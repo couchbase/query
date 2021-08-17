@@ -49,6 +49,22 @@ func NewSliceEnd(operands ...Expression) Function {
 	return rv
 }
 
+func (this *Slice) Start() Expression {
+	if !this.start {
+		return nil
+	}
+	return this.operands[1]
+}
+
+func (this *Slice) End() Expression {
+	if !this.end {
+		return nil
+	} else if this.start {
+		return this.operands[2]
+	}
+	return this.operands[1]
+}
+
 /*
 Visitor pattern.
 */

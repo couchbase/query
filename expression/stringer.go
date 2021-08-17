@@ -595,11 +595,13 @@ func (this *Stringer) VisitSlice(expr *Slice) (interface{}, error) {
 	buf.WriteString("(")
 	buf.WriteString(this.Visit(expr.Operands()[0]))
 	buf.WriteString("[")
-	buf.WriteString(this.Visit(expr.Operands()[1]))
+	if e := expr.Start(); e != nil {
+		buf.WriteString(this.Visit(e))
+	}
 	buf.WriteString(" : ")
 
-	if len(expr.Operands()) > 2 {
-		buf.WriteString(this.Visit(expr.Operands()[2]))
+	if e := expr.End(); e != nil {
+		buf.WriteString(this.Visit(e))
 	}
 
 	buf.WriteString("])")
