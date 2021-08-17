@@ -609,14 +609,14 @@ func (this *ObjectPaths) Evaluate(item value.Value, context Context) (value.Valu
 		if c, ok := options.Field("composites"); ok && c.Type() == value.BOOLEAN {
 			comps = c.Truth()
 		}
-		if ps, ok := options.Field("patternSpace"); ok && ps.Type() == value.STRING {
+		if ps, ok := options.Field("patternspace"); ok && ps.Type() == value.STRING {
 			switch ps.ToString() {
 			case "field":
 				fieldPattern = true
 			case "composite":
 				fieldPattern = false
 			default:
-				return nil, errors.NewError(nil, "Invalid patternSpace option value")
+				return nil, errors.NewError(nil, "Invalid patternspace option value")
 			}
 		}
 		if p, ok := options.Field("pattern"); ok {
@@ -957,14 +957,14 @@ func (this *ObjectPairsNested) Evaluate(item value.Value, context Context) (valu
 		if c, ok := options.Field("composites"); ok && c.Type() == value.BOOLEAN {
 			comps = c.Truth()
 		}
-		if ps, ok := options.Field("patternSpace"); ok && ps.Type() == value.STRING {
+		if ps, ok := options.Field("patternspace"); ok && ps.Type() == value.STRING {
 			switch ps.ToString() {
 			case "field":
 				fieldPattern = true
 			case "composite":
 				fieldPattern = false
 			default:
-				return nil, errors.NewError(nil, "Invalid patternSpace option value")
+				return nil, errors.NewError(nil, "Invalid patternspace option value")
 			}
 		}
 		if p, ok := options.Field("pattern"); ok {
