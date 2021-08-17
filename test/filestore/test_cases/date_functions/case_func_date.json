@@ -105,6 +105,126 @@
     ]
     },
     {
+      "description":"Test last day of 30-day month to 31-day month",
+      "statements":"SELECT DATE_ADD_STR('2019-04-30', 1, 'month'), DATE_ADD_STR('2019-04-30', 1, 'calendar_month')",
+      "results": [
+        {
+            "$1": "2019-05-30",
+            "$2": "2019-05-31"
+        }
+    ]
+    },
+    {
+      "description":"Test last day of 30-day month to 31-day month moving back and test spanning more than a year",
+      "statements":"SELECT DATE_ADD_STR('2019-04-30', -15, 'month'), DATE_ADD_STR('2019-04-30', -15, 'calendar_month')",
+      "results": [
+        {
+            "$1": "2018-01-30",
+            "$2": "2018-01-31"
+        }
+    ]
+    },
+    {
+      "description":"Test last day of 30-day month to February",
+      "statements":"SELECT DATE_ADD_STR('2019-04-30', -2, 'month'), DATE_ADD_STR('2019-04-30', -2, 'calendar_month')",
+      "results": [
+        {
+            "$1": "2019-03-02",
+            "$2": "2019-02-28"
+        }
+    ]
+    },
+    {
+      "description":"Test last day of 30-day month to February in a leap year",
+      "statements":"SELECT DATE_ADD_STR('2020-04-30', -2, 'month'), DATE_ADD_STR('2020-04-30', -2, 'calendar_month')",
+      "results": [
+        {
+            "$1": "2020-03-01",
+            "$2": "2020-02-29"
+        }
+    ]
+    },
+    {
+      "description":"Test last day of 31-day month to 30-day month",
+      "statements":"SELECT DATE_ADD_STR('2021-08-31', 1, 'month'), DATE_ADD_STR('2021-08-31', 1, 'calendar_month')",
+      "results": [
+        {
+            "$1": "2021-10-01",
+            "$2": "2021-09-30"
+        }
+    ]
+    },
+    {
+      "description":"Test last day of 31-day month to 30-day month moving back and test spanning a leap year",
+      "statements":"SELECT DATE_ADD_STR('2021-05-31', -61, 'month'), DATE_ADD_STR('2021-05-31', -61, 'calendar_month')",
+      "results": [
+        {
+            "$1": "2016-05-01",
+            "$2": "2016-04-30"
+        }
+    ]
+    },
+    {
+      "description":"Test last day of 31-day month to February spanning more than a year",
+      "statements":"SELECT DATE_ADD_STR('2021-01-31', 13, 'month'), DATE_ADD_STR('2021-01-31', 13, 'calendar_month')",
+      "results": [
+        {
+            "$1": "2022-03-03",
+            "$2": "2022-02-28"
+        }
+    ]
+    },
+    {
+      "description":"Test last day of 31-day month to February in a leap year spanning more than a year",
+      "statements":"SELECT DATE_ADD_STR('2021-01-31', 37, 'month'), DATE_ADD_STR('2021-01-31', 37, 'calendar_month')",
+      "results": [
+        {
+            "$1": "2024-03-02",
+            "$2": "2024-02-29"
+        }
+      ]
+    },
+    {
+      "description":"Test other-than-last day of month",
+      "statements":"SELECT DATE_ADD_STR('2021-08-17', 6, 'month'), DATE_ADD_STR('2021-08-17', 6, 'calendar_month')",
+      "results": [
+        {
+            "$1": "2022-02-17",
+            "$2": "2022-02-17"
+        }
+    ]
+    },
+    {
+      "description":"Test last day of February to a 30-day month",
+      "statements":"SELECT DATE_ADD_STR('2021-02-28', 2, 'month'), DATE_ADD_STR('2021-02-28', 2, 'calendar_month')",
+      "results": [
+        {
+            "$1": "2021-04-28",
+            "$2": "2021-04-30"
+        }
+    ]
+    },
+    {
+      "description":"Test last day of February in a leap year to a 31-day month",
+      "statements":"SELECT DATE_ADD_STR('2020-02-29', -2, 'month'), DATE_ADD_STR('2020-02-29', -2, 'calendar_month')",
+      "results": [
+        {
+            "$1": "2019-12-29",
+            "$2": "2019-12-31"
+        }
+    ]
+    },
+    {
+      "description":"Test day beyond end of target month but not last day of source month",
+      "statements":"SELECT DATE_ADD_STR('2021-01-30', 1, 'month'), DATE_ADD_STR('2021-01-30', 1, 'calendar_month')",
+      "results": [
+        {
+            "$1": "2021-03-02",
+            "$2": "2021-02-28"
+        }
+    ]
+    },
+    {
       "statements":"select DATE_DIFF_STR(\"2006-01-02\" ,\"1998-02-02\" ,\"year\")",
       "results": [
         {
@@ -1093,6 +1213,102 @@
         "statements": "SELECT DATE_RANGE_STR('1980-01-01', '9999-12-31', 'day')",
         "results": [
         ]
+    },
+    {
+        "description": "calendar_month vs month range generation with start as last day of month",
+        "statements": "select DATE_RANGE_STR('2020-01-31','2021-07-01','month',1),DATE_RANGE_STR('2020-01-31','2021-07-01','calendar_month',1)",
+        "results": [
+           {
+            "$1": [
+                "2020-01-31",
+                "2020-03-02",
+                "2020-04-02",
+                "2020-05-02",
+                "2020-06-02",
+                "2020-07-02",
+                "2020-08-02",
+                "2020-09-02",
+                "2020-10-02",
+                "2020-11-02",
+                "2020-12-02",
+                "2021-01-02",
+                "2021-02-02",
+                "2021-03-02",
+                "2021-04-02",
+                "2021-05-02",
+                "2021-06-02"
+            ],
+            "$2": [
+                "2020-01-31",
+                "2020-02-29",
+                "2020-03-31",
+                "2020-04-30",
+                "2020-05-31",
+                "2020-06-30",
+                "2020-07-31",
+                "2020-08-31",
+                "2020-09-30",
+                "2020-10-31",
+                "2020-11-30",
+                "2020-12-31",
+                "2021-01-31",
+                "2021-02-28",
+                "2021-03-31",
+                "2021-04-30",
+                "2021-05-31",
+                "2021-06-30"
+            ]
+           }
+        ]
+    },
+    {
+        "description": "calendar_month vs month range generation with start as last day of month descending order",
+        "statements": "select DATE_RANGE_STR('2020-01-31','2019-07-01','month',-1),DATE_RANGE_STR('2020-01-31','2019-07-01','calendar_month',-1)",
+        "results": [
+            {
+              "$1": [
+                  "2020-01-31",
+                  "2019-12-31",
+                  "2019-12-01",
+                  "2019-11-01",
+                  "2019-10-01",
+                  "2019-09-01",
+                  "2019-08-01"
+              ],
+              "$2": [
+                  "2020-01-31",
+                  "2019-12-31",
+                  "2019-11-30",
+                  "2019-10-31",
+                  "2019-09-30",
+                  "2019-08-31",
+                  "2019-07-31"
+              ]
+          }
+        ]
+    },
+    {
+      "description": "calendar_month vs month range generation with start not last day of month",
+      "statements": "select DATE_RANGE_STR('2020-01-30','2020-07-01','month',1),DATE_RANGE_STR('2020-01-30','2020-07-01','calendar_month',1)",
+      "results": [
+        {
+          "$1": [
+              "2020-01-30",
+              "2020-03-01",
+              "2020-04-01",
+              "2020-05-01",
+              "2020-06-01"
+          ],
+          "$2": [
+              "2020-01-30",
+              "2020-02-29",
+              "2020-03-30",
+              "2020-04-30",
+              "2020-05-30",
+              "2020-06-30"
+          ]
+        }
+      ]
     },
     {
         "statements": "SELECT DATE_RANGE_MILLIS(0, 10000000000, 'millisecond')",

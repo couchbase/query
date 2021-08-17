@@ -1210,16 +1210,31 @@ func (this *DateRangeStr) Evaluate(item value.Value, context Context) (value.Val
 
 	// Populate the array now
 	// Until you reach the end date
-	for (step > 0.0 && timeToMillis(start) < end) ||
-		(step < 0.0 && timeToMillis(start) > end) {
-		// Compute the new time
-		rv = append(rv, timeToStr(start, fmt1))
-		t, err := dateAdd(start, int(step), partStr)
-		if err != nil {
-			return value.NULL_VALUE, err
-		}
+	if partStr != "calendar_month" {
+		for (step > 0.0 && timeToMillis(start) < end) ||
+			(step < 0.0 && timeToMillis(start) > end) {
+			// Compute the new time
+			rv = append(rv, timeToStr(start, fmt1))
+			t, err := dateAdd(start, int(step), partStr)
+			if err != nil {
+				return value.NULL_VALUE, err
+			}
 
-		start = t
+			start = t
+		}
+	} else {
+		// Always compute relative to start so as to maintain relationship (last day of month)
+		for i := 0; ; i++ {
+			t, err := dateAdd(start, int(step)*i, partStr)
+			if err != nil {
+				return value.NULL_VALUE, err
+			}
+			if (step > 0.0 && timeToMillis(t) >= end) ||
+				(step < 0.0 && timeToMillis(t) <= end) {
+				break
+			}
+			rv = append(rv, timeToStr(t, fmt1))
+		}
 	}
 
 	return value.NewValue(rv), nil
@@ -1384,18 +1399,34 @@ func (this *DateRangeMillis) Evaluate(item value.Value, context Context) (value.
 	// the array to be returned.
 	start := t1
 	end := timeToMillis(t2)
+
 	// Populate the array now
 	// Until you reach the end date
-	for (step > 0.0 && timeToMillis(start) < end) ||
-		(step < 0.0 && timeToMillis(start) > end) {
-		// Compute the new time
-		rv = append(rv, timeToMillis(start))
-		t, err := dateAdd(start, int(step), partStr)
-		if err != nil {
-			return value.NULL_VALUE, err
-		}
+	if partStr != "calendar_month" {
+		for (step > 0.0 && timeToMillis(start) < end) ||
+			(step < 0.0 && timeToMillis(start) > end) {
+			// Compute the new time
+			rv = append(rv, timeToMillis(start))
+			t, err := dateAdd(start, int(step), partStr)
+			if err != nil {
+				return value.NULL_VALUE, err
+			}
 
-		start = t
+			start = t
+		}
+	} else {
+		// Always compute relative to start so as to maintain relationship (last day of month)
+		for i := 0; ; i++ {
+			t, err := dateAdd(start, int(step)*i, partStr)
+			if err != nil {
+				return value.NULL_VALUE, err
+			}
+			if (step > 0.0 && timeToMillis(t) >= end) ||
+				(step < 0.0 && timeToMillis(t) <= end) {
+				break
+			}
+			rv = append(rv, timeToMillis(t))
+		}
 	}
 
 	return value.NewValue(rv), nil
@@ -4069,6 +4100,8 @@ func datePart(t time.Time, part string) (int, error) {
 		return t.Year(), nil
 	case "quarter":
 		return (int(t.Month()) + 2) / 3, nil
+	case "calendar_month":
+		fallthrough
 	case "month":
 		return int(t.Month()), nil
 	case "day":
@@ -4135,6 +4168,87 @@ func dateAdd(t time.Time, n int, part string) (time.Time, error) {
 		return t.AddDate(0, n*3, 0), nil
 	case "month":
 		return t.AddDate(0, n, 0), nil
+	case "calendar_month":
+		if n == 0 {
+			return t, nil
+		}
+		// adds months but if the original was the last day of the start month, the result is the last day of the new month
+		// if the new day would be beyond the end of the new month, round it down to the end of the new month (as opposed to
+		// advancing the months; e.g. 2021-01-31 + 1 calendar_month = 2021-02-28). This mimics the behaviour of some RDBMSes.
+		om := t.Month()
+		od := t.Day()
+		last := false
+		switch {
+		case om == time.January || om == time.March || om == time.May || om == time.July ||
+			om == time.August || om == time.October || om == time.December:
+			if od == 31 {
+				last = true
+			}
+		case om == time.February:
+			ly := isLeapYear(t.Year())
+			if ly && od == 29 {
+				last = true
+			} else if !ly && od == 28 {
+				last = true
+			}
+		default:
+			if od == 30 {
+				last = true
+			}
+		}
+		ny := t.Year() + (n / 12)
+		nm := time.January
+		if n > 0 {
+			t := int(om-1) + (n % 12)
+			if t >= 12 {
+				t -= 12
+				ny++
+			}
+			nm = time.Month(t + 1)
+		} else {
+			t := int(om-1) + (n % 12)
+			if t < 0 {
+				t += 12
+				ny--
+			}
+			nm = time.Month(t + 1)
+		}
+		nd := od
+		if last {
+			switch {
+			case nm == time.January || nm == time.March || nm == time.May || nm == time.July ||
+				nm == time.August || nm == time.October || nm == time.December:
+				nd = 31
+			case nm == time.February:
+				nd = 28
+				if isLeapYear(ny) {
+					nd = 29
+				}
+			default:
+				nd = 30
+			}
+		} else {
+			switch {
+			case nm == time.January || nm == time.March || nm == time.May || nm == time.July ||
+				nm == time.August || nm == time.October || nm == time.December:
+				if nd > 31 {
+					nd = 31
+				}
+			case nm == time.February:
+				max := 28
+				if isLeapYear(ny) {
+					max = 29
+				}
+				if nd > max {
+					nd = max
+				}
+			default:
+				if nd > 30 {
+					nd = 30
+				}
+			}
+		}
+		return time.Date(ny, nm, nd, t.Hour(), t.Minute(), t.Second(), t.Nanosecond(), t.Location()), nil
 	case "week":
 		return t.AddDate(0, 0, n*7), nil
 	case "day":
@@ -4174,6 +4288,8 @@ func dateTrunc(t time.Time, part string) (time.Time, error) {
 	case "quarter":
 		t = monthTrunc(t)
 		return t.AddDate(0, -((int(t.Month()) - 1) % 3), 0), nil
+	case "calendar_month":
+		fallthrough
 	case "month":
 		return monthTrunc(t), nil
 	case "week":
@@ -4301,6 +4417,8 @@ func diffPart(t1, t2 time.Time, diff *date, part string) (int64, error) {
 			return 0, e
 		}
 		return day / 7, nil
+	case "calendar_month":
+		fallthrough
 	case "month":
 		diff_month := (int64(t1.Year())*12 + int64(t1.Month())) - (int64(t2.Year())*12 + int64(t2.Month()))
 		if diff_month < 0 {
