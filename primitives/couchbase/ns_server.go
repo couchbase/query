@@ -960,9 +960,7 @@ func (b *Bucket) refresh(preserveConnections bool) error {
 			// There is an issue retrieving cluster config. Log and move on.
 			logging.Infof(" Issue retrieving TLS: %v", err)
 		} else {
-			if cryptoConfig.DisableNonSSLPorts {
-				force = true
-			}
+			force = cryptoConfig.DisableNonSSLPorts
 		}
 
 	}
