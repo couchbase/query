@@ -945,6 +945,8 @@ func (b *Bucket) refresh(preserveConnections bool) error {
 	client := pool.client
 	b.RUnlock()
 
+	force := false
+
 	var poolServices PoolServices
 	var err error
 	if client.tlsConfig != nil {
@@ -952,6 +954,17 @@ func (b *Bucket) refresh(preserveConnections bool) error {
 		if err != nil {
 			return err
 		}
+
+		cryptoConfig, err := cbauth.GetClusterEncryptionConfig()
+		if err != nil {
+			// There is an issue retrieving cluster config. Log and move on.
+			logging.Infof(" Issue retrieving TLS: %v", err)
+		} else {
+			if cryptoConfig.DisableNonSSLPorts {
+				force = true
+			}
+		}
+
 	}
 
 	tmpb := &Bucket{}
@@ -988,7 +1001,7 @@ func (b *Bucket) refresh(preserveConnections bool) error {
 
 		var encrypted bool
 		if client.tlsConfig != nil {
-			hostport, encrypted, err = MapKVtoSSL(hostport, &poolServices)
+			hostport, encrypted, err = MapKVtoSSLExt(hostport, &poolServices, force)
 			if err != nil {
 				b.Unlock()
 				return err
