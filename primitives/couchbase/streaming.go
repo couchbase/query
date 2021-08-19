@@ -23,7 +23,6 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/couchbase/cbauth"
 	"github.com/couchbase/query/logging"
 )
 
@@ -275,7 +274,6 @@ func (b *Bucket) UpdateBucket2(streamingFn StreamingFn) error {
 
 			// if we got here, reset failure count
 			failures = 0
-			force := false
 
 			if b.pool.client.tlsConfig != nil {
 				poolServices, err = b.pool.client.GetPoolServices("default")
@@ -283,14 +281,6 @@ func (b *Bucket) UpdateBucket2(streamingFn StreamingFn) error {
 					returnErr = err
 					res.Body.Close()
 					break
-				}
-
-				cryptoConfig, err := cbauth.GetClusterEncryptionConfig()
-				if err != nil {
-					// There is an issue retrieving cluster config. Log and move on.
-					logging.Infof(" Issue retrieving TLS: %v", err)
-				} else {
-					force = cryptoConfig.DisableNonSSLPorts
 				}
 			}
 
@@ -318,7 +308,7 @@ func (b *Bucket) UpdateBucket2(streamingFn StreamingFn) error {
 				var encrypted bool
 				hostport := tmpb.VBSMJson.ServerList[i]
 				if b.pool.client.tlsConfig != nil {
-					hostport, encrypted, err = MapKVtoSSLExt(hostport, &poolServices, force)
+					hostport, encrypted, err = MapKVtoSSLExt(hostport, &poolServices, b.pool.client.disableNonSSLPorts)
 					if err != nil {
 						b.Unlock()
 						return err

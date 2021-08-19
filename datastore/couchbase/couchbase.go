@@ -509,7 +509,7 @@ func (s *store) GetRolesAll() ([]datastore.Role, errors.Error) {
 
 func (s *store) SetClientConnectionSecurityConfig() (err error) {
 	if s.connSecConfig != nil && s.connSecConfig.ClusterEncryptionConfig.EncryptData {
-		err = s.client.InitTLS(s.connSecConfig.CertFile)
+		err = s.client.InitTLS(s.connSecConfig.CertFile, s.connSecConfig.ClusterEncryptionConfig.DisableNonSSLPorts)
 		if err == nil && s.gcClient != nil {
 			err = s.gcClient.InitTLS(s.connSecConfig.CertFile)
 		}

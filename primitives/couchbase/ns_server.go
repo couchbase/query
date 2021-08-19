@@ -467,10 +467,11 @@ func (b *Bucket) authHandler(bucketLocked bool) (ah AuthHandler) {
 // A Client is the starting point for all services across all buckets
 // in a Couchbase cluster.
 type Client struct {
-	BaseURL   *url.URL
-	ah        AuthHandler
-	Info      Pools
-	tlsConfig *tls.Config
+	BaseURL            *url.URL
+	ah                 AuthHandler
+	Info               Pools
+	tlsConfig          *tls.Config
+	disableNonSSLPorts bool
 }
 
 func maybeAddAuth(req *http.Request, ah AuthHandler) error {
@@ -780,7 +781,7 @@ func ConnectWithAuth(baseU string, ah AuthHandler) (c Client, err error) {
 // with the KV engine encrypted.
 //
 // This method should be called immediately after a Connect*() method.
-func (c *Client) InitTLS(certFile string) error {
+func (c *Client) InitTLS(certFile string, disableNonSSLPorts bool) error {
 	serverCert, err := ioutil.ReadFile(certFile)
 	if err != nil {
 		return err
@@ -788,11 +789,13 @@ func (c *Client) InitTLS(certFile string) error {
 	CA_Pool := x509.NewCertPool()
 	CA_Pool.AppendCertsFromPEM(serverCert)
 	c.tlsConfig = &tls.Config{RootCAs: CA_Pool}
+	c.disableNonSSLPorts = disableNonSSLPorts
 	return nil
 }
 
 func (c *Client) ClearTLS() {
 	c.tlsConfig = nil
+	c.disableNonSSLPorts = false
 }
 
 // Connect to a couchbase cluster.  An authentication handler will be
@@ -945,8 +948,6 @@ func (b *Bucket) refresh(preserveConnections bool) error {
 	client := pool.client
 	b.RUnlock()
 
-	force := false
-
 	var poolServices PoolServices
 	var err error
 	if client.tlsConfig != nil {
@@ -954,15 +955,6 @@ func (b *Bucket) refresh(preserveConnections bool) error {
 		if err != nil {
 			return err
 		}
-
-		cryptoConfig, err := cbauth.GetClusterEncryptionConfig()
-		if err != nil {
-			// There is an issue retrieving cluster config. Log and move on.
-			logging.Infof(" Issue retrieving TLS: %v", err)
-		} else {
-			force = cryptoConfig.DisableNonSSLPorts
-		}
-
 	}
 
 	tmpb := &Bucket{}
@@ -999,7 +991,7 @@ func (b *Bucket) refresh(preserveConnections bool) error {
 
 		var encrypted bool
 		if client.tlsConfig != nil {
-			hostport, encrypted, err = MapKVtoSSLExt(hostport, &poolServices, force)
+			hostport, encrypted, err = MapKVtoSSLExt(hostport, &poolServices, client.disableNonSSLPorts)
 			if err != nil {
 				b.Unlock()
 				return err
