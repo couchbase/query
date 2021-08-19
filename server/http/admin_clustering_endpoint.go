@@ -22,14 +22,10 @@ import (
 	json "github.com/couchbase/go_json"
 	"github.com/couchbase/query/audit"
 	"github.com/couchbase/query/clustering"
-	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/distributed"
 	"github.com/couchbase/query/errors"
-	"github.com/couchbase/query/functions"
 	"github.com/couchbase/query/logging"
-	"github.com/couchbase/query/prepareds"
 	"github.com/couchbase/query/server"
-	"github.com/couchbase/query/util"
 	"github.com/gorilla/mux"
 )
 
@@ -407,7 +403,7 @@ func doSettings(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 	srvr := endpoint.server
 	switch req.Method {
 	case "GET":
-		return fillSettings(settings, srvr), nil
+		return server.FillSettings(settings, srvr), nil
 	case "POST":
 		decoder, e := getJsonDecoder(req.Body)
 		if e != nil {
@@ -424,7 +420,7 @@ func doSettings(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 			return nil, errP
 		}
 		settings = map[string]interface{}{}
-		return fillSettings(settings, srvr), nil
+		return server.FillSettings(settings, srvr), nil
 	default:
 		return nil, errors.NewServiceErrorHttpMethod(req.Method)
 	}
@@ -450,47 +446,6 @@ func settingsWorkHorse(settings map[string]interface{}, srvr *server.Server) err
 			}, distributed.NO_CREDS, "")
 	}
 	return nil
-}
-
-func fillSettings(settings map[string]interface{}, srvr *server.Server) map[string]interface{} {
-	settings[server.CPUPROFILE] = srvr.CpuProfile()
-	settings[server.MEMPROFILE] = srvr.MemProfile()
-	settings[server.SERVICERS] = srvr.Servicers()
-	settings[server.PLUSSERVICERS] = srvr.PlusServicers()
-	settings[server.SCANCAP] = srvr.ScanCap()
-	settings[server.REQUESTSIZECAP] = srvr.RequestSizeCap()
-	settings[server.DEBUG] = srvr.Debug()
-	settings[server.PIPELINEBATCH] = srvr.PipelineBatch()
-	settings[server.PIPELINECAP] = srvr.PipelineCap()
-	settings[server.MAXPARALLELISM] = srvr.MaxParallelism()
-	settings[server.TIMEOUTSETTING] = srvr.Timeout()
-	settings[server.KEEPALIVELENGTH] = srvr.KeepAlive()
-	settings[server.LOGLEVEL] = srvr.LogLevel()
-	threshold, _ := server.RequestsGetQualifier("threshold", "")
-	settings[server.CMPTHRESHOLD] = threshold
-	settings[server.CMPLIMIT] = server.RequestsLimit()
-	settings[server.CMPOBJECT] = server.RequestsGetQualifiers()
-	settings[server.PRPLIMIT] = prepareds.PreparedsLimit()
-	settings[server.PRETTY] = srvr.Pretty()
-	settings[server.MAXINDEXAPI] = srvr.MaxIndexAPI()
-	settings[server.N1QLFEATCTRL] = util.GetN1qlFeatureControl()
-	settings[server.TXTIMEOUT] = srvr.TxTimeout().String()
-	settings = server.GetProfileAdmin(settings, srvr)
-	settings = server.GetControlsAdmin(settings, srvr)
-	settings[server.AUTOPREPARE] = srvr.AutoPrepare()
-	settings[server.MUTEXPROFILE] = srvr.MutexProfile()
-	settings[server.FUNCLIMIT] = functions.FunctionsLimit()
-	settings[server.MEMORYQUOTA] = srvr.MemoryQuota()
-	settings[server.USECBO] = srvr.UseCBO()
-	settings[server.ATRCOLLECTION] = srvr.AtrCollection()
-	settings[server.NUMATRS] = srvr.NumAtrs()
-
-	tranSettings := datastore.GetTransactionSettings()
-	settings[server.CLEANUPWINDOW] = tranSettings.CleanupWindow().String()
-	settings[server.CLEANUPCLIENTATTEMPTS] = tranSettings.CleanupClientAttempts()
-	settings[server.CLEANUPLOSTATTEMPTS] = tranSettings.CleanupLostAttempts()
-	settings[server.GCPERCENT] = srvr.GCPercent()
-	return settings
 }
 
 func getClusterFromRequest(req *http.Request) (clustering.Cluster, errors.Error) {

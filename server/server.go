@@ -30,6 +30,7 @@ import (
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/execution"
 	"github.com/couchbase/query/logging"
+	"github.com/couchbase/query/logging/event"
 	"github.com/couchbase/query/parser/n1ql"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/planner"
@@ -922,12 +923,17 @@ func (this *Server) serviceRequest(request Request) {
 			buf := make([]byte, 1<<16)
 			n := runtime.Stack(buf, false)
 			s := string(buf[0:n])
+			stmt := "<ud>" + request.Statement() + "</ud>"
+			qc := "<ud>" + request.QueryContext() + "</ud>"
 			logging.Severef("panic: %v ", err)
-			logging.Severef("request text: <ud>%v</ud>", request.Statement())
-			logging.Severef("query context: <ud>%v</ud>", request.QueryContext())
+			logging.Severef("request text: %v", stmt)
+			logging.Severef("query context: %v", qc)
 			logging.Severef("stack: %v", s)
 			os.Stderr.WriteString(s)
 			os.Stderr.Sync()
+			event.Report(event.CRASH, event.ERROR, "error", err, "request-id", request.Id().String(),
+				"statement", event.UpTo(stmt, 500), "query_context", event.UpTo(qc, 250), "stack", event.CompactStack(s, 2000))
+
 			request.Fail(errors.NewExecutionPanicError(nil, fmt.Sprintf("Panic: %v", err)))
 			request.Failed(this)
 		}

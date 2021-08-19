@@ -161,6 +161,9 @@ func (ClusterStub) Settings() (map[string]interface{}, errors.Error) {
 	return nil, nil
 }
 
+func (ClusterStub) ReportEventAsync(event string) {
+}
+
 // StandaloneStub is a stub implementation of clustering.Standalone
 type StandaloneStub struct{}
 

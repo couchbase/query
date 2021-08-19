@@ -898,6 +898,40 @@ func (this *cbCluster) GetQueryNodes() ([]clustering.QueryNode, errors.Error) {
 	return qryNodes, nil
 }
 
+const _SYSTEM_LOG_PATH = "/_event"
+const _NUM_RETRIES = 5
+
+func (this *cbCluster) ReportEventAsync(event string) {
+	// local recovery as faults may be reported as events
+	defer func() {
+		r := recover()
+		if r == nil {
+			return
+		}
+		logging.Stackf(logging.ERROR, "Failed to report event: %v. Event: %v", r, event)
+	}()
+	hostport := strings.TrimPrefix("https://", strings.TrimPrefix("http://", this.DatastoreURI))
+	u, p, _ := cbauth.Default.GetHTTPServiceAuth(hostport)
+	url := this.DatastoreURI + _SYSTEM_LOG_PATH
+
+	go func() {
+		defer func() {
+			r := recover()
+			if r == nil {
+				return
+			}
+			logging.Stackf(logging.ERROR, "Failed to report event: %v. Event: %v", r, event)
+		}()
+
+		_, err := couchbase.InvokeEndpointWithRetry(url, u, p, "POST", "application/json", event, _NUM_RETRIES)
+		if err != nil {
+			logging.Errora(func() string {
+				return fmt.Sprintf("Failed to report event: %v. URL: %v Event: %v", err, url, event)
+			})
+		}
+	}()
+}
+
 // cbQueryNodeConfig implements clustering.QueryNode
 type cbQueryNodeConfig struct {
 	ClusterName   string                    `json:"cluster"`

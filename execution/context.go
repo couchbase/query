@@ -27,6 +27,7 @@ import (
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/logging"
+	"github.com/couchbase/query/logging/event"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/planner"
 	"github.com/couchbase/query/timestamp"
@@ -567,7 +568,19 @@ func (this *Context) CloseResults() {
 	this.output.CloseResults()
 }
 
+type eventError struct {
+	t event.EventType
+	l event.EventLevel
+}
+
+var eventErrors = map[errors.ErrorCode]eventError{
+	errors.E_MEMORY_QUOTA_EXCEEDED: {event.QUOTA_EXCEEDED, event.INFO},
+}
+
 func (this *Context) Error(err errors.Error) {
+	if evt, ok := eventErrors[err.Code()]; ok {
+		event.Report(evt.t, evt.l, "request-id", this.RequestId())
+	}
 	this.output.Error(err)
 }
 
@@ -971,15 +984,20 @@ func (this *Context) Recover(base *base) {
 		buf := make([]byte, 1<<16)
 		n := runtime.Stack(buf, false)
 		s := string(buf[0:n])
+		stmt := "<ud>" + this.prepared.Text() + "</ud>"
+		qc := "<ud>" + this.queryContext + "</ud>"
 		logging.Severef("panic: %v ", err)
-		logging.Severef("request text: <ud>%v</ud>", this.prepared.Text())
-		logging.Severef("query context: <ud>%v</ud>", this.queryContext)
+		logging.Severef("request text: %v", stmt)
+		logging.Severef("query context: %v", qc)
 		logging.Severef("stack: %v", s)
 
 		// TODO - this may very well be a duplicate, if the orchestrator is redirecting
 		// the standard error to the same file as the log
 		os.Stderr.WriteString(s)
 		os.Stderr.Sync()
+
+		event.Report(event.CRASH, event.ERROR, "error", err, "request-id", this.RequestId(),
+			"statement", event.UpTo(stmt, 500), "query_context", event.UpTo(qc, 250), "stack", event.CompactStack(s, 2000))
 
 		this.Abort(errors.NewExecutionPanicError(nil, fmt.Sprintf("Panic: %v", err)))
 

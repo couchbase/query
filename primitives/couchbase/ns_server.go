@@ -1221,3 +1221,72 @@ func AlreadyExistsError(err error) bool {
 	// Collection error: Collection with this name already exists
 	return strings.Contains(err.Error(), " name already exists")
 }
+
+const _BACK_OFF_INTERVAL = 500 * time.Millisecond
+
+func InvokeEndpointWithRetry(url string, u string, p string, cmd string, ctype string, data string, retries int) ([]byte, error) {
+
+	dataReader := strings.NewReader(data)
+	req, err := http.NewRequest(cmd, url, dataReader)
+	if err != nil {
+		return nil, err
+	}
+	if ctype != "" {
+		req.Header.Add("Content-Type", ctype)
+	}
+	req.SetBasicAuth(u, p)
+
+	client := &http.Client{}
+
+	backoffSleep := _BACK_OFF_INTERVAL
+	exponential := true
+	for i := 0; ; i++ {
+		dataReader.Seek(0, io.SeekStart)
+		resp, err := client.Do(req)
+		if err == nil && resp != nil {
+			if resp.StatusCode == 200 {
+				body, err := ioutil.ReadAll(resp.Body)
+				if err != nil {
+					return nil, err
+				}
+				resp.Body.Close()
+				return body, nil
+			}
+			delay := resp.Header.Get("Retry-After")
+			if delay != "" {
+				secs, err := strconv.Atoi(delay)
+				if err != nil {
+					ts, err := time.Parse(time.RFC1123, delay)
+					if err == nil {
+						secs = int(ts.Sub(time.Now()).Seconds())
+					}
+				}
+				if secs > 0 {
+					backoffSleep = time.Duration(secs) * time.Second
+					exponential = false
+				}
+			}
+		}
+		if resp != nil && resp.Body != nil {
+			resp.Body.Close()
+		}
+		if i < retries {
+			time.Sleep(backoffSleep)
+			if exponential {
+				backoffSleep *= 2
+			} else {
+				backoffSleep = _BACK_OFF_INTERVAL
+				exponential = true
+			}
+		} else {
+			if err == nil {
+				if resp == nil {
+					return nil, fmt.Errorf("Unknown error")
+				} else {
+					return nil, fmt.Errorf("%s", resp.Status)
+				}
+			}
+			return nil, err
+		}
+	}
+}

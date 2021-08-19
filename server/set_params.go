@@ -19,6 +19,7 @@ import (
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/functions"
 	"github.com/couchbase/query/logging"
+	"github.com/couchbase/query/logging/event"
 	"github.com/couchbase/query/prepareds"
 	"github.com/couchbase/query/scheduler"
 	queryMetakv "github.com/couchbase/query/server/settings/couchbase"
@@ -275,7 +276,16 @@ func setCompleted(s *Server, o interface{}) errors.Error {
 	return nil
 }
 
+var reportAllInitially = true
+
 func ProcessSettings(settings map[string]interface{}, srvr *Server) (err errors.Error) {
+	prev := make(map[string]interface{})
+	if !reportAllInitially {
+		prev = FillSettings(prev, srvr)
+	} else {
+		reportAllInitially = false
+	}
+
 	for setting, value := range settings {
 		var cerr errors.Error
 
@@ -319,7 +329,88 @@ func ProcessSettings(settings map[string]interface{}, srvr *Server) (err errors.
 		}
 	}
 
+	current := make(map[string]interface{})
+	current = FillSettings(current, srvr)
+	reportChangedValues(prev, current)
+
 	return err
+}
+
+func reportChangedValues(prev map[string]interface{}, current map[string]interface{}) {
+	changed := make([]interface{}, 0, len(current))
+	for k, v := range current {
+		p, ok := prev[k]
+		same := false
+		if ok {
+			switch vt := v.(type) {
+			case map[string]interface{}:
+				pt := p.(map[string]interface{})
+				if len(vt) == len(pt) {
+					same = true
+					for k2, v2 := range pt {
+						v, ok := vt[k2]
+						if !ok || v != v2 {
+							same = false
+							break
+						}
+					}
+				}
+			default:
+				same = p == v
+			}
+		}
+		if !same {
+			changed = append(changed, k)
+			changeRecord := make(map[string]interface{})
+			changeRecord["from"] = p
+			changeRecord["to"] = v
+			changed = append(changed, changeRecord)
+		}
+	}
+	if len(changed) > 0 {
+		event.Report(event.CONFIG_CHANGE, event.INFO, changed...)
+	}
+}
+
+func FillSettings(settings map[string]interface{}, srvr *Server) map[string]interface{} {
+	settings[CPUPROFILE] = srvr.CpuProfile()
+	settings[MEMPROFILE] = srvr.MemProfile()
+	settings[SERVICERS] = srvr.Servicers()
+	settings[PLUSSERVICERS] = srvr.PlusServicers()
+	settings[SCANCAP] = srvr.ScanCap()
+	settings[REQUESTSIZECAP] = srvr.RequestSizeCap()
+	settings[DEBUG] = srvr.Debug()
+	settings[PIPELINEBATCH] = srvr.PipelineBatch()
+	settings[PIPELINECAP] = srvr.PipelineCap()
+	settings[MAXPARALLELISM] = srvr.MaxParallelism()
+	settings[TIMEOUTSETTING] = srvr.Timeout()
+	settings[KEEPALIVELENGTH] = srvr.KeepAlive()
+	settings[LOGLEVEL] = srvr.LogLevel()
+	threshold, _ := RequestsGetQualifier("threshold", "")
+	settings[CMPTHRESHOLD] = threshold
+	settings[CMPLIMIT] = RequestsLimit()
+	settings[CMPOBJECT] = RequestsGetQualifiers()
+	settings[PRPLIMIT] = prepareds.PreparedsLimit()
+	settings[PRETTY] = srvr.Pretty()
+	settings[MAXINDEXAPI] = srvr.MaxIndexAPI()
+	settings[N1QLFEATCTRL] = util.GetN1qlFeatureControl()
+	settings[TXTIMEOUT] = srvr.TxTimeout().String()
+	settings = GetProfileAdmin(settings, srvr)
+	settings = GetControlsAdmin(settings, srvr)
+	settings[AUTOPREPARE] = srvr.AutoPrepare()
+	settings[MUTEXPROFILE] = srvr.MutexProfile()
+	settings[FUNCLIMIT] = functions.FunctionsLimit()
+	settings[MEMORYQUOTA] = srvr.MemoryQuota()
+	settings[USECBO] = srvr.UseCBO()
+	settings[ATRCOLLECTION] = srvr.AtrCollection()
+	settings[NUMATRS] = srvr.NumAtrs()
+
+	tranSettings := datastore.GetTransactionSettings()
+	settings[CLEANUPWINDOW] = tranSettings.CleanupWindow().String()
+	settings[CLEANUPCLIENTATTEMPTS] = tranSettings.CleanupClientAttempts()
+	settings[CLEANUPLOSTATTEMPTS] = tranSettings.CleanupLostAttempts()
+	settings[GCPERCENT] = srvr.GCPercent()
+	return settings
 }
 
 func SetParamValuesForAll(cfg queryMetakv.Config, srvr *Server) {

@@ -394,6 +394,9 @@ func (z *zkCluster) GetQueryNodes() ([]clustering.QueryNode, errors.Error) {
 	return qryNodes, nil
 }
 
+func (this *zkCluster) ReportEventAsync(event string) {
+}
+
 // zkQueryNodeConfig implements clustering.QueryNode
 type zkQueryNodeConfig struct {
 	ClusterName      string                    `json:"cluster_name"`

@@ -32,6 +32,7 @@ import (
 	"github.com/couchbase/query/functions"
 	"github.com/couchbase/query/functions/constructor"
 	"github.com/couchbase/query/logging"
+	"github.com/couchbase/query/logging/event"
 	log_resolver "github.com/couchbase/query/logging/resolver"
 	"github.com/couchbase/query/prepareds"
 	"github.com/couchbase/query/scheduler"
@@ -237,6 +238,9 @@ func main() {
 		fmt.Printf("\n%v\n", err)
 		os.Exit(1)
 	}
+
+	// needs to be before any events may be generated
+	event.Init(configstore)
 
 	acctstore, err := acct_resolver.NewAcctstore(*ACCTSTORE)
 	if err != nil {

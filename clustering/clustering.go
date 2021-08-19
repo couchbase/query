@@ -87,6 +87,8 @@ type Cluster interface {
 	ClusterManager() ClusterManager                        // Get a ClusterManager for this Cluster
 	Capability(string) bool                                // Check if cluster possesses a certain capability
 	Settings() (map[string]interface{}, errors.Error)      // Get cluster wide settings
+
+	ReportEventAsync(event string) // Cluster's event logging
 }
 
 type Standalone interface {
