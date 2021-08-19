@@ -411,8 +411,9 @@ func (this *httpRequest) writeError(err errors.Error, count int, prefix, indent 
 		"code": err.Code(),
 		"msg":  err.Error(),
 	}
-	if err.Retry() != value.NONE {
-		m["retry"] = value.ToBool(err.Retry())
+	retry := checkForPossibleRetry(err, this.MutationCount() != 0)
+	if retry != value.NONE {
+		m["retry"] = value.ToBool(retry)
 	}
 	if err.Cause() != nil {
 		m["cause"] = err.Cause()
@@ -431,6 +432,17 @@ func (this *httpRequest) writeError(err errors.Error, count int, prefix, indent 
 	}
 
 	return this.writeString(newPrefix) && this.writeString(string(bytes))
+}
+
+// For CAS mismatch errors where no mutations have taken place, we can explicitly set retry to true
+func checkForPossibleRetry(err errors.Error, mutations bool) value.Tristate {
+	if mutations || err.Code() != errors.E_DML || err.Cause() != nil {
+		return err.Retry()
+	}
+	if c, ok := err.Cause().(errors.Error); ok && c.Code() == errors.E_CAS_MISMATCH {
+		return value.TRUE
+	}
+	return err.Retry()
 }
 
 func (this *httpRequest) writeMetrics(metrics bool, prefix, indent string) bool {

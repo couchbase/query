@@ -55,14 +55,16 @@ func NewCbBulkGetError(e error, msg string) Error {
 		InternalMsg: "Error performing bulk get operation " + msg, InternalCaller: CallerN(1), retry: value.TRUE}
 }
 
+const E_DML = 12009
+
 func NewCbDMLError(e error, msg string, casMismatch int, r value.Tristate) Error {
 	if casMismatch != 0 {
 		e = newCASMismatchError()
 		r = value.FALSE
-		return &err{level: EXCEPTION, ICode: 12009, IKey: "datastore.couchbase.DML_error", ICause: e, cause: e, retry: r,
+		return &err{level: EXCEPTION, ICode: E_DML, IKey: "datastore.couchbase.DML_error", ICause: e, cause: e, retry: r,
 			InternalMsg: "DML Error, possible causes include CAS mismatch " + msg, InternalCaller: CallerN(1)}
 	} else {
-		return &err{level: EXCEPTION, ICode: 12009, IKey: "datastore.couchbase.DML_error", ICause: e, cause: e, retry: r,
+		return &err{level: EXCEPTION, ICode: E_DML, IKey: "datastore.couchbase.DML_error", ICause: e, cause: e, retry: r,
 			InternalMsg: "DML Error, possible causes include concurrent modification " + msg, InternalCaller: CallerN(1)}
 	}
 }
@@ -190,12 +192,16 @@ func NewPreserveExpiryNotSupported() Error {
 }
 
 // this is only embedded in 12009
+const E_CAS_MISMATCH = 12033
+
 func newCASMismatchError() Error {
-	return &err{level: EXCEPTION, ICode: 12033, IKey: "datastore.couchbase.CAS_mismatch",
+	return &err{level: EXCEPTION, ICode: E_CAS_MISMATCH, IKey: "datastore.couchbase.CAS_mismatch",
 		InternalMsg: "CAS mismatch", InternalCaller: CallerN(2)} // note caller level
 }
 
+const E_DML_MC = 12034
+
 func NewCbDMLMCError(s string) Error {
-	return &err{level: EXCEPTION, ICode: 12034, IKey: "datastore.couchbase.mc_error",
+	return &err{level: EXCEPTION, ICode: E_DML_MC, IKey: "datastore.couchbase.mc_error",
 		InternalMsg: "MC error " + s, cause: s, InternalCaller: CallerN(1)}
 }
