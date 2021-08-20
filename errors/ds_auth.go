@@ -11,30 +11,24 @@ package errors
 import ()
 
 // Couchbase authorization error
-const DS_AUTH_ERROR = 10000
-
 func NewDatastoreAuthorizationError(e error) Error {
-	return &err{level: EXCEPTION, ICode: DS_AUTH_ERROR, IKey: "datastore.couchbase.authorization_error", ICause: e,
+	return &err{level: EXCEPTION, ICode: E_DATASTORE_AUTHORIZATION, IKey: "datastore.couchbase.authorization_error", ICause: e,
 		InternalMsg: "Unable to authorize user.", InternalCaller: CallerN(1)}
 }
 
 // Error codes 13010-13011 are retired. Do not reuse.
 
 func NewDatastoreClusterError(e error, msg string) Error {
-	return &err{level: EXCEPTION, ICode: 13012, IKey: "datastore.couchbase.cluster_error", ICause: e,
+	return &err{level: EXCEPTION, ICode: E_DATASTORE_CLUSTER, IKey: "datastore.couchbase.cluster_error", ICause: e,
 		InternalMsg: "Error retrieving cluster " + msg, InternalCaller: CallerN(1)}
 }
 
-const DS_ROLES_ERROR = 13013
-
 func NewDatastoreUnableToRetrieveRoles(e error) Error {
-	return &err{level: EXCEPTION, ICode: DS_ROLES_ERROR, IKey: "datastore.couchbase.retrieve_roles", ICause: e,
+	return &err{level: EXCEPTION, ICode: E_DATASTORE_UNABLE_TO_RETRIEVE_ROLES, IKey: "datastore.couchbase.retrieve_roles", ICause: e,
 		InternalMsg: "Unable to retrieve roles from server.", InternalCaller: CallerN(1)}
 }
 
-const DS_INSUFFICIENT_CREDS = 13014
-
 func NewDatastoreInsufficientCredentials(msg string) Error {
-	return &err{level: EXCEPTION, ICode: DS_INSUFFICIENT_CREDS, IKey: "datastore.couchbase.insufficient_credentials",
+	return &err{level: EXCEPTION, ICode: E_DATASTORE_INSUFFICIENT_CREDENTIALS, IKey: "datastore.couchbase.insufficient_credentials",
 		InternalMsg: msg, InternalCaller: CallerN(1)}
 }

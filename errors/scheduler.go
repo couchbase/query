@@ -13,25 +13,25 @@ import (
 )
 
 func NewSchedulerError(what string, e error) Error {
-	return &err{level: EXCEPTION, ICode: 6001, IKey: "scheduler.generic.error", ICause: e,
+	return &err{level: EXCEPTION, ICode: E_SCHEDULER, IKey: "scheduler.generic.error", ICause: e,
 		InternalMsg:    fmt.Sprintf("The scheduler encountered an error in %v", what),
 		InternalCaller: CallerN(1)}
 }
 
 func NewDuplicateTaskError(t string) Error {
-	return &err{level: EXCEPTION, ICode: 6002, IKey: "scheduler.duplicate.error", ICause: fmt.Errorf("%v", t),
+	return &err{level: EXCEPTION, ICode: E_DUPLICATE_TASK, IKey: "scheduler.duplicate.error", ICause: fmt.Errorf("%v", t),
 		InternalMsg:    fmt.Sprintf("Task already exists %v", t),
 		InternalCaller: CallerN(1)}
 }
 
 func NewTaskRunningError(t string) Error {
-	return &err{level: EXCEPTION, ICode: 6003, IKey: "scheduler.running.error", ICause: fmt.Errorf("%v", t),
+	return &err{level: EXCEPTION, ICode: E_TASK_RUNNING, IKey: "scheduler.running.error", ICause: fmt.Errorf("%v", t),
 		InternalMsg:    fmt.Sprintf("Task %v is currently executing and cannot be deleted", t),
 		InternalCaller: CallerN(1)}
 }
 
 func NewTaskNotFoundError(t string) Error {
-	return &err{level: EXCEPTION, ICode: 6004, IKey: "scheduler.notfound.error", ICause: fmt.Errorf("%v", t),
+	return &err{level: EXCEPTION, ICode: E_TASK_NOT_FOUND, IKey: "scheduler.notfound.error", ICause: fmt.Errorf("%v", t),
 		InternalMsg:    fmt.Sprintf("the task %v was not found", t),
 		InternalCaller: CallerN(1)}
 }

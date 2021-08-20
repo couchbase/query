@@ -35,14 +35,14 @@ func (this *Disconnect) MaxArgs() int {
 	return ZERO_ARGS
 }
 
-func (this *Disconnect) ExecCommand(args []string) (int, string) {
+func (this *Disconnect) ExecCommand(args []string) (errors.ErrorCode, string) {
 	/* Command to disconnect service. Use the noQueryService
 	   flag value and the disconnect flag value to determine
 	   disconnection. If the command contains an input argument
 	   then throw an error.
 	*/
 	if len(args) != 0 {
-		return errors.TOO_MANY_ARGS, ""
+		return errors.E_SHELL_TOO_MANY_ARGS, ""
 
 	} else {
 		DISCONNECT = true
@@ -51,7 +51,7 @@ func (this *Disconnect) ExecCommand(args []string) (int, string) {
 	return 0, ""
 }
 
-func (this *Disconnect) PrintHelp(desc bool) (int, string) {
+func (this *Disconnect) PrintHelp(desc bool) (errors.ErrorCode, string) {
 	_, werr := io.WriteString(W, HDISCONNECT)
 	if desc {
 		err_code, err_str := printDesc(this.Name())
@@ -61,7 +61,7 @@ func (this *Disconnect) PrintHelp(desc bool) (int, string) {
 	}
 	_, werr = io.WriteString(W, "\n")
 	if werr != nil {
-		return errors.WRITER_OUTPUT, werr.Error()
+		return errors.E_SHELL_WRITER_OUTPUT, werr.Error()
 	}
 	return 0, ""
 }

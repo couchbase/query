@@ -80,13 +80,13 @@ func mapErrorToHttpResponse(err errors.Error, def int) int {
 		return http.StatusUnauthorized
 	case 3000: // parse error range
 		return http.StatusBadRequest
-	case 4000, errors.NO_SUCH_PREPARED: // plan error range
+	case 4000, errors.E_NO_SUCH_PREPARED: // plan error range
 		return http.StatusNotFound
 	case 4300:
 		return http.StatusConflict
 	case 5000:
 		return http.StatusInternalServerError
-	case errors.SUBQUERY_BUILD:
+	case errors.E_SUBQUERY_BUILD:
 		return http.StatusUnprocessableEntity
 	case 10000:
 		return http.StatusUnauthorized
@@ -436,7 +436,7 @@ func (this *httpRequest) writeError(err errors.Error, count int, prefix, indent 
 
 // For CAS mismatch errors where no mutations have taken place, we can explicitly set retry to true
 func checkForPossibleRetry(err errors.Error, mutations bool) value.Tristate {
-	if mutations || err.Code() != errors.E_DML || err.Cause() != nil {
+	if mutations || err.Code() != errors.E_CB_DML || err.Cause() != nil {
 		return err.Retry()
 	}
 	if c, ok := err.Cause().(errors.Error); ok && c.Code() == errors.E_CAS_MISMATCH {

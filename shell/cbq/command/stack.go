@@ -30,10 +30,10 @@ func (stack *Stack) Push(val value.Value) {
 /* Return the top element in the stack. If the stack
    is empty then return ZERO_VALUE.
 */
-func (stack *Stack) Top() (val value.Value, err_code int, err_str string) {
+func (stack *Stack) Top() (val value.Value, err_code errors.ErrorCode, err_str string) {
 	if stack.Len() == 0 {
 		val = nil
-		err_code = errors.STACK_EMPTY
+		err_code = errors.E_SHELL_STACK_EMPTY
 		err_str = ""
 	} else {
 		x := stack.Len() - 1
@@ -45,9 +45,9 @@ func (stack *Stack) Top() (val value.Value, err_code int, err_str string) {
 	return
 }
 
-func (stack *Stack) SetTop(v value.Value) (err_code int, err_str string) {
+func (stack *Stack) SetTop(v value.Value) (err_code errors.ErrorCode, err_str string) {
 	if stack.Len() == 0 {
-		err_code = errors.STACK_EMPTY
+		err_code = errors.E_SHELL_STACK_EMPTY
 		err_str = ""
 	} else {
 		x := stack.Len() - 1
@@ -61,10 +61,10 @@ func (stack *Stack) SetTop(v value.Value) (err_code int, err_str string) {
 /* Delete the top element in the stack. If the stack
    is empty then print err stack empty
 */
-func (stack *Stack) Pop() (val value.Value, err_code int, err_str string) {
+func (stack *Stack) Pop() (val value.Value, err_code errors.ErrorCode, err_str string) {
 	if stack.Len() == 0 {
 		val = nil
-		err_code = errors.STACK_EMPTY
+		err_code = errors.E_SHELL_STACK_EMPTY
 		err_str = ""
 	} else {
 		x := stack.Len() - 1

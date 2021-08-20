@@ -37,17 +37,17 @@ func (this *Alias) MaxArgs() int {
 	return MAX_ARGS
 }
 
-func (this *Alias) ExecCommand(args []string) (int, string) {
+func (this *Alias) ExecCommand(args []string) (errors.ErrorCode, string) {
 
 	if len(args) > this.MaxArgs() {
-		return errors.TOO_MANY_ARGS, ""
+		return errors.E_SHELL_TOO_MANY_ARGS, ""
 
 	} else if len(args) < this.MinArgs() {
 
 		if len(args) == 0 {
 			// \ALIAS without input args lists the aliases present.
 			if len(AliasCommand) == 0 {
-				return errors.NO_SUCH_ALIAS, ""
+				return errors.E_SHELL_NO_SUCH_ALIAS, ""
 			}
 
 			for k, v := range AliasCommand {
@@ -55,13 +55,13 @@ func (this *Alias) ExecCommand(args []string) (int, string) {
 				tmp := fmt.Sprintf("%-14s %-14s\n", k, v)
 				_, werr := io.WriteString(W, tmp)
 				if werr != nil {
-					return errors.WRITER_OUTPUT, werr.Error()
+					return errors.E_SHELL_WRITER_OUTPUT, werr.Error()
 				}
 			}
 
 		} else {
 			// Error out if it has 1 argument.
-			return errors.TOO_FEW_ARGS, ""
+			return errors.E_SHELL_TOO_FEW_ARGS, ""
 		}
 
 	} else {
@@ -82,7 +82,7 @@ func (this *Alias) ExecCommand(args []string) (int, string) {
 
 }
 
-func (this *Alias) PrintHelp(desc bool) (int, string) {
+func (this *Alias) PrintHelp(desc bool) (errors.ErrorCode, string) {
 	_, werr := io.WriteString(W, HALIAS)
 	if desc {
 		err_code, err_str := printDesc(this.Name())
@@ -92,7 +92,7 @@ func (this *Alias) PrintHelp(desc bool) (int, string) {
 	}
 	_, werr = io.WriteString(W, "\n")
 	if werr != nil {
-		return errors.WRITER_OUTPUT, werr.Error()
+		return errors.E_SHELL_WRITER_OUTPUT, werr.Error()
 	}
 	return 0, ""
 }

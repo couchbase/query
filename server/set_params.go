@@ -260,10 +260,10 @@ func setCompleted(s *Server, o interface{}) errors.Error {
 			res = RequestsUpdateQualifier(n, v, tag)
 			if res != nil {
 				switch res.Code() {
-				case errors.ADMIN_QUALIFIER_NOT_UNIQUE:
+				case errors.E_COMPLETED_QUALIFIER_NOT_UNIQUE:
 					RequestsRemoveQualifier(n, nil, tag)
 					res = RequestsAddQualifier(n, v, tag)
-				case errors.ADMIN_QUALIFIER_NOT_SET:
+				case errors.E_COMPLETED_QUALIFIER_NOT_FOUND:
 					res = RequestsAddQualifier(n, v, tag)
 				}
 			}

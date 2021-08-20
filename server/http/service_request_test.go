@@ -311,10 +311,10 @@ func doNoSuchPrepared(t *testing.T, name string) {
 
 	errs := test_server.request().Errors()
 	if len(errs) == 0 {
-		t.Errorf("Expected error: %v no such prepared, got nothing", errors.NO_SUCH_PREPARED)
+		t.Errorf("Expected error: %v no such prepared, got nothing", errors.E_NO_SUCH_PREPARED)
 	} else if len(errs) > 1 {
-		t.Errorf("Expected error: %v no such prepared, got %v", errors.NO_SUCH_PREPARED, errs)
-	} else if errs[0].Code() != errors.NO_SUCH_PREPARED {
+		t.Errorf("Expected error: %v no such prepared, got %v", errors.E_NO_SUCH_PREPARED, errs)
+	} else if errs[0].Code() != errors.E_NO_SUCH_PREPARED {
 		t.Errorf("Expected error condition: no such prepared. Received: %v", errs[0])
 	}
 }
@@ -361,10 +361,10 @@ func doPreparedAndStatement(t *testing.T, name string, stmt string) {
 
 	errs := test_server.request().Errors()
 	if len(errs) == 0 {
-		t.Errorf("Expected error: %v multiple values, got nothing", errors.SERVICE_MULTIPLE_VALUES)
+		t.Errorf("Expected error: %v multiple values, got nothing", errors.E_SERVICE_MULTIPLE_VALUES)
 	} else if len(errs) > 1 {
-		t.Errorf("Expected error: %v multiple values, got %v", errors.SERVICE_MULTIPLE_VALUES, errs)
-	} else if errs[0].Code() != errors.SERVICE_MULTIPLE_VALUES {
+		t.Errorf("Expected error: %v multiple values, got %v", errors.E_SERVICE_MULTIPLE_VALUES, errs)
+	} else if errs[0].Code() != errors.E_SERVICE_MULTIPLE_VALUES {
 		t.Errorf("Expected error condition: multiple values. Received: %v", errs[0])
 	}
 }

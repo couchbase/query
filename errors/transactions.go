@@ -19,49 +19,49 @@ func NewTransactionError(e error, msg string) Error {
 	case Error: // if given error is already an Error, just return it:
 		return e
 	default:
-		return &err{level: EXCEPTION, ICode: 17099, IKey: "transaction_error", ICause: e,
+		return &err{level: EXCEPTION, ICode: E_TRANSACTION, IKey: "transaction_error", ICause: e,
 			InternalMsg: msg, InternalCaller: CallerN(1)}
 	}
 }
 
 func NewMemoryAllocationError(msg string) Error {
-	return &err{level: EXCEPTION, ICode: 17098, IKey: "nomemory",
+	return &err{level: EXCEPTION, ICode: E_MEMORY_ALLOCATION, IKey: "nomemory",
 		InternalMsg:    fmt.Sprintf("Memory allocation error: %s", msg),
 		InternalCaller: CallerN(1)}
 }
 
 func NewTranCENotsupported() Error {
-	return &err{level: EXCEPTION, ICode: 17097, IKey: "transaction.ce.not_supported",
+	return &err{level: EXCEPTION, ICode: E_TRANCE_NOTSUPPORTED, IKey: "transaction.ce.not_supported",
 		InternalMsg:    fmt.Sprintf("Transactions are not supported in Community Edition"),
 		InternalCaller: CallerN(1)}
 }
 
 func NewTranDatastoreNotSupportedError(msg string) Error {
-	return &err{level: EXCEPTION, ICode: 17001, IKey: "transaction.datastore.not_supported",
+	return &err{level: EXCEPTION, ICode: E_TRAN_DATASTORE_NOT_SUPPORTED, IKey: "transaction.datastore.not_supported",
 		InternalMsg:    fmt.Sprintf("Transactions are not supported on %s store", msg),
 		InternalCaller: CallerN(1)}
 }
 
 func NewTranStatementNotSupportedError(stmtType, msg string) Error {
-	return &err{level: EXCEPTION, ICode: 17002, IKey: "transaction.statement.not_supported",
+	return &err{level: EXCEPTION, ICode: E_TRAN_STATEMENT_NOT_SUPPORTED, IKey: "transaction.statement.not_supported",
 		InternalMsg:    fmt.Sprintf("%s statement is not supported %s transaction", stmtType, msg),
 		InternalCaller: CallerN(1)}
 }
 
 func NewTranFunctionNotSupportedError(fn string) Error {
-	return &err{level: EXCEPTION, ICode: 17003, IKey: "transaction.statement.not_supported",
+	return &err{level: EXCEPTION, ICode: E_TRAN_FUNCTION_NOT_SUPPORTED, IKey: "transaction.statement.not_supported",
 		InternalMsg:    fmt.Sprintf("%s function is not supported within the transaction", fn),
 		InternalCaller: CallerN(1)}
 }
 
 func NewTransactionContextError(e error) Error {
-	return &err{level: EXCEPTION, ICode: 17004, IKey: "transaction.statement.txcontext",
+	return &err{level: EXCEPTION, ICode: E_TRANSACTION_CONTEXT, IKey: "transaction.statement.txcontext",
 		InternalMsg:    fmt.Sprintf("Transaction context error: %v", e),
 		InternalCaller: CallerN(1)}
 }
 
 func NewTranStatementOutOfOrderError(prev, cur int64) Error {
-	return &err{level: EXCEPTION, ICode: 17005, IKey: "transaction.statement.out_of_order",
+	return &err{level: EXCEPTION, ICode: E_TRAN_STATEMENT_OUT_OF_ORDER, IKey: "transaction.statement.out_of_order",
 		InternalMsg:    fmt.Sprintf("Transaction statement is out of order (%v, %v) ", prev, cur),
 		InternalCaller: CallerN(1)}
 }
@@ -71,7 +71,7 @@ func NewStartTransactionError(e error, c interface{}) Error {
 	if e != nil {
 		msg = fmt.Sprintf("%s: %v", msg, e)
 	}
-	return &err{level: EXCEPTION, ICode: 17006, IKey: "transaction.statement.start",
+	return &err{level: EXCEPTION, ICode: E_START_TRANSACTION, IKey: "transaction.statement.start",
 		InternalMsg: msg, InternalCaller: CallerN(1), cause: c}
 }
 
@@ -80,7 +80,7 @@ func NewCommitTransactionError(e error, c interface{}) Error {
 	if e != nil {
 		msg = fmt.Sprintf("%s: %v", msg, e)
 	}
-	return &err{level: EXCEPTION, ICode: 17007, IKey: "transaction.statement.commit",
+	return &err{level: EXCEPTION, ICode: E_COMMIT_TRANSACTION, IKey: "transaction.statement.commit",
 		InternalMsg: msg, InternalCaller: CallerN(1), cause: c}
 }
 
@@ -89,60 +89,60 @@ func NewRollbackTransactionError(e error, c interface{}) Error {
 	if e != nil {
 		msg = fmt.Sprintf("%s: %v", msg, e)
 	}
-	return &err{level: EXCEPTION, ICode: 17008, IKey: "transaction.statement.rollback",
+	return &err{level: EXCEPTION, ICode: E_ROLLBACK_TRANSACTION, IKey: "transaction.statement.rollback",
 		InternalMsg: msg, InternalCaller: CallerN(1), cause: c}
 }
 
 func NewNoSavepointError(msg string) Error {
-	return &err{level: EXCEPTION, ICode: 17009, IKey: "transaction.statement.nosavepoint",
+	return &err{level: EXCEPTION, ICode: E_NO_SAVEPOINT, IKey: "transaction.statement.nosavepoint",
 		InternalMsg:    fmt.Sprintf("%s savepoint is not defined", msg),
 		InternalCaller: CallerN(1)}
 }
 
 func NewTransactionExpired(c interface{}) Error {
-	return &err{level: EXCEPTION, ICode: 17010, IKey: "transaction.expired",
+	return &err{level: EXCEPTION, ICode: E_TRANSACTION_EXPIRED, IKey: "transaction.expired",
 		InternalMsg:    "Transaction timeout",
 		InternalCaller: CallerN(1), cause: c}
 }
 
 func NewTransactionReleased() Error {
-	return &err{level: EXCEPTION, ICode: 17011, IKey: "transaction.released",
+	return &err{level: EXCEPTION, ICode: E_TRANSACTION_RELEASED, IKey: "transaction.released",
 		InternalMsg:    "Transaction is released",
 		InternalCaller: CallerN(1)}
 }
 
 func NewDuplicateKeyError(msg string) Error {
-	return &err{level: EXCEPTION, ICode: 17012, IKey: "transaction.statement.duplicatekey",
+	return &err{level: EXCEPTION, ICode: E_DUPLICATE_KEY, IKey: "transaction.statement.duplicatekey",
 		InternalMsg:    fmt.Sprintf("Duplicate Key: %s", msg),
 		InternalCaller: CallerN(1)}
 }
 
 func NewTransactionInuse() Error {
-	return &err{level: EXCEPTION, ICode: 17013, IKey: "transaction.parallel.disallowed",
+	return &err{level: EXCEPTION, ICode: E_TRANSACTION_INUSE, IKey: "transaction.parallel.disallowed",
 		InternalMsg:    "Parallel execution of the statements are not allowed within the transaction",
 		InternalCaller: CallerN(1)}
 }
 
 func NewKeyNotFoundError(k string, c interface{}) Error {
-	return &err{level: EXCEPTION, ICode: 17014, IKey: "transaction.statement.keynotfound",
+	return &err{level: EXCEPTION, ICode: E_KEY_NOT_FOUND, IKey: "transaction.statement.keynotfound",
 		InternalMsg:    fmt.Sprintf("Key not found : %v", k),
 		InternalCaller: CallerN(1), cause: c}
 }
 
 func NewCasMissmatch(op, key string, aCas, eCas uint64) Error {
-	return &err{level: EXCEPTION, ICode: 17015, IKey: "transaction.statement.keynotfound",
+	return &err{level: EXCEPTION, ICode: E_CAS_MISSMATCH, IKey: "transaction.statement.keynotfound",
 		InternalMsg:    fmt.Sprintf("%s cas (actual:%v, expected:%v) missmatch for key: %v", op, aCas, eCas, key),
 		InternalCaller: CallerN(1)}
 }
 
 func NewTransactionMemoryQuotaExceededError(memQuota, memUsed int64) Error {
-	return &err{level: EXCEPTION, ICode: 17016, IKey: "transaction.memory_quota.exceeded",
+	return &err{level: EXCEPTION, ICode: E_TRANSACTION_MEMORY_QUOTA_EXCEEDED, IKey: "transaction.memory_quota.exceeded",
 		InternalMsg:    fmt.Sprintf("Transaction memory (%v) exceeded quota (%v)", memUsed, memQuota),
 		InternalCaller: CallerN(1)}
 }
 
 func NewTransactionFetchError(e error, c interface{}) Error {
-	return &err{level: EXCEPTION, ICode: 17017, IKey: "transaction.fetch", ICause: e,
+	return &err{level: EXCEPTION, ICode: E_TRANSACTION_FETCH, IKey: "transaction.fetch", ICause: e,
 		InternalMsg:    "Transaction fetch error",
 		InternalCaller: CallerN(1), cause: c}
 }
@@ -152,7 +152,7 @@ func NewPostCommitTransactionError(e error, c interface{}) Error {
 	if e != nil {
 		msg = fmt.Sprintf("%s: %v", msg, e)
 	}
-	return &err{level: EXCEPTION, ICode: 17018, IKey: "transaction.statement.postcommit",
+	return &err{level: EXCEPTION, ICode: E_POST_COMMIT_TRANSACTION, IKey: "transaction.statement.postcommit",
 		InternalMsg: msg, InternalCaller: CallerN(1), cause: c}
 }
 
@@ -161,7 +161,7 @@ func NewAmbiguousCommitTransactionError(e error, c interface{}) Error {
 	if e != nil {
 		msg = fmt.Sprintf("%s: %v", msg, e)
 	}
-	return &err{level: EXCEPTION, ICode: 17019, IKey: "transaction.statement.ambiguouscommit",
+	return &err{level: EXCEPTION, ICode: E_AMBIGUOUS_COMMIT_TRANSACTION, IKey: "transaction.statement.ambiguouscommit",
 		InternalMsg: msg, InternalCaller: CallerN(1), cause: c}
 }
 
@@ -170,12 +170,12 @@ func NewWriteTransactionError(e error, c interface{}) Error {
 	if e != nil {
 		msg = fmt.Sprintf("%s: %v", msg, e)
 	}
-	return &err{level: EXCEPTION, ICode: 17020, IKey: "transaction.write.error",
+	return &err{level: EXCEPTION, ICode: E_WRITE_TRANSACTION, IKey: "transaction.write.error",
 		InternalMsg: msg, InternalCaller: CallerN(1), cause: c}
 }
 
 func NewTransactionQueueFull() Error {
-	return &err{level: EXCEPTION, ICode: 17021, IKey: "transaction.queue.full",
+	return &err{level: EXCEPTION, ICode: E_TRANSACTION_QUEUE_FULL, IKey: "transaction.queue.full",
 		InternalMsg:    "Transaction queue is full",
 		InternalCaller: CallerN(1)}
 }
@@ -185,6 +185,6 @@ func NewPostCommitTransactionWarning(e error, c interface{}) Error {
 	if e != nil {
 		msg = fmt.Sprintf("%s: %v", msg, e)
 	}
-	return &err{level: WARNING, ICode: 17022, IKey: "transaction.statement.postcommit",
+	return &err{level: WARNING, ICode: E_POST_COMMIT_TRANSACTION_WARNING, IKey: "transaction.statement.postcommit",
 		InternalMsg: msg, InternalCaller: CallerN(1), cause: c}
 }

@@ -10,14 +10,12 @@ package errors
 
 // rewrite errors 6500-6599
 
-const _REWRITE_ERROR = 6500
-
 func NewRewriteError(e error, msg string) Error {
 	switch e := e.(type) {
 	case Error: // if given error is already an Error, just return it:
 		return e
 	default:
-		return &err{level: EXCEPTION, ICode: _REWRITE_ERROR, IKey: "rewrite_error", ICause: e,
+		return &err{level: EXCEPTION, ICode: E_REWRITE, IKey: "rewrite_error", ICause: e,
 			InternalMsg: msg, InternalCaller: CallerN(1)}
 	}
 }

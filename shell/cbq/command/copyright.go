@@ -35,19 +35,19 @@ func (this *Copyright) MaxArgs() int {
 	return ZERO_ARGS
 }
 
-func (this *Copyright) ExecCommand(args []string) (int, string) {
+func (this *Copyright) ExecCommand(args []string) (errors.ErrorCode, string) {
 	/* Print the Copyright information for the shell. If the
 	   command contains an input argument then throw an error.
 	*/
 	if len(args) != 0 {
-		return errors.TOO_MANY_ARGS, ""
+		return errors.E_SHELL_TOO_MANY_ARGS, ""
 	} else {
 		io.WriteString(W, COPYRIGHTMSG)
 	}
 	return 0, ""
 }
 
-func (this *Copyright) PrintHelp(desc bool) (int, string) {
+func (this *Copyright) PrintHelp(desc bool) (errors.ErrorCode, string) {
 	_, werr := io.WriteString(W, HCOPYRIGHT)
 	if desc {
 		err_code, err_str := printDesc(this.Name())
@@ -57,7 +57,7 @@ func (this *Copyright) PrintHelp(desc bool) (int, string) {
 	}
 	_, werr = io.WriteString(W, "\n")
 	if werr != nil {
-		return errors.WRITER_OUTPUT, werr.Error()
+		return errors.E_SHELL_WRITER_OUTPUT, werr.Error()
 	}
 	return 0, ""
 }

@@ -42,92 +42,92 @@ func GetfgRed() string {
    shell errors are handled.
 */
 
-func HandleError(err int, msg string) errors.Error {
+func HandleError(err errors.ErrorCode, msg string) errors.Error {
 
 	switch err {
 
 	//Connection errors
-	case errors.CONNECTION_REFUSED:
+	case errors.E_SHELL_CONNECTION_REFUSED:
 		return errors.NewShellErrorCannotConnect(msg)
-	case errors.UNSUPPORTED_PROTOCOL:
+	case errors.E_SHELL_UNSUPPORTED_PROTOCOL:
 		return errors.NewShellErrorUnsupportedProtocol(SERVICE_URL)
-	case errors.NO_SUCH_HOST:
+	case errors.E_SHELL_NO_SUCH_HOST:
 		return errors.NewShellErrorNoSuchHost(SERVICE_URL)
-	case errors.NO_HOST_IN_URL:
+	case errors.E_SHELL_NO_HOST_IN_REQUEST_URL:
 		return errors.NewShellErrorNoHostInRequestUrl(SERVICE_URL)
-	case errors.UNKNOWN_PORT_TCP:
+	case errors.E_SHELL_UNKNOWN_PORT_TCP:
 		return errors.NewShellErrorUnknownPorttcp(SERVICE_URL)
-	case errors.NO_ROUTE_TO_HOST:
+	case errors.E_SHELL_NO_ROUTE_TO_HOST:
 		return errors.NewShellErrorNoRouteToHost(SERVICE_URL)
-	case errors.UNREACHABLE_NETWORK:
+	case errors.E_SHELL_UNREACHABLE_NETWORK:
 		return errors.NewShellErrorUnreachableNetwork("")
-	case errors.NO_CONNECTION:
+	case errors.E_SHELL_NO_CONNECTION:
 		return errors.NewShellErrorNoConnection("")
-	case errors.DRIVER_OPEN:
+	case errors.E_SHELL_DRIVER_OPEN:
 		return errors.NewShellErrorDriverOpen(msg)
-	case errors.INVALID_URL:
+	case errors.E_SHELL_INVALID_URL:
 		return errors.NewShellErrorInvalidURL(msg)
 
 	//Read/Write/Update file errors
-	case errors.READ_FILE:
+	case errors.E_SHELL_READ_FILE:
 		return errors.NewShellErrorReadFile(msg)
-	case errors.WRITE_FILE:
+	case errors.E_SHELL_WRITE_FILE:
 		return errors.NewShellErrorWriteFile(msg)
-	case errors.FILE_OPEN:
+	case errors.E_SHELL_OPEN_FILE:
 		return errors.NewShellErrorOpenFile(msg)
-	case errors.FILE_CLOSE:
+	case errors.E_SHELL_CLOSE_FILE:
 		return errors.NewShellErrorCloseFile(msg)
 
 	//Authentication Errors.
-	case errors.INVALID_PASSWORD:
+	case errors.E_SHELL_INVALID_PASSWORD:
 		return errors.NewShellErrorInvalidPassword(msg)
-	case errors.INVALID_USERNAME:
+	case errors.E_SHELL_INVALID_USERNAME:
 		return errors.NewShellErrorInvalidUsername("")
-	case errors.MISSING_CREDENTIAL:
+	case errors.E_SHELL_MISSING_CREDENTIAL:
 		return errors.NewShellErrorMissingCredential("")
-	case errors.INVALID_CREDENTIAL:
+	case errors.E_SHELL_INVALID_CREDENTIAL:
 		return errors.NewShellErrorInvalidCredential("")
 
 	//Command Errors
-	case errors.NO_SUCH_COMMAND:
+	case errors.E_SHELL_NO_SUCH_COMMAND:
 		return errors.NewShellErrorNoSuchCommand(msg)
-	case errors.NO_SUCH_PARAM:
+	case errors.E_SHELL_NO_SUCH_PARAM:
 		return errors.NewShellErrorNoSuchParam(msg)
-	case errors.TOO_MANY_ARGS:
+	case errors.E_SHELL_TOO_MANY_ARGS:
 		return errors.NewShellErrorTooManyArgs("")
-	case errors.TOO_FEW_ARGS:
+	case errors.E_SHELL_TOO_FEW_ARGS:
 		return errors.NewShellErrorTooFewArgs("")
-	case errors.STACK_EMPTY:
+	case errors.E_SHELL_STACK_EMPTY:
 		return errors.NewShellErrorStackEmpty("")
-	case errors.NO_SUCH_ALIAS:
+	case errors.E_SHELL_NO_SUCH_ALIAS:
 		return errors.NewShellErrorNoSuchAlias(msg)
-	case errors.BATCH_MODE:
+	case errors.E_SHELL_BATCH_MODE:
 		return errors.NewShellErrorBatchMode("")
 
 	//Generic Errors
-	case errors.OPERATION_TIMEOUT:
+	case errors.E_SHELL_OPERATION_TIMEOUT:
 		return errors.NewShellErrorOperationTimeout(SERVICE_URL)
-	case errors.ROWS_SCAN:
+	case errors.E_SHELL_ROWS_SCAN:
 		return errors.NewShellErrorRowsScan(msg)
-	case errors.JSON_MARSHAL:
+	case errors.E_SHELL_JSON_MARSHAL:
 		return errors.NewShellErrorJsonMarshal(msg)
-	case errors.JSON_UNMARSHAL:
+	case errors.E_SHELL_JSON_UNMARSHAL:
 		return errors.NewShellErrorJsonUnmarshal(msg)
-	case errors.DRIVER_QUERY:
+	case errors.E_SHELL_DRIVER_QUERY_METHOD:
 		return errors.NewShellErrorDriverQueryMethod(msg)
-	case errors.WRITER_OUTPUT:
+	case errors.E_SHELL_WRITER_OUTPUT:
 		return errors.NewShellErrorWriterOutput(msg)
-	case errors.UNBALANCED_PAREN:
+	case errors.E_SHELL_UNBALANCED_PAREN:
 		return errors.NewShellErrorUnbalancedParen("")
-	case errors.ROWS_CLOSE:
+	case errors.E_SHELL_ROWS_CLOSE:
 		return errors.NewShellErrorRowsClose(msg)
-	case errors.CMD_LINE_ARG:
+	case errors.E_SHELL_CMD_LINE_ARGS:
 		return errors.NewShellErrorCmdLineArgs("")
-	case errors.INVALID_INPUT_ARGUMENTS:
+	case errors.E_SHELL_INVALID_INPUT_ARGUMENTS:
 		return errors.NewShellErrorInvalidInputArguments("")
 
 	default:
-		return errors.NewShellErrorUnkownError(msg)
+		return errors.NewShellErrorUnknownError(msg)
 	}
 
 }

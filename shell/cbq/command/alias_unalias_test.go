@@ -40,7 +40,7 @@ func TestAlias(t *testing.T) {
 	unalias := COMMAND_LIST["\\unalias"]
 	tmp := []string{s[0]}
 	errCode, errStr = unalias.ExecCommand(tmp)
-	if errCode == errors.NO_SUCH_ALIAS {
+	if errCode == errors.E_SHELL_NO_SUCH_ALIAS {
 		t.Errorf("Error using \\UNALIAS %s", HandleError(errCode, errStr))
 	} else {
 		t.Logf("%s deleted using \\UNALIAS", s[0])
@@ -74,7 +74,7 @@ func TestAliasErrors(t *testing.T) {
 
 	errCode, errStr := alias.ExecCommand(tmp)
 
-	if errCode == errors.TOO_FEW_ARGS {
+	if errCode == errors.E_SHELL_TOO_FEW_ARGS {
 		t.Log("Too Few arguments to \\ALIAS command.")
 	} else {
 		t.Error("Minimum number of args for \\ALIAS has changed.")
@@ -93,7 +93,7 @@ func TestAliasErrors(t *testing.T) {
 	for key, _ := range AliasCommand {
 		tmp[0] = key
 		errCode, errStr := unalias.ExecCommand(tmp)
-		if errCode == errors.NO_SUCH_ALIAS {
+		if errCode == errors.E_SHELL_NO_SUCH_ALIAS {
 			t.Errorf("Error using \\UNALIAS %s", HandleError(errCode, errStr))
 		} else {
 			t.Log("All ALIAS deleted using \\UNALIAS")
@@ -104,7 +104,7 @@ func TestAliasErrors(t *testing.T) {
 
 	//test case where too few args for \unalias
 	errCode, errStr = unalias.ExecCommand(tmp)
-	if errCode == errors.TOO_FEW_ARGS {
+	if errCode == errors.E_SHELL_TOO_FEW_ARGS {
 		t.Logf("%s", HandleError(errCode, errStr))
 	} else {
 		t.Errorf("Minimum number of args for \\UNALIAS has changed.")
@@ -117,7 +117,7 @@ func TestAliasErrors(t *testing.T) {
 	errCode, errStr = alias.ExecCommand(tmp)
 	writetmp.Flush()
 
-	if errCode == errors.NO_SUCH_ALIAS {
+	if errCode == errors.E_SHELL_NO_SUCH_ALIAS {
 		t.Logf("%s", HandleError(errCode, errStr))
 	} else {
 		t.Errorf("Unknown Error %s", HandleError(errCode, errStr))

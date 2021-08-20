@@ -23,7 +23,7 @@ import (
 func TestErrors(t *testing.T) {
 
 	// Test some sample errors.
-	s_err := HandleError(errors.CONNECTION_REFUSED, "Random string")
+	s_err := HandleError(errors.E_SHELL_CONNECTION_REFUSED, "Random string")
 
 	var b bytes.Buffer
 	writetmp := bufio.NewWriter(&b)
@@ -33,7 +33,7 @@ func TestErrors(t *testing.T) {
 
 	t.Logf(" Printed Error : %s", b.String())
 
-	s_err = HandleError(errors.NO_SUCH_PARAM, "-r")
+	s_err = HandleError(errors.E_SHELL_NO_SUCH_PARAM, "-r")
 
 	b.Reset()
 	writetmp = bufio.NewWriter(&b)

@@ -23,7 +23,7 @@ import (
 
 var batch_run = false
 
-func command_alias(line string, w io.Writer, interactive bool, liner *liner.State) (int, string) {
+func command_alias(line string, w io.Writer, interactive bool, liner *liner.State) (errors.ErrorCode, string) {
 	// This block handles aliases
 	commandkey := line[2:]
 	commandkey = strings.TrimSpace(commandkey)
@@ -31,14 +31,14 @@ func command_alias(line string, w io.Writer, interactive bool, liner *liner.Stat
 	val, ok := command.AliasCommand[commandkey]
 
 	if !ok {
-		return errors.NO_SUCH_ALIAS, " : " + commandkey + "\n"
+		return errors.E_SHELL_NO_SUCH_ALIAS, " : " + commandkey + "\n"
 	}
 
 	// If outputting to a file, then add the statement to the file as well.
 	if command.FILE_RW_MODE == true {
 		_, werr := io.WriteString(command.W, val+"\n")
 		if werr != nil {
-			return errors.WRITER_OUTPUT, werr.Error()
+			return errors.E_SHELL_WRITER_OUTPUT, werr.Error()
 		}
 	}
 
@@ -53,7 +53,7 @@ func command_alias(line string, w io.Writer, interactive bool, liner *liner.Stat
 
 }
 
-func command_shell(line string, w io.Writer, interactive bool, liner *liner.State) (int, string) {
+func command_shell(line string, w io.Writer, interactive bool, liner *liner.State) (errors.ErrorCode, string) {
 	if len(strings.TrimSpace(line)) == 1 {
 		// A single \ (with whitespaces) is used to run the input statements
 		// in batch mode for AsterixDB. For such a case, we run the statements the
@@ -78,14 +78,14 @@ func command_shell(line string, w io.Writer, interactive bool, liner *liner.Stat
 	return 0, ""
 }
 
-func command_query(line string, w io.Writer, liner *liner.State) (int, string) {
+func command_query(line string, w io.Writer, liner *liner.State) (errors.ErrorCode, string) {
 	command.REFRESH_URL = serverFlag
 	var err error
 	//This block handles N1QL statements
 	// If connected to a query service then noQueryService == false.
 	if noQueryService {
 		//Not connected to a query service
-		return errors.NO_CONNECTION, ""
+		return errors.E_SHELL_NO_CONNECTION, ""
 	} else {
 		// Check for batch mode.
 		if command.BATCH == "on" && !batch_run {
@@ -95,7 +95,7 @@ func command_query(line string, w io.Writer, liner *liner.State) (int, string) {
 			line = line + ";"
 			_, err := stringBuffer.WriteString(line)
 			if err != nil {
-				return errors.STRING_WRITE, err.Error()
+				return errors.E_SHELL_STRING_WRITE, err.Error()
 			}
 		} else {
 			/* If a connection already exists, then use it.
@@ -107,7 +107,7 @@ func command_query(line string, w io.Writer, liner *liner.State) (int, string) {
 			if command.DbN1ql == nil {
 				command.DbN1ql, err = n1ql.OpenExtended(serverFlag)
 				if err != nil {
-					return errors.DRIVER_OPEN, err.Error()
+					return errors.E_SHELL_DRIVER_OPEN, err.Error()
 				}
 			}
 
@@ -134,7 +134,7 @@ func command_query(line string, w io.Writer, liner *liner.State) (int, string) {
 						err = command.Ping(serverFlag)
 						if err != nil {
 							// There was an issue establishing a connection. Throw the error and return
-							return errors.CONNECTION_REFUSED, err.Error()
+							return errors.E_SHELL_CONNECTION_REFUSED, err.Error()
 						}
 					} else {
 						return err_code, err_str
@@ -153,7 +153,7 @@ func command_query(line string, w io.Writer, liner *liner.State) (int, string) {
 This method is the handler that calls execution methods based on the input command
 or statement. It returns an error code and optionally a non empty error message.
 */
-func dispatch_command(line string, w io.Writer, interactive bool, liner *liner.State) (int, string) {
+func dispatch_command(line string, w io.Writer, interactive bool, liner *liner.State) (errors.ErrorCode, string) {
 	line = strings.TrimSpace(line)
 	command.W = w
 
@@ -213,7 +213,7 @@ func dispatch_command(line string, w io.Writer, interactive bool, liner *liner.S
 	return 0, ""
 }
 
-func ExecN1QLStmt(line string, dBn1ql n1ql.N1qlDB, w io.Writer) (int, string) {
+func ExecN1QLStmt(line string, dBn1ql n1ql.N1qlDB, w io.Writer) (errors.ErrorCode, string) {
 
 	// Add back the ; for queries to support fully qualified
 	// asterix queries along with N1QL queries.
@@ -227,16 +227,16 @@ func ExecN1QLStmt(line string, dBn1ql n1ql.N1qlDB, w io.Writer) (int, string) {
 
 		// For any captured write error
 		if werr != nil {
-			return errors.WRITER_OUTPUT, werr.Error()
+			return errors.E_SHELL_WRITER_OUTPUT, werr.Error()
 		} else if err != nil {
 			// Return error from godbc if there is one. This is for N1QL errors.
-			return errors.DRIVER_QUERY, err.Error()
+			return errors.E_SHELL_DRIVER_QUERY_METHOD, err.Error()
 		}
 		return 0, ""
 	}
 
 	if err != nil {
-		return errors.DRIVER_QUERY, err.Error()
+		return errors.E_SHELL_DRIVER_QUERY_METHOD, err.Error()
 	}
 
 	// No output, and no error. Strange, but keep going.
@@ -260,7 +260,7 @@ func trimSpaceInStr(inputStr string) (outputStr string) {
 	return
 }
 
-func ExecShellCmd(line string, liner *liner.State) (int, string) {
+func ExecShellCmd(line string, liner *liner.State) (errors.ErrorCode, string) {
 	line = strings.TrimSpace(line)
 	arg1 := strings.Split(line, " ")
 	arg1str := strings.ToLower(arg1[0])
@@ -281,7 +281,7 @@ func ExecShellCmd(line string, liner *liner.State) (int, string) {
 			line = r.Replace(line)
 
 		} else {
-			return errors.UNBALANCED_PAREN, ""
+			return errors.E_SHELL_UNBALANCED_PAREN, ""
 		}
 
 	}
@@ -293,7 +293,7 @@ func ExecShellCmd(line string, liner *liner.State) (int, string) {
 	Cmd, ok := command.COMMAND_LIST[cmd_args[0]]
 	if ok == true {
 		err_code, err_str := Cmd.ExecCommand(cmd_args[1:])
-		if err_code == errors.CONNECTION_REFUSED {
+		if err_code == errors.E_SHELL_CONNECTION_REFUSED {
 			if strings.TrimSpace(SERVICE_URL) == "" {
 				io.WriteString(command.W, command.NOCONNMSG)
 			} else {
@@ -304,7 +304,7 @@ func ExecShellCmd(line string, liner *liner.State) (int, string) {
 			return err_code, err_str
 		}
 	} else {
-		return errors.NO_SUCH_COMMAND, ""
+		return errors.E_SHELL_NO_SUCH_COMMAND, ""
 	}
 
 	SERVICE_URL = command.SERVICE_URL
@@ -338,14 +338,14 @@ func ExecShellCmd(line string, liner *liner.State) (int, string) {
 
 // Helper function to read file based input. Run all the commands as
 // seen in the file given by FILE_INPUT and then return the prompt.
-func readAndExec(liner *liner.State) (int, string) {
+func readAndExec(liner *liner.State) (errors.ErrorCode, string) {
 
 	var isEOF = false
 
 	// Read input file
 	inputFile, err := os.Open(command.FILE_INPUT)
 	if err != nil {
-		return errors.FILE_OPEN, err.Error()
+		return errors.E_SHELL_OPEN_FILE, err.Error()
 	}
 
 	// Defer file close
@@ -372,7 +372,7 @@ func readAndExec(liner *liner.State) (int, string) {
 		path, err := newFileReader.ReadString('\n')
 
 		if err != nil && err != io.EOF {
-			return errors.READ_FILE, err.Error()
+			return errors.E_SHELL_READ_FILE, err.Error()
 		}
 
 		// Remove leading and trailing spaces from the input
@@ -460,7 +460,7 @@ func readAndExec(liner *liner.State) (int, string) {
 			if *errorExitFlag {
 				_, werr := io.WriteString(command.W, command.EXITONERR)
 				if werr != nil {
-					command.PrintError(command.HandleError(errors.WRITER_OUTPUT, werr.Error()))
+					command.PrintError(command.HandleError(errors.E_SHELL_WRITER_OUTPUT, werr.Error()))
 				}
 				liner.Close()
 				os.Clearenv()

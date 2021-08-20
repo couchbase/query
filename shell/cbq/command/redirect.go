@@ -36,14 +36,14 @@ func (this *Redirect) MaxArgs() int {
 	return ONE_ARG
 }
 
-func (this *Redirect) ExecCommand(args []string) (int, string) {
+func (this *Redirect) ExecCommand(args []string) (errors.ErrorCode, string) {
 	/* Command to load a file into the shell.
 	 */
 	if len(args) > this.MaxArgs() {
-		return errors.TOO_MANY_ARGS, ""
+		return errors.E_SHELL_TOO_MANY_ARGS, ""
 
 	} else if len(args) < this.MinArgs() {
-		return errors.TOO_FEW_ARGS, ""
+		return errors.E_SHELL_TOO_FEW_ARGS, ""
 	} else {
 		if strings.ToLower(args[0]) == "off" {
 			FILE_RW_MODE = false
@@ -61,7 +61,7 @@ func (this *Redirect) ExecCommand(args []string) (int, string) {
 	return 0, ""
 }
 
-func (this *Redirect) PrintHelp(desc bool) (int, string) {
+func (this *Redirect) PrintHelp(desc bool) (errors.ErrorCode, string) {
 	_, werr := io.WriteString(W, HREDIRECT)
 	if desc {
 		err_code, err_str := printDesc(this.Name())
@@ -71,7 +71,7 @@ func (this *Redirect) PrintHelp(desc bool) (int, string) {
 	}
 	_, werr = io.WriteString(W, "\n")
 	if werr != nil {
-		return errors.WRITER_OUTPUT, werr.Error()
+		return errors.E_SHELL_WRITER_OUTPUT, werr.Error()
 	}
 	return 0, ""
 }

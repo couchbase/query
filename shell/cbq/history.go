@@ -19,7 +19,7 @@ import (
 	"github.com/couchbase/query/shell/liner"
 )
 
-func LoadHistory(liner *liner.State, dir string) (int, string) {
+func LoadHistory(liner *liner.State, dir string) (errors.ErrorCode, string) {
 	if dir != "" {
 
 		path := command.GetPath(dir, command.HISTFILE)
@@ -36,7 +36,7 @@ func LoadHistory(liner *liner.State, dir string) (int, string) {
 	return 0, ""
 }
 
-func UpdateHistory(liner *liner.State, dir, line string) (int, string) {
+func UpdateHistory(liner *liner.State, dir, line string) (errors.ErrorCode, string) {
 	liner.AppendHistory(line)
 	if dir != "" {
 		path := command.GetPath(dir, command.HISTFILE)
@@ -49,12 +49,12 @@ func UpdateHistory(liner *liner.State, dir, line string) (int, string) {
 	return 0, ""
 }
 
-func WriteHistoryToFile(liner *liner.State, path string) (int, string) {
+func WriteHistoryToFile(liner *liner.State, path string) (errors.ErrorCode, string) {
 
 	var err error
 	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
-		return errors.FILE_OPEN, err.Error()
+		return errors.E_SHELL_OPEN_FILE, err.Error()
 	}
 
 	defer f.Close()
@@ -62,18 +62,18 @@ func WriteHistoryToFile(liner *liner.State, path string) (int, string) {
 	writer := bufio.NewWriter(f)
 	_, err = liner.WriteHistory(writer)
 	if err != nil {
-		return errors.WRITE_FILE, err.Error()
+		return errors.E_SHELL_WRITE_FILE, err.Error()
 	} else {
 		err = writer.Flush()
 		if err != nil {
-			return errors.WRITER_OUTPUT, err.Error()
+			return errors.E_SHELL_WRITER_OUTPUT, err.Error()
 		}
 	}
 	return 0, ""
 
 }
 
-func ReadHistoryFromFile(liner *liner.State, path string) (int, string) {
+func ReadHistoryFromFile(liner *liner.State, path string) (errors.ErrorCode, string) {
 
 	var err error
 	f, err := os.Open(path)
@@ -81,11 +81,11 @@ func ReadHistoryFromFile(liner *liner.State, path string) (int, string) {
 		if os.IsNotExist(err) {
 			f, err = os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
 			if err != nil {
-				return errors.FILE_OPEN, err.Error()
+				return errors.E_SHELL_OPEN_FILE, err.Error()
 			}
 
 		} else {
-			return errors.FILE_OPEN, err.Error()
+			return errors.E_SHELL_OPEN_FILE, err.Error()
 		}
 	}
 
@@ -101,7 +101,7 @@ func ReadHistoryFromFile(liner *liner.State, path string) (int, string) {
 	}
 
 	if err != nil {
-		return errors.READ_FILE, err.Error()
+		return errors.E_SHELL_READ_FILE, err.Error()
 	}
 
 	return 0, ""

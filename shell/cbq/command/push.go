@@ -38,7 +38,7 @@ func (this *Push) MaxArgs() int {
 	return MAX_ARGS
 }
 
-func (this *Push) ExecCommand(args []string) (int, string) {
+func (this *Push) ExecCommand(args []string) (errors.ErrorCode, string) {
 	/* Command to set the value of the given parameter to
 	   the input value. The top value of the parameter stack
 	   is modified. If the command contains no input argument
@@ -46,10 +46,10 @@ func (this *Push) ExecCommand(args []string) (int, string) {
 	*/
 
 	if len(args) > this.MaxArgs() {
-		return errors.TOO_MANY_ARGS, ""
+		return errors.E_SHELL_TOO_MANY_ARGS, ""
 
 	} else if len(args) == 1 {
-		return errors.TOO_FEW_ARGS, ""
+		return errors.E_SHELL_TOO_FEW_ARGS, ""
 
 	} else if len(args) == 0 {
 		/* For \PUSH with no input arguments, push the top value
@@ -80,7 +80,7 @@ func (this *Push) ExecCommand(args []string) (int, string) {
 	return 0, ""
 }
 
-func (this *Push) PrintHelp(desc bool) (int, string) {
+func (this *Push) PrintHelp(desc bool) (errors.ErrorCode, string) {
 	_, werr := io.WriteString(W, HPUSH)
 	if desc {
 		err_code, err_str := printDesc(this.Name())
@@ -90,7 +90,7 @@ func (this *Push) PrintHelp(desc bool) (int, string) {
 	}
 	_, werr = io.WriteString(W, "\n")
 	if werr != nil {
-		return errors.WRITER_OUTPUT, werr.Error()
+		return errors.E_SHELL_WRITER_OUTPUT, werr.Error()
 	}
 	return 0, ""
 }
@@ -98,7 +98,7 @@ func (this *Push) PrintHelp(desc bool) (int, string) {
 /* Push value from the Top of the stack onto the parameter stack.
    This is used by the \PUSH command with no arguments.
 */
-func Pushparam_Helper(param map[string]*Stack, isrestp bool, isnamep bool) (int, string) {
+func Pushparam_Helper(param map[string]*Stack, isrestp bool, isnamep bool) (errors.ErrorCode, string) {
 	for name, v := range param {
 		t, err_code, err_string := v.Top()
 		if err_code != 0 {
@@ -138,7 +138,7 @@ func Pushparam_Helper(param map[string]*Stack, isrestp bool, isnamep bool) (int,
 
 					ac, err := json.Marshal(creds)
 					if err != nil {
-						return errors.JSON_MARSHAL, ""
+						return errors.E_SHELL_JSON_MARSHAL, ""
 					}
 					val = string(ac)
 				}

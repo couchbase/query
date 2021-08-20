@@ -35,23 +35,23 @@ func (this *Version) MaxArgs() int {
 	return ZERO_ARGS
 }
 
-func (this *Version) ExecCommand(args []string) (int, string) {
+func (this *Version) ExecCommand(args []string) (errors.ErrorCode, string) {
 	/* Print the shell version. If the command contains an input
 	   argument then throw an error.
 	*/
 	if len(args) != 0 {
-		return errors.TOO_MANY_ARGS, ""
+		return errors.E_SHELL_TOO_MANY_ARGS, ""
 	} else {
 		_, werr := io.WriteString(W, NewMessage(VERSIONMSG, SHELL_VERSION)+"\n")
 		_, werr = io.WriteString(W, SERVERVERSIONMSG)
 		if werr != nil {
-			return errors.WRITER_OUTPUT, werr.Error()
+			return errors.E_SHELL_WRITER_OUTPUT, werr.Error()
 		}
 	}
 	return 0, ""
 }
 
-func (this *Version) PrintHelp(desc bool) (int, string) {
+func (this *Version) PrintHelp(desc bool) (errors.ErrorCode, string) {
 	_, werr := io.WriteString(W, HVERSION)
 	if desc {
 		err_code, err_str := printDesc(this.Name())
@@ -61,7 +61,7 @@ func (this *Version) PrintHelp(desc bool) (int, string) {
 	}
 	_, werr = io.WriteString(W, "\n")
 	if werr != nil {
-		return errors.WRITER_OUTPUT, werr.Error()
+		return errors.E_SHELL_WRITER_OUTPUT, werr.Error()
 	}
 	return 0, ""
 }

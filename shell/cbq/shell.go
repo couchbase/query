@@ -469,7 +469,7 @@ func main() {
 
 	args := flag.Args()
 	if len(args) > 1 {
-		s_err := command.HandleError(errors.CMD_LINE_ARG, "")
+		s_err := command.HandleError(errors.E_SHELL_CMD_LINE_ARGS, "")
 		command.PrintError(s_err)
 		os.Exit(1)
 	} else {
@@ -482,7 +482,7 @@ func main() {
 	n1ql.SetIsAnalytics(analyticsFlag)
 
 	// call command.ParseURL()
-	var errCode int
+	var errCode errors.ErrorCode
 	var errStr string
 	var pURL *command.UrlRes
 
@@ -520,7 +520,7 @@ func main() {
 
 		if err == nil {
 			if string(password) == "" {
-				s_err := command.HandleError(errors.INVALID_PASSWORD, "")
+				s_err := command.HandleError(errors.E_SHELL_INVALID_PASSWORD, "")
 				command.PrintError(s_err)
 				os.Exit(1)
 			} else {
@@ -528,7 +528,7 @@ func main() {
 				// or ctrl chars.
 				for _, c := range bytes.Runes(password) {
 					if !unicode.IsPrint(c) {
-						s_err := command.HandleError(errors.INVALID_PASSWORD, "")
+						s_err := command.HandleError(errors.E_SHELL_INVALID_PASSWORD, "")
 						command.PrintError(s_err)
 						os.Exit(1)
 					}
@@ -540,7 +540,7 @@ func main() {
 				n1ql.SetUsernamePassword(userFlag, string(password))
 			}
 		} else {
-			s_err := command.HandleError(errors.INVALID_PASSWORD, err.Error())
+			s_err := command.HandleError(errors.E_SHELL_INVALID_PASSWORD, err.Error())
 			command.PrintError(s_err)
 			os.Exit(1)
 		}
@@ -548,7 +548,7 @@ func main() {
 		// If the -u option isnt specified and the -p option is specified
 		// then Invalid Username error.
 		if pwdFlag != "" {
-			s_err := command.HandleError(errors.INVALID_USERNAME, "")
+			s_err := command.HandleError(errors.E_SHELL_INVALID_USERNAME, "")
 			command.PrintError(s_err)
 			os.Exit(1)
 		}
@@ -568,7 +568,7 @@ func main() {
 			_, werr := io.WriteString(command.W, command.STARTUPCREDS)
 
 			if werr != nil {
-				s_err := command.HandleError(errors.WRITER_OUTPUT, werr.Error())
+				s_err := command.HandleError(errors.E_SHELL_WRITER_OUTPUT, werr.Error())
 				command.PrintError(s_err)
 			}
 		}
@@ -598,7 +598,7 @@ func main() {
 		ac, err := json.Marshal(creds)
 		if err != nil {
 			//Error while Marshalling
-			s_err := command.HandleError(errors.JSON_MARSHAL, err.Error())
+			s_err := command.HandleError(errors.E_SHELL_JSON_MARSHAL, err.Error())
 			command.PrintError(s_err)
 			os.Exit(1)
 		}
@@ -634,7 +634,7 @@ func main() {
 		SERVICE_URL = serverFlag
 		command.SERVICE_URL = serverFlag
 		if pingerr != nil {
-			s_err := command.HandleError(errors.CONNECTION_REFUSED, pingerr.Error())
+			s_err := command.HandleError(errors.E_SHELL_CONNECTION_REFUSED, pingerr.Error())
 			command.PrintError(s_err)
 			serverFlag = ""
 			command.SERVICE_URL = ""
@@ -648,7 +648,7 @@ func main() {
 			s := command.NewMessage(command.STARTUP, fmt.Sprintf("%v", serverFlag)) + command.EXITMSG
 			_, werr := io.WriteString(command.W, s)
 			if werr != nil {
-				s_err := command.HandleError(errors.WRITER_OUTPUT, werr.Error())
+				s_err := command.HandleError(errors.E_SHELL_WRITER_OUTPUT, werr.Error())
 				command.PrintError(s_err)
 			}
 		}

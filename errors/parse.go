@@ -18,13 +18,13 @@ func NewParseSyntaxError(e error, msg string) Error {
 	case Error: // if given error is already an Error, just return it:
 		return e
 	default:
-		return &err{level: EXCEPTION, ICode: 3000, IKey: "parse.syntax_error", ICause: e,
+		return &err{level: EXCEPTION, ICode: E_PARSE_SYNTAX, IKey: "parse.syntax_error", ICause: e,
 			InternalMsg: msg, InternalCaller: CallerN(1)}
 	}
 }
 
 // An error (albeit always text in another error) so that we can make use of translation
 func NewErrorContext(line, column int) Error {
-	return &err{level: EXCEPTION, ICode: 3005, IKey: "expression.error.context", ICause: nil,
+	return &err{level: EXCEPTION, ICode: E_ERROR_CONTEXT, IKey: "expression.error.context", ICause: nil,
 		InternalMsg: fmt.Sprintf(" (near line %d, column %d)", line, column), InternalCaller: CallerN(1)}
 }

@@ -13,6 +13,6 @@ import (
 )
 
 func NewIndexScanSizeError(size int64) Error {
-	return &err{level: EXCEPTION, ICode: 14000, IKey: "datastore.index.scan_size_error",
+	return &err{level: EXCEPTION, ICode: E_INDEX_SCAN_SIZE, IKey: "datastore.index.scan_size_error",
 		InternalMsg: fmt.Sprintf("Unacceptable size for index scan: %d", size), InternalCaller: CallerN(1)}
 }

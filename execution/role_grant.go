@@ -102,7 +102,7 @@ func getRoles(node roleSource) ([]datastore.Role, errors.Error) {
 
 						// we still want to be able to grant privileges on a bucket even
 						// if it's missing a default collection
-						if err != nil && len(parts) == 2 && err.Code() == errors.DS_NO_DEFAULT_COLLECTION {
+						if err != nil && len(parts) == 2 && err.Code() == errors.E_BUCKET_NO_DEFAULT_COLLECTION {
 							bucket, _ := datastore.GetBucket(parts...)
 							if bucket == nil {
 								return nil, errors.NewNoSuchBucketError(ks.FullName())

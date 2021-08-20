@@ -39,13 +39,13 @@ func (this *Pop) MaxArgs() int {
 	return ONE_ARG
 }
 
-func (this *Pop) ExecCommand(args []string) (int, string) {
+func (this *Pop) ExecCommand(args []string) (errors.ErrorCode, string) {
 
 	if len(args) > this.MaxArgs() {
-		return errors.TOO_MANY_ARGS, ""
+		return errors.E_SHELL_TOO_MANY_ARGS, ""
 
 	} else if len(args) < this.MinArgs() {
-		return errors.TOO_FEW_ARGS, ""
+		return errors.E_SHELL_TOO_FEW_ARGS, ""
 
 	} else if len(args) == 0 {
 		/* For \Pop with no input arguments, Pop the top value
@@ -219,7 +219,7 @@ func (this *Pop) ExecCommand(args []string) (int, string) {
 	return 0, ""
 }
 
-func (this *Pop) PrintHelp(desc bool) (int, string) {
+func (this *Pop) PrintHelp(desc bool) (errors.ErrorCode, string) {
 	_, werr := io.WriteString(W, HPOP)
 	if desc {
 		err_code, err_str := printDesc(this.Name())
@@ -229,7 +229,7 @@ func (this *Pop) PrintHelp(desc bool) (int, string) {
 	}
 	_, werr = io.WriteString(W, "\n")
 	if werr != nil {
-		return errors.WRITER_OUTPUT, werr.Error()
+		return errors.E_SHELL_WRITER_OUTPUT, werr.Error()
 	}
 	return 0, ""
 }
@@ -237,7 +237,7 @@ func (this *Pop) PrintHelp(desc bool) (int, string) {
 /* Pop the top value of the parameter stack.
    This is used by the \POP command with no arguments.
 */
-func Popparam_Helper(param map[string]*Stack, isrestp bool, isnamep bool) (int, string) {
+func Popparam_Helper(param map[string]*Stack, isrestp bool, isnamep bool) (errors.ErrorCode, string) {
 	for name, val := range param {
 		_, err_code, err_str := val.Pop()
 
@@ -266,7 +266,7 @@ func Popparam_Helper(param map[string]*Stack, isrestp bool, isnamep bool) (int, 
 	return 0, ""
 }
 
-func setNewParamPop(name string, paramst *Stack) (int, string) {
+func setNewParamPop(name string, paramst *Stack) (errors.ErrorCode, string) {
 	newval, err_code, err_str := paramst.Top()
 	if err_code != 0 {
 		return err_code, err_str
@@ -291,7 +291,7 @@ func setNewParamPop(name string, paramst *Stack) (int, string) {
 
 		ac, err := json.Marshal(creds)
 		if err != nil {
-			return errors.JSON_MARSHAL, ""
+			return errors.E_SHELL_JSON_MARSHAL, ""
 		}
 		nval = string(ac)
 	}

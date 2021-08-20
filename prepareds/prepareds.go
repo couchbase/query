@@ -221,7 +221,7 @@ func encodeName(name string, queryContext string) string {
 func (this *preparedCache) GetPlan(name, text, namespace string, context *planner.PrepareContext) (*plan.Prepared, errors.Error) {
 	prep, err := getPrepared(name, context.QueryContext(), context.DeltaKeyspaces(), OPT_VERIFY, nil)
 	if err != nil {
-		if err.Code() == errors.NO_SUCH_PREPARED {
+		if err.Code() == errors.E_NO_SUCH_PREPARED {
 			return nil, nil
 		}
 		return nil, err
@@ -350,7 +350,7 @@ func GetAutoPreparePlan(name, text, namespace string, context *planner.PrepareCo
 	// have a new index no other planning will be necessary
 	prep, err := getPrepared(name, "", context.DeltaKeyspaces(), OPT_TRACK|OPT_METACHECK, nil)
 	if err != nil {
-		if err.Code() != errors.NO_SUCH_PREPARED {
+		if err.Code() != errors.E_NO_SUCH_PREPARED {
 			logging.Infof("Auto Prepare plan fetching failed with %v", err)
 		}
 		return nil

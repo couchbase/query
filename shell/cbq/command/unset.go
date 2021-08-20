@@ -38,15 +38,15 @@ func (this *Unset) MaxArgs() int {
 	return ONE_ARG
 }
 
-func (this *Unset) ExecCommand(args []string) (int, string) {
+func (this *Unset) ExecCommand(args []string) (errors.ErrorCode, string) {
 	/* Command to Unset the value of the given parameter.
 	 */
 
 	if len(args) > this.MaxArgs() {
-		return errors.TOO_MANY_ARGS, ""
+		return errors.E_SHELL_TOO_MANY_ARGS, ""
 
 	} else if len(args) < this.MinArgs() {
-		return errors.TOO_FEW_ARGS, ""
+		return errors.E_SHELL_TOO_FEW_ARGS, ""
 
 	} else {
 		//Check what kind of parameter needs to be Unset.
@@ -133,7 +133,7 @@ func (this *Unset) ExecCommand(args []string) (int, string) {
 	return 0, ""
 }
 
-func (this *Unset) PrintHelp(desc bool) (int, string) {
+func (this *Unset) PrintHelp(desc bool) (errors.ErrorCode, string) {
 	_, werr := io.WriteString(W, HUNSET)
 	if desc {
 		err_code, err_str := printDesc(this.Name())
@@ -143,7 +143,7 @@ func (this *Unset) PrintHelp(desc bool) (int, string) {
 	}
 	_, werr = io.WriteString(W, "\n")
 	if werr != nil {
-		return errors.WRITER_OUTPUT, werr.Error()
+		return errors.E_SHELL_WRITER_OUTPUT, werr.Error()
 	}
 	return 0, ""
 }

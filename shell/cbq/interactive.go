@@ -49,7 +49,7 @@ func handleOPModeFlag(outputFile **os.File, prevFile *string) {
 		*outputFile, err = os.OpenFile(command.FILE_OUTPUT, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
 		command.SetDispVal("", "")
 		if err != nil {
-			s_err := command.HandleError(errors.FILE_OPEN, err.Error())
+			s_err := command.HandleError(errors.E_SHELL_OPEN_FILE, err.Error())
 			command.PrintError(s_err)
 		}
 
@@ -68,7 +68,7 @@ func handleIPModeFlag(liner **liner.State) {
 		if command.FILE_RW_MODE == true {
 			_, werr := io.WriteString(command.W, input_command+"\n")
 			if werr != nil {
-				s_err := command.HandleError(errors.WRITER_OUTPUT, werr.Error())
+				s_err := command.HandleError(errors.E_SHELL_WRITER_OUTPUT, werr.Error())
 				command.PrintError(s_err)
 			}
 		}
@@ -108,7 +108,7 @@ func handleScriptFlag(liner **liner.State) {
 			if command.FILE_RW_MODE == true {
 				_, werr := io.WriteString(command.W, scriptFlag[i]+"\n")
 				if werr != nil {
-					s_err := command.HandleError(errors.WRITER_OUTPUT, werr.Error())
+					s_err := command.HandleError(errors.E_SHELL_WRITER_OUTPUT, werr.Error())
 					command.PrintError(s_err)
 				}
 			}
@@ -116,7 +116,7 @@ func handleScriptFlag(liner **liner.State) {
 			if !command.QUIET {
 				_, werr := io.WriteString(command.W, "\n "+scriptFlag[i]+"\n")
 				if werr != nil {
-					s_err := command.HandleError(errors.WRITER_OUTPUT, werr.Error())
+					s_err := command.HandleError(errors.E_SHELL_WRITER_OUTPUT, werr.Error())
 					command.PrintError(s_err)
 				}
 			}
@@ -130,7 +130,7 @@ func handleScriptFlag(liner **liner.State) {
 				if *errorExitFlag {
 					_, werr := io.WriteString(command.W, command.EXITONERR)
 					if werr != nil {
-						s_err = command.HandleError(errors.WRITER_OUTPUT, werr.Error())
+						s_err = command.HandleError(errors.E_SHELL_WRITER_OUTPUT, werr.Error())
 						command.PrintError(s_err)
 					}
 					(*liner).Close()
@@ -166,7 +166,7 @@ func HandleInteractiveMode(prompt string) {
 	defer outputFile.Close()
 
 	// Find the HOME environment variable using GetHome
-	var err_code = 0
+	var err_code = errors.E_OK
 	var err_str = ""
 	homeDir, err_code, err_str = command.GetHome()
 	if err_code != 0 {
@@ -271,7 +271,7 @@ func HandleInteractiveMode(prompt string) {
 				if command.FILE_RW_MODE == true {
 					_, werr := io.WriteString(command.W, "\n"+inputString+"\n")
 					if werr != nil {
-						s_err := command.HandleError(errors.WRITER_OUTPUT, werr.Error())
+						s_err := command.HandleError(errors.E_SHELL_WRITER_OUTPUT, werr.Error())
 						command.PrintError(s_err)
 					}
 				}
@@ -282,7 +282,7 @@ func HandleInteractiveMode(prompt string) {
 
 				if err_code != 0 {
 					s_err := command.HandleError(err_code, err_string)
-					if err_code != errors.DRIVER_QUERY {
+					if err_code != errors.E_SHELL_DRIVER_QUERY_METHOD {
 						// Dont print the error for query errors since we want to print the result.
 						// Print all other errors
 						command.PrintError(s_err)
@@ -293,7 +293,7 @@ func HandleInteractiveMode(prompt string) {
 							first = true
 							_, werr := io.WriteString(command.W, command.EXITONERR)
 							if werr != nil {
-								s_err = command.HandleError(errors.WRITER_OUTPUT, werr.Error())
+								s_err = command.HandleError(errors.E_SHELL_WRITER_OUTPUT, werr.Error())
 								command.PrintError(s_err)
 							}
 							liner.Close()
@@ -353,7 +353,7 @@ func redirectTo(prevFile, prevreset, prevfgRed string) (string, *os.File) {
 
 			command.SetDispVal("", "")
 			if err != nil {
-				s_err := command.HandleError(errors.FILE_OPEN, err.Error())
+				s_err := command.HandleError(errors.E_SHELL_OPEN_FILE, err.Error())
 				command.PrintError(s_err)
 				return prevFile, nil
 			} else if command.FILE_APPEND_MODE && !quietFlag {

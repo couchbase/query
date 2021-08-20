@@ -37,21 +37,21 @@ func (this *Refresh_cluster_map) MaxArgs() int {
 	return ZERO_ARGS
 }
 
-func (this *Refresh_cluster_map) ExecCommand(args []string) (int, string) {
+func (this *Refresh_cluster_map) ExecCommand(args []string) (errors.ErrorCode, string) {
 	if len(args) != 0 {
-		return errors.TOO_MANY_ARGS, ""
+		return errors.E_SHELL_TOO_MANY_ARGS, ""
 	} else {
 		// REFRESH LOGIC HERE
 		// Set new Service URL and then Ping
 		err := Ping(REFRESH_URL)
 		if err != nil {
-			return errors.ERROR_ON_REFRESH, err.Error()
+			return errors.E_SHELL_ON_REFRESH, err.Error()
 		}
 	}
 	return 0, ""
 }
 
-func (this *Refresh_cluster_map) PrintHelp(desc bool) (int, string) {
+func (this *Refresh_cluster_map) PrintHelp(desc bool) (errors.ErrorCode, string) {
 	_, werr := io.WriteString(W, HREFRESH_CLUSTERMAP)
 	if desc {
 		err_code, err_str := printDesc(this.Name())
@@ -61,7 +61,7 @@ func (this *Refresh_cluster_map) PrintHelp(desc bool) (int, string) {
 	}
 	_, werr = io.WriteString(W, "\n")
 	if werr != nil {
-		return errors.WRITER_OUTPUT, werr.Error()
+		return errors.E_SHELL_WRITER_OUTPUT, werr.Error()
 	}
 	return 0, ""
 }

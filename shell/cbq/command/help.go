@@ -36,13 +36,13 @@ func (this *Help) MaxArgs() int {
 	return MAX_ARGS
 }
 
-func (this *Help) ExecCommand(args []string) (int, string) {
+func (this *Help) ExecCommand(args []string) (errors.ErrorCode, string) {
 	/* Input Command : \HELP;
 	   Print Help information for all commands. */
 	if len(args) == 0 {
 		_, werr := io.WriteString(W, HELPMSG)
 		if werr != nil {
-			return errors.WRITER_OUTPUT, werr.Error()
+			return errors.E_SHELL_WRITER_OUTPUT, werr.Error()
 		}
 		num := 0
 
@@ -75,7 +75,7 @@ func (this *Help) ExecCommand(args []string) (int, string) {
 					return err_code, err_str
 				}
 			} else {
-				return errors.NO_SUCH_COMMAND, ""
+				return errors.E_SHELL_NO_SUCH_COMMAND, ""
 			}
 		}
 
@@ -83,7 +83,7 @@ func (this *Help) ExecCommand(args []string) (int, string) {
 	return 0, ""
 }
 
-func (this *Help) PrintHelp(desc bool) (int, string) {
+func (this *Help) PrintHelp(desc bool) (errors.ErrorCode, string) {
 	_, werr := io.WriteString(W, HHELP)
 	if desc {
 		err_code, err_str := printDesc(this.Name())
@@ -93,7 +93,7 @@ func (this *Help) PrintHelp(desc bool) (int, string) {
 	}
 	_, werr = io.WriteString(W, "\n")
 	if werr != nil {
-		return errors.WRITER_OUTPUT, werr.Error()
+		return errors.E_SHELL_WRITER_OUTPUT, werr.Error()
 	}
 	return 0, ""
 }

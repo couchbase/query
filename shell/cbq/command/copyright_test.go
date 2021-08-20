@@ -26,7 +26,7 @@ func TestCopyright(t *testing.T) {
 
 	errCode, errStr := copyright.ExecCommand(args)
 
-	if errCode == errors.TOO_MANY_ARGS {
+	if errCode == errors.E_SHELL_TOO_MANY_ARGS {
 		t.Logf("Correctly evaluated error: Too manay args.")
 	} else {
 		t.Error("The max number of args for \\Copyright is 0.")

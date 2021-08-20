@@ -94,13 +94,13 @@ func writeError(w http.ResponseWriter, err errors.Error) int {
 
 func mapErrorToHttpStatus(err errors.Error) int {
 	switch err.Code() {
-	case errors.ADMIN_AUTH_ERROR:
+	case errors.E_ADMIN_AUTH:
 		return http.StatusUnauthorized
-	case errors.ADMIN_SSL_NOT_ENABLED:
+	case errors.E_ADMIN_SSL_NOT_ENABLED:
 		return http.StatusNotFound
-	case errors.DS_AUTH_ERROR:
+	case errors.E_DATASTORE_AUTHORIZATION:
 		return http.StatusUnauthorized
-	case errors.ADMIN_CREDS_ERROR:
+	case errors.E_ADMIN_CREDS:
 		return http.StatusBadRequest
 	default:
 		return http.StatusInternalServerError

@@ -678,28 +678,28 @@ func buildAuditEntries(eventTypeId uint32, event Auditable, auditInfo *datastore
 	return entries
 }
 
-var AUTH_ERRORS = map[int32]bool{
-	errors.ADMIN_CONN_ERROR:                  true,
-	errors.ADMIN_AUTH_ERROR:                  true,
-	errors.ADMIN_SSL_NOT_ENABLED:             true,
-	errors.ADMIN_CREDS_ERROR:                 true,
-	errors.DS_AUTH_ERROR:                     true,
-	errors.DS_ROLES_ERROR:                    true,
-	errors.DS_INSUFFICIENT_CREDS:             true,
-	errors.DS_CB_CONN_ERROR:                  true,
-	errors.DS_CB_INIT_CBAUTH_ERROR:           true,
-	errors.DS_CB_SEC_CONFIG_ERROR:            true,
-	errors.DS_SYS_ROLE_ERROR:                 true,
-	errors.DS_SYS_UNABLE_TO_UPDATE_USER_INFO: true,
-	errors.DS_SYS_INSUFFICIENT_PERMISSION:    true,
-	errors.EXE_USER_NOT_FOUND:                true,
-	errors.EXE_ROLE_REQUIRES_KEYSPACE:        true,
-	errors.EXE_ROLE_TAKES_NO_KEYSPACE:        true,
-	errors.EXE_ROLE_NOT_FOUND:                true,
-	errors.EXE_ROLE_ALREADY_PRESENT:          true,
-	errors.EXE_ROLE_NOT_PRESENT:              true,
-	errors.EXE_NEW_USER_NO_ROLES:             true,
-	errors.NODE_ACCESS_ERR:                   true}
+var AUTH_ERRORS = map[errors.ErrorCode]bool{
+	errors.E_ADMIN_CONNECTION:                   true,
+	errors.E_ADMIN_AUTH:                         true,
+	errors.E_ADMIN_SSL_NOT_ENABLED:              true,
+	errors.E_ADMIN_CREDS:                        true,
+	errors.E_DATASTORE_AUTHORIZATION:            true,
+	errors.E_DATASTORE_UNABLE_TO_RETRIEVE_ROLES: true,
+	errors.E_DATASTORE_INSUFFICIENT_CREDENTIALS: true,
+	errors.E_CB_CONNECTION:                      true,
+	errors.E_UNABLE_TO_INIT_CB_AUTH:             true,
+	errors.E_CB_SECURITY_CONFIG_NOT_PROVIDED:    true,
+	errors.E_SYSTEM_UNABLE_TO_RETRIEVE:          true,
+	errors.E_SYSTEM_UNABLE_TO_UPDATE:            true,
+	errors.E_SYSTEM_FILTERED_ROWS_WARNING:       true,
+	errors.E_USER_NOT_FOUND:                     true,
+	errors.E_ROLE_REQUIRES_KEYSPACE:             true,
+	errors.E_ROLE_TAKES_NO_KEYSPACE:             true,
+	errors.E_ROLE_NOT_FOUND:                     true,
+	errors.E_ROLE_ALREADY_PRESENT:               true,
+	errors.E_ROLE_NOT_PRESENT:                   true,
+	errors.E_USER_WITH_NO_ROLES:                 true,
+	errors.E_NODE_INFO_ACCESS_ERR:               true}
 
 func auditError(err []errors.Error) (finalErr []map[string]interface{}) {
 

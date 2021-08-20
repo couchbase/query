@@ -36,13 +36,15 @@ const (
 	DEBUG
 )
 
+type ErrorCode int32
+
 type Errors []Error
 
 // Error will eventually include code, message key, and internal error
 // object (cause) and message
 type Error interface {
 	error
-	Code() int32
+	Code() ErrorCode
 	TranslationKey() string
 	GetICause() error
 	Level() int
@@ -113,7 +115,7 @@ func NewErrors(es []error, internalMsg string) (errs Errors) {
 }
 
 type err struct {
-	ICode          int32
+	ICode          ErrorCode
 	IKey           string
 	ICause         error
 	InternalMsg    string
@@ -182,7 +184,7 @@ func (e *err) UnmarshalJSON(body []byte) error {
 		return unmarshalErr
 	}
 
-	e.ICode = _unmarshalled.Code
+	e.ICode = ErrorCode(_unmarshalled.Code)
 	e.IKey = _unmarshalled.Key
 	e.InternalMsg = _unmarshalled.Message
 	e.InternalCaller = _unmarshalled.Caller
@@ -206,7 +208,7 @@ func (e *err) IsWarning() bool {
 	return e.level == WARNING
 }
 
-func (e *err) Code() int32 {
+func (e *err) Code() ErrorCode {
 	return e.ICode
 }
 

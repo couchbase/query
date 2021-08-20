@@ -549,7 +549,7 @@ func (this *builder) buildAnsiJoinScan(node *algebra.KeyspaceTerm, onclause, fil
 	if err != nil {
 		switch e := err.(type) {
 		case errors.Error:
-			if e.Code() == errors.NO_ANSI_JOIN &&
+			if e.Code() == errors.E_NO_ANSI_JOIN &&
 				baseKeyspace.DnfPred() != nil && baseKeyspace.Onclause() != nil {
 
 				// did not find an appropriate index path using both

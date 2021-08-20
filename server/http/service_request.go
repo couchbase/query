@@ -229,7 +229,7 @@ func handlePrepared(rv *httpRequest, httpArgs httpRequestArgs, parm string, val 
 	// when the prepared statement can't be found, for backwards
 	// compatibility with older SDKs
 	if util.IsFeatureEnabled(util.GetN1qlFeatureControl(), util.N1QL_ENCODED_PLAN) &&
-		err != nil && err.Code() == errors.NO_SUCH_PREPARED {
+		err != nil && err.Code() == errors.E_NO_SUCH_PREPARED {
 		encoded_plan, plan_err := httpArgs.getString(_ENCODED_PLAN, "")
 		if plan_err == nil && encoded_plan != "" && encoded_plan != prepareds.EmptyPlan {
 			var decoded_plan *plan.Prepared

@@ -12,6 +12,8 @@ import (
 	"io"
 	"math"
 	"sort"
+
+	"github.com/couchbase/query/errors"
 )
 
 const (
@@ -144,7 +146,7 @@ type ShellCommand interface {
 	/* Returns the Maximum number of input arguments allowed by the function */
 	MaxArgs() int
 	/* Method that implements the functionality */
-	ExecCommand(args []string) (int, string)
+	ExecCommand(args []string) (errors.ErrorCode, string)
 	/* Print Help information for command and its usage with an example */
-	PrintHelp(desc bool) (int, string)
+	PrintHelp(desc bool) (errors.ErrorCode, string)
 }

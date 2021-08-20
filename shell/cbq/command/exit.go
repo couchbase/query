@@ -35,7 +35,7 @@ func (this *Exit) MaxArgs() int {
 	return ZERO_ARGS
 }
 
-func (this *Exit) ExecCommand(args []string) (int, string) {
+func (this *Exit) ExecCommand(args []string) (errors.ErrorCode, string) {
 	/* Command to Exit the shell. We set the EXIT flag to true.
 	Once this command is processed, and executequery returns to
 	HandleInteractiveMode, handle errors (if any) and then exit
@@ -43,14 +43,14 @@ func (this *Exit) ExecCommand(args []string) (int, string) {
 	input argument then throw an error.
 	*/
 	if len(args) != 0 {
-		return errors.TOO_MANY_ARGS, ""
+		return errors.E_SHELL_TOO_MANY_ARGS, ""
 	} else {
 		EXIT = true
 	}
 	return 0, ""
 }
 
-func (this *Exit) PrintHelp(desc bool) (int, string) {
+func (this *Exit) PrintHelp(desc bool) (errors.ErrorCode, string) {
 	_, werr := io.WriteString(W, HEXIT)
 	if desc {
 		err_code, err_str := printDesc(this.Name())
@@ -60,7 +60,7 @@ func (this *Exit) PrintHelp(desc bool) (int, string) {
 	}
 	_, werr = io.WriteString(W, "\n")
 	if werr != nil {
-		return errors.WRITER_OUTPUT, werr.Error()
+		return errors.E_SHELL_WRITER_OUTPUT, werr.Error()
 	}
 	return 0, ""
 }

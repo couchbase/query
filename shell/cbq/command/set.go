@@ -37,7 +37,7 @@ func (this *Set) MaxArgs() int {
 	return MAX_ARGS
 }
 
-func (this *Set) ExecCommand(args []string) (int, string) {
+func (this *Set) ExecCommand(args []string) (errors.ErrorCode, string) {
 	/* Command to set the value of the given parameter to
 	   the input value. The top value of the parameter stack
 	   is modified. If the command contains no input argument
@@ -46,7 +46,7 @@ func (this *Set) ExecCommand(args []string) (int, string) {
 	*/
 
 	if len(args) > this.MaxArgs() {
-		return errors.TOO_MANY_ARGS, ""
+		return errors.E_SHELL_TOO_MANY_ARGS, ""
 	} else if len(args) < this.MinArgs() {
 		if len(args) == 0 {
 
@@ -97,11 +97,11 @@ func (this *Set) ExecCommand(args []string) (int, string) {
 			_, werr = io.WriteString(W, "\n")
 
 			if werr != nil {
-				return errors.WRITER_OUTPUT, werr.Error()
+				return errors.E_SHELL_WRITER_OUTPUT, werr.Error()
 			}
 
 		} else {
-			return errors.TOO_FEW_ARGS, ""
+			return errors.E_SHELL_TOO_FEW_ARGS, ""
 		}
 
 	} else {
@@ -114,7 +114,7 @@ func (this *Set) ExecCommand(args []string) (int, string) {
 	return 0, ""
 }
 
-func (this *Set) PrintHelp(desc bool) (int, string) {
+func (this *Set) PrintHelp(desc bool) (errors.ErrorCode, string) {
 	_, werr := io.WriteString(W, HSET)
 	if desc {
 		err_code, err_str := printDesc(this.Name())
@@ -124,7 +124,7 @@ func (this *Set) PrintHelp(desc bool) (int, string) {
 	}
 	_, werr = io.WriteString(W, "\n")
 	if werr != nil {
-		return errors.WRITER_OUTPUT, werr.Error()
+		return errors.E_SHELL_WRITER_OUTPUT, werr.Error()
 	}
 	return 0, ""
 }

@@ -120,8 +120,6 @@ func (m *ServiceMgr) Shutdown() error {
 // /admin/shutdown REST interface to obtain information on the progress of the remote graceful shutdown
 // Using this saves us from having to establish and handle another communication mechanism to feed back state to the master
 
-var ssd = errors.NewServiceShutDownError() // specific shutdown completed error code
-
 func (m *ServiceMgr) GetTaskList(rev service.Revision, cancel service.Cancel) (*service.TaskList, error) {
 	logging.Debuga(func() string { return fmt.Sprintf("ServiceMgr::GetTaskList entry: %v", DecodeRev(rev)) })
 
@@ -153,7 +151,7 @@ func (m *ServiceMgr) GetTaskList(rev service.Revision, cancel service.Cancel) (*
 						Code int32 `json:"code"`
 					}
 					jerr := json.Unmarshal(res, &status)
-					if jerr == nil && status.Code != ssd.Code() {
+					if jerr == nil && errors.ErrorCode(status.Code) != errors.E_SERVICE_SHUT_DOWN {
 						running++
 					} else {
 						e.Opaque = nil

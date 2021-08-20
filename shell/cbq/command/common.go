@@ -45,7 +45,7 @@ func init() {
 	   values.
 	*/
 
-	var err_code int
+	var err_code errors.ErrorCode
 	var err_str string
 	//var werr error
 
@@ -84,7 +84,7 @@ func SetWriter(Wt io.Writer) {
    2. Actual values that can be converted to value.Value using
    the StrToVal method.
 */
-func Resolve(param string) (val value.Value, err_code int, err_str string) {
+func Resolve(param string) (val value.Value, err_code errors.ErrorCode, err_str string) {
 
 	/* Parse the input string to check whether it is a parameter
 	   or a value. If it is a parameter, then we parse it
@@ -101,7 +101,7 @@ func Resolve(param string) (val value.Value, err_code int, err_str string) {
 		key := param[2:]
 		st_val, ok := AliasCommand[key]
 		if !ok {
-			err_code = errors.NO_SUCH_ALIAS
+			err_code = errors.E_SHELL_NO_SUCH_ALIAS
 			err_str = " " + key + " "
 		} else {
 
@@ -116,7 +116,7 @@ func Resolve(param string) (val value.Value, err_code int, err_str string) {
 		key := param[2:]
 		v, ok := NamedParam[key]
 		if !ok {
-			err_code = errors.NO_SUCH_PARAM
+			err_code = errors.E_SHELL_NO_SUCH_PARAM
 			err_str = " " + param + " "
 		} else {
 			val, err_code, err_str = v.Top()
@@ -134,7 +134,7 @@ func Resolve(param string) (val value.Value, err_code int, err_str string) {
 		v, ok := QueryParam[key]
 
 		if !ok {
-			err_code = errors.NO_SUCH_PARAM
+			err_code = errors.E_SHELL_NO_SUCH_PARAM
 			err_str = " " + param + " "
 		} else {
 			val, err_code, err_str = v.Top()
@@ -150,7 +150,7 @@ func Resolve(param string) (val value.Value, err_code int, err_str string) {
 			// Look into our os code - shell expansion for variables.
 			strval := os.Getenv(key)
 			if strings.TrimSpace(strval) == "" {
-				err_code = errors.NO_SUCH_PARAM
+				err_code = errors.E_SHELL_NO_SUCH_PARAM
 				err_str = " " + param + " "
 			} else {
 				val = StrToVal(strval)
@@ -217,7 +217,7 @@ func ValToStr(item value.Value) string {
 }
 
 /* Helper function to push or set a value in a stack. */
-func PushValue_Helper(set bool, param map[string]*Stack, vble, value_ip string) (err_code int, err_str string) {
+func PushValue_Helper(set bool, param map[string]*Stack, vble, value_ip string) (err_code errors.ErrorCode, err_str string) {
 	err_code = 0
 	err_str = ""
 
@@ -230,7 +230,7 @@ func PushValue_Helper(set bool, param map[string]*Stack, vble, value_ip string) 
 
 		//if the input value is a BINARY value, then throw an error.
 		if v.Type() == value.BINARY {
-			return errors.INVALID_INPUT_ARGUMENTS, ""
+			return errors.E_SHELL_INVALID_INPUT_ARGUMENTS, ""
 		}
 
 		//Stack already exists
@@ -257,7 +257,7 @@ func PushValue_Helper(set bool, param map[string]*Stack, vble, value_ip string) 
 }
 
 /* Helper function to pop or unset a value in a stack. */
-func PopValue_Helper(unset bool, param map[string]*Stack, vble string) (err_code int, err_str string) {
+func PopValue_Helper(unset bool, param map[string]*Stack, vble string) (err_code errors.ErrorCode, err_str string) {
 	err_code = 0
 	err_str = ""
 
@@ -276,7 +276,7 @@ func PopValue_Helper(unset bool, param map[string]*Stack, vble string) (err_code
 			//given variable.
 			delete(param, vble)
 		} else {
-			err_code = errors.NO_SUCH_PARAM
+			err_code = errors.E_SHELL_NO_SUCH_PARAM
 			err_str = " " + vble + " "
 		}
 	} else {
@@ -291,7 +291,7 @@ func PopValue_Helper(unset bool, param map[string]*Stack, vble string) (err_code
 				delete(param, vble)
 			}
 		} else {
-			err_code = errors.NO_SUCH_PARAM
+			err_code = errors.E_SHELL_NO_SUCH_PARAM
 			err_str = " " + vble + " "
 		}
 	}
@@ -299,7 +299,7 @@ func PopValue_Helper(unset bool, param map[string]*Stack, vble string) (err_code
 
 }
 
-func ToCreds(credsFlag string) (Credentials, int, string) {
+func ToCreds(credsFlag string) (Credentials, errors.ErrorCode, string) {
 
 	//Handle the input string of credentials.
 	//The string needs to be parsed into a byte array so as to pass to godbc/n1ql.
@@ -315,14 +315,14 @@ func ToCreds(credsFlag string) (Credentials, int, string) {
 		// Make sure the format of the credentials is correct.
 		// If not return an error.
 		if !strings.Contains(i, ":") {
-			return nil, errors.INVALID_CREDENTIAL, ""
+			return nil, errors.E_SHELL_INVALID_CREDENTIAL, ""
 		}
 
 		up := strings.Split(i, ":")
 
 		switch len(up) {
 		case 0, 1:
-			return nil, errors.MISSING_CREDENTIAL, ""
+			return nil, errors.E_SHELL_MISSING_CREDENTIAL, ""
 			//Make sure there are no leading and trailing spaces
 		case 2:
 			up[0] = strings.TrimSpace(up[0])
@@ -336,7 +336,7 @@ func ToCreds(credsFlag string) (Credentials, int, string) {
 		//when processing the username and password.
 		if up[0] == "" && up[1] != "" {
 			// One of the input credentials is incorrect
-			return nil, errors.MISSING_CREDENTIAL, ""
+			return nil, errors.E_SHELL_MISSING_CREDENTIAL, ""
 		} else {
 			creds = append(creds, Credential{"user": up[0], "pass": up[1]})
 		}
@@ -345,7 +345,7 @@ func ToCreds(credsFlag string) (Credentials, int, string) {
 
 }
 
-func PushOrSet(args []string, pushvalue bool) (int, string) {
+func PushOrSet(args []string, pushvalue bool) (errors.ErrorCode, string) {
 
 	// Check what kind of parameter needs to be set or pushed
 	// depending on the pushvalue boolean value.
@@ -357,7 +357,7 @@ func PushOrSet(args []string, pushvalue bool) (int, string) {
 		vble = vble[2:]
 
 		if strings.TrimSpace(vble) == "" {
-			return errors.TOO_FEW_ARGS, ""
+			return errors.E_SHELL_TOO_FEW_ARGS, ""
 		}
 
 		args_str := strings.Join(args[1:], " ")
@@ -384,7 +384,7 @@ func PushOrSet(args []string, pushvalue bool) (int, string) {
 		vble = vble[1:]
 
 		if strings.TrimSpace(vble) == "" {
-			return errors.TOO_FEW_ARGS, ""
+			return errors.E_SHELL_TOO_FEW_ARGS, ""
 		}
 
 		vble = strings.ToLower(vble)
@@ -415,7 +415,7 @@ func PushOrSet(args []string, pushvalue bool) (int, string) {
 
 			ac, err := json.Marshal(creds)
 			if err != nil {
-				return errors.JSON_MARSHAL, ""
+				return errors.E_SHELL_JSON_MARSHAL, ""
 			}
 
 			n1ql.SetQueryParams("creds", string(ac))
@@ -449,7 +449,7 @@ func PushOrSet(args []string, pushvalue bool) (int, string) {
 		vble = vble[1:]
 
 		if strings.TrimSpace(vble) == "" {
-			return errors.TOO_FEW_ARGS, ""
+			return errors.E_SHELL_TOO_FEW_ARGS, ""
 		}
 
 		args_str := strings.Join(args[1:], " ")
@@ -478,14 +478,14 @@ func PushOrSet(args []string, pushvalue bool) (int, string) {
 			}
 		} else if vble == "batch" {
 			if args_str != "on" && args_str != "off" {
-				return errors.BATCH_MODE, ""
+				return errors.E_SHELL_BATCH_MODE, ""
 			}
 			BATCH = args_str
 		} else if vble == "quiet" {
 			var errQ error
 			QUIET, errQ = strconv.ParseBool(args_str)
 			if errQ != nil {
-				return errors.INVALID_INPUT_ARGUMENTS, ""
+				return errors.E_SHELL_INVALID_INPUT_ARGUMENTS, ""
 			}
 		}
 
@@ -498,7 +498,7 @@ func PushOrSet(args []string, pushvalue bool) (int, string) {
 	return 0, ""
 }
 
-func VerifyHistPath(args string) (int, string) {
+func VerifyHistPath(args string) (errors.ErrorCode, string) {
 	//Verify if the value for histfile is valid.
 	//the path is given is relative to the HOME dir.
 	//dir+"/"+HISTFILE ==>
@@ -514,7 +514,7 @@ func VerifyHistPath(args string) (int, string) {
 	//If err then the value for histfile is invalid. Hence return an error.
 	//For this case, the HISTFILE will retain its original value.
 	if err != nil {
-		return errors.FILE_OPEN, err.Error()
+		return errors.E_SHELL_OPEN_FILE, err.Error()
 	} else {
 		HISTFILE = path
 		if !QUIET {
@@ -524,7 +524,7 @@ func VerifyHistPath(args string) (int, string) {
 	return 0, ""
 }
 
-func printDesc(cmdname string) (int, string) {
+func printDesc(cmdname string) (errors.ErrorCode, string) {
 
 	switch cmdname {
 
@@ -601,7 +601,7 @@ func Ping(server string) error {
    try USERPROFILE for windows. If neither is found then
    the cli cant find the history file to read from.
 */
-func GetHome() (homeDir string, err_code int, err_Str string) {
+func GetHome() (homeDir string, err_code errors.ErrorCode, err_Str string) {
 	//Detect OS using the runtime.GOOS
 	if runtime.GOOS == "windows" {
 		homeDir = os.Getenv("USERPROFILE")
@@ -613,7 +613,7 @@ func GetHome() (homeDir string, err_code int, err_Str string) {
 	if homeDir == "" {
 		_, werr := io.WriteString(W, ERRHOME)
 		if werr != nil {
-			return "", errors.WRITER_OUTPUT, werr.Error()
+			return "", errors.E_SHELL_WRITER_OUTPUT, werr.Error()
 		}
 	}
 	return homeDir, 0, ""
@@ -690,7 +690,7 @@ func GetPath(homeDir, inputPath string) (path string) {
 
 }
 
-func printPath(nval string) (int, string) {
+func printPath(nval string) (errors.ErrorCode, string) {
 	if !QUIET {
 		homeDir, err_code, err_str := GetHome()
 		if err_code != 0 {
@@ -706,10 +706,10 @@ func printPath(nval string) (int, string) {
 }
 
 //Use this method to writestring to output.
-func PrintStr(W io.Writer, val string) (int, string) {
+func PrintStr(W io.Writer, val string) (errors.ErrorCode, string) {
 	_, werr := io.WriteString(W, val)
 	if werr != nil {
-		return errors.WRITER_OUTPUT, werr.Error()
+		return errors.E_SHELL_WRITER_OUTPUT, werr.Error()
 	}
 	return 0, ""
 }
@@ -721,7 +721,7 @@ type UrlRes struct {
 }
 
 // Method to return the new value of the server flag based on input url string
-func ParseURL(serverFlag string) (*UrlRes, int, string) {
+func ParseURL(serverFlag string) (*UrlRes, errors.ErrorCode, string) {
 
 	pURL := &UrlRes{serverFlag, "", ""}
 
@@ -742,11 +742,11 @@ func ParseURL(serverFlag string) (*UrlRes, int, string) {
 	//Parse the url
 	parsedURL, err := url.Parse(serverFlag)
 	if err != nil {
-		return pURL, errors.INVALID_URL, err.Error()
+		return pURL, errors.E_SHELL_INVALID_URL, err.Error()
 	}
 
 	if parsedURL.Host == "" {
-		return pURL, errors.INVALID_URL, INVALIDHOST
+		return pURL, errors.E_SHELL_INVALID_URL, INVALIDHOST
 	}
 
 	// Check if the input url is a DNS SRV
@@ -791,10 +791,10 @@ func ParseURL(serverFlag string) (*UrlRes, int, string) {
 		parsedURL.Host = net.JoinHostPort(parsedURL.Host, portNo)
 		// Cannot give port with couchbase:// couchbases://
 		if strings.ToLower(parsedURL.Scheme) == "couchbase" || strings.ToLower(parsedURL.Scheme) == "couchbases" {
-			return pURL, errors.INVALID_URL, INVALIDPORT
+			return pURL, errors.E_SHELL_INVALID_URL, INVALIDPORT
 		} else {
 			if err != nil {
-				return pURL, errors.INVALID_URL, err.Error()
+				return pURL, errors.E_SHELL_INVALID_URL, err.Error()
 			}
 		}
 	}

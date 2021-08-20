@@ -163,7 +163,7 @@ func checkCompleted(val interface{}) (bool, errors.Error) {
 			op = CMP_OP_UPD
 		}
 		err := RequestsCheckQualifier(n, op, v, tag)
-		if err != nil && op == CMP_OP_UPD && err.Code() == errors.ADMIN_QUALIFIER_NOT_SET {
+		if err != nil && op == CMP_OP_UPD && err.Code() == errors.E_COMPLETED_QUALIFIER_NOT_FOUND {
 			err = RequestsCheckQualifier(n, CMP_OP_ADD, v, tag)
 		}
 		if err != nil {
