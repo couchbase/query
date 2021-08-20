@@ -58,18 +58,18 @@ DevStandaloneSetup() {
              cp -rp $JSEVAL $GOPATH/lib
            fi
        fi
-    # gocbcore points to master; gocbcore/v9 points to 9.1.4
+    # gocbcore points to master; gocbcore/v9 points to 9.1.6
        if [[ -d ../gocbcore/v9 ]]
        then
            cd ../gocbcore/v9
-           C=`git log --pretty=oneline --abbrev-commit -n 1|grep -c "v9.1.4"`
+           C=`git log --pretty=oneline --abbrev-commit -n 1|grep -c "v9.1.6"`
            cd -
        else
            C=0
        fi
        if [[ $C -eq 0 ]]
        then
-           (cd ..; rm -rf gocbcore/v9; git clone -b v9.1.4 https://github.com/couchbase/gocbcore.git gocbcore/v9)
+           (cd ..; rm -rf gocbcore/v9; git clone -b v9.1.6 https://github.com/couchbase/gocbcore.git gocbcore/v9)
        fi
     # bleve version
        if [[ ! -d ../../blevesearch/bleve/v2 ]]; then

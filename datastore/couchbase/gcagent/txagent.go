@@ -57,7 +57,11 @@ func (ap *AgentProvider) CreateOrRefreshAgent() error {
 	rootCAs := ap.client.TLSRootCAs()
 	if rootCAs != nil {
 		// Use SSL config
-		config = *ap.client.sslConfig
+		cconfig, cerr := ap.client.sslConfigFn()
+		if cerr != nil {
+			return cerr
+		}
+		config = *cconfig
 		config.UseTLS = true
 		config.TLSRootCAProvider = func() *x509.CertPool {
 			return rootCAs

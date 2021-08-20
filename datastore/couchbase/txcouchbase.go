@@ -725,8 +725,11 @@ func initGocb(s *store) (err errors.Error) {
 	txConfig.Internal.EnableNonFatalGets = true
 	txConfig.Internal.EnableParallelUnstaging = true
 
-	sslHost, sslPort := getSSLHostPort(s)
-	client, cerr := gcagent.NewClient(s.URL(), sslHost, sslPort, certFile)
+	client, cerr := gcagent.NewClient(s.URL(),
+		func() (string, string) {
+			return getSSLHostPort(s)
+		},
+		certFile)
 	s.nslock.Lock()
 	defer s.nslock.Unlock()
 

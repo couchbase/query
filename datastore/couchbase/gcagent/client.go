@@ -11,6 +11,7 @@ package gcagent
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"fmt"
 	"io/ioutil"
 	"strings"
 	"sync"
@@ -67,16 +68,17 @@ func (auth *MemcachedAuthProvider) Certificate(req gocbcore.AuthCertRequest) (*t
 
 // Call this method with a TLS certificate file name to make communication
 type Client struct {
-	config        *gocbcore.AgentConfig
-	sslConfig     *gocbcore.AgentConfig
-	transactions  *gctx.Manager
-	rootCAs       *x509.CertPool
-	agentProvider *AgentProvider
-	mutex         sync.RWMutex
-	atrLocations  map[string]gctx.LostATRLocation
+	config       *gocbcore.AgentConfig
+	transactions *gctx.Manager
+	rootCAs      *x509.CertPool
+	mutex        sync.RWMutex
+	sslConfigFn  SSLConfigFn
+	atrLocations map[string]gctx.LostATRLocation
 }
 
-func NewClient(url, sslHost, sslPort, certFile string) (rv *Client, err error) {
+type SSLConfigFn func() (*gocbcore.AgentConfig, error)
+
+func NewClient(url string, sslHostFn func() (string, string), certFile string) (rv *Client, err error) {
 	var connSpec *connstr.ConnSpec
 
 	rv = &Client{}
@@ -87,19 +89,22 @@ func NewClient(url, sslHost, sslPort, certFile string) (rv *Client, err error) {
 		return nil, err
 	}
 
-	// create SSL agent config file
-	if len(connSpec.Addresses) > 0 {
-		if sslHost == "" {
-			sslHost = connSpec.Addresses[0].Host
+	rv.sslConfigFn = func() (*gocbcore.AgentConfig, error) {
+		// create SSL agent config file
+		sslHost, sslPort := sslHostFn()
+		if len(connSpec.Addresses) > 0 {
+			if sslHost == "" {
+				sslHost = connSpec.Addresses[0].Host
+			}
+			surl := "couchbases://" + sslHost
+			if sslPort != "" {
+				// couchbases schema with custom port will not allowed http bootstrap.
+				surl = "http://" + sslHost + ":" + sslPort
+			}
+			sslConfig, _, err1 := agentConfig(surl, options)
+			return sslConfig, err1
 		}
-		surl := "couchbases://" + sslHost
-		if sslPort != "" {
-			// couchbases schema with custom port will not allowed http bootstrap.
-			surl = "http://" + sslHost + ":" + sslPort
-		}
-		if rv.sslConfig, _, err = agentConfig(surl, options); err != nil {
-			return nil, err
-		}
+		return nil, fmt.Errorf("no ssl address")
 	}
 
 	if certFile != "" {
@@ -109,7 +114,6 @@ func NewClient(url, sslHost, sslPort, certFile string) (rv *Client, err error) {
 	}
 
 	// generic provider
-	rv.agentProvider, err = rv.CreateAgentProvider("")
 	rv.atrLocations = make(map[string]gctx.LostATRLocation, 32)
 
 	return rv, err
@@ -189,22 +193,10 @@ func (c *Client) CreateAgentProvider(bucketName string) (*AgentProvider, error) 
 	return ap, err
 }
 
-func (c *Client) AgentProvider() *AgentProvider {
-	return c.agentProvider
-}
-
-func (c *Client) Agent() *gocbcore.Agent {
-	return c.agentProvider.Agent()
-}
-
 func (c *Client) Close() {
-	if c.agentProvider != nil {
-		c.agentProvider.Close()
-	}
 	if c.transactions != nil {
 		c.transactions.Close()
 	}
-	c.agentProvider = nil
 	c.transactions = nil
 	c.mutex.Lock()
 	c.rootCAs = nil
@@ -222,9 +214,6 @@ func (c *Client) InitTLS(certFile string) error {
 	c.mutex.Lock()
 	c.rootCAs = CA_Pool
 	c.mutex.Unlock()
-	if c.agentProvider != nil {
-		return c.agentProvider.Refresh()
-	}
 	return nil
 }
 
@@ -232,9 +221,6 @@ func (c *Client) ClearTLS() {
 	c.mutex.Lock()
 	c.rootCAs = nil
 	c.mutex.Unlock()
-	if c.agentProvider != nil {
-		c.agentProvider.Refresh()
-	}
 }
 
 func (c *Client) TLSRootCAs() *x509.CertPool {
