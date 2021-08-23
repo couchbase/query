@@ -183,32 +183,14 @@ func AppendUUIDV5(buf []byte, space, data string) ([]byte, error) {
 }
 
 func doUUID(buf, uuid []byte) []byte {
-	buf = appendSlice(buf, uuid[0:4])
+	buf = AppendBytesAsHex(buf, uuid[0:4])
 	buf = append(buf, '-')
-	buf = appendSlice(buf, uuid[4:6])
+	buf = AppendBytesAsHex(buf, uuid[4:6])
 	buf = append(buf, '-')
-	buf = appendSlice(buf, uuid[6:8])
+	buf = AppendBytesAsHex(buf, uuid[6:8])
 	buf = append(buf, '-')
-	buf = appendSlice(buf, uuid[8:10])
+	buf = AppendBytesAsHex(buf, uuid[8:10])
 	buf = append(buf, '-')
-	buf = appendSlice(buf, uuid[10:])
+	buf = AppendBytesAsHex(buf, uuid[10:])
 	return buf
-}
-
-func appendSlice(d, s []byte) []byte {
-	for _, b := range s {
-		b1 := hexNum(b >> 4)
-		b2 := hexNum(b & 0xf)
-		d = append(d, b1, b2)
-	}
-	return d
-}
-
-func hexNum(b byte) byte {
-	if b < 10 {
-		b = b + '0'
-	} else {
-		b = b - 10 + 'a'
-	}
-	return b
 }

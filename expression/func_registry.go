@@ -99,6 +99,9 @@ var _FUNCTIONS = map[string]Function{
 	"field":   &Field{},
 	"slice":   &Slice{},
 
+	// Crypto
+	"hashbytes": &Hashbytes{},
+
 	// Curl
 	"curl": &Curl{},
 
