@@ -62,7 +62,7 @@ DevStandaloneSetup() {
        if [[ -d ../gocbcore/v9 ]]
        then
            cd ../gocbcore/v9
-           C=`git log --pretty=oneline --abbrev-commit -n 1|grep -c "v9.1.6"`
+           C=`git describe --tags|grep -c "v9.1.6"`
            cd -
        else
            C=0
