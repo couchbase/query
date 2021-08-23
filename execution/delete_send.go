@@ -147,15 +147,14 @@ func (this *SendDelete) flushBatch(context *Context) bool {
 
 	this.switchPhase(_SERVTIME)
 
-	dpairs, e := this.keyspace.Delete(pairs, context)
-
+	dpairs, errs := this.keyspace.Delete(pairs, context)
 	this.switchPhase(_EXECTIME)
 
 	// Update mutation count with number of deleted docs:
 	context.AddMutationCount(uint64(len(dpairs)))
 
-	if e != nil {
-		context.Error(e)
+	if len(errs) > 0 {
+		context.Errors(errs)
 	}
 
 	for _, item := range this.batch {

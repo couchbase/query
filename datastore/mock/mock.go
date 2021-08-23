@@ -345,15 +345,11 @@ func (b *keyspace) Indexers() ([]datastore.Indexer, errors.Error) {
 }
 
 func (b *keyspace) Fetch(keys []string, keysMap map[string]value.AnnotatedValue,
-	context datastore.QueryContext, subPaths []string) []errors.Error {
-	var errs []errors.Error
+	context datastore.QueryContext, subPaths []string) (errs errors.Errors) {
 
 	for _, k := range keys {
 		item, e := b.fetchOne(k)
 		if e != nil {
-			if errs == nil {
-				errs = make([]errors.Error, 0, 1)
-			}
 			errs = append(errs, e)
 			continue
 		}
@@ -388,24 +384,24 @@ func genItem(i int, nitems int) (value.AnnotatedValue, errors.Error) {
 	return doc, nil
 }
 
-func (b *keyspace) Insert(inserts []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
+func (b *keyspace) Insert(inserts value.Pairs, context datastore.QueryContext) (value.Pairs, errors.Errors) {
 	// FIXME
-	return nil, errors.NewOtherNotImplementedError(nil, "for Mock datastore")
+	return nil, errors.Errors{errors.NewOtherNotImplementedError(nil, "for Mock datastore")}
 }
 
-func (b *keyspace) Update(updates []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
+func (b *keyspace) Update(updates value.Pairs, context datastore.QueryContext) (value.Pairs, errors.Errors) {
 	// FIXME
-	return nil, errors.NewOtherNotImplementedError(nil, "for Mock datastore")
+	return nil, errors.Errors{errors.NewOtherNotImplementedError(nil, "for Mock datastore")}
 }
 
-func (b *keyspace) Upsert(upserts []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
+func (b *keyspace) Upsert(upserts value.Pairs, context datastore.QueryContext) (value.Pairs, errors.Errors) {
 	// FIXME
-	return nil, errors.NewOtherNotImplementedError(nil, "for Mock datastore")
+	return nil, errors.Errors{errors.NewOtherNotImplementedError(nil, "for Mock datastore")}
 }
 
-func (b *keyspace) Delete(deletes []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
+func (b *keyspace) Delete(deletes value.Pairs, context datastore.QueryContext) (value.Pairs, errors.Errors) {
 	// FIXME
-	return nil, errors.NewOtherNotImplementedError(nil, "for Mock datastore")
+	return nil, errors.Errors{errors.NewOtherNotImplementedError(nil, "for Mock datastore")}
 }
 
 func (b *keyspace) Release(close bool) {

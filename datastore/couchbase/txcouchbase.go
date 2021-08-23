@@ -494,11 +494,11 @@ func (ks *keyspace) txFetch(fullName, qualifiedName, scopeName, collectionName s
 
 func (ks *keyspace) txPerformOp(op MutateOp, qualifiedName, scopeName, collectionName string, collId uint32, pairs value.Pairs,
 	context datastore.QueryContext, txContext *transactions.TranContext) (
-	mPairs value.Pairs, err errors.Error) {
+	mPairs value.Pairs, errs errors.Errors) {
 
-	err = ks.txReady(txContext)
+	err := ks.txReady(txContext)
 	if err != nil {
-		return
+		return nil, append(errs, err)
 	}
 
 	txMutations := txContext.TxMutations().(*TransactionMutations)
@@ -519,7 +519,7 @@ func (ks *keyspace) txPerformOp(op MutateOp, qualifiedName, scopeName, collectio
 			fkeys, fetchMap, context, nil, sdkKvInsert, txContext)
 		_STRING_POOL.Put(fkeys)
 		if len(errs) > 0 {
-			return nil, errs[0]
+			return nil, errs
 		}
 	}
 
@@ -535,7 +535,7 @@ func (ks *keyspace) txPerformOp(op MutateOp, qualifiedName, scopeName, collectio
 		nop := op
 
 		if val != nil && val.Type() == value.BINARY {
-			return nil, errors.NewBinaryDocumentMutationError(_MutateOpNames[op], key)
+			return nil, append(errs, errors.NewBinaryDocumentMutationError(_MutateOpNames[op], key))
 		}
 
 		if op != MOP_DELETE {
@@ -550,7 +550,7 @@ func (ks *keyspace) txPerformOp(op MutateOp, qualifiedName, scopeName, collectio
 				if op == MOP_UPSERT {
 					nop = MOP_UPDATE
 				} else {
-					return nil, errors.NewDuplicateKeyError(key)
+					return nil, append(errs, errors.NewDuplicateKeyError(key))
 				}
 				val = av
 				kv.Value = val
@@ -563,12 +563,12 @@ func (ks *keyspace) txPerformOp(op MutateOp, qualifiedName, scopeName, collectio
 		cas, _, txnMeta, err1 := getMeta(kv.Name, val, must)
 		if err1 == nil && must {
 			if sdkKv && sdkCas != cas {
-				return nil, errors.NewCasMissmatch(_MutateOpNames[op], kv.Name, sdkCas, cas)
+				return nil, append(errs, errors.NewCasMissmatch(_MutateOpNames[op], kv.Name, sdkCas, cas))
 			}
 		}
 
 		if err1 != nil {
-			return nil, errors.NewTransactionError(err1, _MutateOpNames[op])
+			return nil, append(errs, errors.NewTransactionError(err1, _MutateOpNames[op]))
 		}
 
 		if nop == MOP_INSERT {
@@ -580,11 +580,12 @@ func (ks *keyspace) txPerformOp(op MutateOp, qualifiedName, scopeName, collectio
 			key, data, cas, MV_FLAGS_WRITE, uint32(exptime), txnMeta, nil, ks, dataSize)
 
 		if err != nil {
-			return nil, err
+			return nil, append(errs, err)
 		}
 
 		if retCas > 0 && !SetMetaCas(val, retCas) {
-			return nil, errors.NewTransactionError(fmt.Errorf("Setting return cas error"), _MutateOpNames[op])
+			return nil, append(errs, errors.NewTransactionError(fmt.Errorf("Setting return cas error"),
+				_MutateOpNames[op]))
 		}
 
 		// upsert and not already in the fetchMap then add so that same upsert key will make it update in same statement
@@ -601,7 +602,7 @@ func (ks *keyspace) txPerformOp(op MutateOp, qualifiedName, scopeName, collectio
 		// implict transaction write the current batch
 		if terr := txMutations.Write(context.GetReqDeadline()); terr != nil {
 			e, c := errorType(terr, false)
-			return nil, errors.NewWriteTransactionError(e, c)
+			return nil, append(errs, errors.NewWriteTransactionError(e, c))
 		}
 	}
 

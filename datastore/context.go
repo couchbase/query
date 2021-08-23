@@ -64,6 +64,7 @@ type QueryContext interface {
 	Credentials() *auth.Credentials
 	AuthenticatedUsers() []string
 	Warning(errors.Error)
+	Error(errors.Error)
 	GetTxContext() interface{}
 	SetTxContext(tc interface{})
 	Datastore() Datastore
@@ -85,6 +86,9 @@ func (ci *queryContextImpl) AuthenticatedUsers() []string {
 }
 
 func (ci *queryContextImpl) Warning(err errors.Error) {
+}
+
+func (ci *queryContextImpl) Error(err errors.Error) {
 }
 
 func (ci *queryContextImpl) GetReqDeadline() time.Time {

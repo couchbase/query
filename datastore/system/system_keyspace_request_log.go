@@ -67,7 +67,7 @@ func (b *requestLogKeyspace) Indexers() ([]datastore.Indexer, errors.Error) {
 }
 
 func (b *requestLogKeyspace) Fetch(keys []string, keysMap map[string]value.AnnotatedValue,
-	context datastore.QueryContext, subPaths []string) (errs []errors.Error) {
+	context datastore.QueryContext, subPaths []string) (errs errors.Errors) {
 
 	// now that the node name can change in flight, use a consistent one across fetches
 	whoAmI := distributed.RemoteAccess().WhoAmI()
@@ -213,19 +213,7 @@ func (b *requestLogKeyspace) Fetch(keys []string, keysMap map[string]value.Annot
 	return
 }
 
-func (b *requestLogKeyspace) Insert(inserts []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
-	return nil, errors.NewSystemNotSupportedError(nil, "")
-}
-
-func (b *requestLogKeyspace) Update(updates []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
-	return nil, errors.NewSystemNotSupportedError(nil, "")
-}
-
-func (b *requestLogKeyspace) Upsert(upserts []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
-	return nil, errors.NewSystemNotSupportedError(nil, "")
-}
-
-func (b *requestLogKeyspace) Delete(deletes []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
+func (b *requestLogKeyspace) Delete(deletes value.Pairs, context datastore.QueryContext) (value.Pairs, errors.Errors) {
 	var err errors.Error
 
 	// now that the node name can change in flight, use a consistent one across deletes
@@ -255,7 +243,7 @@ func (b *requestLogKeyspace) Delete(deletes []value.Pair, context datastore.Quer
 			if i > 0 {
 				copy(deleted, deletes[0:i-1])
 			}
-			return deleted, err
+			return deleted, errors.Errors{err}
 		}
 	}
 	return deletes, nil

@@ -138,7 +138,7 @@ func (b *keyspaceKeyspace) Indexers() ([]datastore.Indexer, errors.Error) {
 }
 
 func (b *keyspaceKeyspace) Fetch(keys []string, keysMap map[string]value.AnnotatedValue,
-	context datastore.QueryContext, subPaths []string) (errs []errors.Error) {
+	context datastore.QueryContext, subPaths []string) (errs errors.Errors) {
 	var e errors.Error
 	var item value.AnnotatedValue
 
@@ -272,22 +272,6 @@ func (b *keyspaceKeyspace) fetchOneCollection(ns, bn, sn, ks string, context dat
 		}
 	}
 	return nil, err
-}
-
-func (b *keyspaceKeyspace) Insert(inserts []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
-	return nil, errors.NewSystemNotSupportedError(nil, "")
-}
-
-func (b *keyspaceKeyspace) Update(updates []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
-	return nil, errors.NewSystemNotSupportedError(nil, "")
-}
-
-func (b *keyspaceKeyspace) Upsert(upserts []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
-	return nil, errors.NewSystemNotSupportedError(nil, "")
-}
-
-func (b *keyspaceKeyspace) Delete(deletes []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
-	return nil, errors.NewSystemNotSupportedError(nil, "")
 }
 
 func newKeyspacesKeyspace(p *namespace, store datastore.Datastore, name string, skipSystem bool, info bool) (*keyspaceKeyspace, errors.Error) {

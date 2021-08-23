@@ -59,7 +59,7 @@ func (b *dictionaryKeyspace) Indexers() ([]datastore.Indexer, errors.Error) {
 }
 
 func (b *dictionaryKeyspace) Fetch(keys []string, keysMap map[string]value.AnnotatedValue,
-	context datastore.QueryContext, subPaths []string) (errs []errors.Error) {
+	context datastore.QueryContext, subPaths []string) (errs errors.Errors) {
 	for _, k := range keys {
 		itemMap, e := b.fetchOne(k)
 		if e != nil {
@@ -112,19 +112,7 @@ func (b *dictionaryKeyspace) fetchOne(key string) (map[string]interface{}, error
 	return itemMap, nil
 }
 
-func (b *dictionaryKeyspace) Insert(inserts []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
-	return nil, errors.NewSystemNotSupportedError(nil, "")
-}
-
-func (b *dictionaryKeyspace) Update(updates []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
-	return nil, errors.NewSystemNotSupportedError(nil, "")
-}
-
-func (b *dictionaryKeyspace) Upsert(upserts []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
-	return nil, errors.NewSystemNotSupportedError(nil, "")
-}
-
-func (b *dictionaryKeyspace) Delete(deletes []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
+func (b *dictionaryKeyspace) Delete(deletes value.Pairs, context datastore.QueryContext) (value.Pairs, errors.Errors) {
 	for _, pair := range deletes {
 		name := pair.Name
 

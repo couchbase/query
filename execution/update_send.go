@@ -185,15 +185,15 @@ func (this *SendUpdate) flushBatch(context *Context) bool {
 
 	this.switchPhase(_SERVTIME)
 
-	pairs, e := this.keyspace.Update(pairs, context)
+	pairs, errs := this.keyspace.Update(pairs, context)
 
 	this.switchPhase(_EXECTIME)
 
 	// Update mutation count with number of updated docs
 	context.AddMutationCount(uint64(len(pairs)))
 
-	if e != nil {
-		context.Error(e)
+	if len(errs) > 0 {
+		context.Errors(errs)
 	}
 
 	for _, item := range this.batch {

@@ -215,14 +215,14 @@ type Keyspace interface {
 
 	// Used by both SELECT and DML statements
 	Fetch(keys []string, keysMap map[string]value.AnnotatedValue,
-		context QueryContext, subPath []string) []errors.Error // Bulk key-value fetch from this keyspace
+		context QueryContext, subPath []string) errors.Errors // Bulk key-value fetch from this keyspace
 
 	// Used by DML statements
 	// For insert and upsert, nil input keys are replaced with auto-generated keys
-	Insert(inserts []value.Pair, context QueryContext) ([]value.Pair, errors.Error) // Bulk key-value insert into this keyspace
-	Update(updates []value.Pair, context QueryContext) ([]value.Pair, errors.Error) // Bulk key-value updates into this keyspace
-	Upsert(upserts []value.Pair, context QueryContext) ([]value.Pair, errors.Error) // Bulk key-value upserts into this keyspace
-	Delete(deletes []value.Pair, context QueryContext) ([]value.Pair, errors.Error) // Bulk key-value deletes from this keyspace
+	Insert(inserts value.Pairs, context QueryContext) (value.Pairs, errors.Errors) // Bulk key-value insert into this keyspace
+	Update(updates value.Pairs, context QueryContext) (value.Pairs, errors.Errors) // Bulk key-value updates into this keyspace
+	Upsert(upserts value.Pairs, context QueryContext) (value.Pairs, errors.Errors) // Bulk key-value upserts into this keyspace
+	Delete(deletes value.Pairs, context QueryContext) (value.Pairs, errors.Errors) // Bulk key-value deletes from this keyspace
 
 	Flush() errors.Error // For flush collection
 	IsBucket() bool

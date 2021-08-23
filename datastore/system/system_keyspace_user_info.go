@@ -77,7 +77,7 @@ func (b *userInfoKeyspace) Indexers() ([]datastore.Indexer, errors.Error) {
 }
 
 func (b *userInfoKeyspace) Fetch(keys []string, keysMap map[string]value.AnnotatedValue,
-	context datastore.QueryContext, subPaths []string) (errs []errors.Error) {
+	context datastore.QueryContext, subPaths []string) (errs errors.Errors) {
 	sliceOfUsers, err := getUserInfoList(b.namespace.store)
 	if err != nil {
 		return []errors.Error{err}
@@ -100,22 +100,6 @@ func (b *userInfoKeyspace) Fetch(keys []string, keysMap map[string]value.Annotat
 	}
 
 	return
-}
-
-func (b *userInfoKeyspace) Insert(inserts []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
-	return nil, errors.NewSystemNotSupportedError(nil, "")
-}
-
-func (b *userInfoKeyspace) Update(updates []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
-	return nil, errors.NewSystemNotSupportedError(nil, "")
-}
-
-func (b *userInfoKeyspace) Upsert(upserts []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
-	return nil, errors.NewSystemNotSupportedError(nil, "")
-}
-
-func (b *userInfoKeyspace) Delete(deletes []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
-	return nil, errors.NewSystemNotSupportedError(nil, "")
 }
 
 func newUserInfoKeyspace(p *namespace) (*userInfoKeyspace, errors.Error) {

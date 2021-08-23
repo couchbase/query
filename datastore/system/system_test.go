@@ -62,6 +62,10 @@ func (ci *queryContextImpl) Warning(warn errors.Error) {
 	ci.t.Logf("datastore warning: %v", warn)
 }
 
+func (ci *queryContextImpl) Error(err errors.Error) {
+	ci.t.Logf("datastore error: %v", err)
+}
+
 func (ci *queryContextImpl) DurabilityLevel() datastore.DurabilityLevel {
 	return datastore.DL_NONE
 }

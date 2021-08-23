@@ -259,24 +259,25 @@ func (this *virtualKeyspace) Indexers() ([]datastore.Indexer, errors.Error) {
 	return []datastore.Indexer{this.indexer}, nil
 }
 
-func (this *virtualKeyspace) Fetch(keys []string, keysMap map[string]value.AnnotatedValue, context datastore.QueryContext, subPath []string) []errors.Error {
-	return []errors.Error{errors.NewVirtualKSNotSupportedError(nil, "Fetch for virtual keyspace.")}
+func (this *virtualKeyspace) Fetch(keys []string, keysMap map[string]value.AnnotatedValue,
+	context datastore.QueryContext, subPath []string) errors.Errors {
+	return errors.Errors{errors.NewVirtualKSNotSupportedError(nil, "Fetch for virtual keyspace.")}
 }
 
-func (this *virtualKeyspace) Insert(inserts []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
-	return nil, errors.NewVirtualKSNotSupportedError(nil, "Insert for virtual keyspace.")
+func (this *virtualKeyspace) Insert(inserts value.Pairs, context datastore.QueryContext) (value.Pairs, errors.Errors) {
+	return nil, errors.Errors{errors.NewVirtualKSNotSupportedError(nil, "Insert for virtual keyspace.")}
 }
 
-func (this *virtualKeyspace) Update(updates []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
-	return nil, errors.NewVirtualKSNotSupportedError(nil, "Update for virtual keyspace.")
+func (this *virtualKeyspace) Update(updates value.Pairs, context datastore.QueryContext) (value.Pairs, errors.Errors) {
+	return nil, errors.Errors{errors.NewVirtualKSNotSupportedError(nil, "Update for virtual keyspace.")}
 }
 
-func (this *virtualKeyspace) Upsert(upserts []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
-	return nil, errors.NewVirtualKSNotSupportedError(nil, "Upsert for virtual keyspace.")
+func (this *virtualKeyspace) Upsert(upserts value.Pairs, context datastore.QueryContext) (value.Pairs, errors.Errors) {
+	return nil, errors.Errors{errors.NewVirtualKSNotSupportedError(nil, "Upsert for virtual keyspace.")}
 }
 
-func (this *virtualKeyspace) Delete(deletes []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
-	return nil, errors.NewVirtualKSNotSupportedError(nil, "Delete for virtual keyspace.")
+func (this *virtualKeyspace) Delete(deletes value.Pairs, context datastore.QueryContext) (value.Pairs, errors.Errors) {
+	return nil, errors.Errors{errors.NewVirtualKSNotSupportedError(nil, "Delete for virtual keyspace.")}
 }
 
 func (this *virtualKeyspace) Release(close bool) {}

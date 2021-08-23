@@ -94,7 +94,7 @@ func TestServer(t *testing.T) {
 
 	pair := make(map[string]value.AnnotatedValue, 1)
 	errs := ks.Fetch([]string{"357", "aass_brewery"}, pair, datastore.NULL_QUERY_CONTEXT, nil)
-	if errs != nil {
+	if len(errs) > 0 {
 		t.Fatalf(" Cannot fetch keys errors %v", errs)
 
 	}
@@ -102,14 +102,14 @@ func TestServer(t *testing.T) {
 	fmt.Printf("Keys fetched %v", pair)
 	insertKey := value.Pair{Name: "testBeerKey", Value: value.NewValue(("This is a random test key-value"))}
 
-	_, err = ks.Insert([]value.Pair{insertKey}, datastore.NULL_QUERY_CONTEXT)
-	if err != nil {
+	_, errs = ks.Insert([]value.Pair{insertKey}, datastore.NULL_QUERY_CONTEXT)
+	if len(errs) > 0 {
 		t.Fatalf("Cannot insert key %v", insertKey)
 	}
 
-	deleted, err := ks.Delete([]value.Pair{insertKey}, datastore.NULL_QUERY_CONTEXT)
-	if err != nil || (len(deleted) != 1 && deleted[0].Name != insertKey.Name) {
-		t.Fatalf("Failed to delete %v", err)
+	deleted, errs := ks.Delete([]value.Pair{insertKey}, datastore.NULL_QUERY_CONTEXT)
+	if len(errs) > 0 || (len(deleted) != 1 && deleted[0].Name != insertKey.Name) {
+		t.Fatalf("Failed to delete %v", errs)
 	}
 
 	pi, err := indexer.PrimaryIndexes()

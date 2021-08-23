@@ -604,6 +604,12 @@ func (this *Context) Error(err errors.Error) {
 	this.output.Error(err)
 }
 
+func (this *Context) Errors(errs errors.Errors) {
+	for _, err := range errs {
+		this.output.Error(err)
+	}
+}
+
 func (this *Context) Abort(err errors.Error) {
 	this.output.Abort(err)
 }

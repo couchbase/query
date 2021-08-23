@@ -464,7 +464,8 @@ func (ks *CollectionsKeyspace) Indexers() ([]Indexer, errors.Error) {
 	return []Indexer{ks.indexer}, nil
 }
 
-func (ks *CollectionsKeyspace) Fetch(keys []string, keysMap map[string]value.AnnotatedValue, context QueryContext, subPath []string) []errors.Error {
+func (ks *CollectionsKeyspace) Fetch(keys []string, keysMap map[string]value.AnnotatedValue,
+	context QueryContext, subPath []string) errors.Errors {
 	for _, v := range keys {
 		doc := ks.docs[v]
 		if doc != nil {
@@ -477,20 +478,20 @@ func (ks *CollectionsKeyspace) Fetch(keys []string, keysMap map[string]value.Ann
 
 // Used by DML statements
 // For insert and upsert, nil input keys are replaced with auto-generated keys
-func (ks *CollectionsKeyspace) Insert(inserts []value.Pair, context QueryContext) ([]value.Pair, errors.Error) {
-	return nil, errors.NewNotImplemented("CollectionsKeyspace.Insert()")
+func (ks *CollectionsKeyspace) Insert(inserts value.Pairs, context QueryContext) (value.Pairs, errors.Errors) {
+	return nil, errors.Errors{errors.NewNotImplemented("CollectionsKeyspace.Insert()")}
 }
 
-func (ks *CollectionsKeyspace) Update(updates []value.Pair, context QueryContext) ([]value.Pair, errors.Error) {
-	return nil, errors.NewNotImplemented("CollectionsKeyspace.Update()")
+func (ks *CollectionsKeyspace) Update(updates value.Pairs, context QueryContext) (value.Pairs, errors.Errors) {
+	return nil, errors.Errors{errors.NewNotImplemented("CollectionsKeyspace.Update()")}
 }
 
-func (ks *CollectionsKeyspace) Upsert(upserts []value.Pair, context QueryContext) ([]value.Pair, errors.Error) {
-	return nil, errors.NewNotImplemented("CollectionsKeyspace.Upsert()")
+func (ks *CollectionsKeyspace) Upsert(upserts value.Pairs, context QueryContext) (value.Pairs, errors.Errors) {
+	return nil, errors.Errors{errors.NewNotImplemented("CollectionsKeyspace.Upsert()")}
 }
 
-func (ks *CollectionsKeyspace) Delete(deletes []value.Pair, context QueryContext) ([]value.Pair, errors.Error) {
-	return nil, errors.NewNotImplemented("CollectionsKeyspace.Delete()")
+func (ks *CollectionsKeyspace) Delete(deletes value.Pairs, context QueryContext) (value.Pairs, errors.Errors) {
+	return nil, errors.Errors{errors.NewNotImplemented("CollectionsKeyspace.Delete()")}
 }
 
 func (ks *CollectionsKeyspace) Release(close bool) {

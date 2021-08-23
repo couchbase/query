@@ -59,7 +59,7 @@ func (b *nodeKeyspace) Indexers() ([]datastore.Indexer, errors.Error) {
 }
 
 func (b *nodeKeyspace) Fetch(keys []string, keysMap map[string]value.AnnotatedValue,
-	context datastore.QueryContext, subPaths []string) (errs []errors.Error) {
+	context datastore.QueryContext, subPaths []string) (errs errors.Errors) {
 	info := b.namespace.store.actualStore.Info()
 
 	for _, k := range keys {
@@ -90,22 +90,6 @@ func appendError(errs []errors.Error, err errors.Error) []errors.Error {
 	}
 	errs = append(errs, err)
 	return errs
-}
-
-func (b *nodeKeyspace) Insert(inserts []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
-	return nil, errors.NewSystemNotSupportedError(nil, "")
-}
-
-func (b *nodeKeyspace) Update(updates []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
-	return nil, errors.NewSystemNotSupportedError(nil, "")
-}
-
-func (b *nodeKeyspace) Upsert(upserts []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
-	return nil, errors.NewSystemNotSupportedError(nil, "")
-}
-
-func (b *nodeKeyspace) Delete(deletes []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
-	return nil, errors.NewSystemNotSupportedError(nil, "")
 }
 
 func newNodesKeyspace(p *namespace) (*nodeKeyspace, errors.Error) {

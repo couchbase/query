@@ -1589,13 +1589,13 @@ func (k *keyspace) getRandomEntry(scopeName, collectionName string,
 }
 
 func (b *keyspace) Fetch(keys []string, fetchMap map[string]value.AnnotatedValue,
-	context datastore.QueryContext, subPaths []string) []errors.Error {
+	context datastore.QueryContext, subPaths []string) errors.Errors {
 	return b.fetch(b.fullName, b.QualifiedName(), "", "", keys, fetchMap, context, subPaths)
 }
 
 func (b *keyspace) fetch(fullName, qualifiedName, scopeName, collectionName string, keys []string,
 	fetchMap map[string]value.AnnotatedValue, context datastore.QueryContext, subPaths []string,
-	clientContext ...*memcached.ClientContext) []errors.Error {
+	clientContext ...*memcached.ClientContext) errors.Errors {
 
 	if txContext, _ := context.GetTxContext().(*transactions.TranContext); txContext != nil {
 		return b.txFetch(fullName, qualifiedName, scopeName, collectionName, getCollectionId(clientContext...),
@@ -1860,37 +1860,40 @@ func getExpiration(options value.Value) (exptime int, present bool) {
 	return
 }
 
-func (b *keyspace) performOp(op MutateOp, qualifiedName, scopeName, collectionName string, pairs []value.Pair,
-	context datastore.QueryContext, clientContext ...*memcached.ClientContext) ([]value.Pair, errors.Error) {
-	casMismatch := 0
+func (b *keyspace) performOp(op MutateOp, qualifiedName, scopeName, collectionName string, pairs value.Pairs,
+	context datastore.QueryContext, clientContext ...*memcached.ClientContext) (
+	mPairs value.Pairs, errs errors.Errors) {
 
 	if len(pairs) == 0 {
-		return nil, nil
+		return
 	}
 
 	if txContext, _ := context.GetTxContext().(*transactions.TranContext); txContext != nil {
 		return b.txPerformOp(op, qualifiedName, scopeName, collectionName, getCollectionId(clientContext...),
 			pairs, context, txContext)
 	}
+
 	if err := setMutateClientContext(context, clientContext...); err != nil {
-		return nil, err
+		errs = append(errs, err)
+		return
 	}
 
+	mPairs = make(value.Pairs, 0, len(pairs))
 	retry := value.NONE
 	var failedDeletes []string
 	var err error
-	mPairs := make(value.Pairs, 0, len(pairs))
 
 	for _, kv := range pairs {
 		var val interface{}
 		var exptime int
 		var present bool
 		var cas, newCas uint64
+		casMismatch := false
 
 		key := kv.Name
 		if op != MOP_DELETE {
 			if kv.Value.Type() == value.BINARY {
-				return nil, errors.NewBinaryDocumentMutationError(_MutateOpNames[op], key)
+				return nil, append(errs, errors.NewBinaryDocumentMutationError(_MutateOpNames[op], key))
 			}
 			val = kv.Value.ActualForIndex()
 			exptime, present = getExpiration(kv.Options)
@@ -1915,7 +1918,10 @@ func (b *keyspace) performOp(op MutateOp, qualifiedName, scopeName, collectionNa
 				}
 			} else { // if err != nil then added is false
 				// refresh local meta CAS value
-				logging.Debuga(func() string { return fmt.Sprintf("After insert: key {<ud>%v</ud>} CAS %v", key, cas) })
+				logging.Debuga(func() string {
+					return fmt.Sprintf("After %s: key {<ud>%v</ud>} CAS %v for Keyspace <ud>%s</ud>.",
+						MutateOpToName(op), key, cas, qualifiedName)
+				})
 				SetMetaCas(kv.Value, cas)
 			}
 		case MOP_UPDATE:
@@ -1925,24 +1931,37 @@ func (b *keyspace) performOp(op MutateOp, qualifiedName, scopeName, collectionNa
 
 			cas, flags, _, err = getMeta(key, kv.Value, true)
 			if err != nil { // Don't perform the update if the meta values are not found
-				logging.Errorf("Failed to get meta values for key <ud>%v</ud>, error %v", key, err)
+				logging.Debuga(func() string {
+					return fmt.Sprintf("Failed to get meta value to perform %s on key <ud>%s<ud>"+
+						" for Keyspace <ud>%s</ud>. Error %s",
+						MutateOpToName(op), key, qualifiedName, err)
+				})
 				if retry == value.NONE {
 					retry = value.TRUE
 				}
 			} else if err = setPreserveExpiry(present, context, clientContext...); err != nil {
-				logging.Errorf("Failed to preserve the expiration of key <ud>%v</ud>, error %v", key, err)
+				logging.Debuga(func() string {
+					return fmt.Sprintf("Failed to preserve the expiration to perform %s on key <ud>%s<ud>"+
+						" for Keyspace <ud>%s</ud>. Error %s",
+						MutateOpToName(op), key, qualifiedName, err)
+				})
 				if retry == value.NONE {
 					retry = value.TRUE
 				}
 			} else {
 				logging.Debuga(func() string {
-					return fmt.Sprintf("Before update: key {<ud>%v</ud>} CAS %v flags <ud>%v</ud> value <ud>%v</ud>",
-						key, cas, flags, val)
+					return fmt.Sprintf("Before %s: key {<ud>%v</ud>} CAS %v flags <ud>%v</ud>"+
+						" value <ud>%v</ud> for Keyspace <ud>%s</ud>.",
+						MutateOpToName(op), key, cas, flags, val, qualifiedName)
 				})
 				newCas, _, err = b.cbbucket.CasWithMeta(key, int(flags), exptime, cas, val, clientContext...)
 				if err == nil {
 					// refresh local meta CAS value
-					logging.Debuga(func() string { return fmt.Sprintf("After update: Key - <ud>%v</ud> CAS - %v", key, cas) })
+					logging.Debuga(func() string {
+						return fmt.Sprintf("After %s: key {<ud>%v</ud>} CAS %v "+
+							"for Keyspace <ud>%s</ud>.",
+							MutateOpToName(op), key, cas, qualifiedName)
+					})
 					SetMetaCas(kv.Value, newCas)
 				}
 				b.checkRefresh(err)
@@ -1950,7 +1969,11 @@ func (b *keyspace) performOp(op MutateOp, qualifiedName, scopeName, collectionNa
 
 		case MOP_UPSERT:
 			if err = setPreserveExpiry(present, context, clientContext...); err != nil {
-				logging.Errorf("Failed to preserve the expiration of key <ud>%v</ud>, error %v", key, err)
+				logging.Debuga(func() string {
+					return fmt.Sprintf("Failed to preserve the expiration to perform %s on key <ud>%s<ud>"+
+						" for Keyspace <ud>%s</ud>. Error %s",
+						MutateOpToName(op), key, qualifiedName, err)
+				})
 				if retry == value.NONE {
 					retry = value.TRUE
 				}
@@ -1958,7 +1981,11 @@ func (b *keyspace) performOp(op MutateOp, qualifiedName, scopeName, collectionNa
 				newCas, err = b.cbbucket.SetWithCAS(key, exptime, val, clientContext...)
 				b.checkRefresh(err)
 				if err == nil {
-					logging.Debuga(func() string { return fmt.Sprintf("After upsert: key {<ud>%v</ud>} CAS %v", key, cas) })
+					logging.Debuga(func() string {
+						return fmt.Sprintf("After %s: key {<ud>%v</ud>} CAS %v "+
+							"for Keyspace <ud>%s</ud>.",
+							MutateOpToName(op), key, cas, qualifiedName)
+					})
 					SetMetaCas(kv.Value, newCas)
 				}
 			}
@@ -1968,41 +1995,57 @@ func (b *keyspace) performOp(op MutateOp, qualifiedName, scopeName, collectionNa
 		}
 
 		if err != nil {
+			msg := fmt.Sprintf("Failed to perform %s on key %s", MutateOpToName(op), key)
 			if op == MOP_DELETE {
 				if !isNotFoundError(err) {
-					logging.Infof("Failed to delete key <ud>%s</ud> Error %s", key, err)
+					logging.Debuga(func() string {
+						return fmt.Sprintf("Failed to perform %s on key <ud>%s<ud>"+
+							" for Keyspace <ud>%s</ud>. Error %s",
+							MutateOpToName(op), key, qualifiedName, err)
+					})
+					errs = append(errs, errors.NewCbDeleteFailedError(nil, msg))
 					failedDeletes = append(failedDeletes, key)
 				}
 			} else if isEExistError(err) {
-				logging.Errorf("Failed to perform update on key <ud>%s</ud>. CAS mismatch due to concurrent modifications. Error - %v", key, err)
 				if op != MOP_INSERT {
-					casMismatch++
+					casMismatch = true
 					retry = value.FALSE
 				}
+				logging.Debuga(func() string {
+					if casMismatch {
+						return fmt.Sprintf("Failed to perform %s on key <ud>%s<ud>"+
+							" for Keyspace <ud>%s</ud>."+
+							" CAS mismatch due to concurrent modifications. Error %s",
+							MutateOpToName(op), key, qualifiedName, err)
+					} else {
+						return fmt.Sprintf("Failed to perform %s on key <ud>%s<ud>"+
+							" for Keyspace <ud>%s</ud>."+
+							" Concurrent modifications. Error %s",
+							MutateOpToName(op), key, qualifiedName, err)
+					}
+				})
+
 				retry, err = processIfMCError(retry, err, key, qualifiedName)
+				errs = append(errs, errors.NewCbDMLError(err, msg, casMismatch, retry))
 			} else if isNotFoundError(err) {
 				err = errors.NewKeyNotFoundError(key, nil)
 				retry = value.FALSE
+				errs = append(errs, errors.NewCbDMLError(err, msg, casMismatch, retry))
 			} else {
 				// err contains key, redact
-				logging.Errorf("Failed to perform %s on key <ud>%s</ud> for Keyspace %s. Error - <ud>%v</ud>",
-					MutateOpToName(op), key, qualifiedName, err)
+				logging.Debuga(func() string {
+					return fmt.Sprintf("Failed to perform %s on key <ud>%s<ud>"+
+						" for Keyspace <ud>%s</ud>. Error %s",
+						MutateOpToName(op), key, qualifiedName, err)
+				})
 				retry, err = processIfMCError(retry, err, key, qualifiedName)
+				errs = append(errs, errors.NewCbDMLError(err, msg, casMismatch, retry))
 			}
 		} else {
 			mPairs = append(mPairs, kv)
 		}
 	}
-
-	if op == MOP_DELETE {
-		if len(failedDeletes) > 0 {
-			return mPairs, errors.NewCbDeleteFailedError(err, "Some keys were not deleted "+fmt.Sprintf("%v", failedDeletes))
-		}
-	} else if len(mPairs) == 0 {
-		return nil, errors.NewCbDMLError(err, "Failed to perform "+MutateOpToName(op), casMismatch, retry)
-	}
-
-	return mPairs, nil
+	return
 }
 
 func processIfMCError(retry value.Tristate, err error, key string, keyspace string) (value.Tristate, error) {
@@ -2017,20 +2060,20 @@ func processIfMCError(retry value.Tristate, err error, key string, keyspace stri
 	return retry, err
 }
 
-func (b *keyspace) Insert(inserts []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
+func (b *keyspace) Insert(inserts value.Pairs, context datastore.QueryContext) (value.Pairs, errors.Errors) {
 	return b.performOp(MOP_INSERT, b.QualifiedName(), "", "", inserts, context)
 
 }
 
-func (b *keyspace) Update(updates []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
+func (b *keyspace) Update(updates value.Pairs, context datastore.QueryContext) (value.Pairs, errors.Errors) {
 	return b.performOp(MOP_UPDATE, b.QualifiedName(), "", "", updates, context)
 }
 
-func (b *keyspace) Upsert(upserts []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
+func (b *keyspace) Upsert(upserts value.Pairs, context datastore.QueryContext) (value.Pairs, errors.Errors) {
 	return b.performOp(MOP_UPSERT, b.QualifiedName(), "", "", upserts, context)
 }
 
-func (b *keyspace) Delete(deletes []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
+func (b *keyspace) Delete(deletes value.Pairs, context datastore.QueryContext) (value.Pairs, errors.Errors) {
 	return b.performOp(MOP_DELETE, b.QualifiedName(), "", "", deletes, context)
 }
 

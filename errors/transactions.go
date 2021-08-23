@@ -112,7 +112,7 @@ func NewTransactionReleased() Error {
 }
 
 func NewDuplicateKeyError(msg string) Error {
-	return &err{level: EXCEPTION, ICode: E_DUPLICATE_KEY, IKey: "transaction.statement.duplicatekey",
+	return &err{level: EXCEPTION, ICode: E_DUPLICATE_KEY, IKey: "dml.statement.duplicatekey",
 		InternalMsg:    fmt.Sprintf("Duplicate Key: %s", msg),
 		InternalCaller: CallerN(1)}
 }

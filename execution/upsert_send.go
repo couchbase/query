@@ -161,16 +161,16 @@ func (this *SendUpsert) flushBatch(context *Context) bool {
 	this.switchPhase(_SERVTIME)
 
 	// Perform the actual UPSERT
-	var er errors.Error
-	dpairs, er = this.keyspace.Upsert(dpairs, context)
+	var errs errors.Errors
+	dpairs, errs = this.keyspace.Upsert(dpairs, context)
 
 	this.switchPhase(_EXECTIME)
 
 	// Update mutation count with number of upserted docs
 	context.AddMutationCount(uint64(len(dpairs)))
 
-	if er != nil {
-		context.Error(er)
+	if len(errs) > 0 {
+		context.Errors(errs)
 	}
 
 	// Capture the upserted keys in case there is a RETURNING clause

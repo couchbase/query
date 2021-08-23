@@ -59,7 +59,7 @@ func (b *functionsKeyspace) Indexers() ([]datastore.Indexer, errors.Error) {
 }
 
 func (b *functionsKeyspace) Fetch(keys []string, keysMap map[string]value.AnnotatedValue,
-	context datastore.QueryContext, subPaths []string) (errs []errors.Error) {
+	context datastore.QueryContext, subPaths []string) (errs errors.Errors) {
 	for _, k := range keys {
 		item, e := b.fetchOne(k)
 		if e != nil {
@@ -96,22 +96,6 @@ func (b *functionsKeyspace) fetchOne(key string) (value.AnnotatedValue, errors.E
 // dodgy, but the not found error is not exported in metakv
 func isNotFoundError(err error) bool {
 	return err != nil && err.Error() == "Not found"
-}
-
-func (b *functionsKeyspace) Insert(inserts []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
-	return nil, errors.NewSystemNotSupportedError(nil, "")
-}
-
-func (b *functionsKeyspace) Update(updates []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
-	return nil, errors.NewSystemNotSupportedError(nil, "")
-}
-
-func (b *functionsKeyspace) Upsert(upserts []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
-	return nil, errors.NewSystemNotSupportedError(nil, "")
-}
-
-func (b *functionsKeyspace) Delete(deletes []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
-	return nil, errors.NewSystemNotSupportedError(nil, "")
 }
 
 func newFunctionsKeyspace(p *namespace) (*functionsKeyspace, errors.Error) {

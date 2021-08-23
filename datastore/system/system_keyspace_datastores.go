@@ -53,7 +53,7 @@ func (b *storeKeyspace) Indexers() ([]datastore.Indexer, errors.Error) {
 }
 
 func (b *storeKeyspace) Fetch(keys []string, keysMap map[string]value.AnnotatedValue,
-	context datastore.QueryContext, subPaths []string) (errs []errors.Error) {
+	context datastore.QueryContext, subPaths []string) (errs errors.Errors) {
 	for _, k := range keys {
 		item, e := b.fetchOne(k)
 		if e != nil {
@@ -83,22 +83,6 @@ func (b *storeKeyspace) fetchOne(key string) (value.AnnotatedValue, errors.Error
 		return doc, nil
 	}
 	return nil, errors.NewSystemDatastoreError(nil, "Key Not Found "+key)
-}
-
-func (b *storeKeyspace) Insert(inserts []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
-	return nil, errors.NewSystemNotSupportedError(nil, "")
-}
-
-func (b *storeKeyspace) Update(updates []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
-	return nil, errors.NewSystemNotSupportedError(nil, "")
-}
-
-func (b *storeKeyspace) Upsert(upserts []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
-	return nil, errors.NewSystemNotSupportedError(nil, "")
-}
-
-func (b *storeKeyspace) Delete(deletes []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
-	return nil, errors.NewSystemNotSupportedError(nil, "")
 }
 
 func newStoresKeyspace(p *namespace) (*storeKeyspace, errors.Error) {

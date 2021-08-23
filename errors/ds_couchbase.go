@@ -53,15 +53,15 @@ func NewCbBulkGetError(e error, msg string) Error {
 		InternalMsg: "Error performing bulk get operation " + msg, InternalCaller: CallerN(1), retry: value.TRUE}
 }
 
-func NewCbDMLError(e error, msg string, casMismatch int, r value.Tristate) Error {
-	if casMismatch != 0 {
+func NewCbDMLError(e error, msg string, casMismatch bool, r value.Tristate) Error {
+	if casMismatch {
 		e = newCASMismatchError()
 		r = value.FALSE
 		return &err{level: EXCEPTION, ICode: E_CB_DML, IKey: "datastore.couchbase.DML_error", ICause: e, cause: e, retry: r,
-			InternalMsg: "DML Error, possible causes include CAS mismatch " + msg, InternalCaller: CallerN(1)}
+			InternalMsg: "DML Error, possible causes include CAS mismatch. " + msg, InternalCaller: CallerN(1)}
 	} else {
 		return &err{level: EXCEPTION, ICode: E_CB_DML, IKey: "datastore.couchbase.DML_error", ICause: e, cause: e, retry: r,
-			InternalMsg: "DML Error, possible causes include concurrent modification " + msg, InternalCaller: CallerN(1)}
+			InternalMsg: "DML Error, possible causes include concurrent modification. " + msg, InternalCaller: CallerN(1)}
 	}
 }
 

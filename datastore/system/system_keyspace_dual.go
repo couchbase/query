@@ -53,7 +53,7 @@ func (b *dualKeyspace) Indexers() ([]datastore.Indexer, errors.Error) {
 }
 
 func (b *dualKeyspace) Fetch(keys []string, keysMap map[string]value.AnnotatedValue,
-	context datastore.QueryContext, subPaths []string) (errs []errors.Error) {
+	context datastore.QueryContext, subPaths []string) (errs errors.Errors) {
 	for _, k := range keys {
 		item, e := b.fetchOne(k)
 		if e != nil {
@@ -77,22 +77,6 @@ func (b *dualKeyspace) Fetch(keys []string, keysMap map[string]value.AnnotatedVa
 
 func (b *dualKeyspace) fetchOne(key string) (value.AnnotatedValue, errors.Error) {
 	return value.NewAnnotatedValue(nil), nil
-}
-
-func (b *dualKeyspace) Insert(inserts []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
-	return nil, errors.NewSystemDatastoreError(nil, "Mutations not allowed on system:dual.")
-}
-
-func (b *dualKeyspace) Update(updates []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
-	return nil, errors.NewSystemDatastoreError(nil, "Mutations not allowed on system:dual.")
-}
-
-func (b *dualKeyspace) Upsert(upserts []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
-	return nil, errors.NewSystemDatastoreError(nil, "Mutations not allowed on system:dual.")
-}
-
-func (b *dualKeyspace) Delete(deletes []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
-	return nil, errors.NewSystemDatastoreError(nil, "Mutations not allowed on system:dual.")
 }
 
 func newDualKeyspace(p *namespace) (*dualKeyspace, errors.Error) {

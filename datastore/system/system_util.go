@@ -59,6 +59,24 @@ func (this *keyspaceBase) DropScope(name string) errors.Error {
 	return errors.NewScopesNotSupportedError(this.name)
 }
 
+var _ERRS_SYSTEM_NOT_SUPPORTED = errors.Errors{errors.NewSystemNotSupportedError(nil, "")}
+
+func (b *keyspaceBase) Insert(inserts value.Pairs, context datastore.QueryContext) (value.Pairs, errors.Errors) {
+	return nil, _ERRS_SYSTEM_NOT_SUPPORTED
+}
+
+func (b *keyspaceBase) Update(updates value.Pairs, context datastore.QueryContext) (value.Pairs, errors.Errors) {
+	return nil, _ERRS_SYSTEM_NOT_SUPPORTED
+}
+
+func (b *keyspaceBase) Upsert(upserts value.Pairs, context datastore.QueryContext) (value.Pairs, errors.Errors) {
+	return nil, _ERRS_SYSTEM_NOT_SUPPORTED
+}
+
+func (b *keyspaceBase) Delete(deletes value.Pairs, context datastore.QueryContext) (value.Pairs, errors.Errors) {
+	return nil, _ERRS_SYSTEM_NOT_SUPPORTED
+}
+
 func (this *keyspaceBase) Flush() errors.Error {
 	return errors.NewNoFlushError(this.name)
 }

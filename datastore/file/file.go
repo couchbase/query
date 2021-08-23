@@ -472,8 +472,7 @@ func (b *keyspace) Indexers() ([]datastore.Indexer, errors.Error) {
 }
 
 func (b *keyspace) Fetch(keys []string, keysMap map[string]value.AnnotatedValue,
-	context datastore.QueryContext, subPaths []string) []errors.Error {
-	var errs []errors.Error
+	context datastore.QueryContext, subPaths []string) (errs errors.Errors) {
 
 	for _, k := range keys {
 		item, e := b.fetchOne(k)
@@ -482,9 +481,6 @@ func (b *keyspace) Fetch(keys []string, keysMap map[string]value.AnnotatedValue,
 			if os.IsNotExist(e.GetICause()) {
 				// file doesn't exist => key denotes non-existent doc => ignore it
 				continue
-			}
-			if errs == nil {
-				errs = make([]errors.Error, 0, 1)
 			}
 			errs = append(errs, e)
 			continue
@@ -530,14 +526,14 @@ func opToString(op int) string {
 	return "unknown operation"
 }
 
-func (b *keyspace) performOp(op int, kvPairs []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
+func (b *keyspace) performOp(op int, kvPairs value.Pairs, context datastore.QueryContext) (
+	rParis value.Pairs, errs errors.Errors) {
 
 	if len(kvPairs) == 0 {
-		return nil, errors.NewFileNoKeysInsertError(nil, "keyspace "+b.Name())
+		return nil, errors.Errors{errors.NewFileNoKeysInsertError(nil, "keyspace "+b.Name())}
 	}
 
-	insertedKeys := make([]value.Pair, 0)
-	var returnErr errors.Error
+	rParis = make(value.Pairs, 0)
 
 	// this lock can be mode more granular FIXME
 	b.fileLock.Lock()
@@ -583,32 +579,32 @@ func (b *keyspace) performOp(op int, kvPairs []value.Pair, context datastore.Que
 		}
 
 		if err != nil {
-			returnErr = errors.NewFileDMLError(returnErr, opToString(op)+" Failed "+err.Error())
+			errs = append(errs, errors.NewFileDMLError(nil, opToString(op)+" Failed "+err.Error()))
 		} else {
-			insertedKeys = append(insertedKeys, kv)
+			rParis = append(rParis, kv)
 		}
 	}
 
-	return insertedKeys, returnErr
+	return
 
 }
 
-func (b *keyspace) Insert(inserts []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
+func (b *keyspace) Insert(inserts value.Pairs, context datastore.QueryContext) (value.Pairs, errors.Errors) {
 	return b.performOp(INSERT, inserts, context)
 }
 
-func (b *keyspace) Update(updates []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
+func (b *keyspace) Update(updates value.Pairs, context datastore.QueryContext) (value.Pairs, errors.Errors) {
 	return b.performOp(UPDATE, updates, context)
 }
 
-func (b *keyspace) Upsert(upserts []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
+func (b *keyspace) Upsert(upserts value.Pairs, context datastore.QueryContext) (value.Pairs, errors.Errors) {
 	return b.performOp(UPSERT, upserts, context)
 }
 
-func (b *keyspace) Delete(deletes []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
+func (b *keyspace) Delete(deletes value.Pairs, context datastore.QueryContext) (value.Pairs, errors.Errors) {
 
 	var fileError []string
-	var deleted []value.Pair
+	var deleted value.Pairs
 	for _, pair := range deletes {
 		key := pair.Name
 		filename := filepath.Join(b.path(), key+".json")
@@ -623,7 +619,7 @@ func (b *keyspace) Delete(deletes []value.Pair, context datastore.QueryContext) 
 
 	if len(fileError) > 0 {
 		errLine := fmt.Sprintf("Delete failed on some keys %v", fileError)
-		return deleted, errors.NewFileDatastoreError(nil, errLine)
+		return deleted, errors.Errors{errors.NewFileDatastoreError(nil, errLine)}
 	}
 
 	return deleted, nil

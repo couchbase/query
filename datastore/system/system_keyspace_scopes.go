@@ -113,7 +113,7 @@ func (b *scopeKeyspace) Indexers() ([]datastore.Indexer, errors.Error) {
 }
 
 func (b *scopeKeyspace) Fetch(keys []string, keysMap map[string]value.AnnotatedValue,
-	context datastore.QueryContext, subPaths []string) (errs []errors.Error) {
+	context datastore.QueryContext, subPaths []string) (errs errors.Errors) {
 	var e errors.Error
 	var item value.AnnotatedValue
 
@@ -179,22 +179,6 @@ func (b *scopeKeyspace) fetchOne(ns, bn, sn string) (value.AnnotatedValue, error
 		}
 	}
 	return nil, err
-}
-
-func (b *scopeKeyspace) Insert(inserts []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
-	return nil, errors.NewSystemNotSupportedError(nil, "")
-}
-
-func (b *scopeKeyspace) Update(updates []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
-	return nil, errors.NewSystemNotSupportedError(nil, "")
-}
-
-func (b *scopeKeyspace) Upsert(upserts []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
-	return nil, errors.NewSystemNotSupportedError(nil, "")
-}
-
-func (b *scopeKeyspace) Delete(deletes []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
-	return nil, errors.NewSystemNotSupportedError(nil, "")
 }
 
 func newScopesKeyspace(p *namespace, store datastore.Datastore, name string, skipSystem bool) (*scopeKeyspace, errors.Error) {

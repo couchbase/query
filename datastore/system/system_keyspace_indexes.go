@@ -168,7 +168,7 @@ func splitIndexId(id string) (errors.Error, []string) {
 }
 
 func (b *indexKeyspace) Fetch(keys []string, keysMap map[string]value.AnnotatedValue,
-	context datastore.QueryContext, subPaths []string) (errs []errors.Error) {
+	context datastore.QueryContext, subPaths []string) (errs errors.Errors) {
 
 	for _, key := range keys {
 		err, elems := splitIndexId(key)
@@ -193,9 +193,6 @@ func (b *indexKeyspace) Fetch(keys []string, keysMap map[string]value.AnnotatedV
 		}
 
 		if err != nil {
-			if errs == nil {
-				errs = make([]errors.Error, 0, 1)
-			}
 			errs = append(errs, err)
 			continue
 		}
@@ -418,22 +415,6 @@ func newIndexesKeyspace(p *namespace, store datastore.Datastore, name string, sk
 	setIndexBase(&primary.indexBase, b.indexer)
 
 	return b, nil
-}
-
-func (b *indexKeyspace) Insert(inserts []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
-	return nil, errors.NewSystemNotSupportedError(nil, "")
-}
-
-func (b *indexKeyspace) Update(updates []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
-	return nil, errors.NewSystemNotSupportedError(nil, "")
-}
-
-func (b *indexKeyspace) Upsert(upserts []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
-	return nil, errors.NewSystemNotSupportedError(nil, "")
-}
-
-func (b *indexKeyspace) Delete(deletes []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
-	return nil, errors.NewSystemNotSupportedError(nil, "")
 }
 
 type indexIndex struct {

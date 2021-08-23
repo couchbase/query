@@ -199,16 +199,16 @@ func (this *SendInsert) flushBatch(context *Context) bool {
 	this.switchPhase(_SERVTIME)
 
 	// Perform the actual INSERT
-	var er errors.Error
-	dpairs, er = this.keyspace.Insert(dpairs, context)
+	var errs errors.Errors
+	dpairs, errs = this.keyspace.Insert(dpairs, context)
 
 	this.switchPhase(_EXECTIME)
 
 	// Update mutation count with number of inserted docs
 	context.AddMutationCount(uint64(len(dpairs)))
 
-	if er != nil {
-		context.Error(er)
+	if len(errs) > 0 {
+		context.Errors(errs)
 	}
 
 	// Capture the inserted keys in case there is a RETURNING clause

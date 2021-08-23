@@ -66,7 +66,7 @@ func (b *applicableRolesKeyspace) Indexers() ([]datastore.Indexer, errors.Error)
 }
 
 func (b *applicableRolesKeyspace) Fetch(keys []string, keysMap map[string]value.AnnotatedValue,
-	context datastore.QueryContext, subPaths []string) (errs []errors.Error) {
+	context datastore.QueryContext, subPaths []string) (errs errors.Errors) {
 
 	for _, key := range keys {
 		err, grantee, role, target := splitAppRolesKey(key)
@@ -95,22 +95,6 @@ func (b *applicableRolesKeyspace) Fetch(keys []string, keysMap map[string]value.
 		keysMap[key] = item
 	}
 	return
-}
-
-func (b *applicableRolesKeyspace) Insert(inserts []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
-	return nil, errors.NewSystemNotSupportedError(nil, "")
-}
-
-func (b *applicableRolesKeyspace) Update(updates []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
-	return nil, errors.NewSystemNotSupportedError(nil, "")
-}
-
-func (b *applicableRolesKeyspace) Upsert(upserts []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
-	return nil, errors.NewSystemNotSupportedError(nil, "")
-}
-
-func (b *applicableRolesKeyspace) Delete(deletes []value.Pair, context datastore.QueryContext) ([]value.Pair, errors.Error) {
-	return nil, errors.NewSystemNotSupportedError(nil, "")
 }
 
 func newApplicableRolesKeyspace(p *namespace) (*applicableRolesKeyspace, errors.Error) {
