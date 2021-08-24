@@ -364,7 +364,7 @@ func NewBaseRequest(rv *BaseRequest) {
 	rv.autoPrepare = value.NONE
 	rv.indexApiVersion = util.GetMaxIndexAPI()
 	rv.featureControls = util.GetN1qlFeatureControl()
-	rv.id.id, _ = util.UUIDV3()
+	rv.id.id, _ = util.UUIDV4()
 	rv.client_id.id = ""
 	rv.SetMaxParallelism(1)
 	rv.useCBO = util.GetUseCBO()

@@ -130,16 +130,16 @@ func getNextBuffer() {
 	randomBytes.switchHandler.Done()
 }
 
-// UUIDV3 generates a random UUID according to RFC 4122
-func UUIDV3() (string, error) {
+// UUIDV4 generates a random UUID according to RFC 4122
+func UUIDV4() (string, error) {
 	var arr [UUID_STRING_SIZE]byte
 	buf := arr[0:0:UUID_STRING_SIZE]
 
-	b, err := AppendUUIDV3(buf)
+	b, err := AppendUUIDV4(buf)
 	return string(b), err
 }
 
-func AppendUUIDV3(buf []byte) ([]byte, error) {
+func AppendUUIDV4(buf []byte) ([]byte, error) {
 	var bytes [_UUID_SIZE]byte
 	uuid := bytes[0:_UUID_SIZE:_UUID_SIZE]
 

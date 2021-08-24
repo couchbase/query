@@ -98,7 +98,7 @@ func (this *Advisor) Evaluate(item value.Value, context Context) (value.Value, e
 		if ok {
 			val = strings.ToLower(value.NewValue(val).ToString())
 			if val == "start" {
-				sessionName, err := util.UUIDV3()
+				sessionName, err := util.UUIDV4()
 				if err != nil {
 					return nil, err
 				}

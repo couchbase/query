@@ -340,7 +340,7 @@ and return it. The UUID() function may return an error, if so return
 a nil value UUID with the error.
 */
 func (this *Uuid) Evaluate(item value.Value, context Context) (value.Value, error) {
-	u, err := util.UUIDV3()
+	u, err := util.UUIDV4()
 	if err != nil {
 		return nil, err
 	}

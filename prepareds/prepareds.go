@@ -740,7 +740,7 @@ func reprepare(prepared *plan.Prepared, deltaKeyspaces map[string]bool, phaseTim
 
 	// since this is a reprepare, no need to check semantics again after parsing.
 	prep := time.Now()
-	requestId, err := util.UUIDV3()
+	requestId, err := util.UUIDV4()
 	if err != nil {
 		return nil, errors.NewReprepareError(fmt.Errorf("Context is nil"))
 	}
@@ -791,7 +791,7 @@ func predefinedPrepareStatement(name, statement, queryContext, namespace string)
 		optimizer = getNewOptimizer()
 	}
 
-	requestId, err := util.UUIDV3()
+	requestId, err := util.UUIDV4()
 	if err != nil {
 		return nil, errors.NewPlanError(nil, "request id is nil")
 	}

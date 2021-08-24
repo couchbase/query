@@ -38,7 +38,7 @@ func TestNewBase64Decode(t *testing.T) {
 }
 
 func TestNewV4(t *testing.T) {
-	u, err := util.UUIDV3()
+	u, err := util.UUIDV4()
 	if err != nil {
 		t.Errorf("Unexpected error getting UUID: %s", err.Error())
 	}
