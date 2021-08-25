@@ -1488,7 +1488,7 @@ func IsIPv6() string {
 	return _IPv6val
 }
 
-func IsIpv4() string {
+func IsIPv4() string {
 	return _IPv4val
 }
 
