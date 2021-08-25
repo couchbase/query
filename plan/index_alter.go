@@ -20,19 +20,21 @@ import (
 // Alter index
 type AlterIndex struct {
 	ddl
-	index    datastore.Index
-	indexer  datastore.Indexer
-	node     *algebra.AlterIndex
-	keyspace datastore.Keyspace
+	index         datastore.Index
+	deferredError errors.Error
+	indexer       datastore.Indexer
+	node          *algebra.AlterIndex
+	keyspace      datastore.Keyspace
 }
 
-func NewAlterIndex(index datastore.Index, indexer datastore.Indexer, node *algebra.AlterIndex,
+func NewAlterIndex(index datastore.Index, err errors.Error, indexer datastore.Indexer, node *algebra.AlterIndex,
 	keyspace datastore.Keyspace) *AlterIndex {
 	return &AlterIndex{
-		index:    index,
-		indexer:  indexer,
-		node:     node,
-		keyspace: keyspace,
+		index:         index,
+		deferredError: err,
+		indexer:       indexer,
+		node:          node,
+		keyspace:      keyspace,
 	}
 }
 
@@ -46,6 +48,10 @@ func (this *AlterIndex) New() Operator {
 
 func (this *AlterIndex) Index() datastore.Index {
 	return this.index
+}
+
+func (this *AlterIndex) DeferredError() errors.Error {
+	return this.deferredError
 }
 
 func (this *AlterIndex) Node() *algebra.AlterIndex {
@@ -149,9 +155,8 @@ func (this *AlterIndex) UnmarshalJSON(body []byte) error {
 
 func (this *AlterIndex) verify(prepared *Prepared) bool {
 	if this.index == nil {
-		var err error
-		this.index, err = this.indexer.IndexByName(this.node.Name())
-		if err != nil {
+		this.index, this.deferredError = this.indexer.IndexByName(this.node.Name())
+		if this.deferredError != nil {
 			return false
 		}
 	}

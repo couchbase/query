@@ -63,7 +63,11 @@ func (this *DropIndex) RunOnce(context *Context, parent value.Value) {
 		index := this.plan.Index()
 		if index == nil {
 			if this.plan.Node().FailIfNotExists() {
-				context.Error(errors.NewCbIndexNotFoundError(nil))
+				err := this.plan.DeferredError()
+				if err == nil {
+					err = errors.NewCbIndexNotFoundError(nil)
+				}
+				context.Error(err)
 			}
 			return
 		}

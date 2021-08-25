@@ -1,5 +1,4 @@
-//  Copyright 2014-Present Couchbase, Inc.
-//
+//  Copyright 2014-Present Couchbase, Inc.  //
 //  Use of this software is governed by the Business Source License included in
 //  the file licenses/Couchbase-BSL.txt.  As of the Change Date specified in that
 //  file, in accordance with the Business Source License, use of this software will
@@ -98,9 +97,9 @@ func (this *builder) VisitDropIndex(stmt *algebra.DropIndex) (interface{}, error
 		return nil, er
 	}
 
-	index, _ := indexer.IndexByName(stmt.Name())
+	index, ierr := indexer.IndexByName(stmt.Name())
 
-	return plan.NewDropIndex(index, indexer, stmt), nil
+	return plan.NewDropIndex(index, ierr, indexer, stmt), nil
 }
 
 func (this *builder) VisitAlterIndex(stmt *algebra.AlterIndex) (interface{}, error) {
@@ -120,9 +119,9 @@ func (this *builder) VisitAlterIndex(stmt *algebra.AlterIndex) (interface{}, err
 		return nil, er
 	}
 
-	index, _ := indexer.IndexByName(stmt.Name())
+	index, ierr := indexer.IndexByName(stmt.Name())
 
-	return plan.NewAlterIndex(index, indexer, stmt, keyspace), nil
+	return plan.NewAlterIndex(index, ierr, indexer, stmt, keyspace), nil
 }
 
 func (this *builder) VisitBuildIndexes(stmt *algebra.BuildIndexes) (interface{}, error) {

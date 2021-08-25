@@ -13,21 +13,24 @@ import (
 
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/errors"
 )
 
 // Drop index
 type DropIndex struct {
 	ddl
-	index   datastore.Index
-	indexer datastore.Indexer
-	node    *algebra.DropIndex
+	index         datastore.Index
+	deferredError errors.Error
+	indexer       datastore.Indexer
+	node          *algebra.DropIndex
 }
 
-func NewDropIndex(index datastore.Index, indexer datastore.Indexer, node *algebra.DropIndex) *DropIndex {
+func NewDropIndex(index datastore.Index, err errors.Error, indexer datastore.Indexer, node *algebra.DropIndex) *DropIndex {
 	return &DropIndex{
-		index:   index,
-		indexer: indexer,
-		node:    node,
+		index:         index,
+		deferredError: err,
+		indexer:       indexer,
+		node:          node,
 	}
 }
 
@@ -41,6 +44,10 @@ func (this *DropIndex) New() Operator {
 
 func (this *DropIndex) Index() datastore.Index {
 	return this.index
+}
+
+func (this *DropIndex) DeferredError() errors.Error {
+	return this.deferredError
 }
 
 func (this *DropIndex) Node() *algebra.DropIndex {
@@ -101,17 +108,15 @@ func (this *DropIndex) UnmarshalJSON(body []byte) error {
 		return err
 	}
 	if len(_unmarshalled.IndexId) > 0 {
-		index, err := indexer.IndexById(_unmarshalled.IndexId)
-		if err != nil {
-			return err
+		this.index, this.deferredError = indexer.IndexById(_unmarshalled.IndexId)
+		if this.deferredError != nil {
+			return this.deferredError
 		}
-		this.index = index
 	} else {
-		index, err := indexer.IndexByName(_unmarshalled.Name)
-		if err != nil {
-			return err
+		this.index, this.deferredError = indexer.IndexByName(_unmarshalled.Name)
+		if this.deferredError != nil {
+			return this.deferredError
 		}
-		this.index = index
 	}
 	this.indexer = indexer
 
@@ -120,9 +125,8 @@ func (this *DropIndex) UnmarshalJSON(body []byte) error {
 
 func (this *DropIndex) verify(prepared *Prepared) bool {
 	if this.index == nil {
-		var err error
-		this.index, err = this.indexer.IndexByName(this.node.Name())
-		if err != nil {
+		this.index, this.deferredError = this.indexer.IndexByName(this.node.Name())
+		if this.deferredError != nil {
 			return false
 		}
 	}
