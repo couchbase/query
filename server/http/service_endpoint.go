@@ -43,7 +43,8 @@ type HttpEndpoint struct {
 	bufpool       BufferPool
 	listener      map[string]net.Listener
 	listenerTLS   map[string]net.Listener
-	mux           *mux.Router
+	localListener bool
+        mux           *mux.Router
 	actives       server.ActiveRequests
 	options       server.ServerOptions
 	connSecConfig datastore.ConnectionSecurityConfig
@@ -117,15 +118,66 @@ func getNetwProtocol() map[string]string {
 		protocol["tcp6"] = val
 	}
 
-	val = server.IsIpv4()
+	val = server.IsIPv4()
 	if val != server.TCP_OFF {
 		protocol["tcp4"] = val
 	}
 	return protocol
 }
 
+func (this *HttpEndpoint) localhostListen() error {
+	netWs := getNetwProtocol()
+	if len(netWs) == 0 {
+		// Both values were set to off so we fail here.
+		return fmt.Errorf(" Failed to start service: Both IPv4 and IPv6 flags were not set.")
+	}
+
+	srv := &http.Server{
+		Handler:           this.mux,
+		ReadHeaderTimeout: 5 * time.Second,
+	}
+
+	_, port, _ := net.SplitHostPort(this.httpAddr)
+	if port == "" {
+		port = "8093"
+	}
+	this.localListener = true
+	IPv4 := server.IsIPv4()
+	if IPv4 != server.TCP_OFF {
+		err := this.serve(srv, "tcp4", IPv4, "127.0.0.1:"+port)
+		if err != nil {
+			return err
+		}
+	}
+	IPv6 := server.IsIPv6()
+	if IPv6 != server.TCP_OFF {
+		err := this.serve(srv, "tcp6", IPv6, "[::1]:"+port)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // Ipv4 and IPv6 are tri value flags that take required optional or off as values.
 // Fail only in the case the listener doesnt come up when flag value is required
+func (this *HttpEndpoint) serve(srv *http.Server, protocol, required, httpAddr string) error {
+	ln, err := net.Listen(protocol, httpAddr)
+
+	if err != nil {
+		if required == server.TCP_REQ {
+			return fmt.Errorf("Failed to start service: %v", err.Error())
+		} else {
+			logging.Infof("Failed to start service: %v", err.Error())
+		}
+	} else {
+		this.listener[protocol] = ln
+		go srv.Serve(ln)
+		logging.Infoa(func() string { return fmt.Sprintf("HttpEndpoint: Listen Address - %v", ln.Addr()) })
+	}
+	return nil
+}
+
 func (this *HttpEndpoint) Listen() error {
 	netWs := getNetwProtocol()
 	if len(netWs) == 0 {
@@ -139,18 +191,9 @@ func (this *HttpEndpoint) Listen() error {
 	}
 
 	for netW, val := range netWs {
-		ln, err := net.Listen(netW, this.httpAddr)
-
+		err := this.serve(srv, netW, val, this.httpAddr)
 		if err != nil {
-			if val == server.TCP_REQ {
-				return fmt.Errorf("Failed to start service: %v", err.Error())
-			} else {
-				logging.Infof("Failed to start service: %v", err.Error())
-			}
-		} else {
-			this.listener[netW] = ln
-			go srv.Serve(ln)
-			logging.Infoa(func() string { return fmt.Sprintf("HttpEndpoint: Listen Address - %v", ln.Addr()) })
+			return err
 		}
 	}
 
@@ -300,6 +343,7 @@ func (this *HttpEndpoint) Close() error {
 			}
 		}
 	}
+	this.localListener = false
 	if len(serr) != 0 {
 		return fmt.Errorf("HTTP Listener errors: %v", serr)
 	}
@@ -407,9 +451,8 @@ func (this *HttpEndpoint) SetupSSL() error {
 			}
 			this.connSecConfig.ClusterEncryptionConfig = cryptoConfig
 
-			// Disable non ssl ports when cluster encryption has changed and if disablenonsslports
-			// is set to true
-
+			// For strict TLS, stop the non encrypted listeners and restart on localhost only
+			// For non strict, stop the localhost listeners, if any, and restart on all addresses
 			if this.connSecConfig.ClusterEncryptionConfig.DisableNonSSLPorts == true {
 				closeErr := this.Close()
 				if closeErr != nil {
@@ -417,7 +460,21 @@ func (this *HttpEndpoint) SetupSSL() error {
 						return fmt.Sprintf("Closing HTTP listener failed- %s", closeErr.Error())
 					})
 				}
+				listenErr := this.localhostListen()
+				if listenErr != nil {
+					logging.Errora(func() string {
+						return fmt.Sprintf("Starting localhost HTTP listener failed - %s", listenErr.Error())
+					})
+				}
 			} else {
+				if this.localListener {
+					closeErr := this.Close()
+					if closeErr != nil {
+						logging.Errora(func() string {
+							return fmt.Sprintf("Closing HTTP listener failed- %s", closeErr.Error())
+						})
+					}
+				}
 				if len(this.listener) == 0 {
 					listenErr := this.Listen()
 					if listenErr != nil {
@@ -426,7 +483,6 @@ func (this *HttpEndpoint) SetupSSL() error {
 						})
 					}
 				}
-
 			}
 
 			// Temporary log message.
