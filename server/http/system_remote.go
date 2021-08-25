@@ -633,6 +633,16 @@ func (this *systemRemoteHttp) WhoAmI() string {
 	return localNode
 }
 
+func (this *systemRemoteHttp) NodeUUID(host string) string {
+	uuid, _ := this.configStore.NodeUUID(host)
+	return uuid
+}
+
+func (this *systemRemoteHttp) UUIDToHost(uuid string) string {
+	host, _ := this.configStore.UUIDToHost(uuid)
+	return host
+}
+
 func (this *systemRemoteHttp) Starting() bool {
 	this.doState()
 	return this.state == clustering.STARTING

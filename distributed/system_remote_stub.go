@@ -68,6 +68,14 @@ func (this systemRemoteStub) WhoAmI() string {
 	return ""
 }
 
+func (this systemRemoteStub) NodeUUID(host string) string {
+	return ""
+}
+
+func (this systemRemoteStub) UUIDToHost(uuid string) string {
+	return ""
+}
+
 func (this systemRemoteStub) Starting() bool {
 
 	// always local

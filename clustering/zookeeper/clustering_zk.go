@@ -173,6 +173,14 @@ func (z *zkConfigStore) Cluster() (clustering.Cluster, errors.Error) {
 	return nil, nil
 }
 
+func (z *zkConfigStore) NodeUUID(string) (string, errors.Error) {
+	return "", nil
+}
+
+func (z *zkConfigStore) UUIDToHost(string) (string, errors.Error) {
+	return "", nil
+}
+
 // zkCluster implements clustering.Cluster
 type zkCluster struct {
 	configStore    clustering.ConfigurationStore `json:"-"`

@@ -526,6 +526,46 @@ func (this *cbConfigStore) checkPoolServices(pool *couchbase.Pool, poolServices 
 	return "", "", nil
 }
 
+func (this *cbConfigStore) NodeUUID(host string) (string, errors.Error) {
+	if this.poolName == "" {
+		_, _, err := this.doNameState()
+		if err != nil {
+			return "", err
+		}
+	}
+	pool, err := this.cbConn.GetPool(this.poolName)
+	if err != nil {
+		return "", errors.NewAdminGetNodeError(err, this.poolName)
+	}
+	host = strings.ToLower(host)
+	for _, n := range pool.Nodes {
+		if strings.ToLower(n.Hostname) == host {
+			return n.NodeUUID, nil
+		}
+	}
+	return "", errors.NewAdminNoNodeError(host)
+}
+
+func (this *cbConfigStore) UUIDToHost(uuid string) (string, errors.Error) {
+	if this.poolName == "" {
+		_, _, err := this.doNameState()
+		if err != nil {
+			return "", err
+		}
+	}
+	pool, err := this.cbConn.GetPool(this.poolName)
+	if err != nil {
+		return "", errors.NewAdminGetNodeError(err, this.poolName)
+	}
+	uuid = strings.ToLower(uuid)
+	for _, n := range pool.Nodes {
+		if strings.ToLower(n.NodeUUID) == uuid {
+			return n.Hostname, nil
+		}
+	}
+	return "", errors.NewAdminNoNodeError(uuid)
+}
+
 // Type services associates a protocol with a port number
 type services map[string]int
 

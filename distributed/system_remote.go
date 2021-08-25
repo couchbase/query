@@ -71,6 +71,12 @@ type SystemRemoteAccess interface {
 	// Execute an operation against previously prepared admin endpoint
 	ExecutePreparedAdminOp(op interface{}, command string, data string, warnFn func(warn errors.Error), creds Creds,
 		authToken string) ([]byte, errors.Error)
+
+	// Retrieve a host's UUID
+	NodeUUID(string) string
+
+	// Retrieve hostname for given UUID
+	UUIDToHost(string) string
 }
 
 // It would be convenient to use datastore/Credentials here, but that causes an import circularity,

@@ -65,6 +65,8 @@ type ConfigurationStore interface {
 	State() (Mode, errors.Error)                                                            // The clustering state of the local node
 	Cluster() (Cluster, errors.Error)                                                       // The cluster the local belongs to
 	SetOptions(monitor StateMonitor, httpAddr, httpsAddr string, managed bool) errors.Error // Set options for the local ConfigurationStore
+	NodeUUID(string) (string, errors.Error)                                                 // Retrieve the UUID of the host
+	UUIDToHost(string) (string, errors.Error)                                               // Retrieve the hostname for the UUID
 }
 
 type StateMonitor interface {

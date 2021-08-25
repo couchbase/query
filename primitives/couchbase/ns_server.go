@@ -168,6 +168,7 @@ type Node struct {
 	ClusterCompatibility int                           `json:"clusterCompatibility"`
 	ClusterMembership    string                        `json:"clusterMembership"`
 	CouchAPIBase         string                        `json:"couchApiBase"`
+	NodeUUID             string                        `json:"nodeUUID"`
 	Hostname             string                        `json:"hostname"`
 	AlternateNames       map[string]NodeAlternateNames `json:"alternateAddresses"`
 	InterestingStats     map[string]float64            `json:"interestingStats,omitempty"`

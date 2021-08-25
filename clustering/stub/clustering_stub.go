@@ -101,6 +101,14 @@ func (ConfigurationStoreStub) Cluster() (clustering.Cluster, errors.Error) {
 	return nil, nil
 }
 
+func (ConfigurationStoreStub) NodeUUID(host string) (string, errors.Error) {
+	return "", nil
+}
+
+func (ConfigurationStoreStub) UUIDToHost(uuid string) (string, errors.Error) {
+	return "", nil
+}
+
 // ClusterStub is a stub implementation of clustering.Cluster
 // It has one Query Node, an instance of QueryNodeStub
 type ClusterStub struct{}

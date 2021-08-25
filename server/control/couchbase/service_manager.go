@@ -59,7 +59,7 @@ func NewManager() Manager {
 			changeID: "",
 		},
 		nodeInfo: &service.NodeInfo{
-			NodeID:   service.NodeID(distributed.RemoteAccess().WhoAmI()),
+			NodeID:   service.NodeID(distributed.RemoteAccess().NodeUUID(distributed.RemoteAccess().WhoAmI())),
 			Priority: service.Priority(0),
 		},
 	}
@@ -82,7 +82,8 @@ func (m *ServiceMgr) setInitialNodeList() {
 	nodeList := make([]service.NodeInfo, 0)
 	for _, nn := range topology {
 		ps, _ := distributed.RemoteAccess().PrepareAdminOp(string(nn), "shutdown", "", nil, distributed.NO_CREDS, "")
-		nodeList = append(nodeList, service.NodeInfo{service.NodeID(nn), service.Priority(0), ps})
+		uuid := distributed.RemoteAccess().NodeUUID(string(nn))
+		nodeList = append(nodeList, service.NodeInfo{service.NodeID(uuid), service.Priority(0), ps})
 	}
 
 	m.updateState(func(s *state) {
@@ -243,9 +244,13 @@ func (m *ServiceMgr) PrepareTopologyChange(change service.TopologyChange) error 
 	info := make([]rune, 0, len(change.KeepNodes)*32)
 	servers := make([]service.NodeInfo, 0)
 	for _, n := range change.KeepNodes {
-		ps, _ := distributed.RemoteAccess().PrepareAdminOp(string(n.NodeInfo.NodeID), "shutdown", "", nil, distributed.NO_CREDS, "")
+		host := distributed.RemoteAccess().UUIDToHost(string(n.NodeInfo.NodeID))
+		ps, _ := distributed.RemoteAccess().PrepareAdminOp(host, "shutdown", "", nil, distributed.NO_CREDS, "")
 		servers = append(servers, service.NodeInfo{n.NodeInfo.NodeID, service.Priority(0), ps})
 		info = append(info, []rune(n.NodeInfo.NodeID)...)
+		info = append(info, '[')
+		info = append(info, []rune(host)...)
+		info = append(info, ']')
 		info = append(info, ' ')
 	}
 
