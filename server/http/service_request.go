@@ -820,9 +820,9 @@ var _PARAMETERS = map[string]*argHandler{
 	TXDATA:            {handleTxData, false},
 	DURABILITY_LEVEL:  {handleDurabilityLevel, false},
 	//	DURABILITY_TIMEOUT: {handleDurabilityTimeout, false},
-	KVTIMEOUT:     {handleKvTimeout, false},
-	ATRCOLLECTION: {handleAtrCollection, false},
-	//	NUMATRS:            {handleNumAtrs, false},
+	KVTIMEOUT:       {handleKvTimeout, false},
+	ATRCOLLECTION:   {handleAtrCollection, false},
+	NUMATRS:         {handleNumAtrs, false},
 	PRESERVE_EXPIRY: {handlePreserveExpiry, false},
 }
 
