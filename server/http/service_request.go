@@ -813,7 +813,7 @@ var _PARAMETERS = map[string]*argHandler{
 	DURABILITY_TIMEOUT: {handleDurabilityTimeout, false},
 	KVTIMEOUT:          {handleKvTimeout, false},
 	ATRCOLLECTION:      {handleAtrCollection, false},
-	//	NUMATRS:            {handleNumAtrs, false},
+	NUMATRS:            {handleNumAtrs, false},
 }
 
 // common storage for the httpArgs implementations
