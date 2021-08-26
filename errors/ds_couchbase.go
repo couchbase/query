@@ -184,7 +184,11 @@ func newCASMismatchError() Error {
 		InternalMsg: "CAS mismatch", InternalCaller: CallerN(2)} // note caller level
 }
 
-func NewCbDMLMCError(s string) Error {
+func NewCbDMLMCError(s string, k string, ks string) Error {
+	c := map[string]string{}
+	c["keyspace"] = ks
+	c["document_key"] = k
+	c["mc_status"] = s
 	return &err{level: EXCEPTION, ICode: E_DML_MC, IKey: "datastore.couchbase.mc_error",
-		InternalMsg: "MC error " + s, cause: s, InternalCaller: CallerN(1)}
+		InternalMsg: "MC error " + s, cause: c, InternalCaller: CallerN(1)}
 }

@@ -1887,7 +1887,7 @@ func (b *keyspace) performOp(op MutateOp, qualifiedName, scopeName, collectionNa
 			if added == false {
 				// false & err == nil => given key aready exists in the bucket
 				if err != nil {
-					retry, err = processIfMCError(retry, err)
+					retry, err = processIfMCError(retry, err, key, qualifiedName)
 					err = errors.NewError(err, "Key "+key)
 				} else {
 					err = errors.NewDuplicateKeyError(key)
@@ -1959,7 +1959,7 @@ func (b *keyspace) performOp(op MutateOp, qualifiedName, scopeName, collectionNa
 					casMismatch++
 					retry = value.FALSE
 				}
-				retry, err = processIfMCError(retry, err)
+				retry, err = processIfMCError(retry, err, key, qualifiedName)
 			} else if isNotFoundError(err) {
 				err = errors.NewKeyNotFoundError(key, nil)
 				retry = value.FALSE
@@ -1967,7 +1967,7 @@ func (b *keyspace) performOp(op MutateOp, qualifiedName, scopeName, collectionNa
 				// err contains key, redact
 				logging.Errorf("Failed to perform %s on key <ud>%s</ud> for Keyspace %s. Error - <ud>%v</ud>",
 					MutateOpToName(op), key, qualifiedName, err)
-				retry, err = processIfMCError(retry, err)
+				retry, err = processIfMCError(retry, err, key, qualifiedName)
 			}
 		} else {
 			mPairs = append(mPairs, kv)
@@ -1985,14 +1985,14 @@ func (b *keyspace) performOp(op MutateOp, qualifiedName, scopeName, collectionNa
 	return mPairs, nil
 }
 
-func processIfMCError(retry value.Tristate, err error) (value.Tristate, error) {
+func processIfMCError(retry value.Tristate, err error, key string, keyspace string) (value.Tristate, error) {
 	if mcr, ok := err.(*gomemcached.MCResponse); ok {
 		if gomemcached.IsFatal(mcr) {
 			retry = value.FALSE
 		} else if retry == value.NONE {
 			retry = value.TRUE
 		}
-		err = errors.NewCbDMLMCError(mcr.Status.String())
+		err = errors.NewCbDMLMCError(mcr.Status.String(), key, keyspace)
 	}
 	return retry, err
 }
