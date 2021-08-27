@@ -71,7 +71,11 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			}
 			return false
 		}
-		var state [][2]int
+		stateCap := len(family)
+		if stateCap == 0 {
+			stateCap = 1
+		}
+		state := make([][2]int, 0, stateCap)
 		for i := 0; i < len(family); i++ {
 			mark := make([]bool, len(family[i].startf))
 			// Every DFA starts at state 0.
@@ -107,16 +111,17 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 			if !atEOF {
 				r := buf[n]
 				n++
-				var nextState [][2]int
+				d := 0
 				for _, x := range state {
 					x[1] = family[x[0]].f[x[1]](r)
 					if -1 == x[1] {
 						continue
 					}
-					nextState = append(nextState, x)
+					state[d] = x
+					d++
 					checkAccept(x[0], x[1])
 				}
-				state = nextState
+				state = state[:d]
 			} else {
 			dollar: // Handle $.
 				for _, x := range state {
@@ -133,10 +138,10 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 						}
 					}
 				}
-				state = nil
+				state = state[:0]
 			}
 
-			if state == nil {
+			if len(state) == 0 {
 				lcUpdate := func(r rune) {
 					if r == '\n' {
 						line++
@@ -180,6 +185,9 @@ func NewLexerWithInit(in io.Reader, initFun func(*Lexer)) *Lexer {
 					}
 				}
 				n = 0
+				if len(family) > cap(state) {
+					state = make([][2]int, 0, len(family))
+				}
 				for i := 0; i < len(family); i++ {
 					state = append(state, [2]int{i, 0})
 				}
