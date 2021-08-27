@@ -2841,13 +2841,17 @@ BUILD INDEX ON named_keyspace_ref LPAREN exprs RPAREN opt_index_using
 create_function:
 CREATE opt_replace FUNCTION func_name
 {
+    if $4 != nil {
 
-    // push function query context
-    yylex.(*lexer).PushQueryContext($4.QueryContext())
+	// push function query context
+	yylex.(*lexer).PushQueryContext($4.QueryContext())
+    }
 }
 LPAREN parm_list RPAREN func_body
 {
-    yylex.(*lexer).PopQueryContext()
+    if $4 != nil {
+	yylex.(*lexer).PopQueryContext()
+    }
     if $9 != nil {
         err := $9.SetVarNames($7)
         if err != nil {
