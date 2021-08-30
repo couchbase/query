@@ -223,7 +223,7 @@
 
     {
         "statements": "SELECT details.* AS D FROM catalog",
-        "error": "syntax error - line 1, column 18, near 'SELECT details.*', at: AS"
+        "error": "syntax error - line 1, column 18, near 'SELECT details.*', at: AS (reserved word)"
     },
 
     {

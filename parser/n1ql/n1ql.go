@@ -176,8 +176,22 @@ func (this *lexer) Error(s string) {
 	}
 	if strings.HasPrefix(s, "syntax error") {
 		s = s + this.ErrorContext()
+		if len(this.nex.stack) > 0 {
+			if isLexerToken(strings.ToUpper(this.nex.Text())) {
+				s = s + " (reserved word)"
+			}
+		}
 	}
 	this.errs = append(this.errs, s)
+}
+
+func isLexerToken(t string) bool {
+	for _, tok := range yyToknames {
+		if tok == t {
+			return true
+		}
+	}
+	return false
 }
 
 func (this *lexer) ErrorContext() string {
