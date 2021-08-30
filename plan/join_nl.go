@@ -61,6 +61,10 @@ func (this *NLJoin) Onclause() expression.Expression {
 	return this.onclause
 }
 
+func (this *NLJoin) SetOnclause(onclause expression.Expression) {
+	this.onclause = onclause
+}
+
 func (this *NLJoin) HintError() string {
 	return this.hintError
 }
@@ -71,6 +75,10 @@ func (this *NLJoin) Child() Operator {
 
 func (this *NLJoin) Filter() expression.Expression {
 	return this.filter
+}
+
+func (this *NLJoin) SetFilter(filter expression.Expression) {
+	this.filter = filter
 }
 
 func (this *NLJoin) MarshalJSON() ([]byte, error) {

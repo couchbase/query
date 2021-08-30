@@ -38,9 +38,11 @@ func (this *builder) buildSecondaryScan(indexes, flex map[datastore.Index]*index
 
 	pred := baseKeyspace.DnfPred()
 
-	err = this.sargIndexes(baseKeyspace, node.IsUnderHash(), indexes)
-	if err != nil {
-		return nil, 0, err
+	if !this.hasBuilderFlag(BUILDER_CHK_INDEX_ORDER) {
+		err = this.sargIndexes(baseKeyspace, node.IsUnderHash(), indexes)
+		if err != nil {
+			return nil, 0, err
+		}
 	}
 
 	for _, entry := range indexes {

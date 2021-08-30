@@ -438,6 +438,7 @@ func getFilterInfos(filters base.Filters, context *PrepareContext) base.Filters 
 			}
 			fl = base.NewFilter(fltrExpr, origExpr, f.Keyspaces(), f.OrigKeyspaces(),
 				f.IsOnclause(), f.IsJoin())
+			fl.SetOptBits(f.OptBits())
 		} else {
 			fl = f.Copy()
 		}

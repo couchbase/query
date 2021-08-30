@@ -17,10 +17,11 @@ import (
 const (
 	KS_PLAN_DONE     = 1 << iota // planning is done for this keyspace
 	KS_ONCLAUSE_ONLY             // use ON-clause only for planning
-	KS_IS_UNNEST                 // unnest
+	KS_IS_UNNEST                 // unnest alias
 	KS_IN_CORR_SUBQ              // in correlated subquery
 	KS_HAS_DOC_COUNT             // docCount retrieved for keyspace
 	KS_PRIMARY_TERM              // primary term
+	KS_OUTER_FILTERS             // OUTER filters have been classified
 )
 
 type BaseKeyspace struct {
@@ -36,9 +37,13 @@ type BaseKeyspace struct {
 	docCount      int64
 	unnests       map[string]string
 	unnestIndexes map[datastore.Index][]string
+	node          algebra.SimpleFromTerm
+	optBit        int32
 }
 
-func NewBaseKeyspace(name string, path *algebra.Path) *BaseKeyspace {
+func NewBaseKeyspace(name string, path *algebra.Path, node algebra.SimpleFromTerm,
+	optBit int32) *BaseKeyspace {
+
 	var keyspace string
 
 	// for expression scans we don't have a keyspace and leave it empty
@@ -64,6 +69,8 @@ func NewBaseKeyspace(name string, path *algebra.Path) *BaseKeyspace {
 	return &BaseKeyspace{
 		name:     name,
 		keyspace: keyspace,
+		node:     node,
+		optBit:   optBit,
 	}
 }
 
@@ -73,6 +80,10 @@ func (this *BaseKeyspace) PlanDone() bool {
 
 func (this *BaseKeyspace) SetPlanDone() {
 	this.ksFlags |= KS_PLAN_DONE
+}
+
+func (this *BaseKeyspace) UnsetPlanDone() {
+	this.ksFlags &^= KS_PLAN_DONE
 }
 
 func (this *BaseKeyspace) OnclauseOnly() bool {
@@ -115,6 +126,22 @@ func (this *BaseKeyspace) SetPrimaryTerm() {
 	this.ksFlags |= KS_PRIMARY_TERM
 }
 
+func (this *BaseKeyspace) HasOuterFilters() bool {
+	return (this.ksFlags & KS_OUTER_FILTERS) != 0
+}
+
+func (this *BaseKeyspace) SetOuterFilters() {
+	this.ksFlags |= KS_OUTER_FILTERS
+}
+
+func (this *BaseKeyspace) IsAnsiJoin() bool {
+	return this.node != nil && this.node.IsAnsiJoin()
+}
+
+func (this *BaseKeyspace) IsAnsiNest() bool {
+	return this.node != nil && this.node.IsAnsiNest()
+}
+
 func CopyBaseKeyspaces(src map[string]*BaseKeyspace) map[string]*BaseKeyspace {
 	return copyBaseKeyspaces(src, false)
 }
@@ -132,6 +159,8 @@ func copyBaseKeyspaces(src map[string]*BaseKeyspace, copyFilter bool) map[string
 			keyspace:   kspace.keyspace,
 			ksFlags:    kspace.ksFlags,
 			outerlevel: kspace.outerlevel,
+			node:       kspace.node,
+			optBit:     kspace.optBit,
 		}
 		if len(kspace.unnests) > 0 {
 			dest[kspace.name].unnests = make(map[string]string, len(kspace.unnests))
@@ -234,6 +263,18 @@ func (this *BaseKeyspace) DocCount() int64 {
 
 func (this *BaseKeyspace) SetDocCount(docCount int64) {
 	this.docCount = docCount
+}
+
+func (this *BaseKeyspace) Node() algebra.SimpleFromTerm {
+	return this.node
+}
+
+func (this *BaseKeyspace) SetNode(node algebra.SimpleFromTerm) {
+	this.node = node
+}
+
+func (this *BaseKeyspace) OptBit() int32 {
+	return this.optBit
 }
 
 // unnests is only populated for the primary keyspace term

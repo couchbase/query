@@ -82,6 +82,9 @@ const (
 	BUILDER_HAS_GROUP
 	BUILDER_HAS_ORDER
 	BUILDER_HAS_WINDOW_AGGS
+	BUILDER_JOIN_ENUM
+	BUILDER_CHK_INDEX_ORDER
+	BUILDER_PLAN_HAS_ORDER
 )
 
 type builder struct {
@@ -122,29 +125,30 @@ type builder struct {
 
 func (this *builder) Copy() *builder {
 	rv := &builder{
-		context:           this.context,
-		datastore:         this.datastore,
-		systemstore:       this.systemstore,
-		namespace:         this.namespace,
-		subquery:          this.subquery,
-		correlated:        this.correlated,
-		maxParallelism:    this.maxParallelism,
-		delayProjection:   this.delayProjection,
-		from:              this.from,
-		where:             expression.Copy(this.where),
-		filter:            expression.Copy(this.filter),
-		setOpDistinct:     this.setOpDistinct,
-		cover:             this.cover,
-		node:              this.node,
-		skipDynamic:       this.skipDynamic,
-		requirePrimaryKey: this.requirePrimaryKey,
-		baseKeyspaces:     base.CopyBaseKeyspacesWithFilters(this.baseKeyspaces),
-		keyspaceNames:     this.keyspaceNames,
-		pushableOnclause:  expression.Copy(this.pushableOnclause),
-		builderFlags:      this.builderFlags,
-		indexAdvisor:      this.indexAdvisor,
-		useCBO:            this.useCBO,
-		hintIndexes:       this.hintIndexes,
+		context:            this.context,
+		datastore:          this.datastore,
+		systemstore:        this.systemstore,
+		namespace:          this.namespace,
+		subquery:           this.subquery,
+		correlated:         this.correlated,
+		maxParallelism:     this.maxParallelism,
+		delayProjection:    this.delayProjection,
+		from:               this.from,
+		where:              expression.Copy(this.where),
+		filter:             expression.Copy(this.filter),
+		setOpDistinct:      this.setOpDistinct,
+		cover:              this.cover,
+		node:               this.node,
+		skipDynamic:        this.skipDynamic,
+		requirePrimaryKey:  this.requirePrimaryKey,
+		baseKeyspaces:      base.CopyBaseKeyspacesWithFilters(this.baseKeyspaces),
+		keyspaceNames:      this.keyspaceNames,
+		indexKeyspaceNames: this.indexKeyspaceNames,
+		pushableOnclause:   expression.Copy(this.pushableOnclause),
+		builderFlags:       this.builderFlags,
+		indexAdvisor:       this.indexAdvisor,
+		useCBO:             this.useCBO,
+		hintIndexes:        this.hintIndexes,
 		// the following fields are setup during planning process and thus not copied:
 		// children, subChildren, coveringScan, coveredUnnests, countScan, orderScan, lastOp
 	}
@@ -240,12 +244,28 @@ func (this *builder) setFalseWhereClause() {
 	this.builderFlags |= BUILDER_WHERE_IS_FALSE
 }
 
+func (this *builder) joinEnum() bool {
+	return (this.builderFlags & BUILDER_JOIN_ENUM) != 0
+}
+
+func (this *builder) setJoinEnum() {
+	this.builderFlags |= BUILDER_JOIN_ENUM
+}
+
+func (this *builder) unsetJoinEnum() {
+	this.builderFlags &^= BUILDER_JOIN_ENUM
+}
+
 func (this *builder) hasBuilderFlag(flag uint32) bool {
 	return (this.builderFlags & flag) != 0
 }
 
 func (this *builder) setBuilderFlag(flag uint32) {
 	this.builderFlags |= flag
+}
+
+func (this *builder) unsetBuilderFlag(flag uint32) {
+	this.builderFlags &^= flag
 }
 
 func (this *builder) collectKeyspaceNames() {

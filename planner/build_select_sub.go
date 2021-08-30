@@ -213,7 +213,8 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 	this.subChildren = make([]plan.Operator, 0, 16) // sub-children, executed across data-parallel streams
 
 	// If SELECT DISTINCT, avoid pushing LIMIT down to index scan.
-	if this.hasOffsetOrLimit() && node.Projection().Distinct() {
+	projection := node.Projection()
+	if this.hasOffsetOrLimit() && projection.Distinct() {
 		this.resetOffsetLimit()
 	}
 
@@ -229,7 +230,7 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 	this.setIndexGroupAggs(group, aggs, node.Let())
 	this.extractLetGroupProjOrder(nil, group, nil, nil, aggs)
 
-	err = this.visitFrom(node, group)
+	err = this.visitFrom(node, group, projection, indexPushDowns)
 	if err != nil {
 		return nil, err
 	}
@@ -264,7 +265,6 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 			this.visitWindowAggregates(windowAggs)
 		}
 
-		projection := node.Projection()
 		if this.useCBO && this.lastOp != nil {
 			cost = this.lastOp.Cost()
 			cardinality = this.lastOp.Cardinality()
@@ -310,7 +310,7 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 			this.addChildren(plan.NewDistinct(cost, cardinality, size, frCost))
 		}
 	} else {
-		this.addChildren(plan.NewIndexCountProject(node.Projection()))
+		this.addChildren(plan.NewIndexCountProject(projection))
 	}
 
 	// Serialize the top-level children
@@ -572,7 +572,7 @@ func (this *builder) inferUnnestPredicates(from algebra.FromTerm) {
 	unnests = collectInnerUnnestsFromJoinTerm(joinTerm, unnests)
 
 	// Enumerate primary UNNESTs
-	primaryUnnests := collectPrimaryUnnests(from, unnests)
+	primaryUnnests := collectPrimaryUnnests(from.PrimaryTerm(), unnests)
 	if nil != primaryUnnests {
 		defer _UNNEST_POOL.Put(primaryUnnests)
 	}

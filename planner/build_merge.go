@@ -28,9 +28,9 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 	if source.From() != nil {
 		path = source.From().Path()
 	}
-	sourceKeyspace := base.NewBaseKeyspace(source.Alias(), path)
+	sourceKeyspace := base.NewBaseKeyspace(source.Alias(), path, nil, 1)
 	this.baseKeyspaces[sourceKeyspace.Name()] = sourceKeyspace
-	targetKeyspace := base.NewBaseKeyspace(stmt.KeyspaceRef().Alias(), stmt.KeyspaceRef().Path())
+	targetKeyspace := base.NewBaseKeyspace(stmt.KeyspaceRef().Alias(), stmt.KeyspaceRef().Path(), nil, 2)
 	this.baseKeyspaces[targetKeyspace.Name()] = targetKeyspace
 	this.collectKeyspaceNames()
 
@@ -83,6 +83,7 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 
 		left = source.From()
 	}
+	sourceKeyspace.SetNode(left)
 
 	ksref := stmt.KeyspaceRef()
 	ksref.SetDefaultNamespace(this.namespace)
@@ -107,6 +108,7 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 	}
 
 	right := algebra.NewKeyspaceTermFromPath(ksref.Path(), ksref.As(), nil, stmt.Indexes())
+	targetKeyspace.SetNode(right)
 
 	if stmt.IsOnKey() {
 		if this.useCBO && this.keyspaceUseCBO(ksAlias) {

@@ -73,3 +73,27 @@ type SecondaryScan interface {
 	// get index pointer if single index used, nil if multiple indexes used
 	GetIndex() datastore.Index
 }
+
+func CopyOperators(ops []Operator) []Operator {
+	size := len(ops)
+	if size < 16 {
+		size = 16
+	}
+	newOps := make([]Operator, 0, size)
+	for _, op := range ops {
+		newOps = append(newOps, op)
+	}
+	return newOps
+}
+
+func CopyCoveringOperators(ops []CoveringOperator) []CoveringOperator {
+	size := len(ops)
+	if size < 8 {
+		size = 8
+	}
+	newOps := make([]CoveringOperator, 0, size)
+	for _, op := range ops {
+		newOps = append(newOps, op)
+	}
+	return newOps
+}

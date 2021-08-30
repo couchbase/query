@@ -74,6 +74,10 @@ func (this *Join) OnFilter() expression.Expression {
 	return this.onFilter
 }
 
+func (this *Join) SetOnFilter(onFilter expression.Expression) {
+	this.onFilter = onFilter
+}
+
 func (this *Join) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }

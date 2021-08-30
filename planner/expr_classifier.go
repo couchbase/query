@@ -35,8 +35,15 @@ func ClassifyExpr(expr expression.Expression, baseKeyspaces map[string]*base.Bas
 		}
 	}
 
-	classifier := newExprClassifier(baseKeyspaces, keyspaceNames, isOnclause, doSelec,
-		advisorValidate, context)
+	return ClassifyExprKeyspace(expr, baseKeyspaces, keyspaceNames, "", isOnclause, doSelec, advisorValidate, context)
+}
+
+func ClassifyExprKeyspace(expr expression.Expression, baseKeyspaces map[string]*base.BaseKeyspace,
+	keyspaceNames map[string]string, alias string, isOnclause, doSelec, advisorValidate bool,
+	context *PrepareContext) (value.Value, error) {
+
+	classifier := newExprClassifier(baseKeyspaces, keyspaceNames, alias, isOnclause,
+		doSelec, advisorValidate, context)
 	_, err := expr.Accept(classifier)
 	if err != nil {
 		return nil, err
@@ -63,6 +70,7 @@ func ClassifyExpr(expr expression.Expression, baseKeyspaces map[string]*base.Bas
 type exprClassifier struct {
 	baseKeyspaces   map[string]*base.BaseKeyspace
 	keyspaceNames   map[string]string
+	alias           string
 	recursion       bool
 	recurseExpr     expression.Expression
 	recursionJoin   bool
@@ -76,11 +84,12 @@ type exprClassifier struct {
 }
 
 func newExprClassifier(baseKeyspaces map[string]*base.BaseKeyspace, keyspaceNames map[string]string,
-	isOnclause, doSelec, advisorValidate bool, context *PrepareContext) *exprClassifier {
+	alias string, isOnclause, doSelec, advisorValidate bool, context *PrepareContext) *exprClassifier {
 
 	return &exprClassifier{
 		baseKeyspaces:   baseKeyspaces,
 		keyspaceNames:   keyspaceNames,
+		alias:           alias,
 		isOnclause:      isOnclause,
 		doSelec:         doSelec,
 		advisorValidate: advisorValidate,
@@ -464,44 +473,62 @@ func (this *exprClassifier) visitDefault(expr expression.Expression) (interface{
 		}
 	}
 
-	for kspace, _ := range keyspaces {
-		if baseKspace, ok := this.baseKeyspaces[kspace]; ok {
-			filter := base.NewFilter(dnfExpr, origExpr, keyspaces, origKeyspaces,
-				this.isOnclause, len(origKeyspaces) > 1)
-			if this.doSelec && !baseKspace.IsUnnest() && baseKspace.DocCount() >= 0 {
-				optFilterSelectivity(filter, this.advisorValidate, this.context)
-			}
-			if len(subqueries) > 0 {
-				filter.SetSubq()
-			}
+	optBits := int32(0)
+	if this.doSelec {
+		optBits = getOptBits(this.baseKeyspaces, origKeyspaces)
+	}
 
-			if len(keyspaces) == 1 {
-				baseKspace.AddFilter(filter)
-			} else {
-				baseKspace.AddJoinFilter(filter)
-				// if this is an OR join predicate, attempt to extract a new OR-predicate
-				// for a single keyspace (to enable union scan)
-				if or, ok := dnfExpr.(*expression.Or); ok {
-					newPred, newOrigPred, orIsJoin, err := this.extractExpr(or, baseKspace.Name())
-					if err != nil {
-						return nil, err
+	for kspace, _ := range keyspaces {
+		baseKspace, ok := this.baseKeyspaces[kspace]
+		if !ok {
+			return nil, errors.NewPlanInternalError(fmt.Sprintf("exprClassifier.visitDefault: missing keyspace %s", kspace))
+		}
+
+		if this.isOnclause {
+			if baseKspace.PlanDone() {
+				// skip keyspaces already processed
+				continue
+			} else if this.alias != "" && kspace != this.alias {
+				// if alias is set, only add filter to the specified keyspace
+				continue
+			}
+		}
+
+		filter := base.NewFilter(dnfExpr, origExpr, keyspaces, origKeyspaces,
+			this.isOnclause, len(origKeyspaces) > 1)
+		if this.doSelec && !baseKspace.IsUnnest() && baseKspace.DocCount() >= 0 {
+			optFilterSelectivity(filter, this.advisorValidate, this.context)
+			filter.SetOptBits(optBits)
+		}
+		if len(subqueries) > 0 {
+			filter.SetSubq()
+		}
+
+		if len(keyspaces) == 1 {
+			baseKspace.AddFilter(filter)
+		} else {
+			baseKspace.AddJoinFilter(filter)
+			// if this is an OR join predicate, attempt to extract a new OR-predicate
+			// for a single keyspace (to enable union scan)
+			if or, ok := dnfExpr.(*expression.Or); ok {
+				newPred, newOrigPred, orIsJoin, err := this.extractExpr(or, baseKspace.Name())
+				if err != nil {
+					return nil, err
+				}
+				if newPred != nil {
+					newKeyspaces := make(map[string]string, 1)
+					newKeyspaces[baseKspace.Name()] = baseKspace.Keyspace()
+					newOrigKeyspaces := make(map[string]string, 1)
+					newOrigKeyspaces[baseKspace.Name()] = baseKspace.Keyspace()
+					newFilter := base.NewFilter(newPred, newOrigPred, newKeyspaces,
+						newOrigKeyspaces, this.isOnclause, orIsJoin)
+					if this.doSelec && !baseKspace.IsUnnest() && baseKspace.DocCount() >= 0 {
+						optFilterSelectivity(newFilter, this.advisorValidate, this.context)
+						newFilter.SetOptBits(baseKspace.OptBit())
 					}
-					if newPred != nil {
-						newKeyspaces := make(map[string]string, 1)
-						newKeyspaces[baseKspace.Name()] = baseKspace.Keyspace()
-						newOrigKeyspaces := make(map[string]string, 1)
-						newOrigKeyspaces[baseKspace.Name()] = baseKspace.Keyspace()
-						newFilter := base.NewFilter(newPred, newOrigPred, newKeyspaces,
-							newOrigKeyspaces, this.isOnclause, orIsJoin)
-						if this.doSelec && !baseKspace.IsUnnest() && baseKspace.DocCount() >= 0 {
-							optFilterSelectivity(newFilter, this.advisorValidate, this.context)
-						}
-						baseKspace.AddFilter(newFilter)
-					}
+					baseKspace.AddFilter(newFilter)
 				}
 			}
-		} else {
-			return nil, errors.NewPlanInternalError(fmt.Sprintf("exprClassifier.visitDefault: missing keyspace %s", kspace))
 		}
 	}
 
@@ -521,8 +548,8 @@ func (this *exprClassifier) extractExpr(or *expression.Or, keyspaceName string) 
 	var isJoin = false
 	for _, op := range orTerms.Operands() {
 		baseKeyspaces := base.CopyBaseKeyspaces(this.baseKeyspaces)
-		_, err := ClassifyExpr(op, baseKeyspaces, this.keyspaceNames, this.isOnclause,
-			this.doSelec, this.advisorValidate, this.context)
+		_, err := ClassifyExprKeyspace(op, baseKeyspaces, this.keyspaceNames, this.alias,
+			this.isOnclause, this.doSelec, this.advisorValidate, this.context)
 		if err != nil {
 			return nil, nil, false, err
 		}

@@ -36,11 +36,12 @@ func newKeyspaceFinder(baseKeyspaces map[string]*base.BaseKeyspace, primary stri
 	return rv
 }
 
-func (this *keyspaceFinder) addKeyspaceAlias(alias string, path *algebra.Path) error {
+func (this *keyspaceFinder) addKeyspaceAlias(alias string, path *algebra.Path,
+	node algebra.SimpleFromTerm) error {
 	if _, ok := this.baseKeyspaces[alias]; ok {
 		return errors.NewPlanInternalError(fmt.Sprintf("addKeyspaceAlias: duplicate keyspace %s", alias))
 	}
-	newBaseKeyspace := base.NewBaseKeyspace(alias, path)
+	newBaseKeyspace := base.NewBaseKeyspace(alias, path, node, (1 << len(this.baseKeyspaces)))
 	newBaseKeyspace.SetOuterlevel(this.outerlevel)
 	this.baseKeyspaces[alias] = newBaseKeyspace
 	this.keyspaceMap[alias] = newBaseKeyspace.Keyspace()
@@ -50,19 +51,8 @@ func (this *keyspaceFinder) addKeyspaceAlias(alias string, path *algebra.Path) e
 func (this *keyspaceFinder) addOnclause(onclause expression.Expression) bool {
 	if onclause != nil {
 		// add onclause if it does not reference any previous outer tables
-		keyspaces, err := expression.CountKeySpaces(onclause, this.keyspaceMap)
-		if err != nil {
+		if !pushableOnclause(onclause, this.baseKeyspaces, this.keyspaceMap) {
 			return false
-		}
-
-		chkNullRej := newChkNullRej()
-		for ks, _ := range keyspaces {
-			baseKspace, ok := this.baseKeyspaces[ks]
-			if !ok || baseKspace.Outerlevel() > 0 {
-				if !nullRejExpr(chkNullRej, ks, onclause) {
-					return false
-				}
-			}
 		}
 
 		if this.pushableOnclause != nil {
@@ -114,7 +104,7 @@ func (this *keyspaceFinder) VisitSubselect(node *algebra.Subselect) (interface{}
 }
 
 func (this *keyspaceFinder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{}, error) {
-	return nil, this.addKeyspaceAlias(node.Alias(), node.Path())
+	return nil, this.addKeyspaceAlias(node.Alias(), node.Path(), node)
 }
 
 func (this *keyspaceFinder) VisitExpressionTerm(node *algebra.ExpressionTerm) (interface{}, error) {
@@ -122,11 +112,11 @@ func (this *keyspaceFinder) VisitExpressionTerm(node *algebra.ExpressionTerm) (i
 		return node.KeyspaceTerm().Accept(this)
 	}
 
-	return nil, this.addKeyspaceAlias(node.Alias(), nil)
+	return nil, this.addKeyspaceAlias(node.Alias(), nil, node)
 }
 
 func (this *keyspaceFinder) VisitSubqueryTerm(node *algebra.SubqueryTerm) (interface{}, error) {
-	return nil, this.addKeyspaceAlias(node.Alias(), nil)
+	return nil, this.addKeyspaceAlias(node.Alias(), nil, node)
 }
 
 func (this *keyspaceFinder) VisitJoin(node *algebra.Join) (interface{}, error) {
@@ -173,14 +163,16 @@ func (this *keyspaceFinder) VisitUnnest(node *algebra.Unnest) (interface{}, erro
 		return nil, err
 	}
 
-	err = this.addKeyspaceAlias(node.Alias(), nil)
+	err = this.addKeyspaceAlias(node.Alias(), nil, nil)
 	if err != nil {
 		return nil, err
 	}
 
 	ks, _ := this.baseKeyspaces[node.Alias()]
 	ks.SetUnnest()
-	if !node.Outer() {
+	if node.Outer() {
+		ks.SetOuterlevel(this.outerlevel + 1)
+	} else {
 		for _, unnest := range this.unnestDepends {
 			if node.Expression().DependsOn(unnest) {
 				this.unnestDepends[node.Alias()] = expression.NewIdentifier(node.Alias())
@@ -214,4 +206,27 @@ func (this *keyspaceFinder) VisitExcept(node *algebra.Except) (interface{}, erro
 
 func (this *keyspaceFinder) VisitExceptAll(node *algebra.ExceptAll) (interface{}, error) {
 	return nil, this.visitSetop(node.First(), node.Second())
+}
+
+func pushableOnclause(onclause expression.Expression, baseKeyspaces map[string]*base.BaseKeyspace,
+	keyspaceNames map[string]string) bool {
+
+	keyspaces, err := expression.CountKeySpaces(onclause, keyspaceNames)
+	if err != nil {
+		return false
+	}
+
+	chkNullRej := newChkNullRej()
+	for ks, _ := range keyspaces {
+		baseKspace, ok := baseKeyspaces[ks]
+		if !ok {
+			return false
+		} else if baseKspace.Outerlevel() > 0 {
+			if !nullRejExpr(chkNullRej, ks, onclause) {
+				return false
+			}
+		}
+	}
+
+	return true
 }

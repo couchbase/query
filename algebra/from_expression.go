@@ -311,6 +311,22 @@ func (this *ExpressionTerm) SetCommaJoin() {
 }
 
 /*
+Unset (and save) join property
+*/
+func (this *ExpressionTerm) UnsetJoinProps() uint32 {
+	joinProps := (this.property & TERM_JOIN_PROPS)
+	this.property &^= TERM_JOIN_PROPS
+	return joinProps
+}
+
+/*
+Set join property
+*/
+func (this *ExpressionTerm) SetJoinProps(joinProps uint32) {
+	this.property |= joinProps
+}
+
+/*
 Marshals input ExpressionTerm.
 */
 func (this *ExpressionTerm) MarshalJSON() ([]byte, error) {

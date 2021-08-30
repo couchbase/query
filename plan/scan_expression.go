@@ -48,6 +48,10 @@ func (this *ExpressionScan) FromExpr() expression.Expression {
 	return this.fromExpr
 }
 
+func (this *ExpressionScan) SetFromExpr(fromExpr expression.Expression) {
+	this.fromExpr = fromExpr
+}
+
 func (this *ExpressionScan) Alias() string {
 	return this.alias
 }
@@ -58,6 +62,10 @@ func (this *ExpressionScan) IsCorrelated() bool {
 
 func (this *ExpressionScan) Filter() expression.Expression {
 	return this.filter
+}
+
+func (this *ExpressionScan) SetFilter(filter expression.Expression) {
+	this.filter = filter
 }
 
 func (this *ExpressionScan) MarshalJSON() ([]byte, error) {

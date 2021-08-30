@@ -36,6 +36,7 @@ type Filter struct {
 	origExpr      expression.Expression // original filter expression
 	keyspaces     map[string]string     // keyspace references
 	origKeyspaces map[string]string     // original keyspace references
+	optBits       int32                 // keyspace references in bits
 	fltrFlags     uint32                // filter flags
 	selec         float64               // filter selectivity
 	arrSelec      float64               // filter selectivity for array index
@@ -67,6 +68,7 @@ func NewFilter(fltrExpr, origExpr expression.Expression, keyspaces, origKeyspace
 func (this *Filter) Copy() *Filter {
 	rv := &Filter{
 		fltrExpr:  this.fltrExpr.Copy(),
+		optBits:   this.optBits,
 		fltrFlags: this.fltrFlags,
 		selec:     this.selec,
 		arrSelec:  this.arrSelec,
@@ -187,6 +189,14 @@ func (this *Filter) Keyspaces() map[string]string {
 
 func (this *Filter) OrigKeyspaces() map[string]string {
 	return this.origKeyspaces
+}
+
+func (this *Filter) OptBits() int32 {
+	return this.optBits
+}
+
+func (this *Filter) SetOptBits(optBits int32) {
+	this.optBits = optBits
 }
 
 func (this *Filter) Selec() float64 {

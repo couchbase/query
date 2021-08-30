@@ -62,6 +62,10 @@ func (this *HashNest) Onclause() expression.Expression {
 	return this.onclause
 }
 
+func (this *HashNest) SetOnclause(onclause expression.Expression) {
+	this.onclause = onclause
+}
+
 func (this *HashNest) Child() Operator {
 	return this.child
 }
@@ -70,8 +74,16 @@ func (this *HashNest) BuildExprs() expression.Expressions {
 	return this.buildExprs
 }
 
+func (this *HashNest) SetBuildExprs(buildExprs expression.Expressions) {
+	this.buildExprs = buildExprs
+}
+
 func (this *HashNest) ProbeExprs() expression.Expressions {
 	return this.probeExprs
+}
+
+func (this *HashNest) SetProbeExprs(probeExprs expression.Expressions) {
+	this.probeExprs = probeExprs
 }
 
 func (this *HashNest) BuildAlias() string {
@@ -84,6 +96,10 @@ func (this *HashNest) HintError() string {
 
 func (this *HashNest) Filter() expression.Expression {
 	return this.filter
+}
+
+func (this *HashNest) SetFilter(filter expression.Expression) {
+	this.filter = filter
 }
 
 func (this *HashNest) MarshalJSON() ([]byte, error) {

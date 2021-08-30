@@ -91,8 +91,9 @@ func (this *builder) indexCoveringPushDownProperty(entry *indexEntry, indexKeys 
 	//          * Requires single aggregate in projection
 	//          * NO Group By
 
-	if !isPushDownProperty(pushDownProperty, _PUSHDOWN_GROUPAGGS) && this.oldAggregates && tryApi2 &&
-		len(this.aggs) == 1 && len(this.group.By()) == 0 && !indexHasArrayIndexKey(entry.index) {
+	if !isPushDownProperty(pushDownProperty, _PUSHDOWN_GROUPAGGS) && !this.joinEnum() &&
+		this.oldAggregates && tryApi2 && len(this.aggs) == 1 && len(this.group.By()) == 0 &&
+		!indexHasArrayIndexKey(entry.index) {
 		for _, ag := range this.aggs {
 			switch agg := ag.(type) {
 

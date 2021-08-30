@@ -208,3 +208,19 @@ Return whether correlated
 func (this *SubqueryTerm) IsCorrelated() bool {
 	return this.subquery.IsCorrelated()
 }
+
+/*
+Unset (and save) join property
+*/
+func (this *SubqueryTerm) UnsetJoinProps() uint32 {
+	joinProps := (this.property & TERM_JOIN_PROPS)
+	this.property &^= TERM_JOIN_PROPS
+	return joinProps
+}
+
+/*
+Set join property
+*/
+func (this *SubqueryTerm) SetJoinProps(joinProps uint32) {
+	this.property |= joinProps
+}

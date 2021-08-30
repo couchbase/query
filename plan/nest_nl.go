@@ -61,6 +61,10 @@ func (this *NLNest) Onclause() expression.Expression {
 	return this.onclause
 }
 
+func (this *NLNest) SetOnclause(onclause expression.Expression) {
+	this.onclause = onclause
+}
+
 func (this *NLNest) HintError() string {
 	return this.hintError
 }
@@ -71,6 +75,10 @@ func (this *NLNest) Child() Operator {
 
 func (this *NLNest) Filter() expression.Expression {
 	return this.filter
+}
+
+func (this *NLNest) SetFilter(filter expression.Expression) {
+	this.filter = filter
 }
 
 func (this *NLNest) MarshalJSON() ([]byte, error) {

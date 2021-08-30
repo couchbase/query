@@ -47,7 +47,7 @@ func (this *builder) beginMutate(keyspace datastore.Keyspace, ksref *algebra.Key
 	this.offset = nil
 	this.requirePrimaryKey = true
 	this.baseKeyspaces = make(map[string]*base.BaseKeyspace, _MAP_KEYSPACE_CAP)
-	baseKeyspace := base.NewBaseKeyspace(ksref.Alias(), ksref.Path())
+	baseKeyspace := base.NewBaseKeyspace(ksref.Alias(), ksref.Path(), term, 1)
 	this.baseKeyspaces[baseKeyspace.Name()] = baseKeyspace
 	this.collectKeyspaceNames()
 	this.extractKeyspacePredicates(this.where, nil)

@@ -62,6 +62,10 @@ func (this *HashJoin) Onclause() expression.Expression {
 	return this.onclause
 }
 
+func (this *HashJoin) SetOnclause(onclause expression.Expression) {
+	this.onclause = onclause
+}
+
 func (this *HashJoin) Child() Operator {
 	return this.child
 }
@@ -70,8 +74,16 @@ func (this *HashJoin) BuildExprs() expression.Expressions {
 	return this.buildExprs
 }
 
+func (this *HashJoin) SetBuildExprs(buildExprs expression.Expressions) {
+	this.buildExprs = buildExprs
+}
+
 func (this *HashJoin) ProbeExprs() expression.Expressions {
 	return this.probeExprs
+}
+
+func (this *HashJoin) SetProbeExprs(probeExprs expression.Expressions) {
+	this.probeExprs = probeExprs
 }
 
 func (this *HashJoin) BuildAliases() []string {
@@ -84,6 +96,10 @@ func (this *HashJoin) HintError() string {
 
 func (this *HashJoin) Filter() expression.Expression {
 	return this.filter
+}
+
+func (this *HashJoin) SetFilter(filter expression.Expression) {
+	this.filter = filter
 }
 
 func (this *HashJoin) MarshalJSON() ([]byte, error) {

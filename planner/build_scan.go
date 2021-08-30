@@ -27,6 +27,10 @@ func (this *builder) selectScan(keyspace datastore.Keyspace, node *algebra.Keysp
 
 	keys := node.Keys()
 	if keys != nil {
+		if this.hasBuilderFlag(BUILDER_CHK_INDEX_ORDER) {
+			return nil, nil
+		}
+
 		this.resetPushDowns()
 		switch keys.(type) {
 		case *expression.ArrayConstruct, *algebra.NamedParameter, *algebra.PositionalParameter:
@@ -114,7 +118,7 @@ func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.Keyspa
 
 	if pred != nil || pred2 != nil {
 		// for ANSI JOIN, the following process is already done for ON clause filters
-		if !join {
+		if !join && !this.hasBuilderFlag(BUILDER_CHK_INDEX_ORDER) {
 			if len(baseKeyspace.JoinFilters()) > 0 {
 				// derive IS NOT NULL predicate
 				err = deriveNotNullFilter(keyspace, baseKeyspace, this.useCBO,
@@ -255,17 +259,19 @@ func (this *builder) buildSubsetScan(keyspace datastore.Keyspace, node *algebra.
 	}
 	order := this.order
 
-	// Prefer OR scan
 	pred := baseKeyspace.DnfPred()
 	if join && baseKeyspace.OnclauseOnly() {
 		pred = baseKeyspace.Onclause()
 	}
-	if or, ok := pred.(*expression.Or); ok {
+	if !this.hasBuilderFlag(BUILDER_CHK_INDEX_ORDER) {
+		// Prefer OR scan
+		if or, ok := pred.(*expression.Or); ok {
 
-		scan, _, err := this.buildOrScan(node, baseKeyspace, id, or, indexes, primaryKey, formalizer)
+			scan, _, err := this.buildOrScan(node, baseKeyspace, id, or, indexes, primaryKey, formalizer)
 
-		if scan != nil || err != nil {
-			return scan, nil, err
+			if scan != nil || err != nil {
+				return scan, nil, err
+			}
 		}
 	}
 
@@ -300,7 +306,7 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm,
 	var scanbuf [4]plan.SecondaryScan
 	scans := scanbuf[0:1]
 
-	if !join {
+	if !join && !this.hasBuilderFlag(BUILDER_CHK_INDEX_ORDER) {
 		// Consider pattern matching indexes
 		err = this.PatternFor(baseKeyspace, indexes, formalizer)
 		if err != nil {
@@ -315,13 +321,15 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm,
 
 	// collect UNNEST bindings when HINT indexes has FTS index
 	var ubs expression.Bindings
-	if this.hintIndexes && this.from != nil {
-		for _, idx := range indexes {
-			if idx.Type() == datastore.FTS {
-				ubs = make(expression.Bindings, 0, 2)
-				ua := expression.Expressions{expression.NewIdentifier(node.Alias())}
-				_, ubs = this.collectUnnestBindings(this.from, ua, ubs)
-				break
+	if !this.hasBuilderFlag(BUILDER_CHK_INDEX_ORDER) {
+		if this.hintIndexes && this.from != nil {
+			for _, idx := range indexes {
+				if idx.Type() == datastore.FTS {
+					ubs = make(expression.Bindings, 0, 2)
+					ua := expression.Expressions{expression.NewIdentifier(node.Alias())}
+					_, ubs = this.collectUnnestBindings(this.from, ua, ubs)
+					break
+				}
 			}
 		}
 	}
@@ -330,6 +338,24 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm,
 		formalizer, ubs, node.IsUnderNL())
 	if err != nil {
 		return nil, 0, err
+	}
+
+	if this.hasBuilderFlag(BUILDER_CHK_INDEX_ORDER) {
+		// useIndexOrder() needs index span
+		err = this.sargIndexes(baseKeyspace, false, sargables)
+		if err != nil {
+			return nil, 0, err
+		}
+		// only consider indexes that satisfy ordering
+		for i, e := range sargables {
+			ok, _ := this.useIndexOrder(e, e.keys)
+			if !ok {
+				delete(sargables, i)
+			}
+		}
+		if len(sargables) == 0 {
+			return nil, 0, nil
+		}
 	}
 
 	// purge any subset indexe and keep superset indexes

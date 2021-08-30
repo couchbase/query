@@ -29,6 +29,8 @@ const (
 	TERM_COMMA_JOIN                  // right-hand side of comma-separated join
 )
 
+const TERM_JOIN_PROPS = (TERM_ANSI_JOIN | TERM_ANSI_NEST | TERM_PRIMARY_JOIN)
+
 /*
 Represents the Keyspace (bucket) term in the FROM clause.  The
 keyspace can be prefixed with an optional namespace (pool).
@@ -525,6 +527,22 @@ Return whether correlated
 */
 func (this *KeyspaceTerm) IsCorrelated() bool {
 	return false
+}
+
+/*
+Unset (and save) join property
+*/
+func (this *KeyspaceTerm) UnsetJoinProps() uint32 {
+	joinProps := (this.property & TERM_JOIN_PROPS)
+	this.property &^= TERM_JOIN_PROPS
+	return joinProps
+}
+
+/*
+Set join property
+*/
+func (this *KeyspaceTerm) SetJoinProps(joinProps uint32) {
+	this.property |= joinProps
 }
 
 /*

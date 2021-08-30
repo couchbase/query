@@ -253,7 +253,7 @@ func deriveNotNullFilter(keyspace datastore.Keyspace, baseKeyspace *base.BaseKey
 					keyMap[val].derive = false
 					newFilters = AddDerivedFilter(term, keyspaceNames, origKeyspaceNames,
 						jfl.IsOnclause(), newFilters, useCBO, advisorValidate,
-						context)
+						baseKeyspace.OptBit(), context)
 				}
 			} else {
 				simple := false
@@ -280,7 +280,7 @@ func deriveNotNullFilter(keyspace datastore.Keyspace, baseKeyspace *base.BaseKey
 						keyMap[val].derive = false
 						newFilters = AddDerivedFilter(term, keyspaceNames, origKeyspaceNames,
 							jfl.IsOnclause(), newFilters, useCBO, advisorValidate,
-							context)
+							baseKeyspace.OptBit(), context)
 					}
 				}
 			}
@@ -296,15 +296,26 @@ func deriveNotNullFilter(keyspace datastore.Keyspace, baseKeyspace *base.BaseKey
 
 func AddDerivedFilter(term expression.Expression, keyspaceNames, origKeyspaceNames map[string]string,
 	isOnclause bool, newFilters base.Filters, useCBO, advisorValidate bool,
-	context *PrepareContext) base.Filters {
+	optBit int32, context *PrepareContext) base.Filters {
 
 	newExpr := expression.NewIsNotNull(term)
 	newFilter := base.NewFilter(newExpr, newExpr, keyspaceNames, origKeyspaceNames, isOnclause, false)
 	newFilter.SetDerived()
 	if useCBO {
 		optFilterSelectivity(newFilter, advisorValidate, context)
+		newFilter.SetOptBits(optBit)
 	}
 	newFilters = append(newFilters, newFilter)
 
 	return newFilters
+}
+
+func getOptBits(baseKeyspaces map[string]*base.BaseKeyspace, keyspaces map[string]string) int32 {
+	bits := int32(0)
+	for a, _ := range keyspaces {
+		if ks, ok := baseKeyspaces[a]; ok {
+			bits |= ks.OptBit()
+		}
+	}
+	return bits
 }
