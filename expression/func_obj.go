@@ -548,11 +548,8 @@ func NewObjectPaths(operands ...Expression) Function {
 	}
 
 	if 2 == len(operands) && operands[1].Type() == value.OBJECT {
-		if p, ok := operands[1].Value().Field("pattern"); ok {
-			rv.re, _ = precompileRegexp(value.NewValue(p), false)
-		}
+		rv.re = precompilePattern(operands[1].Value())
 	}
-
 	rv.expr = rv
 	return rv
 }
@@ -582,11 +579,11 @@ func (this *ObjectPaths) Evaluate(item value.Value, context Context) (value.Valu
 	}
 
 	unique := true
-	aNote := subscript
-	comps := true
-	index := false
-	var re *regexp.Regexp
-	fieldPattern := false
+	var pf pathFilter
+	pf.aNote = subscript
+	pf.comps = true
+	pf.index = false
+	pf.fieldPattern = false
 
 	if len(this.operands) > 1 {
 		options, err := this.operands[1].Evaluate(item, context)
@@ -603,28 +600,31 @@ func (this *ObjectPaths) Evaluate(item value.Value, context Context) (value.Valu
 		}
 		if as, ok := options.Field("arraysubscript"); ok && as.Type() == value.BOOLEAN {
 			if !as.Truth() {
-				aNote = star
+				pf.aNote = star
 			}
 		}
 		if c, ok := options.Field("composites"); ok && c.Type() == value.BOOLEAN {
-			comps = c.Truth()
+			pf.comps = c.Truth()
 		}
 		if ps, ok := options.Field("patternspace"); ok && ps.Type() == value.STRING {
 			switch ps.ToString() {
 			case "field":
-				fieldPattern = true
-			case "composite":
-				fieldPattern = false
-			default:
-				return nil, errors.NewError(nil, "Invalid patternspace option value")
+				pf.fieldPattern = true
+			case "path":
+				pf.fieldPattern = false
 			}
 		}
 		if p, ok := options.Field("pattern"); ok {
 			pattern := p.ToString()
 			if len(pattern) > 0 {
-				re = this.re
-				if re == nil {
-					re, err = regexp.Compile(pattern)
+				pf.re = this.re
+				if pf.re == nil {
+					if rex, ok := options.Field("regex"); ok && rex.Type() == value.BOOLEAN {
+						if !rex.Truth() {
+							pattern = regexp.QuoteMeta(pattern)
+						}
+					}
+					pf.re, err = regexp.Compile(pattern)
 					if err != nil {
 						return nil, err
 					}
@@ -632,45 +632,39 @@ func (this *ObjectPaths) Evaluate(item value.Value, context Context) (value.Valu
 			}
 		}
 		if c, ok := options.Field("index"); ok && c.Type() == value.BOOLEAN {
-			index = c.Truth()
+			pf.index = c.Truth()
 		}
 	}
 
 	// index==true forces no composites and no array subscript
-	if index == true {
-		comps = false
-		aNote = star
+	if pf.index == true {
+		pf.comps = false
+		pf.aNote = star
 	}
 
 	var nameBuf [_NAME_CAP]string
 	var names []string
-
+	var l int
 	if arg.Type() == value.OBJECT {
-		oa := arg.Actual().(map[string]interface{})
+		o := arg.Actual().(map[string]interface{})
 
-		l := len(oa)
-		l *= 3
-		if l <= len(nameBuf) {
-			names = nameBuf[0:0]
-		} else {
-			names = _NAME_POOL.GetCapped(l)
-			defer _NAME_POOL.Put(names)
-		}
-		names = getNames(names, "", oa, aNote, comps, re, fieldPattern, index)
-
+		l = len(o)
 	} else { // value.ARRAY
 		a := arg.Actual().([]interface{})
 
-		// assume an average of 3 fields per element
-		l := len(a) * 3
-		if l <= len(nameBuf) {
-			names = nameBuf[0:0]
-		} else {
-			names = _NAME_POOL.GetCapped(l)
-			defer _NAME_POOL.Put(names)
-		}
-		names = getNamesFromArray(names, "", a, aNote, comps, re, fieldPattern, index)
+		l = len(a)
 	}
+
+	// assume an average of 3 fields per element
+	l *= 3
+	if l <= len(nameBuf) {
+		names = nameBuf[0:0]
+	} else {
+		names = _NAME_POOL.GetCapped(l)
+		defer _NAME_POOL.Put(names)
+	}
+
+	names = pf.processValueForNames(names, "", arg)
 
 	sort.Strings(names)
 	ra := make([]interface{}, len(names))
@@ -694,25 +688,34 @@ func (this *ObjectPaths) Evaluate(item value.Value, context Context) (value.Valu
 	return value.NewValue(ra[:i]), nil
 }
 
-func getNamesFromArray(names []string, prefix string, a []interface{}, aNote aNotation, comps bool,
-	re *regexp.Regexp, fieldPattern bool, index bool) []string {
+type pathFilter struct {
+	aNote        aNotation
+	comps        bool
+	re           *regexp.Regexp
+	fieldPattern bool
+	index        bool
+}
 
+func (this *pathFilter) getNamesFromArray(names []string, prefix string, a []interface{}) []string {
+
+	var keep aNotation
 	for i, val := range a {
-		if aNote == subscript {
-			names = processValueForNames(names, prefix+fmt.Sprintf("[%d]", i), val, aNote, comps, re, fieldPattern, index)
+		if this.aNote == subscript {
+			names = this.processValueForNames(names, prefix+fmt.Sprintf("[%d]", i), val)
 		} else {
-			names = processValueForNames(names, prefix, val, belowStar, comps, re, fieldPattern, index)
+			keep, this.aNote = this.aNote, belowStar
+			names = this.processValueForNames(names, prefix, val)
+			this.aNote = keep
 		}
 	}
 	return names
 }
 
-func getNames(names []string, prefix string, m map[string]interface{}, aNote aNotation, comps bool,
-	re *regexp.Regexp, fieldPattern bool, index bool) []string {
+func (this *pathFilter) getNames(names []string, prefix string, m map[string]interface{}) []string {
 
 	if len(prefix) > 0 {
-		if aNote == belowStar {
-			if index {
+		if this.aNote == belowStar {
+			if this.index {
 				prefix = prefix + "[]."
 			} else {
 				prefix = prefix + "[*]."
@@ -722,30 +725,24 @@ func getNames(names []string, prefix string, m map[string]interface{}, aNote aNo
 		}
 	}
 	for name, val := range m {
-		if strings.IndexAny(name, " \t.`") != -1 || index == true {
+		if strings.IndexAny(name, " \t.`") != -1 || this.index == true {
 			name = strings.Replace(name, "`", "\\u0060", -1)
-			name := prefix + "`" + name + "`"
-			cre := re
-			if comps && matchPattern(name, re, fieldPattern) {
-				names = append(names, name)
-				cre = nil // once we've matched, all children match
-			}
-			names = processValueForNames(names, name, val, aNote, comps, cre, fieldPattern, index)
+			name = prefix + "`" + name + "`"
 		} else {
 			name = prefix + name
-			cre := re
-			if comps && matchPattern(name, re, fieldPattern) {
-				names = append(names, name)
-				cre = nil // once we've matched, all children match
-			}
-			names = processValueForNames(names, name, val, aNote, comps, cre, fieldPattern, index)
 		}
+		keepre := this.re
+		if this.comps && matchPattern(name, this.re, this.fieldPattern) {
+			names = append(names, name)
+			this.re = nil // once we've matched, all children match
+		}
+		names = this.processValueForNames(names, name, val)
+		this.re = keepre
 	}
 	return names
 }
 
-func processValueForNames(names []string, prefix string, val interface{}, aNote aNotation, comps bool,
-	re *regexp.Regexp, fieldPattern bool, index bool) []string {
+func (this *pathFilter) processValueForNames(names []string, prefix string, val interface{}) []string {
 
 	withAct, ok := val.(interface{ Actual() interface{} })
 	if ok {
@@ -753,11 +750,11 @@ func processValueForNames(names []string, prefix string, val interface{}, aNote 
 	}
 	switch ov := val.(type) {
 	case []interface{}:
-		names = getNamesFromArray(names, prefix, ov, aNote, comps, re, fieldPattern, index)
+		names = this.getNamesFromArray(names, prefix, ov)
 	case map[string]interface{}:
-		names = getNames(names, prefix, ov, aNote, comps, re, fieldPattern, index)
+		names = this.getNames(names, prefix, ov)
 	default:
-		if !comps && matchPattern(prefix, re, fieldPattern) {
+		if !this.comps && matchPattern(prefix, this.re, this.fieldPattern) {
 			names = append(names, prefix)
 		}
 	}
@@ -916,9 +913,7 @@ func NewObjectPairsNested(operands ...Expression) Function {
 	}
 
 	if 2 == len(operands) && operands[1].Type() == value.OBJECT {
-		if p, ok := operands[1].Value().Field("pattern"); ok {
-			rv.re, _ = precompileRegexp(value.NewValue(p), false)
-		}
+		rv.re = precompilePattern(operands[1].Value())
 	}
 	rv.expr = rv
 	return rv
@@ -940,10 +935,10 @@ func (this *ObjectPairsNested) Evaluate(item value.Value, context Context) (valu
 		return value.NULL_VALUE, nil
 	}
 
-	var re *regexp.Regexp
-	comps := false
-	index := false
-	fieldPattern := false
+	var pf pairFilter
+	pf.comps = false
+	pf.index = false
+	pf.fieldPattern = false
 	if len(this.operands) > 1 {
 		options, err := this.operands[1].Evaluate(item, context)
 		if err != nil {
@@ -955,24 +950,27 @@ func (this *ObjectPairsNested) Evaluate(item value.Value, context Context) (valu
 		}
 
 		if c, ok := options.Field("composites"); ok && c.Type() == value.BOOLEAN {
-			comps = c.Truth()
+			pf.comps = c.Truth()
 		}
 		if ps, ok := options.Field("patternspace"); ok && ps.Type() == value.STRING {
 			switch ps.ToString() {
 			case "field":
-				fieldPattern = true
-			case "composite":
-				fieldPattern = false
-			default:
-				return nil, errors.NewError(nil, "Invalid patternspace option value")
+				pf.fieldPattern = true
+			case "path":
+				pf.fieldPattern = false
 			}
 		}
 		if p, ok := options.Field("pattern"); ok {
 			pattern := p.ToString()
 			if len(pattern) > 0 {
-				re = this.re
-				if re == nil {
-					re, err = regexp.Compile(pattern)
+				pf.re = this.re
+				if pf.re == nil {
+					if rex, ok := options.Field("regex"); ok && rex.Type() == value.BOOLEAN {
+						if !rex.Truth() {
+							pattern = regexp.QuoteMeta(pattern)
+						}
+					}
+					pf.re, err = regexp.Compile(pattern)
 					if err != nil {
 						return nil, err
 					}
@@ -980,32 +978,29 @@ func (this *ObjectPairsNested) Evaluate(item value.Value, context Context) (valu
 			}
 		}
 		if c, ok := options.Field("index"); ok && c.Type() == value.BOOLEAN {
-			index = c.Truth()
+			pf.index = c.Truth()
 		}
 	}
 
 	// index==true forces no composites
-	if index == true {
-		comps = false
+	if pf.index == true {
+		pf.comps = false
 	}
 
 	var pairs util.Pairs
+	var l int
 
 	if arg.Type() == value.OBJECT {
-		oa := arg.Actual().(map[string]interface{})
-
-		l := len(oa) * 2
-		pairs = make(util.Pairs, 0, l)
-		pairs = getPairs(pairs, "", oa, comps, re, fieldPattern, index)
-
+		o := arg.Actual().(map[string]interface{})
+		l = len(o)
 	} else { // value.ARRAY
 		a := arg.Actual().([]interface{})
-
-		l := len(a) * 3
-		pairs = make(util.Pairs, 0, l)
-		pairs = getPairsFromArray(pairs, "", a, comps, re, fieldPattern, index)
+		l = len(a)
 	}
 
+	l *= 3
+	pairs = make(util.Pairs, 0, l)
+	pairs = pf.processPairValue(pairs, "", arg)
 	sort.Sort(pairs)
 
 	rv := make([]interface{}, len(pairs))
@@ -1016,32 +1011,39 @@ func (this *ObjectPairsNested) Evaluate(item value.Value, context Context) (valu
 	return value.NewValue(rv), nil
 }
 
-func getPairsFromArray(pairs util.Pairs, prefix string, a []interface{}, comps bool, re *regexp.Regexp, fieldPattern bool, index bool) util.Pairs {
-	if index == true {
+type pairFilter struct {
+	comps        bool
+	re           *regexp.Regexp
+	fieldPattern bool
+	index        bool
+}
+
+func (this *pairFilter) getPairsFromArray(pairs util.Pairs, prefix string, a []interface{}) util.Pairs {
+	if this.index == true {
 		for _, val := range a {
-			pairs = processPairValue(pairs, prefix+"[]", val, comps, re, fieldPattern, index)
+			pairs = this.processPairValue(pairs, prefix+"[]", val)
 		}
 	} else {
 		for i, val := range a {
-			pairs = processPairValue(pairs, prefix+fmt.Sprintf("[%d]", i), val, comps, re, fieldPattern, index)
+			pairs = this.processPairValue(pairs, prefix+fmt.Sprintf("[%d]", i), val)
 		}
 	}
 	return pairs
 }
 
-func getPairs(pairs util.Pairs, prefix string, m map[string]interface{}, comps bool, re *regexp.Regexp, fieldPattern bool, index bool) util.Pairs {
+func (this *pairFilter) getPairs(pairs util.Pairs, prefix string, m map[string]interface{}) util.Pairs {
 	if len(prefix) > 0 {
 		prefix = prefix + "."
 	}
 	for name, val := range m {
-		if strings.IndexAny(name, " \t.`") != -1 || index == true {
+		if strings.IndexAny(name, " \t.`") != -1 || this.index == true {
 			name = strings.Replace(name, "`", "\\u0060", -1)
 			name = prefix + "`" + name + "`"
 		} else {
 			name = prefix + name
 		}
-		cre := re
-		if comps && matchPattern(name, re, fieldPattern) {
+		keepre := this.re
+		if this.comps && matchPattern(name, this.re, this.fieldPattern) {
 			// only add if it is actually a composite value
 			withAct, ok := val.(interface{ Actual() interface{} })
 			if ok {
@@ -1057,25 +1059,26 @@ func getPairs(pairs util.Pairs, prefix string, m map[string]interface{}, comps b
 			if add {
 				pairs = append(pairs, util.Pair{Name: name, Value: val})
 			}
-			cre = nil // once matched, all children match
+			this.re = nil // once matched, all children match
 		}
-		pairs = processPairValue(pairs, name, val, comps, cre, fieldPattern, index)
+		pairs = this.processPairValue(pairs, name, val)
+		this.re = keepre
 	}
 	return pairs
 }
 
-func processPairValue(pairs util.Pairs, prefix string, val interface{}, comps bool, re *regexp.Regexp, fieldPattern bool, index bool) util.Pairs {
+func (this *pairFilter) processPairValue(pairs util.Pairs, prefix string, val interface{}) util.Pairs {
 	withAct, ok := val.(interface{ Actual() interface{} })
 	if ok {
 		val = withAct.Actual()
 	}
 	switch ov := val.(type) {
 	case []interface{}:
-		pairs = getPairsFromArray(pairs, prefix, ov, comps, re, fieldPattern, index)
+		pairs = this.getPairsFromArray(pairs, prefix, ov)
 	case map[string]interface{}:
-		pairs = getPairs(pairs, prefix, ov, comps, re, fieldPattern, index)
+		pairs = this.getPairs(pairs, prefix, ov)
 	default:
-		if matchPattern(prefix, re, fieldPattern) {
+		if matchPattern(prefix, this.re, this.fieldPattern) {
 			pairs = append(pairs, util.Pair{Name: prefix, Value: val})
 		}
 	}
@@ -1648,9 +1651,7 @@ func NewObjectExtract(operands ...Expression) Function {
 	}
 
 	if 2 == len(operands) && operands[1].Type() == value.OBJECT {
-		if p, ok := operands[1].Value().Field("pattern"); ok {
-			rv.re, _ = precompileRegexp(value.NewValue(p), false)
-		}
+		rv.re = precompilePattern(operands[1].Value())
 	}
 	rv.expr = rv
 	return rv
@@ -1863,3 +1864,214 @@ func (this *ObjectField) Constructor() FunctionConstructor {
 const _FIELD_CAP = 16
 
 var _FIELD_POOL = util.NewInterfacePool(256)
+
+///////////////////////////////////////////////////
+//
+// ObjectFilter
+//
+///////////////////////////////////////////////////
+
+type ObjectFilter struct {
+	FunctionBase
+	re *regexp.Regexp
+}
+
+func NewObjectFilter(operands ...Expression) Function {
+	rv := &ObjectFilter{
+		*NewFunctionBase("object_filter", operands...),
+		nil,
+	}
+
+	if 2 == len(operands) && operands[1].Type() == value.OBJECT {
+		rv.re = precompilePattern(operands[1].Value())
+	}
+
+	rv.expr = rv
+	return rv
+}
+
+func (this *ObjectFilter) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *ObjectFilter) Type() value.Type { return value.ARRAY }
+
+func (this *ObjectFilter) Evaluate(item value.Value, context Context) (value.Value, error) {
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if arg.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else if arg.Type() != value.OBJECT && arg.Type() != value.ARRAY {
+		return value.NULL_VALUE, nil
+	}
+
+	var ff fieldFilter
+	ff.aNote = subscript
+	ff.fieldPattern = false
+	ff.comps = true
+
+	if len(this.operands) > 1 {
+		options, err := this.operands[1].Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		} else if options.Type() == value.MISSING {
+			return value.MISSING_VALUE, nil
+		} else if options.Type() != value.OBJECT {
+			return value.NULL_VALUE, nil
+		}
+
+		if as, ok := options.Field("arraysubscript"); ok && as.Type() == value.BOOLEAN {
+			if !as.Truth() {
+				ff.aNote = star
+			}
+		}
+		if c, ok := options.Field("composites"); ok && c.Type() == value.BOOLEAN {
+			ff.comps = c.Truth()
+		}
+		if ps, ok := options.Field("patternspace"); ok && ps.Type() == value.STRING {
+			switch ps.ToString() {
+			case "field":
+				ff.fieldPattern = true
+			case "path":
+				ff.fieldPattern = false
+			}
+		}
+		if p, ok := options.Field("pattern"); ok {
+			pattern := p.ToString()
+			if len(pattern) > 0 {
+				ff.re = this.re
+				if ff.re == nil {
+					if rex, ok := options.Field("regex"); ok && rex.Type() == value.BOOLEAN {
+						if !rex.Truth() {
+							pattern = regexp.QuoteMeta(pattern)
+						}
+					}
+					ff.re, err = regexp.Compile(pattern)
+					if err != nil {
+						return nil, err
+					}
+				}
+			}
+		}
+	}
+
+	obj := ff.processValueForFields("", arg.Actual())
+	return value.NewValue(obj), nil
+}
+
+func (this *ObjectFilter) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return NewObjectFilter(operands...)
+	}
+}
+
+/*
+Minimum input arguments required is 1.
+*/
+func (this *ObjectFilter) MinArgs() int { return 1 }
+
+/*
+Maximum input arguments allowed.
+*/
+func (this *ObjectFilter) MaxArgs() int { return 2 }
+
+type fieldFilter struct {
+	aNote        aNotation
+	comps        bool
+	re           *regexp.Regexp
+	fieldPattern bool
+}
+
+func (this *fieldFilter) getFieldsFromArray(prefix string, a []interface{}) []interface{} {
+
+	var res []interface{}
+	var keep aNotation
+	for i, val := range a {
+		var nv interface{}
+		if this.aNote == subscript {
+			nv = this.processValueForFields(prefix+fmt.Sprintf("[%d]", i), val)
+		} else {
+			keep, this.aNote = this.aNote, belowStar
+			nv = this.processValueForFields(prefix, val)
+			this.aNote = keep
+		}
+		if nv != nil {
+			res = append(res, nv)
+		}
+	}
+	return res
+}
+
+func (this *fieldFilter) getFields(prefix string, m map[string]interface{}) interface{} {
+
+	if len(prefix) > 0 {
+		if this.aNote == belowStar {
+			prefix = prefix + "[*]."
+		} else {
+			prefix = prefix + "."
+		}
+	}
+	res := make(map[string]interface{})
+	for name, val := range m {
+		var mname string
+		if strings.IndexAny(name, " \t.`") != -1 {
+			mname = strings.Replace(name, "`", "\\u0060", -1)
+			mname = prefix + "`" + mname + "`"
+		} else {
+			mname = prefix + name
+		}
+		if this.comps && matchPattern(mname, this.re, this.fieldPattern) {
+			res[name] = val
+		} else {
+			// else check nested
+			nv := this.processValueForFields(mname, val)
+			if nv != nil {
+				res[name] = nv
+			}
+		}
+	}
+	return res
+}
+
+func (this *fieldFilter) processValueForFields(prefix string, val interface{}) interface{} {
+
+	withAct, ok := val.(interface{ Actual() interface{} })
+	if ok {
+		val = withAct.Actual()
+	}
+	var res interface{}
+	switch ov := val.(type) {
+	case []interface{}:
+		res = this.getFieldsFromArray(prefix, ov)
+	case map[string]interface{}:
+		res = this.getFields(prefix, ov)
+	default:
+		if !this.comps && matchPattern(prefix, this.re, this.fieldPattern) {
+			res = val
+		}
+	}
+	if av, ok := res.([]interface{}); ok {
+		if len(av) == 0 {
+			res = nil
+		}
+	} else if ov, ok := res.(map[string]interface{}); ok {
+		if len(ov) == 0 {
+			res = nil
+		}
+	}
+	return res
+}
+
+func precompilePattern(options value.Value) *regexp.Regexp {
+	var re *regexp.Regexp
+	if p, ok := options.Field("pattern"); ok {
+		if rex, ok := options.Field("regex"); ok && rex.Type() == value.BOOLEAN {
+			if !rex.Truth() {
+				p = value.NewValue(regexp.QuoteMeta(p.ToString()))
+			}
+		}
+		re, _ = precompileRegexp(p, false)
+	}
+	return re
+}

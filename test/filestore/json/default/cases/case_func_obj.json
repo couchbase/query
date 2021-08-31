@@ -637,5 +637,35 @@
           ]
       }
     ]
+  },
+  {
+    "statements":"select raw object_filter(a,{'pattern':'bb$','composites':true}) from {'a':[{'bb':{'c':0}},{'cd':1},{'d':1},{'dc':[2,{'x':true}]}]} a",
+    "results": [
+      {
+          "a": [
+              {
+                  "bb": {
+                      "c": 0
+                  }
+              }
+          ]
+      }
+    ]
+  },
+  {
+    "statements":"select raw object_filter(a,{'pattern':'a[3].dc[1].x','regex':false}) from {'a':[{'bb':{'c':0}},{'cd':1},{'d':1},{'dc':[2,{'x':true}]}]} a",
+    "results": [
+      {
+          "a": [
+              {
+                  "dc": [
+                      {
+                          "x": true
+                      }
+                  ]
+              }
+          ]
+      }
+    ]
   }
 ]
