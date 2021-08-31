@@ -20,6 +20,8 @@ replace github.com/couchbase/gomemcached => ../gomemcached
 
 replace github.com/couchbase/indexing => ../indexing
 
+replace github.com/couchbase/gometa => ../gometa
+
 replace github.com/couchbase/n1fty => ../n1fty
 
 replace github.com/couchbase/plasma => ../plasma
