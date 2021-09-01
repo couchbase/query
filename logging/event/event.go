@@ -76,9 +76,9 @@ func Report(e EventType, l EventLevel, args ...interface{}) {
 
 	uuid, _ := util.UUIDV4()
 	body = append(body, byte('{'))
-	writeValue(&body, "event_id", uuid)
+	writeValue(&body, "uuid", uuid)
 	writeValue(&body, "component", _COMPONENT)
-	writeValue(&body, "event_code", e)
+	writeValue(&body, "event_id", e)
 	writeValue(&body, "description", eventDescription[e])
 	writeValue(&body, "severity", l)
 	writeValue(&body, "timestamp", time.Now().UTC().Format(_EVENT_TIMESTAMP_FORMAT))
