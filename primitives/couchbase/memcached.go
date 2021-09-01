@@ -86,71 +86,293 @@ func IsUnknownCollection(err error) bool {
 	return false
 }
 
+// infrastructure for GetBulk() and Do()
+type doDescriptor struct {
+	retry           bool
+	discard         bool
+	useReplicas     bool
+	version         int
+	replica         int
+	backoffAttempts int
+	NMVBCount       int
+	attempts        int
+	maxTries        int
+	errorString     string
+	pool            *connectionPool
+}
+
+// Given a vbucket number, returns a memcached connection to it.
+// The connection must be returned to its pool after use.
+func (b *Bucket) getConnectionToVBucket(vb uint32, replica int) (*memcached.Client, *connectionPool, error) {
+	for {
+		vbm := b.VBServerMap()
+		if len(vbm.VBucketMap) < int(vb) {
+			return nil, nil, fmt.Errorf("primitives/couchbase: vbmap smaller than vbucket list: %v vs. %v",
+				vb, vbm.VBucketMap)
+		}
+		masterId := vbm.VBucketMap[vb][replica]
+		if masterId < 0 {
+			return nil, nil, fmt.Errorf("primitives/couchbase: No master for vbucket %d", vb)
+		}
+		pool := b.getConnPool(masterId)
+		conn, err := pool.Get()
+		if err != errClosedPool {
+			return conn, pool, err
+		}
+		// If conn pool was closed, because another goroutine refreshed the vbucket map, retry...
+	}
+}
+
+// first part of the retry loop: get a connection and handle errors
+func (b *Bucket) getVbConnection(vb uint32, desc *doDescriptor) (conn *memcached.Client, pool *connectionPool, err error) {
+	desc.errorString = ""
+
+	// if we had a NMVB and have successfully identified the pool for the correct node, use it
+	// if it doesn't work out, fall back to the old method
+	if desc.pool != nil {
+		pool = desc.pool
+		desc.pool = nil
+		conn, err = pool.Get()
+		if conn == nil {
+			conn, pool, err = b.getConnectionToVBucket(vb, desc.replica)
+		}
+	} else {
+		conn, pool, err = b.getConnectionToVBucket(vb, desc.replica)
+	}
+	desc.retry = false
+	if err == nil {
+		return conn, pool, nil
+	} else if err == errNoPool {
+		if backOff(desc.backoffAttempts, desc.maxTries, backOffDuration, true) {
+			b.Refresh()
+			desc.backoffAttempts++
+			desc.retry = true
+		} else {
+			desc.errorString = "Connection Error no pool %v : %v"
+		}
+	} else if isConnError(err) {
+		if backOff(desc.backoffAttempts, desc.maxTries, backOffDuration, true) {
+
+			// check for a new vbmap
+			if desc.version == b.Version {
+				b.Refresh()
+			}
+
+			// if one's available, assume the master is up
+			if desc.version != b.Version {
+				desc.version = b.Version
+				desc.replica = 0
+			} else if desc.useReplicas && desc.replica < b.VBServerMap().NumReplicas-1 {
+
+				// see if we can use a replica
+				desc.replica++
+			}
+			desc.backoffAttempts++
+			desc.retry = true
+		} else {
+			desc.errorString = "Connection Error %v : %v"
+		}
+	} else if isAddrNotAvailable(err) {
+		if backOff(desc.backoffAttempts, desc.maxTries, backOffDuration, true) {
+			b.Refresh()
+			desc.backoffAttempts++
+			desc.retry = true
+		} else {
+			desc.errorString = "Out of ephemeral ports: %v : %v"
+		}
+	} else if isTimeoutError(err) {
+
+		// check for a new vbmap
+		if desc.version == b.Version {
+			b.Refresh()
+		}
+
+		// if one's available, assume the master is up
+		if desc.version != b.Version {
+			desc.version = b.Version
+			desc.replica = 0
+		} else {
+
+			// see if we can use a replica
+			desc.replica++
+		}
+
+		desc.retry = desc.replica == 0 || (desc.useReplicas && desc.replica < b.VBServerMap().NumReplicas)
+		if !desc.retry {
+			desc.errorString = "Connection Error %v : %v"
+		}
+	}
+	return nil, nil, err
+}
+
+// second part of the retry loop: handle the command errors and retry strategy
+func (b *Bucket) processOpError(vb uint32, lastError error, node string, desc *doDescriptor) {
+	desc.retry = false
+	desc.discard = false
+
+	// MB-30967 / MB-31001 implement back off for transient errors
+	if resp, ok := lastError.(*gomemcached.MCResponse); ok {
+		switch resp.Status {
+		case gomemcached.NOT_MY_VBUCKET:
+			desc.NMVBCount++
+
+			// first, can we use the NMVB response vbmap entry?
+			// we will only try this once
+			if desc.NMVBCount == 1 {
+				desc.pool = b.handleNMVB(vb, resp)
+				if desc.pool != nil {
+					desc.retry = true
+					desc.discard = b.obsoleteNode(node)
+					return
+				}
+			}
+
+			// if it didn't work out, refresh until we get a new vbmap
+			desc.backoffAttempts++
+			desc.retry = backOff(desc.backoffAttempts, desc.maxTries, backOffDuration, false)
+			for desc.backoffAttempts < desc.maxTries {
+				if !desc.retry {
+					break
+				}
+				b.Refresh()
+				if desc.version == b.Version {
+					desc.backoffAttempts++
+					desc.retry = backOff(desc.backoffAttempts, desc.maxTries, backOffDuration, false)
+					continue
+				}
+				desc.version = b.Version
+			}
+
+			// MB-28842: in case of NMVB, check if the node is still part of the map
+			// and ditch the connection if it isn't.
+			desc.discard = b.obsoleteNode(node)
+		case gomemcached.NOT_SUPPORTED:
+			b.Refresh()
+			desc.discard = b.obsoleteNode(node)
+			desc.backoffAttempts++
+			desc.retry = backOff(desc.backoffAttempts, desc.maxTries, backOffDuration, true)
+		case gomemcached.EBUSY, gomemcached.LOCKED:
+			// TODO backoff instead?
+			if (desc.attempts % (MaxBulkRetries / 100)) == 0 {
+				desc.errorString = "Retrying Memcached error (%v) FOR %v(vbid:%d, keys:<ud>%v</ud>)"
+			}
+			desc.retry = true
+		case gomemcached.ENOMEM, gomemcached.TMPFAIL:
+			desc.errorString = "Retrying Memcached error (%v) FOR %v(vbid:%d, keys:<ud>%v</ud>)"
+			desc.backoffAttempts++
+			desc.retry = backOff(desc.backoffAttempts, desc.maxTries, backOffDuration, true)
+		}
+	} else if lastError != nil {
+		if isOutOfBoundsError(lastError) {
+
+			// We got an out of bounds error or a read timeout error; retry the operation
+			desc.discard = true
+			desc.retry = true
+		} else if isConnError(lastError) {
+			desc.backoffAttempts++
+			desc.retry = backOff(desc.backoffAttempts, desc.maxTries, backOffDuration, true)
+		} else if IsReadTimeOutError(lastError) {
+
+			// check for a new vbmap
+			if desc.version == b.Version {
+				b.Refresh()
+			}
+
+			// if one's available, assume the master is up
+			if desc.version != b.Version {
+				desc.version = b.Version
+				desc.replica = 0
+			} else {
+
+				// see if we can use a replica
+				desc.replica++
+			}
+
+			desc.retry = desc.replica == 0 || (desc.useReplicas && desc.replica < b.VBServerMap().NumReplicas)
+		}
+	} else if b.replica < desc.replica {
+
+		// if we had to use a replica and it worked, force all gets to use the replica until a refresh
+		b.replica = desc.replica
+	}
+}
+
+// dummy type to extract the VB map from a memcached error
+type refreshVB struct {
+	VBSMJson VBucketServerMap `json:"vBucketServerMap"`
+}
+
+func (b *Bucket) handleNMVB(vb uint32, resp *gomemcached.MCResponse) *connectionPool {
+	if resp != nil && len(resp.Body) > 0 {
+		tmpVB := &refreshVB{}
+		if json.Unmarshal(resp.Body, &tmpVB) == nil &&
+			len(tmpVB.VBSMJson.ServerList) > 0 && len(tmpVB.VBSMJson.VBucketMap) > 0 {
+
+			// if the vbmap is good and we find the node in the current node list, use that pool
+			if int(vb) < len(tmpVB.VBSMJson.VBucketMap) {
+				masterId := tmpVB.VBSMJson.VBucketMap[int(vb)][0]
+				nodes := b.VBServerMap().ServerList
+				node := tmpVB.VBSMJson.ServerList[masterId]
+				if masterId < len(nodes) && nodes[masterId] == node {
+					return b.getConnPool(masterId)
+				}
+				for i := range nodes {
+					if nodes[i] == node {
+						return b.getConnPool(masterId)
+					}
+				}
+			}
+		}
+	}
+	return nil
+}
+
 // Do executes a function on a memcached connection to the node owning key "k"
 //
 // Note that this automatically handles transient errors by replaying
 // your function on a "not-my-vbucket" error, so don't assume
-// your command will only be executed only once.
+// your command will only be executed once.
 func (b *Bucket) Do(k string, f func(mc *memcached.Client, vb uint16) error) (err error) {
-	return b.Do2(k, f, true)
+	return b.Do2(k, f, true, false)
 }
 
-func (b *Bucket) Do2(k string, f func(mc *memcached.Client, vb uint16) error, deadline bool) (err error) {
+func (b *Bucket) Do2(k string, f func(mc *memcached.Client, vb uint16) error, deadline bool, useReplicas bool) (err error) {
 	var lastError error
 
 	vb := b.VBHash(k)
-	maxTries := len(b.Nodes()) * 2
-	for i := 0; i < maxTries; i++ {
-		conn, pool, err := b.getConnectionToVBucket(vb)
+	desc := &doDescriptor{useReplicas: useReplicas, version: b.Version, maxTries: len(b.Nodes()) * 2}
+
+	// if we were forced to use replicas beforehand, start with replicas anyway
+	if useReplicas && b.replica > 0 {
+		desc.replica = b.replica
+	}
+	for desc.attempts = 0; desc.attempts < desc.maxTries; desc.attempts++ {
+		conn, pool, err := b.getVbConnection(uint32(vb), desc)
 		if err != nil {
-			if (err == errNoPool || isConnError(err)) && backOff(i, maxTries, backOffDuration, true) {
-				b.Refresh()
+			if desc.retry {
 				continue
 			}
 			return err
 		}
-
 		if deadline && DefaultTimeout > 0 {
 			conn.SetDeadline(getDeadline(noDeadline, DefaultTimeout))
 		} else {
 			conn.SetDeadline(noDeadline)
 		}
-		lastError = f(conn, uint16(vb))
-
-		retry := false
-		discard := isOutOfBoundsError(lastError) || IsReadTimeOutError(lastError)
-
-		// MB-30967 / MB-31001 implement back off for transient errors
-		if resp, ok := lastError.(*gomemcached.MCResponse); ok {
-			switch resp.Status {
-			case gomemcached.NOT_MY_VBUCKET:
-				retry = backOff(i, maxTries, backOffDuration, false)
-				if retry {
-					b.Refresh()
-				}
-
-				// MB-28842: in case of NMVB, check if the node is still part of the map
-				// and ditch the connection if it isn't.
-				discard = b.checkVBmap(pool.Node())
-			case gomemcached.NOT_SUPPORTED:
-				discard = true
-				retry = true
-			case gomemcached.ENOMEM:
-				fallthrough
-			case gomemcached.TMPFAIL, gomemcached.EBUSY:
-				retry = backOff(i, maxTries, backOffDuration, true)
-			}
-		} else if lastError != nil && isConnError(lastError) && backOff(i, maxTries, backOffDuration, true) {
-			retry = true
+		if desc.replica > 0 {
+			conn.SetReplica(true)
 		}
+		lastError = f(conn, uint16(vb))
+		b.processOpError(uint32(vb), lastError, pool.Node(), desc)
 
-		if discard {
+		if desc.discard {
 			pool.Discard(conn)
 		} else {
+			conn.SetReplica(false)
 			pool.Return(conn)
 		}
 
-		if !retry {
+		if !desc.retry {
 			return lastError
 		}
 	}
@@ -160,9 +382,9 @@ func (b *Bucket) Do2(k string, f func(mc *memcached.Client, vb uint16) error, de
 		if err == "" {
 			err = fmt.Sprintf("KV status %v", resp.Status)
 		}
-		return fmt.Errorf("unable to complete action after %v attempts: %v", maxTries, err)
+		return fmt.Errorf("unable to complete action after %v attempts: %v", desc.maxTries, err)
 	} else {
-		return fmt.Errorf("unable to complete action after %v attempts: %v", maxTries, lastError)
+		return fmt.Errorf("unable to complete action after %v attempts: %v", desc.maxTries, lastError)
 	}
 }
 
@@ -365,152 +587,61 @@ func (b *Bucket) doBulkGet(vb uint16, keys []string, reqDeadline time.Time,
 	eStatus *errorStatus, context ...*memcached.ClientContext) {
 
 	rv := _STRING_MCRESPONSE_POOL.Get()
-	attempts := 0
-	backOffAttempts := 0
 	done := false
 	bname := b.Name
+	desc := &doDescriptor{useReplicas: true, version: b.Version, maxTries: len(b.Nodes()) * 2}
 	var lastError error
-	for ; attempts < MaxBulkRetries && !done && !eStatus.errStatus; attempts++ {
-
-		if len(b.VBServerMap().VBucketMap) < int(vb) {
-			//fatal
-			err := fmt.Errorf("vbmap smaller than requested for %v", bname)
-			logging.Errorf("primtives/couchbase: %v vb %d vbmap len %d", err.Error(), vb, len(b.VBServerMap().VBucketMap))
-			ech <- err
-			return
-		}
-
-		masterID := b.VBServerMap().VBucketMap[vb][0]
-
-		if masterID < 0 {
-			// fatal
-			err := fmt.Errorf("No master node available for %v vb %d", bname, vb)
-			logging.Errorf("%v", err.Error())
-			ech <- err
-			return
-		}
+	for ; desc.attempts < MaxBulkRetries && !done && !eStatus.errStatus; desc.attempts++ {
 
 		// This stack frame exists to ensure we can clean up
 		// connection at a reasonable time.
 		err := func() error {
-			pool := b.getConnPool(masterID)
-			conn, err := pool.Get()
+			conn, pool, err := b.getVbConnection(uint32(vb), desc)
 			if err != nil {
-				if isAuthError(err) || isTimeoutError(err) {
-					logging.Errorf("Fatal Error %v : %v", bname, err)
+				if !desc.retry {
 					ech <- err
+					if desc.errorString != "" {
+						logging.Infof(desc.errorString, b.Name, err)
+					}
 					return err
-				} else if isConnError(err) {
-					if !backOff(backOffAttempts, MaxBackOffRetries, backOffDuration, true) {
-						logging.Errorf("Connection Error %v : %v", bname, err)
-						ech <- err
-						return err
-					}
-					b.Refresh()
-					backOffAttempts++
-				} else if err == errNoPool {
-					if !backOff(backOffAttempts, MaxBackOffRetries, backOffDuration, true) {
-						logging.Errorf("Connection Error no pool %v : %v", bname, err)
-						ech <- err
-						return err
-					}
-					err = b.Refresh()
-					if err != nil {
-						ech <- err
-						return err
-					}
-					backOffAttempts++
-
-					// retry, and make no noise
-					return nil
-				} else if isAddrNotAvailable(err) {
-					if !backOff(backOffAttempts, MaxBackOffRetries, backOffDuration, true) {
-						logging.Errorf("Out of ephemeral ports: %v : %v", bname, err)
-						ech <- err
-						return err
-					}
-					b.Refresh()
-					backOffAttempts++
 				}
-				if lastError == nil || err.Error() != lastError.Error() || MaxBulkRetries-1 == attempts {
+				if lastError == nil || err.Error() != lastError.Error() || MaxBulkRetries-1 == desc.attempts {
 					if lastError != nil {
-						logging.Infof("(... attempt: %v) Pool Get returned %v: %v", attempts-1, bname, err)
+						logging.Infof("(... attempt: %v) Pool Get returned %v: %v", desc.attempts-1, bname, err)
 					}
-					logging.Infof("(Attempt: %v) Pool Get returned %v: %v", attempts, bname, err)
+					logging.Infof("(Attempt: %v) Pool Get returned %v: %v", desc.attempts, bname, err)
 					lastError = err
 				}
-				// retry
+
 				return nil
 			}
 			lastError = nil
 
 			conn.SetDeadline(getDeadline(reqDeadline, DefaultTimeout))
+			if desc.replica > 0 {
+				conn.SetReplica(true)
+			}
 			err = conn.GetBulk(vb, keys, rv, subPaths, context...)
 
-			discard := false
 			defer func() {
-				if discard {
+				if desc.discard {
 					pool.Discard(conn)
 				} else {
+					conn.SetReplica(false)
 					pool.Return(conn)
 				}
 			}()
 
-			switch err.(type) {
-			case *gomemcached.MCResponse:
-				notSMaxTries := len(b.Nodes()) * 2
-				resp := err.(*gomemcached.MCResponse)
-				st := resp.Status
-				if st == gomemcached.NOT_MY_VBUCKET {
-
-					// increment first, as we want a delay
-					backOffAttempts++
-					backOff(backOffAttempts, MaxBackOffRetries, backOffDuration, false)
-					b.Refresh()
-					discard = b.checkVBmap(pool.Node())
-					return nil // retry
-				} else if st == gomemcached.NOT_SUPPORTED && attempts < notSMaxTries {
-					b.Refresh()
-					discard = b.checkVBmap(pool.Node())
-					return nil // retry
-				} else if st == gomemcached.EBUSY || st == gomemcached.LOCKED {
-					if (attempts % (MaxBulkRetries / 100)) == 0 {
-						logging.Infof("Retrying Memcached error (%v) FOR %v(vbid:%d, keys:<ud>%v</ud>)",
-							err.Error(), bname, vb, keys)
-					}
-					return nil // retry
-				} else if (st == gomemcached.ENOMEM || st == gomemcached.TMPFAIL) && backOff(backOffAttempts, MaxBackOffRetries, backOffDuration, true) {
-					// MB-30967 / MB-31001 use backoff for TMPFAIL too
-					backOffAttempts++
-					logging.Infof("Retrying Memcached error (%v) FOR %v(vbid:%d, keys:<ud>%v</ud>)",
-						err.Error(), bname, vb, keys)
-					return nil // retry
-				}
-				ech <- err
-				return err
-			case error:
-				if isOutOfBoundsError(err) {
-					// We got an out of bounds error or a read timeout error; retry the operation
-					discard = true
-					return nil
-				} else if isConnError(err) && backOff(backOffAttempts, MaxBackOffRetries, backOffDuration, true) {
-					backOffAttempts++
-					logging.Errorf("Connection Error: %s. Refreshing bucket %v (vbid:%v,keys:<ud>%v</ud>)",
-						err.Error(), bname, vb, keys)
-					discard = true
-					b.Refresh()
-					return nil // retry
-				} else if IsReadTimeOutError(err) {
-					discard = true
-					logging.Errorf("Attempt %v: Terminating bulk request on timeout.", attempts)
-				}
-				ech <- err
-				ch <- rv
-				return err
+			b.processOpError(uint32(vb), err, pool.Node(), desc)
+			if desc.errorString != "" {
+				logging.Infof(desc.errorString, err.Error(), bname, vb, keys)
 			}
-
-			done = true
-			return nil
+			if desc.retry {
+				err = nil
+			} else if err == nil {
+				done = true
+			}
+			return err
 		}()
 
 		if err != nil {
@@ -518,7 +649,7 @@ func (b *Bucket) doBulkGet(vb uint16, keys []string, reqDeadline time.Time,
 		}
 	}
 
-	if attempts >= MaxBulkRetries {
+	if desc.attempts >= MaxBulkRetries {
 		err := fmt.Errorf("bulkget exceeded MaxBulkRetries for %v(vbid:%d,keys:<ud>%v</ud>)", bname, vb, keys)
 		logging.Errorf("%v", err.Error())
 		ech <- err
@@ -927,7 +1058,7 @@ func (b *Bucket) GetCollectionCID(scope string, collection string, reqDeadline t
 		collUid = binary.BigEndian.Uint32(response.Extras[8:12])
 
 		return nil
-	}, false)
+	}, false, false)
 
 	return collUid, manifestUid, err
 }
@@ -950,7 +1081,7 @@ func (b *Bucket) GetsMC(key string, reqDeadline time.Time, context ...*memcached
 			return err1
 		}
 		return nil
-	}, false)
+	}, false, true)
 	return response, err
 }
 
@@ -972,7 +1103,7 @@ func (b *Bucket) GetsSubDoc(key string, reqDeadline time.Time, subPaths []string
 			return err1
 		}
 		return nil
-	}, false)
+	}, false, false)
 	return response, err
 }
 

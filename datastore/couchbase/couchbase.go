@@ -1373,7 +1373,7 @@ func (p *namespace) KeyspaceUpdateCallback(bucket *cb.Bucket) {
 		}
 
 		// the KV nodes list has changed, force a refresh on next use
-		if len(ks.cbKeyspace.cbbucket.VBServerMap().ServerList) != len(bucket.VBSMJson.ServerList) {
+		if ks.cbKeyspace.cbbucket.ChangedVBServerMap(&bucket.VBSMJson) {
 			ks.cbKeyspace.flags |= _NEEDS_REFRESH
 		}
 		ks.cbKeyspace.Unlock()
@@ -1619,6 +1619,7 @@ func (b *keyspace) fetch(fullName, qualifiedName, scopeName, collectionName stri
 			if cb.IsReadTimeOutError(err) {
 				logging.Errorf(err.Error())
 			}
+			_, err = processIfMCError(value.FALSE, err, keys[0], qualifiedName)
 			return []errors.Error{errors.NewCbBulkGetError(err, "")}
 		}
 	}

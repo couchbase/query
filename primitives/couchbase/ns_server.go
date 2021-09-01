@@ -29,8 +29,7 @@ import (
 	"unsafe"
 
 	"github.com/couchbase/cbauth"
-	"github.com/couchbase/gomemcached"        // package name is 'gomemcached'
-	"github.com/couchbase/gomemcached/client" // package name is 'memcached'
+	"github.com/couchbase/gomemcached" // package name is 'gomemcached'
 	"github.com/couchbase/query/logging"
 )
 
@@ -243,6 +242,11 @@ type Bucket struct {
 	VBSMJson  VBucketServerMap `json:"vBucketServerMap"`
 	NodesJSON []Node           `json:"nodes"`
 
+	// used to detect a new vbmap
+	Version int
+
+	// to force replica access
+	replica          int
 	pool             *Pool
 	connPools        unsafe.Pointer // *[]*connectionPool
 	vBucketServerMap unsafe.Pointer // *VBucketServerMap
@@ -289,8 +293,33 @@ func (b *Bucket) VBServerMap() *VBucketServerMap {
 	return ret
 }
 
+func (b *Bucket) ChangedVBServerMap(new *VBucketServerMap) bool {
+	b.RLock()
+	defer b.RUnlock()
+	return b.changedVBServerMap(new)
+}
+
+func (b *Bucket) changedVBServerMap(new *VBucketServerMap) bool {
+	old := (*VBucketServerMap)(b.vBucketServerMap)
+	if new.NumReplicas != old.NumReplicas {
+		return true
+	}
+	if len(new.ServerList) != len(old.ServerList) {
+		return true
+	}
+
+	// this will also catch the same server list in different order,
+	// but better safe than sorry
+	for i, s := range new.ServerList {
+		if s != old.ServerList[i] {
+			return true
+		}
+	}
+	return false
+}
+
 // true if node is not on the bucket VBmap
-func (b *Bucket) checkVBmap(node string) bool {
+func (b *Bucket) obsoleteNode(node string) bool {
 	vbmap := b.VBServerMap()
 	servers := vbmap.ServerList
 
@@ -373,28 +402,6 @@ func (b *Bucket) getConnPoolByHost(host string, bucketLocked bool) *connectionPo
 	}
 
 	return nil
-}
-
-// Given a vbucket number, returns a memcached connection to it.
-// The connection must be returned to its pool after use.
-func (b *Bucket) getConnectionToVBucket(vb uint32) (*memcached.Client, *connectionPool, error) {
-	for {
-		vbm := b.VBServerMap()
-		if len(vbm.VBucketMap) < int(vb) {
-			return nil, nil, fmt.Errorf("primitives/couchbase: vbmap smaller than vbucket list: %v vs. %v",
-				vb, vbm.VBucketMap)
-		}
-		masterId := vbm.VBucketMap[vb][0]
-		if masterId < 0 {
-			return nil, nil, fmt.Errorf("primitives/couchbase: No master for vbucket %d", vb)
-		}
-		pool := b.getConnPool(masterId)
-		conn, err := pool.Get()
-		if err != errClosedPool {
-			return conn, pool, err
-		}
-		// If conn pool was closed, because another goroutine refreshed the vbucket map, retry...
-	}
 }
 
 // Bucket DDL
@@ -1011,6 +1018,10 @@ func (b *Bucket) refresh(preserveConnections bool) error {
 	}
 	b.replaceConnPools2(newcps, true /* bucket already locked */)
 	tmpb.ah = b.ah
+	if b.vBucketServerMap != nil && b.changedVBServerMap(&tmpb.VBSMJson) {
+		b.Version++
+		b.replica = 0
+	}
 	b.vBucketServerMap = unsafe.Pointer(&tmpb.VBSMJson)
 	b.nodeList = unsafe.Pointer(&tmpb.NodesJSON)
 
@@ -1039,6 +1050,8 @@ func (p *Pool) refresh() (err error) {
 			ob.Close()
 		}
 		b.replaceConnPools(make([]*connectionPool, len(b.VBSMJson.ServerList)))
+		b.replica = 0
+		b.Version = 0
 		p.BucketMap[b.Name] = b
 		runtime.SetFinalizer(b, bucketFinalizer)
 	}
