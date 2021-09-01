@@ -60,7 +60,7 @@ func (this *builder) buildSearchCovering(searchSargables []*indexEntry, node *al
 	keys = append(keys, id, search.NewSearchScore(sfn.IndexMetaField()),
 		search.NewSearchMeta(sfn.IndexMetaField()))
 
-	coveringExprs, filterCovers, err := indexCoverExpressions(entry, keys, pred, pred, alias)
+	coveringExprs, filterCovers, err := indexCoverExpressions(entry, keys, pred, pred, alias, this.context)
 	if err != nil {
 		return nil, 0, err
 	}
