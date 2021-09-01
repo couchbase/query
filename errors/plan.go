@@ -137,8 +137,10 @@ func NewNotGroupKeyOrAggError(expr string) Error {
 }
 
 func NewIndexAlreadyExistsError(idx string) Error {
+	c := make(map[string]interface{})
+	c["name"] = idx
 	return &err{level: EXCEPTION, ICode: E_INDEX_ALREADY_EXISTS,
-		IKey:           "plan.new_index_already_exists",
+		IKey: "plan.new_index_already_exists", cause: c,
 		InternalMsg:    fmt.Sprintf("The index %s already exists.", idx),
 		InternalCaller: CallerN(1)}
 }

@@ -78,7 +78,11 @@ func (this *CreatePrimaryIndex) RunOnce(context *Context, parent value.Value) {
 
 			_, err = indexer3.CreatePrimaryIndex3(context.RequestId(), node.Name(), indexPartition, node.With())
 			if err != nil {
-				if !errors.IsIndexExistsError(err) || this.plan.Node().FailIfExists() {
+				exists := errors.IsIndexExistsError(err)
+				if !exists || this.plan.Node().FailIfExists() {
+					if exists {
+						err = errors.NewIndexAlreadyExistsError(node.Name())
+					}
 					context.Error(err)
 				} else {
 					err = nil

@@ -9,6 +9,8 @@
 package errors
 
 import (
+	"strings"
+
 	"github.com/couchbase/query/value"
 )
 
@@ -92,8 +94,33 @@ func NewCbIndexScanTimeoutError(e error) Error {
 		InternalMsg: "Index scan timed out", InternalCaller: CallerN(1)}
 }
 
-func NewCbIndexNotFoundError(e error) Error {
-	return &err{level: EXCEPTION, ICode: E_CB_INDEX_NOT_FOUND, IKey: "datastore.couchbase.index_not_found", ICause: e,
+func NewCbIndexNotFoundError(args ...interface{}) Error {
+	var e error
+	var name string
+	for _, a := range args {
+		switch at := a.(type) {
+		case error:
+			if e == nil {
+				e = at
+			}
+		case string:
+			if name == "" {
+				name = at
+			}
+		}
+	}
+	if name == "" && e != nil {
+		s := strings.Split(e.Error(), " ")
+		if len(s) > 3 && s[0] == "GSI" {
+			name = s[len(s)-3]
+		}
+	}
+	var c map[string]interface{}
+	if name != "" {
+		c = make(map[string]interface{})
+		c["name"] = name
+	}
+	return &err{level: EXCEPTION, ICode: E_CB_INDEX_NOT_FOUND, IKey: "datastore.couchbase.index_not_found", ICause: e, cause: c,
 		InternalMsg: "Index Not Found", InternalCaller: CallerN(1), retry: value.TRUE}
 }
 
