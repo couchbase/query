@@ -9,6 +9,7 @@
 package server
 
 import (
+	"reflect"
 	"strings"
 	"time"
 
@@ -336,22 +337,44 @@ func ProcessSettings(settings map[string]interface{}, srvr *Server) (err errors.
 	return err
 }
 
+func compareMaps(m1 map[string]interface{}, m2 map[string]interface{}) bool {
+	if len(m1) != len(m2) {
+		return false
+	}
+	for k, v := range m1 {
+		v2, ok := m2[k]
+		if !ok || v != v2 {
+			return false
+		}
+	}
+	return true
+}
+
 func reportChangedValues(prev map[string]interface{}, current map[string]interface{}) {
 	changed := make([]interface{}, 0, len(current))
 	for k, v := range current {
 		p, ok := prev[k]
 		same := false
-		if ok {
+		if ok && reflect.TypeOf(v) == reflect.TypeOf(p) {
 			switch vt := v.(type) {
 			case map[string]interface{}:
 				pt := p.(map[string]interface{})
+				same = compareMaps(vt, pt)
+			case []interface{}:
+				pt := p.([]interface{})
 				if len(vt) == len(pt) {
 					same = true
-					for k2, v2 := range pt {
-						v, ok := vt[k2]
-						if !ok || v != v2 {
+					for i := 0; i < len(vt) && same == true; i++ {
+						if reflect.TypeOf(vt[i]) == reflect.TypeOf(pt[i]) {
+							switch vtt := vt[i].(type) {
+							case map[string]interface{}:
+								ptt := pt[i].(map[string]interface{})
+								same = compareMaps(vtt, ptt)
+							default:
+								same = vt[i] == pt[i]
+							}
+						} else {
 							same = false
-							break
 						}
 					}
 				}
