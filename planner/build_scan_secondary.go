@@ -366,7 +366,7 @@ func (this *builder) sargableIndexes(indexes []datastore.Index, pred, subset exp
 		}
 
 		skip := useSkipIndexKeys(index, this.context.IndexApiVersion())
-		min, max, sum, skeys := SargableFor(pred, keys, false, skip)
+		min, max, sum, skeys := SargableFor(pred, keys, false, skip, this.context)
 
 		n := min
 		if skip {

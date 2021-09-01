@@ -111,7 +111,7 @@ outer:
 		}
 
 		// Include filter covers
-		coveringExprs, filterCovers, err := indexCoverExpressions(entry, keys, pred, origPred, alias)
+		coveringExprs, filterCovers, err := indexCoverExpressions(entry, keys, pred, origPred, alias, this.context)
 		if err != nil {
 			return nil, 0, err
 		}
@@ -432,8 +432,8 @@ func mapFilterCovers(fc map[string]value.Value, keyspace string) (map[*expressio
 	return rv, nil
 }
 
-func indexCoverExpressions(entry *indexEntry, keys expression.Expressions, pred, origPred expression.Expression, keyspace string) (
-	expression.Expressions, map[*expression.Cover]value.Value, error) {
+func indexCoverExpressions(entry *indexEntry, keys expression.Expressions, pred, origPred expression.Expression,
+	keyspace string, context *PrepareContext) (expression.Expressions, map[*expression.Cover]value.Value, error) {
 
 	var filterCovers map[*expression.Cover]value.Value
 	exprs := make(expression.Expressions, 0, len(keys))
@@ -455,7 +455,7 @@ func indexCoverExpressions(entry *indexEntry, keys expression.Expressions, pred,
 		sargKeysHasArray := hasArrayIndexKey(entry.sargKeys)
 
 		if _, ok := entry.spans.(*IntersectSpans); !ok && sargKeysHasArray {
-			covers, err := CoversFor(pred, origPred, keys)
+			covers, err := CoversFor(pred, origPred, keys, context)
 			if err != nil {
 				return nil, nil, err
 			}

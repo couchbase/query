@@ -15,18 +15,18 @@ import (
 
 // Return the filterCovers for a query predicate and index keys. This
 // allows array indexes to cover ANY predicates.
-func CoversFor(pred, origPred expression.Expression, keys expression.Expressions) (
-	map[*expression.Cover]value.Value, error) {
+func CoversFor(pred, origPred expression.Expression, keys expression.Expressions,
+	context *PrepareContext) (map[*expression.Cover]value.Value, error) {
 
 	var fv, ofv map[string]*expression.Cover
 	var err error
 
-	fv, err = coversFor(pred, keys)
+	fv, err = coversFor(pred, keys, context)
 	if err != nil {
 		return nil, err
 	}
 	if origPred != nil {
-		ofv, err = coversFor(origPred, keys)
+		ofv, err = coversFor(origPred, keys, context)
 		if err != nil {
 			return nil, err
 		}
@@ -50,10 +50,10 @@ func CoversFor(pred, origPred expression.Expression, keys expression.Expressions
 
 }
 
-func coversFor(pred expression.Expression, keys expression.Expressions) (
-	map[string]*expression.Cover, error) {
+func coversFor(pred expression.Expression, keys expression.Expressions,
+	context *PrepareContext) (map[string]*expression.Cover, error) {
 
-	cov := &covers{keys}
+	cov := &covers{keys, context}
 	rv, err := pred.Accept(cov)
 	if rv == nil || err != nil {
 		return nil, err
@@ -65,7 +65,8 @@ func coversFor(pred expression.Expression, keys expression.Expressions) (
 }
 
 type covers struct {
-	keys expression.Expressions
+	keys    expression.Expressions
+	context *PrepareContext
 }
 
 // Arithmetic
@@ -110,7 +111,7 @@ func (this *covers) VisitAny(expr *expression.Any) (interface{}, error) {
 
 	for i, k := range this.keys {
 		if all, ok := k.(*expression.All); ok {
-			if min, _, _, _ := SargableFor(expr, expression.Expressions{all}, (i != 0), true); min > 0 {
+			if min, _, _, _ := SargableFor(expr, expression.Expressions{all}, (i != 0), true, this.context); min > 0 {
 				return map[string]*expression.Cover{
 					expr.String(): expression.NewCover(expr),
 				}, nil
@@ -231,7 +232,7 @@ func (this *covers) VisitAnd(expr *expression.And) (interface{}, error) {
 	var fc map[string]*expression.Cover
 
 	for _, op := range expr.Operands() {
-		oc, err := coversFor(op, this.keys)
+		oc, err := coversFor(op, this.keys, this.context)
 		if err != nil {
 			return nil, err
 		}
@@ -257,7 +258,7 @@ func (this *covers) VisitOr(expr *expression.Or) (interface{}, error) {
 	var fc map[string]*expression.Cover
 
 	for _, op := range expr.Operands() {
-		oc, err := coversFor(op, this.keys)
+		oc, err := coversFor(op, this.keys, this.context)
 		if err != nil {
 			return nil, err
 		}

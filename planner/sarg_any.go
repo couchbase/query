@@ -65,7 +65,7 @@ func (this *sarg) VisitAny(pred *expression.Any) (interface{}, error) {
 		return nil, err
 	}
 
-	if array.When() != nil && !base.SubsetOf(satisfies, array.When()) {
+	if array.When() != nil && !sargCheckWhen(satisfies, array.When(), this.context) {
 		return sp, nil
 	}
 

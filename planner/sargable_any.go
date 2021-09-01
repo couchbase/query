@@ -10,7 +10,6 @@ package planner
 
 import (
 	"github.com/couchbase/query/expression"
-	base "github.com/couchbase/query/plannerbase"
 )
 
 func (this *sargable) VisitAny(pred *expression.Any) (interface{}, error) {
@@ -42,11 +41,11 @@ func (this *sargable) VisitAny(pred *expression.Any) (interface{}, error) {
 		return nil, err
 	}
 
-	if array.When() != nil && !base.SubsetOf(satisfies, array.When()) {
+	if array.When() != nil && !sargCheckWhen(satisfies, array.When(), this.context) {
 		return false, nil
 	}
 
 	mappings := expression.Expressions{array.ValueMapping()}
-	min, _, _, _ := SargableFor(satisfies, mappings, this.missing, this.gsi)
+	min, _, _, _ := SargableFor(satisfies, mappings, this.missing, this.gsi, this.context)
 	return min > 0, nil
 }
