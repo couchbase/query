@@ -45,7 +45,7 @@ const (
 
 const _EVENT_TIMESTAMP_FORMAT = "2006-01-02T15:04:05:999Z"
 
-const _SERVICE = "query"
+const _COMPONENT = "query"
 
 const MaxRecLen = 3072
 
@@ -77,7 +77,7 @@ func Report(e EventType, l EventLevel, args ...interface{}) {
 	uuid, _ := util.UUIDV4()
 	body = append(body, byte('{'))
 	writeValue(&body, "event_id", uuid)
-	writeValue(&body, "service", _SERVICE)
+	writeValue(&body, "component", _COMPONENT)
 	writeValue(&body, "event_code", e)
 	writeValue(&body, "description", eventDescription[e])
 	writeValue(&body, "severity", l)
