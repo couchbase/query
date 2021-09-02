@@ -59,6 +59,12 @@ func messageForDeniedPrivilege(pair auth.PrivilegePair) string {
 	case auth.PRIV_QUERY_EXTERNAL_ACCESS:
 		privilege = "queries using the CURL() function"
 		role = "admin"
+	case auth.PRIV_BACKUP_CLUSTER:
+		privilege = "backup cluster metadata"
+		role = "backup_admin"
+	case auth.PRIV_BACKUP_BUCKET:
+		privilege = "backup bucket metadata"
+		role = fmt.Sprintf("data_backup on %s", keyspace)
 	default:
 		privilege = "this type of query"
 		role = "admin"
