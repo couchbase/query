@@ -79,6 +79,10 @@ func privilegeString(namespace, target, obj string, requested auth.Privilege) (s
 		permission = join3Strings("cluster.bucket[", target, "]!manage")
 	case auth.PRIV_QUERY_STATS:
 		permission = "cluster.admin.internal.stats!read"
+	case auth.PRIV_BACKUP_CLUSTER:
+		permission = "cluster.n1ql.meta!backup"
+	case auth.PRIV_BACKUP_BUCKET:
+		permission = join3Strings("cluster.bucket[", target, "].n1ql.meta!backup")
 	default:
 		return "", fmt.Errorf("Invalid Privileges")
 	}

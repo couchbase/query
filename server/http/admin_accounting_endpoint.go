@@ -820,7 +820,7 @@ func doFunctionsGlobalBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req 
 	af.EventTypeId = audit.API_ADMIN_FUNCTIONS_BACKUP
 	switch req.Method {
 	case "GET":
-		err, _ := endpoint.verifyCredentialsFromRequest("", auth.PRIV_SYSTEM_READ, req, af)
+		err, _ := endpoint.verifyCredentialsFromRequest("", auth.PRIV_BACKUP_CLUSTER, req, af)
 		if err != nil {
 			return nil, err
 		}
@@ -849,7 +849,7 @@ func doFunctionsGlobalBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req 
 			return nil, errors.NewServiceErrorBadValue(go_errors.New("unable to read body of request"), "UDF restore body")
 		}
 
-		err, _ := endpoint.verifyCredentialsFromRequest("", auth.PRIV_SYSTEM_READ, req, af)
+		err, _ := endpoint.verifyCredentialsFromRequest("", auth.PRIV_BACKUP_CLUSTER, req, af)
 		if err != nil {
 			return nil, err
 		}
@@ -898,7 +898,7 @@ func doFunctionsBucketBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req 
 	af.EventTypeId = audit.API_ADMIN_FUNCTIONS_BACKUP
 	switch req.Method {
 	case "GET":
-		err, _ := endpoint.verifyCredentialsFromRequest("", auth.PRIV_SYSTEM_READ, req, af)
+		err, _ := endpoint.verifyCredentialsFromRequest(bucket, auth.PRIV_BACKUP_BUCKET, req, af)
 		if err != nil {
 			return nil, err
 		}
@@ -934,7 +934,7 @@ func doFunctionsBucketBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req 
 			return nil, errors.NewServiceErrorBadValue(go_errors.New("unable to read body of request"), "UDF restore body")
 		}
 
-		err, _ := endpoint.verifyCredentialsFromRequest("", auth.PRIV_SYSTEM_READ, req, af)
+		err, _ := endpoint.verifyCredentialsFromRequest(bucket, auth.PRIV_BACKUP_BUCKET, req, af)
 		if err != nil {
 			return nil, err
 		}

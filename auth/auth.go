@@ -48,6 +48,8 @@ const (
 	PRIV_QUERY_STATS                            Privilege = 26 // Ability to read query stats
 	PRIV_QUERY_TRANSACTION_STMT                 Privilege = 27 // Ability to run Transaction statements.
 	PRIV_UPSERT                                 Privilege = 28 // Ability to run docs UPSERT
+	PRIV_BACKUP_CLUSTER                         Privilege = 29 // Ability to backup cluster level N1QL metadata
+	PRIV_BACKUP_BUCKET                          Privilege = 30 // Ability to backup bucket level N1QL metadata
 )
 
 type PrivilegePair struct {
