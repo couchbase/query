@@ -71,20 +71,22 @@ func (this *DropIndex) MarshalBase(f func(map[string]interface{})) map[string]in
 	}
 	// invert so the default if not present is to fail if not exists
 	r["ifExists"] = !this.node.FailIfNotExists()
+	r["primaryOnly"] = this.node.PrimaryOnly()
 	return r
 }
 
 func (this *DropIndex) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_         string              `json:"#operator"`
-		Namespace string              `json:"namespace"`
-		Bucket    string              `json:"bucket"`
-		Scope     string              `json:"scope"`
-		Keyspace  string              `json:"keyspace"`
-		Using     datastore.IndexType `json:"using"`
-		Name      string              `json:"name"`
-		IndexId   string              `json:"index_id"`
-		IfExists  bool                `json:"ifExists"`
+		_           string              `json:"#operator"`
+		Namespace   string              `json:"namespace"`
+		Bucket      string              `json:"bucket"`
+		Scope       string              `json:"scope"`
+		Keyspace    string              `json:"keyspace"`
+		Using       datastore.IndexType `json:"using"`
+		Name        string              `json:"name"`
+		IndexId     string              `json:"index_id"`
+		IfExists    bool                `json:"ifExists"`
+		PrimaryOnly bool                `json:"primaryOnly"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -96,7 +98,8 @@ func (this *DropIndex) UnmarshalJSON(body []byte) error {
 	ksref := algebra.NewKeyspaceRefFromPath(algebra.NewPathShortOrLong(_unmarshalled.Namespace, _unmarshalled.Bucket,
 		_unmarshalled.Scope, _unmarshalled.Keyspace), "")
 	// invert IfExists to obtain FailIfNotExists
-	this.node = algebra.NewDropIndex(ksref, _unmarshalled.Name, _unmarshalled.Using, !_unmarshalled.IfExists)
+	this.node = algebra.NewDropIndex(ksref, _unmarshalled.Name, _unmarshalled.Using, !_unmarshalled.IfExists,
+		_unmarshalled.PrimaryOnly)
 
 	// Build this.index.
 	keyspace, err := datastore.GetKeyspace(ksref.Path().Parts()...)

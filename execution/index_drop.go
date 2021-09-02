@@ -71,6 +71,10 @@ func (this *DropIndex) RunOnce(context *Context, parent value.Value) {
 			}
 			return
 		}
+		if this.plan.Node() != nil && this.plan.Node().PrimaryOnly() && !index.IsPrimary() {
+			context.Error(errors.NewCbNotPrimaryIndexError(this.plan.Node().Name()))
+			return
+		}
 		err := index.Drop(context.RequestId())
 		if err != nil {
 			context.Error(err)

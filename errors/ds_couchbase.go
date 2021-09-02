@@ -192,3 +192,12 @@ func NewCbDMLMCError(s string, k string, ks string) Error {
 	return &err{level: EXCEPTION, ICode: E_DML_MC, IKey: "datastore.couchbase.mc_error",
 		InternalMsg: "MC error " + s, cause: c, InternalCaller: CallerN(1)}
 }
+
+func NewCbNotPrimaryIndexError(name string) Error {
+	c := make(map[string]string)
+	c["name"] = name
+	c["reason"] = "not primary index"
+	return &err{level: EXCEPTION, ICode: E_CB_NOT_PRIMARY_INDEX, IKey: "datastore.couchbase.not_primary_index",
+		InternalMsg: "Index " + name + " exists but is not a primary index", cause: c, retry: value.FALSE,
+		InternalCaller: CallerN(1)}
+}

@@ -286,6 +286,7 @@ const (
 	E_PRESERVE_EXPIRY_NOT_SUPPORTED           ErrorCode = 12032
 	E_CAS_MISMATCH                            ErrorCode = 12033
 	E_DML_MC                                  ErrorCode = 12034
+	E_CB_NOT_PRIMARY_INDEX                    ErrorCode = 12035
 	_RETIRED_13010                                      = 13010
 	_RETIRED_13011                                      = 13011
 	E_DATASTORE_CLUSTER                       ErrorCode = 13012

@@ -2773,19 +2773,19 @@ MISSING
  *************************************************/
 
 drop_index:
-DROP PRIMARY INDEX opt_if_exists ON named_keyspace_ref opt_index_using
+DROP PRIMARY INDEX opt_primary_name opt_if_exists ON named_keyspace_ref opt_index_using
 {
-    $$ = algebra.NewDropIndex($6, "#primary", $7, $4)
+    $$ = algebra.NewDropIndex($7, $4, $8, $5, true)
 }
 |
 DROP INDEX simple_named_keyspace_ref DOT index_name opt_if_exists opt_index_using
 {
-    $$ = algebra.NewDropIndex($3, $5, $7, $6)
+    $$ = algebra.NewDropIndex($3, $5, $7, $6, false)
 }
 |
 DROP INDEX index_name opt_if_exists ON named_keyspace_ref opt_index_using
 {
-    $$ = algebra.NewDropIndex($6, $3, $7, $4)
+    $$ = algebra.NewDropIndex($6, $3, $7, $4, false)
 }
 ;
 

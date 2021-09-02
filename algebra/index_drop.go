@@ -30,18 +30,20 @@ type DropIndex struct {
 	name            string              `json:"name"`
 	using           datastore.IndexType `json:"using"`
 	failIfNotExists bool                `json:"failIfNotExists"`
+	primaryOnly     bool                `json:"primaryOnly"`
 }
 
 /*
 The function NewDropIndex returns a pointer to the
 DropIndex struct with the input argument values as fields.
 */
-func NewDropIndex(keyspace *KeyspaceRef, name string, using datastore.IndexType, failIfNotExists bool) *DropIndex {
+func NewDropIndex(keyspace *KeyspaceRef, name string, using datastore.IndexType, failIfNotExists bool, primary bool) *DropIndex {
 	rv := &DropIndex{
 		keyspace:        keyspace,
 		name:            name,
 		using:           using,
 		failIfNotExists: failIfNotExists,
+		primaryOnly:     primary,
 	}
 
 	rv.stmt = rv
@@ -120,6 +122,10 @@ func (this *DropIndex) FailIfNotExists() bool {
 	return this.failIfNotExists
 }
 
+func (this *DropIndex) PrimaryOnly() bool {
+	return this.primaryOnly
+}
+
 /*
 Marshals input receiver into byte array.
 */
@@ -129,6 +135,7 @@ func (this *DropIndex) MarshalJSON() ([]byte, error) {
 	r["name"] = this.name
 	r["using"] = this.using
 	r["failIfNotExists"] = this.failIfNotExists
+	r["primaryOnly"] = this.primaryOnly
 	return json.Marshal(r)
 }
 
