@@ -125,6 +125,8 @@ func HandleError(err errors.ErrorCode, msg string) errors.Error {
 		return errors.NewShellErrorCmdLineArgs("")
 	case errors.E_SHELL_INVALID_INPUT_ARGUMENTS:
 		return errors.NewShellErrorInvalidInputArguments("")
+	case errors.E_SHELL_INVALID_ARGUMENT:
+		return errors.NewShellErrorInvalidArgument()
 
 	default:
 		return errors.NewShellErrorUnknownError(msg)

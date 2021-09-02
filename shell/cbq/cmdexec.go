@@ -155,7 +155,7 @@ or statement. It returns an error code and optionally a non empty error message.
 */
 func dispatch_command(line string, w io.Writer, interactive bool, liner *liner.State) (errors.ErrorCode, string) {
 	line = strings.TrimSpace(line)
-	command.W = w
+	command.SetWriter(w)
 
 	if interactive == false {
 		// Check if the line ends with a ;

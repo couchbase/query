@@ -39,6 +39,7 @@ const (
 	E_SHELL_CMD_LINE_ARGS                     ErrorCode = 178
 	E_SHELL_INVALID_INPUT_ARGUMENTS           ErrorCode = 179
 	E_SHELL_ON_REFRESH                        ErrorCode = 180
+	E_SHELL_INVALID_ARGUMENT                  ErrorCode = 181
 	E_SHELL_UNKNOWN                           ErrorCode = 199
 	E_SERVICE_READONLY                        ErrorCode = 1000
 	E_SERVICE_HTTP_UNSUPPORTED_METHOD         ErrorCode = 1010

@@ -33,7 +33,7 @@ func (this *Redirect) MinArgs() int {
 }
 
 func (this *Redirect) MaxArgs() int {
-	return ONE_ARG
+	return TWO_ARGS
 }
 
 func (this *Redirect) ExecCommand(args []string) (errors.ErrorCode, string) {
@@ -45,11 +45,21 @@ func (this *Redirect) ExecCommand(args []string) (errors.ErrorCode, string) {
 	} else if len(args) < this.MinArgs() {
 		return errors.E_SHELL_TOO_FEW_ARGS, ""
 	} else {
-		if strings.ToLower(args[0]) == "off" {
+		if len(args) == 1 && strings.ToLower(args[0]) == "off" {
+			SetTee(false)
 			FILE_RW_MODE = false
 		} else {
+			i := 0
+			if len(args) == 2 {
+				if strings.ToLower(args[i]) == "tee" {
+					i++
+					SetTee(true)
+				} else {
+					return errors.E_SHELL_INVALID_ARGUMENT, ""
+				}
+			}
 			FILE_RW_MODE = true
-			FILE_OUTPUT = args[0]
+			FILE_OUTPUT = args[i]
 			if strings.HasPrefix(FILE_OUTPUT, "+") {
 				FILE_APPEND_MODE = true
 				FILE_OUTPUT = strings.TrimPrefix(FILE_OUTPUT, "+")

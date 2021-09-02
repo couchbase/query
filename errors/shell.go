@@ -53,6 +53,7 @@ const (
 	ROWS_CLOSE_MSG              = ""
 	CMD_LINE_ARG_MSG            = "Place input argument URL at the end, after input flags. "
 	INVALID_INPUT_ARGUMENTS_MSG = "Input Argument format is invalid."
+	INVALID_ARGUMENT_MSG        = "Invalid argument."
 	ERROR_ON_REFRESH_MSG        = "Query APIs cannot be initialized from Cluster Map."
 
 	UNKNOWN_ERROR_MSG = ""
@@ -220,4 +221,8 @@ func NewShellErrorUnknownError(msg string) Error {
 
 func NewShellErrorOnRefresh(msg string) Error {
 	return &err{level: EXCEPTION, ICode: E_SHELL_ON_REFRESH, IKey: "shell.cluster.map.refresh.error", InternalMsg: ERROR_ON_REFRESH_MSG + msg, InternalCaller: CallerN(1)}
+}
+
+func NewShellErrorInvalidArgument() Error {
+	return &err{level: EXCEPTION, ICode: E_SHELL_INVALID_ARGUMENT, IKey: "shell.invalid.argument", InternalMsg: INVALID_ARGUMENT_MSG, InternalCaller: CallerN(1)}
 }

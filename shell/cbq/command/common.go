@@ -71,8 +71,39 @@ func init() {
 
 }
 
+type tee struct {
+	w io.Writer
+	t bool
+}
+
+func (this *tee) Write(b []byte) (n int, err error) {
+	n, err = this.w.Write(b)
+	if this.t && this.w != os.Stdout {
+		os.Stdout.Write(b)
+	}
+	return
+}
+
 func SetWriter(Wt io.Writer) {
-	W = Wt
+	if W == nil {
+		W = &tee{}
+	}
+	if W == Wt {
+		return
+	} else if _, ok := Wt.(*tee); ok {
+		W = Wt
+	} else {
+		t := W.(*tee)
+		t.w = Wt
+	}
+}
+
+func SetTee(on bool) {
+	if W == nil {
+		W = &tee{w: os.Stdout}
+	}
+	t := W.(*tee)
+	t.t = on
 }
 
 /* The Resolve method is used to evaluate the input parameter

@@ -105,7 +105,7 @@ const (
 	HPUSH               = "\\PUSH [ parameter value ]\n"
 	HUNSET              = "\\UNSET parameter\n"
 	HPOP                = "\\POP [ parameter ]\n"
-	HREDIRECT           = "\\REDIRECT OFF | filename \n"
+	HREDIRECT           = "\\REDIRECT OFF | [TEE] filename \n"
 	HSOURCE             = "\\SOURCE filename\n"
 	HREFRESH_CLUSTERMAP = "\\REFRESH_CLUSTER_MAP\n"
 
