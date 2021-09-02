@@ -319,6 +319,14 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm,
 		pred = baseKeyspace.Onclause()
 	}
 
+	subset := pred
+	if len(this.context.NamedArgs()) > 0 || len(this.context.PositionalArgs()) > 0 {
+		subset, err = base.ReplaceParameters(subset, this.context.NamedArgs(), this.context.PositionalArgs())
+		if err != nil {
+			return
+		}
+	}
+
 	// collect UNNEST bindings when HINT indexes has FTS index
 	var ubs expression.Bindings
 	if !this.hasBuilderFlag(BUILDER_CHK_INDEX_ORDER) {
@@ -334,7 +342,7 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm,
 		}
 	}
 
-	sargables, all, arrays, flex, err := this.sargableIndexes(indexes, pred, pred, primaryKey,
+	sargables, all, arrays, flex, err := this.sargableIndexes(indexes, pred, subset, primaryKey,
 		formalizer, ubs, node.IsUnderNL())
 	if err != nil {
 		return nil, 0, err
@@ -424,7 +432,7 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm,
 		this.restoreIndexPushDowns(indexPushDowns, true)
 		hasDeltaKeyspace := this.context.HasDeltaKeyspace(baseKeyspace.Keyspace())
 
-		unnest, unnestSargLength, err := this.buildUnnestScan(node, this.from, pred, all, hasDeltaKeyspace)
+		unnest, unnestSargLength, err := this.buildUnnestScan(node, this.from, pred, subset, all, hasDeltaKeyspace)
 		if err != nil {
 			return nil, 0, err
 		}
@@ -804,6 +812,17 @@ func allIndexes(keyspace datastore.Keyspace, skip, virtualIndexes []datastore.In
 	}
 
 	return indexes, nil
+}
+
+func checkSubset(pred, cond expression.Expression, context *PrepareContext) bool {
+	if context != nil && (len(context.NamedArgs()) > 0 || len(context.PositionalArgs()) > 0) {
+		var err error
+		pred, err = base.ReplaceParameters(pred, context.NamedArgs(), context.PositionalArgs())
+		if err != nil {
+			return false
+		}
+	}
+	return base.SubsetOf(pred, cond)
 }
 
 var _INDEX_POOL = datastore.NewIndexPool(256)
