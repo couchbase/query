@@ -285,14 +285,3 @@ func getSargSpans(pred expression.Expression, sargKeys expression.Expressions, i
 
 	return sargSpans, exactSpan, nil
 }
-
-func sargCheckWhen(pred, when expression.Expression, context *PrepareContext) bool {
-	if context != nil && (len(context.NamedArgs()) > 0 || len(context.PositionalArgs()) > 0) {
-		var err error
-		pred, err = base.ReplaceParameters(pred, context.NamedArgs(), context.PositionalArgs())
-		if err != nil {
-			return false
-		}
-	}
-	return base.SubsetOf(pred, when)
-}

@@ -16,7 +16,7 @@ import (
 	base "github.com/couchbase/query/plannerbase"
 )
 
-func (this *builder) buildCoveringUnnestScan(node *algebra.KeyspaceTerm, pred expression.Expression,
+func (this *builder) buildCoveringUnnestScan(node *algebra.KeyspaceTerm, pred, subset expression.Expression,
 	indexes map[datastore.Index]*indexEntry, unnestIndexes []datastore.Index,
 	arrayKeys map[datastore.Index]*expression.All, unnests []*algebra.Unnest, hasDeltaKeyspace bool) (
 	plan.SecondaryScan, int, error) {
@@ -36,7 +36,7 @@ func (this *builder) buildCoveringUnnestScan(node *algebra.KeyspaceTerm, pred ex
 		this.restoreIndexPushDowns(indexPushDowns, true)
 
 		entry := indexes[index]
-		cop, cun, un, err := this.buildOneCoveringUnnestScan(node, pred, entry, arrayKeys[index],
+		cop, cun, un, err := this.buildOneCoveringUnnestScan(node, pred, subset, entry, arrayKeys[index],
 			unnests, hasDeltaKeyspace)
 		if err != nil {
 			return nil, 0, err
@@ -87,12 +87,12 @@ func (this *builder) buildCoveringUnnestScan(node *algebra.KeyspaceTerm, pred ex
 	return nil, 0, nil
 }
 
-func (this *builder) buildOneCoveringUnnestScan(node *algebra.KeyspaceTerm, pred expression.Expression,
+func (this *builder) buildOneCoveringUnnestScan(node *algebra.KeyspaceTerm, pred, subset expression.Expression,
 	entry *indexEntry, arrKey *expression.All, unnests []*algebra.Unnest, hasDeltaKeyspace bool) (
 	plan.SecondaryScan, map[*algebra.Unnest]bool, *algebra.Unnest, error) {
 
 	// Sarg and populate spans
-	op, unnest, arrayKey, _, err := this.matchUnnest(node, pred, unnests[0], entry, arrKey, unnests, hasDeltaKeyspace)
+	op, unnest, arrayKey, _, err := this.matchUnnest(node, pred, subset, unnests[0], entry, arrKey, unnests, hasDeltaKeyspace)
 	if op == nil || err != nil {
 		return nil, nil, nil, err
 	}
