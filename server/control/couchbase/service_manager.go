@@ -79,17 +79,26 @@ func (m *ServiceMgr) setInitialNodeList() {
 	// our topology is just the list of nodes in the cluster (or ourselves)
 	topology := distributed.RemoteAccess().GetNodeNames()
 
+	info := make([]rune, 0, len(topology)*32)
 	nodeList := make([]service.NodeInfo, 0)
 	for _, nn := range topology {
-		ps, _ := distributed.RemoteAccess().PrepareAdminOp(string(nn), "shutdown", "", nil, distributed.NO_CREDS, "")
-		uuid := distributed.RemoteAccess().NodeUUID(string(nn))
+		ps := prepareOperation(nn, "ServiceMgr::setInitialNodeList")
+		uuid := distributed.RemoteAccess().NodeUUID(nn)
 		nodeList = append(nodeList, service.NodeInfo{service.NodeID(uuid), service.Priority(0), ps})
+		info = append(info, []rune(uuid)...)
+		info = append(info, '[')
+		info = append(info, []rune(nn)...)
+		info = append(info, ']')
+		info = append(info, ' ')
 	}
 
 	m.updateState(func(s *state) {
 		s.servers = nodeList
 	})
-	logging.Debuga(func() string { return fmt.Sprintf("ServiceMgr::setInitialNodeList list: %v", nodeList) })
+	if len(info) == 0 {
+		info = append(info, []rune("no active nodes")...)
+	}
+	logging.Infof("Initial topology: %v", string(info))
 }
 
 func (m *ServiceMgr) registerWithServer() {
@@ -214,6 +223,7 @@ func (m *ServiceMgr) GetCurrentTopology(rev service.Revision, cancel service.Can
 	topology.Rev = EncodeRev(state.rev)
 	m.mu.Lock()
 	if m.servers != nil && len(m.servers) != 0 {
+		checkPrepareOperations(m.servers, "ServiceMgr::GetCurrentTopology")
 		for _, s := range m.servers {
 			topology.Nodes = append(topology.Nodes, s.NodeID)
 		}
@@ -231,6 +241,27 @@ func (m *ServiceMgr) GetCurrentTopology(rev service.Revision, cancel service.Can
 	return topology, nil
 }
 
+func prepareOperation(node string, caller string) interface{} {
+	host := distributed.RemoteAccess().UUIDToHost(node)
+	ps, err := distributed.RemoteAccess().PrepareAdminOp(host, "shutdown", "", nil, distributed.NO_CREDS, "")
+	if err != nil {
+		logging.Debuga(func() string {
+			return fmt.Sprintf("%v Failed to prepare admin operation for %v: %v", caller, host, err)
+		})
+	}
+	return ps
+}
+
+func checkPrepareOperations(servers []service.NodeInfo, caller string) {
+	for i := range servers {
+		if servers[i].Opaque == nil {
+			servers[i].Opaque = prepareOperation(string(servers[i].NodeID), caller)
+		}
+	}
+}
+
+const _PREPARE_RETRY_DELAY = 5 * time.Second
+
 // when preparing all we're doing is updating the cached nodes list from the list of retained nodes
 func (m *ServiceMgr) PrepareTopologyChange(change service.TopologyChange) error {
 	logging.Debuga(func() string { return fmt.Sprintf("ServiceMgr::PrepareTopologyChange entry: %v", change) })
@@ -243,15 +274,27 @@ func (m *ServiceMgr) PrepareTopologyChange(change service.TopologyChange) error 
 	// for each node we know about, cache its shutdown URL
 	info := make([]rune, 0, len(change.KeepNodes)*32)
 	servers := make([]service.NodeInfo, 0)
+	retry := false
 	for _, n := range change.KeepNodes {
-		host := distributed.RemoteAccess().UUIDToHost(string(n.NodeInfo.NodeID))
-		ps, _ := distributed.RemoteAccess().PrepareAdminOp(host, "shutdown", "", nil, distributed.NO_CREDS, "")
+		ps := prepareOperation(string(n.NodeInfo.NodeID), "ServiceMgr::PrepareTopologyChange")
+		if ps == nil {
+			retry = true
+		}
 		servers = append(servers, service.NodeInfo{n.NodeInfo.NodeID, service.Priority(0), ps})
 		info = append(info, []rune(n.NodeInfo.NodeID)...)
 		info = append(info, '[')
-		info = append(info, []rune(host)...)
+		info = append(info, []rune(distributed.RemoteAccess().UUIDToHost(string(n.NodeInfo.NodeID)))...)
 		info = append(info, ']')
 		info = append(info, ' ')
+	}
+
+	if retry {
+		// some failed.  This is likely a synchronisation issue where we've been invoked ahead of the cluster information
+		// changing.  This is a blunt delay before retrying any that have failed.  If they still fail, we'll try again whenever
+		// polled for the topologly and again prior to invocation.
+		time.Sleep(_PREPARE_RETRY_DELAY)
+		logging.Debuga(func() string { return "Retrying failed admin operation prepares" })
+		checkPrepareOperations(servers, "ServiceMgr::PrepareTopologyChange")
 	}
 
 	// always keep a local list of servers that are no longer present; only the master will ever act upon this list
@@ -282,6 +325,9 @@ func (m *ServiceMgr) PrepareTopologyChange(change service.TopologyChange) error 
 		s.eject = eject
 	})
 
+	if len(info) == 0 {
+		info = append(info, []rune("no active nodes")...)
+	}
 	logging.Infof("Topology changed to: %s", string(info))
 	return nil
 }
@@ -314,6 +360,10 @@ func (m *ServiceMgr) StartTopologyChange(change service.TopologyChange) error {
 		// in parallel in case some take time to reach
 		for _, e := range m.eject {
 			go func() {
+				if e.Opaque == nil {
+					// if we failed to prepare it before now, we could well be too late but try again anyway
+					e.Opaque = prepareOperation(string(e.NodeID), "ServiceMgr::StartTopologyChange")
+				}
 				_, err := distributed.RemoteAccess().ExecutePreparedAdminOp(e.Opaque, "POST", data, nil, distributed.NO_CREDS, "")
 				if err == nil {
 					mutex.Lock()
@@ -327,7 +377,8 @@ func (m *ServiceMgr) StartTopologyChange(change service.TopologyChange) error {
 						return fmt.Sprintf("ServiceMgr::StartTopologyChange initiated shutdown down on '%s'", string(e.NodeID))
 					})
 				} else {
-					logging.Infof("ServiceMgr::StartTopologyChange failed start shudown on '%s': %v", string(e.NodeID), err)
+					logging.Infof("ServiceMgr::StartTopologyChange failed start shudown on '%s' (op:%v): %v", string(e.NodeID),
+						e.Opaque, err)
 				}
 				done.Incr()
 			}()
