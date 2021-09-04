@@ -15,6 +15,7 @@ type Meter interface {
 	Rate5() float64
 	Rate15() float64
 	RateMean() float64
+	Stop()
 }
 
 // GetOrRegisterMeter returns an existing Meter or constructs and registers a
@@ -62,6 +63,7 @@ type StandardMeter struct {
 	snapshot    meterSnapshot
 	a1, a5, a15 EWMA
 	startTime   time.Time
+	deleted     bool
 }
 
 func newStandardMeter() *StandardMeter {
@@ -122,6 +124,10 @@ func (m *StandardMeter) RateMean() float64 {
 	return rateMean
 }
 
+func (m *StandardMeter) Stop() {
+	m.deleted = true
+}
+
 // has to be run with write lock held on m.lock
 func (m *StandardMeter) updateSnapshot() {
 	m.snapshot.rate1 = m.a1.Rate()
@@ -161,7 +167,15 @@ func (ma *meterArbiter) tick() {
 func (ma *meterArbiter) tickMeters() {
 	ma.RLock()
 	defer ma.RUnlock()
-	for _, meter := range ma.meters {
-		meter.tick()
+	m := 0
+	for m < len(ma.meters) {
+		meter := ma.meters[m]
+		if meter.deleted {
+			meter = ma.meters[len(ma.meters)-1]
+			ma.meters = ma.meters[:len(ma.meters)-1]
+		} else {
+			meter.tick()
+			m++
+		}
 	}
 }

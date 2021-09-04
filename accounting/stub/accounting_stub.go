@@ -102,6 +102,8 @@ func (MeterStub) Mark(n int64) {} // Nop
 
 func (MeterStub) Count() int64 { return 0 }
 
+func (MeterStub) Stop() {} // nop
+
 // HistogramStub is a stub implementation of Histogram
 type HistogramStub struct{}
 

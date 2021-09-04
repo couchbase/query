@@ -61,6 +61,7 @@ type Meter interface {
 	RateMean() float64 // Mean throughput rate
 	Mark(n int64)      // Mark the occurance of n events
 	Count() int64      // The overall count of events
+	Stop()             // Stop accruing data
 }
 
 // Histogram provides summary statistics for a metric within a time window

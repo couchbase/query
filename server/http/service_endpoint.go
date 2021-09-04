@@ -36,40 +36,42 @@ import (
 )
 
 type userMetrics struct {
-	uuid                string
-	activeRequests      int32
-	requestMeter        accounting.Meter
-	payloadMeter        accounting.Meter
-	outputMeter         accounting.Meter
-	requestsFailures    int64
-	requestRateFailures int64
-	payloadRateFailures int64
-	outputRateFailures  int64
-}
-
-type HttpEndpoint struct {
-	server               *server.Server
-	metrics              bool
-	httpAddr             string
-	httpsAddr            string
-	certFile             string
-	keyFile              string
-	bufpool              BufferPool
-	listener             map[string]net.Listener
-	listenerTLS          map[string]net.Listener
-	localListener        bool
-	mux                  *mux.Router
-	actives              server.ActiveRequests
-	options              server.ServerOptions
-	connSecConfig        datastore.ConnectionSecurityConfig
-	internalUser         string
-	trackUsers           bool
-	trackedUsers         map[string]*userMetrics
-	userRequestsLimit    int32
+	uuid                 string
 	userRequestRateLimit float64
 	userPayloadLimit     float64
 	userOutputLimit      float64
-	usersLock            sync.RWMutex
+	userRequestsLimit    int32
+	activeRequests       int32
+	requestMeter         accounting.Meter
+	payloadMeter         accounting.Meter
+	outputMeter          accounting.Meter
+	requestsFailures     int64
+	requestRateFailures  int64
+	payloadRateFailures  int64
+	outputRateFailures   int64
+	limitsVersion        string
+}
+
+type HttpEndpoint struct {
+	server              *server.Server
+	metrics             bool
+	httpAddr            string
+	httpsAddr           string
+	certFile            string
+	keyFile             string
+	bufpool             BufferPool
+	listener            map[string]net.Listener
+	listenerTLS         map[string]net.Listener
+	localListener       bool
+	mux                 *mux.Router
+	actives             server.ActiveRequests
+	options             server.ServerOptions
+	connSecConfig       datastore.ConnectionSecurityConfig
+	internalUser        string
+	trackUsers          bool
+	trackedUsers        map[string]*userMetrics
+	trackedUsersVersion string
+	usersLock           sync.RWMutex
 }
 
 const (
@@ -128,35 +130,6 @@ func (this *HttpEndpoint) SettingsCallback(f string, v interface{}) {
 		if ok {
 			this.bufpool.SetBufferCapacity(val)
 		}
-		/*
-			case "enforce_limits":
-				val, ok := v.(string)
-				if ok {
-					switch val {
-					case "on":
-						this.trackUsers = true
-					case "off":
-						this.trackUsers = false
-
-						// get rid of user cache:
-						this.usersLock.Lock()
-						for u, _ := range this.trackedUsers {
-							this.trackedUsers[u].requestsMeter.Stop()
-							this.trackedUsers[u].payloadMeter.Stop()
-							this.trackedUsers[u].outputMeter.Stop()
-							delete(this.trackedUsers, u)
-						}
-						this.usersLock.Unlock()
-					case "reload":
-						if this.trackUsers {
-						        this.userRequestsLimit = datastore.GetUserLimit("num_concurrent_requests").(int)
-						        this.userRequestRateLimit = datastore.GetUserLimit("num_queries_per_min").(float64)
-						        this.userPayloadLimit = datastore.GetUserLimit("ingress_mib_per_min").(float64) * 1024 * 1024
-						        this.userOutputLimit = datastore.GetUserLimit("egress_mib_per_min").(float64) * 1024 * 1024
-						}
-					}
-				}
-		*/
 	}
 }
 
@@ -368,23 +341,39 @@ func (this *HttpEndpoint) ServeHTTP(resp http.ResponseWriter, req *http.Request)
 				payloadMeter:   this.server.AccountingStore().NewMeter(),
 				outputMeter:    this.server.AccountingStore().NewMeter(),
 			}
+			limits, err := cbauth.GetUserLimits(userName, "local", "query")
+			if err != nil {
+				logging.Infof("No user limits fouund for user <ud>%v</ud> - limits not enforced", userName)
+			} else {
+				user.amendLimits(limits)
+				user.limitsVersion = this.trackedUsersVersion
+			}
 			this.trackedUsers[userName] = user
 			this.usersLock.Unlock()
 		} else {
+			if this.trackedUsersVersion != user.limitsVersion {
+				limits, err := cbauth.GetUserLimits(userName, "local", "query")
+				if err != nil {
+					logging.Infof("No user limits fouund for user <ud>%v</ud> - limits not changed")
+				} else {
+					user.amendLimits(limits)
+					user.limitsVersion = this.trackedUsersVersion
+				}
+			}
 			this.usersLock.Unlock()
-			if this.userRequestsLimit > 0 && user.activeRequests >= this.userRequestsLimit {
+			if user.userRequestsLimit > 0 && user.activeRequests >= user.userRequestsLimit {
 				atomic.AddInt64(&user.requestsFailures, 1)
 				request.Fail(errors.NewServiceUserRequestExceededError())
 				return
-			} else if this.userRequestRateLimit > 0 && user.requestMeter.Rate1() >= this.userRequestRateLimit {
+			} else if user.userRequestRateLimit > 0 && user.requestMeter.Rate1() >= user.userRequestRateLimit {
 				atomic.AddInt64(&user.requestRateFailures, 1)
 				request.Fail(errors.NewServiceUserRequestRateExceededError())
 				return
-			} else if this.userPayloadLimit > 0 && user.payloadMeter.Rate1() >= this.userPayloadLimit {
+			} else if user.userPayloadLimit > 0 && user.payloadMeter.Rate1() >= user.userPayloadLimit {
 				atomic.AddInt64(&user.payloadRateFailures, 1)
 				request.Fail(errors.NewServiceUserRequestSizeExceededError())
 				return
-			} else if this.userOutputLimit > 0 && user.outputMeter.Rate1() >= this.userOutputLimit {
+			} else if user.userOutputLimit > 0 && user.outputMeter.Rate1() >= user.userOutputLimit {
 				atomic.AddInt64(&user.outputRateFailures, 1)
 				request.Fail(errors.NewServiceUserResultsSizeExceededError())
 				return
@@ -600,6 +589,28 @@ func (this *HttpEndpoint) SetupSSL() error {
 
 		}
 
+		if (configChange & cbauth.CFG_CHANGE_USER_LIMITS) != 0 {
+			limitsConfig, err := cbauth.GetLimitsConfig()
+			if err != nil {
+				logging.Errorf("unable to retrieve User Limits settings: %v", err)
+				return errors.NewAdminEndpointError(err, "unable to retrieve User Limits settings")
+			}
+			this.trackUsers = limitsConfig.EnforceLimits
+			if this.trackUsers {
+				this.trackedUsersVersion = limitsConfig.UserLimitsVersion
+			} else {
+
+				// get rid of user cache:
+				this.usersLock.Lock()
+				for u, _ := range this.trackedUsers {
+					this.trackedUsers[u].requestMeter.Stop()
+					this.trackedUsers[u].payloadMeter.Stop()
+					this.trackedUsers[u].outputMeter.Stop()
+					delete(this.trackedUsers, u)
+				}
+			}
+		}
+
 		if settingsUpdated {
 			ds := datastore.GetDatastore()
 			if ds == nil {
@@ -658,6 +669,33 @@ func (this *HttpEndpoint) doStats(request *httpRequest, srvr *server.Server) {
 
 func ServicePrefix() string {
 	return servicePrefix
+}
+
+func (this *userMetrics) amendLimits(vars map[string]int) {
+	val, ok := vars["num_concurrent_requests"]
+	if ok && val >= 0 {
+		this.userRequestsLimit = int32(val)
+	} else {
+		this.userRequestsLimit = 0
+	}
+	val, ok = vars["num_queries_per_min"]
+	if ok && val >= 0 {
+		this.userRequestRateLimit = float64(val)
+	} else {
+		this.userRequestRateLimit = 0
+	}
+	val, ok = vars["ingress_mib_per_min"]
+	if ok && val >= 0 {
+		this.userPayloadLimit = float64(val) * 1024 * 1024
+	} else {
+		this.userPayloadLimit = 0
+	}
+	val, ok = vars["egress_mib_per_min"]
+	if ok && val >= 0 {
+		this.userOutputLimit = float64(val) * 1024 * 1024
+	} else {
+		this.userOutputLimit = 0
+	}
 }
 
 // activeHttpRequests implements server.ActiveRequests for http requests
