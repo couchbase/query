@@ -6,7 +6,7 @@
 # be governed by the Apache License, Version 2.0, included in the file
 # licenses/APL.txt.
 
-CMAKE_MINIMUM_REQUIRED (VERSION 2.8)
+CMAKE_MINIMUM_REQUIRED (VERSION 3.13)
 PROJECT (query NONE)
 
 # This project is intended to be built as part of a Couchbase Server build,
