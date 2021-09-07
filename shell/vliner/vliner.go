@@ -51,6 +51,7 @@ const (
 	_ASCII_TAB  = 9
 	_ASCII_ESC  = 27
 	_ASCII_VT   = 11
+	_ASCII_DC2  = 18 // Ctrl+R
 	_ASCII_DEL  = 127
 )
 
@@ -59,6 +60,11 @@ type WinSize struct {
 	Col    uint16
 	Xpixel uint16
 	Ypixel uint16
+}
+
+type bufferSave struct {
+	line []rune
+	pos  int
 }
 
 type State struct {
@@ -75,8 +81,8 @@ type State struct {
 	history         []string
 	replayActive    bool
 	recording       bool
-	save            []rune
-	savePos         int
+	save            []*bufferSave
+	saveTop         int
 	cmdRepeat       []rune
 	interruptAborts bool
 	multiLine       bool
@@ -740,6 +746,8 @@ func (s *State) Prompt(prompt string) (string, error) {
 	var yank []rune
 	var input []rune
 
+	s.save = s.save[:0]
+	s.saveTop = 0
 	line := make([]rune, 0, 1024)
 	line = line[:0]
 	s.insertIntoInput('i') // initiate insert mode directly
@@ -846,8 +854,7 @@ mainLoop:
 			case '-':
 				pos = 0
 				if -1 == curHist {
-					s.save = append(s.save[:0], line...)
-					s.savePos = 0
+					s.saveForUndo(line, 0, 1, rune(0))
 					curHist = len(s.history)
 				}
 				if 0 < curHist {
@@ -865,15 +872,15 @@ mainLoop:
 			case '+':
 				pos = 0
 				if -1 == curHist {
-					s.save = append(s.save[:0], line...)
-					s.savePos = 0
+					s.saveForUndo(line, 0, 1, rune(0))
 					curHist = len(s.history)
 				} else {
 					curHist += repeat
 				}
 				if curHist >= len(s.history) {
+					l, _ := s.redo(1)
 					line = line[:0]
-					line = insertRunes(line, 0, []rune(s.save))
+					line = insertRunes(line, 0, l)
 					curHist = -1
 				} else {
 					line = line[:0]
@@ -896,8 +903,7 @@ mainLoop:
 					break
 				}
 				if -1 == curHist {
-					s.save = append(s.save[:0], line...)
-					s.savePos = 0
+					s.saveForUndo(line, 0, 1, rune(0))
 				}
 				line = insertRunes(line[:0], 0, []rune(s.history[i]))
 				curHist = i
@@ -918,8 +924,7 @@ mainLoop:
 					break
 				}
 				if -1 == curHist {
-					s.save = append(s.save[:0], line...)
-					s.savePos = 0
+					s.saveForUndo(line, 0, 1, rune(0))
 				}
 				line = insertRunes(line[:0], 0, []rune(s.history[i]))
 				curHist = i
@@ -979,8 +984,7 @@ mainLoop:
 					break
 				}
 				if -1 == curHist {
-					s.save = append(s.save[:0], line...)
-					s.savePos = 0
+					s.saveForUndo(line, 0, 1, rune(0))
 				}
 				line = insertRunes(line[:0], 0, []rune(s.history[repeat]))
 				curHist = repeat
@@ -1063,9 +1067,16 @@ mainLoop:
 					s.insertIntoInput('i')
 				}
 			case 'u':
-				if 1 == repeat&0x1 {
-					line, s.save = s.save, line
-					pos, s.savePos = s.savePos, pos
+				l, p := s.undo(line, pos, repeat)
+				pos = p
+				line = append(line[:0], l...)
+			case 'U':
+				fallthrough
+			case _ASCII_DC2:
+				if 0 < len(s.save) {
+					l, p := s.redo(repeat)
+					pos = p
+					line = append(line[:0], l...)
 				}
 			case 'r':
 				s.saveForUndo(line, pos, repeat, r)
@@ -1895,11 +1906,49 @@ func (s *State) stopRecording() {
 
 func (s *State) saveForUndo(line []rune, pos int, repeat int, r rune) {
 	if !s.replayActive && !s.recording {
-		s.save = append(s.save[:0], line...)
-		s.savePos = pos
-		s.recording = true
-		s.cmdRepeat = []rune(fmt.Sprintf("%d%c", repeat, r))
+		if rune(0) != r || len(s.save) == 0 || string(s.save[len(s.save)-1].line) != string(line) {
+			b := &bufferSave{line: append([]rune(nil), line...), pos: pos}
+			s.save = append(s.save[:s.saveTop], b)
+			s.saveTop++
+			if r != rune(0) {
+				s.recording = true
+				s.cmdRepeat = []rune(fmt.Sprintf("%d%c", repeat, r))
+			}
+		}
 	}
+}
+
+func (s *State) undo(line []rune, pos int, repeat int) ([]rune, int) {
+	if !s.replayActive && !s.recording && len(s.save) <= s.saveTop {
+		if len(s.save) == 0 || string(s.save[len(s.save)-1].line) != string(line) {
+			b := &bufferSave{line: append([]rune(nil), line...), pos: pos}
+			s.save = append(s.save, b)
+		}
+	}
+	if 0 == s.saveTop {
+		fmt.Printf("\a") // ASCII_BEL
+	}
+	s.saveTop -= repeat
+	if 0 > s.saveTop {
+		s.saveTop = 0
+	}
+	return s.save[s.saveTop].line, s.save[s.saveTop].pos
+}
+
+func (s *State) redo(repeat int) ([]rune, int) {
+	if len(s.save)-1 <= s.saveTop {
+		fmt.Printf("\a") // ASCII_BEL
+	}
+	s.saveTop += repeat
+	if len(s.save) < s.saveTop {
+		s.saveTop = len(s.save)
+	}
+	if len(s.save) > s.saveTop {
+		return s.save[s.saveTop].line, s.save[s.saveTop].pos
+	} else if 0 < len(s.save) {
+		return s.save[len(s.save)-1].line, s.save[len(s.save)-1].pos
+	}
+	return []rune(""), 0
 }
 
 func (s *State) insertIntoInput(r rune) {
