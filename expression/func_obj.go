@@ -731,13 +731,10 @@ func (this *pathFilter) getNames(names []string, prefix string, m map[string]int
 		} else {
 			name = prefix + name
 		}
-		keepre := this.re
 		if this.comps && matchPattern(name, this.re, this.fieldPattern) {
 			names = append(names, name)
-			this.re = nil // once we've matched, all children match
 		}
 		names = this.processValueForNames(names, name, val)
-		this.re = keepre
 	}
 	return names
 }
@@ -1042,7 +1039,6 @@ func (this *pairFilter) getPairs(pairs util.Pairs, prefix string, m map[string]i
 		} else {
 			name = prefix + name
 		}
-		keepre := this.re
 		if this.comps && matchPattern(name, this.re, this.fieldPattern) {
 			// only add if it is actually a composite value
 			withAct, ok := val.(interface{ Actual() interface{} })
@@ -1059,10 +1055,8 @@ func (this *pairFilter) getPairs(pairs util.Pairs, prefix string, m map[string]i
 			if add {
 				pairs = append(pairs, util.Pair{Name: name, Value: val})
 			}
-			this.re = nil // once matched, all children match
 		}
 		pairs = this.processPairValue(pairs, name, val)
-		this.re = keepre
 	}
 	return pairs
 }
