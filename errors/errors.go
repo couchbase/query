@@ -146,6 +146,7 @@ func (e *err) Object() map[string]interface{} {
 		"code":    e.ICode,
 		"key":     e.IKey,
 		"message": e.InternalMsg,
+		"caller":  e.InternalCaller,
 	}
 	if e.ICause != nil {
 		m["icause"] = e.ICause.Error()
@@ -154,9 +155,33 @@ func (e *err) Object() map[string]interface{} {
 		m["retry"] = value.ToBool(e.retry)
 	}
 	if e.cause != nil {
-		m["cause"] = e.cause
+		// ensure m["cause"] contains only basic types
+		m["cause"] = processValue(e.cause)
 	}
 	return m
+}
+
+func processValue(v interface{}) interface{} {
+	switch vt := v.(type) {
+	case map[string]interface{}:
+		return processMap(vt)
+	case interface{ Object() map[string]interface{} }:
+		return vt.Object()
+	case interface{ Error() string }:
+		return vt.Error()
+	case interface{ String() string }:
+		return vt.String()
+	default:
+		return fmt.Sprintf("%v", v)
+	}
+}
+
+func processMap(m map[string]interface{}) map[string]interface{} {
+	rv := make(map[string]interface{})
+	for k, v := range m {
+		rv[k] = processValue(v)
+	}
+	return rv
 }
 
 func (e *err) MarshalJSON() ([]byte, error) {

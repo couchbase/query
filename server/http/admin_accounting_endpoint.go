@@ -1691,11 +1691,7 @@ func completedRequestWorkHorse(requestId string, profiling bool) interface{} {
 				}
 			}
 			if request.Errors != nil {
-				errors := make([]map[string]interface{}, len(request.Errors))
-				for i, e := range request.Errors {
-					errors[i] = e.Object()
-				}
-				reqMap["errors"] = errors
+				reqMap["errors"] = request.Errors
 			}
 			if request.MemoryQuota != 0 {
 				reqMap["memoryQuota"] = request.MemoryQuota

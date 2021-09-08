@@ -57,7 +57,7 @@ type RequestLogEntry struct {
 	ResultCount              int
 	ResultSize               int
 	ErrorCount               int
-	Errors                   []errors.Error
+	Errors                   []map[string]interface{}
 	Mutations                uint64
 	PreparedName             string
 	PreparedText             string
@@ -531,7 +531,6 @@ func LogRequest(request_time, service_time, transactionElapsedTime time.Duration
 		ResultCount:     result_count,
 		ResultSize:      result_size,
 		ErrorCount:      error_count,
-		Errors:          request.Errors(),
 		Time:            request.RequestTime(),
 		ScanConsistency: string(request.ScanConsistency()),
 		UseFts:          request.UseFts(),
@@ -539,6 +538,11 @@ func LogRequest(request_time, service_time, transactionElapsedTime time.Duration
 		Mutations:       request.MutationCount(),
 		QueryContext:    request.QueryContext(),
 		TxId:            request.TxId(),
+	}
+	errs := request.Errors()
+	re.Errors = make([]map[string]interface{}, 0, len(errs))
+	for _, e := range errs {
+		re.Errors = append(re.Errors, e.Object())
 	}
 	if !request.TransactionStartTime().IsZero() {
 		re.TransactionElapsedTime = transactionElapsedTime

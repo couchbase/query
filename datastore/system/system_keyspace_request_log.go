@@ -186,7 +186,7 @@ func (b *requestLogKeyspace) Fetch(keys []string, keysMap map[string]value.Annot
 				if entry.Errors != nil {
 					errors := make([]value.Value, len(entry.Errors))
 					for i, e := range entry.Errors {
-						errors[i] = value.NewValue(e.Object())
+						errors[i] = value.NewValue(e)
 					}
 					item.SetField("errors", errors)
 				}

@@ -185,7 +185,7 @@ func newCASMismatchError() Error {
 }
 
 func NewCbDMLMCError(s string, k string, ks string) Error {
-	c := map[string]string{}
+	c := make(map[string]interface{})
 	c["keyspace"] = ks
 	c["document_key"] = k
 	c["mc_status"] = s
@@ -194,7 +194,7 @@ func NewCbDMLMCError(s string, k string, ks string) Error {
 }
 
 func NewCbNotPrimaryIndexError(name string) Error {
-	c := make(map[string]string)
+	c := make(map[string]interface{})
 	c["name"] = name
 	c["reason"] = "not primary index"
 	return &err{level: EXCEPTION, ICode: E_CB_NOT_PRIMARY_INDEX, IKey: "datastore.couchbase.not_primary_index",
