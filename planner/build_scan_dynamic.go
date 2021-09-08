@@ -45,9 +45,18 @@ func (this *builder) buildDynamicScan(node *algebra.KeyspaceTerm,
 	alias := expression.NewIdentifier(node.Alias())
 	alias.SetKeyspaceAlias(true)
 
+	subset := pred
+	if len(this.context.NamedArgs()) > 0 || len(this.context.PositionalArgs()) > 0 {
+		var err error
+		subset, err = base.ReplaceParameters(subset, this.context.NamedArgs(), this.context.PositionalArgs())
+		if err != nil {
+			return nil, 0, err
+		}
+	}
+
 outer:
 	for i, e := range arrays {
-		if e.cond != nil && !SubsetOf(pred, e.cond) {
+		if e.cond != nil && !SubsetOf(subset, e.cond) {
 			continue
 		}
 

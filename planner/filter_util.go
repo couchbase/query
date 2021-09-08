@@ -101,7 +101,8 @@ func newIdxKeyDerive(keyExpr expression.Expression) *idxKeyDerive {
 
 // derive IS NOT NULL filters for a keyspace based on join filters in the
 // WHERE clause as well as ON-clause of inner joins
-func deriveNotNullFilter(keyspace datastore.Keyspace, baseKeyspace *base.BaseKeyspace, indexApiVersion int, virtualIndexes []datastore.Index) error {
+func deriveNotNullFilter(keyspace datastore.Keyspace, baseKeyspace *base.BaseKeyspace,
+	indexApiVersion int, virtualIndexes []datastore.Index, context *PrepareContext) error {
 
 	// first gather leading index key from all indexes for this keyspace
 	indexes := _INDEX_POOL.Get()
@@ -267,7 +268,7 @@ func deriveNotNullFilter(keyspace datastore.Keyspace, baseKeyspace *base.BaseKey
 						continue
 					}
 
-					min, _, _ := SargableFor(term, expression.Expressions{idxKeyDerive.keyExpr}, false, false)
+					min, _, _ := SargableFor(term, expression.Expressions{idxKeyDerive.keyExpr}, false, false, context)
 					if min > 0 {
 						keyMap[val].derive = false
 						newFilters = base.AddDerivedFilter(term, keyspaceNames, jfl.IsOnclause(), newFilters)

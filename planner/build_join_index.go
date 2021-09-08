@@ -17,6 +17,7 @@ import (
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
+	base "github.com/couchbase/query/plannerbase"
 	"github.com/couchbase/query/value"
 )
 
@@ -133,6 +134,13 @@ func (this *builder) buildJoinScan(keyspace datastore.Keyspace, node *algebra.Ke
 			expression.NewFieldName("id", false)),
 	}
 
+	if len(this.context.NamedArgs()) > 0 || len(this.context.PositionalArgs()) > 0 {
+		subset, err = base.ReplaceParameters(subset, this.context.NamedArgs(), this.context.PositionalArgs())
+		if err != nil {
+			return nil, nil, nil, err
+		}
+	}
+
 	sargables, _, _, _, err := this.sargableIndexes(indexes, pred, subset, primaryKey, formalizer, nil, false)
 	if err != nil {
 		return nil, nil, nil, err
@@ -166,7 +174,7 @@ func (this *builder) buildCoveringJoinScan(secondaries map[datastore.Index]*inde
 			}
 
 			// Include covering expression from index WHERE clause
-			coveringExprs, filterCovers, err := indexCoverExpressions(entry, keys, nil, nil, alias)
+			coveringExprs, filterCovers, err := indexCoverExpressions(entry, keys, nil, nil, alias, this.context)
 			if err != nil {
 				return nil, nil, nil, err
 			}

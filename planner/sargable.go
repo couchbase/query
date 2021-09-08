@@ -13,11 +13,11 @@ import (
 	"github.com/couchbase/query/expression"
 )
 
-func SargableFor(pred expression.Expression, keys expression.Expressions, missing, gsi bool) (
-	min, max, sum int) {
+func SargableFor(pred expression.Expression, keys expression.Expressions, missing, gsi bool,
+	context *PrepareContext) (min, max, sum int) {
 
 	if or, ok := pred.(*expression.Or); ok {
-		return sargableForOr(or, keys, missing, gsi)
+		return sargableForOr(or, keys, missing, gsi, context)
 	}
 
 	skiped := false
@@ -28,7 +28,7 @@ func SargableFor(pred expression.Expression, keys expression.Expressions, missin
 			return
 		}
 
-		s := &sargable{keys[i], missing, gsi}
+		s := &sargable{keys[i], missing, gsi, context}
 
 		r, err := pred.Accept(s)
 
@@ -58,11 +58,11 @@ func SargableFor(pred expression.Expression, keys expression.Expressions, missin
 	return
 }
 
-func sargableForOr(or *expression.Or, keys expression.Expressions, missing, gsi bool) (
-	min, max, sum int) {
+func sargableForOr(or *expression.Or, keys expression.Expressions, missing, gsi bool,
+	context *PrepareContext) (min, max, sum int) {
 
 	for _, c := range or.Operands() {
-		cmin, cmax, csum := SargableFor(c, keys, missing, gsi)
+		cmin, cmax, csum := SargableFor(c, keys, missing, gsi, context)
 		if cmin == 0 || cmax == 0 || csum < cmin {
 			return 0, 0, 0
 		}
@@ -85,6 +85,7 @@ type sargable struct {
 	key     expression.Expression
 	missing bool
 	gsi     bool
+	context *PrepareContext
 }
 
 // Arithmetic

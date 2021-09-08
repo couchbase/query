@@ -40,7 +40,7 @@ func sargForOr(or *expression.Or, entry *indexEntry, keys expression.Expressions
 	exact := true
 	spans := make([]SargSpans, len(or.Operands()))
 	for i, c := range or.Operands() {
-		_, max1, _ := SargableFor(c, keys, false, true) // Variable length sarging
+		_, max1, _ := SargableFor(c, keys, false, true, context) // Variable length sarging
 		s, ex, err := SargFor(c, entry, keys, max1, isJoin, doSelec, baseKeyspace, context)
 		if err != nil {
 			return nil, false, err
@@ -51,7 +51,7 @@ func sargForOr(or *expression.Or, entry *indexEntry, keys expression.Expressions
 
 		if exact && (max1 < max) {
 			// check for non-sargable key in predicate
-			exprs, _, err := indexCoverExpressions(entry, keys[:max1], c, nil, baseKeyspace.Name())
+			exprs, _, err := indexCoverExpressions(entry, keys[:max1], c, nil, baseKeyspace.Name(), context)
 			if err != nil {
 				return nil, false, err
 			}

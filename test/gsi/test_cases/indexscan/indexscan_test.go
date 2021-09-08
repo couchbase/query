@@ -147,9 +147,11 @@ func TestIndexScan(t *testing.T) {
 	// query named and positional parameters
 	runStmt(qc, "CREATE INDEX poix1 ON orders (c1, c2, c3, c4) WHERE test_id = \"parameters\"")
 	runStmt(qc, "CREATE INDEX poix2 ON orders (DISTINCT ARRAY v.id FOR v IN a3 END) WHERE test_id = \"parameters\"")
+	runStmt(qc, "CREATE INDEX poix3 ON orders (DISTINCT ARRAY v.id FOR v IN a4 WHEN v.name = \"abc\" END) WHERE test_id = \"parameters\"")
 	runMatch("case_parameters.json", false, true, qc, t)
 	runStmt(qc, "DROP INDEX orders.poix1")
 	runStmt(qc, "DROP INDEX orders.poix2")
+	runStmt(qc, "DROP INDEX orders.poix3")
 
 	runStmt(qc, "create primary index on product ")
 	runStmt(qc, "create primary index on purchase")

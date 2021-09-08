@@ -57,7 +57,7 @@ dimension.
 
 */
 func (this *builder) buildUnnestScan(node *algebra.KeyspaceTerm, from algebra.FromTerm,
-	pred expression.Expression, indexes map[datastore.Index]*indexEntry) (
+	pred, subset expression.Expression, indexes map[datastore.Index]*indexEntry) (
 	op plan.SecondaryScan, sargLength int, err error) {
 
 	if pred == nil {
@@ -85,12 +85,12 @@ func (this *builder) buildUnnestScan(node *algebra.KeyspaceTerm, from algebra.Fr
 	// Enumerate candidate array indexes
 	unnestIndexes := _INDEX_POOL.Get()
 	defer _INDEX_POOL.Put(unnestIndexes)
-	unnestIndexes, arrayKeys := collectUnnestIndexes(pred, indexes, unnestIndexes)
+	unnestIndexes, arrayKeys := collectUnnestIndexes(subset, indexes, unnestIndexes)
 	if len(unnestIndexes) == 0 {
 		return nil, 0, nil
 	}
 
-	cop, sargLength, err := this.buildCoveringUnnestScan(node, pred, indexes, unnestIndexes, arrayKeys, unnests)
+	cop, sargLength, err := this.buildCoveringUnnestScan(node, pred, subset, indexes, unnestIndexes, arrayKeys, unnests)
 	if cop != nil || err != nil {
 		return cop, sargLength, err
 	}
@@ -103,7 +103,7 @@ func (this *builder) buildUnnestScan(node *algebra.KeyspaceTerm, from algebra.Fr
 	for _, unnest := range primaryUnnests {
 		for _, index := range unnestIndexes {
 			arrayKey := arrayKeys[index]
-			op, _, _, n, err = this.matchUnnest(node, pred, unnest, indexes[index], arrayKey, unnests)
+			op, _, _, n, err = this.matchUnnest(node, pred, subset, unnest, indexes[index], arrayKey, unnests)
 			if err != nil {
 				return nil, 0, err
 			}
@@ -247,7 +247,7 @@ func collectPrimaryUnnests(from algebra.FromTerm, unnests, buf []*algebra.Unnest
 /*
 Enumerate array indexes for UNNEST.
 */
-func collectUnnestIndexes(pred expression.Expression, indexes map[datastore.Index]*indexEntry,
+func collectUnnestIndexes(subset expression.Expression, indexes map[datastore.Index]*indexEntry,
 	unnestIndexes []datastore.Index) (
 	[]datastore.Index, map[datastore.Index]*expression.All) {
 
@@ -265,7 +265,7 @@ func collectUnnestIndexes(pred expression.Expression, indexes map[datastore.Inde
 		}
 
 		if entry.cond != nil &&
-			!SubsetOf(pred, entry.cond) {
+			!SubsetOf(subset, entry.cond) {
 			continue
 		}
 
@@ -276,7 +276,7 @@ func collectUnnestIndexes(pred expression.Expression, indexes map[datastore.Inde
 	return unnestIndexes, arrayKeys
 }
 
-func (this *builder) matchUnnest(node *algebra.KeyspaceTerm, pred expression.Expression, unnest *algebra.Unnest,
+func (this *builder) matchUnnest(node *algebra.KeyspaceTerm, pred, subset expression.Expression, unnest *algebra.Unnest,
 	entry *indexEntry, arrayKey *expression.All, unnests []*algebra.Unnest) (
 	plan.SecondaryScan, *algebra.Unnest, *expression.All, int, error) {
 
@@ -325,7 +325,7 @@ func (this *builder) matchUnnest(node *algebra.KeyspaceTerm, pred expression.Exp
 			}
 		}
 
-		if when != nil && !SubsetOf(pred, when) {
+		if when != nil && !SubsetOf(subset, when) {
 			return nil, nil, nil, 0, nil
 		}
 
@@ -337,7 +337,7 @@ func (this *builder) matchUnnest(node *algebra.KeyspaceTerm, pred expression.Exp
 					continue
 				}
 
-				op, un, nArrayKey, n, err := this.matchUnnest(node, pred, u, entry, nestedArrayKey, unnests)
+				op, un, nArrayKey, n, err := this.matchUnnest(node, pred, subset, u, entry, nestedArrayKey, unnests)
 				if err != nil {
 					return nil, nil, nil, 0, err
 				}
@@ -390,7 +390,7 @@ func (this *builder) matchUnnest(node *algebra.KeyspaceTerm, pred expression.Exp
 		}
 	}
 
-	min, max, _ := SargableFor(pred, sargKeys, false, true)
+	min, max, _ := SargableFor(pred, sargKeys, false, true, this.context)
 	if min == 0 {
 		return nil, nil, nil, 0, nil
 	}

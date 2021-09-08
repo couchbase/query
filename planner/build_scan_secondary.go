@@ -250,13 +250,7 @@ func (this *builder) sargableIndexes(indexes []datastore.Index, pred, subset exp
 
 	flexPred := pred
 	if len(this.context.NamedArgs()) > 0 || len(this.context.PositionalArgs()) > 0 {
-		namedArgs := this.context.NamedArgs()
-		positionalArgs := this.context.PositionalArgs()
-		subset, err = base.ReplaceParameters(subset, namedArgs, positionalArgs)
-		if err != nil {
-			return
-		}
-		flexPred, err = base.ReplaceParameters(flexPred, namedArgs, positionalArgs)
+		flexPred, err = base.ReplaceParameters(flexPred, this.context.NamedArgs(), this.context.PositionalArgs())
 		if err != nil {
 			return
 		}
@@ -362,7 +356,7 @@ func (this *builder) sargableIndexes(indexes []datastore.Index, pred, subset exp
 		}
 
 		skip := useSkipIndexKeys(index, this.context.IndexApiVersion())
-		min, max, sum := SargableFor(pred, keys, false, skip)
+		min, max, sum := SargableFor(pred, keys, false, skip, this.context)
 
 		n := min
 		if skip {

@@ -42,11 +42,11 @@ func (this *sargable) VisitAny(pred *expression.Any) (interface{}, error) {
 		return nil, err
 	}
 
-	if array.When() != nil && !SubsetOf(satisfies, array.When()) {
+	if array.When() != nil && !checkSubset(satisfies, array.When(), this.context) {
 		return false, nil
 	}
 
 	mappings := expression.Expressions{array.ValueMapping()}
-	min, _, _ := SargableFor(satisfies, mappings, this.missing, this.gsi)
+	min, _, _ := SargableFor(satisfies, mappings, this.missing, this.gsi, this.context)
 	return min > 0, nil
 }
