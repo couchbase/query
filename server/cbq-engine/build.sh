@@ -6,5 +6,5 @@
 # be governed by the Apache License, Version 2.0, included in the file
 # licenses/APL.txt.
 
-echo go build $*
-go build $*
+echo go build -ldflags "-X github.com/couchbase/query/util.VERSION=${PRODUCT_VERSION}" $*
+go build -ldflags "-X github.com/couchbase/query/util.VERSION=${PRODUCT_VERSION}" $*

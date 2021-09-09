@@ -52,7 +52,7 @@ const (
 )
 
 // N1QL User-Agent value
-const (
+var (
 	_N1QL_USER_AGENT = "couchbase/n1ql/" + util.VERSION
 )
 

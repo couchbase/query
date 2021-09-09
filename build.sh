@@ -13,6 +13,8 @@
 # To build the enterprise version with latest updates, launch this  AS './build.sh -u -tags enterprise'
 # Add -s to fix standalone build issues. Keep indexer, eventing-ee generated files in ~/devbld
 
+PRODUCT_VERSION=${PRODUCT_VERSION:-"7.1.0-local_build"}
+export PRODUCT_VERSION
 
 args=""
 

@@ -1017,7 +1017,8 @@ func getClientID(client_id string) (string, errors.Error) {
 
 const acceptType = "application/json"
 const versionTag = "version="
-const version = acceptType + "; " + versionTag + util.VERSION
+
+var version = acceptType + "; " + versionTag + util.VERSION
 
 func contentNegotiation(resp http.ResponseWriter, req *http.Request) errors.Error {
 	// set content type to current version

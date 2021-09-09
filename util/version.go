@@ -10,7 +10,7 @@ package util
 
 // Define the current server version and minimum supported version
 
-const (
-	VERSION     = "7.1.0-N1QL"
+var (
+	VERSION     = "unset: build issue" // is set by correct build process
 	MIN_VERSION = "1.0.0"
 )

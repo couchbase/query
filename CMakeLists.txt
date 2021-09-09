@@ -42,7 +42,8 @@ GoPrivateMod (MODULE cbftx PATH ../../../../../cbftx)
 GoPrivateMod (MODULE eventing-ee)
 GoPrivateMod (MODULE query-ee)
 
-SET (LDFLAGS)
+STRING(REGEX REPLACE "-[^-]*$" "-N1QL" QUERY_VERSION ${PRODUCT_VERSION})
+SET (LDFLAGS "-X github.com/couchbase/query/util.VERSION=${QUERY_VERSION}")
 IF (APPLE)
   # Suppress warning from FindCouchbaseGo
   IF (${GOVERSION} VERSION_LESS ${GO_MAC_MINIMUM_VERSION})
