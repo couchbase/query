@@ -20,6 +20,8 @@ type LikeFunction interface {
 	Regexp() *regexp.Regexp
 }
 
+var _DEFAULT_ESCAPE = NewConstant("\\")
+
 ///////////////////////////////////////////////////
 //
 // LikePrefix
@@ -33,9 +35,12 @@ type LikePrefix struct {
 	BinaryFunctionBase
 }
 
-func NewLikePrefix(first, second Expression) Function {
+func NewLikePrefix(operands ...Expression) Function {
+	if len(operands) == 1 {
+		operands = append(operands, _DEFAULT_ESCAPE)
+	}
 	rv := &LikePrefix{
-		*NewBinaryFunctionBase("like_prefix", first, second),
+		*NewBinaryFunctionBase("like_prefix", operands[0], operands[1]),
 	}
 
 	rv.expr = rv
@@ -61,19 +66,22 @@ func (this *LikePrefix) Evaluate(item value.Value, context Context) (value.Value
 		return value.NULL_VALUE, nil
 	}
 
-	esc, err := this.operands[1].Evaluate(item, context)
-	if err != nil {
-		return nil, err
-	} else if esc.Type() == value.MISSING {
-		return value.MISSING_VALUE, nil
-	} else if esc.Type() != value.STRING {
-		return value.NULL_VALUE, nil
-	}
-
+	escape := rune('\\')
 	s := arg.ToString()
-	escape, err := getEscapeRuneFromValue(esc)
-	if err != nil {
-		return nil, err
+	if len(this.operands) > 1 {
+		esc, err := this.operands[1].Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		} else if esc.Type() == value.MISSING {
+			return value.MISSING_VALUE, nil
+		} else if esc.Type() != value.STRING {
+			return value.NULL_VALUE, nil
+		}
+
+		escape, err = getEscapeRuneFromValue(esc)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	prefix, _ := likeLiteralPrefix(s, escape)
@@ -84,10 +92,10 @@ func (this *LikePrefix) Evaluate(item value.Value, context Context) (value.Value
 Factory method pattern.
 */
 func (this *LikePrefix) Constructor() FunctionConstructor {
-	return func(operands ...Expression) Function {
-		return NewLikePrefix(operands[0], operands[1])
-	}
+	return NewLikePrefix
 }
+
+func (this *LikePrefix) MinArgs() int { return 1 }
 
 ///////////////////////////////////////////////////
 //
@@ -102,9 +110,12 @@ type LikeStop struct {
 	BinaryFunctionBase
 }
 
-func NewLikeStop(first, second Expression) Function {
+func NewLikeStop(operands ...Expression) Function {
+	if len(operands) == 1 {
+		operands = append(operands, _DEFAULT_ESCAPE)
+	}
 	rv := &LikeStop{
-		*NewBinaryFunctionBase("like_stop", first, second),
+		*NewBinaryFunctionBase("like_stop", operands[0], operands[1]),
 	}
 
 	rv.expr = rv
@@ -130,19 +141,22 @@ func (this *LikeStop) Evaluate(item value.Value, context Context) (value.Value, 
 		return value.NULL_VALUE, nil
 	}
 
-	esc, err := this.operands[1].Evaluate(item, context)
-	if err != nil {
-		return nil, err
-	} else if esc.Type() == value.MISSING {
-		return value.MISSING_VALUE, nil
-	} else if esc.Type() != value.STRING {
-		return value.NULL_VALUE, nil
-	}
-
+	escape := rune('\\')
 	s := arg.ToString()
-	escape, err := getEscapeRuneFromValue(esc)
-	if err != nil {
-		return nil, err
+	if len(this.operands) > 1 {
+		esc, err := this.operands[1].Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		} else if esc.Type() == value.MISSING {
+			return value.MISSING_VALUE, nil
+		} else if esc.Type() != value.STRING {
+			return value.NULL_VALUE, nil
+		}
+
+		escape, err = getEscapeRuneFromValue(esc)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	prefix, complete := likeLiteralPrefix(s, escape)
@@ -164,10 +178,10 @@ func (this *LikeStop) Evaluate(item value.Value, context Context) (value.Value, 
 Factory method pattern.
 */
 func (this *LikeStop) Constructor() FunctionConstructor {
-	return func(operands ...Expression) Function {
-		return NewLikeStop(operands[0], operands[1])
-	}
+	return NewLikeStop
 }
+
+func (this *LikeStop) MinArgs() int { return 1 }
 
 ///////////////////////////////////////////////////
 //
@@ -182,9 +196,12 @@ type LikeSuffix struct {
 	BinaryFunctionBase
 }
 
-func NewLikeSuffix(first, second Expression) Function {
+func NewLikeSuffix(operands ...Expression) Function {
+	if len(operands) == 1 {
+		operands = append(operands, _DEFAULT_ESCAPE)
+	}
 	rv := &LikeSuffix{
-		*NewBinaryFunctionBase("like_suffix", first, second),
+		*NewBinaryFunctionBase("like_suffix", operands[0], operands[1]),
 	}
 
 	rv.expr = rv
@@ -210,18 +227,21 @@ func (this *LikeSuffix) Evaluate(item value.Value, context Context) (value.Value
 		return value.NULL_VALUE, nil
 	}
 
-	esc, err := this.operands[1].Evaluate(item, context)
-	if err != nil {
-		return nil, err
-	} else if esc.Type() == value.MISSING {
-		return value.MISSING_VALUE, nil
-	} else if esc.Type() != value.STRING {
-		return value.NULL_VALUE, nil
-	}
+	escape := rune('\\')
+	if len(this.operands) > 1 {
+		esc, err := this.operands[1].Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		} else if esc.Type() == value.MISSING {
+			return value.MISSING_VALUE, nil
+		} else if esc.Type() != value.STRING {
+			return value.NULL_VALUE, nil
+		}
 
-	escape, err := getEscapeRuneFromValue(esc)
-	if err != nil {
-		return nil, err
+		escape, err = getEscapeRuneFromValue(esc)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	for s := arg.ToString(); s != ""; s = s[1:] {
@@ -238,10 +258,10 @@ func (this *LikeSuffix) Evaluate(item value.Value, context Context) (value.Value
 Factory method pattern.
 */
 func (this *LikeSuffix) Constructor() FunctionConstructor {
-	return func(operands ...Expression) Function {
-		return NewLikeSuffix(operands[0], operands[1])
-	}
+	return NewLikeSuffix
 }
+
+func (this *LikeSuffix) MinArgs() int { return 1 }
 
 ///////////////////////////////////////////////////
 //

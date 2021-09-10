@@ -261,7 +261,8 @@ func likeCompile(s string, escape rune) (re, part *regexp.Regexp, err error) {
 
 func likeLiteralPrefix(s string, escape rune) (string, bool) {
 	escaped := false
-	for i, r := range s {
+	res := make([]rune, 0, len(s))
+	for _, r := range s {
 		switch {
 		case escaped == true:
 		case r == escape:
@@ -270,11 +271,12 @@ func likeLiteralPrefix(s string, escape rune) (string, bool) {
 		case r == anyStringWildcard:
 			fallthrough
 		case r == anyCharWildcard:
-			return s[0:i], false
+			return string(res), false
 		}
 		escaped = false
+		res = append(res, r)
 	}
-	return s, true
+	return string(res), true
 }
 
 /*
