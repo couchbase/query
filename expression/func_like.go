@@ -57,31 +57,29 @@ func (this *LikePrefix) Accept(visitor Visitor) (interface{}, error) {
 func (this *LikePrefix) Type() value.Type { return value.STRING }
 
 func (this *LikePrefix) Evaluate(item value.Value, context Context) (value.Value, error) {
+	null := false
 	arg, err := this.operands[0].Evaluate(item, context)
 	if err != nil {
 		return nil, err
 	} else if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.STRING {
+		null = true
+	}
+
+	esc, err := this.operands[1].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if esc.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else if esc.Type() != value.STRING || null {
 		return value.NULL_VALUE, nil
 	}
 
-	escape := rune('\\')
 	s := arg.ToString()
-	if len(this.operands) > 1 {
-		esc, err := this.operands[1].Evaluate(item, context)
-		if err != nil {
-			return nil, err
-		} else if esc.Type() == value.MISSING {
-			return value.MISSING_VALUE, nil
-		} else if esc.Type() != value.STRING {
-			return value.NULL_VALUE, nil
-		}
-
-		escape, err = getEscapeRuneFromValue(esc)
-		if err != nil {
-			return nil, err
-		}
+	escape, err := getEscapeRuneFromValue(esc)
+	if err != nil {
+		return nil, err
 	}
 
 	prefix, _ := likeLiteralPrefix(s, escape)
@@ -132,31 +130,29 @@ func (this *LikeStop) Accept(visitor Visitor) (interface{}, error) {
 func (this *LikeStop) Type() value.Type { return value.JSON }
 
 func (this *LikeStop) Evaluate(item value.Value, context Context) (value.Value, error) {
+	null := false
 	arg, err := this.operands[0].Evaluate(item, context)
 	if err != nil {
 		return nil, err
 	} else if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.STRING {
+		null = true
+	}
+
+	esc, err := this.operands[1].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if esc.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else if esc.Type() != value.STRING || null {
 		return value.NULL_VALUE, nil
 	}
 
-	escape := rune('\\')
 	s := arg.ToString()
-	if len(this.operands) > 1 {
-		esc, err := this.operands[1].Evaluate(item, context)
-		if err != nil {
-			return nil, err
-		} else if esc.Type() == value.MISSING {
-			return value.MISSING_VALUE, nil
-		} else if esc.Type() != value.STRING {
-			return value.NULL_VALUE, nil
-		}
-
-		escape, err = getEscapeRuneFromValue(esc)
-		if err != nil {
-			return nil, err
-		}
+	escape, err := getEscapeRuneFromValue(esc)
+	if err != nil {
+		return nil, err
 	}
 
 	prefix, complete := likeLiteralPrefix(s, escape)
@@ -218,30 +214,28 @@ func (this *LikeSuffix) Accept(visitor Visitor) (interface{}, error) {
 func (this *LikeSuffix) Type() value.Type { return value.STRING }
 
 func (this *LikeSuffix) Evaluate(item value.Value, context Context) (value.Value, error) {
+	null := false
 	arg, err := this.operands[0].Evaluate(item, context)
 	if err != nil {
 		return nil, err
 	} else if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	} else if arg.Type() != value.STRING {
+		null = true
+	}
+
+	esc, err := this.operands[1].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if esc.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else if esc.Type() != value.STRING || null {
 		return value.NULL_VALUE, nil
 	}
 
-	escape := rune('\\')
-	if len(this.operands) > 1 {
-		esc, err := this.operands[1].Evaluate(item, context)
-		if err != nil {
-			return nil, err
-		} else if esc.Type() == value.MISSING {
-			return value.MISSING_VALUE, nil
-		} else if esc.Type() != value.STRING {
-			return value.NULL_VALUE, nil
-		}
-
-		escape, err = getEscapeRuneFromValue(esc)
-		if err != nil {
-			return nil, err
-		}
+	escape, err := getEscapeRuneFromValue(esc)
+	if err != nil {
+		return nil, err
 	}
 
 	for s := arg.ToString(); s != ""; s = s[1:] {
