@@ -78,7 +78,7 @@ type Client struct {
 
 type SSLConfigFn func() (*gocbcore.AgentConfig, error)
 
-func NewClient(url string, sslHostFn func() (string, string), certFile string) (rv *Client, err error) {
+func NewClient(url string, sslHostFn func() (string, string), caFile, certFile string) (rv *Client, err error) {
 	var connSpec *connstr.ConnSpec
 
 	rv = &Client{}
@@ -107,8 +107,8 @@ func NewClient(url string, sslHostFn func() (string, string), certFile string) (
 		return nil, fmt.Errorf("no ssl address")
 	}
 
-	if certFile != "" {
-		if err = rv.InitTLS(certFile); err != nil {
+	if certFile != "" || caFile != "" {
+		if err = rv.InitTLS(caFile, certFile); err != nil {
 			return nil, err
 		}
 	}
@@ -204,7 +204,10 @@ func (c *Client) Close() {
 }
 
 // with the KV engine encrypted.
-func (c *Client) InitTLS(certFile string) error {
+func (c *Client) InitTLS(caFile, certFile string) error {
+	if len(caFile) > 0 {
+		certFile = caFile
+	}
 	serverCert, err := ioutil.ReadFile(certFile)
 	if err != nil {
 		return err

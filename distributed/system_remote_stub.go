@@ -113,6 +113,6 @@ func (this systemRemoteStub) Settings(setting map[string]interface{}) errors.Err
 }
 
 // Update TLS or node-to-node encryption settings.
-func (this systemRemoteStub) SetConnectionSecurityConfig(certFile string, encryptNodeToNodeComms bool) {
+func (this systemRemoteStub) SetConnectionSecurityConfig(caFile, certFile string, encryptNodeToNodeComms bool) {
 	// Do nothing.
 }

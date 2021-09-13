@@ -65,6 +65,7 @@ type Indexer interface {
 type ConnectionSecurityConfig struct {
 	TLSConfig               cbauth.TLSConfig
 	ClusterEncryptionConfig cbauth.ClusterEncryptionConfig
+	CAFile                  string
 	CertFile                string
 	KeyFile                 string
 }

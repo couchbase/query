@@ -62,7 +62,7 @@ type SystemRemoteAccess interface {
 	Settings(settings map[string]interface{}) errors.Error
 
 	// Update TLS or node-to-node encryption settings.
-	SetConnectionSecurityConfig(certFile string, encryptNodeToNodeComms bool)
+	SetConnectionSecurityConfig(caFile, certFile string, encryptNodeToNodeComms bool)
 
 	// Prepare an opaque type that represents this admin endpoint and necessary authentication
 	PrepareAdminOp(node string, endpoint string, key string, warnFn func(warn errors.Error), creds Creds,

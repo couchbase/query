@@ -78,8 +78,11 @@ var ORDER_LIMIT = flag.Int64("order-limit", 0, "Maximum LIMIT for ORDER BY claus
 var MUTATION_LIMIT = flag.Int64("mutation-limit", 0, "Maximum LIMIT for data modification statements; use zero or negative value to disable")
 var HTTP_ADDR = flag.String("http", _DEF_HTTP, "HTTP service address")
 var HTTPS_ADDR = flag.String("https", _DEF_HTTPS, "HTTPS service address")
-var CERT_FILE = flag.String("certfile", "", "HTTPS certificate file")
+
+var CA_FILE = flag.String("cafile", "", "HTTPS CA certificates")
+var CERT_FILE = flag.String("certfile", "", "HTTPS certificate chain file")
 var KEY_FILE = flag.String("keyfile", "", "HTTPS private key file")
+
 var IPv6 = flag.String("ipv6", server_package.TCP_OPT, "Query is IPv6 compliant")
 var IPv4 = flag.String("ipv4", server_package.TCP_REQ, "Query uses IPv4 listeners only")
 
@@ -373,7 +376,7 @@ func main() {
 
 	// Create http endpoint
 	endpoint := http.NewServiceEndpoint(server, *STATIC_PATH, *METRICS,
-		*HTTP_ADDR, *HTTPS_ADDR, *CERT_FILE, *KEY_FILE)
+		*HTTP_ADDR, *HTTPS_ADDR, *CA_FILE, *CERT_FILE, *KEY_FILE)
 	er := endpoint.Listen()
 	if er != nil {
 		logging.Errorf("cbq-engine (HTTP_ADDR %v) exiting with error: %v", *HTTP_ADDR, er)

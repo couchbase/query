@@ -67,7 +67,7 @@ func (this *systemRemoteHttp) setCommParams(cp *commParameters) {
 	atomic.StorePointer(&(this.commParams), curCommParameters)
 }
 
-func (this *systemRemoteHttp) SetConnectionSecurityConfig(certFile string, encryptNodeToNodeComms bool) {
+func (this *systemRemoteHttp) SetConnectionSecurityConfig(caFile, certFile string, encryptNodeToNodeComms bool) {
 	var cp *commParameters
 	if !encryptNodeToNodeComms {
 		cp = &commParameters{
@@ -78,6 +78,9 @@ func (this *systemRemoteHttp) SetConnectionSecurityConfig(certFile string, encry
 			useSecurePort: false,
 		}
 	} else {
+		if len(caFile) > 0 {
+			certFile = caFile
+		}
 		serverCert, err := ioutil.ReadFile(certFile)
 		if err != nil {
 			logging.Errorf("SystemRemoteHttp.SetCommunictionSecurityConfig: Unable to read cert file %s:%v", certFile, err)

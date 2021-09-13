@@ -81,7 +81,7 @@ var TCPKeepaliveInterval = 30 * 60
 var skipVerify = true
 var certFile = ""
 var keyFile = ""
-var rootFile = ""
+var caFile = ""
 
 func SetSkipVerify(skip bool) {
 	skipVerify = skip
@@ -95,8 +95,8 @@ func SetKeyFile(cert string) {
 	keyFile = cert
 }
 
-func SetRootFile(cert string) {
-	rootFile = cert
+func SetCaFile(cert string) {
+	caFile = cert
 }
 
 // Allow applications to speciify the Poolsize and Overflow
@@ -509,7 +509,7 @@ func isHttpConnError(err error) bool {
 
 var client *http.Client
 
-func ClientConfigForX509(certFile, keyFile, rootFile string) (*tls.Config, error) {
+func ClientConfigForX509(caFile, certFile, keyFile string) (*tls.Config, error) {
 	cfg := &tls.Config{}
 
 	if certFile != "" && keyFile != "" {
@@ -527,9 +527,9 @@ func ClientConfigForX509(certFile, keyFile, rootFile string) (*tls.Config, error
 	var err1 error
 
 	caCertPool := x509.NewCertPool()
-	if rootFile != "" {
+	if caFile != "" {
 		// Read that value in
-		caCert, err1 = ioutil.ReadFile(rootFile)
+		caCert, err1 = ioutil.ReadFile(caFile)
 		if err1 != nil {
 			return nil, fmt.Errorf(" Error in reading cacert file, err: %v", err1)
 		}
@@ -558,7 +558,7 @@ func doHTTPRequest(req *http.Request) (*http.Response, error) {
 		} else {
 			// Handle cases with cert
 
-			cfg, err := ClientConfigForX509(certFile, keyFile, rootFile)
+			cfg, err := ClientConfigForX509(caFile, certFile, keyFile)
 			if err != nil {
 				return nil, err
 			}
@@ -789,7 +789,10 @@ func ConnectWithAuth(baseU string, ah AuthHandler) (c Client, err error) {
 // with the KV engine encrypted.
 //
 // This method should be called immediately after a Connect*() method.
-func (c *Client) InitTLS(certFile string, disableNonSSLPorts bool) error {
+func (c *Client) InitTLS(caFile, certFile string, disableNonSSLPorts bool) error {
+	if len(caFile) > 0 {
+		certFile = caFile
+	}
 	serverCert, err := ioutil.ReadFile(certFile)
 	if err != nil {
 		return err

@@ -509,13 +509,19 @@ func (s *store) GetRolesAll() ([]datastore.Role, errors.Error) {
 
 func (s *store) SetClientConnectionSecurityConfig() (err error) {
 	if s.connSecConfig != nil && s.connSecConfig.ClusterEncryptionConfig.EncryptData {
-		err = s.client.InitTLS(s.connSecConfig.CertFile, s.connSecConfig.ClusterEncryptionConfig.DisableNonSSLPorts)
+		err = s.client.InitTLS(s.connSecConfig.CAFile, s.connSecConfig.CertFile, s.connSecConfig.ClusterEncryptionConfig.DisableNonSSLPorts)
 		if err == nil && s.gcClient != nil {
-			err = s.gcClient.InitTLS(s.connSecConfig.CertFile)
+			err = s.gcClient.InitTLS(s.connSecConfig.CAFile, s.connSecConfig.CertFile)
 		}
 		if err != nil {
-			err = fmt.Errorf("Unable to initialize TLS using cert file %s. Aborting security update. Error:%v",
-				s.connSecConfig.CertFile, err)
+			if len(s.connSecConfig.CAFile) > 0 {
+				err = fmt.Errorf("Unable to initialize TLS using certificate %s. Aborting security update. Error:%v",
+					s.connSecConfig.CAFile, err)
+			} else {
+				err = fmt.Errorf("Unable to initialize TLS using certificate %s. Aborting security update. Error:%v",
+					s.connSecConfig.CertFile, err)
+			}
+
 			logging.Errorf("%v", err)
 			return
 		}

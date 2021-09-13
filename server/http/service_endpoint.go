@@ -57,6 +57,7 @@ type HttpEndpoint struct {
 	metrics             bool
 	httpAddr            string
 	httpsAddr           string
+	cafile              string
 	certFile            string
 	keyFile             string
 	bufpool             BufferPool
@@ -92,12 +93,13 @@ func init() {
 }
 
 func NewServiceEndpoint(srv *server.Server, staticPath string, metrics bool,
-	httpAddr, httpsAddr, certFile, keyFile string) *HttpEndpoint {
+	httpAddr, httpsAddr, caFile, certFile, keyFile string) *HttpEndpoint {
 	rv := &HttpEndpoint{
 		server:    srv,
 		metrics:   metrics,
 		httpAddr:  httpAddr,
 		httpsAddr: httpsAddr,
+		cafile:    caFile,
 		certFile:  certFile,
 		keyFile:   keyFile,
 		bufpool:   NewSyncPool(srv.KeepAlive()),
@@ -110,6 +112,7 @@ func NewServiceEndpoint(srv *server.Server, staticPath string, metrics bool,
 
 	rv.connSecConfig.CertFile = certFile
 	rv.connSecConfig.KeyFile = keyFile
+	rv.connSecConfig.CAFile = caFile
 
 	server.SetActives(rv.actives)
 	server.SetOptions(rv.options)
@@ -233,10 +236,11 @@ func (this *HttpEndpoint) ListenTLS() error {
 	}
 
 	// create tls configuration
-	if this.certFile == "" || this.keyFile == "" {
+	if (this.certFile == "" || this.cafile == "") && this.keyFile == "" {
 		logging.Errorf("No certificate passed. Secure listener not brought up.")
 		return nil
 	}
+
 	tlsCert, err := tls.LoadX509KeyPair(this.certFile, this.keyFile)
 	if err != nil {
 		return err
@@ -258,7 +262,7 @@ func (this *HttpEndpoint) ListenTLS() error {
 	}
 
 	if cbauthTLSsettings.ClientAuthType != tls.NoClientCert {
-		caCert, err := ioutil.ReadFile(this.certFile)
+		caCert, err := ioutil.ReadFile(this.cafile)
 		if err != nil {
 			return fmt.Errorf(" Error in reading cacert file, err: %v", err)
 		}
@@ -624,7 +628,7 @@ func (this *HttpEndpoint) SetupSSL() error {
 			} else {
 				sds.SetConnectionSecurityConfig(&(this.connSecConfig))
 			}
-			distributed.RemoteAccess().SetConnectionSecurityConfig(this.connSecConfig.CertFile,
+			distributed.RemoteAccess().SetConnectionSecurityConfig(this.connSecConfig.CAFile, this.connSecConfig.CertFile,
 				this.connSecConfig.ClusterEncryptionConfig.EncryptData)
 		}
 		return nil

@@ -124,7 +124,8 @@ type QueryNodeOptions interface {
 	UpdateLimit() int        // Max LIMIT for data modification statements
 	Http() string            // HTTP service address
 	Https() string           // HTTPS service address
-	Certfile() string        // HTTPS certificate file
+	Cafile() string          //HTTPS certificate file
+	Certfile() string        // HTTPS certificate chain
 	Keyfile() string         // HTTPS private key file
 	Logger() string          // Name of Logger implementation
 	Debug() bool             // Debug mode
@@ -229,6 +230,7 @@ type ClOptions struct {
 	LoggerImpl   string `json:"logger"`
 	DebugFlag    bool   `json:"debug"`
 	ClusterName  string `json:"cluster"`
+	CaFile       string `json:"cafile"`
 	CertFile     string `json:"certfile"`
 	KeyFile      string `json:"keyfile"`
 }
@@ -297,6 +299,10 @@ func (c *ClOptions) Https() string {
 	return c.HttpsAddr
 }
 
+func (c *ClOptions) Cafile() string {
+	return c.CaFile
+}
+
 func (c *ClOptions) Certfile() string {
 	return c.CertFile
 }
@@ -307,7 +313,7 @@ func (c *ClOptions) Keyfile() string {
 
 func NewOptions(datastoreURL string, cfgstoreURL string, acctstoreURL string, namespace string,
 	readOnly bool, signature bool, metrics bool, reqCap int, threads int, ordLim int, updLim int,
-	http string, https string, loggerImpl string, debugFlag bool, clustName string, certFile string,
+	http string, https string, loggerImpl string, debugFlag bool, clustName string, cafile string, certFile string,
 	keyFile string) *ClOptions {
 	return &ClOptions{
 		DatastoreURL: datastoreURL,
@@ -326,6 +332,7 @@ func NewOptions(datastoreURL string, cfgstoreURL string, acctstoreURL string, na
 		LoggerImpl:   loggerImpl,
 		DebugFlag:    debugFlag,
 		ClusterName:  clustName,
+		CaFile:       cafile,
 		CertFile:     certFile,
 		KeyFile:      keyFile,
 	}

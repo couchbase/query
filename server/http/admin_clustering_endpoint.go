@@ -382,6 +382,7 @@ func doSslCert(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request,
 	sslStatus["status"] = "ok"
 	sslStatus["keyfile"] = endpoint.keyFile
 	sslStatus["certfile"] = endpoint.certFile
+	sslStatus["cafile"] = endpoint.cafile
 
 	return sslStatus, nil
 }
