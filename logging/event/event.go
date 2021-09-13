@@ -107,6 +107,9 @@ func Report(e EventType, l EventLevel, args ...interface{}) {
 		logging.Errorf("Events not initialised. Failed to report event: %v", string(body))
 		return
 	}
+	if s, _ := configStore.State(); s == clustering.STANDALONE {
+		return
+	}
 	cl, err := configStore.Cluster()
 	if cl == nil || err != nil {
 		logging.Errorf("Cluster not found (%v). Failed to report event: %v", err, string(body))
