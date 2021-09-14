@@ -876,8 +876,8 @@ var dfas = []dfa{
 		},
 	}, []int{ /* Start-of-input transitions */ -1, -1, -1, -1}, []int{ /* End-of-input transitions */ -1, -1, -1, -1}, nil},
 
-	// (\/\*)([^\*]|(\*)+[^\/])*((\*)+\/)
-	{[]bool{false, false, false, false, false, false, true, false, true, false}, []func(rune) int{ // Transitions
+	// \/\*[^*]?(([^*\/])|(\*+[^\/])|([^*]\/))*\*+\/
+	{[]bool{false, false, false, false, false, false, false, false, false, true, false, false, false, true, false}, []func(rune) int{ // Transitions
 		func(r rune) int {
 			switch r {
 			case 42:
@@ -903,12 +903,21 @@ var dfas = []dfa{
 			case 47:
 				return 4
 			}
-			return 4
+			return 5
 		},
 		func(r rune) int {
 			switch r {
 			case 42:
-				return 5
+				return 8
+			case 47:
+				return 9
+			}
+			return 10
+		},
+		func(r rune) int {
+			switch r {
+			case 42:
+				return 3
 			case 47:
 				return 6
 			}
@@ -919,18 +928,36 @@ var dfas = []dfa{
 			case 42:
 				return 3
 			case 47:
-				return 4
+				return 6
 			}
-			return 4
+			return 7
 		},
 		func(r rune) int {
 			switch r {
 			case 42:
-				return 5
+				return 3
 			case 47:
-				return 8
+				return 6
 			}
-			return 9
+			return 7
+		},
+		func(r rune) int {
+			switch r {
+			case 42:
+				return 3
+			case 47:
+				return 6
+			}
+			return 7
+		},
+		func(r rune) int {
+			switch r {
+			case 42:
+				return 8
+			case 47:
+				return 13
+			}
+			return 14
 		},
 		func(r rune) int {
 			switch r {
@@ -946,29 +973,47 @@ var dfas = []dfa{
 			case 42:
 				return 3
 			case 47:
-				return 4
+				return 11
 			}
-			return 4
+			return 7
+		},
+		func(r rune) int {
+			switch r {
+			case 42:
+				return -1
+			case 47:
+				return 12
+			}
+			return -1
 		},
 		func(r rune) int {
 			switch r {
 			case 42:
 				return 3
 			case 47:
-				return 4
+				return 11
 			}
-			return 4
+			return 7
+		},
+		func(r rune) int {
+			switch r {
+			case 42:
+				return -1
+			case 47:
+				return 12
+			}
+			return -1
 		},
 		func(r rune) int {
 			switch r {
 			case 42:
 				return 3
 			case 47:
-				return 4
+				return 6
 			}
-			return 4
+			return 7
 		},
-	}, []int{ /* Start-of-input transitions */ -1, -1, -1, -1, -1, -1, -1, -1, -1, -1}, []int{ /* End-of-input transitions */ -1, -1, -1, -1, -1, -1, -1, -1, -1, -1}, nil},
+	}, []int{ /* Start-of-input transitions */ -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1}, []int{ /* End-of-input transitions */ -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1}, nil},
 
 	// --[^\n\r]*
 	{[]bool{false, false, true, true}, []func(rune) int{ // Transitions

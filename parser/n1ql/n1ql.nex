@@ -77,7 +77,7 @@
 		    }
 		  }
 
-/(\/\*)([^\*]|(\*)+[^\/])*((\*)+\/)/ {
+/\/\*[^*]?(([^*\/])|(\*+[^\/])|([^*]\/))*\*+\// {
 		    yylex.logToken(yylex.Text(), "BLOCK_COMMENT (length=%d)", len(yylex.Text())) /* eat up block comment */
 		  }
 
