@@ -910,8 +910,12 @@ func (this *cbCluster) ReportEventAsync(event string) {
 		}
 		logging.Stackf(logging.ERROR, "Failed to report event: %v. Event: %v", r, event)
 	}()
-	hostport := strings.TrimPrefix("https://", strings.TrimPrefix("http://", this.DatastoreURI))
-	u, p, _ := cbauth.Default.GetHTTPServiceAuth(hostport)
+	hostport := strings.TrimPrefix(strings.TrimPrefix(this.DatastoreURI, "http://"), "https://")
+	u, p, err := cbauth.Default.GetHTTPServiceAuth(hostport)
+	if err != nil {
+		logging.Errorf("Failed to obtain credentials for %v for event logging: %v. Event: %v", hostport, err, event)
+		return
+	}
 	url := this.DatastoreURI + _SYSTEM_LOG_PATH
 
 	go func() {

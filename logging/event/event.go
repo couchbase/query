@@ -43,7 +43,7 @@ const (
 	FATAL   EventLevel = "fatal"
 )
 
-const _EVENT_TIMESTAMP_FORMAT = "2006-01-02T15:04:05:999Z"
+const _EVENT_TIMESTAMP_FORMAT = "2006-01-02T15:04:05.999Z"
 
 const _COMPONENT = "query"
 

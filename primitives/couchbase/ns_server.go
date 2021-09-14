@@ -1254,6 +1254,7 @@ func InvokeEndpointWithRetry(url string, u string, p string, cmd string, ctype s
 
 	client := &http.Client{}
 
+	extra := ""
 	backoffSleep := _BACK_OFF_INTERVAL
 	exponential := true
 	for i := 0; ; i++ {
@@ -1284,6 +1285,12 @@ func InvokeEndpointWithRetry(url string, u string, p string, cmd string, ctype s
 			}
 		}
 		if resp != nil && resp.Body != nil {
+			if resp.StatusCode != 200 {
+				body, err := ioutil.ReadAll(resp.Body)
+				if err == nil {
+					extra = string(body)
+				}
+			}
 			resp.Body.Close()
 		}
 		if i < retries {
@@ -1299,7 +1306,11 @@ func InvokeEndpointWithRetry(url string, u string, p string, cmd string, ctype s
 				if resp == nil {
 					return nil, fmt.Errorf("Unknown error")
 				} else {
-					return nil, fmt.Errorf("%s", resp.Status)
+					if len(extra) > 0 {
+						return nil, fmt.Errorf("%s [%s]", resp.Status, extra)
+					} else {
+						return nil, fmt.Errorf("%s", resp.Status)
+					}
 				}
 			}
 			return nil, err
