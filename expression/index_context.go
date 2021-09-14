@@ -90,6 +90,14 @@ func (this *IndexContext) SetAdvisor() {
 	// no-op
 }
 
+func (this *IndexContext) IncRecursionCount(inc int) int {
+	return 0
+}
+
+func (this *IndexContext) RecursionCount() int {
+	return 0
+}
+
 func (this *IndexContext) StoreValue(key string, val interface{}) {
 	// no-op
 }

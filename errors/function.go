@@ -102,3 +102,9 @@ func NewFunctionExecutionError(what string, name string, reason error) Error {
 		InternalMsg:    fmt.Sprintf("Error executing function %v %v: %v", name, what, reason),
 		InternalCaller: CallerN(1)}
 }
+
+func NewFunctionExecutionNestedError(levels int, name string) Error {
+	return &err{level: EXCEPTION, ICode: E_TOO_MANY_NESTED_FUNCTIONS, IKey: "function.nested.error",
+		InternalMsg:    fmt.Sprintf("Error executing function %v: %v nested javascript calls", name, levels),
+		InternalCaller: CallerN(1)}
+}

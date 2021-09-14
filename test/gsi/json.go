@@ -411,7 +411,7 @@ func Start(site, pool, namespace string, setGlobals bool) *MockServer {
 	srv.SetWhitelist(curlWhitelist)
 
 	prepareds.PreparedsReprepareInit(ds, sys)
-	constructor.Init(nil)
+	constructor.Init(nil, 6)
 	srv.SetKeepAlive(1 << 10)
 
 	mockServer.server = srv

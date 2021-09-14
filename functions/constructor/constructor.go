@@ -22,13 +22,13 @@ import (
 	"github.com/gorilla/mux"
 )
 
-func Init(mux *mux.Router) {
+func Init(mux *mux.Router, threads int) {
 	functions.Constructor = newGlobalFunction
 	authorize.Init()
 	storage.Init()
 	golang.Init()
 	inline.Init()
-	javascript.Init(mux)
+	javascript.Init(mux, threads)
 }
 
 func newGlobalFunction(elem []string, namespace string, queryContext string) (functions.FunctionName, errors.Error) {

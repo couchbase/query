@@ -195,6 +195,7 @@ type Context struct {
 	kvTimeout           time.Duration
 	preserveExpiry      bool
 	flags               uint32
+	recursionCount      int32
 	result              func(context *Context, item value.AnnotatedValue) bool
 	likeRegexMap        map[*expression.Like]*expression.LikeRegex
 	udfValueMap         map[string]interface{}
@@ -566,6 +567,14 @@ func (this *Context) Result(item value.AnnotatedValue) bool {
 
 func (this *Context) CloseResults() {
 	this.output.CloseResults()
+}
+
+func (this *Context) RecursionCount() int {
+	return int(this.recursionCount)
+}
+
+func (this *Context) IncRecursionCount(inc int) int {
+	return int(atomic.AddInt32(&this.recursionCount, int32(inc)))
 }
 
 type eventError struct {

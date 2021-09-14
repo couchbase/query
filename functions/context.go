@@ -30,6 +30,8 @@ type Context interface {
 	NewQueryContext(queryContext string, readonly bool) interface{}
 	Readonly() bool
 	SetAdvisor()
+	IncRecursionCount(inc int) int
+	RecursionCount() int
 	StoreValue(key string, val interface{})
 	RetrieveValue(key string) interface{}
 	ReleaseValue(key string)

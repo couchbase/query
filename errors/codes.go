@@ -230,6 +230,7 @@ const (
 	E_FUNCTION_EXECUTION                      ErrorCode = 10109
 	E_METAKV_CHANGE_COUNTER                   ErrorCode = 10110
 	E_METAKV_INDEX                            ErrorCode = 10111
+	E_TOO_MANY_NESTED_FUNCTIONS               ErrorCode = 10112
 	E_DATASTORE_INVALID_BUCKET_PARTS          ErrorCode = 10200
 	E_QUERY_CONTEXT                           ErrorCode = 10201
 	E_BUCKET_NO_DEFAULT_COLLECTION            ErrorCode = 10202

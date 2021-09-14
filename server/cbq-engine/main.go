@@ -390,7 +390,8 @@ func main() {
 	}
 
 	server.SetSettingsCallback(endpoint.SettingsCallback)
-	constructor.Init(endpoint.Mux())
+
+	constructor.Init(endpoint.Mux(), *SERVICERS)
 
 	// topology awareness
 	_ = control.NewManager()

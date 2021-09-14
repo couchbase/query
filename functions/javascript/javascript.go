@@ -13,6 +13,7 @@ package javascript
 import (
 	goerrors "errors"
 	"fmt"
+	"sync/atomic"
 
 	"github.com/couchbase/eventing-ee/evaluator/defs"
 	"github.com/couchbase/eventing-ee/evaluator/n1ql_client"
@@ -26,6 +27,8 @@ import (
 
 // we won't let a javascript function execute more than 2 minutes
 const _MAX_TIMEOUT = 120000
+const _MIN_SERVICERS = 6
+const _MAX_SERVICERS = 96
 
 type javascript struct {
 }
@@ -38,18 +41,25 @@ type javascriptBody struct {
 
 var enabled = true
 var evaluator defs.Evaluator
+var threads int32
+var threadCount int32
 
 // FIXME to be sorted
-// - evaluator client does not yet take credentials
+// - evaluator client does not yet take context
 // - indexing issues: identify functions as deterministic and not running N1QL code
-// - deadly embrace between evaluator an n1ql services consuming each other's processes
 
-func Init(mux *mux.Router) {
+func Init(mux *mux.Router, t int) {
 	functions.FunctionsNewLanguage(functions.JAVASCRIPT, &javascript{})
 
+	if t < _MIN_SERVICERS {
+		t = _MIN_SERVICERS
+	} else if t > _MAX_SERVICERS {
+		t = _MAX_SERVICERS
+	}
 	engine := n1ql_client.SingleInstance
 	config := make(map[defs.Config]interface{})
-	config[defs.Threads] = 6
+	config[defs.Threads] = t
+	threads = int32(t)
 
 	err := engine.Configure(config)
 	if err.Err == nil {
@@ -95,14 +105,23 @@ func (this *javascript) Execute(name functions.FunctionName, body functions.Func
 		args = append(args, values[i].Actual())
 	}
 
-	// FIXME credentials
-	// FIXME queryContext
+	// FIXME context
 	// the runners take timeouts in milliseconds
 	timeout := int(context.GetTimeout().Milliseconds())
 	if timeout == 0 || timeout > _MAX_TIMEOUT {
 		timeout = _MAX_TIMEOUT
 	}
 	opts := map[defs.Option]interface{}{defs.SideEffects: (modifiers & functions.READONLY) == 0, defs.Timeout: timeout}
+	runners := atomic.AddInt32(&threadCount, 1)
+	defer atomic.AddInt32(&threadCount, -1)
+	levels := context.IncRecursionCount(1)
+	defer context.IncRecursionCount(-1)
+
+	// make sure that requests don't flood the runners by calling nested functions too deeply
+	// the higher the load, the lower the threshold
+	if levels > 1 && levels > int(threads-runners) {
+		return nil, errors.NewFunctionExecutionNestedError(levels, funcName)
+	}
 	res, err := evaluator.Evaluate(funcBody.library, funcBody.object, opts, args)
 	if err.Err != nil {
 		return nil, funcBody.execError(err.Err, err.Details, funcName)
