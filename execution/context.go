@@ -808,10 +808,10 @@ func (this *Context) EvaluateSubquery(query *algebra.Select, parent value.Value)
 	collect := NewCollect(plan.NewCollect(), this)
 	sequence := NewSequence(plan.NewSequence(), this, pipeline, collect)
 	av, ok := parent.(value.AnnotatedValue)
+	var track int32
 	if ok {
-		track := av.Stash()
+		track = av.Stash()
 		sequence.RunOnce(this, parent)
-		av.Restore(track)
 	} else {
 		sequence.RunOnce(this, parent)
 	}
@@ -821,6 +821,10 @@ func (this *Context) EvaluateSubquery(query *algebra.Select, parent value.Value)
 
 	results := collect.ValuesOnce()
 	sequence.Done()
+
+	if ok {
+		av.Restore(track)
+	}
 
 	// Cache results
 	if !query.IsCorrelated() {

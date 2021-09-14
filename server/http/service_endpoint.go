@@ -44,7 +44,7 @@ type HttpEndpoint struct {
 	listener      map[string]net.Listener
 	listenerTLS   map[string]net.Listener
 	localListener bool
-        mux           *mux.Router
+	mux           *mux.Router
 	actives       server.ActiveRequests
 	options       server.ServerOptions
 	connSecConfig datastore.ConnectionSecurityConfig
