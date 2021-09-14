@@ -34,7 +34,7 @@ func TestZKClustering(t *testing.T) {
 	stdCfg := clustering.NewStandalone(version, cs, ds, as)
 	stdCfg2 := clustering.NewStandalone(version2, cs, ds, as)
 	stdOpts := clustering.NewOptions(ds.URL(), cs.URL(), as.URL(), "default", false, false, true,
-		runtime.NumCPU()<<16, runtime.NumCPU()<<6, 0, 0, ":8093", ":8094", "", false, "cluster1", "", "")
+		runtime.NumCPU()<<16, runtime.NumCPU()<<6, 0, 0, ":8093", ":8094", "", false, "cluster1", "", "", "")
 
 	if !zookeeper_running() {
 		t.Skip("Zookeeper not running - skipping test")
