@@ -905,7 +905,11 @@ func (this *runQueue) load(txqueueCnt int) int {
 }
 
 func (this *runQueue) activeRequests() int {
-	return int(this.runCnt) + int(this.queueCnt)
+	return int(this.runCnt) + this.queuedRequests()
+}
+
+func (this *runQueue) queuedRequests() int {
+	return int(this.queueCnt)
 }
 
 func (this *Server) Load() int {
@@ -914,6 +918,14 @@ func (this *Server) Load() int {
 
 func (this *Server) txQueueCount() int {
 	return int(this.transactionQueues.queueCnt)
+}
+
+func (this *Server) ActiveRequests() int {
+	return this.plusQueue.activeRequests() + this.unboundQueue.activeRequests()
+}
+
+func (this *Server) QueuedRequests() int {
+	return this.unboundQueue.queuedRequests() + this.plusQueue.queuedRequests() + this.txQueueCount()
 }
 
 func (this *Server) serviceRequest(request Request) {
@@ -1409,10 +1421,6 @@ func (this *Server) InitiateShutdownAndWait() {
 	}
 }
 
-func (this *Server) activeRequests() int {
-	return this.plusQueue.activeRequests() + this.unboundQueue.activeRequests()
-}
-
 const (
 	_CHECK_INTERVAL  = 100
 	_REPORT_INTERVAL = 10000
@@ -1420,14 +1428,14 @@ const (
 
 func (this *Server) monitorShutdown(timeout time.Duration) {
 	// wait for existing requests to complete
-	ar := this.activeRequests()
+	ar := this.ActiveRequests()
 	at := transactions.CountTransContext()
 	if ar > 0 || at > 0 {
 		logging.Infof("Shutdown: Waiting for %v active request(s) and %v active transaction(s) to complete.", ar, at)
 		start := time.Now()
 		reportStart := start
 		for {
-			ar = this.activeRequests()
+			ar = this.ActiveRequests()
 			at = transactions.CountTransContext()
 			if ar == 0 && at == 0 {
 				logging.Infof("Shutdown: All requests and transactions completed.")

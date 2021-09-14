@@ -1855,7 +1855,7 @@ func doTransactionsIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *htt
 	return transactions.NameTransactions(), nil
 }
 
-var localData = map[string]string{"load": "gauge"}
+var localData = map[string]string{"load": "gauge", "active_requests": "counter", "queued_requests": "counter"}
 
 func isLocal(metric string) bool {
 	return localData[metric] != ""
@@ -1866,6 +1866,10 @@ func getLocalData(serv *server.Server, metric string) map[string]interface{} {
 	switch metric {
 	case "load":
 		values["value"] = serv.Load()
+	case "active_requests":
+		values["count"] = serv.ActiveRequests()
+	case "queued_requests":
+		values["count"] = serv.QueuedRequests()
 	}
 	return values
 }
@@ -1874,6 +1878,10 @@ func localValue(serv *server.Server, metric string) interface{} {
 	switch metric {
 	case "load":
 		return serv.Load()
+	case "active_requests":
+		return serv.ActiveRequests()
+	case "queued_requests":
+		return serv.QueuedRequests()
 	}
 	return nil
 }
