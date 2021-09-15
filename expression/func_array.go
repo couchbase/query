@@ -1035,41 +1035,34 @@ func (this *ArrayIntersect) Evaluate(item value.Value, context Context) (value.V
 		return value.NULL_VALUE, nil
 	}
 
-	intersect := make(map[value.Value]int, max)
-	comp := 0
+	bag := _ARRAY_BAG_POOL.Get()
+	defer _ARRAY_BAG_POOL.Put(bag)
+	set := _ARRAY_SET_POOL.Get()
+	defer _ARRAY_SET_POOL.Put(set)
 	for _, arg := range args {
 		a := arg.Actual().([]interface{})
+		// De-dup each array
 		for _, elem := range a {
-			val := value.NewValue(elem)
-			v, ok := intersect[val]
-			if !ok {
-				v = 0
-			}
-			if v == comp {
-				intersect[val] = v + 1
+			set.Add(value.NewValue(elem))
+		}
+
+		// Add to multi-set
+		for _, elem := range set.Values() {
+			if elem != nil && elem.Type() > value.NULL {
+				bag.Add(elem)
 			}
 		}
-		comp++
-	}
-	if null {
-		return value.NULL_VALUE, nil
+		set.Clear()
 	}
 
-	c := 0
-	for _, v := range intersect {
-		if v == n {
-			c++
+	ra := make([]interface{}, 0, min)
+	n = len(args)
+	for _, entry := range bag.Entries() {
+		if entry.Count == n {
+			ra = append(ra, entry.Value)
 		}
 	}
 
-	ra := make([]interface{}, c)
-	c = 0
-	for elem, v := range intersect {
-		if v == n {
-			ra[c] = elem
-			c++
-		}
-	}
 	return value.NewValue(ra), nil
 }
 
@@ -2490,8 +2483,11 @@ func (this *ArrayUnion) Constructor() FunctionConstructor {
 	return NewArrayUnion
 }
 
-var _ARRAY_SET_POOL = value.NewSetPool(64, true, false)
-var _ARRAY_BAG_POOL = value.NewBagPool(64)
+const _ARRAY_SET_POOL_SIZE = 64
+const _ARRAY_BAG_POOL_SIZE = 64
+
+var _ARRAY_SET_POOL = value.NewSetPool(_ARRAY_SET_POOL_SIZE, true, false)
+var _ARRAY_BAG_POOL = value.NewBagPool(_ARRAY_BAG_POOL_SIZE)
 
 ///////////////////////////////////////////////////
 //
