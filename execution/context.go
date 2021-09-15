@@ -858,20 +858,22 @@ func (this *Context) EvaluateSubquery(query *algebra.Select, parent value.Value)
 	// FIXME: this should handled by the planner
 	collect := NewCollect(plan.NewCollect(), this)
 	sequence := NewSequence(plan.NewSequence(), this, pipeline, collect)
-	av, ok := parent.(value.AnnotatedValue)
-	if ok {
-		track := av.Stash()
-		sequence.RunOnce(this, parent)
-		av.Restore(track)
-	} else {
-		sequence.RunOnce(this, parent)
+	var track int32
+	av, stashTracking := parent.(value.AnnotatedValue)
+	if stashTracking {
+		track = av.Stash()
 	}
+	sequence.RunOnce(this, parent)
 
 	// Await completion
 	collect.waitComplete()
 
 	results := collect.ValuesOnce()
 	sequence.Done()
+
+	if stashTracking {
+		av.Restore(track)
+	}
 
 	// Cache results
 	if !query.IsCorrelated() {
