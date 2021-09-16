@@ -74,6 +74,8 @@ var (
 	BATCH = "off"
 	//Output File open in append mode
 	FILE_APPEND_MODE = false
+	//Terse output
+	TERSE = false
 )
 
 /* Value to store sorted list of keys for shell commands */

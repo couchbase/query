@@ -122,6 +122,15 @@ func (this *Unset) ExecCommand(args []string) (errors.ErrorCode, string) {
 				QUIET = false
 			}
 
+			if vble == "terse" {
+				err_code, err_str = PushValue_Helper(false, PreDefSV, "terse", strconv.FormatBool(false))
+				if err_code != 0 {
+					return err_code, err_str
+
+				}
+				TERSE = false
+			}
+
 			//Print the path to histfile
 			err_code, err_str = printPath(HISTFILE)
 			if err_code != 0 {

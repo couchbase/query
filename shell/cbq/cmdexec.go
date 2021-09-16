@@ -10,6 +10,8 @@ package main
 
 import (
 	"bufio"
+	"bytes"
+	"encoding/json"
 	"io"
 	"os"
 	"strings"
@@ -223,7 +225,12 @@ func ExecN1QLStmt(line string, dBn1ql n1ql.N1qlDB, w io.Writer) (errors.ErrorCod
 	if rows != nil {
 		// We have output. That is what we want.
 
-		_, werr := io.Copy(w, rows)
+		var werr error
+		if command.TERSE {
+			werr = terseOutput(w, rows)
+		} else {
+			_, werr = io.Copy(w, rows)
+		}
 
 		// For any captured write error
 		if werr != nil {
@@ -471,4 +478,173 @@ func readAndExec(liner *liner.State) (errors.ErrorCode, string) {
 		final_input = " "
 	}
 	return 0, ""
+}
+
+// terse output
+const _INDENT = "    "
+const _INITIAL_BUFFER_SIZE = 1024 * 1024
+
+var (
+	_ELEM_SEP = []byte("\n,")
+	_START    = []byte("[\n")
+	_END      = []byte("\n]\n")
+	_NL       = []byte("\n")
+)
+
+func terseOutput(w io.Writer, rows io.ReadCloser) error {
+	pretty := *prettyFlag
+	if v, ok := command.QueryParam["pretty"]; ok {
+		if v, ec, _ := v.Top(); ec == 0 {
+			pretty = v.Truth()
+		}
+	}
+	status := make(map[string]interface{})
+
+	buf := make([]byte, _INITIAL_BUFFER_SIZE)
+	i := 0
+	s := 0
+	var err error
+	level := 0
+	quoted := false
+	res := false
+
+	// skip everything until the results or errors section
+	for {
+		buf = buf[:cap(buf)]
+		nr, err := rows.Read(buf[s:])
+		if (err == io.EOF && nr == 0) || (err != nil && err != io.EOF) {
+			return err
+		}
+		buf = buf[:s+nr]
+		i = bytes.Index(buf, []byte("\"results\""))
+		if i != -1 {
+			i += len("\"results\": [\n")
+			buf = buf[i:]
+			break
+		}
+		i = bytes.Index(buf, []byte("\"errors\""))
+		if i != -1 {
+			// if we find the errors element before results it means there are no results and we'll fully process
+			// the entire server return, so reset the start point to the beginning of the buffer
+			i = 0
+			goto status
+		}
+		// keep reading into / expanding the buffer until we find one of these
+		s = len(buf)
+		if s == cap(buf) {
+			buf = append(buf, make([]byte, cap(buf))...)
+		}
+	}
+
+	// pass on the results array uninterpreted (save for working out where it ends)
+results:
+	for {
+		for i = 0; i < len(buf); i++ {
+			switch {
+			case buf[i] == '\\':
+				i++
+			case quoted:
+				if buf[i] == '"' {
+					quoted = false
+				}
+			case buf[i] == '"':
+				quoted = true
+			case buf[i] == '[':
+				level++
+			case buf[i] == ']':
+				level--
+				if level < 0 {
+					j := i
+					for j > 0 {
+						if buf[j] == '\n' {
+							break
+						}
+						j--
+					}
+					if j > 0 {
+						if pretty && !res {
+							w.Write(_START)
+						}
+						res = true
+						w.Write(buf[:j])
+					}
+					i++
+					buf[i] = '{'
+					break results
+				}
+			}
+		}
+		if pretty && !res {
+			w.Write(_START)
+		}
+		w.Write(buf)
+		res = true
+		buf = buf[:cap(buf)]
+		nr, err := rows.Read(buf)
+		if err != nil {
+			return err
+		}
+		buf = buf[:nr]
+	}
+
+status:
+	// we should have only the meta-data to process at this point
+	dec := json.NewDecoder(io.MultiReader(bytes.NewReader(buf[i:]), rows))
+	var v map[string]interface{}
+	err = dec.Decode(&v)
+	if err != nil {
+		return err
+	}
+
+	if val, ok := v["status"]; ok {
+		status["status"] = val
+	}
+	if val, ok := v["errors"]; ok {
+		status["errors"] = val
+	}
+	if val, ok := v["warnings"]; ok {
+		status["warnings"] = val
+	}
+	if im, ok := v["metrics"]; ok {
+		if m, ok := im.(map[string]interface{}); ok {
+			if cnt, ok := m["mutationCount"]; ok {
+				status["mutationCount"] = cnt
+			} else if cnt, ok := m["resultCount"]; ok {
+				status["resultCount"] = cnt
+			}
+		}
+	}
+
+	if len(status) > 1 || status["status"] != "success" {
+		if res {
+			w.Write(_ELEM_SEP)
+		} else if pretty {
+			w.Write(_START)
+		}
+		var b []byte
+		var err error
+		if pretty {
+			if pretty && res {
+				w.Write([]byte(_INDENT[1:]))
+			} else {
+				w.Write([]byte(_INDENT))
+			}
+			b, err = json.MarshalIndent(status, _INDENT, _INDENT)
+		} else {
+			b, err = json.Marshal(status)
+		}
+		if err != nil {
+			return err
+		}
+		w.Write(b)
+		res = true
+	}
+	if res {
+		if pretty {
+			w.Write(_END)
+		} else {
+			w.Write(_NL)
+		}
+	}
+	return nil
 }

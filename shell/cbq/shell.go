@@ -198,11 +198,19 @@ func (s *scripts) Set(val string) error {
 
 /*
    Option        : -pretty
-   Default value : false
+   Default value : true
    Pretty print output
 */
 
 var prettyFlag = flag.Bool("pretty", true, command.UPRETTY)
+
+/*
+   Option        : -terse
+   Default value : false
+   Terse output
+*/
+
+var terseFlag = flag.Bool("terse", false, command.UTERSE)
 
 /*
    Option        : -exit-on-error
@@ -440,6 +448,11 @@ func main() {
 		n1ql.SetQueryParams("pretty", "true")
 	} else {
 		n1ql.SetQueryParams("pretty", "false")
+	}
+
+	command.TERSE = *terseFlag
+	if *terseFlag {
+		n1ql.SetQueryParams("signature", "false")
 	}
 
 	if outputFlag != "" {

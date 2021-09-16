@@ -212,6 +212,24 @@ func (this *Pop) ExecCommand(args []string) (errors.ErrorCode, string) {
 				// Dont need to worry about error handling here as we make sure we push correct values
 				// into the stack.
 				QUIET, _ = strconv.ParseBool(nval)
+			} else if vble == "terse" {
+				st_val, ok := PreDefSV["terse"]
+				if ok {
+					newval, err_code, err_str := st_val.Top()
+					if err_code != 0 {
+						return err_code, err_str
+					}
+					nval = ValToStr(newval)
+					nval = handleStrings(nval)
+				} else {
+					err_code, err_str := PushValue_Helper(false, PreDefSV, "terse", strconv.FormatBool(false))
+					if err_code != 0 {
+						return err_code, err_str
+
+					}
+					nval = strconv.FormatBool(false)
+				}
+				TERSE, _ = strconv.ParseBool(nval)
 			}
 
 		}

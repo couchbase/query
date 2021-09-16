@@ -69,6 +69,12 @@ func init() {
 		PrintError(s_err)
 	}
 
+	err_code, err_str = PushValue_Helper(false, PreDefSV, "terse", strconv.FormatBool(TERSE))
+	if err_code != 0 {
+		s_err := HandleError(err_code, err_str)
+		PrintError(s_err)
+	}
+
 }
 
 type tee struct {
@@ -515,6 +521,12 @@ func PushOrSet(args []string, pushvalue bool) (errors.ErrorCode, string) {
 		} else if vble == "quiet" {
 			var errQ error
 			QUIET, errQ = strconv.ParseBool(args_str)
+			if errQ != nil {
+				return errors.E_SHELL_INVALID_INPUT_ARGUMENTS, ""
+			}
+		} else if vble == "terse" {
+			var errQ error
+			TERSE, errQ = strconv.ParseBool(args_str)
 			if errQ != nil {
 				return errors.E_SHELL_INVALID_INPUT_ARGUMENTS, ""
 			}
