@@ -240,7 +240,7 @@ func (this floatValue) Index(index int) (Value, bool) {
 Not valid for NUMBER.
 */
 func (this floatValue) SetIndex(index int, val interface{}) error {
-	return Unsettable(index)
+	return Unsettable(strconv.Itoa(index))
 }
 
 /*

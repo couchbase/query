@@ -12,6 +12,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"strconv"
 
 	"github.com/couchbase/query/util"
 )
@@ -128,7 +129,7 @@ func (this binaryValue) Index(index int) (Value, bool) {
 }
 
 func (this binaryValue) SetIndex(index int, val interface{}) error {
-	return Unsettable(index)
+	return Unsettable(strconv.Itoa(index))
 }
 
 func (this binaryValue) Slice(start, end int) (Value, bool) {

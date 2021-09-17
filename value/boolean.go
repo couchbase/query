@@ -11,6 +11,7 @@ package value
 import (
 	"io"
 	"math"
+	"strconv"
 
 	"github.com/couchbase/query/util"
 )
@@ -181,7 +182,7 @@ func (this boolValue) Index(index int) (Value, bool) {
 Not valid for bool.
 */
 func (this boolValue) SetIndex(index int, val interface{}) error {
-	return Unsettable(index)
+	return Unsettable(strconv.Itoa(index))
 }
 
 /*

@@ -11,6 +11,7 @@ package value
 import (
 	"bytes"
 	"io"
+	"strconv"
 
 	"github.com/couchbase/query/util"
 )
@@ -244,7 +245,7 @@ func (this sliceValue) SetIndex(index int, val interface{}) error {
 	}
 
 	if index < 0 || index >= len(this) {
-		return Unsettable(index)
+		return Unsettable(strconv.Itoa(index))
 	}
 
 	switch val := val.(type) {

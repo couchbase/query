@@ -11,6 +11,7 @@ package value
 import (
 	"io"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -364,7 +365,7 @@ index and value as input arguments.
 */
 func (this *parsedValue) SetIndex(index int, val interface{}) error {
 	if this.parsedType != ARRAY {
-		return Unsettable(index)
+		return Unsettable(strconv.Itoa(index))
 	}
 
 	return this.unwrap().SetIndex(index, val)

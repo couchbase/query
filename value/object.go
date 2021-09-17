@@ -12,6 +12,7 @@ import (
 	"bytes"
 	"io"
 	"sort"
+	"strconv"
 
 	json "github.com/couchbase/go_json"
 	"github.com/couchbase/query/util"
@@ -349,7 +350,7 @@ func (this objectValue) Index(index int) (Value, bool) {
 Not valid for objects.
 */
 func (this objectValue) SetIndex(index int, val interface{}) error {
-	return Unsettable(index)
+	return Unsettable(strconv.Itoa(index))
 }
 
 /*

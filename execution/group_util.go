@@ -9,6 +9,8 @@
 package execution
 
 import (
+	"strconv"
+
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
@@ -25,7 +27,7 @@ func groupKey(item value.Value, keys expression.Expressions, context *Context) (
 		}
 
 		if k.Type() != value.MISSING {
-			kvs[string(i)] = k
+			kvs[strconv.Itoa(i)] = k
 		}
 	}
 

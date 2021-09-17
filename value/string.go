@@ -13,6 +13,7 @@ import (
 	"fmt"
 	json "github.com/couchbase/go_json"
 	"io"
+	"strconv"
 	"strings"
 	"unicode"
 
@@ -189,7 +190,7 @@ func (this stringValue) Index(index int) (Value, bool) {
 Not valid for string.
 */
 func (this stringValue) SetIndex(index int, val interface{}) error {
-	return Unsettable(index)
+	return Unsettable(strconv.Itoa(index))
 }
 
 /*

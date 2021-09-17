@@ -11,6 +11,7 @@ package value
 import (
 	"fmt"
 	"io"
+	"strconv"
 
 	"github.com/couchbase/query/util"
 )
@@ -163,7 +164,7 @@ func (this missingValue) Index(index int) (Value, bool) {
 Invalid for missing.
 */
 func (this missingValue) SetIndex(index int, val interface{}) error {
-	return Unsettable(index)
+	return Unsettable(strconv.Itoa(index))
 }
 
 /*
@@ -249,5 +250,5 @@ func missingField(field string) missingValue {
 Cast input index to missingValue after casting to string.
 */
 func missingIndex(index int) missingValue {
-	return missingValue(string(index))
+	return missingValue(strconv.Itoa(index))
 }

@@ -10,6 +10,7 @@ package value
 
 import (
 	"io"
+	"strconv"
 
 	"github.com/couchbase/query/util"
 )
@@ -156,7 +157,7 @@ func (this *nullValue) Index(index int) (Value, bool) {
 Not valid for NULL.
 */
 func (this *nullValue) SetIndex(index int, val interface{}) error {
-	return Unsettable(index)
+	return Unsettable(strconv.Itoa(index))
 }
 
 /*
