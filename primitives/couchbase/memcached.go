@@ -181,6 +181,7 @@ func (b *Bucket) getVbConnection(vb uint32, desc *doDescriptor) (conn *memcached
 			desc.errorString = "Out of ephemeral ports: %v : %v"
 		}
 	} else if isTimeoutError(err) {
+		desc.retry = true
 
 		// check for a new vbmap
 		if desc.version == b.Version {
@@ -191,13 +192,15 @@ func (b *Bucket) getVbConnection(vb uint32, desc *doDescriptor) (conn *memcached
 		if desc.version != b.Version {
 			desc.version = b.Version
 			desc.replica = 0
-		} else {
+		} else if desc.useReplicas {
 
 			// see if we can use a replica
 			desc.replica++
+			desc.retry = desc.replica < b.VBServerMap().NumReplicas
+		} else {
+			desc.retry = false
 		}
 
-		desc.retry = desc.replica == 0 || (desc.useReplicas && desc.replica < b.VBServerMap().NumReplicas)
 		if !desc.retry {
 			desc.errorString = "Connection Error %v : %v"
 		}
@@ -272,6 +275,7 @@ func (b *Bucket) processOpError(vb uint32, lastError error, node string, desc *d
 			desc.backoffAttempts++
 			desc.retry = backOff(desc.backoffAttempts, desc.maxTries, backOffDuration, true)
 		} else if IsReadTimeOutError(lastError) {
+			desc.retry = true
 
 			// check for a new vbmap
 			if desc.version == b.Version {
@@ -282,13 +286,15 @@ func (b *Bucket) processOpError(vb uint32, lastError error, node string, desc *d
 			if desc.version != b.Version {
 				desc.version = b.Version
 				desc.replica = 0
-			} else {
+			} else if desc.useReplicas {
 
 				// see if we can use a replica
 				desc.replica++
+				desc.retry = desc.replica < b.VBServerMap().NumReplicas
+			} else {
+				desc.retry = false
 			}
 
-			desc.retry = desc.replica == 0 || (desc.useReplicas && desc.replica < b.VBServerMap().NumReplicas)
 		}
 	} else if b.replica < desc.replica {
 
@@ -584,12 +590,12 @@ func backOff(attempt, maxAttempts int, duration time.Duration, exponential bool)
 
 func (b *Bucket) doBulkGet(vb uint16, keys []string, reqDeadline time.Time,
 	ch chan<- map[string]*gomemcached.MCResponse, ech chan<- error, subPaths []string,
-	eStatus *errorStatus, context ...*memcached.ClientContext) {
+	useReplica bool, eStatus *errorStatus, context ...*memcached.ClientContext) {
 
 	rv := _STRING_MCRESPONSE_POOL.Get()
 	done := false
 	bname := b.Name
-	desc := &doDescriptor{useReplicas: true, version: b.Version, maxTries: len(b.Nodes()) * 2}
+	desc := &doDescriptor{useReplicas: useReplica, version: b.Version, maxTries: len(b.Nodes()) * 2}
 	var lastError error
 	for ; desc.attempts < MaxBulkRetries && !done && !eStatus.errStatus; desc.attempts++ {
 
@@ -671,6 +677,7 @@ type vbBulkGet struct {
 	reqDeadline time.Time
 	wg          *sync.WaitGroup
 	subPaths    []string
+	useReplica  bool
 	groupError  *errorStatus
 	context     []*memcached.ClientContext
 }
@@ -722,14 +729,14 @@ func vbDoBulkGet(vbg *vbBulkGet) {
 		// Workers cannot panic and die
 		recover()
 	}()
-	vbg.b.doBulkGet(vbg.k, vbg.keys, vbg.reqDeadline, vbg.ch, vbg.ech, vbg.subPaths, vbg.groupError, vbg.context...)
+	vbg.b.doBulkGet(vbg.k, vbg.keys, vbg.reqDeadline, vbg.ch, vbg.ech, vbg.subPaths, vbg.useReplica, vbg.groupError, vbg.context...)
 }
 
 var _ERR_CHAN_FULL = fmt.Errorf("Data request queue full, aborting query.")
 
 func (b *Bucket) processBulkGet(kdm map[uint16][]string, reqDeadline time.Time,
 	ch chan<- map[string]*gomemcached.MCResponse, ech chan<- error, subPaths []string,
-	eStatus *errorStatus, context ...*memcached.ClientContext) {
+	useReplica bool, eStatus *errorStatus, context ...*memcached.ClientContext) {
 
 	defer close(ch)
 	defer close(ech)
@@ -752,6 +759,7 @@ func (b *Bucket) processBulkGet(kdm map[uint16][]string, reqDeadline time.Time,
 			reqDeadline: reqDeadline,
 			wg:          wg,
 			subPaths:    subPaths,
+			useReplica:  useReplica,
 			groupError:  eStatus,
 			context:     context,
 		}
@@ -813,15 +821,15 @@ func errorCollector(ech <-chan error, eout chan<- error, eStatus *errorStatus) {
 // map array for each key.  Keys that were not found will not be included in
 // the map.
 
-func (b *Bucket) GetBulk(keys []string, reqDeadline time.Time, subPaths []string, context ...*memcached.ClientContext) (map[string]*gomemcached.MCResponse, error) {
-	return b.getBulk(keys, reqDeadline, subPaths, context...)
+func (b *Bucket) GetBulk(keys []string, reqDeadline time.Time, subPaths []string, useReplica bool, context ...*memcached.ClientContext) (map[string]*gomemcached.MCResponse, error) {
+	return b.getBulk(keys, reqDeadline, subPaths, useReplica, context...)
 }
 
 func (b *Bucket) ReleaseGetBulkPools(rv map[string]*gomemcached.MCResponse) {
 	_STRING_MCRESPONSE_POOL.Put(rv)
 }
 
-func (b *Bucket) getBulk(keys []string, reqDeadline time.Time, subPaths []string, context ...*memcached.ClientContext) (map[string]*gomemcached.MCResponse, error) {
+func (b *Bucket) getBulk(keys []string, reqDeadline time.Time, subPaths []string, useReplica bool, context ...*memcached.ClientContext) (map[string]*gomemcached.MCResponse, error) {
 	kdm := _VB_STRING_POOL.Get()
 	defer _VB_STRING_POOL.Put(kdm)
 	for _, k := range keys {
@@ -844,7 +852,7 @@ func (b *Bucket) getBulk(keys []string, reqDeadline time.Time, subPaths []string
 	ech := make(chan error)
 
 	go errorCollector(ech, eout, groupErrorStatus)
-	go b.processBulkGet(kdm, reqDeadline, ch, ech, subPaths, groupErrorStatus, context...)
+	go b.processBulkGet(kdm, reqDeadline, ch, ech, subPaths, useReplica, groupErrorStatus, context...)
 
 	var rv map[string]*gomemcached.MCResponse
 
@@ -1064,7 +1072,7 @@ func (b *Bucket) GetCollectionCID(scope string, collection string, reqDeadline t
 }
 
 // Get a value straight from Memcached
-func (b *Bucket) GetsMC(key string, reqDeadline time.Time, context ...*memcached.ClientContext) (*gomemcached.MCResponse, error) {
+func (b *Bucket) GetsMC(key string, reqDeadline time.Time, useReplica bool, context ...*memcached.ClientContext) (*gomemcached.MCResponse, error) {
 	var err error
 	var response *gomemcached.MCResponse
 
@@ -1081,7 +1089,7 @@ func (b *Bucket) GetsMC(key string, reqDeadline time.Time, context ...*memcached
 			return err1
 		}
 		return nil
-	}, false, true)
+	}, false, useReplica)
 	return response, err
 }
 

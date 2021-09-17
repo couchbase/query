@@ -112,6 +112,7 @@ func (b *requestLogKeyspace) Fetch(keys []string, keysMap map[string]value.Annot
 					"errorCount":      entry.ErrorCount,
 					"requestTime":     entry.Time.Format(expression.DEFAULT_FORMAT),
 					"scanConsistency": entry.ScanConsistency,
+					"n1qlFeatCtrl":    entry.FeatureControls,
 				})
 				if node != "" {
 					item.SetField("node", node)
@@ -133,6 +134,9 @@ func (b *requestLogKeyspace) Fetch(keys []string, keysMap map[string]value.Annot
 				}
 				if entry.UseCBO {
 					item.SetField("useCBO", entry.UseCBO)
+				}
+				if entry.UseReplica {
+					item.SetField("useReplica", entry.UseReplica)
 				}
 				if entry.TxId != "" {
 					item.SetField("txid", entry.TxId)

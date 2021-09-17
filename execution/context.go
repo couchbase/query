@@ -155,6 +155,7 @@ type Context struct {
 	queryContext        string
 	useFts              bool
 	useCBO              bool
+	useReplica          bool
 	optimizer           planner.Optimizer
 	readonly            bool
 	maxParallelism      int
@@ -231,6 +232,7 @@ func NewContext(requestId string, datastore datastore.Datastore, systemstore dat
 		prepared:         prepared,
 		indexApiVersion:  indexApiVersion,
 		featureControls:  featureControls,
+		useReplica:       false,
 		queryContext:     queryContext,
 		useFts:           useFts,
 		useCBO:           useCBO,
@@ -430,6 +432,14 @@ func (this *Context) UrlCredentials(urlS string) *auth.Credentials {
 	authenticator := cbauth.Default
 	u, p, _ := authenticator.GetHTTPServiceAuth(urlS)
 	return &auth.Credentials{map[string]string{u: p}, nil, nil, nil}
+}
+
+func (this *Context) UseReplica() bool {
+	return this.useReplica
+}
+
+func (this *Context) SetUseReplica(r bool) {
+	this.useReplica = r
 }
 
 func (this *Context) ScanConsistency() datastore.ScanConsistency {

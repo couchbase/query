@@ -604,6 +604,15 @@ func (this *httpRequest) writeControls(controls bool, prefix, indent string) boo
 		}
 	}
 
+	if this.UseReplica() {
+		if !this.writeString(",") {
+			return false
+		}
+		if err != nil || !this.writer.printf("%s\"use_replica\": \"%v\"", newPrefix, this.UseReplica()) {
+			logging.Infof("Error writing use_replica. Error: %v", err)
+		}
+	}
+
 	memoryQuota := this.MemoryQuota()
 	if memoryQuota != 0 {
 		if !this.writeString(",") {
@@ -612,6 +621,10 @@ func (this *httpRequest) writeControls(controls bool, prefix, indent string) boo
 		if err != nil || !this.writer.printf("%s\"memoryQuota\": \"%v\"", newPrefix, memoryQuota) {
 			logging.Infof("Error writing memoryQuota. Error: %v", err)
 		}
+	}
+
+	if !this.writeString(",") || !this.writer.printf("%s\"n1ql_feat_ctrl\": \"%v\"", newPrefix, this.FeatureControls()) {
+		logging.Infof("Error writing n1l_feat_ctrl")
 	}
 
 	if !this.writeString(",") || !this.writer.printf("%s\"stmtType\": \"%v\"", newPrefix, this.Type()) {

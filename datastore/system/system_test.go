@@ -39,6 +39,10 @@ func (ci *queryContextImpl) GetTxContext() interface{} {
 	return nil
 }
 
+func (ci *queryContextImpl) UseReplica() bool {
+	return false
+}
+
 func (ci *queryContextImpl) Datastore() datastore.Datastore {
 	return datastore.GetDatastore()
 }

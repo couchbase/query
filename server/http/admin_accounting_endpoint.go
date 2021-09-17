@@ -1422,6 +1422,10 @@ func activeRequestWorkHorse(endpoint *HttpEndpoint, requestId string, profiling 
 		if request.UseCBO() {
 			reqMap["useCBO"] = request.UseCBO()
 		}
+		if request.UseReplica() {
+			reqMap["useReplica"] = request.UseReplica()
+		}
+		reqMap["n1qlFeatCtrl"] = request.FeatureControls()
 
 		p := request.Output().FmtPhaseCounts()
 		if p != nil {
@@ -1630,6 +1634,10 @@ func completedRequestWorkHorse(requestId string, profiling bool) interface{} {
 		if request.UseCBO {
 			reqMap["useCBO"] = request.UseCBO
 		}
+		if request.UseReplica {
+			reqMap["useReplica"] = request.UseReplica
+		}
+		reqMap["n1qlFeatCtrl"] = request.FeatureControls
 		if request.QueryContext != "" {
 			reqMap["queryContext"] = request.QueryContext
 		}

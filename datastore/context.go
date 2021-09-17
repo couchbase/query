@@ -53,9 +53,14 @@ func (ci *contextImpl) GetReqDeadline() time.Time {
 	return time.Time{}
 }
 
+func (ci *contextImpl) FeatureControl() uint64 {
+	return 0
+}
+
 // A subset of execution.Context that is useful at the datastore level.
 type QueryContext interface {
 	GetReqDeadline() time.Time
+	UseReplica() bool
 	Credentials() *auth.Credentials
 	AuthenticatedUsers() []string
 	Warning(errors.Error)
@@ -84,6 +89,10 @@ func (ci *queryContextImpl) Warning(err errors.Error) {
 
 func (ci *queryContextImpl) GetReqDeadline() time.Time {
 	return time.Time{}
+}
+
+func (ci *queryContextImpl) UseReplica() bool {
+	return false
 }
 
 func (ci *queryContextImpl) GetTxContext() interface{} {

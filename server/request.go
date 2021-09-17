@@ -113,6 +113,8 @@ type Request interface {
 	SetUseFts(a bool)
 	UseCBO() bool
 	SetUseCBO(useCBO bool)
+	UseReplica() bool
+	SetUseReplica(useReplica bool)
 	MemoryQuota() uint64
 	SetMemoryQuota(q uint64)
 	UsedMemory() uint64
@@ -304,6 +306,7 @@ type BaseRequest struct {
 	autoExecute          value.Tristate
 	useFts               bool
 	useCBO               bool
+	useReplica           bool
 	queryContext         string
 	memoryQuota          uint64
 	txId                 string
@@ -368,6 +371,7 @@ func NewBaseRequest(rv *BaseRequest) {
 	rv.client_id.id = ""
 	rv.SetMaxParallelism(1)
 	rv.useCBO = util.GetUseCBO()
+	rv.useReplica = false
 	rv.durabilityTimeout = datastore.DEF_DURABILITY_TIMEOUT
 	rv.kvTimeout = datastore.DEF_KVTIMEOUT
 	rv.durabilityLevel = datastore.DL_UNSET
@@ -889,6 +893,14 @@ func (this *BaseRequest) SetUseCBO(useCBO bool) {
 	if util.IsFeatureEnabled(this.featureControls, util.N1QL_CBO) {
 		this.useCBO = useCBO
 	}
+}
+
+func (this *BaseRequest) UseReplica() bool {
+	return this.useReplica
+}
+
+func (this *BaseRequest) SetUseReplica(useReplica bool) {
+	this.useReplica = useReplica
 }
 
 func (this *BaseRequest) SetTxId(s string) {

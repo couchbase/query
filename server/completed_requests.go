@@ -54,6 +54,8 @@ type RequestLogEntry struct {
 	TxId                     string
 	UseFts                   bool
 	UseCBO                   bool
+	UseReplica               bool
+	FeatureControls          uint64
 	ResultCount              int
 	ResultSize               int
 	ErrorCount               int
@@ -535,6 +537,8 @@ func LogRequest(request_time, service_time, transactionElapsedTime time.Duration
 		ScanConsistency: string(request.ScanConsistency()),
 		UseFts:          request.UseFts(),
 		UseCBO:          request.UseCBO(),
+		UseReplica:      request.UseReplica(),
+		FeatureControls: request.FeatureControls(),
 		Mutations:       request.MutationCount(),
 		QueryContext:    request.QueryContext(),
 		TxId:            request.TxId(),

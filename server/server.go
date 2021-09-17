@@ -1258,6 +1258,10 @@ func (this *Server) getPrepared(request Request, context *execution.Context) (*p
 		}
 	}
 
+	useReplica := util.IsFeatureEnabled(request.FeatureControls(), util.N1QL_READ_FROM_REPLICA) && request.Type() == "SELECT" && request.TxId() == ""
+	request.SetUseReplica(useReplica)
+	context.SetUseReplica(useReplica)
+
 	if logging.LogLevel() >= logging.DEBUG {
 		// log EXPLAIN for the request
 		logExplain(prepared)

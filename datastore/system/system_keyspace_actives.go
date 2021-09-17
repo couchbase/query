@@ -114,6 +114,7 @@ func (b *activeRequestsKeyspace) Fetch(keys []string, keysMap map[string]value.A
 					"executionTime":   time.Since(request.ServiceTime()).String(),
 					"state":           request.State().StateName(),
 					"scanConsistency": request.ScanConsistency(),
+					"n1qlFeatCtrl":    request.FeatureControls(),
 				})
 				if node != "" {
 					item.SetField("node", node)
@@ -136,6 +137,9 @@ func (b *activeRequestsKeyspace) Fetch(keys []string, keysMap map[string]value.A
 				}
 				if request.UseCBO() {
 					item.SetField("useCBO", request.UseCBO())
+				}
+				if request.UseReplica() {
+					item.SetField("useReplica", request.UseReplica())
 				}
 				if request.TxId() != "" {
 					item.SetField("txid", request.TxId())
