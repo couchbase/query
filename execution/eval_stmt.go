@@ -26,6 +26,8 @@ import (
 	"github.com/couchbase/query/value"
 )
 
+const _INITIAL_SIZE = 64
+
 type internalOutput struct {
 	mutationCount uint64
 	err           errors.Error
@@ -130,6 +132,7 @@ func (this *Context) EvaluateStatement(statement string, namedArgs map[string]va
 
 func (this *Context) OpenStatement(statement string, namedArgs map[string]value.Value, positionalArgs value.Values,
 	subquery, readonly bool) (interface {
+	Results() (interface{}, uint64, error)
 	NextDocument() (value.Value, error)
 	Cancel()
 }, error) {
@@ -291,13 +294,15 @@ func (this *Context) ExecutePrepared(prepared *plan.Prepared, isPrepared bool,
 
 func (this *Context) OpenPrepared(prepared *plan.Prepared, isPrepared bool,
 	namedArgs map[string]value.Value, positionalArgs value.Values) (interface {
+	Results() (interface{}, uint64, error)
 	NextDocument() (value.Value, error)
 	Cancel()
 }, error) {
 
 	handle := &executionHandle{}
 	handle.context = this.Copy()
-	handle.context.output = &internalOutput{}
+	handle.output = &internalOutput{}
+	handle.context.output = handle.output
 
 	handle.context.SetIsPrepared(isPrepared)
 	handle.context.SetPrepared(prepared)
@@ -327,6 +332,33 @@ type executionHandle struct {
 	root    *Sequence
 	input   *Receive
 	context *Context
+	output  *internalOutput
+	stopped int32
+}
+
+func (this *executionHandle) Results() (interface{}, uint64, error) {
+	values := make([]interface{}, 0, _INITIAL_SIZE)
+
+	for {
+		item, ok := this.input.getItem()
+		if item != nil {
+			if len(values) == cap(values) {
+				newValues := make([]interface{}, len(values), len(values)<<1)
+				copy(newValues, values)
+				values = newValues
+			}
+			values = append(values, item)
+		}
+		if !ok {
+			break
+		}
+	}
+	if atomic.AddInt32(&this.stopped, 1) == 1 {
+		this.context.output.AddPhaseTime(RUN, util.Since(this.exec))
+		this.root.SendAction(_ACTION_STOP)
+		this.root.Done()
+	}
+	return values, this.output.mutationCount, this.output.err
 }
 
 func (this *executionHandle) NextDocument() (value.Value, error) {
@@ -334,16 +366,20 @@ func (this *executionHandle) NextDocument() (value.Value, error) {
 	if item != nil {
 		return item, nil
 	}
-	this.context.output.AddPhaseTime(RUN, util.Since(this.exec))
-	this.root.SendAction(_ACTION_STOP)
-	this.root.Done()
-	return nil, nil
+	if atomic.AddInt32(&this.stopped, 1) == 1 {
+		this.context.output.AddPhaseTime(RUN, util.Since(this.exec))
+		this.root.SendAction(_ACTION_STOP)
+		this.root.Done()
+	}
+	return nil, this.output.err
 }
 
 func (this *executionHandle) Cancel() {
-	this.context.output.AddPhaseTime(RUN, util.Since(this.exec))
-	this.root.SendAction(_ACTION_STOP)
-	this.root.Done()
+	if atomic.AddInt32(&this.stopped, 1) == 1 {
+		this.context.output.AddPhaseTime(RUN, util.Since(this.exec))
+		this.root.SendAction(_ACTION_STOP)
+		this.root.Done()
+	}
 }
 
 func (this *Context) executeTranStatementAtomicity(stmtType string) (map[string]bool, errors.Error) {

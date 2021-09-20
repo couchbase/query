@@ -19,6 +19,7 @@ type UdfContext struct {
 
 type UdfHandle struct {
 	handle interface {
+		Results() (interface{}, uint64, error)
 		NextDocument() (value.Value, error)
 		Cancel()
 	}
@@ -54,7 +55,7 @@ func (this *UdfContext) ReleaseValue(key string) {
 
 func (this *UdfContext) CompareValues(val1, val2 interface{}) (int, bool) {
 	v1, ok1 := val1.(value.Value)
-	v2, ok2 := val1.(value.Value)
+	v2, ok2 := val2.(value.Value)
 	if !ok1 || !ok2 {
 		return 0, true
 	}
@@ -107,6 +108,14 @@ func (this *UdfContext) OpenStatement(statement string, namedArgs map[string]int
 
 func (this *UdfContext) Log(fmt string, args ...interface{}) {
 	logging.Infof(fmt, args...)
+}
+
+func (this *UdfContext) NestingLevel() int {
+	return this.context.RecursionCount()
+}
+
+func (this *UdfHandle) Results() (interface{}, uint64, error) {
+	return this.handle.Results()
 }
 
 func (this *UdfHandle) NextDocument() (interface{}, error) {
