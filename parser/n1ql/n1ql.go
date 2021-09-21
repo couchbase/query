@@ -73,6 +73,22 @@ func ParseExpression(input string) (expression.Expression, error) {
 	}
 }
 
+func parseOptimHints(input string) *algebra.OptimHints {
+	input = strings.TrimSpace(input)
+	reader := strings.NewReader(input)
+	lex := newLexer(NewLexer(reader))
+	lex.text = input
+	lex.nex.ResetOffset()
+	lex.nex.ReportError(lex.ScannerError)
+	doParse(lex)
+
+	if len(lex.errs) > 0 {
+		/* ignore the '+' at the beginning */
+		return algebra.InvalidOptimHints(input[1:], strings.Join(lex.errs, "\n"))
+	}
+	return lex.optimHints
+}
+
 func doParse(lex *lexer) {
 	defer func() {
 		r := recover()
@@ -110,6 +126,7 @@ type lexer struct {
 	saved                  int
 	lval                   yySymType
 	stop                   bool
+	optimHints             *algebra.OptimHints
 }
 
 func newLexer(nex *Lexer) *lexer {
@@ -303,4 +320,8 @@ func (this *lexer) QueryContext() string {
 		return this.createFuncQueryContext
 	}
 	return this.queryContext
+}
+
+func (this *lexer) setOptimHints(optimHints *algebra.OptimHints) {
+	this.optimHints = optimHints
 }

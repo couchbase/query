@@ -30,6 +30,7 @@ type Subselect struct {
 	group      *Group                `json:"group"`
 	projection *Projection           `json:"projection"`
 	window     WindowTerms           `json:"window"`
+	optimHints *OptimHints           `json:"optimizer_hints"`
 	correlated bool                  `json:"correlated"`
 }
 
@@ -38,7 +39,7 @@ Constructor.
 */
 func NewSubselect(with expression.Bindings, from FromTerm, let expression.Bindings,
 	where expression.Expression, group *Group, window WindowTerms,
-	projection *Projection) *Subselect {
+	projection *Projection, optimHints *OptimHints) *Subselect {
 
 	return &Subselect{
 		with:       with,
@@ -48,6 +49,7 @@ func NewSubselect(with expression.Bindings, from FromTerm, let expression.Bindin
 		group:      group,
 		projection: projection,
 		window:     window,
+		optimHints: optimHints,
 	}
 }
 
@@ -387,6 +389,14 @@ func (this *Subselect) Window() WindowTerms {
 
 func (this *Subselect) ResetWindow() {
 	this.window = nil
+}
+
+func (this *Subselect) OptimHints() *OptimHints {
+	return this.optimHints
+}
+
+func (this *Subselect) SetOptimHints(optimHints *OptimHints) {
+	this.optimHints = optimHints
 }
 
 /*

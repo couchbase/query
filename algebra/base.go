@@ -62,3 +62,10 @@ does it have parameters?
 func (this *statementBase) Params() int {
 	return this.paramCount
 }
+
+/*
+Get optimier hints
+*/
+func (this *statementBase) OptimHints() *OptimHints {
+	return nil
+}

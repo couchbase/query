@@ -230,7 +230,7 @@ func (this *ExpressionTerm) JoinHint() JoinHint {
 Join hint prefers hash join
 */
 func (this *ExpressionTerm) PreferHash() bool {
-	return this.joinHint == USE_HASH_BUILD || this.joinHint == USE_HASH_PROBE
+	return this.joinHint == USE_HASH_BUILD || this.joinHint == USE_HASH_PROBE || this.joinHint == USE_HASH_EITHER
 }
 
 /*

@@ -69,6 +69,11 @@ type Statement interface {
 		Returns the parameter count, for AutoPrepare and other purposes
 	*/
 	Params() int
+
+	/*
+		Returns the optimizer hints
+	*/
+	OptimHints() *OptimHints
 }
 
 /*

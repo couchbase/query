@@ -47,6 +47,11 @@ func (this *builder) visitFrom(node *algebra.Subselect, group *algebra.Group,
 		this.pushableOnclause = keyspaceFinder.pushableOnclause
 		this.collectKeyspaceNames()
 
+		node.SetOptimHints(deriveOptimHints(this.baseKeyspaces, node.OptimHints()))
+		if node.OptimHints() != nil {
+			processOptimHints(this.baseKeyspaces, node.OptimHints())
+		}
+
 		primKeyspace, _ := this.baseKeyspaces[primaryTerm.Alias()]
 		primKeyspace.SetPrimaryTerm()
 

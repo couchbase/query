@@ -311,6 +311,10 @@ func (this *Select) SetCorrelated() {
 	this.correlated = true
 }
 
+func (this *Select) OptimHints() *OptimHints {
+	return this.subresult.OptimHints()
+}
+
 /*
 The Subresult interface represents the intermediate result of a
 select statement. It inherits from Node.
@@ -366,4 +370,9 @@ type Subresult interface {
 	   Checks if projection is raw
 	*/
 	Raw() bool
+
+	/*
+	   Returns the optimizer hints
+	*/
+	OptimHints() *OptimHints
 }

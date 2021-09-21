@@ -12,16 +12,17 @@ import (
 	"github.com/couchbase/query/expression"
 )
 
+type JoinHint int32
+
 const (
-	JOIN_HINT_NONE = iota
+	JOIN_HINT_NONE = JoinHint(iota)
 	USE_HASH_BUILD
 	USE_HASH_PROBE
+	USE_HASH_EITHER
 	USE_NL
 )
 
 var EMPTY_USE = NewUse(nil, nil, JOIN_HINT_NONE)
-
-type JoinHint int
 
 type Use struct {
 	keys     expression.Expression

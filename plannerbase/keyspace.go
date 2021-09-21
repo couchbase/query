@@ -39,6 +39,8 @@ type BaseKeyspace struct {
 	unnestIndexes map[datastore.Index][]string
 	node          algebra.SimpleFromTerm
 	optBit        int32
+	indexHints    []algebra.OptimHint
+	joinHints     []algebra.OptimHint
 }
 
 func NewBaseKeyspace(name string, path *algebra.Path, node algebra.SimpleFromTerm,
@@ -176,6 +178,20 @@ func copyBaseKeyspaces(src map[string]*BaseKeyspace, copyFilter bool) map[string
 				}
 			}
 		}
+		if len(kspace.indexHints) > 0 {
+			indexHints := make([]algebra.OptimHint, 0, len(kspace.indexHints))
+			for _, hint := range kspace.indexHints {
+				indexHints = append(indexHints, hint.Copy())
+			}
+			dest[kspace.name].indexHints = indexHints
+		}
+		if len(kspace.joinHints) > 0 {
+			joinHints := make([]algebra.OptimHint, 0, len(kspace.joinHints))
+			for _, hint := range kspace.joinHints {
+				joinHints = append(joinHints, hint.Copy())
+			}
+			dest[kspace.name].joinHints = joinHints
+		}
 		if copyFilter {
 			if len(kspace.filters) > 0 {
 				dest[kspace.name].filters = kspace.filters.Copy()
@@ -312,6 +328,22 @@ func (this *BaseKeyspace) AddUnnestIndex(index datastore.Index, alias string) {
 
 func (this *BaseKeyspace) GetUnnestIndexes() map[datastore.Index][]string {
 	return this.unnestIndexes
+}
+
+func (this *BaseKeyspace) AddIndexHint(indexHint algebra.OptimHint) {
+	this.indexHints = append(this.indexHints, indexHint)
+}
+
+func (this *BaseKeyspace) IndexHints() []algebra.OptimHint {
+	return this.indexHints
+}
+
+func (this *BaseKeyspace) AddJoinHint(joinHint algebra.OptimHint) {
+	this.joinHints = append(this.joinHints, joinHint)
+}
+
+func (this *BaseKeyspace) JoinHints() []algebra.OptimHint {
+	return this.joinHints
 }
 
 func GetKeyspaceName(baseKeyspaces map[string]*BaseKeyspace, alias string) string {

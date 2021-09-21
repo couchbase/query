@@ -128,6 +128,19 @@ func (this *setOp) Second() Subresult {
 	return this.second
 }
 
+func (this *setOp) OptimHints() *OptimHints {
+	firstHints := this.first.OptimHints()
+	secondHints := this.second.OptimHints()
+	if firstHints.JSONStyle() == secondHints.JSONStyle() {
+		allHints := append(firstHints.Hints(), secondHints.Hints()...)
+		return &OptimHints{
+			hints:     allHints,
+			jsonStyle: firstHints.JSONStyle(),
+		}
+	}
+	return nil
+}
+
 /*
 Represents the result of the UNION set operation. Type
 unionSubresult inherits from setOp.

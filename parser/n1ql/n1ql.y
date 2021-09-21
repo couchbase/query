@@ -103,6 +103,9 @@ functionBody     functions.FunctionBody
 
 identifier       *expression.Identifier
 
+optimHintArr     []algebra.OptimHint
+optimHints       *algebra.OptimHints
+
 // token offset into the statement
 tokOffset    int
 }
@@ -319,7 +322,7 @@ tokOffset    int
 %token WORK
 %token XOR
 
-%token INT NUM STR IDENT IDENT_ICASE NAMED_PARAM POSITIONAL_PARAM NEXT_PARAM
+%token INT NUM STR IDENT IDENT_ICASE NAMED_PARAM POSITIONAL_PARAM NEXT_PARAM OPTIM_HINTS
 %token LPAREN RPAREN
 %token LBRACE RBRACE LBRACKET RBRACKET RBRACKET_ICASE
 %token COMMA COLON
@@ -363,6 +366,7 @@ tokOffset    int
 %type <f>                NUM
 %type <n>                INT
 %type <n>                POSITIONAL_PARAM NEXT_PARAM
+%type <s>                OPTIM_HINTS
 %type <expr>             literal construction_expr execute_using object array
 %type <expr>             param_expr
 %type <pair>             member
@@ -419,7 +423,7 @@ tokOffset    int
 %type <expr>             opt_having having
 %type <resultTerm>       project
 %type <resultTerms>      projects
-%type <projection>       projection select_clause
+%type <projection>       projection
 %type <order>            order_by opt_order_by
 %type <sortTerm>         sort_term
 %type <sortTerms>        sort_terms
@@ -504,6 +508,10 @@ tokOffset    int
 %type <isolationLevel>      opt_isolation_level isolation_level isolation_val
 %type <s>                   opt_savepoint savepoint_name
 
+%type <optimHints>          hints_input opt_optim_hints
+%type <optimHintArr>        optim_hints optim_hint
+%type <ss>                  opt_hint_args hint_args
+
 %start input
 
 %%
@@ -517,6 +525,11 @@ stmt_body opt_trailer
 expr_input
 {
     yylex.(*lexer).setExpression($1)
+}
+|
+hints_input
+{
+    yylex.(*lexer).setOptimHints($1)
 }
 ;
 
@@ -882,33 +895,118 @@ select_from
 ;
 
 from_select:
-opt_with from opt_let opt_where opt_group opt_window_clause select_clause
+opt_with from opt_let opt_where opt_group opt_window_clause SELECT opt_optim_hints projection
 {
-    $$ = algebra.NewSubselect($1, $2, $3, $4, $5, $6, $7)
+    $$ = algebra.NewSubselect($1, $2, $3, $4, $5, $6, $9, $8)
 }
 ;
 
 select_from:
-opt_with select_clause opt_from opt_let opt_where opt_group opt_window_clause
+opt_with SELECT opt_optim_hints projection opt_from opt_let opt_where opt_group opt_window_clause
 {
-    $$ = algebra.NewSubselect($1, $3, $4, $5, $6, $7, $2)
+    $$ = algebra.NewSubselect($1, $5, $6, $7, $8, $9, $4, $3)
 }
 ;
 
 
 /*************************************************
  *
- * SELECT clause
+ * Optimizer Hints
  *
  *************************************************/
-
-select_clause:
-SELECT
-projection
+opt_optim_hints:
+/* empty */
 {
-    $$ = $2
+    $$ = nil
+}
+|
+OPTIM_HINTS
+{
+    $$ = parseOptimHints($1) 
 }
 ;
+
+hints_input:
+PLUS optim_hints
+{
+    $$ = algebra.NewOptimHints($2, false)
+}
+|
+PLUS object
+{
+    hints := algebra.ParseObjectHints($2)
+    $$ = algebra.NewOptimHints(hints, true)
+}
+;
+
+optim_hints:
+optim_hint
+{
+    $$ = $1
+}
+|
+optim_hints optim_hint
+{
+    $$ = append($1, $2...)
+}
+;
+
+optim_hint:
+IDENT
+{
+    $$ = algebra.NewOptimHint($1, nil)
+}
+|
+IDENT LPAREN opt_hint_args RPAREN
+{
+    $$ = algebra.NewOptimHint($1, $3)
+}
+|
+INDEX LPAREN opt_hint_args RPAREN
+{
+    $$ = algebra.NewOptimHint("index", $3)
+}
+;
+
+opt_hint_args:
+/* empty */
+{
+    $$ = []string{}
+}
+|
+hint_args
+{
+    $$ = $1
+}
+;
+
+hint_args:
+IDENT
+{
+    $$ = []string{$1}
+}
+|
+IDENT DIV BUILD
+{
+    $$ = []string{$1 + "/BUILD"}
+}
+|
+IDENT DIV PROBE
+{
+    $$ = []string{$1 + "/PROBE"}
+}
+|
+hint_args IDENT
+{
+    $$ = append($1, $2)
+}
+;
+
+/*************************************************
+ *
+ * Projection clause
+ *
+ *************************************************/
 
 projection:
 opt_quantifier projects

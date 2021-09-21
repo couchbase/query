@@ -327,6 +327,13 @@ func (this *KeyspaceTerm) Indexes() IndexRefs {
 }
 
 /*
+Set index hint
+*/
+func (this *KeyspaceTerm) SetIndexes(indexes IndexRefs) {
+	this.indexes = indexes
+}
+
+/*
 Returns the join keys expression defined by the ON KEYS
 or ON KEY ... FOR ... clause.
 */
@@ -345,7 +352,7 @@ func (this *KeyspaceTerm) JoinHint() JoinHint {
 Join hint prefers hash join
 */
 func (this *KeyspaceTerm) PreferHash() bool {
-	return this.joinHint == USE_HASH_BUILD || this.joinHint == USE_HASH_PROBE
+	return this.joinHint == USE_HASH_BUILD || this.joinHint == USE_HASH_PROBE || this.joinHint == USE_HASH_EITHER
 }
 
 /*

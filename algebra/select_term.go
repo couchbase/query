@@ -114,3 +114,7 @@ Accessor.
 func (this *SelectTerm) Select() *Select {
 	return this.query
 }
+
+func (this *SelectTerm) OptimHints() *OptimHints {
+	return this.query.OptimHints()
+}
