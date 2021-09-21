@@ -128,61 +128,67 @@ func processOptimHints(baseKeyspaces map[string]*base.BaseKeyspace, optimHints *
 		}
 
 		baseKeyspace, ok := baseKeyspaces[keyspace]
-		if ok {
-			node := baseKeyspace.Node()
-			if joinHint != algebra.JOIN_HINT_NONE {
-				curHints := baseKeyspace.JoinHints()
-				if len(curHints) > 0 {
-					// duplicated join hint
-					hint.SetError(algebra.DUPLICATED_JOIN_HINT + keyspace)
-					for _, curHint := range curHints {
-						curHint.SetError(algebra.DUPLICATED_JOIN_HINT + keyspace)
-					}
-				} else {
-					node.SetJoinHint(joinHint)
-				}
-				baseKeyspace.AddJoinHint(hint)
-			}
-			if len(indexes) > 0 {
-				if hasDerivedHint(baseKeyspace.IndexHints()) {
-					hint.SetError(algebra.DUPLICATED_INDEX_HINT + keyspace)
-					for _, curHint := range baseKeyspace.IndexHints() {
-						if !curHint.Derived() {
-							continue
-						}
-						curHint.SetError(algebra.DUPLICATED_INDEX_HINT + keyspace)
-					}
-				} else {
-					ksterm := algebra.GetKeyspaceTerm(node)
-					if ksterm == nil {
-						hint.SetError(algebra.NON_KEYSPACE_INDEX_HINT + keyspace)
-					} else {
-						curIndexes := ksterm.Indexes()
-						curMap := make(map[string]bool, len(curIndexes)+len(indexes))
-						newIndexes := make(algebra.IndexRefs, 0, len(curIndexes)+len(indexes))
-						for _, idx := range curIndexes {
-							if _, ok := curMap[idx.Name()]; ok {
-								continue
-							}
-							curMap[idx.Name()] = true
-							newIndexes = append(newIndexes, idx)
-						}
-						for _, idx := range indexes {
-							if _, ok := curMap[idx.Name()]; ok {
-								continue
-							}
-							curMap[idx.Name()] = true
-							newIndexes = append(newIndexes, idx)
-
-						}
-						ksterm.SetIndexes(newIndexes)
-					}
-				}
-				baseKeyspace.AddIndexHint(hint)
-			}
-		} else {
+		if !ok {
 			// invalid keyspace specified
 			hint.SetError(algebra.INVALID_KEYSPACE + keyspace)
+			continue
+		}
+
+		node := baseKeyspace.Node()
+		if node == nil {
+			// invalid keyspace specified
+			hint.SetError(algebra.INVALID_KEYSPACE + keyspace)
+			continue
+		}
+
+		if joinHint != algebra.JOIN_HINT_NONE {
+			curHints := baseKeyspace.JoinHints()
+			if len(curHints) > 0 {
+				// duplicated join hint
+				hint.SetError(algebra.DUPLICATED_JOIN_HINT + keyspace)
+				for _, curHint := range curHints {
+					curHint.SetError(algebra.DUPLICATED_JOIN_HINT + keyspace)
+				}
+			} else {
+				node.SetJoinHint(joinHint)
+			}
+			baseKeyspace.AddJoinHint(hint)
+		}
+		if len(indexes) > 0 {
+			if hasDerivedHint(baseKeyspace.IndexHints()) {
+				hint.SetError(algebra.DUPLICATED_INDEX_HINT + keyspace)
+				for _, curHint := range baseKeyspace.IndexHints() {
+					if !curHint.Derived() {
+						continue
+					}
+					curHint.SetError(algebra.DUPLICATED_INDEX_HINT + keyspace)
+				}
+			} else {
+				ksterm := algebra.GetKeyspaceTerm(node)
+				if ksterm == nil {
+					hint.SetError(algebra.NON_KEYSPACE_INDEX_HINT + keyspace)
+				} else {
+					curIndexes := ksterm.Indexes()
+					curMap := make(map[string]bool, len(curIndexes)+len(indexes))
+					newIndexes := make(algebra.IndexRefs, 0, len(curIndexes)+len(indexes))
+					for _, idx := range curIndexes {
+						if _, ok := curMap[idx.Name()]; ok {
+							continue
+						}
+						curMap[idx.Name()] = true
+						newIndexes = append(newIndexes, idx)
+					}
+					for _, idx := range indexes {
+						if _, ok := curMap[idx.Name()]; ok {
+							continue
+						}
+						curMap[idx.Name()] = true
+						newIndexes = append(newIndexes, idx)
+					}
+					ksterm.SetIndexes(newIndexes)
+				}
+			}
+			baseKeyspace.AddIndexHint(hint)
 		}
 	}
 }
