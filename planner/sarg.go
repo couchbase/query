@@ -256,7 +256,12 @@ func getSargSpans(pred expression.Expression, sargKeys expression.Expressions, i
 
 			// If one key span is EMPTY then whole index span can be EMPTY
 			if rs == _EMPTY_SPANS {
-				return []SargSpans{_EMPTY_SPANS}, true, nil
+				// make sure the returned slice is of length n since
+				// the caller assumes that (it'll be streamlined later)
+				for j := n - 1; j >= 0; j-- {
+					sargSpans[j] = _EMPTY_SPANS
+				}
+				return sargSpans, true, nil
 			}
 
 			if simple {
