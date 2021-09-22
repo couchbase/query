@@ -60,6 +60,10 @@ func (a authUser) Domain() string {
 	return "internal"
 }
 
+func (a authUser) Uuid() (string, error) {
+	return "internal", nil
+}
+
 func (a authUser) IsAllowed(permission string) (bool, error) {
 	return a.permissions[permission], nil
 }
