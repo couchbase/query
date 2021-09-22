@@ -18,6 +18,8 @@ replace github.com/couchbase/go_json => ../go_json
 
 replace github.com/couchbase/gomemcached => ../gomemcached
 
+replace github.com/couchbase/goutils => ../goutils
+
 replace github.com/couchbase/indexing => ../indexing
 
 replace github.com/couchbase/gometa => ../gometa
