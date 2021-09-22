@@ -14,7 +14,6 @@ import (
 
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/expression"
-	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/value"
 )
 
@@ -228,7 +227,6 @@ func NewOptimHint(hint_name string, hint_args []string) []OptimHint {
 
 			// check whether /BUILD or /PROBE is present
 			parts := strings.Split(arg, "/")
-			logging.Infof("===== len(parts) %d =====", len(parts))
 			if len(parts) > 2 {
 				invalid = true
 				err = EXTRA_SLASH + arg
@@ -268,7 +266,6 @@ func NewOptimHint(hint_name string, hint_args []string) []OptimHint {
 	}
 
 	if invalid || len(hints) == 0 {
-		logging.Infof("===== return invalid, invalid %t len(hints) %d =====", invalid, len(hints))
 		return invalidHint(hint_name, hint_args, err)
 	}
 	return hints
@@ -831,7 +828,6 @@ func InvalidOptimHints(input, err string) *OptimHints {
 // JSON style hints
 
 func ParseObjectHints(object expression.Expression) []OptimHint {
-	logging.Infof("===== JSON hints: %v =====", object)
 	if object == nil {
 		return nil
 	}
@@ -848,7 +844,6 @@ func ParseObjectHints(object expression.Expression) []OptimHint {
 		invalid := false
 
 		vval := value.NewValue(v)
-		logging.Infof("===== key %v %T value %v %T =====", k, k, v, v)
 		lowerKey := strings.ToLower(k)
 		switch lowerKey {
 		case "index":
