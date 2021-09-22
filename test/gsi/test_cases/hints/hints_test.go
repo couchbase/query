@@ -41,7 +41,6 @@ func TestHints(t *testing.T) {
 	// simple hints
 	runMatch("case_hints_simple.json", false, false, qc, t)
 
-
 	fmt.Println("Dropping indexes")
 	runStmt(qc, "DROP INDEX customer.cust_lastName_firstName_customerId")
 	runStmt(qc, "DROP INDEX customer.cust_customerId_lastName_firstName")
