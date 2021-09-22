@@ -201,3 +201,14 @@ func hasDerivedHint(hints []algebra.OptimHint) bool {
 	}
 	return false
 }
+
+func hasOrderedHint(optHints *algebra.OptimHints) bool {
+	if optHints != nil {
+		for _, hint := range optHints.Hints() {
+			if hint.Type() == algebra.HINT_ORDERED {
+				return true
+			}
+		}
+	}
+	return false
+}

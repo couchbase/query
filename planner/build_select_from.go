@@ -17,6 +17,7 @@ import (
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
 	base "github.com/couchbase/query/plannerbase"
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
@@ -131,7 +132,9 @@ func (this *builder) visitFrom(node *algebra.Subselect, group *algebra.Group,
 		var filter expression.Expression
 		var hasOrder bool
 
-		if this.useCBO && !this.indexAdvisor && this.context.Optimizer() != nil {
+		if this.useCBO && !this.indexAdvisor && this.context.Optimizer() != nil &&
+			!hasOrderedHint(node.OptimHints()) &&
+			util.IsFeatureEnabled(this.context.FeatureControls(), util.N1QL_JOIN_ENUMERATION) {
 			var limit, offset expression.Expression
 			var order *algebra.Order
 			var distinct algebra.ResultTerms
