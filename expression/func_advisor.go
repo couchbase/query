@@ -94,9 +94,9 @@ func (this *Advisor) Evaluate(item value.Value, context Context) (value.Value, e
 			return nil, err
 		}
 		actual := arg.Actual().(map[string]interface{})
-		val, ok := actual["action"]
+		vali, ok := actual["action"]
 		if ok {
-			val = strings.ToLower(value.NewValue(val).ToString())
+			val := strings.ToLower(value.NewValue(vali).ToString())
 			if val == "start" {
 				sessionName, err := util.UUIDV4()
 				if err != nil {
@@ -147,13 +147,22 @@ func (this *Advisor) Evaluate(item value.Value, context Context) (value.Value, e
 				if err != nil {
 					return nil, err
 				}
+				state, err := getState(sessionName, context)
+				if err != nil {
+					return nil, err
+				}
+				if len(state) == 0 {
+					return nil, errors.NewAdvisorSessionNotFoundError(sessionName)
+				} else if state != scheduler.RUNNING && state != scheduler.SCHEDULED {
+					return value.EMPTY_ARRAY_VALUE, nil
+				}
 
 				return purgeResults(sessionName, context, true)
 			} else {
-				return nil, fmt.Errorf("%s() not valid argument for 'action'", this.Name())
+				return nil, errors.NewAdvisorActionNotValid(val)
 			}
 		} else {
-			return nil, fmt.Errorf("%s() missing argument for 'action'", this.Name())
+			return nil, errors.NewAdvisorActionMissing()
 		}
 	}
 
@@ -278,6 +287,25 @@ func getResults(sessionName string, context Context) (value.Value, error) {
 	return value.NewValue(r), nil
 }
 
+const _EMPTY_STATE scheduler.State = ""
+
+func getState(sessionName string, context Context) (scheduler.State, error) {
+	query := "SELECT state from system:tasks_cache where class = \"" + _CLASS + "\"  and name = \"" + sessionName + "\""
+	res, _, err := context.(Context).EvaluateStatement(query, nil, nil, false, false)
+	if err != nil {
+		return _EMPTY_STATE, err
+	}
+	v, ok := res.Index(0)
+	if !ok {
+		return _EMPTY_STATE, nil
+	}
+	val, ok := v.Field("state")
+	if !ok {
+		return _EMPTY_STATE, errors.NewError(nil, "invalid results")
+	}
+	return scheduler.State(val.ToString()), nil
+}
+
 func purgeResults(sessionName string, context Context, analysis bool) (value.Value, error) {
 	query := "DELETE from system:tasks_cache where class = \"" + _CLASS + "\"  and name = \"" + sessionName + "\""
 	_, _, err := context.(Context).EvaluateStatement(query, nil, nil, false, false)
@@ -317,12 +345,13 @@ func validateSessionArgs(arg value.Value) error {
 			!strings.EqualFold(fieldName, "query_count") &&
 			!strings.EqualFold(fieldName, "status") &&
 			!strings.EqualFold(fieldName, "session") {
+
 			invalidNames = append(invalidNames, fieldName)
 		}
 	}
 
 	if len(invalidNames) > 0 {
-		return fmt.Errorf("Invalid arguments to Advisor() function: %v", invalidNames)
+		return errors.NewAdvisorInvalidArgs(invalidNames)
 	}
 
 	return nil

@@ -82,7 +82,7 @@ func NewError(e error, internalMsg string) Error {
 	case Error: // if given error is already an Error, just return it:
 		return e
 	default:
-		return &err{level: EXCEPTION, ICode: 5000, IKey: "Internal Error", ICause: e,
+		return &err{level: EXCEPTION, ICode: E_INTERNAL, IKey: "Internal Error", ICause: e,
 			InternalMsg: internalMsg, InternalCaller: CallerN(1)}
 	}
 }

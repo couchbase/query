@@ -156,6 +156,7 @@ const (
 	_RETIRED_4903                                       = 4903
 	_RETIRED_4904                                       = 4904
 	_RETIRED_4905                                       = 4905
+	E_INTERNAL                                ErrorCode = 5000
 	E_EXECUTION_PANIC                         ErrorCode = 5001
 	E_EXECUTION_INTERNAL                      ErrorCode = 5002
 	E_EXECUTION_PARAMETER                     ErrorCode = 5003
@@ -239,6 +240,10 @@ const (
 	E_DATASTORE_INVALID_KEYSPACE_PARTS        ErrorCode = 10205
 	E_DATASTORE_INVALID_PATH                  ErrorCode = 10206
 	E_DATASTORE_INVALID_SCOPE_PARTS           ErrorCode = 10207
+	E_ADVISOR_SESSION_NOT_FOUND               ErrorCode = 10500
+	E_ADVISOR_INVALID_ACTION                  ErrorCode = 10501
+	E_ADVISOR_ACTION_MISSING                  ErrorCode = 10502
+	E_ADVISOR_INVALID_ARGS                    ErrorCode = 10503
 	E_SYSTEM_DATASTORE                        ErrorCode = 11000
 	E_SYSTEM_KEYSPACE_NOT_FOUND               ErrorCode = 11002
 	E_SYSTEM_NOT_IMPLEMENTED                  ErrorCode = 11003

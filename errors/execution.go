@@ -39,10 +39,11 @@ func NewParsingError(e error, ctx string) Error {
 }
 
 func NewEvaluationError(e error, termType string) Error {
-	_, ok := e.(*AbortError)
-	if ok {
+	if _, ok := e.(*AbortError); ok {
 		return &err{level: EXCEPTION, ICode: E_EVALUATION, IKey: "execution.abort_error", ICause: e,
 			InternalMsg: fmt.Sprintf("Abort: %s.", e), InternalCaller: CallerN(1)}
+	} else if ee, ok := e.(Error); ok {
+		return ee
 	}
 	return &err{level: EXCEPTION, ICode: E_EVALUATION_ABORT, IKey: "execution.evaluation_error", ICause: e,
 		InternalMsg: fmt.Sprintf("Error evaluating %s", termType), InternalCaller: CallerN(1)}

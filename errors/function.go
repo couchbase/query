@@ -108,3 +108,29 @@ func NewFunctionExecutionNestedError(levels int, name string) Error {
 		InternalMsg:    fmt.Sprintf("Error executing function %v: %v nested javascript calls", name, levels),
 		InternalCaller: CallerN(1)}
 }
+
+func NewAdvisorSessionNotFoundError(s string) Error {
+	c := make(map[string]interface{})
+	c["unknown_session"] = s
+	return &err{level: EXCEPTION, ICode: E_ADVISOR_SESSION_NOT_FOUND, IKey: "function.advisor.session_not_found",
+		InternalMsg: "Advisor: Session not found.", cause: c, InternalCaller: CallerN(1)}
+}
+
+func NewAdvisorActionNotValid(a string) Error {
+	c := make(map[string]interface{})
+	c["invalid_action"] = a
+	return &err{level: EXCEPTION, ICode: E_ADVISOR_INVALID_ACTION, IKey: "function.advisor.invalid_action",
+		InternalMsg: "Advisor: Invalid value for 'action'", cause: c, InternalCaller: CallerN(1)}
+}
+
+func NewAdvisorActionMissing() Error {
+	return &err{level: EXCEPTION, ICode: E_ADVISOR_ACTION_MISSING, IKey: "function.advisor.action_missing",
+		InternalMsg: "Advisor: missing argument for 'action'", InternalCaller: CallerN(1)}
+}
+
+func NewAdvisorInvalidArgs(args []string) Error {
+	c := make(map[string]interface{})
+	c["args"] = args
+	return &err{level: EXCEPTION, ICode: E_ADVISOR_INVALID_ARGS, IKey: "function.advisor.invalid_arguments",
+		InternalMsg: "Advisor: Invalid arguments.", cause: c, InternalCaller: CallerN(1)}
+}
