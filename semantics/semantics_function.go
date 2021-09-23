@@ -73,7 +73,7 @@ func (this *SemChecker) visitAdvisorFunction(advisor *expression.Advisor) (err e
 
 func (this *SemChecker) VisitAll(expr *expression.All) (interface{}, error) {
 
-	if this.stmtType != "CREATE_INDEX" {
+	if this.stmtType != "CREATE_INDEX" && this.stmtType != "UPDATE_STATISTICS" {
 		return expr, errors.NewAllDistinctNotAllowed(expr.String(), expr.ErrorContext())
 	}
 	return expr, expr.MapChildren(this)
