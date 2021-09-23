@@ -136,7 +136,7 @@ func (this *httpRequest) markTimeOfCompletion(now time.Time) {
 	}
 }
 
-func (this *httpRequest) Execute(srvr *server.Server, context *execution.Context, reqType string, signature value.Value) {
+func (this *httpRequest) Execute(srvr *server.Server, context *execution.Context, reqType string, signature value.Value, startTx bool) {
 	this.prefix, this.indent = this.prettyStrings(srvr.Pretty(), false)
 
 	this.setHttpCode(http.StatusOK)
@@ -163,7 +163,7 @@ func (this *httpRequest) Execute(srvr *server.Server, context *execution.Context
 	success := this.State() == server.COMPLETED && len(this.Errors()) == 0
 	if err := context.DoStatementComplete(reqType, success); err != nil {
 		this.Error(err)
-	} else if context.TxContext() != nil && reqType == "START_TRANSACTION" {
+	} else if context.TxContext() != nil && startTx {
 		this.SetTransactionStartTime(context.TxContext().TxStartTime())
 		this.SetTxTimeout(context.TxContext().TxTimeout())
 	}

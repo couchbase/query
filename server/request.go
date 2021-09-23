@@ -151,7 +151,7 @@ type Request interface {
 	Servicing()
 	Fail(err errors.Error)
 	Error(err errors.Error)
-	Execute(server *Server, context *execution.Context, reqType string, signature value.Value)
+	Execute(server *Server, context *execution.Context, reqType string, signature value.Value, startTx bool)
 	NotifyStop(stop execution.Operator)
 	Failed(server *Server)
 	Expire(state State, timeout time.Duration)

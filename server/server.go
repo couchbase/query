@@ -1075,7 +1075,7 @@ func (this *Server) serviceRequest(request Request) {
 	request.SetExecTime(time.Now())
 	operator.RunOnce(context, nil)
 
-	request.Execute(this, context, request.Type(), prepared.Signature())
+	request.Execute(this, context, request.Type(), prepared.Signature(), request.Type() == "START_TRANSACTION")
 }
 
 func (this *Server) getPrepared(request Request, context *execution.Context) (*plan.Prepared, errors.Error) {
@@ -1147,7 +1147,7 @@ func (this *Server) getPrepared(request Request, context *execution.Context) (*p
 			allow = isPrepare && !autoExecute
 		}
 
-		if ok, msg := IsValidStatement(request.TxId(), stype, request.TxImplicit(), allow); !ok {
+		if ok, msg := transactions.IsValidStatement(request.TxId(), stype, request.TxImplicit(), allow); !ok {
 			return nil, errors.NewTranStatementNotSupportedError(stype, msg)
 		}
 
@@ -1196,7 +1196,7 @@ func (this *Server) getPrepared(request Request, context *execution.Context) (*p
 			}
 
 			request.SetType(prepared.Type())
-			if ok, msg := IsValidStatement(request.TxId(), request.Type(), request.TxImplicit(), false); !ok {
+			if ok, msg := transactions.IsValidStatement(request.TxId(), request.Type(), request.TxImplicit(), false); !ok {
 				return nil, errors.NewTranStatementNotSupportedError(request.Type(), msg)
 			}
 
@@ -1253,7 +1253,7 @@ func (this *Server) getPrepared(request Request, context *execution.Context) (*p
 
 		// ditto
 		request.SetType(prepared.Type())
-		if ok, msg := IsValidStatement(request.TxId(), request.Type(), request.TxImplicit(), true); !ok {
+		if ok, msg := transactions.IsValidStatement(request.TxId(), request.Type(), request.TxImplicit(), true); !ok {
 			return nil, errors.NewTranStatementNotSupportedError(request.Type(), msg)
 		}
 	}
@@ -1621,22 +1621,4 @@ func HostNameandPort(node string) (host, port string) {
 	}
 
 	return
-}
-
-func IsValidStatement(txId, stmtType string, tximplicit, allow bool) (bool, string) {
-	switch stmtType {
-	case "SELECT", "UPDATE", "INSERT", "UPSERT", "DELETE", "MERGE":
-		return true, ""
-	case "EXECUTE", "PREPARE":
-		return true, ""
-	case "COMMIT", "ROLLBACK", "ROLLBACK_SAVEPOINT", "SET_TRANSACTION_ISOLATION", "SAVEPOINT":
-		return allow || txId != "", "outside the"
-	case "START_TRANSACTION":
-		return allow || txId == "", "within the"
-	default:
-		if txId != "" {
-			return false, "within the"
-		}
-		return !tximplicit, "in implicit"
-	}
 }

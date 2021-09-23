@@ -87,6 +87,14 @@ func (this *IndexContext) NewQueryContext(queryContext string, readonly bool) in
 	return nil
 }
 
+func (this *IndexContext) GetTxContext() interface{} {
+	return nil
+}
+
+func (this *IndexContext) SetTxContext(c interface{}) {
+	// no-op
+}
+
 func (this *IndexContext) SetAdvisor() {
 	// no-op
 }

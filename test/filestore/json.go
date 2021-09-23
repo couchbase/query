@@ -68,7 +68,7 @@ func (this *MockQuery) Fail(err errors.Error) {
 	close(this.response.done)
 }
 
-func (this *MockQuery) Execute(srvr *server.Server, context *execution.Context, reqType string, signature value.Value) {
+func (this *MockQuery) Execute(srvr *server.Server, context *execution.Context, reqType string, signature value.Value, dummy bool) {
 	select {
 	case <-this.Results():
 		this.Stop(server.COMPLETED)

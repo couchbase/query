@@ -137,6 +137,7 @@ type Output interface {
 	FmtPhaseTimes() map[string]interface{}
 	FmtOptimizerEstimates(op Operator) map[string]interface{}
 	TrackMemory(size uint64)
+	SetTransactionStartTime(t time.Time)
 }
 
 // context flags
@@ -697,6 +698,10 @@ func (this *Context) ResetTxContext() {
 	}
 }
 
+func (this *Context) SetTxTimeout(txTimeout time.Duration) {
+	this.txTimeout = txTimeout
+}
+
 func (this *Context) SetTransactionInfo(txId string, txStmtNum int64) (err errors.Error) {
 	txContext := transactions.GetTransContext(txId)
 	if txContext == nil {
@@ -773,6 +778,13 @@ func (this *Context) SetTransactionContext(stmtType string, txImplicit bool, rTx
 				this.SetDeltaKeyspaces(dks)
 			}
 		}
+	} else if stmtType == "EXECUTE_FUNCTION" {
+
+		// set up transaction timeout in case the function starts a transaction
+		if sTxTimeout > 0 && sTxTimeout < rTxTimeout {
+			rTxTimeout = sTxTimeout
+		}
+		this.txTimeout = rTxTimeout
 	}
 	return nil
 }

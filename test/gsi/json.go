@@ -105,7 +105,7 @@ func (this *MockQuery) Error(err errors.Error) {
 	}
 }
 
-func (this *MockQuery) Execute(srvr *server.Server, context *execution.Context, reqType string, signature value.Value) {
+func (this *MockQuery) Execute(srvr *server.Server, context *execution.Context, reqType string, signature value.Value, startTx bool) {
 	select {
 	case <-this.Results():
 		this.Stop(server.COMPLETED)
@@ -120,6 +120,9 @@ func (this *MockQuery) Execute(srvr *server.Server, context *execution.Context, 
 		if this.response.err == nil {
 			this.response.err = err
 		}
+	} else if context.TxContext() != nil && startTx {
+		this.SetTransactionStartTime(context.TxContext().TxStartTime())
+		this.SetTxTimeout(context.TxContext().TxTimeout())
 	}
 	close(this.response.done)
 }

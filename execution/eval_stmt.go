@@ -119,6 +119,10 @@ func (this *internalOutput) TrackMemory(size uint64) {
 	// empty
 }
 
+func (this *internalOutput) SetTransactionStartTime(t time.Time) {
+	// empty
+}
+
 func (this *Context) EvaluateStatement(statement string, namedArgs map[string]value.Value, positionalArgs value.Values,
 	subquery, readonly bool) (value.Value, uint64, error) {
 	prepared, isPrepared, err := this.PrepareStatement(statement, namedArgs, positionalArgs, subquery, readonly, false)
@@ -127,7 +131,23 @@ func (this *Context) EvaluateStatement(statement string, namedArgs map[string]va
 	}
 
 	newContext := this.Copy()
-	return newContext.ExecutePrepared(prepared, isPrepared, namedArgs, positionalArgs)
+	rv, mutations, err := newContext.ExecutePrepared(prepared, isPrepared, namedArgs, positionalArgs)
+	newErr := newContext.completeStatement(prepared.Type(), err == nil, this)
+	if newErr != nil {
+		err = newErr
+	}
+	return rv, mutations, err
+}
+
+func (this *Context) completeStatement(stmtType string, success bool, baseContext *Context) errors.Error {
+	if newErr := this.DoStatementComplete(stmtType, success); newErr != nil {
+		return newErr
+	} else if this.TxContext() != nil && baseContext.TxContext() == nil {
+		baseContext.SetTxContext(this.TxContext())
+		baseContext.output.SetTransactionStartTime(this.TxContext().TxStartTime())
+		baseContext.SetTxTimeout(this.TxContext().TxTimeout())
+	}
+	return nil
 }
 
 func (this *Context) OpenStatement(statement string, namedArgs map[string]value.Value, positionalArgs value.Values,
@@ -142,7 +162,12 @@ func (this *Context) OpenStatement(statement string, namedArgs map[string]value.
 	}
 
 	newContext := this.Copy()
-	return newContext.OpenPrepared(prepared, isPrepared, namedArgs, positionalArgs)
+	rv, err := newContext.OpenPrepared(prepared, isPrepared, namedArgs, positionalArgs)
+	if rv != nil {
+		h := rv.(*executionHandle)
+		h.baseContext = this
+	}
+	return rv, err
 }
 
 func (this *Context) PrepareStatement(statement string, namedArgs map[string]value.Value, positionalArgs value.Values,
@@ -176,6 +201,33 @@ func (this *Context) PrepareStatement(statement string, namedArgs map[string]val
 	stmt, err := n1ql.ParseStatement2(statement, this.namespace, this.queryContext)
 	if err != nil {
 		return nil, false, err
+	}
+
+	var stype string
+	var allow bool
+	switch estmt := stmt.(type) {
+	case *algebra.Explain:
+		stype = estmt.Statement().Type()
+		allow = true
+	case *algebra.Advise:
+		stype = estmt.Statement().Type()
+		allow = true
+	case *algebra.Prepare:
+		stype = stmt.Type()
+		allow = true
+	default:
+		stype = stmt.Type()
+		allow = false
+	}
+
+	txId := ""
+	txImplicit := false
+	if this.TxContext() != nil {
+		txId = this.TxContext().TxId()
+		txImplicit = this.TxContext().TxImplicit()
+	}
+	if ok, msg := transactions.IsValidStatement(txId, stype, txImplicit, allow); !ok {
+		return nil, false, errors.NewTranStatementNotSupportedError(stype, msg)
 	}
 
 	//  monitoring code TBD
@@ -322,18 +374,21 @@ func (this *Context) OpenPrepared(prepared *plan.Prepared, isPrepared bool,
 	// the last operator's output to itself
 	handle.input = NewReceive(plan.NewReceive(), handle.context)
 	handle.root = NewSequence(plan.NewSequence(), handle.context, pipeline, handle.input)
+	handle.stmtType = prepared.Type()
 	handle.exec = util.Now()
 	handle.root.RunOnce(handle.context, nil)
 	return handle, nil
 }
 
 type executionHandle struct {
-	exec    util.Time
-	root    *Sequence
-	input   *Receive
-	context *Context
-	output  *internalOutput
-	stopped int32
+	exec        util.Time
+	root        *Sequence
+	input       *Receive
+	baseContext *Context
+	context     *Context
+	stmtType    string
+	output      *internalOutput
+	stopped     int32
 }
 
 func (this *executionHandle) Results() (interface{}, uint64, error) {
@@ -356,6 +411,10 @@ func (this *executionHandle) Results() (interface{}, uint64, error) {
 	if atomic.AddInt32(&this.stopped, 1) == 1 {
 		this.context.output.AddPhaseTime(RUN, util.Since(this.exec))
 		this.root.SendAction(_ACTION_STOP)
+		newErr := this.context.completeStatement(this.stmtType, this.output.err == nil, this.baseContext)
+		if newErr != nil {
+			this.output.err = newErr
+		}
 		this.root.Done()
 	}
 	return values, this.output.mutationCount, this.output.err
@@ -369,6 +428,10 @@ func (this *executionHandle) NextDocument() (value.Value, error) {
 	if atomic.AddInt32(&this.stopped, 1) == 1 {
 		this.context.output.AddPhaseTime(RUN, util.Since(this.exec))
 		this.root.SendAction(_ACTION_STOP)
+		newErr := this.context.completeStatement(this.stmtType, this.output.err == nil, this.baseContext)
+		if newErr != nil {
+			this.output.err = newErr
+		}
 		this.root.Done()
 	}
 	return nil, this.output.err
@@ -378,6 +441,10 @@ func (this *executionHandle) Cancel() {
 	if atomic.AddInt32(&this.stopped, 1) == 1 {
 		this.context.output.AddPhaseTime(RUN, util.Since(this.exec))
 		this.root.SendAction(_ACTION_STOP)
+		newErr := this.context.completeStatement(this.stmtType, this.output.err == nil, this.baseContext)
+		if newErr != nil {
+			this.output.err = newErr
+		}
 		this.root.Done()
 	}
 }

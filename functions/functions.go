@@ -491,6 +491,15 @@ func ExecuteFunction(name FunctionName, modifiers Modifier, values []value.Value
 		func(old, new uint64) bool { return old > new }, 0)
 	util.TestAndSetUint64(&entry.MaxServiceTime, uint64(serviceTime),
 		func(old, new uint64) bool { return old < new }, 0)
+
+	// propagate transaction context if necessary
+	if context != newContext && context.GetTxContext() == nil {
+		newTxContext := newContext.GetTxContext()
+		if newTxContext != nil {
+			context.SetTxContext(newTxContext)
+		}
+	}
+
 	return val, err
 }
 

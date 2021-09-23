@@ -30,10 +30,11 @@ func (this *SemChecker) VisitFunction(expr expression.Function) (interface{}, er
 		if this.stmtType != "CREATE_INDEX" {
 			return expr, errors.NewFlattenKeys(nexpr.String(), nexpr.ErrorContext())
 		}
-	case *expression.UserDefinedFunction:
-		if this.hasSemFlag(_SEM_TRANSACTION) {
-			return expr, errors.NewTranFunctionNotSupportedError(nexpr.Name())
-		}
+		/*	case *expression.UserDefinedFunction:
+			if this.hasSemFlag(_SEM_TRANSACTION) {
+				return expr, errors.NewTranFunctionNotSupportedError(nexpr.Name())
+			}
+		*/
 	}
 	return expr, expr.MapChildren(this)
 }

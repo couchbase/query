@@ -29,6 +29,8 @@ type Context interface {
 	Credentials() *auth.Credentials
 	DatastoreVersion() string
 	NewQueryContext(queryContext string, readonly bool) interface{}
+	GetTxContext() interface{}
+	SetTxContext(t interface{})
 	Readonly() bool
 	SetAdvisor()
 	IncRecursionCount(inc int) int
