@@ -659,6 +659,8 @@ func (this *cbCluster) QueryNodeNames() ([]string, errors.Error) {
 		} else {
 			hostname, _ = server.HostNameandPort(hostname)
 		}
+
+		ip := net.ParseIP(hostname)
 		if ip != nil && ip.To4() == nil && ip.To16() != nil { // IPv6
 			hostname = "[" + hostname + "]"
 		}
