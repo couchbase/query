@@ -14,6 +14,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"os"
 	"strconv"
 	"strings"
@@ -462,6 +463,10 @@ func (this *cbConfigStore) checkPoolServices(pool *couchbase.Pool, poolServices 
 			// must be enclosed within ‘[‘ and ‘]’ brackets.
 			hostname = server.GetIP(true)
 		}
+		ip := net.ParseIP(hostname)
+		if ip != nil && ip.To4() == nil && ip.To16() != nil { // IPv6
+			hostname = "[" + hostname + "]"
+		}
 
 		mgmtPort := node.Services["mgmt"]
 		if mgmtPort == 0 {
@@ -698,7 +703,8 @@ func (this *cbCluster) QueryNodeNames() ([]string, errors.Error) {
 		} else {
 			hostname, _ = server.HostNameandPort(hostname)
 		}
-		if strings.ContainsRune(hostname, ':') {
+		ip := net.ParseIP(hostname)
+		if ip != nil && ip.To4() == nil && ip.To16() != nil { // IPv6
 			hostname = "[" + hostname + "]"
 		}
 
