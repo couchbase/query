@@ -27,7 +27,7 @@ func (this *SemChecker) VisitFunction(expr expression.Function) (interface{}, er
 	case *expression.Advisor:
 		return expr, this.visitAdvisorFunction(nexpr)
 	case *expression.FlattenKeys:
-		if this.stmtType != "CREATE_INDEX" {
+		if this.stmtType != "CREATE_INDEX" && this.stmtType != "UPDATE_STATISTICS" {
 			return expr, errors.NewFlattenKeys(nexpr.String(), nexpr.ErrorContext())
 		}
 		/*	case *expression.UserDefinedFunction:
