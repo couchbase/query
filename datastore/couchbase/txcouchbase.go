@@ -708,9 +708,15 @@ func errorType(err error, rollback bool) (error, interface{}) {
 func initGocb(s *store) (err errors.Error) {
 	var certFile string
 	var caFile string
-	if s.connSecConfig != nil && s.connSecConfig.ClusterEncryptionConfig.EncryptData {
+	var keyFile string
+	var passphrase []byte
+
+	if s.connSecConfig != nil &&
+		s.connSecConfig.ClusterEncryptionConfig.EncryptData {
 		certFile = s.connSecConfig.CertFile
 		caFile = s.connSecConfig.CAFile
+		keyFile = s.connSecConfig.KeyFile
+		passphrase = s.connSecConfig.TLSConfig.PrivateKeyPassphrase
 	}
 
 	tranSettings := datastore.GetTransactionSettings()
@@ -732,7 +738,9 @@ func initGocb(s *store) (err errors.Error) {
 			return getSSLHostPort(s)
 		},
 		caFile,
-		certFile)
+		certFile,
+		keyFile,
+		passphrase)
 	s.nslock.Lock()
 	defer s.nslock.Unlock()
 

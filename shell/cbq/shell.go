@@ -629,7 +629,11 @@ func main() {
 	}
 
 	if rootFile != "" {
-		n1ql.SetRootFile(rootFile)
+		n1ql.SetCaFile(rootFile)
+	}
+
+	if certFile != "" && keyFile != "" {
+		n1ql.SetPrivateKeyPassphrase(password)
 	}
 
 	if strings.HasPrefix(strings.ToLower(serverFlag), "https://") && rootFile == "" && certFile == "" && keyFile == "" {

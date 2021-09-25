@@ -30,6 +30,7 @@ import (
 
 	"github.com/couchbase/cbauth"
 	"github.com/couchbase/gomemcached" // package name is 'gomemcached'
+	ntls "github.com/couchbase/goutils/tls"
 	"github.com/couchbase/query/logging"
 )
 
@@ -82,6 +83,7 @@ var skipVerify = true
 var certFile = ""
 var keyFile = ""
 var caFile = ""
+var privateKeyPassphrase = []byte{}
 
 func SetSkipVerify(skip bool) {
 	skipVerify = skip
@@ -91,12 +93,23 @@ func SetCertFile(cert string) {
 	certFile = cert
 }
 
-func SetKeyFile(cert string) {
-	keyFile = cert
+func SetCaFile(cacert string) {
+	caFile = cacert
 }
 
-func SetCaFile(cert string) {
-	caFile = cert
+func SetKeyFile(key string) {
+	keyFile = key
+}
+
+func SetPrivateKeyPassphrase(passphrase []byte) {
+	privateKeyPassphrase = passphrase
+}
+
+func UnsetCertSettings() {
+	caFile = ""
+	certFile = ""
+	keyFile = ""
+	privateKeyPassphrase = []byte{}
 }
 
 // Allow applications to speciify the Poolsize and Overflow
@@ -509,11 +522,11 @@ func isHttpConnError(err error) bool {
 
 var client *http.Client
 
-func ClientConfigForX509(caFile, certFile, keyFile string) (*tls.Config, error) {
+func ClientConfigForX509(caFile, certFile, keyFile string, passphrase []byte) (*tls.Config, error) {
 	cfg := &tls.Config{}
 
 	if certFile != "" && keyFile != "" {
-		tlsCert, err := tls.LoadX509KeyPair(certFile, keyFile)
+		tlsCert, err := ntls.LoadX509KeyPair(certFile, keyFile, passphrase)
 		if err != nil {
 			return nil, err
 		}
@@ -556,9 +569,7 @@ func doHTTPRequest(req *http.Request) (*http.Response, error) {
 				MaxIdleConnsPerHost: MaxIdleConnsPerHost,
 			}
 		} else {
-			// Handle cases with cert
-
-			cfg, err := ClientConfigForX509(caFile, certFile, keyFile)
+			cfg, err := ClientConfigForX509(caFile, certFile, keyFile, privateKeyPassphrase)
 			if err != nil {
 				return nil, err
 			}
@@ -761,7 +772,7 @@ func (b basicAuth) GetCredentials() (string, string, string) {
 	return b.u, b.p, b.u
 }
 
-func basicAuthFromURL(us string) (ah AuthHandler) {
+func BasicAuthFromURL(us string) (ah AuthHandler) {
 	u, err := ParseURL(us)
 	if err != nil {
 		return
@@ -789,7 +800,7 @@ func ConnectWithAuth(baseU string, ah AuthHandler) (c Client, err error) {
 // with the KV engine encrypted.
 //
 // This method should be called immediately after a Connect*() method.
-func (c *Client) InitTLS(caFile, certFile string, disableNonSSLPorts bool) error {
+func (c *Client) InitTLS(caFile, certFile, keyfile string, disableNonSSLPorts bool, passphrase []byte) error {
 	if len(caFile) > 0 {
 		certFile = caFile
 	}
@@ -801,18 +812,25 @@ func (c *Client) InitTLS(caFile, certFile string, disableNonSSLPorts bool) error
 	CA_Pool.AppendCertsFromPEM(serverCert)
 	c.tlsConfig = &tls.Config{RootCAs: CA_Pool}
 	c.disableNonSSLPorts = disableNonSSLPorts
+
+	// Set the values for certs
+	SetCaFile(caFile)
+	SetCertFile(certFile)
+	SetKeyFile(keyFile)
+	SetPrivateKeyPassphrase(passphrase)
 	return nil
 }
 
 func (c *Client) ClearTLS() {
 	c.tlsConfig = nil
 	c.disableNonSSLPorts = false
+	UnsetCertSettings()
 }
 
 // Connect to a couchbase cluster.  An authentication handler will be
 // created from the userinfo in the URL if provided.
 func Connect(baseU string) (Client, error) {
-	return ConnectWithAuth(baseU, basicAuthFromURL(baseU))
+	return ConnectWithAuth(baseU, BasicAuthFromURL(baseU))
 }
 
 // Sample data for scopes and collections as returned from the

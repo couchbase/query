@@ -508,10 +508,23 @@ func (s *store) GetRolesAll() ([]datastore.Role, errors.Error) {
 }
 
 func (s *store) SetClientConnectionSecurityConfig() (err error) {
-	if s.connSecConfig != nil && s.connSecConfig.ClusterEncryptionConfig.EncryptData {
-		err = s.client.InitTLS(s.connSecConfig.CAFile, s.connSecConfig.CertFile, s.connSecConfig.ClusterEncryptionConfig.DisableNonSSLPorts)
+	if s.connSecConfig != nil &&
+		s.connSecConfig.ClusterEncryptionConfig.EncryptData {
+
+		// For every initTLS call when info is refreshed pass the
+		// cert and key info along with passphrase to client.
+
+		err = s.client.InitTLS(s.connSecConfig.CAFile,
+			s.connSecConfig.CertFile,
+			s.connSecConfig.KeyFile,
+			s.connSecConfig.ClusterEncryptionConfig.DisableNonSSLPorts,
+			s.connSecConfig.TLSConfig.PrivateKeyPassphrase)
+
 		if err == nil && s.gcClient != nil {
-			err = s.gcClient.InitTLS(s.connSecConfig.CAFile, s.connSecConfig.CertFile)
+			err = s.gcClient.InitTLS(s.connSecConfig.CAFile,
+				s.connSecConfig.CertFile,
+				s.connSecConfig.KeyFile,
+				s.connSecConfig.TLSConfig.PrivateKeyPassphrase)
 		}
 		if err != nil {
 			if len(s.connSecConfig.CAFile) > 0 {

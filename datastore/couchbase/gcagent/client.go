@@ -21,6 +21,7 @@ import (
 	gctx "github.com/couchbase/gocbcore-transactions"
 	"github.com/couchbase/gocbcore/v9"
 	"github.com/couchbase/gocbcore/v9/connstr"
+	ntls "github.com/couchbase/goutils/tls"
 )
 
 const (
@@ -35,6 +36,7 @@ const (
 )
 
 type MemcachedAuthProvider struct {
+	c *Client
 }
 
 func (auth *MemcachedAuthProvider) Credentials(req gocbcore.AuthCredsRequest) (
@@ -64,6 +66,8 @@ func (auth *MemcachedAuthProvider) SupportsTLS() bool {
 
 func (auth *MemcachedAuthProvider) Certificate(req gocbcore.AuthCertRequest) (*tls.Certificate, error) {
 	return nil, nil
+	// At present when we act as client we use Credentials, not certificates.
+	// return auth.c.certs, nil
 }
 
 // Call this method with a TLS certificate file name to make communication
@@ -74,18 +78,20 @@ type Client struct {
 	mutex        sync.RWMutex
 	sslConfigFn  SSLConfigFn
 	atrLocations map[string]gctx.LostATRLocation
+	certs        *tls.Certificate
 }
 
 type SSLConfigFn func() (*gocbcore.AgentConfig, error)
 
-func NewClient(url string, sslHostFn func() (string, string), caFile, certFile string) (rv *Client, err error) {
+func NewClient(url string, sslHostFn func() (string, string), caFile, certFile, keyFile string, passphrase []byte) (rv *Client, err error) {
 	var connSpec *connstr.ConnSpec
 
 	rv = &Client{}
+
 	// network=default use internal (vs  alternative) addresses
 	// http bootstrap is faster
 	options := "?network=default&bootstrap_on=http"
-	if rv.config, connSpec, err = agentConfig(url, options); err != nil {
+	if rv.config, connSpec, err = agentConfig(url, options, rv); err != nil {
 		return nil, err
 	}
 
@@ -101,14 +107,14 @@ func NewClient(url string, sslHostFn func() (string, string), caFile, certFile s
 				// couchbases schema with custom port will not allowed http bootstrap.
 				surl = "http://" + sslHost + ":" + sslPort
 			}
-			sslConfig, _, err1 := agentConfig(surl, options)
+			sslConfig, _, err1 := agentConfig(surl, options, rv)
 			return sslConfig, err1
 		}
 		return nil, fmt.Errorf("no ssl address")
 	}
 
-	if certFile != "" || caFile != "" {
-		if err = rv.InitTLS(caFile, certFile); err != nil {
+	if certFile != "" || caFile != "" || keyFile != "" {
+		if err = rv.InitTLS(caFile, certFile, keyFile, passphrase); err != nil {
 			return nil, err
 		}
 	}
@@ -119,14 +125,14 @@ func NewClient(url string, sslHostFn func() (string, string), caFile, certFile s
 	return rv, err
 }
 
-func agentConfig(url, options string) (config *gocbcore.AgentConfig, cspec *connstr.ConnSpec, err error) {
+func agentConfig(url, options string, rv *Client) (config *gocbcore.AgentConfig, cspec *connstr.ConnSpec, err error) {
 	config = &gocbcore.AgentConfig{
 		ConnectTimeout:       _CONNECTTIMEOUT,
 		KVConnectTimeout:     _KVCONNECTTIMEOUT,
 		UseCollections:       true,
 		KvPoolSize:           _kVPOOLSIZE,
 		MaxQueueSize:         _MAXQUEUESIZE,
-		Auth:                 &MemcachedAuthProvider{},
+		Auth:                 &MemcachedAuthProvider{rv},
 		DefaultRetryStrategy: gocbcore.NewBestEffortRetryStrategy(nil),
 	}
 
@@ -204,7 +210,7 @@ func (c *Client) Close() {
 }
 
 // with the KV engine encrypted.
-func (c *Client) InitTLS(caFile, certFile string) error {
+func (c *Client) InitTLS(caFile, certFile, keyFile string, passphrase []byte) error {
 	if len(caFile) > 0 {
 		certFile = caFile
 	}
@@ -214,7 +220,13 @@ func (c *Client) InitTLS(caFile, certFile string) error {
 	}
 	CA_Pool := x509.NewCertPool()
 	CA_Pool.AppendCertsFromPEM(serverCert)
+	certs, err := ntls.LoadX509KeyPair(certFile, keyFile, passphrase)
+	if err != nil {
+		return err
+	}
 	c.mutex.Lock()
+	// Set values for certs and passphrase
+	c.certs = &certs
 	c.rootCAs = CA_Pool
 	c.mutex.Unlock()
 	return nil
@@ -223,6 +235,7 @@ func (c *Client) InitTLS(caFile, certFile string) error {
 func (c *Client) ClearTLS() {
 	c.mutex.Lock()
 	c.rootCAs = nil
+	c.certs = nil
 	c.mutex.Unlock()
 }
 

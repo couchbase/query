@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/couchbase/cbauth"
+	ntls "github.com/couchbase/goutils/tls"
 	"github.com/couchbase/query/accounting"
 	"github.com/couchbase/query/audit"
 	"github.com/couchbase/query/datastore"
@@ -241,17 +242,18 @@ func (this *HttpEndpoint) ListenTLS() error {
 		return nil
 	}
 
-	tlsCert, err := tls.LoadX509KeyPair(this.certFile, this.keyFile)
-	if err != nil {
-		return err
-	}
-
 	cbauthTLSsettings, err1 := cbauth.GetTLSConfig()
 	if err1 != nil {
 		return fmt.Errorf("Failed to get cbauth tls config: %v", err1.Error())
 	}
 
 	this.connSecConfig.TLSConfig = cbauthTLSsettings
+
+	tlsCert, err := ntls.LoadX509KeyPair(this.certFile, this.keyFile,
+		this.connSecConfig.TLSConfig.PrivateKeyPassphrase)
+	if err != nil {
+		return err
+	}
 
 	cfg := &tls.Config{
 		Certificates:             []tls.Certificate{tlsCert},

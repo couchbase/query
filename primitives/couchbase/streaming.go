@@ -52,8 +52,7 @@ func doHTTPRequestForStreaming(req *http.Request) (*http.Response, error) {
 			}
 		} else {
 			// Handle cases with cert
-
-			cfg, err := ClientConfigForX509(caFile, certFile, keyFile)
+			cfg, err := ClientConfigForX509(caFile, certFile, keyFile, privateKeyPassphrase)
 			if err != nil {
 				return nil, err
 			}
