@@ -15,6 +15,7 @@ import (
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/functions"
 	"github.com/couchbase/query/functions/authorize"
+	"github.com/couchbase/query/functions/bridge"
 	"github.com/couchbase/query/functions/golang"
 	"github.com/couchbase/query/functions/inline"
 	"github.com/couchbase/query/functions/javascript"
@@ -23,7 +24,10 @@ import (
 )
 
 func Init(mux *mux.Router, threads int) {
-	functions.Constructor = newGlobalFunction
+	functionsBridge.NewFunctionName = newGlobalFunction
+	functionsBridge.NewInlineBody = inline.NewInlineBody
+	functionsBridge.NewGolangBody = golang.NewGolangBody
+	functionsBridge.NewJavascriptBody = javascript.NewJavascriptBody
 	authorize.Init()
 	storage.Init()
 	golang.Init()

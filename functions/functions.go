@@ -86,7 +86,6 @@ type functionCache struct {
 	tag   atomic.AlignedInt64
 }
 
-var Constructor func(elem []string, namespace string, queryContext string) (FunctionName, errors.Error)
 var Authorize func(privileges *auth.Privileges, credentials *auth.Credentials) errors.Error
 
 var languages = [_SIZER]LanguageRunner{&missing{}, &empty{}}
@@ -101,13 +100,6 @@ func FunctionsNewLanguage(lang Language, runner LanguageRunner) {
 	if runner != nil && lang != _MISSING {
 		languages[lang] = runner
 	}
-}
-
-// support for language runners
-
-// golang UDFs can use this to execute N1QL
-func Run(statement string, namedArgs map[string]value.Value, positionalArgs value.Values, context Context) (value.Value, uint64, error) {
-	return context.EvaluateStatement(statement, namedArgs, positionalArgs, false, context.Readonly())
 }
 
 // configure functions cache

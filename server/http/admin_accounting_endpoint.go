@@ -28,6 +28,7 @@ import (
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/functions"
+	"github.com/couchbase/query/functions/bridge"
 	functionsMeta "github.com/couchbase/query/functions/metakv"
 	functionsResolver "github.com/couchbase/query/functions/resolver"
 	"github.com/couchbase/query/prepareds"
@@ -1261,7 +1262,7 @@ func doFunctionRestore(v []byte, l int, b string, include, exclude matcher, rema
 	if l == 2 || filterEval(path, include, exclude) {
 		remap.remap(b, path)
 
-		name, err1 := functions.Constructor(path, path[0], "")
+		name, err1 := functionsBridge.NewFunctionName(path, path[0], "")
 		if err1 != nil {
 			return errors.NewServiceErrorBadValue(err1, "UDF restore body")
 		}

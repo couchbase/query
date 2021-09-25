@@ -10,9 +10,7 @@ import "github.com/couchbase/query/errors"
 import "github.com/couchbase/query/expression"
 import "github.com/couchbase/query/expression/search"
 import "github.com/couchbase/query/functions"
-import "github.com/couchbase/query/functions/inline"
-import "github.com/couchbase/query/functions/golang"
-import "github.com/couchbase/query/functions/javascript"
+import "github.com/couchbase/query/functions/bridge"
 import "github.com/couchbase/query/value"
 
 func logDebugGrammar(format string, v ...interface{}) {
@@ -2981,7 +2979,7 @@ long_func_name
 short_func_name:
 keyspace_name
 {
-    name, err := functions.Constructor([]string{$1}, yylex.(*lexer).Namespace(), yylex.(*lexer).QueryContext())
+    name, err := functionsBridge.NewFunctionName([]string{$1}, yylex.(*lexer).Namespace(), yylex.(*lexer).QueryContext())
     if err != nil {
         yylex.Error(err.Error()+yylex.(*lexer).ErrorContext())
     }
@@ -2992,7 +2990,7 @@ keyspace_name
 long_func_name:
 namespace_term keyspace_name
 {
-    name, err := functions.Constructor([]string{$1, $2}, yylex.(*lexer).Namespace(), yylex.(*lexer).QueryContext())
+    name, err := functionsBridge.NewFunctionName([]string{$1, $2}, yylex.(*lexer).Namespace(), yylex.(*lexer).QueryContext())
     if err != nil {
         yylex.Error(err.Error()+yylex.(*lexer).ErrorContext())
     }
@@ -3001,7 +2999,7 @@ namespace_term keyspace_name
 |
 namespace_term bucket_name DOT scope_name DOT keyspace_name
 {
-    name, err := functions.Constructor([]string{$1, $2, $4, $6}, yylex.(*lexer).Namespace(), yylex.(*lexer).QueryContext())
+    name, err := functionsBridge.NewFunctionName([]string{$1, $2, $4, $6}, yylex.(*lexer).Namespace(), yylex.(*lexer).QueryContext())
     if err != nil {
         yylex.Error(err.Error()+yylex.(*lexer).ErrorContext())
     }
@@ -3038,7 +3036,7 @@ parameter_terms COMMA IDENT
 func_body:
 LBRACE expr RBRACE
 {
-    body, err := inline.NewInlineBody($2)
+    body, err := functionsBridge.NewInlineBody($2)
     if err != nil {
         yylex.Error(err.Error()+yylex.(*lexer).ErrorContext())
     } else {
@@ -3048,7 +3046,7 @@ LBRACE expr RBRACE
 |
 LANGUAGE INLINE AS expr
 {
-    body, err := inline.NewInlineBody($4)
+    body, err := functionsBridge.NewInlineBody($4)
     if err != nil {
         yylex.Error(err.Error()+yylex.(*lexer).ErrorContext())
     } else {
@@ -3058,7 +3056,7 @@ LANGUAGE INLINE AS expr
 |
 LANGUAGE GOLANG AS STR AT STR
 {
-    body, err := golang.NewGolangBody($6, $4)
+    body, err := functionsBridge.NewGolangBody($6, $4)
     if err != nil {
         yylex.Error(err.Error()+yylex.(*lexer).ErrorContext())
     } else {
@@ -3068,7 +3066,7 @@ LANGUAGE GOLANG AS STR AT STR
 |
 LANGUAGE JAVASCRIPT AS STR AT STR
 {
-    body, err := javascript.NewJavascriptBody($6, $4)
+    body, err := functionsBridge.NewJavascriptBody($6, $4)
     if err != nil {
         yylex.Error(err.Error()+yylex.(*lexer).ErrorContext())
     } else {
@@ -4106,7 +4104,7 @@ function_name LPAREN opt_exprs RPAREN opt_filter opt_nulls_treatment opt_window_
 
         f = nil
         if $5 == nil && $6 == uint32(0) && $7 == nil {
-            name, err = functions.Constructor([]string{fname}, yylex.(*lexer).Namespace(), yylex.(*lexer).QueryContext())
+            name, err = functionsBridge.NewFunctionName([]string{fname}, yylex.(*lexer).Namespace(), yylex.(*lexer).QueryContext())
             if err != nil {
                 return yylex.(*lexer).FatalError(err.Error()+yylex.(*lexer).ErrorContext())
             }
