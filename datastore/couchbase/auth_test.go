@@ -60,6 +60,10 @@ func (a authUser) Domain() string {
 	return "internal"
 }
 
+func (a authUser) User() (string, string) {
+	return a.id, a.Domain()
+}
+
 func (a authUser) Uuid() (string, error) {
 	return "internal", nil
 }
