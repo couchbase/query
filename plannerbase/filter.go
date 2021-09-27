@@ -222,6 +222,10 @@ func (this *Filter) IsPostjoinFilter(onclause expression.Expression, outer bool)
 		if SubsetOf(onclause, this.fltrExpr) {
 			return false
 		}
+		if this.origExpr != nil && SubsetOf(onclause, this.origExpr) {
+			return false
+		}
+
 		// if it's not part of the current ON-clause, it must be specified
 		// in an ON-clause for a later inner join (pushed), in which case
 		// treat it as postjoin

@@ -132,6 +132,27 @@
             "c11": 4
         }
 	]
+    },
+    {
+        "testcase": "MB-48601",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'NestedLoopJoin' AND v.`alias` = 'r' AND v.`outer` IS NOT MISSING AND v.`filter` IS MISSING END"
+        },
+        "statements":"SELECT l.c11, r.c21 FROM shellTest l LEFT JOIN shellTest r ON l.c12 = r.c22 AND l.c11 != r.c21 AND r.type = \"right\" WHERE l.type = \"left\" AND l.c11 > 2",
+        "results": [
+        {
+            "c11": 3
+        },
+        {
+            "c11": 4
+        }
+	]
     }
 ]
 
