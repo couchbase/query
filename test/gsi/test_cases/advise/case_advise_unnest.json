@@ -95,9 +95,16 @@
           "#operator": "IndexAdvice",
           "adviseinfo": {
             "recommended_indexes": {
+              "covering_indexes": [
+                {
+                  "index_property": "FULL GROUPBY & AGGREGATES pushdown, GROUPBY & AGGREGATES pushdown",
+                  "index_statement": "CREATE INDEX adv_ALL_schedule_special_flights_flight ON `shellTest`(ALL ARRAY (ALL ARRAY `x`.`flight` FOR y IN `x`.`special_flights` END) FOR x IN `schedule` END)",
+                  "keyspace_alias": "shellTest"
+                }
+              ],
               "indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_ALL_schedule_flight ON `shellTest`(ALL ARRAY `x`.`flight` FOR x IN `schedule` END)",
+                  "index_statement": "CREATE INDEX adv_ALL_schedule_special_flights_flight ON `shellTest`(ALL ARRAY (ALL ARRAY `x`.`flight` FOR y IN `x`.`special_flights` END) FOR x IN `schedule` END)",
                   "keyspace_alias": "shellTest",
                   "recommending_rule": "Index keys follow order of predicate types: 1. leading array index for unnest."
                 }
@@ -211,15 +218,39 @@
               ],
               "indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_ALL_branches_Id_type ON `shellTest`(ALL ARRAY `branch`.`Id` FOR branch IN `branches` END,`type`)",
+                  "index_statement": "CREATE INDEX adv_ALL_branches_Id_type_cur_sub_2 ON `shellTest`(ALL ARRAY `branch`.`Id` FOR branch IN `branches` END,`type`,`cur`-2)",
                   "keyspace_alias": "shellTest_t",
-                  "recommending_rule": "Index keys follow order of predicate types: 1. leading array index for unnest, 7. not null/not missing/valued."
+                  "recommending_rule": "Index keys follow order of predicate types: 1. leading array index for unnest, 7. not null/not missing/valued, 9. non-static join predicate."
                 }
               ]
             }
           }
         },
         "query": "SELECT t.type,branch.Id FROM shellTest AS t UNNEST t.branches AS branch WHERE t.type is valued AND branch.Id > (t.cur-2)"
+      }
+    ]
+  },
+  {
+    "statements": "ADVISE SELECT META(t).id , pg1.description, pg1.num, pg1.name FROM shellTest AS t UNNEST t.chapters AS ch1 UNNEST ch1.pages AS pg1 WHERE t.type = \"book\" AND ch1.num = 1 AND pg1.name LIKE \"page%\" AND t.isbn >= 1;",
+    "advise": true,
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": {
+            "recommended_indexes": {
+              "indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_ALL_chapters_pages_num_name_isbn_type ON `shellTest`(ALL ARRAY (ALL ARRAY FLATTEN_KEYS(`ch1`.`num`,`pg1`.`name`) FOR pg1 IN `ch1`.`pages` END) FOR ch1 IN `chapters` END,`isbn`) WHERE `type` = 'book'",
+                  "keyspace_alias": "shellTest_t",
+                  "recommending_rule":"Index keys follow order of predicate types: 1. leading array index for unnest, 4. not less than/between/not greater than, 10. flavor for partial index."
+                }
+              ]
+            }
+          }
+        },
+        "query": "SELECT META(t).id , pg1.description, pg1.num, pg1.name FROM shellTest AS t UNNEST t.chapters AS ch1 UNNEST ch1.pages AS pg1 WHERE t.type = \"book\" AND ch1.num = 1 AND pg1.name LIKE \"page%\" AND t.isbn >= 1;"
       }
     ]
   }

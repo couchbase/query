@@ -143,8 +143,7 @@ func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.Keyspa
 
 		}
 
-		this.enableUnnest(node.Alias())
-		this.collectPredicates(baseKeyspace, keyspace, node, nil, false)
+		this.collectPredicates(baseKeyspace, keyspace, node, nil, false, true)
 
 		if baseKeyspace.DnfPred() != nil {
 			if baseKeyspace.OrigPred() == nil {

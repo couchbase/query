@@ -142,7 +142,7 @@ func (this *builder) buildJoinScan(keyspace datastore.Keyspace, node *algebra.Ke
 		return nil, nil, nil, errors.NewPlanInternalError(fmt.Sprintf("buildJoinScan: keyspace %s not found", node.Alias()))
 	}
 
-	this.collectPredicates(nil, keyspace, node, subset, false)
+	this.collectPredicates(nil, keyspace, node, subset, false, false)
 	if err != nil || len(indexes) == 0 {
 		return nil, nil, nil, errors.NewNoIndexJoinError(node.Alias(), op)
 	}

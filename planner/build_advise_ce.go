@@ -42,7 +42,8 @@ func (this *builder) appendQueryInfo(scan plan.Operator, keyspace datastore.Keys
 func (this *builder) enableUnnest(alias string) {
 }
 
-func (this *builder) collectPredicates(baseKeyspace *base.BaseKeyspace, keyspace datastore.Keyspace, node *algebra.KeyspaceTerm, pred expression.Expression, ansijoin bool) error {
+func (this *builder) collectPredicates(baseKeyspace *base.BaseKeyspace, keyspace datastore.Keyspace,
+	node *algebra.KeyspaceTerm, pred expression.Expression, ansijoin, unnest bool) error {
 	return nil
 }
 

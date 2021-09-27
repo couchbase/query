@@ -26,6 +26,10 @@ const (
 	_VALIDATE
 )
 
+const (
+	_MAXUNNEST = 6
+)
+
 var pushdownMap = map[PushDownProperties]string{
 	_PUSHDOWN_LIMIT:         "LIMIT pushdown",
 	_PUSHDOWN_OFFSET:        "OFFSET pushdown",
@@ -302,18 +306,32 @@ func (this *builder) extractLetGroupProjOrder(let expression.Bindings, group *al
 	}
 }
 
-func (this *builder) enableUnnest(alias string) {
-	if this.indexAdvisor && this.advisePhase == _RECOMMEND {
-		if this.queryInfo.ContainsUnnest() {
-			this.queryInfo.InitializeUnnestMap()
-			collectInnerUnnestMap(this.from, this.queryInfo, expression.NewIdentifier(alias), 1)
-			this.queryInfo.SetUnnest(false)
+func (this *builder) collectUnnests(node *algebra.KeyspaceTerm) {
+	if this.indexAdvisor && this.advisePhase == _RECOMMEND && this.queryInfo.ContainsUnnest() {
+		unnests, unnestsIdentifiers := this.queryInfo.Unnests()
+		if len(unnests) == 0 {
+			unnests = collectInnerUnnests(this.from, unnests)
+			unnestsIdentifiers = collectUnnestsIdentifiers(unnests)
+			this.queryInfo.SetUnnests(unnests, unnestsIdentifiers)
+		}
+		unnestMap := make(map[string]*unnestAdvisorEntry, len(unnests))
+		for i, u := range unnests {
+			if len(unnestsIdentifiers[i]) > 0 && u.Expression().Indexable() {
+				unnestMap[u.Alias()] = &unnestAdvisorEntry{unnest: u, dependent: unnestsIdentifiers[i]}
+			}
+		}
+		aliases := make(map[string]bool, 1)
+		aliases[node.Alias()] = true
+		collectAdvisorUnnests(aliases, unnestMap)
+
+		for s, eu := range collectAdvisorUnnestsLevel(unnestMap, _MAXUNNEST) {
+			this.queryInfo.AddToUnnestMap(node.Alias(), s, eu.unnest.Expression(), eu.level)
 		}
 	}
 }
 
 func (this *builder) collectPredicates(baseKeyspace *base.BaseKeyspace, keyspace datastore.Keyspace,
-	node *algebra.KeyspaceTerm, pred expression.Expression, ansijoin bool) error {
+	node *algebra.KeyspaceTerm, pred expression.Expression, ansijoin, unnest bool) error {
 	if !(this.indexAdvisor && this.advisePhase == _RECOMMEND) {
 		return nil
 	}
@@ -323,6 +341,10 @@ func (this *builder) collectPredicates(baseKeyspace *base.BaseKeyspace, keyspace
 	}
 	if baseKeyspace == nil {
 		baseKeyspace = this.baseKeyspaces[node.Alias()]
+	}
+
+	if unnest {
+		this.collectUnnests(node)
 	}
 
 	if pred == nil {
@@ -449,7 +471,7 @@ func getFilterInfos(filters base.Filters, context *PrepareContext) base.Filters 
 
 func (this *builder) setUnnest() {
 	if this.indexAdvisor && this.advisePhase == _RECOMMEND {
-		this.queryInfo.SetUnnest(true)
+		this.queryInfo.SetContainsUnnest(true)
 	}
 }
 
@@ -495,24 +517,81 @@ func (this *builder) advisorValidate() bool {
 	return this.indexAdvisor && this.advisePhase == _VALIDATE
 }
 
-func collectInnerUnnestMap(from algebra.FromTerm, q *advisor.QueryInfo, primaryIdentifier *expression.Identifier, level int) int {
-	joinTerm, ok := from.(algebra.JoinTerm)
-	if !ok {
-		return 0
+// collect identfiers for the unnests used
+
+func collectUnnestsIdentifiers(unnests []*algebra.Unnest) (rv []map[string]expression.Expression) {
+	rv = make([]map[string]expression.Expression, len(unnests))
+	for pos, u := range unnests {
+		rv[pos] = expression.GetIdentifiers(u.Expression())
+	}
+	return
+}
+
+// indexable unnests with dependency check and assign level
+func collectAdvisorInnerUnnests(aliases map[string]bool, unnestMap map[string]*unnestAdvisorEntry) (rv []string) {
+outer:
+	for _, u := range unnestMap {
+		if u.done {
+			continue
+		}
+		level := 0
+		for s, _ := range u.dependent {
+			if _, ok := aliases[s]; !ok {
+				continue outer
+			}
+			if u1, ok := unnestMap[s]; ok && level < u1.level {
+				level = u1.level
+			}
+		}
+		rv = append(rv, u.unnest.Alias())
+		u.level = level + 1
+		u.done = true
 	}
 
-	level = collectInnerUnnestMap(joinTerm.Left(), q, primaryIdentifier, level)
-	unnest, ok := joinTerm.(*algebra.Unnest)
-	if ok && !unnest.Outer() {
-		// to add the top level expression to avoid generating regular index on it.
-		if unnest.Expression().DependsOn(primaryIdentifier) {
-			q.AddToUnnestMap(expression.NewStringer().Visit(unnest.Expression()), unnest.Expression(), level)
-			level += 1
+	return rv
+}
+
+// collect unnests that can be indexed
+func collectAdvisorUnnests(aliases map[string]bool, unnestMap map[string]*unnestAdvisorEntry) {
+	rv := collectAdvisorInnerUnnests(aliases, unnestMap)
+	for _, a := range rv {
+		newAliases := make(map[string]bool, len(aliases)+1)
+		for k, v := range aliases {
+			newAliases[k] = v
 		}
-		q.AddToUnnestMap(unnest.Alias(), unnest.Expression(), level)
-		level += 1
+		newAliases[a] = true
+
+		collectAdvisorUnnests(newAliases, unnestMap)
 	}
-	return level
+	return
+}
+
+// Get highest nested unnests
+func collectAdvisorUnnestsLevel(unnestMap map[string]*unnestAdvisorEntry, level int) (rv map[string]*unnestAdvisorEntry) {
+	var fu *unnestAdvisorEntry
+	for _, eu := range unnestMap {
+		if eu.done && (fu == nil || (eu.level > fu.level && eu.level <= level)) {
+			fu = eu
+		}
+	}
+
+	if fu != nil {
+		rv = make(map[string]*unnestAdvisorEntry, len(fu.dependent))
+		rv[fu.unnest.Alias()] = fu
+		for s, _ := range fu.dependent {
+			if u, ok := unnestMap[s]; ok {
+				rv[s] = u
+			}
+		}
+	}
+	return
+}
+
+type unnestAdvisorEntry struct {
+	unnest    *algebra.Unnest
+	level     int
+	done      bool
+	dependent map[string]expression.Expression
 }
 
 func extractExistAndDeferredIdxes(queryInfos map[expression.HasExpressions]*advisor.QueryInfo,
