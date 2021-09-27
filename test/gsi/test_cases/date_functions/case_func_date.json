@@ -876,7 +876,7 @@
    },
    {
         "statements": "SELECT DATE_RANGE_STR('1980-01-01', '9999-12-31', 'day')",
-        "error": "Error evaluating projection - cause: Out of range evaluating DATE_RANGE_STR()."
+        "error": "Out of range evaluating DATE_RANGE_STR()."
     },
     {
         "description": "calendar_month vs month range generation with start as last day of month",
@@ -976,7 +976,7 @@
     },
     {
         "statements": "SELECT DATE_RANGE_MILLIS(0, 10000000000, 'millisecond')",
-        "error": "Error evaluating projection - cause: Out of range evaluating DATE_RANGE_MILLIS()."
+        "error": "Out of range evaluating DATE_RANGE_MILLIS()."
     },
     {
         "statements": "SELECT WEEKDAY_MILLIS(1486237655742, 'America/Tijuana')",
