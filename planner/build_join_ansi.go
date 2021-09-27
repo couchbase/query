@@ -597,7 +597,12 @@ func (this *builder) buildAnsiJoinScan(node *algebra.KeyspaceTerm, onclause, fil
 
 	var newFilter, newOnclause expression.Expression
 
-	if !this.joinEnum() {
+	if this.joinEnum() {
+		// no need to do cover transformation (will be done at the end when the final
+		// plan is chosen); just set newFilter, no need to set newOnclause (will keep
+		// the original onclause if newOnclause is not set).
+		newFilter = filter
+	} else {
 		if filter != nil {
 			newFilter = filter.Copy()
 		}
@@ -877,6 +882,10 @@ func (this *builder) buildHashJoinOp(right algebra.SimpleFromTerm, outer bool,
 			return nil, nil, nil, nil, nil, nil,
 				OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, err
 		}
+		// no need to do cover transformation (will be done at the end when the final
+		// plan is chosen); just set newFilter, no need to set newOnclause (will keep
+		// the original onclause if newOnclause is not set).
+		newFilter = filter
 	} else {
 		this.coveringScans = nil
 		this.countScan = nil
