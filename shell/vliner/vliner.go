@@ -1089,6 +1089,10 @@ mainLoop:
 					line[pos] = r
 					if 0 != repeat {
 						pos++
+						if len(line) <= pos {
+							pos = len(line) - 1
+							break
+						}
 					}
 				}
 				s.stopRecording()
@@ -1346,19 +1350,17 @@ mainLoop:
 				for len(line) > pos && 0 == classify(line[pos]) {
 					pos++
 				}
-				if len(line) <= pos {
-					pos = len(line) - 1
-				}
 			}
 			if _NORMAL != mode {
-				if len(line)-1 == pos {
-					pos++
-				}
 				if _CHANGE == mode {
 					pos--
 					for ; 0 < pos && 0 == classify(line[pos]); pos-- {
 					}
 					pos++
+				}
+			} else {
+				if len(line) <= pos {
+					pos = len(line) - 1
 				}
 			}
 		case 'T':
