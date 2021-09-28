@@ -26,6 +26,7 @@ import (
 //
 
 const _EMPTY_KEY = ""
+const _KEYS_NOT_FOUND = 32
 
 type DocumentRetriever interface {
 	GetNextDoc(context datastore.QueryContext) (string, value.Value, *string) // returns nil for value when done
@@ -161,10 +162,11 @@ func MakePrimaryIndexDocumentRetriever(ks datastore.Keyspace, optSampleSize int)
 ////////////////////////////////////////////////////////////////////////////////
 
 type KeyspaceRandomDocumentRetriever struct {
-	ks         datastore.Keyspace
-	rdr        datastore.RandomEntryProvider
-	docIdsSeen map[string]bool
-	sampleSize int
+	ks           datastore.Keyspace
+	rdr          datastore.RandomEntryProvider
+	docIdsSeen   map[string]bool
+	keysNotFound int
+	sampleSize   int
 }
 
 func (krdr *KeyspaceRandomDocumentRetriever) GetNextDoc(context datastore.QueryContext) (string, value.Value, *string) {
@@ -184,10 +186,19 @@ func (krdr *KeyspaceRandomDocumentRetriever) GetNextDoc(context datastore.QueryC
 
 		// MB-42205 this may need improvement: a nil value only means that we run on of documents
 		// on the last node we queried. There may be corner cases with many nodes and few documents
-		// where we get a KEY_NOENT from one node, but there are more documents in other nodes
+		// where we get a KEY_NOENT from one node, but there are more documents in other nodes.
+		// Try at least _KEYS_NOT_FOUND(32) times.
+		// https://github.com/couchbase/kv_engine/blob/master/docs/BinaryProtocol.md#0xb6-get-random-key
+		// resident items only using a randomised vbucket as a start point and then randomised hash-tables
+		// buckets for searching within a vbucket.
 		if value == nil {
-			break
+			krdr.keysNotFound++
+			if krdr.keysNotFound > _KEYS_NOT_FOUND {
+				break
+			}
+			continue
 		}
+
 		if krdr.docIdsSeen[key] { // seen it before?
 			duplicatesSeen++
 			continue
