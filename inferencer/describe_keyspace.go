@@ -1,12 +1,10 @@
-/*
-Copyright 2019-Present Couchbase, Inc.
-
-Use of this software is governed by the Business Source License included in
-the file licenses/Couchbase-BSL.txt.  As of the Change Date specified in that
-file, in accordance with the Business Source License, use of this software will
-be governed by the Apache License, Version 2.0, included in the file
-licenses/APL.txt.
-*/
+// Copyright 2019-Present Couchbase, Inc.
+//
+// Use of this software is governed by the Business Source License included in
+// the file licenses/Couchbase-BSL.txt.  As of the Change Date specified in that
+// file, in accordance with the Business Source License, use of this software will
+// be governed by the Apache License, Version 2.0, included in the file
+// licenses/APL.txt.
 
 package inferencer
 
@@ -32,11 +30,7 @@ import (
 var desc_debug = false
 
 func DescribeKeyspace(context datastore.QueryContext, conn *datastore.ValueConnection, retriever DocumentRetriever,
-	similarityMetric float32, numSampleValues, dictionary_threshold, infer_timeout, max_schema_MB int32) (result value.Value, error_msg *string, warning_msg *string) {
-
-	result = nil
-	error_msg = nil
-	warning_msg = nil
+	similarityMetric float32, numSampleValues, dictionary_threshold, infer_timeout, max_schema_MB int32) (value.Value, errors.Error) {
 
 	if desc_debug {
 		fmt.Printf("Inferring keyspace...")
@@ -57,7 +51,7 @@ func DescribeKeyspace(context datastore.QueryContext, conn *datastore.ValueConne
 		if conn != nil {
 			select {
 			case <-conn.StopChannel():
-				return
+				return nil, nil
 			default:
 			}
 		}
@@ -65,12 +59,7 @@ func DescribeKeyspace(context datastore.QueryContext, conn *datastore.ValueConne
 		// Get the document
 		_, doc, err := retriever.GetNextDoc(context)
 		if err != nil {
-			message := fmt.Sprintf("Error getting documents for infer.\n%s", *err)
-			error := map[string]interface{}{"error": message}
-			error["internal Error"] = *err
-			result = value.NewValue(error)
-			error_msg = &message
-			return
+			return nil, err
 		}
 
 		if doc == nil { // all done, no more docs
@@ -93,8 +82,7 @@ func DescribeKeyspace(context datastore.QueryContext, conn *datastore.ValueConne
 			if desc_debug {
 				fmt.Printf("   exceeded infer_timeout of %d seconds, finishing document inferencing\n", infer_timeout)
 			}
-			tmp := fmt.Sprintf("Schema may be incomplete. Stopped schema inferencing after exceeding infer_timeout of %d seconds.", infer_timeout)
-			warning_msg = &tmp
+			err = errors.NewInferTimeout(infer_timeout)
 			break
 		}
 
@@ -107,8 +95,7 @@ func DescribeKeyspace(context datastore.QueryContext, conn *datastore.ValueConne
 			if desc_debug {
 				fmt.Printf("   exceeded max schema size of %d MB, finishing document inferencing\n", max_schema_MB)
 			}
-			tmp := fmt.Sprintf("Schema may be incomplete. Stopped schema inferencing after schema size exceeded max_schema_MB of %d MB.", max_schema_MB)
-			warning_msg = &tmp
+			err = errors.NewInferSizeLimit(max_schema_MB)
 			break
 		}
 
@@ -123,16 +110,10 @@ func DescribeKeyspace(context datastore.QueryContext, conn *datastore.ValueConne
 		}
 	}
 
-	//fmt.Printf("Count was %d.",count)
-
 	// nothing to do if no documents
 
 	if len(collection) == 0 {
-		message := fmt.Sprintf("No documents found, unable to infer schema.")
-		error := map[string]interface{}{"error": message}
-		result = value.NewValue(error)
-		error_msg = &message
-		return
+		return nil, errors.NewInferNoDocuments()
 	}
 
 	// now get the complete description
@@ -150,8 +131,6 @@ func DescribeKeyspace(context datastore.QueryContext, conn *datastore.ValueConne
 	// put out each flavor as JSON and return the result
 	//
 
-	schema_size := 0
-
 	desc := make([]value.Value, len(flavors))
 	for idx, _ := range flavors {
 		bytes, jerr := flavors[idx].MarshalJSON()
@@ -159,13 +138,10 @@ func DescribeKeyspace(context datastore.QueryContext, conn *datastore.ValueConne
 			desc[idx] = value.NewValue(jerr.Error())
 		} else {
 			desc[idx] = value.NewValue(bytes)
-			schema_size = schema_size + len(bytes)
 		}
 	}
 
-	result = value.NewValue(desc)
-
-	return
+	return value.NewValue(desc), nil
 }
 
 //
@@ -330,7 +306,7 @@ func (di *DefaultInferencer) InferKeyspace(context datastore.QueryContext, ks da
 	//
 
 	if docCount == 0 {
-		conn.Error(errors.NewWarning(fmt.Sprintf("Keyspace %s has no documents, schema inference not possible", ks.Name())))
+		conn.Error(errors.NewInferNoDocuments())
 		return
 	}
 
@@ -348,7 +324,7 @@ func (di *DefaultInferencer) InferKeyspace(context datastore.QueryContext, ks da
 	//
 
 	var retriever DocumentRetriever
-	var err, err2 *string
+	var err, err2, err3 errors.Error
 
 	retriever = nil
 	err = nil
@@ -367,8 +343,17 @@ func (di *DefaultInferencer) InferKeyspace(context datastore.QueryContext, ks da
 		if err != nil {
 			retriever, err2 = MakePrimaryIndexDocumentRetriever(ks, sample_size)
 			if err2 != nil {
-				conn.Error(errors.NewWarning(fmt.Sprintf("Unable to create either random or primary document retriever for keyspace: %s\n%s\n%s\n", ks.Name(), *err, *err2)))
-				return
+				retriever, err3 = MakeAnyIndexDocumentRetriever(ks, sample_size)
+				if err3 != nil {
+					conn.Error(err)
+					conn.Error(err2)
+					conn.Error(err3)
+					return
+				}
+				ai := retriever.(*AnyIndexDocumentRetriever)
+				conn.Warning(errors.NewInferIndexWarning(ai.Indexes))
+			} else {
+				conn.Warning(errors.NewInferIndexWarning([]string{"#primary"}))
 			}
 		}
 
@@ -389,34 +374,33 @@ func (di *DefaultInferencer) InferKeyspace(context datastore.QueryContext, ks da
 		if err != nil {
 			retriever, err2 = MakeKeyspaceRandomDocumentRetriever(ks, sample_size)
 			if err2 != nil {
-				conn.Error(errors.NewWarning(fmt.Sprintf("Unable to create either primary or random document retriever for keyspace: %s\n%s\n%s\n", ks.Name(), *err, *err2)))
-				return
+				retriever, err3 = MakeAnyIndexDocumentRetriever(ks, sample_size)
+				if err3 != nil {
+					conn.Error(err)
+					conn.Error(err2)
+					conn.Error(err3)
+					return
+				}
+				ai := retriever.(*AnyIndexDocumentRetriever)
+				conn.Warning(errors.NewInferIndexWarning(ai.Indexes))
 			}
+		} else {
+			conn.Warning(errors.NewInferIndexWarning([]string{"#primary"}))
 		}
 	}
 
 	//
 	// get the
 
-	schema, error_msg, warning_msg := DescribeKeyspace(context, conn, retriever, float32(similarity_metric), num_sample_values, dictionary_threshold, infer_timeout, max_schema_MB)
+	schema, err := DescribeKeyspace(context, conn, retriever, float32(similarity_metric), num_sample_values, dictionary_threshold, infer_timeout, max_schema_MB)
 
-	if error_msg != nil {
-		conn.Error(errors.NewWarning(*error_msg))
-		return
+	if err != nil {
+		if !err.IsWarning() {
+			conn.Error(err)
+			return
+		}
+		conn.Warning(err)
 	}
 
-	if warning_msg != nil {
-		conn.Warning(errors.NewWarning(*warning_msg))
-	}
 	conn.ValueChannel() <- schema
-}
-
-//
-// in verbose mode, output messages on the command line
-//
-
-func log(message string) {
-	if false {
-		fmt.Println(message)
-	}
 }

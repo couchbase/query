@@ -25,10 +25,10 @@ func main() {
 	// connect to couchbase and do schema inferencing on travel-sample
 	fmt.Printf("Connecting to %s\n", *CLUSTER)
 
-	kvRetriever, errr := inferencer.MakeKVRandomDocumentRetriever(*CLUSTER, *BUCKET, "", 1000)
+	kvRetriever, err := inferencer.MakeKVRandomDocumentRetriever(*CLUSTER, *BUCKET, "", 1000)
 
-	if errr != nil {
-		fmt.Printf("Error making retriever: %s\n", *errr)
+	if err != nil {
+		fmt.Printf("Error making retriever: %v\n", err)
 		return
 	}
 
@@ -42,10 +42,10 @@ func main() {
 
 	start := time.Now() // remember when we started
 
-	result, errr, warn := inferencer.DescribeKeyspace(nil, nil, kvRetriever, 0.6, 5, 10, 60, 10)
+	result, err := inferencer.DescribeKeyspace(nil, nil, kvRetriever, 0.6, 5, 10, 60, 10)
 
-	if errr != nil {
-		fmt.Printf("Error result: %v err: %v warn %v\n", result, errr, warn)
+	if err != nil {
+		fmt.Printf("Error result: %v err: %v\n", result, err)
 		return
 	}
 
