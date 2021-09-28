@@ -904,6 +904,8 @@ func procIndexHints(fields map[string]interface{}) (OptimHint, bool) {
 					}
 					indexes = append(indexes, NewIndexRef(name, datastore.DEFAULT))
 				}
+			case nil:
+				// if NULL is specified, ignore (no-op)
 			default:
 				name := value.NewValue(idxs).ToString()
 				if name == "" {
@@ -916,7 +918,7 @@ func procIndexHints(fields map[string]interface{}) (OptimHint, bool) {
 			break
 		}
 	}
-	if invalid || keyspace == "" || len(indexes) == 0 {
+	if invalid || keyspace == "" {
 		return nil, true
 	}
 
@@ -949,6 +951,8 @@ func procFTSIndexHints(fields map[string]interface{}) (OptimHint, bool) {
 					}
 					indexes = append(indexes, NewIndexRef(name, datastore.DEFAULT))
 				}
+			case nil:
+				// if NULL is specified, ignore (no-op)
 			default:
 				name := value.NewValue(idxs).ToString()
 				if name == "" {
@@ -961,7 +965,7 @@ func procFTSIndexHints(fields map[string]interface{}) (OptimHint, bool) {
 			break
 		}
 	}
-	if invalid || keyspace == "" || len(indexes) == 0 {
+	if invalid || keyspace == "" {
 		return nil, true
 	}
 
@@ -1016,6 +1020,8 @@ func procHashHints(fields map[string]interface{}) (OptimHint, bool) {
 				option = HASH_OPTION_BUILD
 			case "probe":
 				option = HASH_OPTION_PROBE
+			case "null":
+				// if null is specified, ignore (no-op)
 			default:
 				invalid = true
 			}
