@@ -1,0 +1,15 @@
+[
+
+    {
+        "statements": "select len([1,2,3]), len({\"a\":null,\"b\":1}), len(\"Hello world\"), len(12.34), len(missing), len(null)",
+        "results": [
+            {
+                "$1": 3,
+                "$2": 2,
+                "$3": 11,
+                "$4": null,
+                "$6": null
+            }
+        ]
+    }
+]

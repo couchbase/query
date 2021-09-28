@@ -439,4 +439,7 @@ var _FUNCTIONS = map[string]Function{
 
 	// Index Advisor
 	"advisor": &Advisor{},
+
+	// General
+	"len": &Len{},
 }
