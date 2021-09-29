@@ -144,6 +144,10 @@ func (this *BaseKeyspace) IsAnsiNest() bool {
 	return this.node != nil && this.node.IsAnsiNest()
 }
 
+func (this *BaseKeyspace) IsCommaJoin() bool {
+	return this.node != nil && this.node.IsCommaJoin()
+}
+
 func CopyBaseKeyspaces(src map[string]*BaseKeyspace) map[string]*BaseKeyspace {
 	return copyBaseKeyspaces(src, false)
 }
