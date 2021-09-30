@@ -79,6 +79,10 @@ func (this *IndexContext) Parse(s string) (interface{}, error) {
 	return nil, nil
 }
 
+func (this *IndexContext) Infer(value.Value, value.Value) (value.Value, error) {
+	return nil, nil
+}
+
 func (this *IndexContext) Readonly() bool {
 	return true
 }

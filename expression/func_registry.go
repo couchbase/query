@@ -442,4 +442,9 @@ var _FUNCTIONS = map[string]Function{
 
 	// General
 	"len": &Len{},
+
+	// Infer
+	"infer_value": &InferValue{},
+	"infervalue":  &InferValue{},
+	"infer":       &InferValue{},
 }

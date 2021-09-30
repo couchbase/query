@@ -73,6 +73,7 @@ type Visitor interface {
 	   Visitor for INFER statements.
 	*/
 	VisitInferKeyspace(stmt *InferKeyspace) (interface{}, error)
+	VisitInferExpression(stmt *InferExpression) (interface{}, error)
 
 	/*
 	   Visitor FUNCTION statements

@@ -448,6 +448,10 @@ func (this *scanIdxCol) VisitInferKeyspace(op *plan.InferKeyspace) (interface{},
 	return nil, nil
 }
 
+func (this *scanIdxCol) VisitInferExpression(op *plan.InferExpression) (interface{}, error) {
+	return nil, nil
+}
+
 // Function statements
 func (this *scanIdxCol) VisitCreateFunction(op *plan.CreateFunction) (interface{}, error) {
 	return nil, nil

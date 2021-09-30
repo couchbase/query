@@ -42,7 +42,15 @@ func main() {
 
 	start := time.Now() // remember when we started
 
-	result, err := inferencer.DescribeKeyspace(nil, nil, kvRetriever, 0.6, 5, 10, 60, 10)
+	options := &inferencer.DescribeOptions{
+		SimilarityMetric:    0.6,
+		NumSampleValues:     5,
+		DictionaryThreshold: 10,
+		InferTimeout:        60,
+		MaxSchemaMB:         10,
+	}
+
+	result, err := inferencer.DescribeKeyspace(nil, nil, kvRetriever, options)
 
 	if err != nil {
 		fmt.Printf("Error result: %v err: %v\n", result, err)

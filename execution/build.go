@@ -693,6 +693,10 @@ func (this *builder) VisitInferKeyspace(plan *plan.InferKeyspace) (interface{}, 
 	return checkOp(NewInferKeyspace(plan, this.context), this.context)
 }
 
+func (this *builder) VisitInferExpression(plan *plan.InferExpression) (interface{}, error) {
+	return checkOp(NewInferExpression(plan, this.context), this.context)
+}
+
 // CreateFunction
 func (this *builder) VisitCreateFunction(plan *plan.CreateFunction) (interface{}, error) {
 	return checkOp(NewCreateFunction(plan, this.context), this.context)

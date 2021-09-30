@@ -22,3 +22,7 @@ func (this *builder) VisitInferKeyspace(stmt *algebra.InferKeyspace) (interface{
 
 	return plan.NewInferKeyspace(keyspace, stmt), nil
 }
+
+func (this *builder) VisitInferExpression(stmt *algebra.InferExpression) (interface{}, error) {
+	return plan.NewInferExpression(stmt), nil
+}

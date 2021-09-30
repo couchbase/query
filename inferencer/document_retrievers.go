@@ -10,10 +10,16 @@ package inferencer
 
 import (
 	"fmt"
+	"math"
+	"math/rand"
 	"sort"
 
+	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/logging"
+	"github.com/couchbase/query/plannerbase"
 	"github.com/couchbase/query/primitives/couchbase"
 	"github.com/couchbase/query/value"
 )
@@ -21,6 +27,48 @@ import (
 const _EMPTY_KEY = ""
 const _KEYS_NOT_FOUND = 5
 const _MAX_DUPLICATES = 100
+const _RANDOM_THRESHOLD = 0.75
+const _MAX_INDEXES_TRIED_PER_DOC = 10
+const _MAX_NUM_SCANS = 20000
+const _MAX_SAMPLE_SIZE = 1000000
+
+type Flag int
+
+const (
+	NO_FLAGS     Flag = iota
+	SINGLE_INDEX Flag = 1 << iota
+	LIMIT_2_INDEXES
+	LIMIT_5_INDEXES
+	NO_RANDOM_ENTRY
+	NO_PRIMARY_INDEX
+	NO_SECONDARY_INDEX
+	NO_RANDOM_INDEX_SAMPLE
+	ALLOW_DUPLICATED_LEADING_KEY
+	ALLOW_ARRAY_INDEXES
+	LIMIT_RANDOM
+	ALLOW_CONDITIONAL
+	ALLOW_SUPERSET_CONDITIONS
+	CACHE_KEYS
+	RANDOM_ENTRY_LAST
+)
+
+var flags_map = map[string]Flag{
+	"no_flags":                     NO_FLAGS,
+	"single_index":                 SINGLE_INDEX,
+	"limit_2_indexes":              LIMIT_2_INDEXES,
+	"limit_5_indexes":              LIMIT_5_INDEXES,
+	"no_random_entry":              NO_RANDOM_ENTRY,
+	"no_primary_index":             NO_PRIMARY_INDEX,
+	"no_secondary_index":           NO_SECONDARY_INDEX,
+	"no_random_index_sample":       NO_RANDOM_INDEX_SAMPLE,
+	"allow_duplicated_leading_key": ALLOW_DUPLICATED_LEADING_KEY,
+	"allow_array_indexes":          ALLOW_ARRAY_INDEXES,
+	"limit_random":                 LIMIT_RANDOM,
+	"allow_conditional":            ALLOW_CONDITIONAL,
+	"allow_superset_conditions":    ALLOW_SUPERSET_CONDITIONS,
+	"cache_keys":                   CACHE_KEYS,
+	"random_entry_last":            RANDOM_ENTRY_LAST,
+}
 
 //
 // we need an interface describing access methods for getting a set
@@ -30,134 +78,10 @@ const _MAX_DUPLICATES = 100
 
 type DocumentRetriever interface {
 	GetNextDoc(context datastore.QueryContext) (string, value.Value, errors.Error) // returns nil for value when done
+	Reset()
 }
 
-////////////////////////////////////////////////////////////////////////////////
-// PrimaryIndexDocumentRetriever implementation
-//
-// Given a datastore with a primary index, use that index to retrieve
-// documents.
-////////////////////////////////////////////////////////////////////////////////
-
-type PrimaryIndexDocumentRetriever struct {
-	ks           datastore.Keyspace
-	docIds       []string
-	nextToReturn int
-	sampleSize   int
-}
-
-func (pidr *PrimaryIndexDocumentRetriever) GetNextDoc(context datastore.QueryContext) (string, value.Value, errors.Error) {
-	// have we reached the end of the set of primary keys?
-	if pidr.nextToReturn >= len(pidr.docIds) {
-		return _EMPTY_KEY, nil, nil
-	}
-
-	// retrieve the next key
-	key := pidr.docIds[pidr.nextToReturn : pidr.nextToReturn+1]
-	pidr.nextToReturn++
-	docs := make(map[string]value.AnnotatedValue, 1)
-	errs := pidr.ks.Fetch(key, docs, datastore.NULL_QUERY_CONTEXT, nil)
-
-	if errs != nil {
-		return _EMPTY_KEY, nil, errs[0]
-	} else if len(docs) == 0 {
-		return _EMPTY_KEY, nil, nil
-	}
-
-	return key[0], docs[key[0]], nil
-}
-
-func MakePrimaryIndexDocumentRetriever(ks datastore.Keyspace, optSampleSize int) (*PrimaryIndexDocumentRetriever, errors.Error) {
-	pidr := new(PrimaryIndexDocumentRetriever)
-	pidr.ks = ks
-	pidr.docIds = make([]string, 0)
-	pidr.nextToReturn = 0
-
-	// how many docs in the keyspace?
-	docCount, err := ks.Count(datastore.NULL_QUERY_CONTEXT)
-
-	if err != nil {
-		return nil, errors.NewInferKeyspaceError(ks.Name(), err)
-	}
-
-	// if they specified 0 for the sampleSize, set the limit to the number of documents
-	if optSampleSize == 0 {
-		pidr.sampleSize = int(docCount)
-	} else {
-		pidr.sampleSize = optSampleSize
-	}
-
-	indexer, err := ks.Indexer(datastore.GSI)
-	if err != nil {
-		return nil, errors.NewInferKeyspaceError(ks.Name(), err)
-	}
-
-	primaryIndexes, err := indexer.PrimaryIndexes()
-	if err == nil {
-		for _, index := range primaryIndexes {
-			// make sure that the index is online
-			state, _, err := index.State()
-			if err != nil || state != datastore.ONLINE {
-				continue
-			}
-
-			// if we get this far, the index should be good and online
-			conn := datastore.NewIndexConnection(datastore.NULL_CONTEXT)
-			go index.ScanEntries("retriever", int64(pidr.sampleSize), datastore.UNBOUNDED, nil, conn)
-
-			for len(pidr.docIds) < pidr.sampleSize {
-				entry, _ := conn.Sender().GetEntry()
-				if entry == nil {
-					break
-				}
-				pidr.docIds = append(pidr.docIds, entry.PrimaryKey)
-			}
-			return pidr, nil
-		}
-	}
-
-	return nil, errors.NewInferNoSuitablePrimaryIndex(ks.Name())
-}
-
-////////////////////////////////////////////////////////////////////////////////
-// AnyIndexDocumentRetriever implementation
-//
-// Rank indexes preferring GSI, unconditional, non-array with the shortest key.
-// Then in order, fill sample by retrieving a unique set of keys from the indices
-// stopping when sample size has been reached.
-////////////////////////////////////////////////////////////////////////////////
-
-type AnyIndexDocumentRetriever struct {
-	ks         datastore.Keyspace
-	docIds     map[string]bool
-	sampleSize int
-	Indexes    []string
-}
-
-func (aidr *AnyIndexDocumentRetriever) GetNextDoc(context datastore.QueryContext) (string, value.Value, errors.Error) {
-	if len(aidr.docIds) == 0 {
-		return _EMPTY_KEY, nil, nil
-	}
-
-	var key []string
-	for k, _ := range aidr.docIds {
-		key = []string{k}
-		delete(aidr.docIds, k)
-		break
-	}
-	docs := make(map[string]value.AnnotatedValue, 1)
-	errs := aidr.ks.Fetch(key, docs, datastore.NULL_QUERY_CONTEXT, nil)
-
-	if errs != nil {
-		return _EMPTY_KEY, nil, errs[0]
-	} else if len(docs) == 0 {
-		return _EMPTY_KEY, nil, nil
-	}
-
-	return key[0], docs[key[0]], nil
-}
-
-type indexArray []datastore.Index3
+type indexArray []datastore.Index
 
 func (this indexArray) Len() int {
 	return len(this)
@@ -173,23 +97,48 @@ func (this indexArray) Less(i, j int) bool {
 		return true
 	} else if this[i].Condition() != nil && this[j].Condition() == nil {
 		return false
+	} else if this[i].Condition() != nil && this[j].Condition() != nil {
+		// prefer least selective condition
+		if plannerbase.SubsetOf(this[j].Condition(), this[i].Condition()) {
+			return true
+		} else if plannerbase.SubsetOf(this[i].Condition(), this[j].Condition()) {
+			return false
+		}
 	}
 	// prefer without array keys
-	rki := this[i].RangeKey2()
-	rkj := this[j].RangeKey2()
+	rki := this[i].RangeKey()
+	rkj := this[j].RangeKey()
 	aki := false
 	for _, k := range rki {
-		ak, _, _ := k.Expr.IsArrayIndexKey()
+		ak, _, _ := k.IsArrayIndexKey()
 		aki = aki || ak
 	}
 	akj := false
 	for _, k := range rkj {
-		ak, _, _ := k.Expr.IsArrayIndexKey()
+		ak, _, _ := k.IsArrayIndexKey()
 		akj = akj || ak
 	}
 	if !aki && akj {
 		return true
 	} else if aki && !akj {
+		return false
+	}
+	// prefer non-partitioned (for key-based restart)
+	pk1, _ := this[i].(datastore.Index3).PartitionKeys()
+	pk2, _ := this[j].(datastore.Index3).PartitionKeys()
+	if pk1 == nil && pk2 != nil {
+		return true
+	} else if pk1 != nil && pk2 == nil {
+		return false
+	}
+	// most documents
+	cii := this[i].(datastore.CountIndex2)
+	cij := this[j].(datastore.CountIndex2)
+	nki, _ := cii.CountDistinct("retriever", nil, datastore.UNBOUNDED, nil)
+	nkj, _ := cij.CountDistinct("retriever", nil, datastore.UNBOUNDED, nil)
+	if nki > nkj {
+		return true
+	} else if nkj > nki {
 		return false
 	}
 	// prefer fewest keys
@@ -203,157 +152,580 @@ func (this indexArray) Less(i, j int) bool {
 	return false
 }
 
-func MakeAnyIndexDocumentRetriever(ks datastore.Keyspace, optSampleSize int) (*AnyIndexDocumentRetriever, errors.Error) {
-	aidr := new(AnyIndexDocumentRetriever)
-	aidr.ks = ks
-	aidr.docIds = make(map[string]bool, 0)
+type UnifiedDocumentRetriever struct {
+	ks             datastore.Keyspace
+	rnd            datastore.RandomEntryProvider
+	lastRnd        datastore.RandomEntryProvider
+	iconn          *datastore.IndexConnection
+	returned       int
+	sampleSize     int
+	currentIndex   int
+	indexes        indexArray
+	spans          datastore.Spans2
+	flags          Flag
+	cache          []string
+	dedup          map[string]bool
+	docs           map[string]value.AnnotatedValue
+	keys           []string
+	scanNum        int
+	scanBlockSize  int
+	scanSampleSize int
+	offset         int64
+	lastKeys       value.Values
+}
+
+func (udr *UnifiedDocumentRetriever) Reset() {
+	udr.returned = 0
+	udr.currentIndex = -1
+	udr.dedup = make(map[string]bool)
+	udr.docs = make(map[string]value.AnnotatedValue, 1)
+	udr.keys = nil
+	udr.scanNum = 0
+	udr.lastKeys = nil
+	logging.Debuga(func() string {
+		if udr.cache == nil {
+			return "UnifiedDocumentRetriever: reset without cache"
+		} else {
+			return fmt.Sprintf("UnifiedDocumentRetriever: reset with cache of %v keys", len(udr.cache))
+		}
+	})
+}
+
+func (udr *UnifiedDocumentRetriever) isFlagOn(what Flag) bool {
+	return (udr.flags & what) != 0
+}
+
+func (udr *UnifiedDocumentRetriever) isFlagOff(what Flag) bool {
+	return (udr.flags & what) == 0
+}
+
+func MakeUnifiedDocumentRetriever(context datastore.QueryContext, ks datastore.Keyspace, sampleSize int, flags Flag) (
+	*UnifiedDocumentRetriever, errors.Error) {
+
+	var errs []errors.Error
+
+	udr := new(UnifiedDocumentRetriever)
+	udr.ks = ks
+	udr.dedup = make(map[string]bool)
+	udr.currentIndex = -1
+	udr.flags = flags
+	udr.scanNum = 0
 
 	docCount, err := ks.Count(datastore.NULL_QUERY_CONTEXT)
-
 	if err != nil {
 		return nil, errors.NewInferKeyspaceError(ks.Name(), err)
 	}
 
-	// if they specified 0 for the sampleSize, set the limit to the number of documents
-	if optSampleSize == 0 {
-		aidr.sampleSize = int(docCount)
-	} else {
-		aidr.sampleSize = optSampleSize
-	}
-
-	indexer, err := ks.Indexer(datastore.GSI)
-	if err != nil {
-		return nil, errors.NewInferKeyspaceError(ks.Name(), err)
-	}
-
-	ranges := append(datastore.Ranges2(nil), &datastore.Range2{
-		Low:       nil,
-		High:      nil,
-		Inclusion: datastore.BOTH,
-	})
-	spans := append(datastore.Spans2(nil), &datastore.Span2{
-		Seek:   nil,
-		Ranges: ranges,
-	})
-	ilist, err := indexer.Indexes()
-	if err == nil {
-		indexes := make(indexArray, 0, len(ilist))
-		for i, _ := range ilist {
-			if state, _, err := ilist[i].State(); err == nil && state == datastore.ONLINE {
-				if i3, ok := ilist[i].(datastore.Index3); ok {
-					indexes = append(indexes, i3)
-				}
-			}
+	if udr.isFlagOff(LIMIT_RANDOM) {
+		if float64(sampleSize) >= float64(docCount)*_RANDOM_THRESHOLD {
+			udr.flags |= RANDOM_ENTRY_LAST | NO_RANDOM_INDEX_SAMPLE
+			sampleSize = int(docCount)
 		}
-		sort.Sort(indexes)
+	}
+	logging.Debuga(func() string { return fmt.Sprintf("flags: 0x%x", udr.flags) })
 
-		for _, index := range indexes {
-			if index == nil {
-				continue
-			}
+	if sampleSize <= 0 || sampleSize > int(docCount) {
+		udr.sampleSize = int(docCount)
+	} else {
+		udr.sampleSize = sampleSize
+	}
+	if udr.sampleSize > _MAX_SAMPLE_SIZE {
+		udr.sampleSize = _MAX_SAMPLE_SIZE
+	}
 
-			aidr.Indexes = append(aidr.Indexes, index.Name())
-			// if we get this far, the index should be good and online
-			conn := datastore.NewIndexConnection(datastore.NULL_CONTEXT)
-			go index.Scan3("retriever", spans, false, false, &datastore.IndexProjection{PrimaryKey: true}, 0,
-				int64(aidr.sampleSize), nil, nil, datastore.UNBOUNDED, nil, conn)
-
-			for len(aidr.docIds) < aidr.sampleSize {
-				entry, _ := conn.Sender().GetEntry()
-				if entry == nil {
+	var ok bool
+	if udr.isFlagOff(NO_RANDOM_ENTRY) {
+		udr.rnd, ok = ks.(datastore.RandomEntryProvider)
+		if ok {
+			i := 0
+			for i = 0; i < _KEYS_NOT_FOUND; i++ {
+				_, val, _ := udr.rnd.GetRandomEntry(context)
+				if val != nil {
 					break
 				}
-				aidr.docIds[entry.PrimaryKey] = true
 			}
-			if len(aidr.docIds) >= aidr.sampleSize {
-				break
+			if i == _KEYS_NOT_FOUND {
+				logging.Debuga(func() string { return "not returning random documents" })
+				errs = append(errs, errors.NewInferNoRandomDocuments(ks.Name()))
+				udr.rnd = nil
 			}
+		} else {
+			logging.Debuga(func() string { return "RandomEntryProvider not supported" })
+			errs = append(errs, errors.NewInferNoRandomEntryProvider(ks.Name()))
+		}
+	} else {
+		logging.Debuga(func() string { return "flags exclude random" })
+	}
+
+	if udr.isFlagOff(NO_PRIMARY_INDEX) || udr.isFlagOff(NO_SECONDARY_INDEX) {
+		indexer, err := ks.Indexer(datastore.GSI)
+		if err == nil {
+			udr.docs = make(map[string]value.AnnotatedValue, 1)
+			udr.indexes = make(indexArray, 0, 32)
+
+			udr.spans = append(datastore.Spans2(nil), &datastore.Span2{
+				Seek: nil,
+				Ranges: append(datastore.Ranges2(nil), &datastore.Range2{
+					Low:       nil,
+					High:      nil,
+					Inclusion: datastore.BOTH,
+				}),
+			})
+
+			if udr.isFlagOff(NO_PRIMARY_INDEX) {
+				primaryIndexes, err := indexer.PrimaryIndexes()
+				found := true
+				if err == nil {
+					found = false
+					for _, index := range primaryIndexes {
+						// make sure that the index is online
+						state, _, err := index.State()
+						if err != nil || state != datastore.ONLINE {
+							continue
+						}
+						udr.indexes = append(udr.indexes, index.(datastore.Index))
+						found = true
+						logging.Debuga(func() string { return fmt.Sprintf("primary index (%v) found", index.Name()) })
+						// once a primary index has been picked, we won't bother with secondary indexes
+						udr.flags |= NO_SECONDARY_INDEX
+						break
+					}
+				}
+				if err != nil || !found {
+					logging.Debuga(func() string { return "no primary index" })
+					errs = append(errs, errors.NewInferNoSuitablePrimaryIndex(ks.Name()))
+				}
+			} else {
+				logging.Debuga(func() string { return "flags exclude primary" })
+			}
+
+			if udr.isFlagOff(NO_SECONDARY_INDEX) {
+				ilist, err := indexer.Indexes()
+				found := true
+				if err == nil {
+					found = false
+				secondary_indexes:
+					for _, idx := range ilist {
+						if state, _, err := idx.State(); err == nil && state == datastore.ONLINE && !idx.IsPrimary() {
+							if i3, ok := idx.(datastore.Index3); ok {
+								if udr.isFlagOff(ALLOW_ARRAY_INDEXES) {
+									keys := i3.RangeKey()
+									for _, key := range keys {
+										if is, _, _ := key.IsArrayIndexKey(); is {
+											continue secondary_indexes
+										}
+									}
+								}
+								if udr.isFlagOff(ALLOW_CONDITIONAL) && i3.Condition() != nil {
+									continue secondary_indexes
+								}
+								if udr.isFlagOff(ALLOW_SUPERSET_CONDITIONS) && i3.Condition() != nil {
+									for n, other := range udr.indexes {
+										if other.Condition() == nil {
+											continue
+										}
+										if plannerbase.SubsetOf(i3.Condition(), other.Condition()) {
+											logging.Debuga(func() string {
+												return fmt.Sprintf("excluding %v - subset of %v",
+													i3.Name(), other.Name())
+											})
+											continue secondary_indexes
+										} else if plannerbase.SubsetOf(other.Condition(), i3.Condition()) {
+											logging.Debuga(func() string {
+												return fmt.Sprintf("swapping secondary index %v for %v",
+													i3.Name(), other.Name())
+											})
+											udr.indexes[n] = i3
+											continue secondary_indexes
+										}
+									}
+								}
+								udr.indexes = append(udr.indexes, idx)
+								logging.Debuga(func() string { return fmt.Sprintf("secondary index %v included", idx.Name()) })
+								found = true
+								if udr.isFlagOn(SINGLE_INDEX) {
+									break
+								}
+							}
+						}
+					}
+				}
+				if err != nil || !found {
+					logging.Debuga(func() string { return "no secondary index" })
+					errs = append(errs, errors.NewInferNoSuitableSecondaryIndex(ks.Name()))
+				}
+
+				if udr.isFlagOff(SINGLE_INDEX) && len(udr.indexes) > 1 {
+					sort.Sort(udr.indexes)
+					if udr.isFlagOff(ALLOW_DUPLICATED_LEADING_KEY) {
+						leading := make(map[string]bool)
+						prune := false
+						for i := range udr.indexes {
+							if udr.indexes[i].IsPrimary() {
+								continue
+							}
+							lkey := udr.indexes[i].RangeKey()[0].String()
+							if leading[lkey] {
+								logging.Debuga(func() string {
+									return fmt.Sprintf("%v excluded - duplicate leading key",
+										udr.indexes[i].Name())
+								})
+								udr.indexes[i] = nil
+								prune = true
+							} else {
+								leading[lkey] = true
+							}
+						}
+						if prune {
+							temp := make(indexArray, 0, len(udr.indexes))
+							for _, index := range udr.indexes {
+								if index != nil {
+									temp = append(temp, index)
+								}
+							}
+							udr.indexes = temp
+						}
+					}
+					if udr.isFlagOn(LIMIT_5_INDEXES) && len(udr.indexes) > 5 {
+						udr.indexes = udr.indexes[:5]
+					}
+
+					if udr.isFlagOn(LIMIT_2_INDEXES) && len(udr.indexes) > 2 {
+						udr.indexes = udr.indexes[:2]
+					}
+					logging.Debuga(func() string {
+						s := "Ranked index list: "
+						for i, idx := range udr.indexes {
+							s += fmt.Sprintf("[%v] %v,", i, idx.Name())
+						}
+						s = s[:len(s)-1]
+						return s
+					})
+				}
+			} else {
+				logging.Debuga(func() string { return "flags or primary exclude secondary" })
+			}
+
+			logging.Debuga(func() string { return fmt.Sprintf("retriever: rnd: %v idxs: %v", udr.rnd != nil, len(udr.indexes)) })
+			return udr, nil
+		} else {
+			errs = append(errs, errors.NewInferKeyspaceError(ks.Name(), err))
 		}
 	}
 
-	if len(aidr.docIds) == 0 {
-		return nil, errors.NewInferNoSuitableSecondaryIndex(ks.Name())
+	if udr.rnd == nil && len(udr.indexes) == 0 {
+		return nil, errors.NewInferCreateRetrieverFailed(errs...)
 	}
 
-	return aidr, nil
+	// will be a random only retriever
+	logging.Debuga(func() string { return "random only retriever" })
+	return udr, nil
 }
 
-////////////////////////////////////////////////////////////////////////////////
-// KeyspaceRandomDocumentRetriever implementation
-//
-// Given a query/datastore/keyspace, use the GetRandomDoc() method to retrieve
-// non-duplicate docs until we have retrieved sampleSize (or give up because
-// we keep seeing duplicates.
-////////////////////////////////////////////////////////////////////////////////
-
-type KeyspaceRandomDocumentRetriever struct {
-	ks         datastore.Keyspace
-	rdr        datastore.RandomEntryProvider
-	docIdsSeen map[string]bool
-	sampleSize int
-}
-
-func (krdr *KeyspaceRandomDocumentRetriever) GetNextDoc(context datastore.QueryContext) (string, value.Value, errors.Error) {
-	// have we returned as many documents as were requested?
-	if len(krdr.docIdsSeen) >= krdr.sampleSize {
-		return _EMPTY_KEY, nil, nil
-	}
-
-	// try to retrieve the next document
-	duplicatesSeen := 0
-	for duplicatesSeen < _MAX_DUPLICATES {
-		key, value, err := krdr.rdr.GetRandomEntry(context) // get the doc
-		if err != nil {                                     // check for errors
+func (udr *UnifiedDocumentRetriever) getRandom(context datastore.QueryContext) (string, value.Value, errors.Error) {
+	duplicates := 0
+	for duplicates < _MAX_DUPLICATES {
+		key, value, err := udr.rnd.GetRandomEntry(context)
+		if err != nil {
 			return _EMPTY_KEY, nil, errors.NewInferRandomError(err)
 		}
 
-		// MB-42205 this may need improvement: a nil value only means that we run on of documents
-		// on the last node we queried. There may be corner cases with many nodes and few documents
-		// where we get a KEY_NOENT from one node, but there are more documents in other nodes.
-		// Try at up to _MAX_DUPLICATES times if value is nil.
-		// https://github.com/couchbase/kv_engine/blob/master/docs/BinaryProtocol.md#0xb6-get-random-key
-		// resident items only using a randomised vbucket as a start point and then randomised hash-tables
-		// buckets for searching within a vbucket.
-
-		if value == nil || krdr.docIdsSeen[key] { // seen it before?
-			duplicatesSeen++
+		if value == nil || udr.dedup[key] {
+			duplicates++
 			continue
 		}
 
-		krdr.docIdsSeen[key] = true
-		return key, value, nil // new doc, return
+		udr.dedup[key] = true
+		udr.returned++
+		udr.cacheKey(key)
+		return key, value, nil
 	}
-
-	// if we get here, we saw duplicate docs or nil keys _MAX_DUPLICATES times so we give up on finding any more new docs
 	return _EMPTY_KEY, nil, nil
 }
 
-func MakeKeyspaceRandomDocumentRetriever(context datastore.QueryContext, ks datastore.Keyspace, sampleSize int) (
-	*KeyspaceRandomDocumentRetriever, errors.Error) {
-
-	var ok bool
-	krdr := new(KeyspaceRandomDocumentRetriever)
-	krdr.rdr, ok = ks.(datastore.RandomEntryProvider)
-	if !ok {
-		return nil, errors.NewInferNoRandomEntryProvider(ks.Name())
+func (udr *UnifiedDocumentRetriever) GetNextDoc(context datastore.QueryContext) (string, value.Value, errors.Error) {
+	if udr.returned >= udr.sampleSize {
+		if udr.iconn != nil {
+			udr.iconn.Sender().Close()
+			udr.iconn = nil
+		}
+		return _EMPTY_KEY, nil, nil
 	}
 
-	i := 0
-	for i = 0; i < _KEYS_NOT_FOUND; i++ {
-		_, val, _ := krdr.rdr.GetRandomEntry(context)
-		if val != nil {
-			break
+	// if we have cached keys just use them
+	if udr.cache != nil && len(udr.cache) == udr.sampleSize {
+		if udr.returned >= len(udr.cache) {
+			return _EMPTY_KEY, nil, nil
+		}
+		errs := udr.ks.Fetch(udr.cache[udr.returned:udr.returned+1], udr.docs, datastore.NULL_QUERY_CONTEXT, nil)
+
+		if errs != nil {
+			return _EMPTY_KEY, nil, errs[0]
+		} else if len(udr.docs) == 0 {
+			return _EMPTY_KEY, nil, nil
+		}
+
+		k := udr.cache[udr.returned]
+		udr.returned++
+		defer func() { delete(udr.docs, k) }()
+		return k, udr.docs[k], nil
+	}
+
+	if udr.rnd != nil && udr.isFlagOff(RANDOM_ENTRY_LAST) {
+		k, v, e := udr.getRandom(context)
+		if v != nil || e != nil {
+			return k, v, e
+		}
+		logging.Debuga(func() string {
+			if udr.currentIndex == 0 {
+				return "UnifiedDocumentRetriever: random retriever exhausted, will attempt indexes (if any selected)"
+			} else {
+				return "UnifiedDocumentRetriever: random retriever exhausted"
+			}
+		})
+		udr.rnd = nil
+	}
+
+	if len(udr.indexes) == 0 {
+		logging.Debuga(func() string { return "UnifiedDocumentRetriever: no indexes to scan" })
+		return _EMPTY_KEY, nil, nil
+	}
+
+next_index:
+	for indexesTried := 0; indexesTried < _MAX_INDEXES_TRIED_PER_DOC; {
+		duplicates := 0
+		if udr.iconn == nil && len(udr.keys) == 0 {
+			udr.currentIndex++
+			if udr.currentIndex >= len(udr.indexes) || (udr.currentIndex > 0 && udr.isFlagOn(SINGLE_INDEX)) {
+				logging.Debuga(func() string {
+					return fmt.Sprintf("UnifiedDocumentRetriever: ending after %v index(es), %v docs returned",
+						udr.currentIndex, udr.returned)
+				})
+				if udr.isFlagOn(RANDOM_ENTRY_LAST) && udr.rnd != nil {
+					udr.flags &^= RANDOM_ENTRY_LAST
+					return udr.getRandom(context)
+				}
+				return _EMPTY_KEY, nil, nil
+			}
+
+			start := int64(0)
+			if udr.scanNum > 0 {
+				start = int64(udr.scanBlockSize) - (udr.offset % int64(udr.scanBlockSize))
+				start %= int64(udr.scanBlockSize)
+			} else {
+				udr.spans[0].Ranges[0].Low = nil
+				udr.spans[0].Ranges[0].Inclusion = datastore.BOTH
+
+				// set-up for index-based options
+				remainingSampleSize := udr.sampleSize - udr.returned
+				udr.scanSampleSize = 1
+				numScans := _MAX_NUM_SCANS
+				if numScans > remainingSampleSize || !udr.indexes[udr.currentIndex].IsPrimary() {
+					numScans = remainingSampleSize
+					if numScans <= 0 {
+						numScans = 1
+					}
+				} else {
+					udr.scanSampleSize = (remainingSampleSize + (numScans - 1)) / numScans
+				}
+				// break the number of keys down into blocks within which the samples can be randomly picked
+				// this is to try ensure more even distribution of sampling across the key range
+				ci := udr.indexes[udr.currentIndex].(datastore.CountIndex2)
+				nk, err := ci.CountDistinct("retriever", nil, datastore.UNBOUNDED, nil)
+				if err != nil {
+					docCount, err := udr.ks.Count(datastore.NULL_QUERY_CONTEXT)
+					if err != nil {
+						return _EMPTY_KEY, nil, err
+					}
+					udr.scanBlockSize = int(docCount / int64(numScans))
+				} else {
+					udr.scanBlockSize = int(nk / int64(numScans))
+				}
+				if udr.scanBlockSize < udr.scanSampleSize {
+					udr.scanBlockSize = udr.scanSampleSize
+				}
+				logging.Debuga(func() string {
+					return fmt.Sprintf("UnifiedDocumentRetriever: %v: ss-size: %v, sb-size: %v, remaining samples: %v",
+						udr.indexes[udr.currentIndex].Name(), udr.scanSampleSize, udr.scanBlockSize, remainingSampleSize)
+				})
+			}
+
+			udr.offset = 0
+			if udr.isFlagOff(NO_RANDOM_INDEX_SAMPLE) && udr.scanBlockSize > udr.scanSampleSize {
+				// if the scan block size is greater than the index count, use the index count so we get at least 1 sample from it
+				ci := udr.indexes[udr.currentIndex].(datastore.CountIndex2)
+				count, err := ci.CountDistinct("retriever", nil, datastore.UNBOUNDED, nil)
+				if err == nil && int64(udr.scanBlockSize) > count {
+					if int(count) > udr.scanSampleSize {
+						udr.offset = int64(rand.Int() % (int(count) - udr.scanSampleSize))
+					}
+				} else {
+					udr.offset = int64(rand.Int() % (udr.scanBlockSize - udr.scanSampleSize))
+				}
+			}
+			start += udr.offset
+			udr.restartScan(start)
+		}
+
+		if len(udr.keys) == 0 {
+			for len(udr.keys) < udr.scanSampleSize {
+				entry, _ := udr.iconn.Sender().GetEntry()
+				if entry == nil {
+					timeout := udr.iconn.Timeout()
+					udr.iconn.Sender().Close()
+					udr.iconn = nil
+					if timeout {
+						if len(udr.keys) > 0 && udr.indexes[udr.currentIndex].IsPrimary() {
+							udr.spans[0].Ranges[0].Low = value.NewValue(udr.keys[len(udr.keys)-1])
+							udr.spans[0].Ranges[0].Inclusion = datastore.HIGH
+							udr.restartScan(0)
+							continue
+						} else if !udr.indexes[udr.currentIndex].IsPrimary() && udr.lastKeys != nil {
+							udr.restartAfterLastKey()
+							continue
+						}
+					}
+					if len(udr.keys) == 0 {
+						udr.scanNum = 0
+						indexesTried++
+						continue next_index
+					} else {
+						break
+					}
+				}
+				udr.lastKeys = entry.EntryKey
+				udr.offset++
+				if !udr.dedup[entry.PrimaryKey] {
+					udr.dedup[entry.PrimaryKey] = true
+					udr.keys = append(udr.keys, entry.PrimaryKey)
+				} else {
+					duplicates++
+					if duplicates > _MAX_DUPLICATES {
+						udr.iconn.Sender().Close()
+						udr.iconn = nil
+						if len(udr.keys) == 0 {
+							udr.scanNum = 0
+							indexesTried++
+							continue next_index
+						} else {
+							break
+						}
+					}
+				}
+			}
+			if len(udr.keys) == 0 {
+				indexesTried++
+				udr.scanNum = 0
+				continue next_index
+			}
+			if udr.indexes[udr.currentIndex].IsPrimary() {
+				if udr.iconn != nil {
+					// repeat this index with a different offset
+					udr.iconn.Sender().Close()
+					udr.iconn = nil
+					udr.scanNum++
+					if len(udr.keys) > 0 {
+						udr.spans[0].Ranges[0].Low = value.NewValue(udr.keys[len(udr.keys)-1])
+						udr.spans[0].Ranges[0].Inclusion = datastore.HIGH
+					}
+					udr.currentIndex--
+				} else {
+					udr.scanNum = 0
+				}
+			} else {
+				if udr.iconn != nil {
+					// read and discard keys to provide random sampling
+					skip := int64(udr.scanBlockSize) - (udr.offset % int64(udr.scanBlockSize))
+					skip %= int64(udr.scanBlockSize)
+					if udr.isFlagOff(NO_RANDOM_INDEX_SAMPLE) && udr.scanBlockSize > udr.scanSampleSize {
+						skip += int64(rand.Int() % (udr.scanBlockSize - udr.scanSampleSize))
+					}
+					for ; skip > 0; skip-- {
+						entry, _ := udr.iconn.Sender().GetEntry()
+						if entry == nil {
+							timeout := udr.iconn.Timeout()
+							udr.iconn.Sender().Close()
+							udr.iconn = nil
+							if timeout && udr.lastKeys != nil {
+								udr.restartAfterLastKey()
+							}
+							break
+						}
+						udr.lastKeys = entry.EntryKey
+						udr.offset++
+					}
+				}
+			}
+		}
+
+		errs := udr.ks.Fetch(udr.keys[0:1], udr.docs, datastore.NULL_QUERY_CONTEXT, nil)
+
+		if errs != nil {
+			return _EMPTY_KEY, nil, errs[0]
+		} else if len(udr.docs) == 0 {
+			return _EMPTY_KEY, nil, nil
+		}
+
+		udr.returned++
+		defer func() { delete(udr.docs, udr.keys[0]); udr.keys = udr.keys[1:] }()
+		udr.cacheKey(udr.keys[0])
+		return udr.keys[0], udr.docs[udr.keys[0]], nil
+	}
+	if udr.iconn != nil {
+		udr.iconn.Sender().Close()
+		udr.iconn = nil
+	}
+	if udr.isFlagOn(RANDOM_ENTRY_LAST) && udr.rnd != nil {
+		udr.flags &^= RANDOM_ENTRY_LAST
+		return udr.getRandom(context)
+	}
+	return _EMPTY_KEY, nil, nil
+}
+
+func (udr *UnifiedDocumentRetriever) restartScan(offset int64) {
+	udr.iconn = datastore.NewIndexConnection(datastore.NULL_CONTEXT)
+	index := udr.indexes[udr.currentIndex].(datastore.Index3)
+	proj := &datastore.IndexProjection{PrimaryKey: true}
+	ss := int64(math.MaxInt64)
+	udr.iconn.SetPrimary() // always set as primary so we can trap timeouts
+	if index.IsPrimary() {
+		ss = int64(udr.scanSampleSize)
+	} else {
+		proj.EntryKeys = make([]int, len(index.RangeKey()))
+		for i := range proj.EntryKeys {
+			proj.EntryKeys[i] = i
 		}
 	}
-	if i == _KEYS_NOT_FOUND {
-		return nil, errors.NewInferNoRandomDocuments(ks.Name())
+	go index.Scan3("retriever", udr.spans, false, false, proj, offset, ss, nil, nil, datastore.UNBOUNDED, nil, udr.iconn)
+
+	logging.Debuga(func() string {
+		return fmt.Sprintf("UnifiedDocumentRetriever: scanning index %v (scan: %v, offset: %v, low: %v (first of %d))",
+			udr.indexes[udr.currentIndex].Name(), udr.scanNum, offset, udr.spans[0].Ranges[0].Low, len(udr.spans[0].Ranges))
+	})
+}
+
+func (udr *UnifiedDocumentRetriever) restartAfterLastKey() {
+	// reset the block calculation
+	udr.offset = 0
+
+	if len(udr.spans[0].Ranges) != len(udr.lastKeys) {
+		udr.spans[0].Ranges = make(datastore.Ranges2, len(udr.lastKeys))
 	}
+	for i := range udr.spans[0].Ranges {
+		udr.spans[0].Ranges[i] = &datastore.Range2{Low: udr.lastKeys[i], Inclusion: datastore.HIGH}
+	}
+	udr.lastKeys = nil
+	udr.restartScan(0)
+}
 
-	krdr.ks = ks
-	krdr.docIdsSeen = make(map[string]bool)
-	krdr.sampleSize = sampleSize
-
-	return krdr, nil
+func (udr *UnifiedDocumentRetriever) cacheKey(key string) {
+	if udr.isFlagOff(CACHE_KEYS) {
+		return
+	}
+	if udr.cache == nil {
+		udr.cache = make([]string, 0, udr.sampleSize)
+	}
+	udr.cache = append(udr.cache, key)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -369,6 +741,9 @@ type KVRandomDocumentRetriever struct {
 	docIdsSeen map[string]bool
 	sampleSize int
 	bucket     *couchbase.Bucket
+}
+
+func (kvrdr *KVRandomDocumentRetriever) Reset() {
 }
 
 func (kvrdr *KVRandomDocumentRetriever) GetNextDoc(context datastore.QueryContext) (string, value.Value, errors.Error) {
@@ -427,4 +802,95 @@ func MakeKVRandomDocumentRetriever(serverURL, bucket, bucketPass string, sampleS
 	}
 
 	return kvrdr, nil
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// ExpressionDocumentRetriever implementation
+//
+// Given an expression, evaluate to produce the document.
+////////////////////////////////////////////////////////////////////////////////
+
+type subqueryResults interface {
+	Results() (interface{}, uint64, error)
+	NextDocument() (value.Value, error)
+	Cancel()
+}
+
+type ExpressionDocumentRetriever struct {
+	doc         value.Value
+	returnIndex int
+	sampleSize  int
+	subquery    subqueryResults
+}
+
+func MakeExpressionDocumentRetriever(context datastore.QueryContext, expr expression.Expression, sampleSize int) (
+	*ExpressionDocumentRetriever, errors.Error) {
+
+	if sampleSize < 1 {
+		sampleSize = 1
+	}
+	edr := new(ExpressionDocumentRetriever)
+	edr.returnIndex = 0
+	edr.sampleSize = sampleSize
+
+	ectx, ok := context.(expression.Context)
+	if !ok {
+		return nil, errors.NewInferMissingContext(fmt.Sprintf("%T", context))
+	}
+
+	var err error
+	if sq, ok := expr.(*algebra.Subquery); ok {
+		// since we will not want any more than sampleSize results, we might as well limit the subquery to this to save processing
+		if sq.Select() != nil && sq.Select().Limit() == nil {
+			sq.Select().SetLimit(expression.NewConstant(sampleSize))
+		}
+		// stream subqueries to save on caching a potentially large result-set all at once, even though it means processing this
+		// statement a second time
+		edr.subquery, err = ectx.OpenStatement(sq.Select().String(), nil, nil, false, true)
+		if err != nil {
+			return nil, errors.NewInferExpressionEvalFailed(err)
+		}
+	} else {
+		edr.doc, err = expr.Evaluate(nil, ectx)
+		if err != nil {
+			return nil, errors.NewInferExpressionEvalFailed(err)
+		}
+		if edr.doc.Type() == value.ARRAY {
+			a := edr.doc.Actual().([]interface{})
+			if len(a) > sampleSize {
+				a = a[:sampleSize]
+				edr.doc = value.NewValue(a)
+			}
+		}
+	}
+
+	return edr, nil
+}
+
+func (this *ExpressionDocumentRetriever) Reset() {
+}
+
+func (this *ExpressionDocumentRetriever) GetNextDoc(context datastore.QueryContext) (string, value.Value, errors.Error) {
+	if this.returnIndex >= this.sampleSize {
+		if this.subquery != nil {
+			this.subquery.Cancel()
+		}
+		return _EMPTY_KEY, nil, nil
+	}
+
+	if this.subquery != nil {
+		doc, err := this.subquery.NextDocument()
+		if err != nil {
+			if e, ok := err.(errors.Error); ok {
+				return _EMPTY_KEY, nil, e
+			} else {
+				return _EMPTY_KEY, nil, errors.NewError(err, "NextDocument failed")
+			}
+		}
+		this.returnIndex++
+		return fmt.Sprintf("_%d", this.returnIndex), doc, nil
+	} else {
+		this.returnIndex = this.sampleSize
+		return "_1", this.doc, nil
+	}
 }

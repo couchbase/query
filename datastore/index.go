@@ -9,6 +9,7 @@
 package datastore
 
 import (
+	"strings"
 	"time"
 
 	"github.com/couchbase/cbauth"
@@ -673,7 +674,7 @@ func (this *IndexConnection) MaxParallelism() int {
 }
 
 func (this *IndexConnection) Error(err errors.Error) {
-	if this.primary && err.Code() == errors.E_CB_INDEX_SCAN_TIMEOUT {
+	if this.primary && (err.Code() == errors.E_CB_INDEX_SCAN_TIMEOUT || strings.Contains(err.Error(), "Index scan timed out")) {
 		this.timeout = true
 		return
 	}

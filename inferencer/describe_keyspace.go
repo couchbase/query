@@ -10,11 +10,14 @@ package inferencer
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/value"
 
 	"os"
@@ -29,8 +32,24 @@ import (
 
 var desc_debug = false
 
+type DescribeOptions struct {
+	SampleSize          int
+	SimilarityMetric    float32
+	NumSampleValues     int32
+	DictionaryThreshold int32
+	InferTimeout        int32
+	MaxSchemaMB         int32
+	Flags               Flag
+}
+
 func DescribeKeyspace(context datastore.QueryContext, conn *datastore.ValueConnection, retriever DocumentRetriever,
-	similarityMetric float32, numSampleValues, dictionary_threshold, infer_timeout, max_schema_MB int32) (value.Value, errors.Error) {
+	options *DescribeOptions) (value.Value, errors.Error) {
+
+	if options == nil {
+		return nil, errors.NewError(nil, "Options must be provided") // this is an internal error
+	}
+
+	var err errors.Error
 
 	if desc_debug {
 		fmt.Printf("Inferring keyspace...")
@@ -51,7 +70,7 @@ func DescribeKeyspace(context datastore.QueryContext, conn *datastore.ValueConne
 		if conn != nil {
 			select {
 			case <-conn.StopChannel():
-				return nil, nil
+				return nil, err
 			default:
 			}
 		}
@@ -67,7 +86,7 @@ func DescribeKeyspace(context datastore.QueryContext, conn *datastore.ValueConne
 		}
 
 		if desc_debug {
-			fmt.Printf("   got document, collection size: %d\n", len(collection))
+			fmt.Printf("  got document, collection size: %d\n", len(collection))
 		}
 
 		// make a schema out of the JSON document
@@ -75,14 +94,14 @@ func DescribeKeyspace(context datastore.QueryContext, conn *datastore.ValueConne
 
 		// add it to the collection
 
-		collection.AddSchema(aSchema, numSampleValues)
+		collection.AddSchema(aSchema, options.NumSampleValues)
 
 		// have we exceeded our timeout time?
-		if int32(time.Now().Sub(start)/time.Second) > infer_timeout {
+		if int32(time.Now().Sub(start)/time.Second) > options.InferTimeout {
 			if desc_debug {
-				fmt.Printf("   exceeded infer_timeout of %d seconds, finishing document inferencing\n", infer_timeout)
+				fmt.Printf("  exceeded infer_timeout of %d seconds, finishing document inferencing\n", options.InferTimeout)
 			}
-			err = errors.NewInferTimeout(infer_timeout)
+			err = errors.NewInferTimeout(options.InferTimeout)
 			break
 		}
 
@@ -91,11 +110,11 @@ func DescribeKeyspace(context datastore.QueryContext, conn *datastore.ValueConne
 		}
 
 		// have we exceeded our max schema size?
-		if int32(collection.GetCollectionByteSize()/1000000) > max_schema_MB {
+		if int32(collection.GetCollectionByteSize()/1000000) > options.MaxSchemaMB {
 			if desc_debug {
-				fmt.Printf("   exceeded max schema size of %d MB, finishing document inferencing\n", max_schema_MB)
+				fmt.Printf("  exceeded max schema size of %d MB, finishing document inferencing\n", options.MaxSchemaMB)
 			}
-			err = errors.NewInferSizeLimit(max_schema_MB)
+			err = errors.NewInferSizeLimit(options.MaxSchemaMB)
 			break
 		}
 
@@ -118,7 +137,7 @@ func DescribeKeyspace(context datastore.QueryContext, conn *datastore.ValueConne
 
 	// now get the complete description
 
-	flavors := collection.GetFlavorsFromCollection(similarityMetric, numSampleValues, dictionary_threshold)
+	flavors := collection.GetFlavorsFromCollection(options.SimilarityMetric, options.NumSampleValues, options.DictionaryThreshold)
 
 	if desc_debug {
 		fmt.Printf("Done with second pass\n")
@@ -141,12 +160,90 @@ func DescribeKeyspace(context datastore.QueryContext, conn *datastore.ValueConne
 		}
 	}
 
-	return value.NewValue(desc), nil
+	return value.NewValue(desc), err
 }
 
-//
-// Here is an inferencer that cbq-engine can use to infer schemas
-//
+func processWith(context datastore.QueryContext, with value.Value) (*DescribeOptions, errors.Error) {
+	// defaults
+	options := &DescribeOptions{
+		SampleSize:          1000,
+		SimilarityMetric:    float32(0.6),
+		NumSampleValues:     5,
+		DictionaryThreshold: 10,
+		InferTimeout:        60, // don't spend more than 60 seconds on any bucket
+		MaxSchemaMB:         10, // if the schema is bigger than 10MB, don't return
+		Flags:               NO_FLAGS,
+	}
+
+	if !context.GetReqDeadline().IsZero() {
+		options.InferTimeout = int32(context.GetReqDeadline().Sub(time.Now()).Seconds())
+		logging.Debuga(func() string {
+			return fmt.Sprintf("Setting infer_timeout to %v based on context deadline %v",
+				options.InferTimeout, context.GetReqDeadline())
+		})
+	}
+
+	if with == nil {
+		return options, nil
+	}
+	if with.Type() != value.OBJECT {
+		return nil, errors.NewInferInvalidOption(fmt.Sprintf("%v", with.Actual()))
+	}
+
+	for fieldName, _ := range with.Fields() {
+		fv, _ := with.Field(fieldName)
+		if fv.Type() != value.NUMBER {
+			if fieldName == "flags" {
+				if fv.Type() == value.STRING {
+					flags_num, err := strconv.ParseInt(fv.Actual().(string), 0, 32)
+					if err != nil {
+						return nil, errors.NewInferErrorReadingNumber(fieldName, fmt.Sprintf("%v", fv.Actual()))
+					}
+					options.Flags = Flag(flags_num)
+				} else if fv.Type() == value.ARRAY {
+					fa := fv.Actual().([]interface{})
+					options.Flags = NO_FLAGS
+					for _, f := range fa {
+						fs := strings.ToLower(f.(value.Value).ToString())
+						v, ok := flags_map[fs]
+						if !ok {
+							//TODO
+							return nil, errors.NewWarning(fmt.Sprintf("'flags' array element '%v' is invalid", fs))
+						}
+						options.Flags |= v
+					}
+				} else {
+					// TODO
+					return nil, errors.NewWarning(fmt.Sprintf("'flags' must be a number, a string or an array not: %v", fv.Type()))
+				}
+				continue
+			}
+			return nil, errors.NewInferOptionMustBeNumeric(fieldName, fv.Type().String())
+		}
+		v, ok := fv.Actual().(float64)
+		if !ok {
+			return nil, errors.NewInferErrorReadingNumber(fieldName, fmt.Sprintf("%v", fv.Actual()))
+		}
+		switch fieldName {
+		case "sample_size":
+			options.SampleSize = int(v)
+		case "similarity_metric":
+			options.SimilarityMetric = float32(v)
+		case "num_sample_values":
+			options.NumSampleValues = int32(v)
+		case "dictionary_threshold":
+			options.DictionaryThreshold = int32(v)
+		case "infer_timeout":
+			options.InferTimeout = int32(v)
+		case "max_schema_MB":
+			options.MaxSchemaMB = int32(v)
+		default:
+			return nil, errors.NewInferInvalidOption(fieldName)
+		}
+	}
+
+	return options, nil
+}
 
 func NewDefaultSchemaInferencer(store datastore.Datastore) (datastore.Inferencer, errors.Error) {
 	inferencer := new(DefaultInferencer)
@@ -162,238 +259,70 @@ func (di *DefaultInferencer) Name() datastore.InferenceType {
 	return ("Default")
 }
 
-//
-// here
-//
-
-func (di *DefaultInferencer) InferKeyspace(context datastore.QueryContext, ks datastore.Keyspace, with value.Value, conn *datastore.ValueConnection) {
-
-	var ok bool
+func (di *DefaultInferencer) InferKeyspace(context datastore.QueryContext, ks datastore.Keyspace, with value.Value,
+	conn *datastore.ValueConnection) {
 
 	docCount, _ := ks.Count(datastore.NULL_QUERY_CONTEXT)
-	sample_size := 1000
-	similarity_metric := float64(0.6)
-	num_sample_values := int32(5)
-	dictionary_threshold := int32(10)
-	infer_timeout := int32(60) // don't spend more than 60 seconds on any bucket
-	max_schema_MB := int32(10) // if the schema is bigger than 10MB, don't return
 
 	defer close(conn.ValueChannel())
 
-	// did we get any options to do something other than our defaults?
-	if with != nil {
-		if with.Type() != value.OBJECT {
-			conn.Error(errors.NewWarning(fmt.Sprintf(`Unrecognized infer option '%v', options must be JSON (e.g., '{"sample_size":1000,"similarity_metric":0.6}'`, with.Actual())))
-			return
-		}
-
-		unrecognizedNames := make([]string, 0)
-		for fieldName, _ := range with.Fields() {
-			if !strings.EqualFold(fieldName, "sample_size") &&
-				!strings.EqualFold(fieldName, "dictionary_threshold") &&
-				!strings.EqualFold(fieldName, "similarity_metric") &&
-				!strings.EqualFold(fieldName, "num_sample_values") &&
-				!strings.EqualFold(fieldName, "max_schema_MB") &&
-				!strings.EqualFold(fieldName, "infer_timeout") {
-				unrecognizedNames = append(unrecognizedNames, fieldName)
-			}
-		}
-
-		if len(unrecognizedNames) > 0 {
-			conn.Error(errors.NewWarning(fmt.Sprintf(`Unrecognized infer options: '%v'`, unrecognizedNames)))
-			return
-		}
-
-		//////////////////////////////////////////////////////////////////////
-		// sample_size parameter
-		sample_size_val, sample_size_found := with.Field("sample_size")
-		if sample_size_found {
-			if sample_size_val.Type() != value.NUMBER {
-				conn.Error(errors.NewWarning(fmt.Sprintf("'sample_size' option must be a number, not %s", sample_size_val.Type().String())))
-				return
-			}
-			sample_size_num, ok := sample_size_val.Actual().(float64)
-			if !ok {
-				conn.Error(errors.NewWarning(fmt.Sprintf("Error reading 'sample_size' %v", sample_size_val.Actual())))
-				return
-			}
-			sample_size = int(sample_size_num)
-		}
-
-		//////////////////////////////////////////////////////////////////////
-		// similarity_metric parameter
-		similarity_metric_val, similarity_metric_found := with.Field("similarity_metric")
-		if similarity_metric_found {
-			if similarity_metric_val.Type() != value.NUMBER {
-				conn.Error(errors.NewWarning(fmt.Sprintf("'similarity_metric' option must be a number, not %s", similarity_metric_val.Type().String())))
-				return
-			}
-			similarity_metric, ok = similarity_metric_val.Actual().(float64)
-			if !ok {
-				conn.Error(errors.NewWarning(fmt.Sprintf("Error reading 'similarity_metric' %v", similarity_metric_val.Actual())))
-				return
-			}
-		}
-
-		//////////////////////////////////////////////////////////////////////
-		// num_sample_values parameter
-		num_sample_values_val, num_sample_values_found := with.Field("num_sample_values")
-		if num_sample_values_found {
-			if num_sample_values_val.Type() != value.NUMBER {
-				conn.Error(errors.NewWarning(fmt.Sprintf("'num_sample_values' option must be a number, not %s", num_sample_values_val.Type().String())))
-				return
-			}
-			num_sample_values_num, ok := num_sample_values_val.Actual().(float64)
-			if !ok {
-				conn.Error(errors.NewWarning(fmt.Sprintf("Error reading 'num_sample_values' %v", num_sample_values_val.Actual())))
-				return
-			}
-			num_sample_values = int32(num_sample_values_num)
-		}
-
-		//////////////////////////////////////////////////////////////////////
-		// dictionary_threshold parameter
-		dictionary_threshold_val, dictionary_threshold_found := with.Field("dictionary_threshold")
-		if dictionary_threshold_found {
-			if dictionary_threshold_val.Type() != value.NUMBER {
-				conn.Error(errors.NewWarning(fmt.Sprintf("'dictionary_threshold' option must be a number, not %s", dictionary_threshold_val.Type().String())))
-				return
-			}
-			dictionary_threshold_num, ok := dictionary_threshold_val.Actual().(float64)
-			if !ok {
-				conn.Error(errors.NewWarning(fmt.Sprintf("Error reading 'dictionary_threshold' %v", dictionary_threshold_val.Actual())))
-				return
-			}
-			dictionary_threshold = int32(dictionary_threshold_num)
-		}
-
-		//////////////////////////////////////////////////////////////////////
-		// infer_timeout parameter - how many seconds to allow
-		infer_timeout_val, infer_timeout_found := with.Field("infer_timeout")
-		if infer_timeout_found {
-			if infer_timeout_val.Type() != value.NUMBER {
-				conn.Error(errors.NewWarning(fmt.Sprintf("'infer_timeout' option must be a number, not %s", infer_timeout_val.Type().String())))
-				return
-			}
-			infer_timeout_num, ok := infer_timeout_val.Actual().(float64)
-			if !ok {
-				conn.Error(errors.NewWarning(fmt.Sprintf("Error reading 'infer_timeout' %v", infer_timeout_val.Actual())))
-				return
-			}
-			infer_timeout = int32(infer_timeout_num)
-		}
-
-		//////////////////////////////////////////////////////////////////////
-		// max_schema_MB parameter - how many megabytes of schema before we give up.
-		max_schema_MB_val, max_schema_MB_found := with.Field("max_schema_MB")
-		if max_schema_MB_found {
-			if max_schema_MB_val.Type() != value.NUMBER {
-				conn.Error(errors.NewWarning(fmt.Sprintf("'max_schema_MB' option must be a number, not %s", max_schema_MB_val.Type().String())))
-				return
-			}
-			max_schema_MB_num, ok := max_schema_MB_val.Actual().(float64)
-			if !ok {
-				conn.Error(errors.NewWarning(fmt.Sprintf("Error reading 'max_schema_MB' %v", max_schema_MB_val.Actual())))
-				return
-			}
-			max_schema_MB = int32(max_schema_MB_num)
-		}
-
+	options, err := processWith(context, with)
+	if err != nil {
+		conn.Error(err)
+		return
 	}
-
-	//
-	// Can't do anything if zero documents
-	//
 
 	if docCount == 0 {
 		conn.Error(errors.NewInferNoDocuments())
 		return
 	}
 
-	//	fmt.Printf("    Inferring keyspace for NamespaceId: %s Id: %s Name: %s, Count: %d\n",
-	//		ks.NamespaceId(), ks.Id(), ks.Name(), docCount)
-	//	if with != nil {
-	//		fmt.Printf("      With: %v (%v)\n", with, with.Type())
-	//	}
+	var retriever DocumentRetriever
 
-	//
-	// we have two choices to get documents: either random (if supported) or primary key
-	// traversal (if a primary index exists). Random is generally best, unless the sample
-	// size is close to or greater than the number of documents. If neither is available
-	// we can't do anything.
-	//
+	retriever, err = MakeUnifiedDocumentRetriever(context, ks, options.SampleSize, options.Flags)
+	if err != nil {
+		if !err.IsWarning() {
+			conn.Error(err)
+			return
+		}
+		conn.Warning(err)
+	}
+
+	schema, err := DescribeKeyspace(context, conn, retriever, options)
+	if err != nil {
+		if !err.IsWarning() {
+			conn.Error(err)
+			return
+		}
+		conn.Warning(err)
+	}
+
+	conn.ValueChannel() <- schema
+}
+
+func (di *DefaultInferencer) InferExpression(context datastore.QueryContext, expr expression.Expression, with value.Value,
+	conn *datastore.ValueConnection) {
+
+	defer close(conn.ValueChannel())
+
+	options, err := processWith(context, with)
+	if err != nil {
+		conn.Error(err)
+		return
+	}
 
 	var retriever DocumentRetriever
-	var err, err2, err3 errors.Error
 
 	retriever = nil
 	err = nil
 
-	// does the Keyspace support random document retrieval?
-	_, random_ok := ks.(datastore.RandomEntryProvider)
-
-	// if the keyspace supports random document retrieval, and the sample size is small enough
-	// relative to the docCount, a random document retriever is our first choice, if that
-	// fails use the primary index (if any)
-
-	if random_ok && float64(sample_size) < float64(docCount)*0.75 {
-		retriever, err = MakeKeyspaceRandomDocumentRetriever(context, ks, sample_size)
-
-		// if that failed, try to make a PrimaryKey retriever
-		if err != nil {
-			retriever, err2 = MakePrimaryIndexDocumentRetriever(ks, sample_size)
-			if err2 != nil {
-				retriever, err3 = MakeAnyIndexDocumentRetriever(ks, sample_size)
-				if err3 != nil {
-					conn.Error(err)
-					conn.Error(err2)
-					conn.Error(err3)
-					return
-				}
-				ai := retriever.(*AnyIndexDocumentRetriever)
-				conn.Warning(errors.NewInferIndexWarning(ai.Indexes))
-			} else {
-				conn.Warning(errors.NewInferIndexWarning([]string{"#primary"}))
-			}
-		}
-
-		//
-		// otherwise, a primary index retriever is our first choice, but if it fails try random
-		//
-	} else {
-
-		// if the number of documents to too small relative to the sample size,
-		// we need to get the all documents from a sequential scan
-		if float64(sample_size) >= float64(docCount)*0.75 {
-			retriever, err = MakePrimaryIndexDocumentRetriever(ks, int(docCount))
-		} else {
-			retriever, err = MakePrimaryIndexDocumentRetriever(ks, sample_size)
-		}
-
-		// if this fails, perhaps there's no primary key. Try random
-		if err != nil {
-			retriever, err2 = MakeKeyspaceRandomDocumentRetriever(context, ks, sample_size)
-			if err2 != nil {
-				retriever, err3 = MakeAnyIndexDocumentRetriever(ks, sample_size)
-				if err3 != nil {
-					conn.Error(err)
-					conn.Error(err2)
-					conn.Error(err3)
-					return
-				}
-				ai := retriever.(*AnyIndexDocumentRetriever)
-				conn.Warning(errors.NewInferIndexWarning(ai.Indexes))
-			}
-		} else {
-			conn.Warning(errors.NewInferIndexWarning([]string{"#primary"}))
-		}
+	retriever, err = MakeExpressionDocumentRetriever(context, expr, options.SampleSize)
+	if err != nil {
+		conn.Error(errors.NewInferCreateRetrieverFailed(err))
+		return
 	}
 
-	//
-	// get the
-
-	schema, err := DescribeKeyspace(context, conn, retriever, float32(similarity_metric), num_sample_values, dictionary_threshold, infer_timeout, max_schema_MB)
-
+	schema, err := DescribeKeyspace(context, conn, retriever, options)
 	if err != nil {
 		if !err.IsWarning() {
 			conn.Error(err)

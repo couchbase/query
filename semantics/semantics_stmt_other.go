@@ -62,6 +62,10 @@ func (this *SemChecker) VisitInferKeyspace(stmt *algebra.InferKeyspace) (interfa
 	return nil, stmt.MapExpressions(this)
 }
 
+func (this *SemChecker) VisitInferExpression(stmt *algebra.InferExpression) (interface{}, error) {
+	return nil, stmt.MapExpressions(this)
+}
+
 func (this *SemChecker) VisitUpdateStatistics(stmt *algebra.UpdateStatistics) (interface{}, error) {
 	if !this.hasSemFlag(_SEM_ENTERPRISE) {
 		return nil, errors.NewEnterpriseFeature("Update Statistics", "semantics.visit_update_statistics")

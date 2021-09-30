@@ -14,7 +14,9 @@ import (
 	"time"
 
 	"github.com/couchbase/query/algebra"
+	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/parser/n1ql"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/planner"
@@ -587,4 +589,22 @@ func (this *Context) DoStatementComplete(stmtType string, success bool) (err err
 
 func (this *Context) Parse(s string) (interface{}, error) {
 	return n1ql.ParseExpression(s)
+}
+
+func (this *Context) Infer(v value.Value, with value.Value) (value.Value, error) {
+	infer, err := this.Datastore().Inferencer(datastore.INF_DEFAULT)
+	if err != nil {
+		return nil, errors.NewInferencerNotFoundError(err, string(datastore.INF_DEFAULT))
+	}
+
+	expr := expression.NewConstant(v)
+	conn := datastore.NewValueConnection(this)
+	infer.InferExpression(this, expr, with, conn)
+
+	item, ok := <-conn.ValueChannel()
+	if item != nil && ok {
+		val := item.(value.Value)
+		return val, nil
+	}
+	return value.NULL_VALUE, nil
 }

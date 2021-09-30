@@ -1602,8 +1602,10 @@ func (k *keyspace) getRandomEntry(scopeName, collectionName string,
 		}
 		return "", nil, errors.NewCbGetRandomEntryError(err)
 	}
+	key := string(key(resp.Key, clientContext...))
+	doc := doFetch(key, k.fullName, resp)
 
-	return string(key(resp.Key, clientContext...)), value.NewValue(resp.Body), nil
+	return key, doc, nil
 }
 
 func (b *keyspace) Fetch(keys []string, fetchMap map[string]value.AnnotatedValue,

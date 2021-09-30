@@ -141,6 +141,7 @@ type Visitor interface {
 
 	// Infer
 	VisitInferKeyspace(op *InferKeyspace) (interface{}, error)
+	VisitInferExpression(op *InferExpression) (interface{}, error)
 
 	// Function statements
 	VisitCreateFunction(op *CreateFunction) (interface{}, error)

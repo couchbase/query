@@ -40,6 +40,10 @@ func (this *Rewrite) VisitInferKeyspace(stmt *algebra.InferKeyspace) (interface{
 	return stmt, stmt.MapExpressions(this)
 }
 
+func (this *Rewrite) VisitInferExpression(stmt *algebra.InferExpression) (interface{}, error) {
+	return stmt, stmt.MapExpressions(this)
+}
+
 func (this *Rewrite) VisitUpdateStatistics(stmt *algebra.UpdateStatistics) (interface{}, error) {
 	return stmt, stmt.MapExpressions(this)
 }

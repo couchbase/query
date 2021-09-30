@@ -45,6 +45,7 @@ type Context interface {
 		Cancel()
 	}, error)
 	Parse(s string) (interface{}, error)
+	Infer(value.Value, value.Value) (value.Value, error)
 }
 
 type CurlContext interface {

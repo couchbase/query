@@ -10,6 +10,7 @@ package datastore
 
 import (
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/value"
 )
 
@@ -25,5 +26,7 @@ type RandomEntryProvider interface {
 
 type Inferencer interface {
 	Name() InferenceType
-	InferKeyspace(context QueryContext, ks Keyspace, with value.Value, conn *ValueConnection) // The Inferencer should populate the connection.
+	// The Inferencer will return data over the connection
+	InferKeyspace(context QueryContext, ks Keyspace, with value.Value, conn *ValueConnection)
+	InferExpression(context QueryContext, expr expression.Expression, with value.Value, conn *ValueConnection)
 }
