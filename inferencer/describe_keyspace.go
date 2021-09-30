@@ -337,7 +337,7 @@ func (di *DefaultInferencer) InferKeyspace(context datastore.QueryContext, ks da
 	// fails use the primary index (if any)
 
 	if random_ok && float64(sample_size) < float64(docCount)*0.75 {
-		retriever, err = MakeKeyspaceRandomDocumentRetriever(ks, sample_size)
+		retriever, err = MakeKeyspaceRandomDocumentRetriever(context, ks, sample_size)
 
 		// if that failed, try to make a PrimaryKey retriever
 		if err != nil {
@@ -372,7 +372,7 @@ func (di *DefaultInferencer) InferKeyspace(context datastore.QueryContext, ks da
 
 		// if this fails, perhaps there's no primary key. Try random
 		if err != nil {
-			retriever, err2 = MakeKeyspaceRandomDocumentRetriever(ks, sample_size)
+			retriever, err2 = MakeKeyspaceRandomDocumentRetriever(context, ks, sample_size)
 			if err2 != nil {
 				retriever, err3 = MakeAnyIndexDocumentRetriever(ks, sample_size)
 				if err3 != nil {

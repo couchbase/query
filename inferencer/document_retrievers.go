@@ -328,7 +328,8 @@ func (krdr *KeyspaceRandomDocumentRetriever) GetNextDoc(context datastore.QueryC
 	return _EMPTY_KEY, nil, nil
 }
 
-func MakeKeyspaceRandomDocumentRetriever(ks datastore.Keyspace, sampleSize int) (*KeyspaceRandomDocumentRetriever, errors.Error) {
+func MakeKeyspaceRandomDocumentRetriever(context datastore.QueryContext, ks datastore.Keyspace, sampleSize int) (
+	*KeyspaceRandomDocumentRetriever, errors.Error) {
 
 	var ok bool
 	krdr := new(KeyspaceRandomDocumentRetriever)
@@ -339,7 +340,7 @@ func MakeKeyspaceRandomDocumentRetriever(ks datastore.Keyspace, sampleSize int) 
 
 	i := 0
 	for i = 0; i < _KEYS_NOT_FOUND; i++ {
-		_, val, _ := krdr.rdr.GetRandomEntry(nil)
+		_, val, _ := krdr.rdr.GetRandomEntry(context)
 		if val != nil {
 			break
 		}
