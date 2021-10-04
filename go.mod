@@ -34,7 +34,7 @@ replace github.com/couchbase/query-ee => ../query-ee
 
 require (
 	github.com/couchbase/cbauth v0.0.0-20210911011937-6a860d4b3951
-	github.com/couchbase/clog v0.0.0-20190523192451-b8e6d5d421bc
+	github.com/couchbase/clog v0.1.0
 	github.com/couchbase/eventing-ee v0.0.0-00010101000000-000000000000
 	github.com/couchbase/go-couchbase v0.0.0-20201026062457-7b3be89bbd89
 	github.com/couchbase/go_json v0.0.0-00010101000000-000000000000
