@@ -208,10 +208,15 @@ func (this *builder) buildJoinOp(join *algebra.AnsiJoin, nest *algebra.AnsiNest,
 	this.filter = expression.Copy(outerFilter)
 	this.offset = nil
 	this.limit = nil
-	if len(outerSubPlan) > 0 {
-		this.lastOp = outerSubPlan[len(outerSubPlan)-1]
+	if len(this.subChildren) > 0 {
+		this.lastOp = this.subChildren[len(this.subChildren)-1]
 	} else {
-		this.lastOp = outerPlan[len(outerPlan)-1]
+		this.lastOp = this.children[len(this.children)-1]
+	}
+	if hash {
+		innerPlan = plan.CopyOperators(innerPlan)
+		innerSubPlan = plan.CopyOperators(innerSubPlan)
+		innerCoveringScans = plan.CopyCoveringOperators(innerCoveringScans)
 	}
 
 	this.setJoinEnum()
@@ -315,10 +320,10 @@ func (this *builder) BuildUnnest(unnest *algebra.Unnest, outerPlan, outerSubPlan
 	this.subChildren = plan.CopyOperators(outerSubPlan)
 	this.coveringScans = plan.CopyCoveringOperators(outerCoveringScans)
 	this.filter = expression.Copy(outerFilter)
-	if len(outerSubPlan) > 0 {
-		this.lastOp = outerSubPlan[len(outerSubPlan)-1]
+	if len(this.subChildren) > 0 {
+		this.lastOp = this.subChildren[len(this.subChildren)-1]
 	} else {
-		this.lastOp = outerPlan[len(outerPlan)-1]
+		this.lastOp = this.children[len(this.children)-1]
 	}
 
 	this.setJoinEnum()
