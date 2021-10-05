@@ -85,7 +85,7 @@ IF (NOT CBQ_ONLY)
     GOTAGS ${_gotags})
 
   IF (BUILD_ENTERPRISE)
-    ADD_DEPENDENCIES (cbq-engine js-evaluator jseval)
+    ADD_DEPENDENCIES (cbq-engine jseval)
   ENDIF ()
 
 ENDIF (NOT CBQ_ONLY)
