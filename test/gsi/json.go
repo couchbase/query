@@ -41,6 +41,7 @@ import (
 	"github.com/couchbase/query/timestamp"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
+	diffpkg "github.com/kylelemons/godebug/diff"
 )
 
 /*
@@ -125,6 +126,7 @@ func (this *MockQuery) Execute(srvr *server.Server, context *execution.Context, 
 		this.SetTxTimeout(context.TxContext().TxTimeout())
 	}
 	close(this.response.done)
+	this.response.sortCount = int(this.SortCount())
 }
 
 func (this *MockQuery) Failed(srvr *server.Server) {
@@ -157,10 +159,11 @@ func (this *MockQuery) Result(item value.AnnotatedValue) bool {
 }
 
 type MockResponse struct {
-	err      errors.Error
-	results  []interface{}
-	warnings []errors.Error
-	done     chan bool
+	err       errors.Error
+	results   []interface{}
+	warnings  []errors.Error
+	done      chan bool
+	sortCount int
 }
 
 func (this *MockResponse) NoMoreResults() {
@@ -243,17 +246,17 @@ the input argument (q) string using the NewBaseRequest method
 as defined in the server request.go.
 */
 func Run(mockServer *MockServer, queryParams map[string]interface{}, q, namespace string, namedArgs map[string]value.Value,
-	positionalArgs value.Values, userArgs map[string]string) ([]interface{}, []errors.Error, errors.Error) {
+	positionalArgs value.Values, userArgs map[string]string) ([]interface{}, []errors.Error, errors.Error, int) {
 	return run(mockServer, queryParams, q, namespace, namedArgs, positionalArgs, userArgs, false)
 }
 
 func RunPrepared(mockServer *MockServer, queryParams map[string]interface{}, q, namespace string, namedArgs map[string]value.Value,
-	positionalArgs value.Values) ([]interface{}, []errors.Error, errors.Error) {
+	positionalArgs value.Values) ([]interface{}, []errors.Error, errors.Error, int) {
 	return run(mockServer, queryParams, q, namespace, namedArgs, positionalArgs, nil, true)
 }
 
 func run(mockServer *MockServer, queryParams map[string]interface{}, q, namespace string, namedArgs map[string]value.Value,
-	positionalArgs value.Values, userArgs map[string]string, prepare bool) ([]interface{}, []errors.Error, errors.Error) {
+	positionalArgs value.Values, userArgs map[string]string, prepare bool) ([]interface{}, []errors.Error, errors.Error, int) {
 
 	var metrics value.Tristate
 	consistency := &scanConfigImpl{scan_level: Consistency_parameter}
@@ -270,7 +273,7 @@ func run(mockServer *MockServer, queryParams map[string]interface{}, q, namespac
 	if prepare {
 		prepared, err := PrepareStmt(mockServer, queryParams, namespace, q)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, err, -1
 		}
 		query.SetPrepared(prepared)
 		query.SetType(prepared.Type())
@@ -351,13 +354,13 @@ func run(mockServer *MockServer, queryParams map[string]interface{}, q, namespac
 
 	if !ret {
 		mockServer.saveTxId(gv, query.Type(), nil)
-		return nil, nil, errors.NewError(nil, "Query timed out")
+		return nil, nil, errors.NewError(nil, "Query timed out"), -1
 	}
 
 	// wait till all the results are ready
 	<-mr.done
 	mockServer.saveTxId(gv, query.Type(), mr.results)
-	return mr.results, mr.warnings, mr.err
+	return mr.results, mr.warnings, mr.err, mr.sortCount
 }
 
 /*
@@ -527,6 +530,7 @@ func FtestCaseFile(fname string, prepared, explain bool, qc *MockServer, namespa
 		var positionalArgs value.Values
 		var userArgs map[string]string
 		var queryParams map[string]interface{}
+		var sortCount int
 		if n, ok1 := c["namedArgs"]; ok1 {
 			nv := value.NewValue(n)
 			size := len(nv.Fields())
@@ -572,9 +576,9 @@ func FtestCaseFile(fname string, prepared, explain bool, qc *MockServer, namespa
 
 		// no index, test infrastructure can't handle this.
 		if prepared && errCodeExpected != 4000 {
-			resultsActual, _, errActual = RunPrepared(qc, queryParams, statements, namespace, namedArgs, positionalArgs)
+			resultsActual, _, errActual, sortCount = RunPrepared(qc, queryParams, statements, namespace, namedArgs, positionalArgs)
 		} else {
-			resultsActual, _, errActual = Run(qc, queryParams, statements, namespace, namedArgs, positionalArgs, userArgs)
+			resultsActual, _, errActual, sortCount = Run(qc, queryParams, statements, namespace, namedArgs, positionalArgs, userArgs)
 		}
 
 		errExpected := ""
@@ -679,6 +683,15 @@ func FtestCaseFile(fname string, prepared, explain bool, qc *MockServer, namespa
 				}
 			}
 		}
+		v, ok = c["sortCount"]
+		if ok {
+			expectedSortCount := int(v.(float64))
+			if sortCount != expectedSortCount {
+				errstring = go_er.New(fmt.Sprintf("sortCount %v doesn't match expected %v\nstatement: %v\n"+
+					"     file: %v\n    index: %v%s\n\n", sortCount, expectedSortCount, statements, ffname, i, findIndex(b, i)))
+				return
+			}
+		}
 	}
 	return fin_stmt, nil
 }
@@ -693,35 +706,50 @@ func doResultsMatch(resultsActual, resultsExpected []interface{}, ordered bool, 
 		ffname = fname
 	}
 	if len(resultsActual) != len(resultsExpected) {
-		return go_er.New(fmt.Sprintf("results len don't match, %v vs %v\n  actual: %v\nexpected: %v\n"+
-			" (%v) for case file: %v, index: %v%s",
-			len(resultsActual), len(resultsExpected),
-			resultsActual, resultsExpected, stmt, ffname, i, findIndex(content, i)))
+		return go_er.New(fmt.Sprintf("results length doesn't match; expected %v have %v\n%v\n"+
+			"statement: %v\n     file: %v\n    index: %v%s\n\n",
+			len(resultsExpected), len(resultsActual),
+			diff(resultsExpected, resultsActual), stmt, ffname, i, findIndex(content, i)))
 	}
 
 	if ordered {
 		if !reflect.DeepEqual(resultsActual, resultsExpected) {
-			return go_er.New(fmt.Sprintf("results don't match\n  actual: %#v\nexpected: %#v\n"+
-				" (%v) for case file: %v, index: %v%s",
-				resultsActual, resultsExpected, stmt, ffname, i, findIndex(content, i)))
+			return go_er.New(fmt.Sprintf("results don't match\n%v\n"+
+				"statement: %v\n     file: %v\n    index: %v%s\n\n",
+				diff(resultsExpected, resultsActual), stmt, ffname, i, findIndex(content, i)))
 		}
 	} else {
 	nextresult:
 		for _, re := range resultsExpected {
 			for j, ra := range resultsActual {
 				if ra != nil && reflect.DeepEqual(ra, re) {
-					resultsActual[j] = nil
+					if j < len(resultsActual)-1 {
+						copy(resultsActual[j:], resultsActual[j+1:])
+					}
+					resultsActual = resultsActual[:len(resultsActual)-1]
 					continue nextresult
 				}
 			}
-			return go_er.New(fmt.Sprintf("results don't match: %#v is not present in : %#v"+
-				", (%v) for case file: %v, index: %v%s",
-				re, resultsActual, stmt, ffname, i, findIndex(content, i)))
+			return go_er.New(fmt.Sprintf("results don't match\n%v\nis not present in remaining results:\n%v\n"+
+				"statement: %v\n     file: %v\n    index: %v%s\n\n",
+				prettyPrint(re), prettyPrint(resultsActual), stmt, ffname, i, findIndex(content, i)))
 		}
 
 	}
 
 	return nil
+}
+
+func diff(a interface{}, b interface{}) string {
+	return diffpkg.Diff(prettyPrint(a), prettyPrint(b))
+}
+
+func prettyPrint(what interface{}) string {
+	res, err := json.MarshalIndent(what, "", "  ")
+	if err != nil {
+		res = []byte(fmt.Sprintf("%v", what))
+	}
+	return string(res)
 }
 
 // Search the file content trying to locate the line the index in question starts on
@@ -818,7 +846,7 @@ func checkExplain(qc *MockServer, queryParams map[string]interface{}, namespace 
 	}
 
 	explainStmt := "EXPLAIN " + statement
-	resultsActual, _, errActual := Run(qc, queryParams, explainStmt, namespace, namedArgs, positionalArgs, nil)
+	resultsActual, _, errActual, _ := Run(qc, queryParams, explainStmt, namespace, namedArgs, positionalArgs, nil)
 	if errActual != nil || len(resultsActual) != 1 {
 		return go_er.New(fmt.Sprintf("(%v) error actual: code - %d, msg - %s"+
 			", for case file: %v, index: %v%s", explainStmt, errActual.Code(), errActual.Error(), fname, i, findIndex(content, i)))
@@ -827,7 +855,7 @@ func checkExplain(qc *MockServer, queryParams map[string]interface{}, namespace 
 	namedParams := make(map[string]value.Value, 1)
 	namedParams["explan"] = value.NewValue(resultsActual[0])
 
-	resultsActual, _, errActual = Run(qc, queryParams, eStmt, namespace, namedParams, nil, nil)
+	resultsActual, _, errActual, _ = Run(qc, queryParams, eStmt, namespace, namedParams, nil, nil)
 	if errActual != nil {
 		return go_er.New(fmt.Sprintf("unexpected err: code - %d, msg - %s, statement: %v"+
 			", for case file: %v, index: %v%s", errActual.Code(), errActual.Error(), eStmt, fname, i, findIndex(content, i)))
@@ -846,7 +874,7 @@ func PrepareStmt(qc *MockServer, queryParams map[string]interface{}, namespace, 
 		queryContext, _ = s.(string)
 	}
 	prepareStmt := "PREPARE " + statement
-	resultsActual, _, errActual := Run(qc, queryParams, prepareStmt, namespace, nil, nil, nil)
+	resultsActual, _, errActual, _ := Run(qc, queryParams, prepareStmt, namespace, nil, nil, nil)
 	if errActual != nil || len(resultsActual) != 1 {
 		return nil, errors.NewError(nil, fmt.Sprintf("Error %#v FOR (%v)", prepareStmt, resultsActual))
 	}
@@ -910,7 +938,7 @@ func RunMatch(filename string, prepared, explain bool, qc *MockServer, t *testin
 
 }
 
-func RunStmt(mockServer *MockServer, q string) ([]interface{}, []errors.Error, errors.Error) {
+func RunStmt(mockServer *MockServer, q string) ([]interface{}, []errors.Error, errors.Error, int) {
 	return Run(mockServer, nil, q, Namespace_CBS, nil, nil, nil)
 }
 

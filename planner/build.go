@@ -91,67 +91,69 @@ const (
 type builder struct {
 	indexPushDowns
 	collectQueryInfo
-	context            *PrepareContext
-	datastore          datastore.Datastore
-	systemstore        datastore.Datastore
-	namespace          string
-	subquery           bool
-	correlated         bool
-	maxParallelism     int
-	delayProjection    bool                  // Used to allow ORDER BY non-projected expressions
-	from               algebra.FromTerm      // Used for index selection
-	where              expression.Expression // Used for index selection
-	filter             expression.Expression // for Filter operator
-	setOpDistinct      bool                  // Used for SETOP Distinct to apply DISTINCT on projection
-	children           []plan.Operator
-	subChildren        []plan.Operator
-	cover              expression.HasExpressions
-	node               expression.HasExpressions
-	coveringScans      []plan.CoveringOperator
-	coveredUnnests     map[*algebra.Unnest]bool
-	countScan          plan.CoveringOperator
-	skipDynamic        bool
-	requirePrimaryKey  bool
-	orderScan          plan.SecondaryScan
-	baseKeyspaces      map[string]*base.BaseKeyspace
-	keyspaceNames      map[string]string
-	indexKeyspaceNames map[string]bool       // keyspace names that use indexscan (excludes non from caluse subqueries)
-	pushableOnclause   expression.Expression // combined ON-clause from all inner joins
-	builderFlags       uint32
-	indexAdvisor       bool
-	useCBO             bool
-	hintIndexes        bool
-	lastOp             plan.Operator // last operator built, to get cost/cardinality info
-	aliases            map[string]bool
+	context              *PrepareContext
+	datastore            datastore.Datastore
+	systemstore          datastore.Datastore
+	namespace            string
+	subquery             bool
+	correlated           bool
+	maxParallelism       int
+	delayProjection      bool                  // Used to allow ORDER BY non-projected expressions
+	from                 algebra.FromTerm      // Used for index selection
+	where                expression.Expression // Used for index selection
+	filter               expression.Expression // for Filter operator
+	setOpDistinct        bool                  // Used for SETOP Distinct to apply DISTINCT on projection
+	children             []plan.Operator
+	subChildren          []plan.Operator
+	cover                expression.HasExpressions
+	node                 expression.HasExpressions
+	coveringScans        []plan.CoveringOperator
+	coveredUnnests       map[*algebra.Unnest]bool
+	countScan            plan.CoveringOperator
+	skipDynamic          bool
+	requirePrimaryKey    bool
+	orderScan            plan.SecondaryScan
+	baseKeyspaces        map[string]*base.BaseKeyspace
+	keyspaceNames        map[string]string
+	indexKeyspaceNames   map[string]bool       // keyspace names that use indexscan (excludes non from caluse subqueries)
+	pushableOnclause     expression.Expression // combined ON-clause from all inner joins
+	builderFlags         uint32
+	indexAdvisor         bool
+	useCBO               bool
+	hintIndexes          bool
+	lastOp               plan.Operator // last operator built, to get cost/cardinality info
+	aliases              map[string]bool
+	partialSortTermCount int
 }
 
 func (this *builder) Copy() *builder {
 	rv := &builder{
-		context:            this.context,
-		datastore:          this.datastore,
-		systemstore:        this.systemstore,
-		namespace:          this.namespace,
-		subquery:           this.subquery,
-		correlated:         this.correlated,
-		maxParallelism:     this.maxParallelism,
-		delayProjection:    this.delayProjection,
-		from:               this.from,
-		where:              expression.Copy(this.where),
-		filter:             expression.Copy(this.filter),
-		setOpDistinct:      this.setOpDistinct,
-		cover:              this.cover,
-		node:               this.node,
-		skipDynamic:        this.skipDynamic,
-		requirePrimaryKey:  this.requirePrimaryKey,
-		baseKeyspaces:      base.CopyBaseKeyspacesWithFilters(this.baseKeyspaces),
-		keyspaceNames:      this.keyspaceNames,
-		indexKeyspaceNames: this.indexKeyspaceNames,
-		pushableOnclause:   expression.Copy(this.pushableOnclause),
-		builderFlags:       this.builderFlags,
-		indexAdvisor:       this.indexAdvisor,
-		useCBO:             this.useCBO,
-		hintIndexes:        this.hintIndexes,
-		aliases:            this.aliases,
+		context:              this.context,
+		datastore:            this.datastore,
+		systemstore:          this.systemstore,
+		namespace:            this.namespace,
+		subquery:             this.subquery,
+		correlated:           this.correlated,
+		maxParallelism:       this.maxParallelism,
+		delayProjection:      this.delayProjection,
+		from:                 this.from,
+		where:                expression.Copy(this.where),
+		filter:               expression.Copy(this.filter),
+		setOpDistinct:        this.setOpDistinct,
+		cover:                this.cover,
+		node:                 this.node,
+		skipDynamic:          this.skipDynamic,
+		requirePrimaryKey:    this.requirePrimaryKey,
+		baseKeyspaces:        base.CopyBaseKeyspacesWithFilters(this.baseKeyspaces),
+		keyspaceNames:        this.keyspaceNames,
+		indexKeyspaceNames:   this.indexKeyspaceNames,
+		pushableOnclause:     expression.Copy(this.pushableOnclause),
+		builderFlags:         this.builderFlags,
+		indexAdvisor:         this.indexAdvisor,
+		useCBO:               this.useCBO,
+		hintIndexes:          this.hintIndexes,
+		aliases:              this.aliases,
+		partialSortTermCount: this.partialSortTermCount,
 		// the following fields are setup during planning process and thus not copied:
 		// children, subChildren, coveringScan, coveredUnnests, countScan, orderScan, lastOp
 	}

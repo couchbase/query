@@ -84,7 +84,7 @@ func case_clean(qc *gsi.MockServer, t *testing.T) {
 	runStmt(qc, "DROP PRIMARY INDEX ON orders._default.flattenkeys")
 }
 
-func runStmt(mockServer *gsi.MockServer, q string) ([]interface{}, []errors.Error, errors.Error) {
+func runStmt(mockServer *gsi.MockServer, q string) ([]interface{}, []errors.Error, errors.Error, int) {
 	return gsi.RunStmt(mockServer, q)
 }
 

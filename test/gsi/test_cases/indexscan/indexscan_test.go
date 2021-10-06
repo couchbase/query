@@ -163,15 +163,15 @@ func TestIndexScan(t *testing.T) {
 	runStmt(qc, "create primary index on purchase")
 	runStmt(qc, "create primary index on orders")
 
-	_, _, errcs := runStmt(qc, "delete from product where test_id IN [\"arrayIndex\", \"coveredIndex\"]")
+	_, _, errcs, _ := runStmt(qc, "delete from product where test_id IN [\"arrayIndex\", \"coveredIndex\"]")
 	if errcs != nil {
 		t.Errorf("did not expect err %s", errcs.Error())
 	}
-	_, _, errcs = runStmt(qc, "delete from purchase where test_id = \"arrayIndex\"")
+	_, _, errcs, _ = runStmt(qc, "delete from purchase where test_id = \"arrayIndex\"")
 	if errcs != nil {
 		t.Errorf("did not expect err %s", errcs.Error())
 	}
-	_, _, errcs = runStmt(qc, "delete from orders where test_id IN [\"ua\", \"skipranges\", \"ordernulls\", \"parameters\", \"idxfltr\"]")
+	_, _, errcs, _ = runStmt(qc, "delete from orders where test_id IN [\"ua\", \"skipranges\", \"ordernulls\", \"parameters\", \"idxfltr\"]")
 	if errcs != nil {
 		t.Errorf("did not expect err %s", errcs.Error())
 	}

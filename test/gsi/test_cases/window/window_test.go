@@ -42,7 +42,7 @@ func TestWindow(t *testing.T) {
 
 	runMatch("case_windowname.json", false, false, qc, t) // non-prepared, no explain
 	runMatch("case_windowname.json", true, false, qc, t)  // prepared, no explain
-	_, _, errcs := runStmt(qc, "delete from orders where test_id IN [\"window\"]")
+	_, _, errcs, _ := runStmt(qc, "delete from orders where test_id IN [\"window\"]")
 	if errcs != nil {
 		t.Errorf("did not expect err %s", errcs.Error())
 	}

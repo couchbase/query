@@ -96,6 +96,101 @@
         "statements": "SELECT orderlines[0] FROM orders WHERE test_id=\"order_func\" ORDER BY orderlines[0].productId, orderlines[0].qty ASC OFFSET 8192 LIMIT 1",
         "results": [
         ]
+    },
+    {
+        "description": "order_limit_prune_sort: Tests full sort with no pruning",
+        "statements": "SELECT custId, `shipped-on` FROM orders USE INDEX (order_cust) WHERE custId is valued AND test_id=\"order_limit_prune_sort\" ORDER BY custId, `shipped-on`",
+        "sortCount": 9
+    },
+    {
+        "description": "order_limit_prune_sort: Check plan reflects 'partial_sort_term_count'",
+        "ignore": "index_id",
+        "explain": {
+          "disabled": false,
+          "results": [
+            {
+              "present": true
+            }
+          ],
+          "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'Order' AND v.partial_sort_term_count = 1 END"
+        },
+        "statements": "SELECT custId, `shipped-on` FROM orders USE INDEX (order_cust) WHERE custId is valued AND test_id=\"order_limit_prune_sort\" ORDER BY custId,`shipped-on` limit 4",
+        "sortCount": 4,
+        "ordered": true,
+        "results": [
+            {
+                "custId": "c1",
+                "shipped-on": "2022-01-01"
+            },
+            {
+                "custId": "c1",
+                "shipped-on": "2022-01-02"
+            },
+            {
+                "custId": "c1",
+                "shipped-on": "2022-01-03"
+            },
+            {
+                "custId": "c2",
+                "shipped-on": "2022-01-01"
+            }
+        ]
+    },
+    {
+        "description": "order_limit_prune_sort: Tests offset + limit still using reduced sort count",
+        "statements": "SELECT custId, `shipped-on` FROM orders USE INDEX (order_cust) WHERE custId is valued AND test_id=\"order_limit_prune_sort\" ORDER BY custId, `shipped-on` offset 4 limit 2",
+        "sortCount": 3
+    },
+    {
+        "description": "order_limit_prune_sort: Tests offset + limit using reduced sort count produces correct results",
+        "statements": "SELECT custId, `shipped-on` FROM orders USE INDEX (order_cust) WHERE custId is valued AND test_id=\"order_limit_prune_sort\" ORDER BY custId, `shipped-on` offset 5 limit 2",
+        "ordered": true,
+        "results": [
+            {
+                "custId": "c2",
+                "shipped-on": "2022-01-03"
+            },
+            {
+                "custId": "c3",
+                "shipped-on": "2022-01-01"
+            }
+        ]
+    },
+    {
+        "description": "order_limit_prune_sort: Tests offset + limit using reduced sort count with multiple partial sort keys",
+        "statements": "SELECT custId, `shipped-on` FROM orders USE INDEX (order_cust_shipped) WHERE custId is valued AND test_id=\"order_limit_prune_sort\" ORDER BY custId, `shipped-on` DESC, orderId offset 4 limit 2",
+        "sortCount": 3
+    },
+    {
+        "description": "order_limit_prune_sort: Check plan reflects 'partial_sort_term_count'",
+        "ignore": "index_id",
+        "explain": {
+          "disabled": false,
+          "results": [
+            {
+              "present": true
+            }
+          ],
+          "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'Order' AND v.partial_sort_term_count = 1 END AND ANY y WITHIN p.plan.`~children` SATISFIES y.`#operator` LIKE 'IndexScan%' AND y.covers IS NOT MISSING END"
+        },
+        "statements": "SELECT custId, `shipped-on`, orderId FROM orders WHERE custId is valued AND test_id='order_limit_prune_sort' ORDER BY custId, `shipped-on` DESC, orderId offset 5 limit 2"
+    },
+    {
+        "description": "order_limit_prune_sort: Tests offset + limit using reduced sort count and covering index scan",
+        "statements": "SELECT custId, `shipped-on`, orderId FROM orders WHERE custId is valued AND test_id='order_limit_prune_sort' ORDER BY custId, `shipped-on` DESC, orderId offset 5 limit 2",
+        "ordered": true,
+        "sortCount": 4,
+        "results": [
+            {
+                "custId": "c2",
+                "orderId": 1,
+                "shipped-on": "2022-01-01"
+            },
+            {
+                "custId": "c3",
+                "orderId": 1,
+                "shipped-on": "2022-01-03"
+            }
+        ]
     }
 ]
-

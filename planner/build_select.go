@@ -31,6 +31,8 @@ func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 	prevProjection := this.delayProjection
 	prevRequirePrimaryKey := this.requirePrimaryKey
 	prevCollectQueryInfo := this.storeCollectQueryInfo()
+	prevPartialSortTermCount := this.partialSortTermCount
+
 	defer func() {
 		this.cover = prevCover
 		this.order = prevOrder
@@ -39,7 +41,7 @@ func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 		this.delayProjection = prevProjection
 		this.requirePrimaryKey = prevRequirePrimaryKey
 		this.restoreCollectQueryInfo(prevCollectQueryInfo)
-
+		this.partialSortTermCount = prevPartialSortTermCount
 	}()
 
 	stmtOrder := stmt.Order()
@@ -61,6 +63,7 @@ func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 	this.offset = stmtOffset
 	this.limit = stmtLimit
 	this.order = stmtOrder
+	this.partialSortTermCount = 0
 
 	this.extractPagination(this.order, this.offset, this.limit)
 
@@ -68,6 +71,23 @@ func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 		// If there is an ORDER BY, delay the final projection
 		this.delayProjection = true
 		this.cover = stmt
+	}
+
+	if this.order != nil {
+		var where expression.Expression
+		if ss, ok := stmt.Subresult().(*algebra.Subselect); ok {
+			where, err = this.getWhere(ss.Where())
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		order := skipFixedOrderTermsAndDedup(this.order, where)
+		if order != nil {
+			this.order = order
+			// if we changed order then we must adjust the stmtOrder too so later operator creation matches
+			stmtOrder = order
+		}
 	}
 
 	sub, err := stmt.Subresult().Accept(this)
@@ -107,7 +127,10 @@ func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 		}
 	}
 
-	if stmtOrder != nil && this.order == nil && !this.hasBuilderFlag(BUILDER_PLAN_HAS_ORDER) {
+	offsetHandled := false
+	if stmtOrder != nil && !this.hasBuilderFlag(BUILDER_PLAN_HAS_ORDER) &&
+		(this.order == nil || this.partialSortTermCount > 0) {
+
 		var limit *plan.Limit
 		var offset *plan.Offset
 		if stmtLimit != nil {
@@ -133,12 +156,13 @@ func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 				frCost = OPT_COST_NOT_AVAIL
 			}
 		}
-		order := plan.NewOrder(stmtOrder, offset, limit, cost, cardinality, size, frCost)
+		offsetHandled = (this.partialSortTermCount > 0)
+		order := plan.NewOrder(stmtOrder, this.partialSortTermCount, offset, limit, cost, cardinality, size, frCost)
 		children = append(children, order)
 		lastOp = order
 	}
 
-	if stmtOffset != nil && this.offset == nil {
+	if stmtOffset != nil && this.offset == nil && !offsetHandled {
 		if this.useCBO && (cost > 0.0) && (cardinality > 0.0) && (size > 0) && (frCost > 0.0) {
 			cost, cardinality, size, frCost = getOffsetCost(lastOp, noffset)
 		}
@@ -200,4 +224,41 @@ func newOffsetLimitExpr(expr expression.Expression, offset bool) (expression.Exp
 		return nil, errors.NewInvalidValueError(fmt.Sprintf("Invalid OFFSET value %v", actual))
 	}
 	return nil, errors.NewInvalidValueError(fmt.Sprintf("Invalid LIMIT value %v", actual))
+}
+
+func skipFixedOrderTermsAndDedup(order *algebra.Order, pred expression.Expression) *algebra.Order {
+	filterCovers := _FILTER_COVERS_POOL.Get()
+	defer _FILTER_COVERS_POOL.Put(filterCovers)
+
+	if pred != nil {
+		filterCovers = pred.FilterCovers(filterCovers)
+	}
+
+	sortTerms := make(algebra.SortTerms, 0, len(order.Terms()))
+term_loop:
+	for n, term := range order.Terms() {
+		expr := term.Expression()
+		if expr.Static() != nil &&
+			(term.DescendingExpr() != nil && term.DescendingExpr().Static() != nil) &&
+			(term.NullsPosExpr() != nil && term.NullsPosExpr().Static() != nil) {
+			continue
+		}
+
+		for i := 0; i < n; i++ {
+			if expr.EquivalentTo(order.Terms()[i].Expression()) {
+				// already appears in order by so skip
+				continue term_loop
+			}
+		}
+
+		if val, ok := filterCovers[expr.String()]; !ok || val == nil {
+			sortTerms = append(sortTerms, term)
+		}
+	}
+
+	if len(sortTerms) == 0 {
+		return nil
+	} else {
+		return algebra.NewOrder(sortTerms)
+	}
 }

@@ -96,7 +96,7 @@ func run_drop_index(ixname, coll string, qc *gsi.MockServer, t *testing.T) {
 	}
 }
 
-func runStmt(mockServer *gsi.MockServer, q string) ([]interface{}, []errors.Error, errors.Error) {
+func runStmt(mockServer *gsi.MockServer, q string) ([]interface{}, []errors.Error, errors.Error, int) {
 	return gsi.RunStmt(mockServer, q)
 }
 

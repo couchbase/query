@@ -45,7 +45,7 @@ func TestN1qlFts(t *testing.T) {
 	if err != nil {
 		t.Errorf("did not expect err %s", err.Error())
 	}
-	_, _, errcs := runStmt(qc, "delete from product where test_id = \"n1qlfts\"")
+	_, _, errcs, _ := runStmt(qc, "delete from product where test_id = \"n1qlfts\"")
 	if errcs != nil {
 		t.Errorf("did not expect err %s", errcs.Error())
 	}

@@ -30,7 +30,7 @@ func TestTypeConvFunc(t *testing.T) {
 	runMatch("case_distinct.json", false, false, qc, t)
 	runMatch("case_select.json", false, false, qc, t)
 
-	_, _, errcs := runStmt(qc, "delete from orders where test_id = \"select_func\"")
+	_, _, errcs, _ := runStmt(qc, "delete from orders where test_id = \"select_func\"")
 	if errcs != nil {
 		t.Errorf("did not expect err %s", errcs.Error())
 	}

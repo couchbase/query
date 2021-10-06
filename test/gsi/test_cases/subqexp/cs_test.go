@@ -31,7 +31,7 @@ func TestSubqexp(t *testing.T) {
 	runMatch("case_keyspace.json", false, false, qc, t)
 	runMatch("case_keyspace.json", true, false, qc, t)
 
-	_, _, errcs := runStmt(qc, "delete from orders where test_id = \"subqexp\"")
+	_, _, errcs, _ := runStmt(qc, "delete from orders where test_id = \"subqexp\"")
 	if errcs != nil {
 		t.Errorf("did not expect err %s", errcs.Error())
 	}

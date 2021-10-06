@@ -30,7 +30,7 @@ func TestArrayFunctions(t *testing.T) {
 	runMatch("case_array.json", false, false, qc, t)
 	runMatch("case_func_array.json", false, false, qc, t)
 
-	_, _, errcs := runStmt(qc, "delete from orders where test_id IN [\"array_func\"]")
+	_, _, errcs, _ := runStmt(qc, "delete from orders where test_id IN [\"array_func\"]")
 	if errcs != nil {
 		t.Errorf("did not expect err %s", errcs.Error())
 	}

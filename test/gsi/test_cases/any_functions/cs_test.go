@@ -30,7 +30,7 @@ func TestAnyFunctions(t *testing.T) {
 	runMatch("case_any.json", false, false, qc, t)
 	runMatch("case_every.json", false, false, qc, t)
 
-	_, _, errcs := runStmt(qc, "delete from purchase where test_id IN [\"any_func\"]")
+	_, _, errcs, _ := runStmt(qc, "delete from purchase where test_id IN [\"any_func\"]")
 	if errcs != nil {
 		t.Errorf("did not expect err %s", errcs.Error())
 	}

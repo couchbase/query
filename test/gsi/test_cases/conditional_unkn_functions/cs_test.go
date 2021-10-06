@@ -30,12 +30,12 @@ func TestCondUnknFunctions(t *testing.T) {
 
 	runMatch("case_func_cond_unkn.json", false, false, qc, t)
 
-	_, _, errcs := runStmt(qc, "delete from orders where test_id IN [\"cond_unkn_func\"]")
+	_, _, errcs, _ := runStmt(qc, "delete from orders where test_id IN [\"cond_unkn_func\"]")
 	if errcs != nil {
 		t.Errorf("did not expect err %s", errcs.Error())
 	}
 
-	_, _, errcs = runStmt(qc, "delete from customer where test_id IN [\"cond_unkn_func\"]")
+	_, _, errcs, _ = runStmt(qc, "delete from customer where test_id IN [\"cond_unkn_func\"]")
 	if errcs != nil {
 		t.Errorf("did not expect err %s", errcs.Error())
 	}

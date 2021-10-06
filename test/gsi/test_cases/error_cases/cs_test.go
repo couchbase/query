@@ -31,12 +31,12 @@ func TestErrorCases(t *testing.T) {
 	runMatch("case_error.json", false, false, qc, t)
 	runMatch("case_error1.json", false, false, qc, t)
 
-	_, _, errcs := runStmt(qc, "delete from orders where test_id IN [\"err_cases\"]")
+	_, _, errcs, _ := runStmt(qc, "delete from orders where test_id IN [\"err_cases\"]")
 	if errcs != nil {
 		t.Errorf("did not expect err %s", errcs.Error())
 	}
 
-	_, _, errcs = runStmt(qc, "delete from product where test_id IN [\"err_cases\"]")
+	_, _, errcs, _ = runStmt(qc, "delete from product where test_id IN [\"err_cases\"]")
 	if errcs != nil {
 		t.Errorf("did not expect err %s", errcs.Error())
 	}

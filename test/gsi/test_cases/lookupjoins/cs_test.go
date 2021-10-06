@@ -32,17 +32,17 @@ func TestLookupjoins(t *testing.T) {
 	runMatch("case_joins.json", false, false, qc, t)
 	runMatch("case_leftjoin.json", false, false, qc, t)
 
-	_, _, errcs := runStmt(qc, "delete from purchase where test_id = \"joins\"")
+	_, _, errcs, _ := runStmt(qc, "delete from purchase where test_id = \"joins\"")
 	if errcs != nil {
 		t.Errorf("did not expect err %s", errcs.Error())
 	}
 
-	_, _, errcs = runStmt(qc, "delete from customer where test_id = \"joins\"")
+	_, _, errcs, _ = runStmt(qc, "delete from customer where test_id = \"joins\"")
 	if errcs != nil {
 		t.Errorf("did not expect err %s", errcs.Error())
 	}
 
-	_, _, errcs = runStmt(qc, "delete from product where test_id = \"joins\"")
+	_, _, errcs, _ = runStmt(qc, "delete from product where test_id = \"joins\"")
 	if errcs != nil {
 		t.Errorf("did not expect err %s", errcs.Error())
 	}

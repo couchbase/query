@@ -21,19 +21,21 @@ import (
 type Order struct {
 	readonly
 	optEstimate
-	terms  algebra.SortTerms
-	offset *Offset
-	limit  *Limit
+	terms                algebra.SortTerms
+	partialSortTermCount int
+	offset               *Offset
+	limit                *Limit
 }
 
 const _FALLBACK_NUM = 64 * 1024
 
-func NewOrder(order *algebra.Order, offset *Offset, limit *Limit, cost, cardinality float64,
+func NewOrder(order *algebra.Order, partialSortTermCount int, offset *Offset, limit *Limit, cost, cardinality float64,
 	size int64, frCost float64) *Order {
 	rv := &Order{
-		terms:  order.Terms(),
-		offset: offset,
-		limit:  limit,
+		terms:                order.Terms(),
+		partialSortTermCount: partialSortTermCount,
+		offset:               offset,
+		limit:                limit,
 	}
 	setOptEstimate(&rv.optEstimate, cost, cardinality, size, frCost)
 	return rv
@@ -49,6 +51,10 @@ func (this *Order) New() Operator {
 
 func (this *Order) Terms() algebra.SortTerms {
 	return this.terms
+}
+
+func (this *Order) PartialSortTermCount() int {
+	return this.partialSortTermCount
 }
 
 func (this *Order) MarshalJSON() ([]byte, error) {
@@ -73,6 +79,9 @@ func (this *Order) MarshalBase(f func(map[string]interface{})) map[string]interf
 		s = append(s, q)
 	}
 	r["sort_terms"] = s
+	if this.partialSortTermCount > 0 {
+		r["partial_sort_term_count"] = this.partialSortTermCount
+	}
 	if this.offset != nil {
 		r["offset"] = this.offset.Expression().String()
 	}
@@ -96,9 +105,10 @@ func (this *Order) UnmarshalJSON(body []byte) error {
 			Desc     interface{} `json:"desc"`
 			NullsPos interface{} `json:"nulls_pos"`
 		} `json:"sort_terms"`
-		OffsetExpr  string                 `json:"offset"`
-		LimitExpr   string                 `json:"limit"`
-		OptEstimate map[string]interface{} `json:"optimizer_estimates"`
+		PartialSortTermCount int                    `json:"partial_sort_term_count"`
+		OffsetExpr           string                 `json:"offset"`
+		LimitExpr            string                 `json:"limit"`
+		OptEstimate          map[string]interface{} `json:"optimizer_estimates"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -182,6 +192,7 @@ func (this *Order) UnmarshalJSON(body []byte) error {
 		this.limit = NewLimit(limitExpr, PLAN_COST_NOT_AVAIL, PLAN_CARD_NOT_AVAIL, PLAN_SIZE_NOT_AVAIL, PLAN_COST_NOT_AVAIL)
 	}
 
+	this.partialSortTermCount = _unmarshalled.PartialSortTermCount
 	unmarshalOptEstimate(&this.optEstimate, _unmarshalled.OptEstimate)
 
 	return nil

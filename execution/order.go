@@ -81,12 +81,14 @@ func (this *Order) processItem(item value.AnnotatedValue, context *Context) bool
 }
 
 func (this *Order) setupTerms(context *Context) {
-	this.context = context
-	this.terms = make([]orderTerm, len(this.plan.Terms()))
-	for i, term := range this.plan.Terms() {
-		this.terms[i].term = term.Expression().String()
-		this.terms[i].descending = term.Descending(this.context)
-		this.terms[i].nullsLast = term.NullsLast(this.context)
+	if this.terms == nil {
+		this.context = context
+		this.terms = make([]orderTerm, len(this.plan.Terms()))
+		for i, term := range this.plan.Terms() {
+			this.terms[i].term = term.Expression().String()
+			this.terms[i].descending = term.Descending(this.context)
+			this.terms[i].nullsLast = term.NullsLast(this.context)
+		}
 	}
 }
 

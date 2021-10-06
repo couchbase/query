@@ -342,7 +342,7 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm,
 		}
 		// only consider indexes that satisfy ordering
 		for i, e := range sargables {
-			ok, _ := this.useIndexOrder(e, e.keys)
+			ok, _, _ := this.useIndexOrder(e, e.keys)
 			if !ok {
 				delete(sargables, i)
 			}
@@ -373,12 +373,6 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm,
 
 	indexPushDowns := this.storeIndexPushDowns()
 	this.orderScan = nil
-
-	defer func() {
-		if this.orderScan != nil {
-			this.order = indexPushDowns.order
-		}
-	}()
 
 	var secOffsetPushed, unnestOffsetPushed, dynamicOffsetPushed bool
 	var limitPushed bool

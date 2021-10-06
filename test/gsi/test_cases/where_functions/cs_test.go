@@ -31,12 +31,12 @@ func TestWhereFunc(t *testing.T) {
 	runMatch("case_simple.json", false, false, qc, t)
 	runMatch("case_where.json", false, false, qc, t)
 
-	_, _, errcs := runStmt(qc, "delete from product where test_id = \"where_func\"")
+	_, _, errcs, _ := runStmt(qc, "delete from product where test_id = \"where_func\"")
 	if errcs != nil {
 		t.Errorf("did not expect err %s", errcs.Error())
 	}
 
-	_, _, errcs = runStmt(qc, "delete from orders where test_id = \"where_func\"")
+	_, _, errcs, _ = runStmt(qc, "delete from orders where test_id = \"where_func\"")
 	if errcs != nil {
 		t.Errorf("did not expect err %s", errcs.Error())
 	}

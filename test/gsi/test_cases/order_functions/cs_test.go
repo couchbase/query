@@ -26,15 +26,19 @@ func TestOrderFunctions(t *testing.T) {
 	runMatch("insert.json", false, false, qc, t)
 
 	runStmt(qc, "CREATE PRIMARY INDEX ON orders")
+	runStmt(qc, "CREATE INDEX order_cust ON orders(custId)")
+	runStmt(qc, "CREATE INDEX order_cust_shipped ON orders(custId,`shipped-on`,orderId,test_id)")
 
 	runMatch("case_first.json", false, false, qc, t)
-	runMatch("case_orderby_limit.json", false, false, qc, t)
+	runMatch("case_orderby_limit.json", false, true, qc, t)
 	runMatch("case_orderby.json", false, false, qc, t)
 
-	_, _, errcs := runStmt(qc, "delete from orders where test_id IN [\"order_func\"]")
+	_, _, errcs, _ := runStmt(qc, "delete from orders where test_id IN [\"order_func\",\"order_limit_prune_sort\"]")
 	if errcs != nil {
 		t.Errorf("did not expect err %s", errcs.Error())
 	}
 
 	runStmt(qc, "DROP PRIMARY INDEX ON order")
+	runStmt(qc, "DROP INDEX orders.order_cust")
+	runStmt(qc, "DROP INDEX orders.order_cust_shipped")
 }

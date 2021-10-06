@@ -146,7 +146,7 @@ func (this *builder) buildCreateSecondaryScan(indexes, flex map[datastore.Index]
 
 		var indexKeyOrders plan.IndexKeyOrders
 		if orderEntry != nil && index == orderEntry.index {
-			_, indexKeyOrders = this.useIndexOrder(entry, entry.keys)
+			_, indexKeyOrders, _ = this.useIndexOrder(entry, entry.keys)
 		}
 
 		if entry.index.Type() != datastore.SYSTEM {
@@ -237,8 +237,16 @@ func (this *builder) buildSecondaryScanPushdowns(indexes, flex map[datastore.Ind
 	// get ordered Index. If any index doesn't have Limit/Offset pushdown those must turned off
 	pushDown := this.hasOffsetOrLimit()
 	for _, entry := range indexes {
-		if this.order != nil && orderEntry == nil && entry.IsPushDownProperty(_PUSHDOWN_ORDER) {
-			orderEntry = entry
+		if this.order != nil {
+			// prefer _PUSHDOWN_ORDER over _PUSHDOWN_PARTIAL_ORDER
+			if (orderEntry == nil || orderEntry.IsPushDownProperty(_PUSHDOWN_PARTIAL_ORDER)) &&
+				entry.IsPushDownProperty(_PUSHDOWN_ORDER) {
+				orderEntry = entry
+				this.partialSortTermCount = 0
+			} else if orderEntry == nil && entry.IsPushDownProperty(_PUSHDOWN_PARTIAL_ORDER) {
+				orderEntry = entry
+				this.partialSortTermCount = entry.partialSortTermCount
+			}
 		}
 
 		if pushDown && ((this.offset != nil && !entry.IsPushDownProperty(_PUSHDOWN_OFFSET)) ||

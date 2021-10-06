@@ -24,6 +24,7 @@ const (
 	_PUSHDOWN_LIMIT
 	_PUSHDOWN_OFFSET
 	_PUSHDOWN_COVERED_UNNEST
+	_PUSHDOWN_PARTIAL_ORDER
 	_PUSHDOWN_ORDER
 	_PUSHDOWN_GROUPAGGS
 	_PUSHDOWN_FULLGROUPAGGS
@@ -37,34 +38,35 @@ const (
 )
 
 type indexEntry struct {
-	index            datastore.Index
-	keys             expression.Expressions
-	sargKeys         expression.Expressions
-	partitionKeys    expression.Expressions
-	arrayKey         *expression.All
-	arrayKeyPos      int
-	minKeys          int
-	maxKeys          int
-	sumKeys          int
-	nSargKeys        int
-	skeys            []bool
-	cond             expression.Expression
-	origCond         expression.Expression
-	spans            SargSpans
-	exactSpans       bool
-	pushDownProperty PushDownProperties
-	cost             float64
-	cardinality      float64
-	selectivity      float64
-	size             int64
-	frCost           float64
-	searchOrders     []string
-	condFc           map[string]value.Value
-	nEqCond          int
-	numIndexedKeys   uint32
-	flags            uint32
-	unnestAliases    []string
-	exactFilters     map[*base.Filter]bool
+	index                datastore.Index
+	keys                 expression.Expressions
+	sargKeys             expression.Expressions
+	partitionKeys        expression.Expressions
+	arrayKey             *expression.All
+	arrayKeyPos          int
+	minKeys              int
+	maxKeys              int
+	sumKeys              int
+	nSargKeys            int
+	skeys                []bool
+	cond                 expression.Expression
+	origCond             expression.Expression
+	spans                SargSpans
+	exactSpans           bool
+	pushDownProperty     PushDownProperties
+	cost                 float64
+	cardinality          float64
+	selectivity          float64
+	size                 int64
+	frCost               float64
+	searchOrders         []string
+	condFc               map[string]value.Value
+	nEqCond              int
+	numIndexedKeys       uint32
+	flags                uint32
+	unnestAliases        []string
+	exactFilters         map[*base.Filter]bool
+	partialSortTermCount int
 }
 
 func newIndexEntry(index datastore.Index, keys, sargKeys, partitionKeys expression.Expressions,

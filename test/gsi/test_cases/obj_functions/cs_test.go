@@ -29,7 +29,7 @@ func TestObjFunctions(t *testing.T) {
 
 	runMatch("case_obj.json", false, false, qc, t)
 
-	_, _, errcs := runStmt(qc, "delete from customer where test_id IN [\"obj_func\"]")
+	_, _, errcs, _ := runStmt(qc, "delete from customer where test_id IN [\"obj_func\"]")
 	if errcs != nil {
 		t.Errorf("did not expect err %s", errcs.Error())
 	}

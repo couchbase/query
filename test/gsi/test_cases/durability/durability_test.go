@@ -34,7 +34,7 @@ func TestDurability(t *testing.T) {
 	runMatch("durability_neg.json", false, false, qc, t) // non-prepared, no-explain
 }
 
-func runStmt(mockServer *gsi.MockServer, q string) ([]interface{}, []errors.Error, errors.Error) {
+func runStmt(mockServer *gsi.MockServer, q string) ([]interface{}, []errors.Error, errors.Error, int) {
 	return gsi.RunStmt(mockServer, q)
 }
 

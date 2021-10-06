@@ -39,7 +39,7 @@ func TestXattrs(t *testing.T) {
 	// Test non covering index
 	runMatch("case_xattrs.json", false, false, qc, t)
 
-	_, _, errcs := runStmt(qc, "delete from product where test_id = \"xattrs\"")
+	_, _, errcs, _ := runStmt(qc, "delete from product where test_id = \"xattrs\"")
 	if errcs != nil {
 		t.Errorf("did not expect err %s", errcs.Error())
 	}

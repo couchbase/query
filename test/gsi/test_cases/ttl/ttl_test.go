@@ -41,7 +41,7 @@ func TestWindow(t *testing.T) {
 	runMatch("preserve_ttl.json", true, false, qc, t)  // prepared, no-explain
 }
 
-func runStmt(mockServer *gsi.MockServer, q string) ([]interface{}, []errors.Error, errors.Error) {
+func runStmt(mockServer *gsi.MockServer, q string) ([]interface{}, []errors.Error, errors.Error, int) {
 	return gsi.RunStmt(mockServer, q)
 }
 

@@ -39,7 +39,7 @@ func TestWindow(t *testing.T) {
 	runStmt(qc, "DROP INDEX orders.aggfltix1")
 
 	runStmt(qc, "CREATE PRIMARY INDEX ON orders")
-	_, _, errcs := runStmt(qc, "delete from orders where test_id IN [\"aggflt\"]")
+	_, _, errcs, _ := runStmt(qc, "delete from orders where test_id IN [\"aggflt\"]")
 	if errcs != nil {
 		t.Errorf("did not expect err %s", errcs.Error())
 	}
@@ -47,7 +47,7 @@ func TestWindow(t *testing.T) {
 	runStmt(qc, "DROP PRIMARY INDEX ON orders")
 }
 
-func runStmt(mockServer *gsi.MockServer, q string) ([]interface{}, []errors.Error, errors.Error) {
+func runStmt(mockServer *gsi.MockServer, q string) ([]interface{}, []errors.Error, errors.Error, int) {
 	return gsi.RunStmt(mockServer, q)
 }
 

@@ -9,9 +9,12 @@
 package planner
 
 import (
+	"fmt"
+
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
@@ -38,9 +41,18 @@ func (this *builder) indexPushDownProperty(entry *indexEntry, indexKeys,
 	// Check Query Order By matches with index key order.
 	exactLimitOffset := exact
 	if this.order != nil {
-		ok, _ := this.useIndexOrder(entry, entry.keys)
-		if ok && (this.group == nil || isPushDownProperty(pushDownProperty, _PUSHDOWN_FULLGROUPAGGS)) {
-			pushDownProperty |= _PUSHDOWN_ORDER
+		if this.group == nil || isPushDownProperty(pushDownProperty, _PUSHDOWN_FULLGROUPAGGS) {
+			ok, _, partSortCount := this.useIndexOrder(entry, entry.keys)
+			logging.Debuga(func() string { return fmt.Sprintf("indexPushDownProperty: ok: %v, count: %v", ok, partSortCount) })
+			if ok {
+				pushDownProperty |= _PUSHDOWN_ORDER
+			} else {
+				exactLimitOffset = false
+				if partSortCount > 0 && partSortCount < len(this.order.Terms()) && !indexHasFlattenKeys(entry.index) {
+					entry.partialSortTermCount = partSortCount
+					pushDownProperty |= _PUSHDOWN_PARTIAL_ORDER
+				}
+			}
 		} else {
 			exactLimitOffset = false
 		}
@@ -461,7 +473,7 @@ func (this *builder) canPushDownProjectionDistinct(entry *indexEntry, projection
 	return true
 }
 
-func (this *builder) useIndexOrder(entry *indexEntry, keys expression.Expressions) (bool, plan.IndexKeyOrders) {
+func (this *builder) useIndexOrder(entry *indexEntry, keys expression.Expressions) (bool, plan.IndexKeyOrders, int) {
 
 	// Force the use of sorts on indexes that we know not to be ordered
 	// (for now system indexes)
@@ -471,8 +483,10 @@ func (this *builder) useIndexOrder(entry *indexEntry, keys expression.Expression
 
 	if entry.index.Type() == datastore.SYSTEM ||
 		!entry.spans.CanUseIndexOrder(useIndex3API(entry.index, this.context.IndexApiVersion())) {
-		return false, nil
+		return false, nil, 0
 	}
+
+	logging.Debuga(func() string { return fmt.Sprintf("useIndexOrder: entry: %v, order: %v", entry, this.order.Terms()) })
 
 	var filters map[string]value.Value
 	if entry.cond != nil {
@@ -494,16 +508,18 @@ func (this *builder) useIndexOrder(entry *indexEntry, keys expression.Expression
 	indexKeys := getIndexKeys(entry.index)
 	i := 0
 	indexOrder := make(plan.IndexKeyOrders, 0, len(keys))
+	partSortTermCount := 0
 outer:
 	for _, orderTerm := range this.order.Terms() {
 		// sort order or nulls order are parameters, then we can't use index order
 		if (orderTerm.DescendingExpr() != nil && orderTerm.DescendingExpr().Indexable() == false) ||
 			(orderTerm.NullsPosExpr() != nil && orderTerm.NullsPosExpr().Indexable() == false) {
-			return false, nil
+			return false, indexOrder, partSortTermCount
 		}
 
 		// orderTerm is constant
 		if orderTerm.Expression().Static() != nil {
+			partSortTermCount++
 			continue
 		}
 
@@ -511,9 +527,11 @@ outer:
 		if i >= len(keys) {
 			// match with condition EQ terms
 			if equalConditionFilter(filters, orderTerm.Expression().String()) {
+				partSortTermCount++
 				continue outer
 			}
-			return false, nil
+			// index order gives us partial sorting
+			return false, indexOrder, partSortTermCount
 		}
 
 		d := orderTerm.Descending(nil)
@@ -533,9 +551,11 @@ outer:
 				// orderTerm matched with index key
 				indexOrder = append(indexOrder, plan.NewIndexKeyOrders(i, d))
 				i++
+				partSortTermCount++
 				continue outer
 			} else if equalConditionFilter(filters, orderTerm.Expression().String()) {
 				// orderTerm matched with Condition EQ
+				partSortTermCount++
 				continue outer
 			} else if eq, _ := entry.spans.EquivalenceRangeAt(i); eq {
 				// orderTerm not yet matched, but can skip equivalence range key
@@ -543,15 +563,15 @@ outer:
 					plan.NewIndexKeyOrders(i, indexKeyIsDescCollation(i, indexKeys)))
 				i++
 				if i >= len(keys) {
-					return false, nil
+					return false, indexOrder, partSortTermCount
 				}
 			} else {
-				return false, nil
+				return false, indexOrder, partSortTermCount
 			}
 		}
 	}
 
-	return true, indexOrder
+	return true, indexOrder, 0 // complete sorting via index
 }
 
 func equalConditionFilter(filters map[string]value.Value, str string) bool {

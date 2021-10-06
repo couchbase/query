@@ -30,7 +30,7 @@ func TestDateFunctions(t *testing.T) {
 	runMatch("case_func_cond_num.json", false, false, qc, t)
 	runMatch("case_func_num.json", false, false, qc, t)
 
-	_, _, errcs := runStmt(qc, "delete from product where test_id IN [\"numberfunc\"]")
+	_, _, errcs, _ := runStmt(qc, "delete from product where test_id IN [\"numberfunc\"]")
 	if errcs != nil {
 		t.Errorf("did not expect err %s", errcs.Error())
 	}

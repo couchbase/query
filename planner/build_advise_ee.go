@@ -34,6 +34,7 @@ var pushdownMap = map[PushDownProperties]string{
 	_PUSHDOWN_LIMIT:         "LIMIT pushdown",
 	_PUSHDOWN_OFFSET:        "OFFSET pushdown",
 	_PUSHDOWN_ORDER:         "ORDER pushdown",
+	_PUSHDOWN_PARTIAL_ORDER: "ORDER pushdown (partial)",
 	_PUSHDOWN_GROUPAGGS:     "GROUPBY & AGGREGATES pushdown",
 	_PUSHDOWN_FULLGROUPAGGS: "FULL GROUPBY & AGGREGATES pushdown",
 }

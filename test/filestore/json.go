@@ -36,6 +36,7 @@ import (
 	"github.com/couchbase/query/server/http"
 	"github.com/couchbase/query/timestamp"
 	"github.com/couchbase/query/value"
+	diffpkg "github.com/kylelemons/godebug/diff"
 )
 
 var Namespace_FS = "dimestore"
@@ -402,7 +403,7 @@ func FtestCaseFile(fname string, qc *MockServer, namespace string) (fin_stmt str
 
 		if errExpected != "" {
 			errstring = go_er.New(fmt.Sprintf("did not see the expected err: %v\nstatements: %v\n"+
-				" for case file: %v, index: %v%s", errActual, statements, ffname, i, findIndex(b, i)))
+				" for case file: %v, index: %v%s", errExpected, statements, ffname, i, findIndex(b, i)))
 			return
 		}
 
@@ -477,20 +478,32 @@ func doResultsMatch(resultsActual, resultsExpected []interface{}, fname string, 
 		ffname = fname
 	}
 	if len(resultsActual) != len(resultsExpected) {
-		errstring = go_er.New(fmt.Sprintf("results len don't match, %v vs %v\n  actual: %v\nexpected: %v\n"+
-			" (%v) for case file: %v, index: %v%s",
-			len(resultsActual), len(resultsExpected),
-			resultsActual, resultsExpected, s, ffname, i, findIndex(content, i)))
+		errstring = go_er.New(fmt.Sprintf("results length doesn't match; expected %v have %v\n%v\n"+
+			"statement: %v\n     file: %v    index: %v%s\n\n",
+			len(resultsExpected), len(resultsActual),
+			diff(resultsExpected, resultsActual), s, ffname, i, findIndex(content, i)))
 		return
 	}
 
 	if !reflect.DeepEqual(resultsActual, resultsExpected) {
-		errstring = go_er.New(fmt.Sprintf("results don't match\n  actual: %#v\nexpected: %#v\n"+
-			" (%v) for case file: %v, index: %v%s",
-			resultsActual, resultsExpected, s, ffname, i, findIndex(content, i)))
+		errstring = go_er.New(fmt.Sprintf("results don't match\n%v\n"+
+			"statement: %v\n     file: %v\n    index: %v%s\n\n",
+			diff(resultsExpected, resultsActual), s, ffname, i, findIndex(content, i)))
 		return
 	}
 	return nil
+}
+
+func diff(a interface{}, b interface{}) string {
+	return diffpkg.Diff(prettyPrint(a), prettyPrint(b))
+}
+
+func prettyPrint(what interface{}) string {
+	res, err := json.MarshalIndent(what, "", "  ")
+	if err != nil {
+		res = []byte(fmt.Sprintf("%v", what))
+	}
+	return string(res)
 }
 
 // Search the file content trying to locate the line the index in question starts on

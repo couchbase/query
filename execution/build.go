@@ -425,7 +425,9 @@ func (this *builder) VisitExceptAll(plan *plan.ExceptAll) (interface{}, error) {
 
 // Order
 func (this *builder) VisitOrder(plan *plan.Order) (interface{}, error) {
-	if plan.LimitPushed() {
+	if plan.PartialSortTermCount() > 0 {
+		return checkOp(NewPartSortOrder(plan, this.context), this.context)
+	} else if plan.LimitPushed() {
 		return checkOp(NewOrderLimit(plan, this.context), this.context)
 	} else {
 		return checkOp(NewOrder(plan, this.context), this.context)

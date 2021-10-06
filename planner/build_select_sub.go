@@ -226,15 +226,6 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 		this.resetOffsetLimit()
 	}
 
-	// Skip fixed values in ORDER BY
-	if this.order != nil && this.where != nil {
-		order := this.order
-		this.order = skipFixedOrderTerms(this.order, this.where)
-		if this.order == nil {
-			defer func() { this.order = order }()
-		}
-	}
-
 	this.setIndexGroupAggs(group, aggs, node.Let())
 	this.extractLetGroupProjOrder(nil, group, nil, nil, aggs)
 
@@ -930,36 +921,6 @@ func constrainGroupTerm(expr expression.Expression, groupKeys expression.Express
 		return errors.NewNotGroupKeyOrAggError(rexpr.String() + rexpr.ErrorContext())
 	}
 	return nil
-}
-
-func skipFixedOrderTerms(order *algebra.Order, pred expression.Expression) *algebra.Order {
-	filterCovers := _FILTER_COVERS_POOL.Get()
-	defer _FILTER_COVERS_POOL.Put(filterCovers)
-
-	filterCovers = pred.FilterCovers(filterCovers)
-	if len(filterCovers) == 0 {
-		return order
-	}
-
-	sortTerms := make(algebra.SortTerms, 0, len(order.Terms()))
-	for _, term := range order.Terms() {
-		expr := term.Expression()
-		if expr.Static() != nil &&
-			(term.DescendingExpr() != nil && term.DescendingExpr().Static() != nil) &&
-			(term.NullsPosExpr() != nil && term.NullsPosExpr().Static() != nil) {
-			continue
-		}
-
-		if val, ok := filterCovers[expr.String()]; !ok || val == nil {
-			sortTerms = append(sortTerms, term)
-		}
-	}
-
-	if len(sortTerms) == 0 {
-		return nil
-	} else {
-		return algebra.NewOrder(sortTerms)
-	}
 }
 
 func (this *builder) setIndexGroupAggs(group *algebra.Group, aggs algebra.Aggregates, let expression.Bindings) {

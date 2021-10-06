@@ -6,6 +6,24 @@
 # file, in accordance with the Business Source License, use of this software
 # will be governed by the Apache License, Version 2.0, included in the file
 # licenses/APL2.txt.
+
+CHILD=
+function cleanup()
+{
+  cd ../
+  ./bucket_delete.sh
+}
+function interrupt()
+{
+  if [ "X$CHILD" != "X" ]
+  then
+    kill -n 2 $CHILD
+  fi
+  echo "\n\n\nInterrupted\n\n"
+  cleanup
+  exit 1
+}
+
 args=""
 verbose=
 skip=
@@ -28,12 +46,13 @@ go clean -testcache
 ./bucket_delete.sh
 ./bucket_create.sh 100
 
+trap interrupt 2 15
 cd ../
 go test $verbose ./... $*
 
 #Run gsi
 cd test/gsi
 ./runtests.sh $verbose $skip $*
+CHILD=$?
 
-cd ../
-./bucket_delete.sh
+cleanup
