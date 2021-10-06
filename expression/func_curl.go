@@ -298,6 +298,7 @@ func (this *Curl) handleCurl(url string, options map[string]interface{}, whiteli
 
 	for k, val := range options {
 		// Only support valid options.
+		inputVal := value.NewValue(val)
 		switch k {
 		/*
 			show_error: Do not output the errors with the CURL function
@@ -311,14 +312,14 @@ func (this *Curl) handleCurl(url string, options map[string]interface{}, whiteli
 			important to note that providing this option does nothing.
 		*/
 		case "get", "--get", "G", "-G":
-			if value.NewValue(val).Type() != value.BOOLEAN {
+			if inputVal.Type() != value.BOOLEAN {
 				if show_error == true {
 					return nil, fmt.Errorf(" Incorrect type for get option in CURL ")
 				} else {
 					return nil, nil
 				}
 			}
-			get := value.NewValue(val).Actual().(bool)
+			get := inputVal.Actual().(bool)
 			if get {
 				getMethod = true
 				this.simpleGet(url)
@@ -330,13 +331,12 @@ func (this *Curl) handleCurl(url string, options map[string]interface{}, whiteli
 		   to note that providing this option does nothing.
 		*/
 		case "request", "--request", "X", "-X":
-			request := value.NewValue(val)
-			if request.Type() != value.STRING {
+			if inputVal.Type() != value.STRING {
 				return nil, fmt.Errorf(" Incorrect type for request option in CURL. It should be a string. ")
 			}
 
 			// Remove the quotations at the end.
-			requestVal := request.String()
+			requestVal := inputVal.String()
 			requestVal = requestVal[1 : len(requestVal)-1]
 
 			// Methods are case sensitive.
@@ -394,7 +394,7 @@ func (this *Curl) handleCurl(url string, options map[string]interface{}, whiteli
 				  slist1 = curl_slist_append(slist1, "User-Agent: ikandaswamy");
 			*/
 			// Get the value
-			headerVal := value.NewValue(val).Actual()
+			headerVal := inputVal.Actual()
 
 			switch headerVal.(type) {
 
@@ -433,14 +433,14 @@ func (this *Curl) handleCurl(url string, options map[string]interface{}, whiteli
 			we error out.
 		*/
 		case "silent", "--silent", "s", "-s":
-			if value.NewValue(val).Type() != value.BOOLEAN {
+			if inputVal.Type() != value.BOOLEAN {
 				if show_error == true {
 					return nil, fmt.Errorf(" Incorrect type for silent option in CURL ")
 				} else {
 					return nil, nil
 				}
 			}
-			silent = value.NewValue(val).Actual().(bool)
+			silent = inputVal.Actual().(bool)
 		/*
 			connect-timeout: Maximum time allowed for connection in seconds
 		*/
@@ -452,11 +452,11 @@ func (this *Curl) handleCurl(url string, options map[string]interface{}, whiteli
 				To save fractions of the decimal value, libcurl uses the _MS suffix to convert
 				to milliseconds.
 			*/
-			if value.NewValue(val).Type() != value.NUMBER {
+			if inputVal.Type() != value.NUMBER {
 				return nil, fmt.Errorf(" Incorrect type for connect-timeout option in CURL ")
 			}
 
-			connTime := value.NewValue(val).Actual().(float64)
+			connTime := inputVal.Actual().(float64)
 
 			this.curlConnectTimeout(int64(connTime))
 		/*
@@ -470,11 +470,11 @@ func (this *Curl) handleCurl(url string, options map[string]interface{}, whiteli
 				To save fractions of the decimal value, libcurl uses the _MS suffix to convert
 				to milliseconds.
 			*/
-			if value.NewValue(val).Type() != value.NUMBER {
+			if inputVal.Type() != value.NUMBER {
 				return nil, fmt.Errorf(" Incorrect type for max-time option in CURL ")
 			}
 
-			maxTime := value.NewValue(val).Actual().(float64)
+			maxTime := inputVal.Actual().(float64)
 
 			this.curlMaxTime(int64(maxTime))
 		/*
@@ -486,10 +486,10 @@ func (this *Curl) handleCurl(url string, options map[string]interface{}, whiteli
 				Libcurl code to set user
 				curl_easy_setopt(hnd, CURLOPT_USERPWD, "Administrator:password");
 			*/
-			if value.NewValue(val).Type() != value.STRING {
+			if inputVal.Type() != value.STRING {
 				return nil, fmt.Errorf(" Incorrect type for user option in CURL. It should be a string. ")
 			}
-			this.curlAuth(value.NewValue(val).String())
+			this.curlAuth(inputVal.String())
 		/*
 			ciphers: Set input ciphers
 		*/
@@ -498,11 +498,10 @@ func (this *Curl) handleCurl(url string, options map[string]interface{}, whiteli
 				Libcurl code to set user
 				curl_easy_setopt(hnd, CURLOPT_USERPWD, "Administrator:password");
 			*/
-			inpVal := value.NewValue(val)
-			if inpVal.Type() != value.STRING {
+			if inputVal.Type() != value.STRING {
 				return nil, fmt.Errorf(" Incorrect type for ciphers option in CURL. It should be a string. ")
 			}
-			this.curlCiphers(inpVal.Actual().(string))
+			this.curlCiphers(inputVal.Actual().(string))
 		/*
 			basic: Use HTTP Basic Authentication. It has to be a boolean, otherwise
 			we error out.
@@ -514,14 +513,14 @@ func (this *Curl) handleCurl(url string, options map[string]interface{}, whiteli
 				curl_easy_setopt(hnd, CURLOPT_HTTPAUTH, (long)CURLAUTH_BASIC);
 			*/
 
-			if value.NewValue(val).Type() != value.BOOLEAN {
+			if inputVal.Type() != value.BOOLEAN {
 				if show_error == true {
 					return nil, fmt.Errorf(" Incorrect type for basic option in CURL ")
 				} else {
 					return nil, nil
 				}
 			}
-			if value.NewValue(val).Actual().(bool) == true {
+			if inputVal.Actual().(bool) == true {
 				this.myCurl.Setopt(curl.OPT_HTTPAUTH, _CURLAUTH_BASIC)
 			}
 		/*
@@ -534,14 +533,14 @@ func (this *Curl) handleCurl(url string, options map[string]interface{}, whiteli
 				#define CURLAUTH_ANY ~0
 				curl_easy_setopt(hnd, CURLOPT_HTTPAUTH, (long)CURLAUTH_ANY);
 			*/
-			if value.NewValue(val).Type() != value.BOOLEAN {
+			if inputVal.Type() != value.BOOLEAN {
 				if show_error == true {
 					return nil, fmt.Errorf(" Incorrect type for anyauth option in CURL ")
 				} else {
 					return nil, nil
 				}
 			}
-			if value.NewValue(val).Actual().(bool) == true {
+			if inputVal.Actual().(bool) == true {
 				this.myCurl.Setopt(curl.OPT_HTTPAUTH, _CURLAUTH_ANY)
 			}
 		/*
@@ -558,14 +557,14 @@ func (this *Curl) handleCurl(url string, options map[string]interface{}, whiteli
 				verification of the server's certificate. This makes the connection
 				A LOT LESS SECURE.
 			*/
-			if value.NewValue(val).Type() != value.BOOLEAN {
+			if inputVal.Type() != value.BOOLEAN {
 				if show_error == true {
 					return nil, fmt.Errorf(" Incorrect type for insecure option in CURL ")
 				} else {
 					return nil, nil
 				}
 			}
-			insecure := value.NewValue(val).Actual().(bool)
+			insecure := inputVal.Actual().(bool)
 			if insecure == true {
 				this.myCurl.Setopt(curl.OPT_SSL_VERIFYPEER, insecure)
 			}
@@ -581,11 +580,11 @@ func (this *Curl) handleCurl(url string, options map[string]interface{}, whiteli
 				curl_easy_setopt(hnd, CURLOPT_TCP_KEEPIDLE, 1L);
 				curl_easy_setopt(hnd, CURLOPT_TCP_KEEPINTVL, 1L);
 			*/
-			if value.NewValue(val).Type() != value.NUMBER {
+			if inputVal.Type() != value.NUMBER {
 				return nil, fmt.Errorf(" Incorrect type for keepalive-time option in CURL ")
 			}
 
-			kATime := value.NewValue(val).Actual().(float64)
+			kATime := inputVal.Actual().(float64)
 
 			this.curlKeepAlive(int64(kATime))
 
@@ -597,10 +596,10 @@ func (this *Curl) handleCurl(url string, options map[string]interface{}, whiteli
 				Libcurl code to set user-agent
 				curl_easy_setopt(hnd, CURLOPT_USERAGENT, "curl/7.43.0");
 			*/
-			if value.NewValue(val).Type() != value.STRING {
+			if inputVal.Type() != value.STRING {
 				return nil, fmt.Errorf(" Incorrect type for user-agent option in CURL. user-agent should be a string. ")
 			}
-			userAgent := value.NewValue(val).ToString()
+			userAgent := inputVal.ToString()
 			this.curlUserAgent(userAgent)
 
 		case "cacert":
@@ -630,10 +629,10 @@ func (this *Curl) handleCurl(url string, options map[string]interface{}, whiteli
 			// nsserver uses the inbox folder within var/lib/couchbase to read certificates from.
 			certDir = certDir + subdir
 			// dir. Paths are not allowed.
-			if value.NewValue(val).Type() != value.STRING {
+			if inputVal.Type() != value.STRING {
 				return nil, fmt.Errorf(" Incorrect type for cacert option in CURL. It should be a string. ")
 			}
-			certName := value.NewValue(val).ToString()
+			certName := inputVal.ToString()
 
 			// Make sure this file is not a path.
 			// use path.Split and check 1st and 2nd args
@@ -655,11 +654,11 @@ func (this *Curl) handleCurl(url string, options map[string]interface{}, whiteli
 			// Min allowed = 20MB  20971520
 			// Max allowed = request-size-cap default 67 108 864
 
-			if value.NewValue(val).Type() != value.NUMBER {
+			if inputVal.Type() != value.NUMBER {
 				return nil, fmt.Errorf(" Incorrect type for result-cap option in CURL ")
 			}
 
-			maxSize := value.NewValue(val).Actual().(float64)
+			maxSize := inputVal.Actual().(float64)
 
 			responseSize = setResponseSize(int64(maxSize))
 
