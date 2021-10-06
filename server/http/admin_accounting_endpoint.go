@@ -54,7 +54,6 @@ const (
 	prometheusHigh        = "/_prometheusMetricsHigh"
 	transactionsPrefix    = adminPrefix + "/transactions"
 	functionsBackupPrefix = "/api/v1"
-	userStatsPrefix       = adminPrefix + "/user_stats"
 )
 
 func expvarsHandler(w http.ResponseWriter, req *http.Request) {
@@ -136,7 +135,7 @@ func (this *HttpEndpoint) registerAccountingHandlers() {
 		this.wrapAPI(w, req, doPrometheusLow)
 	}
 	prometheusHighHandler := func(w http.ResponseWriter, req *http.Request) {
-		this.wrapAPI(w, req, doEmpty)
+		this.wrapAPI(w, req, doPrometheusHigh)
 	}
 	transactionsIndexHandler := func(w http.ResponseWriter, req *http.Request) {
 		this.wrapAPI(w, req, doTransactionsIndex)
@@ -152,9 +151,6 @@ func (this *HttpEndpoint) registerAccountingHandlers() {
 	}
 	functionsBucketBackupHandler := func(w http.ResponseWriter, req *http.Request) {
 		this.wrapAPI(w, req, doFunctionsBucketBackup)
-	}
-	userStatsHandler := func(w http.ResponseWriter, req *http.Request) {
-		this.wrapAPI(w, req, doUserStats)
 	}
 	routeMap := map[string]struct {
 		handler handlerFunc
@@ -188,7 +184,6 @@ func (this *HttpEndpoint) registerAccountingHandlers() {
 		indexesPrefix + "/transactions":                   {handler: transactionsIndexHandler, methods: []string{"GET"}},
 		functionsBackupPrefix + "/backup":                 {handler: functionsGlobalBackupHandler, methods: []string{"GET", "POST"}},
 		functionsBackupPrefix + "/bucket/{bucket}/backup": {handler: functionsBucketBackupHandler, methods: []string{"GET", "POST"}},
-		userStatsPrefix:                                   {handler: userStatsHandler, methods: []string{"GET"}},
 	}
 
 	for route, h := range routeMap {
@@ -299,7 +294,7 @@ func doPrometheusLow(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Re
 	return textPlain(""), nil
 }
 
-func doEmpty(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
+func doPrometheusHigh(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
 	af.EventTypeId = audit.API_DO_NOT_AUDIT
 	err, _ := endpoint.verifyCredentialsFromRequest("", auth.PRIV_QUERY_STATS, req, nil)
 	if err != nil {
@@ -307,39 +302,32 @@ func doEmpty(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, a
 	}
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	for _, user := range endpoint.trackedUsers {
+		doPrometheusUserStat(w, user.uuid, "requests", "counter", user.activeRequests)
+		doPrometheusUserStat(w, user.uuid, "total_requests", "counter", user.requestMeter.Count())
+		doPrometheusUserStat(w, user.uuid, "request_rate", "gauge", user.requestMeter)
+		doPrometheusUserStat(w, user.uuid, "ingres_rate", "gauge", user.payloadMeter.Rate1()/1024/1024)
+		doPrometheusUserStat(w, user.uuid, "total_ingress", "counter", user.payloadMeter.Count()/1024/1024)
+		doPrometheusUserStat(w, user.uuid, "egress_rate", "gauge", user.outputMeter.Rate1()/1024/1024)
+		doPrometheusUserStat(w, user.uuid, "total_egress", "counter", user.outputMeter.Count()/1024/1024)
+		doPrometheusUserStat(w, user.uuid, "requests_failures", "counter", user.requestsFailures)
+		doPrometheusUserStat(w, user.uuid, "request_rate_failures", "counter", user.requestRateFailures)
+		doPrometheusUserStat(w, user.uuid, "ingress_rate_failures", "counter", user.payloadRateFailures)
+		doPrometheusUserStat(w, user.uuid, "egress_rate_failures", "counter", user.outputRateFailures)
+	}
 	return textPlain(""), nil
+}
+
+func doPrometheusUserStat(w http.ResponseWriter, uuid string, metric string, t string, val interface{}) {
+	name := uuid + "_" + metric
+	w.Write([]byte("# TYPE n1ql_" + name + " " + t + "\n"))
+	w.Write([]byte("n1ql_" + name + " "))
+	w.Write([]byte(fmt.Sprintf("%v\n", val)))
 }
 
 func doNotFound(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
 	accounting.UpdateCounter(accounting.INVALID_REQUESTS)
 	return nil, nil
-}
-
-func doUserStats(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
-	switch req.Method {
-	case "GET":
-		af.EventTypeId = audit.API_DO_NOT_AUDIT
-		stats := make([]interface{}, 0, len(endpoint.trackedUsers))
-		for _, user := range endpoint.trackedUsers {
-			stat := make(map[string]interface{})
-			stat["uuid"] = user.uuid
-			stat["requests"] = user.activeRequests
-			stat["totatlRequests"] = user.requestMeter.Count()
-			stat["requestRate"] = user.requestMeter
-			stat["ingresRate"] = user.payloadMeter.Rate1() / 1024 / 1024
-			stat["totalIngress"] = user.payloadMeter.Count() / 1024 / 1024
-			stat["egressRate"] = user.outputMeter.Rate1() / 1024 / 1024
-			stat["totalEgress"] = user.outputMeter.Count() / 1024 / 1024
-			stat["requestsFailures"] = user.requestsFailures
-			stat["requestRateFailures"] = user.requestRateFailures
-			stat["ingressRateFailures"] = user.payloadRateFailures
-			stat["egressRateFailures"] = user.outputRateFailures
-		}
-		return stats, nil
-	default:
-		af.EventTypeId = audit.API_ADMIN_STATS
-		return nil, errors.NewServiceErrorHttpMethod(req.Method)
-	}
 }
 
 func doVitals(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
