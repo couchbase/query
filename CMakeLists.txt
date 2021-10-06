@@ -29,13 +29,12 @@ INCLUDE (FindCouchbaseGo)
 
 IF (BUILD_ENTERPRISE)
     SET (_gotags "enterprise")
-    SET (_extra_deps "evaluator-generated")
     SET (NEWEVAL_DIR ../eventing-ee/evaluator)
     SET(_eval_no_default_path NO_DEFAULT_PATH)
 ELSE (BUILD_ENTERPRISE)
     SET (_gotags "community")
-    SET (_extra_deps)
 ENDIF(BUILD_ENTERPRISE)
+SET (_extra_deps)
 
 SET (GOVERSION 1.16.6)
 GoPrivateMod (MODULE cbftx PATH ../../../../../cbftx)
@@ -62,7 +61,7 @@ IF(WIN32)
 ENDIF()
 
 IF (NOT CBQ_ONLY)
-  GoYacc (GOVERSION 1.13.7 TARGET n1ql-yacc YFILE "${PROJECT_SOURCE_DIR}/parser/n1ql/n1ql.y")
+  GoYacc (GOVERSION 1.16.6 TARGET n1ql-yacc YFILE "${PROJECT_SOURCE_DIR}/parser/n1ql/n1ql.y")
 
   GET_FILENAME_COMPONENT (CURL_LIBRARY_DIR "${CURL_LIBRARIES}" DIRECTORY)
 
