@@ -247,7 +247,7 @@ func (this *builder) matchUnnest(node *algebra.KeyspaceTerm, pred, subset expres
 		}
 
 		binding := array.Bindings()[0]
-		if binding.Descend() || !unnest.Expression().EquivalentTo(binding.Expression()) {
+		if !unnest.Expression().EquivalentTo(binding.Expression()) {
 			return nil, nil, nil, nil
 		}
 
@@ -362,6 +362,11 @@ func (this *builder) matchUnnest(node *algebra.KeyspaceTerm, pred, subset expres
 		baseKeyspace, this.keyspaceNames, advisorValidate, this.aliases, this.context)
 	if err != nil {
 		return nil, nil, nil, err
+	}
+
+	// ArrayKey has Descend(WITHIN) false positives possible
+	if exactSpans && newArrayKey != nil && newArrayKey.HasDescend() {
+		exactSpans = false
 	}
 
 	cardinality, selectivity, cost, frCost, size :=

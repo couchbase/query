@@ -195,6 +195,20 @@ func (this *All) NoDistinct() bool {
 	return true
 }
 
+func (this *All) HasDescend() bool {
+	if array, ok := this.Array().(*Array); ok {
+		for _, b := range array.Bindings() {
+			if b.Descend() {
+				return true
+			}
+		}
+		if all, ok := array.ValueMapping().(*All); ok {
+			return all.HasDescend()
+		}
+	}
+	return false
+}
+
 func (this *All) Flatten() bool {
 	return this.flatten_keys != nil
 }

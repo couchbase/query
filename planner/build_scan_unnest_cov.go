@@ -83,6 +83,10 @@ func (this *builder) buildOneCoveringUnnestScan(node *algebra.KeyspaceTerm,
 		entry.exactSpans = exact
 	}
 
+	if !unnestExprInKeys && indexArrayKey != nil && indexArrayKey.HasDescend() {
+		return nil, nil
+	}
+
 	coverAliases := getUnnestAliases(entry.arrayKey, centry.leafUnnest, true)
 	pushDownProperty := this.indexCoveringPushDownProperty(entry, append(entry.keys, id),
 		node.Alias(), coverAliases, true, false, _PUSHDOWN_EXACTSPANS)
