@@ -17,7 +17,7 @@ import (
 	"time"
 
 	gctx "github.com/couchbase/gocbcore-transactions"
-	"github.com/couchbase/gocbcore/v9"
+	"github.com/couchbase/gocbcore/v10"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/value"
 )
@@ -62,8 +62,9 @@ func (ap *AgentProvider) CreateOrRefreshAgent() error {
 			return cerr
 		}
 		config = *cconfig
-		config.UseTLS = true
-		config.TLSRootCAProvider = func() *x509.CertPool {
+		config.SecurityConfig.UseTLS = true
+		// config.SecurityConfig.InitialBootstrapNonTLS = true
+		config.SecurityConfig.TLSRootCAProvider = func() *x509.CertPool {
 			return rootCAs
 		}
 	} else {
@@ -162,7 +163,7 @@ func (ap *AgentProvider) getTxAnnotatedValue(res *gctx.GetResult, key, fullName 
 
 // bulk transactional get
 
-func (ap *AgentProvider) TxGet(transaction *gctx.Transaction, fullName, bucketName, scopeName, collectionName string,
+func (ap *AgentProvider) TxGet(transaction *gctx.Transaction, fullName, bucketName, scopeName, collectionName, user string,
 	collectionID uint32, keys, paths []string, reqDeadline time.Time, replica, notFoundErr bool,
 	fetchMap map[string]value.AnnotatedValue) (errs []error) {
 
@@ -186,6 +187,7 @@ func (ap *AgentProvider) TxGet(transaction *gctx.Transaction, fullName, bucketNa
 			ScopeName:      scopeName,
 			CollectionName: collectionName,
 			Key:            []byte(item.Key),
+			OboUser:        user,
 		}, func(res *gctx.GetResult, resErr error) {
 			defer wg.Done()
 			item.Err = resErr
@@ -252,6 +254,7 @@ type WriteOp struct {
 	Data    []byte
 	TxnMeta []byte
 	Cas     uint64
+	User    string
 	Expiry  uint32
 	Pendop  gocbcore.PendingOp
 	Err     error
@@ -284,6 +287,7 @@ func (ap *AgentProvider) TxWrite(transaction *gctx.Transaction, txnInternal *gct
 			CollectionName: collectionName,
 			Key:            []byte(wop.Key),
 			Value:          wop.Data,
+			OboUser:        wop.User,
 		}, func(res *gctx.GetResult, resErr error) {
 			defer wg.Done()
 			wop.Err = resErr
@@ -351,6 +355,7 @@ func (ap *AgentProvider) TxWrite(transaction *gctx.Transaction, txnInternal *gct
 					Key:            []byte(op.Key),
 					Cas:            gocbcore.Cas(op.Cas),
 					Meta:           txnMeta,
+					OboUser:        op.User,
 				})
 				errOut = sendUpdateOne(op, tmpRes)
 			}
@@ -368,6 +373,7 @@ func (ap *AgentProvider) TxWrite(transaction *gctx.Transaction, txnInternal *gct
 					Key:            []byte(op.Key),
 					Cas:            gocbcore.Cas(op.Cas),
 					Meta:           txnMeta,
+					OboUser:        op.User,
 				})
 				errOut = sendDeleteOne(op, tmpRes)
 			}

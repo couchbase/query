@@ -19,21 +19,20 @@ import (
 
 	"github.com/couchbase/cbauth"
 	gctx "github.com/couchbase/gocbcore-transactions"
-	"github.com/couchbase/gocbcore/v9"
-	"github.com/couchbase/gocbcore/v9/connstr"
+	"github.com/couchbase/gocbcore/v10"
+	"github.com/couchbase/gocbcore/v10/connstr"
 	ntls "github.com/couchbase/goutils/tls"
 	"github.com/couchbase/query/logging"
 )
 
 const (
-	_CONNECTTIMEOUT   = 10000 * time.Millisecond
-	_KVCONNECTTIMEOUT = 7000 * time.Millisecond
-	_KVTIMEOUT        = 2500 * time.Millisecond
-	_WARMUPTIMEOUT    = 1000 * time.Millisecond
-	_WARMUP           = false
-	_CLOSEWAIT        = 2 * time.Minute
-	_kVPOOLSIZE       = 8
-	_MAXQUEUESIZE     = 32 * 1024
+	_CONNECTTIMEOUT = 10000 * time.Millisecond
+	_KVTIMEOUT      = 2500 * time.Millisecond
+	_WARMUPTIMEOUT  = 1000 * time.Millisecond
+	_WARMUP         = false
+	_CLOSEWAIT      = 2 * time.Minute
+	_kVPOOLSIZE     = 8
+	_MAXQUEUESIZE   = 32 * 1024
 )
 
 type MemcachedAuthProvider struct {
@@ -127,14 +126,16 @@ func NewClient(url string, sslHostFn func() (string, string), caFile, certFile, 
 }
 
 func agentConfig(url, options string, rv *Client) (config *gocbcore.AgentConfig, cspec *connstr.ConnSpec, err error) {
-	config = &gocbcore.AgentConfig{
-		ConnectTimeout:       _CONNECTTIMEOUT,
-		KVConnectTimeout:     _KVCONNECTTIMEOUT,
-		UseCollections:       true,
-		KvPoolSize:           _kVPOOLSIZE,
-		MaxQueueSize:         _MAXQUEUESIZE,
-		Auth:                 &MemcachedAuthProvider{rv},
-		DefaultRetryStrategy: gocbcore.NewBestEffortRetryStrategy(nil),
+	config = &gocbcore.AgentConfig{}
+	config.DefaultRetryStrategy = gocbcore.NewBestEffortRetryStrategy(nil)
+	config.KVConfig.ConnectTimeout = _CONNECTTIMEOUT
+	config.KVConfig.PoolSize = _kVPOOLSIZE
+	config.KVConfig.MaxQueueSize = _MAXQUEUESIZE
+	config.IoConfig.UseCollections = true
+	config.IoConfig.NetworkType = "network"
+	config.SecurityConfig.Auth = &MemcachedAuthProvider{rv}
+	config.SecurityConfig.TLSRootCAProvider = func() *x509.CertPool {
+		return rv.TLSRootCAs()
 	}
 
 	var connSpec connstr.ConnSpec

@@ -73,6 +73,7 @@ DevStandaloneSetup() {
        then
            (cd ..; rm -rf gocbcore/v9; git clone -b v9.1.7 https://github.com/couchbase/gocbcore.git gocbcore/v9)
        fi
+       (cd ..; rm -rf gocbcore/v10; git clone -b v10.0.3 https://github.com/couchbase/gocbcore.git gocbcore/v10)
     # bleve version
        if [[ ! -d ../../blevesearch/bleve/v2 ]]; then
            (cd ../../blevesearch; git clone -b v2.2.1 http://github.com/blevesearch/bleve.git bleve/v2)

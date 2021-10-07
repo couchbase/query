@@ -59,6 +59,7 @@ type MutationValue struct {
 	Flags      uint32
 	Val        interface{}
 	TxnMeta    interface{}
+	User       string
 	memSize    int64
 }
 
@@ -81,6 +82,7 @@ type TransactionLogValue struct {
 	oldFlags      uint32
 	oldVal        interface{}
 	oldTxnMeta    interface{}
+	oldUser       string
 	oldMemSize    int64
 }
 
@@ -362,7 +364,7 @@ DELETE   INSERT   ---  UPDATE with cas  *      INSERT
          DELETE   ---- N/A                     N/A
 */
 
-func (this *TransactionMutations) Add(op MutateOp, keyspace, bucketName, scopeName, collectionName string,
+func (this *TransactionMutations) Add(op MutateOp, keyspace, bucketName, scopeName, collectionName, user string,
 	collId uint32, key string, val interface{}, cas uint64, flags, exptime uint32, txnMeta interface{},
 	paths []string, ks *keyspace, valSize int64) (retCas uint64, err errors.Error) {
 
@@ -497,6 +499,7 @@ func (this *TransactionMutations) Add(op MutateOp, keyspace, bucketName, scopeNa
 		mv.Flags = flags
 		mv.Val = val
 		mv.TxnMeta = txnMeta
+		mv.User = user
 		if len(this.savepoints) == 0 && mmv != nil {
 			memSize -= mmv.memSize
 		} else {
@@ -867,6 +870,7 @@ func (this *DeltaKeyspace) Write(transaction *gctx.Transaction, txnInternal *gct
 				Data:    data,
 				TxnMeta: txnMeta,
 				Cas:     mv.KvCas,
+				User:    mv.User,
 				Expiry:  mv.Expiration})
 
 			if len(wops) == bSize {
@@ -951,6 +955,7 @@ func (this *TransactionLogValue) Set(mv *MutationValue) (err errors.Error) {
 		this.oldFlags = mv.Flags
 		this.oldVal = mv.Val
 		this.oldTxnMeta = mv.TxnMeta
+		this.oldUser = mv.User
 		this.oldMemSize = mv.memSize
 	} else {
 		this.oldOp = MOP_NONE
@@ -987,6 +992,7 @@ func (this *TransactionLogValue) Undo(dk *DeltaKeyspace, memSize *int64) (err er
 		mv.Flags = this.oldFlags
 		mv.Val = this.oldVal
 		mv.TxnMeta = this.oldTxnMeta
+		mv.User = this.oldUser
 		mv.memSize = this.oldMemSize
 		dk.values[this.key] = mv
 	}

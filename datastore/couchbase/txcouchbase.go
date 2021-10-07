@@ -17,7 +17,7 @@ import (
 	"sync"
 
 	gctx "github.com/couchbase/gocbcore-transactions"
-	"github.com/couchbase/gocbcore/v9"
+	"github.com/couchbase/gocbcore/v10"
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/datastore/couchbase/gcagent"
@@ -88,9 +88,17 @@ func (s *store) StartTransaction(stmtAtomicity bool, context datastore.QueryCont
 			return nil, errors.NewStartTransactionError(terr, nil)
 		}
 
+		oboUser := getUser(context)
+		bucketAgentProvider := func(bucketName string) (*gocbcore.Agent, string, error) {
+			return CollectionAgentProvider(bucketName, "_default", "_default", oboUser)
+		}
+
 		if resume {
 			atrCollectionName := txContext.AtrCollection()
-			transaction, terr = gcAgentTxs.ResumeTransactionAttempt(txnData)
+
+			rtxConfig := &gctx.ResumeTransactionOptions{BucketAgentProvider: bucketAgentProvider}
+			transaction, terr = gcAgentTxs.ResumeTransactionAttempt(txnData, rtxConfig)
+
 			if terr == nil && atrCollectionName != "" {
 				// If cluster/request level has atrCollectionName and resumed transaction
 				// doesn't have atrlocation, set it.
@@ -116,6 +124,8 @@ func (s *store) StartTransaction(stmtAtomicity bool, context datastore.QueryCont
 			if terr != nil {
 				return nil, errors.NewStartTransactionError(terr, nil)
 			}
+			txConfig.CustomATRLocation.OboUser = oboUser
+			txConfig.BucketAgentProvider = bucketAgentProvider
 
 			transaction, terr = gcAgentTxs.BeginTransaction(txConfig)
 			if terr == nil {
@@ -148,7 +158,7 @@ func (s *store) StartTransaction(stmtAtomicity bool, context datastore.QueryCont
 
 				dataSize = int64(len(mutation.Staged))
 				_, err = txMutations.Add(op, qualifiedName, mutation.BucketName, mutation.ScopeName,
-					mutation.CollectionName, uint32(0),
+					mutation.CollectionName, "", uint32(0),
 					string(mutation.Key), mutation.Staged, uint64(mutation.Cas), uint32(0), uint32(0),
 					nil, nil, nil, dataSize)
 				if err != nil {
@@ -410,7 +420,7 @@ func (ks *keyspace) txReady(txContext *transactions.TranContext) errors.Error {
 	return nil
 }
 
-func (ks *keyspace) txFetch(fullName, qualifiedName, scopeName, collectionName string, collId uint32, keys []string,
+func (ks *keyspace) txFetch(fullName, qualifiedName, scopeName, collectionName, user string, collId uint32, keys []string,
 	fetchMap map[string]value.AnnotatedValue, context datastore.QueryContext, subPaths []string, sdkKvInsert bool,
 	txContext *transactions.TranContext) errors.Errors {
 
@@ -472,7 +482,7 @@ func (ks *keyspace) txFetch(fullName, qualifiedName, scopeName, collectionName s
 		notFoundErr := sdkKv && !sdkKvInsert
 		// fetch the keys that are not present in delta keyspace
 		errs := ks.agentProvider.TxGet(transaction, fullName, ks.name, scopeName, collectionName,
-			collId, fkeys, subPaths, context.GetReqDeadline(), false, notFoundErr, fetchMap)
+			user, collId, fkeys, subPaths, context.GetReqDeadline(), false, notFoundErr, fetchMap)
 		if len(errs) > 0 {
 			if notFoundErr &&
 				(gerrors.Is(errs[0], gocbcore.ErrDocumentNotFound) || gerrors.Is(errs[0], gctx.ErrDocumentNotFound)) {
@@ -492,8 +502,8 @@ func (ks *keyspace) txFetch(fullName, qualifiedName, scopeName, collectionName s
 	return nil
 }
 
-func (ks *keyspace) txPerformOp(op MutateOp, qualifiedName, scopeName, collectionName string, collId uint32, pairs value.Pairs,
-	context datastore.QueryContext, txContext *transactions.TranContext) (
+func (ks *keyspace) txPerformOp(op MutateOp, qualifiedName, scopeName, collectionName, user string,
+	collId uint32, pairs value.Pairs, context datastore.QueryContext, txContext *transactions.TranContext) (
 	mPairs value.Pairs, errs errors.Errors) {
 
 	err := ks.txReady(txContext)
@@ -515,7 +525,7 @@ func (ks *keyspace) txPerformOp(op MutateOp, qualifiedName, scopeName, collectio
 		for _, kv := range pairs {
 			fkeys = append(fkeys, kv.Name)
 		}
-		errs := ks.txFetch("", qualifiedName, scopeName, collectionName, collId,
+		errs := ks.txFetch("", qualifiedName, scopeName, collectionName, user, collId,
 			fkeys, fetchMap, context, nil, sdkKvInsert, txContext)
 		_STRING_POOL.Put(fkeys)
 		if len(errs) > 0 {
@@ -576,7 +586,7 @@ func (ks *keyspace) txPerformOp(op MutateOp, qualifiedName, scopeName, collectio
 		}
 
 		// Add to mutations
-		retCas, err = txMutations.Add(nop, qualifiedName, ks.name, scopeName, collectionName, collId,
+		retCas, err = txMutations.Add(nop, qualifiedName, ks.name, scopeName, collectionName, user, collId,
 			key, data, cas, MV_FLAGS_WRITE, uint32(exptime), txnMeta, nil, ks, dataSize)
 
 		if err != nil {
@@ -663,29 +673,29 @@ func AtrCollectionAgentPovider(atrCollection string) (string, string, *gocbcore.
 		return "", "", nil, err
 	}
 
-	agent, cerr := CollectionAgentProvider(path.Bucket(), path.Scope(), path.Keyspace())
+	agent, _, cerr := CollectionAgentProvider(path.Bucket(), path.Scope(), path.Keyspace(), "")
 	return path.Scope(), path.Keyspace(), agent, cerr
 }
 
-func CollectionAgentProvider(bucketName, scpName, collName string) (agent *gocbcore.Agent, rerr error) {
+func CollectionAgentProvider(bucketName, scpName, collName, oboUser string) (*gocbcore.Agent, string, error) {
 	if bucketName == "" || scpName == "" || collName == "" {
-		return nil, fmt.Errorf("Not valid collection : `%v`.`%v`.`%v`", bucketName, scpName, collName)
+		return nil, oboUser, fmt.Errorf("Not valid collection : `%v`.`%v`.`%v`", bucketName, scpName, collName)
 	}
 
 	ks, cerr := datastore.GetKeyspace("default", bucketName, scpName, collName)
 	if cerr != nil {
-		return nil, cerr
+		return nil, oboUser, cerr
 	}
 
 	coll, ok := ks.(*collection)
 	if !ok {
-		return nil, fmt.Errorf("%v is not a collection", ks.QualifiedName())
+		return nil, oboUser, fmt.Errorf("%v is not a collection", ks.QualifiedName())
 	}
 
 	if cerr = coll.bucket.txReady(nil); cerr != nil {
-		return nil, cerr.GetICause()
+		return nil, oboUser, cerr.GetICause()
 	}
-	return coll.bucket.agentProvider.Agent(), nil
+	return coll.bucket.agentProvider.Agent(), oboUser, nil
 }
 
 func errorType(err error, rollback bool) (error, interface{}) {
@@ -726,8 +736,8 @@ func initGocb(s *store) (err errors.Error) {
 		CleanupWindow:         tranSettings.CleanupWindow(),
 		CleanupClientAttempts: tranSettings.CleanupClientAttempts(),
 		CleanupLostAttempts:   tranSettings.CleanupLostAttempts(),
-		BucketAgentProvider: func(bucketName string) (agent *gocbcore.Agent, rerr error) {
-			return CollectionAgentProvider(bucketName, "_default", "_default")
+		BucketAgentProvider: func(bucketName string) (*gocbcore.Agent, string, error) {
+			return CollectionAgentProvider(bucketName, "_default", "_default", "")
 		},
 	}
 

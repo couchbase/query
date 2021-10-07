@@ -12,7 +12,7 @@ import (
 	"strings"
 
 	gctx "github.com/couchbase/gocbcore-transactions"
-	"github.com/couchbase/gocbcore/v9"
+	"github.com/couchbase/gocbcore/v10"
 	"github.com/couchbase/query/logging"
 )
 

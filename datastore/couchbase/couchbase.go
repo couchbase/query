@@ -1598,7 +1598,8 @@ func (b *keyspace) fetch(fullName, qualifiedName, scopeName, collectionName stri
 	clientContext ...*memcached.ClientContext) errors.Errors {
 
 	if txContext, _ := context.GetTxContext().(*transactions.TranContext); txContext != nil {
-		return b.txFetch(fullName, qualifiedName, scopeName, collectionName, getCollectionId(clientContext...),
+		collId, user := getCollectionId(clientContext...)
+		return b.txFetch(fullName, qualifiedName, scopeName, collectionName, user, collId,
 			keys, fetchMap, context, subPaths, false, txContext)
 	}
 
@@ -1869,7 +1870,8 @@ func (b *keyspace) performOp(op MutateOp, qualifiedName, scopeName, collectionNa
 	}
 
 	if txContext, _ := context.GetTxContext().(*transactions.TranContext); txContext != nil {
-		return b.txPerformOp(op, qualifiedName, scopeName, collectionName, getCollectionId(clientContext...),
+		collId, user := getCollectionId(clientContext...)
+		return b.txPerformOp(op, qualifiedName, scopeName, collectionName, user, collId,
 			pairs, context, txContext)
 	}
 
@@ -2258,12 +2260,11 @@ func (b *keyspace) IsBucket() bool {
 	return true
 }
 
-func getCollectionId(clientContext ...*memcached.ClientContext) uint32 {
-	collectionId := uint32(0)
+func getCollectionId(clientContext ...*memcached.ClientContext) (collectionId uint32, user string) {
 	if len(clientContext) > 0 {
-		collectionId = clientContext[0].CollId
+		return clientContext[0].CollId, clientContext[0].User
 	}
-	return collectionId
+	return
 }
 
 func setPreserveExpiry(present bool, context datastore.QueryContext, clientContext ...*memcached.ClientContext) errors.Error {
