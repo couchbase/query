@@ -166,10 +166,7 @@ var pipelineCap atomic.AlignedInt64
 
 func init() {
 	atomic.StoreInt64(&pipelineCap, int64(_ITEM_CAP))
-	p := value.NewAnnotatedPool(_BATCH_SIZE)
-	_BATCH_POOL.Store(p)
-	j := value.NewAnnotatedJoinPairPool(_BATCH_SIZE)
-	_JOIN_BATCH_POOL.Store(j)
+	SetPipelineBatch(0)
 }
 
 func SetPipelineCap(pcap int64) {
@@ -1116,21 +1113,25 @@ func (this *base) deltaKeyspaceDone(keys map[string]bool, pool bool) (map[string
 type batcher interface {
 	allocateBatch(context *Context, size int)
 	enbatch(item value.AnnotatedValue, b batcher, context *Context) bool
-	enbatchSize(item value.AnnotatedValue, b batcher, batchSize int, context *Context) bool
+	enbatchSize(item value.AnnotatedValue, b batcher, batchSize int, context *Context, immediateFlush bool) bool
 	flushBatch(context *Context) bool
 	releaseBatch(context *Context)
 }
 
-var _BATCH_SIZE = 64
+var _BATCH_SIZE = 512
 
 var _BATCH_POOL go_atomic.Value
 var _JOIN_BATCH_POOL go_atomic.Value
+var _PIPELINE_BATCH_SIZE atomic.AlignedInt64
 
 func SetPipelineBatch(size int) {
 	if size < 1 {
 		size = _BATCH_SIZE
 	}
-
+	atomic.StoreInt64(&_PIPELINE_BATCH_SIZE, int64(size))
+	if size < _BATCH_SIZE {
+		size = _BATCH_SIZE
+	}
 	p := value.NewAnnotatedPool(size)
 	_BATCH_POOL.Store(p)
 	j := value.NewAnnotatedJoinPairPool(size)
@@ -1138,7 +1139,8 @@ func SetPipelineBatch(size int) {
 }
 
 func PipelineBatchSize() int {
-	return _BATCH_POOL.Load().(*value.AnnotatedPool).Size()
+	size := atomic.LoadInt64(&_PIPELINE_BATCH_SIZE)
+	return int(size)
 }
 
 func getBatchPool() *value.AnnotatedPool {
@@ -1150,7 +1152,7 @@ func getJoinBatchPool() *value.AnnotatedJoinPairPool {
 }
 
 func (this *base) allocateBatch(context *Context, size int) {
-	if size <= PipelineBatchSize() {
+	if size <= _BATCH_POOL.Load().(*value.AnnotatedPool).Size() {
 		this.batch = getBatchPool().Get()
 	} else {
 		this.batch = make(value.AnnotatedValues, 0, size)
@@ -1162,23 +1164,37 @@ func (this *base) releaseBatch(context *Context) {
 	this.batch = nil
 }
 
-func (this *base) enbatchSize(item value.AnnotatedValue, b batcher, batchSize int, context *Context) bool {
-	if len(this.batch) >= batchSize {
-		if !b.flushBatch(context) {
-			return false
+func (this *base) resetBatch(context *Context) {
+	if this.batch != nil {
+		for i := range this.batch {
+			this.batch[i] = nil
 		}
+		this.batch = this.batch[:0]
 	}
+}
 
+func (this *base) enbatchSize(item value.AnnotatedValue, b batcher, batchSize int, context *Context, immediateFlush bool) bool {
 	if this.batch == nil {
 		this.allocateBatch(context, batchSize)
 	}
 
 	this.batch = append(this.batch, item)
+
+	if len(this.batch) >= batchSize || (immediateFlush && this.queuedItems() == 0 && !this.output.getBase().isQueuing(batchSize)) {
+		if !b.flushBatch(context) {
+			return false
+		}
+	}
+
 	return true
 }
 
+func (this *base) isQueuing(batchSize int) bool {
+	return this.queuedItems() > (batchSize / 2)
+}
+
 func (this *base) enbatch(item value.AnnotatedValue, b batcher, context *Context) bool {
-	return this.enbatchSize(item, b, cap(this.batch), context)
+	return this.enbatchSize(item, b, cap(this.batch), context, false)
 }
 
 func (this *base) newEmptyDocumentWithKey(key interface{}, parent value.Value, context *Context) value.AnnotatedValue {
