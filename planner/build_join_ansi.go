@@ -241,7 +241,7 @@ func (this *builder) buildAnsiJoinOp(node *algebra.AnsiJoin) (op plan.Operator, 
 			}
 		}
 
-		scans, newOnclause, cost, cardinality, size, frCost, err := this.buildAnsiJoinSimpleFromTerm(right, node.Onclause())
+		scans, newOnclause, cost, cardinality, size, frCost, err := this.buildAnsiJoinSimpleFromTerm(right, node.Onclause(), node.Outer(), "join")
 		if err != nil {
 			return nil, err
 		}
@@ -433,7 +433,7 @@ func (this *builder) buildAnsiNestOp(node *algebra.AnsiNest) (op plan.Operator, 
 			}
 		}
 
-		scans, newOnclause, cost, cardinality, size, frCost, err := this.buildAnsiJoinSimpleFromTerm(right, node.Onclause())
+		scans, newOnclause, cost, cardinality, size, frCost, err := this.buildAnsiJoinSimpleFromTerm(right, node.Onclause(), node.Outer(), "nest")
 		if err != nil {
 			return nil, err
 		}
@@ -1040,8 +1040,8 @@ func (this *builder) buildHashJoinOp(right algebra.SimpleFromTerm, outer bool,
 	return child, buildExprs, probeExprs, buildAliases, newOnclause, newFilter, cost, cardinality, size, frCost, nil
 }
 
-func (this *builder) buildAnsiJoinSimpleFromTerm(node algebra.SimpleFromTerm, onclause expression.Expression) (
-	[]plan.Operator, expression.Expression, float64, float64, int64, float64, error) {
+func (this *builder) buildAnsiJoinSimpleFromTerm(node algebra.SimpleFromTerm, onclause expression.Expression,
+	outer bool, op string) ([]plan.Operator, expression.Expression, float64, float64, int64, float64, error) {
 
 	var newOnclause expression.Expression
 	var err error
@@ -1123,7 +1123,7 @@ func (this *builder) buildAnsiJoinSimpleFromTerm(node algebra.SimpleFromTerm, on
 	frCost := OPT_COST_NOT_AVAIL
 
 	if this.useCBO {
-		cost, cardinality, size, frCost = getSimpleFromTermCost(lastOp, this.lastOp, filters)
+		cost, cardinality, size, frCost = getSimpleFromTermCost(lastOp, this.lastOp, filters, outer, op)
 	}
 
 	return this.children, newOnclause, cost, cardinality, size, frCost, nil

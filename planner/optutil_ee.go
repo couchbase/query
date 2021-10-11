@@ -248,8 +248,13 @@ func getUnnestCost(node *algebra.Unnest, lastOp plan.Operator,
 	return optutil.CalcUnnestCost(node, lastOp, baseKeyspaces, keyspaceNames, advisorValidate)
 }
 
-func getSimpleFromTermCost(left, right plan.Operator, filters base.Filters) (float64, float64, int64, float64) {
-	return optutil.CalcSimpleFromTermCost(left, right, filters)
+func getSimpleFromTermCost(left, right plan.Operator, filters base.Filters, outer bool, op string) (
+	float64, float64, int64, float64) {
+	jointype := optutil.COST_JOIN
+	if op == "nest" {
+		jointype = optutil.COST_NEST
+	}
+	return optutil.CalcSimpleFromTermCost(left, right, filters, outer, jointype)
 }
 
 func getSimpleFilterCost(alias string, cost, cardinality, selec float64, size int64, frCost float64) (
