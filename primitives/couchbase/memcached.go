@@ -271,9 +271,11 @@ func (b *Bucket) processOpError(vb uint32, lastError error, node string, desc *d
 			desc.discard = true
 			desc.retry = true
 		} else if isConnError(lastError) {
+			desc.discard = true
 			desc.backoffAttempts++
 			desc.retry = backOff(desc.backoffAttempts, desc.maxTries, backOffDuration, true)
 		} else if IsReadTimeOutError(lastError) {
+			desc.discard = true
 			desc.retry = true
 
 			// check for a new vbmap
@@ -323,7 +325,7 @@ func (b *Bucket) handleNMVB(vb uint32, resp *gomemcached.MCResponse) *connection
 				}
 				for i := range nodes {
 					if nodes[i] == node {
-						return b.getConnPool(masterId)
+						return b.getConnPool(i)
 					}
 				}
 			}
@@ -377,8 +379,11 @@ func (b *Bucket) Do2(k string, f func(mc *memcached.Client, vb uint16) error, de
 			pool.Return(conn)
 		}
 
+		if lastError == nil {
+			return nil
+		}
 		if !desc.retry {
-			return lastError
+			break
 		}
 	}
 
@@ -645,6 +650,8 @@ func (b *Bucket) doBulkGet(vb uint16, keys []string, reqDeadline time.Time,
 				err = nil
 			} else if err == nil {
 				done = true
+			} else {
+				ech <- err
 			}
 			return err
 		}()
