@@ -208,6 +208,12 @@ var _SETTERS = map[string]Setter{
 		}
 		return nil
 	},
+	REQUESTERRORLIMIT: func(s *Server, o interface{}) errors.Error {
+		if err := s.SetRequestErrorLimit(int(getNumber(o))); err != nil {
+			return errors.NewServiceErrorBadValue(err, "settings")
+		}
+		return nil
+	},
 	/*
 	   	"enforce_limits": func(s *Server, o interface{}) errors.Error {
 	                   s.SettingsCallback()("enforce_limits", o)
@@ -438,6 +444,7 @@ func FillSettings(settings map[string]interface{}, srvr *Server) map[string]inte
 	settings[CLEANUPCLIENTATTEMPTS] = tranSettings.CleanupClientAttempts()
 	settings[CLEANUPLOSTATTEMPTS] = tranSettings.CleanupLostAttempts()
 	settings[GCPERCENT] = srvr.GCPercent()
+	settings[REQUESTERRORLIMIT] = srvr.RequestErrorLimit()
 	return settings
 }
 

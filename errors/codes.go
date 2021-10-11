@@ -66,6 +66,7 @@ const (
 	E_SERVICE_USER_REQUEST_RATE_EXCEEDED      ErrorCode = 1192
 	E_SERVICE_USER_REQUEST_SIZE_EXCEEDED      ErrorCode = 1193
 	E_SERVICE_USER_RESULT_SIZE_EXCEEDED       ErrorCode = 1194
+	E_REQUEST_ERROR_LIMIT                     ErrorCode = 1195
 	E_ADMIN_CONNECTION                        ErrorCode = 2000
 	E_ADMIN_INVALIDURL                        ErrorCode = 2010
 	E_ADMIN_DECODING                          ErrorCode = 2020

@@ -46,8 +46,6 @@ type httpRequest struct {
 	httpRespCode int
 	resultCount  int
 	resultSize   int
-	errorCount   int
-	warningCount int
 
 	sync.WaitGroup
 	prefix string
@@ -66,6 +64,7 @@ type httpRequest struct {
 var zeroScanVectorSource = &ZeroScanVectorSource{}
 
 func newHttpRequest(rv *httpRequest, resp http.ResponseWriter, req *http.Request, bp BufferPool, size int, namespace string) {
+
 	var httpArgs httpRequestArgs
 	var err errors.Error
 
@@ -666,7 +665,7 @@ func (this *httpRequest) EventResultSize() int {
 
 // For audit.Auditable interface.
 func (this *httpRequest) EventErrorCount() int {
-	return this.errorCount
+	return this.GetErrorCount()
 }
 
 // For audit.Auditable interface.
@@ -676,14 +675,14 @@ func (this *httpRequest) EventErrorMessage() []errors.Error {
 
 // For audit.Auditable interface.
 func (this *httpRequest) EventWarningCount() int {
-	return this.warningCount
+	return this.GetWarningCount()
 }
 
 // For audit.Auditable interface.
 func (this *httpRequest) EventStatus() string {
 	state := this.State()
 	if state == server.COMPLETED {
-		if this.errorCount == 0 {
+		if this.GetErrorCount() == 0 {
 			state = server.SUCCESS
 		} else {
 			state = server.ERRORS

@@ -57,6 +57,7 @@ const (
 	_DEF_TASKS_LIMIT            = 16384
 	_DEF_MEMORY_QUOTA           = 0
 	_DEF_CE_MAXCPUS             = 4
+	_DEF_REQUEST_ERROR_LIMIT    = 16
 )
 
 var DATASTORE = flag.String("datastore", "", "Datastore address (http://URL or dir:PATH or mock:)")
@@ -71,6 +72,7 @@ var METRICS = flag.Bool("metrics", true, "Whether to provide metrics")
 var PRETTY = flag.Bool("pretty", false, "Pretty output")
 var REQUEST_CAP = flag.Int("request-cap", _DEF_REQUEST_CAP, "Maximum number of queued requests per logical CPU")
 var REQUEST_SIZE_CAP = flag.Int("request-size-cap", server_package.MAX_REQUEST_SIZE, "Maximum size of a request")
+var REQUEST_ERROR_LIMIT = flag.Int("request-error-limit", _DEF_REQUEST_ERROR_LIMIT, "Maximum number of errors to accumulate before aborting a request")
 var SCAN_CAP = flag.Int64("scan-cap", _DEF_SCAN_CAP, "Maximum buffer size for index scans; use zero or negative value to disable")
 var SERVICERS = flag.Int("servicers", 0, "Servicer count")
 var PLUS_SERVICERS = flag.Int("plus-servicers", 0, "Plus servicer count")
@@ -327,6 +329,7 @@ func main() {
 	}
 	server.SetMemoryQuota(*MEMORY_QUOTA)
 	server.SetGCPercent(*_GOGC_PERCENT)
+	server.SetRequestErrorLimit(*REQUEST_ERROR_LIMIT)
 	configstore.SetOptions(server, *HTTP_ADDR, *HTTPS_ADDR, (*HTTP_ADDR == _DEF_HTTP && *HTTPS_ADDR == _DEF_HTTPS))
 
 	audit.StartAuditService(*DATASTORE, server.Servicers()+server.PlusServicers())

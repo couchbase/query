@@ -162,6 +162,7 @@ type Server struct {
 	settingsCallback  func(string, interface{})
 	gcpercent         int
 	shutdown          int
+	requestErrorLimit int
 }
 
 // Default and min Keep Alive Length
@@ -569,6 +570,18 @@ func (this *Server) UseCBO() bool {
 
 func (this *Server) SetUseCBO(useCBO bool) {
 	util.SetUseCBO(useCBO)
+}
+
+func (this *Server) RequestErrorLimit() int {
+	return this.requestErrorLimit
+}
+
+func (this *Server) SetRequestErrorLimit(limit int) error {
+	if limit < 0 {
+		limit = 0
+	}
+	this.requestErrorLimit = limit
+	return nil
 }
 
 func (this *Server) ServiceRequest(request Request) bool {
@@ -985,6 +998,9 @@ func (this *Server) serviceRequest(request Request) {
 		}
 	} else if request.TxImplicit() {
 		context.SetDeltaKeyspaces(make(map[string]bool, 1))
+	} else {
+		// only enable error limits for non-transactional requests
+		request.SetErrorLimit(this.RequestErrorLimit())
 	}
 
 	prepared, err := this.getPrepared(request, context)

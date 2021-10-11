@@ -316,7 +316,7 @@ func (this *httpRequest) writeString(s string) bool {
 
 func (this *httpRequest) writeState(state server.State, prefix string) bool {
 	if state == server.COMPLETED {
-		if this.errorCount == 0 {
+		if this.GetErrorCount() == 0 {
 			state = server.SUCCESS
 		} else {
 			state = server.ERRORS
@@ -332,8 +332,14 @@ func (this *httpRequest) writeState(state server.State, prefix string) bool {
 
 func (this *httpRequest) writeErrors(prefix string, indent string) bool {
 	var err errors.Error
+
+	if this.GetErrorCount() == 0 {
+		return true
+	}
+
+	first := true
 	for _, err = range this.Errors() {
-		if this.errorCount == 0 {
+		if first {
 			this.writeString(",\n")
 			this.writeString(prefix)
 			this.writeString("\"errors\": [")
@@ -347,15 +353,11 @@ func (this *httpRequest) writeErrors(prefix string, indent string) bool {
 			if this.State() != server.FATAL {
 				this.setHttpCode(mapErrorToHttpResponse(err, http.StatusOK))
 			}
+			first = false
 		}
-		if !this.writeError(err, this.errorCount, prefix, indent) {
+		if !this.writeError(err, first, prefix, indent) {
 			break
 		}
-		this.errorCount++
-	}
-
-	if this.errorCount == 0 {
-		return true
 	}
 
 	if prefix != "" && !(this.writeString("\n") && this.writeString(prefix)) {
@@ -366,28 +368,22 @@ func (this *httpRequest) writeErrors(prefix string, indent string) bool {
 
 func (this *httpRequest) writeWarnings(prefix, indent string) bool {
 	var err errors.Error
-	alreadySeen := make(map[string]bool)
 
-loop:
+	if this.GetWarningCount() == 0 {
+		return true
+	}
+
+	first := true
 	for _, err = range this.Warnings() {
-		if err.OnceOnly() && alreadySeen[err.Error()] {
-			// do nothing for this warning
-			continue loop
-		}
-		if this.warningCount == 0 {
+		if first {
 			this.writeString(",\n")
 			this.writeString(prefix)
 			this.writeString("\"warnings\": [")
+			first = false
 		}
-		if !this.writeError(err, this.warningCount, prefix, indent) {
+		if !this.writeError(err, first, prefix, indent) {
 			break
 		}
-		this.warningCount++
-		alreadySeen[err.Error()] = true
-	}
-
-	if this.warningCount == 0 {
-		return true
 	}
 
 	if prefix != "" && !(this.writeString("\n") && this.writeString(prefix)) {
@@ -396,11 +392,11 @@ loop:
 	return this.writeString("]")
 }
 
-func (this *httpRequest) writeError(err errors.Error, count int, prefix, indent string) bool {
+func (this *httpRequest) writeError(err errors.Error, first bool, prefix, indent string) bool {
 
 	newPrefix := prefix + indent
 
-	if count != 0 && !this.writeString(",") {
+	if !first && !this.writeString(",") {
 		return false
 	}
 	if prefix != "" && !this.writeString("\n") {
@@ -507,12 +503,12 @@ func (this *httpRequest) writeMetrics(metrics bool, prefix, indent string) bool 
 		fmt.Fprintf(buf, ",%s\"sortCount\": %d", newPrefix, this.SortCount())
 	}
 
-	if this.errorCount > 0 {
-		fmt.Fprintf(buf, ",%s\"errorCount\": %d", newPrefix, this.errorCount)
+	if this.GetErrorCount() > 0 {
+		fmt.Fprintf(buf, ",%s\"errorCount\": %d", newPrefix, this.GetErrorCount())
 	}
 
-	if this.warningCount > 0 {
-		fmt.Fprintf(buf, ",%s\"warningCount\": %d", newPrefix, this.warningCount)
+	if this.GetWarningCount() > 0 {
+		fmt.Fprintf(buf, ",%s\"warningCount\": %d", newPrefix, this.GetWarningCount())
 	}
 
 	if prefix != "" && !(this.writeString("\n") && this.writeString(prefix)) {

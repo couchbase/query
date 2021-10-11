@@ -139,3 +139,18 @@ func NewServiceUserResultsSizeExceededError() Error {
 	return &err{level: EXCEPTION, ICode: E_SERVICE_USER_RESULT_SIZE_EXCEEDED, IKey: "service.result.size.exceeded",
 		InternalMsg: "User has exceeded results size limit", InternalCaller: CallerN(1)}
 }
+
+func NewErrorLimit(limit int, num int, dups int, mut uint64) Error {
+	c := make(map[string]interface{})
+	c["errorLimit"] = limit
+	c["distinctErrors"] = num
+	if dups > 0 {
+		c["duplicateErrors"] = dups
+	}
+	if mut > 0 {
+		c["mutationCount"] = mut
+	}
+	return &err{level: EXCEPTION, ICode: E_REQUEST_ERROR_LIMIT, IKey: "service.request.error_limit", cause: c,
+		InternalMsg:    "Request execution aborted as the number of errors raised has reached the maximum permitted.",
+		InternalCaller: CallerN(1)}
+}

@@ -166,6 +166,7 @@ type Request interface {
 	SetTimings(o execution.Operator)
 	GetTimings() execution.Operator
 	IsAdHoc() bool
+	SetErrorLimit(limit int)
 
 	setSleep() // internal methods for load control
 	sleep()
@@ -289,6 +290,10 @@ type BaseRequest struct {
 	transactionStartTime time.Time
 	state                State
 	aborted              bool
+	errorLimit           int
+	errorCount           int
+	duplicateErrorCount  int
+	warningCount         int
 	errors               []errors.Error
 	warnings             []errors.Error
 	stopGate             sync.WaitGroup
@@ -374,6 +379,7 @@ func NewBaseRequest(rv *BaseRequest) {
 	rv.durabilityTimeout = datastore.DEF_DURABILITY_TIMEOUT
 	rv.kvTimeout = datastore.DEF_KVTIMEOUT
 	rv.durabilityLevel = datastore.DL_UNSET
+
 }
 
 func (this *BaseRequest) SetRequestTime(time time.Time) {
@@ -666,22 +672,61 @@ func (this *BaseRequest) Abort(err errors.Error) {
 	this.Stop(FATAL)
 }
 
+func (this *BaseRequest) SetErrorLimit(limit int) {
+	if limit < 0 {
+		limit = 0
+	}
+	this.errorLimit = limit
+}
+
+func (this *BaseRequest) GetErrorLimit() int {
+	return this.errorLimit
+}
+
+func (this *BaseRequest) GetErrorCount() int {
+	return this.errorCount
+}
+
+func (this *BaseRequest) GetWarningCount() int {
+	return this.warningCount
+}
+
 func (this *BaseRequest) Error(err errors.Error) {
 	this.Lock()
+	if this.errorLimit > 0 && this.errorCount+this.duplicateErrorCount >= this.errorLimit {
+		this.errors = append(this.errors, errors.NewErrorLimit(this.errorLimit, this.errorCount, this.duplicateErrorCount,
+			this.MutationCount()))
+		this.errorCount++
+		this.aborted = true
+		this.Unlock()
+		this.Stop(FATAL)
+		return
+	}
 	defer this.Unlock()
 	// don't add duplicate errors
 	for _, e := range this.errors {
 		if err.Code() != 0 && err.Code() == e.Code() && err.Error() == e.Error() {
+			this.duplicateErrorCount++
 			return
 		}
 	}
 	this.errors = append(this.errors, err)
+	this.errorCount++
 }
 
 func (this *BaseRequest) Warning(wrn errors.Error) {
 	this.Lock()
+	defer this.Unlock()
+	// de-duplicate warnings
+	if wrn.OnceOnly() {
+		for _, w := range this.warnings {
+			if wrn.Code() == w.Code() && wrn.Error() == w.Error() {
+				return
+			}
+		}
+	}
 	this.warnings = append(this.warnings, wrn)
-	this.Unlock()
+	this.warningCount++
 }
 
 func (this *BaseRequest) AddMutationCount(i uint64) {
