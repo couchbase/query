@@ -207,8 +207,12 @@ func (this *SendInsert) flushBatch(context *Context) bool {
 	// Update mutation count with number of inserted docs
 	context.AddMutationCount(uint64(len(dpairs)))
 
+	mutationOk := true
 	if len(errs) > 0 {
 		context.Errors(errs)
+		if context.txContext != nil {
+			mutationOk = false
+		}
 	}
 
 	// Capture the inserted keys in case there is a RETURNING clause
@@ -222,7 +226,7 @@ func (this *SendInsert) flushBatch(context *Context) bool {
 		}
 	}
 
-	return true
+	return mutationOk
 }
 
 func (this *SendInsert) readonly() bool {

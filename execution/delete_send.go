@@ -153,8 +153,12 @@ func (this *SendDelete) flushBatch(context *Context) bool {
 	// Update mutation count with number of deleted docs:
 	context.AddMutationCount(uint64(len(dpairs)))
 
+	mutationOk := true
 	if len(errs) > 0 {
 		context.Errors(errs)
+		if context.txContext != nil {
+			mutationOk = false
+		}
 	}
 
 	for _, item := range this.batch {
@@ -163,7 +167,7 @@ func (this *SendDelete) flushBatch(context *Context) bool {
 		}
 	}
 
-	return true
+	return mutationOk
 }
 
 func (this *SendDelete) readonly() bool {

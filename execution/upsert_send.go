@@ -169,8 +169,12 @@ func (this *SendUpsert) flushBatch(context *Context) bool {
 	// Update mutation count with number of upserted docs
 	context.AddMutationCount(uint64(len(dpairs)))
 
+	mutationOk := true
 	if len(errs) > 0 {
 		context.Errors(errs)
+		if context.txContext != nil {
+			mutationOk = false
+		}
 	}
 
 	// Capture the upserted keys in case there is a RETURNING clause
@@ -184,7 +188,7 @@ func (this *SendUpsert) flushBatch(context *Context) bool {
 		}
 	}
 
-	return true
+	return mutationOk
 }
 
 func (this *SendUpsert) readonly() bool {
