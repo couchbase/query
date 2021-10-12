@@ -16,7 +16,6 @@ import (
 	"fmt"
 	"io"
 	"math/rand"
-	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -684,7 +683,7 @@ type vbBulkGet struct {
 
 const _NUM_CHANNELS = 5
 
-var _NUM_CHANNEL_WORKERS = (runtime.NumCPU() + 1) / 2
+var _NUM_CHANNEL_WORKERS = (util.NumCPU() + 1) / 2
 var DefaultDialTimeout = time.Duration(0)
 var DefaultTimeout = time.Duration(0)
 var noDeadline = time.Time{}

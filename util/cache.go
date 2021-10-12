@@ -90,7 +90,7 @@ type GenCache struct {
 }
 
 func NewGenCache(l int) *GenCache {
-	numCaches := runtime.NumCPU()
+	numCaches := NumCPU()
 	if numCaches > _MAX_CACHES {
 		numCaches = _MAX_CACHES
 	} else if numCaches < _MIN_CACHES {
@@ -526,4 +526,8 @@ func (this *genSubList) ditch(elem *genElem, list listType) {
 	// help the GC
 	elem.lists[list].next = nil
 	elem.lists[list].prev = nil
+}
+
+func NumCPU() int {
+	return runtime.GOMAXPROCS(0)
 }

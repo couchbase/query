@@ -9,7 +9,6 @@
 package util
 
 import (
-	"runtime"
 	"sync"
 
 	atomic "github.com/couchbase/go-couchbase/platform"
@@ -91,7 +90,7 @@ type byteSlicePoolEntry struct {
 
 func newByteSliceFastPool(p *byteSliceFastPool, f func() []byte) {
 	*p = byteSliceFastPool{}
-	p.buckets = uint32(runtime.NumCPU())
+	p.buckets = uint32(NumCPU())
 	if p.buckets > _MAX_BUCKETS {
 		p.buckets = _MAX_BUCKETS
 	} else if p.buckets < _MIN_BUCKETS {

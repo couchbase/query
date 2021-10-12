@@ -32,6 +32,7 @@ import (
 	"github.com/couchbase/query/planner"
 	"github.com/couchbase/query/timestamp"
 	"github.com/couchbase/query/transactions"
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
@@ -245,8 +246,8 @@ func NewContext(requestId string, datastore datastore.Datastore, systemstore dat
 		reqTimeout:       reqTimeout,
 	}
 
-	if rv.maxParallelism <= 0 || rv.maxParallelism > runtime.NumCPU() {
-		rv.maxParallelism = runtime.NumCPU()
+	if rv.maxParallelism <= 0 || rv.maxParallelism > util.NumCPU() {
+		rv.maxParallelism = util.NumCPU()
 	}
 
 	return rv

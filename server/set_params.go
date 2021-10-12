@@ -307,6 +307,11 @@ func ProcessSettings(settings map[string]interface{}, srvr *Server) (err errors.
 			set_it := _SETTERS[s]
 			serr := set_it(srvr, value)
 			if serr == nil {
+				if s == SERVICERS {
+					value = srvr.Servicers()
+				} else if s == PLUSSERVICERS {
+					value = srvr.PlusServicers()
+				}
 				logging.Infof("Query Configuration changed for %v. New value is %v", s, value)
 			} else {
 				logging.Infof("Could not change query Configuration %v to %v: %v", s, value, serr)

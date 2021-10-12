@@ -13,7 +13,6 @@ package util
 
 import (
 	"fmt"
-	"runtime"
 	"sync"
 	"time"
 	"unsafe"
@@ -92,7 +91,7 @@ type poolEntry struct {
 
 func NewFastPool(p *FastPool, f func() interface{}) {
 	*p = FastPool{}
-	p.buckets = uint32(runtime.NumCPU())
+	p.buckets = uint32(NumCPU())
 	if p.buckets > _MAX_BUCKETS {
 		p.buckets = _MAX_BUCKETS
 	} else if p.buckets < _MIN_BUCKETS {

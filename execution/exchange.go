@@ -9,7 +9,6 @@
 package execution
 
 import (
-	"runtime"
 	"sync"
 
 	"github.com/couchbase/query/util"
@@ -82,7 +81,7 @@ func init() {
 	util.NewFastPool(&largeChildPool, func() interface{} {
 		return make([]int, _LARGE_CHILD_POOL)
 	})
-	threshold = runtime.NumCPU()
+	threshold = util.NumCPU()
 	if threshold > _MAX_THRESHOLD {
 		threshold = _MAX_THRESHOLD
 	}

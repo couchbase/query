@@ -10,7 +10,6 @@ package execution
 
 import (
 	"encoding/json"
-	"runtime"
 
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/util"
@@ -182,4 +181,4 @@ func (this *Parallel) Done() {
 	}
 }
 
-var _PARALLEL_POOL = NewOperatorPool(runtime.NumCPU())
+var _PARALLEL_POOL = NewOperatorPool(util.NumCPU())

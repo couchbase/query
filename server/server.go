@@ -169,6 +169,11 @@ type Server struct {
 const KEEP_ALIVE_DEFAULT = 1024 * 16
 const KEEP_ALIVE_MIN = 1024
 
+const (
+	SERVICERS_MULTIPLIER     = 4
+	PLUSSERVICERS_MULTIPLIER = 16
+)
+
 func NewServer(store datastore.Datastore, sys datastore.Systemstore, config clustering.ConfigurationStore,
 	acctng accounting.AccountingStore, namespace string, readonly bool,
 	requestsCap, plusRequestsCap int, servicers, plusServicers, maxParallelism int,
@@ -191,8 +196,8 @@ func NewServer(store datastore.Datastore, sys datastore.Systemstore, config clus
 		settingsCallback: func(s string, v interface{}) {},
 	}
 
-	rv.unboundQueue.servicers = servicers
-	rv.plusQueue.servicers = plusServicers
+	rv.SetServicers(servicers)
+	rv.SetPlusServicers(plusServicers)
 	newRunQueue(&rv.unboundQueue, requestsCap, false)
 	newRunQueue(&rv.plusQueue, plusRequestsCap, false)
 	newTxRunQueues(&rv.transactionQueues, plusRequestsCap, _TX_QUEUE_SIZE)
@@ -322,10 +327,7 @@ func (this *Server) MaxParallelism() int {
 }
 
 func (this *Server) SetMaxParallelism(maxParallelism int) {
-	numProcs := runtime.NumCPU()
-	if os.Getenv("GOMAXPROCS") != "" {
-		numProcs = runtime.GOMAXPROCS(0)
-	}
+	numProcs := util.NumCPU()
 
 	// maxParallelism zero or negative or exceeds number of allowed procs limit to numProcs
 	if maxParallelism <= 0 || maxParallelism > numProcs {
@@ -465,6 +467,9 @@ func (this *Server) Servicers() int {
 
 func (this *Server) SetServicers(servicers int) {
 	this.Lock()
+	if servicers <= 0 {
+		servicers = SERVICERS_MULTIPLIER * util.NumCPU()
+	}
 	this.unboundQueue.servicers = servicers
 	this.Unlock()
 }
@@ -475,6 +480,9 @@ func (this *Server) PlusServicers() int {
 
 func (this *Server) SetPlusServicers(plusServicers int) {
 	this.Lock()
+	if plusServicers <= 0 {
+		plusServicers = PLUSSERVICERS_MULTIPLIER * util.NumCPU()
+	}
 	this.plusQueue.servicers = plusServicers
 	this.Unlock()
 }

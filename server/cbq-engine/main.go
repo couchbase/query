@@ -56,6 +56,7 @@ const (
 	_DEF_DICTIONARY_CACHE_LIMIT = 16384
 	_DEF_TASKS_LIMIT            = 16384
 	_DEF_MEMORY_QUOTA           = 0
+	_DEF_CE_MAXCPUS             = 4
 )
 
 var DATASTORE = flag.String("datastore", "", "Datastore address (http://URL or dir:PATH or mock:)")
@@ -71,8 +72,8 @@ var PRETTY = flag.Bool("pretty", false, "Pretty output")
 var REQUEST_CAP = flag.Int("request-cap", _DEF_REQUEST_CAP, "Maximum number of queued requests per logical CPU")
 var REQUEST_SIZE_CAP = flag.Int("request-size-cap", server_package.MAX_REQUEST_SIZE, "Maximum size of a request")
 var SCAN_CAP = flag.Int64("scan-cap", _DEF_SCAN_CAP, "Maximum buffer size for index scans; use zero or negative value to disable")
-var SERVICERS = flag.Int("servicers", 4*runtime.NumCPU(), "Servicer count")
-var PLUS_SERVICERS = flag.Int("plus-servicers", 16*runtime.NumCPU(), "Plus servicer count")
+var SERVICERS = flag.Int("servicers", 0, "Servicer count")
+var PLUS_SERVICERS = flag.Int("plus-servicers", 0, "Plus servicer count")
 var MAX_PARALLELISM = flag.Int("max-parallelism", 1, "Maximum parallelism per query; use zero or negative value to use maximum")
 var ORDER_LIMIT = flag.Int64("order-limit", 0, "Maximum LIMIT for ORDER BY clauses; use zero or negative value to disable")
 var MUTATION_LIMIT = flag.Int64("mutation-limit", 0, "Maximum LIMIT for data modification statements; use zero or negative value to disable")
@@ -132,6 +133,19 @@ func main() {
 	HideConsole(true)
 	defer HideConsole(false)
 	flag.Parse()
+
+	numCPUs := runtime.NumCPU()
+	if !*ENTERPRISE && numCPUs > _DEF_CE_MAXCPUS {
+		numCPUs = _DEF_CE_MAXCPUS
+	}
+
+	maxProcs := numCPUs
+	if os.Getenv("GOMAXPROCS") != "" {
+		maxProcs = runtime.GOMAXPROCS(0)
+	}
+
+	runtime.GOMAXPROCS(util.MinInt(numCPUs, maxProcs))
+	numProcs := util.NumCPU()
 
 	// Use the IPv4/IPv6 flags to setup listener bool value
 	// This is for external interfaces / listeners
@@ -255,20 +269,6 @@ func main() {
 		acctstore.MetricReporter().Start(1, 1)
 	}
 
-	numCPU := runtime.NumCPU()
-	if *ENTERPRISE && os.Getenv("GOMAXPROCS") == "" {
-		runtime.GOMAXPROCS(numCPU)
-	}
-
-	if !*ENTERPRISE {
-		if os.Getenv("GOMAXPROCS") != "" {
-			numCPU = runtime.GOMAXPROCS(0)
-		}
-
-		// Use at most 4 cpus in non-enterprise mode
-		runtime.GOMAXPROCS(util.MinInt(numCPU, 4))
-	}
-
 	// Start the completed requests log
 	server_package.RequestsInit(*COMPLETED_THRESHOLD, *COMPLETED_LIMIT)
 
@@ -285,10 +285,9 @@ func main() {
 		logging.Errorf("Ignoring invalid dictionary cache size: %v", *DICTIONARY_CACHE_LIMIT)
 		*DICTIONARY_CACHE_LIMIT = _DEF_DICTIONARY_CACHE_LIMIT
 	}
+
 	// Initialize dictionary cache
 	server_package.InitDictionaryCache(*DICTIONARY_CACHE_LIMIT)
-
-	numProcs := runtime.GOMAXPROCS(0)
 
 	sys, err := system.NewDatastore(datastore)
 	if err != nil {
@@ -330,7 +329,7 @@ func main() {
 	server.SetGCPercent(*_GOGC_PERCENT)
 	configstore.SetOptions(server, *HTTP_ADDR, *HTTPS_ADDR, (*HTTP_ADDR == _DEF_HTTP && *HTTPS_ADDR == _DEF_HTTPS))
 
-	audit.StartAuditService(*DATASTORE, *SERVICERS+*PLUS_SERVICERS)
+	audit.StartAuditService(*DATASTORE, server.Servicers()+server.PlusServicers())
 
 	ll := logging.LogLevel().String() // extract first
 	logging.Infoa(func() string {
@@ -391,7 +390,7 @@ func main() {
 
 	server.SetSettingsCallback(endpoint.SettingsCallback)
 
-	constructor.Init(endpoint.Mux(), *SERVICERS)
+	constructor.Init(endpoint.Mux(), server.Servicers())
 
 	// topology awareness
 	_ = control.NewManager()

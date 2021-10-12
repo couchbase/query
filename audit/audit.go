@@ -10,7 +10,6 @@ package audit
 
 import (
 	"fmt"
-	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -24,6 +23,7 @@ import (
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/server"
+	"github.com/couchbase/query/util"
 )
 
 // We keep counters for four things. All of these counters are available from the /admin/stats API.
@@ -238,7 +238,7 @@ func StartAuditService(server string, numServicers int) {
 	// unimpeded, with high probability.
 	auditor.auditRecordQueue = make(chan auditQueueEntry, numServicers*25)
 
-	for i := 1; i <= runtime.NumCPU(); i++ {
+	for i := 1; i <= util.NumCPU(); i++ {
 		go auditWorker(auditor, i)
 	}
 

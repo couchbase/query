@@ -10,7 +10,6 @@ package server
 
 import (
 	"net/http"
-	"runtime"
 	"sync"
 	"time"
 
@@ -459,7 +458,7 @@ func (this *BaseRequest) MaxParallelism() int {
 
 func (this *BaseRequest) SetMaxParallelism(maxParallelism int) {
 	if maxParallelism <= 0 {
-		maxParallelism = runtime.NumCPU()
+		maxParallelism = util.NumCPU()
 	}
 	this.maxParallelism = maxParallelism
 }
