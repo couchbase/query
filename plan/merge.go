@@ -20,24 +20,32 @@ import (
 type Merge struct {
 	dml
 	optEstimate
-	keyspace datastore.Keyspace
-	ref      *algebra.KeyspaceRef
-	key      expression.Expression
-	update   Operator
-	delete   Operator
-	insert   Operator
+	keyspace     datastore.Keyspace
+	ref          *algebra.KeyspaceRef
+	key          expression.Expression
+	update       Operator
+	updateFilter expression.Expression
+	delete       Operator
+	deleteFilter expression.Expression
+	insert       Operator
+	insertFilter expression.Expression
 }
 
 func NewMerge(keyspace datastore.Keyspace, ref *algebra.KeyspaceRef,
-	key expression.Expression, update, delete, insert Operator, cost, cardinality float64,
+	key expression.Expression, update Operator, updateFilter expression.Expression,
+	delete Operator, deleteFilter expression.Expression,
+	insert Operator, insertFilter expression.Expression, cost, cardinality float64,
 	size int64, frCost float64) *Merge {
 	rv := &Merge{
-		keyspace: keyspace,
-		ref:      ref,
-		key:      key,
-		update:   update,
-		delete:   delete,
-		insert:   insert,
+		keyspace:     keyspace,
+		ref:          ref,
+		key:          key,
+		update:       update,
+		updateFilter: updateFilter,
+		delete:       delete,
+		deleteFilter: deleteFilter,
+		insert:       insert,
+		insertFilter: insertFilter,
 	}
 	setOptEstimate(&rv.optEstimate, cost, cardinality, size, frCost)
 	return rv
@@ -79,6 +87,18 @@ func (this *Merge) Insert() Operator {
 	return this.insert
 }
 
+func (this *Merge) UpdateFilter() expression.Expression {
+	return this.updateFilter
+}
+
+func (this *Merge) DeleteFilter() expression.Expression {
+	return this.deleteFilter
+}
+
+func (this *Merge) InsertFilter() expression.Expression {
+	return this.insertFilter
+}
+
 func (this *Merge) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
@@ -105,11 +125,20 @@ func (this *Merge) MarshalBase(f func(map[string]interface{})) map[string]interf
 		if this.update != nil {
 			r["update"] = this.update
 		}
+		if this.updateFilter != nil {
+			r["update_filter"] = this.updateFilter
+		}
 		if this.delete != nil {
 			r["delete"] = this.delete
 		}
+		if this.deleteFilter != nil {
+			r["delete_filter"] = this.deleteFilter
+		}
 		if this.insert != nil {
 			r["insert"] = this.insert
+		}
+		if this.insertFilter != nil {
+			r["insert_filter"] = this.insertFilter
 		}
 	}
 	return r
@@ -117,17 +146,20 @@ func (this *Merge) MarshalBase(f func(map[string]interface{})) map[string]interf
 
 func (this *Merge) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_           string                 `json:"#operator"`
-		Namespace   string                 `json:"namespace"`
-		Bucket      string                 `json:"bucket"`
-		Scope       string                 `json:"scope"`
-		Keyspace    string                 `json:"keyspace"`
-		As          string                 `json:"as"`
-		Key         string                 `json:"key"`
-		Update      json.RawMessage        `json:"update"`
-		Delete      json.RawMessage        `json:"delete"`
-		Insert      json.RawMessage        `json:"insert"`
-		OptEstimate map[string]interface{} `json:"optimizer_estimates"`
+		_            string                 `json:"#operator"`
+		Namespace    string                 `json:"namespace"`
+		Bucket       string                 `json:"bucket"`
+		Scope        string                 `json:"scope"`
+		Keyspace     string                 `json:"keyspace"`
+		As           string                 `json:"as"`
+		Key          string                 `json:"key"`
+		Update       json.RawMessage        `json:"update"`
+		Delete       json.RawMessage        `json:"delete"`
+		Insert       json.RawMessage        `json:"insert"`
+		UpdateFilter string                 `json:"update_filter"`
+		DeleteFilter string                 `json:"delete_filter"`
+		InsertFilter string                 `json:"insert_filter"`
+		OptEstimate  map[string]interface{} `json:"optimizer_estimates"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -185,6 +217,24 @@ func (this *Merge) UnmarshalJSON(body []byte) error {
 	}
 
 	unmarshalOptEstimate(&this.optEstimate, _unmarshalled.OptEstimate)
+
+	if _unmarshalled.UpdateFilter != "" {
+		if this.updateFilter, err = parser.Parse(_unmarshalled.UpdateFilter); err != nil {
+			return err
+		}
+	}
+
+	if _unmarshalled.DeleteFilter != "" {
+		if this.deleteFilter, err = parser.Parse(_unmarshalled.DeleteFilter); err != nil {
+			return err
+		}
+	}
+
+	if _unmarshalled.InsertFilter != "" {
+		if this.insertFilter, err = parser.Parse(_unmarshalled.InsertFilter); err != nil {
+			return err
+		}
+	}
 
 	return nil
 }

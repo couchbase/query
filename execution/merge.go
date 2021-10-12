@@ -222,33 +222,55 @@ func (this *Merge) processAction(item value.AnnotatedValue, context *Context,
 
 	ok := true
 	if match {
-		if update != nil || delete != nil {
-			// make sure document is not updated multiple times
-			if _, ok1 = this.matched[key]; ok1 {
-				context.Error(errors.NewMergeMultiUpdateError(key))
-				return false
-			}
-			this.matched[key] = true
-		}
-
 		// Perform UPDATE and/or DELETE
+		check := true
 		if update != nil {
-			item1 := item
-			if delete != nil {
-				item1 = item.CopyForUpdate().(value.AnnotatedValue)
-				if context.UseRequestQuota() && context.TrackValueSize(item1.Size()) {
-					context.Error(errors.NewMemoryQuotaExceededError())
-					item1.Recycle()
-					item.Recycle()
+			matched := true
+			if this.plan.UpdateFilter() != nil {
+				val, err := this.plan.UpdateFilter().Evaluate(item, context)
+				matched = err == nil && val.Truth()
+			}
+			if matched {
+				// make sure document is not updated multiple times
+				if this.matched[key] {
+					context.Error(errors.NewMergeMultiUpdateError(key))
 					return false
 				}
+				item1 := item
+				if delete != nil {
+					item1 = item.CopyForUpdate().(value.AnnotatedValue)
+					if context.UseRequestQuota() && context.TrackValueSize(item1.Size()) {
+						context.Error(errors.NewMemoryQuotaExceededError())
+						item1.Recycle()
+						item.Recycle()
+						return false
+					}
+				}
+				this.matched[key] = true
+				check = false
+				ok = this.sendItemOp(update.Input(), item1)
+			} else if delete == nil {
+				item.Recycle()
 			}
-			ok = this.sendItemOp(update.Input(), item1)
 		}
-
 		if delete != nil {
 			if ok {
-				ok = this.sendItemOp(delete.Input(), item)
+				matched := true
+				if this.plan.DeleteFilter() != nil {
+					val, err := this.plan.DeleteFilter().Evaluate(item, context)
+					matched = err == nil && val.Truth()
+				}
+				if matched {
+					// make sure document is not updated multiple times
+					if check && this.matched[key] {
+						context.Error(errors.NewMergeMultiUpdateError(key))
+						return false
+					}
+					this.matched[key] = true
+					ok = this.sendItemOp(delete.Input(), item)
+				} else {
+					item.Recycle()
+				}
 			} else {
 				item.Recycle()
 			}
@@ -275,14 +297,21 @@ func (this *Merge) processAction(item value.AnnotatedValue, context *Context,
 					return false
 				}
 			}
-
-			if _, ok1 = this.inserted[key]; ok1 {
-				context.Error(errors.NewMergeMultiInsertError(key))
-				return false
+			matched := true
+			if this.plan.InsertFilter() != nil {
+				val, err := this.plan.InsertFilter().Evaluate(item, context)
+				matched = err == nil && val.Truth()
 			}
-			this.inserted[key] = true
-
-			ok = this.sendItemOp(insert.Input(), item)
+			if matched {
+				if this.inserted[key] {
+					context.Error(errors.NewMergeMultiInsertError(key))
+					return false
+				}
+				ok = this.sendItemOp(insert.Input(), item)
+				this.inserted[key] = true
+			} else {
+				item.Recycle()
+			}
 		}
 	}
 
