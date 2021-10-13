@@ -801,6 +801,12 @@ func ConnectWithAuth(baseU string, ah AuthHandler) (c Client, err error) {
 //
 // This method should be called immediately after a Connect*() method.
 func (c *Client) InitTLS(caFile, certFile, keyfile string, disableNonSSLPorts bool, passphrase []byte) error {
+	// Set the values for certs
+	SetCaFile(caFile)
+	SetCertFile(certFile)
+	SetKeyFile(keyFile)
+	SetPrivateKeyPassphrase(passphrase)
+
 	if len(caFile) > 0 {
 		certFile = caFile
 	}
@@ -812,12 +818,6 @@ func (c *Client) InitTLS(caFile, certFile, keyfile string, disableNonSSLPorts bo
 	CA_Pool.AppendCertsFromPEM(serverCert)
 	c.tlsConfig = &tls.Config{RootCAs: CA_Pool}
 	c.disableNonSSLPorts = disableNonSSLPorts
-
-	// Set the values for certs
-	SetCaFile(caFile)
-	SetCertFile(certFile)
-	SetKeyFile(keyFile)
-	SetPrivateKeyPassphrase(passphrase)
 	return nil
 }
 
