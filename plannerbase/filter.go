@@ -72,6 +72,7 @@ func (this *Filter) Copy() *Filter {
 		fltrFlags: this.fltrFlags,
 		selec:     this.selec,
 		arrSelec:  this.arrSelec,
+		adjSelec:  this.adjSelec,
 	}
 
 	if this.origExpr != nil {

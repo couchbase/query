@@ -165,6 +165,7 @@ func copyBaseKeyspaces(src map[string]*BaseKeyspace, copyFilter bool) map[string
 			keyspace:   kspace.keyspace,
 			ksFlags:    kspace.ksFlags,
 			outerlevel: kspace.outerlevel,
+			docCount:   kspace.docCount,
 			node:       kspace.node,
 			optBit:     kspace.optBit,
 		}

@@ -102,6 +102,10 @@ func (this *HashNest) SetFilter(filter expression.Expression) {
 	this.filter = filter
 }
 
+func (this *HashNest) SetCardinality(cardinality float64) {
+	this.cardinality = cardinality
+}
+
 func (this *HashNest) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }

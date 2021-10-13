@@ -78,6 +78,10 @@ func (this *Nest) SetOnFilter(onFilter expression.Expression) {
 	this.onFilter = onFilter
 }
 
+func (this *Nest) SetCardinality(cardinality float64) {
+	this.cardinality = cardinality
+}
+
 func (this *Nest) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
