@@ -211,19 +211,22 @@ func (c *Client) Close() {
 
 // with the KV engine encrypted.
 func (c *Client) InitTLS(caFile, certFile, keyFile string, passphrase []byte) error {
-	if len(caFile) > 0 {
-		certFile = caFile
-	}
-	serverCert, err := ioutil.ReadFile(certFile)
-	if err != nil {
-		return err
-	}
-	CA_Pool := x509.NewCertPool()
-	CA_Pool.AppendCertsFromPEM(serverCert)
 	certs, err := ntls.LoadX509KeyPair(certFile, keyFile, passphrase)
 	if err != nil {
 		return err
 	}
+
+	if len(caFile) == 0 {
+		caFile = certFile
+	}
+
+	serverCert, err := ioutil.ReadFile(caFile)
+	if err != nil {
+		return err
+	}
+
+	CA_Pool := x509.NewCertPool()
+	CA_Pool.AppendCertsFromPEM(serverCert)
 	c.mutex.Lock()
 	// Set values for certs and passphrase
 	c.certs = &certs
