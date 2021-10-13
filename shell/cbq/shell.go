@@ -116,8 +116,8 @@ func init() {
 }
 
 /*
-   Option        : -password or -p
-   Args          : password
+   Option        : -password, passphrase or -p
+   Args          : password for username or passphrase for keyfile (Private Key Encryption)
    Password for user given by -u. If -u is present and we provide -p, then
    do not prompt for the password. Error out if username is not provided.
 */
@@ -559,8 +559,9 @@ func main() {
 		}
 	} else {
 		// If the -u option isnt specified and the -p option is specified
-		// then Invalid Username error.
-		if pwdFlag != "" {
+		// It could be using the passphrase instead of the username.
+		// Make sure the keyfile is also empty before throwing the error.
+		if pwdFlag != "" && keyFile == "" {
 			s_err := command.HandleError(errors.E_SHELL_INVALID_USERNAME, "")
 			command.PrintError(s_err)
 			os.Exit(1)
