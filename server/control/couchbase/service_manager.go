@@ -50,6 +50,17 @@ func NewManager() Manager {
 	logging.Debugf("server::NewManager entry")
 	defer logging.Debuga(func() string { return fmt.Sprintf("server::NewManager exit: %v", mgr) })
 
+	// wait for the node to be part of a cluster
+	thisHost := distributed.RemoteAccess().WhoAmI()
+	for distributed.RemoteAccess().Starting() && thisHost == "" {
+		time.Sleep(time.Second)
+		thisHost = distributed.RemoteAccess().WhoAmI()
+	}
+
+	if distributed.RemoteAccess().StandAlone() {
+		return nil
+	}
+
 	mgr = &ServiceMgr{
 		mu: &sync.RWMutex{},
 		state: state{
@@ -59,7 +70,7 @@ func NewManager() Manager {
 			changeID: "",
 		},
 		nodeInfo: &service.NodeInfo{
-			NodeID:   service.NodeID(distributed.RemoteAccess().NodeUUID(distributed.RemoteAccess().WhoAmI())),
+			NodeID:   service.NodeID(distributed.RemoteAccess().NodeUUID(thisHost)),
 			Priority: service.Priority(0),
 		},
 	}
