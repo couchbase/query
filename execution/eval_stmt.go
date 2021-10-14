@@ -550,6 +550,10 @@ func (this *Context) DoStatementComplete(stmtType string, success bool) (err err
 			this.ExecuteTranStatement("ROLLBACK", !this.txImplicit)
 		}
 
+		if tranStmt == "ROLLBACK" || err != nil {
+			this.AddMutationCount(-this.MutationCount())
+		}
+
 		if this.txContext != nil {
 			if this.txContext.TxImplicit() {
 				transactions.DeleteTransContext(this.txContext.TxId(), false)
