@@ -22,6 +22,7 @@ import (
 	"github.com/couchbase/gocbcore/v9"
 	"github.com/couchbase/gocbcore/v9/connstr"
 	ntls "github.com/couchbase/goutils/tls"
+	"github.com/couchbase/query/logging"
 )
 
 const (
@@ -213,6 +214,7 @@ func (c *Client) Close() {
 func (c *Client) InitTLS(caFile, certFile, keyFile string, passphrase []byte) error {
 	certs, err := ntls.LoadX509KeyPair(certFile, keyFile, passphrase)
 	if err != nil {
+		logging.Errorf("Transaction client certificates refresh failed: %v", err)
 		return err
 	}
 
@@ -222,6 +224,7 @@ func (c *Client) InitTLS(caFile, certFile, keyFile string, passphrase []byte) er
 
 	serverCert, err := ioutil.ReadFile(caFile)
 	if err != nil {
+		logging.Errorf("Transaction client CA root certificate refresh failed: %v", err)
 		return err
 	}
 
@@ -232,6 +235,7 @@ func (c *Client) InitTLS(caFile, certFile, keyFile string, passphrase []byte) er
 	c.certs = &certs
 	c.rootCAs = CA_Pool
 	c.mutex.Unlock()
+	logging.Infof("Transaction client certificates have been refreshed")
 	return nil
 }
 
@@ -240,6 +244,7 @@ func (c *Client) ClearTLS() {
 	c.rootCAs = nil
 	c.certs = nil
 	c.mutex.Unlock()
+	logging.Infof("Transaction client certificates have been reset")
 }
 
 func (c *Client) TLSRootCAs() *x509.CertPool {

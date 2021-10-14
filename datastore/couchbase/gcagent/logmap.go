@@ -23,7 +23,7 @@ var gocbcoreLogger GocbcoreLogger
 
 func (l GocbcoreLogger) Log(level gocbcore.LogLevel, offset int, format string,
 	args ...interface{}) error {
-	prefixedFormat := "(GOCBCORE) " + format
+	prefixedFormat := "(TXGOCBCORE) " + format
 	switch level {
 	case gocbcore.LogError:
 		logging.Errorf(prefixedFormat, args...)
