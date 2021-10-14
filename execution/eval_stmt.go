@@ -550,7 +550,9 @@ func (this *Context) DoStatementComplete(stmtType string, success bool) (err err
 			this.ExecuteTranStatement("ROLLBACK", !this.txImplicit)
 		}
 
-		if tranStmt == "ROLLBACK" || err != nil {
+		if tranStmt == "ROLLBACK" || (err != nil &&
+			err.Code() != errors.E_AMBIGUOUS_COMMIT_TRANSACTION &&
+			err.Code() != errors.E_POST_COMMIT_TRANSACTION) {
 			this.AddMutationCount(-this.MutationCount())
 		}
 
