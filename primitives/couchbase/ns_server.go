@@ -219,6 +219,8 @@ type VBucketServerMap struct {
 	NumReplicas   int      `json:"numReplicas"`
 	ServerList    []string `json:"serverList"`
 	VBucketMap    [][]int  `json:"vBucketMap"`
+	DownNodes     []bool
+	sync.Mutex
 }
 
 // Bucket is the primary entry point for most data operations.
@@ -258,8 +260,6 @@ type Bucket struct {
 	// used to detect a new vbmap
 	Version int
 
-	// to force replica access
-	replica          int
 	pool             *Pool
 	connPools        unsafe.Pointer // *[]*connectionPool
 	vBucketServerMap unsafe.Pointer // *VBucketServerMap
@@ -296,6 +296,24 @@ type BucketNotFoundError struct {
 
 func (e *BucketNotFoundError) Error() string {
 	return fmt.Sprint("No bucket named " + e.bucket)
+}
+
+func (v *VBucketServerMap) IsDown(node int) bool {
+	return len(v.DownNodes) != 0 && v.DownNodes[node]
+}
+
+func (v *VBucketServerMap) MarkDown(vb uint32, replica int) {
+	v.Lock()
+	defer v.Unlock()
+	if v.DownNodes == nil {
+		v.DownNodes = make([]bool, len(v.ServerList))
+	}
+	for i := 0; i < replica; i++ {
+		n := v.VBucketMap[vb][i]
+		if n >= 0 {
+			v.DownNodes[n] = true
+		}
+	}
 }
 
 // VBServerMap returns the current VBucketServerMap.
@@ -1041,7 +1059,6 @@ func (b *Bucket) refresh(preserveConnections bool) error {
 	tmpb.ah = b.ah
 	if b.vBucketServerMap != nil && b.changedVBServerMap(&tmpb.VBSMJson) {
 		b.Version++
-		b.replica = 0
 	}
 	b.vBucketServerMap = unsafe.Pointer(&tmpb.VBSMJson)
 	b.nodeList = unsafe.Pointer(&tmpb.NodesJSON)
@@ -1071,7 +1088,6 @@ func (p *Pool) refresh() (err error) {
 			ob.Close()
 		}
 		b.replaceConnPools(make([]*connectionPool, len(b.VBSMJson.ServerList)))
-		b.replica = 0
 		b.Version = 0
 		p.BucketMap[b.Name] = b
 		runtime.SetFinalizer(b, bucketFinalizer)

@@ -37,9 +37,10 @@ type MutationToken struct {
 }
 
 // Maximum number of times to retry a chunk of a bulk get on error.
-var MaxBulkRetries = 5000
-var backOffDuration time.Duration = 100 * time.Millisecond
-var MaxBackOffRetries = 25 // exponentail backOff result in over 30sec (25*13*0.1s)
+const maxBulkRetries = 5000
+const backOffDuration time.Duration = 100 * time.Millisecond
+const minBackOffRetriesLimit = 25  // exponentail backOff result in over 30sec (25*13*0.1s)
+const maxBackOffRetriesLimit = 100 // exponentail backOff result in over 2min (100*13*0.1s)
 
 // Return true if error is KEY_EEXISTS
 func IsKeyEExistsError(err error) bool {
@@ -92,26 +93,31 @@ type doDescriptor struct {
 	useReplicas     bool
 	version         int
 	replica         int
-	backoffAttempts int
+	backOffAttempts int
 	NMVBCount       int
 	attempts        int
 	maxTries        int
 	errorString     string
+	amendReplica    bool
 	pool            *connectionPool
 }
 
 // Given a vbucket number, returns a memcached connection to it.
 // The connection must be returned to its pool after use.
-func (b *Bucket) getConnectionToVBucket(vb uint32, replica int) (*memcached.Client, *connectionPool, error) {
+func (b *Bucket) getConnectionToVBucket(vb uint32, desc *doDescriptor) (*memcached.Client, *connectionPool, error) {
+	vbm := b.VBServerMap()
+	if len(vbm.VBucketMap) < int(vb) {
+		return nil, nil, fmt.Errorf("primitives/couchbase: vbmap smaller than vbucket list: %v vs. %v",
+			vb, vbm.VBucketMap)
+	}
 	for {
-		vbm := b.VBServerMap()
-		if len(vbm.VBucketMap) < int(vb) {
-			return nil, nil, fmt.Errorf("primitives/couchbase: vbmap smaller than vbucket list: %v vs. %v",
-				vb, vbm.VBucketMap)
-		}
-		masterId := vbm.VBucketMap[vb][replica]
+		masterId := vbm.VBucketMap[vb][desc.replica]
 		if masterId < 0 {
 			return nil, nil, fmt.Errorf("primitives/couchbase: No master for vbucket %d", vb)
+		}
+		if desc.useReplicas && vbm.IsDown(masterId) && desc.replica < vbm.NumReplicas-1 {
+			desc.replica++
+			continue
 		}
 		pool := b.getConnPool(masterId)
 		conn, err := pool.Get()
@@ -133,24 +139,24 @@ func (b *Bucket) getVbConnection(vb uint32, desc *doDescriptor) (conn *memcached
 		desc.pool = nil
 		conn, err = pool.Get()
 		if conn == nil {
-			conn, pool, err = b.getConnectionToVBucket(vb, desc.replica)
+			conn, pool, err = b.getConnectionToVBucket(vb, desc)
 		}
 	} else {
-		conn, pool, err = b.getConnectionToVBucket(vb, desc.replica)
+		conn, pool, err = b.getConnectionToVBucket(vb, desc)
 	}
 	desc.retry = false
 	if err == nil {
 		return conn, pool, nil
 	} else if err == errNoPool {
-		if backOff(desc.backoffAttempts, desc.maxTries, backOffDuration, true) {
+		if backOff(desc.backOffAttempts, desc.maxTries, backOffDuration, true) {
 			b.Refresh()
-			desc.backoffAttempts++
+			desc.backOffAttempts++
 			desc.retry = true
 		} else {
 			desc.errorString = "Connection Error no pool %v : %v"
 		}
 	} else if isConnError(err) {
-		if backOff(desc.backoffAttempts, desc.maxTries, backOffDuration, true) {
+		if backOff(desc.backOffAttempts, desc.maxTries, backOffDuration, true) {
 
 			// check for a new vbmap
 			if desc.version == b.Version {
@@ -161,20 +167,22 @@ func (b *Bucket) getVbConnection(vb uint32, desc *doDescriptor) (conn *memcached
 			if desc.version != b.Version {
 				desc.version = b.Version
 				desc.replica = 0
+				desc.amendReplica = false
 			} else if desc.useReplicas && desc.replica < b.VBServerMap().NumReplicas-1 {
 
 				// see if we can use a replica
 				desc.replica++
+				desc.amendReplica = true
 			}
-			desc.backoffAttempts++
+			desc.backOffAttempts++
 			desc.retry = true
 		} else {
 			desc.errorString = "Connection Error %v : %v"
 		}
 	} else if isAddrNotAvailable(err) {
-		if backOff(desc.backoffAttempts, desc.maxTries, backOffDuration, true) {
+		if backOff(desc.backOffAttempts, desc.maxTries, backOffDuration, true) {
 			b.Refresh()
-			desc.backoffAttempts++
+			desc.backOffAttempts++
 			desc.retry = true
 		} else {
 			desc.errorString = "Out of ephemeral ports: %v : %v"
@@ -191,10 +199,12 @@ func (b *Bucket) getVbConnection(vb uint32, desc *doDescriptor) (conn *memcached
 		if desc.version != b.Version {
 			desc.version = b.Version
 			desc.replica = 0
+			desc.amendReplica = false
 		} else if desc.useReplicas {
 
 			// see if we can use a replica
 			desc.replica++
+			desc.amendReplica = true
 			desc.retry = desc.replica < b.VBServerMap().NumReplicas
 		} else {
 			desc.retry = false
@@ -230,16 +240,16 @@ func (b *Bucket) processOpError(vb uint32, lastError error, node string, desc *d
 			}
 
 			// if it didn't work out, refresh until we get a new vbmap
-			desc.backoffAttempts++
-			desc.retry = backOff(desc.backoffAttempts, desc.maxTries, backOffDuration, false)
-			for desc.backoffAttempts < desc.maxTries {
+			desc.backOffAttempts++
+			desc.retry = backOff(desc.backOffAttempts, desc.maxTries, backOffDuration, false)
+			for desc.backOffAttempts < desc.maxTries {
 				if !desc.retry {
 					break
 				}
 				b.Refresh()
 				if desc.version == b.Version {
-					desc.backoffAttempts++
-					desc.retry = backOff(desc.backoffAttempts, desc.maxTries, backOffDuration, false)
+					desc.backOffAttempts++
+					desc.retry = backOff(desc.backOffAttempts, desc.maxTries, backOffDuration, false)
 					continue
 				}
 				desc.version = b.Version
@@ -251,18 +261,18 @@ func (b *Bucket) processOpError(vb uint32, lastError error, node string, desc *d
 		case gomemcached.NOT_SUPPORTED:
 			b.Refresh()
 			desc.discard = b.obsoleteNode(node)
-			desc.backoffAttempts++
-			desc.retry = backOff(desc.backoffAttempts, desc.maxTries, backOffDuration, true)
+			desc.backOffAttempts++
+			desc.retry = backOff(desc.backOffAttempts, desc.maxTries, backOffDuration, true)
 		case gomemcached.EBUSY, gomemcached.LOCKED:
-			// TODO backoff instead?
-			if (desc.attempts % (MaxBulkRetries / 100)) == 0 {
+			// TODO backOff instead?
+			if (desc.attempts % (maxBulkRetries / 100)) == 0 {
 				desc.errorString = "Retrying Memcached error (%v) FOR %v(vbid:%d, keys:<ud>%v</ud>)"
 			}
 			desc.retry = true
 		case gomemcached.ENOMEM, gomemcached.TMPFAIL:
 			desc.errorString = "Retrying Memcached error (%v) FOR %v(vbid:%d, keys:<ud>%v</ud>)"
-			desc.backoffAttempts++
-			desc.retry = backOff(desc.backoffAttempts, desc.maxTries, backOffDuration, true)
+			desc.backOffAttempts++
+			desc.retry = backOff(desc.backOffAttempts, desc.maxTries, backOffDuration, true)
 		}
 	} else if lastError != nil {
 		if isOutOfBoundsError(lastError) {
@@ -272,8 +282,8 @@ func (b *Bucket) processOpError(vb uint32, lastError error, node string, desc *d
 			desc.retry = true
 		} else if isConnError(lastError) {
 			desc.discard = true
-			desc.backoffAttempts++
-			desc.retry = backOff(desc.backoffAttempts, desc.maxTries, backOffDuration, true)
+			desc.backOffAttempts++
+			desc.retry = backOff(desc.backOffAttempts, desc.maxTries, backOffDuration, true)
 		} else if IsReadTimeOutError(lastError) {
 			desc.discard = true
 			desc.retry = true
@@ -287,20 +297,23 @@ func (b *Bucket) processOpError(vb uint32, lastError error, node string, desc *d
 			if desc.version != b.Version {
 				desc.version = b.Version
 				desc.replica = 0
+				desc.amendReplica = false
 			} else if desc.useReplicas {
 
 				// see if we can use a replica
 				desc.replica++
+				desc.amendReplica = true
 				desc.retry = desc.replica < b.VBServerMap().NumReplicas
 			} else {
 				desc.retry = false
 			}
 
 		}
-	} else if b.replica < desc.replica {
+	} else if desc.amendReplica {
 
-		// if we had to use a replica and it worked, force all gets to use the replica until a refresh
-		b.replica = desc.replica
+		// if we successfully used a replica, mark the node down, so that until the next refresh
+		// we start from the same place
+		b.VBServerMap().MarkDown(vb, desc.replica)
 	}
 }
 
@@ -334,25 +347,32 @@ func (b *Bucket) handleNMVB(vb uint32, resp *gomemcached.MCResponse) *connection
 	return nil
 }
 
+func (b *Bucket) backOffRetries() int {
+	res := 2 * len(b.Nodes())
+	if res < minBackOffRetriesLimit {
+		return minBackOffRetriesLimit
+	}
+	if res > maxBackOffRetriesLimit {
+		return maxBackOffRetriesLimit
+	}
+	return res
+}
+
 // Do executes a function on a memcached connection to the node owning key "k"
 //
 // Note that this automatically handles transient errors by replaying
 // your function on a "not-my-vbucket" error, so don't assume
 // your command will only be executed once.
 func (b *Bucket) Do(k string, f func(mc *memcached.Client, vb uint16) error) (err error) {
-	return b.Do2(k, f, true, false)
+	return b.Do2(k, f, true, false, 2*len(b.Nodes()))
 }
 
-func (b *Bucket) Do2(k string, f func(mc *memcached.Client, vb uint16) error, deadline bool, useReplicas bool) (err error) {
+func (b *Bucket) Do2(k string, f func(mc *memcached.Client, vb uint16) error, deadline bool, useReplicas bool, backOffRetries int) (err error) {
 	var lastError error
 
 	vb := b.VBHash(k)
-	desc := &doDescriptor{useReplicas: useReplicas, version: b.Version, maxTries: len(b.Nodes()) * 2}
+	desc := &doDescriptor{useReplicas: useReplicas, version: b.Version, maxTries: backOffRetries}
 
-	// if we were forced to use replicas beforehand, start with replicas anyway
-	if useReplicas && b.replica > 0 {
-		desc.replica = b.replica
-	}
 	for desc.attempts = 0; desc.attempts < desc.maxTries; desc.attempts++ {
 		conn, pool, err := b.getVbConnection(uint32(vb), desc)
 		if err != nil {
@@ -599,9 +619,9 @@ func (b *Bucket) doBulkGet(vb uint16, keys []string, reqDeadline time.Time,
 	rv := _STRING_MCRESPONSE_POOL.Get()
 	done := false
 	bname := b.Name
-	desc := &doDescriptor{useReplicas: useReplica, version: b.Version, maxTries: len(b.Nodes()) * 2}
+	desc := &doDescriptor{useReplicas: useReplica, version: b.Version, maxTries: b.backOffRetries()}
 	var lastError error
-	for ; desc.attempts < MaxBulkRetries && !done && !eStatus.errStatus; desc.attempts++ {
+	for ; desc.attempts < maxBulkRetries && !done && !eStatus.errStatus; desc.attempts++ {
 
 		// This stack frame exists to ensure we can clean up
 		// connection at a reasonable time.
@@ -615,7 +635,7 @@ func (b *Bucket) doBulkGet(vb uint16, keys []string, reqDeadline time.Time,
 					}
 					return err
 				}
-				if lastError == nil || err.Error() != lastError.Error() || MaxBulkRetries-1 == desc.attempts {
+				if lastError == nil || err.Error() != lastError.Error() || maxBulkRetries-1 == desc.attempts {
 					if lastError != nil {
 						logging.Infof("(... attempt: %v) Pool Get returned %v: %v", desc.attempts-1, bname, err)
 					}
@@ -661,7 +681,7 @@ func (b *Bucket) doBulkGet(vb uint16, keys []string, reqDeadline time.Time,
 		}
 	}
 
-	if desc.attempts >= MaxBulkRetries {
+	if desc.attempts >= maxBulkRetries {
 		err := fmt.Errorf("bulkget exceeded MaxBulkRetries for %v(vbid:%d,keys:<ud>%v</ud>)", bname, vb, keys)
 		logging.Errorf("%v", err.Error())
 		ech <- err
@@ -1072,7 +1092,7 @@ func (b *Bucket) GetCollectionCID(scope string, collection string, reqDeadline t
 		collUid = binary.BigEndian.Uint32(response.Extras[8:12])
 
 		return nil
-	}, false, false)
+	}, false, false, b.backOffRetries())
 
 	return collUid, manifestUid, err
 }
@@ -1095,7 +1115,7 @@ func (b *Bucket) GetsMC(key string, reqDeadline time.Time, useReplica bool, cont
 			return err1
 		}
 		return nil
-	}, false, useReplica)
+	}, false, useReplica, b.backOffRetries())
 	return response, err
 }
 
@@ -1117,7 +1137,7 @@ func (b *Bucket) GetsSubDoc(key string, reqDeadline time.Time, subPaths []string
 			return err1
 		}
 		return nil
-	}, false, false)
+	}, false, false, b.backOffRetries())
 	return response, err
 }
 
