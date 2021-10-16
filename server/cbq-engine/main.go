@@ -119,6 +119,8 @@ var TASKS_LIMIT = flag.Int("tasks-limit", _DEF_TASKS_LIMIT, "maximum number of c
 var _GOGC_PERCENT_DEFAULT = 200
 var _GOGC_PERCENT = flag.Int("gc-percent", _GOGC_PERCENT_DEFAULT, "Go runtime garbage collection target percentage")
 
+var UUID = flag.String("uuid", "", "Node UUID.")
+
 // profiler, to use instead of the REST endpoint if needed
 // var PROFILER_PORT = flag.Int("profiler-port", 6060, "profiler listening port")
 
@@ -396,7 +398,7 @@ func main() {
 	constructor.Init(endpoint.Mux(), server.Servicers())
 
 	// topology awareness
-	_ = control.NewManager()
+	_ = control.NewManager(*UUID)
 
 	// Now that we are up and running, try to prime the prepareds cache
 	prepareds.PreparedsRemotePrime()

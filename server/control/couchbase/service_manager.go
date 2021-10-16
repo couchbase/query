@@ -45,19 +45,13 @@ type state struct {
 type waiter chan state
 type waiters map[waiter]struct{}
 
-func NewManager() Manager {
+func NewManager(uuid string) Manager {
 	var mgr *ServiceMgr
-	logging.Debugf("server::NewManager entry")
+	logging.Debugf("server::NewManager entry. UUID: %v", uuid)
 	defer logging.Debuga(func() string { return fmt.Sprintf("server::NewManager exit: %v", mgr) })
 
-	// wait for the node to be part of a cluster
-	thisHost := distributed.RemoteAccess().WhoAmI()
-	for distributed.RemoteAccess().Starting() && thisHost == "" {
-		time.Sleep(time.Second)
-		thisHost = distributed.RemoteAccess().WhoAmI()
-	}
-
-	if distributed.RemoteAccess().StandAlone() {
+	if uuid == "" {
+		logging.Infof("No UUID passed.  Will not register for topology awareness.")
 		return nil
 	}
 
@@ -70,14 +64,14 @@ func NewManager() Manager {
 			changeID: "",
 		},
 		nodeInfo: &service.NodeInfo{
-			NodeID:   service.NodeID(distributed.RemoteAccess().NodeUUID(thisHost)),
+			NodeID:   service.NodeID(uuid),
 			Priority: service.Priority(0),
 		},
 	}
 
 	mgr.waiters = make(waiters)
 
-	mgr.setInitialNodeList()
+	go mgr.setInitialNodeList() // don't wait for cluster node list else registration may be too late
 	go mgr.registerWithServer() // Note: doesn't complete unless an error occurs
 
 	return mgr
@@ -86,6 +80,13 @@ func NewManager() Manager {
 func (m *ServiceMgr) setInitialNodeList() {
 	logging.Debugf("ServiceMgr::setInitialNodeList entry")
 	defer logging.Debugf("ServiceMgr::setInitialNodeList exit")
+
+	// wait for the node to be part of a cluster
+	thisHost := distributed.RemoteAccess().WhoAmI()
+	for distributed.RemoteAccess().Starting() && thisHost == "" {
+		time.Sleep(time.Second)
+		thisHost = distributed.RemoteAccess().WhoAmI()
+	}
 
 	// our topology is just the list of nodes in the cluster (or ourselves)
 	topology := distributed.RemoteAccess().GetNodeNames()
