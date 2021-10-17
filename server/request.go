@@ -167,6 +167,7 @@ type Request interface {
 	GetTimings() execution.Operator
 	IsAdHoc() bool
 	SetErrorLimit(limit int)
+	GetErrorLimit() int
 
 	setSleep() // internal methods for load control
 	sleep()
@@ -379,7 +380,7 @@ func NewBaseRequest(rv *BaseRequest) {
 	rv.durabilityTimeout = datastore.DEF_DURABILITY_TIMEOUT
 	rv.kvTimeout = datastore.DEF_KVTIMEOUT
 	rv.durabilityLevel = datastore.DL_UNSET
-
+	rv.errorLimit = -1
 }
 
 func (this *BaseRequest) SetRequestTime(time time.Time) {

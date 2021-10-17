@@ -638,6 +638,14 @@ func handlePreserveExpiry(rv *httpRequest, httpArgs httpRequestArgs, parm string
 	return err
 }
 
+func handleErrorLimit(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+	limit, err := httpArgs.getIntVal(parm, val)
+	if err == nil {
+		rv.SetErrorLimit(limit)
+	}
+	return err
+}
+
 // For audit.Auditable interface.
 func (this *httpRequest) ElapsedTime() time.Duration {
 	return this.elapsedTime
@@ -770,6 +778,7 @@ const ( // Request argument names
 	ATRCOLLECTION      = "atrcollection"
 	NUMATRS            = "numatrs"
 	PRESERVE_EXPIRY    = "preserve_expiry"
+	ERROR_LIMIT        = "error_limit"
 )
 
 type argHandler struct {
@@ -823,6 +832,7 @@ var _PARAMETERS = map[string]*argHandler{
 	ATRCOLLECTION:   {handleAtrCollection, false},
 	NUMATRS:         {handleNumAtrs, false},
 	PRESERVE_EXPIRY: {handlePreserveExpiry, false},
+	ERROR_LIMIT:     {handleErrorLimit, false},
 }
 
 // common storage for the httpArgs implementations

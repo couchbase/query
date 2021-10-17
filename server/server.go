@@ -1000,7 +1000,9 @@ func (this *Server) serviceRequest(request Request) {
 		context.SetDeltaKeyspaces(make(map[string]bool, 1))
 	} else {
 		// only enable error limits for non-transactional requests
-		request.SetErrorLimit(this.RequestErrorLimit())
+		if request.GetErrorLimit() == -1 {
+			request.SetErrorLimit(this.RequestErrorLimit())
+		}
 	}
 
 	prepared, err := this.getPrepared(request, context)
