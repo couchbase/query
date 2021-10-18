@@ -474,7 +474,7 @@ tokOffset    int
 %type <val>              index_with opt_index_with
 %type <expr>             index_term_expr index_where
 %type <indexKeyTerm>     index_term flatten_keys_expr
-%type <indexKeyTerms>    index_terms flatten_keys_exprs
+%type <indexKeyTerms>    index_terms flatten_keys_exprs opt_flatten_keys_exprs
 %type <expr>             expr_input all_expr
 
 %type <exprs>            update_stat_terms
@@ -2820,6 +2820,15 @@ flatten_keys_exprs COMMA flatten_keys_expr
 }
 ;
 
+opt_flatten_keys_exprs:
+/* empty */
+{
+    $$ = nil
+}
+|
+flatten_keys_exprs
+;
+
 index_where:
 /* empty */
 {
@@ -4012,15 +4021,19 @@ ELSE expr
  *************************************************/
 
 function_expr:
-FLATTEN_KEYS LPAREN flatten_keys_exprs RPAREN
+FLATTEN_KEYS LPAREN opt_flatten_keys_exprs RPAREN
 {
     $$ = nil
+    ectx := ""
+    if len($3) > 0 {
+        ectx = $3[0].Expression().ErrorContext()
+    }
+
     fname := "flatten_keys"
     f, ok := expression.GetFunction(fname)
     if ok {
         if len($3) < f.MinArgs() || len($3) > f.MaxArgs() {
-            ectx := $3[0].Expression().ErrorContext()
-            yylex.Error(fmt.Sprintf("Number of arguments to function %s%s must be between %d and %d.", fname, ectx, f.MinArgs(), f.MaxArgs()))
+            return yylex.(*lexer).FatalError(fmt.Sprintf("Number of arguments to function %s%s must be between %d and %d.", fname, ectx, f.MinArgs(), f.MaxArgs()))
         } else {
             $$ = f.Constructor()($3.Expressions()...)
             if fk, ok := $$.(*expression.FlattenKeys); ok {
@@ -4028,7 +4041,7 @@ FLATTEN_KEYS LPAREN flatten_keys_exprs RPAREN
             }
         }
     } else {
-        return yylex.(*lexer).FatalError(fmt.Sprintf("Invalid function %s%s.", fname, $3[0].Expression().ErrorContext()))
+        return yylex.(*lexer).FatalError(fmt.Sprintf("Invalid function %s%s.", fname, ectx))
     }
 }
 |
