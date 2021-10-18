@@ -59,6 +59,8 @@ func Init(mux *mux.Router, t int) {
 	engine := n1ql_client.SingleInstance
 	config := make(map[defs.Config]interface{})
 	config[defs.Threads] = t
+	config[defs.FeatureBitmask] = uint32(8)
+	config[defs.IsIpV6] = false
 	threads = int32(t)
 
 	err := engine.Configure(config)
@@ -122,17 +124,21 @@ func (this *javascript) Execute(name functions.FunctionName, body functions.Func
 	if levels > 1 && levels > int(threads-runners) {
 		return nil, errors.NewFunctionExecutionNestedError(levels, funcName)
 	}
-	res, err := evaluator.Evaluate(funcBody.library, funcBody.object, opts, args)
+	res, err := evaluator.Evaluate(funcBody.library, funcBody.object, opts, args, functions.NewUdfContext(context))
 	if err.Err != nil {
-		return nil, funcBody.execError(err.Err, err.Details, funcName)
+		return nil, funcBody.execError(err, funcName)
 	} else {
 		return value.NewValue(res), nil
 	}
 }
 
-func (this *javascriptBody) execError(err error, details fmt.Stringer, name string) errors.Error {
+func (this *javascriptBody) execError(err defs.Error, name string) errors.Error {
+	if err.IsNestedErr {
+		return errors.NewInnerFunctionExecutionError(fmt.Sprintf("(%v:%v)", this.library, this.object),
+			name, fmt.Errorf("%v", err.Details))
+	}
 	return errors.NewFunctionExecutionError(fmt.Sprintf("(%v:%v)", this.library, this.object),
-		name, fmt.Errorf("%v %v", err, details))
+		name, fmt.Errorf("%v %v", err.Err, err.Details))
 }
 
 func NewJavascriptBody(library, object string) (functions.FunctionBody, errors.Error) {

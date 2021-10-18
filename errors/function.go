@@ -103,6 +103,12 @@ func NewFunctionExecutionError(what string, name string, reason error) Error {
 		InternalCaller: CallerN(1)}
 }
 
+func NewInnerFunctionExecutionError(what string, name string, reason error) Error {
+	return &err{level: EXCEPTION, ICode: E_INNER_FUNCTION_EXECUTION, IKey: "function.inner.error",
+		InternalMsg:    fmt.Sprintf("%s", reason.Error()),
+		InternalCaller: CallerN(1)}
+}
+
 func NewFunctionExecutionNestedError(levels int, name string) Error {
 	return &err{level: EXCEPTION, ICode: E_TOO_MANY_NESTED_FUNCTIONS, IKey: "function.nested.error",
 		InternalMsg:    fmt.Sprintf("Error executing function %v: %v nested javascript calls", name, levels),
