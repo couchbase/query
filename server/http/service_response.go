@@ -353,11 +353,11 @@ func (this *httpRequest) writeErrors(prefix string, indent string) bool {
 			if this.State() != server.FATAL {
 				this.setHttpCode(mapErrorToHttpResponse(err, http.StatusOK))
 			}
-			first = false
 		}
 		if !this.writeError(err, first, prefix, indent) {
 			break
 		}
+		first = false
 	}
 
 	if prefix != "" && !(this.writeString("\n") && this.writeString(prefix)) {
@@ -379,11 +379,11 @@ func (this *httpRequest) writeWarnings(prefix, indent string) bool {
 			this.writeString(",\n")
 			this.writeString(prefix)
 			this.writeString("\"warnings\": [")
-			first = false
 		}
 		if !this.writeError(err, first, prefix, indent) {
 			break
 		}
+		first = false
 	}
 
 	if prefix != "" && !(this.writeString("\n") && this.writeString(prefix)) {
