@@ -87,6 +87,10 @@ func (this *IndexContext) NewQueryContext(queryContext string, readonly bool) in
 	return nil
 }
 
+func (this *IndexContext) QueryContext() string {
+	return ""
+}
+
 func (this *IndexContext) GetTxContext() interface{} {
 	return nil
 }

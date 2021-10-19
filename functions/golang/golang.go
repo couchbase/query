@@ -139,7 +139,7 @@ func (this *golangBody) Indexable() value.Tristate {
 }
 
 func (this *golangBody) SwitchContext() value.Tristate {
-	return value.TRUE
+	return value.NONE
 
 }
 

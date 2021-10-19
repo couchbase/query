@@ -201,7 +201,7 @@ type Context struct {
 	recursionCount      int32
 	result              func(context *Context, item value.AnnotatedValue) bool
 	likeRegexMap        map[*expression.Like]*expression.LikeRegex
-	udfValueMap         map[string]interface{}
+	udfValueMap         *sync.Map
 }
 
 func NewContext(requestId string, datastore datastore.Datastore, systemstore datastore.Systemstore,
@@ -244,6 +244,7 @@ func NewContext(requestId string, datastore datastore.Datastore, systemstore dat
 		result:           setup,
 		likeRegexMap:     nil,
 		reqTimeout:       reqTimeout,
+		udfValueMap:      &sync.Map{},
 	}
 
 	if rv.maxParallelism <= 0 || rv.maxParallelism > util.NumCPU() {
@@ -288,6 +289,7 @@ func (this *Context) Copy() *Context {
 		preserveExpiry:      this.preserveExpiry,
 		flags:               this.flags,
 		reqTimeout:          this.reqTimeout,
+		udfValueMap:         this.udfValueMap,
 	}
 
 	rv.SetDurability(this.DurabilityLevel(), this.DurabilityTimeout())
@@ -300,6 +302,10 @@ func (this *Context) NewQueryContext(queryContext string, readonly bool) interfa
 	rv.queryContext = queryContext
 	rv.readonly = readonly
 	return rv
+}
+
+func (this *Context) QueryContext() string {
+	return this.queryContext
 }
 
 func (this *Context) RequestId() string {
@@ -646,24 +652,16 @@ func (this *Context) ReleaseValueSize(size uint64) {
 // UDF memory storage
 
 func (this *Context) StoreValue(key string, val interface{}) {
-	this.mutex.Lock()
-	defer this.mutex.Unlock()
-	if this.udfValueMap == nil {
-		this.udfValueMap = make(map[string]interface{})
-	}
-	this.udfValueMap[key] = val
+	this.udfValueMap.Store(key, val)
 }
 
 func (this *Context) RetrieveValue(key string) interface{} {
-	this.mutex.RLock()
-	defer this.mutex.RUnlock()
-	return this.udfValueMap[key]
+	res, _ := this.udfValueMap.Load(key)
+	return res
 }
 
 func (this *Context) ReleaseValue(key string) {
-	this.mutex.Lock()
-	defer this.mutex.Unlock()
-	delete(this.udfValueMap, key)
+	this.udfValueMap.Delete(key)
 }
 
 func (this *Context) SetDeltaKeyspaces(d map[string]bool) {

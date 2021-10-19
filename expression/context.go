@@ -29,6 +29,7 @@ type Context interface {
 	Credentials() *auth.Credentials
 	DatastoreVersion() string
 	NewQueryContext(queryContext string, readonly bool) interface{}
+	QueryContext() string
 	GetTxContext() interface{}
 	SetTxContext(t interface{})
 	Readonly() bool

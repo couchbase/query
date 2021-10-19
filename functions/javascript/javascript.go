@@ -170,9 +170,8 @@ func (this *javascriptBody) Indexable() value.Tristate {
 	return value.FALSE
 }
 
-// queryContext and readonly are resolved outside of this request
 func (this *javascriptBody) SwitchContext() value.Tristate {
-	return value.FALSE
+	return value.NONE
 }
 
 func (this *javascriptBody) IsExternal() bool {

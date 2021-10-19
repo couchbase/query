@@ -130,7 +130,9 @@ func (this *inlineBody) Indexable() value.Tristate {
 	}
 }
 
-// inline only allows selects and the keyspaces are already qualified
+// inline only allows selects and all objects are already qualified
+// both at the algebra and plan level:
+// the subquery plan cache will never have conflicts for the same subquery across two Query Contexts,
 // so no need to switch
 func (this *inlineBody) SwitchContext() value.Tristate {
 	return value.FALSE
