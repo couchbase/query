@@ -41,6 +41,14 @@ type Filter struct {
 	selec         float64               // filter selectivity
 	arrSelec      float64               // filter selectivity for array index
 	adjSelec      float64               // selectivity adjustment
+	eqLeft        EqElem                // left-hand-side equivalent class element
+	eqRight       EqElem                // right-hand-side equivalent class element
+	eqfId         int32                 // equivalent filter id
+}
+
+type EqElem interface {
+	HasLink(pos int32) bool
+	SetLink(pos int32)
 }
 
 type Filters []*Filter
@@ -73,6 +81,9 @@ func (this *Filter) Copy() *Filter {
 		selec:     this.selec,
 		arrSelec:  this.arrSelec,
 		adjSelec:  this.adjSelec,
+		eqLeft:    this.eqLeft,
+		eqRight:   this.eqRight,
+		eqfId:     this.eqfId,
 	}
 
 	if this.origExpr != nil {
@@ -262,6 +273,26 @@ func (this *Filter) SingleJoinFilter(unnestKeyspaces map[string]bool) bool {
 	}
 
 	return true
+}
+
+// get equivalent class filter info
+func (this *Filter) EqLeft() EqElem {
+	return this.eqLeft
+}
+
+func (this *Filter) EqRight() EqElem {
+	return this.eqRight
+}
+
+func (this *Filter) EqfId() int32 {
+	return this.eqfId
+}
+
+// setup equivalent class filter info
+func (this *Filter) SetEqInfo(left, right EqElem, eqfId int32) {
+	this.eqLeft = left
+	this.eqRight = right
+	this.eqfId = eqfId
 }
 
 // Once a keyspace has been visited, join filters referring to this keyspace can remove
