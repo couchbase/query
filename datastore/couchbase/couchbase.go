@@ -1802,11 +1802,19 @@ func (k *keyspace) setNeedsManifest() {
 }
 
 func isNotFoundError(err error) bool {
-	return cb.IsKeyNoEntError(err)
+	if cb.IsKeyNoEntError(err) {
+		return true
+	}
+	// it may have been wrapped in another error so check the text...
+	return strings.Contains(err.Error(), "KEY_ENOENT")
 }
 
 func isEExistError(err error) bool {
-	return cb.IsKeyEExistsError(err)
+	if cb.IsKeyEExistsError(err) {
+		return true
+	}
+	// it may have been wrapped in another error so check the text...
+	return strings.Contains(err.Error(), "KEY_EEXISTS")
 }
 
 func getMeta(key string, val value.Value, must bool) (cas uint64, flags uint32, txnMeta interface{}, err error) {
