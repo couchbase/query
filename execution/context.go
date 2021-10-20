@@ -290,6 +290,7 @@ func (this *Context) Copy() *Context {
 		flags:               this.flags,
 		reqTimeout:          this.reqTimeout,
 		udfValueMap:         this.udfValueMap,
+		recursionCount:      this.recursionCount,
 	}
 
 	rv.SetDurability(this.DurabilityLevel(), this.DurabilityTimeout())
