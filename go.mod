@@ -45,7 +45,7 @@ require (
 	github.com/couchbase/godbc v0.0.0-20210615212222-79da1b49cb4d
 	github.com/couchbase/gomemcached v0.0.0-20200618124739-5bac349aff71
 	github.com/couchbase/gometa v0.0.0-20200717102231-b0e38b71d711 // indirect
-	github.com/couchbase/goutils v0.1.1
+	github.com/couchbase/goutils v0.1.2
 	github.com/couchbase/indexing v0.0.0-00010101000000-000000000000
 	github.com/couchbase/n1fty v0.0.0-00010101000000-000000000000
 	github.com/couchbase/query-ee v0.0.0-00010101000000-000000000000
