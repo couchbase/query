@@ -2005,7 +2005,8 @@ func (b *keyspace) performOp(op MutateOp, qualifiedName, scopeName, collectionNa
 							" for Keyspace <ud>%s</ud>. Error %s",
 							MutateOpToName(op), key, qualifiedName, err)
 					})
-					errs = append(errs, errors.NewCbDeleteFailedError(nil, msg))
+					retry, err = processIfMCError(retry, err, key, qualifiedName)
+					errs = append(errs, errors.NewCbDeleteFailedError(err, key, msg))
 					failedDeletes = append(failedDeletes, key)
 				}
 			} else if isEExistError(err) {

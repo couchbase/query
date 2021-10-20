@@ -67,8 +67,11 @@ func NewCbDMLError(e error, msg string, casMismatch bool, r value.Tristate) Erro
 
 // Error code 12010 is retired. Do not reuse.
 
-func NewCbDeleteFailedError(e error, msg string) Error {
-	return &err{level: EXCEPTION, ICode: E_CB_DELETE_FAILED, IKey: "datastore.couchbase.delete_failed", ICause: e,
+func NewCbDeleteFailedError(e error, key string, msg string) Error {
+	c := make(map[string]interface{})
+	c["key"] = key
+	c["cause"] = e
+	return &err{level: EXCEPTION, ICode: E_CB_DELETE_FAILED, IKey: "datastore.couchbase.delete_failed", ICause: e, cause: c,
 		InternalMsg: msg, InternalCaller: CallerN(1)}
 }
 
