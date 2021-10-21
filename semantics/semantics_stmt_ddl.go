@@ -43,16 +43,14 @@ func (this *SemChecker) VisitCreateIndex(stmt *algebra.CreateIndex) (interface{}
 					return nil, errors.NewCreateIndexAttributeMissing(fke.String(), fke.ErrorContext())
 				}
 			}
-
-			// check FLATTEN_KEYS() is present in the correct context
-			cfk := NewCheckFlattenKeys(fk)
-			if err := expr.MapChildren(cfk); err != nil {
-				return nil, err
-			}
 		}
 		if term.HasAttribute(algebra.IK_MISSING) && (i > 0 || !gsi) {
 			return nil, errors.NewCreateIndexAttributeMissing(expr.String(), expr.ErrorContext())
 		}
+	}
+
+	if err := semCheckFlattenKeys(stmt.Expressions()); err != nil {
+		return nil, err
 	}
 
 	return nil, stmt.MapExpressions(this)
@@ -101,10 +99,8 @@ type CheckFlattenKeys struct {
    -   No recursive
 */
 
-func NewCheckFlattenKeys(flattenKeys expression.Expression) *CheckFlattenKeys {
-	rv := &CheckFlattenKeys{
-		flattenKeys: flattenKeys,
-	}
+func NewCheckFlattenKeys() *CheckFlattenKeys {
+	rv := &CheckFlattenKeys{}
 	rv.SetMapper(rv)
 	rv.SetMapFunc(func(expr expression.Expression) (expression.Expression, error) {
 		if _, ok := expr.(*expression.FlattenKeys); ok && rv.flattenKeys != expr {
@@ -113,4 +109,21 @@ func NewCheckFlattenKeys(flattenKeys expression.Expression) *CheckFlattenKeys {
 		return expr, expr.MapChildren(rv)
 	})
 	return rv
+}
+
+func semCheckFlattenKeys(exprs expression.Expressions) (err error) {
+	cfk := NewCheckFlattenKeys()
+	for _, expr := range exprs {
+		if all, ok := expr.(*expression.All); ok && all.Flatten() {
+			cfk.flattenKeys = all.FlattenKeys()
+		} else {
+			cfk.flattenKeys = nil
+		}
+
+		if _, err = cfk.Map(expr); err != nil {
+			return err
+		}
+	}
+
+	return err
 }
