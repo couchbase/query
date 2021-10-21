@@ -96,7 +96,7 @@ func (this *inlineBody) SetVarNames(vars []string) errors.Error {
 	}
 
 	f := expression.NewFormalizer("", nil)
-	f.SetPermanentWiths(bindings)
+	f.SetWiths(bindings)
 	f.PushBindings(bindings, true)
 	_, err := this.expr.Accept(f)
 	if err != nil {
