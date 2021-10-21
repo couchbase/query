@@ -346,6 +346,14 @@ func (b *Bucket) changedVBServerMap(new *VBucketServerMap) bool {
 			return true
 		}
 	}
+
+	for i, v := range new.VBucketMap {
+		for j, n := range v {
+			if old.VBucketMap[i][j] != n {
+				return true
+			}
+		}
+	}
 	return false
 }
 

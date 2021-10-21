@@ -94,7 +94,6 @@ type doDescriptor struct {
 	version         int
 	replica         int
 	backOffAttempts int
-	NMVBCount       int
 	attempts        int
 	maxTries        int
 	errorString     string
@@ -111,11 +110,14 @@ func (b *Bucket) getConnectionToVBucket(vb uint32, desc *doDescriptor) (*memcach
 			vb, vbm.VBucketMap)
 	}
 	for {
+		if desc.replica+1 > len(vbm.VBucketMap[vb]) {
+			return nil, nil, fmt.Errorf("primitives/couchbase: invalid vbmap entry for vb %v (len %v, replicas %v)", vb, len(vbm.VBucketMap[vb]), vbm.NumReplicas)
+		}
 		masterId := vbm.VBucketMap[vb][desc.replica]
 		if masterId < 0 {
 			return nil, nil, fmt.Errorf("primitives/couchbase: No master for vbucket %d", vb)
 		}
-		if desc.useReplicas && vbm.IsDown(masterId) && desc.replica < vbm.NumReplicas-1 {
+		if desc.useReplicas && vbm.IsDown(masterId) && desc.replica < vbm.NumReplicas {
 			desc.replica++
 			continue
 		}
@@ -168,7 +170,7 @@ func (b *Bucket) getVbConnection(vb uint32, desc *doDescriptor) (conn *memcached
 				desc.version = b.Version
 				desc.replica = 0
 				desc.amendReplica = false
-			} else if desc.useReplicas && desc.replica < b.VBServerMap().NumReplicas-1 {
+			} else if desc.useReplicas && desc.replica < b.VBServerMap().NumReplicas {
 
 				// see if we can use a replica
 				desc.replica++
@@ -205,7 +207,7 @@ func (b *Bucket) getVbConnection(vb uint32, desc *doDescriptor) (conn *memcached
 			// see if we can use a replica
 			desc.replica++
 			desc.amendReplica = true
-			desc.retry = desc.replica < b.VBServerMap().NumReplicas
+			desc.retry = desc.replica <= b.VBServerMap().NumReplicas
 		} else {
 			desc.retry = false
 		}
@@ -226,34 +228,26 @@ func (b *Bucket) processOpError(vb uint32, lastError error, node string, desc *d
 	if resp, ok := lastError.(*gomemcached.MCResponse); ok {
 		switch resp.Status {
 		case gomemcached.NOT_MY_VBUCKET:
-			desc.NMVBCount++
 
 			// first, can we use the NMVB response vbmap entry?
-			// we will only try this once
-			if desc.NMVBCount == 1 {
-				desc.pool = b.handleNMVB(vb, resp)
-				if desc.pool != nil {
-					desc.retry = true
-					desc.discard = b.obsoleteNode(node)
-					return
-				}
+			newPool, newNode := b.handleNMVB(vb, resp)
+
+			// KV response might still send old map
+			// go the old way if we don't have a different node
+			if newPool != nil && newNode != node {
+				desc.retry = true
+				desc.pool = newPool
+				desc.discard = b.obsoleteNode(node)
+				return
 			}
 
-			// if it didn't work out, refresh until we get a new vbmap
+			// if it didn't work out, refresh and retry until we get a new vbmap
 			desc.backOffAttempts++
 			desc.retry = backOff(desc.backOffAttempts, desc.maxTries, backOffDuration, false)
-			for desc.backOffAttempts < desc.maxTries {
-				if !desc.retry {
-					break
-				}
+			if desc.retry && desc.version == b.Version {
 				b.Refresh()
-				if desc.version == b.Version {
-					desc.backOffAttempts++
-					desc.retry = backOff(desc.backOffAttempts, desc.maxTries, backOffDuration, false)
-					continue
-				}
-				desc.version = b.Version
 			}
+			desc.version = b.Version
 
 			// MB-28842: in case of NMVB, check if the node is still part of the map
 			// and ditch the connection if it isn't.
@@ -303,7 +297,7 @@ func (b *Bucket) processOpError(vb uint32, lastError error, node string, desc *d
 				// see if we can use a replica
 				desc.replica++
 				desc.amendReplica = true
-				desc.retry = desc.replica < b.VBServerMap().NumReplicas
+				desc.retry = desc.replica <= b.VBServerMap().NumReplicas
 			} else {
 				desc.retry = false
 			}
@@ -322,29 +316,30 @@ type refreshVB struct {
 	VBSMJson VBucketServerMap `json:"vBucketServerMap"`
 }
 
-func (b *Bucket) handleNMVB(vb uint32, resp *gomemcached.MCResponse) *connectionPool {
+func (b *Bucket) handleNMVB(vb uint32, resp *gomemcached.MCResponse) (*connectionPool, string) {
 	if resp != nil && len(resp.Body) > 0 {
 		tmpVB := &refreshVB{}
-		if json.Unmarshal(resp.Body, &tmpVB) == nil &&
-			len(tmpVB.VBSMJson.ServerList) > 0 && len(tmpVB.VBSMJson.VBucketMap) > 0 {
+		if json.Unmarshal(resp.Body, &tmpVB) == nil {
+			if len(tmpVB.VBSMJson.ServerList) > 0 && len(tmpVB.VBSMJson.VBucketMap) > 0 {
 
-			// if the vbmap is good and we find the node in the current node list, use that pool
-			if int(vb) < len(tmpVB.VBSMJson.VBucketMap) {
-				masterId := tmpVB.VBSMJson.VBucketMap[int(vb)][0]
-				nodes := b.VBServerMap().ServerList
-				node := tmpVB.VBSMJson.ServerList[masterId]
-				if masterId < len(nodes) && nodes[masterId] == node {
-					return b.getConnPool(masterId)
-				}
-				for i := range nodes {
-					if nodes[i] == node {
-						return b.getConnPool(i)
+				// if the vbmap is good and we find the node in the current node list, use that pool
+				if int(vb) < len(tmpVB.VBSMJson.VBucketMap) {
+					masterId := tmpVB.VBSMJson.VBucketMap[int(vb)][0]
+					nodes := b.VBServerMap().ServerList
+					node := tmpVB.VBSMJson.ServerList[masterId]
+					if masterId < len(nodes) && nodes[masterId] == node {
+						return b.getConnPool(masterId), node
+					}
+					for i := range nodes {
+						if nodes[i] == node {
+							return b.getConnPool(i), node
+						}
 					}
 				}
 			}
 		}
 	}
-	return nil
+	return nil, ""
 }
 
 func (b *Bucket) backOffRetries() int {
@@ -412,9 +407,9 @@ func (b *Bucket) Do2(k string, f func(mc *memcached.Client, vb uint16) error, de
 		if err == "" {
 			err = fmt.Sprintf("KV status %v", resp.Status)
 		}
-		return fmt.Errorf("unable to complete action after %v attempts: %v", desc.maxTries, err)
+		return fmt.Errorf("unable to complete action after %v attempts: %v", desc.attempts, err)
 	} else {
-		return fmt.Errorf("unable to complete action after %v attempts: %v", desc.maxTries, lastError)
+		return fmt.Errorf("unable to complete action after %v attempts: %v", desc.attempts, lastError)
 	}
 }
 
