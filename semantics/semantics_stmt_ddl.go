@@ -21,7 +21,6 @@ func (this *SemChecker) VisitCreatePrimaryIndex(stmt *algebra.CreatePrimaryIndex
 
 func (this *SemChecker) VisitCreateIndex(stmt *algebra.CreateIndex) (interface{}, error) {
 	gsi := stmt.Using() == datastore.GSI || stmt.Using() == datastore.DEFAULT
-	var fk *expression.FlattenKeys
 	for _, expr := range stmt.Expressions() {
 		if !expr.Indexable() || expr.Value() != nil {
 			return nil, errors.NewCreateIndexNotIndexable(expr.String(), expr.ErrorContext())
@@ -35,7 +34,7 @@ func (this *SemChecker) VisitCreateIndex(stmt *algebra.CreateIndex) (interface{}
 				return nil, errors.NewCreateIndexAttribute(expr.String(), expr.ErrorContext())
 			}
 
-			fk = all.FlattenKeys()
+			fk := all.FlattenKeys()
 			for pos, fke := range fk.Operands() {
 				if !fke.Indexable() || fke.Value() != nil {
 					return nil, errors.NewCreateIndexNotIndexable(fke.String(), fke.ErrorContext())
@@ -44,16 +43,16 @@ func (this *SemChecker) VisitCreateIndex(stmt *algebra.CreateIndex) (interface{}
 					return nil, errors.NewCreateIndexAttributeMissing(fke.String(), fke.ErrorContext())
 				}
 			}
+
+			// check FLATTEN_KEYS() is present in the correct context
+			cfk := NewCheckFlattenKeys(fk)
+			if err := expr.MapChildren(cfk); err != nil {
+				return nil, err
+			}
 		}
 		if term.HasAttribute(algebra.IK_MISSING) && (i > 0 || !gsi) {
 			return nil, errors.NewCreateIndexAttributeMissing(expr.String(), expr.ErrorContext())
 		}
-	}
-
-	// check FLATTEN_KEYS() is present in the correct context
-	cfk := NewCheckFlattenKeys(fk)
-	if err := stmt.MapExpressions(cfk); err != nil {
-		return nil, err
 	}
 
 	return nil, stmt.MapExpressions(this)
