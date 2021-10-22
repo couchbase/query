@@ -561,6 +561,18 @@ func hasSargableArrayKey(entry *indexEntry) bool {
 	return false
 }
 
+func hasUnknownsInSargableArrayKey(entry *indexEntry) bool {
+	if entry.arrayKey != nil && entry.spans != nil {
+		for i, k := range entry.sargKeys {
+			if _, ok := k.(*expression.All); ok &&
+				i < len(entry.skeys) && entry.skeys[i] && entry.spans.CanProduceUnknowns(i) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 func implicitFilterCovers(expr expression.Expression) (map[*expression.Cover]value.Value, error) {
 	fc := _FILTER_COVERS_POOL.Get()
 	defer _FILTER_COVERS_POOL.Put(fc)
@@ -611,7 +623,7 @@ func implicitIndexKeysProj(keys expression.Expressions,
 
 func implicitAnyCover(entry *indexEntry, flatten bool, featControl uint64) bool {
 	_, ok := entry.spans.(*IntersectSpans)
-	if ok || entry.arrayKey == nil || !hasSargableArrayKey(entry) {
+	if ok || entry.arrayKey == nil || !hasSargableArrayKey(entry) || hasUnknownsInSargableArrayKey(entry) {
 		return false
 	}
 	enabled := !flatten || (util.IsFeatureEnabled(featControl, util.N1QL_IMPLICIT_ARRAY_COVER) &&

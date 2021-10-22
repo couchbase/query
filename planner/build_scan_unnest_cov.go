@@ -73,7 +73,8 @@ func (this *builder) buildOneCoveringUnnestScan(node *algebra.KeyspaceTerm,
 	// Sarg and populate spans
 	centry.idxEntry, centry.leafUnnest, indexArrayKey, err = this.matchUnnestScan(node, pred, subset,
 		centry.rootUnnest, centry.idxEntry, indexArrayKey, unnests, false)
-	if err != nil || centry.idxEntry == nil || centry.leafUnnest == nil || indexArrayKey == nil {
+	if err != nil || centry.idxEntry == nil || centry.leafUnnest == nil || indexArrayKey == nil ||
+		hasUnknownsInSargableArrayKey(centry.idxEntry) {
 		return nil, err
 	}
 	entry = centry.idxEntry
