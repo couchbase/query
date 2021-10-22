@@ -26,6 +26,7 @@ const (
 	UTIMEOUT    = " Query timeout parameter. Units are mandatory. \n\t\tFor example : -timeout \"10ms\". \n\t\tValid units : ns, us, ms, s, m, h"
 	UUSER       = " Username \n\t For example : -u Administrator"
 	UPWD        = " Password \n\t For example : -p password"
+	UPP         = "Passphrase \n\t For example -pp HelloWorld"
 	UCREDS      = " A list of credentials, in the form user:password. \n\t For example : -c beer-sample:pass"
 	UVERSION    = " Shell Version \n\t Usage: -version"
 	UVIMODESL   = " Single-line vi style input mode \n\t Usage: -vi"

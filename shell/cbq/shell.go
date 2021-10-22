@@ -135,6 +135,24 @@ func init() {
 }
 
 /*
+   Option        : -passphrase or -pp
+   Args          : passphrase for keyfile (Private Key Encryption)
+   Need to provide certfile and keyfile with passphrase
+*/
+
+var passpFlag string
+
+func init() {
+	const (
+		defaultval = ""
+		usage      = command.UPP
+	)
+	flag.StringVar(&passpFlag, "passphrase", defaultval, usage)
+	flag.StringVar(&passpFlag, "pp", defaultval, command.NewShorthandMsg("-passphrase"))
+
+}
+
+/*
    Option        : -credentials or -c
    Args          : A list of credentials, in the form of user/password objects.
    Login credentials for users as well as SASL Buckets.
@@ -561,7 +579,7 @@ func main() {
 		// If the -u option isnt specified and the -p option is specified
 		// It could be using the passphrase instead of the username.
 		// Make sure the keyfile is also empty before throwing the error.
-		if pwdFlag != "" && keyFile == "" {
+		if pwdFlag != "" {
 			s_err := command.HandleError(errors.E_SHELL_INVALID_USERNAME, "")
 			command.PrintError(s_err)
 			os.Exit(1)
@@ -622,9 +640,11 @@ func main() {
 
 	n1ql.SetSkipVerify(noSSLVerify)
 	command.SKIPVERIFY = noSSLVerify
+
 	if certFile != "" {
 		n1ql.SetCertFile(certFile)
 	}
+
 	if keyFile != "" {
 		n1ql.SetKeyFile(keyFile)
 	}
@@ -634,7 +654,7 @@ func main() {
 	}
 
 	if certFile != "" && keyFile != "" {
-		n1ql.SetPrivateKeyPassphrase(password)
+		n1ql.SetPrivateKeyPassphrase([]byte(passpFlag))
 	}
 
 	if strings.HasPrefix(strings.ToLower(serverFlag), "https://") && rootFile == "" && certFile == "" && keyFile == "" {
