@@ -67,6 +67,10 @@ const (
 	_PATH = "/../var/lib/couchbase/n1qlcerts/"
 )
 
+const (
+	_WINCIPHERS = "CALG_AES_128,CALG_AES_256,CALG_SHA_256,CALG_SHA_384,CALG_RSA_SIGN,CALG_RSA_KEYX,CALG_ECDSA"
+)
+
 var hostname string
 
 /*
@@ -904,6 +908,7 @@ func (this *Curl) curlCiphers(val string) error {
 		myCurl := this.myCurl
 		myCurl.Setopt(curl.OPT_SSL_CIPHER_LIST, nVal)
 	} else {
+		cbCiphers := ""
 		if runtime.GOOS != "windows" {
 			// Get the Ciphers supported by couchbase based on the level set
 			tlsCfg, err := cbauth.GetTLSConfig()
@@ -915,11 +920,12 @@ func (this *Curl) curlCiphers(val string) error {
 				Libcurl code to set the ssl ciphers to be used during connection.
 				curl_easy_setopt(hnd, CURLOPT_SSL_CIPHER_LIST, "rsa_aes_128_sha,rsa_aes_256_sha");
 			*/
-			cbCiphers := strings.Join(tlsCfg.CipherSuiteOpenSSLNames, ",")
-
-			myCurl := this.myCurl
-			myCurl.Setopt(curl.OPT_SSL_CIPHER_LIST, cbCiphers)
+			cbCiphers = strings.Join(tlsCfg.CipherSuiteOpenSSLNames, ",")
+		} else {
+			cbCiphers = _WINCIPHERS
 		}
+		myCurl := this.myCurl
+		myCurl.Setopt(curl.OPT_SSL_CIPHER_LIST, cbCiphers)
 	}
 
 	return nil
