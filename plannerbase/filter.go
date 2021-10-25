@@ -16,17 +16,18 @@ import (
 )
 
 const (
-	FLTR_IS_JOIN       = 1 << iota // is this originally a join filter
-	FLTR_IS_ONCLAUSE               // is this an ON-clause filter for ANSI JOIN
-	FLTR_IS_DERIVED                // is this a derived filter
-	FLTR_IS_UNNEST                 // is this ann unnest filter (inherited)
-	FLTR_SELEC_DONE                // calculation of selectivity is done
-	FLTR_HAS_DEF_SELEC             // has default selectivity
-	FLTR_IN_INDEX_SPAN             // used in index span
-	FLTR_IN_HASH_JOIN              // used as join filter for hash join
-	FLTR_HAS_SUBQ                  // has subquery
-	FLTR_HAS_ADJ_SELEC             // has adjusted selectivity
-	FLTR_PRIMARY_JOIN              // join on meta id
+	FLTR_IS_JOIN        = 1 << iota // is this originally a join filter
+	FLTR_IS_ONCLAUSE                // is this an ON-clause filter for ANSI JOIN
+	FLTR_IS_DERIVED                 // is this a derived filter
+	FLTR_IS_UNNEST                  // is this ann unnest filter (inherited)
+	FLTR_SELEC_DONE                 // calculation of selectivity is done
+	FLTR_HAS_DEF_SELEC              // has default selectivity
+	FLTR_IN_INDEX_SPAN              // used in index span
+	FLTR_IN_HASH_JOIN               // used as join filter for hash join
+	FLTR_HAS_SUBQ                   // has subquery
+	FLTR_HAS_ADJ_SELEC              // has adjusted selectivity
+	FLTR_PRIMARY_JOIN               // join on meta id
+	FLTR_DERIVED_EQJOIN             // derived equi-join filter
 )
 
 const TEMP_PLAN_FLAGS = (FLTR_IN_INDEX_SPAN | FLTR_IN_HASH_JOIN)
@@ -187,6 +188,14 @@ func (this *Filter) IsPrimaryJoin() bool {
 	return (this.fltrFlags & FLTR_PRIMARY_JOIN) != 0
 }
 
+func (this *Filter) SetDerivedEqJoin() {
+	this.fltrFlags |= FLTR_DERIVED_EQJOIN
+}
+
+func (this *Filter) IsDerivedEqJoin() bool {
+	return (this.fltrFlags & FLTR_DERIVED_EQJOIN) != 0
+}
+
 func (this *Filter) FltrExpr() expression.Expression {
 	return this.fltrExpr
 }
@@ -289,10 +298,20 @@ func (this *Filter) EqfId() int32 {
 }
 
 // setup equivalent class filter info
-func (this *Filter) SetEqInfo(left, right EqElem, eqfId int32) {
+func (this *Filter) SetEqElems(left, right EqElem) {
 	this.eqLeft = left
 	this.eqRight = right
+}
+
+func (this *Filter) SetEqfId(eqfId int32) {
 	this.eqfId = eqfId
+}
+
+// is this filter an equi-join filter involving the two EqElems passed in?
+func (this *Filter) EquivalentEqJoin(left, right EqElem) bool {
+	return this.eqLeft != nil && this.eqRight != nil &&
+		((this.eqLeft == left && this.eqRight == right) ||
+			(this.eqLeft == right && this.eqRight == left))
 }
 
 // Once a keyspace has been visited, join filters referring to this keyspace can remove
