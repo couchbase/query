@@ -12,7 +12,6 @@ import (
 	"encoding/json"
 	gerrors "errors"
 	"fmt"
-	"net"
 	"strconv"
 	"sync"
 
@@ -744,10 +743,14 @@ func initGocb(s *store) (err errors.Error) {
 	txConfig.Internal.EnableNonFatalGets = true
 	txConfig.Internal.EnableParallelUnstaging = true
 
+	// don't raise error not able to setup ATR Collection.
+	txConfig.CustomATRLocation.ScopeName, txConfig.CustomATRLocation.CollectionName,
+		txConfig.CustomATRLocation.Agent, _ = AtrCollectionAgentPovider(tranSettings.AtrCollection())
+
+	logging.Infof("Transaction Initialization: ExpirationTime: %v, CleanupWindow: %v, CleanupClientAttempts: %v, CleanupLostAttempts: %v",
+		txConfig.ExpirationTime, txConfig.CleanupWindow, txConfig.CleanupClientAttempts, txConfig.CleanupLostAttempts)
+
 	client, cerr := gcagent.NewClient(s.URL(),
-		func() (string, string) {
-			return getSSLHostPort(s)
-		},
 		caFile,
 		certFile,
 		keyFile,
@@ -767,15 +770,6 @@ func initGocb(s *store) (err errors.Error) {
 		logging.Errorf(err.Error())
 		return err
 	}
-
-	// don't raise error not able to setup ATR Collection.
-
-	txConfig.CustomATRLocation.ScopeName, txConfig.CustomATRLocation.CollectionName,
-		txConfig.CustomATRLocation.Agent, _ = AtrCollectionAgentPovider(tranSettings.AtrCollection())
-
-	logging.Infof("Transaction Initialization: ExpirationTime: %v, CleanupWindow: %v, CleanupClientAttempts: %v, CleanupLostAttempts: %v",
-		txConfig.ExpirationTime, txConfig.CleanupWindow, txConfig.CleanupClientAttempts, txConfig.CleanupLostAttempts)
-
 	cerr = client.InitTransactions(txConfig)
 	if cerr != nil {
 		client.Close()
@@ -786,41 +780,4 @@ func initGocb(s *store) (err errors.Error) {
 	s.gcClient = client
 
 	return nil
-}
-
-/* host name inherits ip as name.
- * encryption enabled certificates will have actual host name.
- * ns_server passes http://127.0.0.1:8091, certificates doesn't have loop back address.
- * Get actual host and custom SSL port
- */
-
-func getSSLHostPort(s *store) (string, string) {
-	for _, p := range s.client.Info.Pools {
-		if pool, err := s.client.GetPool(p.Name); err == nil {
-			for _, node := range pool.Nodes {
-				if node.ThisNode {
-					host := ""
-					port := ""
-					if p, ok := node.Ports["httpsMgmt"]; ok && p != _DEFAULT_MGMT_SSLPORT {
-						port = strconv.Itoa(p)
-					}
-					if node.Hostname != "" {
-						host, _, err = net.SplitHostPort(node.Hostname)
-						if err == nil && host != "" {
-							ip := net.ParseIP(host)
-							if ip != nil && ip.To4() == nil && ip.To16() != nil { // IPv6 and not a FQDN
-								// Prefix and suffix square brackets as SplitHostPort removes them,
-								// see: https://golang.org/pkg/net/#SplitHostPort
-								host = "[" + host + "]"
-							}
-							pool.Close()
-						}
-					}
-					return host, port
-				}
-			}
-			pool.Close()
-		}
-	}
-	return "", ""
 }

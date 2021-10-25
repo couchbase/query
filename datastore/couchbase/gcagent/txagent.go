@@ -9,7 +9,6 @@
 package gcagent
 
 import (
-	"crypto/x509"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -51,27 +50,9 @@ type AgentProvider struct {
  * Close old agent after 2 minutes so that any transient connections will be serviced.
  * If still not finished we will return error
  */
-func (ap *AgentProvider) CreateOrRefreshAgent() error {
-	var config gocbcore.AgentConfig
-
-	rootCAs := ap.client.TLSRootCAs()
-	if rootCAs != nil {
-		// Use SSL config
-		cconfig, cerr := ap.client.sslConfigFn()
-		if cerr != nil {
-			return cerr
-		}
-		config = *cconfig
-		config.SecurityConfig.UseTLS = true
-		// config.SecurityConfig.InitialBootstrapNonTLS = true
-		config.SecurityConfig.TLSRootCAProvider = func() *x509.CertPool {
-			return rootCAs
-		}
-	} else {
-		// use non-SSL config
-		config = *ap.client.config
-	}
-
+func (ap *AgentProvider) CreateAgent() error {
+	config := *ap.client.config
+	config.SecurityConfig.UseTLS = (ap.client.TLSRootCAs() != nil)
 	config.UserAgent = ap.bucketName
 	config.BucketName = ap.bucketName
 
@@ -98,22 +79,25 @@ func (ap *AgentProvider) CreateOrRefreshAgent() error {
 	}
 
 	ap.mutex.Lock()
-	oldAgent := ap.provider
+	defer ap.mutex.Unlock()
 	ap.provider = agent
-	ap.mutex.Unlock()
-	if oldAgent != nil {
-		// close old agent after 2 minutes
-		go func() {
-			time.Sleep(_CLOSEWAIT)
-			oldAgent.Close()
-		}()
-	}
-
 	return nil
 }
 
 func (ap *AgentProvider) Refresh() error {
-	return ap.CreateOrRefreshAgent()
+	agent := ap.Agent()
+	config := ap.client.config
+	useTLS := ap.client.TLSRootCAs() != nil
+	if useTLS {
+		defer logging.Infof("Agent (%s) certificates have been refreshed.", agent.BucketName())
+	} else {
+		defer logging.Infof("Agent (%s) certificates have been turned off.", agent.BucketName())
+	}
+	return agent.ReconfigureSecurity(gocbcore.ReconfigureSecurityOptions{
+		UseTLS:            useTLS,
+		TLSRootCAProvider: config.SecurityConfig.TLSRootCAProvider,
+		Auth:              config.SecurityConfig.Auth,
+	})
 }
 
 func (ap *AgentProvider) Agent() *gocbcore.Agent {

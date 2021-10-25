@@ -11,7 +11,6 @@ package gcagent
 import (
 	"crypto/tls"
 	"crypto/x509"
-	"fmt"
 	"io/ioutil"
 	"strings"
 	"sync"
@@ -76,41 +75,19 @@ type Client struct {
 	transactions *gctx.Manager
 	rootCAs      *x509.CertPool
 	mutex        sync.RWMutex
-	sslConfigFn  SSLConfigFn
 	atrLocations map[string]gctx.LostATRLocation
 	certs        *tls.Certificate
 }
 
-type SSLConfigFn func() (*gocbcore.AgentConfig, error)
-
-func NewClient(url string, sslHostFn func() (string, string), caFile, certFile, keyFile string, passphrase []byte) (rv *Client, err error) {
-	var connSpec *connstr.ConnSpec
-
+func NewClient(url string, caFile, certFile, keyFile string, passphrase []byte) (rv *Client, err error) {
 	rv = &Client{}
 
 	// network=default use internal (vs  alternative) addresses
 	// http bootstrap is faster
+	nurl := strings.Replace(url, "http://", "ns_server://", 1)
 	options := "?network=default&bootstrap_on=http"
-	if rv.config, connSpec, err = agentConfig(url, options, rv); err != nil {
+	if rv.config, err = agentConfig(nurl, options, rv); err != nil {
 		return nil, err
-	}
-
-	rv.sslConfigFn = func() (*gocbcore.AgentConfig, error) {
-		// create SSL agent config file
-		sslHost, sslPort := sslHostFn()
-		if len(connSpec.Addresses) > 0 {
-			if sslHost == "" {
-				sslHost = connSpec.Addresses[0].Host
-			}
-			surl := "couchbases://" + sslHost
-			if sslPort != "" {
-				// couchbases schema with custom port will not allowed http bootstrap.
-				surl = "http://" + sslHost + ":" + sslPort
-			}
-			sslConfig, _, err1 := agentConfig(surl, options, rv)
-			return sslConfig, err1
-		}
-		return nil, fmt.Errorf("no ssl address")
 	}
 
 	if certFile != "" || caFile != "" || keyFile != "" {
@@ -125,8 +102,8 @@ func NewClient(url string, sslHostFn func() (string, string), caFile, certFile, 
 	return rv, err
 }
 
-func agentConfig(url, options string, rv *Client) (config *gocbcore.AgentConfig, cspec *connstr.ConnSpec, err error) {
-	config = &gocbcore.AgentConfig{}
+func agentConfig(url, options string, rv *Client) (*gocbcore.AgentConfig, error) {
+	config := &gocbcore.AgentConfig{}
 	config.DefaultRetryStrategy = gocbcore.NewBestEffortRetryStrategy(nil)
 	config.KVConfig.ConnectTimeout = _CONNECTTIMEOUT
 	config.KVConfig.PoolSize = _kVPOOLSIZE
@@ -137,13 +114,15 @@ func agentConfig(url, options string, rv *Client) (config *gocbcore.AgentConfig,
 	config.SecurityConfig.TLSRootCAProvider = func() *x509.CertPool {
 		return rv.TLSRootCAs()
 	}
+	config.SecurityConfig.NoTLSSeedNode = true
+	config.SecurityConfig.UseTLS = (rv.TLSRootCAs() != nil)
 
-	var connSpec connstr.ConnSpec
-	if connSpec, err = connstr.Parse(url + options); err == nil {
+	connSpec, err := connstr.Parse(url + options)
+	if err == nil {
 		err = config.FromConnStr(connSpec.String())
 	}
 
-	return config, &connSpec, err
+	return config, err
 }
 
 func (c *Client) InitTransactions(txConfig *gctx.Config) (err error) {
@@ -197,7 +176,11 @@ func (c *Client) RemoveAtrLocation(bucketName string) (err error) {
 
 func (c *Client) CreateAgentProvider(bucketName string) (*AgentProvider, error) {
 	ap := &AgentProvider{client: c, bucketName: bucketName}
-	err := ap.CreateOrRefreshAgent()
+	useTLS := c.rootCAs != nil
+	err := ap.CreateAgent()
+	if err == nil && useTLS != (c.rootCAs != nil) {
+		err = ap.Refresh() // refresh if TLS changed while creation
+	}
 	return ap, err
 }
 
