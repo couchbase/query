@@ -768,8 +768,6 @@ func initGocb(s *store) (err errors.Error) {
 		return err
 	}
 
-	s.gcClient = client
-
 	// don't raise error not able to setup ATR Collection.
 
 	txConfig.CustomATRLocation.ScopeName, txConfig.CustomATRLocation.CollectionName,
@@ -784,6 +782,8 @@ func initGocb(s *store) (err errors.Error) {
 		s.gcClient = nil
 		return errors.NewError(cerr, "Transaction initialization failed")
 	}
+
+	s.gcClient = client
 
 	return nil
 }
