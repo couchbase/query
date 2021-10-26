@@ -11,7 +11,9 @@
 #
 # To build the enterprise version, launch this  AS './build.sh -tags enterprise'
 # To build the enterprise version with latest updates, launch this  AS './build.sh -u -tags enterprise'
-# Add -s to fix standalone build issues. Keep indexer, eventing-ee generated files in ~/devbld
+# Add -s to fix standalone build issues. Keep indexer generated files in ~/devbld
+# Note standalone build requires libraries from installed server, make sure installed server is
+# compatible with source that is being built
 
 PRODUCT_VERSION=${PRODUCT_VERSION:-"7.1.0-local_build"}
 export PRODUCT_VERSION
@@ -45,19 +47,17 @@ DevStandaloneSetup() {
            cp ~/devbld/query.pb.go ../indexing/secondary/protobuf/query/query.pb.go
        fi
     # eventing-ee generated files
-       if [[ ( ! -d $GOPATH/lib ) ]]; then
+       if [[ ( ! -L $GOPATH/lib ) ]]; then
+           if [[ -d $GOPATH/lib ]]
+           then
+             rm -rf $GOPATH/lib
+           fi
            if [[ "Linux" = `uname` ]]
            then
-             JSEVAL=~/devbld/build/goproj/src/github.com/couchbase/eventing-ee/evaluator/libjseval.so
-             [[ ! -f $JSEVAL ]] && JSEVAL=/opt/couchbase/lib/libjseval.so
-           else #macos
-             JSEVAL=~/devbld/build/goproj/src/github.com/couchbase/eventing-ee/evaluator/libjseval.dylib
-             [[ ! -f $JSEVAL ]] && JSEVAL="/Applications/Couchbase Server.app/Contents/Resources/couchbase-core/lib/libjseval.dylib"
-           fi
-           if [[ "X" != "X$JSEVAL"  &&  -f $JSEVAL ]]
+             ln -s /opt/couchbase/lib $GOPATH/lib
+           elif [[ "Darwin" = `uname` ]]
            then
-             mkdir $GOPATH/lib
-             cp -rp $JSEVAL $GOPATH/lib
+             ln -s "/Applications/Couchbase Server.app/Contents/Resources/couchbase-core/lib" $GOPATH/lib
            fi
        fi
     # gocbcore points to master; gocbcore/v9 points to 9.1.7
@@ -113,7 +113,8 @@ DevStandaloneSetup() {
 if [[ ( ! -d ../../../../../cbft && "$GOPATH" != "") || ( $sflag == 1) ]]; then
      export GO111MODULE=off
      export CGO_CFLAGS="-I$GOPATH/src/github.com/couchbase/eventing-ee/evaluator/worker/include $CGO_FLAGS"
-     export CGO_LDFLAGS="-L$GOPATH/lib $CGO_LDLAGS"
+     export CGO_LDFLAGS="-L$GOPATH/lib $CGO_LDFLAGS"
+     export LD_LIBRARY_PATH=$GOPATH/lib:${LD_LIBRARY_PATH}
      echo go get $* $uflag -d -v ./...
      go get $* $uflag -d -v ./...
      if [[ $sflag == 1 ]]; then
