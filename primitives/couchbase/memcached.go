@@ -398,6 +398,7 @@ func (b *Bucket) Do2(k string, f func(mc *memcached.Client, vb uint16) error, de
 			return nil
 		}
 		if !desc.retry {
+			desc.attempts++
 			break
 		}
 	}
