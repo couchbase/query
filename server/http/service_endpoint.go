@@ -354,6 +354,9 @@ func (this *HttpEndpoint) ServeHTTP(resp http.ResponseWriter, req *http.Request)
 				user.amendLimits(limits)
 				user.limitsVersion = this.trackedUsersVersion
 			}
+			if this.trackedUsers == nil {
+				this.trackedUsers = make(map[string]*userMetrics)
+			}
 			this.trackedUsers[userName] = user
 			this.usersLock.Unlock()
 		} else {
@@ -603,7 +606,9 @@ func (this *HttpEndpoint) SetupSSL() error {
 			}
 			this.trackUsers = limitsConfig.EnforceLimits
 			if this.trackUsers {
+				this.usersLock.Lock()
 				this.trackedUsersVersion = limitsConfig.UserLimitsVersion
+				this.usersLock.Unlock()
 			} else {
 
 				// get rid of user cache:
@@ -614,6 +619,7 @@ func (this *HttpEndpoint) SetupSSL() error {
 					this.trackedUsers[u].outputMeter.Stop()
 					delete(this.trackedUsers, u)
 				}
+				this.usersLock.Unlock()
 			}
 		}
 
