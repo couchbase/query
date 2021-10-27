@@ -38,12 +38,12 @@ require (
 	github.com/couchbase/cbauth v0.0.0-20210911011937-6a860d4b3951
 	github.com/couchbase/clog v0.1.0
 	github.com/couchbase/eventing-ee v0.0.0-00010101000000-000000000000
-	github.com/couchbase/go-couchbase v0.0.0-20201026062457-7b3be89bbd89
+	github.com/couchbase/go-couchbase v0.1.1
 	github.com/couchbase/go_json v0.0.0-00010101000000-000000000000
 	github.com/couchbase/gocbcore-transactions v0.0.0-20211015175912-8d8655302661
 	github.com/couchbase/gocbcore/v10 v10.0.3
 	github.com/couchbase/godbc v0.0.0-20210615212222-79da1b49cb4d
-	github.com/couchbase/gomemcached v0.0.0-20200618124739-5bac349aff71
+	github.com/couchbase/gomemcached v0.1.4
 	github.com/couchbase/gometa v0.0.0-20200717102231-b0e38b71d711 // indirect
 	github.com/couchbase/goutils v0.1.2
 	github.com/couchbase/indexing v0.0.0-00010101000000-000000000000
