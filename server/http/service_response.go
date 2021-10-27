@@ -64,31 +64,31 @@ func mapErrorToHttpResponse(err errors.Error, def int) int {
 	// the request has not produced any results (ie failed
 	// in some sort of non starter way)
 	switch err.Code() {
-	case 1000: // readonly violation
+	case errors.E_SERVICE_READONLY: // readonly violation
 		return http.StatusForbidden
-	case 1010: // unsupported http method
+	case errors.E_SERVICE_HTTP_UNSUPPORTED_METHOD: // unsupported http method
 		return http.StatusMethodNotAllowed
-	case 1020, 1030, 1040, 1050, 1060, 1065, 1070:
+	case errors.E_SERVICE_NOT_IMPLEMENTED, errors.E_SERVICE_UNRECOGNIZED_VALUE, errors.E_SERVICE_BAD_VALUE,
+		errors.E_SERVICE_MISSING_VALUE, errors.E_SERVICE_MULTIPLE_VALUES, errors.E_SERVICE_UNRECOGNIZED_PARAMETER,
+		errors.E_SERVICE_TYPE_MISMATCH:
 		return http.StatusBadRequest
-	case 1120:
+	case errors.E_SERVICE_MEDIA_TYPE:
 		return http.StatusNotAcceptable
-	case 1180:
+	case errors.E_SERVICE_SHUTTING_DOWN, errors.E_SERVICE_SHUT_DOWN:
 		return http.StatusServiceUnavailable
-	case 1181:
-		return http.StatusServiceUnavailable
-	case 13014:
+	case errors.E_DATASTORE_INSUFFICIENT_CREDENTIALS:
 		return http.StatusUnauthorized
-	case 3000: // parse error range
+	case errors.E_PARSE_SYNTAX: // parse error range
 		return http.StatusBadRequest
-	case 4000, errors.E_NO_SUCH_PREPARED: // plan error range
+	case errors.E_PLAN, errors.E_NO_SUCH_PREPARED: // plan error range
 		return http.StatusNotFound
-	case 4300:
+	case errors.E_INDEX_ALREADY_EXISTS:
 		return http.StatusConflict
-	case 5000:
+	case errors.E_INTERNAL:
 		return http.StatusInternalServerError
 	case errors.E_SUBQUERY_BUILD:
 		return http.StatusUnprocessableEntity
-	case 10000:
+	case errors.E_DATASTORE_AUTHORIZATION:
 		return http.StatusUnauthorized
 	default:
 		return def
