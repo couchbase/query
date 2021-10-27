@@ -35,7 +35,7 @@ replace github.com/couchbase/query => ./empty
 replace github.com/couchbase/query-ee => ../query-ee
 
 require (
-	github.com/couchbase/cbauth v0.0.0-20210911011937-6a860d4b3951
+	github.com/couchbase/cbauth v0.1.0
 	github.com/couchbase/clog v0.1.0
 	github.com/couchbase/eventing-ee v0.0.0-00010101000000-000000000000
 	github.com/couchbase/go-couchbase v0.1.1
@@ -51,7 +51,7 @@ require (
 	github.com/couchbase/query-ee v0.0.0-00010101000000-000000000000
 	github.com/couchbase/retriever v0.0.0-20150311081435-e3419088e4d3
 	github.com/couchbasedeps/go-curl v0.0.0-20190830233031-f0b2afc926ec
-	github.com/gorilla/mux v1.7.4
+	github.com/gorilla/mux v1.8.0
 	github.com/mattn/go-runewidth v0.0.3
 	github.com/natefinch/npipe v0.0.0-20160621034901-c1b8fa8bdcce // indirect
 	github.com/opentracing/opentracing-go v1.2.0 // indirect
