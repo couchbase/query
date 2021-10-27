@@ -352,7 +352,7 @@ func (this *Context) OpenPrepared(prepared *plan.Prepared, isPrepared bool,
 }, error) {
 
 	handle := &executionHandle{}
-	handle.context = this.Copy()
+	handle.context = this
 	handle.output = &internalOutput{}
 	handle.context.output = handle.output
 
@@ -418,6 +418,25 @@ func (this *executionHandle) Results() (interface{}, uint64, error) {
 		this.root.Done()
 	}
 	return values, this.output.mutationCount, this.output.err
+}
+
+func (this *executionHandle) Complete() (uint64, error) {
+	for {
+		item, ok := this.input.getItem()
+		if item == nil || !ok {
+			break
+		}
+	}
+	if atomic.AddInt32(&this.stopped, 1) == 1 {
+		this.context.output.AddPhaseTime(RUN, util.Since(this.exec))
+		this.root.SendAction(_ACTION_STOP)
+		newErr := this.context.completeStatement(this.stmtType, this.output.err == nil, this.baseContext)
+		if newErr != nil {
+			this.output.err = newErr
+		}
+		this.root.Done()
+	}
+	return this.output.mutationCount, this.output.err
 }
 
 func (this *executionHandle) NextDocument() (value.Value, error) {
