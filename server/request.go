@@ -165,6 +165,10 @@ type Request interface {
 	SetUserAgent(userAgent string)
 	SetTimings(o execution.Operator)
 	GetTimings() execution.Operator
+	SetFmtTimings(e []byte)
+	GetFmtTimings() []byte
+	SetFmtOptimizerEstimates(t []byte)
+	GetFmtOptimizerEstimates() []byte
 	IsAdHoc() bool
 	SetErrorLimit(limit int)
 	GetErrorLimit() int
@@ -303,6 +307,8 @@ type BaseRequest struct {
 	stopExecute          chan bool          // stop executing request
 	stopOperator         execution.Operator // notified when request execution stops
 	timings              execution.Operator
+	fmtTimings           []byte
+	fmtEstimates         []byte
 	controls             value.Tristate
 	profile              Profile
 	indexApiVersion      int    // Index API version
@@ -326,6 +332,9 @@ type BaseRequest struct {
 	numAtrs              int
 	preserveExpiry       bool
 	executionContext     *execution.Context
+	resultCount          int64
+	resultSize           int64
+	serviceDuration      time.Duration
 }
 
 type requestIDImpl struct {
@@ -851,6 +860,22 @@ func (this *BaseRequest) SetTimings(o execution.Operator) {
 
 func (this *BaseRequest) GetTimings() execution.Operator {
 	return this.timings
+}
+
+func (this *BaseRequest) SetFmtTimings(t []byte) {
+	this.fmtTimings = t
+}
+
+func (this *BaseRequest) GetFmtTimings() []byte {
+	return this.fmtTimings
+}
+
+func (this *BaseRequest) SetFmtOptimizerEstimates(e []byte) {
+	this.fmtEstimates = e
+}
+
+func (this *BaseRequest) GetFmtOptimizerEstimates() []byte {
+	return this.fmtEstimates
 }
 
 func (this *BaseRequest) SetControls(c value.Tristate) {

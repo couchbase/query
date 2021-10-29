@@ -43,6 +43,7 @@ func NewStream(plan *plan.Stream, context *Context) *Stream {
 	}
 	rv.stopContext = context
 	rv.output = rv
+	rv.execPhase = STREAM
 	return rv
 }
 

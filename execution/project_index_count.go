@@ -28,6 +28,7 @@ func NewIndexCountProject(plan *plan.IndexCountProject, context *Context) *Index
 	}
 
 	newBase(&rv.base, context)
+	rv.execPhase = PROJECT
 	rv.output = rv
 	return rv
 }

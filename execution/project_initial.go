@@ -36,6 +36,7 @@ func NewInitialProject(plan *plan.InitialProject, context *Context) *InitialProj
 	rv.plan = plan
 	newBase(&rv.base, context)
 	rv.output = rv
+	rv.execPhase = PROJECT
 	return rv
 }
 

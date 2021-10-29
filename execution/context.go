@@ -56,6 +56,8 @@ const (
 	INDEX_COUNT
 	FILTER
 	SORT
+	PROJECT
+	STREAM
 	INSERT
 	DELETE
 	UPDATE
@@ -98,6 +100,8 @@ var _PHASE_NAMES = []string{
 	INDEX_COUNT:  "indexCount",
 	SORT:         "sort",
 	FILTER:       "filter",
+	PROJECT:      "project",
+	STREAM:       "stream",
 	INSERT:       "insert",
 	DELETE:       "delete",
 	UPDATE:       "update",

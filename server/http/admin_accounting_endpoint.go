@@ -1681,11 +1681,13 @@ func completedRequestWorkHorse(requestId string, profiling bool) interface{} {
 			if request.PositionalArgs != nil {
 				reqMap["positionalArgs"] = request.PositionalArgs
 			}
-			if request.Timings != nil {
-				reqMap["timings"] = request.Timings
-				if request.OptEstimates != nil {
-					reqMap["optimizerEstimates"] = request.OptEstimates
-				}
+			timings := request.Timings()
+			if timings != nil {
+				reqMap["timings"] = timings
+			}
+			optEstimates := request.OptEstimates()
+			if optEstimates != nil {
+				reqMap["optimizerEstimates"] = optEstimates
 			}
 			if request.Errors != nil {
 				reqMap["errors"] = request.Errors

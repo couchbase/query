@@ -754,6 +754,7 @@ func (this *httpRequest) writeProfile(profile server.Profile, prefix, indent str
 			if err != nil || !this.writer.printf(",%s\"executionTimings\": %s", newPrefix, e) {
 				logging.Infof("Error writing executionTimings: %v", err)
 			}
+			this.SetFmtTimings(e)
 			optEstimates := this.FmtOptimizerEstimates(timings)
 			if optEstimates != nil {
 				if indent != "" {
@@ -765,6 +766,7 @@ func (this *httpRequest) writeProfile(profile server.Profile, prefix, indent str
 					logging.Infof("Error writing optimizerEstimates: %v", err)
 				}
 			}
+			this.SetFmtOptimizerEstimates(e)
 		}
 	}
 	if prefix != "" && !(this.writeString("\n") && this.writeString(prefix)) {

@@ -9,8 +9,6 @@
 package system
 
 import (
-	"encoding/json"
-
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/distributed"
 	"github.com/couchbase/query/errors"
@@ -197,13 +195,13 @@ func (b *requestLogKeyspace) Fetch(keys []string, keysMap map[string]value.Annot
 
 				meta := item.NewMeta()
 				meta["keyspace"] = b.fullName
-				if entry.Timings != nil {
-					bytes, _ := json.Marshal(entry.Timings)
-					meta["plan"] = bytes
-					if entry.OptEstimates != nil {
-						bytes, _ := json.Marshal(entry.OptEstimates)
-						meta["optimizerEstimates"] = bytes
-					}
+				timings := entry.Timings()
+				if timings != nil {
+					meta["plan"] = timings
+				}
+				optEstimates := entry.OptEstimates()
+				if optEstimates != nil {
+					meta["optimizerEstimates"] = optEstimates
 				}
 				item.SetId(key)
 				keysMap[key] = item

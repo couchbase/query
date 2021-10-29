@@ -22,6 +22,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/couchbase/go_json"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/execution"
@@ -67,8 +68,8 @@ type RequestLogEntry struct {
 	PhaseTimes               map[string]interface{}
 	PhaseCounts              map[string]interface{}
 	PhaseOperators           map[string]interface{}
-	Timings                  execution.Operator
-	OptEstimates             map[string]interface{}
+	timings                  value.Value
+	optEstimates             value.Value
 	NamedArgs                map[string]value.Value
 	PositionalArgs           value.Values
 	MemoryQuota              uint64
@@ -259,6 +260,14 @@ func RequestsCheckQualifier(name string, op RequestsOp, condition interface{}, t
 		_, err = newClient(condition)
 	case "context":
 		_, err = newContext(condition)
+	case "results":
+		_, err = newResults(condition)
+	case "size":
+		_, err = newSize(condition)
+	case "mutations":
+		_, err = newMutations(condition)
+	case "counts":
+		_, err = newCounts(condition)
 	default:
 		return errors.NewCompletedQualifierUnknown(name)
 	}
@@ -297,6 +306,14 @@ func RequestsAddQualifier(name string, condition interface{}, tag string) errors
 		q, err = newClient(condition)
 	case "context":
 		q, err = newContext(condition)
+	case "results":
+		q, err = newResults(condition)
+	case "size":
+		q, err = newSize(condition)
+	case "mutations":
+		q, err = newMutations(condition)
+	case "counts":
+		q, err = newCounts(condition)
 	default:
 		return errors.NewCompletedQualifierUnknown(name)
 	}
@@ -450,9 +467,9 @@ func RequestDo(id string, f func(*RequestLogEntry)) {
 func RequestDelete(id string) errors.Error {
 	if requestLog.cache.Delete(id, func(r interface{}) {
 		re := r.(*RequestLogEntry)
-		if re.Timings != nil {
-			re.Timings.Done()
-			re.Timings = nil
+		if re.timings != nil {
+			re.timings.Recycle()
+			re.timings = nil
 		}
 	}) {
 		return nil
@@ -485,6 +502,11 @@ func LogRequest(request_time, service_time, transactionElapsedTime time.Duration
 	if requestLog.cache.Limit() == 0 {
 		return
 	}
+
+	// these assignments are a bit hacky, but simplify our life
+	request.resultCount = int64(result_count)
+	request.resultSize = int64(result_size)
+	request.serviceDuration = service_time
 	requestLog.RLock()
 	defer requestLog.RUnlock()
 
@@ -575,25 +597,24 @@ func LogRequest(request_time, service_time, transactionElapsedTime time.Duration
 	re.PhaseTimes = request.FmtPhaseTimes()
 	re.UsedMemory = request.UsedMemory()
 
-	// in order not to bloat service memory, we only
-	// store timings if they are turned on at the service
-	// or request level when the request completes.
-	// this may yield inconsistent output if different nodes
-	// have different settings, but it's better than ever growing
-	// memory because we are storing every plan in completed_requests
-	// once timings get stored in completed_requests, it's this
-	// module that's responsible for cleaning after them, hence
-	// we nillify request.timings to signal that
-	prof := request.Profile()
-	if prof == ProfUnset {
-		prof = server.Profile()
-	}
-
-	if prof == ProfOn || prof == ProfBench {
-		re.Timings = request.GetTimings()
-		request.SetTimings(nil)
-		if re.Timings != nil {
-			re.OptEstimates = request.FmtOptimizerEstimates(re.Timings)
+	// in order not to bloat service memory, we marshal the timings into a value
+	// at the expense of request execution time
+	timings := request.GetTimings()
+	if timings != nil {
+		parsed := request.GetFmtTimings()
+		if len(parsed) > 0 {
+			re.timings = value.NewValue(parsed)
+		} else {
+			v, err := json.Marshal(timings)
+			if len(v) > 0 && err == nil {
+				re.timings = value.NewValue(v)
+			}
+		}
+		estimates := request.GetFmtOptimizerEstimates()
+		if len(parsed) > 0 {
+			re.optEstimates = value.NewValue(estimates)
+		} else {
+			re.optEstimates = value.NewValue(request.FmtOptimizerEstimates(timings))
 		}
 	}
 
@@ -632,6 +653,14 @@ func LogRequest(request_time, service_time, transactionElapsedTime time.Duration
 	for _, h := range requestLog.handlers {
 		go h.handlerFunc(re)
 	}
+}
+
+func (this *RequestLogEntry) Timings() interface{} {
+	return this.timings
+}
+
+func (this *RequestLogEntry) OptEstimates() interface{} {
+	return this.optEstimates
 }
 
 // request qualifiers
@@ -689,7 +718,7 @@ func (this *timeThreshold) evaluate(request *BaseRequest, req *http.Request) boo
 	// zero threshold means log everything (no threshold)
 	if this.threshold < 0 ||
 		(this.threshold >= 0 &&
-			time.Since(request.ServiceTime()) < time.Millisecond*this.threshold) {
+			request.serviceDuration < time.Millisecond*this.threshold) {
 		return false
 	}
 	return true
@@ -926,4 +955,213 @@ func (this *context) checkCondition(c interface{}) errors.Error {
 
 func (this *context) evaluate(request *BaseRequest, req *http.Request) bool {
 	return this.id == request.ClientContextId()
+}
+
+// 7- results count
+type results struct {
+	count int64
+}
+
+func newResults(c interface{}) (*results, errors.Error) {
+	switch c.(type) {
+	case int:
+		return &results{count: int64(c.(int))}, nil
+	case int64:
+		return &results{count: c.(int64)}, nil
+	}
+	return nil, errors.NewCompletedQualifierInvalidArgument("results", c)
+}
+
+func (this *results) name() string {
+	return "results"
+}
+
+func (this *results) unique() bool {
+	return true
+}
+
+func (this *results) condition() interface{} {
+	return this.count
+}
+
+func (this *results) isCondition(c interface{}) bool {
+	switch c.(type) {
+	case int:
+		return int64(c.(int)) == this.count
+	case int64:
+		return c.(int64) == this.count
+	}
+	return false
+}
+
+func (this *results) checkCondition(c interface{}) errors.Error {
+	switch c.(type) {
+	case int:
+		return nil
+	case int64:
+		return nil
+	}
+	return errors.NewCompletedQualifierInvalidArgument("results", c)
+}
+
+func (this *results) evaluate(request *BaseRequest, req *http.Request) bool {
+	return request.resultCount > this.count
+}
+
+// 8- mutation count
+type mutations struct {
+	count int64
+}
+
+func newMutations(c interface{}) (*mutations, errors.Error) {
+	switch c.(type) {
+	case int:
+		return &mutations{count: int64(c.(int))}, nil
+	case int64:
+		return &mutations{count: c.(int64)}, nil
+	}
+	return nil, errors.NewCompletedQualifierInvalidArgument("mutations", c)
+}
+
+func (this *mutations) name() string {
+	return "mutations"
+}
+
+func (this *mutations) unique() bool {
+	return true
+}
+
+func (this *mutations) condition() interface{} {
+	return this.count
+}
+
+func (this *mutations) isCondition(c interface{}) bool {
+	switch c.(type) {
+	case int:
+		return int64(c.(int)) == this.count
+	case int64:
+		return c.(int64) == this.count
+	}
+	return false
+}
+
+func (this *mutations) checkCondition(c interface{}) errors.Error {
+	switch c.(type) {
+	case int:
+		return nil
+	case int64:
+		return nil
+	}
+	return errors.NewCompletedQualifierInvalidArgument("mutations", c)
+}
+
+func (this *mutations) evaluate(request *BaseRequest, req *http.Request) bool {
+	return int64(request.mutationCount) > this.count
+}
+
+// 9- output size
+type size struct {
+	size int64
+}
+
+func newSize(c interface{}) (*size, errors.Error) {
+	switch c.(type) {
+	case int:
+		return &size{size: int64(c.(int))}, nil
+	case int64:
+		return &size{size: c.(int64)}, nil
+	}
+	return nil, errors.NewCompletedQualifierInvalidArgument("size", c)
+}
+
+func (this *size) name() string {
+	return "size"
+}
+
+func (this *size) unique() bool {
+	return true
+}
+
+func (this *size) condition() interface{} {
+	return this.size
+}
+
+func (this *size) isCondition(c interface{}) bool {
+	switch c.(type) {
+	case int:
+		return int64(c.(int)) == this.size
+	case int64:
+		return c.(int64) == this.size
+	}
+	return false
+}
+
+func (this *size) checkCondition(c interface{}) errors.Error {
+	switch c.(type) {
+	case int:
+		return nil
+	case int64:
+		return nil
+	}
+	return errors.NewCompletedQualifierInvalidArgument("size", c)
+}
+
+func (this *size) evaluate(request *BaseRequest, req *http.Request) bool {
+	return request.resultSize > this.size
+}
+
+// 10- operator counts
+type counts struct {
+	count int64
+}
+
+func newCounts(c interface{}) (*counts, errors.Error) {
+	switch c.(type) {
+	case int:
+		return &counts{count: int64(c.(int))}, nil
+	case int64:
+		return &counts{count: c.(int64)}, nil
+	}
+	return nil, errors.NewCompletedQualifierInvalidArgument("counts", c)
+}
+
+func (this *counts) name() string {
+	return "counts"
+}
+
+func (this *counts) unique() bool {
+	return true
+}
+
+func (this *counts) condition() interface{} {
+	return this.count
+}
+
+func (this *counts) isCondition(c interface{}) bool {
+	switch c.(type) {
+	case int:
+		return int64(c.(int)) == this.count
+	case int64:
+		return c.(int64) == this.count
+	}
+	return false
+}
+
+func (this *counts) checkCondition(c interface{}) errors.Error {
+	switch c.(type) {
+	case int:
+		return nil
+	case int64:
+		return nil
+	}
+	return errors.NewCompletedQualifierInvalidArgument("counts", c)
+}
+
+func (this *counts) evaluate(request *BaseRequest, req *http.Request) bool {
+	return int64(request.phaseStats[execution.FETCH].count) > this.count ||
+		int64(request.phaseStats[execution.PRIMARY_SCAN].count) > this.count ||
+		int64(request.phaseStats[execution.INDEX_SCAN].count) > this.count ||
+		int64(request.phaseStats[execution.NL_JOIN].count) > this.count ||
+		int64(request.phaseStats[execution.HASH_JOIN].count) > this.count ||
+		int64(request.phaseStats[execution.SORT].count) > this.count
 }
