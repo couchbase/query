@@ -370,23 +370,6 @@ func (this *HttpEndpoint) ServeHTTP(resp http.ResponseWriter, req *http.Request)
 				}
 			}
 			this.usersLock.Unlock()
-			if user.userRequestsLimit > 0 && user.activeRequests >= user.userRequestsLimit {
-				atomic.AddInt64(&user.requestsFailures, 1)
-				request.Fail(errors.NewServiceUserRequestExceededError())
-				return
-			} else if user.userRequestRateLimit > 0 && user.requestMeter.Rate1() >= user.userRequestRateLimit {
-				atomic.AddInt64(&user.requestRateFailures, 1)
-				request.Fail(errors.NewServiceUserRequestRateExceededError())
-				return
-			} else if user.userPayloadLimit > 0 && user.payloadMeter.Rate1() >= user.userPayloadLimit {
-				atomic.AddInt64(&user.payloadRateFailures, 1)
-				request.Fail(errors.NewServiceUserRequestSizeExceededError())
-				return
-			} else if user.userOutputLimit > 0 && user.outputMeter.Rate1() >= user.userOutputLimit {
-				atomic.AddInt64(&user.outputRateFailures, 1)
-				request.Fail(errors.NewServiceUserResultsSizeExceededError())
-				return
-			}
 			atomic.AddInt32(&user.activeRequests, 1)
 		}
 		reqSize := req.ContentLength
@@ -397,6 +380,31 @@ func (this *HttpEndpoint) ServeHTTP(resp http.ResponseWriter, req *http.Request)
 		}
 		user.requestMeter.Mark(1)
 		user.payloadMeter.Mark(reqSize)
+		if user.userRequestsLimit > 0 && user.activeRequests > user.userRequestsLimit {
+			atomic.AddInt64(&user.requestsFailures, 1)
+			atomic.AddInt32(&user.activeRequests, -1)
+			request.Fail(errors.NewServiceUserRequestExceededError())
+			request.Failed(this.server)
+			return
+		} else if user.userRequestRateLimit > 0 && user.requestMeter.Rate1() > user.userRequestRateLimit {
+			atomic.AddInt64(&user.requestRateFailures, 1)
+			atomic.AddInt32(&user.activeRequests, -1)
+			request.Fail(errors.NewServiceUserRequestRateExceededError())
+			request.Failed(this.server)
+			return
+		} else if user.userPayloadLimit > 0 && user.payloadMeter.Rate1() > user.userPayloadLimit {
+			atomic.AddInt64(&user.payloadRateFailures, 1)
+			atomic.AddInt32(&user.activeRequests, -1)
+			request.Fail(errors.NewServiceUserRequestSizeExceededError())
+			request.Failed(this.server)
+			return
+		} else if user.userOutputLimit > 0 && user.outputMeter.Rate1() > user.userOutputLimit {
+			atomic.AddInt64(&user.outputRateFailures, 1)
+			atomic.AddInt32(&user.activeRequests, -1)
+			request.Fail(errors.NewServiceUserResultsSizeExceededError())
+			request.Failed(this.server)
+			return
+		}
 	}
 
 	defer this.doStats(request, this.server)
