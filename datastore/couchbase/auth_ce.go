@@ -65,6 +65,30 @@ func messageForDeniedPrivilege(pair auth.PrivilegePair) string {
 	case auth.PRIV_BACKUP_BUCKET:
 		privilege = "backup bucket metadata"
 		role = fmt.Sprintf("data_backup on %s", keyspace)
+	case auth.PRIV_QUERY_MANAGE_FUNCTIONS:
+		privilege = "manage global functions"
+		role = "query_manage_global_functions"
+	case auth.PRIV_QUERY_EXECUTE_FUNCTIONS:
+		privilege = "execue global functions"
+		role = "query_execute_global_functions"
+	case auth.PRIV_QUERY_MANAGE_SCOPE_FUNCTIONS:
+		privilege = "manage scope functions"
+		role = fmt.Sprintf("query_manage_functions on %s", keyspace)
+	case auth.PRIV_QUERY_EXECUTE_SCOPE_FUNCTIONS:
+		privilege = "excute scope functions"
+		role = fmt.Sprintf("query_execute_functions on %s", keyspace)
+	case auth.PRIV_QUERY_MANAGE_FUNCTIONS_EXTERNAL:
+		privilege = "manage global external functions"
+		role = "query_manage_global_external_functions"
+	case auth.PRIV_QUERY_EXECUTE_FUNCTIONS_EXTERNAL:
+		privilege = "execute globl external functions"
+		role = "query_execute_global_external_functions"
+	case auth.PRIV_QUERY_MANAGE_SCOPE_FUNCTIONS_EXTERNAL:
+		privilege = "manage scope external functions"
+		role = fmt.Sprintf("query_manage_external_functions on %s", keyspace)
+	case auth.PRIV_QUERY_EXECUTE_SCOPE_FUNCTIONS_EXTERNAL:
+		privilege = "execute scope external functions"
+		role = fmt.Sprintf("query_execute_external_functions on %s", keyspace)
 	default:
 		privilege = "this type of query"
 		role = "admin"
