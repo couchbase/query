@@ -36,7 +36,12 @@ ELSE (BUILD_ENTERPRISE)
 ENDIF(BUILD_ENTERPRISE)
 SET (_extra_deps)
 
-SET (GOVERSION 1.16.6)
+# MB-40185: perf: for now need to use 1.17.2 on Windows only
+IF(WIN32)
+  SET (GOVERSION 1.17.2)
+ELSE ()
+  SET (GOVERSION 1.16.6)
+ENDIF ()
 GoPrivateMod (MODULE cbftx PATH ../../../../../cbftx)
 GoPrivateMod (MODULE eventing-ee)
 GoPrivateMod (MODULE query-ee)
