@@ -305,7 +305,7 @@ func doPrometheusHigh(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.R
 	for _, user := range endpoint.trackedUsers {
 		doPrometheusUserStat(w, user.uuid, "requests", "counter", user.activeRequests)
 		doPrometheusUserStat(w, user.uuid, "total_requests", "counter", user.requestMeter.Count())
-		doPrometheusUserStat(w, user.uuid, "request_rate", "gauge", user.requestMeter)
+		doPrometheusUserStat(w, user.uuid, "request_rate", "gauge", user.requestMeter.Rate1())
 		doPrometheusUserStat(w, user.uuid, "ingres_rate", "gauge", user.payloadMeter.Rate1()/1024/1024)
 		doPrometheusUserStat(w, user.uuid, "total_ingress", "counter", user.payloadMeter.Count()/1024/1024)
 		doPrometheusUserStat(w, user.uuid, "egress_rate", "gauge", user.outputMeter.Rate1()/1024/1024)

@@ -43,7 +43,8 @@ type Datastore interface {
 	NamespaceByName(name string) (Namespace, errors.Error)                                 // Find a namespace in this datastore using the namespace's name
 	Authorize(*auth.Privileges, *auth.Credentials) (auth.AuthenticatedUsers, errors.Error) // Perform authorization and return nil if successful
 	PreAuthorize(*auth.Privileges)                                                         // Transform privileges in the internal format
-	CredsString(*http.Request) string                                                      // return name from credentials in http request
+	CredsString(*http.Request) string                                                      // Return name from credentials in http request
+	GetUserUUID(*auth.Credentials) string                                                  // Returns user UUID for stats
 	SetLogLevel(level logging.Level)                                                       // Set log level of in-process indexers
 	Inferencer(name InferenceType) (Inferencer, errors.Error)                              // Schema inference provider by name, e.g. INF_DEFAULT
 	Inferencers() ([]Inferencer, errors.Error)                                             // List of schema inference providers
@@ -417,6 +418,13 @@ func IndexerQualifiedKeyspacePath(indexer Indexer) string {
 	}
 
 	return keyspace.QualifiedName()
+}
+
+func GetUserUUID(creds *auth.Credentials) string {
+	if _DATASTORE == nil {
+		return ""
+	}
+	return _DATASTORE.GetUserUUID(creds)
 }
 
 // These structures are generic representations of users and their roles.

@@ -341,12 +341,13 @@ func (this *HttpEndpoint) ServeHTTP(resp http.ResponseWriter, req *http.Request)
 		user := this.trackedUsers[userName]
 		if user == nil {
 			user = &userMetrics{
-				// uuid: datastore.GetUserUUID(userName),
+				uuid:           datastore.GetUserUUID(request.Credentials()),
 				activeRequests: 1,
 				requestMeter:   this.server.AccountingStore().NewMeter(),
 				payloadMeter:   this.server.AccountingStore().NewMeter(),
 				outputMeter:    this.server.AccountingStore().NewMeter(),
 			}
+			user.uuid = strings.Replace(user.uuid, "-", "_", -1)
 			limits, err := cbauth.GetUserLimits(userName, "local", "query")
 			if err != nil {
 				logging.Infof("No user limits fouund for user <ud>%v</ud> - limits not enforced", userName)

@@ -156,6 +156,10 @@ func (s *store) Authorize(*auth.Privileges, *auth.Credentials) (auth.Authenticat
 	return nil, nil
 }
 
+func (s *store) GetUserUUID(*auth.Credentials) string {
+	return ""
+}
+
 func (s *store) PreAuthorize(*auth.Privileges) {
 }
 
