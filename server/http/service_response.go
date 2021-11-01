@@ -76,6 +76,10 @@ func mapErrorToHttpResponse(err errors.Error, def int) int {
 		return http.StatusNotAcceptable
 	case errors.E_SERVICE_SHUTTING_DOWN, errors.E_SERVICE_SHUT_DOWN:
 		return http.StatusServiceUnavailable
+	case errors.E_SERVICE_USER_REQUEST_EXCEEDED, errors.E_SERVICE_USER_REQUEST_RATE_EXCEEDED:
+		return http.StatusTooManyRequests
+	case errors.E_SERVICE_USER_REQUEST_SIZE_EXCEEDED, errors.E_SERVICE_USER_RESULT_SIZE_EXCEEDED:
+		return http.StatusRequestEntityTooLarge
 	case errors.E_DATASTORE_INSUFFICIENT_CREDENTIALS:
 		return http.StatusUnauthorized
 	case errors.E_PARSE_SYNTAX: // parse error range
