@@ -43,9 +43,9 @@ type userMetrics struct {
 	userOutputLimit      float64
 	userRequestsLimit    int32
 	activeRequests       int32
-	requestMeter         accounting.Meter
-	payloadMeter         accounting.Meter
-	outputMeter          accounting.Meter
+	requestMeter         util.Meter
+	payloadMeter         util.Meter
+	outputMeter          util.Meter
 	requestsFailures     int64
 	requestRateFailures  int64
 	payloadRateFailures  int64
@@ -343,9 +343,9 @@ func (this *HttpEndpoint) ServeHTTP(resp http.ResponseWriter, req *http.Request)
 			user = &userMetrics{
 				uuid:           datastore.GetUserUUID(request.Credentials()),
 				activeRequests: 1,
-				requestMeter:   this.server.AccountingStore().NewMeter(),
-				payloadMeter:   this.server.AccountingStore().NewMeter(),
-				outputMeter:    this.server.AccountingStore().NewMeter(),
+				requestMeter:   util.NewMeter(5*time.Minute, time.Minute),
+				payloadMeter:   util.NewMeter(5*time.Minute, time.Minute),
+				outputMeter:    util.NewMeter(5*time.Minute, time.Minute),
 			}
 			user.uuid = strings.Replace(user.uuid, "-", "_", -1)
 			limits, err := cbauth.GetUserLimits(userName, "local", "query")
@@ -379,27 +379,27 @@ func (this *HttpEndpoint) ServeHTTP(resp http.ResponseWriter, req *http.Request)
 		if reqSize <= 0 {
 			reqSize = int64(len(request.Statement()))
 		}
-		user.requestMeter.Mark(1)
-		user.payloadMeter.Mark(reqSize)
+		user.requestMeter.Mark(1, request.RequestTime())
+		user.payloadMeter.Mark(reqSize, request.RequestTime())
 		if user.userRequestsLimit > 0 && user.activeRequests > user.userRequestsLimit {
 			atomic.AddInt64(&user.requestsFailures, 1)
 			atomic.AddInt32(&user.activeRequests, -1)
 			request.Fail(errors.NewServiceUserRequestExceededError())
 			request.Failed(this.server)
 			return
-		} else if user.userRequestRateLimit > 0 && user.requestMeter.Rate1() > user.userRequestRateLimit {
+		} else if user.userRequestRateLimit > 0 && user.requestMeter.Rate() > user.userRequestRateLimit {
 			atomic.AddInt64(&user.requestRateFailures, 1)
 			atomic.AddInt32(&user.activeRequests, -1)
 			request.Fail(errors.NewServiceUserRequestRateExceededError())
 			request.Failed(this.server)
 			return
-		} else if user.userPayloadLimit > 0 && user.payloadMeter.Rate1() > user.userPayloadLimit {
+		} else if user.userPayloadLimit > 0 && user.payloadMeter.Rate() > user.userPayloadLimit {
 			atomic.AddInt64(&user.payloadRateFailures, 1)
 			atomic.AddInt32(&user.activeRequests, -1)
 			request.Fail(errors.NewServiceUserRequestSizeExceededError())
 			request.Failed(this.server)
 			return
-		} else if user.userOutputLimit > 0 && user.outputMeter.Rate1() > user.userOutputLimit {
+		} else if user.userOutputLimit > 0 && user.outputMeter.Rate() > user.userOutputLimit {
 			atomic.AddInt64(&user.outputRateFailures, 1)
 			atomic.AddInt32(&user.activeRequests, -1)
 			request.Fail(errors.NewServiceUserResultsSizeExceededError())
@@ -623,9 +623,6 @@ func (this *HttpEndpoint) SetupSSL() error {
 				// get rid of user cache:
 				this.usersLock.Lock()
 				for u, _ := range this.trackedUsers {
-					this.trackedUsers[u].requestMeter.Stop()
-					this.trackedUsers[u].payloadMeter.Stop()
-					this.trackedUsers[u].outputMeter.Stop()
 					delete(this.trackedUsers, u)
 				}
 				this.usersLock.Unlock()
@@ -681,7 +678,7 @@ func (this *HttpEndpoint) doStats(request *httpRequest, srvr *server.Server) {
 		this.usersLock.RUnlock()
 		if user != nil {
 			atomic.AddInt32(&user.activeRequests, -1)
-			user.outputMeter.Mark(int64(request.resultSize))
+			user.outputMeter.Mark(int64(request.resultSize), request.RequestTime())
 		}
 	}
 
