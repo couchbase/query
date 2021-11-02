@@ -351,6 +351,9 @@ func (s *store) GetUserUUID(credentials *auth.Credentials) string {
 		logging.Warnf("CbAuth not intialized")
 		return ""
 	}
+	if credentials.HttpRequest == nil {
+		return ""
+	}
 	creds, _ := cbauth.AuthWebCreds(credentials.HttpRequest)
 	if creds != nil {
 		res, _ := creds.Uuid()

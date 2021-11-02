@@ -420,13 +420,6 @@ func IndexerQualifiedKeyspacePath(indexer Indexer) string {
 	return keyspace.QualifiedName()
 }
 
-func GetUserUUID(creds *auth.Credentials) string {
-	if _DATASTORE == nil {
-		return ""
-	}
-	return _DATASTORE.GetUserUUID(creds)
-}
-
 // These structures are generic representations of users and their roles.
 // Very similar structures exist in primitives/couchbase, but to keep open the
 // possibility of connecting to other back ends, the query engine

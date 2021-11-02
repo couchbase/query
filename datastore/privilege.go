@@ -58,20 +58,9 @@ func CredsStringHTTP(creds *auth.Credentials) string {
 	return ""
 }
 
-/*
-func GetUserUUID(user string) string {
-	ds := GetDatastore()
-	if ds != nil {
-		return ds.GetUserUUID(user)
+func GetUserUUID(creds *auth.Credentials) string {
+	if _DATASTORE == nil || creds == nil {
+		return ""
 	}
-	return ""
+	return _DATASTORE.GetUserUUID(creds)
 }
-
-func GetUserLimit(limit string) int64 {
-	ds := GetDatastore()
-	if ds != nil {
-		return ds.GetUserLimit(limit)
-	}
-	return 0
-}
-*/

@@ -131,13 +131,16 @@ func newHttpRequest(rv *httpRequest, resp http.ResponseWriter, req *http.Request
 		}
 	}
 
+	var creds *auth.Credentials
+	var err1 errors.Error
+
 	if err == nil {
 		// handle parameters that can't be handled dynamically
 		// get credentials even in case of error - for auditing and logging
 		pwdlessbkts := util.IsFeatureEnabled(rv.FeatureControls(), util.N1QL_DISABLE_PWD_BKT)
 
 		// Creds check
-		creds, err1 := getCredentials(httpArgs)
+		creds, err1 = getCredentials(httpArgs)
 
 		if err1 == nil {
 			if len(creds.Users) == 0 && !pwdlessbkts {
@@ -161,6 +164,10 @@ func newHttpRequest(rv *httpRequest, resp http.ResponseWriter, req *http.Request
 			}
 		}
 		err = err1
+	}
+
+	if creds == nil {
+		rv.SetCredentials(&auth.Credentials{HttpRequest: req})
 	}
 
 	if err == nil {
