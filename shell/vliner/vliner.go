@@ -817,6 +817,7 @@ mainLoop:
 			handled := true
 			switch r {
 			case '.':
+				s.saveForUndo(line, pos, 0, rune(0))
 				s.insertStringIntoInput(append(s.cmdRepeat, _REPLAY_END))
 				s.replayActive = true
 			case 'C':
@@ -1093,6 +1094,21 @@ mainLoop:
 							pos = len(line) - 1
 							break
 						}
+					}
+				}
+				s.stopRecording()
+			case 'g': // extension: global single rune replacement
+				s.saveForUndo(line, pos, repeat, r)
+				r, err = s.read()
+				if nil != err {
+					return "", err
+				}
+				s.record(r)
+				sr := line[pos]
+				for i, _ := range line {
+					if line[i] == sr {
+						line[i] = r
+						pos = i
 					}
 				}
 				s.stopRecording()
@@ -1912,7 +1928,7 @@ func (s *State) saveForUndo(line []rune, pos int, repeat int, r rune) {
 			b := &bufferSave{line: append([]rune(nil), line...), pos: pos}
 			s.save = append(s.save[:s.saveTop], b)
 			s.saveTop++
-			if r != rune(0) {
+			if rune(0) != r {
 				s.recording = true
 				s.cmdRepeat = []rune(fmt.Sprintf("%d%c", repeat, r))
 			}
