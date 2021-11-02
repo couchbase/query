@@ -173,10 +173,6 @@ func (b *activeRequestsKeyspace) Fetch(keys []string, keysMap map[string]value.A
 					item.SetField("preparedName", p.Name())
 					item.SetField("preparedText", p.Text())
 				}
-				prof := request.Profile()
-				if prof == server.ProfUnset {
-					prof = server.GetProfile()
-				}
 				credsString := datastore.CredsString(request.Credentials())
 				if credsString != "" {
 					item.SetField("users", credsString)
@@ -216,7 +212,7 @@ func (b *activeRequestsKeyspace) Fetch(keys []string, keysMap map[string]value.A
 				meta["keyspace"] = b.fullName
 
 				t := request.GetTimings()
-				if (prof == server.ProfOn || prof == server.ProfBench) && t != nil {
+				if t != nil {
 					bytes, _ := json.Marshal(t)
 					meta["plan"] = bytes
 					optEstimates := request.Output().FmtOptimizerEstimates(t)
