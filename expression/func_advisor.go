@@ -36,8 +36,8 @@ const (
 
 func queryDict() func(string) string {
 	innerMap := map[string]string{
-		_ACTIVE:    " and state in [\"running\", \"scheduled\"]",
-		_COMPLETED: " and state = \"completed\"",
+		_ACTIVE:    " AND state IN [\"running\", \"scheduled\"]",
+		_COMPLETED: " AND state = \"completed\"",
 		_ALL:       "",
 	}
 
@@ -259,27 +259,29 @@ func (this *Advisor) scheduleTask(sessionName string, duration time.Duration, co
 
 func analyzeWorkload(profile, response_limit string, delta, query_count float64) string {
 	start_time := time.Now().Format(DEFAULT_FORMAT)
-	workload := "SELECT statement, queryContext as query_context from system:completed_requests where "
+	workload := "SELECT statement, queryContext AS query_context FROM system:completed_requests" +
+		" WHERE statementType IN ('SELECT','UPSERT','UPDATE','INSERT','DELETE','MERGE')" +
+		" AND preparedName IS NOT VALUED"
 	if len(profile) > 0 {
-		workload += "users like \"%" + profile + "%\" and "
+		workload += " AND users LIKE \"%" + profile + "%\""
 	}
 	if response_limit != "" {
-		workload += "str_to_duration(elapsedTime)/1000000 > " + response_limit + " and "
+		workload += " AND str_to_duration(elapsedTime)/1000000 > " + response_limit
 	}
 
 	// exclude SELECT ADVISOR(...) statements
-	workload += "phaseOperators.advisor is missing and "
+	workload += " AND phaseOperators.advisor IS MISSING"
 
 	// exclude internal statements from UI
-	workload += "(clientContextID is missing OR clientContextID not like \"INTERNAL%\") and "
+	workload += " AND (clientContextID IS MISSING OR clientContextID NOT LIKE \"INTERNAL%\")"
 
-	workload += "requestTime between \"" + start_time + "\" and DATE_ADD_STR(\"" + start_time + "\", " + strconv.FormatFloat(delta, 'f', 0, 64) + ",\"second\") "
-	workload += "order by requestTime limit " + strconv.FormatFloat(query_count, 'f', 0, 64)
+	workload += " AND requestTime BETWEEN \"" + start_time + "\" AND date_add_str(\"" + start_time + "\", " + strconv.FormatFloat(delta, 'f', 0, 64) + ",\"second\") "
+	workload += " ORDER BY requestTime LIMIT " + strconv.FormatFloat(query_count, 'f', 0, 64)
 	return "SELECT RAW Advisor((" + workload + "))"
 }
 
 func getResults(sessionName string, context Context) (value.Value, error) {
-	query := "select raw results from system:tasks_cache where class = \"" + _CLASS + "\"  and name = \"" + sessionName + "\" and ANY v in results satisfies v <> {} END"
+	query := "SELECT RAW results FROM system:tasks_cache WHERE class = \"" + _CLASS + "\" AND name = \"" + sessionName + "\" AND ANY v IN results SATISFIES v <> {} END"
 	r, _, err := context.(Context).EvaluateStatement(query, nil, nil, false, true)
 	if err != nil {
 		return nil, err
@@ -290,7 +292,7 @@ func getResults(sessionName string, context Context) (value.Value, error) {
 const _EMPTY_STATE scheduler.State = ""
 
 func getState(sessionName string, context Context) (scheduler.State, error) {
-	query := "SELECT state from system:tasks_cache where class = \"" + _CLASS + "\"  and name = \"" + sessionName + "\""
+	query := "SELECT state FROM system:tasks_cache WHERE class = \"" + _CLASS + "\" AND name = \"" + sessionName + "\""
 	res, _, err := context.(Context).EvaluateStatement(query, nil, nil, false, false)
 	if err != nil {
 		return _EMPTY_STATE, err
@@ -307,7 +309,7 @@ func getState(sessionName string, context Context) (scheduler.State, error) {
 }
 
 func purgeResults(sessionName string, context Context, analysis bool) (value.Value, error) {
-	query := "DELETE from system:tasks_cache where class = \"" + _CLASS + "\"  and name = \"" + sessionName + "\""
+	query := "DELETE FROM system:tasks_cache WHERE class = \"" + _CLASS + "\" AND name = \"" + sessionName + "\""
 	_, _, err := context.(Context).EvaluateStatement(query, nil, nil, false, false)
 	if !analysis {
 		//For purge and abort, scheduler.stop func will run upon deletion when task is not nil.
@@ -323,7 +325,7 @@ func purgeResults(sessionName string, context Context, analysis bool) (value.Val
 }
 
 func listSessions(status string, context Context) (value.Value, error) {
-	query := "select * from system:tasks_cache where class = \"" + _CLASS + "\"" + queryDict()(status)
+	query := "SELECT * FROM system:tasks_cache WHERE class = \"" + _CLASS + "\"" + queryDict()(status)
 	r, _, err := context.(Context).EvaluateStatement(query, nil, nil, false, true)
 	if err != nil {
 		return nil, err
