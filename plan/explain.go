@@ -10,18 +10,22 @@ package plan
 
 import (
 	"encoding/json"
+
+	"github.com/couchbase/query/algebra"
 )
 
 type Explain struct {
 	execution
-	op   Operator
-	text string
+	op         Operator
+	text       string
+	optimHints *algebra.OptimHints
 }
 
-func NewExplain(op Operator, text string) *Explain {
+func NewExplain(op Operator, text string, optimHints *algebra.OptimHints) *Explain {
 	return &Explain{
-		op:   op,
-		text: text,
+		op:         op,
+		text:       text,
+		optimHints: optimHints,
 	}
 }
 
@@ -56,6 +60,9 @@ func (this *Explain) MarshalBase(f func(map[string]interface{})) map[string]inte
 		f(r)
 	} else {
 		r["plan"] = this.op
+		if this.optimHints != nil {
+			r["optimizer_hints"] = this.optimHints
+		}
 	}
 	return r
 }
@@ -66,6 +73,7 @@ func (this *Explain) UnmarshalJSON(body []byte) error {
 		Text        string          `json:"text"`
 		Cost        float64         `json:"cost"`
 		Cardinality float64         `json:"cardinality"`
+		OptimHints  json.RawMessage `json:"optimizer_hints"`
 	}
 
 	var op_type struct {
@@ -92,6 +100,8 @@ func (this *Explain) UnmarshalJSON(body []byte) error {
 	// Cost/cardinality is included in the explain plan so it's easy to
 	// see the overall cost/cardinality for the entire plan, there is
 	// no need to put the info anywhere
+
+	// Optimizer hints is printed in explain for informational purpose only
 
 	this.op, err = MakeOperator(op_type.Operator, _unmarshalled.Op)
 	return err

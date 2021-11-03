@@ -10,6 +10,8 @@ package algebra
 
 import (
 	"encoding/json"
+	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/couchbase/query/datastore"
@@ -39,27 +41,37 @@ const (
 )
 
 const (
-	INVALID_HINT            = "Invalid hint name: "
-	MISSING_ARG             = "Missing argument for "
-	EXTRA_ARG               = "Argument not expected: "
-	INVALID_SLASH           = "Invalid '/' found in "
-	EXTRA_SLASH             = "Extra '/' found in "
-	INVALID_HASH_OPTION     = "Invalid hash option (BUILD or PROBE only):  "
-	INVALID_KEYSPACE        = "Invalid keyspace specified: "
-	DUPLICATED_JOIN_HINT    = "Duplciated join hint specified for keyspace: "
-	DUPLICATED_INDEX_HINT   = "Duplicated index or index_fts hint specified for keyspace: "
-	NON_KEYSPACE_INDEX_HINT = "Index or index_fts hint specified on non-keyspace: "
+	INVALID_HINT                = "Invalid hint name"
+	MISSING_ARG                 = "Missing argument for "
+	EXTRA_ARG                   = "Argument not expected: "
+	INVALID_SLASH               = "Invalid '/' found in "
+	EXTRA_SLASH                 = "Extra '/' found in "
+	INVALID_HASH_OPTION         = "Invalid hash option (BUILD or PROBE only):  "
+	INVALID_KEYSPACE            = "Invalid keyspace specified: "
+	DUPLICATED_JOIN_HINT        = "Duplciated join hint specified for keyspace: "
+	DUPLICATED_INDEX_HINT       = "Duplicated INDEX hint specified for keyspace: "
+	DUPLICATED_INDEX_FTS_HINT   = "Duplicated INDEX_FTS hint specified for keyspace: "
+	NON_KEYSPACE_INDEX_HINT     = "INDEX hint specified on non-keyspace: "
+	NON_KEYSPACE_INDEX_FTS_HINT = "INDEX_FTS hint specified on non-keyspace: "
+	HASH_JOIN_NOT_AVAILABLE     = "Hash Join/Nest is not supported"
+	INDEX_HINT_NOT_FOLLOWED     = "INDEX hint cannot be followed"
+	INDEX_FTS_HINT_NOT_FOLLOWED = "INDEX_FTS hint cannot be followed"
+	USE_NL_HINT_NOT_FOLLOWED    = "USE_NL hint cannot be followed"
+	USE_HASH_HINT_NOT_FOLLOWED  = "USE_HASH hint cannot be followed"
+	ORDERED_HINT_NOT_FOLLOWED   = "ORDERED hint cannot be followed"
 )
 
 type OptimHint interface {
 	Type() HintType
 	FormatHint(jsonStyle bool) string
 	State() HintState
-	SetState(state HintState)
+	SetFollowed()
+	SetNotFollowed()
 	Error() string
 	SetError(err string)
 	Copy() OptimHint
 	Derived() bool
+	sortString() string
 }
 
 type OptimHints struct {
@@ -262,7 +274,7 @@ func NewOptimHint(hint_name string, hint_args []string) []OptimHint {
 		hints = []OptimHint{NewOrderedHint()}
 	default:
 		invalid = true
-		err = INVALID_HINT + hint_name
+		err = INVALID_HINT
 	}
 
 	if invalid || len(hints) == 0 {
@@ -331,8 +343,17 @@ func (this *HintIndex) State() HintState {
 	return this.state
 }
 
-func (this *HintIndex) SetState(state HintState) {
-	this.state = state
+func (this *HintIndex) SetFollowed() {
+	if this.state == HINT_STATE_UNKNOWN {
+		this.state = HINT_STATE_FOLLOWED
+	}
+}
+
+func (this *HintIndex) SetNotFollowed() {
+	if this.state == HINT_STATE_UNKNOWN {
+		this.state = HINT_STATE_NOT_FOLLOWED
+		this.err = INDEX_HINT_NOT_FOLLOWED
+	}
 }
 
 func (this *HintIndex) Error() string {
@@ -344,10 +365,12 @@ func (this *HintIndex) SetError(err string) {
 	this.state = HINT_STATE_ERROR
 }
 
+func (this *HintIndex) sortString() string {
+	return fmt.Sprintf("%d%d%t%s%d%s", this.Type(), this.state, this.derived, this.keyspace, len(this.indexes), this.err)
+}
+
 func (this *HintIndex) FormatHint(jsonStyle bool) string {
-	if this.derived {
-		return ""
-	} else if jsonStyle {
+	if jsonStyle {
 		hint := map[string]interface{}{
 			"index": this.formatJSON(),
 		}
@@ -359,7 +382,7 @@ func (this *HintIndex) FormatHint(jsonStyle bool) string {
 	for _, idx := range this.indexes {
 		args = append(args, idx.Name())
 	}
-	return formatHint("index", args)
+	return formatHint("INDEX", args)
 }
 
 func (this *HintIndex) formatJSON() map[string]interface{} {
@@ -434,8 +457,17 @@ func (this *HintFTSIndex) State() HintState {
 	return this.state
 }
 
-func (this *HintFTSIndex) SetState(state HintState) {
-	this.state = state
+func (this *HintFTSIndex) SetFollowed() {
+	if this.state == HINT_STATE_UNKNOWN {
+		this.state = HINT_STATE_FOLLOWED
+	}
+}
+
+func (this *HintFTSIndex) SetNotFollowed() {
+	if this.state == HINT_STATE_UNKNOWN {
+		this.state = HINT_STATE_NOT_FOLLOWED
+		this.err = INDEX_FTS_HINT_NOT_FOLLOWED
+	}
 }
 
 func (this *HintFTSIndex) Error() string {
@@ -447,10 +479,12 @@ func (this *HintFTSIndex) SetError(err string) {
 	this.state = HINT_STATE_ERROR
 }
 
+func (this *HintFTSIndex) sortString() string {
+	return fmt.Sprintf("%d%d%t%s%d%s", this.Type(), this.state, this.derived, this.keyspace, len(this.indexes), this.err)
+}
+
 func (this *HintFTSIndex) FormatHint(jsonStyle bool) string {
-	if this.derived {
-		return ""
-	} else if jsonStyle {
+	if jsonStyle {
 		hint := map[string]interface{}{
 			"index_fts": this.formatJSON(),
 		}
@@ -462,7 +496,7 @@ func (this *HintFTSIndex) FormatHint(jsonStyle bool) string {
 	for _, idx := range this.indexes {
 		args = append(args, idx.Name())
 	}
-	return formatHint("index_fts", args)
+	return formatHint("INDEX_FTS", args)
 }
 
 func (this *HintFTSIndex) formatJSON() map[string]interface{} {
@@ -523,8 +557,17 @@ func (this *HintNL) State() HintState {
 	return this.state
 }
 
-func (this *HintNL) SetState(state HintState) {
-	this.state = state
+func (this *HintNL) SetFollowed() {
+	if this.state == HINT_STATE_UNKNOWN {
+		this.state = HINT_STATE_FOLLOWED
+	}
+}
+
+func (this *HintNL) SetNotFollowed() {
+	if this.state == HINT_STATE_UNKNOWN {
+		this.state = HINT_STATE_NOT_FOLLOWED
+		this.err = USE_NL_HINT_NOT_FOLLOWED
+	}
 }
 
 func (this *HintNL) Error() string {
@@ -536,17 +579,19 @@ func (this *HintNL) SetError(err string) {
 	this.state = HINT_STATE_ERROR
 }
 
+func (this *HintNL) sortString() string {
+	return fmt.Sprintf("%d%d%t%s%s", this.Type(), this.state, this.derived, this.keyspace, this.err)
+}
+
 func (this *HintNL) FormatHint(jsonStyle bool) string {
-	if this.derived {
-		return ""
-	} else if jsonStyle {
+	if jsonStyle {
 		hint := map[string]interface{}{
 			"use_nl": this.formatJSON(),
 		}
 		bytes, _ := json.Marshal(hint)
 		return string(bytes)
 	}
-	return formatHint("use_nl", []string{this.keyspace})
+	return formatHint("USE_NL", []string{this.keyspace})
 }
 
 func (this *HintNL) formatJSON() map[string]interface{} {
@@ -616,8 +661,17 @@ func (this *HintHash) State() HintState {
 	return this.state
 }
 
-func (this *HintHash) SetState(state HintState) {
-	this.state = state
+func (this *HintHash) SetFollowed() {
+	if this.state == HINT_STATE_UNKNOWN {
+		this.state = HINT_STATE_FOLLOWED
+	}
+}
+
+func (this *HintHash) SetNotFollowed() {
+	if this.state == HINT_STATE_UNKNOWN {
+		this.state = HINT_STATE_NOT_FOLLOWED
+		this.err = USE_HASH_HINT_NOT_FOLLOWED
+	}
 }
 
 func (this *HintHash) Error() string {
@@ -629,10 +683,12 @@ func (this *HintHash) SetError(err string) {
 	this.state = HINT_STATE_ERROR
 }
 
+func (this *HintHash) sortString() string {
+	return fmt.Sprintf("%d%d%t%s%s", this.Type(), this.state, this.derived, this.keyspace, this.err)
+}
+
 func (this *HintHash) FormatHint(jsonStyle bool) string {
-	if this.derived {
-		return ""
-	} else if jsonStyle {
+	if jsonStyle {
 		hint := map[string]interface{}{
 			"use_hash": this.formatJSON(),
 		}
@@ -646,7 +702,7 @@ func (this *HintHash) FormatHint(jsonStyle bool) string {
 	case HASH_OPTION_PROBE:
 		s += "/PROBE"
 	}
-	return formatHint("use_hash", []string{s})
+	return formatHint("USE_HASH", []string{s})
 }
 
 func (this *HintHash) formatJSON() map[string]interface{} {
@@ -689,8 +745,17 @@ func (this *HintOrdered) State() HintState {
 	return this.state
 }
 
-func (this *HintOrdered) SetState(state HintState) {
-	this.state = state
+func (this *HintOrdered) SetFollowed() {
+	if this.state == HINT_STATE_UNKNOWN {
+		this.state = HINT_STATE_FOLLOWED
+	}
+}
+
+func (this *HintOrdered) SetNotFollowed() {
+	if this.state == HINT_STATE_UNKNOWN {
+		this.state = HINT_STATE_NOT_FOLLOWED
+		this.err = ORDERED_HINT_NOT_FOLLOWED
+	}
 }
 
 func (this *HintOrdered) Error() string {
@@ -702,12 +767,16 @@ func (this *HintOrdered) SetError(err string) {
 	this.state = HINT_STATE_ERROR
 }
 
+func (this *HintOrdered) sortString() string {
+	return fmt.Sprintf("%d%d%s", this.Type(), this.state, this.err)
+}
+
 func (this *HintOrdered) FormatHint(jsonStyle bool) string {
 	if jsonStyle {
 		bytes, _ := json.Marshal(this.formatJSON())
 		return string(bytes)
 	}
-	return formatHint("ordered", nil)
+	return formatHint("ORDERED", nil)
 }
 
 func (this *HintOrdered) formatJSON() map[string]interface{} {
@@ -770,7 +839,11 @@ func (this *HintInvalid) State() HintState {
 	return HINT_STATE_INVALID
 }
 
-func (this *HintInvalid) SetState(state HintState) {
+func (this *HintInvalid) SetFollowed() {
+	// no-op
+}
+
+func (this *HintInvalid) SetNotFollowed() {
 	// no-op
 }
 
@@ -782,12 +855,16 @@ func (this *HintInvalid) SetError(err string) {
 	this.err = err
 }
 
+func (this *HintInvalid) sortString() string {
+	return fmt.Sprintf("%d%d%s%s", this.Type(), this.State(), this.input, this.err)
+}
+
 func (this *HintInvalid) FormatHint(jsonStyle bool) string {
 	if jsonStyle && len(this.inputObj) != 0 {
 		bytes, _ := json.Marshal(this.inputObj)
 		return string(bytes)
 	}
-	return "invalid hint: " + this.input
+	return this.input
 }
 
 func (this *HintInvalid) formatJSON() map[string]interface{} {
@@ -864,7 +941,7 @@ func ParseObjectHints(object expression.Expression) []OptimHint {
 			r := map[string]interface{}{
 				k: v,
 			}
-			hints = genInvalidJSONHint(r, INVALID_HINT+k)
+			hints = genInvalidJSONHint(r, INVALID_HINT)
 		}
 
 		if len(hints) > 0 {
@@ -875,6 +952,12 @@ func ParseObjectHints(object expression.Expression) []OptimHint {
 	if len(optimHints) == 0 {
 		return nil
 	}
+
+	// JSON-style hints do not have order for multiple hints, sort the hints
+	// for explain purpose
+	sort.Slice(optimHints, func(i, j int) bool {
+		return optimHints[i].sortString() < optimHints[j].sortString()
+	})
 	return optimHints
 }
 
@@ -1063,7 +1146,6 @@ func newHints(val value.Value, procFunc func(fields map[string]interface{}) (Opt
 	}
 
 	return hints, false
-
 }
 
 func newOrderedHint(val value.Value) ([]OptimHint, bool) {
@@ -1071,4 +1153,62 @@ func newOrderedHint(val value.Value) ([]OptimHint, bool) {
 		return []OptimHint{NewOrderedHint()}, false
 	}
 	return nil, true
+}
+
+// when marshalling we put the optimizer hints in groups:
+// hints_followed, hints_not_followed, invalid_hints
+func (this *OptimHints) MarshalJSON() ([]byte, error) {
+	var followed, not_followed, invalid, errored, unknown []interface{}
+
+	for _, hint := range this.hints {
+		obj := formatOptimHint(hint, this.jsonStyle)
+		switch hint.State() {
+		case HINT_STATE_FOLLOWED:
+			followed = append(followed, obj)
+		case HINT_STATE_NOT_FOLLOWED:
+			not_followed = append(not_followed, obj)
+		case HINT_STATE_ERROR:
+			errored = append(errored, obj)
+		case HINT_STATE_INVALID:
+			invalid = append(invalid, obj)
+		case HINT_STATE_UNKNOWN:
+			unknown = append(unknown, obj)
+		}
+	}
+
+	r := make(map[string]interface{}, 5)
+	if len(followed) > 0 {
+		r["hints_followed"] = followed
+	}
+	if len(not_followed) > 0 {
+		r["hints_not_followed"] = not_followed
+	}
+	if len(errored) > 0 {
+		r["hints_with_error"] = errored
+	}
+	if len(invalid) > 0 {
+		r["invalid_hints"] = invalid
+	}
+	if len(unknown) > 0 {
+		r["hints_status_unknown"] = unknown
+	}
+
+	return json.Marshal(r)
+}
+
+func formatOptimHint(hint OptimHint, jsonStyle bool) interface{} {
+	err := hint.Error()
+	if jsonStyle {
+		r := make(map[string]interface{}, 2)
+		r["hint"] = hint.FormatHint(jsonStyle)
+		if err != "" {
+			r["error"] = err
+		}
+		return r
+	}
+	s := hint.FormatHint(false)
+	if err != "" {
+		s += ": " + err
+	}
+	return s
 }

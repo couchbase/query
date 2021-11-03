@@ -21,21 +21,20 @@ Represents the ANSI JOIN clause. AnsiJoins create new input objects by
 combining two or more source objects.  They can be chained.
 */
 type AnsiJoin struct {
-	left      FromTerm
-	right     SimpleFromTerm
-	outer     bool
-	pushable  bool // if not outer join, is the ON-clause pushable
-	onclause  expression.Expression
-	hintError string
+	left     FromTerm
+	right    SimpleFromTerm
+	outer    bool
+	pushable bool // if not outer join, is the ON-clause pushable
+	onclause expression.Expression
 }
 
 func NewAnsiJoin(left FromTerm, outer bool, right SimpleFromTerm, onclause expression.Expression) *AnsiJoin {
-	return &AnsiJoin{left, right, outer, false, onclause, ""}
+	return &AnsiJoin{left, right, outer, false, onclause}
 }
 
 func NewAnsiRightJoin(left SimpleFromTerm, right SimpleFromTerm, onclause expression.Expression) *AnsiJoin {
 	TransferJoinHint(left, right)
-	return &AnsiJoin{right, left, true, false, onclause, ""}
+	return &AnsiJoin{right, left, true, false, onclause}
 }
 
 func TransferJoinHint(left SimpleFromTerm, right SimpleFromTerm) {
@@ -232,22 +231,6 @@ Set pushable ON-clause
 */
 func (this *AnsiJoin) SetPushable(pushable bool) {
 	this.pushable = pushable
-}
-
-/*
-Hint Error
-*/
-func (this *AnsiJoin) HintError() string {
-	return this.hintError
-}
-
-/*
-Set Hint Error
-*/
-func (this *AnsiJoin) SetHintError(hintError string) {
-	if this.hintError == "" {
-		this.hintError = hintError
-	}
 }
 
 /*

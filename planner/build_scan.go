@@ -54,6 +54,13 @@ func (this *builder) selectScan(keyspace datastore.Keyspace, node *algebra.Keysp
 		return nil, err
 	}
 
+	if !this.joinEnum() && !node.IsAnsiJoinOp() {
+		err = this.markOptimHints(node.Alias())
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	if secondary != nil {
 		return secondary, nil
 	}
@@ -73,6 +80,11 @@ func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.Keyspa
 	join := node.IsAnsiJoinOp()
 	hash := node.IsUnderHash()
 
+	baseKeyspace, ok := this.baseKeyspaces[node.Alias()]
+	if !ok {
+		return nil, nil, errors.NewPlanInternalError(fmt.Sprintf("buildScan: cannot find keyspace %s", node.Alias()))
+	}
+
 	var hints, virtualIndexes []datastore.Index
 	if this.indexAdvisor {
 		virtualIndexes = this.getIdxCandidates()
@@ -81,15 +93,14 @@ func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.Keyspa
 		hints, err = allHints(keyspace, node.Indexes(), virtualIndexes, this.context.IndexApiVersion(), this.context.UseFts())
 		if nil != hints {
 			defer _INDEX_POOL.Put(hints)
+		} else if len(node.Indexes()) > 0 {
+			// if index hints are specified but none of the indexes are valid
+			// mark index hint error
+			baseKeyspace.SetIndexHintError()
 		}
 		if err != nil {
 			return
 		}
-	}
-
-	baseKeyspace, ok := this.baseKeyspaces[node.Alias()]
-	if !ok {
-		return nil, nil, errors.NewPlanInternalError(fmt.Sprintf("buildScan: cannot find keyspace %s", node.Alias()))
 	}
 
 	hasDeltaKeyspace := this.context.HasDeltaKeyspace(baseKeyspace.Keyspace())
@@ -199,6 +210,8 @@ func (this *builder) buildPredicateScan(keyspace datastore.Keyspace, node *algeb
 		if secondary != nil || primary != nil || err != nil {
 			return
 		}
+		// no scan built with optimizer hints - mark index hint error
+		baseKeyspace.SetIndexHintError()
 	}
 
 	// collect SEARCH() functions that depends on current keyspace in the predicate

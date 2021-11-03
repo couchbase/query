@@ -39,7 +39,10 @@ func TestHints(t *testing.T) {
 	fmt.Println("Running Hints test cases")
 
 	// simple hints
-	runMatch("case_hints_simple.json", false, false, qc, t)
+	runMatch("case_hints_simple.json", false, true, qc, t)
+
+	// hints with errors
+	runMatch("case_hints_errors.json", false, true, qc, t)
 
 	fmt.Println("Dropping indexes")
 	runStmt(qc, "DROP INDEX customer.cust_lastName_firstName_customerId")

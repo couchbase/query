@@ -15,13 +15,15 @@ import (
 )
 
 const (
-	KS_PLAN_DONE     = 1 << iota // planning is done for this keyspace
-	KS_ONCLAUSE_ONLY             // use ON-clause only for planning
-	KS_IS_UNNEST                 // unnest alias
-	KS_IN_CORR_SUBQ              // in correlated subquery
-	KS_HAS_DOC_COUNT             // docCount retrieved for keyspace
-	KS_PRIMARY_TERM              // primary term
-	KS_OUTER_FILTERS             // OUTER filters have been classified
+	KS_PLAN_DONE        = 1 << iota // planning is done for this keyspace
+	KS_ONCLAUSE_ONLY                // use ON-clause only for planning
+	KS_IS_UNNEST                    // unnest alias
+	KS_IN_CORR_SUBQ                 // in correlated subquery
+	KS_HAS_DOC_COUNT                // docCount retrieved for keyspace
+	KS_PRIMARY_TERM                 // primary term
+	KS_OUTER_FILTERS                // OUTER filters have been classified
+	KS_INDEX_HINT_ERROR             // index hint error
+	KS_JOIN_HINT_ERROR              // join hint error
 )
 
 type BaseKeyspace struct {
@@ -183,17 +185,23 @@ func copyBaseKeyspaces(src map[string]*BaseKeyspace, copyFilter bool) map[string
 				}
 			}
 		}
+		// The optimizer hints kept in BaseKeyspace is a slice of pointers that points to
+		// the "original" hints in a statement. The optimizer/planner subsequently
+		// modify the hints (e.g. change hint state) based on plans being generated.
+		// Thus when BaseKeyspace is being copied we copy the slice but the pointers
+		// in the slice remains the original pointers, such that any modification
+		// through BaseKeyspace is reflected in the original hint.
 		if len(kspace.indexHints) > 0 {
 			indexHints := make([]algebra.OptimHint, 0, len(kspace.indexHints))
 			for _, hint := range kspace.indexHints {
-				indexHints = append(indexHints, hint.Copy())
+				indexHints = append(indexHints, hint)
 			}
 			dest[kspace.name].indexHints = indexHints
 		}
 		if len(kspace.joinHints) > 0 {
 			joinHints := make([]algebra.OptimHint, 0, len(kspace.joinHints))
 			for _, hint := range kspace.joinHints {
-				joinHints = append(joinHints, hint.Copy())
+				joinHints = append(joinHints, hint)
 			}
 			dest[kspace.name].joinHints = joinHints
 		}
@@ -349,6 +357,38 @@ func (this *BaseKeyspace) AddJoinHint(joinHint algebra.OptimHint) {
 
 func (this *BaseKeyspace) JoinHints() []algebra.OptimHint {
 	return this.joinHints
+}
+
+func (this *BaseKeyspace) HasIndexHintError() bool {
+	return (this.ksFlags & KS_INDEX_HINT_ERROR) != 0
+}
+
+func (this *BaseKeyspace) SetIndexHintError() {
+	this.ksFlags |= KS_INDEX_HINT_ERROR
+}
+
+func (this *BaseKeyspace) UnsetIndexHintError() {
+	this.ksFlags &^= KS_INDEX_HINT_ERROR
+}
+
+func (this *BaseKeyspace) HasJoinHintError() bool {
+	return (this.ksFlags & KS_JOIN_HINT_ERROR) != 0
+}
+
+func (this *BaseKeyspace) SetJoinHintError() {
+	this.ksFlags |= KS_JOIN_HINT_ERROR
+}
+
+func (this *BaseKeyspace) UnsetJoinHintError() {
+	this.ksFlags &^= KS_JOIN_HINT_ERROR
+}
+
+func (this *BaseKeyspace) MarkHashUnavailable() {
+	for _, hint := range this.joinHints {
+		if hint.Type() == algebra.HINT_HASH {
+			hint.SetError(algebra.HASH_JOIN_NOT_AVAILABLE)
+		}
+	}
 }
 
 func GetKeyspaceName(baseKeyspaces map[string]*BaseKeyspace, alias string) string {

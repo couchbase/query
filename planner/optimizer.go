@@ -53,6 +53,7 @@ type Builder interface {
 		[]plan.Operator, []plan.Operator, []plan.CoveringOperator, expression.Expression, error)
 
 	CheckPushableOnclause(onclause expression.Expression) bool
+	MarkOptimHints()
 }
 
 func (this *builder) GetBaseKeyspaces() map[string]*base.BaseKeyspace {
@@ -335,4 +336,10 @@ func (this *builder) BuildUnnest(unnest *algebra.Unnest, outerPlan, outerSubPlan
 	}
 
 	return this.children, this.subChildren, this.coveringScans, this.filter, nil
+}
+
+func (this *builder) MarkOptimHints() {
+	for alias, _ := range this.baseKeyspaces {
+		this.markOptimHints(alias)
+	}
 }

@@ -11,15 +11,12 @@ package planner
 import (
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/errors"
 	base "github.com/couchbase/query/plannerbase"
 )
 
 // derive new OptimHints based on USE INDEX and USE NL/USE HASH specified in the query
 func deriveOptimHints(baseKeyspaces map[string]*base.BaseKeyspace, optimHints *algebra.OptimHints) *algebra.OptimHints {
-	if optimHints == nil {
-		optimHints = algebra.NewOptimHints(nil, false)
-	}
-
 	var newHints []algebra.OptimHint
 
 	for alias, baseKeyspace := range baseKeyspaces {
@@ -76,6 +73,10 @@ func deriveOptimHints(baseKeyspaces map[string]*base.BaseKeyspace, optimHints *a
 	}
 
 	if len(newHints) > 0 {
+		if optimHints == nil {
+			optimHints = algebra.NewOptimHints(nil, false)
+		}
+
 		optimHints.AddHints(newHints)
 	}
 
@@ -156,17 +157,17 @@ func processOptimHints(baseKeyspaces map[string]*base.BaseKeyspace, optimHints *
 		}
 		if len(indexes) > 0 {
 			if hasDerivedHint(baseKeyspace.IndexHints()) {
-				hint.SetError(algebra.DUPLICATED_INDEX_HINT + keyspace)
+				setDuplicateIndexHintError(hint, keyspace)
 				for _, curHint := range baseKeyspace.IndexHints() {
 					if !curHint.Derived() {
 						continue
 					}
-					curHint.SetError(algebra.DUPLICATED_INDEX_HINT + keyspace)
+					setDuplicateIndexHintError(curHint, keyspace)
 				}
 			} else {
 				ksterm := algebra.GetKeyspaceTerm(node)
 				if ksterm == nil {
-					hint.SetError(algebra.NON_KEYSPACE_INDEX_HINT + keyspace)
+					setNonKeyspaceIndexHintError(hint, keyspace)
 				} else {
 					curIndexes := ksterm.Indexes()
 					curMap := make(map[string]bool, len(curIndexes)+len(indexes))
@@ -206,9 +207,77 @@ func hasOrderedHint(optHints *algebra.OptimHints) bool {
 	if optHints != nil {
 		for _, hint := range optHints.Hints() {
 			if hint.Type() == algebra.HINT_ORDERED {
+				// ordered hint is currently always followed
+				hint.SetFollowed()
 				return true
 			}
 		}
 	}
 	return false
+}
+
+func setDuplicateIndexHintError(hint algebra.OptimHint, keyspace string) {
+	switch hint := hint.(type) {
+	case *algebra.HintIndex:
+		hint.SetError(algebra.DUPLICATED_INDEX_HINT + keyspace)
+	case *algebra.HintFTSIndex:
+		hint.SetError(algebra.DUPLICATED_INDEX_FTS_HINT + keyspace)
+	}
+}
+
+func setNonKeyspaceIndexHintError(hint algebra.OptimHint, keyspace string) {
+	switch hint := hint.(type) {
+	case *algebra.HintIndex:
+		hint.SetError(algebra.NON_KEYSPACE_INDEX_HINT + keyspace)
+	case *algebra.HintFTSIndex:
+		hint.SetError(algebra.NON_KEYSPACE_INDEX_FTS_HINT + keyspace)
+	}
+}
+
+// Based on hint error flags in BaseKeyspace, mark the original hint (as FOLLOWED or NOT_FOLLOWED).
+// The optimizer hints kept in BaseKeyspace are slices of pointers to the original hints in the
+// statement, thus any modifications done here are reflected in the original hints.
+// Note that when BaseKeyspace is copied we only copy the hint slices but keep the original hint
+// pointers, thus we should only be marking optimizer hints when it's safe to do so, i.e. when
+// the planning for a specific keyspace is "final". For RBO this is done as we consider each
+// keyspace, for join enumeration this is done when a final plan is chosen.
+func (this *builder) markOptimHints(alias string) (err error) {
+	baseKeyspace, ok := this.baseKeyspaces[alias]
+	if !ok {
+		return errors.NewPlanInternalError("markOptimHintErrors: invalid alias specified: " + alias)
+	}
+
+	indexHintError := baseKeyspace.HasIndexHintError()
+	for _, hint := range baseKeyspace.IndexHints() {
+		switch hint.State() {
+		case algebra.HINT_STATE_ERROR, algebra.HINT_STATE_INVALID, algebra.HINT_STATE_FOLLOWED, algebra.HINT_STATE_NOT_FOLLOWED:
+			// nothing to do
+		case algebra.HINT_STATE_UNKNOWN:
+			if indexHintError {
+				hint.SetNotFollowed()
+			} else {
+				hint.SetFollowed()
+			}
+		default:
+			return errors.NewPlanInternalError("markOptimHints: invalid hint state")
+		}
+	}
+
+	joinHintError := baseKeyspace.HasJoinHintError()
+	for _, hint := range baseKeyspace.JoinHints() {
+		switch hint.State() {
+		case algebra.HINT_STATE_ERROR, algebra.HINT_STATE_INVALID, algebra.HINT_STATE_FOLLOWED, algebra.HINT_STATE_NOT_FOLLOWED:
+			// nothing to do
+		case algebra.HINT_STATE_UNKNOWN:
+			if joinHintError {
+				hint.SetNotFollowed()
+			} else {
+				hint.SetFollowed()
+			}
+		default:
+			return errors.NewPlanInternalError("markOptimHints: invalid hint state")
+		}
+	}
+
+	return nil
 }

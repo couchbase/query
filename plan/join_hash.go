@@ -25,7 +25,6 @@ type HashJoin struct {
 	buildExprs   expression.Expressions
 	probeExprs   expression.Expressions
 	buildAliases []string
-	hintError    string
 	filter       expression.Expression
 }
 
@@ -39,7 +38,6 @@ func NewHashJoin(join *algebra.AnsiJoin, child Operator, buildExprs, probeExprs 
 		buildExprs:   buildExprs,
 		probeExprs:   probeExprs,
 		buildAliases: buildAliases,
-		hintError:    join.HintError(),
 		filter:       filter,
 	}
 	setOptEstimate(&rv.optEstimate, cost, cardinality, size, frCost)
@@ -90,10 +88,6 @@ func (this *HashJoin) BuildAliases() []string {
 	return this.buildAliases
 }
 
-func (this *HashJoin) HintError() string {
-	return this.hintError
-}
-
 func (this *HashJoin) Filter() expression.Expression {
 	return this.filter
 }
@@ -134,10 +128,6 @@ func (this *HashJoin) MarshalBase(f func(map[string]interface{})) map[string]int
 
 	r["build_aliases"] = this.buildAliases
 
-	if this.hintError != "" {
-		r["hint_not_followed"] = this.hintError
-	}
-
 	if this.filter != nil {
 		r["filter"] = expression.NewStringer().Visit(this.filter)
 	}
@@ -162,7 +152,6 @@ func (this *HashJoin) UnmarshalJSON(body []byte) error {
 		BuildExprs   []string               `json:"build_exprs"`
 		ProbeExprs   []string               `json:"probe_exprs"`
 		BuildAliases []string               `json:"build_aliases"`
-		HintError    string                 `json:"hint_not_followed"`
 		Filter       string                 `json:"filter"`
 		OptEstimate  map[string]interface{} `json:"optimizer_estimates"`
 		Child        json.RawMessage        `json:"~child"`
@@ -201,7 +190,6 @@ func (this *HashJoin) UnmarshalJSON(body []byte) error {
 	}
 
 	this.buildAliases = _unmarshalled.BuildAliases
-	this.hintError = _unmarshalled.HintError
 
 	if _unmarshalled.Filter != "" {
 		this.filter, err = parser.Parse(_unmarshalled.Filter)

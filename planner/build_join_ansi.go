@@ -26,6 +26,13 @@ func (this *builder) buildAnsiJoin(node *algebra.AnsiJoin) (op plan.Operator, er
 		return nil, err
 	}
 
+	if !this.joinEnum() {
+		err = this.markOptimHints(node.Alias())
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	if this.useCBO && op.Cost() > 0.0 && op.Cardinality() > 0.0 {
 		// once the join is finalized, properly mark plan flags on the right-hand side
 		err = this.markPlanFlags(op, node.Right())
@@ -38,6 +45,13 @@ func (this *builder) buildAnsiNest(node *algebra.AnsiNest) (op plan.Operator, er
 	op, err = this.buildAnsiNestOp(node)
 	if err != nil {
 		return nil, err
+	}
+
+	if !this.joinEnum() {
+		err = this.markOptimHints(node.Alias())
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if this.useCBO && op.Cost() > 0.0 && op.Cardinality() > 0.0 {
@@ -83,6 +97,16 @@ func (this *builder) buildAnsiJoinOp(node *algebra.AnsiJoin) (op plan.Operator, 
 		origOnclause := node.Onclause()
 		hjCost := OPT_COST_NOT_AVAIL
 		nlCost := OPT_COST_NOT_AVAIL
+
+		// When optimizer hints are specified, in case of CBO when we consider
+		// both hash join and nested-loop join, if index hint error occurs we
+		// remember the index hint error here and reset the flag on baseKeyspace,
+		// since both hash join and nested-loop join build the scan on the inner
+		// side. After we've chosen either hash join or nested-loop join, we then
+		// re-set the necessary hint error flag on baseKeyspace.
+		hjIndexHintError := false
+		nlIndexHintError := false
+
 		useFr := false
 		if useCBO && this.hasBuilderFlag(BUILDER_HAS_LIMIT) &&
 			!this.hasBuilderFlag(BUILDER_HAS_GROUP|BUILDER_HAS_ORDER|BUILDER_HAS_WINDOW_AGGS) {
@@ -116,10 +140,18 @@ func (this *builder) buildAnsiJoinOp(node *algebra.AnsiJoin) (op plan.Operator, 
 						}
 						hjps = this.saveJoinPlannerState()
 						hjOnclause = node.Onclause()
+						if baseKeyspace.HasIndexHintError() {
+							hjIndexHintError = true
+							baseKeyspace.UnsetIndexHintError()
+						}
 					} else {
 						return hjoin, nil
 					}
 				}
+			}
+		} else {
+			if right.PreferHash() {
+				baseKeyspace.MarkHashUnavailable()
 			}
 		}
 
@@ -134,6 +166,11 @@ func (this *builder) buildAnsiJoinOp(node *algebra.AnsiJoin) (op plan.Operator, 
 			return nil, err
 		}
 
+		if baseKeyspace.HasIndexHintError() {
+			nlIndexHintError = true
+			baseKeyspace.UnsetIndexHintError()
+		}
+
 		if len(scans) > 0 {
 			if useCBO && !right.PreferNL() {
 				if useFr {
@@ -145,12 +182,15 @@ func (this *builder) buildAnsiJoinOp(node *algebra.AnsiJoin) (op plan.Operator, 
 					this.restoreJoinPlannerState(hjps)
 					node.SetOnclause(hjOnclause)
 					right.UnsetUnderNL()
+					if hjIndexHintError {
+						baseKeyspace.SetIndexHintError()
+					}
 					return hjoin, nil
 				}
 			}
 
 			if right.PreferHash() && !this.joinEnum() {
-				node.SetHintError(algebra.USE_HASH_NOT_FOLLOWED)
+				baseKeyspace.SetJoinHintError()
 			}
 			if newOnclause != nil {
 				node.SetOnclause(newOnclause)
@@ -164,14 +204,20 @@ func (this *builder) buildAnsiJoinOp(node *algebra.AnsiJoin) (op plan.Operator, 
 			if this.joinEnum() {
 				right.UnsetUnderNL()
 			}
+			if nlIndexHintError {
+				baseKeyspace.SetIndexHintError()
+			}
 			return plan.NewNLJoin(node, plan.NewSequence(scans...), newFilter, cost, cardinality, size, frCost), nil
 		} else if hjCost > 0.0 {
 			this.restoreJoinPlannerState(hjps)
 			node.SetOnclause(hjOnclause)
 			if right.PreferNL() && !this.joinEnum() {
-				node.SetHintError(algebra.USE_NL_NOT_FOLLOWED)
+				baseKeyspace.SetJoinHintError()
 			}
 			right.UnsetUnderNL()
+			if hjIndexHintError {
+				baseKeyspace.SetIndexHintError()
+			}
 			return hjoin, nil
 		} else if err != nil && useCBO {
 			// error occurred and neither nested-loop join nor hash join is available
@@ -217,6 +263,9 @@ func (this *builder) buildAnsiJoinOp(node *algebra.AnsiJoin) (op plan.Operator, 
 			rightKeyspace := base.GetKeyspaceName(this.baseKeyspaces, right.Alias())
 			cost, cardinality, size, frCost = getLookupJoinCost(this.lastOp, node.Outer(),
 				newKeyspaceTerm, rightKeyspace)
+		}
+		if nlIndexHintError {
+			baseKeyspace.SetIndexHintError()
 		}
 		return plan.NewJoinFromAnsi(keyspace, newKeyspaceTerm, node.Outer(), onFilter, cost, cardinality, size, frCost), nil
 	case *algebra.ExpressionTerm, *algebra.SubqueryTerm:
@@ -297,6 +346,15 @@ func (this *builder) buildAnsiNestOp(node *algebra.AnsiNest) (op plan.Operator, 
 		origOnclause := node.Onclause()
 		hnCost := float64(OPT_COST_NOT_AVAIL)
 
+		// When optimizer hints are specified, in case of CBO when we consider
+		// both hash nest and nested-loop nest, if index hint error occurs we
+		// remember the index hint error here and reset the flag on baseKeyspace,
+		// since both hash nest and nested-loop nest build the scan on the inner
+		// side. After we've chosen either hash nest or nested-loop nest, we then
+		// re-set the necessary hint error flag on baseKeyspace.
+		hjIndexHintError := false
+		nlIndexHintError := false
+
 		if util.IsFeatureEnabled(this.context.FeatureControls(), util.N1QL_HASH_JOIN) {
 			tryHash := false
 			if useCBO {
@@ -320,10 +378,18 @@ func (this *builder) buildAnsiNestOp(node *algebra.AnsiNest) (op plan.Operator, 
 						hnCost = hnest.Cost()
 						hjps = this.saveJoinPlannerState()
 						hnOnclause = node.Onclause()
+						if baseKeyspace.HasIndexHintError() {
+							hjIndexHintError = true
+							baseKeyspace.UnsetIndexHintError()
+						}
 					} else {
 						return hnest, nil
 					}
 				}
+			}
+		} else {
+			if right.PreferHash() {
+				baseKeyspace.MarkHashUnavailable()
 			}
 		}
 
@@ -338,16 +404,24 @@ func (this *builder) buildAnsiNestOp(node *algebra.AnsiNest) (op plan.Operator, 
 			return nil, err
 		}
 
+		if baseKeyspace.HasIndexHintError() {
+			nlIndexHintError = true
+			baseKeyspace.UnsetIndexHintError()
+		}
+
 		if len(scans) > 0 {
 			if useCBO && !right.PreferNL() && (hnCost > 0.0) && (cost > hnCost) {
 				this.restoreJoinPlannerState(hjps)
 				node.SetOnclause(hnOnclause)
 				right.UnsetUnderNL()
+				if hjIndexHintError {
+					baseKeyspace.SetIndexHintError()
+				}
 				return hnest, nil
 			}
 
 			if right.PreferHash() && !this.joinEnum() {
-				node.SetHintError(algebra.USE_HASH_NOT_FOLLOWED)
+				baseKeyspace.SetJoinHintError()
 			}
 			if newOnclause != nil {
 				node.SetOnclause(newOnclause)
@@ -361,14 +435,20 @@ func (this *builder) buildAnsiNestOp(node *algebra.AnsiNest) (op plan.Operator, 
 			if this.joinEnum() {
 				right.UnsetUnderNL()
 			}
+			if nlIndexHintError {
+				baseKeyspace.SetIndexHintError()
+			}
 			return plan.NewNLNest(node, plan.NewSequence(scans...), newFilter, cost, cardinality, size, frCost), nil
 		} else if hnCost > 0.0 {
 			this.restoreJoinPlannerState(hjps)
 			node.SetOnclause(hnOnclause)
 			if right.PreferNL() && !this.joinEnum() {
-				node.SetHintError(algebra.USE_NL_NOT_FOLLOWED)
+				baseKeyspace.SetJoinHintError()
 			}
 			right.UnsetUnderNL()
+			if hjIndexHintError {
+				baseKeyspace.SetIndexHintError()
+			}
 			return hnest, nil
 		} else if err != nil && useCBO {
 			// error occurred and neither nested-loop join nor hash join is available
@@ -414,6 +494,9 @@ func (this *builder) buildAnsiNestOp(node *algebra.AnsiNest) (op plan.Operator, 
 			rightKeyspace := base.GetKeyspaceName(this.baseKeyspaces, right.Alias())
 			cost, cardinality, size, frCost = getLookupNestCost(this.lastOp, node.Outer(),
 				newKeyspaceTerm, rightKeyspace)
+		}
+		if nlIndexHintError {
+			baseKeyspace.SetIndexHintError()
 		}
 		return plan.NewNestFromAnsi(keyspace, newKeyspaceTerm, node.Outer(), onFilter, cost, cardinality, size, frCost), nil
 	case *algebra.ExpressionTerm, *algebra.SubqueryTerm:

@@ -19,23 +19,21 @@ import (
 type NLJoin struct {
 	readonly
 	optEstimate
-	outer     bool
-	alias     string
-	onclause  expression.Expression
-	hintError string
-	child     Operator
-	filter    expression.Expression
+	outer    bool
+	alias    string
+	onclause expression.Expression
+	child    Operator
+	filter   expression.Expression
 }
 
 func NewNLJoin(join *algebra.AnsiJoin, child Operator, filter expression.Expression,
 	cost, cardinality float64, size int64, frCost float64) *NLJoin {
 	rv := &NLJoin{
-		outer:     join.Outer(),
-		alias:     join.Alias(),
-		onclause:  join.Onclause(),
-		hintError: join.HintError(),
-		child:     child,
-		filter:    filter,
+		outer:    join.Outer(),
+		alias:    join.Alias(),
+		onclause: join.Onclause(),
+		child:    child,
+		filter:   filter,
 	}
 	setOptEstimate(&rv.optEstimate, cost, cardinality, size, frCost)
 	return rv
@@ -63,10 +61,6 @@ func (this *NLJoin) Onclause() expression.Expression {
 
 func (this *NLJoin) SetOnclause(onclause expression.Expression) {
 	this.onclause = onclause
-}
-
-func (this *NLJoin) HintError() string {
-	return this.hintError
 }
 
 func (this *NLJoin) Child() Operator {
@@ -100,10 +94,6 @@ func (this *NLJoin) MarshalBase(f func(map[string]interface{})) map[string]inter
 		r["outer"] = this.outer
 	}
 
-	if this.hintError != "" {
-		r["hint_not_followed"] = this.hintError
-	}
-
 	if this.filter != nil {
 		r["filter"] = expression.NewStringer().Visit(this.filter)
 	}
@@ -126,7 +116,6 @@ func (this *NLJoin) UnmarshalJSON(body []byte) error {
 		Onclause    string                 `json:"on_clause"`
 		Outer       bool                   `json:"outer"`
 		Alias       string                 `json:"alias"`
-		HintError   string                 `json:"hint_not_followed"`
 		Filter      string                 `json:"filter"`
 		OptEstimate map[string]interface{} `json:"optimizer_estimates"`
 		Child       json.RawMessage        `json:"~child"`
@@ -146,7 +135,6 @@ func (this *NLJoin) UnmarshalJSON(body []byte) error {
 
 	this.outer = _unmarshalled.Outer
 	this.alias = _unmarshalled.Alias
-	this.hintError = _unmarshalled.HintError
 
 	if _unmarshalled.Filter != "" {
 		this.filter, err = parser.Parse(_unmarshalled.Filter)

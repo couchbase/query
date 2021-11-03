@@ -25,7 +25,6 @@ type HashNest struct {
 	buildExprs expression.Expressions
 	probeExprs expression.Expressions
 	buildAlias string
-	hintError  string
 	filter     expression.Expression
 }
 
@@ -39,7 +38,6 @@ func NewHashNest(nest *algebra.AnsiNest, child Operator, buildExprs, probeExprs 
 		buildExprs: buildExprs,
 		probeExprs: probeExprs,
 		buildAlias: buildAlias,
-		hintError:  nest.HintError(),
 		filter:     filter,
 	}
 	setOptEstimate(&rv.optEstimate, cost, cardinality, size, frCost)
@@ -90,10 +88,6 @@ func (this *HashNest) BuildAlias() string {
 	return this.buildAlias
 }
 
-func (this *HashNest) HintError() string {
-	return this.hintError
-}
-
 func (this *HashNest) Filter() expression.Expression {
 	return this.filter
 }
@@ -132,10 +126,6 @@ func (this *HashNest) MarshalBase(f func(map[string]interface{})) map[string]int
 
 	r["build_alias"] = this.buildAlias
 
-	if this.hintError != "" {
-		r["hint_not_followed"] = this.hintError
-	}
-
 	if this.filter != nil {
 		r["filter"] = expression.NewStringer().Visit(this.filter)
 	}
@@ -160,7 +150,6 @@ func (this *HashNest) UnmarshalJSON(body []byte) error {
 		BuildExprs  []string               `json:"build_exprs"`
 		ProbeExprs  []string               `json:"probe_exprs"`
 		BuildAlias  string                 `json:"build_alias"`
-		HintError   string                 `json:"hint_not_followed"`
 		Filter      string                 `json:"filter"`
 		OptEstimate map[string]interface{} `json:"optimizer_estimates"`
 		Child       json.RawMessage        `json:"~child"`
@@ -199,7 +188,6 @@ func (this *HashNest) UnmarshalJSON(body []byte) error {
 	}
 
 	this.buildAlias = _unmarshalled.BuildAlias
-	this.hintError = _unmarshalled.HintError
 
 	if _unmarshalled.Filter != "" {
 		this.filter, err = parser.Parse(_unmarshalled.Filter)

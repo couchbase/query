@@ -165,16 +165,6 @@ func (this *KeyspaceTerm) String() (s string) {
 		s += " use keys " + this.keys.String()
 	}
 
-	// since use keys cannot be mixed with join hints, we can safely add the "use" keyword
-	switch this.joinHint {
-	case USE_HASH_BUILD:
-		s += " use hash(build)"
-	case USE_HASH_PROBE:
-		s += " use hash(probe)"
-	case USE_NL:
-		s += " use nl"
-	}
-
 	return s
 }
 

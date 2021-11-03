@@ -1,18 +1,19 @@
 [
     {
-	"testcase": "simple inline hints",
+	"testcase": "duplicated hints specified inline and as relational-style",
         "explain": {
             "disabled": false,
             "results": [
                 {
-                  "hints_followed": [
-                      "INDEX(p purch_customerId_purchaseId)"
+                  "hints_with_error": [
+                      "INDEX(c cust_lastName_firstName_customerId): Duplicated INDEX hint specified for keyspace: c",
+                      "INDEX(c cust_customerId_lastName_firstName): Duplicated INDEX hint specified for keyspace: c"
                   ]
                 }
             ],
             "statement": "SELECT RAW p.`optimizer_hints` FROM $explan AS p"
         },
-        "statements":"SELECT c.firstName, c.lastName, c.customerId, p.purchaseId FROM customer c JOIN purchase p USE INDEX (purch_customerId_purchaseId) ON c.customerId = p.customerId WHERE c.lastName = \"Champlin\" ORDER BY p.purchaseId LIMIT 10",
+        "statements":"SELECT /*+ INDEX(c cust_lastName_firstName_customerId) */ c.firstName, c.lastName, c.customerId, p.purchaseId FROM customer c USE INDEX(cust_customerId_lastName_firstName) JOIN purchase p ON c.customerId = p.customerId WHERE c.lastName = \"Champlin\" AND c.type = \"customer\" ORDER BY p.purchaseId LIMIT 10",
         "ordered": true,
         "results": [
         {
@@ -78,182 +79,194 @@
     ]
     },
     {
-	"testcase": "simple relational-style hints",
-        "explain": {
-            "disabled": false,
-            "results": [
-                {
-                  "hints_followed": [
-                      "INDEX(c cust_lastName_firstName_customerId)"
-                  ]
-                }
-            ],
-            "statement": "SELECT RAW p.`optimizer_hints` FROM $explan AS p"
-        },
-        "statements":"SELECT /*+ INDEX(c cust_lastName_firstName_customerId) */ c.firstName, c.lastName, c.customerId, p.purchaseId FROM customer c JOIN purchase p ON c.customerId = p.customerId WHERE c.lastName = \"Champlin\" AND c.type = \"customer\" ORDER BY p.purchaseId LIMIT 10",
-        "ordered": true,
-        "results": [
-        {
-            "customerId": "customer60",
-            "firstName": "Bryon",
-            "lastName": "Champlin",
-            "purchaseId": "purchase104"
-        },
-        {
-            "customerId": "customer33",
-            "firstName": "Charles",
-            "lastName": "Champlin",
-            "purchaseId": "purchase1582"
-        },
-        {
-            "customerId": "customer33",
-            "firstName": "Charles",
-            "lastName": "Champlin",
-            "purchaseId": "purchase1704"
-        },
-        {
-            "customerId": "customer60",
-            "firstName": "Bryon",
-            "lastName": "Champlin",
-            "purchaseId": "purchase1747"
-        },
-        {
-            "customerId": "customer631",
-            "firstName": "Gladyce",
-            "lastName": "Champlin",
-            "purchaseId": "purchase2838"
-        },
-        {
-            "customerId": "customer631",
-            "firstName": "Gladyce",
-            "lastName": "Champlin",
-            "purchaseId": "purchase2872"
-        },
-        {
-            "customerId": "customer60",
-            "firstName": "Bryon",
-            "lastName": "Champlin",
-            "purchaseId": "purchase3344"
-        },
-        {
-            "customerId": "customer60",
-            "firstName": "Bryon",
-            "lastName": "Champlin",
-            "purchaseId": "purchase3698"
-        },
-        {
-            "customerId": "customer60",
-            "firstName": "Bryon",
-            "lastName": "Champlin",
-            "purchaseId": "purchase4142"
-        },
-        {
-            "customerId": "customer60",
-            "firstName": "Bryon",
-            "lastName": "Champlin",
-            "purchaseId": "purchase4315"
-        }
-    ]
-    },
-    {
-	"testcase": "simple JSON-style hints",
-        "explain": {
-            "disabled": false,
-            "results": [
-                {
-                  "hints_followed": [
-                      {
-                          "hint": "{\"index\":{\"indexes\":[\"purch_customerId_purchaseId\"],\"keyspace\":\"p\"}}"
-                      },
-                      {
-                          "hint": "{\"ordered\":true}"
-                      }
-                  ]
-                }
-            ],
-            "statement": "SELECT RAW p.`optimizer_hints` FROM $explan AS p"
-        },
-        "statements":"SELECT /*+ {\"index\": {\"alias\": \"p\", \"indexes\": [ \"purch_customerId_purchaseId\" ] }, \"ordered\": true } */ c.firstName, c.lastName, c.customerId, p.purchaseId FROM customer c JOIN purchase p ON c.customerId = p.customerId WHERE c.lastName = \"Champlin\" AND p.type = \"purchase\" ORDER BY p.purchaseId LIMIT 10",
-        "ordered": true,
-        "results": [
-        {
-            "customerId": "customer60",
-            "firstName": "Bryon",
-            "lastName": "Champlin",
-            "purchaseId": "purchase104"
-        },
-        {
-            "customerId": "customer33",
-            "firstName": "Charles",
-            "lastName": "Champlin",
-            "purchaseId": "purchase1582"
-        },
-        {
-            "customerId": "customer33",
-            "firstName": "Charles",
-            "lastName": "Champlin",
-            "purchaseId": "purchase1704"
-        },
-        {
-            "customerId": "customer60",
-            "firstName": "Bryon",
-            "lastName": "Champlin",
-            "purchaseId": "purchase1747"
-        },
-        {
-            "customerId": "customer631",
-            "firstName": "Gladyce",
-            "lastName": "Champlin",
-            "purchaseId": "purchase2838"
-        },
-        {
-            "customerId": "customer631",
-            "firstName": "Gladyce",
-            "lastName": "Champlin",
-            "purchaseId": "purchase2872"
-        },
-        {
-            "customerId": "customer60",
-            "firstName": "Bryon",
-            "lastName": "Champlin",
-            "purchaseId": "purchase3344"
-        },
-        {
-            "customerId": "customer60",
-            "firstName": "Bryon",
-            "lastName": "Champlin",
-            "purchaseId": "purchase3698"
-        },
-        {
-            "customerId": "customer60",
-            "firstName": "Bryon",
-            "lastName": "Champlin",
-            "purchaseId": "purchase4142"
-        },
-        {
-            "customerId": "customer60",
-            "firstName": "Bryon",
-            "lastName": "Champlin",
-            "purchaseId": "purchase4315"
-        }
-    ]
-    },
-    {
-	"testcase": "inline hints for one keyspace, relational-style hints for another",
+	"testcase": "invalid hint name",
         "explain": {
             "disabled": false,
             "results": [
                 {
                   "hints_followed": [
                       "INDEX(c cust_lastName_firstName_customerId)",
-                      "ORDERED",
-                      "INDEX(p purch_customerId_purchaseId)"
+                      "ORDERED"
+                  ],
+                  "invalid_hints": [
+                      "INDEX_SS(p purch_purchaseId): Invalid hint name"
                   ]
                 }
             ],
             "statement": "SELECT RAW p.`optimizer_hints` FROM $explan AS p"
         },
-        "statements":"SELECT /*+ INDEX(c cust_lastName_firstName_customerId) ORDERED */ c.firstName, c.lastName, c.customerId, p.purchaseId FROM customer c JOIN purchase p USE INDEX(purch_customerId_purchaseId) ON c.customerId = p.customerId WHERE c.lastName = \"Champlin\" AND c.type = \"customer\" AND p.type = \"purchase\" ORDER BY p.purchaseId LIMIT 10",
+        "statements":"SELECT /*+ INDEX(c cust_lastName_firstName_customerId) ORDERED INDEX_SS(p purch_purchaseId) */ c.firstName, c.lastName, c.customerId, p.purchaseId FROM customer c JOIN purchase p ON c.customerId = p.customerId WHERE c.lastName = \"Champlin\" AND c.type = \"customer\" ORDER BY p.purchaseId LIMIT 10",
+        "ordered": true,
+        "results": [
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase104"
+        },
+        {
+            "customerId": "customer33",
+            "firstName": "Charles",
+            "lastName": "Champlin",
+            "purchaseId": "purchase1582"
+        },
+        {
+            "customerId": "customer33",
+            "firstName": "Charles",
+            "lastName": "Champlin",
+            "purchaseId": "purchase1704"
+        },
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase1747"
+        },
+        {
+            "customerId": "customer631",
+            "firstName": "Gladyce",
+            "lastName": "Champlin",
+            "purchaseId": "purchase2838"
+        },
+        {
+            "customerId": "customer631",
+            "firstName": "Gladyce",
+            "lastName": "Champlin",
+            "purchaseId": "purchase2872"
+        },
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase3344"
+        },
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase3698"
+        },
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase4142"
+        },
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase4315"
+        }
+    ]
+    },
+    {
+	"testcase": "hints not followed",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                  "hints_followed": [
+                      "INDEX(c cust_lastName_firstName_customerId)",
+                      "ORDERED"
+                  ],
+                  "hints_not_followed": [
+                      "INDEX(p purch_purchaseId): INDEX hint cannot be followed"
+                  ]
+                }
+            ],
+            "statement": "SELECT RAW p.`optimizer_hints` FROM $explan AS p"
+        },
+        "statements":"SELECT /*+ INDEX(c cust_lastName_firstName_customerId) ORDERED INDEX(p purch_purchaseId) */ c.firstName, c.lastName, c.customerId, p.purchaseId FROM customer c JOIN purchase p ON c.customerId = p.customerId WHERE c.lastName = \"Champlin\" AND p.type = \"purchase\" ORDER BY p.purchaseId LIMIT 10",
+        "ordered": true,
+        "results": [
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase104"
+        },
+        {
+            "customerId": "customer33",
+            "firstName": "Charles",
+            "lastName": "Champlin",
+            "purchaseId": "purchase1582"
+        },
+        {
+            "customerId": "customer33",
+            "firstName": "Charles",
+            "lastName": "Champlin",
+            "purchaseId": "purchase1704"
+        },
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase1747"
+        },
+        {
+            "customerId": "customer631",
+            "firstName": "Gladyce",
+            "lastName": "Champlin",
+            "purchaseId": "purchase2838"
+        },
+        {
+            "customerId": "customer631",
+            "firstName": "Gladyce",
+            "lastName": "Champlin",
+            "purchaseId": "purchase2872"
+        },
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase3344"
+        },
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase3698"
+        },
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase4142"
+        },
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase4315"
+        }
+    ]
+    },
+    {
+	"testcase": "json-style hint",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                  "hints_followed": [
+                      {
+                          "hint": "{\"index\":{\"indexes\":[\"cust_lastName_firstName_customerId\"],\"keyspace\":\"c\"}}"
+                      },
+                      {
+                          "hint": "{\"ordered\":true}"
+                      }
+                  ],
+                  "hints_not_followed": [
+                      {
+                          "error": "INDEX hint cannot be followed",
+                          "hint": "{\"index\":{\"indexes\":[\"purch_purchaseId\"],\"keyspace\":\"p\"}}"
+                      }
+                  ]
+                }
+            ],
+            "statement": "SELECT RAW p.`optimizer_hints` FROM $explan AS p"
+        },
+        "statements":"SELECT /*+ {\"index\": [ {\"alias\": \"c\", \"indexes\": [ \"cust_lastName_firstName_customerId\" ] }, {\"alias\": \"p\", \"indexes\": [ \"purch_purchaseId\" ] } ], \"ordered\": true } */ c.firstName, c.lastName, c.customerId, p.purchaseId FROM customer c JOIN purchase p ON c.customerId = p.customerId WHERE c.lastName = \"Champlin\" AND c.type = \"customer\" AND p.type = \"purchase\" ORDER BY p.purchaseId LIMIT 10",
         "ordered": true,
         "results": [
         {
