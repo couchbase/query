@@ -16,6 +16,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"syscall"
 	"unicode"
 	"unicode/utf8"
 
@@ -32,6 +33,10 @@ const (
 	ccVKILL
 	ccVSUSP
 	ccDigraph
+	ccUP
+	ccDOWN
+	ccRIGHT
+	ccLEFT
 	num_cc
 )
 
@@ -43,6 +48,15 @@ const (
 	_DELETE
 	_YANK_SELECTED
 	_YANK
+	_G_SELECTED
+	_UPPER_SELECTED
+	_UPPER
+	_LOWER_SELECTED
+	_LOWER
+	_SHIFT_L_SELECTED
+	_SHIFT_L
+	_SHIFT_R_SELECTED
+	_SHIFT_R
 )
 
 const (
@@ -53,6 +67,14 @@ const (
 	_ASCII_VT   = 11
 	_ASCII_DC2  = 18 // Ctrl+R
 	_ASCII_DEL  = 127
+	_ASCII_BEL  = '\a'
+)
+
+const (
+	_MARGIN                     = 5
+	_MARGIN_TEXT                = "     "
+	_MAX_HISTORY_STATEMENT_SIZE = 2 * 1024 * 1024
+	_TAB_SIZE                   = 8
 )
 
 type WinSize struct {
@@ -65,6 +87,14 @@ type WinSize struct {
 type bufferSave struct {
 	line []rune
 	pos  int
+}
+
+type termLine struct {
+	start   int
+	end     int
+	lineNum int
+	sol     bool
+	trunc   bool
 }
 
 type State struct {
@@ -91,6 +121,7 @@ type State struct {
 	cy              int
 	promptLines     int
 	displayStartPos int
+	termLines       []termLine
 }
 
 type digraph struct {
@@ -556,65 +587,21 @@ var digraphs = []digraph{
 	{'f', 't', 64261 /* ﬅ */}, {'s', 't', 64262 /* ﬆ */},
 }
 
-func (s *State) writeStrWrap(str []rune) {
+func (s *State) writeStrNoWrap(str []rune) rune {
 	buf := make([]rune, 0, len(str))
-	for i, c := range str {
-		if _ASCII_TAB == c {
-			n := (8 - s.cx%8)
-			if int(s.ws.Col) < s.cx+n {
-				for n := 0; int(s.ws.Col)-s.cx > n; n++ {
-					buf = append(buf, ' ')
-				}
-				s.cx = int(s.ws.Col)
-			} else {
-				s.cx += n
-				for ; n > 0; n-- {
-					buf = append(buf, ' ')
-				}
-			}
-		} else {
-			rs := runeDisplaySize(c)
-			if int(s.ws.Col) < s.cx+rs {
-				for n := 0; int(s.ws.Col)-s.cx > n; n++ {
-					buf = append(buf, ' ')
-				}
-				s.cx = int(s.ws.Col)
-			}
-			d := decode(c)
-			buf = append(buf, d...)
-			s.cx += rs
-		}
-		if int(s.ws.Col) <= s.cx {
-			s.cx -= int(s.ws.Col)
-			s.cy++
-			if s.promptLines == s.cy {
-				s.promptLines++
-			}
-			// the terminal wait for the next emitted character to advance line
-			// instead of trying to handle this special case everywhere else we just force the scroll
-			if len(str)-1 == i {
-				buf = append(buf, []rune(" \b")...)
-			}
-		}
-	}
-	fmt.Printf("%s", string(buf))
-}
-
-func (s *State) writeStrNoWrap(str []rune) bool {
-	buf := make([]rune, 0, len(str))
-	trunc := false
+	trunc := rune(0)
 	for _, c := range str {
 		if _ASCII_TAB == c {
-			n := 8 - (s.cx % 8)
+			n := _TAB_SIZE - (s.cx % _TAB_SIZE)
 			if int(s.ws.Col) <= s.cx+n {
 				n = int(s.ws.Col) - s.cx
-				trunc = true
+				trunc = ' '
 			}
 			s.cx += n
 			for ; n > 0; n-- {
 				buf = append(buf, ' ')
 			}
-			if trunc {
+			if rune(0) != trunc {
 				break
 			}
 		} else {
@@ -624,12 +611,38 @@ func (s *State) writeStrNoWrap(str []rune) bool {
 			if int(s.ws.Col) <= s.cx {
 				buf = buf[:len(buf)-(s.cx-int(s.ws.Col))]
 				s.cx = int(s.ws.Col) - 1
-				trunc = true
+				trunc = c
 				break
 			}
 		}
 	}
-	return writeStrNoWrapInternal(buf, trunc)
+	writeStrNoWrapInternal(buf)
+	return trunc
+}
+
+func (s *State) writeStrWrap(str []rune) {
+	buf := make([]rune, 0, len(str))
+	for _, c := range str {
+		if _ASCII_TAB == c {
+			n := _TAB_SIZE - (s.cx % _TAB_SIZE)
+			if int(s.ws.Col) <= s.cx+n {
+				n = int(s.ws.Col) - s.cx
+			}
+			s.cx += n
+			for ; n > 0; n-- {
+				buf = append(buf, ' ')
+			}
+		} else {
+			d := decode(c)
+			buf = append(buf, d...)
+			s.cx += runeDisplaySize(c)
+			if int(s.ws.Col) <= s.cx {
+				s.cx -= int(s.ws.Col)
+				s.cy++
+			}
+		}
+	}
+	fmt.Printf("%s", string(buf))
 }
 
 func (s *State) Close() error {
@@ -639,6 +652,13 @@ func (s *State) Close() error {
 	}
 	return err
 }
+
+// History format is statement per line
+// For multi-line statements, we translate \n (ASCII 10) to ASCII 30 (record separator) before writing and reverse that after
+// reading.
+// It does mean that ASCII 30 can't be stored in the history, and if one is used in a statement it'll be retrieved as \n.
+// The legacy liner history loading converts ASCII 30 to space so as not to interfere with its rendering, but this means that once
+// loaded & saved by the legacy liner, all \n characters are lost from the history.
 
 func (s *State) ReadHistory(r io.Reader) (num int, err error) {
 	in := bufio.NewReader(r)
@@ -657,7 +677,8 @@ func (s *State) ReadHistory(r io.Reader) (num int, err error) {
 		if pliner.HistoryLimit <= len(s.history) {
 			s.history = s.history[1:]
 		}
-		s.history = append(s.history, string(item))
+		mli := strings.ReplaceAll(string(item), "\x1e", "\n")
+		s.history = append(s.history, mli)
 		n++
 	}
 	return n, nil
@@ -665,8 +686,7 @@ func (s *State) ReadHistory(r io.Reader) (num int, err error) {
 
 func (s *State) WriteHistory(w io.Writer) (int, error) {
 	for i, item := range s.history {
-		// can't retain embedded newline characters for compatibility with peterh/liner
-		_, err := fmt.Fprintln(w, strings.ReplaceAll(item, "\n", " "))
+		_, err := fmt.Fprintln(w, strings.ReplaceAll(item, "\n", "\x1e"))
 		if nil != err {
 			return i, err
 		}
@@ -741,6 +761,7 @@ func (s *State) Prompt(prompt string) (string, error) {
 	i := 0
 	repeat := 0
 	startPos := 0
+	desiredCol := -1
 	expandEnd := false
 	res := 0
 	var yank []rune
@@ -761,6 +782,7 @@ func (s *State) Prompt(prompt string) (string, error) {
 		}
 	}
 
+	moved := false
 	done := 0
 mainLoop:
 	for 0 == done {
@@ -816,28 +838,160 @@ mainLoop:
 		if _NORMAL == mode {
 			handled := true
 			switch r {
+			case ':':
+				cmd, res := s.inputText("", []rune(":"), []rune(""), true, true)
+				if -1 == res {
+					return "", errors.New("vliner: failed to input text")
+				} else if 0 == res || 0 == len(cmd) {
+					break
+				}
+				moved = true
+				var m string
+				switch cmd[0] {
+				case 'r':
+					if 1 < len(cmd) && 1 != classify(cmd[1]) {
+						fileName := strings.TrimSpace(string(cmd[1:]))
+						if 0 == len(fileName) {
+							m = "[Missing filename]"
+						} else {
+							f, ferr := os.Open(fileName)
+							if nil != ferr {
+								m = fmt.Sprintf("[%s]", ferr.Error())
+							} else {
+								reader := bufio.NewReader(f)
+								content, ferr := reader.ReadString(0)
+								if nil != ferr && io.EOF != ferr {
+									m = fmt.Sprintf(" [%s]", ferr.Error())
+								} else {
+									if 0 == pos {
+										line = append([]rune(content), line...)
+									} else if len(line) > pos {
+										line = append(append(line[:pos], []rune(content)...), line[pos:]...)
+									} else {
+										line = append(line, []rune(content)...)
+									}
+								}
+								f.Close()
+								m = fmt.Sprintf("\"%s\" %vC", fileName, len(content))
+							}
+						}
+					} else {
+						m = "[Missing filename]"
+					}
+				case 'w':
+					if 1 < len(cmd) && 1 != classify(cmd[1]) {
+						fileName := strings.TrimSpace(string(cmd[1:]))
+						if '!' != cmd[1] {
+							f, _ := os.Open(fileName)
+							if nil != f {
+								f.Close()
+								m = fmt.Sprintf("[File %s exists]", fileName)
+							}
+						} else {
+							if 2 == len(cmd) {
+								fileName = ""
+							} else {
+								fileName = strings.TrimSpace(string(cmd[2:]))
+							}
+						}
+						if 0 == len(fileName) {
+							m = "[Missing filename]"
+						}
+						if 0 == len(m) {
+							f, ferr := os.OpenFile(fileName, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0755)
+							if nil != ferr {
+								m = fmt.Sprintf("[%s]", ferr.Error())
+							} else {
+								f.WriteString(string(line))
+								f.Close()
+								m = fmt.Sprintf("\"%s\" %vC written", fileName, len(line))
+							}
+						}
+					} else {
+						m = "[Missing filename]"
+					}
+				case 'c':
+					if "clear" == string(cmd) {
+						s.clearTerm()
+					} else {
+						m = fmt.Sprintf("[Invalid command: %s]", string(cmd))
+					}
+				case '0':
+					fallthrough
+				case '1':
+					fallthrough
+				case '2':
+					fallthrough
+				case '3':
+					fallthrough
+				case '4':
+					fallthrough
+				case '5':
+					fallthrough
+				case '6':
+					fallthrough
+				case '7':
+					fallthrough
+				case '8':
+					fallthrough
+				case '9':
+					n, err := strconv.Atoi(string(cmd))
+					if nil == err {
+						moved = true
+						if s.isMultiLine(line) {
+							pos = 0
+							for i := 0; n-1 > i; i++ {
+								pos, desiredCol = s.lineDown(line, pos, desiredCol)
+							}
+						}
+						break
+					}
+					fallthrough
+				default:
+					m = fmt.Sprintf("[Invalid command: %s]", string(cmd))
+				}
+				if 0 != len(m) {
+					s.render(len(m), "", []rune(m), []rune(nil))
+					r, err = s.read()
+					if nil != err {
+						return "", err
+					}
+				}
 			case '.':
 				s.saveForUndo(line, pos, 0, rune(0))
 				s.insertStringIntoInput(append(s.cmdRepeat, _REPLAY_END))
 				s.replayActive = true
+				moved = s.isMultiLine(line)
 			case 'C':
 				s.saveForUndo(line, pos, repeat, r)
 				mode = _CHANGE
 				startPos = len(line)
 				repeat = 1
+				moved = s.isMultiLine(line)
 			case 'c':
 				s.saveForUndo(line, pos, repeat, r)
 				mode = _CHANGE_SELECTED
 				startPos = pos
+				moved = s.isMultiLine(line)
 			case 'D':
 				s.saveForUndo(line, pos, repeat, r)
 				mode = _DELETE
-				startPos = len(line)
+				if s.multiLine {
+					for startPos = pos; len(line) > startPos; startPos++ {
+						if '\n' == line[startPos] {
+							break
+						}
+					}
+				} else {
+					startPos = len(line)
+				}
 				repeat = 1
+				moved = s.isMultiLine(line)
 			case 'd':
 				s.saveForUndo(line, pos, repeat, r)
 				mode = _DELETE_SELECTED
 				startPos = pos
+				moved = s.isMultiLine(line)
 			case 'Y':
 				mode = _YANK
 				expandEnd = true
@@ -849,8 +1003,17 @@ mainLoop:
 			case 'y':
 				mode = _YANK_SELECTED
 				startPos = pos
+			case 'g':
+				mode = _G_SELECTED
 			// history ------------------------------------------
+			case s.controlChars[ccUP]:
+				moved = false
+				fallthrough
 			case 'k':
+				if moved {
+					handled = false
+					break
+				}
 				fallthrough
 			case '-':
 				pos = 0
@@ -868,7 +1031,15 @@ mainLoop:
 						line = insertRunes(line, 0, []rune(s.history[curHist]))
 					}
 				}
+				moved = false
+			case s.controlChars[ccDOWN]:
+				moved = false
+				fallthrough
 			case 'j':
+				if moved {
+					handled = false
+					break
+				}
 				fallthrough
 			case '+':
 				pos = 0
@@ -889,11 +1060,13 @@ mainLoop:
 						line = insertRunes(line, 0, []rune(s.history[curHist]))
 					}
 				}
+				moved = false
 			case '/':
 				if 0 == len(s.history) {
 					break
 				}
-				search, res = s.inputText("/", []rune(""), []rune(""), true)
+				search, res = s.inputText("/", []rune(""), []rune(""), true, true)
+				moved = false
 				if -1 == res {
 					return "", errors.New("vliner: failed to input text")
 				} else if 0 == res || 0 == len(search) {
@@ -914,7 +1087,8 @@ mainLoop:
 				if 0 == len(s.history) {
 					break
 				}
-				search, res = s.inputText("?", []rune(""), []rune(""), true)
+				search, res = s.inputText("?", []rune(""), []rune(""), true, true)
+				moved = false
 				if -1 == res {
 					return "", errors.New("vliner: failed to input text")
 				} else if 0 == res || 0 == len(search) {
@@ -928,6 +1102,7 @@ mainLoop:
 					s.saveForUndo(line, 0, 1, rune(0))
 				}
 				line = insertRunes(line[:0], 0, []rune(s.history[i]))
+				moved = false
 				curHist = i
 				pos = 0
 				searchForwards = false
@@ -952,6 +1127,7 @@ mainLoop:
 					break
 				}
 				line = insertRunes(line[:0], 0, []rune(s.history[i]))
+				moved = false
 				curHist = i
 				pos = 0
 			case 'N':
@@ -975,22 +1151,33 @@ mainLoop:
 					break
 				}
 				line = insertRunes(line[:0], 0, []rune(s.history[i]))
+				moved = false
 				curHist = i
 				pos = 0
 			case 'G':
-				if 0 == len(s.history) {
-					break
+				if moved {
+					pos = len(line) - 1
+					if 0 > pos {
+						pos = 0
+					}
+					desiredCol = -1
+				} else {
+					if 0 == len(s.history) {
+						break
+					}
+					if len(s.history) <= repeat {
+						break
+					}
+					if -1 == curHist {
+						s.saveForUndo(line, 0, 1, rune(0))
+					}
+					curHist = len(s.history) - repeat
+					line = insertRunes(line[:0], 0, []rune(s.history[curHist]))
+					moved = false
+					pos = 0
 				}
-				if len(s.history) < repeat {
-					break
-				}
-				if -1 == curHist {
-					s.saveForUndo(line, 0, 1, rune(0))
-				}
-				line = insertRunes(line[:0], 0, []rune(s.history[repeat]))
-				curHist = repeat
-				pos = 0
 			case '_':
+				desiredCol = -1
 				if 0 == len(s.history) {
 					break
 				}
@@ -1002,7 +1189,7 @@ mainLoop:
 					break
 				}
 				startPos := i
-				for i <= l {
+				for i < l {
 					if 0 == classify(rune(s.history[n][i])) || l == i {
 						repeat--
 						if 0 == repeat {
@@ -1028,6 +1215,7 @@ mainLoop:
 						i++
 					}
 				}
+				moved = false
 			// editing ------------------------------------------
 			case 'P':
 				if 0 < len(yank) {
@@ -1037,6 +1225,8 @@ mainLoop:
 					}
 				}
 				s.stopRecording()
+				desiredCol = -1
+				moved = s.isMultiLine(line)
 			case 'p':
 				if 0 < len(yank) {
 					s.saveForUndo(line, pos, repeat, r)
@@ -1048,6 +1238,8 @@ mainLoop:
 					pos--
 				}
 				s.stopRecording()
+				desiredCol = -1
+				moved = s.isMultiLine(line)
 			case 'S':
 				s.saveForUndo(line, pos, repeat, r)
 				pos = 0
@@ -1055,6 +1247,7 @@ mainLoop:
 				if !s.replayActive {
 					s.insertIntoInput('i')
 				}
+				moved = s.isMultiLine(line)
 			case 's':
 				s.saveForUndo(line, pos, repeat, r)
 				l := repeat
@@ -1067,10 +1260,17 @@ mainLoop:
 				if !s.replayActive {
 					s.insertIntoInput('i')
 				}
+				desiredCol = -1
+				moved = s.isMultiLine(line)
 			case 'u':
 				l, p := s.undo(line, pos, repeat)
 				pos = p
 				line = append(line[:0], l...)
+				if len(line) > pos && '\n' == line[pos] && s.multiLine {
+					pos++
+				}
+				desiredCol = -1
+				moved = s.isMultiLine(line)
 			case 'U':
 				fallthrough
 			case _ASCII_DC2:
@@ -1078,7 +1278,12 @@ mainLoop:
 					l, p := s.redo(repeat)
 					pos = p
 					line = append(line[:0], l...)
+					if len(line) > pos && '\n' == line[pos] && s.multiLine {
+						pos++
+					}
 				}
+				desiredCol = -1
+				moved = s.isMultiLine(line)
 			case 'r':
 				s.saveForUndo(line, pos, repeat, r)
 				r, err = s.read()
@@ -1087,7 +1292,11 @@ mainLoop:
 				}
 				s.record(r)
 				for ; 0 < repeat && len(line) > pos; repeat-- {
-					line[pos] = r
+					if s.multiLine && '\n' == line[pos] {
+						line = insertRunes(line, pos, []rune{r})
+					} else {
+						line[pos] = r
+					}
 					if 0 != repeat {
 						pos++
 						if len(line) <= pos {
@@ -1096,22 +1305,41 @@ mainLoop:
 						}
 					}
 				}
-				s.stopRecording()
-			case 'g': // extension: global single rune replacement
-				s.saveForUndo(line, pos, repeat, r)
-				r, err = s.read()
-				if nil != err {
-					return "", err
+				if 0 < pos && len(line) > pos && '\n' == line[pos] && s.multiLine {
+					pos--
 				}
-				s.record(r)
-				sr := line[pos]
-				for i, _ := range line {
-					if line[i] == sr {
-						line[i] = r
-						pos = i
+				s.stopRecording()
+				desiredCol = -1
+				moved = s.isMultiLine(line)
+			case '!': // extension: global single rune replacement
+				if len(line) > pos && 0 <= pos {
+					s.saveForUndo(line, pos, repeat, r)
+					r, err = s.read()
+					if nil != err {
+						return "", err
 					}
+					s.record(r)
+					sr := line[pos]
+					sra := sr
+					if '“' == sr {
+						sra = '”'
+					} else if '”' == sr {
+						sra = '“'
+					} else if '‘' == sr {
+						sra = '’'
+					} else if '’' == sr {
+						sra = '‘'
+					}
+					for i, _ := range line {
+						if line[i] == sr || line[i] == sra {
+							line[i] = r
+							pos = i
+						}
+					}
+					s.stopRecording()
+					desiredCol = -1
+					moved = s.isMultiLine(line)
 				}
-				s.stopRecording()
 			case 'X':
 				if repeat > pos {
 					repeat = pos
@@ -1138,6 +1366,8 @@ mainLoop:
 					}
 				}
 				s.stopRecording()
+				desiredCol = -1
+				moved = s.isMultiLine(line)
 			case '~':
 				s.saveForUndo(line, pos, repeat, r)
 				for ; 0 < repeat && len(line) > pos; repeat-- {
@@ -1149,9 +1379,21 @@ mainLoop:
 					pos++
 				}
 				s.stopRecording()
+				desiredCol = -1
+				moved = s.isMultiLine(line)
+			case 'o':
+				fallthrough
 			case 'A':
 				s.saveForUndo(line, pos, repeat, r)
-				pos = len(line)
+				if s.multiLine {
+					for ; len(line) > pos && '\n' != line[pos]; pos++ {
+					}
+					if 'A' == r && len(line) > pos && '\n' == line[pos] {
+						pos--
+					}
+				} else {
+					pos = len(line)
+				}
 				fallthrough
 			case 'a':
 				if 'a' == r {
@@ -1162,35 +1404,65 @@ mainLoop:
 				}
 				fallthrough
 			case 'i':
+				if len(line) < pos {
+					pos = len(line)
+				}
 				if 'i' == r {
 					s.saveForUndo(line, pos, repeat, r)
 				}
 				curHist = -1
 				// if replaying we'll use the existing input buffer
 				if !s.replayActive {
+					if 'o' == r {
+						line = insertRunes(line, pos, []rune("\n"))
+					}
 					prefix := line[:pos]
 					suffix := line[pos:]
-					input, done = s.inputText(prompt, prefix, suffix, true)
+					input, done = s.inputText(prompt, prefix, suffix, true, false)
 				}
 				if len(input) > 0 {
 					for ; 0 < repeat; repeat-- {
 						line = insertRunes(line, pos, input)
 						pos += len(input)
 					}
-					if 0 < pos {
+					if 0 < pos && '\n' != line[pos-1] {
 						pos--
 					}
 				}
+				if 0 < pos && len(line) > pos && '\n' == line[pos] && s.multiLine {
+					pos--
+				}
 				s.stopRecording()
+				desiredCol = -1
+				moved = s.isMultiLine(line)
+			case 'O':
+				fallthrough
 			case 'I':
 				s.saveForUndo(line, pos, repeat, r)
-				pos = 0
-				for 0 == classify(line[pos]) && len(line) > pos {
-					pos++
+				if s.multiLine {
+					if 0 < pos && len(line) > pos && '\n' == line[pos] {
+						pos--
+					}
+					for ; 0 < pos && len(line) > pos && '\n' != line[pos]; pos-- {
+					}
+					if 0 < pos && len(line) > pos && '\n' == line[pos] {
+						pos++
+					}
+				} else {
+					pos = 0
+				}
+				if s.multiLine && 'O' == r {
+					line = insertRunes(line, pos, []rune("\n"))
+				} else {
+					for len(line) > pos && 0 == classify(line[pos]) {
+						pos++
+					}
 				}
 				if !s.replayActive {
 					s.insertIntoInput('i')
 				}
+				desiredCol = -1
+				moved = s.isMultiLine(line)
 			case 'R':
 				s.saveForUndo(line, pos, repeat, r)
 				curHist = -1
@@ -1198,7 +1470,8 @@ mainLoop:
 				if !s.replayActive {
 					prefix := line[:pos]
 					suffix := line[pos:]
-					input, done = s.inputText(prompt, prefix, suffix, false)
+
+					input, done = s.inputText(prompt, prefix, suffix, false, false)
 				}
 
 				if len(input) > 0 {
@@ -1218,6 +1491,109 @@ mainLoop:
 					}
 				}
 				s.stopRecording()
+				desiredCol = -1
+				moved = s.isMultiLine(line)
+			case 'J':
+				if s.multiLine {
+					s.saveForUndo(line, pos, repeat, r)
+					p := pos
+					for ; len(line) > p; p++ {
+						if '\n' == line[p] {
+							line[p] = ' '
+							break
+						}
+					}
+					s.stopRecording()
+					moved = s.isMultiLine(line)
+				}
+			case 'v':
+				prog := os.Getenv("CBQEDITOR")
+				if "" == prog {
+					prog = os.Getenv("VISUAL")
+				}
+				if "" == prog {
+					prog = os.Getenv("EDITOR")
+				}
+				if "" == prog {
+					break
+				}
+				f, err := os.CreateTemp(os.TempDir(), "cbq-edit-*")
+				if f == nil {
+					break
+				}
+				name := f.Name()
+				f.WriteString(string(line))
+				f.Close()
+
+				// Keep quoted strings as single arguments but strip containing quotes
+				// Note no escaping of quote characters (so Windows paths don't require escaping)
+				// This allows for more complex CBQEDITOR specification such as:
+				// xterm -e "/path/with a space/to/editor"
+				// (i.e. Shell syntax: export CBQEDITOR="xterm -e \"/path/with a space/to/editor\"" )
+				// or
+				// "c:\program files\bin\editor.exe" /f
+				// (i.e. set CBQEDITOR="c:\program files\bin\editor.exe" /f )
+				args := make([]string, 0, 5)
+				quote := rune(0)
+				start := -1
+				for i, c := range prog {
+					if quote == c {
+						args = append(args, prog[start:i])
+						start = -1
+						quote = rune(0)
+						continue
+					}
+					cl := classify(c)
+					if -1 == start && 0 != cl {
+						start = i
+						if '"' == c || '\'' == c {
+							quote = c
+							start++
+						}
+					} else if 0 == quote && 0 == cl && -1 != start {
+						args = append(args, prog[start:i])
+						start = -1
+					}
+				}
+				if -1 != start {
+					args = append(args, prog[start:])
+				}
+				args = append(args, name)
+
+				files := make([]uintptr, 0, 3)
+				files = append(files, os.Stdin.Fd())
+				files = append(files, os.Stdout.Fd())
+				files = append(files, os.Stderr.Fd())
+				attr := &syscall.ProcAttr{Files: files, Env: syscall.Environ()}
+
+				ok := invokeEditor(args, attr)
+				if ok {
+					f, err = os.Open(name)
+					if nil == err {
+						fi, _ := f.Stat()
+						buf := make([]byte, fi.Size())
+						n, _ := f.ReadAt(buf, 0)
+						if len(line) < n {
+							line = make([]rune, 0, n)
+						}
+						line = append(line[:0], []rune(string(buf))...)
+						s.saveForUndo(line, pos, repeat, r)
+						s.stopRecording()
+						f.Close()
+						pos = 0
+					}
+				}
+				os.Remove(name)
+			case '>':
+				if _NORMAL == mode {
+					s.saveForUndo(line, pos, repeat, r)
+					mode = _SHIFT_R_SELECTED
+				}
+			case '<':
+				if _NORMAL == mode {
+					s.saveForUndo(line, pos, repeat, r)
+					mode = _SHIFT_L_SELECTED
+				}
 			default:
 				handled = false
 			}
@@ -1225,29 +1601,180 @@ mainLoop:
 				r = 0
 			}
 		}
+		if _G_SELECTED == mode && rune(0) != r {
+			switch r {
+			case 'U':
+				mode = _UPPER_SELECTED
+				r = 0
+			case 'u':
+				mode = _LOWER_SELECTED
+				r = 0
+			case 'g':
+				mode = _NORMAL
+			default:
+				mode = _NORMAL
+				s.alert()
+				r = 0
+			}
+		}
 		// all modes
 		switch r {
-		case '\n':
-			fallthrough
 		case '\r':
-			done = 1
-			break mainLoop
+			desiredCol = -1
+			if IsTerminatedStatement(string(line)) {
+				done = 1
+				break mainLoop
+			}
+			if s.isMultiLine(line) {
+				for i := 0; repeat > i; i++ {
+					pos, desiredCol = s.lineDown(line, pos, desiredCol)
+				}
+			}
 		case _ASCII_ESC:
 			mode = _NORMAL
 			s.replayActive = false
 			s.stopRecording()
+			if 0 < pos && len(line) > pos && '\n' == line[pos] && s.multiLine {
+				pos--
+			}
 		case 'c':
 			if _CHANGE == mode {
 				startPos = 0
 				pos = len(line)
+			} else {
+				s.alert()
 			}
 		case 'd':
 			if _DELETE == mode {
-				startPos = 0
-				pos = len(line)
+				if s.multiLine {
+					for startPos = pos; 0 < startPos; startPos-- {
+						if len(line) > startPos && '\n' == line[startPos] {
+							startPos++
+							break
+						}
+					}
+					for ; len(line) > pos; pos++ {
+						if '\n' == line[pos] {
+							repeat--
+							if 0 >= repeat {
+								break
+							}
+						}
+					}
+					if pos < len(line) && '\n' == line[pos] && pos > startPos {
+						pos++
+					}
+					if pos == startPos {
+						pos++
+					}
+				} else {
+					startPos = 0
+					pos = len(line)
+				}
+			} else {
+				s.alert()
+			}
+		case 'y':
+			if _YANK == mode {
+				if s.multiLine {
+					for startPos = pos; 0 < startPos; startPos-- {
+						if len(line) > startPos && '\n' == line[startPos] {
+							startPos++
+							break
+						}
+					}
+					for ; len(line) > pos; pos++ {
+						if '\n' == line[pos] {
+							repeat--
+							if 0 >= repeat {
+								break
+							}
+						}
+					}
+					if pos < len(line) && '\n' == line[pos] && pos > startPos {
+						pos++
+					}
+				} else {
+					startPos = 0
+					pos = len(line)
+				}
+			} else {
+				s.alert()
+			}
+		case 12: // Ctrl+L
+			if _NORMAL == mode {
+				s.getWinSize()
+				s.clearPrompt()
+			} else {
+				s.alert()
 			}
 		// navigation ---------------------------------------
+		case 'j':
+			if s.isMultiLine(line) {
+				startPos = pos
+				for i := 0; repeat > i; i++ {
+					pos, desiredCol = s.lineDown(line, pos, desiredCol)
+				}
+			}
+		case 'k':
+			if s.isMultiLine(line) {
+				startPos = pos
+				for i := 0; repeat > i; i++ {
+					pos, desiredCol = s.lineUp(line, pos, desiredCol)
+				}
+			}
+		case 'g':
+			desiredCol = -1
+			startPos = pos
+			pos = 0
+			if s.isMultiLine(line) {
+				for i := 0; repeat-1 > i; i++ {
+					pos, desiredCol = s.lineDown(line, pos, desiredCol)
+				}
+			}
+		case 'G':
+			desiredCol = -1
+			startPos = pos
+			pos = len(line)
+		case 2: // Ctrl+B
+			if s.isMultiLine(line) {
+				startPos = pos
+				end := len(line) - 1
+				if 0 > end {
+					end = 0
+				}
+				pos = s.termPageUp(pos, end)
+				moved = true
+			}
+		case 6: // Ctrl+F
+			if s.isMultiLine(line) {
+				startPos = pos
+				end := len(line) - 1
+				if 0 > end {
+					end = 0
+				}
+				pos = s.termPageDown(pos, end)
+				moved = true
+			}
+		case 11: // Ctrl+K
+			if s.multiLine {
+				startPos = pos
+				for i := 0; repeat > i; i++ {
+					pos, desiredCol = s.lineUp(line, pos, desiredCol)
+				}
+			}
+			moved = s.isMultiLine(line)
+		case 10: // Ctrl+J
+			if s.multiLine {
+				startPos = pos
+				for i := 0; repeat > i; i++ {
+					pos, desiredCol = s.lineDown(line, pos, desiredCol)
+				}
+			}
+			moved = s.isMultiLine(line)
 		case '|':
+			desiredCol = -1
+			startPos = pos
 			pos = repeat - 1
 			if pos >= len(line) {
 				pos = len(line) - 1
@@ -1255,41 +1782,122 @@ mainLoop:
 			if 0 > pos {
 				pos = 0
 			}
+			moved = s.isMultiLine(line)
 		case '0':
-			pos = 0
+			desiredCol = -1
+			startPos = pos
+			if s.multiLine {
+				if pos >= len(line) {
+					pos = len(line) - 1
+				}
+				if len(line) > pos && 0 <= pos && '\n' == line[pos] {
+					pos--
+					if 0 > pos || '\n' == line[pos] {
+						pos++
+					}
+				}
+				for ; 0 < pos && '\n' != line[pos]; pos-- {
+				}
+				if 0 > pos || '\n' == line[pos] {
+					pos++
+				}
+			} else {
+				pos = 0
+			}
+			moved = s.isMultiLine(line)
 		case '^':
-			for pos = 0; len(line) > pos && 0 == classify(line[pos]); pos++ {
+			desiredCol = -1
+			startPos = pos
+			if s.multiLine {
+				if pos >= len(line) {
+					pos = len(line) - 1
+				}
+				if len(line) > pos && 0 <= pos && '\n' == line[pos] {
+					pos--
+					if 0 > pos || '\n' == line[pos] {
+						pos++
+					}
+				}
+				for ; 0 < pos && '\n' != line[pos]; pos-- {
+				}
+				if 0 > pos || '\n' == line[pos] {
+					pos++
+				}
+				s := pos
+				for ; len(line) > pos && '\n' != line[pos] && 0 == classify(line[pos]); pos++ {
+				}
+				if 0 < pos && len(line) == pos {
+					pos--
+				} else if '\n' == line[pos] {
+					pos = s
+				}
+			} else {
+				for pos = 0; len(line) > pos && 0 == classify(line[pos]); pos++ {
+				}
+				if 0 < pos && len(line) == pos {
+					pos--
+				}
 			}
-			if 0 < pos && len(line) == pos {
-				pos--
-			}
+			moved = s.isMultiLine(line)
 		case '$':
-			pos = len(line) - 1
-			if _NORMAL != mode {
-				pos++
+			desiredCol = -1
+			startPos = pos
+			if s.multiLine {
+				for ; len(line) > pos && '\n' != line[pos]; pos++ {
+				}
+				if 0 < pos && len(line) > pos && '\n' == line[pos] {
+					pos--
+				}
+				if _NORMAL != mode && len(line)-1 == pos {
+					pos++
+				}
+				if len(line) == pos && 0 < pos {
+					pos--
+				}
+			} else {
+				pos = len(line) - 1
+				if _NORMAL != mode {
+					pos++
+				}
 			}
 			if 0 > pos {
 				pos = 0
 			}
+			moved = s.isMultiLine(line)
 		case 'h':
+			desiredCol = -1
+			startPos = pos
 			pos -= repeat
+			if 0 < pos && len(line) > pos && '\n' == line[pos] && s.multiLine {
+				if '\n' != line[pos-1] {
+					pos--
+				}
+			}
 			if 0 > pos {
 				pos = 0
 			}
+			moved = s.isMultiLine(line)
 		case ' ':
 			fallthrough
 		case 'l':
+			desiredCol = -1
+			startPos = pos
 			if 0 == len(line) {
 				pos = 0
 			} else {
 				pos += repeat
+				if len(line) > pos && '\n' == line[pos] && s.multiLine {
+					pos++
+				}
 				if len(line) <= pos {
 					pos = len(line) - 1
 				}
 			}
+			moved = s.isMultiLine(line)
 		case 'B':
 			fallthrough
 		case 'b':
+			desiredCol = -1
 			if 0 >= pos {
 				break
 			}
@@ -1312,9 +1920,11 @@ mainLoop:
 					}
 				}
 			}
+			moved = s.isMultiLine(line)
 		case 'E':
 			fallthrough
 		case 'e':
+			desiredCol = -1
 			if len(line) <= pos {
 				break
 			}
@@ -1341,19 +1951,21 @@ mainLoop:
 			if _NORMAL != mode {
 				pos++
 			}
+			moved = s.isMultiLine(line)
 		case 'W':
 			fallthrough
 		case 'w':
+			desiredCol = -1
 			if len(line) <= pos {
 				break
 			}
 			for ; 0 < repeat; repeat-- {
-				t := classify(line[pos])
-				pos++
 				if len(line) <= pos {
 					pos = len(line) - 1
 					break
 				}
+				t := classify(line[pos])
+				pos++
 				if 'W' == r {
 					for len(line) > pos && 0 != classify(line[pos]) {
 						pos++
@@ -1379,9 +1991,11 @@ mainLoop:
 					pos = len(line) - 1
 				}
 			}
+			moved = s.isMultiLine(line)
 		case 'T':
 			fallthrough
 		case 'F':
+			desiredCol = -1
 			fact = r
 			fr, err = s.read()
 			if nil != err {
@@ -1398,9 +2012,11 @@ mainLoop:
 					pos++
 				}
 			}
+			moved = s.isMultiLine(line)
 		case 't':
 			fallthrough
 		case 'f':
+			desiredCol = -1
 			fact = r
 			fr, err = s.read()
 			if nil != err {
@@ -1420,7 +2036,9 @@ mainLoop:
 					pos++
 				}
 			}
+			moved = s.isMultiLine(line)
 		case ';':
+			desiredCol = -1
 			switch fact {
 			case 'T':
 				fallthrough
@@ -1446,7 +2064,9 @@ mainLoop:
 					}
 				}
 			}
+			moved = s.isMultiLine(line)
 		case ',':
+			desiredCol = -1
 			switch fact {
 			case 't':
 				fallthrough
@@ -1472,7 +2092,9 @@ mainLoop:
 					}
 				}
 			}
+			moved = s.isMultiLine(line)
 		case '%':
+			desiredCol = -1
 			switch line[pos] {
 			case '(':
 				i = find(line, pos, true, 1, ')', '(')
@@ -1519,8 +2141,21 @@ mainLoop:
 			if -1 != i {
 				pos = i
 			}
+			moved = s.isMultiLine(line)
 		case 0:
 			// ignore; explicitly set above
+		case '>':
+			if _SHIFT_R_SELECTED == mode {
+				mode = _SHIFT_R
+			} else {
+				mode = _NORMAL
+			}
+		case '<':
+			if _SHIFT_L_SELECTED == mode {
+				mode = _SHIFT_L
+			} else {
+				mode = _NORMAL
+			}
 		default:
 			fmt.Printf("\a") // ASCII BEL
 		}
@@ -1551,10 +2186,23 @@ mainLoop:
 			if startPos < pos {
 				pos, startPos = startPos, pos
 			}
+			if 0 > startPos {
+				startPos = 0
+			}
+			if len(line) <= pos {
+				pos = len(line) - 1
+			}
+			if 0 > pos {
+				pos = 0
+			}
 			l = startPos - pos
-			yank = append([]rune(nil), line[pos:startPos]...)
-			copy(line[pos:], line[startPos:])
-			line = line[:len(line)-l]
+			if 0 < l {
+				yank = append([]rune(nil), line[pos:startPos]...)
+				copy(line[pos:], line[startPos:])
+				line = line[:len(line)-l]
+			} else {
+				line = line[:0]
+			}
 			if _CHANGE == mode {
 				if !s.replayActive {
 					s.insertIntoInput('i')
@@ -1592,11 +2240,95 @@ mainLoop:
 				pos = startPos
 			}
 			mode = _NORMAL
+		case _UPPER_SELECTED:
+			mode = _UPPER
+			startPos = pos
+		case _LOWER_SELECTED:
+			mode = _LOWER
+			startPos = pos
+		case _UPPER:
+			from, to := startPos, pos
+			if to < from {
+				to, from = from, to
+			}
+			s.saveForUndo(line, startPos, repeat, r)
+			pos = from
+			for ; to > from; from++ {
+				line[from] = unicode.ToUpper(line[from])
+			}
+			s.stopRecording()
+			mode = _NORMAL
+		case _LOWER:
+			from, to := startPos, pos
+			if to < from {
+				to, from = from, to
+			}
+			s.saveForUndo(line, startPos, repeat, r)
+			pos = from
+			for ; to > from; from++ {
+				line[from] = unicode.ToLower(line[from])
+			}
+			s.stopRecording()
+			mode = _NORMAL
+		case _SHIFT_R:
+			if s.multiLine {
+				p := pos
+				if 0 < p && len(line) > p && '\n' != line[p] {
+					for ; 0 < p && len(line) > p && '\n' != line[p]; p-- {
+					}
+					if len(line) > p && '\n' == line[p] {
+						p++
+					}
+				}
+				for i := 0; repeat > i && len(line) > p; i++ {
+					if 0 < p && len(line) > p && '\n' != line[p] {
+						line = insertRunes(line, p, []rune{'\t'})
+					}
+					for ; len(line) > p && '\n' != line[p]; p++ {
+					}
+					if len(line) > p && '\n' == line[p] {
+						p++
+					}
+				}
+			} else {
+				line = insertRunes(line, 0, []rune{'\t'})
+			}
+			s.insertIntoInput('^')
+			s.stopRecording()
+			mode = _NORMAL
+		case _SHIFT_L:
+			if s.multiLine {
+				p := pos
+				if 0 < p && len(line) > p && '\n' != line[p] {
+					for ; 0 < p && len(line) > p && '\n' != line[p]; p-- {
+					}
+					if len(line) > p && '\n' == line[p] {
+						p++
+					}
+				}
+				for i := 0; repeat > i && len(line) > p; i++ {
+					if 0 < p && len(line) > p && '\n' != line[p] && 0 == classify(line[p]) {
+						line = append(line[:p], line[p+1:]...)
+					}
+					for ; len(line) > p && '\n' != line[p]; p++ {
+					}
+					if len(line) > p && '\n' == line[p] {
+						p++
+					}
+				}
+			} else {
+				if 0 == classify(line[0]) {
+					line = line[1:]
+				}
+			}
+			s.insertIntoInput('^')
+			s.stopRecording()
+			mode = _NORMAL
 		}
 	} // main loop
 
 	s.clearPrompt()
-	s.writeStrWrap([]rune(prompt))
+	s.render(-1, prompt, line, []rune(nil))
 
 	if 2 == done {
 		return "", io.EOF
@@ -1604,21 +2336,117 @@ mainLoop:
 		return "", errors.New("vliner: input error")
 	}
 
-	s.writeStrWrap(line)
-	fmt.Printf("\n")
+	fmt.Printf("\r\n")
 	return string(line), nil
+}
+
+func (s *State) lineUp(line []rune, pos int, desiredCol int) (int, int) {
+	if !s.multiLine {
+		return pos, desiredCol
+	}
+	pos--
+	if 0 > pos || len(line) < pos {
+		return 0, desiredCol
+	}
+	x := 0
+	for ; 0 <= pos && '\n' != line[pos]; pos-- {
+		x++
+	}
+	if 0 > pos {
+		return 0, desiredCol
+	}
+	if -1 == desiredCol {
+		desiredCol = x
+	}
+	if '\n' == line[pos] {
+		pos--
+	}
+	x2 := 0
+	for ; 0 <= pos && '\n' != line[pos]; pos-- {
+		x2++
+	}
+	pos++
+	if x2 > desiredCol {
+		pos += desiredCol
+	} else {
+		pos += x2
+	}
+	if len(line) > pos && '\n' == line[pos] {
+		if 0 < pos && '\n' != line[pos-1] {
+			pos--
+		}
+	}
+	return pos, desiredCol
+}
+
+func (s *State) lineDown(line []rune, pos int, desiredCol int) (int, int) {
+	if !s.multiLine {
+		return pos, desiredCol
+	}
+	x := 0
+	if len(line) > pos && '\n' == line[pos] {
+		pos--
+		if 0 <= pos && '\n' == line[pos] {
+			pos++
+		}
+		x++
+	}
+	if 0 > pos {
+		pos = 0
+	}
+	p := pos
+	for ; 0 <= p && len(line) > p && '\n' != line[p]; p-- {
+		x++
+	}
+	x--
+	if -1 == desiredCol {
+		desiredCol = x
+	}
+	for ; len(line) > pos && '\n' != line[pos]; pos++ {
+	}
+	pos++
+	x = desiredCol
+	for ; len(line) > pos && '\n' != line[pos] && 0 < x; pos++ {
+		x--
+	}
+	if len(line) > pos && '\n' == line[pos] {
+		if 0 < pos && '\n' != line[pos-1] {
+			pos--
+		}
+	}
+	if pos >= len(line) {
+		pos = len(line) - 1
+	}
+	if 0 > pos {
+		pos = 0
+	}
+	return pos, desiredCol
+}
+
+func (s *State) isMultiLine(line []rune) bool {
+	if !s.multiLine {
+		return false
+	}
+	for _, r := range line {
+		if '\n' == r {
+			return true
+		}
+	}
+	return false
 }
 
 func (s *State) render(pos int, prompt string, input []rune, suffix []rune) {
 	var x int
 	var i int
 	s.hideCursor()
-	if !s.multiLine {
+	if !s.multiLine && -1 == pos {
+		s.writeStrWrap(append(append([]rune(prompt), input...), suffix...))
+	} else if !s.multiLine {
 		var chlen int
 		x = len(prompt)
 		for i = s.displayStartPos; pos > i; i++ {
 			if _ASCII_TAB == input[i] {
-				chlen = 8 - (x % 8)
+				chlen = _TAB_SIZE - (x % _TAB_SIZE)
 			} else {
 				chlen = runeDisplaySize(input[i])
 			}
@@ -1629,7 +2457,7 @@ func (s *State) render(pos int, prompt string, input []rune, suffix []rune) {
 			l := len(prompt)
 			for _, r := range input[:pos] {
 				if _ASCII_TAB == r {
-					chlen = 8 - (l % 8)
+					chlen = _TAB_SIZE - (l % _TAB_SIZE)
 				} else {
 					chlen = runeDisplaySize(r)
 				}
@@ -1642,7 +2470,7 @@ func (s *State) render(pos int, prompt string, input []rune, suffix []rune) {
 					break
 				}
 				if _ASCII_TAB == r {
-					chlen = 8 - (x % 8)
+					chlen = _TAB_SIZE - (x % _TAB_SIZE)
 				} else {
 					chlen = runeDisplaySize(r)
 				}
@@ -1652,7 +2480,7 @@ func (s *State) render(pos int, prompt string, input []rune, suffix []rune) {
 			for i = s.displayStartPos; pos > i; i++ {
 				r := input[i]
 				if _ASCII_TAB == r {
-					chlen = 8 - (x % 8)
+					chlen = _TAB_SIZE - (x % _TAB_SIZE)
 				} else {
 					chlen = runeDisplaySize(r)
 				}
@@ -1661,42 +2489,229 @@ func (s *State) render(pos int, prompt string, input []rune, suffix []rune) {
 		}
 		s.moveToStart()
 		if 0 < len(suffix) {
-			if !s.writeStrNoWrap(append(append([]rune(prompt), input[s.displayStartPos:]...), suffix...)) {
+			if rune(0) == s.writeStrNoWrap(append(append([]rune(prompt), input[s.displayStartPos:]...), suffix...)) {
 				s.clearToEOL()
 			}
 		} else {
-			if !s.writeStrNoWrap(append([]rune(prompt), input[s.displayStartPos:]...)) {
+			if rune(0) == s.writeStrNoWrap(append([]rune(prompt), input[s.displayStartPos:]...)) {
 				s.clearToEOL()
 			}
 		}
 		if len(input) > pos && _ASCII_TAB == input[pos] {
-			x = x + (8 - x%8) - 1
+			x = x + (_TAB_SIZE - x%_TAB_SIZE) - 1
 			if int(s.ws.Col) <= x {
 				x = int(s.ws.Col) - 1
 			}
 		}
 		s.moveToCol(x)
 	} else {
-		s.moveToStart()
-		s.writeStrWrap([]rune(prompt))
-		s.writeStrWrap(input[:pos])
-		kx := s.cx
-		ky := s.cy
-		if len(input) > pos {
-			s.writeStrWrap(input[pos:])
+		if 0 != len(prompt) {
+			if len(prompt) < _MARGIN {
+				prompt = "     " + prompt
+			}
+			if len(prompt) > _MARGIN {
+				prompt = prompt[len(prompt)-_MARGIN:]
+			}
 		}
+		text := append([]rune(prompt), input...)
 		if 0 < len(suffix) {
-			s.writeStrWrap(suffix)
+			text = append(text, suffix...)
 		}
-		s.clearToEOP()
-		s.moveToStart()
-		s.moveDown(ky)
-		s.moveRight(kx)
+		all := false
+		if 0 > pos {
+			pos = len(text)
+			all = true
+		}
+		ky, kx, startLine := s.getLayout(&text, len(prompt)+pos)
+		multiPage := len(s.termLines) >= int(s.ws.Row)
+		if multiPage {
+			s.moveToTermStart()
+		} else {
+			s.moveToStart()
+		}
+
+		lastLine := startLine + int(s.ws.Row)
+		if len(s.termLines) < lastLine {
+			lastLine = len(s.termLines)
+		}
+		if all {
+			startLine = 0
+			lastLine = len(s.termLines)
+		}
+		i := 0
+		lastTrunc := rune(0)
+		for i = startLine; lastLine > i; i++ {
+			l := text[s.termLines[i].start:s.termLines[i].end]
+			if 0 == s.termLines[i].start {
+				// prompt is included in first line text
+				lastTrunc = s.writeStrNoWrap(l)
+			} else if s.termLines[i].sol {
+				s.writeLineNum(s.termLines[i].lineNum)
+				lastTrunc = s.writeStrNoWrap(l)
+			} else if 0 != s.termLines[i].lineNum {
+				s.writeStrNoWrap([]rune(_MARGIN_TEXT))
+				lastTrunc = s.writeStrNoWrap(l)
+			} else {
+				lastTrunc = s.writeStrNoWrap(l)
+			}
+			if lastLine > i+1 || ky > i {
+				if int(s.ws.Col)-1 > s.cx {
+					s.clearToEOL()
+				} else if s.termLines[i].trunc {
+					s.writeTruncMarker()
+				}
+				fmt.Printf("\r\n")
+				lastTrunc = rune(0)
+				s.cy = (s.cy + 1) % int(s.ws.Row)
+				if s.promptLines < s.cy {
+					s.promptLines = s.cy
+				}
+				s.cx = 0
+				if lastLine == i+1 && len(text) > s.termLines[i].end && '\n' == text[s.termLines[i].end] {
+					s.writeLineNum(s.termLines[i].lineNum + 1)
+				}
+			}
+		}
+		if !all {
+			if int(s.ws.Col)-1 > s.cx || int(s.ws.Row)-1 > s.cy {
+				s.clearToEOP()
+				if rune(0) != lastTrunc {
+					writeAtEOL(lastTrunc)
+				}
+			}
+			if multiPage {
+				s.moveToTermStart()
+			} else {
+				s.moveToStart()
+			}
+			s.moveDown(ky)
+			s.moveToCol(kx)
+		} else {
+			fmt.Printf("\r")
+		}
 	}
 	s.showCursor()
 }
 
-func (s *State) inputText(prompt string, prefix []rune, suffix []rune, fixedSuffix bool) ([]rune, int) {
+func (s *State) getLayout(text *[]rune, pos int) (int, int, int) {
+	var x, y, line, kx, ky, page int
+
+	if len(s.termLines) < int(s.ws.Row) {
+		s.termLines = make([]termLine, int(s.ws.Row))
+	}
+	s.termLines = s.termLines[:1]
+	ky = -1
+	s.termLines[0] = termLine{start: 0, lineNum: 0, sol: true}
+	for i, r := range *text {
+	repeat:
+		if pos == i {
+			kx = x
+			if _ASCII_TAB == r {
+				kx += (_TAB_SIZE - 1) - (x % _TAB_SIZE)
+			}
+			ky = y % int(s.ws.Row)
+			page = y / int(s.ws.Row)
+		}
+		if '\n' == r {
+			s.termLines[y].end = i
+			x = _MARGIN
+			line++
+			y++
+			s.termLines = append(s.termLines, termLine{start: i + 1, lineNum: line, sol: true})
+		} else {
+			chlen := 0
+			if _ASCII_TAB == r {
+				chlen = _TAB_SIZE - (x % _TAB_SIZE)
+			} else {
+				chlen = runeDisplaySize(r)
+			}
+			x += chlen
+			if int(s.ws.Col) <= x {
+				if int(s.ws.Col) < x {
+					x -= chlen
+					s.termLines[y].end = i
+					s.termLines[y].trunc = true
+				} else {
+					s.termLines[y].end = i + 1
+					chlen = 0
+				}
+				if 0 < line {
+					x = _MARGIN
+				} else {
+					x = 0
+				}
+				s.termLines = append(s.termLines, termLine{start: s.termLines[y].end, lineNum: line})
+				y++
+				if 0 < chlen {
+					goto repeat
+				}
+			}
+		}
+	}
+	if -1 == ky {
+		kx = x
+		ky = y % int(s.ws.Row)
+		page = y / int(s.ws.Row)
+	}
+	if 0 == s.termLines[y].end {
+		if len(*text) == s.termLines[y].start {
+			s.termLines = s.termLines[:y]
+		} else {
+			s.termLines[y].end = len(*text)
+		}
+	}
+	return ky, kx, page * int(s.ws.Row)
+}
+
+func (s *State) termLineFromPos(pos int) int {
+	for i := range s.termLines {
+		if s.termLines[i].start <= pos && s.termLines[i].end >= pos {
+			return i
+		}
+	}
+	return -1
+}
+
+func (s *State) termPageUp(pos int, end int) int {
+	sl := s.termLineFromPos(pos + _MARGIN)
+	if -1 == sl {
+		return pos
+	}
+	el := sl - int(s.ws.Row)
+	if 0 > el {
+		return 0
+	}
+	return s.fitToLine(pos, end, sl, el)
+}
+
+func (s *State) termPageDown(pos int, end int) int {
+	sl := s.termLineFromPos(pos + _MARGIN)
+	if -1 == sl {
+		return pos
+	}
+	el := sl + int(s.ws.Row)
+	if len(s.termLines) <= el {
+		return end
+	}
+	return s.fitToLine(pos, end, sl, el)
+}
+
+func (s *State) fitToLine(pos int, end int, sl int, el int) int {
+	if 0 != sl {
+		pos += _MARGIN
+	}
+	x := pos - s.termLines[sl].start
+	ep := s.termLines[el].start + x
+	if s.termLines[el].end <= ep {
+		return s.termLines[el].end
+	}
+	if _MARGIN <= ep {
+		return ep - _MARGIN
+	}
+	return 0
+}
+
+func (s *State) inputText(prompt string, prefix []rune, suffix []rune, fixedSuffix bool, noTerminator bool) ([]rune, int) {
 	input := make([]rune, 0, 1024)
 	input = input[:0]
 	combo := make([]rune, 0, 1024)
@@ -1875,10 +2890,22 @@ func (s *State) inputText(prompt string, prefix []rune, suffix []rune, fixedSuff
 		} else if s.controlChars[ccVKILL] == r { // Ctrl+U typically
 			pos = 0
 			input = input[:0]
-		} else if '\r' == r || '\n' == r {
-			done = 1
+		} else if '\r' == r {
+			if noTerminator || IsTerminatedStatement(string(prefix), string(input), string(suffix)) {
+				done = 1
+			} else if s.multiLine {
+				if len(input) > 0 || len(prefix) > 0 || len(suffix) > 0 {
+					input = insertRunes(input, pos, []rune{'\n'})
+					pos++
+				}
+			} else {
+				s.alert()
+			}
 		} else if _ASCII_ESC == r {
 			done = 0
+		} else if s.controlChars[ccUP] == r || s.controlChars[ccDOWN] == r ||
+			s.controlChars[ccLEFT] == r || s.controlChars[ccRIGHT] == r {
+			s.alert()
 		} else {
 			if unicode.IsPrint(r) || unicode.IsSpace(r) {
 				input = insertRunes(input, pos, []rune{r})
@@ -1887,6 +2914,89 @@ func (s *State) inputText(prompt string, prefix []rune, suffix []rune, fixedSuff
 		}
 	}
 	return input, done
+}
+
+func IsTerminatedStatement(lines ...string) bool {
+	quote := rune(0)
+	comment := false
+	lCmt := false
+	possCmt := false
+	possLCmt := false
+	last := rune(0)
+
+	for _, l := range lines {
+		quote, comment, lCmt, possCmt, possLCmt, last = checkForTerminator(l, quote, comment, lCmt, possCmt, possLCmt, last)
+	}
+	return ';' == last
+}
+
+func checkForTerminator(stmt string, quote rune, comment bool, lCmt bool, possCmt bool, possLCmt bool, last rune) (
+	rune, bool, bool, bool, bool, rune) {
+
+	escaped := false
+	for _, r := range stmt {
+		if rune(0) != quote {
+			if escaped {
+				escaped = false
+				continue
+			}
+			if '\\' == r {
+				escaped = true
+				continue
+			}
+			if quote == r {
+				quote = rune(0)
+				continue
+			}
+			continue
+		}
+		if comment {
+			if '/' == r && possCmt {
+				possCmt = false
+				comment = false
+				continue
+			}
+			possCmt = false
+			if '*' == r {
+				possCmt = true
+			}
+			continue
+		}
+		if lCmt {
+			if '\n' == r {
+				lCmt = false
+			}
+			continue
+		}
+		if '*' == r && possCmt {
+			possCmt = false
+			comment = true
+			continue
+		}
+		if '-' == r && possLCmt {
+			possLCmt = false
+			lCmt = true
+		}
+		if '/' == r {
+			possCmt = true
+			continue
+		}
+		if '-' == r {
+			possLCmt = true
+			continue
+		}
+		possCmt = false
+		possLCmt = false
+		if '\'' == r || '"' == r || '`' == r {
+			quote = r
+			continue
+		}
+		if 0 != classify(r) {
+			last = r
+		}
+	}
+
+	return quote, comment, lCmt, possCmt, possLCmt, last
 }
 
 // we display control characters as composites so we need to deal with them explicitly
@@ -1944,7 +3054,7 @@ func (s *State) undo(line []rune, pos int, repeat int) ([]rune, int) {
 		}
 	}
 	if 0 == s.saveTop {
-		fmt.Printf("\a") // ASCII_BEL
+		s.alert()
 	}
 	s.saveTop -= repeat
 	if 0 > s.saveTop {
@@ -1955,7 +3065,7 @@ func (s *State) undo(line []rune, pos int, repeat int) ([]rune, int) {
 
 func (s *State) redo(repeat int) ([]rune, int) {
 	if len(s.save)-1 <= s.saveTop {
-		fmt.Printf("\a") // ASCII_BEL
+		s.alert()
 	}
 	s.saveTop += repeat
 	if len(s.save) < s.saveTop {
@@ -2115,4 +3225,109 @@ func insertRunes(line []rune, pos int, ins []rune) []rune {
 	}
 	copy(line[pos:], ins)
 	return line
+}
+
+func (s *State) moveUp(n int) {
+	if 0 < n {
+		if n > s.cy {
+			n = s.cy
+		}
+		fmt.Printf("\033[%dA", n)
+		s.cy -= n
+	}
+}
+
+func (s *State) moveDown(n int) {
+	s.cy += n
+	if s.promptLines <= s.cy {
+		s.promptLines = s.cy + 1
+	}
+	if 0 < n {
+		fmt.Printf("\033[%dB", n)
+	}
+}
+
+func (s *State) moveRight(n int) {
+	if 0 < n {
+		s.cx += n
+		for int(s.ws.Col) < s.cx {
+			s.cx -= int(s.ws.Col)
+			s.cy++
+		}
+		fmt.Printf("\033[%dC", n)
+	}
+}
+
+func (s *State) moveToCol(n int) {
+	if int(s.ws.Col) <= n {
+		n = int(s.ws.Col) - 1
+	}
+	s.cx = 0
+	fmt.Printf("\r")
+	s.moveRight(n)
+}
+
+func (s *State) moveToStart() {
+	s.cx = 0
+	fmt.Printf("\r")
+	s.moveUp(s.cy)
+}
+
+func (s *State) moveToTermStart() {
+	fmt.Printf("\033[0;0H")
+	s.cx = 0
+	s.cy = 0
+}
+
+func (s *State) clearToEOL() {
+	fmt.Printf("\033[K")
+}
+
+func (s *State) clearLine() {
+	fmt.Printf("\033[2K")
+}
+
+func (s *State) clearToEOP() {
+	fmt.Printf("\033[0J")
+}
+
+func (s *State) clearPrompt() {
+	s.moveToStart()
+	s.clearToEOP()
+	s.moveToStart()
+}
+
+func (s *State) clearTerm() {
+	s.moveToTermStart()
+	fmt.Printf("\033[2J")
+}
+
+func (s *State) hideCursor() {
+	fmt.Printf("\033[?25l")
+}
+
+func (s *State) showCursor() {
+	fmt.Printf("\033[?25h")
+}
+
+func (s *State) writeLineNum(line int) {
+	lineNum := []rune(_MARGIN_TEXT)
+	if 0 < line {
+		lineNum = []rune(fmt.Sprintf("%4d ", line+1))
+		if 5 < len(lineNum) {
+			lineNum[len(lineNum)-5] = '*'
+			lineNum = lineNum[len(lineNum)-5:]
+		}
+	}
+	fmt.Printf("\033[1;33m")
+	s.writeStrNoWrap(lineNum)
+	fmt.Printf("\033[0m")
+}
+
+func (s *State) writeTruncMarker() {
+	fmt.Printf("\033[34m»\033[0m")
+}
+
+func (s *State) alert() {
+	fmt.Printf("%c", _ASCII_BEL)
 }

@@ -11,6 +11,7 @@ package liner
 import (
 	"io"
 
+	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/shell/vliner"
 	pliner "github.com/peterh/liner"
 )
@@ -21,14 +22,18 @@ type State struct {
 	viMode bool
 }
 
-func NewLiner(viInput bool) *State {
+func NewLiner(viInput bool) (*State, errors.Error) {
 	var s = State{viMode: viInput}
 	if !viInput {
 		s.orig = pliner.NewLiner()
 	} else {
-		s.vi = vliner.NewLiner()
+		var err error
+		s.vi, err = vliner.NewLiner()
+		if nil != err {
+			return nil, errors.NewShellErrorInitTerminal(err)
+		}
 	}
-	return &s
+	return &s, nil
 }
 
 func (s *State) Close() error {
@@ -45,9 +50,42 @@ func (s *State) Prompt(p string) (string, error) {
 	return s.vi.Prompt(p)
 }
 
+// This is a workaround so as not to have to fork and maintain the legacy input mechanism (peterh/liner).
+// The liner state interface is closed and there isn't provision to hook custom history functions in so we're left having to
+// process the I/O streams to facilitate some level of compatibility (without restricting features) between the two mechanisms.
+
+type interceptHistoryReader struct {
+	io.Reader
+	src io.Reader
+	buf []byte
+}
+
+// converts multi-line history entries into single line entries
+// multi-line entries use ASCII 30 (record separator) to indicate newlines since the existing history format is line-based
+// this means we have to translate them from ASCII 30 to something (space) that doesn't interfere with the legacy liner's rendering
+// but does mean that after loading & saving with the legacy liner, all embedded newlines are lost
+func (ir *interceptHistoryReader) Read(p []byte) (n int, err error) {
+	i := 0
+	for len(p) > i {
+		_, err := ir.src.Read(ir.buf)
+		if nil != err {
+			return i, err
+		}
+		if '\x1e' == ir.buf[0] {
+			ir.buf[0] = ' '
+		}
+		p[i] = ir.buf[0]
+		i++
+	}
+	return i, nil
+}
+
 func (s *State) ReadHistory(r io.Reader) (num int, err error) {
 	if !s.viMode {
-		return s.orig.ReadHistory(r)
+		// expensive waste but default isn't available otherwise and peterh/liner uses the default
+		// (minus 1 here else it trigers the limit)
+		ir := interceptHistoryReader{src: r, buf: make([]byte, 1)}
+		return s.orig.ReadHistory(&ir)
 	}
 	return s.vi.ReadHistory(r)
 }

@@ -22,20 +22,19 @@ var (
 	kernel32 = syscall.NewLazyDLL("kernel32.dll")
 
 	winReadConsoleInput           = kernel32.NewProc("ReadConsoleInputW")
+	winPeekConsoleInput           = kernel32.NewProc("PeekConsoleInputW")
 	winSetConsoleMode             = kernel32.NewProc("SetConsoleMode")
-	winSetConsoleCursorPosition   = kernel32.NewProc("SetConsoleCursorPosition")
 	winGetConsoleScreenBufferInfo = kernel32.NewProc("GetConsoleScreenBufferInfo")
 	winFillConsoleOutputCharacter = kernel32.NewProc("FillConsoleOutputCharacterW")
-	winGetConsoleCursorInfo       = kernel32.NewProc("GetConsoleCursorInfo")
-	winSetConsoleCursorInfo       = kernel32.NewProc("SetConsoleCursorInfo")
 )
 
 type Termios struct {
-	mode uint32
+	imode uint32
+	omode uint32
 }
 
 type coord struct {
-	x uint16
+	x int16
 	y int16
 }
 
@@ -70,44 +69,91 @@ type consoleCursorInfo struct {
 	visible uint32
 }
 
-func NewLiner() *State {
+const (
+	_ENABLE_PROCESSED_INPUT        = uint32(0x0001)
+	_ENABLE_LINE_INPUT             = uint32(0x0002)
+	_ENABLE_ECHO_INPUT             = uint32(0x0004)
+	_ENABLE_WINDOW_INPUT           = uint32(0x0008)
+	_ENABLE_MOUSE_INPUT            = uint32(0x0010)
+	_ENABLE_INSERT_MODE            = uint32(0x0020)
+	_ENABLE_VIRTUAL_TERMINAL_INPUT = uint32(0x0200)
+
+	_ENABLE_PROCESSED_OUTPUT            = uint32(0x0001)
+	_ENABLE_WRAP_AT_EOL_OUTPUT          = uint32(0x0002)
+	_ENABLE_VIRTUAL_TERMINAL_PROCESSING = uint32(0x0004)
+	_DISABLE_NEWLINE_AUTO_RETURN        = uint32(0x0008)
+
+	_WINDOW_BUFFER_SIZE_EVENT = 4
+	_KEY_EVENT                = 1
+)
+
+func NewLiner() (*State, error) {
 	var s = State{}
 
-	syscall.GetConsoleMode(syscall.Stdin, &s.origMode.mode)
+	err := syscall.GetConsoleMode(syscall.Stdin, &s.origMode.imode)
+	if nil != err {
+		if err.Error() == "The handle is invalid." {
+			err = fmt.Errorf("No console access.")
+		}
+		return nil, err
+	}
+	err = syscall.GetConsoleMode(syscall.Stdout, &s.origMode.omode)
+	if nil != err {
+		return nil, err
+	}
 
 	s.newMode = s.origMode
-	s.newMode.mode &^= 0x0001 | 0x0002 | 0x0004 | 0x0010 | 0x0020
-	s.newMode.mode |= 0x0008
+
+	s.newMode.imode &^= _ENABLE_PROCESSED_INPUT | _ENABLE_LINE_INPUT | _ENABLE_ECHO_INPUT | _ENABLE_MOUSE_INPUT |
+		_ENABLE_INSERT_MODE
+	s.newMode.imode |= _ENABLE_WINDOW_INPUT | _ENABLE_VIRTUAL_TERMINAL_INPUT
+
+	s.newMode.omode |= _ENABLE_PROCESSED_OUTPUT | _ENABLE_WRAP_AT_EOL_OUTPUT |
+		_ENABLE_VIRTUAL_TERMINAL_PROCESSING | _DISABLE_NEWLINE_AUTO_RETURN
 
 	s.controlChars[ccVINTR] = rune(0x3)         // Ctrl+C
 	s.controlChars[ccVEOF] = rune(0x4)          // Ctrl+D
 	s.controlChars[ccVLNEXT] = rune(0x16)       // Ctrl+V
-	s.controlChars[ccVERASE] = rune(0x8)        // backspace
+	s.controlChars[ccVERASE] = rune(0x7f)       // DEL
 	s.controlChars[ccVWERASE] = rune(0x17)      // Ctrl+W
 	s.controlChars[ccVKILL] = rune(0x1c)        // Ctrl+\
 	s.controlChars[ccVSUSP] = rune(0x1a)        // Ctrl+Z
 	s.controlChars[ccDigraph] = rune(_ASCII_VT) // Ctrl+K
+	s.controlChars[ccUP] = rune(-'A')
+	s.controlChars[ccDOWN] = rune(-'B')
+	s.controlChars[ccRIGHT] = rune(-'C')
+	s.controlChars[ccLEFT] = rune(-'D')
 
 	s.getWinSize()
 
 	s.history = make([]string, 0, pliner.HistoryLimit)
 	s.cmdRepeat = make([]rune, 0, 64)
-	s.buffer = make([]rune, 0, 1024)
+	s.buffer = make([]rune, 0, 10240)
 
-	return &s
+	return &s, nil
 }
 
 func (s *State) startTerm() error {
-	success, _, err := winSetConsoleMode.Call(uintptr(syscall.Stdin), uintptr(s.newMode.mode))
+	success, _, err := winSetConsoleMode.Call(uintptr(syscall.Stdin), uintptr(s.newMode.imode))
+	if 1 != success {
+		return err
+	}
+	success, _, err = winSetConsoleMode.Call(uintptr(syscall.Stdout), uintptr(s.newMode.omode))
 	if 1 != success {
 		return err
 	}
 	s.needsReset = true
+	fmt.Printf("\033[!p")
 	return nil
 }
 
 func (s *State) resetTerm() error {
-	success, _, err := winSetConsoleMode.Call(uintptr(syscall.Stdin), uintptr(s.origMode.mode))
+	fmt.Printf("\033[!p")
+	success, _, err := winSetConsoleMode.Call(uintptr(syscall.Stdin), uintptr(s.origMode.imode))
+	if 1 != success {
+		return err
+	}
+	success, _, err = winSetConsoleMode.Call(uintptr(syscall.Stdout), uintptr(s.origMode.omode))
 	if 1 != success {
 		return err
 	}
@@ -121,127 +167,28 @@ func (s *State) setISig(on bool) {
 func (s *State) getWinSize() int {
 	var sbi consoleScreenBufferInfo
 	winGetConsoleScreenBufferInfo.Call(uintptr(syscall.Stdout), uintptr(unsafe.Pointer(&sbi)))
-	s.ws.Row = uint16(sbi.dwSize.y)
-	s.ws.Col = uint16(sbi.dwSize.x)
+	s.ws.Row = uint16(sbi.srWindow.bottom-sbi.srWindow.top) + 1
+	s.ws.Col = uint16(sbi.srWindow.right-sbi.srWindow.left) + 1
 	return 0
 }
 
-func (s *State) moveUp(n int) {
-	if 0 < n {
-		if n > s.cy {
-			n = s.cy
-		}
-		var sbi consoleScreenBufferInfo
-		winGetConsoleScreenBufferInfo.Call(uintptr(syscall.Stdout), uintptr(unsafe.Pointer(&sbi)))
-		sbi.dwCursorPosition.y -= int16(n)
-		ncp := int(sbi.dwCursorPosition.x) | (int(sbi.dwCursorPosition.y) << 16)
-		winSetConsoleCursorPosition.Call(uintptr(syscall.Stdout), uintptr(ncp))
-		s.cy -= n
-	}
+func writeStrNoWrapInternal(str []rune) {
+	fmt.Printf("%s", string(str))
 }
 
-func (s *State) moveDown(n int) {
-	if 0 < n {
-		s.cy += n
-		if s.promptLines <= s.cy {
-			s.promptLines = s.cy + 1
-		}
-		var sbi consoleScreenBufferInfo
-		winGetConsoleScreenBufferInfo.Call(uintptr(syscall.Stdout), uintptr(unsafe.Pointer(&sbi)))
-		sbi.dwCursorPosition.y += int16(n)
-		ncp := int(sbi.dwCursorPosition.x) | (int(sbi.dwCursorPosition.y) << 16)
-		winSetConsoleCursorPosition.Call(uintptr(syscall.Stdout), uintptr(ncp))
-	}
-}
-
-func (s *State) moveRight(n int) {
-	if 0 < n {
-		s.cx += n
-		y := int16(0)
-		for int(s.ws.Col) < s.cx {
-			s.cx -= int(s.ws.Col)
-			s.cy++
-			y++
-		}
-		var sbi consoleScreenBufferInfo
-		winGetConsoleScreenBufferInfo.Call(uintptr(syscall.Stdout), uintptr(unsafe.Pointer(&sbi)))
-		sbi.dwCursorPosition.y += y
-		sbi.dwCursorPosition.x += uint16(s.cx)
-		ncp := int(sbi.dwCursorPosition.x) | (int(sbi.dwCursorPosition.y) << 16)
-		winSetConsoleCursorPosition.Call(uintptr(syscall.Stdout), uintptr(ncp))
-	}
-}
-
-func (s *State) moveToCol(n int) {
-	if int(s.ws.Col) <= n {
-		n = int(s.ws.Col) - 1
-	}
-	s.cx = 0
-	fmt.Printf("\r")
-	s.moveRight(n)
-}
-
-func (s *State) moveToStart() {
-	s.cx = 0
-	fmt.Printf("\r")
-	s.moveUp(s.cy)
-}
-
-func (s *State) clearToEOL() {
+func writeAtEOL(ch rune) {
 	var sbi consoleScreenBufferInfo
 	var nr uint32
 	winGetConsoleScreenBufferInfo.Call(uintptr(syscall.Stdout), uintptr(unsafe.Pointer(&sbi)))
 	coord := int(sbi.dwCursorPosition.x) | (int(sbi.dwCursorPosition.y) << 16)
-	l := sbi.dwSize.x - sbi.dwCursorPosition.x
-	winFillConsoleOutputCharacter.Call(uintptr(syscall.Stdout), uintptr(' '), uintptr(l), uintptr(coord),
+	winFillConsoleOutputCharacter.Call(uintptr(syscall.Stdout), uintptr(ch), uintptr(1), uintptr(coord),
 		uintptr(unsafe.Pointer(&nr)))
-}
-
-func (s *State) clearLine() {
-	fmt.Printf("\r")
-	var sbi consoleScreenBufferInfo
-	var nr uint32
-	winGetConsoleScreenBufferInfo.Call(uintptr(syscall.Stdout), uintptr(unsafe.Pointer(&sbi)))
-	coord := 0 | (int(sbi.dwCursorPosition.y) << 16)
-	l := sbi.dwSize.x
-	winFillConsoleOutputCharacter.Call(uintptr(syscall.Stdout), uintptr(' '), uintptr(l), uintptr(coord),
-		uintptr(unsafe.Pointer(&nr)))
-}
-
-func (s *State) clearToEOP() {
-	s.clearToEOL()
-	for i := s.cy + 1; s.promptLines > i; i++ {
-		s.moveDown(1)
-		s.clearLine()
-	}
-}
-
-func (s *State) clearPrompt() {
-	s.moveToStart()
-	s.clearToEOP()
-	s.moveToStart()
-}
-
-func writeStrNoWrapInternal(str []rune, trunc bool) bool {
-	if !trunc {
-		fmt.Printf("%s", string(str))
-	} else {
-		fmt.Printf("%s", string(str[:len(str)-1]))
-		ch := str[len(str)-1]
-		var sbi consoleScreenBufferInfo
-		var nr uint32
-		winGetConsoleScreenBufferInfo.Call(uintptr(syscall.Stdout), uintptr(unsafe.Pointer(&sbi)))
-		coord := int(sbi.dwCursorPosition.x) | (int(sbi.dwCursorPosition.y) << 16)
-		winFillConsoleOutputCharacter.Call(uintptr(syscall.Stdout), uintptr(ch), uintptr(1), uintptr(coord),
-			uintptr(unsafe.Pointer(&nr)))
-	}
-	return trunc
 }
 
 func (s *State) read() (rune, error) {
-	var ev consoleKeyEvent
+	var ev [3]consoleKeyEvent
 	var rv uint32
-	pev := uintptr(unsafe.Pointer(&ev))
+	pev := uintptr(unsafe.Pointer(&ev[0]))
 	// first check if there are any characters queued up for us to process ahead of further live input
 	if 0 < len(s.buffer) {
 		r := s.buffer[0]
@@ -251,32 +198,53 @@ func (s *State) read() (rune, error) {
 	for {
 		success, _, err := winReadConsoleInput.Call(uintptr(syscall.Stdin), pev, 1, uintptr(unsafe.Pointer(&rv)))
 		if 1 != success || 1 != rv {
-			return 0, err
+			return rune(0), err
 		}
-		switch ev.eventType {
-		case 4: // window size
+		switch ev[0].eventType {
+		case _WINDOW_BUFFER_SIZE_EVENT:
 			s.getWinSize()
 			return _REPLAY_END, nil
-		case 1: // key
-			if 0 != ev.pressed {
-				if 0 != ev.chr {
-					return rune(ev.chr), nil
+		case _KEY_EVENT:
+			if 0 != ev[0].pressed {
+				if _ASCII_ESC == ev[0].chr {
+					pev = uintptr(unsafe.Pointer(&ev[1]))
+					success, _, _ := winPeekConsoleInput.Call(uintptr(syscall.Stdin), pev, 2, uintptr(unsafe.Pointer(&rv)))
+					r := rune(ev[0].chr)
+					if 1 == success && 2 == rv && '[' == ev[1].chr {
+						skip := false
+						switch ev[2].chr {
+						case 'A':
+							r = s.controlChars[ccUP]
+						case 'B':
+							r = s.controlChars[ccDOWN]
+						case 'C':
+							r = s.controlChars[ccRIGHT]
+						case 'D':
+							r = s.controlChars[ccLEFT]
+						default:
+							skip = true
+						}
+						if !skip {
+							winReadConsoleInput.Call(uintptr(syscall.Stdin), pev, 2, uintptr(unsafe.Pointer(&rv)))
+						}
+					}
+					return r, nil
+				} else if 0 != ev[0].chr {
+					return rune(ev[0].chr), nil
 				}
 			}
 		}
 	}
 }
 
-func (s *State) hideCursor() {
-	var cci consoleCursorInfo
-	winGetConsoleCursorInfo.Call(uintptr(syscall.Stdout), uintptr(unsafe.Pointer(&cci)))
-	cci.visible = 0
-	winSetConsoleCursorInfo.Call(uintptr(syscall.Stdout), uintptr(unsafe.Pointer(&cci)))
-}
-
-func (s *State) showCursor() {
-	var cci consoleCursorInfo
-	winGetConsoleCursorInfo.Call(uintptr(syscall.Stdout), uintptr(unsafe.Pointer(&cci)))
-	cci.visible = 1
-	winSetConsoleCursorInfo.Call(uintptr(syscall.Stdout), uintptr(unsafe.Pointer(&cci)))
+func invokeEditor(args []string, attr *syscall.ProcAttr) bool {
+	if nil == attr.Sys {
+		attr.Sys = &syscall.SysProcAttr{}
+	}
+	attr.Sys.CreationFlags |= 0x10 // CREATE_NEW_CONSOLE
+	_, handle, err := syscall.StartProcess(args[0], args, attr)
+	if nil == err {
+		_, err = syscall.WaitForSingleObject(syscall.Handle(handle), syscall.INFINITE)
+	}
+	return nil == err
 }

@@ -15,7 +15,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"unicode"
@@ -740,5 +739,5 @@ func main() {
 	// Handle the inputFlag and ScriptFlag options in HandleInteractiveMode.
 	// This is so as to add these to the history.
 
-	HandleInteractiveMode(filepath.Base(os.Args[0]))
+	HandleInteractiveMode("cbq")
 }

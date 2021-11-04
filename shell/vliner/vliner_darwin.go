@@ -27,3 +27,13 @@ const (
 	_TCGETS = syscall.TIOCGETA
 	_TCSETS = syscall.TIOCSETA
 )
+
+func invokeEditor(args []string, attr *syscall.ProcAttr) bool {
+	attr.Sys = &syscall.SysProcAttr{Setctty: true, Setsid: true}
+	pid, _, err := syscall.StartProcess(args[0], args, attr)
+	if nil == err {
+		var ws syscall.WaitStatus
+		_, err = syscall.Wait4(pid, &ws, 0, nil)
+	}
+	return nil == err
+}

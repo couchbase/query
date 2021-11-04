@@ -37,7 +37,7 @@ const (
 )
 
 const (
-	SHELL_VERSION = "2.0"
+	SHELL_VERSION = "2.1"
 
 	MAX_ARGS  = math.MaxInt16
 	ZERO_ARGS = 0

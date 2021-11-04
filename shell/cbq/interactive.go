@@ -18,6 +18,7 @@ import (
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/shell/cbq/command"
 	"github.com/couchbase/query/shell/liner"
+	"github.com/couchbase/query/shell/vliner"
 )
 
 const (
@@ -175,7 +176,11 @@ func HandleInteractiveMode(prompt string) {
 	}
 
 	/* Create a new liner */
-	var liner = liner.NewLiner(viModeSingleLineFlag || viModeMultiLineFlag)
+	liner, err := liner.NewLiner(viModeSingleLineFlag || viModeMultiLineFlag)
+	if nil != err {
+		command.PrintError(err)
+		return
+	}
 	liner.SetMultiLineMode(!viModeSingleLineFlag)
 	defer liner.Close()
 
@@ -256,7 +261,7 @@ func HandleInteractiveMode(prompt string) {
 			isTrunc = false
 		}
 
-		if strings.HasSuffix(line, QRY_EOL) {
+		if vliner.IsTerminatedStatement(inputLine...) {
 			inputString := strings.Join(inputLine, space)
 			for strings.HasSuffix(inputString, QRY_EOL) {
 				inputString = strings.TrimSuffix(inputString, QRY_EOL)

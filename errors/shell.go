@@ -226,3 +226,8 @@ func NewShellErrorOnRefresh(msg string) Error {
 func NewShellErrorInvalidArgument() Error {
 	return &err{level: EXCEPTION, ICode: E_SHELL_INVALID_ARGUMENT, IKey: "shell.invalid.argument", InternalMsg: INVALID_ARGUMENT_MSG, InternalCaller: CallerN(1)}
 }
+
+func NewShellErrorInitTerminal(c error) Error {
+	return &err{level: EXCEPTION, ICode: E_SHELL_INIT_FAILURE, IKey: "shell.init.terminal.failure", cause: c,
+		InternalMsg: "Terminal set-up failed (check not legacy console)", InternalCaller: CallerN(1)}
+}

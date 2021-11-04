@@ -23,7 +23,7 @@ import (
 	pliner "github.com/peterh/liner"
 )
 
-func NewLiner() *State {
+func NewLiner() (*State, error) {
 	var s = State{}
 
 	s.r = bufio.NewReader(os.Stdin)
@@ -53,6 +53,10 @@ func NewLiner() *State {
 		s.controlChars[ccVKILL] = rune(s.origMode.Cc[syscall.VKILL])
 		s.controlChars[ccVSUSP] = rune(s.origMode.Cc[syscall.VSUSP])
 		s.controlChars[ccDigraph] = rune(_ASCII_VT) // Ctrl+K
+		s.controlChars[ccUP] = rune(-'A')
+		s.controlChars[ccDOWN] = rune(-'B')
+		s.controlChars[ccRIGHT] = rune(-'C')
+		s.controlChars[ccLEFT] = rune(-'D')
 
 	}
 
@@ -68,7 +72,7 @@ func NewLiner() *State {
 	s.cmdRepeat = make([]rune, 0, 64)
 	s.buffer = make([]rune, 0, 1024)
 
-	return &s
+	return &s, nil
 }
 
 func (s *State) startTerm() error {
@@ -98,79 +102,12 @@ func (s *State) getWinSize() int {
 	return int(errno)
 }
 
-func (s *State) moveUp(n int) {
-	if 0 < n {
-		if n > s.cy {
-			n = s.cy
-		}
-		fmt.Printf(fmt.Sprintf("\033[%dA", n))
-		s.cy -= n
-	}
-}
-
-func (s *State) moveDown(n int) {
-	s.cy += n
-	if s.promptLines <= s.cy {
-		for ; n > 0; n-- {
-			fmt.Printf("\033D")
-		}
-		s.promptLines = s.cy + 1
-	} else if 0 < n {
-		fmt.Printf(fmt.Sprintf("\033[%dB", n))
-	}
-}
-
-func (s *State) moveRight(n int) {
-	if 0 < n {
-		s.cx += n
-		for int(s.ws.Col) < s.cx {
-			s.cx -= int(s.ws.Col)
-			s.cy++
-		}
-		fmt.Printf(fmt.Sprintf("\033[%dC", n))
-	}
-}
-
-func (s *State) moveToCol(n int) {
-	if int(s.ws.Col) <= n {
-		n = int(s.ws.Col) - 1
-	}
-	s.cx = 0
-	fmt.Printf("\r")
-	s.moveRight(n)
-}
-
-func (s *State) moveToStart() {
-	s.cx = 0
-	fmt.Printf("\r")
-	s.moveUp(s.cy)
-}
-
-func (s *State) clearToEOL() {
-	fmt.Printf("\033[K")
-}
-
-func (s *State) clearLine() {
-	fmt.Printf("\r\033[K")
-}
-
-func (s *State) clearToEOP() {
-	fmt.Printf("\033[K")
-	for i := s.cy + 1; s.promptLines > i; i++ {
-		s.moveDown(1)
-		s.clearLine()
-	}
-}
-
-func (s *State) clearPrompt() {
-	s.moveToStart()
-	s.clearToEOP()
-	s.moveToStart()
-}
-
-func writeStrNoWrapInternal(str []rune, trunc bool) bool {
+func writeStrNoWrapInternal(str []rune) {
 	fmt.Printf("\033[?7l%s\033[?7h", string(str))
-	return trunc
+}
+
+func writeAtEOL(ch rune) {
+	fmt.Printf("%c", ch)
 }
 
 func (s *State) read() (rune, error) {
@@ -203,18 +140,32 @@ func (s *State) read() (rune, error) {
 					p.Signal(syscall.SIGSTOP)
 					// make sure there is time for the signal to be delivered before we continue
 					time.Sleep(100 * time.Millisecond)
+				} else if nil == err && _ASCII_ESC == r {
+					p, e := s.r.Peek(2)
+					if e == nil && '[' == p[0] {
+						skip := false
+						switch p[1] {
+						case 'A':
+							r = s.controlChars[ccUP]
+						case 'B':
+							r = s.controlChars[ccDOWN]
+						case 'C':
+							r = s.controlChars[ccRIGHT]
+						case 'D':
+							r = s.controlChars[ccLEFT]
+						default:
+							skip = true
+						}
+						if !skip {
+							s.r.ReadRune()
+							s.r.ReadRune()
+						}
+					}
+					return r, err
 				} else {
 					return r, err
 				}
 			}
 		}
 	}
-}
-
-func (s *State) hideCursor() {
-	fmt.Printf("\033[?25l")
-}
-
-func (s *State) showCursor() {
-	fmt.Printf("\033[?25h")
 }

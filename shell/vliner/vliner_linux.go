@@ -22,3 +22,12 @@ const (
 type Termios struct {
 	syscall.Termios
 }
+
+func invokeEditor(args []string, attr *syscall.ProcAttr) bool {
+	pid, _, err := syscall.StartProcess(args[0], args, attr)
+	if nil == err {
+		var ws syscall.WaitStatus
+		_, err = syscall.Wait4(pid, &ws, 0, nil)
+	}
+	return nil == err
+}
