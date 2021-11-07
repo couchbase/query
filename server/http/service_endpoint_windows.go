@@ -45,6 +45,7 @@ type HttpEndpoint struct {
 	bufpool       BufferPool
 	listener      net.Listener
 	listenerTLS   net.Listener
+	localListener bool
 	mux           *mux.Router
 	actives       server.ActiveRequests
 	options       server.ServerOptions
@@ -52,7 +53,9 @@ type HttpEndpoint struct {
 }
 
 const (
-	servicePrefix = "/query/service"
+	servicePrefix   = "/query/service"
+	_MAXRETRIES     = 3
+	_LISTENINTERVAL = 100 * time.Millisecond
 )
 
 var _ENDPOINT *HttpEndpoint
@@ -87,23 +90,63 @@ func (this *HttpEndpoint) Mux() *mux.Router {
 	return this.mux
 }
 
-func (this *HttpEndpoint) Listen() error {
-	ln, err := net.Listen("tcp", this.httpAddr)
-	if err == nil {
-		this.listener = ln
-		srv := &http.Server{
-			Handler:           this.mux,
-			ReadHeaderTimeout: 5 * time.Second,
-			ReadTimeout:       30 * time.Second,
+func (this *HttpEndpoint) localhostListen() error {
+
+	srv := &http.Server{
+		Handler:           this.mux,
+		ReadHeaderTimeout: 5 * time.Second,
+	}
+
+	_, port, _ := net.SplitHostPort(this.httpAddr)
+
+	if port == "" {
+		port = "8093"
+	}
+
+	this.localListener = true
+	err := this.serve(srv, "tcp", this.httpAddr, 0)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (this *HttpEndpoint) serve(srv *http.Server, protocol, httpAddr string, i int) error {
+	ln, err := net.Listen(protocol, httpAddr)
+
+	if err != nil {
+		if i == 0 {
+			return fmt.Errorf("Failed to start service: %v", err.Error())
+		} else {
+			logging.Infof("Failed to start service: %v", err.Error())
 		}
+	} else {
+		this.listener = ln
 		go srv.Serve(ln)
 		logging.Infop("HttpEndpoint: Listen", logging.Pair{"Address", ln.Addr()})
 	}
 
-	return err
+	return nil
+}
+
+func (this *HttpEndpoint) Listen() error {
+	srv := &http.Server{
+		Handler:           this.mux,
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       30 * time.Second,
+	}
+
+	err := this.serve(srv, "tcp", this.httpAddr, 0)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (this *HttpEndpoint) ListenTLS() error {
+	var ln net.Listener
+
 	// create tls configuration
 	if this.certFile == "" {
 		logging.Errorf("No certificate passed. Secure listener not brought up.")
@@ -121,38 +164,52 @@ func (this *HttpEndpoint) ListenTLS() error {
 
 	this.connSecConfig.TLSConfig = cbauthTLSsettings
 
-	ln, err := net.Listen("tcp", this.httpsAddr)
+	cfg := &tls.Config{
+		Certificates:             []tls.Certificate{tlsCert},
+		ClientAuth:               cbauthTLSsettings.ClientAuthType,
+		MinVersion:               cbauthTLSsettings.MinVersion,
+		CipherSuites:             cbauthTLSsettings.CipherSuites,
+		PreferServerCipherSuites: cbauthTLSsettings.PreferServerCipherSuites,
+		NextProtos:               []string{"h2", "http/1.1"},
+	}
 
-	if err == nil {
-		cfg := &tls.Config{
-			Certificates:             []tls.Certificate{tlsCert},
-			ClientAuth:               cbauthTLSsettings.ClientAuthType,
-			MinVersion:               cbauthTLSsettings.MinVersion,
-			CipherSuites:             cbauthTLSsettings.CipherSuites,
-			PreferServerCipherSuites: cbauthTLSsettings.PreferServerCipherSuites,
-			NextProtos:               []string{"h2", "http/1.1"},
+	if cbauthTLSsettings.ClientAuthType != tls.NoClientCert {
+		caCert, err := ioutil.ReadFile(this.certFile)
+		if err != nil {
+			return fmt.Errorf(" Error in reading cacert file, err: %v", err)
 		}
-		if cbauthTLSsettings.ClientAuthType != tls.NoClientCert {
-			caCert, err := ioutil.ReadFile(this.certFile)
-			if err != nil {
-				return fmt.Errorf(" Error in reading cacert file, err: %v", err)
-			}
-			caCertPool := x509.NewCertPool()
-			caCertPool.AppendCertsFromPEM(caCert)
-			cfg.ClientCAs = caCertPool
+		caCertPool := x509.NewCertPool()
+		caCertPool.AppendCertsFromPEM(caCert)
+		cfg.ClientCAs = caCertPool
+	}
+
+	srv := &http.Server{
+		Handler:           this.mux,
+		ReadHeaderTimeout: 5 * time.Second,
+		//ReadTimeout:       30 * time.Second,
+	}
+
+	for i := 0; i < _MAXRETRIES; i++ {
+		if i != 0 {
+			time.Sleep(_LISTENINTERVAL)
 		}
 
+		ln, err = net.Listen("tcp", this.httpsAddr)
+		if err == nil || !strings.Contains(strings.ToLower(err.Error()), "bind address already in use") {
+			break
+		}
+	}
+
+	if err != nil {
+		return fmt.Errorf("Failed to start service: %v", err.Error())
+	} else {
 		tls_ln := tls.NewListener(ln, cfg)
 		this.listenerTLS = tls_ln
-		srv := &http.Server{
-			Handler:           this.mux,
-			ReadHeaderTimeout: 5 * time.Second,
-			ReadTimeout:       30 * time.Second,
-		}
 		go srv.Serve(tls_ln)
 		logging.Infop("HttpEndpoint: ListenTLS", logging.Pair{"Address", ln.Addr()})
 	}
-	return err
+
+	return nil
 }
 
 // If the server channel is full and we are unable to queue a request,
@@ -189,6 +246,7 @@ func (this *HttpEndpoint) ServeHTTP(resp http.ResponseWriter, req *http.Request)
 }
 
 func (this *HttpEndpoint) Close() error {
+	this.localListener = false
 	return this.closeListener(this.listener)
 }
 
@@ -198,8 +256,18 @@ func (this *HttpEndpoint) CloseTLS() error {
 
 func (this *HttpEndpoint) closeListener(l net.Listener) error {
 	var err error
+
 	if l != nil {
-		err = l.Close()
+		for i := 0; i < _MAXRETRIES; i++ {
+			if i != 0 {
+				time.Sleep(_LISTENINTERVAL)
+			}
+
+			err = l.Close()
+			if err == nil {
+				break
+			}
+		}
 		logging.Infop("HttpEndpoint: close listener ", logging.Pair{"Address", l.Addr()}, logging.Pair{"err", err})
 	}
 	return err
@@ -240,18 +308,15 @@ func (this *HttpEndpoint) setupSSL() {
 		if (configChange & cbauth.CFG_CHANGE_CERTS_TLSCONFIG) != 0 {
 			logging.Infof(" Certificates have been refreshed by ns server ")
 			closeErr := this.CloseTLS()
-			if closeErr != nil && !strings.ContainsAny(strings.ToLower(closeErr.Error()), "closed network connection & use") {
-				logging.Infof("ERROR: Closing TLS listener - %s", closeErr.Error())
+			if closeErr != nil && !strings.Contains(strings.ToLower(closeErr.Error()), "closed network connection & use") {
+				logging.Errorf("ERROR: Closing TLS listener - %s", closeErr.Error())
 				return errors.NewAdminEndpointError(closeErr, "error closing tls listenener")
 			}
 
 			tlsErr := this.ListenTLS()
 			if tlsErr != nil {
-				if strings.ContainsAny(strings.ToLower(tlsErr.Error()), "bind address & already in use") {
-					time.Sleep(100 * time.Millisecond)
-				}
-				logging.Infof("ERROR: Starting TLS listener - %s", tlsErr.Error())
-				return errors.NewAdminEndpointError(tlsErr, "error starting tls listenener")
+				logging.Errorf("ERROR: Starting TLS listener - %s", tlsErr.Error())
+				return errors.NewAdminEndpointError(tlsErr, "error starting tls listener")
 			}
 			settingsUpdated = true
 		}
@@ -263,6 +328,32 @@ func (this *HttpEndpoint) setupSSL() {
 				return errors.NewAdminEndpointError(err, "unable to retrieve node-to-node encryption settings")
 			}
 			this.connSecConfig.ClusterEncryptionConfig = cryptoConfig
+			// For strict TLS, stop the non encrypted listeners and restart on localhost only
+			// For non strict, stop the localhost listeners, if any, and restart on all addresses
+
+			if this.connSecConfig.ClusterEncryptionConfig.DisableNonSSLPorts == true {
+				closeErr := this.Close()
+				if closeErr != nil {
+					logging.Errorf("ERROR: Closing HTTP listener - %s", closeErr.Error())
+				}
+				listenErr := this.localhostListen()
+				if listenErr != nil {
+					logging.Errorf("Starting localhost HTTP listener failed - %s", listenErr.Error())
+				}
+			} else {
+				if this.localListener {
+					closeErr := this.Close()
+					if closeErr != nil {
+						logging.Errorf("Closing HTTP listener failed- %s", closeErr.Error())
+					}
+				}
+				if this.listener == nil {
+					listenErr := this.Listen()
+					if listenErr != nil {
+						logging.Errorf("ERROR: Starting HTTP listener - %s", listenErr.Error())
+					}
+				}
+			}
 
 			// Temporary log message.
 			logging.Errorf("Updating node-to-node encryption level: %+v", cryptoConfig)

@@ -43,8 +43,9 @@ type HttpEndpoint struct {
 	certFile      string
 	keyFile       string
 	bufpool       BufferPool
-	listener      []net.Listener
-	listenerTLS   []net.Listener
+	listener      map[string]net.Listener
+	listenerTLS   map[string]net.Listener
+	localListener bool
 	mux           *mux.Router
 	actives       server.ActiveRequests
 	options       server.ServerOptions
@@ -52,7 +53,9 @@ type HttpEndpoint struct {
 }
 
 const (
-	servicePrefix = "/query/service"
+	servicePrefix   = "/query/service"
+	_MAXRETRIES     = 3
+	_LISTENINTERVAL = 100 * time.Millisecond
 )
 
 var _ENDPOINT *HttpEndpoint
@@ -70,6 +73,9 @@ func NewServiceEndpoint(srv *server.Server, staticPath string, metrics bool,
 		actives:   NewActiveRequests(),
 		options:   NewHttpOptions(srv),
 	}
+
+	rv.listener = make(map[string]net.Listener, 2)
+	rv.listenerTLS = make(map[string]net.Listener, 2)
 
 	rv.connSecConfig.CertFile = certFile
 	rv.connSecConfig.KeyFile = keyFile
@@ -102,6 +108,59 @@ func getNetwProtocol() []string {
       (1) start listening to ipv4 - fail service if listen fails
       (2) try to listen to ipv6 - don't fail service even if listen fails.
 */
+func (this *HttpEndpoint) localhostListen() error {
+	netWs := getNetwProtocol()
+	if len(netWs) == 0 {
+		// Both values were set to off so we fail here.
+		return fmt.Errorf(" Failed to start service: Both IPv4 and IPv6 flags were not set.")
+	}
+
+	srv := &http.Server{
+		Handler:           this.mux,
+		ReadHeaderTimeout: 5 * time.Second,
+	}
+
+	_, port, _ := net.SplitHostPort(this.httpAddr)
+
+	if port == "" {
+		port = "8093"
+	}
+
+	this.localListener = true
+	IPv6 := server.IsIPv6()
+	if !IPv6 {
+		err := this.serve(srv, "tcp4", "127.0.0.1:"+port, 0)
+		if err != nil {
+			return err
+		}
+		this.serve(srv, "tcp6", "[::1]:"+port, 1)
+	} else {
+		err := this.serve(srv, "tcp6", "[::1]:"+port, 0)
+		if err != nil {
+			return err
+		}
+		this.serve(srv, "tcp4", "127.0.0.1:"+port, 1)
+	}
+	return nil
+}
+
+func (this *HttpEndpoint) serve(srv *http.Server, protocol, httpAddr string, i int) error {
+	ln, err := net.Listen(protocol, httpAddr)
+
+	if err != nil {
+		if i == 0 {
+			return fmt.Errorf("Failed to start service: %v", err.Error())
+		} else {
+			logging.Infof("Failed to start service: %v", err.Error())
+		}
+	} else {
+		this.listener[protocol] = ln
+		go srv.Serve(ln)
+		logging.Infop("HttpEndpoint: Listen", logging.Pair{"Address", ln.Addr()})
+	}
+
+	return nil
+}
 
 func (this *HttpEndpoint) Listen() error {
 
@@ -111,18 +170,9 @@ func (this *HttpEndpoint) Listen() error {
 	}
 
 	for i, netW := range getNetwProtocol() {
-		ln, err := net.Listen(netW, this.httpAddr)
-
+		err := this.serve(srv, netW, this.httpAddr, i)
 		if err != nil {
-			if i == 0 {
-				return fmt.Errorf("Failed to start service: %v", err.Error())
-			} else {
-				logging.Infof("Failed to start service: %v", err.Error())
-			}
-		} else {
-			this.listener = append(this.listener, ln)
-			go srv.Serve(ln)
-			logging.Infop("HttpEndpoint: Listen", logging.Pair{"Address", ln.Addr()})
+			return err
 		}
 	}
 
@@ -181,8 +231,27 @@ func (this *HttpEndpoint) ListenTLS() error {
 		      (2) try to listen to ipv6 - don't fail service even if listen fails.
 	*/
 
-	for i, netW := range getNetwProtocol() {
-		ln, err := net.Listen(netW, this.httpsAddr)
+	netWs := getNetwProtocol()
+	if len(netWs) == 0 {
+		// Both values were set to off so we fail here.
+		return fmt.Errorf(" Failed to start service: Both IPv4 and IPv6 flags were not set.")
+	}
+
+	for i, netW := range netWs {
+
+		var ln net.Listener
+		var err error
+
+		for i := 0; i < _MAXRETRIES; i++ {
+			if i != 0 {
+				time.Sleep(_LISTENINTERVAL)
+			}
+
+			ln, err = net.Listen(netW, this.httpsAddr)
+			if err == nil || !strings.Contains(strings.ToLower(err.Error()), "bind address already in use") {
+				break
+			}
+		}
 
 		if err != nil {
 			if i == 0 {
@@ -192,7 +261,7 @@ func (this *HttpEndpoint) ListenTLS() error {
 			}
 		} else {
 			tls_ln := tls.NewListener(ln, cfg)
-			this.listenerTLS = append(this.listenerTLS, tls_ln)
+			this.listenerTLS[netW] = tls_ln
 			go srv.Serve(tls_ln)
 			logging.Infop("HttpEndpoint: ListenTLS", logging.Pair{"Address", ln.Addr()})
 		}
@@ -236,14 +305,18 @@ func (this *HttpEndpoint) ServeHTTP(resp http.ResponseWriter, req *http.Request)
 
 func (this *HttpEndpoint) Close() error {
 	serr := []error{}
-	for _, listener := range this.listener {
+	for netW, listener := range this.listener {
 		if listener != nil {
 			err := this.closeListener(listener)
 			if err != nil {
 				serr = append(serr, err)
+			} else {
+				this.listener[netW] = nil
+				delete(this.listener, netW)
 			}
 		}
 	}
+	this.localListener = false
 	if len(serr) != 0 {
 		return fmt.Errorf("HTTP Listener errors: %v", serr)
 	}
@@ -252,11 +325,14 @@ func (this *HttpEndpoint) Close() error {
 
 func (this *HttpEndpoint) CloseTLS() error {
 	serr := []error{}
-	for _, listener := range this.listenerTLS {
+	for netW, listener := range this.listenerTLS {
 		if listener != nil {
 			err := this.closeListener(listener)
 			if err != nil {
 				serr = append(serr, err)
+			} else {
+				this.listenerTLS[netW] = nil
+				delete(this.listenerTLS, netW)
 			}
 		}
 	}
@@ -268,8 +344,18 @@ func (this *HttpEndpoint) CloseTLS() error {
 
 func (this *HttpEndpoint) closeListener(l net.Listener) error {
 	var err error
+
 	if l != nil {
-		err = l.Close()
+		for i := 0; i < _MAXRETRIES; i++ {
+			if i != 0 {
+				time.Sleep(_LISTENINTERVAL)
+			}
+
+			err = l.Close()
+			if err == nil {
+				break
+			}
+		}
 		logging.Infop("HttpEndpoint: close listener ", logging.Pair{"Address", l.Addr()}, logging.Pair{"err", err})
 	}
 	return err
@@ -310,27 +396,16 @@ func (this *HttpEndpoint) setupSSL() {
 		if (configChange & cbauth.CFG_CHANGE_CERTS_TLSCONFIG) != 0 {
 			logging.Infof(" Certificates have been refreshed by ns server ")
 			closeErr := this.CloseTLS()
-			if closeErr != nil && !strings.ContainsAny(strings.ToLower(closeErr.Error()), "closed network connection & use") {
-				logging.Infof("ERROR: Closing TLS listener - %s", closeErr.Error())
+
+			if closeErr != nil && !strings.Contains(strings.ToLower(closeErr.Error()), "closed network connection & use") {
+				logging.Errorf("ERROR: Closing TLS listener - %s", closeErr.Error())
 				return errors.NewAdminEndpointError(closeErr, "error closing tls listenener")
 			}
 
 			tlsErr := this.ListenTLS()
 			if tlsErr != nil {
-				logging.Infof("ERROR: Starting TLS listener - %s", tlsErr.Error())
-
-				if strings.ContainsAny(strings.ToLower(tlsErr.Error()), "bind address already in use") {
-					logging.Infof("ERROR: Retrying listen on TLS Endpoint after sleep")
-
-					// Wait a little and then retry as maybe closing the listener is taking time.
-					time.Sleep(100 * time.Millisecond)
-					tlsErr = this.ListenTLS()
-					time.Sleep(100 * time.Millisecond)
-				}
-
-				if tlsErr != nil {
-					return errors.NewAdminEndpointError(tlsErr, "error starting tls listener")
-				}
+				logging.Errorf("ERROR: Starting TLS listener - %s", tlsErr.Error())
+				return errors.NewAdminEndpointError(tlsErr, "error starting tls listener")
 			}
 			settingsUpdated = true
 		}
@@ -342,6 +417,33 @@ func (this *HttpEndpoint) setupSSL() {
 				return errors.NewAdminEndpointError(err, "unable to retrieve node-to-node encryption settings")
 			}
 			this.connSecConfig.ClusterEncryptionConfig = cryptoConfig
+
+			// For strict TLS, stop the non encrypted listeners and restart on localhost only
+			// For non strict, stop the localhost listeners, if any, and restart on all addresses
+
+			if this.connSecConfig.ClusterEncryptionConfig.DisableNonSSLPorts == true {
+				closeErr := this.Close()
+				if closeErr != nil {
+					logging.Errorf("ERROR: Closing HTTP listener - %s", closeErr.Error())
+				}
+				listenErr := this.localhostListen()
+				if listenErr != nil {
+					logging.Errorf("Starting localhost HTTP listener failed - %s", listenErr.Error())
+				}
+			} else {
+				if this.localListener {
+					closeErr := this.Close()
+					if closeErr != nil {
+						logging.Errorf("Closing HTTP listener failed- %s", closeErr.Error())
+					}
+				}
+				if len(this.listener) == 0 {
+					listenErr := this.Listen()
+					if listenErr != nil {
+						logging.Errorf("ERROR: Starting HTTP listener - %s", listenErr.Error())
+					}
+				}
+			}
 
 			// Temporary log message.
 			logging.Errorf("Updating node-to-node encryption level: %+v", cryptoConfig)
