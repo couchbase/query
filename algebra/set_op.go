@@ -131,6 +131,11 @@ func (this *setOp) Second() Subresult {
 func (this *setOp) OptimHints() *OptimHints {
 	firstHints := this.first.OptimHints()
 	secondHints := this.second.OptimHints()
+	if firstHints == nil {
+		return secondHints
+	} else if secondHints == nil {
+		return firstHints
+	}
 	if firstHints.JSONStyle() == secondHints.JSONStyle() {
 		allHints := append(firstHints.Hints(), secondHints.Hints()...)
 		return &OptimHints{
