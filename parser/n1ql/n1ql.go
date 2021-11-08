@@ -10,6 +10,7 @@ package n1ql
 
 import (
 	"fmt"
+	"regexp"
 	"runtime"
 	"strings"
 
@@ -192,10 +193,13 @@ func (this *lexer) Error(s string) {
 		this.lastScannerError = ""
 	}
 	if strings.HasPrefix(s, "syntax error") {
-		s = s + this.ErrorContext()
-		if len(this.nex.stack) > 0 {
-			if isLexerToken(strings.ToUpper(this.nex.Text())) {
-				s = s + " (reserved word)"
+		// add context if the error doesn't already contain context
+		if ctx, _ := regexp.MatchString("(near line [0-9]+, column [0-9]+)", s); !ctx {
+			s = s + this.ErrorContext()
+			if len(this.nex.stack) > 0 {
+				if isLexerToken(strings.ToUpper(this.nex.Text())) {
+					s = s + " (reserved word)"
+				}
 			}
 		}
 	}

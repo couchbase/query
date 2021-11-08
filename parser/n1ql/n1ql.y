@@ -392,7 +392,7 @@ tokOffset    int
 %type <functionName>     func_name long_func_name short_func_name
 %type <ss>               parm_list parameter_terms
 %type <functionBody>     func_body
-%type <b>                opt_replace
+%type <expr>             opt_replace
 
 %type <expr>             paren_expr
 %type <subquery>         subquery_expr
@@ -2947,35 +2947,39 @@ create_function:
 CREATE opt_replace FUNCTION func_name
 {
     if $4 != nil {
-
-	// push function query context
-	yylex.(*lexer).PushQueryContext($4.QueryContext())
+        // push function query context
+        yylex.(*lexer).PushQueryContext($4.QueryContext())
     }
 }
-LPAREN parm_list RPAREN func_body
+LPAREN parm_list RPAREN opt_if_not_exists func_body
 {
     if $4 != nil {
-	yylex.(*lexer).PopQueryContext()
+        yylex.(*lexer).PopQueryContext()
     }
-    if $9 != nil {
-        err := $9.SetVarNames($7)
+    if $10 != nil {
+        err := $10.SetVarNames($7)
         if err != nil {
             yylex.Error(err.Error()+yylex.(*lexer).ErrorContext())
         }
     }
-    $$ = algebra.NewCreateFunction($4, $9, $2)
+    if $2.Value().Truth() && !$9 {
+        return yylex.(*lexer).FatalError(
+            fmt.Sprintf("syntax error - OR REPLACE and IF NOT EXISTS are mutually exclusive%s", $2.ErrorContext()))
+    }
+    $$ = algebra.NewCreateFunction($4, $10, $2.Value().Truth(), $9)
 }
 ;
 
 opt_replace:
 /* empty */
 {
-    $$ = false
+    $$ = expression.FALSE_EXPR
 }
 |
 OR REPLACE
 {
-    $$ = true
+    $$ = expression.TRUE_EXPR
+    $$.ExprBase().SetErrorContext(yylex.(*lexer).nex.Line()+1,yylex.(*lexer).nex.Column())
 }
 ;
 
@@ -3091,9 +3095,9 @@ LANGUAGE JAVASCRIPT AS STR AT STR
  *************************************************/
 
 drop_function:
-DROP FUNCTION func_name
+DROP FUNCTION func_name opt_if_exists
 {
-    $$ = algebra.NewDropFunction($3)
+    $$ = algebra.NewDropFunction($3, $4)
 }
 ;
 

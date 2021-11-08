@@ -18,17 +18,23 @@ import (
 // Drop function
 type DropFunction struct {
 	ddl
-	name functions.FunctionName
+	name            functions.FunctionName
+	failIfNotExists bool
 }
 
 func NewDropFunction(node *algebra.DropFunction) *DropFunction {
 	return &DropFunction{
-		name: node.Name(),
+		name:            node.Name(),
+		failIfNotExists: node.FailIfNotExists(),
 	}
 }
 
 func (this *DropFunction) Name() functions.FunctionName {
 	return this.name
+}
+
+func (this *DropFunction) FailIfNotExists() bool {
+	return this.failIfNotExists
 }
 
 func (this *DropFunction) Accept(visitor Visitor) (interface{}, error) {
@@ -48,6 +54,7 @@ func (this *DropFunction) MarshalBase(f func(map[string]interface{})) map[string
 	identity := make(map[string]interface{})
 	this.name.Signature(identity)
 	r["identity"] = identity
+	r["fail_if_not_exists"] = this.failIfNotExists
 
 	if f != nil {
 		f(r)
@@ -57,8 +64,9 @@ func (this *DropFunction) MarshalBase(f func(map[string]interface{})) map[string
 
 func (this *DropFunction) UnmarshalJSON(bytes []byte) error {
 	var _unmarshalled struct {
-		_        string          `json:"#operator"`
-		Identity json.RawMessage `json:"identity"`
+		_               string          `json:"#operator"`
+		Identity        json.RawMessage `json:"identity"`
+		FailIfNotExists bool            `json:"fail_if_not_exists"`
 	}
 
 	err := json.Unmarshal(bytes, &_unmarshalled)
@@ -70,5 +78,7 @@ func (this *DropFunction) UnmarshalJSON(bytes []byte) error {
 	if err != nil {
 		return err
 	}
+
+	this.failIfNotExists = _unmarshalled.FailIfNotExists
 	return nil
 }

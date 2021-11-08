@@ -11,6 +11,7 @@ package execution
 import (
 	"encoding/json"
 
+	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/functions"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
@@ -63,7 +64,9 @@ func (this *DropFunction) RunOnce(context *Context, parent value.Value) {
 		err := functions.DeleteFunction(this.plan.Name(), context)
 		this.switchPhase(_EXECTIME)
 		if err != nil {
-			context.Error(err)
+			if this.plan.FailIfNotExists() || err.Code() != errors.E_MISSING_FUNCTION {
+				context.Error(err)
+			}
 		}
 	})
 }

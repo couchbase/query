@@ -24,16 +24,18 @@ create function statement. The fields just refer to the function name.
 type DropFunction struct {
 	statementBase
 
-	name functions.FunctionName `json:"name"`
+	name            functions.FunctionName `json:"name"`
+	failIfNotExists bool                   `json:"failIfNotExists"`
 }
 
 /*
 The function NewDropFunction returns a pointer to the
 DropFunction struct with the input argument values as fields.
 */
-func NewDropFunction(name functions.FunctionName) *DropFunction {
+func NewDropFunction(name functions.FunctionName, failIfNotExists bool) *DropFunction {
 	rv := &DropFunction{
-		name: name,
+		name:            name,
+		failIfNotExists: failIfNotExists,
 	}
 
 	rv.stmt = rv
@@ -42,6 +44,10 @@ func NewDropFunction(name functions.FunctionName) *DropFunction {
 
 func (this *DropFunction) Name() functions.FunctionName {
 	return this.name
+}
+
+func (this *DropFunction) FailIfNotExists() bool {
+	return this.failIfNotExists
 }
 
 /*

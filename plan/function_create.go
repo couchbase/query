@@ -20,16 +20,18 @@ import (
 // Create function
 type CreateFunction struct {
 	ddl
-	name    functions.FunctionName
-	body    functions.FunctionBody
-	replace bool
+	name         functions.FunctionName
+	body         functions.FunctionBody
+	replace      bool
+	failIfExists bool
 }
 
 func NewCreateFunction(node *algebra.CreateFunction) *CreateFunction {
 	return &CreateFunction{
-		name:    node.Name(),
-		body:    node.Body(),
-		replace: node.Replace(),
+		name:         node.Name(),
+		body:         node.Body(),
+		replace:      node.Replace(),
+		failIfExists: node.FailIfExists(),
 	}
 }
 
@@ -43,6 +45,10 @@ func (this *CreateFunction) Body() functions.FunctionBody {
 
 func (this *CreateFunction) Replace() bool {
 	return this.replace
+}
+
+func (this *CreateFunction) FailIfExists() bool {
+	return this.failIfExists
 }
 
 func (this *CreateFunction) Accept(visitor Visitor) (interface{}, error) {
@@ -66,6 +72,7 @@ func (this *CreateFunction) MarshalBase(f func(map[string]interface{})) map[stri
 	r["identity"] = identity
 	r["definition"] = definition
 	r["replace"] = this.replace
+	r["fail_if_exists"] = this.failIfExists
 
 	if f != nil {
 		f(r)
@@ -75,10 +82,11 @@ func (this *CreateFunction) MarshalBase(f func(map[string]interface{})) map[stri
 
 func (this *CreateFunction) UnmarshalJSON(bytes []byte) error {
 	var _unmarshalled struct {
-		_          string          `json:"#operator"`
-		Identity   json.RawMessage `json:"identity"`
-		Definition json.RawMessage `json:"definition"`
-		Replace    bool            `json:"replace"`
+		_            string          `json:"#operator"`
+		Identity     json.RawMessage `json:"identity"`
+		Definition   json.RawMessage `json:"definition"`
+		Replace      bool            `json:"replace"`
+		FailIfExists bool            `json:"fail_if_exists"`
 	}
 	var newErr errors.Error
 
@@ -96,5 +104,6 @@ func (this *CreateFunction) UnmarshalJSON(bytes []byte) error {
 		return newErr.GetICause()
 	}
 	this.replace = _unmarshalled.Replace
+	this.failIfExists = _unmarshalled.FailIfExists
 	return nil
 }

@@ -62,15 +62,20 @@ func (this *CreateFunction) RunOnce(context *Context, parent value.Value) {
 		// Actually create function
 		var err errors.Error
 
-		if this.plan.Replace() {
+		replace := this.plan.Replace()
+		if !this.plan.FailIfExists() {
+			// IF EXISTS clause has been specified so ensure replacement isn't attempted
+			replace = false
+		}
+		if replace {
 			err = functions.CheckDelete(this.plan.Name(), context)
 		}
 		if err == nil {
 			this.switchPhase(_SERVTIME)
-			err = functions.AddFunction(this.plan.Name(), this.plan.Body(), this.plan.Replace())
+			err = functions.AddFunction(this.plan.Name(), this.plan.Body(), replace)
 			this.switchPhase(_EXECTIME)
 		}
-		if err != nil {
+		if err != nil && (this.plan.FailIfExists() || err.Code() != errors.E_DUPLICATE_FUNCTION) {
 			context.Error(err)
 		}
 	})

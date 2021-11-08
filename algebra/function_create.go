@@ -25,20 +25,22 @@ and function body
 type CreateFunction struct {
 	statementBase
 
-	name    functions.FunctionName `json:"name"`
-	body    functions.FunctionBody `json:"body"`
-	replace bool                   `json:"replace"`
+	name         functions.FunctionName `json:"name"`
+	body         functions.FunctionBody `json:"body"`
+	replace      bool                   `json:"replace"`
+	failIfExists bool                   `json:"fail_if_exists"`
 }
 
 /*
 The function NewCreateFunction returns a pointer to the
 CreateFunction struct with the input argument values as fields.
 */
-func NewCreateFunction(name functions.FunctionName, body functions.FunctionBody, replace bool) *CreateFunction {
+func NewCreateFunction(name functions.FunctionName, body functions.FunctionBody, replace bool, failIfExists bool) *CreateFunction {
 	rv := &CreateFunction{
-		name:    name,
-		body:    body,
-		replace: replace,
+		name:         name,
+		body:         body,
+		replace:      replace,
+		failIfExists: failIfExists,
 	}
 
 	rv.stmt = rv
@@ -55,6 +57,10 @@ func (this *CreateFunction) Body() functions.FunctionBody {
 
 func (this *CreateFunction) Replace() bool {
 	return this.replace
+}
+
+func (this *CreateFunction) FailIfExists() bool {
+	return this.failIfExists
 }
 
 /*
