@@ -143,10 +143,23 @@ func (this *Identifier) CoveredBy(keyspace string, exprs Expressions, options Co
 						return CoveredTrue
 					} else if eType.identifier != keyspace {
 						return CoveredSkip
+					} else if this.IsUnnestAlias() {
+						return CoveredEquiv
 					}
 				}
 			default:
 				return CoveredTrue
+			}
+		} else if options.hasCoverArrayKeyOptions() {
+			// special handling of array index expression self
+			// ALL ARRAY FLATTEN_KEYS(v) FOR v IN self END
+			// FROM default AS d WHERE ANY v IN  d SATISFIES v > 10 END;
+
+			if all, ok := expr.(*All); ok {
+				rv := chkArrayKeyCover(this, keyspace, exprs, all, options)
+				if rv == CoveredTrue || rv == CoveredEquiv {
+					return rv
+				}
 			}
 		}
 	}

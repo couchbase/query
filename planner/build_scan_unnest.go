@@ -399,7 +399,7 @@ func (this *builder) matchUnnestScan(node *algebra.KeyspaceTerm, pred, subset ex
 		return entry, unnest, arrayKey, err
 	}
 	entry.setArrayKey(arrayKey, entry.arrayKeyPos)
-	entry.unnestAliases = getUnnestAliases(entry.arrayKey, unnest, false)
+	entry.unnestAliases = getUnnestAliases(entry.arrayKey, unnest)
 
 	unnestFilters, coveredExprs, _, _, err := this.coveringExpressions(node, entry, unnest,
 		unnests, false)
@@ -409,7 +409,7 @@ func (this *builder) matchUnnestScan(node *algebra.KeyspaceTerm, pred, subset ex
 	unnestFilters = append(unnestFilters, coveredExprs...)
 	unnestFilters = append(unnestFilters, getUnnestFilters(entry.unnestAliases)...)
 
-	coverAliases := getUnnestAliases(entry.arrayKey, unnest, true)
+	coverAliases := getUnnestAliases(entry.arrayKey, unnest)
 	entry.pushDownProperty = this.indexPushDownProperty(entry, entry.sargKeys,
 		unnestFilters, pred, node.Alias(), coverAliases, true, false,
 		(len(this.baseKeyspaces) == len(entry.unnestAliases)+1), false)
@@ -449,24 +449,16 @@ func getUnnestFilters(aliases []string) expression.Expressions {
 /*
  Array varaibles replaced with and unnest variables.
  Collect the varaibles from the leaf (if no binding varaible replace with leaf Unnest alias)
- If emptyIdentifer set, when leaf is Identifier consider alias as ""
 */
 
-func getUnnestAliases(expr expression.Expression, leafUnnest *algebra.Unnest, emptyIdentifer bool) (
+func getUnnestAliases(expr expression.Expression, leafUnnest *algebra.Unnest) (
 	unnestAliases []string) {
 	for all, ok := expr.(*expression.All); ok; all, ok = expr.(*expression.All) {
-		alias := ""
 		if array, ok := all.Array().(*expression.Array); ok {
 			expr = array.ValueMapping()
-			if _, ok1 := expr.(*expression.Identifier); !ok1 || !emptyIdentifer {
-				alias = array.Bindings()[0].Variable()
-			}
-			unnestAliases = append(unnestAliases, alias)
+			unnestAliases = append(unnestAliases, array.Bindings()[0].Variable())
 		} else {
-			if !emptyIdentifer {
-				alias = leafUnnest.Alias()
-			}
-			unnestAliases = append(unnestAliases, alias)
+			unnestAliases = append(unnestAliases, leafUnnest.Alias())
 			break
 		}
 	}

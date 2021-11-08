@@ -88,7 +88,7 @@ func (this *builder) buildOneCoveringUnnestScan(node *algebra.KeyspaceTerm,
 		return nil, nil
 	}
 
-	coverAliases := getUnnestAliases(entry.arrayKey, centry.leafUnnest, true)
+	coverAliases := getUnnestAliases(entry.arrayKey, centry.leafUnnest)
 	pushDownProperty := this.indexCoveringPushDownProperty(entry, append(entry.keys, id),
 		node.Alias(), coverAliases, true, false, _PUSHDOWN_EXACTSPANS)
 	allDistinct := isPushDownProperty(pushDownProperty, _PUSHDOWN_GROUPAGGS)
@@ -104,9 +104,23 @@ func (this *builder) buildOneCoveringUnnestScan(node *algebra.KeyspaceTerm,
 		coveredUnnests = nil
 	}
 	coveringExprs = append(coveringExprs, coveredExprs...)
+
+	// Unnest on keyspace
+	// FROM default AS d UNNEST d AS v WHERE v > 10;
+	unnestOnKeyspace, ok := centry.rootUnnest.Expression().(*expression.Identifier)
+	if ok && unnestOnKeyspace.Alias() != node.Alias() {
+		unnestOnKeyspace = nil
+	}
+
 	// Is the statement covered by this index?
 	exprs := this.cover.Expressions()
 	for _, expr := range exprs {
+		// unnestOnKeyspace is exact expression pointer of UNNEST d. and skip the covering of that.
+		// Match the pointer with expression to avoid d can be used other place.
+		if unnestOnKeyspace != nil && unnestOnKeyspace == expr {
+			continue
+		}
+
 		if !expression.IsCovered(expr, node.Alias(), coveringExprs, false) {
 			return nil, nil
 		}
