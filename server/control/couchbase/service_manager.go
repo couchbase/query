@@ -13,7 +13,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"strings"
 	"sync"
 	"time"
 
@@ -114,13 +113,7 @@ func (m *ServiceMgr) setInitialNodeList() {
 }
 
 func (m *ServiceMgr) registerWithServer() {
-	// ns_server is looking for "n1ql-service_api" but we are "cbq-engine" so the default API tries to register as
-	// "cbq-engine-service_api" (if we don't "massage" the CBAUTH_REVRPC_URL).  Instead we'll make use of a new API allowing
-	// us to massage as necessary here, leaving the environment variable well alone.
-	orig := os.Getenv("CBAUTH_REVRPC_URL") + "-service_api"
-	url := strings.Replace(orig, "cbq-engine", "n1ql", 1)
-	logging.Debuga(func() string { return fmt.Sprintf("ServiceMgr::registerWithServer url: %v", url) })
-	err := service.RegisterManagerWithURL(m, url, nil)
+	err := service.RegisterManager(m, nil)
 	if err != nil {
 		logging.Infof("ServiceMgr::registerWithServer error %v", err)
 		m.Shutdown()
