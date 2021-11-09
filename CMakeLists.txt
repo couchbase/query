@@ -76,8 +76,8 @@ IF (NOT CBQ_ONLY)
   IF (BUILD_ENTERPRISE)
     find_path(NEWEVAL_INCLUDE_DIR worker.h
         HINTS ${NEWEVAL_DIR}/worker/include)
-    LIST(APPEND CGO_LIBRARY_DIRS "${evaluator_BINARY_DIR}")
-    LIST(APPEND CGO_INCLUDE_DIRS "${NEWEVAL_INCLUDE_DIR}")
+    LIST(PREPEND CGO_LIBRARY_DIRS "${evaluator_BINARY_DIR}")
+    LIST(PREPEND CGO_INCLUDE_DIRS "${NEWEVAL_INCLUDE_DIR}")
   ENDIF (BUILD_ENTERPRISE)
 
   GoModBuild (TARGET cbq-engine PACKAGE github.com/couchbase/query/server/cbq-engine
