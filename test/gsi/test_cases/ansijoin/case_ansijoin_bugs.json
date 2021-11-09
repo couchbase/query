@@ -153,6 +153,52 @@
             "c11": 4
         }
 	]
+    },
+    {
+        "testcase": "MB-49425",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'HashJoin' AND v.`outer` IS NOT MISSING AND v.`filter` IS MISSING END"
+        },
+        "statements":"SELECT p AS id, earliest_in_future FROM [{ \"id\": 1 }, { \"id\": 2 }, { \"id\": 3 }, { \"id\": 4 }, { \"id\": 5 }] p LEFT JOIN [{ \"parent\": 1, \"date\": \"2030-01-01\" }, { \"parent\": 1, \"date\": \"2000-01-01\" }, { \"parent\": 2, \"date\": \"2000-01-01\" }, { \"parent\": 3, \"date\": \"2030-01-01\" }, { \"parent\": 3, \"date\": \"2060-01-01\" }] c ON c.parent = p.id AND SUBSTR(c.date, 0, 10) >= SUBSTR(NOW_STR(), 0, 10) GROUP BY p LETTING earliest_in_future = MIN(SUBSTR(c.date, 0, 10)) ORDER BY p.id",
+        "ordered": true,
+        "results": [
+        {
+            "earliest_in_future": "2030-01-01",
+            "id": {
+                "id": 1
+            }
+        },
+        {
+            "earliest_in_future": null,
+            "id": {
+                "id": 2
+            }
+        },
+        {
+            "earliest_in_future": "2030-01-01",
+            "id": {
+                "id": 3
+            }
+        },
+        {
+            "earliest_in_future": null,
+            "id": {
+                "id": 4
+            }
+        },
+        {
+            "earliest_in_future": null,
+            "id": {
+                "id": 5
+            }
+        }
+	]
     }
 ]
 

@@ -244,9 +244,17 @@ type Expression interface {
 	*/
 	ExprBase() *ExpressionBase
 
+	/*
+	   Parser error context
+	*/
 	ErrorContext() string
 
 	GetErrorContext() (int, int)
+
+	/*
+	   Contains volatile expression
+	*/
+	HasVolatileExpr() bool
 }
 
 func (this Expressions) MapExpressions(mapper Mapper) (err error) {

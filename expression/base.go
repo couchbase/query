@@ -608,3 +608,15 @@ func (this *ExpressionBase) SetIdentFlags(aliases map[string]bool, flags uint32)
 func (this *ExpressionBase) ExprBase() *ExpressionBase {
 	return this
 }
+
+func (this *ExpressionBase) HasVolatileExpr() bool {
+	if this.volatile() {
+		return true
+	}
+	for _, child := range this.expr.Children() {
+		if child.HasVolatileExpr() {
+			return true
+		}
+	}
+	return false
+}

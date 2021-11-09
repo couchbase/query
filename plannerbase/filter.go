@@ -257,6 +257,14 @@ func (this *Filter) IsPostjoinFilter(onclause expression.Expression, outer bool)
 			return false
 		}
 
+		// Special handling of volatile function expression, which returns false for
+		// EquivalentTo() (which is called by SubsetOf()) even for the same expr
+		// (see FunctionBase.EquivalentTo()).
+		// For such expression do not assume it is postjoin.
+		if this.fltrExpr.HasVolatileExpr() {
+			return false
+		}
+
 		// if it's not part of the current ON-clause, it must be specified
 		// in an ON-clause for a later inner join (pushed), in which case
 		// treat it as postjoin
