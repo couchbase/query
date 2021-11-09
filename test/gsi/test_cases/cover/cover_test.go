@@ -84,4 +84,14 @@ func TestCover(t *testing.T) {
 	runMatch("case_cover_bugs.json", false, true, qc, t)
 
 	runStmt(qc, "DROP INDEX shellTest.ixCover16")
+
+	runStmt(qc, "CREATE INDEX ixCover17 on shellTest(ALL ARRAY v FOR v IN a2 END)")
+	runStmt(qc, "CREATE INDEX ixCover18 on shellTest(ALL ARRAY v FOR v IN self END)")
+	runStmt(qc, "CREATE INDEX ixCover19 on shellTest(ALL ARRAY FLATTEN_KEYS(META().id, st) FOR st IN self END)")
+
+	runMatch("case_cover7.json", false, true, qc, t)
+
+	runStmt(qc, "DROP INDEX shellTest.ixCover17")
+	runStmt(qc, "DROP INDEX shellTest.ixCover18")
+	runStmt(qc, "DROP INDEX shellTest.ixCover19")
 }

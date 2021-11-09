@@ -1,0 +1,99 @@
+[
+    {
+        "testcase": "MB-49405 part1.1",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND ARRAY_LENGTH(v.covers) > 0 END"
+        },
+        "statements":"SELECT v FROM shellTest AS d UNNEST d.a2 AS v WHERE v > 10",
+        "results": [
+    ]
+    },
+    {
+        "testcase": "MB-49405 part1.2",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND ARRAY_LENGTH(v.covers) > 0 END"
+        },
+        "statements":"SELECT META(d).id FROM shellTest AS d WHERE ANY v IN d.a2 SATISFIES v > 10 END",
+        "results": [
+    ]
+    },
+    {
+        "testcase": "MB-49405 part2.1",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND ARRAY_LENGTH(v.covers) > 0 END"
+        },
+        "statements":"SELECT v FROM shellTest AS d UNNEST d AS v WHERE v > 10",
+        "results": [
+    ]
+    },
+    {
+        "testcase": "MB-49405 part2.2",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND ARRAY_LENGTH(v.covers) > 0 END"
+        },
+        "statements":"SELECT META(d).id FROM shellTest AS d WHERE ANY v IN d SATISFIES v > 10 END",
+        "results": [
+    ]
+    },
+    {
+        "testcase": "MB-49405 part3.1",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND ARRAY_LENGTH(v.covers) > 0 END"
+        },
+        "statements":"SELECT META(s).id, st FROM shellTest AS s UNNEST s AS st WHERE META(s).id BETWEEN \"CoverTest:2021-01\" AND \"CoverTest:2021-12\"",
+        "results": [
+    ]
+    },
+    {
+        "testcase": "MB-49405 part3.2",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND ARRAY_LENGTH(v.covers) > 0 END"
+        },
+        "statements":"SELECT p1, p2, AVG(st[2]) AS avg1, AVG(st[3]) AS avg2 FROM shellTest AS s UNNEST s AS st WHERE META(s).id BETWEEN \"CoverTest:2021-01\" AND \"CoverTest:2021-12\" GROUP BY SUBSTR(META(s).id, 0, 9) AS p1, SUBSTR(META(s).id, 0, 17) AS p2",
+        "results": [
+    ]
+    }
+]
+
