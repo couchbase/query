@@ -275,7 +275,6 @@ func (this *Context) Copy() *Context {
 		originalConsistency: this.originalConsistency,
 		scanVectorSource:    this.scanVectorSource,
 		output:              this.output,
-		result:              this.result,
 		httpRequest:         this.httpRequest,
 		indexApiVersion:     this.indexApiVersion,
 		featureControls:     this.featureControls,
