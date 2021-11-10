@@ -469,6 +469,14 @@ func (this *valueQueue) close() {
 	this.vLock.Unlock()
 }
 
+// Ccount of unprocessed children already terminated
+func (this *valueExchange) stoppedChildren() int {
+	this.oLock.Lock()
+	rv := len(this.children)
+	this.oLock.Unlock()
+	return rv
+}
+
 // wait for children without stopping or receiving
 // if there are no more children, this will hang
 func (this *valueExchange) retrieveChildNoStop() int {

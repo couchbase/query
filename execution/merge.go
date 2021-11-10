@@ -130,6 +130,9 @@ func (this *Merge) RunOnce(context *Context, parent value.Value) {
 				break
 			}
 			this.addInDocs(1)
+			if this.ValueExchange().stoppedChildren() > 0 {
+				break
+			}
 			if this.plan.IsOnKey() {
 				ok = this.processKeyMatch(item, context, update, delete, insert)
 			} else {
