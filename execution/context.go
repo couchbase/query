@@ -294,6 +294,7 @@ func (this *Context) Copy() *Context {
 		preserveExpiry:      this.preserveExpiry,
 		flags:               this.flags,
 		reqTimeout:          this.reqTimeout,
+		whitelist:           this.whitelist,
 		udfValueMap:         this.udfValueMap,
 		recursionCount:      this.recursionCount,
 	}
