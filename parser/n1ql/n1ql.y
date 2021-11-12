@@ -665,10 +665,49 @@ USING construction_expr
 ;
 
 infer:
-INFER opt_keyspace_collection simple_keyspace_ref opt_infer_using opt_infer_ustat_with
+INFER keyspace_collection simple_keyspace_ref opt_infer_using opt_infer_ustat_with
 {
     $$ = algebra.NewInferKeyspace($3, $4, $5)
 }
+|
+INFER keyspace_path opt_as_alias opt_infer_using opt_infer_ustat_with
+{
+    kr := algebra.NewKeyspaceRefFromPath($2, $3)
+    $$ = algebra.NewInferKeyspace(kr, $4, $5)
+}
+|
+INFER expr opt_infer_using opt_infer_ustat_with
+{
+    i, ok := $2.(*expression.Identifier)
+    if ok {
+        kr := algebra.NewKeyspaceRefWithContext(i.Identifier(), "", yylex.(*lexer).Namespace(), yylex.(*lexer).QueryContext())
+        $$ = algebra.NewInferKeyspace(kr, $3, $4)
+    } else {
+        f, ok := $2.(*expression.Field)
+        if ok {
+            p := f.Path()
+            if len(p) == 2 || len(p) == 0 {
+                yylex.(*lexer).FatalError("syntax error")
+            } else {
+                if len(p) == 3 {
+                    a := make([]string,1)
+                    a[0] = ""
+                    p = append(a, p...)
+                }
+                pth := algebra.NewPathFromElements(p)
+                $$ = algebra.NewInferKeyspace(algebra.NewKeyspaceRefFromPath(pth, ""), $3, $4)
+            }
+        } else {
+            $$ = algebra.NewInferExpression($2, $3, $4)
+        }
+    }
+}
+;
+
+keyspace_collection:
+KEYSPACE
+|
+COLLECTION
 ;
 
 opt_keyspace_collection:
@@ -676,9 +715,7 @@ opt_keyspace_collection:
 {
 }
 |
-KEYSPACE
-|
-COLLECTION
+keyspace_collection
 ;
 
 opt_infer_using:
