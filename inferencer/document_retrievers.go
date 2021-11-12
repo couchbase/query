@@ -45,7 +45,7 @@ const (
 	NO_RANDOM_INDEX_SAMPLE
 	ALLOW_DUPLICATED_LEADING_KEY
 	ALLOW_ARRAY_INDEXES
-	LIMIT_RANDOM
+	NO_LIMIT_RANDOM
 	ALLOW_CONDITIONAL
 	ALLOW_SUPERSET_CONDITIONS
 	CACHE_KEYS
@@ -63,7 +63,7 @@ var flags_map = map[string]Flag{
 	"no_random_index_sample":       NO_RANDOM_INDEX_SAMPLE,
 	"allow_duplicated_leading_key": ALLOW_DUPLICATED_LEADING_KEY,
 	"allow_array_indexes":          ALLOW_ARRAY_INDEXES,
-	"limit_random":                 LIMIT_RANDOM,
+	"no_limit_random":              NO_LIMIT_RANDOM,
 	"allow_conditional":            ALLOW_CONDITIONAL,
 	"allow_superset_conditions":    ALLOW_SUPERSET_CONDITIONS,
 	"cache_keys":                   CACHE_KEYS,
@@ -216,13 +216,27 @@ func MakeUnifiedDocumentRetriever(context datastore.QueryContext, ks datastore.K
 		return nil, errors.NewInferKeyspaceError(ks.Name(), err)
 	}
 
-	if udr.isFlagOff(LIMIT_RANDOM) {
+	if udr.isFlagOff(NO_LIMIT_RANDOM) {
 		if float64(sampleSize) >= float64(docCount)*_RANDOM_THRESHOLD {
 			udr.flags |= RANDOM_ENTRY_LAST | NO_RANDOM_INDEX_SAMPLE
 			sampleSize = int(docCount)
 		}
 	}
-	logging.Debuga(func() string { return fmt.Sprintf("flags: 0x%x", udr.flags) })
+	logging.Debuga(func() string {
+		s := make([]rune, 0, 128)
+		s = append(s, []rune("UDR: flags:")...)
+		if udr.flags == 0 {
+			s = append(s, []rune(" no_flags")...)
+		} else {
+			for k, v := range flags_map {
+				if udr.flags&v != 0 {
+					s = append(s, ' ')
+					s = append(s, []rune(k)...)
+				}
+			}
+		}
+		return string(s)
+	})
 
 	if sampleSize <= 0 || sampleSize > int(docCount) {
 		udr.sampleSize = int(docCount)
@@ -232,6 +246,8 @@ func MakeUnifiedDocumentRetriever(context datastore.QueryContext, ks datastore.K
 	if udr.sampleSize > _MAX_SAMPLE_SIZE {
 		udr.sampleSize = _MAX_SAMPLE_SIZE
 	}
+
+	logging.Debuga(func() string { return fmt.Sprintf("UDR: sampleSize: %v", udr.sampleSize) })
 
 	var ok bool
 	if udr.isFlagOff(NO_RANDOM_ENTRY) {
@@ -245,16 +261,16 @@ func MakeUnifiedDocumentRetriever(context datastore.QueryContext, ks datastore.K
 				}
 			}
 			if i == _KEYS_NOT_FOUND {
-				logging.Debuga(func() string { return "not returning random documents" })
+				logging.Debuga(func() string { return "UDR: not returning random documents" })
 				errs = append(errs, errors.NewInferNoRandomDocuments(ks.Name()))
 				udr.rnd = nil
 			}
 		} else {
-			logging.Debuga(func() string { return "RandomEntryProvider not supported" })
+			logging.Debuga(func() string { return "UDR: RandomEntryProvider not supported" })
 			errs = append(errs, errors.NewInferNoRandomEntryProvider(ks.Name()))
 		}
 	} else {
-		logging.Debuga(func() string { return "flags exclude random" })
+		logging.Debuga(func() string { return "UDR: flags exclude random" })
 	}
 
 	if udr.isFlagOff(NO_PRIMARY_INDEX) || udr.isFlagOff(NO_SECONDARY_INDEX) {
@@ -285,18 +301,18 @@ func MakeUnifiedDocumentRetriever(context datastore.QueryContext, ks datastore.K
 						}
 						udr.indexes = append(udr.indexes, index.(datastore.Index))
 						found = true
-						logging.Debuga(func() string { return fmt.Sprintf("primary index (%v) found", index.Name()) })
+						logging.Debuga(func() string { return fmt.Sprintf("UDR: primary index (%v) found", index.Name()) })
 						// once a primary index has been picked, we won't bother with secondary indexes
 						udr.flags |= NO_SECONDARY_INDEX
 						break
 					}
 				}
 				if err != nil || !found {
-					logging.Debuga(func() string { return "no primary index" })
+					logging.Debuga(func() string { return "UDR: no primary index" })
 					errs = append(errs, errors.NewInferNoSuitablePrimaryIndex(ks.Name()))
 				}
 			} else {
-				logging.Debuga(func() string { return "flags exclude primary" })
+				logging.Debuga(func() string { return "UDR: flags exclude primary" })
 			}
 
 			if udr.isFlagOff(NO_SECONDARY_INDEX) {
@@ -326,13 +342,13 @@ func MakeUnifiedDocumentRetriever(context datastore.QueryContext, ks datastore.K
 										}
 										if plannerbase.SubsetOf(i3.Condition(), other.Condition()) {
 											logging.Debuga(func() string {
-												return fmt.Sprintf("excluding %v - subset of %v",
+												return fmt.Sprintf("UDR: excluding %v - subset of %v",
 													i3.Name(), other.Name())
 											})
 											continue secondary_indexes
 										} else if plannerbase.SubsetOf(other.Condition(), i3.Condition()) {
 											logging.Debuga(func() string {
-												return fmt.Sprintf("swapping secondary index %v for %v",
+												return fmt.Sprintf("UDR: swapping secondary index %v for %v",
 													i3.Name(), other.Name())
 											})
 											udr.indexes[n] = i3
@@ -341,7 +357,9 @@ func MakeUnifiedDocumentRetriever(context datastore.QueryContext, ks datastore.K
 									}
 								}
 								udr.indexes = append(udr.indexes, idx)
-								logging.Debuga(func() string { return fmt.Sprintf("secondary index %v included", idx.Name()) })
+								logging.Debuga(func() string {
+									return fmt.Sprintf("UDR: secondary index %v included", idx.Name())
+								})
 								found = true
 								if udr.isFlagOn(SINGLE_INDEX) {
 									break
@@ -351,7 +369,7 @@ func MakeUnifiedDocumentRetriever(context datastore.QueryContext, ks datastore.K
 					}
 				}
 				if err != nil || !found {
-					logging.Debuga(func() string { return "no secondary index" })
+					logging.Debuga(func() string { return "UDR: no secondary index" })
 					errs = append(errs, errors.NewInferNoSuitableSecondaryIndex(ks.Name()))
 				}
 
@@ -367,7 +385,7 @@ func MakeUnifiedDocumentRetriever(context datastore.QueryContext, ks datastore.K
 							lkey := udr.indexes[i].RangeKey()[0].String()
 							if leading[lkey] {
 								logging.Debuga(func() string {
-									return fmt.Sprintf("%v excluded - duplicate leading key",
+									return fmt.Sprintf("UDR: %v excluded - duplicate leading key",
 										udr.indexes[i].Name())
 								})
 								udr.indexes[i] = nil
@@ -403,10 +421,10 @@ func MakeUnifiedDocumentRetriever(context datastore.QueryContext, ks datastore.K
 					})
 				}
 			} else {
-				logging.Debuga(func() string { return "flags or primary exclude secondary" })
+				logging.Debuga(func() string { return "UDR: flags or primary exclude secondary" })
 			}
 
-			logging.Debuga(func() string { return fmt.Sprintf("retriever: rnd: %v idxs: %v", udr.rnd != nil, len(udr.indexes)) })
+			logging.Debuga(func() string { return fmt.Sprintf("UDR: rnd: %v idxs: %v", udr.rnd != nil, len(udr.indexes)) })
 			return udr, nil
 		} else {
 			errs = append(errs, errors.NewInferKeyspaceError(ks.Name(), err))
@@ -418,7 +436,7 @@ func MakeUnifiedDocumentRetriever(context datastore.QueryContext, ks datastore.K
 	}
 
 	// will be a random only retriever
-	logging.Debuga(func() string { return "random only retriever" })
+	logging.Debuga(func() string { return "UDR: random only retriever" })
 	return udr, nil
 }
 
@@ -427,6 +445,7 @@ func (udr *UnifiedDocumentRetriever) getRandom(context datastore.QueryContext) (
 	for duplicates < _MAX_DUPLICATES {
 		key, value, err := udr.rnd.GetRandomEntry(context)
 		if err != nil {
+			logging.Debuga(func() string { return fmt.Sprintf("UnifiedDocumentRetriever: random retriever error: %v", err) })
 			return _EMPTY_KEY, nil, errors.NewInferRandomError(err)
 		}
 
@@ -440,6 +459,7 @@ func (udr *UnifiedDocumentRetriever) getRandom(context datastore.QueryContext) (
 		udr.cacheKey(key)
 		return key, value, nil
 	}
+	logging.Debuga(func() string { return "UnifiedDocumentRetriever: maximum random duplicates reached" })
 	return _EMPTY_KEY, nil, nil
 }
 
@@ -486,11 +506,6 @@ func (udr *UnifiedDocumentRetriever) GetNextDoc(context datastore.QueryContext) 
 		udr.rnd = nil
 	}
 
-	if len(udr.indexes) == 0 {
-		logging.Debuga(func() string { return "UnifiedDocumentRetriever: no indexes to scan" })
-		return _EMPTY_KEY, nil, nil
-	}
-
 next_index:
 	for indexesTried := 0; indexesTried < _MAX_INDEXES_TRIED_PER_DOC; {
 		duplicates := 0
@@ -498,7 +513,7 @@ next_index:
 			udr.currentIndex++
 			if udr.currentIndex >= len(udr.indexes) || (udr.currentIndex > 0 && udr.isFlagOn(SINGLE_INDEX)) {
 				logging.Debuga(func() string {
-					return fmt.Sprintf("UnifiedDocumentRetriever: ending after %v index(es), %v docs returned",
+					return fmt.Sprintf("UnifiedDocumentRetriever: ending index scanning after %v index(es), %v docs returned",
 						udr.currentIndex, udr.returned)
 				})
 				if udr.isFlagOn(RANDOM_ENTRY_LAST) && udr.rnd != nil {
