@@ -212,7 +212,7 @@ func (this *preparedCache) GetName(text, namespace string, context *planner.Prep
 }
 
 func encodeName(name string, queryContext string) string {
-	if queryContext == "" {
+	if queryContext == "" || queryContext == ":" || queryContext == "default:" {
 		return name
 	}
 	return name + "(" + queryContext + ")"
