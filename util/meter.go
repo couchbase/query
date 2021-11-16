@@ -50,8 +50,8 @@ func (m *meter) Count() int64 {
 // Mark records the occurance of n events.
 func (m *meter) Mark(n int64, t time.Time) {
 	atomic.AddInt64(&m.count, n)
-	cur := atomic.AddInt64(&m.curCount, n)
 	m.Lock()
+	cur := atomic.AddInt64(&m.curCount, n)
 	intvl := t.Sub(m.curTime)
 	if intvl > _INTERVAL {
 		atomic.AddInt64(&m.curCount, -cur)
@@ -63,15 +63,32 @@ func (m *meter) Mark(n int64, t time.Time) {
 }
 
 // Rate returns the interval rate of events
-func (m meter) Rate() float64 {
+func (m *meter) Rate() float64 {
 	m.RLock()
 	count := m.curCount
 	t := m.curTime
 	rate := m.rate
 	m.RUnlock()
-	intvl := float64(time.Since(t))
-	if intvl == 0.0 {
-		return rate * m.intvl
+	now := time.Now()
+	intvl := now.Sub(t)
+
+	// if we have exceeded the sample interval, amend the rate
+	// for the benefit of monitoring
+	if intvl > _INTERVAL {
+		m.Lock()
+		cur := atomic.AddInt64(&m.curCount, 0)
+		atomic.AddInt64(&m.curCount, -cur)
+		lastRate := float64(cur) / float64(intvl)
+		m.rate += m.alpha * (lastRate - m.rate)
+		m.curTime = now
+		rate = m.rate
+		m.Unlock()
+		return m.rate * m.intvl
 	}
-	return (rate + float64(count)/intvl) * m.intvl / (intvl + float64(_INTERVAL)) * float64(_INTERVAL)
+
+	// in order not to have huge spikes at the beginning of metering
+	// we process the unaccounted events over the sampling interval
+	// and not over the actual unaccounted elapsed time
+	lastRate := float64(count) / float64(_INTERVAL)
+	return (rate + m.alpha*(lastRate-rate)) * m.intvl
 }

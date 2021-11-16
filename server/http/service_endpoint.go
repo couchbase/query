@@ -343,9 +343,9 @@ func (this *HttpEndpoint) ServeHTTP(resp http.ResponseWriter, req *http.Request)
 			user = &userMetrics{
 				uuid:           datastore.GetUserUUID(request.Credentials()),
 				activeRequests: 1,
-				requestMeter:   util.NewMeter(5*time.Minute, time.Minute),
-				payloadMeter:   util.NewMeter(5*time.Minute, time.Minute),
-				outputMeter:    util.NewMeter(5*time.Minute, time.Minute),
+				requestMeter:   util.NewMeter(time.Minute, time.Minute),
+				payloadMeter:   util.NewMeter(time.Minute, time.Minute),
+				outputMeter:    util.NewMeter(time.Minute, time.Minute),
 			}
 			user.uuid = strings.Replace(user.uuid, "-", "_", -1)
 			limits, err := cbauth.GetUserLimits(userName, "local", "query")
