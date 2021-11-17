@@ -314,7 +314,10 @@ func (this *Context) PrepareStatement(statement string, namedArgs map[string]val
 // handle using
 func (this *Context) handleUsing(stmt algebra.Statement, namedArgs map[string]value.Value, positionalArgs value.Values) (map[string]value.Value, value.Values, errors.Error) {
 
-	exec := stmt.(*algebra.Execute)
+	exec, ok := stmt.(*algebra.Execute)
+	if !ok {
+		return namedArgs, positionalArgs, nil
+	}
 	using := exec.Using()
 	if using != nil {
 		if namedArgs != nil || positionalArgs != nil {
