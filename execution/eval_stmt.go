@@ -127,12 +127,16 @@ func (this *internalOutput) SetTransactionStartTime(t time.Time) {
 
 func (this *Context) EvaluateStatement(statement string, namedArgs map[string]value.Value, positionalArgs value.Values,
 	subquery, readonly bool) (value.Value, uint64, error) {
-	prepared, isPrepared, err := this.PrepareStatement(statement, namedArgs, positionalArgs, subquery, readonly, false)
+	stmt, prepared, isPrepared, err := this.PrepareStatement(statement, namedArgs, positionalArgs, subquery, readonly, false)
 	if err != nil {
 		return nil, 0, err
 	}
 
 	newContext := this.Copy()
+	namedArgs, positionalArgs, err = newContext.handleUsing(stmt, namedArgs, positionalArgs)
+	if err != nil {
+		return nil, 0, err
+	}
 	rv, mutations, err := newContext.ExecutePrepared(prepared, isPrepared, namedArgs, positionalArgs)
 	newErr := newContext.completeStatement(prepared.Type(), err == nil, this)
 	if newErr != nil {
@@ -158,12 +162,16 @@ func (this *Context) OpenStatement(statement string, namedArgs map[string]value.
 	NextDocument() (value.Value, error)
 	Cancel()
 }, error) {
-	prepared, isPrepared, err := this.PrepareStatement(statement, namedArgs, positionalArgs, subquery, readonly, false)
+	stmt, prepared, isPrepared, err := this.PrepareStatement(statement, namedArgs, positionalArgs, subquery, readonly, false)
 	if err != nil {
 		return nil, err
 	}
 
 	newContext := this.Copy()
+	namedArgs, positionalArgs, err = newContext.handleUsing(stmt, namedArgs, positionalArgs)
+	if err != nil {
+		return nil, err
+	}
 	rv, err := newContext.OpenPrepared(prepared, isPrepared, namedArgs, positionalArgs)
 	if rv != nil {
 		h := rv.(*executionHandle)
@@ -173,7 +181,7 @@ func (this *Context) OpenStatement(statement string, namedArgs map[string]value.
 }
 
 func (this *Context) PrepareStatement(statement string, namedArgs map[string]value.Value, positionalArgs value.Values,
-	subquery, readonly, autoPrepare bool) (prepared *plan.Prepared, isPrepared bool, rerr error) {
+	subquery, readonly, autoPrepare bool) (stmt algebra.Statement, prepared *plan.Prepared, isPrepared bool, rerr error) {
 
 	if len(namedArgs) > 0 || len(positionalArgs) > 0 || subquery {
 		autoPrepare = false
@@ -191,9 +199,9 @@ func (this *Context) PrepareStatement(statement string, namedArgs map[string]val
 			prepared = prepareds.GetAutoPreparePlan(name, statement, this.namespace, &prepContext)
 			if prepared != nil {
 				if readonly && !prepared.Readonly() {
-					return nil, false, fmt.Errorf("not a readonly request")
+					return nil, nil, false, fmt.Errorf("not a readonly request")
 				}
-				return prepared, true, nil
+				return nil, prepared, true, nil
 			}
 		} else {
 			autoPrepare = false
@@ -202,7 +210,7 @@ func (this *Context) PrepareStatement(statement string, namedArgs map[string]val
 
 	stmt, err := n1ql.ParseStatement2(statement, this.namespace, this.queryContext)
 	if err != nil {
-		return nil, false, err
+		return nil, nil, false, err
 	}
 
 	var stype string
@@ -229,18 +237,18 @@ func (this *Context) PrepareStatement(statement string, namedArgs map[string]val
 		txImplicit = this.TxContext().TxImplicit()
 	}
 	if ok, msg := transactions.IsValidStatement(txId, stype, txImplicit, allow); !ok {
-		return nil, false, errors.NewTranStatementNotSupportedError(stype, msg)
+		return nil, nil, false, errors.NewTranStatementNotSupportedError(stype, msg)
 	}
 
 	//  monitoring code TBD
 	if _, err = stmt.Accept(rewrite.NewRewrite(rewrite.REWRITE_PHASE1)); err != nil {
-		return nil, false, errors.NewRewriteError(err, "")
+		return nil, nil, false, errors.NewRewriteError(err, "")
 	}
 
 	semChecker := semantics.NewSemChecker(true /* FIXME */, stmt.Type(), this.TxContext() != nil)
 	_, err = stmt.Accept(semChecker)
 	if err != nil {
-		return nil, false, err
+		return nil, nil, false, err
 	}
 
 	switch st := stmt.(type) {
@@ -255,15 +263,15 @@ func (this *Context) PrepareStatement(statement string, namedArgs map[string]val
 	prepared, err = planner.BuildPrepared(stmt, this.datastore, this.systemstore, this.namespace, subquery, false,
 		&prepContext)
 	if err != nil {
-		return nil, false, err
+		return nil, nil, false, err
 	}
 
 	if prepared == nil {
-		return nil, false, fmt.Errorf("failed to build a plan")
+		return nil, nil, false, fmt.Errorf("failed to build a plan")
 	}
 
 	if readonly && !prepared.Readonly() {
-		return nil, false, fmt.Errorf("not a readonly request")
+		return nil, nil, false, fmt.Errorf("not a readonly request")
 	}
 
 	// EXECUTE doesn't get a plan. Get the plan from the cache.
@@ -278,7 +286,7 @@ func (this *Context) PrepareStatement(statement string, namedArgs map[string]val
 			&reprepTime)
 		//  monitoring code TBD
 		if err != nil {
-			return prepared, isPrepared, err
+			return nil, prepared, isPrepared, err
 		}
 		isPrepared = true
 
@@ -300,7 +308,44 @@ func (this *Context) PrepareStatement(statement string, namedArgs map[string]val
 
 	}
 
-	return prepared, isPrepared, nil
+	return stmt, prepared, isPrepared, nil
+}
+
+// handle using
+func (this *Context) handleUsing(stmt algebra.Statement, namedArgs map[string]value.Value, positionalArgs value.Values) (map[string]value.Value, value.Values, errors.Error) {
+
+	exec := stmt.(*algebra.Execute)
+	using := exec.Using()
+	if using != nil {
+		if namedArgs != nil || positionalArgs != nil {
+			return namedArgs, positionalArgs, errors.NewExecutionParameterError("cannot have both USING clause and request parameters")
+		}
+		argsValue := using.Value()
+		if argsValue == nil {
+			return namedArgs, positionalArgs, errors.NewExecutionParameterError("USING clause does not evaluate to static values")
+		}
+
+		actualValue := argsValue.Actual()
+		switch actualValue := actualValue.(type) {
+		case map[string]interface{}:
+			newArgs := make(map[string]value.Value, len(actualValue))
+			for n, v := range actualValue {
+				newArgs[n] = value.NewValue(v)
+			}
+			namedArgs = newArgs
+		case []interface{}:
+			newArgs := make([]value.Value, len(actualValue))
+			for n, v := range actualValue {
+				newArgs[n] = value.NewValue(v)
+			}
+			positionalArgs = newArgs
+		default:
+
+			// this never happens, but for completeness
+			return namedArgs, positionalArgs, errors.NewExecutionParameterError("unexpected value type")
+		}
+	}
+	return namedArgs, positionalArgs, nil
 }
 
 func (this *Context) ExecutePrepared(prepared *plan.Prepared, isPrepared bool,
@@ -517,7 +562,7 @@ func (this *Context) ExecuteTranStatement(stmtType string, stmtAtomicity bool) (
 	newContext.namedArgs = nil
 	newContext.positionalArgs = nil
 
-	prepared, isPrepared, err := newContext.PrepareStatement(stmt, nil, nil, false, false, true)
+	_, prepared, isPrepared, err := newContext.PrepareStatement(stmt, nil, nil, false, false, true)
 	if err == nil {
 		res, _, err = newContext.ExecutePrepared(prepared, isPrepared, nil, nil)
 	}
