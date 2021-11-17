@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"math"
 	"math/rand"
+	"runtime"
 	"sort"
 
 	"github.com/couchbase/query/algebra"
@@ -70,15 +71,10 @@ var flags_map = map[string]Flag{
 	"random_entry_last":            RANDOM_ENTRY_LAST,
 }
 
-//
-// we need an interface describing access methods for getting a set
-// of documents, since we might be getting them using random sampling via KV,
-// and we also might get them using a primary index
-//
-
 type DocumentRetriever interface {
 	GetNextDoc(context datastore.QueryContext) (string, value.Value, errors.Error) // returns nil for value when done
-	Reset()
+	Reset()                                                                        // reset for reuse of cached results etc.
+	Close()                                                                        // final clean-up to ensure any index connection is closed/cleaned-up too
 }
 
 type indexArray []datastore.Index
@@ -199,12 +195,37 @@ func (udr *UnifiedDocumentRetriever) isFlagOff(what Flag) bool {
 	return (udr.flags & what) == 0
 }
 
+// safety net to ensure we don't leak index connections
+func udrFinalizer(udr *UnifiedDocumentRetriever) {
+	if udr.iconn != nil {
+		logging.Warnf("UDR: Finalizer closing index connection.")
+		udr.iconn.Sender().Close()
+		udr.iconn = nil
+	}
+}
+
+func (udr *UnifiedDocumentRetriever) Close() {
+	if udr.iconn != nil {
+		udr.iconn.Sender().Close()
+		udr.iconn = nil
+	}
+	// hints for GC
+	udr.dedup = nil
+	udr.docs = nil
+	udr.cache = nil
+	udr.keys = nil
+	udr.indexes = nil
+	udr.lastKeys = nil
+	runtime.SetFinalizer(udr, nil)
+}
+
 func MakeUnifiedDocumentRetriever(context datastore.QueryContext, ks datastore.Keyspace, sampleSize int, flags Flag) (
 	*UnifiedDocumentRetriever, errors.Error) {
 
 	var errs []errors.Error
 
 	udr := new(UnifiedDocumentRetriever)
+	runtime.SetFinalizer(udr, udrFinalizer)
 	udr.ks = ks
 	udr.dedup = make(map[string]bool)
 	udr.currentIndex = -1
@@ -761,6 +782,9 @@ type KVRandomDocumentRetriever struct {
 func (kvrdr *KVRandomDocumentRetriever) Reset() {
 }
 
+func (kvrdr *KVRandomDocumentRetriever) Close() {
+}
+
 func (kvrdr *KVRandomDocumentRetriever) GetNextDoc(context datastore.QueryContext) (string, value.Value, errors.Error) {
 	// have we returned as many documents as were requested?
 	if len(kvrdr.docIdsSeen) >= kvrdr.sampleSize {
@@ -883,6 +907,10 @@ func MakeExpressionDocumentRetriever(context datastore.QueryContext, expr expres
 }
 
 func (this *ExpressionDocumentRetriever) Reset() {
+}
+
+func (this *ExpressionDocumentRetriever) Close() {
+	this.subquery = nil
 }
 
 func (this *ExpressionDocumentRetriever) GetNextDoc(context datastore.QueryContext) (string, value.Value, errors.Error) {

@@ -277,9 +277,7 @@ func (di *DefaultInferencer) InferKeyspace(context datastore.QueryContext, ks da
 		return
 	}
 
-	var retriever DocumentRetriever
-
-	retriever, err = MakeUnifiedDocumentRetriever(context, ks, options.SampleSize, options.Flags)
+	retriever, err := MakeUnifiedDocumentRetriever(context, ks, options.SampleSize, options.Flags)
 	if err != nil {
 		if !err.IsWarning() {
 			conn.Error(err)
@@ -287,6 +285,7 @@ func (di *DefaultInferencer) InferKeyspace(context datastore.QueryContext, ks da
 		}
 		conn.Warning(err)
 	}
+	defer retriever.Close()
 
 	schema, err := DescribeKeyspace(context, conn, retriever, options)
 	if err != nil {
@@ -321,6 +320,7 @@ func (di *DefaultInferencer) InferExpression(context datastore.QueryContext, exp
 		conn.Error(errors.NewInferCreateRetrieverFailed(err))
 		return
 	}
+	defer retriever.Close()
 
 	schema, err := DescribeKeyspace(context, conn, retriever, options)
 	if err != nil {
