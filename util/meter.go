@@ -21,6 +21,7 @@ type Meter interface {
 	Count() int64
 	Mark(int64, time.Time)
 	Rate() float64
+	Reset()
 }
 
 // NewMeter constructs a new StandardMeter and launches a goroutine.
@@ -91,4 +92,13 @@ func (m *meter) Rate() float64 {
 	// and not over the actual unaccounted elapsed time
 	lastRate := float64(count) / float64(_INTERVAL)
 	return (rate + m.alpha*(lastRate-rate)) * m.intvl
+}
+
+// Reset the meter rate
+func (m *meter) Reset() {
+	m.Lock()
+	m.rate = 0.0
+	m.curCount = 0
+	m.curTime = time.Now()
+	m.Unlock()
 }

@@ -698,19 +698,31 @@ func (this *userMetrics) amendLimits(vars map[string]int) {
 	}
 	val, ok = vars["num_queries_per_min"]
 	if ok && val >= 0 {
-		this.userRequestRateLimit = float64(val)
+		userRequestRateLimit := float64(val)
+		if userRequestRateLimit != this.userRequestRateLimit {
+			this.userRequestRateLimit = userRequestRateLimit
+			this.requestMeter.Reset()
+		}
 	} else {
 		this.userRequestRateLimit = 0
 	}
 	val, ok = vars["ingress_mib_per_min"]
 	if ok && val >= 0 {
-		this.userPayloadLimit = float64(val) * 1024 * 1024
+		userPayloadLimit := float64(val) * 1024 * 1024
+		if userPayloadLimit != this.userPayloadLimit {
+			this.userPayloadLimit = userPayloadLimit
+			this.payloadMeter.Reset()
+		}
 	} else {
 		this.userPayloadLimit = 0
 	}
 	val, ok = vars["egress_mib_per_min"]
 	if ok && val >= 0 {
-		this.userOutputLimit = float64(val) * 1024 * 1024
+		userOutputLimit := float64(val) * 1024 * 1024
+		if userOutputLimit != this.userOutputLimit {
+			this.userOutputLimit = userOutputLimit
+			this.outputMeter.Reset()
+		}
 	} else {
 		this.userOutputLimit = 0
 	}
