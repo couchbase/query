@@ -164,7 +164,7 @@ func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.Keyspa
 		}
 	}
 
-	if join && !hash {
+	if join && !hash && !node.IsSystem() {
 		op := "join"
 		if node.IsAnsiNest() {
 			op = "nest"
@@ -195,7 +195,7 @@ func (this *builder) buildPredicateScan(keyspace datastore.Keyspace, node *algeb
 
 	// do not consider primary index for ANSI JOIN or ANSI NEST
 	var primaryKey expression.Expressions
-	if !node.IsAnsiJoinOp() || node.IsUnderHash() {
+	if !node.IsAnsiJoinOp() || node.IsUnderHash() || node.IsSystem() {
 		primaryKey = expression.Expressions{id}
 	}
 
@@ -245,7 +245,7 @@ func (this *builder) buildPredicateScan(keyspace datastore.Keyspace, node *algeb
 	}
 
 	if node.IsAnsiJoinOp() {
-		if node.IsPrimaryJoin() || node.IsUnderHash() {
+		if node.IsPrimaryJoin() || node.IsUnderHash() || node.IsSystem() {
 			return nil, nil, nil
 		} else {
 			op := "join"
@@ -293,7 +293,7 @@ func (this *builder) buildSubsetScan(keyspace datastore.Keyspace, node *algebra.
 		return secondary, nil, err
 	}
 
-	if !join || hash {
+	if !join || hash || node.IsSystem() {
 		// No secondary scan, try primary scan. restore order there is predicate no need to restore others
 		this.order = order
 		hasDeltaKeyspace := this.context.HasDeltaKeyspace(baseKeyspace.Keyspace())
