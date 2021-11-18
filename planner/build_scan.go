@@ -64,7 +64,7 @@ func (this *builder) selectScan(keyspace datastore.Keyspace, node *algebra.Keysp
 	if secondary != nil {
 		return secondary, nil
 	}
-	if node.IsInCorrSubq() {
+	if node.IsInCorrSubq() && !node.IsSystem() {
 		return nil, errors.NewSubqueryMissingIndexError(node.Alias())
 	}
 	if primary != nil {
