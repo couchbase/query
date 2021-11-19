@@ -230,7 +230,7 @@ func (b *Bucket) processOpError(vb uint32, lastError error, node string, desc *d
 		case gomemcached.NOT_MY_VBUCKET:
 
 			// first, can we use the NMVB response vbmap entry?
-			newPool, newNode := b.handleNMVB(vb, resp)
+			newPool, newNode := b.handleNMVB(vb, node, resp)
 
 			// KV response might still send old map
 			// go the old way if we don't have a different node
@@ -311,22 +311,38 @@ func (b *Bucket) processOpError(vb uint32, lastError error, node string, desc *d
 	}
 }
 
-// dummy type to extract the VB map from a memcached error
-type refreshVB struct {
-	VBSMJson VBucketServerMap `json:"vBucketServerMap"`
+type kVBucketServerMap struct {
+	ServerList        []string `json:"serverList"`
+	VBucketMap        [][]int  `json:"vBucketMap"`
+	VBucketMapForward [][]int  `json:"vBucketMapForward"`
 }
 
-func (b *Bucket) handleNMVB(vb uint32, resp *gomemcached.MCResponse) (*connectionPool, string) {
+// dummy type to extract the VB map from a memcached error
+type refreshVB struct {
+	VBSMJson kVBucketServerMap `json:"vBucketServerMap"`
+}
+
+func (b *Bucket) handleNMVB(vb uint32, oldNode string, resp *gomemcached.MCResponse) (*connectionPool, string) {
 	if resp != nil && len(resp.Body) > 0 {
 		tmpVB := &refreshVB{}
 		if json.Unmarshal(resp.Body, &tmpVB) == nil {
-			if len(tmpVB.VBSMJson.ServerList) > 0 && len(tmpVB.VBSMJson.VBucketMap) > 0 {
+			if len(tmpVB.VBSMJson.ServerList) > 0 {
+				var masterId int
+				node := oldNode
+				nodes := b.VBServerMap().ServerList
 
-				// if the vbmap is good and we find the node in the current node list, use that pool
+				// search the current map
 				if int(vb) < len(tmpVB.VBSMJson.VBucketMap) {
-					masterId := tmpVB.VBSMJson.VBucketMap[int(vb)][0]
-					nodes := b.VBServerMap().ServerList
-					node := tmpVB.VBSMJson.ServerList[masterId]
+					masterId = tmpVB.VBSMJson.VBucketMap[int(vb)][0]
+					node = tmpVB.VBSMJson.ServerList[masterId]
+				}
+
+				// if we haven't found a different node and there's a future map, search there
+				if node == oldNode && int(vb) < len(tmpVB.VBSMJson.VBucketMapForward) {
+					masterId = tmpVB.VBSMJson.VBucketMapForward[int(vb)][0]
+					node = tmpVB.VBSMJson.ServerList[masterId]
+				}
+				if node != oldNode {
 					if masterId < len(nodes) && nodes[masterId] == node {
 						return b.getConnPool(masterId), node
 					}
@@ -334,6 +350,10 @@ func (b *Bucket) handleNMVB(vb uint32, resp *gomemcached.MCResponse) (*connectio
 						if nodes[i] == node {
 							return b.getConnPool(i), node
 						}
+					}
+					pool := b.getTempConnPool(masterId, tmpVB.VBSMJson.ServerList, node)
+					if pool != nil {
+						return pool, node
 					}
 				}
 			}

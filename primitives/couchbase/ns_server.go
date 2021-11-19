@@ -264,9 +264,12 @@ type Bucket struct {
 	connPools        unsafe.Pointer // *[]*connectionPool
 	vBucketServerMap unsafe.Pointer // *VBucketServerMap
 	nodeList         unsafe.Pointer // *[]Node
-	commonSufix      string
-	ah               AuthHandler // auth handler
-	closed           bool
+
+	tempServers   []string          // temporary connections for forward NMVB handling
+	tempConnPools []*connectionPool // will be folded on standard connection pools on refresh
+	commonSufix   string
+	ah            AuthHandler // auth handler
+	closed        bool
 }
 
 // PoolServices is all the bucket-independent services in a pool
@@ -347,7 +350,13 @@ func (b *Bucket) changedVBServerMap(new *VBucketServerMap) bool {
 		}
 	}
 
+	if len(new.VBucketMap) != len(old.VBucketMap) {
+		return true
+	}
 	for i, v := range new.VBucketMap {
+		if len(v) != len(old.VBucketMap[i]) {
+			return true
+		}
 		for j, n := range v {
 			if old.VBucketMap[i][j] != n {
 				return true
@@ -441,6 +450,50 @@ func (b *Bucket) getConnPoolByHost(host string, bucketLocked bool) *connectionPo
 	}
 
 	return nil
+}
+
+func (b *Bucket) getTempConnPool(i int, serverList []string, node string) *connectionPool {
+	var connPool *connectionPool
+
+	if i < 0 || i >= len(serverList) || node == "" {
+		return nil
+	}
+	b.Lock()
+
+	// if we have never seen nodes, allocate a new server list
+	if len(b.tempServers) == 0 {
+		b.tempServers = make([]string, len(serverList))
+		b.tempConnPools = make([]*connectionPool, len(serverList))
+	}
+
+	if len(serverList) == len(b.tempServers) {
+
+		// if we have never seen this node, make a new connection pool
+		if b.tempServers[i] == "" {
+			var poolServices PoolServices
+			var err error
+
+			b.tempServers[i] = node
+			client := b.pool.client
+			if client.tlsConfig != nil {
+				poolServices, err = client.GetPoolServices("default")
+				if err != nil {
+					b.Unlock()
+					return nil
+				}
+			}
+
+			// if we get an error, we populate the node name, so that we don't try over and over again
+			b.tempConnPools[i], _ = b.mkConnPool(node, &poolServices)
+		}
+
+		// if the entry is populated but different, the vbmap has changed *again* and we ignore the node
+		if b.tempServers[i] == node {
+			connPool = b.tempConnPools[i]
+		}
+	}
+	b.Unlock()
+	return connPool
 }
 
 // Bucket DDL
@@ -1042,27 +1095,33 @@ func (b *Bucket) refresh(preserveConnections bool) error {
 				pool.inUse = true
 				continue
 			}
-		}
 
-		var encrypted bool
-		if client.tlsConfig != nil {
-			hostport, encrypted, err = MapKVtoSSLExt(hostport, &poolServices, client.disableNonSSLPorts)
-			if err != nil {
-				b.Unlock()
-				return err
+			// if we find a temporary pool, save it
+			if len(b.tempServers) > i && b.tempServers[i] == hostport {
+				newcps[i] = b.tempConnPools[i]
+				b.tempServers[i] = ""
+				b.tempConnPools[i] = nil
+				newcps[i].inUse = true
+				continue
 			}
 		}
 
-		if b.ah != nil {
-			newcps[i] = newConnectionPool(hostport,
-				b.ah, AsynchronousCloser, PoolSize, PoolOverflow, client.tlsConfig, b.Name, encrypted)
-
-		} else {
-			newcps[i] = newConnectionPool(hostport,
-				b.authHandler(true /* bucket already locked */),
-				AsynchronousCloser, PoolSize, PoolOverflow, client.tlsConfig, b.Name, encrypted)
+		newcps[i], err = b.mkConnPool(hostport, &poolServices)
+		if err != nil {
+			b.Unlock()
+			return err
 		}
 	}
+
+	// ditch any remaining temporary pool
+	for i, c := range b.tempConnPools {
+		b.tempServers[i] = ""
+		b.tempConnPools[i] = nil
+		c.Close()
+	}
+	b.tempServers = nil
+	b.tempConnPools = nil
+
 	b.replaceConnPools2(newcps, true /* bucket already locked */)
 	tmpb.ah = b.ah
 	if b.vBucketServerMap != nil && b.changedVBServerMap(&tmpb.VBSMJson) {
@@ -1073,6 +1132,31 @@ func (b *Bucket) refresh(preserveConnections bool) error {
 
 	b.Unlock()
 	return nil
+}
+
+func (b *Bucket) mkConnPool(node string, poolServices *PoolServices) (*connectionPool, error) {
+	var encrypted bool
+	var pool *connectionPool
+	var err error
+
+	client := b.pool.client
+	if client.tlsConfig != nil {
+		node, encrypted, err = MapKVtoSSLExt(node, poolServices, client.disableNonSSLPorts)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if b.ah != nil {
+		pool = newConnectionPool(node,
+			b.ah, AsynchronousCloser, PoolSize, PoolOverflow, client.tlsConfig, b.Name, encrypted)
+
+	} else {
+		pool = newConnectionPool(node,
+			b.authHandler(true /* bucket already locked */),
+			AsynchronousCloser, PoolSize, PoolOverflow, client.tlsConfig, b.Name, encrypted)
+	}
+	return pool, nil
 }
 
 func (p *Pool) refresh() (err error) {
@@ -1090,7 +1174,7 @@ func (p *Pool) refresh() (err error) {
 		b.nodeList = unsafe.Pointer(&b.NodesJSON)
 
 		// MB-33185 this is merely defensive, just in case
-		// refresh() gets called on a perfectly node pool
+		// refresh() gets called on a perfectly good node pool
 		ob, ok := p.BucketMap[b.Name]
 		if ok && ob.connPools != nil {
 			ob.Close()
