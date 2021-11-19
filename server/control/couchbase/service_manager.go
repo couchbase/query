@@ -158,6 +158,9 @@ func (m *ServiceMgr) GetTaskList(rev service.Revision, cancel service.Cancel) (*
 		if eject != nil {
 			for _, e := range eject {
 				if e.Opaque == nil {
+					e.Priority = -1
+				}
+				if e.Priority < 0 {
 					continue
 				}
 				res, err := distributed.RemoteAccess().ExecutePreparedAdminOp(e.Opaque, "GET", "", nil, distributed.NO_CREDS, "")
@@ -169,10 +172,10 @@ func (m *ServiceMgr) GetTaskList(rev service.Revision, cancel service.Cancel) (*
 					if jerr == nil && errors.ErrorCode(status.Code) != errors.E_SERVICE_SHUT_DOWN {
 						running++
 					} else {
-						e.Opaque = nil
+						e.Priority = -1
 					}
 				} else {
-					e.Opaque = nil
+					e.Priority = -1
 				}
 			}
 		}
@@ -195,7 +198,7 @@ func (m *ServiceMgr) GetTaskList(rev service.Revision, cancel service.Cancel) (*
 				Type:         service.TaskTypeRebalance,
 				Status:       service.TaskStatusRunning,
 				Progress:     progress,
-				IsCancelable: false,
+				IsCancelable: true, // since it is ignored anyway and ns-server still tries to cancel the task...
 			}
 			tasks.Tasks = append(tasks.Tasks, task)
 		}
@@ -206,11 +209,102 @@ func (m *ServiceMgr) GetTaskList(rev service.Revision, cancel service.Cancel) (*
 	return tasks, nil
 }
 
-// we don't support cancelling tasks
 func (m *ServiceMgr) CancelTask(id string, rev service.Revision) error {
 	logging.Debuga(func() string { return fmt.Sprintf("ServiceMgr::CancelTask entry %v %v", id, DecodeRev(rev)) })
 	defer logging.Debugf("ServiceMgr::CancelTask exit")
-	return service.ErrNotSupported
+
+	timeout := time.Duration(0)
+	data := "cancel=true"
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	currentTask := fmt.Sprintf("shutdown/monitor/%s", m.changeID)
+	if currentTask == id {
+		if m.eject != nil {
+			servers := make([]service.NodeInfo, 0, len(m.eject))
+			servers = append(servers, m.servers...)
+			timedOut := false
+			info := make([]rune, 0, len(m.eject)*33)
+			done := util.WaitCount{}
+			mutex := &sync.Mutex{}
+			// in parallel in case some take time to reach
+			for _, e := range m.eject {
+				go func() {
+					if e.Opaque == nil {
+						// if we failed to prepare it before now, we could well be too late but try again anyway
+						e.Opaque = prepareOperation(string(e.NodeID), "ServiceMgr::CancelTask")
+					}
+					_, err := distributed.RemoteAccess().ExecutePreparedAdminOp(e.Opaque, "POST", data, nil,
+						distributed.NO_CREDS, "")
+					if err == nil {
+						mutex.Lock()
+						if !timedOut {
+							e.Priority = 0
+							servers = appendInOrder(servers, e)
+							info = append(info, []rune(e.NodeID)...)
+							info = append(info, ' ')
+						}
+						mutex.Unlock()
+						logging.Debuga(func() string {
+							return fmt.Sprintf("ServiceMgr::CancelTask cancelled shutdown down on '%s'", string(e.NodeID))
+						})
+					} else {
+						logging.Infof("ServiceMgr::CancelTask failed to cancel shudown on '%s' (op:%v): %v", string(e.NodeID),
+							e.Opaque, err)
+					}
+					done.Incr()
+				}()
+			}
+			// wait for completion
+			if !done.Until(int32(len(m.eject)), timeout) {
+				logging.Errorf("ServiceMgr::CancelTask failed to cancel shutdown on all ejected nodes within the time limit.")
+				mutex.Lock()
+				timedOut = true
+				mutex.Unlock()
+			}
+			if len(info) > 0 {
+				logging.Infof("Topology change: shutdown cancelled on: %s", string(info))
+			}
+			m.updateStateLOCKED(func(s *state) {
+				s.changeID = ""
+				s.eject = nil
+				if servers != nil {
+					s.servers = servers
+				}
+			})
+			if len(info) < len(m.servers)*64 {
+				info = make([]rune, 0, len(m.servers)*64)
+			} else {
+				info = info[:0]
+			}
+			for _, n := range m.servers {
+				info = append(info, []rune(n.NodeID)...)
+				info = append(info, '[')
+				info = append(info, []rune(distributed.RemoteAccess().UUIDToHost(string(n.NodeID)))...)
+				info = append(info, ']')
+				info = append(info, ' ')
+			}
+			logging.Infof("Current topology: %s", string(info))
+			return nil
+		} else {
+			logging.Debugf("ServiceMgr::CancelTask ejected nodes list is empty.")
+			return service.ErrConflict
+		}
+	}
+	logging.Debuga(func() string { return fmt.Sprintf("ServiceMgr::CancelTask unknown task (%v).", id) })
+	return service.ErrNotFound
+}
+
+func appendInOrder(list []service.NodeInfo, item service.NodeInfo) []service.NodeInfo {
+	for i := range list {
+		if list[i].NodeID > item.NodeID {
+			if i == 0 {
+				return append([]service.NodeInfo{item}, list...)
+			}
+			return append(append(list[:i], item), list[i:]...)
+		}
+	}
+	return append(list, item)
 }
 
 // return the current node list as understood by this process
@@ -277,7 +371,7 @@ func (m *ServiceMgr) PrepareTopologyChange(change service.TopologyChange) error 
 	}
 
 	// for each node we know about, cache its shutdown URL
-	info := make([]rune, 0, len(change.KeepNodes)*32)
+	info := make([]rune, 0, len(change.KeepNodes)*64)
 	servers := make([]service.NodeInfo, 0)
 	retry := false
 	for _, n := range change.KeepNodes {
@@ -351,6 +445,11 @@ func (m *ServiceMgr) StartTopologyChange(change service.TopologyChange) error {
 		// if we want to implement a timeout, this is how we'd do it:
 		// data = fmt.Sprintf("deadline=%v", time.Now().Add(_FAILOVER_LIMIT).Unix())
 		// timeout = _FAILOVER_LIMIT
+		m.updateState(func(s *state) {
+			s.changeID = ""
+			s.eject = nil
+		})
+		return nil // we're doing nothing so just return
 	case service.TopologyChangeTypeRebalance:
 	default:
 		return service.ErrNotSupported
@@ -358,7 +457,7 @@ func (m *ServiceMgr) StartTopologyChange(change service.TopologyChange) error {
 
 	m.mu.Lock()
 	if m.eject != nil {
-		info := make([]rune, 0, len(m.eject)*32)
+		info := make([]rune, 0, len(m.eject)*33)
 		eject := make([]service.NodeInfo, 0, len(m.eject))
 		done := util.WaitCount{}
 		mutex := &sync.Mutex{}
@@ -382,7 +481,7 @@ func (m *ServiceMgr) StartTopologyChange(change service.TopologyChange) error {
 						return fmt.Sprintf("ServiceMgr::StartTopologyChange initiated shutdown down on '%s'", string(e.NodeID))
 					})
 				} else {
-					logging.Infof("ServiceMgr::StartTopologyChange failed start shudown on '%s' (op:%v): %v", string(e.NodeID),
+					logging.Infof("ServiceMgr::StartTopologyChange failed to start shudown on '%s' (op:%v): %v", string(e.NodeID),
 						e.Opaque, err)
 				}
 				done.Incr()
@@ -391,11 +490,11 @@ func (m *ServiceMgr) StartTopologyChange(change service.TopologyChange) error {
 		// wait for completion
 		if !done.Until(int32(len(m.eject)), timeout) {
 			mutex.Lock()
-			eject = eject[:0] // don't report any tasks
+			eject = nil
 			mutex.Unlock()
-			logging.Infof("ServiceMgr::StartTopologyChange failed initiate shutdown on nodes within time limit.")
+			logging.Infof("ServiceMgr::StartTopologyChange failed to initiate shutdown on all ejected nodes within the time limit.")
 		}
-		if len(eject) > 0 {
+		if len(info) > 0 {
 			logging.Infof("Topology change: shutdown initiated on: %s", string(info))
 		} else {
 			mutex.Lock()

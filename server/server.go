@@ -1442,11 +1442,24 @@ func (this *Server) InitiateShutdown(timeout time.Duration) {
 	}
 }
 
+func (this *Server) CancelShutdown() {
+	log := false
+	this.Lock()
+	if this.shutdown != _SERVER_RUNNING {
+		this.shutdown = _SERVER_RUNNING
+		log = true
+	}
+	this.Unlock()
+	if log {
+		logging.Infof("Graceful shutdown cancelled.")
+	}
+}
+
 const _SHUTDOWN_WAIT_LIMIT = 10 * time.Minute
 
 func (this *Server) InitiateShutdownAndWait() {
 	this.InitiateShutdown(_SHUTDOWN_WAIT_LIMIT)
-	for !this.ShutDown() {
+	for this.ShuttingDown() {
 		time.Sleep(time.Second)
 	}
 }
@@ -1464,7 +1477,7 @@ func (this *Server) monitorShutdown(timeout time.Duration) {
 		logging.Infof("Shutdown: Waiting for %v active request(s) and %v active transaction(s) to complete.", ar, at)
 		start := time.Now()
 		reportStart := start
-		for {
+		for this.ShuttingDown() {
 			ar = this.ActiveRequests()
 			at = transactions.CountTransContext()
 			if ar == 0 && at == 0 {
@@ -1486,14 +1499,17 @@ func (this *Server) monitorShutdown(timeout time.Duration) {
 		logging.Infof("Shutdown: No active requests or transactions.")
 	}
 
-	// only mark the server as now down; the master manager will use this state to report that this node is no longer active
-	this.Lock()
-	this.shutdown = _SERVER_SHUTDOWN
-	this.Unlock()
-
-	// after this point we have to trust the external monitoring will shut the process down eventually.  We cannot exit ourselves
-	// if it is still monitoring us as it will cause issues with running monitoring operations.  If the shutdown isn't initiated
-	// by something that will kill us off eventually, we will end up just sitting there unable to do anything.
+	if this.ShuttingDown() {
+		// only mark the server as now down; the master manager will use this state to report that this node is no longer active
+		this.Lock()
+		this.shutdown = _SERVER_SHUTDOWN
+		this.Unlock()
+		// after this point we have to trust the external monitoring will shut the process down eventually.  We cannot exit
+		// ourselves if it is still monitoring us as it will cause issues with running monitoring operations.  If the shutdown
+		// isn't initiated by something that will kill us off eventually, we will end up just sitting there unable to do anything.
+	} else {
+		logging.Infof("Shutdown: Monitor detected shutdown was cancelled.")
+	}
 }
 
 func logExplain(prepared *plan.Prepared) {

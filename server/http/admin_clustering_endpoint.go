@@ -509,9 +509,15 @@ func doShutdown(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 		} else {
 			timeout = time.Unix(deadline, 0).Sub(time.Now())
 		}
+		cancel := req.FormValue("cancel")
 		if !endpoint.server.ShutDown() {
-			endpoint.server.InitiateShutdown(timeout)
-			return textPlain("shutdown requested\n"), nil
+			if cancel == "" {
+				endpoint.server.InitiateShutdown(timeout)
+				return textPlain("shutdown requested\n"), nil
+			} else if endpoint.server.ShuttingDown() {
+				endpoint.server.CancelShutdown()
+				return textPlain("shutdown cancelled\n"), nil
+			}
 		} else {
 			return errors.NewServiceShuttingDownError(), nil
 		}
