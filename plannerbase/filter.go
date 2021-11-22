@@ -16,18 +16,19 @@ import (
 )
 
 const (
-	FLTR_IS_JOIN        = 1 << iota // is this originally a join filter
-	FLTR_IS_ONCLAUSE                // is this an ON-clause filter for ANSI JOIN
-	FLTR_IS_DERIVED                 // is this a derived filter
-	FLTR_IS_UNNEST                  // is this ann unnest filter (inherited)
-	FLTR_SELEC_DONE                 // calculation of selectivity is done
-	FLTR_HAS_DEF_SELEC              // has default selectivity
-	FLTR_IN_INDEX_SPAN              // used in index span
-	FLTR_IN_HASH_JOIN               // used as join filter for hash join
-	FLTR_HAS_SUBQ                   // has subquery
-	FLTR_HAS_ADJ_SELEC              // has adjusted selectivity
-	FLTR_PRIMARY_JOIN               // join on meta id
-	FLTR_DERIVED_EQJOIN             // derived equi-join filter
+	FLTR_IS_JOIN           = 1 << iota // is this originally a join filter
+	FLTR_IS_ONCLAUSE                   // is this an ON-clause filter for ANSI JOIN
+	FLTR_IS_DERIVED                    // is this a derived filter
+	FLTR_IS_UNNEST                     // is this ann unnest filter (inherited)
+	FLTR_SELEC_DONE                    // calculation of selectivity is done
+	FLTR_HAS_DEF_SELEC                 // has default selectivity
+	FLTR_IN_INDEX_SPAN                 // used in index span
+	FLTR_IN_HASH_JOIN                  // used as join filter for hash join
+	FLTR_HAS_SUBQ                      // has subquery
+	FLTR_HAS_ADJ_SELEC                 // has adjusted selectivity
+	FLTR_PRIMARY_JOIN                  // join on meta id
+	FLTR_DERIVED_EQJOIN                // derived equi-join filter
+	FLTR_ADJUST_JOIN_SELEC             // join selectivity adjusted
 )
 
 const TEMP_PLAN_FLAGS = (FLTR_IN_INDEX_SPAN | FLTR_IN_HASH_JOIN)
@@ -194,6 +195,14 @@ func (this *Filter) SetDerivedEqJoin() {
 
 func (this *Filter) IsDerivedEqJoin() bool {
 	return (this.fltrFlags & FLTR_DERIVED_EQJOIN) != 0
+}
+
+func (this *Filter) SetAdjustJoinSelec() {
+	this.fltrFlags |= FLTR_ADJUST_JOIN_SELEC
+}
+
+func (this *Filter) HasAdjustJoinSelec() bool {
+	return (this.fltrFlags & FLTR_ADJUST_JOIN_SELEC) != 0
 }
 
 func (this *Filter) FltrExpr() expression.Expression {
