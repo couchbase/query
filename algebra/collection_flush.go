@@ -83,8 +83,10 @@ Returns all required privileges.
 */
 func (this *FlushCollection) Privileges() (*auth.Privileges, errors.Error) {
 	privs := auth.NewPrivileges()
-	fullName := this.keyspace.Path().BucketPath().FullName()
-	privs.Add(fullName, auth.PRIV_QUERY_BUCKET_ADMIN, auth.PRIV_PROPS_NONE)
+
+	// TODO check with KV for permissions once this is functional
+	fullName := this.keyspace.Path().ScopePath().FullName()
+	privs.Add(fullName, auth.PRIV_QUERY_SCOPE_ADMIN, auth.PRIV_PROPS_NONE)
 	return privs, nil
 }
 
