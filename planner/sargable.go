@@ -107,6 +107,10 @@ func (this *sargable) VisitMod(pred *expression.Mod) (interface{}, error) {
 	return this.visitDefault(pred)
 }
 
+func (this *sargable) VisitPow(pred *expression.Pow) (interface{}, error) {
+	return this.visitDefault(pred)
+}
+
 func (this *sargable) VisitMult(pred *expression.Mult) (interface{}, error) {
 	return this.visitDefault(pred)
 }

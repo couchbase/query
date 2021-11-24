@@ -103,6 +103,10 @@ func (this *sarg) VisitMod(pred *expression.Mod) (interface{}, error) {
 	return this.visitDefault(pred)
 }
 
+func (this *sarg) VisitPow(pred *expression.Pow) (interface{}, error) {
+	return this.visitDefault(pred)
+}
+
 func (this *sarg) VisitMult(pred *expression.Mult) (interface{}, error) {
 	return this.visitDefault(pred)
 }

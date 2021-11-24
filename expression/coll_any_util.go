@@ -60,6 +60,10 @@ func (this *gatherAny) VisitMod(expr *Mod) (interface{}, error) {
 	return this.visit(expr)
 }
 
+func (this *gatherAny) VisitPow(expr *Pow) (interface{}, error) {
+	return this.visit(expr)
+}
+
 func (this *gatherAny) VisitMult(expr *Mult) (interface{}, error) {
 	return this.visit(expr)
 }

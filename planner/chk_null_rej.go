@@ -161,6 +161,10 @@ func (this *chkNullRej) VisitMod(pred *expression.Mod) (interface{}, error) {
 	return this.visitOperands(pred.First(), pred.Second())
 }
 
+func (this *chkNullRej) VisitPow(pred *expression.Pow) (interface{}, error) {
+	return this.visitOperands(pred.First(), pred.Second())
+}
+
 func (this *chkNullRej) VisitMult(pred *expression.Mult) (interface{}, error) {
 	return this.visitOperands((pred.Operands())...)
 }

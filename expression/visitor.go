@@ -23,6 +23,7 @@ type Visitor interface {
 	VisitAdd(expr *Add) (interface{}, error)
 	VisitDiv(expr *Div) (interface{}, error)
 	VisitMod(expr *Mod) (interface{}, error)
+	VisitPow(expr *Pow) (interface{}, error)
 	VisitMult(expr *Mult) (interface{}, error)
 	VisitNeg(expr *Neg) (interface{}, error)
 	VisitSub(expr *Sub) (interface{}, error)
