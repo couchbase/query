@@ -16,6 +16,7 @@ import (
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
+	base "github.com/couchbase/query/plannerbase"
 	"github.com/couchbase/query/util"
 )
 
@@ -36,6 +37,8 @@ func (this *builder) buildAnsiJoin(node *algebra.AnsiJoin) (op plan.Operator, er
 		}
 
 		this.extractPredicates(nil, node.Onclause())
+
+		baseKeyspace, _ := this.baseKeyspaces[right.Alias()]
 
 		var hjoin *plan.HashJoin
 		var jps, hjps *joinPlannerState
@@ -116,7 +119,14 @@ func (this *builder) buildAnsiJoin(node *algebra.AnsiJoin) (op plan.Operator, er
 		newKeyspaceTerm := algebra.NewKeyspaceTerm(right.Namespace(), right.Keyspace(), right.As(), nil, right.Indexes())
 		newKeyspaceTerm.SetProperty(right.Property())
 		newKeyspaceTerm.SetJoinKeys(primaryJoinKeys)
-		return plan.NewJoinFromAnsi(keyspace, newKeyspaceTerm, node.Outer()), nil
+
+		// need to get extra filters in the ON-clause that's not the primary join filter
+		onFilter, err := this.getOnclauseFilter(baseKeyspace.Filters())
+		if err != nil {
+			return nil, err
+		}
+
+		return plan.NewJoinFromAnsi(keyspace, newKeyspaceTerm, node.Outer(), onFilter), nil
 	case *algebra.ExpressionTerm, *algebra.SubqueryTerm:
 		err := this.processOnclause(right.Alias(), node.Onclause(), node.Outer())
 		if err != nil {
@@ -166,6 +176,8 @@ func (this *builder) buildAnsiNest(node *algebra.AnsiNest) (op plan.Operator, er
 		}
 
 		this.extractPredicates(nil, node.Onclause())
+
+		baseKeyspace, _ := this.baseKeyspaces[right.Alias()]
 
 		var hnest *plan.HashNest
 		var jps, hjps *joinPlannerState
@@ -246,7 +258,14 @@ func (this *builder) buildAnsiNest(node *algebra.AnsiNest) (op plan.Operator, er
 		newKeyspaceTerm := algebra.NewKeyspaceTerm(right.Namespace(), right.Keyspace(), right.As(), nil, right.Indexes())
 		newKeyspaceTerm.SetProperty(right.Property())
 		newKeyspaceTerm.SetJoinKeys(primaryJoinKeys)
-		return plan.NewNestFromAnsi(keyspace, newKeyspaceTerm, node.Outer()), nil
+
+		// need to get extra filters in the ON-clause that's not the primary join filter
+		onFilter, err := this.getOnclauseFilter(baseKeyspace.Filters())
+		if err != nil {
+			return nil, err
+		}
+
+		return plan.NewNestFromAnsi(keyspace, newKeyspaceTerm, node.Outer(), onFilter), nil
 	case *algebra.ExpressionTerm, *algebra.SubqueryTerm:
 		if util.IsFeatureEnabled(this.context.FeatureControls(), util.N1QL_HASH_JOIN) {
 			// for expression term and subquery term, consider hash join
@@ -358,16 +377,19 @@ func (this *builder) buildAnsiJoinScan(node *algebra.KeyspaceTerm, onclause expr
 			if eqFltr, ok := fltr.FltrExpr().(*expression.Eq); ok {
 				if eqFltr.First().EquivalentTo(id) {
 					node.SetPrimaryJoin()
+					fltr.SetPrimaryJoin()
 					primaryJoinKeys = eqFltr.Second().Copy()
 					break
 				} else if eqFltr.Second().EquivalentTo(id) {
 					node.SetPrimaryJoin()
+					fltr.SetPrimaryJoin()
 					primaryJoinKeys = eqFltr.First().Copy()
 					break
 				}
 			} else if inFltr, ok := fltr.FltrExpr().(*expression.In); ok {
 				if inFltr.First().EquivalentTo(id) {
 					node.SetPrimaryJoin()
+					fltr.SetPrimaryJoin()
 					primaryJoinKeys = inFltr.Second().Copy()
 					break
 				}
@@ -834,6 +856,32 @@ func (this *builder) buildAnsiJoinSimpleFromTerm(node algebra.SimpleFromTerm, on
 	}
 
 	return this.children, newOnclause, cost, cardinality, nil
+}
+
+func (this *builder) getOnclauseFilter(filters base.Filters) (expression.Expression, error) {
+	terms := make(expression.Expressions, 0, len(filters))
+	for _, fltr := range filters {
+		if fltr.IsOnclause() && !fltr.IsPrimaryJoin() {
+			terms = append(terms, fltr.FltrExpr())
+		}
+	}
+	var filter expression.Expression
+	var err error
+	if len(terms) == 0 {
+		return nil, nil
+	} else if len(terms) == 1 {
+		filter = terms[0]
+	} else {
+		filter = expression.NewAnd(terms...)
+	}
+	for _, op := range this.coveringScans {
+		coverer := expression.NewCoverer(op.Covers(), op.FilterCovers())
+		filter, err = coverer.Map(filter)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return filter, nil
 }
 
 // if both nested-loop join and hash join are to be attempted (in case of CBO),

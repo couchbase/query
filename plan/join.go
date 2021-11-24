@@ -23,6 +23,7 @@ type Join struct {
 	keyspace datastore.Keyspace
 	term     *algebra.KeyspaceTerm
 	outer    bool
+	onFilter expression.Expression
 }
 
 func NewJoin(keyspace datastore.Keyspace, join *algebra.Join) *Join {
@@ -33,11 +34,13 @@ func NewJoin(keyspace datastore.Keyspace, join *algebra.Join) *Join {
 	}
 }
 
-func NewJoinFromAnsi(keyspace datastore.Keyspace, term *algebra.KeyspaceTerm, outer bool) *Join {
+func NewJoinFromAnsi(keyspace datastore.Keyspace, term *algebra.KeyspaceTerm, outer bool,
+	onFilter expression.Expression) *Join {
 	return &Join{
 		keyspace: keyspace,
 		term:     term,
 		outer:    outer,
+		onFilter: onFilter,
 	}
 }
 
@@ -61,6 +64,10 @@ func (this *Join) Outer() bool {
 	return this.outer
 }
 
+func (this *Join) OnFilter() expression.Expression {
+	return this.onFilter
+}
+
 func (this *Join) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
@@ -78,6 +85,11 @@ func (this *Join) MarshalBase(f func(map[string]interface{})) map[string]interfa
 	if this.term.As() != "" {
 		r["as"] = this.term.As()
 	}
+
+	if this.onFilter != nil {
+		r["on_filter"] = expression.NewStringer().Visit(this.onFilter)
+	}
+
 	if f != nil {
 		f(r)
 	}
@@ -86,12 +98,13 @@ func (this *Join) MarshalBase(f func(map[string]interface{})) map[string]interfa
 
 func (this *Join) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_     string `json:"#operator"`
-		Names string `json:"namespace"`
-		Keys  string `json:"keyspace"`
-		On    string `json:"on_keys"`
-		Outer bool   `json:"outer"`
-		As    string `json:"as"`
+		_        string `json:"#operator"`
+		Names    string `json:"namespace"`
+		Keys     string `json:"keyspace"`
+		On       string `json:"on_keys"`
+		Outer    bool   `json:"outer"`
+		As       string `json:"as"`
+		OnFilter string `json:"on_filter"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -111,7 +124,18 @@ func (this *Join) UnmarshalJSON(body []byte) error {
 	this.term = algebra.NewKeyspaceTerm(_unmarshalled.Names, _unmarshalled.Keys, _unmarshalled.As, nil, nil)
 	this.term.SetJoinKeys(keys_expr)
 	this.keyspace, err = datastore.GetKeyspace(_unmarshalled.Names, _unmarshalled.Keys)
-	return err
+	if err != nil {
+		return err
+	}
+
+	if _unmarshalled.OnFilter != "" {
+		this.onFilter, err = parser.Parse(_unmarshalled.OnFilter)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (this *Join) verify(prepared *Prepared) bool {

@@ -72,6 +72,102 @@
     ]
     },
     {
+        "statements":"SELECT c.firstName, c.lastName, c.customerId, p.purchaseId FROM purchase p JOIN customer c ON meta(c).id = p.customerId || \"_\" || p.test_id WHERE p.purchaseId LIKE \"purchase655%\" AND c.firstName LIKE \"A%\" ORDER BY p.purchaseId",
+        "ordered": true,
+        "results": [
+        {
+            "customerId": "customer721",
+            "firstName": "Asia",
+            "lastName": "Hilpert",
+            "purchaseId": "purchase6550"
+        },
+        {
+            "customerId": "customer905",
+            "firstName": "Angelina",
+            "lastName": "Tillman",
+            "purchaseId": "purchase6555"
+        },
+        {
+            "customerId": "customer388",
+            "firstName": "Arnaldo",
+            "lastName": "Bosco",
+            "purchaseId": "purchase6556"
+        }
+    ]
+    },
+    {
+        "statements":"SELECT c.firstName, c.lastName, c.customerId, p.purchaseId FROM purchase p JOIN customer c ON meta(c).id = p.customerId || \"_\" || p.test_id AND c.firstName LIKE \"A%\" WHERE p.purchaseId LIKE \"purchase655%\" ORDER BY p.purchaseId",
+        "ordered": true,
+        "results": [
+        {
+            "customerId": "customer721",
+            "firstName": "Asia",
+            "lastName": "Hilpert",
+            "purchaseId": "purchase6550"
+        },
+        {
+            "customerId": "customer905",
+            "firstName": "Angelina",
+            "lastName": "Tillman",
+            "purchaseId": "purchase6555"
+        },
+        {
+            "customerId": "customer388",
+            "firstName": "Arnaldo",
+            "lastName": "Bosco",
+            "purchaseId": "purchase6556"
+        }
+    ]
+    },
+    {
+        "statements":"SELECT c.firstName, c.lastName, c.customerId, p.purchaseId FROM purchase p LEFT JOIN customer c ON meta(c).id = p.customerId || \"_\" || p.test_id AND c.firstName LIKE \"A%\" WHERE p.purchaseId LIKE \"purchase655%\" ORDER BY p.purchaseId",
+        "ordered": true,
+        "results": [
+        {
+            "purchaseId": "purchase655"
+        },
+        {
+            "customerId": "customer721",
+            "firstName": "Asia",
+            "lastName": "Hilpert",
+            "purchaseId": "purchase6550"
+        },
+        {
+            "purchaseId": "purchase6551"
+        },
+        {
+            "purchaseId": "purchase6552"
+        },
+        {
+            "purchaseId": "purchase6553"
+        },
+        {
+            "purchaseId": "purchase6554"
+        },
+        {
+            "customerId": "customer905",
+            "firstName": "Angelina",
+            "lastName": "Tillman",
+            "purchaseId": "purchase6555"
+        },
+        {
+            "customerId": "customer388",
+            "firstName": "Arnaldo",
+            "lastName": "Bosco",
+            "purchaseId": "purchase6556"
+        },
+        {
+            "purchaseId": "purchase6557"
+        },
+        {
+            "purchaseId": "purchase6558"
+        },
+        {
+            "purchaseId": "purchase6559"
+        }
+    ]
+    },
+    {
         "statements":"SELECT p.productId, pu.customerId, pu.purchaseId FROM purchase pu JOIN product p ON meta(p).id IN ARRAY (pd.product || \"_ansijoin\") FOR pd IN pu.lineItems END WHERE pu.purchaseId = \"purchase1000\" ORDER BY p.productId",
         "ordered": true,
         "results": [

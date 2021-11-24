@@ -209,7 +209,7 @@ func (this *IndexJoin) flushBatch(context *Context) bool {
 
 	fetchOk := this.joinFetch(this.plan.Keyspace(), keyCount, pairMap, context)
 
-	return fetchOk && this.joinEntries(keyCount, pairMap, this.plan.Outer(), this.plan.Term().Alias())
+	return fetchOk && this.joinEntries(keyCount, pairMap, this.plan.Outer(), nil, this.plan.Term().Alias(), context)
 }
 
 func (this *IndexJoin) MarshalJSON() ([]byte, error) {
