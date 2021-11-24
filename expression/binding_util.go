@@ -92,10 +92,6 @@ func (this *exprBindings) VisitMod(expr *Mod) (interface{}, error) {
 	return this.visit(expr)
 }
 
-func (this *exprBindings) VisitPow(expr *Pow) (interface{}, error) {
-	return this.visit(expr)
-}
-
 func (this *exprBindings) VisitMult(expr *Mult) (interface{}, error) {
 	return this.visit(expr)
 }

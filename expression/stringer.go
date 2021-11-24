@@ -97,16 +97,6 @@ func (this *Stringer) VisitMod(expr *Mod) (interface{}, error) {
 	return buf.String(), nil
 }
 
-func (this *Stringer) VisitPow(expr *Pow) (interface{}, error) {
-	var buf bytes.Buffer
-	buf.WriteString("(")
-	buf.WriteString(this.Visit(expr.First()))
-	buf.WriteString(" ^ ")
-	buf.WriteString(this.Visit(expr.Second()))
-	buf.WriteString(")")
-	return buf.String(), nil
-}
-
 func (this *Stringer) VisitMult(expr *Mult) (interface{}, error) {
 	var buf bytes.Buffer
 	buf.WriteString("(")

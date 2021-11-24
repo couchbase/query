@@ -45,10 +45,6 @@ func (this *subset) VisitMod(expr *expression.Mod) (interface{}, error) {
 	return this.visitDefault(expr)
 }
 
-func (this *subset) VisitPow(expr *expression.Pow) (interface{}, error) {
-	return this.visitDefault(expr)
-}
-
 func (this *subset) VisitMult(expr *expression.Mult) (interface{}, error) {
 	return this.visitDefault(expr)
 }

@@ -54,10 +54,6 @@ func (this *TraverserBase) VisitMod(expr *Mod) (interface{}, error) {
 	return nil, this.TraverseList(expr.Children())
 }
 
-func (this *TraverserBase) VisitPow(expr *Pow) (interface{}, error) {
-	return nil, this.TraverseList(expr.Children())
-}
-
 func (this *TraverserBase) VisitMult(expr *Mult) (interface{}, error) {
 	return nil, this.TraverseList(expr.Children())
 }

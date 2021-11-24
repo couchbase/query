@@ -83,10 +83,6 @@ func (this *covers) VisitMod(expr *expression.Mod) (interface{}, error) {
 	return nil, nil
 }
 
-func (this *covers) VisitPow(expr *expression.Pow) (interface{}, error) {
-	return nil, nil
-}
-
 func (this *covers) VisitMult(expr *expression.Mult) (interface{}, error) {
 	return nil, nil
 }

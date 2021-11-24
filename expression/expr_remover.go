@@ -94,10 +94,6 @@ func (this *exprRemover) VisitMod(pred *Mod) (interface{}, error) {
 	return this.visitDefault(pred)
 }
 
-func (this *exprRemover) VisitPow(pred *Pow) (interface{}, error) {
-	return this.visitDefault(pred)
-}
-
 func (this *exprRemover) VisitMult(pred *Mult) (interface{}, error) {
 	return this.visitDefault(pred)
 }

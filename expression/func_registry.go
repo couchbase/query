@@ -41,7 +41,6 @@ var _FUNCTIONS = map[string]Function{
 	"idiv": &IDiv{},
 	"imod": &IMod{},
 	"mod":  &Mod{},
-	"pow":  &Pow{},
 	"mult": &Mult{},
 	"neg":  &Neg{},
 	"sub":  &Sub{},

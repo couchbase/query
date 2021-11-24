@@ -342,7 +342,7 @@ tokOffset    int
 %nonassoc       IS                              /* IS NULL, IS MISSING, IS VALUED, IS NOT NULL, etc. */
 %left           CONCAT
 %left           PLUS MINUS
-%left           STAR DIV MOD POW
+%left           STAR DIV MOD
 
 /* Unary operators */
 %right          COVER
@@ -3384,12 +3384,6 @@ expr MOD expr
     $$.ExprBase().SetErrorContext($1.ExprBase().GetErrorContext())
 }
 |
-expr POW expr
-{
-    $$ = expression.NewPow($1, $3)
-    $$.ExprBase().SetErrorContext($1.ExprBase().GetErrorContext())
-}
-|
 /* Concat */
 expr CONCAT expr
 {
@@ -3752,12 +3746,6 @@ b_expr DIV b_expr
 b_expr MOD b_expr
 {
     $$ = expression.NewMod($1, $3)
-    $$.ExprBase().SetErrorContext($1.ExprBase().GetErrorContext())
-}
-|
-b_expr POW b_expr
-{
-    $$ = expression.NewPow($1, $3)
     $$.ExprBase().SetErrorContext($1.ExprBase().GetErrorContext())
 }
 |

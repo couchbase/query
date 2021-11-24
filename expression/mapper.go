@@ -55,10 +55,6 @@ func (this *MapperBase) VisitMod(expr *Mod) (interface{}, error) {
 	return this.visit(expr)
 }
 
-func (this *MapperBase) VisitPow(expr *Pow) (interface{}, error) {
-	return this.visit(expr)
-}
-
 func (this *MapperBase) VisitMult(expr *Mult) (interface{}, error) {
 	return this.visit(expr)
 }

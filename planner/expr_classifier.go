@@ -188,10 +188,6 @@ func (this *exprClassifier) VisitMod(pred *expression.Mod) (interface{}, error) 
 	return this.visitDefault(pred)
 }
 
-func (this *exprClassifier) VisitPow(pred *expression.Pow) (interface{}, error) {
-	return this.visitDefault(pred)
-}
-
 func (this *exprClassifier) VisitMult(pred *expression.Mult) (interface{}, error) {
 	return this.visitDefault(pred)
 }
