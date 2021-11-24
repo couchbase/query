@@ -1416,8 +1416,9 @@ func (this *builder) getOnclauseFilter(filters base.Filters) expression.Expressi
 		return nil
 	} else if len(terms) == 1 {
 		filter = terms[0]
+	} else {
+		filter = expression.NewAnd(terms...)
 	}
-	filter = expression.NewAnd(terms...)
 	if this.joinEnum() {
 		return filter
 	}
