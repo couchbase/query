@@ -3,10 +3,10 @@
 # Copyright 2014-Present Couchbase, Inc.
 #
 # Use of this software is governed by the Business Source License included in
-# the file licenses/Couchbase-BSL.txt.  As of the Change Date specified in that
-# file, in accordance with the Business Source License, use of this software will
-# be governed by the Apache License, Version 2.0, included in the file
-# licenses/APL.txt.
+# the file licenses/BSL-Couchbase.txt.  As of the Change Date specified in that
+# file, in accordance with the Business Source License, use of this software
+# will be governed by the Apache License, Version 2.0, included in the file
+# licenses/APL2.txt.
 
 NEX=github.com/couchbaselabs/nex
 
@@ -22,11 +22,11 @@ then
     cat << EOF > n1ql.nn.tmp
 //  Copyright 2014-Present Couchbase, Inc.
 //
-//  Use of this software is governed by the Business Source License included in
-//  the file licenses/Couchbase-BSL.txt.  As of the Change Date specified in that
-//  file, in accordance with the Business Source License, use of this software will
-//  be governed by the Apache License, Version 2.0, included in the file
-//  licenses/APL.txt.
+//  Use of this software is governed by the Business Source License included
+//  in the file licenses/BSL-Couchbase.txt.  As of the Change Date specified
+//  in that file, in accordance with the Business Source License, use of this
+//  software will be governed by the Apache License, Version 2.0, included in
+//  the file licenses/APL2.txt.
 
 EOF
     awk '/NEX_END_OF_LEXER_STRUCT/ { print "curOffset int\nreportError func(what string)" }
