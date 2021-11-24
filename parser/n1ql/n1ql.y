@@ -320,7 +320,8 @@ tokOffset    int
 %token WORK
 %token XOR
 
-%token INT NUM STR IDENT IDENT_ICASE NAMED_PARAM POSITIONAL_PARAM NEXT_PARAM OPTIM_HINTS RANDOM_ELEMENT
+%token INT NUM STR IDENT IDENT_ICASE NAMED_PARAM POSITIONAL_PARAM NEXT_PARAM OPTIM_HINTS
+%token RANDOM_ELEMENT
 %token LPAREN RPAREN
 %token LBRACE RBRACE LBRACKET RBRACKET RBRACKET_ICASE
 %token COMMA COLON
@@ -342,7 +343,7 @@ tokOffset    int
 %nonassoc       IS                              /* IS NULL, IS MISSING, IS VALUED, IS NOT NULL, etc. */
 %left           CONCAT
 %left           PLUS MINUS
-%left           STAR DIV MOD
+%left           STAR DIV MOD POW
 
 /* Unary operators */
 %right          COVER
@@ -3432,6 +3433,13 @@ expr MOD expr
     $$.ExprBase().SetErrorContext($1.ExprBase().GetErrorContext())
 }
 |
+expr POW expr
+{
+    $$ = expression.NewPower($1, $3)
+    $$.(*expression.Power).SetOperator()
+    $$.ExprBase().SetErrorContext($1.ExprBase().GetErrorContext())
+}
+|
 /* Concat */
 expr CONCAT expr
 {
@@ -3770,6 +3778,13 @@ b_expr DIV b_expr
 b_expr MOD b_expr
 {
     $$ = expression.NewMod($1, $3)
+    $$.ExprBase().SetErrorContext($1.ExprBase().GetErrorContext())
+}
+|
+b_expr POW b_expr
+{
+    $$ = expression.NewPower($1, $3)
+    $$.(*expression.Power).SetOperator()
     $$.ExprBase().SetErrorContext($1.ExprBase().GetErrorContext())
 }
 |

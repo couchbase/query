@@ -1053,11 +1053,13 @@ It returns expr1 to the power of expr2.
 */
 type Power struct {
 	BinaryFunctionBase
+	operator bool
 }
 
 func NewPower(first, second Expression) Function {
 	rv := &Power{
 		*NewBinaryFunctionBase("power", first, second),
+		false,
 	}
 
 	rv.expr = rv
@@ -1072,6 +1074,17 @@ func (this *Power) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *Power) Type() value.Type { return value.NUMBER }
+
+func (this *Power) SetOperator() {
+	this.operator = true
+}
+
+func (this *Power) Operator() string {
+	if this.operator {
+		return "^"
+	}
+	return ""
+}
 
 func (this *Power) Evaluate(item value.Value, context Context) (value.Value, error) {
 	first, err := this.operands[0].Evaluate(item, context)
