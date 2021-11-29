@@ -260,7 +260,7 @@ func (this *Context) PrepareStatement(statement string, namedArgs map[string]val
 	}
 
 	//  monitoring code TBD
-	prepared, err = planner.BuildPrepared(stmt, this.datastore, this.systemstore, this.namespace, subquery, false,
+	prepared, err = planner.BuildPrepared(stmt, this.datastore, this.systemstore, this.namespace, subquery, true,
 		&prepContext)
 	if err != nil {
 		return nil, nil, false, err
@@ -366,7 +366,10 @@ func (this *Context) ExecutePrepared(prepared *plan.Prepared, isPrepared bool,
 	this.positionalArgs = positionalArgs
 
 	build := util.Now()
-	pipeline, err := Build(prepared, this)
+
+	// Collect statements results
+	collect := NewCollect(plan.NewCollect(), this)
+	pipeline, err := Build2(prepared, this, collect)
 	keep.AddPhaseTime(INSTANTIATE, util.Since(build))
 
 	if err != nil {
@@ -374,20 +377,15 @@ func (this *Context) ExecutePrepared(prepared *plan.Prepared, isPrepared bool,
 		return nil, 0, err
 	}
 
-	// Collect statements results
-	// FIXME: this should handled by the planner
-	collect := NewCollect(plan.NewCollect(), this)
-	sequence := NewSequence(plan.NewSequence(), this, pipeline, collect)
-
 	exec := util.Now()
-	sequence.RunOnce(this, nil)
+	pipeline.RunOnce(this, nil)
 
 	// Await completion
 	collect.waitComplete()
 
 	results := collect.ValuesOnce()
 
-	sequence.Done()
+	pipeline.Done()
 	this.output = keep
 	this.output.AddPhaseTime(RUN, util.Since(exec))
 
@@ -400,6 +398,7 @@ func (this *Context) OpenPrepared(prepared *plan.Prepared, isPrepared bool,
 	NextDocument() (value.Value, error)
 	Cancel()
 }, error) {
+	var err error
 
 	handle := &executionHandle{}
 	handle.context = this
@@ -412,18 +411,16 @@ func (this *Context) OpenPrepared(prepared *plan.Prepared, isPrepared bool,
 	handle.context.positionalArgs = positionalArgs
 
 	build := util.Now()
-	pipeline, err := Build(prepared, this)
+
+	// Collect statements results
+	handle.input = NewReceive(plan.NewReceive(), handle.context)
+	handle.root, err = Build2(prepared, this, handle.input)
 	this.output.AddPhaseTime(INSTANTIATE, util.Since(build))
 
 	if err != nil {
 		return nil, err
 	}
 
-	// Collect statements results
-	// We use the sequence value exchange, and the fact that the sequence sets
-	// the last operator's output to itself
-	handle.input = NewReceive(plan.NewReceive(), handle.context)
-	handle.root = NewSequence(plan.NewSequence(), handle.context, pipeline, handle.input)
 	handle.stmtType = prepared.Type()
 	handle.exec = util.Now()
 	handle.root.RunOnce(handle.context, nil)
@@ -432,7 +429,7 @@ func (this *Context) OpenPrepared(prepared *plan.Prepared, isPrepared bool,
 
 type executionHandle struct {
 	exec        util.Time
-	root        *Sequence
+	root        Operator
 	input       *Receive
 	baseContext *Context
 	context     *Context
@@ -494,6 +491,7 @@ func (this *executionHandle) NextDocument() (value.Value, error) {
 	if item != nil {
 		return item, nil
 	}
+
 	if atomic.AddInt32(&this.stopped, 1) == 1 {
 		this.context.output.AddPhaseTime(RUN, util.Since(this.exec))
 		this.root.SendAction(_ACTION_STOP)

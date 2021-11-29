@@ -20,13 +20,17 @@ import (
 
 // Build a query execution pipeline from a query plan.
 func Build(plan plan.Operator, context *Context) (Operator, error) {
+	return Build2(plan, context, nil)
+}
+
+func Build2(plan plan.Operator, context *Context, collector Operator) (Operator, error) {
 	var m map[scannedIndex]bool
 	aliasMap := make(map[string]string, 8)
 	if context.ScanVectorSource().Type() == timestamp.ONE_VECTOR {
 		// Collect scanned indexes.
 		m = make(map[scannedIndex]bool, 8)
 	}
-	builder := &builder{context, m, aliasMap, true}
+	builder := &builder{context, m, aliasMap, true, collector}
 	x, err := plan.Accept(builder)
 
 	if err != nil {
@@ -55,6 +59,7 @@ type builder struct {
 	scannedIndexes   map[scannedIndex]bool // Nil if scanned indexes should not be collected.
 	aliasMap         map[string]string
 	dynamicAuthorize bool
+	collector        Operator
 }
 
 func (this *builder) setAliasMap(keyspaceTerm *algebra.KeyspaceTerm) {
@@ -603,6 +608,9 @@ func (this *builder) VisitDiscard(plan *plan.Discard) (interface{}, error) {
 
 // Stream
 func (this *builder) VisitStream(plan *plan.Stream) (interface{}, error) {
+	if this.collector != nil {
+		return checkOp(this.collector, this.context)
+	}
 	return checkOp(NewStream(plan, this.context), this.context)
 }
 
