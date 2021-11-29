@@ -253,7 +253,10 @@ func (this *builder) buildAnsiJoinOp(node *algebra.AnsiJoin) (op plan.Operator, 
 		newKeyspaceTerm.SetJoinKeys(primaryJoinKeys)
 
 		// need to get extra filters in the ON-clause that's not the primary join filter
-		onFilter := this.getOnclauseFilter(baseKeyspace.Filters())
+		onFilter, err := this.getOnclauseFilter(baseKeyspace.Filters())
+		if err != nil {
+			return nil, err
+		}
 
 		cost = OPT_COST_NOT_AVAIL
 		cardinality = OPT_CARD_NOT_AVAIL
@@ -484,7 +487,10 @@ func (this *builder) buildAnsiNestOp(node *algebra.AnsiNest) (op plan.Operator, 
 		newKeyspaceTerm.SetJoinKeys(primaryJoinKeys)
 
 		// need to get extra filters in the ON-clause that's not the primary join filter
-		onFilter := this.getOnclauseFilter(baseKeyspace.Filters())
+		onFilter, err := this.getOnclauseFilter(baseKeyspace.Filters())
+		if err != nil {
+			return nil, err
+		}
 
 		cost = OPT_COST_NOT_AVAIL
 		cardinality = OPT_CARD_NOT_AVAIL
@@ -1403,7 +1409,7 @@ func markIndexFlags(index datastore.Index, spans plan.Spans2, baseKeyspace *base
 	return nil
 }
 
-func (this *builder) getOnclauseFilter(filters base.Filters) expression.Expression {
+func (this *builder) getOnclauseFilter(filters base.Filters) (expression.Expression, error) {
 	terms := make(expression.Expressions, 0, len(filters))
 	for _, fltr := range filters {
 		if fltr.IsOnclause() && !fltr.IsPrimaryJoin() {
@@ -1413,14 +1419,14 @@ func (this *builder) getOnclauseFilter(filters base.Filters) expression.Expressi
 	var filter expression.Expression
 	var err error
 	if len(terms) == 0 {
-		return nil
+		return nil, nil
 	} else if len(terms) == 1 {
 		filter = terms[0]
 	} else {
 		filter = expression.NewAnd(terms...)
 	}
 	if this.joinEnum() {
-		return filter
+		return filter, nil
 	}
 	for _, op := range this.coveringScans {
 		coverer := expression.NewCoverer(op.Covers(), op.FilterCovers())
@@ -1431,10 +1437,10 @@ func (this *builder) getOnclauseFilter(filters base.Filters) expression.Expressi
 			filter, _, _, err = this.coverExpression(coverer, filter, nil, nil)
 		}
 		if err != nil {
-			return nil
+			return nil, err
 		}
 	}
-	return filter
+	return filter, nil
 }
 
 // if both nested-loop join and hash join are to be attempted (in case of CBO),
