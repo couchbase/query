@@ -1469,16 +1469,27 @@ const (
 	_REPORT_INTERVAL = 10000
 )
 
+func RunningRequests() int {
+	count := 0
+	ActiveRequestsForEach(func(id string, request Request) bool {
+		if request.State() == RUNNING || request.State() == SUBMITTED {
+			count++
+		}
+		return true
+	}, nil)
+	return count
+}
+
 func (this *Server) monitorShutdown(timeout time.Duration) {
 	// wait for existing requests to complete
-	ar := this.ActiveRequests()
+	ar := RunningRequests()
 	at := transactions.CountTransContext()
 	if ar > 0 || at > 0 {
 		logging.Infof("Shutdown: Waiting for %v active request(s) and %v active transaction(s) to complete.", ar, at)
 		start := time.Now()
 		reportStart := start
 		for this.ShuttingDown() {
-			ar = this.ActiveRequests()
+			ar = RunningRequests()
 			at = transactions.CountTransContext()
 			if ar == 0 && at == 0 {
 				logging.Infof("Shutdown: All requests and transactions completed.")
@@ -1507,6 +1518,7 @@ func (this *Server) monitorShutdown(timeout time.Duration) {
 		// after this point we have to trust the external monitoring will shut the process down eventually.  We cannot exit
 		// ourselves if it is still monitoring us as it will cause issues with running monitoring operations.  If the shutdown
 		// isn't initiated by something that will kill us off eventually, we will end up just sitting there unable to do anything.
+		logging.Infof("Shutdown: Monitor complete.")
 	} else {
 		logging.Infof("Shutdown: Monitor detected shutdown was cancelled.")
 	}
