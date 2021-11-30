@@ -64,7 +64,6 @@ github.com/couchbase/gocb/v2 v2.3.2 h1:ND7NDs7VHqnkO+pPcbeMToiQS/KW10Yn9woBiFTnl
 github.com/couchbase/gocb/v2 v2.3.2/go.mod h1:NmEbg3pWHURqx5rPR3w/BcBRV5MRkc7i2kf0hq2Gdm0=
 github.com/couchbase/gocbcore-transactions v0.0.0-20211015175912-8d8655302661 h1:W9AWWkSGWKDWS+gwPIKqdzGDF+YHCX6ymxQvx4A/NG0=
 github.com/couchbase/gocbcore-transactions v0.0.0-20211015175912-8d8655302661/go.mod h1:W+sLc2i+hgGGzm0khKQ4t7kapFiaJitds5uhEWy+NW4=
-github.com/couchbase/gocbcore/v10 v10.0.3 h1:7WGBlEYPt1uM3jovjBR3qQyqWYPsAXwi1g88rZk01FQ=
 github.com/couchbase/gocbcore/v10 v10.0.3/go.mod h1:s6dwBFs4c3+cAzZbo1q0VW+QasudhHJuehE8b8U2YNg=
 github.com/couchbase/gocbcore/v10 v10.0.5 h1:/6S4iTzLDWcWfnp99fUKfDM906BcAqDlCQz+K1MVX3M=
 github.com/couchbase/gocbcore/v10 v10.0.5/go.mod h1:s6dwBFs4c3+cAzZbo1q0VW+QasudhHJuehE8b8U2YNg=
