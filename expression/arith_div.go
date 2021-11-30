@@ -9,6 +9,7 @@
 package expression
 
 import (
+	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/value"
 )
 
@@ -55,6 +56,9 @@ func (this *Div) Evaluate(item value.Value, context Context) (value.Value, error
 	if second.Type() == value.NUMBER {
 		s := second.Actual().(float64)
 		if s == 0.0 {
+			if ectx, ok := context.(interface{ Warning(errors.Error) }); ok {
+				ectx.Warning(errors.NewDivideByZeroWarning())
+			}
 			return value.NULL_VALUE, nil
 		}
 

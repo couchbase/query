@@ -68,6 +68,11 @@ func NewRangeError(termType string) Error {
 		InternalMsg: fmt.Sprintf("Out of range evaluating %s.", termType), InternalCaller: CallerN(1)}
 }
 
+func NewDivideByZeroWarning() Error {
+	return &err{level: WARNING, ICode: W_DIVIDE_BY_ZERO, IKey: "execution.divide_by_zero",
+		InternalMsg: "Division by 0.", InternalCaller: CallerN(1)}
+}
+
 func NewDuplicateFinalGroupError() Error {
 	return &err{level: EXCEPTION, ICode: E_DUPLICATE_FINAL_GROUP, IKey: "execution.duplicate_final_group",
 		InternalMsg: "Duplicate Final Group.", InternalCaller: CallerN(1)}

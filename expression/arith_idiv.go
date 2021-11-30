@@ -9,6 +9,7 @@
 package expression
 
 import (
+	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/value"
 )
 
@@ -53,7 +54,14 @@ func (this *IDiv) Evaluate(item value.Value, context Context) (value.Value, erro
 	}
 
 	if first.Type() == value.NUMBER && second.Type() == value.NUMBER {
-		return value.AsNumberValue(first).IDiv(value.AsNumberValue(second)), nil
+		s := value.AsNumberValue(second)
+		if s.Int64() == 0 {
+			if ectx, ok := context.(interface{ Warning(errors.Error) }); ok {
+				ectx.Warning(errors.NewDivideByZeroWarning())
+			}
+			return value.NULL_VALUE, nil
+		}
+		return value.AsNumberValue(first).IDiv(s), nil
 	} else {
 		return value.NULL_VALUE, nil
 	}

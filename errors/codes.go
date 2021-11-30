@@ -195,6 +195,7 @@ const (
 	E_GROUP_UPDATE                            ErrorCode = 5020
 	E_INVALID_VALUE                           ErrorCode = 5030
 	E_RANGE                                   ErrorCode = 5035
+	W_DIVIDE_BY_ZERO                          ErrorCode = 5036
 	E_DUPLICATE_FINAL_GROUP                   ErrorCode = 5040
 	E_INSERT_KEY                              ErrorCode = 5050
 	E_INSERT_VALUE                            ErrorCode = 5060
