@@ -197,7 +197,7 @@ func (e *err) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
 		Caller  string         `json:"caller"`
 		Code    int32          `json:"code"`
-		ICause  string         `json:"icasue"`
+		ICause  string         `json:"icause"`
 		Key     string         `json:"key"`
 		Message string         `json:"message"`
 		Retry   value.Tristate `json:"retry"`
