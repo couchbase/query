@@ -20,10 +20,11 @@ import (
 
 // Build a query execution pipeline from a query plan.
 func Build(plan plan.Operator, context *Context) (Operator, error) {
-	return Build2(plan, context, nil)
+	op, _, err := Build2(plan, context, nil)
+	return op, err
 }
 
-func Build2(plan plan.Operator, context *Context, collector Operator) (Operator, error) {
+func Build2(plan plan.Operator, context *Context, collector Operator) (Operator, bool, error) {
 	var m map[scannedIndex]bool
 	aliasMap := make(map[string]string, 8)
 	if context.ScanVectorSource().Type() == timestamp.ONE_VECTOR {
@@ -34,7 +35,7 @@ func Build2(plan plan.Operator, context *Context, collector Operator) (Operator,
 	x, err := plan.Accept(builder)
 
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
 	if len(builder.scannedIndexes) > 1 {
@@ -42,11 +43,11 @@ func Build2(plan plan.Operator, context *Context, collector Operator) (Operator,
 		for si := range builder.scannedIndexes {
 			scannedIndexArr = append(scannedIndexArr, fmt.Sprintf("%s:%s", si.namespace, si.keyspace))
 		}
-		return nil, errors.NewScanVectorTooManyScannedBuckets(scannedIndexArr)
+		return nil, false, errors.NewScanVectorTooManyScannedBuckets(scannedIndexArr)
 	}
 
 	ex := x.(Operator)
-	return ex, nil
+	return ex, builder.collector == nil, nil
 }
 
 type scannedIndex struct {
@@ -609,7 +610,9 @@ func (this *builder) VisitDiscard(plan *plan.Discard) (interface{}, error) {
 // Stream
 func (this *builder) VisitStream(plan *plan.Stream) (interface{}, error) {
 	if this.collector != nil {
-		return checkOp(this.collector, this.context)
+		res, err := checkOp(this.collector, this.context)
+		this.collector = nil
+		return res, err
 	}
 	return checkOp(NewStream(plan, this.context), this.context)
 }

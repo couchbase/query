@@ -355,6 +355,7 @@ func (this *Context) ExecutePrepared(prepared *plan.Prepared, isPrepared bool,
 	namedArgs map[string]value.Value, positionalArgs value.Values) (value.Value, uint64, error) {
 
 	var outputBuf internalOutput
+	var results value.Value
 	output := &outputBuf
 
 	keep := this.output
@@ -369,7 +370,7 @@ func (this *Context) ExecutePrepared(prepared *plan.Prepared, isPrepared bool,
 
 	// Collect statements results
 	collect := NewCollect(plan.NewCollect(), this)
-	pipeline, err := Build2(prepared, this, collect)
+	pipeline, used, err := Build2(prepared, this, collect)
 	keep.AddPhaseTime(INSTANTIATE, util.Since(build))
 
 	if err != nil {
@@ -378,14 +379,25 @@ func (this *Context) ExecutePrepared(prepared *plan.Prepared, isPrepared bool,
 	}
 
 	exec := util.Now()
-	pipeline.RunOnce(this, nil)
+	if used {
+		pipeline.RunOnce(this, nil)
 
-	// Await completion
-	collect.waitComplete()
+		// Await completion
+		collect.waitComplete()
 
-	results := collect.ValuesOnce()
+		results = collect.ValuesOnce()
+		pipeline.Done()
 
-	pipeline.Done()
+	} else {
+		sequence := NewSequence(plan.NewSequence(), this, pipeline, collect)
+		sequence.RunOnce(this, nil)
+
+		// Await completion
+		collect.waitComplete()
+
+		results = collect.ValuesOnce()
+		sequence.Done()
+	}
 	this.output = keep
 	this.output.AddPhaseTime(RUN, util.Since(exec))
 
@@ -398,8 +410,6 @@ func (this *Context) OpenPrepared(prepared *plan.Prepared, isPrepared bool,
 	NextDocument() (value.Value, error)
 	Cancel()
 }, error) {
-	var err error
-
 	handle := &executionHandle{}
 	handle.context = this
 	handle.output = &internalOutput{}
@@ -414,11 +424,16 @@ func (this *Context) OpenPrepared(prepared *plan.Prepared, isPrepared bool,
 
 	// Collect statements results
 	handle.input = NewReceive(plan.NewReceive(), handle.context)
-	handle.root, err = Build2(prepared, this, handle.input)
+	pipeline, used, err := Build2(prepared, this, handle.input)
 	this.output.AddPhaseTime(INSTANTIATE, util.Since(build))
-
 	if err != nil {
 		return nil, err
+	}
+
+	if used {
+		handle.root = pipeline
+	} else {
+		handle.root = NewSequence(plan.NewSequence(), this, pipeline, handle.input)
 	}
 
 	handle.stmtType = prepared.Type()
