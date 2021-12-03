@@ -882,10 +882,12 @@ func (this *base) runConsumer(cons consumer, context *Context, parent value.Valu
 
 			return
 		}
-		defer this.close(context)
-		defer this.switchPhase(_NOTIME) // accrue current phase's time
-		defer this.notify()             // Notify that I have stopped
-		defer func() { this.batch = nil }()
+		defer func() {
+			this.notify()
+			this.switchPhase(_NOTIME)
+			this.close(context)
+			this.batch = nil
+		}()
 		if !active {
 			return
 		}

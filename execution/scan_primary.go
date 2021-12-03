@@ -56,9 +56,13 @@ func (this *PrimaryScan) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
 		defer context.Recover(&this.base) // Recover from any panic
 		active := this.active()
-		defer this.close(context)
+		this.switchPhase(_EXECTIME)
 		this.setExecPhase(PRIMARY_SCAN, context)
-		defer this.notify() // Notify that I have stopped
+		defer func() {
+			this.notify()
+			this.switchPhase(_NOTIME)
+			this.close(context)
+		}()
 		if !active {
 			return
 		}
@@ -81,8 +85,6 @@ func stringifyIndexEntry(lastEntry *datastore.IndexEntry) string {
 }
 
 func (this *PrimaryScan) scanPrimary(context *Context, parent value.Value) {
-	this.switchPhase(_EXECTIME)
-	defer this.switchPhase(_NOTIME)
 	this.conn = datastore.NewIndexConnection(context)
 	this.conn.SetPrimary()
 	defer this.conn.Dispose()  // Dispose of the connection
