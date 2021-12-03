@@ -183,6 +183,7 @@ func (udr *UnifiedDocumentRetriever) Reset() {
 	udr.keys = nil
 	udr.scanNum = 0
 	udr.lastKeys = nil
+	udr.cacheActive = udr.isFlagOn(CACHE_KEYS)
 	logging.Debuga(func() string {
 		if udr.cache == nil {
 			return fmt.Sprintf("UnifiedDocumentRetriever: reset without cache (active:%v)", udr.cacheActive)
@@ -487,7 +488,6 @@ func (udr *UnifiedDocumentRetriever) getRandom(context datastore.QueryContext) (
 		return key, value, nil
 	}
 	logging.Debuga(func() string { return "UnifiedDocumentRetriever: maximum random duplicates reached" })
-	udr.cacheActive = true
 	return _EMPTY_KEY, nil, nil
 }
 
@@ -497,11 +497,10 @@ func (udr *UnifiedDocumentRetriever) GetNextDoc(context datastore.QueryContext) 
 			udr.iconn.Sender().Close()
 			udr.iconn = nil
 		}
-		udr.cacheActive = true
 		return _EMPTY_KEY, nil, nil
 	}
 
-	// if we have cached keys just use them
+	// if we have cached keys (and this has been reset) just use them
 	if udr.cacheActive {
 		if udr.returned >= len(udr.cache) {
 			return _EMPTY_KEY, nil, nil
@@ -547,10 +546,8 @@ next_index:
 				})
 				if udr.isFlagOn(RANDOM_ENTRY_LAST) && udr.rnd != nil {
 					udr.flags &^= RANDOM_ENTRY_LAST
-					udr.cacheActive = false
 					return udr.getRandom(context)
 				}
-				udr.cacheActive = true
 				return _EMPTY_KEY, nil, nil
 			}
 
@@ -725,7 +722,6 @@ next_index:
 		udr.flags &^= RANDOM_ENTRY_LAST
 		return udr.getRandom(context)
 	}
-	udr.cacheActive = true
 	return _EMPTY_KEY, nil, nil
 }
 
