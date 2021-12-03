@@ -159,6 +159,7 @@ type UnifiedDocumentRetriever struct {
 	indexes        indexArray
 	spans          datastore.Spans2
 	flags          Flag
+	cacheActive    bool
 	cache          []string
 	dedup          map[string]bool
 	docs           map[string]value.AnnotatedValue
@@ -171,6 +172,10 @@ type UnifiedDocumentRetriever struct {
 }
 
 func (udr *UnifiedDocumentRetriever) Reset() {
+	if udr.iconn != nil {
+		udr.iconn.Sender().Close()
+		udr.iconn = nil
+	}
 	udr.returned = 0
 	udr.currentIndex = -1
 	udr.dedup = make(map[string]bool)
@@ -180,9 +185,9 @@ func (udr *UnifiedDocumentRetriever) Reset() {
 	udr.lastKeys = nil
 	logging.Debuga(func() string {
 		if udr.cache == nil {
-			return "UnifiedDocumentRetriever: reset without cache"
+			return fmt.Sprintf("UnifiedDocumentRetriever: reset without cache (active:%v)", udr.cacheActive)
 		} else {
-			return fmt.Sprintf("UnifiedDocumentRetriever: reset with cache of %v keys", len(udr.cache))
+			return fmt.Sprintf("UnifiedDocumentRetriever: reset with cache (active:%v) of %v keys", udr.cacheActive, len(udr.cache))
 		}
 	})
 }
@@ -213,6 +218,7 @@ func (udr *UnifiedDocumentRetriever) Close() {
 	udr.dedup = nil
 	udr.docs = nil
 	udr.cache = nil
+	udr.cacheActive = false
 	udr.keys = nil
 	udr.indexes = nil
 	udr.lastKeys = nil
@@ -481,6 +487,7 @@ func (udr *UnifiedDocumentRetriever) getRandom(context datastore.QueryContext) (
 		return key, value, nil
 	}
 	logging.Debuga(func() string { return "UnifiedDocumentRetriever: maximum random duplicates reached" })
+	udr.cacheActive = true
 	return _EMPTY_KEY, nil, nil
 }
 
@@ -490,11 +497,12 @@ func (udr *UnifiedDocumentRetriever) GetNextDoc(context datastore.QueryContext) 
 			udr.iconn.Sender().Close()
 			udr.iconn = nil
 		}
+		udr.cacheActive = true
 		return _EMPTY_KEY, nil, nil
 	}
 
 	// if we have cached keys just use them
-	if udr.cache != nil && len(udr.cache) == udr.sampleSize {
+	if udr.cacheActive {
 		if udr.returned >= len(udr.cache) {
 			return _EMPTY_KEY, nil, nil
 		}
@@ -539,8 +547,10 @@ next_index:
 				})
 				if udr.isFlagOn(RANDOM_ENTRY_LAST) && udr.rnd != nil {
 					udr.flags &^= RANDOM_ENTRY_LAST
+					udr.cacheActive = false
 					return udr.getRandom(context)
 				}
+				udr.cacheActive = true
 				return _EMPTY_KEY, nil, nil
 			}
 
@@ -715,6 +725,7 @@ next_index:
 		udr.flags &^= RANDOM_ENTRY_LAST
 		return udr.getRandom(context)
 	}
+	udr.cacheActive = true
 	return _EMPTY_KEY, nil, nil
 }
 
