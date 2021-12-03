@@ -14,6 +14,22 @@
         "statements":"SELECT c1 FROM shellTest WHERE ANY v IN arr1 SATISFIES v = 10 END AND to_number(c1) < 20",
         "results": [
     ]
+    },
+    {
+        "testcase": "MB-49859",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`as` = \"o\" AND ARRAY_LENGTH(v.covers) > 0 END AND ANY u WITHIN p.plan.`~children` SATISFIES u.`#operator` LIKE 'IndexScan%' AND u.`as` = \"c\" AND ARRAY_LENGTH(u.covers) > 0 END"
+        },
+        "statements":"SELECT f.* FROM ( SELECT item.n, \"\" AS v FROM shellTest AS o UNNEST o.items AS item WHERE item.n = \"\" AND o.type = \"ll\" AND item.type = \"al\" ) AS f JOIN shellTest AS c ON f.n = c.n AND f.v = c.v AND c.type = \"rr\" AND c.l = \"l\"",
+        "results": [
+    ]
     }
 ]
 

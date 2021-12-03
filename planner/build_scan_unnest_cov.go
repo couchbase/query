@@ -210,7 +210,8 @@ func (this *builder) coveringExpressions(node *algebra.KeyspaceTerm, entry *inde
 
 	// Include filter covers from array key
 	var expr expression.Expression
-	for _, bexpr := range bindings {
+	bindVars := make([]string, 0, len(bindings))
+	for v, bexpr := range bindings {
 		expr = expression.NewIsArray(bexpr)
 		fc = expr.FilterCovers(fc)
 
@@ -220,6 +221,7 @@ func (this *builder) coveringExpressions(node *algebra.KeyspaceTerm, entry *inde
 			return
 		}
 		fc = expr.FilterCovers(fc)
+		bindVars = append(bindVars, v)
 	}
 
 	for _, wexpr := range whens {
@@ -232,7 +234,7 @@ func (this *builder) coveringExpressions(node *algebra.KeyspaceTerm, entry *inde
 		fc = entry.origCond.FilterCovers(fc)
 	}
 
-	filterCovers, err = mapFilterCovers(fc, node.Alias())
+	filterCovers, err = mapFilterCovers(fc, node.Alias(), bindVars)
 	if err != nil {
 		return
 	}

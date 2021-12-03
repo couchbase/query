@@ -468,7 +468,7 @@ func (this *builder) buildCoveringPushdDownIndexScan2(entry *indexEntry, node *a
 	return scan
 }
 
-func mapFilterCovers(fc map[string]value.Value, keyspace string) (map[*expression.Cover]value.Value, error) {
+func mapFilterCovers(fc map[string]value.Value, keyspace string, bindVars []string) (map[*expression.Cover]value.Value, error) {
 	if len(fc) == 0 {
 		return nil, nil
 	}
@@ -480,7 +480,7 @@ func mapFilterCovers(fc map[string]value.Value, keyspace string) (map[*expressio
 			return nil, err
 		}
 
-		expression.MarkKeyspace(keyspace, expr)
+		expression.MarkKeyspace(keyspace, bindVars, expr)
 		c := expression.NewCover(expr)
 		rv[c] = v
 	}
@@ -514,7 +514,7 @@ func indexCoverExpressions(entry *indexEntry, keys expression.Expressions,
 		defer _FILTER_COVERS_POOL.Put(fc)
 		fc = entry.cond.FilterCovers(fc)
 		fc = entry.origCond.FilterCovers(fc)
-		filterCovers, err = mapFilterCovers(fc, keyspace)
+		filterCovers, err = mapFilterCovers(fc, keyspace, nil)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -589,8 +589,7 @@ func implicitFilterCovers(expr expression.Expression) (map[*expression.Cover]val
 			break
 		}
 	}
-	return mapFilterCovers(fc, "")
-
+	return mapFilterCovers(fc, "", nil)
 }
 
 func implicitIndexKeys(entry *indexEntry) (rv expression.Expressions) {
