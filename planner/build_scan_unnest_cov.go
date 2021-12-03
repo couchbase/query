@@ -190,9 +190,6 @@ func (this *builder) coveringExpressions(node *algebra.KeyspaceTerm, entry *inde
 	coveredExprs = make(expression.Expressions, 0, 4)
 	unnestFilters = make(expression.Expressions, 0, 4)
 
-	fc := _FILTER_COVERS_POOL.Get()
-	defer _FILTER_COVERS_POOL.Put(fc)
-
 	bindings, whens := coveredUnnestBindings(entry.arrayKey, allDistinct, unnest)
 
 	for _, uns := range unnests {
@@ -210,34 +207,30 @@ func (this *builder) coveringExpressions(node *algebra.KeyspaceTerm, entry *inde
 
 	// Include filter covers from array key
 	var expr expression.Expression
-	bindVars := make([]string, 0, len(bindings))
-	for v, bexpr := range bindings {
+	fc := make(map[expression.Expression]value.Value, len(bindings)+len(whens)+2)
+	for _, bexpr := range bindings {
 		expr = expression.NewIsArray(bexpr)
-		fc = expr.FilterCovers(fc)
+		fc = expr.FilterExpressionCovers(fc)
 
 		dnf := base.NewDNF(expr, true, true)
 		expr, err = dnf.Map(expr)
 		if err != nil {
 			return
 		}
-		fc = expr.FilterCovers(fc)
-		bindVars = append(bindVars, v)
+		fc = expr.FilterExpressionCovers(fc)
 	}
 
 	for _, wexpr := range whens {
-		fc = wexpr.FilterCovers(fc)
+		fc = wexpr.FilterExpressionCovers(fc)
 	}
 
 	// Include filter covers from index WHERE clause
 	if entry.cond != nil {
-		fc = entry.cond.FilterCovers(fc)
-		fc = entry.origCond.FilterCovers(fc)
+		fc = entry.cond.FilterExpressionCovers(fc)
+		fc = entry.origCond.FilterExpressionCovers(fc)
 	}
 
-	filterCovers, err = mapFilterCovers(fc, node.Alias(), bindVars)
-	if err != nil {
-		return
-	}
+	filterCovers = mapFilterCovers(fc)
 
 	for c, _ := range filterCovers {
 		unnestFilters = append(unnestFilters, c.Covered())

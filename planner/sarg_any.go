@@ -107,13 +107,11 @@ func anySargFor(pred, key, cond expression.Expression, isJoin, doSelec bool,
 
 	exprs := expression.Expressions{key}
 	if cond != nil {
-		fc := make(map[string]value.Value, 4)
-		fc = cond.FilterCovers(fc)
-		filterCovers, err := mapFilterCovers(fc, alias, nil)
-		if err == nil {
-			for c, _ := range filterCovers {
-				exprs = append(exprs, c.Covered())
-			}
+		fc := make(map[expression.Expression]value.Value, 4)
+		fc = cond.FilterExpressionCovers(fc)
+		filterCovers := mapFilterCovers(fc)
+		for c, _ := range filterCovers {
+			exprs = append(exprs, c.Covered())
 		}
 	}
 

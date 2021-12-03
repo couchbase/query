@@ -12,7 +12,6 @@ import (
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/expression"
-	"github.com/couchbase/query/expression/parser"
 	"github.com/couchbase/query/plan"
 	base "github.com/couchbase/query/plannerbase"
 	"github.com/couchbase/query/util"
@@ -137,10 +136,7 @@ outer:
 			if err1 != nil {
 				continue
 			}
-			ifc, err1 := implicitFilterCovers(entry.arrayKey)
-			if err1 != nil {
-				continue
-			}
+			ifc := implicitFilterCovers(entry.arrayKey)
 			if len(ifc) > 0 {
 				if len(filterCovers) == 0 {
 					filterCovers = ifc
@@ -468,24 +464,18 @@ func (this *builder) buildCoveringPushdDownIndexScan2(entry *indexEntry, node *a
 	return scan
 }
 
-func mapFilterCovers(fc map[string]value.Value, keyspace string, bindVars []string) (map[*expression.Cover]value.Value, error) {
+func mapFilterCovers(fc map[expression.Expression]value.Value) map[*expression.Cover]value.Value {
 	if len(fc) == 0 {
-		return nil, nil
+		return nil
 	}
 
 	rv := make(map[*expression.Cover]value.Value, len(fc))
-	for s, v := range fc {
-		expr, err := parser.Parse(s)
-		if err != nil {
-			return nil, err
-		}
-
-		expression.MarkKeyspace(keyspace, bindVars, expr)
-		c := expression.NewCover(expr)
+	for e, v := range fc {
+		c := expression.NewCover(e)
 		rv[c] = v
 	}
 
-	return rv, nil
+	return rv
 }
 
 func unFlattenKeys(keys expression.Expressions, arrayKey *expression.All) expression.Expressions {
@@ -509,15 +499,10 @@ func indexCoverExpressions(entry *indexEntry, keys expression.Expressions,
 	exprs := make(expression.Expressions, 0, len(keys))
 	exprs = append(exprs, unFlattenKeys(keys, entry.arrayKey)...)
 	if entry.cond != nil {
-		var err error
-		fc := _FILTER_COVERS_POOL.Get()
-		defer _FILTER_COVERS_POOL.Put(fc)
-		fc = entry.cond.FilterCovers(fc)
-		fc = entry.origCond.FilterCovers(fc)
-		filterCovers, err = mapFilterCovers(fc, keyspace, nil)
-		if err != nil {
-			return nil, nil, err
-		}
+		fc := make(map[expression.Expression]value.Value, 2)
+		fc = entry.cond.FilterExpressionCovers(fc)
+		fc = entry.origCond.FilterExpressionCovers(fc)
+		filterCovers = mapFilterCovers(fc)
 	}
 
 	// Allow array indexes to cover ANY predicates
@@ -573,23 +558,25 @@ func hasUnknownsInSargableArrayKey(entry *indexEntry) bool {
 	return false
 }
 
-func implicitFilterCovers(expr expression.Expression) (map[*expression.Cover]value.Value, error) {
-	fc := _FILTER_COVERS_POOL.Get()
-	defer _FILTER_COVERS_POOL.Put(fc)
+func implicitFilterCovers(expr expression.Expression) map[*expression.Cover]value.Value {
+	var fc map[expression.Expression]value.Value
 	for all, ok := expr.(*expression.All); ok; all, ok = expr.(*expression.All) {
 		if array, ok := all.Array().(*expression.Array); ok {
+			if fc == nil {
+				fc = make(map[expression.Expression]value.Value, len(array.Bindings())+1)
+			}
 			for _, b := range array.Bindings() {
-				fc[b.Expression().String()] = value.TRUE_ARRAY_VALUE
+				fc[b.Expression()] = value.TRUE_ARRAY_VALUE
 			}
 			if array.When() != nil {
-				fc = array.When().FilterCovers(fc)
+				fc = array.When().FilterExpressionCovers(fc)
 			}
 			expr = array.ValueMapping()
 		} else {
 			break
 		}
 	}
-	return mapFilterCovers(fc, "", nil)
+	return mapFilterCovers(fc)
 }
 
 func implicitIndexKeys(entry *indexEntry) (rv expression.Expressions) {
