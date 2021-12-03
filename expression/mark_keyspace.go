@@ -8,8 +8,8 @@
 
 package expression
 
-func MarkKeyspace(keyspace string, expr Expression) {
-	km := newKeyspaceMarker(keyspace)
+func MarkKeyspace(keyspace string, bindVars []string, expr Expression) {
+	km := newKeyspaceMarker(keyspace, bindVars)
 	_, _ = km.Map(expr)
 	return
 }
@@ -19,11 +19,13 @@ type keyspaceMarker struct {
 	MapperBase
 
 	keyspace string
+	bindVars []string
 }
 
-func newKeyspaceMarker(keyspace string) *keyspaceMarker {
+func newKeyspaceMarker(keyspace string, bindVars []string) *keyspaceMarker {
 	rv := &keyspaceMarker{
 		keyspace: keyspace,
+		bindVars: bindVars,
 	}
 
 	rv.mapFunc = func(expr Expression) (Expression, error) {
@@ -41,6 +43,13 @@ func newKeyspaceMarker(keyspace string) *keyspaceMarker {
 func (this *keyspaceMarker) VisitIdentifier(expr *Identifier) (interface{}, error) {
 	if expr.identifier == this.keyspace {
 		expr.SetKeyspaceAlias(true)
+	} else if len(this.bindVars) > 0 {
+		for _, v := range this.bindVars {
+			if expr.identifier == v {
+				expr.SetBindingVariable(true)
+				break
+			}
+		}
 	}
 	return expr, nil
 }

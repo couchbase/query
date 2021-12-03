@@ -169,7 +169,8 @@ func (this *builder) buildOneCoveringUnnestScan(node *algebra.KeyspaceTerm, pred
 
 	// Include filter covers from array key
 	var expr expression.Expression
-	for _, bexpr := range bindings {
+	bindVars := make([]string, 0, len(bindings))
+	for v, bexpr := range bindings {
 		expr = expression.NewIsArray(bexpr)
 		fc = expr.FilterCovers(fc)
 
@@ -179,6 +180,7 @@ func (this *builder) buildOneCoveringUnnestScan(node *algebra.KeyspaceTerm, pred
 			return nil, nil, nil, err
 		}
 		fc = expr.FilterCovers(fc)
+		bindVars = append(bindVars, v)
 	}
 
 	for _, wexpr := range whens {
@@ -191,7 +193,7 @@ func (this *builder) buildOneCoveringUnnestScan(node *algebra.KeyspaceTerm, pred
 		fc = entry.origCond.FilterCovers(fc)
 	}
 
-	filterCovers, err := mapFilterCovers(fc, alias)
+	filterCovers, err := mapFilterCovers(fc, alias, bindVars)
 	if err != nil {
 		return nil, nil, nil, err
 	}
