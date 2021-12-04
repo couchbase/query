@@ -50,6 +50,7 @@ const (
 
 	//User facing messages from package main
 	PWDMSG       = " Enter Password: "
+	PASSPMSG     = "Enter Passphrase: "
 	STARTUPCREDS = " No input credentials. In order to connect to a server with authentication, please provide credentials.\n"
 	STARTUP      = " Connected to"
 	EXITMSG      = ". Type Ctrl-D or \\QUIT to exit.\n"

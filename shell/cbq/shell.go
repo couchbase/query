@@ -671,6 +671,15 @@ func main() {
 		pingerr := command.Ping(serverFlag)
 		SERVICE_URL = serverFlag
 		command.SERVICE_URL = serverFlag
+		if pingerr != nil && strings.Contains(pingerr.Error(), "parsePrivateKey") {
+			// Prompt for passphrase and retry
+			newPassp, err := promptPassword(command.PASSPMSG)
+			if err == nil {
+				n1ql.SetPrivateKeyPassphrase(newPassp)
+				pingerr = command.Ping(serverFlag)
+			}
+		}
+
 		if pingerr != nil {
 			s_err := command.HandleError(errors.E_SHELL_CONNECTION_REFUSED, pingerr.Error())
 			command.PrintError(s_err)
