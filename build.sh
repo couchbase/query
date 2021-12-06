@@ -23,6 +23,7 @@ args=""
 enterprise=0
 uflag=
 sflag=0
+fflag=1
 while [ $# -gt 0 ]; do
   case $1 in
     -tags)
@@ -32,6 +33,7 @@ while [ $# -gt 0 ]; do
       ;;
     -u) uflag=-u ;;
     -s) sflag=1 ;;
+    -nofmt) fflag=0 ;;
     *) args="$args $1" ;;
   esac
   shift
@@ -128,10 +130,13 @@ cd parser/n1ql
 ./build.sh $*
 cd ../..
 
-echo go fmt ./...
-go fmt ./...
-if [[ $enterprise == 1 ]]; then
-  (echo go fmt ../query-ee/...; cd ../query-ee; export GO111MODULE=off; go fmt ./...)
+if [[ ($fflag != 0) ]]
+then
+  echo go fmt ./...
+  go fmt ./...
+  if [[ $enterprise == 1 ]]; then
+    (echo go fmt ../query-ee/...; cd ../query-ee; export GO111MODULE=off; go fmt ./...)
+  fi
 fi
 
 echo cd server/cbq-engine
