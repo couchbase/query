@@ -7,53 +7,6 @@ import (
 	"time"
 )
 
-// Benchmark{Compute,Copy}{1000,1000000} demonstrate that, even for relatively
-// expensive computations like Variance, the cost of copying the Sample, as
-// approximated by a make and copy, is much greater than the cost of the
-// computation for small samples and only slightly less for large samples.
-func BenchmarkCompute1000(b *testing.B) {
-	s := make([]int64, 1000)
-	for i := 0; i < len(s); i++ {
-		s[i] = int64(i)
-	}
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		SampleVariance(s)
-	}
-}
-func BenchmarkCompute1000000(b *testing.B) {
-	s := make([]int64, 1000000)
-	for i := 0; i < len(s); i++ {
-		s[i] = int64(i)
-	}
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		SampleVariance(s)
-	}
-}
-func BenchmarkCopy1000(b *testing.B) {
-	s := make([]int64, 1000)
-	for i := 0; i < len(s); i++ {
-		s[i] = int64(i)
-	}
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		sCopy := make([]int64, len(s))
-		copy(sCopy, s)
-	}
-}
-func BenchmarkCopy1000000(b *testing.B) {
-	s := make([]int64, 1000000)
-	for i := 0; i < len(s); i++ {
-		s[i] = int64(i)
-	}
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		sCopy := make([]int64, len(s))
-		copy(sCopy, s)
-	}
-}
-
 func BenchmarkExpDecaySample257(b *testing.B) {
 	benchmarkSample(b, NewExpDecaySample(257, 0.015))
 }
@@ -159,13 +112,13 @@ func TestExpDecaySampleNanosecondRegression(t *testing.T) {
 
 func TestExpDecaySampleRescale(t *testing.T) {
 	s := NewExpDecaySample(2, 0.001).(*ExpDecaySample)
-	s.update(time.Now(), 1)
-	s.update(time.Now().Add(time.Hour+time.Microsecond), 1)
-	for _, v := range s.values.Values() {
-		if v.inUse && v.k == 0.0 {
+	s.UpdateWithTimestamp(time.Now(), 1)
+	s.UpdateWithTimestamp(time.Now().Add(time.Hour+time.Microsecond), 1)
+	s.scan(func(v expDecaySample) {
+		if v.k == 0.0 {
 			t.Fatal("v.k == 0.0")
 		}
-	}
+	})
 }
 
 func TestExpDecaySampleStatistics(t *testing.T) {
@@ -173,7 +126,7 @@ func TestExpDecaySampleStatistics(t *testing.T) {
 	s := NewExpDecaySample(100, 0.99)
 	setSeed(s)
 	for i := 1; i <= 10000; i++ {
-		s.(*ExpDecaySample).update(now.Add(time.Duration(i)), int64(i))
+		s.UpdateWithTimestamp(now.Add(time.Duration(i)), int64(i))
 	}
 	testExpDecaySampleStatistics(t, s)
 }

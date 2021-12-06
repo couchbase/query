@@ -21,6 +21,7 @@ type Timer interface {
 	Time(func())
 	Update(time.Duration)
 	UpdateSince(time.Time)
+	UpdateWithTimestamp(time.Time, time.Duration)
 	Variance() float64
 }
 
@@ -136,6 +137,12 @@ func (t *StandardTimer) Update(d time.Duration) {
 // Record the duration of an event that started at a time and ends now.
 func (t *StandardTimer) UpdateSince(ts time.Time) {
 	t.histogram.Update(int64(time.Since(ts)))
+	t.meter.Mark(1)
+}
+
+// Record the duration of an event at a specific point in time
+func (t *StandardTimer) UpdateWithTimestamp(w time.Time, d time.Duration) {
+	t.histogram.UpdateWithTimestamp(w, int64(d))
 	t.meter.Mark(1)
 }
 

@@ -1,5 +1,7 @@
 package metrics
 
+import "time"
+
 // Histograms calculate distribution statistics from a series of int64 values.
 type Histogram interface {
 	Clear()
@@ -13,6 +15,7 @@ type Histogram interface {
 	StdDev() float64
 	Sum() int64
 	Update(int64)
+	UpdateWithTimestamp(time.Time, int64)
 	Variance() float64
 }
 
@@ -85,6 +88,11 @@ func (h *StandardHistogram) Sum() int64 { return h.sample.Sum() }
 
 // Update samples a new value.
 func (h *StandardHistogram) Update(v int64) { h.sample.Update(v) }
+
+// Update samples a new value at a specific point in time.
+func (h *StandardHistogram) UpdateWithTimestamp(w time.Time, v int64) {
+	h.sample.UpdateWithTimestamp(w, v)
+}
 
 // Variance returns the variance of the values in the sample.
 func (h *StandardHistogram) Variance() float64 { return h.sample.Variance() }
