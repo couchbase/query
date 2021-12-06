@@ -249,16 +249,8 @@ func likeCompile(s string, escape rune) (re, part *regexp.Regexp, err error) {
 		return
 	}
 
-	// MB-19230 only add ^ and $ if we are not starting or ending with % owing to operating in multi-line mode.
-	if !strings.HasPrefix(string(pat), anyString) {
-		pat = append([]rune("^"), pat...)
-	}
-	if !strings.HasSuffix(string(pat), anyString) {
-		pat = append(pat, rune('$'))
-	}
-
-	// turn on $ and ^ matching \n .  See MB-39569 for problems...
-	pat = append([]rune("(?ms)"), pat...)
+	// turn on wildcard matching of \n as it may be embedded; DO NOT turn on multi-line mode (MB-39569)
+	pat = append([]rune("(?s)^"), append(pat, rune('$'))...)
 
 	re, err = regexp.Compile(string(pat))
 	return
