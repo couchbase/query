@@ -165,6 +165,9 @@ func (this *builder) visitFrom(node *algebra.Subselect, group *algebra.Group,
 			this.filter = filter
 			if hasOrder {
 				this.setBuilderFlag(BUILDER_PLAN_HAS_ORDER)
+				this.resetOffsetLimit()
+			} else {
+				this.resetOrderOffsetLimit()
 			}
 		} else {
 			// Use FROM clause in index selection
