@@ -249,7 +249,7 @@ func (m *ServiceMgr) CancelTask(id string, rev service.Revision) error {
 							return fmt.Sprintf("ServiceMgr::CancelTask cancelled shutdown down on '%s'", string(e.NodeID))
 						})
 					} else {
-						logging.Infof("ServiceMgr::CancelTask failed to cancel shudown on '%s' (op:%v): %v", string(e.NodeID),
+						logging.Infof("ServiceMgr::CancelTask failed to cancel shutdown on '%s' (op:%v): %v", string(e.NodeID),
 							e.Opaque, err)
 					}
 					done.Incr()
@@ -481,7 +481,7 @@ func (m *ServiceMgr) StartTopologyChange(change service.TopologyChange) error {
 						return fmt.Sprintf("ServiceMgr::StartTopologyChange initiated shutdown down on '%s'", string(e.NodeID))
 					})
 				} else {
-					logging.Infof("ServiceMgr::StartTopologyChange failed to start shudown on '%s' (op:%v): %v", string(e.NodeID),
+					logging.Infof("ServiceMgr::StartTopologyChange failed to start shutdown on '%s' (op:%v): %v", string(e.NodeID),
 						e.Opaque, err)
 				}
 				done.Incr()
