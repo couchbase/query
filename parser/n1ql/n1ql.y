@@ -341,6 +341,7 @@ tokOffset    int
 %nonassoc       IN WITHIN
 %nonassoc       EXISTS
 %nonassoc       IS                              /* IS NULL, IS MISSING, IS VALUED, IS NOT NULL, etc. */
+%left           FROM                            /* IS [NOT] DISTINCT FROM */
 %left           CONCAT
 %left           PLUS MINUS
 %left           STAR DIV MOD POW
@@ -3602,6 +3603,20 @@ expr IS valued
 expr IS NOT valued
 {
     $$ = expression.NewIsNotValued($1)
+    $$.ExprBase().SetErrorContext($1.ExprBase().GetErrorContext())
+}
+|
+expr IS DISTINCT FROM expr
+{
+    $$ = expression.NewIsDistinctFrom($1,$5)
+    $$.(*expression.IsDistinctFrom).SetOperator()
+    $$.ExprBase().SetErrorContext($1.ExprBase().GetErrorContext())
+}
+|
+expr IS NOT DISTINCT FROM expr
+{
+    $$ = expression.NewIsNotDistinctFrom($1,$6)
+    $$.(*expression.IsNotDistinctFrom).SetOperator()
     $$.ExprBase().SetErrorContext($1.ExprBase().GetErrorContext())
 }
 |
