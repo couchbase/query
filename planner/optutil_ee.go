@@ -178,7 +178,7 @@ func getFetchCost(keyspace datastore.Keyspace, cardinality float64) (float64, in
 	return optutil.CalcFetchCost(keyspace, cardinality)
 }
 
-func getDistinctScanCost(index datastore.Index, cardinality float64) (float64, float64) {
+func getDistinctScanCost(index datastore.Index, cardinality float64) (float64, float64, float64) {
 	return optutil.CalcDistinctScanCost(index, cardinality, true)
 }
 

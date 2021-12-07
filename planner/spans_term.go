@@ -49,11 +49,11 @@ func (this *TermSpans) CreateScan(
 				cost, cardinality, size, frCost, hasDeltaKeyspace)
 
 			if cost > 0.0 && cardinality > 0.0 {
-				distCost, distCard := getDistinctScanCost(index, cardinality)
-				if distCost > 0.0 && distCard > 0.0 {
+				distCost, distCard, distFrCost := getDistinctScanCost(index, cardinality)
+				if distCost > 0.0 && distCard > 0.0 && distFrCost > 0.0 {
 					cost += distCost
 					cardinality = distCard
-					frCost = cost
+					frCost += distFrCost
 				} else {
 					cost = OPT_COST_NOT_AVAIL
 					cardinality = OPT_CARD_NOT_AVAIL
