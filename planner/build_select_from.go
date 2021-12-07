@@ -443,7 +443,7 @@ func (this *builder) VisitExpressionTerm(node *algebra.ExpressionTerm) (interfac
 }
 
 func (this *builder) VisitJoin(node *algebra.Join) (interface{}, error) {
-	if term, ok := node.PrimaryTerm().(*algebra.ExpressionTerm); ok && term.IsKeyspace() &&
+	if algebra.GetKeyspaceTerm(node.PrimaryTerm()) != nil &&
 		this.group == nil {
 		this.resetProjection()
 		this.resetIndexGroupAggs()
@@ -490,7 +490,7 @@ func (this *builder) VisitJoin(node *algebra.Join) (interface{}, error) {
 
 func (this *builder) VisitIndexJoin(node *algebra.IndexJoin) (interface{}, error) {
 	this.requirePrimaryKey = true
-	if term, ok := node.PrimaryTerm().(*algebra.ExpressionTerm); ok && term.IsKeyspace() &&
+	if algebra.GetKeyspaceTerm(node.PrimaryTerm()) != nil &&
 		this.group == nil {
 		this.resetProjection()
 		this.resetIndexGroupAggs()
@@ -528,8 +528,8 @@ func (this *builder) VisitIndexJoin(node *algebra.IndexJoin) (interface{}, error
 }
 
 func (this *builder) VisitAnsiJoin(node *algebra.AnsiJoin) (interface{}, error) {
-	if term, ok := node.PrimaryTerm().(*algebra.ExpressionTerm); ok && term.IsKeyspace() &&
-		this.group == nil && node.Right().JoinHint() != algebra.USE_HASH_PROBE {
+	if algebra.GetKeyspaceTerm(node.PrimaryTerm()) != nil &&
+		this.group == nil {
 		this.resetProjection()
 		this.resetIndexGroupAggs()
 		this.resetOffsetLimit()
@@ -651,8 +651,7 @@ func (this *builder) VisitIndexNest(node *algebra.IndexNest) (interface{}, error
 }
 
 func (this *builder) VisitAnsiNest(node *algebra.AnsiNest) (interface{}, error) {
-	if this.group == nil && node.Right().JoinHint() != algebra.USE_HASH_PROBE &&
-		this.hasOffsetOrLimit() && !node.Outer() {
+	if this.group == nil && this.hasOffsetOrLimit() && !node.Outer() {
 		this.resetProjection()
 		this.resetIndexGroupAggs()
 		this.resetOffsetLimit()
@@ -692,7 +691,7 @@ func (this *builder) VisitAnsiNest(node *algebra.AnsiNest) (interface{}, error) 
 }
 
 func (this *builder) VisitUnnest(node *algebra.Unnest) (interface{}, error) {
-	if term, ok := node.PrimaryTerm().(*algebra.ExpressionTerm); !ok || !term.IsKeyspace() {
+	if algebra.GetKeyspaceTerm(node.PrimaryTerm()) == nil {
 		this.resetPushDowns()
 	}
 

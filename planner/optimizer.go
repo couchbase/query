@@ -242,7 +242,7 @@ func (this *builder) buildJoinOp(join *algebra.AnsiJoin, nest *algebra.AnsiNest,
 				return nil, nil, nil, nil, err
 			}
 
-			hjoin, err := this.buildHashJoin(join, joinFilter, selec, innerPlan, innerSubPlan, innerCoveringScans)
+			hjoin, _, err := this.buildHashJoin(join, joinFilter, selec, innerPlan, innerSubPlan, innerCoveringScans)
 			if err != nil || hjoin == nil {
 				return nil, nil, nil, nil, err
 			}
@@ -272,7 +272,7 @@ func (this *builder) buildJoinOp(join *algebra.AnsiJoin, nest *algebra.AnsiNest,
 				return nil, nil, nil, nil, err
 			}
 
-			hnest, err := this.buildHashNest(nest, joinFilter, selec, innerPlan, innerSubPlan, innerCoveringScans)
+			hnest, _, err := this.buildHashNest(nest, joinFilter, selec, innerPlan, innerSubPlan, innerCoveringScans)
 			if err != nil || hnest == nil {
 				return nil, nil, nil, nil, err
 			}
