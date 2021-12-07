@@ -300,7 +300,7 @@ func (s *ExpDecaySample) UpdateWithTimestamp(t time.Time, v int64) {
 			newLandmark := math.Exp(-s.alpha * s.t0.Sub(t0).Seconds())
 			for r, _ := range s.reservoirs {
 				s.reservoirs[r].mutex.RLock()
-				for i := 0; i <= s.reservoirs[r].values.count; i++ {
+				for i := 0; i < s.reservoirs[r].values.count; i++ {
 					s.reservoirs[r].values.s[i].k = s.reservoirs[r].values.s[i].k * newLandmark
 				}
 				s.reservoirs[r].mutex.RUnlock()
