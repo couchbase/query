@@ -69,8 +69,9 @@ github.com/couchbase/gocbcore/v10 v10.0.5 h1:/6S4iTzLDWcWfnp99fUKfDM906BcAqDlCQz
 github.com/couchbase/gocbcore/v10 v10.0.5/go.mod h1:s6dwBFs4c3+cAzZbo1q0VW+QasudhHJuehE8b8U2YNg=
 github.com/couchbase/gocbcore/v9 v9.1.7 h1:YvNzLQ//ltaNfmMR5C5mtm0sWTdw8hGe4rhk961Cw5A=
 github.com/couchbase/gocbcore/v9 v9.1.7/go.mod h1:jOSQeBSECyNvD7aS4lfuaw+pD5t6ciTOf8hrDP/4Nus=
-github.com/couchbase/moss v0.1.0 h1:HCL+xxHUwmOaL44kMM/gU08OW6QGCui1WVFO58bjhNI=
 github.com/couchbase/moss v0.1.0/go.mod h1:9MaHIaRuy9pvLPUJxB8sh8OrLfyDczECVL37grCIubs=
+github.com/couchbase/moss v0.1.1 h1:N4gXGPcf3WBp1jYiRiJofLQNRYeQGML1K9a0lExv0AQ=
+github.com/couchbase/moss v0.1.1/go.mod h1:9MaHIaRuy9pvLPUJxB8sh8OrLfyDczECVL37grCIubs=
 github.com/couchbase/retriever v0.0.0-20150311081435-e3419088e4d3 h1:tVf2isyBCoxClXKJF6LrHlvxU6EEdzRx9pA6nnJivMA=
 github.com/couchbase/retriever v0.0.0-20150311081435-e3419088e4d3/go.mod h1:Lf6b4SPd9CX30fg/aEcV4l/f2xI4xSQn5IKGwE62TIY=
 github.com/couchbase/vellum v1.0.2/go.mod h1:FcwrEivFpNi24R3jLOs3n+fs5RnuQnQqCLBJ1uAg1W4=
