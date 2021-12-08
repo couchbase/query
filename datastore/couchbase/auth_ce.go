@@ -69,13 +69,13 @@ func messageForDeniedPrivilege(pair auth.PrivilegePair) string {
 		privilege = "manage global functions"
 		role = "query_manage_global_functions"
 	case auth.PRIV_QUERY_EXECUTE_FUNCTIONS:
-		privilege = "execue global functions"
+		privilege = "execute global functions"
 		role = "query_execute_global_functions"
 	case auth.PRIV_QUERY_MANAGE_SCOPE_FUNCTIONS:
 		privilege = "manage scope functions"
 		role = fmt.Sprintf("query_manage_functions on %s", keyspace)
 	case auth.PRIV_QUERY_EXECUTE_SCOPE_FUNCTIONS:
-		privilege = "excute scope functions"
+		privilege = "execute scope functions"
 		role = fmt.Sprintf("query_execute_functions on %s", keyspace)
 	case auth.PRIV_QUERY_MANAGE_FUNCTIONS_EXTERNAL:
 		privilege = "manage global external functions"
