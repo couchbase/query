@@ -20,6 +20,11 @@ type Value interface {
 	Track()
 }
 
+type Error interface {
+	error
+	Object() map[string]interface{}
+}
+
 type Context interface {
 	NewValue(val interface{}) interface{}
 	CopyValue(val interface{}) interface{}

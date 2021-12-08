@@ -143,7 +143,8 @@ func (e *err) Error() string {
 
 func (e *err) Object() map[string]interface{} {
 	m := map[string]interface{}{
-		"code":    e.ICode,
+		// only use standard data types in the object
+		"code":    int32(e.ICode),
 		"key":     e.IKey,
 		"message": e.InternalMsg,
 		"caller":  e.InternalCaller,
