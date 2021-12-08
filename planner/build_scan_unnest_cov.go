@@ -80,12 +80,12 @@ func (this *builder) buildOneCoveringUnnestScan(node *algebra.KeyspaceTerm,
 	entry = centry.idxEntry
 	unnestExprInKeys := IsUnnestExprInIndexKeys(entry, centry.rootUnnest)
 	exact := isPushDownProperty(entry.pushDownProperty, _PUSHDOWN_EXACTSPANS)
-	if unnestExprInKeys && entry.exactSpans && !exact {
-		entry.exactSpans = exact
+	if !unnestExprInKeys && indexArrayKey != nil && indexArrayKey.HasDescend() {
+		exact = false
 	}
 
-	if !unnestExprInKeys && indexArrayKey != nil && indexArrayKey.HasDescend() {
-		return nil, nil
+	if unnestExprInKeys && entry.exactSpans && !exact {
+		entry.exactSpans = exact
 	}
 
 	coverAliases := getUnnestAliases(entry.arrayKey, centry.leafUnnest)
