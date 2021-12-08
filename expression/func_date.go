@@ -23,17 +23,18 @@ import (
 	"github.com/couchbase/query/value"
 )
 
+const (
+	_MIN_MILLIS = -377705073600000 // -9999-01-01 12:00:00.000000000 UTC (min TZ offset = -12h)
+	_MAX_MILLIS = +253402250399999 //  9999-12-31 09:59:59.999000000 UTC (max TZ offset = +14h)
+)
+
 ///////////////////////////////////////////////////
 //
 // ClockMillis
 //
 ///////////////////////////////////////////////////
 
-/*
-This represents the Date function CLOCK_MILLIS(). It
-returns the system clock at function evaluation time,
-as UNIX milliseconds and varies during a query.
-*/
+// Return the system clock at function evaluation time as a UNIX milliseconds (varies during a query).
 type ClockMillis struct {
 	NullaryFunctionBase
 }
@@ -50,20 +51,12 @@ func NewClockMillis() Function {
 	return rv
 }
 
-/*
-Visitor pattern.
-*/
 func (this *ClockMillis) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
 func (this *ClockMillis) Type() value.Type { return value.NUMBER }
 
-/*
-Get the current local time in Unix Nanoseconds. In
-order to convert it to milliseconds, divide it by
-10^6.
-*/
 func (this *ClockMillis) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return value.NewValue(timeToMillis(time.Now())), nil
 }
@@ -72,9 +65,6 @@ func (this *ClockMillis) Static() Expression {
 	return this
 }
 
-/*
-Factory method pattern.
-*/
 func (this *ClockMillis) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function { return _CLOCK_MILLIS }
 }
@@ -84,12 +74,8 @@ func (this *ClockMillis) Constructor() FunctionConstructor {
 // ClockStr
 //
 ///////////////////////////////////////////////////
-/*
-This represents the Date function CLOCK_STR([ fmt ]). It returns
-the system clock at function evaluation time, as a string in a
-supported format and varies during a query. There are a set of
-supported formats.
-*/
+
+// Return the system clock at function evaluation time as a string (varies during a query).
 type ClockStr struct {
 	FunctionBase
 }
@@ -104,9 +90,6 @@ func NewClockStr(operands ...Expression) Function {
 	return rv
 }
 
-/*
-Visitor pattern.
-*/
 func (this *ClockStr) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
@@ -123,34 +106,27 @@ func (this *ClockStr) Evaluate(item value.Value, context Context) (value.Value, 
 		} else if fv.Type() == value.MISSING {
 			return value.MISSING_VALUE, nil
 		} else if fv.Type() != value.STRING {
-			return value.NULL_VALUE, nil
+			return setWarning(context, errors.W_DATE_INVALID_ARGUMENT, invalidArgInfo(0, fv))
 		}
 
 		fmt = fv.ToString()
 	}
 
-	return value.NewValue(timeToStr(time.Now(), fmt)), nil
+	rv, err := timeToStr(time.Now(), fmt)
+	if err != nil {
+		return setWarning(context, err)
+	}
+	return value.NewValue(rv), nil
 }
 
 func (this *ClockStr) Value() value.Value {
 	return nil
 }
 
-/*
-Minimum input arguments required for the defined function
-CLOCK_STR is 0.
-*/
 func (this *ClockStr) MinArgs() int { return 0 }
 
-/*
-Maximum input arguments allowable for the defined function
-CLOCK_STR is 1.
-*/
 func (this *ClockStr) MaxArgs() int { return 1 }
 
-/*
-Factory method pattern.
-*/
 func (this *ClockStr) Constructor() FunctionConstructor {
 	return NewClockStr
 }
@@ -160,12 +136,8 @@ func (this *ClockStr) Constructor() FunctionConstructor {
 // ClockTZ
 //
 ///////////////////////////////////////////////////
-/*
-This represents the Date function CLOCK_TZ(timezone, [ fmt ]).
-It returns the system clock at function evaluation time, as a
-string in a supported format and input timezone and varies
-during a query. There are a set of supported formats.
-*/
+
+// Return the system clock in the specified TZ at function evaluation time as a string (varies during a query).
 type ClockTZ struct {
 	FunctionBase
 }
@@ -180,9 +152,6 @@ func NewClockTZ(operands ...Expression) Function {
 	return rv
 }
 
-/*
-Visitor pattern.
-*/
 func (this *ClockTZ) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
@@ -190,9 +159,9 @@ func (this *ClockTZ) Accept(visitor Visitor) (interface{}, error) {
 func (this *ClockTZ) Type() value.Type { return value.STRING }
 
 func (this *ClockTZ) Evaluate(item value.Value, context Context) (value.Value, error) {
-	null := false
 	missing := false
 	fmt := ""
+	var info map[string]interface{}
 
 	// Get current time
 	timeVal := time.Now()
@@ -203,7 +172,7 @@ func (this *ClockTZ) Evaluate(item value.Value, context Context) (value.Value, e
 	} else if tz.Type() == value.MISSING {
 		missing = true
 	} else if tz.Type() != value.STRING {
-		null = true
+		info = invalidArgInfo(0, tz)
 	}
 
 	// Check format
@@ -214,49 +183,45 @@ func (this *ClockTZ) Evaluate(item value.Value, context Context) (value.Value, e
 		} else if fv.Type() == value.MISSING {
 			missing = true
 		} else if fv.Type() != value.STRING {
-			null = true
+			if info == nil {
+				info = invalidArgInfo(1, fv)
+			}
+		} else {
+			fmt = fv.ToString()
 		}
-		fmt = fv.ToString()
 	}
 
 	if missing {
 		return value.MISSING_VALUE, nil
-	} else if null {
-		return value.NULL_VALUE, nil
+	} else if info != nil {
+		return setWarning(context, errors.W_DATE_INVALID_ARGUMENT, info)
 	}
 
 	// Get the timezone and the *Location.
 	timeZone := tz.ToString()
 	loc, err := loadLocation(timeZone)
 	if err != nil {
-		return value.NULL_VALUE, nil
+		return setWarning(context, errors.W_DATE_INVALID_TIMEZONE, timeZone)
 	}
 
 	// Use the timezone to get corresponding time component.
 	timeVal = timeVal.In(loc)
 
-	return value.NewValue(timeToStr(timeVal, fmt)), nil
+	rv, err := timeToStr(timeVal, fmt)
+	if err != nil {
+		return setWarning(context, err)
+	}
+	return value.NewValue(rv), nil
 }
 
 func (this *ClockTZ) Value() value.Value {
 	return nil
 }
 
-/*
-Minimum input arguments required for the defined function
-CLOCK_TZ is 1.
-*/
 func (this *ClockTZ) MinArgs() int { return 1 }
 
-/*
-Maximum input arguments allowable for the defined function
-CLOCK_TZ is 2.
-*/
 func (this *ClockTZ) MaxArgs() int { return 2 }
 
-/*
-Factory method pattern.
-*/
 func (this *ClockTZ) Constructor() FunctionConstructor {
 	return NewClockTZ
 }
@@ -266,12 +231,8 @@ func (this *ClockTZ) Constructor() FunctionConstructor {
 // ClockUTC
 //
 ///////////////////////////////////////////////////
-/*
-This represents the Date function CLOCK_UTC([ fmt ]). It returns
-the system clock at function evaluation time, as a string in a
-supported format in UTC and varies during a query. There are a
-set of supported formats.
-*/
+
+// Return the system clock in UTC at function evaluation time as a string (varies during a query).
 type ClockUTC struct {
 	FunctionBase
 }
@@ -286,9 +247,6 @@ func NewClockUTC(operands ...Expression) Function {
 	return rv
 }
 
-/*
-Visitor pattern.
-*/
 func (this *ClockUTC) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
@@ -305,7 +263,7 @@ func (this *ClockUTC) Evaluate(item value.Value, context Context) (value.Value, 
 		} else if fv.Type() == value.MISSING {
 			return value.MISSING_VALUE, nil
 		} else if fv.Type() != value.STRING {
-			return value.NULL_VALUE, nil
+			return setWarning(context, errors.W_DATE_INVALID_ARGUMENT, invalidArgInfo(0, fv))
 		}
 
 		fmt = fv.ToString()
@@ -314,28 +272,21 @@ func (this *ClockUTC) Evaluate(item value.Value, context Context) (value.Value, 
 	// Get current time in UTC
 	t := time.Now().UTC()
 
-	return value.NewValue(timeToStr(t, fmt)), nil
+	rv, err := timeToStr(t, fmt)
+	if err != nil {
+		return setWarning(context, err)
+	}
+	return value.NewValue(rv), nil
 }
 
 func (this *ClockUTC) Value() value.Value {
 	return nil
 }
 
-/*
-Minimum input arguments required for the defined function
-CLOCK_UTC is 0.
-*/
 func (this *ClockUTC) MinArgs() int { return 0 }
 
-/*
-Maximum input arguments allowable for the defined function
-CLOCK_UTC is 1.
-*/
 func (this *ClockUTC) MaxArgs() int { return 1 }
 
-/*
-Factory method pattern.
-*/
 func (this *ClockUTC) Constructor() FunctionConstructor {
 	return NewClockUTC
 }
@@ -346,12 +297,8 @@ func (this *ClockUTC) Constructor() FunctionConstructor {
 //
 ///////////////////////////////////////////////////
 
-/*
-This represents the Date function DATE_ADD_MILLIS(expr,n,part).
-It performs date arithmetic. n and part are used to define an
-interval or duration, which is then added (or subtracted) to
-the UNIX timestamp, returning the result.
-*/
+// Perform date arithmetic. n and part are used to define an interval or duration, which is then added (or subtracted) to
+// the UNIX timestamp, returning the result.
 type DateAddMillis struct {
 	TernaryFunctionBase
 }
@@ -365,9 +312,6 @@ func NewDateAddMillis(first, second, third Expression) Function {
 	return rv
 }
 
-/*
-Visitor pattern.
-*/
 func (this *DateAddMillis) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
@@ -375,42 +319,68 @@ func (this *DateAddMillis) Accept(visitor Visitor) (interface{}, error) {
 func (this *DateAddMillis) Type() value.Type { return value.NUMBER }
 
 func (this *DateAddMillis) Evaluate(item value.Value, context Context) (value.Value, error) {
+	missing := false
+	null := false
+	var info map[string]interface{}
 	date, err := this.operands[0].Evaluate(item, context)
 	if err != nil {
 		return nil, err
+	} else if date.Type() == value.MISSING {
+		missing = true
+	} else if date.Type() == value.NULL {
+		null = true
+	} else if date.Type() != value.NUMBER {
+		info = invalidArgInfo(0, date)
 	}
 	n, err := this.operands[1].Evaluate(item, context)
 	if err != nil {
 		return nil, err
+	} else if n.Type() == value.MISSING {
+		missing = true
+	} else if n.Type() == value.NULL {
+		null = true
+	} else if n.Type() != value.NUMBER {
+		if info == nil {
+			info = invalidArgInfo(1, n)
+		}
 	}
 	part, err := this.operands[2].Evaluate(item, context)
 	if err != nil {
 		return nil, err
+	} else if part.Type() == value.MISSING {
+		missing = true
+	} else if part.Type() != value.STRING {
+		if info == nil {
+			info = invalidArgInfo(2, part)
+		}
 	}
-	if date.Type() == value.MISSING || n.Type() == value.MISSING || part.Type() == value.MISSING {
+	if missing {
 		return value.MISSING_VALUE, nil
-	} else if date.Type() != value.NUMBER || n.Type() != value.NUMBER || part.Type() != value.STRING {
+	} else if null {
 		return value.NULL_VALUE, nil
+	} else if info != nil {
+		return setWarning(context, errors.W_DATE_INVALID_ARGUMENT, info)
 	}
 
 	da := date.Actual().(float64)
+	if da < _MIN_MILLIS || da > _MAX_MILLIS {
+		return setWarning(context, errors.W_DATE_OVERFLOW, nil)
+	}
+
 	na := n.Actual().(float64)
 	if na != math.Trunc(na) {
-		return value.NULL_VALUE, nil
+		return setWarning(context, errors.W_DATE_NON_INT_VALUE, n)
 	}
 
 	pa := part.ToString()
 	t, err := dateAdd(millisToTime(da), int(na), pa)
 	if err != nil {
-		return value.NULL_VALUE, err
+		return setWarning(context, err)
 	}
 
 	return value.NewValue(timeToMillis(t)), nil
 }
 
-/*
-Factory method pattern.
-*/
 func (this *DateAddMillis) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
 		return NewDateAddMillis(operands[0], operands[1], operands[2])
@@ -423,12 +393,8 @@ func (this *DateAddMillis) Constructor() FunctionConstructor {
 //
 ///////////////////////////////////////////////////
 
-/*
-This represents the Date function DATE_ADD_STR(expr,n,part).
-It performs date arithmetic. n and part are used to define an
-interval or duration, which is then added to the date string
-in a supported format, returning the result.
-*/
+// Perform date arithmetic. n and part are used to define an interval or duration, which is then added to the date string
+// in a supported format, returning the result.
 type DateAddStr struct {
 	TernaryFunctionBase
 }
@@ -442,9 +408,6 @@ func NewDateAddStr(first, second, third Expression) Function {
 	return rv
 }
 
-/*
-Visitor pattern.
-*/
 func (this *DateAddStr) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
@@ -452,47 +415,77 @@ func (this *DateAddStr) Accept(visitor Visitor) (interface{}, error) {
 func (this *DateAddStr) Type() value.Type { return value.STRING }
 
 func (this *DateAddStr) Evaluate(item value.Value, context Context) (value.Value, error) {
+	missing := false
+	null := false
+	var info map[string]interface{}
 	date, err := this.operands[0].Evaluate(item, context)
 	if err != nil {
 		return nil, err
+	} else if date.Type() == value.MISSING {
+		missing = true
+	} else if date.Type() == value.NULL {
+		null = true
+	} else if date.Type() != value.STRING {
+		info = invalidArgInfo(0, date)
 	}
 	n, err := this.operands[1].Evaluate(item, context)
 	if err != nil {
 		return nil, err
+	} else if n.Type() == value.MISSING {
+		missing = true
+	} else if n.Type() == value.NULL {
+		null = true
+	} else if n.Type() != value.NUMBER {
+		if info == nil {
+			info = invalidArgInfo(1, n)
+		}
 	}
 	part, err := this.operands[2].Evaluate(item, context)
 	if err != nil {
 		return nil, err
+	} else if part.Type() == value.MISSING {
+		missing = true
+	} else if part.Type() != value.STRING {
+		if info == nil {
+			info = invalidArgInfo(2, part)
+		}
 	}
-	if date.Type() == value.MISSING || n.Type() == value.MISSING || part.Type() == value.MISSING {
+	if missing {
 		return value.MISSING_VALUE, nil
-	} else if date.Type() != value.STRING || n.Type() != value.NUMBER || part.Type() != value.STRING {
+	} else if null {
 		return value.NULL_VALUE, nil
+	} else if info != nil {
+		return setWarning(context, errors.W_DATE_INVALID_ARGUMENT, info)
 	}
 
 	da := date.ToString()
 	t, fmt, err := StrToTimeFormat(da)
 	if err != nil {
-		return value.NULL_VALUE, nil
+		return setWarning(context, err)
 	}
 
 	na := n.Actual().(float64)
 	if na != math.Trunc(na) {
-		return value.NULL_VALUE, nil
+		return setWarning(context, errors.W_DATE_NON_INT_VALUE, n)
 	}
 
 	pa := part.ToString()
 	t, err = dateAdd(t, int(na), pa)
 	if err != nil {
-		return value.NULL_VALUE, err
+		return setWarning(context, err)
+	}
+	ms := t.UTC().UnixMilli()
+	if ms < _MIN_MILLIS || ms > _MAX_MILLIS {
+		return setWarning(context, errors.W_DATE_OVERFLOW, nil)
 	}
 
-	return value.NewValue(timeToStr(t, fmt)), nil
+	rv, err := timeToStr(t, fmt)
+	if err != nil {
+		return setWarning(context, err)
+	}
+	return value.NewValue(rv), nil
 }
 
-/*
-Factory method pattern.
-*/
 func (this *DateAddStr) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
 		return NewDateAddStr(operands[0], operands[1], operands[2])
@@ -505,11 +498,7 @@ func (this *DateAddStr) Constructor() FunctionConstructor {
 //
 ///////////////////////////////////////////////////
 
-/*
-This represents the Date function DATE_DIFF_MILLIS(expr1,expr2,part).
-It performs date arithmetic. It returns the elapsed time between two
-UNIX timestamps, as an integer whose unit is part.
-*/
+// Perform date arithmetic. It returns the elapsed time between two UNIX timestamps, as an integer whose unit is part.
 type DateDiffMillis struct {
 	TernaryFunctionBase
 }
@@ -523,9 +512,6 @@ func NewDateDiffMillis(first, second, third Expression) Function {
 	return rv
 }
 
-/*
-Visitor pattern.
-*/
 func (this *DateDiffMillis) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
@@ -533,38 +519,67 @@ func (this *DateDiffMillis) Accept(visitor Visitor) (interface{}, error) {
 func (this *DateDiffMillis) Type() value.Type { return value.NUMBER }
 
 func (this *DateDiffMillis) Evaluate(item value.Value, context Context) (value.Value, error) {
+	missing := false
+	null := false
+	var info map[string]interface{}
 	date1, err := this.operands[0].Evaluate(item, context)
 	if err != nil {
 		return nil, err
+	} else if date1.Type() == value.MISSING {
+		missing = true
+	} else if date1.Type() == value.NULL {
+		null = true
+	} else if date1.Type() != value.NUMBER {
+		info = invalidArgInfo(0, date1)
 	}
 	date2, err := this.operands[1].Evaluate(item, context)
 	if err != nil {
 		return nil, err
+	} else if date2.Type() == value.MISSING {
+		missing = true
+	} else if date2.Type() == value.NULL {
+		null = true
+	} else if date2.Type() != value.NUMBER {
+		if info == nil {
+			info = invalidArgInfo(1, date2)
+		}
 	}
 	part, err := this.operands[2].Evaluate(item, context)
 	if err != nil {
 		return nil, err
+	} else if part.Type() == value.MISSING {
+		missing = true
+	} else if part.Type() != value.STRING {
+		if info == nil {
+			info = invalidArgInfo(2, part)
+		}
 	}
-	if date1.Type() == value.MISSING || date2.Type() == value.MISSING || part.Type() == value.MISSING {
+	if missing {
 		return value.MISSING_VALUE, nil
-	} else if date1.Type() != value.NUMBER || date2.Type() != value.NUMBER || part.Type() != value.STRING {
+	} else if null {
 		return value.NULL_VALUE, nil
+	} else if info != nil {
+		return setWarning(context, errors.W_DATE_INVALID_ARGUMENT, info)
 	}
 
 	da1 := date1.Actual().(float64)
+	if da1 < _MIN_MILLIS || da1 > _MAX_MILLIS {
+		return setWarning(context, errors.W_DATE_OVERFLOW, nil)
+	}
 	da2 := date2.Actual().(float64)
+	if da2 < _MIN_MILLIS || da2 > _MAX_MILLIS {
+		return setWarning(context, errors.W_DATE_OVERFLOW, nil)
+	}
+
 	pa := part.ToString()
 	diff, err := dateDiff(millisToTime(da1), millisToTime(da2), pa)
 	if err != nil {
-		return value.NULL_VALUE, err
+		return setWarning(context, err)
 	}
 
 	return value.NewValue(diff), nil
 }
 
-/*
-Factory method pattern.
-*/
 func (this *DateDiffMillis) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
 		return NewDateDiffMillis(operands[0], operands[1], operands[2])
@@ -577,12 +592,8 @@ func (this *DateDiffMillis) Constructor() FunctionConstructor {
 //
 ///////////////////////////////////////////////////
 
-/*
-This represents the Date function DATE_DIFF_STR(expr1,expr2,part).
-It performs date arithmetic and returns the elapsed time between two
-date strings in a supported format, as an integer whose unit is
-part.
-*/
+// Perform date arithmetic and returns the elapsed time between two date strings in a supported format, as an integer whose unit
+// is part.
 type DateDiffStr struct {
 	TernaryFunctionBase
 }
@@ -596,9 +607,6 @@ func NewDateDiffStr(first, second, third Expression) Function {
 	return rv
 }
 
-/*
-Visitor pattern.
-*/
 func (this *DateDiffStr) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
@@ -606,48 +614,70 @@ func (this *DateDiffStr) Accept(visitor Visitor) (interface{}, error) {
 func (this *DateDiffStr) Type() value.Type { return value.NUMBER }
 
 func (this *DateDiffStr) Evaluate(item value.Value, context Context) (value.Value, error) {
+	missing := false
+	null := false
+	var info map[string]interface{}
 	date1, err := this.operands[0].Evaluate(item, context)
 	if err != nil {
 		return nil, err
+	} else if date1.Type() == value.MISSING {
+		missing = true
+	} else if date1.Type() == value.NULL {
+		null = true
+	} else if date1.Type() != value.STRING {
+		info = invalidArgInfo(0, date1)
 	}
 	date2, err := this.operands[1].Evaluate(item, context)
 	if err != nil {
 		return nil, err
+	} else if date2.Type() == value.MISSING {
+		missing = true
+	} else if date2.Type() == value.NULL {
+		null = true
+	} else if date2.Type() != value.STRING {
+		if info == nil {
+			info = invalidArgInfo(1, date2)
+		}
 	}
 	part, err := this.operands[2].Evaluate(item, context)
 	if err != nil {
 		return nil, err
+	} else if part.Type() == value.MISSING {
+		missing = true
+	} else if part.Type() != value.STRING {
+		if info == nil {
+			info = invalidArgInfo(2, part)
+		}
 	}
-	if date1.Type() == value.MISSING || date2.Type() == value.MISSING || part.Type() == value.MISSING {
+	if missing {
 		return value.MISSING_VALUE, nil
-	} else if date1.Type() != value.STRING || date2.Type() != value.STRING || part.Type() != value.STRING {
+	} else if null {
 		return value.NULL_VALUE, nil
+	} else if info != nil {
+		return setWarning(context, errors.W_DATE_INVALID_ARGUMENT, info)
 	}
 
 	da1 := date1.ToString()
 	t1, err := strToTime(da1, "")
 	if err != nil {
-		return value.NULL_VALUE, nil
+		return setWarning(context, err)
 	}
 
 	da2 := date2.ToString()
 	t2, err := strToTime(da2, "")
 	if err != nil {
-		return value.NULL_VALUE, nil
+		return setWarning(context, err)
 	}
 
 	pa := part.ToString()
 	diff, err := dateDiff(t1, t2, pa)
 	if err != nil {
-		return value.NULL_VALUE, err
+		return setWarning(context, err)
 	}
 
 	return value.NewValue(diff), nil
 }
 
-/*
-Factory method pattern.
-*/
 func (this *DateDiffStr) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
 		return NewDateDiffStr(operands[0], operands[1], operands[2])
@@ -660,12 +690,8 @@ func (this *DateDiffStr) Constructor() FunctionConstructor {
 //
 ///////////////////////////////////////////////////
 
-/*
-This represents the Date function DATE_DIFF_ABS_MILLIS(expr1,expr2,part).
-It performs date arithmetic. It returns the absolute elapsed time between two
-UNIX timestamps, as an integer whose unit is part. It is always a +ve int.
-This is similar to Oracles date diff arithmetic.
-*/
+// Perform date arithmetic. It returns the absolute (always +ve) elapsed time between two UNIX timestamps, as an integer whose
+// unit is part.
 type DateDiffAbsMillis struct {
 	TernaryFunctionBase
 }
@@ -686,30 +712,61 @@ func (this *DateDiffAbsMillis) Accept(visitor Visitor) (interface{}, error) {
 func (this *DateDiffAbsMillis) Type() value.Type { return value.NUMBER }
 
 func (this *DateDiffAbsMillis) Evaluate(item value.Value, context Context) (value.Value, error) {
+	missing := false
+	null := false
+	var info map[string]interface{}
 	date1, err := this.operands[0].Evaluate(item, context)
 	if err != nil {
 		return nil, err
+	} else if date1.Type() == value.MISSING {
+		missing = true
+	} else if date1.Type() == value.NULL {
+		null = true
+	} else if date1.Type() != value.NUMBER {
+		info = invalidArgInfo(0, date1)
 	}
 	date2, err := this.operands[1].Evaluate(item, context)
 	if err != nil {
 		return nil, err
+	} else if date2.Type() == value.MISSING {
+		missing = true
+	} else if date2.Type() == value.NULL {
+		null = true
+	} else if date2.Type() != value.NUMBER {
+		if info == nil {
+			info = invalidArgInfo(1, date2)
+		}
 	}
 	part, err := this.operands[2].Evaluate(item, context)
 	if err != nil {
 		return nil, err
+	} else if part.Type() == value.MISSING {
+		missing = true
+	} else if part.Type() != value.STRING {
+		if info == nil {
+			info = invalidArgInfo(2, part)
+		}
 	}
-	if date1.Type() == value.MISSING || date2.Type() == value.MISSING || part.Type() == value.MISSING {
+	if missing {
 		return value.MISSING_VALUE, nil
-	} else if date1.Type() != value.NUMBER || date2.Type() != value.NUMBER || part.Type() != value.STRING {
+	} else if null {
 		return value.NULL_VALUE, nil
+	} else if info != nil {
+		return setWarning(context, errors.W_DATE_INVALID_ARGUMENT, info)
 	}
 
 	da1 := date1.Actual().(float64)
+	if da1 < _MIN_MILLIS || da1 > _MAX_MILLIS {
+		return setWarning(context, errors.W_DATE_OVERFLOW, nil)
+	}
 	da2 := date2.Actual().(float64)
+	if da2 < _MIN_MILLIS || da2 > _MAX_MILLIS {
+		return setWarning(context, errors.W_DATE_OVERFLOW, nil)
+	}
 	pa := part.ToString()
 	diff, err := dateDiff(millisToTime(da1), millisToTime(da2), pa)
 	if err != nil {
-		return value.NULL_VALUE, err
+		return setWarning(context, err)
 	}
 
 	return value.NewValue(math.Abs(float64(diff))), nil
@@ -727,13 +784,8 @@ func (this *DateDiffAbsMillis) Constructor() FunctionConstructor {
 //
 ///////////////////////////////////////////////////
 
-/*
-This represents the Date function DATE_DIFF_ABS_STR(expr1,expr2,part).
-It performs date arithmetic and returns the absolute elapsed time between two
-date strings in a supported format, as an integer whose unit is
-part. It is always a +ve int.
-This is similar to Oracles date diff arithmetic.
-*/
+// Perform date arithmetic and returns the absolute (always +ve) elapsed time between two date strings in a supported format,
+// as an integer whose unit is part.
 type DateDiffAbsStr struct {
 	TernaryFunctionBase
 }
@@ -754,40 +806,65 @@ func (this *DateDiffAbsStr) Accept(visitor Visitor) (interface{}, error) {
 func (this *DateDiffAbsStr) Type() value.Type { return value.NUMBER }
 
 func (this *DateDiffAbsStr) Evaluate(item value.Value, context Context) (value.Value, error) {
+	missing := false
+	null := false
+	var info map[string]interface{}
 	date1, err := this.operands[0].Evaluate(item, context)
 	if err != nil {
 		return nil, err
+	} else if date1.Type() == value.MISSING {
+		missing = true
+	} else if date1.Type() == value.NULL {
+		null = true
+	} else if date1.Type() != value.STRING {
+		info = invalidArgInfo(0, date1)
 	}
 	date2, err := this.operands[1].Evaluate(item, context)
 	if err != nil {
 		return nil, err
+	} else if date2.Type() == value.MISSING {
+		missing = true
+	} else if date2.Type() == value.NULL {
+		null = true
+	} else if date2.Type() != value.STRING {
+		if info == nil {
+			info = invalidArgInfo(1, date2)
+		}
 	}
 	part, err := this.operands[2].Evaluate(item, context)
 	if err != nil {
 		return nil, err
+	} else if part.Type() == value.MISSING {
+		missing = true
+	} else if part.Type() != value.STRING {
+		if info == nil {
+			info = invalidArgInfo(2, part)
+		}
 	}
-	if date1.Type() == value.MISSING || date2.Type() == value.MISSING || part.Type() == value.MISSING {
+	if missing {
 		return value.MISSING_VALUE, nil
-	} else if date1.Type() != value.STRING || date2.Type() != value.STRING || part.Type() != value.STRING {
+	} else if null {
 		return value.NULL_VALUE, nil
+	} else if info != nil {
+		return setWarning(context, errors.W_DATE_INVALID_ARGUMENT, info)
 	}
 
 	da1 := date1.ToString()
 	t1, err := strToTime(da1, "")
 	if err != nil {
-		return value.NULL_VALUE, nil
+		return setWarning(context, err)
 	}
 
 	da2 := date2.ToString()
 	t2, err := strToTime(da2, "")
 	if err != nil {
-		return value.NULL_VALUE, nil
+		return setWarning(context, err)
 	}
 
 	pa := part.ToString()
 	diff, err := dateDiff(t1, t2, pa)
 	if err != nil {
-		return value.NULL_VALUE, err
+		return setWarning(context, err)
 	}
 
 	return value.NewValue(math.Abs(float64(diff))), nil
@@ -805,10 +882,7 @@ func (this *DateDiffAbsStr) Constructor() FunctionConstructor {
 //
 ///////////////////////////////////////////////////
 
-/*
-This represents the Date function DATE_FORMAT_STR(expr, format).
-It returns the input date in the expected format.
-*/
+// Return the input date in the expected format.
 type DateFormatStr struct {
 	FunctionBase
 }
@@ -822,9 +896,6 @@ func NewDateFormatStr(operands ...Expression) Function {
 	return rv
 }
 
-/*
-Visitor pattern.
-*/
 func (this *DateFormatStr) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
@@ -832,26 +903,49 @@ func (this *DateFormatStr) Accept(visitor Visitor) (interface{}, error) {
 func (this *DateFormatStr) Type() value.Type { return value.STRING }
 
 func (this *DateFormatStr) Evaluate(item value.Value, context Context) (value.Value, error) {
+	missing := false
+	null := false
+	var info map[string]interface{}
 	first, err := this.operands[0].Evaluate(item, context)
 	if err != nil {
 		return nil, err
+	} else if first.Type() == value.MISSING {
+		missing = true
+	} else if first.Type() == value.NULL {
+		null = true
+	} else if first.Type() != value.STRING {
+		info = invalidArgInfo(0, first)
 	}
 	second, err := this.operands[1].Evaluate(item, context)
 	if err != nil {
 		return nil, err
+	} else if second.Type() == value.MISSING {
+		missing = true
+	} else if second.Type() != value.STRING {
+		if info == nil {
+			info = invalidArgInfo(1, second)
+		}
 	}
 	third := second
 	if len(this.operands) == 3 {
 		third, err = this.operands[2].Evaluate(item, context)
 		if err != nil {
 			return nil, err
+		} else if third.Type() == value.MISSING {
+			missing = true
+		} else if third.Type() != value.STRING {
+			if info == nil {
+				info = invalidArgInfo(2, third)
+			}
 		}
 	}
 
-	if first.Type() == value.MISSING || second.Type() == value.MISSING || third.Type() == value.MISSING {
+	if missing {
 		return value.MISSING_VALUE, nil
-	} else if first.Type() != value.STRING || second.Type() != value.STRING || third.Type() != value.STRING {
+	} else if null {
 		return value.NULL_VALUE, nil
+	} else if info != nil {
+		return setWarning(context, errors.W_DATE_INVALID_ARGUMENT, info)
 	}
 
 	str := first.ToString()
@@ -862,12 +956,16 @@ func (this *DateFormatStr) Evaluate(item value.Value, context Context) (value.Va
 		t, err = strToTime(str, "")
 	}
 	if err != nil {
-		return value.NULL_VALUE, nil
+		return setWarning(context, err)
 	}
 
 	format := third.ToString()
 
-	return value.NewValue(timeToStr(t, format)), nil
+	rv, err := timeToStr(t, format)
+	if err != nil {
+		return setWarning(context, err)
+	}
+	return value.NewValue(rv), nil
 
 }
 
@@ -885,12 +983,8 @@ func (this *DateFormatStr) Constructor() FunctionConstructor {
 //
 ///////////////////////////////////////////////////
 
-/*
-This represents the Date function DATE_PART_MILLIS(expr, part, [ tz ]).
-It returns the date part as an integer. The date expr is a number
-representing UNIX milliseconds, and part is one of the date part
-strings.
-*/
+// Return the date part as an integer. The date expr is a number representing UNIX milliseconds, and part is one of the date part
+// strings.
 type DatePartMillis struct {
 	FunctionBase
 }
@@ -904,9 +998,6 @@ func NewDatePartMillis(operands ...Expression) Function {
 	return rv
 }
 
-/*
-Visitor pattern.
-*/
 func (this *DatePartMillis) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
@@ -916,14 +1007,17 @@ func (this *DatePartMillis) Type() value.Type { return value.NUMBER }
 func (this *DatePartMillis) Evaluate(item value.Value, context Context) (value.Value, error) {
 	null := false
 	missing := false
+	var info map[string]interface{}
 
 	first, err := this.operands[0].Evaluate(item, context)
 	if err != nil {
 		return nil, err
 	} else if first.Type() == value.MISSING {
 		missing = true
-	} else if first.Type() != value.NUMBER {
+	} else if first.Type() == value.NULL {
 		null = true
+	} else if first.Type() != value.NUMBER {
+		info = invalidArgInfo(0, first)
 	}
 
 	second, err := this.operands[1].Evaluate(item, context)
@@ -932,7 +1026,9 @@ func (this *DatePartMillis) Evaluate(item value.Value, context Context) (value.V
 	} else if second.Type() == value.MISSING {
 		missing = true
 	} else if second.Type() != value.STRING {
-		null = true
+		if info == nil {
+			info = invalidArgInfo(1, second)
+		}
 	}
 
 	// Initialize timezone to nil to avoid processing if not specified.
@@ -946,7 +1042,9 @@ func (this *DatePartMillis) Evaluate(item value.Value, context Context) (value.V
 		} else if timeZone.Type() == value.MISSING {
 			missing = true
 		} else if timeZone.Type() != value.STRING {
-			null = true
+			if info == nil {
+				info = invalidArgInfo(2, timeZone)
+			}
 		}
 	}
 
@@ -954,9 +1052,14 @@ func (this *DatePartMillis) Evaluate(item value.Value, context Context) (value.V
 		return value.MISSING_VALUE, nil
 	} else if null {
 		return value.NULL_VALUE, nil
+	} else if info != nil {
+		return setWarning(context, errors.W_DATE_INVALID_ARGUMENT, info)
 	}
 
 	millis := first.Actual().(float64)
+	if millis < _MIN_MILLIS || millis > _MAX_MILLIS {
+		return setWarning(context, errors.W_DATE_OVERFLOW, nil)
+	}
 	part := second.ToString()
 
 	// Convert the input millis to *Time
@@ -969,7 +1072,7 @@ func (this *DatePartMillis) Evaluate(item value.Value, context Context) (value.V
 		tz := timeZone.ToString()
 		loc, err := loadLocation(tz)
 		if err != nil {
-			return value.NULL_VALUE, nil
+			return setWarning(context, errors.W_DATE_INVALID_TIMEZONE, tz)
 		}
 		// Use the timezone to get corresponding time component.
 		timeVal = timeVal.In(loc)
@@ -977,25 +1080,16 @@ func (this *DatePartMillis) Evaluate(item value.Value, context Context) (value.V
 
 	rv, err := datePart(timeVal, part)
 	if err != nil {
-		return value.NULL_VALUE, err
+		return setWarning(context, err)
 	}
 
 	return value.NewValue(rv), nil
 }
 
-/*
-Minimum input arguments required.
-*/
 func (this *DatePartMillis) MinArgs() int { return 2 }
 
-/*
-Maximum input arguments allowed.
-*/
 func (this *DatePartMillis) MaxArgs() int { return 3 }
 
-/*
-Factory method pattern.
-*/
 func (this *DatePartMillis) Constructor() FunctionConstructor {
 	return NewDatePartMillis
 }
@@ -1006,11 +1100,8 @@ func (this *DatePartMillis) Constructor() FunctionConstructor {
 //
 ///////////////////////////////////////////////////
 
-/*
-This represents the Date function DATE_PART_STR(expr, part).  It
-returns the date part as an integer. The date expr is a string in a
-supported format, and part is one of the supported date part strings.
-*/
+// Return the date part as an integer. The date expr is a string in a supported format, and part is one of the supported date part
+// strings.
 type DatePartStr struct {
 	BinaryFunctionBase
 }
@@ -1024,9 +1115,6 @@ func NewDatePartStr(first, second Expression) Function {
 	return rv
 }
 
-/*
-Visitor pattern.
-*/
 func (this *DatePartStr) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
@@ -1034,39 +1122,52 @@ func (this *DatePartStr) Accept(visitor Visitor) (interface{}, error) {
 func (this *DatePartStr) Type() value.Type { return value.NUMBER }
 
 func (this *DatePartStr) Evaluate(item value.Value, context Context) (value.Value, error) {
+	missing := false
+	null := false
+	var info map[string]interface{}
 	first, err := this.operands[0].Evaluate(item, context)
 	if err != nil {
 		return nil, err
+	} else if first.Type() == value.MISSING {
+		missing = true
+	} else if first.Type() == value.NULL {
+		null = true
+	} else if first.Type() != value.STRING {
+		info = invalidArgInfo(0, first)
 	}
 	second, err := this.operands[1].Evaluate(item, context)
 	if err != nil {
 		return nil, err
+	} else if second.Type() == value.MISSING {
+		missing = true
+	} else if second.Type() != value.STRING {
+		if info == nil {
+			info = invalidArgInfo(1, second)
+		}
 	}
-
-	if first.Type() == value.MISSING || second.Type() == value.MISSING {
+	if missing {
 		return value.MISSING_VALUE, nil
-	} else if first.Type() != value.STRING || second.Type() != value.STRING {
+	} else if null {
 		return value.NULL_VALUE, nil
+	} else if info != nil {
+		return setWarning(context, errors.W_DATE_INVALID_ARGUMENT, info)
 	}
 
 	str := first.ToString()
 	t, err := strToTime(str, "")
 	if err != nil {
-		return value.NULL_VALUE, nil
+		return setWarning(context, err)
 	}
 
 	part := second.ToString()
 	rv, err := datePart(t, part)
 	if err != nil {
-		return value.NULL_VALUE, err
+		return setWarning(context, err)
 	}
 
 	return value.NewValue(rv), nil
 }
 
-/*
-Factory method pattern.
-*/
 func (this *DatePartStr) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
 		return NewDatePartStr(operands[0], operands[1])
@@ -1079,11 +1180,7 @@ func (this *DatePartStr) Constructor() FunctionConstructor {
 //
 ///////////////////////////////////////////////////
 
-/*
-This represents the Date function ARRAY_DATE_RANGE(expr,expr,part,[n]).
-It returns a range of dates from expr1 to expr2. n and part are used to
-define an interval and duration.
-*/
+// Return a range of dates from expr1 to expr2. n and part are used to define an interval and duration.
 type DateRangeStr struct {
 	FunctionBase
 }
@@ -1097,9 +1194,6 @@ func NewDateRangeStr(operands ...Expression) Function {
 	return rv
 }
 
-/*
-Visitor pattern.
-*/
 func (this *DateRangeStr) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
@@ -1109,6 +1203,7 @@ func (this *DateRangeStr) Type() value.Type { return value.ARRAY }
 func (this *DateRangeStr) Evaluate(item value.Value, context Context) (value.Value, error) {
 	null := false
 	missing := false
+	var info map[string]interface{}
 	// Populate the args
 	// If input arguments are missing then return missing, and if they arent valid types,
 	// return null.
@@ -1117,16 +1212,22 @@ func (this *DateRangeStr) Evaluate(item value.Value, context Context) (value.Val
 		return nil, err
 	} else if startDate.Type() == value.MISSING {
 		missing = true
-	} else if startDate.Type() != value.STRING {
+	} else if startDate.Type() == value.NULL {
 		null = true
+	} else if startDate.Type() != value.STRING {
+		info = invalidArgInfo(0, startDate)
 	}
 	endDate, err := this.operands[1].Evaluate(item, context)
 	if err != nil {
 		return nil, err
 	} else if endDate.Type() == value.MISSING {
 		missing = true
-	} else if endDate.Type() != value.STRING {
+	} else if endDate.Type() == value.NULL {
 		null = true
+	} else if endDate.Type() != value.STRING {
+		if info == nil {
+			info = invalidArgInfo(1, endDate)
+		}
 	}
 	part, err := this.operands[2].Evaluate(item, context)
 	if err != nil {
@@ -1134,10 +1235,13 @@ func (this *DateRangeStr) Evaluate(item value.Value, context Context) (value.Val
 	} else if part.Type() == value.MISSING {
 		missing = true
 	} else if part.Type() != value.STRING {
-		null = true
+		if info == nil {
+			info = invalidArgInfo(2, part)
+		}
 	}
 	// Default value for the increment is 1.
 	n := value.ONE_VALUE
+	defaultStep := true
 	if len(this.operands) > 3 {
 		n, err = this.operands[3].Evaluate(item, context)
 		if err != nil {
@@ -1145,28 +1249,33 @@ func (this *DateRangeStr) Evaluate(item value.Value, context Context) (value.Val
 		} else if n.Type() == value.MISSING {
 			missing = true
 		} else if n.Type() != value.NUMBER {
-			null = true
+			if info == nil {
+				info = invalidArgInfo(3, n)
+			}
 		}
+		defaultStep = false
 	}
 
 	if missing {
 		return value.MISSING_VALUE, nil
 	} else if null {
 		return value.NULL_VALUE, nil
+	} else if info != nil {
+		return setWarning(context, errors.W_DATE_INVALID_ARGUMENT, info)
 	}
 
 	// Convert start date to time format.
 	da1 := startDate.ToString()
 	t1, fmt1, err := StrToTimeFormat(da1)
 	if err != nil {
-		return value.NULL_VALUE, nil
+		return setWarning(context, err)
 	}
 
 	// Convert end date to time format.
 	da2 := endDate.ToString()
 	t2, _, err := StrToTimeFormat(da2)
 	if err != nil {
-		return value.NULL_VALUE, nil
+		return setWarning(context, err)
 	}
 
 	// Increment
@@ -1174,7 +1283,7 @@ func (this *DateRangeStr) Evaluate(item value.Value, context Context) (value.Val
 
 	// Return null value for decimal increments.
 	if step != math.Trunc(step) {
-		return value.NULL_VALUE, nil
+		return setWarning(context, errors.W_DATE_NON_INT_VALUE, n)
 	}
 
 	// If the two dates are the same, return an empty array.
@@ -1184,6 +1293,9 @@ func (this *DateRangeStr) Evaluate(item value.Value, context Context) (value.Val
 
 	// If the start date is after the end date
 	if t1.After(t2) {
+		if defaultStep {
+			step *= -1
+		}
 
 		// And the increment is positive return empty array. If
 		// the increment is negative, so populate the array with
@@ -1204,7 +1316,7 @@ func (this *DateRangeStr) Evaluate(item value.Value, context Context) (value.Val
 	//Define capacity of the slice using dateDiff
 	capacity, err := dateDiff(t1, t2, partStr)
 	if err != nil {
-		return value.NULL_VALUE, err
+		return setWarning(context, err)
 	}
 	if capacity < 0 {
 		capacity = -capacity
@@ -1227,10 +1339,19 @@ func (this *DateRangeStr) Evaluate(item value.Value, context Context) (value.Val
 		for (step > 0.0 && timeToMillis(start) < end) ||
 			(step < 0.0 && timeToMillis(start) > end) {
 			// Compute the new time
-			rv = append(rv, timeToStr(start, fmt1))
+			ts, err := timeToStr(start, fmt1)
+			if err != nil {
+				return setWarning(context, err)
+			}
+			rv = append(rv, ts)
 			t, err := dateAdd(start, int(step), partStr)
 			if err != nil {
-				return value.NULL_VALUE, err
+				// we could overflow on the last addition so consider that as reaching the end
+				e, ok := err.(errors.Error)
+				if ok && e.Code() == errors.W_DATE_OVERFLOW {
+					break
+				}
+				return nil, err
 			}
 
 			start = t
@@ -1240,13 +1361,22 @@ func (this *DateRangeStr) Evaluate(item value.Value, context Context) (value.Val
 		for i := 0; ; i++ {
 			t, err := dateAdd(start, int(step)*i, partStr)
 			if err != nil {
-				return value.NULL_VALUE, err
+				// we could overflow on the last addition so consider that as reaching the end
+				e, ok := err.(errors.Error)
+				if ok && e.Code() == errors.W_DATE_OVERFLOW {
+					break
+				}
+				return nil, err
 			}
 			if (step > 0.0 && timeToMillis(t) >= end) ||
 				(step < 0.0 && timeToMillis(t) <= end) {
 				break
 			}
-			rv = append(rv, timeToStr(t, fmt1))
+			ts, err := timeToStr(t, fmt1)
+			if err != nil {
+				return setWarning(context, err)
+			}
+			rv = append(rv, ts)
 		}
 	}
 
@@ -1254,19 +1384,10 @@ func (this *DateRangeStr) Evaluate(item value.Value, context Context) (value.Val
 
 }
 
-/*
-Minimum input arguments required is 3.
-*/
 func (this *DateRangeStr) MinArgs() int { return 3 }
 
-/*
-Maximum input arguments allowed is 4.
-*/
 func (this *DateRangeStr) MaxArgs() int { return 4 }
 
-/*
-Factory method pattern.
-*/
 func (this *DateRangeStr) Constructor() FunctionConstructor {
 	return NewDateRangeStr
 }
@@ -1277,11 +1398,7 @@ func (this *DateRangeStr) Constructor() FunctionConstructor {
 //
 ///////////////////////////////////////////////////
 
-/*
-This represents the Date function DATE_RANGE_MILLIS(expr,expr,part,[n]).
-It returns a range of dates from expr1 to expr2 in milliseconds. n and part are used to
-define an interval and duration.
-*/
+// Return a range of dates from expr1 to expr2 in milliseconds. n and part are used to define an interval and duration.
 type DateRangeMillis struct {
 	FunctionBase
 }
@@ -1295,9 +1412,6 @@ func NewDateRangeMillis(operands ...Expression) Function {
 	return rv
 }
 
-/*
-Visitor pattern.
-*/
 func (this *DateRangeMillis) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
@@ -1307,6 +1421,7 @@ func (this *DateRangeMillis) Type() value.Type { return value.ARRAY }
 func (this *DateRangeMillis) Evaluate(item value.Value, context Context) (value.Value, error) {
 	null := false
 	missing := false
+	var info map[string]interface{}
 	// Populate the args
 	// If input arguments are missing then return missing, and if they arent valid types,
 	// return null.
@@ -1315,16 +1430,22 @@ func (this *DateRangeMillis) Evaluate(item value.Value, context Context) (value.
 		return nil, err
 	} else if startDate.Type() == value.MISSING {
 		missing = true
-	} else if startDate.Type() != value.NUMBER {
+	} else if startDate.Type() == value.NULL {
 		null = true
+	} else if startDate.Type() != value.NUMBER {
+		info = invalidArgInfo(0, startDate)
 	}
 	endDate, err := this.operands[1].Evaluate(item, context)
 	if err != nil {
 		return nil, err
 	} else if endDate.Type() == value.MISSING {
 		missing = true
-	} else if endDate.Type() != value.NUMBER {
+	} else if endDate.Type() == value.NULL {
 		null = true
+	} else if endDate.Type() != value.NUMBER {
+		if info == nil {
+			info = invalidArgInfo(1, endDate)
+		}
 	}
 	part, err := this.operands[2].Evaluate(item, context)
 	if err != nil {
@@ -1332,10 +1453,13 @@ func (this *DateRangeMillis) Evaluate(item value.Value, context Context) (value.
 	} else if part.Type() == value.MISSING {
 		missing = true
 	} else if part.Type() != value.STRING {
-		null = true
+		if info == nil {
+			info = invalidArgInfo(2, part)
+		}
 	}
 	// Default value for the increment is 1.
 	n := value.ONE_VALUE
+	defaultStep := true
 	if len(this.operands) > 3 {
 		n, err = this.operands[3].Evaluate(item, context)
 		if err != nil {
@@ -1343,22 +1467,33 @@ func (this *DateRangeMillis) Evaluate(item value.Value, context Context) (value.
 		} else if n.Type() == value.MISSING {
 			missing = true
 		} else if n.Type() != value.NUMBER {
-			null = true
+			if info == nil {
+				info = invalidArgInfo(3, n)
+			}
 		}
+		defaultStep = false
 	}
 
 	if missing {
 		return value.MISSING_VALUE, nil
 	} else if null {
 		return value.NULL_VALUE, nil
+	} else if info != nil {
+		return setWarning(context, errors.W_DATE_INVALID_ARGUMENT, info)
 	}
 
 	// Convert start date to time format.
 	da1 := startDate.Actual().(float64)
+	if da1 < _MIN_MILLIS || da1 > _MAX_MILLIS {
+		return setWarning(context, errors.W_DATE_OVERFLOW, nil)
+	}
 	t1 := millisToTime(da1)
 
 	// Convert end date to time format.
 	da2 := endDate.Actual().(float64)
+	if da2 < _MIN_MILLIS || da2 > _MAX_MILLIS {
+		return setWarning(context, errors.W_DATE_OVERFLOW, nil)
+	}
 	t2 := millisToTime(da2)
 
 	// Increment
@@ -1366,16 +1501,19 @@ func (this *DateRangeMillis) Evaluate(item value.Value, context Context) (value.
 
 	// Return null value for decimal increments.
 	if step != math.Trunc(step) {
-		return value.NULL_VALUE, nil
+		return setWarning(context, errors.W_DATE_NON_INT_VALUE, n)
 	}
 
 	// If the two dates are the same, return an empty array.
-	if t1.String() == t2.String() {
+	if t1.Equal(t2) {
 		return value.EMPTY_ARRAY_VALUE, nil
 	}
 
 	// If the start date is after the end date
-	if t1.String() > t2.String() {
+	if t1.After(t2) {
+		if defaultStep {
+			step *= -1
+		}
 
 		// And the increment is positive return empty array. If
 		// the increment is negative, so populate the array with
@@ -1396,7 +1534,7 @@ func (this *DateRangeMillis) Evaluate(item value.Value, context Context) (value.
 	//Define capacity of the slice using dateDiff
 	capacity, err := dateDiff(t1, t2, partStr)
 	if err != nil {
-		return value.NULL_VALUE, err
+		return setWarning(context, err)
 	}
 	if capacity < 0 {
 		capacity = -capacity
@@ -1422,7 +1560,12 @@ func (this *DateRangeMillis) Evaluate(item value.Value, context Context) (value.
 			rv = append(rv, timeToMillis(start))
 			t, err := dateAdd(start, int(step), partStr)
 			if err != nil {
-				return value.NULL_VALUE, err
+				// we could overflow on the last addition so consider that as reaching the end
+				e, ok := err.(errors.Error)
+				if ok && e.Code() == errors.W_DATE_OVERFLOW {
+					break
+				}
+				return nil, err
 			}
 
 			start = t
@@ -1432,7 +1575,12 @@ func (this *DateRangeMillis) Evaluate(item value.Value, context Context) (value.
 		for i := 0; ; i++ {
 			t, err := dateAdd(start, int(step)*i, partStr)
 			if err != nil {
-				return value.NULL_VALUE, err
+				// we could overflow on the last addition so consider that as reaching the end
+				e, ok := err.(errors.Error)
+				if ok && e.Code() == errors.W_DATE_OVERFLOW {
+					break
+				}
+				return setWarning(context, err)
 			}
 			if (step > 0.0 && timeToMillis(t) >= end) ||
 				(step < 0.0 && timeToMillis(t) <= end) {
@@ -1446,19 +1594,10 @@ func (this *DateRangeMillis) Evaluate(item value.Value, context Context) (value.
 
 }
 
-/*
-Minimum input arguments required is 3.
-*/
 func (this *DateRangeMillis) MinArgs() int { return 3 }
 
-/*
-Maximum input arguments allowed is 4.
-*/
 func (this *DateRangeMillis) MaxArgs() int { return 4 }
 
-/*
-Factory method pattern.
-*/
 func (this *DateRangeMillis) Constructor() FunctionConstructor {
 	return NewDateRangeMillis
 }
@@ -1469,11 +1608,7 @@ func (this *DateRangeMillis) Constructor() FunctionConstructor {
 //
 ///////////////////////////////////////////////////
 
-/*
-This represents the Date function DATE_TRUNC_MILLIS(expr, part).
-It truncates UNIX timestamp so that the given date part string
-is the least significant.
-*/
+// Truncate a UNIX timestamp so that the given date part string is the least significant.
 type DateTruncMillis struct {
 	BinaryFunctionBase
 }
@@ -1487,9 +1622,6 @@ func NewDateTruncMillis(first, second Expression) Function {
 	return rv
 }
 
-/*
-Visitor pattern.
-*/
 func (this *DateTruncMillis) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
@@ -1497,36 +1629,53 @@ func (this *DateTruncMillis) Accept(visitor Visitor) (interface{}, error) {
 func (this *DateTruncMillis) Type() value.Type { return value.NUMBER }
 
 func (this *DateTruncMillis) Evaluate(item value.Value, context Context) (value.Value, error) {
+	null := false
+	missing := false
+	var info map[string]interface{}
 	first, err := this.operands[0].Evaluate(item, context)
 	if err != nil {
 		return nil, err
+	} else if first.Type() == value.MISSING {
+		missing = true
+	} else if first.Type() == value.NULL {
+		null = true
+	} else if first.Type() != value.NUMBER {
+		info = invalidArgInfo(0, first)
 	}
 	second, err := this.operands[1].Evaluate(item, context)
 	if err != nil {
 		return nil, err
+	} else if second.Type() == value.MISSING {
+		missing = true
+	} else if second.Type() != value.STRING {
+		if info == nil {
+			info = invalidArgInfo(1, second)
+		}
 	}
 
-	if first.Type() == value.MISSING || second.Type() == value.MISSING {
+	if missing {
 		return value.MISSING_VALUE, nil
-	} else if first.Type() != value.NUMBER || second.Type() != value.STRING {
+	} else if null {
 		return value.NULL_VALUE, nil
+	} else if info != nil {
+		return setWarning(context, errors.W_DATE_INVALID_ARGUMENT, info)
 	}
 
 	millis := first.Actual().(float64)
+	if millis < _MIN_MILLIS || millis > _MAX_MILLIS {
+		return setWarning(context, errors.W_DATE_OVERFLOW, nil)
+	}
 	part := second.ToString()
 	t := millisToTime(millis).UTC()
 
 	t, err = dateTrunc(t, part)
 	if err != nil {
-		return value.NULL_VALUE, err
+		return nil, err
 	}
 
 	return value.NewValue(timeToMillis(t)), nil
 }
 
-/*
-Factory method pattern.
-*/
 func (this *DateTruncMillis) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
 		return NewDateTruncMillis(operands[0], operands[1])
@@ -1539,11 +1688,7 @@ func (this *DateTruncMillis) Constructor() FunctionConstructor {
 //
 ///////////////////////////////////////////////////
 
-/*
-This represents the Date function DATE_TRUNC_STR(expr, part).
-It truncates ISO 8601 timestamp so that the given date part
-string is the least significant.
-*/
+// Truncate an ISO 8601 timestamp so that the given date part string is the least significant.
 type DateTruncStr struct {
 	FunctionBase
 }
@@ -1557,9 +1702,6 @@ func NewDateTruncStr(operands ...Expression) Function {
 	return rv
 }
 
-/*
-Visitor pattern.
-*/
 func (this *DateTruncStr) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
@@ -1567,19 +1709,36 @@ func (this *DateTruncStr) Accept(visitor Visitor) (interface{}, error) {
 func (this *DateTruncStr) Type() value.Type { return value.STRING }
 
 func (this *DateTruncStr) Evaluate(item value.Value, context Context) (value.Value, error) {
+	null := false
+	missing := false
+	var info map[string]interface{}
 	first, err := this.operands[0].Evaluate(item, context)
 	if err != nil {
 		return nil, err
+	} else if first.Type() == value.MISSING {
+		missing = true
+	} else if first.Type() == value.NULL {
+		null = true
+	} else if first.Type() != value.STRING {
+		info = invalidArgInfo(0, first)
 	}
 	second, err := this.operands[1].Evaluate(item, context)
 	if err != nil {
 		return nil, err
+	} else if second.Type() == value.MISSING {
+		missing = true
+	} else if second.Type() != value.STRING {
+		if info == nil {
+			info = invalidArgInfo(1, second)
+		}
 	}
 
-	if first.Type() == value.MISSING || second.Type() == value.MISSING {
+	if missing {
 		return value.MISSING_VALUE, nil
-	} else if first.Type() != value.STRING || second.Type() != value.STRING {
+	} else if null {
 		return value.NULL_VALUE, nil
+	} else if info != nil {
+		return setWarning(context, errors.W_DATE_INVALID_ARGUMENT, info)
 	}
 
 	str := first.ToString()
@@ -1602,15 +1761,19 @@ func (this *DateTruncStr) Evaluate(item value.Value, context Context) (value.Val
 
 	t, err := strToTime(str, format)
 	if err != nil {
-		return value.NULL_VALUE, nil
+		return setWarning(context, err)
 	}
 
 	t, err = dateTrunc(t, part)
 	if err != nil {
-		return value.NULL_VALUE, err
+		return nil, err
 	}
 
-	return value.NewValue(timeToStr(t, format)), nil
+	rv, err := timeToStr(t, format)
+	if err != nil {
+		return setWarning(context, err)
+	}
+	return value.NewValue(rv), nil
 }
 
 func (this *DateTruncStr) Constructor() FunctionConstructor {
@@ -1626,12 +1789,7 @@ func (this *DateTruncStr) MaxArgs() int { return 3 }
 //
 ///////////////////////////////////////////////////
 
-/*
-This represents the Date function MILLIS_TO_STR(expr[,fmt]).
-The date part as an integer. The date expr is a string in
-a supported format, and part is one of the supported date
-part strings.
-*/
+// Convert a millisecond timestamp to a date string in a supported format.
 type MillisToStr struct {
 	FunctionBase
 }
@@ -1645,9 +1803,6 @@ func NewMillisToStr(operands ...Expression) Function {
 	return rv
 }
 
-/*
-Visitor pattern.
-*/
 func (this *MillisToStr) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
@@ -1657,18 +1812,17 @@ func (this *MillisToStr) Type() value.Type { return value.STRING }
 func (this *MillisToStr) Evaluate(item value.Value, context Context) (value.Value, error) {
 	null := false
 	missing := false
-	// Populate the args
-	// If input arguments are missing then return missing, and if they arent valid types,
-	// return null.
+	var info map[string]interface{}
 	ev, err := this.operands[0].Evaluate(item, context)
 	if err != nil {
 		return nil, err
 	} else if ev.Type() == value.MISSING {
 		missing = true
-	} else if ev.Type() != value.NUMBER {
+	} else if ev.Type() == value.NULL {
 		null = true
+	} else if ev.Type() != value.NUMBER {
+		info = invalidArgInfo(0, ev)
 	}
-	// Default value for the increment is 1.
 	fmt := ""
 	if len(this.operands) > 1 {
 		fv, err := this.operands[1].Evaluate(item, context)
@@ -1677,7 +1831,9 @@ func (this *MillisToStr) Evaluate(item value.Value, context Context) (value.Valu
 		} else if fv.Type() == value.MISSING {
 			missing = true
 		} else if fv.Type() != value.STRING {
-			null = true
+			if info == nil {
+				info = invalidArgInfo(1, fv)
+			}
 		}
 		fmt = fv.ToString()
 	}
@@ -1686,28 +1842,25 @@ func (this *MillisToStr) Evaluate(item value.Value, context Context) (value.Valu
 		return value.MISSING_VALUE, nil
 	} else if null {
 		return value.NULL_VALUE, nil
+	} else if info != nil {
+		return setWarning(context, errors.W_DATE_INVALID_ARGUMENT, info)
 	}
 
 	millis := ev.Actual().(float64)
-	t := millisToTime(millis)
-	return value.NewValue(timeToStr(t, fmt)), nil
+	if millis < _MIN_MILLIS || millis > _MAX_MILLIS {
+		return setWarning(context, errors.W_DATE_OVERFLOW, nil)
+	}
+	rv, err := timeToStr(millisToTime(millis), fmt)
+	if err != nil {
+		return setWarning(context, err)
+	}
+	return value.NewValue(rv), nil
 }
 
-/*
-Minimum input arguments required for the defined function
-is 1.
-*/
 func (this *MillisToStr) MinArgs() int { return 1 }
 
-/*
-Maximum input arguments required for the defined function
-is 2.
-*/
 func (this *MillisToStr) MaxArgs() int { return 2 }
 
-/*
-Factory method pattern.
-*/
 func (this *MillisToStr) Constructor() FunctionConstructor {
 	return NewMillisToStr
 }
@@ -1718,10 +1871,7 @@ func (this *MillisToStr) Constructor() FunctionConstructor {
 //
 ///////////////////////////////////////////////////
 
-/*
-This represents the Date function MILLIS_TO_UTC(expr [, fmt ]).
-It converts the UNIX timestamp to a UTC string in a supported format.
-*/
+// Convert the UNIX timestamp to a UTC string in a supported format.
 type MillisToUTC struct {
 	FunctionBase
 }
@@ -1735,9 +1885,6 @@ func NewMillisToUTC(operands ...Expression) Function {
 	return rv
 }
 
-/*
-Visitor pattern.
-*/
 func (this *MillisToUTC) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
@@ -1747,13 +1894,16 @@ func (this *MillisToUTC) Type() value.Type { return value.STRING }
 func (this *MillisToUTC) Evaluate(item value.Value, context Context) (value.Value, error) {
 	null := false
 	missing := false
+	var info map[string]interface{}
 	ev, err := this.operands[0].Evaluate(item, context)
 	if err != nil {
 		return nil, err
 	} else if ev.Type() == value.MISSING {
 		missing = true
-	} else if ev.Type() != value.NUMBER {
+	} else if ev.Type() == value.NULL {
 		null = true
+	} else if ev.Type() != value.NUMBER {
+		info = invalidArgInfo(0, ev)
 	}
 	fmt := ""
 
@@ -1764,7 +1914,9 @@ func (this *MillisToUTC) Evaluate(item value.Value, context Context) (value.Valu
 		} else if fv.Type() == value.MISSING {
 			missing = true
 		} else if fv.Type() != value.STRING {
-			null = true
+			if info == nil {
+				info = invalidArgInfo(1, fv)
+			}
 		}
 		fmt = fv.ToString()
 	}
@@ -1773,28 +1925,26 @@ func (this *MillisToUTC) Evaluate(item value.Value, context Context) (value.Valu
 		return value.MISSING_VALUE, nil
 	} else if null {
 		return value.NULL_VALUE, nil
+	} else if info != nil {
+		return setWarning(context, errors.W_DATE_INVALID_ARGUMENT, info)
 	}
 
 	millis := ev.Actual().(float64)
+	if millis < _MIN_MILLIS || millis > _MAX_MILLIS {
+		return setWarning(context, errors.W_DATE_OVERFLOW, nil)
+	}
 	t := millisToTime(millis).UTC()
-	return value.NewValue(timeToStr(t, fmt)), nil
+	rv, err := timeToStr(t, fmt)
+	if err != nil {
+		return setWarning(context, err)
+	}
+	return value.NewValue(rv), nil
 }
 
-/*
-Minimum input arguments required for the defined function
-is 1.
-*/
 func (this *MillisToUTC) MinArgs() int { return 1 }
 
-/*
-Maximum input arguments required for the defined function
-is 2.
-*/
 func (this *MillisToUTC) MaxArgs() int { return 2 }
 
-/*
-Factory method pattern.
-*/
 func (this *MillisToUTC) Constructor() FunctionConstructor {
 	return NewMillisToUTC
 }
@@ -1805,11 +1955,7 @@ func (this *MillisToUTC) Constructor() FunctionConstructor {
 //
 ///////////////////////////////////////////////////
 
-/*
-This represents the Date function
-MILLIS_TO_ZONE_NAME(expr, tz_name [, fmt ]). It converts
-the UNIX timestamp to a string in the named time zone.
-*/
+// Convert the UNIX timestamp to a string in the named time zone.
 type MillisToZoneName struct {
 	FunctionBase
 }
@@ -1823,9 +1969,6 @@ func NewMillisToZoneName(operands ...Expression) Function {
 	return rv
 }
 
-/*
-Visitor pattern.
-*/
 func (this *MillisToZoneName) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
@@ -1835,13 +1978,16 @@ func (this *MillisToZoneName) Type() value.Type { return value.STRING }
 func (this *MillisToZoneName) Evaluate(item value.Value, context Context) (value.Value, error) {
 	null := false
 	missing := false
+	var info map[string]interface{}
 	ev, err := this.operands[0].Evaluate(item, context)
 	if err != nil {
 		return nil, err
 	} else if ev.Type() == value.MISSING {
 		missing = true
-	} else if ev.Type() != value.NUMBER {
+	} else if ev.Type() == value.NULL {
 		null = true
+	} else if ev.Type() != value.NUMBER {
+		info = invalidArgInfo(0, ev)
 	}
 	zv, err := this.operands[1].Evaluate(item, context)
 	if err != nil {
@@ -1849,7 +1995,9 @@ func (this *MillisToZoneName) Evaluate(item value.Value, context Context) (value
 	} else if zv.Type() == value.MISSING {
 		missing = true
 	} else if zv.Type() != value.STRING {
-		null = true
+		if info == nil {
+			info = invalidArgInfo(1, zv)
+		}
 	}
 	fmt := ""
 
@@ -1860,7 +2008,9 @@ func (this *MillisToZoneName) Evaluate(item value.Value, context Context) (value
 		} else if fv.Type() == value.MISSING {
 			missing = true
 		} else if fv.Type() != value.STRING {
-			null = true
+			if info == nil {
+				info = invalidArgInfo(2, fv)
+			}
 		}
 		fmt = fv.ToString()
 	}
@@ -1869,34 +2019,32 @@ func (this *MillisToZoneName) Evaluate(item value.Value, context Context) (value
 		return value.MISSING_VALUE, nil
 	} else if null {
 		return value.NULL_VALUE, nil
+	} else if info != nil {
+		return setWarning(context, errors.W_DATE_INVALID_ARGUMENT, info)
 	}
 
 	millis := ev.Actual().(float64)
+	if millis < _MIN_MILLIS || millis > _MAX_MILLIS {
+		return setWarning(context, errors.W_DATE_OVERFLOW, nil)
+	}
 	tz := zv.ToString()
 	loc, err := loadLocation(tz)
 	if err != nil {
-		return value.NULL_VALUE, nil
+		return setWarning(context, errors.W_DATE_INVALID_TIMEZONE, tz)
 	}
 
 	t := millisToTime(millis).In(loc)
-	return value.NewValue(timeToStr(t, fmt)), nil
+	rv, err := timeToStr(t, fmt)
+	if err != nil {
+		return setWarning(context, err)
+	}
+	return value.NewValue(rv), nil
 }
 
-/*
-Minimum input arguments required for the defined function
-is 2.
-*/
 func (this *MillisToZoneName) MinArgs() int { return 2 }
 
-/*
-Maximum input arguments required for the defined function
-is 3.
-*/
 func (this *MillisToZoneName) MaxArgs() int { return 3 }
 
-/*
-Factory method pattern.
-*/
 func (this *MillisToZoneName) Constructor() FunctionConstructor {
 	return NewMillisToZoneName
 }
@@ -1906,11 +2054,8 @@ func (this *MillisToZoneName) Constructor() FunctionConstructor {
 // NowMillis
 //
 ///////////////////////////////////////////////////
-/*
-This represents the Date function NOW_MILLIS(). It
-returns a statement timestamp as UNIX milliseconds
-and does not vary during a query.
-*/
+
+// Return a statement timestamp as UNIX milliseconds and does not vary during a query.
 type NowMillis struct {
 	NullaryFunctionBase
 }
@@ -1927,9 +2072,6 @@ func NewNowMillis() Function {
 	return rv
 }
 
-/*
-Visitor pattern.
-*/
 func (this *NowMillis) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
@@ -1947,9 +2089,6 @@ func (this *NowMillis) Static() Expression {
 	return this
 }
 
-/*
-Factory method pattern.
-*/
 func (this *NowMillis) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function { return _NOW_MILLIS }
 }
@@ -1960,11 +2099,7 @@ func (this *NowMillis) Constructor() FunctionConstructor {
 //
 ///////////////////////////////////////////////////
 
-/*
-This represents the Date function NOW_STR([fmt]).
-It returns a statement timestamp as a string in
-a supported format and does not vary during a query.
-*/
+// Return a statement timestamp as a string in a supported format and does not vary during a query.
 type NowStr struct {
 	FunctionBase
 }
@@ -1979,9 +2114,6 @@ func NewNowStr(operands ...Expression) Function {
 	return rv
 }
 
-/*
-Visitor pattern.
-*/
 func (this *NowStr) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
@@ -2001,35 +2133,28 @@ func (this *NowStr) Evaluate(item value.Value, context Context) (value.Value, er
 		} else if fv.Type() == value.MISSING {
 			return value.MISSING_VALUE, nil
 		} else if fv.Type() != value.STRING {
-			return value.NULL_VALUE, nil
+			return setWarning(context, errors.W_DATE_INVALID_ARGUMENT, invalidArgInfo(0, fv))
 		}
 
 		fmt = fv.ToString()
 	}
 
 	now := context.Now()
-	return value.NewValue(timeToStr(now, fmt)), nil
+	rv, err := timeToStr(now, fmt)
+	if err != nil {
+		return setWarning(context, err)
+	}
+	return value.NewValue(rv), nil
 }
 
 func (this *NowStr) Value() value.Value {
 	return nil
 }
 
-/*
-Minimum input arguments required for the defined function
-is 0.
-*/
 func (this *NowStr) MinArgs() int { return 0 }
 
-/*
-Maximum input arguments required for the defined function
-is 1.
-*/
 func (this *NowStr) MaxArgs() int { return 1 }
 
-/*
-Factory method pattern.
-*/
 func (this *NowStr) Constructor() FunctionConstructor {
 	return NewNowStr
 }
@@ -2040,12 +2165,7 @@ func (this *NowStr) Constructor() FunctionConstructor {
 //
 ///////////////////////////////////////////////////
 
-/*
-This represents the Date function NOW_TZ(timezone, [fmt]).
-It returns a statement timestamp as a string in
-a supported format for input timezone and does not vary
-during a query.
-*/
+// Return a statement timestamp as a string in a supported format for input timezone and does not vary during a query.
 type NowTZ struct {
 	FunctionBase
 }
@@ -2060,9 +2180,6 @@ func NewNowTZ(operands ...Expression) Function {
 	return rv
 }
 
-/*
-Visitor pattern.
-*/
 func (this *NowTZ) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
@@ -2073,10 +2190,10 @@ func (this *NowTZ) Evaluate(item value.Value, context Context) (value.Value, err
 	if context == nil {
 		return nil, errors.NewNilEvaluateParamError("context")
 	}
-	null := false
 	missing := false
 	fmt := ""
 	now := context.Now()
+	var info map[string]interface{}
 
 	tz, err := this.operands[0].Evaluate(item, context)
 	if err != nil {
@@ -2084,7 +2201,7 @@ func (this *NowTZ) Evaluate(item value.Value, context Context) (value.Value, err
 	} else if tz.Type() == value.MISSING {
 		missing = true
 	} else if tz.Type() != value.STRING {
-		null = true
+		info = invalidArgInfo(0, tz)
 	}
 
 	// Check format
@@ -2095,49 +2212,45 @@ func (this *NowTZ) Evaluate(item value.Value, context Context) (value.Value, err
 		} else if fv.Type() == value.MISSING {
 			missing = true
 		} else if fv.Type() != value.STRING {
-			null = true
+			if info == nil {
+				info = invalidArgInfo(1, fv)
+			}
+		} else {
+			fmt = fv.ToString()
 		}
-		fmt = fv.ToString()
 	}
 
 	if missing {
 		return value.MISSING_VALUE, nil
-	} else if null {
-		return value.NULL_VALUE, nil
+	} else if info != nil {
+		return setWarning(context, errors.W_DATE_INVALID_ARGUMENT, info)
 	}
 
 	// Get the timezone and the *Location.
 	timeZone := tz.ToString()
 	loc, err := loadLocation(timeZone)
 	if err != nil {
-		return value.NULL_VALUE, nil
+		return setWarning(context, errors.W_DATE_INVALID_TIMEZONE, timeZone)
 	}
 
 	// Use the timezone to get corresponding time component.
 	now = now.In(loc)
 
-	return value.NewValue(timeToStr(now, fmt)), nil
+	rv, err := timeToStr(now, fmt)
+	if err != nil {
+		return setWarning(context, err)
+	}
+	return value.NewValue(rv), nil
 }
 
 func (this *NowTZ) Value() value.Value {
 	return nil
 }
 
-/*
-Minimum input arguments required for the defined function
-is 1.
-*/
 func (this *NowTZ) MinArgs() int { return 1 }
 
-/*
-Maximum input arguments required for the defined function
-is 2.
-*/
 func (this *NowTZ) MaxArgs() int { return 2 }
 
-/*
-Factory method pattern.
-*/
 func (this *NowTZ) Constructor() FunctionConstructor {
 	return NewNowTZ
 }
@@ -2148,11 +2261,7 @@ func (this *NowTZ) Constructor() FunctionConstructor {
 //
 ///////////////////////////////////////////////////
 
-/*
-This represents the Date function NOW_STR([fmt]).
-It returns a statement timestamp as a string in
-a supported format and does not vary during a query.
-*/
+// Return a statement timestamp as a string in a supported format and does not vary during a query.
 type NowUTC struct {
 	FunctionBase
 }
@@ -2167,9 +2276,6 @@ func NewNowUTC(operands ...Expression) Function {
 	return rv
 }
 
-/*
-Visitor pattern.
-*/
 func (this *NowUTC) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
@@ -2189,34 +2295,27 @@ func (this *NowUTC) Evaluate(item value.Value, context Context) (value.Value, er
 		} else if fv.Type() == value.MISSING {
 			return value.MISSING_VALUE, nil
 		} else if fv.Type() != value.STRING {
-			return value.NULL_VALUE, nil
+			return setWarning(context, errors.W_DATE_INVALID_ARGUMENT, invalidArgInfo(0, fv))
 		}
 		fmt = fv.ToString()
 	}
 
 	now := context.Now().UTC()
-	return value.NewValue(timeToStr(now, fmt)), nil
+	rv, err := timeToStr(now, fmt)
+	if err != nil {
+		return setWarning(context, err)
+	}
+	return value.NewValue(rv), nil
 }
 
 func (this *NowUTC) Value() value.Value {
 	return nil
 }
 
-/*
-Minimum input arguments required for the defined function
-is 0.
-*/
 func (this *NowUTC) MinArgs() int { return 0 }
 
-/*
-Maximum input arguments required for the defined function
-is 1.
-*/
 func (this *NowUTC) MaxArgs() int { return 1 }
 
-/*
-Factory method pattern.
-*/
 func (this *NowUTC) Constructor() FunctionConstructor {
 	return NewNowUTC
 }
@@ -2227,10 +2326,7 @@ func (this *NowUTC) Constructor() FunctionConstructor {
 //
 ///////////////////////////////////////////////////
 
-/*
-This represents the Date function STR_TO_MILLIS(expr).
-It converts date in a supported format to UNIX milliseconds.
-*/
+// Convert a date string in a supported format to UNIX milliseconds.
 type StrToMillis struct {
 	FunctionBase
 }
@@ -2244,9 +2340,6 @@ func NewStrToMillis(operands ...Expression) Function {
 	return rv
 }
 
-/*
-Visitor pattern.
-*/
 func (this *StrToMillis) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
@@ -2259,8 +2352,10 @@ func (this *StrToMillis) Evaluate(item value.Value, context Context) (value.Valu
 		return nil, err
 	} else if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
-	} else if arg.Type() != value.STRING {
+	} else if arg.Type() == value.NULL {
 		return value.NULL_VALUE, nil
+	} else if arg.Type() != value.STRING {
+		return setWarning(context, errors.W_DATE_INVALID_ARGUMENT, invalidArgInfo(0, arg))
 	}
 	str := arg.ToString()
 	var fmt string
@@ -2272,14 +2367,18 @@ func (this *StrToMillis) Evaluate(item value.Value, context Context) (value.Valu
 		} else if arg.Type() == value.MISSING {
 			return value.MISSING_VALUE, nil
 		} else if arg.Type() != value.STRING {
-			return value.NULL_VALUE, nil
+			return setWarning(context, errors.W_DATE_INVALID_ARGUMENT, invalidArgInfo(1, arg))
 		}
 		fmt = arg.ToString()
 	}
 
 	t, err = strToTime(str, fmt)
 	if err != nil {
-		return value.NULL_VALUE, nil
+		return setWarning(context, err)
+	}
+	ms := t.UTC().UnixMilli()
+	if ms < _MIN_MILLIS || ms > _MAX_MILLIS {
+		return setWarning(context, errors.W_DATE_OVERFLOW, nil)
 	}
 
 	return value.NewValue(timeToMillis(t)), nil
@@ -2288,9 +2387,6 @@ func (this *StrToMillis) Evaluate(item value.Value, context Context) (value.Valu
 func (this *StrToMillis) MaxArgs() int { return 2 }
 func (this *StrToMillis) MinArgs() int { return 1 }
 
-/*
-Factory method pattern.
-*/
 func (this *StrToMillis) Constructor() FunctionConstructor {
 	return NewStrToMillis
 }
@@ -2301,11 +2397,7 @@ func (this *StrToMillis) Constructor() FunctionConstructor {
 //
 ///////////////////////////////////////////////////
 
-/*
-This represents the Date function STR_TO_UTC(expr). It
-converts the input expression in the given format
-to UTC.
-*/
+// Convert the input expression in the given format to UTC.
 type StrToUTC struct {
 	FunctionBase
 }
@@ -2319,9 +2411,6 @@ func NewStrToUTC(operands ...Expression) Function {
 	return rv
 }
 
-/*
-Visitor pattern.
-*/
 func (this *StrToUTC) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
@@ -2334,8 +2423,10 @@ func (this *StrToUTC) Evaluate(item value.Value, context Context) (value.Value, 
 		return nil, err
 	} else if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
-	} else if arg.Type() != value.STRING {
+	} else if arg.Type() == value.NULL {
 		return value.NULL_VALUE, nil
+	} else if arg.Type() != value.STRING {
+		return setWarning(context, errors.W_DATE_INVALID_ARGUMENT, invalidArgInfo(0, arg))
 	}
 
 	str := arg.ToString()
@@ -2360,7 +2451,7 @@ func (this *StrToUTC) Evaluate(item value.Value, context Context) (value.Value, 
 		} else if arg.Type() == value.MISSING {
 			return value.MISSING_VALUE, nil
 		} else if arg.Type() != value.STRING {
-			return value.NULL_VALUE, nil
+			return setWarning(context, errors.W_DATE_INVALID_ARGUMENT, invalidArgInfo(1, arg))
 		}
 		format = arg.ToString()
 		if len(this.operands) == 2 {
@@ -2371,12 +2462,20 @@ func (this *StrToUTC) Evaluate(item value.Value, context Context) (value.Value, 
 	}
 	t, err = strToTime(str, format)
 	if err != nil {
-		return value.NULL_VALUE, nil
+		return setWarning(context, err)
 	}
 
 	t = t.UTC()
+	ms := t.UnixMilli()
+	if ms < _MIN_MILLIS || ms > _MAX_MILLIS {
+		return setWarning(context, errors.W_DATE_OVERFLOW, nil)
+	}
 
-	return value.NewValue(timeToStr(t, outputFormat)), nil
+	rv, err := timeToStr(t, outputFormat)
+	if err != nil {
+		return setWarning(context, err)
+	}
+	return value.NewValue(rv), nil
 }
 
 func (this *StrToUTC) MaxArgs() int { return 3 }
@@ -2392,10 +2491,7 @@ func (this *StrToUTC) Constructor() FunctionConstructor {
 //
 ///////////////////////////////////////////////////
 
-/*
-This represents the Date function STR_TO_ZONE_NAME(expr, tz_name).
-It converts the supported timestamp string to the named time zone.
-*/
+// Convert the supported timestamp string to the named time zone.
 type StrToZoneName struct {
 	FunctionBase
 }
@@ -2409,9 +2505,6 @@ func NewStrToZoneName(operands ...Expression) Function {
 	return rv
 }
 
-/*
-Visitor pattern.
-*/
 func (this *StrToZoneName) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
@@ -2419,19 +2512,36 @@ func (this *StrToZoneName) Accept(visitor Visitor) (interface{}, error) {
 func (this *StrToZoneName) Type() value.Type { return value.STRING }
 
 func (this *StrToZoneName) Evaluate(item value.Value, context Context) (value.Value, error) {
+	null := false
+	missing := false
+	var info map[string]interface{}
 	first, err := this.operands[0].Evaluate(item, context)
 	if err != nil {
 		return nil, err
+	} else if first.Type() == value.MISSING {
+		missing = true
+	} else if first.Type() == value.NULL {
+		null = true
+	} else if first.Type() != value.STRING {
+		info = invalidArgInfo(0, first)
 	}
 	second, err := this.operands[1].Evaluate(item, context)
 	if err != nil {
 		return nil, err
+	} else if second.Type() == value.MISSING {
+		missing = true
+	} else if second.Type() != value.STRING {
+		if info == nil {
+			info = invalidArgInfo(1, second)
+		}
 	}
 
-	if first.Type() == value.MISSING || second.Type() == value.MISSING {
+	if missing {
 		return value.MISSING_VALUE, nil
-	} else if first.Type() != value.STRING || second.Type() != value.STRING {
+	} else if null {
 		return value.NULL_VALUE, nil
+	} else if info != nil {
+		return setWarning(context, errors.W_DATE_INVALID_ARGUMENT, info)
 	}
 
 	str := first.ToString()
@@ -2439,7 +2549,7 @@ func (this *StrToZoneName) Evaluate(item value.Value, context Context) (value.Va
 	tz := second.ToString()
 	loc, err := loadLocation(tz)
 	if err != nil {
-		return value.NULL_VALUE, nil
+		return setWarning(context, errors.W_DATE_INVALID_TIMEZONE, tz)
 	}
 
 	var format string
@@ -2465,7 +2575,7 @@ func (this *StrToZoneName) Evaluate(item value.Value, context Context) (value.Va
 		} else if arg.Type() == value.MISSING {
 			return value.MISSING_VALUE, nil
 		} else if arg.Type() != value.STRING {
-			return value.NULL_VALUE, nil
+			return setWarning(context, errors.W_DATE_INVALID_ARGUMENT, invalidArgInfo(2, arg))
 		}
 		format = arg.ToString()
 		if len(this.operands) == 3 {
@@ -2478,10 +2588,18 @@ func (this *StrToZoneName) Evaluate(item value.Value, context Context) (value.Va
 
 	t, err = strToTime(str, format)
 	if err != nil {
-		return value.NULL_VALUE, nil
+		return setWarning(context, err)
+	}
+	ms := t.UTC().UnixMilli()
+	if ms < _MIN_MILLIS || ms > _MAX_MILLIS {
+		return setWarning(context, errors.W_DATE_OVERFLOW, nil)
 	}
 
-	return value.NewValue(timeToStr(t.In(loc), outputFormat)), nil
+	rv, err := timeToStr(t.In(loc), outputFormat)
+	if err != nil {
+		return setWarning(context, err)
+	}
+	return value.NewValue(rv), nil
 }
 
 func (this *StrToZoneName) MaxArgs() int { return 4 }
@@ -2497,10 +2615,7 @@ func (this *StrToZoneName) Constructor() FunctionConstructor {
 //
 ///////////////////////////////////////////////////
 
-/*
-This represents the Date function DURATION_TO_STR(duration)
-It converts a duration in nanoseconds to a string
-*/
+// Convert a duration in nanoseconds to a string
 type DurationToStr struct {
 	FunctionBase
 }
@@ -2514,20 +2629,12 @@ func NewDurationToStr(operands ...Expression) Function {
 	return rv
 }
 
-/*
-Visitor pattern.
-*/
 func (this *DurationToStr) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
 func (this *DurationToStr) Type() value.Type { return value.STRING }
 
-/*
-This method takes a duration and converts it to a string representation.
-If the argument is missing, it returns missing.
-If it's not a string or the conversion fails, it returns null.
-*/
 func (this *DurationToStr) Evaluate(item value.Value, context Context) (value.Value, error) {
 	null := false
 	missing := false
@@ -2556,6 +2663,8 @@ func (this *DurationToStr) Evaluate(item value.Value, context Context) (value.Va
 	}
 	if null {
 		return value.NULL_VALUE, nil
+	} else if first.Type() != value.NUMBER {
+		return setWarning(context, errors.W_DATE_INVALID_ARGUMENT, invalidArgInfo(0, first))
 	}
 
 	var style util.DurationStyle
@@ -2577,9 +2686,6 @@ func (this *DurationToStr) Evaluate(item value.Value, context Context) (value.Va
 	return value.NewValue(str), nil
 }
 
-/*
-Factory method pattern.
-*/
 func (this *DurationToStr) Constructor() FunctionConstructor {
 	return NewDurationToStr
 }
@@ -2593,10 +2699,7 @@ func (this *DurationToStr) MaxArgs() int { return 2 }
 //
 ///////////////////////////////////////////////////
 
-/*
-This represents the Date function STR_TO_DURATION(string)
-It converts a string to a duration in nanoseconds.
-*/
+// Convert a string representation of a duration to a nanosecond duration value.
 type StrToDuration struct {
 	FunctionBase
 }
@@ -2610,21 +2713,12 @@ func NewStrToDuration(operands ...Expression) Function {
 	return rv
 }
 
-/*
-Visitor pattern.
-*/
 func (this *StrToDuration) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
 func (this *StrToDuration) Type() value.Type { return value.NUMBER }
 
-/*
-This method takes a string representation of a duration and converts it to a
-duration.
-If the argument is missing, it returns missing.
-If it's not a string or the conversion fails, it returns null.
-*/
 func (this *StrToDuration) Evaluate(item value.Value, context Context) (value.Value, error) {
 	missing := false
 	null := false
@@ -2653,6 +2747,8 @@ func (this *StrToDuration) Evaluate(item value.Value, context Context) (value.Va
 	}
 	if null {
 		return value.NULL_VALUE, nil
+	} else if first.Type() != value.STRING {
+		return setWarning(context, errors.W_DATE_INVALID_ARGUMENT, invalidArgInfo(0, first))
 	}
 
 	str := first.ToString()
@@ -2665,15 +2761,12 @@ func (this *StrToDuration) Evaluate(item value.Value, context Context) (value.Va
 	}
 	d, err := util.ParseDurationStyle(str, style)
 	if err != nil {
-		return value.NULL_VALUE, nil
+		return setWarning(context, errors.W_DATE, err)
 	}
 
 	return value.NewValue(d), nil
 }
 
-/*
-Factory method pattern.
-*/
 func (this *StrToDuration) Constructor() FunctionConstructor {
 	return NewStrToDuration
 }
@@ -2687,11 +2780,7 @@ func (this *StrToDuration) MaxArgs() int { return 2 }
 //
 ///////////////////////////////////////////////////
 
-/*
-This represents the Date function WEEKDAY_MILLIS(expr, [ tz ]).  It
-returns the English name of the weekday as a string. The date expr is
-a number representing UNIX milliseconds.
-*/
+// Return the English name of the weekday as a string. The date expr is a number representing UNIX milliseconds.
 type WeekdayMillis struct {
 	FunctionBase
 }
@@ -2705,9 +2794,6 @@ func NewWeekdayMillis(operands ...Expression) Function {
 	return rv
 }
 
-/*
-Visitor pattern.
-*/
 func (this *WeekdayMillis) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
@@ -2717,13 +2803,16 @@ func (this *WeekdayMillis) Type() value.Type { return value.STRING }
 func (this *WeekdayMillis) Evaluate(item value.Value, context Context) (value.Value, error) {
 	missing := false
 	null := false
+	var info map[string]interface{}
 	first, err := this.operands[0].Evaluate(item, context)
 	if err != nil {
 		return nil, err
 	} else if first.Type() == value.MISSING {
 		missing = true
-	} else if first.Type() != value.NUMBER {
+	} else if first.Type() == value.NULL {
 		null = true
+	} else if first.Type() != value.NUMBER {
+		info = invalidArgInfo(0, first)
 	}
 
 	// Initialize timezone to nil to avoid processing if not specified.
@@ -2737,16 +2826,23 @@ func (this *WeekdayMillis) Evaluate(item value.Value, context Context) (value.Va
 		} else if timeZone.Type() == value.MISSING {
 			missing = true
 		} else if timeZone.Type() != value.STRING {
-			null = true
+			if info == nil {
+				info = invalidArgInfo(1, timeZone)
+			}
 		}
 	}
 	if missing {
 		return value.MISSING_VALUE, nil
 	} else if null {
 		return value.NULL_VALUE, nil
+	} else if info != nil {
+		return setWarning(context, errors.W_DATE_INVALID_ARGUMENT, info)
 	}
 
 	millis := first.Actual().(float64)
+	if millis < _MIN_MILLIS || millis > _MAX_MILLIS {
+		return setWarning(context, errors.W_DATE_OVERFLOW, nil)
+	}
 
 	// Convert the input millis to *Time
 	timeVal := millisToTime(millis)
@@ -2757,7 +2853,7 @@ func (this *WeekdayMillis) Evaluate(item value.Value, context Context) (value.Va
 		tz := timeZone.ToString()
 		loc, err := loadLocation(tz)
 		if err != nil {
-			return value.NULL_VALUE, nil
+			return setWarning(context, errors.W_DATE_INVALID_TIMEZONE, tz)
 		}
 		// Use the timezone to get corresponding time component.
 		timeVal = timeVal.In(loc)
@@ -2765,26 +2861,17 @@ func (this *WeekdayMillis) Evaluate(item value.Value, context Context) (value.Va
 
 	dow, err := datePart(timeVal, "day_of_week")
 	if err != nil {
-		return value.NULL_VALUE, err
+		return setWarning(context, err)
 	}
 
 	rv := time.Weekday(dow).String()
 	return value.NewValue(rv), nil
 }
 
-/*
-Minimum input arguments required.
-*/
 func (this *WeekdayMillis) MinArgs() int { return 1 }
 
-/*
-Maximum input arguments allowed.
-*/
 func (this *WeekdayMillis) MaxArgs() int { return 2 }
 
-/*
-Factory method pattern.
-*/
 func (this *WeekdayMillis) Constructor() FunctionConstructor {
 	return NewWeekdayMillis
 }
@@ -2795,11 +2882,7 @@ func (this *WeekdayMillis) Constructor() FunctionConstructor {
 //
 ///////////////////////////////////////////////////
 
-/*
-This represents the Date function WEEKDAY_STR(expr).  It returns the
-English name of the weekday as a string. The date expr is a string in
-a supported format.
-*/
+// Return the English name of the weekday as a string. The date expr is a string in a supported format.
 type WeekdayStr struct {
 	UnaryFunctionBase
 }
@@ -2813,9 +2896,6 @@ func NewWeekdayStr(first Expression) Function {
 	return rv
 }
 
-/*
-Visitor pattern.
-*/
 func (this *WeekdayStr) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
@@ -2828,28 +2908,31 @@ func (this *WeekdayStr) Evaluate(item value.Value, context Context) (value.Value
 		return nil, err
 	} else if first.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
-	} else if first.Type() != value.STRING {
+	} else if first.Type() == value.NULL {
 		return value.NULL_VALUE, nil
+	} else if first.Type() != value.STRING {
+		return setWarning(context, errors.W_DATE_INVALID_ARGUMENT, invalidArgInfo(0, first))
 	}
 
 	str := first.ToString()
 	t, err := strToTime(str, "")
 	if err != nil {
-		return value.NULL_VALUE, nil
+		return setWarning(context, err)
+	}
+	ms := t.UTC().UnixMilli()
+	if ms < _MIN_MILLIS || ms > _MAX_MILLIS {
+		return setWarning(context, errors.W_DATE_OVERFLOW, nil)
 	}
 
 	dow, err := datePart(t, "day_of_week")
 	if err != nil {
-		return value.NULL_VALUE, err
+		return setWarning(context, err)
 	}
 
 	rv := time.Weekday(dow).String()
 	return value.NewValue(rv), nil
 }
 
-/*
-Factory method pattern.
-*/
 func (this *WeekdayStr) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
 		return NewWeekdayStr(operands[0])
@@ -2917,6 +3000,7 @@ func strToTimeGoFormat(s string, format string) (time.Time, error) {
 	zoneh = -1
 	pm := false
 	h12 := false
+	sign := false
 	for i = 0; i < len(format) && n < len(s); i++ {
 		if format[i] == ' ' {
 			// space matches any character
@@ -2934,7 +3018,7 @@ func strToTimeGoFormat(s string, format string) (time.Time, error) {
 				}
 			}
 			if j > 12 {
-				return t, fmt.Errorf("Invalid month in date string")
+				return t, errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING, errorInfo(format, i-1, s, n, "month"))
 			}
 			i += 6
 			continue
@@ -2950,15 +3034,15 @@ func strToTimeGoFormat(s string, format string) (time.Time, error) {
 				}
 			}
 			if j > 6 {
-				return t, fmt.Errorf("Invalid day of week in date string")
+				return t, errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING, errorInfo(format, i-1, s, n, "day of week"))
 			}
 			i += 5
 			continue
 		}
 		if i+4 <= len(format) && format[i:i+4] == "2006" {
-			year, l = gatherNumber(s[n:], 4, false)
-			if l != 4 || year < 0 {
-				return t, fmt.Errorf("Invalid year in date string")
+			year, l, sign = gatherNumber(s[n:], 4, false, true)
+			if (!sign && l != 4) || (sign && l != 5) {
+				return t, errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING, errorInfo(format, i-1, s, n, "year"))
 			}
 			century = year / 100
 			year = year % 100
@@ -2969,7 +3053,7 @@ func strToTimeGoFormat(s string, format string) (time.Time, error) {
 		if i+3 <= len(format) {
 			if format[i:i+3] == "MST" {
 				var err error
-				n, zoneh, zonem, loc, err = gatherZone(s, n, _FORMAT_NAME)
+				n, zoneh, zonem, loc, err = gatherZone(s, n, _TZ_FORMAT_NAME)
 				if err != nil {
 					return t, err
 				}
@@ -2987,7 +3071,7 @@ func strToTimeGoFormat(s string, format string) (time.Time, error) {
 					}
 				}
 				if j > 12 {
-					return t, fmt.Errorf("Invalid month in date string")
+					return t, errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING, errorInfo(format, i-1, s, n, "month"))
 				}
 				i += 2
 				continue
@@ -3003,24 +3087,24 @@ func strToTimeGoFormat(s string, format string) (time.Time, error) {
 					}
 				}
 				if j > 6 {
-					return t, fmt.Errorf("Invalid day of week in date string")
+					return t, errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING, errorInfo(format, i-1, s, n, "day of week"))
 				}
 				i += 2
 				continue
 			}
 			if format[i:i+3] == "__2" {
-				yday, l = gatherNumber(s[n:], 3, true)
+				yday, l, _ = gatherNumber(s[n:], 3, true, false)
 				if l < 1 || l > 3 || yday < 1 || yday > 366 {
-					return t, fmt.Errorf("Invalid day of year in date string")
+					return t, errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING, errorInfo(format, i-1, s, n, "year"))
 				}
 				n += l
 				i += 2
 				continue
 			}
 			if format[i:i+3] == "002" {
-				yday, l = gatherNumber(s[n:], 3, true)
+				yday, l, _ = gatherNumber(s[n:], 3, true, false)
 				if l != 3 || yday < 1 || yday > 366 {
-					return t, fmt.Errorf("Invalid day of year in date string")
+					return t, errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING, errorInfo(format, i-1, s, n, "day of year"))
 				}
 				n += l
 				i += 2
@@ -3030,43 +3114,43 @@ func strToTimeGoFormat(s string, format string) (time.Time, error) {
 		if i+2 <= len(format) {
 			switch format[i : i+2] {
 			case "01":
-				month, l = gatherNumber(s[n:], 2, true)
+				month, l, _ = gatherNumber(s[n:], 2, true, false)
 				if l != 2 || month < 1 || month > 12 {
-					return t, fmt.Errorf("Invalid month in date string")
+					return t, errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING, errorInfo(format, i-1, s, n, "month"))
 				}
 				n += l
 				i++
 				continue
 			case "02":
-				day, l = gatherNumber(s[n:], 2, true)
+				day, l, _ = gatherNumber(s[n:], 2, true, false)
 				if l != 2 || day < 1 || day > 31 {
-					return t, fmt.Errorf("Invalid day in date string")
+					return t, errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING, errorInfo(format, i-1, s, n, "day"))
 				}
 				n += l
 				i++
 				continue
 			case "_2":
-				day, l = gatherNumber(s[n:], 2, false)
+				day, l, _ = gatherNumber(s[n:], 2, false, false)
 				if (l != 2 && l != 1) || day < 1 || day > 31 {
-					return t, fmt.Errorf("Invalid day in date string")
+					return t, errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING, errorInfo(format, i-1, s, n, "day"))
 				}
 				n += l
 				i++
 				continue
 			case "15":
-				hour, l = gatherNumber(s[n:], 2, false)
+				hour, l, _ = gatherNumber(s[n:], 2, false, false)
 				if (l != 2 && l != 1) || hour < 0 || hour > 23 {
-					return t, fmt.Errorf("Invalid hour in date string")
+					return t, errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING, errorInfo(format, i-1, s, n, "hour"))
 				}
 				h12 = false
 				n += l
 				i++
 				continue
 			case "03":
-				hour, l = gatherNumber(s[n:], 2, true)
+				hour, l, _ = gatherNumber(s[n:], 2, true, false)
 				h12 = true
 				if l != 2 || hour < 1 || hour > 12 {
-					return t, fmt.Errorf("Invalid hour in date string")
+					return t, errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING, errorInfo(format, i-1, s, n, "hour"))
 				}
 				n += l
 				i++
@@ -3077,7 +3161,8 @@ func strToTimeGoFormat(s string, format string) (time.Time, error) {
 				} else if n+1 < len(s) && s[n] == 'A' {
 					pm = false
 				} else {
-					return t, fmt.Errorf("Invalid 12-hour indicator date string")
+					return t, errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING,
+						errorInfo(format, i-1, s, n, "12-hour indicator"))
 				}
 				n += 2
 				i++
@@ -3088,31 +3173,32 @@ func strToTimeGoFormat(s string, format string) (time.Time, error) {
 				} else if n+1 < len(s) && s[n] == 'a' {
 					pm = false
 				} else {
-					return t, fmt.Errorf("Invalid 12-hour indicator date string")
+					return t, errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING,
+						errorInfo(format, i-1, s, n, "12-hour indicator"))
 				}
 				n += 2
 				i++
 				continue
 			case "04":
-				minute, l = gatherNumber(s[n:], 2, true)
+				minute, l, _ = gatherNumber(s[n:], 2, true, false)
 				if l != 2 || minute < 0 || minute > 59 {
-					return t, fmt.Errorf("Invalid minute in date string")
+					return t, errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING, errorInfo(format, i-1, s, n, "minute"))
 				}
 				n += l
 				i++
 				continue
 			case "05":
-				second, l = gatherNumber(s[n:], 2, true)
+				second, l, _ = gatherNumber(s[n:], 2, true, false)
 				if l != 2 || second < 0 || second > 59 {
-					return t, fmt.Errorf("Invalid second in date string")
+					return t, errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING, errorInfo(format, i-1, s, n, "second"))
 				}
 				n += l
 				i++
 				continue
 			case "06":
-				year, l = gatherNumber(s[n:], 2, true)
+				year, l, _ = gatherNumber(s[n:], 2, true, false)
 				if l != 2 || year < 0 || year > 99 {
-					return t, fmt.Errorf("Invalid year in date string")
+					return t, errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING, errorInfo(format, i-1, s, n, "year"))
 				}
 				yearSeen = true
 				n += l
@@ -3120,7 +3206,7 @@ func strToTimeGoFormat(s string, format string) (time.Time, error) {
 				continue
 			case ".0":
 				if s[n] != '.' {
-					return t, fmt.Errorf("Invalid fraction in date string")
+					return t, errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING, errorInfo(format, i-1, s, n, "fraction"))
 				}
 				n++
 				i++
@@ -3128,9 +3214,9 @@ func strToTimeGoFormat(s string, format string) (time.Time, error) {
 				for ; i+j < len(format) && format[i] == format[i+j]; j++ {
 				}
 				i += j - 1
-				fraction, l = gatherNumber(s[n:], j, false)
+				fraction, l, _ = gatherNumber(s[n:], j, false, false)
 				if l == 0 || l != j {
-					return t, fmt.Errorf("Invalid fraction in date string")
+					return t, errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING, errorInfo(format, i-1, s, n, "fraction"))
 				}
 				n += l
 				if l > 9 {
@@ -3141,7 +3227,7 @@ func strToTimeGoFormat(s string, format string) (time.Time, error) {
 				continue
 			case ".9":
 				if s[n] != '.' {
-					return t, fmt.Errorf("Invalid fraction in date string")
+					return t, errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING, errorInfo(format, i-1, s, n, "fraction"))
 				}
 				n++
 				i++
@@ -3149,9 +3235,9 @@ func strToTimeGoFormat(s string, format string) (time.Time, error) {
 				for ; i+j < len(format) && format[i] == format[i+j]; j++ {
 				}
 				i += j - 1
-				fraction, l = gatherNumber(s[n:], 9, true)
+				fraction, l, _ = gatherNumber(s[n:], 9, true, false)
 				if l == 0 {
-					return t, fmt.Errorf("Invalid fraction in date string")
+					return t, errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING, errorInfo(format, i-1, s, n, "fraction"))
 				}
 				n += l
 				// convert to ns
@@ -3161,38 +3247,38 @@ func strToTimeGoFormat(s string, format string) (time.Time, error) {
 		}
 		switch format[i] {
 		case '1':
-			month, l = gatherNumber(s[n:], 2, false)
+			month, l, _ = gatherNumber(s[n:], 2, false, false)
 			if (l != 1 && l != 2) || month < 1 || month > 12 {
-				return t, fmt.Errorf("Invalid month in date string")
+				return t, errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING, errorInfo(format, i-1, s, n, "month"))
 			}
 			n += l
 			continue
 		case '2':
-			day, l = gatherNumber(s[n:], 2, false)
+			day, l, _ = gatherNumber(s[n:], 2, false, false)
 			if (l != 1 && l != 2) || day < 1 || day > 31 {
-				return t, fmt.Errorf("Invalid day in date string")
+				return t, errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING, errorInfo(format, i-1, s, n, "day"))
 			}
 			n += l
 			continue
 		case '3':
-			hour, l = gatherNumber(s[n:], 2, false)
+			hour, l, _ = gatherNumber(s[n:], 2, false, false)
 			h12 = true
 			if (l != 1 && l != 2) || hour < 1 || hour > 12 {
-				return t, fmt.Errorf("Invalid hour in date string")
+				return t, errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING, errorInfo(format, i-1, s, n, "hour"))
 			}
 			n += l
 			continue
 		case '4':
-			minute, l = gatherNumber(s[n:], 2, false)
+			minute, l, _ = gatherNumber(s[n:], 2, false, false)
 			if (l != 1 && l != 2) || minute < 0 || minute > 59 {
-				return t, fmt.Errorf("Invalid minute in date string")
+				return t, errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING, errorInfo(format, i-1, s, n, "minute"))
 			}
 			n += l
 			continue
 		case '5':
-			second, l = gatherNumber(s[n:], 2, false)
+			second, l, _ = gatherNumber(s[n:], 2, false, false)
 			if (l != 1 && l != 2) || second < 0 || second > 59 {
-				return t, fmt.Errorf("Invalid second in date string")
+				return t, errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING, errorInfo(format, i-1, s, n, "second"))
 			}
 			n += l
 			continue
@@ -3202,24 +3288,24 @@ func strToTimeGoFormat(s string, format string) (time.Time, error) {
 			var j int
 			var tzf uint32
 			if i+9 <= len(format) && format[i+1:i+9] == "07:00:00" {
-				tzf = _FORMAT_2COLON
+				tzf = _TZ_FORMAT_2COLON
 				j = 8
 			} else if i+7 <= len(format) && format[i+1:i+7] == "070000" {
-				tzf = _FORMAT_3PART
+				tzf = _TZ_FORMAT_3PART
 				j = 6
 			} else if i+6 <= len(format) && format[i+1:i+6] == "07:00" {
-				tzf = _FORMAT_1COLON
+				tzf = _TZ_FORMAT_1COLON
 				j = 5
 			} else if i+5 <= len(format) && format[i+1:i+5] == "0700" {
-				tzf = _FORMAT_2PART
+				tzf = _TZ_FORMAT_2PART
 				j = 4
 			} else if i+3 <= len(format) && format[i+1:i+3] == "07" {
-				tzf = _FORMAT_1PART
+				tzf = _TZ_FORMAT_1PART
 				j = 2
 			}
 			if j > 0 {
 				if format[i] == 'Z' {
-					tzf |= _FORMAT_ALLOW_Z
+					tzf |= _TZ_FORMAT_ALLOW_Z
 				}
 				var err error
 				n, zoneh, zonem, loc, err = gatherZone(s, n, tzf)
@@ -3232,17 +3318,17 @@ func strToTimeGoFormat(s string, format string) (time.Time, error) {
 		}
 
 		if !unicode.IsPunct(rune(format[i])) && format[i] != 'T' {
-			return t, fmt.Errorf("Invalid format")
+			return t, errors.NewDateWarning(errors.W_DATE_INVALID_FORMAT, errorInfo(format, i, s, n, format[i]))
 		} else {
 			if format[i] != 'T' && format[i] != s[n] {
-				return t, fmt.Errorf("Failed to parse '%c' in date string (found '%c')", format[i], s[n])
+				return t, errors.NewDateWarning(errors.W_DATE_INVALID_FORMAT, errorInfo(format, i, s, n, format[i]))
 			}
 			n++
 		}
 	}
 
 	if i != len(format) || n != len(s) {
-		return t, fmt.Errorf("Failed to completely parse date string")
+		return t, errors.NewDateWarning(errors.W_DATE_PARSE_FAILED, errorInfo(format, i, s, n, format[i]))
 	}
 
 	// only default the century based on the final parsed year value
@@ -3259,7 +3345,7 @@ func strToTimeGoFormat(s string, format string) (time.Time, error) {
 	if yday != -1 {
 		m, d := yearDay(year, yday)
 		if (month != -1 && month != m) || (day != -1 && d != day) {
-			return t, fmt.Errorf("Day of year does not match month & day")
+			return t, errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING, errorInfo(format, i-1, s, n, "day of year"))
 		}
 		month = m
 		day = d
@@ -3290,6 +3376,9 @@ func strToTimeGoFormat(s string, format string) (time.Time, error) {
 	}
 
 	t = time.Date(year, time.Month(month), day, hour, minute, second, fraction, loc)
+	if t.UnixMilli() > _MAX_MILLIS || t.UnixMilli() < _MIN_MILLIS {
+		return t, errors.NewDateWarning(errors.W_DATE_OVERFLOW, nil)
+	}
 	return t, nil
 }
 
@@ -3299,21 +3388,84 @@ const (
 	noPad
 )
 
-/*
-Date format *similar* to Unix 'date' command. Notable exceptions are locale-specific formats (we don't have locale internally
-curently) and opposite case specification; width specification is ignored too.  Upper case preference modifier is sequestered
-to mean case insensitive and a literal space means any literal character (useful when delimiters aren't consistent or there are
-portions to be ignored).
+func errorInfo(format string, fpos int, input string, ipos int, extra ...interface{}) map[string]interface{} {
+	info := make(map[string]interface{})
+	if len(input) > 0 || len(format) == 0 {
+		m := make(map[string]interface{}, 3)
+		m["value"] = input
+		if ipos >= 0 {
+			m["~~~~~"] = strings.Repeat("-", ipos) + "^"
+			m["pos"] = ipos
+		}
+		info["input"] = m
+	}
+	if len(format) > 0 {
+		m := make(map[string]interface{}, 3)
+		m["value"] = format
+		if fpos >= 0 {
+			m["~~~~~"] = strings.Repeat("-", fpos) + "^"
+			m["pos"] = fpos
+		}
+		info["format"] = m
+	}
+	if len(extra) > 0 {
+		switch ev := extra[0].(type) {
+		case rune:
+			if ev == rune(0x3) {
+				info["expected"] = "<END>"
+			} else {
+				info["expected"] = fmt.Sprintf("%c", ev)
+			}
+		default:
+			info["field"] = extra[0]
+		}
+	}
+	return info
+}
 
-Examples:
+func processParseError(code errors.ErrorCode, e interface{}) errors.Error {
+	if pe, ok := e.(*time.ParseError); ok {
+		m := strings.TrimPrefix(pe.Message, ": ")
+		off := 0
+		field := ""
+		if m != "" {
+			if strings.HasSuffix(m, " out of range") {
+				code = errors.W_DATE_INVALID_DATE_STRING
+				field = strings.TrimSpace(m[:len(m)-13])
+				if field == "year" {
+					off = -4
+				} else {
+					off = -2
+				}
+			} else {
+				field = m
+			}
+		}
+		fpos := strings.Index(pe.Layout, pe.LayoutElem)
+		ipos := strings.Index(pe.Value, pe.ValueElem)
+		ipos += off
+		if field != "" {
+			return errors.NewDateWarning(code, errorInfo(pe.Layout, fpos, pe.Value, ipos, field))
+		} else {
+			return errors.NewDateWarning(code, errorInfo(pe.Layout, fpos, pe.Value, ipos))
+		}
+	}
+	return errors.NewDateWarning(code, e)
+}
 
-	format    ...      parses
-	%F                 2021-06-25T04:00:00.000+05:30
-	%D                 2021-06-25
-	%Y %m %d           2021/06/25, 2021-06-25, 2021.06.25, etc.
-	%T %N              14:24:37.001002003, 14:24:37,001002003, 14:24:37:001002003, 14:24:37.2, 14:24:37,345, etc.
-	%d/%m/%y %-I %^p   25/06/21 4 am, 25/06/21 11 PM
-*/
+// Date format *similar* to Unix 'date' command. Notable exceptions are locale-specific formats (we don't have locale internally
+// curently) and opposite case specification; width specification is ignored too.  Upper case preference modifier is sequestered
+// to mean case insensitive and a literal space means any literal character (useful when delimiters aren't consistent or there are
+// portions to be ignored).
+//
+// Examples:
+//
+//	format    ...      parses
+//	%F                 2021-06-25T04:00:00.000+05:30
+//	%D                 2021-06-25
+//	%Y %m %d           2021/06/25, 2021-06-25, 2021.06.25, etc.
+//	%T %N              14:24:37.001002003, 14:24:37,001002003, 14:24:37:001002003, 14:24:37.2, 14:24:37,345, etc.
+//	%d/%m/%y %-I %^p   25/06/21 4 am, 25/06/21 11 PM
 func strToTimePercentFormat(s string, format string) (time.Time, error) {
 	var t time.Time
 	var century, year, month, day, hour, minute, second, fraction, l, zoneh, zonem int
@@ -3328,18 +3480,19 @@ func strToTimePercentFormat(s string, format string) (time.Time, error) {
 	zoneh = -1
 	pm := false
 	h12 := false
+	sign := false
 	for i = 0; i < len(format) && n < len(s); i++ {
 		if format[i] != '%' {
 			if format[i] == ' ' {
 				// space matches any character
 				n++
 			} else if format[i] != s[n] {
-				return t, fmt.Errorf("Failed to parse '%c' in date string (found '%c')", format[i], s[n])
+				return t, errors.NewDateWarning(errors.W_DATE_PARSE_FAILED, errorInfo(format, i, s, n, format[i]))
 			} else {
 				n++
 			}
 		} else if i+1 == len(format) {
-			return t, fmt.Errorf("Invalid format: '%s'", format)
+			return t, errors.NewDateWarning(errors.W_DATE_INVALID_FORMAT, errorInfo(format, i, "", i))
 		} else {
 			i++
 			pad := padZero
@@ -3358,21 +3511,21 @@ func strToTimePercentFormat(s string, format string) (time.Time, error) {
 				i++
 			}
 			if i >= len(format) {
-				return t, fmt.Errorf("Invalid format: '%s'", format)
+				return t, errors.NewDateWarning(errors.W_DATE_INVALID_FORMAT, errorInfo(format, i, "", i))
 			}
 			st := i
 			for ; unicode.IsDigit(rune(format[i])) && i < len(format); i++ {
 			}
 			if st < i {
 				if i >= len(format) {
-					return t, fmt.Errorf("Invalid format: '%s'", format)
+					return t, errors.NewDateWarning(errors.W_DATE_INVALID_FORMAT, errorInfo(format, i, "", i))
 				}
 				// ignore the width specification
 			}
 			if format[i] == 'E' || format[i] == 'O' {
 				i++
 				if i >= len(format) {
-					return t, fmt.Errorf("Invalid format: '%s'", format)
+					return t, errors.NewDateWarning(errors.W_DATE_INVALID_FORMAT, errorInfo(format, i, "", i))
 				}
 			}
 			colons := 0
@@ -3381,76 +3534,49 @@ func strToTimePercentFormat(s string, format string) (time.Time, error) {
 				i++
 			}
 			if colons > 0 && format[i] != 'z' {
-				return t, fmt.Errorf("Invalid format: '%s'", format)
+				return t, errors.NewDateWarning(errors.W_DATE_INVALID_FORMAT, errorInfo(format, i, "", i))
 			}
 			switch format[i] {
 			case '%':
 				if s[n] != '%' {
-					return t, fmt.Errorf("Failed to parse '%c' in date string (found '%c')", format[i], s[n])
+					return t, errors.NewDateWarning(errors.W_DATE_PARSE_FAILED, errorInfo(format, i, s, n, format[i]))
 				}
 			case 'x':
 				fallthrough
 			case 'D':
-				if n+len(DEFAULT_SHORT_DATE_FORMAT) <= len(s) {
-					// can use ParseInLocation since the format doesn't include zone information
-					pt, err := time.ParseInLocation(DEFAULT_SHORT_DATE_FORMAT, s[n:n+len(DEFAULT_SHORT_DATE_FORMAT)], time.Local)
-					if err != nil {
-						return t, err
-					}
-					century = pt.Year() / 100
-					year = pt.Year() % 100
-					month = int(pt.Month())
-					day = pt.Day()
-					n += len(DEFAULT_SHORT_DATE_FORMAT)
-				} else {
-					return t, fmt.Errorf("Invalid date string")
-				}
+				// expand and reprocess
+				format = format[:i-1] + _SHORT_DATE_FORMAT + format[i+1:]
+				i -= 2
 			case 'F':
-				if n+len(DEFAULT_FORMAT) <= len(s) {
-					// can use ParseInLocation since the format includes only numerical zone information
-					pt, err := time.ParseInLocation(DEFAULT_FORMAT, s[n:n+len(DEFAULT_FORMAT)], time.Local)
-					if err != nil {
-						return t, err
-					}
-					century = pt.Year() / 100
-					year = pt.Year() % 100
-					month = int(pt.Month())
-					day = pt.Day()
-					hour = pt.Hour()
-					h12 = false
-					minute = pt.Minute()
-					second = pt.Second()
-					fraction = pt.Nanosecond()
-					loc = pt.Location()
-					n += len(DEFAULT_FORMAT)
-				} else {
-					return t, fmt.Errorf("Invalid date string")
-				}
+				// expand and reprocess
+				format = format[:i-1] + _FULL_DATE_FORMAT + format[i+1:]
+				i -= 2
 			case 'Y':
-				year, l = gatherNumber(s[n:], 4, pad == padSpace)
-				if (pad == noPad && l < 1) || (pad != noPad && l != 4) || year < 0 {
-					return t, fmt.Errorf("Invalid year in date string")
+				year, l, sign = gatherNumber(s[n:], 4, pad == padSpace, true)
+				if (pad == noPad && l < 1) || (pad != noPad && ((!sign && l != 4) || (sign && l != 5))) || year < -9999 {
+					return t, errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING, errorInfo(format, i-1, s, n, "year"))
 				}
 				century = year / 100
 				year = year % 100
 				n += l
 			case 'C':
-				century, l = gatherNumber(s[n:], 2, pad == padSpace)
-				if (pad == noPad && l == 0) || (pad != noPad && l != 2) || century < 0 {
-					return t, fmt.Errorf("Invalid century in date string")
+				century, l, sign = gatherNumber(s[n:], 2, pad == padSpace, true)
+				if (pad == noPad && l == 0) || (pad != noPad && ((!sign && l != 2) || (sign && l != 3))) || century < -99 {
+					return t, errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING, errorInfo(format, i-1, s, n, "century"))
 				}
 				n += l
 			case 'y':
-				year, l = gatherNumber(s[n:], 2, pad == padSpace)
+				year, l, _ = gatherNumber(s[n:], 2, pad == padSpace, false)
 				if (pad == noPad && l == 0) || (pad != noPad && l != 2) || year < 0 || year > 99 {
-					return t, fmt.Errorf("Invalid year (in century) in date string")
+					return t, errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING,
+						errorInfo(format, i-1, s, n, "year (in century)"))
 				}
 				yearSeen = true
 				n += l
 			case 'm':
-				month, l = gatherNumber(s[n:], 2, pad == padSpace)
+				month, l, _ = gatherNumber(s[n:], 2, pad == padSpace, false)
 				if (pad == noPad && l == 0) || (pad != noPad && l != 2) || month < 1 || month > 12 {
-					return t, fmt.Errorf("Invalid month in date string")
+					return t, errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING, errorInfo(format, i-1, s, n, "month"))
 				}
 				n += l
 			case 'B':
@@ -3465,7 +3591,7 @@ func strToTimePercentFormat(s string, format string) (time.Time, error) {
 					}
 				}
 				if m > time.December {
-					return t, fmt.Errorf("Invalid month in date string")
+					return t, errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING, errorInfo(format, i-1, s, n, "month"))
 				}
 			case 'b':
 				var m time.Month
@@ -3478,18 +3604,18 @@ func strToTimePercentFormat(s string, format string) (time.Time, error) {
 					}
 				}
 				if m > time.December {
-					return t, fmt.Errorf("Invalid month in date string")
+					return t, errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING, errorInfo(format, i-1, s, n, "month"))
 				}
 			case 'd':
-				day, l = gatherNumber(s[n:], 2, pad == padSpace)
+				day, l, _ = gatherNumber(s[n:], 2, pad == padSpace, false)
 				if (pad == noPad && l == 0) || (pad != noPad && l != 2) || day < 1 || day > 31 {
-					return t, fmt.Errorf("Invalid day in date string")
+					return t, errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING, errorInfo(format, i-1, s, n, "day"))
 				}
 				n += l
 			case 'e':
-				day, l = gatherNumber(s[n:], 2, true)
+				day, l, _ = gatherNumber(s[n:], 2, true, false)
 				if l != 2 || day < 1 || day > 31 {
-					return t, fmt.Errorf("Invalid day in date string")
+					return t, errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING, errorInfo(format, i-1, s, n, "day"))
 				}
 				n += l
 			case 'A':
@@ -3504,7 +3630,7 @@ func strToTimePercentFormat(s string, format string) (time.Time, error) {
 					}
 				}
 				if d > time.Saturday {
-					return t, fmt.Errorf("Invalid day in date string")
+					return t, errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING, errorInfo(format, i-1, s, n, "day"))
 				}
 			case 'a':
 				// parse/validate but do nothing with it
@@ -3517,7 +3643,7 @@ func strToTimePercentFormat(s string, format string) (time.Time, error) {
 					}
 				}
 				if d > time.Saturday {
-					return t, fmt.Errorf("Invalid day in date string")
+					return t, errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING, errorInfo(format, i-1, s, n, "day"))
 				}
 			case 'f':
 				// gobble valid suffix
@@ -3533,30 +3659,30 @@ func strToTimePercentFormat(s string, format string) (time.Time, error) {
 					}
 				}
 			case 'H':
-				hour, l = gatherNumber(s[n:], 2, pad == padSpace)
+				hour, l, _ = gatherNumber(s[n:], 2, pad == padSpace, false)
 				if (pad == noPad && l == 0) || (pad != noPad && l != 2) || hour < 0 || hour > 23 {
-					return t, fmt.Errorf("Invalid hour in date string")
+					return t, errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING, errorInfo(format, i-1, s, n, "hour (00-23)"))
 				}
 				h12 = false
 				n += l
 			case 'I':
-				hour, l = gatherNumber(s[n:], 2, pad == padSpace)
+				hour, l, _ = gatherNumber(s[n:], 2, pad == padSpace, false)
 				if (pad == noPad && l == 0) || (pad != noPad && l != 2) || hour < 1 || hour > 12 {
-					return t, fmt.Errorf("Invalid hour in date string")
+					return t, errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING, errorInfo(format, i-1, s, n, "hour (01-12)"))
 				}
 				h12 = true
 				n += l
 			case 'k':
-				hour, l = gatherNumber(s[n:], 2, true)
+				hour, l, _ = gatherNumber(s[n:], 2, true, false)
 				if l != 2 || hour < 0 || hour > 23 {
-					return t, fmt.Errorf("Invalid hour in date string")
+					return t, errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING, errorInfo(format, i-1, s, n, "hour (0-23)"))
 				}
 				h12 = false
 				n += l
 			case 'l':
-				hour, l = gatherNumber(s[n:], 2, true)
+				hour, l, _ = gatherNumber(s[n:], 2, true, false)
 				if l != 2 || hour < 0 || hour > 11 {
-					return t, fmt.Errorf("Invalid hour in date string")
+					return t, errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING, errorInfo(format, i-1, s, n, "hour (0-11)"))
 				}
 				h12 = true
 				n += l
@@ -3570,7 +3696,8 @@ func strToTimePercentFormat(s string, format string) (time.Time, error) {
 					}
 					n += 2
 				} else {
-					return t, fmt.Errorf("Invalid 12-hour indicator date string")
+					return t, errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING,
+						errorInfo(format, i-1, s, n, "12-hour indicator"))
 				}
 			case 'P':
 				if n+1 < len(s) && ((s[n] == 'a' || s[n] == 'p') || (preferUpper && (s[n] == 'A' || s[n] == 'P'))) &&
@@ -3582,66 +3709,67 @@ func strToTimePercentFormat(s string, format string) (time.Time, error) {
 					}
 					n += 2
 				} else {
-					return t, fmt.Errorf("Invalid 12-hour indicator date string")
+					return t, errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING,
+						errorInfo(format, i-1, s, n, "12-hour indicator"))
 				}
 			case 'M':
-				minute, l = gatherNumber(s[n:], 2, pad == padSpace)
+				minute, l, _ = gatherNumber(s[n:], 2, pad == padSpace, false)
 				if (pad == noPad && l == 0) || (pad != noPad && l != 2) || minute < 0 || minute > 59 {
-					return t, fmt.Errorf("Invalid minute in date string")
+					return t, errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING, errorInfo(format, i-1, s, n, "minute"))
 				}
 				n += l
 			case 'S':
-				second, l = gatherNumber(s[n:], 2, pad == padSpace)
+				second, l, _ = gatherNumber(s[n:], 2, pad == padSpace, false)
 				if (pad == noPad && l == 0) || (pad != noPad && l != 2) || second < 0 || second > 59 {
-					return t, fmt.Errorf("Invalid second in date string")
+					return t, errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING, errorInfo(format, i-1, s, n, "second"))
 				}
 				n += l
 			case 'R':
-				hour, l = gatherNumber(s[n:], 2, pad == padSpace)
+				hour, l, _ = gatherNumber(s[n:], 2, pad == padSpace, false)
 				if (pad == noPad && l == 0) || (pad != noPad && l != 2) || hour < 0 || hour > 23 {
-					return t, fmt.Errorf("Invalid hour in date string")
+					return t, errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING, errorInfo(format, i-1, s, n, "hour"))
 				}
 				h12 = false
 				n += l
 				if s[n] == ':' {
 					n++
 				}
-				minute, l = gatherNumber(s[n:], 2, pad == padSpace)
+				minute, l, _ = gatherNumber(s[n:], 2, pad == padSpace, false)
 				if (pad == noPad && l == 0) || (pad != noPad && l != 2) || minute < 0 || minute > 59 {
-					return t, fmt.Errorf("Invalid minute in date string")
+					return t, errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING, errorInfo(format, i-1, s, n, "minute"))
 				}
 				n += l
 			case 'X':
 				fallthrough
 			case 'T':
-				hour, l = gatherNumber(s[n:], 2, pad == padSpace)
+				hour, l, _ = gatherNumber(s[n:], 2, pad == padSpace, false)
 				if (pad == noPad && l == 0) || (pad != noPad && l != 2) || hour < 0 || hour > 23 {
-					return t, fmt.Errorf("Invalid hour in date string")
+					return t, errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING, errorInfo(format, i-1, s, n, "hour"))
 				}
 				h12 = false
 				n += l
 				if s[n] == ':' {
 					n++
 				}
-				minute, l = gatherNumber(s[n:], 2, pad == padSpace)
+				minute, l, _ = gatherNumber(s[n:], 2, pad == padSpace, false)
 				if (pad == noPad && l == 0) || (pad != noPad && l != 2) || minute < 0 || minute > 59 {
-					return t, fmt.Errorf("Invalid minute in date string")
+					return t, errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING, errorInfo(format, i-1, s, n, "minute"))
 				}
 				n += l
 				if s[n] == ':' {
 					n++
 				}
-				second, l = gatherNumber(s[n:], 2, pad == padSpace)
+				second, l, _ = gatherNumber(s[n:], 2, pad == padSpace, false)
 				if (pad == noPad && l == 0) || (pad != noPad && l != 2) || second < 0 || second > 59 {
-					return t, fmt.Errorf("Invalid second in date string")
+					return t, errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING, errorInfo(format, i-1, s, n, "second"))
 				}
 				n += l
 			case 'n':
 				fallthrough
 			case 'N':
-				fraction, l = gatherNumber(s[n:], 9, pad == padSpace)
+				fraction, l, _ = gatherNumber(s[n:], 9, pad == padSpace, false)
 				if l == 0 {
-					return t, fmt.Errorf("Invalid fraction in date string")
+					return t, errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING, errorInfo(format, i-1, s, n, "fraction"))
 				}
 				// convert to ns
 				fraction *= int(math.Pow10(9 - l))
@@ -3650,7 +3778,7 @@ func strToTimePercentFormat(s string, format string) (time.Time, error) {
 				fallthrough
 			case 'z':
 				var err error
-				n, zoneh, zonem, loc, err = gatherZone(s, n, _FORMAT_ALL)
+				n, zoneh, zonem, loc, err = gatherZone(s, n, _TZ_FORMAT_ALL)
 				if err != nil {
 					return t, err
 				}
@@ -3658,18 +3786,20 @@ func strToTimePercentFormat(s string, format string) (time.Time, error) {
 				var e time.Time
 				if preferUpper {
 					epoch := 0
-					epoch, l = gatherNumber(s[n:], 19, pad == padSpace)
+					epoch, l, _ = gatherNumber(s[n:], 19, pad == padSpace, false)
 					if l == 0 {
-						return t, fmt.Errorf("Invalid nanoseconds since epoch")
+						return t, errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING,
+							errorInfo(format, i-1, s, n, "seconds since epoch"))
 					}
 					s := int64(epoch / 1000000000)
 					n := int64(epoch % 1000000000)
 					e = time.Unix(s, n)
 				} else {
 					epoch := 0
-					epoch, l = gatherNumber(s[n:], 10, pad == padSpace)
+					epoch, l, _ = gatherNumber(s[n:], 10, pad == padSpace, false)
 					if l == 0 {
-						return t, fmt.Errorf("Invalid seconds since epoch")
+						return t, errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING,
+							errorInfo(format, i-1, s, n, "seconds since epoch"))
 					}
 					e = time.Unix(int64(epoch), 0)
 				}
@@ -3686,26 +3816,26 @@ func strToTimePercentFormat(s string, format string) (time.Time, error) {
 				h12 = false
 				n += l
 			case 'r':
-				hour, l = gatherNumber(s[n:], 2, pad == padSpace)
+				hour, l, _ = gatherNumber(s[n:], 2, pad == padSpace, false)
 				if (pad == noPad && l == 0) || (pad != noPad && l != 2) || hour < 1 || hour > 12 {
-					return t, fmt.Errorf("Invalid hour in date string")
+					return t, errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING, errorInfo(format, i-1, s, n, "hour"))
 				}
 				h12 = false
 				n += l
 				if s[n] == ':' {
 					n++
 				}
-				minute, l = gatherNumber(s[n:], 2, pad == padSpace)
+				minute, l, _ = gatherNumber(s[n:], 2, pad == padSpace, false)
 				if (pad == noPad && l == 0) || (pad != noPad && l != 2) || minute < 0 || minute > 59 {
-					return t, fmt.Errorf("Invalid minute in date string")
+					return t, errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING, errorInfo(format, i-1, s, n, "minute"))
 				}
 				n += l
 				if s[n] == ':' {
 					n++
 				}
-				second, l = gatherNumber(s[n:], 2, pad == padSpace)
+				second, l, _ = gatherNumber(s[n:], 2, pad == padSpace, false)
 				if (pad == noPad && l == 0) || (pad != noPad && l != 2) || second < 0 || second > 59 {
-					return t, fmt.Errorf("Invalid second in date string")
+					return t, errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING, errorInfo(format, i-1, s, n, "second"))
 				}
 				n += l
 				if n+1 < len(s) && ((s[n] == 'a' || s[n] == 'p') || (preferUpper && (s[n] == 'A' || s[n] == 'P'))) &&
@@ -3717,91 +3847,97 @@ func strToTimePercentFormat(s string, format string) (time.Time, error) {
 					}
 					n += 2
 				} else {
-					return t, fmt.Errorf("Invalid 12-hour indicator date string")
+					return t, errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING,
+						errorInfo(format, i-1, s, n, "12-hour indicator"))
 				}
 			case 'V':
 				// parse but do nothing with it
-				isoWeek, l := gatherNumber(s[n:], 2, pad == padSpace)
+				isoWeek, l, _ := gatherNumber(s[n:], 2, pad == padSpace, false)
 				if (pad == noPad && l < 1) || (pad != noPad && l != 2) || isoWeek < 1 || isoWeek > 53 {
-					return t, fmt.Errorf("Invalid ISO week number in date string")
+					return t, errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING,
+						errorInfo(format, i-1, s, n, "ISO week number"))
 				}
 				n += l
 			case 'G':
 				// parse but do nothing with it
-				isoYear, l := gatherNumber(s[n:], 4, pad == padSpace)
+				isoYear, l, _ := gatherNumber(s[n:], 4, pad == padSpace, false)
 				if (pad == noPad && l < 1) || (pad != noPad && l != 4) || isoYear < 0 {
-					return t, fmt.Errorf("Invalid ISO year in date string")
+					return t, errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING, errorInfo(format, i-1, s, n, "ISO year"))
 				}
 				n += l
 			case 'j':
 				// parse but do nothing with it
-				dayOfYear, l := gatherNumber(s[n:], 3, pad == padSpace)
+				dayOfYear, l, _ := gatherNumber(s[n:], 3, pad == padSpace, false)
 				if (pad == noPad && l < 1) || (pad != noPad && l != 3) || dayOfYear < 1 || dayOfYear > 366 {
-					return t, fmt.Errorf("Invalid day of year in date string")
+					return t, errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING,
+						errorInfo(format, i-1, s, n, "day of year"))
 				}
 				n += l
 			case 'q':
 				// parse but do nothing with it
-				quarter, l := gatherNumber(s[n:], 2, pad == padSpace)
+				quarter, l, _ := gatherNumber(s[n:], 2, pad == padSpace, false)
 				if (pad == noPad && l < 1) || (pad != noPad && l != 2) || quarter < 1 || quarter > 4 {
-					return t, fmt.Errorf("Invalid quarter in date string")
+					return t, errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING, errorInfo(format, i-1, s, n, "quarter"))
 				}
 				n += l
 			case 'u':
 				// parse but do nothing with it
-				dow, l := gatherNumber(s[n:], 2, pad == padSpace)
+				dow, l, _ := gatherNumber(s[n:], 2, pad == padSpace, false)
 				if (pad == noPad && l < 1) || (pad != noPad && l != 2) || dow < 1 || dow > 7 {
-					return t, fmt.Errorf("Invalid day of week in date string")
+					return t, errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING,
+						errorInfo(format, i-1, s, n, "day of week"))
 				}
 				n += l
 			case 'w':
 				// parse but do nothing with it
-				dow, l := gatherNumber(s[n:], 2, pad == padSpace)
+				dow, l, _ := gatherNumber(s[n:], 2, pad == padSpace, false)
 				if (pad == noPad && l < 1) || (pad != noPad && l != 2) || dow < 0 || dow > 6 {
-					return t, fmt.Errorf("Invalid day of week in date string")
+					return t, errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING,
+						errorInfo(format, i-1, s, n, "day of week"))
 				}
 				n += l
 			case 'U':
 				fallthrough
 			case 'W':
 				// parse but do nothing with it
-				week, l := gatherNumber(s[n:], 2, pad == padSpace)
+				week, l, _ := gatherNumber(s[n:], 2, pad == padSpace, false)
 				if (pad == noPad && l < 1) || (pad != noPad && l != 2) || week < 0 || week > 53 {
-					return t, fmt.Errorf("Invalid day of week in date string")
+					return t, errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING,
+						errorInfo(format, i-1, s, n, "day of week"))
 				}
 				n += l
 			case '@':
 				fallthrough
 			case '#':
 				var hh, mm, ss, ff int
-				hh, l = gatherNumber(s[n:], 10, pad == padSpace)
+				hh, l, _ = gatherNumber(s[n:], 10, pad == padSpace, false)
 				if (l < 1) || hh < 0 {
-					return t, fmt.Errorf("Invalid hours in date string")
+					return t, errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING, errorInfo(format, i-1, s, n, "hours"))
 				}
 				n += l
 				if s[n] == ':' {
 					n++
 				}
-				mm, l = gatherNumber(s[n:], 2, pad == padSpace)
+				mm, l, _ = gatherNumber(s[n:], 2, pad == padSpace, false)
 				if (pad == noPad && l < 1) || (pad != noPad && l != 2) || mm < 0 || mm > 59 {
-					return t, fmt.Errorf("Invalid minutes in date string")
+					return t, errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING, errorInfo(format, i-1, s, n, "minutes"))
 				}
 				n += l
 				if s[n] == ':' {
 					n++
 				}
-				ss, l = gatherNumber(s[n:], 2, pad == padSpace)
+				ss, l, _ = gatherNumber(s[n:], 2, pad == padSpace, false)
 				if (pad == noPad && l < 1) || (pad != noPad && l != 2) || ss < 0 || ss > 59 {
-					return t, fmt.Errorf("Invalid seconds in date string")
+					return t, errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING, errorInfo(format, i-1, s, n, "seconds"))
 				}
 				n += l
 				if format[i] == '@' {
 					if s[n] == '.' {
 						n++
 					}
-					ff, l = gatherNumber(s[n:], 3, pad == padSpace)
+					ff, l, _ = gatherNumber(s[n:], 3, pad == padSpace, false)
 					if (pad == noPad && l < 1) || (pad != noPad && l != 3) || ff < 0 || ff > 999 {
-						return t, fmt.Errorf("Invalid fraction in date string")
+						return t, errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING, errorInfo(format, i-1, s, n, "fraction"))
 					}
 					n += l
 				} else {
@@ -3823,13 +3959,17 @@ func strToTimePercentFormat(s string, format string) (time.Time, error) {
 				fraction = t.Nanosecond()
 				h12 = false
 			default:
-				return t, fmt.Errorf("Invalid format '%c' (position %d)", format[i], i)
+				return t, errors.NewDateWarning(errors.W_DATE_INVALID_FORMAT, errorInfo(format, i, "", i))
 			}
 		}
 	}
 
-	if i != len(format) || n != len(s) {
-		return t, fmt.Errorf("Failed to completely parse date string")
+	if i != len(format) {
+		return t, errors.NewDateWarning(errors.W_DATE_PARSE_FAILED, errorInfo(format, i, s, n, rune(format[i])))
+	}
+
+	if n != len(s) {
+		return t, errors.NewDateWarning(errors.W_DATE_PARSE_FAILED, errorInfo(format, i, s, n, rune(0x3)))
 	}
 
 	// only default the century based on the final parsed year value
@@ -3849,6 +3989,7 @@ func strToTimePercentFormat(s string, format string) (time.Time, error) {
 	if day == -1 {
 		day = 1
 	}
+
 	err := validateMonthAndDay(year, month, day)
 	if err != nil {
 		return t, err
@@ -3869,50 +4010,51 @@ func strToTimePercentFormat(s string, format string) (time.Time, error) {
 	}
 
 	t = time.Date(year, time.Month(month), day, hour, minute, second, fraction, loc)
+	if t.UnixMilli() > _MAX_MILLIS || t.UnixMilli() < _MIN_MILLIS {
+		return t, errors.NewDateWarning(errors.W_DATE_OVERFLOW, nil)
+	}
 	return t, nil
 }
 
-/*
-Common date format, e.g. YYYY-MM-DD hh:mm:ss.s
-
-Components are:
-YYYY - 4 digit century+year
-CC   - 2 digit century (00...99)
-YY   - 2 digit year (00...99)
-MM   - 2 digit month (01..12)
-DD   - 2 digit day-of-month (01...31) (depending on month)
-hh   - 2 digit 24-hour hour (00...23)
-HH24 - synonym
-HH   - 2 digit 12-hour hour (01...12)
-HH12 - synonym
-mm   - 2 digit minute (00...59)
-MI   - synonym
-ss   - 2 digit second (00...59)
-s    - up to 9 digit fraction of a second
-pp   - 2 character 12-hour cycle indicator (am/pm)
-PP   - 2 character 12-hour cycle indicator (AM/PM)
-AM   - 2 character 12-hour cycle indicator UPPERCASE
-PM   - synonym
-am   - 2 character 12-hour cycle indicator LOWERCASE
-pm   - synonym
-TZD  - timezone specified as either: Z, +hh:mm:ss (seconds ignored), +hh:mm, +hhmm, +hh, <zone-name>
-TZN  - timezone specified as either: Z, +hh:mm:ss (seconds ignored), +hh:mm, +hhmm, +hh, <zone-name>
-MONTH - English month name (uppercase)
-Month - English month name (capitalised)
-month - English month name (lowercase)
-MON  - English month name abbreviated
-Mon  - English month name abbreviated
-mon  - English month name abbreviated
-DAY  - English day name
-Day  - English day name
-day  - English day name
-DY   - English day name abbreviated
-Dy   - English day name abbreviated
-dy   - English day name abbreviated
-
-Spaces match any character else non format characters have to be matched exactly. There is no escape sequence to use components
-listed above as literal content (individual parts can be, e.g. a single Y).
-*/
+// Common date format, e.g. YYYY-MM-DD hh:mm:ss.s
+//
+// Components are:
+// YYYY - 4 digit century+year
+// CC   - 2 digit century (00...99)
+// YY   - 2 digit year (00...99)
+// MM   - 2 digit month (01..12)
+// DD   - 2 digit day-of-month (01...31) (depending on month)
+// hh   - 2 digit 24-hour hour (00...23)
+// HH24 - synonym
+// HH   - 2 digit 12-hour hour (01...12)
+// HH12 - synonym
+// mm   - 2 digit minute (00...59)
+// MI   - synonym
+// ss   - 2 digit second (00...59)
+// s    - up to 9 digit fraction of a second
+// pp   - 2 character 12-hour cycle indicator (am/pm)
+// PP   - 2 character 12-hour cycle indicator (AM/PM)
+// AM   - 2 character 12-hour cycle indicator UPPERCASE
+// PM   - synonym
+// am   - 2 character 12-hour cycle indicator LOWERCASE
+// pm   - synonym
+// TZD  - timezone specified as either: Z, +hh:mm:ss (seconds ignored), +hh:mm, +hhmm, +hh, <zone-name>
+// TZN  - timezone specified as either: Z, +hh:mm:ss (seconds ignored), +hh:mm, +hhmm, +hh, <zone-name>
+// MONTH - English month name (uppercase)
+// Month - English month name (capitalised)
+// month - English month name (lowercase)
+// MON  - English month name abbreviated
+// Mon  - English month name abbreviated
+// mon  - English month name abbreviated
+// DAY  - English day name
+// Day  - English day name
+// day  - English day name
+// DY   - English day name abbreviated
+// Dy   - English day name abbreviated
+// dy   - English day name abbreviated
+//
+// Spaces match any character else non format characters have to be matched exactly. There is no escape sequence to use components
+// listed above as literal content (individual parts can be, e.g. a single Y).
 
 var _COMMON_FORMATS = map[rune][]string{ // descending length order is important in each array!
 	'A': {"AM"},
@@ -3967,72 +4109,73 @@ func strToTimeCommonFormat(s string, format string) (time.Time, error) {
 	zoneh = -1
 	pm := false
 	h12 := false
+	sign := true
 	for i = 0; i < len(format) && n < len(s); i++ {
 		if format[i] == ' ' {
 			// space matches any character
 			n++
 		} else if format[i] == 'Y' {
 			if i+4 <= len(format) && format[i:i+4] == "YYYY" {
-				year, l = gatherNumber(s[n:], 4, false)
-				if l != 4 || year < 0 {
-					return t, fmt.Errorf("Invalid year in date string")
+				year, l, sign = gatherNumber(s[n:], 4, false, true)
+				if (!sign && l != 4) || (sign && l != 5) {
+					return t, errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING, errorInfo(format, i, s, n, "year"))
 				}
 				century = year / 100
 				year = year % 100
 				i += 3
 			} else if i+1 < len(format) && format[i+1] == 'Y' {
-				year, l = gatherNumber(s[n:], 2, false)
+				year, l, _ = gatherNumber(s[n:], 2, false, false)
 				if l != 2 || year < 0 || year > 99 {
-					return t, fmt.Errorf("Invalid year in date string")
+					return t, errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING, errorInfo(format, i, s, n, "year"))
 				}
 				i++
 				yearSeen = true
 			} else {
-				return t, fmt.Errorf("Invalid format")
+				return t, errors.NewDateWarning(errors.W_DATE_INVALID_FORMAT, "")
 			}
 			n += l
 		} else if i+1 < len(format) && format[i] == format[i+1] && format[i] != 's' && format[i] != 'S' {
 			i++
 			switch format[i] {
 			case 'C':
-				century, l = gatherNumber(s[n:], 2, false)
-				if l != 2 || century < 0 {
-					return t, fmt.Errorf("Invalid century in date string")
+				century, l, sign = gatherNumber(s[n:], 2, false, true)
+				if (!sign && l != 2) || (sign && l != 3) || century < -99 {
+					return t, errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING, errorInfo(format, i-1, s, n, "century"))
 				}
-				n += 2
+				n += l
 			case 'M':
-				month, l = gatherNumber(s[n:], 2, false)
+				month, l, _ = gatherNumber(s[n:], 2, false, false)
 				if (l != 1 && l != 2) || month < 1 || month > 12 {
-					return t, fmt.Errorf("Invalid month in date string")
+					return t, errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING, errorInfo(format, i-1, s, n, "month"))
 				}
 				n += l
 			case 'D':
-				day, l = gatherNumber(s[n:], 2, false)
+				day, l, _ = gatherNumber(s[n:], 2, false, false)
 				if (l != 1 && l != 2) || day < 1 || day > 31 {
-					return t, fmt.Errorf("Invalid day in date string")
+					return t, errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING, errorInfo(format, i-1, s, n, "day"))
 				}
 				n += l
 			case 'h':
-				hour, l = gatherNumber(s[n:], 2, false)
+				hour, l, _ = gatherNumber(s[n:], 2, false, false)
 				if (l != 1 && l != 2) || hour < 0 || hour > 23 {
-					return t, fmt.Errorf("Invalid hour in date string")
+					return t, errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING, errorInfo(format, i-1, s, n, "hour (00-23)"))
 				}
 				h12 = false
 				n += l
 			case 'H':
-				hour, l = gatherNumber(s[n:], 2, false)
+				hour, l, _ = gatherNumber(s[n:], 2, false, false)
 				h12 = true
 				min := 1
 				max := 12
 				if i+2 < len(format) {
 					if format[i+1] == '1' {
 						if format[i+2] != '2' {
-							return t, fmt.Errorf("Invalid format")
+							return t, errors.NewDateWarning(errors.W_DATE_INVALID_FORMAT, errorInfo(format, i, "", i))
 						}
 						i += 2
 					} else if format[i+1] == '2' {
 						if format[i+2] != '4' {
-							return t, fmt.Errorf("Invalid format")
+							return t, errors.NewDateWarning(errors.W_DATE_INVALID_FORMAT, errorInfo(format, i, "", i))
 						}
 						h12 = false
 						min = 0
@@ -4041,7 +4184,7 @@ func strToTimeCommonFormat(s string, format string) (time.Time, error) {
 					}
 				}
 				if (l != 1 && l != 2) || hour < min || hour > max {
-					return t, fmt.Errorf("Invalid hour in date string")
+					return t, errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING, errorInfo(format, i-1, s, n, "hour"))
 				}
 				n += l
 			case 'p':
@@ -4050,23 +4193,24 @@ func strToTimeCommonFormat(s string, format string) (time.Time, error) {
 				} else if n+1 < len(s) && (s[n] == 'a' || s[n] == 'A') {
 					pm = false
 				} else {
-					return t, fmt.Errorf("Invalid 12-hour indicator date string")
+					return t, errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING,
+						errorInfo(format, i-1, s, n, "12-hour indicator"))
 				}
 				n += 2
 			case 'm':
-				minute, l = gatherNumber(s[n:], 2, false)
+				minute, l, _ = gatherNumber(s[n:], 2, false, false)
 				if (l != 1 && l != 2) || minute < 0 || minute > 59 {
-					return t, fmt.Errorf("Invalid minute in date string")
+					return t, errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING, errorInfo(format, i-1, s, n, "minute"))
 				}
 				n += l
 			default:
-				return t, fmt.Errorf("Invalid format")
+				return t, errors.NewDateWarning(errors.W_DATE_INVALID_FORMAT, format)
 			}
 		} else if i+1 < len(format) && format[i] == 'M' && format[i+1] == 'I' {
 			i++
-			minute, l = gatherNumber(s[n:], 2, false)
+			minute, l, _ = gatherNumber(s[n:], 2, false, false)
 			if (l != 1 && l != 2) || minute < 0 || minute > 59 {
-				return t, fmt.Errorf("Invalid minute in date string")
+				return t, errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING, errorInfo(format, i-1, s, n, "minute"))
 			}
 			n += l
 		} else if i+1 < len(format) && (format[i] == 'A' || format[i] == 'P') && format[i+1] == 'M' {
@@ -4076,7 +4220,8 @@ func strToTimeCommonFormat(s string, format string) (time.Time, error) {
 			} else if n+1 < len(s) && s[n] == 'A' && s[n+1] == 'M' {
 				pm = false
 			} else {
-				return t, fmt.Errorf("Invalid 12-hour indicator date string")
+				return t, errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING,
+					errorInfo(format, i-1, s, n, "12-hour indicator"))
 			}
 			n += 2
 		} else if i+1 < len(format) && (format[i] == 'a' || format[i] == 'p') && format[i+1] == 'm' {
@@ -4086,7 +4231,8 @@ func strToTimeCommonFormat(s string, format string) (time.Time, error) {
 			} else if n+1 < len(s) && s[n] == 'a' && s[n+1] == 'm' {
 				pm = false
 			} else {
-				return t, fmt.Errorf("Invalid 12-hour indicator date string")
+				return t, errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING,
+					errorInfo(format, i-1, s, n, "12-hour indicator"))
 			}
 			n += 2
 		} else if format[i] == 's' || format[i] == 'S' {
@@ -4097,25 +4243,25 @@ func strToTimeCommonFormat(s string, format string) (time.Time, error) {
 				}
 			}
 			if j == 2 {
-				second, l = gatherNumber(s[n:], 2, false)
+				second, l, _ = gatherNumber(s[n:], 2, false, false)
 				if (l != 1 && l != 2) || second < 0 || second > 59 {
-					return t, fmt.Errorf("Invalid second in date string")
+					return t, errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING, errorInfo(format, i-1, s, n, "second"))
 				}
 			} else if j == 1 || j == 3 {
-				fraction, l = gatherNumber(s[n:], 9, false)
+				fraction, l, _ = gatherNumber(s[n:], 9, false, false)
 				if l == 0 {
-					return t, fmt.Errorf("Invalid fraction in date string")
+					return t, errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING, errorInfo(format, i-1, s, n, "fraction"))
 				}
 				// convert to ns
 				fraction *= int(math.Pow10(9 - l))
 			} else {
-				return t, fmt.Errorf("Invalid format")
+				return t, errors.NewDateWarning(errors.W_DATE_INVALID_FORMAT, errorInfo(format, i, "", i))
 			}
 			i += j - 1
 			n += l
 		} else if i+2 < len(format) && (format[i:i+3] == "TZD" || format[i:i+3] == "TZN" || format[i:i+3] == "TZF") {
 			var err error
-			n, zoneh, zonem, loc, err = gatherZone(s, n, _FORMAT_ALL)
+			n, zoneh, zonem, loc, err = gatherZone(s, n, _TZ_FORMAT_ALL)
 			if err != nil {
 				return t, err
 			}
@@ -4137,7 +4283,7 @@ func strToTimeCommonFormat(s string, format string) (time.Time, error) {
 			}
 			i += 4
 			if j > 12 {
-				return t, fmt.Errorf("Invalid month in date string")
+				return t, errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING, errorInfo(format, i-1, s, n, "full month name"))
 			}
 		} else if i+2 < len(format) && (format[i:i+3] == "MON" || format[i:i+3] == "Mon" || format[i:i+3] == "mon") {
 			j := 0
@@ -4156,7 +4302,7 @@ func strToTimeCommonFormat(s string, format string) (time.Time, error) {
 			}
 			i += 2
 			if j > 12 {
-				return t, fmt.Errorf("Invalid month in date string")
+				return t, errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING, errorInfo(format, i-1, s, n, "short month name"))
 			}
 		} else if i+2 < len(format) && (format[i:i+3] == "DAY" || format[i:i+3] == "Day" || format[i:i+3] == "day") {
 			j := 0
@@ -4175,7 +4321,7 @@ func strToTimeCommonFormat(s string, format string) (time.Time, error) {
 			}
 			i += 2
 			if j > 6 {
-				return t, fmt.Errorf("Invalid day of week in date string")
+				return t, errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING, errorInfo(format, i-1, s, n, "day of week"))
 			}
 		} else if i+1 < len(format) && (format[i:i+2] == "DY" || format[i:i+2] == "Dy" || format[i:i+2] == "dy") {
 			j := 0
@@ -4194,20 +4340,25 @@ func strToTimeCommonFormat(s string, format string) (time.Time, error) {
 			}
 			i++
 			if j > 6 {
-				return t, fmt.Errorf("Invalid day of week in date string")
+				return t, errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING,
+					errorInfo(format, i-1, s, n, "short day of week"))
 			}
 		} else if !unicode.IsPunct(rune(format[i])) && format[i] != 'T' {
-			return t, fmt.Errorf("Invalid format")
+			return t, errors.NewDateWarning(errors.W_DATE_INVALID_FORMAT, errorInfo(format, i, "", i))
 		} else {
 			if format[i] != 'T' && format[i] != s[n] {
-				return t, fmt.Errorf("Failed to parse '%c' in date string (found '%c')", format[i], s[n])
+				return t, errors.NewDateWarning(errors.W_DATE_PARSE_FAILED, errorInfo(format, i, s, n, rune(format[i])))
 			}
 			n++
 		}
 	}
 
-	if i != len(format) || n != len(s) {
-		return t, fmt.Errorf("Failed to completely parse date string")
+	if i != len(format) {
+		return t, errors.NewDateWarning(errors.W_DATE_PARSE_FAILED, errorInfo(format, i, "", -1))
+	}
+
+	if n != len(s) {
+		return t, errors.NewDateWarning(errors.W_DATE_PARSE_FAILED, errorInfo(format, -1, s, n))
 	}
 
 	// only default the century based on the final parsed year value
@@ -4219,6 +4370,9 @@ func strToTimeCommonFormat(s string, format string) (time.Time, error) {
 		}
 	}
 	if century != -1 {
+		if century < 0 && year > 0 {
+			year *= -1
+		}
 		year = century*100 + year
 	}
 	if month == -1 {
@@ -4247,6 +4401,9 @@ func strToTimeCommonFormat(s string, format string) (time.Time, error) {
 	}
 
 	t = time.Date(year, time.Month(month), day, hour, minute, second, fraction, loc)
+	if t.UnixMilli() > _MAX_MILLIS || t.UnixMilli() < _MIN_MILLIS {
+		return t, errors.NewDateWarning(errors.W_DATE_OVERFLOW, nil)
+	}
 	return t, nil
 }
 
@@ -4306,53 +4463,58 @@ func determineFormat(fmt string) formatType {
 	return updateCache(fmt, exampleFormat)
 }
 
-func gatherNumber(s string, max int, countLeadingSpaces bool) (int, int) {
+func gatherNumber(s string, max int, countLeadingSpaces bool, allowSign bool) (int, int, bool) {
 	i := 0
 	st := 0
 	leading := true
+	sign := false
 	for i = 0; i < len(s) && i < max; i++ {
 		if leading && countLeadingSpaces && unicode.IsSpace(rune(s[i])) {
 			st++
 			continue
 		}
-		if !unicode.IsDigit(rune(s[i])) {
+		if !unicode.IsDigit(rune(s[i])) && !(allowSign && leading && (s[i] == '-' || s[i] == '+')) {
 			break
+		}
+		if allowSign && (s[i] == '-' || s[i] == '+') {
+			max++
+			sign = true
 		}
 		leading = false
 	}
 	if i == 0 || leading {
-		return 0, 0
+		return 0, 0, false
 	}
 	en := i
 	if i > 9 && !countLeadingSpaces {
 		en = 9
 	}
 	r, _ := strconv.Atoi(s[st:en])
-	return r, i
+	return r, i, sign
 }
 
 const (
-	_FORMAT_2COLON = uint32(1) << iota
-	_FORMAT_1COLON
-	_FORMAT_3PART
-	_FORMAT_2PART
-	_FORMAT_1PART
-	_FORMAT_NAME
-	_FORMAT_ALLOW_Z
+	_TZ_FORMAT_2COLON = uint32(1) << iota
+	_TZ_FORMAT_1COLON
+	_TZ_FORMAT_3PART
+	_TZ_FORMAT_2PART
+	_TZ_FORMAT_1PART
+	_TZ_FORMAT_NAME
+	_TZ_FORMAT_ALLOW_Z
 )
-const _FORMAT_ALL = uint32(0xffffffff)
+const _TZ_FORMAT_ALL = uint32(0xffffffff)
 
 // try parse ISO-8601 time zone formats, or load location by name
 func gatherZone(s string, n int, allowedFormats uint32) (int, int, int, *time.Location, error) {
 	var err error
 	var zoneh, zonem int
 	var loc *time.Location
-	if allowedFormats&_FORMAT_ALLOW_Z != 0 && n < len(s) && s[n] == 'Z' {
+	if allowedFormats&_TZ_FORMAT_ALLOW_Z != 0 && n < len(s) && s[n] == 'Z' {
 		zoneh = 0
 		zonem = 0
 		loc = nil
 		n++
-	} else if allowedFormats&_FORMAT_2COLON != 0 && n+8 < len(s) &&
+	} else if allowedFormats&_TZ_FORMAT_2COLON != 0 && n+8 < len(s) &&
 		s[n+3] == ':' && s[n+6] == ':' && (s[n] == '+' || s[n] == '-') && // +00:00:00
 
 		unicode.IsDigit(rune(s[n+1])) && unicode.IsDigit(rune(s[n+2])) &&
@@ -4360,52 +4522,61 @@ func gatherZone(s string, n int, allowedFormats uint32) (int, int, int, *time.Lo
 		unicode.IsDigit(rune(s[n+7])) && unicode.IsDigit(rune(s[n+8])) {
 		zoneh, _ = strconv.Atoi(s[n : n+3])
 		zonem, _ = strconv.Atoi(s[n+4 : n+6])
-		s, _ := strconv.Atoi(s[n+7 : n+9])
-		if s < 0 || s > 59 {
-			err = fmt.Errorf("Invalid time zone in date string")
+		sec, _ := strconv.Atoi(s[n+7 : n+9])
+		if sec > 59 || zoneh > 14 || zoneh < -12 || zonem%15 != 0 {
+			err = errors.NewDateWarning(errors.W_DATE_INVALID_TIMEZONE, s[n:])
 		}
 		// seconds are ignored as aren't ISO-8601
 		loc = nil
 		n += 9
-	} else if allowedFormats&_FORMAT_1COLON != 0 && n+5 < len(s) &&
+	} else if allowedFormats&_TZ_FORMAT_1COLON != 0 && n+5 < len(s) &&
 		s[n+3] == ':' && (s[n] == '+' || s[n] == '-') && // +00:00
 
 		unicode.IsDigit(rune(s[n+1])) && unicode.IsDigit(rune(s[n+2])) &&
 		unicode.IsDigit(rune(s[n+4])) && unicode.IsDigit(rune(s[n+5])) {
 		zoneh, _ = strconv.Atoi(s[n : n+3])
 		zonem, _ = strconv.Atoi(s[n+4 : n+6])
+		if zoneh > 14 || zoneh < -12 || zonem%15 != 0 || zonem > 59 {
+			err = errors.NewDateWarning(errors.W_DATE_INVALID_TIMEZONE, s[n:])
+		}
 		loc = nil
 		n += 6
-	} else if allowedFormats&_FORMAT_3PART != 0 && n+6 < len(s) && (s[n] == '+' || s[n] == '-') && // +000000
+	} else if allowedFormats&_TZ_FORMAT_3PART != 0 && n+6 < len(s) && (s[n] == '+' || s[n] == '-') && // +000000
 		unicode.IsDigit(rune(s[n+1])) && unicode.IsDigit(rune(s[n+2])) &&
 		unicode.IsDigit(rune(s[n+3])) && unicode.IsDigit(rune(s[n+4])) &&
 		unicode.IsDigit(rune(s[n+5])) && unicode.IsDigit(rune(s[n+6])) {
 
 		zoneh, _ = strconv.Atoi(s[n : n+3])
 		zonem, _ = strconv.Atoi(s[n+3 : n+5])
-		s, _ := strconv.Atoi(s[n+5 : n+7])
-		if s < 0 || s > 59 {
-			err = fmt.Errorf("Invalid time zone in date string")
+		sec, _ := strconv.Atoi(s[n+5 : n+7])
+		if sec > 59 || zoneh > 14 || zoneh < 12 || zonem%15 != 0 || zonem > 59 {
+			err = errors.NewDateWarning(errors.W_DATE_INVALID_TIMEZONE, s[n:])
 		}
 		// seconds are ingnored
 		loc = nil
 		n += 7
-	} else if allowedFormats&_FORMAT_2PART != 0 && n+4 < len(s) && (s[n] == '+' || s[n] == '-') && // +0000
+	} else if allowedFormats&_TZ_FORMAT_2PART != 0 && n+4 < len(s) && (s[n] == '+' || s[n] == '-') && // +0000
 		unicode.IsDigit(rune(s[n+1])) && unicode.IsDigit(rune(s[n+2])) &&
 		unicode.IsDigit(rune(s[n+3])) && unicode.IsDigit(rune(s[n+4])) {
 
 		zoneh, _ = strconv.Atoi(s[n : n+3])
 		zonem, _ = strconv.Atoi(s[n+3 : n+5])
+		if zoneh > 14 || zoneh < -12 || zonem%15 != 0 || zonem > 59 {
+			err = errors.NewDateWarning(errors.W_DATE_INVALID_TIMEZONE, s[n:])
+		}
 		loc = nil
 		n += 5
-	} else if allowedFormats&_FORMAT_1PART != 0 && n+2 < len(s) && (s[n] == '+' || s[n] == '-') && // +00
+	} else if allowedFormats&_TZ_FORMAT_1PART != 0 && n+2 < len(s) && (s[n] == '+' || s[n] == '-') && // +00
 		unicode.IsDigit(rune(s[n+1])) && unicode.IsDigit(rune(s[n+2])) {
 
 		zoneh, _ = strconv.Atoi(s[n : n+3])
 		zonem = 0
+		if zoneh > 14 || zoneh < -12 || zonem > 59 {
+			err = errors.NewDateWarning(errors.W_DATE_INVALID_TIMEZONE, s[n:])
+		}
 		loc = nil
 		n += 3
-	} else if allowedFormats&_FORMAT_NAME != 0 {
+	} else if allowedFormats&_TZ_FORMAT_NAME != 0 {
 		var name string
 		l := 0
 		if n < len(s) {
@@ -4423,11 +4594,11 @@ func gatherZone(s string, n int, allowedFormats uint32) (int, int, int, *time.Lo
 		}
 		loc, err = time.LoadLocation(name)
 		if err != nil {
-			err = fmt.Errorf("Invalid time zone in date string")
+			err = errors.NewDateWarning(errors.W_DATE_INVALID_TIMEZONE, name)
 		}
 		n += l
 	} else {
-		err = fmt.Errorf("Invalid time zone in date string")
+		err = errors.NewDateWarning(errors.W_DATE_INVALID_TIMEZONE, s[n:])
 	}
 	return n, zoneh, zonem, loc, err
 }
@@ -4482,26 +4653,26 @@ var shortToLong = map[string]string{
 // Make sure YMD specification makes sense
 func validateMonthAndDay(year int, month int, day int) error {
 	if month < 1 || month > 12 {
-		return fmt.Errorf("Invalid month in date string")
+		return errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING, "month")
 	}
 	if day < 1 {
-		return fmt.Errorf("Invalid day in date string")
+		return errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING, "day")
 	}
 	if month == int(time.February) {
 		if isLeapYear(year) {
 			if day > 29 {
-				return fmt.Errorf("Invalid day in date string")
+				return errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING, "day")
 			}
 		} else if day > 28 {
-			return fmt.Errorf("Invalid day in date string")
+			return errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING, "day")
 		}
 	} else if month == int(time.April) || month == int(time.June) || month == int(time.September) || month == int(time.November) {
 		if day > 30 {
-			return fmt.Errorf("Invalid day in date string")
+			return errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING, "day")
 		}
 	} else {
 		if day > 31 {
-			return fmt.Errorf("Invalid day in date string")
+			return errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING, "day")
 		}
 	}
 	return nil
@@ -4522,27 +4693,23 @@ func getLocation(h int, m int) *time.Location {
 }
 
 func loadLocation(tz string) (*time.Location, error) {
-	_, zoneh, zonem, loc, err := gatherZone(tz, 0, _FORMAT_ALL)
+	_, zoneh, zonem, loc, err := gatherZone(tz, 0, _TZ_FORMAT_ALL)
 	if err == nil && loc == nil {
 		loc = getLocation(zoneh, zonem)
 	}
 	return loc, err
 }
 
-/*
-Parse the input string using the defined formats for Date and return the time value it represents, and error.
-Pick the first one that successfully parses preferring formats that exactly match the length over those with optional components.
-(Optional components are handled by the time package API.)
-*/
-
+// Parse the input string using the defined formats for Date and return the time value it represents, and error.
+// Pick the first one that successfully parses preferring formats that exactly match the length over those with optional components.
+// (Optional components are handled by the time package API.)
 func strToTimeTryAllDefaultFormats(s string) (time.Time, error) {
 	var t time.Time
 	var err error
 	// first pass try formats that match length before encountering the overhead of parsing all
 	for _, f := range _DATE_FORMATS {
 		if len(f) == len(s) {
-			// can use ParseInLocation since the formats include only numerical zone information
-			t, err = time.ParseInLocation(f, s, time.Local)
+			t, err = strToTimeGoFormat(s, f)
 			if err == nil {
 				return t, nil
 			}
@@ -4551,28 +4718,24 @@ func strToTimeTryAllDefaultFormats(s string) (time.Time, error) {
 
 	format := determineKnownFormat(s)
 	if format == "" {
-		err = fmt.Errorf("Unable to determine date format")
+		err = errors.NewDateWarning(errors.W_DATE_INVALID_FORMAT, "unable to determine format")
 	} else {
-		// can use ParseInLocation since the formats returned may include only numerical zone information
-		t, err = time.ParseInLocation(format, s, time.Local)
+		t, err = strToTimeGoFormat(s, format)
 		if err == nil {
 			return t, nil
 		}
 	}
 
-	return t, err
+	return t, processParseError(errors.W_DATE_INVALID_DATE_STRING, err)
 }
 
-/*
-Parse the input string using the defined formats for Date and return the time value it represents, and error.
-Pick the first one that successfully parses preferring formats that exactly match the length over those with optional components.
-(Optional components are handled by the time package API.)
-
-If an exact-length format can't be found, This tries all remaining and the one closest in length to the input string is picked in
-an effort to improve the selection especially when using an example to identify a format to use (some formats have components
-which are optional when parsing but present when formatting).
-*/
-
+// Parse the input string using the defined formats for Date and return the time value it represents, and error.
+// Pick the first one that successfully parses preferring formats that exactly match the length over those with optional components.
+// (Optional components are handled by the time package API.)
+//
+// If an exact-length format can't be found, This tries all remaining and the one closest in length to the input string is picked in
+// an effort to improve the selection especially when using an example to identify a format to use (some formats have components
+// which are optional when parsing but present when formatting).
 func StrToTimeFormat(s string) (time.Time, string, error) {
 	return strToTimeFormatClosest(s)
 }
@@ -4584,8 +4747,7 @@ func strToTimeFormatClosest(s string) (time.Time, string, error) {
 	// first pass try formats that match length before encountering the overhead of parsing all
 	for _, f := range _DATE_FORMATS {
 		if len(f) == len(s) {
-			// can use ParseInLocation since the formats include only numerical zone information
-			t, err = time.ParseInLocation(f, s, time.Local)
+			t, err = strToTimeGoFormat(s, f)
 			if err == nil {
 				return t, f, nil
 			}
@@ -4594,21 +4756,19 @@ func strToTimeFormatClosest(s string) (time.Time, string, error) {
 
 	format := determineKnownFormat(s)
 	if format == "" {
-		err = fmt.Errorf("Unable to determine date format")
+		return t, DEFAULT_FORMAT, errors.NewDateWarning(errors.W_DATE_INVALID_FORMAT, "unable to determine format")
 	} else {
-		// can use ParseInLocation since the formats include only numerical zone information
-		t, err = time.ParseInLocation(format, s, time.Local)
+		t, err = strToTimeGoFormat(s, format)
 		if err == nil {
 			return t, format, nil
 		}
 	}
 
-	return t, DEFAULT_FORMAT, err
+	return t, DEFAULT_FORMAT, processParseError(errors.W_DATE_INVALID_DATE_STRING, err)
 }
 
-// Date string formatting:
-// Returns a textual representation of the time value formatted according to the format string.
-func timeToStr(t time.Time, format string) string {
+// Date string formatting: Returns a text representation of the time value formatted according to the format string.
+func timeToStr(t time.Time, format string) (string, error) {
 	switch determineFormat(format) {
 	case defaultFormat:
 		return timeToStrGoFormat(t, DEFAULT_FORMAT)
@@ -4624,32 +4784,30 @@ func timeToStr(t time.Time, format string) string {
 }
 
 // format string is go standard (e.g. 2006-01-02 15:04:05)
-func timeToStrGoFormat(t time.Time, format string) string {
-	return t.Format(format)
+func timeToStrGoFormat(t time.Time, format string) (string, error) {
+	return t.Format(format), nil
 }
 
-// find a default format that parses the example given in the format string and use that to format the result
-func timeToStrExampleFormat(t time.Time, format string) string {
+// find a format that parses the example given in the format string and use that to format the result
+func timeToStrExampleFormat(t time.Time, format string) (string, error) {
 	_, f, _ := strToTimeFormatClosest(format)
 
 	return timeToStrGoFormat(t, f)
 }
 
-/*
-format using Unix date-like format string (e.g. %Y-%m-%d %H:%M:%S.%N)
-
-Examples:
-	format    ...      produces
-	%F                 2021-06-25T04:00:00.000+05:30
-	%D                 2021-06-25
-	%Y.%m.%d           2021.06.25
-	%T,%n              14:24:37,345
-	%d/%m/%y %-I %^p   25/06/21 4 AM
-	[%_3S]             [ 37]
-	%Z                 BST
-*/
-
-func timeToStrPercentFormat(t time.Time, format string) string {
+// format using Unix date-like format string (e.g. %Y-%m-%d %H:%M:%S.%N)
+//
+// Examples:
+//
+//	format    ...      produces
+//	%F                 2021-06-25T04:00:00.000+05:30
+//	%D                 2021-06-25
+//	%Y.%m.%d           2021.06.25
+//	%T,%n              14:24:37,345
+//	%d/%m/%y %-I %^p   25/06/21 4 AM
+//	[%_3S]             [ 37]
+//	%Z                 BST
+func timeToStrPercentFormat(t time.Time, format string) (string, error) {
 	res := make([]rune, 0, len(format)*3)
 	i := 0
 	for i = 0; i < len(format); i++ {
@@ -4671,22 +4829,22 @@ func timeToStrPercentFormat(t time.Time, format string) string {
 				i++
 			}
 			if i >= len(format) {
-				return fmt.Sprintf("!(Invalid format: '%s')", format)
+				return "", errors.NewDateWarning(errors.W_DATE_INVALID_FORMAT, format)
 			}
 			width := 0
 			st := i
-			for ; unicode.IsDigit(rune(format[i])) && i < len(format); i++ {
+			for ; i < len(format) && unicode.IsDigit(rune(format[i])); i++ {
 			}
 			if st < i {
 				if i >= len(format) {
-					return fmt.Sprintf("!(Invalid format: '%s')", format)
+					return "", errors.NewDateWarning(errors.W_DATE_INVALID_FORMAT, format)
 				}
 				width, _ = strconv.Atoi(format[st:i])
 			}
 			if format[i] == 'E' || format[i] == 'O' {
 				i++
 				if i >= len(format) {
-					return fmt.Sprintf("!(Invalid format: '%s')", format)
+					return "", errors.NewDateWarning(errors.W_DATE_INVALID_FORMAT, format)
 				}
 			}
 			colons := 0
@@ -4695,13 +4853,15 @@ func timeToStrPercentFormat(t time.Time, format string) string {
 				i++
 			}
 			if colons > 0 && format[i] != 'z' {
-				return fmt.Sprintf("!(Invalid format: '%s')", format)
+				return "", errors.NewDateWarning(errors.W_DATE_INVALID_FORMAT, format)
 			}
 			switch format[i] {
 			case 'x':
 				fallthrough
 			case 'D':
-				res = append(res, []rune(t.Format(DEFAULT_SHORT_DATE_FORMAT))...)
+				// expand and reprocess
+				format = format[:i-1] + _SHORT_DATE_FORMAT + format[i+1:]
+				i -= 2
 			case 'F':
 				res = append(res, []rune(t.Format(DEFAULT_FORMAT))...)
 			case 'Y':
@@ -4868,7 +5028,7 @@ func timeToStrPercentFormat(t time.Time, format string) string {
 						res = append(res, []rune(fmt.Sprintf("%+03d:%02d:%02d", h, m, s))...)
 					}
 				default:
-					return fmt.Sprintf("!(Invalid format: '%s')", format)
+					return "", errors.NewDateWarning(errors.W_DATE_INVALID_FORMAT, format)
 				}
 			case 'Z':
 				zone, off := t.Zone()
@@ -4944,13 +5104,13 @@ func timeToStrPercentFormat(t time.Time, format string) string {
 				n %= 1000
 				res = append(res, []rune(fmt.Sprintf("%d:%02d:%02d.%03d", h, m, s, n))...)
 			default:
-				res = append(res, []rune(fmt.Sprintf("!(Unknown format: '%c')", format[i]))...)
+				return "", errors.NewDateWarning(errors.W_DATE_INVALID_FORMAT, fmt.Sprintf("%%%c", format[i]))
 			}
 		} else {
 			res = append(res, rune(format[i]))
 		}
 	}
-	return string(res)
+	return string(res), nil
 }
 
 func formatInt(width int, defWidth int, pad int, val int) []rune {
@@ -4969,42 +5129,39 @@ func formatInt(width int, defWidth int, pad int, val int) []rune {
 	return []rune(fmt.Sprintf(f, val))
 }
 
-/*
-format using common-style format string (e.g. YYYY-MM-DD HH:mm:ss.s)
-
-Components are:
-YYYY - 4 digit century+year
-CC   - 2 digit century (00...99)
-YY   - 2 digit year (00...99)
-MM   - 2 digit month (01..12)
-MON/Mon/mon - 3 character month matching case
-MONTH/Month/month - month name matching case
-DD   - 2 digit day-of-month (01...31) (depending on month)
-DAY/Day/day - day-of-week matching case
-DY/Dy/dy - 3 character day-of-week matching case
-hh   - 2 digit 24-hour hour (00...23)
-HH24 - synonym
-HH   - 2 digit 12-hour hour (01...12)
-HH12 - synonym
-mm   - 2 digit minute (00...59)
-MI   - synonym
-ss   - 2 digit second (00...59)
-SS   - synonym
-s    - 3 digit zero-padded milliseconds
-sss  - 9 digit zero-padded nanoseconds
-PP   - 2 character upper case 12-hour cycle indicator (AM/PM)
-AM   - synonym
-PM   - synonym
-pp   - 2 character lower case 12-hour cycle indicator (am/pm)
-am   - synonym
-pm   - synonym
-TZD  - timezone Z or +hh:mm
-TZN  - timezone name
-TZF  - timezone name (preferring full location name)
-
-Other characters/sequences are produced literally in the output.
-*/
-func timeToStrCommonFormat(t time.Time, format string) string {
+// format using common-style format string (e.g. YYYY-MM-DD HH:mm:ss.s)
+//
+// Components are:
+// YYYY - 4 digit century+year
+// CC   - 2 digit century (00...99)
+// YY   - 2 digit year (00...99)
+// MM   - 2 digit month (01..12)
+// MON/Mon/mon - 3 character month matching case
+// MONTH/Month/month - month name matching case
+// DD   - 2 digit day-of-month (01...31) (depending on month)
+// DAY/Day/day - day-of-week matching case
+// DY/Dy/dy - 3 character day-of-week matching case
+// hh   - 2 digit 24-hour hour (00...23)
+// HH24 - synonym
+// HH   - 2 digit 12-hour hour (01...12)
+// HH12 - synonym
+// mm   - 2 digit minute (00...59)
+// MI   - synonym
+// ss   - 2 digit second (00...59)
+// SS   - synonym
+// s    - 3 digit zero-padded milliseconds
+// sss  - 9 digit zero-padded nanoseconds
+// PP   - 2 character upper case 12-hour cycle indicator (AM/PM)
+// AM   - synonym
+// PM   - synonym
+// pp   - 2 character lower case 12-hour cycle indicator (am/pm)
+// am   - synonym
+// pm   - synonym
+// TZD  - timezone Z or +hh:mm
+// TZN  - timezone name
+//
+// Other characters/sequences are produced literally in the output.
+func timeToStrCommonFormat(t time.Time, format string) (string, error) {
 	res := make([]rune, 0, len(format)*3)
 	i := 0
 	for i = 0; i < len(format); i++ {
@@ -5156,28 +5313,20 @@ func timeToStrCommonFormat(t time.Time, format string) string {
 			res = append(res, rune(format[i]))
 		}
 	}
-	return string(res)
+	return string(res), nil
 }
 
-/*
-Convert input milliseconds to time format by multiplying
-with 10^6 and using the Unix method from the time package.
-*/
+// Convert input milliseconds to time format by multiplying with 10^6 and using the Unix method from the time package.
 func millisToTime(millis float64) time.Time {
 	return time.Unix(int64(millis/1000), int64(math.Mod(millis, 1000)*1000000.0))
 }
 
-/*
-Convert input time to milliseconds from nanoseconds returned
-by UnixNano().
-*/
+// Convert input time to milliseconds from nanoseconds returned by UnixNano().
 func timeToMillis(t time.Time) float64 {
 	return float64(t.Unix()*1000) + float64(t.Round(time.Millisecond).Nanosecond())/1000000
 }
 
-/*
-Variable that represents different date formats.
-*/
+// Default date formats
 var _DATE_FORMATS = []string{
 	"2006-01-02T15:04:05.999Z07:00", // time.RFC3339Milli
 	"2006-01-02 15:04:05.999Z07:00",
@@ -5222,6 +5371,9 @@ func determineKnownFormat(s string) string {
 	}
 	dt := ""
 	// date part
+	if (s[0] == '-' || s[0] == '+') && isDateSeparator(rune(s[5])) && len(s) >= 11 {
+		s = s[1:]
+	}
 	if isDateSeparator(rune(s[4])) && len(s) >= 10 {
 		if s[7] != s[4] {
 			return ""
@@ -5340,18 +5492,11 @@ func isdigit(b byte) bool {
 	return b >= '0' && b <= '9'
 }
 
-/*
-Represents the default format of the time string.
-*/
-const DEFAULT_FORMAT = util.DEFAULT_FORMAT
+const DEFAULT_FORMAT = util.DEFAULT_FORMAT                // Represents the default format of the time string.
+const _SHORT_DATE_FORMAT = "%Y-%m-%d"                     // only used for '%D' expansion
+const _FULL_DATE_FORMAT = _SHORT_DATE_FORMAT + "T%T.%N%z" // only used for '%F' expansion
 
-// Used solely for the %D format specifier
-const DEFAULT_SHORT_DATE_FORMAT = "2006-01-02"
-
-/*
-This function returns the part of the time string that is
-depicted by part (for eg. the day, current quarter etc).
-*/
+// Return the part of the time string that is depicted by part (for eg. the day, current quarter etc).
 func datePart(t time.Time, part string) (int, error) {
 	p := strings.ToLower(part)
 
@@ -5410,34 +5555,36 @@ func datePart(t time.Time, part string) (int, error) {
 		z = z - (zh * (60 * 60))
 		return z / 60, nil
 	default:
-		return 0, fmt.Errorf("Unsupported date part %s.", part)
+		return 0, errors.NewDateWarning(errors.W_DATE_INVALID_COMPONENT, part)
 	}
 }
 
-/*
-Add part to the input time string using AddDate method from the
-time package. n and part are used to define the interval or duration.
-*/
+// Add part to the input time string using AddDate method from the time package. n and part are used to define the interval or
+// duration.
 func dateAdd(t time.Time, n int, part string) (time.Time, error) {
 	p := strings.ToLower(part)
+	var res time.Time
+
+	if n == 0 {
+		return t, nil
+	} else if n >= math.MaxInt64 || n <= math.MinInt64 {
+		return t, errors.NewDateWarning(errors.W_DATE_OVERFLOW, nil)
+	}
 
 	switch p {
 	case "millennium":
-		return t.AddDate(n*1000, 0, 0), nil
+		res = t.AddDate(n*1000, 0, 0)
 	case "century":
-		return t.AddDate(n*100, 0, 0), nil
+		res = t.AddDate(n*100, 0, 0)
 	case "decade":
-		return t.AddDate(n*10, 0, 0), nil
+		res = t.AddDate(n*10, 0, 0)
 	case "year":
-		return t.AddDate(n, 0, 0), nil
+		res = t.AddDate(n, 0, 0)
 	case "quarter":
-		return t.AddDate(0, n*3, 0), nil
+		res = t.AddDate(0, n*3, 0)
 	case "month":
-		return t.AddDate(0, n, 0), nil
+		res = t.AddDate(0, n, 0)
 	case "calendar_month":
-		if n == 0 {
-			return t, nil
-		}
 		// adds months but if the original was the last day of the start month, the result is the last day of the new month
 		// if the new day would be beyond the end of the new month, round it down to the end of the new month (as opposed to
 		// advancing the months; e.g. 2021-01-31 + 1 calendar_month = 2021-02-28). This mimics the behaviour of some RDBMSes.
@@ -5514,28 +5661,31 @@ func dateAdd(t time.Time, n int, part string) (time.Time, error) {
 				}
 			}
 		}
-		return time.Date(ny, nm, nd, t.Hour(), t.Minute(), t.Second(), t.Nanosecond(), t.Location()), nil
+		res = time.Date(ny, nm, nd, t.Hour(), t.Minute(), t.Second(), t.Nanosecond(), t.Location())
 	case "week":
-		return t.AddDate(0, 0, n*7), nil
+		res = t.AddDate(0, 0, n*7)
 	case "day":
-		return t.AddDate(0, 0, n), nil
+		res = t.AddDate(0, 0, n)
 	case "hour":
-		return t.Add(time.Duration(n) * time.Hour), nil
+		res = t.Add(time.Duration(n) * time.Hour)
 	case "minute":
-		return t.Add(time.Duration(n) * time.Minute), nil
+		res = t.Add(time.Duration(n) * time.Minute)
 	case "second":
-		return t.Add(time.Duration(n) * time.Second), nil
+		res = t.Add(time.Duration(n) * time.Second)
 	case "millisecond":
-		return t.Add(time.Duration(n) * time.Millisecond), nil
+		res = t.Add(time.Duration(n) * time.Millisecond)
 	default:
-		return t, fmt.Errorf("Unsupported date add part %s.", part)
+		return t, errors.NewDateWarning(errors.W_DATE_INVALID_COMPONENT, part)
 	}
+	t1 := timeToMillis(t)
+	t2 := timeToMillis(res)
+	if (n > 0 && t1 > t2) || (n < 0 && t1 < t2) || t2 < _MIN_MILLIS || t2 > _MAX_MILLIS {
+		return t, errors.NewDateWarning(errors.W_DATE_OVERFLOW, nil)
+	}
+	return res, nil
 }
 
-/*
-Truncate out the part of the date string from the output and return the
-remaining time t.
-*/
+// Truncate out the part of the date string from the output and return the remaining time t.
 func dateTrunc(t time.Time, part string) (time.Time, error) {
 	p := strings.ToLower(part)
 
@@ -5573,30 +5723,20 @@ func dateTrunc(t time.Time, part string) (time.Time, error) {
 	}
 }
 
-/*
-This method returns time t that truncates the Day in the
-week that year and returns the Time.
-*/
+// Return time t that truncates the Day in the week that year and returns the Time.
 func yearTrunc(t time.Time) time.Time {
 	t, _ = timeTrunc(t, "day")
 	return t.AddDate(0, 0, 1-t.YearDay())
 }
 
-/*
-This method returns the time t with the day part truncated out. First
-get Time part as day. Subtract that from the days and then Add the
-given number of years, months and days to t using the AddDate method
-from the time package and return.
-*/
+// Return the time t with the day part truncated out. First get Time part as day. Subtract that from the days and
+// then Add the given number of years, months and days to t using the AddDate method from the time package and return.
 func monthTrunc(t time.Time) time.Time {
 	t, _ = timeTrunc(t, "day")
 	return t.AddDate(0, 0, 1-t.Day())
 }
 
-/*
-Truncate the time string based on the value of the part string.
-If type day convert to hours.
-*/
+// Truncate the time string based on the value of the part string.  If type day convert to hours.
 func timeTrunc(t time.Time, part string) (time.Time, error) {
 	switch part {
 	case "day":
@@ -5620,17 +5760,13 @@ func timeTrunc(t time.Time, part string) (time.Time, error) {
 	case "millisecond":
 		return t.Truncate(time.Millisecond), nil
 	default:
-		return t, fmt.Errorf("Unsupported date trunc part %s.", part)
+		return t, errors.NewDateWarning(errors.W_DATE_INVALID_COMPONENT, part)
 	}
 }
 
-/*
-This method returns the difference between the two times. Call
-diffDates to calculate the difference between the 2 time strings
-and then calls diffPart over these strings to unify it into part
-format. In the event t2 is greater than t1, and the result returns
-a negative value, return a negative result.
-*/
+// Return the difference between the two times. Call diffDates to calculate the difference between the 2 time strings
+// and then calls diffPart over these strings to unify it into part format. In the event t2 is greater than t1, and the result
+// returns a negative value, return a negative result.
 func dateDiff(t1, t2 time.Time, part string) (int64, error) {
 	sign := 1
 	if t1.String() < t2.String() {
@@ -5647,12 +5783,8 @@ func GetQuarter(t time.Time) int {
 	return (int(t.Month()) + 2) / 3
 }
 
-/*
-This method returns a value specifying a part of the dates specified
-by part string. For each type of part (enumerated in the specs) it
-computes the value in the type part(for eg. seconds) recursively and
-returning it in format (int64) as per the part string.
-*/
+// Return a value specifying a part of the dates specified by part string. For each type of part (enumerated in the specs) it
+// computes the value in the type part(for eg. seconds) recursively and returning it in format (int64) as per the part string.
 func diffPart(t1, t2 time.Time, diff *date, part string) (int64, error) {
 	p := strings.ToLower(part)
 
@@ -5717,16 +5849,12 @@ func diffPart(t1, t2 time.Time, diff *date, part string) (int64, error) {
 	case "millennium":
 		return int64(diff.year) / 1000, nil
 	default:
-		return 0, fmt.Errorf("Unsupported date diff part %s.", part)
+		return 0, errors.NewDateWarning(errors.W_DATE_INVALID_COMPONENT, part)
 	}
 }
 
-/*
-This method returns the difference between two dates. The input
-arguments to this function are of type Time. We use the setDate
-to extract the dates from the time and then compute and return
-the difference between the two dates.
-*/
+// Return the difference between two dates. The input arguments to this function are of type Time. We use the setDate
+// to extract the dates from the time and then compute and return the difference between the two dates.
 func diffDates(t1, t2 time.Time) *date {
 	var d1, d2, diff date
 	setDate(&d1, t1)
@@ -5742,10 +5870,7 @@ func diffDates(t1, t2 time.Time) *date {
 	return &diff
 }
 
-/*
-The type date is a structure containing fields year, day in that
-year, hour, minute, second and millisecond (all integers).
-*/
+// The type date is a structure containing fields year, day in that year, hour, minute, second and millisecond (all integers).
 type date struct {
 	year        int
 	doy         int
@@ -5755,13 +5880,8 @@ type date struct {
 	millisecond int
 }
 
-/*
-This method extracts a date from the input time and sets the
-year (as t.year), Day (as t.YearDay), and time (hour, minute,
-second using t.Clock, and millisecond as Nanosecond/10^6)
-using the input time which is of type Time (defined in package
-time).
-*/
+// Extract a date from the input time and sets the year (as t.year), Day (as t.YearDay), and time (hour, minute,
+// second using t.Clock, and millisecond as Nanosecond/10^6) using the input time which is of type Time (defined in package time).
 func setDate(d *date, t time.Time) {
 	d.year = t.Year()
 	d.doy = t.YearDay()
@@ -5769,9 +5889,7 @@ func setDate(d *date, t time.Time) {
 	d.millisecond = t.Nanosecond() / 1000000
 }
 
-/*
-Round input float64 value to int.
-*/
+// Round input float64 value to int.
 func round(f float64) int {
 	if math.Abs(f) < 0.5 {
 		return 0
@@ -5779,20 +5897,12 @@ func round(f float64) int {
 	return int(f + math.Copysign(0.5, f))
 }
 
-/*
-This method computes the number of leap years in
-between start and end year, using the method
-leapYearsWithin.
-*/
+// Compute the number of leap years in between start and end year, using the method leapYearsWithin.
 func leapYearsBetween(end, start int) int {
 	return leapYearsWithin(end) - leapYearsWithin(start)
 }
 
-/*
-This method returns the number of leap years up until the
-input year. This is done using the computation
-(year/4) - (year/100) + (year/400).
-*/
+// return the number of leap years up until the input year. This is done using the computation (year/4) - (year/100) + (year/400).
 func leapYearsWithin(year int) int {
 	if year > 0 {
 		year--
@@ -5803,12 +5913,8 @@ func leapYearsWithin(year int) int {
 	return (year / 4) - (year / 100) + (year / 400)
 }
 
-/*
-This method is used to determine if the input year
-is a leap year. Leap years can be evenly divided by 4,
-and should not be evenly divided by 100, unless it can
-be evenly divided by 400.
-*/
+// Determine if the input year is a leap year. Leap years can be evenly divided by 4, and should not be evenly divided by 100,
+// unless it can be evenly divided by 400.
 func isLeapYear(year int) bool {
 	return year%400 == 0 || (year%4 == 0 && year%100 != 0)
 }
@@ -5861,4 +5967,35 @@ func yearDay(year int, yday int) (int, int) {
 	default:
 		return 12, yday - 31 - 30 - 31 - 30 - 31 - 31 - 30 - 31 - 30
 	}
+}
+
+func invalidArgInfo(arg int, v value.Value) map[string]interface{} {
+	info := make(map[string]interface{})
+	info["argument"] = arg
+	if v != nil {
+		info["type"] = v.Type().String()
+	}
+	return info
+}
+
+func setWarning(context Context, other ...interface{}) (value.Value, errors.Error) {
+	if c, ok := context.(interface {
+		Warning(errors.Error)
+		HasFeature(uint64) bool
+	}); ok && len(other) > 0 {
+		if !c.HasFeature(util.N1QL_DATE_WARNINGS) {
+			return value.NULL_VALUE, nil
+		}
+		switch o := other[0].(type) {
+		case errors.ErrorCode:
+			if len(other) == 2 {
+				c.Warning(errors.NewDateWarning(o, other[1]))
+			} else {
+				c.Warning(errors.NewDateWarning(o, nil))
+			}
+		case errors.Error:
+			c.Warning(o)
+		}
+	}
+	return value.NULL_VALUE, nil
 }

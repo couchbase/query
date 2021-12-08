@@ -788,6 +788,7 @@ func (this *BaseRequest) addErrorLOCKED(err errors.Error) {
 	// don't add duplicate errors
 	for _, e := range this.errors {
 		if err.Code() != 0 && err.Code() == e.Code() && err.Error() == e.Error() {
+			e.Repeat()
 			this.duplicateErrorCount++
 			return
 		}
@@ -807,6 +808,7 @@ func (this *BaseRequest) addWarningLOCKED(wrn errors.Error) {
 	if wrn.OnceOnly() {
 		for _, w := range this.warnings {
 			if wrn.Code() == w.Code() && wrn.Error() == w.Error() {
+				w.Repeat()
 				return
 			}
 		}

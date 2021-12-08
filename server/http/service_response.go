@@ -721,6 +721,9 @@ func (this *httpRequest) writeError(err errors.Error, first bool, prefix, indent
 			m["cause"] = err.Cause()
 		}
 	}
+	if err.GetRepeats() > 0 {
+		m["repeats"] = err.GetRepeats()
+	}
 	err.ExtractLineAndColumn(m)
 
 	var er error

@@ -87,6 +87,8 @@ type Error interface {
 	HasICause(ErrorCode) bool
 	ExtractLineAndColumn(map[string]interface{})
 	AddErrorContext(ctx string)
+	Repeat()
+	GetRepeats() int
 }
 
 type AbortError struct {
@@ -220,6 +222,7 @@ type err struct {
 	onceOnly       bool
 	retry          Tristate // Retrying this query might be useful.
 	cause          interface{}
+	repeats        int
 }
 
 func (e *err) Error() string {
@@ -257,6 +260,9 @@ func (e *err) Object() map[string]interface{} {
 		m["cause"] = processValue(e.cause)
 	}
 	e.ExtractLineAndColumn(m)
+	if e.repeats > 0 {
+		m["repeats"] = e.repeats
+	}
 	return m
 }
 
@@ -326,6 +332,7 @@ func (e *err) UnmarshalJSON(body []byte) error {
 		Message string      `json:"message"`
 		Retry   Tristate    `json:"retry"`
 		Cause   interface{} `json:"cause"`
+		Repeats int         `json:"repeats"`
 	}
 
 	unmarshalErr := json.Unmarshal(body, &_unmarshalled)
@@ -339,6 +346,7 @@ func (e *err) UnmarshalJSON(body []byte) error {
 	e.InternalCaller = _unmarshalled.Caller
 	e.retry = _unmarshalled.Retry
 	e.cause = _unmarshalled.Cause
+	e.repeats = _unmarshalled.Repeats
 	if _unmarshalled.ICause != "" {
 		e.ICause = errors.New(_unmarshalled.ICause)
 	}
@@ -428,6 +436,14 @@ func (e *err) AddErrorContext(ctx string) {
 	if extractRe.FindStringSubmatch(err) == nil {
 		e.InternalMsg += ctx
 	}
+}
+
+func (e *err) Repeat() {
+	e.repeats++
+}
+
+func (e *err) GetRepeats() int {
+	return e.repeats
 }
 
 // only put errors in the reserved range here (7000-9999)

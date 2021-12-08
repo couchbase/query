@@ -716,7 +716,7 @@ func FtestCaseFile(fname string, prepared, explain bool, qc *MockServer, namespa
 
 			found := false
 			for _, w := range rr.Warnings {
-				if int(w.Code()) == warnCodeExpected || (len(warnExpected) > 0 && !w.ContainsText(warnExpected)) {
+				if int(w.Code()) == warnCodeExpected || (len(warnExpected) > 0 && w.ContainsText(warnExpected)) {
 					found = true
 				}
 			}

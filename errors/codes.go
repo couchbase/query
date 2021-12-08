@@ -221,6 +221,15 @@ const (
 	E_EXPLAIN                                 ErrorCode = 5015
 	E_EXPLAIN_FUNCTION                        ErrorCode = 5017
 	E_GROUP_UPDATE                            ErrorCode = 5020
+	W_DATE                                    ErrorCode = 5021
+	W_DATE_OVERFLOW                           ErrorCode = 5022
+	W_DATE_INVALID_FORMAT                     ErrorCode = 5023
+	W_DATE_INVALID_DATE_STRING                ErrorCode = 5024
+	W_DATE_PARSE_FAILED                       ErrorCode = 5025
+	W_DATE_INVALID_COMPONENT                  ErrorCode = 5026
+	W_DATE_NON_INT_VALUE                      ErrorCode = 5027
+	W_DATE_INVALID_ARGUMENT                   ErrorCode = 5028
+	W_DATE_INVALID_TIMEZONE                   ErrorCode = 5029
 	E_INVALID_VALUE                           ErrorCode = 5030
 	E_INVALID_EXPRESSION                      ErrorCode = 5031
 	E_UNSUPPORTED_EXPRESSION                  ErrorCode = 5032

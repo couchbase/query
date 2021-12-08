@@ -81,6 +81,49 @@ func NewEvaluationWithCauseError(e error, termType string) Error {
 		InternalMsg: fmt.Sprintf("Error evaluating %s", termType), InternalCaller: CallerN(1)}
 }
 
+var _de = map[ErrorCode]string{
+	W_DATE:                     "",
+	W_DATE_OVERFLOW:            ": Overflow",
+	W_DATE_INVALID_FORMAT:      ": Invalid format",
+	W_DATE_INVALID_DATE_STRING: ": Invalid date string",
+	W_DATE_PARSE_FAILED:        ": Failed to parse",
+	W_DATE_INVALID_COMPONENT:   ": Invalid component",
+	W_DATE_NON_INT_VALUE:       ": Value is not an integer",
+	W_DATE_INVALID_ARGUMENT:    ": Invalid argument",
+	W_DATE_INVALID_TIMEZONE:    ": Invalid time zone",
+}
+
+func NewDateWarning(e ErrorCode, info interface{}) Error {
+	var c interface{}
+	if info != nil {
+		cm := make(map[string]interface{})
+		switch e := info.(type) {
+		case map[string]interface{}:
+			for k, v := range e {
+				cm[k] = v
+			}
+		case Error:
+			cm["error"] = e
+		case interface{ Error() string }:
+			cm["error"] = e.Error()
+		default:
+			cm["details"] = e
+		}
+		cm["caller"] = CallerN(1)
+		c = cm
+	}
+	msg := "Date error"
+	if m, ok := _de[e]; ok {
+		if m != "" {
+			msg += m
+		}
+	} else {
+		panic("BUG: invalid date warning")
+	}
+	return &err{level: WARNING, ICode: e, IKey: "execution.date_error", cause: c,
+		InternalMsg: msg, InternalCaller: CallerN(1), onceOnly: true}
+}
+
 func NewExplainError(e error, msg string) Error {
 	return &err{level: EXCEPTION, ICode: E_EXPLAIN, IKey: "execution.explain_error", ICause: e,
 		InternalMsg: msg, InternalCaller: CallerN(1)}

@@ -47,6 +47,7 @@ const (
 	N1QL_SPILL_TO_DISK                                // 0x0000008000
 	N1QL_PARTIAL_GRACEFUL_SHUTDOWN                    // 0x0000010000
 	N1QL_USE_SUB_DOC                                  // 0x0000020000
+	N1QL_DATE_WARNINGS                                // 0x0000040000
 	N1QL_ALL_BITS                                     // This needs to be last (highest value) constant.
 )
 
@@ -67,6 +68,7 @@ var N1Ql_Features = map[uint64]string{
 	N1QL_EARLY_ORDER:           fmt.Sprintf("Early Order (%#x)", N1QL_EARLY_ORDER),
 	N1QL_SEQ_SCAN:              fmt.Sprintf("Sequential Scans (%#x)", N1QL_SEQ_SCAN),
 	N1QL_SPILL_TO_DISK:         fmt.Sprintf("Spill To Disk (%#x)", N1QL_SPILL_TO_DISK),
+	N1QL_DATE_WARNINGS:         fmt.Sprintf("Report date warnings (%#x)", N1QL_DATE_WARNINGS),
 
 	N1QL_PARTIAL_GRACEFUL_SHUTDOWN: fmt.Sprintf("Partial graceful shutdown (%#x)", N1QL_PARTIAL_GRACEFUL_SHUTDOWN),
 
