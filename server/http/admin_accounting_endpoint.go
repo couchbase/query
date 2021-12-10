@@ -381,6 +381,7 @@ func (endpoint *HttpEndpoint) getCredentialsFromRequest(ds datastore.Datastore, 
 			}
 		}
 	}
+	creds.HttpRequest = req
 	return creds, nil, isInternal
 }
 

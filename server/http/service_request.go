@@ -143,23 +143,19 @@ func newHttpRequest(rv *httpRequest, resp http.ResponseWriter, req *http.Request
 		creds, err1 = getCredentials(httpArgs)
 
 		if err1 == nil {
-			if len(creds.Users) == 0 && !pwdlessbkts {
-				err1 = errors.NewAdminAuthError(err, "cause: No credentials provided")
-			} else {
-				creds.HttpRequest = req
-				rv.SetCredentials(creds)
+			creds.HttpRequest = req
+			rv.SetCredentials(creds)
 
-				// This means we got creds. Now we need to see if they are authorized users.
-				if !pwdlessbkts {
-					var authUsers auth.AuthenticatedUsers
+			// This means we got creds. Now we need to see if they are authorized users.
+			if !pwdlessbkts {
+				var authUsers auth.AuthenticatedUsers
 
-					authUsers, err1 = datastore.GetDatastore().Authorize(nil, creds)
-					if authUsers == nil {
+				authUsers, err1 = datastore.GetDatastore().Authorize(nil, creds)
+				if authUsers == nil {
 
-						// This means the users associated with the input credentials do not have authorization.
-						// Throw an error
-						err1 = errors.NewAdminAuthError(err1, "cause: Failure to authenticate user")
-					}
+					// This means the users associated with the input credentials do not have authorization.
+					// Throw an error
+					err1 = errors.NewAdminAuthError(err1, "cause: Failure to authenticate user")
 				}
 			}
 		}
