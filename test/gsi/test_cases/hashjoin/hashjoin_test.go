@@ -36,6 +36,7 @@ func TestHashJoin(t *testing.T) {
 	runStmt(qc, "CREATE INDEX purch_arrProduct_customerId on purchase(DISTINCT ARRAY pd.product FOR pd IN lineItems END, customerId)")
 	runStmt(qc, "CREATE INDEX ord_customerId_ordersId on orders(customerId, orderId)")
 	runStmt(qc, "CREATE INDEX st_ix11 on shellTest(c11, DISTINCT a11) WHERE type = \"left\"")
+	runStmt(qc, "CREATE INDEX st_ix12 on shellTest(c21) WHERE type = \"right\"")
 
 	fmt.Println("Running HASH JOIN test cases")
 
@@ -73,6 +74,9 @@ func TestHashJoin(t *testing.T) {
 	// test ANSI OUTER JOIN to ANSI INNER JOIN transformation
 	runMatch("case_hashjoin_oj2ij.json", false, true, qc, t)
 
+	// test HASH JOIN bug fixes
+	runMatch("case_hashjoin_bugs.json", false, true, qc, t)
+
 	fmt.Println("Dropping indexes")
 	runStmt(qc, "DROP INDEX customer.cust_lastName_firstName_customerId")
 	runStmt(qc, "DROP INDEX customer.cust_customerId_lastName_firstName")
@@ -83,6 +87,7 @@ func TestHashJoin(t *testing.T) {
 	runStmt(qc, "DROP INDEX purchase.purch_arrProduct_customerId")
 	runStmt(qc, "DROP INDEX orders.ord_customerId_ordersId")
 	runStmt(qc, "DROP INDEX shellTest.st_ix11")
+	runStmt(qc, "DROP INDEX shellTest.st_ix12")
 
 	// create primary indexes
 	runStmt(qc, "CREATE PRIMARY INDEX ON customer")

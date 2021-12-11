@@ -1,0 +1,54 @@
+[
+    {
+        "testcase": "MB-50041",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'HashJoin' AND ARRAY_LENGTH(v.`build_aliases`) = 2 AND ANY u WITHIN v.`~child` SATISFIES u.`#operator` = 'HashJoin' AND u.`outer` = true END END"
+        },
+        "statements": "SELECT l1.c11, l2.c12, r.c22 FROM shellTest l1 LEFT JOIN shellTest r USE HASH(build) ON l1.c11 = r.c21 AND r.type = \"right\" JOIN shellTest l2 USE HASH(probe) ON l1.c11 = l2.c11 AND l2.type = \"left\" WHERE l1.type = \"left\" ORDER BY l1.c11, r.c22",
+        "ordered": true,
+        "results": [
+        {
+            "c11": 1,
+            "c12": 10,
+            "c22": 10
+        },
+        {
+            "c11": 2,
+            "c12": 20,
+            "c22": 20
+        },
+        {
+            "c11": 2,
+            "c12": 20,
+            "c22": 21
+        },
+        {
+            "c11": 3,
+            "c12": 30,
+            "c22": 30
+        },
+        {
+            "c11": 3,
+            "c12": 30,
+            "c22": 31
+        },
+        {
+            "c11": 3,
+            "c12": 30,
+            "c22": 32
+        },
+        {
+            "c11": 4,
+            "c12": 40
+        }
+    ]
+    }
+]
+

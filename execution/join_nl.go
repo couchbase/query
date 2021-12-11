@@ -191,8 +191,15 @@ func processAnsiExec(item value.AnnotatedValue, right_item value.AnnotatedValue,
 	for _, alias := range aliases {
 		val, ok := right_item.Field(alias)
 		if !ok {
-			context.Error(errors.NewExecutionInternalError(fmt.Sprintf("processAnsiExec: annotated value not found for %s", alias)))
-			return false, false, nil
+			if len(aliases) > 1 {
+				// in case of HASH JOIN, when there are multiple aliases on the
+				// build side, value could be MISSING for an alias, if right_item
+				// contains the result of an outer join
+				continue
+			} else {
+				context.Error(errors.NewExecutionInternalError(fmt.Sprintf("processAnsiExec: annotated value not found for %s", alias)))
+				return false, false, nil
+			}
 		}
 
 		joined.SetField(alias, val)
