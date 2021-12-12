@@ -277,6 +277,10 @@ func (this *ToNumber) Evaluate(item value.Value, context Context) (value.Value, 
 		}
 	case value.STRING:
 		s := arg.ToString()
+		i, err := strconv.ParseInt(s, 10, 64)
+		if err == nil && ((i > math.MinInt64 && i < math.MaxInt64) || strconv.FormatInt(i, 10) == s) {
+			return value.NewValue(i), nil
+		}
 		f, err := strconv.ParseFloat(s, 64)
 		if err == nil {
 			return value.NewValue(f), nil
