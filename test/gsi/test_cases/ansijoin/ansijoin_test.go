@@ -98,7 +98,6 @@ func TestAnsiJoin(t *testing.T) {
 	runStmt(qc, "CREATE INDEX st_ix25 on shellTest(field1, field2) WHERE META().id LIKE \"OFFER:%\"")
 	runStmt(qc, "CREATE INDEX st_ix26 on shellTest(META().id) WHERE META().id LIKE \"PRODUCT:%\"")
 
-
 	// test ANSI JOIN bug fixes
 	runMatch("case_ansijoin_bugs.json", false, true, qc, t)
 
