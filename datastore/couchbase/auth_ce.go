@@ -81,7 +81,7 @@ func messageForDeniedPrivilege(pair auth.PrivilegePair) string {
 		privilege = "manage global external functions"
 		role = "query_manage_global_external_functions"
 	case auth.PRIV_QUERY_EXECUTE_FUNCTIONS_EXTERNAL:
-		privilege = "execute globl external functions"
+		privilege = "execute global external functions"
 		role = "query_execute_global_external_functions"
 	case auth.PRIV_QUERY_MANAGE_SCOPE_FUNCTIONS_EXTERNAL:
 		privilege = "manage scope external functions"
