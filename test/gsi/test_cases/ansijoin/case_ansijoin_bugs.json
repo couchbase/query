@@ -199,6 +199,22 @@
             }
         }
 	]
+    },
+    {
+        "testcase": "MB-50077",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'NestedLoopJoin' AND v.`outer` IS MISSING END"
+        },
+        "statements":"SELECT product AS product, offer AS offer FROM shellTest AS offer LEFT JOIN shellTest AS product ON offer.field3 = product.field3 WHERE offer.field1 = \"123456\" AND offer.field2 = TRUE AND META(offer).id LIKE \"OFFER:%\" AND META(product).id LIKE \"PRODUCT:%\"",
+        "ordered": true,
+        "results": [
+	]
     }
 ]
 

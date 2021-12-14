@@ -355,6 +355,16 @@ func (this *chkNullRej) VisitSelf(pred *expression.Self) (interface{}, error) {
 
 // Function
 func (this *chkNullRej) VisitFunction(pred expression.Function) (interface{}, error) {
+	operands := pred.Operands()
+	switch pred.(type) {
+	case *expression.Meta:
+		if len(operands) == 1 {
+			if id, ok := operands[0].(*expression.Identifier); ok &&
+				id.Identifier() == this.alias {
+				return true, nil
+			}
+		}
+	}
 	return false, nil
 }
 

@@ -95,8 +95,15 @@ func TestAnsiJoin(t *testing.T) {
 	// test ANSI OUTER JOIN to ANSI INNER JOIN transformation
 	runMatch("case_ansijoin_oj2ij.json", false, true, qc, t)
 
+	runStmt(qc, "CREATE INDEX st_ix25 on shellTest(field1, field2) WHERE META().id LIKE \"OFFER:%\"")
+	runStmt(qc, "CREATE INDEX st_ix26 on shellTest(META().id) WHERE META().id LIKE \"PRODUCT:%\"")
+
+
 	// test ANSI JOIN bug fixes
 	runMatch("case_ansijoin_bugs.json", false, true, qc, t)
+
+	runStmt(qc, "DROP INDEX shellTest.st_ix25")
+	runStmt(qc, "DROP INDEX shellTest.st_ix26")
 
 	// test COMMA form ANSI join syntax
 	runMatch("case_comma_form_ansijoin_simple.json", false, false, qc, t)
