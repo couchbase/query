@@ -72,17 +72,26 @@ func sargForOr(or *expression.Or, entry *indexEntry, keys expression.Expressions
 }
 
 func sargFor(pred, key expression.Expression, isJoin, doSelec bool, baseKeyspace *base.BaseKeyspace,
-	keyspaceNames map[string]string, advisorValidate bool, context *PrepareContext) (SargSpans, error) {
+	keyspaceNames map[string]string, advisorValidate bool, context *PrepareContext) (SargSpans, bool, error) {
 
-	s := &sarg{key, baseKeyspace, keyspaceNames, isJoin, doSelec, advisorValidate, context}
+	s := newSarg(key, baseKeyspace, keyspaceNames, isJoin, doSelec, advisorValidate, context)
 
 	r, err := pred.Accept(s)
-	if err != nil || r == nil {
-		return nil, err
+	if err != nil {
+		return nil, false, err
+	}
+	if r == nil {
+		exact := true
+		if s.constPred {
+			exact = false
+		} else if pred.DependsOn(key) {
+			exact = false
+		}
+		return nil, exact, nil
 	}
 
 	rs := r.(SargSpans)
-	return rs, nil
+	return rs, rs.Exact(), nil
 }
 
 func SargForFilters(filters base.Filters, keys expression.Expressions, max int, underHash, doSelec bool,
@@ -244,7 +253,7 @@ func getSargSpans(pred expression.Expression, sargKeys expression.Expressions, i
 
 	// Sarg composite indexes right to left
 	for i := n - 1; i >= 0; i-- {
-		s := &sarg{sargKeys[i], baseKeyspace, keyspaceNames, isJoin, doSelec, advisorValidate, context}
+		s := newSarg(sargKeys[i], baseKeyspace, keyspaceNames, isJoin, doSelec, advisorValidate, context)
 		r, err := pred.Accept(s)
 		if err != nil {
 			return nil, false, err
@@ -283,8 +292,16 @@ func getSargSpans(pred expression.Expression, sargKeys expression.Expressions, i
 			} else {
 				exactSpan = exactSpan && rs.Exact()
 			}
-		} else if exactSpan && pred.DependsOn(sargKeys[i]) {
-			exactSpan = false
+		} else if exactSpan {
+			// if a constant or query parameters is used as a (boolean) predicate
+			// then it'll not be used to generate spans, and it won't be caught
+			// by covering checks later on; set exactSpan to be false in this case
+			// to be safe (since this may introduce false positives from index scan)
+			if s.constPred {
+				exactSpan = false
+			} else if pred.DependsOn(sargKeys[i]) {
+				exactSpan = false
+			}
 		}
 	}
 

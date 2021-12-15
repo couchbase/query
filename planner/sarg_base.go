@@ -20,7 +20,22 @@ type sarg struct {
 	isJoin          bool
 	doSelec         bool
 	advisorValidate bool
+	constPred       bool
 	context         *PrepareContext
+}
+
+func newSarg(key expression.Expression, baseKeyspace *base.BaseKeyspace,
+	keyspaceNames map[string]string, isJoin, doSelec, advisorValidate bool,
+	context *PrepareContext) *sarg {
+	return &sarg{
+		key:             key,
+		baseKeyspace:    baseKeyspace,
+		keyspaceNames:   keyspaceNames,
+		isJoin:          isJoin,
+		doSelec:         doSelec,
+		advisorValidate: advisorValidate,
+		context:         context,
+	}
 }
 
 func (this *sarg) getSarg(pred expression.Expression) expression.Expression {
@@ -167,6 +182,11 @@ func (this *sarg) VisitConcat(pred *expression.Concat) (interface{}, error) {
 
 // Constant
 func (this *sarg) VisitConstant(pred *expression.Constant) (interface{}, error) {
+	val := pred.Value()
+	if val == nil || !val.Truth() {
+		// mark if it is not a TRUE constant (TRUE constant does not introduce false positives)
+		this.constPred = true
+	}
 	return this.visitDefault(pred)
 }
 
@@ -231,11 +251,13 @@ func (this *sarg) VisitSubquery(pred expression.Subquery) (interface{}, error) {
 
 // NamedParameter
 func (this *sarg) VisitNamedParameter(pred expression.NamedParameter) (interface{}, error) {
+	this.constPred = true
 	return this.visitDefault(pred)
 }
 
 // PositionalParameter
 func (this *sarg) VisitPositionalParameter(pred expression.PositionalParameter) (interface{}, error) {
+	this.constPred = true
 	return this.visitDefault(pred)
 }
 
