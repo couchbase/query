@@ -12,6 +12,6 @@ package util
 // Define the current server version and minimum supported version
 
 const (
-	VERSION     = "6.6.3-N1QL"
+	VERSION     = "6.6.5-N1QL"
 	MIN_VERSION = "1.0.0"
 )
