@@ -189,7 +189,16 @@ func (b *Bucket) RunBucketUpdater2(streamingFn StreamingFn, notify NotifyFn) {
 		err := b.UpdateBucket2(streamingFn)
 		if err != nil {
 			if notify != nil {
-				notify(b.GetName(), err)
+				name := b.GetName()
+				notify(name, err)
+
+				// MB-49772 get rid of the deleted bucket
+				p := b.pool
+				b.Close()
+				p.Lock()
+				p.BucketMap[name] = nil
+				delete(p.BucketMap, name)
+				p.Unlock()
 			}
 			logging.Errorf(" Bucket Updater exited with err %v", err)
 		}

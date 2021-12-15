@@ -571,8 +571,11 @@ func (s *store) SetConnectionSecurityConfig(connSecConfig *datastore.ConnectionS
 		return
 	}
 
-	// Implementation based on SetLogLevel(), above.
+	// for any active buckets set new security config
 	for _, n := range s.namespaceCache {
+
+		// force a full pool refresh
+		n.refreshFully()
 		n.lock.Lock()
 		for _, k := range n.keyspaceCache {
 			if k.cbKeyspace == nil {
@@ -580,7 +583,6 @@ func (s *store) SetConnectionSecurityConfig(connSecConfig *datastore.ConnectionS
 			}
 
 			// Make new TLS settings take effect in the buckets.
-			k.cbKeyspace.cbbucket.RefreshFully()
 			if k.cbKeyspace.agentProvider != nil {
 				k.cbKeyspace.agentProvider.Refresh()
 			}
@@ -1097,10 +1099,13 @@ func (p *namespace) refresh() {
 	if util.Since(p.last) < _NAMESPACE_REFRESH_THRESHOLD {
 		return
 	}
+	logging.Debuga(func() string { return fmt.Sprintf("Refreshing pool %s", p.name) })
+	p.refreshFully()
+}
+
+func (p *namespace) refreshFully() {
 
 	// trigger refresh of this pool
-	logging.Debuga(func() string { return fmt.Sprintf("Refreshing pool %s", p.name) })
-
 	newpool, err := p.store.client.GetPool(p.name)
 	if err != nil {
 		newpool, err = p.reload1(err)
