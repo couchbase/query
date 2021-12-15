@@ -313,36 +313,40 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 		}
 		this.addChildren(plan.NewFetch(keyspace, node, names, cost, cardinality, size, frCost))
 
-		filter, _, err := this.getFilter(node.Alias(), false, nil)
-		if err != nil {
-			return nil, err
-		}
+		// no need to separate out the filter if the query has a single keyspace
+		if len(this.baseKeyspaces) > 1 {
+			filter, _, err := this.getFilter(node.Alias(), false, nil)
+			if err != nil {
+				return nil, err
+			}
 
-		if filter != nil {
-			baseKeyspace, _ := this.baseKeyspaces[node.Alias()]
-			if useCBO && node.IsAnsiJoinOp() && len(baseKeyspace.Filters()) > 0 {
-				// temporarily mark index filters for selectivity calculation
-				// if this keyspace is not under a join, this step is already done above
-				err = this.markPlanFlags(scan, node)
-				if err != nil {
-					return nil, err
+			if filter != nil {
+				baseKeyspace, _ := this.baseKeyspaces[node.Alias()]
+				if useCBO && node.IsAnsiJoinOp() && len(baseKeyspace.Filters()) > 0 {
+					// temporarily mark index filters for selectivity calculation
+					// if this keyspace is not under a join, this step is already
+					// done above
+					err = this.markPlanFlags(scan, node)
+					if err != nil {
+						return nil, err
+					}
 				}
-			}
 
-			if useCBO && (cost > 0.0) && (cardinality > 0.0) && (size > 0) && (frCost > 0.0) {
-				cost, cardinality, size, frCost = getFilterCost(this.lastOp, filter,
-					this.baseKeyspaces, this.keyspaceNames, node.Alias(),
-					this.advisorValidate(), this.context)
-			}
+				if useCBO && (cost > 0.0) && (cardinality > 0.0) && (size > 0) && (frCost > 0.0) {
+					cost, cardinality, size, frCost = getFilterCost(this.lastOp,
+						filter, this.baseKeyspaces, this.keyspaceNames,
+						node.Alias(), this.advisorValidate(), this.context)
+				}
 
-			// Add filter as a separate Filter operator since Fetch is already
-			// heavily loaded. This way the filter evaluation can happen on a
-			// separate go thread and can be potentially parallelized
-			this.addSubChildren(plan.NewFilter(filter, cost, cardinality, size, frCost))
+				// Add filter as a separate Filter operator since Fetch is already
+				// heavily loaded. This way the filter evaluation can happen on a
+				// separate go thread and can be potentially parallelized
+				this.addSubChildren(plan.NewFilter(filter, cost, cardinality, size, frCost))
 
-			if useCBO && node.IsAnsiJoinOp() && len(baseKeyspace.Filters()) > 0 {
-				// clear temporary index flags
-				baseKeyspace.Filters().ClearIndexFlag()
+				if useCBO && node.IsAnsiJoinOp() && len(baseKeyspace.Filters()) > 0 {
+					// clear temporary index flags
+					baseKeyspace.Filters().ClearIndexFlag()
+				}
 			}
 		}
 	}
@@ -376,23 +380,25 @@ func (this *builder) VisitSubqueryTerm(node *algebra.SubqueryTerm) (interface{},
 	this.addChildren(selOp, plan.NewAlias(node.Alias(), baseKeyspace.IsPrimaryTerm(),
 		selOp.Cost(), selOp.Cardinality(), selOp.Size(), selOp.FrCost()))
 
-	filter, _, err := this.getFilter(node.Alias(), false, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	if filter != nil {
-		// use a Filter operator if there are filters on the subquery term
-		cost := OPT_COST_NOT_AVAIL
-		cardinality := OPT_CARD_NOT_AVAIL
-		size := OPT_SIZE_NOT_AVAIL
-		frCost := OPT_COST_NOT_AVAIL
-		if this.useCBO {
-			cost, cardinality, size, frCost = getFilterCost(this.lastOp, filter,
-				this.baseKeyspaces, this.keyspaceNames, node.Alias(),
-				this.advisorValidate(), this.context)
+	if len(this.baseKeyspaces) > 1 {
+		filter, _, err := this.getFilter(node.Alias(), false, nil)
+		if err != nil {
+			return nil, err
 		}
-		this.addSubChildren(plan.NewFilter(filter, cost, cardinality, size, frCost))
+
+		if filter != nil {
+			// use a Filter operator if there are filters on the subquery term
+			cost := OPT_COST_NOT_AVAIL
+			cardinality := OPT_CARD_NOT_AVAIL
+			size := OPT_SIZE_NOT_AVAIL
+			frCost := OPT_COST_NOT_AVAIL
+			if this.useCBO {
+				cost, cardinality, size, frCost = getFilterCost(this.lastOp, filter,
+					this.baseKeyspaces, this.keyspaceNames, node.Alias(),
+					this.advisorValidate(), this.context)
+			}
+			this.addSubChildren(plan.NewFilter(filter, cost, cardinality, size, frCost))
+		}
 	}
 
 	if !this.joinEnum() && !node.IsAnsiJoinOp() {
@@ -415,19 +421,25 @@ func (this *builder) VisitExpressionTerm(node *algebra.ExpressionTerm) (interfac
 	this.children = make([]plan.Operator, 0, 16)    // top-level children, executed sequentially
 	this.subChildren = make([]plan.Operator, 0, 16) // sub-children, executed across data-parallel streams
 
-	filter, selec, err := this.getFilter(node.Alias(), false, nil)
-	if err != nil {
-		return nil, err
-	}
-
 	cost := OPT_COST_NOT_AVAIL
 	cardinality := OPT_CARD_NOT_AVAIL
 	size := OPT_SIZE_NOT_AVAIL
 	frCost := OPT_COST_NOT_AVAIL
 	if this.useCBO {
 		cost, cardinality, size, frCost = getExpressionScanCost(node.ExpressionTerm())
-		if (filter != nil) && (cost > 0.0) && (cardinality > 0.0) && (selec > 0.0) &&
-			(size > 0) && (frCost > 0.0) {
+	}
+
+	var filter expression.Expression
+	var selec float64
+	var err error
+	if len(this.baseKeyspaces) > 1 {
+		filter, selec, err = this.getFilter(node.Alias(), false, nil)
+		if err != nil {
+			return nil, err
+		}
+
+		if this.useCBO && (filter != nil) && (cost > 0.0) && (cardinality > 0.0) &&
+			(selec > 0.0) && (size > 0) && (frCost > 0.0) {
 			cost, cardinality, size, frCost = getSimpleFilterCost(node.Alias(),
 				cost, cardinality, selec, size, frCost)
 		}

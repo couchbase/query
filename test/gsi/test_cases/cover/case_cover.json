@@ -200,7 +200,6 @@
                             "cover ((`shellTest`.`f2`))",
                             "cover ((meta(`shellTest`).`id`))"
                         ],
-                        "filter": "(cover ((`shellTest`.`f1`)) = 5)",
                         "index": "ixCover",
                         "index_projection": {
                             "entry_keys": [
@@ -230,6 +229,10 @@
                         "~child": {
                             "#operator": "Sequence",
                             "~children": [
+                                {
+                                    "#operator": "Filter",
+                                    "condition": "(cover ((`shellTest`.`f1`)) = 5)"
+                                },
                                 {
                                     "#operator": "InitialProject",
                                     "result_terms": [
@@ -653,7 +656,6 @@
                             "cover ((`shellTest`.`join_day`))",
                             "cover ((meta(`shellTest`).`id`))"
                         ],
-                        "filter": "((cover ((`shellTest`.`email`)) like \"%@%.%\") and (5 < ((cover ((`shellTest`.`VMs`))[0]).`RAM`)) and cover ((10 < (`shellTest`.`join_day`))))",
                         "filter_covers": {
                             "cover ((10 \u003c (`shellTest`.`join_day`)))": true
                         },
@@ -696,6 +698,10 @@
                         "~child": {
                             "#operator": "Sequence",
                             "~children": [
+                                {
+                                    "#operator": "Filter",
+                                    "condition": "(((cover ((`shellTest`.`email`)) like \"%@%.%\") and (5 < ((cover ((`shellTest`.`VMs`))[0]).`RAM`))) and cover ((10 < (`shellTest`.`join_day`))))"
+                                },
                                 {
                                     "#operator": "InitialProject",
                                     "result_terms": [
@@ -807,7 +813,6 @@
                                     "cover ((`shellTest`.`f2`))",
                                     "cover ((meta(`shellTest`).`id`))"
                                 ],
-                                "filter": "(cover ((`shellTest`.`f1`)) = 10)",
                                 "index": "ixCover",
                                 "index_projection": {
                                     "entry_keys": [
@@ -837,6 +842,10 @@
                                 "~child": {
                                     "#operator": "Sequence",
                                     "~children": [
+                                        {
+                                            "#operator": "Filter",
+                                            "condition": "(cover ((`shellTest`.`f1`)) = 10)"
+                                        },
                                         {
                                             "#operator": "InitialProject",
                                             "result_terms": [
