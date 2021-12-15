@@ -60,7 +60,7 @@ func run_test(qc *gsi.MockServer, t *testing.T, prepare bool) {
 		"DROP INDEX orders.ixgar101",
 		"CREATE INDEX ixgar102 ON orders(c10) WHERE test_id = 'indexga' AND type = 'numeric'",
 		"DROP INDEX orders.ixgar102",
-		"CREATE INDEX ixga201 ON orders(c1, a1) WHERE test_id = 'indexga' AND type = 'bugs'",
+		"CREATE INDEX ixga201 ON orders(c1, a1, c2, c3) WHERE test_id = 'indexga' AND type = 'bugs'",
 		"DROP INDEX orders.ixga201",
 	}
 

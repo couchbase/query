@@ -1,6 +1,6 @@
 [
     {
-        "testcase": "MB-42774",
+        "testcase": "MB-42474",
         "ignore": "index_id",
         "explain": {
             "disabled": false,
@@ -15,6 +15,65 @@
         "results": [
             {
                 "cnt": 2
+            }
+        ]
+    },
+    {
+        "testcase": "MB-50071, part 1",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`index_group_aggs` IS NOT MISSING AND ARRAY_LENGTH(v.spans) = 1 END"
+        },
+        "statements": "SELECT count(1) AS cnt FROM orders WHERE (test_id = 'indexga' AND type = 'bugs') AND c1 = 'doc' AND a1 IS NOT MISSING AND c3 BETWEEN 0 AND 20 AND (false OR c2 = false)",
+        "results": [
+            {
+                "cnt": 0
+            }
+        ]
+    },
+    {
+        "testcase": "MB-50071, part 2",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`index_group_aggs` IS MISSING AND ARRAY_LENGTH(v.spans) > 1 END"
+        },
+        "statements": "SELECT count(1) AS cnt FROM orders WHERE (test_id = 'indexga' AND type = 'bugs') AND c1 = 'doc' AND a1 IS NOT MISSING AND c3 BETWEEN 0 AND 20 AND ($myBool OR c2 = false)",
+	"namedArgs": {"myBool": false},
+        "results": [
+            {
+                "cnt": 0
+            }
+        ]
+    },
+    {
+        "testcase": "MB-50071, part 3",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`index_group_aggs` IS MISSING AND ARRAY_LENGTH(v.spans) > 1 END"
+        },
+        "statements": "SELECT count(1) AS cnt FROM orders WHERE (test_id = 'indexga' AND type = 'bugs') AND c1 = 'doc' AND a1 IS NOT MISSING AND c3 BETWEEN 0 AND 20 AND (($myBool AND c2 = true) OR c2 = false)",
+	"namedArgs": {"myBool": true},
+        "results": [
+            {
+                "cnt": 0
             }
         ]
     }

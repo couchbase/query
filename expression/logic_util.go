@@ -54,6 +54,7 @@ func orLength(or *Or) (length int, flatten, truth bool) {
 					truth = true
 					return
 				}
+				flatten = true
 			} else {
 				length++
 			}
@@ -82,6 +83,7 @@ func andLength(and *And) (length int, flatten, truth bool) {
 					truth = false
 					return
 				}
+				flatten = true
 			} else {
 				length++
 			}
