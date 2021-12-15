@@ -62,11 +62,11 @@ github.com/couchbase/ghistogram v0.1.0 h1:b95QcQTCzjTUocDXp/uMgSNQi8oj1tGwnJ4bOD
 github.com/couchbase/ghistogram v0.1.0/go.mod h1:s1Jhy76zqfEecpNWJfWUiKZookAFaiGOEoyzgHt9i7k=
 github.com/couchbase/gocb/v2 v2.3.2 h1:ND7NDs7VHqnkO+pPcbeMToiQS/KW10Yn9woBiFTnljc=
 github.com/couchbase/gocb/v2 v2.3.2/go.mod h1:NmEbg3pWHURqx5rPR3w/BcBRV5MRkc7i2kf0hq2Gdm0=
-github.com/couchbase/gocbcore-transactions v0.0.0-20211015175912-8d8655302661 h1:W9AWWkSGWKDWS+gwPIKqdzGDF+YHCX6ymxQvx4A/NG0=
-github.com/couchbase/gocbcore-transactions v0.0.0-20211015175912-8d8655302661/go.mod h1:W+sLc2i+hgGGzm0khKQ4t7kapFiaJitds5uhEWy+NW4=
+github.com/couchbase/gocbcore-transactions v0.0.0-20211206095448-75aee9dc7816 h1:+Ip1QV+0umCpx4F/pEHz30MN92VhIbOupjWRTG7VNyk=
+github.com/couchbase/gocbcore-transactions v0.0.0-20211206095448-75aee9dc7816/go.mod h1:W+sLc2i+hgGGzm0khKQ4t7kapFiaJitds5uhEWy+NW4=
 github.com/couchbase/gocbcore/v10 v10.0.3/go.mod h1:s6dwBFs4c3+cAzZbo1q0VW+QasudhHJuehE8b8U2YNg=
-github.com/couchbase/gocbcore/v10 v10.0.5 h1:/6S4iTzLDWcWfnp99fUKfDM906BcAqDlCQz+K1MVX3M=
-github.com/couchbase/gocbcore/v10 v10.0.5/go.mod h1:s6dwBFs4c3+cAzZbo1q0VW+QasudhHJuehE8b8U2YNg=
+github.com/couchbase/gocbcore/v10 v10.0.6 h1:pKPhJWM9TBBMa755ARm25ZoBO6Fo6C4vVKvEAqpt4jE=
+github.com/couchbase/gocbcore/v10 v10.0.6/go.mod h1:s6dwBFs4c3+cAzZbo1q0VW+QasudhHJuehE8b8U2YNg=
 github.com/couchbase/gocbcore/v9 v9.1.7 h1:YvNzLQ//ltaNfmMR5C5mtm0sWTdw8hGe4rhk961Cw5A=
 github.com/couchbase/gocbcore/v9 v9.1.7/go.mod h1:jOSQeBSECyNvD7aS4lfuaw+pD5t6ciTOf8hrDP/4Nus=
 github.com/couchbase/moss v0.1.0/go.mod h1:9MaHIaRuy9pvLPUJxB8sh8OrLfyDczECVL37grCIubs=
