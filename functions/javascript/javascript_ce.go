@@ -38,14 +38,13 @@ func (this *javascriptBody) Body(object map[string]interface{}) {
 }
 
 //ditto
-func (this *javascriptBody) SetVars(vars []string) {
+func (this *javascriptBody) SetVarNames(vars []string) errors.Error {
+}
+
+func (this *javascriptBody) SetStorage(context functions.Context, path []string) {
+	// noop
 }
 
 func (this *javascriptBody) Indexable() value.Tristate {
 	return value.FALSE
-}
-
-// ditto, for tests
-func MakeJavascript(name functions.FunctionName, body []byte) (functions.FunctionBody, errors.Error) {
-	return nil, errors.NewFunctionsNotSupported("javascript")
 }

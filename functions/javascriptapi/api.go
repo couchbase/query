@@ -36,6 +36,7 @@ type Context interface {
 	OpenStatement(statement string, namedArgs map[string]interface{}, positionalArgs []interface{}) (interface{}, error)
 	Log(fmt string, args ...interface{})
 	NestingLevel() int
+	StorageContext() string
 }
 
 type Handle interface {

@@ -206,6 +206,7 @@ type Context struct {
 	result              func(context *Context, item value.AnnotatedValue) bool
 	likeRegexMap        map[*expression.Like]*expression.LikeRegex
 	udfValueMap         *sync.Map
+	tracked             bool
 }
 
 func NewContext(requestId string, datastore datastore.Datastore, systemstore datastore.Systemstore,
@@ -1123,6 +1124,14 @@ func (this *Context) SetAdvisor() {
 
 func (this *Context) IsAdvisor() bool {
 	return (this.flags & CONTEXT_IS_ADVISOR) != 0
+}
+
+func (this *Context) SetTracked(t bool) {
+	this.tracked = t
+}
+
+func (this *Context) IsTracked() bool {
+	return this.tracked
 }
 
 // Return the cached regex for the input operator only if the like pattern is unchanged

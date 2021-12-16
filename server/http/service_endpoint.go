@@ -339,6 +339,7 @@ func (this *HttpEndpoint) ServeHTTP(resp http.ResponseWriter, req *http.Request)
 		userName := datastore.CredsStringHTTP(request.Credentials())
 		this.usersLock.Lock()
 		user := this.trackedUsers[userName]
+		request.SetTracked()
 		if user == nil {
 			user = &userMetrics{
 				uuid:           datastore.GetUserUUID(request.Credentials()),

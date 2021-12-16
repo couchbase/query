@@ -172,6 +172,8 @@ type Request interface {
 	IsAdHoc() bool
 	SetErrorLimit(limit int)
 	GetErrorLimit() int
+	SetTracked()
+	Tracked() bool
 
 	setSleep() // internal methods for load control
 	sleep()
@@ -335,6 +337,7 @@ type BaseRequest struct {
 	resultCount          int64
 	resultSize           int64
 	serviceDuration      time.Duration
+	tracked              bool
 }
 
 type requestIDImpl struct {
@@ -1072,6 +1075,14 @@ func (this *BaseRequest) SetExecutionContext(ctx *execution.Context) {
 
 func (this *BaseRequest) ExecutionContext() *execution.Context {
 	return this.executionContext
+}
+
+func (this *BaseRequest) SetTracked() {
+	this.tracked = true
+}
+
+func (this *BaseRequest) Tracked() bool {
+	return this.tracked
 }
 
 func (this *BaseRequest) Results() chan bool {

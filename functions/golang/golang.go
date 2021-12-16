@@ -90,7 +90,7 @@ func (this *golang) Execute(name functions.FunctionName, body functions.Function
 		args = value.NewValue(values)
 	}
 
-	val, err = udf(args, functions.NewUdfContext(context))
+	val, err = udf(args, functions.NewUdfContext(context, ""))
 	if err != nil {
 		return nil, funcBody.execError(err, funcName)
 	} else {
@@ -113,6 +113,10 @@ func NewGolangBody(library, object string) (functions.FunctionBody, errors.Error
 func (this *golangBody) SetVarNames(vars []string) errors.Error {
 	this.varNames = vars
 	return nil
+}
+
+func (this *golangBody) SetStorage(context functions.Context, path []string) {
+	// noop
 }
 
 func (this *golangBody) Lang() functions.Language {

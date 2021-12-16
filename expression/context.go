@@ -47,6 +47,8 @@ type Context interface {
 	}, error)
 	Parse(s string) (interface{}, error)
 	Infer(value.Value, value.Value) (value.Value, error)
+	SetTracked(bool)
+	IsTracked() bool
 }
 
 type ExecutionHandle interface {

@@ -58,6 +58,7 @@ type FunctionName interface {
 type FunctionBody interface {
 	Lang() Language
 	SetVarNames(vars []string) errors.Error
+	SetStorage(Context, []string)
 	Body(object map[string]interface{})
 	Indexable() value.Tristate
 	SwitchContext() value.Tristate
@@ -576,6 +577,9 @@ func (this *missing) Privileges() (*auth.Privileges, errors.Error) {
 
 func (this *missing) SetVarNames(vars []string) errors.Error {
 	return nil
+}
+
+func (this *missing) SetStorage(context Context, path []string) {
 }
 
 func (this *missing) Execute(name FunctionName, body FunctionBody, modifiers Modifier, values []value.Value, context Context) (value.Value, errors.Error) {

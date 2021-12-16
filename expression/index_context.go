@@ -126,3 +126,11 @@ func (this *IndexContext) RetrieveValue(key string) interface{} {
 func (this *IndexContext) ReleaseValue(key string) {
 	// no-op
 }
+
+func (this *IndexContext) SetTracked(t bool) {
+	// no-op
+}
+
+func (this *IndexContext) IsTracked() bool {
+	return false
+}

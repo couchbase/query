@@ -37,6 +37,7 @@ type javascriptBody struct {
 	varNames []string
 	library  string
 	object   string
+	path     string
 }
 
 var enabled = true
@@ -107,7 +108,6 @@ func (this *javascript) Execute(name functions.FunctionName, body functions.Func
 		args = append(args, values[i].Actual())
 	}
 
-	// FIXME context
 	// the runners take timeouts in milliseconds
 	timeout := int(context.GetTimeout().Milliseconds())
 	if timeout == 0 || timeout > _MAX_TIMEOUT {
@@ -124,7 +124,7 @@ func (this *javascript) Execute(name functions.FunctionName, body functions.Func
 	if levels > 1 && levels > int(threads-runners) {
 		return nil, errors.NewFunctionExecutionNestedError(levels, funcName)
 	}
-	res, err := evaluator.Evaluate(funcBody.library, funcBody.object, opts, args, functions.NewUdfContext(context))
+	res, err := evaluator.Evaluate(funcBody.library, funcBody.object, opts, args, functions.NewUdfContext(context, funcBody.path))
 	if err.Err != nil {
 		return nil, funcBody.execError(err, funcName)
 	} else {
@@ -142,15 +142,28 @@ func (this *javascriptBody) execError(err defs.Error, name string) errors.Error 
 }
 
 func NewJavascriptBody(library, object string) (functions.FunctionBody, errors.Error) {
+	return NewJavascriptBodyWithPath(library, object, "")
+}
+
+func NewJavascriptBodyWithPath(library, object, path string) (functions.FunctionBody, errors.Error) {
 	if !enabled {
 		return nil, errors.NewFunctionsDisabledError("javascript")
 	}
-	return &javascriptBody{library: library, object: object}, nil
+	return &javascriptBody{library: library, object: object, path: path}, nil
 }
 
 func (this *javascriptBody) SetVarNames(vars []string) errors.Error {
 	this.varNames = vars
 	return nil
+}
+
+func (this *javascriptBody) SetStorage(context functions.Context, path []string) {
+	this.path = ""
+	if context.IsTracked() && len(path) == 4 {
+
+		// TODO set path as per jsevauator requirements
+		this.path = path[0] + ":" + path[1] + "." + path[2]
+	}
 }
 
 func (this *javascriptBody) Lang() functions.Language {
@@ -167,6 +180,9 @@ func (this *javascriptBody) Body(object map[string]interface{}) {
 			vars[v] = value.NewValue(this.varNames[v])
 		}
 		object["parameters"] = vars
+	}
+	if this.path != "" {
+		object["path"] = this.path
 	}
 }
 

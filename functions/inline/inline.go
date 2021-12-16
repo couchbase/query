@@ -105,6 +105,10 @@ func (this *inlineBody) SetVarNames(vars []string) errors.Error {
 	return nil
 }
 
+func (this *inlineBody) SetStorage(context functions.Context, path []string) {
+	// noop
+}
+
 func (this *inlineBody) Lang() functions.Language {
 	return functions.INLINE
 }

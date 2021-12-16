@@ -15,6 +15,7 @@ import (
 
 type UdfContext struct {
 	context Context
+	path    string
 }
 
 type UdfHandle struct {
@@ -25,8 +26,8 @@ type UdfHandle struct {
 	}
 }
 
-func NewUdfContext(context Context) *UdfContext {
-	return &UdfContext{context}
+func NewUdfContext(context Context, path string) *UdfContext {
+	return &UdfContext{context, path}
 }
 
 func (this *UdfContext) NewValue(val interface{}) interface{} {
@@ -112,6 +113,10 @@ func (this *UdfContext) Log(fmt string, args ...interface{}) {
 
 func (this *UdfContext) NestingLevel() int {
 	return this.context.RecursionCount()
+}
+
+func (this *UdfContext) StorageContext() string {
+	return this.path
 }
 
 func (this *UdfHandle) Results() (interface{}, uint64, error) {

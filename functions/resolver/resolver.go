@@ -131,6 +131,7 @@ func MakeBody(name string, bytes []byte) (functions.FunctionBody, errors.Error) 
 			Parameters []string `json:"parameters"`
 			Library    string   `json:"library"`
 			Object     string   `json:"object"`
+			Path       string   `json:"path"`
 		}
 		err := json.Unmarshal(bytes, &_unmarshalled)
 		if err != nil {
@@ -139,7 +140,7 @@ func MakeBody(name string, bytes []byte) (functions.FunctionBody, errors.Error) 
 		if _unmarshalled.Object == "" || _unmarshalled.Library == "" {
 			return nil, errors.NewFunctionEncodingError("decode body", name, go_errors.New("object is missing"))
 		}
-		body, newErr := javascript.NewJavascriptBody(_unmarshalled.Library, _unmarshalled.Object)
+		body, newErr := javascript.NewJavascriptBodyWithPath(_unmarshalled.Library, _unmarshalled.Object, _unmarshalled.Path)
 		if body != nil {
 			newErr = body.SetVarNames(_unmarshalled.Parameters)
 		}

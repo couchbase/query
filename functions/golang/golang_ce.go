@@ -37,14 +37,14 @@ func (this *golangBody) Body(object map[string]interface{}) {
 }
 
 //ditto
-func (this *golangBody) SetVars(vars []string) {
+func (this *golangBody) SetVarNames(vars []string) errors.Error {
+	return nil
+}
+
+func (this *golangBody) SetStorage(context functions.Context, path []string) {
+	// noop
 }
 
 func (this *golangBody) Indexable() value.Tristate {
 	return value.FALSE
-}
-
-// ditto, for tests
-func MakeGolang(name functions.FunctionName, body []byte) (functions.FunctionBody, errors.Error) {
-	return nil, errors.NewFunctionsNotSupported("golang")
 }
