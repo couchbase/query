@@ -127,18 +127,24 @@ func (this *internalOutput) SetTransactionStartTime(t time.Time) {
 
 func (this *Context) EvaluateStatement(statement string, namedArgs map[string]value.Value, positionalArgs value.Values,
 	subquery, readonly bool) (value.Value, uint64, error) {
-	stmt, prepared, isPrepared, err := this.PrepareStatement(statement, namedArgs, positionalArgs, subquery, readonly, false)
+	newContext := this.Copy()
+	txContext := this.TxContext()
+	if txContext != nil {
+		newContext.SetDeltaKeyspaces(this.DeltaKeyspaces())
+		atrCollection, numAtrs := this.AtrCollection()
+		newContext.SetTransactionContext("", false, txContext.TxTimeout(), txContext.TxTimeout(), atrCollection, numAtrs, []byte{})
+	}
+	stmt, prepared, isPrepared, err := newContext.PrepareStatement(statement, namedArgs, positionalArgs, subquery, readonly, false)
 	if err != nil {
 		return nil, 0, err
 	}
 
-	newContext := this.Copy()
 	namedArgs, positionalArgs, err = newContext.handleUsing(stmt, namedArgs, positionalArgs)
 	if err != nil {
 		return nil, 0, err
 	}
 	rv, mutations, err := newContext.ExecutePrepared(prepared, isPrepared, namedArgs, positionalArgs)
-	newErr := newContext.completeStatement(prepared.Type(), err == nil, this)
+	newErr := newContext.completeStatement(stmt.Type(), err == nil, this)
 	if newErr != nil {
 		err = newErr
 	}
@@ -146,12 +152,19 @@ func (this *Context) EvaluateStatement(statement string, namedArgs map[string]va
 }
 
 func (this *Context) completeStatement(stmtType string, success bool, baseContext *Context) errors.Error {
-	if newErr := this.DoStatementComplete(stmtType, success); newErr != nil {
+	newErr, txDone := this.DoStatementComplete(stmtType, success)
+	if newErr != nil {
+		baseContext.SetTxContext(nil)
 		return newErr
-	} else if this.TxContext() != nil && baseContext.TxContext() == nil {
+	}
+	if this.TxContext() != nil && baseContext.TxContext() == nil {
 		baseContext.SetTxContext(this.TxContext())
 		baseContext.output.SetTransactionStartTime(this.TxContext().TxStartTime())
 		baseContext.SetTxTimeout(this.TxContext().TxTimeout())
+		baseContext.SetAtrCollection(this.AtrCollection())
+		baseContext.SetDeltaKeyspaces(this.DeltaKeyspaces())
+	} else if txDone {
+		baseContext.SetTxContext(nil)
 	}
 	return nil
 }
@@ -162,17 +175,23 @@ func (this *Context) OpenStatement(statement string, namedArgs map[string]value.
 	NextDocument() (value.Value, error)
 	Cancel()
 }, error) {
-	stmt, prepared, isPrepared, err := this.PrepareStatement(statement, namedArgs, positionalArgs, subquery, readonly, false)
+	newContext := this.Copy()
+	txContext := this.TxContext()
+	if txContext != nil {
+		newContext.SetDeltaKeyspaces(this.DeltaKeyspaces())
+		atrCollection, numAtrs := this.AtrCollection()
+		newContext.SetTransactionContext("", false, txContext.TxTimeout(), txContext.TxTimeout(), atrCollection, numAtrs, []byte{})
+	}
+	stmt, prepared, isPrepared, err := newContext.PrepareStatement(statement, namedArgs, positionalArgs, subquery, readonly, false)
 	if err != nil {
 		return nil, err
 	}
 
-	newContext := this.Copy()
 	namedArgs, positionalArgs, err = newContext.handleUsing(stmt, namedArgs, positionalArgs)
 	if err != nil {
 		return nil, err
 	}
-	rv, err := newContext.OpenPrepared(prepared, isPrepared, namedArgs, positionalArgs)
+	rv, err := newContext.OpenPrepared(stmt.Type(), prepared, isPrepared, namedArgs, positionalArgs)
 	if rv != nil {
 		h := rv.(*executionHandle)
 		h.baseContext = this
@@ -404,7 +423,7 @@ func (this *Context) ExecutePrepared(prepared *plan.Prepared, isPrepared bool,
 	return results, output.mutationCount, output.err
 }
 
-func (this *Context) OpenPrepared(prepared *plan.Prepared, isPrepared bool,
+func (this *Context) OpenPrepared(stmtType string, prepared *plan.Prepared, isPrepared bool,
 	namedArgs map[string]value.Value, positionalArgs value.Values) (interface {
 	Results() (interface{}, uint64, error)
 	NextDocument() (value.Value, error)
@@ -436,7 +455,7 @@ func (this *Context) OpenPrepared(prepared *plan.Prepared, isPrepared bool,
 		handle.root = NewSequence(plan.NewSequence(), this, pipeline, handle.input)
 	}
 
-	handle.stmtType = prepared.Type()
+	handle.stmtType = stmtType
 	handle.exec = util.Now()
 	handle.root.RunOnce(handle.context, nil)
 	return handle, nil
@@ -604,7 +623,8 @@ func (this *Context) ExecuteTranStatement(stmtType string, stmtAtomicity bool) (
 	return txId, nil, nil
 }
 
-func (this *Context) DoStatementComplete(stmtType string, success bool) (err errors.Error) {
+func (this *Context) DoStatementComplete(stmtType string, success bool) (err errors.Error, done bool) {
+	done = false
 	if this.txContext == nil {
 		return
 	}
@@ -618,6 +638,7 @@ func (this *Context) DoStatementComplete(stmtType string, success bool) (err err
 		if this.txContext != nil {
 			if stmtType != "START_TRANSACTION" || !success {
 				transactions.DeleteTransContext(this.txContext.TxId(), false)
+				done = true
 			}
 		}
 

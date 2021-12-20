@@ -976,17 +976,17 @@ func (this *Server) serviceRequest(request Request) {
 	request.Servicing()
 
 	context := request.ExecutionContext()
+	atrCollection := this.AtrCollection()
+	if request.AtrCollection() != "" {
+		atrCollection = request.AtrCollection()
+	}
+	numAtrs := this.NumAtrs()
+	if request.NumAtrs() > 0 {
+		numAtrs = request.NumAtrs()
+	}
 	if request.TxId() != "" {
 		err := context.TxContext().TxValid()
 		if err == nil {
-			atrCollection := this.AtrCollection()
-			if request.AtrCollection() != "" {
-				atrCollection = request.AtrCollection()
-			}
-			numAtrs := this.NumAtrs()
-			if request.NumAtrs() > 0 {
-				numAtrs = request.NumAtrs()
-			}
 			err = context.SetTransactionContext(request.Type(), request.TxImplicit(),
 				request.TxTimeout(), this.TxTimeout(), atrCollection, numAtrs,
 				request.TxData())
@@ -1000,6 +1000,10 @@ func (this *Server) serviceRequest(request Request) {
 	} else if request.TxImplicit() {
 		context.SetDeltaKeyspaces(make(map[string]bool, 1))
 	} else {
+
+		// set tup atr collection for possible UDF execution
+		context.SetAtrCollection(atrCollection, numAtrs)
+
 		// only enable error limits for non-transactional requests
 		if request.GetErrorLimit() == -1 {
 			request.SetErrorLimit(this.RequestErrorLimit())

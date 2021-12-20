@@ -165,7 +165,7 @@ func (this *httpRequest) Execute(srvr *server.Server, context *execution.Context
 	}
 
 	success := this.State() == server.COMPLETED && len(this.Errors()) == 0
-	if err := context.DoStatementComplete(reqType, success); err != nil {
+	if err, _ := context.DoStatementComplete(reqType, success); err != nil {
 		this.Error(err)
 	} else if context.TxContext() != nil && startTx {
 		this.SetTransactionStartTime(context.TxContext().TxStartTime())

@@ -802,6 +802,15 @@ func (this *Context) SetTransactionContext(stmtType string, txImplicit bool, rTx
 	return nil
 }
 
+func (this *Context) SetAtrCollection(atrCollection string, numAtrs int) {
+	this.atrCollection = atrCollection
+	this.numAtrs = numAtrs
+}
+
+func (this *Context) AtrCollection() (string, int) {
+	return this.atrCollection, this.numAtrs
+}
+
 func (this *Context) TxExpired() bool {
 	return this.txContext != nil && this.txContext.TxExpired()
 }

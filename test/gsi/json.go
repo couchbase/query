@@ -116,7 +116,7 @@ func (this *MockQuery) Execute(srvr *server.Server, context *execution.Context, 
 		<-this.Results()
 	}
 
-	if err := context.DoStatementComplete(reqType, this.response.err == nil); err != nil {
+	if err, _ := context.DoStatementComplete(reqType, this.response.err == nil); err != nil {
 		if this.response.err == nil {
 			this.response.err = err
 		}
