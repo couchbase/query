@@ -62,6 +62,8 @@ func Init(mux *mux.Router, t int) {
 	config[defs.Threads] = t
 	config[defs.FeatureBitmask] = uint32(8)
 	config[defs.IsIpV6] = false
+	config[defs.GlobalManagePermission] = "cluster.n1ql.udf_external!manage"
+	config[defs.ScopeManagePermission] = "cluster.collection[%s].n1ql.udf_external!manage"
 	threads = int32(t)
 
 	err := engine.Configure(config)
