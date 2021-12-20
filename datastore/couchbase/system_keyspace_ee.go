@@ -20,6 +20,7 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	cb "github.com/couchbase/query/primitives/couchbase"
+	"github.com/couchbase/query/value"
 )
 
 const (
@@ -161,9 +162,72 @@ func (s *store) CreateSystemCBOStats(requestId string) errors.Error {
 			return er
 		}
 
-		_, er = indexer3.CreatePrimaryIndex3(requestId, _CBO_STATS_PRIMARY_INDEX, nil, nil)
+		// get number of index nodes in the cluster, and create the primary index
+		// with replicas in the following fashion:
+		//    numIndexNode >= 4    ==> num_replica = 2
+		//    numIndexNode >  1    ==> num_replica = 1
+		//    numIndexNode == 1    ==> no replica
+		numIndexNode, errs := s.getNumIndexNode()
+		if len(errs) > 0 {
+			return errs[0]
+		}
+
+		var with value.Value
+		var replica map[string]interface{}
+		num_replica := 0
+		if numIndexNode >= 4 {
+			num_replica = 2
+		} else if numIndexNode > 1 {
+			num_replica = 1
+		}
+		if num_replica > 0 {
+			replica = make(map[string]interface{}, 1)
+			replica["num_replica"] = num_replica
+			with = value.NewValue(replica)
+		}
+
+		_, er = indexer3.CreatePrimaryIndex3(requestId, _CBO_STATS_PRIMARY_INDEX, nil, with)
 		if er != nil {
-			return er
+			// if the create failed due to not enough indexer nodes, retry with
+			// less number of replica
+			for num_replica > 0 {
+				// defined as ErrNotEnoughIndexers in indexing/secondary/common/const.go
+				if !er.ContainsText("not enough indexer nodes to create index with replica") {
+					return er
+				}
+
+				num_replica--
+				if num_replica == 0 {
+					with = nil
+				} else {
+					replica["num_replica"] = num_replica
+					with = value.NewValue(replica)
+				}
+
+				// retry with less number of replica
+				_, er = indexer3.CreatePrimaryIndex3(requestId, _CBO_STATS_PRIMARY_INDEX, nil, with)
+				if er == nil {
+					break
+				}
+			}
+			if er != nil {
+				return er
+			}
+		}
+
+		var sysIndex datastore.Index
+		maxRetry := 8
+		interval := 250 * time.Millisecond
+		for i := 0; i < maxRetry; i++ {
+			time.Sleep(interval)
+			interval *= 2
+
+			sysIndex, er = indexer3.IndexByName(_CBO_STATS_PRIMARY_INDEX)
+			if sysIndex != nil {
+				break
+			} else if er != nil && er.Code() != 12016 {
+				return er
+			}
 		}
 	}
 
@@ -196,4 +260,35 @@ func (s *store) HasSystemCBOStats() (bool, errors.Error) {
 
 func (s *store) GetSystemCBOStats() (datastore.Keyspace, errors.Error) {
 	return datastore.GetKeyspace("default", _N1QL_SYSTEM_BUCKET, _N1QL_SYSTEM_SCOPE, _N1QL_CBO_STATS)
+}
+
+func (s *store) getNumIndexNode() (int, errors.Errors) {
+	info := s.Info()
+	nodes, errs := info.Topology()
+	if len(errs) > 0 {
+		return 0, errs
+	}
+
+	numIndexNode := 0
+	for _, node := range nodes {
+		nodeServices, errs := info.Services(node)
+		if len(errs) > 0 {
+			return 0, errs
+		}
+		// the nodeServices should have an element named "services" which is
+		// an array of service names on that node, e.g. ["n1ql", "kv", "index"]
+		if services, ok := nodeServices["services"]; ok {
+			if serviceArr, ok := services.([]interface{}); ok {
+				for _, serv := range serviceArr {
+					if name, ok := serv.(string); ok {
+						if name == "index" {
+							numIndexNode++
+						}
+					}
+				}
+			}
+		}
+	}
+
+	return numIndexNode, nil
 }
