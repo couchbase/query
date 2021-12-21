@@ -491,6 +491,7 @@ func (s *store) SetConnectionSecurityConfig(connSecConfig *datastore.ConnectionS
 
 	// Implementation based on SetLogLevel(), above.
 	for _, n := range s.namespaceCache {
+		n.refresh()
 		n.lock.Lock()
 		for _, k := range n.keyspaceCache {
 			if k.cbKeyspace == nil {
