@@ -62,6 +62,12 @@ func (this *IntersectScan) New() Operator {
 	return &IntersectScan{}
 }
 
+// AllScan means no early termination
+func (this *IntersectScan) AllScan() bool {
+	// if intersect scan is chosen by cost, then do not do early termination
+	return this.cost > 0.0 && this.cardinality > 0.0 && this.size > 0 && this.frCost > 0.0
+}
+
 func (this *IntersectScan) Covers() expression.Covers {
 	if this.Covering() {
 		return this.scans[0].Covers()

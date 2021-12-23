@@ -113,6 +113,10 @@ func (this *IntersectScan) RunOnce(context *Context, parent value.Value) {
 		n := len(this.scans)
 		nscans := len(this.scans)
 		childBits := int64(0)
+		allScan := this.plan.AllScan()
+		if allScan {
+			childBits = fullBits
+		}
 		stopped := false
 		ok := true
 
@@ -123,7 +127,7 @@ func (this *IntersectScan) RunOnce(context *Context, parent value.Value) {
 				if childBit >= 0 {
 
 					// MB-22321 terminate when first child terminates
-					if n == nscans {
+					if !allScan && n == nscans {
 						sendChildren(this.plan, this.scans...)
 						childBits |= int64(0x01) << uint(childBit)
 					}

@@ -120,6 +120,10 @@ func (this *OrderedIntersectScan) RunOnce(context *Context, parent value.Value) 
 		n := len(this.scans)
 		nscans := len(this.scans)
 		childBits := int64(0)
+		allScan := this.plan.AllScan()
+		if allScan {
+			childBits = fullBits
+		}
 		firstStopped := false
 		needProcessing := -1
 		stopped := false
@@ -132,7 +136,7 @@ func (this *OrderedIntersectScan) RunOnce(context *Context, parent value.Value) 
 				if childBit >= 0 {
 
 					// MB-22321 we stop when the first scan finishes
-					if childBit == 0 || n == nscans {
+					if !allScan && (childBit == 0 || n == nscans) {
 						if nscans > 1 {
 							sendChildren(this.plan, this.scans[1:]...)
 						}
@@ -172,7 +176,9 @@ func (this *OrderedIntersectScan) RunOnce(context *Context, parent value.Value) 
 							firstStopped = true
 						}
 						if limit > 0 && this.fullCount >= limit {
-							childBits |= int64(0x01)
+							if !allScan {
+								childBits |= int64(0x01)
+							}
 							break loop
 						}
 					}
