@@ -80,20 +80,21 @@ func indexScanCost(index datastore.Index, sargKeys expression.Expressions, reque
 	case *TermSpans:
 		return optutil.CalcIndexScanCost(index, sargKeys, requestId, spans.spans, alias, advisorValidate, context)
 	case *IntersectSpans:
-		return multiIndexCost(index, sargKeys, requestId, spans.spans, alias, false, advisorValidate, context)
+		return intersectSpansCost(index, sargKeys, requestId, spans, alias, advisorValidate, context)
 	case *UnionSpans:
-		return multiIndexCost(index, sargKeys, requestId, spans.spans, alias, true, advisorValidate, context)
+		return unionSpansCost(index, sargKeys, requestId, spans, alias, advisorValidate, context)
 	}
 
 	return OPT_COST_NOT_AVAIL, OPT_SELEC_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, errors.NewPlanInternalError("indexScanCost: unexpected span type")
 }
 
-func multiIndexCost(index datastore.Index, sargKeys expression.Expressions, requestId string,
-	spans []SargSpans, alias string, union, advisorValidate bool, context *PrepareContext) (
+func unionSpansCost(index datastore.Index, sargKeys expression.Expressions, requestId string,
+	unionSpan *UnionSpans, alias string, advisorValidate bool, context *PrepareContext) (
 	float64, float64, float64, int64, float64, error) {
+
 	var cost, sel, frCost, nrows float64
 	var size int64
-	for i, span := range spans {
+	for i, span := range unionSpan.spans {
 		tcost, tsel, tcard, tsize, tfrCost, e := indexScanCost(index, sargKeys, requestId, span, alias, advisorValidate, context)
 		if e != nil {
 			return tcost, tsel, tcard, tsize, tfrCost, e
@@ -107,17 +108,65 @@ func multiIndexCost(index datastore.Index, sargKeys expression.Expressions, requ
 			size = tsize
 		} else {
 			tsel = tsel * (tnrows / nrows)
-			if union {
-				sel = sel + tsel - (sel * tsel)
-			} else {
-				sel = sel * tsel
-			}
+			sel = sel + tsel - (sel * tsel)
 			if tsize > size {
 				size = tsize
 			}
 		}
 	}
 
+	return cost, sel, (sel * nrows), size, frCost, nil
+}
+
+func intersectSpansCost(index datastore.Index, sargKeys expression.Expressions, requestId string,
+	intersectSpan *IntersectSpans, alias string, advisorValidate bool, context *PrepareContext) (
+	float64, float64, float64, int64, float64, error) {
+
+	spanMap := make(map[*base.IndexCost]SargSpans, len(intersectSpan.spans))
+	indexes := make([]*base.IndexCost, 0, len(intersectSpan.spans))
+	for _, span := range intersectSpan.spans {
+		skipKeys := make([]bool, len(sargKeys))
+		tcost, tsel, tcard, tsize, tfrCost, e := indexScanCost(index, sargKeys, requestId, span, alias, advisorValidate, context)
+		if e != nil {
+			return tcost, tsel, tcard, tsize, tfrCost, e
+		}
+		icost := base.NewIndexCost(index, tcost, tcard, tsel, tsize, tfrCost, skipKeys)
+		indexes = append(indexes, icost)
+		spanMap[icost] = span
+	}
+
+	indexes = optutil.ChooseIntersectScan(datastore.IndexQualifiedKeyspacePath(index), indexes)
+
+	var cost, sel, frCost, nrows float64
+	var size int64
+	newSpans := make([]SargSpans, 0, len(indexes))
+	for i, ic := range indexes {
+		tcost := ic.Cost()
+		tcard := ic.Cardinality()
+		tsize := ic.Size()
+		tfrCost := ic.FrCost()
+		tsel := ic.Selectivity()
+		cost += tcost
+		tnrows := tcard / tsel
+		if i == 0 {
+			sel = tsel
+			nrows = tnrows
+			frCost = tfrCost
+			size = tsize
+		} else {
+			tsel = tsel * (tnrows / nrows)
+			sel = sel * tsel
+			if tsize > size {
+				size = tsize
+			}
+		}
+		if span, ok := spanMap[ic]; ok {
+			newSpans = append(newSpans, span)
+		} else {
+			return OPT_COST_NOT_AVAIL, OPT_SELEC_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, errors.NewPlanInternalError("intersectSpansCost: map corrupted")
+		}
+	}
+	intersectSpan.spans = newSpans
 	return cost, sel, (sel * nrows), size, frCost, nil
 }
 
@@ -175,7 +224,10 @@ func getKeyScanCost(keys expression.Expression) (float64, float64, int64, float6
 }
 
 func getFetchCost(keyspace datastore.Keyspace, cardinality float64) (float64, int64, float64) {
-	return optutil.CalcFetchCost(keyspace, cardinality)
+	if keyspace == nil {
+		return OPT_COST_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL
+	}
+	return optutil.CalcFetchCost(keyspace.QualifiedName(), cardinality)
 }
 
 func getDistinctScanCost(index datastore.Index, cardinality float64) (float64, float64, float64) {
@@ -299,6 +351,10 @@ func getUnnestPredSelec(pred expression.Expression, variable string, mapping exp
 func optChooseIntersectScan(keyspace datastore.Keyspace, sargables map[datastore.Index]*indexEntry,
 	nTerms int, alias string, advisorValidate bool, context *PrepareContext) map[datastore.Index]*indexEntry {
 
+	if keyspace == nil {
+		return sargables
+	}
+
 	indexes := make([]*base.IndexCost, 0, len(sargables))
 
 	hasOrder := false
@@ -331,7 +387,7 @@ func optChooseIntersectScan(keyspace datastore.Keyspace, sargables map[datastore
 
 	adjustIndexSelectivity(indexes, sargables, alias, advisorValidate, context)
 
-	indexes = optutil.ChooseIntersectScan(keyspace, indexes)
+	indexes = optutil.ChooseIntersectScan(keyspace.QualifiedName(), indexes)
 
 	newSargables := make(map[datastore.Index]*indexEntry, len(indexes))
 	for _, idx := range indexes {
