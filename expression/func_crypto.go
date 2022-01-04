@@ -106,6 +106,9 @@ func (this *Hashbytes) Evaluate(item value.Value, context Context) (value.Value,
 
 	if arg.Type() == value.BINARY {
 		d = arg.Actual().([]byte)
+	} else if arg.Type() == value.STRING {
+		// special case for string so as to not include the quotes found in the JSON marshalled value
+		d = []byte(arg.ToString())
 	} else {
 		// hash the JSON representation of non-binary values
 		d, err = arg.MarshalJSON()

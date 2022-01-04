@@ -3,7 +3,7 @@
         "statements": "select hashbytes(\"Hello world\")",
         "results": [
             {
-                "$1": "b58f34e73579dcfb700daacadd50fa7503f1e4c6c881cb4d720fe84a57be306d"
+                "$1": "64ec88ca00b268e5ba1a35678a1b5316d212f4f366b2477232534a8aeca37f3c"
             }
         ]
     },
@@ -11,7 +11,7 @@
         "statements":"select hashbytes(\"Hello world\",{\"algorithm\":\"crc32\"})",
         "results": [
             {
-                "$1": "250f367c"
+                "$1": "8bd69e52"
             }
         ]
     },
@@ -19,7 +19,7 @@
         "statements":"select hashbytes(\"Hello world\",\"crc32\")",
         "results": [
             {
-                "$1": "250f367c"
+                "$1": "8bd69e52"
             }
         ]
     },
@@ -27,7 +27,7 @@
         "statements":"select hashbytes(\"Hello world\",{\"algorithm\":\"crc32\",\"polynomial\":\"IEEE\"})",
         "results": [
             {
-                "$1": "250f367c"
+                "$1": "8bd69e52"
             }
         ]
     },
@@ -35,7 +35,7 @@
         "statements":"select hashbytes(\"Hello world\",{\"algorithm\":\"crc32\",\"polynomial\":\"Castagnoli\"})",
         "results": [
             {
-                "$1": "98794e50"
+                "$1": "72b51f78"
             }
         ]
     },
@@ -43,7 +43,7 @@
         "statements":"select hashbytes(\"Hello world\",{\"algorithm\":\"crc32\",\"polynomial\":\"Koopman\"})",
         "results": [
             {
-                "$1": "0649da7b"
+                "$1": "b1bcb065"
             }
         ]
     },
@@ -51,7 +51,7 @@
         "statements":"select hashbytes(\"Hello world\",{\"algorithm\":\"crc32\",\"polynomial\":\"0xD5828281\"})",
         "results": [
             {
-                "$1": "a1dd72d9"
+                "$1": "2964d064"
             }
         ]
     },
@@ -59,7 +59,7 @@
         "statements":"select hashbytes(\"Hello world\",{\"algorithm\":\"crc32\",\"polynomial\":2197175160})",
         "results": [
             {
-                "$1": "98794e50"
+                "$1": "72b51f78"
             }
         ]
     },
@@ -67,7 +67,7 @@
         "statements":"select hashbytes(\"Hello world\",{\"algorithm\":\"md4\"})",
         "results": [
             {
-                "$1": "49091234899a7c0840aa03499b1e4ee1"
+                "$1": "2f34e7edc8180b87578159ff58e87c1a"
             }
         ]
     },
@@ -75,7 +75,7 @@
         "statements":"select hashbytes(\"Hello world\",{\"algorithm\":\"md5\"})",
         "results": [
             {
-                "$1": "ca74e8418fcd3ef2e5d34857baf7b3cb"
+                "$1": "3e25960a79dbc69b674cd4ec67a72c62"
             }
         ]
     },
@@ -83,7 +83,7 @@
         "statements":"select hashbytes(\"Hello world\",\"md5\")",
         "results": [
             {
-                "$1": "ca74e8418fcd3ef2e5d34857baf7b3cb"
+                "$1": "3e25960a79dbc69b674cd4ec67a72c62"
             }
         ]
     },
@@ -91,7 +91,7 @@
         "statements":"select hashbytes(\"Hello world\",{\"algorithm\":\"sha224\"})",
         "results": [
             {
-                "$1": "24925bd095e41f70377e459c4e5dbb925755a251e5c80f5dea4b188b"
+                "$1": "ac230f15fcae7f77d8f76e99adf45864a1c6f800655da78dea956112"
             }
         ]
     },
@@ -99,7 +99,7 @@
         "statements":"select hashbytes(\"Hello world\",{\"algorithm\":\"sha256\"})",
         "results": [
             {
-                "$1": "b58f34e73579dcfb700daacadd50fa7503f1e4c6c881cb4d720fe84a57be306d"
+                "$1": "64ec88ca00b268e5ba1a35678a1b5316d212f4f366b2477232534a8aeca37f3c"
             }
         ]
     },
@@ -107,7 +107,7 @@
         "statements":"select hashbytes(\"Hello world\",{\"algorithm\":\"sha384\"})",
         "results": [
             {
-                "$1": "5fa8cd00d1840100e5576cd78c6a796cc732117cd5ee22342eeb531cc0a47fb68f39f0a05acb93aa55de906108c109d3"
+                "$1": "9203b0c4439fd1e6ae5878866337b7c532acd6d9260150c80318e8ab8c27ce330189f8df94fb890df1d298ff360627e1"
             }
         ]
     },
@@ -115,7 +115,7 @@
         "statements":"select hashbytes(\"Hello world\",{\"algorithm\":\"sha512\"})",
         "results": [
             {
-                "$1": "8638af8e9a137ecb0249ef9e1672f7ce8cabd053c8c0f33fc74c99d5f27a3751f4abd8b0dda025124d28b68cc8f99fdcc52c8b8d08d6640f5485a3bf48ca9020"
+                "$1": "b7f783baed8297f0db917462184ff4f08e69c2d5e5f79a942600f9725f58ce1f29c18139bf80b06c0fff2bdd34738452ecf40c488c22a7e3d80cdf6f9c1c0d47"
             }
         ]
     },
@@ -123,7 +123,7 @@
         "statements":"select hashbytes(\"Hello world\",{\"algorithm\":\"sha512/224\"})",
         "results": [
             {
-                "$1": "ac00f2111b9b67255cfc0bdeef5f272b28a1ced39233cdad409abdce"
+                "$1": "02a3ae05df05f8ee679c0e4fa25b59342f514f3e4687bc8fe7c51fcc"
             }
         ]
     },
@@ -131,7 +131,7 @@
         "statements":"select hashbytes(\"Hello world\",{\"algorithm\":\"sha512/256\"})",
         "results": [
             {
-                "$1": "035243193fe2536eba29e64a200ba210e12b39e0421c0a1e9ca5ff7e730f502a"
+                "$1": "f7b55872d4aefe68143bd2ebd928b87f769e15362fcd5a1af8da184bbfcb5fa8"
             }
         ]
     },
@@ -170,7 +170,7 @@
         "statements":"select hashbytes(\"Hello world\",{\"invalid\":\"whatever\"})",
         "results": [
             {
-                "$1": "b58f34e73579dcfb700daacadd50fa7503f1e4c6c881cb4d720fe84a57be306d"
+                "$1": "64ec88ca00b268e5ba1a35678a1b5316d212f4f366b2477232534a8aeca37f3c"
             }
         ]
     }
