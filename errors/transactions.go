@@ -10,16 +10,21 @@ package errors
 
 import (
 	"fmt"
+	"strings"
 )
 
 // rewrite errors 17000-17099
+
+func IsTransactionError(e Error) bool {
+	return strings.HasPrefix(e.TranslationKey(), "transaction")
+}
 
 func NewTransactionError(e error, msg string) Error {
 	switch e := e.(type) {
 	case Error: // if given error is already an Error, just return it:
 		return e
 	default:
-		return &err{level: EXCEPTION, ICode: E_TRANSACTION, IKey: "transaction_error", ICause: e,
+		return &err{level: EXCEPTION, ICode: E_TRANSACTION, IKey: "transaction.error", ICause: e,
 			InternalMsg: msg, InternalCaller: CallerN(1)}
 	}
 }
@@ -130,7 +135,7 @@ func NewKeyNotFoundError(k string, c interface{}) Error {
 }
 
 func NewCasMissmatch(op, key string, aCas, eCas uint64) Error {
-	return &err{level: EXCEPTION, ICode: E_CAS_MISSMATCH, IKey: "transaction.statement.keynotfound",
+	return &err{level: EXCEPTION, ICode: E_CAS_MISSMATCH, IKey: "transaction.statement.casmismatch",
 		InternalMsg:    fmt.Sprintf("%s cas (actual:%v, expected:%v) missmatch for key: %v", op, aCas, eCas, key),
 		InternalCaller: CallerN(1)}
 }

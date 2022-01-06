@@ -416,7 +416,11 @@ func (this *httpRequest) writeError(err errors.Error, first bool, prefix, indent
 		m["retry"] = value.ToBool(retry)
 	}
 	if err.Cause() != nil {
-		m["cause"] = err.Cause()
+		if !errors.IsTransactionError(err) {
+			m["reason"] = err.Cause()
+		} else {
+			m["cause"] = err.Cause()
+		}
 	}
 
 	var er error
