@@ -63,11 +63,7 @@ func (this *UnionScan) RunOnce(context *Context, parent value.Value) {
 		defer context.Recover(&this.base) // Recover from any panic
 		active := this.active()
 		this.switchPhase(_EXECTIME)
-		defer func() {
-			this.notify()
-			this.switchPhase(_NOTIME)
-			this.close(context)
-		}()
+		defer this.cleanup(context)
 
 		if !active || !context.assert(len(this.scans) != 0, "Union Scan has no scans") {
 			return

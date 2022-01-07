@@ -58,11 +58,7 @@ func (this *PrimaryScan3) RunOnce(context *Context, parent value.Value) {
 		active := this.active()
 		this.switchPhase(_EXECTIME)
 		this.setExecPhase(PRIMARY_SCAN, context)
-		defer func() {
-			this.notify()
-			this.switchPhase(_NOTIME)
-			this.close(context)
-		}()
+		defer this.cleanup(context)
 		if !active {
 			return
 		}

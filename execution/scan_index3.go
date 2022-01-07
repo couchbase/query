@@ -59,11 +59,7 @@ func (this *IndexScan3) RunOnce(context *Context, parent value.Value) {
 		active := this.active()
 		this.switchPhase(_EXECTIME)
 		this.setExecPhase(INDEX_SCAN, context)
-		defer func() {
-			this.notify()
-			this.switchPhase(_NOTIME)
-			this.close(context)
-		}()
+		defer this.cleanup(context)
 		if !active {
 			return
 		}

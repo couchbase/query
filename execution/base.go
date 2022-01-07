@@ -883,6 +883,10 @@ func (this *base) runConsumer(cons consumer, context *Context, parent value.Valu
 			return
 		}
 		defer func() {
+			err := recover()
+			if err != nil {
+				panic(err)
+			}
 			if active {
 				this.batch = nil
 			}
@@ -1383,6 +1387,16 @@ func (this *base) waitComplete() {
 
 func (this *base) isComplete() bool {
 	return this.opState == _DONE
+}
+
+func (this *base) cleanup(context *Context) {
+	err := recover()
+	if err != nil {
+		panic(err)
+	}
+	this.notify()
+	this.switchPhase(_NOTIME)
+	this.close(context)
 }
 
 // profiling
