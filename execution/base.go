@@ -883,10 +883,12 @@ func (this *base) runConsumer(cons consumer, context *Context, parent value.Valu
 			return
 		}
 		defer func() {
+			if active {
+				this.batch = nil
+			}
 			this.notify()
 			this.switchPhase(_NOTIME)
 			this.close(context)
-			this.batch = nil
 		}()
 		if !active {
 			return
