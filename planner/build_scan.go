@@ -552,11 +552,8 @@ func (this *builder) intersectScanCost(node *algebra.KeyspaceTerm, scans ...plan
 	}
 	docCount := float64(cnt)
 
-	cost := float64(0.0)
-	cardinality := float64(0.0)
-	selec := float64(1.0)
-	size := int64(0)
-	frCost := float64(0.0)
+	var cost, cardinality, frCost, selec float64
+	var size int64
 	for i, scan := range scans {
 		scost := scan.Cost()
 		scardinality := scan.Cardinality()
@@ -567,17 +564,26 @@ func (this *builder) intersectScanCost(node *algebra.KeyspaceTerm, scans ...plan
 			break
 		}
 
-		cost += scost
-		frCost += sfrCost
 		selec1 := scardinality / docCount
 		if selec1 > 1.0 {
 			selec1 = 1.0
 		}
 		if i == 0 {
 			selec = selec1
+			cost = scost
+			frCost = sfrCost
 			size = ssize
 		} else {
 			selec = selec * selec1
+			// index scans under intersect scan execute in parallel at runtime,
+			// thus we take the one with the highest cost as cost instead of adding
+			// all cost, this should be more reflective of execution time of an
+			// intersect scan
+			if scost > cost {
+				cost = scost
+				frCost = sfrCost
+				size = ssize
+			}
 		}
 	}
 
