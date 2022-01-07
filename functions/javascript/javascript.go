@@ -64,6 +64,10 @@ func Init(mux *mux.Router, t int) {
 	config[defs.IsIpV6] = false
 	config[defs.GlobalManagePermission] = "cluster.n1ql.udf_external!manage"
 	config[defs.ScopeManagePermission] = "cluster.collection[%s].n1ql.udf_external!manage"
+	config[defs.SysLogLevel] = 4
+	config[defs.SysLogCallback] = func(level, msg string, ctx interface{}) {
+		logging.Infof("jsevaluator: %s", msg)
+	}
 	threads = int32(t)
 
 	err := engine.Configure(config)
