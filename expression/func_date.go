@@ -2782,7 +2782,7 @@ func strToTime(s string, format string) (time.Time, error) {
 // find one of the standard formats that parses the format string (which is an example) and use it
 func strToTimeExampleFormat(s string, format string) (time.Time, error) {
 	var t time.Time
-	_, f, err := strToTimeFormatClosest(format, true)
+	_, f, err := strToTimeFormatClosest(format)
 	if err != nil {
 		return t, err
 	}
@@ -3696,13 +3696,14 @@ func strToTimeTryAllDefaultFormats(s string) (time.Time, error) {
 			}
 		}
 	}
-	// only check formats we've not checked above
-	for _, f := range _DATE_FORMATS {
-		if len(f) != len(s) {
-			t, err = time.ParseInLocation(f, s, time.Local)
-			if err == nil {
-				return t, nil
-			}
+
+	format := determineKnownFormat(s)
+	if format == "" {
+		err = fmt.Errorf("Unable to determine date format")
+	} else {
+		t, err = time.ParseInLocation(format, s, time.Local)
+		if err == nil {
+			return t, nil
 		}
 	}
 
@@ -3758,19 +3759,17 @@ Parse the input string using the defined formats for Date and return the time va
 Pick the first one that successfully parses preferring formats that exactly match the length over those with optional components.
 (Optional components are handled by the time package API.)
 
-If an exact-length format can't be founf, This tries all remaining and the one closest in length to the input string is picked in
+If an exact-length format can't be found, This tries all remaining and the one closest in length to the input string is picked in
 an effort to improve the selection especially when using an example to identify a format to use (some formats have components
 which are optional when parsing but present when formatting).
 */
 
 func StrToTimeFormat(s string) (time.Time, string, error) {
-	return strToTimeFormatClosest(s, false)
+	return strToTimeFormatClosest(s)
 }
 
-func strToTimeFormatClosest(s string, nearestFormat bool) (time.Time, string, error) {
-	var t, rt time.Time
-	var rf string
-	var closest int
+func strToTimeFormatClosest(s string) (time.Time, string, error) {
+	var t time.Time
 	var err error
 
 	// first pass try formats that match length before encountering the overhead of parsing all
@@ -3782,30 +3781,15 @@ func strToTimeFormatClosest(s string, nearestFormat bool) (time.Time, string, er
 			}
 		}
 	}
-	// only check formats we've not checked above
-	closest = math.MaxInt32
-	for _, f := range _DATE_FORMATS {
-		if len(f) != len(s) {
-			t, err = time.ParseInLocation(f, s, time.Local)
-			if err == nil {
-				if !nearestFormat {
-					return t, f, nil
-				}
-				l := len(s) - len(f)
-				if l < 0 {
-					l = l * -1
-				}
-				if l < closest {
-					rf = f
-					rt = t
-					closest = l
-				}
-			}
-		}
-	}
 
-	if closest < math.MaxInt32 {
-		return rt, rf, nil
+	format := determineKnownFormat(s)
+	if format == "" {
+		err = fmt.Errorf("Unable to determine date format")
+	} else {
+		t, err = time.ParseInLocation(format, s, time.Local)
+		if err == nil {
+			return t, format, nil
+		}
 	}
 
 	return t, DEFAULT_FORMAT, err
@@ -3835,7 +3819,7 @@ func timeToStrGoFormat(t time.Time, format string) string {
 
 // find a default format that parses the example given in the format string and use that to format the result
 func timeToStrExampleFormat(t time.Time, format string) string {
-	_, f, _ := strToTimeFormatClosest(format, true)
+	_, f, _ := strToTimeFormatClosest(format)
 	return timeToStrGoFormat(t, f)
 }
 
@@ -4277,6 +4261,165 @@ var _DATE_FORMATS = []string{
 	"15:04:05.000000",
 	"15:04:05.999",
 	"15:04:05",
+}
+
+// When the input date's length doesn't exactly match the length of a _DATE_FORMATS entry that successfully parses it, it is more
+// efficient to try analyse what fields exist than to try parsing with all other entries.
+// (Better still would be to just parse the date string directly)
+func determineKnownFormat(s string) string {
+	if len(s) < 8 {
+		return ""
+	}
+	if s[4] == '-' && len(s) >= 10 {
+		// formats with date part
+		if s[7] != '-' {
+			return ""
+		}
+		for i, r := range s[:10] {
+			if !(i == 4 || i == 7 || unicode.IsDigit(r)) {
+				return ""
+			}
+		}
+		if len(s) == 10 {
+			return "2006-01-02"
+		}
+		if s[10] != 'T' && s[10] != ' ' {
+			return ""
+		}
+		if len(s) < 19 {
+			return ""
+		}
+		for i, r := range s[11:19] {
+			if !(((i == 2 || i == 5) && r == ':') || unicode.IsDigit(r)) {
+				return ""
+			}
+		}
+		if len(s) == 19 {
+			return "2006-01-02" + string(s[10:11]) + "15:04:05"
+		}
+		if len(s) > 19 && (s[19] == 'Z' || s[19] == '+' || s[19] == '-') {
+			for i, r := range s[20:] {
+				if !((i == 2 && r == ':') || unicode.IsDigit(r)) {
+					return ""
+				}
+			}
+			if len(s) == 25 && s[22] == ':' {
+				return "2006-01-02" + string(s[10:11]) + "15:04:05Z07:00"
+			} else if len(s) == 24 {
+				return "2006-01-02" + string(s[10:11]) + "15:04:05Z0700"
+			} else if len(s) == 22 {
+				return "2006-01-02" + string(s[10:11]) + "15:04:05Z07"
+			} else if len(s) == 20 {
+				return "2006-01-02" + string(s[10:11]) + "15:04:05Z"
+			}
+			return ""
+		}
+		if s[19] != '.' {
+			return ""
+		}
+		tz := -1
+		colon := -1
+		part := s[20:]
+		for i, r := range part {
+			if r == 'Z' || r == '+' || r == '-' {
+				if tz != -1 {
+					return ""
+				}
+				tz = i
+			} else if r == ':' && tz != -1 {
+				if colon != -1 {
+					return ""
+				}
+				colon = i
+			} else if !unicode.IsDigit(r) {
+				return ""
+			}
+		}
+		if tz != -1 {
+			if tz == 0 {
+				return ""
+			}
+			if colon != -1 {
+				if colon != len(part)-3 || colon != tz+3 {
+					return ""
+				}
+				return "2006-01-02" + string(s[10:11]) + "15:04:05.999Z07:00"
+			} else {
+				if tz == len(part)-5 {
+					return "2006-01-02" + string(s[10:11]) + "15:04:05.999Z0700"
+				} else if tz == len(part)-3 {
+					return "2006-01-02" + string(s[10:11]) + "15:04:05.999Z07"
+				} else if tz == len(part)-1 && part[tz] == 'Z' {
+					return "2006-01-02" + string(s[10:11]) + "15:04:05.999Z"
+				}
+				return ""
+			}
+		} else {
+			return "2006-01-02" + string(s[10:11]) + "15:04:05.999"
+		}
+	} else if s[2] == ':' && s[5] == ':' {
+		// formats with only time part
+		for i, r := range s[:8] {
+			if !(((i == 2 || i == 5) && r == ':') || unicode.IsDigit(r)) {
+				return ""
+			}
+		}
+		if len(s) == 8 {
+			return "15:04:05"
+		}
+		if s[8] == 'Z' || s[8] == '+' || s[8] == '-' {
+			if len(s) == 9 && s[8] == 'Z' {
+				return "15:04:05Z07:00"
+			}
+			if len(s) != 14 {
+				return ""
+			}
+			for i, r := range s[9:] {
+				if (i == 2 && r != ':') || (i != 2 && !unicode.IsDigit(r)) {
+					return ""
+				}
+			}
+			return "15:04:05Z07:00"
+		}
+		if s[8] != '.' || len(s) == 9 {
+			return ""
+		}
+		tz := -1
+		colon := -1
+		part := s[9:]
+		for i, r := range part {
+			if r == 'Z' || r == '+' || r == '-' {
+				if tz != -1 {
+					return ""
+				}
+				tz = i
+			} else if r == ':' && tz != -1 {
+				if colon != -1 {
+					return ""
+				}
+				colon = i
+			} else if !unicode.IsDigit(r) {
+				return ""
+			}
+		}
+		if tz != -1 {
+			if tz == 0 || colon == -1 {
+				return ""
+			}
+			if colon != len(part)-3 || colon != tz+3 {
+				return ""
+			}
+			return "15:04:05.999Z07:00"
+		} else {
+			if len(s) == 18 {
+				return "15:04:05.000000000"
+			} else if len(s) == 15 {
+				return "15:04:05.000000"
+			}
+			return "15:04:05.999"
+		}
+	}
+	return ""
 }
 
 /*
