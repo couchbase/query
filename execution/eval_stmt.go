@@ -155,6 +155,8 @@ func (this *Context) completeStatement(stmtType string, success bool, baseContex
 	newErr, txDone := this.DoStatementComplete(stmtType, success)
 	if newErr != nil {
 		baseContext.SetTxContext(nil)
+		baseContext.output.SetTransactionStartTime(time.Time{})
+		baseContext.SetDeltaKeyspaces(nil)
 		return newErr
 	}
 	if this.TxContext() != nil && baseContext.TxContext() == nil {
@@ -165,6 +167,8 @@ func (this *Context) completeStatement(stmtType string, success bool, baseContex
 		baseContext.SetDeltaKeyspaces(this.DeltaKeyspaces())
 	} else if txDone {
 		baseContext.SetTxContext(nil)
+		baseContext.output.SetTransactionStartTime(time.Time{})
+		baseContext.SetDeltaKeyspaces(nil)
 	}
 	return nil
 }
