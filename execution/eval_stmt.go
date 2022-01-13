@@ -143,8 +143,12 @@ func (this *Context) EvaluateStatement(statement string, namedArgs map[string]va
 	if err != nil {
 		return nil, 0, err
 	}
+	stmtType := stmt.Type()
+	if stmtType == "EXECUTE" && isPrepared {
+		stmtType = prepared.Type()
+	}
 	rv, mutations, err := newContext.ExecutePrepared(prepared, isPrepared, namedArgs, positionalArgs)
-	newErr := newContext.completeStatement(stmt.Type(), err == nil, this)
+	newErr := newContext.completeStatement(stmtType, err == nil, this)
 	if newErr != nil {
 		err = newErr
 	}
@@ -190,12 +194,16 @@ func (this *Context) OpenStatement(statement string, namedArgs map[string]value.
 	if err != nil {
 		return nil, err
 	}
+	stmtType := stmt.Type()
+	if stmtType == "EXECUTE" && isPrepared {
+		stmtType = prepared.Type()
+	}
 
 	namedArgs, positionalArgs, err = newContext.handleUsing(stmt, namedArgs, positionalArgs)
 	if err != nil {
 		return nil, err
 	}
-	rv, err := newContext.OpenPrepared(stmt.Type(), prepared, isPrepared, namedArgs, positionalArgs)
+	rv, err := newContext.OpenPrepared(stmtType, prepared, isPrepared, namedArgs, positionalArgs)
 	if rv != nil {
 		h := rv.(*executionHandle)
 		h.baseContext = this
@@ -310,6 +318,10 @@ func (this *Context) PrepareStatement(statement string, namedArgs map[string]val
 		//  monitoring code TBD
 		if err != nil {
 			return nil, prepared, isPrepared, err
+		}
+
+		if ok, msg := transactions.IsValidStatement(txId, prepared.Type(), txImplicit, false); !ok {
+			return nil, nil, false, errors.NewTranStatementNotSupportedError(stype, msg)
 		}
 		isPrepared = true
 
