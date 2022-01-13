@@ -748,7 +748,7 @@ func (this *Context) SetTransactionInfo(txId string, txStmtNum int64) (err error
 func (this *Context) SetTransactionContext(stmtType string, txImplicit bool, rTxTimeout, sTxTimeout time.Duration,
 	atrCollection string, numAtrs int, txData []byte) (err errors.Error) {
 
-	if this.txContext != nil || stmtType == "START_TRANSACTION" || (txImplicit && stmtType != "EXECUTE_FUNCTION") {
+	if this.txContext != nil || txImplicit || stmtType == "START_TRANSACTION" {
 		this.txData = txData
 		if len(txData) > 0 {
 			this.txDataVal = value.NewValue(txData)
