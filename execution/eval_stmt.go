@@ -143,9 +143,13 @@ func (this *Context) EvaluateStatement(statement string, namedArgs map[string]va
 	if err != nil {
 		return nil, 0, err
 	}
+	stmtType := stmt.Type()
+	if stmtType == "EXECUTE" && isPrepared {
+		stmtType = prepared.Type()
+	}
 	rv, mutations, err := newContext.ExecutePrepared(prepared, isPrepared, namedArgs, positionalArgs)
-	newErr := newContext.completeStatement(stmt.Type(), err == nil, this)
-	if newErr != nil {
+	newErr := newContext.completeStatement(stmtType, err == nil, this)
+	if err == nil && newErr != nil {
 		err = newErr
 	}
 	return rv, mutations, err
@@ -153,7 +157,7 @@ func (this *Context) EvaluateStatement(statement string, namedArgs map[string]va
 
 func (this *Context) completeStatement(stmtType string, success bool, baseContext *Context) errors.Error {
 	newErr, txDone := this.DoStatementComplete(stmtType, success)
-	if newErr != nil {
+	if newErr != nil || txDone {
 		baseContext.SetTxContext(nil)
 		baseContext.output.SetTransactionStartTime(time.Time{})
 		baseContext.SetDeltaKeyspaces(nil)
@@ -165,10 +169,6 @@ func (this *Context) completeStatement(stmtType string, success bool, baseContex
 		baseContext.SetTxTimeout(this.TxContext().TxTimeout())
 		baseContext.SetAtrCollection(this.AtrCollection())
 		baseContext.SetDeltaKeyspaces(this.DeltaKeyspaces())
-	} else if txDone {
-		baseContext.SetTxContext(nil)
-		baseContext.output.SetTransactionStartTime(time.Time{})
-		baseContext.SetDeltaKeyspaces(nil)
 	}
 	return nil
 }
@@ -190,12 +190,16 @@ func (this *Context) OpenStatement(statement string, namedArgs map[string]value.
 	if err != nil {
 		return nil, err
 	}
+	stmtType := stmt.Type()
+	if stmtType == "EXECUTE" && isPrepared {
+		stmtType = prepared.Type()
+	}
 
 	namedArgs, positionalArgs, err = newContext.handleUsing(stmt, namedArgs, positionalArgs)
 	if err != nil {
 		return nil, err
 	}
-	rv, err := newContext.OpenPrepared(stmt.Type(), prepared, isPrepared, namedArgs, positionalArgs)
+	rv, err := newContext.OpenPrepared(stmtType, prepared, isPrepared, namedArgs, positionalArgs)
 	if rv != nil {
 		h := rv.(*executionHandle)
 		h.baseContext = this
@@ -310,6 +314,10 @@ func (this *Context) PrepareStatement(statement string, namedArgs map[string]val
 		//  monitoring code TBD
 		if err != nil {
 			return nil, prepared, isPrepared, err
+		}
+
+		if ok, msg := transactions.IsValidStatement(txId, prepared.Type(), txImplicit, false); !ok {
+			return nil, nil, false, errors.NewTranStatementNotSupportedError(stype, msg)
 		}
 		isPrepared = true
 
@@ -497,7 +505,7 @@ func (this *executionHandle) Results() (interface{}, uint64, error) {
 		this.context.output.AddPhaseTime(RUN, util.Since(this.exec))
 		this.root.SendAction(_ACTION_STOP)
 		newErr := this.context.completeStatement(this.stmtType, this.output.err == nil, this.baseContext)
-		if newErr != nil {
+		if this.output.err == nil && newErr != nil {
 			this.output.err = newErr
 		}
 		this.root.Done()
@@ -516,7 +524,7 @@ func (this *executionHandle) Complete() (uint64, error) {
 		this.context.output.AddPhaseTime(RUN, util.Since(this.exec))
 		this.root.SendAction(_ACTION_STOP)
 		newErr := this.context.completeStatement(this.stmtType, this.output.err == nil, this.baseContext)
-		if newErr != nil {
+		if this.output.err == nil && newErr != nil {
 			this.output.err = newErr
 		}
 		this.root.Done()
@@ -534,7 +542,7 @@ func (this *executionHandle) NextDocument() (value.Value, error) {
 		this.context.output.AddPhaseTime(RUN, util.Since(this.exec))
 		this.root.SendAction(_ACTION_STOP)
 		newErr := this.context.completeStatement(this.stmtType, this.output.err == nil, this.baseContext)
-		if newErr != nil {
+		if this.output.err == nil && newErr != nil {
 			this.output.err = newErr
 		}
 		this.root.Done()
@@ -547,7 +555,7 @@ func (this *executionHandle) Cancel() {
 		this.context.output.AddPhaseTime(RUN, util.Since(this.exec))
 		this.root.SendAction(_ACTION_STOP)
 		newErr := this.context.completeStatement(this.stmtType, this.output.err == nil, this.baseContext)
-		if newErr != nil {
+		if this.output.err == nil && newErr != nil {
 			this.output.err = newErr
 		}
 		this.root.Done()
