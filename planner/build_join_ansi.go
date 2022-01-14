@@ -630,7 +630,9 @@ func (this *builder) buildAnsiJoinScan(node *algebra.KeyspaceTerm, onclause, fil
 
 	var err error
 
+	useCBO := this.useCBO && this.keyspaceUseCBO(node.Alias())
 	baseKeyspace, _ := this.baseKeyspaces[node.Alias()]
+	filters := baseKeyspace.Filters()
 
 	// check whether joining on meta().id
 	id := expression.NewField(
@@ -640,7 +642,7 @@ func (this *builder) buildAnsiJoinScan(node *algebra.KeyspaceTerm, onclause, fil
 	var primaryJoinKeys expression.Expression
 
 	if !node.IsCommaJoin() {
-		for _, fltr := range baseKeyspace.Filters() {
+		for _, fltr := range filters {
 			if fltr.IsOnclause() {
 				if eqFltr, ok := fltr.FltrExpr().(*expression.Eq); ok {
 					if eqFltr.First().EquivalentTo(id) {
@@ -690,10 +692,12 @@ func (this *builder) buildAnsiJoinScan(node *algebra.KeyspaceTerm, onclause, fil
 		this.addChildren(this.addSubchildrenParallel())
 	}
 
-	// temporarily mark index filters for selectivity calculation
-	err = markPlanFlagsChildren(baseKeyspace, this.children)
-	if err != nil {
-		return nil, nil, nil, nil, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, err
+	// The Accept() call above for the inner side would have marked the index flag
+	// on the filters, which is necessary for cost calculations later in the function.
+	// Make sure the index flag is cleared since this is temporary.
+	// The index flag will be permenantly marked after we've chosen a join method.
+	if useCBO && len(filters) > 0 {
+		defer filters.ClearIndexFlag()
 	}
 
 	// perform cover transformation for ON-clause
@@ -774,10 +778,8 @@ func (this *builder) buildAnsiJoinScan(node *algebra.KeyspaceTerm, onclause, fil
 	}
 
 	cost, cardinality, size, frCost := OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL
-	useCBO := this.useCBO && this.keyspaceUseCBO(node.Alias())
 	if useCBO && len(this.children) > 0 {
-		cost, cardinality, size, frCost = getNLJoinCost(lastOp, this.lastOp,
-			baseKeyspace.Filters(), outer, op)
+		cost, cardinality, size, frCost = getNLJoinCost(lastOp, this.lastOp, filters, outer, op)
 	}
 
 	return this.children, primaryJoinKeys, newOnclause, newFilter, cost, cardinality, size, frCost, nil
@@ -897,7 +899,7 @@ func (this *builder) buildHashJoinOp(right algebra.SimpleFromTerm, outer bool,
 
 	baseKeyspace, _ := this.baseKeyspaces[alias]
 	filters := baseKeyspace.Filters()
-	if len(filters) > 0 {
+	if useCBO && len(filters) > 0 {
 		filters.ClearHashFlag()
 	}
 
@@ -1025,6 +1027,14 @@ func (this *builder) buildHashJoinOp(right algebra.SimpleFromTerm, outer bool,
 		if err != nil {
 			return nil, nil, nil, nil, nil, nil, false,
 				OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, err
+		}
+
+		// The Accept() call above for the inner side would have marked the index flag
+		// on the filters, which is necessary for cost calculations later in the function.
+		// Make sure the index flag is cleared since this is temporary.
+		// The index flag will be permenantly marked after we've chosen a join method.
+		if useCBO && len(filters) > 0 {
+			defer filters.ClearIndexFlag()
 		}
 
 		// if no plan generated, bail out
@@ -1159,7 +1169,7 @@ func (this *builder) buildAnsiJoinSimpleFromTerm(node algebra.SimpleFromTerm, on
 
 	baseKeyspace, _ := this.baseKeyspaces[node.Alias()]
 	filters := baseKeyspace.Filters()
-	if len(filters) > 0 {
+	if this.useCBO && len(filters) > 0 {
 		filters.ClearIndexFlag()
 	}
 

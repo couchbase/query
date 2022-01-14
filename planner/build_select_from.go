@@ -279,9 +279,7 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 
 	useCBO := this.useCBO && this.keyspaceUseCBO(node.Alias())
 
-	// for inner side of ANSI JOIN/NEST, scans will be considered multiple times for different
-	// join methods, wait till join is finalized before marking index filters
-	if useCBO && !node.IsAnsiJoinOp() {
+	if useCBO {
 		err = this.markPlanFlags(scan, node)
 		if err != nil {
 			return nil, err
@@ -321,17 +319,6 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 			}
 
 			if filter != nil {
-				baseKeyspace, _ := this.baseKeyspaces[node.Alias()]
-				if useCBO && node.IsAnsiJoinOp() && len(baseKeyspace.Filters()) > 0 {
-					// temporarily mark index filters for selectivity calculation
-					// if this keyspace is not under a join, this step is already
-					// done above
-					err = this.markPlanFlags(scan, node)
-					if err != nil {
-						return nil, err
-					}
-				}
-
 				if useCBO && (cost > 0.0) && (cardinality > 0.0) && (size > 0) && (frCost > 0.0) {
 					cost, cardinality, size, frCost = getFilterCost(this.lastOp,
 						filter, this.baseKeyspaces, this.keyspaceNames,
@@ -342,11 +329,6 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 				// heavily loaded. This way the filter evaluation can happen on a
 				// separate go thread and can be potentially parallelized
 				this.addSubChildren(plan.NewFilter(filter, cost, cardinality, size, frCost))
-
-				if useCBO && node.IsAnsiJoinOp() && len(baseKeyspace.Filters()) > 0 {
-					// clear temporary index flags
-					baseKeyspace.Filters().ClearIndexFlag()
-				}
 			}
 		}
 	}
@@ -930,7 +912,7 @@ func (this *builder) getIndexFilter(index datastore.Index, alias string, sargSpa
 		}
 	}
 
-	if len(spans) > 0 {
+	if this.useCBO && len(spans) > 0 {
 		// mark index filters for seletivity calculation
 		markIndexFlags(index, spans, baseKeyspace)
 	}
@@ -951,8 +933,10 @@ func (this *builder) getIndexFilter(index datastore.Index, alias string, sargSpa
 		}
 	}
 
-	// clear the index flags marked above (temporary marking)
-	baseKeyspace.Filters().ClearIndexFlag()
+	if this.useCBO {
+		// clear the index flags marked above (temporary marking)
+		baseKeyspace.Filters().ClearIndexFlag()
+	}
 
 	if this.useCBO && (filter != nil) && (cost > 0.0) && (cardinality > 0.0) && (selec > 0.0) &&
 		(size > 0) && (frCost > 0.0) {
