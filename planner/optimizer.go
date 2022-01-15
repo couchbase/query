@@ -53,7 +53,6 @@ type Builder interface {
 		outerCoveringScans []plan.CoveringOperator, outerFilter expression.Expression) (
 		[]plan.Operator, []plan.Operator, []plan.CoveringOperator, expression.Expression, error)
 
-	CheckPushableOnclause(onclause expression.Expression) bool
 	MarkOptimHints()
 }
 
@@ -67,10 +66,6 @@ func (this *builder) GetKeyspaceNames() map[string]string {
 
 func (this *builder) GetPrepareContext() *PrepareContext {
 	return this.context
-}
-
-func (this *builder) CheckPushableOnclause(onclause expression.Expression) bool {
-	return pushableOnclause(onclause, this.baseKeyspaces, this.keyspaceNames)
 }
 
 func (this *builder) AddOuterOnclause(onclause expression.Expression, alias string,
