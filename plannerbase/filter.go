@@ -29,6 +29,7 @@ const (
 	FLTR_PRIMARY_JOIN                  // join on meta id
 	FLTR_DERIVED_EQJOIN                // derived equi-join filter
 	FLTR_ADJUST_JOIN_SELEC             // join selectivity adjusted
+	FLTR_SAV_INDEX_SPAN                // saved IN_INDEX_SPAN flag
 )
 
 const TEMP_PLAN_FLAGS = (FLTR_IN_INDEX_SPAN | FLTR_IN_HASH_JOIN)
@@ -417,5 +418,26 @@ func (this Filters) ClearHashFlag() {
 func (this Filters) ClearPlanFlags() {
 	for _, fltr := range this {
 		fltr.fltrFlags &^= TEMP_PLAN_FLAGS
+	}
+}
+
+func (this Filters) SaveIndexFlag() {
+	for _, fltr := range this {
+		if (fltr.fltrFlags & FLTR_IN_INDEX_SPAN) != 0 {
+			fltr.fltrFlags |= FLTR_SAV_INDEX_SPAN
+		} else {
+			fltr.fltrFlags &^= FLTR_SAV_INDEX_SPAN
+		}
+	}
+}
+
+func (this Filters) RestoreIndexFlag() {
+	for _, fltr := range this {
+		if (fltr.fltrFlags & FLTR_SAV_INDEX_SPAN) != 0 {
+			fltr.fltrFlags |= FLTR_IN_INDEX_SPAN
+			fltr.fltrFlags &^= FLTR_SAV_INDEX_SPAN
+		} else {
+			fltr.fltrFlags &^= FLTR_IN_INDEX_SPAN
+		}
 	}
 }

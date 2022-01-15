@@ -11,6 +11,7 @@ package planner
 
 import (
 	"github.com/couchbase/query/algebra"
+	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
 	base "github.com/couchbase/query/plannerbase"
@@ -218,6 +219,23 @@ func (this *builder) buildJoinOp(join *algebra.AnsiJoin, nest *algebra.AnsiNest,
 		innerPlan = plan.CopyOperators(innerPlan)
 		innerSubPlan = plan.CopyOperators(innerSubPlan)
 		innerCoveringScans = plan.CopyCoveringOperators(innerCoveringScans)
+	} else {
+		// nested-loop join/nest replans the inner side, save/restore filter index flag
+		var innerAlias string
+		if join != nil {
+			innerAlias = join.Alias()
+		} else if nest != nil {
+			innerAlias = nest.Alias()
+		}
+		baseKeyspace, ok := this.baseKeyspaces[innerAlias]
+		if !ok {
+			return nil, nil, nil, nil, errors.NewPlanInternalError("buildJoinOp: baseKeyspace not found for " + innerAlias)
+		}
+		filters := baseKeyspace.Filters()
+		if len(filters) > 0 {
+			filters.SaveIndexFlag()
+			defer filters.RestoreIndexFlag()
+		}
 	}
 
 	this.setJoinEnum()
