@@ -26,10 +26,6 @@ import (
 	"github.com/couchbase/query/value"
 )
 
-const (
-	_DEFAULT_MGMT_SSLPORT = 18091
-)
-
 func (s *store) StartTransaction(stmtAtomicity bool, context datastore.QueryContext) (dks map[string]bool, err errors.Error) {
 	txContext, _ := context.GetTxContext().(*transactions.TranContext)
 	if txContext == nil {

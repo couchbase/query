@@ -29,6 +29,10 @@ const (
 	MOP_DELETE
 )
 
+const (
+	_BATCH_SIZE = 16
+)
+
 var _MutateOpNames = [...]string{"UNKNOWN", "INSERT", "UPSERT", "UPDATE", "DELETE"}
 
 type GetOp struct {
@@ -164,7 +168,9 @@ func (ap *AgentProvider) TxGet(transaction *gctx.Transaction, fullName, bucketNa
 
 	// send the request and get results in call back
 	wg := &sync.WaitGroup{}
+	batchCh := make(chan bool, _BATCH_SIZE)
 	sendOneGet := func(item *GetOp) error {
+		batchCh <- false
 		wg.Add(1)
 		cerr := transaction.Get(gctx.GetOptions{
 			Agent:          ap.Agent(),
@@ -173,7 +179,10 @@ func (ap *AgentProvider) TxGet(transaction *gctx.Transaction, fullName, bucketNa
 			Key:            []byte(item.Key),
 			OboUser:        user,
 		}, func(res *gctx.GetResult, resErr error) {
-			defer wg.Done()
+			defer func() {
+				wg.Done()
+				<-batchCh
+			}()
 			item.Err = resErr
 			if item.Err == nil && res != nil {
 				item.Val, item.Err = ap.getTxAnnotatedValue(res, item.Key, fullName)
@@ -182,6 +191,7 @@ func (ap *AgentProvider) TxGet(transaction *gctx.Transaction, fullName, bucketNa
 
 		if cerr != nil {
 			wg.Add(-1)
+			<-batchCh
 		}
 		return cerr
 	}
