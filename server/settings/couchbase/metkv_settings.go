@@ -40,14 +40,14 @@ var GLOBALPARAM = map[string]string{
 
 type Config value.Value
 
-func Subscribe(callb metakv.CallbackV2, path string, cancelCh chan struct{}) {
+func Subscribe(callb metakv.Callback, path string, cancelCh chan struct{}) {
 	go func() {
 		fn := func(r int, err error) error {
 			if r > 0 {
 				logging.Errorf("ERROR: metakv notifier failed (%v)..Retrying %v", err, r)
 			}
 			// cancelCh is the cancel channel to return contril back to metakv.
-			err = metakv.RunObserveChildrenV2(path, callb, cancelCh)
+			err = metakv.RunObserveChildren(path, callb, cancelCh)
 			if err != nil {
 				logging.Infof("New susbscription %s done:%v", path, err)
 			}

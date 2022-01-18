@@ -42,7 +42,7 @@ func Init() {
 	}
 
 	// fire callback runner. It won't ever return
-	go metakv.RunObserveChildrenV2(_CHANGE_COUNTER_PATH, callback, make(chan struct{}))
+	go metakv.RunObserveChildren(_CHANGE_COUNTER_PATH, callback, make(chan struct{}))
 }
 
 // change callback
@@ -92,7 +92,7 @@ func fmtChangeCounter() []byte {
 // TODO this is very inefficient - we'll amend when we write the new storage
 func DropScope(namespace, bucket, scope string) {
 	scopePath := _FUNC_PATH + namespace + ":" + bucket + "." + scope + "."
-	metakv.IterateChildrenV2(_FUNC_PATH, func(kve metakv.KVEntry) error {
+	metakv.IterateChildren(_FUNC_PATH, func(kve metakv.KVEntry) error {
 		if strings.HasPrefix(kve.Path, scopePath) {
 
 			// technically, we don't need to clear the cache because clearing the
@@ -105,7 +105,7 @@ func DropScope(namespace, bucket, scope string) {
 }
 
 func Foreach(f func(path string, value []byte) error) error {
-	return metakv.IterateChildrenV2(_FUNC_PATH, func(kve metakv.KVEntry) error {
+	return metakv.IterateChildren(_FUNC_PATH, func(kve metakv.KVEntry) error {
 		return f(kve.Path[len(_FUNC_PATH):], kve.Value)
 	})
 }
