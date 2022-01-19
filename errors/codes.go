@@ -221,6 +221,7 @@ const (
 	E_INDEX_NOT_FOUND                         ErrorCode = 5411
 	E_MEMORY_QUOTA_EXCEEDED                   ErrorCode = 5500
 	E_NIL_EVALUATE_PARAM                      ErrorCode = 5501
+	E_BUCKET_ACTION                           ErrorCode = 5502
 	E_SCHEDULER                               ErrorCode = 6001
 	E_DUPLICATE_TASK                          ErrorCode = 6002
 	E_TASK_RUNNING                            ErrorCode = 6003
@@ -326,6 +327,7 @@ const (
 	E_CAS_MISMATCH                            ErrorCode = 12033
 	E_DML_MC                                  ErrorCode = 12034
 	E_CB_NOT_PRIMARY_INDEX                    ErrorCode = 12035
+	E_DML_INSERT                              ErrorCode = 12036
 	_RETIRED_13010                                      = 13010
 	_RETIRED_13011                                      = 13011
 	E_DATASTORE_CLUSTER                       ErrorCode = 13012

@@ -1831,6 +1831,9 @@ func isNotFoundError(err error) bool {
 		return true
 	}
 	// it may have been wrapped in another error so check the text...
+	if ee, ok := err.(errors.Error); ok {
+		return ee.ContainsText("KEY_ENOENT")
+	}
 	return strings.Contains(err.Error(), "KEY_ENOENT")
 }
 
@@ -1839,6 +1842,9 @@ func isEExistError(err error) bool {
 		return true
 	}
 	// it may have been wrapped in another error so check the text...
+	if ee, ok := err.(errors.Error); ok {
+		return ee.ContainsText("KEY_EEXISTS")
+	}
 	return strings.Contains(err.Error(), "KEY_EEXISTS")
 }
 
@@ -1946,7 +1952,7 @@ func (b *keyspace) performOp(op MutateOp, qualifiedName, scopeName, collectionNa
 				// false & err == nil => given key aready exists in the bucket
 				if err != nil {
 					retry, err = processIfMCError(retry, err, key, qualifiedName)
-					err = errors.NewError(err, "Key "+key)
+					err = errors.NewInsertError(err, key)
 				} else {
 					err = errors.NewDuplicateKeyError(key)
 					retry = value.FALSE

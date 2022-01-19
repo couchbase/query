@@ -25,6 +25,7 @@ import (
 
 	"github.com/couchbase/gomemcached"
 	"github.com/couchbase/gomemcached/client" // package name is 'memcached'
+	qerrors "github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/util"
 )
@@ -428,9 +429,9 @@ func (b *Bucket) Do2(k string, f func(mc *memcached.Client, vb uint16) error, de
 		if err == "" {
 			err = fmt.Sprintf("KV status %v", resp.Status)
 		}
-		return fmt.Errorf("unable to complete action after %v attempts: %v", desc.attempts, err)
+		return qerrors.NewBucketActionError(err, desc.attempts)
 	} else {
-		return fmt.Errorf("unable to complete action after %v attempts: %v", desc.attempts, lastError)
+		return qerrors.NewBucketActionError(lastError, desc.attempts)
 	}
 }
 
@@ -1076,8 +1077,10 @@ func (b *Bucket) SetWithCAS(k string, exp int, v interface{}, context ...*memcac
 // happens if the key exists. Return the CAS value.
 func (b *Bucket) AddWithCAS(k string, exp int, v interface{}, context ...*memcached.ClientContext) (bool, uint64, error) {
 	cas, err := b.WriteWithCAS(k, 0, exp, v, AddOnly, context...)
-	if err == ErrKeyExists {
-		return false, 0, nil
+	if ee, ok := err.(qerrors.Error); ok {
+		if ee.ContainsText(ErrKeyExists.Error()) {
+			return false, 0, nil
+		}
 	}
 	return (err == nil), cas, err
 }

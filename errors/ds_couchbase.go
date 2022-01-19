@@ -9,6 +9,7 @@
 package errors
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/couchbase/query/value"
@@ -230,4 +231,20 @@ func NewCbNotPrimaryIndexError(name string) Error {
 	return &err{level: EXCEPTION, ICode: E_CB_NOT_PRIMARY_INDEX, IKey: "datastore.couchbase.not_primary_index",
 		InternalMsg: "Index " + name + " exists but is not a primary index", cause: c, retry: value.FALSE,
 		InternalCaller: CallerN(1)}
+}
+
+func NewInsertError(e error, key string) Error {
+	c := make(map[string]interface{})
+	c["key"] = key
+	c["cause"] = e
+	return &err{level: EXCEPTION, ICode: E_DML_INSERT, IKey: "datastore.couchbase.insert.error",
+		InternalMsg: "Error in INSERT of key: " + key, cause: c, InternalCaller: CallerN(1)}
+}
+
+func NewBucketActionError(e interface{}, attempts int) Error {
+	c := make(map[string]interface{})
+	c["attempts"] = attempts
+	c["cause"] = e
+	return &err{level: EXCEPTION, ICode: E_BUCKET_ACTION, IKey: "datastore.couchbase.bucket.action",
+		InternalMsg: fmt.Sprintf("Unable to complete action after %v attempts", attempts), cause: c, InternalCaller: CallerN(1)}
 }

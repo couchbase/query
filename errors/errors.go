@@ -319,7 +319,7 @@ func IsCollectionNotFoundError(e error) bool {
 	return IsNotFoundError("Collection", e)
 }
 
-// to support unit testing
+// search initial error text and all cause nesting levels for the given string
 func (e *err) ContainsText(text string) bool {
 	s := e.Error()
 	if strings.Contains(s, text) {
