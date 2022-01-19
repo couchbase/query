@@ -37,7 +37,7 @@ replace github.com/couchbase/query => ./empty
 replace github.com/couchbase/query-ee => ../query-ee
 
 require (
-	github.com/couchbase/cbauth v0.1.0
+	github.com/couchbase/cbauth v0.1.1
 	github.com/couchbase/clog v0.1.0
 	github.com/couchbase/eventing-ee v0.0.0-00010101000000-000000000000
 	github.com/couchbase/go-couchbase v0.1.1
