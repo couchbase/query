@@ -129,7 +129,7 @@ func NewTransactionInuse() Error {
 }
 
 func NewKeyNotFoundError(k string, c interface{}) Error {
-	return &err{level: EXCEPTION, ICode: E_KEY_NOT_FOUND, IKey: "transaction.statement.keynotfound",
+	return &err{level: EXCEPTION, ICode: E_KEY_NOT_FOUND, IKey: "datastore.couchbase.keynotfound",
 		InternalMsg:    fmt.Sprintf("Key not found : %v", k),
 		InternalCaller: CallerN(1), cause: c}
 }
