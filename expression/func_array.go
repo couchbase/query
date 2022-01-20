@@ -2764,24 +2764,16 @@ func (this *ArrayExcept) Evaluate(item value.Value, context Context) (value.Valu
 	set := _ARRAY_SET_POOL.Get()
 	defer _ARRAY_SET_POOL.Put(set)
 	set.AddAll(b)
+	r := make([]interface{}, 0, len(a))
 
-	j := 0
 	for i, _ := range a {
 		v := value.NewValue(a[i])
 		if !set.Has(v) {
-			a[j] = a[i]
-			j++
+			r = append(r, a[i])
 		}
 	}
 
-	res := value.NewValue(a[:j])
-
-	//To avoid memory leakage
-	for ; j < len(a); j++ {
-		a[j] = nil
-	}
-
-	return res, nil
+	return value.NewValue(r), nil
 }
 
 func (this *ArrayExcept) PropagatesNull() bool {
