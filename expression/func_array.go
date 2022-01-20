@@ -1517,7 +1517,8 @@ func (this *ArrayPut) Evaluate(item value.Value, context Context) (value.Value, 
 	}
 
 	fa := args[0].Actual().([]interface{})
-	ra := fa
+	ra := make([]interface{}, 0, len(fa))
+	ra = append(ra, fa...)
 	pa := args[1:]
 ploop:
 	for _, p := range pa {
@@ -2581,8 +2582,10 @@ func (this *ArraySwap) Evaluate(item value.Value, context Context) (value.Value,
 		return first, nil
 	}
 
-	a[op], a[np] = a[np], a[op]
-	return value.NewValue(a), nil
+	ra := make([]interface{}, 0, length)
+	ra = append(ra, a...)
+	ra[op], ra[np] = ra[np], ra[op]
+	return value.NewValue(ra), nil
 }
 
 func (this *ArraySwap) PropagatesNull() bool {
@@ -2660,8 +2663,9 @@ func (this *ArrayMove) Evaluate(item value.Value, context Context) (value.Value,
 
 	op := int(oldPos)
 	np := int(newPos)
-	a := first.Actual().([]interface{})
-	length := len(a)
+
+	oa := first.Actual().([]interface{})
+	length := len(oa)
 
 	//out of range check on the index.
 	if op < -length || op > length-1 || np < -length || np > length-1 {
@@ -2676,6 +2680,8 @@ func (this *ArrayMove) Evaluate(item value.Value, context Context) (value.Value,
 		return first, nil
 	}
 
+	a := make([]interface{}, 0, length)
+	a = append(a, oa...)
 	v := a[op]
 
 	//remove the element at old position:
