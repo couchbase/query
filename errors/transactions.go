@@ -134,9 +134,9 @@ func NewKeyNotFoundError(k string, c interface{}) Error {
 		InternalCaller: CallerN(1), cause: c}
 }
 
-func NewCasMissmatch(op, key string, aCas, eCas uint64) Error {
-	return &err{level: EXCEPTION, ICode: E_CAS_MISSMATCH, IKey: "transaction.statement.casmismatch",
-		InternalMsg:    fmt.Sprintf("%s cas (actual:%v, expected:%v) missmatch for key: %v", op, aCas, eCas, key),
+func NewScasMismatch(op, key string, aCas, eCas uint64) Error {
+	return &err{level: EXCEPTION, ICode: E_SCAS_MISMATCH, IKey: "transaction.statement.scasmismatch",
+		InternalMsg:    fmt.Sprintf("%s cas (actual:%v, expected:%v) mismatch for key: %v", op, aCas, eCas, key),
 		InternalCaller: CallerN(1)}
 }
 

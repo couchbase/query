@@ -568,7 +568,7 @@ func (ks *keyspace) txPerformOp(op MutateOp, qualifiedName, scopeName, collectio
 		cas, _, txnMeta, err1 := getMeta(kv.Name, val, must)
 		if err1 == nil && must {
 			if sdkKv && sdkCas != cas {
-				return nil, append(errs, errors.NewCasMissmatch(_MutateOpNames[op], kv.Name, sdkCas, cas))
+				return nil, append(errs, errors.NewScasMismatch(_MutateOpNames[op], kv.Name, sdkCas, cas))
 			}
 		}
 

@@ -373,7 +373,7 @@ const (
 	E_DUPLICATE_KEY                           ErrorCode = 17012
 	E_TRANSACTION_INUSE                       ErrorCode = 17013
 	E_KEY_NOT_FOUND                           ErrorCode = 17014
-	E_CAS_MISSMATCH                           ErrorCode = 17015
+	E_SCAS_MISMATCH                           ErrorCode = 17015
 	E_TRANSACTION_MEMORY_QUOTA_EXCEEDED       ErrorCode = 17016
 	E_TRANSACTION_FETCH                       ErrorCode = 17017
 	E_POST_COMMIT_TRANSACTION                 ErrorCode = 17018
