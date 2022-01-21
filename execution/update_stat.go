@@ -130,9 +130,6 @@ func getIndexes(context *Context, parent value.Value, keyspace datastore.Keyspac
 		if err != nil {
 			return nil, errors.NewIndexNotFoundError(idxName, ikey, err)
 		}
-		if index.IsPrimary() {
-			continue
-		}
 		indexes = append(indexes, index)
 	}
 
