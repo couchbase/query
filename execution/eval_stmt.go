@@ -533,6 +533,9 @@ func (this *executionHandle) Complete() (uint64, error) {
 }
 
 func (this *executionHandle) NextDocument() (value.Value, error) {
+	if this.output != nil && this.output.err != nil {
+		return nil, this.output.err
+	}
 	item, _ := this.input.getItem()
 	if item != nil {
 		return item, nil
