@@ -33,6 +33,7 @@ const _INITIAL_SIZE = 64
 type internalOutput struct {
 	mutationCount uint64
 	err           errors.Error
+	abort         bool
 }
 
 func (this *internalOutput) SetUp() {
@@ -51,12 +52,14 @@ func (this *internalOutput) Abort(err errors.Error) {
 	if this.err == nil {
 		this.err = err
 	}
+	this.abort = true
 }
 
 func (this *internalOutput) Fatal(err errors.Error) {
 	if this.err == nil {
 		this.err = err
 	}
+	this.abort = true
 }
 
 func (this *internalOutput) Error(err errors.Error) {
@@ -533,12 +536,11 @@ func (this *executionHandle) Complete() (uint64, error) {
 }
 
 func (this *executionHandle) NextDocument() (value.Value, error) {
-	if this.output != nil && this.output.err != nil {
-		return nil, this.output.err
-	}
-	item, _ := this.input.getItem()
-	if item != nil {
-		return item, nil
+	if !this.output.abort {
+		item, _ := this.input.getItem()
+		if item != nil {
+			return item, nil
+		}
 	}
 
 	if atomic.AddInt32(&this.stopped, 1) == 1 {
