@@ -1137,6 +1137,12 @@ FROM from_terms
 from_terms:
 from_term
 {
+    if simple, ok := $1.(algebra.SimpleFromTerm); ok {
+        if simple != nil && simple.JoinHint() != algebra.JOIN_HINT_NONE {
+            yylex.Error(fmt.Sprintf("Join hint (USE HASH or USE NL) cannot be specified on the first from term %s%s", simple.Alias(),
+                yylex.(*lexer).ErrorContext()))
+        }
+    }
     $$ = $1
 }
 |
@@ -1158,10 +1164,6 @@ from_terms COMMA from_term
 from_term:
 simple_from_term
 {
-    if $1 != nil && $1.JoinHint() != algebra.JOIN_HINT_NONE {
-        yylex.Error(fmt.Sprintf("Join hint (USE HASH or USE NL) cannot be specified on the first from term %s%s", $1.Alias(),
-          yylex.(*lexer).ErrorContext()))
-    }
     $$ = $1
 }
 |
