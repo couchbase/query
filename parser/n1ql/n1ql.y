@@ -1137,13 +1137,6 @@ FROM from_terms
 from_terms:
 from_term
 {
-    if $1 != nil {
-        first := $1.PrimaryTerm()
-        if first != nil && first.JoinHint() != algebra.JOIN_HINT_NONE {
-            yylex.Error(fmt.Sprintf("Join hint (USE HASH or USE NL) cannot be specified on the first from term %s%s", first.Alias(),
-                yylex.(*lexer).ErrorContext()))
-        }
-    }
     $$ = $1
 }
 |

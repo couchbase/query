@@ -21,7 +21,7 @@ func (this *SemChecker) VisitSelectTerm(node *algebra.SelectTerm) (interface{}, 
 func (this *SemChecker) VisitSubselect(node *algebra.Subselect) (r interface{}, err error) {
 	saveSemFlag := this.semFlag
 	defer func() { this.semFlag = saveSemFlag }()
-	this.unsetSemFlag(_SEM_WHERE | _SEM_ON | _SEM_PROJECTION | _SEM_ADVISOR_FUNC)
+	this.unsetSemFlag(_SEM_WHERE | _SEM_ON | _SEM_PROJECTION | _SEM_ADVISOR_FUNC | _SEM_FROM)
 	if node.With() != nil {
 		if err = node.With().MapExpressions(this); err != nil {
 			return nil, err
@@ -29,7 +29,10 @@ func (this *SemChecker) VisitSubselect(node *algebra.Subselect) (r interface{}, 
 	}
 
 	if node.From() != nil {
-		if r, err = node.From().Accept(this); err != nil {
+		this.setSemFlag(_SEM_FROM)
+		r, err = node.From().Accept(this)
+		this.unsetSemFlag(_SEM_FROM)
+		if err != nil {
 			return r, err
 		}
 	}

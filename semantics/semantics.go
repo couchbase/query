@@ -20,6 +20,7 @@ const (
 	_SEM_TRANSACTION
 	_SEM_PROJECTION
 	_SEM_ADVISOR_FUNC
+	_SEM_FROM
 )
 
 type SemChecker struct {

@@ -132,6 +132,7 @@ const (
 	E_CREATE_INDEX_ATTRIBUTE                  ErrorCode = 3282
 	E_FLATTEN_KEYS                            ErrorCode = 3283
 	E_ALL_DISTINCT_NOT_ALLOWED                ErrorCode = 3284
+	E_JOIN_HINT_FIRST_FROM_TERM               ErrorCode = 3290
 	E_PLAN                                    ErrorCode = 4000
 	E_REPREPARE                               ErrorCode = 4001
 	E_NO_TERM_NAME                            ErrorCode = 4010

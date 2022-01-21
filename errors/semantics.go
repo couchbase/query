@@ -164,6 +164,12 @@ func NewAllDistinctNotAllowed(msg, at string) Error {
 		InternalCaller: CallerN(1)}
 }
 
+func NewFirstTermJoinHintError(alias string) Error {
+	return &err{level: EXCEPTION, ICode: E_JOIN_HINT_FIRST_FROM_TERM, IKey: "semantics_joinhint_first_term",
+		InternalMsg:    fmt.Sprintf("Join hint (USE HASH or USE NL) cannot be specified on the first from term %s", alias),
+		InternalCaller: CallerN(1)}
+}
+
 /* ---- BEGIN MOVED error numbers ----
    The following error numbers (in the 4000 range) originally reside in plan.go (before the introduction of the semantics package)
    although they are semantic errors. They are moved from plan.go to semantics.go but their original error numbers are kept.
