@@ -16,7 +16,7 @@ import (
 type DurabilityLevel int8
 
 var _DurabilityLevelNames = [...]string{"", "none", "majority", "majorityAndPersistActive", "persistToMajority"}
-var _IsolationLevelNames = [...]string{"", "READ COMMITED"}
+var _IsolationLevelNames = [...]string{"", "READ COMMITTED"}
 
 const (
 	DL_UNSET DurabilityLevel = iota
