@@ -166,7 +166,7 @@ func NewAllDistinctNotAllowed(msg, at string) Error {
 
 func NewFirstTermJoinHintError(alias string) Error {
 	return &err{level: EXCEPTION, ICode: E_JOIN_HINT_FIRST_FROM_TERM, IKey: "semantics_joinhint_first_term",
-		InternalMsg:    fmt.Sprintf("Join hint (USE HASH or USE NL) cannot be specified on the first from term %s", alias),
+		InternalMsg:    fmt.Sprintf("Join hint (USE HASH or USE NL) cannot be specified on the first from term '%s'.", alias),
 		InternalCaller: CallerN(1)}
 }
 
