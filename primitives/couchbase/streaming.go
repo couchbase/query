@@ -23,6 +23,7 @@ import (
 	"time"
 	"unsafe"
 
+	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
 )
 
@@ -185,6 +186,13 @@ func doHTTPRequestForUpdate(req *http.Request) (*http.Response, error) {
 }
 
 func (b *Bucket) RunBucketUpdater2(streamingFn StreamingFn, notify NotifyFn) {
+
+	b.Lock()
+	if b.updater != nil {
+		b.updater.Close()
+		b.updater = nil
+	}
+	b.Unlock()
 	go func() {
 		err := b.UpdateBucket2(streamingFn)
 		if err != nil {
@@ -200,7 +208,7 @@ func (b *Bucket) RunBucketUpdater2(streamingFn StreamingFn, notify NotifyFn) {
 				delete(p.BucketMap, name)
 				p.Unlock()
 			}
-			logging.Errorf(" Bucket Updater exited with err %v", err)
+			logging.Errorf("Bucket Updater exited with err %v", err)
 		}
 	}()
 }
@@ -226,24 +234,33 @@ func (b *Bucket) UpdateBucket2(streamingFn StreamingFn) error {
 	var failures int
 	var returnErr error
 	var poolServices PoolServices
+	var updater io.ReadCloser
+
+	defer func() {
+		b.Lock()
+		if b.updater == updater {
+			b.updater = nil
+		}
+		b.Unlock()
+	}()
 
 	for {
 
 		if failures == MAX_RETRY_COUNT {
-			logging.Errorf(" Maximum failures reached. Exiting loop...")
-			return fmt.Errorf("Max failures reached. Last Error %v", returnErr)
+			logging.Errorf("Bucker updater: Maximum failures reached. Exiting loop...")
+			return errors.NewBucketUpdaterMaxErrors(returnErr)
 		}
 
 		nodes := b.Nodes()
 		if len(nodes) < 1 {
-			return fmt.Errorf("No healthy nodes found")
+			return errors.NewBucketUpdaterNoHealthyNodesFound()
 		}
 
 		streamUrl := fmt.Sprintf("%s/pools/default/bucketsStreaming/%s", b.pool.client.BaseURL, uriAdj(b.GetName()))
-		logging.Infof(" Trying with %s", streamUrl)
+		logging.Infof("Bucker updater: Trying with %s", streamUrl)
 		req, err := http.NewRequest("GET", streamUrl, nil)
 		if err != nil {
-			return err
+			return errors.NewBucketUpdaterStreamingError(err)
 		}
 
 		// Lock here to avoid having pool closed under us.
@@ -251,22 +268,34 @@ func (b *Bucket) UpdateBucket2(streamingFn StreamingFn) error {
 		err = maybeAddAuth(req, b.pool.client.ah)
 		b.RUnlock()
 		if err != nil {
-			return err
+			return errors.NewBucketUpdaterAuthError(err)
 		}
 
 		res, err := doHTTPRequestForUpdate(req)
 		if err != nil {
-			return err
+			return errors.NewBucketUpdaterStreamingError(err)
 		}
 
 		if res.StatusCode != 200 {
 			bod, _ := ioutil.ReadAll(io.LimitReader(res.Body, 512))
-			logging.Errorf("Failed to connect to host, unexpected status code: %v. Body %s", res.StatusCode, bod)
+			logging.Errorf("Bucker updater: Failed to connect to host, unexpected status code: %v. Body %s", res.StatusCode, bod)
 			res.Body.Close()
-			returnErr = fmt.Errorf("Failed to connect to host. Status %v Body %s", res.StatusCode, bod)
+			returnErr = errors.NewBucketUpdaterFailedToConnectToHost(res.StatusCode, bod)
 			failures++
 			continue
 		}
+		b.Lock()
+		if b.updater == updater {
+			b.updater = res.Body
+			updater = b.updater
+		} else {
+			// another updater is running and we should exit cleanly
+			b.Unlock()
+			res.Body.Close()
+			logging.Debugf("Bucker updater: New updater found for bucket: %v", b.GetName())
+			return nil
+		}
+		b.Unlock()
 
 		dec := json.NewDecoder(res.Body)
 
@@ -277,6 +306,11 @@ func (b *Bucket) UpdateBucket2(streamingFn StreamingFn) error {
 			if err != nil {
 				returnErr = err
 				res.Body.Close()
+				// if this was closed under us it means a new updater is starting so exit cleanly
+				if strings.Contains(err.Error(), "use of closed network connection") {
+					logging.Debugf("Bucker updater: Notified of new updater for bucket: %v", b.GetName())
+					return nil
+				}
 				break
 			}
 
@@ -319,7 +353,7 @@ func (b *Bucket) UpdateBucket2(streamingFn StreamingFn) error {
 					hostport, encrypted, err = MapKVtoSSLExt(hostport, &poolServices, b.pool.client.disableNonSSLPorts)
 					if err != nil {
 						b.Unlock()
-						return err
+						return errors.NewBucketUpdaterMappingError(err)
 					}
 				}
 				if b.ah != nil {
@@ -343,7 +377,7 @@ func (b *Bucket) UpdateBucket2(streamingFn StreamingFn) error {
 			if streamingFn != nil {
 				streamingFn(tmpb)
 			}
-			logging.Debugf("Got new configuration for bucket %s", b.GetName())
+			logging.Debugf("Bucker updater: Got new configuration for bucket %s", b.GetName())
 
 		}
 		// we are here because of an error

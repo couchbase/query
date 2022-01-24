@@ -271,6 +271,8 @@ type Bucket struct {
 	commonSufix   string
 	ah            AuthHandler // auth handler
 	closed        bool
+
+	updater io.ReadCloser
 }
 
 // PoolServices is all the bucket-independent services in a pool
@@ -1247,6 +1249,10 @@ func (b *Bucket) Close() {
 			}
 		}
 		b.connPools = nil
+	}
+	if b.updater != nil {
+		b.updater.Close()
+		b.updater = nil
 	}
 }
 
