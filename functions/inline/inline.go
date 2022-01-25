@@ -10,6 +10,7 @@ package inline
 
 import (
 	goerrors "errors"
+	"strings"
 
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/auth"
@@ -25,6 +26,7 @@ type inline struct {
 type inlineBody struct {
 	expr     expression.Expression
 	varNames []string
+	text     string
 }
 
 func Init() {
@@ -63,8 +65,8 @@ func (this *inline) Execute(name functions.FunctionName, body functions.Function
 	}
 }
 
-func NewInlineBody(expr expression.Expression) (functions.FunctionBody, errors.Error) {
-	return &inlineBody{expr: expr}, nil
+func NewInlineBody(expr expression.Expression, text string) (functions.FunctionBody, errors.Error) {
+	return &inlineBody{expr: expr, text: strings.TrimSuffix(text, ";")}, nil
 }
 
 func (this *inlineBody) SetVarNames(vars []string) errors.Error {
@@ -123,6 +125,7 @@ func (this *inlineBody) Body(object map[string]interface{}) {
 		}
 		object["parameters"] = vars
 	}
+	object["text"] = this.text
 }
 
 func (this *inlineBody) Indexable() value.Tristate {

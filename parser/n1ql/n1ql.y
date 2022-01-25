@@ -3052,7 +3052,7 @@ parameter_terms COMMA IDENT
 func_body:
 LBRACE expr RBRACE
 {
-    body, err := functionsBridge.NewInlineBody($2)
+    body, err := functionsBridge.NewInlineBody($2, yylex.(*lexer).getSubString($<tokOffset>1,$<tokOffset>3))
     if err != nil {
         yylex.Error(err.Error()+yylex.(*lexer).ErrorContext())
     } else {
@@ -3062,7 +3062,7 @@ LBRACE expr RBRACE
 |
 LANGUAGE INLINE AS expr
 {
-    body, err := functionsBridge.NewInlineBody($4)
+    body, err := functionsBridge.NewInlineBody($4, yylex.(*lexer).Remainder($<tokOffset>3))
     if err != nil {
         yylex.Error(err.Error()+yylex.(*lexer).ErrorContext())
     } else {

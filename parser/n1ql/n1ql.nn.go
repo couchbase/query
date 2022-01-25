@@ -39424,10 +39424,12 @@ OUTER0:
 		case 29:
 			{
 				yylex.logToken(yylex.Text(), "LBRACE")
+				lval.tokOffset = yylex.curOffset
 				return LBRACE
 			}
 		case 30:
 			{
+				lval.tokOffset = yylex.curOffset
 				yylex.logToken(yylex.Text(), "RBRACE")
 				return RBRACE
 			}

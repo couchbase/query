@@ -20,7 +20,7 @@ var NewFunctionName func(elem []string, namespace string, queryContext string) (
 	return nil, nil
 }
 
-var NewInlineBody func(expr expression.Expression) (functions.FunctionBody, errors.Error) = func(expr expression.Expression) (functions.FunctionBody, errors.Error) {
+var NewInlineBody func(expr expression.Expression, text string) (functions.FunctionBody, errors.Error) = func(expr expression.Expression, text string) (functions.FunctionBody, errors.Error) {
 	return nil, nil
 }
 

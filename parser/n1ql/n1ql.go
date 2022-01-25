@@ -295,6 +295,10 @@ func (this *lexer) setExpression(expr expression.Expression) {
 
 func (this *lexer) parsingStatement() bool { return this.parsingStmt }
 
+func (this *lexer) getSubString(s, e int) string {
+	return strings.TrimSpace(this.text[s:e])
+}
+
 func (this *lexer) getText() string { return this.text }
 
 func (this *lexer) nextParam() int {

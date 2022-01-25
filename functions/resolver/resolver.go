@@ -84,6 +84,7 @@ func MakeBody(name string, bytes []byte) (functions.FunctionBody, errors.Error) 
 			_          string   `json:"#language"`
 			Parameters []string `json:"parameters"`
 			Expression string   `json:"expression"`
+			Text       string   `json:"text"`
 		}
 		err := json.Unmarshal(bytes, &_unmarshalled)
 		if err != nil {
@@ -97,7 +98,10 @@ func MakeBody(name string, bytes []byte) (functions.FunctionBody, errors.Error) 
 		} else {
 			return nil, errors.NewFunctionEncodingError("decode body", name, go_errors.New("expression is missing"))
 		}
-		body, newErr := inline.NewInlineBody(expr)
+		if len(_unmarshalled.Text) == 0 {
+			_unmarshalled.Text = expr.String()
+		}
+		body, newErr := inline.NewInlineBody(expr, _unmarshalled.Text)
 		if body != nil {
 			newErr = body.SetVarNames(_unmarshalled.Parameters)
 		}
