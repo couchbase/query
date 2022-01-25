@@ -1347,6 +1347,13 @@ IDENT
 
 keyspace_name:
 IDENT
+{
+  $$ = strings.TrimSpace($1)
+  if $$ != $1 || $$ == "" {
+    return yylex.(*lexer).FatalError(fmt.Sprintf("Invalid identifier '%v'%s", $1,
+      errors.NewErrorContext(yylex.(*lexer).nex.Line()+1,yylex.(*lexer).nex.Column()).Error()))
+  }
+}
 ;
 
 opt_use:
