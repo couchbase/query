@@ -28,7 +28,8 @@ func NewDatastoreUnableToRetrieveRoles(e error) Error {
 		InternalMsg: "Unable to retrieve roles from server.", InternalCaller: CallerN(1)}
 }
 
-func NewDatastoreInsufficientCredentials(msg string) Error {
-	return &err{level: EXCEPTION, ICode: E_DATASTORE_INSUFFICIENT_CREDENTIALS, IKey: "datastore.couchbase.insufficient_credentials",
-		InternalMsg: msg, InternalCaller: CallerN(1)}
+func NewDatastoreInsufficientCredentials(msg string, e error) Error {
+	return &err{level: EXCEPTION, ICode: E_DATASTORE_INSUFFICIENT_CREDENTIALS,
+		IKey:        "datastore.couchbase.insufficient_credentials",
+		InternalMsg: msg, InternalCaller: CallerN(1), cause: e}
 }

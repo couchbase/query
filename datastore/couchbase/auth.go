@@ -264,6 +264,8 @@ func isClientCertPresent(req *http.Request) bool {
 
 func cbAuthorize(s authSource, privileges *auth.Privileges, credentials *auth.Credentials) (auth.AuthenticatedUsers, errors.Error) {
 
+	var reason error
+
 	if credentials.AuthenticatedUsers == nil {
 
 		authenticatedUsers := make(auth.AuthenticatedUsers, 0, len(credentials.Users))
@@ -295,12 +297,11 @@ func cbAuthorize(s authSource, privileges *auth.Privileges, credentials *auth.Cr
 
 		req := credentials.HttpRequest
 		if req != nil {
+			impersonation, _, _ := cbauth.ExtractOnBehalfIdentity(req)
 			creds, err := s.authWebCreds(req)
 			if err == nil {
 				credentialsList = append(credentialsList, creds)
 				authenticatedUsers = append(authenticatedUsers, userKeyString(creds))
-			} else if err.Error() == "No web credentials found in request." {
-				// Do nothing.
 			} else {
 
 				clientAuthType, err1 := cbauth.GetClientCertAuthType()
@@ -312,6 +313,8 @@ func cbAuthorize(s authSource, privileges *auth.Privileges, credentials *auth.Cr
 				// Then return the error.
 				if clientAuthType != tls.NoClientCert && isClientCertPresent(req) {
 					return nil, errors.NewDatastoreAuthorizationError(err)
+				} else if clientAuthType == tls.NoClientCert && impersonation != "" {
+					reason = errors.NewDatastoreAuthorizationError(err)
 				}
 			}
 		}
@@ -341,6 +344,7 @@ func cbAuthorize(s authSource, privileges *auth.Privileges, credentials *auth.Cr
 					logging.Debugf("Unable to authorize <ud>%s</ud>. Error - %v", username, err)
 					return nil, errors.NewDatastoreAuthorizationError(err)
 				} else {
+					reason = nil
 					credentialsList = append(credentialsList, creds)
 					if un != "" {
 						authenticatedUsers = append(authenticatedUsers, userKeyString(creds))
@@ -385,7 +389,7 @@ func cbAuthorize(s authSource, privileges *auth.Privileges, credentials *auth.Cr
 		return credentials.AuthenticatedUsers, nil
 	}
 	msg := messageForDeniedPrivilege(deniedPrivileges[0])
-	return nil, errors.NewDatastoreInsufficientCredentials(msg)
+	return nil, errors.NewDatastoreInsufficientCredentials(msg, reason)
 }
 
 func cbPreAuthorize(privileges *auth.Privileges) {
