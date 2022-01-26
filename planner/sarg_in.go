@@ -13,7 +13,6 @@ import (
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
 	base "github.com/couchbase/query/plannerbase"
-	"github.com/couchbase/query/sort"
 	"github.com/couchbase/query/value"
 )
 
@@ -52,13 +51,8 @@ func (this *sarg) VisitIn(pred *expression.In) (interface{}, error) {
 			return _EMPTY_SPANS, nil
 		}
 
-		// De-dup before generating spans
-		set := value.NewSet(len(vals), true, false)
-		set.AddAll(vals)
-		vals = set.Actuals()
-
-		// Sort for EXPLAIN stability
-		sort.Sort(value.NewSorter(value.NewValue(vals)))
+		// De-dup and Sort before generating spans for EXPLAIN stability
+		vals = expression.SortInList(vals)
 
 		array = make(expression.Expressions, len(vals))
 		for i, val := range vals {

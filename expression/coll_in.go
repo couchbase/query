@@ -13,6 +13,7 @@ import (
 	"sync/atomic"
 
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/sort"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
@@ -200,6 +201,39 @@ func (this *In) ResetMemory(context Context) {
 			}
 		}
 	}
+}
+
+// compare two IN-clause and allow the array to be in different order
+// i.e. "c1 IN [1, 2]" is treated as equivalent to "c1 IN [2, 1]"
+func (this *In) EquivalentWithList(other *In) bool {
+	if this == nil || other == nil {
+		return false
+	}
+	if !this.First().EquivalentTo(other.First()) {
+		return false
+	}
+	secVal1 := this.Second().Value()
+	secVal2 := other.Second().Value()
+	if secVal1 == nil || secVal2 == nil {
+		return this.Second().EquivalentTo(other.Second())
+	}
+	vals1, ok1 := secVal1.Actual().([]interface{})
+	vals2, ok2 := secVal2.Actual().([]interface{})
+	if !ok1 || !ok2 {
+		return this.Second().EquivalentTo(other.Second())
+	}
+	vals1 = SortInList(vals1)
+	vals2 = SortInList(vals2)
+	return value.NewValue(vals1).EquivalentTo(value.NewValue(vals2))
+}
+
+func SortInList(vals []interface{}) []interface{} {
+	set := value.NewSet(len(vals), true, false)
+	set.AddAll(vals)
+	vals = set.Actuals()
+
+	sort.Sort(value.NewSorter(value.NewValue(vals)))
+	return vals
 }
 
 /*

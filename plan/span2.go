@@ -322,10 +322,6 @@ func (this *Span2) Empty() bool {
 	return false
 }
 
-func (this *Span2) SpanFromInExpr() bool {
-	return len(this.Ranges) == 1 && this.Ranges[0].HasFlag(RANGE_FROM_IN_EXPR)
-}
-
 func (this *Span2) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
