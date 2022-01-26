@@ -178,6 +178,7 @@ func (this *Context) completeStatement(stmtType string, success bool, baseContex
 
 func (this *Context) OpenStatement(statement string, namedArgs map[string]value.Value, positionalArgs value.Values,
 	subquery, readonly bool) (interface {
+	Type() string
 	Results() (interface{}, uint64, error)
 	NextDocument() (value.Value, error)
 	Cancel()
@@ -440,6 +441,7 @@ func (this *Context) ExecutePrepared(prepared *plan.Prepared, isPrepared bool,
 
 func (this *Context) OpenPrepared(stmtType string, prepared *plan.Prepared, isPrepared bool,
 	namedArgs map[string]value.Value, positionalArgs value.Values) (interface {
+	Type() string
 	Results() (interface{}, uint64, error)
 	NextDocument() (value.Value, error)
 	Cancel()
@@ -471,6 +473,7 @@ func (this *Context) OpenPrepared(stmtType string, prepared *plan.Prepared, isPr
 	}
 
 	handle.stmtType = stmtType
+	handle.actualType = prepared.Type()
 	handle.exec = util.Now()
 	handle.root.RunOnce(handle.context, nil)
 	return handle, nil
@@ -483,6 +486,7 @@ type executionHandle struct {
 	baseContext *Context
 	context     *Context
 	stmtType    string
+	actualType  string
 	output      *internalOutput
 	stopped     int32
 }
@@ -514,6 +518,10 @@ func (this *executionHandle) Results() (interface{}, uint64, error) {
 		this.root.Done()
 	}
 	return values, this.output.mutationCount, this.output.err
+}
+
+func (this *executionHandle) Type() string {
+	return this.actualType
 }
 
 func (this *executionHandle) Complete() (uint64, error) {

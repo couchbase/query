@@ -41,6 +41,7 @@ type Context interface {
 	ReleaseValue(key string)
 	EvaluateStatement(statement string, namedArgs map[string]value.Value, positionalArgs value.Values, subquery, readonly bool) (value.Value, uint64, error)
 	OpenStatement(statement string, namedArgs map[string]value.Value, positionalArgs value.Values, subquery, readonly bool) (interface {
+		Type() string
 		Results() (interface{}, uint64, error)
 		NextDocument() (value.Value, error)
 		Cancel()
@@ -52,6 +53,7 @@ type Context interface {
 }
 
 type ExecutionHandle interface {
+	Type() string
 	NextDocument() (value.Value, error)
 }
 

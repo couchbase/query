@@ -20,6 +20,7 @@ type UdfContext struct {
 
 type UdfHandle struct {
 	handle interface {
+		Type() string
 		Results() (interface{}, uint64, error)
 		NextDocument() (value.Value, error)
 		Cancel()
@@ -117,6 +118,10 @@ func (this *UdfContext) NestingLevel() int {
 
 func (this *UdfContext) StorageContext() string {
 	return this.path
+}
+
+func (this *UdfHandle) Type() string {
+	return this.handle.Type()
 }
 
 func (this *UdfHandle) Results() (interface{}, uint64, error) {

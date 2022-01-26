@@ -68,6 +68,7 @@ func (this *IndexContext) EvaluateStatement(statement string, namedArgs map[stri
 
 func (this *IndexContext) OpenStatement(statement string, namedArgs map[string]value.Value, positionalArgs value.Values, subquery, readonly bool) (
 	interface {
+		Type() string
 		Results() (interface{}, uint64, error)
 		NextDocument() (value.Value, error)
 		Cancel()
