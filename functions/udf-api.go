@@ -21,6 +21,7 @@ type UdfContext struct {
 type UdfHandle struct {
 	handle interface {
 		Type() string
+		Mutations() uint64
 		Results() (interface{}, uint64, error)
 		NextDocument() (value.Value, error)
 		Cancel()
@@ -122,6 +123,10 @@ func (this *UdfContext) StorageContext() string {
 
 func (this *UdfHandle) Type() string {
 	return this.handle.Type()
+}
+
+func (this *UdfHandle) Mutations() uint64 {
+	return this.handle.Mutations()
 }
 
 func (this *UdfHandle) Results() (interface{}, uint64, error) {

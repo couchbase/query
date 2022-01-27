@@ -41,6 +41,7 @@ type Context interface {
 
 type Handle interface {
 	Type() string
+	Mutations() uint64
 	Results() (interface{}, uint64, error)
 	NextDocument() (interface{}, error)
 	Cancel()

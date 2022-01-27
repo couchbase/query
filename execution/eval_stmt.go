@@ -179,6 +179,7 @@ func (this *Context) completeStatement(stmtType string, success bool, baseContex
 func (this *Context) OpenStatement(statement string, namedArgs map[string]value.Value, positionalArgs value.Values,
 	subquery, readonly bool) (interface {
 	Type() string
+	Mutations() uint64
 	Results() (interface{}, uint64, error)
 	NextDocument() (value.Value, error)
 	Cancel()
@@ -442,6 +443,7 @@ func (this *Context) ExecutePrepared(prepared *plan.Prepared, isPrepared bool,
 func (this *Context) OpenPrepared(stmtType string, prepared *plan.Prepared, isPrepared bool,
 	namedArgs map[string]value.Value, positionalArgs value.Values) (interface {
 	Type() string
+	Mutations() uint64
 	Results() (interface{}, uint64, error)
 	NextDocument() (value.Value, error)
 	Cancel()
@@ -522,6 +524,10 @@ func (this *executionHandle) Results() (interface{}, uint64, error) {
 
 func (this *executionHandle) Type() string {
 	return this.actualType
+}
+
+func (this *executionHandle) Mutations() uint64 {
+	return this.output.mutationCount
 }
 
 func (this *executionHandle) Complete() (uint64, error) {
