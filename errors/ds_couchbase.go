@@ -122,7 +122,7 @@ func NewCbIndexNotFoundError(args ...interface{}) Error {
 		c["name"] = name
 	}
 	return &err{level: EXCEPTION, ICode: E_CB_INDEX_NOT_FOUND, IKey: "datastore.couchbase.index_not_found", ICause: e, cause: c,
-		InternalMsg: "Index Not Found", InternalCaller: CallerN(1), retry: value.TRUE}
+		InternalMsg: "Index Not Found", InternalCaller: CallerN(1)}
 }
 
 func NewCbGetRandomEntryError(e error) Error {
