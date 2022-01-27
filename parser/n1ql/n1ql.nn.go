@@ -218,8 +218,8 @@ type dfa struct {
 }
 
 var dfas = []dfa{
-	// \"(\\\"|\\[^"]|[^\"\\])*\"
-	{[]bool{false, false, true, false, false, false, false}, []func(rune) int{ // Transitions
+	// \"(\\\"|\\[^"]|[^\"\\])*\"?
+	{[]bool{false, true, true, false, true, true, true}, []func(rune) int{ // Transitions
 		func(r rune) int {
 			switch r {
 			case 34:
@@ -285,8 +285,8 @@ var dfas = []dfa{
 		},
 	}, []int{ /* Start-of-input transitions */ -1, -1, -1, -1, -1, -1, -1}, []int{ /* End-of-input transitions */ -1, -1, -1, -1, -1, -1, -1}, nil},
 
-	// '(''|\\'|\\[^']|[^'\\])*'
-	{[]bool{false, false, true, false, false, false, false, false}, []func(rune) int{ // Transitions
+	// '(''|\\'|\\[^']|[^'\\])*'?
+	{[]bool{false, true, true, false, true, true, true, true}, []func(rune) int{ // Transitions
 		func(r rune) int {
 			switch r {
 			case 39:
@@ -361,10 +361,12 @@ var dfas = []dfa{
 		},
 	}, []int{ /* Start-of-input transitions */ -1, -1, -1, -1, -1, -1, -1, -1}, []int{ /* End-of-input transitions */ -1, -1, -1, -1, -1, -1, -1, -1}, nil},
 
-	// `((``)|[^`])*`i
-	{[]bool{false, false, false, false, false, true}, []func(rune) int{ // Transitions
+	// `((``|\\`)|\\[^`]|[^`\\])*`?i
+	{[]bool{false, false, false, false, true, false, false, true, false, false}, []func(rune) int{ // Transitions
 		func(r rune) int {
 			switch r {
+			case 92:
+				return -1
 			case 96:
 				return 1
 			case 105:
@@ -374,89 +376,180 @@ var dfas = []dfa{
 		},
 		func(r rune) int {
 			switch r {
-			case 96:
+			case 92:
 				return 2
-			case 105:
+			case 96:
 				return 3
+			case 105:
+				return 4
 			}
-			return 3
+			return 5
 		},
 		func(r rune) int {
 			switch r {
+			case 92:
+				return 8
 			case 96:
-				return 4
+				return 9
 			case 105:
+				return 8
+			}
+			return 8
+		},
+		func(r rune) int {
+			switch r {
+			case 92:
+				return -1
+			case 96:
+				return 6
+			case 105:
+				return 7
+			}
+			return -1
+		},
+		func(r rune) int {
+			switch r {
+			case 92:
+				return 2
+			case 96:
+				return 3
+			case 105:
+				return 4
+			}
+			return 5
+		},
+		func(r rune) int {
+			switch r {
+			case 92:
+				return 2
+			case 96:
+				return 3
+			case 105:
+				return 4
+			}
+			return 5
+		},
+		func(r rune) int {
+			switch r {
+			case 92:
+				return 2
+			case 96:
+				return 3
+			case 105:
+				return 4
+			}
+			return 5
+		},
+		func(r rune) int {
+			switch r {
+			case 92:
+				return -1
+			case 96:
+				return -1
+			case 105:
+				return -1
+			}
+			return -1
+		},
+		func(r rune) int {
+			switch r {
+			case 92:
+				return 2
+			case 96:
+				return 3
+			case 105:
+				return 4
+			}
+			return 5
+		},
+		func(r rune) int {
+			switch r {
+			case 92:
+				return 2
+			case 96:
+				return 3
+			case 105:
+				return 4
+			}
+			return 5
+		},
+	}, []int{ /* Start-of-input transitions */ -1, -1, -1, -1, -1, -1, -1, -1, -1, -1}, []int{ /* End-of-input transitions */ -1, -1, -1, -1, -1, -1, -1, -1, -1, -1}, nil},
+
+	// `((``|\\`)|\\[^`]|[^`\\])*`?
+	{[]bool{false, true, false, true, true, true, true, true}, []func(rune) int{ // Transitions
+		func(r rune) int {
+			switch r {
+			case 92:
+				return -1
+			case 96:
+				return 1
+			}
+			return -1
+		},
+		func(r rune) int {
+			switch r {
+			case 92:
+				return 2
+			case 96:
+				return 3
+			}
+			return 4
+		},
+		func(r rune) int {
+			switch r {
+			case 92:
+				return 6
+			case 96:
+				return 7
+			}
+			return 6
+		},
+		func(r rune) int {
+			switch r {
+			case 92:
+				return -1
+			case 96:
 				return 5
 			}
 			return -1
 		},
 		func(r rune) int {
 			switch r {
-			case 96:
+			case 92:
 				return 2
-			case 105:
+			case 96:
 				return 3
 			}
-			return 3
+			return 4
 		},
 		func(r rune) int {
 			switch r {
-			case 96:
+			case 92:
 				return 2
-			case 105:
+			case 96:
 				return 3
 			}
-			return 3
+			return 4
 		},
 		func(r rune) int {
 			switch r {
-			case 96:
-				return -1
-			case 105:
-				return -1
-			}
-			return -1
-		},
-	}, []int{ /* Start-of-input transitions */ -1, -1, -1, -1, -1, -1}, []int{ /* End-of-input transitions */ -1, -1, -1, -1, -1, -1}, nil},
-
-	// `((``)|[^`])*`
-	{[]bool{false, false, true, false, false}, []func(rune) int{ // Transitions
-		func(r rune) int {
-			switch r {
-			case 96:
-				return 1
-			}
-			return -1
-		},
-		func(r rune) int {
-			switch r {
-			case 96:
+			case 92:
 				return 2
+			case 96:
+				return 3
 			}
-			return 3
+			return 4
 		},
 		func(r rune) int {
 			switch r {
-			case 96:
-				return 4
-			}
-			return -1
-		},
-		func(r rune) int {
-			switch r {
-			case 96:
+			case 92:
 				return 2
-			}
-			return 3
-		},
-		func(r rune) int {
-			switch r {
 			case 96:
-				return 2
+				return 3
 			}
-			return 3
+			return 4
 		},
-	}, []int{ /* Start-of-input transitions */ -1, -1, -1, -1, -1}, []int{ /* End-of-input transitions */ -1, -1, -1, -1, -1}, nil},
+	}, []int{ /* Start-of-input transitions */ -1, -1, -1, -1, -1, -1, -1, -1}, []int{ /* End-of-input transitions */ -1, -1, -1, -1, -1, -1, -1, -1}, nil},
 
 	// (0|[1-9][0-9]*)\.[0-9]+([eE][+\-]?[0-9]+)?
 	{[]bool{false, false, false, false, false, true, false, false, true}, []func(rune) int{ // Transitions
@@ -39147,7 +39240,7 @@ OUTER0:
 				lval.s, e = ProcessEscapeSequences(yylex.Text())
 				yylex.logToken(yylex.Text(), "STR - [%s]", lval.s)
 				if e != nil {
-					yylex.reportError("invalid quoted string")
+					yylex.reportError("invalid quoted string - " + e.Error())
 					return _ERROR_
 				}
 				return STR
@@ -39159,7 +39252,7 @@ OUTER0:
 				lval.s, e = ProcessEscapeSequences(yylex.Text())
 				yylex.logToken(yylex.Text(), "STR - [%s]", lval.s)
 				if e != nil {
-					yylex.reportError("invalid quoted string")
+					yylex.reportError("invalid quoted string - " + e.Error())
 					return _ERROR_
 				}
 				return STR
@@ -39174,7 +39267,7 @@ OUTER0:
 				lval.s, e = ProcessEscapeSequences(text)
 				yylex.logToken(yylex.Text(), "IDENT_ICASE - %s", lval.s)
 				if e != nil {
-					yylex.reportError("invalid case insensitive identifier")
+					yylex.reportError("invalid case insensitive identifier - " + e.Error())
 					return _ERROR_
 				}
 				return IDENT_ICASE
@@ -39187,7 +39280,7 @@ OUTER0:
 				lval.s, e = ProcessEscapeSequences(yylex.Text())
 				yylex.logToken(yylex.Text(), "IDENT - %s", lval.s)
 				if e != nil {
-					yylex.reportError("invalid escaped identifier")
+					yylex.reportError("invalid escaped identifier - " + e.Error())
 					return _ERROR_
 				}
 				return IDENT

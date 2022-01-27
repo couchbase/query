@@ -14,7 +14,7 @@
 },
 {
     "statements": "SELECT  META() FROM orders AS ord UNNEST ord.lineItems.product AS prod WHERE test_id=\"err_cases\"",
-    "error": "Ambiguous reference to field test_id (near line 1, column 84)."
+    "error": "Ambiguous reference to field 'test_id' (near line 1, column 84)."
 },
 {
     "statements": "SELECT id, custId AS id FROM orders WHERE test_id=\"err_cases\" ORDER BY title",

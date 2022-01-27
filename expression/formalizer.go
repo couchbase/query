@@ -258,7 +258,7 @@ func (this *Formalizer) VisitIdentifier(expr *Identifier) (interface{}, error) {
 	}
 
 	if this.keyspace == "" {
-		return nil, fmt.Errorf("Ambiguous reference to field %v%v.", identifier, expr.ErrorContext())
+		return nil, fmt.Errorf("Ambiguous reference to field '%v'%v.", identifier, expr.ErrorContext())
 	}
 
 	if this.mapKeyspace() {

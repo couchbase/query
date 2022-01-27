@@ -1,28 +1,28 @@
-/\"(\\\"|\\[^"]|[^\"\\])*\"/ {
+/\"(\\\"|\\[^"]|[^\"\\])*\"?/ {
 		    var e error
 
 		    lval.s, e = ProcessEscapeSequences(yylex.Text())
 		    yylex.logToken(yylex.Text(), "STR - [%s]", lval.s)
 		    if e != nil {
-			yylex.reportError("invalid quoted string")
+			yylex.reportError("invalid quoted string - "+e.Error())
 			return _ERROR_
 		    }
 		    return STR
 		  }
 
-/'(''|\\'|\\[^']|[^'\\])*'/ {
+/'(''|\\'|\\[^']|[^'\\])*'?/ {
 		    var e error
 
 		    lval.s, e = ProcessEscapeSequences(yylex.Text())
 		    yylex.logToken(yylex.Text(), "STR - [%s]", lval.s)
 		    if e != nil {
-			yylex.reportError("invalid quoted string")
+			yylex.reportError("invalid quoted string - "+e.Error())
 			return _ERROR_
 		    }
 		    return STR
 		  }
 
-/`((``)|[^`])*`i/ {
+/`((``|\\`)|\\[^`]|[^`\\])*`?i/ {
 		    // Case-insensitive identifier
 		    var e error
 
@@ -31,20 +31,20 @@
 		    lval.s, e = ProcessEscapeSequences(text)
 		    yylex.logToken(yylex.Text(), "IDENT_ICASE - %s", lval.s)
 		    if e != nil {
-			yylex.reportError("invalid case insensitive identifier")
+			yylex.reportError("invalid case insensitive identifier - "+e.Error())
 			return _ERROR_
 		    }
 		    return IDENT_ICASE
 		  }
 
-/`((``)|[^`])*`/ {
+/`((``|\\`)|\\[^`]|[^`\\])*`?/ {
 		    // Escaped identifier
 		    var e error
 
 		    lval.s, e = ProcessEscapeSequences(yylex.Text())
 		    yylex.logToken(yylex.Text(), "IDENT - %s", lval.s)
 		    if e != nil {
-			yylex.reportError("invalid escaped identifier")
+			yylex.reportError("invalid escaped identifier - "+e.Error())
 			return _ERROR_
 		    }
 		    return IDENT

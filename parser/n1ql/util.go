@@ -9,11 +9,12 @@
 package n1ql
 
 import (
-	"errors"
 	"unicode"
 	"unicode/utf16"
 	"unicode/utf8"
 	"unsafe"
+
+	"github.com/couchbase/query/errors"
 )
 
 // Extract first 4 characters in provided string as (ASCII) hex digits of a UTF16 encoding
@@ -27,11 +28,11 @@ func getUTF16Rune(s string) (rune, error) {
 				b = b - 32
 			}
 			if b < 10 {
-				return unicode.ReplacementChar, errors.New("invalid escape sequence")
+				return unicode.ReplacementChar, errors.NewParseInvalidEscapeSequenceError()
 			}
 		}
 		if b < 0 || b > 15 {
-			return unicode.ReplacementChar, errors.New("invalid escape sequence")
+			return unicode.ReplacementChar, errors.NewParseInvalidEscapeSequenceError()
 		}
 		rn = rn << 4
 		rn = rn | rune(b)
@@ -42,14 +43,20 @@ func getUTF16Rune(s string) (rune, error) {
 // Handle permitted JSON escape sequences along with appropriate quotation mark escaping (allows '' as an escaped ')
 // Ref: https://www.json.org/json-en.html
 func ProcessEscapeSequences(s string) (t string, e error) {
+	if len(s) < 2 {
+		return t, errors.NewParseInvalidStringError()
+	}
+	if s[0] != s[len(s)-1] {
+		return t, errors.NewParseMissingClosingQuoteError()
+	}
 	b := make([]byte, len(s)-2)
 	w := 0
 	for r := 1; r < len(s)-1; {
 		c := s[r]
 		r++
 		if c == '\\' {
-			if r >= len(s)-1 {
-				return t, errors.New("invalid escape sequence")
+			if r == len(s)-1 {
+				return t, errors.NewParseMissingClosingQuoteError()
 			}
 			c = s[r]
 			r++
@@ -81,9 +88,12 @@ func ProcessEscapeSequences(s string) (t string, e error) {
 			case '\'':
 				b[w] = c
 				w++
+			case '`':
+				b[w] = c
+				w++
 			case 'u':
 				if r+4 > len(s)-1 {
-					return t, errors.New("invalid escape sequence")
+					return t, errors.NewParseInvalidEscapeSequenceError()
 				}
 				rn, err := getUTF16Rune(s[r:])
 				if err != nil {
@@ -106,7 +116,7 @@ func ProcessEscapeSequences(s string) (t string, e error) {
 				}
 				w += utf8.EncodeRune(b[w:], rn)
 			default:
-				return t, errors.New("invalid escape sequence")
+				return t, errors.NewParseInvalidEscapeSequenceError()
 			}
 		} else {
 			// we don't need validate UTF8 sequences so we can simply copy them byte-by-byte
@@ -115,11 +125,16 @@ func ProcessEscapeSequences(s string) (t string, e error) {
 			// if single quoted, allow '' as an escaped single quote
 			if s[0] == '\'' && c == '\'' {
 				if r >= len(s)-1 || s[r] != '\'' {
-					return t, errors.New("unescaped embedded quote")
+					return t, errors.NewParseUnescapedEmbeddedQuoteError()
+				}
+				r++
+			} else if s[0] == '`' && c == '`' { // same for back quote
+				if r >= len(s)-1 || s[r] != '`' {
+					return t, errors.NewParseUnescapedEmbeddedQuoteError()
 				}
 				r++
 			} else if s[0] == c {
-				return t, errors.New("unescaped embedded quote")
+				return t, errors.NewParseUnescapedEmbeddedQuoteError()
 			}
 		}
 	}

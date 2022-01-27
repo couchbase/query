@@ -104,6 +104,10 @@ const (
 	E_ADMIN_BODY                              ErrorCode = 2220
 	E_PARSE_SYNTAX                            ErrorCode = 3000
 	E_ERROR_CONTEXT                           ErrorCode = 3005
+	E_PARSE_INVALID_ESCAPE_SEQUENCE           ErrorCode = 3006
+	E_PARSE_INVALID_STRING                    ErrorCode = 3007
+	E_PARSE_MISSING_CLOSING_QUOTE             ErrorCode = 3008
+	E_PARSE_UNESCAPED_EMBEDDED_QUOTE          ErrorCode = 3009
 	E_SEMANTICS                               ErrorCode = 3100
 	E_JOIN_NEST_NO_JOIN_HINT                  ErrorCode = 3110
 	E_JOIN_NEST_NO_USE_KEYS                   ErrorCode = 3120

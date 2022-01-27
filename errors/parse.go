@@ -28,3 +28,23 @@ func NewErrorContext(line, column int) Error {
 	return &err{level: EXCEPTION, ICode: E_ERROR_CONTEXT, IKey: "expression.error.context", ICause: nil,
 		InternalMsg: fmt.Sprintf(" (near line %d, column %d)", line, column), InternalCaller: CallerN(1)}
 }
+
+func NewParseInvalidEscapeSequenceError() Error {
+	return &err{level: EXCEPTION, ICode: E_PARSE_INVALID_ESCAPE_SEQUENCE, IKey: "parse.invalid_escape_sequence",
+		InternalMsg: "invalid escape sequence", InternalCaller: CallerN(1)}
+}
+
+func NewParseInvalidStringError() Error {
+	return &err{level: EXCEPTION, ICode: E_PARSE_INVALID_STRING, IKey: "parse.invalid_string",
+		InternalMsg: "invalid string", InternalCaller: CallerN(1)}
+}
+
+func NewParseMissingClosingQuoteError() Error {
+	return &err{level: EXCEPTION, ICode: E_PARSE_MISSING_CLOSING_QUOTE, IKey: "parse.missing_closing_quote",
+		InternalMsg: "missing closing quote", InternalCaller: CallerN(1)}
+}
+
+func NewParseUnescapedEmbeddedQuoteError() Error {
+	return &err{level: EXCEPTION, ICode: E_PARSE_UNESCAPED_EMBEDDED_QUOTE, IKey: "parse.unescaped_embedded_quote",
+		InternalMsg: "unescaped embedded quote", InternalCaller: CallerN(1)}
+}
