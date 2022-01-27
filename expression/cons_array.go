@@ -11,6 +11,7 @@ package expression
 import (
 	"math"
 
+	"github.com/couchbase/query/sort"
 	"github.com/couchbase/query/value"
 )
 
@@ -19,11 +20,13 @@ Represents array construction.
 */
 type ArrayConstruct struct {
 	FunctionBase
+	isSet bool
 }
 
 func NewArrayConstruct(operands ...Expression) Function {
 	rv := &ArrayConstruct{
 		*NewFunctionBase("array", operands...),
+		false,
 	}
 
 	rv.expr = rv
@@ -39,6 +42,12 @@ func (this *ArrayConstruct) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *ArrayConstruct) Type() value.Type { return value.ARRAY }
+
+func (this *ArrayConstruct) Copy() Expression {
+	rv := this.FunctionBase.Copy().(*ArrayConstruct)
+	rv.isSet = this.isSet
+	return rv
+}
 
 func (this *ArrayConstruct) Evaluate(item value.Value, context Context) (value.Value, error) {
 	if this.value != nil && *this.value != nil {
@@ -58,6 +67,27 @@ func (this *ArrayConstruct) Evaluate(item value.Value, context Context) (value.V
 		}
 		return value.NewValue(aa), nil
 	}
+}
+
+func (this *ArrayConstruct) SetIsSet(isSet bool) {
+	this.isSet = isSet
+}
+
+func (this *ArrayConstruct) EquivalentTo(other Expression) bool {
+	if this.isSet {
+		thisVal := this.Value()
+		otherVal := other.Value()
+		if thisVal != nil && otherVal != nil {
+			thisVals, ok1 := thisVal.Actual().([]interface{})
+			otherVals, ok2 := otherVal.Actual().([]interface{})
+			if ok1 && ok2 {
+				thisVals = SortValArr(thisVals)
+				otherVals = SortValArr(otherVals)
+				return value.NewValue(thisVals).EquivalentTo(value.NewValue(otherVals))
+			}
+		}
+	}
+	return this.FunctionBase.EquivalentTo(other)
 }
 
 func (this *ArrayConstruct) PropagatesMissing() bool {
@@ -90,4 +120,13 @@ Factory method pattern.
 */
 func (this *ArrayConstruct) Constructor() FunctionConstructor {
 	return NewArrayConstruct
+}
+
+func SortValArr(vals []interface{}) []interface{} {
+	set := value.NewSet(len(vals), true, false)
+	set.AddAll(vals)
+	vals = set.Actuals()
+
+	sort.Sort(value.NewSorter(value.NewValue(vals)))
+	return vals
 }
