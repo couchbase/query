@@ -98,7 +98,7 @@ func chkSysBucket() {
 		return
 	}
 
-	hasSysCBOStats, err := dictionary.CheckSysCBOStats(false, "", true)
+	hasSysCBOStats, err := dictionary.CheckSysCBOStats(false, "", true, true)
 	if err == nil && !hasSysCBOStats {
 		// N1QL_SYSTEM_SCOPE or N1QL_CBO_STATS is dropped
 		dictionary.DropDictionaryCache()
