@@ -394,43 +394,12 @@
     ]
     },
     {
-        "statements": "SELECT orders.['orderlines[0].qty'] FROM orders WHERE test_id=\"select_func\" ORDER BY custId",
-        "results": [
-        {
-            "$1": 1
-        },
-        {
-            "$1": 1
-        },
-        {
-            "$1": 2
-        },
-        {
-            "$1": 1
-        }
-    ]
-    },
-    {
         "namedArgs": {"field": "one"},
         "statements": "SELECT t.[t.lookup],t.[$field] FROM {\"lookup\":\"two\",\"one\":1,\"two\":2} t",
         "results": [
             {
                 "$1": 1,
                 "lookup": 2
-            }
-        ]
-    },
-    {
-        "queryParams": { "max_parallelism": 16 },
-        "statements":"SELECT val, COUNT(1) cnt FROM (SELECT d.a||'->'||to_string(d.[d.a])||'->'||to_string(object_field(d,d.a)) AS val FROM [{\"a\":\"b.c.d\", \"b\":{\"c\":{\"d\":10}}}, {\"a\":\"e.f\", \"e\":{\"f\":true}},{\"a\":\"b.c.d\", \"b\":{\"c\":{\"d\":10}}}, {\"a\":\"e.f\", \"e\":{\"f\":true}},{\"a\":\"b.c.d\", \"b\":{\"c\":{\"d\":10}}}, {\"a\":\"e.f\", \"e\":{\"f\":true}},{\"a\":\"b.c.d\", \"b\":{\"c\":{\"d\":10}}}, {\"a\":\"e.f\", \"e\":{\"f\":true}},{\"a\":\"b.c.d\", \"b\":{\"c\":{\"d\":10}}}, {\"a\":\"e.f\", \"e\":{\"f\":true}},{\"a\":\"b.c.d\", \"b\":{\"c\":{\"d\":10}}}, {\"a\":\"e.f\", \"e\":{\"f\":true}}] AS d ORDER BY val) v GROUP BY val ORDER BY val",
-        "results":[
-            {
-                "cnt": 6,
-                "val": "b.c.d->10->10"
-            },
-            {
-                "cnt": 6,
-                "val": "e.f->true->true"
             }
         ]
     }

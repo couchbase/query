@@ -15,7 +15,6 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
@@ -1829,11 +1828,8 @@ func (this *ObjectField) Evaluate(item value.Value, context Context) (value.Valu
 	// only consider using a cached value if second argument is static
 	if exp == nil || !static {
 		// parse field descriptor expression
-		r, e := context.Parse(fld.Actual().(string))
-		if e != nil {
-			e = errors.NewParsingError(e, this.operands[1].ErrorContext())
-			return nil, e
-		} else if r == nil {
+		r, e := context.Parse(fld.ToString())
+		if e != nil || r == nil {
 			return value.NULL_VALUE, nil
 		}
 		exp, _ = r.(Expression)

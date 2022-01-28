@@ -218,7 +218,7 @@ type dfa struct {
 }
 
 var dfas = []dfa{
-	// \"(\\\"|\\[^"]|[^\"\\])*\"?
+	// \"(\\\"|\\[^\"]|[^\"\\])*\"?
 	{[]bool{false, true, true, false, true, true, true}, []func(rune) int{ // Transitions
 		func(r rune) int {
 			switch r {

@@ -11,7 +11,6 @@ package expression
 import (
 	"strings"
 
-	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/value"
 )
 
@@ -24,7 +23,6 @@ type Field struct {
 	BinaryFunctionBase
 	caseInsensitive bool
 	parenthesis     bool
-	cache           Expression
 }
 
 func NewField(first, second Expression) *Field {
@@ -51,7 +49,7 @@ func (this *Field) Accept(visitor Visitor) (interface{}, error) {
 func (this *Field) Type() value.Type { return value.JSON }
 
 /*
-Perform either case-sensitive or case-insensitive field lookup including possibly nested fields.
+Perform either case-sensitive or case-insensitive field lookup
 */
 func (this *Field) Evaluate(item value.Value, context Context) (value.Value, error) {
 	first, err := this.operands[0].Evaluate(item, context)
@@ -63,44 +61,7 @@ func (this *Field) Evaluate(item value.Value, context Context) (value.Value, err
 		return nil, err
 	}
 
-	switch second.Type() {
-	case value.STRING:
-		// if the argument is a field name we must use it as is and not parse it
-		_, fieldName := this.operands[1].(*FieldName)
-		if fieldName {
-			return this.DoEvaluate(context, first, second)
-		}
-		exp := this.cache
-		static := this.operands[1].Static() != nil
-		// only consider cached value if operand is static
-		if exp == nil || !static {
-			s := second.ToString()
-			r, e := context.Parse(s)
-			if e != nil {
-				e = errors.NewParsingError(e, this.operands[1].ErrorContext())
-				return value.NULL_VALUE, e
-			}
-			exp, _ = r.(Expression)
-			switch i := exp.(type) {
-			case *Identifier:
-				if this.CaseInsensitive() {
-					i.SetCaseInsensitive(true)
-				}
-			}
-			if static {
-				this.cache = exp
-			}
-		}
-		return exp.Evaluate(first, context)
-	case value.MISSING:
-		return value.MISSING_VALUE, nil
-	default:
-		if first.Type() == value.MISSING {
-			return value.MISSING_VALUE, nil
-		} else {
-			return value.NULL_VALUE, nil
-		}
-	}
+	return this.DoEvaluate(context, first, second)
 }
 
 // needed as logic externally accessed directly
