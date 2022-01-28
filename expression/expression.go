@@ -351,6 +351,7 @@ func GetFlattenKeys(keys Expressions) Expressions {
 			for _, fk := range all.FlattenKeys().Operands() {
 				aKey := all.Copy().(*All)
 				aKey.SetFlattenValueMapping(fk.Copy())
+				aKey.SetExprFlag(EXPR_FLATTEN_KEYS)
 				fkeys = append(fkeys, aKey)
 			}
 			if i <= len(keys)-1 {

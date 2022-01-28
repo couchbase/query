@@ -89,14 +89,20 @@ func anySargFor(pred, key, cond expression.Expression, isJoin, doSelec bool,
 		sp = sp.Copy()
 	}
 
-	if tsp, ok := sp.(*TermSpans); ok && tsp.Size() == 1 {
+	if tsp, ok := sp.(*TermSpans); ok {
 		spans := tsp.Spans()
-		if len(spans[0].Ranges) == 1 {
-			spans[0].Ranges[0].Selec1 = selec
-			if any {
-				spans[0].Ranges[0].SetFlag(plan.RANGE_ARRAY_ANY)
-			} else {
-				spans[0].Ranges[0].SetFlag(plan.RANGE_ARRAY_ANY_EVERY)
+		if selec > 0.0 && len(spans) > 1 {
+			// distribute selectivity among multiple spans
+			selec /= float64(len(spans))
+		}
+		for _, span := range spans {
+			if len(span.Ranges) == 1 {
+				span.Ranges[0].Selec1 = selec
+				if any {
+					span.Ranges[0].SetFlag(plan.RANGE_ARRAY_ANY)
+				} else {
+					span.Ranges[0].SetFlag(plan.RANGE_ARRAY_ANY_EVERY)
+				}
 			}
 		}
 	}
