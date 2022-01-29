@@ -334,10 +334,11 @@ func (this *builder) matchUnnest(node *algebra.KeyspaceTerm, pred, subset expres
 		keyspaces := make(map[string]string, 1)
 		keyspaces[baseKeyspace.Name()] = baseKeyspace.Keyspace()
 		for _, fl := range baseKeyspace.Filters() {
-			if fl.IsUnnest() {
+			if fl.IsUnnest() && !fl.IsSelecDone() {
 				sel := getUnnestPredSelec(fl.FltrExpr(), unnest.As(),
 					unnest.Expression(), keyspaces, advisorValidate, this.context)
 				fl.SetSelec(sel)
+				fl.SetSelecDone()
 			}
 		}
 	}
