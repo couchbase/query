@@ -332,7 +332,7 @@ func (this *builder) matchUnnest(node *algebra.KeyspaceTerm, pred, subset expres
 
 	if useCBO {
 		keyspaces := make(map[string]string, 1)
-		keyspaces[node.Alias()] = node.Keyspace()
+		keyspaces[baseKeyspace.Name()] = baseKeyspace.Keyspace()
 		for _, fl := range baseKeyspace.Filters() {
 			if fl.IsUnnest() {
 				sel := getUnnestPredSelec(fl.FltrExpr(), unnest.As(),

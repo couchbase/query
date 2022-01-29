@@ -95,9 +95,9 @@ func (this *builder) buildCoveringPrimaryScan(keyspace datastore.Keyspace, node 
 	pred := expression.NewIsNotNull(id)
 	baseKeyspace := base.NewBaseKeyspace(node.Alias(), node.Path(), node, (1 << len(this.baseKeyspaces)))
 	keyspaces := make(map[string]string, 1)
-	keyspaces[node.Alias()] = node.Keyspace()
+	keyspaces[baseKeyspace.Name()] = baseKeyspace.Keyspace()
 	origKeyspaces := make(map[string]string, 1)
-	origKeyspaces[node.Alias()] = node.Keyspace()
+	origKeyspaces[baseKeyspace.Name()] = baseKeyspace.Keyspace()
 	newfilter := base.NewFilter(pred, pred, keyspaces, origKeyspaces, false, false)
 	if this.useCBO && this.keyspaceUseCBO(node.Alias()) {
 		newfilter.SetSelec(1.0)
