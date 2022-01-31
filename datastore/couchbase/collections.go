@@ -105,7 +105,7 @@ func (sc *scope) KeyspaceById(id string) (datastore.Keyspace, errors.Error) {
 
 func (sc *scope) KeyspaceByName(name string) (datastore.Keyspace, errors.Error) {
 	for _, v := range sc.keyspaces {
-		if name == v.Name() {
+		if v != nil && name == v.Name() {
 			return v, nil
 		}
 	}
