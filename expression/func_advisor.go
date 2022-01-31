@@ -260,7 +260,7 @@ func (this *Advisor) scheduleTask(sessionName string, duration time.Duration, co
 func analyzeWorkload(profile, response_limit string, delta, query_count float64) string {
 	start_time := time.Now().Format(DEFAULT_FORMAT)
 	workload := "SELECT statement, queryContext AS query_context FROM system:completed_requests" +
-		" WHERE statementType IN ('SELECT','UPSERT','UPDATE','INSERT','DELETE','MERGE')" +
+		" WHERE statementType IN ['SELECT','UPSERT','UPDATE','INSERT','DELETE','MERGE']" +
 		" AND preparedName IS NOT VALUED"
 	if len(profile) > 0 {
 		workload += " AND users LIKE \"%" + profile + "%\""
