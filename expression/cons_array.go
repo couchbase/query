@@ -20,13 +20,11 @@ Represents array construction.
 */
 type ArrayConstruct struct {
 	FunctionBase
-	isSet bool
 }
 
 func NewArrayConstruct(operands ...Expression) Function {
 	rv := &ArrayConstruct{
 		*NewFunctionBase("array", operands...),
-		false,
 	}
 
 	rv.expr = rv
@@ -42,12 +40,6 @@ func (this *ArrayConstruct) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *ArrayConstruct) Type() value.Type { return value.ARRAY }
-
-func (this *ArrayConstruct) Copy() Expression {
-	rv := this.FunctionBase.Copy().(*ArrayConstruct)
-	rv.isSet = this.isSet
-	return rv
-}
 
 func (this *ArrayConstruct) Evaluate(item value.Value, context Context) (value.Value, error) {
 	if this.value != nil && *this.value != nil {
@@ -69,12 +61,8 @@ func (this *ArrayConstruct) Evaluate(item value.Value, context Context) (value.V
 	}
 }
 
-func (this *ArrayConstruct) SetIsSet(isSet bool) {
-	this.isSet = isSet
-}
-
 func (this *ArrayConstruct) EquivalentTo(other Expression) bool {
-	if this.isSet {
+	if this.HasExprFlag(EXPR_ARRAY_IS_SET) {
 		thisVal := this.Value()
 		otherVal := other.Value()
 		if thisVal != nil && otherVal != nil {

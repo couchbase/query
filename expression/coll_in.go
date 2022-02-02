@@ -30,7 +30,7 @@ func NewIn(first, second Expression) Function {
 	}
 
 	if secondArr, ok := second.(*ArrayConstruct); ok {
-		secondArr.SetIsSet(true)
+		secondArr.SetExprFlag(EXPR_ARRAY_IS_SET)
 	}
 	rv.expr = rv
 	return rv
