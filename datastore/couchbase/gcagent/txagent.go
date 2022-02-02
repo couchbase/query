@@ -112,6 +112,9 @@ func (ap *AgentProvider) Agent() *gocbcore.Agent {
 
 func (ap *AgentProvider) Close() error {
 	if ap.client != nil && ap.Agent().BucketName() != "" {
+		ap.client.mutex.Lock()
+		delete(ap.client.agentProviders, ap.Agent().BucketName())
+		ap.client.mutex.Unlock()
 		ap.client.RemoveAtrLocation(ap.Agent().BucketName())
 	}
 	return ap.Agent().Close()

@@ -71,12 +71,13 @@ func (auth *MemcachedAuthProvider) Certificate(req gocbcore.AuthCertRequest) (*t
 
 // Call this method with a TLS certificate file name to make communication
 type Client struct {
-	config       *gocbcore.AgentConfig
-	transactions *gctx.Manager
-	rootCAs      *x509.CertPool
-	mutex        sync.RWMutex
-	atrLocations map[string]gctx.LostATRLocation
-	certs        *tls.Certificate
+	config         *gocbcore.AgentConfig
+	transactions   *gctx.Manager
+	rootCAs        *x509.CertPool
+	mutex          sync.RWMutex
+	atrLocations   map[string]gctx.LostATRLocation
+	certs          *tls.Certificate
+	agentProviders map[string]*AgentProvider
 }
 
 func NewClient(url string, caFile, certFile, keyFile string, passphrase []byte) (rv *Client, err error) {
@@ -98,6 +99,7 @@ func NewClient(url string, caFile, certFile, keyFile string, passphrase []byte) 
 
 	// generic provider
 	rv.atrLocations = make(map[string]gctx.LostATRLocation, 32)
+	rv.agentProviders = make(map[string]*AgentProvider, 32)
 
 	return rv, err
 }
@@ -175,12 +177,25 @@ func (c *Client) RemoveAtrLocation(bucketName string) (err error) {
 }
 
 func (c *Client) CreateAgentProvider(bucketName string) (*AgentProvider, error) {
-	ap := &AgentProvider{client: c, bucketName: bucketName}
+	c.mutex.RLock()
+	ap, ok := c.agentProviders[bucketName]
+	c.mutex.RUnlock()
+	if ok {
+		return ap, nil
+	}
+
+	ap = &AgentProvider{client: c, bucketName: bucketName}
 	useTLS := c.rootCAs != nil
 	err := ap.CreateAgent()
 	if err == nil && useTLS != (c.rootCAs != nil) {
 		err = ap.Refresh() // refresh if TLS changed while creation
 	}
+	if err == nil {
+		c.mutex.Lock()
+		c.agentProviders[bucketName] = ap
+		c.mutex.Unlock()
+	}
+
 	return ap, err
 }
 
@@ -191,6 +206,15 @@ func (c *Client) Close() {
 	c.transactions = nil
 	c.mutex.Lock()
 	c.rootCAs = nil
+	for n, ap := range c.agentProviders {
+		delete(c.agentProviders, n)
+		for s, atrl := range c.atrLocations {
+			if atrl.BucketName == n {
+				delete(c.atrLocations, s)
+			}
+		}
+		ap.Agent().Close()
+	}
 	c.mutex.Unlock()
 }
 
