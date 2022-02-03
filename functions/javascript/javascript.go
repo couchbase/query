@@ -166,7 +166,7 @@ func (this *javascriptBody) SetVarNames(vars []string) errors.Error {
 func (this *javascriptBody) SetStorage(context functions.Context, path []string) {
 	this.path = ""
 	if context.IsTracked() && len(path) == 4 {
-		this.path = path[1] + ":" + path[2]
+		this.path = path[1] + "/" + path[2]
 	}
 }
 
