@@ -1353,7 +1353,7 @@ func newKeyspace(p *namespace, name string) (*keyspace, errors.Error) {
 		rv.defaultCollection = rv
 	}
 
-	logging.Infof("Created New Bucket %s", name)
+	logging.Infof("Loaded New Bucket %s", name)
 
 	// Create a bucket updater that will keep the couchbase bucket fresh.
 	cbbucket.RunBucketUpdater2(p.KeyspaceUpdateCallback, p.KeyspaceDeleteCallback)
