@@ -150,6 +150,7 @@ func (this *Context) EvaluateStatement(statement string, namedArgs map[string]va
 	if stmtType == "EXECUTE" && isPrepared {
 		stmtType = prepared.Type()
 	}
+	this.handleOpenStatements(stmtType)
 	rv, mutations, err := newContext.ExecutePrepared(prepared, isPrepared, namedArgs, positionalArgs)
 	newErr := newContext.completeStatement(stmtType, err == nil, this)
 	if err == nil && newErr != nil {
@@ -204,12 +205,8 @@ func (this *Context) OpenStatement(statement string, namedArgs map[string]value.
 	if err != nil {
 		return nil, err
 	}
-	rv, err := newContext.OpenPrepared(stmtType, prepared, isPrepared, namedArgs, positionalArgs)
-	if rv != nil {
-		h := rv.(*executionHandle)
-		h.baseContext = this
-	}
-	return rv, err
+	this.handleOpenStatements(stmtType)
+	return newContext.OpenPrepared(this, stmtType, prepared, isPrepared, namedArgs, positionalArgs)
 }
 
 func (this *Context) PrepareStatement(statement string, namedArgs map[string]value.Value, positionalArgs value.Values,
@@ -440,7 +437,7 @@ func (this *Context) ExecutePrepared(prepared *plan.Prepared, isPrepared bool,
 	return results, output.mutationCount, output.err
 }
 
-func (this *Context) OpenPrepared(stmtType string, prepared *plan.Prepared, isPrepared bool,
+func (this *Context) OpenPrepared(baseContext *Context, stmtType string, prepared *plan.Prepared, isPrepared bool,
 	namedArgs map[string]value.Value, positionalArgs value.Values) (interface {
 	Type() string
 	Mutations() uint64
@@ -476,9 +473,54 @@ func (this *Context) OpenPrepared(stmtType string, prepared *plan.Prepared, isPr
 
 	handle.stmtType = stmtType
 	handle.actualType = prepared.Type()
+	handle.baseContext = baseContext
+	baseContext.mutex.Lock()
+	if baseContext.udfHandleMap == nil {
+		baseContext.udfHandleMap = make(map[*executionHandle]bool)
+	}
+	baseContext.udfHandleMap[handle] = handle.actualType != "SELECT"
+	baseContext.mutex.Unlock()
 	handle.exec = util.Now()
 	handle.root.RunOnce(handle.context, nil)
 	return handle, nil
+}
+
+func (this *Context) handleOpenStatements(stmtType string) {
+	var newHandleMap map[*executionHandle]bool
+
+	// technically the lock is not needed as we will only ditch DMLs if the UDF is executed using EXECUTE FUNCTION
+	// which means that there will ever only be one thread executing this loop, but still
+	this.mutex.Lock()
+	if len(this.udfHandleMap) == 0 {
+		this.mutex.Unlock()
+		return
+	}
+
+	// for transaction statements, everything will be closed
+	// for non transaction statements, only non SELECTS
+	if stmtType == "COMMIT" || stmtType == "ROLLBACK" {
+		newHandleMap = this.udfHandleMap
+		this.udfHandleMap = nil
+	} else {
+		newHandleMap = make(map[*executionHandle]bool, len(this.udfHandleMap))
+		for k, v := range this.udfHandleMap {
+			if v {
+				newHandleMap[k] = v
+				delete(this.udfHandleMap, k)
+			}
+		}
+	}
+	this.mutex.Unlock()
+
+	// if we are asked to silently complete DML statements
+	// we ignore errors and mutations
+	for k, v := range newHandleMap {
+		if v {
+			k.Complete()
+		} else {
+			k.Cancel()
+		}
+	}
 }
 
 type executionHandle struct {
@@ -518,6 +560,9 @@ func (this *executionHandle) Results() (interface{}, uint64, error) {
 			this.output.err = newErr
 		}
 		this.root.Done()
+		this.baseContext.mutex.Lock()
+		delete(this.baseContext.udfHandleMap, this)
+		this.baseContext.mutex.Unlock()
 	}
 	return values, this.output.mutationCount, this.output.err
 }
@@ -545,6 +590,9 @@ func (this *executionHandle) Complete() (uint64, error) {
 			this.output.err = newErr
 		}
 		this.root.Done()
+		this.baseContext.mutex.Lock()
+		delete(this.baseContext.udfHandleMap, this)
+		this.baseContext.mutex.Unlock()
 	}
 	return this.output.mutationCount, this.output.err
 }
@@ -565,6 +613,9 @@ func (this *executionHandle) NextDocument() (value.Value, error) {
 			this.output.err = newErr
 		}
 		this.root.Done()
+		this.baseContext.mutex.Lock()
+		delete(this.baseContext.udfHandleMap, this)
+		this.baseContext.mutex.Unlock()
 	}
 	return nil, this.output.err
 }
@@ -578,6 +629,9 @@ func (this *executionHandle) Cancel() {
 			this.output.err = newErr
 		}
 		this.root.Done()
+		this.baseContext.mutex.Lock()
+		delete(this.baseContext.udfHandleMap, this)
+		this.baseContext.mutex.Unlock()
 	}
 }
 

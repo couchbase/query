@@ -206,6 +206,7 @@ type Context struct {
 	result              func(context *Context, item value.AnnotatedValue) bool
 	likeRegexMap        map[*expression.Like]*expression.LikeRegex
 	udfValueMap         *sync.Map
+	udfHandleMap        map[*executionHandle]bool
 	tracked             bool
 }
 
