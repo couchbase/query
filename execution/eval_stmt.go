@@ -150,7 +150,10 @@ func (this *Context) EvaluateStatement(statement string, namedArgs map[string]va
 	if stmtType == "EXECUTE" && isPrepared {
 		stmtType = prepared.Type()
 	}
-	this.handleOpenStatements(stmtType)
+	err = this.handleOpenStatements(stmtType)
+	if err != nil {
+		return nil, 0, err
+	}
 	rv, mutations, err := newContext.ExecutePrepared(prepared, isPrepared, namedArgs, positionalArgs)
 	newErr := newContext.completeStatement(stmtType, err == nil, this)
 	if err == nil && newErr != nil {
@@ -205,7 +208,10 @@ func (this *Context) OpenStatement(statement string, namedArgs map[string]value.
 	if err != nil {
 		return nil, err
 	}
-	this.handleOpenStatements(stmtType)
+	err = this.handleOpenStatements(stmtType)
+	if err != nil {
+		return nil, err
+	}
 	return newContext.OpenPrepared(this, stmtType, prepared, isPrepared, namedArgs, positionalArgs)
 }
 
@@ -485,20 +491,21 @@ func (this *Context) OpenPrepared(baseContext *Context, stmtType string, prepare
 	return handle, nil
 }
 
-func (this *Context) handleOpenStatements(stmtType string) {
+func (this *Context) handleOpenStatements(stmtType string) error {
 	var newHandleMap map[*executionHandle]bool
+	var err error
 
 	// technically the lock is not needed as we will only ditch DMLs if the UDF is executed using EXECUTE FUNCTION
 	// which means that there will ever only be one thread executing this loop, but still
 	this.mutex.Lock()
 	if len(this.udfHandleMap) == 0 {
 		this.mutex.Unlock()
-		return
+		return err
 	}
 
 	// for transaction statements, everything will be closed
 	// for non transaction statements, only non SELECTS
-	if stmtType == "COMMIT" || stmtType == "ROLLBACK" {
+	if stmtType == "START_TRANSACTION" || stmtType == "COMMIT" || stmtType == "ROLLBACK" {
 		newHandleMap = this.udfHandleMap
 		this.udfHandleMap = nil
 	} else {
@@ -516,11 +523,15 @@ func (this *Context) handleOpenStatements(stmtType string) {
 	// we ignore errors and mutations
 	for k, v := range newHandleMap {
 		if v {
-			k.Complete()
+			_, newErr := k.Complete()
+			if newErr != nil && err == nil {
+				err = newErr
+			}
 		} else {
 			k.Cancel()
 		}
 	}
+	return err
 }
 
 type executionHandle struct {
