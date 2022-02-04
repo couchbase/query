@@ -157,7 +157,16 @@ func equivalentBindingsWithExpression(bindings1, bindings2 Bindings, exprs1, exp
 			}
 		}
 
-		if !expr1.EquivalentTo(newExpr2) {
+		var equivalent bool
+		switch exp1 := expr1.(type) {
+		case CollPredicate:
+			equivalent = exp1.EquivalentCollPred(newExpr2)
+		case collMap:
+			equivalent = exp1.EquivalentCollMap(newExpr2)
+		default:
+			equivalent = exp1.EquivalentTo(newExpr2)
+		}
+		if !equivalent {
 			return false
 		}
 	}
