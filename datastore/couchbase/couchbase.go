@@ -1407,6 +1407,7 @@ func (p *namespace) KeyspaceUpdateCallback(bucket *cb.Bucket) {
 		ks.cbKeyspace.Lock()
 		uid, _ := strconv.ParseUint(bucket.CollectionsManifestUid, 16, 64)
 		if ks.cbKeyspace.collectionsManifestUid != uid {
+			logging.Infof("Bucket updater: switching manifest id from %v to %v for bucket %v", ks.cbKeyspace.collectionsManifestUid, uid, bucket.Name)
 			ks.cbKeyspace.flags |= _NEEDS_MANIFEST
 			ks.cbKeyspace.newCollectionsManifestUid = uid
 			if isSysBucket(ks.cbKeyspace.name) {
@@ -1416,6 +1417,7 @@ func (p *namespace) KeyspaceUpdateCallback(bucket *cb.Bucket) {
 
 		// the KV nodes list has changed, force a refresh on next use
 		if ks.cbKeyspace.cbbucket.ChangedVBServerMap(&bucket.VBSMJson) {
+			logging.Infof("Bucket updater: vbMap changed for bucket %v", bucket.Name)
 			ks.cbKeyspace.flags |= _NEEDS_REFRESH
 		}
 		ks.cbKeyspace.Unlock()
