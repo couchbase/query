@@ -70,9 +70,13 @@ func doHTTPRequestForStreaming(req *http.Request) (*http.Response, error) {
 		clientForStreaming = HTTPClientForStreaming
 	}
 
-	for i := 0; i < HTTP_MAX_RETRY; i++ {
+	for i := 1; i <= HTTP_MAX_RETRY; i++ {
 		res, err = clientForStreaming.Do(req)
 		if err != nil && isHttpConnError(err) {
+			// exclude first and last
+			if i > 1 && i < HTTP_MAX_RETRY {
+				time.Sleep(HTTP_RETRY_PERIOD)
+			}
 			continue
 		}
 		break
@@ -171,9 +175,13 @@ func doHTTPRequestForUpdate(req *http.Request) (*http.Response, error) {
 	var err error
 	var res *http.Response
 
-	for i := 0; i < HTTP_MAX_RETRY; i++ {
+	for i := 1; i <= HTTP_MAX_RETRY; i++ {
 		res, err = updaterHTTPClient.Do(req)
 		if err != nil && isHttpConnError(err) {
+			// exclude first and last
+			if i > 1 && i < HTTP_MAX_RETRY {
+				time.Sleep(HTTP_RETRY_PERIOD)
+			}
 			continue
 		}
 		break

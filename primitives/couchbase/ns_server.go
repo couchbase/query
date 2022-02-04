@@ -591,6 +591,7 @@ func maybeAddAuth(req *http.Request, ah AuthHandler) error {
 
 // arbitary number, may need to be tuned #FIXME
 const HTTP_MAX_RETRY = 5
+const HTTP_RETRY_PERIOD = 100 * time.Millisecond
 
 // Someday golang network packages will implement standard
 // error codes. Until then #sigh
@@ -599,6 +600,7 @@ func isHttpConnError(err error) bool {
 	estr := err.Error()
 	return strings.Contains(estr, "broken pipe") ||
 		strings.Contains(estr, "broken connection") ||
+		strings.Contains(estr, "connection refused") ||
 		strings.Contains(estr, "connection reset")
 }
 
@@ -668,9 +670,13 @@ func doHTTPRequest(req *http.Request) (*http.Response, error) {
 		client = HTTPClient
 	}
 
-	for i := 0; i < HTTP_MAX_RETRY; i++ {
+	for i := 1; i <= HTTP_MAX_RETRY; i++ {
 		res, err = client.Do(req)
 		if err != nil && isHttpConnError(err) {
+			// exclude first and last
+			if i > 1 && i < HTTP_MAX_RETRY {
+				time.Sleep(HTTP_RETRY_PERIOD)
+			}
 			continue
 		}
 		break
