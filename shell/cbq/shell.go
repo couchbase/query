@@ -452,9 +452,15 @@ var (
 func main() {
 
 	flag.Parse()
-
+	command.SetWriter(os.Stdout)
 	// Initialize Global buffer to store queries for batch mode.
 	stringBuffer.Write([]byte(""))
+	if batchFlag != "on" && batchFlag != "off" {
+		s_err := command.HandleError(errors.E_SHELL_BATCH_MODE, errors.INVALID_INPUT_ARGUMENTS_MSG)
+		command.PrintError(s_err)
+		os.Exit(1)
+	}
+
 	command.BATCH = batchFlag
 	err_code, err_str := command.PushValue_Helper(true, command.PreDefSV, "batch", batchFlag)
 	if err_code != 0 {
@@ -480,9 +486,6 @@ func main() {
 		command.FILE_RW_MODE = true
 		command.FILE_OUTPUT = outputFlag
 	}
-
-	// Set command.W = os.Stdout
-	command.SetWriter(os.Stdout)
 
 	/* Handle options and what they should do */
 
