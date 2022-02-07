@@ -28,7 +28,7 @@ func NewJavascriptBody(library, object string) (functions.FunctionBody, errors.E
 	return nil, errors.NewFunctionsNotSupported("javascript")
 }
 
-func NewJavascriptBodyWithPath(library, object, path string) (functions.FunctionBody, errors.Error) {
+func NewJavascriptBodyWithDetails(library, object, prefix, name string) (functions.FunctionBody, errors.Error) {
 	return nil, errors.NewFunctionsNotSupported("javascript")
 }
 
@@ -46,8 +46,8 @@ func (this *javascriptBody) SetVarNames(vars []string) errors.Error {
 	return nil
 }
 
-func (this *javascriptBody) SetStorage(context functions.Context, path []string) {
-	// noop
+func (this *javascriptBody) SetStorage(context functions.Context, path []string) errors.Error {
+	return nil
 }
 
 func (this *javascriptBody) Indexable() value.Tristate {

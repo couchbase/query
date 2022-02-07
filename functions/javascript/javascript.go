@@ -13,6 +13,7 @@ package javascript
 import (
 	goerrors "errors"
 	"fmt"
+	"strings"
 	"sync/atomic"
 
 	"github.com/couchbase/eventing-ee/evaluator/defs"
@@ -37,7 +38,8 @@ type javascriptBody struct {
 	varNames []string
 	library  string
 	object   string
-	path     string
+	prefix   string
+	name     string
 }
 
 var enabled = true
@@ -130,7 +132,13 @@ func (this *javascript) Execute(name functions.FunctionName, body functions.Func
 	if levels > 1 && levels > int(threads-runners) {
 		return nil, errors.NewFunctionExecutionNestedError(levels, funcName)
 	}
-	res, err := evaluator.Evaluate(funcBody.library, funcBody.object, opts, args, functions.NewUdfContext(context, funcBody.path))
+	library := funcBody.name
+
+	// if nested paths are not specified, just use the unformalized library
+	if library == "" {
+		library = funcBody.library
+	}
+	res, err := evaluator.Evaluate(library, funcBody.object, opts, args, functions.NewUdfContext(context, funcBody.prefix))
 	if err.Err != nil {
 		return nil, funcBody.execError(err, funcName)
 	} else {
@@ -148,14 +156,14 @@ func (this *javascriptBody) execError(err defs.Error, name string) errors.Error 
 }
 
 func NewJavascriptBody(library, object string) (functions.FunctionBody, errors.Error) {
-	return NewJavascriptBodyWithPath(library, object, "")
+	return NewJavascriptBodyWithDetails(library, object, "", "")
 }
 
-func NewJavascriptBodyWithPath(library, object, path string) (functions.FunctionBody, errors.Error) {
+func NewJavascriptBodyWithDetails(library, object, prefix, name string) (functions.FunctionBody, errors.Error) {
 	if !enabled {
 		return nil, errors.NewFunctionsDisabledError("javascript")
 	}
-	return &javascriptBody{library: library, object: object, path: path}, nil
+	return &javascriptBody{library: library, object: object, prefix: prefix, name: name}, nil
 }
 
 func (this *javascriptBody) SetVarNames(vars []string) errors.Error {
@@ -163,11 +171,43 @@ func (this *javascriptBody) SetVarNames(vars []string) errors.Error {
 	return nil
 }
 
-func (this *javascriptBody) SetStorage(context functions.Context, path []string) {
-	this.path = ""
-	if context.IsTracked() && len(path) == 4 {
-		this.path = path[1] + "/" + path[2]
+func (this *javascriptBody) SetStorage(context functions.Context, path []string) errors.Error {
+	var storageContext string
+
+	if len(path) == 4 {
+		storageContext = path[1] + "/" + path[2]
 	}
+	this.prefix = ""
+	this.name = this.library
+	if context.IsTracked() && len(path) == 4 {
+		this.prefix = storageContext
+	}
+
+	// check if nested library path is used
+	firstSlash := strings.IndexByte(this.library, '/')
+	switch firstSlash {
+	case -1:
+
+		// nothing, all good
+		return nil
+	case 0:
+
+		// absolute paths are forbidden
+	default:
+
+		// relative path, adjust and allow
+		if strings.HasPrefix(this.library, "./") && strings.IndexByte(this.library[2:], '/') < 0 {
+			this.name = this.library[2:]
+			this.prefix = storageContext
+			return nil
+		} else if !context.IsTracked() && strings.HasPrefix(this.library, storageContext+"/") && strings.IndexByte(this.library[len(storageContext)+1:], '/') < 0 {
+
+			// for tenant scenarios, no nested path is allowed
+			// for scope functions, only the function scope is allowed
+			return nil
+		}
+	}
+	return errors.NewFunctionLibraryPathError(this.library)
 }
 
 func (this *javascriptBody) Lang() functions.Language {
@@ -185,8 +225,11 @@ func (this *javascriptBody) Body(object map[string]interface{}) {
 		}
 		object["parameters"] = vars
 	}
-	if this.path != "" {
-		object["path"] = this.path
+	if this.prefix != "" {
+		object["prefix"] = this.prefix
+	}
+	if this.name != "" {
+		object["name"] = this.name
 	}
 }
 

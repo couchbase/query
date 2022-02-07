@@ -1,4 +1,3 @@
-//  Copyright 2019-Present Couchbase, Inc.
 //
 //  Use of this software is governed by the Business Source License included
 //  in the file licenses/BSL-Couchbase.txt.  As of the Change Date specified
@@ -41,8 +40,8 @@ func (this *golangBody) SetVarNames(vars []string) errors.Error {
 	return nil
 }
 
-func (this *golangBody) SetStorage(context functions.Context, path []string) {
-	// noop
+func (this *golangBody) SetStorage(context functions.Context, path []string) errors.Error {
+	return nil
 }
 
 func (this *golangBody) Indexable() value.Tristate {

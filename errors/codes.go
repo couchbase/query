@@ -270,6 +270,7 @@ const (
 	E_METAKV_INDEX                            ErrorCode = 10111
 	E_TOO_MANY_NESTED_FUNCTIONS               ErrorCode = 10112
 	E_INNER_FUNCTION_EXECUTION                ErrorCode = 10113
+	E_LIBRARY_PATH_ERROR                      ErrorCode = 10114
 	E_DATASTORE_INVALID_BUCKET_PARTS          ErrorCode = 10200
 	E_QUERY_CONTEXT                           ErrorCode = 10201
 	E_BUCKET_NO_DEFAULT_COLLECTION            ErrorCode = 10202

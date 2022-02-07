@@ -115,6 +115,12 @@ func NewFunctionExecutionNestedError(levels int, name string) Error {
 		InternalCaller: CallerN(1)}
 }
 
+func NewFunctionLibraryPathError(path string) Error {
+	return &err{level: EXCEPTION, ICode: E_LIBRARY_PATH_ERROR, IKey: "function.library.path.error",
+		InternalMsg:    fmt.Sprintf("Invalid javascript library path: %v. Use a root level path, the same path as the function scope, or a local path ('./library')", path),
+		InternalCaller: CallerN(1)}
+}
+
 func NewAdvisorSessionNotFoundError(s string) Error {
 	c := make(map[string]interface{})
 	c["unknown_session"] = s

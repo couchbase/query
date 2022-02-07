@@ -71,7 +71,9 @@ func (this *CreateFunction) RunOnce(context *Context, parent value.Value) {
 			err = functions.CheckDelete(this.plan.Name(), context)
 		}
 		if err == nil {
-			this.plan.Body().SetStorage(context, this.plan.Name().Path())
+			err = this.plan.Body().SetStorage(context, this.plan.Name().Path())
+		}
+		if err == nil {
 			this.switchPhase(_SERVTIME)
 			err = functions.AddFunction(this.plan.Name(), this.plan.Body(), replace)
 			this.switchPhase(_EXECTIME)

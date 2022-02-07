@@ -115,8 +115,8 @@ func (this *golangBody) SetVarNames(vars []string) errors.Error {
 	return nil
 }
 
-func (this *golangBody) SetStorage(context functions.Context, path []string) {
-	// noop
+func (this *golangBody) SetStorage(context functions.Context, path []string) errors.Error {
+	return nil
 }
 
 func (this *golangBody) Lang() functions.Language {
