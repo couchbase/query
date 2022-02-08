@@ -281,6 +281,8 @@ func (this *Context) Copy() *Context {
 		httpRequest:         this.httpRequest,
 		indexApiVersion:     this.indexApiVersion,
 		featureControls:     this.featureControls,
+		useReplica:          this.useReplica,
+		queryContext:        this.queryContext,
 		useFts:              this.useFts,
 		useCBO:              this.useCBO,
 		optimizer:           this.optimizer,
