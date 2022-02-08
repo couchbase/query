@@ -61,6 +61,7 @@ require (
 	github.com/rcrowley/go-metrics v0.0.0-20200313005456-10cdbea86bc0 // indirect
 	github.com/russross/blackfriday v1.5.2
 	github.com/samuel/go-zookeeper v0.0.0-20200724154423-2164a8ac840e
+	github.com/santhosh-tekuri/jsonschema v1.2.4 // indirect
 	golang.org/x/crypto v0.0.0-20200820211705-5c72a883971a
 	golang.org/x/net v0.0.0-20211215060638-4ddde0e984e9
 	gopkg.in/couchbase/gocb.v1 v1.6.7
