@@ -19,6 +19,8 @@ import (
 	"strings"
 	"time"
 
+	gsi "github.com/couchbase/indexing/secondary/queryport/n1ql"
+
 	"github.com/couchbase/cbauth"
 	"github.com/couchbase/query/accounting"
 	"github.com/couchbase/query/audit"
@@ -53,6 +55,7 @@ type HttpEndpoint struct {
 
 const (
 	servicePrefix   = "/query/service"
+	gsiPrefix       = "/gsi"
 	_MAXRETRIES     = 3
 	_LISTENINTERVAL = 100 * time.Millisecond
 )
@@ -402,6 +405,8 @@ func (this *HttpEndpoint) registerHandlers(staticPath string) {
 	this.registerClusterHandlers()
 	this.registerAccountingHandlers()
 	this.registerStaticHandlers(staticPath)
+
+	this.mux.Handle(gsiPrefix+"/getInternalVersion", newAdminAuthHandlerWrapper(this, gsi.NewInternalVersionHandler()))
 }
 
 func (this *HttpEndpoint) registerStaticHandlers(staticPath string) {
