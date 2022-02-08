@@ -361,6 +361,11 @@ func (this *ExpressionBase) CoveredBy(keyspace string, exprs Expressions, option
 				if rv == CoveredTrue || rv == CoveredEquiv {
 					return rv
 				}
+				switch this.expr.(type) {
+				case *AnyEvery, *Every:
+					return rv
+				}
+
 			}
 		}
 	}

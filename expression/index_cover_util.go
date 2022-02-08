@@ -121,11 +121,17 @@ func chkArrayKeyCover(pred Expression, keyspace string, exprs Expressions, all *
 	} else if options.hasCoverSatisfies() {
 		switch pred.(type) {
 		case *Any, *AnyEvery, *Every:
-			switch pred.CoveredBy(keyspace, exprs, options) {
+			noptions := CoveredOptions{0}
+			if options.hasCoverImplicitArrayKey() {
+				noptions.setCoverImplicitArrayKey()
+			}
+			switch pred.CoveredBy(keyspace, exprs, noptions) {
 			case CoveredEquiv:
 				return CoveredEquiv
 			case CoveredTrue:
-				return CoveredTrue
+				if _, ok := pred.(*Any); ok {
+					return CoveredTrue
+				}
 			}
 		}
 	}
