@@ -62,6 +62,9 @@ DevStandaloneSetup() {
              ln -s "/Applications/Couchbase Server.app/Contents/Resources/couchbase-core/lib" $GOPATH/lib
            fi
        fi
+       if [[ ! -f ../eventing-ee/evaluator/impl/gen/parser/global_config_schema.go ]]; then
+           (cd ../eventing-ee/evaluator/impl/gen/convertschema; go run generate.go  ../../parser/global_config_schema.json GlobalConfigSchema ../parser/global_config_schema.go)
+       fi
     # gocbcore points to master; gocbcore/v9 points to 9.1.8
        if [[ -d ../gocbcore/v9 ]]
        then
