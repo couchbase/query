@@ -149,10 +149,10 @@ func (this *javascript) Execute(name functions.FunctionName, body functions.Func
 func (this *javascriptBody) execError(err defs.Error, name string) errors.Error {
 	if err.IsNestedErr {
 		return errors.NewInnerFunctionExecutionError(fmt.Sprintf("(%v:%v)", this.library, this.object),
-			name, fmt.Errorf("%v", err.Details))
+			name, fmt.Errorf("%v", err.Message))
 	}
 	return errors.NewFunctionExecutionError(fmt.Sprintf("(%v:%v)", this.library, this.object),
-		name, fmt.Errorf("%v %v", err.Err, err.Details))
+		name, fmt.Errorf("%v %v", err.Err, err.Message))
 }
 
 func NewJavascriptBody(library, object string) (functions.FunctionBody, errors.Error) {
