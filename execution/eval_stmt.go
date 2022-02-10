@@ -722,6 +722,7 @@ func (this *Context) ExecuteTranStatement(stmtType string, stmtAtomicity bool) (
 		if txId == "" {
 			return "", nil, errors.NewStartTransactionError(fmt.Errorf("Implicit Transaction"), nil)
 		}
+		this.consistency = newContext.TxContext().TxScanConsistency()
 	}
 
 	return txId, nil, nil
