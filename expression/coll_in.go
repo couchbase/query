@@ -76,7 +76,7 @@ func (this *In) Evaluate(item value.Value, context Context) (value.Value, error)
 
 	if inlistHash != nil {
 		inlistHash.hashLock.Lock()
-		if inlistHash.ChkHash() {
+		if !inlistHash.HashChecked() {
 			inlistHash.SetHashChecked()
 			if inlistHash.IsHashEnabled() && len(sa) >= _INLIST_HASH_THRESHOLD {
 				if this.Second().Static() != nil {
@@ -84,11 +84,11 @@ func (this *In) Evaluate(item value.Value, context Context) (value.Value, error)
 				} else if sq, ok := this.Second().(Subquery); ok && !sq.IsCorrelated() {
 					buildHT = true
 				}
-				if buildHT {
-					hashTab = util.NewHashTable(util.HASH_TABLE_FOR_INLIST)
-					inlistHash.hashTab = hashTab
-				}
 			}
+		}
+		if buildHT {
+			hashTab = util.NewHashTable(util.HASH_TABLE_FOR_INLIST)
+			inlistHash.hashTab = hashTab
 			// lock is not released until hash table is built
 		} else {
 			hashTab = inlistHash.hashTab
@@ -103,6 +103,7 @@ func (this *In) Evaluate(item value.Value, context Context) (value.Value, error)
 				if buildHT {
 					err := hashTab.Put(v, true, value.MarshalValue, value.EqualValue, 0)
 					if err != nil {
+						inlistHash.hashLock.Unlock()
 						return nil, errors.NewHashTablePutError(err)
 					}
 				} else {
@@ -227,7 +228,7 @@ func NewInlistHash() *InlistHash {
 	return &InlistHash{}
 }
 
-func (this *InlistHash) ChkHash() bool {
+func (this *InlistHash) HashChecked() bool {
 	return (this.hashFlags & INEXPR_HASHTAB_CHECKED) != 0
 }
 
