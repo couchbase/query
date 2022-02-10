@@ -23,6 +23,7 @@ type UdfHandle struct {
 		Type() string
 		Mutations() uint64
 		Results() (interface{}, uint64, error)
+		Complete() (uint64, error)
 		NextDocument() (value.Value, error)
 		Cancel()
 	}
@@ -131,6 +132,10 @@ func (this *UdfHandle) Mutations() uint64 {
 
 func (this *UdfHandle) Results() (interface{}, uint64, error) {
 	return this.handle.Results()
+}
+
+func (this *UdfHandle) Complete() (uint64, error) {
+	return this.handle.Complete()
 }
 
 func (this *UdfHandle) NextDocument() (interface{}, error) {

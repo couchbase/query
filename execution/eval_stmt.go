@@ -185,6 +185,7 @@ func (this *Context) OpenStatement(statement string, namedArgs map[string]value.
 	Type() string
 	Mutations() uint64
 	Results() (interface{}, uint64, error)
+	Complete() (uint64, error)
 	NextDocument() (value.Value, error)
 	Cancel()
 }, error) {
@@ -448,6 +449,7 @@ func (this *Context) OpenPrepared(baseContext *Context, stmtType string, prepare
 	Type() string
 	Mutations() uint64
 	Results() (interface{}, uint64, error)
+	Complete() (uint64, error)
 	NextDocument() (value.Value, error)
 	Cancel()
 }, error) {
