@@ -549,6 +549,9 @@ type executionHandle struct {
 }
 
 func (this *executionHandle) Results() (interface{}, uint64, error) {
+	if atomic.LoadInt32(&this.stopped) > 0 {
+		return nil, 0, nil
+	}
 	values := make([]interface{}, 0, _INITIAL_SIZE)
 
 	for {
@@ -589,6 +592,9 @@ func (this *executionHandle) Mutations() uint64 {
 }
 
 func (this *executionHandle) Complete() (uint64, error) {
+	if atomic.LoadInt32(&this.stopped) > 0 {
+		return 0, nil
+	}
 	for {
 		item, ok := this.input.getItem()
 		if item == nil || !ok {
