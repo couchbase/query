@@ -150,9 +150,13 @@ func (this *javascriptBody) execError(err defs.Error, name string) errors.Error 
 	if err.IsNestedErr {
 		return errors.NewInnerFunctionExecutionError(fmt.Sprintf("(%v:%v)", this.library, this.object),
 			name, fmt.Errorf("%v", err.Message))
+	} else if err.Details != nil {
+		return errors.NewFunctionExecutionError(fmt.Sprintf("(%v:%v)", this.library, this.object),
+			name, err.Details)
+	} else {
+		return errors.NewFunctionExecutionError(fmt.Sprintf("(%v:%v)", this.library, this.object),
+			name, fmt.Errorf("%v %v", err.Err, err.Message))
 	}
-	return errors.NewFunctionExecutionError(fmt.Sprintf("(%v:%v)", this.library, this.object),
-		name, fmt.Errorf("%v %v", err.Err, err.Message))
 }
 
 func NewJavascriptBody(library, object string) (functions.FunctionBody, errors.Error) {

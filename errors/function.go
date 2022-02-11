@@ -97,9 +97,9 @@ func NewFunctionsDisabledError(what string) Error {
 		InternalMsg: fmt.Sprintf("%v functions are disabled", what), InternalCaller: CallerN(1)}
 }
 
-func NewFunctionExecutionError(what string, name string, reason error) Error {
-	return &err{level: EXCEPTION, ICode: E_FUNCTION_EXECUTION, IKey: "function.execution.error", ICause: reason,
-		InternalMsg:    fmt.Sprintf("Error executing function '%v' %v: %v", name, what, reason),
+func NewFunctionExecutionError(what string, name string, reason interface{}) Error {
+	return &err{level: EXCEPTION, ICode: E_FUNCTION_EXECUTION, IKey: "function.execution.error", cause: reason,
+		InternalMsg:    fmt.Sprintf("Error executing function '%v' %v", name, what),
 		InternalCaller: CallerN(1)}
 }
 
