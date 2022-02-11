@@ -1409,7 +1409,11 @@ func (p *namespace) KeyspaceUpdateCallback(bucket *cb.Bucket) {
 		ks.cbKeyspace.Lock()
 		uid, _ := strconv.ParseUint(bucket.CollectionsManifestUid, 16, 64)
 		if ks.cbKeyspace.collectionsManifestUid != uid {
-			logging.Infof("Bucket updater: switching manifest id from %v to %v for bucket %v", ks.cbKeyspace.collectionsManifestUid, uid, bucket.Name)
+			if ks.cbKeyspace.collectionsManifestUid == _INVALID_MANIFEST_UID {
+				logging.Infof("Bucket updater: received first manifest id %v for bucket %v", uid, bucket.Name)
+			} else {
+				logging.Infof("Bucket updater: switching manifest id from %v to %v for bucket %v", ks.cbKeyspace.collectionsManifestUid, uid, bucket.Name)
+			}
 			ks.cbKeyspace.flags |= _NEEDS_MANIFEST
 			ks.cbKeyspace.newCollectionsManifestUid = uid
 			if isSysBucket(ks.cbKeyspace.name) {
