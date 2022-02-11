@@ -136,7 +136,18 @@ func generateIdxAdvice(queryInfos map[expression.HasExpressions]*advisor.QueryIn
 
 		if len(v.GetUncoverIndexes()) > 0 {
 			v.GetUncoverIndexes().SetQueryContext(queryContext)
-			recIndexes = append(recIndexes, v.GetUncoverIndexes()...)
+			for _, uci := range v.GetUncoverIndexes() {
+				duplicate := false
+				for _, info := range coverIdxes {
+					if uci.String() == info.String() {
+						duplicate = true
+						break
+					}
+				}
+				if !duplicate {
+					recIndexes = append(recIndexes, uci)
+				}
+			}
 		}
 	}
 
