@@ -554,16 +554,20 @@ func (this *systemRemoteHttp) doRemoteEndpointOp(fullEndpoint string, command st
 		var opErr errors.Error
 
 		err = json.Unmarshal(body, &opErr)
-		if err != nil {
+		if err != nil || len(body) == 0 {
 
 			// MB-28264 we could not unmarshal an error from a remote node
-			// just create an error from th body
+			// just create an error from the body
 			ep := ""
 			u, e := url.Parse(fullEndpoint)
 			if e == nil {
 				ep = u.Path
 			}
-			return nil, errors.NewSystemRemoteWarning(goErr.New(string(body)), op, ep)
+			errText := string(body)
+			if errText == "" {
+				errText = "no data received"
+			}
+			return nil, errors.NewSystemRemoteWarning(goErr.New(errText), op, ep)
 		}
 		return nil, opErr
 	}
