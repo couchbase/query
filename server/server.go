@@ -1035,6 +1035,9 @@ func (this *Server) serviceRequest(request Request) {
 				request.Failed(this)
 				return
 			}
+			if request.OriginalScanConsistency() == datastore.NOT_SET && context.TxContext() != nil {
+				request.SetScanConsistency(context.TxContext().TxScanConsistency())
+			}
 		}
 	}
 
