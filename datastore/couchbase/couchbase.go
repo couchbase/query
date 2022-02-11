@@ -940,6 +940,7 @@ func (p *namespace) keyspaceByName(name string) (*keyspace, errors.Error) {
 							keyspace.collectionsManifestUid == _INVALID_MANIFEST_UID {
 							keyspace.collectionsManifestUid = mani.Uid
 							keyspace.scopes = scopes
+							logging.Infof("Refreshed manifest for bucket %v id %v", name, mani.Uid)
 
 							// if there's no scopes fall back to bucket access
 							if len(scopes) == 0 {
@@ -1342,6 +1343,7 @@ func newKeyspace(p *namespace, name string) (*keyspace, errors.Error) {
 	if err == nil {
 		rv.collectionsManifestUid = mani.Uid
 		rv.scopes, rv.defaultCollection = buildScopesAndCollections(mani, rv)
+		logging.Infof("Loaded manifest for bucket %v id %v", name, mani.Uid)
 	} else {
 		logging.Infof("Unable to retrieve collections info for bucket %s: %v", name, err)
 		// set collectionsManifestUid to _INVALID_MANIFEST_UID such that if collection becomes
