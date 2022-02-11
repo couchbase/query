@@ -85,6 +85,11 @@ func (this *HashNest) beforeItems(context *Context, parent value.Value) bool {
 		SetSearchInfo(this.aliasMap, parent, context, this.plan.Onclause())
 	}
 
+	filter := this.plan.Filter()
+	if filter != nil {
+		filter.EnableInlistHash(context)
+	}
+
 	// build hash table
 	this.hashTab = util.NewHashTable(util.HASH_TABLE_FOR_HASH_JOIN)
 
@@ -177,7 +182,13 @@ func (this *HashNest) processItem(item value.AnnotatedValue, context *Context) b
 
 func (this *HashNest) afterItems(context *Context) {
 	this.dropHashTable(context)
-	this.plan.Onclause().ResetMemory(context)
+	if (this.ansiFlags & (ANSI_ONCLAUSE_TRUE | ANSI_ONCLAUSE_FALSE)) == 0 {
+		this.plan.Onclause().ResetMemory(context)
+	}
+	filter := this.plan.Filter()
+	if filter != nil {
+		filter.ResetMemory(context)
+	}
 }
 
 func (this *HashNest) dropHashTable(context *Context) {

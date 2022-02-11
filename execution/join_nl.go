@@ -92,6 +92,11 @@ func (this *NLJoin) beforeItems(context *Context, parent value.Value) bool {
 		this.ansiFlags |= ANSI_ONCLAUSE_TRUE
 	}
 
+	filter := this.plan.Filter()
+	if filter != nil {
+		filter.EnableInlistHash(context)
+	}
+
 	return true
 }
 
@@ -173,9 +178,15 @@ loop:
 }
 
 func (this *NLJoin) afterItems(context *Context) {
-	onclause := this.plan.Onclause()
-	if onclause != nil {
-		onclause.ResetMemory(context)
+	if (this.ansiFlags & (ANSI_ONCLAUSE_TRUE | ANSI_ONCLAUSE_FALSE)) == 0 {
+		onclause := this.plan.Onclause()
+		if onclause != nil {
+			onclause.ResetMemory(context)
+		}
+	}
+	filter := this.plan.Filter()
+	if filter != nil {
+		filter.ResetMemory(context)
 	}
 }
 
