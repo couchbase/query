@@ -2078,11 +2078,11 @@ func (b *keyspace) performOp(op MutateOp, qualifiedName, scopeName, collectionNa
 				})
 
 				retry, err = processIfMCError(retry, err, key, qualifiedName)
-				errs = append(errs, errors.NewCbDMLError(err, msg, casMismatch, retry))
+				errs = append(errs, errors.NewCbDMLError(err, msg, casMismatch, retry, key, qualifiedName))
 			} else if isNotFoundError(err) {
 				err = errors.NewKeyNotFoundError(key, nil)
 				retry = value.FALSE
-				errs = append(errs, errors.NewCbDMLError(err, msg, casMismatch, retry))
+				errs = append(errs, errors.NewCbDMLError(err, msg, casMismatch, retry, key, qualifiedName))
 			} else {
 				// err contains key, redact
 				logging.Debuga(func() string {
@@ -2091,7 +2091,7 @@ func (b *keyspace) performOp(op MutateOp, qualifiedName, scopeName, collectionNa
 						MutateOpToName(op), key, qualifiedName, err)
 				})
 				retry, err = processIfMCError(retry, err, key, qualifiedName)
-				errs = append(errs, errors.NewCbDMLError(err, msg, casMismatch, retry))
+				errs = append(errs, errors.NewCbDMLError(err, msg, casMismatch, retry, key, qualifiedName))
 			}
 		} else {
 			mPairs = append(mPairs, kv)

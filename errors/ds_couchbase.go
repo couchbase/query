@@ -56,11 +56,14 @@ func NewCbBulkGetError(e error, msg string) Error {
 		InternalMsg: "Error performing bulk get operation " + msg, InternalCaller: CallerN(1), retry: value.TRUE}
 }
 
-func NewCbDMLError(e error, msg string, casMismatch bool, r value.Tristate) Error {
+func NewCbDMLError(e error, msg string, casMismatch bool, r value.Tristate, k string, ks string) Error {
 	if casMismatch {
-		e = newCASMismatchError()
+		ce := newCASMismatchError()
+		c := ce.Object()
+		c["keyspace"] = ks
+		c["document_key"] = k
 		r = value.FALSE
-		return &err{level: EXCEPTION, ICode: E_CB_DML, IKey: "datastore.couchbase.DML_error", ICause: e, cause: e, retry: r,
+		return &err{level: EXCEPTION, ICode: E_CB_DML, IKey: "datastore.couchbase.DML_error", ICause: ce, cause: c, retry: r,
 			InternalMsg: "DML Error, possible causes include CAS mismatch. " + msg, InternalCaller: CallerN(1)}
 	} else {
 		return &err{level: EXCEPTION, ICode: E_CB_DML, IKey: "datastore.couchbase.DML_error", ICause: e, cause: e, retry: r,
