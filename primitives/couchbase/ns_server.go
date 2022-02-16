@@ -1256,6 +1256,9 @@ func (b *Bucket) Close() {
 		}
 		b.connPools = nil
 	}
+}
+
+func (b *Bucket) StopUpdater() {
 	if b.updater != nil {
 		b.updater.Close()
 		b.updater = nil
