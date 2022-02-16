@@ -22,6 +22,7 @@ import (
 	"github.com/couchbase/gocbcore/v10/connstr"
 	ntls "github.com/couchbase/goutils/tls"
 	"github.com/couchbase/query/logging"
+	"github.com/couchbase/query/util"
 )
 
 const (
@@ -30,8 +31,10 @@ const (
 	_WARMUPTIMEOUT  = 1000 * time.Millisecond
 	_WARMUP         = false
 	_CLOSEWAIT      = 2 * time.Minute
-	_kVPOOLSIZE     = 8
-	_MAXQUEUESIZE   = 32 * 1024
+	_CPUSPERQUEUE   = 8
+	_POOL_QUEUES    = 4
+	_QUEUESIZE      = _CPUSPERQUEUE * 4 * 1024
+	_KVBUFFSERSIZE  = 16 * 1024
 )
 
 type MemcachedAuthProvider struct {
@@ -108,8 +111,12 @@ func agentConfig(url, options string, rv *Client) (*gocbcore.AgentConfig, error)
 	config := &gocbcore.AgentConfig{}
 	config.DefaultRetryStrategy = gocbcore.NewBestEffortRetryStrategy(nil)
 	config.KVConfig.ConnectTimeout = _CONNECTTIMEOUT
-	config.KVConfig.PoolSize = _kVPOOLSIZE
-	config.KVConfig.MaxQueueSize = _MAXQUEUESIZE
+	config.KVConfig.PoolSize = int((util.NumCPU() / _CPUSPERQUEUE) + 1)
+	config.KVConfig.MaxQueueSize = _QUEUESIZE
+	if config.KVConfig.PoolSize < _POOL_QUEUES {
+		config.KVConfig.MaxQueueSize += (_POOL_QUEUES - config.KVConfig.PoolSize) * _QUEUESIZE
+	}
+	config.KVConfig.ConnectionBufferSize = _KVBUFFSERSIZE
 	config.IoConfig.UseCollections = true
 	config.IoConfig.NetworkType = "network"
 	config.SecurityConfig.Auth = &MemcachedAuthProvider{rv}

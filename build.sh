@@ -78,18 +78,18 @@ DevStandaloneSetup() {
        then
            (cd ..; rm -rf gocbcore/v9; git clone -b v9.1.8 https://github.com/couchbase/gocbcore.git gocbcore/v9)
        fi
-    # gocbcore points to master; gocbcore/v10 points to 10.0.7
+    # gocbcore points to master; gocbcore/v10 points to 10.0.8
        if [[ -d ../gocbcore/v10 ]]
        then
            cd ../gocbcore/v10
-           C=`git describe --tags|grep -c "v10.0.7"`
+           C=`git describe --tags|grep -c "v10.0.8"`
            cd -
        else
            C=0
        fi
        if [[ $C -eq 0 ]]
        then
-           (cd ..; rm -rf gocbcore/v10; git clone -b v10.0.7 https://github.com/couchbase/gocbcore.git gocbcore/v10)
+           (cd ..; rm -rf gocbcore/v10; git clone -b v10.0.8 https://github.com/couchbase/gocbcore.git gocbcore/v10)
        fi
     # bleve version
        if [[ ! -d ../../blevesearch/bleve/v2 ]]; then
