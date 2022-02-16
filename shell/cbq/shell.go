@@ -354,7 +354,7 @@ var batchFlag string
 
 func init() {
 	const (
-		defaultval = "off"
+		defaultval = ""
 		usage      = command.UBATCH
 	)
 	flag.StringVar(&batchFlag, "batch", defaultval, usage)
@@ -455,6 +455,15 @@ func main() {
 	command.SetWriter(os.Stdout)
 	// Initialize Global buffer to store queries for batch mode.
 	stringBuffer.Write([]byte(""))
+
+	if batchFlag == "" {
+		if analyticsFlag {
+			batchFlag = "on"
+		} else {
+			batchFlag = "off"
+		}
+	}
+
 	if batchFlag != "on" && batchFlag != "off" {
 		s_err := command.HandleError(errors.E_SHELL_BATCH_MODE, errors.INVALID_INPUT_ARGUMENTS_MSG)
 		command.PrintError(s_err)
