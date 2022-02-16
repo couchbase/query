@@ -2140,8 +2140,8 @@ func (b *keyspace) Release(bclose bool) {
 	b.agentProvider = nil
 	b.Unlock()
 	if bclose {
-		b.cbbucket.Close()
 		b.cbbucket.StopUpdater()
+		b.cbbucket.Close()
 	}
 	if agentProvider != nil {
 		agentProvider.Close()
