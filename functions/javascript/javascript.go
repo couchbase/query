@@ -39,7 +39,7 @@ type javascriptBody struct {
 	library  string
 	object   string
 	prefix   string
-	name     string
+	libName  string
 }
 
 var enabled = true
@@ -132,7 +132,7 @@ func (this *javascript) Execute(name functions.FunctionName, body functions.Func
 	if levels > 1 && levels > int(threads-runners) {
 		return nil, errors.NewFunctionExecutionNestedError(levels, funcName)
 	}
-	library := funcBody.name
+	library := funcBody.libName
 
 	// if nested paths are not specified, just use the unformalized library
 	if library == "" {
@@ -163,11 +163,11 @@ func NewJavascriptBody(library, object string) (functions.FunctionBody, errors.E
 	return NewJavascriptBodyWithDetails(library, object, "", "")
 }
 
-func NewJavascriptBodyWithDetails(library, object, prefix, name string) (functions.FunctionBody, errors.Error) {
+func NewJavascriptBodyWithDetails(library, object, prefix, libName string) (functions.FunctionBody, errors.Error) {
 	if !enabled {
 		return nil, errors.NewFunctionsDisabledError("javascript")
 	}
-	return &javascriptBody{library: library, object: object, prefix: prefix, name: name}, nil
+	return &javascriptBody{library: library, object: object, prefix: prefix, libName: libName}, nil
 }
 
 func (this *javascriptBody) SetVarNames(vars []string) errors.Error {
@@ -182,7 +182,7 @@ func (this *javascriptBody) SetStorage(context functions.Context, path []string)
 		storageContext = path[1] + "/" + path[2]
 	}
 	this.prefix = ""
-	this.name = this.library
+	this.libName = this.library
 	if context.IsTracked() && len(path) == 4 {
 		this.prefix = storageContext
 	}
@@ -201,7 +201,7 @@ func (this *javascriptBody) SetStorage(context functions.Context, path []string)
 
 		// relative path, adjust and allow
 		if strings.HasPrefix(this.library, "./") && strings.IndexByte(this.library[2:], '/') < 0 {
-			this.name = this.library[2:]
+			this.libName = this.library[2:]
 			this.prefix = storageContext
 			return nil
 		} else if !context.IsTracked() && strings.HasPrefix(this.library, storageContext+"/") && strings.IndexByte(this.library[len(storageContext)+1:], '/') < 0 {
@@ -232,8 +232,8 @@ func (this *javascriptBody) Body(object map[string]interface{}) {
 	if this.prefix != "" {
 		object["prefix"] = this.prefix
 	}
-	if this.name != "" {
-		object["name"] = this.name
+	if this.libName != "" {
+		object["libName"] = this.libName
 	}
 }
 
