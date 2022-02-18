@@ -72,6 +72,9 @@ func (this *ExpressionScan) RunOnce(context *Context, parent value.Value) {
 			context.Error(errors.NewEvaluationError(e, "ExpressionScan"))
 			return
 		}
+		if ev == nil {
+			return
+		}
 
 		actuals := ev.Actual()
 		switch actuals.(type) {
