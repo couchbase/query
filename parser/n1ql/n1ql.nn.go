@@ -39085,6 +39085,31 @@ var dfas = []dfa{
 		},
 	}, []int{ /* Start-of-input transitions */ -1, -1, -1, -1}, []int{ /* End-of-input transitions */ -1, -1, -1, -1}, nil},
 
+	// \?\?
+	{[]bool{false, false, true}, []func(rune) int{ // Transitions
+		func(r rune) int {
+			switch r {
+			case 63:
+				return 1
+			}
+			return -1
+		},
+		func(r rune) int {
+			switch r {
+			case 63:
+				return 2
+			}
+			return -1
+		},
+		func(r rune) int {
+			switch r {
+			case 63:
+				return -1
+			}
+			return -1
+		},
+	}, []int{ /* Start-of-input transitions */ -1, -1, -1}, []int{ /* End-of-input transitions */ -1, -1, -1}, nil},
+
 	// \?
 	{[]bool{false, true}, []func(rune) int{ // Transitions
 		func(r rune) int {
@@ -40525,13 +40550,14 @@ OUTER0:
 			}
 		case 247:
 			{
-				lval.n = 0 // Handled by parser
-				yylex.logToken(yylex.Text(), "NEXT_PARAM - ?")
-				return NEXT_PARAM
+				yylex.logToken(yylex.Text(), "RANDOM_ELEMENT - ??")
+				return RANDOM_ELEMENT
 			}
 		case 248:
 			{
-				yylex.curOffset++
+				lval.n = 0 // Handled by parser
+				yylex.logToken(yylex.Text(), "NEXT_PARAM - ?")
+				return NEXT_PARAM
 			}
 		case 249:
 			{
@@ -40542,6 +40568,10 @@ OUTER0:
 				yylex.curOffset++
 			}
 		case 251:
+			{
+				yylex.curOffset++
+			}
+		case 252:
 			{
 				/* this we don't know what it is: we'll let
 				   the parser handle it (and most probably throw a syntax error

@@ -95,9 +95,10 @@ var _FUNCTIONS = map[string]Function{
 	"or":  &Or{},
 
 	// Navigation
-	"element": &Element{},
-	"field":   &Field{},
-	"slice":   &Slice{},
+	"element":        &Element{},
+	"field":          &Field{},
+	"random_element": &RandomElement{},
+	"slice":          &Slice{},
 
 	// Crypto
 	"hashbytes": &Hashbytes{},

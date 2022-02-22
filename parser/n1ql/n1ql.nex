@@ -373,6 +373,11 @@
     return POSITIONAL_PARAM
 }
 
+/\?\?/ {
+    yylex.logToken(yylex.Text(), "RANDOM_ELEMENT - ??")
+    return RANDOM_ELEMENT
+}
+
 /\?/ {
     lval.n = 0 // Handled by parser
     yylex.logToken(yylex.Text(), "NEXT_PARAM - ?")

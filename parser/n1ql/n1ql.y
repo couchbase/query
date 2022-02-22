@@ -320,7 +320,7 @@ tokOffset    int
 %token WORK
 %token XOR
 
-%token INT NUM STR IDENT IDENT_ICASE NAMED_PARAM POSITIONAL_PARAM NEXT_PARAM OPTIM_HINTS
+%token INT NUM STR IDENT IDENT_ICASE NAMED_PARAM POSITIONAL_PARAM NEXT_PARAM OPTIM_HINTS RANDOM_ELEMENT
 %token LPAREN RPAREN
 %token LBRACE RBRACE LBRACKET RBRACKET RBRACKET_ICASE
 %token COMMA COLON
@@ -3357,6 +3357,13 @@ expr DOT LBRACKET expr RBRACKET_ICASE
     $$.ExprBase().SetErrorContext($1.ExprBase().GetErrorContext())
 }
 |
+expr LBRACKET RANDOM_ELEMENT RBRACKET
+{
+    $$ = expression.NewRandomElement($1)
+    $$.(*expression.RandomElement).SetOperator()
+    $$.ExprBase().SetErrorContext($1.ExprBase().GetErrorContext())
+}
+|
 expr LBRACKET expr RBRACKET
 {
     $$ = expression.NewElement($1, $3)
@@ -3390,6 +3397,7 @@ expr LBRACKET COLON RBRACKET
 expr LBRACKET STAR RBRACKET
 {
     $$ = expression.NewArrayStar($1)
+    $$.(*expression.ArrayStar).SetOperator()
     $$.ExprBase().SetErrorContext($1.ExprBase().GetErrorContext())
 }
 |

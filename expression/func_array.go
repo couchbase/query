@@ -2067,11 +2067,13 @@ array of objects into an object of arrays.
 */
 type ArrayStar struct {
 	UnaryFunctionBase
+	operator bool
 }
 
 func NewArrayStar(operand Expression) Function {
 	rv := &ArrayStar{
 		*NewUnaryFunctionBase("array_star", operand),
+		false,
 	}
 
 	rv.expr = rv
@@ -2086,6 +2088,17 @@ func (this *ArrayStar) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *ArrayStar) Type() value.Type { return value.OBJECT }
+
+func (this *ArrayStar) SetOperator() {
+	this.operator = true
+}
+
+func (this *ArrayStar) Operator() string {
+	if this.operator {
+		return "[*]"
+	}
+	return ""
+}
 
 func (this *ArrayStar) Evaluate(item value.Value, context Context) (value.Value, error) {
 	arg, err := this.operands[0].Evaluate(item, context)

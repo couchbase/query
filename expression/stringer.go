@@ -623,6 +623,24 @@ func (this *Stringer) VisitFunction(expr Function) (interface{}, error) {
 	}
 
 	var buf bytes.Buffer
+
+	if uf, ok := expr.(UnaryFunction); ok && uf.Operator() != "" {
+		buf.WriteString("(")
+		buf.WriteString(this.Visit(uf.Operand()))
+		buf.WriteString(uf.Operator())
+		buf.WriteString(")")
+		return buf.String(), nil
+	}
+
+	if bf, ok := expr.(BinaryFunction); ok && bf.Operator() != "" {
+		buf.WriteString("(")
+		buf.WriteString(this.Visit(bf.First()))
+		buf.WriteString(bf.Operator())
+		buf.WriteString(this.Visit(bf.Second()))
+		buf.WriteString(")")
+		return buf.String(), nil
+	}
+
 	buf.WriteString(expr.Name())
 	buf.WriteString("(")
 
@@ -643,6 +661,7 @@ func (this *Stringer) VisitFunction(expr Function) (interface{}, error) {
 	}
 
 	buf.WriteString(")")
+
 	return buf.String(), nil
 }
 

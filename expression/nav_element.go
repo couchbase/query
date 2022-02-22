@@ -10,6 +10,7 @@ package expression
 
 import (
 	"math"
+	"math/rand"
 
 	"github.com/couchbase/query/value"
 )
@@ -105,4 +106,71 @@ Return false.
 */
 func (this *Element) Unset(item value.Value, context Context) bool {
 	return false
+}
+
+type RandomElement struct {
+	UnaryFunctionBase
+	operator bool
+}
+
+func NewRandomElement(first Expression) *RandomElement {
+	rv := &RandomElement{
+		*NewUnaryFunctionBase("random_element", first),
+		false,
+	}
+
+	rv.expr = rv
+	return rv
+}
+
+/*
+Visitor pattern.
+*/
+func (this *RandomElement) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *RandomElement) SetOperator() {
+	this.operator = true
+}
+
+func (this *RandomElement) Operator() string {
+	if this.operator {
+		return "[??]"
+	}
+	return ""
+}
+
+func (this *RandomElement) Type() value.Type { return value.JSON }
+
+func (this *RandomElement) Evaluate(item value.Value, context Context) (value.Value, error) {
+	first, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+
+	if first.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else if first.Type() != value.ARRAY {
+		return value.NULL_VALUE, nil
+	}
+
+	a := first.Actual().([]interface{})
+	max := len(a)
+	if max == 0 {
+		return value.NULL_VALUE, nil
+	}
+
+	index := rand.Intn(max)
+	v, _ := first.Index(index)
+	return v, nil
+}
+
+/*
+Factory method pattern.
+*/
+func (this *RandomElement) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return NewRandomElement(operands[0])
+	}
 }

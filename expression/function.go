@@ -66,6 +66,10 @@ type Function interface {
 	   Factory method pattern.
 	*/
 	Constructor() FunctionConstructor
+
+	SetOperator()
+
+	Operator() string
 }
 
 /*
@@ -216,6 +220,10 @@ func (this *FunctionBase) Aggregate() bool { return false }
 Return the operands of the function.
 */
 func (this *FunctionBase) Operands() Expressions { return this.operands }
+
+func (this *FunctionBase) SetOperator() {}
+
+func (this *FunctionBase) Operator() string { return "" }
 
 var _ARGS_POOL = value.NewValuePool(64)
 
