@@ -31,9 +31,9 @@ const (
 	_WARMUPTIMEOUT  = 1000 * time.Millisecond
 	_WARMUP         = false
 	_CLOSEWAIT      = 2 * time.Minute
-	_CPUSPERQUEUE   = 8
-	_POOL_QUEUES    = 4
-	_QUEUESIZE      = _CPUSPERQUEUE * 4 * 1024
+	_MINQUEUES      = 4
+	_MAXQUEUES      = 16
+	_QUEUESIZE      = 32 * 1024
 	_KVBUFFSERSIZE  = 16 * 1024
 )
 
@@ -111,12 +111,17 @@ func agentConfig(url, options string, rv *Client) (*gocbcore.AgentConfig, error)
 	config := &gocbcore.AgentConfig{}
 	config.DefaultRetryStrategy = gocbcore.NewBestEffortRetryStrategy(nil)
 	config.KVConfig.ConnectTimeout = _CONNECTTIMEOUT
-	config.KVConfig.PoolSize = int((util.NumCPU() / _CPUSPERQUEUE) + 1)
-	config.KVConfig.MaxQueueSize = _QUEUESIZE
-	if config.KVConfig.PoolSize < _POOL_QUEUES {
-		config.KVConfig.MaxQueueSize += (_POOL_QUEUES - config.KVConfig.PoolSize) * _QUEUESIZE
-	}
 	config.KVConfig.ConnectionBufferSize = _KVBUFFSERSIZE
+	// queue size per kv node
+	config.KVConfig.MaxQueueSize = _QUEUESIZE
+	// number of the queues per kv node
+	config.KVConfig.PoolSize = int((util.NumCPU() + 1) / 2)
+	if config.KVConfig.PoolSize < _MINQUEUES {
+		config.KVConfig.MaxQueueSize += (_MINQUEUES - config.KVConfig.PoolSize) * _QUEUESIZE
+	} else if config.KVConfig.PoolSize > _MAXQUEUES {
+		// Limit PoolSize. If more CPU, there will be more kv nodes in cluster.
+		config.KVConfig.PoolSize = _MAXQUEUES
+	}
 	config.IoConfig.UseCollections = true
 	config.IoConfig.NetworkType = "network"
 	config.SecurityConfig.Auth = &MemcachedAuthProvider{rv}
