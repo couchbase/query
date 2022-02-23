@@ -1771,7 +1771,8 @@ func getSubDocFetchResults(k string, v *gomemcached.MCResponse, subPaths []strin
 		// When xattr value not defined for a doc, set missing
 		tmpVal := value.NewValue(xattrValue)
 
-		if xattrError != gomemcached.SUBDOC_PATH_NOT_FOUND {
+		// MB-51136 skip system xattrs
+		if xattrError != gomemcached.SUBDOC_PATH_NOT_FOUND && subPaths[i][0] != '_' {
 			xVal[subPaths[i]] = tmpVal.Actual()
 		}
 

@@ -197,11 +197,22 @@ func (this *builder) visitFrom(node *algebra.Subselect, group *algebra.Group,
 }
 
 func isValidXattrs(names []string) bool {
-	if len(names) > 2 {
+
+	// MB-51136 disallow system Xattrs
+	switch len(names) {
+	case 0:
+		return true
+	case 1:
+		return !strings.HasPrefix(names[0], "_")
+	case 2:
+		if strings.HasPrefix(names[0], "_") || strings.HasPrefix(names[1], "_") {
+			return false
+		}
+		return (strings.HasPrefix(names[0], "$") && !strings.HasPrefix(names[1], "$")) ||
+			(!strings.HasPrefix(names[0], "$") && strings.HasPrefix(names[1], "$"))
+	default:
 		return false
 	}
-	return len(names) <= 1 || (strings.HasPrefix(names[0], "$") && !strings.HasPrefix(names[1], "$")) ||
-		(!strings.HasPrefix(names[0], "$") && strings.HasPrefix(names[1], "$"))
 }
 
 func (this *builder) collectAliases(node *algebra.Subselect) {
@@ -218,7 +229,7 @@ func (this *builder) GetSubPaths(keyspace string) (names []string, err error) {
 	if this.node != nil {
 		_, names = expression.XattrsNames(this.node.Expressions(), keyspace)
 		if ok := isValidXattrs(names); !ok {
-			return nil, errors.NewPlanInternalError("Can only retrieve virtual xattr and user xattr or virtual xattr and system xattr")
+			return nil, errors.NewPlanInternalError("Can only retrieve virtual xattr and user xattr")
 		}
 		if len(names) == 0 {
 			var exprs expression.Expressions
