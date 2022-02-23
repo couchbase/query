@@ -71,6 +71,10 @@ func (e *AbortError) Error() string {
 func (e *AbortError) dummyMethod() {
 }
 
+func (e *AbortError) MarshalText() ([]byte, error) {
+	return []byte(e.e), nil
+}
+
 func NewAbortError(e string) *AbortError {
 	return &AbortError{e}
 }
@@ -172,6 +176,8 @@ func processValue(v interface{}) interface{} {
 		return vt.Error()
 	case interface{ String() string }:
 		return vt.String()
+	case *AbortError:
+		return vt.e
 	default:
 		return fmt.Sprintf("%v", v)
 	}

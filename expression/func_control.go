@@ -9,8 +9,6 @@
 package expression
 
 import (
-	"fmt"
-
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/value"
 )
@@ -54,7 +52,7 @@ func (this *Abort) Evaluate(item value.Value, context Context) (value.Value, err
 	if err != nil {
 		return nil, err
 	}
-	return value.NULL_VALUE, errors.NewAbortError(fmt.Sprintf("%v", arg))
+	return value.NULL_VALUE, errors.NewAbortError(arg.ToString())
 }
 
 /*

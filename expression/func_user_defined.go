@@ -80,12 +80,7 @@ func (this *UserDefinedFunction) Evaluate(item value.Value, context Context) (va
 		}
 	}
 
-	val, err := functions.ExecuteFunction(this.name, functions.READONLY, args, context)
-	if err == nil {
-		return val, nil
-	} else {
-		return val, fmt.Errorf(err.Error())
-	}
+	return functions.ExecuteFunction(this.name, functions.READONLY, args, context)
 }
 
 func (this *UserDefinedFunction) EvaluateForIndex(item value.Value, context Context) (value.Value, value.Values, error) {
