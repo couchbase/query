@@ -116,9 +116,13 @@ func NewTransactionReleased() Error {
 		InternalCaller: CallerN(1)}
 }
 
-func NewDuplicateKeyError(msg string) Error {
+func NewDuplicateKeyError(key, ks string) Error {
+	msg := ""
+	if ks != "" {
+		msg = fmt.Sprintf(" for '%s'", ks)
+	}
 	return &err{level: EXCEPTION, ICode: E_DUPLICATE_KEY, IKey: "dml.statement.duplicatekey",
-		InternalMsg:    fmt.Sprintf("Duplicate Key: %s", msg),
+		InternalMsg:    fmt.Sprintf("Duplicate Key%s: %s", msg, key),
 		InternalCaller: CallerN(1)}
 }
 
@@ -128,9 +132,13 @@ func NewTransactionInuse() Error {
 		InternalCaller: CallerN(1)}
 }
 
-func NewKeyNotFoundError(k string, c interface{}) Error {
+func NewKeyNotFoundError(key, ks string, c interface{}) Error {
+	msg := ""
+	if ks != "" {
+		msg = fmt.Sprintf(" for '%s'", ks)
+	}
 	return &err{level: EXCEPTION, ICode: E_KEY_NOT_FOUND, IKey: "datastore.couchbase.keynotfound",
-		InternalMsg:    fmt.Sprintf("Key not found : %v", k),
+		InternalMsg:    fmt.Sprintf("Key not found%s: %v", msg, key),
 		InternalCaller: CallerN(1), cause: c}
 }
 
@@ -170,13 +178,18 @@ func NewAmbiguousCommitTransactionError(e error, c interface{}) Error {
 		InternalMsg: msg, InternalCaller: CallerN(1), cause: c}
 }
 
-func NewWriteTransactionError(e error, c interface{}) Error {
-	msg := "write error"
-	if e != nil {
-		msg = fmt.Sprintf("%s: %v", msg, e)
+func NewTransactionStagingError(e error, c interface{}) Error {
+	switch e := e.(type) {
+	case Error: // if given error is already an Error, just return it:
+		return e
+	default:
+		msg := "Transaction staging error"
+		if e != nil {
+			msg = fmt.Sprintf("%s: %v", msg, e)
+		}
+		return &err{level: EXCEPTION, ICode: E_TRANSACTION_STAGING, IKey: "transaction.staging.error",
+			InternalMsg: msg, InternalCaller: CallerN(1), cause: c}
 	}
-	return &err{level: EXCEPTION, ICode: E_WRITE_TRANSACTION, IKey: "transaction.write.error",
-		InternalMsg: msg, InternalCaller: CallerN(1), cause: c}
 }
 
 func NewTransactionQueueFull() Error {
@@ -192,4 +205,16 @@ func NewPostCommitTransactionWarning(e error, c interface{}) Error {
 	}
 	return &err{level: WARNING, ICode: E_POST_COMMIT_TRANSACTION_WARNING, IKey: "transaction.statement.postcommit",
 		InternalMsg: msg, InternalCaller: CallerN(1), cause: c}
+}
+
+func NewTransactionCommitCause(e error) (c map[string]interface{}) {
+	switch e := e.(type) {
+	case Error:
+		c = e.Object()
+		c["cause"] = c["message"]
+		c["raise"] = "failed"
+		c["rollback"] = false
+		c["retry"] = (e.Code() == E_TRANSACTION_EXPIRED)
+	}
+	return c
 }

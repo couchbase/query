@@ -390,7 +390,7 @@ const (
 	E_TRANSACTION_FETCH                       ErrorCode = 17017
 	E_POST_COMMIT_TRANSACTION                 ErrorCode = 17018
 	E_AMBIGUOUS_COMMIT_TRANSACTION            ErrorCode = 17019
-	E_WRITE_TRANSACTION                       ErrorCode = 17020
+	E_TRANSACTION_STAGING                     ErrorCode = 17020
 	E_TRANSACTION_QUEUE_FULL                  ErrorCode = 17021
 	E_POST_COMMIT_TRANSACTION_WARNING         ErrorCode = 17022
 	E_TRANCE_NOTSUPPORTED                     ErrorCode = 17097

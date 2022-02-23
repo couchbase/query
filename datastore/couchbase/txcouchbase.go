@@ -199,6 +199,9 @@ func (s *store) CommitTransaction(stmtAtomicity bool, context datastore.QueryCon
 	}
 	if err != nil {
 		e, c := errorType(err, false)
+		if c == nil {
+			c = errors.NewTransactionCommitCause(err)
+		}
 		return errors.NewCommitTransactionError(e, c)
 	}
 	logging.Tracea(func() string { return fmt.Sprintf("=====%v=====Commit end write========", txId) })
@@ -449,7 +452,7 @@ func (ks *keyspace) txFetch(fullName, qualifiedName, scopeName, collectionName, 
 			// Transformed SDK REPLACE, DELETE with CAS don't read the document
 			k := keys[0]
 			if len(fkeys) == 0 && txMutations.IsDeletedMutation(qualifiedName, k) {
-				return errors.Errors{errors.NewKeyNotFoundError(k, nil)}
+				return errors.Errors{errors.NewKeyNotFoundError(k, "", nil)}
 			} else if len(fkeys) == 1 {
 				mvs[k] = &MutationValue{Val: value.NewValue(nil), Cas: sdkCas, TxnMeta: sdkTxnMeta}
 				fkeys = fkeys[0:0]
@@ -482,7 +485,7 @@ func (ks *keyspace) txFetch(fullName, qualifiedName, scopeName, collectionName, 
 			if notFoundErr &&
 				(gerrors.Is(errs[0], gocbcore.ErrDocumentNotFound) || gerrors.Is(errs[0], gctx.ErrDocumentNotFound)) {
 				_, c := errorType(errs[0], rollback)
-				return errors.Errors{errors.NewKeyNotFoundError(fkeys[0], c)}
+				return errors.Errors{errors.NewKeyNotFoundError(fkeys[0], "", c)}
 			}
 
 			var rerrs errors.Errors
@@ -555,7 +558,7 @@ func (ks *keyspace) txPerformOp(op MutateOp, qualifiedName, scopeName, collectio
 				if op == MOP_UPSERT {
 					nop = MOP_UPDATE
 				} else {
-					return nil, append(errs, errors.NewDuplicateKeyError(key))
+					return nil, append(errs, errors.NewDuplicateKeyError(key, ""))
 				}
 				val = av
 				kv.Value = val
@@ -607,7 +610,7 @@ func (ks *keyspace) txPerformOp(op MutateOp, qualifiedName, scopeName, collectio
 		// implict transaction write the current batch
 		if terr := txMutations.Write(context.GetReqDeadline()); terr != nil {
 			e, c := errorType(terr, false)
-			return nil, append(errs, errors.NewWriteTransactionError(e, c))
+			return nil, append(errs, errors.NewTransactionStagingError(e, c))
 		}
 	}
 

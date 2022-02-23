@@ -1968,7 +1968,7 @@ func (b *keyspace) performOp(op MutateOp, qualifiedName, scopeName, collectionNa
 					retry, err = processIfMCError(retry, err, key, qualifiedName)
 					err = errors.NewInsertError(err, key)
 				} else {
-					err = errors.NewDuplicateKeyError(key)
+					err = errors.NewDuplicateKeyError(key, "")
 					retry = value.FALSE
 				}
 			} else { // if err != nil then added is false
@@ -2084,7 +2084,7 @@ func (b *keyspace) performOp(op MutateOp, qualifiedName, scopeName, collectionNa
 				retry, err = processIfMCError(retry, err, key, qualifiedName)
 				errs = append(errs, errors.NewCbDMLError(err, msg, casMismatch, retry, key, qualifiedName))
 			} else if isNotFoundError(err) {
-				err = errors.NewKeyNotFoundError(key, nil)
+				err = errors.NewKeyNotFoundError(key, "", nil)
 				retry = value.FALSE
 				errs = append(errs, errors.NewCbDMLError(err, msg, casMismatch, retry, key, qualifiedName))
 			} else {

@@ -17,6 +17,7 @@ import (
 
 	gctx "github.com/couchbase/gocbcore-transactions"
 	"github.com/couchbase/gocbcore/v10"
+	cerrors "github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/value"
 )
@@ -259,7 +260,7 @@ type WriteOp struct {
 
 // bulk transactional write
 
-func (ap *AgentProvider) TxWrite(transaction *gctx.Transaction, txnInternal *gctx.ManagerInternal,
+func (ap *AgentProvider) TxWrite(transaction *gctx.Transaction, txnInternal *gctx.ManagerInternal, keyspace,
 	bucketName, scopeName, collectionName string,
 	collectionID uint32, reqDeadline time.Time, wops WriteOps) (errOut error) {
 
@@ -384,7 +385,7 @@ func (ap *AgentProvider) TxWrite(transaction *gctx.Transaction, txnInternal *gct
 				prevErr = errOut
 				break
 			} else {
-				return errOut
+				return mapStagingError(errOut, op.Key, keyspace)
 			}
 
 		}
@@ -398,10 +399,29 @@ func (ap *AgentProvider) TxWrite(transaction *gctx.Transaction, txnInternal *gct
 				errors.Is(err1.Unwrap(), gctx.ErrPreviousOperationFailed) {
 				prevErr = op.Err
 			} else {
-				return op.Err
+				return mapStagingError(op.Err, op.Key, keyspace)
 			}
 		}
 	}
 
 	return prevErr
+}
+
+func mapStagingError(err error, key, ks string) error {
+	e := err
+	if terr, ok := err.(*gctx.TransactionOperationFailedError); ok {
+		e = terr.Unwrap()
+	}
+	if errors.Is(e, gocbcore.ErrDocumentNotFound) || errors.Is(e, gctx.ErrDocumentNotFound) {
+		return cerrors.NewKeyNotFoundError(key, ks, nil)
+	}
+	if errors.Is(e, gocbcore.ErrDocumentExists) || errors.Is(e, gctx.ErrDocumentAlreadyExists) ||
+		errors.Is(e, gctx.ErrDocAlreadyInTransaction) {
+		return cerrors.NewDuplicateKeyError(key, ks)
+	}
+	if errors.Is(e, gctx.ErrAttemptExpired) {
+		return cerrors.NewTransactionExpired(nil)
+	}
+	// gctx.ErrCasMismatch is not mapped
+	return err
 }

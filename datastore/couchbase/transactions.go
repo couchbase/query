@@ -419,7 +419,7 @@ func (this *TransactionMutations) Add(op MutateOp, keyspace, bucketName, scopeNa
 	case MOP_INSERT:
 		// Inserted key present current statement or previous statement error.
 		if mv != nil || (mmv != nil && (mmv.Op == MOP_INSERT || mmv.Op == MOP_UPSERT || mmv.Op == MOP_UPDATE)) {
-			return retCas, errors.NewDuplicateKeyError(key)
+			return retCas, errors.NewDuplicateKeyError(key, "")
 		}
 
 		// Previous statement has MOP_DELETE and non zero CAS transform to MOP_UPDATE
@@ -572,7 +572,7 @@ func (this *TransactionMutations) Write(deadline time.Time) (err error) {
 	if this.tranImplicit {
 		// write current delta keyspace
 		dk := &this.curDeltaKeyspace
-		if err = dk.Write(this.transaction, this.txnInternal, this.curKeyspace, deadline, &memSize); err != nil {
+		if err = dk.Write(this.transaction, this.txnInternal, "", deadline, &memSize); err != nil {
 			return err
 		}
 	}
@@ -875,7 +875,7 @@ func (this *DeltaKeyspace) Write(transaction *gctx.Transaction, txnInternal *gct
 
 			if len(wops) == bSize {
 				// write once batch size reached
-				err = this.ks.agentProvider.TxWrite(transaction, txnInternal,
+				err = this.ks.agentProvider.TxWrite(transaction, txnInternal, keyspace,
 					this.bucketName, this.scopeName, this.collectionName, this.collId, deadline, wops)
 				if err != nil {
 					return err
@@ -888,7 +888,7 @@ func (this *DeltaKeyspace) Write(transaction *gctx.Transaction, txnInternal *gct
 
 	if len(wops) > 0 {
 		// write partial batch
-		err = this.ks.agentProvider.TxWrite(transaction, txnInternal,
+		err = this.ks.agentProvider.TxWrite(transaction, txnInternal, keyspace,
 			this.bucketName, this.scopeName, this.collectionName, this.collId, deadline, wops)
 		if err != nil {
 			return err

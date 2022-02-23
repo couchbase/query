@@ -302,7 +302,7 @@
     {
         "queryParams": {"tximplicit": true, "durability_level":"none"},
         "statements": "INSERT INTO orders._default.transactions VALUES ('tran004',{'a':4, 'total':0}), VALUES ('tran004',{'a':4, 'total':0})",
-        "errorCode": 17020
+        "errorCode": 17012
     },
     {
         "queryParams": {"tximplicit": true, "durability_level":"none"},
