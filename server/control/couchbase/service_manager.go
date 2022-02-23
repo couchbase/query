@@ -32,6 +32,8 @@ type ServiceMgr struct {
 
 	nodeInfo *service.NodeInfo
 	waiters  waiters
+
+	thisHost string
 }
 
 // to reduce the occasions when host is looked up from node ID, cache it here
@@ -87,10 +89,14 @@ func (m *ServiceMgr) setInitialNodeList() {
 	defer logging.Debugf("ServiceMgr::setInitialNodeList exit")
 
 	// wait for the node to be part of a cluster
-	thisHost := distributed.RemoteAccess().WhoAmI()
-	for distributed.RemoteAccess().Starting() && thisHost == "" {
+	m.thisHost = distributed.RemoteAccess().WhoAmI()
+	for distributed.RemoteAccess().Starting() && m.thisHost == "" {
 		time.Sleep(time.Second)
-		thisHost = distributed.RemoteAccess().WhoAmI()
+		m.thisHost = distributed.RemoteAccess().WhoAmI()
+	}
+	if m.thisHost == "" {
+		// we won't get a server list so exit
+		return
 	}
 
 	// our topology is just the list of nodes in the cluster (or ourselves)
@@ -109,13 +115,22 @@ func (m *ServiceMgr) setInitialNodeList() {
 		info = append(info, ' ')
 	}
 
+	// since preparation may take a short time it is technically possible to receive new topology from the orchestrator before
+	// we're able to update with our initial understanding; don't overwrite if this is the case
+	set := false
 	m.updateState(func(s *state) {
-		s.servers = nodeList
+		if s.servers == nil {
+			s.servers = nodeList
+			set = true
+		}
 	})
-	if len(info) == 0 {
-		info = append(info, []rune("no active nodes")...)
+
+	if set {
+		if len(info) == 0 {
+			info = append(info, []rune("no active nodes")...)
+		}
+		logging.Infof("Initial topology: %v", string(info))
 	}
-	logging.Infof("Initial topology: %v", string(info))
 }
 
 func (m *ServiceMgr) registerWithServer() {
@@ -374,7 +389,12 @@ func (m *ServiceMgr) PrepareTopologyChange(change service.TopologyChange) error 
 		return service.ErrNotSupported
 	}
 
-	logging.Infof("Preparing for topology change")
+	if m.thisHost == "" {
+		logging.Debuga(func() string { return "ServiceMgr::PrepareTopologyChange exit: not enabled" })
+		return nil // do nothing, but don't fail
+	}
+
+	logging.Infof("Preparing for possible topology change")
 
 	// for each node we know about, cache its shutdown URL
 	info := make([]rune, 0, len(change.KeepNodes)*64)
@@ -421,9 +441,7 @@ func (m *ServiceMgr) PrepareTopologyChange(change service.TopologyChange) error 
 			eject = append(eject, o)
 		}
 	}
-	if len(eject) == 0 {
-		eject = nil
-	} else {
+	if len(eject) != 0 {
 		eject = eject[0:len(eject):len(eject)]
 	}
 
@@ -435,7 +453,7 @@ func (m *ServiceMgr) PrepareTopologyChange(change service.TopologyChange) error 
 	if len(info) == 0 {
 		info = append(info, []rune("no active nodes")...)
 	}
-	logging.Infof("Topology now: %s", string(info))
+	logging.Infof("Topology: %s", string(info))
 	logging.Debugf("ServiceMgr::PrepareTopologyChange exit")
 	return nil
 }
@@ -445,6 +463,11 @@ func (m *ServiceMgr) PrepareTopologyChange(change service.TopologyChange) error 
 // This is only invoked on the master which is then responsible for initiating changes on other nodes
 func (m *ServiceMgr) StartTopologyChange(change service.TopologyChange) error {
 	logging.Debuga(func() string { return fmt.Sprintf("ServiceMgr::StartTopologyChange %v", change) })
+
+	if m.thisHost == "" {
+		logging.Debuga(func() string { return "ServiceMgr::StartTopologyChange exit: not enabled" })
+		return nil // do nothing, but don't fail
+	}
 
 	timeout := time.Duration(0)
 	data := ""
