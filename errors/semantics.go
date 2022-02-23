@@ -89,7 +89,7 @@ func NewWindowSemanticError(fname, wclause, cause, iKey string) Error {
 
 func NewEnterpriseFeature(opmsg, iKey string) Error {
 	return &err{level: EXCEPTION, ICode: E_ENTERPRISE_FEATURE, IKey: iKey,
-		InternalMsg:    fmt.Sprintf("%s is enterprise level feature.", opmsg),
+		InternalMsg:    fmt.Sprintf("'%s' is an enterprise level feature.", opmsg),
 		InternalCaller: CallerN(1)}
 }
 

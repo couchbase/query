@@ -165,6 +165,7 @@ const (
 	E_ALTER_INDEX                             ErrorCode = 4322
 	E_NO_ANSI_JOIN                            ErrorCode = 4330
 	E_PARTITION_INDEX_NOT_SUPPORTED           ErrorCode = 4340
+	E_GSI                                     ErrorCode = 4350
 	E_CBO                                     ErrorCode = 4600
 	E_INDEX_STAT                              ErrorCode = 4610
 	_RETIRED_4901                                       = 4901

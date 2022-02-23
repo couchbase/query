@@ -82,14 +82,39 @@ func NewAbortError(e string) *AbortError {
 
 type ErrorChannel chan Error
 
+var gsiPatterns map[string]*regexp.Regexp
+
 func NewError(e error, internalMsg string) Error {
 	switch e := e.(type) {
 	case Error: // if given error is already an Error, just return it:
 		return e
-	default:
-		return &err{level: EXCEPTION, ICode: E_INTERNAL, IKey: "Internal Error", ICause: e,
-			InternalMsg: internalMsg, InternalCaller: CallerN(1)}
 	}
+
+	code := E_INTERNAL
+	key := "internal.error"
+
+	// map GSI errors where possible to meaningful error codes
+	if strings.HasPrefix(internalMsg, "GSI ") || strings.HasPrefix(e.Error(), "GSI ") {
+		errText := e.Error()
+		if gsiPatterns == nil {
+			gsiPatterns = make(map[string]*regexp.Regexp)
+			gsiPatterns["enterprise"] = regexp.MustCompile("(.*) not supported in non-Enterprise Edition")
+			gsiPatterns["exists"] = regexp.MustCompile("Index (.*) already exists")
+		}
+		res := gsiPatterns["enterprise"].FindSubmatch([]byte(errText))
+		if res != nil {
+			return NewEnterpriseFeature(string(res[1]), "indexing.enterprise_only_feature")
+		}
+		res = gsiPatterns["exists"].FindSubmatch([]byte(errText))
+		if res != nil {
+			return NewIndexAlreadyExistsError(string(res[1]))
+		}
+		code = E_GSI
+		key = "indexing.error"
+	}
+
+	return &err{level: EXCEPTION, ICode: code, IKey: key, ICause: e,
+		InternalMsg: internalMsg, InternalCaller: CallerN(1)}
 }
 
 func NewWarning(internalMsg string) Error {
@@ -307,7 +332,10 @@ func IsNotFoundError(object string, e error) bool {
 }
 
 func IsIndexExistsError(e error) bool {
-	return IsExistsError("Index", e)
+	if err, ok := e.(Error); ok && err.Code() == E_INDEX_ALREADY_EXISTS {
+		return true
+	}
+	return false
 }
 
 func IsScopeExistsError(e error) bool {

@@ -81,11 +81,7 @@ func (this *CreateIndex) RunOnce(context *Context, parent value.Value) {
 			_, err = indexer3.CreateIndex3(context.RequestId(), node.Name(), rangeKeys,
 				indexPartition, node.Where(), node.With())
 			if err != nil {
-				exists := errors.IsIndexExistsError(err)
-				if !exists || this.plan.Node().FailIfExists() {
-					if exists {
-						err = errors.NewIndexAlreadyExistsError(node.Name())
-					}
+				if !errors.IsIndexExistsError(err) || this.plan.Node().FailIfExists() {
 					context.Error(err)
 				} else {
 					err = nil
