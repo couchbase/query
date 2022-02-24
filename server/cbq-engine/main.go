@@ -378,9 +378,23 @@ func main() {
 		)
 	})
 
-	// Create http endpoint
+	// Create http endpoint (but don't start it yet)
 	endpoint := http.NewServiceEndpoint(server, *STATIC_PATH, *METRICS,
 		*HTTP_ADDR, *HTTPS_ADDR, *CA_FILE, *CERT_FILE, *KEY_FILE)
+
+	server.SetSettingsCallback(endpoint.SettingsCallback)
+
+	constructor.Init(endpoint.Mux(), server.Servicers())
+
+	// topology awareness
+	_ = control.NewManager(*UUID)
+
+	// Since TLS listener has already been started by NewServiceEndpoint
+	// So not starting here
+	// Check later for enterprise -
+	// server.Enterprise() && *CERT_FILE != "" && *KEY_FILE != ""
+
+	// start the endpoint once all initialisation is complete
 	er := endpoint.Listen()
 	if er != nil {
 		logging.Errorf("cbq-engine (HTTP_ADDR %v) exiting with error: %v", *HTTP_ADDR, er)
@@ -393,20 +407,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	server.SetSettingsCallback(endpoint.SettingsCallback)
-
-	constructor.Init(endpoint.Mux(), server.Servicers())
-
-	// topology awareness
-	_ = control.NewManager(*UUID)
-
 	// Now that we are up and running, try to prime the prepareds cache
 	prepareds.PreparedsRemotePrime()
-
-	// Since TLS listener has already been started by NewServiceEndpoint
-	// So not starting here
-	// Check later for enterprise -
-	// server.Enterprise() && *CERT_FILE != "" && *KEY_FILE != ""
 
 	signalCatcher(server, endpoint)
 }

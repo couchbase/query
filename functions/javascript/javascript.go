@@ -42,7 +42,7 @@ type javascriptBody struct {
 	libName  string
 }
 
-var enabled = true
+var enabled = false
 var evaluator defs.Evaluator
 var threads int32
 var threadCount int32
@@ -85,12 +85,12 @@ func Init(mux *mux.Router, t int) {
 
 	if err.Err != nil {
 		logging.Infof("Unable to start javascript evaluator client, err : %v", err.Err)
-		enabled = false
 	} else {
 		evaluator = engine.Fetch()
 		if evaluator == nil {
 			logging.Infof("Unable to retrieve javascript evaluator")
-			enabled = false
+		} else {
+			enabled = true
 		}
 	}
 }
