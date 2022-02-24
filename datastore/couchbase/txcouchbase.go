@@ -130,7 +130,7 @@ func (s *store) StartTransaction(stmtAtomicity bool, context datastore.QueryCont
 
 		// no detach for resume
 		if terr != nil {
-			e, c := errorType(terr, resume)
+			e, c := gcagent.ErrorType(terr, resume)
 			return nil, errors.NewStartTransactionError(e, c)
 		}
 
@@ -198,9 +198,9 @@ func (s *store) CommitTransaction(stmtAtomicity bool, context datastore.QueryCon
 		s.gcClient.AddAtrLocation(&atrl)
 	}
 	if err != nil {
-		e, c := errorType(err, false)
-		if c == nil {
-			c = errors.NewTransactionCommitCause(err)
+		e, c := gcagent.ErrorType(err, false)
+		if ce, ok := err.(errors.Error); ok && c == nil {
+			c = ce.Cause()
 		}
 		return errors.NewCommitTransactionError(e, c)
 	}
@@ -252,7 +252,7 @@ func (s *store) CommitTransaction(stmtAtomicity bool, context datastore.QueryCon
 	txContext.SetTxMutations(nil)
 
 	if err != nil {
-		e, c := errorType(err, false)
+		e, c := gcagent.ErrorType(err, false)
 		if terr, ok := err.(*gctx.TransactionOperationFailedError); ok {
 			switch terr.ToRaise() {
 			case gctx.ErrorReasonTransactionExpired:
@@ -334,7 +334,7 @@ func (s *store) RollbackTransaction(stmtAtomicity bool, context datastore.QueryC
 	txContext.SetTxMutations(nil)
 
 	if err != nil {
-		e, c := errorType(err, false)
+		e, c := gcagent.ErrorType(err, false)
 		return errors.NewRollbackTransactionError(e, c)
 	}
 
@@ -484,13 +484,13 @@ func (ks *keyspace) txFetch(fullName, qualifiedName, scopeName, collectionName, 
 		if len(errs) > 0 {
 			if notFoundErr &&
 				(gerrors.Is(errs[0], gocbcore.ErrDocumentNotFound) || gerrors.Is(errs[0], gctx.ErrDocumentNotFound)) {
-				_, c := errorType(errs[0], rollback)
+				_, c := gcagent.ErrorType(errs[0], rollback)
 				return errors.Errors{errors.NewKeyNotFoundError(fkeys[0], "", c)}
 			}
 
 			var rerrs errors.Errors
 			for _, e := range errs {
-				e1, c := errorType(e, rollback)
+				e1, c := gcagent.ErrorType(e, rollback)
 				rerrs = append(rerrs, errors.NewTransactionFetchError(e1, c))
 			}
 			return rerrs
@@ -558,7 +558,7 @@ func (ks *keyspace) txPerformOp(op MutateOp, qualifiedName, scopeName, collectio
 				if op == MOP_UPSERT {
 					nop = MOP_UPDATE
 				} else {
-					return nil, append(errs, errors.NewDuplicateKeyError(key, ""))
+					return nil, append(errs, errors.NewDuplicateKeyError(key, "", nil))
 				}
 				val = av
 				kv.Value = val
@@ -609,7 +609,7 @@ func (ks *keyspace) txPerformOp(op MutateOp, qualifiedName, scopeName, collectio
 	if txMutations.TranImplicit() {
 		// implict transaction write the current batch
 		if terr := txMutations.Write(context.GetReqDeadline()); terr != nil {
-			e, c := errorType(terr, false)
+			e, c := gcagent.ErrorType(terr, false)
 			return nil, append(errs, errors.NewTransactionStagingError(e, c))
 		}
 	}
@@ -694,24 +694,6 @@ func CollectionAgentProvider(bucketName, scpName, collName, oboUser string) (*go
 		return nil, oboUser, cerr.GetICause()
 	}
 	return coll.bucket.agentProvider.Agent(), oboUser, nil
-}
-
-func errorType(err error, rollback bool) (error, interface{}) {
-	if terr, ok := err.(*gctx.TransactionOperationFailedError); ok {
-		b, e := terr.MarshalJSON()
-		if e == nil {
-			var iv interface{}
-			if e = json.Unmarshal(b, &iv); e == nil {
-				if c, ok := iv.(map[string]interface{}); ok {
-					if !rollback {
-						c["rollback"] = rollback
-					}
-					return nil, c
-				}
-			}
-		}
-	}
-	return err, nil
 }
 
 func initGocb(s *store) (err errors.Error) {

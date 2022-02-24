@@ -419,7 +419,7 @@ func (this *TransactionMutations) Add(op MutateOp, keyspace, bucketName, scopeNa
 	case MOP_INSERT:
 		// Inserted key present current statement or previous statement error.
 		if mv != nil || (mmv != nil && (mmv.Op == MOP_INSERT || mmv.Op == MOP_UPSERT || mmv.Op == MOP_UPDATE)) {
-			return retCas, errors.NewDuplicateKeyError(key, "")
+			return retCas, errors.NewDuplicateKeyError(key, "", nil)
 		}
 
 		// Previous statement has MOP_DELETE and non zero CAS transform to MOP_UPDATE

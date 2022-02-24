@@ -116,14 +116,14 @@ func NewTransactionReleased() Error {
 		InternalCaller: CallerN(1)}
 }
 
-func NewDuplicateKeyError(key, ks string) Error {
+func NewDuplicateKeyError(key, ks string, c interface{}) Error {
 	msg := ""
 	if ks != "" {
 		msg = fmt.Sprintf(" for '%s'", ks)
 	}
 	return &err{level: EXCEPTION, ICode: E_DUPLICATE_KEY, IKey: "dml.statement.duplicatekey",
 		InternalMsg:    fmt.Sprintf("Duplicate Key%s: %s", msg, key),
-		InternalCaller: CallerN(1)}
+		InternalCaller: CallerN(1), cause: c}
 }
 
 func NewTransactionInuse() Error {
@@ -205,16 +205,4 @@ func NewPostCommitTransactionWarning(e error, c interface{}) Error {
 	}
 	return &err{level: WARNING, ICode: E_POST_COMMIT_TRANSACTION_WARNING, IKey: "transaction.statement.postcommit",
 		InternalMsg: msg, InternalCaller: CallerN(1), cause: c}
-}
-
-func NewTransactionCommitCause(e error) (c map[string]interface{}) {
-	switch e := e.(type) {
-	case Error:
-		c = e.Object()
-		c["cause"] = c["message"]
-		c["raise"] = "failed"
-		c["rollback"] = false
-		c["retry"] = (e.Code() == E_TRANSACTION_EXPIRED)
-	}
-	return c
 }

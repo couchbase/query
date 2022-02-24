@@ -1968,7 +1968,7 @@ func (b *keyspace) performOp(op MutateOp, qualifiedName, scopeName, collectionNa
 					retry, err = processIfMCError(retry, err, key, qualifiedName)
 					err = errors.NewInsertError(err, key)
 				} else {
-					err = errors.NewDuplicateKeyError(key, "")
+					err = errors.NewDuplicateKeyError(key, "", nil)
 					retry = value.FALSE
 				}
 			} else { // if err != nil then added is false

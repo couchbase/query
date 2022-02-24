@@ -46,6 +46,7 @@ type Error interface {
 	error
 	Code() ErrorCode
 	TranslationKey() string
+	SetTranslationKey(s string)
 	GetICause() error
 	Level() int
 	IsFatal() bool
@@ -246,6 +247,10 @@ func (e *err) Code() ErrorCode {
 
 func (e *err) TranslationKey() string {
 	return e.IKey
+}
+
+func (e *err) SetTranslationKey(s string) {
+	e.IKey = s
 }
 
 func (e *err) GetICause() error {

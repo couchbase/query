@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -407,20 +408,46 @@ func (ap *AgentProvider) TxWrite(transaction *gctx.Transaction, txnInternal *gct
 	return prevErr
 }
 
+func ErrorType(err error, rollback bool) (error, interface{}) {
+	if terr, ok := err.(*gctx.TransactionOperationFailedError); ok {
+		b, e := terr.MarshalJSON()
+		if e == nil {
+			var iv interface{}
+			if e = json.Unmarshal(b, &iv); e == nil {
+				if c, ok := iv.(map[string]interface{}); ok {
+					if !rollback {
+						c["rollback"] = rollback
+					}
+					return nil, c
+				}
+			}
+		}
+	}
+	return err, nil
+}
+
 func mapStagingError(err error, key, ks string) error {
+	var c interface{}
 	e := err
 	if terr, ok := err.(*gctx.TransactionOperationFailedError); ok {
+		_, c = ErrorType(err, false)
 		e = terr.Unwrap()
 	}
 	if errors.Is(e, gocbcore.ErrDocumentNotFound) || errors.Is(e, gctx.ErrDocumentNotFound) {
-		return cerrors.NewKeyNotFoundError(key, ks, nil)
+		ce := cerrors.NewKeyNotFoundError(key, ks, c)
+		k := ce.TranslationKey()
+		ce.SetTranslationKey(strings.Replace(k, k[0:strings.Index(k, ".")], "transaction", 1))
+		return ce
 	}
 	if errors.Is(e, gocbcore.ErrDocumentExists) || errors.Is(e, gctx.ErrDocumentAlreadyExists) ||
 		errors.Is(e, gctx.ErrDocAlreadyInTransaction) {
-		return cerrors.NewDuplicateKeyError(key, ks)
+		ce := cerrors.NewDuplicateKeyError(key, ks, c)
+		k := ce.TranslationKey()
+		ce.SetTranslationKey(strings.Replace(k, k[0:strings.Index(k, ".")], "transaction", 1))
+		return ce
 	}
 	if errors.Is(e, gctx.ErrAttemptExpired) {
-		return cerrors.NewTransactionExpired(nil)
+		return cerrors.NewTransactionExpired(c)
 	}
 	// gctx.ErrCasMismatch is not mapped
 	return err
