@@ -90,7 +90,7 @@ func (this *CreatePrimaryIndex) UnmarshalJSON(body []byte) error {
 			Exprs    []string                `json:"exprs"`
 			Strategy datastore.PartitionType `json:"strategy"`
 		} `json:"partition"`
-		ifNotExists bool `json:"ifNotExists"`
+		IfNotExists bool `json:"ifNotExists"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -126,7 +126,7 @@ func (this *CreatePrimaryIndex) UnmarshalJSON(body []byte) error {
 		ksref := algebra.NewKeyspaceRefFromPath(path, "")
 		// invert ifNotExists to obtain FailIfExists
 		this.node = algebra.NewCreatePrimaryIndex(_unmarshalled.Index, ksref,
-			partition, _unmarshalled.Using, with, !_unmarshalled.ifNotExists)
+			partition, _unmarshalled.Using, with, !_unmarshalled.IfNotExists)
 	}
 
 	return err
