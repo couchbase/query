@@ -17,6 +17,10 @@ func SargableFor(pred expression.Expression, keys expression.Expressions, missin
 	context *PrepareContext, aliases map[string]bool) (min, max, sum int, skeys []bool) {
 
 	skeys = make([]bool, len(keys))
+	if pred == nil {
+		return
+	}
+
 	if or, ok := pred.(*expression.Or); ok {
 		return sargableForOr(or, keys, missing, gsi, context, aliases)
 	}
@@ -65,8 +69,9 @@ func sargableForOr(or *expression.Or, keys expression.Expressions, missing, gsi 
 
 	for _, c := range or.Operands() {
 		cmin, cmax, csum, cskeys := SargableFor(c, keys, missing, gsi, context, aliases)
-		if cmin == 0 || cmax == 0 || csum < cmin {
-			return 0, 0, 0, nil
+		if (cmin == 0 && !missing) || cmax == 0 || csum < cmin {
+			skeys = make([]bool, len(keys))
+			return 0, 0, 0, skeys
 		}
 
 		if min == 0 || min > cmin {

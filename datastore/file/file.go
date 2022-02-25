@@ -700,7 +700,7 @@ func (fi *fileIndexer) KeyspaceId() string {
 }
 
 func (fi *fileIndexer) Name() datastore.IndexType {
-	return datastore.DEFAULT
+	return datastore.SYSTEM
 }
 
 func (fi *fileIndexer) IndexIds() ([]string, errors.Error) {
@@ -806,7 +806,7 @@ func (pi *primaryIndex) Name() string {
 }
 
 func (pi *primaryIndex) Type() datastore.IndexType {
-	return datastore.DEFAULT
+	return datastore.SYSTEM
 }
 
 func (pi *primaryIndex) Indexer() datastore.Indexer {

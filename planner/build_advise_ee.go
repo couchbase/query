@@ -88,20 +88,25 @@ func (this *builder) VisitAdvise(stmt *algebra.Advise) (interface{}, error) {
 				this.useCBO = true
 			}
 			stmt.Statement().Accept(this)
-			if len(this.validatedCoverIdxes) > 0 {
+			if len(this.validatedIdxes) > 0 {
 				this.matchIdxInfos(coverIdxMap)
 			}
 		}
 	}
 
-	return plan.NewAdvise(plan.NewIndexAdvice(generateIdxAdvice(this.queryInfos, this.validatedCoverIdxes, this.context.QueryContext())), stmt.Query()), nil
+	return plan.NewAdvise(plan.NewIndexAdvice(generateIdxAdvice(this.queryInfos, this.validatedIdxes,
+		this.validatedCoverIdxes, this.context.QueryContext())), stmt.Query()), nil
 }
 
-func generateIdxAdvice(queryInfos map[expression.HasExpressions]*advisor.QueryInfo, coverIdxes iaplan.IndexInfos,
+func generateIdxAdvice(queryInfos map[expression.HasExpressions]*advisor.QueryInfo, nonCoverIdxes, coverIdxes iaplan.IndexInfos,
 	queryContext string) (iaplan.IndexInfos, iaplan.IndexInfos, iaplan.IndexInfos) {
 	cntKeyspaceNotFound := 0
 	curIndexes := make(iaplan.IndexInfos, 0, 1) //initialize to distinguish between nil and empty for error message
 	recIndexes := make(iaplan.IndexInfos, 0, 1)
+	if len(nonCoverIdxes) > 0 {
+		nonCoverIdxes.SetQueryContext(queryContext)
+	}
+	recIndexes = append(recIndexes, nonCoverIdxes...)
 
 	for _, v := range queryInfos {
 		if !v.IsKeyspaceFound() {
@@ -136,7 +141,12 @@ func generateIdxAdvice(queryInfos map[expression.HasExpressions]*advisor.QueryIn
 
 		if len(v.GetUncoverIndexes()) > 0 {
 			v.GetUncoverIndexes().SetQueryContext(queryContext)
-			recIndexes = append(recIndexes, v.GetUncoverIndexes()...)
+			for _, uci := range v.GetUncoverIndexes() {
+				if uci.IsFound(nonCoverIdxes, false) {
+					continue
+				}
+				recIndexes = append(recIndexes, uci)
+			}
 		}
 	}
 
@@ -152,19 +162,24 @@ func generateIdxAdvice(queryInfos map[expression.HasExpressions]*advisor.QueryIn
 
 func (this *builder) matchIdxInfos(m map[string]*iaplan.IndexInfo) {
 	i := 0
-	for _, info := range this.validatedCoverIdxes {
+	for _, info := range this.validatedIdxes {
 		key := info.GetKeyspaceName() + "_" + info.GetIndexName() + "_virtual"
 		if origInfo, ok := m[key]; ok {
-			origInfo.SetCovering()
 			if !info.IsCostBased() {
 				origInfo.SetCostBased(false)
 			}
-			this.validatedCoverIdxes[i] = this.matchPushdownProperty(key, origInfo)
-			i++
+			origInfo.SetCovering(info.Covering())
+			ix := this.matchPushdownProperty(key, origInfo)
+			if origInfo.Covering() {
+				this.validatedCoverIdxes = append(this.validatedCoverIdxes, ix)
+			} else {
+				this.validatedIdxes[i] = ix
+				i++
+			}
 			delete(m, key)
 		}
 	}
-	this.validatedCoverIdxes = this.validatedCoverIdxes[:i]
+	this.validatedIdxes = this.validatedIdxes[:i]
 	return
 }
 
@@ -174,6 +189,7 @@ type collectQueryInfo struct {
 	queryInfos          map[expression.HasExpressions]*advisor.QueryInfo
 	indexCollector      *scanIdxCol
 	idxCandidates       []datastore.Index
+	validatedIdxes      iaplan.IndexInfos
 	validatedCoverIdxes iaplan.IndexInfos
 	pushDownPropMap     map[string]PushDownProperties // key->"keyspace_alias_indexname_typeofIdx" e.g. "default:b.s.k_d_idx1_virtual"
 	advisePhase         int
@@ -201,6 +217,7 @@ func (this *builder) initialIndexAdvisor(stmt algebra.Statement) {
 				}
 			}
 		} else {
+			this.validatedIdxes = make(iaplan.IndexInfos, 0, 1)
 			this.validatedCoverIdxes = make(iaplan.IndexInfos, 0, 1)
 		}
 	}
@@ -227,7 +244,7 @@ func (this *builder) extractIndexJoin(index datastore.Index, keyspace datastore.
 			}
 			if this.advisePhase == _VALIDATE {
 				info.SetCostBased(cost > 0 && cardinality > 0)
-				this.validatedCoverIdxes = append(this.validatedCoverIdxes, info)
+				this.validatedIdxes = append(this.validatedIdxes, info)
 				return
 			}
 			this.queryInfo.SetCurIndex(info)
@@ -255,8 +272,8 @@ func (this *builder) appendQueryInfo(scan plan.Operator, keyspace datastore.Keys
 				this.indexCollector.setUnCovering()
 			}
 			if this.advisePhase == _VALIDATE {
-				if this.indexCollector.isCovering() {
-					this.validatedCoverIdxes = append(this.validatedCoverIdxes, this.indexCollector.indexInfos...)
+				if this.indexCollector.property != 0 {
+					this.validatedIdxes = append(this.validatedIdxes, this.indexCollector.indexInfos...)
 				}
 				this.indexCollector = nil
 				return
@@ -283,6 +300,20 @@ func (this *builder) storeCollectQueryInfo() *collectQueryInfo {
 
 func (this *builder) restoreCollectQueryInfo(info *collectQueryInfo) {
 	this.queryInfo = info.queryInfo
+}
+
+func (this *builder) extractPagination(order *algebra.Order, offset, limit expression.Expression) {
+	if this.indexAdvisor && this.advisePhase == _RECOMMEND {
+		if order != nil {
+			this.queryInfo.SetOrder(order.Terms())
+		}
+		if limit != nil {
+			this.queryInfo.SetLimit(limit)
+		}
+		if offset != nil {
+			this.queryInfo.SetOffset(offset)
+		}
+	}
 }
 
 func (this *builder) extractLetGroupProjOrder(let expression.Bindings, group *algebra.Group,
@@ -492,8 +523,15 @@ func (this *builder) matchPushdownProperty(key string, idxInfo *iaplan.IndexInfo
 		if property > _PUSHDOWN_EXACTSPANS {
 			var propertyString string
 			set := _PUSHDOWN_FULLGROUPAGGS
+			addgpa := true
 			for set > _PUSHDOWN_EXACTSPANS {
 				if isPushDownProperty(property, set) {
+					if set == _PUSHDOWN_GROUPAGGS && !addgpa {
+						set >>= 1
+						continue
+					} else if set == _PUSHDOWN_FULLGROUPAGGS {
+						addgpa = false
+					}
 					if len(propertyString) > 0 {
 						propertyString += ", "
 					}

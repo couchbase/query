@@ -24,13 +24,14 @@ type VirtualIndex struct {
 	condition    expression.Expression
 	indexKeys    expression.Expressions
 	desc         []bool
+	lkMissing    bool
 	partnExpr    expression.Expressions //partition key expressions
 	storageMode  datastore.IndexStorageMode
 	storageStats []map[datastore.IndexStatType]value.Value
 }
 
 func NewVirtualIndex(keyspace datastore.Keyspace, name string, condition expression.Expression,
-	indexKeys expression.Expressions, desc []bool, partnExpr expression.Expressions, isPrimary bool,
+	indexKeys expression.Expressions, desc []bool, partnExpr expression.Expressions, isPrimary, lkMissing bool,
 	sm datastore.IndexStorageMode, storageStats []map[datastore.IndexStatType]value.Value) datastore.Index {
 	rv := &VirtualIndex{
 		keyspace:  keyspace,
@@ -39,6 +40,7 @@ func NewVirtualIndex(keyspace datastore.Keyspace, name string, condition express
 		condition: expression.Copy(condition),
 		indexKeys: expression.CopyExpressions(indexKeys),
 		desc:      desc,
+		lkMissing: lkMissing,
 		partnExpr: expression.CopyExpressions(partnExpr),
 	}
 
@@ -142,6 +144,9 @@ func (this *VirtualIndex) RangeKey2() datastore.IndexKeys {
 			}
 			if this.desc != nil && this.desc[i] {
 				rangeKey.SetAttribute(datastore.IK_DESC, true)
+			}
+			if i == 0 && this.lkMissing {
+				rangeKey.SetAttribute(datastore.IK_MISSING, true)
 			}
 			rangeKeys = append(rangeKeys, rangeKey)
 		}

@@ -1,0 +1,113 @@
+[
+    {
+       "testcase": "Unneset Scan on MISSING index. Non-Cover. Explain",
+       "queryParams": {"query_context": "orders._default"},
+       "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {"present":true}
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`covers` IS MISSING AND v.`index` = 'mix1' END"
+        },
+       "statements": "SELECT DISTINCT c.id, c.type FROM lkm AS l UNNEST l.contacts AS c",
+       "results": [
+           {
+               "id": "1-888-123-4567",
+               "type": "mobile"
+           },
+           {
+               "id": "stephen.curry@gmail.com",
+               "type": "email"
+           },
+           {
+               "id": "stephen.curry@gmail.com",
+               "type": "facebook"
+           },
+           {
+               "id": "1-888-123-4568",
+               "type": "mobile"
+           },
+           {
+               "id": "klay.thompson@gmail.com",
+               "type": "email"
+           },
+           {
+               "id": "klay.thompson@gmail.com",
+               "type": "facebook"
+           },
+           {
+               "id": "andrew.wigggins@gmail.com",
+               "type": "email"
+           },
+           {
+               "id": "andrew.wigggins@gmail.com"
+           }
+        ]
+    },
+    {
+       "testcase": "Unneset Scan Non-MISSING index. Cover. Explain",
+       "queryParams": {"query_context": "orders._default"},
+       "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {"present":true}
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`covers` IS NOT MISSING AND v.`index` = 'aix2' END"
+        },
+       "statements": "SELECT DISTINCT c.id, c.type FROM lkm AS l UNNEST l.contacts AS c WHERE c.id LIKE 'stephen.%'",
+       "results": [
+           {
+               "id": "stephen.curry@gmail.com",
+               "type": "email"
+           },
+           {
+               "id": "stephen.curry@gmail.com",
+               "type": "facebook"
+           }
+        ]
+    },
+    {
+       "testcase": "Unneset Scan Non-MISSING index. Cover. Explain",
+       "queryParams": {"query_context": "orders._default"},
+       "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {"present":true}
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`covers` IS NOT MISSING AND v.`index` = 'aix2' END"
+        },
+       "statements": "SELECT DISTINCT c.id, c.type FROM lkm AS l UNNEST l.contacts AS c WHERE c.id LIKE '1-888%' AND l.team = 'gsw'",
+       "results": [
+          {
+              "id": "1-888-123-4567",
+              "type": "mobile"
+          },
+          {
+              "id": "1-888-123-4568",
+              "type": "mobile"
+          }
+        ]
+    },
+    {
+       "testcase": "Unneset Scan MISSING index. Cover. Explain",
+       "queryParams": {"query_context": "orders._default"},
+       "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {"present":true}
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`covers` IS NOT MISSING AND v.`index` = 'maix1' END"
+        },
+       "statements": "SELECT DISTINCT c.id, c.type FROM lkm AS l UNNEST l.contacts AS c WHERE c.id LIKE '1-888%' AND l.fname = 'Stephen'",
+       "results": [
+          {
+              "id": "1-888-123-4567",
+              "type": "mobile"
+          }
+        ]
+    }
+]

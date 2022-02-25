@@ -120,9 +120,9 @@
                   "recommended_indexes": {
                       "indexes": [
                           {
+                              "index_property":"ORDER pushdown",
                               "index_statement": "CREATE INDEX adv_class_meta_id ON `shellTest`(`class`,meta().`id`)",
-                              "keyspace_alias": "shellTest",
-                              "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing, 5. less than/greater than."
+                              "keyspace_alias": "shellTest"
                           }
                       ]
                   }

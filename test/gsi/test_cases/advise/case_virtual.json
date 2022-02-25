@@ -14,9 +14,9 @@
               "recommended_indexes": {
                 "indexes": [
                   {
+                    "index_property":"LIMIT pushdown",
                     "index_statement": "CREATE INDEX adv_test_id ON `shellTest12345`(`test_id`)",
-                    "keyspace_alias": "shellTest12345",
-                    "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing."
+                    "keyspace_alias": "shellTest12345"
                   }
                 ]
               }

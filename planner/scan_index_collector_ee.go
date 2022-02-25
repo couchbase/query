@@ -23,6 +23,7 @@ type scanIdxCol struct {
 	indexInfos    iaplan.IndexInfos
 	covering      bool
 	validatePhase bool
+	property      uint32
 }
 
 func NewScanIdxCol() *scanIdxCol {
@@ -108,7 +109,11 @@ func (this *scanIdxCol) VisitIndexScan2(op *plan.IndexScan2) (interface{}, error
 func (this *scanIdxCol) VisitIndexScan3(op *plan.IndexScan3) (interface{}, error) {
 	info := extractInfo(op.Index(), this.alias, this.keyspace, false, this.validatePhase)
 	if info != nil {
+		info.SetCovering(len(op.Covers()) > 0)
 		info.SetCostBased(op.Cost() > 0 && op.Cardinality() > 0)
+		info.SetProperty(len(op.Covers()) > 0, op.Limit() != nil, op.Offset() != nil,
+			len(op.OrderTerms()) > 0, op.GroupAggs() != nil)
+		this.property = info.Property()
 		this.addIndexInfo(info)
 	}
 	return nil, nil
@@ -524,9 +529,11 @@ func extractInfo(index datastore.Index, keyspaceAlias string, keyspace datastore
 		return nil
 	}
 
-	info := iaplan.NewIndexInfo(index.Name(), keyspaceAlias, keyspace, index.IsPrimary(), "", nil, "", deferred, index.Type())
+	lkmissing := indexHasLeadingKeyMissingValues(index, uint64(0))
+	info := iaplan.NewIndexInfo(index.Name(), keyspaceAlias, keyspace, index.IsPrimary(), "", nil, "",
+		deferred, lkmissing, index.Type())
 	if validatePhase {
-		info.SetCovering()
+		info.SetCovering(true)
 	} else if index.Type() == datastore.GSI {
 		info.SetFormalizedKeyExprs(formalizeIndexKeys(keyspaceAlias, index.RangeKey()))
 		info.SetKeyStrings(getIndexKeyStringArray(index))
@@ -536,7 +543,7 @@ func extractInfo(index datastore.Index, keyspaceAlias string, keyspace datastore
 	return info
 }
 
-func getIndexKeyStringArray(index datastore.Index) (rv []string, desc []bool) {
+func getIndexKeyStringArray(index datastore.Index) (rv []string, desc []bool, lkmissing bool) {
 	stringer := expression.NewStringer()
 	if index2, ok2 := index.(datastore.Index2); ok2 {
 		keys := index2.RangeKey2()
@@ -545,6 +552,9 @@ func getIndexKeyStringArray(index datastore.Index) (rv []string, desc []bool) {
 		for i, kp := range keys {
 			rv[i] = stringer.Visit(kp.Expr)
 			desc[i] = kp.HasAttribute(datastore.IK_DESC)
+			if i == 0 {
+				lkmissing = kp.HasAttribute(datastore.IK_MISSING)
+			}
 		}
 	} else {
 		keys := index2.RangeKey()

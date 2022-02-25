@@ -13,7 +13,7 @@ verbose=
 while [ $# -gt 0 ]; do
   case $1 in
     -v) verbose="$1" ;;
-    -s) skiptests="test_cases/curl test_cases/fts" ;;
+    -s) skiptests="test_cases/curl test_cases/fts test_cases/lkmissing" ;;
     *) args="$args $1" ;;
   esac
   shift

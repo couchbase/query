@@ -13,6 +13,7 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
@@ -77,6 +78,19 @@ func indexHasDesc(index datastore.Index) bool {
 				return true
 			}
 		}
+	}
+
+	return false
+}
+
+func indexHasLeadingKeyMissingValues(index datastore.Index, controls uint64) bool {
+	if index.IsPrimary() {
+		return true
+	}
+
+	if util.IsFeatureEnabled(controls, util.N1QL_INDEX_MISSING) {
+		keys := getIndexKeys(index)
+		return len(keys) > 0 && keys[0].HasAttribute(datastore.IK_MISSING)
 	}
 
 	return false
@@ -147,7 +161,7 @@ func (this *builder) buildIndexCountScan(node *algebra.KeyspaceTerm, entry *inde
 	}
 
 	termSpans, ok := entry.spans.(*TermSpans)
-	if !ok || (termSpans.Size() > 1 && pred.MayOverlapSpans()) {
+	if !ok || (termSpans.Size() > 1 && overlapSpans(pred)) {
 		return nil
 	}
 

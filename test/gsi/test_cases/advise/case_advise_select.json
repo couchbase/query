@@ -11,9 +11,9 @@
               "recommended_indexes": {
                 "indexes": [
                   {
+                    "index_property":"LIMIT pushdown",
                     "index_statement": "CREATE INDEX adv_test_id ON `shellTest`(`test_id`)",
-                    "keyspace_alias": "shellTest",
-                    "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing."
+                    "keyspace_alias": "shellTest"
                   }
                 ]
               }
@@ -507,7 +507,15 @@
         "advice": {
           "#operator": "IndexAdvice",
           "adviseinfo": {
-            "recommended_indexes": "No index recommendation at this time, primary index may apply."
+                "recommended_indexes": {
+                    "indexes": [
+                        {
+                            "index_statement": "CREATE INDEX adv_type ON `shellTest`(`type` MISSING)",
+                            "keyspace_alias": "shellTest",
+                            "recommending_rule": "Leading Index Key Missing."
+                        }
+                    ]
+                }
           }
         },
         "query": "select type from shellTest where any x in a21 satisfies x.id < 10 or x.name is not null END"
@@ -672,7 +680,15 @@
         "advice": {
           "#operator": "IndexAdvice",
           "adviseinfo": {
-            "recommended_indexes": "No index recommendation at this time, primary index may apply."
+                "recommended_indexes": {
+                    "indexes": [
+                        {
+                            "index_statement": "CREATE INDEX adv_type ON `shellTest`(`type` MISSING)",
+                            "keyspace_alias": "shellTest",
+                            "recommending_rule": "Leading Index Key Missing."
+                        }
+                    ]
+                }
           }
         },
         "query": "select type from shellTest where any x in a21 satisfies x.id < 10 or x.name is not null END"
