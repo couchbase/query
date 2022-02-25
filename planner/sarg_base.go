@@ -21,12 +21,13 @@ type sarg struct {
 	doSelec         bool
 	advisorValidate bool
 	constPred       bool
+	isMissing       bool
 	aliases         map[string]bool
 	context         *PrepareContext
 }
 
 func newSarg(key expression.Expression, baseKeyspace *base.BaseKeyspace,
-	keyspaceNames map[string]string, isJoin, doSelec, advisorValidate bool,
+	keyspaceNames map[string]string, isJoin, doSelec, advisorValidate, isMissing bool,
 	aliases map[string]bool, context *PrepareContext) *sarg {
 	return &sarg{
 		key:             key,
@@ -35,6 +36,7 @@ func newSarg(key expression.Expression, baseKeyspace *base.BaseKeyspace,
 		isJoin:          isJoin,
 		doSelec:         doSelec,
 		advisorValidate: advisorValidate,
+		isMissing:       isMissing,
 		aliases:         aliases,
 		context:         context,
 	}

@@ -35,7 +35,7 @@
                                         }
                                     }
                                 ],
-                                "using": "default"
+                                "using": "system"
                         },
                         {
                             "#operator": "Fetch",
@@ -107,7 +107,7 @@
                             "index": "#primary",
                             "keyspace": "game",
                             "namespace": "default",
-                            "using": "default"
+                            "using": "system"
                         },
                         {
                             "#operator": "Fetch",
@@ -167,7 +167,7 @@
                             "index": "#primary",
                             "keyspace": "game",
                             "namespace": "default",
-                            "using": "default"
+                            "using": "system"
                         },
                         {
                             "#operator": "Fetch",
@@ -239,7 +239,7 @@
                             "index": "#primary",
                             "keyspace": "game",
                             "namespace": "default",
-                            "using": "default"
+                            "using": "system"
                         },
                         {
                             "#operator": "Fetch",
@@ -365,7 +365,7 @@
                             "index": "#primary",
                             "keyspace": "game",
                             "namespace": "default",
-                            "using": "default"
+                            "using": "system"
                         },
                         {
                             "#operator": "Fetch",
@@ -453,7 +453,7 @@
                     "index": "#primary",
                     "keyspace": "game",
                     "namespace": "default",
-                    "using": "default"
+                    "using": "system"
                 },
                 {
                     "#operator": "Fetch",

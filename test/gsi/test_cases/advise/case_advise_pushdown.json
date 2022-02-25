@@ -11,7 +11,7 @@
             "recommended_indexes": {
               "covering_indexes": [
                 {
-                  "index_property": "FULL GROUPBY & AGGREGATES pushdown, GROUPBY & AGGREGATES pushdown",
+                  "index_property": "FULL GROUPBY & AGGREGATES pushdown",
                   "index_statement": "CREATE INDEX adv_a_b_d ON `shellTest`(`a`,`b`,`d`)",
                   "keyspace_alias": "shellTest"
                 }
@@ -73,7 +73,7 @@
             "recommended_indexes": {
               "covering_indexes": [
                 {
-                  "index_property": "FULL GROUPBY & AGGREGATES pushdown, GROUPBY & AGGREGATES pushdown",
+                  "index_property": "FULL GROUPBY & AGGREGATES pushdown",
                   "index_statement": "CREATE INDEX adv_a_c_b_d ON `shellTest`(`a`,`c`,`b`,`d`)",
                   "keyspace_alias": "shellTest"
                 }
@@ -104,7 +104,7 @@
             "recommended_indexes": {
               "covering_indexes": [
                 {
-                  "index_property": "FULL GROUPBY & AGGREGATES pushdown, GROUPBY & AGGREGATES pushdown",
+                  "index_property": "FULL GROUPBY & AGGREGATES pushdown",
                   "index_statement": "CREATE INDEX adv_a_b_d_c ON `shellTest`(`a`,`b`,`d`,`c`)",
                   "keyspace_alias": "shellTest"
                 }

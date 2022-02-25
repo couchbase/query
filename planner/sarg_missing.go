@@ -37,7 +37,14 @@ func (this *sarg) VisitIsMissing(pred *expression.IsMissing) (interface{}, error
 	}
 
 	if pred.Operand().EquivalentTo(this.key) {
-		return _MISSING_SPANS, nil
+		// MB-38287. isMissing true non-array indexkey.
+		// For array index key requires whole scan because indexer doesn't have info.
+		if this.isMissing {
+			return _MISSING_SPANS, nil
+		}
+		s := _WHOLE_SPANS.Copy()
+		s.SetExact(false)
+		return s, nil
 	}
 
 	return nil, nil

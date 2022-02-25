@@ -1,0 +1,52 @@
+[
+    {
+       "testcase": "Index Scan on non-MISSING index. Cover. Index order. limit. offset. Explain",
+       "queryParams": {"query_context": "orders._default"},
+       "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {"present":true}
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`covers` IS NOT MISSING AND v.`index` = 'ix_team_fname' AND v.index_order IS NOT MISSING AND v.`limit` IS NOT MISSING AND v.`offset` IS NOT MISSING END"
+        },
+       "statements": "SELECT l.fname, l.lname FROM lkm AS l WHERE l.team = 'gsw' ORDER BY l.fname DESC LIMIT 2 OFFSET 1",
+       "ordered": true,
+       "results": [
+          {
+              "fname": "Andrew",
+              "lname": "Wiggins"
+          },
+          {
+              "fname": "Andre",
+              "lname": "Iguodala"
+          }
+        ]
+    },
+    {
+       "testcase": "Index Scan on non-MISSING index. Non-Cover. Index order. limit. offset. Explain",
+       "queryParams": {"query_context": "orders._default"},
+       "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {"present":true}
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`covers` IS MISSING AND v.`index` = 'ix_team_fname' AND v.index_order IS NOT MISSING AND v.`limit` IS NOT MISSING AND v.`offset` IS NOT MISSING END"
+        },
+       "statements": "SELECT l.fname, l.lname, l.city FROM lkm AS l WHERE l.team = 'gsw' ORDER BY l.fname DESC LIMIT 2 OFFSET 1",
+       "ordered": true,
+       "results": [
+          {
+              "city": "Oakland",
+              "fname": "Andrew",
+              "lname": "Wiggins"
+          },
+          {
+              "city": "Oakland",
+              "fname": "Andre",
+              "lname": "Iguodala"
+          }
+        ]
+    }
+]

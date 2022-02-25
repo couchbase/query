@@ -25,18 +25,19 @@ func GetMaxIndexAPI() int {
 }
 
 const (
-	N1QL_GROUPAGG_PUSHDOWN uint64 = 1 << iota
-	N1QL_HASH_JOIN
-	N1QL_ENCODED_PLAN
-	N1QL_GOLANG_UDF
-	N1QL_CBO
-	N1QL_FLEXINDEX
-	N1QL_CBO_NEW
-	N1QL_DISABLE_PWD_BKT
-	N1QL_READ_FROM_REPLICA_OFF
-	N1QL_IMPLICIT_ARRAY_COVER
-	N1QL_JOIN_ENUMERATION
-	N1QL_ALL_BITS // Add anything above this. This needs to be last one
+	N1QL_GROUPAGG_PUSHDOWN     uint64 = 1 << iota // 0x0000000001
+	N1QL_HASH_JOIN                                // 0x0000000002
+	N1QL_ENCODED_PLAN                             // 0x0000000004
+	N1QL_GOLANG_UDF                               // 0x0000000008
+	N1QL_CBO                                      // 0x0000000010
+	N1QL_FLEXINDEX                                // 0x0000000020
+	N1QL_CBO_NEW                                  // 0x0000000040
+	N1QL_DISABLE_PWD_BKT                          // 0x0000000080
+	N1QL_READ_FROM_REPLICA_OFF                    // 0x0000000100
+	N1QL_IMPLICIT_ARRAY_COVER                     // 0x0000000200
+	N1QL_JOIN_ENUMERATION                         // 0x0000000400
+	N1QL_INDEX_MISSING                            // 0x0000000800
+	N1QL_ALL_BITS                                 // Add anything above this. This needs to be last one
 )
 
 const DEF_N1QL_FEAT_CTRL = (N1QL_ENCODED_PLAN | N1QL_GOLANG_UDF | N1QL_CBO_NEW)

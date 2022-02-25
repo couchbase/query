@@ -338,17 +338,25 @@ func (this *builder) matchUnnest(node *algebra.KeyspaceTerm, pred, subset expres
 		origKeys = getUnnestSargKeys(entry.keys, origSargKey)
 	}
 
-	min, max, sum, skeys := SargableFor(pred, keys, false, true, this.context, this.aliases)
-	if min == 0 {
-		return nil, nil, nil, nil
-	}
+	skip := useSkipIndexKeys(entry.index, this.context.IndexApiVersion())
+	missing := entry.HasFlag(IE_LEADINGMISSING)
+	min, max, sum, skeys := SargableFor(pred, keys, missing, skip, this.context, this.aliases)
 
 	n := min
-	if useSkipIndexKeys(entry.index, this.context.IndexApiVersion()) {
+	if skip && (n > 0 || missing) {
 		n = max
 	}
 
-	spans, exactSpans, err := SargFor(pred, entry, keys, n, false, useCBO,
+	if n == 0 && missing {
+		n = 1
+	}
+
+	if n == 0 {
+		return nil, nil, nil, nil
+	}
+
+	isMissings := getMissings(entry)
+	spans, exactSpans, err := SargFor(pred, entry, keys, isMissings, n, false, useCBO,
 		baseKeyspace, this.keyspaceNames, advisorValidate, this.aliases, this.context)
 	if err != nil {
 		return nil, nil, nil, err
@@ -358,7 +366,9 @@ func (this *builder) matchUnnest(node *algebra.KeyspaceTerm, pred, subset expres
 	if exactSpans && newArrayKey != nil && newArrayKey.HasDescend() {
 		exactSpans = false
 	}
-
+	if min == 0 {
+		exactSpans = false
+	}
 	cardinality, selectivity, cost, frCost, size :=
 		OPT_CARD_NOT_AVAIL, OPT_SELEC_NOT_AVAIL, OPT_COST_NOT_AVAIL,
 		OPT_COST_NOT_AVAIL, OPT_SIZE_NOT_AVAIL

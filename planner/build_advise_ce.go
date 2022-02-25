@@ -56,6 +56,9 @@ func (this *builder) setKeyspaceFound() {
 func (this *builder) processadviseJF(alias string) {
 }
 
+func (this *builder) extractPagination(order *algebra.Order, offset, limit expression.Expression) {
+}
+
 func (this *builder) extractLetGroupProjOrder(let expression.Bindings, group *algebra.Group, projection *algebra.Projection, order *algebra.Order, aggs algebra.Aggregates) {
 }
 

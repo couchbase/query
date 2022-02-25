@@ -35,7 +35,7 @@
             "recommended_indexes": {
               "covering_indexes": [
                 {
-                  "index_property": "FULL GROUPBY & AGGREGATES pushdown, GROUPBY & AGGREGATES pushdown",
+                  "index_property": "FULL GROUPBY & AGGREGATES pushdown",
                   "index_statement": "CREATE INDEX adv_ALL_split_s_LanguageWorkedWith_PurchaseWhat ON `shellTest`(ALL split((`LanguageWorkedWith`), ';'),`PurchaseWhat`)",
                   "keyspace_alias": "shellTest_s"
                 }
@@ -66,7 +66,7 @@
             "recommended_indexes": {
               "covering_indexes": [
                 {
-                  "index_property": "FULL GROUPBY & AGGREGATES pushdown, GROUPBY & AGGREGATES pushdown",
+                  "index_property": "FULL GROUPBY & AGGREGATES pushdown",
                   "index_statement": "CREATE INDEX adv_ALL_schedule_special_flights_flight ON `shellTest`(ALL ARRAY (ALL ARRAY `y`.`flight` FOR y IN `x`.`special_flights` END) FOR x IN `schedule` END)",
                   "keyspace_alias": "shellTest"
                 }
@@ -97,7 +97,7 @@
             "recommended_indexes": {
               "covering_indexes": [
                 {
-                  "index_property": "FULL GROUPBY & AGGREGATES pushdown, GROUPBY & AGGREGATES pushdown",
+                  "index_property": "FULL GROUPBY & AGGREGATES pushdown",
                   "index_statement": "CREATE INDEX adv_ALL_schedule_special_flights_flight ON `shellTest`(ALL ARRAY (ALL ARRAY `x`.`flight` FOR y IN `x`.`special_flights` END) FOR x IN `schedule` END)",
                   "keyspace_alias": "shellTest"
                 }

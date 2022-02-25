@@ -14,13 +14,13 @@ import (
 	base "github.com/couchbase/query/plannerbase"
 )
 
-func SargFor(pred expression.Expression, entry *indexEntry, keys expression.Expressions, max int,
-	isJoin, doSelec bool, baseKeyspace *base.BaseKeyspace, keyspaceNames map[string]string,
+func SargFor(pred expression.Expression, entry *indexEntry, keys expression.Expressions, isMissings []bool,
+	max int, isJoin, doSelec bool, baseKeyspace *base.BaseKeyspace, keyspaceNames map[string]string,
 	advisorValidate bool, aliases map[string]bool, context *PrepareContext) (SargSpans, bool, error) {
 
 	// Optimize top-level OR predicate
 	if or, ok := pred.(*expression.Or); ok {
-		return sargForOr(or, entry, keys, max, isJoin, doSelec, baseKeyspace, keyspaceNames,
+		return sargForOr(or, entry, keys, isMissings, max, isJoin, doSelec, baseKeyspace, keyspaceNames,
 			advisorValidate, aliases, context)
 	}
 
@@ -28,7 +28,7 @@ func SargFor(pred expression.Expression, entry *indexEntry, keys expression.Expr
 
 	// Get sarg spans for index sarg keys. The sarg spans are
 	// truncated when they exceed the limit.
-	sargSpans, exactSpan, err := getSargSpans(pred, sargKeys, isJoin, doSelec, baseKeyspace,
+	sargSpans, exactSpan, err := getSargSpans(pred, sargKeys, isMissings, isJoin, doSelec, baseKeyspace,
 		keyspaceNames, advisorValidate, aliases, context)
 	if sargSpans == nil || err != nil {
 		return nil, exactSpan, err
@@ -37,15 +37,18 @@ func SargFor(pred expression.Expression, entry *indexEntry, keys expression.Expr
 	return composeSargSpan(sargSpans, exactSpan)
 }
 
-func sargForOr(or *expression.Or, entry *indexEntry, keys expression.Expressions, max int,
-	isJoin, doSelec bool, baseKeyspace *base.BaseKeyspace, keyspaceNames map[string]string,
+func sargForOr(or *expression.Or, entry *indexEntry, keys expression.Expressions, isMissings []bool,
+	max int, isJoin, doSelec bool, baseKeyspace *base.BaseKeyspace, keyspaceNames map[string]string,
 	advisorValidate bool, aliases map[string]bool, context *PrepareContext) (SargSpans, bool, error) {
 
 	exact := true
 	spans := make([]SargSpans, len(or.Operands()))
 	for i, c := range or.Operands() {
-		_, max1, _, _ := SargableFor(c, keys, false, true, context, aliases) // Variable length sarging
-		s, ex, err := SargFor(c, entry, keys, max1, isJoin, doSelec, baseKeyspace,
+		_, max1, _, _ := SargableFor(c, keys, true, true, context, aliases) // Variable length sarging
+		if max1 == 0 {
+			max1 = 1
+		}
+		s, ex, err := SargFor(c, entry, keys, isMissings, max1, isJoin, doSelec, baseKeyspace,
 			keyspaceNames, advisorValidate, aliases, context)
 		if err != nil {
 			return nil, false, err
@@ -72,10 +75,10 @@ func sargForOr(or *expression.Or, entry *indexEntry, keys expression.Expressions
 }
 
 func sargFor(pred, key expression.Expression, isJoin, doSelec bool, baseKeyspace *base.BaseKeyspace,
-	keyspaceNames map[string]string, advisorValidate bool, aliases map[string]bool,
+	keyspaceNames map[string]string, advisorValidate, isMissing bool, aliases map[string]bool,
 	context *PrepareContext) (SargSpans, bool, error) {
 
-	s := newSarg(key, baseKeyspace, keyspaceNames, isJoin, doSelec, advisorValidate, aliases, context)
+	s := newSarg(key, baseKeyspace, keyspaceNames, isJoin, doSelec, advisorValidate, isMissing, aliases, context)
 
 	r, err := pred.Accept(s)
 	if err != nil {
@@ -95,9 +98,9 @@ func sargFor(pred, key expression.Expression, isJoin, doSelec bool, baseKeyspace
 	return rs, rs.Exact(), nil
 }
 
-func SargForFilters(filters base.Filters, keys expression.Expressions, max int, underHash, doSelec bool,
-	baseKeyspace *base.BaseKeyspace, keyspaceNames map[string]string, advisorValidate bool,
-	aliases map[string]bool, context *PrepareContext) (SargSpans, bool, error) {
+func SargForFilters(filters base.Filters, keys expression.Expressions, isMissings []bool, max int,
+	underHash, doSelec bool, baseKeyspace *base.BaseKeyspace, keyspaceNames map[string]string,
+	advisorValidate bool, aliases map[string]bool, context *PrepareContext) (SargSpans, bool, error) {
 
 	sargSpans := make([]SargSpans, max)
 	exactSpan := true
@@ -112,7 +115,7 @@ func SargForFilters(filters base.Filters, keys expression.Expressions, max int, 
 		}
 
 		isJoin := fl.IsJoin() && !underHash
-		flSargSpans, flExactSpan, err := getSargSpans(fl.FltrExpr(), sargKeys, isJoin,
+		flSargSpans, flExactSpan, err := getSargSpans(fl.FltrExpr(), sargKeys, isMissings, isJoin,
 			doSelec, baseKeyspace, keyspaceNames, advisorValidate, aliases, context)
 		if err != nil {
 			return nil, flExactSpan, err
@@ -162,7 +165,7 @@ func SargForFilters(filters base.Filters, keys expression.Expressions, max int, 
 			}
 		}
 
-		if !hasSpan {
+		if !hasSpan && len(filters) != 0 {
 			exactSpan = false
 		}
 	}
@@ -236,8 +239,8 @@ func composeSargSpan(sargSpans []SargSpans, exactSpan bool) (SargSpans, bool, er
 /*
 Get sarg spans for index sarg keys.
 */
-func getSargSpans(pred expression.Expression, sargKeys expression.Expressions, isJoin, doSelec bool,
-	baseKeyspace *base.BaseKeyspace, keyspaceNames map[string]string, advisorValidate bool,
+func getSargSpans(pred expression.Expression, sargKeys expression.Expressions, isMissings []bool, isJoin,
+	doSelec bool, baseKeyspace *base.BaseKeyspace, keyspaceNames map[string]string, advisorValidate bool,
 	aliases map[string]bool, context *PrepareContext) ([]SargSpans, bool, error) {
 
 	// is the predicate simple?
@@ -255,7 +258,7 @@ func getSargSpans(pred expression.Expression, sargKeys expression.Expressions, i
 	// Sarg composite indexes right to left
 	for i := n - 1; i >= 0; i-- {
 		s := newSarg(sargKeys[i], baseKeyspace, keyspaceNames, isJoin, doSelec,
-			advisorValidate, aliases, context)
+			advisorValidate, isMissings[i], aliases, context)
 		r, err := pred.Accept(s)
 		if err != nil {
 			return nil, false, err

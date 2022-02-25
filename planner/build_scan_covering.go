@@ -308,7 +308,7 @@ func (this *builder) buildCreateCoveringScan(entry *indexEntry, node *algebra.Ke
 	}
 
 	index := entry.index
-	duplicates := entry.spans.CanHaveDuplicates(index, this.context.IndexApiVersion(), pred.MayOverlapSpans(), arrayIndex)
+	duplicates := entry.spans.CanHaveDuplicates(index, this.context.IndexApiVersion(), overlapSpans(pred), arrayIndex)
 	indexProjection := this.buildIndexProjection(entry, exprs, id, index.IsPrimary() || arrayIndex || duplicates, idxProj)
 
 	// Check and reset pagination pushdows
@@ -368,7 +368,7 @@ func (this *builder) buildCreateCoveringScan(entry *indexEntry, node *algebra.Ke
 
 	// build plan for IndexScan
 	scan = entry.spans.CreateScan(index, node, this.context.IndexApiVersion(), false, projDistinct,
-		pred.MayOverlapSpans(), array, this.offset, this.limit, indexProjection, indexKeyOrders,
+		overlapSpans(pred), array, this.offset, this.limit, indexProjection, indexKeyOrders,
 		indexGroupAggs, covers, filterCovers, filter, entry.cost, entry.cardinality,
 		entry.size, entry.frCost, baseKeyspace, hasDeltaKeyspace)
 	if scan != nil {
@@ -451,7 +451,7 @@ func (this *builder) buildCoveringPushdDownIndexScan2(entry *indexEntry, node *a
 	}
 
 	this.maxParallelism = 1
-	scan := entry.spans.CreateScan(entry.index, node, this.context.IndexApiVersion(), false, false, pred.MayOverlapSpans(),
+	scan := entry.spans.CreateScan(entry.index, node, this.context.IndexApiVersion(), false, false, overlapSpans(pred),
 		array, nil, expression.ONE_EXPR, indexProjection, indexKeyOrders, nil, covers, filterCovers, nil,
 		OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, baseKeyspace, false)
 	if scan != nil {
@@ -555,7 +555,6 @@ func hasUnknownsInSargableArrayKey(entry *indexEntry) bool {
 	if entry.arrayKey.Flatten() {
 		size = entry.arrayKey.FlattenSize()
 	}
-
 	for i, _ := range entry.sargKeys {
 		if i >= entry.arrayKeyPos && i < entry.arrayKeyPos+size &&
 			i < len(entry.skeys) && entry.skeys[i] {
@@ -565,7 +564,7 @@ func hasUnknownsInSargableArrayKey(entry *indexEntry) bool {
 			}
 		}
 	}
-	return cnt > 0
+	return cnt > 0 || (entry.arrayKeyPos == 0)
 }
 
 func implicitFilterCovers(expr expression.Expression) map[*expression.Cover]value.Value {

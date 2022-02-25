@@ -111,6 +111,10 @@ func (this *builder) buildCreateSecondaryScan(indexes, flex map[datastore.Index]
 	}
 
 	for index, entry := range indexes {
+		// skip primary index with no sargable keys. Able to do PrimaryScan
+		if index.IsPrimary() && entry.minKeys == 0 {
+			continue
+		}
 		// If this is a join with primary key (meta().id), then it's
 		// possible to get right hand documdents directly without
 		// accessing through an index (similar to "regular" join).
@@ -141,7 +145,7 @@ func (this *builder) buildCreateSecondaryScan(indexes, flex map[datastore.Index]
 			this.collectIndexKeyspaceNames(baseKeyspace.Keyspace())
 		}
 		scan = entry.spans.CreateScan(index, node, this.context.IndexApiVersion(), false, false,
-			pred.MayOverlapSpans(), false, this.offset, this.limit, indexProjection,
+			overlapSpans(pred), false, this.offset, this.limit, indexProjection,
 			indexKeyOrders, nil, nil, nil, nil, entry.cost, entry.cardinality,
 			entry.size, entry.frCost, baseKeyspace, hasDeltaKeyspace)
 
@@ -371,28 +375,38 @@ func (this *builder) sargableIndexes(indexes []datastore.Index, pred, subset exp
 		}
 
 		skip := useSkipIndexKeys(index, this.context.IndexApiVersion())
-		min, max, sum, skeys := SargableFor(pred, keys, false, skip, this.context, this.aliases)
+		missing := indexHasLeadingKeyMissingValues(index, this.context.FeatureControls())
+		min, max, sum, skeys := SargableFor(pred, keys, missing, skip, this.context, this.aliases)
+		exact := min == 0 && pred == nil
 
 		n := min
-		if skip {
+		if skip && (n > 0 || missing) {
 			n = max
 		}
 
-		entry := newIndexEntry(index, keys, keys[0:n], partitionKeys, min, n, sum, cond, origCond, nil, false, skeys)
-		if allKey != nil {
-			arrays[index] = entry
-			var ak expression.Expression
-			if ak, _, err = formalizeExpr(formalizer, allKey, false); err != nil {
-				return
+		if n == 0 && missing && primaryKey != nil {
+			n = 1
+		}
+
+		if n > 0 || allKey != nil {
+			entry := newIndexEntry(index, keys, keys[0:n], partitionKeys, min, n, sum, cond, origCond, nil, exact, skeys)
+			if missing {
+				entry.SetFlags(IE_LEADINGMISSING, true)
 			}
-			allKey, _ := ak.(*expression.All)
-			entry.setArrayKey(allKey, apos)
-		}
+			if allKey != nil {
+				arrays[index] = entry
+				var ak expression.Expression
+				if ak, _, err = formalizeExpr(formalizer, allKey, false); err != nil {
+					return
+				}
+				allKey, _ := ak.(*expression.All)
+				entry.setArrayKey(allKey, apos)
+			}
 
-		if min > 0 {
-			sargables[index] = entry
+			if n > 0 {
+				sargables[index] = entry
+			}
 		}
-
 	}
 
 	return sargables, arrays, flex, nil
@@ -536,18 +550,17 @@ func narrowerOrEquivalent(se, te *indexEntry, shortest bool, predFc map[string]v
 
 	// if te and se has same sargKeys (or equivalent condition), and there exists
 	// a non-sarged array key, prefer the one without the array key
-	if te.nSargKeys > 0 && te.nSargKeys == snk+snc &&
+	if te.nSargKeys == snk+snc &&
 		se.PushDownProperty() == te.PushDownProperty() {
-		teHasArrayKey := indexHasArrayIndexKey(te.index)
-		seHasArrayKey := indexHasArrayIndexKey(se.index)
-		if teHasArrayKey != seHasArrayKey {
-			if !hasArrayIndexKey(te.sargKeys) && !hasArrayIndexKey(se.sargKeys) {
-				if teHasArrayKey && !seHasArrayKey {
+		if se.HasFlag(IE_ARRAYINDEXKEY) != te.HasFlag(IE_ARRAYINDEXKEY) {
+			if !se.HasFlag(IE_ARRAYINDEXKEY_SARGABLE) && !te.HasFlag(IE_ARRAYINDEXKEY_SARGABLE) {
+				if te.HasFlag(IE_ARRAYINDEXKEY) && !se.HasFlag(IE_ARRAYINDEXKEY) {
 					return true
-				} else if seHasArrayKey && !teHasArrayKey {
+				} else if se.HasFlag(IE_ARRAYINDEXKEY) && !te.HasFlag(IE_ARRAYINDEXKEY) {
 					return false
 				}
 			}
+
 		}
 	}
 
@@ -580,7 +593,9 @@ func narrowerOrEquivalent(se, te *indexEntry, shortest bool, predFc map[string]v
 		return se.PushDownProperty() > te.PushDownProperty()
 	}
 
-	return se.cond != nil || len(se.keys) <= len(te.keys)
+	return se.cond != nil ||
+		len(se.keys) < len(te.keys) ||
+		!(te.nSargKeys == 0 && se.nSargKeys == 0 && te.index.IsPrimary())
 }
 
 // Calculates how many keys te sargable keys matched with se sargable keys and se condition
@@ -686,6 +701,14 @@ func (this *builder) sargIndexes(baseKeyspace *base.BaseKeyspace, underHash bool
 		var exactSpans bool
 		var err error
 
+		if se.maxKeys == 0 {
+			se.spans = _WHOLE_SPANS.Copy()
+			if pred != nil {
+				se.exactSpans = false
+			}
+			continue
+		}
+
 		useFilters := true
 		if isOrPred {
 			useFilters = false
@@ -697,13 +720,14 @@ func (this *builder) sargIndexes(baseKeyspace *base.BaseKeyspace, underHash bool
 				}
 			}
 		}
+		isMissings := getMissings(se)
 
 		if useFilters {
-			spans, exactSpans, err = SargForFilters(baseKeyspace.Filters(), se.keys,
+			spans, exactSpans, err = SargForFilters(baseKeyspace.Filters(), se.keys, isMissings,
 				se.maxKeys, underHash, useCBO, baseKeyspace, this.keyspaceNames,
 				advisorValidate, this.aliases, this.context)
 		} else {
-			spans, exactSpans, err = SargFor(baseKeyspace.DnfPred(), se, se.keys,
+			spans, exactSpans, err = SargFor(baseKeyspace.DnfPred(), se, se.keys, isMissings,
 				se.maxKeys, orIsJoin, useCBO, baseKeyspace, this.keyspaceNames,
 				advisorValidate, this.aliases, this.context)
 		}
@@ -810,4 +834,23 @@ func bestIndexBySargableKeys(se, te *indexEntry, snc, tnc int) *indexEntry {
 	}
 
 	return nil
+}
+
+func overlapSpans(expr expression.Expression) bool {
+	return expr != nil && expr.MayOverlapSpans()
+}
+
+func getMissings(entry *indexEntry) (isMissings []bool) {
+	// MB-38287. isMissing true non-array indexkeys only.
+	isMissings = make([]bool, len(entry.keys))
+	size := 1
+	if entry.arrayKey != nil && entry.arrayKey.Flatten() {
+		size = entry.arrayKey.FlattenSize()
+	}
+	for i, _ := range entry.keys {
+		if entry.arrayKey == nil || i < entry.arrayKeyPos || i >= entry.arrayKeyPos+size {
+			isMissings[i] = true
+		}
+	}
+	return
 }

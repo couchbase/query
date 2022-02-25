@@ -1,0 +1,205 @@
+[
+    {
+       "testcase": "Index Scan on MISSING index. ARRAY Index. Cover. Index order. Explain",
+       "queryParams": {"query_context": "orders._default"},
+       "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {"present":true}
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`covers` IS NOT MISSING AND v.`index` = 'mix2' AND v.index_order IS NOT MISSING END"
+        },
+       "statements": "SELECT META(l).id FROM lkm AS l WHERE l.team = 'gsw' AND ANY v IN l.contacts SATISFIES v.id LIKE '1-888%' END ORDER BY l.fname DESC LIMIT 2 OFFSET 1",
+       "ordered": true,
+       "results": [
+           {"id": "wiggins01"},
+           {"id": "thompson01"}
+        ]
+    },
+    {
+       "testcase": "Index Scan on MISSING index. ARRAY Index. Cover. Index order. Explain",
+       "queryParams": {"query_context": "orders._default"},
+       "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {"present":true}
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`covers` IS NOT MISSING AND v.`index` = 'mix2' AND v.index_order IS NOT MISSING END"
+        },
+       "statements": "SELECT l.fname, l.lname FROM lkm AS l WHERE l.team = 'gsw' AND ANY v IN l.contacts SATISFIES v.id LIKE '1-888%' END ORDER BY l.fname DESC LIMIT 2 OFFSET 1",
+       "ordered": true,
+       "results": [
+          {
+              "fname": "Andrew",
+              "lname": "Wiggins"
+          },
+          {
+              "lname": "Klay Thompson"
+          }
+        ]
+    },
+    {
+       "testcase": "Index Scan on MISSING index. ARRAY Index. Non-Cover. Index order. Explain",
+       "queryParams": {"query_context": "orders._default"},
+       "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {"present":true}
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`covers` IS MISSING AND v.`index` = 'mix2' AND v.index_order IS NOT MISSING END"
+        },
+       "statements": "SELECT l.fname, l.lname, l.city FROM lkm AS l WHERE l.team = 'gsw' AND ANY v IN l.contacts SATISFIES v.id LIKE '1-888%' END ORDER BY l.fname DESC LIMIT 2 OFFSET 1",
+       "ordered": true,
+       "results": [
+          {
+              "city": "Oakland",
+              "fname": "Andrew",
+              "lname": "Wiggins"
+          },
+          {
+              "city": "Oakland",
+              "lname": "Klay Thompson"
+          }
+        ]
+    },
+    {
+       "testcase": "Index Scan on MISSING index. ARRAY Index. Non-Cover. Explain",
+       "queryParams": {"query_context": "orders._default"},
+       "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {"present":true}
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`covers` IS MISSING AND v.`index` = 'mix2' END"
+        },
+       "statements": "SELECT DISTINCT l.city FROM lkm AS l WHERE l.zipcode = 94501 AND ANY v IN l.contacts SATISFIES v.id LIKE '1-888%' END",
+       "results": [
+          { "city": "Oakland" }
+        ]
+    },
+    {
+       "testcase": "Index Scan on MISSING index. ARRAY Index. Cover. On leading key MISSING predicate. Explain",
+       "queryParams": {"query_context": "orders._default"},
+       "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {"present":true}
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`covers` IS NOT MISSING AND v.`index` = 'mix2' AND v.spans[0].`range`[0].`high` = 'null' END"
+        },
+       "statements": "SELECT META(l).id FROM lkm AS l WHERE l.fname IS MISSING AND ANY v IN l.contacts SATISFIES v.id LIKE '1-888%' END",
+       "results": [
+             { "id": "thompson01" }
+        ]
+    },
+    {
+       "testcase": "Index Scan on MISSING index. ARRAY Index. Cover. On leading key NULL predicate. Explain",
+       "queryParams": {"query_context": "orders._default"},
+       "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {"present":true}
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`covers` IS NOT MISSING AND v.`index` = 'mix2' AND v.spans[0].`range`[0].`high` = 'null' AND v.spans[0].`range`[0].`low` = 'null' END"
+        },
+       "statements": "SELECT META(l).id FROM lkm AS l WHERE l.fname IS NULL AND ANY v IN l.contacts SATISFIES v.id LIKE '1-888%' END",
+       "results": [
+        ]
+    },
+    {
+       "testcase": "Index Scan on non-MISSING index. Non Cover. Explain",
+       "queryParams": {"query_context": "orders._default"},
+       "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {"present":true}
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`covers` IS MISSING AND v.`index` = 'ix_city_state' END"
+        },
+       "statements": "SELECT DISTINCT l.state FROM lkm AS l WHERE l.city = 'Oakland' AND ANY v IN l.contacts SATISFIES v.id LIKE '1-888%' END",
+       "results": [
+            { "state": "California" }
+        ]
+    },
+    {
+       "testcase": "Index Scan on non-MISSING index. Non Cover. Explain",
+       "queryParams": {"query_context": "orders._default"},
+       "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {"present":true}
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`covers` IS MISSING AND v.`index` = 'ix_city_state' END"
+        },
+       "statements": "SELECT DISTINCT l.state, l.country FROM lkm AS l WHERE l.city = 'Oakland' AND ANY v IN l.contacts SATISFIES v.id LIKE '1-888%' END",
+       "results": [
+           {
+              "country": "USA",
+              "state": "California"
+           },
+           {
+              "state": "California"
+           }
+        ]
+    },
+    {
+       "testcase": "Index Scan on MISSING index. Cover. Explain",
+       "queryParams": {"query_context": "orders._default"},
+       "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {"present":true}
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`covers` IS NOT MISSING AND v.`index` = 'mix2' END"
+        },
+       "statements": "SELECT META(l).id FROM lkm AS l WHERE ANY v IN l.contacts SATISFIES v.id LIKE '1-888%' END",
+       "results": [
+           { "id": "scurry01" },
+           { "id": "wiggins01" },
+           { "id": "thompson01" }
+        ]
+    },
+    {
+       "testcase": "Index Scan on MISSING index. Non-Cover. IS MISSING in ANY . Explain",
+       "queryParams": {"query_context": "orders._default"},
+       "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {"present":true}
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`covers` IS MISSING AND v.`index` = 'mix2' AND v.spans[0].`range`[0].`high` IS MISSING END"
+        },
+       "statements": "SELECT META(l).id FROM lkm AS l WHERE ANY v IN l.contacts SATISFIES v.default IS MISSING END",
+       "results": [
+           { "id": "scurry01" },
+           { "id": "wiggins01" },
+           { "id": "thompson01" }
+        ]
+    },
+    {
+       "testcase": "Index Scan on MISSING index. Non-Cover. IS NULL in ANY . Explain",
+       "queryParams": {"query_context": "orders._default"},
+       "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {"present":true}
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`covers` IS MISSING AND v.`index` = 'mix2' AND v.spans[0].`range`[5].`high` = 'null' AND v.spans[0].`range`[5].`low` = 'null' END"
+        },
+       "statements": "SELECT META(l).id FROM lkm AS l WHERE ANY v IN l.contacts SATISFIES v.default IS NULL END",
+       "results": [
+           { "id": "thompson01" }
+       ]
+    }
+]

@@ -18,7 +18,7 @@ import (
 	"github.com/couchbase/query/test/gsi"
 )
 
-func TestGroupagg(t *testing.T) {
+func TestFlattenkeys(t *testing.T) {
 	if strings.ToLower(os.Getenv("GSI_TEST")) != "true" {
 		return
 	}

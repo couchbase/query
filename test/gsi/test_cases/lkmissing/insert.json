@@ -1,0 +1,18 @@
+[
+{
+   "statements": "UPSERT INTO orders._default.lkm VALUES('scurry01', { 'fname':'Stephen', 'lname':'Curry', 'city':'Oakland', 'state':'California', 'zipcode': 94501, 'country':'USA', 'contacts': [{'type': 'mobile', 'id': '1-888-123-4567', 'default': false}, {'type': 'email', 'id': 'stephen.curry@gmail.com', 'default': true}, {'type': 'facebook', 'id': 'stephen.curry@gmail.com'} ], 'type':'contacts' ,'team':'gsw'});"
+},
+{
+   "statements": "UPSERT INTO orders._default.lkm VALUES('thompson01', { 'lname':'Klay Thompson', 'city':'Oakland', 'state':'California', 'zipcode': 94501, 'contacts': [{'type': 'mobile', 'id': '1-888-123-4568'}, {'type': 'email', 'id': 'klay.thompson@gmail.com', 'default': NULL}, {'type': 'facebook', 'id': 'klay.thompson@gmail.com'} ], 'type':'contacts' ,'team':'gsw'});"
+},
+{
+   "statements": "UPSERT INTO orders._default.lkm VALUES('green01', { 'fname':NULL, 'lname':'Draymond Green', 'city':'Oakland', 'state':'California', 'zipcode': 94501, 'country':'USA', 'type':'contacts' ,'team':'gsw'});"
+},
+{
+   "statements": "UPSERT INTO orders._default.lkm VALUES('igudoala01', { 'fname':'Andre', 'lname':'Iguodala', 'city':'Oakland', 'state':'California', 'zipcode': 94501, 'country':'USA', 'contacts': NULL, 'type':'contacts' ,'team':'gsw'});"
+},
+{
+   "statements": "UPSERT INTO orders._default.lkm VALUES('wiggins01', { 'fname':'Andrew', 'lname':'Wiggins', 'city':'Oakland', 'state':'California', 'zipcode': 94501, 'country':'USA', 'contacts': [{'type': 'mobile', 'id': '1-888-123-4568', 'default': false}, {'type': 'email', 'id': 'andrew.wigggins@gmail.com', 'default': true}, {'id': 'andrew.wigggins@gmail.com'} ], 'type':'contacts' ,'team':'gsw'});"
+}
+]
+

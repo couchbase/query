@@ -68,12 +68,12 @@ func (this *builder) indexPushDownProperty(entry *indexEntry, indexKeys,
 
 		if this.offset != nil && exactLimitOffset &&
 			useIndex2API(entry.index, this.context.IndexApiVersion()) &&
-			entry.spans.CanPushDownOffset(entry.index, pred.MayOverlapSpans(),
+			entry.spans.CanPushDownOffset(entry.index, overlapSpans(pred),
 				!unnest && indexHasArrayIndexKey(entry.index)) {
 			pushDownProperty |= _PUSHDOWN_OFFSET
 		}
 	}
-	if this.indexAdvisor && covering {
+	if this.indexAdvisor {
 		this.collectPushdownProperty(entry.index, alias, pushDownProperty)
 	}
 	return pushDownProperty
@@ -337,6 +337,9 @@ func (this *builder) checkExactSpans(entry *indexEntry, pred expression.Expressi
 	// spans are not exact
 	if !entry.exactSpans || hasUnknownsInSargableArrayKey(entry) {
 		return false
+	}
+	if pred == nil {
+		return this.where == nil
 	}
 
 	// check for non sargable key is in predicate

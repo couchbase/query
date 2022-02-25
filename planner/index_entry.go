@@ -28,6 +28,13 @@ const (
 	_PUSHDOWN_FULLGROUPAGGS
 )
 
+const (
+	IE_NONE           = 0
+	IE_LEADINGMISSING = 1 << iota
+	IE_ARRAYINDEXKEY
+	IE_ARRAYINDEXKEY_SARGABLE
+)
+
 type indexEntry struct {
 	index            datastore.Index
 	keys             expression.Expressions
@@ -54,6 +61,7 @@ type indexEntry struct {
 	condFc           map[string]value.Value
 	nEqCond          int
 	numIndexedKeys   uint32
+	flags            uint32
 	unnestAliases    []string
 }
 
@@ -79,6 +87,7 @@ func newIndexEntry(index datastore.Index, keys, sargKeys, partitionKeys expressi
 		selectivity:      OPT_SELEC_NOT_AVAIL,
 		size:             OPT_SIZE_NOT_AVAIL,
 		frCost:           OPT_COST_NOT_AVAIL,
+		flags:            IE_NONE,
 	}
 
 	rv.arrayKeyPos = -1
@@ -119,6 +128,7 @@ func (this *indexEntry) Copy() *indexEntry {
 		frCost:           this.frCost,
 		condFc:           this.condFc,
 		nEqCond:          this.nEqCond,
+		flags:            this.flags,
 	}
 	if this.arrayKey != nil {
 		rv.arrayKey, _ = expression.Copy(this.arrayKey).(*expression.All)
@@ -133,6 +143,26 @@ func (this *indexEntry) Copy() *indexEntry {
 	}
 
 	return rv
+}
+
+func (this *indexEntry) Falgs() uint32 {
+	return this.flags
+}
+
+func (this *indexEntry) SetFlags(flags uint32, add bool) {
+	if add {
+		this.flags |= flags
+	} else {
+		this.flags = flags
+	}
+}
+
+func (this *indexEntry) UnsetFlags(flags uint32) {
+	this.flags &^= flags
+}
+
+func (this *indexEntry) HasFlag(flag uint32) bool {
+	return (this.flags & flag) != 0
 }
 
 func (this *indexEntry) PushDownProperty() PushDownProperties {
@@ -154,6 +184,20 @@ func (this *indexEntry) setSearchOrders(so []string) {
 func (this *indexEntry) setArrayKey(key *expression.All, pos int) {
 	this.arrayKey = key
 	this.arrayKeyPos = pos
+	if key != nil {
+		this.flags |= IE_ARRAYINDEXKEY
+		if pos > 0 {
+			size := 1
+			if key.Flatten() {
+				size = key.FlattenSize()
+			}
+			for i := pos; i < pos+size; i++ {
+				if i < len(this.skeys) && this.skeys[i] {
+					this.flags |= IE_ARRAYINDEXKEY_SARGABLE
+				}
+			}
+		}
+	}
 }
 
 func isPushDownProperty(pushDownProperty, property PushDownProperties) bool {

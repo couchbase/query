@@ -1,0 +1,207 @@
+[
+  {
+    "statements": "ADVISE SELECT l.state, l.city FROM shellTest AS l",
+    "advise": true,
+    "results": [
+    {
+        "#operator": "Advise",
+        "advice": {
+            "#operator": "IndexAdvice",
+            "adviseinfo": {
+                "recommended_indexes": {
+                    "covering_indexes": [
+                        {
+                            "index_statement": "CREATE INDEX adv_city_state ON `shellTest`(`city` MISSING,`state`)",
+                            "keyspace_alias": "shellTest_l"
+                        }
+                    ],
+                    "indexes": [
+                        {
+                            "index_statement": "CREATE INDEX adv_city_state ON `shellTest`(`city` MISSING,`state`)",
+                            "keyspace_alias": "shellTest_l",
+                            "recommending_rule": "Leading Index Key Missing."
+                        }
+                    ]
+                }
+            }
+        },
+        "query": "SELECT l.state, l.city FROM shellTest AS l"
+    }
+    ]
+  },
+  {
+    "statements": "ADVISE SELECT l.state, l.* FROM shellTest AS l",
+    "advise": true,
+    "results": [
+    {
+        "#operator": "Advise",
+        "advice": {
+            "#operator": "IndexAdvice",
+            "adviseinfo": {
+                "recommended_indexes": {
+                    "indexes": [
+                        {
+                            "index_statement": "CREATE INDEX adv_state ON `shellTest`(`state` MISSING)",
+                            "keyspace_alias": "shellTest_l",
+                            "recommending_rule": "Leading Index Key Missing."
+                        }
+                    ]
+                }
+            }
+        },
+        "query": "SELECT l.state, l.* FROM shellTest AS l"
+    }
+    ]
+  },
+  {
+    "statements": "ADVISE SELECT l.state, l.city FROM shellTest AS l group by l.city, l.state",
+    "advise": true,
+    "results": [
+    {
+        "#operator": "Advise",
+        "advice": {
+            "#operator": "IndexAdvice",
+            "adviseinfo": {
+                "recommended_indexes": {
+                    "covering_indexes": [
+                        {
+                            "index_property": "FULL GROUPBY & AGGREGATES pushdown",
+                            "index_statement": "CREATE INDEX adv_city_state ON `shellTest`(`city` MISSING,`state`)",
+                            "keyspace_alias": "shellTest_l"
+                        }
+                    ],
+                    "indexes": [
+                        {
+                            "index_statement": "CREATE INDEX adv_city_state ON `shellTest`(`city` MISSING,`state`)",
+                            "keyspace_alias": "shellTest_l",
+                            "recommending_rule": "Leading Index Key Missing."
+                        }
+                    ]
+                }
+            }
+        },
+        "query": "SELECT l.state, l.city FROM shellTest AS l group by l.city, l.state"
+    }
+    ]
+  },
+  {
+    "statements": "ADVISE SELECT l.state, l.city FROM shellTest AS l group by l.city, l.state order by l.city, l.state DESC limit 5 offset 2",
+    "advise": true,
+    "results": [
+    {
+        "#operator": "Advise",
+        "advice": {
+            "#operator": "IndexAdvice",
+            "adviseinfo": {
+                "recommended_indexes": {
+                    "covering_indexes": [
+                        {
+                            "index_property": "FULL GROUPBY & AGGREGATES pushdown, ORDER pushdown, OFFSET pushdown, LIMIT pushdown",
+                            "index_statement": "CREATE INDEX adv_city_stateDESC ON `shellTest`(`city` MISSING,`state` DESC)",
+                            "keyspace_alias": "shellTest_l"
+                        }
+                    ],
+                    "indexes": [
+                        {
+                            "index_statement": "CREATE INDEX adv_city_state ON `shellTest`(`city` MISSING,`state`)",
+                            "keyspace_alias": "shellTest_l",
+                            "recommending_rule": "Leading Index Key Missing."
+                        }
+                    ]
+                }
+            }
+        },
+        "query": "SELECT l.state, l.city FROM shellTest AS l group by l.city, l.state order by l.city, l.state DESC limit 5 offset 2"
+    }
+    ]
+  },
+  {
+    "statements": "ADVISE SELECT l.state, l.city FROM shellTest AS l order by l.city, l.state DESC limit 5 offset 2",
+    "advise": true,
+    "results": [
+    {
+        "#operator": "Advise",
+        "advice": {
+            "#operator": "IndexAdvice",
+            "adviseinfo": {
+                "recommended_indexes": {
+                    "covering_indexes": [
+                        {
+                            "index_property": "ORDER pushdown, OFFSET pushdown, LIMIT pushdown",
+                            "index_statement": "CREATE INDEX adv_city_stateDESC ON `shellTest`(`city` MISSING,`state` DESC)",
+                            "keyspace_alias": "shellTest_l"
+                        }
+                    ],
+                    "indexes": [
+                        {
+                            "index_statement": "CREATE INDEX adv_city_state ON `shellTest`(`city` MISSING,`state`)",
+                            "keyspace_alias": "shellTest_l",
+                            "recommending_rule": "Leading Index Key Missing."
+                        }
+                    ]
+                }
+            }
+        },
+        "query": "SELECT l.state, l.city FROM shellTest AS l order by l.city, l.state DESC limit 5 offset 2"
+    }
+    ]
+  },
+  {
+    "statements": "ADVISE SELECT l.* FROM shellTest AS l order by l.state DESC, l.city limit 5 offset 2",
+    "advise": true,
+    "results": [
+    {
+        "#operator": "Advise",
+        "advice": {
+            "#operator": "IndexAdvice",
+            "adviseinfo": {
+                "recommended_indexes": {
+                    "indexes": [
+                        {
+                            "index_property": "ORDER pushdown, OFFSET pushdown, LIMIT pushdown",
+                            "index_statement": "CREATE INDEX adv_stateDESC_city ON `shellTest`(`state` DESC MISSING,`city`)",
+                            "keyspace_alias": "shellTest_l"
+                        },
+                        {
+                            "index_statement": "CREATE INDEX adv_city_state ON `shellTest`(`city` MISSING,`state`)",
+                            "keyspace_alias": "shellTest_l",
+                            "recommending_rule": "Leading Index Key Missing."
+                        }
+                    ]
+                }
+            }
+        },
+        "query": "SELECT l.* FROM shellTest AS l order by l.state DESC, l.city limit 5 offset 2"
+    }
+    ]
+  },
+  {
+    "statements": "ADVISE SELECT l.* FROM shellTest AS l WHERE l.state = 'CA' OR l.city = 'Oakland'",
+    "advise": true,
+    "results": [
+    {
+        "#operator": "Advise",
+        "advice": {
+            "#operator": "IndexAdvice",
+            "adviseinfo": {
+                "recommended_indexes": {
+                    "indexes": [
+                        {
+                            "index_statement": "CREATE INDEX adv_state ON `shellTest`(`state`)",
+                            "keyspace_alias": "shellTest_l",
+                            "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing."
+                        },
+                        {
+                            "index_statement": "CREATE INDEX adv_city ON `shellTest`(`city`)",
+                            "keyspace_alias": "shellTest_l",
+                            "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing."
+                        }
+                    ]
+                }
+            }
+        },
+        "query": "SELECT l.* FROM shellTest AS l WHERE l.state = 'CA' OR l.city = 'Oakland'"
+    }
+    ]
+  }
+]

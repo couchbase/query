@@ -62,6 +62,8 @@ func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 	this.limit = stmtLimit
 	this.order = stmtOrder
 
+	this.extractPagination(this.order, this.offset, this.limit)
+
 	if stmtOrder != nil {
 		// If there is an ORDER BY, delay the final projection
 		this.delayProjection = true

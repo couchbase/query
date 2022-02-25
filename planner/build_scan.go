@@ -78,7 +78,9 @@ func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.Keyspa
 	secondary plan.Operator, primary plan.Operator, err error) {
 
 	join := node.IsAnsiJoinOp()
-	hash := node.IsUnderHash()
+	if !join && this.falseWhereClause() {
+		return _EMPTY_PLAN, nil, nil
+	}
 
 	baseKeyspace, ok := this.baseKeyspaces[node.Alias()]
 	if !ok {
@@ -107,84 +109,42 @@ func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.Keyspa
 	if hasDeltaKeyspace {
 		this.resetPushDowns()
 	}
-
-	var pred, pred2 expression.Expression
-	if join {
-		pred = baseKeyspace.DnfPred()
-	} else {
-		pred = this.where
-		pred2 = this.pushableOnclause
-
-		if this.falseWhereClause() {
-			return _EMPTY_PLAN, nil, nil
-		}
-		if this.trueWhereClause() {
-			pred = nil
-		}
-	}
-
 	id := expression.NewField(
 		expression.NewMeta(expression.NewIdentifier(node.Alias())),
 		expression.NewFieldName("id", false))
 
-	if pred != nil || pred2 != nil {
-		// for ANSI JOIN, the following process is already done for ON clause filters
-		if !join && !this.hasBuilderFlag(BUILDER_CHK_INDEX_ORDER) {
-			if len(baseKeyspace.JoinFilters()) > 0 {
-				// derive IS NOT NULL predicate
-				err = deriveNotNullFilter(keyspace, baseKeyspace, this.useCBO,
-					this.context.IndexApiVersion(), virtualIndexes,
-					this.advisorValidate(), this.context, this.aliases)
-				if err != nil {
-					return nil, nil, err
-				}
-			}
-
-			// add predicates from UNNEST keyspaces
-			err = addUnnestPreds(this.baseKeyspaces, baseKeyspace)
+	// for ANSI JOIN, the following process is already done for ON clause filters
+	if !join && !this.hasBuilderFlag(BUILDER_CHK_INDEX_ORDER) {
+		if len(baseKeyspace.JoinFilters()) > 0 {
+			// derive IS NOT NULL predicate
+			err = deriveNotNullFilter(keyspace, baseKeyspace, this.useCBO,
+				this.context.IndexApiVersion(), virtualIndexes,
+				this.advisorValidate(), this.context, this.aliases)
 			if err != nil {
 				return nil, nil, err
 			}
-
-			// include pushed ON-clause filter
-			err = CombineFilters(baseKeyspace, true)
-			if err != nil {
-				return nil, nil, err
-			}
-
 		}
 
-		this.collectPredicates(baseKeyspace, keyspace, node, nil, false, true)
+		// add predicates from UNNEST keyspaces
+		err = addUnnestPreds(this.baseKeyspaces, baseKeyspace)
+		if err != nil {
+			return nil, nil, err
+		}
 
-		if baseKeyspace.DnfPred() != nil {
-			if baseKeyspace.OrigPred() == nil {
-				return nil, nil, errors.NewPlanInternalError("buildScan: NULL origPred")
-			}
-			secondary, primary, err = this.buildPredicateScan(keyspace, node, baseKeyspace, id, hints, virtualIndexes)
-			if err == nil && !join && this.useCBO && this.keyspaceUseCBO(node.Alias()) &&
-				secondary != nil && len(baseKeyspace.GetUnnestIndexes()) > 0 {
-				chkOpUnnestIndexes(secondary, baseKeyspace.GetUnnestIndexes(), nil)
-			}
-			return secondary, primary, err
+		// include pushed ON-clause filter
+		err = CombineFilters(baseKeyspace, true)
+		if err != nil {
+			return nil, nil, err
 		}
 	}
 
-	if join && !hash && !node.IsSystem() {
-		op := "join"
-		if node.IsAnsiNest() {
-			op = "nest"
-		}
-		return nil, nil, errors.NewNoAnsiJoinError(node.Alias(), op)
-	} else if this.cover != nil && baseKeyspace.DnfPred() == nil {
-		// Handle covering primary scan
-		scan, err := this.buildCoveringPrimaryScan(keyspace, node, id, hints)
-		if scan != nil || err != nil {
-			return scan, nil, err
-		}
+	this.collectPredicates(baseKeyspace, keyspace, node, nil, false, true)
+	secondary, primary, err = this.buildPredicateScan(keyspace, node, baseKeyspace, id, hints, virtualIndexes)
+	if err == nil && !join && this.useCBO && this.keyspaceUseCBO(node.Alias()) &&
+		secondary != nil && len(baseKeyspace.GetUnnestIndexes()) > 0 {
+		chkOpUnnestIndexes(secondary, baseKeyspace.GetUnnestIndexes(), nil)
 	}
-
-	primary, err = this.buildPrimaryScan(keyspace, node, hints, id, false, true, hasDeltaKeyspace)
-	return nil, primary, err
+	return secondary, primary, err
 }
 
 func (this *builder) buildPredicateScan(keyspace datastore.Keyspace, node *algebra.KeyspaceTerm,
@@ -193,9 +153,11 @@ func (this *builder) buildPredicateScan(keyspace datastore.Keyspace, node *algeb
 	secondary plan.Operator, primary plan.Operator, err error) {
 
 	// Handle constant FALSE predicate
-	cpred := baseKeyspace.OrigPred().Value()
-	if cpred != nil && !cpred.Truth() {
-		return _EMPTY_PLAN, nil, nil
+	if baseKeyspace.OrigPred() != nil {
+		cpred := baseKeyspace.OrigPred().Value()
+		if cpred != nil && !cpred.Truth() {
+			return _EMPTY_PLAN, nil, nil
+		}
 	}
 
 	// do not consider primary index for ANSI JOIN or ANSI NEST
@@ -275,6 +237,8 @@ func (this *builder) buildSubsetScan(keyspace datastore.Keyspace, node *algebra.
 		this.resetPushDowns()
 	}
 	order := this.order
+	offset := this.offset
+	limit := this.limit
 
 	pred := baseKeyspace.DnfPred()
 	if join && baseKeyspace.OnclauseOnly() {
@@ -301,16 +265,16 @@ func (this *builder) buildSubsetScan(keyspace datastore.Keyspace, node *algebra.
 	if !join || hash || node.IsSystem() {
 		// No secondary scan, try primary scan. restore order there is predicate no need to restore others
 		this.order = order
+		exact := false
 		hasDeltaKeyspace := this.context.HasDeltaKeyspace(baseKeyspace.Keyspace())
-		primary, err = this.buildPrimaryScan(keyspace, node, indexes, id, force, false, hasDeltaKeyspace)
-		if err != nil {
-			return nil, nil, err
+		if pred == nil && !hash && !hasDeltaKeyspace {
+			this.offset = offset
+			this.limit = limit
+			exact = true
 		}
-	} else {
-		primary = nil
+		primary, err = this.buildPrimaryScan(keyspace, node, indexes, id, force, exact, hasDeltaKeyspace)
 	}
-
-	return nil, primary, nil
+	return nil, primary, err
 }
 
 func (this *builder) buildTermScan(node *algebra.KeyspaceTerm,
@@ -439,7 +403,7 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm,
 	}
 
 	// Try dynamic scan
-	if !join && len(arrays) > 0 {
+	if !join && len(arrays) > 0 && baseKeyspace.OrigPred() != nil {
 		// Try pushdowns
 		if indexPushDowns.order == nil || this.orderScan != nil {
 			this.limit = indexPushDowns.limit

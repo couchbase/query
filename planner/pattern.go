@@ -22,6 +22,9 @@ func (this *builder) PatternFor(baseKeyspace *base.BaseKeyspace, indexes []datas
 	formalizer *expression.Formalizer) error {
 
 	pred := baseKeyspace.OrigPred()
+	if pred == nil {
+		return nil
+	}
 
 	suffixes := _PATTERN_INDEX_POOL.Get()
 	defer _PATTERN_INDEX_POOL.Put(suffixes)
