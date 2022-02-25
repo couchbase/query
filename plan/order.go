@@ -96,8 +96,8 @@ func (this *Order) UnmarshalJSON(body []byte) error {
 			Desc     interface{} `json:"desc"`
 			NullsPos interface{} `json:"nulls_pos"`
 		} `json:"sort_terms"`
-		offsetExpr  string                 `json:"offset"`
-		limitExpr   string                 `json:"limit"`
+		OffsetExpr  string                 `json:"offset"`
+		LimitExpr   string                 `json:"limit"`
 		OptEstimate map[string]interface{} `json:"optimizer_estimates"`
 	}
 
@@ -167,14 +167,14 @@ func (this *Order) UnmarshalJSON(body []byte) error {
 
 		this.terms[i] = algebra.NewSortTerm(expr, desc, nullsPos)
 	}
-	if offsetExprStr := _unmarshalled.offsetExpr; offsetExprStr != "" {
+	if offsetExprStr := _unmarshalled.OffsetExpr; offsetExprStr != "" {
 		offsetExpr, err := parser.Parse(offsetExprStr)
 		if err != nil {
 			return err
 		}
 		this.offset = NewOffset(offsetExpr, PLAN_COST_NOT_AVAIL, PLAN_CARD_NOT_AVAIL, PLAN_SIZE_NOT_AVAIL, PLAN_COST_NOT_AVAIL)
 	}
-	if limitExprStr := _unmarshalled.limitExpr; limitExprStr != "" {
+	if limitExprStr := _unmarshalled.LimitExpr; limitExprStr != "" {
 		limitExpr, err := parser.Parse(limitExprStr)
 		if err != nil {
 			return err
