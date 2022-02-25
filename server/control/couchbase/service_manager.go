@@ -344,7 +344,9 @@ func (m *ServiceMgr) GetCurrentTopology(rev service.Revision, cancel service.Can
 	topology.Rev = EncodeRev(state.rev)
 	m.mu.Lock()
 	if m.servers != nil && len(m.servers) != 0 {
-		checkPrepareOperations(m.servers, "ServiceMgr::GetCurrentTopology")
+		if m.thisHost != "" {
+			checkPrepareOperations(m.servers, "ServiceMgr::GetCurrentTopology")
+		}
 		for _, s := range m.servers {
 			topology.Nodes = append(topology.Nodes, s.nodeInfo.NodeID)
 		}
@@ -389,12 +391,11 @@ func (m *ServiceMgr) PrepareTopologyChange(change service.TopologyChange) error 
 		return service.ErrNotSupported
 	}
 
+	level := logging.INFO
 	if m.thisHost == "" {
-		logging.Debuga(func() string { return "ServiceMgr::PrepareTopologyChange exit: not enabled" })
-		return nil // do nothing, but don't fail
+		level = logging.DEBUG
 	}
-
-	logging.Infof("Preparing for possible topology change")
+	logging.Logf(level, "Preparing for possible topology change")
 
 	// for each node we know about, cache its shutdown URL
 	info := make([]rune, 0, len(change.KeepNodes)*64)
@@ -406,18 +407,20 @@ func (m *ServiceMgr) PrepareTopologyChange(change service.TopologyChange) error 
 		var ps interface{}
 		var host string
 		ps = nil
-		// see if we can reuse the prepared operation
-		// note: this means we may take less time here but are susceptible to stale data
-		for _, o := range s {
-			if o.nodeInfo.NodeID == n.NodeInfo.NodeID {
-				ps = o.nodeInfo.Opaque
-				host = o.host
-				break
+		if m.thisHost != "" {
+			// see if we can reuse the prepared operation
+			// note: this means we may take less time here but are susceptible to stale data
+			for _, o := range s {
+				if o.nodeInfo.NodeID == n.NodeInfo.NodeID {
+					ps = o.nodeInfo.Opaque
+					host = o.host
+					break
+				}
 			}
-		}
-		if ps == nil {
-			host = distributed.RemoteAccess().UUIDToHost(string(n.NodeInfo.NodeID))
-			ps = prepareOperation(host, "ServiceMgr::PrepareTopologyChange")
+			if ps == nil {
+				host = distributed.RemoteAccess().UUIDToHost(string(n.NodeInfo.NodeID))
+				ps = prepareOperation(host, "ServiceMgr::PrepareTopologyChange")
+			}
 		}
 		servers = append(servers, queryServer{host, service.NodeInfo{n.NodeInfo.NodeID, service.Priority(0), ps}})
 		info = append(info, []rune(n.NodeInfo.NodeID)...)
@@ -453,7 +456,7 @@ func (m *ServiceMgr) PrepareTopologyChange(change service.TopologyChange) error 
 	if len(info) == 0 {
 		info = append(info, []rune("no active nodes")...)
 	}
-	logging.Infof("Topology: %s", string(info))
+	logging.Logf(level, "Topology: %s", string(info))
 	logging.Debugf("ServiceMgr::PrepareTopologyChange exit")
 	return nil
 }
