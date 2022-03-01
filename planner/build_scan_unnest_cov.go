@@ -73,12 +73,14 @@ func (this *builder) buildOneCoveringUnnestScan(node *algebra.KeyspaceTerm,
 	// Sarg and populate spans
 	centry.idxEntry, centry.leafUnnest, indexArrayKey, err = this.matchUnnestScan(node, pred, subset,
 		centry.rootUnnest, centry.idxEntry, indexArrayKey, unnests, false)
-	if err != nil || centry.idxEntry == nil || centry.leafUnnest == nil || indexArrayKey == nil ||
-		hasUnknownsInSargableArrayKey(centry.idxEntry) {
+	if err != nil || centry.idxEntry == nil || centry.leafUnnest == nil || indexArrayKey == nil {
 		return nil, err
 	}
 	entry = centry.idxEntry
 	unnestExprInKeys := IsUnnestExprInIndexKeys(entry, centry.rootUnnest)
+	if !unnestExprInKeys && hasUnknownsInSargableArrayKey(centry.idxEntry) {
+		return nil, nil
+	}
 	exact := isPushDownProperty(entry.pushDownProperty, _PUSHDOWN_EXACTSPANS)
 	if !unnestExprInKeys && indexArrayKey != nil && indexArrayKey.HasDescend() {
 		exact = false

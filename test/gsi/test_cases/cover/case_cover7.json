@@ -75,7 +75,7 @@
             ],
             "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND ARRAY_LENGTH(v.covers) > 0 END"
         },
-        "statements":"SELECT META(s).id, st FROM shellTest AS s UNNEST s AS st WHERE META(s).id BETWEEN \"CoverTest:2021-01\" AND \"CoverTest:2021-12\"",
+        "statements":"SELECT META(s).id, st FROM shellTest AS s UNNEST s AS st WHERE META(s).id BETWEEN \"CoverTest:2021-01\" AND \"CoverTest:2021-12\" AND st IS VALUED",
         "results": [
     ]
     },

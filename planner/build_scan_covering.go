@@ -547,15 +547,22 @@ func hasSargableArrayKey(entry *indexEntry) bool {
 }
 
 func hasUnknownsInSargableArrayKey(entry *indexEntry) bool {
-	if entry.arrayKey != nil && entry.spans != nil {
-		for i, k := range entry.sargKeys {
-			if _, ok := k.(*expression.All); ok &&
-				i < len(entry.skeys) && entry.skeys[i] && entry.spans.CanProduceUnknowns(i) {
-				return true
-			}
+	if entry.arrayKey == nil || entry.spans == nil {
+		return false
+	}
+	cnt := 0
+	size := 1
+	if entry.arrayKey.Flatten() {
+		size = entry.arrayKey.FlattenSize()
+	}
+
+	for i, _ := range entry.sargKeys {
+		if i >= entry.arrayKeyPos && i < entry.arrayKeyPos+size &&
+			i < len(entry.skeys) && entry.skeys[i] && entry.spans.CanProduceUnknowns(i) {
+			cnt++
 		}
 	}
-	return false
+	return size == cnt // all array keys are unknows
 }
 
 func implicitFilterCovers(expr expression.Expression) map[*expression.Cover]value.Value {

@@ -382,6 +382,7 @@ func (this *builder) matchUnnest(node *algebra.KeyspaceTerm, pred, subset expres
 
 	entry = newIndexEntry(entry.index, keys, keys[0:n], entry.partitionKeys, min, n, sum,
 		entry.cond, entry.origCond, spans, exactSpans, skeys)
+	entry.setArrayKey(newArrayKey, 0)
 	entry.cardinality, entry.selectivity, entry.cost, entry.frCost, entry.size =
 		cardinality, selectivity, cost, frCost, size
 	return entry, unnest, newArrayKey, nil
