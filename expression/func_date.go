@@ -3217,11 +3217,18 @@ YY   - 2 digit year (00...99)
 MM   - 2 digit month (01..12)
 DD   - 2 digit day-of-month (01...31) (depending on month)
 hh   - 2 digit 24-hour hour (00...23)
+HH24 - synonym
 HH   - 2 digit 12-hour hour (01...12)
+HH12 - synonym
 mm   - 2 digit minute (00...59)
+MI   - synonym
 ss   - 2 digit second (00...59)
 s    - up to 9 digit fraction of a second
 pp   - 2 character 12-hour cycle indicator (AM/PM)
+AM   - 2 character 12-hour cycle indicator UPPERCASE
+PM   - synonym
+am   - 2 character 12-hour cycle indicator LOWERCASE
+pm   - synonym
 TZD  - timezone specified as either: Z, +hh:mm:ss (seconds ignored), +hh:mm, +hhmm, +hh, <zone-name>
 
 Spaces match any character else non format characters have to be matched exactly. There is no escape sequence to use components
@@ -3254,7 +3261,7 @@ func strToTimeCommonFormat(s string, format string) (time.Time, error) {
 				century = year / 100
 				year = year % 100
 				i += 3
-			} else if i+1 < len(format) && format[+1] == 'Y' {
+			} else if i+1 < len(format) && format[i+1] == 'Y' {
 				year, l = gatherNumber(s[n:], 2, false)
 				if l != 2 || year < 0 || year > 99 {
 					return t, fmt.Errorf("Invalid year in date string")
@@ -3265,7 +3272,7 @@ func strToTimeCommonFormat(s string, format string) (time.Time, error) {
 				return t, fmt.Errorf("Invalid format")
 			}
 			n += l
-		} else if i+1 < len(format) && format[i] == format[i+1] && format[i] != 's' {
+		} else if i+1 < len(format) && format[i] == format[i+1] && format[i] != 's' && format[i] != 'S' {
 			i++
 			switch format[i] {
 			case 'C':
@@ -3295,10 +3302,28 @@ func strToTimeCommonFormat(s string, format string) (time.Time, error) {
 				n += l
 			case 'H':
 				hour, l = gatherNumber(s[n:], 2, false)
-				if (l != 1 && l != 2) || hour < 1 || hour > 12 {
+				h12 = true
+				min := 1
+				max := 12
+				if i+2 < len(format) {
+					if format[i+1] == '1' {
+						if format[i+2] != '2' {
+							return t, fmt.Errorf("Invalid format")
+						}
+						i += 2
+					} else if format[i+1] == '2' {
+						if format[i+2] != '4' {
+							return t, fmt.Errorf("Invalid format")
+						}
+						h12 = false
+						min = 0
+						max = 23
+						i += 2
+					}
+				}
+				if (l != 1 && l != 2) || hour < min || hour > max {
 					return t, fmt.Errorf("Invalid hour in date string")
 				}
-				h12 = true
 				n += l
 			case 'p':
 				if n+1 < len(s) && (s[n] == 'p' || s[n] == 'P') {
@@ -3318,10 +3343,37 @@ func strToTimeCommonFormat(s string, format string) (time.Time, error) {
 			default:
 				return t, fmt.Errorf("Invalid format")
 			}
-		} else if format[i] == 's' {
+		} else if i+1 < len(format) && format[i] == 'M' && format[i+1] == 'I' {
+			i++
+			minute, l = gatherNumber(s[n:], 2, false)
+			if (l != 1 && l != 2) || minute < 0 || minute > 59 {
+				return t, fmt.Errorf("Invalid minute in date string")
+			}
+			n += l
+		} else if i+1 < len(format) && (format[i] == 'A' || format[i] == 'P') && format[i+1] == 'M' {
+			i++
+			if n+1 < len(s) && s[n] == 'P' && s[n+1] == 'M' {
+				pm = true
+			} else if n+1 < len(s) && s[n] == 'A' && s[n+1] == 'M' {
+				pm = false
+			} else {
+				return t, fmt.Errorf("Invalid 12-hour indicator date string")
+			}
+			n += 2
+		} else if i+1 < len(format) && (format[i] == 'a' || format[i] == 'p') && format[i+1] == 'm' {
+			i++
+			if n+1 < len(s) && s[n] == 'p' && s[n+1] == 'm' {
+				pm = true
+			} else if n+1 < len(s) && s[n] == 'a' && s[n+1] == 'm' {
+				pm = false
+			} else {
+				return t, fmt.Errorf("Invalid 12-hour indicator date string")
+			}
+			n += 2
+		} else if format[i] == 's' || format[i] == 'S' {
 			j := 0
 			for j = 0; i+j < len(format); j++ {
-				if format[i+j] != 's' {
+				if format[i+j] != format[i] {
 					break
 				}
 			}
@@ -3349,6 +3401,82 @@ func strToTimeCommonFormat(s string, format string) (time.Time, error) {
 				return t, err
 			}
 			i += 2
+		} else if i+4 < len(format) && (format[i:i+5] == "MONTH" || format[i:i+5] == "Month" || format[i:i+5] == "month") {
+			j := 0
+			for j = 1; j < 13; j++ {
+				m := time.Month(j).String()
+				if format[i] == 'm' {
+					m = strings.ToLower(m)
+				} else if format[i+1] == 'O' {
+					m = strings.ToUpper(m)
+				}
+				if strings.HasPrefix(s[n:], m) {
+					month = j
+					n += len(m)
+					break
+				}
+			}
+			i += 4
+			if j > 12 {
+				return t, fmt.Errorf("Invalid month in date string")
+			}
+		} else if i+2 < len(format) && (format[i:i+3] == "MON" || format[i:i+3] == "Mon" || format[i:i+3] == "mon") {
+			j := 0
+			for j = 1; j < 13; j++ {
+				m := time.Month(j).String()[:3] // Jan, Feb, Mar ...
+				if format[i] == 'm' {
+					m = strings.ToLower(m)
+				} else if format[i+1] == 'O' {
+					m = strings.ToUpper(m)
+				}
+				if strings.HasPrefix(s[n:], m) {
+					month = j
+					n += len(m)
+					break
+				}
+			}
+			i += 2
+			if j > 12 {
+				return t, fmt.Errorf("Invalid month in date string")
+			}
+		} else if i+2 < len(format) && (format[i:i+3] == "DAY" || format[i:i+3] == "Day" || format[i:i+3] == "day") {
+			j := 0
+			for j = 0; j < 7; j++ {
+				w := time.Weekday(j).String()
+				if format[i] == 'd' {
+					w = strings.ToLower(w)
+				} else if format[i+1] == 'A' {
+					w = strings.ToUpper(w)
+				}
+				if strings.HasPrefix(s[n:], w) {
+					// parse & validate but do nothing with it
+					n += len(w)
+					break
+				}
+			}
+			i += 2
+			if j > 6 {
+				return t, fmt.Errorf("Invalid day of week in date string")
+			}
+		} else if i+1 < len(format) && (format[i:i+2] == "DY" || format[i:i+2] == "Dy" || format[i:i+2] == "dy") {
+			j := 0
+			for j = 0; j < 7; j++ {
+				w := time.Weekday(j).String()[:3] // Sun, Mon, Tue...
+				if format[i] == 'd' {
+					w = strings.ToLower(w)
+				} else if format[i+1] == 'Y' {
+					w = strings.ToUpper(w)
+				}
+				if strings.HasPrefix(s[n:], w) {
+					// parse & validate but do nothing with it
+					n += len(w)
+					break
+				}
+			}
+			i++
+			if j > 6 {
+				return t, fmt.Errorf("Invalid day of week in date string")
+			}
 		} else {
 			if format[i] != s[n] {
 				return t, fmt.Errorf("Failed to parse '%c' in date string (found '%c')", format[i], s[n])
@@ -3408,7 +3536,7 @@ func determineFormat(fmt string) formatType {
 		return defaultFormat
 	} else if strings.IndexAny(tf, "%") != -1 {
 		return percentFormat
-	} else if strings.IndexAny(tf, "0123456789") == -1 {
+	} else if strings.IndexAny(tf, "0356789") == -1 { // 1,2 and 4 might appear (HH12, HH24)
 		return commonFormat
 	} else if !unicode.IsDigit(rune(tf[0])) { // standard formats all start with a digit
 		return goFormat
@@ -3930,15 +4058,27 @@ YYYY - 4 digit century+year
 CC   - 2 digit century (00...99)
 YY   - 2 digit year (00...99)
 MM   - 2 digit month (01..12)
+MON/Mon/mon - 3 character month matching case
+MONTH/Month/month - month name matching case
 DD   - 2 digit day-of-month (01...31) (depending on month)
+DAY/Day/day - day-of-week matching case
+DY/Dy/dy - 3 character day-of-week matching case
 hh   - 2 digit 24-hour hour (00...23)
+HH24 - synonym
 HH   - 2 digit 12-hour hour (01...12)
+HH12 - synonym
 mm   - 2 digit minute (00...59)
+MI   - synonym
 ss   - 2 digit second (00...59)
+SS   - synonym
 s    - 3 digit zero-padded milliseconds
 sss  - 9 digit zero-padded nanoseconds
 PP   - 2 character upper case 12-hour cycle indicator (AM/PM)
+AM   - synonym
+PM   - synonym
 pp   - 2 character lower case 12-hour cycle indicator (am/pm)
+am   - synonym
+pm   - synonym
 TZD  - timezone Z or +hh:mm
 
 Other characters/sequences are produced literally in the output.
@@ -3950,7 +4090,7 @@ func timeToStrCommonFormat(t time.Time, format string) string {
 		if i+3 < len(format) && format[i:i+4] == "YYYY" {
 			res = append(res, []rune(fmt.Sprintf("%04d", t.Year()))...)
 			i += 3
-		} else if i+1 < len(format) && format[i] == format[i+1] && format[i] != 's' {
+		} else if i+1 < len(format) && format[i] == format[i+1] && format[i] != 's' && format[i] != 'S' {
 			i++
 			switch format[i] {
 			case 'C':
@@ -3964,6 +4104,15 @@ func timeToStrCommonFormat(t time.Time, format string) string {
 			case 'h':
 				res = append(res, []rune(fmt.Sprintf("%02d", t.Hour()))...)
 			case 'H':
+				if i+2 < len(format) {
+					if format[i+1] == '1' && format[i+2] == '2' {
+						i += 2
+					} else if format[i+1] == '2' && format[i+2] == '4' {
+						res = append(res, []rune(fmt.Sprintf("%02d", t.Hour()))...)
+						i += 2
+						break
+					}
+				}
 				h := t.Hour()
 				if h == 0 {
 					h = 12
@@ -3990,6 +4139,25 @@ func timeToStrCommonFormat(t time.Time, format string) string {
 			default:
 				res = append(res, []rune(fmt.Sprintf("%c%c", format[i], format[i]))...)
 			}
+		} else if i+1 < len(format) && format[i] == 'M' && format[i+1] == 'I' {
+			res = append(res, []rune(fmt.Sprintf("%02d", t.Minute()))...)
+			i++
+		} else if i+1 < len(format) && (format[i] == 'A' || format[i] == 'P') && format[i+1] == 'M' {
+			i++
+			h := t.Hour()
+			if h < 12 {
+				res = append(res, []rune("AM")...)
+			} else {
+				res = append(res, []rune("PM")...)
+			}
+		} else if i+1 < len(format) && (format[i] == 'a' || format[i] == 'p') && format[i+1] == 'm' {
+			i++
+			h := t.Hour()
+			if h < 12 {
+				res = append(res, []rune("am")...)
+			} else {
+				res = append(res, []rune("pm")...)
+			}
 		} else if i+2 < len(format) && format[i:i+3] == "TZD" {
 			_, off := t.Zone()
 			if off == 0 {
@@ -4004,10 +4172,10 @@ func timeToStrCommonFormat(t time.Time, format string) string {
 				res = append(res, []rune(fmt.Sprintf("%+03d:%02d", h, m))...)
 			}
 			i += 2
-		} else if format[i] == 's' {
+		} else if format[i] == 's' || format[i] == 'S' {
 			n := 0
 			for n = 0; n+i < len(format); n++ {
-				if format[i+n] != 's' {
+				if format[i+n] != format[i] {
 					break
 				}
 			}
@@ -4019,6 +4187,42 @@ func timeToStrCommonFormat(t time.Time, format string) string {
 				res = append(res, []rune(fmt.Sprintf("%09d", t.Nanosecond()))...)
 			}
 			i += n - 1
+		} else if i+4 < len(format) && (format[i:i+5] == "MONTH" || format[i:i+5] == "Month" || format[i:i+5] == "month") {
+			m := t.Month().String()
+			if format[i] == 'm' {
+				m = strings.ToLower(m)
+			} else if format[i+1] == 'O' {
+				m = strings.ToUpper(m)
+			}
+			res = append(res, []rune(m)...)
+			i += 4
+		} else if i+2 < len(format) && (format[i:i+3] == "MON" || format[i:i+3] == "Mon" || format[i:i+3] == "mon") {
+			m := t.Month().String()[:3]
+			if format[i] == 'm' {
+				m = strings.ToLower(m)
+			} else if format[i+1] == 'O' {
+				m = strings.ToUpper(m)
+			}
+			res = append(res, []rune(m)...)
+			i += 2
+		} else if i+2 < len(format) && (format[i:i+3] == "DAY" || format[i:i+3] == "Day" || format[i:i+3] == "day") {
+			w := t.Weekday().String()
+			if format[i] == 'd' {
+				w = strings.ToLower(w)
+			} else if format[i+1] == 'A' {
+				w = strings.ToUpper(w)
+			}
+			res = append(res, []rune(w)...)
+			i += 2
+		} else if i+1 < len(format) && (format[i:i+2] == "DY" || format[i:i+2] == "Dy" || format[i:i+2] == "dy") {
+			w := t.Weekday().String()[:3]
+			if format[i] == 'd' {
+				w = strings.ToLower(w)
+			} else if format[i+1] == 'A' {
+				w = strings.ToUpper(w)
+			}
+			res = append(res, []rune(w)...)
+			i++
 		} else {
 			res = append(res, rune(format[i]))
 		}
