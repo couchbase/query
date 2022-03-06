@@ -843,9 +843,15 @@ func (p *namespace) Objects(preload bool) ([]datastore.Object, errors.Error) {
 	i := 0
 
 	for name, _ := range p.cbNamespace.BucketMap {
-		var defaultCollection datastore.Keyspace
+		rv[i] = datastore.Object{name, name, false, false}
+		i++
+	}
+	p.nslock.RUnlock()
 
-		o := datastore.Object{name, name, false, false}
+	for i = 0; i < len(rv); {
+		var defaultCollection datastore.Keyspace
+		name := rv[i].Name
+
 		p.lock.RLock()
 		entry := p.keyspaceCache[name]
 		if entry != nil && entry.cbKeyspace != nil {
@@ -866,26 +872,34 @@ func (p *namespace) Objects(preload bool) ([]datastore.Object, errors.Error) {
 		if defaultCollection != nil {
 			switch k := defaultCollection.(type) {
 			case *collection:
-				o.IsKeyspace = (k != nil)
-				o.IsBucket = true
+				rv[i].IsKeyspace = (k != nil)
+				rv[i].IsBucket = true
 			case *keyspace:
-				o.IsKeyspace = (k != nil)
-				o.IsBucket = false
+				rv[i].IsKeyspace = (k != nil)
+				rv[i].IsBucket = false
 			}
 		} else if !preload {
 			bucket, _ := p.cbNamespace.GetBucket(name)
 			if bucket != nil {
 				_, _, err := bucket.GetCollectionCID("_default", "_default", time.Time{})
 				if err == nil {
-					o.IsKeyspace = true
+					rv[i].IsKeyspace = true
 				}
 			}
-			o.IsBucket = true
+			rv[i].IsBucket = true
 		}
-		rv[i] = o
+
+		// skip entries that may have been zapped in the interim
+		if !rv[i].IsKeyspace && !rv[i].IsBucket {
+			if i == len(rv)-1 {
+				rv = rv[:i]
+			} else {
+				rv = append(rv[:i], rv[i+1:]...)
+			}
+			continue
+		}
 		i++
 	}
-	p.nslock.RUnlock()
 	return rv, nil
 }
 
