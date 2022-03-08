@@ -26,10 +26,14 @@ func SetNamespaces(ns map[string]interface{}) {
 }
 
 func ParseStatement(input string) (algebra.Statement, error) {
-	return ParseStatement2(input, "default", "")
+	return parseStatement(input, "default", "", false)
 }
 
 func ParseStatement2(input string, namespace string, queryContext string) (algebra.Statement, error) {
+	return parseStatement(input, namespace, queryContext, true)
+}
+
+func parseStatement(input string, namespace string, queryContext string, udfCheck bool) (algebra.Statement, error) {
 	input = strings.TrimSpace(input)
 	reader := strings.NewReader(input)
 	lex := newLexer(NewLexer(reader))
@@ -37,6 +41,7 @@ func ParseStatement2(input string, namespace string, queryContext string) (algeb
 	lex.text = input
 	lex.namespace = namespace
 	lex.queryContext = queryContext
+	lex.udfCheck = udfCheck
 	lex.nex.ResetOffset()
 	lex.nex.ReportError(lex.ScannerError)
 	doParse(lex)
@@ -123,6 +128,7 @@ type lexer struct {
 	namespace              string
 	createFuncQueryContext string
 	queryContext           string
+	udfCheck               bool
 	hasSaved               bool
 	saved                  int
 	lval                   yySymType
@@ -328,6 +334,10 @@ func (this *lexer) QueryContext() string {
 		return this.createFuncQueryContext
 	}
 	return this.queryContext
+}
+
+func (this *lexer) UdfCheck() bool {
+	return this.udfCheck
 }
 
 func (this *lexer) setOptimHints(optimHints *algebra.OptimHints) {

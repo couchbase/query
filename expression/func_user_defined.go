@@ -16,14 +16,14 @@ import (
 	"github.com/couchbase/query/value"
 )
 
-func GetUserDefinedFunction(name functions.FunctionName) Function {
+func GetUserDefinedFunction(name functions.FunctionName, check bool) Function {
 
 	// we fail to create a UDF expression if the UDF does not exist
 	// this is for backwards compatibility with missing functions
 	// and to avoid succesfully preparing statements with missing
 	// functions
 	// if the UDF gets dropped later, we fail on execution
-	if !functions.PreLoad(name) {
+	if check && !functions.PreLoad(name) {
 		return nil
 	}
 	return &UserDefinedFunction{name: name}

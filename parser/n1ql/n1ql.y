@@ -4081,7 +4081,7 @@ function_name LPAREN opt_exprs RPAREN opt_filter opt_nulls_treatment opt_window_
             if err != nil {
                 return yylex.(*lexer).FatalError(err.Error()+yylex.(*lexer).ErrorContext())
             }
-            f = expression.GetUserDefinedFunction(name)
+            f = expression.GetUserDefinedFunction(name, yylex.(*lexer).UdfCheck())
             if f != nil {
                 $$ = f.Constructor()($3...)
             }
@@ -4131,7 +4131,7 @@ function_name LPAREN STAR RPAREN opt_filter opt_window_function
 |
 long_func_name LPAREN opt_exprs RPAREN
 {
-    f := expression.GetUserDefinedFunction($1)
+    f := expression.GetUserDefinedFunction($1, yylex.(*lexer).UdfCheck())
     if f != nil {
         $$ = f.Constructor()($3...)
     } else {

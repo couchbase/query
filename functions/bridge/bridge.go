@@ -17,7 +17,7 @@ import (
 )
 
 var NewFunctionName func(elem []string, namespace string, queryContext string) (functions.FunctionName, errors.Error) = func(elem []string, namespace string, queryContext string) (functions.FunctionName, errors.Error) {
-	return nil, nil
+	return functions.MockFunction(namespace, elem[len(elem)-1]), nil
 }
 
 var NewInlineBody func(expr expression.Expression, text string) (functions.FunctionBody, errors.Error) = func(expr expression.Expression, text string) (functions.FunctionBody, errors.Error) {

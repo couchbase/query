@@ -156,58 +156,58 @@ func FunctionClear(key string, f func(*FunctionEntry)) bool {
 
 // name resolution
 // mock system wide functions (for local testing)
-type mockName struct {
+type MockName struct {
 	name      string
 	namespace string
 }
 
-func mockFunction(namespace string, name string) FunctionName {
-	return &mockName{name, namespace}
+func MockFunction(namespace string, name string) FunctionName {
+	return &MockName{name, namespace}
 }
 
-func (name *mockName) Path() []string {
+func (name *MockName) Path() []string {
 	return []string{name.namespace, name.name}
 }
 
-func (name *mockName) Name() string {
+func (name *MockName) Name() string {
 	return name.name
 }
 
-func (name *mockName) Key() string {
+func (name *MockName) Key() string {
 	return name.namespace + ":" + name.name
 }
 
-func (name *mockName) IsGlobal() bool {
+func (name *MockName) IsGlobal() bool {
 	return true
 }
 
-func (name *mockName) QueryContext() string {
+func (name *MockName) QueryContext() string {
 	return name.namespace + ":"
 }
 
-func (name *mockName) Signature(object map[string]interface{}) {
+func (name *MockName) Signature(object map[string]interface{}) {
 	object["name"] = name.name
 	object["namespace"] = name.namespace
 	object["global"] = true
 }
 
-func (name *mockName) Load() (FunctionBody, errors.Error) {
+func (name *MockName) Load() (FunctionBody, errors.Error) {
 	return nil, nil
 }
 
-func (name *mockName) Save(body FunctionBody, replace bool) errors.Error {
+func (name *MockName) Save(body FunctionBody, replace bool) errors.Error {
 	return nil
 }
 
-func (name *mockName) Delete() errors.Error {
+func (name *MockName) Delete() errors.Error {
 	return nil
 }
 
-func (name *mockName) CheckStorage() bool {
+func (name *MockName) CheckStorage() bool {
 	return false
 }
 
-func (name *mockName) ResetStorage() {
+func (name *MockName) ResetStorage() {
 }
 
 // function primitives
