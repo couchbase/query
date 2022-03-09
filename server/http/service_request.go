@@ -17,7 +17,6 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	json "github.com/couchbase/go_json"
@@ -49,7 +48,6 @@ type httpRequest struct {
 	errorCount   int
 	warningCount int
 
-	sync.WaitGroup
 	prefix string
 	indent string
 
@@ -182,9 +180,6 @@ func newHttpRequest(rv *httpRequest, resp http.ResponseWriter, req *http.Request
 	}
 
 	NewBufferedWriter(&rv.writer, rv, bp)
-
-	// Prevent operator to send results until the prefix is done
-	rv.Add(1)
 
 	if err != nil {
 		rv.Fail(err)
