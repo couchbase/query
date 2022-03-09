@@ -86,7 +86,7 @@ func (g *gometricsAccountingStore) CompletedRequests() int64 {
 	return request_timer.Count()
 }
 
-func (g *gometricsAccountingStore) Vitals() (map[string]interface{}, errors.Error) {
+func (g *gometricsAccountingStore) Vitals(style util.DurationStyle) (map[string]interface{}, errors.Error) {
 	var mem runtime.MemStats
 
 	runtime.ReadMemStats(&mem)
@@ -118,13 +118,13 @@ func (g *gometricsAccountingStore) Vitals() (map[string]interface{}, errors.Erro
 		prepPercent = 0.0
 	}
 	rv := map[string]interface{}{
-		"uptime":                    uptime.String(),
+		"uptime":                    util.FormatDuration(uptime, style),
 		"local.time":                now.Format(util.DEFAULT_FORMAT),
 		"version":                   util.VERSION,
 		"total.threads":             runtime.NumGoroutine(),
 		"cores":                     runtime.GOMAXPROCS(0),
 		"gc.num":                    mem.NextGC,
-		"gc.pause.time":             time.Duration(mem.PauseTotalNs).String(),
+		"gc.pause.time":             util.FormatDuration(time.Duration(mem.PauseTotalNs), style),
 		"gc.pause.percent":          util.RoundPlaces(pausePerc, 4),
 		"memory.usage":              mem.Alloc,
 		"memory.total":              mem.TotalAlloc,
@@ -136,11 +136,11 @@ func (g *gometricsAccountingStore) Vitals() (map[string]interface{}, errors.Erro
 		"request.per.sec.1min":      util.RoundPlaces(request_timer.Rate1(), 4),
 		"request.per.sec.5min":      util.RoundPlaces(request_timer.Rate5(), 4),
 		"request.per.sec.15min":     util.RoundPlaces(request_timer.Rate15(), 4),
-		"request_time.mean":         time.Duration(request_timer.Mean()).String(),
-		"request_time.median":       time.Duration(request_timer.Percentile(.5)).String(),
-		"request_time.80percentile": time.Duration(request_timer.Percentile(.8)).String(),
-		"request_time.95percentile": time.Duration(request_timer.Percentile(.95)).String(),
-		"request_time.99percentile": time.Duration(request_timer.Percentile(.99)).String(),
+		"request_time.mean":         util.FormatDuration(time.Duration(request_timer.Mean()), style),
+		"request_time.median":       util.FormatDuration(time.Duration(request_timer.Percentile(.5)), style),
+		"request_time.80percentile": util.FormatDuration(time.Duration(request_timer.Percentile(.8)), style),
+		"request_time.95percentile": util.FormatDuration(time.Duration(request_timer.Percentile(.95)), style),
+		"request_time.99percentile": util.FormatDuration(time.Duration(request_timer.Percentile(.99)), style),
 		"request.prepared.percent":  prepPercent,
 	}
 	g.Lock()

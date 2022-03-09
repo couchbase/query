@@ -12,6 +12,7 @@ package util
 
 import (
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -137,4 +138,21 @@ func ToQualifiedInterval(d time.Duration, start Qualifier, end Qualifier, precis
 	}
 
 	return res
+}
+
+// HHH:MM:SS.FFF...
+func FromIntervalStr(str string) (time.Duration, bool) {
+	idx := strings.IndexRune(str, ':')
+	if idx == -1 {
+		return 0, false
+	}
+	str = str[:idx] + "h" + str[idx+1:]
+	idx = strings.IndexRune(str, ':')
+	if idx == -1 {
+		return 0, false
+	}
+	str = str[:idx] + "m" + str[idx+1:] + "s"
+
+	d, err := time.ParseDuration(str)
+	return d, (err == nil)
 }

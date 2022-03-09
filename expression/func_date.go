@@ -2502,12 +2502,12 @@ This represents the Date function DURATION_TO_STR(duration)
 It converts a duration in nanoseconds to a string
 */
 type DurationToStr struct {
-	UnaryFunctionBase
+	FunctionBase
 }
 
-func NewDurationToStr(first Expression) Function {
+func NewDurationToStr(operands ...Expression) Function {
 	rv := &DurationToStr{
-		*NewUnaryFunctionBase("duration_to_str", first),
+		*NewFunctionBase("duration_to_str", operands...),
 	}
 
 	rv.expr = rv
@@ -2529,17 +2529,50 @@ If the argument is missing, it returns missing.
 If it's not a string or the conversion fails, it returns null.
 */
 func (this *DurationToStr) Evaluate(item value.Value, context Context) (value.Value, error) {
+	null := false
+	missing := false
 	first, err := this.operands[0].Evaluate(item, context)
 	if err != nil {
 		return nil, err
 	} else if first.Type() == value.MISSING {
-		return value.MISSING_VALUE, nil
+		missing = true
 	} else if first.Type() != value.NUMBER {
+		null = true
+	}
+	var styleStr string
+	if len(this.operands) == 2 {
+		second, err := this.operands[1].Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		} else if second.Type() == value.MISSING {
+			missing = true
+		} else if second.Type() != value.STRING {
+			null = true
+		}
+		styleStr = second.ToString()
+	}
+	if missing {
+		return value.MISSING_VALUE, nil
+	}
+	if null {
 		return value.NULL_VALUE, nil
 	}
 
+	var style util.DurationStyle
+	if styleStr != "" {
+		var ok bool
+		style, ok = util.IsDurationStyle(styleStr)
+		if !ok {
+			return value.NULL_VALUE, nil
+		}
+	} else if dc, ok := context.(interface{ DurationStyle() util.DurationStyle }); ok {
+		style = dc.DurationStyle()
+	} else {
+		style = util.GetDurationStyle()
+	}
+
 	d := first.Actual().(float64)
-	str := time.Duration(d).String()
+	str := util.FormatDuration(time.Duration(d), style)
 
 	return value.NewValue(str), nil
 }
@@ -2548,10 +2581,11 @@ func (this *DurationToStr) Evaluate(item value.Value, context Context) (value.Va
 Factory method pattern.
 */
 func (this *DurationToStr) Constructor() FunctionConstructor {
-	return func(operands ...Expression) Function {
-		return NewDurationToStr(operands[0])
-	}
+	return NewDurationToStr
 }
+
+func (this *DurationToStr) MinArgs() int { return 1 }
+func (this *DurationToStr) MaxArgs() int { return 2 }
 
 ///////////////////////////////////////////////////
 //
@@ -2564,12 +2598,12 @@ This represents the Date function STR_TO_DURATION(string)
 It converts a string to a duration in nanoseconds.
 */
 type StrToDuration struct {
-	UnaryFunctionBase
+	FunctionBase
 }
 
-func NewStrToDuration(first Expression) Function {
+func NewStrToDuration(operands ...Expression) Function {
 	rv := &StrToDuration{
-		*NewUnaryFunctionBase("str_to_duration", first),
+		*NewFunctionBase("str_to_duration", operands...),
 	}
 
 	rv.expr = rv
@@ -2592,17 +2626,44 @@ If the argument is missing, it returns missing.
 If it's not a string or the conversion fails, it returns null.
 */
 func (this *StrToDuration) Evaluate(item value.Value, context Context) (value.Value, error) {
+	missing := false
+	null := false
 	first, err := this.operands[0].Evaluate(item, context)
 	if err != nil {
 		return nil, err
 	} else if first.Type() == value.MISSING {
-		return value.MISSING_VALUE, nil
+		missing = true
 	} else if first.Type() != value.STRING {
+		null = true
+	}
+	var styleStr string
+	if len(this.operands) == 2 {
+		second, err := this.operands[1].Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		} else if second.Type() == value.MISSING {
+			missing = true
+		} else if second.Type() != value.STRING {
+			null = true
+		}
+		styleStr = second.ToString()
+	}
+	if missing {
+		return value.MISSING_VALUE, nil
+	}
+	if null {
 		return value.NULL_VALUE, nil
 	}
 
 	str := first.ToString()
-	d, err := time.ParseDuration(str)
+	style := util.DEFAULT
+	if styleStr != "" {
+		var ok bool
+		if style, ok = util.IsDurationStyle(styleStr); !ok {
+			return value.NULL_VALUE, nil
+		}
+	}
+	d, err := util.ParseDurationStyle(str, style)
 	if err != nil {
 		return value.NULL_VALUE, nil
 	}
@@ -2614,10 +2675,11 @@ func (this *StrToDuration) Evaluate(item value.Value, context Context) (value.Va
 Factory method pattern.
 */
 func (this *StrToDuration) Constructor() FunctionConstructor {
-	return func(operands ...Expression) Function {
-		return NewStrToDuration(operands[0])
-	}
+	return NewStrToDuration
 }
+
+func (this *StrToDuration) MinArgs() int { return 1 }
+func (this *StrToDuration) MaxArgs() int { return 2 }
 
 ///////////////////////////////////////////////////
 //

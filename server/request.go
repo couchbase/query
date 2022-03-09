@@ -189,6 +189,9 @@ type Request interface {
 	setSleep() // internal methods for load control
 	sleep()
 	release()
+
+	DurationStyle() util.DurationStyle
+	SetDurationStyle(util.DurationStyle)
 }
 
 type RequestID interface {
@@ -376,6 +379,7 @@ type BaseRequest struct {
 	sortProjection       bool
 	throttleTime         time.Duration
 	logLevel             logging.Level
+	durationStyle        util.DurationStyle
 }
 
 type requestIDImpl struct {
@@ -430,6 +434,7 @@ func NewBaseRequest(rv *BaseRequest) {
 	rv.kvTimeout = datastore.DEF_KVTIMEOUT
 	rv.durabilityLevel = datastore.DL_UNSET
 	rv.errorLimit = -1
+	rv.durationStyle = util.DEFAULT
 }
 
 func (this *BaseRequest) SetRequestTime(time time.Time) {
@@ -861,7 +866,7 @@ func (this *BaseRequest) AddPhaseTime(p execution.Phases, duration time.Duration
 	atomic.AddUint64(&this.phaseStats[p].duration, uint64(duration))
 }
 
-func (this *BaseRequest) FmtPhaseTimes() map[string]interface{} {
+func (this *BaseRequest) FmtPhaseTimes(style util.DurationStyle) map[string]interface{} {
 	var p map[string]interface{} = nil
 
 	// Use simple iteration rather than a range clause to avoid a spurious data race report. MB-20692
@@ -872,7 +877,24 @@ func (this *BaseRequest) FmtPhaseTimes() map[string]interface{} {
 			if p == nil {
 				p = make(map[string]interface{}, execution.PHASES)
 			}
-			p[execution.Phases(i).String()] = time.Duration(duration).String()
+			p[execution.Phases(i).String()] = util.FormatDuration(time.Duration(duration), style)
+		}
+	}
+	return p
+}
+
+func (this *BaseRequest) RawPhaseTimes() map[string]interface{} {
+	var p map[string]interface{} = nil
+
+	nr := len(this.phaseStats)
+	for i := 0; i < nr; i++ {
+		duration := atomic.LoadUint64(&this.phaseStats[i].duration)
+		if duration > 0 {
+			if p == nil {
+				p = make(map[string]interface{},
+					execution.PHASES)
+			}
+			p[execution.Phases(i).String()] = time.Duration(duration)
 		}
 	}
 	return p
@@ -1376,4 +1398,12 @@ func (this *BaseRequest) SetErrors(errs errors.Errors) {
 	} else {
 		this.Unlock()
 	}
+}
+
+func (this *BaseRequest) DurationStyle() util.DurationStyle {
+	return this.durationStyle
+}
+
+func (this *BaseRequest) SetDurationStyle(style util.DurationStyle) {
+	this.durationStyle = style
 }

@@ -227,7 +227,7 @@ func (c *statsCollector) runCollectStats() {
 
 		clean := false
 		if (index % _LOG_INTRVL) == 0 {
-			mstats, _ := c.server.AccountingStore().Vitals()
+			mstats, _ := c.server.AccountingStore().Vitals(util.GetDurationStyle())
 			prss := mstats["process.rss"]
 			if prss != nil {
 				rss, ok := prss.(uint64)

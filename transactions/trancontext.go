@@ -15,6 +15,7 @@ import (
 
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/util"
 )
 
 const (
@@ -305,12 +306,12 @@ func (this *TranContext) MemoryQuota() uint64 {
 
 func (this *TranContext) Content(r map[string]interface{}) {
 	r["id"] = this.txId
-	r["timeout"] = this.txTimeout.String()
+	r["timeout"] = util.OutputDuration(this.txTimeout)
 	if this.kvTimeout > 0 {
-		r["kvTimeout"] = this.kvTimeout.String()
+		r["kvTimeout"] = util.OutputDuration(this.kvTimeout)
 	}
 	if this.txDurabilityTimeout > 0 {
-		r["durabilityTimeout"] = this.txDurabilityTimeout.String()
+		r["durabilityTimeout"] = util.OutputDuration(this.txDurabilityTimeout)
 	}
 	r["durabilityLevel"] = datastore.DurabilityLevelToName(this.txDurabilityLevel)
 	r["isolationLevel"] = datastore.IsolationLevelToName(this.txIsolationLevel)

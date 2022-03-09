@@ -69,6 +69,8 @@ func (b *dictionaryCacheKeyspace) Indexers() ([]datastore.Indexer, errors.Error)
 func (b *dictionaryCacheKeyspace) Fetch(keys []string, keysMap map[string]value.AnnotatedValue,
 	context datastore.QueryContext, subPaths []string) (errs errors.Errors) {
 
+	formData := map[string]interface{}{"duration_style": context.DurationStyle().String()}
+
 	// now that the node name can change in flight, use a consistent one across fetches
 	whoAmI := distributed.RemoteAccess().WhoAmI()
 	for _, key := range keys {
@@ -77,8 +79,7 @@ func (b *dictionaryCacheKeyspace) Fetch(keys []string, keysMap map[string]value.
 
 		// remote entry
 		if len(nodeName) != 0 && nodeName != whoAmI {
-			distributed.RemoteAccess().GetRemoteDoc(nodeName, localKey,
-				b.name, "POST",
+			distributed.RemoteAccess().GetRemoteDoc(nodeName, localKey, b.name, "POST",
 				func(doc map[string]interface{}) {
 
 					distributions := doc["distributions"]
@@ -105,7 +106,7 @@ func (b *dictionaryCacheKeyspace) Fetch(keys []string, keysMap map[string]value.
 					if !warn.HasCause(errors.W_SYSTEM_REMOTE_NODE_NOT_FOUND) {
 						context.Warning(warn)
 					}
-				}, distributed.NO_CREDS, "")
+				}, distributed.NO_CREDS, "", formData)
 		} else {
 
 			// local entry
@@ -161,7 +162,7 @@ func (b *dictionaryCacheKeyspace) Delete(deletes value.Pairs, context datastore.
 						context.Warning(warn)
 					}
 				},
-				distributed.NO_CREDS, "")
+				distributed.NO_CREDS, "", nil)
 
 		} else {
 			// local entry

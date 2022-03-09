@@ -101,6 +101,8 @@ func (b *preparedsKeyspace) Fetch(keys []string, keysMap map[string]value.Annota
 		creds = distributed.Creds(userName)
 	}
 
+	formData := map[string]interface{}{"duration_style": context.DurationStyle().String()}
+
 	// now that the node name can change in flight, use a consistent one across fetches
 	whoAmI := distributed.RemoteAccess().WhoAmI()
 	for _, key := range keys {
@@ -109,8 +111,7 @@ func (b *preparedsKeyspace) Fetch(keys []string, keysMap map[string]value.Annota
 
 		// remote entry
 		if len(nodeName) != 0 && nodeName != whoAmI {
-			distributed.RemoteAccess().GetRemoteDoc(nodeName, localKey,
-				"prepareds", "POST",
+			distributed.RemoteAccess().GetRemoteDoc(nodeName, localKey, "prepareds", "POST",
 				func(doc map[string]interface{}) {
 					remoteValue := value.NewAnnotatedValue(doc)
 					remoteValue.SetField("node", node)
@@ -127,7 +128,7 @@ func (b *preparedsKeyspace) Fetch(keys []string, keysMap map[string]value.Annota
 					if !warn.HasCause(errors.W_SYSTEM_REMOTE_NODE_NOT_FOUND) {
 						context.Warning(warn)
 					}
-				}, creds, "")
+				}, creds, "", formData)
 		} else {
 
 			// local entry
@@ -170,14 +171,14 @@ func (b *preparedsKeyspace) Fetch(keys []string, keysMap map[string]value.Annota
 				// only give times for entries that have completed at least one execution
 				if entry.Uses > 0 && entry.RequestTime > 0 {
 					itemMap["lastUse"] = entry.LastUse.Format(util.DEFAULT_FORMAT)
-					itemMap["avgElapsedTime"] = (time.Duration(entry.RequestTime) /
-						time.Duration(entry.Uses)).String()
-					itemMap["avgServiceTime"] = (time.Duration(entry.ServiceTime) /
-						time.Duration(entry.Uses)).String()
-					itemMap["minElapsedTime"] = time.Duration(entry.MinRequestTime).String()
-					itemMap["minServiceTime"] = time.Duration(entry.MinServiceTime).String()
-					itemMap["maxElapsedTime"] = time.Duration(entry.MaxRequestTime).String()
-					itemMap["maxServiceTime"] = time.Duration(entry.MaxServiceTime).String()
+					itemMap["avgElapsedTime"] = context.FormatDuration(time.Duration(entry.RequestTime) /
+						time.Duration(entry.Uses))
+					itemMap["avgServiceTime"] = context.FormatDuration(time.Duration(entry.ServiceTime) /
+						time.Duration(entry.Uses))
+					itemMap["minElapsedTime"] = context.FormatDuration(time.Duration(entry.MinRequestTime))
+					itemMap["minServiceTime"] = context.FormatDuration(time.Duration(entry.MinServiceTime))
+					itemMap["maxElapsedTime"] = context.FormatDuration(time.Duration(entry.MaxRequestTime))
+					itemMap["maxServiceTime"] = context.FormatDuration(time.Duration(entry.MaxServiceTime))
 				}
 				item := value.NewAnnotatedValue(itemMap)
 				m := item.NewMeta()
@@ -224,7 +225,7 @@ func (b *preparedsKeyspace) Delete(deletes value.Pairs, context datastore.QueryC
 						context.Warning(warn)
 					}
 				},
-				creds, "")
+				creds, "", nil)
 
 			// local entry
 		} else {

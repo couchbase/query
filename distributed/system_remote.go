@@ -32,7 +32,7 @@ type SystemRemoteAccess interface {
 	// warnFn issues warnings
 	GetRemoteDoc(node string, key string, endpoint string, command string,
 		docFn func(doc map[string]interface{}),
-		warnFn func(warn errors.Error), creds Creds, authToken string)
+		warnFn func(warn errors.Error), creds Creds, authToken string, formData map[string]interface{})
 
 	// Perform an operation on a key on all nodes in the argument
 	// data is sent to each remote node

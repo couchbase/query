@@ -17,6 +17,7 @@ import (
 
 	"github.com/couchbase/query/accounting"
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/util"
 )
 
 const (
@@ -47,7 +48,7 @@ func (AccountingStoreStub) MetricReporter() accounting.MetricReporter {
 	return MetricReporterStub{}
 }
 
-func (AccountingStoreStub) Vitals() (map[string]interface{}, errors.Error) {
+func (AccountingStoreStub) Vitals(util.DurationStyle) (map[string]interface{}, errors.Error) {
 	return nil, nil
 }
 

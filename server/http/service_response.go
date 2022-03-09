@@ -289,7 +289,7 @@ func (this *httpRequest) Execute(srvr *server.Server, context *execution.Context
 }
 
 func (this *httpRequest) Expire(state server.State, timeout time.Duration) {
-	this.Error(errors.NewTimeoutError(timeout))
+	this.Error(errors.NewTimeoutError(util.FormatDuration(timeout, this.DurationStyle())))
 	this.Stop(state)
 }
 
@@ -779,11 +779,11 @@ func (this *httpRequest) writeMetrics(metrics bool, prefix, indent string) bool 
 
 		this.writeString(newPrefix) &&
 		this.writeString("\"elapsedTime\": \"") &&
-		this.writeString(this.elapsedTime.String()) &&
+		this.writeString(util.FormatDuration(this.elapsedTime, this.DurationStyle())) &&
 		this.writeString("\",") &&
 		this.writeString(newPrefix) &&
 		this.writeString("\"executionTime\": \"") &&
-		this.writeString(this.executionTime.String()) &&
+		this.writeString(util.FormatDuration(this.executionTime, this.DurationStyle())) &&
 		this.writeString("\",") &&
 		this.writeString(newPrefix) &&
 		this.writeString("\"resultCount\": ") &&
@@ -811,7 +811,8 @@ func (this *httpRequest) writeMetrics(metrics bool, prefix, indent string) bool 
 	}
 
 	if this.transactionElapsedTime > 0 {
-		fmt.Fprintf(buf, ",%s\"transactionElapsedTime\": \"%s\"", newPrefix, this.transactionElapsedTime.String())
+		fmt.Fprintf(buf, ",%s\"transactionElapsedTime\": \"%v\"", newPrefix,
+			util.FormatDuration(this.transactionElapsedTime, this.DurationStyle()))
 	}
 
 	if transactionRemainingTime := this.TransactionRemainingTime(); transactionRemainingTime != "" {
@@ -855,11 +856,11 @@ func (this *httpRequest) writeMetricsXML(metrics bool, prefix string, indent str
 	if !(this.writeString("<metrics>") &&
 		this.writeString(newPrefix) &&
 		this.writeString("<elapsedTime>") &&
-		this.writeString(this.elapsedTime.String()) &&
+		this.writeString(util.FormatDuration(this.elapsedTime, this.DurationStyle())) &&
 		this.writeString("</elapsedTime>") &&
 		this.writeString(newPrefix) &&
 		this.writeString("<executionTime>") &&
-		this.writeString(this.executionTime.String()) &&
+		this.writeString(util.FormatDuration(this.executionTime, this.DurationStyle())) &&
 		this.writeString("</executionTime>") &&
 		this.writeString(newPrefix) &&
 		this.writeString("<resultCount>") &&
@@ -888,7 +889,8 @@ func (this *httpRequest) writeMetricsXML(metrics bool, prefix string, indent str
 	}
 
 	if this.transactionElapsedTime > 0 {
-		fmt.Fprintf(buf, "%s<transactionElapsedTime>%s</transactionElapsedTime>", newPrefix, this.transactionElapsedTime.String())
+		fmt.Fprintf(buf, "%s<transactionElapsedTime>%s</transactionElapsedTime>", newPrefix,
+			util.FormatDuration(this.transactionElapsedTime, this.DurationStyle()))
 	}
 
 	if transactionRemainingTime := this.TransactionRemainingTime(); transactionRemainingTime != "" {
@@ -1019,8 +1021,10 @@ func (this *httpRequest) writeControls(controls bool, prefix, indent string) boo
 	}
 
 	// Disabled features in n1ql_feat_ctrl bitset
-	bytes, err := json.MarshalIndent(util.DisabledFeatures(this.FeatureControls()), prefix, indent)
-	if err != nil || !this.writeString(",") || !this.writer.printf("%s\"disabledFeatures\":", newPrefix) || !this.writer.writeBytes(bytes) {
+	bytes, err := json.MarshalIndent(util.DisabledFeatures(this.FeatureControls()), newPrefix[1:], indent)
+	if err != nil || !this.writeString(",") || !this.writer.printf("%s\"disabledFeatures\":", newPrefix) ||
+		!this.writer.writeBytes(bytes) {
+
 		logging.Infof("Error writing disabledFeatures")
 	}
 
@@ -1166,14 +1170,16 @@ func (this *httpRequest) writeTransactionInfo(prefix, indent string) bool {
 		if !this.writer.printf(",%s\"txstmtnum\": \"%v\"", prefix, this.TxStmtNum()) {
 			logging.Infof("Error writing stmtnum")
 		}
-		if !this.writer.printf(",%s\"txtimeout\": \"%v\"", prefix, this.TxTimeout()) {
+		if !this.writer.printf(",%s\"txtimeout\": \"%v\"", prefix, util.FormatDuration(this.TxTimeout(), this.DurationStyle())) {
 			logging.Infof("Error writing txtimeout")
 		}
 		if !this.writer.printf(",%s\"durability_level\": \"%v\"",
 			prefix, datastore.DurabilityLevelToName(this.DurabilityLevel())) {
 			logging.Infof("Error writing durability_level")
 		}
-		if !this.writer.printf(",%s\"durability_timeout\": \"%v\"", prefix, this.DurabilityTimeout()) {
+		if !this.writer.printf(",%s\"durability_timeout\": \"%v\"", prefix,
+			util.FormatDuration(this.DurabilityTimeout(), this.DurationStyle())) {
+
 			logging.Infof("Error writing durability_timeout")
 		}
 	}
@@ -1191,7 +1197,7 @@ func (this *httpRequest) writeTransactionInfoXML(prefix string, indent string) b
 		if !this.writer.printf("%s<txstmtnum>%v</txstmtnum>", prefix, this.TxStmtNum()) {
 			logging.Infof("Error writing stmtnum")
 		}
-		if !this.writer.printf("%s<txtimeout>%v</txtimeout>", prefix, this.TxTimeout()) {
+		if !this.writer.printf("%s<txtimeout>%v</txtimeout>", prefix, util.FormatDuration(this.TxTimeout(), this.DurationStyle())) {
 			logging.Infof("Error writing txtimeout")
 		}
 		if !this.writer.printf("%s<durability_level>%v</durability_level>", prefix,
@@ -1199,7 +1205,9 @@ func (this *httpRequest) writeTransactionInfoXML(prefix string, indent string) b
 
 			logging.Infof("Error writing durability_level")
 		}
-		if !this.writer.printf("%s<durability_timeout>%v</durability_timeout>", prefix, this.DurabilityTimeout()) {
+		if !this.writer.printf("%s<durability_timeout>%v</durability_timeout>", prefix,
+			util.FormatDuration(this.DurabilityTimeout(), this.DurationStyle())) {
+
 			logging.Infof("Error writing durability_timeout")
 		}
 	}
@@ -1236,7 +1244,7 @@ func (this *httpRequest) writeServerless(metrics bool, prefix, indent string) bo
 		!(this.writeString(",\n") &&
 			this.writeString(prefix) &&
 			this.writeString("\"throttleTime\": \"") &&
-			this.writeString(this.ThrottleTime().String()) &&
+			this.writeString(util.FormatDuration(this.ThrottleTime(), this.DurationStyle())) &&
 			this.writeString("\"")) {
 		this.writer.truncate(beforeUnits)
 		return false
@@ -1288,7 +1296,8 @@ func (this *httpRequest) writeServerlessXML(metrics bool, prefix string, indent 
 
 	beforeUnits := this.writer.mark()
 	if this.ThrottleTime() > time.Duration(0) &&
-		!this.writer.printf("%s<throttleTime>%s</throttleTime>", newPrefix, this.ThrottleTime().String()) {
+		!this.writer.printf("%s<throttleTime>%s</throttleTime>", newPrefix,
+			util.FormatDuration(this.ThrottleTime(), this.DurationStyle())) {
 
 		this.writer.truncate(beforeUnits)
 		return false
@@ -1350,8 +1359,11 @@ func (this *httpRequest) writeProfile(profile server.Profile, prefix, indent str
 		return false
 	}
 	if p != server.ProfOff {
-		phaseTimes := this.FmtPhaseTimes()
+		phaseTimes := this.RawPhaseTimes()
 		if phaseTimes != nil {
+			for k, v := range phaseTimes {
+				phaseTimes[k] = util.FormatDuration(v.(time.Duration), this.DurationStyle())
+			}
 			if indent != "" {
 				e, err = json.MarshalIndent(phaseTimes, "\t", indent)
 			} else {
@@ -1396,13 +1408,17 @@ func (this *httpRequest) writeProfile(profile server.Profile, prefix, indent str
 		if needComma && !this.writeString(",") {
 			return false
 		}
-		if this.CpuTime() > time.Duration(0) && !this.writer.printf("%s\"cpuTime\": \"%s\",", newPrefix, this.CpuTime().String()) {
+		if this.CpuTime() > time.Duration(0) &&
+			!this.writer.printf("%s\"cpuTime\": \"%s\",", newPrefix, util.FormatDuration(this.CpuTime(), this.DurationStyle())) {
+
 			logging.Infof("Error writing request CPU time")
 		}
 		if !this.writer.printf("%s\"requestTime\": \"%s\"", newPrefix, this.RequestTime().Format(expression.DEFAULT_FORMAT)) {
 			logging.Infof("Error writing request time")
 		}
-		if !this.writer.printf(",%s\"servicingHost\": \"%s\"", newPrefix, tenant.EncodeNodeName(distributed.RemoteAccess().WhoAmI())) {
+		if !this.writer.printf(",%s\"servicingHost\": \"%s\"", newPrefix,
+			tenant.EncodeNodeName(distributed.RemoteAccess().WhoAmI())) {
+
 			logging.Infof("Error writing servicing host")
 		}
 		needComma = true
@@ -1410,13 +1426,21 @@ func (this *httpRequest) writeProfile(profile server.Profile, prefix, indent str
 	if p == server.ProfOn || p == server.ProfBench {
 		timings := this.GetTimings()
 		if timings != nil {
-			if indent != "" {
-				e, err = json.MarshalIndent(timings, "\t", indent)
-			} else {
-				e, err = json.Marshal(timings)
-			}
-			if err != nil || !this.writer.printf(",%s\"executionTimings\": %s", newPrefix, e) {
+			e, err = json.Marshal(timings)
+			if err != nil {
 				logging.Infof("Error writing executionTimings: %v", err)
+			} else {
+				v := value.ApplyDurationStyleToValue(this.DurationStyle(), func(s string) bool {
+					return strings.HasSuffix(s, "Time")
+				}, value.NewValue(e))
+				if indent != "" {
+					e, err = json.MarshalIndent(v, "\t", indent)
+				} else {
+					e, err = json.Marshal(v)
+				}
+				if err != nil || !this.writer.printf(",%s\"executionTimings\": %s", newPrefix, e) {
+					logging.Infof("Error writing executionTimings: %v", err)
+				}
 			}
 			this.SetFmtTimings(e)
 			optEstimates := this.FmtOptimizerEstimates(timings)
@@ -1461,11 +1485,14 @@ func (this *httpRequest) writeProfileXML(profile server.Profile, prefix string, 
 		return false
 	}
 	if p != server.ProfOff {
-		phaseTimes := this.FmtPhaseTimes()
+		phaseTimes := this.RawPhaseTimes()
 		if phaseTimes != nil {
 			if !this.writeString(newPrefix) || !this.writeString("<phaseTimes>") {
 				logging.Infof("Error writing phaseTimes: %v", err)
 			} else {
+				for k, v := range phaseTimes {
+					phaseTimes[k] = util.FormatDuration(v.(time.Duration), this.DurationStyle())
+				}
 				v := value.NewValue(phaseTimes)
 				err = v.WriteXML(nil, this.writer.buf(), newValuePrefix, indent, false)
 				if err != nil || (newPrefix != "" && !this.writeString(newPrefix)) || !this.writeString("</phaseTimes>") {
@@ -1500,7 +1527,7 @@ func (this *httpRequest) writeProfileXML(profile server.Profile, prefix string, 
 
 		if this.CpuTime() > time.Duration(0) &&
 			(!this.writeString(newPrefix) ||
-				!this.writer.printf("<cpuTime>%s</cpuTime>", this.CpuTime().String())) {
+				!this.writer.printf("<cpuTime>%s</cpuTime>", util.FormatDuration(this.CpuTime(), this.DurationStyle()))) {
 
 			logging.Infof("Error writing request CPU time")
 		}
@@ -1527,7 +1554,9 @@ func (this *httpRequest) writeProfileXML(profile server.Profile, prefix string, 
 				if err != nil || !this.writeString(newPrefix) || !this.writeString("<executionTimings>") {
 					logging.Infof("Error writing executionTimings: %v", err)
 				} else {
-					v := value.NewValue(m)
+					v := value.ApplyDurationStyleToValue(this.DurationStyle(), func(s string) bool {
+						return strings.HasSuffix(s, "Time")
+					}, value.NewValue(m))
 					err = v.WriteXML(nil, this.writer.buf(), newValuePrefix, indent, false)
 					if err != nil || !this.writeString(newPrefix) || !this.writeString("</executionTimings>") {
 						logging.Infof("Error writing executionTimings: %v", err)

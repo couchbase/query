@@ -120,8 +120,12 @@ func (this *internalOutput) AddPhaseTime(phase Phases, duration time.Duration) {
 	this.output.AddPhaseTime(phase, duration)
 }
 
-func (this *internalOutput) FmtPhaseTimes() map[string]interface{} {
+func (this *internalOutput) FmtPhaseTimes(s util.DurationStyle) map[string]interface{} {
 	// never used
+	return nil
+}
+
+func (this *internalOutput) RawPhaseTimes() map[string]interface{} {
 	return nil
 }
 

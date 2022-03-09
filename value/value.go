@@ -19,6 +19,7 @@ import (
 	"math/bits"
 	"reflect"
 	"strings"
+	"time"
 
 	json "github.com/couchbase/go_json"
 	"github.com/couchbase/query/util"
@@ -614,4 +615,28 @@ func getFullPrefix(prefix, indent string) string {
 		return _INDENT_CHARS[0:l]
 	}
 	return "\n" + prefix + indent
+}
+
+func ApplyDurationStyleToValue(s util.DurationStyle, filter func(string) bool, v Value) Value {
+	if s == util.LEGACY {
+		return v
+	}
+	for k, f := range v.Fields() {
+		fv := NewValue(f)
+		if fv.Type() == STRING && (filter == nil || filter(k)) {
+			d, err := time.ParseDuration(fv.ToString())
+			if err == nil {
+				v.SetField(k, util.FormatDuration(d, s))
+			}
+		} else if fv.Type() == OBJECT {
+			ApplyDurationStyleToValue(s, filter, fv)
+		} else if fv.Type() == ARRAY {
+			av, ok := fv.Index(0)
+			for i := 1; ok; i++ {
+				ApplyDurationStyleToValue(s, filter, av)
+				av, ok = fv.Index(i)
+			}
+		}
+	}
+	return v
 }

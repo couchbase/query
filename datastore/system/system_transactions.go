@@ -69,6 +69,8 @@ func (b *transactionsKeyspace) Indexers() ([]datastore.Indexer, errors.Error) {
 func (b *transactionsKeyspace) Fetch(keys []string, keysMap map[string]value.AnnotatedValue,
 	context datastore.QueryContext, subPaths []string) (errs errors.Errors) {
 
+	formData := map[string]interface{}{"duration_style": context.DurationStyle().String()}
+
 	// now that the node name can change in flight, use a consistent one across fetches
 	whoAmI := distributed.RemoteAccess().WhoAmI()
 	for _, key := range keys {
@@ -77,8 +79,7 @@ func (b *transactionsKeyspace) Fetch(keys []string, keysMap map[string]value.Ann
 
 		// remote entry
 		if len(nodeName) != 0 && nodeName != whoAmI {
-			distributed.RemoteAccess().GetRemoteDoc(nodeName, localKey,
-				"transactions", "POST",
+			distributed.RemoteAccess().GetRemoteDoc(nodeName, localKey, "transactions", "POST",
 				func(doc map[string]interface{}) {
 					remoteValue := value.NewAnnotatedValue(doc)
 					remoteValue.NewMeta()["keyspace"] = b.fullName
@@ -90,7 +91,7 @@ func (b *transactionsKeyspace) Fetch(keys []string, keysMap map[string]value.Ann
 					if !warn.HasCause(errors.W_SYSTEM_REMOTE_NODE_NOT_FOUND) {
 						context.Warning(warn)
 					}
-				}, distributed.NO_CREDS, "")
+				}, distributed.NO_CREDS, "", formData)
 		} else {
 
 			// local entry
@@ -131,7 +132,7 @@ func (b *transactionsKeyspace) Delete(deletes value.Pairs, context datastore.Que
 						context.Warning(warn)
 					}
 				},
-				distributed.NO_CREDS, "")
+				distributed.NO_CREDS, "", nil)
 
 			// local entry
 		} else {

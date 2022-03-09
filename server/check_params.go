@@ -10,11 +10,11 @@ package server
 
 import (
 	"strconv"
-	"time"
 
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
@@ -63,6 +63,7 @@ const (
 	QUERY_TMP_LIMIT       = "query_tmpspace_limit"
 	USEREPLICA            = "use-replica"
 	NUM_CPUS              = "num-cpus"
+	DURATIONSTYLE         = "duration-style"
 )
 
 type Checker func(interface{}) (bool, errors.Error)
@@ -100,6 +101,7 @@ var CHECKERS = map[string]Checker{
 	QUERY_TMP_LIMIT:       checkNumber,
 	USEREPLICA:            checkTristateString,
 	NODEQUOTAVALPERCENT:   checkPercent,
+	DURATIONSTYLE:         checkDurationStyle,
 }
 
 var CHECKERS_MIN = map[string]int{
@@ -222,12 +224,8 @@ func checkDuration(val interface{}) (bool, errors.Error) {
 	switch val := val.(type) {
 	case string:
 		if val != "" {
-			// valid units are "ns", "us", "ms", "s", "m", "h"
-			lc := val[len(val)-1]
-			if lc == 's' || lc == 'm' || lc == 'h' {
-				_, e := time.ParseDuration(val)
-				return e == nil, nil
-			}
+			_, e := util.ParseDurationStyle(val, util.DEFAULT)
+			return e == nil, nil
 		}
 	}
 	return false, nil
@@ -265,4 +263,17 @@ func checkPercent(val interface{}) (bool, errors.Error) {
 		}
 	}
 	return false, nil
+}
+
+func checkDurationStyle(val interface{}) (bool, errors.Error) {
+	style, is_string := val.(string)
+	if !is_string {
+		return false, nil
+	}
+	s, ok := util.IsDurationStyle(style)
+	// permit only styles the UI can parse
+	if ok && s != util.LEGACY && s != util.COMPATIBLE {
+		ok = false
+	}
+	return ok, nil
 }

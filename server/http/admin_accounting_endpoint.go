@@ -389,7 +389,8 @@ func doVitals(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, 
 			return nil, err
 		}
 		acctStore := endpoint.server.AccountingStore()
-		return acctStore.Vitals()
+		durStyle, _ := util.IsDurationStyle(req.FormValue("duration_style"))
+		return acctStore.Vitals(durStyle)
 	default:
 		return nil, errors.NewServiceErrorHttpMethod(req.Method)
 	}
@@ -399,7 +400,7 @@ func CaptureVitals(endpoint *HttpEndpoint, w io.Writer) error {
 	acctStore := endpoint.server.AccountingStore()
 	var err error
 	var v map[string]interface{}
-	v, err = acctStore.Vitals()
+	v, err = acctStore.Vitals(util.SECONDS)
 	if err != nil {
 		return err
 	}
@@ -550,6 +551,7 @@ func doPrepared(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 			af.EventTypeId = audit.API_DO_NOT_AUDIT
 		}
 
+		durStyle, _ := util.IsDurationStyle(req.FormValue("duration_style"))
 		profiling := req.Method == "POST"
 		var res interface{}
 		prepareds.PreparedDo(name, func(entry *prepareds.CacheEntry) {
@@ -558,7 +560,7 @@ func doPrepared(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 			if err1 != nil || (userName != "" && entry.Prepared.Tenant() != tenantName) {
 				return
 			}
-			res = preparedWorkHorse(entry, profiling, doRedact(req))
+			res = preparedWorkHorse(entry, profiling, doRedact(req), durStyle)
 		})
 		return res, nil
 	} else {
@@ -566,7 +568,7 @@ func doPrepared(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 	}
 }
 
-func preparedWorkHorse(entry *prepareds.CacheEntry, profiling bool, redact bool) interface{} {
+func preparedWorkHorse(entry *prepareds.CacheEntry, profiling bool, redact bool, durStyle util.DurationStyle) interface{} {
 	itemMap := map[string]interface{}{
 		"name":            entry.Prepared.Name(),
 		"uses":            entry.Uses,
@@ -602,14 +604,12 @@ func preparedWorkHorse(entry *prepareds.CacheEntry, profiling bool, redact bool)
 	// only give times for entries that have completed at least one execution
 	if entry.Uses > 0 && entry.RequestTime > 0 {
 		itemMap["lastUse"] = entry.LastUse.Format(util.DEFAULT_FORMAT)
-		itemMap["avgElapsedTime"] = (time.Duration(entry.RequestTime) /
-			time.Duration(entry.Uses)).String()
-		itemMap["avgServiceTime"] = (time.Duration(entry.ServiceTime) /
-			time.Duration(entry.Uses)).String()
-		itemMap["minElapsedTime"] = time.Duration(entry.MinRequestTime).String()
-		itemMap["minServiceTime"] = time.Duration(entry.MinServiceTime).String()
-		itemMap["maxElapsedTime"] = time.Duration(entry.MaxRequestTime).String()
-		itemMap["maxServiceTime"] = time.Duration(entry.MaxServiceTime).String()
+		itemMap["avgElapsedTime"] = util.FormatDuration((time.Duration(entry.RequestTime) / time.Duration(entry.Uses)), durStyle)
+		itemMap["avgServiceTime"] = util.FormatDuration((time.Duration(entry.ServiceTime) / time.Duration(entry.Uses)), durStyle)
+		itemMap["minElapsedTime"] = util.FormatDuration(time.Duration(entry.MinRequestTime), durStyle)
+		itemMap["minServiceTime"] = util.FormatDuration(time.Duration(entry.MinServiceTime), durStyle)
+		itemMap["maxElapsedTime"] = util.FormatDuration(time.Duration(entry.MaxRequestTime), durStyle)
+		itemMap["maxServiceTime"] = util.FormatDuration(time.Duration(entry.MaxServiceTime), durStyle)
 	}
 	return itemMap
 }
@@ -627,9 +627,10 @@ func doPrepareds(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Reques
 		data := make([]interface{}, 0, numPrepareds)
 		profiling := req.Method == "POST"
 
+		durStyle, _ := util.IsDurationStyle(req.FormValue("duration_style"))
 		redact := doRedact(req)
 		prepareds.PreparedsForeach(func(name string, d *prepareds.CacheEntry) bool {
-			p := preparedWorkHorse(d, profiling, redact)
+			p := preparedWorkHorse(d, profiling, redact, durStyle)
 			data = append(data, p)
 			return true
 		}, nil)
@@ -669,6 +670,7 @@ func doFunction(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 
 		var res interface{}
 
+		durStyle, _ := util.IsDurationStyle(req.FormValue("duration_style"))
 		functions.FunctionDo(name, func(entry *functions.FunctionEntry) {
 			itemMap := map[string]interface{}{
 				"uses": entry.Uses,
@@ -679,10 +681,10 @@ func doFunction(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 			// only give times for entries that have completed at least one execution
 			if entry.Uses > 0 && entry.ServiceTime > 0 {
 				itemMap["lastUse"] = entry.LastUse.Format(util.DEFAULT_FORMAT)
-				itemMap["avgServiceTime"] = (time.Duration(entry.ServiceTime) /
-					time.Duration(entry.Uses)).String()
-				itemMap["minServiceTime"] = time.Duration(entry.MinServiceTime).String()
-				itemMap["maxServiceTime"] = time.Duration(entry.MaxServiceTime).String()
+				itemMap["avgServiceTime"] =
+					util.FormatDuration((time.Duration(entry.ServiceTime) / time.Duration(entry.Uses)), durStyle)
+				itemMap["minServiceTime"] = util.FormatDuration(time.Duration(entry.MinServiceTime), durStyle)
+				itemMap["maxServiceTime"] = util.FormatDuration(time.Duration(entry.MaxServiceTime), durStyle)
 			}
 			res = itemMap
 		})
@@ -692,7 +694,9 @@ func doFunction(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 	}
 }
 
-func doFunctions(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
+func doFunctions(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
+	interface{}, errors.Error) {
+
 	af.EventTypeId = audit.API_ADMIN_FUNCTIONS
 	switch req.Method {
 	case "GET":
@@ -836,6 +840,7 @@ func doTask(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af
 		}
 
 		var res interface{}
+		durStyle, _ := util.IsDurationStyle(req.FormValue("duration_style"))
 
 		scheduler.TaskDo(name, func(entry *scheduler.TaskEntry) {
 			itemMap := map[string]interface{}{
@@ -846,7 +851,7 @@ func doTask(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af
 				"state":        entry.State,
 				"queryContext": entry.QueryContext,
 				"submitTime":   entry.PostTime.Format(util.DEFAULT_FORMAT),
-				"delay":        entry.Delay.String(),
+				"delay":        util.FormatDuration(entry.Delay, durStyle),
 			}
 			if entry.Results != nil {
 				itemMap["results"] = entry.Results
@@ -890,6 +895,7 @@ func doTasks(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, a
 		data := make([]map[string]interface{}, numTasks)
 		i := 0
 
+		durStyle, _ := util.IsDurationStyle(req.FormValue("duration_style"))
 		snapshot := func(name string, d *scheduler.TaskEntry) bool {
 
 			// FIXME quick hack to avoid overruns
@@ -916,7 +922,7 @@ func doTasks(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, a
 				data[i]["errors"] = errors
 			}
 			data[i]["submitTime"] = d.PostTime.Format(util.DEFAULT_FORMAT)
-			data[i]["delay"] = d.Delay.String()
+			data[i]["delay"] = util.FormatDuration(d.Delay, durStyle)
 			if !d.StartTime.IsZero() {
 				data[i]["startTime"] = d.StartTime.Format(util.DEFAULT_FORMAT)
 			}
@@ -1464,7 +1470,8 @@ func doActiveRequest(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Re
 		if err1 != nil {
 			return nil, err1
 		}
-		return processActiveRequest(endpoint, requestId, impersonate, (req.Method == "POST"), doRedact(req)), nil
+		durStyle, _ := util.IsDurationStyle(req.FormValue("duration_style"))
+		return processActiveRequest(endpoint, requestId, impersonate, (req.Method == "POST"), doRedact(req), durStyle), nil
 
 	} else if req.Method == "DELETE" {
 		err, _ := endpoint.verifyCredentialsFromRequest("system:active_requests", auth.PRIV_SYSTEM_READ, req, af)
@@ -1491,7 +1498,9 @@ func doActiveRequest(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Re
 	}
 }
 
-func processActiveRequest(endpoint *HttpEndpoint, requestId string, userName string, profiling bool, redact bool) interface{} {
+func processActiveRequest(endpoint *HttpEndpoint, requestId string, userName string, profiling bool, redact bool,
+	durStyle util.DurationStyle) interface{} {
+
 	var res interface{}
 
 	_ = endpoint.actives.Get(requestId, func(request server.Request) {
@@ -1501,12 +1510,14 @@ func processActiveRequest(endpoint *HttpEndpoint, requestId string, userName str
 				return
 			}
 		}
-		res = activeRequestWorkHorse(endpoint, request, profiling, redact)
+		res = activeRequestWorkHorse(endpoint, request, profiling, redact, durStyle)
 	})
 	return res
 }
 
-func activeRequestWorkHorse(endpoint *HttpEndpoint, request server.Request, profiling bool, redact bool) interface{} {
+func activeRequestWorkHorse(endpoint *HttpEndpoint, request server.Request, profiling bool, redact bool,
+	durStyle util.DurationStyle) interface{} {
+
 	reqMap := map[string]interface{}{
 		"requestId": request.Id().String(),
 	}
@@ -1532,17 +1543,17 @@ func activeRequestWorkHorse(endpoint *HttpEndpoint, request server.Request, prof
 		reqMap["txid"] = request.TxId()
 	}
 	reqMap["requestTime"] = request.RequestTime().Format(expression.DEFAULT_FORMAT)
-	reqMap["elapsedTime"] = time.Since(request.RequestTime()).String()
+	reqMap["elapsedTime"] = util.FormatDuration(time.Since(request.RequestTime()), durStyle)
 	if request.ServiceTime().IsZero() {
-		reqMap["executionTime"] = util.ZERO_DURATION_STR
+		reqMap["executionTime"] = util.FormatDuration(0, durStyle)
 	} else {
-		reqMap["executionTime"] = time.Since(request.ServiceTime()).String()
+		reqMap["executionTime"] = util.FormatDuration(time.Since(request.ServiceTime()), durStyle)
 	}
 	if !request.TransactionStartTime().IsZero() {
-		reqMap["transactionElapsedTime"] = time.Since(request.TransactionStartTime()).String()
+		reqMap["transactionElapsedTime"] = util.FormatDuration(time.Since(request.TransactionStartTime()), durStyle)
 		remTime := request.TxTimeout() - time.Since(request.TransactionStartTime())
 		if remTime > 0 {
-			reqMap["transactionRemainingTime"] = remTime.String()
+			reqMap["transactionRemainingTime"] = util.FormatDuration(remTime, durStyle)
 		}
 	}
 	reqMap["state"] = request.State().StateName()
@@ -1566,7 +1577,7 @@ func activeRequestWorkHorse(endpoint *HttpEndpoint, request server.Request, prof
 	if p != nil {
 		reqMap["phaseOperators"] = p
 	}
-	p = request.Output().FmtPhaseTimes()
+	p = request.Output().FmtPhaseTimes(durStyle)
 	if p != nil {
 		reqMap["phaseTimes"] = p
 	}
@@ -1585,15 +1596,17 @@ func activeRequestWorkHorse(endpoint *HttpEndpoint, request server.Request, prof
 		// TODO - check lifetime of entry
 		// by the time we marshal, is this still valid?
 		if (prof == server.ProfOn || prof == server.ProfBench) && t != nil {
-			reqMap["timings"] = t
+			reqMap["timings"] = value.ApplyDurationStyleToValue(durStyle, func(s string) bool {
+				return strings.HasSuffix(s, "Time")
+			}, value.NewValue(t))
 			p = request.Output().FmtOptimizerEstimates(t)
 			if p != nil {
-				reqMap["optimizerEstimates"] = p
+				reqMap["optimizerEstimates"] = value.NewValue(p)
 			}
 		}
 		cpuTime := request.CpuTime()
 		if cpuTime > time.Duration(0) {
-			reqMap["cpuTime"] = cpuTime.String()
+			reqMap["cpuTime"] = util.FormatDuration(cpuTime, durStyle)
 		}
 
 		var ctrl bool
@@ -1632,7 +1645,7 @@ func activeRequestWorkHorse(endpoint *HttpEndpoint, request server.Request, prof
 	}
 	throttleTime := request.ThrottleTime()
 	if throttleTime > time.Duration(0) {
-		reqMap["throttleTime"] = throttleTime.String()
+		reqMap["throttleTime"] = util.FormatDuration(throttleTime, durStyle)
 	}
 
 	return reqMap
@@ -1652,10 +1665,11 @@ func doActiveRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.R
 
 	requests := make([]interface{}, 0, numRequests)
 	profiling := req.Method == "POST"
+	durStyle, _ := util.IsDurationStyle(req.FormValue("duration_style"))
 
 	redact := doRedact(req)
 	endpoint.actives.ForEach(func(requestId string, request server.Request) bool {
-		r := activeRequestWorkHorse(endpoint, request, profiling, redact)
+		r := activeRequestWorkHorse(endpoint, request, profiling, redact, durStyle)
 		requests = append(requests, r)
 		return true
 	}, nil)
@@ -1675,7 +1689,7 @@ func CaptureActiveRequests(endpoint *HttpEndpoint, w io.Writer) error {
 			_, err = w.Write([]byte{','})
 		}
 		if err == nil {
-			r := activeRequestWorkHorse(endpoint, request, true, true)
+			r := activeRequestWorkHorse(endpoint, request, true, true, util.GetDurationStyle())
 			err = json.MarshalNoEscapeToBuffer(r, &buf)
 			if err == nil {
 				_, err = buf.WriteTo(w)
@@ -1714,7 +1728,8 @@ func doCompletedRequest(endpoint *HttpEndpoint, w http.ResponseWriter, req *http
 		if err1 != nil {
 			return nil, err1
 		}
-		return processCompletedRequest(requestId, impersonate, (req.Method == "POST"), doRedact(req)), nil
+		durStyle, _ := util.IsDurationStyle(req.FormValue("duration_style"))
+		return processCompletedRequest(requestId, impersonate, (req.Method == "POST"), doRedact(req), durStyle), nil
 	} else if req.Method == "DELETE" {
 		err, _ := endpoint.verifyCredentialsFromRequest("system:completed_requests", auth.PRIV_SYSTEM_READ, req, af)
 		if err != nil {
@@ -1737,19 +1752,23 @@ func doCompletedRequest(endpoint *HttpEndpoint, w http.ResponseWriter, req *http
 	}
 }
 
-func processCompletedRequest(requestId string, userName string, profiling bool, redact bool) interface{} {
+func processCompletedRequest(requestId string, userName string, profiling bool, redact bool,
+	durStyle util.DurationStyle) interface{} {
+
 	var res interface{}
 
 	server.RequestDo(requestId, func(request *server.RequestLogEntry) {
 		if userName != "" && userName != request.Users {
 			return
 		}
-		res = completedRequestWorkHorse(request, profiling, redact)
+		res = completedRequestWorkHorse(request, profiling, redact, durStyle)
 	})
 	return res
 }
 
-func completedRequestWorkHorse(request *server.RequestLogEntry, profiling bool, redact bool) interface{} {
+func completedRequestWorkHorse(request *server.RequestLogEntry, profiling bool, redact bool,
+	durStyle util.DurationStyle) interface{} {
+
 	reqMap := map[string]interface{}{
 		"requestId": request.RequestId,
 	}
@@ -1785,13 +1804,13 @@ func completedRequestWorkHorse(request *server.RequestLogEntry, profiling bool, 
 		reqMap["txid"] = request.TxId
 	}
 	reqMap["requestTime"] = request.Time.Format(expression.DEFAULT_FORMAT)
-	reqMap["elapsedTime"] = request.ElapsedTime.String()
-	reqMap["serviceTime"] = request.ServiceTime.String()
+	reqMap["elapsedTime"] = util.FormatDuration(request.ElapsedTime, durStyle)
+	reqMap["serviceTime"] = util.FormatDuration(request.ServiceTime, durStyle)
 	if request.TransactionElapsedTime > 0 {
-		reqMap["transactionElapsedTime"] = request.TransactionElapsedTime.String()
+		reqMap["transactionElapsedTime"] = util.FormatDuration(request.TransactionElapsedTime, durStyle)
 	}
 	if request.TransactionRemainingTime > 0 {
-		reqMap["transactionRemainingTime"] = request.TransactionRemainingTime.String()
+		reqMap["transactionRemainingTime"] = util.FormatDuration(request.TransactionRemainingTime, durStyle)
 	}
 	reqMap["resultCount"] = request.ResultCount
 	reqMap["resultSize"] = request.ResultSize
@@ -1806,7 +1825,15 @@ func completedRequestWorkHorse(request *server.RequestLogEntry, profiling bool, 
 		reqMap["phaseOperators"] = request.PhaseOperators
 	}
 	if request.PhaseTimes != nil {
-		reqMap["phaseTimes"] = request.PhaseTimes
+		m := make(map[string]interface{}, len(request.PhaseTimes))
+		for k, v := range request.PhaseTimes {
+			if d, ok := v.(time.Duration); ok {
+				m[k] = util.FormatDuration(d, durStyle)
+			} else {
+				m[k] = v
+			}
+		}
+		reqMap["phaseTimes"] = m
 	}
 	if request.UsedMemory != 0 {
 		reqMap["usedMemory"] = request.UsedMemory
@@ -1824,10 +1851,12 @@ func completedRequestWorkHorse(request *server.RequestLogEntry, profiling bool, 
 		}
 		timings := request.Timings()
 		if timings != nil {
-			reqMap["timings"] = value.NewValue(interfaceRedacted(timings, redact))
+			reqMap["timings"] = value.ApplyDurationStyleToValue(durStyle, func(s string) bool {
+				return strings.HasSuffix(s, "Time")
+			}, value.NewValue(interfaceRedacted(timings, redact)))
 		}
 		if request.CpuTime > time.Duration(0) {
-			reqMap["cpuTime"] = request.CpuTime.String()
+			reqMap["cpuTime"] = util.FormatDuration(request.CpuTime, durStyle)
 		}
 		optEstimates := request.OptEstimates()
 		if optEstimates != nil {
@@ -1850,7 +1879,7 @@ func completedRequestWorkHorse(request *server.RequestLogEntry, profiling bool, 
 		reqMap["userAgent"] = request.UserAgent
 	}
 	if request.ThrottleTime > time.Duration(0) {
-		reqMap["throttleTime"] = request.ThrottleTime.String()
+		reqMap["throttleTime"] = util.FormatDuration(request.ThrottleTime, durStyle)
 	}
 	return reqMap
 }
@@ -1866,9 +1895,10 @@ func doCompletedRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *htt
 	requests := make([]interface{}, 0, numRequests)
 	profiling := req.Method == "POST"
 
+	durStyle, _ := util.IsDurationStyle(req.FormValue("duration_style"))
 	redact := doRedact(req)
 	server.RequestsForeach(func(requestId string, request *server.RequestLogEntry) bool {
-		r := completedRequestWorkHorse(request, profiling, redact)
+		r := completedRequestWorkHorse(request, profiling, redact, durStyle)
 		requests = append(requests, r)
 		return true
 	}, nil)
@@ -1888,7 +1918,7 @@ func CaptureCompletedRequests(w io.Writer) error {
 			_, err = w.Write([]byte{','})
 		}
 		if err == nil {
-			r := completedRequestWorkHorse(request, true, true)
+			r := completedRequestWorkHorse(request, true, true, util.GetDurationStyle())
 			err = json.MarshalNoEscapeToBuffer(r, &buf)
 			if err == nil {
 				_, err = buf.WriteTo(w)

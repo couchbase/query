@@ -148,19 +148,19 @@ func (sa *simpleAuditable) PreparedId() string {
 	return sa.preparedId
 }
 
-func (sa *simpleAuditable) ElapsedTime() time.Duration {
-	return sa.elapsedTime
+func (sa *simpleAuditable) ElapsedTime() float64 {
+	return sa.elapsedTime.Seconds()
 }
 
-func (sa *simpleAuditable) TransactionElapsedTime() time.Duration {
-	return sa.transactionElapsedTime
+func (sa *simpleAuditable) TransactionElapsedTime() float64 {
+	return sa.transactionElapsedTime.Seconds()
 }
 func (sa *simpleAuditable) TransactionRemainingTime() string {
 	return ""
 }
 
-func (sa *simpleAuditable) ExecutionTime() time.Duration {
-	return sa.executionTime
+func (sa *simpleAuditable) ExecutionTime() float64 {
+	return sa.executionTime.Seconds()
 }
 
 func (sa *simpleAuditable) EventResultCount() int {

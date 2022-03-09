@@ -58,6 +58,8 @@ func (b *vitalsKeyspace) Indexers() ([]datastore.Indexer, errors.Error) {
 func (b *vitalsKeyspace) Fetch(keys []string, keysMap map[string]value.AnnotatedValue,
 	context datastore.QueryContext, subPaths []string) (errs errors.Errors) {
 
+	formData := map[string]interface{}{"duration_style": context.DurationStyle().String()}
+
 	whoAmI := distributed.RemoteAccess().WhoAmI()
 	for _, key := range keys {
 
@@ -69,7 +71,7 @@ func (b *vitalsKeyspace) Fetch(keys []string, keysMap map[string]value.Annotated
 
 		// currently we query ourselves because there isn't a direct path from datastore/system to server
 		if nodeName == whoAmI {
-			doc, err := b.namespace.store.acctStore.Vitals()
+			doc, err := b.namespace.store.acctStore.Vitals(context.DurationStyle())
 			if err != nil {
 				context.Error(err)
 			}
@@ -79,8 +81,7 @@ func (b *vitalsKeyspace) Fetch(keys []string, keysMap map[string]value.Annotated
 			remoteValue.SetId(key)
 			keysMap[key] = remoteValue
 		} else {
-			distributed.RemoteAccess().GetRemoteDoc(nodeName, "",
-				"vitals", "GET",
+			distributed.RemoteAccess().GetRemoteDoc(nodeName, "", "vitals", "GET",
 				func(doc map[string]interface{}) {
 					remoteValue := value.NewAnnotatedValue(doc)
 					remoteValue.SetField("node", key)
@@ -92,7 +93,7 @@ func (b *vitalsKeyspace) Fetch(keys []string, keysMap map[string]value.Annotated
 					if !warn.HasCause(errors.W_SYSTEM_REMOTE_NODE_NOT_FOUND) {
 						context.Warning(warn)
 					}
-				}, distributed.NO_CREDS, "")
+				}, distributed.NO_CREDS, "", formData)
 		}
 
 	}

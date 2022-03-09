@@ -9,6 +9,7 @@
 package system
 
 import (
+	"strings"
 	"time"
 
 	"github.com/couchbase/query/datastore"
@@ -18,7 +19,6 @@ import (
 	"github.com/couchbase/query/expression/parser"
 	"github.com/couchbase/query/server"
 	"github.com/couchbase/query/timestamp"
-	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
@@ -98,6 +98,8 @@ func (b *activeRequestsKeyspace) Fetch(keys []string, keysMap map[string]value.A
 		creds = distributed.Creds(userName)
 	}
 
+	formData := map[string]interface{}{"duration_style": context.DurationStyle().String()}
+
 	// now that the node name can change in flight, use a consistent one across fetches
 	whoAmI := distributed.RemoteAccess().WhoAmI()
 	for _, key := range keys {
@@ -106,31 +108,37 @@ func (b *activeRequestsKeyspace) Fetch(keys []string, keysMap map[string]value.A
 
 		// remote entry
 		if len(nodeName) != 0 && nodeName != whoAmI {
-			distributed.RemoteAccess().GetRemoteDoc(nodeName, localKey,
-				"active_requests", "POST",
+			distributed.RemoteAccess().GetRemoteDoc(nodeName, localKey, "active_requests", "POST",
 				func(doc map[string]interface{}) {
-
 					t, ok := doc["timings"]
 					if ok {
 						delete(doc, "timings")
+					}
+					o, ook := doc["optimizerEstimates"]
+					if ook {
+						delete(doc, "optimizerEstimates")
 					}
 					remoteValue := value.NewAnnotatedValue(doc)
 					remoteValue.SetField("node", node)
 					meta := remoteValue.NewMeta()
 					meta["keyspace"] = b.fullName
 					if ok {
-						meta["plan"] = t
+						meta["plan"] = value.ApplyDurationStyleToValue(context.DurationStyle(), func(s string) bool {
+							return strings.HasSuffix(s, "Time")
+						}, value.NewValue(t))
+					}
+					if ook {
+						meta["optimizerEstimates"] = value.NewValue(o)
 					}
 					remoteValue.SetId(key)
 					keysMap[key] = remoteValue
 				},
-
 				func(warn errors.Error) {
 					if !warn.HasCause(errors.W_SYSTEM_REMOTE_NODE_NOT_FOUND) {
 						context.Warning(warn)
 					}
 				},
-				creds, "")
+				creds, "", formData)
 		} else {
 			var item value.AnnotatedValue
 
@@ -140,15 +148,15 @@ func (b *activeRequestsKeyspace) Fetch(keys []string, keysMap map[string]value.A
 					return
 				}
 
-				et := util.ZERO_DURATION_STR
+				et := context.FormatDuration(0)
 				if !request.ServiceTime().IsZero() {
-					et = time.Since(request.ServiceTime()).String()
+					et = context.FormatDuration(time.Since(request.ServiceTime()))
 				}
 
 				item = value.NewAnnotatedValue(map[string]interface{}{
 					"requestId":       localKey,
 					"requestTime":     request.RequestTime().Format(expression.DEFAULT_FORMAT),
-					"elapsedTime":     time.Since(request.RequestTime()).String(),
+					"elapsedTime":     context.FormatDuration(time.Since(request.RequestTime())),
 					"executionTime":   et,
 					"state":           request.State().StateName(),
 					"scanConsistency": request.ScanConsistency(),
@@ -183,17 +191,17 @@ func (b *activeRequestsKeyspace) Fetch(keys []string, keysMap map[string]value.A
 					item.SetField("txid", request.TxId())
 				}
 				if !request.TransactionStartTime().IsZero() {
-					item.SetField("transactionElapsedTime", time.Since(request.TransactionStartTime()).String())
+					item.SetField("transactionElapsedTime", context.FormatDuration(time.Since(request.TransactionStartTime())))
 					remTime := request.TxTimeout() - time.Since(request.TransactionStartTime())
 					if remTime > 0 {
-						item.SetField("transactionRemainingTime", remTime.String())
+						item.SetField("transactionRemainingTime", context.FormatDuration(remTime))
 					}
 				}
 				if request.ThrottleTime() > time.Duration(0) {
-					item.SetField("throttleTime", request.ThrottleTime().String())
+					item.SetField("throttleTime", context.FormatDuration(request.ThrottleTime()))
 				}
 				if request.CpuTime() > time.Duration(0) {
-					item.SetField("cpuTime", request.CpuTime().String())
+					item.SetField("cpuTime", context.FormatDuration(request.CpuTime()))
 				}
 				p := request.Output().FmtPhaseCounts()
 				if p != nil {
@@ -203,7 +211,7 @@ func (b *activeRequestsKeyspace) Fetch(keys []string, keysMap map[string]value.A
 				if p != nil {
 					item.SetField("phaseOperators", p)
 				}
-				p = request.Output().FmtPhaseTimes()
+				p = request.Output().FmtPhaseTimes(context.DurationStyle())
 				if p != nil {
 					item.SetField("phaseTimes", p)
 				}
@@ -257,7 +265,9 @@ func (b *activeRequestsKeyspace) Fetch(keys []string, keysMap map[string]value.A
 
 				t := request.GetTimings()
 				if t != nil {
-					meta["plan"] = value.NewMarshalledValue(t)
+					meta["plan"] = value.ApplyDurationStyleToValue(context.DurationStyle(), func(s string) bool {
+						return strings.HasSuffix(s, "Time")
+					}, value.NewMarshalledValue(t))
 					optEstimates := request.Output().FmtOptimizerEstimates(t)
 					if optEstimates != nil {
 						meta["optimizerEstimates"] = value.NewMarshalledValue(optEstimates)
@@ -304,7 +314,7 @@ func (b *activeRequestsKeyspace) Delete(deletes value.Pairs, context datastore.Q
 						context.Warning(warn)
 					}
 				},
-				creds, "")
+				creds, "", nil)
 			done = true
 
 			// local entry

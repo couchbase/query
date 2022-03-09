@@ -42,7 +42,8 @@ func (this systemRemoteStub) GetRemoteKeys(nodes []string, endpoint string, keyF
 
 // get a specified remote document from a remote node
 func (this systemRemoteStub) GetRemoteDoc(node string, key string, endpoint string, command string,
-	docFn func(doc map[string]interface{}), warnFn func(warn errors.Error), creds Creds, authToken string) {
+	docFn func(doc map[string]interface{}), warnFn func(warn errors.Error), creds Creds, authToken string,
+	formData map[string]interface{}) {
 	// ditto
 }
 

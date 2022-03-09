@@ -17,6 +17,7 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	goErr "errors"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -321,7 +322,9 @@ func (this *systemRemoteHttp) GetRemoteKeys(nodes []string, endpoint string,
 // get a specified remote document from a remote node
 // Note - the remote "node" must be the node name
 func (this *systemRemoteHttp) GetRemoteDoc(node string, key string, endpoint string, command string,
-	docFn func(map[string]interface{}), warnFn func(warn errors.Error), creds distributed.Creds, authToken string) {
+	docFn func(map[string]interface{}), warnFn func(warn errors.Error), creds distributed.Creds, authToken string,
+	formData map[string]interface{}) {
+
 	var loc string
 	var body []byte
 	var doc map[string]interface{}
@@ -341,7 +344,21 @@ func (this *systemRemoteHttp) GetRemoteDoc(node string, key string, endpoint str
 		loc = endpoint
 	}
 
-	body, opErr := this.doRemoteOp(queryNode, loc, command, "", "fetch", creds, authToken, cp)
+	data := ""
+	if len(formData) > 0 {
+		form := url.Values{}
+		for k, v := range formData {
+			form.Set(k, fmt.Sprintf("%v", v))
+		}
+		switch command {
+		case http.MethodPost:
+			data = form.Encode()
+		case http.MethodGet:
+			loc += "?" + form.Encode()
+		}
+	}
+
+	body, opErr := this.doRemoteOp(queryNode, loc, command, data, "fetch", creds, authToken, cp)
 	if opErr != nil {
 		if warnFn != nil {
 			warnFn(opErr)

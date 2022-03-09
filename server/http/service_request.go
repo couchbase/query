@@ -785,18 +785,18 @@ func handleUseReplica(rv *httpRequest, httpArgs httpRequestArgs, parm string, va
 }
 
 // For audit.Auditable interface.
-func (this *httpRequest) ElapsedTime() time.Duration {
-	return this.elapsedTime
+func (this *httpRequest) ElapsedTime() float64 {
+	return this.elapsedTime.Seconds()
 }
 
 // For audit.Auditable interface.
-func (this *httpRequest) ExecutionTime() time.Duration {
-	return this.executionTime
+func (this *httpRequest) ExecutionTime() float64 {
+	return this.executionTime.Seconds()
 }
 
 // For audit.Auditable interface.
-func (this *httpRequest) TransactionElapsedTime() time.Duration {
-	return this.transactionElapsedTime
+func (this *httpRequest) TransactionElapsedTime() float64 {
+	return this.transactionElapsedTime.Seconds()
 }
 
 // For audit.Auditable interface.
@@ -878,7 +878,7 @@ func (this *httpRequest) TransactionRemainingTime() string {
 	if !this.TransactionStartTime().IsZero() && this.Type() != "COMMIT" && this.Type() != "ROLLBACK" {
 		remTime := this.TxTimeout() - time.Since(this.TransactionStartTime())
 		if remTime > 0 {
-			return remTime.String()
+			return util.FormatDuration(remTime, this.DurationStyle())
 		}
 	}
 	return ""
@@ -933,6 +933,7 @@ const ( // Request argument names
 	SORT_PROJECTION    = "sort_projection"
 	LOGLEVEL           = "loglevel"
 	USE_REPLICA        = "use_replica"
+	DURATION_STYLE     = "duration_style"
 )
 
 type argHandler struct {
@@ -990,6 +991,7 @@ var _PARAMETERS = map[string]*argHandler{
 	SORT_PROJECTION: {handleSortProjection, false},
 	LOGLEVEL:        {handleLogLevel, false},
 	USE_REPLICA:     {handleUseReplica, false},
+	DURATION_STYLE:  {handleDurationStyle, false},
 }
 
 // common storage for the httpArgs implementations
@@ -2231,30 +2233,19 @@ func addNamedArg(args map[string]value.Value, name string, arg value.Value) map[
 }
 
 // helper function to create a time.Duration instance from a given string.
-// There must be a unit - valid units are "ns", "us", "ms", "s", "m", "h"
-func newDuration(s string) (duration time.Duration, err errors.Error) {
+func newDuration(s string) (time.Duration, errors.Error) {
 
 	// handle empty REST parameters by returning a zero duration
 	if s == "" {
-		return
+		return time.Duration(0), nil
 	}
 
-	// Error if given string has no unit
-	last_char := s[len(s)-1]
-	if last_char != 's' && last_char != 'm' && last_char != 'h' {
-		err = errors.NewServiceErrorBadValue(nil,
-			fmt.Sprintf("duration value %s: missing or incorrect unit "+
-				"(valid units: ns, us, ms, s, m, h)", s))
+	var err errors.Error
+	d, e := util.ParseDurationStyle(s, util.DEFAULT)
+	if e != nil {
+		err = errors.NewServiceErrorBadValue(go_errors.New("Unable to parse duration: "+s), "duration")
 	}
-	if err == nil {
-		d, e := time.ParseDuration(s)
-		if e != nil {
-			err = errors.NewServiceErrorBadValue(go_errors.New("Unable to parse duration: "+s), "duration")
-		} else {
-			duration = d
-		}
-	}
-	return
+	return d, err
 }
 
 /*
@@ -2306,4 +2297,14 @@ func txDataValidation(tgt interface{}) (err error) {
 
 func getControlsRequest(a httpRequestArgs, parm string, val interface{}) (value.Tristate, errors.Error) {
 	return a.getTristateVal(parm, val)
+}
+
+func handleDurationStyle(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+	styleStr, err := httpArgs.getStringVal(parm, val)
+	if err == nil {
+		if style, ok := util.IsDurationStyle(styleStr); ok {
+			rv.SetDurationStyle(style)
+		}
+	}
+	return err
 }

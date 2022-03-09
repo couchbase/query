@@ -92,9 +92,9 @@ type Auditable interface {
 	PreparedId() string
 
 	// Metrics
-	ElapsedTime() time.Duration
-	ExecutionTime() time.Duration
-	TransactionElapsedTime() time.Duration
+	ElapsedTime() float64
+	ExecutionTime() float64
+	TransactionElapsedTime() float64
 	TransactionRemainingTime() string
 	EventResultCount() int
 	EventResultSize() int

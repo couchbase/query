@@ -234,6 +234,25 @@ var _SETTERS = map[string]Setter{
 		}
 		return nil
 	},
+	DURATIONSTYLE: func(s *Server, o interface{}) errors.Error {
+		var ok bool
+		var str string
+		var style util.DurationStyle
+		if str, ok = o.(string); ok {
+			if style, ok = util.IsDurationStyle(str); ok {
+				// permit only styles that the UI can parse as the default
+				if style == util.LEGACY || style == util.COMPATIBLE {
+					util.SetDurationStyle(style)
+				} else {
+					ok = false
+				}
+			}
+		}
+		if !ok {
+			return errors.NewServiceErrorBadValue(nil, "settings")
+		}
+		return nil
+	},
 	/*
 	   	"enforce_limits": func(s *Server, o interface{}) errors.Error {
 	                   s.SettingsCallback()("enforce_limits", o)
@@ -295,7 +314,7 @@ func getHexNumber(o interface{}) int64 {
 func getDuration(o interface{}) time.Duration {
 	switch o := o.(type) {
 	case string:
-		if d, e := time.ParseDuration(o); e == nil {
+		if d, e := util.ParseDurationStyle(o, util.DEFAULT); e == nil {
 			return d
 		}
 	}
@@ -535,7 +554,7 @@ func FillSettings(settings map[string]interface{}, srvr *Server) map[string]inte
 	settings[PRETTY] = srvr.Pretty()
 	settings[MAXINDEXAPI] = srvr.MaxIndexAPI()
 	settings[N1QLFEATCTRL] = fmt.Sprintf("0x%x", util.GetN1qlFeatureControl())
-	settings[TXTIMEOUT] = srvr.TxTimeout().String()
+	settings[TXTIMEOUT] = util.OutputDuration(srvr.TxTimeout())
 	settings = GetProfileAdmin(settings, srvr)
 	settings = GetControlsAdmin(settings, srvr)
 	settings[AUTOPREPARE] = srvr.AutoPrepare()
@@ -556,6 +575,7 @@ func FillSettings(settings map[string]interface{}, srvr *Server) map[string]inte
 	settings[REQUESTERRORLIMIT] = srvr.RequestErrorLimit()
 	settings[USEREPLICA] = srvr.UseReplicaToString()
 	settings[NUM_CPUS] = util.NumCPU()
+	settings[DURATIONSTYLE] = util.GetDurationStyle().String()
 	return settings
 }
 

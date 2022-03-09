@@ -212,7 +212,7 @@ func Throttle(isAdmin bool, user, bucket string, buckets []string, timeout time.
 			logging.Debugf("retrying bucket %v previously throttled for %v by regulator (%v)", bucket, d, r)
 		case regulator.CheckResultReject:
 			logging.Debugf("bucket %v rejected by regulator", bucket)
-			return nil, time.Duration(0), errors.NewServiceTenantRejectedError(d)
+			return nil, time.Duration(0), errors.NewServiceTenantRejectedError(d == 0, util.OutputDuration(d))
 		default:
 			logging.Debugf("bucket %v error by regulator (%v) ", bucket, e)
 			return ctx, time.Duration(0), errors.NewServiceTenantThrottledError(e)

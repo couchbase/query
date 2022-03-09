@@ -169,7 +169,8 @@ type Output interface {
 	FmtPhaseCounts() map[string]interface{}
 	FmtPhaseOperators() map[string]interface{}
 	AddPhaseTime(phase Phases, duration time.Duration)
-	FmtPhaseTimes() map[string]interface{}
+	FmtPhaseTimes(util.DurationStyle) map[string]interface{}
+	RawPhaseTimes() map[string]interface{}
 	FmtOptimizerEstimates(op Operator) map[string]interface{}
 	AddCpuTime(duration time.Duration)
 	AddTenantUnits(s tenant.Service, cu tenant.Unit)
@@ -305,6 +306,7 @@ type Context struct {
 	errorLimit          int
 	udfStmtExecTrees    *udfExecTreeMap // cache of execution trees of embedded N1QL statements in Javascript/Golang UDFs
 	udfPlans            *udfPlanMap     // cache of query plans of embedded N1QL statements in Javascript/Golang UDFs
+	durationStyle       util.DurationStyle
 }
 
 func NewContext(requestId string, datastore datastore.Datastore, systemstore datastore.Systemstore,
@@ -351,6 +353,7 @@ func NewContext(requestId string, datastore datastore.Datastore, systemstore dat
 		keysToSkip:       &sync.Map{},
 		udfStmtExecTrees: nil,
 		udfPlans:         nil,
+		durationStyle:    util.LEGACY,
 	}
 
 	if rv.maxParallelism <= 0 || rv.maxParallelism > util.NumCPU() {
@@ -410,6 +413,7 @@ func (this *Context) Copy() *Context {
 		planPreparedTime:    this.planPreparedTime,
 		logLevel:            this.logLevel,
 		errorLimit:          this.errorLimit,
+		durationStyle:       this.durationStyle,
 	}
 
 	if this.optimizer != nil {
@@ -2142,4 +2146,16 @@ var phaseAggs = map[Phases]Phases{
 	PRIMARY_SCAN_GSI: PRIMARY_SCAN,
 	PRIMARY_SCAN_FTS: PRIMARY_SCAN,
 	PRIMARY_SCAN_SEQ: PRIMARY_SCAN,
+}
+
+func (this *Context) DurationStyle() util.DurationStyle {
+	return this.durationStyle
+}
+
+func (this *Context) SetDurationStyle(style util.DurationStyle) {
+	this.durationStyle = style
+}
+
+func (this *Context) FormatDuration(d time.Duration) string {
+	return util.FormatDuration(d, this.durationStyle)
 }

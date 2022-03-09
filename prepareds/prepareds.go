@@ -139,7 +139,7 @@ func PreparedsRemotePrime() {
 						}
 					},
 					func(warn errors.Error) {
-					}, distributed.NO_CREDS, "")
+					}, distributed.NO_CREDS, "", nil)
 				return true
 			}, nil, distributed.NO_CREDS, "")
 
@@ -539,7 +539,7 @@ func (prepareds *preparedCache) getPrepared(preparedName string, queryContext st
 				}
 			},
 			func(warn errors.Error) {
-			}, distributed.NO_CREDS, "")
+			}, distributed.NO_CREDS, "", nil)
 	} else if prepared != nil && verify {
 		var good bool
 

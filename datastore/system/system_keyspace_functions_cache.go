@@ -72,6 +72,8 @@ func (b *functionsCacheKeyspace) Indexers() ([]datastore.Indexer, errors.Error) 
 func (b *functionsCacheKeyspace) Fetch(keys []string, keysMap map[string]value.AnnotatedValue,
 	context datastore.QueryContext, subPaths []string) (errs errors.Errors) {
 
+	formData := map[string]interface{}{"duration_style": context.DurationStyle().String()}
+
 	// now that the node name can change in flight, use a consistent one across fetches
 	whoAmI := distributed.RemoteAccess().WhoAmI()
 	for _, key := range keys {
@@ -80,8 +82,7 @@ func (b *functionsCacheKeyspace) Fetch(keys []string, keysMap map[string]value.A
 
 		// remote entry
 		if len(nodeName) != 0 && nodeName != whoAmI {
-			distributed.RemoteAccess().GetRemoteDoc(nodeName, localKey,
-				"functions_cache", "POST",
+			distributed.RemoteAccess().GetRemoteDoc(nodeName, localKey, "functions_cache", "POST",
 				func(doc map[string]interface{}) {
 
 					remoteValue := value.NewAnnotatedValue(doc)
@@ -94,7 +95,7 @@ func (b *functionsCacheKeyspace) Fetch(keys []string, keysMap map[string]value.A
 					if !warn.HasCause(errors.W_SYSTEM_REMOTE_NODE_NOT_FOUND) {
 						context.Warning(warn)
 					}
-				}, distributed.NO_CREDS, "")
+				}, distributed.NO_CREDS, "", formData)
 		} else {
 
 			// local entry
@@ -112,10 +113,10 @@ func (b *functionsCacheKeyspace) Fetch(keys []string, keysMap map[string]value.A
 				// only give times for entries that have completed at least one execution
 				if entry.Uses > 0 && entry.ServiceTime > 0 {
 					itemMap["lastUse"] = entry.LastUse.Format(util.DEFAULT_FORMAT)
-					itemMap["avgServiceTime"] = (time.Duration(entry.ServiceTime) /
-						time.Duration(entry.Uses)).String()
-					itemMap["minServiceTime"] = time.Duration(entry.MinServiceTime).String()
-					itemMap["maxServiceTime"] = time.Duration(entry.MaxServiceTime).String()
+					itemMap["avgServiceTime"] = context.FormatDuration(time.Duration(entry.ServiceTime) /
+						time.Duration(entry.Uses))
+					itemMap["minServiceTime"] = context.FormatDuration(time.Duration(entry.MinServiceTime))
+					itemMap["maxServiceTime"] = context.FormatDuration(time.Duration(entry.MaxServiceTime))
 				}
 				item := value.NewAnnotatedValue(itemMap)
 				item.NewMeta()["keyspace"] = b.fullName
@@ -146,7 +147,7 @@ func (b *functionsCacheKeyspace) Delete(deletes value.Pairs, context datastore.Q
 						context.Warning(warn)
 					}
 				},
-				distributed.NO_CREDS, "")
+				distributed.NO_CREDS, "", nil)
 
 		} else {
 			// local entry

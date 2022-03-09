@@ -10,7 +10,6 @@ package errors
 
 import (
 	"fmt"
-	"time"
 )
 
 // service level errors - errors that are created in the service package
@@ -64,7 +63,7 @@ func NewServiceErrorTypeMismatch(feature string, expected string) Error {
 		InternalMsg: fmt.Sprintf("%s has to be of type %s", feature, expected), InternalCaller: CallerN(1)}
 }
 
-func NewTimeoutError(timeout time.Duration) Error {
+func NewTimeoutError(timeout string) Error {
 	return &err{level: EXCEPTION, ICode: E_SERVICE_TIMEOUT, IKey: "timeout",
 		InternalMsg: fmt.Sprintf("Timeout %v exceeded", timeout), InternalCaller: CallerN(1), retry: TRUE}
 }
@@ -184,15 +183,15 @@ func NewServiceTenantNotFoundError(bucket string) Error {
 		InternalMsg: fmt.Sprintf("Tenant not found %v", bucket), InternalCaller: CallerN(1)}
 }
 
-func NewServiceTenantRejectedError(duration time.Duration) Error {
+func NewServiceTenantRejectedError(isZero bool, duration string) Error {
 	var (
 		message string
 		cause   map[string]interface{} = make(map[string]interface{})
 	)
-	if duration == 0 {
+	if isZero {
 		message = "Request rejected due to limiting or throttling. Retry later"
 	} else {
-		message = fmt.Sprintf("Request rejected due to limiting or throttling. Retry after %v", duration)
+		message = "Request rejected due to limiting or throttling. Retry after " + duration
 	}
 	cause["retry_after"] = duration
 	return &err{level: EXCEPTION, ICode: E_SERVICE_TENANT_REJECTED, IKey: "service.tenant.rejected", cause: cause,

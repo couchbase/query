@@ -19,6 +19,7 @@ import (
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/tenant"
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
@@ -145,6 +146,10 @@ func (ci *queryContextImpl) ErrorLimit() int {
 
 func (ci *queryContextImpl) ErrorCount() int {
 	return 0
+}
+
+func (ci *queryContextImpl) DurationStyle() util.DurationStyle {
+	return util.DEFAULT
 }
 
 func TestSystem(t *testing.T) {

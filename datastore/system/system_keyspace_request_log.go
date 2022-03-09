@@ -9,6 +9,7 @@
 package system
 
 import (
+	"strings"
 	"time"
 
 	"github.com/couchbase/query/datastore"
@@ -95,6 +96,7 @@ func (b *requestLogKeyspace) Fetch(keys []string, keysMap map[string]value.Annot
 	} else {
 		creds = distributed.Creds(userName)
 	}
+	formData := map[string]interface{}{"duration_style": context.DurationStyle().String()}
 
 	// now that the node name can change in flight, use a consistent one across fetches
 	whoAmI := distributed.RemoteAccess().WhoAmI()
@@ -104,23 +106,26 @@ func (b *requestLogKeyspace) Fetch(keys []string, keysMap map[string]value.Annot
 
 		// remote entry
 		if len(nodeName) != 0 && nodeName != whoAmI {
-			distributed.RemoteAccess().GetRemoteDoc(nodeName, localKey,
-				"completed_requests", "POST",
+			distributed.RemoteAccess().GetRemoteDoc(nodeName, localKey, "completed_requests", "POST",
 				func(doc map[string]interface{}) {
-
 					t, ok := doc["timings"]
 					if ok {
 						delete(doc, "timings")
 					}
-					t, ok = doc["optimizerEstimates"]
-					if ok {
+					o, ook := doc["optimizerEstimates"]
+					if ook {
 						delete(doc, "optimizerEstimates")
 					}
 					remoteValue := value.NewAnnotatedValue(doc)
 					meta := remoteValue.NewMeta()
 					meta["keyspace"] = b.fullName
 					if ok {
-						meta["plan"] = t
+						meta["plan"] = value.ApplyDurationStyleToValue(context.DurationStyle(), func(s string) bool {
+							return strings.HasSuffix(s, "Time")
+						}, value.NewValue(t))
+					}
+					if ook {
+						meta["optimizerEstimates"] = value.NewValue(o)
 					}
 					remoteValue.SetField("node", node)
 					remoteValue.SetId(key)
@@ -131,7 +136,7 @@ func (b *requestLogKeyspace) Fetch(keys []string, keysMap map[string]value.Annot
 						context.Warning(warn)
 					}
 				},
-				creds, "")
+				creds, "", formData)
 		} else {
 
 			// local entry
@@ -142,8 +147,8 @@ func (b *requestLogKeyspace) Fetch(keys []string, keysMap map[string]value.Annot
 				item := value.NewAnnotatedValue(map[string]interface{}{
 					"requestId":       localKey,
 					"state":           entry.State,
-					"elapsedTime":     entry.ElapsedTime.String(),
-					"serviceTime":     entry.ServiceTime.String(),
+					"elapsedTime":     context.FormatDuration(entry.ElapsedTime),
+					"serviceTime":     context.FormatDuration(entry.ServiceTime),
 					"resultCount":     entry.ResultCount,
 					"resultSize":      entry.ResultSize,
 					"errorCount":      entry.ErrorCount,
@@ -179,16 +184,16 @@ func (b *requestLogKeyspace) Fetch(keys []string, keysMap map[string]value.Annot
 					item.SetField("txid", entry.TxId)
 				}
 				if entry.TransactionElapsedTime > 0 {
-					item.SetField("transactionElapsedTime", entry.TransactionElapsedTime.String())
+					item.SetField("transactionElapsedTime", context.FormatDuration(entry.TransactionElapsedTime))
 				}
 				if entry.TransactionRemainingTime > 0 {
-					item.SetField("transactionRemainingTime", entry.TransactionRemainingTime.String())
+					item.SetField("transactionRemainingTime", context.FormatDuration(entry.TransactionRemainingTime))
 				}
 				if entry.ThrottleTime > time.Duration(0) {
-					item.SetField("throttleTime", entry.ThrottleTime.String())
+					item.SetField("throttleTime", context.FormatDuration(entry.ThrottleTime))
 				}
 				if entry.CpuTime > time.Duration(0) {
-					item.SetField("cpuTime", entry.CpuTime.String())
+					item.SetField("cpuTime", context.FormatDuration(entry.CpuTime))
 				}
 				if entry.PreparedName != "" {
 					item.SetField("preparedName", entry.PreparedName)
@@ -198,7 +203,16 @@ func (b *requestLogKeyspace) Fetch(keys []string, keysMap map[string]value.Annot
 					item.SetField("mutations", entry.Mutations)
 				}
 				if entry.PhaseTimes != nil {
-					item.SetField("phaseTimes", entry.PhaseTimes)
+					// adjust durations to current format
+					m := make(map[string]interface{}, len(entry.PhaseTimes))
+					for k, v := range entry.PhaseTimes {
+						if d, ok := v.(time.Duration); ok {
+							m[k] = context.FormatDuration(d)
+						} else {
+							m[k] = v
+						}
+					}
+					item.SetField("phaseTimes", m)
 				}
 				if entry.PhaseCounts != nil {
 					item.SetField("phaseCounts", entry.PhaseCounts)
@@ -242,7 +256,9 @@ func (b *requestLogKeyspace) Fetch(keys []string, keysMap map[string]value.Annot
 				meta["keyspace"] = b.fullName
 				timings := entry.Timings()
 				if timings != nil {
-					meta["plan"] = value.NewValue(timings)
+					meta["plan"] = value.ApplyDurationStyleToValue(context.DurationStyle(), func(s string) bool {
+						return strings.HasSuffix(s, "Time")
+					}, value.NewValue(timings))
 				}
 				optEstimates := entry.OptEstimates()
 				if optEstimates != nil {
@@ -284,7 +300,7 @@ func (b *requestLogKeyspace) Delete(deletes value.Pairs, context datastore.Query
 						context.Warning(warn)
 					}
 				},
-				creds, "")
+				creds, "", nil)
 
 			// local entry
 		} else {

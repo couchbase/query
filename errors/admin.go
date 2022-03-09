@@ -46,7 +46,7 @@ func NewAdminUnknownSettingError(setting string) Error {
 
 func NewAdminSettingTypeError(setting string, value interface{}) Error {
 	return &err{level: EXCEPTION, ICode: E_ADMIN_SETTING_TYPE, IKey: "admin.setting_type_error",
-		InternalMsg: fmt.Sprintf("Incorrect value %v (%T) for setting: %s", value, value, setting), InternalCaller: CallerN(1)}
+		InternalMsg: fmt.Sprintf("Incorrect value '%v' (%T) for setting: %s", value, value, setting), InternalCaller: CallerN(1)}
 }
 
 func NewAdminGetClusterError(e error, msg string) Error {

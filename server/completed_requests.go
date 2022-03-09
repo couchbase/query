@@ -617,7 +617,7 @@ func LogRequest(request_time, service_time, transactionElapsedTime time.Duration
 	}
 	re.PhaseCounts = request.FmtPhaseCounts()
 	re.PhaseOperators = request.FmtPhaseOperators()
-	re.PhaseTimes = request.FmtPhaseTimes()
+	re.PhaseTimes = request.RawPhaseTimes()
 	re.UsedMemory = request.UsedMemory()
 
 	// in order not to bloat service memory, we marshal the timings into a value

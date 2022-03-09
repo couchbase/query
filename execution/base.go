@@ -1579,13 +1579,13 @@ func (this *base) marshalTimes(r map[string]interface{}) {
 	}
 
 	if execTime != 0 {
-		stats["execTime"] = execTime.String()
+		stats["execTime"] = util.OutputDuration(execTime)
 	}
 	if chanTime != 0 {
-		stats["kernTime"] = chanTime.String()
+		stats["kernTime"] = util.OutputDuration(chanTime)
 	}
 	if servTime != 0 {
-		stats["servTime"] = servTime.String()
+		stats["servTime"] = util.OutputDuration(servTime)
 	}
 
 	if this.valueExchange.beatYields > 0 {
