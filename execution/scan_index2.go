@@ -137,7 +137,6 @@ func (this *IndexScan2) RunOnce(context *Context, parent value.Value) {
 									value.NewValue(entry.PrimaryKey))
 							}
 
-							av.SetField(this.plan.Term().Alias(), av)
 							if context.UseRequestQuota() && context.TrackValueSize(av.Size()) {
 								context.Error(errors.NewMemoryQuotaExceededError())
 								av.Recycle()
