@@ -132,7 +132,10 @@ func (this *IndexFtsSearch) RunOnce(context *Context, parent value.Value) {
 							if lc > 3 {
 								av.SetCover(covers[3].Text(), smeta)
 							}
-							av.SetField(this.plan.Term().Alias(), av)
+							nav := value.NewAnnotatedValue(make(map[string]interface{}, 1))
+							av, nav = nav, av
+							av.ShareAnnotations(nav)
+							av.SetField(this.plan.Term().Alias(), nav)
 						}
 						av.SetAttachment("smeta", map[string]interface{}{outName: entry.MetaData})
 						av.SetBit(this.bit)

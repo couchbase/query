@@ -164,6 +164,10 @@ func (this *annotatedValue) CopyForUpdate() Value {
 }
 
 func (this *annotatedValue) SetField(field string, val interface{}) error {
+	if val == this {
+		// if we set a circular reference functions like Size() will endlessly recurse and blow the stack
+		logging.Stackf(logging.DEBUG, "Circular field reference in annotated value.")
+	}
 	err := this.Value.SetField(field, val)
 	if err == nil {
 		v, ok := val.(Value)

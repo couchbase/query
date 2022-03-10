@@ -137,7 +137,11 @@ func (this *IndexScan2) RunOnce(context *Context, parent value.Value) {
 									value.NewValue(entry.PrimaryKey))
 							}
 
-							av.SetField(this.plan.Term().Alias(), av)
+							nav := value.NewAnnotatedValue(make(map[string]interface{}, 1))
+							av, nav = nav, av
+							av.ShareAnnotations(nav)
+							av.SetField(this.plan.Term().Alias(), nav)
+
 							if context.UseRequestQuota() && context.TrackValueSize(av.Size()) {
 								context.Error(errors.NewMemoryQuotaExceededError())
 								av.Recycle()
