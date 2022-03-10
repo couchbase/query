@@ -121,6 +121,10 @@ func (b *dictionaryCacheKeyspace) Fetch(keys []string, keysMap map[string]value.
 						itemMap["distributionKeys"] = distKeys
 					}
 				}
+				if node != "" {
+					itemMap["node"] = node
+				}
+
 				item := value.NewAnnotatedValue(itemMap)
 				meta := item.NewMeta()
 				meta["keyspace"] = b.fullName
