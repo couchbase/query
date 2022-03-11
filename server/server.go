@@ -436,7 +436,7 @@ func (this *Server) LogLevel() string {
 }
 
 func (this *Server) SetLogLevel(level string) {
-	lvl, ok := logging.ParseLevel(level)
+	lvl, ok, f := logging.ParseLevel(level)
 	if !ok {
 		logging.Errorf("SetLogLevel: unrecognized level %v", level)
 		return
@@ -445,6 +445,7 @@ func (this *Server) SetLogLevel(level string) {
 		this.datastore.SetLogLevel(lvl)
 	}
 	logging.SetLevel(lvl)
+	logging.SetDebugFilter(f)
 }
 
 const (

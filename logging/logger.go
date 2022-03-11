@@ -9,6 +9,7 @@
 package logging
 
 import (
+	"regexp"
 	"runtime"
 	"strings"
 	"sync"
@@ -85,8 +86,14 @@ func cacheLoggingChange() {
 	cachedAudit = !skipLogging(AUDIT)
 }
 
-func ParseLevel(name string) (level Level, ok bool) {
+func ParseLevel(name string) (level Level, ok bool, filter string) {
 	level, ok = _LEVEL_MAP[strings.ToLower(name)]
+	if !ok && strings.HasPrefix(strings.ToLower(name), _LEVEL_NAMES[DEBUG]+":") {
+		n := len(_LEVEL_NAMES[DEBUG])
+		filter = name[n+1:]
+		name = name[:n]
+		level, ok = _LEVEL_MAP[strings.ToLower(name)]
+	}
 	return
 }
 
@@ -127,6 +134,7 @@ type Logger interface {
 
 var logger Logger = nil
 var curLevel Level = DEBUG // initially set to never skip
+var debugFilter []*regexp.Regexp
 
 var loggerMutex sync.RWMutex
 
@@ -165,6 +173,8 @@ func SetLogger(newLogger Logger) {
 func Loga(level Level, f func() string) {
 	if skipLogging(level) {
 		return
+	} else if level == DEBUG && !filterDebug() {
+		return
 	}
 	loggerMutex.Lock()
 	defer loggerMutex.Unlock()
@@ -172,7 +182,7 @@ func Loga(level Level, f func() string) {
 }
 
 func Debuga(f func() string) {
-	if !cachedDebug {
+	if !cachedDebug || !filterDebug() {
 		return
 	}
 	loggerMutex.Lock()
@@ -257,6 +267,8 @@ func Audita(f func() string) {
 func Logf(level Level, fmt string, args ...interface{}) {
 	if skipLogging(level) {
 		return
+	} else if level == DEBUG && !filterDebug() {
+		return
 	}
 	loggerMutex.Lock()
 	defer loggerMutex.Unlock()
@@ -264,7 +276,7 @@ func Logf(level Level, fmt string, args ...interface{}) {
 }
 
 func Debugf(fmt string, args ...interface{}) {
-	if !cachedDebug {
+	if !cachedDebug || !filterDebug() {
 		return
 	}
 	loggerMutex.Lock()
@@ -361,6 +373,8 @@ func LogLevel() Level {
 func Stackf(level Level, fmt string, args ...interface{}) {
 	if skipLogging(level) {
 		return
+	} else if level == DEBUG && !filterDebug() {
+		return
 	}
 	buf := make([]byte, 1<<16)
 	n := runtime.Stack(buf, false)
@@ -375,4 +389,47 @@ func Stringf(level Level, fmt string, args ...interface{}) string {
 	loggerMutex.RLock()
 	defer loggerMutex.RUnlock()
 	return logger.Stringf(level, fmt, args...)
+}
+
+func SetDebugFilter(s string) {
+	if s == "" {
+		if debugFilter != nil {
+			loggerMutex.Lock()
+			debugFilter = nil
+			loggerMutex.Unlock()
+		}
+		return
+	}
+	pats := strings.Split(s, ";")
+	df := make([]*regexp.Regexp, 0, len(pats))
+	for _, p := range pats {
+		f, err := regexp.Compile(p)
+		if err == nil {
+			df = append(df, f)
+			Infof("Added debug logging filter: '%s'", p)
+		}
+	}
+	loggerMutex.Lock()
+	debugFilter = df
+	loggerMutex.Unlock()
+}
+
+func filterDebug() bool {
+	if debugFilter == nil || len(debugFilter) == 0 {
+		return true
+	}
+
+	_, pathname, _, ok := runtime.Caller(2)
+	if !ok {
+		return false
+	}
+	loggerMutex.RLock()
+	df := debugFilter
+	loggerMutex.RUnlock()
+	for _, p := range df {
+		if p.MatchString(pathname) {
+			return true
+		}
+	}
+	return false
 }

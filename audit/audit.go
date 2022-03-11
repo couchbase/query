@@ -186,7 +186,7 @@ func loggerFunc(level string, format string, args ...interface{}) string {
 		l = logging.AUDIT
 	} else {
 		var ok bool
-		l, ok = logging.ParseLevel(level)
+		l, ok, _ = logging.ParseLevel(level)
 		if !ok {
 			l = logging.NONE
 		}
