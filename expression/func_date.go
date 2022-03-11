@@ -1577,13 +1577,11 @@ func (this *DateTruncStr) Evaluate(item value.Value, context Context) (value.Val
 	// To avoid this remove it before processing
 
 	_, tzComponent, _ := strToTimeforTrunc(str)
-
 	if tzComponent != "" {
 		str = str[:len(str)-len(tzComponent)]
 	}
 
 	t, _, err := strToTimeforTrunc(str)
-
 	if err != nil {
 		return value.NULL_VALUE, nil
 	}
@@ -3587,6 +3585,7 @@ func strToTimeforTrunc(s string) (time.Time, string, error) {
 	var t time.Time
 	var err error
 	var f string
+	found := false
 	newloc, _ := time.LoadLocation("UTC")
 	// first pass try formats that match length before encountering the overhead of parsing all
 	for _, f = range _DATE_FORMATS {
@@ -3594,24 +3593,26 @@ func strToTimeforTrunc(s string) (time.Time, string, error) {
 			// Check if the format has a timezone
 			t, err = time.ParseInLocation(f, s, newloc)
 			if err == nil {
+				found = true
 				break
 			}
 		}
 	}
-	if err != nil {
+	if !found {
 		// only check formats we've not checked above
 		for _, f = range _DATE_FORMATS {
 			if len(f) != len(s) {
 				// Check if the format has a timezone
 				t, err = time.ParseInLocation(f, s, newloc)
 				if err == nil {
+					found = true
 					break
 				}
 			}
 		}
 	}
 
-	if err == nil {
+	if found {
 		// Calculate the timezone component for input string
 		pos := strings.Index(f, "Z")
 		tz := ""
