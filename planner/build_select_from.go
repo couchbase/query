@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/couchbase/query/algebra"
+	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
@@ -214,7 +215,7 @@ func (this *builder) collectAliases(node *algebra.Subselect) {
 	}
 }
 
-func (this *builder) GetSubPaths(keyspace string) (names []string, err error) {
+func (this *builder) GetSubPaths(ksTerm *algebra.KeyspaceTerm, keyspace string) (names []string, err error) {
 	if this.node != nil {
 		_, names = expression.XattrsNames(this.node.Expressions(), keyspace)
 		if ok := isValidXattrs(names); !ok {
@@ -231,6 +232,19 @@ func (this *builder) GetSubPaths(keyspace string) (names []string, err error) {
 				exprs = this.node.Expressions()
 			}
 			_, names = expression.MetaExpiration(exprs, keyspace)
+		} else {
+			isSystemXattr := false
+			for _, v := range names {
+				if v[0] == '_' {
+					isSystemXattr = true
+					break
+				}
+			}
+
+			// MB-51136 system xattrs access require system xattrs read privilege
+			if isSystemXattr {
+				ksTerm.SetExtraPrivilege(auth.PRIV_XATTRS)
+			}
 		}
 	}
 	return names, nil
@@ -285,7 +299,7 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 	}
 
 	if len(this.coveringScans) == 0 && this.countScan == nil {
-		names, err := this.GetSubPaths(node.Alias())
+		names, err := this.GetSubPaths(node, node.Alias())
 		if err != nil {
 			return nil, err
 		}
