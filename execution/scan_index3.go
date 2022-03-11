@@ -139,6 +139,8 @@ func (this *IndexScan3) RunOnce(context *Context, parent value.Value) {
 									value.NewValue(entry.PrimaryKey))
 							}
 
+							av.SetField(this.plan.Term().Alias(), av)
+
 							if this.plan.Filter() != nil {
 								result, err := this.plan.Filter().Evaluate(av, context)
 								if err != nil {

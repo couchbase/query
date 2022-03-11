@@ -240,6 +240,7 @@ func (this *spanScan) RunOnce(context *Context, parent value.Value) {
 							av.SetCover(covers[len(covers)-1].Text(),
 								value.NewValue(entry.PrimaryKey))
 
+							av.SetField(this.plan.Term().Alias(), av)
 							if context.UseRequestQuota() && context.TrackValueSize(av.Size()) {
 								context.Error(errors.NewMemoryQuotaExceededError())
 								av.Recycle()
