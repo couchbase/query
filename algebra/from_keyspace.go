@@ -55,17 +55,18 @@ type KeyspaceTerm struct {
 	joinHint        JoinHint
 	property        uint32
 	protectedString string
+	extraPrivs      []auth.Privilege
 }
 
 func NewKeyspaceTermFromPath(path *Path, as string,
 	keys expression.Expression, indexes IndexRefs) *KeyspaceTerm {
 	protectedString := path.ProtectedString()
-	return &KeyspaceTerm{path, nil, as, keys, indexes, nil, JOIN_HINT_NONE, 0, protectedString}
+	return &KeyspaceTerm{path, nil, as, keys, indexes, nil, JOIN_HINT_NONE, 0, protectedString, nil}
 }
 
 func NewKeyspaceTermFromExpression(expr expression.Expression, as string,
 	keys expression.Expression, indexes IndexRefs, joinHint JoinHint) *KeyspaceTerm {
-	return &KeyspaceTerm{nil, expr, as, keys, indexes, nil, joinHint, 0, ""}
+	return &KeyspaceTerm{nil, expr, as, keys, indexes, nil, joinHint, 0, "", nil}
 }
 
 func (this *KeyspaceTerm) Accept(visitor NodeVisitor) (interface{}, error) {
@@ -114,9 +115,17 @@ Returns all required privileges.
 func (this *KeyspaceTerm) Privileges() (privs *auth.Privileges, err errors.Error) {
 	if this.path != nil {
 		privs, err = PrivilegesFromPath(auth.PRIV_QUERY_SELECT, this.path)
+
+		for _, p := range this.extraPrivs {
+			privs.Add(this.path.SimpleString(), p, auth.PRIV_PROPS_NONE)
+		}
 	} else {
 		privs = auth.NewPrivileges()
 		privs.Add(this.fromExpr.String(), auth.PRIV_QUERY_SELECT, auth.PRIV_PROPS_DYNAMIC_TARGET)
+
+		for _, p := range this.extraPrivs {
+			privs.Add(this.fromExpr.String(), p, auth.PRIV_PROPS_DYNAMIC_TARGET)
+		}
 	}
 
 	if err == nil {
@@ -127,6 +136,13 @@ func (this *KeyspaceTerm) Privileges() (privs *auth.Privileges, err errors.Error
 		}
 	}
 	return privs, err
+}
+
+func (this *KeyspaceTerm) SetExtraPrivilege(priv auth.Privilege) {
+	if this.path != nil && this.path.IsSystem() {
+		return
+	}
+	this.extraPrivs = append(this.extraPrivs, priv)
 }
 
 func PrivilegesFromPath(priv auth.Privilege, path *Path) (*auth.Privileges, errors.Error) {

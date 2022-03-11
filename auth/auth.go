@@ -51,6 +51,7 @@ const (
 	PRIV_BACKUP_CLUSTER                         Privilege = 29 // Ability to backup cluster level N1QL metadata
 	PRIV_BACKUP_BUCKET                          Privilege = 30 // Ability to backup bucket level N1QL metadata
 	PRIV_QUERY_SCOPE_ADMIN                      Privilege = 31 // Ability to add, drop, flush scopes and collections
+	PRIV_XATTRS                                 Privilege = 32 // Ability to read system xattrs
 )
 
 type PrivilegePair struct {
