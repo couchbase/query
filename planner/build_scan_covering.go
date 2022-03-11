@@ -558,11 +558,14 @@ func hasUnknownsInSargableArrayKey(entry *indexEntry) bool {
 
 	for i, _ := range entry.sargKeys {
 		if i >= entry.arrayKeyPos && i < entry.arrayKeyPos+size &&
-			i < len(entry.skeys) && entry.skeys[i] && entry.spans.CanProduceUnknowns(i) {
+			i < len(entry.skeys) && entry.skeys[i] {
 			cnt++
+			if !entry.spans.CanProduceUnknowns(i) {
+				return false
+			}
 		}
 	}
-	return size == cnt // all array keys are unknows
+	return cnt > 0
 }
 
 func implicitFilterCovers(expr expression.Expression) map[*expression.Cover]value.Value {
