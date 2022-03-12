@@ -139,6 +139,10 @@ func (this *indexEntry) PushDownProperty() PushDownProperties {
 	return this.pushDownProperty
 }
 
+func (this *indexEntry) SetPushDownProperty(property PushDownProperties) {
+	this.pushDownProperty = property
+}
+
 func (this *indexEntry) IsPushDownProperty(property PushDownProperties) bool {
 	return isPushDownProperty(this.pushDownProperty, property)
 }

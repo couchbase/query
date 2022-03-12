@@ -112,6 +112,7 @@ func (this *builder) buildUnnestScan(node *algebra.KeyspaceTerm, pred, subset ex
 				return nil, err
 			}
 			if entry != nil {
+				entry.SetPushDownProperty(_PUSHDOWN_NONE) // reset
 				sargables[index] = entry
 			}
 		}

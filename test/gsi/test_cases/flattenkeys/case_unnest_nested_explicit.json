@@ -15,6 +15,14 @@
           {
             "description": "chapter 1 description",
             "id": "book1"
+          },
+          {
+            "description": "chapter 2 description",
+            "id": "book1"
+          },
+          {
+            "description": "chapter 3 description",
+            "id": "book1"
           }
         ]
      },
@@ -33,6 +41,14 @@
        "results": [
           {
             "description": "chapter 1 description",
+            "id": "book1"
+          },
+          {
+            "description": "chapter 2 description",
+            "id": "book1"
+          },
+          {
+            "description": "chapter 3 description",
             "id": "book1"
           }
         ]
