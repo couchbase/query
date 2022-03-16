@@ -83,7 +83,7 @@ func (this *Fetch) beforeItems(context *Context, item value.Value) bool {
 }
 
 func (this *Fetch) processItem(item value.AnnotatedValue, context *Context) bool {
-	ok := this.enbatchSize(item, this, this.batchSize, context)
+	ok := this.enbatchSize(item, this, this.batchSize, context, true)
 	if ok {
 		this.fetchCount++
 		if this.fetchCount >= uint64(this.batchSize) {
@@ -99,14 +99,19 @@ func (this *Fetch) afterItems(context *Context) {
 	context.SetSortCount(0)
 	context.AddPhaseCount(FETCH, this.fetchCount)
 	this.fetchCount = 0
+	this.releaseBatch(context)
 }
 
 func (this *Fetch) flushBatch(context *Context) bool {
-	defer this.releaseBatch(context)
-	size := int(this.output.ValueExchange().cap())
-	if this.batchSize < size {
+	defer this.resetBatch(context)
+	curQueue := this.queuedItems()
+	if this.batchSize < curQueue {
 		defer func() {
-			this.batchSize = size
+			size := int(this.output.ValueExchange().cap())
+			if curQueue > size {
+				curQueue = size
+			}
+			this.batchSize = curQueue
 		}()
 	}
 

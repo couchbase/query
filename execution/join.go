@@ -67,10 +67,11 @@ func (this *Join) processItem(item value.AnnotatedValue, context *Context) bool 
 
 func (this *Join) afterItems(context *Context) {
 	this.flushBatch(context)
+	this.releaseBatch(context)
 }
 
 func (this *Join) flushBatch(context *Context) bool {
-	defer this.releaseBatch(context)
+	defer this.resetBatch(context)
 
 	if len(this.joinBatch) == 0 {
 		return true

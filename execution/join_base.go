@@ -44,6 +44,16 @@ func (this *joinBase) releaseBatch(context *Context) {
 	this.joinKeyCount = 0
 }
 
+func (this *joinBase) resetBatch(context *Context) {
+	if this.joinBatch != nil {
+		for i := range this.joinBatch {
+			this.joinBatch[i] = value.AnnotatedJoinPair{}
+		}
+		this.joinBatch = this.joinBatch[:0]
+	}
+	this.joinKeyCount = 0
+}
+
 func (this *joinBase) joinEnbatch(item value.AnnotatedJoinPair, b batcher, context *Context) bool {
 	if (len(item.Keys)+this.joinKeyCount > cap(this.joinBatch)) || len(this.joinBatch) >= cap(this.joinBatch) {
 		if !b.flushBatch(context) {
