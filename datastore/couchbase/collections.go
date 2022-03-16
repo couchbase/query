@@ -340,6 +340,9 @@ func (coll *collection) Delete(deletes value.Pairs, context datastore.QueryConte
 }
 
 func (coll *collection) Release(bclose bool) {
+	if gsiIndexer, ok := coll.gsiIndexer.(interface{ Close() }); ok {
+		gsiIndexer.Close()
+	}
 	// close an ftsIndexer that belongs to this keyspace
 	if ftsIndexerCloser, ok := coll.ftsIndexer.(io.Closer); ok {
 		// FTSIndexer implements a Close() method

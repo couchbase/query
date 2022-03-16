@@ -2161,6 +2161,9 @@ func (b *keyspace) Release(bclose bool) {
 		agentProvider.Close()
 	}
 
+	if gsiIndexer, ok := b.gsiIndexer.(interface{ Close() }); ok {
+		gsiIndexer.Close()
+	}
 	// close an ftsIndexer that belongs to this keyspace
 	if ftsIndexerCloser, ok := b.ftsIndexer.(io.Closer); ok {
 		// FTSIndexer implements a Close() method
