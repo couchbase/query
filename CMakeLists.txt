@@ -36,7 +36,7 @@ ELSE (BUILD_ENTERPRISE)
 ENDIF(BUILD_ENTERPRISE)
 SET (_extra_deps)
 
-# MB-40185: perf: for now need to use 1.17.2 on Windows only
+# MB-49185: perf: for now need to use 1.17.2 on Windows only
 IF(WIN32)
   SET (GOVERSION 1.17.2)
 ELSE ()
