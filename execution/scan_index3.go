@@ -139,10 +139,7 @@ func (this *IndexScan3) RunOnce(context *Context, parent value.Value) {
 									value.NewValue(entry.PrimaryKey))
 							}
 
-							nav := value.NewAnnotatedValue(make(map[string]interface{}, 1))
-							av, nav = nav, av
-							av.ShareAnnotations(nav)
-							av.SetField(this.plan.Term().Alias(), nav)
+							av.SetField(this.plan.Term().Alias(), av)
 
 							if this.plan.Filter() != nil {
 								result, err := this.plan.Filter().Evaluate(av, context)

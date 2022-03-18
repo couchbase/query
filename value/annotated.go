@@ -124,6 +124,8 @@ type annotatedValue struct {
 	noRecycle         bool
 }
 
+type annotatedValueSelfReference annotatedValue
+
 func (this *annotatedValue) String() string {
 	return this.Value.String()
 }
@@ -164,11 +166,13 @@ func (this *annotatedValue) CopyForUpdate() Value {
 }
 
 func (this *annotatedValue) SetField(field string, val interface{}) error {
+	var err error
 	if val == this {
-		// if we set a circular reference functions like Size() will endlessly recurse and blow the stack
-		logging.Stackf(logging.DEBUG, "Circular field reference in annotated value.")
+		selfRef := (*annotatedValueSelfReference)(val.(*annotatedValue))
+		err = this.Value.SetField(field, selfRef)
+	} else {
+		err = this.Value.SetField(field, val)
 	}
-	err := this.Value.SetField(field, val)
 	if err == nil {
 		v, ok := val.(Value)
 		if ok {
@@ -495,4 +499,64 @@ func (this *annotatedValue) recycle(lvl int32) {
 	this.sharedAnnotations = false
 	this.id = nil
 	annotatedPool.Put(unsafe.Pointer(this))
+}
+
+func (this *annotatedValueSelfReference) Size() uint64 {
+	return 0
+}
+
+func (this *annotatedValueSelfReference) String() string {
+	return ""
+}
+
+func (this *annotatedValueSelfReference) ToString() string {
+	return ""
+}
+
+func (this *annotatedValueSelfReference) MarshalJSON() ([]byte, error) {
+	return []byte(nil), nil
+}
+
+func (this *annotatedValueSelfReference) WriteJSON(w io.Writer, prefix, indent string, fast bool) error {
+	return nil
+}
+
+func (this *annotatedValueSelfReference) Equals(other Value) Value {
+	return FALSE_VALUE
+}
+
+func (this *annotatedValueSelfReference) EquivalentTo(other Value) bool {
+	return false
+}
+
+func (this *annotatedValueSelfReference) Compare(other Value) Value {
+	return other
+}
+
+func (this *annotatedValueSelfReference) Collate(other Value) int {
+	return 0
+}
+
+func (this *annotatedValueSelfReference) Descendants(buffer []interface{}) []interface{} {
+	return buffer
+}
+
+func (this *annotatedValueSelfReference) DescendantPairs(buffer []util.IPair) []util.IPair {
+	return buffer
+}
+
+func (this *annotatedValueSelfReference) Successor() Value {
+	return _SMALL_OBJECT_VALUE
+}
+
+func (this *annotatedValueSelfReference) Tokens(set *Set, options Value) *Set {
+	return set
+}
+
+func (this *annotatedValueSelfReference) ContainsToken(token, options Value) bool {
+	return false
+}
+
+func (this *annotatedValueSelfReference) ContainsMatchingToken(matcher MatchFunc, options Value) bool {
+	return false
 }

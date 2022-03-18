@@ -240,10 +240,7 @@ func (this *spanScan) RunOnce(context *Context, parent value.Value) {
 							av.SetCover(covers[len(covers)-1].Text(),
 								value.NewValue(entry.PrimaryKey))
 
-							nav := value.NewAnnotatedValue(make(map[string]interface{}, 1))
-							av, nav = nav, av
-							av.ShareAnnotations(nav)
-							av.SetField(this.plan.Term().Alias(), nav)
+							av.SetField(this.plan.Term().Alias(), av)
 
 							if context.UseRequestQuota() && context.TrackValueSize(av.Size()) {
 								context.Error(errors.NewMemoryQuotaExceededError())
