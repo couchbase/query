@@ -132,21 +132,23 @@ func (sc *scope) DropCollection(name string) errors.Error {
 
 type collection struct {
 	sync.Mutex
-	id         string
-	name       string
-	uid        uint32
-	uidString  string
-	namespace  *namespace
-	scope      *scope
-	bucket     *keyspace
-	fullName   string
-	authKey    string
-	checked    bool
-	gsiIndexer datastore.Indexer
-	ftsIndexer datastore.Indexer
-	chkIndex   chkIndexDict
-	isDefault  bool
-	isBucket   bool
+	id               string
+	name             string
+	uid              uint32
+	uidString        string
+	namespace        *namespace
+	scope            *scope
+	bucket           *keyspace
+	fullName         string
+	authKey          string
+	checked          bool
+	gsiIndexer       datastore.Indexer
+	gsiIndexerClosed datastore.Indexer
+	ftsIndexer       datastore.Indexer
+	ftsIndexerClosed datastore.Indexer
+	chkIndex         chkIndexDict
+	isDefault        bool
+	isBucket         bool
 }
 
 func getUser(context datastore.QueryContext) string {
@@ -340,13 +342,19 @@ func (coll *collection) Delete(deletes value.Pairs, context datastore.QueryConte
 }
 
 func (coll *collection) Release(bclose bool) {
-	if gsiIndexer, ok := coll.gsiIndexer.(interface{ Close() }); ok {
-		gsiIndexer.Close()
+	if coll.gsiIndexer != coll.gsiIndexerClosed {
+		if gsiIndexer, ok := coll.gsiIndexer.(interface{ Close() }); ok {
+			gsiIndexer.Close()
+		}
+		coll.gsiIndexerClosed = coll.gsiIndexer
 	}
 	// close an ftsIndexer that belongs to this keyspace
-	if ftsIndexerCloser, ok := coll.ftsIndexer.(io.Closer); ok {
-		// FTSIndexer implements a Close() method
-		ftsIndexerCloser.Close()
+	if coll.ftsIndexer != coll.ftsIndexerClosed {
+		if ftsIndexerCloser, ok := coll.ftsIndexer.(io.Closer); ok {
+			// FTSIndexer implements a Close() method
+			ftsIndexerCloser.Close()
+		}
+		coll.ftsIndexerClosed = coll.ftsIndexer
 	}
 }
 
@@ -436,6 +444,12 @@ func refreshScopesAndCollections(mani *cb.Manifest, bucket *keyspace) (map[strin
 		}
 
 		oldScope := oldScopes[s.Name]
+		var copiedIndexers map[string]bool
+		if oldScope != nil {
+			copiedIndexers = make(map[string]bool, len(oldScope.keyspaces))
+		} else {
+			copiedIndexers = nil
+		}
 		for _, c := range s.Collections {
 			coll := &collection{
 				id:        c.Name,
@@ -457,6 +471,7 @@ func refreshScopesAndCollections(mani *cb.Manifest, bucket *keyspace) (map[strin
 					coll.gsiIndexer = oldColl.gsiIndexer
 					coll.ftsIndexer = oldColl.ftsIndexer
 					coll.checked = oldColl.checked
+					copiedIndexers[c.Name] = true
 					oldColl.Unlock()
 				}
 			}
@@ -514,13 +529,10 @@ func refreshScopesAndCollections(mani *cb.Manifest, bucket *keyspace) (map[strin
 					}
 				}
 			}
-			for n, val := range oldScope.keyspaces {
-				if scope.keyspaces[n] == nil {
-					DropDictionaryEntry(oldScope.keyspaces[n].QualifiedName())
-				}
-				if val != nil {
-					// invoke Release(..) on collection for any cleanup
-					val.Release(false)
+			// always check for releasing indexers
+			for n, _ := range oldScope.keyspaces {
+				if _, copied := copiedIndexers[n]; !copied && oldScope.keyspaces[n] != nil {
+					oldScope.keyspaces[n].Release(false)
 				}
 			}
 		}
