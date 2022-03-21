@@ -682,6 +682,10 @@ func (this *RegexpSplit) Evaluate(item value.Value, context Context) (value.Valu
 	matches := re.FindAllIndex(f, -1)
 	start := 0
 	for _, v := range matches {
+		// align with string split and don't return empty match before first rune
+		if v[0] == v[1] && v[0] == 0 {
+			continue
+		}
 		res = append(res, string(f[start:v[0]]))
 		start = v[1]
 	}
