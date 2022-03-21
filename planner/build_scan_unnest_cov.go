@@ -86,8 +86,8 @@ func (this *builder) buildOneCoveringUnnestScan(node *algebra.KeyspaceTerm,
 		exact = false
 	}
 
-	if entry.exactSpans && (unnestExprInKeys || !exact) {
-		entry.exactSpans = false
+	if entry.exactSpans && unnestExprInKeys && !exact {
+		entry.exactSpans = exact
 	}
 
 	coverAliases := getUnnestAliases(entry.arrayKey, centry.leafUnnest)
