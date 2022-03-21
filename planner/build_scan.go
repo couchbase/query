@@ -512,7 +512,7 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm,
 }
 
 func (this *builder) processPredicate(pred expression.Expression, isOnclause bool) (
-	value.Value, error) {
+	value.Value, expression.Expression, error) {
 
 	return ClassifyExpr(pred, this.baseKeyspaces, this.keyspaceNames, isOnclause, this.useCBO,
 		this.advisorValidate(), this.context)
@@ -520,7 +520,8 @@ func (this *builder) processPredicate(pred expression.Expression, isOnclause boo
 
 func (this *builder) processWhere(where expression.Expression) (err error) {
 	var constant value.Value
-	constant, err = this.processPredicate(where, false)
+	var extraExpr expression.Expression
+	constant, extraExpr, err = this.processPredicate(where, false)
 	if err != nil {
 		return
 	}
@@ -531,6 +532,9 @@ func (this *builder) processWhere(where expression.Expression) (err error) {
 		} else {
 			this.setFalseWhereClause()
 		}
+	}
+	if extraExpr != nil {
+		this.setBuilderFlag(BUILDER_HAS_EXTRA_FLTR)
 	}
 
 	return

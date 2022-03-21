@@ -20,10 +20,10 @@ import (
 // breaks expr on AND boundaries and classify into appropriate keyspaces
 func ClassifyExpr(expr expression.Expression, baseKeyspaces map[string]*base.BaseKeyspace,
 	keyspaceNames map[string]string, isOnclause, doSelec, advisorValidate bool,
-	context *PrepareContext) (value.Value, error) {
+	context *PrepareContext) (value.Value, expression.Expression, error) {
 
 	if len(baseKeyspaces) == 0 {
-		return nil, errors.NewPlanError(nil, "ClassifyExpr: invalid argument baseKeyspaces")
+		return nil, nil, errors.NewPlanError(nil, "ClassifyExpr: invalid argument baseKeyspaces")
 	}
 
 	// make sure document count is available
@@ -40,13 +40,13 @@ func ClassifyExpr(expr expression.Expression, baseKeyspaces map[string]*base.Bas
 
 func ClassifyExprKeyspace(expr expression.Expression, baseKeyspaces map[string]*base.BaseKeyspace,
 	keyspaceNames map[string]string, alias string, isOnclause, doSelec, advisorValidate bool,
-	context *PrepareContext) (value.Value, error) {
+	context *PrepareContext) (value.Value, expression.Expression, error) {
 
 	classifier := newExprClassifier(baseKeyspaces, keyspaceNames, alias, isOnclause,
 		doSelec, advisorValidate, context)
 	_, err := expr.Accept(classifier)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	if doSelec {
@@ -64,7 +64,7 @@ func ClassifyExprKeyspace(expr expression.Expression, baseKeyspaces map[string]*
 		}
 	}
 
-	return constant, nil
+	return constant, classifier.extraExpr, nil
 }
 
 type exprClassifier struct {
@@ -78,6 +78,7 @@ type exprClassifier struct {
 	isOnclause      bool
 	nonConstant     bool
 	constant        value.Value
+	extraExpr       expression.Expression
 	doSelec         bool
 	advisorValidate bool
 	context         *PrepareContext
@@ -398,6 +399,13 @@ func (this *exprClassifier) visitDefault(expr expression.Expression) (interface{
 	}
 
 	if len(keyspaces) < 1 {
+		// remember filters that does not attach to a keyspace, but is not
+		// a "constant" filter (neither TRUE nor FALSE, which are handled above)
+		if this.extraExpr == nil {
+			this.extraExpr = expr
+		} else {
+			this.extraExpr = expression.NewAnd(this.extraExpr, expr)
+		}
 		return expr, nil
 	}
 
@@ -548,7 +556,7 @@ func (this *exprClassifier) extractExpr(or *expression.Or, keyspaceName string) 
 	var isJoin = false
 	for _, op := range orTerms.Operands() {
 		baseKeyspaces := base.CopyBaseKeyspaces(this.baseKeyspaces)
-		_, err := ClassifyExprKeyspace(op, baseKeyspaces, this.keyspaceNames, this.alias,
+		_, _, err := ClassifyExprKeyspace(op, baseKeyspaces, this.keyspaceNames, this.alias,
 			this.isOnclause, this.doSelec, this.advisorValidate, this.context)
 		if err != nil {
 			return nil, nil, false, err

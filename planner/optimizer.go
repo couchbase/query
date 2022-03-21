@@ -72,8 +72,8 @@ func (this *builder) AddOuterOnclause(onclause expression.Expression, alias stri
 	baseKeyspaces map[string]*base.BaseKeyspace, keyspaceNames map[string]string) error {
 	baseKeyspace, _ := baseKeyspaces[alias]
 	if !baseKeyspace.HasOuterFilters() {
-		_, err := ClassifyExprKeyspace(onclause, baseKeyspaces, keyspaceNames, alias, true, true,
-			this.advisorValidate(), this.context)
+		_, _, err := ClassifyExprKeyspace(onclause, baseKeyspaces, keyspaceNames, alias,
+			true, true, this.advisorValidate(), this.context)
 		baseKeyspace.SetOuterFilters()
 		return err
 	}

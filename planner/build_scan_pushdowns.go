@@ -23,8 +23,8 @@ func (this *builder) indexPushDownProperty(entry *indexEntry, indexKeys,
 	pushDownProperty PushDownProperties) {
 
 	// Check all predicates are part of spans, exact and no false positives possible
-	exact := allKeyspaces && this.checkExactSpans(entry, pred, alias, unnestAliases,
-		unnestFiletrs, implicitAny)
+	exact := allKeyspaces && !this.hasBuilderFlag(BUILDER_HAS_EXTRA_FLTR) &&
+		this.checkExactSpans(entry, pred, alias, unnestAliases, unnestFiletrs, implicitAny)
 	if exact {
 		pushDownProperty |= _PUSHDOWN_EXACTSPANS
 	}

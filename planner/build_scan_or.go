@@ -130,8 +130,9 @@ func (this *builder) buildOrScanNoPushdowns(node *algebra.KeyspaceTerm, id expre
 		this.where = op
 		this.limit = limit
 
+		var extraExpr expression.Expression
 		baseKeyspaces := base.CopyBaseKeyspaces(this.baseKeyspaces)
-		_, err = ClassifyExpr(op, baseKeyspaces, this.keyspaceNames, join, this.useCBO,
+		_, extraExpr, err = ClassifyExpr(op, baseKeyspaces, this.keyspaceNames, join, this.useCBO,
 			this.advisorValidate(), this.context)
 		if err != nil {
 			return nil, 0, err
@@ -151,12 +152,16 @@ func (this *builder) buildOrScanNoPushdowns(node *algebra.KeyspaceTerm, id expre
 			}
 
 			if baseKeyspace.DnfPred() == nil {
-				// if an arm of OR does not reference the keyspace,
-				// which could happen if:
-				//   - in case of ANSI JOIN, an arm references other keyspaces
-				//   - an arm only references named/positional parameters
-				// then OR index path is not feasible.
-				return nil, 0, nil
+				if join || extraExpr != nil {
+					// if an arm of OR does not reference the keyspace,
+					// which could happen if:
+					//   - in case of ANSI JOIN, an arm references other keyspaces
+					//   - an arm only references named/positional parameters
+					// then OR index path is not feasible.
+					return nil, 0, nil
+				} else {
+					return nil, 0, errors.NewPlanInternalError("buildOrScanNoPushdown: missing OR subterm")
+				}
 			}
 
 			scan, termSargLength, err := this.buildTermScan(node, baseKeyspace,

@@ -45,7 +45,7 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 
 	if !stmt.IsOnKey() && !outer {
 		// setup usable predicate from ON-clause for source scan
-		_, err = this.processPredicate(stmt.On(), true)
+		_, _, err = this.processPredicate(stmt.On(), true)
 		if err != nil {
 			return nil, err
 		}

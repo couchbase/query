@@ -82,7 +82,7 @@ func (this *builder) visitFrom(node *algebra.Subselect, group *algebra.Group,
 			if this.falseWhereClause() {
 				this.pushableOnclause = nil
 			} else {
-				constant, err := this.processPredicate(this.pushableOnclause, true)
+				constant, extraExpr, err := this.processPredicate(this.pushableOnclause, true)
 				if err != nil {
 					return err
 				}
@@ -94,6 +94,9 @@ func (this *builder) visitFrom(node *algebra.Subselect, group *algebra.Group,
 						this.unsetTrueWhereClause()
 						this.setFalseWhereClause()
 					}
+				}
+				if extraExpr != nil {
+					this.setBuilderFlag(BUILDER_HAS_EXTRA_FLTR)
 				}
 			}
 		}
@@ -118,9 +121,12 @@ func (this *builder) visitFrom(node *algebra.Subselect, group *algebra.Group,
 					this.pushableOnclause = aoj2aij.pushableOnclause
 				}
 
-				_, err = this.processPredicate(aoj2aij.pushableOnclause, true)
+				_, extraExpr, err := this.processPredicate(aoj2aij.pushableOnclause, true)
 				if err != nil {
 					return err
+				}
+				if extraExpr != nil {
+					this.setBuilderFlag(BUILDER_HAS_EXTRA_FLTR)
 				}
 			}
 		}
