@@ -466,7 +466,7 @@ func refreshScopesAndCollections(mani *cb.Manifest, bucket *keyspace) (map[strin
 			// copy the indexers
 			if oldScope != nil {
 				oldColl := oldScope.keyspaces[c.Name]
-				if oldColl != nil {
+				if oldColl != nil && oldColl.Uid() == coll.Uid() {
 					oldColl.Lock()
 					coll.gsiIndexer = oldColl.gsiIndexer
 					coll.ftsIndexer = oldColl.ftsIndexer
