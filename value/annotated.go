@@ -164,7 +164,13 @@ func (this *annotatedValue) CopyForUpdate() Value {
 }
 
 func (this *annotatedValue) SetField(field string, val interface{}) error {
-	err := this.Value.SetField(field, val)
+	var err error
+	if val == this {
+		selfRef := (*annotatedValueSelfReference)(val.(*annotatedValue))
+		err = this.Value.SetField(field, selfRef)
+	} else {
+		err = this.Value.SetField(field, val)
+	}
 	if err == nil {
 		v, ok := val.(Value)
 		if ok {
@@ -491,4 +497,170 @@ func (this *annotatedValue) recycle(lvl int32) {
 	this.sharedAnnotations = false
 	this.id = nil
 	annotatedPool.Put(unsafe.Pointer(this))
+}
+
+type annotatedValueSelfReference annotatedValue
+
+func (this *annotatedValueSelfReference) Size() uint64 {
+	return 0
+}
+
+func (this *annotatedValueSelfReference) String() string {
+	return ""
+}
+
+func (this *annotatedValueSelfReference) ToString() string {
+	return ""
+}
+
+func (this *annotatedValueSelfReference) MarshalJSON() ([]byte, error) {
+	return []byte(nil), nil
+}
+
+func (this *annotatedValueSelfReference) WriteJSON(w io.Writer, prefix, indent string, fast bool) error {
+	return nil
+}
+
+func (this *annotatedValueSelfReference) Equals(other Value) Value {
+	return FALSE_VALUE
+}
+
+func (this *annotatedValueSelfReference) EquivalentTo(other Value) bool {
+	return false
+}
+
+func (this *annotatedValueSelfReference) Compare(other Value) Value {
+	return other
+}
+
+func (this *annotatedValueSelfReference) Collate(other Value) int {
+	return 0
+}
+
+func (this *annotatedValueSelfReference) Descendants(buffer []interface{}) []interface{} {
+	return buffer
+}
+
+func (this *annotatedValueSelfReference) DescendantPairs(buffer []util.IPair) []util.IPair {
+	return buffer
+}
+
+func (this *annotatedValueSelfReference) Successor() Value {
+	return _SMALL_OBJECT_VALUE
+}
+
+func (this *annotatedValueSelfReference) Tokens(set *Set, options Value) *Set {
+	return set
+}
+
+func (this *annotatedValueSelfReference) ContainsToken(token, options Value) bool {
+	return false
+}
+
+func (this *annotatedValueSelfReference) ContainsMatchingToken(matcher MatchFunc, options Value) bool {
+	return false
+}
+
+func (this *annotatedValueSelfReference) Stash() int32 {
+	return (*annotatedValue)(this).Stash()
+}
+
+func (this *annotatedValueSelfReference) Restore(lvl int32) {
+	(*annotatedValue)(this).Restore(lvl)
+}
+
+func (this *annotatedValueSelfReference) Seen() bool {
+	return (*annotatedValue)(this).Seen()
+}
+
+func (this *annotatedValueSelfReference) Track() {
+	// deliberately empty
+}
+
+func (this *annotatedValueSelfReference) Recycle() {
+	// deliberately empty
+}
+
+func (this *annotatedValueSelfReference) GetValue() Value {
+	return (*annotatedValue)(this).GetValue()
+}
+
+func (this *annotatedValueSelfReference) Attachments() map[string]interface{} {
+	return (*annotatedValue)(this).Attachments()
+}
+
+func (this *annotatedValueSelfReference) GetAttachment(key string) interface{} {
+	return (*annotatedValue)(this).GetAttachment(key)
+}
+
+func (this *annotatedValueSelfReference) SetAttachment(key string, val interface{}) {
+	(*annotatedValue)(this).SetAttachment(key, val)
+}
+
+func (this *annotatedValueSelfReference) RemoveAttachment(key string) {
+	(*annotatedValue)(this).RemoveAttachment(key)
+}
+
+func (this *annotatedValueSelfReference) GetId() interface{} {
+	return (*annotatedValue)(this).GetId()
+}
+
+func (this *annotatedValueSelfReference) SetId(id interface{}) {
+	(*annotatedValue)(this).SetId(id)
+}
+
+func (this *annotatedValueSelfReference) NewMeta() map[string]interface{} {
+	return (*annotatedValue)(this).NewMeta()
+}
+
+func (this *annotatedValueSelfReference) GetMeta() map[string]interface{} {
+	return (*annotatedValue)(this).GetMeta()
+}
+
+func (this *annotatedValueSelfReference) Covers() Value {
+	return (*annotatedValue)(this).Covers()
+}
+
+func (this *annotatedValueSelfReference) GetCover(key string) Value {
+	return (*annotatedValue)(this).GetCover(key)
+}
+
+func (this *annotatedValueSelfReference) SetCover(key string, val Value) {
+	(*annotatedValue)(this).SetCover(key, val)
+}
+
+func (this *annotatedValueSelfReference) InheritCovers(val Value) {
+	(*annotatedValue)(this).InheritCovers(val)
+}
+
+func (this *annotatedValueSelfReference) CopyAnnotations(av AnnotatedValue) {
+	(*annotatedValue)(this).CopyAnnotations(av)
+}
+
+func (this *annotatedValueSelfReference) ShareAnnotations(av AnnotatedValue) {
+	(*annotatedValue)(this).ShareAnnotations(av)
+}
+
+func (this *annotatedValueSelfReference) Bit() uint8 {
+	return (*annotatedValue)(this).Bit()
+}
+
+func (this *annotatedValueSelfReference) SetBit(b uint8) {
+	(*annotatedValue)(this).SetBit(b)
+}
+
+func (this *annotatedValueSelfReference) Self() bool {
+	return (*annotatedValue)(this).Self()
+}
+
+func (this *annotatedValueSelfReference) SetSelf(s bool) {
+	(*annotatedValue)(this).SetSelf(s)
+}
+
+func (this *annotatedValueSelfReference) SetProjection(proj Value) {
+	(*annotatedValue)(this).SetProjection(proj)
+}
+
+func (this *annotatedValueSelfReference) Original() AnnotatedValue {
+	return (*annotatedValue)(this).Original()
 }
