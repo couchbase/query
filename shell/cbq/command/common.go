@@ -209,9 +209,6 @@ func Resolve(param string) (val value.Value, err_code errors.ErrorCode, err_str 
 		if ok {
 			val, err_code, err_str = v.Top()
 		} else {
-			if !strings.HasPrefix(param, "\"") {
-				param = "\"" + param + "\""
-			}
 			val = StrToVal(param)
 		}
 	}
@@ -225,10 +222,10 @@ func StrToVal(param string) (val value.Value) {
 
 	param = strings.TrimSpace(param)
 
-	if strings.HasPrefix(param, "\"") {
-		if strings.HasSuffix(param, "\"") {
-			param = param[1 : len(param)-1]
-		}
+	// convert to JSON-compliant quoted strings
+	if (strings.HasPrefix(param, "'") && strings.HasSuffix(param, "'")) ||
+		(strings.HasPrefix(param, "`") && strings.HasSuffix(param, "`")) {
+		param = "\"" + param[1:len(param)-1] + "\""
 	}
 
 	bytes := []byte(param)
