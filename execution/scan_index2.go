@@ -236,11 +236,12 @@ func evalSpan2(pspans plan.Spans2, parent value.Value, context *Context) (datast
 			ds.Ranges = append(ds.Ranges, dsRange)
 		}
 
-		if len(ds.Ranges) > 0 {
+		if !empty && len(ds.Ranges) > 0 {
 			dspans = append(dspans, ds)
 		}
 	}
 
+	empty = false
 	if len(dspans) == 0 {
 		empty = true
 		dspans = append(dspans, _EMPTY_SPAN2)

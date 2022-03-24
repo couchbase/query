@@ -172,5 +172,60 @@
         "statements":"SELECT META(o).id FROM orders AS o WHERE o.test_id = $testid AND ANY v IN o.a4 SATISFIES v.id = $id AND v.name = $name END",
         "results": [
         ]
+    },
+    {
+        "testcase": "Named parameter that results in empty span (MB-51561). Explain",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+	    "use_args": true,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IndexScan3' AND v.`index` = 'poix1' AND ARRAY_LENGTH(v.`spans`) = 2 END"
+        },
+	"namedArgs": {"testid": "parameters", "c2": null},
+        "statements":"SELECT c1, c2 FROM orders AS o WHERE o.test_id = $testid AND o.c1 >= 40 AND ($c2 IS NULL OR o.c2 = $c2)",
+        "results": [
+            {
+                "c1": 40,
+                "c2": 400
+            },
+            {
+                "c1": 50,
+                "c2": 500
+            }
+        ]
+    },
+    {
+        "testcase": "Named parameter that results in empty span (MB-51561), part2. Explain",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+	    "use_args": true,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IndexScan3' AND v.`index` = 'poix2' END"
+        },
+	"namedArgs": {"testid": "parameters", "id": 15, "c1": null},
+        "statements":"SELECT c1, c2 FROM orders AS o WHERE o.test_id = $testid AND o.c2 >= 400 AND ($c1 IS NULL OR o.c1 = $c1) AND ANY v IN o.a3 SATISFIES v.id = $id END",
+        "results": [
+            {
+                "c1": 40,
+                "c2": 400
+            },
+            {
+                "c1": 50,
+                "c2": 500
+            },
+            {
+                "c2": 600
+            }
+        ]
     }
 ]

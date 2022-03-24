@@ -151,14 +151,12 @@ func (this *builder) buildOrScanNoPushdowns(node *algebra.KeyspaceTerm, id expre
 			}
 
 			if baseKeyspace.DnfPred() == nil {
-				if join {
-					// for ANSI JOIN, it's possible that one subterm of the OR only contains
-					// references to other keyspaces, in which case we cannot use any index
-					// scans on the current keyspace. An error will be returned by caller.
-					return nil, 0, nil
-				} else {
-					return nil, 0, errors.NewPlanInternalError("buildOrScanNoPushdown: missing OR subterm")
-				}
+				// if an arm of OR does not reference the keyspace,
+				// which could happen if:
+				//   - in case of ANSI JOIN, an arm references other keyspaces
+				//   - an arm only references named/positional parameters
+				// then OR index path is not feasible.
+				return nil, 0, nil
 			}
 
 			scan, termSargLength, err := this.buildTermScan(node, baseKeyspace,
