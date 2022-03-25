@@ -28,6 +28,7 @@ func NewNest(plan *plan.Nest, context *Context) *Nest {
 	newJoinBase(&rv.joinBase, context)
 	rv.execPhase = NEST
 	rv.output = rv
+	rv.mk.validate = plan.Term().ValidateKeys()
 	return rv
 }
 
@@ -40,6 +41,7 @@ func (this *Nest) Copy() Operator {
 		plan: this.plan,
 	}
 	this.joinBase.copy(&rv.joinBase)
+	this.mk.validate = this.mk.validate
 	return rv
 }
 
@@ -64,8 +66,14 @@ func (this *Nest) processItem(item value.AnnotatedValue, context *Context) bool 
 	return this.joinEnbatch(doc, this, context)
 }
 
+func (this *Nest) beforeItems(context *Context, item value.Value) bool {
+	this.mk.reset()
+	return true
+}
+
 func (this *Nest) afterItems(context *Context) {
 	this.flushBatch(context)
+	this.mk.report(context, this.plan.Keyspace().Name)
 }
 
 func (this *Nest) flushBatch(context *Context) bool {
@@ -82,6 +90,8 @@ func (this *Nest) flushBatch(context *Context) bool {
 	defer _STRING_ANNOTATED_POOL.Put(pairMap)
 
 	fetchOk := this.joinFetch(this.plan.Keyspace(), this.plan.SubPaths(), keyCount, pairMap, context)
+
+	this.validateKeys(pairMap)
 
 	return fetchOk && this.nestEntries(keyCount, pairMap, this.plan.Outer(), this.plan.OnFilter(), this.plan.Term().Alias(), context)
 }

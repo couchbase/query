@@ -18,7 +18,7 @@ import (
 
 func (this *builder) beginMutate(keyspace datastore.Keyspace, ksref *algebra.KeyspaceRef,
 	keys expression.Expression, indexes algebra.IndexRefs, limit expression.Expression,
-	mustFetch bool, optimHints *algebra.OptimHints) (*algebra.OptimHints, error) {
+	mustFetch bool, optimHints *algebra.OptimHints, validateKeys bool) (*algebra.OptimHints, error) {
 
 	ksref.SetDefaultNamespace(this.namespace)
 	var term *algebra.KeyspaceTerm
@@ -119,7 +119,7 @@ func (this *builder) beginMutate(keyspace datastore.Keyspace, ksref *algebra.Key
 					frCost = OPT_COST_NOT_AVAIL
 				}
 			}
-			fetch = plan.NewFetch(keyspace, term, names, cost, cardinality, size, frCost)
+			fetch = plan.NewFetch(keyspace, term, names, cost, cardinality, size, frCost, validateKeys)
 		} else {
 			fetch = plan.NewDummyFetch(keyspace, term, cost, cardinality, size, frCost)
 		}

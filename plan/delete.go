@@ -20,10 +20,11 @@ import (
 type SendDelete struct {
 	dml
 	optEstimate
-	keyspace datastore.Keyspace
-	term     *algebra.KeyspaceRef
-	alias    string
-	limit    expression.Expression
+	keyspace     datastore.Keyspace
+	term         *algebra.KeyspaceRef
+	alias        string
+	limit        expression.Expression
+	validateKeys bool
 }
 
 func NewSendDelete(keyspace datastore.Keyspace, ksref *algebra.KeyspaceRef, limit expression.Expression,
@@ -48,6 +49,14 @@ func (this *SendDelete) New() Operator {
 
 func (this *SendDelete) Keyspace() datastore.Keyspace {
 	return this.keyspace
+}
+
+func (this *SendDelete) SetValidateKeys(on bool) {
+	this.validateKeys = on
+}
+
+func (this *SendDelete) ValidateKeys() bool {
+	return this.validateKeys
 }
 
 func (this *SendDelete) Term() *algebra.KeyspaceRef {
@@ -75,6 +84,10 @@ func (this *SendDelete) MarshalBase(f func(map[string]interface{})) map[string]i
 		r["limit"] = this.limit
 	}
 
+	if this.validateKeys {
+		r["validate_keys"] = this.validateKeys
+	}
+
 	if optEstimate := marshalOptEstimate(&this.optEstimate); optEstimate != nil {
 		r["optimizer_estimates"] = optEstimate
 	}
@@ -87,16 +100,17 @@ func (this *SendDelete) MarshalBase(f func(map[string]interface{})) map[string]i
 
 func (this *SendDelete) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_           string                 `json:"#operator"`
-		Namespace   string                 `json:"namespace"`
-		Bucket      string                 `json:"bucket"`
-		Scope       string                 `json:"scope"`
-		Keyspace    string                 `json:"keyspace"`
-		Expr        string                 `json:"expr"`
-		As          string                 `json:"as"`
-		Alias       string                 `json:"alias"`
-		Limit       string                 `json:"limit"`
-		OptEstimate map[string]interface{} `json:"optimizer_estimates"`
+		_            string                 `json:"#operator"`
+		Namespace    string                 `json:"namespace"`
+		Bucket       string                 `json:"bucket"`
+		Scope        string                 `json:"scope"`
+		Keyspace     string                 `json:"keyspace"`
+		Expr         string                 `json:"expr"`
+		As           string                 `json:"as"`
+		Alias        string                 `json:"alias"`
+		Limit        string                 `json:"limit"`
+		OptEstimate  map[string]interface{} `json:"optimizer_estimates"`
+		ValidateKeys bool                   `json:"validate_keys"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -105,6 +119,7 @@ func (this *SendDelete) UnmarshalJSON(body []byte) error {
 	}
 
 	this.alias = _unmarshalled.Alias
+	this.validateKeys = _unmarshalled.ValidateKeys
 
 	if _unmarshalled.Limit != "" {
 		this.limit, err = parser.Parse(_unmarshalled.Limit)

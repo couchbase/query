@@ -21,31 +21,33 @@ Represents the UPDATE statement.
 type Update struct {
 	statementBase
 
-	keyspace   *KeyspaceRef          `json:"keyspace"`
-	keys       expression.Expression `json:"keys"`
-	indexes    IndexRefs             `json:"indexes"`
-	set        *Set                  `json:"set"`
-	unset      *Unset                `json:"unset"`
-	where      expression.Expression `json:"where"`
-	limit      expression.Expression `json:"limit"`
-	returning  *Projection           `json:"returning"`
-	optimHints *OptimHints           `json:"optimizer_hints"`
+	keyspace     *KeyspaceRef          `json:"keyspace"`
+	keys         expression.Expression `json:"keys"`
+	indexes      IndexRefs             `json:"indexes"`
+	set          *Set                  `json:"set"`
+	unset        *Unset                `json:"unset"`
+	where        expression.Expression `json:"where"`
+	limit        expression.Expression `json:"limit"`
+	returning    *Projection           `json:"returning"`
+	optimHints   *OptimHints           `json:"optimizer_hints"`
+	validateKeys bool                  `json:"validate_keys"`
 }
 
 func NewUpdate(keyspace *KeyspaceRef, keys expression.Expression, indexes IndexRefs,
 	set *Set, unset *Unset, where, limit expression.Expression, returning *Projection,
-	optimHints *OptimHints) *Update {
+	optimHints *OptimHints, validateKeys bool) *Update {
 
 	rv := &Update{
-		keyspace:   keyspace,
-		keys:       keys,
-		indexes:    indexes,
-		set:        set,
-		unset:      unset,
-		where:      where,
-		limit:      limit,
-		returning:  returning,
-		optimHints: optimHints,
+		keyspace:     keyspace,
+		keys:         keys,
+		indexes:      indexes,
+		set:          set,
+		unset:        unset,
+		where:        where,
+		limit:        limit,
+		returning:    returning,
+		optimHints:   optimHints,
+		validateKeys: validateKeys,
 	}
 
 	rv.stmt = rv
@@ -276,6 +278,10 @@ clause.
 */
 func (this *Update) Keys() expression.Expression {
 	return this.keys
+}
+
+func (this *Update) ValidateKeys() bool {
+	return this.validateKeys
 }
 
 /*

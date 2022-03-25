@@ -37,6 +37,7 @@ type Fetch struct {
 	deepCopy   bool
 	batchSize  int
 	fetchCount uint64
+	mk         missingKeys
 }
 
 func NewFetch(plan *plan.Fetch, context *Context) *Fetch {
@@ -49,6 +50,7 @@ func NewFetch(plan *plan.Fetch, context *Context) *Fetch {
 	rv.deepCopy = op == "" || op == "MERGE" || op == "UPDATE"
 	rv.execPhase = FETCH
 	rv.output = rv
+	rv.mk.validate = plan.Term().ValidateKeys()
 
 	return rv
 }
@@ -64,6 +66,7 @@ func (this *Fetch) Copy() Operator {
 	rv.fetchCount = 0
 	rv.deepCopy = this.deepCopy
 	this.base.copy(&rv.base)
+	rv.mk.validate = rv.plan.Term().ValidateKeys()
 	return rv
 }
 
@@ -76,6 +79,7 @@ func (this *Fetch) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *Fetch) beforeItems(context *Context, item value.Value) bool {
+	this.mk.reset()
 	if this.keyspace = this.plan.Keyspace(); this.keyspace == nil {
 		this.keyspace = getKeyspace(this.keyspace, this.plan.Term().FromExpression(), context)
 	}
@@ -100,6 +104,9 @@ func (this *Fetch) afterItems(context *Context) {
 	context.AddPhaseCount(FETCH, this.fetchCount)
 	this.fetchCount = 0
 	this.releaseBatch(context)
+	this.mk.report(context, this.plan.Term().Alias)
+	// if this is the inner leg of a NL join, we don't want to repeatedly report the same keys as missing
+	this.mk.validate = false
 }
 
 func (this *Fetch) flushBatch(context *Context) bool {
@@ -189,6 +196,8 @@ func (this *Fetch) flushBatch(context *Context) bool {
 			if !this.sendItem(av) {
 				return false
 			}
+		} else {
+			this.mk.add(fetchKeys[0])
 		}
 		return fetchOk
 	}
@@ -223,6 +232,8 @@ func (this *Fetch) flushBatch(context *Context) bool {
 			if !this.sendItem(av) {
 				return false
 			}
+		} else {
+			this.mk.add(key)
 		}
 	}
 

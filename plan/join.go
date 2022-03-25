@@ -117,6 +117,10 @@ func (this *Join) MarshalBase(f func(map[string]interface{})) map[string]interfa
 		r["optimizer_estimates"] = optEstimate
 	}
 
+	if this.term.ValidateKeys() {
+		r["validate_keys"] = true
+	}
+
 	if f != nil {
 		f(r)
 	}
@@ -125,17 +129,18 @@ func (this *Join) MarshalBase(f func(map[string]interface{})) map[string]interfa
 
 func (this *Join) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_           string                 `json:"#operator"`
-		Namespace   string                 `json:"namespace"`
-		Bucket      string                 `json:"bucket"`
-		Scope       string                 `json:"scope"`
-		Keyspace    string                 `json:"keyspace"`
-		On          string                 `json:"on_keys"`
-		Outer       bool                   `json:"outer"`
-		As          string                 `json:"as"`
-		OnFilter    string                 `json:"on_filter"`
-		SubPaths    []string               `json:"subpaths"`
-		OptEstimate map[string]interface{} `json:"optimizer_estimates"`
+		_            string                 `json:"#operator"`
+		Namespace    string                 `json:"namespace"`
+		Bucket       string                 `json:"bucket"`
+		Scope        string                 `json:"scope"`
+		Keyspace     string                 `json:"keyspace"`
+		On           string                 `json:"on_keys"`
+		Outer        bool                   `json:"outer"`
+		As           string                 `json:"as"`
+		OnFilter     string                 `json:"on_filter"`
+		SubPaths     []string               `json:"subpaths"`
+		OptEstimate  map[string]interface{} `json:"optimizer_estimates"`
+		ValidateKeys bool                   `json:"validate_keys"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -156,6 +161,7 @@ func (this *Join) UnmarshalJSON(body []byte) error {
 	this.term = algebra.NewKeyspaceTermFromPath(algebra.NewPathShortOrLong(_unmarshalled.Namespace, _unmarshalled.Bucket,
 		_unmarshalled.Scope, _unmarshalled.Keyspace), _unmarshalled.As, nil, nil)
 	this.term.SetJoinKeys(keys_expr)
+	this.term.SetValidateKeys(_unmarshalled.ValidateKeys)
 	this.keyspace, err = datastore.GetKeyspace(this.term.Path().Parts()...)
 	if err != nil {
 		return err

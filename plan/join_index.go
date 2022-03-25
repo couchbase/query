@@ -162,6 +162,10 @@ func (this *IndexJoin) MarshalBase(f func(map[string]interface{})) map[string]in
 		r["optimizer_estimates"] = optEstimate
 	}
 
+	if this.term.ValidateKeys() {
+		r["validate_keys"] = true
+	}
+
 	if f != nil {
 		f(r)
 	}
@@ -186,8 +190,9 @@ func (this *IndexJoin) UnmarshalJSON(body []byte) error {
 			Covers       []string               `json:"covers"`
 			FilterCovers map[string]interface{} `json:"filter_covers"`
 		} `json:"scan"`
-		SubPaths    []string               `json:"subpaths"`
-		OptEstimate map[string]interface{} `json:"optimizer_estimates"`
+		SubPaths     []string               `json:"subpaths"`
+		OptEstimate  map[string]interface{} `json:"optimizer_estimates"`
+		ValidateKeys bool                   `json:"validate_keys"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -213,6 +218,7 @@ func (this *IndexJoin) UnmarshalJSON(body []byte) error {
 	this.term = algebra.NewKeyspaceTermFromPath(algebra.NewPathShortOrLong(_unmarshalled.Namespace, _unmarshalled.Bucket,
 		_unmarshalled.Scope, _unmarshalled.Keyspace), _unmarshalled.As, nil, nil)
 	this.term.SetJoinKeys(keys_expr)
+	this.term.SetValidateKeys(_unmarshalled.ValidateKeys)
 	this.keyspace, err = datastore.GetKeyspace(this.term.Path().Parts()...)
 	if err != nil {
 		return err

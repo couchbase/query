@@ -32,12 +32,14 @@ type SendDelete struct {
 	plan     *plan.SendDelete
 	keyspace datastore.Keyspace
 	limit    int64
+	mk       missingKeys
 }
 
 func NewSendDelete(plan *plan.SendDelete, context *Context) *SendDelete {
 	rv := _SENDDELETE_OP_POOL.Get().(*SendDelete)
 	rv.plan = plan
 	rv.limit = -1
+	rv.mk.validate = plan.ValidateKeys()
 
 	newBase(&rv.base, context)
 	rv.execPhase = DELETE
@@ -53,6 +55,7 @@ func (this *SendDelete) Copy() Operator {
 	rv := _SENDDELETE_OP_POOL.Get().(*SendDelete)
 	rv.plan = this.plan
 	rv.limit = this.limit
+	rv.mk.validate = this.mk.validate
 	this.base.copy(&rv.base)
 	return rv
 }
@@ -76,6 +79,8 @@ func (this *SendDelete) processItem(item value.AnnotatedValue, context *Context)
 }
 
 func (this *SendDelete) beforeItems(context *Context, parent value.Value) bool {
+	this.mk.reset()
+
 	this.keyspace = getKeyspace(this.plan.Keyspace(), this.plan.Term().ExpressionTerm(), context)
 	if this.keyspace == nil {
 		return false
@@ -104,6 +109,7 @@ func (this *SendDelete) beforeItems(context *Context, parent value.Value) bool {
 
 func (this *SendDelete) afterItems(context *Context) {
 	this.flushBatch(context)
+	this.mk.report(context, this.plan.Alias)
 }
 
 func (this *SendDelete) flushBatch(context *Context) bool {
@@ -152,6 +158,21 @@ func (this *SendDelete) flushBatch(context *Context) bool {
 
 	// Update mutation count with number of deleted docs:
 	context.AddMutationCount(uint64(len(dpairs)))
+
+	if this.mk.validate {
+		for _, k := range pairs {
+			deleted := false
+			for _, k2 := range dpairs {
+				if k.Name == k2.Name {
+					deleted = true
+					break
+				}
+			}
+			if !deleted {
+				this.mk.add(k.Name)
+			}
+		}
+	}
 
 	mutationOk := true
 	if len(errs) > 0 {

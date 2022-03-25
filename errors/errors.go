@@ -209,6 +209,20 @@ func processValue(v interface{}) interface{} {
 		return vt.String()
 	case *AbortError:
 		return vt.e
+	case []interface{}:
+		return vt
+	case int64:
+		return vt
+	case int:
+		return vt
+	case float64:
+		return vt
+	case string:
+		return vt
+	case nil:
+		return vt
+	case bool:
+		return vt
 	default:
 		return fmt.Sprintf("%v", v)
 	}

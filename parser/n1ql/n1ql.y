@@ -16,14 +16,15 @@ import "github.com/couchbase/query/value"
 func logDebugGrammar(format string, v ...interface{}) {
     clog.To("PARSER", format, v...)
 }
+
 %}
 
 %union {
-s string
-u32 uint32
-n int64
-f float64
-b bool
+s                string
+u32              uint32
+n                int64
+f                float64
+b                bool
 
 ss               []string
 expr             expression.Expression
@@ -105,7 +106,7 @@ optimHintArr     []algebra.OptimHint
 optimHints       *algebra.OptimHints
 
 // token offset into the statement
-tokOffset    int
+tokOffset        int
 }
 
 %token _ERROR_  // used by the scanner to flag errors
@@ -1208,6 +1209,7 @@ from_term opt_join_type JOIN simple_from_term on_keys
         yylex.Error("JOIN must be done on a keyspace"+yylex.(*lexer).ErrorContext())
     } else {
         ksterm.SetJoinKeys($5)
+        ksterm.SetValidateKeys($5.HasExprFlag(expression.EXPR_VALIDATE_KEYS))
     }
     $$ = algebra.NewJoin($1, $2, ksterm)
 }
@@ -1220,6 +1222,7 @@ from_term opt_join_type JOIN simple_from_term on_key FOR IDENT
     } else {
         ksterm.SetIndexJoinNest()
         ksterm.SetJoinKeys($5)
+        ksterm.SetValidateKeys($5.HasExprFlag(expression.EXPR_VALIDATE_KEYS))
     }
     $$ = algebra.NewIndexJoin($1, $2, ksterm, $7)
 }
@@ -1231,6 +1234,7 @@ from_term opt_join_type NEST simple_from_term on_keys
         yylex.Error("NEST must be done on a keyspace"+yylex.(*lexer).ErrorContext())
     } else {
         ksterm.SetJoinKeys($5)
+        ksterm.SetValidateKeys($5.HasExprFlag(expression.EXPR_VALIDATE_KEYS))
     }
     $$ = algebra.NewNest($1, $2, ksterm)
 }
@@ -1243,6 +1247,7 @@ from_term opt_join_type NEST simple_from_term on_key FOR IDENT
     } else {
         ksterm.SetIndexJoinNest()
         ksterm.SetJoinKeys($5)
+        ksterm.SetValidateKeys($5.HasExprFlag(expression.EXPR_VALIDATE_KEYS))
     }
     $$ = algebra.NewIndexNest($1, $2, ksterm, $7)
 }
@@ -1295,11 +1300,13 @@ expr opt_as_alias opt_use
         case *expression.Identifier:
             ksterm := algebra.NewKeyspaceTermFromPath(algebra.NewPathWithContext(other.Alias(), yylex.(*lexer).Namespace(),
                 yylex.(*lexer).QueryContext()), $2, $3.Keys(), $3.Indexes())
+            ksterm.SetValidateKeys($3.ValidateKeys())
             $$ = algebra.NewExpressionTerm(other, $2, ksterm, other.Parenthesis() == false, $3.JoinHint())
         case *algebra.NamedParameter, *algebra.PositionalParameter:
             if $3.Indexes() == nil {
                 if $3.Keys() != nil {
                     $$ = algebra.NewKeyspaceTermFromExpression(other, $2, $3.Keys(), $3.Indexes(), $3.JoinHint())
+                    $$.(*algebra.KeyspaceTerm).SetValidateKeys($3.ValidateKeys())
                 } else {
                     $$ = algebra.NewExpressionTerm(other, $2, nil, false, $3.JoinHint())
                 }
@@ -1312,6 +1319,7 @@ expr opt_as_alias opt_use
             if len(path) == 3 {
                 ksterm := algebra.NewKeyspaceTermFromPath(algebra.NewPathLong(yylex.(*lexer).Namespace(), path[0], path[1],
                     path[2]), $2, $3.Keys(), $3.Indexes())
+                ksterm.SetValidateKeys($3.ValidateKeys())
                 $$ = algebra.NewExpressionTerm(other, $2, ksterm, other.Parenthesis() == false, $3.JoinHint())
             } else {
                 isExpr = true
@@ -1340,6 +1348,7 @@ keyspace_term:
 keyspace_path opt_as_alias opt_use
 {
     ksterm := algebra.NewKeyspaceTermFromPath($1, $2, $3.Keys(), $3.Indexes())
+    ksterm.SetValidateKeys($3.ValidateKeys())
     if $3.JoinHint() != algebra.JOIN_HINT_NONE {
         ksterm.SetJoinHint($3.JoinHint())
     }
@@ -1446,6 +1455,12 @@ opt_primary KEYS expr
 {
     $$ = algebra.NewUse($3, nil, algebra.JOIN_HINT_NONE)
 }
+|
+opt_primary KEYS VALIDATE expr
+{
+    $$ = algebra.NewUse($4, nil, algebra.JOIN_HINT_NONE)
+    $$.SetValidateKeys(true)
+}
 ;
 
 use_index:
@@ -1545,12 +1560,24 @@ ON opt_primary KEYS expr
 {
     $$ = $4
 }
+|
+ON opt_primary KEYS VALIDATE expr
+{
+    $$ = $5
+    $$.SetExprFlag(expression.EXPR_VALIDATE_KEYS)
+}
 ;
 
 on_key:
 ON opt_primary KEY expr
 {
     $$ = $4
+}
+|
+ON opt_primary KEY VALIDATE expr
+{
+    $$ = $5
+    $$.SetExprFlag(expression.EXPR_VALIDATE_KEYS)
 }
 ;
 
@@ -2095,7 +2122,7 @@ UPSERT INTO keyspace_ref LPAREN key_val_options_expr_header RPAREN fullselect op
 delete:
 DELETE opt_optim_hints FROM keyspace_ref opt_use_del_upd opt_where opt_limit opt_returning
 {
-  $$ = algebra.NewDelete($4, $5.Keys(), $5.Indexes(), $6, $7, $8, $2)
+  $$ = algebra.NewDelete($4, $5.Keys(), $5.Indexes(), $6, $7, $8, $2, $5.ValidateKeys())
 }
 ;
 
@@ -2109,17 +2136,17 @@ DELETE opt_optim_hints FROM keyspace_ref opt_use_del_upd opt_where opt_limit opt
 update:
 UPDATE opt_optim_hints keyspace_ref opt_use_del_upd set unset opt_where opt_limit opt_returning
 {
-    $$ = algebra.NewUpdate($3, $4.Keys(), $4.Indexes(), $5, $6, $7, $8, $9, $2)
+    $$ = algebra.NewUpdate($3, $4.Keys(), $4.Indexes(), $5, $6, $7, $8, $9, $2, $4.ValidateKeys())
 }
 |
 UPDATE opt_optim_hints keyspace_ref opt_use_del_upd set opt_where opt_limit opt_returning
 {
-    $$ = algebra.NewUpdate($3, $4.Keys(), $4.Indexes(), $5, nil, $6, $7, $8, $2)
+    $$ = algebra.NewUpdate($3, $4.Keys(), $4.Indexes(), $5, nil, $6, $7, $8, $2, $4.ValidateKeys())
 }
 |
 UPDATE opt_optim_hints keyspace_ref opt_use_del_upd unset opt_where opt_limit opt_returning
 {
-    $$ = algebra.NewUpdate($3, $4.Keys(), $4.Indexes(), nil, $5, $6, $7, $8, $2)
+    $$ = algebra.NewUpdate($3, $4.Keys(), $4.Indexes(), nil, $5, $6, $7, $8, $2, $4.ValidateKeys())
 }
 ;
 

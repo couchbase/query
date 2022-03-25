@@ -331,5 +331,11 @@
             }
         }
     ]
+    },
+    {
+        "statements": "SELECT * FROM purchase USE KEYS VALIDATE [\"not_a_key\"] ORDER BY purchaseId",
+        "warningCode": 5503,
+        "results": [
+        ]
     }
 ]

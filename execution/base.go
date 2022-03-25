@@ -1590,3 +1590,33 @@ func childrenAccrueTimes(o1, o2 []Operator) bool {
 	}
 	return false
 }
+
+// container for validation failures of keys in ON/USE KEYS clause
+type missingKeys struct {
+	validate bool
+	count    int
+	keys     []interface{}
+}
+
+const _MAX_MISSING_KEYS = 10
+
+func (this *missingKeys) add(k string) {
+	if !this.validate {
+		return
+	}
+	if this.count < _MAX_MISSING_KEYS {
+		this.keys = append(this.keys, k)
+	}
+	this.count++
+}
+
+func (this *missingKeys) reset() {
+	this.count = 0
+	this.keys = nil
+}
+
+func (this *missingKeys) report(context *Context, ks func() string) {
+	if this.validate && this.count > 0 {
+		context.Warning(errors.NewMissingKeysWarning(this.count, ks(), this.keys...))
+	}
+}

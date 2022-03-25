@@ -221,10 +221,10 @@
             "oid1": "customer515_joins",
             "oid2": "purchase0_joins"
         }
-    ]  
+    ]
     },
     {
-        "statements": "SELECT META(purchase).id purchase_id, META(product).id product_id FROM purchase INNER JOIN product ON KEYS ARRAY s.product || \"_\" || purchase.test_id FOR s IN purchase.lineItems END where purchase.test_id = \"joins\" ORDER BY purchase_id, product_id limit 5", 
+        "statements": "SELECT META(purchase).id purchase_id, META(product).id product_id FROM purchase INNER JOIN product ON KEYS ARRAY s.product || \"_\" || purchase.test_id FOR s IN purchase.lineItems END where purchase.test_id = \"joins\" ORDER BY purchase_id, product_id limit 5",
  "results": [
         {
             "product_id": "product701_joins",
@@ -248,7 +248,7 @@
         }
     ]
 },
-{    
+{
     "statements": "SELECT META(purchase).id as purchase_id, meta(product).id as product_id, product.name as name FROM purchase UNNEST purchase.lineItems line INNER JOIN product ON KEYS line.product || \"_\" || purchase.test_id where purchase.test_id = \"joins\" AND product.test_id = \"joins\" ORDER BY purchase_id, product_id, name limit 5 ",
 "results": [
         {
@@ -276,6 +276,13 @@
             "product_id": "product621_joins",
             "purchase_id": "purchase1000_joins"
         }
-    ] 
+    ]
+},
+{
+    "statements": "SELECT META(purchase).id as purchase_id, meta(product).id as product_id, product.name as name FROM purchase UNNEST purchase.lineItems line INNER JOIN product ON KEYS VALIDATE line.product || \"_xxx_\" || purchase.test_id where purchase.test_id = \"joins\" AND product.test_id = \"joins\" ORDER BY purchase_id, product_id, name limit 5 ",
+    "warningCode": 5503,
+    "results": [
+    ]
 }
+
 ]

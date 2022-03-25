@@ -27,13 +27,14 @@ and returning represents the returning clause.
 type Delete struct {
 	statementBase
 
-	keyspace   *KeyspaceRef          `json:"keyspace"`
-	keys       expression.Expression `json:"keys"`
-	indexes    IndexRefs             `json:"indexes"`
-	where      expression.Expression `json:"where"`
-	limit      expression.Expression `json:"limit"`
-	returning  *Projection           `json:"returning"`
-	optimHints *OptimHints           `json:"optimizer_hints"`
+	keyspace     *KeyspaceRef          `json:"keyspace"`
+	keys         expression.Expression `json:"keys"`
+	indexes      IndexRefs             `json:"indexes"`
+	where        expression.Expression `json:"where"`
+	limit        expression.Expression `json:"limit"`
+	returning    *Projection           `json:"returning"`
+	optimHints   *OptimHints           `json:"optimizer_hints"`
+	validateKeys bool                  `json:"validate_keys"`
 }
 
 /*
@@ -42,15 +43,16 @@ struct by assigning the input attributes to the fields
 of the struct
 */
 func NewDelete(keyspace *KeyspaceRef, keys expression.Expression, indexes IndexRefs,
-	where, limit expression.Expression, returning *Projection, optimHints *OptimHints) *Delete {
+	where, limit expression.Expression, returning *Projection, optimHints *OptimHints, validateKeys bool) *Delete {
 	rv := &Delete{
-		keyspace:   keyspace,
-		keys:       keys,
-		indexes:    indexes,
-		where:      where,
-		limit:      limit,
-		returning:  returning,
-		optimHints: optimHints,
+		keyspace:     keyspace,
+		keys:         keys,
+		indexes:      indexes,
+		where:        where,
+		limit:        limit,
+		returning:    returning,
+		optimHints:   optimHints,
+		validateKeys: validateKeys,
 	}
 
 	rv.stmt = rv
@@ -227,6 +229,10 @@ statement.
 */
 func (this *Delete) Keys() expression.Expression {
 	return this.keys
+}
+
+func (this *Delete) ValidateKeys() bool {
+	return this.validateKeys
 }
 
 /*

@@ -26,7 +26,7 @@ type Fetch struct {
 }
 
 func NewFetch(keyspace datastore.Keyspace, term *algebra.KeyspaceTerm, subPaths []string,
-	cost, cardinality float64, size int64, frCost float64) *Fetch {
+	cost, cardinality float64, size int64, frCost float64, validateKeys bool) *Fetch {
 	rv := &Fetch{
 		keyspace: keyspace,
 		term:     term,
@@ -73,6 +73,9 @@ func (this *Fetch) MarshalBase(f func(map[string]interface{})) map[string]interf
 	if this.term.IsUnderNL() {
 		r["nested_loop"] = this.term.IsUnderNL()
 	}
+	if this.term.ValidateKeys() {
+		r["validate_keys"] = true
+	}
 
 	if optEstimate := marshalOptEstimate(&this.optEstimate); optEstimate != nil {
 		r["optimizer_estimates"] = optEstimate
@@ -86,16 +89,17 @@ func (this *Fetch) MarshalBase(f func(map[string]interface{})) map[string]interf
 
 func (this *Fetch) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_           string                 `json:"#operator"`
-		Namespace   string                 `json:"namespace"`
-		Bucket      string                 `json:"bucket"`
-		Scope       string                 `json:"scope"`
-		Keyspace    string                 `json:"keyspace"`
-		FromExpr    string                 `json:"fromExpr"`
-		As          string                 `json:"as"`
-		UnderNL     bool                   `json:"nested_loop"`
-		OptEstimate map[string]interface{} `json:"optimizer_estimates"`
-		SubPaths    []string               `json:"subpaths"`
+		_            string                 `json:"#operator"`
+		Namespace    string                 `json:"namespace"`
+		Bucket       string                 `json:"bucket"`
+		Scope        string                 `json:"scope"`
+		Keyspace     string                 `json:"keyspace"`
+		FromExpr     string                 `json:"fromExpr"`
+		As           string                 `json:"as"`
+		UnderNL      bool                   `json:"nested_loop"`
+		OptEstimate  map[string]interface{} `json:"optimizer_estimates"`
+		SubPaths     []string               `json:"subpaths"`
+		ValidateKeys bool                   `json:"validate_keys"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -121,6 +125,7 @@ func (this *Fetch) UnmarshalJSON(body []byte) error {
 	if err == nil && _unmarshalled.UnderNL {
 		this.term.SetUnderNL()
 	}
+	this.term.SetValidateKeys(_unmarshalled.ValidateKeys)
 
 	return err
 }

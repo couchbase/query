@@ -27,7 +27,7 @@ func (this *builder) VisitUpdate(stmt *algebra.Update) (interface{}, error) {
 
 	optimHints := stmt.OptimHints()
 	optimHints, err = this.beginMutate(keyspace, ksref, stmt.Keys(), stmt.Indexes(), stmt.Limit(),
-		true, optimHints)
+		true, optimHints, stmt.ValidateKeys())
 	if err != nil {
 		return nil, err
 	}

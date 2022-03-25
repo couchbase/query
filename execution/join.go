@@ -28,6 +28,7 @@ func NewJoin(plan *plan.Join, context *Context) *Join {
 	newJoinBase(&rv.joinBase, context)
 	rv.execPhase = JOIN
 	rv.output = rv
+	rv.mk.validate = plan.Term().ValidateKeys()
 	return rv
 }
 
@@ -40,6 +41,7 @@ func (this *Join) Copy() Operator {
 		plan: this.plan,
 	}
 	this.joinBase.copy(&rv.joinBase)
+	this.mk.validate = this.mk.validate
 	return rv
 }
 
@@ -65,9 +67,15 @@ func (this *Join) processItem(item value.AnnotatedValue, context *Context) bool 
 	return this.joinEnbatch(doc, this, context)
 }
 
+func (this *Join) beforeItems(context *Context, item value.Value) bool {
+	this.mk.reset()
+	return true
+}
+
 func (this *Join) afterItems(context *Context) {
 	this.flushBatch(context)
 	this.releaseBatch(context)
+	this.mk.report(context, this.plan.Keyspace().Name)
 }
 
 func (this *Join) flushBatch(context *Context) bool {
@@ -85,7 +93,10 @@ func (this *Join) flushBatch(context *Context) bool {
 
 	fetchOk := this.joinFetch(this.plan.Keyspace(), this.plan.SubPaths(), keyCount, pairMap, context)
 
-	return fetchOk && this.joinEntries(keyCount, pairMap, this.plan.Outer(), this.plan.OnFilter(), this.plan.Term().Alias(), context)
+	this.validateKeys(pairMap)
+
+	return fetchOk &&
+		this.joinEntries(keyCount, pairMap, this.plan.Outer(), this.plan.OnFilter(), this.plan.Term().Alias(), context)
 }
 
 func (this *Join) MarshalJSON() ([]byte, error) {

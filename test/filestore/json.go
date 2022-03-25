@@ -180,7 +180,7 @@ func Run(mockServer *MockServer, p bool, q string, namedArgs map[string]value.Va
 
 	// wait till all the results are ready
 	<-mr.done
-	return mr.results, mr.warnings, mr.err
+	return mr.results, query.Warnings(), mr.err
 }
 
 func Start(site, pool, namespace string) *MockServer {
@@ -345,10 +345,12 @@ func FtestCaseFile(fname string, qc *MockServer, namespace string) (fin_stmt str
 		statements := v.(string)
 		//t.Logf("  %d: %v\n", i, statements)
 		fin_stmt = strconv.Itoa(i) + ": " + statements
-		resultsActual, _, errActual := Run(qc, true, statements, namedArgs, positionalArgs, namespace)
+		resultsActual, warnActual, errActual := Run(qc, true, statements, namedArgs, positionalArgs, namespace)
 
 		errCodeExpected := int(0)
 		errExpected := ""
+		warnCodeExpected := int(0)
+		warnExpected := ""
 
 		v, ok = c["postStatements"]
 		if ok {
@@ -378,9 +380,19 @@ func FtestCaseFile(fname string, qc *MockServer, namespace string) (fin_stmt str
 			errExpected = v.(string)
 		}
 
+		v, ok = c["warning"]
+		if ok {
+			warnExpected = v.(string)
+		}
+
 		if v, ok = c["errorCode"]; ok {
 			errCodeExpectedf, _ := v.(float64)
 			errCodeExpected = int(errCodeExpectedf)
+		}
+
+		if v, ok = c["warningCode"]; ok {
+			warnCodeExpectedf, _ := v.(float64)
+			warnCodeExpected = int(warnCodeExpectedf)
 		}
 
 		if errActual != nil {
@@ -390,20 +402,60 @@ func FtestCaseFile(fname string, qc *MockServer, namespace string) (fin_stmt str
 
 			if errExpected == "" {
 				errstring = go_er.New(fmt.Sprintf("unexpected err: %v\nstatements: %v\n"+
-					" for case file: %v, index: %v%s", errActual, statements, ffname, i, findIndex(b, i)))
+					"      file: %v\n     index: %v%s\n\n", errActual, statements, ffname, i, findIndex(b, i)))
 				return
 			}
 			if !errActual.ContainsText(errExpected) {
 				errstring = go_er.New(fmt.Sprintf("Mismatched error:\nexpected: %s\n  actual: %s\n"+
-					" for case file: %v, index: %v%s", errExpected, errActual.Error(), ffname, i, findIndex(b, i)))
+					"      file: %v\n     index: %v%s\n\n", errExpected, errActual.Error(), ffname, i, findIndex(b, i)))
 				return
 			}
 			continue
 		}
-
 		if errExpected != "" {
 			errstring = go_er.New(fmt.Sprintf("did not see the expected err: %v\nstatements: %v\n"+
-				" for case file: %v, index: %v%s", errExpected, statements, ffname, i, findIndex(b, i)))
+				"      file: %v\n     index: %v%s\n\n", errExpected, statements, ffname, i, findIndex(b, i)))
+			return
+		}
+		if errCodeExpected != 0 {
+			errstring = go_er.New(fmt.Sprintf("did not see the expected err: %v\nstatements: %v\n"+
+				"      file: %v\n     index: %v%s\n\n", errCodeExpected, statements, ffname, i, findIndex(b, i)))
+			return
+		}
+
+		if len(warnActual) > 0 {
+			if warnExpected == "" && warnCodeExpected == 0 {
+				errstring = go_er.New(fmt.Sprintf("unexpected warning(s):\n%s\nstatements: %v\n"+
+					"      file: %v\n     index: %v%s\n\n", prettyPrint(warnActual), statements, ffname, i, findIndex(b, i)))
+				return
+			}
+			found := false
+			for _, w := range warnActual {
+				if int(w.Code()) == warnCodeExpected || (len(warnExpected) > 0 && w.ContainsText(warnExpected)) {
+					found = true
+					break
+				}
+			}
+			if !found {
+				if warnExpected != "" {
+					errstring = go_er.New(fmt.Sprintf("Missing expected warning: %s\n"+
+						"      file: %v\n     index: %v%s\n\n", warnExpected, ffname, i, findIndex(b, i)))
+				} else {
+					errstring = go_er.New(fmt.Sprintf("Missing expected warning: %v\n"+
+						"      file: %v\n     index: %v%s\n\n", warnCodeExpected, ffname, i, findIndex(b, i)))
+				}
+				return
+			}
+			continue
+		}
+		if warnExpected != "" {
+			errstring = go_er.New(fmt.Sprintf("did not see the expected warning: %v\nstatements: %v\n"+
+				"      file: %v\n     index: %v%s\n\n", warnExpected, statements, ffname, i, findIndex(b, i)))
+			return
+		}
+		if warnCodeExpected != 0 {
+			errstring = go_er.New(fmt.Sprintf("did not see the expected warning: %v\nstatements: %v\n"+
+				"      file: %v\n     index: %v%s\n\n", warnCodeExpected, statements, ffname, i, findIndex(b, i)))
 			return
 		}
 

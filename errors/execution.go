@@ -316,3 +316,13 @@ func NewNilEvaluateParamError(param string) Error {
 		InternalMsg:    fmt.Sprintf("nil '%s' parameter for evaluation", param),
 		InternalCaller: CallerN(1)}
 }
+
+func NewMissingKeysWarning(count int, ks string, keys ...interface{}) Error {
+	c := make(map[string]interface{})
+	c["num_missing_keys"] = count
+	c["keyspace"] = ks
+	c["keys"] = keys
+	return &err{level: WARNING, ICode: W_MISSING_KEY, IKey: "execution.use.missing_key",
+		InternalMsg: "Key(s) in USE KEYS hint not found", cause: c,
+		InternalCaller: CallerN(1)}
+}

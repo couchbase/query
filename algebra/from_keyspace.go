@@ -58,17 +58,18 @@ type KeyspaceTerm struct {
 	property        uint32
 	protectedString string
 	extraPrivs      []auth.Privilege
+	validateKeys    bool
 }
 
 func NewKeyspaceTermFromPath(path *Path, as string,
 	keys expression.Expression, indexes IndexRefs) *KeyspaceTerm {
 	protectedString := path.ProtectedString()
-	return &KeyspaceTerm{path, nil, as, keys, indexes, nil, JOIN_HINT_NONE, 0, protectedString, nil}
+	return &KeyspaceTerm{path, nil, as, keys, indexes, nil, JOIN_HINT_NONE, 0, protectedString, nil, false}
 }
 
 func NewKeyspaceTermFromExpression(expr expression.Expression, as string,
 	keys expression.Expression, indexes IndexRefs, joinHint JoinHint) *KeyspaceTerm {
-	return &KeyspaceTerm{nil, expr, as, keys, indexes, nil, joinHint, 0, "", nil}
+	return &KeyspaceTerm{nil, expr, as, keys, indexes, nil, joinHint, 0, "", nil, false}
 }
 
 func (this *KeyspaceTerm) Accept(visitor NodeVisitor) (interface{}, error) {
@@ -173,14 +174,19 @@ func (this *KeyspaceTerm) String() (s string) {
 		s += " as `" + this.as + "`"
 	}
 
+	v := ""
+	if this.validateKeys {
+		v = "validate "
+	}
+
 	if this.joinKeys != nil {
 		if this.IsIndexJoinNest() {
-			s += " on key " + this.joinKeys.String()
+			s += " on key " + v + this.joinKeys.String()
 		} else {
-			s += " on keys " + this.joinKeys.String()
+			s += " on keys " + v + this.joinKeys.String()
 		}
 	} else if this.keys != nil {
-		s += " use keys " + this.keys.String()
+		s += " use keys " + v + this.keys.String()
 	}
 
 	return s
@@ -321,6 +327,14 @@ clause.
 */
 func (this *KeyspaceTerm) Keys() expression.Expression {
 	return this.keys
+}
+
+func (this *KeyspaceTerm) SetValidateKeys(on bool) {
+	this.validateKeys = on
+}
+
+func (this *KeyspaceTerm) ValidateKeys() bool {
+	return this.validateKeys
 }
 
 func (this *KeyspaceTerm) FromExpression() expression.Expression {

@@ -20,6 +20,7 @@ type joinBase struct {
 	base
 	joinBatch    []value.AnnotatedJoinPair
 	joinKeyCount int
+	mk           missingKeys
 }
 
 func newJoinBase(joinBase *joinBase, context *Context) {
@@ -116,6 +117,7 @@ func (this *joinBase) joinFetch(keyspace datastore.Keyspace, subPaths []string, 
 
 func (this *joinBase) joinEntries(keyCount map[string]int, pairMap map[string]value.AnnotatedValue,
 	outer bool, onFilter expression.Expression, alias string, context *Context) bool {
+
 	for _, item := range this.joinBatch {
 		foundKeys := 0
 		if len(pairMap) > 0 {
@@ -266,6 +268,19 @@ func (this *joinBase) reopen(context *Context) bool {
 		this.releaseBatch(context)
 	}
 	return rv
+}
+
+func (this *joinBase) validateKeys(pairMap map[string]value.AnnotatedValue) {
+	if !this.mk.validate {
+		return
+	}
+	for _, item := range this.joinBatch {
+		for _, key := range item.Keys {
+			if _, ok := pairMap[key]; !ok {
+				this.mk.add(key)
+			}
+		}
+	}
 }
 
 var _STRING_KEYCOUNT_POOL = util.NewStringIntPool(_MAP_POOL_CAP)

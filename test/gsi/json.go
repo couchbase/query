@@ -360,7 +360,7 @@ func run(mockServer *MockServer, queryParams map[string]interface{}, q, namespac
 	// wait till all the results are ready
 	<-mr.done
 	mockServer.saveTxId(gv, query.Type(), mr.results)
-	return mr.results, mr.warnings, mr.err, mr.sortCount
+	return mr.results, query.Warnings(), mr.err, mr.sortCount
 }
 
 /*
@@ -526,6 +526,7 @@ func FtestCaseFile(fname string, prepared, explain bool, qc *MockServer, namespa
 		fin_stmt = strconv.Itoa(i) + ": " + statements
 		var resultsActual []interface{}
 		var errActual errors.Error
+		var warnActual []errors.Error
 		var namedArgs map[string]value.Value
 		var positionalArgs value.Values
 		var userArgs map[string]string
@@ -574,17 +575,31 @@ func FtestCaseFile(fname string, prepared, explain bool, qc *MockServer, namespa
 			errCodeExpected = int(errCodeExpectedf)
 		}
 
+		warnCodeExpected := int(0)
+		if v, ok = c["warningCode"]; ok {
+			warnCodeExpectedf, _ := v.(float64)
+			warnCodeExpected = int(warnCodeExpectedf)
+		}
+
 		// no index, test infrastructure can't handle this.
 		if prepared && errCodeExpected != 4000 {
-			resultsActual, _, errActual, sortCount = RunPrepared(qc, queryParams, statements, namespace, namedArgs, positionalArgs)
+			resultsActual, warnActual, errActual, sortCount = RunPrepared(qc, queryParams, statements, namespace, namedArgs,
+				positionalArgs)
 		} else {
-			resultsActual, _, errActual, sortCount = Run(qc, queryParams, statements, namespace, namedArgs, positionalArgs, userArgs)
+			resultsActual, warnActual, errActual, sortCount = Run(qc, queryParams, statements, namespace, namedArgs,
+				positionalArgs, userArgs)
 		}
 
 		errExpected := ""
 		v, ok = c["error"]
 		if ok {
 			errExpected = v.(string)
+		}
+
+		warnExpected := ""
+		v, ok = c["warning"]
+		if ok {
+			warnExpected = v.(string)
 		}
 
 		if errActual != nil {
@@ -594,22 +609,64 @@ func FtestCaseFile(fname string, prepared, explain bool, qc *MockServer, namespa
 
 			if errExpected == "" {
 				errstring = go_er.New(fmt.Sprintf("unexpected err: %v\nstatements: %v\n"+
-					" for case file: %v, index: %v%s", errActual, statements, ffname, i, findIndex(b, i)))
+					"      file: %v\n     index: %v%s\n\n", errActual, statements, ffname, i, findIndex(b, i)))
 				return
 			}
 
 			if !errActual.ContainsText(errExpected) {
 				errstring = go_er.New(fmt.Sprintf("Mismatched error:\nexpected: %s\n  actual: %s\n"+
-					" for case file: %v, index: %v%s", errExpected, errActual.Error(), ffname, i, findIndex(b, i)))
+					"      file: %v\n     index: %v%s\n\n", errExpected, errActual.Error(), ffname, i, findIndex(b, i)))
 				return
 			}
 
 			continue
 		}
-
-		if errExpected != "" || errCodeExpected != 0 {
+		if errExpected != "" {
 			errstring = go_er.New(fmt.Sprintf("did not see the expected err: %v\nstatements: %v\n"+
-				" for case file: %v, index: %v%s", errActual, statements, ffname, i, findIndex(b, i)))
+				"      file: %v\n     index: %v%s\n\n", errExpected, statements, ffname, i, findIndex(b, i)))
+			return
+		}
+		if errCodeExpected != 0 {
+			errstring = go_er.New(fmt.Sprintf("did not see the expected err: %v\nstatements: %v\n"+
+				"      file: %v\n     index: %v%s\n\n", errCodeExpected, statements, ffname, i, findIndex(b, i)))
+			return
+		}
+
+		if len(warnActual) > 0 {
+			if warnExpected == "" && warnCodeExpected == 0 {
+				errstring = go_er.New(fmt.Sprintf("unexpected warning(s):\n%s\nstatements: %v\n"+
+					"      file: %v\n     index: %v%s\n\n", prettyPrint(warnActual), statements, ffname, i, findIndex(b, i)))
+				return
+			}
+
+			found := false
+			for _, w := range warnActual {
+				if int(w.Code()) == warnCodeExpected || (len(warnExpected) > 0 && !w.ContainsText(warnExpected)) {
+					found = true
+				}
+			}
+
+			if !found {
+				if warnExpected != "" {
+					errstring = go_er.New(fmt.Sprintf("Missing expected warning: %s\nstatements: %v\n"+
+						"      file: %v\n     index: %v%s\n\n", warnExpected, statements, ffname, i, findIndex(b, i)))
+				} else {
+					errstring = go_er.New(fmt.Sprintf("Missing expected warning: %v\nstatements: %v\n"+
+						"      file: %v\n     index: %v%s\n\n", warnCodeExpected, statements, ffname, i, findIndex(b, i)))
+				}
+				return
+			}
+
+			continue
+		}
+		if warnExpected != "" {
+			errstring = go_er.New(fmt.Sprintf("did not see the expected warning: %v\nstatements: %v\n"+
+				"      file: %v\n     index: %v%s\n\n", warnExpected, statements, ffname, i, findIndex(b, i)))
+			return
+		}
+		if warnCodeExpected != 0 {
+			errstring = go_er.New(fmt.Sprintf("did not see the expected warning: %v\nstatements: %v\n"+
+				"      file: %v\n     index: %v%s\n\n", warnCodeExpected, statements, ffname, i, findIndex(b, i)))
 			return
 		}
 

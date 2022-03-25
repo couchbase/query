@@ -1,6 +1,6 @@
 [
 
-{   
+{
     "statements": "SELECT purchase.purchaseId, META(customer).id custID, META(product).id prodID, cardio FROM purchase USE KEYS \"purchase1018_joins\" UNNEST ARRAY (pl.product || \"_\" || \"joins\") FOR pl IN purchase.lineItems END AS pID INNER JOIN product ON KEYS pID INNER JOIN customer ON KEYS (purchase.customerId || \"_\" || \"joins\") UNNEST TO_ARRAY(customer.ccInfo.cardNumber) AS cardio ORDER BY prodID",
     "results": [
         {
@@ -54,7 +54,7 @@
     ]
 },
 
-{   
+{
     "statements": "SELECT pu.customerId, product.unitPrice, product.productId from purchase pu USE KEYS \"purchase1018_joins\" INNER JOIN product ON KEYS ARRAY (pl.product || \"_\" || \"joins\") FOR pl IN pu.lineItems END ORDER BY product.unitPrice DESC",
     "results": [
         {
@@ -80,7 +80,7 @@
     ]
 },
 
-{   
+{
     "statements": "SELECT pID, product.unitPrice from purchase pu USE KEYS \"purchase1018_joins\" UNNEST ARRAY (pl.product|| \"_\" || \"joins\") FOR pl IN pu.lineItems END AS pID INNER JOIN product ON KEYS pID ORDER BY pID",
     "results": [
         {
@@ -102,7 +102,7 @@
     ]
 },
 
-{   
+{
     "statements": "SELECT DISTINCT productId, pu.customerId, customer.firstName FROM purchase pu UNNEST ARRAY (pl.product|| \"_\" || \"joins\") FOR pl IN pu.lineItems END AS productId INNER JOIN customer ON KEYS (pu.customerId|| \"_\" || \"joins\") WHERE pu.customerId=\"customer498\" ORDER BY productId limit 8",
     "results": [
         {
@@ -146,5 +146,13 @@
             "productId": "product390_joins"
         }
     ]
+},
+
+{
+    "statements": "SELECT DISTINCT productId, pu.customerId, customer.firstName FROM purchase pu UNNEST ARRAY (pl.product|| \"_\" || \"joins\") FOR pl IN pu.lineItems END AS productId INNER JOIN customer ON KEYS VALIDATE (pu.customerId|| \"_\" || \"bad\") WHERE pu.customerId=\"customer498\" ORDER BY productId limit 8",
+    "warningCode": 5503,
+    "results": [
+    ]
 }
+
 ]

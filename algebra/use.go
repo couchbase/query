@@ -27,13 +27,14 @@ const (
 var EMPTY_USE = NewUse(nil, nil, JOIN_HINT_NONE)
 
 type Use struct {
-	keys     expression.Expression
-	indexes  IndexRefs
-	joinHint JoinHint
+	keys         expression.Expression
+	indexes      IndexRefs
+	joinHint     JoinHint
+	validateKeys bool
 }
 
 func NewUse(keys expression.Expression, indexes IndexRefs, joinHint JoinHint) *Use {
-	return &Use{keys, indexes, joinHint}
+	return &Use{keys, indexes, joinHint, false}
 }
 
 func (this *Use) Keys() expression.Expression {
@@ -78,4 +79,12 @@ func PreferNL(joinHint JoinHint) bool {
 		return true
 	}
 	return false
+}
+
+func (this *Use) SetValidateKeys(on bool) {
+	this.validateKeys = on
+}
+
+func (this *Use) ValidateKeys() bool {
+	return this.validateKeys
 }

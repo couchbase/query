@@ -229,6 +229,7 @@ const (
 	E_MEMORY_QUOTA_EXCEEDED                   ErrorCode = 5500
 	E_NIL_EVALUATE_PARAM                      ErrorCode = 5501
 	E_BUCKET_ACTION                           ErrorCode = 5502
+	W_MISSING_KEY                             ErrorCode = 5503
 	E_SCHEDULER                               ErrorCode = 6001
 	E_DUPLICATE_TASK                          ErrorCode = 6002
 	E_TASK_RUNNING                            ErrorCode = 6003

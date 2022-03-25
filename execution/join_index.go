@@ -38,6 +38,7 @@ func NewIndexJoin(plan *plan.IndexJoin, context *Context) *IndexJoin {
 	newJoinBase(&rv.joinBase, context)
 	rv.execPhase = INDEX_JOIN
 	rv.output = rv
+	rv.mk.validate = plan.Term().ValidateKeys()
 	return rv
 }
 
@@ -50,6 +51,7 @@ func (this *IndexJoin) Copy() Operator {
 		plan: this.plan,
 	}
 	this.joinBase.copy(&rv.joinBase)
+	rv.mk.validate = this.mk.validate
 	return rv
 }
 
@@ -100,6 +102,7 @@ func (this *IndexJoin) processItem(item value.AnnotatedValue, context *Context) 
 					// add this.addInDocs(1) if this changes
 					entries = append(entries, entry)
 				} else {
+					this.mk.add(id)
 					break
 				}
 			} else {
@@ -200,10 +203,16 @@ func (this *IndexJoin) joinCoveredEntries(item value.AnnotatedValue,
 	return true
 }
 
+func (this *IndexJoin) beforeItems(context *Context, item value.Value) bool {
+	this.mk.reset()
+	return true
+}
+
 func (this *IndexJoin) afterItems(context *Context) {
 	if len(this.plan.Covers()) == 0 {
 		this.flushBatch(context)
 	}
+	this.mk.report(context, this.plan.Keyspace().Name)
 }
 
 func (this *IndexJoin) flushBatch(context *Context) bool {
@@ -225,6 +234,8 @@ func (this *IndexJoin) flushBatch(context *Context) bool {
 	}()
 
 	fetchOk := this.joinFetch(this.plan.Keyspace(), this.plan.SubPaths(), keyCount, pairMap, context)
+
+	this.validateKeys(pairMap)
 
 	return fetchOk && this.joinEntries(keyCount, pairMap, this.plan.Outer(), nil, this.plan.Term().Alias(), context)
 }
