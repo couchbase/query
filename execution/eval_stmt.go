@@ -481,6 +481,9 @@ func (this *Context) OpenPrepared(baseContext *Context, stmtType string, prepare
 
 	handle.stmtType = stmtType
 	handle.actualType = prepared.Type()
+	if handle.actualType == "" {
+		handle.actualType = stmtType
+	}
 	handle.baseContext = baseContext
 	baseContext.mutex.Lock()
 	if baseContext.udfHandleMap == nil {
