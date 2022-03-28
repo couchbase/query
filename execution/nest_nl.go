@@ -82,6 +82,11 @@ func (this *NLNest) beforeItems(context *Context, parent value.Value) bool {
 		SetSearchInfo(this.aliasMap, parent, context, this.plan.Onclause())
 	}
 
+	filter := this.plan.Filter()
+	if filter != nil {
+		filter.EnableInlistHash(context)
+	}
+
 	return true
 }
 
@@ -180,7 +185,13 @@ loop:
 }
 
 func (this *NLNest) afterItems(context *Context) {
-	this.plan.Onclause().ResetMemory(context)
+	if (this.ansiFlags & (ANSI_ONCLAUSE_TRUE | ANSI_ONCLAUSE_FALSE)) == 0 {
+		this.plan.Onclause().ResetMemory(context)
+	}
+	filter := this.plan.Filter()
+	if filter != nil {
+		filter.ResetMemory(context)
+	}
 }
 
 func processAnsiNest(item value.AnnotatedValue, right_items value.AnnotatedValues, alias string,

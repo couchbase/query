@@ -89,6 +89,11 @@ func (this *NLJoin) beforeItems(context *Context, parent value.Value) bool {
 		SetSearchInfo(this.aliasMap, parent, context, this.plan.Onclause())
 	}
 
+	filter := this.plan.Filter()
+	if filter != nil {
+		filter.EnableInlistHash(context)
+	}
+
 	return true
 }
 
@@ -170,7 +175,16 @@ loop:
 }
 
 func (this *NLJoin) afterItems(context *Context) {
-	this.plan.Onclause().ResetMemory(context)
+	if (this.ansiFlags & (ANSI_ONCLAUSE_TRUE | ANSI_ONCLAUSE_FALSE)) == 0 {
+		onclause := this.plan.Onclause()
+		if onclause != nil {
+			onclause.ResetMemory(context)
+		}
+	}
+	filter := this.plan.Filter()
+	if filter != nil {
+		filter.ResetMemory(context)
+	}
 }
 
 func processAnsiExec(item value.AnnotatedValue, right_item value.AnnotatedValue,

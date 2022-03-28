@@ -86,6 +86,11 @@ func (this *HashJoin) beforeItems(context *Context, parent value.Value) bool {
 		SetSearchInfo(this.aliasMap, parent, context, this.plan.Onclause())
 	}
 
+	filter := this.plan.Filter()
+	if filter != nil {
+		filter.EnableInlistHash(context)
+	}
+
 	// build hash table
 	this.hashTab = util.NewHashTable(util.HASH_TABLE_FOR_HASH_JOIN)
 
@@ -248,7 +253,16 @@ func (this *HashJoin) processItem(item value.AnnotatedValue, context *Context) b
 
 func (this *HashJoin) afterItems(context *Context) {
 	this.dropHashTable(context)
-	this.plan.Onclause().ResetMemory(context)
+	if (this.ansiFlags & (ANSI_ONCLAUSE_TRUE | ANSI_ONCLAUSE_FALSE)) == 0 {
+		onclause := this.plan.Onclause()
+		if onclause != nil {
+			onclause.ResetMemory(context)
+		}
+	}
+	filter := this.plan.Filter()
+	if filter != nil {
+		filter.ResetMemory(context)
+	}
 }
 
 func (this *HashJoin) dropHashTable(context *Context) {
