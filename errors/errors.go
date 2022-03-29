@@ -94,8 +94,13 @@ func NewError(e error, internalMsg string) Error {
 	key := "internal.error"
 
 	// map GSI errors where possible to meaningful error codes
-	if strings.HasPrefix(internalMsg, "GSI ") || strings.HasPrefix(e.Error(), "GSI ") {
-		errText := e.Error()
+	if strings.HasPrefix(internalMsg, "GSI ") || (e != nil && strings.HasPrefix(e.Error(), "GSI ")) {
+		errText := ""
+		if e != nil {
+			errText = e.Error()
+		} else {
+			errText = internalMsg
+		}
 		if gsiPatterns == nil {
 			gsiPatterns = make(map[string]*regexp.Regexp)
 			gsiPatterns["enterprise"] = regexp.MustCompile("(.*) not supported in non-Enterprise Edition")
