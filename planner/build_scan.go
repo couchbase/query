@@ -160,7 +160,12 @@ func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.Keyspa
 			if baseKeyspace.OrigPred() == nil {
 				return nil, nil, errors.NewPlanInternalError("buildScan: NULL origPred")
 			}
-			return this.buildPredicateScan(keyspace, node, baseKeyspace, id, hints, virtualIndexes)
+			secondary, primary, err = this.buildPredicateScan(keyspace, node, baseKeyspace, id, hints, virtualIndexes)
+			if err == nil && !join && this.useCBO && this.keyspaceUseCBO(node.Alias()) &&
+				secondary != nil && len(baseKeyspace.GetUnnestIndexes()) > 0 {
+				chkOpUnnestIndexes(secondary, baseKeyspace.GetUnnestIndexes(), nil)
+			}
+			return secondary, primary, err
 		}
 	}
 

@@ -370,7 +370,7 @@ func (this *builder) buildCreateCoveringScan(entry *indexEntry, node *algebra.Ke
 	scan = entry.spans.CreateScan(index, node, this.context.IndexApiVersion(), false, projDistinct,
 		pred.MayOverlapSpans(), array, this.offset, this.limit, indexProjection, indexKeyOrders,
 		indexGroupAggs, covers, filterCovers, filter, entry.cost, entry.cardinality,
-		entry.size, entry.frCost, hasDeltaKeyspace)
+		entry.size, entry.frCost, baseKeyspace, hasDeltaKeyspace)
 	if scan != nil {
 		scan.SetImplicitArrayKey(arrayKey)
 		if entry.index.Type() != datastore.SYSTEM {
@@ -453,7 +453,7 @@ func (this *builder) buildCoveringPushdDownIndexScan2(entry *indexEntry, node *a
 	this.maxParallelism = 1
 	scan := entry.spans.CreateScan(entry.index, node, this.context.IndexApiVersion(), false, false, pred.MayOverlapSpans(),
 		array, nil, expression.ONE_EXPR, indexProjection, indexKeyOrders, nil, covers, filterCovers, nil,
-		OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, false)
+		OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, baseKeyspace, false)
 	if scan != nil {
 		if entry.index.Type() != datastore.SYSTEM {
 			this.collectIndexKeyspaceNames(baseKeyspace.Keyspace())

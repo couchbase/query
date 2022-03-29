@@ -15,6 +15,7 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
+	base "github.com/couchbase/query/plannerbase"
 	"github.com/couchbase/query/value"
 )
 
@@ -37,7 +38,7 @@ func (this *TermSpans) CreateScan(
 	indexGroupAggs *plan.IndexGroupAggregates, covers expression.Covers,
 	filterCovers map[*expression.Cover]value.Value, filter expression.Expression,
 	cost, cardinality float64, size int64, frCost float64,
-	hasDeltaKeyspace bool) plan.SecondaryScan {
+	baseKeyspace *base.BaseKeyspace, hasDeltaKeyspace bool) plan.SecondaryScan {
 
 	distScan := this.CanHaveDuplicates(index, indexApiVersion, overlap, array)
 
@@ -49,7 +50,8 @@ func (this *TermSpans) CreateScan(
 				cost, cardinality, size, frCost, hasDeltaKeyspace)
 
 			if cost > 0.0 && cardinality > 0.0 {
-				distCost, distCard, distFrCost := getDistinctScanCost(index, cardinality)
+				distCost, distCard, distFrCost := getDistinctScanCost(index,
+					cardinality, baseKeyspace)
 				if distCost > 0.0 && distCard > 0.0 && distFrCost > 0.0 {
 					cost += distCost
 					cardinality = distCard

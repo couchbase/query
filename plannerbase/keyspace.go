@@ -38,7 +38,7 @@ type BaseKeyspace struct {
 	ksFlags       uint32
 	docCount      int64
 	unnests       map[string]string
-	unnestIndexes map[datastore.Index][]string
+	unnestIndexes map[datastore.Index]*UnnestIndexInfo
 	node          algebra.SimpleFromTerm
 	optBit        int32
 	indexHints    []algebra.OptimHint
@@ -177,11 +177,16 @@ func copyBaseKeyspaces(src map[string]*BaseKeyspace, copyFilter bool) map[string
 				dest[kspace.name].unnests[a] = k
 			}
 			if len(kspace.unnestIndexes) > 0 {
-				dest[kspace.name].unnestIndexes = make(map[datastore.Index][]string, len(kspace.unnestIndexes))
-				for i, a := range kspace.unnestIndexes {
-					a2 := make([]string, len(a))
-					copy(a2, a)
-					dest[kspace.name].unnestIndexes[i] = a2
+				dest[kspace.name].unnestIndexes = make(map[datastore.Index]*UnnestIndexInfo, len(kspace.unnestIndexes))
+				for i, idxInfo := range kspace.unnestIndexes {
+					if idxInfo != nil {
+						a2 := make([]string, len(idxInfo.aliases))
+						copy(a2, idxInfo.aliases)
+						dest[kspace.name].unnestIndexes[i] = &UnnestIndexInfo{
+							selec:   idxInfo.selec,
+							aliases: a2,
+						}
+					}
 				}
 			}
 		}
@@ -327,20 +332,38 @@ func (this *BaseKeyspace) GetUnnests() map[string]string {
 // the array of aliases will be ["b", "a"]
 func (this *BaseKeyspace) AddUnnestIndex(index datastore.Index, alias string) {
 	if this.unnestIndexes == nil {
-		this.unnestIndexes = make(map[datastore.Index][]string, len(this.unnests))
+		this.unnestIndexes = make(map[datastore.Index]*UnnestIndexInfo, len(this.unnests))
 	}
-	aliases, _ := this.unnestIndexes[index]
-	for _, a := range aliases {
-		if a == alias {
-			// already exists
-			return
+	if idxInfo, ok := this.unnestIndexes[index]; ok && idxInfo != nil {
+		for _, a := range idxInfo.aliases {
+			if a == alias {
+				// already exists
+				return
+			}
+		}
+		idxInfo.aliases = append(idxInfo.aliases, alias)
+	} else {
+		this.unnestIndexes[index] = &UnnestIndexInfo{
+			aliases: []string{alias},
 		}
 	}
-	this.unnestIndexes[index] = append(aliases, alias)
 }
 
-func (this *BaseKeyspace) GetUnnestIndexes() map[datastore.Index][]string {
+func (this *BaseKeyspace) UpdateUnnestIndexSelec(index datastore.Index, selec float64) {
+	if idxInfo, ok := this.unnestIndexes[index]; ok {
+		idxInfo.selec = selec
+	}
+}
+
+func (this *BaseKeyspace) GetUnnestIndexes() map[datastore.Index]*UnnestIndexInfo {
 	return this.unnestIndexes
+}
+
+func (this *BaseKeyspace) GetUnnestIndexAliases(index datastore.Index) []string {
+	if idxInfo, ok := this.unnestIndexes[index]; ok {
+		return idxInfo.aliases
+	}
+	return nil
 }
 
 func (this *BaseKeyspace) AddIndexHint(indexHint algebra.OptimHint) {
@@ -397,4 +420,21 @@ func GetKeyspaceName(baseKeyspaces map[string]*BaseKeyspace, alias string) strin
 	}
 
 	return ""
+}
+
+type UnnestIndexInfo struct {
+	selec   float64
+	aliases []string
+}
+
+func (this *UnnestIndexInfo) GetSelec() float64 {
+	return this.selec
+}
+
+func (this *UnnestIndexInfo) SetSelec(selec float64) {
+	this.selec = selec
+}
+
+func (this *UnnestIndexInfo) GetAliases() []string {
+	return this.aliases
 }

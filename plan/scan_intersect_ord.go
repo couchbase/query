@@ -10,6 +10,7 @@ package plan
 
 import (
 	"encoding/json"
+	"sort"
 
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/expression"
@@ -27,11 +28,15 @@ type OrderedIntersectScan struct {
 
 func NewOrderedIntersectScan(limit expression.Expression, cost, cardinality float64,
 	size int64, frCost float64, scans ...SecondaryScan) *OrderedIntersectScan {
+	cbo := (cost > 0.0) && (cardinality > 0.0)
 	for _, scan := range scans {
 		if scan.Limit() != nil {
 			scan.SetLimit(nil)
 		}
 		scan.SetOffset(nil)
+		if cbo && (scan.Cost() <= 0.0 || scan.Cardinality() <= 0.0) {
+			cbo = false
+		}
 	}
 
 	buf := make([]SecondaryScan, 0, 2*len(scans))
@@ -46,6 +51,19 @@ func NewOrderedIntersectScan(limit expression.Expression, cost, cardinality floa
 			NewIntersectScan(nil, cost/2.0, cardinality, size, frCost, scans[1:n/2]...),
 			NewIntersectScan(nil, cost/2.0, cardinality, size, frCost, scans[n/2:]...),
 		)
+	}
+
+	if cbo {
+		sort.Slice(scans, func(i, j int) bool {
+			iCard := scans[i].Cardinality()
+			jCard := scans[j].Cardinality()
+			if iCard < jCard {
+				return true
+			} else if iCard > jCard {
+				return false
+			}
+			return scans[i].Cost() <= scans[j].Cost()
+		})
 	}
 
 	rv := &OrderedIntersectScan{

@@ -129,6 +129,25 @@ func (this *builder) visitFrom(node *algebra.Subselect, group *algebra.Group,
 					this.setBuilderFlag(BUILDER_HAS_EXTRA_FLTR)
 				}
 			}
+
+			if this.useCBO && this.keyspaceUseCBO(primKeyspace.Name()) && len(unnests) > 0 {
+				keyspaceNames := make(map[string]string, 1)
+				keyspaceNames[primKeyspace.Name()] = primKeyspace.Keyspace()
+				for alias, _ := range primKeyspace.GetUnnests() {
+					unnestKeyspace, _ := this.baseKeyspaces[alias]
+					for _, un := range unnests {
+						if un.Alias() == alias {
+							for _, fl := range unnestKeyspace.Filters() {
+								if !fl.IsSelecDone() {
+									sel := getUnnestPredSelec(fl.FltrExpr(), alias, un.Expression(), keyspaceNames, this.advisorValidate(), this.context)
+									fl.SetSelec(sel)
+									fl.SetSelecDone()
+								}
+							}
+						}
+					}
+				}
+			}
 		}
 
 		this.extractKeyspacePredicates(this.where, nil)
@@ -740,6 +759,31 @@ func (this *builder) buildUnnest(node *algebra.Unnest) error {
 			this.baseKeyspaces, this.keyspaceNames, this.advisorValidate())
 		if (filter != nil) && (cost > 0.0) && (cardinality > 0.0) && (selec > 0.0) &&
 			(size > 0) && (frCost > 0.0) {
+
+			var unnestIndexInfo *base.UnnestIndexInfo
+			if this.joinEnum() {
+				for _, ks := range this.baseKeyspaces {
+					if !ks.IsUnnest() {
+						unnestIndexInfo = getUnnestIndexInfo(ks, node.Alias())
+						if unnestIndexInfo != nil {
+							break
+						}
+					}
+				}
+			} else {
+				primaryTerm := algebra.GetKeyspaceTerm(node.PrimaryTerm())
+				if primaryTerm != nil {
+					primKeyspace, _ := this.baseKeyspaces[primaryTerm.Alias()]
+					unnestIndexInfo = getUnnestIndexInfo(primKeyspace, node.Alias())
+				}
+			}
+			if unnestIndexInfo != nil {
+				idxSel := unnestIndexInfo.GetSelec()
+				if idxSel > 0.0 {
+					selec /= idxSel
+				}
+			}
+
 			cost, cardinality, size, frCost = getSimpleFilterCost(node.Alias(),
 				cost, cardinality, selec, size, frCost)
 		}
@@ -747,6 +791,19 @@ func (this *builder) buildUnnest(node *algebra.Unnest) error {
 	this.addSubChildren(plan.NewUnnest(node, filter, cost, cardinality, size, frCost))
 	this.addChildren(this.addSubchildrenParallel())
 
+	return nil
+}
+
+func getUnnestIndexInfo(baseKeyspace *base.BaseKeyspace, alias string) *base.UnnestIndexInfo {
+	for _, idxInfo := range baseKeyspace.GetUnnestIndexes() {
+		if idxInfo != nil {
+			for _, a := range idxInfo.GetAliases() {
+				if a == alias {
+					return idxInfo
+				}
+			}
+		}
+	}
 	return nil
 }
 

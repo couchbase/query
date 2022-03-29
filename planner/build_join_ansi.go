@@ -1430,11 +1430,7 @@ func markIndexFlags(index datastore.Index, spans plan.Spans2, baseKeyspace *base
 		}
 	}
 
-	var unnestAliases []string
-	unnestIndexes := baseKeyspace.GetUnnestIndexes()
-	if a, ok := unnestIndexes[index]; ok {
-		unnestAliases = a
-	}
+	unnestAliases := baseKeyspace.GetUnnestIndexAliases(index)
 
 	optMarkIndexFilters(keys, spans, condition, unnestAliases, baseKeyspace)
 

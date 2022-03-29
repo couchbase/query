@@ -15,6 +15,7 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/plan"
 	base "github.com/couchbase/query/plannerbase"
 )
 
@@ -331,19 +332,6 @@ func (this *builder) matchUnnest(node *algebra.KeyspaceTerm, pred, subset expres
 		sargKey = unnestIdent
 	}
 
-	if useCBO {
-		keyspaces := make(map[string]string, 1)
-		keyspaces[baseKeyspace.Name()] = baseKeyspace.Keyspace()
-		for _, fl := range baseKeyspace.Filters() {
-			if fl.IsUnnest() && !fl.IsSelecDone() {
-				sel := getUnnestPredSelec(fl.FltrExpr(), unnest.As(),
-					unnest.Expression(), keyspaces, advisorValidate, this.context)
-				fl.SetSelec(sel)
-				fl.SetSelecDone()
-			}
-		}
-	}
-
 	keys := getUnnestSargKeys(entry.keys, sargKey)
 	origKeys := keys
 	if origSargKey != nil {
@@ -496,6 +484,87 @@ func (this *builder) collectUnnestBindings(from algebra.FromTerm, ua expression.
 	}
 
 	return ua, ub
+}
+
+func chkOpUnnestIndexes(op plan.Operator, unnestIndexes map[datastore.Index]*base.UnnestIndexInfo,
+	unnestIdxMap map[datastore.Index]bool) (sel float64, found bool) {
+	sel = OPT_SELEC_NOT_AVAIL
+	found = false
+	switch op := op.(type) {
+	case *plan.IndexScan3:
+		index := op.Index()
+		if unnestIdxMap != nil {
+			if idxInfo, ok := unnestIndexes[index]; ok {
+				unnestIdxMap[index] = true
+				sel = idxInfo.GetSelec()
+				found = true
+			}
+		} else {
+			for idx, idxInfo := range unnestIndexes {
+				if idx == index {
+					sel = idxInfo.GetSelec()
+					found = true
+				} else {
+					delete(unnestIndexes, idx)
+				}
+			}
+		}
+		return
+	case *plan.DistinctScan:
+		return chkOpUnnestIndexes(op.Scan(), unnestIndexes, unnestIdxMap)
+	case *plan.IntersectScan:
+		return chkMultiOpUnnestIndexes(op.Scans(), unnestIndexes, unnestIdxMap, false)
+	case *plan.OrderedIntersectScan:
+		return chkMultiOpUnnestIndexes(op.Scans(), unnestIndexes, unnestIdxMap, false)
+	case *plan.UnionScan:
+		return chkMultiOpUnnestIndexes(op.Scans(), unnestIndexes, unnestIdxMap, true)
+	}
+	return
+}
+
+func chkMultiOpUnnestIndexes(scans []plan.SecondaryScan,
+	unnestIndexes map[datastore.Index]*base.UnnestIndexInfo, unnestIdxMap map[datastore.Index]bool,
+	union bool) (sel float64, found bool) {
+
+	top := false
+	if unnestIdxMap == nil {
+		top = true
+		unnestIdxMap = make(map[datastore.Index]bool, len(scans))
+	}
+
+	sel = OPT_SELEC_NOT_AVAIL
+	first := true
+	for _, op := range scans {
+		sc, fc := chkOpUnnestIndexes(op, unnestIndexes, unnestIdxMap)
+		if !fc {
+			continue
+		}
+		found = true
+		if first {
+			sel = sc
+			first = false
+		} else if sel > 0.0 && sc > 0.0 {
+			if union {
+				sel = sel + sc - (sel * sc)
+			} else {
+				sel = sel * sc
+			}
+		} else {
+			sel = OPT_SELEC_NOT_AVAIL
+		}
+	}
+
+	if top {
+		for idx, idxInfo := range unnestIndexes {
+			if _, ok := unnestIdxMap[idx]; ok {
+				idxInfo.SetSelec(sel)
+			} else {
+				delete(unnestIndexes, idx)
+			}
+		}
+	}
+
+	return
 }
 
 var _UNNEST_POOL = algebra.NewUnnestPool(8)
