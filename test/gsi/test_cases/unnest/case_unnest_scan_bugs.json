@@ -83,6 +83,35 @@
         "ordered": true,
         "results": [
     ]
+    },
+    {
+        "testcase": "MB-51410",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`index_order` IS MISSING END"
+        },
+        "statements":"SELECT u.x, d.c1 FROM shellTest AS d USE INDEX (ix101) UNNEST d.arr10 AS u WHERE u.x > 0 ORDER BY u.x",
+        "ordered": true,
+        "results": [
+            {
+                "x": 1
+            },
+            {
+                "x": 1
+            },
+            {
+                "x": 1
+            },
+            {
+                "x": 2
+            }
+        ]
     }
 ]
 
