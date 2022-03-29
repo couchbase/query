@@ -14,13 +14,6 @@
                   "index_statement": "CREATE INDEX adv_c22_c12_type ON `shellTest`(`c22`,`c12`,`type`)",
                   "keyspace_alias": "shellTest"
                 }
-              ],
-              "indexes": [
-                {
-                  "index_statement": "CREATE INDEX adv_c22_c12_type ON `shellTest`(`c22`,`c12`,`type`)",
-                  "keyspace_alias": "shellTest",
-                  "recommending_rule": "Index keys follow order of predicate types: 3. in, 7. not null/not missing/valued, 8. like."
-                }
               ]
             }
           }

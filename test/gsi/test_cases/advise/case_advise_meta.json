@@ -147,13 +147,6 @@
                               "index_statement": "CREATE INDEX adv_class ON `shellTest`(`class`)",
                               "keyspace_alias": "shellTest"
                           }
-                      ],
-                      "indexes": [
-                          {
-                              "index_statement": "CREATE INDEX adv_class ON `shellTest`(`class`)",
-                              "keyspace_alias": "shellTest",
-                              "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing."
-                          }
                       ]
                   }
               }

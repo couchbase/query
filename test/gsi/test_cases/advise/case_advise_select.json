@@ -86,13 +86,6 @@
                     "index_statement": "CREATE INDEX adv_test_id_c11_c12 ON `shellTest`(`test_id`,`c11`,`c12`)",
                     "keyspace_alias": "shellTest"
                   }
-                ],
-                "indexes": [
-                  {
-                    "index_statement": "CREATE INDEX adv_test_id_c11_c12 ON `shellTest`(`test_id`,`c11`,`c12`)",
-                    "keyspace_alias": "shellTest",
-                    "recommending_rule": "Index keys follow order of predicate types: 1. Common leading key for disjunction (2. equality/null/missing), 3. in, 4. not less than/between/not greater than."
-                  }
                 ]
               }
             }
@@ -274,13 +267,6 @@
                   "index_statement": "CREATE INDEX adv_c11_c12 ON `shellTest`(`c11`,`c12`)",
                   "keyspace_alias": "shellTest"
                 }
-              ],
-              "indexes": [
-                {
-                  "index_statement": "CREATE INDEX adv_c11_c12 ON `shellTest`(`c11`,`c12`)",
-                  "keyspace_alias": "shellTest",
-                  "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing, 4. not less than/between/not greater than."
-                }
               ]
             }
           }
@@ -423,13 +409,6 @@
                 {
                   "index_statement": "CREATE INDEX adv_c12_a11_c11_c22_test_id ON `shellTest`(`c12`,`a11`,`c11`,`c22`) WHERE `test_id` = 'advise'",
                   "keyspace_alias": "shellTest"
-                }
-              ],
-              "indexes": [
-                {
-                  "index_statement": "CREATE INDEX adv_c12_a11_c11_c22_test_id ON `shellTest`(`c12`,`a11`,`c11`,`c22`) WHERE `test_id` = 'advise'",
-                  "keyspace_alias": "shellTest",
-                  "recommending_rule": "Index keys follow order of predicate types: 1. Common leading key for disjunction (4. not less than/between/not greater than, 7. not null/not missing/valued), 3. in, 5. less than/greater than, 10. flavor for partial index."
                 }
               ]
             }
@@ -596,13 +575,6 @@
                 {
                   "index_statement": "CREATE INDEX adv_c12_a11_c11_c22_test_id ON `shellTest`(`c12`,`a11`,`c11`,`c22`) WHERE `test_id` = 'advise'",
                   "keyspace_alias": "shellTest"
-                }
-              ],
-              "indexes": [
-                {
-                  "index_statement": "CREATE INDEX adv_c12_a11_c11_c22_test_id ON `shellTest`(`c12`,`a11`,`c11`,`c22`) WHERE `test_id` = 'advise'",
-                  "keyspace_alias": "shellTest",
-                  "recommending_rule": "Index keys follow order of predicate types: 1. Common leading key for disjunction (4. not less than/between/not greater than, 7. not null/not missing/valued), 3. in, 5. less than/greater than, 10. flavor for partial index."
                 }
               ]
             }

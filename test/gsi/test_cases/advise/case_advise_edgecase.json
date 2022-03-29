@@ -14,13 +14,6 @@
                   "index_statement": "CREATE INDEX adv_self1 ON `shellTest`(self[1])",
                   "keyspace_alias": "shellTest_a"
                 }
-              ],
-              "indexes": [
-                {
-                  "index_statement": "CREATE INDEX adv_self1 ON `shellTest`(self[1])",
-                  "keyspace_alias": "shellTest_a",
-                  "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing."
-                }
               ]
             }
           }
@@ -358,13 +351,6 @@
                 {
                   "index_statement": "CREATE INDEX adv_DISTINCT_a_type_val_name_length_c_b ON `shellTest`(DISTINCT ARRAY [`cba`.`type`, `cba`.`val`, `cba`.`name`] FOR `cba` IN `a` END,length(`c`),`b`)",
                   "keyspace_alias": "shellTest_st"
-                }
-              ],
-              "indexes": [
-                {
-                  "index_statement": "CREATE INDEX adv_DISTINCT_a_type_val_name_length_c_b ON `shellTest`(DISTINCT ARRAY [`cba`.`type`, `cba`.`val`, `cba`.`name`] FOR `cba` IN `a` END,length(`c`),`b`)",
-                  "keyspace_alias": "shellTest_st",
-                  "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing, 5. less than/greater than, 7. not null/not missing/valued."
                 }
               ]
             }
