@@ -113,9 +113,9 @@ func identifyType(bytes []byte) Type {
 			return STRING
 		case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '-':
 			return NUMBER
-		case 't', 'f':
+		case 't', 'f', 'T', 'F':
 			return BOOLEAN
-		case 'n':
+		case 'n', 'N':
 			return NULL
 		case ' ', '\t', '\n', '\r':
 			continue
