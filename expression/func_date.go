@@ -13,6 +13,7 @@ import (
 	"math"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 	"unicode"
 
@@ -3224,16 +3225,69 @@ mm   - 2 digit minute (00...59)
 MI   - synonym
 ss   - 2 digit second (00...59)
 s    - up to 9 digit fraction of a second
-pp   - 2 character 12-hour cycle indicator (AM/PM)
+pp   - 2 character 12-hour cycle indicator (am/pm)
+PP   - 2 character 12-hour cycle indicator (AM/PM)
 AM   - 2 character 12-hour cycle indicator UPPERCASE
 PM   - synonym
 am   - 2 character 12-hour cycle indicator LOWERCASE
 pm   - synonym
 TZD  - timezone specified as either: Z, +hh:mm:ss (seconds ignored), +hh:mm, +hhmm, +hh, <zone-name>
+MONTH - English month name (uppercase)
+Month - English month name (capitalised)
+month - English month name (lowercase)
+MON  - English month name abbreviated
+Mon  - English month name abbreviated
+mon  - English month name abbreviated
+DAY  - English day name
+Day  - English day name
+day  - English day name
+DY   - English day name abbreviated
+Dy   - English day name abbreviated
+dy   - English day name abbreviated
 
 Spaces match any character else non format characters have to be matched exactly. There is no escape sequence to use components
 listed above as literal content (individual parts can be, e.g. a single Y).
 */
+
+var _COMMON_FORMATS = map[rune][]string{ // descending length order is important in each array!
+	'A': {"AM"},
+	'a': {"am"},
+	'C': {"CC"},
+	'D': {"DAY", "Day", "Dy", "DY", "DD"},
+	'd': {"day", "dy"},
+	'H': {"HH12", "HH24", "HH"},
+	'h': {"hh"},
+	'M': {"MONTH", "Month", "MON", "Mon", "MM", "MI"},
+	'm': {"month", "mon", "mm"},
+	'P': {"PP", "PM"},
+	'p': {"pp", "pm"},
+	'S': {"SS"},
+	's': {"ss", "s"},
+	'T': {"TZD"},
+	'Y': {"YYYY", "YY"},
+}
+
+func isCommonFormat(format string) bool {
+outer:
+	for i := 0; len(format) > i; {
+		if list, ok := _COMMON_FORMATS[rune(format[i])]; ok {
+			for _, f := range list {
+				if len(format) >= i+len(f) && format[i:i+len(f)] == f {
+					i += len(f)
+					continue outer
+				}
+			}
+		}
+		if unicode.IsSpace(rune(format[i])) || unicode.IsPunct(rune(format[i])) {
+			i++
+			continue outer
+		}
+		// not a valid format nor punctuation (or space), so not common format
+		return false
+	}
+	return true
+}
+
 func strToTimeCommonFormat(s string, format string) (time.Time, error) {
 	var t time.Time
 	var century, year, month, day, hour, minute, second, fraction, l, zoneh, zonem int
@@ -3477,6 +3531,8 @@ func strToTimeCommonFormat(s string, format string) (time.Time, error) {
 			if j > 6 {
 				return t, fmt.Errorf("Invalid day of week in date string")
 			}
+		} else if !unicode.IsPunct(rune(format[i])) {
+			return t, fmt.Errorf("Invalid format")
 		} else {
 			if format[i] != s[n] {
 				return t, fmt.Errorf("Failed to parse '%c' in date string (found '%c')", format[i], s[n])
@@ -3530,37 +3586,59 @@ func strToTimeCommonFormat(s string, format string) (time.Time, error) {
 }
 
 // Determine the type of format string based on the content
+type formatCache struct {
+	sync.Mutex
+	format string
+	fType  formatType
+}
+
+var dateFormatCache formatCache = formatCache{sync.Mutex{}, "", defaultFormat}
+
+func updateCache(fmt string, t formatType) formatType {
+	dateFormatCache.Lock()
+	dateFormatCache.format = fmt
+	dateFormatCache.fType = t
+	dateFormatCache.Unlock()
+	return t
+}
+
 func determineFormat(fmt string) formatType {
-	tf := strings.TrimSpace(fmt)
-	if len(tf) == 0 {
-		return defaultFormat
-	} else if strings.IndexAny(tf, "%") != -1 {
-		return percentFormat
-	} else if strings.IndexAny(tf, "0356789") == -1 { // 1,2 and 4 might appear (HH12, HH24)
-		return commonFormat
-	} else if !unicode.IsDigit(rune(tf[0])) { // standard formats all start with a digit
-		return goFormat
+	dateFormatCache.Lock()
+	if fmt == dateFormatCache.format {
+		rv := dateFormatCache.fType
+		dateFormatCache.Unlock()
+		return rv
+	}
+	dateFormatCache.Unlock()
+	if len(fmt) == 0 {
+		return updateCache(fmt, defaultFormat)
+	} else if strings.IndexAny(fmt, "%") != -1 {
+		return updateCache(fmt, percentFormat)
+	} else if isCommonFormat(fmt) {
+		return updateCache(fmt, commonFormat)
+	} else if !unicode.IsDigit(rune(fmt[0])) { // standard formats all start with a digit
+		return updateCache(fmt, goFormat)
 	}
 	i := 0
-	for i = 0; i < len(tf); i++ {
-		if !unicode.IsDigit(rune(tf[i])) {
+	for i = 0; i < len(fmt); i++ {
+		if !unicode.IsDigit(rune(fmt[i])) {
 			break
 		}
 	}
-	n := tf[0:i]
+	n := fmt[0:i]
 	if n == "2006" {
-		return goFormat
+		return updateCache(fmt, goFormat)
 	} else if len(n) < 3 {
 		a := make([]rune, 2)
 		a[0] = '0'
 		for i := 1; i < 7; i++ {
 			a[1] = rune('0' + i)
 			if n == string(a) || n == string(a[1:]) {
-				return goFormat
+				return updateCache(fmt, goFormat)
 			}
 		}
 	}
-	return exampleFormat
+	return updateCache(fmt, exampleFormat)
 }
 
 func gatherNumber(s string, max int, countLeadingSpaces bool) (int, int) {
@@ -3820,6 +3898,7 @@ func timeToStrGoFormat(t time.Time, format string) string {
 // find a default format that parses the example given in the format string and use that to format the result
 func timeToStrExampleFormat(t time.Time, format string) string {
 	_, f, _ := strToTimeFormatClosest(format)
+
 	return timeToStrGoFormat(t, f)
 }
 
@@ -4310,7 +4389,7 @@ func determineKnownFormat(s string) string {
 			} else if len(s) == 22 {
 				return "2006-01-02" + string(s[10:11]) + "15:04:05Z07"
 			} else if len(s) == 20 {
-				return "2006-01-02" + string(s[10:11]) + "15:04:05Z"
+				return "2006-01-02" + string(s[10:11]) + "15:04:05Z07" // never 'Z' without the '07'
 			}
 			return ""
 		}
@@ -4350,7 +4429,7 @@ func determineKnownFormat(s string) string {
 				} else if tz == len(part)-3 {
 					return "2006-01-02" + string(s[10:11]) + "15:04:05.999Z07"
 				} else if tz == len(part)-1 && part[tz] == 'Z' {
-					return "2006-01-02" + string(s[10:11]) + "15:04:05.999Z"
+					return "2006-01-02" + string(s[10:11]) + "15:04:05.999Z07" // never 'Z' without the '07'
 				}
 				return ""
 			}
