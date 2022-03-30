@@ -103,6 +103,7 @@
 /\*/    { yylex.logToken(yylex.Text(), "MULT"); return STAR }
 /\//    { yylex.logToken(yylex.Text(), "DIV"); return DIV }
 /%/     { yylex.logToken(yylex.Text(), "MOD"); return MOD }
+/\^/    { yylex.logToken(yylex.Text(), "POW"); return POW }
 /\=\=/  { yylex.logToken(yylex.Text(), "DEQ"); return DEQ }
 /\=/    { yylex.logToken(yylex.Text(), "EQ"); return EQ }
 /\!\=/  { yylex.logToken(yylex.Text(), "NE"); return NE }
