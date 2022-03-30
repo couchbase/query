@@ -33,6 +33,7 @@ while [ $# -gt 0 ]; do
       ;;
     -u) uflag=-u ;;
     -s) sflag=1 ;;
+    -S) sflag=2 ;;
     -nofmt) fflag=0 ;;
     *) args="$args $1" ;;
   esac
@@ -58,10 +59,7 @@ function get_repo {
      #echo "$path" "$mcommit" "$subpath" "$scommit" "$rbranch"
 
      cd $GOPATH/src/$path
-     abranch=`$GIT branch | awk '{print $2}'`
-     if [[ $abranch != $mcommit ]]; then
-         checkout_if_necessary $mcommit $rbranch
-     fi
+     checkout_if_necessary $mcommit $rbranch
      if [[ $subpath != "" ]]
      then
          if [[ ! -d $subpath ]]
@@ -175,36 +173,40 @@ function repo_setup {
 }
 
 function checkout_if_necessary {
-  local branch=$1
   local current=`$GIT rev-parse --abbrev-ref HEAD 2>/dev/null`
   local commit=`$GIT log -n 1 --pretty=format:"%h"`
-  local rbranch=$2
+  local report=""
+  local res=""
 
-  if [[ $branch == $current ]]
-  then
-    return
-  elif [[ $branch == $commit ]]
-  then
-    return
-  fi
-  res=`$GIT checkout "${branch}000" 2>&1`
-  if [[ $res =~ "did not match any file" ]]
-  then
-    ($GIT pull 2>/dev/null 1>/dev/null)  # no need to report status
-    res=`$GIT checkout $branch 2>&1`
+  #echo "> $branch / $current / $*"
+  D=`echo ${PWD}|sed 's,.*github.com/couchbase/,,;s,.*golang.org,golang.org,'`
+
+  while [[ $# > 0 ]]
+  do
+    branch=$1
+    shift
+    if [[ $branch == $current || $branch == $commit ]]
+    then
+      return
+    fi
+    res=`$GIT checkout "${branch}" 2>&1`
     if [[ $res =~ "did not match any file" ]]
     then
-      if [[ $rbranch != $current ]]
-      then
-        $GIT checkout $rbranch
-      fi
-    elif [[ ! $res =~ "is now at" ]]
-    then
-      echo "$res"
+      # try refreshing the repo
+      ($GIT pull 2>/dev/null 1>/dev/null)  # no need to report status
+      res=`$GIT checkout $branch 2>&1`
     fi
-  elif [[ ! $res =~ "is now at" ]]
+    if [[ ! $res =~ "is now at" ]]
+    then
+      report="${report}${D} -> checkout $branch:\n${res}\n"
+    else
+      return  # success
+    fi
+  done
+  if [[ -n $report ]]
   then
-    echo "$res"
+    echo -e "$report"
+    echo
   fi
 }
 
@@ -243,7 +245,7 @@ function DevStandaloneSetup {
 }
 
 # turn off go module for non repo sync build or standalone build
-if [[ ( ! -d ../../../../../cbft && "$GOPATH" != "") || ( $sflag == 1) ]]; then
+if [[ ( ! -d ../../../../../cbft && "$GOPATH" != "") || ( $sflag != 0) ]]; then
      export GO111MODULE=off
      export CGO_CFLAGS="-I$GOPATH/src/github.com/couchbase/eventing-ee/evaluator/worker/include $CGO_FLAGS"
      export CGO_LDFLAGS="-L$GOPATH/lib $CGO_LDFLAGS"
