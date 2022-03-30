@@ -22,7 +22,7 @@ import (
 var Server = "http://localhost:8091"
 
 func execline(line string, t *testing.T) {
-	var liner = liner.NewLiner(false)
+	var liner, _ = liner.NewLiner(false)
 	defer liner.Close()
 
 	var b bytes.Buffer
@@ -60,7 +60,7 @@ func TestExecuteInput(t *testing.T) {
 
 func execn1ql(line string, t *testing.T) bool {
 
-	var liner = liner.NewLiner(false)
+	var liner, _ = liner.NewLiner(false)
 	defer liner.Close()
 
 	var b bytes.Buffer
@@ -199,7 +199,7 @@ func testFileCmd(t *testing.T) {
 
 func execshell(line string, t *testing.T) {
 
-	var liner = liner.NewLiner(false)
+	var liner, _ = liner.NewLiner(false)
 	defer liner.Close()
 
 	var b bytes.Buffer
