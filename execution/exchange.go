@@ -179,11 +179,13 @@ func (this *valueExchange) dispose() {
 	}
 	this.items = nil
 
+	this.oLock.Lock()
 	// the slices might have grown with the appends, if the sizing was
 	// approximate, so anything which started with _LARGE_CHILD_POOL
 	// still goes back to the large pool, even if it has grown slightly
 	// ditto for the small pool
 	if this.children == nil {
+		this.oLock.Unlock()
 		return
 	} else if cap(this.children) >= _LARGE_CHILD_POOL {
 		largeChildPool.Put(this.children[0:0])
@@ -191,6 +193,7 @@ func (this *valueExchange) dispose() {
 		smallChildPool.Put(this.children[0:0])
 	}
 	this.children = nil
+	this.oLock.Unlock()
 }
 
 // present a different operator with our value exchange and
@@ -531,12 +534,15 @@ func (this *valueExchange) retrieveChild() (int, bool) {
 func (this *valueExchange) sendChild(child int) {
 	this.oLock.Lock()
 
-	// we should have enough space here for the append
-	// but if we haven't this sorts itself out
-	this.children = append(this.children, child)
-	if this.mustSignal {
-		this.mustSignal = false
-		this.wg.Done()
+	// don't attempt to signal the parent if the exchange has been disposed of
+	if this.children != nil {
+		// we should have enough space here for the append
+		// but if we haven't this sorts itself out
+		this.children = append(this.children, child)
+		if this.mustSignal {
+			this.mustSignal = false
+			this.wg.Done()
+		}
 	}
 	this.oLock.Unlock()
 }
