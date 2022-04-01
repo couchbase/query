@@ -353,6 +353,6 @@ func (this *builder) BuildUnnest(unnest *algebra.Unnest, outerPlan, outerSubPlan
 
 func (this *builder) MarkOptimHints() {
 	for alias, _ := range this.baseKeyspaces {
-		this.markOptimHints(alias)
+		this.markOptimHints(alias, true)
 	}
 }

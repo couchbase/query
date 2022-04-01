@@ -224,3 +224,19 @@ Set join property
 func (this *SubqueryTerm) SetJoinProps(joinProps uint32) {
 	this.property |= joinProps
 }
+
+func (this *SubqueryTerm) HasInferJoinHint() bool {
+	return (this.property & TERM_INFER_JOIN_HINT) != 0
+}
+
+func (this *SubqueryTerm) SetInferJoinHint() {
+	this.property |= TERM_INFER_JOIN_HINT
+}
+
+func (this *SubqueryTerm) HasTransferJoinHint() bool {
+	return (this.property & TERM_XFER_JOIN_HINT) != 0
+}
+
+func (this *SubqueryTerm) SetTransferJoinHint() {
+	this.property |= TERM_XFER_JOIN_HINT
+}

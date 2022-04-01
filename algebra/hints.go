@@ -59,6 +59,8 @@ const (
 	USE_NL_HINT_NOT_FOLLOWED    = "USE_NL hint cannot be followed"
 	USE_HASH_HINT_NOT_FOLLOWED  = "USE_HASH hint cannot be followed"
 	ORDERED_HINT_NOT_FOLLOWED   = "ORDERED hint cannot be followed"
+	MERGE_ONKEY_JOIN_HINT_ERR   = "Join hint not supported in a MERGE statement with ON KEY clause"
+	MERGE_ONKEY_INDEX_HINT_ERR  = "Index hint not supported for target keyspace in a MERGE statement with ON KEY clause"
 )
 
 type OptimHint interface {
@@ -955,9 +957,7 @@ func ParseObjectHints(object expression.Expression) []OptimHint {
 
 	// JSON-style hints do not have order for multiple hints, sort the hints
 	// for explain purpose
-	sort.Slice(optimHints, func(i, j int) bool {
-		return optimHints[i].sortString() < optimHints[j].sortString()
-	})
+	SortOptimHints(optimHints)
 	return optimHints
 }
 
@@ -1211,4 +1211,10 @@ func formatOptimHint(hint OptimHint, jsonStyle bool) interface{} {
 		s += ": " + err
 	}
 	return s
+}
+
+func SortOptimHints(hints []OptimHint) {
+	sort.Slice(hints, func(i, j int) bool {
+		return hints[i].sortString() < hints[j].sortString()
+	})
 }

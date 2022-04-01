@@ -21,27 +21,31 @@ Represents the UPDATE statement.
 type Update struct {
 	statementBase
 
-	keyspace  *KeyspaceRef          `json:"keyspace"`
-	keys      expression.Expression `json:"keys"`
-	indexes   IndexRefs             `json:"indexes"`
-	set       *Set                  `json:"set"`
-	unset     *Unset                `json:"unset"`
-	where     expression.Expression `json:"where"`
-	limit     expression.Expression `json:"limit"`
-	returning *Projection           `json:"returning"`
+	keyspace   *KeyspaceRef          `json:"keyspace"`
+	keys       expression.Expression `json:"keys"`
+	indexes    IndexRefs             `json:"indexes"`
+	set        *Set                  `json:"set"`
+	unset      *Unset                `json:"unset"`
+	where      expression.Expression `json:"where"`
+	limit      expression.Expression `json:"limit"`
+	returning  *Projection           `json:"returning"`
+	optimHints *OptimHints           `json:"optimizer_hints"`
 }
 
 func NewUpdate(keyspace *KeyspaceRef, keys expression.Expression, indexes IndexRefs,
-	set *Set, unset *Unset, where, limit expression.Expression, returning *Projection) *Update {
+	set *Set, unset *Unset, where, limit expression.Expression, returning *Projection,
+	optimHints *OptimHints) *Update {
+
 	rv := &Update{
-		keyspace:  keyspace,
-		keys:      keys,
-		indexes:   indexes,
-		set:       set,
-		unset:     unset,
-		where:     where,
-		limit:     limit,
-		returning: returning,
+		keyspace:   keyspace,
+		keys:       keys,
+		indexes:    indexes,
+		set:        set,
+		unset:      unset,
+		where:      where,
+		limit:      limit,
+		returning:  returning,
+		optimHints: optimHints,
 	}
 
 	rv.stmt = rv
@@ -319,4 +323,15 @@ UPDATE statement.
 */
 func (this *Update) Returning() *Projection {
 	return this.returning
+}
+
+/*
+Optimier hints
+*/
+func (this *Update) OptimHints() *OptimHints {
+	return this.optimHints
+}
+
+func (this *Update) SetOptimHints(optimHints *OptimHints) {
+	this.optimHints = optimHints
 }

@@ -17,7 +17,9 @@ import (
 )
 
 func (this *builder) beginMutate(keyspace datastore.Keyspace, ksref *algebra.KeyspaceRef,
-	keys expression.Expression, indexes algebra.IndexRefs, limit expression.Expression, mustFetch bool) error {
+	keys expression.Expression, indexes algebra.IndexRefs, limit expression.Expression,
+	mustFetch bool, optimHints *algebra.OptimHints) (*algebra.OptimHints, error) {
+
 	ksref.SetDefaultNamespace(this.namespace)
 	var term *algebra.KeyspaceTerm
 	if ksref.Path() != nil {
@@ -63,8 +65,13 @@ func (this *builder) beginMutate(keyspace datastore.Keyspace, ksref *algebra.Key
 	if this.where != nil {
 		err := this.processWhere(this.where)
 		if err != nil {
-			return err
+			return nil, err
 		}
+	}
+
+	optimHints = deriveOptimHints(this.baseKeyspaces, optimHints)
+	if optimHints != nil {
+		processOptimHints(this.baseKeyspaces, optimHints)
 	}
 
 	scan, err := this.selectScan(keyspace, term, true)
@@ -72,7 +79,7 @@ func (this *builder) beginMutate(keyspace datastore.Keyspace, ksref *algebra.Key
 	this.appendQueryInfo(scan, keyspace, term, len(this.coveringScans) == 0)
 
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	this.addChildren(scan)
@@ -85,14 +92,14 @@ func (this *builder) beginMutate(keyspace datastore.Keyspace, ksref *algebra.Key
 	if len(this.coveringScans) > 0 {
 		err = this.coverExpressions()
 		if err != nil {
-			return err
+			return nil, err
 		}
 	} else {
 		var fetch plan.Operator
 		if mustFetch || this.where != nil || !isKeyScan(scan) {
 			names, err := this.GetSubPaths(term, term.Alias())
 			if err != nil {
-				return err
+				return nil, err
 			}
 			if this.useCBO && (cost > 0.0) && (size > 0) && (frCost > 0.0) {
 				fetchCost, fsize, ffrCost := getFetchCost(keyspace, cardinality)
@@ -125,7 +132,7 @@ func (this *builder) beginMutate(keyspace datastore.Keyspace, ksref *algebra.Key
 		this.addSubChildren(filter)
 	}
 
-	return nil
+	return optimHints, nil
 }
 
 func isKeyScan(scan plan.Operator) bool {

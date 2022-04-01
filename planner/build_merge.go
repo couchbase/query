@@ -110,7 +110,15 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 	right := algebra.NewKeyspaceTermFromPath(ksref.Path(), ksref.As(), nil, stmt.Indexes())
 	targetKeyspace.SetNode(right)
 
+	stmt.SetOptimHints(deriveOptimHints(this.baseKeyspaces, stmt.OptimHints()))
+	if stmt.OptimHints() != nil {
+		processOptimHints(this.baseKeyspaces, stmt.OptimHints())
+	}
+
 	if stmt.IsOnKey() {
+		targetKeyspace.MarkJoinHintError(algebra.MERGE_ONKEY_JOIN_HINT_ERR)
+		targetKeyspace.MarkIndexHintError(algebra.MERGE_ONKEY_INDEX_HINT_ERR)
+		sourceKeyspace.MarkJoinHintError(algebra.MERGE_ONKEY_JOIN_HINT_ERR)
 		if this.useCBO && this.keyspaceUseCBO(ksAlias) {
 			rightKeyspace := base.GetKeyspaceName(this.baseKeyspaces, ksAlias)
 			joinCost, joinCard, _, joinFrCost = getLookupJoinCost(this.lastOp, outer, right,
@@ -119,9 +127,11 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 	} else {
 		// use ANSI JOIN to handle the ON-clause
 		right.SetAnsiJoin()
-		algebra.TransferJoinHint(right, left)
+		right.SetInferJoinHint()
+		left.SetTransferJoinHint()
 
 		ansiJoin := algebra.NewAnsiJoin(left, outer, right, stmt.On())
+		ansiJoin.SetPushable(outer == false)
 		join, err := this.buildAnsiJoin(ansiJoin)
 		if err != nil {
 			return nil, err

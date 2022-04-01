@@ -27,6 +27,8 @@ const (
 	TERM_INDEX_JOIN_NEST             // right-hand side of index join/nest
 	TERM_IN_CORR_SUBQ                // inside a correlated subquery
 	TERM_COMMA_JOIN                  // right-hand side of comma-separated join
+	TERM_INFER_JOIN_HINT             // join hint inferred (from other side of join)
+	TERM_XFER_JOIN_HINT              // join hint transferred (to other side of join)
 )
 
 const TERM_JOIN_PROPS = (TERM_ANSI_JOIN | TERM_ANSI_NEST | TERM_PRIMARY_JOIN)
@@ -556,6 +558,22 @@ Set join property
 */
 func (this *KeyspaceTerm) SetJoinProps(joinProps uint32) {
 	this.property |= joinProps
+}
+
+func (this *KeyspaceTerm) HasInferJoinHint() bool {
+	return (this.property & TERM_INFER_JOIN_HINT) != 0
+}
+
+func (this *KeyspaceTerm) SetInferJoinHint() {
+	this.property |= TERM_INFER_JOIN_HINT
+}
+
+func (this *KeyspaceTerm) HasTransferJoinHint() bool {
+	return (this.property & TERM_XFER_JOIN_HINT) != 0
+}
+
+func (this *KeyspaceTerm) SetTransferJoinHint() {
+	this.property |= TERM_XFER_JOIN_HINT
 }
 
 /*

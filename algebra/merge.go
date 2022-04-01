@@ -30,14 +30,15 @@ clause.
 type Merge struct {
 	statementBase
 
-	keyspace  *KeyspaceRef          `json:"keyspace"`
-	indexes   IndexRefs             `json:"indexes"`
-	source    *MergeSource          `json:"source"`
-	on        expression.Expression `json:"on"`
-	isOnKey   bool                  `json:"is_on_key"`
-	actions   *MergeActions         `json:"actions"`
-	limit     expression.Expression `json:"limit"`
-	returning *Projection           `json:"returning"`
+	keyspace   *KeyspaceRef          `json:"keyspace"`
+	indexes    IndexRefs             `json:"indexes"`
+	source     *MergeSource          `json:"source"`
+	on         expression.Expression `json:"on"`
+	isOnKey    bool                  `json:"is_on_key"`
+	actions    *MergeActions         `json:"actions"`
+	limit      expression.Expression `json:"limit"`
+	returning  *Projection           `json:"returning"`
+	optimHints *OptimHints           `json:"optimizer_hints"`
 }
 
 /*
@@ -47,16 +48,17 @@ of the struct.
 */
 func NewMerge(keyspace *KeyspaceRef, indexes IndexRefs, source *MergeSource,
 	isOnKey bool, on expression.Expression, actions *MergeActions,
-	limit expression.Expression, returning *Projection) *Merge {
+	limit expression.Expression, returning *Projection, optimHints *OptimHints) *Merge {
 	rv := &Merge{
-		keyspace:  keyspace,
-		indexes:   indexes,
-		source:    source,
-		on:        on,
-		isOnKey:   isOnKey,
-		actions:   actions,
-		limit:     limit,
-		returning: returning,
+		keyspace:   keyspace,
+		indexes:    indexes,
+		source:     source,
+		on:         on,
+		isOnKey:    isOnKey,
+		actions:    actions,
+		limit:      limit,
+		returning:  returning,
+		optimHints: optimHints,
 	}
 
 	rv.stmt = rv
@@ -325,6 +327,17 @@ func (this *Merge) Returning() *Projection {
 
 func (this *Merge) Type() string {
 	return "MERGE"
+}
+
+/*
+Optimier hints
+*/
+func (this *Merge) OptimHints() *OptimHints {
+	return this.optimHints
+}
+
+func (this *Merge) SetOptimHints(optimHints *OptimHints) {
+	this.optimHints = optimHints
 }
 
 /*

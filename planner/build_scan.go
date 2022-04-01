@@ -55,7 +55,7 @@ func (this *builder) selectScan(keyspace datastore.Keyspace, node *algebra.Keysp
 	}
 
 	if !this.joinEnum() && !node.IsAnsiJoinOp() {
-		err = this.markOptimHints(node.Alias())
+		err = this.markOptimHints(node.Alias(), false)
 		if err != nil {
 			return nil, err
 		}

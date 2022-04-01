@@ -29,10 +29,13 @@ func (this *builder) VisitDelete(stmt *algebra.Delete) (interface{}, error) {
 	}
 
 	mustFetch := stmt.Returning() != nil || this.context.DeltaKeyspaces() != nil
-	err = this.beginMutate(keyspace, ksref, stmt.Keys(), stmt.Indexes(), stmt.Limit(), mustFetch)
+	optimHints := stmt.OptimHints()
+	optimHints, err = this.beginMutate(keyspace, ksref, stmt.Keys(), stmt.Indexes(), stmt.Limit(),
+		mustFetch, optimHints)
 	if err != nil {
 		return nil, err
 	}
+	stmt.SetOptimHints(optimHints)
 
 	subChildren := this.subChildren
 	deleteSubChildren := make([]plan.Operator, 0, 4)

@@ -77,6 +77,8 @@ func deriveOptimHints(baseKeyspaces map[string]*base.BaseKeyspace, optimHints *a
 			optimHints = algebra.NewOptimHints(nil, false)
 		}
 
+		// sort the new hints for explain purpose
+		algebra.SortOptimHints(newHints)
 		optimHints.AddHints(newHints)
 	}
 
@@ -241,7 +243,7 @@ func setNonKeyspaceIndexHintError(hint algebra.OptimHint, keyspace string) {
 // pointers, thus we should only be marking optimizer hints when it's safe to do so, i.e. when
 // the planning for a specific keyspace is "final". For RBO this is done as we consider each
 // keyspace, for join enumeration this is done when a final plan is chosen.
-func (this *builder) markOptimHints(alias string) (err error) {
+func (this *builder) markOptimHints(alias string, includeJoin bool) (err error) {
 	baseKeyspace, ok := this.baseKeyspaces[alias]
 	if !ok {
 		return errors.NewPlanInternalError("markOptimHintErrors: invalid alias specified: " + alias)
@@ -261,6 +263,10 @@ func (this *builder) markOptimHints(alias string) (err error) {
 		default:
 			return errors.NewPlanInternalError("markOptimHints: invalid hint state")
 		}
+	}
+
+	if !includeJoin {
+		return nil
 	}
 
 	joinHintError := baseKeyspace.HasJoinHintError()

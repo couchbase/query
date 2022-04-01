@@ -27,9 +27,23 @@ func (this *builder) buildAnsiJoin(node *algebra.AnsiJoin) (op plan.Operator, er
 	}
 
 	if !this.joinEnum() {
-		err = this.markOptimHints(node.Alias())
-		if err != nil {
-			return nil, err
+		if node.Right().HasInferJoinHint() {
+			if leftTerm, ok := node.Left().(algebra.SimpleFromTerm); ok {
+				err = this.markOptimHints(leftTerm.Alias(), true)
+				if err != nil {
+					return nil, err
+				}
+			}
+			// also mark index hints on the inner
+			err = this.markOptimHints(node.Alias(), false)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			err = this.markOptimHints(node.Alias(), true)
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 
@@ -48,9 +62,23 @@ func (this *builder) buildAnsiNest(node *algebra.AnsiNest) (op plan.Operator, er
 	}
 
 	if !this.joinEnum() {
-		err = this.markOptimHints(node.Alias())
-		if err != nil {
-			return nil, err
+		if node.Right().HasInferJoinHint() {
+			if leftTerm, ok := node.Left().(algebra.SimpleFromTerm); ok {
+				err = this.markOptimHints(leftTerm.Alias(), true)
+				if err != nil {
+					return nil, err
+				}
+			}
+			// also mark index hints on the inner
+			err = this.markOptimHints(node.Alias(), false)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			err = this.markOptimHints(node.Alias(), true)
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 
@@ -72,6 +100,20 @@ func (this *builder) buildAnsiJoinOp(node *algebra.AnsiJoin) (op plan.Operator, 
 	useCBO := this.useCBO && this.keyspaceUseCBO(right.Alias())
 	joinEnum := this.joinEnum()
 
+	var leftBaseKeyspace *base.BaseKeyspace
+	baseKeyspace, _ := this.baseKeyspaces[right.Alias()]
+	preferHash := right.PreferHash()
+	preferNL := right.PreferNL()
+	inferJoinHint := false
+	if !joinEnum && node.Right().HasInferJoinHint() {
+		if leftTerm, ok := node.Left().(algebra.SimpleFromTerm); ok {
+			inferJoinHint = true
+			leftBaseKeyspace, _ = this.baseKeyspaces[leftTerm.Alias()]
+			preferHash = leftTerm.PreferHash()
+			preferNL = leftTerm.PreferNL()
+		}
+	}
+
 	switch right := right.(type) {
 	case *algebra.KeyspaceTerm:
 		err := this.processOnclause(right.Alias(), node.Onclause(), node.Outer(), node.Pushable())
@@ -81,7 +123,6 @@ func (this *builder) buildAnsiJoinOp(node *algebra.AnsiJoin) (op plan.Operator, 
 
 		this.extractKeyspacePredicates(nil, node.Onclause())
 
-		baseKeyspace, _ := this.baseKeyspaces[right.Alias()]
 		if len(baseKeyspace.Filters()) > 0 {
 			baseKeyspace.Filters().ClearPlanFlags()
 		}
@@ -122,7 +163,7 @@ func (this *builder) buildAnsiJoinOp(node *algebra.AnsiJoin) (op plan.Operator, 
 				if !joinEnum {
 					tryHash = true
 				}
-			} else if right.PreferHash() {
+			} else if preferHash {
 				// only consider hash join when USE HASH hint is specified
 				tryHash = true
 			}
@@ -134,7 +175,7 @@ func (this *builder) buildAnsiJoinOp(node *algebra.AnsiJoin) (op plan.Operator, 
 					return nil, err
 				}
 				if hjoin != nil {
-					if useCBO && !right.PreferHash() {
+					if useCBO && !preferHash {
 						if useFr {
 							hjCost = hjoin.FrCost()
 						} else {
@@ -155,8 +196,12 @@ func (this *builder) buildAnsiJoinOp(node *algebra.AnsiJoin) (op plan.Operator, 
 				}
 			}
 		} else {
-			if right.PreferHash() {
-				baseKeyspace.MarkHashUnavailable()
+			if preferHash {
+				if inferJoinHint {
+					leftBaseKeyspace.MarkHashUnavailable()
+				} else {
+					baseKeyspace.MarkHashUnavailable()
+				}
 			}
 		}
 
@@ -177,7 +222,7 @@ func (this *builder) buildAnsiJoinOp(node *algebra.AnsiJoin) (op plan.Operator, 
 		}
 
 		if len(scans) > 0 {
-			if useCBO && !right.PreferNL() {
+			if useCBO && !preferNL {
 				if useFr {
 					nlCost = frCost
 				} else {
@@ -197,8 +242,12 @@ func (this *builder) buildAnsiJoinOp(node *algebra.AnsiJoin) (op plan.Operator, 
 				}
 			}
 
-			if right.PreferHash() && !joinEnum {
-				baseKeyspace.SetJoinHintError()
+			if preferHash && !joinEnum {
+				if inferJoinHint {
+					leftBaseKeyspace.SetJoinHintError()
+				} else {
+					baseKeyspace.SetJoinHintError()
+				}
 			}
 			if newOnclause != nil {
 				node.SetOnclause(newOnclause)
@@ -219,8 +268,12 @@ func (this *builder) buildAnsiJoinOp(node *algebra.AnsiJoin) (op plan.Operator, 
 		} else if hjCost > 0.0 {
 			this.restoreJoinPlannerState(hjps)
 			node.SetOnclause(hjOnclause)
-			if right.PreferNL() && !joinEnum {
-				baseKeyspace.SetJoinHintError()
+			if preferNL && !joinEnum {
+				if inferJoinHint {
+					leftBaseKeyspace.SetJoinHintError()
+				} else {
+					baseKeyspace.SetJoinHintError()
+				}
 			}
 			right.UnsetUnderNL()
 			if hjIndexHintError {
@@ -296,7 +349,7 @@ func (this *builder) buildAnsiJoinOp(node *algebra.AnsiJoin) (op plan.Operator, 
 		if util.IsFeatureEnabled(this.context.FeatureControls(), util.N1QL_HASH_JOIN) {
 			// for expression term and subquery term, consider hash join
 			// even without USE HASH hint, as long as USE NL is not specified
-			if !joinEnum && !right.PreferNL() {
+			if !joinEnum && !preferNL {
 				hjoin, _, err := this.buildHashJoin(node, filter, selec, nil, nil, nil)
 				if hjoin != nil || err != nil {
 					return hjoin, err
@@ -335,6 +388,20 @@ func (this *builder) buildAnsiNestOp(node *algebra.AnsiNest) (op plan.Operator, 
 	useCBO := this.useCBO && this.keyspaceUseCBO(right.Alias())
 	joinEnum := this.joinEnum()
 
+	var leftBaseKeyspace *base.BaseKeyspace
+	baseKeyspace, _ := this.baseKeyspaces[right.Alias()]
+	preferHash := right.PreferHash()
+	preferNL := right.PreferNL()
+	inferJoinHint := false
+	if !joinEnum && node.Right().HasInferJoinHint() {
+		if leftTerm, ok := node.Left().(algebra.SimpleFromTerm); ok {
+			inferJoinHint = true
+			leftBaseKeyspace, _ = this.baseKeyspaces[leftTerm.Alias()]
+			preferHash = leftTerm.PreferHash()
+			preferNL = leftTerm.PreferNL()
+		}
+	}
+
 	switch right := right.(type) {
 	case *algebra.KeyspaceTerm:
 		err := this.processOnclause(right.Alias(), node.Onclause(), node.Outer(), node.Pushable())
@@ -344,7 +411,6 @@ func (this *builder) buildAnsiNestOp(node *algebra.AnsiNest) (op plan.Operator, 
 
 		this.extractKeyspacePredicates(nil, node.Onclause())
 
-		baseKeyspace, _ := this.baseKeyspaces[right.Alias()]
 		if len(baseKeyspace.Filters()) > 0 {
 			baseKeyspace.Filters().ClearPlanFlags()
 		}
@@ -378,7 +444,7 @@ func (this *builder) buildAnsiNestOp(node *algebra.AnsiNest) (op plan.Operator, 
 				if !joinEnum {
 					tryHash = true
 				}
-			} else if right.PreferHash() {
+			} else if preferHash {
 				// only consider hash nest when USE HASH hint is specified
 				tryHash = true
 			}
@@ -390,7 +456,7 @@ func (this *builder) buildAnsiNestOp(node *algebra.AnsiNest) (op plan.Operator, 
 					return nil, err
 				}
 				if hnest != nil {
-					if useCBO && !right.PreferHash() {
+					if useCBO && !preferHash {
 						hnCost = hnest.Cost()
 						hjps = this.saveJoinPlannerState()
 						hnOnclause = node.Onclause()
@@ -407,8 +473,12 @@ func (this *builder) buildAnsiNestOp(node *algebra.AnsiNest) (op plan.Operator, 
 				}
 			}
 		} else {
-			if right.PreferHash() {
-				baseKeyspace.MarkHashUnavailable()
+			if preferHash {
+				if inferJoinHint {
+					leftBaseKeyspace.MarkHashUnavailable()
+				} else {
+					baseKeyspace.MarkHashUnavailable()
+				}
 			}
 		}
 
@@ -429,7 +499,7 @@ func (this *builder) buildAnsiNestOp(node *algebra.AnsiNest) (op plan.Operator, 
 		}
 
 		if len(scans) > 0 {
-			if useCBO && !right.PreferNL() && (hnCost > 0.0) && (cost > hnCost) {
+			if useCBO && !preferNL && (hnCost > 0.0) && (cost > hnCost) {
 				this.restoreJoinPlannerState(hjps)
 				node.SetOnclause(hnOnclause)
 				right.UnsetUnderNL()
@@ -442,8 +512,12 @@ func (this *builder) buildAnsiNestOp(node *algebra.AnsiNest) (op plan.Operator, 
 				return hnest, nil
 			}
 
-			if right.PreferHash() && !joinEnum {
-				baseKeyspace.SetJoinHintError()
+			if preferHash && !joinEnum {
+				if inferJoinHint {
+					leftBaseKeyspace.SetJoinHintError()
+				} else {
+					baseKeyspace.SetJoinHintError()
+				}
 			}
 			if newOnclause != nil {
 				node.SetOnclause(newOnclause)
@@ -464,8 +538,12 @@ func (this *builder) buildAnsiNestOp(node *algebra.AnsiNest) (op plan.Operator, 
 		} else if hnCost > 0.0 {
 			this.restoreJoinPlannerState(hjps)
 			node.SetOnclause(hnOnclause)
-			if right.PreferNL() && !joinEnum {
-				baseKeyspace.SetJoinHintError()
+			if preferNL && !joinEnum {
+				if inferJoinHint {
+					leftBaseKeyspace.SetJoinHintError()
+				} else {
+					baseKeyspace.SetJoinHintError()
+				}
 			}
 			right.UnsetUnderNL()
 			if hjIndexHintError {
@@ -536,7 +614,7 @@ func (this *builder) buildAnsiNestOp(node *algebra.AnsiNest) (op plan.Operator, 
 		if util.IsFeatureEnabled(this.context.FeatureControls(), util.N1QL_HASH_JOIN) {
 			// for expression term and subquery term, consider hash join
 			// even without USE HASH hint, as long as USE NL is not specified
-			if !joinEnum && !right.PreferNL() {
+			if !joinEnum && !preferNL {
 				hnest, _, err := this.buildHashNest(node, filter, selec, nil, nil, nil)
 				if hnest != nil || err != nil {
 					return hnest, err

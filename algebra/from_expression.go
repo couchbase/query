@@ -326,6 +326,22 @@ func (this *ExpressionTerm) SetJoinProps(joinProps uint32) {
 	this.property |= joinProps
 }
 
+func (this *ExpressionTerm) HasInferJoinHint() bool {
+	return (this.property & TERM_INFER_JOIN_HINT) != 0
+}
+
+func (this *ExpressionTerm) SetInferJoinHint() {
+	this.property |= TERM_INFER_JOIN_HINT
+}
+
+func (this *ExpressionTerm) HasTransferJoinHint() bool {
+	return (this.property & TERM_XFER_JOIN_HINT) != 0
+}
+
+func (this *ExpressionTerm) SetTransferJoinHint() {
+	this.property |= TERM_XFER_JOIN_HINT
+}
+
 /*
 Marshals input ExpressionTerm.
 */

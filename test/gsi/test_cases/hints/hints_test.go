@@ -36,6 +36,9 @@ func TestHints(t *testing.T) {
 	runStmt(qc, "CREATE INDEX ord_customerId_ordersId on orders(customerId, orderId)")
 	runStmt(qc, "CREATE INDEX purch_arrProduct_customerId on purchase(DISTINCT ARRAY pd.product FOR pd IN lineItems END, customerId)")
 	runStmt(qc, "CREATE INDEX prod_reviewList_productId on product(DISTINCT reviewList, productId)")
+	runStmt(qc, "CREATE INDEX st_source_idx on shellTest(c11, c12)")
+	runStmt(qc, "CREATE INDEX st_target_idx on shellTest(c21, c22)")
+
 	fmt.Println("Running Hints test cases")
 
 	// simple hints
@@ -43,6 +46,9 @@ func TestHints(t *testing.T) {
 
 	// hints with errors
 	runMatch("case_hints_errors.json", false, true, qc, t)
+
+	// hints in DML statements
+	runMatch("case_hints_dml.json", false, true, qc, t)
 
 	fmt.Println("Dropping indexes")
 	runStmt(qc, "DROP INDEX customer.cust_lastName_firstName_customerId")
@@ -54,6 +60,8 @@ func TestHints(t *testing.T) {
 	runStmt(qc, "DROP INDEX orders.ord_customerId_ordersId")
 	runStmt(qc, "DROP INDEX purchase.purch_arrProduct_customerId")
 	runStmt(qc, "DROP INDEX product.prod_reviewList_productId")
+	runStmt(qc, "DROP INDEX shellTest.st_source_idx")
+	runStmt(qc, "DROP INDEX shellTest.st_target_idx")
 
 	// create primary indexes
 	runStmt(qc, "CREATE PRIMARY INDEX ON customer")

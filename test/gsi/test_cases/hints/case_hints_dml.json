@@ -1,0 +1,370 @@
+[
+    {
+        "testcase": "Delete",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                  "hints_followed": [
+                      "INDEX(t st_target_idx)"
+                  ]
+                }
+            ],
+            "statement": "SELECT RAW p.`optimizer_hints` FROM $explan AS p"
+        },
+        "statements":"DELETE /*+ INDEX(t st_target_idx) */ FROM shellTest t WHERE t.c21 <= 0 AND t.type = \"target\"",
+        "results": [
+    ]
+    },
+    {
+        "testcase": "Delete with duplicate hint specifications",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "hints_with_error": [
+                        "INDEX(t st_target_idx): Duplicated INDEX hint specified for keyspace: t",
+                        "INDEX(t st_target_idx): Duplicated INDEX hint specified for keyspace: t"
+                    ]
+                }
+            ],
+            "statement": "SELECT RAW p.`optimizer_hints` FROM $explan AS p"
+        },
+        "statements":"DELETE /*+ INDEX(t st_target_idx) */ FROM shellTest t USE INDEX(st_target_idx) WHERE t.c21 <= 0 AND t.type = \"target\"",
+        "results": [
+    ]
+    },
+    {
+        "testcase": "Update",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                  "hints_followed": [
+                      "INDEX(t st_target_idx)"
+                  ]
+                }
+            ],
+            "statement": "SELECT RAW p.`optimizer_hints` FROM $explan AS p"
+        },
+        "statements":"UPDATE /*+ INDEX(t st_target_idx) */ shellTest t SET t.c23 = t.c22 WHERE t.c21 <= 0 AND t.type = \"target\"",
+        "results": [
+    ]
+    },
+    {
+        "testcase": "Update with duplicate hint specifications",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "hints_with_error": [
+                        "INDEX(t st_target_idx): Duplicated INDEX hint specified for keyspace: t",
+                        "INDEX(t st_target_idx): Duplicated INDEX hint specified for keyspace: t"
+                    ]
+                }
+            ],
+            "statement": "SELECT RAW p.`optimizer_hints` FROM $explan AS p"
+        },
+        "statements":"UPDATE /*+ INDEX(t st_target_idx) */ shellTest t USE INDEX(st_target_idx) SET t.c23 = t.c22 WHERE t.c21 <= 0 AND t.type = \"target\"",
+        "results": [
+    ]
+    },
+    {
+        "testcase": "Merge with UPDATE and INSERT, UPDATE with WHERE clauses",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                  "hints_followed": [
+                      "INDEX(t st_target_idx)",
+                      "USE_HASH(s/PROBE)"
+                  ]
+                }
+            ],
+            "statement": "SELECT RAW p.`optimizer_hints` FROM $explan AS p"
+        },
+        "statements":"MERGE /*+ INDEX(t st_target_idx) USE_HASH(s/PROBE) */ INTO shellTest t USING (SELECT s1.* FROM shellTest s1 WHERE s1.c11 IS NOT NULL AND s1.type = \"source\") AS s ON t.c21 = s.c11 WHEN MATCHED THEN UPDATE set t.c23 = t.c22, t.c22 = s.c12 WHERE s.type = \"source\" AND t.type = \"target\" WHEN NOT MATCHED THEN INSERT (KEY REPLACE(meta(s).id, \"test1\", \"test2\"), VALUE {\"c21\": s.c11, \"c22\": s.c12 + s.c13, \"type\": \"target\", \"test_id\": s.test_id, \"inserted\": true})",
+        "results": [
+    ]
+    },
+    {
+        "testcase": "Check result of previous MERGE statement",
+        "statements":"SELECT c21, c22, c23, inserted FROM shellTest WHERE type = \"target\" AND c21 IS NOT MISSING ORDER BY c21",
+        "ordered": true,
+        "results": [
+        {
+            "c21": 1,
+            "c22": 2,
+            "c23": 5
+        },
+        {
+            "c21": 2,
+            "c22": 10,
+            "inserted": true
+        },
+        {
+            "c21": 3,
+            "c22": 6,
+            "c23": 15
+        },
+        {
+            "c21": 4,
+            "c22": 20,
+            "inserted": true
+        },
+        {
+            "c21": 5,
+            "c22": 10,
+            "c23": 25
+        },
+        {
+            "c21": 6,
+            "c22": 30
+        }
+    ]
+    },
+    {
+        "testcase": "MERGE statement to return data to previous state, including UPDATE and DELETE actions, both with WHERE clause",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                  "hints_followed": [
+                      "INDEX(t st_target_idx)", 
+                      "USE_HASH(s/BUILD)"
+                  ],
+                  "hints_with_error": [
+                      "INDEX(s st_source_idx): INDEX hint specified on non-keyspace: s"
+                  ]
+                }
+            ],
+            "statement": "SELECT RAW p.`optimizer_hints` FROM $explan AS p"
+        },
+        "statements":"MERGE /*+ INDEX(t st_target_idx) INDEX(s st_source_idx) USE_HASH(s/BUILD) */ INTO shellTest t USING (SELECT s1.* FROM shellTest s1 WHERE s1.c11 IS NOT NULL AND s1.type = \"source\") AS s ON t.c21 = s.c11 WHEN MATCHED THEN UPDATE set t.c22 = t.c23 unset t.c23 WHERE t.type = \"target\" AND t.c23 IS NOT MISSING WHEN MATCHED THEN DELETE WHERE t.type = \"target\" AND t.inserted = true",
+        "results": [
+    ]
+    },
+    {
+        "testcase": "Check result of previous MERGE statement",
+        "statements":"SELECT c21, c22, c23, inserted FROM shellTest WHERE type = \"target\" AND c21 IS NOT MISSING ORDER BY c21",
+        "ordered": true,
+        "results": [
+        {
+            "c21": 1,
+            "c22": 5
+        },
+        {
+            "c21": 3,
+            "c22": 15
+        },
+        {
+            "c21": 5,
+            "c22": 25
+        },
+        {
+            "c21": 6,
+            "c22": 30
+        }
+    ]
+    },
+    {
+        "testcase": "Merge with UPDATE and INSERT, UPDATE with WHERE clauses",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                  "hints_with_error": [
+                      "INDEX(t st_target_idx): Duplicated INDEX hint specified for keyspace: t",
+                      "USE_HASH(s/PROBE): Duplciated join hint specified for keyspace: s",
+                      "INDEX(t st_target_idx): Duplicated INDEX hint specified for keyspace: t",
+                      "USE_HASH(s/PROBE): Duplciated join hint specified for keyspace: s"
+                  ]
+                }
+            ],
+            "statement": "SELECT RAW p.`optimizer_hints` FROM $explan AS p"
+        },
+        "statements":"MERGE /*+ INDEX(t st_target_idx) USE_HASH(s/PROBE) */ INTO shellTest t USE INDEX(st_target_idx) USING (SELECT s1.* FROM shellTest s1 WHERE s1.c11 IS NOT NULL AND s1.type = \"source\") AS s USE HASH(probe) ON t.c21 = s.c11 WHEN MATCHED THEN UPDATE set t.c23 = t.c22, t.c22 = s.c12 WHERE s.type = \"source\" AND t.type = \"target\" WHEN NOT MATCHED THEN INSERT (KEY REPLACE(meta(s).id, \"test1\", \"test2\"), VALUE {\"c21\": s.c11, \"c22\": s.c12 + s.c13, \"type\": \"target\", \"test_id\": s.test_id, \"inserted\": true})",
+        "results": [
+    ]
+    },
+    {
+        "testcase": "Check result of previous MERGE statement",
+        "statements":"SELECT c21, c22, c23, inserted FROM shellTest WHERE type = \"target\" AND c21 IS NOT MISSING ORDER BY c21",
+        "ordered": true,
+        "results": [
+        {
+            "c21": 1,
+            "c22": 2,
+            "c23": 5
+        },
+        {
+            "c21": 2,
+            "c22": 10,
+            "inserted": true
+        },
+        {
+            "c21": 3,
+            "c22": 6,
+            "c23": 15
+        },
+        {
+            "c21": 4,
+            "c22": 20,
+            "inserted": true
+        },
+        {
+            "c21": 5,
+            "c22": 10,
+            "c23": 25
+        },
+        {
+            "c21": 6,
+            "c22": 30
+        }
+    ]
+    },
+    {
+        "testcase": "MERGE statement to return data to previous state, including UPDATE and DELETE actions, both with WHERE clause",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                  "hints_with_error": [
+                      "INDEX(t st_target_idx): Duplicated INDEX hint specified for keyspace: t",
+                      "USE_HASH(s/BUILD): Duplciated join hint specified for keyspace: s",
+                      "INDEX(t st_target_idx): Duplicated INDEX hint specified for keyspace: t",
+                      "USE_HASH(s/BUILD): Duplciated join hint specified for keyspace: s"
+                 ]
+                }
+            ],
+            "statement": "SELECT RAW p.`optimizer_hints` FROM $explan AS p"
+        },
+        "statements":"MERGE /*+ INDEX(t st_target_idx) USE_HASH(s/BUILD) */ INTO shellTest t USE INDEX(st_target_idx) USING (SELECT s1.* FROM shellTest s1 WHERE s1.c11 IS NOT NULL AND s1.type = \"source\") AS s USE HASH(build) ON t.c21 = s.c11 WHEN MATCHED THEN UPDATE set t.c22 = t.c23 unset t.c23 WHERE t.type = \"target\" AND t.c23 IS NOT MISSING WHEN MATCHED THEN DELETE WHERE t.type = \"target\" AND t.inserted = true",
+        "results": [
+    ]
+    },
+    {
+        "testcase": "Check result of previous MERGE statement",
+        "statements":"SELECT c21, c22, c23, inserted FROM shellTest WHERE type = \"target\" AND c21 IS NOT MISSING ORDER BY c21",
+        "ordered": true,
+        "results": [
+        {
+            "c21": 1,
+            "c22": 5
+        },
+        {
+            "c21": 3,
+            "c22": 15
+        },
+        {
+            "c21": 5,
+            "c22": 25
+        },
+        {
+            "c21": 6,
+            "c22": 30
+        }
+    ]
+    },
+    {
+        "testcase": "Merge with ON KEY clauses",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                  "hints_with_error": [
+                      "INDEX(t st_target_idx): Index hint not supported for target keyspace in a MERGE statement with ON KEY clause",
+                      "USE_HASH(s/PROBE): Join hint not supported in a MERGE statement with ON KEY clause"
+                 ]
+                }
+            ],
+            "statement": "SELECT RAW p.`optimizer_hints` FROM $explan AS p"
+        },
+        "statements":"MERGE /*+ INDEX(t st_target_idx) USE_HASH(s/PROBE) */ INTO shellTest t USING (SELECT meta().id, c11, c12, c13, type, test_id FROM shellTest WHERE c11 IS NOT MISSING AND type = \"source\") s ON KEY REPLACE(s.id, \"test1\", \"test2\") WHEN MATCHED THEN UPDATE set t.c23 = t.c22, t.c22 = s.c12 WHERE s.type = \"source\" AND t.type = \"target\" WHEN NOT MATCHED THEN INSERT {\"c21\": s.c11, \"c22\": s.c12 + s.c13, \"type\": \"target\", \"test_id\": s.test_id, \"inserted\": true}",
+        "results": [
+    ]
+    },
+    {
+        "testcase": "Check result of previous MERGE statement",
+        "statements":"SELECT c21, c22, c23, inserted FROM shellTest WHERE c21 IS NOT MISSING AND type = \"target\" ORDER BY c21",
+        "ordered": true,
+        "results": [
+        {
+            "c21": 1,
+            "c22": 2,
+            "c23": 5
+        },
+        {
+            "c21": 2,
+            "c22": 10,
+            "inserted": true
+        },
+        {
+            "c21": 3,
+            "c22": 6,
+            "c23": 15
+        },
+        {
+            "c21": 4,
+            "c22": 20,
+            "inserted": true
+        },
+        {
+            "c21": 5,
+            "c22": 10,
+            "c23": 25
+        },
+        {
+            "c21": 6,
+            "c22": 30
+        }
+    ]
+    },
+    {
+        "testcase": "MERGE statement to return data to previous state, with ON KEY clause",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                  "hints_with_error": [
+                      "INDEX(t st_target_idx): Index hint not supported for target keyspace in a MERGE statement with ON KEY clause",
+                      "USE_HASH(s/PROBE): Join hint not supported in a MERGE statement with ON KEY clause"
+                 ]
+                }
+            ],
+            "statement": "SELECT RAW p.`optimizer_hints` FROM $explan AS p"
+        },
+        "statements":"MERGE /*+ INDEX(t st_target_idx) USE_HASH(s/PROBE) */ INTO shellTest t USING (SELECT meta().id, c11, c12, c13, type, test_id FROM shellTest WHERE c11 IS NOT MISSING AND type = \"source\") s ON KEY REPLACE(s.id, \"test1\", \"test2\") WHEN MATCHED THEN UPDATE set t.c22 = t.c23 unset t.c23 WHERE t.type = \"target\" AND t.c23 IS NOT MISSING WHEN MATCHED THEN DELETE WHERE t.type = \"target\" AND t.inserted = true",
+        "results": [
+    ]
+    },
+    {
+        "testcase": "Check result of previous MERGE statement",
+        "statements":"SELECT c21, c22, c23, inserted FROM shellTest WHERE c21 IS NOT MISSING AND type = \"target\" ORDER BY c21",
+        "ordered": true,
+        "results": [
+        {
+            "c21": 1,
+            "c22": 5
+        },
+        {
+            "c21": 3,
+            "c22": 15
+        },
+        {
+            "c21": 5,
+            "c22": 25
+        },
+        {
+            "c21": 6,
+            "c22": 30
+        }
+    ]
+    }
+]
+
+

@@ -150,6 +150,10 @@ func (this *BaseKeyspace) IsCommaJoin() bool {
 	return this.node != nil && this.node.IsCommaJoin()
 }
 
+func (this *BaseKeyspace) HasInferJoinHint() bool {
+	return this.node != nil && this.node.HasInferJoinHint()
+}
+
 func CopyBaseKeyspaces(src map[string]*BaseKeyspace) map[string]*BaseKeyspace {
 	return copyBaseKeyspaces(src, false)
 }
@@ -410,6 +414,22 @@ func (this *BaseKeyspace) MarkHashUnavailable() {
 	for _, hint := range this.joinHints {
 		if hint.Type() == algebra.HINT_HASH {
 			hint.SetError(algebra.HASH_JOIN_NOT_AVAILABLE)
+		}
+	}
+}
+
+func (this *BaseKeyspace) MarkIndexHintError(err string) {
+	for _, hint := range this.indexHints {
+		if hint.State() == algebra.HINT_STATE_UNKNOWN {
+			hint.SetError(err)
+		}
+	}
+}
+
+func (this *BaseKeyspace) MarkJoinHintError(err string) {
+	for _, hint := range this.joinHints {
+		if hint.State() == algebra.HINT_STATE_UNKNOWN {
+			hint.SetError(err)
 		}
 	}
 }

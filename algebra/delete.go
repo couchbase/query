@@ -27,12 +27,13 @@ and returning represents the returning clause.
 type Delete struct {
 	statementBase
 
-	keyspace  *KeyspaceRef          `json:"keyspace"`
-	keys      expression.Expression `json:"keys"`
-	indexes   IndexRefs             `json:"indexes"`
-	where     expression.Expression `json:"where"`
-	limit     expression.Expression `json:"limit"`
-	returning *Projection           `json:"returning"`
+	keyspace   *KeyspaceRef          `json:"keyspace"`
+	keys       expression.Expression `json:"keys"`
+	indexes    IndexRefs             `json:"indexes"`
+	where      expression.Expression `json:"where"`
+	limit      expression.Expression `json:"limit"`
+	returning  *Projection           `json:"returning"`
+	optimHints *OptimHints           `json:"optimizer_hints"`
 }
 
 /*
@@ -41,14 +42,15 @@ struct by assigning the input attributes to the fields
 of the struct
 */
 func NewDelete(keyspace *KeyspaceRef, keys expression.Expression, indexes IndexRefs,
-	where, limit expression.Expression, returning *Projection) *Delete {
+	where, limit expression.Expression, returning *Projection, optimHints *OptimHints) *Delete {
 	rv := &Delete{
-		keyspace:  keyspace,
-		keys:      keys,
-		indexes:   indexes,
-		where:     where,
-		limit:     limit,
-		returning: returning,
+		keyspace:   keyspace,
+		keys:       keys,
+		indexes:    indexes,
+		where:      where,
+		limit:      limit,
+		returning:  returning,
+		optimHints: optimHints,
 	}
 
 	rv.stmt = rv
@@ -256,4 +258,15 @@ delete statement.
 */
 func (this *Delete) Returning() *Projection {
 	return this.returning
+}
+
+/*
+Optimier hints
+*/
+func (this *Delete) OptimHints() *OptimHints {
+	return this.optimHints
+}
+
+func (this *Delete) SetOptimHints(optimHints *OptimHints) {
+	this.optimHints = optimHints
 }
