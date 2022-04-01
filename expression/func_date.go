@@ -4202,7 +4202,7 @@ func timeToStrCommonFormat(t time.Time, format string) string {
 			w := t.Weekday().String()[:3]
 			if format[i] == 'd' {
 				w = strings.ToLower(w)
-			} else if format[i+1] == 'A' {
+			} else if format[i+1] == 'Y' {
 				w = strings.ToUpper(w)
 			}
 			res = append(res, []rune(w)...)
