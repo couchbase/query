@@ -211,6 +211,7 @@ func (this *builder) buildAnsiJoinOp(node *algebra.AnsiJoin) (op plan.Operator, 
 		node.SetOnclause(origOnclause)
 		right.SetUnderNL()
 		scans, primaryJoinKeys, newOnclause, newFilter, cost, cardinality, size, frCost, err := this.buildAnsiJoinScan(right, node.Onclause(), filter, node.Outer(), "join")
+		right.UnsetUnderNL()
 		if err != nil && !useCBO {
 			// in case of CBO, defer returning error in case hash join is feasible
 			return nil, err
@@ -231,7 +232,6 @@ func (this *builder) buildAnsiJoinOp(node *algebra.AnsiJoin) (op plan.Operator, 
 				if (hjCost > 0.0) && (nlCost > hjCost) {
 					this.restoreJoinPlannerState(hjps)
 					node.SetOnclause(hjOnclause)
-					right.UnsetUnderNL()
 					if hjIndexHintError {
 						baseKeyspace.SetIndexHintError()
 					}
@@ -258,11 +258,11 @@ func (this *builder) buildAnsiJoinOp(node *algebra.AnsiJoin) (op plan.Operator, 
 				cost, cardinality, size, frCost = getSimpleFilterCost(right.Alias(),
 					cost, cardinality, selec, size, frCost)
 			}
-			if joinEnum {
-				right.UnsetUnderNL()
-			}
 			if nlIndexHintError {
 				baseKeyspace.SetIndexHintError()
+			}
+			if !joinEnum {
+				right.SetUnderNL()
 			}
 			return plan.NewNLJoin(node, plan.NewSequence(scans...), newFilter, cost, cardinality, size, frCost), nil
 		} else if hjCost > 0.0 {
@@ -275,7 +275,6 @@ func (this *builder) buildAnsiJoinOp(node *algebra.AnsiJoin) (op plan.Operator, 
 					baseKeyspace.SetJoinHintError()
 				}
 			}
-			right.UnsetUnderNL()
 			if hjIndexHintError {
 				baseKeyspace.SetIndexHintError()
 			}
@@ -287,8 +286,6 @@ func (this *builder) buildAnsiJoinOp(node *algebra.AnsiJoin) (op plan.Operator, 
 			// error occurred and neither nested-loop join nor hash join is available
 			return nil, err
 		}
-
-		right.UnsetUnderNL()
 
 		if !right.IsPrimaryJoin() {
 			return nil, errors.NewPlanInternalError(fmt.Sprintf("buildAnsiJoin: no plan built for %s", node.Alias()))
@@ -488,6 +485,7 @@ func (this *builder) buildAnsiNestOp(node *algebra.AnsiNest) (op plan.Operator, 
 		node.SetOnclause(origOnclause)
 		right.SetUnderNL()
 		scans, primaryJoinKeys, newOnclause, newFilter, cost, cardinality, size, frCost, err := this.buildAnsiJoinScan(right, node.Onclause(), nil, node.Outer(), "nest")
+		right.UnsetUnderNL()
 		if err != nil && !useCBO {
 			// in case of CBO, defer returning error in case hash join is feasible
 			return nil, err
@@ -502,7 +500,6 @@ func (this *builder) buildAnsiNestOp(node *algebra.AnsiNest) (op plan.Operator, 
 			if useCBO && !preferNL && (hnCost > 0.0) && (cost > hnCost) {
 				this.restoreJoinPlannerState(hjps)
 				node.SetOnclause(hnOnclause)
-				right.UnsetUnderNL()
 				if hjIndexHintError {
 					baseKeyspace.SetIndexHintError()
 				}
@@ -528,11 +525,11 @@ func (this *builder) buildAnsiNestOp(node *algebra.AnsiNest) (op plan.Operator, 
 				cost, cardinality, size, frCost = getSimpleFilterCost(right.Alias(),
 					cost, cardinality, selec, size, frCost)
 			}
-			if joinEnum {
-				right.UnsetUnderNL()
-			}
 			if nlIndexHintError {
 				baseKeyspace.SetIndexHintError()
+			}
+			if !joinEnum {
+				right.SetUnderNL()
 			}
 			return plan.NewNLNest(node, plan.NewSequence(scans...), newFilter, cost, cardinality, size, frCost), nil
 		} else if hnCost > 0.0 {
@@ -545,7 +542,6 @@ func (this *builder) buildAnsiNestOp(node *algebra.AnsiNest) (op plan.Operator, 
 					baseKeyspace.SetJoinHintError()
 				}
 			}
-			right.UnsetUnderNL()
 			if hjIndexHintError {
 				baseKeyspace.SetIndexHintError()
 			}
@@ -557,8 +553,6 @@ func (this *builder) buildAnsiNestOp(node *algebra.AnsiNest) (op plan.Operator, 
 			// error occurred and neither nested-loop join nor hash join is available
 			return nil, err
 		}
-
-		right.UnsetUnderNL()
 
 		if !right.IsPrimaryJoin() {
 			return nil, errors.NewPlanInternalError(fmt.Sprintf("buildAnsiNest: no plan built for %s", node.Alias()))
