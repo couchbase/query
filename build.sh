@@ -49,17 +49,69 @@ rbranch=`$GIT log -n 5 --pretty=format:"%D"|awk 'NF>0{p=$NF}END{print p}'`
 defbranch="master"
 
 
+function checkout_if_necessary {
+  local current=`$GIT rev-parse --abbrev-ref HEAD 2>/dev/null`
+  local commit=`$GIT log -n 1 --pretty=format:"%h" 2>/dev/null`
+
+  if [[ -z $current ]]
+  then
+    # isn't a repo so can't check anything out
+    return
+  fi
+
+  local report=""
+  local res=""
+  # if there is no subpath passed in then we'll report errors else remain silent
+  report_errors=$1
+  shift
+
+  D=`echo ${PWD}|sed 's,.*github.com/couchbase/,,;s,.*golang.org,golang.org,'`
+  #echo "checkout_if_necessary: [${PWD}] ${D} -> $@"
+
+  while [[ $# > 0 ]]
+  do
+    branch=$1
+    shift
+    if [[ $branch == $current || $branch == $commit ]]
+    then
+      return
+    fi
+    cmd="$GIT checkout $branch"
+    res=`$cmd 2>&1`
+    if [[ $res =~ "did not match any file" ]]
+    then
+      # try refreshing the repo
+      ($GIT pull 2>/dev/null 1>/dev/null)  # no need to report status
+      res=`$cmd 2>&1`
+    fi
+    if [[ ! $res =~ "is now at" ]]
+    then
+      report="${report}${D} -> ${cmd}:\n${res}\n"
+    else
+      return  # success
+    fi
+  done
+  if [[ -z $report_errors && -n $report ]]
+  then
+    echo -e "$report"
+    echo
+  fi
+}
+
 function get_repo {
      local path=$1
      local mcommit=$2
      local subpath=$3
      local scommit=$4
-     local rbranch=$5
+     shift
+     shift
+     shift
+     shift
 
-     #echo "$path" "$mcommit" "$subpath" "$scommit" "$rbranch"
+     #echo "get_repo: $path $mcommit $subpath $scommit $@"
 
      cd $GOPATH/src/$path
-     checkout_if_necessary $mcommit $rbranch
+     checkout_if_necessary $subpath $mcommit $@
      if [[ $subpath != "" ]]
      then
          if [[ ! -d $subpath ]]
@@ -67,53 +119,41 @@ function get_repo {
             url="https://"$path
             $GIT clone -b $mcommit $url $subpath
          fi
-         (cd $subpath; checkout_if_necessary $scommit $rbranch)
+         (cd $subpath; checkout_if_necessary "" $scommit $@)
      fi
      cd - >> /dev/null
 }
 
 function get_path_subpath_commit {
-    dirs=`echo $4 | tr "\/" "\n"`
-    declare -i l=0
-    for d in $dirs
-    do
-       subpath=$d
-       l+=1
-    done
+    local repo=$1
+    local ipath=$2
+    local vers=$3
+    shift
+    shift
+    shift
+    dirs=`echo $ipath | tr "\/" "\n"`
+    subpath=`echo $ipath|awk -F/ '{print $NF}'`
 
-    if [[ $subpath == $1 ]]; then
-         subpath=""
-         path=$4
+    if [[ $subpath == $repo ]]; then
+        subpath=""
+        path=$ipath
     else
-         declare -i i=0
-         for d in $dirs
-         do
-            if [[ $i == 0 ]]; then
-                path=$d
-            elif [[ $i -ne $l-1 ]]; then
-                path=${path}"/"${d}
-            fi
-            i+=1
-         done
+        path=`echo $ipath|sed 's,/[^/]\+$,,'`
     fi
 
-    if [[ $5 == "" ]]; then
-         commit=$2
+    if [[ $vers == "" ]]; then
+         commit=$1
     else
-          versions=`echo $5 | tr "-" "\n"`
-          for v in $versions
-          do
-             commit=$v
-          done
+         commit=`echo $vers|awk -F- '{print $NF}'`
     fi
 
     if [[ $subpath != "" ]]; then
-         mcommit=$2
+         mcommit=$1
     else
          mcommit=$commit
     fi
 
-    get_repo "$path" "$mcommit" "$subpath" "$commit" "$3"
+    get_repo "$path" "$mcommit" "$subpath" "$commit" $@
 
 }
 
@@ -121,14 +161,18 @@ function get_path_subpath_commit {
 function repo_by_gomod {
      local file=$1
      local repo=$2
+     local subbranch=$3
+     shift
+     shift
+     shift
      local branch=$3
      local rootbranch=$4
-     local subbranch=$5
+     local defaultbranch=$5
 
      C=`grep replace $file | grep "../${repo}" | grep -v "module" | grep -v "${repo}-"`
      if [[ $C != "" ]]; then
            opath=`echo $C| awk '{print $2}'`
-            get_path_subpath_commit "$repo" "$branch" "$rootbranch" "$opath"  ""
+            get_path_subpath_commit "$repo" "$opath" "" $@
      else
            grepo=$repo
            if [[ $subbranch != "" ]]; then
@@ -140,79 +184,42 @@ function repo_by_gomod {
            fi
            gpath=`echo $C| awk '{print $1}'`
            vers=`echo $C| awk '{print $2}'`
-           get_path_subpath_commit "$repo" "$branch" "$rootbranch" "$gpath"  "$vers"
+           get_path_subpath_commit "$repo" "$gpath" "$vers" $@
      fi
 }
 
 
 function repo_setup {
-    repo_by_gomod go.mod query $cbranch $rbranch
-    repo_by_gomod go.mod query-ee $cbranch $rbranch
-    repo_by_gomod go.mod indexing $cbranch $rbranch
-    repo_by_gomod go.mod go-couchbase $cbranch $rbranch
-    repo_by_gomod go.mod gomemcached $cbranch $rbranch
-    repo_by_gomod go.mod cbauth $cbranch $rbranch
-    repo_by_gomod go.mod godbc $cbranch $rbranch
-    repo_by_gomod go.mod goutils $cbranch $rbranch
-    repo_by_gomod go.mod go_json $cbranch $rbranch
-    repo_by_gomod go.mod gometa $cbranch $rbranch
-    repo_by_gomod go.mod eventing-ee $cbranch $rbranch
-    repo_by_gomod go.mod n1fty $cbranch $rbranch
-    repo_by_gomod go.mod cbgt $cbranch $rbranch
-    repo_by_gomod go.mod cbft $cbranch $rbranch
-    repo_by_gomod ../n1fty/go.mod bleve $defbranch $defbranch
-    repo_by_gomod ../n1fty/go.mod bleve $defbranch $defbranch "v2"
-    repo_by_gomod ../cbft/go.mod zapx $defbranch $defbranch "v11"
-    repo_by_gomod ../cbft/go.mod zapx $defbranch $defbranch "v12"
-    repo_by_gomod ../cbft/go.mod zapx $defbranch $defbranch "v13"
-    repo_by_gomod ../cbft/go.mod zapx $defbranch $defbranch "v14"
-    repo_by_gomod ../cbft/go.mod zapx $defbranch $defbranch "v15"
-    repo_by_gomod go.mod gocbcore-transactions $defbranch $defbranch
-    repo_by_gomod go.mod gocbcore $defbranch $defbranch "v10"
-    repo_by_gomod ../cbgt/go.mod gocbcore $defbranch $defbranch "v9"
-}
-
-function checkout_if_necessary {
-  local current=`$GIT rev-parse --abbrev-ref HEAD 2>/dev/null`
-  local commit=`$GIT log -n 1 --pretty=format:"%h"`
-  local report=""
-  local res=""
-
-  #echo "> $branch / $current / $*"
-  D=`echo ${PWD}|sed 's,.*github.com/couchbase/,,;s,.*golang.org,golang.org,'`
-
-  while [[ $# > 0 ]]
-  do
-    branch=$1
-    shift
-    if [[ $branch == $current || $branch == $commit ]]
-    then
-      return
-    fi
-    res=`$GIT checkout "${branch}" 2>&1`
-    if [[ $res =~ "did not match any file" ]]
-    then
-      # try refreshing the repo
-      ($GIT pull 2>/dev/null 1>/dev/null)  # no need to report status
-      res=`$GIT checkout $branch 2>&1`
-    fi
-    if [[ ! $res =~ "is now at" ]]
-    then
-      report="${report}${D} -> checkout $branch:\n${res}\n"
-    else
-      return  # success
-    fi
-  done
-  if [[ -n $report ]]
-  then
-    echo -e "$report"
-    echo
-  fi
+    repo_by_gomod go.mod query "" $cbranch $rbranch $defbranch
+    repo_by_gomod go.mod query-ee "" $cbranch $rbranch $defbranch
+    repo_by_gomod go.mod indexing "" $cbranch $rbranch $defbranch
+    repo_by_gomod go.mod go-couchbase "" $cbranch $rbranch $defbranch
+    repo_by_gomod go.mod gomemcached "" $cbranch $rbranch $defbranch
+    repo_by_gomod go.mod cbauth "" $cbranch $rbranch $defbranch
+    repo_by_gomod go.mod godbc "" $cbranch $rbranch $defbranch
+    repo_by_gomod go.mod goutils "" $cbranch $rbranch $defbranch
+    repo_by_gomod go.mod go_json "" $cbranch $rbranch $defbranch
+    repo_by_gomod go.mod gometa "" $cbranch $rbranch $defbranch
+    repo_by_gomod go.mod eventing-ee "" $cbranch $rbranch $defbranch
+    repo_by_gomod go.mod n1fty "" $cbranch $rbranch $defbranch
+    repo_by_gomod go.mod cbgt "" $cbranch $rbranch $defbranch
+    repo_by_gomod go.mod cbft "" $cbranch $rbranch $defbranch
+    repo_by_gomod ../n1fty/go.mod bleve "" $defbranch
+    repo_by_gomod ../n1fty/go.mod bleve "v2" $defbranch
+    repo_by_gomod ../cbft/go.mod zapx "v11" $defbranch
+    repo_by_gomod ../cbft/go.mod zapx "v12" $defbranch
+    repo_by_gomod ../cbft/go.mod zapx "v13" $defbranch
+    repo_by_gomod ../cbft/go.mod zapx "v14" $defbranch
+    repo_by_gomod ../cbft/go.mod zapx "v15" $defbranch
+    repo_by_gomod go.mod gocbcore-transactions "" $defbranch
+    repo_by_gomod go.mod gocbcore "v10" $defbranch
+    repo_by_gomod ../cbgt/go.mod gocbcore "v9" $defbranch
+    repo_by_gomod go.mod x/net "" `go version |  awk -F'[. ]' '{print "release-branch." $3 "." $4}'` $defbranch
 }
 
 function DevStandaloneSetup {
     # curl fix match manifest
-       (cd ../../couchbasedeps/go-curl; checkout_if_necessary 20161221-couchbase)
+       (cd ../../couchbasedeps/go-curl; checkout_if_necessary "" 20161221-couchbase)
     # indexer generated files
        if [[ (! -f ../indexing/secondary/protobuf/query/query.pb.go) ]]; then
            if [[ -f ~/devbld/query.pb.go ]]; then
@@ -241,7 +248,6 @@ function DevStandaloneSetup {
        fi
 
        repo_setup
-       (cd $GOPATH/src/golang.org/x/net; checkout_if_necessary `go version |  awk -F'[. ]' '{print "release-branch." $3 "." $4}'`)
 }
 
 # turn off go module for non repo sync build or standalone build
