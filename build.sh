@@ -48,7 +48,6 @@ cbranch=`$GIT rev-parse --abbrev-ref HEAD`
 rbranch=`$GIT log -n 5 --pretty=format:"%D"|awk 'NF>0{p=$NF}END{print p}'`
 defbranch="master"
 
-
 function checkout_if_necessary {
   local current=`$GIT rev-parse --abbrev-ref HEAD 2>/dev/null`
   local commit=`$GIT log -n 1 --pretty=format:"%h" 2>/dev/null`
@@ -65,7 +64,7 @@ function checkout_if_necessary {
   report_errors=$1
   shift
 
-  D=`echo ${PWD}|sed 's,.*github.com/couchbase/,,;s,.*golang.org,golang.org,'`
+  D=`echo ${PWD}|sed -E 's,.*github.com/couchbase/,,;s,.*golang.org,golang.org,'`
   #echo "checkout_if_necessary: [${PWD}] ${D} -> $@"
 
   while [[ $# > 0 ]]
@@ -99,46 +98,61 @@ function checkout_if_necessary {
 }
 
 function get_repo {
-     local path=$1
-     local mcommit=$2
-     local subpath=$3
-     local scommit=$4
-     shift
-     shift
-     shift
-     shift
+    local path=$1
+    local mcommit=$2
+    local subpath=$3
+    local scommit=$4
+    shift
+    shift
+    shift
+    shift
 
-     #echo "get_repo: $path $mcommit $subpath $scommit $@"
+    #echo "get_repo: $path $mcommit $subpath $scommit $@"
 
-     cd $GOPATH/src/$path
-     checkout_if_necessary $subpath $mcommit $@
-     if [[ $subpath != "" ]]
-     then
-         if [[ ! -d $subpath ]]
-         then
-            url="https://"$path
+    if [ ! -d $GOPATH/src/$path ]
+    then
+        if [[ $path =~ "github.com" ]]
+        then
+            url="git@${path/\//:}.git"
+        else
+            url="https://${path}.git"
+        fi
+        $GIT clone -b $mcommit $url $GOPATH/src/$path
+    fi
+    cd $GOPATH/src/$path
+    checkout_if_necessary $subpath $mcommit $@
+    if [[ $subpath != "" ]]
+    then
+        if [[ ! -d $subpath ]]
+        then
+            if [[ $path =~ "github.com" ]]
+            then
+                url="git@${path/\//:}.git"
+            else
+                url="https://${path}.git"
+            fi
             $GIT clone -b $mcommit $url $subpath
-         fi
-         (cd $subpath; checkout_if_necessary "" $scommit $@)
-     fi
-     cd - >> /dev/null
+        fi
+        (cd $subpath; checkout_if_necessary "" $scommit $@)
+    fi
+    cd - >> /dev/null
 }
 
 function get_path_subpath_commit {
+    #echo "get_path_subpath_commit: $@"
     local repo=$1
     local ipath=$2
     local vers=$3
     shift
     shift
     shift
-    dirs=`echo $ipath | tr "\/" "\n"`
-    subpath=`echo $ipath|awk -F/ '{print $NF}'`
 
+    subpath=`echo $ipath|awk -F/ '{print $NF}'`
     if [[ $subpath == $repo ]]; then
         subpath=""
         path=$ipath
     else
-        path=`echo $ipath|sed 's,/[^/]\+$,,'`
+        path=`echo $ipath|sed -E 's,/[^/]+$,,'`
     fi
 
     if [[ $vers == "" ]]; then
@@ -159,33 +173,33 @@ function get_path_subpath_commit {
 
 
 function repo_by_gomod {
-     local file=$1
-     local repo=$2
-     local subbranch=$3
-     shift
-     shift
-     shift
-     local branch=$3
-     local rootbranch=$4
-     local defaultbranch=$5
+    #echo "repo_by_gomod: $@"
+    local file=$1
+    local repo=$2
+    local subbranch=$3
+    shift
+    shift
+    shift
 
-     C=`grep replace $file | grep "../${repo}" | grep -v "module" | grep -v "${repo}-"`
-     if [[ $C != "" ]]; then
-           opath=`echo $C| awk '{print $2}'`
-            get_path_subpath_commit "$repo" "$opath" "" $@
-     else
-           grepo=$repo
-           if [[ $subbranch != "" ]]; then
-               grepo="${repo}/${subbranch}"
-           fi
-           C=`grep "${grepo}" $file | grep -v module | grep -v replace | grep -v indirect| grep -v "${repo}-"`
-           if [[ $C == "" ]]; then
-               return
-           fi
-           gpath=`echo $C| awk '{print $1}'`
-           vers=`echo $C| awk '{print $2}'`
-           get_path_subpath_commit "$repo" "$gpath" "$vers" $@
-     fi
+    C=`grep replace $file | grep "../${repo}" | grep -v "module" | grep -v "${repo}-"`
+    if [[ -n "$C" ]]
+    then
+        opath=`echo $C| awk '{print $2}'`
+        get_path_subpath_commit "$repo" "$opath" "" $@
+    else
+        grepo=$repo
+        if [[ $subbranch != "" ]]; then
+            grepo="${repo}/${subbranch}"
+        fi
+        C=`grep "${grepo}" $file | grep -v module | grep -v replace | grep -v indirect| grep -v "${repo}-"`
+        if [[ -z "$C" ]]
+        then
+            C="../${repo} $4"
+        fi
+        gpath=`echo $C| awk '{print $1}'`
+        vers=`echo $C| awk '{print $2}'`
+        get_path_subpath_commit "$repo" "$gpath" "$vers" $@
+    fi
 }
 
 
@@ -219,52 +233,66 @@ function repo_setup {
 
 function DevStandaloneSetup {
     # curl fix match manifest
-       (cd ../../couchbasedeps/go-curl; checkout_if_necessary "" 20161221-couchbase)
-    # indexer generated files
-       if [[ (! -f ../indexing/secondary/protobuf/query/query.pb.go) ]]; then
-           if [[ -f ~/devbld/query.pb.go ]]; then
-               cp ~/devbld/query.pb.go ../indexing/secondary/protobuf/query/query.pb.go
-           fi
-           if [[ -f ~/devbld/$cbranch.query.pb.go ]]; then
-               cp ~/devbld/$cbranch.query.pb.go ../indexing/secondary/protobuf/query/query.pb.go
-           fi
-       fi
-    # eventing-ee generated files
-       if [[ ( ! -L $GOPATH/lib ) ]]; then
-           if [[ -d $GOPATH/lib ]]
-           then
-             rm -rf $GOPATH/lib
-           fi
-           if [[ "Linux" = `uname` ]]
-           then
-             ln -s /opt/couchbase/lib $GOPATH/lib
-           elif [[ "Darwin" = `uname` ]]
-           then
-             ln -s "/Applications/Couchbase Server.app/Contents/Resources/couchbase-core/lib" $GOPATH/lib
-           fi
-       fi
-       if [[ ! -f ../eventing-ee/evaluator/impl/gen/parser/global_config_schema.go ]]; then
-           (cd ../eventing-ee/evaluator/impl/gen/convertschema; go run generate.go  ../../parser/global_config_schema.json GlobalConfigSchema ../parser/global_config_schema.go)
-       fi
+    (cd ../../couchbasedeps/go-curl; checkout_if_necessary "" 20161221-couchbase)
 
-       repo_setup
+    repo_setup
+
+    # indexer generated files
+    if [[ (! -f ../indexing/secondary/protobuf/query/query.pb.go) ]]
+    then
+        base=
+        if [[ -d ~/devbld ]]
+        then
+            base=~/devbld
+        elif [[ -d ~/code/devbld ]]
+        then
+            base=~/code/devbld
+        fi
+        if [[ -n "${base}" ]]
+        then
+            if [[ -f $base/$cbranch.query.pb.go ]]
+            then
+                cp $base/$cbranch.query.pb.go ../indexing/secondary/protobuf/query/query.pb.go
+            elif [[ -f $base/query.pb.go ]]
+            then
+                cp $base/query.pb.go ../indexing/secondary/protobuf/query/query.pb.go
+            fi
+        fi
+    fi
+    # eventing-ee generated files
+    if [[ ( ! -L $GOPATH/lib ) ]]; then
+    if [[ -d $GOPATH/lib ]]
+    then
+    rm -rf $GOPATH/lib
+    fi
+    if [[ "Linux" = `uname` ]]
+    then
+    ln -s /opt/couchbase/lib $GOPATH/lib
+    elif [[ "Darwin" = `uname` ]]
+    then
+    ln -s "/Applications/Couchbase Server.app/Contents/Resources/couchbase-core/lib" $GOPATH/lib
+    fi
+    fi
+    if [[ ! -f ../eventing-ee/evaluator/impl/gen/parser/global_config_schema.go ]]
+    then
+    (cd ../eventing-ee/evaluator/impl/gen/convertschema; go run generate.go  ../../parser/global_config_schema.json GlobalConfigSchema ../parser/global_config_schema.go)
+    fi
 }
 
 # turn off go module for non repo sync build or standalone build
 if [[ ( ! -d ../../../../../cbft && "$GOPATH" != "") || ( $sflag != 0) ]]; then
-     export GO111MODULE=off
-     export CGO_CFLAGS="-I$GOPATH/src/github.com/couchbase/eventing-ee/evaluator/worker/include $CGO_FLAGS"
-     export CGO_LDFLAGS="-L$GOPATH/lib $CGO_LDFLAGS"
-     export LD_LIBRARY_PATH=$GOPATH/lib:${LD_LIBRARY_PATH}
-     echo go get $* $uflag -d -v ./...
-     go get $* $uflag -d -v ./...
-     if [[ $sflag == 1 ]]; then
-         DevStandaloneSetup
-         # go get again because repro branches might changed
-         go get $* $uflag -d -v ./...
-     fi
+    export GO111MODULE=off
+    export CGO_CFLAGS="-I$GOPATH/src/github.com/couchbase/eventing-ee/evaluator/worker/include $CGO_FLAGS"
+    export CGO_LDFLAGS="-L$GOPATH/lib $CGO_LDFLAGS"
+    export LD_LIBRARY_PATH=$GOPATH/lib:${LD_LIBRARY_PATH}
+    cmd="go get $* $uflag -d -v ./..."
+    echo $cmd
+    $cmd
+    if [[ $sflag == 1 ]]; then
+        DevStandaloneSetup
+        $cmd
+    fi
 fi
-
 
 echo cd parser/n1ql
 cd parser/n1ql
