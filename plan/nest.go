@@ -24,27 +24,30 @@ type Nest struct {
 	term     *algebra.KeyspaceTerm
 	outer    bool
 	onFilter expression.Expression
+	subPaths []string
 }
 
-func NewNest(keyspace datastore.Keyspace, nest *algebra.Nest, cost, cardinality float64,
-	size int64, frCost float64) *Nest {
+func NewNest(keyspace datastore.Keyspace, nest *algebra.Nest, subPaths []string,
+	cost, cardinality float64, size int64, frCost float64) *Nest {
 	rv := &Nest{
 		keyspace: keyspace,
 		term:     nest.Right(),
 		outer:    nest.Outer(),
+		subPaths: subPaths,
 	}
 	setOptEstimate(&rv.optEstimate, cost, cardinality, size, frCost)
 	return rv
 }
 
-func NewNestFromAnsi(keyspace datastore.Keyspace, term *algebra.KeyspaceTerm, outer bool,
-	onFilter expression.Expression, cost, cardinality float64,
+func NewNestFromAnsi(keyspace datastore.Keyspace, term *algebra.KeyspaceTerm, subPaths []string,
+	outer bool, onFilter expression.Expression, cost, cardinality float64,
 	size int64, frCost float64) *Nest {
 	rv := &Nest{
 		keyspace: keyspace,
 		term:     term,
 		outer:    outer,
 		onFilter: onFilter,
+		subPaths: subPaths,
 	}
 	setOptEstimate(&rv.optEstimate, cost, cardinality, size, frCost)
 	return rv
@@ -74,6 +77,10 @@ func (this *Nest) OnFilter() expression.Expression {
 	return this.onFilter
 }
 
+func (this *Nest) SubPaths() []string {
+	return this.subPaths
+}
+
 func (this *Nest) SetOnFilter(onFilter expression.Expression) {
 	this.onFilter = onFilter
 }
@@ -90,6 +97,9 @@ func (this *Nest) MarshalBase(f func(map[string]interface{})) map[string]interfa
 	r := map[string]interface{}{"#operator": "Nest"}
 	this.term.MarshalKeyspace(r)
 	r["on_keys"] = expression.NewStringer().Visit(this.term.JoinKeys())
+	if len(this.subPaths) > 0 {
+		r["subpaths"] = this.subPaths
+	}
 
 	if this.outer {
 		r["outer"] = this.outer
@@ -124,6 +134,7 @@ func (this *Nest) UnmarshalJSON(body []byte) error {
 		Outer       bool                   `json:"outer"`
 		As          string                 `json:"as"`
 		OnFilter    string                 `json:"on_filter"`
+		SubPaths    []string               `json:"subpaths"`
 		OptEstimate map[string]interface{} `json:"optimizer_estimates"`
 	}
 
@@ -141,6 +152,7 @@ func (this *Nest) UnmarshalJSON(body []byte) error {
 	}
 
 	this.outer = _unmarshalled.Outer
+	this.subPaths = _unmarshalled.SubPaths
 	this.term = algebra.NewKeyspaceTermFromPath(algebra.NewPathShortOrLong(_unmarshalled.Namespace, _unmarshalled.Bucket,
 		_unmarshalled.Scope, _unmarshalled.Keyspace), _unmarshalled.As, nil, nil)
 	this.term.SetJoinKeys(keys_expr)

@@ -24,13 +24,14 @@ type IndexNest struct {
 	term     *algebra.KeyspaceTerm
 	outer    bool
 	keyFor   string
+	subPaths []string
 	idExpr   expression.Expression
 	index    datastore.Index
 	indexer  datastore.Indexer
 }
 
-func NewIndexNest(keyspace datastore.Keyspace, nest *algebra.IndexNest,
-	index datastore.Index, cost, cardinality float64, size int64, frCost float64) *IndexNest {
+func NewIndexNest(keyspace datastore.Keyspace, nest *algebra.IndexNest, index datastore.Index,
+	subPaths []string, cost, cardinality float64, size int64, frCost float64) *IndexNest {
 	rv := &IndexNest{
 		keyspace: keyspace,
 		term:     nest.Right(),
@@ -38,6 +39,7 @@ func NewIndexNest(keyspace datastore.Keyspace, nest *algebra.IndexNest,
 		keyFor:   nest.For(),
 		index:    index,
 		indexer:  index.Indexer(),
+		subPaths: subPaths,
 	}
 
 	rv.idExpr = expression.NewField(
@@ -79,6 +81,10 @@ func (this *IndexNest) Index() datastore.Index {
 	return this.index
 }
 
+func (this *IndexNest) SubPaths() []string {
+	return this.subPaths
+}
+
 func (this *IndexNest) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
@@ -88,6 +94,9 @@ func (this *IndexNest) MarshalBase(f func(map[string]interface{})) map[string]in
 	this.term.MarshalKeyspace(r)
 	r["on_key"] = expression.NewStringer().Visit(this.term.JoinKeys())
 	r["for"] = this.keyFor
+	if len(this.subPaths) > 0 {
+		r["subpaths"] = this.subPaths
+	}
 
 	if this.outer {
 		r["outer"] = this.outer
@@ -131,6 +140,7 @@ func (this *IndexNest) UnmarshalJSON(body []byte) error {
 			IndexId string              `json:"index_id"`
 			Using   datastore.IndexType `json:"using"`
 		} `json:"scan"`
+		SubPaths    []string               `json:"subpaths"`
 		OptEstimate map[string]interface{} `json:"optimizer_estimates"`
 	}
 
@@ -149,6 +159,7 @@ func (this *IndexNest) UnmarshalJSON(body []byte) error {
 
 	this.outer = _unmarshalled.Outer
 	this.keyFor = _unmarshalled.For
+	this.subPaths = _unmarshalled.SubPaths
 	this.idExpr = expression.NewField(
 		expression.NewMeta(expression.NewIdentifier(this.keyFor)),
 		expression.NewFieldName("id", false))

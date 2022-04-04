@@ -29,6 +29,11 @@ func (this *builder) buildIndexJoin(keyspace datastore.Keyspace,
 		return nil, err
 	}
 
+	subPaths, err := this.GetSubPaths(node.Right(), node.Right().Alias())
+	if err != nil {
+		return nil, err
+	}
+
 	cost, cardinality, size, frCost := OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL
 	if this.useCBO && this.keyspaceUseCBO(node.Alias()) {
 		rightKeyspace := base.GetKeyspaceName(this.baseKeyspaces, node.Alias())
@@ -36,7 +41,7 @@ func (this *builder) buildIndexJoin(keyspace datastore.Keyspace,
 			rightKeyspace, covers != nil, index,
 			this.context.RequestId(), this.advisorValidate(), this.context)
 	}
-	scan := plan.NewIndexJoin(keyspace, node, index, covers, filterCovers, cost, cardinality, size, frCost)
+	scan := plan.NewIndexJoin(keyspace, node, index, subPaths, covers, filterCovers, cost, cardinality, size, frCost)
 	if covers != nil {
 		this.coveringScans = append(this.coveringScans, scan)
 	}
@@ -54,6 +59,11 @@ func (this *builder) buildIndexNest(keyspace datastore.Keyspace,
 		return nil, err
 	}
 
+	subPaths, err := this.GetSubPaths(node.Right(), node.Right().Alias())
+	if err != nil {
+		return nil, err
+	}
+
 	cost := OPT_COST_NOT_AVAIL
 	cardinality := OPT_CARD_NOT_AVAIL
 	size := OPT_SIZE_NOT_AVAIL
@@ -66,7 +76,7 @@ func (this *builder) buildIndexNest(keyspace datastore.Keyspace,
 
 	this.extractIndexJoin(index, keyspace, node.Right(), false, cost, cardinality)
 
-	return plan.NewIndexNest(keyspace, node, index, cost, cardinality, size, frCost), nil
+	return plan.NewIndexNest(keyspace, node, index, subPaths, cost, cardinality, size, frCost), nil
 }
 
 func (this *builder) buildJoinScan(keyspace datastore.Keyspace, node *algebra.KeyspaceTerm, op string) (

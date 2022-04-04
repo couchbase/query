@@ -318,6 +318,10 @@ func (this *builder) buildAnsiJoinOp(node *algebra.AnsiJoin) (op plan.Operator, 
 		if err != nil {
 			return nil, err
 		}
+		subPaths, err := this.GetSubPaths(right, right.Alias())
+		if err != nil {
+			return nil, err
+		}
 
 		cost = OPT_COST_NOT_AVAIL
 		cardinality = OPT_CARD_NOT_AVAIL
@@ -331,7 +335,7 @@ func (this *builder) buildAnsiJoinOp(node *algebra.AnsiJoin) (op plan.Operator, 
 		if nlIndexHintError {
 			baseKeyspace.SetIndexHintError()
 		}
-		return plan.NewJoinFromAnsi(keyspace, newKeyspaceTerm, node.Outer(), onFilter, cost, cardinality, size, frCost), nil
+		return plan.NewJoinFromAnsi(keyspace, newKeyspaceTerm, subPaths, node.Outer(), onFilter, cost, cardinality, size, frCost), nil
 	case *algebra.ExpressionTerm, *algebra.SubqueryTerm:
 		err := this.processOnclause(right.Alias(), node.Onclause(), node.Outer(), node.Pushable())
 		if err != nil {
@@ -573,6 +577,10 @@ func (this *builder) buildAnsiNestOp(node *algebra.AnsiNest) (op plan.Operator, 
 		if err != nil {
 			return nil, err
 		}
+		subPaths, err := this.GetSubPaths(right, right.Alias())
+		if err != nil {
+			return nil, err
+		}
 
 		// make a copy of the original KeyspaceTerm with the extra
 		// primaryJoinKeys and construct a NEST operator
@@ -598,7 +606,8 @@ func (this *builder) buildAnsiNestOp(node *algebra.AnsiNest) (op plan.Operator, 
 		if nlIndexHintError {
 			baseKeyspace.SetIndexHintError()
 		}
-		return plan.NewNestFromAnsi(keyspace, newKeyspaceTerm, node.Outer(), onFilter, cost, cardinality, size, frCost), nil
+		return plan.NewNestFromAnsi(keyspace, newKeyspaceTerm, subPaths, node.Outer(),
+			onFilter, cost, cardinality, size, frCost), nil
 	case *algebra.ExpressionTerm, *algebra.SubqueryTerm:
 		filter, selec, err := this.getFilter(right.Alias(), true, node.Onclause())
 		if err != nil {

@@ -500,6 +500,11 @@ func (this *builder) VisitJoin(node *algebra.Join) (interface{}, error) {
 		return nil, err
 	}
 
+	subPaths, err := this.GetSubPaths(right, right.Alias())
+	if err != nil {
+		return nil, err
+	}
+
 	cost := OPT_COST_NOT_AVAIL
 	cardinality := OPT_CARD_NOT_AVAIL
 	size := OPT_SIZE_NOT_AVAIL
@@ -509,7 +514,7 @@ func (this *builder) VisitJoin(node *algebra.Join) (interface{}, error) {
 		cost, cardinality, size, frCost = getLookupJoinCost(this.lastOp, node.Outer(), right,
 			rightKeyspace)
 	}
-	join := plan.NewJoin(keyspace, node, cost, cardinality, size, frCost)
+	join := plan.NewJoin(keyspace, node, subPaths, cost, cardinality, size, frCost)
 	if len(this.subChildren) > 0 {
 		this.addChildren(this.addSubchildrenParallel())
 	}
@@ -624,6 +629,11 @@ func (this *builder) VisitNest(node *algebra.Nest) (interface{}, error) {
 		return nil, err
 	}
 
+	subPaths, err := this.GetSubPaths(right, right.Alias())
+	if err != nil {
+		return nil, err
+	}
+
 	if len(this.subChildren) > 0 {
 		this.addChildren(this.addSubchildrenParallel())
 	}
@@ -637,7 +647,7 @@ func (this *builder) VisitNest(node *algebra.Nest) (interface{}, error) {
 		cost, cardinality, size, frCost = getLookupNestCost(this.lastOp, node.Outer(), right,
 			rightKeyspace)
 	}
-	this.addChildren(plan.NewNest(keyspace, node, cost, cardinality, size, frCost))
+	this.addChildren(plan.NewNest(keyspace, node, subPaths, cost, cardinality, size, frCost))
 
 	err = this.processKeyspaceDone(node.Alias())
 	if err != nil {

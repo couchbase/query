@@ -30,10 +30,11 @@ type IndexJoin struct {
 	indexer      datastore.Indexer
 	covers       expression.Covers
 	filterCovers map[*expression.Cover]value.Value
+	subPaths     []string
 }
 
 func NewIndexJoin(keyspace datastore.Keyspace, join *algebra.IndexJoin,
-	index datastore.Index, covers expression.Covers,
+	index datastore.Index, subPaths []string, covers expression.Covers,
 	filterCovers map[*expression.Cover]value.Value, cost, cardinality float64,
 	size int64, frCost float64) *IndexJoin {
 	rv := &IndexJoin{
@@ -45,6 +46,7 @@ func NewIndexJoin(keyspace datastore.Keyspace, join *algebra.IndexJoin,
 		indexer:      index.Indexer(),
 		covers:       covers,
 		filterCovers: filterCovers,
+		subPaths:     subPaths,
 	}
 
 	rv.idExpr = expression.NewField(
@@ -86,6 +88,10 @@ func (this *IndexJoin) Index() datastore.Index {
 	return this.index
 }
 
+func (this *IndexJoin) SubPaths() []string {
+	return this.subPaths
+}
+
 func (this *IndexJoin) Covers() expression.Covers {
 	return this.covers
 }
@@ -119,6 +125,9 @@ func (this *IndexJoin) MarshalBase(f func(map[string]interface{})) map[string]in
 	this.term.MarshalKeyspace(r)
 	r["on_key"] = expression.NewStringer().Visit(this.term.JoinKeys())
 	r["for"] = this.keyFor
+	if len(this.subPaths) > 0 {
+		r["subpaths"] = this.subPaths
+	}
 
 	if this.outer {
 		r["outer"] = this.outer
@@ -177,6 +186,7 @@ func (this *IndexJoin) UnmarshalJSON(body []byte) error {
 			Covers       []string               `json:"covers"`
 			FilterCovers map[string]interface{} `json:"filter_covers"`
 		} `json:"scan"`
+		SubPaths    []string               `json:"subpaths"`
 		OptEstimate map[string]interface{} `json:"optimizer_estimates"`
 	}
 
@@ -195,6 +205,7 @@ func (this *IndexJoin) UnmarshalJSON(body []byte) error {
 
 	this.outer = _unmarshalled.Outer
 	this.keyFor = _unmarshalled.For
+	this.subPaths = _unmarshalled.SubPaths
 	this.idExpr = expression.NewField(
 		expression.NewMeta(expression.NewIdentifier(this.keyFor)),
 		expression.NewFieldName("id", false))
