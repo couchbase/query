@@ -102,14 +102,17 @@ func processOptimHints(baseKeyspaces map[string]*base.BaseKeyspace, optimHints *
 		var keyspace string
 		var indexes algebra.IndexRefs
 		var joinHint algebra.JoinHint
+		var indexHint bool
 
 		switch hint := hint.(type) {
 		case *algebra.HintIndex:
 			keyspace = hint.Keyspace()
 			indexes = hint.Indexes()
+			indexHint = true
 		case *algebra.HintFTSIndex:
 			keyspace = hint.Keyspace()
 			indexes = hint.Indexes()
+			indexHint = true
 		case *algebra.HintNL:
 			keyspace = hint.Keyspace()
 			joinHint = algebra.USE_NL
@@ -156,8 +159,7 @@ func processOptimHints(baseKeyspaces map[string]*base.BaseKeyspace, optimHints *
 				node.SetJoinHint(joinHint)
 			}
 			baseKeyspace.AddJoinHint(hint)
-		}
-		if len(indexes) > 0 {
+		} else if indexHint {
 			if hasDerivedHint(baseKeyspace.IndexHints()) {
 				setDuplicateIndexHintError(hint, keyspace)
 				for _, curHint := range baseKeyspace.IndexHints() {
