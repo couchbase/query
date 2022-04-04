@@ -7,12 +7,15 @@
                 {
                   "hints_followed": [
                       "INDEX(t st_target_idx)"
+                  ],
+                  "hints_with_error": [
+                      "USE_HASH(t): Join hint not supported in an UPDATE or DELETE statement"
                   ]
                 }
             ],
             "statement": "SELECT RAW p.`optimizer_hints` FROM $explan AS p"
         },
-        "statements":"DELETE /*+ INDEX(t st_target_idx) */ FROM shellTest t WHERE t.c21 <= 0 AND t.type = \"target\"",
+        "statements":"DELETE /*+ INDEX(t st_target_idx) USE_HASH(t) */ FROM shellTest t WHERE t.c21 <= 0 AND t.type = \"target\"",
         "results": [
     ]
     },
@@ -42,12 +45,15 @@
                 {
                   "hints_followed": [
                       "INDEX(t st_target_idx)"
+                  ],
+                  "hints_with_error": [
+                      "USE_HASH(t): Join hint not supported in an UPDATE or DELETE statement"
                   ]
                 }
             ],
             "statement": "SELECT RAW p.`optimizer_hints` FROM $explan AS p"
         },
-        "statements":"UPDATE /*+ INDEX(t st_target_idx) */ shellTest t SET t.c23 = t.c22 WHERE t.c21 <= 0 AND t.type = \"target\"",
+        "statements":"UPDATE /*+ INDEX(t st_target_idx) USE_HASH(t) */ shellTest t SET t.c23 = t.c22 WHERE t.c21 <= 0 AND t.type = \"target\"",
         "results": [
     ]
     },
