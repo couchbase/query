@@ -215,6 +215,25 @@
         "ordered": true,
         "results": [
 	]
+    },
+    {
+        "testcase": "MB-51736",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'NestedLoopJoin' AND v.`outer` = true AND v.`filter` IS MISSING END"
+        },
+        "statements":"SELECT lhs.c11, rhs.c21 FROM shellTest AS lhs LEFT JOIN shellTest AS rhs ON lhs.c11 = rhs.c21 AND rhs.type = \"right\" AND rhs.c22 BETWEEN 30 AND 40 WHERE lhs.type = \"left\" AND lhs.c11 IN [4,5]",
+        "ordered": true,
+        "results": [
+            {
+                "c11": 4
+            }
+	]
     }
 ]
 
