@@ -57,30 +57,14 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 	this.extractKeyspacePredicates(nil, this.pushableOnclause)
 
 	if source.SubqueryTerm() != nil {
-		_, err = source.SubqueryTerm().Accept(this)
-		if err != nil && !this.indexAdvisor {
-			return nil, err
-		}
-
 		left = source.SubqueryTerm()
 	} else if source.ExpressionTerm() != nil {
-		_, err = source.ExpressionTerm().Accept(this)
-		if err != nil && !this.indexAdvisor {
-			return nil, err
-		}
-
 		left = source.ExpressionTerm()
 	} else {
 		if source.From() == nil {
 			// should have caught in semantics check
 			return nil, errors.NewPlanInternalError("VisitMerge: MERGE missing source.")
 		}
-
-		_, err = source.From().Accept(this)
-		if err != nil && !this.indexAdvisor {
-			return nil, err
-		}
-
 		left = source.From()
 	}
 	sourceKeyspace.SetNode(left)
@@ -88,6 +72,36 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 	ksref := stmt.KeyspaceRef()
 	ksref.SetDefaultNamespace(this.namespace)
 	ksAlias := ksref.Alias()
+
+	right := algebra.NewKeyspaceTermFromPath(ksref.Path(), ksref.As(), nil, stmt.Indexes())
+	targetKeyspace.SetNode(right)
+
+	stmt.SetOptimHints(deriveOptimHints(this.baseKeyspaces, stmt.OptimHints()))
+	if stmt.OptimHints() != nil {
+		processOptimHints(this.baseKeyspaces, stmt.OptimHints())
+	}
+
+	if stmt.IsOnKey() {
+		targetKeyspace.MarkJoinHintError(algebra.MERGE_ONKEY_JOIN_HINT_ERR)
+		targetKeyspace.MarkIndexHintError(algebra.MERGE_ONKEY_INDEX_HINT_ERR)
+		sourceKeyspace.MarkJoinHintError(algebra.MERGE_ONKEY_JOIN_HINT_ERR)
+
+	} else {
+		leftJoinHint := left.JoinHint()
+		rightJoinHint := right.JoinHint()
+		if leftJoinHint != algebra.JOIN_HINT_NONE && rightJoinHint != algebra.JOIN_HINT_NONE {
+			sourceKeyspace.SetJoinHintError()
+			targetKeyspace.SetJoinHintError()
+		} else if leftJoinHint != algebra.JOIN_HINT_NONE {
+			right.SetInferJoinHint()
+			left.SetTransferJoinHint()
+		}
+	}
+
+	_, err = left.Accept(this)
+	if err != nil && !this.indexAdvisor {
+		return nil, err
+	}
 
 	keyspace, err := this.getNameKeyspace(ksref, false)
 	if err != nil {
@@ -107,18 +121,7 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 		leftCard = this.lastOp.Cardinality()
 	}
 
-	right := algebra.NewKeyspaceTermFromPath(ksref.Path(), ksref.As(), nil, stmt.Indexes())
-	targetKeyspace.SetNode(right)
-
-	stmt.SetOptimHints(deriveOptimHints(this.baseKeyspaces, stmt.OptimHints()))
-	if stmt.OptimHints() != nil {
-		processOptimHints(this.baseKeyspaces, stmt.OptimHints())
-	}
-
 	if stmt.IsOnKey() {
-		targetKeyspace.MarkJoinHintError(algebra.MERGE_ONKEY_JOIN_HINT_ERR)
-		targetKeyspace.MarkIndexHintError(algebra.MERGE_ONKEY_INDEX_HINT_ERR)
-		sourceKeyspace.MarkJoinHintError(algebra.MERGE_ONKEY_JOIN_HINT_ERR)
 		if this.useCBO && this.keyspaceUseCBO(ksAlias) {
 			rightKeyspace := base.GetKeyspaceName(this.baseKeyspaces, ksAlias)
 			joinCost, joinCard, _, joinFrCost = getLookupJoinCost(this.lastOp, outer, right,
@@ -127,10 +130,6 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 	} else {
 		// use ANSI JOIN to handle the ON-clause
 		right.SetAnsiJoin()
-		if left.JoinHint() != algebra.JOIN_HINT_NONE {
-			right.SetInferJoinHint()
-			left.SetTransferJoinHint()
-		}
 
 		ansiJoin := algebra.NewAnsiJoin(left, outer, right, stmt.On())
 		ansiJoin.SetPushable(outer == false)

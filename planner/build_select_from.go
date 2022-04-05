@@ -423,6 +423,13 @@ func (this *builder) VisitSubqueryTerm(node *algebra.SubqueryTerm) (interface{},
 	}
 
 	if !this.joinEnum() && !node.IsAnsiJoinOp() {
+		if !node.HasTransferJoinHint() {
+			baseKeyspace.SetJoinHintError()
+			err = this.markOptimHints(node.Alias(), true)
+			if err != nil {
+				return nil, err
+			}
+		}
 		err = this.processKeyspaceDone(node.Alias())
 		if err != nil {
 			return nil, err
@@ -468,6 +475,17 @@ func (this *builder) VisitExpressionTerm(node *algebra.ExpressionTerm) (interfac
 	this.addChildren(plan.NewExpressionScan(node.ExpressionTerm(), node.Alias(), node.IsCorrelated(), filter, cost, cardinality, size, frCost))
 
 	if !this.joinEnum() && !node.IsAnsiJoinOp() {
+		if !node.HasTransferJoinHint() {
+			baseKeyspace, ok := this.baseKeyspaces[node.Alias()]
+			if !ok {
+				return nil, errors.NewPlanInternalError("VisitExpressionTerm: baseKeyspace not found for " + node.Alias())
+			}
+			baseKeyspace.SetJoinHintError()
+			err = this.markOptimHints(node.Alias(), true)
+			if err != nil {
+				return nil, err
+			}
+		}
 		err = this.processKeyspaceDone(node.Alias())
 		if err != nil {
 			return nil, err

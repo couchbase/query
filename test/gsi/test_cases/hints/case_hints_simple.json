@@ -474,6 +474,84 @@
             "purchaseId": "purchase4315"
         }
     ]
+    },
+    {
+	"testcase": "Join hint on first subquery term",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                  "hints_not_followed": [
+                      "USE_HASH(c): USE_HASH hint cannot be followed"
+                  ]
+                }
+            ],
+            "statement": "SELECT RAW p.`optimizer_hints` FROM $explan AS p"
+        },
+        "statements":"SELECT /*+ USE_HASH(c) */ c.firstName, c.lastName, c.customerId, p.purchaseId FROM (SELECT firstName, lastName, customerId FROM customer WHERE lastName = \"Champlin\" AND type = \"customer\") AS c JOIN purchase p ON c.customerId = p.customerId WHERE p.type = \"purchase\" ORDER BY p.purchaseId LIMIT 10",
+        "ordered": true,
+        "results": [
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase104"
+        },
+        {
+            "customerId": "customer33",
+            "firstName": "Charles",
+            "lastName": "Champlin",
+            "purchaseId": "purchase1582"
+        },
+        {
+            "customerId": "customer33",
+            "firstName": "Charles",
+            "lastName": "Champlin",
+            "purchaseId": "purchase1704"
+        },
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase1747"
+        },
+        {
+            "customerId": "customer631",
+            "firstName": "Gladyce",
+            "lastName": "Champlin",
+            "purchaseId": "purchase2838"
+        },
+        {
+            "customerId": "customer631",
+            "firstName": "Gladyce",
+            "lastName": "Champlin",
+            "purchaseId": "purchase2872"
+        },
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase3344"
+        },
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase3698"
+        },
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase4142"
+        },
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase4315"
+        }
+    ]
     }
 ]
 
