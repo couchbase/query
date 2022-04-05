@@ -78,7 +78,8 @@ func NewFilter(fltrExpr, origExpr expression.Expression, keyspaces, origKeyspace
 
 func (this *Filter) Copy() *Filter {
 	rv := &Filter{
-		fltrExpr:  this.fltrExpr.Copy(),
+		fltrExpr:  expression.Copy(this.fltrExpr),
+		origExpr:  expression.Copy(this.origExpr),
 		optBits:   this.optBits,
 		fltrFlags: this.fltrFlags,
 		selec:     this.selec,
@@ -87,10 +88,6 @@ func (this *Filter) Copy() *Filter {
 		eqLeft:    this.eqLeft,
 		eqRight:   this.eqRight,
 		eqfId:     this.eqfId,
-	}
-
-	if this.origExpr != nil {
-		rv.origExpr = this.origExpr.Copy()
 	}
 
 	rv.keyspaces = make(map[string]string, len(this.keyspaces))
@@ -263,8 +260,21 @@ func (this *Filter) IsPostjoinFilter(onclause expression.Expression, outer bool)
 		if SubsetOf(onclause, this.fltrExpr) {
 			return false
 		}
-		if this.origExpr != nil && SubsetOf(onclause, this.origExpr) {
-			return false
+		if this.origExpr != nil {
+			if SubsetOf(onclause, this.origExpr) {
+				return false
+			}
+		} else if IsDerivedExpr(this.fltrExpr) {
+			var err error
+			dnfExpr := onclause.Copy()
+			dnf := NewDNF(dnfExpr, true, false)
+			dnfExpr, err = dnf.Map(dnfExpr)
+			if err != nil {
+				return false
+			}
+			if SubsetOf(dnfExpr, this.fltrExpr) {
+				return false
+			}
 		}
 
 		// Special handling of volatile function expression, which returns false for

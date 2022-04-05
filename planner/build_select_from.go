@@ -1092,15 +1092,15 @@ func (this *builder) getFilter(alias string, join bool, onclause expression.Expr
 		fltr := fl.FltrExpr()
 		origFltr := fl.OrigExpr()
 		if origFltr != nil {
-			terms = append(terms, origFltr.Copy())
+			terms = append(terms, expression.Copy(origFltr))
 			if this.filter != nil {
 				this.filter, err = expression.RemoveExpr(this.filter, origFltr)
 				if err != nil {
 					return nil, OPT_SELEC_NOT_AVAIL, err
 				}
 			}
-		} else if !fltr.HasExprFlag(expression.EXPR_DERIVED_FROM_LIKE | expression.EXPR_DERIVED_RANGE1 | expression.EXPR_DERIVED_RANGE2) {
-			terms = append(terms, fltr.Copy())
+		} else if !base.IsDerivedExpr(fltr) {
+			terms = append(terms, expression.Copy(fltr))
 		}
 
 		if doSelec && !fl.HasPlanFlags() {
