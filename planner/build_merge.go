@@ -127,8 +127,10 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 	} else {
 		// use ANSI JOIN to handle the ON-clause
 		right.SetAnsiJoin()
-		right.SetInferJoinHint()
-		left.SetTransferJoinHint()
+		if left.JoinHint() != algebra.JOIN_HINT_NONE {
+			right.SetInferJoinHint()
+			left.SetTransferJoinHint()
+		}
 
 		ansiJoin := algebra.NewAnsiJoin(left, outer, right, stmt.On())
 		ansiJoin.SetPushable(outer == false)

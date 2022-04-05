@@ -55,7 +55,13 @@ func (this *builder) selectScan(keyspace datastore.Keyspace, node *algebra.Keysp
 	}
 
 	if !this.joinEnum() && !node.IsAnsiJoinOp() {
-		err = this.markOptimHints(node.Alias(), false)
+		includeJoin := false
+		if !node.HasTransferJoinHint() {
+			baseKeyspace, _ := this.baseKeyspaces[node.Alias()]
+			baseKeyspace.SetJoinHintError()
+			includeJoin = true
+		}
+		err = this.markOptimHints(node.Alias(), includeJoin)
 		if err != nil {
 			return nil, err
 		}

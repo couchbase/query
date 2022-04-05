@@ -33,8 +33,10 @@ func NewAnsiJoin(left FromTerm, outer bool, right SimpleFromTerm, onclause expre
 }
 
 func NewAnsiRightJoin(left SimpleFromTerm, right SimpleFromTerm, onclause expression.Expression) *AnsiJoin {
-	left.SetInferJoinHint()
-	right.SetTransferJoinHint()
+	if right.JoinHint() != JOIN_HINT_NONE {
+		left.SetInferJoinHint()
+		right.SetTransferJoinHint()
+	}
 	return &AnsiJoin{right, left, true, false, onclause}
 }
 
