@@ -418,6 +418,35 @@ func (this *BaseKeyspace) MarkHashUnavailable() {
 	}
 }
 
+func (this *BaseKeyspace) JoinHint() algebra.JoinHint {
+	for _, hint := range this.joinHints {
+		switch hint.State() {
+		case algebra.HINT_STATE_ERROR, algebra.HINT_STATE_INVALID:
+			// ignore
+		default:
+			// there should be only a single join hint
+			switch hint := hint.(type) {
+			case *algebra.HintHash:
+				switch hint.Option() {
+				case algebra.HASH_OPTION_BUILD:
+					return algebra.USE_HASH_BUILD
+				case algebra.HASH_OPTION_PROBE:
+					return algebra.USE_HASH_PROBE
+				default:
+					return algebra.USE_HASH_EITHER
+				}
+			case *algebra.HintNL:
+				return algebra.USE_NL
+			case *algebra.HintNoHash:
+				return algebra.NO_USE_HASH
+			case *algebra.HintNoNL:
+				return algebra.NO_USE_NL
+			}
+		}
+	}
+	return algebra.JOIN_HINT_NONE
+}
+
 func (this *BaseKeyspace) MarkIndexHintError(err string) {
 	for _, hint := range this.indexHints {
 		if hint.State() == algebra.HINT_STATE_UNKNOWN {

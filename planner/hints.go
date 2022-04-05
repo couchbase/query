@@ -48,14 +48,14 @@ func deriveOptimHints(baseKeyspaces map[string]*base.BaseKeyspace, optimHints *a
 		if ksterm != nil {
 			indexes := ksterm.Indexes()
 			if len(indexes) > 0 {
-				gsiIndexes := make(algebra.IndexRefs, 0, len(indexes))
-				ftsIndexes := make(algebra.IndexRefs, 0, len(indexes))
+				gsiIndexes := make([]string, 0, len(indexes))
+				ftsIndexes := make([]string, 0, len(indexes))
 				for _, idx := range indexes {
 					switch idx.Using() {
 					case datastore.DEFAULT, datastore.GSI:
-						gsiIndexes = append(gsiIndexes, idx)
+						gsiIndexes = append(gsiIndexes, idx.Name())
 					case datastore.FTS:
-						ftsIndexes = append(ftsIndexes, idx)
+						ftsIndexes = append(ftsIndexes, idx.Name())
 					}
 				}
 				if len(gsiIndexes) > 0 {
@@ -90,8 +90,8 @@ func processOptimHints(baseKeyspaces map[string]*base.BaseKeyspace, optimHints *
 		return
 	}
 
-	// For INDEX/INDEX_FTS/USE_NL/USE_HASH hints, add correpsonding hint in SimpleFromTerm
-	// for ease of further processing.
+	// For INDEX/INDEX_FTS/NO_INDEX/NO_INDEX_FTS/USE_NL/USE_HASH/NO_USE_NL/NO_USE_HASH hints,
+	// check for duplicated hint specification and add hints to baseKeyspace.
 	// Note we don't allow mixing of USE style hints (specified after a keyspace in query text)
 	// with same type of hint specified up front
 	for _, hint := range optimHints.Hints() {
@@ -100,18 +100,23 @@ func processOptimHints(baseKeyspaces map[string]*base.BaseKeyspace, optimHints *
 		}
 
 		var keyspace string
-		var indexes algebra.IndexRefs
 		var joinHint algebra.JoinHint
-		var indexHint bool
+		var indexHint, negative bool
 
 		switch hint := hint.(type) {
 		case *algebra.HintIndex:
 			keyspace = hint.Keyspace()
-			indexes = hint.Indexes()
 			indexHint = true
 		case *algebra.HintFTSIndex:
 			keyspace = hint.Keyspace()
-			indexes = hint.Indexes()
+			indexHint = true
+		case *algebra.HintNoIndex:
+			keyspace = hint.Keyspace()
+			negative = true
+			indexHint = true
+		case *algebra.HintNoFTSIndex:
+			keyspace = hint.Keyspace()
+			negative = true
 			indexHint = true
 		case *algebra.HintNL:
 			keyspace = hint.Keyspace()
@@ -126,6 +131,14 @@ func processOptimHints(baseKeyspaces map[string]*base.BaseKeyspace, optimHints *
 			case algebra.HASH_OPTION_PROBE:
 				joinHint = algebra.USE_HASH_PROBE
 			}
+		case *algebra.HintNoNL:
+			keyspace = hint.Keyspace()
+			joinHint = algebra.NO_USE_NL
+			negative = true
+		case *algebra.HintNoHash:
+			keyspace = hint.Keyspace()
+			joinHint = algebra.NO_USE_HASH
+			negative = true
 		}
 
 		if keyspace == "" {
@@ -155,8 +168,6 @@ func processOptimHints(baseKeyspaces map[string]*base.BaseKeyspace, optimHints *
 				for _, curHint := range curHints {
 					curHint.SetError(algebra.DUPLICATED_JOIN_HINT + keyspace)
 				}
-			} else {
-				node.SetJoinHint(joinHint)
 			}
 			baseKeyspace.AddJoinHint(hint)
 		} else if indexHint {
@@ -172,25 +183,20 @@ func processOptimHints(baseKeyspaces map[string]*base.BaseKeyspace, optimHints *
 				ksterm := algebra.GetKeyspaceTerm(node)
 				if ksterm == nil {
 					setNonKeyspaceIndexHintError(hint, keyspace)
-				} else {
-					curIndexes := ksterm.Indexes()
-					curMap := make(map[string]bool, len(curIndexes)+len(indexes))
-					newIndexes := make(algebra.IndexRefs, 0, len(curIndexes)+len(indexes))
-					for _, idx := range curIndexes {
-						if _, ok := curMap[idx.Name()]; ok {
-							continue
-						}
-						curMap[idx.Name()] = true
-						newIndexes = append(newIndexes, idx)
+				}
+			}
+			if negative {
+				checkDupIndexes(baseKeyspace.IndexHints(), hint)
+
+				switch hint := hint.(type) {
+				case *algebra.HintNoIndex:
+					if len(hint.Indexes()) == 0 {
+						hint.SetNotFollowed()
 					}
-					for _, idx := range indexes {
-						if _, ok := curMap[idx.Name()]; ok {
-							continue
-						}
-						curMap[idx.Name()] = true
-						newIndexes = append(newIndexes, idx)
+				case *algebra.HintNoFTSIndex:
+					if len(hint.Indexes()) == 0 {
+						hint.SetNotFollowed()
 					}
-					ksterm.SetIndexes(newIndexes)
 				}
 			}
 			baseKeyspace.AddIndexHint(hint)
@@ -205,6 +211,70 @@ func hasDerivedHint(hints []algebra.OptimHint) bool {
 		}
 	}
 	return false
+}
+
+// If an index is specified in both INDEX/INDEX_FTS and the corresponding NO_INDEX/NO_INDEX_FTS hint,
+// then both hints are ignored, but the index is considered during planning, i.e. the INDEX/INDEX_FTS
+// hint overrides the NO_INDEX/NO_INDEX_FTS hint. In this case, remove this index from the
+// NO_INDEX/NO_INDEX_FTS hint.
+func checkDupIndexes(hints []algebra.OptimHint, hint algebra.OptimHint) {
+	var indexes []string
+	fts := false
+	switch hint := hint.(type) {
+	case *algebra.HintNoIndex:
+		indexes = hint.Indexes()
+	case *algebra.HintNoFTSIndex:
+		indexes = hint.Indexes()
+		fts = true
+	}
+	if len(indexes) == 0 {
+		return
+	}
+
+	newIndexes := make([]string, 0, len(indexes))
+	for _, idx := range indexes {
+		found := false
+		for _, other := range hints {
+			if other.State() != algebra.HINT_STATE_UNKNOWN {
+				continue
+			}
+			var otherIndexes []string
+			switch other := other.(type) {
+			case *algebra.HintIndex:
+				if !fts {
+					otherIndexes = other.Indexes()
+				}
+			case *algebra.HintFTSIndex:
+				if fts {
+					otherIndexes = other.Indexes()
+				}
+			}
+			for _, oidx := range otherIndexes {
+				if idx == oidx {
+					found = true
+					break
+				}
+			}
+			if found {
+				break
+			}
+		}
+		if !found {
+			newIndexes = append(newIndexes, idx)
+		}
+	}
+
+	// if some indexes removed, reset the indexes array, we cannot change the original
+	// hint pointer since that's what's kept in stmt.OptimHints()
+	if len(indexes) != len(newIndexes) {
+		switch hint := hint.(type) {
+		case *algebra.HintNoIndex:
+			hint.SetIndexes(newIndexes)
+		case *algebra.HintNoFTSIndex:
+			hint.SetIndexes(newIndexes)
+		}
+	}
+	return
 }
 
 func hasOrderedHint(optHints *algebra.OptimHints) bool {
@@ -222,18 +292,18 @@ func hasOrderedHint(optHints *algebra.OptimHints) bool {
 
 func setDuplicateIndexHintError(hint algebra.OptimHint, keyspace string) {
 	switch hint := hint.(type) {
-	case *algebra.HintIndex:
+	case *algebra.HintIndex, *algebra.HintNoIndex:
 		hint.SetError(algebra.DUPLICATED_INDEX_HINT + keyspace)
-	case *algebra.HintFTSIndex:
+	case *algebra.HintFTSIndex, *algebra.HintNoFTSIndex:
 		hint.SetError(algebra.DUPLICATED_INDEX_FTS_HINT + keyspace)
 	}
 }
 
 func setNonKeyspaceIndexHintError(hint algebra.OptimHint, keyspace string) {
 	switch hint := hint.(type) {
-	case *algebra.HintIndex:
+	case *algebra.HintIndex, *algebra.HintNoIndex:
 		hint.SetError(algebra.NON_KEYSPACE_INDEX_HINT + keyspace)
-	case *algebra.HintFTSIndex:
+	case *algebra.HintFTSIndex, *algebra.HintNoFTSIndex:
 		hint.SetError(algebra.NON_KEYSPACE_INDEX_FTS_HINT + keyspace)
 	}
 }

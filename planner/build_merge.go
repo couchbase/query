@@ -87,8 +87,8 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 		sourceKeyspace.MarkJoinHintError(algebra.MERGE_ONKEY_JOIN_HINT_ERR)
 
 	} else {
-		leftJoinHint := left.JoinHint()
-		rightJoinHint := right.JoinHint()
+		leftJoinHint := sourceKeyspace.JoinHint()
+		rightJoinHint := targetKeyspace.JoinHint()
 		if leftJoinHint != algebra.JOIN_HINT_NONE && rightJoinHint != algebra.JOIN_HINT_NONE {
 			sourceKeyspace.SetJoinHintError()
 			targetKeyspace.SetJoinHintError()

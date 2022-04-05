@@ -40,22 +40,6 @@ func NewAnsiRightJoin(left SimpleFromTerm, right SimpleFromTerm, onclause expres
 	return &AnsiJoin{right, left, true, false, onclause}
 }
 
-func TransferJoinHint(left SimpleFromTerm, right SimpleFromTerm) {
-	// transfer join hint from right-hand side to left-hand side
-	joinHint := right.JoinHint()
-	if joinHint != JOIN_HINT_NONE {
-		// swith build and probe side of USE HASH hint
-		switch joinHint {
-		case USE_HASH_BUILD:
-			joinHint = USE_HASH_PROBE
-		case USE_HASH_PROBE:
-			joinHint = USE_HASH_BUILD
-		}
-		left.SetJoinHint(joinHint)
-		right.SetJoinHint(JOIN_HINT_NONE)
-	}
-}
-
 func (this *AnsiJoin) Accept(visitor NodeVisitor) (interface{}, error) {
 	return visitor.VisitAnsiJoin(this)
 }

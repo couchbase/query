@@ -20,6 +20,8 @@ const (
 	USE_HASH_PROBE
 	USE_HASH_EITHER
 	USE_NL
+	NO_USE_HASH
+	NO_USE_NL
 )
 
 var EMPTY_USE = NewUse(nil, nil, JOIN_HINT_NONE)
@@ -56,4 +58,24 @@ func (this *Use) JoinHint() JoinHint {
 
 func (this *Use) SetJoinHint(joinHint JoinHint) {
 	this.joinHint = joinHint
+}
+
+func PreferHash(joinHint JoinHint) bool {
+	switch joinHint {
+	case USE_HASH_BUILD, USE_HASH_PROBE, USE_HASH_EITHER:
+		return true
+	case NO_USE_NL:
+		return true
+	}
+	return false
+}
+
+func PreferNL(joinHint JoinHint) bool {
+	switch joinHint {
+	case USE_NL:
+		return true
+	case NO_USE_HASH:
+		return true
+	}
+	return false
 }

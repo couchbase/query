@@ -101,16 +101,22 @@ func (this *builder) buildAnsiJoinOp(node *algebra.AnsiJoin) (op plan.Operator, 
 	joinEnum := this.joinEnum()
 
 	var leftBaseKeyspace *base.BaseKeyspace
+	var joinHint algebra.JoinHint
+	var preferHash, preferNL, inferJoinHint bool
 	baseKeyspace, _ := this.baseKeyspaces[right.Alias()]
-	preferHash := right.PreferHash()
-	preferNL := right.PreferNL()
-	inferJoinHint := false
-	if !joinEnum && node.Right().HasInferJoinHint() {
-		if leftTerm, ok := node.Left().(algebra.SimpleFromTerm); ok {
-			inferJoinHint = true
-			leftBaseKeyspace, _ = this.baseKeyspaces[leftTerm.Alias()]
-			preferHash = leftTerm.PreferHash()
-			preferNL = leftTerm.PreferNL()
+	if !joinEnum {
+		joinHint = baseKeyspace.JoinHint()
+		preferHash = algebra.PreferHash(joinHint)
+		preferNL = algebra.PreferNL(joinHint)
+
+		if node.Right().HasInferJoinHint() {
+			if leftTerm, ok := node.Left().(algebra.SimpleFromTerm); ok {
+				inferJoinHint = true
+				leftBaseKeyspace, _ = this.baseKeyspaces[leftTerm.Alias()]
+				joinHint = leftBaseKeyspace.JoinHint()
+				preferHash = algebra.PreferHash(joinHint)
+				preferNL = algebra.PreferNL(joinHint)
+			}
 		}
 	}
 
@@ -151,7 +157,7 @@ func (this *builder) buildAnsiJoinOp(node *algebra.AnsiJoin) (op plan.Operator, 
 		nlIndexHintError := false
 
 		useFr := false
-		if useCBO && this.hasBuilderFlag(BUILDER_HAS_LIMIT) &&
+		if useCBO && !joinEnum && this.hasBuilderFlag(BUILDER_HAS_LIMIT) &&
 			!this.hasBuilderFlag(BUILDER_HAS_GROUP|BUILDER_HAS_ORDER|BUILDER_HAS_WINDOW_AGGS) {
 			useFr = true
 		}
@@ -390,16 +396,22 @@ func (this *builder) buildAnsiNestOp(node *algebra.AnsiNest) (op plan.Operator, 
 	joinEnum := this.joinEnum()
 
 	var leftBaseKeyspace *base.BaseKeyspace
+	var joinHint algebra.JoinHint
+	var preferHash, preferNL, inferJoinHint bool
 	baseKeyspace, _ := this.baseKeyspaces[right.Alias()]
-	preferHash := right.PreferHash()
-	preferNL := right.PreferNL()
-	inferJoinHint := false
-	if !joinEnum && node.Right().HasInferJoinHint() {
-		if leftTerm, ok := node.Left().(algebra.SimpleFromTerm); ok {
-			inferJoinHint = true
-			leftBaseKeyspace, _ = this.baseKeyspaces[leftTerm.Alias()]
-			preferHash = leftTerm.PreferHash()
-			preferNL = leftTerm.PreferNL()
+	if !joinEnum {
+		joinHint = baseKeyspace.JoinHint()
+		preferHash = algebra.PreferHash(joinHint)
+		preferNL = algebra.PreferNL(joinHint)
+
+		if node.Right().HasInferJoinHint() {
+			if leftTerm, ok := node.Left().(algebra.SimpleFromTerm); ok {
+				inferJoinHint = true
+				leftBaseKeyspace, _ = this.baseKeyspaces[leftTerm.Alias()]
+				joinHint = leftBaseKeyspace.JoinHint()
+				preferHash = algebra.PreferHash(joinHint)
+				preferNL = algebra.PreferNL(joinHint)
+			}
 		}
 	}
 

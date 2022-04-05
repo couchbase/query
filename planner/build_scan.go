@@ -97,11 +97,11 @@ func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.Keyspa
 	if this.indexAdvisor {
 		virtualIndexes = this.getIdxCandidates()
 	}
-	if len(node.Indexes()) > 0 || this.context.UseFts() {
-		hints, err = allHints(keyspace, node.Indexes(), virtualIndexes, this.context.IndexApiVersion(), this.context.UseFts())
+	if len(baseKeyspace.IndexHints()) > 0 || this.context.UseFts() {
+		hints, err = allHints(keyspace, baseKeyspace.IndexHints(), virtualIndexes, this.context.IndexApiVersion(), this.context.UseFts())
 		if nil != hints {
 			defer _INDEX_POOL.Put(hints)
-		} else if len(node.Indexes()) > 0 {
+		} else if len(baseKeyspace.IndexHints()) > 0 {
 			// if index hints are specified but none of the indexes are valid
 			// mark index hint error
 			baseKeyspace.SetIndexHintError()
@@ -602,7 +602,7 @@ func poolAllocIndexSlice(indexes []datastore.Index) []datastore.Index {
 }
 
 // all HINT indexes
-func allHints(keyspace datastore.Keyspace, hints algebra.IndexRefs, virtualIndexes []datastore.Index, indexApiVersion int, useFts bool) (
+func allHints(keyspace datastore.Keyspace, hints []algebra.OptimHint, virtualIndexes []datastore.Index, indexApiVersion int, useFts bool) (
 	[]datastore.Index, error) {
 
 	var indexes []datastore.Index
@@ -610,8 +610,11 @@ func allHints(keyspace datastore.Keyspace, hints algebra.IndexRefs, virtualIndex
 	var hintFts bool
 
 	for _, hint := range hints {
-		if hint.Using() == datastore.FTS {
+		switch hint.(type) {
+		case *algebra.HintFTSIndex, *algebra.HintNoFTSIndex:
 			hintFts = true
+		}
+		if hintFts {
 			break
 		}
 	}
@@ -622,8 +625,13 @@ func allHints(keyspace datastore.Keyspace, hints algebra.IndexRefs, virtualIndex
 	}
 
 	for _, indexer := range indexers {
+		indexerFts := false
+		if indexer.Name() == datastore.FTS {
+			indexerFts = true
+		}
+
 		// neither FTS index reference in the HINT nor useFts set skip FTS indexer
-		if !hintFts && !useFts && indexer.Name() == datastore.FTS {
+		if !hintFts && !useFts && indexerFts {
 			continue
 		}
 
@@ -635,27 +643,84 @@ func allHints(keyspace datastore.Keyspace, hints algebra.IndexRefs, virtualIndex
 		// all HINT indexes. If name is "", consider all indexes on the indexer
 		// duplicates on the HINT will be ignored
 		for _, idx := range idxes {
+			if !isValidIndex(idx, indexApiVersion) {
+				continue
+			}
+
 			/* When one or more FTS indexes is specified in the USE INDEX hint,
 			   USE_FTS query parameter does not take effect. When no FTS indexes is specified in the
 			   USE INDEX hint (or no hint specified), USE_FTS query parameter takes effect.
 			*/
-			if !hintFts && useFts && indexer.Name() == datastore.FTS && isValidIndex(idx, indexApiVersion) {
+			if !hintFts && useFts && indexerFts {
 				indexes = append(poolAllocIndexSlice(indexes), idx)
 				continue
 			}
 
+			hasIndex := false
+			hasNoIndex := false
+			inIndex := false
+			inNoIndex := false
 			for _, hint := range hints {
-				using := hint.Using()
-				if using == datastore.DEFAULT {
-					using = datastore.GSI
+				if hint.State() != algebra.HINT_STATE_UNKNOWN {
+					continue
 				}
-				if indexer.Name() == using &&
-					(hint.Name() == "" || hint.Name() == idx.Name()) {
-					if isValidIndex(idx, indexApiVersion) {
-						indexes = append(poolAllocIndexSlice(indexes), idx)
+
+				var hintIndexes []string
+				var fts bool
+				var negative bool
+				switch hint := hint.(type) {
+				case *algebra.HintIndex:
+					hintIndexes = hint.Indexes()
+					hasIndex = true
+				case *algebra.HintFTSIndex:
+					hintIndexes = hint.Indexes()
+					hasIndex = true
+					fts = true
+				case *algebra.HintNoIndex:
+					hintIndexes = hint.Indexes()
+					hasNoIndex = true
+					negative = true
+				case *algebra.HintNoFTSIndex:
+					hintIndexes = hint.Indexes()
+					hasNoIndex = true
+					fts = true
+					negative = true
+				}
+
+				if (indexerFts && fts) || (!indexerFts && !fts) {
+					if len(hintIndexes) == 0 {
+						if negative {
+							inNoIndex = true
+						} else {
+							inIndex = true
+						}
+					} else {
+						for _, name := range hintIndexes {
+							if name == idx.Name() {
+								if negative {
+									inNoIndex = true
+								} else {
+									inIndex = true
+								}
+							}
+						}
 					}
-					break
 				}
+			}
+
+			use := false
+			if inIndex && inNoIndex {
+				// We should have removed any index from NO_INDEX/NO_INDEX_FTS
+				// hint that is also present in INDEX/INDEX_FTS hint.
+				return nil, errors.NewPlanInternalError(fmt.Sprintf("allHints: unexpected index %s in both INDEX/INDEX_FTS and NO_INDEX/NO_INDEX_FTS hints", idx.Name()))
+			} else if inIndex {
+				use = true
+			} else if !hasIndex && hasNoIndex && !inNoIndex {
+				use = true
+			}
+
+			if use {
+				indexes = append(poolAllocIndexSlice(indexes), idx)
 			}
 		}
 	}

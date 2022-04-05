@@ -26,8 +26,8 @@
             "results": [
                 {
                     "hints_with_error": [
-                        "INDEX(t st_target_idx): Duplicated INDEX hint specified for keyspace: t",
-                        "INDEX(t st_target_idx): Duplicated INDEX hint specified for keyspace: t"
+                        "INDEX(t st_target_idx): Duplicated INDEX/NO_INDEX hint specified for keyspace: t",
+                        "INDEX(t st_target_idx): Duplicated INDEX/NO_INDEX hint specified for keyspace: t"
                     ]
                 }
             ],
@@ -64,8 +64,8 @@
             "results": [
                 {
                     "hints_with_error": [
-                        "INDEX(t st_target_idx): Duplicated INDEX hint specified for keyspace: t",
-                        "INDEX(t st_target_idx): Duplicated INDEX hint specified for keyspace: t"
+                        "INDEX(t st_target_idx): Duplicated INDEX/NO_INDEX hint specified for keyspace: t",
+                        "INDEX(t st_target_idx): Duplicated INDEX/NO_INDEX hint specified for keyspace: t"
                     ]
                 }
             ],
@@ -140,7 +140,7 @@
                       "USE_HASH(s/BUILD)"
                   ],
                   "hints_with_error": [
-                      "INDEX(s st_source_idx): INDEX hint specified on non-keyspace: s"
+                      "INDEX(s st_source_idx): INDEX/NO_INDEX hint specified on non-keyspace: s"
                   ]
                 }
             ],
@@ -181,9 +181,9 @@
             "results": [
                 {
                   "hints_with_error": [
-                      "INDEX(t st_target_idx): Duplicated INDEX hint specified for keyspace: t",
+                      "INDEX(t st_target_idx): Duplicated INDEX/NO_INDEX hint specified for keyspace: t",
                       "USE_HASH(s/PROBE): Duplciated join hint specified for keyspace: s",
-                      "INDEX(t st_target_idx): Duplicated INDEX hint specified for keyspace: t",
+                      "INDEX(t st_target_idx): Duplicated INDEX/NO_INDEX hint specified for keyspace: t",
                       "USE_HASH(s/PROBE): Duplciated join hint specified for keyspace: s"
                   ]
                 }
@@ -238,9 +238,9 @@
             "results": [
                 {
                   "hints_with_error": [
-                      "INDEX(t st_target_idx): Duplicated INDEX hint specified for keyspace: t",
+                      "INDEX(t st_target_idx): Duplicated INDEX/NO_INDEX hint specified for keyspace: t",
                       "USE_HASH(s/BUILD): Duplciated join hint specified for keyspace: s",
-                      "INDEX(t st_target_idx): Duplicated INDEX hint specified for keyspace: t",
+                      "INDEX(t st_target_idx): Duplicated INDEX/NO_INDEX hint specified for keyspace: t",
                       "USE_HASH(s/BUILD): Duplciated join hint specified for keyspace: s"
                  ]
                 }
