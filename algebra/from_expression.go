@@ -154,16 +154,7 @@ func (this *ExpressionTerm) Formalize(parent *expression.Formalizer) (f *express
 	}
 
 	// Determine if this expression contains any correlated references
-	immediate := f.Allowed().GetValue().Fields()
-	for ident, _ := range f.Identifiers().Fields() {
-		if _, ok := immediate[ident]; !ok {
-			if f.WithAlias(ident) {
-				continue
-			}
-			this.correlated = true
-			break
-		}
-	}
+	this.correlated = f.CheckCorrelated()
 
 	f.SetAllowedExprTermAlias(alias)
 	f.SetAlias(this.as)

@@ -79,9 +79,13 @@ func (this *In) Evaluate(item value.Value, context Context) (value.Value, error)
 		if !inlistHash.HashChecked() {
 			inlistHash.SetHashChecked()
 			if inlistHash.IsHashEnabled() && len(sa) >= _INLIST_HASH_THRESHOLD {
-				if this.Second().Static() != nil {
-					buildHT = true
-				} else if sq, ok := this.Second().(Subquery); ok && !sq.IsCorrelated() {
+				right := this.Second()
+				if right.Static() != nil {
+					ident, ok := right.(*Identifier)
+					if !ok || !ident.IsCorrelated() {
+						buildHT = true
+					}
+				} else if sq, ok := right.(Subquery); ok && !sq.IsCorrelated() {
 					buildHT = true
 				}
 			}

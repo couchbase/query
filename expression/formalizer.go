@@ -231,6 +231,7 @@ func (this *Formalizer) VisitIdentifier(expr *Identifier) (interface{}, error) {
 		unnest_flags := ident_flags & IDENT_IS_UNNEST_ALIAS
 		expr_term_flags := ident_flags & IDENT_IS_EXPR_TERM
 		subq_term_flags := ident_flags & IDENT_IS_SUBQ_TERM
+		correlated_flags := ident_flags & IDENT_IS_CORRELATED
 		if !this.indexScope() || keyspace_flags == 0 || expr.IsKeyspaceAlias() {
 			this.identifiers.SetField(identifier, ident_val)
 			// for user specified keyspace alias (such as alias.c1)
@@ -252,6 +253,9 @@ func (this *Formalizer) VisitIdentifier(expr *Identifier) (interface{}, error) {
 			}
 			if subq_term_flags != 0 && !expr.IsSubqTermAlias() {
 				expr.SetSubqTermAlias(true)
+			}
+			if correlated_flags != 0 && !expr.IsCorrelated() {
+				expr.SetCorrelated(true)
 			}
 			return expr, nil
 		}
@@ -358,6 +362,28 @@ func (this *Formalizer) PushBindings(bindings Bindings, push bool) (err error) {
 	var expr Expression
 	var ident_flags uint32
 	for _, b := range bindings {
+		expr, err = this.Map(b.Expression())
+		if err != nil {
+			return
+		}
+
+		b.SetExpression(expr)
+
+		// check for correlated reference in binding expr
+		correlated := this.CheckCorrelatedParams(allowed, identifiers)
+		if !correlated {
+			subqueries, er := ListSubqueries(Expressions{expr}, false)
+			if er != nil {
+				return er
+			}
+			for _, subq := range subqueries {
+				if subq.IsCorrelated() {
+					correlated = true
+					break
+				}
+			}
+		}
+
 		if ident_val, ok := allowed.Field(b.Variable()); ok {
 			ident_flags = uint32(ident_val.ActualForIndex().(int64))
 			tmp_flags1 := ident_flags & IDENT_IS_KEYSPACE
@@ -379,6 +405,9 @@ func (this *Formalizer) PushBindings(bindings Bindings, push bool) (err error) {
 		ident_flags |= IDENT_IS_VARIABLE
 		if b.Static() {
 			ident_flags |= IDENT_IS_STATIC_VAR
+		}
+		if correlated {
+			ident_flags |= IDENT_IS_CORRELATED
 		}
 		ident_val := value.NewValue(ident_flags)
 		allowed.SetField(b.Variable(), ident_val)
@@ -406,13 +435,6 @@ func (this *Formalizer) PushBindings(bindings Bindings, push bool) (err error) {
 			allowed.SetField(b.NameVariable(), ident_val)
 			aliases.SetField(b.NameVariable(), ident_val)
 		}
-
-		expr, err = this.Map(b.Expression())
-		if err != nil {
-			return
-		}
-
-		b.SetExpression(expr)
 	}
 
 	if push {
@@ -566,4 +588,26 @@ func (this *Formalizer) SaveWiths() map[string]bool {
 
 func (this *Formalizer) RestoreWiths(withs map[string]bool) {
 	this.withs = withs
+}
+
+func (this *Formalizer) CheckCorrelated() bool {
+	return this.CheckCorrelatedParams(this.allowed, this.identifiers)
+}
+
+func (this *Formalizer) CheckCorrelatedParams(allowed, identifiers *value.ScopeValue) bool {
+	immediate := allowed.GetValue().Fields()
+
+	for id, id_val := range identifiers.Fields() {
+		if _, ok := immediate[id]; !ok {
+			if this.WithAlias(id) {
+				id_flags := uint32(value.NewValue(id_val).ActualForIndex().(int64))
+				if (id_flags & IDENT_IS_CORRELATED) == 0 {
+					continue
+				}
+			}
+			return true
+		}
+	}
+
+	return false
 }
