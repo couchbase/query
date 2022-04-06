@@ -49,6 +49,14 @@ func (this *Unnest) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent)
 }
 
+func (this *Unnest) beforeItems(context *Context, parent value.Value) bool {
+	filter := this.plan.Filter()
+	if filter != nil {
+		filter.EnableInlistHash(context)
+	}
+	return true
+}
+
 func (this *Unnest) processItem(item value.AnnotatedValue, context *Context) bool {
 	ev, err := this.plan.Term().Expression().Evaluate(item, context)
 	if err != nil {
@@ -69,6 +77,8 @@ func (this *Unnest) processItem(item value.AnnotatedValue, context *Context) boo
 		return !this.plan.Term().Outer() || this.sendItem(item)
 	}
 
+	filter := this.plan.Filter()
+
 	// Attach and send
 	for {
 		var av value.AnnotatedValue
@@ -87,8 +97,8 @@ func (this *Unnest) processItem(item value.AnnotatedValue, context *Context) boo
 		}
 		av.SetField(this.plan.Alias(), actv)
 
-		if this.plan.Filter() != nil {
-			result, err := this.plan.Filter().Evaluate(av, context)
+		if filter != nil {
+			result, err := filter.Evaluate(av, context)
 			if err != nil {
 				context.Error(errors.NewEvaluationError(err, "unnest filter"))
 				return false
@@ -112,6 +122,13 @@ func (this *Unnest) processItem(item value.AnnotatedValue, context *Context) boo
 	}
 
 	return true
+}
+
+func (this *Unnest) afterItems(context *Context) {
+	filter := this.plan.Filter()
+	if filter != nil {
+		filter.ResetMemory(context)
+	}
 }
 
 func (this *Unnest) MarshalJSON() ([]byte, error) {
