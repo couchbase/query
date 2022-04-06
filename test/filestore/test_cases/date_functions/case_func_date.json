@@ -273,7 +273,8 @@
     ]
     },
     {
-       "statements":"select STR_TO_MILLIS('2015-01-01T16:00:00-08:00'),STR_TO_MILLIS('2015/01/01 16:00:00-08:00','YYYY MM DD hh:mm:ssTZD'),STR_TO_MILLIS('2015/01/01T16:00:00-08:00','%Y/%m/%dT%T%z'),STR_TO_MILLIS('4pm on 1st JaN 15 in America/Los_Angeles','%-I%P on %-d%f %^b %y in %z'),STR_TO_MILLIS('00:00:00','%I:%M:%S'),STR_TO_MILLIS('00:00:00+0000','%H:%M:%S%z'),STR_TO_MILLIS('00:00:00+0000','HH24:MI:SSTZD'),STR_TO_MILLIS('Monday 12 pm, 1 MAR','Day HH12 pm, DD MON'),STR_TO_MILLIS('4pm 1 JAN 15 America/Los_Angeles','HH12am DD MON YY TZD')",
+       "comment":"Time-only tests need to include time zone for consistent results",
+       "statements":"select STR_TO_MILLIS('2015-01-01T16:00:00-08:00'),STR_TO_MILLIS('2015/01/01 16:00:00-08:00','YYYY MM DD hh:mm:ssTZD'),STR_TO_MILLIS('2015/01/01T16:00:00-08:00','%Y/%m/%dT%T%z'),STR_TO_MILLIS('4pm on 1st JaN 15 in America/Los_Angeles','%-I%P on %-d%f %^b %y in %z'),STR_TO_MILLIS('00:00:00','%I:%M:%S'),STR_TO_MILLIS('00:00:00+0000','%H:%M:%S%z'),STR_TO_MILLIS('00:00:00+0000','HH24:MI:SSTZD'),STR_TO_MILLIS('Monday 12 pm, 1 MAR Z','Day HH12 pm, DD MON TZD'),STR_TO_MILLIS('4pm 1 JAN 15 America/Los_Angeles','HH12am DD MON YY TZD')",
        "results": [
         {
             "$1": 1420156800000,
@@ -283,7 +284,7 @@
             "$5": null,
             "$6": -62167219200000,
             "$7": -62167219200000,
-            "$8": -62161991925000,
+            "$8": -62161992000000,
             "$9": 1420156800000
         }
     ]
