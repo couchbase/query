@@ -52,10 +52,10 @@ const (
 	INVALID_HASH_OPTION            = "Invalid hash option (BUILD or PROBE only):  "
 	INVALID_KEYSPACE               = "Invalid keyspace specified: "
 	DUPLICATED_JOIN_HINT           = "Duplciated join hint specified for keyspace: "
-	DUPLICATED_INDEX_HINT          = "Duplicated INDEX/NO_INDEX hint specified for keyspace: "
-	DUPLICATED_INDEX_FTS_HINT      = "Duplicated INDEX_FTS/NO_INDEX_FTS hint specified for keyspace: "
-	NON_KEYSPACE_INDEX_HINT        = "INDEX/NO_INDEX hint specified on non-keyspace: "
-	NON_KEYSPACE_INDEX_FTS_HINT    = "INDEX_FTS/NO_INDEX_FTS hint specified on non-keyspace: "
+	DUPLICATED_INDEX_HINT          = "Duplicated index hint specified for keyspace: "
+	DUPLICATED_INDEX_FTS_HINT      = "Duplicated FTS index hint specified for keyspace: "
+	NON_KEYSPACE_INDEX_HINT        = "Index hint specified on non-keyspace: "
+	NON_KEYSPACE_INDEX_FTS_HINT    = "FTS index hint specified on non-keyspace: "
 	HASH_JOIN_NOT_AVAILABLE        = "Hash Join/Nest is not supported"
 	INDEX_HINT_NOT_FOLLOWED        = "INDEX hint cannot be followed"
 	INDEX_FTS_HINT_NOT_FOLLOWED    = "INDEX_FTS hint cannot be followed"
@@ -66,6 +66,10 @@ const (
 	NO_INDEX_FTS_HINT_NOT_FOLLOWED = "NO_INDEX_FTS hint cannot be followed"
 	NO_HASH_HINT_NOT_FOLLOWED      = "NO_HASH hint cannot be followed"
 	NO_NL_HINT_NOT_FOLLOWED        = "NO_NL hint cannot be followed"
+	AVD_IDX_HINT_NOT_FOLLOWED      = "AVOID_INDEX hint cannot be followed"
+	AVD_IDX_FTS_HINT_NOT_FOLLOWED  = "AVOID_INDEX_FTS hint cannot be followed"
+	AVD_HASH_HINT_NOT_FOLLOWED     = "AVOID_HASH hint cannot be followed"
+	AVD_NL_HINT_NOT_FOLLOWED       = "AVOID_NL hint cannot be followed"
 	MERGE_ONKEY_JOIN_HINT_ERR      = "Join hint not supported in a MERGE statement with ON KEY clause"
 	MERGE_ONKEY_INDEX_HINT_ERR     = "Index hint not supported for target keyspace in a MERGE statement with ON KEY clause"
 	UPD_DEL_JOIN_HINT_ERR          = "Join hint not supported in an UPDATE or DELETE statement"
@@ -153,9 +157,15 @@ func addJSONHint(r map[string]interface{}, hint OptimHint) {
 		obj = hint.formatJSON()
 	case *HintNoIndex:
 		name = "no_index"
+		if hint.avoid {
+			name = "avoid_index"
+		}
 		obj = hint.formatJSON()
 	case *HintNoFTSIndex:
 		name = "no_index_fts"
+		if hint.avoid {
+			name = "avoid_index_fts"
+		}
 		obj = hint.formatJSON()
 	case *HintNL:
 		name = "use_nl"
@@ -165,9 +175,15 @@ func addJSONHint(r map[string]interface{}, hint OptimHint) {
 		obj = hint.formatJSON()
 	case *HintNoNL:
 		name = "no_use_nl"
+		if hint.avoid {
+			name = "avoid_nl"
+		}
 		obj = hint.formatJSON()
 	case *HintNoHash:
 		name = "no_use_hash"
+		if hint.avoid {
+			name = "avoid_hash"
+		}
 		obj = hint.formatJSON()
 	case *HintOrdered:
 		name = "ordered"
@@ -205,9 +221,10 @@ func NewOptimHint(hint_name string, hint_args []string) []OptimHint {
 	var err string
 	lowerName := strings.ToLower(hint_name)
 	switch lowerName {
-	case "index", "index_fts", "no_index", "no_index_fts":
-		fts := (lowerName == "index_fts") || (lowerName == "no_index_fts")
-		negative := (lowerName == "no_index") || (lowerName == "no_index_fts")
+	case "index", "index_fts", "no_index", "no_index_fts", "avoid_index", "avoid_index_fts":
+		fts := (lowerName == "index_fts") || (lowerName == "no_index_fts") || (lowerName == "avoid_index_fts")
+		avoid := (lowerName == "avoid_index") || (lowerName == "avoid_index_fts")
+		negative := (lowerName == "no_index") || (lowerName == "no_index_fts") || avoid
 		if len(hint_args) == 0 {
 			invalid = true
 			err = MISSING_ARG + hint_name
@@ -226,20 +243,21 @@ func NewOptimHint(hint_name string, hint_args []string) []OptimHint {
 		if !invalid {
 			if fts {
 				if negative {
-					hints = []OptimHint{NewNoFTSIndexHint(hint_args[0], indexes)}
+					hints = []OptimHint{NewNoFTSIndexHint(hint_args[0], indexes, avoid)}
 				} else {
 					hints = []OptimHint{NewFTSIndexHint(hint_args[0], indexes)}
 				}
 			} else {
 				if negative {
-					hints = []OptimHint{NewNoIndexHint(hint_args[0], indexes)}
+					hints = []OptimHint{NewNoIndexHint(hint_args[0], indexes, avoid)}
 				} else {
 					hints = []OptimHint{NewIndexHint(hint_args[0], indexes)}
 				}
 			}
 		}
-	case "use_nl", "no_use_nl":
-		negative := (lowerName == "no_use_nl")
+	case "use_nl", "no_use_nl", "avoid_nl":
+		avoid := (lowerName == "avoid_nl")
+		negative := (lowerName == "no_use_nl") || avoid
 		// USE_NL/NO_USE_NL hint must include at least 1 keyspsace
 		if len(hint_args) == 0 {
 			invalid = true
@@ -255,14 +273,15 @@ func NewOptimHint(hint_name string, hint_args []string) []OptimHint {
 			}
 			var hint OptimHint
 			if negative {
-				hint = NewNoNLHint(arg)
+				hint = NewNoNLHint(arg, avoid)
 			} else {
 				hint = NewNLHint(arg)
 			}
 			hints = append(hints, hint)
 		}
-	case "use_hash", "no_use_hash":
-		negative := (lowerName == "no_use_hash")
+	case "use_hash", "no_use_hash", "avoid_hash":
+		avoid := (lowerName == "avoid_hash")
+		negative := (lowerName == "no_use_hash") || avoid
 		// USE_HASH must include at least 1 keyspace
 		if len(hint_args) == 0 {
 			invalid = true
@@ -308,7 +327,7 @@ func NewOptimHint(hint_name string, hint_args []string) []OptimHint {
 
 			var hint OptimHint
 			if negative {
-				hint = NewNoHashHint(keyspace)
+				hint = NewNoHashHint(keyspace, avoid)
 			} else {
 				hint = NewHashHint(keyspace, option)
 			}
@@ -559,12 +578,14 @@ type HintNoIndex struct {
 	oriIndexes []string
 	state      HintState
 	err        string
+	avoid      bool
 }
 
-func NewNoIndexHint(keyspace string, indexes []string) *HintNoIndex {
+func NewNoIndexHint(keyspace string, indexes []string, avoid bool) *HintNoIndex {
 	return &HintNoIndex{
 		keyspace: keyspace,
 		indexes:  indexes,
+		avoid:    avoid,
 	}
 }
 
@@ -577,6 +598,7 @@ func (this *HintNoIndex) Copy() OptimHint {
 		keyspace: this.keyspace,
 		state:    this.state,
 		err:      this.err,
+		avoid:    this.avoid,
 	}
 	if len(this.indexes) > 0 {
 		rv.indexes = make([]string, 0, len(this.indexes))
@@ -621,7 +643,11 @@ func (this *HintNoIndex) SetFollowed() {
 func (this *HintNoIndex) SetNotFollowed() {
 	if this.state == HINT_STATE_UNKNOWN {
 		this.state = HINT_STATE_NOT_FOLLOWED
-		this.err = NO_INDEX_HINT_NOT_FOLLOWED
+		if this.avoid {
+			this.err = AVD_IDX_HINT_NOT_FOLLOWED
+		} else {
+			this.err = NO_INDEX_HINT_NOT_FOLLOWED
+		}
 	}
 }
 
@@ -640,8 +666,12 @@ func (this *HintNoIndex) sortString() string {
 
 func (this *HintNoIndex) FormatHint(jsonStyle bool) string {
 	if jsonStyle {
+		key := "no_index"
+		if this.avoid {
+			key = "avoid_index"
+		}
 		hint := map[string]interface{}{
-			"no_index": this.formatJSON(),
+			key: this.formatJSON(),
 		}
 		bytes, _ := json.Marshal(hint)
 		return string(bytes)
@@ -653,7 +683,11 @@ func (this *HintNoIndex) FormatHint(jsonStyle bool) string {
 	args := make([]string, 0, len(idxs)+1)
 	args = append(args, this.keyspace)
 	args = append(args, idxs...)
-	return formatHint("NO_INDEX", args)
+	name := "NO_INDEX"
+	if this.avoid {
+		name = "AVOID_INDEX"
+	}
+	return formatHint(name, args)
 }
 
 func (this *HintNoIndex) formatJSON() map[string]interface{} {
@@ -679,12 +713,14 @@ type HintNoFTSIndex struct {
 	oriIndexes []string
 	state      HintState
 	err        string
+	avoid      bool
 }
 
-func NewNoFTSIndexHint(keyspace string, indexes []string) *HintNoFTSIndex {
+func NewNoFTSIndexHint(keyspace string, indexes []string, avoid bool) *HintNoFTSIndex {
 	return &HintNoFTSIndex{
 		keyspace: keyspace,
 		indexes:  indexes,
+		avoid:    avoid,
 	}
 }
 
@@ -697,6 +733,7 @@ func (this *HintNoFTSIndex) Copy() OptimHint {
 		keyspace: this.keyspace,
 		state:    this.state,
 		err:      this.err,
+		avoid:    this.avoid,
 	}
 	if len(this.indexes) > 0 {
 		rv.indexes = make([]string, 0, len(this.indexes))
@@ -741,7 +778,11 @@ func (this *HintNoFTSIndex) SetFollowed() {
 func (this *HintNoFTSIndex) SetNotFollowed() {
 	if this.state == HINT_STATE_UNKNOWN {
 		this.state = HINT_STATE_NOT_FOLLOWED
-		this.err = NO_INDEX_FTS_HINT_NOT_FOLLOWED
+		if this.avoid {
+			this.err = AVD_IDX_FTS_HINT_NOT_FOLLOWED
+		} else {
+			this.err = NO_INDEX_FTS_HINT_NOT_FOLLOWED
+		}
 	}
 }
 
@@ -760,8 +801,12 @@ func (this *HintNoFTSIndex) sortString() string {
 
 func (this *HintNoFTSIndex) FormatHint(jsonStyle bool) string {
 	if jsonStyle {
+		key := "no_index_fts"
+		if this.avoid {
+			key = "avoid_index_fts"
+		}
 		hint := map[string]interface{}{
-			"no_index_fts": this.formatJSON(),
+			key: this.formatJSON(),
 		}
 		bytes, _ := json.Marshal(hint)
 		return string(bytes)
@@ -773,7 +818,11 @@ func (this *HintNoFTSIndex) FormatHint(jsonStyle bool) string {
 	args := make([]string, 0, len(idxs)+1)
 	args = append(args, this.keyspace)
 	args = append(args, idxs...)
-	return formatHint("NO_INDEX_FTS", args)
+	name := "NO_INDEX_FTS"
+	if this.avoid {
+		name = "AVOID_INDEX_FTS"
+	}
+	return formatHint(name, args)
 }
 
 func (this *HintNoFTSIndex) formatJSON() map[string]interface{} {
@@ -1002,11 +1051,13 @@ type HintNoNL struct {
 	keyspace string
 	state    HintState
 	err      string
+	avoid    bool
 }
 
-func NewNoNLHint(keyspace string) *HintNoNL {
+func NewNoNLHint(keyspace string, avoid bool) *HintNoNL {
 	return &HintNoNL{
 		keyspace: keyspace,
+		avoid:    avoid,
 	}
 }
 
@@ -1019,6 +1070,7 @@ func (this *HintNoNL) Copy() OptimHint {
 		keyspace: this.keyspace,
 		state:    this.state,
 		err:      this.err,
+		avoid:    this.avoid,
 	}
 }
 
@@ -1043,7 +1095,11 @@ func (this *HintNoNL) SetFollowed() {
 func (this *HintNoNL) SetNotFollowed() {
 	if this.state == HINT_STATE_UNKNOWN {
 		this.state = HINT_STATE_NOT_FOLLOWED
-		this.err = NO_NL_HINT_NOT_FOLLOWED
+		if this.avoid {
+			this.err = AVD_NL_HINT_NOT_FOLLOWED
+		} else {
+			this.err = NO_NL_HINT_NOT_FOLLOWED
+		}
 	}
 }
 
@@ -1062,13 +1118,21 @@ func (this *HintNoNL) sortString() string {
 
 func (this *HintNoNL) FormatHint(jsonStyle bool) string {
 	if jsonStyle {
+		key := "no_use_nl"
+		if this.avoid {
+			key = "avoid_nl"
+		}
 		hint := map[string]interface{}{
-			"no_use_nl": this.formatJSON(),
+			key: this.formatJSON(),
 		}
 		bytes, _ := json.Marshal(hint)
 		return string(bytes)
 	}
-	return formatHint("NO_USE_NL", []string{this.keyspace})
+	name := "NO_USE_NL"
+	if this.avoid {
+		name = "AVOID_NL"
+	}
+	return formatHint(name, []string{this.keyspace})
 }
 
 func (this *HintNoNL) formatJSON() map[string]interface{} {
@@ -1081,11 +1145,13 @@ type HintNoHash struct {
 	keyspace string
 	state    HintState
 	err      string
+	avoid    bool
 }
 
-func NewNoHashHint(keyspace string) *HintNoHash {
+func NewNoHashHint(keyspace string, avoid bool) *HintNoHash {
 	return &HintNoHash{
 		keyspace: keyspace,
+		avoid:    avoid,
 	}
 }
 
@@ -1094,10 +1160,11 @@ func (this *HintNoHash) Type() HintType {
 }
 
 func (this *HintNoHash) Copy() OptimHint {
-	return &HintHash{
+	return &HintNoHash{
 		keyspace: this.keyspace,
 		state:    this.state,
 		err:      this.err,
+		avoid:    this.avoid,
 	}
 }
 
@@ -1122,7 +1189,11 @@ func (this *HintNoHash) SetFollowed() {
 func (this *HintNoHash) SetNotFollowed() {
 	if this.state == HINT_STATE_UNKNOWN {
 		this.state = HINT_STATE_NOT_FOLLOWED
-		this.err = NO_HASH_HINT_NOT_FOLLOWED
+		if this.avoid {
+			this.err = AVD_HASH_HINT_NOT_FOLLOWED
+		} else {
+			this.err = NO_HASH_HINT_NOT_FOLLOWED
+		}
 	}
 }
 
@@ -1141,13 +1212,21 @@ func (this *HintNoHash) sortString() string {
 
 func (this *HintNoHash) FormatHint(jsonStyle bool) string {
 	if jsonStyle {
+		key := "no_use_hash"
+		if this.avoid {
+			key = "avoid_hash"
+		}
 		hint := map[string]interface{}{
-			"no_use_hash": this.formatJSON(),
+			key: this.formatJSON(),
 		}
 		bytes, _ := json.Marshal(hint)
 		return string(bytes)
 	}
-	return formatHint("NO_USE_HASH", []string{this.keyspace})
+	name := "NO_USE_HASH"
+	if this.avoid {
+		name = "AVOID_HASH"
+	}
+	return formatHint(name, []string{this.keyspace})
 }
 
 func (this *HintNoHash) formatJSON() map[string]interface{} {
@@ -1367,17 +1446,25 @@ func ParseObjectHints(object expression.Expression) []OptimHint {
 		case "index_fts":
 			hints, invalid = newFTSIndexHints(vval)
 		case "no_index":
-			hints, invalid = newNoIndexHints(vval)
+			hints, invalid = newNoIndexHints(vval, false)
+		case "avoid_index":
+			hints, invalid = newNoIndexHints(vval, true)
 		case "no_index_fts":
-			hints, invalid = newNoFTSIndexHints(vval)
+			hints, invalid = newNoFTSIndexHints(vval, false)
+		case "avoid_index_fts":
+			hints, invalid = newNoFTSIndexHints(vval, true)
 		case "use_nl":
 			hints, invalid = newNLHints(vval)
 		case "use_hash":
 			hints, invalid = newHashHints(vval)
 		case "no_use_nl":
-			hints, invalid = newNoNLHints(vval)
+			hints, invalid = newNoNLHints(vval, false)
+		case "avoid_nl":
+			hints, invalid = newNoNLHints(vval, true)
 		case "no_use_hash":
-			hints, invalid = newNoHashHints(vval)
+			hints, invalid = newNoHashHints(vval, false)
+		case "avoid_hash":
+			hints, invalid = newNoHashHints(vval, true)
 		case "ordered":
 			hints, invalid = newOrderedHint(vval)
 		default:
@@ -1407,14 +1494,14 @@ func ParseObjectHints(object expression.Expression) []OptimHint {
 }
 
 func newIndexHints(val value.Value) ([]OptimHint, bool) {
-	return newHints(val, procIndexHints, false)
+	return newHints(val, procIndexHints, false, false)
 }
 
-func newNoIndexHints(val value.Value) ([]OptimHint, bool) {
-	return newHints(val, procIndexHints, true)
+func newNoIndexHints(val value.Value, avoid bool) ([]OptimHint, bool) {
+	return newHints(val, procIndexHints, true, avoid)
 }
 
-func procIndexHints(fields map[string]interface{}, negative bool) (OptimHint, bool) {
+func procIndexHints(fields map[string]interface{}, negative, avoid bool) (OptimHint, bool) {
 	invalid := false
 	var keyspace string
 	var indexes []string
@@ -1455,20 +1542,20 @@ func procIndexHints(fields map[string]interface{}, negative bool) (OptimHint, bo
 	}
 
 	if negative {
-		return NewNoIndexHint(keyspace, indexes), false
+		return NewNoIndexHint(keyspace, indexes, avoid), false
 	}
 	return NewIndexHint(keyspace, indexes), false
 }
 
 func newFTSIndexHints(val value.Value) ([]OptimHint, bool) {
-	return newHints(val, procFTSIndexHints, false)
+	return newHints(val, procFTSIndexHints, false, false)
 }
 
-func newNoFTSIndexHints(val value.Value) ([]OptimHint, bool) {
-	return newHints(val, procFTSIndexHints, true)
+func newNoFTSIndexHints(val value.Value, avoid bool) ([]OptimHint, bool) {
+	return newHints(val, procFTSIndexHints, true, avoid)
 }
 
-func procFTSIndexHints(fields map[string]interface{}, negative bool) (OptimHint, bool) {
+func procFTSIndexHints(fields map[string]interface{}, negative, avoid bool) (OptimHint, bool) {
 	invalid := false
 	var keyspace string
 	var indexes []string
@@ -1509,20 +1596,20 @@ func procFTSIndexHints(fields map[string]interface{}, negative bool) (OptimHint,
 	}
 
 	if negative {
-		return NewNoFTSIndexHint(keyspace, indexes), false
+		return NewNoFTSIndexHint(keyspace, indexes, avoid), false
 	}
 	return NewFTSIndexHint(keyspace, indexes), false
 }
 
 func newNLHints(val value.Value) ([]OptimHint, bool) {
-	return newHints(val, procNLHints, false)
+	return newHints(val, procNLHints, false, false)
 }
 
-func newNoNLHints(val value.Value) ([]OptimHint, bool) {
-	return newHints(val, procNLHints, true)
+func newNoNLHints(val value.Value, avoid bool) ([]OptimHint, bool) {
+	return newHints(val, procNLHints, true, avoid)
 }
 
-func procNLHints(fields map[string]interface{}, negative bool) (OptimHint, bool) {
+func procNLHints(fields map[string]interface{}, negative, avoid bool) (OptimHint, bool) {
 	invalid := false
 	var keyspace string
 	for k, v := range fields {
@@ -1542,20 +1629,20 @@ func procNLHints(fields map[string]interface{}, negative bool) (OptimHint, bool)
 	}
 
 	if negative {
-		return NewNoNLHint(keyspace), false
+		return NewNoNLHint(keyspace, avoid), false
 	}
 	return NewNLHint(keyspace), false
 }
 
 func newHashHints(val value.Value) ([]OptimHint, bool) {
-	return newHints(val, procHashHints, false)
+	return newHints(val, procHashHints, false, false)
 }
 
-func newNoHashHints(val value.Value) ([]OptimHint, bool) {
-	return newHints(val, procHashHints, true)
+func newNoHashHints(val value.Value, avoid bool) ([]OptimHint, bool) {
+	return newHints(val, procHashHints, true, avoid)
 }
 
-func procHashHints(fields map[string]interface{}, negative bool) (OptimHint, bool) {
+func procHashHints(fields map[string]interface{}, negative, avoid bool) (OptimHint, bool) {
 	invalid := false
 	var keyspace string
 	var option HashOption = HASH_OPTION_NONE
@@ -1592,19 +1679,19 @@ func procHashHints(fields map[string]interface{}, negative bool) (OptimHint, boo
 	}
 
 	if negative {
-		return NewNoHashHint(keyspace), false
+		return NewNoHashHint(keyspace, avoid), false
 	}
 	return NewHashHint(keyspace, option), false
 }
 
-func newHints(val value.Value, procFunc func(map[string]interface{}, bool) (OptimHint, bool), negative bool) ([]OptimHint, bool) {
+func newHints(val value.Value, procFunc func(map[string]interface{}, bool, bool) (OptimHint, bool), negative, avoid bool) ([]OptimHint, bool) {
 
 	hints := make([]OptimHint, 0, 1)
 	actual := val.Actual()
 	switch actual := actual.(type) {
 	case []interface{}:
 		for _, a := range actual {
-			ahints, invalid := newHints(value.NewValue(a), procFunc, negative)
+			ahints, invalid := newHints(value.NewValue(a), procFunc, negative, avoid)
 			if invalid {
 				return nil, true
 			}
@@ -1613,7 +1700,7 @@ func newHints(val value.Value, procFunc func(map[string]interface{}, bool) (Opti
 			}
 		}
 	case map[string]interface{}:
-		hint, invalid := procFunc(actual, negative)
+		hint, invalid := procFunc(actual, negative, avoid)
 		if invalid {
 			return nil, true
 		}
