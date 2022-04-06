@@ -78,6 +78,12 @@ func (this *IndexScan3) RunOnce(context *Context, parent value.Value) {
 		defer this.conn.Dispose()  // Dispose of the connection
 		defer this.conn.SendStop() // Notify index that I have stopped
 
+		filter := this.plan.Filter()
+		if filter != nil {
+			filter.EnableInlistHash(context)
+			defer filter.ResetMemory(context)
+		}
+
 		go func() {
 			primeStack()
 			this.scan(context, this.conn, parent)
@@ -143,8 +149,8 @@ func (this *IndexScan3) RunOnce(context *Context, parent value.Value) {
 
 							av.SetField(this.plan.Term().Alias(), av)
 
-							if this.plan.Filter() != nil {
-								result, err := this.plan.Filter().Evaluate(av, context)
+							if filter != nil {
+								result, err := filter.Evaluate(av, context)
 								if err != nil {
 									context.Error(errors.NewEvaluationError(err, "filter"))
 									return
