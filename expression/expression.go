@@ -311,9 +311,7 @@ func Copy(expr Expression) Expression {
 		return nil
 	}
 
-	rv := expr.Copy()
-	rv.BaseCopy(expr)
-	return rv
+	return expr.Copy()
 }
 
 func CopyExpressions(exprs Expressions) Expressions {

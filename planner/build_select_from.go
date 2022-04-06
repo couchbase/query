@@ -1092,7 +1092,7 @@ func (this *builder) getFilter(alias string, join bool, onclause expression.Expr
 		fltr := fl.FltrExpr()
 		origFltr := fl.OrigExpr()
 		if origFltr != nil {
-			terms = append(terms, expression.Copy(origFltr))
+			terms = append(terms, origFltr.Copy())
 			if this.filter != nil {
 				this.filter, err = expression.RemoveExpr(this.filter, origFltr)
 				if err != nil {
@@ -1100,7 +1100,7 @@ func (this *builder) getFilter(alias string, join bool, onclause expression.Expr
 				}
 			}
 		} else if !base.IsDerivedExpr(fltr) {
-			terms = append(terms, expression.Copy(fltr))
+			terms = append(terms, fltr.Copy())
 		}
 
 		if doSelec && !fl.HasPlanFlags() {
