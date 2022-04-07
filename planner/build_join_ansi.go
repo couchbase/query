@@ -671,7 +671,7 @@ func (this *builder) processOnclause(alias string, onclause expression.Expressio
 		// for each keyspace, as a result, both ON clause filters and WHERE clause
 		// filters will be used for index selection for the inner keyspace, which
 		// is ok for outer joins.
-		_, _, err = this.processPredicate(onclause, true)
+		_, err = this.processPredicate(onclause, true)
 		if err != nil {
 			return err
 		}

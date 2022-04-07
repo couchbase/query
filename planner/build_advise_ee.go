@@ -413,7 +413,7 @@ func (this *builder) collectPredicates(baseKeyspace *base.BaseKeyspace, keyspace
 			for _, op := range orTerms.Operands() {
 				baseKeyspacesCopy := base.CopyBaseKeyspaces(this.baseKeyspaces)
 
-				_, _, err := ClassifyExpr(op, baseKeyspacesCopy, this.keyspaceNames,
+				_, err := ClassifyExpr(op, baseKeyspacesCopy, this.keyspaceNames,
 					ansijoin, this.useCBO, advisorValidate, this.context)
 				if err != nil {
 					continue outer
@@ -435,7 +435,7 @@ func (this *builder) collectPredicates(baseKeyspace *base.BaseKeyspace, keyspace
 		} else {
 			//This is for collecting predicates for build_join_index.
 			baseKeyspacesCopy := base.CopyBaseKeyspaces(this.baseKeyspaces)
-			_, _, err := ClassifyExpr(pred, baseKeyspacesCopy, this.keyspaceNames,
+			_, err := ClassifyExpr(pred, baseKeyspacesCopy, this.keyspaceNames,
 				false, this.useCBO, advisorValidate, this.context)
 			if err != nil {
 				return err

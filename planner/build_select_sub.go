@@ -88,9 +88,10 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 		this.setBuilderFlag(BUILDER_HAS_ORDER)
 	}
 
+	var err error
+
 	// Inline LET expressions for index selection
 	if node.Let() != nil && node.Where() != nil {
-		var err error
 		inliner := expression.NewInliner(node.Let().Mappings())
 		level := getMaxLevelOfLetBindings(node.Let())
 		this.where, err = dereferenceLet(node.Where().Copy(), inliner, level)
@@ -101,10 +102,14 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 		this.where = node.Where()
 	}
 
-	if node.Where() != nil {
-		this.filter = node.Where().Copy()
-	} else {
-		this.filter = nil
+	this.where, err = this.getWhere(this.where)
+	if err != nil {
+		return nil, err
+	}
+
+	this.filter = nil
+	if this.where != nil {
+		this.filter = this.where.Copy()
 	}
 
 	this.extractLetGroupProjOrder(node.Let(), nil, node.Projection(), this.order, nil)

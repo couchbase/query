@@ -19,7 +19,6 @@ import (
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/plan"
 	base "github.com/couchbase/query/plannerbase"
-	"github.com/couchbase/query/value"
 )
 
 func (this *builder) selectScan(keyspace datastore.Keyspace, node *algebra.KeyspaceTerm,
@@ -487,29 +486,42 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm,
 }
 
 func (this *builder) processPredicate(pred expression.Expression, isOnclause bool) (
-	value.Value, expression.Expression, error) {
+	expression.Expression, error) {
 
 	return ClassifyExpr(pred, this.baseKeyspaces, this.keyspaceNames, isOnclause, this.useCBO,
 		this.advisorValidate(), this.context)
 }
 
 func (this *builder) processWhere(where expression.Expression) (err error) {
-	var constant value.Value
-	var extraExpr expression.Expression
-	constant, extraExpr, err = this.processPredicate(where, false)
-	if err != nil {
+	if !this.falseWhereClause() {
+		var extraExpr expression.Expression
+		extraExpr, err = this.processPredicate(where, false)
+		if err != nil {
+			return
+		}
+		if extraExpr != nil && extraExpr.Value() == nil {
+			this.setBuilderFlag(BUILDER_HAS_EXTRA_FLTR)
+		}
+	}
+
+	return
+}
+
+func (this *builder) getWhere(whereExpr expression.Expression) (where expression.Expression, err error) {
+	where, err = expression.RemoveConstants(whereExpr)
+	if err != nil || where == nil {
 		return
 	}
+
 	// Handle constant TRUE/FALSE predicate
+	constant := where.Value()
 	if constant != nil {
 		if constant.Truth() {
 			this.setTrueWhereClause()
 		} else {
 			this.setFalseWhereClause()
 		}
-	}
-	if extraExpr != nil {
-		this.setBuilderFlag(BUILDER_HAS_EXTRA_FLTR)
+		where = nil
 	}
 
 	return

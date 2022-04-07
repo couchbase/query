@@ -83,21 +83,24 @@ func (this *builder) visitFrom(node *algebra.Subselect, group *algebra.Group,
 			if this.falseWhereClause() {
 				this.pushableOnclause = nil
 			} else {
-				constant, extraExpr, err := this.processPredicate(this.pushableOnclause, true)
+				extraExpr, err := this.processPredicate(this.pushableOnclause, true)
 				if err != nil {
 					return err
 				}
-				if constant != nil {
-					if constant.Truth() {
-						this.pushableOnclause = nil
-					} else {
-						// pushable on clause behaves like where clause
-						this.unsetTrueWhereClause()
-						this.setFalseWhereClause()
-					}
-				}
 				if extraExpr != nil {
-					this.setBuilderFlag(BUILDER_HAS_EXTRA_FLTR)
+					constant := extraExpr.Value()
+					if constant != nil {
+						if constant.Truth() {
+							this.pushableOnclause = nil
+						} else {
+							// pushable on clause behaves like where clause
+							this.unsetTrueWhereClause()
+							this.setFalseWhereClause()
+
+						}
+					} else {
+						this.setBuilderFlag(BUILDER_HAS_EXTRA_FLTR)
+					}
 				}
 			}
 		}
@@ -122,11 +125,11 @@ func (this *builder) visitFrom(node *algebra.Subselect, group *algebra.Group,
 					this.pushableOnclause = aoj2aij.pushableOnclause
 				}
 
-				_, extraExpr, err := this.processPredicate(aoj2aij.pushableOnclause, true)
+				extraExpr, err := this.processPredicate(aoj2aij.pushableOnclause, true)
 				if err != nil {
 					return err
 				}
-				if extraExpr != nil {
+				if extraExpr != nil && extraExpr.Value() == nil {
 					this.setBuilderFlag(BUILDER_HAS_EXTRA_FLTR)
 				}
 			}

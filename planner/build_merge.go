@@ -45,7 +45,7 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 
 	if !stmt.IsOnKey() && !outer {
 		// setup usable predicate from ON-clause for source scan
-		_, _, err = this.processPredicate(stmt.On(), true)
+		_, err = this.processPredicate(stmt.On(), true)
 		if err != nil {
 			return nil, err
 		}
@@ -198,7 +198,10 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 			size = targetSize
 		}
 		cardinality = matchCard
-		updateFilter = act.Where()
+		updateFilter, err = expression.RemoveConstants(act.Where())
+		if err != nil {
+			return nil, err
+		}
 		if updateFilter != nil {
 			cost, cardinality, size, frCost = this.addMergeFilterCost(updateFilter, ksAlias, cost, cardinality, size, frCost)
 		}
@@ -250,7 +253,10 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 			size = targetSize
 		}
 		cardinality = matchCard
-		deleteFilter = act.Where()
+		deleteFilter, err = expression.RemoveConstants(act.Where())
+		if err != nil {
+			return nil, err
+		}
 		if deleteFilter != nil {
 			cost, cardinality, size, frCost = this.addMergeFilterCost(deleteFilter, ksAlias, cost, cardinality, size, frCost)
 		}
@@ -281,7 +287,10 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 			size = targetSize
 		}
 		cardinality = nonMatchCard
-		insertFilter = act.Where()
+		insertFilter, err = expression.RemoveConstants(act.Where())
+		if err != nil {
+			return nil, err
+		}
 		if insertFilter != nil {
 			cost, cardinality, size, frCost = this.addMergeFilterCost(insertFilter, ksAlias, cost, cardinality, size, frCost)
 		}

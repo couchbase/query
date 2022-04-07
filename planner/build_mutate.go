@@ -63,7 +63,11 @@ func (this *builder) beginMutate(keyspace datastore.Keyspace, ksref *algebra.Key
 
 	// Process where clause
 	if this.where != nil {
-		err := this.processWhere(this.where)
+		var err error
+		this.where, err = this.getWhere(this.where)
+		if err == nil && this.where != nil {
+			err = this.processWhere(this.where)
+		}
 		if err != nil {
 			return nil, err
 		}

@@ -132,7 +132,7 @@ func (this *builder) buildOrScanNoPushdowns(node *algebra.KeyspaceTerm, id expre
 
 		var extraExpr expression.Expression
 		baseKeyspaces := base.CopyBaseKeyspaces(this.baseKeyspaces)
-		_, extraExpr, err = ClassifyExpr(op, baseKeyspaces, this.keyspaceNames, join, this.useCBO,
+		extraExpr, err = ClassifyExpr(op, baseKeyspaces, this.keyspaceNames, join, this.useCBO,
 			this.advisorValidate(), this.context)
 		if err != nil {
 			return nil, 0, err
@@ -152,7 +152,7 @@ func (this *builder) buildOrScanNoPushdowns(node *algebra.KeyspaceTerm, id expre
 			}
 
 			if baseKeyspace.DnfPred() == nil {
-				if join || extraExpr != nil {
+				if join || (extraExpr != nil && extraExpr.Value() == nil) {
 					// if an arm of OR does not reference the keyspace,
 					// which could happen if:
 					//   - in case of ANSI JOIN, an arm references other keyspaces

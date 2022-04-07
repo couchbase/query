@@ -14,16 +14,15 @@ import (
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	base "github.com/couchbase/query/plannerbase"
-	"github.com/couchbase/query/value"
 )
 
 // breaks expr on AND boundaries and classify into appropriate keyspaces
 func ClassifyExpr(expr expression.Expression, baseKeyspaces map[string]*base.BaseKeyspace,
 	keyspaceNames map[string]string, isOnclause, doSelec, advisorValidate bool,
-	context *PrepareContext) (value.Value, expression.Expression, error) {
+	context *PrepareContext) (expression.Expression, error) {
 
 	if len(baseKeyspaces) == 0 {
-		return nil, nil, errors.NewPlanError(nil, "ClassifyExpr: invalid argument baseKeyspaces")
+		return nil, errors.NewPlanError(nil, "ClassifyExpr: invalid argument baseKeyspaces")
 	}
 
 	// make sure document count is available
@@ -40,31 +39,20 @@ func ClassifyExpr(expr expression.Expression, baseKeyspaces map[string]*base.Bas
 
 func ClassifyExprKeyspace(expr expression.Expression, baseKeyspaces map[string]*base.BaseKeyspace,
 	keyspaceNames map[string]string, alias string, isOnclause, doSelec, advisorValidate bool,
-	context *PrepareContext) (value.Value, expression.Expression, error) {
+	context *PrepareContext) (expression.Expression, error) {
 
 	classifier := newExprClassifier(baseKeyspaces, keyspaceNames, alias, isOnclause,
 		doSelec, advisorValidate, context)
 	_, err := expr.Accept(classifier)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	if doSelec {
 		optCheckRangeExprs(baseKeyspaces, advisorValidate, context)
 	}
 
-	var constant value.Value
-	if classifier.constant != nil {
-		if classifier.constant.Truth() {
-			if !classifier.nonConstant {
-				constant = classifier.constant
-			}
-		} else {
-			constant = classifier.constant
-		}
-	}
-
-	return constant, classifier.extraExpr, nil
+	return classifier.extraExpr, nil
 }
 
 type exprClassifier struct {
@@ -76,8 +64,6 @@ type exprClassifier struct {
 	recursionJoin   bool
 	recurseJoinExpr expression.Expression
 	isOnclause      bool
-	nonConstant     bool
-	constant        value.Value
 	extraExpr       expression.Expression
 	doSelec         bool
 	advisorValidate bool
@@ -98,20 +84,11 @@ func newExprClassifier(baseKeyspaces map[string]*base.BaseKeyspace, keyspaceName
 	}
 }
 
-func (this *exprClassifier) addConstant(result bool) {
-	if this.constant == nil {
-		if result {
-			this.constant = value.TRUE_VALUE
-		} else {
-			this.constant = value.FALSE_VALUE
-		}
+func (this *exprClassifier) addConstant(expr expression.Expression) {
+	if this.extraExpr == nil {
+		this.extraExpr = expr
 	} else {
-		// true AND true is true, true AND false is false, false AND false is false
-		// thus if result is true, no change to existing value
-		// if result is false, change existing constant to FALSE
-		if !result {
-			this.constant = value.FALSE_VALUE
-		}
+		this.extraExpr = expression.NewAnd(this.extraExpr, expr)
 	}
 }
 
@@ -137,7 +114,7 @@ func (this *exprClassifier) VisitOr(expr *expression.Or) (interface{}, error) {
 
 	or, truth := expression.FlattenOr(expr)
 	if truth {
-		this.addConstant(true)
+		this.addConstant(expr)
 		return expression.TRUE_EXPR, nil
 	}
 
@@ -165,7 +142,7 @@ func (this *exprClassifier) VisitOr(expr *expression.Or) (interface{}, error) {
 	if newExpr {
 		if len(orTerms) == 0 {
 			// expr is FALSE if all subterms skipped
-			this.addConstant(false)
+			this.addConstant(expr)
 			return expression.FALSE_EXPR, nil
 		} else {
 			return this.visitDefault(expression.NewOr(orTerms...))
@@ -380,32 +357,14 @@ func (this *exprClassifier) VisitAll(pred *expression.All) (interface{}, error) 
 }
 
 func (this *exprClassifier) visitDefault(expr expression.Expression) (interface{}, error) {
-
-	cpred := expr.Value()
-	if cpred != nil {
-		if cpred.Truth() {
-			this.addConstant(true)
-		} else {
-			this.addConstant(false)
-		}
-		return expr, nil
-	} else {
-		this.nonConstant = true
-	}
-
 	keyspaces, err := expression.CountKeySpaces(expr, this.keyspaceNames)
 	if err != nil {
 		return nil, err
 	}
 
 	if len(keyspaces) < 1 {
-		// remember filters that does not attach to a keyspace, but is not
-		// a "constant" filter (neither TRUE nor FALSE, which are handled above)
-		if this.extraExpr == nil {
-			this.extraExpr = expr
-		} else {
-			this.extraExpr = expression.NewAnd(this.extraExpr, expr)
-		}
+		// remember filters that do not reference any keyspace
+		this.addConstant(expr)
 		return expr, nil
 	}
 
@@ -556,7 +515,7 @@ func (this *exprClassifier) extractExpr(or *expression.Or, keyspaceName string) 
 	var isJoin = false
 	for _, op := range orTerms.Operands() {
 		baseKeyspaces := base.CopyBaseKeyspaces(this.baseKeyspaces)
-		_, _, err := ClassifyExprKeyspace(op, baseKeyspaces, this.keyspaceNames, this.alias,
+		_, err := ClassifyExprKeyspace(op, baseKeyspaces, this.keyspaceNames, this.alias,
 			this.isOnclause, this.doSelec, this.advisorValidate, this.context)
 		if err != nil {
 			return nil, nil, false, err
