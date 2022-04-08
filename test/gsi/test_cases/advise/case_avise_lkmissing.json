@@ -11,13 +11,13 @@
                 "recommended_indexes": {
                     "covering_indexes": [
                         {
-                            "index_statement": "CREATE INDEX adv_city_state ON `shellTest`(`city` MISSING,`state`)",
+                            "index_statement": "CREATE INDEX adv_city_state ON `shellTest`(`city` ALLOW MISSING,`state`)",
                             "keyspace_alias": "shellTest_l"
                         }
                     ],
                     "indexes": [
                         {
-                            "index_statement": "CREATE INDEX adv_city_state ON `shellTest`(`city` MISSING,`state`)",
+                            "index_statement": "CREATE INDEX adv_city_state ON `shellTest`(`city` ALLOW MISSING,`state`)",
                             "keyspace_alias": "shellTest_l",
                             "recommending_rule": "Leading Index Key Missing."
                         }
@@ -41,7 +41,7 @@
                 "recommended_indexes": {
                     "indexes": [
                         {
-                            "index_statement": "CREATE INDEX adv_state ON `shellTest`(`state` MISSING)",
+                            "index_statement": "CREATE INDEX adv_state ON `shellTest`(`state` ALLOW MISSING)",
                             "keyspace_alias": "shellTest_l",
                             "recommending_rule": "Leading Index Key Missing."
                         }
@@ -66,13 +66,13 @@
                     "covering_indexes": [
                         {
                             "index_property": "FULL GROUPBY & AGGREGATES pushdown",
-                            "index_statement": "CREATE INDEX adv_city_state ON `shellTest`(`city` MISSING,`state`)",
+                            "index_statement": "CREATE INDEX adv_city_state ON `shellTest`(`city` ALLOW MISSING,`state`)",
                             "keyspace_alias": "shellTest_l"
                         }
                     ],
                     "indexes": [
                         {
-                            "index_statement": "CREATE INDEX adv_city_state ON `shellTest`(`city` MISSING,`state`)",
+                            "index_statement": "CREATE INDEX adv_city_state ON `shellTest`(`city` ALLOW MISSING,`state`)",
                             "keyspace_alias": "shellTest_l",
                             "recommending_rule": "Leading Index Key Missing."
                         }
@@ -97,13 +97,13 @@
                     "covering_indexes": [
                         {
                             "index_property": "FULL GROUPBY & AGGREGATES pushdown, ORDER pushdown, OFFSET pushdown, LIMIT pushdown",
-                            "index_statement": "CREATE INDEX adv_city_stateDESC ON `shellTest`(`city` MISSING,`state` DESC)",
+                            "index_statement": "CREATE INDEX adv_city_stateDESC ON `shellTest`(`city` ALLOW MISSING,`state` DESC)",
                             "keyspace_alias": "shellTest_l"
                         }
                     ],
                     "indexes": [
                         {
-                            "index_statement": "CREATE INDEX adv_city_state ON `shellTest`(`city` MISSING,`state`)",
+                            "index_statement": "CREATE INDEX adv_city_state ON `shellTest`(`city` ALLOW MISSING,`state`)",
                             "keyspace_alias": "shellTest_l",
                             "recommending_rule": "Leading Index Key Missing."
                         }
@@ -128,13 +128,13 @@
                     "covering_indexes": [
                         {
                             "index_property": "ORDER pushdown, OFFSET pushdown, LIMIT pushdown",
-                            "index_statement": "CREATE INDEX adv_city_stateDESC ON `shellTest`(`city` MISSING,`state` DESC)",
+                            "index_statement": "CREATE INDEX adv_city_stateDESC ON `shellTest`(`city` ALLOW MISSING,`state` DESC)",
                             "keyspace_alias": "shellTest_l"
                         }
                     ],
                     "indexes": [
                         {
-                            "index_statement": "CREATE INDEX adv_city_state ON `shellTest`(`city` MISSING,`state`)",
+                            "index_statement": "CREATE INDEX adv_city_state ON `shellTest`(`city` ALLOW MISSING,`state`)",
                             "keyspace_alias": "shellTest_l",
                             "recommending_rule": "Leading Index Key Missing."
                         }
@@ -159,11 +159,11 @@
                     "indexes": [
                         {
                             "index_property": "ORDER pushdown, OFFSET pushdown, LIMIT pushdown",
-                            "index_statement": "CREATE INDEX adv_stateDESC_city ON `shellTest`(`state` DESC MISSING,`city`)",
+                            "index_statement": "CREATE INDEX adv_stateDESC_city ON `shellTest`(`state` DESC ALLOW MISSING,`city`)",
                             "keyspace_alias": "shellTest_l"
                         },
                         {
-                            "index_statement": "CREATE INDEX adv_city_state ON `shellTest`(`city` MISSING,`state`)",
+                            "index_statement": "CREATE INDEX adv_city_state ON `shellTest`(`city` ALLOW MISSING,`state`)",
                             "keyspace_alias": "shellTest_l",
                             "recommending_rule": "Leading Index Key Missing."
                         }

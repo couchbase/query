@@ -111,6 +111,7 @@ tokOffset    int
 %token _ERROR_  // used by the scanner to flag errors
 %token ADVISE
 %token ALL
+%token ALLOW
 %token ALTER
 %token ANALYZE
 %token AND
@@ -2909,6 +2910,9 @@ DESC
 { $$ = algebra.IK_DESC }
 |
 MISSING
+{ $$ = algebra.IK_MISSING }
+|
+ALLOW MISSING
 { $$ = algebra.IK_MISSING }
 ;
 
