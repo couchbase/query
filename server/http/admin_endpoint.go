@@ -86,25 +86,10 @@ func writeError(w http.ResponseWriter, err errors.Error) int {
 		http.Error(w, er.Error(), http.StatusInternalServerError)
 		return http.StatusInternalServerError
 	}
-	status := mapErrorToHttpStatus(err)
+	status := mapErrorToHttpResponse(err, http.StatusInternalServerError)
 	w.WriteHeader(status)
 	w.Write(buf)
 	return status
-}
-
-func mapErrorToHttpStatus(err errors.Error) int {
-	switch err.Code() {
-	case errors.E_ADMIN_AUTH:
-		return http.StatusUnauthorized
-	case errors.E_ADMIN_SSL_NOT_ENABLED:
-		return http.StatusNotFound
-	case errors.E_DATASTORE_AUTHORIZATION:
-		return http.StatusUnauthorized
-	case errors.E_ADMIN_CREDS:
-		return http.StatusBadRequest
-	default:
-		return http.StatusInternalServerError
-	}
 }
 
 func AdminPrefix() string {

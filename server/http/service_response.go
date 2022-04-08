@@ -95,6 +95,12 @@ func mapErrorToHttpResponse(err errors.Error, def int) int {
 		return http.StatusUnprocessableEntity
 	case errors.E_DATASTORE_AUTHORIZATION:
 		return http.StatusUnauthorized
+	case errors.E_ADMIN_AUTH:
+		return http.StatusUnauthorized
+	case errors.E_ADMIN_SSL_NOT_ENABLED:
+		return http.StatusNotFound
+	case errors.E_ADMIN_CREDS:
+		return http.StatusBadRequest
 	default:
 		return def
 	}
