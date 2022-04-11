@@ -66,14 +66,11 @@ func NewFilter(fltrExpr, origExpr expression.Expression, keyspaces, origKeyspace
 
 func (this *Filter) Copy() *Filter {
 	rv := &Filter{
-		fltrExpr:  this.fltrExpr.Copy(),
+		fltrExpr:  expression.Copy(this.fltrExpr),
+		origExpr:  expression.Copy(this.origExpr),
 		fltrFlags: this.fltrFlags,
 		selec:     this.selec,
 		arrSelec:  this.arrSelec,
-	}
-
-	if this.origExpr != nil {
-		rv.origExpr = this.origExpr.Copy()
 	}
 
 	rv.keyspaces = make(map[string]string, len(this.keyspaces))
@@ -222,8 +219,21 @@ func (this *Filter) IsPostjoinFilter(onclause expression.Expression, outer bool)
 		if SubsetOf(onclause, this.fltrExpr) {
 			return false
 		}
-		if this.origExpr != nil && SubsetOf(onclause, this.origExpr) {
-			return false
+		if this.origExpr != nil {
+			if SubsetOf(onclause, this.origExpr) {
+				return false
+			}
+		} else if IsDerivedExpr(this.fltrExpr) {
+			var err error
+			dnfExpr := onclause.Copy()
+			dnf := NewDNF(dnfExpr, true, false)
+			dnfExpr, err = dnf.Map(dnfExpr)
+			if err != nil {
+				return false
+			}
+			if SubsetOf(dnfExpr, this.fltrExpr) {
+				return false
+			}
 		}
 
 		// if it's not part of the current ON-clause, it must be specified

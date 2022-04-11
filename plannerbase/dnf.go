@@ -40,8 +40,13 @@ func (this *DNF) VisitBetween(expr *expression.Between) (interface{}, error) {
 		return nil, err
 	}
 
-	exp := expression.NewAnd(expression.NewGE(expr.First(), expr.Second()),
-		expression.NewLE(expr.First(), expr.Third()))
+	exp1 := expression.NewGE(expr.First(), expr.Second())
+	exp2 := expression.NewLE(expr.First(), expr.Third())
+	exp := expression.NewAnd(exp1, exp2)
+	exp1.SetExprFlag(expression.EXPR_DERIVED_RANGE1)
+	exp2.SetExprFlag(expression.EXPR_DERIVED_RANGE2)
+	exp.SetExprFlag(expression.EXPR_DERIVED_RANGE)
+
 	return exp, nil
 }
 
