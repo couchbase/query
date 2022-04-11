@@ -510,7 +510,7 @@
                 "recommended_indexes": {
                     "indexes": [
                         {
-                            "index_statement": "CREATE INDEX adv_type ON `shellTest`(`type` ALLOW MISSING)",
+                            "index_statement": "CREATE INDEX adv_type ON `shellTest`(`type` INCLUDE MISSING)",
                             "keyspace_alias": "shellTest",
                             "recommending_rule": "Leading Index Key Missing."
                         }
@@ -683,7 +683,7 @@
                 "recommended_indexes": {
                     "indexes": [
                         {
-                            "index_statement": "CREATE INDEX adv_type ON `shellTest`(`type` ALLOW MISSING)",
+                            "index_statement": "CREATE INDEX adv_type ON `shellTest`(`type` INCLUDE MISSING)",
                             "keyspace_alias": "shellTest",
                             "recommending_rule": "Leading Index Key Missing."
                         }
