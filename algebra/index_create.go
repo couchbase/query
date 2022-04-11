@@ -291,7 +291,7 @@ func (this *IndexKeyTerm) String(pos int) string {
 	s := this.expr.String()
 
 	if pos == 0 && this.HasAttribute(IK_MISSING) {
-		s += " ALLOW MISSING"
+		s += " INCLUDE MISSING"
 	}
 
 	if this.HasAttribute(IK_DESC) {

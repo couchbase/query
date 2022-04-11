@@ -131,7 +131,6 @@
     return ADVISE
 }
 /[aA][lL][lL]/                   { yylex.logToken(yylex.Text(), "ALL"); return ALL }
-/[aA][lL][lL][oO][wW]/           { yylex.logToken(yylex.Text(), "ALLOW"); return ALLOW }
 /[aA][lL][tT][eE][rR]/           { yylex.logToken(yylex.Text(), "ALTER"); return ALTER }
 /[aA][nN][aA][lL][yY][zZ][eE]/   { yylex.logToken(yylex.Text(), "ANALYZE"); return ANALYZE }
 /[aA][nN][dD]/                   { yylex.logToken(yylex.Text(), "AND"); return AND }

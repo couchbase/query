@@ -39,8 +39,8 @@ func TestLkMissing(t *testing.T) {
 		"CREATE INDEX %s ON %s(team, fname DESC, lname);",
 		"CREATE INDEX %s ON %s(ALL ARRAY FLATTEN_KEYS(c.id MISSING, c.type, c.default) FOR c IN contacts END, fname, lname, team)",
 		"CREATE INDEX %s ON %s(ALL ARRAY FLATTEN_KEYS(c.id, c.type, c.default) FOR c IN contacts END, team)",
-		"CREATE INDEX %s ON %s(fname MISSING DESC, lname, team);",
-		"CREATE INDEX %s ON %s(fname MISSING DESC, lname, team, DISTINCT ARRAY FLATTEN_KEYS(v.id, v.type, v.default) FOR v IN contacts END);",
+		"CREATE INDEX %s ON %s(fname INCLUDE MISSING DESC, lname, team);",
+		"CREATE INDEX %s ON %s(fname INCLUDE MISSING DESC, lname, team, DISTINCT ARRAY FLATTEN_KEYS(v.id, v.type, v.default) FOR v IN contacts END);",
 		"CREATE INDEX %s ON %s(city, state);",
 	}
 
