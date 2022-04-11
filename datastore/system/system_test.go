@@ -54,10 +54,6 @@ func (ci *queryContextImpl) TxDataVal() value.Value {
 	return nil
 }
 
-func (ci *queryContextImpl) AuthenticatedUsers() []string {
-	return []string{"local:ivanivanov", "local:petrpetrov"}
-}
-
 func (ci *queryContextImpl) Warning(warn errors.Error) {
 	ci.t.Logf("datastore warning: %v", warn)
 }
@@ -152,7 +148,12 @@ func TestSystem(t *testing.T) {
 	}
 
 	// Expect count of 2 for the my_user_info keyspace
-	mui_c, err := mui.Count(&queryContextImpl{t: t})
+	mui_c, err := mui.Count(&queryContextImpl{
+		t: t,
+		creds: &auth.Credentials{
+			AuthenticatedUsers: auth.AuthenticatedUsers{"local:ivanivanov", "local:petrpetrov"},
+		},
+	})
 	if err != nil || mui_c != 2 {
 		t.Fatalf("failed to get expect my_user_info keyspace count %v", err)
 	}

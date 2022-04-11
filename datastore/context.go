@@ -62,7 +62,6 @@ type QueryContext interface {
 	GetReqDeadline() time.Time
 	UseReplica() bool
 	Credentials() *auth.Credentials
-	AuthenticatedUsers() []string
 	Warning(errors.Error)
 	Error(errors.Error)
 	GetTxContext() interface{}
@@ -79,10 +78,6 @@ type queryContextImpl struct {
 
 func (ci *queryContextImpl) Credentials() *auth.Credentials {
 	return auth.NewCredentials()
-}
-
-func (ci *queryContextImpl) AuthenticatedUsers() []string {
-	return make([]string, 0, 16)
 }
 
 func (ci *queryContextImpl) Warning(err errors.Error) {

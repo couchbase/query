@@ -50,10 +50,6 @@ func (this *IndexContext) GetTimeout() time.Duration {
 	return time.Duration(0)
 }
 
-func (this *IndexContext) AuthenticatedUsers() []string {
-	return []string{"NEVER_USED"}
-}
-
 func (this *IndexContext) Credentials() *auth.Credentials {
 	return nil
 }

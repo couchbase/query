@@ -182,7 +182,6 @@ type Context struct {
 	subplans            *subqueryMap
 	subresults          *subqueryMap
 	httpRequest         *http.Request
-	authenticatedUsers  auth.AuthenticatedUsers
 	mutex               sync.RWMutex
 	whitelist           map[string]interface{}
 	inlistHashMap       map[*expression.In]*expression.InlistHash
@@ -472,12 +471,6 @@ func (this *Context) SetScanConsistency(consistency, originalConsistency datasto
 
 func (this *Context) ScanVectorSource() timestamp.ScanVectorSource {
 	return this.scanVectorSource
-}
-
-// Return []string rather than datastore.AuthenticatedUsers to avoid a circular dependency
-// in /expression
-func (this *Context) AuthenticatedUsers() []string {
-	return this.authenticatedUsers
 }
 
 func (this *Context) GetScanCap() int64 {

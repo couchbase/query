@@ -509,7 +509,7 @@ func (this *CurrentUsers) Evaluate(item value.Value, context Context) (value.Val
 	if context == nil {
 		return nil, errors.NewNilEvaluateParamError("context")
 	}
-	authUsers := context.AuthenticatedUsers()
+	authUsers := context.Credentials().AuthenticatedUsers
 	arr := make([]interface{}, len(authUsers))
 	for i, user := range authUsers {
 		arr[i] = user

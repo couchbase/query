@@ -98,13 +98,12 @@ func (this *Authorize) RunOnce(context *Context, parent value.Value) {
 				return
 			}
 
-			authenticatedUsers, err := ds.Authorize(privs, context.Credentials())
+			_, err := ds.Authorize(privs, context.Credentials())
 			if err != nil {
 				context.Fatal(err)
 				this.fail(context)
 				return
 			}
-			context.authenticatedUsers = authenticatedUsers
 		}
 
 		this.switchPhase(_EXECTIME)
