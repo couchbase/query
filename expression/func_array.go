@@ -1869,7 +1869,7 @@ func (this *ArrayReplace) Accept(visitor Visitor) (interface{}, error) {
 func (this *ArrayReplace) Type() value.Type { return value.ARRAY }
 
 func (this *ArrayReplace) Evaluate(item value.Value, context Context) (value.Value, error) {
-	var av, v1, v2 value.Value
+	var av, v1, v2, max value.Value
 	var err error
 	av, err = this.operands[0].Evaluate(item, context)
 	if err != nil {
@@ -1884,18 +1884,36 @@ func (this *ArrayReplace) Evaluate(item value.Value, context Context) (value.Val
 		return nil, err
 	}
 
-	if av.Type() == value.MISSING || v1.Type() == value.MISSING || v2.Type() == value.MISSING {
+	if len(this.operands) > 3 {
+		max, err = this.operands[3].Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if av.Type() == value.MISSING || v1.Type() == value.MISSING || v2.Type() == value.MISSING ||
+		(max != nil && max.Type() == value.MISSING) {
 		return value.MISSING_VALUE, nil
-	} else if av.Type() != value.ARRAY || v1.Type() == value.NULL {
+	} else if av.Type() != value.ARRAY || v1.Type() == value.NULL || (max != nil && max.Type() != value.NUMBER) {
 		return value.NULL_VALUE, nil
+	}
+
+	num_replacements := int64(math.MaxInt64)
+	if max != nil {
+		f := value.AsNumberValue(max).Float64()
+		if f != math.Trunc(f) {
+			return value.NULL_VALUE, nil
+		}
+		num_replacements = int64(f)
 	}
 
 	aa := av.Actual().([]interface{})
 	ra := make([]interface{}, 0, len(aa))
 	for _, a := range aa {
 		v := value.NewValue(a)
-		if v1.Equals(v).Truth() {
+		if num_replacements > 0 && v1.Equals(v).Truth() {
 			ra = append(ra, v2)
+			num_replacements--
 		} else {
 			ra = append(ra, v)
 		}
