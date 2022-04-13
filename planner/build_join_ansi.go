@@ -1477,7 +1477,8 @@ func markPlanFlagsSecondaryScans(baseKeyspace *base.BaseKeyspace, scans ...plan.
 		if iscan, ok := scan.(*plan.IndexScan3); ok {
 			sterm := iscan.Term()
 			if sterm != nil && sterm.Alias() == baseKeyspace.Name() {
-				err = markIndexFlags(iscan.Index(), iscan.Spans(), baseKeyspace)
+				err = markIndexFlags(iscan.Index(), iscan.Spans(), iscan.Filter(),
+					baseKeyspace)
 				if err != nil {
 					return err
 				}
@@ -1493,7 +1494,8 @@ func markPlanFlagsSecondaryScans(baseKeyspace *base.BaseKeyspace, scans ...plan.
 	return nil
 }
 
-func markIndexFlags(index datastore.Index, spans plan.Spans2, baseKeyspace *base.BaseKeyspace) error {
+func markIndexFlags(index datastore.Index, spans plan.Spans2, filter expression.Expression,
+	baseKeyspace *base.BaseKeyspace) error {
 	var err error
 	var keys expression.Expressions
 	var condition expression.Expression
@@ -1525,7 +1527,7 @@ func markIndexFlags(index datastore.Index, spans plan.Spans2, baseKeyspace *base
 
 	unnestAliases := baseKeyspace.GetUnnestIndexAliases(index)
 
-	optMarkIndexFilters(keys, spans, condition, unnestAliases, baseKeyspace)
+	optMarkIndexFilters(keys, spans, condition, filter, unnestAliases, baseKeyspace)
 
 	return nil
 }
