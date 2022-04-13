@@ -152,6 +152,13 @@ func TestIndexScan(t *testing.T) {
 	runStmt(qc, "DROP INDEX orders.poix2")
 	runStmt(qc, "DROP INDEX orders.poix3")
 
+	runStmt(qc, "CREATE INDEX ifloix1 ON orders (c1, c2, c3, c4, c5) WHERE test_id = \"idxfltr\"")
+	runStmt(qc, "CREATE INDEX ifloix2 ON orders (c6, a1) WHERE test_id = \"idxfltr\"")
+	runMatch("case_index_filter.json", false, true, qc, t)
+	runMatch("case_index_filter.json", true, true, qc, t)
+	runStmt(qc, "DROP INDEX orders.ifloix1")
+	runStmt(qc, "DROP INDEX orders.ifloix2")
+
 	runStmt(qc, "create primary index on product ")
 	runStmt(qc, "create primary index on purchase")
 	runStmt(qc, "create primary index on orders")
@@ -164,7 +171,7 @@ func TestIndexScan(t *testing.T) {
 	if errcs != nil {
 		t.Errorf("did not expect err %s", errcs.Error())
 	}
-	_, _, errcs = runStmt(qc, "delete from orders where test_id IN [\"ua\", \"skipranges\", \"ordernulls\", \"parameters\"]")
+	_, _, errcs = runStmt(qc, "delete from orders where test_id IN [\"ua\", \"skipranges\", \"ordernulls\", \"parameters\", \"idxfltr\"]")
 	if errcs != nil {
 		t.Errorf("did not expect err %s", errcs.Error())
 	}

@@ -105,16 +105,17 @@ func (this *builder) buildIndexProjection(entry *indexEntry, exprs expression.Ex
 		primary = primary || entry.index.IsPrimary()
 	}
 
-	indexProjection := plan.NewIndexProjection(size, primary || this.requirePrimaryKey)
-
+	primary = primary || this.requirePrimaryKey
 	if !primary && id != nil {
 		for _, expr := range exprs {
 			if expr.DependsOn(id) {
-				indexProjection.PrimaryKey = true
+				primary = true
 				break
 			}
 		}
 	}
+
+	indexProjection := plan.NewIndexProjection(size, primary)
 
 	if entry != nil {
 		primaryKey := indexProjection.PrimaryKey

@@ -20,8 +20,9 @@ Internal Expression to support covering indexing.
 */
 type Cover struct {
 	ExpressionBase
-	covered Expression
-	text    string
+	covered   Expression
+	text      string
+	fullCover bool
 }
 
 func NewCover(covered Expression) *Cover {
@@ -31,8 +32,25 @@ func NewCover(covered Expression) *Cover {
 	}
 
 	rv := &Cover{
-		covered: covered,
-		text:    covered.String(),
+		covered:   covered,
+		text:      covered.String(),
+		fullCover: true,
+	}
+
+	rv.expr = rv
+	return rv
+}
+
+func NewIndexKey(covered Expression) *Cover {
+	switch covered := covered.(type) {
+	case *Cover:
+		return covered
+	}
+
+	rv := &Cover{
+		covered:   covered,
+		text:      covered.String(),
+		fullCover: false,
 	}
 
 	rv.expr = rv
@@ -123,7 +141,12 @@ func (this *Cover) MapChildren(mapper Mapper) error {
 }
 
 func (this *Cover) Copy() Expression {
-	rv := NewCover(this.covered.Copy())
+	var rv *Cover
+	if this.fullCover {
+		rv = NewCover(this.covered.Copy())
+	} else {
+		rv = NewIndexKey(this.covered.Copy())
+	}
 	rv.BaseCopy(this)
 	return rv
 }
@@ -134,4 +157,8 @@ func (this *Cover) Covered() Expression {
 
 func (this *Cover) Text() string {
 	return this.text
+}
+
+func (this *Cover) FullCover() bool {
+	return this.fullCover
 }

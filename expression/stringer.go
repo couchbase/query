@@ -685,7 +685,11 @@ func (this *Stringer) VisitPositionalParameter(expr PositionalParameter) (interf
 // Cover
 func (this *Stringer) VisitCover(expr *Cover) (interface{}, error) {
 	var buf bytes.Buffer
-	buf.WriteString("cover (")
+	if expr.FullCover() {
+		buf.WriteString("cover (")
+	} else {
+		buf.WriteString("index_key (")
+	}
 	buf.WriteString(expr.Text())
 	buf.WriteString(")")
 	return buf.String(), nil

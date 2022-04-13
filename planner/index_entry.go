@@ -11,6 +11,7 @@ package planner
 import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/expression"
+	base "github.com/couchbase/query/plannerbase"
 	"github.com/couchbase/query/value"
 )
 
@@ -63,6 +64,7 @@ type indexEntry struct {
 	numIndexedKeys   uint32
 	flags            uint32
 	unnestAliases    []string
+	exactFilters     map[*base.Filter]bool
 }
 
 func newIndexEntry(index datastore.Index, keys, sargKeys, partitionKeys expression.Expressions,
@@ -140,6 +142,12 @@ func (this *indexEntry) Copy() *indexEntry {
 	if len(this.skeys) > 0 {
 		rv.skeys = make([]bool, len(this.skeys))
 		copy(rv.skeys, this.skeys)
+	}
+	if len(this.exactFilters) > 0 {
+		rv.exactFilters = make(map[*base.Filter]bool, len(this.exactFilters))
+		for k, v := range this.exactFilters {
+			rv.exactFilters[k] = v
+		}
 	}
 
 	return rv

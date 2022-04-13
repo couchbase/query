@@ -191,6 +191,7 @@ tokOffset    int
 %token INCLUDE
 %token INCREMENT
 %token INDEX
+%token INDEX_KEY
 %token INFER
 %token INLINE
 %token INNER
@@ -348,7 +349,7 @@ tokOffset    int
 %left           STAR DIV MOD POW
 
 /* Unary operators */
-%right          COVER
+%right          COVER INDEX_KEY
 %left           ALL
 %right          UMINUS
 %left           DOT LBRACKET RBRACKET
@@ -3698,6 +3699,18 @@ COVER
 LPAREN expr RPAREN
 {
     $$ = expression.NewCover($4)
+}
+|
+/* For indexe keys */
+INDEX_KEY
+{
+    if yylex.(*lexer).parsingStatement() {
+        yylex.Error("syntax error")
+    }
+}
+LPAREN expr RPAREN
+{
+    $$ = expression.NewIndexKey($4)
 }
 ;
 

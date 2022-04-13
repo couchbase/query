@@ -44,6 +44,7 @@ type IndexScan3 struct {
 	filter           expression.Expression
 	implicitArrayKey *expression.All
 	hasDeltaKeyspace bool
+	fullCover        bool
 }
 
 func NewIndexScan3(index datastore.Index3, term *algebra.KeyspaceTerm, spans Spans2,
@@ -78,6 +79,10 @@ func NewIndexScan3(index datastore.Index3, term *algebra.KeyspaceTerm, spans Spa
 		filterCovers:     filterCovers,
 		filter:           filter,
 		hasDeltaKeyspace: hasDeltaKeyspace,
+	}
+
+	if len(covers) > 0 {
+		rv.fullCover = covers[0].FullCover()
 	}
 
 	rv.keyspace, _ = datastore.GetKeyspace(term.Path().Parts()...)
@@ -230,11 +235,26 @@ func (this *IndexScan3) CoverJoinSpanExpressions(coverer *expression.Coverer,
 }
 
 func (this *IndexScan3) Covers() expression.Covers {
+	if this.fullCover {
+		return this.covers
+	}
+	return nil
+}
+
+func (this *IndexScan3) IndexKeys() expression.Covers {
+	if !this.fullCover {
+		return this.covers
+	}
+	return nil
+}
+
+func (this *IndexScan3) AllCovers() expression.Covers {
 	return this.covers
 }
 
 func (this *IndexScan3) SetCovers(covers expression.Covers) {
 	this.covers = covers
+	this.fullCover = len(covers) > 0 && covers[0].FullCover()
 }
 
 func (this *IndexScan3) SetImplicitArrayKey(arrayKey *expression.All) {
@@ -250,7 +270,7 @@ func (this *IndexScan3) FilterCovers() map[*expression.Cover]value.Value {
 }
 
 func (this *IndexScan3) Covering() bool {
-	return len(this.covers) > 0
+	return this.fullCover && len(this.covers) > 0
 }
 
 func (this *IndexScan3) Filter() expression.Expression {
@@ -329,7 +349,11 @@ func (this *IndexScan3) MarshalBase(f func(map[string]interface{})) map[string]i
 	}
 
 	if len(this.covers) > 0 {
-		r["covers"] = this.covers
+		if this.fullCover {
+			r["covers"] = this.covers
+		} else {
+			r["index_keys"] = this.covers
+		}
 	}
 
 	if len(this.filterCovers) > 0 {
@@ -387,6 +411,7 @@ func (this *IndexScan3) UnmarshalJSON(body []byte) error {
 		Offset           string                 `json:"offset"`
 		Limit            string                 `json:"limit"`
 		Covers           []string               `json:"covers"`
+		IndexKeys        []string               `json:"index_keys"`
 		FilterCovers     map[string]interface{} `json:"filter_covers"`
 		Filter           string                 `json:"filter"`
 		OptEstimate      map[string]interface{} `json:"optimizer_estimates"`
@@ -451,6 +476,18 @@ func (this *IndexScan3) UnmarshalJSON(body []byte) error {
 
 			this.covers[i] = expression.NewCover(expr)
 		}
+		this.fullCover = true
+	} else if len(_unmarshalled.IndexKeys) > 0 {
+		this.covers = make(expression.Covers, len(_unmarshalled.IndexKeys))
+		for i, c := range _unmarshalled.IndexKeys {
+			expr, err := parser.Parse(c)
+			if err != nil {
+				return err
+			}
+
+			this.covers[i] = expression.NewIndexKey(expr)
+		}
+		this.fullCover = false
 	}
 
 	if len(_unmarshalled.FilterCovers) > 0 {
