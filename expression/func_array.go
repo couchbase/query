@@ -1945,6 +1945,110 @@ func (this *ArrayReplace) Constructor() FunctionConstructor {
 
 ///////////////////////////////////////////////////
 //
+// ArrayReplaceEquivalent
+//
+///////////////////////////////////////////////////
+
+type ArrayReplaceEquivalent struct {
+	FunctionBase
+}
+
+func NewArrayReplaceEquivalent(operands ...Expression) Function {
+	rv := &ArrayReplaceEquivalent{
+		*NewFunctionBase("array_replace_equivalent", operands...),
+	}
+
+	rv.expr = rv
+	return rv
+}
+
+func (this *ArrayReplaceEquivalent) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *ArrayReplaceEquivalent) Type() value.Type { return value.ARRAY }
+
+func (this *ArrayReplaceEquivalent) Evaluate(item value.Value, context Context) (value.Value, error) {
+	var av, v1, v2, max value.Value
+	var err error
+	av, err = this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+	v1, err = this.operands[1].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+	v2, err = this.operands[2].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(this.operands) > 3 {
+		max, err = this.operands[3].Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if av.Type() == value.MISSING || v1.Type() == value.MISSING || v2.Type() == value.MISSING ||
+		(max != nil && max.Type() == value.MISSING) {
+		return value.MISSING_VALUE, nil
+	} else if av.Type() != value.ARRAY || (max != nil && max.Type() != value.NUMBER) {
+		return value.NULL_VALUE, nil
+	}
+
+	num_replacements := int64(math.MaxInt64)
+	if max != nil {
+		f := value.AsNumberValue(max).Float64()
+		if f != math.Trunc(f) {
+			return value.NULL_VALUE, nil
+		}
+		num_replacements = int64(f)
+	}
+
+	aa := av.Actual().([]interface{})
+	ra := make([]interface{}, 0, len(aa))
+	for _, a := range aa {
+		v := value.NewValue(a)
+		if num_replacements > 0 && doIsNotDistinct(v1, v) {
+			ra = append(ra, v2)
+			num_replacements--
+		} else {
+			ra = append(ra, v)
+		}
+	}
+
+	return value.NewValue(ra), nil
+}
+
+func doIsNotDistinct(first value.Value, second value.Value) bool {
+	if first.Type() == value.MISSING && second.Type() == value.MISSING {
+		return true
+	} else if first.Type() == value.MISSING || second.Type() == value.MISSING {
+		return false
+	} else if first.Type() == value.NULL && second.Type() == value.NULL {
+		return true
+	} else if first.Type() == value.NULL || second.Type() == value.NULL {
+		return false
+	}
+	return first.EquivalentTo(second)
+}
+
+func (this *ArrayReplaceEquivalent) PropagatesNull() bool {
+	return false
+}
+
+func (this *ArrayReplaceEquivalent) MinArgs() int { return 3 }
+
+func (this *ArrayReplaceEquivalent) MaxArgs() int { return 4 }
+
+func (this *ArrayReplaceEquivalent) Constructor() FunctionConstructor {
+	return NewArrayReplaceEquivalent
+}
+
+///////////////////////////////////////////////////
+//
 // ArrayReverse
 //
 ///////////////////////////////////////////////////
