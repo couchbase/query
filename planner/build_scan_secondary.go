@@ -140,8 +140,8 @@ func (this *builder) buildCreateSecondaryScan(indexes, flex map[datastore.Index]
 		if err != nil {
 			return nil, 0, err
 		}
-		if len(covers) > 0 && filter != nil {
-			indexProjection = idxProj
+		if len(covers) == 0 {
+			idxProj = indexProjection
 		}
 
 		var indexKeyOrders plan.IndexKeyOrders
@@ -153,7 +153,7 @@ func (this *builder) buildCreateSecondaryScan(indexes, flex map[datastore.Index]
 			this.collectIndexKeyspaceNames(baseKeyspace.Keyspace())
 		}
 		scan = entry.spans.CreateScan(index, node, this.context.IndexApiVersion(), false, false,
-			overlapSpans(pred), false, this.offset, this.limit, indexProjection,
+			overlapSpans(pred), false, this.offset, this.limit, idxProj,
 			indexKeyOrders, nil, covers, nil, filter, entry.cost, entry.cardinality,
 			entry.size, entry.frCost, baseKeyspace, hasDeltaKeyspace)
 
