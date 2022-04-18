@@ -31,7 +31,7 @@ import (
 	"github.com/couchbase/cbauth"
 	cb "github.com/couchbase/go-couchbase"
 	"github.com/couchbase/gomemcached"
-	"github.com/couchbase/gomemcached/client" // package name is memcached
+	memcached "github.com/couchbase/gomemcached/client" // package name is memcached
 	gsi "github.com/couchbase/indexing/secondary/queryport/n1ql"
 	ftsclient "github.com/couchbase/n1fty"
 	"github.com/couchbase/query/auth"
@@ -523,6 +523,7 @@ func (s *store) SetConnectionSecurityConfig(connSecConfig *datastore.ConnectionS
 	if err := s.SetClientConnectionSecurityConfig(); err != nil {
 		return
 	}
+	gsi.SetConnectionSecurityConfig(connSecConfig)
 
 	// Implementation based on SetLogLevel(), above.
 	for _, n := range s.namespaceCache {
