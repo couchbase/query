@@ -13,12 +13,15 @@ import (
 	"compress/gzip"
 	"encoding/base64"
 	"encoding/json"
+	"io/ioutil"
 	"sort"
 	"strconv"
 	"sync"
 
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
@@ -63,12 +66,50 @@ func NewPrepared(operator Operator, signature value.Value, indexScanKeyspaces ma
 	}
 }
 
+func NewPreparedFromEncodedPlan(prepared_stmt string) (*Prepared, []byte, int, errors.Error) {
+	r := 0
+	decoded, err := base64.StdEncoding.DecodeString(prepared_stmt)
+	if err != nil {
+		return nil, nil, r, errors.NewPreparedDecodingError(err)
+	}
+	var buf bytes.Buffer
+	buf.Write(decoded)
+	reader, err := gzip.NewReader(&buf)
+	if err != nil {
+		return nil, nil, r, errors.NewPreparedDecodingError(err)
+	}
+	prepared_bytes, err := ioutil.ReadAll(reader)
+	if err != nil {
+		return nil, nil, r, errors.NewPreparedDecodingError(err)
+	}
+	prepared := NewPrepared(nil, nil, nil)
+	version, err := prepared.unmarshalInternal(prepared_bytes)
+	if err != nil {
+		return nil, prepared_bytes, r, errors.NewUnrecognizedPreparedError(err)
+	}
+
+	if version < util.PLAN_VERSION {
+		r = -1
+	} else if version > util.PLAN_VERSION {
+		r = 1
+	}
+	return prepared, nil, r, nil
+}
+
 func (this *Prepared) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
 func (this *Prepared) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := make(map[string]interface{}, 5)
+	this.marshalInternal(r)
+	if f != nil {
+		f(r)
+	}
+	return r
+}
+
+func (this *Prepared) marshalInternal(r map[string]interface{}) {
 	r["operator"] = this.Operator
 	r["signature"] = this.signature
 	r["name"] = this.name
@@ -89,13 +130,14 @@ func (this *Prepared) MarshalBase(f func(map[string]interface{})) map[string]int
 		r["indexScanKeyspaces"] = this.IndexScanKeyspaces()
 	}
 
-	if f != nil {
-		f(r)
-	}
-	return r
 }
 
 func (this *Prepared) UnmarshalJSON(body []byte) error {
+	_, err := this.unmarshalInternal(body)
+	return err
+}
+
+func (this *Prepared) unmarshalInternal(body []byte) (int, error) {
 	var _unmarshalled struct {
 		Operator           json.RawMessage        `json:"operator"`
 		Signature          json.RawMessage        `json:"signature"`
@@ -110,6 +152,7 @@ func (this *Prepared) UnmarshalJSON(body []byte) error {
 		UseFts             bool                   `json:"useFts"`
 		UseCBO             bool                   `json:"useCBO"`
 		IndexScanKeyspaces map[string]interface{} `json:"indexScanKeyspaces"`
+		Version            int                    `json:"planVersion"`
 	}
 
 	var op_type struct {
@@ -118,12 +161,12 @@ func (this *Prepared) UnmarshalJSON(body []byte) error {
 
 	err := json.Unmarshal(body, &_unmarshalled)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	err = json.Unmarshal(_unmarshalled.Operator, &op_type)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	if _unmarshalled.ApiVersion < datastore.INDEX_API_MIN {
@@ -150,7 +193,7 @@ func (this *Prepared) UnmarshalJSON(body []byte) error {
 	}
 	this.Operator, err = MakeOperator(op_type.Operator, _unmarshalled.Operator)
 
-	return err
+	return _unmarshalled.Version, err
 }
 
 func (this *Prepared) Signature() value.Value {
@@ -237,15 +280,22 @@ func (this *Prepared) SetEncodedPlan(encoded_plan string) {
 	this.encoded_plan = encoded_plan
 }
 
-func (this *Prepared) BuildEncodedPlan(json_bytes []byte) string {
+func (this *Prepared) BuildEncodedPlan() (string, error) {
 	var b bytes.Buffer
 
+	r := make(map[string]interface{}, 5)
+	r["planVersion"] = util.PLAN_VERSION
+	this.marshalInternal(r)
+	json_bytes, err := json.Marshal(r)
+	if err != nil {
+		return "", err
+	}
 	w := gzip.NewWriter(&b)
 	w.Write(json_bytes)
 	w.Close()
 	str := base64.StdEncoding.EncodeToString(b.Bytes())
 	this.encoded_plan = str
-	return str
+	return str, nil
 }
 
 func (this *Prepared) MismatchingEncodedPlan(encoded_plan string) bool {

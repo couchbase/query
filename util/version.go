@@ -11,6 +11,7 @@ package util
 // Define the current server version and minimum supported version
 
 var (
-	VERSION     = "unset: build issue" // is set by correct build process
-	MIN_VERSION = "1.0.0"
+	VERSION      = "unset: build issue" // is set by correct build process
+	MIN_VERSION  = "1.0.0"
+	PLAN_VERSION = 720
 )

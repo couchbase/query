@@ -9,11 +9,7 @@
 package prepareds
 
 import (
-	"bytes"
-	"compress/gzip"
-	"encoding/base64"
 	"fmt"
-	"io/ioutil"
 	"math"
 	"math/rand"
 	"strconv"
@@ -607,33 +603,17 @@ func DecodePrepared(prepared_name string, prepared_stmt string, reprep bool) (*p
 func DecodePreparedWithContext(prepared_name string, queryContext string, prepared_stmt string, track bool, phaseTime *time.Duration, reprep bool) (*plan.Prepared, errors.Error) {
 	added := true
 
-	decoded, err := base64.StdEncoding.DecodeString(prepared_stmt)
+	prepared, err := unmarshalPrepared(prepared_stmt, phaseTime, reprep)
 	if err != nil {
-		return nil, errors.NewPreparedDecodingError(err)
+		return nil, err
 	}
-	var buf bytes.Buffer
-	buf.Write(decoded)
-	reader, err := gzip.NewReader(&buf)
-	if err != nil {
-		return nil, errors.NewPreparedDecodingError(err)
-	}
-	prepared_bytes, err := ioutil.ReadAll(reader)
-	if err != nil {
-		return nil, errors.NewPreparedDecodingError(err)
-	}
-	prepared, err := unmarshalPrepared(prepared_bytes, phaseTime, reprep)
-	if err != nil {
-		return nil, errors.NewPreparedDecodingError(err)
-	}
-
-	prepared.SetEncodedPlan(prepared_stmt)
 
 	// MB-19509 we now have to check that the encoded plan matches
 	// the prepared statement named in the rest API
 	_, prepared_key := distributed.RemoteAccess().SplitKey(prepared_name)
 
 	// if a query context is specified, name and query context have to match
-	// if it isn't, encoded name and query context before comapring to key
+	// if it isn't, encoded name and query context before comparing to key
 	if queryContext != "" {
 		if prepared_key != prepared.Name() {
 			return nil, errors.NewEncodingNameMismatchError(prepared_name, prepared.Name())
@@ -686,11 +666,11 @@ func DecodePreparedWithContext(prepared_name string, queryContext string, prepar
 	}
 }
 
-func unmarshalPrepared(bytes []byte, phaseTime *time.Duration, reprep bool) (*plan.Prepared, errors.Error) {
-	prepared := plan.NewPrepared(nil, nil, nil)
-	err := prepared.UnmarshalJSON(bytes)
+func unmarshalPrepared(encoded string, phaseTime *time.Duration, reprep bool) (*plan.Prepared, errors.Error) {
+	prepared, bytes, diffVersion, err := plan.NewPreparedFromEncodedPlan(encoded)
 	if err != nil {
-		if reprep {
+		if reprep && len(bytes) > 0 {
+
 			// if we failed to unmarshall, we find  the statement
 			// and try preparing from scratch
 			text, err1 := json.FindKey(bytes, "text")
@@ -707,7 +687,13 @@ func unmarshalPrepared(bytes []byte, phaseTime *time.Duration, reprep bool) (*pl
 				}
 			}
 		}
-		return nil, errors.NewUnrecognizedPreparedError(fmt.Errorf("JSON unmarshalling error: %v", err))
+		return nil, err
+	} else if reprep && diffVersion > 0 {
+
+		// we got the statement, but it was prepared by a newer engine, reprepare to produce a plan we understand
+		return reprepare(prepared, nil, phaseTime)
+	} else {
+		prepared.SetEncodedPlan(encoded)
 	}
 	return prepared, nil
 }
@@ -775,11 +761,10 @@ func reprepare(prepared *plan.Prepared, deltaKeyspaces map[string]bool, phaseTim
 	pl.SetUseFts(prepared.UseFts())
 	pl.SetUseCBO(prepared.UseCBO())
 
-	json_bytes, err := pl.MarshalJSON()
+	_, err = pl.BuildEncodedPlan()
 	if err != nil {
 		return nil, errors.NewReprepareError(err)
 	}
-	pl.BuildEncodedPlan(json_bytes)
 	return pl, nil
 }
 
@@ -835,12 +820,10 @@ func predefinedPrepareStatement(name, statement, queryContext, namespace string)
 	prepared.SetUseCBO(prepContext.UseCBO())
 	prepared.SetType(stmt.Type())
 
-	json_bytes, err := prepared.MarshalJSON()
+	_, err = prepared.BuildEncodedPlan()
 	if err != nil {
 		return nil, errors.NewPlanError(err, "")
 	}
-
-	prepared.BuildEncodedPlan(json_bytes)
 
 	return prepared, AddPrepared(prepared)
 }
