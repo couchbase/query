@@ -74,7 +74,7 @@ func NewNoSuchPreparedWithContextError(name string, queryContext string) Error {
 
 func NewUnrecognizedPreparedError(e error) Error {
 	return &err{level: EXCEPTION, ICode: E_UNRECOGNIZED_PREPARED, IKey: "plan.build_prepared.unrecognized_prepared",
-		ICause: e, InternalMsg: "Unrecognizable prepared statement", InternalCaller: CallerN(1)}
+		ICause: fmt.Errorf("JSON unmarshalling error: %v", e), InternalMsg: "Unrecognizable prepared statement", InternalCaller: CallerN(1)}
 }
 
 func NewPreparedNameError(msg string) Error {

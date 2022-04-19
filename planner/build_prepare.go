@@ -78,7 +78,10 @@ func (this *builder) VisitPrepare(stmt *algebra.Prepare) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	str := prep.BuildEncodedPlan(json_bytes)
+	str, err := prep.BuildEncodedPlan()
+	if err != nil {
+		return nil, err
+	}
 
 	prep.SetEncodedPlan(str)
 	val := value.NewValue(json_bytes)
