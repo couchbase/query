@@ -88,7 +88,7 @@ func cacheLoggingChange() {
 
 func ParseLevel(name string) (level Level, ok bool, filter string) {
 	level, ok = _LEVEL_MAP[strings.ToLower(name)]
-	if !ok && strings.HasPrefix(strings.ToLower(name), _LEVEL_NAMES[DEBUG]+":") {
+	if !ok && strings.HasPrefix(strings.ToUpper(name), _LEVEL_NAMES[DEBUG]+":") {
 		n := len(_LEVEL_NAMES[DEBUG])
 		filter = name[n+1:]
 		name = name[:n]
