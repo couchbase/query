@@ -1975,8 +1975,14 @@ mainLoop:
 						pos++
 					}
 				}
-				for len(line) > pos && 0 == classify(line[pos]) {
-					pos++
+				if 0 < pos && len(line) > pos {
+					if 1 < repeat || '\n' != line[pos] {
+						for len(line) > pos && 0 == classify(line[pos]) {
+							pos++
+						}
+					} else if '\n' == line[pos] && '\n' != line[pos-1] {
+						s.insertIntoInput('h')
+					}
 				}
 			}
 			if _NORMAL != mode {
