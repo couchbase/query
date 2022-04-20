@@ -2203,6 +2203,9 @@ mainLoop:
 			if 0 > startPos {
 				startPos = 0
 			}
+			if len(line) < startPos {
+				startPos = len(line)
+			}
 			if len(line) <= pos {
 				pos = len(line) - 1
 			}
