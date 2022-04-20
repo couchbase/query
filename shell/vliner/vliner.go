@@ -763,6 +763,7 @@ func (s *State) Prompt(prompt string) (string, error) {
 	startPos := 0
 	desiredCol := -1
 	expandEnd := false
+	includeTrailingLF := false
 	res := 0
 	var yank []rune
 	var input []rune
@@ -836,6 +837,7 @@ mainLoop:
 			break mainLoop
 		}
 		if _NORMAL == mode {
+			includeTrailingLF = false
 			handled := true
 			switch r {
 			case ':':
@@ -1231,11 +1233,21 @@ mainLoop:
 				if 0 < len(yank) {
 					s.saveForUndo(line, pos, repeat, r)
 					pos++
+					save := pos
+					if '\n' == yank[len(yank)-1] {
+						// position at start of next line
+						for ; len(line) > pos && '\n' != line[pos]; pos++ {
+						}
+						if len(line) > pos {
+							pos++
+						}
+						save = pos
+					}
 					for ; 0 < repeat; repeat-- {
 						line = insertRunes(line, pos, yank)
 						pos += len(yank)
 					}
-					pos--
+					pos = save
 				}
 				s.stopRecording()
 				desiredCol = -1
@@ -1667,6 +1679,7 @@ mainLoop:
 					if pos == startPos {
 						pos++
 					}
+					includeTrailingLF = true
 				} else {
 					startPos = 0
 					pos = len(line)
@@ -1694,6 +1707,7 @@ mainLoop:
 					if pos < len(line) && '\n' == line[pos] && pos > startPos {
 						pos++
 					}
+					includeTrailingLF = true
 				} else {
 					startPos = 0
 					pos = len(line)
@@ -1975,14 +1989,8 @@ mainLoop:
 						pos++
 					}
 				}
-				if 0 < pos && len(line) > pos {
-					if 1 < repeat || '\n' != line[pos] {
-						for len(line) > pos && 0 == classify(line[pos]) {
-							pos++
-						}
-					} else if '\n' == line[pos] && '\n' != line[pos-1] {
-						s.insertIntoInput('h')
-					}
+				for len(line) > pos && 0 == classify(line[pos]) {
+					pos++
 				}
 			}
 			if _NORMAL != mode {
@@ -2201,6 +2209,17 @@ mainLoop:
 			if 0 > pos {
 				pos = 0
 			}
+			if !includeTrailingLF && 0 < startPos && '\n' == line[startPos-1] {
+				i := pos
+				for i = pos; startPos > i; i++ {
+					if '\n' == line[i] {
+						break
+					}
+				}
+				if i == startPos-1 {
+					startPos--
+				}
+			}
 			l = startPos - pos
 			if 0 < l {
 				yank = append([]rune(nil), line[pos:startPos]...)
@@ -2220,6 +2239,9 @@ mainLoop:
 						pos = 0
 					}
 				}
+				if 0 < pos && '\n' == line[pos] && '\n' != line[pos-1] {
+					pos--
+				}
 				s.stopRecording()
 			}
 			mode = _NORMAL
@@ -2233,10 +2255,16 @@ mainLoop:
 					if expandEnd {
 						pos++
 					}
+					if !includeTrailingLF && 0 < pos && '\n' == line[pos-1] {
+						pos--
+					}
 					yank = append([]rune(nil), line[startPos:pos]...)
 				} else {
 					if expandEnd {
 						startPos++
+					}
+					if !includeTrailingLF && 0 < startPos && '\n' == line[startPos-1] {
+						startPos--
 					}
 					yank = append([]rune(nil), line[pos:startPos]...)
 					if expandEnd {
