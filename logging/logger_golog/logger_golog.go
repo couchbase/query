@@ -9,7 +9,6 @@
 package logger_golog
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -32,16 +31,12 @@ const (
 	_RLEVEL = "_rlevel"
 )
 
-func NewLogger(out io.Writer, lvl logging.Level, jsonLogging bool) *goLogger {
+func NewLogger(out io.Writer, lvl logging.Level) *goLogger {
 	logger := &goLogger{
 		logger: log.New(out, "", 0),
 		level:  lvl,
 	}
-	if jsonLogging {
-		logger.entryFormatter = &jsonFormatter{}
-	} else {
-		logger.entryFormatter = &standardFormatter{}
-	}
+	logger.entryFormatter = &standardFormatter{}
 	return logger
 }
 
@@ -93,7 +88,7 @@ func (gl *goLogger) Fatala(f func() string) {
 }
 
 func (gl *goLogger) Audita(f func() string) {
-	gl.Loga(logging.AUDIT, f)
+	gl.Loga(logging.INFO, f)
 }
 
 // printf-style variants
@@ -145,7 +140,7 @@ func (gl *goLogger) Fatalf(format string, args ...interface{}) {
 }
 
 func (gl *goLogger) Auditf(format string, args ...interface{}) {
-	gl.Logf(logging.AUDIT, format, args...)
+	gl.Logf(logging.INFO, format, args...)
 }
 
 func (gl *goLogger) Level() logging.Level {
@@ -213,22 +208,4 @@ func appendKeyValue(b *strings.Builder, key, value interface{}) {
 	} else {
 		fmt.Fprintf(b, "%v=%v ", key, value)
 	}
-}
-
-type jsonFormatter struct {
-}
-
-func (*jsonFormatter) format(tm string, level logging.Level, rlevel logging.Level, msg string) string {
-	data := make(map[string]interface{}, 4)
-	data[_TIME] = tm
-	data[_LEVEL] = level.String()
-	if rlevel != logging.NONE {
-		data[_RLEVEL] = rlevel.String()
-	}
-	data[_MSG] = msg
-	serialized, _ := json.Marshal(data)
-	var b strings.Builder
-	b.Write(serialized)
-	b.WriteByte('\n')
-	return b.String()
 }

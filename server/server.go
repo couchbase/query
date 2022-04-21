@@ -1418,7 +1418,7 @@ func (this *Server) SetGCPercent(gcpercent int) error {
 		return fmt.Errorf("gcpercent (%v) outside permitted range (75-300)", gcpercent)
 	}
 	if this.gcpercent != gcpercent {
-		logging.Warnf("Changing GC percent from %d to %d", this.gcpercent, gcpercent)
+		logging.Infof("Changing GC percent from %d to %d", this.gcpercent, gcpercent)
 		this.gcpercent = gcpercent
 	}
 	debug.SetGCPercent(this.gcpercent)

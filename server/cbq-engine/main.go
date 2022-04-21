@@ -43,6 +43,14 @@ import (
 	"github.com/couchbase/query/util"
 )
 
+// this function must be the first executed so as to clearly delineate cbq-engine start in the query.log
+func init() {
+	os.Stderr.WriteString("\n")
+	logging.Infoa(func() string { return fmt.Sprintf("cbq-engine starting version=%v", util.VERSION) })
+	debug.SetGCPercent(_GOGC_PERCENT_DEFAULT)
+	setOpenFilesLimit()
+}
+
 const (
 	_DEF_HTTP                   = ":8093"
 	_DEF_HTTPS                  = ":18093"
@@ -133,11 +141,6 @@ var DICTIONARY_CACHE_LIMIT = flag.Int("dictionary-cache-limit", _DEF_DICTIONARY_
 
 // Serverless
 var SERVERLESS = flag.Bool("serverless", false, "Serverless mode")
-
-func init() {
-	debug.SetGCPercent(_GOGC_PERCENT_DEFAULT)
-	setOpenFilesLimit()
-}
 
 func main() {
 
@@ -350,6 +353,7 @@ func main() {
 	logging.Infoa(func() string {
 		return fmt.Sprintf("cbq-engine started"+
 			" version=%v"+
+			" ds_version=%v"+
 			" datastore=%v"+
 			" max-concurrency=%v"+
 			" loglevel=%v"+
@@ -368,6 +372,7 @@ func main() {
 			" txtimeout=%v"+
 			" gc-percent=%v",
 			util.VERSION,
+			datastore.Info().Version(),
 			*DATASTORE,
 			numProcs,
 			ll,

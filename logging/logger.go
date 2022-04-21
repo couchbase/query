@@ -19,15 +19,14 @@ type Level int
 
 const (
 	NONE    = Level(iota) // Disable all logging
-	AUDIT                 // Audit messages
 	FATAL                 // System is in severe error state and has to terminate
 	SEVERE                // System is in severe error state and cannot recover reliably
 	ERROR                 // System is in error state but can recover and continue reliably
 	WARN                  // System approaching error state, or is in a correct but undesirable state
 	INFO                  // System-level events and status, in correct states
 	REQUEST               // Request-level events, with request-specific rlevel
-	TRACE                 // Trace detailed system execution, e.g. function entry / exit
 	DEBUG                 // Debug
+	TRACE                 // Trace detailed system execution, e.g. function entry / exit
 )
 
 func (level Level) String() string {
@@ -43,7 +42,6 @@ var _LEVEL_NAMES = []string{
 	ERROR:   "ERROR",
 	SEVERE:  "SEVERE",
 	FATAL:   "FATAL",
-	AUDIT:   "AUDIT",
 	NONE:    "NONE",
 }
 
@@ -56,7 +54,6 @@ var _LEVEL_MAP = map[string]Level{
 	"error":   ERROR,
 	"severe":  SEVERE,
 	"fatal":   FATAL,
-	"audit":   AUDIT,
 	"none":    NONE,
 }
 
@@ -83,7 +80,6 @@ func cacheLoggingChange() {
 	cachedError = !skipLogging(ERROR)
 	cachedSevere = !skipLogging(SEVERE)
 	cachedFatal = !skipLogging(FATAL)
-	cachedAudit = !skipLogging(AUDIT)
 }
 
 func ParseLevel(name string) (level Level, ok bool, filter string) {

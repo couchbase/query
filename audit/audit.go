@@ -183,7 +183,7 @@ var _AUDITOR Auditor
 func loggerFunc(level string, format string, args ...interface{}) string {
 	l := logging.NONE
 	if strings.HasPrefix(format, "audit:") || strings.HasPrefix(format, "Auditing:") {
-		l = logging.AUDIT
+		l = logging.INFO
 	} else {
 		var ok bool
 		l, ok, _ = logging.ParseLevel(level)
