@@ -109,6 +109,7 @@ tokOffset    int
 }
 
 %token _ERROR_  // used by the scanner to flag errors
+%token _INDEX_KEY
 %token ADVISE
 %token ALL
 %token ALTER
@@ -190,7 +191,6 @@ tokOffset    int
 %token INCLUDE
 %token INCREMENT
 %token INDEX
-%token INDEX_KEY
 %token INFER
 %token INLINE
 %token INNER
@@ -348,7 +348,7 @@ tokOffset    int
 %left           STAR DIV MOD POW
 
 /* Unary operators */
-%right          COVER INDEX_KEY
+%right          COVER _INDEX_KEY
 %left           ALL
 %right          UMINUS
 %left           DOT LBRACKET RBRACKET
@@ -3701,7 +3701,7 @@ LPAREN expr RPAREN
 }
 |
 /* For indexe keys */
-INDEX_KEY
+_INDEX_KEY
 {
     if yylex.(*lexer).parsingStatement() {
         yylex.Error("syntax error")

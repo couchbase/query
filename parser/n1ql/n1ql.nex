@@ -125,6 +125,7 @@
 /;/     { yylex.logToken(yylex.Text(), "SEMI"); return SEMI }
 /\!/    { yylex.logToken(yylex.Text(), "NOT_A_TOKEN"); return NOT_A_TOKEN }
 
+/[_][iI][nN][dD][eE][xX][_][kK][eE][yY]/ { yylex.logToken(yylex.Text(), "_INDEX_KEY"); return _INDEX_KEY }
 /[aA][dD][vV][iI][sS][eE]/ {
     yylex.logToken(yylex.Text(), "ADVISE")
     lval.tokOffset = yylex.curOffset
@@ -227,7 +228,6 @@
 /[iI][nN][cC][lL][uU][dD][eE]/   { yylex.logToken(yylex.Text(), "INCLUDE"); return INCLUDE }
 /[iI][nN][cC][rR][eE][mM][eE][nN][tT]/ { yylex.logToken(yylex.Text(), "INCREMENT"); return INCREMENT }
 /[iI][nN][dD][eE][xX]/           { yylex.logToken(yylex.Text(), "INDEX"); return INDEX }
-/[iI][nN][dD][eE][xX][_][kK][eE][yY]/ { yylex.logToken(yylex.Text(), "INDEX_KEY"); return INDEX_KEY }
 /[iI][nN][fF][eE][rR]/           { yylex.logToken(yylex.Text(), "INFER"); return INFER }
 /[iI][nN][lL][iI][nN][eE]/       { yylex.logToken(yylex.Text(), "INLINE"); return INLINE }
 /[iI][nN][nN][eE][rR]/           { yylex.logToken(yylex.Text(), "INNER"); return INNER }

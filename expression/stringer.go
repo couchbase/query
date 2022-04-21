@@ -688,7 +688,7 @@ func (this *Stringer) VisitCover(expr *Cover) (interface{}, error) {
 	if expr.FullCover() {
 		buf.WriteString("cover (")
 	} else {
-		buf.WriteString("index_key (")
+		buf.WriteString("_index_key (")
 	}
 	buf.WriteString(expr.Text())
 	buf.WriteString(")")
