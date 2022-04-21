@@ -331,7 +331,7 @@
     },
     {
         "statements":"explain select d.x from shellTest d where x IN (select raw b.x from shellTest b where b.x IN (select raw d.x from shellTest c use keys[\"kk02\"]))",
-        "ignore":["index_id", "cost", "cardinality"],
+        "ignore":["index_id", "cost", "cardinality", "~subqueries"],
         "results": [
         {
             "plan": {
@@ -373,7 +373,7 @@
                             "~children": [
                                 {
                                     "#operator": "Filter",
-                                    "condition": "(cover ((`d`.`x`)) in (select raw (`b`.`x`) from `default`:`shellTest` as `b` where ((`b`.`x`) in correlated (select raw cover ((`d`.`x`)) from `default`:`shellTest` as `c` use keys [\"kk02\"]))))"
+                                    "condition": "(cover ((`d`.`x`)) in (select raw cover ((`b`.`x`)) from `default`:`shellTest` as `b` where (cover ((`b`.`x`)) in correlated (select raw cover ((`d`.`x`)) from `default`:`shellTest` as `c` use keys [\"kk02\"]))))"
                                 },
                                 {
                                     "#operator": "InitialProject",

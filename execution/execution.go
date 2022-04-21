@@ -40,7 +40,7 @@ type Operator interface {
 	SetParent(parent Operator)                     // Can be set
 	Bit() uint8                                    // Child bit
 	SetBit(b uint8)                                // Child bit
-	SetRoot()                                      // Let the root operator know that it is, in fact, root
+	SetRoot(context *Context)                      // Let the root operator know that it is, in fact, root
 	SetKeepAlive(children int, context *Context)   // Sets keep alive
 	IsSerializable() bool                          // The operator supports being serialized
 	IsParallel() bool                              // The operator has more than one producer

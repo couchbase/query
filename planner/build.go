@@ -38,6 +38,22 @@ func Build(stmt algebra.Statement, datastore, systemstore datastore.Datastore,
 	_, is_prepared := o.(*plan.Prepared)
 	indexKeyspaces := builder.indexKeyspaceNames
 
+	// TODO to be expanded to all statements, plus prepareds
+	if explain, is_explain := o.(*plan.Explain); is_explain {
+		for _, s := range stmt.Subqueries() {
+			if s.Explained() {
+				continue
+			}
+
+			// be warned, this amends the AST for the subqueries
+			op, err := s.Select().Accept(builder)
+			if err != nil {
+				return nil, nil, err
+			}
+			explain.AddSubquery(s.Select(), op.(plan.Operator))
+		}
+	}
+
 	if !subquery && !is_prepared {
 		privs, er := stmt.Privileges()
 		if er != nil {

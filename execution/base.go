@@ -153,6 +153,7 @@ type base struct {
 	isRoot         bool
 	bit            uint8
 	contextTracked *Context
+	rootContext    *Context
 	childrenLeft   int32
 	activeCond     sync.Cond
 	activeLock     sync.Mutex
@@ -342,8 +343,10 @@ func (this *base) baseDone() {
 		this.opState = _ENDED
 	}
 
+	rootContext := this.rootContext
 	if this.opState == _DONE || this.opState == _ENDED {
 		this.valueExchange.dispose()
+		this.rootContext = nil
 		this.stopChannel = nil
 		this.input = nil
 		this.output = nil
@@ -352,6 +355,9 @@ func (this *base) baseDone() {
 		this.contextTracked = nil
 	}
 	this.activeCond.L.Unlock()
+	if rootContext != nil {
+		rootContext.done()
+	}
 }
 
 // reopen for the terminal operator case
@@ -469,8 +475,9 @@ func (this *base) SetBit(b uint8) {
 	this.bit = b
 }
 
-func (this *base) SetRoot() {
+func (this *base) SetRoot(context *Context) {
 	this.isRoot = true
+	this.rootContext = context
 }
 
 func (this *base) SetKeepAlive(children int, context *Context) {
@@ -1526,6 +1533,12 @@ func (this *base) marshalTimes(r map[string]interface{}) {
 	if this.isRoot {
 		var versions []interface{}
 
+		if this.rootContext != nil {
+			subqueryTimes := this.rootContext.getSubqueryTimes()
+			if subqueryTimes != nil {
+				r["~subqueries"] = subqueryTimes
+			}
+		}
 		versions = append(versions, util.VERSION)
 		versions = append(versions, datastore.GetDatastore().Info().Version())
 		r["~versions"] = versions

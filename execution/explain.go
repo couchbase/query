@@ -72,7 +72,6 @@ func (this *Explain) RunOnce(context *Context, parent value.Value) {
 func (this *Explain) MarshalJSON() ([]byte, error) {
 	r := this.plan.MarshalBase(func(r map[string]interface{}) {
 		this.marshalTimes(r)
-		r["plan"] = this.plan
 	})
 	return json.Marshal(r)
 }
