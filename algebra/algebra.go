@@ -74,6 +74,16 @@ type Statement interface {
 		Returns the optimizer hints
 	*/
 	OptimHints() *OptimHints
+
+	/*
+		Sets the statement subqueries
+	*/
+	SetSubqueries([]*Subquery)
+
+	/*
+		Returns the statement subqueries
+	*/
+	Subqueries() []*Subquery
 }
 
 /*

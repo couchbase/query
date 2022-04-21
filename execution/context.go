@@ -179,6 +179,7 @@ type Context struct {
 	scanVectorSource    timestamp.ScanVectorSource
 	output              Output
 	prepared            *plan.Prepared
+	subExecTrees        *subqueryArrayMap
 	subplans            *subqueryMap
 	subresults          *subqueryMap
 	httpRequest         *http.Request
@@ -902,18 +903,27 @@ func (this *Context) EvaluateSubquery(query *algebra.Select, parent value.Value)
 		subplans.set(query, subplan, subplanIsks)
 	}
 
-	pipeline, err := Build(subplan.(plan.Operator), this)
-	if err != nil {
-		// Generate our own error for this subquery, in addition to whatever the query above is doing.
-		err1 := errors.NewSubqueryBuildError(err)
-		this.Error(err1)
-		return nil, err1
-	}
+	var sequence *Sequence
+	var collect *Collect
 
-	// Collect subquery results
-	// FIXME: this should handled by the planner
-	collect := NewCollect(plan.NewCollect(), this)
-	sequence := NewSequence(plan.NewSequence(), this, pipeline, collect)
+	subExecTrees := this.getSubExecTrees()
+	ops, opc, opsFound := subExecTrees.get(query)
+	if opsFound {
+		sequence = ops
+		collect = opc
+	} else {
+		pipeline, err := Build(subplan.(plan.Operator), this)
+		if err != nil {
+			// Generate our own error for this subquery, in addition to whatever the query above is doing.
+			err1 := errors.NewSubqueryBuildError(err)
+			this.Error(err1)
+			return nil, err1
+		}
+
+		// Collect subquery results
+		collect = NewCollect(plan.NewCollect(), this)
+		sequence = NewSequence(plan.NewSequence(), this, pipeline, collect)
+	}
 	var track int32
 	av, stashTracking := parent.(value.AnnotatedValue)
 	if stashTracking {
@@ -925,7 +935,13 @@ func (this *Context) EvaluateSubquery(query *algebra.Select, parent value.Value)
 	collect.waitComplete()
 
 	results := collect.ValuesOnce()
-	sequence.Done()
+
+	// mark execution tree for reuse if possible
+	if collect.opState == _DONE {
+		collect.opState = _COMPLETED
+		sequence.reopen(this)
+	}
+	subExecTrees.set(query, sequence, collect)
 
 	if stashTracking {
 		av.Restore(track)
@@ -941,6 +957,86 @@ func (this *Context) EvaluateSubquery(query *algebra.Select, parent value.Value)
 
 func (this *Context) DatastoreURL() string {
 	return this.datastore.URL()
+}
+
+func (this *Context) getSubqueryTimes() interface{} {
+	trees := this.contextSubExecTrees()
+	if trees != nil {
+		trees.mutex.RLock()
+		times := make([]interface{}, 0, len(trees.entries))
+		for q, e := range trees.entries {
+			var t Operator
+
+			switch len(e) {
+			case 0:
+				continue
+			case 1:
+				t = e[0].sequence
+			default:
+				for _, i := range e {
+					if i.sequence == nil {
+						continue
+					}
+					if t == nil {
+						t = i.sequence.Copy()
+						continue
+					}
+					t.accrueTimes(i.sequence)
+				}
+
+			}
+			if t == nil {
+				continue
+			}
+			mq := q.String()
+			mt, err := json.Marshal(t)
+			if err == nil {
+				times = append(times, map[string]interface{}{"subquery": mq, "executionTimings": value.NewValue(mt)})
+			}
+		}
+		trees.mutex.RUnlock()
+		if len(times) == 0 {
+			return nil
+		}
+		return times
+	}
+	return nil
+}
+
+func (this *Context) done() {
+	trees := this.contextSubExecTrees()
+	if trees != nil {
+		trees.mutex.RLock()
+		for _, e := range trees.entries {
+			for _, i := range e {
+				if i.sequence != nil {
+					i.sequence.Done()
+				}
+			}
+		}
+		trees.mutex.RUnlock()
+	}
+}
+
+func (this *Context) getSubExecTrees() *subqueryArrayMap {
+	if this.contextSubExecTrees() == nil {
+		this.initSubExecTrees()
+	}
+	return this.contextSubExecTrees()
+}
+
+func (this *Context) initSubExecTrees() {
+	this.mutex.Lock()
+	defer this.mutex.Unlock()
+	if this.subExecTrees == nil {
+		this.subExecTrees = newSubqueryArrayMap()
+	}
+}
+
+func (this *Context) contextSubExecTrees() *subqueryArrayMap {
+	this.mutex.RLock()
+	defer this.mutex.RUnlock()
+	return this.subExecTrees
 }
 
 func (this *Context) getSubplans() *subqueryMap {
@@ -1015,6 +1111,58 @@ func (this *subqueryMap) set(key *algebra.Select, value, dks interface{}) {
 	if this.isks != nil {
 		this.isks[key] = dks
 	}
+	this.mutex.Unlock()
+}
+
+type subqueryEntry struct {
+	sequence *Sequence
+	collect  *Collect
+}
+
+// since the same copy of a subquery may be running in parallel
+// we instantiate as many execution trees as required, and collate
+// the times at the end
+// while an execution tree is in use, it is removed from the map
+type subqueryArrayMap struct {
+	mutex   sync.RWMutex
+	entries map[*algebra.Select][]subqueryEntry
+}
+
+func newSubqueryArrayMap() *subqueryArrayMap {
+	rv := &subqueryArrayMap{}
+	rv.entries = make(map[*algebra.Select][]subqueryEntry)
+	return rv
+}
+
+func (this *subqueryArrayMap) get(key *algebra.Select) (*Sequence, *Collect, bool) {
+	this.mutex.Lock()
+	e, ok := this.entries[key]
+	if !ok || len(e) == 0 {
+		this.mutex.Unlock()
+		return nil, nil, false
+	}
+
+	l := e[len(e)-1]
+
+	// if we didn't manage to reopen the execution tree, the previous copies are there for profiling only
+	if l.collect.opState != _CREATED {
+		this.mutex.Unlock()
+		return nil, nil, false
+	}
+	this.entries[key] = e[:len(e)-1]
+	this.mutex.Unlock()
+	return l.sequence, l.collect, ok
+}
+
+func (this *subqueryArrayMap) set(key *algebra.Select, sequence *Sequence, collect *Collect) {
+	this.mutex.Lock()
+	e := this.entries[key]
+	if e == nil {
+		e = []subqueryEntry{{sequence, collect}}
+	} else {
+		e = append(e, subqueryEntry{sequence, collect})
+	}
+	this.entries[key] = e
 	this.mutex.Unlock()
 }
 

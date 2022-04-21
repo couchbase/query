@@ -134,6 +134,7 @@ type lexer struct {
 	lval                   yySymType
 	stop                   bool
 	optimHints             *algebra.OptimHints
+	subqueries             []*algebra.Subquery
 }
 
 func newLexer(nex *Lexer) *lexer {
@@ -285,6 +286,7 @@ func (this *lexer) ScannerError(s string) {
 
 func (this *lexer) setStatement(stmt algebra.Statement) {
 	this.stmt = stmt
+	this.stmt.SetSubqueries(this.subqueries)
 }
 
 func (this *lexer) setOffset(offset int) {
@@ -342,4 +344,12 @@ func (this *lexer) UdfCheck() bool {
 
 func (this *lexer) setOptimHints(optimHints *algebra.OptimHints) {
 	this.optimHints = optimHints
+}
+
+func (this *lexer) addSubquery(sub *algebra.Subquery) {
+	this.subqueries = append(this.subqueries, sub)
+}
+
+func (this *lexer) getSubqueries() []*algebra.Subquery {
+	return this.subqueries
 }

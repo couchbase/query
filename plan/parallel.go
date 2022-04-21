@@ -14,12 +14,13 @@ import (
 )
 
 type Parallel struct {
+	readwrite
 	child          Operator
 	maxParallelism int
 }
 
 func NewParallel(child Operator, maxParallelism int) *Parallel {
-	return &Parallel{child, maxParallelism}
+	return &Parallel{child: child, maxParallelism: maxParallelism}
 }
 
 func (this *Parallel) Accept(visitor Visitor) (interface{}, error) {

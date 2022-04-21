@@ -9,10 +9,12 @@
 package plan
 
 import (
+	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/expression"
 )
 
 type readonly struct {
+	subqueries map[*algebra.Select]Operator
 }
 
 func (this *readonly) Readonly() bool {
@@ -30,7 +32,19 @@ func (this *readonly) ImplicitArrayKey() *expression.All {
 	return nil
 }
 
+func (this *readonly) AddSubquery(subq *algebra.Select, op Operator) {
+	if this.subqueries == nil {
+		this.subqueries = make(map[*algebra.Select]Operator, 1)
+	}
+	this.subqueries[subq] = op
+}
+
+func (this *readonly) Subqueries() map[*algebra.Select]Operator {
+	return this.subqueries
+}
+
 type readwrite struct {
+	subqueries map[*algebra.Select]Operator
 }
 
 func (this *readwrite) Readonly() bool {
@@ -39,6 +53,17 @@ func (this *readwrite) Readonly() bool {
 
 func (this *readwrite) verify(prepared *Prepared) bool {
 	return true
+}
+
+func (this *readwrite) AddSubquery(subq *algebra.Select, op Operator) {
+	if this.subqueries == nil {
+		this.subqueries = make(map[*algebra.Select]Operator, 1)
+	}
+	this.subqueries[subq] = op
+}
+
+func (this *readwrite) Subqueries() map[*algebra.Select]Operator {
+	return this.subqueries
 }
 
 // optimizer estimates

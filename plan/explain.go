@@ -56,17 +56,26 @@ func (this *Explain) MarshalBase(f func(map[string]interface{})) map[string]inte
 			r["cardinality"] = this.op.Cardinality()
 		}
 	}
-	if f != nil {
-		f(r)
-	} else {
-		r["plan"] = this.op
-		if this.optimHints != nil {
-			r["optimizer_hints"] = this.optimHints
+	r["plan"] = this.op
+	if this.optimHints != nil {
+		r["optimizer_hints"] = this.optimHints
+	}
+	if len(this.subqueries) > 0 {
+		marshalledSubqueries := make([]map[string]interface{}, 0, len(this.subqueries))
+		for t, s := range this.subqueries {
+			marshalledSubqueries = append(marshalledSubqueries, map[string]interface{}{"subquery": t.String(), "plan": s})
 		}
+		r["~subqueries"] = marshalledSubqueries
+	}
+	if f != nil {
+		r["#operator"] = "Explain"
+		f(r)
 	}
 	return r
 }
 
+// Note that explain is never prepared nor distributed across nodes,
+// so this code is never exercised - it might as well be a noop
 func (this *Explain) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
 		Op          json.RawMessage `json:"plan"`
@@ -74,6 +83,7 @@ func (this *Explain) UnmarshalJSON(body []byte) error {
 		Cost        float64         `json:"cost"`
 		Cardinality float64         `json:"cardinality"`
 		OptimHints  json.RawMessage `json:"optimizer_hints"`
+		Subqueries  json.RawMessage `json:"~subqueries"`
 	}
 
 	var op_type struct {
@@ -102,6 +112,8 @@ func (this *Explain) UnmarshalJSON(body []byte) error {
 	// no need to put the info anywhere
 
 	// Optimizer hints is printed in explain for informational purpose only
+
+	// Subqueries is printed in explain for informational purposes only
 
 	this.op, err = MakeOperator(op_type.Operator, _unmarshalled.Op)
 	return err

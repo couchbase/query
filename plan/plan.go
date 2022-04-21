@@ -16,6 +16,7 @@ import (
 	"fmt"
 	"math"
 
+	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/value"
@@ -36,6 +37,9 @@ type Operator interface {
 	New() Operator                               // Dynamic constructor; used for unmarshaling
 
 	verify(prepared *Prepared) bool // Check that the operator can reference keyspaces and indexes
+
+	AddSubquery(*algebra.Select, Operator)
+	Subqueries() map[*algebra.Select]Operator
 
 	Cost() float64
 	Cardinality() float64

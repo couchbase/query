@@ -16,7 +16,22 @@ import (
 
 type statementBase struct {
 	stmt       Statement
+	subqueries []*Subquery
 	paramCount int
+}
+
+/*
+Set the statement subqueries.
+*/
+func (this *statementBase) SetSubqueries(subqueries []*Subquery) {
+	this.subqueries = subqueries
+}
+
+/*
+Return the statement subqueries.
+*/
+func (this *statementBase) Subqueries() []*Subquery {
+	return this.subqueries
 }
 
 /*
