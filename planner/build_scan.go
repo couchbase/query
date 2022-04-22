@@ -19,6 +19,7 @@ import (
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/plan"
 	base "github.com/couchbase/query/plannerbase"
+	"github.com/couchbase/query/util"
 )
 
 func (this *builder) selectScan(keyspace datastore.Keyspace, node *algebra.KeyspaceTerm,
@@ -217,7 +218,8 @@ func (this *builder) buildPredicateScan(keyspace datastore.Keyspace, node *algeb
 	}
 
 	if node.IsAnsiJoinOp() {
-		if node.IsPrimaryJoin() || node.IsUnderHash() || node.IsSystem() {
+		nlPrimaryScan := !util.IsFeatureEnabled(this.context.FeatureControls(), util.N1QL_NONL_PRIMARYSCAN)
+		if node.IsPrimaryJoin() || node.IsUnderHash() || node.IsSystem() || nlPrimaryScan {
 			return nil, nil, nil
 		} else {
 			op := "join"
@@ -238,6 +240,7 @@ func (this *builder) buildSubsetScan(keyspace datastore.Keyspace, node *algebra.
 
 	join := node.IsAnsiJoinOp()
 	hash := node.IsUnderHash()
+	nlPrimaryScan := !util.IsFeatureEnabled(this.context.FeatureControls(), util.N1QL_NONL_PRIMARYSCAN)
 	if join {
 		this.resetPushDowns()
 	}
@@ -267,7 +270,7 @@ func (this *builder) buildSubsetScan(keyspace datastore.Keyspace, node *algebra.
 		return secondary, nil, err
 	}
 
-	if !join || hash || node.IsSystem() {
+	if !join || hash || node.IsSystem() || nlPrimaryScan {
 		// No secondary scan, try primary scan. restore order there is predicate no need to restore others
 		this.order = order
 		exact := false
