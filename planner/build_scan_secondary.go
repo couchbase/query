@@ -880,9 +880,48 @@ func getMissings(entry *indexEntry) (isMissings []bool) {
 	return
 }
 
+func eqJoinFilter(fl *base.Filter, alias string) (bool, expression.Expression, expression.Expression, string) {
+	fltrExpr := fl.FltrExpr()
+	eqFltr, ok := fltrExpr.(*expression.Eq)
+	if !ok {
+		return false, nil, nil, ""
+	}
+
+	keyspaces := fl.OrigKeyspaces()
+	if len(keyspaces) != 2 {
+		return false, nil, nil, ""
+	}
+
+	first := eqFltr.First()
+	second := eqFltr.Second()
+	firstRefs, err1 := expression.CountKeySpaces(first, keyspaces)
+	secondRefs, err2 := expression.CountKeySpaces(second, keyspaces)
+	if err1 != nil || err2 != nil {
+		return false, nil, nil, ""
+	}
+	if len(firstRefs) != 1 || len(secondRefs) != 1 {
+		return false, nil, nil, ""
+	}
+
+	var joinAlias string
+	for a, _ := range keyspaces {
+		if a != alias {
+			joinAlias = a
+			break
+		}
+	}
+
+	if _, ok := firstRefs[alias]; ok {
+		return true, first, second, joinAlias
+	} else if _, ok := secondRefs[alias]; ok {
+		return true, second, first, joinAlias
+	}
+	return false, nil, nil, ""
+}
+
 func getIndexFilters(entry *indexEntry, baseKeyspace *base.BaseKeyspace,
-	id expression.Expression, underHash, useCBO bool) (
-	indexFilters, indexJoinFilters, keys expression.Expressions, selec, joinSelec float64) {
+	id expression.Expression, includeJoin, useCBO bool) (
+	keys, indexFilters, indexJoinFilters expression.Expressions, selec, joinSelec float64) {
 
 	doSelec := useCBO
 	selec = OPT_SELEC_NOT_AVAIL
@@ -897,20 +936,23 @@ func getIndexFilters(entry *indexEntry, baseKeyspace *base.BaseKeyspace,
 	alias := baseKeyspace.Name()
 	filters := baseKeyspace.Filters()
 	joinFilters := baseKeyspace.JoinFilters()
-	if len(filters)+len(joinFilters) == 0 {
+	nFilters := len(filters)
+	nJoinFilters := len(joinFilters)
+
+	for _, fl := range filters {
+		if fl.IsJoin() {
+			nFilters--
+			nJoinFilters++
+		}
+	}
+	if !includeJoin {
+		nJoinFilters = 0
+	}
+
+	if (nFilters + nJoinFilters) == 0 {
 		return
 	}
 
-	nFilters := len(filters)
-	nJoinFilters := len(joinFilters)
-	if underHash {
-		for _, fl := range filters {
-			if fl.IsJoin() {
-				nFilters--
-				nJoinFilters++
-			}
-		}
-	}
 	if nFilters > 0 {
 		indexFilters = make(expression.Expressions, 0, nFilters)
 	}
@@ -933,7 +975,7 @@ func getIndexFilters(entry *indexEntry, baseKeyspace *base.BaseKeyspace,
 		fltrExpr := fl.FltrExpr()
 		derived := false
 		orig := false
-		if base.IsDerivedExpr(fltrExpr) {
+		if base.IsDerivedExpr(fltrExpr) && !fl.IsJoin() {
 			derived = true
 			if fl.OrigExpr() != nil {
 				fltrExpr = fl.OrigExpr()
@@ -947,7 +989,7 @@ func getIndexFilters(entry *indexEntry, baseKeyspace *base.BaseKeyspace,
 			continue
 		}
 		if expression.IsCovered(fltrExpr, alias, keys, false) {
-			if !fl.IsJoin() || !underHash {
+			if !fl.IsJoin() {
 				if doSelec {
 					if fl.Selec() > 0.0 {
 						selec *= fl.Selec()
@@ -958,7 +1000,32 @@ func getIndexFilters(entry *indexEntry, baseKeyspace *base.BaseKeyspace,
 				if !derived || orig {
 					indexFilters = append(indexFilters, fltrExpr)
 				}
-			} else {
+			} else if includeJoin {
+				eq, self, other, joinAlias := eqJoinFilter(fl, alias)
+				if eq && self != nil && other != nil && joinAlias != "" {
+					if doSelec {
+						if fl.Selec() > 0.0 {
+							joinSelec *= fl.Selec()
+						} else {
+							doSelec = false
+						}
+					}
+					indexJoinFilters = append(indexJoinFilters, fltrExpr)
+					baseKeyspace.AddBFSource(joinAlias, index, self, other)
+				}
+			}
+		}
+	}
+
+	if !includeJoin {
+		return
+	}
+
+	for _, fl := range joinFilters {
+		fltrExpr := fl.FltrExpr()
+		if expression.IsCovered(fltrExpr, alias, keys, false) {
+			eq, self, other, joinAlias := eqJoinFilter(fl, alias)
+			if eq && self != nil && other != nil && joinAlias != "" {
 				if doSelec {
 					if fl.Selec() > 0.0 {
 						joinSelec *= fl.Selec()
@@ -966,24 +1033,9 @@ func getIndexFilters(entry *indexEntry, baseKeyspace *base.BaseKeyspace,
 						doSelec = false
 					}
 				}
-				if !derived || orig {
-					indexJoinFilters = append(indexJoinFilters, fltrExpr)
-				}
+				indexJoinFilters = append(indexJoinFilters, fltrExpr)
+				baseKeyspace.AddBFSource(joinAlias, index, self, other)
 			}
-		}
-	}
-
-	for _, fl := range joinFilters {
-		fltrExpr := fl.FltrExpr()
-		if expression.IsCovered(fltrExpr, alias, keys, false) {
-			if doSelec {
-				if fl.Selec() > 0.0 {
-					joinSelec *= fl.Selec()
-				} else {
-					doSelec = false
-				}
-			}
-			indexJoinFilters = append(indexJoinFilters, fltrExpr)
 		}
 	}
 
@@ -995,11 +1047,21 @@ func (this *builder) buildIndexFilters(entry *indexEntry, baseKeyspace *base.Bas
 	covers expression.Covers, filter expression.Expression, indexProjection *plan.IndexProjection, err error) {
 
 	useCBO := this.useCBO && this.keyspaceUseCBO(node.Alias())
+	includeJoin := true
+	if node.IsAnsiJoinOp() && (this.joinEnum() || !node.IsUnderHash()) {
+		includeJoin = false
+	} else if this.hasBuilderFlag(BUILDER_CHK_INDEX_ORDER) {
+		includeJoin = false
+	}
 
-	indexFilters, _, keys, selec, _ := getIndexFilters(entry, baseKeyspace, id, node.IsUnderHash(), useCBO)
+	keys, indexFilters, joinFilters, selec, _ := getIndexFilters(entry, baseKeyspace, id, includeJoin, useCBO)
 
-	if len(indexFilters) > 0 {
-		indexProjection = this.buildIndexProjection(entry, indexFilters, id, true, nil)
+	if len(indexFilters) > 0 || len(joinFilters) > 0 {
+		allFilters := indexFilters
+		if len(joinFilters) > 0 {
+			allFilters = append(allFilters, joinFilters...)
+		}
+		indexProjection = this.buildIndexProjection(entry, allFilters, id, true, nil)
 		if indexProjection != nil {
 			covers = make(expression.Covers, 0, len(indexProjection.EntryKeys)+1)
 			for _, i := range indexProjection.EntryKeys {
@@ -1016,7 +1078,9 @@ func (this *builder) buildIndexFilters(entry *indexEntry, baseKeyspace *base.Bas
 				covers = append(covers, expression.NewIndexKey(key))
 			}
 		}
+	}
 
+	if len(indexFilters) > 0 {
 		if len(indexFilters) == 1 {
 			filter = indexFilters[0].Copy()
 		} else {

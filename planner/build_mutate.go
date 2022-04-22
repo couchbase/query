@@ -133,7 +133,7 @@ func (this *builder) beginMutate(keyspace datastore.Keyspace, ksref *algebra.Key
 				this.advisorValidate(), this.context)
 		}
 
-		filter := plan.NewFilter(this.where, cost, cardinality, size, frCost)
+		filter := plan.NewFilter(this.where, term.Alias(), cost, cardinality, size, frCost)
 		this.addSubChildren(filter)
 	}
 

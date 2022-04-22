@@ -108,6 +108,9 @@ func (this *builder) buildAnsiJoinOp(node *algebra.AnsiJoin) (op plan.Operator, 
 		joinHint = baseKeyspace.JoinHint()
 		preferHash = algebra.PreferHash(joinHint)
 		preferNL = algebra.PreferNL(joinHint)
+		if !preferHash && !preferNL && baseKeyspace.HasJoinFilterHint() {
+			preferHash = true
+		}
 
 		if node.Right().HasInferJoinHint() {
 			if leftTerm, ok := node.Left().(algebra.SimpleFromTerm); ok {
@@ -116,6 +119,9 @@ func (this *builder) buildAnsiJoinOp(node *algebra.AnsiJoin) (op plan.Operator, 
 				joinHint = leftBaseKeyspace.JoinHint()
 				preferHash = algebra.PreferHash(joinHint)
 				preferNL = algebra.PreferNL(joinHint)
+				if !preferHash && !preferNL && leftBaseKeyspace.HasJoinFilterHint() {
+					preferHash = true
+				}
 			}
 		}
 	}
@@ -403,6 +409,9 @@ func (this *builder) buildAnsiNestOp(node *algebra.AnsiNest) (op plan.Operator, 
 		joinHint = baseKeyspace.JoinHint()
 		preferHash = algebra.PreferHash(joinHint)
 		preferNL = algebra.PreferNL(joinHint)
+		if !preferHash && !preferNL && baseKeyspace.HasJoinFilterHint() {
+			preferHash = true
+		}
 
 		if node.Right().HasInferJoinHint() {
 			if leftTerm, ok := node.Left().(algebra.SimpleFromTerm); ok {
@@ -411,6 +420,9 @@ func (this *builder) buildAnsiNestOp(node *algebra.AnsiNest) (op plan.Operator, 
 				joinHint = leftBaseKeyspace.JoinHint()
 				preferHash = algebra.PreferHash(joinHint)
 				preferNL = algebra.PreferNL(joinHint)
+				if !preferHash && !preferNL && leftBaseKeyspace.HasJoinFilterHint() {
+					preferHash = true
+				}
 			}
 		}
 	}
@@ -965,6 +977,7 @@ func (this *builder) buildHashJoinOp(right algebra.SimpleFromTerm, left algebra.
 	useCBO := this.useCBO && this.keyspaceUseCBO(alias)
 	baseKeyspace, _ := this.baseKeyspaces[alias]
 	force := true
+	inferJoinFilterHint := false
 	joinHint := baseKeyspace.JoinHint()
 	if right.HasInferJoinHint() {
 		if leftTerm, ok := left.(algebra.SimpleFromTerm); ok {
@@ -976,6 +989,7 @@ func (this *builder) buildHashJoinOp(right algebra.SimpleFromTerm, left algebra.
 			case algebra.USE_HASH_PROBE:
 				joinHint = algebra.USE_HASH_BUILD
 			}
+			inferJoinFilterHint = leftBaseKeyspace.HasJoinFilterHint()
 		}
 	}
 
@@ -990,14 +1004,18 @@ func (this *builder) buildHashJoinOp(right algebra.SimpleFromTerm, left algebra.
 	} else if outer || op == "nest" {
 		// for outer join or nest, must build on right-hand side
 		buildRight = true
-	} else if defaultBuildRight {
-		// for expression term and subquery term, if no USE HASH hint is
-		// specified, then consider hash join/nest with the right-hand side
-		// as build side
+	} else if inferJoinFilterHint {
 		buildRight = true
-		force = false
-	} else {
-		force = false
+	} else if !baseKeyspace.HasJoinFilterHint() {
+		if defaultBuildRight {
+			// for expression term and subquery term, if no USE HASH hint is
+			// specified, then consider hash join/nest with the right-hand side
+			// as build side
+			buildRight = true
+			force = false
+		} else {
+			force = false
+		}
 	}
 
 	keyspaceNames := make(map[string]string, 1)
@@ -1237,6 +1255,13 @@ func (this *builder) buildHashJoinOp(right algebra.SimpleFromTerm, left algebra.
 		cost, cardinality, size, frCost = OPT_COST_NOT_AVAIL, OPT_COST_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL
 	}
 
+	var probeAliases []string
+	leftAliases := make([]string, 0, len(this.baseKeyspaces))
+	for _, kspace := range this.baseKeyspaces {
+		if kspace.PlanDone() && kspace.Name() != alias {
+			leftAliases = append(leftAliases, kspace.Name())
+		}
+	}
 	if buildRight {
 		if len(this.subChildren) > 0 {
 			this.addChildren(this.addSubchildrenParallel())
@@ -1247,6 +1272,7 @@ func (this *builder) buildHashJoinOp(right algebra.SimpleFromTerm, left algebra.
 		probeExprs = leftExprs
 		buildExprs = rightExprs
 		buildAliases = []string{alias}
+		probeAliases = leftAliases
 	} else {
 		if len(subChildren) > 0 {
 			children = append(children, this.addParallel(subChildren...))
@@ -1254,13 +1280,32 @@ func (this *builder) buildHashJoinOp(right algebra.SimpleFromTerm, left algebra.
 		child = plan.NewSequence(children...)
 		buildExprs = leftExprs
 		probeExprs = rightExprs
-		buildAliases = make([]string, 0, len(this.baseKeyspaces))
-		for _, kspace := range this.baseKeyspaces {
-			if kspace.PlanDone() && kspace.Name() != alias {
-				buildAliases = append(buildAliases, kspace.Name())
-			}
-		}
+		buildAliases = leftAliases
+		probeAliases = []string{alias}
 		this.lastOp = this.children[len(this.children)-1]
+	}
+
+	useBitFilter := !outer
+	if useBitFilter {
+		tmpBldAliases := buildAliases
+		if len(tmpBldAliases) > 1 {
+			// remove from buildAliases the ones not able to use bit filter
+			tmpBldAliases = checkBuildAliases(tmpBldAliases, child)
+		}
+		buildBFInfosMap := make(map[string]map[datastore.Index]*base.BuildBFInfo, len(tmpBldAliases))
+		for _, a := range tmpBldAliases {
+			buildBFInfosMap[a] = make(map[datastore.Index]*base.BuildBFInfo, 4)
+		}
+		err = setProbeBitFilters(this.baseKeyspaces, probeAliases, tmpBldAliases,
+			buildBFInfosMap, this.children...)
+		if err != nil {
+			return nil, nil, nil, nil, nil, nil, false, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, err
+		}
+		err = setBuildBitFilters(this.baseKeyspaces, tmpBldAliases, probeAliases,
+			buildBFInfosMap, child)
+		if err != nil {
+			return nil, nil, nil, nil, nil, nil, false, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, err
+		}
 	}
 
 	return child, buildExprs, probeExprs, buildAliases, newOnclause, newFilter, buildRight, cost, cardinality, size, frCost, nil
@@ -1605,4 +1650,325 @@ func (this *builder) restoreJoinPlannerState(jps *joinPlannerState) {
 	this.coveringScans = jps.coveringScans
 	this.lastOp = jps.lastOp
 	this.filter = jps.filter
+}
+
+func hasAlias(alias string, aliases []string) bool {
+	for _, a := range aliases {
+		if alias == a {
+			return true
+		}
+	}
+	return false
+}
+
+func setProbeBitFilters(baseKeyspaces map[string]*base.BaseKeyspace,
+	probeAliases, buildAliases []string,
+	buildBFInfosMap map[string]map[datastore.Index]*base.BuildBFInfo,
+	ops ...plan.Operator) (err error) {
+
+	for i := len(ops) - 1; i >= 0; i-- {
+		switch op := ops[i].(type) {
+		case *plan.IndexScan3:
+			alias := op.Term().Alias()
+			baseKeyspace, ok := baseKeyspaces[alias]
+			if !ok {
+				return errors.NewPlanInternalError(fmt.Sprintf("setProbeBitFilters: baseKeyspace for %s not found", alias))
+			}
+			if baseKeyspace.HasJoinFilterHint() && !op.Covering() &&
+				hasAlias(alias, probeAliases) && len(op.IndexKeys()) > 0 {
+				coverer := expression.NewCoverer(op.IndexKeys(), nil)
+				for _, a := range buildAliases {
+					bfSource := baseKeyspace.GetBFSource(a)
+					if bfSource == nil {
+						continue
+					}
+					buildExprs, _ := buildBFInfosMap[a]
+					probeExprs := bfSource.GetIndexExprs(op.Index(), alias, buildExprs)
+					if len(probeExprs) > 0 {
+						coverExprs := make(expression.Expressions, 0, len(probeExprs))
+						for _, exp := range probeExprs {
+							coverExpr, err := coverer.Map(exp.Copy())
+							if err != nil {
+								return err
+							}
+							coverExprs = append(coverExprs, coverExpr)
+						}
+						probeIdxExprs := map[datastore.Index]expression.Expressions{op.Index(): coverExprs}
+						err = op.SetProbeBitFilters(a, probeIdxExprs)
+						if err != nil {
+							return
+						}
+					}
+				}
+			}
+		case *plan.DistinctScan:
+			err = setScanProbeBitFilters(baseKeyspaces, probeAliases, buildAliases, buildBFInfosMap, op.Scan())
+		case *plan.IntersectScan:
+			err = setScanProbeBitFilters(baseKeyspaces, probeAliases, buildAliases, buildBFInfosMap, op.Scans()...)
+		case *plan.OrderedIntersectScan:
+			err = setScanProbeBitFilters(baseKeyspaces, probeAliases, buildAliases, buildBFInfosMap, op.Scans()...)
+		case *plan.UnionScan:
+			err = setScanProbeBitFilters(baseKeyspaces, probeAliases, buildAliases, buildBFInfosMap, op.Scans()...)
+		case *plan.Parallel:
+			err = setProbeBitFilters(baseKeyspaces, probeAliases, buildAliases, buildBFInfosMap, op.Child())
+		case *plan.Sequence:
+			err = setProbeBitFilters(baseKeyspaces, probeAliases, buildAliases, buildBFInfosMap, op.Children()...)
+		case *plan.HashJoin:
+			if !op.Outer() {
+				err = setProbeBitFilters(baseKeyspaces, probeAliases, buildAliases, buildBFInfosMap, op.Child())
+			}
+		case *plan.Alias:
+			// skip next term (SubqueryTerm)
+			i--
+		}
+		// do not traverse down inner side of NL join/nest (accessed repeatedly)
+		// do not traverse down inner side of Hash Nest either (becoming arrays)
+		if err != nil {
+			return
+		}
+	}
+	return
+}
+
+func setScanProbeBitFilters(baseKeyspaces map[string]*base.BaseKeyspace,
+	probeAliases, buildAliases []string,
+	buildBFInfosMap map[string]map[datastore.Index]*base.BuildBFInfo,
+	scans ...plan.SecondaryScan) (err error) {
+
+	for _, scan := range scans {
+		err = setProbeBitFilters(baseKeyspaces, probeAliases, buildAliases, buildBFInfosMap, scan)
+		if err != nil {
+			return
+		}
+	}
+	return
+}
+
+func setBuildBitFilters(baseKeyspaces map[string]*base.BaseKeyspace,
+	buildAliases, probeAliases []string,
+	buildBFInfosMap map[string]map[datastore.Index]*base.BuildBFInfo,
+	ops ...plan.Operator) (err error) {
+
+	for i := len(ops) - 1; i >= 0; i-- {
+		switch op := ops[i].(type) {
+		case *plan.IndexScan3:
+			alias := op.Term().Alias()
+			if !hasAlias(alias, buildAliases) {
+				break
+			}
+			if op.Covering() {
+				coverer := expression.NewCoverer(op.Covers(), nil)
+				buildBFInfos, _ := buildBFInfosMap[alias]
+				for _, a := range probeAliases {
+					buildExprs := base.GetBFInfoExprs(a, buildBFInfos)
+					if len(buildExprs) > 0 {
+						for index, exps := range buildExprs {
+							coverExprs := make(expression.Expressions, 0, len(exps))
+							for _, exp := range exps {
+								coverExpr, err := coverer.Map(exp.Copy())
+								if err != nil {
+									return err
+								}
+								coverExprs = append(coverExprs, coverExpr)
+							}
+							buildExprs[index] = coverExprs
+						}
+						err = op.SetBuildBitFilters(a, buildExprs)
+						if err != nil {
+							return
+						}
+					}
+				}
+			}
+		case *plan.DistinctScan:
+			err = setScanBuildBitFilters(baseKeyspaces, buildAliases, probeAliases, buildBFInfosMap, op.Scan())
+		case *plan.IntersectScan:
+			err = setScanBuildBitFilters(baseKeyspaces, buildAliases, probeAliases, buildBFInfosMap, op.Scans()...)
+		case *plan.OrderedIntersectScan:
+			err = setScanBuildBitFilters(baseKeyspaces, buildAliases, probeAliases, buildBFInfosMap, op.Scans()...)
+		case *plan.UnionScan:
+			err = setScanBuildBitFilters(baseKeyspaces, buildAliases, probeAliases, buildBFInfosMap, op.Scans()...)
+		case *plan.ExpressionScan:
+			alias := op.Alias()
+			if hasAlias(alias, buildAliases) {
+				err = setBuildFilterBaseFilters(probeAliases, op.GetBuildFilterBase(), buildBFInfosMap[alias])
+				if err != nil {
+					return
+				}
+			}
+		case *plan.Unnest:
+			alias := op.Alias()
+			if hasAlias(alias, buildAliases) {
+				err = setBuildFilterBaseFilters(probeAliases, op.GetBuildFilterBase(), buildBFInfosMap[alias])
+				if err != nil {
+					return
+				}
+			}
+		case *plan.Filter:
+			alias := op.Alias()
+			if hasAlias(alias, buildAliases) {
+				err = setBuildFilterBaseFilters(probeAliases, op.GetBuildFilterBase(), buildBFInfosMap[alias])
+				if err != nil {
+					return
+				}
+			}
+		case *plan.Parallel:
+			err = setBuildBitFilters(baseKeyspaces, buildAliases, probeAliases, buildBFInfosMap, op.Child())
+		case *plan.Sequence:
+			err = setBuildBitFilters(baseKeyspaces, buildAliases, probeAliases, buildBFInfosMap, op.Children()...)
+		case *plan.HashJoin:
+			if !op.Outer() {
+				err = setBuildBitFilters(baseKeyspaces, buildAliases, probeAliases, buildBFInfosMap, op.Child())
+			}
+		case *plan.Alias:
+			alias := op.Alias()
+			if hasAlias(alias, buildAliases) {
+				err = setBuildFilterBaseFilters(probeAliases, op.GetBuildFilterBase(), buildBFInfosMap[alias])
+				if err != nil {
+					return
+				}
+			}
+			// skip next term (SubqueryTerm)
+			i--
+		}
+		// do not traverse down inner side of NL join/nest (accessed repeatedly)
+		// do not traverse down inner side of Hash Nest either (becoming arrays)
+		if err != nil {
+			return
+		}
+	}
+	return
+}
+
+func setScanBuildBitFilters(baseKeyspaces map[string]*base.BaseKeyspace,
+	buildAliases, probeAliases []string,
+	buildBFInfosMap map[string]map[datastore.Index]*base.BuildBFInfo,
+	scans ...plan.SecondaryScan) (err error) {
+
+	for _, scan := range scans {
+		err = setBuildBitFilters(baseKeyspaces, buildAliases, probeAliases, buildBFInfosMap, scan)
+		if err != nil {
+			return
+		}
+	}
+	return
+}
+
+func setBuildFilterBaseFilters(probeAliases []string, op *plan.BuildBitFilterBase,
+	buildBFInfos map[datastore.Index]*base.BuildBFInfo) (err error) {
+	for _, a := range probeAliases {
+		buildExprs := base.GetBFInfoExprs(a, buildBFInfos)
+		if len(buildExprs) > 0 {
+			err = op.SetBuildBitFilters(a, buildExprs)
+			if err != nil {
+				return
+			}
+		}
+	}
+	return
+}
+
+// remove aliases that cannot be used in bit filter
+func checkBuildAliases(buildAliases []string, ops ...plan.Operator) []string {
+	aliases := make([]string, len(buildAliases))
+	copy(aliases, buildAliases)
+	for i := len(ops) - 1; i >= 0; i-- {
+		switch op := ops[i].(type) {
+		case *plan.NLJoin:
+			aliases = removeAlias(aliases, op.Alias())
+		case *plan.NLNest:
+			aliases = removeAlias(aliases, op.Alias())
+		case *plan.HashNest:
+			aliases = removeAlias(aliases, op.BuildAlias())
+		case *plan.Sequence:
+			aliases = checkBuildAliases(aliases, op.Children()...)
+		case *plan.Parallel:
+			aliases = checkBuildAliases(aliases, op.Child())
+		}
+	}
+	return aliases
+}
+
+func removeAlias(aliases []string, alias string) []string {
+	end := len(aliases) - 1
+	if end <= 0 {
+		return aliases
+	}
+	pos := -1
+	for i, a := range aliases {
+		if a == alias {
+			pos = i
+			break
+		}
+	}
+	if pos >= 0 {
+		if pos == 0 {
+			return aliases[1:]
+		} else if pos == end {
+			return aliases[:end]
+		}
+		copy(aliases[pos:end], aliases[pos+1:end+1])
+		return aliases[:end]
+	}
+	return aliases
+}
+
+func checkJoinFilterHint(baseKeyspaces map[string]*base.BaseKeyspace, ops ...plan.Operator) (err error) {
+	for i := len(ops) - 1; i >= 0; i-- {
+		switch op := ops[i].(type) {
+		case *plan.IndexScan3:
+			alias := op.Term().Alias()
+			baseKeyspace, ok := baseKeyspaces[alias]
+			if !ok {
+				return errors.NewPlanInternalError(fmt.Sprintf("checkJoinFilterHint: baseKeyspace for %s not found", alias))
+			}
+			if len(op.GetProbeBitFilters()) == 0 {
+				if baseKeyspace.HasJoinFilterHint() {
+					baseKeyspace.SetJoinFltrHintError()
+				}
+				if len(op.IndexKeys()) > 0 && op.Filter() == nil {
+					op.ResetIndexKeys()
+				}
+			}
+		case *plan.DistinctScan:
+			err = checkScanJoinFilterHint(baseKeyspaces, op.Scan())
+		case *plan.IntersectScan:
+			err = checkScanJoinFilterHint(baseKeyspaces, op.Scans()...)
+		case *plan.OrderedIntersectScan:
+			err = checkScanJoinFilterHint(baseKeyspaces, op.Scans()...)
+		case *plan.UnionScan:
+			err = checkScanJoinFilterHint(baseKeyspaces, op.Scans()...)
+		case *plan.Parallel:
+			err = checkJoinFilterHint(baseKeyspaces, op.Child())
+		case *plan.Sequence:
+			err = checkJoinFilterHint(baseKeyspaces, op.Children()...)
+		case *plan.HashJoin:
+			err = checkJoinFilterHint(baseKeyspaces, op.Child())
+		case *plan.HashNest:
+			err = checkJoinFilterHint(baseKeyspaces, op.Child())
+		case *plan.NLJoin:
+			err = checkJoinFilterHint(baseKeyspaces, op.Child())
+		case *plan.NLNest:
+			err = checkJoinFilterHint(baseKeyspaces, op.Child())
+		case *plan.Alias:
+			// skip next term (SubqueryTerm)
+			i--
+		}
+		if err != nil {
+			return
+		}
+	}
+	return
+}
+
+func checkScanJoinFilterHint(baseKeyspaces map[string]*base.BaseKeyspace,
+	scans ...plan.SecondaryScan) (err error) {
+
+	for _, scan := range scans {
+		err = checkJoinFilterHint(baseKeyspaces, scan)
+		if err != nil {
+			return
+		}
+	}
+	return
 }

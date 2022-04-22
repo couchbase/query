@@ -206,6 +206,11 @@ func (this *builder) visitFrom(node *algebra.Subselect, group *algebra.Group,
 			if err != nil {
 				return err
 			}
+			// join filter hints are checked/marked after all join/nest/unnest are done
+			err = this.markJoinFilterHints()
+			if err != nil {
+				return err
+			}
 		}
 	} else {
 		// No FROM clause
@@ -370,7 +375,7 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 				// Add filter as a separate Filter operator since Fetch is already
 				// heavily loaded. This way the filter evaluation can happen on a
 				// separate go thread and can be potentially parallelized
-				this.addSubChildren(plan.NewFilter(filter, cost, cardinality, size, frCost))
+				this.addSubChildren(plan.NewFilter(filter, node.Alias(), cost, cardinality, size, frCost))
 			}
 		}
 	}
@@ -421,7 +426,7 @@ func (this *builder) VisitSubqueryTerm(node *algebra.SubqueryTerm) (interface{},
 					this.baseKeyspaces, this.keyspaceNames, node.Alias(),
 					this.advisorValidate(), this.context)
 			}
-			this.addSubChildren(plan.NewFilter(filter, cost, cardinality, size, frCost))
+			this.addSubChildren(plan.NewFilter(filter, node.Alias(), cost, cardinality, size, frCost))
 		}
 	}
 

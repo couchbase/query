@@ -333,8 +333,8 @@
                       "INDEX(p purch_customerId_purchaseId)"
                   ],
                   "hints_with_error": [
-                      "USE_HASH(p/PROBE): Duplciated join hint specified for keyspace: p",
-                      "NO_USE_NL(p): Duplciated join hint specified for keyspace: p"
+                      "USE_HASH(p/PROBE): Duplicated join hint specified for keyspace: p",
+                      "NO_USE_NL(p): Duplicated join hint specified for keyspace: p"
                   ]
                 }
             ],

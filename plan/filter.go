@@ -18,12 +18,15 @@ import (
 type Filter struct {
 	readonly
 	optEstimate
-	cond expression.Expression
+	BuildBitFilterBase
+	cond  expression.Expression
+	alias string
 }
 
-func NewFilter(cond expression.Expression, cost, cardinality float64, size int64, frCost float64) *Filter {
+func NewFilter(cond expression.Expression, alias string, cost, cardinality float64, size int64, frCost float64) *Filter {
 	rv := &Filter{
-		cond: cond,
+		cond:  cond,
+		alias: alias,
 	}
 	setOptEstimate(&rv.optEstimate, cost, cardinality, size, frCost)
 	return rv
@@ -41,6 +44,10 @@ func (this *Filter) Condition() expression.Expression {
 	return this.cond
 }
 
+func (this *Filter) Alias() string {
+	return this.alias
+}
+
 func (this *Filter) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
@@ -48,6 +55,13 @@ func (this *Filter) MarshalJSON() ([]byte, error) {
 func (this *Filter) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "Filter"}
 	r["condition"] = expression.NewStringer().Visit(this.cond)
+	if this.alias != "" {
+		r["alias"] = this.alias
+	}
+
+	if this.hasBuildBitFilter() {
+		this.marshalBuildBitFilters(r)
+	}
 
 	if optEstimate := marshalOptEstimate(&this.optEstimate); optEstimate != nil {
 		r["optimizer_estimates"] = optEstimate
@@ -61,9 +75,11 @@ func (this *Filter) MarshalBase(f func(map[string]interface{})) map[string]inter
 
 func (this *Filter) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_           string                 `json:"#operator"`
-		Condition   string                 `json:"condition"`
-		OptEstimate map[string]interface{} `json:"optimizer_estimates"`
+		_               string                 `json:"#operator"`
+		Condition       string                 `json:"condition"`
+		Alias           string                 `json:"alias"`
+		OptEstimate     map[string]interface{} `json:"optimizer_estimates"`
+		BuildBitFilters []json.RawMessage      `json:"build_bit_filters"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -73,6 +89,17 @@ func (this *Filter) UnmarshalJSON(body []byte) error {
 
 	if _unmarshalled.Condition != "" {
 		this.cond, err = parser.Parse(_unmarshalled.Condition)
+		if err != nil {
+			return err
+		}
+	}
+
+	if _unmarshalled.Alias != "" {
+		this.alias = _unmarshalled.Alias
+	}
+
+	if len(_unmarshalled.BuildBitFilters) > 0 {
+		err = this.unmarshalBuildBitFilters(_unmarshalled.BuildBitFilters)
 		if err != nil {
 			return err
 		}

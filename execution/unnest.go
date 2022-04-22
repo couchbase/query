@@ -18,6 +18,7 @@ import (
 
 type Unnest struct {
 	base
+	buildBitFilterBase
 	plan *plan.Unnest
 }
 
@@ -54,6 +55,10 @@ func (this *Unnest) beforeItems(context *Context, parent value.Value) bool {
 	if filter != nil {
 		filter.EnableInlistHash(context)
 	}
+	buildBitFilters := this.plan.GetBuildBitFilters()
+	if len(buildBitFilters) > 0 {
+		this.createLocalBuildFilters(buildBitFilters)
+	}
 	return true
 }
 
@@ -78,6 +83,7 @@ func (this *Unnest) processItem(item value.AnnotatedValue, context *Context) boo
 	}
 
 	filter := this.plan.Filter()
+	buildBitFltr := this.hasBuildBitFilter()
 
 	// Attach and send
 	for {
@@ -97,21 +103,27 @@ func (this *Unnest) processItem(item value.AnnotatedValue, context *Context) boo
 		}
 		av.SetField(this.plan.Alias(), actv)
 
+		pass := true
 		if filter != nil {
 			result, err := filter.Evaluate(av, context)
 			if err != nil {
 				context.Error(errors.NewEvaluationError(err, "unnest filter"))
 				return false
 			}
-			if result.Truth() {
-				if !this.sendItem(av) {
-					return false
-				}
-			} else {
+			if !result.Truth() {
 				av.Recycle()
+				pass = false
 			}
-		} else if !this.sendItem(av) {
-			return false
+		}
+
+		if pass {
+			if buildBitFltr && !this.buildBitFilters(av, context) {
+				return false
+			}
+
+			if !this.sendItem(av) {
+				return false
+			}
 		}
 
 		// no more
@@ -128,6 +140,9 @@ func (this *Unnest) afterItems(context *Context) {
 	filter := this.plan.Filter()
 	if filter != nil {
 		filter.ResetMemory(context)
+	}
+	if this.hasBuildBitFilter() {
+		this.setBuildBitFilters(this.plan.Alias(), context)
 	}
 }
 

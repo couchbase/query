@@ -207,6 +207,8 @@ type Context struct {
 	udfValueMap         *sync.Map
 	udfHandleMap        map[*executionHandle]bool
 	tracked             bool
+	bitFilterMap        map[string]*BitFilterTerm
+	bitFilterLock       sync.RWMutex
 }
 
 func NewContext(requestId string, datastore datastore.Datastore, systemstore datastore.Systemstore,
@@ -1166,4 +1168,59 @@ func (this *Context) CacheLikeRegex(in *expression.Like, s string, re *regexp.Re
 	}
 	this.likeRegexMap[in].Orig = s
 	this.likeRegexMap[in].Re = re
+}
+
+func (this *Context) getBitFilter(alias, indexId string) (*BloomFilter, errors.Error) {
+	if len(this.bitFilterMap) == 0 {
+		return nil, nil
+	}
+	this.bitFilterLock.RLock()
+	bft := this.bitFilterMap[alias]
+	this.bitFilterLock.RUnlock()
+	if bft == nil {
+		return nil, nil
+	}
+	return bft.getBitFilter(indexId)
+}
+
+func (this *Context) setBitFilter(alias, indexId string, nTerms, nIndexes int, filter *BloomFilter) errors.Error {
+	if this.bitFilterMap == nil {
+		this.bitFilterLock.Lock()
+		if this.bitFilterMap == nil {
+			this.bitFilterMap = make(map[string]*BitFilterTerm, nTerms)
+		}
+		this.bitFilterLock.Unlock()
+	}
+	this.bitFilterLock.RLock()
+	bft := this.bitFilterMap[alias]
+	this.bitFilterLock.RUnlock()
+	if bft == nil {
+		this.bitFilterLock.Lock()
+		bft = this.bitFilterMap[alias]
+		if bft == nil {
+			bft = newBitFilterTerm(nIndexes)
+			this.bitFilterMap[alias] = bft
+		}
+		this.bitFilterLock.Unlock()
+	}
+
+	return bft.setBitFilter(indexId, filter)
+}
+
+func (this *Context) clearBitFilter(alias, idxId string) {
+	if len(this.bitFilterMap) == 0 {
+		return
+	}
+	this.bitFilterLock.RLock()
+	bft := this.bitFilterMap[alias]
+	this.bitFilterLock.RUnlock()
+	if bft == nil {
+		return
+	}
+	empty := bft.clearBitFilters(idxId)
+	if empty {
+		this.bitFilterLock.Lock()
+		delete(this.bitFilterMap, alias)
+		this.bitFilterLock.Unlock()
+	}
 }

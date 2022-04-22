@@ -18,6 +18,7 @@ import (
 type ExpressionScan struct {
 	readonly
 	optEstimate
+	BuildBitFilterBase
 	fromExpr   expression.Expression
 	alias      string
 	correlated bool
@@ -82,6 +83,9 @@ func (this *ExpressionScan) MarshalBase(f func(map[string]interface{})) map[stri
 	if this.filter != nil {
 		r["filter"] = expression.NewStringer().Visit(this.filter)
 	}
+	if this.hasBuildBitFilter() {
+		this.marshalBuildBitFilters(r)
+	}
 	if optEstimate := marshalOptEstimate(&this.optEstimate); optEstimate != nil {
 		r["optimizer_estimates"] = optEstimate
 	}
@@ -93,12 +97,13 @@ func (this *ExpressionScan) MarshalBase(f func(map[string]interface{})) map[stri
 
 func (this *ExpressionScan) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_            string                 `json:"#operator"`
-		FromExpr     string                 `json:"expr"`
-		Alias        string                 `json:"alias"`
-		UnCorrelated bool                   `json:"uncorrelated"`
-		Filter       string                 `json:"filter"`
-		OptEstimate  map[string]interface{} `json:"optimizer_estimates"`
+		_               string                 `json:"#operator"`
+		FromExpr        string                 `json:"expr"`
+		Alias           string                 `json:"alias"`
+		UnCorrelated    bool                   `json:"uncorrelated"`
+		Filter          string                 `json:"filter"`
+		OptEstimate     map[string]interface{} `json:"optimizer_estimates"`
+		BuildBitFilters []json.RawMessage      `json:"build_bit_filters"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -119,6 +124,13 @@ func (this *ExpressionScan) UnmarshalJSON(body []byte) error {
 
 	if _unmarshalled.Filter != "" {
 		this.filter, err = parser.Parse(_unmarshalled.Filter)
+		if err != nil {
+			return err
+		}
+	}
+
+	if len(_unmarshalled.BuildBitFilters) > 0 {
+		err = this.unmarshalBuildBitFilters(_unmarshalled.BuildBitFilters)
 		if err != nil {
 			return err
 		}

@@ -19,6 +19,7 @@ import (
 
 type ExpressionScan struct {
 	base
+	buildBitFilterBase
 	plan    *plan.ExpressionScan
 	results value.AnnotatedValues
 }
@@ -73,6 +74,16 @@ func (this *ExpressionScan) RunOnce(context *Context, parent value.Value) {
 			defer filter.ResetMemory(context)
 		}
 
+		alias := this.plan.Alias()
+
+		var buildBitFltr bool
+		buildBitFilters := this.plan.GetBuildBitFilters()
+		if len(buildBitFilters) > 0 {
+			this.createLocalBuildFilters(buildBitFilters)
+			buildBitFltr = this.hasBuildBitFilter()
+			defer this.setBuildBitFilters(alias, context)
+		}
+
 		ev, e := this.plan.FromExpr().Evaluate(parent, context)
 		if e != nil {
 			context.Error(errors.NewEvaluationError(e, "ExpressionScan"))
@@ -114,6 +125,10 @@ func (this *ExpressionScan) RunOnce(context *Context, parent value.Value) {
 				if !result.Truth() {
 					continue
 				}
+			}
+
+			if buildBitFltr && !this.buildBitFilters(av, context) {
+				return
 			}
 
 			if !correlated {

@@ -15,15 +15,16 @@ import (
 )
 
 const (
-	KS_PLAN_DONE        = 1 << iota // planning is done for this keyspace
-	KS_ONCLAUSE_ONLY                // use ON-clause only for planning
-	KS_IS_UNNEST                    // unnest alias
-	KS_IN_CORR_SUBQ                 // in correlated subquery
-	KS_HAS_DOC_COUNT                // docCount retrieved for keyspace
-	KS_PRIMARY_TERM                 // primary term
-	KS_OUTER_FILTERS                // OUTER filters have been classified
-	KS_INDEX_HINT_ERROR             // index hint error
-	KS_JOIN_HINT_ERROR              // join hint error
+	KS_PLAN_DONE            = 1 << iota // planning is done for this keyspace
+	KS_ONCLAUSE_ONLY                    // use ON-clause only for planning
+	KS_IS_UNNEST                        // unnest alias
+	KS_IN_CORR_SUBQ                     // in correlated subquery
+	KS_HAS_DOC_COUNT                    // docCount retrieved for keyspace
+	KS_PRIMARY_TERM                     // primary term
+	KS_OUTER_FILTERS                    // OUTER filters have been classified
+	KS_INDEX_HINT_ERROR                 // index hint error
+	KS_JOIN_HINT_ERROR                  // join hint error
+	KS_JOIN_FLTR_HINT_ERROR             // join filter hint error
 )
 
 type BaseKeyspace struct {
@@ -43,6 +44,8 @@ type BaseKeyspace struct {
 	optBit        int32
 	indexHints    []algebra.OptimHint
 	joinHints     []algebra.OptimHint
+	joinFltrHints []algebra.OptimHint
+	bfSource      map[string]*BFSource
 }
 
 func NewBaseKeyspace(name string, path *algebra.Path, node algebra.SimpleFromTerm,
@@ -213,6 +216,13 @@ func copyBaseKeyspaces(src map[string]*BaseKeyspace, copyFilter bool) map[string
 				joinHints = append(joinHints, hint)
 			}
 			dest[kspace.name].joinHints = joinHints
+		}
+		if len(kspace.joinFltrHints) > 0 {
+			joinFltrHints := make([]algebra.OptimHint, 0, len(kspace.joinFltrHints))
+			for _, hint := range kspace.joinFltrHints {
+				joinFltrHints = append(joinFltrHints, hint)
+			}
+			dest[kspace.name].joinFltrHints = joinFltrHints
 		}
 		if copyFilter {
 			if len(kspace.filters) > 0 {
@@ -386,6 +396,14 @@ func (this *BaseKeyspace) JoinHints() []algebra.OptimHint {
 	return this.joinHints
 }
 
+func (this *BaseKeyspace) AddJoinFltrHint(joinFltrHint algebra.OptimHint) {
+	this.joinFltrHints = append(this.joinFltrHints, joinFltrHint)
+}
+
+func (this *BaseKeyspace) JoinFltrHints() []algebra.OptimHint {
+	return this.joinFltrHints
+}
+
 func (this *BaseKeyspace) HasIndexHintError() bool {
 	return (this.ksFlags & KS_INDEX_HINT_ERROR) != 0
 }
@@ -408,6 +426,18 @@ func (this *BaseKeyspace) SetJoinHintError() {
 
 func (this *BaseKeyspace) UnsetJoinHintError() {
 	this.ksFlags &^= KS_JOIN_HINT_ERROR
+}
+
+func (this *BaseKeyspace) HasJoinFltrHintError() bool {
+	return (this.ksFlags & KS_JOIN_FLTR_HINT_ERROR) != 0
+}
+
+func (this *BaseKeyspace) SetJoinFltrHintError() {
+	this.ksFlags |= KS_JOIN_FLTR_HINT_ERROR
+}
+
+func (this *BaseKeyspace) UnsetJoinFltrHintError() {
+	this.ksFlags &^= KS_JOIN_FLTR_HINT_ERROR
 }
 
 func (this *BaseKeyspace) MarkHashUnavailable() {
@@ -447,6 +477,38 @@ func (this *BaseKeyspace) JoinHint() algebra.JoinHint {
 	return algebra.JOIN_HINT_NONE
 }
 
+func (this *BaseKeyspace) HasJoinFilterHint() bool {
+	for _, hint := range this.joinFltrHints {
+		switch hint.State() {
+		case algebra.HINT_STATE_ERROR, algebra.HINT_STATE_INVALID:
+			// ignore
+		default:
+			// there should be only a single join filter hint
+			switch hint.(type) {
+			case *algebra.HintJoinFilter:
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func (this *BaseKeyspace) HasNoJoinFilterHint() bool {
+	for _, hint := range this.joinFltrHints {
+		switch hint.State() {
+		case algebra.HINT_STATE_ERROR, algebra.HINT_STATE_INVALID:
+			// ignore
+		default:
+			// there should be only a single join filter hint
+			switch hint.(type) {
+			case *algebra.HintNoJoinFilter:
+				return true
+			}
+		}
+	}
+	return false
+}
+
 func (this *BaseKeyspace) MarkIndexHintError(err string) {
 	for _, hint := range this.indexHints {
 		if hint.State() == algebra.HINT_STATE_UNKNOWN {
@@ -459,6 +521,47 @@ func (this *BaseKeyspace) MarkJoinHintError(err string) {
 	for _, hint := range this.joinHints {
 		if hint.State() == algebra.HINT_STATE_UNKNOWN {
 			hint.SetError(err)
+		}
+	}
+}
+
+func (this *BaseKeyspace) MarkJoinFltrHintError(err string) {
+	for _, hint := range this.joinFltrHints {
+		if hint.State() == algebra.HINT_STATE_UNKNOWN {
+			hint.SetError(err)
+		}
+	}
+}
+
+func (this *BaseKeyspace) GetBFSource(joinAlias string) *BFSource {
+	if bfSource, ok := this.bfSource[joinAlias]; ok {
+		return bfSource
+	}
+	return nil
+}
+
+func (this *BaseKeyspace) AddBFSource(joinAlias string, index datastore.Index, self, other expression.Expression) {
+	if this.bfSource == nil {
+		this.bfSource = make(map[string]*BFSource, 4)
+	}
+	selfStr := self.String()
+	bfSource, ok := this.bfSource[joinAlias]
+	if !ok {
+		bfInfos := make(map[string]*BFInfo)
+		bfInfos[selfStr] = newBFInfo(index, self, other)
+		bfSource = newBFSource(joinAlias, bfInfos)
+		this.bfSource[joinAlias] = bfSource
+	} else {
+		bfInfos := bfSource.bfInfos
+		if curInfo, ok := bfInfos[selfStr]; ok {
+			if other.EquivalentTo(curInfo.other) {
+				if _, ok := curInfo.indexes[index]; !ok {
+					curInfo.indexes[index] = true
+				}
+			}
+			// otherwise just ignore
+		} else {
+			bfInfos[selfStr] = newBFInfo(index, self, other)
 		}
 	}
 }

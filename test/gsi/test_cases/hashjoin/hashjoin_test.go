@@ -77,6 +77,9 @@ func TestHashJoin(t *testing.T) {
 	// test HASH JOIN bug fixes
 	runMatch("case_hashjoin_bugs.json", false, true, qc, t)
 
+	// test HASH JOIN with bit filter
+	runMatch("case_hashjoin_bitfltr.json", false, true, qc, t)
+
 	fmt.Println("Dropping indexes")
 	runStmt(qc, "DROP INDEX customer.cust_lastName_firstName_customerId")
 	runStmt(qc, "DROP INDEX customer.cust_customerId_lastName_firstName")

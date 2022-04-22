@@ -28,6 +28,8 @@ const (
 type IndexScan3 struct {
 	readonly
 	optEstimate
+	BuildBitFilterBase
+	ProbeBitFilterBase
 	index            datastore.Index3
 	indexer          datastore.Indexer
 	term             *algebra.KeyspaceTerm
@@ -257,6 +259,17 @@ func (this *IndexScan3) SetCovers(covers expression.Covers) {
 	this.fullCover = len(covers) > 0 && covers[0].FullCover()
 }
 
+func (this *IndexScan3) ResetIndexKeys() {
+	if !this.fullCover && len(this.covers) > 0 {
+		this.covers = nil
+		if this.projection == nil {
+			this.projection = NewIndexProjection(0, true)
+		} else {
+			this.projection.EntryKeys = this.projection.EntryKeys[:0]
+		}
+	}
+}
+
 func (this *IndexScan3) SetImplicitArrayKey(arrayKey *expression.All) {
 	this.implicitArrayKey = arrayKey
 }
@@ -377,6 +390,14 @@ func (this *IndexScan3) MarshalBase(f func(map[string]interface{})) map[string]i
 		r["has_delta_keyspace"] = this.hasDeltaKeyspace
 	}
 
+	if this.hasBuildBitFilter() {
+		this.marshalBuildBitFilters(r)
+	}
+
+	if this.hasProbeBitFilter() {
+		this.marshalProbeBitFilters(r)
+	}
+
 	// index partition info is for information only (in explain), no need to unmarshal
 	partition, _ := this.index.PartitionKeys()
 	if partition != nil {
@@ -416,6 +437,8 @@ func (this *IndexScan3) UnmarshalJSON(body []byte) error {
 		Filter           string                 `json:"filter"`
 		OptEstimate      map[string]interface{} `json:"optimizer_estimates"`
 		HasDeltaKeyspace bool                   `json:"has_delta_keyspace"`
+		BuildBitFilters  []json.RawMessage      `json:"build_bit_filters"`
+		ProbeBitFilters  []json.RawMessage      `json:"probe_bit_filters"`
 		_                string                 `json:"index_partition_by"`
 	}
 
@@ -505,6 +528,20 @@ func (this *IndexScan3) UnmarshalJSON(body []byte) error {
 
 	if _unmarshalled.Filter != "" {
 		this.filter, err = parser.Parse(_unmarshalled.Filter)
+		if err != nil {
+			return err
+		}
+	}
+
+	if len(_unmarshalled.BuildBitFilters) > 0 {
+		err = this.unmarshalBuildBitFilters(_unmarshalled.BuildBitFilters)
+		if err != nil {
+			return err
+		}
+	}
+
+	if len(_unmarshalled.ProbeBitFilters) > 0 {
+		err = this.unmarshalProbeBitFilters(_unmarshalled.ProbeBitFilters)
 		if err != nil {
 			return err
 		}

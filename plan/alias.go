@@ -15,6 +15,7 @@ import (
 type Alias struct {
 	readonly
 	optEstimate
+	BuildBitFilterBase
 	alias   string
 	primary bool // alias for subquery as primary term
 }
@@ -54,6 +55,9 @@ func (this *Alias) MarshalBase(f func(map[string]interface{})) map[string]interf
 	if !this.primary {
 		r["secondary_term"] = !this.primary
 	}
+	if this.hasBuildBitFilter() {
+		this.marshalBuildBitFilters(r)
+	}
 	if optEstimate := marshalOptEstimate(&this.optEstimate); optEstimate != nil {
 		r["optimizer_estimates"] = optEstimate
 	}
@@ -65,14 +69,21 @@ func (this *Alias) MarshalBase(f func(map[string]interface{})) map[string]interf
 
 func (this *Alias) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_           string                 `json:"#operator"`
-		As          string                 `json:"as"`
-		Secondary   bool                   `json:"secondary_term"`
-		OptEstimate map[string]interface{} `json:"optimizer_estimates"`
+		_               string                 `json:"#operator"`
+		As              string                 `json:"as"`
+		Secondary       bool                   `json:"secondary_term"`
+		OptEstimate     map[string]interface{} `json:"optimizer_estimates"`
+		BuildBitFilters []json.RawMessage      `json:"build_bit_filters"`
 	}
 	err := json.Unmarshal(body, &_unmarshalled)
 	this.alias = _unmarshalled.As
 	this.primary = !_unmarshalled.Secondary // if not set assume to be primary to be safe
+	if len(_unmarshalled.BuildBitFilters) > 0 {
+		err = this.unmarshalBuildBitFilters(_unmarshalled.BuildBitFilters)
+		if err != nil {
+			return err
+		}
+	}
 	unmarshalOptEstimate(&this.optEstimate, _unmarshalled.OptEstimate)
 	return err
 }

@@ -19,6 +19,7 @@ import (
 
 type Filter struct {
 	base
+	buildBitFilterBase
 	docs     uint64
 	plan     *plan.Filter
 	aliasMap map[string]string
@@ -65,6 +66,10 @@ func (this *Filter) RunOnce(context *Context, parent value.Value) {
 func (this *Filter) beforeItems(context *Context, parent value.Value) bool {
 	this.plan.Condition().EnableInlistHash(context)
 	SetSearchInfo(this.aliasMap, parent, context, this.plan.Condition())
+	buildBitFilters := this.plan.GetBuildBitFilters()
+	if len(buildBitFilters) > 0 {
+		this.createLocalBuildFilters(buildBitFilters)
+	}
 	return true
 }
 
@@ -81,6 +86,9 @@ func (this *Filter) processItem(item value.AnnotatedValue, context *Context) boo
 			context.AddPhaseCount(FILTER, this.docs)
 			this.docs = 0
 		}
+		if this.hasBuildBitFilter() && !this.buildBitFilters(item, context) {
+			return false
+		}
 		return this.sendItem(item)
 	} else {
 		if context.UseRequestQuota() {
@@ -96,6 +104,9 @@ func (this *Filter) afterItems(context *Context) {
 	if this.docs > 0 {
 		context.AddPhaseCount(FILTER, this.docs)
 		this.docs = 0
+	}
+	if this.hasBuildBitFilter() {
+		this.setBuildBitFilters(this.plan.Alias(), context)
 	}
 }
 

@@ -53,7 +53,7 @@ type Builder interface {
 		outerCoveringScans []plan.CoveringOperator, outerFilter expression.Expression) (
 		[]plan.Operator, []plan.Operator, []plan.CoveringOperator, expression.Expression, error)
 
-	MarkOptimHints()
+	MarkOptimHints() error
 }
 
 func (this *builder) GetBaseKeyspaces() map[string]*base.BaseKeyspace {
@@ -351,8 +351,12 @@ func (this *builder) BuildUnnest(unnest *algebra.Unnest, outerPlan, outerSubPlan
 	return this.children, this.subChildren, this.coveringScans, this.filter, nil
 }
 
-func (this *builder) MarkOptimHints() {
+func (this *builder) MarkOptimHints() (err error) {
 	for alias, _ := range this.baseKeyspaces {
-		this.markOptimHints(alias, true)
+		err = this.markOptimHints(alias, true)
+		if err != nil {
+			return err
+		}
 	}
+	return this.markJoinFilterHints()
 }

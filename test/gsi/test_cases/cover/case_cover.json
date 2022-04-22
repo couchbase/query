@@ -437,6 +437,7 @@
                             "~children": [
                                {
                                     "#operator": "Filter",
+                                    "alias": "d1",
                                     "condition": "(((`d1`.`k0`) = 1) and is_array((`d1`.`a`)))"
                                },
                                {

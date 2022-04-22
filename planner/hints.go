@@ -101,7 +101,7 @@ func processOptimHints(baseKeyspaces map[string]*base.BaseKeyspace, optimHints *
 
 		var keyspace string
 		var joinHint algebra.JoinHint
-		var indexHint, negative bool
+		var indexHint, joinFilterHint, negative bool
 
 		switch hint := hint.(type) {
 		case *algebra.HintIndex:
@@ -138,6 +138,13 @@ func processOptimHints(baseKeyspaces map[string]*base.BaseKeyspace, optimHints *
 		case *algebra.HintNoHash:
 			keyspace = hint.Keyspace()
 			joinHint = algebra.NO_USE_HASH
+			negative = true
+		case *algebra.HintJoinFilter:
+			keyspace = hint.Keyspace()
+			joinFilterHint = true
+		case *algebra.HintNoJoinFilter:
+			keyspace = hint.Keyspace()
+			joinFilterHint = true
 			negative = true
 		}
 
@@ -200,6 +207,16 @@ func processOptimHints(baseKeyspaces map[string]*base.BaseKeyspace, optimHints *
 				}
 			}
 			baseKeyspace.AddIndexHint(hint)
+		} else if joinFilterHint {
+			curHints := baseKeyspace.JoinFltrHints()
+			if len(curHints) > 0 {
+				// duplicated join hint
+				hint.SetError(algebra.DUPLICATED_JOIN_FLTR_HINT + keyspace)
+				for _, curHint := range curHints {
+					curHint.SetError(algebra.DUPLICATED_JOIN_FLTR_HINT + keyspace)
+				}
+			}
+			baseKeyspace.AddJoinFltrHint(hint)
 		}
 	}
 }
@@ -354,6 +371,41 @@ func (this *builder) markOptimHints(alias string, includeJoin bool) (err error) 
 			}
 		default:
 			return errors.NewPlanInternalError("markOptimHints: invalid hint state")
+		}
+	}
+
+	return nil
+}
+
+func (this *builder) markJoinFilterHints() (err error) {
+	if len(this.subChildren) > 0 {
+		err = checkJoinFilterHint(this.baseKeyspaces, this.subChildren...)
+		if err != nil {
+			return err
+		}
+	}
+	if len(this.children) > 0 {
+		err = checkJoinFilterHint(this.baseKeyspaces, this.children...)
+		if err != nil {
+			return err
+		}
+	}
+
+	for _, baseKeyspace := range this.baseKeyspaces {
+		joinFltrHintError := baseKeyspace.HasJoinFltrHintError()
+		for _, hint := range baseKeyspace.JoinFltrHints() {
+			switch hint.State() {
+			case algebra.HINT_STATE_ERROR, algebra.HINT_STATE_INVALID, algebra.HINT_STATE_FOLLOWED, algebra.HINT_STATE_NOT_FOLLOWED:
+			// nothing to do
+			case algebra.HINT_STATE_UNKNOWN:
+				if joinFltrHintError {
+					hint.SetNotFollowed()
+				} else {
+					hint.SetFollowed()
+				}
+			default:
+				return errors.NewPlanInternalError("markJoinFilterHints: invalid hint state")
+			}
 		}
 	}
 

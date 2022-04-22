@@ -22,6 +22,8 @@ import (
 
 type IndexScan3 struct {
 	base
+	buildBitFilterBase
+	probeBitFilterBase
 	conn     *datastore.IndexConnection
 	plan     *plan.IndexScan3
 	children []Operator
@@ -80,6 +82,26 @@ func (this *IndexScan3) RunOnce(context *Context, parent value.Value) {
 		if filter != nil {
 			filter.EnableInlistHash(context)
 			defer filter.ResetMemory(context)
+		}
+
+		alias := this.plan.Term().Alias()
+
+		var buildBitFltr, probeBitFltr bool
+		buildBitFilters := this.plan.GetBuildBitFilters()
+		if len(buildBitFilters) > 0 {
+			this.createLocalBuildFilters(buildBitFilters)
+			buildBitFltr = this.hasBuildBitFilter()
+			defer this.setBuildBitFilters(alias, context)
+		}
+		probeBitFilters := this.plan.GetProbeBitFilters()
+		if len(probeBitFilters) > 0 {
+			err := this.getLocalProbeFilters(probeBitFilters, context)
+			if err != nil {
+				context.Error(err)
+				return
+			}
+			probeBitFltr = this.hasProbeBitFilter()
+			defer this.clearProbeBitFilters(context)
 		}
 
 		go func() {
@@ -147,7 +169,7 @@ func (this *IndexScan3) RunOnce(context *Context, parent value.Value) {
 									value.NewValue(entry.PrimaryKey))
 							}
 
-							av.SetField(this.plan.Term().Alias(), av)
+							av.SetField(alias, av)
 
 							if filter != nil {
 								result, err := filter.Evaluate(av, context)
@@ -156,6 +178,18 @@ func (this *IndexScan3) RunOnce(context *Context, parent value.Value) {
 									return
 								}
 								if !result.Truth() {
+									av.Recycle()
+									continue
+								}
+							}
+							if buildBitFltr && !this.buildBitFilters(av, context) {
+								return
+							}
+							if probeBitFltr {
+								ok1, pass := this.probeBitFilters(av, context)
+								if !ok1 {
+									return
+								} else if !pass {
 									av.Recycle()
 									continue
 								}

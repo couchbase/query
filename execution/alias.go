@@ -17,6 +17,7 @@ import (
 
 type Alias struct {
 	base
+	buildBitFilterBase
 	plan   *plan.Alias
 	parent value.Value
 }
@@ -51,6 +52,10 @@ func (this *Alias) RunOnce(context *Context, parent value.Value) {
 
 func (this *Alias) beforeItems(context *Context, parent value.Value) bool {
 	this.parent = parent
+	buildBitFilters := this.plan.GetBuildBitFilters()
+	if len(buildBitFilters) > 0 {
+		this.createLocalBuildFilters(buildBitFilters)
+	}
 	return true
 }
 
@@ -66,7 +71,16 @@ func (this *Alias) processItem(item value.AnnotatedValue, context *Context) bool
 	}
 	av.ShareAnnotations(item)
 	av.SetField(this.plan.Alias(), item)
+	if this.hasBuildBitFilter() && !this.buildBitFilters(av, context) {
+		return false
+	}
 	return this.sendItem(av)
+}
+
+func (this *Alias) afterItems(context *Context) {
+	if this.hasBuildBitFilter() {
+		this.setBuildBitFilters(this.plan.Alias(), context)
+	}
 }
 
 func (this *Alias) MarshalJSON() ([]byte, error) {

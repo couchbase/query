@@ -19,6 +19,7 @@ import (
 type Unnest struct {
 	readonly
 	optEstimate
+	BuildBitFilterBase
 	term   *algebra.Unnest
 	alias  string
 	filter expression.Expression
@@ -75,6 +76,10 @@ func (this *Unnest) MarshalBase(f func(map[string]interface{})) map[string]inter
 		r["filter"] = expression.NewStringer().Visit(this.filter)
 	}
 
+	if this.hasBuildBitFilter() {
+		this.marshalBuildBitFilters(r)
+	}
+
 	if optEstimate := marshalOptEstimate(&this.optEstimate); optEstimate != nil {
 		r["optimizer_estimates"] = optEstimate
 	}
@@ -87,12 +92,13 @@ func (this *Unnest) MarshalBase(f func(map[string]interface{})) map[string]inter
 
 func (this *Unnest) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_           string                 `json:"#operator"`
-		Outer       bool                   `json:"outer"`
-		Expr        string                 `json:"expr"`
-		As          string                 `json:"as"`
-		Filter      string                 `json:"filter"`
-		OptEstimate map[string]interface{} `json:"optimizer_estimates"`
+		_               string                 `json:"#operator"`
+		Outer           bool                   `json:"outer"`
+		Expr            string                 `json:"expr"`
+		As              string                 `json:"as"`
+		Filter          string                 `json:"filter"`
+		OptEstimate     map[string]interface{} `json:"optimizer_estimates"`
+		BuildBitFilters []json.RawMessage      `json:"build_bit_filters"`
 	}
 	var expr expression.Expression
 
@@ -110,6 +116,13 @@ func (this *Unnest) UnmarshalJSON(body []byte) error {
 
 	if _unmarshalled.Filter != "" {
 		this.filter, err = parser.Parse(_unmarshalled.Filter)
+		if err != nil {
+			return err
+		}
+	}
+
+	if len(_unmarshalled.BuildBitFilters) > 0 {
+		err = this.unmarshalBuildBitFilters(_unmarshalled.BuildBitFilters)
 		if err != nil {
 			return err
 		}

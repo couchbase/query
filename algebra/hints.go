@@ -31,6 +31,8 @@ const (
 	HINT_NO_INDEX_FTS
 	HINT_NO_HASH
 	HINT_NO_NL
+	HINT_JOIN_FILTER
+	HINT_NO_JOIN_FILTER
 )
 
 type HintState int32
@@ -51,7 +53,8 @@ const (
 	EXTRA_SLASH                    = "Extra '/' found in "
 	INVALID_HASH_OPTION            = "Invalid hash option (BUILD or PROBE only):  "
 	INVALID_KEYSPACE               = "Invalid keyspace specified: "
-	DUPLICATED_JOIN_HINT           = "Duplciated join hint specified for keyspace: "
+	DUPLICATED_JOIN_HINT           = "Duplicated join hint specified for keyspace: "
+	DUPLICATED_JOIN_FLTR_HINT      = "Duplicated join filter hint specified for keyspace: "
 	DUPLICATED_INDEX_HINT          = "Duplicated index hint specified for keyspace: "
 	DUPLICATED_INDEX_FTS_HINT      = "Duplicated FTS index hint specified for keyspace: "
 	NON_KEYSPACE_INDEX_HINT        = "Index hint specified on non-keyspace: "
@@ -70,6 +73,9 @@ const (
 	AVD_IDX_FTS_HINT_NOT_FOLLOWED  = "AVOID_INDEX_FTS hint cannot be followed"
 	AVD_HASH_HINT_NOT_FOLLOWED     = "AVOID_HASH hint cannot be followed"
 	AVD_NL_HINT_NOT_FOLLOWED       = "AVOID_NL hint cannot be followed"
+	JOIN_FILTER_HINT_NOT_FOLLOWED  = "JOIN_FILTER hint cannot be followed"
+	NO_JN_FLTR_HINT_NOT_FOLLOWED   = "NO_JOIN_FILTER hint cannot be followed"
+	AVD_JN_FLTR_HINT_NOT_FOLLOWED  = "AVOID_JOIN_FILTER hint cannot be followed"
 	MERGE_ONKEY_JOIN_HINT_ERR      = "Join hint not supported in a MERGE statement with ON KEY clause"
 	MERGE_ONKEY_INDEX_HINT_ERR     = "Index hint not supported for target keyspace in a MERGE statement with ON KEY clause"
 	UPD_DEL_JOIN_HINT_ERR          = "Join hint not supported in an UPDATE or DELETE statement"
@@ -183,6 +189,15 @@ func addJSONHint(r map[string]interface{}, hint OptimHint) {
 		name = "no_use_hash"
 		if hint.avoid {
 			name = "avoid_hash"
+		}
+		obj = hint.formatJSON()
+	case *HintJoinFilter:
+		name = "join_filter"
+		obj = hint.formatJSON()
+	case *HintNoJoinFilter:
+		name = "no_join_filter"
+		if hint.avoid {
+			name = "avoid_join_filter"
 		}
 		obj = hint.formatJSON()
 	case *HintOrdered:
@@ -330,6 +345,34 @@ func NewOptimHint(hint_name string, hint_args []string) []OptimHint {
 				hint = NewNoHashHint(keyspace, avoid)
 			} else {
 				hint = NewHashHint(keyspace, option)
+			}
+			hints = append(hints, hint)
+		}
+	case "px_join_filter", "no_px_join_filter":
+		// allow PX_JOIN_FILTER/NO_PX_JOIN_FILTER
+		lowerName = strings.Replace(lowerName, "px_", "", 1)
+		fallthrough
+	case "join_filter", "no_join_filter", "avoid_join_filter":
+		avoid := (lowerName == "avoid_join_filter")
+		negative := (lowerName == "no_join_filter") || avoid
+		// JOIN_FILTER/NO_JOIN_FILTER hint must include at least 1 keyspsace
+		if len(hint_args) == 0 {
+			invalid = true
+			err = MISSING_ARG + hint_name
+			break
+		}
+		hints = make([]OptimHint, 0, len(hint_args))
+		for _, arg := range hint_args {
+			if strings.Contains(arg, "/") {
+				invalid = true
+				err = INVALID_SLASH + arg
+				break
+			}
+			var hint OptimHint
+			if negative {
+				hint = NewNoJoinFilterHint(arg, avoid)
+			} else {
+				hint = NewJoinFilterHint(arg)
 			}
 			hints = append(hints, hint)
 		}
@@ -1235,6 +1278,179 @@ func (this *HintNoHash) formatJSON() map[string]interface{} {
 	return r
 }
 
+type HintJoinFilter struct {
+	keyspace string
+	state    HintState
+	err      string
+}
+
+func NewJoinFilterHint(keyspace string) *HintJoinFilter {
+	return &HintJoinFilter{
+		keyspace: keyspace,
+	}
+}
+
+func (this *HintJoinFilter) Type() HintType {
+	return HINT_JOIN_FILTER
+}
+
+func (this *HintJoinFilter) Copy() OptimHint {
+	return &HintJoinFilter{
+		keyspace: this.keyspace,
+		state:    this.state,
+		err:      this.err,
+	}
+}
+
+func (this *HintJoinFilter) Keyspace() string {
+	return this.keyspace
+}
+
+func (this *HintJoinFilter) Derived() bool {
+	return false
+}
+
+func (this *HintJoinFilter) State() HintState {
+	return this.state
+}
+
+func (this *HintJoinFilter) SetFollowed() {
+	if this.state == HINT_STATE_UNKNOWN {
+		this.state = HINT_STATE_FOLLOWED
+	}
+}
+
+func (this *HintJoinFilter) SetNotFollowed() {
+	if this.state == HINT_STATE_UNKNOWN {
+		this.state = HINT_STATE_NOT_FOLLOWED
+		this.err = JOIN_FILTER_HINT_NOT_FOLLOWED
+	}
+}
+
+func (this *HintJoinFilter) Error() string {
+	return this.err
+}
+
+func (this *HintJoinFilter) SetError(err string) {
+	this.err = err
+	this.state = HINT_STATE_ERROR
+}
+
+func (this *HintJoinFilter) sortString() string {
+	return fmt.Sprintf("%d%d%t%s%s", this.Type(), this.state, false, this.keyspace, this.err)
+}
+
+func (this *HintJoinFilter) FormatHint(jsonStyle bool) string {
+	if jsonStyle {
+		hint := map[string]interface{}{
+			"join_filter": this.formatJSON(),
+		}
+		bytes, _ := json.Marshal(hint)
+		return string(bytes)
+	}
+	return formatHint("JOIN_FILTER", []string{this.keyspace})
+}
+
+func (this *HintJoinFilter) formatJSON() map[string]interface{} {
+	r := make(map[string]interface{}, 1)
+	r["keyspace"] = this.keyspace
+	return r
+}
+
+type HintNoJoinFilter struct {
+	keyspace string
+	state    HintState
+	err      string
+	avoid    bool
+}
+
+func NewNoJoinFilterHint(keyspace string, avoid bool) *HintNoJoinFilter {
+	return &HintNoJoinFilter{
+		keyspace: keyspace,
+		avoid:    avoid,
+	}
+}
+
+func (this *HintNoJoinFilter) Type() HintType {
+	return HINT_NO_JOIN_FILTER
+}
+
+func (this *HintNoJoinFilter) Copy() OptimHint {
+	return &HintNoJoinFilter{
+		keyspace: this.keyspace,
+		state:    this.state,
+		err:      this.err,
+		avoid:    this.avoid,
+	}
+}
+
+func (this *HintNoJoinFilter) Keyspace() string {
+	return this.keyspace
+}
+
+func (this *HintNoJoinFilter) Derived() bool {
+	return false
+}
+
+func (this *HintNoJoinFilter) State() HintState {
+	return this.state
+}
+
+func (this *HintNoJoinFilter) SetFollowed() {
+	if this.state == HINT_STATE_UNKNOWN {
+		this.state = HINT_STATE_FOLLOWED
+	}
+}
+
+func (this *HintNoJoinFilter) SetNotFollowed() {
+	if this.state == HINT_STATE_UNKNOWN {
+		this.state = HINT_STATE_NOT_FOLLOWED
+		if this.avoid {
+			this.err = AVD_JN_FLTR_HINT_NOT_FOLLOWED
+		} else {
+			this.err = NO_JN_FLTR_HINT_NOT_FOLLOWED
+		}
+	}
+}
+
+func (this *HintNoJoinFilter) Error() string {
+	return this.err
+}
+
+func (this *HintNoJoinFilter) SetError(err string) {
+	this.err = err
+	this.state = HINT_STATE_ERROR
+}
+
+func (this *HintNoJoinFilter) sortString() string {
+	return fmt.Sprintf("%d%d%t%s%s", this.Type(), this.state, false, this.keyspace, this.err)
+}
+
+func (this *HintNoJoinFilter) FormatHint(jsonStyle bool) string {
+	if jsonStyle {
+		key := "no_join_filter"
+		if this.avoid {
+			key = "avoid_join_filter"
+		}
+		hint := map[string]interface{}{
+			key: this.formatJSON(),
+		}
+		bytes, _ := json.Marshal(hint)
+		return string(bytes)
+	}
+	name := "NO_JOIN_FILTER"
+	if this.avoid {
+		name = "AVOID_JOIN_FILTER"
+	}
+	return formatHint(name, []string{this.keyspace})
+}
+
+func (this *HintNoJoinFilter) formatJSON() map[string]interface{} {
+	r := make(map[string]interface{}, 1)
+	r["keyspace"] = this.keyspace
+	return r
+}
+
 type HintOrdered struct {
 	state HintState
 	err   string
@@ -1465,6 +1681,12 @@ func ParseObjectHints(object expression.Expression) []OptimHint {
 			hints, invalid = newNoHashHints(vval, false)
 		case "avoid_hash":
 			hints, invalid = newNoHashHints(vval, true)
+		case "join_filter", "px_join_filter":
+			hints, invalid = newJoinFilterHints(vval)
+		case "no_join_filter", "no_px_join_filter":
+			hints, invalid = newNoJoinFilterHints(vval, false)
+		case "avoid_join_filter":
+			hints, invalid = newNoJoinFilterHints(vval, true)
 		case "ordered":
 			hints, invalid = newOrderedHint(vval)
 		default:
@@ -1682,6 +1904,39 @@ func procHashHints(fields map[string]interface{}, negative, avoid bool) (OptimHi
 		return NewNoHashHint(keyspace, avoid), false
 	}
 	return NewHashHint(keyspace, option), false
+}
+
+func newJoinFilterHints(val value.Value) ([]OptimHint, bool) {
+	return newHints(val, procJoinFilterHints, false, false)
+}
+
+func newNoJoinFilterHints(val value.Value, avoid bool) ([]OptimHint, bool) {
+	return newHints(val, procJoinFilterHints, true, avoid)
+}
+
+func procJoinFilterHints(fields map[string]interface{}, negative, avoid bool) (OptimHint, bool) {
+	invalid := false
+	var keyspace string
+	for k, v := range fields {
+		key := strings.ToLower(k)
+		if key == "keyspace" || key == "alias" {
+			keyspace = value.NewValue(v).ToString()
+			if keyspace == "" {
+				invalid = true
+			}
+		} else {
+			invalid = true
+			break
+		}
+	}
+	if invalid || keyspace == "" {
+		return nil, true
+	}
+
+	if negative {
+		return NewNoJoinFilterHint(keyspace, avoid), false
+	}
+	return NewJoinFilterHint(keyspace), false
 }
 
 func newHints(val value.Value, procFunc func(map[string]interface{}, bool, bool) (OptimHint, bool), negative, avoid bool) ([]OptimHint, bool) {
