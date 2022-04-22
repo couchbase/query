@@ -880,7 +880,7 @@ func (this *builder) buildAnsiJoinScan(node *algebra.KeyspaceTerm, onclause, fil
 
 func (this *builder) buildHashJoin(node *algebra.AnsiJoin, filter expression.Expression, selec float64,
 	qPlan, subPlan []plan.Operator, coveringOps []plan.CoveringOperator) (*plan.HashJoin, bool, error) {
-	child, buildExprs, probeExprs, aliases, newOnclause, newFilter, buildRight, cost, cardinality, size, frCost, err := this.buildHashJoinOp(node.Right(), node.Outer(), node.Onclause(), filter, "join", qPlan, subPlan, coveringOps)
+	child, buildExprs, probeExprs, aliases, newOnclause, newFilter, buildRight, cost, cardinality, size, frCost, err := this.buildHashJoinOp(node.Right(), node.Left(), node.Outer(), node.Onclause(), filter, "join", qPlan, subPlan, coveringOps)
 	if err != nil || child == nil {
 		// cannot do hash join
 		return nil, false, err
@@ -899,7 +899,7 @@ func (this *builder) buildHashJoin(node *algebra.AnsiJoin, filter expression.Exp
 
 func (this *builder) buildHashNest(node *algebra.AnsiNest, filter expression.Expression, selec float64,
 	qPlan, subPlan []plan.Operator, coveringOps []plan.CoveringOperator) (*plan.HashNest, bool, error) {
-	child, buildExprs, probeExprs, aliases, newOnclause, newFilter, buildRight, cost, cardinality, size, frCost, err := this.buildHashJoinOp(node.Right(), node.Outer(), node.Onclause(), nil, "nest", qPlan, subPlan, coveringOps)
+	child, buildExprs, probeExprs, aliases, newOnclause, newFilter, buildRight, cost, cardinality, size, frCost, err := this.buildHashJoinOp(node.Right(), node.Left(), node.Outer(), node.Onclause(), nil, "nest", qPlan, subPlan, coveringOps)
 	if err != nil || child == nil {
 		// cannot do hash nest
 		return nil, false, err
@@ -919,7 +919,7 @@ func (this *builder) buildHashNest(node *algebra.AnsiNest, filter expression.Exp
 	return plan.NewHashNest(node, child, buildExprs, probeExprs, aliases[0], newFilter, cost, cardinality, size, frCost), buildRight, nil
 }
 
-func (this *builder) buildHashJoinOp(right algebra.SimpleFromTerm, outer bool,
+func (this *builder) buildHashJoinOp(right algebra.SimpleFromTerm, left algebra.FromTerm, outer bool,
 	onclause, filter expression.Expression, op string, qPlan, subPlan []plan.Operator,
 	coveringOps []plan.CoveringOperator) (child plan.Operator, buildExprs expression.Expressions,
 	probeExprs expression.Expressions, buildAliases []string,
@@ -961,9 +961,24 @@ func (this *builder) buildHashJoinOp(right algebra.SimpleFromTerm, outer bool,
 		return nil, nil, nil, nil, nil, nil, false, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, errors.NewPlanInternalError(fmt.Sprintf("buildHashJoinOp: unexpected right-hand side node type"))
 	}
 
-	useCBO := this.useCBO && this.keyspaceUseCBO(right.Alias())
+	alias := right.Alias()
+	useCBO := this.useCBO && this.keyspaceUseCBO(alias)
+	baseKeyspace, _ := this.baseKeyspaces[alias]
 	force := true
-	joinHint := right.JoinHint()
+	joinHint := baseKeyspace.JoinHint()
+	if right.HasInferJoinHint() {
+		if leftTerm, ok := left.(algebra.SimpleFromTerm); ok {
+			leftBaseKeyspace, _ := this.baseKeyspaces[leftTerm.Alias()]
+			leftJoinHint := leftBaseKeyspace.JoinHint()
+			switch leftJoinHint {
+			case algebra.USE_HASH_BUILD:
+				joinHint = algebra.USE_HASH_PROBE
+			case algebra.USE_HASH_PROBE:
+				joinHint = algebra.USE_HASH_BUILD
+			}
+		}
+	}
+
 	if joinHint == algebra.USE_HASH_BUILD {
 		buildRight = true
 	} else if joinHint == algebra.USE_HASH_PROBE {
@@ -985,12 +1000,9 @@ func (this *builder) buildHashJoinOp(right algebra.SimpleFromTerm, outer bool,
 		force = false
 	}
 
-	alias := right.Alias()
-
 	keyspaceNames := make(map[string]string, 1)
 	keyspaceNames[alias] = keyspace
 
-	baseKeyspace, _ := this.baseKeyspaces[alias]
 	filters := baseKeyspace.Filters()
 	if useCBO && len(filters) > 0 {
 		filters.ClearHashFlag()
