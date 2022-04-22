@@ -81,7 +81,6 @@ func command_shell(line string, w io.Writer, interactive bool, liner *liner.Stat
 }
 
 func command_query(line string, w io.Writer, liner *liner.State) (errors.ErrorCode, string) {
-	command.REFRESH_URL = serverFlag
 	var err error
 	//This block handles N1QL statements
 	// If connected to a query service then noQueryService == false.
@@ -156,6 +155,7 @@ This method is the handler that calls execution methods based on the input comma
 or statement. It returns an error code and optionally a non empty error message.
 */
 func dispatch_command(line string, w io.Writer, interactive bool, liner *liner.State) (errors.ErrorCode, string) {
+	command.REFRESH_URL = serverFlag
 	line = strings.TrimSpace(line)
 	command.SetWriter(w)
 

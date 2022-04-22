@@ -45,7 +45,11 @@ func (this *Refresh_cluster_map) ExecCommand(args []string) (errors.ErrorCode, s
 		// Set new Service URL and then Ping
 		err := Ping(REFRESH_URL)
 		if err != nil {
-			return errors.E_SHELL_ON_REFRESH, err.Error()
+			// try the SERVICE_URL if the REFRESH_URL fails
+			err = Ping(SERVICE_URL)
+			if err != nil {
+				return errors.E_SHELL_ON_REFRESH, err.Error()
+			}
 		}
 	}
 	return 0, ""
