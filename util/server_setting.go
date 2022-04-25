@@ -37,7 +37,7 @@ const (
 	N1QL_IMPLICIT_ARRAY_COVER                     // 0x0000000200
 	N1QL_JOIN_ENUMERATION                         // 0x0000000400
 	N1QL_INDEX_MISSING                            // 0x0000000800
-	N1QL_NONL_PRIMARYSCAN                         // 0x0000001000
+	N1QL_NL_PRIMARYSCAN                           // 0x0000001000
 	N1QL_ALL_BITS                                 // Add anything above this. This needs to be last one
 )
 

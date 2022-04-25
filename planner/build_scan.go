@@ -167,8 +167,10 @@ func (this *builder) buildPredicateScan(keyspace datastore.Keyspace, node *algeb
 	}
 
 	// do not consider primary index for ANSI JOIN or ANSI NEST
+	nlPrimaryScan := !util.IsFeatureEnabled(this.context.FeatureControls(), util.N1QL_NL_PRIMARYSCAN)
 	var primaryKey expression.Expressions
-	if !node.IsAnsiJoinOp() || node.IsUnderHash() || node.IsSystem() {
+
+	if !node.IsAnsiJoinOp() || node.IsUnderHash() || node.IsSystem() || nlPrimaryScan {
 		primaryKey = expression.Expressions{id}
 	}
 
@@ -218,7 +220,6 @@ func (this *builder) buildPredicateScan(keyspace datastore.Keyspace, node *algeb
 	}
 
 	if node.IsAnsiJoinOp() {
-		nlPrimaryScan := !util.IsFeatureEnabled(this.context.FeatureControls(), util.N1QL_NONL_PRIMARYSCAN)
 		if node.IsPrimaryJoin() || node.IsUnderHash() || node.IsSystem() || nlPrimaryScan {
 			return nil, nil, nil
 		} else {
@@ -240,7 +241,7 @@ func (this *builder) buildSubsetScan(keyspace datastore.Keyspace, node *algebra.
 
 	join := node.IsAnsiJoinOp()
 	hash := node.IsUnderHash()
-	nlPrimaryScan := !util.IsFeatureEnabled(this.context.FeatureControls(), util.N1QL_NONL_PRIMARYSCAN)
+	nlPrimaryScan := !util.IsFeatureEnabled(this.context.FeatureControls(), util.N1QL_NL_PRIMARYSCAN)
 	if join {
 		this.resetPushDowns()
 	}
