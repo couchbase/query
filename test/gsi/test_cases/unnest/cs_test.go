@@ -49,9 +49,9 @@ func TestUnnestFunc(t *testing.T) {
 	runStmt(qc, "DROP INDEX shellTest.ix12")
 	runStmt(qc, "DROP INDEX shellTest.ix101")
 
-	_, _, errcs, _ := runStmt(qc, "delete from purchase where test_id = \"unnest\"")
-	if errcs != nil {
-		t.Errorf("did not expect err %s", errcs.Error())
+	rr := runStmt(qc, "delete from purchase where test_id = \"unnest\"")
+	if rr.Err != nil {
+		t.Errorf("did not expect err %s", rr.Err.Error())
 	}
 
 	runStmt(qc, "DROP PRIMARY INDEX ON purchase")

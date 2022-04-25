@@ -72,6 +72,13 @@ func init() {
 	logging.SetLogger(logger)
 }
 
+type RunResult struct {
+	Results   []interface{}
+	Warnings  []errors.Error
+	Err       errors.Error
+	SortCount int
+}
+
 type MockQuery struct {
 	server.BaseRequest
 	response    *MockResponse
@@ -246,17 +253,17 @@ the input argument (q) string using the NewBaseRequest method
 as defined in the server request.go.
 */
 func Run(mockServer *MockServer, queryParams map[string]interface{}, q, namespace string, namedArgs map[string]value.Value,
-	positionalArgs value.Values, userArgs map[string]string) ([]interface{}, []errors.Error, errors.Error, int) {
+	positionalArgs value.Values, userArgs map[string]string) *RunResult {
 	return run(mockServer, queryParams, q, namespace, namedArgs, positionalArgs, userArgs, false)
 }
 
 func RunPrepared(mockServer *MockServer, queryParams map[string]interface{}, q, namespace string, namedArgs map[string]value.Value,
-	positionalArgs value.Values) ([]interface{}, []errors.Error, errors.Error, int) {
+	positionalArgs value.Values) *RunResult {
 	return run(mockServer, queryParams, q, namespace, namedArgs, positionalArgs, nil, true)
 }
 
 func run(mockServer *MockServer, queryParams map[string]interface{}, q, namespace string, namedArgs map[string]value.Value,
-	positionalArgs value.Values, userArgs map[string]string, prepare bool) ([]interface{}, []errors.Error, errors.Error, int) {
+	positionalArgs value.Values, userArgs map[string]string, prepare bool) *RunResult {
 
 	var metrics value.Tristate
 	consistency := &scanConfigImpl{scan_level: Consistency_parameter}
@@ -273,7 +280,7 @@ func run(mockServer *MockServer, queryParams map[string]interface{}, q, namespac
 	if prepare {
 		prepared, err := PrepareStmt(mockServer, queryParams, namespace, q)
 		if err != nil {
-			return nil, nil, err, -1
+			return &RunResult{nil, nil, err, -1}
 		}
 		query.SetPrepared(prepared)
 		query.SetType(prepared.Type())
@@ -354,13 +361,13 @@ func run(mockServer *MockServer, queryParams map[string]interface{}, q, namespac
 
 	if !ret {
 		mockServer.saveTxId(gv, query.Type(), nil)
-		return nil, nil, errors.NewError(nil, "Query timed out"), -1
+		return &RunResult{nil, nil, errors.NewError(nil, "Query timed out"), -1}
 	}
 
 	// wait till all the results are ready
 	<-mr.done
 	mockServer.saveTxId(gv, query.Type(), mr.results)
-	return mr.results, query.Warnings(), mr.err, mr.sortCount
+	return &RunResult{mr.results, query.Warnings(), mr.err, mr.sortCount}
 }
 
 /*
@@ -524,14 +531,10 @@ func FtestCaseFile(fname string, prepared, explain bool, qc *MockServer, namespa
 		}
 
 		fin_stmt = strconv.Itoa(i) + ": " + statements
-		var resultsActual []interface{}
-		var errActual errors.Error
-		var warnActual []errors.Error
 		var namedArgs map[string]value.Value
 		var positionalArgs value.Values
 		var userArgs map[string]string
 		var queryParams map[string]interface{}
-		var sortCount int
 		if n, ok1 := c["namedArgs"]; ok1 {
 			nv := value.NewValue(n)
 			size := len(nv.Fields())
@@ -582,12 +585,11 @@ func FtestCaseFile(fname string, prepared, explain bool, qc *MockServer, namespa
 		}
 
 		// no index, test infrastructure can't handle this.
+		var rr *RunResult
 		if prepared && errCodeExpected != 4000 {
-			resultsActual, warnActual, errActual, sortCount = RunPrepared(qc, queryParams, statements, namespace, namedArgs,
-				positionalArgs)
+			rr = RunPrepared(qc, queryParams, statements, namespace, namedArgs, positionalArgs)
 		} else {
-			resultsActual, warnActual, errActual, sortCount = Run(qc, queryParams, statements, namespace, namedArgs,
-				positionalArgs, userArgs)
+			rr = Run(qc, queryParams, statements, namespace, namedArgs, positionalArgs, userArgs)
 		}
 
 		errExpected := ""
@@ -602,20 +604,20 @@ func FtestCaseFile(fname string, prepared, explain bool, qc *MockServer, namespa
 			warnExpected = v.(string)
 		}
 
-		if errActual != nil {
-			if errCodeExpected == int(errActual.Code()) {
+		if rr.Err != nil {
+			if errCodeExpected == int(rr.Err.Code()) {
 				continue
 			}
 
 			if errExpected == "" {
 				errstring = go_er.New(fmt.Sprintf("unexpected err: %v\nstatements: %v\n"+
-					"      file: %v\n     index: %v%s\n\n", errActual, statements, ffname, i, findIndex(b, i)))
+					"      file: %v\n     index: %v%s\n\n", rr.Err, statements, ffname, i, findIndex(b, i)))
 				return
 			}
 
-			if !errActual.ContainsText(errExpected) {
+			if !rr.Err.ContainsText(errExpected) {
 				errstring = go_er.New(fmt.Sprintf("Mismatched error:\nexpected: %s\n  actual: %s\n"+
-					"      file: %v\n     index: %v%s\n\n", errExpected, errActual.Error(), ffname, i, findIndex(b, i)))
+					"      file: %v\n     index: %v%s\n\n", errExpected, rr.Err.Error(), ffname, i, findIndex(b, i)))
 				return
 			}
 
@@ -632,15 +634,15 @@ func FtestCaseFile(fname string, prepared, explain bool, qc *MockServer, namespa
 			return
 		}
 
-		if len(warnActual) > 0 {
+		if len(rr.Warnings) > 0 {
 			if warnExpected == "" && warnCodeExpected == 0 {
 				errstring = go_er.New(fmt.Sprintf("unexpected warning(s):\n%s\nstatements: %v\n"+
-					"      file: %v\n     index: %v%s\n\n", prettyPrint(warnActual), statements, ffname, i, findIndex(b, i)))
+					"      file: %v\n     index: %v%s\n\n", prettyPrint(rr.Warnings), statements, ffname, i, findIndex(b, i)))
 				return
 			}
 
 			found := false
-			for _, w := range warnActual {
+			for _, w := range rr.Warnings {
 				if int(w.Code()) == warnCodeExpected || (len(warnExpected) > 0 && !w.ContainsText(warnExpected)) {
 					found = true
 				}
@@ -682,12 +684,12 @@ func FtestCaseFile(fname string, prepared, explain bool, qc *MockServer, namespa
 					case []interface{}:
 					case map[string]interface{}:
 					default:
-						dropResultsEntry(resultsActual, v)
+						dropResultsEntry(rr.Results, v)
 					}
 				}
 			case map[string]interface{}:
 			default:
-				dropResultsEntry(resultsActual, ignore)
+				dropResultsEntry(rr.Results, ignore)
 			}
 		}
 
@@ -695,10 +697,10 @@ func FtestCaseFile(fname string, prepared, explain bool, qc *MockServer, namespa
 		// again, we handle scalars and the scalars in an array
 		accept, ok := c["accept"]
 		if ok {
-			newResults := make([]interface{}, len(resultsActual))
+			newResults := make([]interface{}, len(rr.Results))
 			switch accept.(type) {
 			case []interface{}:
-				for j, _ := range resultsActual {
+				for j, _ := range rr.Results {
 					newResults[j] = make(map[string]interface{}, len(accept.([]interface{})))
 				}
 				for _, v := range accept.([]interface{}) {
@@ -706,17 +708,17 @@ func FtestCaseFile(fname string, prepared, explain bool, qc *MockServer, namespa
 					case []interface{}:
 					case map[string]interface{}:
 					default:
-						addResultsEntry(newResults, resultsActual, v)
+						addResultsEntry(newResults, rr.Results, v)
 					}
 				}
 			case map[string]interface{}:
 			default:
-				for j, _ := range resultsActual {
+				for j, _ := range rr.Results {
 					newResults[j] = make(map[string]interface{}, 1)
 				}
-				addResultsEntry(newResults, resultsActual, accept)
+				addResultsEntry(newResults, rr.Results, accept)
 			}
-			resultsActual = newResults
+			rr.Results = newResults
 		}
 		v, ok = c["results"]
 		if ok {
@@ -724,7 +726,7 @@ func FtestCaseFile(fname string, prepared, explain bool, qc *MockServer, namespa
 				if isAdvise, ok := isAdvise.(bool); ok && isAdvise {
 					resultsExpected := v.([]interface{})
 					for _, sub := range Subpath_advise {
-						okres := doResultsMatch(getAdviseResults(sub, resultsActual), getAdviseResults(sub, resultsExpected), ordered, statements, fname, i, b)
+						okres := doResultsMatch(getAdviseResults(sub, rr.Results), getAdviseResults(sub, resultsExpected), ordered, statements, fname, i, b)
 						if okres != nil {
 							errstring = okres
 							return
@@ -733,19 +735,19 @@ func FtestCaseFile(fname string, prepared, explain bool, qc *MockServer, namespa
 				}
 			} else {
 				resultsExpected := v.([]interface{})
-				okres := doResultsMatch(resultsActual, resultsExpected, ordered, statements, fname, i, b)
+				okres := doResultsMatch(rr.Results, resultsExpected, ordered, statements, fname, i, b)
 				if okres != nil {
 					errstring = okres
 					return
 				}
 			}
 		}
-		v, ok = c["sortCount"]
+		v, ok = c["rr.SortCount"]
 		if ok {
 			expectedSortCount := int(v.(float64))
-			if sortCount != expectedSortCount {
-				errstring = go_er.New(fmt.Sprintf("sortCount %v doesn't match expected %v\nstatement: %v\n"+
-					"     file: %v\n    index: %v%s\n\n", sortCount, expectedSortCount, statements, ffname, i, findIndex(b, i)))
+			if rr.SortCount != expectedSortCount {
+				errstring = go_er.New(fmt.Sprintf("rr.SortCount %v doesn't match expected %v\nstatement: %v\n"+
+					"     file: %v\n    index: %v%s\n\n", rr.SortCount, expectedSortCount, statements, ffname, i, findIndex(b, i)))
 				return
 			}
 		}
@@ -903,23 +905,23 @@ func checkExplain(qc *MockServer, queryParams map[string]interface{}, namespace 
 	}
 
 	explainStmt := "EXPLAIN " + statement
-	resultsActual, _, errActual, _ := Run(qc, queryParams, explainStmt, namespace, namedArgs, positionalArgs, nil)
-	if errActual != nil || len(resultsActual) != 1 {
-		return go_er.New(fmt.Sprintf("(%v) error actual: code - %d, msg - %s"+
-			", for case file: %v, index: %v%s", explainStmt, errActual.Code(), errActual.Error(), fname, i, findIndex(content, i)))
+	rr := Run(qc, queryParams, explainStmt, namespace, namedArgs, positionalArgs, nil)
+	if rr.Err != nil || len(rr.Results) != 1 {
+		return go_er.New(fmt.Sprintf("(%v) error actual: code - %d, msg - %s\n"+
+			"      file: %v\n     index: %v%s", explainStmt, rr.Err.Code(), rr.Err.Error(), fname, i, findIndex(content, i)))
 	}
 
 	namedParams := make(map[string]value.Value, 1)
-	namedParams["explan"] = value.NewValue(resultsActual[0])
+	namedParams["explan"] = value.NewValue(rr.Results[0])
 
-	resultsActual, _, errActual, _ = Run(qc, queryParams, eStmt, namespace, namedParams, nil, nil)
-	if errActual != nil {
-		return go_er.New(fmt.Sprintf("unexpected err: code - %d, msg - %s, statement: %v"+
-			", for case file: %v, index: %v%s", errActual.Code(), errActual.Error(), eStmt, fname, i, findIndex(content, i)))
+	rr = Run(qc, queryParams, eStmt, namespace, namedParams, nil, nil)
+	if rr.Err != nil {
+		return go_er.New(fmt.Sprintf("unexpected err: code - %d, msg - %s\nstatement: %v\n"+
+			"     file: %v\n    index: %v%s", rr.Err.Code(), rr.Err.Error(), eStmt, fname, i, findIndex(content, i)))
 	}
 
 	if rok {
-		return doResultsMatch(resultsActual, erExpected, ordered, eStmt, fname, i, content)
+		return doResultsMatch(rr.Results, erExpected, ordered, eStmt, fname, i, content)
 	}
 
 	return
@@ -931,11 +933,11 @@ func PrepareStmt(qc *MockServer, queryParams map[string]interface{}, namespace, 
 		queryContext, _ = s.(string)
 	}
 	prepareStmt := "PREPARE " + statement
-	resultsActual, _, errActual, _ := Run(qc, queryParams, prepareStmt, namespace, nil, nil, nil)
-	if errActual != nil || len(resultsActual) != 1 {
-		return nil, errors.NewError(nil, fmt.Sprintf("Error %#v FOR (%v)", prepareStmt, resultsActual))
+	rr := Run(qc, queryParams, prepareStmt, namespace, nil, nil, nil)
+	if rr.Err != nil || len(rr.Results) != 1 {
+		return nil, errors.NewError(nil, fmt.Sprintf("Error %#v FOR (%v)", prepareStmt, rr.Results))
 	}
-	ra := resultsActual[0].(map[string]interface{})
+	ra := rr.Results[0].(map[string]interface{})
 
 	// if already tried decodeing just get on with it
 	qc.RLock()
@@ -946,7 +948,8 @@ func PrepareStmt(qc *MockServer, queryParams map[string]interface{}, namespace, 
 	}
 
 	// we redecode the encoded plan to make sure that we can transmit it correctly across nodes
-	rv, err := prepareds.DecodePreparedWithContext(ra["name"].(string), queryContext, ra["encoded_plan"].(string), false, nil, false)
+	rv, err := prepareds.DecodePreparedWithContext(ra["name"].(string), queryContext, ra["encoded_plan"].(string),
+		false, nil, false)
 	if err != nil {
 		return rv, err
 	}
@@ -995,7 +998,7 @@ func RunMatch(filename string, prepared, explain bool, qc *MockServer, t *testin
 
 }
 
-func RunStmt(mockServer *MockServer, q string) ([]interface{}, []errors.Error, errors.Error, int) {
+func RunStmt(mockServer *MockServer, q string) *RunResult {
 	return Run(mockServer, nil, q, Namespace_CBS, nil, nil, nil)
 }
 

@@ -14,7 +14,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/test/gsi"
 )
 
@@ -96,7 +95,7 @@ func run_drop_index(ixname, coll string, qc *gsi.MockServer, t *testing.T) {
 	}
 }
 
-func runStmt(mockServer *gsi.MockServer, q string) ([]interface{}, []errors.Error, errors.Error, int) {
+func runStmt(mockServer *gsi.MockServer, q string) *gsi.RunResult {
 	return gsi.RunStmt(mockServer, q)
 }
 

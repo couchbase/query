@@ -29,9 +29,9 @@ func TestCaseFunctions(t *testing.T) {
 
 	runMatch("case_case.json", false, false, qc, t)
 
-	_, _, errcs, _ := runStmt(qc, "delete from orders where test_id IN [\"case_func\"]")
-	if errcs != nil {
-		t.Errorf("did not expect err %s", errcs.Error())
+	rr := runStmt(qc, "delete from orders where test_id IN [\"case_func\"]")
+	if rr.Err != nil {
+		t.Errorf("did not expect err %s", rr.Err.Error())
 	}
 
 	runStmt(qc, "DROP PRIMARY INDEX ON orders")

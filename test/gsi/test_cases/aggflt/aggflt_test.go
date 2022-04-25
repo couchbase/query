@@ -14,7 +14,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/test/gsi"
 )
 
@@ -39,15 +38,15 @@ func TestWindow(t *testing.T) {
 	runStmt(qc, "DROP INDEX orders.aggfltix1")
 
 	runStmt(qc, "CREATE PRIMARY INDEX ON orders")
-	_, _, errcs, _ := runStmt(qc, "delete from orders where test_id IN [\"aggflt\"]")
-	if errcs != nil {
-		t.Errorf("did not expect err %s", errcs.Error())
+	rr := runStmt(qc, "delete from orders where test_id IN [\"aggflt\"]")
+	if rr.Err != nil {
+		t.Errorf("did not expect err %s", rr.Err.Error())
 	}
 
 	runStmt(qc, "DROP PRIMARY INDEX ON orders")
 }
 
-func runStmt(mockServer *gsi.MockServer, q string) ([]interface{}, []errors.Error, errors.Error, int) {
+func runStmt(mockServer *gsi.MockServer, q string) *gsi.RunResult {
 	return gsi.RunStmt(mockServer, q)
 }
 

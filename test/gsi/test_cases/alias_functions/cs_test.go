@@ -30,9 +30,9 @@ func TestAliasFunctions(t *testing.T) {
 	runMatch("case_as.json", false, false, qc, t)
 	runMatch("case_naming.json", false, false, qc, t)
 
-	_, _, errcs, _ := runStmt(qc, "delete from customer where test_id IN [\"alias_func\"]")
-	if errcs != nil {
-		t.Errorf("did not expect err %s", errcs.Error())
+	rr := runStmt(qc, "delete from customer where test_id IN [\"alias_func\"]")
+	if rr.Err != nil {
+		t.Errorf("did not expect err %s", rr.Err.Error())
 	}
 
 	runStmt(qc, "DROP PRIMARY INDEX ON customer")

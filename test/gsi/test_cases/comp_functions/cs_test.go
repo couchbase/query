@@ -29,9 +29,9 @@ func TestCompFunctions(t *testing.T) {
 
 	runMatch("case_func_comp.json", false, false, qc, t)
 
-	_, _, errcs, _ := runStmt(qc, "delete from review where test_id IN [\"comp_func\"]")
-	if errcs != nil {
-		t.Errorf("did not expect err %s", errcs.Error())
+	rr := runStmt(qc, "delete from review where test_id IN [\"comp_func\"]")
+	if rr.Err != nil {
+		t.Errorf("did not expect err %s", rr.Err.Error())
 	}
 
 	runStmt(qc, "DROP PRIMARY INDEX ON review")

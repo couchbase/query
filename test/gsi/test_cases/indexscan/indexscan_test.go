@@ -163,17 +163,17 @@ func TestIndexScan(t *testing.T) {
 	runStmt(qc, "create primary index on purchase")
 	runStmt(qc, "create primary index on orders")
 
-	_, _, errcs, _ := runStmt(qc, "delete from product where test_id IN [\"arrayIndex\", \"coveredIndex\"]")
-	if errcs != nil {
-		t.Errorf("did not expect err %s", errcs.Error())
+	rr := runStmt(qc, "delete from product where test_id IN [\"arrayIndex\", \"coveredIndex\"]")
+	if rr.Err != nil {
+		t.Errorf("did not expect err %s", rr.Err.Error())
 	}
-	_, _, errcs, _ = runStmt(qc, "delete from purchase where test_id = \"arrayIndex\"")
-	if errcs != nil {
-		t.Errorf("did not expect err %s", errcs.Error())
+	rr = runStmt(qc, "delete from purchase where test_id = \"arrayIndex\"")
+	if rr.Err != nil {
+		t.Errorf("did not expect err %s", rr.Err.Error())
 	}
-	_, _, errcs, _ = runStmt(qc, "delete from orders where test_id IN [\"ua\", \"skipranges\", \"ordernulls\", \"parameters\", \"idxfltr\"]")
-	if errcs != nil {
-		t.Errorf("did not expect err %s", errcs.Error())
+	rr = runStmt(qc, "delete from orders where test_id IN [\"ua\", \"skipranges\", \"ordernulls\", \"parameters\", \"idxfltr\"]")
+	if rr.Err != nil {
+		t.Errorf("did not expect err %s", rr.Err.Error())
 	}
 
 	runStmt(qc, "drop primary index on product")

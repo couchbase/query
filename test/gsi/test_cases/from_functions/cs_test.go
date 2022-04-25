@@ -30,9 +30,9 @@ func TestFromFunctions(t *testing.T) {
 	runMatch("case_from.json", false, false, qc, t)
 	runMatch("case_from-over.json", false, false, qc, t)
 
-	_, _, errcs, _ := runStmt(qc, "delete from orders where test_id IN [\"from_func\"]")
-	if errcs != nil {
-		t.Errorf("did not expect err %s", errcs.Error())
+	rr := runStmt(qc, "delete from orders where test_id IN [\"from_func\"]")
+	if rr.Err != nil {
+		t.Errorf("did not expect err %s", rr.Err.Error())
 	}
 
 	runStmt(qc, "DROP PRIMARY INDEX ON orders")

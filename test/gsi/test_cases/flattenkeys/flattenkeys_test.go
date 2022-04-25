@@ -14,7 +14,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/test/gsi"
 )
 
@@ -84,7 +83,7 @@ func case_clean(qc *gsi.MockServer, t *testing.T) {
 	runStmt(qc, "DROP PRIMARY INDEX ON orders._default.flattenkeys")
 }
 
-func runStmt(mockServer *gsi.MockServer, q string) ([]interface{}, []errors.Error, errors.Error, int) {
+func runStmt(mockServer *gsi.MockServer, q string) *gsi.RunResult {
 	return gsi.RunStmt(mockServer, q)
 }
 

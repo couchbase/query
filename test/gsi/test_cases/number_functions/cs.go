@@ -8,7 +8,6 @@
 package number_functions
 
 import (
-	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/test/gsi"
 	"testing"
 )
@@ -17,7 +16,7 @@ func start_cs() *gsi.MockServer {
 	return gsi.Start_cs(true)
 }
 
-func runStmt(mockServer *gsi.MockServer, q string) ([]interface{}, []errors.Error, errors.Error, int) {
+func runStmt(mockServer *gsi.MockServer, q string) *gsi.RunResult {
 	return gsi.RunStmt(mockServer, q)
 }
 

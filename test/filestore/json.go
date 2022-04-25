@@ -47,6 +47,13 @@ func init() {
 	runtime.GOMAXPROCS(1)
 }
 
+type RunResult struct {
+	Results   []interface{}
+	Warnings  []errors.Error
+	Err       errors.Error
+	SortCount int
+}
+
 type MockQuery struct {
 	server.BaseRequest
 	response    *MockResponse
@@ -80,6 +87,7 @@ func (this *MockQuery) Execute(srvr *server.Server, context *execution.Context, 
 		<-this.Results()
 	}
 	close(this.response.done)
+	this.response.sortCount = int(this.SortCount())
 }
 
 func (this *MockQuery) Failed(srvr *server.Server) {
@@ -113,10 +121,11 @@ func (this *MockQuery) Result(item value.AnnotatedValue) bool {
 }
 
 type MockResponse struct {
-	err      errors.Error
-	results  []interface{}
-	warnings []errors.Error
-	done     chan bool
+	err       errors.Error
+	results   []interface{}
+	warnings  []errors.Error
+	done      chan bool
+	sortCount int
 }
 
 func (this *MockResponse) NoMoreResults() {
@@ -146,7 +155,7 @@ func (this *MockServer) doStats(request *MockQuery) {
 	request.CompleteRequest(0, 0, 0, request.resultCount, 0, 0, nil, this.server)
 }
 
-func Run(mockServer *MockServer, p bool, q string, namedArgs map[string]value.Value, positionalArgs []value.Value, namespace string) ([]interface{}, []errors.Error, errors.Error) {
+func Run(mockServer *MockServer, p bool, q string, namedArgs map[string]value.Value, positionalArgs []value.Value, namespace string) *RunResult {
 	var metrics value.Tristate
 	scanConfiguration := &scanConfigImpl{}
 
@@ -175,12 +184,12 @@ func Run(mockServer *MockServer, p bool, q string, namedArgs map[string]value.Va
 	defer mockServer.doStats(query)
 
 	if !mockServer.server.ServiceRequest(query) {
-		return nil, nil, errors.NewError(nil, "Query timed out")
+		return &RunResult{nil, nil, errors.NewError(nil, "Query timed out"), -1}
 	}
 
 	// wait till all the results are ready
 	<-mr.done
-	return mr.results, query.Warnings(), mr.err
+	return &RunResult{mr.results, query.Warnings(), mr.err, mr.sortCount}
 }
 
 func Start(site, pool, namespace string) *MockServer {
@@ -306,9 +315,10 @@ func FtestCaseFile(fname string, qc *MockServer, namespace string) (fin_stmt str
 		v, ok := c["preStatements"]
 		if ok {
 			preStatements := v.(string)
-			_, _, err := Run(qc, true, preStatements, nil, nil, namespace)
-			if err != nil {
-				go_er.New(fmt.Sprintf("preStatements resulted in error: %v, for case file: %v, index: %v%s", err, ffname, i, findIndex(b, i)))
+			pr := Run(qc, true, preStatements, nil, nil, namespace)
+			if pr.Err != nil {
+				go_er.New(fmt.Sprintf("preStatements resulted in error: %v\n      file: %v\n     index: %v%s",
+					pr.Err, ffname, i, findIndex(b, i)))
 				return
 			}
 		}
@@ -345,7 +355,7 @@ func FtestCaseFile(fname string, qc *MockServer, namespace string) (fin_stmt str
 		statements := v.(string)
 		//t.Logf("  %d: %v\n", i, statements)
 		fin_stmt = strconv.Itoa(i) + ": " + statements
-		resultsActual, warnActual, errActual := Run(qc, true, statements, namedArgs, positionalArgs, namespace)
+		rr := Run(qc, true, statements, namedArgs, positionalArgs, namespace)
 
 		errCodeExpected := int(0)
 		errExpected := ""
@@ -355,9 +365,10 @@ func FtestCaseFile(fname string, qc *MockServer, namespace string) (fin_stmt str
 		v, ok = c["postStatements"]
 		if ok {
 			postStatements := v.(string)
-			_, _, err := Run(qc, true, postStatements, nil, nil, namespace)
-			if err != nil {
-				errstring = go_er.New(fmt.Sprintf("postStatements resulted in error: %v\nfor case file: %v, index: %v%s", err, ffname, i, findIndex(b, i)))
+			pr := Run(qc, true, postStatements, nil, nil, namespace)
+			if pr.Err != nil {
+				errstring = go_er.New(fmt.Sprintf("postStatements resulted in error: %v\n     file: %v\n     index: %v%s\n\n",
+					pr.Err, ffname, i, findIndex(b, i)))
 				return
 			}
 		}
@@ -365,14 +376,14 @@ func FtestCaseFile(fname string, qc *MockServer, namespace string) (fin_stmt str
 		v, ok = c["matchStatements"]
 		if ok {
 			matchStatements := v.(string)
-			resultsMatch, _, errMatch := Run(qc, true, matchStatements, nil, nil, namespace)
-			if !reflect.DeepEqual(errActual, errActual) {
+			mr := Run(qc, true, matchStatements, nil, nil, namespace)
+			if !reflect.DeepEqual(rr.Err, mr.Err) {
 				errstring = go_er.New(fmt.Sprintf("errors don't match\n  actual: %#v\nexpected: %#v\n"+
-					" for case file: %v, index: %v%s",
-					errActual, errMatch, ffname, i, findIndex(b, i)))
+					"      file: %v\n     index: %v%s\n\n",
+					rr.Err, mr.Err, ffname, i, findIndex(b, i)))
 				return
 			}
-			doResultsMatch(resultsActual, resultsMatch, fname, i, b, matchStatements)
+			doResultsMatch(rr.Results, mr.Results, fname, i, b, matchStatements)
 		}
 
 		v, ok = c["error"]
@@ -395,19 +406,19 @@ func FtestCaseFile(fname string, qc *MockServer, namespace string) (fin_stmt str
 			warnCodeExpected = int(warnCodeExpectedf)
 		}
 
-		if errActual != nil {
-			if errCodeExpected == int(errActual.Code()) {
+		if rr.Err != nil {
+			if errCodeExpected == int(rr.Err.Code()) {
 				continue
 			}
 
 			if errExpected == "" {
 				errstring = go_er.New(fmt.Sprintf("unexpected err: %v\nstatements: %v\n"+
-					"      file: %v\n     index: %v%s\n\n", errActual, statements, ffname, i, findIndex(b, i)))
+					"      file: %v\n     index: %v%s\n\n", rr.Err, statements, ffname, i, findIndex(b, i)))
 				return
 			}
-			if !errActual.ContainsText(errExpected) {
+			if !rr.Err.ContainsText(errExpected) {
 				errstring = go_er.New(fmt.Sprintf("Mismatched error:\nexpected: %s\n  actual: %s\n"+
-					"      file: %v\n     index: %v%s\n\n", errExpected, errActual.Error(), ffname, i, findIndex(b, i)))
+					"      file: %v\n     index: %v%s\n\n", errExpected, rr.Err.Error(), ffname, i, findIndex(b, i)))
 				return
 			}
 			continue
@@ -423,14 +434,14 @@ func FtestCaseFile(fname string, qc *MockServer, namespace string) (fin_stmt str
 			return
 		}
 
-		if len(warnActual) > 0 {
+		if len(rr.Warnings) > 0 {
 			if warnExpected == "" && warnCodeExpected == 0 {
 				errstring = go_er.New(fmt.Sprintf("unexpected warning(s):\n%s\nstatements: %v\n"+
-					"      file: %v\n     index: %v%s\n\n", prettyPrint(warnActual), statements, ffname, i, findIndex(b, i)))
+					"      file: %v\n     index: %v%s\n\n", prettyPrint(rr.Warnings), statements, ffname, i, findIndex(b, i)))
 				return
 			}
 			found := false
-			for _, w := range warnActual {
+			for _, w := range rr.Warnings {
 				if int(w.Code()) == warnCodeExpected || (len(warnExpected) > 0 && w.ContainsText(warnExpected)) {
 					found = true
 					break
@@ -470,12 +481,12 @@ func FtestCaseFile(fname string, qc *MockServer, namespace string) (fin_stmt str
 					case []interface{}:
 					case map[string]interface{}:
 					default:
-						dropResultsEntry(resultsActual, v)
+						dropResultsEntry(rr.Results, v)
 					}
 				}
 			case map[string]interface{}:
 			default:
-				dropResultsEntry(resultsActual, ignore)
+				dropResultsEntry(rr.Results, ignore)
 			}
 		}
 
@@ -483,10 +494,10 @@ func FtestCaseFile(fname string, qc *MockServer, namespace string) (fin_stmt str
 		// again, we handle scalars and the scalars in an array
 		accept, ok := c["accept"]
 		if ok {
-			newResults := make([]interface{}, len(resultsActual))
+			newResults := make([]interface{}, len(rr.Results))
 			switch accept.(type) {
 			case []interface{}:
-				for i, _ := range resultsActual {
+				for i, _ := range rr.Results {
 					newResults[i] = make(map[string]interface{}, len(accept.([]interface{})))
 				}
 				for _, v := range accept.([]interface{}) {
@@ -494,23 +505,23 @@ func FtestCaseFile(fname string, qc *MockServer, namespace string) (fin_stmt str
 					case []interface{}:
 					case map[string]interface{}:
 					default:
-						addResultsEntry(newResults, resultsActual, v)
+						addResultsEntry(newResults, rr.Results, v)
 					}
 				}
 			case map[string]interface{}:
 			default:
-				for i, _ := range resultsActual {
+				for i, _ := range rr.Results {
 					newResults[i] = make(map[string]interface{}, 1)
 				}
-				addResultsEntry(newResults, resultsActual, accept)
+				addResultsEntry(newResults, rr.Results, accept)
 			}
-			resultsActual = newResults
+			rr.Results = newResults
 		}
 
 		v, ok = c["results"]
 		if ok {
 			resultsExpected := v.([]interface{})
-			okres := doResultsMatch(resultsActual, resultsExpected, fname, i, b, statements)
+			okres := doResultsMatch(rr.Results, resultsExpected, fname, i, b, statements)
 			if okres != nil {
 				errstring = okres
 				return

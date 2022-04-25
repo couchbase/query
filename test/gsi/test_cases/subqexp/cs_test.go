@@ -31,9 +31,9 @@ func TestSubqexp(t *testing.T) {
 	runMatch("case_keyspace.json", false, false, qc, t)
 	runMatch("case_keyspace.json", true, false, qc, t)
 
-	_, _, errcs, _ := runStmt(qc, "delete from orders where test_id = \"subqexp\"")
-	if errcs != nil {
-		t.Errorf("did not expect err %s", errcs.Error())
+	rr := runStmt(qc, "delete from orders where test_id = \"subqexp\"")
+	if rr.Err != nil {
+		t.Errorf("did not expect err %s", rr.Err.Error())
 	}
 
 	runStmt(qc, "DROP PRIMARY INDEX ON orders")

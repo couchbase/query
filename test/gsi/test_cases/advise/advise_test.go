@@ -38,9 +38,9 @@ func TestAdvise(t *testing.T) {
 	runMatch("case_advise_lkmissing.json", false, false, qc, t)
 
 	runStmt(qc, "CREATE PRIMARY INDEX ON shellTest")
-	_, _, errcs, _ := runStmt(qc, "delete from shellTest where test_id IN [\"advise\"]")
-	if errcs != nil {
-		t.Errorf("did not expect err %s", errcs.Error())
+	rr := runStmt(qc, "delete from shellTest where test_id IN [\"advise\"]")
+	if rr.Err != nil {
+		t.Errorf("did not expect err %s", rr.Err.Error())
 	}
 
 	runStmt(qc, "DROP PRIMARY INDEX ON shellTest")

@@ -31,14 +31,14 @@ func TestWhereFunc(t *testing.T) {
 	runMatch("case_simple.json", false, false, qc, t)
 	runMatch("case_where.json", false, false, qc, t)
 
-	_, _, errcs, _ := runStmt(qc, "delete from product where test_id = \"where_func\"")
-	if errcs != nil {
-		t.Errorf("did not expect err %s", errcs.Error())
+	rr := runStmt(qc, "delete from product where test_id = \"where_func\"")
+	if rr.Err != nil {
+		t.Errorf("did not expect err %s", rr.Err.Error())
 	}
 
-	_, _, errcs, _ = runStmt(qc, "delete from orders where test_id = \"where_func\"")
-	if errcs != nil {
-		t.Errorf("did not expect err %s", errcs.Error())
+	rr = runStmt(qc, "delete from orders where test_id = \"where_func\"")
+	if rr.Err != nil {
+		t.Errorf("did not expect err %s", rr.Err.Error())
 	}
 
 	runStmt(qc, "DROP PRIMARY INDEX ON orders")

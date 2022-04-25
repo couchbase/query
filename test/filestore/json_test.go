@@ -25,12 +25,12 @@ func start() *MockServer {
 func TestSyntaxErr(t *testing.T) {
 	qc := start()
 
-	r, _, err := Run(qc, true, "this is a bad query", nil, nil, _NAMESPACE)
-	if err == nil || len(r) != 0 {
+	rr := Run(qc, true, "this is a bad query", nil, nil, _NAMESPACE)
+	if rr.Err == nil || len(rr.Results) != 0 {
 		t.Errorf("expected err")
 	}
-	r, _, err = Run(qc, true, "", nil, nil, _NAMESPACE) // empty string query
-	if err == nil || len(r) != 0 {
+	rr = Run(qc, true, "", nil, nil, _NAMESPACE) // empty string query
+	if rr.Err == nil || len(rr.Results) != 0 {
 		t.Errorf("expected err")
 	}
 }
@@ -47,12 +47,12 @@ func TestRoleStatements(t *testing.T) {
 	ds.PutUserInfo(&pete)
 	ds.PutUserInfo(&sam)
 
-	r, _, err := Run(qc, true, "GRANT bucket_admin ON products TO pete, sam", nil, nil, _NAMESPACE)
-	if err != nil {
-		t.Fatalf("Unable to run GRANT: %s", err.Error())
+	rr := Run(qc, true, "GRANT bucket_admin ON products TO pete, sam", nil, nil, _NAMESPACE)
+	if rr.Err != nil {
+		t.Fatalf("Unable to run GRANT: %s", rr.Err.Error())
 	}
-	if len(r) != 0 {
-		t.Fatalf("Expected no return, got %v", r)
+	if len(rr.Results) != 0 {
+		t.Fatalf("Expected no return, got %v", rr.Results)
 	}
 
 	users, err := ds.GetUserInfoAll()
@@ -83,12 +83,12 @@ func TestRoleStatements(t *testing.T) {
 	}
 	compareUserLists(&expectedAfterGrant, &users, t)
 
-	r, _, err = Run(qc, true, "REVOKE bucket_admin ON products FROM pete, sam", nil, nil, _NAMESPACE)
-	if err != nil {
-		t.Fatalf("Unable to run REVOKE: %s", err.Error())
+	rr = Run(qc, true, "REVOKE bucket_admin ON products FROM pete, sam", nil, nil, _NAMESPACE)
+	if rr.Err != nil {
+		t.Fatalf("Unable to run REVOKE: %s", rr.Err.Error())
 	}
-	if len(r) != 0 {
-		t.Fatalf("Expected no return, got %v", r)
+	if len(rr.Results) != 0 {
+		t.Fatalf("Expected no return, got %v", rr.Results)
 	}
 
 	users, err = ds.GetUserInfoAll()
@@ -166,33 +166,33 @@ func compareRoleLists(expected *[]datastore.Role, result *[]datastore.Role, t *t
 func TestSimpleSelect(t *testing.T) {
 	qc := start()
 
-	r, _, err := Run(qc, true, "select 1 + 1", nil, nil, _NAMESPACE)
-	if err != nil {
-		t.Errorf("did not expect err %s", err.Error())
+	rr := Run(qc, true, "select 1 + 1", nil, nil, _NAMESPACE)
+	if rr.Err != nil {
+		t.Errorf("did not expect err %s", rr.Err.Error())
 	}
-	if len(r) == 0 {
+	if len(rr.Results) == 0 {
 		t.Errorf("unexpected 0 length result")
 	}
 
-	r, _, err = Run(qc, true, "select * from system:keyspaces", nil, nil, _NAMESPACE)
-	if err != nil {
-		t.Errorf("did not expect err %s", err.Error())
+	rr = Run(qc, true, "select * from system:keyspaces", nil, nil, _NAMESPACE)
+	if rr.Err != nil {
+		t.Errorf("did not expect err %s", rr.Err.Error())
 	}
-	if len(r) == 0 {
+	if len(rr.Results) == 0 {
 		t.Errorf("unexpected 0 length result")
 	}
 
-	r, _, err = Run(qc, true, "select * from default:orders", nil, nil, _NAMESPACE)
-	if err != nil {
-		t.Errorf("did not expect err %s", err.Error())
+	rr = Run(qc, true, "select * from default:orders", nil, nil, _NAMESPACE)
+	if rr.Err != nil {
+		t.Errorf("did not expect err %s", rr.Err.Error())
 	}
-	if len(r) == 0 {
+	if len(rr.Results) == 0 {
 		t.Errorf("unexpected 0 length result")
 	}
 
 	fileInfos, _ := ioutil.ReadDir("json/default/orders")
-	if len(r) != len(fileInfos) {
-		fmt.Printf("num results : %#v, fileInfos: %#v\n", len(r), len(fileInfos))
+	if len(rr.Results) != len(fileInfos) {
+		fmt.Printf("num results : %#v, fileInfos: %#v\n", len(rr.Results), len(fileInfos))
 		t.Errorf("expected # of results to match directory listing")
 	}
 }

@@ -45,9 +45,9 @@ func TestN1qlFts(t *testing.T) {
 	if err != nil {
 		t.Errorf("did not expect err %s", err.Error())
 	}
-	_, _, errcs, _ := runStmt(qc, "delete from product where test_id = \"n1qlfts\"")
-	if errcs != nil {
-		t.Errorf("did not expect err %s", errcs.Error())
+	rr := runStmt(qc, "delete from product where test_id = \"n1qlfts\"")
+	if rr.Err != nil {
+		t.Errorf("did not expect err %s", rr.Err.Error())
 	}
 
 	runStmt(qc, "drop primary index on product")

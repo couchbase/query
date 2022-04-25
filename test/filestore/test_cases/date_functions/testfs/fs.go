@@ -8,7 +8,6 @@
 package testfs
 
 import (
-	"github.com/couchbase/query/errors"
 	js "github.com/couchbase/query/test/filestore"
 )
 
@@ -21,6 +20,6 @@ func testCaseFile(fname string, qc *js.MockServer) (fin_stmt string, errstring e
 	return
 }
 
-func Run_test(mockServer *js.MockServer, q string) ([]interface{}, []errors.Error, errors.Error) {
+func Run_test(mockServer *js.MockServer, q string) *js.RunResult {
 	return js.Run(mockServer, true, q, nil, nil, js.Namespace_FS)
 }
