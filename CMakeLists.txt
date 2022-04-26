@@ -36,12 +36,7 @@ ELSE (BUILD_ENTERPRISE)
 ENDIF(BUILD_ENTERPRISE)
 SET (_extra_deps)
 
-# MB-40185: perf: for now need to use 1.17.2 on Windows only
-IF(WIN32)
-  SET (GOVERSION 1.17.2)
-ELSE ()
-  SET (GOVERSION 1.16.6)
-ENDIF ()
+SET (GOVERSION 1.18.1)
 GoPrivateMod (MODULE cbftx PATH ../../../../../cbftx)
 GoPrivateMod (MODULE eventing-ee)
 GoPrivateMod (MODULE query-ee)
@@ -66,7 +61,7 @@ IF(WIN32)
 ENDIF()
 
 IF (NOT CBQ_ONLY)
-  GoYacc (GOVERSION 1.16.6 TARGET n1ql-yacc YFILE "${PROJECT_SOURCE_DIR}/parser/n1ql/n1ql.y")
+  GoYacc (GOVERSION 1.18.1 TARGET n1ql-yacc YFILE "${PROJECT_SOURCE_DIR}/parser/n1ql/n1ql.y")
 
   GET_FILENAME_COMPONENT (CURL_LIBRARY_DIR "${CURL_LIBRARIES}" DIRECTORY)
 
