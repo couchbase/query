@@ -18,14 +18,19 @@
 package server
 
 import (
+	"fmt"
 	"net/http"
+	"regexp"
+	"strings"
 	"sync"
 	"time"
+	"unicode"
 
 	"github.com/couchbase/go_json"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/execution"
+	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
@@ -268,6 +273,10 @@ func RequestsCheckQualifier(name string, op RequestsOp, condition interface{}, t
 		_, err = newMutations(condition)
 	case "counts":
 		_, err = newCounts(condition)
+	case "statement":
+		_, err = newStatement(condition)
+	case "plan":
+		_, err = newPlanElement(condition)
 	default:
 		return errors.NewCompletedQualifierUnknown(name)
 	}
@@ -314,6 +323,10 @@ func RequestsAddQualifier(name string, condition interface{}, tag string) errors
 		q, err = newMutations(condition)
 	case "counts":
 		q, err = newCounts(condition)
+	case "statement":
+		q, err = newStatement(condition)
+	case "plan":
+		q, err = newPlanElement(condition)
 	default:
 		return errors.NewCompletedQualifierUnknown(name)
 	}
@@ -1164,4 +1177,275 @@ func (this *counts) evaluate(request *BaseRequest, req *http.Request) bool {
 		int64(request.phaseStats[execution.NL_JOIN].count) > this.count ||
 		int64(request.phaseStats[execution.HASH_JOIN].count) > this.count ||
 		int64(request.phaseStats[execution.SORT].count) > this.count
+}
+
+// 11- statement text
+type statement struct {
+	pattern *regexp.Regexp
+	like    string
+}
+
+func newStatement(c interface{}) (*statement, errors.Error) {
+	switch c := c.(type) {
+	case string:
+		re, _, err := expression.LikeCompile(c, '\\')
+		if err == nil || len(c) == 0 {
+			return &statement{like: c, pattern: re}, nil
+		}
+	}
+	return nil, errors.NewCompletedQualifierInvalidArgument("statement", c)
+}
+
+func (this *statement) name() string {
+	return "statement"
+}
+
+func (this *statement) unique() bool {
+	return false
+}
+
+func (this *statement) condition() interface{} {
+	return this.like
+}
+
+func (this *statement) isCondition(c interface{}) bool {
+	switch c.(type) {
+	case string:
+		return c.(string) == this.like
+	}
+	return false
+}
+
+func (this *statement) checkCondition(c interface{}) errors.Error {
+	switch c.(type) {
+	case string:
+		return nil
+	}
+	return errors.NewCompletedQualifierInvalidArgument("statement", c)
+}
+
+func (this *statement) evaluate(request *BaseRequest, req *http.Request) bool {
+	switch request.Type() {
+	case "SELECT", "UPDATE", "INSERT", "UPSERT", "DELETE", "MERGE":
+	default:
+		return false
+	}
+	if this.pattern == nil {
+		return false
+	}
+	return this.pattern.MatchString(request.Statement())
+}
+
+// 12- plan element
+type elemfilter struct {
+	key     string
+	value   interface{}
+	jsonKey string
+	jsonVal string
+	result  bool
+}
+
+type elemfilters []*elemfilter
+
+func (this *elemfilter) MarshalJSON() ([]byte, error) {
+	m := make(map[string]interface{})
+	k := "+"
+	if !this.result {
+		k = "-"
+	}
+	k += this.key
+	m[k] = this.value
+	return json.Marshal(m)
+}
+
+func (this *elemfilter) Equals(c interface{}) bool {
+	if f, ok := c.(*elemfilter); ok {
+		if this.key != f.key || this.result != f.result {
+			return false
+		}
+		return compare(this.value, f.value)
+	}
+	return false
+}
+
+func (this elemfilters) Equals(c interface{}) bool {
+	if ca, ok := c.(elemfilters); ok {
+		if len(ca) != len(this) {
+			return false
+		}
+		for i := range this {
+			if !this[i].Equals(ca[i]) {
+				return false
+			}
+		}
+		return true
+	}
+	return false
+}
+
+func (this elemfilters) String() string {
+	s := ""
+	for _, v := range this {
+		s += fmt.Sprintf(", %v", v)
+	}
+	if len(s) > 0 {
+		return s[2:]
+	}
+	return ""
+}
+
+type plan_element struct {
+	criteria elemfilters
+}
+
+func newPlanElement(c interface{}) (*plan_element, errors.Error) {
+	switch c := c.(type) {
+	case map[string]interface{}:
+		f := makeMapFilters(c)
+		return &plan_element{criteria: f}, nil
+	case []interface{}:
+		f, ok := makeFilters(c)
+		if ok {
+			return &plan_element{criteria: f}, nil
+		}
+	}
+	return nil, errors.NewCompletedQualifierInvalidArgument("plan", c)
+}
+
+func (this *plan_element) name() string {
+	return "plan"
+}
+
+func (this *plan_element) unique() bool {
+	return false
+}
+
+func (this *plan_element) condition() interface{} {
+	return this.criteria
+}
+
+func (this *plan_element) Equals(c interface{}) bool {
+	return this.isCondition(c)
+}
+
+func (this *plan_element) isCondition(c interface{}) bool {
+	switch c := c.(type) {
+	case []interface{}:
+		f, ok := makeFilters(c)
+		if !ok {
+			return false
+		}
+		return compare(this.criteria, f)
+	case map[string]interface{}:
+		f := makeMapFilters(c)
+		return compare(this.criteria, f)
+	case elemfilters:
+		return compare(this.criteria, c)
+	}
+	return false
+}
+
+func makeFilters(a []interface{}) (elemfilters, bool) {
+	var filters elemfilters
+	for i := range a {
+		switch m := a[i].(type) {
+		case map[string]interface{}:
+			filters = append(filters, makeMapFilters(m)...)
+		case []interface{}:
+			f, ok := makeFilters(m)
+			if !ok {
+				return nil, false
+			}
+			filters = append(filters, f...)
+		default:
+			return nil, false
+		}
+	}
+	return filters, true
+}
+
+func makeMapFilters(m map[string]interface{}) elemfilters {
+	var filters []*elemfilter
+	for mk, mv := range m {
+		expectedRes := true
+		if mk[0] == '+' {
+			mk = mk[1:]
+		} else if mk[0] == '-' {
+			expectedRes = false
+			mk = mk[1:]
+		}
+		jk := "\"" + mk + "\":"
+		jv := ""
+		b, err := json.Marshal(mv)
+		if err == nil {
+			jv = fmt.Sprintf("%s", string(b))
+		} else {
+			jv = fmt.Sprintf("%v", mv)
+		}
+		filters = append(filters, &elemfilter{mk, mv, jk, jv, expectedRes})
+	}
+	return filters
+}
+
+func (this *plan_element) checkCondition(c interface{}) errors.Error {
+	switch c.(type) {
+	case map[string]interface{}:
+		return nil
+	}
+	return errors.NewCompletedQualifierInvalidArgument("plan", c)
+}
+
+func (this *plan_element) evaluate(request *BaseRequest, req *http.Request) bool {
+	switch request.Type() {
+	case "SELECT", "UPDATE", "INSERT", "UPSERT", "DELETE", "MERGE":
+	default:
+		return false
+	}
+	t := request.GetTimings()
+	if t == nil {
+		return false
+	}
+	b := request.GetFmtTimings()
+	if b == nil {
+		var err error
+		b, err = json.Marshal(t)
+		if err != nil {
+			return false
+		}
+		request.SetFmtTimings(b)
+	}
+	// plan may or may not be in indented format, match key then value ignoring whitespace
+	plan := string(b)
+	for _, p := range this.criteria {
+		start := 0
+		i := strings.Index(plan[start:], p.jsonKey)
+		found := false
+		for i != -1 {
+			i += start + len(p.jsonKey)
+			m := i + 20
+			if m > len(plan) {
+				m = len(plan)
+			}
+			found = true
+			for j := range p.jsonVal {
+				for unicode.IsSpace(rune(plan[i])) {
+					i++
+				}
+				if plan[i] != p.jsonVal[j] {
+					found = false
+					break
+				}
+				i++
+			}
+			if found && p.result {
+				break
+			}
+			start = i
+			i = strings.Index(plan[start:], p.jsonKey)
+		}
+		if found != p.result {
+			return false
+		}
+	}
+	return true
 }

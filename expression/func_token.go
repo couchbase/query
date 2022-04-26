@@ -188,7 +188,7 @@ func (this *ContainsTokenLike) Evaluate(item value.Value, context Context) (valu
 		// because the tokenising disallows special characters we don't have to care about the escape character
 		// (tokens can never contain anything other than letters and numbers)
 		// if we change the tokenising at some point to allow character groups then we'll have to add "escape" to the options
-		re, _, err = likeCompile(pattern.ToString(), '\\')
+		re, _, err = LikeCompile(pattern.ToString(), '\\')
 		if err != nil {
 			return nil, err
 		}

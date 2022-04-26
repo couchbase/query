@@ -130,7 +130,7 @@ func (this *Like) Evaluate(item value.Value, context Context) (value.Value, erro
 			}
 		}
 		if re == nil {
-			re, _, err = likeCompile(s, escape)
+			re, _, err = LikeCompile(s, escape)
 			if err != nil {
 				return nil, err
 			}
@@ -186,7 +186,7 @@ func precompileLike(sv value.Value, escape rune) (re, part *regexp.Regexp, err e
 	}
 
 	s := sv.ToString()
-	return likeCompile(s, escape)
+	return LikeCompile(s, escape)
 }
 
 /*
@@ -206,7 +206,7 @@ const (
 	anyChar           = "(.)"
 )
 
-func likeCompile(s string, escape rune) (re, part *regexp.Regexp, err error) {
+func LikeCompile(s string, escape rune) (re, part *regexp.Regexp, err error) {
 	pat := make([]rune, 0, len(s)*2)
 	literal := make([]rune, 0, len(s)*2)
 	escaped := false
