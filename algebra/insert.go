@@ -108,6 +108,39 @@ func (this *Insert) Type() string {
 	return "INSERT"
 }
 
+func (this *Insert) String() string {
+	s := "insert into "
+	s += this.keyspace.Path().ProtectedString()
+	alias := this.keyspace.Alias()
+	if len(alias) > 0 {
+		s += " as `" + alias + "`"
+	}
+	if this.key != nil && this.value != nil {
+		s += " (key " + this.key.String() + ", value " + this.value.String()
+		if this.options != nil {
+			s += ", options " + this.options.String()
+		}
+		s += ")"
+	}
+	if this.values != nil && len(this.values) > 0 {
+		s += " values"
+		for _, v := range this.values {
+			s += "(" + v.key.String() + "," + v.value.String()
+			if v.options != nil {
+				s += "," + v.options.String()
+			}
+			s += "),"
+		}
+		s = s[:len(s)-1]
+	} else if this.query != nil {
+		s += this.query.String()
+	}
+	if this.returning != nil {
+		s += " returning " + this.returning.String()
+	}
+	return s
+}
+
 /*
 Applies mapper to all the expressions in the insert statement.
 */

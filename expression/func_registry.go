@@ -151,6 +151,8 @@ var _FUNCTIONS = map[string]Function{
 
 	// String
 	"contains":  &Contains{},
+	"formalise": &Formalize{},
+	"formalize": &Formalize{},
 	"initcap":   &Title{},
 	"length":    &Length{},
 	"lower":     &Lower{},

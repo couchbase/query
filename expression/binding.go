@@ -66,6 +66,21 @@ func (this *Binding) Copy() *Binding {
 	}
 }
 
+func (this *Binding) String() string {
+	s := ""
+	if this.nameVariable != "" {
+		s += this.nameVariable + ":"
+	}
+	s += this.variable
+	if this.descend {
+		s += " within "
+	} else {
+		s += " in "
+	}
+	s += this.expr.String()
+	return s
+}
+
 func (this *Binding) NameVariable() string {
 	return this.nameVariable
 }
@@ -277,6 +292,17 @@ func (this Bindings) MapExpressions(mapper Mapper) (err error) {
 	}
 
 	return
+}
+
+func (this Bindings) String() string {
+	s := ""
+	for _, b := range this {
+		s += b.String() + ","
+	}
+	if len(s) > 0 {
+		s = s[:len(s)-1]
+	}
+	return s
 }
 
 /*

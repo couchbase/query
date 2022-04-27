@@ -1077,7 +1077,15 @@ func (this *Context) DoStatementComplete(stmtType string, success bool) (err err
 }
 
 func (this *Context) Parse(s string) (interface{}, error) {
-	return n1ql.ParseExpression(s)
+	rv, err := n1ql.ParseExpression(s)
+	if err == nil {
+		return rv, nil
+	}
+	rvs, err2 := n1ql.ParseStatement2(s, this.Namespace(), this.QueryContext())
+	if err2 != nil {
+		return nil, err
+	}
+	return rvs, nil
 }
 
 func (this *Context) Infer(v value.Value, with value.Value) (value.Value, error) {

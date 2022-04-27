@@ -88,6 +88,39 @@ func (this *Delete) Type() string {
 	return "DELETE"
 }
 
+func (this *Delete) String() string {
+	s := "delete from "
+	s += this.keyspace.Path().ProtectedString()
+	alias := this.keyspace.Alias()
+	if len(alias) > 0 {
+		s += " as " + alias
+	}
+	if this.keys != nil {
+		if this.validateKeys {
+			s += " use keys validate " + this.keys.String()
+		} else {
+			s += " use keys " + this.keys.String()
+		}
+	}
+	if this.indexes != nil {
+		s += " use index(" + this.indexes.String() + ")"
+	}
+
+	if this.where != nil {
+		s += " where " + this.where.String()
+	}
+	if this.offset != nil {
+		s += " offset " + this.offset.String()
+	}
+	if this.limit != nil {
+		s += " limit " + this.limit.String()
+	}
+	if this.returning != nil {
+		s += " returning " + this.returning.String()
+	}
+	return s
+}
+
 /*
 Applies mapper to all the expressions in the delete statement.
 */

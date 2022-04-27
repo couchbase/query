@@ -30,3 +30,23 @@ func (this *IndexRef) Name() string {
 func (this *IndexRef) Using() datastore.IndexType {
 	return this.using
 }
+
+func (this IndexRefs) String() string {
+	s := ""
+	for _, i := range this {
+		if i.name != "" {
+			s += " " + i.name
+		}
+		if i.using == datastore.GSI || i.using == datastore.FTS {
+			s += " using " + string(i.using)
+		}
+		s += ","
+	}
+	if len(s) > 0 {
+		s = s[1:]
+	}
+	if len(s) > 0 {
+		s = s[:len(s)-1]
+	}
+	return s
+}

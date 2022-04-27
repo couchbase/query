@@ -9,6 +9,8 @@
 package algebra
 
 import (
+	"strings"
+
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
@@ -329,6 +331,109 @@ func (this *Merge) Type() string {
 	return "MERGE"
 }
 
+func (this *Merge) String() string {
+	s := "merge into "
+	s += this.keyspace.Path().ProtectedString()
+	alias := this.keyspace.Alias()
+	if alias != "" {
+		s += " as `" + alias + "`"
+	}
+	if this.indexes != nil {
+		s += " use index(" + this.indexes.String() + ")"
+	}
+	s += " using " + this.source.String()
+	if this.on != nil {
+		if this.isOnKey {
+			s += " on key " + this.on.String()
+		} else {
+			s += " on " + this.on.String()
+		}
+	}
+	if this.actions != nil {
+		if this.actions.update != nil {
+			s += " when matched then update"
+			if this.actions.update.set != nil {
+				s += " set"
+				for _, v := range this.actions.update.set.Terms() {
+					if v.meta != nil {
+						s += " " + v.meta.String()
+					} else {
+						s += " " + strings.TrimPrefix(strings.TrimSuffix(v.path.String(), ")"), "(")
+					}
+					s += " = " + v.value.String()
+					if v.updateFor != nil {
+						s += " for "
+						for _, b := range v.updateFor.Bindings() {
+							s += b.String() + ","
+						}
+						s = s[:len(s)-1]
+						if v.updateFor.When() != nil {
+							s += " when " + v.updateFor.When().String()
+						}
+						s += " end"
+					}
+					s += ","
+				}
+				s = s[:len(s)-1]
+			}
+			if this.actions.update.unset != nil {
+				s += " unset"
+				for _, v := range this.actions.update.unset.Terms() {
+					s += " " + strings.TrimPrefix(strings.TrimSuffix(v.path.String(), ")"), "(")
+					if v.updateFor != nil {
+						s += " for "
+						for _, b := range v.updateFor.Bindings() {
+							s += b.String() + ","
+						}
+						s = s[:len(s)-1]
+						if v.updateFor.When() != nil {
+							s += " when " + v.updateFor.When().String()
+						}
+						s += " end"
+					}
+					s += ","
+				}
+				s = s[:len(s)-1]
+			}
+			if this.actions.update.where != nil {
+				s += " where " + this.actions.update.where.String()
+			}
+		}
+		if this.actions.delete != nil {
+			s += " when matched then delete"
+			if this.actions.delete.where != nil {
+				s += " where " + this.actions.delete.where.String()
+			}
+		}
+		if this.actions.insert != nil {
+			s += " when not matched then insert"
+			if this.isOnKey {
+				s += this.actions.insert.value.String()
+			} else {
+				s += "(key " + this.actions.insert.key.String()
+				if this.actions.insert.value != nil {
+					s += ", value " + this.actions.insert.value.String()
+				}
+				if this.actions.insert.options != nil {
+					s += ", options " + this.actions.insert.options.String()
+				}
+				s += ")"
+			}
+			if this.actions.insert.where != nil {
+				s += " where " + this.actions.insert.where.String()
+			}
+		}
+	}
+
+	if this.limit != nil {
+		s += " limit " + this.limit.String()
+	}
+	if this.returning != nil {
+		s += " returning " + this.returning.String()
+	}
+	return s
+}
+
 /*
 Optimier hints
 */
@@ -524,6 +629,17 @@ func (this *MergeSource) Alias() string {
 	} else {
 		return ""
 	}
+}
+
+func (this *MergeSource) String() string {
+	if this.query != nil {
+		return this.query.String()
+	} else if this.from != nil {
+		return this.from.Path().ProtectedString()
+	} else if this.expr != nil {
+		return this.expr.String()
+	}
+	return ""
 }
 
 // MergeSource.Keyspace() no longer needed, as we use paths instead

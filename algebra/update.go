@@ -9,6 +9,8 @@
 package algebra
 
 import (
+	"strings"
+
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
@@ -78,6 +80,79 @@ It's an Update
 */
 func (this *Update) Type() string {
 	return "UPDATE"
+}
+
+func (this *Update) String() string {
+	s := "update "
+	s += this.keyspace.Path().ProtectedString()
+	alias := this.keyspace.Alias()
+	if len(alias) > 0 {
+		s += " as `" + alias + "`"
+	}
+	if this.keys != nil {
+		if this.validateKeys {
+			s += " use keys validate " + this.keys.String()
+		} else {
+			s += " use keys " + this.keys.String()
+		}
+	}
+	if this.indexes != nil {
+		s += " use index(" + this.indexes.String() + ")"
+	}
+	if this.set != nil {
+		s += " set"
+		for _, v := range this.set.Terms() {
+			if v.meta != nil {
+				s += " " + v.meta.String()
+			} else {
+				s += " " + strings.TrimPrefix(strings.TrimSuffix(v.path.String(), ")"), "(")
+			}
+			s += " = " + v.value.String()
+			if v.updateFor != nil {
+				s += " for "
+				for _, b := range v.updateFor.Bindings() {
+					s += b.String() + ","
+				}
+				s = s[:len(s)-1]
+				if v.updateFor.When() != nil {
+					s += " when " + v.updateFor.When().String()
+				}
+				s += " end"
+			}
+			s += ","
+		}
+		s = s[:len(s)-1]
+	}
+	if this.unset != nil {
+		s += " unset"
+		for _, v := range this.unset.Terms() {
+			s += " " + strings.TrimPrefix(strings.TrimSuffix(v.path.String(), ")"), "(")
+			if v.updateFor != nil {
+				s += " for "
+				for _, b := range v.updateFor.Bindings() {
+					s += b.String() + ","
+				}
+				s = s[:len(s)-1]
+				if v.updateFor.When() != nil {
+					s += " when " + v.updateFor.When().String()
+				}
+				s += " end"
+			}
+			s += ","
+		}
+		s = s[:len(s)-1]
+	}
+
+	if this.where != nil {
+		s += " where " + this.where.String()
+	}
+	if this.limit != nil {
+		s += " limit " + this.limit.String()
+	}
+	if this.returning != nil {
+		s += " returning " + this.returning.String()
+	}
+	return s
 }
 
 /*

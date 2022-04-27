@@ -1683,6 +1683,71 @@ func padString(item value.Value, context Context, operands Expressions, right bo
 
 ///////////////////////////////////////////////////
 //
+// Formalize
+//
+///////////////////////////////////////////////////
+
+type Formalize struct {
+	FunctionBase
+}
+
+func NewFormalize(operands ...Expression) Function {
+	rv := &Formalize{
+		*NewFunctionBase("formalize", operands...),
+	}
+
+	rv.expr = rv
+	return rv
+}
+
+func (this *Formalize) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *Formalize) Type() value.Type { return value.NUMBER }
+
+func (this *Formalize) Evaluate(item value.Value, context Context) (value.Value, error) {
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if arg.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else if arg.Type() != value.STRING {
+		return value.NULL_VALUE, nil
+	}
+	qc := context.QueryContext()
+	if len(this.operands) > 1 {
+		qcarg, err := this.operands[1].Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		} else if arg.Type() == value.MISSING {
+			return value.MISSING_VALUE, nil
+		} else if arg.Type() != value.STRING {
+			return value.NULL_VALUE, nil
+		}
+		qc = qcarg.ToString()
+	}
+	evalContext := context.NewQueryContext(qc, context.Readonly())
+
+	s, err := evalContext.(Context).Parse(arg.ToString())
+	if err != nil {
+		return value.NULL_VALUE, errors.NewParseSyntaxError(err, "Error formalizing statement")
+	}
+	if st, ok := s.(interface{ String() string }); ok {
+		return value.NewValue(st.String()), nil
+	}
+	return value.NULL_VALUE, nil
+}
+
+func (this *Formalize) Constructor() FunctionConstructor {
+	return NewFormalize
+}
+
+func (this *Formalize) MinArgs() int { return 1 }
+func (this *Formalize) MaxArgs() int { return 2 }
+
+///////////////////////////////////////////////////
+//
 // URLEncode
 //
 ///////////////////////////////////////////////////
