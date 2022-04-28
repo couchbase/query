@@ -65,7 +65,7 @@ func (b *keyspaceKeyspace) Count(context datastore.QueryContext) (int64, errors.
 				objects, excp := namespace.Objects(true)
 				if excp == nil {
 					for _, object := range objects {
-						excludeResult := !canAccessAll && !canRead(context, namespaceId, object.Id)
+						includeDefaultKeyspace := canAccessAll || canRead(context, namespaceId, object.Id)
 
 						// The list of bucket ids can include memcached buckets.
 						// We do not want to include them in the count of
@@ -85,28 +85,29 @@ func (b *keyspaceKeyspace) Count(context datastore.QueryContext) (int64, errors.
 								continue
 							}
 						}
-						if excludeResult {
-							context.Warning(errors.NewSystemFilteredRowsWarning("system:keyspaces"))
-						} else {
 
-							if object.IsKeyspace {
+						if object.IsKeyspace {
+							if includeDefaultKeyspace {
 								count++
+							} else {
+								context.Warning(errors.NewSystemFilteredRowsWarning("system:keyspaces"))
 							}
-							if object.IsBucket {
-								scopeIds, _ := bucket.ScopeIds()
-								for _, scopeId := range scopeIds {
-									scope, _ := bucket.ScopeById(scopeId)
-									if scope != nil {
-										keyspaceIds, _ := scope.KeyspaceIds()
-										for _, keyspaceId := range keyspaceIds {
-											if b.skipSystem && keyspaceId[0] == '_' {
-												continue
-											}
-											if !canAccessAll && !canRead(context, namespaceId, object.Id, scopeId, keyspaceId) {
-												context.Warning(errors.NewSystemFilteredRowsWarning("system:keyspaces"))
-											} else {
-												count++
-											}
+						}
+						if object.IsBucket {
+							scopeIds, _ := bucket.ScopeIds()
+							for _, scopeId := range scopeIds {
+								scope, _ := bucket.ScopeById(scopeId)
+								if scope != nil {
+									includeScope := includeDefaultKeyspace || canRead(context, namespaceId, object.Id, scopeId)
+									keyspaceIds, _ := scope.KeyspaceIds()
+									for _, keyspaceId := range keyspaceIds {
+										if b.skipSystem && keyspaceId[0] == '_' {
+											continue
+										}
+										if includeScope || canRead(context, namespaceId, object.Id, scopeId, keyspaceId) {
+											count++
+										} else {
+											context.Warning(errors.NewSystemFilteredRowsWarning("system:keyspaces"))
 										}
 									}
 								}
