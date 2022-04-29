@@ -83,7 +83,7 @@ func (ci *queryContextImpl) GetScanCap() int64 {
 }
 
 func (ci *queryContextImpl) MaxParallelism() int {
-        return 1
+	return 1
 }
 
 func TestSystem(t *testing.T) {
@@ -275,13 +275,13 @@ func TestSystem(t *testing.T) {
 // Helper function to perform a primary index scan on the given keyspace. Returns a map of
 // all primary key names.
 func doPrimaryIndexScan(t *testing.T, b datastore.Keyspace) (m map[string]bool, excp errors.Error) {
-//	conn := datastore.NewIndexConnection(&testingContext{t})
+	//	conn := datastore.NewIndexConnection(&testingContext{t})
 	conn := datastore.NewIndexConnection(&queryContextImpl{
-                t: t,
-                creds: &auth.Credentials{
-                        AuthenticatedUsers: auth.AuthenticatedUsers{"local:Administrator"},
-                },
-        },)
+		t: t,
+		creds: &auth.Credentials{
+			AuthenticatedUsers: auth.AuthenticatedUsers{"local:Administrator"},
+		},
+	})
 
 	m = map[string]bool{}
 
