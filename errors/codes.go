@@ -132,11 +132,13 @@ const (
 	E_HAS_USE_INDEXES                         ErrorCode = 3262
 	E_UPDATE_STAT_INVALID_INDEX_TYPE          ErrorCode = 3270
 	E_UPDATE_STAT_INDEX_ALL_COLLECTION_ONLY   ErrorCode = 3271
+	E_UPDATE_STAT_SELF_NOTALLOWED             ErrorCode = 3272
 	E_CREATE_INDEX_NOT_INDEXABLE              ErrorCode = 3280
 	E_CREATE_INDEX_ATTRIBUTE_MISSING          ErrorCode = 3281
 	E_CREATE_INDEX_ATTRIBUTE                  ErrorCode = 3282
 	E_FLATTEN_KEYS                            ErrorCode = 3283
 	E_ALL_DISTINCT_NOT_ALLOWED                ErrorCode = 3284
+	E_CREATE_INDEX_SELF_NOTALLOWED            ErrorCode = 3285
 	E_JOIN_HINT_FIRST_FROM_TERM               ErrorCode = 3290
 	E_PLAN                                    ErrorCode = 4000
 	E_REPREPARE                               ErrorCode = 4001

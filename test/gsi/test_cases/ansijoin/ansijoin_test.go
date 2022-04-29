@@ -41,7 +41,7 @@ func TestAnsiJoin(t *testing.T) {
 	runStmt(qc, "CREATE INDEX st_ix21 on shellTest(c21, DISTINCT a21) WHERE type = \"right\"")
 	runStmt(qc, "CREATE INDEX st_ix22 on shellTest(a22) WHERE type = \"right\"")
 	runStmt(qc, "CREATE INDEX st_ix23 on shellTest(c22, c21) WHERE type = \"right\"")
-	runStmt(qc, "CREATE INDEX st_ix24 on shellTest(c21, self, c22) WHERE type = \"right\"")
+	runStmt(qc, "CREATE INDEX st_ix24 on shellTest(c21, c22) WHERE type = \"right\"")
 
 	fmt.Println("Running ANSI JOIN test cases")
 

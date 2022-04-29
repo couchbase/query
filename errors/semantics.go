@@ -135,6 +135,12 @@ func NewUpdateStatIndexAllCollectionOnly() Error {
 		InternalMsg: "INDEX ALL option for UPDATE STATISTICS (ANALYZE) can only be used for a collection.", InternalCaller: CallerN(1)}
 }
 
+func NewUpdateStatSelf(msg, at string) Error {
+	return &err{level: EXCEPTION, ICode: E_UPDATE_STAT_SELF_NOTALLOWED, IKey: "semantics_update_statistics_self",
+		InternalMsg:    fmt.Sprintf("UPDATE STATISTICS of '%s%s' is not allowed", msg, at),
+		InternalCaller: CallerN(1)}
+}
+
 func NewCreateIndexNotIndexable(msg, at string) Error {
 	return &err{level: EXCEPTION, ICode: E_CREATE_INDEX_NOT_INDEXABLE, IKey: "semantics_create_index",
 		InternalMsg: fmt.Sprintf("%s%s is not indexable.", msg, at), InternalCaller: CallerN(1)}
@@ -161,6 +167,12 @@ func NewFlattenKeys(msg, at string) Error {
 func NewAllDistinctNotAllowed(msg, at string) Error {
 	return &err{level: EXCEPTION, ICode: E_ALL_DISTINCT_NOT_ALLOWED, IKey: "semantics_no_distinct",
 		InternalMsg:    fmt.Sprintf("ALL/DISTINCT is not allowed in %s%s.", msg, at),
+		InternalCaller: CallerN(1)}
+}
+
+func NewCreateIndexSelf(msg, at string) Error {
+	return &err{level: EXCEPTION, ICode: E_CREATE_INDEX_SELF_NOTALLOWED, IKey: "semantics_create_index_self",
+		InternalMsg:    fmt.Sprintf("Index of '%s%s' is not allowed", msg, at),
 		InternalCaller: CallerN(1)}
 }
 

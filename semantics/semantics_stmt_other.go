@@ -12,6 +12,7 @@ import (
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/expression"
 )
 
 func (this *SemChecker) VisitGrantRole(stmt *algebra.GrantRole) (interface{}, error) {
@@ -69,6 +70,12 @@ func (this *SemChecker) VisitInferExpression(stmt *algebra.InferExpression) (int
 func (this *SemChecker) VisitUpdateStatistics(stmt *algebra.UpdateStatistics) (interface{}, error) {
 	if !this.hasSemFlag(_SEM_ENTERPRISE) {
 		return nil, errors.NewEnterpriseFeature("Update Statistics", "semantics.visit_update_statistics")
+	}
+
+	for _, expr := range stmt.Terms() {
+		if _, ok := expr.(*expression.Self); ok {
+			return nil, errors.NewUpdateStatSelf(expr.String(), expr.ErrorContext())
+		}
 	}
 
 	if err := semCheckFlattenKeys(stmt.Terms()); err != nil {

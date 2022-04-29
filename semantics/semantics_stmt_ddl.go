@@ -29,6 +29,9 @@ func (this *SemChecker) VisitCreateIndex(stmt *algebra.CreateIndex) (interface{}
 
 	for i, term := range stmt.Keys() {
 		expr := term.Expression()
+		if _, ok := expr.(*expression.Self); ok {
+			return nil, errors.NewCreateIndexSelf(expr.String(), expr.ErrorContext())
+		}
 		if all, ok := expr.(*expression.All); ok && all.Flatten() {
 			if term.Attributes() != 0 {
 				return nil, errors.NewCreateIndexAttribute(expr.String(), expr.ErrorContext())
