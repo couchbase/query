@@ -143,7 +143,6 @@ func (b *keyspaceKeyspace) Fetch(keys []string, keysMap map[string]value.Annotat
 	var e errors.Error
 	var item value.AnnotatedValue
 
-	canAccessAll := canAccessSystemTables(context)
 	for _, k := range keys {
 		err, elems := splitId(k)
 		if err != nil {
@@ -151,16 +150,8 @@ func (b *keyspaceKeyspace) Fetch(keys []string, keysMap map[string]value.Annotat
 			continue
 		}
 		if len(elems) == 2 {
-			if !canAccessAll && !canRead(context, elems[0], elems[1]) {
-				context.Warning(errors.NewSystemFilteredRowsWarning("system:keyspaces"))
-				continue
-			}
 			item, e = b.fetchOne(elems[0], elems[1], context)
 		} else {
-			if !canAccessAll && !canRead(context, elems[0], elems[1], elems[2], elems[3]) {
-				context.Warning(errors.NewSystemFilteredRowsWarning("system:keyspaces"))
-				continue
-			}
 			item, e = b.fetchOneCollection(elems[0], elems[1], elems[2], elems[3], context)
 		}
 
@@ -372,6 +363,7 @@ func (pi *keyspaceIndex) Scan(requestId string, span *datastore.Span, distinct b
 		var numProduced int64 = 0
 		namespaceIds, err := pi.keyspace.store.NamespaceIds()
 		if err == nil {
+			canAccessAll := canAccessSystemTables(conn.QueryContext())
 
 		loop:
 			for _, namespaceId := range namespaceIds {
@@ -400,7 +392,8 @@ func (pi *keyspaceIndex) Scan(requestId string, span *datastore.Span, distinct b
 								}
 							}
 
-							if object.IsKeyspace {
+							includeDefaultKeyspace := canAccessAll || canRead(conn.QueryContext(), namespaceId, object.Id)
+							if object.IsKeyspace && includeDefaultKeyspace {
 								id := makeId(namespaceId, object.Id)
 								if spanEvaluator.evaluate(id) {
 									entry := datastore.IndexEntry{PrimaryKey: id}
@@ -418,6 +411,7 @@ func (pi *keyspaceIndex) Scan(requestId string, span *datastore.Span, distinct b
 								for _, scopeId := range scopeIds {
 									scope, _ := bucket.ScopeById(scopeId)
 									if scope != nil {
+										includeScope := includeDefaultKeyspace || canRead(conn.QueryContext(), namespaceId, object.Id, scopeId)
 										keyspaceIds, _ := scope.KeyspaceIds()
 										for _, keyspaceId := range keyspaceIds {
 											if pi.keyspace.skipSystem && keyspaceId[0] == '_' {
@@ -425,6 +419,10 @@ func (pi *keyspaceIndex) Scan(requestId string, span *datastore.Span, distinct b
 											}
 											id := makeId(namespaceId, object.Id, scopeId, keyspaceId)
 											if spanEvaluator.evaluate(id) {
+												if !(includeScope || canRead(conn.QueryContext(), namespaceId, object.Id, scopeId, keyspaceId)) {
+													conn.Warning(errors.NewSystemFilteredRowsWarning("system:keyspaces"))
+													continue
+												}
 												entry := datastore.IndexEntry{PrimaryKey: id}
 												if !sendSystemKey(conn, &entry) {
 													return
@@ -457,6 +455,7 @@ func (pi *keyspaceIndex) ScanEntries(requestId string, limit int64, cons datasto
 	var numProduced int64 = 0
 	namespaceIds, err := pi.keyspace.store.NamespaceIds()
 	if err == nil {
+		canAccessAll := canAccessSystemTables(conn.QueryContext())
 
 	loop:
 		for _, namespaceId := range namespaceIds {
@@ -484,8 +483,9 @@ func (pi *keyspaceIndex) ScanEntries(requestId string, limit int64, cons datasto
 								continue
 							}
 						}
+						includeDefaultKeyspace := canAccessAll || canRead(conn.QueryContext(), namespaceId, object.Id)
 
-						if object.IsKeyspace {
+						if object.IsKeyspace && includeDefaultKeyspace {
 							id := makeId(namespaceId, object.Id)
 							entry := datastore.IndexEntry{PrimaryKey: id}
 							if !sendSystemKey(conn, &entry) {
@@ -501,9 +501,14 @@ func (pi *keyspaceIndex) ScanEntries(requestId string, limit int64, cons datasto
 							for _, scopeId := range scopeIds {
 								scope, _ := bucket.ScopeById(scopeId)
 								if scope != nil {
+									includeScope := includeDefaultKeyspace || canRead(conn.QueryContext(), namespaceId, object.Id, scopeId)
 									keyspaceIds, _ := scope.KeyspaceIds()
 									for _, keyspaceId := range keyspaceIds {
 										if pi.keyspace.skipSystem && keyspaceId[0] == '_' {
+											continue
+										}
+										if !(includeScope || canRead(conn.QueryContext(), namespaceId, object.Id, scopeId, keyspaceId)) {
+											conn.Warning(errors.NewSystemFilteredRowsWarning("system:keyspaces"))
 											continue
 										}
 										id := makeId(namespaceId, object.Id, scopeId, keyspaceId)

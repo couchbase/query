@@ -54,7 +54,7 @@ func (b *scopeKeyspace) Count(context datastore.QueryContext) (int64, errors.Err
 				objects, excp := namespace.Objects(true)
 				if excp == nil {
 					for _, object := range objects {
-						excludeResult := !canAccessAll && !canRead(context, namespaceId, object.Id)
+						includeDefaultKeyspace := canAccessAll || canRead(context, namespaceId, object.Id)
 
 						// The list of bucket ids can include memcached buckets.
 						// We do not want to include them in the count of
@@ -70,20 +70,16 @@ func (b *scopeKeyspace) Count(context datastore.QueryContext) (int64, errors.Err
 						} else {
 							continue
 						}
-						if excludeResult {
-							context.Warning(errors.NewSystemFilteredRowsWarning("system:scopes"))
-						} else {
 
-							scopeIds, _ := bucket.ScopeIds()
-							for _, scopeId := range scopeIds {
-								scope, _ := bucket.ScopeById(scopeId)
-								if scope != nil {
+						scopeIds, _ := bucket.ScopeIds()
+						for _, scopeId := range scopeIds {
+							scope, _ := bucket.ScopeById(scopeId)
+							if scope != nil {
 
-									if !canAccessAll && !canRead(context, namespaceId, object.Id, scopeId) {
-										context.Warning(errors.NewSystemFilteredRowsWarning("system:scopes"))
-									} else {
-										count++
-									}
+								if includeDefaultKeyspace || canRead(context, namespaceId, object.Id, scopeId) {
+									count++
+								} else {
+									context.Warning(errors.NewSystemFilteredRowsWarning("system:scopes"))
 								}
 							}
 						}
@@ -117,15 +113,10 @@ func (b *scopeKeyspace) Fetch(keys []string, keysMap map[string]value.AnnotatedV
 	var e errors.Error
 	var item value.AnnotatedValue
 
-	canAccessAll := canAccessSystemTables(context)
 	for _, k := range keys {
 		err, elems := splitScopeId(k)
 		if err != nil {
 			errs = append(errs, err)
-			continue
-		}
-		if !canAccessAll && !canRead(context, elems[0], elems[1], elems[2]) {
-			context.Warning(errors.NewSystemFilteredRowsWarning("system:scopes"))
 			continue
 		}
 		item, e = b.fetchOne(elems[0], elems[1], elems[2])
@@ -273,6 +264,7 @@ func (pi *scopeIndex) Scan(requestId string, span *datastore.Span, distinct bool
 		var numProduced int64 = 0
 		namespaceIds, err := pi.keyspace.store.NamespaceIds()
 		if err == nil {
+			canAccessAll := canAccessSystemTables(conn.QueryContext())
 
 		loop:
 			for _, namespaceId := range namespaceIds {
@@ -297,12 +289,17 @@ func (pi *scopeIndex) Scan(requestId string, span *datastore.Span, distinct bool
 								continue
 							}
 
+							includeDefaultKeyspace := canAccessAll || canRead(conn.QueryContext(), namespaceId, object.Id)
 							scopeIds, _ := bucket.ScopeIds()
 							for _, scopeId := range scopeIds {
 								scope, _ := bucket.ScopeById(scopeId)
 								if scope != nil {
 									id := makeId(namespaceId, object.Id, scopeId)
 									if spanEvaluator.evaluate(id) {
+										if !(includeDefaultKeyspace || canRead(conn.QueryContext(), namespaceId, object.Id, scopeId)) {
+											conn.Warning(errors.NewSystemFilteredRowsWarning("system:scopes"))
+											continue
+										}
 										entry := datastore.IndexEntry{PrimaryKey: id}
 										if !sendSystemKey(conn, &entry) {
 											return
@@ -333,6 +330,7 @@ func (pi *scopeIndex) ScanEntries(requestId string, limit int64, cons datastore.
 	var numProduced int64 = 0
 	namespaceIds, err := pi.keyspace.store.NamespaceIds()
 	if err == nil {
+		canAccessAll := canAccessSystemTables(conn.QueryContext())
 
 	loop:
 		for _, namespaceId := range namespaceIds {
@@ -362,11 +360,16 @@ func (pi *scopeIndex) ScanEntries(requestId string, limit int64, cons datastore.
 						} else {
 							continue
 						}
+						includeDefaultKeyspace := canAccessAll || canRead(conn.QueryContext(), namespaceId, object.Id)
 
 						scopeIds, _ := bucket.ScopeIds()
 						for _, scopeId := range scopeIds {
 							scope, _ := bucket.ScopeById(scopeId)
 							if scope != nil {
+								if !(includeDefaultKeyspace || canRead(conn.QueryContext(), namespaceId, object.Id, scopeId)) {
+									conn.Warning(errors.NewSystemFilteredRowsWarning("system:scopes"))
+									continue
+								}
 								id := makeId(namespaceId, object.Id, scopeId)
 								entry := datastore.IndexEntry{PrimaryKey: id}
 								if !sendSystemKey(conn, &entry) {
