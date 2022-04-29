@@ -1422,14 +1422,22 @@ func (this *plan_element) evaluate(request *BaseRequest, req *http.Request) bool
 		found := false
 		for i != -1 {
 			i += start + len(p.jsonKey)
-			m := i + 20
-			if m > len(plan) {
-				m = len(plan)
-			}
 			found = true
+			quoted := false
+			escaped := false
 			for j := range p.jsonVal {
-				for unicode.IsSpace(rune(plan[i])) {
-					i++
+				if !quoted {
+					for unicode.IsSpace(rune(plan[i])) {
+						i++
+					}
+				}
+				if !escaped && p.jsonVal[j] == '"' {
+					quoted = !quoted
+				}
+				if !escaped && p.jsonVal[j] == '\\' {
+					escaped = true
+				} else {
+					escaped = false
 				}
 				if plan[i] != p.jsonVal[j] {
 					found = false
