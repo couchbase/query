@@ -972,6 +972,9 @@ func getIndexFilters(entry *indexEntry, baseKeyspace *base.BaseKeyspace,
 	}
 
 	for _, fl := range filters {
+		if fl.IsUnnest() {
+			continue
+		}
 		fltrExpr := fl.FltrExpr()
 		derived := false
 		orig := false
