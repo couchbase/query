@@ -14,6 +14,7 @@ import (
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/util"
 )
 
 /*
@@ -59,7 +60,8 @@ func (this *builder) visitWindowAggregates(windowAggs algebra.Aggregates) {
 					frCost = OPT_COST_NOT_AVAIL
 				}
 			}
-			this.addSubChildren(plan.NewOrder(order, 0, nil, nil, cost, cardinality, size, frCost))
+			canSpill := util.IsFeatureEnabled(this.context.FeatureControls(), util.N1QL_SPILL_TO_DISK)
+			this.addSubChildren(plan.NewOrder(order, 0, nil, nil, cost, cardinality, size, frCost, false, canSpill))
 		}
 
 		for i := len(wOrderGroup.pbys) - 1; i >= 0; i-- {

@@ -13,20 +13,56 @@ import (
 	"fmt"
 
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
 type FinalGroup struct {
 	base
 	plan   *plan.FinalGroup
-	groups map[string]value.AnnotatedValue
+	groups *value.AnnotatedMap
 }
 
 func NewFinalGroup(plan *plan.FinalGroup, context *Context) *FinalGroup {
+
+	var shouldSpill func(uint64, uint64) bool
+	if context.UseRequestQuota() {
+		shouldSpill = func(c uint64, n uint64) bool {
+			return (c+n) > context.ProducerThrottleQuota() && context.CurrentQuotaUsage() > 0.75
+		}
+	} else {
+		maxSize := context.AvailableMemory()
+		if maxSize > 0 {
+			maxSize = uint64(float64(maxSize) / float64(util.NumCPU()) * 0.05) // 5% of per CPU free memory
+		}
+		if maxSize < _MIN_SIZE {
+			maxSize = _MIN_SIZE
+		}
+		shouldSpill = func(c uint64, n uint64) bool {
+			return (c + n) > maxSize
+		}
+	}
+	trackMem := func(size int64) {
+		if context.UseRequestQuota() {
+			if size < 0 {
+				context.ReleaseValueSize(uint64(-size))
+			} else {
+				if err := context.TrackValueSize(uint64(size)); err != nil {
+					context.Fatal(err)
+				}
+			}
+		}
+	}
+	merge := func(v1 value.AnnotatedValue, v2 value.AnnotatedValue) value.AnnotatedValue {
+		logging.Debugf("Invalid call to merge in FinalGroup")
+		return v1
+	}
+
 	rv := &FinalGroup{
 		plan:   plan,
-		groups: make(map[string]value.AnnotatedValue),
+		groups: value.NewAnnotatedMap(shouldSpill, trackMem, merge),
 	}
 
 	newBase(&rv.base, context)
@@ -41,7 +77,7 @@ func (this *FinalGroup) Accept(visitor Visitor) (interface{}, error) {
 func (this *FinalGroup) Copy() Operator {
 	rv := &FinalGroup{
 		plan:   this.plan,
-		groups: make(map[string]value.AnnotatedValue),
+		groups: this.groups.Copy(),
 	}
 	this.base.copy(&rv.base)
 	return rv
@@ -52,6 +88,7 @@ func (this *FinalGroup) PlanOp() plan.Operator {
 }
 
 func (this *FinalGroup) RunOnce(context *Context, parent value.Value) {
+	defer this.groups.Release()
 	this.runConsumer(this, context, parent)
 }
 
@@ -69,7 +106,7 @@ func (this *FinalGroup) processItem(item value.AnnotatedValue, context *Context)
 	}
 
 	// Get or seed the group value
-	gv := this.groups[gk]
+	gv := this.groups.Get(gk)
 	if gv != nil {
 		context.Fatal(errors.NewDuplicateFinalGroupError())
 		item.Recycle()
@@ -77,7 +114,12 @@ func (this *FinalGroup) processItem(item value.AnnotatedValue, context *Context)
 	}
 
 	gv = item
-	this.groups[gk] = gv
+	err := this.groups.Set(gk, gv)
+	if err != nil {
+		context.Fatal(err)
+		item.Recycle()
+		return false
+	}
 
 	// Compute final aggregates
 	aggregates := gv.GetAttachment("aggregates")
@@ -86,33 +128,33 @@ func (this *FinalGroup) processItem(item value.AnnotatedValue, context *Context)
 		for _, agg := range this.plan.Aggregates() {
 			v, e := agg.ComputeFinal(aggregates[agg.String()], context)
 			if e != nil {
-				context.Fatal(errors.NewGroupUpdateError(
-					e, "Error updating final GROUP value."))
+				context.Fatal(errors.NewGroupUpdateError(e, "Error updating final GROUP value."))
 				item.Recycle()
 				return false
 			}
 
 			aggregates[agg.String()] = v
 		}
-
 		return true
 	default:
-		context.Fatal(errors.NewInvalidValueError(fmt.Sprintf(
-			"Invalid or missing aggregates of type %T.", aggregates)))
+		context.Fatal(errors.NewInvalidValueError(fmt.Sprintf("Invalid or missing aggregates of type %T.", aggregates)))
 		item.Recycle()
 		return false
 	}
 }
 
 func (this *FinalGroup) afterItems(context *Context) {
-	for _, av := range this.groups {
+	groups_len := 0
+	this.groups.Foreach(func(key string, av value.AnnotatedValue) bool {
+		groups_len++
 		if !this.sendItem(av) {
-			return
+			return false
 		}
-	}
+		return true
+	})
 
 	// Mo matching inputs, so send default values
-	if len(this.plan.Keys()) == 0 && len(this.groups) == 0 {
+	if len(this.plan.Keys()) == 0 && groups_len == 0 {
 		av := value.NewAnnotatedValue(nil)
 		aggregates := make(map[string]value.Value, len(this.plan.Aggregates()))
 		av.SetAttachment("aggregates", aggregates)
@@ -121,8 +163,7 @@ func (this *FinalGroup) afterItems(context *Context) {
 		}
 
 		if context.UseRequestQuota() {
-			err := context.TrackValueSize(av.Size())
-			if err != nil {
+			if err := context.TrackValueSize(av.Size()); err != nil {
 				context.Error(err)
 				av.Recycle()
 			}
@@ -140,7 +181,6 @@ func (this *FinalGroup) MarshalJSON() ([]byte, error) {
 }
 
 func (this *FinalGroup) reopen(context *Context) bool {
-	rv := this.baseReopen(context)
-	this.groups = make(map[string]value.AnnotatedValue)
-	return rv
+	this.groups.Release()
+	return this.baseReopen(context)
 }

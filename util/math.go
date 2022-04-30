@@ -14,6 +14,12 @@ import (
 	atomic "github.com/couchbase/go-couchbase/platform"
 )
 
+const (
+	KiB = (1 << 10)
+	MiB = (1 << 20)
+	GiB = (1 << 30)
+)
+
 // Comparisons
 
 func MinInt(x, y int) int {

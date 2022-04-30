@@ -228,3 +228,13 @@ func (h *SystemStats) GetControlGroupInfo() *SigarControlGroupInfo {
 		UsageUsec:     uint64(info.usage_usec),
 	}
 }
+
+func AvailableMemory() uint64 {
+	avail := uint64(0)
+	ss, err := NewSystemStats()
+	if err == nil {
+		avail, _ = ss.SystemActualFreeMem()
+		ss.Close()
+	}
+	return avail
+}

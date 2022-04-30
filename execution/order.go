@@ -11,8 +11,10 @@ package execution
 import (
 	"encoding/json"
 
+	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/plan"
-	"github.com/couchbase/query/sort"
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
@@ -25,24 +27,68 @@ type orderTerm struct {
 type Order struct {
 	base
 	plan    *plan.Order
-	values  value.AnnotatedValues
+	values  *value.AnnotatedArray
 	context *Context
 	terms   []orderTerm
 }
 
 const _ORDER_CAP = 1024
+const _MIN_SIZE = 128 * util.MiB
 
 var _ORDER_POOL = value.NewAnnotatedPool(_ORDER_CAP)
 
 func NewOrder(plan *plan.Order, context *Context) *Order {
 	rv := &Order{
-		plan:   plan,
-		values: _ORDER_POOL.Get(),
+		plan: plan,
 	}
+	// here only setting function to test for spilling when quota is in effect
+	var shouldSpill func(uint64, uint64) bool
+	if plan.CanSpill() && plan.ClipValues() {
+		if context.UseRequestQuota() {
+			shouldSpill = func(c uint64, n uint64) bool {
+				return (c+n) > context.ProducerThrottleQuota() && context.CurrentQuotaUsage() > 0.75
+			}
+		} else {
+			maxSize := context.AvailableMemory()
+			if maxSize > 0 {
+				maxSize = uint64(float64(maxSize) / float64(util.NumCPU()) * 0.2) // 20% of per CPU free memory
+			}
+			if maxSize < _MIN_SIZE {
+				maxSize = _MIN_SIZE
+			}
+			shouldSpill = func(c uint64, n uint64) bool {
+				return (c + n) > maxSize
+			}
+		}
+	}
+	acquire := func(size int) value.AnnotatedValues {
+		if size <= _ORDER_POOL.Size() {
+			return _ORDER_POOL.Get()
+		}
+		return make(value.AnnotatedValues, 0, size)
+	}
+	trackMem := func(size int64) {
+		if context.UseRequestQuota() {
+			if size < 0 {
+				context.ReleaseValueSize(uint64(-size))
+			} else {
+				if err := context.TrackValueSize(uint64(size)); err != nil {
+					context.Fatal(errors.NewMemoryQuotaExceededError())
+				}
+			}
+		}
+	}
+	rv.values = value.NewAnnotatedArray(
+		acquire,
+		func(p value.AnnotatedValues) { _ORDER_POOL.Put(p) },
+		shouldSpill,
+		trackMem,
+		rv.lessThan)
 
 	newBase(&rv.base, context)
 	rv.execPhase = SORT
 	rv.output = rv
+	rv.setupTerms(context)
 	return rv
 }
 
@@ -53,7 +99,7 @@ func (this *Order) Accept(visitor Visitor) (interface{}, error) {
 func (this *Order) Copy() Operator {
 	rv := &Order{
 		plan:   this.plan,
-		values: _ORDER_POOL.Get(),
+		values: this.values.Copy(),
 	}
 	this.base.copy(&rv.base)
 	return rv
@@ -69,15 +115,14 @@ func (this *Order) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *Order) processItem(item value.AnnotatedValue, context *Context) bool {
-	if len(this.values) == cap(this.values) {
-		values := make(value.AnnotatedValues, len(this.values), len(this.values)<<1)
-		copy(values, this.values)
-		this.releaseValues()
-		this.values = values
+	if this.plan.ClipValues() {
+		this.makeMinimal(item, context)
 	}
-
-	this.values = append(this.values, item)
-	return true
+	err := this.values.Append(item)
+	if err != nil {
+		context.Error(err)
+	}
+	return err == nil
 }
 
 func (this *Order) setupTerms(context *Context) {
@@ -92,6 +137,11 @@ func (this *Order) setupTerms(context *Context) {
 	}
 }
 
+func (this *Order) beforeItems(context *Context, item value.Value) bool {
+	this.setupTerms(context)
+	return true
+}
+
 func (this *Order) afterItems(context *Context) {
 	defer this.releaseValues()
 	defer func() {
@@ -104,26 +154,21 @@ func (this *Order) afterItems(context *Context) {
 		return
 	}
 
-	this.setupTerms(context)
-	sort.Sort(this)
-
-	context.SetSortCount(uint64(this.Len()))
-	context.AddPhaseCount(SORT, uint64(this.Len()))
+	context.SetSortCount(uint64(this.values.Length()))
+	context.AddPhaseCount(SORT, uint64(this.values.Length()))
 
 	earlyOrder := this.plan.IsEarlyOrder()
-	for _, av := range this.values {
+	this.values.Foreach(func(av value.AnnotatedValue) bool {
 		if earlyOrder {
 			this.resetCachedValues(av)
 		}
-		if !this.sendItem(av) {
-			return
-		}
-	}
+		return this.sendItem(av)
+	})
+	logging.Debuga(func() string { return this.values.Stats() })
 }
 
 func (this *Order) releaseValues() {
-	_ORDER_POOL.Put(this.values)
-	this.values = nil
+	this.values.Release()
 }
 
 func (this *Order) resetCachedValues(av value.AnnotatedValue) {
@@ -132,12 +177,31 @@ func (this *Order) resetCachedValues(av value.AnnotatedValue) {
 	}
 }
 
-func (this *Order) Len() int {
-	return len(this.values)
-}
-
-func (this *Order) Less(i, j int) bool {
-	return this.lessThan(this.values[i], this.values[j])
+func (this *Order) makeMinimal(item value.AnnotatedValue, context *Context) {
+	var sz uint64
+	useQuota := context.UseRequestQuota()
+	if useQuota {
+		sz = item.Size()
+	}
+	aggs := item.GetAttachment("aggregates")
+	item.ResetAttachments()
+	if aggs != nil {
+		item.SetAttachment("aggregates", aggs)
+	}
+	for i, term := range this.plan.Terms() {
+		_, err := getOriginalCachedValue(item, term.Expression(), this.terms[i].term, this.context)
+		if err != nil {
+		}
+	}
+	item.ResetCovers(nil)
+	item.ResetMeta()
+	item.ResetOriginal()
+	if useQuota {
+		sz -= item.Size()
+		if sz != 0 {
+			context.ReleaseValueSize(sz)
+		}
+	}
 }
 
 func (this *Order) lessThan(v1 value.AnnotatedValue, v2 value.AnnotatedValue) bool {
@@ -183,10 +247,6 @@ func (this *Order) lessThan(v1 value.AnnotatedValue, v2 value.AnnotatedValue) bo
 	return false
 }
 
-func (this *Order) Swap(i, j int) {
-	this.values[i], this.values[j] = this.values[j], this.values[i]
-}
-
 func (this *Order) MarshalJSON() ([]byte, error) {
 	r := this.plan.MarshalBase(func(r map[string]interface{}) {
 		this.marshalTimes(r)
@@ -196,6 +256,5 @@ func (this *Order) MarshalJSON() ([]byte, error) {
 
 func (this *Order) reopen(context *Context) bool {
 	rv := this.baseReopen(context)
-	this.values = _ORDER_POOL.Get()
 	return rv
 }

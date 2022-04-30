@@ -13,6 +13,7 @@ package tenant
 import (
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/memory"
+	"github.com/couchbase/query/system"
 )
 
 type memorySession struct {
@@ -34,4 +35,12 @@ func (this *memorySession) Allocated() uint64 {
 }
 
 func (this *memorySession) Release() {
+}
+
+func (this *memorySession) AvailableMemory() uint64 {
+	return system.AvailableMemory()
+}
+
+func (this *memorySession) InUseMemory() uint64 {
+	return 0
 }

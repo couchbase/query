@@ -40,6 +40,25 @@ func (this binaryValue) WriteJSON(w io.Writer, prefix, indent string, fast bool)
 	return err
 }
 
+func (this binaryValue) WriteSpill(w io.Writer, buf []byte) error {
+	b := []byte{_SPILL_TYPE_VALUE}
+	_, err := w.Write(b)
+	if err == nil {
+		err = writeSpillValue(w, ([]byte)(this), buf)
+	}
+	return err
+}
+
+func (this binaryValue) ReadSpill(r io.Reader, buf []byte) error {
+	v, err := readSpillValue(r, buf)
+	if err == nil && v != nil {
+		this = binaryValue(v.([]byte))
+	} else {
+		this = nil
+	}
+	return err
+}
+
 func (this binaryValue) Type() Type {
 	return BINARY
 }

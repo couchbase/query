@@ -57,6 +57,8 @@ const (
 	CLEANUPLOSTATTEMPTS   = "cleanuplostattempts"
 	GCPERCENT             = "gc-percent"
 	REQUESTERRORLIMIT     = "request-error-limit"
+	QUERY_TMP_DIR         = "query_tmpspace_dir"
+	QUERY_TMP_LIMIT       = "query_tmpspace_limit"
 )
 
 type Checker func(interface{}) (bool, errors.Error)
@@ -90,6 +92,8 @@ var CHECKERS = map[string]Checker{
 	CLEANUPLOSTATTEMPTS:   checkBool,
 	GCPERCENT:             checkNumber,
 	REQUESTERRORLIMIT:     checkNumber,
+	QUERY_TMP_DIR:         checkString,
+	QUERY_TMP_LIMIT:       checkNumber,
 }
 
 var CHECKERS_MIN = map[string]int{

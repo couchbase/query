@@ -9,13 +9,11 @@
 package execution
 
 import (
-	"container/heap"
 	"encoding/json"
 	"fmt"
 
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/plan"
-	"github.com/couchbase/query/sort"
 	"github.com/couchbase/query/value"
 )
 
@@ -28,7 +26,8 @@ type PartSortOrder struct {
 	remainingLimit       uint64
 	sortCount            uint64
 	numProcessedRows     uint64
-	useHeap              bool
+	last                 value.AnnotatedValue
+	fallbackNum          int
 }
 
 func NewPartSortOrder(order *plan.Order, context *Context) *PartSortOrder {
@@ -37,6 +36,7 @@ func NewPartSortOrder(order *plan.Order, context *Context) *PartSortOrder {
 	rv = &PartSortOrder{
 		Order:                NewOrder(order, context),
 		partialSortTermCount: order.PartialSortTermCount(),
+		fallbackNum:          plan.OrderFallbackNum(),
 	}
 
 	if order.Offset() != nil {
@@ -54,6 +54,7 @@ func (this *PartSortOrder) Copy() Operator {
 	rv := &PartSortOrder{
 		Order:                this.Order.Copy().(*Order),
 		partialSortTermCount: this.partialSortTermCount,
+		fallbackNum:          this.fallbackNum,
 	}
 
 	if this.offset != nil {
@@ -75,8 +76,8 @@ func (this *PartSortOrder) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *PartSortOrder) beforeItems(context *Context, parent value.Value) bool {
+	this.Order.setupTerms(context)
 	context.AddPhaseOperator(SORT)
-	this.setupTerms(context)
 	if this.offset != nil && !this.offset.beforeItems(context, parent) {
 		return false
 	}
@@ -87,29 +88,46 @@ func (this *PartSortOrder) beforeItems(context *Context, parent value.Value) boo
 	if this.offset != nil {
 		this.remainingOffset = uint64(this.offset.offset)
 	}
-	this.useHeap = false
+	this.remainingLimit = 0
 	if this.limit != nil {
 		this.remainingLimit = uint64(this.limit.limit)
-		this.useHeap = this.remainingOffset+this.remainingLimit < uint64(plan.OrderFallbackNum())
 	}
+	heapSize := int(this.remainingOffset + this.remainingLimit)
+	if this.fallbackNum < heapSize {
+		heapSize = 0
+	}
+	this.values.SetHeapSize(heapSize)
 	this.sortCount = 0
 	this.numProcessedRows = 0
 	logging.Debuga(func() string {
 		return fmt.Sprintf("PartSortOrder: terms: %v, off: %v, lim: (%v) %v, heap: %v",
-			this.partialSortTermCount, this.remainingOffset, this.limit != nil, this.remainingLimit, this.useHeap)
+			this.partialSortTermCount, this.remainingOffset, this.limit != nil, this.remainingLimit, heapSize)
 	})
 	return true
 }
 
 func (this *PartSortOrder) processItem(item value.AnnotatedValue, context *Context) bool {
 	this.numProcessedRows++
+	if this.Order.plan.ClipValues() {
+		this.Order.makeMinimal(item, context)
+	}
 
-	if len(this.values) > 0 && !this.samePartialSortValues(item, this.values[len(this.values)-1]) {
-		if this.remainingOffset >= uint64(len(this.values)) {
+	if this.last != nil && this.values.Length() > 0 && !this.samePartialSortValues(item, this.last) {
+		if this.remainingOffset >= uint64(this.values.Length()) {
 			// discard all accumulated values thus far as they'll not be part of the results
-			this.remainingOffset -= uint64(len(this.values))
-			this.releaseValuesSubset(context, 0, len(this.values))
-			this.values = this.values[0:0:cap(this.values)]
+			this.remainingOffset -= uint64(this.values.Length())
+			this.values.Truncate(
+				func(v value.AnnotatedValue) {
+					if context.UseRequestQuota() {
+						context.ReleaseValueSize(v.Size())
+					}
+					v.Recycle()
+				})
+			heapSize := int(this.remainingOffset + this.remainingLimit)
+			if this.fallbackNum < heapSize {
+				heapSize = 0
+			}
+			this.values.ShrinkHeapSize(heapSize)
 		} else {
 			// sort and stream what we have, potentially stopping if we hit the limit
 			if !this.sortAndStream(context) {
@@ -122,34 +140,14 @@ func (this *PartSortOrder) processItem(item value.AnnotatedValue, context *Conte
 		}
 	}
 
-	if len(this.values) == cap(this.values) {
-		values := make(value.AnnotatedValues, len(this.values), len(this.values)<<1)
-		copy(values, this.values)
-		this.releaseValues()
-		this.values = values
+	err := this.values.Append(item)
+	if err == nil {
+		this.last = item
+		return true
 	}
-
-	if this.useHeap {
-		heap.Push(this, item)
-		if uint64(len(this.values)) > this.remainingOffset+this.remainingLimit {
-			heap.Pop(this)
-		}
-	} else {
-		this.values = append(this.values, item)
-	}
-
-	return true
-}
-
-// this handles accounting for values that are not going to make it past this operator
-func (this *PartSortOrder) releaseValuesSubset(context *Context, from int, to int) {
-	useQuota := context.UseRequestQuota()
-	for i := from; i < to && len(this.values) > i; i++ {
-		if useQuota {
-			context.ReleaseValueSize(this.values[i].Size())
-		}
-		this.values[i].Recycle()
-	}
+	this.last = nil
+	context.Error(err)
+	return false
 }
 
 func (this *PartSortOrder) afterItems(context *Context) {
@@ -165,7 +163,7 @@ func (this *PartSortOrder) afterItems(context *Context) {
 		return
 	}
 
-	if len(this.values) > 0 {
+	if this.values.Length() > 0 {
 		this.setupTerms(context)
 		this.sortAndStream(context)
 	}
@@ -174,74 +172,35 @@ func (this *PartSortOrder) afterItems(context *Context) {
 // called only once we've reached the point n the offset of returning items; caller handles prior to this
 func (this *PartSortOrder) sortAndStream(context *Context) bool {
 
-	this.sortCount += uint64(len(this.values))
-	// also needed for heap; doesn't have to be all terms as we never have mixed pre-sorted term values
-	sort.Sort(this)
+	this.sortCount += uint64(this.values.Length())
 
-	if this.useHeap {
-		return this.sortAndStreamHeap(context)
-	}
-
-	// there is no following offset operator so we must fully implement it here
-	if this.remainingOffset > 0 && uint64(len(this.values)) > this.remainingOffset {
-		this.releaseValuesSubset(context, 0, int(this.remainingOffset))
-		this.values = this.values[this.remainingOffset:]
-		this.remainingOffset = 0
-	}
-
-	if this.limit != nil {
-		if this.remainingLimit < uint64(len(this.values)) {
-			this.releaseValuesSubset(context, int(this.remainingLimit), len(this.values))
-			this.values = this.values[:this.remainingLimit]
-		}
-		this.remainingLimit -= uint64(len(this.values))
-	}
-
-	earlyOrder := this.plan.IsEarlyOrder()
-	for n, av := range this.values {
-		if earlyOrder {
-			this.resetCachedValues(av)
-		}
-		if !this.sendItem(av) {
-			this.releaseValuesSubset(context, n, len(this.values))
-			return false
-		}
-	}
-
-	this.values = this.values[:0]
-	return this.limit == nil || this.remainingLimit != 0
-}
-
-// return the appropriate portion of the values list in reverse heap order (which is desired order)
-func (this *PartSortOrder) sortAndStreamHeap(context *Context) bool {
-
-	if this.remainingOffset > 0 && uint64(len(this.values)) > this.remainingOffset {
-		this.releaseValuesSubset(context, len(this.values)-int(this.remainingOffset), len(this.values))
-		this.values = this.values[:uint64(len(this.values))-this.remainingOffset]
-		this.remainingOffset = 0
-	}
-
-	to := 0
-	if this.limit != nil {
-		if this.remainingLimit < uint64(len(this.values)) {
-			this.releaseValuesSubset(context, 0, int(this.remainingLimit))
-			to = int(this.remainingLimit)
-			this.remainingLimit = 0
-		} else {
-			this.remainingLimit -= uint64(len(this.values))
-		}
-	}
-
-	if to < len(this.values) {
-		for i := len(this.values) - 1; i >= to; i-- {
-			if !this.sendItem(this.values[i]) {
-				this.releaseValuesSubset(context, to, i)
+	rv := true
+	if this.limit == nil || this.remainingLimit > 0 {
+		this.values.Foreach(func(av value.AnnotatedValue) bool {
+			if this.remainingOffset == 0 {
+				if !this.sendItem(av) {
+					rv = false
+					return false
+				}
+				if this.limit != nil {
+					this.remainingLimit--
+				}
+			} else {
+				if context.UseRequestQuota() {
+					context.ReleaseValueSize(av.Size())
+				}
+				this.remainingOffset--
+				av.Recycle()
+			}
+			if this.limit != nil && this.remainingLimit == 0 {
 				return false
 			}
-		}
+			return true
+		})
 	}
-	this.values = this.values[:0]
-	return this.limit == nil || this.remainingLimit != 0
+	logging.Debuga(func() string { return this.values.Stats() })
+	this.values.Truncate(nil)
+	return rv && (this.limit == nil || this.remainingLimit != 0)
 }
 
 func (this *PartSortOrder) MarshalJSON() ([]byte, error) {
@@ -286,24 +245,6 @@ func (this *PartSortOrder) Done() {
 		this.offset = nil
 		offset.Done()
 	}
-}
-
-func (this *PartSortOrder) Less(i, j int) bool {
-	if this.useHeap {
-		i, j = j, i // invert for maximum heap
-	}
-	return this.remainingTermsLessThan(this.values[i], this.values[j])
-}
-
-func (this *PartSortOrder) Push(item interface{}) {
-	this.values = append(this.values, item.(value.AnnotatedValue))
-}
-
-func (this *PartSortOrder) Pop() interface{} {
-	index := len(this.values) - 1
-	item := this.values[index]
-	this.values = this.values[0:index:cap(this.values)]
-	return item
 }
 
 // we are only completing the sort on partially sorted blocks so no need to check the already sorted terms

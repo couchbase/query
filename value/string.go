@@ -61,6 +61,25 @@ func (this stringValue) WriteJSON(w io.Writer, prefix, indent string, fast bool)
 	return json.MarshalStringNoEscapeToBuffer(string(this), w.(*bytes.Buffer))
 }
 
+func (this stringValue) WriteSpill(w io.Writer, buf []byte) error {
+	b := []byte{_SPILL_TYPE_VALUE}
+	_, err := w.Write(b)
+	if err == nil {
+		err = writeSpillValue(w, string(this), buf)
+	}
+	return err
+}
+
+func (this stringValue) ReadSpill(r io.Reader, buf []byte) error {
+	v, err := readSpillValue(r, buf)
+	if err == nil && v != nil {
+		this = stringValue(v.(string))
+	} else {
+		this = ""
+	}
+	return err
+}
+
 /*
 Type STRING.
 */
