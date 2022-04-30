@@ -370,3 +370,35 @@ func NewMissingKeysWarning(count int, ks string, keys ...interface{}) Error {
 		InternalMsg: "Key(s) in USE KEYS hint not found", cause: c,
 		InternalCaller: CallerN(1)}
 }
+
+var _ve = map[ErrorCode][2]string{
+	E_VALUE_RECONSTRUCT:  {"reconstruct", "Failed to reconstruct value"},
+	E_VALUE_INVALID:      {"invalid", "Invalid reconstructed value"},
+	E_VALUE_SPILL_CREATE: {"spill.create", "Failed to create spill file"},
+	E_VALUE_SPILL_READ:   {"spill.read", "Failed to read from spill file"},
+	E_VALUE_SPILL_WRITE:  {"spill.write", "Failed to write to spill file"},
+	E_VALUE_SPILL_SIZE:   {"spill.size", "Failed to determine spill file size"},
+	E_VALUE_SPILL_SEEK:   {"spill.seek", "Failed to seek in spill file"},
+}
+
+func NewValueError(code ErrorCode, args ...interface{}) Error {
+	e := &err{level: EXCEPTION, ICode: code, InternalCaller: CallerN(1),
+		IKey: "value." + _ve[code][0], InternalMsg: _ve[code][1]}
+	var fmtArgs []interface{}
+	for _, a := range args {
+		switch a := a.(type) {
+		case string:
+			fmtArgs = append(fmtArgs, a)
+		case Error:
+			e.cause = a
+		case error:
+			e.cause = a
+		default:
+			panic("invalid arguments to NewValueError")
+		}
+	}
+	if len(fmtArgs) > 0 {
+		e.InternalMsg = fmt.Sprintf(e.InternalMsg, fmtArgs...)
+	}
+	return e
+}

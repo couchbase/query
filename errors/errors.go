@@ -413,6 +413,6 @@ func (e *err) ContainsText(text string) bool {
 }
 
 func NewTempFileQuotaExceededError() Error {
-	return &err{level: EXCEPTION, ICode: E_TEMP_FILE_QUOTA_EXCEEDED, IKey: "temp_quota_exceeded", InternalCaller: CallerN(1),
+	return &err{level: EXCEPTION, ICode: E_TEMP_FILE_QUOTA, IKey: "quota.temp_file.exceeded", InternalCaller: CallerN(1),
 		InternalMsg: "Temporary file quota exceeded"}
 }

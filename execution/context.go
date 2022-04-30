@@ -31,6 +31,7 @@ import (
 	"github.com/couchbase/query/memory"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/planner"
+	"github.com/couchbase/query/system"
 	"github.com/couchbase/query/tenant"
 	"github.com/couchbase/query/timestamp"
 	"github.com/couchbase/query/transactions"
@@ -509,7 +510,7 @@ func (this *Context) SetReqDeadline(reqDeadline time.Time) {
 }
 
 func (this *Context) SetMemoryQuota(memoryQuota uint64) {
-	this.memoryQuota = memoryQuota * 1024 * 1024
+	this.memoryQuota = memoryQuota * util.MiB
 }
 
 func (this *Context) SetMemorySession(m memory.MemorySession) {
@@ -676,6 +677,30 @@ func (this *Context) Release() {
 	if this.memorySession != nil {
 		this.memorySession.Release()
 	}
+}
+
+func (this *Context) CurrentQuotaUsage() float64 {
+	if this.memorySession == nil {
+		return 0.0
+	}
+	sz := this.memorySession.InUseMemory()
+	if sz <= 0 {
+		return 0.0
+	}
+	return float64(sz) / float64(this.memoryQuota)
+}
+
+func (this *Context) AvailableMemory() uint64 {
+	if this.memorySession != nil {
+		return this.memorySession.AvailableMemory()
+	}
+	avail := uint64(0)
+	ss, err := system.NewSystemStats()
+	if err == nil {
+		avail, _ = ss.SystemFreeMem()
+		ss.Close()
+	}
+	return avail
 }
 
 // UDF memory storage

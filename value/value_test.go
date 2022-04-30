@@ -10,13 +10,17 @@ package value
 
 import (
 	"compress/gzip"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"reflect"
+	"regexp"
+	"strings"
 	"testing"
 	// "time"
 
 	json "github.com/couchbase/go_json"
+	diffpkg "github.com/kylelemons/godebug/diff"
 )
 
 var codeJSON []byte
@@ -613,4 +617,284 @@ func TestActualForIndex(t *testing.T) {
 	if !ok {
 		t.Errorf("Expected int64, got %v of type %T", i, i)
 	}
+}
+
+func TestValueSpilling(t *testing.T) {
+	var f *os.File
+	var err error
+
+	defer func() {
+		r := recover()
+		if r != nil {
+			if f != nil {
+				pos, _ := f.Seek(0, os.SEEK_CUR)
+				fmt.Printf("Panic: %v\nFile: %v\nPos: %v\n", r, f.Name(), pos)
+			}
+			panic(r)
+		}
+	}()
+
+	type pair struct {
+		name  string
+		value interface{}
+	}
+
+	list := make([]*pair, 0, 32)
+
+	list = append(list, &pair{"nil", nil})
+	list = append(list, &pair{"bool", true})
+	b := make([]byte, 1)
+	b[0] = 0xaa
+	list = append(list, &pair{"[]byte", b})
+	list = append(list, &pair{"int", int(1)})
+	list = append(list, &pair{"int32", int32(31)})
+	list = append(list, &pair{"uint32", uint32(32)})
+	list = append(list, &pair{"int64", int64(63)})
+	list = append(list, &pair{"uint64", uint64(64)})
+	list = append(list, &pair{"float32", float32(31.5)})
+	list = append(list, &pair{"float64", float64(32.5)})
+	list = append(list, &pair{"string", "correct"})
+
+	m := make(map[string]interface{})
+	m["test"] = "correct"
+	list = append(list, &pair{"map[string]interface{}", m})
+	mv := make(map[string]Value)
+	mv["test"] = NewValue("correct")
+	list = append(list, &pair{"map[string]Value", mv})
+	a := make([]interface{}, 1)
+	a[0] = "correct"
+	list = append(list, &pair{"[]interface", a})
+	a2 := make([]Value, 1)
+	a2[0] = NewValue("correct")
+	list = append(list, &pair{"[]Value", a2})
+	a3 := make(Values, 1)
+	a3[0] = NewValue("correct")
+	list = append(list, &pair{"Values", a3})
+	a4 := make([]interface{}, 2)
+	a4[0] = NewValue("correct")
+	a4[1] = NewMissingValue()
+	list = append(list, &pair{"sliceValue", NewValue(a4)})
+	list = append(list, &pair{"listValue", &listValue{NewValue(make([]interface{}, 1)).(sliceValue)}})
+	list = append(list, &pair{"binaryValue", NewValue(make([]byte, 1))})
+	list = append(list, &pair{"boolValue", NewValue(true)})
+	list = append(list, &pair{"floatValue", NewValue(32.5)})
+	list = append(list, &pair{"intValue", NewValue(64)})
+	list = append(list, &pair{"missingValue", NewMissingValue()})
+	list = append(list, &pair{"nullValue", NewNullValue()})
+	list = append(list, &pair{"objectValue", NewValue(make(map[string]interface{}))})
+	list = append(list, &pair{"stringValue", NewValue("correct")})
+	m2 := make(map[string]Value)
+	m2["test"] = NewValue("correct")
+	list = append(list, &pair{"map[string]Value", NewValue(m2)})
+
+	// annotatedValue
+	pv := &parsedValue{raw: []byte(`{"street":"sutton oaks"}`), parsedType: OBJECT}
+	list = append(list, &pair{"parsedValue", pv})
+
+	av := NewAnnotatedValue([]byte(`{"name":"marty","address":{"street":"sutton oaks"}}`))
+	av.SetId("doc1")
+	av.SetField("selfref", av)
+	list = append(list, &pair{"AnnotatedValue", av})
+
+	f, err = os.CreateTemp("", "value_test-*")
+	if err != nil {
+		t.Errorf("Failed to create spill file: %v", err)
+		return
+	}
+
+	for _, p := range list {
+		err = writeSpillValue(f, p.value, make([]byte, 0, 128))
+		if err != nil {
+			t.Errorf("Failed to write '%v' to spill file: %v", p.name, err)
+			return
+		}
+	}
+
+	f.Sync()
+
+	_, err = f.Seek(0, os.SEEK_SET)
+	if err != nil {
+		t.Errorf("Failed to rewind spill file: %v", err)
+		return
+	}
+
+	re := regexp.MustCompile("\\(0x[0-9a-f]+\\)")
+	for _, p := range list {
+		v, err := readSpillValue(f, nil)
+		if err != nil {
+			t.Errorf("Failed to read '%v' from spill file: %v", p.name, err)
+			return
+		}
+		bts := fmt.Sprintf("%T: %#v", p.value, p.value)
+		bts = re.ReplaceAllString(bts, "(<address>)") // erase pointer address values
+		rts := fmt.Sprintf("%T: %#v", v, v)
+		rts = re.ReplaceAllString(rts, "(<address>)") // erase pointer address values
+		if rts != bts {
+			t.Errorf("'%v' has incorrect reconstructed value:\n%v\ninstead of\n%v", p.name, rts, bts)
+			continue
+		}
+		if av, ok := v.(Value); ok {
+			if !p.value.(Value).EquivalentTo(av) {
+				t.Errorf("'%v' reconstructed value is not equivalent:\n%#v\nshould be\n%#v", p.name, av, p.value)
+			}
+		}
+	}
+
+	f.Close()
+	os.Remove(f.Name()) // remove after so files can be examined if necessary
+}
+
+func TestSpillingArray(t *testing.T) {
+
+	tracking := int64(0)
+	spillThreshold := uint64(0)
+
+	shouldSpill := func(c uint64, n uint64) bool {
+		return c > spillThreshold
+	}
+	acquire := func(size int) AnnotatedValues { return make(AnnotatedValues, 0, size) }
+	release := func(p AnnotatedValues) {}
+	trackMem := func(sz int64) {
+		tracking -= sz
+	}
+	lessThan := func(v1 AnnotatedValue, v2 AnnotatedValue) bool {
+		m1 := v1.GetValue().Actual().(map[string]interface{})
+		m2 := v2.GetValue().Actual().(map[string]interface{})
+		n1 := m1["name"].(string) + m1["surname"].(string)
+		n2 := m2["name"].(string) + m2["surname"].(string)
+		return strings.Compare(n1, n2) < 0
+	}
+	array := NewAnnotatedArray(acquire, release, shouldSpill, trackMem, lessThan)
+	check := make([]string, 4)
+
+	av := NewAnnotatedValue([]byte(`{"name":"Marty","surname":"McFly"}`))
+	av.SetId("doc1")
+	av.SetField("selfref", av)
+	array.Append(av)
+	check[3] = av.GetId().(string)
+	spillThreshold += av.Size()
+
+	av = NewAnnotatedValue([]byte(`{"name":"Emmett","surname":"Brown"}`))
+	av.SetId("doc2")
+	av.SetField("selfref", av)
+	array.Append(av)
+	check[0] = av.GetId().(string)
+	spillThreshold += av.Size()
+
+	av = NewAnnotatedValue([]byte(`{"name":"Loraine","surname":"Baines"}`))
+	av.SetId("doc3")
+	av.SetField("selfref", av)
+	array.Append(av)
+	check[2] = av.GetId().(string)
+
+	av = NewAnnotatedValue([]byte(`{"name":"George","surname":"McFly"}`))
+	av.SetId("doc4")
+	av.SetField("selfref", av)
+	array.Append(av)
+	check[1] = av.GetId().(string)
+
+	checkIndex := 0
+	array.Foreach(func(av AnnotatedValue) bool {
+		if check[checkIndex] != av.GetId().(string) {
+			t.Errorf("documents not in order: expected '%v' at position %v found '%v'",
+				check[checkIndex], checkIndex, av.GetId().(string))
+			return false
+		}
+		checkIndex++
+		return true
+	})
+
+	if tracking != 0 {
+		t.Errorf("memory accounting error, found %v (should be 0)", tracking)
+	}
+
+}
+
+func TestSpillingMap(t *testing.T) {
+
+	tracking := int64(0)
+	spillThreshold := uint64(0)
+
+	shouldSpill := func(c uint64, n uint64) bool {
+		return c > spillThreshold
+	}
+	trackMem := func(sz int64) {
+		tracking -= sz
+	}
+	merge := func(a AnnotatedValue, b AnnotatedValue) AnnotatedValue {
+		return a
+	}
+	themap := NewAnnotatedMap(shouldSpill, trackMem, merge)
+	check := make(map[string]string, 4)
+
+	re := regexp.MustCompile("\\(0x[0-9a-f]+\\)")
+
+	s := NewScopeValue(make(map[string]interface{}), nil)
+	s.SetField("name", "Martu")
+	s.SetField("surname", "McFly")
+	av := NewAnnotatedValue(s)
+	av.SetId("doc1")
+	av.SetField("selfref", av)
+	av.GetMeta() // ensures the meta map is created since we call GetMeta() when spilling (which'll create it if not done here)
+	themap.Set(av.GetId().(string), av)
+	check[av.GetId().(string)] = re.ReplaceAllString(fmt.Sprintf("%#v", av), "(<address>)") // erase pointer address values
+	spillThreshold += av.Size()
+
+	s = NewScopeValue(make(map[string]interface{}), nil)
+	s.SetField("name", "Emmett")
+	s.SetField("surname", "Brown")
+	av = NewAnnotatedValue(s)
+	av.SetId("doc2")
+	av.SetField("selfref", av)
+	av.GetMeta()
+	themap.Set(av.GetId().(string), av)
+	check[av.GetId().(string)] = re.ReplaceAllString(fmt.Sprintf("%#v", av), "(<address>)") // erase pointer address values
+	spillThreshold += av.Size()
+
+	s = NewScopeValue(make(map[string]interface{}), nil)
+	s.SetField("name", "Loraine")
+	s.SetField("surname", "Baines")
+	av = NewAnnotatedValue(s)
+	av.SetId("doc3")
+	av.SetField("selfref", av)
+	av.GetMeta()
+	themap.Set(av.GetId().(string), av)
+	check[av.GetId().(string)] = re.ReplaceAllString(fmt.Sprintf("%#v", av), "(<address>)") // erase pointer address values
+
+	s = NewScopeValue(make(map[string]interface{}), nil)
+	s.SetField("name", "George")
+	s.SetField("surname", "McFly")
+	av = NewAnnotatedValue(s)
+	av.SetId("doc4")
+	av.SetField("selfref", av)
+	av.GetMeta()
+	themap.Set(av.GetId().(string), av)
+	check[av.GetId().(string)] = re.ReplaceAllString(fmt.Sprintf("%#v", av), "(<address>)") // erase pointer address values
+
+	// values will have to swap in and out of memory for the foreach to complete on all values
+	themap.Foreach(func(key string, av AnnotatedValue) bool {
+		if key != av.GetId().(string) {
+			t.Errorf("incorrect key '%v' for value '%#v' in map ", key, av)
+		}
+		lookfor := re.ReplaceAllString(fmt.Sprintf("%#v", av), "(<address>)") // erase pointer address values
+		ck, ok := check[key]
+		if !ok {
+			t.Errorf("Invalid key: %v (not found in check-map)", key)
+			return true
+		}
+		if ck != lookfor {
+			ck = strings.ReplaceAll(ck, ",", ",\n")
+			lookfor = strings.ReplaceAll(lookfor, ",", ",\n")
+
+			d := diffpkg.Diff(lookfor, ck)
+
+			t.Errorf("incorrect value in map:\n%s\n", d)
+		}
+		return true
+	})
+
+	if tracking != 0 {
+		t.Errorf("memory accounting error, found %v (should be 0)", tracking)
+	}
+
 }

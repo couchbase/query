@@ -122,3 +122,11 @@ func (this *memorySession) Release() {
 		logging.Infof("Scheduling cleanup of tenant %v for %v", this.manager.tenant, time.Now().Add(_CLEANUP_INTERVAL))
 	}
 }
+
+func (this *memorySession) AvailableMemory() uint64 {
+	return perTenantQuota - this.manager.inUseMemory
+}
+
+func (this *memorySession) InUseMemory() uint64 {
+	return this.manager.inUseMemory
+}

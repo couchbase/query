@@ -147,6 +147,107 @@ func (this *parsedValue) WriteJSON(w io.Writer, prefix, indent string, fast bool
 	return err
 }
 
+func (this *parsedValue) WriteSpill(w io.Writer, buf []byte) error {
+	b := []byte{_SPILL_TYPE_VALUE_PARSED}
+	_, err := w.Write([]byte(b))
+	if err == nil {
+		err = writeSpillValue(w, this.raw, buf)
+	}
+	if err == nil {
+		err = writeSpillValue(w, this.len, buf)
+	}
+	if err == nil {
+		err = writeSpillValue(w, int(this.parsedType), buf)
+	}
+	if err == nil {
+		err = writeSpillValue(w, this.parsed, buf)
+	}
+	if err == nil {
+		err = writeSpillValue(w, this.fields, buf)
+	}
+	if err == nil {
+		err = writeSpillValue(w, this.elements, buf)
+	}
+	if err == nil {
+		err = writeSpillValue(w, this.useState, buf)
+	}
+	if err == nil {
+		err = writeSpillValue(w, this.refCnt, buf)
+	}
+	if err == nil {
+		err = writeSpillValue(w, this.used, buf)
+	}
+	return err
+}
+
+func (this *parsedValue) ReadSpill(r io.Reader, buf []byte) error {
+	*this = parsedValue{}
+	v, err := readSpillValue(r, buf)
+	if err != nil {
+		return err
+	} else if v != nil {
+		this.raw = v.([]byte)
+	}
+
+	v, err = readSpillValue(r, buf)
+	if err != nil {
+		return err
+	} else if v != nil {
+		this.len = v.(uint64)
+	}
+
+	v, err = readSpillValue(r, buf)
+	if err != nil {
+		return err
+	} else if v != nil {
+		this.parsedType = Type(v.(int))
+	}
+
+	v, err = readSpillValue(r, buf)
+	if err != nil {
+		return err
+	} else if v != nil {
+		this.parsed = v.(Value)
+	}
+
+	v, err = readSpillValue(r, buf)
+	if err != nil {
+		return err
+	} else if v != nil {
+		this.fields = v.(map[string]Value)
+	}
+
+	v, err = readSpillValue(r, buf)
+	if err != nil {
+		return err
+	} else if v != nil {
+		this.elements = v.(map[int]Value)
+	}
+
+	v, err = readSpillValue(r, buf)
+	if err != nil {
+		return err
+	} else if v != nil {
+		this.useState = v.(bool)
+	}
+
+	v, err = readSpillValue(r, buf)
+	if err != nil {
+		return err
+	} else if v != nil {
+		this.refCnt = v.(int32)
+	}
+
+	v, err = readSpillValue(r, buf)
+	if err != nil {
+		return err
+	} else if v != nil {
+		this.used = v.(int32)
+	}
+
+	return nil
+}
+
 func (this *parsedValue) Type() Type {
 	return this.parsedType
 }

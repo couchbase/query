@@ -9,6 +9,7 @@
 package value
 
 import (
+	"encoding/binary"
 	"io"
 	"reflect"
 	"unsafe"
@@ -70,10 +71,12 @@ type AnnotatedValue interface {
 	GetAttachment(key string) interface{}
 	SetAttachment(key string, val interface{})
 	RemoveAttachment(key string)
+	ResetAttachments()
 	GetId() interface{}
 	SetId(id interface{})
 	NewMeta() map[string]interface{}
 	GetMeta() map[string]interface{}
+	ResetMeta()
 	Covers() Value
 	GetCover(key string) Value
 	SetCover(key string, val Value)
@@ -88,6 +91,7 @@ type AnnotatedValue interface {
 	SetProjection(proj Value)
 	Original() AnnotatedValue
 	RefCnt() int32
+	ResetOriginal()
 }
 
 func NewAnnotatedValue(val interface{}) AnnotatedValue {
@@ -186,6 +190,10 @@ func (this *annotatedValue) GetValue() Value {
 	return this.Value
 }
 
+func (this *annotatedValue) ResetAttachments() {
+	this.attachments = nil
+}
+
 func (this *annotatedValue) Attachments() map[string]interface{} {
 	return this.attachments
 }
@@ -225,6 +233,10 @@ func (this *annotatedValue) GetMeta() map[string]interface{} {
 		this.meta["id"] = this.id
 	}
 	return this.meta
+}
+
+func (this *annotatedValue) ResetMeta() {
+	this.meta = nil
 }
 
 func (this *annotatedValue) Covers() Value {
@@ -437,6 +449,21 @@ func (this *annotatedValue) Original() AnnotatedValue {
 	return av
 }
 
+func (this *annotatedValue) ResetOriginal() {
+	if this.annotatedOrig != nil {
+		val := this.annotatedOrig.(*annotatedValue)
+		val.covers = nil
+		val.attachments = nil
+		val.meta = nil
+		annotatedPool.Put(unsafe.Pointer(val))
+		this.annotatedOrig = nil
+	}
+	if this.original != nil {
+		this.original.Recycle()
+		this.original = nil
+	}
+}
+
 func (this *annotatedValue) Stash() int32 {
 	return atomic.AddInt32(&this.refCnt, 1) - 1
 }
@@ -519,7 +546,214 @@ func (this *annotatedValue) recycle(lvl int32) {
 	annotatedPool.Put(unsafe.Pointer(this))
 }
 
+func (this *annotatedValue) WriteSpill(w io.Writer, buf []byte) error {
+	free := false
+	if buf == nil {
+		buf = _SPILL_POOL.Get()
+		free = true
+	}
+
+	buf = buf[:1]
+	buf[0] = _SPILL_TYPE_VALUE_ANNOTATED
+	_, err := w.Write(buf)
+	if err != nil {
+		if free {
+			_SPILL_POOL.Put(buf)
+		}
+		return err
+	}
+	err = writeSpillValue(w, this.Value, buf)
+	if err != nil {
+		if free {
+			_SPILL_POOL.Put(buf)
+		}
+		return err
+	}
+
+	err = writeSpillValue(w, this.original, buf)
+	if err != nil {
+		if free {
+			_SPILL_POOL.Put(buf)
+		}
+		return err
+	}
+
+	err = writeSpillValue(w, this.covers, buf)
+	if err != nil {
+		if free {
+			_SPILL_POOL.Put(buf)
+		}
+		return err
+	}
+
+	err = writeSpillValue(w, this.attachments, buf)
+	if err != nil {
+		if free {
+			_SPILL_POOL.Put(buf)
+		}
+		return err
+	}
+
+	err = writeSpillValue(w, this.meta, buf)
+	if err != nil {
+		if free {
+			_SPILL_POOL.Put(buf)
+		}
+		return err
+	}
+
+	err = writeSpillValue(w, this.id, buf)
+	if err != nil {
+		if free {
+			_SPILL_POOL.Put(buf)
+		}
+		return err
+	}
+
+	buf = buf[:4]
+	binary.BigEndian.PutUint32(buf, uint32(this.refCnt))
+	_, err = w.Write(buf)
+	if err != nil {
+		if free {
+			_SPILL_POOL.Put(buf)
+		}
+		return err
+	}
+
+	buf = buf[:3]
+	buf[0] = this.bit
+	if this.self {
+		buf[1] = 1
+	} else {
+		buf[1] = 0
+	}
+	if this.noRecycle {
+		buf[2] = 1
+	} else {
+		buf[2] = 0
+	}
+	_, err = w.Write(buf)
+	if free {
+		_SPILL_POOL.Put(buf)
+	}
+	return err
+}
+
+func (this *annotatedValue) ReadSpill(r io.Reader, buf []byte) error {
+	free := false
+	if buf == nil {
+		buf = _SPILL_POOL.Get()
+		free = true
+	}
+	var err error
+	var v interface{}
+	v, err = readSpillValue(r, buf)
+	if err != nil {
+		if free {
+			_SPILL_POOL.Put(buf)
+		}
+		return err
+	}
+	if v != nil {
+		this.Value = v.(Value)
+		// restore any self references
+		for k, v := range this.Value.Fields() {
+			if _, ok := v.(*annotatedValueSelfReference); ok {
+				this.SetField(k, this)
+			}
+		}
+	} else {
+		this.Value = nil
+	}
+
+	v, err = readSpillValue(r, buf)
+	if err != nil {
+		if free {
+			_SPILL_POOL.Put(buf)
+		}
+		return err
+	}
+	if v != nil {
+		this.original = v.(Value)
+	} else {
+		this.original = nil
+	}
+
+	v, err = readSpillValue(r, buf)
+	if err != nil {
+		if free {
+			_SPILL_POOL.Put(buf)
+		}
+		return err
+	}
+	if v != nil {
+		this.covers = v.(Value)
+	} else {
+		this.covers = nil
+	}
+
+	v, err = readSpillValue(r, buf)
+	if err != nil {
+		if free {
+			_SPILL_POOL.Put(buf)
+		}
+		return err
+	}
+	if v != nil {
+		this.attachments = v.(map[string]interface{})
+	} else {
+		this.attachments = nil
+	}
+
+	v, err = readSpillValue(r, buf)
+	if err != nil {
+		if free {
+			_SPILL_POOL.Put(buf)
+		}
+		return err
+	}
+	if v != nil {
+		this.meta = v.(map[string]interface{})
+	} else {
+		this.meta = nil
+	}
+
+	this.id, err = readSpillValue(r, buf)
+	if err != nil {
+		if free {
+			_SPILL_POOL.Put(buf)
+		}
+		return err
+	}
+
+	buf = buf[:4]
+	_, err = r.Read(buf)
+	if err != nil {
+		if free {
+			_SPILL_POOL.Put(buf)
+		}
+		return err
+	}
+	this.refCnt = int32(binary.BigEndian.Uint32(buf))
+
+	buf = buf[:3]
+	_, err = r.Read(buf)
+	if err == nil {
+		this.bit = buf[0]
+		this.self = (buf[1] == 1)
+		this.noRecycle = (buf[2] == 1)
+	}
+	if free {
+		_SPILL_POOL.Put(buf)
+	}
+	return err
+}
+
 type annotatedValueSelfReference annotatedValue
+
+func (this *annotatedValueSelfReference) Type() Type {
+	return NULL
+}
 
 func (this *annotatedValueSelfReference) Size() uint64 {
 	return 0
@@ -546,7 +780,8 @@ func (this *annotatedValueSelfReference) Equals(other Value) Value {
 }
 
 func (this *annotatedValueSelfReference) EquivalentTo(other Value) bool {
-	return false
+	// always compare as true so referred value is seen as equivalent
+	return true
 }
 
 func (this *annotatedValueSelfReference) Compare(other Value) Value {
@@ -625,6 +860,10 @@ func (this *annotatedValueSelfReference) RemoveAttachment(key string) {
 	(*annotatedValue)(this).RemoveAttachment(key)
 }
 
+func (this *annotatedValueSelfReference) ResetAttachments() {
+	(*annotatedValue)(this).ResetAttachments()
+}
+
 func (this *annotatedValueSelfReference) GetId() interface{} {
 	return (*annotatedValue)(this).GetId()
 }
@@ -639,6 +878,10 @@ func (this *annotatedValueSelfReference) NewMeta() map[string]interface{} {
 
 func (this *annotatedValueSelfReference) GetMeta() map[string]interface{} {
 	return (*annotatedValue)(this).GetMeta()
+}
+
+func (this *annotatedValueSelfReference) ResetMeta() {
+	(*annotatedValue)(this).ResetMeta()
 }
 
 func (this *annotatedValueSelfReference) Covers() Value {
@@ -691,4 +934,28 @@ func (this *annotatedValueSelfReference) SetProjection(proj Value) {
 
 func (this *annotatedValueSelfReference) Original() AnnotatedValue {
 	return (*annotatedValue)(this).Original()
+}
+
+func (this *annotatedValueSelfReference) ResetOriginal() {
+	(*annotatedValue)(this).ResetOriginal()
+}
+
+func (this *annotatedValueSelfReference) WriteSpill(w io.Writer, buf []byte) error {
+	free := false
+	if buf == nil {
+		buf = _SPILL_POOL.Get()
+		free = true
+	}
+
+	buf = buf[:1]
+	buf[0] = _SPILL_TYPE_VALUE_ANNOTATED_SELFREF
+	_, err := w.Write(buf)
+	if free {
+		_SPILL_POOL.Put(buf)
+	}
+	return err
+}
+
+func (this *annotatedValueSelfReference) ReadSpill(r io.Reader, buf []byte) error {
+	return nil
 }

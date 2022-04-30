@@ -228,6 +228,25 @@ func (this objectValue) WriteJSON(w io.Writer, prefix, indent string, fast bool)
 	return err
 }
 
+func (this objectValue) WriteSpill(w io.Writer, buf []byte) error {
+	b := []byte{_SPILL_TYPE_VALUE}
+	_, err := w.Write([]byte(b))
+	if err == nil {
+		err = writeSpillValue(w, (map[string]interface{})(this), buf)
+	}
+	return err
+}
+
+func (this objectValue) ReadSpill(r io.Reader, buf []byte) error {
+	v, err := readSpillValue(r, buf)
+	if err == nil && v != nil {
+		this = objectValue(v.(map[string]interface{}))
+	} else {
+		this = nil
+	}
+	return err
+}
+
 /*
 Type OBJECT.
 */

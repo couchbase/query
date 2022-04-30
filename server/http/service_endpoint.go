@@ -738,7 +738,7 @@ func (this *userMetrics) amendLimits(vars map[string]int) {
 	}
 	val, ok = vars["ingress_mib_per_min"]
 	if ok && val >= 0 {
-		userPayloadLimit := float64(val) * 1024 * 1024
+		userPayloadLimit := float64(val) * util.MiB
 		if userPayloadLimit != this.userPayloadLimit {
 			this.userPayloadLimit = userPayloadLimit
 			this.payloadMeter.Reset()
@@ -748,7 +748,7 @@ func (this *userMetrics) amendLimits(vars map[string]int) {
 	}
 	val, ok = vars["egress_mib_per_min"]
 	if ok && val >= 0 {
-		userOutputLimit := float64(val) * 1024 * 1024
+		userOutputLimit := float64(val) * util.MiB
 		if userOutputLimit != this.userOutputLimit {
 			this.userOutputLimit = userOutputLimit
 			this.outputMeter.Reset()

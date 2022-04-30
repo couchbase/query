@@ -9,7 +9,6 @@
 package execution
 
 import (
-	"container/heap"
 	"encoding/json"
 
 	"github.com/couchbase/query/plan"
@@ -20,10 +19,8 @@ type OrderLimit struct {
 	*Order
 	offset           *Offset // offset is optional
 	limit            *Limit  // limit must present
-	numReturnedRows  int
 	fallbackNum      int
 	ignoreInput      bool
-	fallback         bool
 	numProcessedRows uint64
 }
 
@@ -34,10 +31,8 @@ func NewOrderLimit(order *plan.Order, context *Context) *OrderLimit {
 			Order:            NewOrder(order, context),
 			offset:           nil,
 			limit:            NewLimit(order.Limit(), context),
-			numReturnedRows:  0,
 			fallbackNum:      plan.OrderFallbackNum(),
 			ignoreInput:      false,
-			fallback:         false,
 			numProcessedRows: 0,
 		}
 	} else {
@@ -45,10 +40,8 @@ func NewOrderLimit(order *plan.Order, context *Context) *OrderLimit {
 			Order:            NewOrder(order, context),
 			offset:           NewOffset(order.Offset(), context),
 			limit:            NewLimit(order.Limit(), context),
-			numReturnedRows:  0,
 			fallbackNum:      plan.OrderFallbackNum(),
 			ignoreInput:      false,
-			fallback:         false,
 			numProcessedRows: 0,
 		}
 	}
@@ -65,9 +58,7 @@ func (this *OrderLimit) Copy() Operator {
 			Order:            this.Order.Copy().(*Order),
 			offset:           nil,
 			limit:            this.limit.Copy().(*Limit),
-			numReturnedRows:  this.numReturnedRows,
 			ignoreInput:      this.ignoreInput,
-			fallback:         this.fallback,
 			numProcessedRows: this.numProcessedRows,
 		}
 	} else {
@@ -75,9 +66,7 @@ func (this *OrderLimit) Copy() Operator {
 			Order:            this.Order.Copy().(*Order),
 			offset:           this.offset.Copy().(*Offset),
 			limit:            this.limit.Copy().(*Limit),
-			numReturnedRows:  this.numReturnedRows,
 			ignoreInput:      this.ignoreInput,
-			fallback:         this.fallback,
 			numProcessedRows: this.numProcessedRows,
 		}
 	}
@@ -94,77 +83,41 @@ func (this *OrderLimit) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *OrderLimit) beforeItems(context *Context, parent value.Value) bool {
+	this.Order.setupTerms(context)
 	context.AddPhaseOperator(SORT)
-	this.numReturnedRows = 0
-	this.fallback = false
 	this.numProcessedRows = 0
 	this.setupTerms(context)
-	res := true
 
+	heapSize := 0
 	if this.offset != nil {
 		// There is an offset in the query.
-		res = this.offset.beforeItems(context, parent)
-		if !res {
-			return res
+		if !this.offset.beforeItems(context, parent) {
+			return false
 		}
-		offset := this.offset.offset
-		if offset > int64(this.fallbackNum) {
-			// Fall back to the standard sort.
-			this.fallback = true
-		} else {
-			this.numReturnedRows += int(offset)
-		}
+		heapSize += int(this.offset.offset)
 	}
 
-	res = res && this.limit.beforeItems(context, parent)
-	if !res {
-		return res
+	if !this.limit.beforeItems(context, parent) {
+		return false
 	}
-	limit := this.limit.limit
-	this.ignoreInput = limit <= 0
-	if !this.ignoreInput && !this.fallback && limit > int64(this.fallbackNum-this.numReturnedRows) {
-		// Fallback to the standard sort.
-		this.fallback = true
-	}
+	heapSize += int(this.limit.limit)
 
-	if !this.ignoreInput && !this.fallback {
-		this.numReturnedRows += int(limit)
-	}
+	this.ignoreInput = heapSize <= 0
 
-	// Will ignore input rows if numReturnedRows is not positive.
-	this.ignoreInput = this.ignoreInput || this.numReturnedRows <= 0
-
-	// Allocate more space if necessary.
-	if this.numReturnedRows > cap(this.values) {
-		values := make(value.AnnotatedValues, len(this.values), this.numReturnedRows)
-		copy(values, this.values)
-		this.releaseValues()
-		this.values = values
+	if !this.ignoreInput && heapSize < this.fallbackNum {
+		this.values.SetHeapSize(heapSize)
+	} else {
+		this.values.SetHeapSize(-1)
 	}
-	return res
+	return true
 }
 
 func (this *OrderLimit) processItem(item value.AnnotatedValue, context *Context) bool {
 	this.numProcessedRows++
-	if this.fallback {
-		return this.Order.processItem(item, context)
-	}
 	if this.ignoreInput {
 		return true
 	}
-
-	// Prune the item that does not need to enter the heap.
-	if len(this.values) == this.numReturnedRows && !this.lessThan(item, this.values[0]) {
-		return true
-	}
-
-	// Push the current item into the maximum heap.
-	heap.Push(this, item)
-	if len(this.values) > this.numReturnedRows {
-		// Pop and discard the largest item out of the maximum heap.
-		heap.Pop(this)
-	}
-	return true
+	return this.Order.processItem(item, context)
 }
 
 func (this *OrderLimit) afterItems(context *Context) {
@@ -175,38 +128,18 @@ func (this *OrderLimit) afterItems(context *Context) {
 		this.limit.afterItems(context)
 	}()
 
-	// Deal with the case no data item is needed at all:
-	// when offset is too large.
-	len := len(this.values)
 	offset := int64(0)
 	if this.offset != nil {
 		offset = this.offset.offset
 	}
-	if offset >= int64(len) {
-		this.values = this.values[0:0]
-	}
 
-	this.Order.afterItems(context)
+	if offset < int64(this.values.Length()) {
+		this.Order.afterItems(context)
+	}
 
 	// Set the sort count to the number of processed rows.
 	context.AddPhaseCount(SORT, this.numProcessedRows)
 	context.SetSortCount(this.numProcessedRows)
-}
-
-func (this *OrderLimit) Less(i, j int) bool {
-	// Since the heap is a maximum heap, it needs to returns the reversal of Less in Order.
-	return this.Order.Less(j, i)
-}
-
-func (this *OrderLimit) Push(item interface{}) {
-	this.values = append(this.values, item.(value.AnnotatedValue))
-}
-
-func (this *OrderLimit) Pop() interface{} {
-	index := len(this.values) - 1
-	item := this.values[index]
-	this.values = this.values[0:index:cap(this.values)]
-	return item
 }
 
 func (this *OrderLimit) MarshalJSON() ([]byte, error) {

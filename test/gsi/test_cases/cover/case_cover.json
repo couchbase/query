@@ -863,6 +863,8 @@
                     },
                     {
                         "#operator": "Order",
+                        "can_spill":true,
+                        "clip_values": true,
                         "sort_terms": [
                             {
                                 "expr": "(`o` + 1)"

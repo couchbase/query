@@ -13,6 +13,7 @@ import (
 
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
+	"github.com/couchbase/query/system"
 )
 
 type MemoryManager interface {
@@ -23,6 +24,8 @@ type MemorySession interface {
 	Track(s uint64) (uint64, uint64, errors.Error)
 	Allocated() uint64
 	Release()
+	AvailableMemory() uint64
+	InUseMemory() uint64
 }
 
 type memoryManager struct {
@@ -103,4 +106,18 @@ func (this *memorySession) Release() {
 	if size > 0 {
 		atomic.AddUint64(&this.manager.curr, ^(size - 1))
 	}
+}
+
+func (this *memorySession) AvailableMemory() uint64 {
+	avail := uint64(0)
+	ss, err := system.NewSystemStats()
+	if err == nil {
+		avail, _ = ss.SystemFreeMem()
+		ss.Close()
+	}
+	return avail
+}
+
+func (this *memorySession) InUseMemory() uint64 {
+	return this.inUseMemory
 }

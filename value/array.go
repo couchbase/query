@@ -39,6 +39,25 @@ func (this sliceValue) MarshalJSON() ([]byte, error) {
 	return marshalArray(this)
 }
 
+func (this sliceValue) WriteSpill(w io.Writer, buf []byte) error {
+	b := []byte{_SPILL_TYPE_VALUE}
+	_, err := w.Write(b)
+	if err == nil {
+		err = writeSpillValue(w, ([]interface{})(this), buf)
+	}
+	return err
+}
+
+func (this sliceValue) ReadSpill(r io.Reader, buf []byte) error {
+	v, err := readSpillValue(r, buf)
+	if err == nil && v != nil {
+		this = sliceValue(v.([]interface{}))
+	} else {
+		this = nil
+	}
+	return err
+}
+
 func (this sliceValue) WriteJSON(w io.Writer, prefix, indent string, fast bool) (err error) {
 	if this == nil {
 		_, err = w.Write(_NULL_BYTES)
@@ -420,6 +439,25 @@ func (this *listValue) MarshalJSON() ([]byte, error) {
 
 func (this *listValue) WriteJSON(w io.Writer, prefix, indent string, fast bool) (err error) {
 	return this.slice.WriteJSON(w, prefix, indent, fast)
+}
+
+func (this *listValue) WriteSpill(w io.Writer, buf []byte) error {
+	b := []byte{_SPILL_TYPE_VALUE_LIST}
+	_, err := w.Write(b)
+	if err == nil {
+		err = writeSpillValue(w, ([]interface{})(this.slice), buf)
+	}
+	return err
+}
+
+func (this *listValue) ReadSpill(r io.Reader, buf []byte) error {
+	v, err := readSpillValue(r, buf)
+	if err == nil && v != nil {
+		this.slice = sliceValue(v.([]interface{}))
+	} else {
+		this.slice = nil
+	}
+	return err
 }
 
 /*
