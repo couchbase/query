@@ -48,22 +48,29 @@ func deriveOptimHints(baseKeyspaces map[string]*base.BaseKeyspace, optimHints *a
 		if ksterm != nil {
 			indexes := ksterm.Indexes()
 			if len(indexes) > 0 {
+				var gsi, fts bool
 				gsiIndexes := make([]string, 0, len(indexes))
 				ftsIndexes := make([]string, 0, len(indexes))
 				for _, idx := range indexes {
 					switch idx.Using() {
 					case datastore.DEFAULT, datastore.GSI:
-						gsiIndexes = append(gsiIndexes, idx.Name())
+						gsi = true
+						if idx.Name() != "" {
+							gsiIndexes = append(gsiIndexes, idx.Name())
+						}
 					case datastore.FTS:
-						ftsIndexes = append(ftsIndexes, idx.Name())
+						fts = true
+						if idx.Name() != "" {
+							ftsIndexes = append(ftsIndexes, idx.Name())
+						}
 					}
 				}
-				if len(gsiIndexes) > 0 {
+				if gsi {
 					newHint := algebra.NewDerivedIndexHint(alias, gsiIndexes)
 					baseKeyspace.AddIndexHint(newHint)
 					newHints = append(newHints, newHint)
 				}
-				if len(ftsIndexes) > 0 {
+				if fts {
 					newHint := algebra.NewDerivedFTSIndexHint(alias, ftsIndexes)
 					baseKeyspace.AddIndexHint(newHint)
 					newHints = append(newHints, newHint)
