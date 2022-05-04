@@ -100,14 +100,6 @@ outer:
 			continue
 		}
 
-		if !this.hasBuilderFlag(BUILDER_CHK_INDEX_ORDER) {
-			// Sarg to set spans
-			err := this.sargIndexes(baseKeyspace, node.IsUnderHash(), map[datastore.Index]*indexEntry{index: entry})
-			if err != nil {
-				return nil, 0, err
-			}
-		}
-
 		keys := entry.keys
 
 		// Matches execution.spanScan.RunOnce()

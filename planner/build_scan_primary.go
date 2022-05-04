@@ -16,7 +16,6 @@ import (
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
-	base "github.com/couchbase/query/plannerbase"
 )
 
 func (this *builder) buildPrimaryScan(keyspace datastore.Keyspace, node *algebra.KeyspaceTerm,
@@ -71,43 +70,6 @@ func (this *builder) buildPrimaryScan(keyspace datastore.Keyspace, node *algebra
 	}
 
 	return plan.NewPrimaryScan(primary, keyspace, node, limit, hasDeltaKeyspace), nil
-}
-
-func (this *builder) buildCoveringPrimaryScan(keyspace datastore.Keyspace, node *algebra.KeyspaceTerm,
-	id expression.Expression, indexes []datastore.Index) (plan.Operator, error) {
-
-	primary, err := buildPrimaryIndex(keyspace, indexes, node, false)
-	if err != nil {
-		return nil, err
-	}
-
-	keys := expression.Expressions{id}
-
-	formalizer := expression.NewSelfFormalizer(node.Alias(), nil)
-	partitionKeys, err := indexPartitionKeys(primary, formalizer)
-	if err != nil {
-		return nil, err
-	}
-
-	entry := newIndexEntry(primary, keys, keys, partitionKeys, 1, 1, 1, nil, nil, _EXACT_VALUED_SPANS, true, []bool{true})
-	secondaries := map[datastore.Index]*indexEntry{primary: entry}
-
-	pred := expression.NewIsNotNull(id)
-	baseKeyspace := base.NewBaseKeyspace(node.Alias(), node.Path(), node, (1 << len(this.baseKeyspaces)))
-	keyspaces := make(map[string]string, 1)
-	keyspaces[baseKeyspace.Name()] = baseKeyspace.Keyspace()
-	origKeyspaces := make(map[string]string, 1)
-	origKeyspaces[baseKeyspace.Name()] = baseKeyspace.Keyspace()
-	newfilter := base.NewFilter(pred, pred, keyspaces, origKeyspaces, false, false)
-	if this.useCBO && this.keyspaceUseCBO(node.Alias()) {
-		newfilter.SetSelec(1.0)
-		newfilter.SetSelecDone()
-		newfilter.SetOptBits(baseKeyspace.OptBit())
-	}
-	baseKeyspace.AddFilter(newfilter)
-	baseKeyspace.SetPreds(pred, nil, nil)
-	op, _, err := this.buildCoveringScan(secondaries, node, baseKeyspace, id)
-	return op, err
 }
 
 func buildPrimaryIndex(keyspace datastore.Keyspace, indexes []datastore.Index, node *algebra.KeyspaceTerm, force bool) (

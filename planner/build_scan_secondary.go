@@ -43,13 +43,6 @@ func (this *builder) buildSecondaryScan(indexes, arrayIndexes, flex map[datastor
 		this.resetPushDowns()
 	}
 
-	if !this.hasBuilderFlag(BUILDER_CHK_INDEX_ORDER) {
-		err = this.sargIndexes(baseKeyspace, node.IsUnderHash(), indexes)
-		if err != nil {
-			return nil, 0, err
-		}
-	}
-
 	for _, entry := range indexes {
 		entry.pushDownProperty = this.indexPushDownProperty(entry, entry.keys, nil,
 			pred, node.Alias(), nil, false, false, (len(this.baseKeyspaces) == 1),

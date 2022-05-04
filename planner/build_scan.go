@@ -338,12 +338,12 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm,
 		return nil, 0, err
 	}
 
+	err = this.sargIndexes(baseKeyspace, node.IsUnderHash(), sargables)
+	if err != nil {
+		return nil, 0, err
+	}
+
 	if this.hasBuilderFlag(BUILDER_CHK_INDEX_ORDER) {
-		// useIndexOrder() needs index span
-		err = this.sargIndexes(baseKeyspace, false, sargables)
-		if err != nil {
-			return nil, 0, err
-		}
 		// only consider indexes that satisfy ordering
 		for i, e := range sargables {
 			ok, _, _ := this.useIndexOrder(e, e.keys)
