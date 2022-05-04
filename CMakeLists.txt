@@ -38,6 +38,7 @@ SET (_extra_deps)
 
 SET (GOVERSION 1.18.1)
 GoPrivateMod (MODULE cbftx PATH ../../../../../cbftx)
+GoPrivateMod (MODULE hebrew PATH ../../../../../hebrew)
 GoPrivateMod (MODULE eventing-ee)
 GoPrivateMod (MODULE query-ee)
 
