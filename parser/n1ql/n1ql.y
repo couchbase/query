@@ -3632,7 +3632,19 @@ expr IS valued
     $$.ExprBase().SetErrorContext($1.ExprBase().GetErrorContext())
 }
 |
+expr IS NOT UNKNOWN
+{
+    $$ = expression.NewIsValued($1)
+    $$.ExprBase().SetErrorContext($1.ExprBase().GetErrorContext())
+}
+|
 expr IS NOT valued
+{
+    $$ = expression.NewIsNotValued($1)
+    $$.ExprBase().SetErrorContext($1.ExprBase().GetErrorContext())
+}
+|
+expr IS UNKNOWN
 {
     $$ = expression.NewIsNotValued($1)
     $$.ExprBase().SetErrorContext($1.ExprBase().GetErrorContext())
