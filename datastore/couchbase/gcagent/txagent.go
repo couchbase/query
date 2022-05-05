@@ -16,7 +16,6 @@ import (
 	"sync"
 	"time"
 
-	gctx "github.com/couchbase/gocbcore-transactions"
 	"github.com/couchbase/gocbcore/v10"
 	cerrors "github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
@@ -131,7 +130,7 @@ func (ap *AgentProvider) Deadline(d time.Time, n int) time.Time {
 
 // Create annotated value
 
-func (ap *AgentProvider) getTxAnnotatedValue(res *gctx.GetResult, key, fullName string) (av value.AnnotatedValue, err error) {
+func (ap *AgentProvider) getTxAnnotatedValue(res *gocbcore.TransactionGetResult, key, fullName string) (av value.AnnotatedValue, err error) {
 	av = value.NewAnnotatedValue(value.NewParsedValue(res.Value, false))
 	meta_type := "json"
 	if av.Type() == value.BINARY {
@@ -156,7 +155,7 @@ func (ap *AgentProvider) getTxAnnotatedValue(res *gctx.GetResult, key, fullName 
 
 // bulk transactional get
 
-func (ap *AgentProvider) TxGet(transaction *gctx.Transaction, fullName, bucketName, scopeName, collectionName, user string,
+func (ap *AgentProvider) TxGet(transaction *gocbcore.Transaction, fullName, bucketName, scopeName, collectionName, user string,
 	collectionID uint32, keys, paths []string, reqDeadline time.Time, replica, notFoundErr bool,
 	fetchMap map[string]value.AnnotatedValue) (errs []error) {
 
@@ -177,13 +176,13 @@ func (ap *AgentProvider) TxGet(transaction *gctx.Transaction, fullName, bucketNa
 	sendOneGet := func(item *GetOp) error {
 		batchCh <- false
 		wg.Add(1)
-		cerr := transaction.Get(gctx.GetOptions{
+		cerr := transaction.Get(gocbcore.TransactionGetOptions{
 			Agent:          ap.Agent(),
 			ScopeName:      scopeName,
 			CollectionName: collectionName,
 			Key:            []byte(item.Key),
 			OboUser:        user,
-		}, func(res *gctx.GetResult, resErr error) {
+		}, func(res *gocbcore.TransactionGetResult, resErr error) {
 			defer func() {
 				wg.Done()
 				<-batchCh
@@ -207,8 +206,8 @@ func (ap *AgentProvider) TxGet(transaction *gctx.Transaction, fullName, bucketNa
 		gop := &GetOp{Key: k}
 		if err := sendOneGet(gop); err != nil {
 			// process other errors before processing PreviousOperationFailed
-			if err1, ok1 := err.(*gctx.TransactionOperationFailedError); ok1 &&
-				errors.Is(err1.Unwrap(), gctx.ErrPreviousOperationFailed) {
+			if err1, ok1 := err.(*gocbcore.TransactionOperationFailedError); ok1 &&
+				errors.Is(err1.Unwrap(), gocbcore.ErrPreviousOperationFailed) {
 				prevErr = err
 				break
 			} else {
@@ -225,12 +224,11 @@ func (ap *AgentProvider) TxGet(transaction *gctx.Transaction, fullName, bucketNa
 	for _, item := range items {
 		if item.Err == nil && item.Val != nil {
 			fetchMap[item.Key] = item.Val
-		} else if notFoundErr ||
-			!(errors.Is(item.Err, gocbcore.ErrDocumentNotFound) || errors.Is(item.Err, gctx.ErrDocumentNotFound)) {
+		} else if notFoundErr || !errors.Is(item.Err, gocbcore.ErrDocumentNotFound) {
 			// handle key not found error
 			// process other errors before processing PreviousOperationFailed
-			if err1, ok1 := item.Err.(*gctx.TransactionOperationFailedError); ok1 &&
-				errors.Is(err1.Unwrap(), gctx.ErrPreviousOperationFailed) {
+			if err1, ok1 := item.Err.(*gocbcore.TransactionOperationFailedError); ok1 &&
+				errors.Is(err1.Unwrap(), gocbcore.ErrPreviousOperationFailed) {
 				prevErr = item.Err
 			} else {
 				errs = append(errs, item.Err)
@@ -261,8 +259,8 @@ type WriteOp struct {
 
 // bulk transactional write
 
-func (ap *AgentProvider) TxWrite(transaction *gctx.Transaction, txnInternal *gctx.ManagerInternal, keyspace,
-	bucketName, scopeName, collectionName string,
+func (ap *AgentProvider) TxWrite(transaction *gocbcore.Transaction, txnInternal *gocbcore.TransactionsManagerInternal,
+	keyspace, bucketName, scopeName, collectionName string,
 	collectionID uint32, reqDeadline time.Time, wops WriteOps) (errOut error) {
 
 	defer func() {
@@ -280,14 +278,14 @@ func (ap *AgentProvider) TxWrite(transaction *gctx.Transaction, txnInternal *gct
 	// insert request and get results in call back
 	sendInsertOne := func(wop *WriteOp) error {
 		wg.Add(1)
-		cerr := transaction.Insert(gctx.InsertOptions{
+		cerr := transaction.Insert(gocbcore.TransactionInsertOptions{
 			Agent:          ap.Agent(),
 			ScopeName:      scopeName,
 			CollectionName: collectionName,
 			Key:            []byte(wop.Key),
 			Value:          wop.Data,
 			OboUser:        wop.User,
-		}, func(res *gctx.GetResult, resErr error) {
+		}, func(res *gocbcore.TransactionGetResult, resErr error) {
 			defer wg.Done()
 			wop.Err = resErr
 		})
@@ -299,12 +297,12 @@ func (ap *AgentProvider) TxWrite(transaction *gctx.Transaction, txnInternal *gct
 	}
 
 	// update request and get results in call back
-	sendUpdateOne := func(wop *WriteOp, reqRes *gctx.GetResult) error {
+	sendUpdateOne := func(wop *WriteOp, reqRes *gocbcore.TransactionGetResult) error {
 		wg.Add(1)
-		cerr := transaction.Replace(gctx.ReplaceOptions{
+		cerr := transaction.Replace(gocbcore.TransactionReplaceOptions{
 			Document: reqRes,
 			Value:    wop.Data,
-		}, func(res *gctx.GetResult, resErr error) {
+		}, func(res *gocbcore.TransactionGetResult, resErr error) {
 			defer wg.Done()
 			wop.Err = resErr
 		})
@@ -316,11 +314,11 @@ func (ap *AgentProvider) TxWrite(transaction *gctx.Transaction, txnInternal *gct
 	}
 
 	// delete request and get results in call back
-	sendDeleteOne := func(wop *WriteOp, reqRes *gctx.GetResult) error {
+	sendDeleteOne := func(wop *WriteOp, reqRes *gocbcore.TransactionGetResult) error {
 		wg.Add(1)
-		cerr := transaction.Remove(gctx.RemoveOptions{
+		cerr := transaction.Remove(gocbcore.TransactionRemoveOptions{
 			Document: reqRes,
-		}, func(res *gctx.GetResult, resErr error) {
+		}, func(res *gocbcore.TransactionGetResult, resErr error) {
 			defer wg.Done()
 			wop.Err = resErr
 		})
@@ -341,13 +339,13 @@ func (ap *AgentProvider) TxWrite(transaction *gctx.Transaction, txnInternal *gct
 		case MOP_INSERT:
 			errOut = sendInsertOne(op)
 		case MOP_UPDATE:
-			var txnMeta *gctx.MutableItemMeta
+			var txnMeta *gocbcore.TransactionMutableItemMeta
 			if len(op.TxnMeta) > 0 {
-				txnMeta = &gctx.MutableItemMeta{}
+				txnMeta = &gocbcore.TransactionMutableItemMeta{}
 				errOut = json.Unmarshal(op.TxnMeta, &txnMeta)
 			}
 			if errOut == nil {
-				tmpRes := txnInternal.CreateGetResult(gctx.CreateGetResultOptions{
+				tmpRes := txnInternal.CreateGetResult(gocbcore.TransactionCreateGetResultOptions{
 					Agent:          ap.Agent(),
 					ScopeName:      scopeName,
 					CollectionName: collectionName,
@@ -359,13 +357,13 @@ func (ap *AgentProvider) TxWrite(transaction *gctx.Transaction, txnInternal *gct
 				errOut = sendUpdateOne(op, tmpRes)
 			}
 		case MOP_DELETE:
-			var txnMeta *gctx.MutableItemMeta
+			var txnMeta *gocbcore.TransactionMutableItemMeta
 			if len(op.TxnMeta) > 0 {
-				txnMeta = &gctx.MutableItemMeta{}
+				txnMeta = &gocbcore.TransactionMutableItemMeta{}
 				errOut = json.Unmarshal(op.TxnMeta, &txnMeta)
 			}
 			if errOut == nil {
-				tmpRes := txnInternal.CreateGetResult(gctx.CreateGetResultOptions{
+				tmpRes := txnInternal.CreateGetResult(gocbcore.TransactionCreateGetResultOptions{
 					Agent:          ap.Agent(),
 					ScopeName:      scopeName,
 					CollectionName: collectionName,
@@ -381,8 +379,8 @@ func (ap *AgentProvider) TxWrite(transaction *gctx.Transaction, txnInternal *gct
 		}
 		if errOut != nil {
 			// process other errors before processing PreviousOperationFailed
-			if err1, ok1 := errOut.(*gctx.TransactionOperationFailedError); ok1 &&
-				errors.Is(err1.Unwrap(), gctx.ErrPreviousOperationFailed) {
+			if err1, ok1 := errOut.(*gocbcore.TransactionOperationFailedError); ok1 &&
+				errors.Is(err1.Unwrap(), gocbcore.ErrPreviousOperationFailed) {
 				prevErr = errOut
 				break
 			} else {
@@ -396,8 +394,8 @@ func (ap *AgentProvider) TxWrite(transaction *gctx.Transaction, txnInternal *gct
 	for _, op := range wops {
 		if op.Err != nil {
 			// process other errors before processing PreviousOperationFailed
-			if err1, ok1 := op.Err.(*gctx.TransactionOperationFailedError); ok1 &&
-				errors.Is(err1.Unwrap(), gctx.ErrPreviousOperationFailed) {
+			if err1, ok1 := op.Err.(*gocbcore.TransactionOperationFailedError); ok1 &&
+				errors.Is(err1.Unwrap(), gocbcore.ErrPreviousOperationFailed) {
 				prevErr = op.Err
 			} else {
 				return mapStagingError(op.Err, op.Key, keyspace)
@@ -409,7 +407,7 @@ func (ap *AgentProvider) TxWrite(transaction *gctx.Transaction, txnInternal *gct
 }
 
 func ErrorType(err error, rollback bool) (error, interface{}) {
-	if terr, ok := err.(*gctx.TransactionOperationFailedError); ok {
+	if terr, ok := err.(*gocbcore.TransactionOperationFailedError); ok {
 		b, e := terr.MarshalJSON()
 		if e == nil {
 			var iv interface{}
@@ -429,26 +427,26 @@ func ErrorType(err error, rollback bool) (error, interface{}) {
 func mapStagingError(err error, key, ks string) error {
 	var c interface{}
 	e := err
-	if terr, ok := err.(*gctx.TransactionOperationFailedError); ok {
+	if terr, ok := err.(*gocbcore.TransactionOperationFailedError); ok {
 		_, c = ErrorType(err, false)
 		e = terr.Unwrap()
 	}
-	if errors.Is(e, gocbcore.ErrDocumentNotFound) || errors.Is(e, gctx.ErrDocumentNotFound) {
+	if errors.Is(e, gocbcore.ErrDocumentNotFound) {
 		ce := cerrors.NewKeyNotFoundError(key, ks, c)
 		k := ce.TranslationKey()
 		ce.SetTranslationKey(strings.Replace(k, k[0:strings.Index(k, ".")], "transaction", 1))
 		return ce
 	}
-	if errors.Is(e, gocbcore.ErrDocumentExists) || errors.Is(e, gctx.ErrDocumentAlreadyExists) ||
-		errors.Is(e, gctx.ErrDocAlreadyInTransaction) {
+	if errors.Is(e, gocbcore.ErrDocumentExists) ||
+		errors.Is(e, gocbcore.ErrDocAlreadyInTransaction) {
 		ce := cerrors.NewDuplicateKeyError(key, ks, c)
 		k := ce.TranslationKey()
 		ce.SetTranslationKey(strings.Replace(k, k[0:strings.Index(k, ".")], "transaction", 1))
 		return ce
 	}
-	if errors.Is(e, gctx.ErrAttemptExpired) {
+	if errors.Is(e, gocbcore.ErrAttemptExpired) {
 		return cerrors.NewTransactionExpired(c)
 	}
-	// gctx.ErrCasMismatch is not mapped
+	// gocbcore.ErrCasMismatch is not mapped
 	return err
 }

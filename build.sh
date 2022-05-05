@@ -225,7 +225,6 @@ function repo_setup {
     repo_by_gomod ../cbft/go.mod zapx "v13" $defbranch
     repo_by_gomod ../cbft/go.mod zapx "v14" $defbranch
     repo_by_gomod ../cbft/go.mod zapx "v15" $defbranch
-    repo_by_gomod go.mod gocbcore-transactions "" $defbranch
     repo_by_gomod go.mod gocbcore "v10" $defbranch
     repo_by_gomod ../cbgt/go.mod gocbcore "v9" $defbranch
     repo_by_gomod go.mod x/net "" `go version |  awk -F'[. ]' '{print "release-branch." $3 "." $4}'` $defbranch

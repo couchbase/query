@@ -42,8 +42,7 @@ require (
 	github.com/couchbase/eventing-ee v0.0.0-00010101000000-000000000000
 	github.com/couchbase/go-couchbase v0.1.1
 	github.com/couchbase/go_json v0.0.0-00010101000000-000000000000
-	github.com/couchbase/gocbcore-transactions v0.0.0-20220110140047-0cfbabaea2ec
-	github.com/couchbase/gocbcore/v10 v10.0.9-0.20220228174725-170b8c650e3f
+	github.com/couchbase/gocbcore/v10 v10.1.2
 	github.com/couchbase/godbc v0.0.0-20210615212222-79da1b49cb4d
 	github.com/couchbase/gomemcached v0.1.4
 	github.com/couchbase/gometa v0.0.0-20200717102231-b0e38b71d711 // indirect
@@ -64,7 +63,6 @@ require (
 	github.com/russross/blackfriday v1.5.2
 	github.com/samuel/go-zookeeper v0.0.0-20200724154423-2164a8ac840e
 	github.com/santhosh-tekuri/jsonschema v1.2.4 // indirect
-	github.com/stretchr/objx v0.2.0 // indirect
 	golang.org/x/crypto v0.0.0-20200820211705-5c72a883971a
 	golang.org/x/net v0.0.0-20211215060638-4ddde0e984e9
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect

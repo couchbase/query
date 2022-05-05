@@ -15,7 +15,6 @@ import (
 	"strconv"
 	"sync"
 
-	gctx "github.com/couchbase/gocbcore-transactions"
 	"github.com/couchbase/gocbcore/v10"
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
@@ -76,7 +75,7 @@ func (s *store) StartTransaction(stmtAtomicity bool, context datastore.QueryCont
 		}
 
 		txnData := txContext.TxData()
-		var transaction *gctx.Transaction
+		var transaction *gocbcore.Transaction
 
 		resume, terr := isResumeTransaction(txnData)
 		if terr != nil {
@@ -91,7 +90,7 @@ func (s *store) StartTransaction(stmtAtomicity bool, context datastore.QueryCont
 		if resume {
 			atrCollectionName := txContext.AtrCollection()
 
-			rtxConfig := &gctx.ResumeTransactionOptions{BucketAgentProvider: bucketAgentProvider}
+			rtxConfig := &gocbcore.ResumeTransactionOptions{BucketAgentProvider: bucketAgentProvider}
 			transaction, terr = gcAgentTxs.ResumeTransactionAttempt(txnData, rtxConfig)
 
 			if terr == nil && atrCollectionName != "" {
@@ -107,8 +106,8 @@ func (s *store) StartTransaction(stmtAtomicity bool, context datastore.QueryCont
 				}
 			}
 		} else {
-			txConfig := &gctx.PerTransactionConfig{ExpirationTime: txContext.TxTimeout(),
-				DurabilityLevel: gctx.DurabilityLevel(txContext.TxDurabilityLevel()),
+			txConfig := &gocbcore.TransactionOptions{ExpirationTime: txContext.TxTimeout(),
+				DurabilityLevel: gocbcore.TransactionDurabilityLevel(txContext.TxDurabilityLevel()),
 			}
 			if txContext.KvTimeout() > 0 {
 				txConfig.KeyValueTimeout = txContext.KvTimeout()
@@ -139,11 +138,11 @@ func (s *store) StartTransaction(stmtAtomicity bool, context datastore.QueryCont
 			for _, mutation := range transaction.GetMutations() {
 				var op MutateOp
 				switch mutation.OpType {
-				case gctx.StagedMutationInsert:
+				case gocbcore.TransactionStagedMutationInsert:
 					op = MOP_INSERT
-				case gctx.StagedMutationReplace:
+				case gocbcore.TransactionStagedMutationReplace:
 					op = MOP_UPDATE
-				case gctx.StagedMutationRemove:
+				case gocbcore.TransactionStagedMutationRemove:
 					op = MOP_DELETE
 				default:
 					continue
@@ -253,13 +252,13 @@ func (s *store) CommitTransaction(stmtAtomicity bool, context datastore.QueryCon
 
 	if err != nil {
 		e, c := gcagent.ErrorType(err, false)
-		if terr, ok := err.(*gctx.TransactionOperationFailedError); ok {
+		if terr, ok := err.(*gocbcore.TransactionOperationFailedError); ok {
 			switch terr.ToRaise() {
-			case gctx.ErrorReasonTransactionExpired:
+			case gocbcore.TransactionErrorReasonTransactionExpired:
 				return errors.NewTransactionExpired(c)
-			case gctx.ErrorReasonTransactionCommitAmbiguous:
+			case gocbcore.TransactionErrorReasonTransactionCommitAmbiguous:
 				return errors.NewAmbiguousCommitTransactionError(e, c)
-			case gctx.ErrorReasonTransactionFailedPostCommit:
+			case gocbcore.TransactionErrorReasonTransactionFailedPostCommit:
 				return errors.NewPostCommitTransactionError(e, c)
 				// context.Warning(errors.NewPostCommitTransactionWarning(e, c))
 				// return nil
@@ -427,7 +426,7 @@ func (ks *keyspace) txFetch(fullName, qualifiedName, scopeName, collectionName, 
 		return errors.Errors{err}
 	}
 
-	var transaction *gctx.Transaction
+	var transaction *gocbcore.Transaction
 	fkeys := keys
 	rollback := false
 	sdkKv, sdkCas, sdkTxnMeta := GetTxDataValues(context.TxDataVal())
@@ -483,7 +482,7 @@ func (ks *keyspace) txFetch(fullName, qualifiedName, scopeName, collectionName, 
 			user, collId, fkeys, subPaths, context.GetReqDeadline(), false, notFoundErr, fetchMap)
 		if len(errs) > 0 {
 			if notFoundErr &&
-				(gerrors.Is(errs[0], gocbcore.ErrDocumentNotFound) || gerrors.Is(errs[0], gctx.ErrDocumentNotFound)) {
+				(gerrors.Is(errs[0], gocbcore.ErrDocumentNotFound) || gerrors.Is(errs[0], gocbcore.ErrDocumentNotFound)) {
 				_, c := gcagent.ErrorType(errs[0], rollback)
 				return errors.Errors{errors.NewKeyNotFoundError(fkeys[0], "", c)}
 			}
@@ -711,7 +710,7 @@ func initGocb(s *store) (err errors.Error) {
 	}
 
 	tranSettings := datastore.GetTransactionSettings()
-	txConfig := &gctx.Config{
+	txConfig := &gocbcore.TransactionsConfig{
 		ExpirationTime:        tranSettings.TxTimeout(),
 		CleanupWindow:         tranSettings.CleanupWindow(),
 		CleanupClientAttempts: tranSettings.CleanupClientAttempts(),

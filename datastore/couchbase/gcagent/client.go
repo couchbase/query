@@ -17,7 +17,6 @@ import (
 	"time"
 
 	"github.com/couchbase/cbauth"
-	gctx "github.com/couchbase/gocbcore-transactions"
 	"github.com/couchbase/gocbcore/v10"
 	"github.com/couchbase/gocbcore/v10/connstr"
 	ntls "github.com/couchbase/goutils/tls"
@@ -75,10 +74,10 @@ func (auth *MemcachedAuthProvider) Certificate(req gocbcore.AuthCertRequest) (*t
 // Call this method with a TLS certificate file name to make communication
 type Client struct {
 	config         *gocbcore.AgentConfig
-	transactions   *gctx.Manager
+	transactions   *gocbcore.TransactionsManager
 	rootCAs        *x509.CertPool
 	mutex          sync.RWMutex
-	atrLocations   map[string]gctx.LostATRLocation
+	atrLocations   map[string]gocbcore.TransactionLostATRLocation
 	certs          *tls.Certificate
 	agentProviders map[string]*AgentProvider
 }
@@ -101,7 +100,7 @@ func NewClient(url string, caFile, certFile, keyFile string, passphrase []byte) 
 	}
 
 	// generic provider
-	rv.atrLocations = make(map[string]gctx.LostATRLocation, 32)
+	rv.atrLocations = make(map[string]gocbcore.TransactionLostATRLocation, 32)
 	rv.agentProviders = make(map[string]*AgentProvider, 32)
 
 	return rv, err
@@ -139,25 +138,25 @@ func agentConfig(url, options string, rv *Client) (*gocbcore.AgentConfig, error)
 	return config, err
 }
 
-func (c *Client) InitTransactions(txConfig *gctx.Config) (err error) {
+func (c *Client) InitTransactions(txConfig *gocbcore.TransactionsConfig) (err error) {
 	c.AddAtrLocation(&txConfig.CustomATRLocation)
-	txConfig.LostCleanupATRLocationProvider = func() (lostAtrLocations []gctx.LostATRLocation, cerr error) {
+	txConfig.LostCleanupATRLocationProvider = func() (lostAtrLocations []gocbcore.TransactionLostATRLocation, cerr error) {
 		c.mutex.RLock()
 		defer c.mutex.RUnlock()
-		lostAtrLocations = make([]gctx.LostATRLocation, 0, len(c.atrLocations))
+		lostAtrLocations = make([]gocbcore.TransactionLostATRLocation, 0, len(c.atrLocations))
 		for _, atrl := range c.atrLocations {
 			lostAtrLocations = append(lostAtrLocations, atrl)
 		}
 		return
 	}
 
-	c.transactions, err = gctx.Init(txConfig)
+	c.transactions, err = gocbcore.InitTransactions(txConfig)
 	return err
 }
 
-func (c *Client) AddAtrLocation(atrLocation *gctx.ATRLocation) (err error) {
+func (c *Client) AddAtrLocation(atrLocation *gocbcore.TransactionATRLocation) (err error) {
 	if atrLocation != nil && atrLocation.Agent != nil && atrLocation.Agent.BucketName() != "" {
-		lostAtr := gctx.LostATRLocation{BucketName: atrLocation.Agent.BucketName(),
+		lostAtr := gocbcore.TransactionLostATRLocation{BucketName: atrLocation.Agent.BucketName(),
 			ScopeName:      "_default",
 			CollectionName: "_default"}
 
@@ -273,6 +272,6 @@ func (c *Client) TLSRootCAs() *x509.CertPool {
 	return c.rootCAs
 }
 
-func (c *Client) Transactions() *gctx.Manager {
+func (c *Client) Transactions() *gocbcore.TransactionsManager {
 	return c.transactions
 }

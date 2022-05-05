@@ -14,7 +14,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	gctx "github.com/couchbase/gocbcore-transactions"
+	"github.com/couchbase/gocbcore/v10"
 	"github.com/couchbase/query/datastore/couchbase/gcagent"
 	"github.com/couchbase/query/errors"
 )
@@ -96,8 +96,8 @@ type TransactionLog struct {
 type TransactionMutations struct {
 	logSize          int
 	mutex            sync.RWMutex
-	transaction      *gctx.Transaction
-	txnInternal      *gctx.ManagerInternal
+	transaction      *gocbcore.Transaction
+	txnInternal      *gocbcore.TransactionsManagerInternal
 	tranImplicit     bool
 	savepoints       map[string]uint64
 	keyspaces        map[string]*DeltaKeyspace
@@ -170,7 +170,7 @@ func (this *TransactionMutations) LogSize() int {
 /* gocbcore-transaction
  */
 
-func (this *TransactionMutations) SetTransaction(transaction *gctx.Transaction, txnInternal *gctx.ManagerInternal) {
+func (this *TransactionMutations) SetTransaction(transaction *gocbcore.Transaction, txnInternal *gocbcore.TransactionsManagerInternal) {
 	this.mutex.Lock()
 	defer this.mutex.Unlock()
 	this.transaction = transaction
@@ -180,13 +180,13 @@ func (this *TransactionMutations) SetTransaction(transaction *gctx.Transaction, 
 /* gocbcore-transaction
  */
 
-func (this *TransactionMutations) Transaction() *gctx.Transaction {
+func (this *TransactionMutations) Transaction() *gocbcore.Transaction {
 	this.mutex.RLock()
 	defer this.mutex.RUnlock()
 	return this.transaction
 }
 
-func (this *TransactionMutations) TransactionsInternal() *gctx.ManagerInternal {
+func (this *TransactionMutations) TransactionsInternal() *gocbcore.TransactionsManagerInternal {
 	this.mutex.RLock()
 	defer this.mutex.RUnlock()
 	return this.txnInternal
@@ -837,7 +837,7 @@ func (this *TransactionMutations) GetDeltaKeyspaceKeys(keysapce string) (keys ma
 
 // write mutations to gocbcore-transactions in batches
 
-func (this *DeltaKeyspace) Write(transaction *gctx.Transaction, txnInternal *gctx.ManagerInternal,
+func (this *DeltaKeyspace) Write(transaction *gocbcore.Transaction, txnInternal *gocbcore.TransactionsManagerInternal,
 	keyspace string, deadline time.Time, memSize *int64) (err error) {
 	bSize := len(this.values)
 	if bSize == 0 {
