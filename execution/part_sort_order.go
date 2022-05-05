@@ -247,6 +247,17 @@ func (this *PartSortOrder) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
+func (this *PartSortOrder) reopen(context *Context) bool {
+	rv := this.Order.reopen(context)
+	if this.limit != nil {
+		this.limit.reopen(context)
+	}
+	if this.offset != nil {
+		this.offset.reopen(context)
+	}
+	return rv
+}
+
 func (this *PartSortOrder) Done() {
 	this.Order.Done()
 	this.Order = nil
