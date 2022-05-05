@@ -172,11 +172,11 @@ func (this *annotatedValue) SetField(field string, val interface{}) error {
 		err = this.Value.SetField(field, selfRef)
 	} else {
 		err = this.Value.SetField(field, val)
-	}
-	if err == nil {
-		v, ok := val.(Value)
-		if ok {
-			v.Track()
+		if err == nil {
+			v, ok := val.(Value)
+			if ok {
+				v.Track()
+			}
 		}
 	}
 	return err
