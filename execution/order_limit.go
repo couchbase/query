@@ -216,9 +216,21 @@ func (this *OrderLimit) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
+func (this *OrderLimit) SendAction(action opAction) {
+	this.baseSendAction(action)
+	this.Order.SendAction(action)
+	this.limit.SendAction(action)
+	if this.offset != nil {
+		this.offset.SendAction(action)
+	}
+}
+
 func (this *OrderLimit) reopen(context *Context) bool {
 	rv := this.Order.reopen(context)
 	this.limit.baseReopen(context)
+	if this.offset != nil {
+		this.offset.reopen(context)
+	}
 	return rv
 }
 
