@@ -258,6 +258,17 @@ func (this *PartSortOrder) reopen(context *Context) bool {
 	return rv
 }
 
+func (this *PartSortOrder) SendAction(action opAction) {
+	this.baseSendAction(action)
+	this.Order.SendAction(action)
+	if this.limit != nil {
+		this.limit.SendAction(action)
+	}
+	if this.offset != nil {
+		this.offset.SendAction(action)
+	}
+}
+
 func (this *PartSortOrder) Done() {
 	this.Order.Done()
 	this.Order = nil
