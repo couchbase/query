@@ -275,6 +275,20 @@ type Bucket struct {
 	updater io.ReadCloser
 }
 
+// bucket capabilities
+const (
+	RANGE_SCAN = "rangeScan"
+)
+
+func (b *Bucket) HasCapability(cap string) bool {
+	for _, c := range b.Capabilities {
+		if c == cap {
+			return true
+		}
+	}
+	return false
+}
+
 // PoolServices is all the bucket-independent services in a pool
 type PoolServices struct {
 	Rev          int             `json:"rev"`

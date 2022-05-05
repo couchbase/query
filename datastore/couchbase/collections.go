@@ -13,6 +13,7 @@ import (
 	"io"
 	"strconv"
 	"sync"
+	"time"
 
 	atomic "github.com/couchbase/go-couchbase/platform"
 	"github.com/couchbase/gomemcached/client" // package name is memcached
@@ -146,6 +147,7 @@ type collection struct {
 	gsiIndexerClosed datastore.Indexer
 	ftsIndexer       datastore.Indexer
 	ftsIndexerClosed datastore.Indexer
+	ssIndexer        datastore.Indexer
 	chkIndex         chkIndexDict
 	isDefault        bool
 	isBucket         bool
@@ -249,6 +251,11 @@ func (coll *collection) Indexer(name datastore.IndexType) (datastore.Indexer, er
 			return coll.ftsIndexer, nil
 		}
 		return nil, errors.NewCbIndexerNotImplementedError(nil, fmt.Sprintf("FTS may not be enabled"))
+	case datastore.SEQ_SCAN:
+		if coll.ssIndexer != nil {
+			return coll.ssIndexer, nil
+		}
+		return nil, errors.NewCbIndexerNotImplementedError(nil, fmt.Sprintf("Sequential scans may not be enabled"))
 	default:
 		return nil, errors.NewCbIndexerNotImplementedError(nil, fmt.Sprintf("Type %s", name))
 	}
@@ -272,6 +279,9 @@ func (coll *collection) Indexers() ([]datastore.Indexer, errors.Error) {
 	}
 	if coll.ftsIndexer != nil {
 		indexers = append(indexers, coll.ftsIndexer)
+	}
+	if coll.ssIndexer != nil {
+		indexers = append(indexers, coll.ssIndexer)
 	}
 	return indexers, err
 }
@@ -307,6 +317,14 @@ func (coll *collection) loadIndexes() {
 	} else {
 		coll.ftsIndexer.SetConnectionSecurityConfig(connSecConfig)
 	}
+
+	if coll.bucket.cbbucket.HasCapability(cb.RANGE_SCAN) {
+		coll.ssIndexer = newSeqScanIndexer(coll)
+		coll.ssIndexer.SetConnectionSecurityConfig(connSecConfig)
+	} else {
+		coll.ssIndexer = nil
+	}
+
 	coll.checked = true
 }
 
@@ -368,6 +386,26 @@ func (coll *collection) Flush() errors.Error {
 
 func (coll *collection) IsBucket() bool {
 	return coll.isBucket
+}
+
+func (coll *collection) StartKeyScan(ranges []*datastore.SeqScanRange, offset int64, limit int64, ordered bool,
+	timeout time.Duration, pipelineSize int, kvTimeout time.Duration) (interface{}, errors.Error) {
+
+	r := make([]*cb.SeqScanRange, len(ranges))
+	for i := range ranges {
+		r[i] = &cb.SeqScanRange{}
+		r[i].Init(ranges[i].Start, ranges[i].ExcludeStart, ranges[i].End, ranges[i].ExcludeEnd)
+	}
+
+	return coll.bucket.cbbucket.StartKeyScan(coll.scope.id, coll.id, r, offset, limit, ordered, timeout, pipelineSize, kvTimeout)
+}
+
+func (coll *collection) StopKeyScan(scan interface{}) errors.Error {
+	return coll.bucket.cbbucket.StopKeyScan(scan)
+}
+
+func (coll *collection) FetchKeys(scan interface{}, timeout time.Duration) ([]string, errors.Error, bool) {
+	return coll.bucket.cbbucket.FetchKeys(scan, timeout)
 }
 
 func buildScopesAndCollections(mani *cb.Manifest, bucket *keyspace) (map[string]*scope, datastore.Keyspace) {
@@ -470,6 +508,7 @@ func refreshScopesAndCollections(mani *cb.Manifest, bucket *keyspace) (map[strin
 					oldColl.Lock()
 					coll.gsiIndexer = oldColl.gsiIndexer
 					coll.ftsIndexer = oldColl.ftsIndexer
+					coll.ssIndexer = oldColl.ssIndexer
 					coll.checked = oldColl.checked
 					copiedIndexers[c.Name] = true
 					oldColl.Unlock()
@@ -502,12 +541,14 @@ func refreshScopesAndCollections(mani *cb.Manifest, bucket *keyspace) (map[strin
 						old.Lock()
 						coll.gsiIndexer = old.gsiIndexer
 						coll.ftsIndexer = old.ftsIndexer
+						coll.ssIndexer = old.ssIndexer
 						coll.checked = old.checked
 						old.Unlock()
 					case *keyspace:
 						old.Lock()
 						coll.gsiIndexer = old.gsiIndexer
 						coll.ftsIndexer = old.ftsIndexer
+						coll.ssIndexer = old.ssIndexer
 						coll.checked = old.indexersLoaded
 						old.Unlock()
 					}

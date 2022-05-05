@@ -9,6 +9,8 @@
 package logging
 
 import (
+	fmtpkg "fmt"
+	"path"
 	"regexp"
 	"runtime"
 	"strings"
@@ -84,11 +86,18 @@ func cacheLoggingChange() {
 
 func ParseLevel(name string) (level Level, ok bool, filter string) {
 	level, ok = _LEVEL_MAP[strings.ToLower(name)]
-	if !ok && strings.HasPrefix(strings.ToUpper(name), _LEVEL_NAMES[DEBUG]+":") {
-		n := len(_LEVEL_NAMES[DEBUG])
-		filter = name[n+1:]
-		name = name[:n]
-		level, ok = _LEVEL_MAP[strings.ToLower(name)]
+	if !ok {
+		if strings.HasPrefix(strings.ToUpper(name), _LEVEL_NAMES[DEBUG]+":") {
+			n := len(_LEVEL_NAMES[DEBUG])
+			filter = name[n+1:]
+			name = name[:n]
+			level, ok = _LEVEL_MAP[strings.ToLower(name)]
+		} else if strings.HasPrefix(strings.ToUpper(name), _LEVEL_NAMES[TRACE]+":") {
+			n := len(_LEVEL_NAMES[TRACE])
+			filter = name[n+1:]
+			name = name[:n]
+			level, ok = _LEVEL_MAP[strings.ToLower(name)]
+		}
 	}
 	return
 }
@@ -169,7 +178,7 @@ func SetLogger(newLogger Logger) {
 func Loga(level Level, f func() string) {
 	if skipLogging(level) {
 		return
-	} else if level == DEBUG && !filterDebug() {
+	} else if (level == DEBUG || level == TRACE) && !filterDebug() {
 		return
 	}
 	loggerMutex.Lock()
@@ -187,7 +196,7 @@ func Debuga(f func() string) {
 }
 
 func Tracea(f func() string) {
-	if !cachedTrace {
+	if !cachedTrace || !filterDebug() {
 		return
 	}
 	loggerMutex.Lock()
@@ -263,7 +272,7 @@ func Audita(f func() string) {
 func Logf(level Level, fmt string, args ...interface{}) {
 	if skipLogging(level) {
 		return
-	} else if level == DEBUG && !filterDebug() {
+	} else if (level == DEBUG || level == TRACE) && !filterDebug() {
 		return
 	}
 	loggerMutex.Lock()
@@ -275,14 +284,58 @@ func Debugf(fmt string, args ...interface{}) {
 	if !cachedDebug || !filterDebug() {
 		return
 	}
+	pc, fname, lineno, ok := runtime.Caller(1)
+	if ok {
+		fnc := runtime.FuncForPC(pc)
+		if fnc != nil {
+			n := fnc.Name()
+			i := strings.LastIndexByte(n, '(')
+			if i == -1 {
+				i = strings.LastIndexByte(n, '.')
+				if i != -1 {
+					i++
+				}
+			}
+			if i < 0 {
+				i = 0
+			}
+			f := fmtpkg.Sprintf(" (%s|%s:%d)", n[i:], path.Base(fname), lineno)
+			fmt = fmt + f
+		} else {
+			f := fmtpkg.Sprintf(" (%s:%d)", path.Base(fname), lineno)
+			fmt = fmt + f
+		}
+	}
 	loggerMutex.Lock()
 	defer loggerMutex.Unlock()
 	logger.Debugf(fmt, args...)
 }
 
 func Tracef(fmt string, args ...interface{}) {
-	if !cachedTrace {
+	if !cachedTrace || !filterDebug() {
 		return
+	}
+	pc, fname, lineno, ok := runtime.Caller(1)
+	if ok {
+		fnc := runtime.FuncForPC(pc)
+		if fnc != nil {
+			n := fnc.Name()
+			i := strings.LastIndexByte(n, '(')
+			if i == -1 {
+				i = strings.LastIndexByte(n, '.')
+				if i != -1 {
+					i++
+				}
+			}
+			if i < 0 {
+				i = 0
+			}
+			f := fmtpkg.Sprintf(" (%s|%s:%d)", n[i:], path.Base(fname), lineno)
+			fmt = fmt + f
+		} else {
+			f := fmtpkg.Sprintf(" (%s:%d)", path.Base(fname), lineno)
+			fmt = fmt + f
+		}
 	}
 	loggerMutex.Lock()
 	defer loggerMutex.Unlock()
@@ -443,7 +496,7 @@ func debugFilterString() string {
 
 func LogLevelString() string {
 	l := LogLevel()
-	if l != DEBUG || len(debugFilter) == 0 {
+	if (l != DEBUG && l != TRACE) || len(debugFilter) == 0 {
 		return l.String()
 	}
 	return l.String() + debugFilterString()

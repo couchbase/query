@@ -179,7 +179,9 @@ func (this *builder) buildIndexGroupAggs(entry *indexEntry, indexKeys expression
 	*plan.IndexGroupAggregates, *plan.IndexProjection) {
 
 	_, ok := entry.spans.(*TermSpans)
-	if this.group == nil || !ok || !useIndex3API(entry.index, this.context.IndexApiVersion()) {
+	if this.group == nil || !ok || entry.index.Type() == datastore.SEQ_SCAN ||
+		!useIndex3API(entry.index, this.context.IndexApiVersion()) {
+
 		this.resetIndexGroupAggs()
 		return nil, indexProjection
 	}

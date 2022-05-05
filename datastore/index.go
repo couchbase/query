@@ -25,12 +25,13 @@ import (
 type IndexType string
 
 const (
-	DEFAULT IndexType = "default" // default may vary per backend
-	VIEW    IndexType = "view"    // view index
-	GSI     IndexType = "gsi"     // global secondary index
-	FTS     IndexType = "fts"     // full text index
-	SYSTEM  IndexType = "system"  // system keyspace indexes
-	VIRTUAL IndexType = "virtual" // The index is built as a virtual index
+	DEFAULT  IndexType = "default"        // default may vary per backend
+	VIEW     IndexType = "view"           // view index
+	GSI      IndexType = "gsi"            // global secondary index
+	FTS      IndexType = "fts"            // full text index
+	SYSTEM   IndexType = "system"         // system keyspace indexes
+	VIRTUAL  IndexType = "virtual"        // The index is built as a virtual index
+	SEQ_SCAN IndexType = "sequentialscan" // sequential scan
 )
 
 const (

@@ -717,6 +717,7 @@ var capabilities = map[distributed.Capability]string{
 	distributed.NEW_INDEXADVISOR:         "indexAdvisor",
 	distributed.NEW_INLINE_FUNCTIONS:     "inlineFunctions",
 	distributed.NEW_JAVASCRIPT_FUNCTIONS: "javaScriptFunctions",
+	distributed.KV_RANGE_SCANS:           "kv.rangeScans",
 }
 
 // a capability is enabled if we are part of a cluster and we find it enabled

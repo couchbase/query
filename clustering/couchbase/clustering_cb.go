@@ -733,7 +733,7 @@ func (this *cbCluster) QueryNodeNames() ([]string, errors.Error) {
 
 		err := json.Unmarshal(poolServices.Capabilities, &caps)
 		if err == nil {
-			n1ql := caps["n1ql"]
+			n1ql := caps[n1qlService]
 			if n1ql != nil {
 				capList, ok := n1ql.([]interface{})
 				if ok {

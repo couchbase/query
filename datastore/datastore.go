@@ -22,7 +22,12 @@ plans before query Beta / GA.
 package datastore
 
 import (
+	"bytes"
+	"fmt"
 	"net/http"
+	"strings"
+	"time"
+	"unicode"
 
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/errors"
@@ -227,6 +232,79 @@ type Keyspace interface {
 	Flush() errors.Error // For flush collection
 	IsBucket() bool
 	Release(close bool) // Release any resources held by this object
+}
+
+// range scan
+
+type SeqScanRange struct {
+	Start        []byte
+	ExcludeStart bool
+	End          []byte
+	ExcludeEnd   bool
+}
+
+func (this *SeqScanRange) Equals(other *SeqScanRange) bool {
+	return this.ExcludeStart == other.ExcludeStart && this.ExcludeEnd == other.ExcludeEnd &&
+		bytes.Compare(this.Start, other.Start) == 0 && bytes.Compare(this.End, other.End) == 0
+}
+
+func (this *SeqScanRange) OverlapsWith(other *SeqScanRange) bool {
+	return (bytes.Compare(this.Start, other.Start) <= 0 && bytes.Compare(this.End, other.Start) >= 0) ||
+		(bytes.Compare(this.Start, other.End) <= 0 && bytes.Compare(this.End, other.End) >= 0) ||
+		(bytes.Compare(other.Start, this.Start) <= 0 && bytes.Compare(other.End, this.Start) >= 0) ||
+		(bytes.Compare(other.Start, this.End) <= 0 && bytes.Compare(other.End, this.End) >= 0)
+}
+
+func (this *SeqScanRange) MergeWith(other *SeqScanRange) bool {
+	c := 0
+	if bytes.Compare(other.Start, this.Start) < 0 {
+		this.Start, this.ExcludeStart = other.Start, other.ExcludeStart
+		c++
+	}
+	if bytes.Compare(other.End, this.End) > 0 {
+		this.End, this.ExcludeEnd = other.End, other.ExcludeEnd
+		c++
+	}
+	return c == 2
+}
+
+func (this *SeqScanRange) String() string {
+	var b strings.Builder
+	b.WriteRune('[')
+	if this.ExcludeStart {
+		b.WriteRune('-')
+	} else {
+		b.WriteRune('+')
+	}
+	for _, c := range this.Start {
+		if c != 0xff && unicode.IsPrint(rune(c)) {
+			b.WriteRune(rune(c))
+		} else {
+			b.WriteString(fmt.Sprintf("<%02x>", byte(c)))
+		}
+	}
+	b.WriteRune(':')
+	if this.ExcludeEnd {
+		b.WriteRune('-')
+	} else {
+		b.WriteRune('+')
+	}
+	for _, c := range this.End {
+		if c != 0xff && unicode.IsPrint(rune(c)) {
+			b.WriteRune(rune(c))
+		} else {
+			b.WriteString(fmt.Sprintf("<%02x>", byte(c)))
+		}
+	}
+	b.WriteRune(']')
+	return b.String()
+}
+
+type SeqScanner interface {
+	StartKeyScan(ranges []*SeqScanRange, offset int64, limit int64, ordered bool, timeout time.Duration, pipelineSize int,
+		kvTimeout time.Duration) (interface{}, errors.Error)
+	StopKeyScan(interface{}) errors.Error
+	FetchKeys(interface{}, time.Duration) ([]string, errors.Error, bool)
 }
 
 type KeyspaceStats int

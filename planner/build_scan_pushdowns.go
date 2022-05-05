@@ -481,7 +481,7 @@ func (this *builder) useIndexOrder(entry *indexEntry, keys expression.Expression
 	// when GSI starts implementing other types of indexes (eg bitmap)
 	// we will revisit this approach
 
-	if entry.index.Type() == datastore.SYSTEM ||
+	if entry.index.Type() == datastore.SYSTEM || /*entry.index.Type() == datastore.SEQ_SCAN ||*/
 		!entry.spans.CanUseIndexOrder(useIndex3API(entry.index, this.context.IndexApiVersion())) {
 		return false, nil, 0
 	}

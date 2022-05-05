@@ -1314,6 +1314,7 @@ type keyspace struct {
 	flags          int
 	gsiIndexer     datastore.Indexer // GSI index provider
 	ftsIndexer     datastore.Indexer // FTS index provider
+	ssIndexer      datastore.Indexer // range scan provider
 	chkIndex       chkIndexDict
 	indexersLoaded bool
 
@@ -1573,6 +1574,11 @@ func (b *keyspace) Indexer(name datastore.IndexType) (datastore.Indexer, errors.
 			return b.ftsIndexer, nil
 		}
 		return nil, errors.NewCbIndexerNotImplementedError(nil, fmt.Sprintf("FTS may not be enabled"))
+	case datastore.SEQ_SCAN:
+		if b.ssIndexer != nil {
+			return b.ssIndexer, nil
+		}
+		return nil, errors.NewCbIndexerNotImplementedError(nil, fmt.Sprintf("Range scans may not be enabled"))
 	default:
 		return nil, errors.NewCbIndexerNotImplementedError(nil, fmt.Sprintf("Type %s", name))
 	}
@@ -1589,6 +1595,10 @@ func (b *keyspace) Indexers() ([]datastore.Indexer, errors.Error) {
 
 	if b.ftsIndexer != nil {
 		indexers = append(indexers, b.ftsIndexer)
+	}
+
+	if b.ssIndexer != nil {
+		indexers = append(indexers, b.ssIndexer)
 	}
 
 	return indexers, err
@@ -2185,6 +2195,8 @@ func (b *keyspace) Release(bclose bool) {
 		// FTSIndexer implements a Close() method
 		ftsIndexerCloser.Close()
 	}
+
+	// no need to close anything for range scans
 }
 
 func (b *keyspace) refreshGSIIndexer(url string, poolName string) {
@@ -2256,6 +2268,14 @@ func (b *keyspace) loadIndexes() {
 	} else {
 		b.ftsIndexer.SetConnectionSecurityConfig(store.connSecConfig)
 	}
+
+	if b.cbbucket.HasCapability(cb.RANGE_SCAN) {
+		b.ssIndexer = newSeqScanIndexer(b)
+		b.ssIndexer.SetConnectionSecurityConfig(store.connSecConfig)
+	} else {
+		b.ssIndexer = nil
+	}
+
 	b.indexersLoaded = true
 }
 
@@ -2346,6 +2366,26 @@ func (ks *keyspace) Flush() errors.Error {
 
 func (b *keyspace) IsBucket() bool {
 	return true
+}
+
+func (ks *keyspace) StartKeyScan(ranges []*datastore.SeqScanRange, offset int64, limit int64, ordered bool,
+	timeout time.Duration, pipelineSize int, kvTimeout time.Duration) (interface{}, errors.Error) {
+
+	r := make([]*cb.SeqScanRange, len(ranges))
+	for i := range ranges {
+		r[i] = &cb.SeqScanRange{}
+		r[i].Init(ranges[i].Start, ranges[i].ExcludeStart, ranges[i].End, ranges[i].ExcludeEnd)
+	}
+
+	return ks.cbbucket.StartKeyScan("_default", "_default", r, offset, limit, ordered, timeout, pipelineSize, kvTimeout)
+}
+
+func (ks *keyspace) StopKeyScan(scan interface{}) errors.Error {
+	return ks.cbbucket.StopKeyScan(scan)
+}
+
+func (ks *keyspace) FetchKeys(scan interface{}, timeout time.Duration) ([]string, errors.Error, bool) {
+	return ks.cbbucket.FetchKeys(scan, timeout)
 }
 
 func getCollectionId(clientContext ...*memcached.ClientContext) (collectionId uint32, user string) {

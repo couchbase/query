@@ -384,11 +384,17 @@ func (b *Bucket) Do(k string, f func(mc *memcached.Client, vb uint16) error) (er
 }
 
 func (b *Bucket) Do2(k string, f func(mc *memcached.Client, vb uint16) error, deadline bool, useReplicas bool, backOffRetries int) (err error) {
+	vb := b.VBHash(k)
+
+	return b.do3(uint16(vb), f, deadline, useReplicas, backOffRetries)
+}
+
+func (b *Bucket) do3(vb uint16, f func(mc *memcached.Client, vb uint16) error, deadline bool, useReplicas bool,
+	backOffRetries int) (err error) {
+
 	var lastError error
 
-	vb := b.VBHash(k)
 	desc := &doDescriptor{useReplicas: useReplicas, version: b.Version, maxTries: backOffRetries}
-
 	for desc.attempts = 0; desc.attempts < desc.maxTries; desc.attempts++ {
 		conn, pool, err := b.getVbConnection(uint32(vb), desc)
 		if err != nil {
