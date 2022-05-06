@@ -22,7 +22,6 @@ func TestLkMissing(t *testing.T) {
 		return
 	}
 
-	return // until indexer changes ready
 	collname := "orders._default.lkm"
 	ixnames := []string{
 		"",
