@@ -581,7 +581,7 @@ results:
 		res = true
 		buf = buf[:cap(buf)]
 		nr, err := rows.Read(buf)
-		if err != nil {
+		if err != nil && (err != io.EOF || nr == 0) {
 			return err
 		}
 		buf = buf[:nr]
