@@ -975,11 +975,13 @@ func (this *builder) buildHashJoinOp(right algebra.SimpleFromTerm, left algebra.
 
 	alias := right.Alias()
 	useCBO := this.useCBO && this.keyspaceUseCBO(alias)
+	joinEnum := this.joinEnum()
 	baseKeyspace, _ := this.baseKeyspaces[alias]
 	force := true
 	inferJoinFilterHint := false
 	joinHint := baseKeyspace.JoinHint()
-	if right.HasInferJoinHint() {
+	if right.HasInferJoinHint() ||
+		(joinEnum && joinHint != algebra.USE_HASH_BUILD && joinHint != algebra.USE_HASH_PROBE) {
 		if leftTerm, ok := left.(algebra.SimpleFromTerm); ok {
 			leftBaseKeyspace, _ := this.baseKeyspaces[leftTerm.Alias()]
 			leftJoinHint := leftBaseKeyspace.JoinHint()
@@ -988,6 +990,19 @@ func (this *builder) buildHashJoinOp(right algebra.SimpleFromTerm, left algebra.
 				joinHint = algebra.USE_HASH_PROBE
 			case algebra.USE_HASH_PROBE:
 				joinHint = algebra.USE_HASH_BUILD
+			default:
+				// replace if joinHint from right-hand side is not set
+				// can just assign directly since no build/probe side is specified
+				//
+				// left-hand side      right-hand side
+				// USE_HASH_EITHER --> USE_HASH_EITHER
+				// USE_NL          --> USE_NL
+				// NO_USE_HASH     --> NO_USE_HASH
+				// NO_USE_NL       --> NO_USE_NL
+				// JOIN_HINT_NONE  --> JOIN_HINT_NONE
+				if joinHint == algebra.JOIN_HINT_NONE {
+					joinHint = leftJoinHint
+				}
 			}
 			inferJoinFilterHint = leftBaseKeyspace.HasJoinFilterHint()
 		}
@@ -1099,7 +1114,7 @@ func (this *builder) buildHashJoinOp(right algebra.SimpleFromTerm, left algebra.
 	children := this.children
 	subChildren := this.subChildren
 
-	if this.joinEnum() {
+	if joinEnum {
 		this.children = qPlan
 		this.subChildren = subPlan
 		this.coveringScans = coveringOps
