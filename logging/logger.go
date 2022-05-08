@@ -31,6 +31,9 @@ const (
 )
 
 func (level Level) String() string {
+	if level == DEBUG && len(debugFilter) > 0 {
+		return _LEVEL_NAMES[level] + debugFilterString()
+	}
 	return _LEVEL_NAMES[level]
 }
 
@@ -432,4 +435,15 @@ func filterDebug() bool {
 		}
 	}
 	return false
+}
+
+func debugFilterString() string {
+	loggerMutex.RLock()
+	df := debugFilter
+	loggerMutex.RUnlock()
+	s := ":"
+	for _, e := range df {
+		s += e.String() + ";"
+	}
+	return s[:len(s)-1]
 }
