@@ -432,7 +432,7 @@ func (this *Server) SetDebug(debug bool) {
 }
 
 func (this *Server) LogLevel() string {
-	return logging.LogLevel().String()
+	return logging.LogLevelString()
 }
 
 func (this *Server) SetLogLevel(level string) {

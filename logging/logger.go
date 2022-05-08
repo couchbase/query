@@ -31,9 +31,6 @@ const (
 )
 
 func (level Level) String() string {
-	if level == DEBUG && len(debugFilter) > 0 {
-		return _LEVEL_NAMES[level] + debugFilterString()
-	}
 	return _LEVEL_NAMES[level]
 }
 
@@ -446,4 +443,12 @@ func debugFilterString() string {
 		s += e.String() + ";"
 	}
 	return s[:len(s)-1]
+}
+
+func LogLevelString() string {
+	l := LogLevel()
+	if l != DEBUG || len(debugFilter) == 0 {
+		return l.String()
+	}
+	return l.String() + debugFilterString()
 }
