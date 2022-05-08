@@ -159,8 +159,7 @@ func (this *buildBitFilterBase) createLocalBuildFilters(buildBitFilters plan.Bit
 		aliasBuildFilters := make(map[string]*localBitFilter, len(bfs.IndexBitFilters()))
 		this.localBuildFilters[bfs.Alias()] = aliasBuildFilters
 		for _, indexBF := range bfs.IndexBitFilters() {
-			// FIXME: fixed size for now, need costing for size estimate
-			bfilter := newBloomFilter(100000)
+			bfilter := newBloomFilter(indexBF.Size())
 			if bfilter != nil {
 				indexFilter := newLocalBitFilter(indexBF.Expressions(), bfilter)
 				aliasBuildFilters[indexBF.IndexId()] = indexFilter

@@ -59,7 +59,7 @@ func (this *Filter) MarshalBase(f func(map[string]interface{})) map[string]inter
 		r["alias"] = this.alias
 	}
 
-	if this.hasBuildBitFilter() {
+	if this.HasBuildBitFilter() {
 		this.marshalBuildBitFilters(r)
 	}
 

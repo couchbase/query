@@ -9,6 +9,7 @@
 package planner
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/couchbase/query/algebra"
@@ -292,11 +293,14 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 		return nil, err
 	}
 
+	baseKeyspace, ok := this.baseKeyspaces[node.Alias()]
+	if !ok {
+		return nil, errors.NewPlanInternalError(fmt.Sprintf("VisitKeyspaceTerm: baseKeyspace for %s not found", node.Alias()))
+	}
+
 	if this.subquery && this.correlated {
 		node.SetInCorrSubq()
-		if baseKeyspace, ok := this.baseKeyspaces[node.Alias()]; ok {
-			baseKeyspace.SetInCorrSubq()
-		}
+		baseKeyspace.SetInCorrSubq()
 	}
 
 	scan, err := this.selectScan(keyspace, node, false)
@@ -385,6 +389,10 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 		if err != nil {
 			return nil, err
 		}
+		if useCBO && this.lastOp != nil {
+			baseKeyspace.SetCardinality(this.lastOp.Cardinality())
+			baseKeyspace.SetSize(this.lastOp.Size())
+		}
 	}
 
 	return nil, nil
@@ -404,7 +412,7 @@ func (this *builder) VisitSubqueryTerm(node *algebra.SubqueryTerm) (interface{},
 	selOp := sel.(plan.Operator)
 	baseKeyspace, ok := this.baseKeyspaces[node.Alias()]
 	if !ok {
-		return nil, errors.NewPlanInternalError("VisitSubqueryTerm: baseKeyspace not found for " + node.Alias())
+		return nil, errors.NewPlanInternalError(fmt.Sprintf("VisitSubqueryTerm: baseKeyspace for %s not found", node.Alias()))
 	}
 	this.addChildren(selOp, plan.NewAlias(node.Alias(), baseKeyspace.IsPrimaryTerm(),
 		selOp.Cost(), selOp.Cardinality(), selOp.Size(), selOp.FrCost()))
@@ -441,6 +449,10 @@ func (this *builder) VisitSubqueryTerm(node *algebra.SubqueryTerm) (interface{},
 		err = this.processKeyspaceDone(node.Alias())
 		if err != nil {
 			return nil, err
+		}
+		if this.useCBO && this.lastOp != nil {
+			baseKeyspace.SetCardinality(this.lastOp.Cardinality())
+			baseKeyspace.SetSize(this.lastOp.Size())
 		}
 	}
 
@@ -483,11 +495,11 @@ func (this *builder) VisitExpressionTerm(node *algebra.ExpressionTerm) (interfac
 	this.addChildren(plan.NewExpressionScan(node.ExpressionTerm(), node.Alias(), node.IsCorrelated(), filter, cost, cardinality, size, frCost))
 
 	if !this.joinEnum() && !node.IsAnsiJoinOp() {
+		baseKeyspace, ok := this.baseKeyspaces[node.Alias()]
+		if !ok {
+			return nil, errors.NewPlanInternalError(fmt.Sprintf("VisitExpressionTerm: baseKeyspace for %s not found", node.Alias()))
+		}
 		if !node.HasTransferJoinHint() {
-			baseKeyspace, ok := this.baseKeyspaces[node.Alias()]
-			if !ok {
-				return nil, errors.NewPlanInternalError("VisitExpressionTerm: baseKeyspace not found for " + node.Alias())
-			}
 			baseKeyspace.SetJoinHintError()
 			err = this.markOptimHints(node.Alias(), true)
 			if err != nil {
@@ -497,6 +509,10 @@ func (this *builder) VisitExpressionTerm(node *algebra.ExpressionTerm) (interfac
 		err = this.processKeyspaceDone(node.Alias())
 		if err != nil {
 			return nil, err
+		}
+		if this.useCBO && this.lastOp != nil {
+			baseKeyspace.SetCardinality(this.lastOp.Cardinality())
+			baseKeyspace.SetSize(this.lastOp.Size())
 		}
 	}
 

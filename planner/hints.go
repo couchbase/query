@@ -97,6 +97,8 @@ func processOptimHints(baseKeyspaces map[string]*base.BaseKeyspace, optimHints *
 		return
 	}
 
+	numJoinFilterHint := 0
+
 	// For INDEX/INDEX_FTS/NO_INDEX/NO_INDEX_FTS/USE_NL/USE_HASH/NO_USE_NL/NO_USE_HASH hints,
 	// check for duplicated hint specification and add hints to baseKeyspace.
 	// Note we don't allow mixing of USE style hints (specified after a keyspace in query text)
@@ -182,6 +184,18 @@ func processOptimHints(baseKeyspaces map[string]*base.BaseKeyspace, optimHints *
 				for _, curHint := range curHints {
 					curHint.SetError(algebra.DUPLICATED_JOIN_HINT + keyspace)
 				}
+			} else if baseKeyspace.HasJoinFilterHint() {
+				if joinHint == algebra.USE_HASH_BUILD {
+					hint.SetError(algebra.HASH_JOIN_BUILD_JOIN_FILTER)
+					for _, curHint := range baseKeyspace.JoinFltrHints() {
+						curHint.SetError(algebra.HASH_JOIN_BUILD_JOIN_FILTER)
+					}
+				} else if joinHint == algebra.USE_NL {
+					hint.SetError(algebra.NL_JOIN_JOIN_FILTER)
+					for _, curHint := range baseKeyspace.JoinFltrHints() {
+						curHint.SetError(algebra.NL_JOIN_JOIN_FILTER)
+					}
+				}
 			}
 			baseKeyspace.AddJoinHint(hint)
 		} else if indexHint {
@@ -222,8 +236,29 @@ func processOptimHints(baseKeyspaces map[string]*base.BaseKeyspace, optimHints *
 				for _, curHint := range curHints {
 					curHint.SetError(algebra.DUPLICATED_JOIN_FLTR_HINT + keyspace)
 				}
+			} else if !negative {
+				if baseKeyspace.JoinHint() == algebra.USE_HASH_BUILD {
+					hint.SetError(algebra.HASH_JOIN_BUILD_JOIN_FILTER)
+					for _, curHint := range baseKeyspace.JoinHints() {
+						curHint.SetError(algebra.HASH_JOIN_BUILD_JOIN_FILTER)
+					}
+				} else if baseKeyspace.JoinHint() == algebra.USE_NL {
+					hint.SetError(algebra.NL_JOIN_JOIN_FILTER)
+					for _, curHint := range baseKeyspace.JoinHints() {
+						curHint.SetError(algebra.NL_JOIN_JOIN_FILTER)
+					}
+				}
+				numJoinFilterHint++
 			}
 			baseKeyspace.AddJoinFltrHint(hint)
+		}
+	}
+
+	if numJoinFilterHint == len(baseKeyspaces) {
+		for _, baseKeyspace := range baseKeyspaces {
+			for _, hint := range baseKeyspace.JoinFltrHints() {
+				hint.SetError(algebra.ALL_TERM_JOIN_FILTER)
+			}
 		}
 	}
 }

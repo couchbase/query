@@ -24,10 +24,11 @@ import (
 type BitFilterIndex struct {
 	indexName string
 	indexId   string
+	size      int
 	exprs     expression.Expressions
 }
 
-func newBitFilterIndex(index datastore.Index, exprs expression.Expressions) *BitFilterIndex {
+func NewBitFilterIndex(index datastore.Index, exprs expression.Expressions) *BitFilterIndex {
 	return &BitFilterIndex{
 		indexName: index.Name(),
 		indexId:   index.Id(),
@@ -47,11 +48,51 @@ func (this *BitFilterIndex) Expressions() expression.Expressions {
 	return this.exprs
 }
 
+func (this *BitFilterIndex) SetExpressions(exprs expression.Expressions) {
+	this.exprs = exprs
+}
+
+func (this *BitFilterIndex) Size() int {
+	return this.size
+}
+
+func (this *BitFilterIndex) SetSize(size int) {
+	this.size = size
+}
+
+func (this *BitFilterIndex) sameAs(other *BitFilterIndex) bool {
+	if this.indexName != other.indexName || this.indexId != other.indexId {
+		return false
+	}
+	if this.size != 0 && other.size != 0 && this.size != other.size {
+		return false
+	}
+	if len(this.exprs) != len(other.exprs) {
+		return false
+	}
+	for _, exp1 := range this.exprs {
+		found := false
+		for _, exp2 := range other.exprs {
+			if exp1.EquivalentTo(exp2) {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return false
+		}
+	}
+	return true
+}
+
 func (this *BitFilterIndex) MarshalJSON() ([]byte, error) {
 	stringer := expression.NewStringer()
-	r := make(map[string]interface{}, 3)
+	r := make(map[string]interface{}, 4)
 	r["index_name"] = this.indexName
 	r["index_id"] = this.indexId
+	if this.size > 0 {
+		r["size"] = this.size
+	}
 	bfexprs := make([]string, 0, len(this.exprs))
 	for _, exp := range this.exprs {
 		bfexprs = append(bfexprs, stringer.Visit(exp))
@@ -64,6 +105,7 @@ func (this *BitFilterIndex) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
 		IndexName      string   `json:"index_name"`
 		IndexId        string   `json:"index_id"`
+		Size           int      `json:"size"`
 		BitFilterExprs []string `json:"bit_filter_expressions"`
 	}
 
@@ -74,6 +116,10 @@ func (this *BitFilterIndex) UnmarshalJSON(body []byte) error {
 
 	this.indexName = _unmarshalled.IndexName
 	this.indexId = _unmarshalled.IndexId
+
+	if _unmarshalled.Size > 0 {
+		this.size = _unmarshalled.Size
+	}
 
 	if len(_unmarshalled.BitFilterExprs) > 0 {
 		this.exprs = make(expression.Expressions, len(_unmarshalled.BitFilterExprs))
@@ -108,20 +154,34 @@ func (this *BitFilterTerm) IndexBitFilters() []*BitFilterIndex {
 	return this.indexBFs
 }
 
-func (this *BitFilterTerm) addBitFilterIndex(bfIndexExprs map[datastore.Index]expression.Expressions) error {
+func (this *BitFilterTerm) addBitFilterIndex(bfIndexExprs []*BitFilterIndex) ([]bool, error) {
 	if this.indexBFs == nil {
-		this.indexBFs = make([]*BitFilterIndex, 0, len(bfIndexExprs))
+		this.indexBFs = bfIndexExprs
+		return nil, nil
 	}
-	for index, exprs := range bfIndexExprs {
-		for _, bfIndex := range this.indexBFs {
-			if index.Id() == bfIndex.indexId {
-				return errors.NewPlanInternalError(fmt.Sprintf("BitFilterTerm.addBitFilterIndex: bit filters for term %s (index %s) already exists", this.alias, bfIndex.indexName))
+	var dups []bool
+	for i, bfIndex := range bfIndexExprs {
+		found := false
+		for _, curIndex := range this.indexBFs {
+			if bfIndex.indexId == curIndex.indexId {
+				if curIndex.sameAs(bfIndex) {
+					found = true
+					break
+				} else {
+					return nil, errors.NewPlanInternalError(fmt.Sprintf("BitFilterTerm.addBitFilterIndex: bit filters for term %s (index %s) already exists", this.alias, bfIndex.indexName))
+				}
 			}
 		}
-		bfIndex := newBitFilterIndex(index, exprs)
-		this.indexBFs = append(this.indexBFs, bfIndex)
+		if found {
+			if dups == nil {
+				dups = make([]bool, len(bfIndexExprs))
+			}
+			dups[i] = true
+		} else {
+			this.indexBFs = append(this.indexBFs, bfIndex)
+		}
 	}
-	return nil
+	return dups, nil
 }
 
 func (this *BitFilterTerm) MarshalJSON() ([]byte, error) {
@@ -165,10 +225,9 @@ func (this *BitFilterTerm) UnmarshalJSON(body []byte) error {
 
 type BitFilters []*BitFilterTerm
 
-func addBitFilters(bitFilters BitFilters, alias string, bfIndexExprs map[datastore.Index]expression.Expressions) (BitFilters, error) {
+func addBitFilters(bitFilters BitFilters, alias string, bfIndexExprs []*BitFilterIndex) (BitFilters, []bool, error) {
 
 	var bfTerm *BitFilterTerm
-	var err error
 	for _, bfk := range bitFilters {
 		if bfk.alias == alias {
 			bfTerm = bfk
@@ -178,10 +237,10 @@ func addBitFilters(bitFilters BitFilters, alias string, bfIndexExprs map[datasto
 	if bfTerm == nil {
 		bfTerm = newBitFilterTerm(alias)
 		bfTerm.addBitFilterIndex(bfIndexExprs)
-		return append(bitFilters, bfTerm), nil
+		return append(bitFilters, bfTerm), nil, nil
 	}
-	err = bfTerm.addBitFilterIndex(bfIndexExprs)
-	return bitFilters, err
+	dups, err := bfTerm.addBitFilterIndex(bfIndexExprs)
+	return bitFilters, dups, err
 }
 
 type BuildBitFilterBase struct {
@@ -192,12 +251,16 @@ func (this *BuildBitFilterBase) GetBuildFilterBase() *BuildBitFilterBase {
 	return this
 }
 
-func (this *BuildBitFilterBase) hasBuildBitFilter() bool {
+func (this *BuildBitFilterBase) HasBuildBitFilter() bool {
 	return len(this.buildBitFilters) > 0
 }
 
-func (this *BuildBitFilterBase) SetBuildBitFilters(alias string, buildExprs map[datastore.Index]expression.Expressions) (err error) {
-	this.buildBitFilters, err = addBitFilters(this.buildBitFilters, alias, buildExprs)
+func (this *BuildBitFilterBase) SetBuildBitFilters(alias string, buildExprs []*BitFilterIndex) (err error) {
+	var dups []bool
+	this.buildBitFilters, dups, err = addBitFilters(this.buildBitFilters, alias, buildExprs)
+	if err == nil && len(dups) > 0 {
+		err = errors.NewPlanInternalError(fmt.Sprintf("SetBuildBitFilters: duplicated bit filter detected for alias %s", alias))
+	}
 	return
 }
 
@@ -234,12 +297,12 @@ func (this *ProbeBitFilterBase) GetProbeFilterBase() *ProbeBitFilterBase {
 	return this
 }
 
-func (this *ProbeBitFilterBase) hasProbeBitFilter() bool {
+func (this *ProbeBitFilterBase) HasProbeBitFilter() bool {
 	return len(this.probeBitFilters) > 0
 }
 
-func (this *ProbeBitFilterBase) SetProbeBitFilters(alias string, probeExprs map[datastore.Index]expression.Expressions) (err error) {
-	this.probeBitFilters, err = addBitFilters(this.probeBitFilters, alias, probeExprs)
+func (this *ProbeBitFilterBase) SetProbeBitFilters(alias string, probeExprs []*BitFilterIndex) (dups []bool, err error) {
+	this.probeBitFilters, dups, err = addBitFilters(this.probeBitFilters, alias, probeExprs)
 	return
 }
 

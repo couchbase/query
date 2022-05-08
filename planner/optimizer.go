@@ -29,7 +29,7 @@ type Builder interface {
 	GetPrepareContext() *PrepareContext
 	AddOuterOnclause(onclause expression.Expression, alias string,
 		baseKeyspaces map[string]*base.BaseKeyspace, keyspaceNames map[string]string) error
-	BuildScan(node algebra.SimpleFromTerm, order bool) (
+	BuildScan(node algebra.SimpleFromTerm, order, joinFilter bool) (
 		[]plan.Operator, []plan.Operator, []plan.CoveringOperator, map[*algebra.Unnest]bool, expression.Expression, error)
 	BuildNLJoin(node *algebra.AnsiJoin, outerAliases []string,
 		outerPlan, outerSubPlan []plan.Operator, outerCoveringScans []plan.CoveringOperator,
@@ -42,7 +42,7 @@ type Builder interface {
 	BuildHashJoin(node *algebra.AnsiJoin, outerAliases []string,
 		outerPlan, outerSubPlan, innerPlan, innerSubPlan []plan.Operator,
 		outerCoveringScans, innerCoveringScans []plan.CoveringOperator,
-		outerFilter expression.Expression) (
+		outerFilter expression.Expression, joinFilter bool) (
 		[]plan.Operator, []plan.Operator, []plan.CoveringOperator, expression.Expression, error)
 	BuildHashNest(node *algebra.AnsiNest, outerAliases []string,
 		outerPlan, outerSubPlan, innerPlan, innerSubPlan []plan.Operator,
@@ -80,7 +80,7 @@ func (this *builder) AddOuterOnclause(onclause expression.Expression, alias stri
 	return nil
 }
 
-func (this *builder) BuildScan(node algebra.SimpleFromTerm, order bool) (
+func (this *builder) BuildScan(node algebra.SimpleFromTerm, order, joinFilter bool) (
 	[]plan.Operator, []plan.Operator, []plan.CoveringOperator, map[*algebra.Unnest]bool, expression.Expression, error) {
 	children := this.children
 	subChildren := this.subChildren
@@ -127,6 +127,11 @@ func (this *builder) BuildScan(node algebra.SimpleFromTerm, order bool) (
 		this.order = nil
 	}
 
+	if joinFilter {
+		this.setBuilderFlag(BUILDER_DO_JOIN_FILTER)
+		defer this.unsetBuilderFlag(BUILDER_DO_JOIN_FILTER)
+	}
+
 	_, err := node.Accept(this)
 	if err != nil {
 		return nil, nil, nil, nil, nil, err
@@ -148,7 +153,7 @@ func (this *builder) BuildNLJoin(join *algebra.AnsiJoin, outerAliases []string,
 	[]plan.Operator, []plan.Operator, []plan.CoveringOperator, expression.Expression, error) {
 
 	return this.buildJoinOp(join, nil, outerAliases, outerPlan, outerSubPlan, nil, nil,
-		outerCoveringScans, nil, outerFilter, false)
+		outerCoveringScans, nil, outerFilter, false, false)
 }
 
 func (this *builder) BuildNLNest(nest *algebra.AnsiNest, outerAliases []string,
@@ -157,17 +162,17 @@ func (this *builder) BuildNLNest(nest *algebra.AnsiNest, outerAliases []string,
 	[]plan.Operator, []plan.Operator, []plan.CoveringOperator, expression.Expression, error) {
 
 	return this.buildJoinOp(nil, nest, outerAliases, outerPlan, outerSubPlan, nil, nil,
-		outerCoveringScans, nil, outerFilter, false)
+		outerCoveringScans, nil, outerFilter, false, false)
 }
 
 func (this *builder) BuildHashJoin(join *algebra.AnsiJoin, outerAliases []string,
 	outerPlan, outerSubPlan, innerPlan, innerSubPlan []plan.Operator,
 	outerCoveringScans, innerCoveringScans []plan.CoveringOperator,
-	outerFilter expression.Expression) (
+	outerFilter expression.Expression, joinFilter bool) (
 	[]plan.Operator, []plan.Operator, []plan.CoveringOperator, expression.Expression, error) {
 
 	return this.buildJoinOp(join, nil, outerAliases, outerPlan, outerSubPlan,
-		innerPlan, innerSubPlan, outerCoveringScans, innerCoveringScans, outerFilter, true)
+		innerPlan, innerSubPlan, outerCoveringScans, innerCoveringScans, outerFilter, true, joinFilter)
 }
 
 func (this *builder) BuildHashNest(nest *algebra.AnsiNest, outerAliases []string,
@@ -177,13 +182,13 @@ func (this *builder) BuildHashNest(nest *algebra.AnsiNest, outerAliases []string
 	[]plan.Operator, []plan.Operator, []plan.CoveringOperator, expression.Expression, error) {
 
 	return this.buildJoinOp(nil, nest, outerAliases, outerPlan, outerSubPlan,
-		innerPlan, innerSubPlan, outerCoveringScans, innerCoveringScans, outerFilter, true)
+		innerPlan, innerSubPlan, outerCoveringScans, innerCoveringScans, outerFilter, true, false)
 }
 
 func (this *builder) buildJoinOp(join *algebra.AnsiJoin, nest *algebra.AnsiNest,
 	outerAliases []string, outerPlan, outerSubPlan, innerPlan, innerSubPlan []plan.Operator,
 	outerCoveringScans, innerCoveringScans []plan.CoveringOperator,
-	outerFilter expression.Expression, hash bool) (
+	outerFilter expression.Expression, hash, joinFilter bool) (
 	[]plan.Operator, []plan.Operator, []plan.CoveringOperator, expression.Expression, error) {
 
 	children := this.children
@@ -247,6 +252,11 @@ func (this *builder) buildJoinOp(join *algebra.AnsiJoin, nest *algebra.AnsiNest,
 			}
 		}
 	}()
+
+	if joinFilter {
+		this.setBuilderFlag(BUILDER_DO_JOIN_FILTER)
+		defer this.unsetBuilderFlag(BUILDER_DO_JOIN_FILTER)
+	}
 
 	if join != nil {
 		if hash {

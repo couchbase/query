@@ -390,11 +390,11 @@ func (this *IndexScan3) MarshalBase(f func(map[string]interface{})) map[string]i
 		r["has_delta_keyspace"] = this.hasDeltaKeyspace
 	}
 
-	if this.hasBuildBitFilter() {
+	if this.HasBuildBitFilter() {
 		this.marshalBuildBitFilters(r)
 	}
 
-	if this.hasProbeBitFilter() {
+	if this.HasProbeBitFilter() {
 		this.marshalProbeBitFilters(r)
 	}
 

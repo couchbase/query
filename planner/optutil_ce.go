@@ -274,3 +274,17 @@ func getWindowAggCost(aggs algebra.Aggregates, cost, cardinality float64, size i
 func getKeyspaceSize(keyspace string) int64 {
 	return OPT_SIZE_NOT_AVAIL
 }
+
+func optGetJoinFilterSelec(selec, cardinality float64) float64 {
+	return OPT_SELEC_NOT_AVAIL
+}
+
+func optChooseJoinFilters(baseKeyspace *base.BaseKeyspace, index datastore.Index) (
+	float64, float64, float64, expression.Expressions) {
+	return OPT_SELEC_NOT_AVAIL, OPT_COST_NOT_AVAIL, OPT_COST_NOT_AVAIL, baseKeyspace.GetAllJoinFilterExprs(index)
+}
+
+func optBuildBitFilterSize(baseKeyspace *base.BaseKeyspace, exprs expression.Expressions) (size int) {
+
+	return int(OPT_SIZE_NOT_AVAIL)
+}

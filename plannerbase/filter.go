@@ -25,11 +25,12 @@ const (
 	FLTR_IN_INDEX_SPAN                 // used in index span
 	FLTR_IN_HASH_JOIN                  // used as join filter for hash join
 	FLTR_HAS_SUBQ                      // has subquery
-	FLTR_HAS_ADJ_SELEC                 // has adjusted selectivity
+	FLTR_HAS_ADJ_ARR_SELEC             // has adjusted selectivity
 	FLTR_PRIMARY_JOIN                  // join on meta id
 	FLTR_DERIVED_EQJOIN                // derived equi-join filter
 	FLTR_ADJUST_JOIN_SELEC             // join selectivity adjusted
 	FLTR_SAV_INDEX_SPAN                // saved IN_INDEX_SPAN flag
+	FLTR_HAS_ADJ_BIT_SELEC             // has adjusted bit-filter selectivity
 )
 
 const TEMP_PLAN_FLAGS = (FLTR_IN_INDEX_SPAN | FLTR_IN_HASH_JOIN)
@@ -171,12 +172,24 @@ func (this *Filter) HasSubq() bool {
 	return (this.fltrFlags & FLTR_HAS_SUBQ) != 0
 }
 
-func (this *Filter) SetAdjustedSelec() {
-	this.fltrFlags |= FLTR_HAS_ADJ_SELEC
+func (this *Filter) SetAdjustedArrSelec() {
+	this.fltrFlags |= FLTR_HAS_ADJ_ARR_SELEC
 }
 
-func (this *Filter) HasAdjustedSelec() bool {
-	return (this.fltrFlags & FLTR_HAS_ADJ_SELEC) != 0
+func (this *Filter) HasAdjustedArrSelec() bool {
+	return (this.fltrFlags & FLTR_HAS_ADJ_ARR_SELEC) != 0
+}
+
+func (this *Filter) SetAdjustedBitSelec() {
+	this.fltrFlags |= FLTR_HAS_ADJ_BIT_SELEC
+}
+
+func (this *Filter) UnsetAdjustedBitSelec() {
+	this.fltrFlags &^= FLTR_HAS_ADJ_BIT_SELEC
+}
+
+func (this *Filter) HasAdjustedBitSelec() bool {
+	return (this.fltrFlags & FLTR_HAS_ADJ_BIT_SELEC) != 0
 }
 
 func (this *Filter) SetPrimaryJoin() {

@@ -31,10 +31,12 @@ func (this *builder) buildSecondaryScan(indexes, arrayIndexes, flex map[datastor
 		pred, arrayIndexes)
 	defer releaseUnnestPools(unnests, primaryUnnests)
 
-	scan, sargLength, err = this.buildCovering(indexes, unnestIndexes, flex, node,
-		baseKeyspace, subset, id, searchSargables, unnests)
-	if scan != nil || err != nil {
-		return
+	if !this.hasBuilderFlag(BUILDER_DO_JOIN_FILTER) {
+		scan, sargLength, err = this.buildCovering(indexes, unnestIndexes, flex, node,
+			baseKeyspace, subset, id, searchSargables, unnests)
+		if scan != nil || err != nil {
+			return
+		}
 	}
 
 	hasDeltaKeyspace := this.context.HasDeltaKeyspace(baseKeyspace.Keyspace())
@@ -71,9 +73,11 @@ func (this *builder) buildCreateSecondaryScan(indexes, flex map[datastore.Index]
 	searchSargables []*indexEntry, hasDeltaKeyspace bool) (scan plan.SecondaryScan, sargLength int, err error) {
 
 	indexes = this.minimalIndexes(indexes, true, pred, node)
-	// Already done. need only for one index
-	// flex = this.minimalFTSFlexIndexes(flex, true)
-	searchSargables = this.minimalSearchIndexes(flex, searchSargables)
+	if !this.hasBuilderFlag(BUILDER_DO_JOIN_FILTER) {
+		// Already done. need only for one index
+		// flex = this.minimalFTSFlexIndexes(flex, true)
+		searchSargables = this.minimalSearchIndexes(flex, searchSargables)
+	}
 
 	orderEntry, limit, searchOrders := this.buildSecondaryScanPushdowns(indexes, flex, searchSargables, pred, node)
 
@@ -227,6 +231,10 @@ func (this *builder) buildSecondaryScanPushdowns(indexes, flex map[datastore.Ind
 	searchSargables []*indexEntry, pred expression.Expression, node *algebra.KeyspaceTerm) (
 	orderEntry *indexEntry, limit expression.Expression, searchOrders []string) {
 
+	if this.hasBuilderFlag(BUILDER_DO_JOIN_FILTER) {
+		return
+	}
+
 	// get ordered Index. If any index doesn't have Limit/Offset pushdown those must turned off
 	pushDown := this.hasOffsetOrLimit()
 	for _, entry := range indexes {
@@ -314,7 +322,7 @@ func (this *builder) sargableIndexes(indexes []datastore.Index, pred, subset exp
 
 	for _, index := range indexes {
 		if index.Type() == datastore.FTS {
-			if this.hintIndexes {
+			if this.hintIndexes && !this.hasBuilderFlag(BUILDER_DO_JOIN_FILTER) {
 				// FTS Flex index sargability
 				if flexRequest == nil {
 					flex = make(map[datastore.Index]*indexEntry, len(indexes))
@@ -499,6 +507,10 @@ func (this *builder) minimalIndexes(sargables map[datastore.Index]*indexEntry, s
 				}
 			}
 		}
+	}
+
+	if !useCBO && this.hasBuilderFlag(BUILDER_DO_JOIN_FILTER) {
+		return nil
 	}
 
 	for s, se := range sargables {
@@ -873,16 +885,16 @@ func getMissings(entry *indexEntry) (isMissings []bool) {
 	return
 }
 
-func eqJoinFilter(fl *base.Filter, alias string) (bool, expression.Expression, expression.Expression, string) {
+func (this *builder) eqJoinFilter(fl *base.Filter, alias string) (bool, expression.Expression, expression.Expression, *base.BaseKeyspace) {
 	fltrExpr := fl.FltrExpr()
 	eqFltr, ok := fltrExpr.(*expression.Eq)
 	if !ok {
-		return false, nil, nil, ""
+		return false, nil, nil, nil
 	}
 
 	keyspaces := fl.OrigKeyspaces()
 	if len(keyspaces) != 2 {
-		return false, nil, nil, ""
+		return false, nil, nil, nil
 	}
 
 	first := eqFltr.First()
@@ -890,10 +902,10 @@ func eqJoinFilter(fl *base.Filter, alias string) (bool, expression.Expression, e
 	firstRefs, err1 := expression.CountKeySpaces(first, keyspaces)
 	secondRefs, err2 := expression.CountKeySpaces(second, keyspaces)
 	if err1 != nil || err2 != nil {
-		return false, nil, nil, ""
+		return false, nil, nil, nil
 	}
 	if len(firstRefs) != 1 || len(secondRefs) != 1 {
-		return false, nil, nil, ""
+		return false, nil, nil, nil
 	}
 
 	var joinAlias string
@@ -904,24 +916,27 @@ func eqJoinFilter(fl *base.Filter, alias string) (bool, expression.Expression, e
 		}
 	}
 
-	if _, ok := firstRefs[alias]; ok {
-		return true, first, second, joinAlias
-	} else if _, ok := secondRefs[alias]; ok {
-		return true, second, first, joinAlias
+	joinKeyspace, ok := this.baseKeyspaces[joinAlias]
+	if !ok || joinKeyspace.IsOuter() {
+		return false, nil, nil, nil
 	}
-	return false, nil, nil, ""
+
+	if _, ok = firstRefs[alias]; ok {
+		return true, first, second, joinKeyspace
+	} else if _, ok = secondRefs[alias]; ok {
+		return true, second, first, joinKeyspace
+	}
+	return false, nil, nil, nil
 }
 
-func getIndexFilters(entry *indexEntry, baseKeyspace *base.BaseKeyspace,
+func (this *builder) getIndexFilters(entry *indexEntry, baseKeyspace *base.BaseKeyspace,
 	id expression.Expression, includeJoin, useCBO bool) (
-	keys, indexFilters, indexJoinFilters expression.Expressions, selec, joinSelec float64) {
+	keys, indexFilters expression.Expressions, selec float64) {
 
 	doSelec := useCBO
 	selec = OPT_SELEC_NOT_AVAIL
-	joinSelec = OPT_SELEC_NOT_AVAIL
 	if doSelec {
 		selec = 1.0
-		joinSelec = 1.0
 	}
 
 	index := entry.index
@@ -948,9 +963,6 @@ func getIndexFilters(entry *indexEntry, baseKeyspace *base.BaseKeyspace,
 
 	if nFilters > 0 {
 		indexFilters = make(expression.Expressions, 0, nFilters)
-	}
-	if nJoinFilters > 0 {
-		indexJoinFilters = make(expression.Expressions, 0, nJoinFilters)
 	}
 
 	// skip array index keys
@@ -991,23 +1003,16 @@ func getIndexFilters(entry *indexEntry, baseKeyspace *base.BaseKeyspace,
 						selec *= fl.Selec()
 					} else {
 						doSelec = false
+						selec = OPT_SELEC_NOT_AVAIL
 					}
 				}
 				if !derived || orig {
 					indexFilters = append(indexFilters, fltrExpr)
 				}
 			} else if includeJoin {
-				eq, self, other, joinAlias := eqJoinFilter(fl, alias)
-				if eq && self != nil && other != nil && joinAlias != "" {
-					if doSelec {
-						if fl.Selec() > 0.0 {
-							joinSelec *= fl.Selec()
-						} else {
-							doSelec = false
-						}
-					}
-					indexJoinFilters = append(indexJoinFilters, fltrExpr)
-					baseKeyspace.AddBFSource(joinAlias, index, self, other)
+				eq, self, other, joinKeyspace := this.eqJoinFilter(fl, alias)
+				if eq && self != nil && other != nil && joinKeyspace != nil {
+					baseKeyspace.AddBFSource(joinKeyspace, index, self, other, fl)
 				}
 			}
 		}
@@ -1020,17 +1025,9 @@ func getIndexFilters(entry *indexEntry, baseKeyspace *base.BaseKeyspace,
 	for _, fl := range joinFilters {
 		fltrExpr := fl.FltrExpr()
 		if expression.IsCovered(fltrExpr, alias, keys, false) {
-			eq, self, other, joinAlias := eqJoinFilter(fl, alias)
-			if eq && self != nil && other != nil && joinAlias != "" {
-				if doSelec {
-					if fl.Selec() > 0.0 {
-						joinSelec *= fl.Selec()
-					} else {
-						doSelec = false
-					}
-				}
-				indexJoinFilters = append(indexJoinFilters, fltrExpr)
-				baseKeyspace.AddBFSource(joinAlias, index, self, other)
+			eq, self, other, joinKeyspace := this.eqJoinFilter(fl, alias)
+			if eq && self != nil && other != nil && joinKeyspace != nil {
+				baseKeyspace.AddBFSource(joinKeyspace, index, self, other, fl)
 			}
 		}
 	}
@@ -1043,14 +1040,37 @@ func (this *builder) buildIndexFilters(entry *indexEntry, baseKeyspace *base.Bas
 	covers expression.Covers, filter expression.Expression, indexProjection *plan.IndexProjection, err error) {
 
 	useCBO := this.useCBO && this.keyspaceUseCBO(node.Alias())
+	if useCBO && (entry.cost <= 0.0 || entry.cardinality <= 0.0 || entry.size <= 0 || entry.frCost <= 0.0) {
+		useCBO = false
+	}
+
 	includeJoin := true
-	if node.IsAnsiJoinOp() && (this.joinEnum() || !node.IsUnderHash()) {
+	if this.joinEnum() {
+		if !this.hasBuilderFlag(BUILDER_DO_JOIN_FILTER) {
+			includeJoin = false
+		}
+	} else if baseKeyspace.IsOuter() || baseKeyspace.IsUnnest() || baseKeyspace.HasNoJoinFilterHint() {
 		includeJoin = false
-	} else if this.hasBuilderFlag(BUILDER_CHK_INDEX_ORDER) {
+	} else if node.IsAnsiJoinOp() && !node.IsUnderHash() {
+		includeJoin = false
+	} else if !useCBO && !baseKeyspace.HasJoinFilterHint() {
 		includeJoin = false
 	}
 
-	keys, indexFilters, joinFilters, selec, _ := getIndexFilters(entry, baseKeyspace, id, includeJoin, useCBO)
+	keys, indexFilters, selec := this.getIndexFilters(entry, baseKeyspace, id, includeJoin, useCBO)
+
+	var joinFilters expression.Expressions
+	var bfCost, bfFrCost, bfSelec float64
+	if includeJoin {
+		if useCBO {
+			bfSelec, bfCost, bfFrCost, joinFilters = optChooseJoinFilters(baseKeyspace, entry.index)
+			if len(joinFilters) > 0 && (bfSelec <= 0.0 || bfCost <= 0.0 || bfFrCost <= 0.0) {
+				useCBO = false
+			}
+		} else {
+			joinFilters = baseKeyspace.GetAllJoinFilterExprs(entry.index)
+		}
+	}
 
 	if len(indexFilters) > 0 || len(joinFilters) > 0 {
 		allFilters := indexFilters
@@ -1091,7 +1111,7 @@ func (this *builder) buildIndexFilters(entry *indexEntry, baseKeyspace *base.Bas
 			}
 		}
 
-		if useCBO && entry.cost > 0.0 && entry.cardinality > 0.0 && entry.size > 0 && entry.frCost > 0.0 {
+		if useCBO {
 			cost, cardinality, size, frCost := getIndexProjectionCost(entry.index, indexProjection, entry.cardinality)
 
 			if cost > 0.0 && cardinality > 0.0 && size > 0 && frCost > 0.0 && selec > 0.0 {
@@ -1104,9 +1124,16 @@ func (this *builder) buildIndexFilters(entry *indexEntry, baseKeyspace *base.Bas
 					entry.cost, entry.cardinality, selec, entry.size, entry.frCost)
 				entry.cardinality, entry.cost, entry.frCost, entry.size = cardinality, cost, frCost, size
 			} else {
+				useCBO = false
 				entry.cost, entry.cardinality, entry.frCost, entry.size = OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_COST_NOT_AVAIL, OPT_SIZE_NOT_AVAIL
 			}
 		}
+	}
+
+	if useCBO && len(joinFilters) > 0 {
+		entry.cost += bfCost
+		entry.frCost += bfFrCost
+		entry.cardinality *= bfSelec
 	}
 
 	return

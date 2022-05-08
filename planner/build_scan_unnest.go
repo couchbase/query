@@ -62,7 +62,7 @@ func (this *builder) buildUnnestIndexes(node *algebra.KeyspaceTerm, from algebra
 	pred expression.Expression, indexes map[datastore.Index]*indexEntry) (
 	unnests, primaryUnnests []*algebra.Unnest, unnestIndexes map[datastore.Index]*indexEntry) {
 
-	if from == nil || pred == nil || node.IsAnsiJoinOp() {
+	if from == nil || pred == nil || node.IsAnsiJoinOp() || this.hasBuilderFlag(BUILDER_DO_JOIN_FILTER) {
 		return
 	}
 

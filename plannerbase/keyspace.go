@@ -12,6 +12,7 @@ import (
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/plan"
 )
 
 const (
@@ -46,6 +47,8 @@ type BaseKeyspace struct {
 	joinHints     []algebra.OptimHint
 	joinFltrHints []algebra.OptimHint
 	bfSource      map[string]*BFSource
+	cardinality   float64
+	size          int64
 }
 
 func NewBaseKeyspace(name string, path *algebra.Path, node algebra.SimpleFromTerm,
@@ -533,6 +536,26 @@ func (this *BaseKeyspace) MarkJoinFltrHintError(err string) {
 	}
 }
 
+func (this *BaseKeyspace) Cardinality() float64 {
+	return this.cardinality
+}
+
+func (this *BaseKeyspace) SetCardinality(cardinality float64) {
+	this.cardinality = cardinality
+}
+
+func (this *BaseKeyspace) Size() int64 {
+	return this.size
+}
+
+func (this *BaseKeyspace) SetSize(size int64) {
+	this.size = size
+}
+
+func (this *BaseKeyspace) GetAllBFSource() map[string]*BFSource {
+	return this.bfSource
+}
+
 func (this *BaseKeyspace) GetBFSource(joinAlias string) *BFSource {
 	if bfSource, ok := this.bfSource[joinAlias]; ok {
 		return bfSource
@@ -540,7 +563,10 @@ func (this *BaseKeyspace) GetBFSource(joinAlias string) *BFSource {
 	return nil
 }
 
-func (this *BaseKeyspace) AddBFSource(joinAlias string, index datastore.Index, self, other expression.Expression) {
+func (this *BaseKeyspace) AddBFSource(joinKeyspace *BaseKeyspace, index datastore.Index,
+	self, other expression.Expression, fltr *Filter) {
+
+	joinAlias := joinKeyspace.Name()
 	if this.bfSource == nil {
 		this.bfSource = make(map[string]*BFSource, 4)
 	}
@@ -548,20 +574,75 @@ func (this *BaseKeyspace) AddBFSource(joinAlias string, index datastore.Index, s
 	bfSource, ok := this.bfSource[joinAlias]
 	if !ok {
 		bfInfos := make(map[string]*BFInfo)
-		bfInfos[selfStr] = newBFInfo(index, self, other)
-		bfSource = newBFSource(joinAlias, bfInfos)
+		bfInfos[selfStr] = newBFInfo(index, self, other, fltr)
+		bfSource = newBFSource(joinKeyspace, bfInfos)
 		this.bfSource[joinAlias] = bfSource
 	} else {
 		bfInfos := bfSource.bfInfos
+		selec := fltr.selec
 		if curInfo, ok := bfInfos[selfStr]; ok {
 			if other.EquivalentTo(curInfo.other) {
 				if _, ok := curInfo.indexes[index]; !ok {
 					curInfo.indexes[index] = true
 				}
+			} else if (selec > 0.0) && (curInfo.fltr.selec <= 0.0 || selec < curInfo.fltr.selec) {
+				// don't expect this to happen often, this will be something like:
+				// r.c1 = t.c1 and r.c1 = t.c2
+				curInfo.fltr = fltr
+				curInfo.other = other
 			}
 			// otherwise just ignore
 		} else {
-			bfInfos[selfStr] = newBFInfo(index, self, other)
+			bfInfos[selfStr] = newBFInfo(index, self, other, fltr)
+		}
+	}
+}
+
+func (this *BaseKeyspace) RemoveBFSource(joinAlias string, index datastore.Index) {
+	if bfSource, ok := this.bfSource[joinAlias]; ok {
+		for exp, bfinfo := range bfSource.BFInfos() {
+			if bfinfo.HasIndex(index) {
+				bfinfo.DropIndex(index)
+				if bfinfo.Empty() {
+					bfSource.DropBFInfo(exp)
+					if bfSource.Empty() {
+						delete(this.bfSource, joinAlias)
+					}
+				}
+			}
+		}
+	}
+	return
+}
+
+func (this *BaseKeyspace) GetAllJoinFilterExprs(index datastore.Index) expression.Expressions {
+	allExprs := make(expression.Expressions, 0, len(this.bfSource))
+	for _, bfSource := range this.bfSource {
+		for _, bfinfo := range bfSource.BFInfos() {
+			if _, ok := bfinfo.indexes[index]; ok {
+				allExprs = append(allExprs, bfinfo.fltr.FltrExpr())
+			}
+		}
+	}
+	return allExprs
+}
+
+func (this *BaseKeyspace) GetAllJoinFilterBits() int32 {
+	allBits := int32(0)
+	for _, bfSource := range this.bfSource {
+		allBits |= bfSource.joinKeyspace.optBit
+	}
+	return allBits
+}
+
+func (this *BaseKeyspace) CheckJoinFilterIndexes(ops []plan.Operator) {
+	indexes := make(map[datastore.Index]bool)
+	gatherIndexes(indexes, ops...)
+	for _, bfSource := range this.bfSource {
+		for index, _ := range bfSource.selecs {
+			if _, ok := indexes[index]; !ok {
+				delete(bfSource.selecs, index)
+			}
 		}
 	}
 }

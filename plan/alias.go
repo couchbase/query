@@ -55,7 +55,7 @@ func (this *Alias) MarshalBase(f func(map[string]interface{})) map[string]interf
 	if !this.primary {
 		r["secondary_term"] = !this.primary
 	}
-	if this.hasBuildBitFilter() {
+	if this.HasBuildBitFilter() {
 		this.marshalBuildBitFilters(r)
 	}
 	if optEstimate := marshalOptEstimate(&this.optEstimate); optEstimate != nil {

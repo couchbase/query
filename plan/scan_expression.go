@@ -83,7 +83,7 @@ func (this *ExpressionScan) MarshalBase(f func(map[string]interface{})) map[stri
 	if this.filter != nil {
 		r["filter"] = expression.NewStringer().Visit(this.filter)
 	}
-	if this.hasBuildBitFilter() {
+	if this.HasBuildBitFilter() {
 		this.marshalBuildBitFilters(r)
 	}
 	if optEstimate := marshalOptEstimate(&this.optEstimate); optEstimate != nil {

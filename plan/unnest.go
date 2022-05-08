@@ -76,7 +76,7 @@ func (this *Unnest) MarshalBase(f func(map[string]interface{})) map[string]inter
 		r["filter"] = expression.NewStringer().Visit(this.filter)
 	}
 
-	if this.hasBuildBitFilter() {
+	if this.HasBuildBitFilter() {
 		this.marshalBuildBitFilters(r)
 	}
 
