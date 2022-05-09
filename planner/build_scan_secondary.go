@@ -1108,17 +1108,6 @@ func (this *builder) buildIndexFilters(entry *indexEntry, baseKeyspace *base.Bas
 		useCBO = false
 	}
 
-	// skip array index keys
-	keys := make(expression.Expressions, 0, len(entry.keys)+1)
-	for _, key := range entry.keys {
-		if isArray, _, _ := key.IsArrayIndexKey(); !isArray {
-			keys = append(keys, key)
-		}
-	}
-	if !entry.index.IsPrimary() && id != nil {
-		keys = append(keys, id)
-	}
-
 	var indexFilters, joinFilters expression.Expressions
 	var bfCost, bfFrCost, bfSelec float64
 	if entry.HasFlag(IE_HAS_FILTER) {
@@ -1136,6 +1125,7 @@ func (this *builder) buildIndexFilters(entry *indexEntry, baseKeyspace *base.Bas
 	}
 
 	if len(indexFilters) > 0 || len(joinFilters) > 0 {
+		keys := entry.keys
 		allFilters := indexFilters
 		if len(joinFilters) > 0 {
 			allFilters = append(allFilters, joinFilters...)
@@ -1150,13 +1140,13 @@ func (this *builder) buildIndexFilters(entry *indexEntry, baseKeyspace *base.Bas
 					return nil, nil, nil, errors.NewPlanInternalError(fmt.Sprintf("buildIndexFilters: index projection key position %d beyond key length(%d)", i, len(keys)))
 				}
 			}
-			covers = append(covers, expression.NewIndexKey(id))
 		} else {
 			covers = make(expression.Covers, 0, len(keys))
 			for _, key := range keys {
 				covers = append(covers, expression.NewIndexKey(key))
 			}
 		}
+		covers = append(covers, expression.NewIndexKey(id))
 	}
 
 	if len(indexFilters) > 0 {
