@@ -45,10 +45,15 @@ func (this *builder) buildSecondaryScan(indexes, arrayIndexes, flex map[datastor
 		this.resetPushDowns()
 	}
 
-	for _, entry := range indexes {
+	for idx, entry := range indexes {
 		entry.pushDownProperty = this.indexPushDownProperty(entry, entry.keys, nil,
 			pred, node.Alias(), nil, false, false, (len(this.baseKeyspaces) == 1),
 			implicitAnyCover(entry, true, this.context.FeatureControls()))
+
+		this.getIndexFilters(entry, node, baseKeyspace, id)
+		if this.hasBuilderFlag(BUILDER_DO_JOIN_FILTER) && !entry.HasFlag(IE_HAS_JOIN_FILTER) {
+			delete(indexes, idx)
+		}
 	}
 
 	if len(primaryUnnests) > 0 && len(unnests) > 0 && len(unnestIndexes) > 0 {
@@ -520,7 +525,8 @@ func (this *builder) minimalIndexes(sargables map[datastore.Index]*indexEntry, s
 			}
 
 			if useCBO && shortest {
-				if matchedLeadingKeys(se, te, predFc) && se.cost < te.cost {
+				if matchedLeadingKeys(se, te, predFc) &&
+					(se.cardinality < te.cardinality || (se.cardinality == te.cardinality && se.cost < te.cost)) {
 					delete(sargables, t)
 				}
 			} else {
@@ -569,10 +575,10 @@ func narrowerOrEquivalent(se, te *indexEntry, shortest bool, predFc map[string]v
 		return true
 	}
 
-	// if te and se has same sargKeys (or equivalent condition), and there exists
-	// a non-sarged array key, prefer the one without the array key
 	if te.nSargKeys == snk+snc &&
 		se.PushDownProperty() == te.PushDownProperty() {
+		// if te and se has same sargKeys (or equivalent condition), and there exists
+		// a non-sarged array key, prefer the one without the array key
 		if se.HasFlag(IE_ARRAYINDEXKEY) != te.HasFlag(IE_ARRAYINDEXKEY) {
 			if !se.HasFlag(IE_ARRAYINDEXKEY_SARGABLE) && !te.HasFlag(IE_ARRAYINDEXKEY_SARGABLE) {
 				if te.HasFlag(IE_ARRAYINDEXKEY) && !se.HasFlag(IE_ARRAYINDEXKEY) {
@@ -582,6 +588,22 @@ func narrowerOrEquivalent(se, te *indexEntry, shortest bool, predFc map[string]v
 				}
 			}
 
+		}
+		// prefer one with index filter
+		if se.HasFlag(IE_HAS_FILTER) != te.HasFlag(IE_HAS_FILTER) {
+			if se.HasFlag(IE_HAS_FILTER) && !te.HasFlag(IE_HAS_FILTER) {
+				return true
+			} else if te.HasFlag(IE_HAS_FILTER) && !se.HasFlag(IE_HAS_FILTER) {
+				return false
+			}
+		}
+		// prefer one with index join filter (bit filter)
+		if se.HasFlag(IE_HAS_JOIN_FILTER) != te.HasFlag(IE_HAS_JOIN_FILTER) {
+			if se.HasFlag(IE_HAS_JOIN_FILTER) && !te.HasFlag(IE_HAS_JOIN_FILTER) {
+				return true
+			} else if te.HasFlag(IE_HAS_JOIN_FILTER) && !se.HasFlag(IE_HAS_JOIN_FILTER) {
+				return false
+			}
 		}
 	}
 
@@ -929,19 +951,45 @@ func (this *builder) eqJoinFilter(fl *base.Filter, alias string) (bool, expressi
 	return false, nil, nil, nil
 }
 
-func (this *builder) getIndexFilters(entry *indexEntry, baseKeyspace *base.BaseKeyspace,
-	id expression.Expression, includeJoin, useCBO bool) (
-	keys, indexFilters expression.Expressions, selec float64) {
+func (this *builder) getIndexFilters(entry *indexEntry, node *algebra.KeyspaceTerm,
+	baseKeyspace *base.BaseKeyspace, id expression.Expression) {
 
-	doSelec := useCBO
-	selec = OPT_SELEC_NOT_AVAIL
-	if doSelec {
+	alias := node.Alias()
+	useCBO := this.useCBO && this.keyspaceUseCBO(alias)
+	advisorValidate := this.advisorValidate()
+	requestId := this.context.RequestId()
+	if useCBO && (entry.cost <= 0.0 || entry.cardinality <= 0.0 || entry.size <= 0 || entry.frCost <= 0.0) {
+		cost, selec, card, size, frCost, e := indexScanCost(entry.index, entry.sargKeys,
+			requestId, entry.spans, alias, advisorValidate, this.context)
+		if e != nil || (cost <= 0.0 || card <= 0.0 || size <= 0 || frCost <= 0.0) {
+			useCBO = false
+		} else {
+			entry.cardinality, entry.selectivity, entry.cost, entry.frCost, entry.size = card, selec, cost, frCost, size
+		}
+	}
+
+	includeJoin := true
+	if this.joinEnum() {
+		if !this.hasBuilderFlag(BUILDER_DO_JOIN_FILTER) {
+			includeJoin = false
+		}
+	} else if baseKeyspace.IsOuter() || baseKeyspace.IsUnnest() || baseKeyspace.HasNoJoinFilterHint() {
+		includeJoin = false
+	} else if node.IsAnsiJoinOp() && !node.IsUnderHash() {
+		includeJoin = false
+	} else if !useCBO && !baseKeyspace.HasJoinFilterHint() {
+		includeJoin = false
+	}
+
+	selec := OPT_SELEC_NOT_AVAIL
+	if useCBO {
 		selec = 1.0
 	}
 
 	index := entry.index
 
-	alias := baseKeyspace.Name()
+	var indexFilters expression.Expressions
+	var hasIndexJoinFilters bool
 	filters := baseKeyspace.Filters()
 	joinFilters := baseKeyspace.JoinFilters()
 	nFilters := len(filters)
@@ -966,7 +1014,7 @@ func (this *builder) getIndexFilters(entry *indexEntry, baseKeyspace *base.BaseK
 	}
 
 	// skip array index keys
-	keys = make(expression.Expressions, 0, len(entry.keys)+1)
+	keys := make(expression.Expressions, 0, len(entry.keys)+1)
 	for _, key := range entry.keys {
 		if isArray, _, _ := key.IsArrayIndexKey(); !isArray {
 			keys = append(keys, key)
@@ -983,26 +1031,26 @@ func (this *builder) getIndexFilters(entry *indexEntry, baseKeyspace *base.BaseK
 		fltrExpr := fl.FltrExpr()
 		derived := false
 		orig := false
-		if base.IsDerivedExpr(fltrExpr) && !fl.IsJoin() {
-			derived = true
-			if fl.OrigExpr() != nil {
-				fltrExpr = fl.OrigExpr()
-				orig = true
-			}
-		} else if _, ok := entry.exactFilters[fl]; ok {
+		if _, ok := entry.exactFilters[fl]; ok {
 			// Skip the filters used to generate exact spans since these are
 			// supposedly evaluated by the indexer already.
 			// It is possible that a span starts out exact but was turned to non-exact
 			// later, but this will not cause wrong result (just potential inefficiency)
 			continue
+		} else if base.IsDerivedExpr(fltrExpr) && !fl.IsJoin() {
+			derived = true
+			if fl.OrigExpr() != nil {
+				fltrExpr = fl.OrigExpr()
+				orig = true
+			}
 		}
 		if expression.IsCovered(fltrExpr, alias, keys, false) {
 			if !fl.IsJoin() {
-				if doSelec {
+				if useCBO {
 					if fl.Selec() > 0.0 {
 						selec *= fl.Selec()
 					} else {
-						doSelec = false
+						useCBO = false
 						selec = OPT_SELEC_NOT_AVAIL
 					}
 				}
@@ -1012,9 +1060,20 @@ func (this *builder) getIndexFilters(entry *indexEntry, baseKeyspace *base.BaseK
 			} else if includeJoin {
 				eq, self, other, joinKeyspace := this.eqJoinFilter(fl, alias)
 				if eq && self != nil && other != nil && joinKeyspace != nil {
+					hasIndexJoinFilters = true
 					baseKeyspace.AddBFSource(joinKeyspace, index, self, other, fl)
 				}
 			}
+		}
+	}
+
+	if len(indexFilters) > 0 {
+		entry.indexFilters = indexFilters
+		entry.SetFlags(IE_HAS_FILTER, true)
+		if useCBO {
+			entry.cost, entry.cardinality, entry.size, entry.frCost = getSimpleFilterCost(alias,
+				entry.cost, entry.cardinality, selec, entry.size, entry.frCost)
+			entry.selectivity *= selec
 		}
 	}
 
@@ -1027,9 +1086,14 @@ func (this *builder) getIndexFilters(entry *indexEntry, baseKeyspace *base.BaseK
 		if expression.IsCovered(fltrExpr, alias, keys, false) {
 			eq, self, other, joinKeyspace := this.eqJoinFilter(fl, alias)
 			if eq && self != nil && other != nil && joinKeyspace != nil {
+				hasIndexJoinFilters = true
 				baseKeyspace.AddBFSource(joinKeyspace, index, self, other, fl)
 			}
 		}
+	}
+
+	if hasIndexJoinFilters {
+		entry.SetFlags(IE_HAS_JOIN_FILTER, true)
 	}
 
 	return
@@ -1044,24 +1108,23 @@ func (this *builder) buildIndexFilters(entry *indexEntry, baseKeyspace *base.Bas
 		useCBO = false
 	}
 
-	includeJoin := true
-	if this.joinEnum() {
-		if !this.hasBuilderFlag(BUILDER_DO_JOIN_FILTER) {
-			includeJoin = false
+	// skip array index keys
+	keys := make(expression.Expressions, 0, len(entry.keys)+1)
+	for _, key := range entry.keys {
+		if isArray, _, _ := key.IsArrayIndexKey(); !isArray {
+			keys = append(keys, key)
 		}
-	} else if baseKeyspace.IsOuter() || baseKeyspace.IsUnnest() || baseKeyspace.HasNoJoinFilterHint() {
-		includeJoin = false
-	} else if node.IsAnsiJoinOp() && !node.IsUnderHash() {
-		includeJoin = false
-	} else if !useCBO && !baseKeyspace.HasJoinFilterHint() {
-		includeJoin = false
+	}
+	if !entry.index.IsPrimary() && id != nil {
+		keys = append(keys, id)
 	}
 
-	keys, indexFilters, selec := this.getIndexFilters(entry, baseKeyspace, id, includeJoin, useCBO)
-
-	var joinFilters expression.Expressions
+	var indexFilters, joinFilters expression.Expressions
 	var bfCost, bfFrCost, bfSelec float64
-	if includeJoin {
+	if entry.HasFlag(IE_HAS_FILTER) {
+		indexFilters = entry.indexFilters
+	}
+	if entry.HasFlag(IE_HAS_JOIN_FILTER) {
 		if useCBO {
 			bfSelec, bfCost, bfFrCost, joinFilters = optChooseJoinFilters(baseKeyspace, entry.index)
 			if len(joinFilters) > 0 && (bfSelec <= 0.0 || bfCost <= 0.0 || bfFrCost <= 0.0) {
@@ -1114,15 +1177,11 @@ func (this *builder) buildIndexFilters(entry *indexEntry, baseKeyspace *base.Bas
 		if useCBO {
 			cost, cardinality, size, frCost := getIndexProjectionCost(entry.index, indexProjection, entry.cardinality)
 
-			if cost > 0.0 && cardinality > 0.0 && size > 0 && frCost > 0.0 && selec > 0.0 {
+			if cost > 0.0 && cardinality > 0.0 && size > 0 && frCost > 0.0 {
 				entry.cost += cost
 				entry.cardinality = cardinality
 				entry.size += size
 				entry.frCost += frCost
-
-				cost, cardinality, size, frCost = getSimpleFilterCost(node.Alias(),
-					entry.cost, entry.cardinality, selec, entry.size, entry.frCost)
-				entry.cardinality, entry.cost, entry.frCost, entry.size = cardinality, cost, frCost, size
 			} else {
 				useCBO = false
 				entry.cost, entry.cardinality, entry.frCost, entry.size = OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_COST_NOT_AVAIL, OPT_SIZE_NOT_AVAIL

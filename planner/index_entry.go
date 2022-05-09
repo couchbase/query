@@ -35,6 +35,8 @@ const (
 	IE_LEADINGMISSING = 1 << iota
 	IE_ARRAYINDEXKEY
 	IE_ARRAYINDEXKEY_SARGABLE
+	IE_HAS_FILTER
+	IE_HAS_JOIN_FILTER
 )
 
 type indexEntry struct {
@@ -66,6 +68,7 @@ type indexEntry struct {
 	flags                uint32
 	unnestAliases        []string
 	exactFilters         map[*base.Filter]bool
+	indexFilters         expression.Expressions
 	partialSortTermCount int
 }
 
