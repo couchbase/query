@@ -589,22 +589,6 @@ func narrowerOrEquivalent(se, te *indexEntry, shortest bool, predFc map[string]v
 			}
 
 		}
-		// prefer one with index filter
-		if se.HasFlag(IE_HAS_FILTER) != te.HasFlag(IE_HAS_FILTER) {
-			if se.HasFlag(IE_HAS_FILTER) && !te.HasFlag(IE_HAS_FILTER) {
-				return true
-			} else if te.HasFlag(IE_HAS_FILTER) && !se.HasFlag(IE_HAS_FILTER) {
-				return false
-			}
-		}
-		// prefer one with index join filter (bit filter)
-		if se.HasFlag(IE_HAS_JOIN_FILTER) != te.HasFlag(IE_HAS_JOIN_FILTER) {
-			if se.HasFlag(IE_HAS_JOIN_FILTER) && !te.HasFlag(IE_HAS_JOIN_FILTER) {
-				return true
-			} else if te.HasFlag(IE_HAS_JOIN_FILTER) && !se.HasFlag(IE_HAS_JOIN_FILTER) {
-				return false
-			}
-		}
 	}
 
 	if te.cond != nil && (se.cond == nil || !base.SubsetOf(se.cond, te.cond)) {
@@ -634,6 +618,13 @@ func narrowerOrEquivalent(se, te *indexEntry, shortest bool, predFc map[string]v
 
 	if se.PushDownProperty() != te.PushDownProperty() {
 		return se.PushDownProperty() > te.PushDownProperty()
+	}
+
+	// prefer one with index filter/join filter
+	seKeyFlags := se.IndexKeyFlags()
+	teKeyFlags := te.IndexKeyFlags()
+	if seKeyFlags != teKeyFlags {
+		return seKeyFlags > teKeyFlags
 	}
 
 	return se.cond != nil ||

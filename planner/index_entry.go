@@ -158,7 +158,7 @@ func (this *indexEntry) Copy() *indexEntry {
 	return rv
 }
 
-func (this *indexEntry) Falgs() uint32 {
+func (this *indexEntry) Flags() uint32 {
 	return this.flags
 }
 
@@ -176,6 +176,11 @@ func (this *indexEntry) UnsetFlags(flags uint32) {
 
 func (this *indexEntry) HasFlag(flag uint32) bool {
 	return (this.flags & flag) != 0
+}
+
+// return flags relevant for index key values (index filter, join filter)
+func (this *indexEntry) IndexKeyFlags() uint32 {
+	return (this.flags & (IE_HAS_FILTER | IE_HAS_JOIN_FILTER))
 }
 
 func (this *indexEntry) PushDownProperty() PushDownProperties {
