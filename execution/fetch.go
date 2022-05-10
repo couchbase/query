@@ -87,6 +87,7 @@ func (this *Fetch) beforeItems(context *Context, item value.Value) bool {
 }
 
 func (this *Fetch) processItem(item value.AnnotatedValue, context *Context) bool {
+	item.ResetCovers()
 	ok := this.enbatchSize(item, this, this.batchSize, context, true)
 	if ok {
 		this.fetchCount++

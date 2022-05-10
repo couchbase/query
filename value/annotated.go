@@ -77,6 +77,7 @@ type AnnotatedValue interface {
 	Covers() Value
 	GetCover(key string) Value
 	SetCover(key string, val Value)
+	ResetCovers()
 	InheritCovers(val Value)
 	CopyAnnotations(av AnnotatedValue)
 	ShareAnnotations(av AnnotatedValue)
@@ -244,6 +245,10 @@ func (this *annotatedValue) SetCover(key string, val Value) {
 	}
 
 	this.covers.SetField(key, val)
+}
+
+func (this *annotatedValue) ResetCovers() {
+	this.covers = nil
 }
 
 func (this *annotatedValue) InheritCovers(val Value) {
@@ -627,6 +632,10 @@ func (this *annotatedValueSelfReference) GetCover(key string) Value {
 
 func (this *annotatedValueSelfReference) SetCover(key string, val Value) {
 	(*annotatedValue)(this).SetCover(key, val)
+}
+
+func (this *annotatedValueSelfReference) ResetCovers() {
+	(*annotatedValue)(this).ResetCovers()
 }
 
 func (this *annotatedValueSelfReference) InheritCovers(val Value) {
