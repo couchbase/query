@@ -509,6 +509,15 @@ func (this *builder) minimalIndexes(sargables map[datastore.Index]*indexEntry, s
 					useCBO = false
 				} else {
 					se.cardinality, se.selectivity, se.cost, se.frCost, se.size = card, selec, cost, frCost, size
+					if shortest {
+						baseKeyspace, _ := this.baseKeyspaces[node.Alias()]
+						fetchCost, _, _ := getFetchCost(baseKeyspace.Keyspace(), card)
+						if fetchCost > 0.0 {
+							se.fetchCost = fetchCost
+						} else {
+							useCBO = false
+						}
+					}
 				}
 			}
 		}
@@ -525,8 +534,10 @@ func (this *builder) minimalIndexes(sargables map[datastore.Index]*indexEntry, s
 			}
 
 			if useCBO && shortest {
+				seCost := se.scanCost()
+				teCost := te.scanCost()
 				if matchedLeadingKeys(se, te, predFc) &&
-					(se.cardinality < te.cardinality || (se.cardinality == te.cardinality && se.cost < te.cost)) {
+					(seCost < teCost || (seCost == teCost && se.cardinality < te.cardinality)) {
 					delete(sargables, t)
 				}
 			} else {
@@ -956,6 +967,12 @@ func (this *builder) getIndexFilters(entry *indexEntry, node *algebra.KeyspaceTe
 			useCBO = false
 		} else {
 			entry.cardinality, entry.selectivity, entry.cost, entry.frCost, entry.size = card, selec, cost, frCost, size
+			fetchCost, _, _ := getFetchCost(baseKeyspace.Keyspace(), card)
+			if fetchCost > 0.0 {
+				entry.fetchCost = fetchCost
+			} else {
+				useCBO = false
+			}
 		}
 	}
 
@@ -1065,6 +1082,12 @@ func (this *builder) getIndexFilters(entry *indexEntry, node *algebra.KeyspaceTe
 			entry.cost, entry.cardinality, entry.size, entry.frCost = getSimpleFilterCost(alias,
 				entry.cost, entry.cardinality, selec, entry.size, entry.frCost)
 			entry.selectivity *= selec
+			fetchCost, _, _ := getFetchCost(baseKeyspace.Keyspace(), entry.cardinality)
+			if fetchCost > 0.0 {
+				entry.fetchCost = fetchCost
+			} else {
+				useCBO = false
+			}
 		}
 	}
 
@@ -1174,6 +1197,10 @@ func (this *builder) buildIndexFilters(entry *indexEntry, baseKeyspace *base.Bas
 		entry.cost += bfCost
 		entry.frCost += bfFrCost
 		entry.cardinality *= bfSelec
+		fetchCost, _, _ := getFetchCost(baseKeyspace.Keyspace(), entry.cardinality)
+		if fetchCost > 0.0 {
+			entry.fetchCost = fetchCost
+		}
 	}
 
 	return

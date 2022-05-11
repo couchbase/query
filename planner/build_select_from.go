@@ -348,7 +348,10 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 		size := scan.Size()
 		frCost := scan.FrCost()
 		if useCBO && (cost > 0.0) && (cardinality > 0.0) && (size > 0) && (frCost > 0.0) {
-			fetchCost, fsize, ffrCost := getFetchCost(keyspace, cardinality)
+			fetchCost, fsize, ffrCost := OPT_COST_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL
+			if keyspace != nil {
+				fetchCost, fsize, ffrCost = getFetchCost(keyspace.QualifiedName(), cardinality)
+			}
 			if fetchCost > 0.0 && fsize > 0 && ffrCost > 0.0 {
 				cost += fetchCost
 				frCost += ffrCost

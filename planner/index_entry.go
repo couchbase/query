@@ -61,6 +61,7 @@ type indexEntry struct {
 	selectivity          float64
 	size                 int64
 	frCost               float64
+	fetchCost            float64
 	searchOrders         []string
 	condFc               map[string]value.Value
 	nEqCond              int
@@ -94,6 +95,7 @@ func newIndexEntry(index datastore.Index, keys, sargKeys, partitionKeys expressi
 		selectivity:      OPT_SELEC_NOT_AVAIL,
 		size:             OPT_SIZE_NOT_AVAIL,
 		frCost:           OPT_COST_NOT_AVAIL,
+		fetchCost:        OPT_COST_NOT_AVAIL,
 		flags:            IE_NONE,
 	}
 
@@ -133,6 +135,7 @@ func (this *indexEntry) Copy() *indexEntry {
 		selectivity:      this.selectivity,
 		size:             this.size,
 		frCost:           this.frCost,
+		fetchCost:        this.fetchCost,
 		condFc:           this.condFc,
 		nEqCond:          this.nEqCond,
 		flags:            this.flags,
@@ -216,6 +219,14 @@ func (this *indexEntry) setArrayKey(key *expression.All, pos int) {
 			}
 		}
 	}
+}
+
+// for comparing indexes, use both index scan cost and fetch cost
+func (this *indexEntry) scanCost() float64 {
+	if this.cost > 0.0 && this.fetchCost > 0.0 {
+		return this.cost + this.fetchCost
+	}
+	return this.cost
 }
 
 func isPushDownProperty(pushDownProperty, property PushDownProperties) bool {
