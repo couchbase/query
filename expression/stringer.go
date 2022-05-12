@@ -687,8 +687,12 @@ func (this *Stringer) VisitCover(expr *Cover) (interface{}, error) {
 	var buf bytes.Buffer
 	if expr.FullCover() {
 		buf.WriteString("cover (")
-	} else {
+	} else if expr.IsIndexKey() {
 		buf.WriteString("_index_key (")
+	} else if expr.IsIndexCond() {
+		buf.WriteString("_index_condition (")
+	} else {
+		return nil, fmt.Errorf("VisitCover: unexpected cover type")
 	}
 	buf.WriteString(expr.Text())
 	buf.WriteString(")")

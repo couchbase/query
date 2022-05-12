@@ -241,7 +241,7 @@ func (this *builder) coveringExpressions(node *algebra.KeyspaceTerm, entry *inde
 		fc = entry.origCond.FilterExpressionCovers(fc)
 	}
 
-	filterCovers = mapFilterCovers(fc)
+	filterCovers = mapFilterCovers(fc, true)
 
 	for c, _ := range filterCovers {
 		unnestFilters = append(unnestFilters, c.Covered())

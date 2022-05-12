@@ -138,7 +138,7 @@ func (this *builder) buildCreateSecondaryScan(indexes, flex map[datastore.Index]
 			}
 		}
 
-		covers, filter, idxProj, err := this.buildIndexFilters(entry, baseKeyspace, id, node)
+		covers, filterCovers, filter, idxProj, err := this.buildIndexFilters(entry, baseKeyspace, id, node)
 		if err != nil {
 			return nil, 0, err
 		}
@@ -154,9 +154,18 @@ func (this *builder) buildCreateSecondaryScan(indexes, flex map[datastore.Index]
 		if entry.index.Type() != datastore.SYSTEM {
 			this.collectIndexKeyspaceNames(baseKeyspace.Keyspace())
 		}
+
+		var limit, offset expression.Expression
+		if entry.IsPushDownProperty(_PUSHDOWN_LIMIT) {
+			limit = this.limit
+		}
+		if entry.IsPushDownProperty(_PUSHDOWN_OFFSET) {
+			offset = this.offset
+		}
+
 		scan = entry.spans.CreateScan(index, node, this.context.IndexApiVersion(), false, false,
-			overlapSpans(pred), false, this.offset, this.limit, idxProj,
-			indexKeyOrders, nil, covers, nil, filter, entry.cost, entry.cardinality,
+			overlapSpans(pred), false, offset, limit, idxProj, indexKeyOrders, nil,
+			covers, filterCovers, filter, entry.cost, entry.cardinality,
 			entry.size, entry.frCost, baseKeyspace, hasDeltaKeyspace)
 
 		if orderEntry != nil && index == orderEntry.index {
@@ -1022,16 +1031,28 @@ func (this *builder) getIndexFilters(entry *indexEntry, node *algebra.KeyspaceTe
 	}
 
 	// skip array index keys
-	keys := make(expression.Expressions, 0, len(entry.keys)+1)
+	coverExprs := make(expression.Expressions, 0, len(entry.keys)+1)
 	for _, key := range entry.keys {
 		if isArray, _, _ := key.IsArrayIndexKey(); !isArray {
-			keys = append(keys, key)
+			coverExprs = append(coverExprs, key)
 		}
 	}
 	if !index.IsPrimary() && id != nil {
-		keys = append(keys, id)
+		coverExprs = append(coverExprs, id)
 	}
 
+	if entry.cond != nil {
+		fc := make(map[expression.Expression]value.Value, 2)
+		fc = entry.cond.FilterExpressionCovers(fc)
+		fc = entry.origCond.FilterExpressionCovers(fc)
+		filterCovers := mapFilterCovers(fc, false)
+		for c, _ := range filterCovers {
+			coverExprs = append(coverExprs, c.Covered())
+		}
+	}
+
+	namedArgs := this.context.NamedArgs()
+	positionalArgs := this.context.PositionalArgs()
 	for _, fl := range filters {
 		if fl.IsUnnest() {
 			continue
@@ -1045,14 +1066,38 @@ func (this *builder) getIndexFilters(entry *indexEntry, node *algebra.KeyspaceTe
 			// It is possible that a span starts out exact but was turned to non-exact
 			// later, but this will not cause wrong result (just potential inefficiency)
 			continue
-		} else if base.IsDerivedExpr(fltrExpr) && !fl.IsJoin() {
+		} else if entry.cond != nil {
+			// Also skip filters that is in index condition
+			origExpr := fl.OrigExpr()
+			flExpr := fltrExpr
+			var err error
+			if len(namedArgs) > 0 || len(positionalArgs) > 0 {
+				flExpr, err = base.ReplaceParameters(flExpr, namedArgs, positionalArgs)
+				if err != nil {
+					continue
+				}
+				if origExpr != nil {
+					origExpr, err = base.ReplaceParameters(origExpr, namedArgs, positionalArgs)
+					if err != nil {
+						continue
+					}
+				}
+			}
+			if base.SubsetOf(entry.cond, flExpr) {
+				continue
+			}
+			if origExpr != nil && base.SubsetOf(entry.origCond, origExpr) {
+				continue
+			}
+		}
+		if base.IsDerivedExpr(fltrExpr) && !fl.IsJoin() {
 			derived = true
 			if fl.OrigExpr() != nil {
 				fltrExpr = fl.OrigExpr()
 				orig = true
 			}
 		}
-		if expression.IsCovered(fltrExpr, alias, keys, false) {
+		if expression.IsCovered(fltrExpr, alias, coverExprs, false) {
 			if !fl.IsJoin() {
 				if useCBO {
 					if fl.Selec() > 0.0 {
@@ -1097,7 +1142,7 @@ func (this *builder) getIndexFilters(entry *indexEntry, node *algebra.KeyspaceTe
 
 	for _, fl := range joinFilters {
 		fltrExpr := fl.FltrExpr()
-		if expression.IsCovered(fltrExpr, alias, keys, false) {
+		if expression.IsCovered(fltrExpr, alias, coverExprs, false) {
 			eq, self, other, joinKeyspace := this.eqJoinFilter(fl, alias)
 			if eq && self != nil && other != nil && joinKeyspace != nil {
 				hasIndexJoinFilters = true
@@ -1115,7 +1160,8 @@ func (this *builder) getIndexFilters(entry *indexEntry, node *algebra.KeyspaceTe
 
 func (this *builder) buildIndexFilters(entry *indexEntry, baseKeyspace *base.BaseKeyspace,
 	id expression.Expression, node *algebra.KeyspaceTerm) (
-	covers expression.Covers, filter expression.Expression, indexProjection *plan.IndexProjection, err error) {
+	covers expression.Covers, filterCovers map[*expression.Cover]value.Value,
+	filter expression.Expression, indexProjection *plan.IndexProjection, err error) {
 
 	useCBO := this.useCBO && this.keyspaceUseCBO(node.Alias())
 	if useCBO && (entry.cost <= 0.0 || entry.cardinality <= 0.0 || entry.size <= 0 || entry.frCost <= 0.0) {
@@ -1151,7 +1197,7 @@ func (this *builder) buildIndexFilters(entry *indexEntry, baseKeyspace *base.Bas
 				if i < len(keys) {
 					covers = append(covers, expression.NewIndexKey(keys[i]))
 				} else {
-					return nil, nil, nil, errors.NewPlanInternalError(fmt.Sprintf("buildIndexFilters: index projection key position %d beyond key length(%d)", i, len(keys)))
+					return nil, nil, nil, nil, errors.NewPlanInternalError(fmt.Sprintf("buildIndexFilters: index projection key position %d beyond key length(%d)", i, len(keys)))
 				}
 			}
 		} else {
@@ -1161,6 +1207,13 @@ func (this *builder) buildIndexFilters(entry *indexEntry, baseKeyspace *base.Bas
 			}
 		}
 		covers = append(covers, expression.NewIndexKey(id))
+
+		if entry.cond != nil {
+			fc := make(map[expression.Expression]value.Value, 2)
+			fc = entry.cond.FilterExpressionCovers(fc)
+			fc = entry.origCond.FilterExpressionCovers(fc)
+			filterCovers = mapFilterCovers(fc, false)
+		}
 	}
 
 	if len(indexFilters) > 0 {
@@ -1169,12 +1222,12 @@ func (this *builder) buildIndexFilters(entry *indexEntry, baseKeyspace *base.Bas
 		} else {
 			filter = expression.NewAnd(indexFilters.Copy()...)
 		}
-		if len(covers) > 0 {
-			// no array index keys so can Map directly; also no filterCovers
-			coverer := expression.NewCoverer(covers, nil)
+		if len(covers) > 0 || len(filterCovers) > 0 {
+			// no array index keys so can Map directly
+			coverer := expression.NewCoverer(covers, filterCovers)
 			filter, err = coverer.Map(filter)
 			if err != nil {
-				return nil, nil, nil, err
+				return nil, nil, nil, nil, err
 			}
 		}
 

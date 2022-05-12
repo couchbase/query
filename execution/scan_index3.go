@@ -146,7 +146,7 @@ func (this *IndexScan3) RunOnce(context *Context, parent value.Value) {
 						av := this.newEmptyDocumentWithKey(entry.PrimaryKey, scope_value, context)
 						if lcovers > 0 {
 
-							for c, v := range this.plan.FilterCovers() {
+							for c, v := range this.plan.AllFilterCovers() {
 								av.SetCover(c.Text(), v)
 							}
 

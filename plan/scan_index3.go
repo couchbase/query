@@ -279,6 +279,20 @@ func (this *IndexScan3) ImplicitArrayKey() *expression.All {
 }
 
 func (this *IndexScan3) FilterCovers() map[*expression.Cover]value.Value {
+	if this.fullCover {
+		return this.filterCovers
+	}
+	return nil
+}
+
+func (this *IndexScan3) IndexConditions() map[*expression.Cover]value.Value {
+	if !this.fullCover {
+		return this.filterCovers
+	}
+	return nil
+}
+
+func (this *IndexScan3) AllFilterCovers() map[*expression.Cover]value.Value {
 	return this.filterCovers
 }
 
@@ -375,7 +389,11 @@ func (this *IndexScan3) MarshalBase(f func(map[string]interface{})) map[string]i
 			fc[c.String()] = v
 		}
 
-		r["filter_covers"] = fc
+		if this.fullCover {
+			r["filter_covers"] = fc
+		} else {
+			r["index_conditions"] = fc
+		}
 	}
 
 	if this.filter != nil {
@@ -434,6 +452,7 @@ func (this *IndexScan3) UnmarshalJSON(body []byte) error {
 		Covers           []string               `json:"covers"`
 		IndexKeys        []string               `json:"index_keys"`
 		FilterCovers     map[string]interface{} `json:"filter_covers"`
+		IndexConditions  map[string]interface{} `json:"index_conditions"`
 		Filter           string                 `json:"filter"`
 		OptEstimate      map[string]interface{} `json:"optimizer_estimates"`
 		HasDeltaKeyspace bool                   `json:"has_delta_keyspace"`
@@ -524,6 +543,19 @@ func (this *IndexScan3) UnmarshalJSON(body []byte) error {
 			c := expression.NewCover(expr)
 			this.filterCovers[c] = value.NewValue(v)
 		}
+		this.fullCover = true
+	} else if len(_unmarshalled.IndexConditions) > 0 {
+		this.filterCovers = make(map[*expression.Cover]value.Value, len(_unmarshalled.IndexConditions))
+		for k, v := range _unmarshalled.IndexConditions {
+			expr, err := parser.Parse(k)
+			if err != nil {
+				return err
+			}
+
+			c := expression.NewIndexCondition(expr)
+			this.filterCovers[c] = value.NewValue(v)
+		}
+		this.fullCover = false
 	}
 
 	if _unmarshalled.Filter != "" {

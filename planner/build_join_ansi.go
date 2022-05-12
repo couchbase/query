@@ -1731,7 +1731,7 @@ func setProbeBitFilters(baseKeyspaces map[string]*base.BaseKeyspace,
 			if !baseKeyspace.HasNoJoinFilterHint() &&
 				(auto || baseKeyspace.HasJoinFilterHint()) && !op.Covering() &&
 				hasAlias(alias, probeAliases) && len(op.IndexKeys()) > 0 {
-				coverer := expression.NewCoverer(op.IndexKeys(), nil)
+				coverer := expression.NewCoverer(op.IndexKeys(), op.IndexConditions())
 				for a, binfo := range buildInfosMap {
 					if binfo.Skip() {
 						continue
@@ -1885,7 +1885,7 @@ func setBuildBitFilters(baseKeyspaces map[string]*base.BaseKeyspace,
 		case *plan.IndexScan3:
 			alias := op.Term().Alias()
 			if hasAlias(alias, buildAliases) && op.Covering() {
-				coverer := expression.NewCoverer(op.Covers(), nil)
+				coverer := expression.NewCoverer(op.Covers(), op.FilterCovers())
 				buildInfo, _ := buildInfosMap[alias]
 				if buildInfo == nil || buildInfo.Skip() {
 					break
