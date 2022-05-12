@@ -376,7 +376,7 @@ func (this *builder) sargableIndexes(indexes []datastore.Index, pred, subset exp
 					return
 				}
 
-				if !base.SubsetOf(subset, cond) {
+				if !base.SubsetOf(subset, cond) && (origCond == nil || !base.SubsetOf(subset, origCond)) {
 					continue
 				}
 			}

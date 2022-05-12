@@ -227,5 +227,31 @@
                 "c2": 600
             }
         ]
+    },
+    {
+        "testcase": "Named parameter that results in empty span (MB-52090). Explain",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+	    "use_args": true,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IndexScan3' AND v.`index` = 'poix4' END"
+        },
+	"namedArgs": {"testid": "parameter%"},
+        "statements":"SELECT c1, c2 FROM orders AS o WHERE o.test_id LIKE $testid AND o.c1 >= 40",
+        "results": [
+            {
+                "c1": 40,
+                "c2": 400
+            },
+            {
+                "c1": 50,
+                "c2": 500
+            }
+        ]
     }
 ]

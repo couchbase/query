@@ -147,10 +147,12 @@ func TestIndexScan(t *testing.T) {
 	runStmt(qc, "CREATE INDEX poix1 ON orders (c1, c2, c3, c4) WHERE test_id = \"parameters\"")
 	runStmt(qc, "CREATE INDEX poix2 ON orders (DISTINCT ARRAY v.id FOR v IN a3 END) WHERE test_id = \"parameters\"")
 	runStmt(qc, "CREATE INDEX poix3 ON orders (DISTINCT ARRAY v.id FOR v IN a4 WHEN v.name = \"abc\" END) WHERE test_id = \"parameters\"")
+	runStmt(qc, "CREATE INDEX poix4 ON orders (c1, c2, c3, c4) WHERE test_id LIKE \"parameter%\"")
 	runMatch("case_parameters.json", false, true, qc, t)
 	runStmt(qc, "DROP INDEX orders.poix1")
 	runStmt(qc, "DROP INDEX orders.poix2")
 	runStmt(qc, "DROP INDEX orders.poix3")
+	runStmt(qc, "DROP INDEX orders.poix4")
 
 	runStmt(qc, "CREATE INDEX ifloix1 ON orders (c1, c2, c3, c4, c5) WHERE test_id = \"idxfltr\"")
 	runStmt(qc, "CREATE INDEX ifloix2 ON orders (c6, a1) WHERE test_id = \"idxfltr\"")
