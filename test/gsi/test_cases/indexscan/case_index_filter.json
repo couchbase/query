@@ -96,5 +96,36 @@
                 "c6": 331
             }
         ]
+    },
+    {
+        "testcase": "OR predicate, check exact filters. Explain",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IndexScan3' AND v.`index_keys` IS MISSING AND v.`filter` IS MISSING END"
+        },
+        "statements":"SELECT d.c1, d.c2, d.c3, d.c5, d.c6 FROM orders AS d WHERE d.test_id = \"idxfltr\" AND d.c1 = 1 AND (d.c2 < 20 OR d.c2 > 500) AND d.c3 IS NOT NULL",
+        "ordered": true,
+        "results": [
+            {
+                "c1": 1,
+                "c2": 11,
+                "c3": "test",
+                "c5": "xabcy",
+                "c6": 31
+            },
+            {
+                "c1": 1,
+                "c2": 511,
+                "c3": "test",
+                "c5": "xxyy",
+                "c6": 531
+	    }
+        ]
     }
 ]

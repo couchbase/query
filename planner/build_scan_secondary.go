@@ -755,7 +755,7 @@ func (this *builder) sargIndexes(baseKeyspace *base.BaseKeyspace, underHash bool
 		var exactSpans bool
 		var err error
 
-		if se.maxKeys == 0 {
+		if (se.index.IsPrimary() && se.minKeys == 0) || se.maxKeys == 0 {
 			se.spans = _WHOLE_SPANS.Copy()
 			if pred != nil {
 				se.exactSpans = false
@@ -764,7 +764,7 @@ func (this *builder) sargIndexes(baseKeyspace *base.BaseKeyspace, underHash bool
 		}
 
 		useFilters := true
-		if isOrPred {
+		if isOrPred && this.hasBuilderFlag(BUILDER_OR_SUBTERM) {
 			useFilters = false
 		} else {
 			for _, key := range se.keys {
@@ -776,6 +776,7 @@ func (this *builder) sargIndexes(baseKeyspace *base.BaseKeyspace, underHash bool
 		}
 		isMissings := getMissings(se)
 
+		validSpans := false
 		if useFilters {
 			filters := baseKeyspace.Filters()
 			if se.exactFilters != nil {
@@ -789,12 +790,27 @@ func (this *builder) sargIndexes(baseKeyspace *base.BaseKeyspace, underHash bool
 			spans, exactSpans, err = SargForFilters(filters, se.keys, isMissings,
 				se.maxKeys, underHash, useCBO, baseKeyspace, this.keyspaceNames,
 				advisorValidate, this.aliases, se.exactFilters, this.context)
-		} else {
+			if err == nil && (spans != nil || !isOrPred || !se.HasFlag(IE_LEADINGMISSING)) {
+				// If this is OR predicate and no valid span generated, and index
+				// has leading missing, allow it to try with SargFor() below.
+				validSpans = true
+			}
+		}
+		if !validSpans {
 			spans, exactSpans, err = SargFor(baseKeyspace.DnfPred(), se, se.keys, isMissings,
 				se.maxKeys, orIsJoin, useCBO, baseKeyspace, this.keyspaceNames,
 				advisorValidate, this.aliases, this.context)
 		}
-		if err != nil || spans.Size() == 0 {
+
+		if se.HasFlag(IE_LEADINGMISSING) && (spans == nil || spans.Size() == 0) {
+			se.spans = _WHOLE_SPANS.Copy()
+			if pred != nil {
+				se.exactSpans = false
+			}
+			continue
+		}
+
+		if err != nil || spans == nil || spans.Size() == 0 {
 			logging.Errora(func() string {
 				return fmt.Sprintf("Sargable index not sarged: pred:<ud>%v</ud> sarg_keys:<ud>%v</ud> error:%v",
 					pred,

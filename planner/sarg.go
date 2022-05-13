@@ -170,18 +170,16 @@ func SargForFilters(filters base.Filters, keys expression.Expressions, isMissing
 		sargSpans[pos] = addArrayKeys(arrayKeySpan)
 	}
 
-	if exactSpan {
-		var hasSpan bool
-		for _, s := range sargSpans {
-			if s != nil {
-				hasSpan = true
-				break
-			}
+	var hasSpan bool
+	for _, s := range sargSpans {
+		if s != nil {
+			hasSpan = true
+			break
 		}
+	}
 
-		if !hasSpan && len(filters) != 0 {
-			exactSpan = false
-		}
+	if !hasSpan && len(filters) != 0 {
+		return nil, false, nil
 	}
 
 	return composeSargSpan(sargSpans, exactSpan)
