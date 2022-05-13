@@ -1216,13 +1216,16 @@ func (this *builder) buildIndexFilters(entry *indexEntry, baseKeyspace *base.Bas
 					return nil, nil, nil, nil, errors.NewPlanInternalError(fmt.Sprintf("buildIndexFilters: index projection key position %d beyond key length(%d)", i, len(keys)))
 				}
 			}
+			covers = append(covers, expression.NewIndexKey(id))
 		} else {
 			covers = make(expression.Covers, 0, len(keys))
 			for _, key := range keys {
 				covers = append(covers, expression.NewIndexKey(key))
 			}
+			if !entry.index.IsPrimary() {
+				covers = append(covers, expression.NewIndexKey(id))
+			}
 		}
-		covers = append(covers, expression.NewIndexKey(id))
 
 		if entry.cond != nil {
 			fc := make(map[expression.Expression]value.Value, 2)
