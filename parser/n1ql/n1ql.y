@@ -413,7 +413,7 @@ tokOffset        int
 %type <keyspacePath>     keyspace_path
 %type <b>                opt_join_type opt_quantifier
 %type <path>             path
-%type <s>                namespace_term namespace_name bucket_name scope_name keyspace_name
+%type <s>                namespace_term namespace_name path_part keyspace_name
 %type <use>              opt_use opt_use_del_upd opt_use_merge use_options use_keys use_index join_hint
 %type <joinHint>         use_hash_option
 %type <expr>             on_keys on_key
@@ -683,28 +683,29 @@ INFER keyspace_path opt_as_alias opt_infer_using opt_infer_ustat_with
 |
 INFER expr opt_infer_using opt_infer_ustat_with
 {
-    i, ok := $2.(*expression.Identifier)
-    if ok {
-        kr := algebra.NewKeyspaceRefWithContext(i.Identifier(), "", yylex.(*lexer).Namespace(), yylex.(*lexer).QueryContext())
+    var pth *algebra.Path
+    var err errors.Error
+
+    switch other := $2.(type) {
+    case *expression.Identifier:
+        kr := algebra.NewKeyspaceRefWithContext(other.Identifier(), "", yylex.(*lexer).Namespace(), yylex.(*lexer).QueryContext())
         $$ = algebra.NewInferKeyspace(kr, $3, $4)
-    } else {
-        f, ok := $2.(*expression.Field)
-        if ok {
-            p := f.Path()
-            if len(p) == 2 || len(p) == 0 {
-                yylex.(*lexer).FatalError("syntax error")
-            } else {
-                if len(p) == 3 {
-                    a := make([]string,1)
-                    a[0] = ""
-                    p = append(a, p...)
-                }
-                pth := algebra.NewPathFromElements(p)
-                $$ = algebra.NewInferKeyspace(algebra.NewKeyspaceRefFromPath(pth, ""), $3, $4)
+    case *expression.Field:
+        p := other.Path()
+        if len(p) == 2 {
+	    pth, err = algebra.NewPathFromElementsWithContext([]string{ p[0], p[1] }, yylex.(*lexer).Namespace(),
+                                 yylex.(*lexer).QueryContext())
+            if err != nil {
+                return yylex.(*lexer).FatalError(err.Error())
             }
-        } else {
-            $$ = algebra.NewInferExpression($2, $3, $4)
-        }
+	} else if len(p) == 3 {
+            pth = algebra.NewPathLong(yylex.(*lexer).Namespace(), p[0], p[1], p[2])
+	} else {
+            yylex.(*lexer).FatalError("syntax error")
+	}
+        $$ = algebra.NewInferKeyspace(algebra.NewKeyspaceRefFromPath(pth, ""), $3, $4)
+    default:
+	$$ = algebra.NewInferExpression($2, $3, $4)
     }
 }
 ;
@@ -1316,8 +1317,18 @@ expr opt_as_alias opt_use
                     $1.ErrorContext()))
             }
         case *expression.Field:
-        path := other.Path()
-            if len(path) == 3 {
+	    path := other.Path()
+            if len(path) == 2 {
+		longPath, err := algebra.NewPathFromElementsWithContext([]string{ path[0], path[1] }, yylex.(*lexer).Namespace(),
+				yylex.(*lexer).QueryContext())
+		if err != nil {
+		    isExpr = true
+		} else {
+		    ksterm := algebra.NewKeyspaceTermFromPath(longPath, $2, $3.Keys(), $3.Indexes())
+		    ksterm.SetValidateKeys($3.ValidateKeys())
+		    $$ = algebra.NewExpressionTerm(other, $2, ksterm, other.Parenthesis() == false, $3.JoinHint())
+		}
+            } else if len(path) == 3 {
                 ksterm := algebra.NewKeyspaceTermFromPath(algebra.NewPathLong(yylex.(*lexer).Namespace(), path[0], path[1],
                     path[2]), $2, $3.Keys(), $3.Indexes())
                 ksterm.SetValidateKeys($3.ValidateKeys())
@@ -1363,7 +1374,7 @@ namespace_term keyspace_name
     $$ = algebra.NewPathShort($1, $2)
 }
 |
-namespace_term bucket_name DOT scope_name DOT keyspace_name
+namespace_term path_part DOT path_part DOT keyspace_name
 {
     $$ = algebra.NewPathLong($1, $2, $4, $6)
 }
@@ -1388,11 +1399,7 @@ NAMESPACE_ID COLON
 }
 ;
 
-bucket_name:
-IDENT
-;
-
-scope_name:
+path_part:
 IDENT
 ;
 
@@ -1935,12 +1942,22 @@ keyspace_name opt_as_alias
     $$ = algebra.NewKeyspaceRefWithContext($1, $2, yylex.(*lexer).Namespace(), yylex.(*lexer).QueryContext())
 }
 |
+path_part DOT path_part opt_as_alias
+{
+    path, err := algebra.NewPathFromElementsWithContext([]string{ $1, $3 }, yylex.(*lexer).Namespace(),
+		 yylex.(*lexer).QueryContext())
+    if err != nil {
+	return yylex.(*lexer).FatalError(err.Error())
+    }
+    $$ = algebra.NewKeyspaceRefFromPath(path, $4)
+}
+|
 keyspace_path opt_as_alias
 {
     $$ = algebra.NewKeyspaceRefFromPath($1, $2)
 }
 |
-bucket_name DOT scope_name DOT keyspace_name  opt_as_alias
+path_part DOT path_part DOT keyspace_name  opt_as_alias
 {
     path := algebra.NewPathLong(yylex.(*lexer).Namespace(), $1, $3, $5)
     $$ = algebra.NewKeyspaceRefFromPath(path, $6)
@@ -2530,33 +2547,37 @@ keyspace_name
     $$ = algebra.NewKeyspaceRefWithContext($1, "", yylex.(*lexer).Namespace(), yylex.(*lexer).QueryContext())
 }
 |
+path_part DOT path_part
+{
+    path, err := algebra.NewPathFromElementsWithContext([]string{ $1, $3 }, yylex.(*lexer).Namespace(),
+                                 yylex.(*lexer).QueryContext())
+    if err != nil {
+        return yylex.(*lexer).FatalError(err.Error())
+    }
+    $$ = algebra.NewKeyspaceRefFromPath(path, "")
+}
+|
 namespace_name keyspace_name
 {
     path := algebra.NewPathShort($1, $2)
     $$ = algebra.NewKeyspaceRefFromPath(path, "")
 }
 |
-namespace_name bucket_name DOT scope_name DOT keyspace_name
+namespace_name path_part DOT path_part DOT keyspace_name
 {
     path := algebra.NewPathLong($1, $2, $4, $6)
     $$ = algebra.NewKeyspaceRefFromPath(path, "")
 }
 |
-bucket_name DOT scope_name DOT keyspace_name
+path_part DOT path_part DOT keyspace_name
 {
     path := algebra.NewPathLong(yylex.(*lexer).Namespace(), $1, $3, $5)
     $$ = algebra.NewKeyspaceRefFromPath(path, "")
 }
 |
-namespace_name bucket_name DOT scope_name
+namespace_name path_part DOT path_part
 {
     path := algebra.NewPathScope($1, $2, $4)
-    $$ = algebra.NewKeyspaceRefFromPath(path, "")
-}
-|
-bucket_name DOT scope_name
-{
-    path := algebra.NewPathScope(yylex.(*lexer).Namespace(), $1, $3)
     $$ = algebra.NewKeyspaceRefFromPath(path, "")
 }
 ;
@@ -2727,15 +2748,24 @@ IF NOT EXISTS
 named_keyspace_ref:
 simple_named_keyspace_ref
 |
-namespace_name bucket_name
+namespace_name path_part
 {
     path := algebra.NewPathShort($1, $2)
     $$ = algebra.NewKeyspaceRefFromPath(path, "")
 }
 |
-bucket_name DOT scope_name DOT keyspace_name
+path_part DOT path_part DOT keyspace_name
 {
     path := algebra.NewPathLong(yylex.(*lexer).Namespace(), $1, $3, $5)
+    $$ = algebra.NewKeyspaceRefFromPath(path, "")
+}
+|
+path_part DOT keyspace_name
+{
+    path, err := algebra.NewPathFromElementsWithContext([]string{ $1, $3}, yylex.(*lexer).Namespace(), yylex.(*lexer).QueryContext())
+    if err != nil {
+        return yylex.(*lexer).FatalError(err.Error())
+    }
     $$ = algebra.NewKeyspaceRefFromPath(path, "")
 }
 ;
@@ -2746,7 +2776,7 @@ keyspace_name
     $$ = algebra.NewKeyspaceRefWithContext($1, "", yylex.(*lexer).Namespace(), yylex.(*lexer).QueryContext())
 }
 |
-namespace_name bucket_name DOT scope_name DOT keyspace_name
+namespace_name path_part DOT path_part DOT keyspace_name
 {
     path := algebra.NewPathLong($1, $2, $4, $6)
     $$ = algebra.NewKeyspaceRefFromPath(path, "")
@@ -2754,15 +2784,24 @@ namespace_name bucket_name DOT scope_name DOT keyspace_name
 ;
 
 named_scope_ref:
-namespace_name bucket_name DOT scope_name
+namespace_name path_part DOT path_part
 {
     path := algebra.NewPathScope($1, $2, $4)
     $$ = algebra.NewScopeRefFromPath(path, "")
 }
 |
-bucket_name DOT scope_name
+path_part DOT path_part
 {
     path := algebra.NewPathScope(yylex.(*lexer).Namespace(), $1, $3)
+    $$ = algebra.NewScopeRefFromPath(path, "")
+}
+|
+path_part
+{
+    path, err := algebra.NewPathScopeWithContext(yylex.(*lexer).Namespace(), $1, yylex.(*lexer).QueryContext())
+    if err != nil {
+	return yylex.(*lexer).FatalError(err.Error())
+    }
     $$ = algebra.NewScopeRefFromPath(path, "")
 }
 ;
@@ -3073,6 +3112,29 @@ keyspace_name
     }
     $$ = name
 }
+|
+path_part DOT path_part
+{
+    dummyPath, err := algebra.NewPathFromElementsWithContext([]string{ $1, $3}, yylex.(*lexer).Namespace(), yylex.(*lexer).QueryContext())
+    if err != nil {
+        return yylex.(*lexer).FatalError(err.Error())
+    }
+    name, err := functionsBridge.NewFunctionName(dummyPath.Parts(), yylex.(*lexer).Namespace(), yylex.(*lexer).QueryContext())
+    if err != nil {
+        yylex.Error(err.Error()+yylex.(*lexer).ErrorContext())
+    }
+    $$ = name
+}
+|
+path_part DOT path_part DOT path_part
+{
+    name, err := functionsBridge.NewFunctionName([]string{yylex.(*lexer).Namespace(), $1, $3, $5},
+			yylex.(*lexer).Namespace(), yylex.(*lexer).QueryContext())
+    if err != nil {
+        yylex.Error(err.Error()+yylex.(*lexer).ErrorContext())
+    }
+    $$ = name
+}
 ;
 
 long_func_name:
@@ -3085,7 +3147,7 @@ namespace_term keyspace_name
     $$ = name
 }
 |
-namespace_term bucket_name DOT scope_name DOT keyspace_name
+namespace_term path_part DOT path_part DOT keyspace_name
 {
     name, err := functionsBridge.NewFunctionName([]string{$1, $2, $4, $6}, yylex.(*lexer).Namespace(), yylex.(*lexer).QueryContext())
     if err != nil {
@@ -3362,6 +3424,45 @@ IDENT_ICASE
 
 expr:
 c_expr
+|
+// relative path function call
+expr DOT ident LPAREN opt_exprs RPAREN
+{
+    var path []string
+
+    switch other := $1.(type) {
+    case *expression.Identifier:
+	path = []string { other.Alias(), $3.Identifier() }
+	dummyPath, err := algebra.NewPathFromElementsWithContext([]string { other.Alias(), $3.Identifier() },
+		yylex.(*lexer).Namespace(), yylex.(*lexer).QueryContext())
+	if err != nil {
+	    return yylex.(*lexer).FatalError(err.Error())
+	}
+	path = dummyPath.Parts()
+    case *expression.Field:
+	tempPath := other.Path()
+	if len(tempPath) != 2 {
+	    return yylex.(*lexer).FatalError("syntax error")
+	}
+	path = append([]string { yylex.(*lexer).Namespace() }, append(tempPath, $3.Identifier())...)
+    default:
+	return yylex.(*lexer).FatalError("syntax error")
+    }
+
+    // NewFunctionName() cannot deal with 3 part names, and considers 2 parts as a global function
+    // so we have to deal with this ourselves
+    name, err := functionsBridge.NewFunctionName(path, yylex.(*lexer).Namespace(), yylex.(*lexer).QueryContext())
+    if err != nil {
+        yylex.Error(err.Error()+yylex.(*lexer).ErrorContext())
+    }
+    f := expression.GetUserDefinedFunction(name, yylex.(*lexer).UdfCheck())
+    if f != nil {
+        $$ = f.Constructor()($5...)
+    } else {
+        return yylex.(*lexer).FatalError(fmt.Sprintf("Invalid function %v%s", name.Key(),
+                     errors.NewErrorContext(yylex.(*lexer).nex.Line()+1,yylex.(*lexer).nex.Column()).Error()))
+    }
+}
 |
 /* Nested */
 expr DOT ident
@@ -3764,10 +3865,49 @@ LPAREN expr RPAREN
 {
     $$ = expression.NewIndexCondition($4)
 }
+
 ;
 
 b_expr:
 c_expr
+|
+// relative path function call
+b_expr DOT IDENT LPAREN opt_exprs RPAREN
+{
+    var path []string
+
+    switch other := $1.(type) {
+    case *expression.Identifier:
+	path = []string { other.Alias(), $3 }
+	dummyPath, err := algebra.NewPathFromElementsWithContext([]string { other.Alias(), $3 }, yylex.(*lexer).Namespace(), yylex.(*lexer).QueryContext())
+	if err != nil {
+	    return yylex.(*lexer).FatalError(err.Error())
+	}
+	path = dummyPath.Parts()
+    case *expression.Field:
+	tempPath := other.Path()
+	if len(tempPath) != 2 {
+	    return yylex.(*lexer).FatalError("syntax error")
+	}
+	path = append([]string { yylex.(*lexer).Namespace() }, append(tempPath, $3)...)
+    default:
+	return yylex.(*lexer).FatalError("syntax error")
+    }
+
+    // NewFunctionName() cannot deal with 3 part names, and considers 2 parts as a global function
+    // so we have to deal with this ourselves
+    name, err := functionsBridge.NewFunctionName(path, yylex.(*lexer).Namespace(), yylex.(*lexer).QueryContext())
+    if err != nil {
+        yylex.Error(err.Error()+yylex.(*lexer).ErrorContext())
+    }
+    f := expression.GetUserDefinedFunction(name, yylex.(*lexer).UdfCheck())
+    if f != nil {
+        $$ = f.Constructor()($5...)
+    } else {
+        return yylex.(*lexer).FatalError(fmt.Sprintf("Invalid function %v%s", name.Key(),
+                     errors.NewErrorContext(yylex.(*lexer).nex.Line()+1,yylex.(*lexer).nex.Column()).Error()))
+    }
+}
 |
 /* Nested */
 b_expr DOT IDENT

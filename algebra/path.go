@@ -63,6 +63,21 @@ func NewPathScope(namespace, bucket, scope string) *Path {
 	}
 }
 
+// Create a scope path from an identifier and query context
+func NewPathScopeWithContext(namespace, scope, queryContext string) (*Path, errors.Error) {
+	elems := ParseQueryContext(queryContext)
+	if elems[0] == "" {
+		elems[0] = namespace
+	}
+	elems = append(elems, scope)
+	if len(elems) != 3 {
+		return nil, errors.NewDatastoreInvalidScopePartsError(elems...)
+	}
+	return &Path{
+		elements: elems,
+	}, nil
+}
+
 // Create a path from three possible combinations:
 // namespace:bucket
 // namespace:keyspace (for backwards compatibility)
@@ -89,6 +104,8 @@ func NewPathShortOrLong(namespace, bucket, scope, keyspace string) *Path {
 // :bucket.scope (namespace is either specified by the namespace parameter or set later)
 // namespace: (produces a short path)
 // namespace:bucket.scope (produces a long path)
+// :bucket (produces a long path with the scope set to _default)
+// namespace:bucket (as above)
 func NewPathWithContext(keyspace, namespace, queryContext string) *Path {
 	if queryContext == "" {
 		return &Path{elements: []string{namespace, keyspace}}
@@ -98,6 +115,11 @@ func NewPathWithContext(keyspace, namespace, queryContext string) *Path {
 
 	if elems[0] == "" {
 		elems[0] = namespace
+	}
+
+	// if the query context scope isn't specified, use the default scope
+	if len(elems) == 2 {
+		elems = append(elems, "_default")
 	}
 	return &Path{
 		elements: append(elems, keyspace),
@@ -114,7 +136,13 @@ func NewVariablePathWithContext(keyspace, namespace, queryContext string) (*Path
 	case 1:
 		return NewPathWithContext(keyspace, namespace, queryContext), nil
 	case 3:
-		return nil, errors.NewDatastoreInvalidPathError(keyspace)
+		// 3 means either [namespace]:bucket.scope or ident.ident
+		// if no : then try to see if it's a valid scope + keyspace
+		if strings.IndexByte(keyspace, ':') >= 0 {
+			return nil, errors.NewDatastoreInvalidPathError(keyspace)
+		}
+		elems := parsePathOrContext(keyspace)
+		return NewPathFromElementsWithContext(elems[1:2], namespace, queryContext)
 	default:
 		elems := parsePathOrContext(keyspace)
 		if elems[0] == "" {
@@ -126,6 +154,30 @@ func NewVariablePathWithContext(keyspace, namespace, queryContext string) (*Path
 
 func NewPathFromElements(elems []string) *Path {
 	return &Path{elements: elems}
+}
+
+// Creates a full path from a slice of identifiers and a query context
+// if the slice contains a single keyspace, it behaves like NewPathWithContext()
+// two elements are taken to mean scope.collection, and work with a queryContext
+// of the form
+// :bucket (namespace is either specified by the namespace parameter or set later)
+// namespace:bucket (produces a long path)
+// any other path length or query context yields an error
+func NewPathFromElementsWithContext(parts []string, namespace, queryContext string) (*Path, errors.Error) {
+	if len(parts) == 1 {
+		return NewPathWithContext(parts[0], namespace, queryContext), nil
+	}
+	elems := ParseQueryContext(queryContext)
+
+	if elems[0] == "" {
+		elems[0] = namespace
+	}
+
+	elems = append(elems, parts...)
+	if len(elems) != 4 {
+		return nil, errors.NewDatastoreInvalidKeyspacePartsError(elems...)
+	}
+	return &Path{elements: elems}, nil
 }
 
 // These two are used to generate partial paths for RBAC roles
@@ -321,15 +373,14 @@ func parsePathOrContext(queryContext string) []string {
 // for now the only formats we support are
 // blank
 // namespace:
+// namespace:bucket
 // namespace:bucket.scope
+// [:]bucket
 // [:]bucket.scope
 func ValidateQueryContext(queryContext string) errors.Error {
 	res, parts := validatePathOrContext(queryContext)
 	if res != "" {
 		return errors.NewQueryContextError(res)
-	}
-	if parts == 2 {
-		return errors.NewQueryContextError("missing scope")
 	}
 	if parts > 3 {
 		return errors.NewQueryContextError("too many context elements")
@@ -382,6 +433,7 @@ func validatePathOrContext(queryContext string) (string, int) {
 				return "invalid use of back ticks", 0
 			}
 			if !hasNamespace {
+
 				parts++ // namespace is implied
 				hasNamespace = true
 			}

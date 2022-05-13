@@ -307,6 +307,12 @@ outer:
 		case *FieldName:
 			out = append(out, three.name)
 		}
+	case *Identifier:
+		out = append(out, first.Alias())
+		switch two := this.Second().(type) {
+		case *FieldName:
+			out = append(out, two.name)
+		}
 	}
 	return out
 }
