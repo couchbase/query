@@ -101,6 +101,12 @@ func mapErrorToHttpResponse(err errors.Error, def int) int {
 		return http.StatusNotFound
 	case errors.E_ADMIN_CREDS:
 		return http.StatusBadRequest
+	case errors.E_CB_KEYSPACE_NOT_FOUND:
+		return http.StatusFailedDependency
+	case errors.E_CB_BUCKET_NOT_FOUND:
+		return http.StatusFailedDependency
+	case errors.E_CB_NAMESPACE_NOT_FOUND:
+		return http.StatusFailedDependency
 	default:
 		return def
 	}
