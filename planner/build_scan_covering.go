@@ -461,8 +461,13 @@ func mapFilterCovers(fc map[expression.Expression]value.Value, fullCover bool) m
 		return nil
 	}
 
+	fsc := make(map[string]bool, len(fc))
 	rv := make(map[*expression.Cover]value.Value, len(fc))
 	for e, v := range fc {
+		str := e.String()
+		if _, ok := fsc[str]; ok {
+			continue
+		}
 		var c *expression.Cover
 		if fullCover {
 			c = expression.NewCover(e)
@@ -470,6 +475,7 @@ func mapFilterCovers(fc map[expression.Expression]value.Value, fullCover bool) m
 			c = expression.NewIndexCondition(e)
 		}
 		rv[c] = v
+		fsc[str] = true
 	}
 
 	return rv
