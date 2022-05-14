@@ -161,6 +161,10 @@ func TestIndexScan(t *testing.T) {
 	runStmt(qc, "DROP INDEX orders.ifloix1")
 	runStmt(qc, "DROP INDEX orders.ifloix2")
 
+	runStmt(qc, "CREATE INDEX ieopix1 ON purchase (customerId, purchaseId, purchasedAt) WHERE test_id = \"arrayIndex\"")
+	runMatch("case_early_order.json", false, true, qc, t)
+	runStmt(qc, "DROP INDEX purchase.ieopix1")
+
 	runStmt(qc, "create primary index on product ")
 	runStmt(qc, "create primary index on purchase")
 	runStmt(qc, "create primary index on orders")

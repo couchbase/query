@@ -37,6 +37,7 @@ const (
 	IE_ARRAYINDEXKEY_SARGABLE
 	IE_HAS_FILTER
 	IE_HAS_JOIN_FILTER
+	IE_HAS_EARLY_ORDER
 )
 
 type indexEntry struct {
@@ -70,6 +71,7 @@ type indexEntry struct {
 	unnestAliases        []string
 	exactFilters         map[*base.Filter]bool
 	indexFilters         expression.Expressions
+	orderExprs           expression.Expressions
 	partialSortTermCount int
 }
 
@@ -181,9 +183,9 @@ func (this *indexEntry) HasFlag(flag uint32) bool {
 	return (this.flags & flag) != 0
 }
 
-// return flags relevant for index key values (index filter, join filter)
+// return flags relevant for index key values (index filter, join filter, early order)
 func (this *indexEntry) IndexKeyFlags() uint32 {
-	return (this.flags & (IE_HAS_FILTER | IE_HAS_JOIN_FILTER))
+	return (this.flags & (IE_HAS_FILTER | IE_HAS_JOIN_FILTER | IE_HAS_EARLY_ORDER))
 }
 
 func (this *indexEntry) PushDownProperty() PushDownProperties {

@@ -12,10 +12,11 @@ import (
 	"github.com/couchbase/query/datastore"
 )
 
-type IdxPushDown uint32
+type IdxProperty uint32
 
 const (
-	IDX_PD_ORDER IdxPushDown = 1 << iota
+	IDX_PD_ORDER IdxProperty = 1 << iota
+	IDX_EARLY_ORDER
 )
 
 type IndexCost struct {
@@ -25,7 +26,7 @@ type IndexCost struct {
 	selectivity float64
 	size        int64
 	frCost      float64
-	idxPushDown IdxPushDown
+	idxProperty IdxProperty
 	skipKeys    []bool
 }
 
@@ -51,7 +52,7 @@ func (this *IndexCost) Copy() *IndexCost {
 		selectivity: this.selectivity,
 		size:        this.size,
 		frCost:      this.frCost,
-		idxPushDown: this.idxPushDown,
+		idxProperty: this.idxProperty,
 	}
 	rv.skipKeys = make([]bool, len(this.skipKeys))
 	copy(rv.skipKeys, this.skipKeys)
@@ -94,12 +95,20 @@ func (this *IndexCost) SetSelectivity(selectivity float64) {
 	this.selectivity = selectivity
 }
 
-func (this *IndexCost) HasOrder() bool {
-	return (this.idxPushDown & IDX_PD_ORDER) != 0
+func (this *IndexCost) HasPdOrder() bool {
+	return (this.idxProperty & IDX_PD_ORDER) != 0
 }
 
-func (this *IndexCost) SetOrder() {
-	this.idxPushDown |= IDX_PD_ORDER
+func (this *IndexCost) SetPdOrder() {
+	this.idxProperty |= IDX_PD_ORDER
+}
+
+func (this *IndexCost) HasEarlyOrder() bool {
+	return (this.idxProperty & IDX_EARLY_ORDER) != 0
+}
+
+func (this *IndexCost) SetEarlyOrder() {
+	this.idxProperty |= IDX_EARLY_ORDER
 }
 
 func (this *IndexCost) SkipKeys() []bool {

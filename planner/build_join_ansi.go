@@ -2056,7 +2056,7 @@ func checkJoinFilterHint(baseKeyspaces map[string]*base.BaseKeyspace, ops ...pla
 				if baseKeyspace.HasJoinFilterHint() {
 					baseKeyspace.SetJoinFltrHintError()
 				}
-				if len(op.IndexKeys()) > 0 && op.Filter() == nil {
+				if len(op.IndexKeys()) > 0 && op.Filter() == nil && !op.HasEarlyOrder() {
 					op.ResetIndexKeys()
 				}
 			}

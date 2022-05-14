@@ -347,7 +347,27 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 		cardinality := scan.Cardinality()
 		size := scan.Size()
 		frCost := scan.FrCost()
-		if useCBO && (cost > 0.0) && (cardinality > 0.0) && (size > 0) && (frCost > 0.0) {
+		if useCBO && (cost <= 0.0 || cardinality <= 0.0 || size <= 0 || frCost <= 0.0) {
+			useCBO = false
+		}
+
+		if iscan3, ok := scan.(*plan.IndexScan3); ok && iscan3.HasEarlyOrder() {
+			order, err := this.buildEarlyOrder(iscan3, useCBO)
+			if err != nil {
+				return nil, err
+			}
+			if useCBO {
+				cost = order.Cost()
+				cardinality = order.Cardinality()
+				size = order.Size()
+				frCost = order.FrCost()
+				if cost <= 0.0 || cardinality <= 0.0 || size <= 0 || frCost <= 0.0 {
+					useCBO = false
+				}
+			}
+		}
+
+		if useCBO {
 			fetchCost, fsize, ffrCost := OPT_COST_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL
 			if keyspace != nil {
 				fetchCost, fsize, ffrCost = getFetchCost(keyspace.QualifiedName(), cardinality)
@@ -1178,4 +1198,67 @@ func (this *builder) adjustForIndexFilters(alias string, onclause expression.Exp
 	}
 
 	return selec
+}
+
+func (this *builder) buildEarlyOrder(iscan3 *plan.IndexScan3, useCBO bool) (plan.Operator, error) {
+	if this.order == nil || this.limit == nil {
+		return nil, errors.NewPlanInternalError("VisitKeyspaceTerm: early order without expected order and/or limit information")
+	}
+	earlyOrderExprs := iscan3.EarlyOrderExprs()
+	if len(this.order.Terms()) != len(earlyOrderExprs) {
+		return nil, errors.NewPlanInternalError("VisitKeyspaceTerm: early order expressions mismatch")
+	}
+
+	cost := iscan3.Cost()
+	cardinality := iscan3.Cardinality()
+	size := iscan3.Size()
+	frCost := iscan3.FrCost()
+	if useCBO && (cost <= 0.0 || cardinality <= 0.0 || size <= 0 || frCost <= 0.0) {
+		useCBO = false
+	}
+
+	// make a copy of this.order and change expressions to _index_key exprs
+	coverer := expression.NewCoverer(iscan3.IndexKeys(), iscan3.IndexConditions())
+	newTerms := make(algebra.SortTerms, len(this.order.Terms()))
+	for i, term := range this.order.Terms() {
+		newExpr, err := coverer.Map(earlyOrderExprs[i].Copy())
+		if err != nil {
+			return nil, err
+		}
+		newTerm := algebra.NewSortTerm(newExpr, term.DescendingExpr(), term.NullsPosExpr())
+		newTerms[i] = newTerm
+	}
+	order := algebra.NewOrder(newTerms)
+	// no need for any cost information for Limit/Offset inside Order
+	limit := plan.NewLimit(this.limit, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL)
+	var offset *plan.Offset
+	if this.offset != nil {
+		offset = plan.NewOffset(this.offset, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL)
+	}
+	if useCBO {
+		var nlimit, noffset int64
+		if this.limit != nil {
+			nlimit, _ = base.GetStaticInt(this.limit)
+		}
+		if this.offset != nil {
+			noffset, _ = base.GetStaticInt(this.offset)
+		}
+		scost, scard, ssize, sfrCost := getSortCost(size, len(this.order.Terms()), cardinality, nlimit, noffset)
+		if scost > 0.0 && scard > 0.0 && ssize > 0.0 && sfrCost > 0.0 {
+			cost += scost
+			cardinality = scard
+			size = ssize
+			frCost += sfrCost
+		} else {
+			cost, cardinality, size, frCost = OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL
+		}
+	}
+
+	orderOp := plan.NewOrder(order, this.partialSortTermCount, offset, limit, cost, cardinality, size, frCost)
+	this.addChildren(orderOp)
+	this.setBuilderFlag(BUILDER_HAS_EARLY_ORDER)
+
+	this.maxParallelism = 1
+
+	return orderOp, nil
 }
