@@ -259,26 +259,26 @@ func (this *PartSortOrder) reopen(context *Context) bool {
 }
 
 func (this *PartSortOrder) SendAction(action opAction) {
-	this.baseSendAction(action)
 	this.Order.SendAction(action)
-	if this.limit != nil {
-		this.limit.SendAction(action)
+	limit := this.limit
+	if limit != nil {
+		limit.SendAction(action)
 	}
-	if this.offset != nil {
-		this.offset.SendAction(action)
+	offset := this.offset
+	if offset != nil {
+		offset.SendAction(action)
 	}
 }
 
 func (this *PartSortOrder) Done() {
 	this.Order.Done()
-	this.Order = nil
-	if this.limit != nil {
-		limit := this.limit
+	limit := this.limit
+	if limit != nil {
 		this.limit = nil
 		limit.Done()
 	}
-	if this.offset != nil {
-		offset := this.offset
+	offset := this.offset
+	if offset != nil {
 		this.offset = nil
 		offset.Done()
 	}

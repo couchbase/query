@@ -217,11 +217,14 @@ func (this *OrderLimit) MarshalJSON() ([]byte, error) {
 }
 
 func (this *OrderLimit) SendAction(action opAction) {
-	this.baseSendAction(action)
 	this.Order.SendAction(action)
-	this.limit.SendAction(action)
-	if this.offset != nil {
-		this.offset.SendAction(action)
+	limit := this.limit
+	if limit != nil {
+		limit.SendAction(action)
+	}
+	offset := this.offset
+	if offset != nil {
+		offset.SendAction(action)
 	}
 }
 
@@ -236,14 +239,13 @@ func (this *OrderLimit) reopen(context *Context) bool {
 
 func (this *OrderLimit) Done() {
 	this.Order.Done()
-	this.Order = nil
-	if this.limit != nil {
-		limit := this.limit
+	limit := this.limit
+	if limit != nil {
 		this.limit = nil
 		limit.Done()
 	}
-	if this.offset != nil {
-		offset := this.offset
+	offset := this.offset
+	if offset != nil {
 		this.offset = nil
 		offset.Done()
 	}
