@@ -77,8 +77,10 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 	targetKeyspace.SetNode(right)
 
 	stmt.SetOptimHints(deriveOptimHints(this.baseKeyspaces, stmt.OptimHints()))
-	if stmt.OptimHints() != nil {
-		processOptimHints(this.baseKeyspaces, stmt.OptimHints())
+	optimHints := stmt.OptimHints()
+	if optimHints != nil {
+		processOptimHints(this.baseKeyspaces, optimHints)
+		markDMLOrderedHintError(optimHints)
 	}
 
 	if stmt.IsOnKey() {

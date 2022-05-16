@@ -82,6 +82,7 @@ const (
 	MERGE_ONKEY_JOIN_HINT_ERR      = "Join hint not supported in a MERGE statement with ON KEY clause"
 	MERGE_ONKEY_INDEX_HINT_ERR     = "Index hint not supported for target keyspace in a MERGE statement with ON KEY clause"
 	UPD_DEL_JOIN_HINT_ERR          = "Join hint not supported in an UPDATE or DELETE statement"
+	DML_ORDERED_HINT_ERR           = "Ordered hint not supported in DML statements"
 )
 
 type OptimHint interface {

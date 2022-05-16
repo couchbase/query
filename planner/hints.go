@@ -349,6 +349,16 @@ func hasOrderedHint(optHints *algebra.OptimHints) bool {
 	return false
 }
 
+func markDMLOrderedHintError(optHints *algebra.OptimHints) {
+	if optHints != nil {
+		for _, hint := range optHints.Hints() {
+			if hint.Type() == algebra.HINT_ORDERED {
+				hint.SetError(algebra.DML_ORDERED_HINT_ERR)
+			}
+		}
+	}
+}
+
 func setDuplicateIndexHintError(hint algebra.OptimHint, keyspace string) {
 	switch hint := hint.(type) {
 	case *algebra.HintIndex, *algebra.HintNoIndex:
