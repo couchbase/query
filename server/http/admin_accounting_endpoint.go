@@ -849,7 +849,7 @@ func doFunctionsGlobalBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req 
 
 		numFunctions, err1 := functionsMeta.Count()
 		if err1 != nil {
-			return nil, err1
+			return nil, errors.NewMetaKVIndexError(err1)
 		}
 		data := make([]interface{}, 0, numFunctions)
 
