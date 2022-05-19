@@ -1,0 +1,46 @@
+[
+    {
+	"testcase": "MB-51753",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.`plan`.`~children` SATISFIES v.`#operator` = \"InitialProject\" AND CONTAINS(v.`result_terms`[0].`expr`, \"correlated \") END"
+        },
+        "statements":"SELECT (WITH a AS (s.a11) SELECT RAW c1 FROM a AS c1) AS arr, s.test_id FROM shellTest s WHERE s.c11 IN [1, 2] AND type = \"left\"",
+        "results": [
+            {
+                "arr": [
+                    1,
+                    2,
+                    3,
+                    4
+                ],
+                "test_id": "withs"
+            },
+            {
+                "arr": [
+                    3,
+                    3,
+                    5,
+                    10
+                ],
+                "test_id": "withs"
+            }
+        ]
+    },
+    {
+	"testcase": "MB-52200",
+        "statements":"WITH arrs AS ([1,2,3,4]) SELECT meta().id, FIRST v FOR v IN arrs END AS elem FROM shellTest s WHERE s.c11 = 1 AND type = \"left\"",
+        "results": [
+            {
+                "elem": 1,
+                "id": "test11_withs"
+            }
+        ]
+    }
+]
+

@@ -458,9 +458,9 @@ func (this *Formalizer) PopBindings() {
 	this.aliases = this.aliases.Parent().(*value.ScopeValue)
 
 	// Identifiers that are used in current level but not defined in the current level scope move to parent
-	for ident, _ := range currLevelIndentfiers {
+	for ident, ident_val := range currLevelIndentfiers {
 		if currLevelAllowed != nil {
-			if ident_val, ok := currLevelAllowed[ident]; !ok {
+			if _, ok := currLevelAllowed[ident]; !ok {
 				this.identifiers.SetField(ident, ident_val)
 			}
 		}
