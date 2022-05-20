@@ -566,15 +566,6 @@ func (this *Formalizer) SetWiths(withs Bindings) {
 	}
 }
 
-func (this *Formalizer) SetPermanentWiths(withs Bindings) {
-	if this.withs == nil {
-		this.withs = make(map[string]bool, len(withs))
-	}
-	for _, b := range withs {
-		this.withs[b.Variable()] = true
-	}
-}
-
 func (this *Formalizer) SaveWiths() map[string]bool {
 	withs := this.withs
 	this.withs = make(map[string]bool, len(withs))

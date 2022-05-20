@@ -23,7 +23,6 @@ group and projection, map to the FromTerm, let clause, group by
 and select clause respectively.
 */
 type Subselect struct {
-	with       expression.Bindings   `json:"with"`
 	from       FromTerm              `json:"from"`
 	let        expression.Bindings   `json:"let"`
 	where      expression.Expression `json:"where"`
@@ -37,12 +36,11 @@ type Subselect struct {
 /*
 Constructor.
 */
-func NewSubselect(with expression.Bindings, from FromTerm, let expression.Bindings,
+func NewSubselect(from FromTerm, let expression.Bindings,
 	where expression.Expression, group *Group, window WindowTerms,
 	projection *Projection, optimHints *OptimHints) *Subselect {
 
 	return &Subselect{
-		with:       with,
 		from:       from,
 		let:        let,
 		where:      where,
@@ -76,24 +74,12 @@ group and projections, calls Map to map the where
 expressions and calls PushBindings for the let clause.
 */
 func (this *Subselect) Formalize(parent *expression.Formalizer) (f *expression.Formalizer, err error) {
-	if this.with != nil {
-		f = expression.NewFormalizer("", parent)
-		err = f.PushBindings(this.with, false)
-		if err != nil {
-			return nil, err
-		}
-		f.SetWiths(this.with)
-	}
-
 	if this.from != nil {
-		if f == nil {
-			f = parent
-		}
-		f, err = this.from.Formalize(f)
+		f, err = this.from.Formalize(parent)
 		if err != nil {
 			return nil, err
 		}
-	} else if f == nil {
+	} else {
 		f = expression.NewFormalizer("", parent)
 	}
 
@@ -247,10 +233,6 @@ func (this *Subselect) Privileges() (*auth.Privileges, errors.Error) {
 		exprs = append(exprs, this.let.Expressions()...)
 	}
 
-	if this.with != nil {
-		exprs = append(exprs, this.with.Expressions()...)
-	}
-
 	if this.where != nil {
 		exprs = append(exprs, this.where)
 	}
@@ -282,13 +264,7 @@ func (this *Subselect) Privileges() (*auth.Privileges, errors.Error) {
    Representation as a N1QL string.
 */
 func (this *Subselect) String() string {
-	var s string
-
-	if len(this.with) > 0 {
-		s += withBindings(this.with)
-	}
-
-	s += "select " + this.projection.String()
+	s := "select " + this.projection.String()
 
 	if this.from != nil {
 		s += " from " + this.from.String()
@@ -318,14 +294,6 @@ func (this *Subselect) IsCorrelated() bool {
 
 func (this *Subselect) SetCorrelated() {
 	this.correlated = true
-}
-
-/*
-Returns the let field that represents the With
-clause in the subselect statement.
-*/
-func (this *Subselect) With() expression.Bindings {
-	return this.with
 }
 
 /*

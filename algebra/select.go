@@ -29,19 +29,22 @@ type Select struct {
 	statementBase
 
 	subresult  Subresult             `json:"subresult"`
+	with       expression.Bindings   `json:"with"`
 	order      *Order                `json:"order"`
 	offset     expression.Expression `json:"offset"`
 	limit      expression.Expression `json:"limit"`
 	correlated bool                  `json:"correlated"`
+	setop      bool                  `json:"setop"`
 }
 
 /*
 The function NewSelect returns a pointer to the Select struct
 by assigning the input attributes to the fields of the struct.
 */
-func NewSelect(subresult Subresult, order *Order, offset, limit expression.Expression) *Select {
+func NewSelect(subresult Subresult, with expression.Bindings, order *Order, offset, limit expression.Expression) *Select {
 	rv := &Select{
 		subresult: subresult,
+		with:      with,
 		order:     order,
 		offset:    offset,
 		limit:     limit,
@@ -90,6 +93,10 @@ func (this *Select) MapExpressions(mapper expression.Mapper) (err error) {
 		return
 	}
 
+	if this.with != nil {
+		err = this.with.MapExpressions(mapper)
+	}
+
 	if this.order != nil {
 		err = this.order.MapExpressions(mapper)
 	}
@@ -113,6 +120,10 @@ func (this *Select) MapExpressions(mapper expression.Mapper) (err error) {
 */
 func (this *Select) Expressions() expression.Expressions {
 	exprs := this.subresult.Expressions()
+
+	if this.with != nil {
+		exprs = append(exprs, this.with.Expressions()...)
+	}
 
 	if this.order != nil {
 		exprs = append(exprs, this.order.Expressions()...)
@@ -139,6 +150,10 @@ func (this *Select) Privileges() (*auth.Privileges, errors.Error) {
 	}
 
 	exprs := make(expression.Expressions, 0, 16)
+
+	if this.with != nil {
+		exprs = append(exprs, this.with.Expressions()...)
+	}
 
 	if this.order != nil {
 		exprs = append(exprs, this.order.Expressions()...)
@@ -169,7 +184,13 @@ func (this *Select) Privileges() (*auth.Privileges, errors.Error) {
    Representation as a N1QL string.
 */
 func (this *Select) String() string {
-	s := this.subresult.String()
+	var s string
+
+	if len(this.with) > 0 {
+		s += withBindings(this.with)
+	}
+
+	s += this.subresult.String()
 
 	if this.order != nil {
 		s += " " + this.order.String()
@@ -192,13 +213,25 @@ namely the subresult, order, limit and offset within a subquery.
 For the subresult of the subquery, call Formalize, for the order
 by clause call MapExpressions, for limit and offset call Accept.
 */
-func (this *Select) FormalizeSubquery(parent *expression.Formalizer) error {
-	if parent != nil {
+func (this *Select) FormalizeSubquery(parent *expression.Formalizer) (err error) {
+	if parent != nil && !this.setop {
 		withs := parent.SaveWiths()
 		defer parent.RestoreWiths(withs)
 	}
 
-	f, err := this.subresult.Formalize(parent)
+	var f *expression.Formalizer
+	if this.with != nil {
+		f = expression.NewFormalizer("", parent)
+		err = f.PushBindings(this.with, false)
+		if err != nil {
+			return err
+		}
+		f.SetWiths(this.with)
+	} else {
+		f = parent
+	}
+
+	f, err = this.subresult.Formalize(f)
 	if err != nil {
 		return err
 	}
@@ -303,6 +336,24 @@ func (this *Select) IsCorrelated() bool {
 
 func (this *Select) SetCorrelated() {
 	this.correlated = true
+}
+
+/*
+this.setop indicates whether the Select is under a set operation (UNION/INTERSECT/EXCEPT)
+*/
+func (this *Select) IsUnderSetOp() bool {
+	return this.setop
+}
+
+func (this *Select) SetUnderSetOp() {
+	this.setop = true
+}
+
+/*
+Returns the With clause in the select statement.
+*/
+func (this *Select) With() expression.Bindings {
+	return this.with
 }
 
 func (this *Select) OptimHints() *OptimHints {

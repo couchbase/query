@@ -243,9 +243,6 @@ func (this *builder) collectAliases(node *algebra.Subselect) {
 	for a, _ := range this.baseKeyspaces {
 		this.aliases[a] = true
 	}
-	for _, b := range node.With() {
-		this.aliases[b.Variable()] = true
-	}
 	for _, b := range node.Let() {
 		this.aliases[b.Variable()] = true
 	}

@@ -28,9 +28,13 @@ func TestWiths(t *testing.T) {
 
 	fmt.Println("Creating indexes")
 	runStmt(qc, "CREATE INDEX st_idx1 on shellTest(c11, c12) WHERE type = \"left\"")
-	runStmt(qc, "CREATE INDEX st_idx2 on shellTest(c11, c12) WHERE type = \"left\"")
+	runStmt(qc, "CREATE INDEX st_idx2 on shellTest(c21, c22) WHERE type = \"right\"")
 
 	fmt.Println("Running Withs test cases")
+
+	runMatch("case_withs_simple.json", false, true, qc, t)
+
+	runMatch("case_withs_setop.json", false, true, qc, t)
 
 	runMatch("case_withs_bugs.json", false, true, qc, t)
 

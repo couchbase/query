@@ -1,0 +1,145 @@
+[
+    {
+	"testcase": "Simple CTE in UNION ALL",
+        "statements":"WITH cte AS (SELECT 1 as a) SELECT cte.a from cte UNION ALL SELECT cte.a from cte",
+        "results": [
+            {
+                "a": 1
+            },
+            {
+                "a": 1
+            }
+        ]
+    },
+    {
+	"testcase": "Simple CTE in UNION ALL with subquery expression on both sides",
+        "statements":"WITH cte AS (SELECT 1 as a) (SELECT cte.a from cte) UNION ALL (SELECT cte.a from cte)",
+        "results": [
+            {
+                "a": 1
+            },
+            {
+                "a": 1
+            }
+        ]
+    },
+    {
+	"testcase": "Nested CTE in UNION ALL, not in SQL standard but supported in Postgres",
+        "statements":"WITH cte AS (SELECT 1 as a) (WITH cte2 as (SELECT 2 as b) SELECT cte2.b from cte2) UNION ALL (SELECT cte.a from cte)",
+        "results": [
+            {
+                "a": 1
+            },
+            {
+                "b": 2
+            }
+        ]
+    },
+    {
+	"testcase": "Nested CTE in UNION ALL (second arm), not in SQL standard but supported in Postgres",
+        "statements":"WITH cte AS (SELECT 1 as a) SELECT cte.a from cte UNION ALL (WITH cte2 as (SELECT 2 as b) SELECT cte2.b from cte2)",
+        "results": [
+            {
+                "a": 1
+            },
+            {
+                "b": 2
+            }
+        ]
+    },
+    {
+	"testcase": "CTE only under UNION ALL, not in SQL standard but supported in Postgres",
+        "statements":"(WITH cte AS (SELECT 1 as a) SELECT cte.a FROM cte) UNION ALL (WITH cte as (SELECT 1 as a) SELECT cte.a from cte)",
+        "results": [
+            {
+                "a": 1
+            },
+            {
+                "a": 1
+            }
+        ]
+    },
+    {
+	"testcase": "Nested CTE, with UNION arm referencing both outer CTE and CTE under UNION",
+        "statements":"WITH cte1 AS (SELECT 1 as a) SELECT cte1.a from cte1 UNION ALL (WITH cte2 as (SELECT a FROM [1,2] a) SELECT cte2.a from cte1, cte2 WHERE cte1.a = cte2.a)",
+        "results": [
+            {
+                "a": 1
+            },
+            {
+                "a": 1
+            }
+        ]
+    },
+    {
+	"testcase": "Simple CTE in INTERSECT",
+        "statements":"WITH cte AS (SELECT 1 as a) SELECT cte.a from cte INTERSECT SELECT cte.a from cte",
+        "results": [
+            {
+                "a": 1
+            }
+        ]
+    },
+    {
+	"testcase": "CTE only under INTERSECT ALL, not in SQL standard but supported in Postgres",
+        "statements":"(WITH cte AS (SELECT 1 as a) SELECT cte.a FROM cte) INTERSECT ALL (WITH cte as (SELECT 1 as a) SELECT cte.a from cte)",
+        "results": [
+            {
+                "a": 1
+            }
+        ]
+    },
+    {
+	"testcase": "Nested CTE in INTERSECT ALL (second arm), not in SQL standard but supported in Postgres",
+        "statements":"WITH cte1 AS (SELECT a FROM [1,2,3] as a) SELECT cte1.a from cte1 INTERSECT ALL (WITH cte2 as (SELECT a FROM [3,4,5] as a) SELECT cte2.a from cte2)",
+        "results": [
+            {
+                "a": 3
+            }
+        ]
+    },
+    {
+	"testcase": "Simple CTE in EXCEPT",
+        "statements":"WITH cte AS (SELECT a FROM [1,2,3] as a) SELECT cte.a from cte EXCEPT SELECT cte.a from cte WHERE cte.a > 1",
+        "results": [
+            {
+                "a": 1
+            }
+        ]
+    },
+    {
+	"testcase": "CTE only under EXCEPT ALL, not in SQL standard but supported in Postgres",
+        "statements":"(WITH cte AS (SELECT a FROM [1,2,3] as a) SELECT cte.a FROM cte) EXCEPT ALL (WITH cte as (SELECT a FROM [3,4,5] as a) SELECT cte.a from cte)",
+        "results": [
+            {
+                "a": 1
+            },
+            {
+                "a": 2
+            }
+        ]
+    },
+    {
+	"testcase": "Nested CTE in EXCEPT ALL (second arm), not in SQL standard but supported in Postgres",
+        "statements":"WITH cte1 AS (SELECT a FROM [1,2,3] as a) SELECT cte1.a from cte1 EXCEPT ALL (WITH cte2 as (SELECT a FROM [3,4,5] as a) SELECT cte2.a from cte2)",
+        "results": [
+            {
+                "a": 1
+            },
+            {
+                "a": 2
+            }
+        ]
+    },
+    {
+	"testcase": "Same CTE alias in top query and nested query, error",
+        "statements":"WITH cte1 AS (SELECT a FROM [1,2,3] as a) SELECT cte1.a from cte1 UNION ALL (WITH cte1 as (SELECT a FROM [3,4,5] as a) SELECT cte1.a from cte1)",
+        "error": "Duplicate variable cte1 (near line 1, column 117) already in scope."
+    },
+    {
+	"testcase": "Nested CTE not in parentheses, error",
+        "statements":"WITH cte1 AS (SELECT a FROM [1,2,3] as a) SELECT cte1.a from cte1 UNION ALL WITH cte1 as (SELECT a FROM [3,4,5] as a) SELECT cte1.a from cte1",
+        "error": "syntax error - line 1, column 77, near ' from cte1 UNION ALL', at: WITH (reserved word)"
+    }
+]
+

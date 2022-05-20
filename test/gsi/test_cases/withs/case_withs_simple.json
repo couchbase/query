@@ -1,0 +1,51 @@
+[
+    {
+	"testcase": "Simple expression as CTE",
+        "statements":"WITH a AS ([1,2,3]) SELECT c1 FROM a AS c1",
+        "results": [
+            {
+                "c1": 1
+            },
+            {
+                "c1": 2
+            },
+            {
+                "c1": 3
+            }
+        ]
+    },
+    {
+	"testcase": "Simple expression as CTE",
+        "statements":"WITH a AS ([1,2,3]) SELECT c1, st.c12 FROM a AS c1 JOIN shellTest st ON c1 = st.c11 WHERE st.type = \"left\"",
+        "results": [
+            {
+                "c1": 1,
+                "c12": 10
+            },
+            {
+                "c1": 2,
+                "c12": 20
+            },
+            {
+                "c1": 3,
+                "c12": 30
+            }
+        ]
+    },
+    {
+	"testcase": "Simple query as CTE",
+        "statements":"WITH arrs AS (SELECT RAW a1 FROM shellTest s UNNEST s.a11 AS a1 WHERE s.c11 = 3 AND s.type = \"left\") SELECT st.c22 FROM shellTest st JOIN arrs a ON st.c21 = a WHERE st.type = \"right\"",
+        "results": [
+            {
+                "c22": 30
+            },
+            {
+                "c22": 31
+            },
+            {
+                "c22": 32
+            }
+        ]
+    }
+]
+

@@ -24,6 +24,12 @@ func (this *SemChecker) VisitSelect(stmt *algebra.Select) (r interface{}, err er
 		return r, err
 	}
 
+	if stmt.With() != nil {
+		if err = stmt.With().MapExpressions(this); err != nil {
+			return nil, err
+		}
+	}
+
 	if stmt.Order() != nil {
 		if err = stmt.Order().MapExpressions(this); err != nil {
 			return nil, err
