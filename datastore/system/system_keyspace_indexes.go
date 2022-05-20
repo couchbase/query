@@ -262,6 +262,10 @@ func (b *indexKeyspace) fetchOne(key string, keysMap map[string]value.AnnotatedV
 			doc.SetField("is_primary", true)
 		}
 
+		if ixm, ok := index.(interface{ IndexMetadata() map[string]interface{} }); ok {
+			doc.SetField("metadata", datastoreObjectToJSONSafe(ixm.IndexMetadata()))
+		}
+
 		keysMap[key] = doc
 	}
 
