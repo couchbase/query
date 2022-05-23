@@ -54,6 +54,12 @@ func newKeyspaceCounter(baseKeyspaces map[string]string) *keyspaceCounter {
 
 func (this *keyspaceCounter) VisitField(expr *Field) (interface{}, error) {
 	err := this.Traverse(expr.First())
+	if err != nil {
+		return nil, err
+	}
+	if _, ok := expr.Second().(*FieldName); !ok {
+		err = this.Traverse(expr.Second())
+	}
 	return nil, err
 }
 
