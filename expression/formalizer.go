@@ -266,11 +266,7 @@ func (this *Formalizer) VisitIdentifier(expr *Identifier) (interface{}, error) {
 	}
 
 	if this.mapKeyspace() {
-		if identifier == this.keyspace {
-			return SELF, nil
-		} else {
-			return expr, nil
-		}
+		return expr, nil
 	} else {
 		keyspaceIdent := NewIdentifier(this.keyspace)
 		keyspaceIdent.SetKeyspaceAlias(true)
