@@ -10,7 +10,6 @@ package errors
 
 import (
 	"fmt"
-	"github.com/couchbase/query/value"
 	"time"
 )
 
@@ -62,7 +61,7 @@ func NewServiceErrorTypeMismatch(feature string, expected string) Error {
 
 func NewTimeoutError(timeout time.Duration) Error {
 	return &err{level: EXCEPTION, ICode: E_SERVICE_TIMEOUT, IKey: "timeout",
-		InternalMsg: fmt.Sprintf("Timeout %v exceeded", timeout), InternalCaller: CallerN(1), retry: value.TRUE}
+		InternalMsg: fmt.Sprintf("Timeout %v exceeded", timeout), InternalCaller: CallerN(1), retry: TRUE}
 }
 
 func NewServiceErrorInvalidJSON(e error) Error {

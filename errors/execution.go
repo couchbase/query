@@ -10,8 +10,6 @@ package errors
 
 import (
 	"fmt"
-
-	"github.com/couchbase/query/value"
 )
 
 // Execution errors - errors that are created in the execution package
@@ -75,45 +73,45 @@ func NewDuplicateFinalGroupError() Error {
 		InternalMsg: "Duplicate Final Group.", InternalCaller: CallerN(1)}
 }
 
-func NewInsertKeyError(v value.Value) Error {
+func NewInsertKeyError(v interface{}) Error {
 	return &err{level: EXCEPTION, ICode: E_INSERT_KEY, IKey: "execution.insert_key_error",
 		InternalMsg: fmt.Sprintf("No INSERT key for %v", v), InternalCaller: CallerN(1)}
 }
 
-func NewInsertValueError(v value.Value) Error {
+func NewInsertValueError(v interface{}) Error {
 	return &err{level: EXCEPTION, ICode: E_INSERT_VALUE, IKey: "execution.insert_value_error",
 		InternalMsg: fmt.Sprintf("No INSERT value for %v", v), InternalCaller: CallerN(1)}
 }
 
-func NewInsertKeyTypeError(v value.Value) Error {
+func NewInsertKeyTypeError(v interface{}) Error {
 	return &err{level: EXCEPTION, ICode: E_INSERT_KEY_TYPE, IKey: "execution.insert_key_type_error",
 		InternalMsg:    fmt.Sprintf("Cannot INSERT non-string key %v of type %T.", v, v),
 		InternalCaller: CallerN(1)}
 }
 
-func NewInsertOptionsTypeError(v value.Value) Error {
+func NewInsertOptionsTypeError(v interface{}) Error {
 	return &err{level: EXCEPTION, ICode: E_INSERT_OPTIONS_TYPE, IKey: "execution.insert_options_type_error",
 		InternalMsg:    fmt.Sprintf("Cannot INSERT non-OBJECT options %v of type %T.", v, v),
 		InternalCaller: CallerN(1)}
 }
 
-func NewUpsertKeyError(v value.Value) Error {
+func NewUpsertKeyError(v interface{}) Error {
 	return &err{level: EXCEPTION, ICode: E_UPSERT_KEY, IKey: "execution.upsert_key_error",
 		InternalMsg: fmt.Sprintf("No UPSERT key for %v", v), InternalCaller: CallerN(1)}
 }
 
-func NewUpsertValueError(v value.Value) Error {
+func NewUpsertValueError(v interface{}) Error {
 	return &err{level: EXCEPTION, ICode: E_UPSERT_VALUE, IKey: "execution.upsert_value_error",
 		InternalMsg: fmt.Sprintf("No UPSERT value for %v", v), InternalCaller: CallerN(1)}
 }
 
-func NewUpsertKeyTypeError(v value.Value) Error {
+func NewUpsertKeyTypeError(v interface{}) Error {
 	return &err{level: EXCEPTION, ICode: E_UPSERT_KEY_TYPE, IKey: "execution.upsert_key_type_error",
 		InternalMsg:    fmt.Sprintf("Cannot UPSERT non-string key %v of type %T.", v, v),
 		InternalCaller: CallerN(1)}
 }
 
-func NewUpsertOptionsTypeError(v value.Value) Error {
+func NewUpsertOptionsTypeError(v interface{}) Error {
 	return &err{level: EXCEPTION, ICode: E_UPSERT_OPTIONS_TYPE, IKey: "execution.upsert_options_type_error",
 		InternalMsg:    fmt.Sprintf("Cannot UPSERT non-OBJECT options %v of type %T.", v, v),
 		InternalCaller: CallerN(1)}

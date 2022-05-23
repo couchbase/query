@@ -1691,7 +1691,7 @@ func (b *keyspace) fetch(fullName, qualifiedName, scopeName, collectionName stri
 			if cb.IsReadTimeOutError(err) {
 				logging.Errorf(err.Error())
 			}
-			_, err = processIfMCError(value.FALSE, err, keys[0], qualifiedName)
+			_, err = processIfMCError(errors.FALSE, err, keys[0], qualifiedName)
 			return []errors.Error{errors.NewCbBulkGetError(err, "")}
 		}
 	}
@@ -1948,7 +1948,7 @@ func (b *keyspace) performOp(op MutateOp, qualifiedName, scopeName, collectionNa
 	}
 
 	mPairs = make(value.Pairs, 0, len(pairs))
-	retry := value.NONE
+	retry := errors.NONE
 	var failedDeletes []string
 	var err error
 
@@ -1983,7 +1983,7 @@ func (b *keyspace) performOp(op MutateOp, qualifiedName, scopeName, collectionNa
 					err = errors.NewInsertError(err, key)
 				} else {
 					err = errors.NewDuplicateKeyError(key, "", nil)
-					retry = value.FALSE
+					retry = errors.FALSE
 				}
 			} else { // if err != nil then added is false
 				// refresh local meta CAS value
@@ -2005,8 +2005,8 @@ func (b *keyspace) performOp(op MutateOp, qualifiedName, scopeName, collectionNa
 						" for Keyspace <ud>%s</ud>. Error %s",
 						MutateOpToName(op), key, qualifiedName, err)
 				})
-				if retry == value.NONE {
-					retry = value.TRUE
+				if retry == errors.NONE {
+					retry = errors.TRUE
 				}
 			} else if err = setPreserveExpiry(present, context, clientContext...); err != nil {
 				logging.Debuga(func() string {
@@ -2014,8 +2014,8 @@ func (b *keyspace) performOp(op MutateOp, qualifiedName, scopeName, collectionNa
 						" for Keyspace <ud>%s</ud>. Error %s",
 						MutateOpToName(op), key, qualifiedName, err)
 				})
-				if retry == value.NONE {
-					retry = value.TRUE
+				if retry == errors.NONE {
+					retry = errors.TRUE
 				}
 			} else {
 				logging.Debuga(func() string {
@@ -2043,8 +2043,8 @@ func (b *keyspace) performOp(op MutateOp, qualifiedName, scopeName, collectionNa
 						" for Keyspace <ud>%s</ud>. Error %s",
 						MutateOpToName(op), key, qualifiedName, err)
 				})
-				if retry == value.NONE {
-					retry = value.TRUE
+				if retry == errors.NONE {
+					retry = errors.TRUE
 				}
 			} else {
 				newCas, err = b.cbbucket.SetWithCAS(key, exptime, val, clientContext...)
@@ -2079,7 +2079,7 @@ func (b *keyspace) performOp(op MutateOp, qualifiedName, scopeName, collectionNa
 			} else if isEExistError(err) {
 				if op != MOP_INSERT {
 					casMismatch = true
-					retry = value.FALSE
+					retry = errors.FALSE
 				}
 				logging.Debuga(func() string {
 					if casMismatch {
@@ -2099,7 +2099,7 @@ func (b *keyspace) performOp(op MutateOp, qualifiedName, scopeName, collectionNa
 				errs = append(errs, errors.NewCbDMLError(err, msg, casMismatch, retry, key, qualifiedName))
 			} else if isNotFoundError(err) {
 				err = errors.NewKeyNotFoundError(key, "", nil)
-				retry = value.FALSE
+				retry = errors.FALSE
 				errs = append(errs, errors.NewCbDMLError(err, msg, casMismatch, retry, key, qualifiedName))
 			} else {
 				// err contains key, redact
@@ -2118,12 +2118,12 @@ func (b *keyspace) performOp(op MutateOp, qualifiedName, scopeName, collectionNa
 	return
 }
 
-func processIfMCError(retry value.Tristate, err error, key string, keyspace string) (value.Tristate, error) {
+func processIfMCError(retry errors.Tristate, err error, key string, keyspace string) (errors.Tristate, error) {
 	if mcr, ok := err.(*gomemcached.MCResponse); ok {
 		if gomemcached.IsFatal(mcr) {
-			retry = value.FALSE
-		} else if retry == value.NONE {
-			retry = value.TRUE
+			retry = errors.FALSE
+		} else if retry == errors.NONE {
+			retry = errors.TRUE
 		}
 		err = errors.NewCbDMLMCError(mcr.Status.String(), key, keyspace)
 	}

@@ -23,8 +23,6 @@ import (
 	"regexp"
 	"runtime"
 	"strings"
-
-	"github.com/couchbase/query/value"
 )
 
 const (
@@ -40,6 +38,18 @@ type ErrorCode int32
 
 type Errors []Error
 
+type Tristate int
+
+const (
+	NONE Tristate = iota
+	FALSE
+	TRUE
+)
+
+func ToBool(t Tristate) bool {
+	return t == TRUE
+}
+
 // Error will eventually include code, message key, and internal error
 // object (cause) and message
 type Error interface {
@@ -53,7 +63,7 @@ type Error interface {
 	IsWarning() bool
 	OnceOnly() bool
 	Object() map[string]interface{}
-	Retry() value.Tristate
+	Retry() Tristate
 	Cause() interface{}
 	SetCause(cause interface{})
 	ContainsText(text string) bool
@@ -157,7 +167,7 @@ type err struct {
 	InternalCaller string
 	level          int
 	onceOnly       bool
-	retry          value.Tristate // Retrying this query might be useful.
+	retry          Tristate // Retrying this query might be useful.
 	cause          interface{}
 }
 
@@ -187,8 +197,8 @@ func (e *err) Object() map[string]interface{} {
 	if e.ICause != nil {
 		m["icause"] = e.ICause.Error()
 	}
-	if e.retry != value.NONE {
-		m["retry"] = value.ToBool(e.retry)
+	if e.retry != NONE {
+		m["retry"] = ToBool(e.retry)
 	}
 	if e.cause != nil {
 		// ensure m["cause"] contains only basic types
@@ -247,13 +257,13 @@ func (e *err) MarshalJSON() ([]byte, error) {
 
 func (e *err) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		Caller  string         `json:"caller"`
-		Code    int32          `json:"code"`
-		ICause  string         `json:"icause"`
-		Key     string         `json:"key"`
-		Message string         `json:"message"`
-		Retry   value.Tristate `json:"retry"`
-		Cause   interface{}    `json:"cause"`
+		Caller  string      `json:"caller"`
+		Code    int32       `json:"code"`
+		ICause  string      `json:"icause"`
+		Key     string      `json:"key"`
+		Message string      `json:"message"`
+		Retry   Tristate    `json:"retry"`
+		Cause   interface{} `json:"cause"`
 	}
 
 	unmarshalErr := json.Unmarshal(body, &_unmarshalled)
@@ -305,7 +315,7 @@ func (e *err) OnceOnly() bool {
 	return e.onceOnly
 }
 
-func (e *err) Retry() value.Tristate {
+func (e *err) Retry() Tristate {
 	return e.retry
 }
 

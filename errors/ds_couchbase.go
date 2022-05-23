@@ -11,8 +11,6 @@ package errors
 import (
 	"fmt"
 	"strings"
-
-	"github.com/couchbase/query/value"
 )
 
 // Datastore/couchbase error codes
@@ -46,23 +44,23 @@ func NewCbIndexerNotImplementedError(e error, msg string) Error {
 
 func NewCbKeyspaceCountError(e error, msg string) Error {
 	return &err{level: EXCEPTION, ICode: E_CB_KEYSPACE_COUNT, IKey: "datastore.couchbase.keyspace_count_error", ICause: e,
-		InternalMsg: "Failed to get count for keyspace " + msg, InternalCaller: CallerN(1), retry: value.TRUE}
+		InternalMsg: "Failed to get count for keyspace " + msg, InternalCaller: CallerN(1), retry: TRUE}
 }
 
 // Error code 12007 is retired. Do not reuse.
 
 func NewCbBulkGetError(e error, msg string) Error {
 	return &err{level: EXCEPTION, ICode: E_CB_BULK_GET, IKey: "datastore.couchbase.bulk_get_error", ICause: e,
-		InternalMsg: "Error performing bulk get operation " + msg, InternalCaller: CallerN(1), retry: value.TRUE}
+		InternalMsg: "Error performing bulk get operation " + msg, InternalCaller: CallerN(1), retry: TRUE}
 }
 
-func NewCbDMLError(e error, msg string, casMismatch bool, r value.Tristate, k string, ks string) Error {
+func NewCbDMLError(e error, msg string, casMismatch bool, r Tristate, k string, ks string) Error {
 	if casMismatch {
 		ce := newCASMismatchError()
 		c := ce.Object()
 		c["keyspace"] = ks
 		c["document_key"] = k
-		r = value.FALSE
+		r = FALSE
 		return &err{level: EXCEPTION, ICode: E_CB_DML, IKey: "datastore.couchbase.DML_error", ICause: ce, cause: c, retry: r,
 			InternalMsg: "DML Error, possible causes include CAS mismatch. " + msg, InternalCaller: CallerN(1)}
 	} else {
@@ -155,12 +153,12 @@ func NewCbScopeNotFoundError(e error, msg string) Error {
 
 func NewCbKeyspaceSizeError(e error, msg string) Error {
 	return &err{level: EXCEPTION, ICode: E_CB_KEYSPACE_SIZE, IKey: "datastore.couchbase.keyspace_size_error", ICause: e,
-		InternalMsg: "Failed to get size for keyspace" + msg, InternalCaller: CallerN(1), retry: value.TRUE}
+		InternalMsg: "Failed to get size for keyspace" + msg, InternalCaller: CallerN(1), retry: TRUE}
 }
 
 func NewCbSecurityConfigNotProvided(bucket string) Error {
 	return &err{level: EXCEPTION, ICode: E_CB_SECURITY_CONFIG_NOT_PROVIDED, IKey: "datastore.couchbase.security_config_not_provided",
-		InternalMsg: "Connection security config not provided. Unable to load bucket " + bucket, InternalCaller: CallerN(1), retry: value.TRUE}
+		InternalMsg: "Connection security config not provided. Unable to load bucket " + bucket, InternalCaller: CallerN(1), retry: TRUE}
 }
 
 func NewCbCreateSystemBucketError(s string, e error) Error {
@@ -232,7 +230,7 @@ func NewCbNotPrimaryIndexError(name string) Error {
 	c["name"] = name
 	c["reason"] = "not primary index"
 	return &err{level: EXCEPTION, ICode: E_CB_NOT_PRIMARY_INDEX, IKey: "datastore.couchbase.not_primary_index",
-		InternalMsg: "Index " + name + " exists but is not a primary index", cause: c, retry: value.FALSE,
+		InternalMsg: "Index " + name + " exists but is not a primary index", cause: c, retry: FALSE,
 		InternalCaller: CallerN(1)}
 }
 

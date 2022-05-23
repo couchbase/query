@@ -10,8 +10,6 @@ package errors
 
 import (
 	"fmt"
-
-	"github.com/couchbase/query/value"
 )
 
 // System datastore error codes
@@ -65,7 +63,7 @@ func NewSystemRemoteWarning(e error, op string, ks string) Error {
 
 func NewSystemUnableToRetrieveError(e error) Error {
 	return &err{level: EXCEPTION, ICode: E_SYSTEM_UNABLE_TO_RETRIEVE, IKey: "datastore.system.unable_to_retrieve", ICause: e,
-		InternalMsg: "System datastore : unable to retrieve user roles from server", InternalCaller: CallerN(1), retry: value.TRUE}
+		InternalMsg: "System datastore : unable to retrieve user roles from server", InternalCaller: CallerN(1), retry: TRUE}
 }
 
 func NewSystemUnableToUpdateError(e error) Error {
