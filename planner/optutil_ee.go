@@ -357,18 +357,48 @@ func optChooseIntersectScan(keyspace datastore.Keyspace, sargables map[datastore
 
 	indexes := make([]*base.IndexCost, 0, len(sargables))
 
-	hasOrder := false
+	hasPdOrder := false
+	hasEarlyOrder := false
 	for s, e := range sargables {
 		skipKeys := make([]bool, len(e.sargKeys))
 		icost := base.NewIndexCost(s, e.cost, e.cardinality, e.selectivity, e.size, e.frCost, skipKeys)
 		if e.IsPushDownProperty(_PUSHDOWN_ORDER) {
-			icost.SetOrder()
-			hasOrder = true
+			icost.SetPdOrder()
+			hasPdOrder = true
+		} else if e.HasFlag(IE_HAS_EARLY_ORDER) {
+			icost.SetEarlyOrder()
+			hasEarlyOrder = true
 		}
 		indexes = append(indexes, icost)
 	}
 
-	if hasOrder && nTerms > 0 {
+	if hasPdOrder && hasEarlyOrder {
+		// this should not happen, but just in case, remove the earlyOrder
+		origIndexes := indexes
+		indexes = make([]*base.IndexCost, 0, len(origIndexes))
+		for _, idx := range origIndexes {
+			if !idx.HasEarlyOrder() {
+				indexes = append(indexes, idx)
+			}
+		}
+	} else if hasEarlyOrder {
+		// choose the best one with early order
+		var bestIndex *base.IndexCost
+		for _, idx := range indexes {
+			if idx.HasEarlyOrder() {
+				if bestIndex == nil {
+					bestIndex = idx
+				} else if idx.Cardinality() < bestIndex.Cardinality() ||
+					(idx.Cardinality() == bestIndex.Cardinality() && idx.Cost() < bestIndex.Cost()) {
+					bestIndex = idx
+				}
+			}
+		}
+		index := bestIndex.Index()
+		return map[datastore.Index]*indexEntry{index: sargables[index]}
+	}
+
+	if hasPdOrder && nTerms > 0 {
 		// If some plans have Order pushdown, then add a SORT cost to all plans that
 		// do not have Order pushdown.
 		// Note that since we are still at keyspace level, the SORT cost is not going
@@ -376,7 +406,7 @@ func optChooseIntersectScan(keyspace datastore.Keyspace, sargables map[datastore
 		// however this is the best estimation we could do at this level.
 		// (also ignore limit and offset for this calculation).
 		for _, ic := range indexes {
-			if !ic.HasOrder() {
+			if !ic.HasPdOrder() {
 				sortCost, _, _, _ := getSortCost(ic.Size(), nTerms, ic.Cardinality(), 0, 0)
 				if sortCost > 0.0 {
 					ic.SetCost(ic.Cost() + sortCost)

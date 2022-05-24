@@ -23,6 +23,7 @@ const (
 	ISCAN_IS_REVERSE_SCAN = 1 << iota
 	ISCAN_IS_DISTINCT_SCAN
 	ISCAN_HAS_DYNAMIC_IN_SPAN
+	ISCAN_EARLY_ORDER
 )
 
 type IndexScan3 struct {
@@ -42,6 +43,7 @@ type IndexScan3 struct {
 	covers           expression.Covers
 	filterCovers     map[*expression.Cover]value.Value
 	filter           expression.Expression
+	earlyOrderExprs  expression.Expressions
 	implicitArrayKey *expression.All
 	hasDeltaKeyspace bool
 	fullCover        bool
@@ -130,6 +132,14 @@ func (this *IndexScan3) HasDynamicInSpan() bool {
 	return (this.flags & ISCAN_HAS_DYNAMIC_IN_SPAN) != 0
 }
 
+func (this *IndexScan3) HasEarlyOrder() bool {
+	return (this.flags & ISCAN_EARLY_ORDER) != 0
+}
+
+func (this *IndexScan3) SetEarlyOrder() {
+	this.flags |= ISCAN_EARLY_ORDER
+}
+
 func (this *IndexScan3) Projection() *IndexProjection {
 	return this.projection
 }
@@ -160,6 +170,16 @@ func (this *IndexScan3) SetLimit(limit expression.Expression) {
 
 func (this *IndexScan3) SetOffset(offset expression.Expression) {
 	this.offset = offset
+}
+
+// earlyOrderExprs is not used in this operator, it is for passing information only
+// and thus no need for marshal/unmarshal
+func (this *IndexScan3) EarlyOrderExprs() expression.Expressions {
+	return this.earlyOrderExprs
+}
+
+func (this *IndexScan3) SetEarlyOrderExprs(earlyOrderExprs expression.Expressions) {
+	this.earlyOrderExprs = earlyOrderExprs
 }
 
 func anyRenameExpressions(arrayKey *expression.All, spans Spans2) (err error) {

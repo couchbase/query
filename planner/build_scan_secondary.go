@@ -19,6 +19,7 @@ import (
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/plan"
 	base "github.com/couchbase/query/plannerbase"
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
@@ -102,7 +103,8 @@ func (this *builder) buildCreateSecondaryScan(indexes, flex map[datastore.Index]
 	if len(indexes) == 1 {
 		for _, entry := range indexes {
 			indexProjection = this.buildIndexProjection(entry, nil, nil, true, nil)
-			if cap == 1 && this.offset != nil && !entry.IsPushDownProperty(_PUSHDOWN_OFFSET) {
+			if cap == 1 && this.offset != nil && !entry.IsPushDownProperty(_PUSHDOWN_OFFSET) &&
+				!entry.HasFlag(IE_HAS_EARLY_ORDER) {
 				this.limit = offsetPlusLimit(this.offset, this.limit)
 				this.resetOffset()
 			}
@@ -167,6 +169,13 @@ func (this *builder) buildCreateSecondaryScan(indexes, flex map[datastore.Index]
 			overlapSpans(pred), false, offset, limit, idxProj, indexKeyOrders, nil,
 			covers, filterCovers, filter, entry.cost, entry.cardinality,
 			entry.size, entry.frCost, hasDeltaKeyspace)
+
+		if entry.HasFlag(IE_HAS_EARLY_ORDER) {
+			if iscan3, ok := scan.(*plan.IndexScan3); ok {
+				iscan3.SetEarlyOrder()
+				iscan3.SetEarlyOrderExprs(entry.orderExprs)
+			}
+		}
 
 		if orderEntry != nil && index == orderEntry.index {
 			scans[0] = scan
@@ -245,6 +254,8 @@ func (this *builder) buildSecondaryScanPushdowns(indexes, flex map[datastore.Ind
 	searchSargables []*indexEntry, pred expression.Expression, node *algebra.KeyspaceTerm) (
 	orderEntry *indexEntry, limit expression.Expression, searchOrders []string) {
 
+	hasEarlyOrder := false
+
 	// get ordered Index. If any index doesn't have Limit/Offset pushdown those must turned off
 	pushDown := this.hasOffsetOrLimit()
 	for _, entry := range indexes {
@@ -255,6 +266,10 @@ func (this *builder) buildSecondaryScanPushdowns(indexes, flex map[datastore.Ind
 		if pushDown && ((this.offset != nil && !entry.IsPushDownProperty(_PUSHDOWN_OFFSET)) ||
 			(this.limit != nil && !entry.IsPushDownProperty(_PUSHDOWN_LIMIT))) {
 			pushDown = false
+		}
+
+		if entry.HasFlag(IE_HAS_EARLY_ORDER) {
+			hasEarlyOrder = true
 		}
 	}
 
@@ -271,7 +286,7 @@ func (this *builder) buildSecondaryScanPushdowns(indexes, flex map[datastore.Ind
 	}
 
 	if len(searchSargables) > 0 {
-		if !pushDown {
+		if !pushDown && !hasEarlyOrder {
 			this.resetOffsetLimit()
 		}
 
@@ -288,7 +303,9 @@ func (this *builder) buildSecondaryScanPushdowns(indexes, flex map[datastore.Ind
 	if orderEntry != nil {
 		this.maxParallelism = 1
 	} else if this.order != nil {
-		this.resetOrderOffsetLimit()
+		if !hasEarlyOrder {
+			this.resetOrderOffsetLimit()
+		}
 		return nil, nil, nil
 	}
 
@@ -296,7 +313,7 @@ func (this *builder) buildSecondaryScanPushdowns(indexes, flex map[datastore.Ind
 	if pushDown && (len(indexes)+len(flex)+len(searchSargables)) > 1 {
 		limit = offsetPlusLimit(this.offset, this.limit)
 		this.resetOffsetLimit()
-	} else if !pushDown {
+	} else if !pushDown && !hasEarlyOrder {
 		this.resetOffsetLimit()
 	}
 	return
@@ -541,8 +558,15 @@ func (this *builder) minimalIndexes(sargables map[datastore.Index]*indexEntry, s
 		}
 	}
 
-	if useCBO && shortest && len(sargables) > 1 {
-		sargables = this.chooseIntersectScan(sargables, node)
+	if shortest && len(sargables) > 1 {
+		if useCBO {
+			sargables = this.chooseIntersectScan(sargables, node)
+		} else {
+			// remove any early order indicator
+			for _, entry := range sargables {
+				entry.UnsetFlags(IE_HAS_EARLY_ORDER)
+			}
+		}
 	}
 
 	return sargables
@@ -624,7 +648,7 @@ func narrowerOrEquivalent(se, te *indexEntry, shortest bool, predFc map[string]v
 		return se.PushDownProperty() > te.PushDownProperty()
 	}
 
-	// prefer one with index filter/join filter
+	// prefer one with index filter/early order
 	seKeyFlags := se.IndexKeyFlags()
 	teKeyFlags := te.IndexKeyFlags()
 	if seKeyFlags != teKeyFlags {
@@ -964,9 +988,12 @@ func (this *builder) getIndexFilters(entry *indexEntry, node *algebra.KeyspaceTe
 	indexFilters = make(expression.Expressions, 0, nFilters)
 
 	// skip array index keys
+	arrayKey := false
 	coverExprs := make(expression.Expressions, 0, len(entry.keys)+1)
 	for _, key := range entry.keys {
-		if isArray, _, _ := key.IsArrayIndexKey(); !isArray {
+		if isArray, _, _ := key.IsArrayIndexKey(); isArray {
+			arrayKey = true
+		} else {
 			coverExprs = append(coverExprs, key)
 		}
 	}
@@ -981,6 +1008,70 @@ func (this *builder) getIndexFilters(entry *indexEntry, node *algebra.KeyspaceTe
 		filterCovers := mapFilterCovers(fc, false)
 		for c, _ := range filterCovers {
 			coverExprs = append(coverExprs, c.Covered())
+		}
+	}
+
+	if util.IsFeatureEnabled(this.context.FeatureControls(), util.N1QL_EARLY_ORDER) && !arrayKey &&
+		this.order != nil && this.limit != nil &&
+		!entry.IsPushDownProperty(_PUSHDOWN_ORDER|_PUSHDOWN_LIMIT|_PUSHDOWN_OFFSET) {
+		nlimit := int64(-1)
+		noffset := int64(-1)
+		cons := true
+		lv, static := base.GetStaticInt(this.limit)
+		if static {
+			nlimit = lv
+		} else {
+			cons = false
+		}
+		if this.offset != nil {
+			ov, static := base.GetStaticInt(this.offset)
+			if static {
+				noffset = ov
+			} else {
+				cons = false
+			}
+		}
+		if cons && nlimit > 0 {
+			doOrder := true
+			sortTerms := this.order.Expressions()
+			sortExprs := make(expression.Expressions, 0, len(sortTerms))
+			newTerms, found, err := algebra.ReplaceProjectionAlias(sortTerms, this.projection)
+			if err == nil {
+				if !found || this.projection != nil {
+					if found {
+						sortTerms = newTerms
+					}
+					for _, sortExpr := range sortTerms {
+						if expression.IsCovered(sortExpr, alias, coverExprs, false) {
+							sortExprs = append(sortExprs, sortExpr)
+						} else {
+							doOrder = false
+							break
+						}
+					}
+				} else {
+					doOrder = false
+				}
+			} else {
+				doOrder = false
+			}
+
+			if doOrder {
+				entry.orderExprs = sortExprs
+				entry.SetFlags(IE_HAS_EARLY_ORDER, true)
+				if useCBO {
+					sortCard := float64(nlimit + noffset)
+					if sortCard > entry.cardinality {
+						sortCard = entry.cardinality
+					}
+					fetchCost, _, _ := getFetchCost(baseKeyspace.Keyspace(), sortCard)
+					if fetchCost > 0.0 {
+						entry.fetchCost = fetchCost
+					} else {
+						useCBO = false
+					}
+				}
+			}
 		}
 	}
 
@@ -1076,14 +1167,21 @@ func (this *builder) buildIndexFilters(entry *indexEntry, baseKeyspace *base.Bas
 		useCBO = false
 	}
 
-	var indexFilters expression.Expressions
+	var indexFilters, sortExprs expression.Expressions
 	if entry.HasFlag(IE_HAS_FILTER) {
 		indexFilters = entry.indexFilters
 	}
+	if entry.HasFlag(IE_HAS_EARLY_ORDER) {
+		sortExprs = entry.orderExprs
+	}
 
-	if len(indexFilters) > 0 {
+	if len(indexFilters) > 0 || len(sortExprs) > 0 {
 		keys := entry.keys
-		indexProjection = this.buildIndexProjection(entry, indexFilters, id, true, nil)
+		allFilters := indexFilters
+		if len(sortExprs) > 0 {
+			allFilters = append(allFilters, sortExprs...)
+		}
+		indexProjection = this.buildIndexProjection(entry, allFilters, id, true, nil)
 		if indexProjection != nil {
 			covers = make(expression.Covers, 0, len(indexProjection.EntryKeys)+1)
 			for _, i := range indexProjection.EntryKeys {
@@ -1110,7 +1208,9 @@ func (this *builder) buildIndexFilters(entry *indexEntry, baseKeyspace *base.Bas
 			fc = entry.origCond.FilterExpressionCovers(fc)
 			filterCovers = mapFilterCovers(fc, false)
 		}
+	}
 
+	if len(indexFilters) > 0 {
 		if len(indexFilters) == 1 {
 			filter = indexFilters[0].Copy()
 		} else {

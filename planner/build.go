@@ -86,7 +86,10 @@ const (
 	BUILDER_CHK_INDEX_ORDER
 	BUILDER_PLAN_HAS_ORDER
 	BUILDER_OR_SUBTERM
+	BUILDER_HAS_EARLY_ORDER
 )
+
+const BUILDER_PRESERVED_FLAGS = (BUILDER_PLAN_HAS_ORDER | BUILDER_HAS_EARLY_ORDER)
 
 type builder struct {
 	indexPushDowns
@@ -269,6 +272,11 @@ func (this *builder) setBuilderFlag(flag uint32) {
 
 func (this *builder) unsetBuilderFlag(flag uint32) {
 	this.builderFlags &^= flag
+}
+
+func (this *builder) resetBuilderFlags(prevBuilderFlags uint32) {
+	preservedFlags := (this.builderFlags & BUILDER_PRESERVED_FLAGS)
+	this.builderFlags = prevBuilderFlags | preservedFlags
 }
 
 func (this *builder) collectKeyspaceNames() {

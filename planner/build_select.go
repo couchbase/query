@@ -107,7 +107,9 @@ func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 		}
 	}
 
-	if stmtOrder != nil && this.order == nil && !this.hasBuilderFlag(BUILDER_PLAN_HAS_ORDER) {
+	if stmtOrder != nil && !this.hasBuilderFlag(BUILDER_PLAN_HAS_ORDER|BUILDER_HAS_EARLY_ORDER) &&
+		this.order == nil {
+
 		var limit *plan.Limit
 		var offset *plan.Offset
 		if stmtLimit != nil {

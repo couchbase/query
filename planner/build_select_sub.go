@@ -50,7 +50,7 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 		this.baseKeyspaces = prevBasekeyspaces
 		this.keyspaceNames = prevKeyspaceNames
 		this.pushableOnclause = prevPushableOnclause
-		this.builderFlags = prevBuilderFlags
+		this.resetBuilderFlags(prevBuilderFlags)
 		this.maxParallelism = prevMaxParallelism
 		this.lastOp = prevLastOp
 		this.aliases = prevAliases

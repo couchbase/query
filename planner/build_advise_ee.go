@@ -170,6 +170,9 @@ func (this *builder) matchIdxInfos(m map[string]*iaplan.IndexInfo) {
 			}
 			origInfo.SetCovering(info.Covering())
 			ix := this.matchPushdownProperty(key, origInfo)
+			if info.HasEarlyOrder() {
+				ix.SetPushdown("EARLY ORDER")
+			}
 			if origInfo.Covering() {
 				this.validatedCoverIdxes = append(this.validatedCoverIdxes, ix)
 			} else {

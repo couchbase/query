@@ -112,7 +112,7 @@ func (this *scanIdxCol) VisitIndexScan3(op *plan.IndexScan3) (interface{}, error
 		info.SetCovering(len(op.Covers()) > 0)
 		info.SetCostBased(op.Cost() > 0 && op.Cardinality() > 0)
 		info.SetProperty(len(op.Covers()) > 0, op.Limit() != nil, op.Offset() != nil,
-			len(op.OrderTerms()) > 0, op.GroupAggs() != nil)
+			len(op.OrderTerms()) > 0, op.GroupAggs() != nil, op.HasEarlyOrder())
 		this.property = info.Property()
 		this.addIndexInfo(info)
 	}
