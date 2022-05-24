@@ -83,7 +83,7 @@ func getKeyScanCost(keys expression.Expression) (float64, float64, int64, float6
 	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL
 }
 
-func getFetchCost(keyspace datastore.Keyspace, cardinality float64) (float64, int64, float64) {
+func getFetchCost(keyspaceName string, cardinality float64) (float64, int64, float64) {
 	return OPT_COST_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL
 }
 

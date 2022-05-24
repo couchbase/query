@@ -15,13 +15,21 @@ import (
 
 type Covers []*Cover
 
+const (
+	_COVER_NONE = int32(iota)
+	_COVER_FULL
+	_COVER_KEY
+	_COVER_COND
+)
+
 /*
 Internal Expression to support covering indexing.
 */
 type Cover struct {
 	ExpressionBase
-	covered Expression
-	text    string
+	covered   Expression
+	text      string
+	coverType int32
 }
 
 func NewCover(covered Expression) *Cover {
@@ -31,8 +39,41 @@ func NewCover(covered Expression) *Cover {
 	}
 
 	rv := &Cover{
-		covered: covered,
-		text:    covered.String(),
+		covered:   covered,
+		text:      covered.String(),
+		coverType: _COVER_FULL,
+	}
+
+	rv.expr = rv
+	return rv
+}
+
+func NewIndexKey(covered Expression) *Cover {
+	switch covered := covered.(type) {
+	case *Cover:
+		return covered
+	}
+
+	rv := &Cover{
+		covered:   covered,
+		text:      covered.String(),
+		coverType: _COVER_KEY,
+	}
+
+	rv.expr = rv
+	return rv
+}
+
+func NewIndexCondition(covered Expression) *Cover {
+	switch covered := covered.(type) {
+	case *Cover:
+		return covered
+	}
+
+	rv := &Cover{
+		covered:   covered,
+		text:      covered.String(),
+		coverType: _COVER_COND,
 	}
 
 	rv.expr = rv
@@ -97,7 +138,7 @@ func (this *Cover) EquivalentTo(other Expression) bool {
 	}
 
 	oc, ok := other.(*Cover)
-	return ok && this.covered.EquivalentTo(oc.covered)
+	return ok && this.covered.EquivalentTo(oc.covered) && this.coverType == oc.coverType
 }
 
 func (this *Cover) DependsOn(other Expression) bool {
@@ -123,7 +164,14 @@ func (this *Cover) MapChildren(mapper Mapper) error {
 }
 
 func (this *Cover) Copy() Expression {
-	rv := NewCover(this.covered.Copy())
+	var rv *Cover
+	if this.coverType == _COVER_FULL {
+		rv = NewCover(this.covered.Copy())
+	} else if this.coverType == _COVER_KEY {
+		rv = NewIndexKey(this.covered.Copy())
+	} else if this.coverType == _COVER_COND {
+		rv = NewIndexCondition(this.covered.Copy())
+	}
 	rv.BaseCopy(this)
 	return rv
 }
@@ -134,4 +182,16 @@ func (this *Cover) Covered() Expression {
 
 func (this *Cover) Text() string {
 	return this.text
+}
+
+func (this *Cover) FullCover() bool {
+	return this.coverType == _COVER_FULL
+}
+
+func (this *Cover) IsIndexKey() bool {
+	return this.coverType == _COVER_KEY
+}
+
+func (this *Cover) IsIndexCond() bool {
+	return this.coverType == _COVER_COND
 }

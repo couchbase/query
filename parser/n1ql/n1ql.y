@@ -109,6 +109,8 @@ tokOffset    int
 }
 
 %token _ERROR_  // used by the scanner to flag errors
+%token _INDEX_CONDITION
+%token _INDEX_KEY
 %token ADVISE
 %token ALL
 %token ALTER
@@ -345,7 +347,7 @@ tokOffset    int
 %left           STAR DIV MOD
 
 /* Unary operators */
-%right          COVER
+%right          COVER _INDEX_KEY _INDEX_CONDITION
 %left           ALL
 %right          UMINUS
 %left           DOT LBRACKET RBRACKET
@@ -3629,6 +3631,30 @@ COVER
 LPAREN expr RPAREN
 {
     $$ = expression.NewCover($4)
+}
+|
+/* For index keys */
+_INDEX_KEY
+{
+    if yylex.(*lexer).parsingStatement() {
+        yylex.Error("syntax error")
+    }
+}
+LPAREN expr RPAREN
+{
+    $$ = expression.NewIndexKey($4)
+}
+|
+/* For index conditions */
+_INDEX_CONDITION
+{
+    if yylex.(*lexer).parsingStatement() {
+        yylex.Error("syntax error")
+    }
+}
+LPAREN expr RPAREN
+{
+    $$ = expression.NewIndexCondition($4)
 }
 ;
 

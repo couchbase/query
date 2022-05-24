@@ -11,6 +11,7 @@ package planner
 import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/expression"
+	base "github.com/couchbase/query/plannerbase"
 	"github.com/couchbase/query/value"
 )
 
@@ -33,6 +34,7 @@ const (
 	IE_LEADINGMISSING = 1 << iota
 	IE_ARRAYINDEXKEY
 	IE_ARRAYINDEXKEY_SARGABLE
+	IE_HAS_FILTER
 )
 
 type indexEntry struct {
@@ -57,12 +59,15 @@ type indexEntry struct {
 	selectivity      float64
 	size             int64
 	frCost           float64
+	fetchCost        float64
 	searchOrders     []string
 	condFc           map[string]value.Value
 	nEqCond          int
 	numIndexedKeys   uint32
 	flags            uint32
 	unnestAliases    []string
+	exactFilters     map[*base.Filter]bool
+	indexFilters     expression.Expressions
 }
 
 func newIndexEntry(index datastore.Index, keys, sargKeys, partitionKeys expression.Expressions,
@@ -87,6 +92,7 @@ func newIndexEntry(index datastore.Index, keys, sargKeys, partitionKeys expressi
 		selectivity:      OPT_SELEC_NOT_AVAIL,
 		size:             OPT_SIZE_NOT_AVAIL,
 		frCost:           OPT_COST_NOT_AVAIL,
+		fetchCost:        OPT_COST_NOT_AVAIL,
 		flags:            IE_NONE,
 	}
 
@@ -126,6 +132,7 @@ func (this *indexEntry) Copy() *indexEntry {
 		selectivity:      this.selectivity,
 		size:             this.size,
 		frCost:           this.frCost,
+		fetchCost:        this.fetchCost,
 		condFc:           this.condFc,
 		nEqCond:          this.nEqCond,
 		flags:            this.flags,
@@ -141,11 +148,17 @@ func (this *indexEntry) Copy() *indexEntry {
 		rv.skeys = make([]bool, len(this.skeys))
 		copy(rv.skeys, this.skeys)
 	}
+	if len(this.exactFilters) > 0 {
+		rv.exactFilters = make(map[*base.Filter]bool, len(this.exactFilters))
+		for k, v := range this.exactFilters {
+			rv.exactFilters[k] = v
+		}
+	}
 
 	return rv
 }
 
-func (this *indexEntry) Falgs() uint32 {
+func (this *indexEntry) Flags() uint32 {
 	return this.flags
 }
 
@@ -163,6 +176,11 @@ func (this *indexEntry) UnsetFlags(flags uint32) {
 
 func (this *indexEntry) HasFlag(flag uint32) bool {
 	return (this.flags & flag) != 0
+}
+
+// return flags relevant for index key values (index filter)
+func (this *indexEntry) IndexKeyFlags() uint32 {
+	return (this.flags & (IE_HAS_FILTER))
 }
 
 func (this *indexEntry) PushDownProperty() PushDownProperties {
@@ -198,6 +216,14 @@ func (this *indexEntry) setArrayKey(key *expression.All, pos int) {
 			}
 		}
 	}
+}
+
+// for comparing indexes, use both index scan cost and fetch cost
+func (this *indexEntry) scanCost() float64 {
+	if this.cost > 0.0 && this.fetchCost > 0.0 {
+		return this.cost + this.fetchCost
+	}
+	return this.cost
 }
 
 func isPushDownProperty(pushDownProperty, property PushDownProperties) bool {

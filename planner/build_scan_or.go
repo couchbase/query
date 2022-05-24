@@ -24,6 +24,9 @@ func (this *builder) buildOrScan(node *algebra.KeyspaceTerm, baseKeyspace *base.
 	primaryKey expression.Expressions, formalizer *expression.Formalizer) (
 	scan plan.SecondaryScan, sargLength int, err error) {
 
+	var cost, cardinality, orCost, orCardinality float64
+	useCBO := this.useCBO && this.keyspaceUseCBO(node.Alias())
+
 	indexPushDowns := this.storeIndexPushDowns()
 	if this.cover != nil || this.hasOrderOrOffsetOrLimit() {
 		coveringScans := this.coveringScans
@@ -38,8 +41,33 @@ func (this *builder) buildOrScan(node *algebra.KeyspaceTerm, baseKeyspace *base.
 		this.restoreIndexPushDowns(indexPushDowns, true)
 	}
 
+	if useCBO {
+		if scan != nil {
+			cost = scan.Cost()
+			cardinality = scan.Cardinality()
+			if cost <= 0.0 || cardinality <= 0.0 {
+				useCBO = false
+			}
+		} else {
+			useCBO = false
+		}
+	}
+
 	// Try individual OR terms
 	orScan, orSargLength, orErr := this.buildOrScanNoPushdowns(node, id, pred, indexes, primaryKey, formalizer)
+
+	if useCBO && orScan != nil {
+		orCost = orScan.Cost()
+		orCardinality = orScan.Cardinality()
+		if orCost > 0.0 && orCardinality > 0.0 {
+			if cost < orCost || (cost == orCost && cardinality < orCardinality) {
+				return scan, sargLength, err
+			} else if orCost < cost || (orCost == cost && orCardinality < cardinality) {
+				return orScan, orSargLength, orErr
+			}
+		}
+	}
+
 	/*
 	   If combined sargLength is higher than individual or use combined scan
 	   ix1 ON default (c1,c2,c3)  ===> WHERE c1 = 10 AND (c2 = 20 OR (c2 = 30 AND c3 = 40))
@@ -68,10 +96,12 @@ func (this *builder) buildOrScanNoPushdowns(node *algebra.KeyspaceTerm, id expre
 
 	where := this.where
 	cover := this.cover
+	this.setBuilderFlag(BUILDER_OR_SUBTERM)
 
 	defer func() {
 		this.where = where
 		this.cover = cover
+		this.unsetBuilderFlag(BUILDER_OR_SUBTERM)
 	}()
 
 	this.cover = nil

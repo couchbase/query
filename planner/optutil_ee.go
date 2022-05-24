@@ -223,11 +223,11 @@ func getKeyScanCost(keys expression.Expression) (float64, float64, int64, float6
 	return optutil.CalcKeyScanCost(keys)
 }
 
-func getFetchCost(keyspace datastore.Keyspace, cardinality float64) (float64, int64, float64) {
-	if keyspace == nil {
+func getFetchCost(keyspaceName string, cardinality float64) (float64, int64, float64) {
+	if keyspaceName == "" {
 		return OPT_COST_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL
 	}
-	return optutil.CalcFetchCost(keyspace.QualifiedName(), cardinality)
+	return optutil.CalcFetchCost(keyspaceName, cardinality)
 }
 
 func getDistinctScanCost(index datastore.Index, cardinality float64) (float64, float64, float64) {

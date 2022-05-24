@@ -100,7 +100,8 @@ func sargFor(pred, key expression.Expression, isJoin, doSelec bool, baseKeyspace
 
 func SargForFilters(filters base.Filters, keys expression.Expressions, isMissings []bool, max int,
 	underHash, doSelec bool, baseKeyspace *base.BaseKeyspace, keyspaceNames map[string]string,
-	advisorValidate bool, aliases map[string]bool, context *PrepareContext) (SargSpans, bool, error) {
+	advisorValidate bool, aliases map[string]bool, exactFilters map[*base.Filter]bool,
+	context *PrepareContext) (SargSpans, bool, error) {
 
 	sargSpans := make([]SargSpans, max)
 	exactSpan := true
@@ -119,6 +120,19 @@ func SargForFilters(filters base.Filters, keys expression.Expressions, isMissing
 			doSelec, baseKeyspace, keyspaceNames, advisorValidate, aliases, context)
 		if err != nil {
 			return nil, flExactSpan, err
+		}
+
+		if flExactSpan && exactFilters != nil {
+			valid := false
+			for _, rs := range flSargSpans {
+				if rs != nil && rs.Size() > 0 {
+					valid = true
+					break
+				}
+			}
+			if valid {
+				exactFilters[fl] = true
+			}
 		}
 
 		exactSpan = exactSpan && flExactSpan
@@ -156,18 +170,16 @@ func SargForFilters(filters base.Filters, keys expression.Expressions, isMissing
 		sargSpans[pos] = addArrayKeys(arrayKeySpan)
 	}
 
-	if exactSpan {
-		var hasSpan bool
-		for _, s := range sargSpans {
-			if s != nil {
-				hasSpan = true
-				break
-			}
+	var hasSpan bool
+	for _, s := range sargSpans {
+		if s != nil {
+			hasSpan = true
+			break
 		}
+	}
 
-		if !hasSpan && len(filters) != 0 {
-			exactSpan = false
-		}
+	if !hasSpan && len(filters) != 0 {
+		return nil, false, nil
 	}
 
 	return composeSargSpan(sargSpans, exactSpan)

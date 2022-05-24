@@ -464,14 +464,19 @@ func (this *builder) buildCoveringPushdDownIndexScan2(entry *indexEntry, node *a
 	return scan
 }
 
-func mapFilterCovers(fc map[expression.Expression]value.Value) map[*expression.Cover]value.Value {
+func mapFilterCovers(fc map[expression.Expression]value.Value, fullCover bool) map[*expression.Cover]value.Value {
 	if len(fc) == 0 {
 		return nil
 	}
 
 	rv := make(map[*expression.Cover]value.Value, len(fc))
 	for e, v := range fc {
-		c := expression.NewCover(e)
+		var c *expression.Cover
+		if fullCover {
+			c = expression.NewCover(e)
+		} else {
+			c = expression.NewIndexCondition(e)
+		}
 		rv[c] = v
 	}
 
@@ -502,7 +507,7 @@ func indexCoverExpressions(entry *indexEntry, keys expression.Expressions,
 		fc := make(map[expression.Expression]value.Value, 2)
 		fc = entry.cond.FilterExpressionCovers(fc)
 		fc = entry.origCond.FilterExpressionCovers(fc)
-		filterCovers = mapFilterCovers(fc)
+		filterCovers = mapFilterCovers(fc, true)
 	}
 
 	// Allow array indexes to cover ANY predicates
@@ -585,7 +590,7 @@ func implicitFilterCovers(expr expression.Expression) map[*expression.Cover]valu
 			break
 		}
 	}
-	return mapFilterCovers(fc)
+	return mapFilterCovers(fc, true)
 }
 
 func implicitIndexKeys(entry *indexEntry) (rv expression.Expressions) {

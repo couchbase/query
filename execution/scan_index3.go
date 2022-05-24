@@ -69,7 +69,7 @@ func (this *IndexScan3) RunOnce(context *Context, parent value.Value) {
 				this.keys, this.pool = this.deltaKeyspaceDone(this.keys, this.pool)
 			}()
 			this.keys, this.pool = this.scanDeltaKeyspace(this.plan.Keyspace(), parent,
-				INDEX_SCAN, context, this.plan.Covers())
+				INDEX_SCAN, context, this.plan.AllCovers())
 		}
 
 		this.conn = datastore.NewIndexConnection(context)
@@ -100,8 +100,11 @@ func (this *IndexScan3) RunOnce(context *Context, parent value.Value) {
 		// for right hand side of nested-loop join we don't want to include parent values
 		// in the returned scope value
 		scope_value := parent
-		covers := this.plan.Covers()
+
+		// at runtime treat Covers() and IndexKeys() the same way
+		covers := this.plan.AllCovers()
 		lcovers := len(covers)
+		fullCover := this.plan.Covering()
 
 		var entryKeys []int
 		proj := this.plan.Projection()
@@ -119,17 +122,16 @@ func (this *IndexScan3) RunOnce(context *Context, parent value.Value) {
 				if entry != nil {
 					if _, sok := this.keys[entry.PrimaryKey]; !sok {
 						av := this.newEmptyDocumentWithKey(entry.PrimaryKey, scope_value, context)
-						covers := this.plan.Covers()
 						if lcovers > 0 {
 
-							for c, v := range this.plan.FilterCovers() {
+							for c, v := range this.plan.AllFilterCovers() {
 								av.SetCover(c.Text(), v)
 							}
 
 							// Matches planner.builder.buildCoveringScan()
 							for i, ek := range entry.EntryKey {
 								if proj == nil || i < len(entryKeys) {
-									if i < len(entryKeys) {
+									if fullCover && i < len(entryKeys) {
 										i = entryKeys[i]
 									}
 

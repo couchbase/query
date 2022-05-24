@@ -54,6 +54,8 @@ func (this *builder) buildSecondaryScan(indexes, arrayIndexes, flex map[datastor
 		entry.pushDownProperty = this.indexPushDownProperty(entry, entry.keys, nil,
 			pred, node.Alias(), nil, false, false, (len(this.baseKeyspaces) == 1),
 			implicitAnyCover(entry, true, this.context.FeatureControls()))
+
+		this.getIndexFilters(entry, node, baseKeyspace, id)
 	}
 
 	if len(primaryUnnests) > 0 && len(unnests) > 0 && len(unnestIndexes) > 0 {
@@ -117,7 +119,7 @@ func (this *builder) buildCreateSecondaryScan(indexes, flex map[datastore.Index]
 		}
 		// If this is a join with primary key (meta().id), then it's
 		// possible to get right hand documdents directly without
-		// accessing through an index (similar to "regular" join).
+		// accessing through an index (similar to lookup join).
 		// In such cases do not consider secondary indexes that does
 		// not include meta().id as a sargable index key. In addition,
 		// the index must have either a WHERE clause or at least
@@ -136,6 +138,14 @@ func (this *builder) buildCreateSecondaryScan(indexes, flex map[datastore.Index]
 			}
 		}
 
+		covers, filterCovers, filter, idxProj, err := this.buildIndexFilters(entry, baseKeyspace, id, node)
+		if err != nil {
+			return nil, 0, err
+		}
+		if len(covers) == 0 {
+			idxProj = indexProjection
+		}
+
 		var indexKeyOrders plan.IndexKeyOrders
 		if orderEntry != nil && index == orderEntry.index {
 			_, indexKeyOrders = this.useIndexOrder(entry, entry.keys)
@@ -144,9 +154,18 @@ func (this *builder) buildCreateSecondaryScan(indexes, flex map[datastore.Index]
 		if entry.index.Type() != datastore.SYSTEM {
 			this.collectIndexKeyspaceNames(baseKeyspace.Keyspace())
 		}
+
+		var limit, offset expression.Expression
+		if entry.IsPushDownProperty(_PUSHDOWN_LIMIT) {
+			limit = this.limit
+		}
+		if entry.IsPushDownProperty(_PUSHDOWN_OFFSET) {
+			offset = this.offset
+		}
+
 		scan = entry.spans.CreateScan(index, node, this.context.IndexApiVersion(), false, false,
-			overlapSpans(pred), false, this.offset, this.limit, indexProjection,
-			indexKeyOrders, nil, nil, nil, nil, entry.cost, entry.cardinality,
+			overlapSpans(pred), false, offset, limit, idxProj, indexKeyOrders, nil,
+			covers, filterCovers, filter, entry.cost, entry.cardinality,
 			entry.size, entry.frCost, hasDeltaKeyspace)
 
 		if orderEntry != nil && index == orderEntry.index {
@@ -487,6 +506,15 @@ func (this *builder) minimalIndexes(sargables map[datastore.Index]*indexEntry, s
 					useCBO = false
 				} else {
 					se.cardinality, se.selectivity, se.cost, se.frCost, se.size = card, selec, cost, frCost, size
+					if shortest {
+						baseKeyspace, _ := this.baseKeyspaces[node.Alias()]
+						fetchCost, _, _ := getFetchCost(baseKeyspace.Keyspace(), card)
+						if fetchCost > 0.0 {
+							se.fetchCost = fetchCost
+						} else {
+							useCBO = false
+						}
+					}
 				}
 			}
 		}
@@ -499,7 +527,10 @@ func (this *builder) minimalIndexes(sargables map[datastore.Index]*indexEntry, s
 			}
 
 			if useCBO && shortest {
-				if matchedLeadingKeys(se, te, predFc) && se.cost < te.cost {
+				seCost := se.scanCost()
+				teCost := te.scanCost()
+				if matchedLeadingKeys(se, te, predFc) &&
+					(seCost < teCost || (seCost == teCost && se.cardinality < te.cardinality)) {
 					delete(sargables, t)
 				}
 			} else {
@@ -548,10 +579,10 @@ func narrowerOrEquivalent(se, te *indexEntry, shortest bool, predFc map[string]v
 		return true
 	}
 
-	// if te and se has same sargKeys (or equivalent condition), and there exists
-	// a non-sarged array key, prefer the one without the array key
 	if te.nSargKeys == snk+snc &&
 		se.PushDownProperty() == te.PushDownProperty() {
+		// if te and se has same sargKeys (or equivalent condition), and there exists
+		// a non-sarged array key, prefer the one without the array key
 		if se.HasFlag(IE_ARRAYINDEXKEY) != te.HasFlag(IE_ARRAYINDEXKEY) {
 			if !se.HasFlag(IE_ARRAYINDEXKEY_SARGABLE) && !te.HasFlag(IE_ARRAYINDEXKEY_SARGABLE) {
 				if te.HasFlag(IE_ARRAYINDEXKEY) && !se.HasFlag(IE_ARRAYINDEXKEY) {
@@ -591,6 +622,13 @@ func narrowerOrEquivalent(se, te *indexEntry, shortest bool, predFc map[string]v
 
 	if se.PushDownProperty() != te.PushDownProperty() {
 		return se.PushDownProperty() > te.PushDownProperty()
+	}
+
+	// prefer one with index filter/join filter
+	seKeyFlags := se.IndexKeyFlags()
+	teKeyFlags := te.IndexKeyFlags()
+	if seKeyFlags != teKeyFlags {
+		return seKeyFlags > teKeyFlags
 	}
 
 	return se.cond != nil ||
@@ -701,7 +739,7 @@ func (this *builder) sargIndexes(baseKeyspace *base.BaseKeyspace, underHash bool
 		var exactSpans bool
 		var err error
 
-		if se.maxKeys == 0 {
+		if (se.index.IsPrimary() && se.minKeys == 0) || se.maxKeys == 0 {
 			se.spans = _WHOLE_SPANS.Copy()
 			if pred != nil {
 				se.exactSpans = false
@@ -710,7 +748,7 @@ func (this *builder) sargIndexes(baseKeyspace *base.BaseKeyspace, underHash bool
 		}
 
 		useFilters := true
-		if isOrPred {
+		if isOrPred && this.hasBuilderFlag(BUILDER_OR_SUBTERM) {
 			useFilters = false
 		} else {
 			for _, key := range se.keys {
@@ -722,16 +760,41 @@ func (this *builder) sargIndexes(baseKeyspace *base.BaseKeyspace, underHash bool
 		}
 		isMissings := getMissings(se)
 
+		validSpans := false
 		if useFilters {
-			spans, exactSpans, err = SargForFilters(baseKeyspace.Filters(), se.keys, isMissings,
+			filters := baseKeyspace.Filters()
+			if se.exactFilters != nil {
+				// already considered before, clear the map
+				for k, _ := range se.exactFilters {
+					delete(se.exactFilters, k)
+				}
+			} else {
+				se.exactFilters = make(map[*base.Filter]bool, len(filters))
+			}
+			spans, exactSpans, err = SargForFilters(filters, se.keys, isMissings,
 				se.maxKeys, underHash, useCBO, baseKeyspace, this.keyspaceNames,
-				advisorValidate, this.aliases, this.context)
-		} else {
+				advisorValidate, this.aliases, se.exactFilters, this.context)
+			if err == nil && (spans != nil || !isOrPred || !se.HasFlag(IE_LEADINGMISSING)) {
+				// If this is OR predicate and no valid span generated, and index
+				// has leading missing, allow it to try with SargFor() below.
+				validSpans = true
+			}
+		}
+		if !validSpans {
 			spans, exactSpans, err = SargFor(baseKeyspace.DnfPred(), se, se.keys, isMissings,
 				se.maxKeys, orIsJoin, useCBO, baseKeyspace, this.keyspaceNames,
 				advisorValidate, this.aliases, this.context)
 		}
-		if err != nil || spans.Size() == 0 {
+
+		if se.HasFlag(IE_LEADINGMISSING) && (spans == nil || spans.Size() == 0) {
+			se.spans = _WHOLE_SPANS.Copy()
+			if pred != nil {
+				se.exactSpans = false
+			}
+			continue
+		}
+
+		if err != nil || spans == nil || spans.Size() == 0 {
 			logging.Errora(func() string {
 				return fmt.Sprintf("Sargable index not sarged: pred:<ud>%v</ud> sarg_keys:<ud>%v</ud> error:%v",
 					pred,
@@ -852,5 +915,230 @@ func getMissings(entry *indexEntry) (isMissings []bool) {
 			isMissings[i] = true
 		}
 	}
+	return
+}
+
+func (this *builder) getIndexFilters(entry *indexEntry, node *algebra.KeyspaceTerm,
+	baseKeyspace *base.BaseKeyspace, id expression.Expression) {
+
+	alias := node.Alias()
+	useCBO := this.useCBO && this.keyspaceUseCBO(alias)
+	advisorValidate := this.advisorValidate()
+	requestId := this.context.RequestId()
+	if useCBO && (entry.cost <= 0.0 || entry.cardinality <= 0.0 || entry.size <= 0 || entry.frCost <= 0.0) {
+		cost, selec, card, size, frCost, e := indexScanCost(entry.index, entry.sargKeys,
+			requestId, entry.spans, alias, advisorValidate, this.context)
+		if e != nil || (cost <= 0.0 || card <= 0.0 || size <= 0 || frCost <= 0.0) {
+			useCBO = false
+		} else {
+			entry.cardinality, entry.selectivity, entry.cost, entry.frCost, entry.size = card, selec, cost, frCost, size
+			fetchCost, _, _ := getFetchCost(baseKeyspace.Keyspace(), card)
+			if fetchCost > 0.0 {
+				entry.fetchCost = fetchCost
+			} else {
+				useCBO = false
+			}
+		}
+	}
+
+	selec := OPT_SELEC_NOT_AVAIL
+	if useCBO {
+		selec = 1.0
+	}
+
+	index := entry.index
+
+	var indexFilters expression.Expressions
+	filters := baseKeyspace.Filters()
+	nFilters := len(filters)
+	for _, fl := range filters {
+		if fl.IsJoin() {
+			nFilters--
+		}
+	}
+
+	if nFilters == 0 {
+		return
+	}
+
+	indexFilters = make(expression.Expressions, 0, nFilters)
+
+	// skip array index keys
+	coverExprs := make(expression.Expressions, 0, len(entry.keys)+1)
+	for _, key := range entry.keys {
+		if isArray, _, _ := key.IsArrayIndexKey(); !isArray {
+			coverExprs = append(coverExprs, key)
+		}
+	}
+	if !index.IsPrimary() && id != nil {
+		coverExprs = append(coverExprs, id)
+	}
+
+	if entry.cond != nil {
+		fc := make(map[expression.Expression]value.Value, 2)
+		fc = entry.cond.FilterExpressionCovers(fc)
+		fc = entry.origCond.FilterExpressionCovers(fc)
+		filterCovers := mapFilterCovers(fc, false)
+		for c, _ := range filterCovers {
+			coverExprs = append(coverExprs, c.Covered())
+		}
+	}
+
+	namedArgs := this.context.NamedArgs()
+	positionalArgs := this.context.PositionalArgs()
+	for _, fl := range filters {
+		if fl.IsUnnest() {
+			continue
+		}
+		fltrExpr := fl.FltrExpr()
+		derived := false
+		orig := false
+		if _, ok := entry.exactFilters[fl]; ok {
+			// Skip the filters used to generate exact spans since these are
+			// supposedly evaluated by the indexer already.
+			// It is possible that a span starts out exact but was turned to non-exact
+			// later, but this will not cause wrong result (just potential inefficiency)
+			continue
+		} else if entry.cond != nil {
+			// Also skip filters that is in index condition
+			origExpr := fl.OrigExpr()
+			flExpr := fltrExpr
+			var err error
+			if len(namedArgs) > 0 || len(positionalArgs) > 0 {
+				flExpr, err = base.ReplaceParameters(flExpr, namedArgs, positionalArgs)
+				if err != nil {
+					continue
+				}
+				if origExpr != nil {
+					origExpr, err = base.ReplaceParameters(origExpr, namedArgs, positionalArgs)
+					if err != nil {
+						continue
+					}
+				}
+			}
+			if base.SubsetOf(entry.cond, flExpr) {
+				continue
+			}
+			if origExpr != nil && base.SubsetOf(entry.origCond, origExpr) {
+				continue
+			}
+		}
+		if base.IsDerivedExpr(fltrExpr) && !fl.IsJoin() {
+			derived = true
+			if fl.OrigExpr() != nil {
+				fltrExpr = fl.OrigExpr()
+				orig = true
+			}
+		}
+		if expression.IsCovered(fltrExpr, alias, coverExprs, false) {
+			if !fl.IsJoin() {
+				if useCBO {
+					if fl.Selec() > 0.0 {
+						selec *= fl.Selec()
+					} else {
+						useCBO = false
+						selec = OPT_SELEC_NOT_AVAIL
+					}
+				}
+				if !derived || orig {
+					indexFilters = append(indexFilters, fltrExpr)
+				}
+			}
+		}
+	}
+
+	if len(indexFilters) > 0 {
+		entry.indexFilters = indexFilters
+		entry.SetFlags(IE_HAS_FILTER, true)
+		if useCBO {
+			entry.cost, entry.cardinality, entry.size, entry.frCost = getSimpleFilterCost(alias,
+				entry.cost, entry.cardinality, selec, entry.size, entry.frCost)
+			entry.selectivity *= selec
+			fetchCost, _, _ := getFetchCost(baseKeyspace.Keyspace(), entry.cardinality)
+			if fetchCost > 0.0 {
+				entry.fetchCost = fetchCost
+			} else {
+				useCBO = false
+			}
+		}
+	}
+
+	return
+}
+
+func (this *builder) buildIndexFilters(entry *indexEntry, baseKeyspace *base.BaseKeyspace,
+	id expression.Expression, node *algebra.KeyspaceTerm) (
+	covers expression.Covers, filterCovers map[*expression.Cover]value.Value,
+	filter expression.Expression, indexProjection *plan.IndexProjection, err error) {
+
+	useCBO := this.useCBO && this.keyspaceUseCBO(node.Alias())
+	if useCBO && (entry.cost <= 0.0 || entry.cardinality <= 0.0 || entry.size <= 0 || entry.frCost <= 0.0) {
+		useCBO = false
+	}
+
+	var indexFilters expression.Expressions
+	if entry.HasFlag(IE_HAS_FILTER) {
+		indexFilters = entry.indexFilters
+	}
+
+	if len(indexFilters) > 0 {
+		keys := entry.keys
+		indexProjection = this.buildIndexProjection(entry, indexFilters, id, true, nil)
+		if indexProjection != nil {
+			covers = make(expression.Covers, 0, len(indexProjection.EntryKeys)+1)
+			for _, i := range indexProjection.EntryKeys {
+				if i < len(keys) {
+					covers = append(covers, expression.NewIndexKey(keys[i]))
+				} else {
+					return nil, nil, nil, nil, errors.NewPlanInternalError(fmt.Sprintf("buildIndexFilters: index projection key position %d beyond key length(%d)", i, len(keys)))
+				}
+			}
+			covers = append(covers, expression.NewIndexKey(id))
+		} else {
+			covers = make(expression.Covers, 0, len(keys))
+			for _, key := range keys {
+				covers = append(covers, expression.NewIndexKey(key))
+			}
+			if !entry.index.IsPrimary() {
+				covers = append(covers, expression.NewIndexKey(id))
+			}
+		}
+
+		if entry.cond != nil {
+			fc := make(map[expression.Expression]value.Value, 2)
+			fc = entry.cond.FilterExpressionCovers(fc)
+			fc = entry.origCond.FilterExpressionCovers(fc)
+			filterCovers = mapFilterCovers(fc, false)
+		}
+
+		if len(indexFilters) == 1 {
+			filter = indexFilters[0].Copy()
+		} else {
+			filter = expression.NewAnd(indexFilters.Copy()...)
+		}
+		if len(covers) > 0 || len(filterCovers) > 0 {
+			// no array index keys so can Map directly
+			coverer := expression.NewCoverer(covers, filterCovers)
+			filter, err = coverer.Map(filter)
+			if err != nil {
+				return nil, nil, nil, nil, err
+			}
+		}
+
+		if useCBO {
+			cost, cardinality, size, frCost := getIndexProjectionCost(entry.index, indexProjection, entry.cardinality)
+
+			if cost > 0.0 && cardinality > 0.0 && size > 0 && frCost > 0.0 {
+				entry.cost += cost
+				entry.cardinality = cardinality
+				entry.size += size
+				entry.frCost += frCost
+			} else {
+				useCBO = false
+				entry.cost, entry.cardinality, entry.frCost, entry.size = OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_COST_NOT_AVAIL, OPT_SIZE_NOT_AVAIL
+			}
+		}
+	}
+
 	return
 }
