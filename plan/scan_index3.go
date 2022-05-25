@@ -24,6 +24,7 @@ const (
 	ISCAN_IS_DISTINCT_SCAN
 	ISCAN_HAS_DYNAMIC_IN_SPAN
 	ISCAN_EARLY_ORDER
+	ISCAN_EARLY_OFFSET
 )
 
 type IndexScan3 struct {
@@ -140,6 +141,14 @@ func (this *IndexScan3) HasEarlyOrder() bool {
 
 func (this *IndexScan3) SetEarlyOrder() {
 	this.flags |= ISCAN_EARLY_ORDER
+}
+
+func (this *IndexScan3) HasEarlyOffset() bool {
+	return (this.flags & ISCAN_EARLY_OFFSET) != 0
+}
+
+func (this *IndexScan3) SetEarlyOffset() {
+	this.flags |= ISCAN_EARLY_OFFSET
 }
 
 func (this *IndexScan3) Projection() *IndexProjection {

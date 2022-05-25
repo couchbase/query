@@ -348,18 +348,28 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 			useCBO = false
 		}
 
-		if iscan3, ok := scan.(*plan.IndexScan3); ok && iscan3.HasEarlyOrder() {
-			order, err := this.buildEarlyOrder(iscan3, useCBO)
-			if err != nil {
-				return nil, err
-			}
-			if useCBO {
-				cost = order.Cost()
-				cardinality = order.Cardinality()
-				size = order.Size()
-				frCost = order.FrCost()
-				if cost <= 0.0 || cardinality <= 0.0 || size <= 0 || frCost <= 0.0 {
-					useCBO = false
+		if iscan3, ok := scan.(*plan.IndexScan3); ok {
+			if iscan3.HasEarlyOrder() {
+				op, err := this.buildEarlyOrder(iscan3, useCBO)
+				if err != nil {
+					return nil, err
+				}
+				if useCBO {
+					cost, cardinality, size, frCost = op.Cost(), op.Cardinality(), op.Size(), op.FrCost()
+					if cost <= 0.0 || cardinality <= 0.0 || size <= 0 || frCost <= 0.0 {
+						useCBO = false
+					}
+				}
+			} else if iscan3.HasEarlyOffset() {
+				op, err := this.buildEarlyOffset(iscan3, useCBO)
+				if err != nil {
+					return nil, err
+				}
+				if useCBO {
+					cost, cardinality, size, frCost = op.Cost(), op.Cardinality(), op.Size(), op.FrCost()
+					if cost <= 0.0 || cardinality <= 0.0 || size <= 0 || frCost <= 0.0 {
+						useCBO = false
+					}
 				}
 			}
 		}
@@ -1205,11 +1215,11 @@ func (this *builder) adjustForIndexFilters(alias string, onclause expression.Exp
 
 func (this *builder) buildEarlyOrder(iscan3 *plan.IndexScan3, useCBO bool) (plan.Operator, error) {
 	if this.order == nil || this.limit == nil {
-		return nil, errors.NewPlanInternalError("VisitKeyspaceTerm: early order without expected order and/or limit information")
+		return nil, errors.NewPlanInternalError("buildEarlyOrder: early order without expected order and/or limit information")
 	}
 	earlyOrderExprs := iscan3.EarlyOrderExprs()
 	if len(this.order.Terms()) != len(earlyOrderExprs) {
-		return nil, errors.NewPlanInternalError("VisitKeyspaceTerm: early order expressions mismatch")
+		return nil, errors.NewPlanInternalError("buildEarlyOrder: early order expressions mismatch")
 	}
 
 	cost := iscan3.Cost()
@@ -1253,6 +1263,7 @@ func (this *builder) buildEarlyOrder(iscan3 *plan.IndexScan3, useCBO bool) (plan
 			size = ssize
 			frCost += sfrCost
 		} else {
+			useCBO = false
 			cost, cardinality, size, frCost = OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL
 		}
 	}
@@ -1262,7 +1273,29 @@ func (this *builder) buildEarlyOrder(iscan3 *plan.IndexScan3, useCBO bool) (plan
 	this.setBuilderFlag(BUILDER_HAS_EARLY_ORDER)
 
 	this.maxParallelism = 1
-	this.resetOffsetLimit()
 
+	if iscan3.HasEarlyOffset() {
+		offsetOp, err := this.buildEarlyOffset(orderOp, useCBO)
+		this.resetLimit()
+		return offsetOp, err
+	}
+
+	this.resetOffsetLimit()
 	return orderOp, nil
+}
+
+func (this *builder) buildEarlyOffset(lastOp plan.Operator, useCBO bool) (
+	plan.Operator, error) {
+
+	if this.offset == nil {
+		return nil, errors.NewPlanInternalError("buildEarlyOffset: early offset without expected offset information")
+	}
+	cost, cardinality, size, frCost := lastOp.Cost(), lastOp.Cardinality(), lastOp.Size(), lastOp.FrCost()
+	if useCBO {
+		noffset, _ := base.GetStaticInt(this.offset)
+		cost, cardinality, size, frCost = getOffsetCost(lastOp, noffset)
+	}
+	offsetOp := plan.NewOffset(this.offset, cost, cardinality, size, frCost)
+	this.addChildren(offsetOp)
+	return offsetOp, nil
 }
