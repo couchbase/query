@@ -1262,6 +1262,7 @@ func (this *builder) buildEarlyOrder(iscan3 *plan.IndexScan3, useCBO bool) (plan
 	this.setBuilderFlag(BUILDER_HAS_EARLY_ORDER)
 
 	this.maxParallelism = 1
+	this.resetOffsetLimit()
 
 	return orderOp, nil
 }
