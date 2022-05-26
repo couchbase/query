@@ -615,7 +615,7 @@ func ClientConfigForX509(caFile, certFile, keyFile string, passphrase []byte) (*
 			return nil, err
 		}
 		cfg.Certificates = []tls.Certificate{tlsCert}
-	} else {
+	} else if certFile != "" || keyFile != "" {
 		//error need to pass both certfile and keyfile
 		return nil, fmt.Errorf("N1QL: Need to pass both certfile and keyfile")
 	}
