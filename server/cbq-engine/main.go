@@ -121,6 +121,9 @@ var _GOGC_PERCENT = flag.Int("gc-percent", _GOGC_PERCENT_DEFAULT, "Go runtime ga
 
 var UUID = flag.String("uuid", "", "Node UUID.")
 
+var INTERNAL_CLIENT_CERT = flag.String("clientCertFile", "", "Internal communications certificate")
+var INTERNAL_CLIENT_KEY = flag.String("clientKeyFile", "", "Internal communications private key")
+
 // profiler, to use instead of the REST endpoint if needed
 // var PROFILER_PORT = flag.Int("profiler-port", 6060, "profiler listening port")
 
