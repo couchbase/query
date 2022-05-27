@@ -9,6 +9,7 @@
 package server
 
 import (
+	"strconv"
 	"time"
 
 	"github.com/couchbase/query/algebra"
@@ -77,7 +78,7 @@ var CHECKERS = map[string]Checker{
 	MAXINDEXAPI:           checkNumber,
 	PROFILE:               checkProfileAdmin,
 	CONTROLS:              checkControlsAdmin,
-	N1QLFEATCTRL:          checkNumber,
+	N1QLFEATCTRL:          checkHexNumber,
 	AUTOPREPARE:           checkBool,
 	MUTEXPROFILE:          checkBool,
 	USECBO:                checkBool,
@@ -114,6 +115,18 @@ func checkNumber(val interface{}) (bool, errors.Error) {
 		return true, nil
 	case float64:
 		return true, nil
+	}
+	return false, nil
+}
+
+func checkHexNumber(val interface{}) (bool, errors.Error) {
+	switch v := val.(type) {
+	case int64:
+		return true, nil
+	case string:
+		if _, err := strconv.ParseInt(v, 0, 64); err == nil {
+			return true, nil
+		}
 	}
 	return false, nil
 }

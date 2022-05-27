@@ -9,7 +9,9 @@
 package server
 
 import (
+	"fmt"
 	"reflect"
+	"strconv"
 	"strings"
 	"time"
 
@@ -134,7 +136,7 @@ var _SETTERS = map[string]Setter{
 	PROFILE:  setProfileAdmin,
 	CONTROLS: setControlsAdmin,
 	N1QLFEATCTRL: func(s *Server, o interface{}) errors.Error {
-		value := getNumber(o)
+		value := getHexNumber(o)
 		if s.enterprise {
 			util.SetN1qlFeatureControl(uint64(value))
 		} else {
@@ -227,6 +229,18 @@ func getNumber(o interface{}) float64 {
 		return float64(o)
 	case float64:
 		return o
+	}
+	return -1
+}
+
+func getHexNumber(o interface{}) int64 {
+	switch o := o.(type) {
+	case int64:
+		return o
+	case string:
+		if v, err := strconv.ParseInt(o, 0, 64); err == nil {
+			return v
+		}
 	}
 	return -1
 }
@@ -450,7 +464,7 @@ func FillSettings(settings map[string]interface{}, srvr *Server) map[string]inte
 	settings[PRPLIMIT] = prepareds.PreparedsLimit()
 	settings[PRETTY] = srvr.Pretty()
 	settings[MAXINDEXAPI] = srvr.MaxIndexAPI()
-	settings[N1QLFEATCTRL] = util.GetN1qlFeatureControl()
+	settings[N1QLFEATCTRL] = fmt.Sprintf("0x%x", util.GetN1qlFeatureControl())
 	settings[TXTIMEOUT] = srvr.TxTimeout().String()
 	settings = GetProfileAdmin(settings, srvr)
 	settings = GetControlsAdmin(settings, srvr)
