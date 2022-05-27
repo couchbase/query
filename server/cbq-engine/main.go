@@ -39,6 +39,7 @@ import (
 	server_package "github.com/couchbase/query/server"
 	control "github.com/couchbase/query/server/control/couchbase"
 	"github.com/couchbase/query/server/http"
+	"github.com/couchbase/query/tenant"
 	"github.com/couchbase/query/util"
 )
 
@@ -129,6 +130,9 @@ var INTERNAL_CLIENT_KEY = flag.String("clientKeyFile", "", "Internal communicati
 
 // Dictionary Cache
 var DICTIONARY_CACHE_LIMIT = flag.Int("dictionary-cache-limit", _DEF_DICTIONARY_CACHE_LIMIT, "maximum number of entries in dictionary cache")
+
+// Serverless
+var SERVERLESS = flag.Bool("serverless", false, "Serverless mode")
 
 func init() {
 	debug.SetGCPercent(_GOGC_PERCENT_DEFAULT)
@@ -391,6 +395,7 @@ func main() {
 	server.SetSettingsCallback(endpoint.SettingsCallback)
 
 	constructor.Init(endpoint.Mux(), server.Servicers())
+	tenant.Init(endpoint.Mux(), *UUID, *CA_FILE, *SERVERLESS)
 
 	// topology awareness
 	_ = control.NewManager(*UUID)
