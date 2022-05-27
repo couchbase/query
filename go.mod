@@ -38,6 +38,8 @@ replace github.com/couchbase/query => ./empty
 
 replace github.com/couchbase/query-ee => ../query-ee
 
+replace github.com/couchbase/regulator => ../regulator
+
 require (
 	github.com/couchbase/cbauth v0.1.1
 	github.com/couchbase/clog v0.1.0
@@ -53,6 +55,7 @@ require (
 	github.com/couchbase/n1fty v0.0.0-00010101000000-000000000000
 	github.com/couchbase/query-ee v0.0.0-00010101000000-000000000000
 	github.com/couchbase/retriever v0.0.0-20150311081435-e3419088e4d3
+	github.com/couchbase/regulator v0.0.0-00010101000000-000000000000
 	github.com/couchbasedeps/go-curl v0.0.0-20190830233031-f0b2afc926ec
 	github.com/gorilla/mux v1.8.0
 	github.com/kr/pretty v0.1.0 // indirect
