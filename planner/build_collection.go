@@ -27,7 +27,7 @@ func (this *builder) VisitCreateCollection(stmt *algebra.CreateCollection) (inte
 	if err != nil {
 		return nil, err
 	}
-	return plan.NewCreateCollection(scope, stmt), nil
+	return plan.NewQueryPlan(plan.NewCreateCollection(scope, stmt)), nil
 }
 
 func (this *builder) VisitDropCollection(stmt *algebra.DropCollection) (interface{}, error) {
@@ -35,7 +35,7 @@ func (this *builder) VisitDropCollection(stmt *algebra.DropCollection) (interfac
 	if err != nil {
 		return nil, err
 	}
-	return plan.NewDropCollection(scope, stmt), nil
+	return plan.NewQueryPlan(plan.NewDropCollection(scope, stmt)), nil
 }
 
 func (this *builder) VisitFlushCollection(stmt *algebra.FlushCollection) (interface{}, error) {
@@ -44,5 +44,5 @@ func (this *builder) VisitFlushCollection(stmt *algebra.FlushCollection) (interf
 	if err != nil {
 		return nil, err
 	}
-	return plan.NewFlushCollection(keyspace, stmt), nil
+	return plan.NewQueryPlan(plan.NewFlushCollection(keyspace, stmt)), nil
 }

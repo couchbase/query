@@ -157,6 +157,7 @@ const (
 	E_USE_KEYS_USE_INDEXES                    ErrorCode = 4110
 	E_NO_PRIMARY_INDEX                        ErrorCode = 4120
 	E_PRIMARY_INDEX_OFFLINE                   ErrorCode = 4125
+	E_LIST_SUBQUERIES                         ErrorCode = 4130
 	E_NOT_GROUP_KEY_OR_AGG                    ErrorCode = 4210
 	E_INDEX_ALREADY_EXISTS                    ErrorCode = 4300
 	E_AMBIGUOUS_META                          ErrorCode = 4310

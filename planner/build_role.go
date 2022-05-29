@@ -14,9 +14,9 @@ import (
 )
 
 func (this *builder) VisitGrantRole(stmt *algebra.GrantRole) (interface{}, error) {
-	return plan.NewGrantRole(stmt), nil
+	return plan.NewQueryPlan(plan.NewGrantRole(stmt)), nil
 }
 
 func (this *builder) VisitRevokeRole(stmt *algebra.RevokeRole) (interface{}, error) {
-	return plan.NewRevokeRole(stmt), nil
+	return plan.NewQueryPlan(plan.NewRevokeRole(stmt)), nil
 }

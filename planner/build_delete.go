@@ -87,5 +87,5 @@ func (this *builder) VisitDelete(stmt *algebra.Delete) (interface{}, error) {
 		this.addChildren(plan.NewDiscard(cost, cardinality, size, frCost))
 	}
 
-	return plan.NewSequence(this.children...), nil
+	return this.chkBldSubqueries(stmt, plan.NewSequence(this.children...))
 }

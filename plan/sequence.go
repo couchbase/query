@@ -11,12 +11,11 @@ package plan
 import "encoding/json"
 
 type Sequence struct {
-	readwrite
 	children []Operator `json:"~children"`
 }
 
 func NewSequence(children ...Operator) *Sequence {
-	return &Sequence{children: children}
+	return &Sequence{children}
 }
 
 func (this *Sequence) Accept(visitor Visitor) (interface{}, error) {

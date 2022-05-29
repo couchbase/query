@@ -14,13 +14,13 @@ import (
 )
 
 func (this *builder) VisitCreateFunction(stmt *algebra.CreateFunction) (interface{}, error) {
-	return plan.NewCreateFunction(stmt), nil
+	return plan.NewQueryPlan(plan.NewCreateFunction(stmt)), nil
 }
 
 func (this *builder) VisitDropFunction(stmt *algebra.DropFunction) (interface{}, error) {
-	return plan.NewDropFunction(stmt), nil
+	return plan.NewQueryPlan(plan.NewDropFunction(stmt)), nil
 }
 
 func (this *builder) VisitExecuteFunction(stmt *algebra.ExecuteFunction) (interface{}, error) {
-	return plan.NewExecuteFunction(stmt), nil
+	return plan.NewQueryPlan(plan.NewExecuteFunction(stmt)), nil
 }

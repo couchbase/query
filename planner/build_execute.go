@@ -28,5 +28,5 @@ func (this *builder) VisitExecute(stmt *algebra.Execute) (interface{}, error) {
 	if val == nil || val.Type() != value.STRING {
 		return nil, errors.NewUnrecognizedPreparedError(errBadFormat)
 	}
-	return plan.NewDiscard(OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL), nil
+	return plan.NewQueryPlan(plan.NewDiscard(OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL)), nil
 }

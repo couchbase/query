@@ -24,6 +24,36 @@ import (
 
 const REPREPARE_CHECK uint64 = math.MaxUint64
 
+type QueryPlan struct {
+	op         Operator
+	subqueries map[*algebra.Select]Operator
+}
+
+func NewQueryPlan(op Operator) *QueryPlan {
+	return &QueryPlan{
+		op: op,
+	}
+}
+
+func (this *QueryPlan) PlanOp() Operator {
+	return this.op
+}
+
+func (this *QueryPlan) SetPlanOp(op Operator) {
+	this.op = op
+}
+
+func (this *QueryPlan) AddSubquery(subq *algebra.Select, op Operator) {
+	if this.subqueries == nil {
+		this.subqueries = make(map[*algebra.Select]Operator, 1)
+	}
+	this.subqueries[subq] = op
+}
+
+func (this *QueryPlan) Subqueries() map[*algebra.Select]Operator {
+	return this.subqueries
+}
+
 type Operators []Operator
 
 type Operator interface {
@@ -37,9 +67,6 @@ type Operator interface {
 	New() Operator                               // Dynamic constructor; used for unmarshaling
 
 	verify(prepared *Prepared) bool // Check that the operator can reference keyspaces and indexes
-
-	AddSubquery(*algebra.Select, Operator)
-	Subqueries() map[*algebra.Select]Operator
 
 	Cost() float64
 	Cardinality() float64

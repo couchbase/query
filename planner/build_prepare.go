@@ -51,7 +51,7 @@ func (this *builder) VisitPrepare(stmt *algebra.Prepare) (interface{}, error) {
 			if err != nil {
 				return nil, err
 			}
-			return plan.NewPrepare(val, prep, false), nil
+			return plan.NewQueryPlan(plan.NewPrepare(val, prep, false)), nil
 		}
 	}
 
@@ -90,5 +90,5 @@ func (this *builder) VisitPrepare(stmt *algebra.Prepare) (interface{}, error) {
 		return nil, err
 	}
 
-	return plan.NewPrepare(val, prep, true), nil
+	return plan.NewQueryPlan(plan.NewPrepare(val, prep, true)), nil
 }

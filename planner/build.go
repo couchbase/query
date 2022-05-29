@@ -20,7 +20,7 @@ import (
 
 func Build(stmt algebra.Statement, datastore, systemstore datastore.Datastore,
 	namespace string, subquery, stream bool, context *PrepareContext) (
-	plan.Operator, map[string]bool, error) {
+	*plan.QueryPlan, map[string]bool, error) {
 
 	builder := newBuilder(datastore, systemstore, namespace, subquery, context)
 	if context.UseCBO() && context.Optimizer() != nil {
@@ -28,31 +28,22 @@ func Build(stmt algebra.Statement, datastore, systemstore datastore.Datastore,
 		checkCostModel(context.FeatureControls())
 	}
 
-	o, err := stmt.Accept(builder)
+	// subquery plan is currently only for explain
+	// TODO: to be expanded to all statements, plus prepareds
+	if stmt.Type() == "EXPLAIN" {
+		builder.setBuilderFlag(BUILDER_PLAN_SUBQUERY)
+	}
+
+	p, err := stmt.Accept(builder)
 
 	if err != nil {
 		return nil, nil, err
 	}
 
-	op := o.(plan.Operator)
-	_, is_prepared := o.(*plan.Prepared)
+	qp := p.(*plan.QueryPlan)
+	op := qp.PlanOp()
+	_, is_prepared := op.(*plan.Prepared)
 	indexKeyspaces := builder.indexKeyspaceNames
-
-	// TODO to be expanded to all statements, plus prepareds
-	if explain, is_explain := o.(*plan.Explain); is_explain {
-		for _, s := range stmt.Subqueries() {
-			if s.Explained() {
-				continue
-			}
-
-			// be warned, this amends the AST for the subqueries
-			op, err := s.Select().Accept(builder)
-			if err != nil {
-				return nil, nil, err
-			}
-			explain.AddSubquery(s.Select(), op.(plan.Operator))
-		}
-	}
 
 	if !subquery && !is_prepared {
 		privs, er := stmt.Privileges()
@@ -75,10 +66,37 @@ func Build(stmt algebra.Statement, datastore, systemstore datastore.Datastore,
 		// query is against secured tables anyway, and would therefore
 		// have privileges that need verification, meaning the Authorize
 		// operator would have been present in any case.
-		return plan.NewAuthorize(privs, op), indexKeyspaces, nil
-	} else {
-		return op, indexKeyspaces, nil
+		qp.SetPlanOp(plan.NewAuthorize(privs, op))
 	}
+
+	return qp, indexKeyspaces, nil
+}
+
+func (this *builder) chkBldSubqueries(stmt algebra.Statement, op plan.Operator) (
+	qp *plan.QueryPlan, err error) {
+
+	qp = plan.NewQueryPlan(op)
+	if this.hasBuilderFlag(BUILDER_PLAN_SUBQUERY) {
+		err = this.buildSubqueries(stmt, qp)
+	}
+	return
+}
+
+func (this *builder) buildSubqueries(stmt algebra.Statement, qp *plan.QueryPlan) error {
+	subqueries, er := stmt.Subqueries()
+	if er != nil {
+		return er
+	}
+	for _, s := range subqueries {
+		// be warned, this amends the AST for the subqueries
+		p, err := s.Select().Accept(this)
+		if err != nil {
+			return err
+		}
+		qplan := p.(*plan.QueryPlan)
+		qp.AddSubquery(s.Select(), qplan.PlanOp())
+	}
+	return nil
 }
 
 var _MAP_KEYSPACE_CAP = 4
@@ -103,6 +121,7 @@ const (
 	BUILDER_PLAN_HAS_ORDER
 	BUILDER_OR_SUBTERM
 	BUILDER_HAS_EARLY_ORDER
+	BUILDER_PLAN_SUBQUERY
 )
 
 const BUILDER_PRESERVED_FLAGS = (BUILDER_PLAN_HAS_ORDER | BUILDER_HAS_EARLY_ORDER)

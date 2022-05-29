@@ -16,14 +16,14 @@ import (
 
 type Explain struct {
 	execution
-	op         Operator
+	qp         *QueryPlan
 	text       string
 	optimHints *algebra.OptimHints
 }
 
-func NewExplain(op Operator, text string, optimHints *algebra.OptimHints) *Explain {
+func NewExplain(qp *QueryPlan, text string, optimHints *algebra.OptimHints) *Explain {
 	return &Explain{
-		op:         op,
+		qp:         qp,
 		text:       text,
 		optimHints: optimHints,
 	}
@@ -37,10 +37,6 @@ func (this *Explain) New() Operator {
 	return &Explain{}
 }
 
-func (this *Explain) Operator() Operator {
-	return this.op
-}
-
 func (this *Explain) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
@@ -48,21 +44,23 @@ func (this *Explain) MarshalJSON() ([]byte, error) {
 func (this *Explain) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := make(map[string]interface{}, 2)
 	r["text"] = this.text
-	if this.op != nil {
-		if this.op.Cost() > 0.0 {
-			r["cost"] = this.op.Cost()
+	op := this.qp.op
+	if op != nil {
+		if op.Cost() > 0.0 {
+			r["cost"] = op.Cost()
 		}
-		if this.op.Cardinality() > 0.0 {
-			r["cardinality"] = this.op.Cardinality()
+		if op.Cardinality() > 0.0 {
+			r["cardinality"] = op.Cardinality()
 		}
 	}
-	r["plan"] = this.op
+	r["plan"] = op
 	if this.optimHints != nil {
 		r["optimizer_hints"] = this.optimHints
 	}
-	if len(this.subqueries) > 0 {
-		marshalledSubqueries := make([]map[string]interface{}, 0, len(this.subqueries))
-		for t, s := range this.subqueries {
+	subqueries := this.qp.subqueries
+	if len(subqueries) > 0 {
+		marshalledSubqueries := make([]map[string]interface{}, 0, len(subqueries))
+		for t, s := range subqueries {
 			marshalledSubqueries = append(marshalledSubqueries, map[string]interface{}{"subquery": t.String(), "plan": s})
 		}
 		r["~subqueries"] = marshalledSubqueries
@@ -115,6 +113,10 @@ func (this *Explain) UnmarshalJSON(body []byte) error {
 
 	// Subqueries is printed in explain for informational purposes only
 
-	this.op, err = MakeOperator(op_type.Operator, _unmarshalled.Op)
-	return err
+	op, err := MakeOperator(op_type.Operator, _unmarshalled.Op)
+	if err != nil {
+		return err
+	}
+	this.qp = NewQueryPlan(op)
+	return nil
 }

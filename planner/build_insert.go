@@ -38,12 +38,13 @@ func (this *builder) VisitInsert(stmt *algebra.Insert) (interface{}, error) {
 		children = append(children, plan.NewValueScan(stmt.Values(), cost, cardinality, size, frCost))
 		this.maxParallelism = (len(stmt.Values()) + 64) / 64
 	} else if stmt.Select() != nil {
-		sel, err := stmt.Select().Accept(this)
+		qp, err := stmt.Select().Accept(this)
 		if err != nil {
 			return nil, err
 		}
 
-		selOp := sel.(plan.Operator)
+		selQP := qp.(*plan.QueryPlan)
+		selOp := selQP.PlanOp()
 		if this.useCBO {
 			cost = selOp.Cost()
 			cardinality = selOp.Cardinality()
@@ -72,5 +73,5 @@ func (this *builder) VisitInsert(stmt *algebra.Insert) (interface{}, error) {
 	}
 
 	children = append(children, this.addParallel(subChildren...))
-	return plan.NewSequence(children...), nil
+	return this.chkBldSubqueries(stmt, plan.NewSequence(children...))
 }

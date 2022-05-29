@@ -14,10 +14,11 @@ import (
 )
 
 func (this *builder) VisitExplain(stmt *algebra.Explain) (interface{}, error) {
-	op, err := stmt.Statement().Accept(this)
+	qp, err := stmt.Statement().Accept(this)
 	if err != nil {
 		return nil, err
 	}
 
-	return plan.NewExplain(op.(plan.Operator), stmt.Text(), stmt.Statement().OptimHints()), nil
+	op := plan.NewExplain(qp.(*plan.QueryPlan), stmt.Text(), stmt.Statement().OptimHints())
+	return plan.NewQueryPlan(op), nil
 }

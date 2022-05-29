@@ -76,14 +76,9 @@ type Statement interface {
 	OptimHints() *OptimHints
 
 	/*
-		Sets the statement subqueries
-	*/
-	SetSubqueries([]*Subquery)
-
-	/*
 		Returns the statement subqueries
 	*/
-	Subqueries() []*Subquery
+	Subqueries() ([]*Subquery, errors.Error)
 }
 
 /*

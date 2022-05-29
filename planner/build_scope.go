@@ -19,7 +19,7 @@ func (this *builder) VisitCreateScope(stmt *algebra.CreateScope) (interface{}, e
 	if err != nil {
 		return nil, err
 	}
-	return plan.NewCreateScope(bucket, stmt), nil
+	return plan.NewQueryPlan(plan.NewCreateScope(bucket, stmt)), nil
 }
 
 func (this *builder) VisitDropScope(stmt *algebra.DropScope) (interface{}, error) {
@@ -27,5 +27,5 @@ func (this *builder) VisitDropScope(stmt *algebra.DropScope) (interface{}, error
 	if err != nil {
 		return nil, err
 	}
-	return plan.NewDropScope(bucket, stmt), nil
+	return plan.NewQueryPlan(plan.NewDropScope(bucket, stmt)), nil
 }

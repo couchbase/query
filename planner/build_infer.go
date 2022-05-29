@@ -20,9 +20,9 @@ func (this *builder) VisitInferKeyspace(stmt *algebra.InferKeyspace) (interface{
 		return nil, err
 	}
 
-	return plan.NewInferKeyspace(keyspace, stmt), nil
+	return plan.NewQueryPlan(plan.NewInferKeyspace(keyspace, stmt)), nil
 }
 
 func (this *builder) VisitInferExpression(stmt *algebra.InferExpression) (interface{}, error) {
-	return plan.NewInferExpression(stmt), nil
+	return plan.NewQueryPlan(plan.NewInferExpression(stmt)), nil
 }

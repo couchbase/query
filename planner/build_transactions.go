@@ -15,25 +15,25 @@ import (
 
 func (this *builder) VisitStartTransaction(stmt *algebra.StartTransaction) (interface{}, error) {
 	this.maxParallelism = 1
-	return plan.NewSequence(plan.NewStartTransaction(stmt)), nil
+	return plan.NewQueryPlan(plan.NewSequence(plan.NewStartTransaction(stmt))), nil
 }
 
 func (this *builder) VisitCommitTransaction(stmt *algebra.CommitTransaction) (interface{}, error) {
 	this.maxParallelism = 1
-	return plan.NewSequence(plan.NewCommitTransaction(stmt)), nil
+	return plan.NewQueryPlan(plan.NewSequence(plan.NewCommitTransaction(stmt))), nil
 }
 
 func (this *builder) VisitRollbackTransaction(stmt *algebra.RollbackTransaction) (interface{}, error) {
 	this.maxParallelism = 1
-	return plan.NewSequence(plan.NewRollbackTransaction(stmt)), nil
+	return plan.NewQueryPlan(plan.NewSequence(plan.NewRollbackTransaction(stmt))), nil
 }
 
 func (this *builder) VisitTransactionIsolation(stmt *algebra.TransactionIsolation) (interface{}, error) {
 	this.maxParallelism = 1
-	return plan.NewSequence(plan.NewTransactionIsolation(stmt)), nil
+	return plan.NewQueryPlan(plan.NewSequence(plan.NewTransactionIsolation(stmt))), nil
 }
 
 func (this *builder) VisitSavepoint(stmt *algebra.Savepoint) (interface{}, error) {
 	this.maxParallelism = 1
-	return plan.NewSequence(plan.NewSavepoint(stmt)), nil
+	return plan.NewQueryPlan(plan.NewSequence(plan.NewSavepoint(stmt))), nil
 }

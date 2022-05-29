@@ -22,8 +22,7 @@ the subquery.
 */
 type Subquery struct {
 	expression.ExpressionBase
-	query     *Select
-	explained bool
+	query *Select
 }
 
 /*
@@ -50,14 +49,6 @@ func (this *Subquery) String() string {
 	}
 
 	return s + "(" + this.query.String() + ")"
-}
-
-func (this *Subquery) SetExplained() {
-	this.explained = true
-}
-
-func (this *Subquery) Explained() bool {
-	return this.explained
 }
 
 /*

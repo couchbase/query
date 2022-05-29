@@ -76,7 +76,7 @@ func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 	}
 
 	if stmtOrder == nil && stmtOffset == nil && stmtLimit == nil {
-		return sub, nil
+		return this.chkBldSubqueries(stmt, sub.(plan.Operator))
 	}
 
 	children := make([]plan.Operator, 0, 5)
@@ -165,7 +165,7 @@ func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 		children = maybeFinalProject(children)
 	}
 
-	return plan.NewSequence(children...), nil
+	return this.chkBldSubqueries(stmt, plan.NewSequence(children...))
 }
 
 func newOffsetLimitExpr(expr expression.Expression, offset bool) (expression.Expression, error) {
