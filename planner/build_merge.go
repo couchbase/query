@@ -370,7 +370,7 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 		this.addChildren(plan.NewDiscard(cost, cardinality, size, frCost))
 	}
 
-	return plan.NewSequence(this.children...), nil
+	return this.chkBldSubqueries(stmt, plan.NewSequence(this.children...))
 }
 
 func (this *builder) addMergeFilterCost(pred expression.Expression, alias string,

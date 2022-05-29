@@ -1300,7 +1300,6 @@ expr opt_as_alias opt_use
                 return yylex.(*lexer).FatalError(fmt.Sprintf("FROM Subquery cannot have USE KEYS or USE INDEX%s.",
                     $1.ErrorContext()))
             }
-	    other.SetExplained()
             $$ = algebra.NewSubqueryTerm(other.Select(), $2, $3.JoinHint())
         case *expression.Identifier:
             ksterm := algebra.NewKeyspaceTermFromPath(algebra.NewPathWithContext(other.Alias(), yylex.(*lexer).Namespace(),
@@ -4596,14 +4595,12 @@ LPAREN fullselect RPAREN
     $$ = algebra.NewSubquery($4)
     $$.Select().SetCorrelated()
     $$.ExprBase().SetErrorContext(yylex.(*lexer).nex.Line()+1,yylex.(*lexer).nex.Column())
-    yylex.(*lexer).addSubquery($$)
 }
 |
 LPAREN fullselect RPAREN
 {
     $$ = algebra.NewSubquery($2)
     $$.ExprBase().SetErrorContext(yylex.(*lexer).nex.Line()+1,yylex.(*lexer).nex.Column())
-    yylex.(*lexer).addSubquery($$)
 }
 ;
 

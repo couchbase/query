@@ -20,5 +20,5 @@ func (this *builder) VisitUpdateStatistics(stmt *algebra.UpdateStatistics) (inte
 		return nil, err
 	}
 
-	return plan.NewUpdateStatistics(keyspace, stmt), nil
+	return plan.NewQueryPlan(plan.NewUpdateStatistics(keyspace, stmt)), nil
 }

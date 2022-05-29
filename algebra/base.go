@@ -16,36 +16,38 @@ import (
 
 type statementBase struct {
 	stmt       Statement
-	subqueries []*Subquery
 	paramCount int
-}
-
-/*
-Set the statement subqueries.
-*/
-func (this *statementBase) SetSubqueries(subqueries []*Subquery) {
-	this.subqueries = subqueries
 }
 
 /*
 Return the statement subqueries.
 */
-func (this *statementBase) Subqueries() []*Subquery {
-	return this.subqueries
+func (this *statementBase) Subqueries() ([]*Subquery, errors.Error) {
+	return listSubqueries(this.stmt.Expressions())
+}
+
+func listSubqueries(exprs expression.Expressions) ([]*Subquery, errors.Error) {
+	subqs, err := expression.ListSubqueries(exprs, false)
+	if err != nil {
+		return nil, errors.NewListSubqueryError(err)
+	}
+	subqueries := make([]*Subquery, 0, len(subqs))
+	for _, subq := range subqs {
+		subqueries = append(subqueries, subq.(*Subquery))
+	}
+	return subqueries, nil
 }
 
 /*
 Returns all required privileges.
 */
 func subqueryPrivileges(exprs expression.Expressions) (*auth.Privileges, errors.Error) {
-	subqueries, err := expression.ListSubqueries(exprs, false)
+	subqueries, err := listSubqueries(exprs)
 	if err != nil {
-		return nil, errors.NewError(err, "")
+		return nil, err
 	}
-
 	privileges := auth.NewPrivileges()
-	for _, s := range subqueries {
-		sub := s.(*Subquery)
+	for _, sub := range subqueries {
 		sp, e := sub.Select().Privileges()
 		if e != nil {
 			return nil, e

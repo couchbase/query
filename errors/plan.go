@@ -131,6 +131,11 @@ func NewPrimaryIndexOfflineError(name string) Error {
 		InternalMsg: fmt.Sprintf("Primary index %s not online.", name), InternalCaller: CallerN(1)}
 }
 
+func NewListSubqueryError(e error) Error {
+	return &err{level: EXCEPTION, ICode: E_LIST_SUBQUERIES, IKey: "plan.stmt.list_subqueries",
+		ICause: e, InternalMsg: "Error listing subqueries.", InternalCaller: CallerN(1)}
+}
+
 func NewNotGroupKeyOrAggError(expr string) Error {
 	return &err{level: EXCEPTION, ICode: E_NOT_GROUP_KEY_OR_AGG, IKey: "plan.not_group_key_or_agg",
 		InternalMsg: fmt.Sprintf("Expression %s must depend only on group keys or aggregates.", expr), InternalCaller: CallerN(1)}

@@ -39,7 +39,7 @@ func (this *builder) VisitCreatePrimaryIndex(stmt *algebra.CreatePrimaryIndex) (
 		}
 	}
 
-	return plan.NewCreatePrimaryIndex(keyspace, stmt), nil
+	return plan.NewQueryPlan(plan.NewCreatePrimaryIndex(keyspace, stmt)), nil
 }
 
 func (this *builder) VisitCreateIndex(stmt *algebra.CreateIndex) (interface{}, error) {
@@ -77,7 +77,7 @@ func (this *builder) VisitCreateIndex(stmt *algebra.CreateIndex) (interface{}, e
 		return nil, errors.NewPlanInternalError("Only a single user or system xattribute can be indexed.")
 	}
 
-	return plan.NewCreateIndex(keyspace, stmt), nil
+	return plan.NewQueryPlan(plan.NewCreateIndex(keyspace, stmt)), nil
 }
 
 func (this *builder) VisitDropIndex(stmt *algebra.DropIndex) (interface{}, error) {
@@ -99,7 +99,7 @@ func (this *builder) VisitDropIndex(stmt *algebra.DropIndex) (interface{}, error
 
 	index, ierr := indexer.IndexByName(stmt.Name())
 
-	return plan.NewDropIndex(index, ierr, indexer, stmt), nil
+	return plan.NewQueryPlan(plan.NewDropIndex(index, ierr, indexer, stmt)), nil
 }
 
 func (this *builder) VisitAlterIndex(stmt *algebra.AlterIndex) (interface{}, error) {
@@ -121,7 +121,7 @@ func (this *builder) VisitAlterIndex(stmt *algebra.AlterIndex) (interface{}, err
 
 	index, ierr := indexer.IndexByName(stmt.Name())
 
-	return plan.NewAlterIndex(index, ierr, indexer, stmt, keyspace), nil
+	return plan.NewQueryPlan(plan.NewAlterIndex(index, ierr, indexer, stmt, keyspace)), nil
 }
 
 func (this *builder) VisitBuildIndexes(stmt *algebra.BuildIndexes) (interface{}, error) {
@@ -141,7 +141,7 @@ func (this *builder) VisitBuildIndexes(stmt *algebra.BuildIndexes) (interface{},
 		return nil, er
 	}
 
-	return plan.NewBuildIndexes(keyspace, stmt), nil
+	return plan.NewQueryPlan(plan.NewBuildIndexes(keyspace, stmt)), nil
 }
 
 func (this *builder) getNameKeyspace(ks *algebra.KeyspaceRef, dynamic bool) (datastore.Keyspace, error) {

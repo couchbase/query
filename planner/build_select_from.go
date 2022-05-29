@@ -429,7 +429,7 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 }
 
 func (this *builder) VisitSubqueryTerm(node *algebra.SubqueryTerm) (interface{}, error) {
-	sel, err := node.Subquery().Accept(this)
+	qp, err := node.Subquery().Accept(this)
 	if err != nil {
 		this.processadviseJF(node.Alias())
 		return nil, err
@@ -439,7 +439,8 @@ func (this *builder) VisitSubqueryTerm(node *algebra.SubqueryTerm) (interface{},
 
 	this.children = make([]plan.Operator, 0, 16)    // top-level children, executed sequentially
 	this.subChildren = make([]plan.Operator, 0, 16) // sub-children, executed across data-parallel streams
-	selOp := sel.(plan.Operator)
+	selQP := qp.(*plan.QueryPlan)
+	selOp := selQP.PlanOp()
 	baseKeyspace, ok := this.baseKeyspaces[node.Alias()]
 	if !ok {
 		return nil, errors.NewPlanInternalError(fmt.Sprintf("VisitSubqueryTerm: baseKeyspace for %s not found", node.Alias()))

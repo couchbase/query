@@ -10,8 +10,14 @@ package planner
 
 import (
 	"github.com/couchbase/query/algebra"
+	"github.com/couchbase/query/plan"
 )
 
 func (this *builder) VisitSelectTerm(node *algebra.SelectTerm) (interface{}, error) {
-	return node.Select().Accept(this)
+	qp, err := node.Select().Accept(this)
+	if err != nil {
+		return nil, err
+	}
+	op := qp.(*plan.QueryPlan).PlanOp()
+	return op, nil
 }

@@ -817,6 +817,7 @@ func (this *Context) TxExpired() bool {
 // subquery evaluation
 
 func (this *Context) EvaluateSubquery(query *algebra.Select, parent value.Value) (value.Value, error) {
+	var qp *plan.QueryPlan
 	var subplan, subplanIsks interface{}
 	planFound := false
 
@@ -850,7 +851,7 @@ func (this *Context) EvaluateSubquery(query *algebra.Select, parent value.Value)
 				planner.NewPrepareContext(&prepContext, this.requestId, this.queryContext, nil, nil,
 					this.indexApiVersion, this.featureControls, this.useFts, this.useCBO, this.optimizer,
 					nil, this)
-				subplan, subplanIsks, err = planner.Build(query, this.datastore, this.systemstore, this.namespace,
+				qp, subplanIsks, err = planner.Build(query, this.datastore, this.systemstore, this.namespace,
 					true, false, &prepContext)
 
 				if err != nil {
@@ -861,6 +862,8 @@ func (this *Context) EvaluateSubquery(query *algebra.Select, parent value.Value)
 					this.Error(err1)
 					return nil, err1
 				}
+
+				subplan = qp.PlanOp()
 
 				// Cache plan
 				this.prepared.SetSubqueryPlan(query, subplan, subplanIsks)
@@ -884,7 +887,7 @@ func (this *Context) EvaluateSubquery(query *algebra.Select, parent value.Value)
 		planner.NewPrepareContext(&prepContext, this.requestId, this.queryContext, this.namedArgs,
 			this.positionalArgs, this.indexApiVersion, this.featureControls, this.useFts, this.useCBO, this.optimizer,
 			this.deltaKeyspaces, this)
-		subplan, subplanIsks, err = planner.Build(query, this.datastore, this.systemstore,
+		qp, subplanIsks, err = planner.Build(query, this.datastore, this.systemstore,
 			this.namespace, true, false, &prepContext)
 
 		if err != nil {
@@ -893,6 +896,8 @@ func (this *Context) EvaluateSubquery(query *algebra.Select, parent value.Value)
 			this.Error(err1)
 			return nil, err1
 		}
+
+		subplan = qp.PlanOp()
 
 		// Cache plan
 		subplans.set(query, subplan, subplanIsks)

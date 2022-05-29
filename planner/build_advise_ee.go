@@ -95,8 +95,9 @@ func (this *builder) VisitAdvise(stmt *algebra.Advise) (interface{}, error) {
 		}
 	}
 
-	return plan.NewAdvise(plan.NewIndexAdvice(generateIdxAdvice(this.queryInfos, this.validatedIdxes,
-		this.validatedCoverIdxes, this.context.QueryContext())), stmt.Query()), nil
+	op := plan.NewAdvise(plan.NewIndexAdvice(generateIdxAdvice(this.queryInfos, this.validatedIdxes,
+		this.validatedCoverIdxes, this.context.QueryContext())), stmt.Query())
+	return plan.NewQueryPlan(op), nil
 }
 
 func generateIdxAdvice(queryInfos map[expression.HasExpressions]*advisor.QueryInfo, nonCoverIdxes, coverIdxes iaplan.IndexInfos,
