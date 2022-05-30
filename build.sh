@@ -24,6 +24,13 @@ enterprise=0
 uflag=
 sflag=0
 fflag=1
+
+goversion=`go version | awk -F'[. ]' '{print $3$4}' | sed -E 's,go,,'`
+if [[ $goversion -ge 117 ]]
+then
+    fflag=0
+fi
+
 while [ $# -gt 0 ]; do
   case $1 in
     -tags)
