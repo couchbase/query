@@ -56,6 +56,12 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 	this.initialIndexAdvisor(stmt)
 	this.extractKeyspacePredicates(nil, this.pushableOnclause)
 
+	qp := plan.NewQueryPlan(nil)
+	err = this.chkBldSubqueries(stmt, qp)
+	if err != nil {
+		return nil, err
+	}
+
 	if source.SubqueryTerm() != nil {
 		_, err = source.SubqueryTerm().Accept(this)
 		if err != nil && !this.indexAdvisor {
@@ -348,7 +354,8 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 		this.addChildren(plan.NewDiscard(cost, cardinality, size, frCost))
 	}
 
-	return this.chkBldSubqueries(stmt, plan.NewSequence(this.children...))
+	qp.SetPlanOp(plan.NewSequence(this.children...))
+	return qp, nil
 }
 
 func (this *builder) addMergeFilterCost(pred expression.Expression, alias string,

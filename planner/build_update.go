@@ -25,6 +25,12 @@ func (this *builder) VisitUpdate(stmt *algebra.Update) (interface{}, error) {
 		return nil, err
 	}
 
+	qp := plan.NewQueryPlan(nil)
+	err = this.chkBldSubqueries(stmt, qp)
+	if err != nil {
+		return nil, err
+	}
+
 	err = this.beginMutate(keyspace, ksref, stmt.Keys(), stmt.Indexes(), stmt.Limit(), true)
 	if err != nil {
 		return nil, err
@@ -101,5 +107,6 @@ func (this *builder) VisitUpdate(stmt *algebra.Update) (interface{}, error) {
 		this.addChildren(plan.NewDiscard(cost, cardinality, size, frCost))
 	}
 
-	return this.chkBldSubqueries(stmt, plan.NewSequence(this.children...))
+	qp.SetPlanOp(plan.NewSequence(this.children...))
+	return qp, nil
 }

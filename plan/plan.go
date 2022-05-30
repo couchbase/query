@@ -45,9 +45,14 @@ func (this *QueryPlan) SetPlanOp(op Operator) {
 
 func (this *QueryPlan) AddSubquery(subq *algebra.Select, op Operator) {
 	if this.subqueries == nil {
-		this.subqueries = make(map[*algebra.Select]Operator, 1)
+		this.subqueries = make(map[*algebra.Select]Operator, 8)
 	}
 	this.subqueries[subq] = op
+}
+
+func (this *QueryPlan) HasSubquery(subq *algebra.Select) bool {
+	_, ok := this.subqueries[subq]
+	return ok
 }
 
 func (this *QueryPlan) Subqueries() map[*algebra.Select]Operator {
