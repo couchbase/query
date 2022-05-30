@@ -90,6 +90,12 @@ func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 		}
 	}
 
+	qp := plan.NewQueryPlan(nil)
+	err = this.chkBldSubqueries(stmt, qp)
+	if err != nil {
+		return nil, err
+	}
+
 	sub, err := stmt.Subresult().Accept(this)
 	if err != nil {
 		return nil, err
@@ -108,7 +114,8 @@ func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 	}
 
 	if stmtOrder == nil && stmtOffset == nil && stmtLimit == nil {
-		return this.chkBldSubqueries(stmt, sub.(plan.Operator))
+		qp.SetPlanOp(sub.(plan.Operator))
+		return qp, nil
 	}
 
 	children := make([]plan.Operator, 0, 5)
@@ -202,7 +209,8 @@ func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 		children = maybeFinalProject(children)
 	}
 
-	return this.chkBldSubqueries(stmt, plan.NewSequence(children...))
+	qp.SetPlanOp(plan.NewSequence(children...))
+	return qp, nil
 }
 
 func newOffsetLimitExpr(expr expression.Expression, offset bool) (expression.Expression, error) {

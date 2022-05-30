@@ -72,12 +72,11 @@ func Build(stmt algebra.Statement, datastore, systemstore datastore.Datastore,
 	return qp, indexKeyspaces, nil
 }
 
-func (this *builder) chkBldSubqueries(stmt algebra.Statement, op plan.Operator) (
-	qp *plan.QueryPlan, err error) {
-
-	qp = plan.NewQueryPlan(op)
+func (this *builder) chkBldSubqueries(stmt algebra.Statement, qp *plan.QueryPlan) (err error) {
 	if this.hasBuilderFlag(BUILDER_PLAN_SUBQUERY) {
 		err = this.buildSubqueries(stmt, qp)
+		// once plans for subqueries are built, unset builder flag
+		this.unsetBuilderFlag(BUILDER_PLAN_SUBQUERY)
 	}
 	return
 }
@@ -88,13 +87,22 @@ func (this *builder) buildSubqueries(stmt algebra.Statement, qp *plan.QueryPlan)
 		return er
 	}
 	for _, s := range subqueries {
+		subq := s.Select()
+		if qp.HasSubquery(subq) {
+			continue
+		}
 		// be warned, this amends the AST for the subqueries
-		p, err := s.Select().Accept(this)
+		p, err := subq.Accept(this)
 		if err != nil {
 			return err
 		}
 		qplan := p.(*plan.QueryPlan)
-		qp.AddSubquery(s.Select(), qplan.PlanOp())
+		qp.AddSubquery(subq, qplan.PlanOp())
+		for s, o := range qplan.Subqueries() {
+			if !qp.HasSubquery(s) {
+				qp.AddSubquery(s, o)
+			}
+		}
 	}
 	return nil
 }
@@ -127,6 +135,7 @@ const (
 )
 
 const BUILDER_PRESERVED_FLAGS = (BUILDER_PLAN_HAS_ORDER | BUILDER_HAS_EARLY_ORDER)
+const BUILDER_PASSTHRU_FLAGS = (BUILDER_PLAN_SUBQUERY)
 
 type builder struct {
 	indexPushDowns
@@ -316,6 +325,10 @@ func (this *builder) unsetBuilderFlag(flag uint32) {
 func (this *builder) resetBuilderFlags(prevBuilderFlags uint32) {
 	preservedFlags := (this.builderFlags & BUILDER_PRESERVED_FLAGS)
 	this.builderFlags = prevBuilderFlags | preservedFlags
+}
+
+func (this *builder) passthruBuilderFlags(prevBuilderFlags uint32) {
+	this.builderFlags = (prevBuilderFlags & BUILDER_PASSTHRU_FLAGS)
 }
 
 func (this *builder) collectKeyspaceNames() {

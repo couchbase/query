@@ -76,6 +76,12 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 	right := algebra.NewKeyspaceTermFromPath(ksref.Path(), ksref.As(), nil, stmt.Indexes())
 	targetKeyspace.SetNode(right)
 
+	qp := plan.NewQueryPlan(nil)
+	err = this.chkBldSubqueries(stmt, qp)
+	if err != nil {
+		return nil, err
+	}
+
 	stmt.SetOptimHints(deriveOptimHints(this.baseKeyspaces, stmt.OptimHints()))
 	optimHints := stmt.OptimHints()
 	if optimHints != nil {
@@ -370,7 +376,8 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 		this.addChildren(plan.NewDiscard(cost, cardinality, size, frCost))
 	}
 
-	return this.chkBldSubqueries(stmt, plan.NewSequence(this.children...))
+	qp.SetPlanOp(plan.NewSequence(this.children...))
+	return qp, nil
 }
 
 func (this *builder) addMergeFilterCost(pred expression.Expression, alias string,

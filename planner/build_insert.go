@@ -31,6 +31,12 @@ func (this *builder) VisitInsert(stmt *algebra.Insert) (interface{}, error) {
 	size := OPT_SIZE_NOT_AVAIL
 	frCost := OPT_COST_NOT_AVAIL
 
+	qp := plan.NewQueryPlan(nil)
+	err = this.chkBldSubqueries(stmt, qp)
+	if err != nil {
+		return nil, err
+	}
+
 	if stmt.Values() != nil {
 		if this.useCBO && this.keyspaceUseCBO(ksref.Alias()) {
 			cost, cardinality, size, frCost = getValueScanCost(stmt.Values())
@@ -38,12 +44,12 @@ func (this *builder) VisitInsert(stmt *algebra.Insert) (interface{}, error) {
 		children = append(children, plan.NewValueScan(stmt.Values(), cost, cardinality, size, frCost))
 		this.maxParallelism = (len(stmt.Values()) + 64) / 64
 	} else if stmt.Select() != nil {
-		qp, err := stmt.Select().Accept(this)
+		q, err := stmt.Select().Accept(this)
 		if err != nil {
 			return nil, err
 		}
 
-		selQP := qp.(*plan.QueryPlan)
+		selQP := q.(*plan.QueryPlan)
 		selOp := selQP.PlanOp()
 		if this.useCBO {
 			cost = selOp.Cost()
@@ -73,5 +79,6 @@ func (this *builder) VisitInsert(stmt *algebra.Insert) (interface{}, error) {
 	}
 
 	children = append(children, this.addParallel(subChildren...))
-	return this.chkBldSubqueries(stmt, plan.NewSequence(children...))
+	qp.SetPlanOp(plan.NewSequence(children...))
+	return qp, nil
 }

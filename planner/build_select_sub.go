@@ -64,7 +64,7 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 	this.baseKeyspaces = nil
 	this.keyspaceNames = nil
 	this.pushableOnclause = nil
-	this.builderFlags = 0
+	this.passthruBuilderFlags(prevBuilderFlags)
 	this.maxParallelism = 0
 	this.lastOp = nil
 	this.aliases = nil
