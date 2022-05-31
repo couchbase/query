@@ -84,18 +84,19 @@ func (this *InitialProject) processItem(item value.AnnotatedValue, context *Cont
 		} else {
 			pv := value.EMPTY_ANNOTATED_OBJECT
 			if context.UseRequestQuota() {
-				pv := value.EMPTY_ANNOTATED_OBJECT
 				iSz := item.Size()
 				pSz := pv.Size()
 				if pSz > iSz {
 					if context.TrackValueSize(pSz - iSz) {
 						context.Error(errors.NewMemoryQuotaExceededError())
+						item.Recycle()
 						return false
 					}
 				} else {
 					context.ReleaseValueSize(iSz - pSz)
 				}
 			}
+			item.Recycle()
 			return this.sendItem(pv)
 		}
 	} else if this.plan.Projection().Raw() {
@@ -129,6 +130,7 @@ func (this *InitialProject) processItem(item value.AnnotatedValue, context *Cont
 				context.ReleaseValueSize(iSz - aSz)
 			}
 		}
+		item.Recycle()
 		return this.sendItem(av)
 	} else {
 		// Any other projection
@@ -200,7 +202,12 @@ func (this *InitialProject) processTerms(item value.AnnotatedValue, context *Con
 			context.ReleaseValueSize(iSz - pSz)
 		}
 	}
-	return this.sendItem(pv)
+	item.Recycle()
+	if !this.sendItem(pv) {
+		pv.Recycle()
+		return false
+	}
+	return true
 }
 
 func (this *InitialProject) MarshalJSON() ([]byte, error) {

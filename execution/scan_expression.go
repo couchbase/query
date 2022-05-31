@@ -63,7 +63,11 @@ func (this *ExpressionScan) RunOnce(context *Context, parent value.Value) {
 		// use cached results if available
 		if !correlated && this.results != nil {
 			for _, av := range this.results {
-				this.sendItem(av)
+				av.Track()
+				if !this.sendItem(av) {
+					av.Recycle()
+					break
+				}
 			}
 			return
 		}
@@ -107,8 +111,15 @@ func (this *ExpressionScan) RunOnce(context *Context, parent value.Value) {
 		}
 
 		acts := actuals.([]interface{})
+		var results value.AnnotatedValues
 		if !correlated {
-			this.results = make(value.AnnotatedValues, 0, len(acts))
+			this.results = nil
+			results = make(value.AnnotatedValues, 0, len(acts))
+			defer func() {
+				for i := range results {
+					results[i].Recycle()
+				}
+			}()
 		}
 		for _, act := range acts {
 			actv := value.NewScopeValue(make(map[string]interface{}), parent)
@@ -123,6 +134,7 @@ func (this *ExpressionScan) RunOnce(context *Context, parent value.Value) {
 					return
 				}
 				if !result.Truth() {
+					av.Recycle()
 					continue
 				}
 			}
@@ -132,13 +144,24 @@ func (this *ExpressionScan) RunOnce(context *Context, parent value.Value) {
 			}
 
 			if !correlated {
-				this.results = append(this.results, av)
+				av.Track()
+				results = append(results, av)
 			}
-			this.sendItem(av)
+			if !this.sendItem(av) {
+				av.Recycle()
+				return
+			}
 		}
-
+		this.results, results = results, nil
 	})
+}
 
+func (this *ExpressionScan) Done() {
+	this.baseDone()
+	for i := range this.results {
+		this.results[i].Recycle()
+	}
+	this.results = nil
 }
 
 func (this *ExpressionScan) MarshalJSON() ([]byte, error) {

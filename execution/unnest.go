@@ -118,10 +118,12 @@ func (this *Unnest) processItem(item value.AnnotatedValue, context *Context) boo
 
 		if pass {
 			if buildBitFltr && !this.buildBitFilters(av, context) {
+				av.Recycle()
 				return false
 			}
 
 			if !this.sendItem(av) {
+				av.Recycle()
 				return false
 			}
 		}

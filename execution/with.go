@@ -20,6 +20,7 @@ type With struct {
 	base
 	plan  *plan.With
 	child Operator
+	wv    value.AnnotatedValue
 }
 
 func NewWith(plan *plan.With, context *Context, child Operator) *With {
@@ -90,9 +91,9 @@ func (this *With) RunOnce(context *Context, parent value.Value) {
 				// operators to be set properly by sequences
 				break
 			}
-
 			wv.SetField(b.Variable(), v)
 		}
+		this.wv = wv // keep a copy for later recycling
 
 		this.fork(this.child, context, wv)
 	})
@@ -127,6 +128,7 @@ func (this *With) reopen(context *Context) bool {
 	if rv && this.child != nil {
 		rv = this.child.reopen(context)
 	}
+	this.recycleBindings()
 	return rv
 }
 
@@ -137,4 +139,25 @@ func (this *With) Done() {
 		this.child = nil
 		child.Done()
 	}
+	this.recycleBindings()
+}
+
+func (this *With) recycleBindings() {
+	if this.wv == nil {
+		return
+	}
+
+	m := this.wv.Fields()
+	if m == nil {
+		return
+	}
+	for _, v := range m {
+		if val, ok := v.(value.Value); ok {
+			// double recycle here to account for SetField's tracking
+			val.Recycle()
+			val.Recycle()
+		}
+	}
+	this.wv.Recycle()
+	this.wv = nil
 }
