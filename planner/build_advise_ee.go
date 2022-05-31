@@ -52,8 +52,29 @@ func (this *builder) VisitAdvise(stmt *algebra.Advise) (interface{}, error) {
 	this.queryInfos = make(map[expression.HasExpressions]*advisor.QueryInfo, 1)
 	stmt.Statement().Accept(this)
 
+	this.advise(considerCBO, this.queryInfos, stmt.Statement(), stmt.Context())
+	indexAdvice := plan.NewIndexAdvice(generateIdxAdvice(this.queryInfos, this.validatedIdxes,
+		this.validatedCoverIdxes, this.context.QueryContext()))
+
+	var subqueryIndexAdvice []plan.StmtAdvice
+	if len(this.subqueryInfos) > 0 {
+		subqueryIndexAdvice = make([]plan.StmtAdvice, 0, len(this.subqueryInfos))
+		for q, queryInfos := range this.subqueryInfos {
+			this.advise(considerCBO, queryInfos, q, stmt.Context())
+			indexAdvice := plan.NewIndexAdvice(generateIdxAdvice(queryInfos, this.validatedIdxes,
+				this.validatedCoverIdxes, this.context.QueryContext()))
+			subqueryIndexAdvice = append(subqueryIndexAdvice, plan.StmtAdvice{Op: indexAdvice, Subquery: q.String()})
+		}
+	}
+
+	op := plan.NewAdvise(indexAdvice, subqueryIndexAdvice, stmt.Query())
+	return plan.NewQueryPlan(op), nil
+}
+
+func (this *builder) advise(considerCBO bool, queryInfos map[expression.HasExpressions]*advisor.QueryInfo,
+	stmt algebra.Statement, context interface{}) {
 	if considerCBO {
-		for _, queryInfo := range this.queryInfos {
+		for _, queryInfo := range queryInfos {
 			keyspaceInfos := queryInfo.GetKeyspaceInfos()
 			for _, info := range keyspaceInfos {
 				if dictionary.HasKeyspaceInfo(info.GetName()) {
@@ -67,8 +88,8 @@ func (this *builder) VisitAdvise(stmt *algebra.Advise) (interface{}, error) {
 		}
 	}
 
-	coverIdxMap := advisor.AdviseIdxs(this.queryInfos,
-		extractExistAndDeferredIdxes(this.queryInfos, this.context.IndexApiVersion()), doDNF(stmt.Statement().Expressions()), stmt.Context(), this.context.dsContext)
+	coverIdxMap := advisor.AdviseIdxs(queryInfos,
+		extractExistAndDeferredIdxes(queryInfos, this.context.IndexApiVersion()), doDNF(stmt.Expressions()), context, this.context.dsContext)
 
 	this.setAdvisePhase(_VALIDATE)
 	//There are covering indexes to be validated:
@@ -88,16 +109,12 @@ func (this *builder) VisitAdvise(stmt *algebra.Advise) (interface{}, error) {
 			if considerCBO {
 				this.useCBO = true
 			}
-			stmt.Statement().Accept(this)
+			stmt.Accept(this)
 			if len(this.validatedIdxes) > 0 {
 				this.matchIdxInfos(coverIdxMap)
 			}
 		}
 	}
-
-	op := plan.NewAdvise(plan.NewIndexAdvice(generateIdxAdvice(this.queryInfos, this.validatedIdxes,
-		this.validatedCoverIdxes, this.context.QueryContext())), stmt.Query())
-	return plan.NewQueryPlan(op), nil
 }
 
 func generateIdxAdvice(queryInfos map[expression.HasExpressions]*advisor.QueryInfo, nonCoverIdxes, coverIdxes iaplan.IndexInfos,
@@ -201,6 +218,8 @@ type collectQueryInfo struct {
 	keyspaceInfos       advisor.KeyspaceInfos
 	queryInfo           *advisor.QueryInfo
 	queryInfos          map[expression.HasExpressions]*advisor.QueryInfo
+	saveQueryInfos      map[expression.HasExpressions]*advisor.QueryInfo
+	subqueryInfos       map[*algebra.Select]map[expression.HasExpressions]*advisor.QueryInfo
 	indexCollector      *scanIdxCol
 	idxCandidates       []datastore.Index
 	validatedIdxes      iaplan.IndexInfos
@@ -212,6 +231,21 @@ type collectQueryInfo struct {
 func (this *builder) setAdvisePhase(op int) {
 	this.indexAdvisor = true
 	this.advisePhase = op
+}
+
+func (this *builder) makeSubqueryInfos(l int) {
+	this.subqueryInfos = make(map[*algebra.Select]map[expression.HasExpressions]*advisor.QueryInfo, l)
+}
+
+func (this *builder) startSubqIndexAdvisor() {
+	this.saveQueryInfos = this.queryInfos
+	this.queryInfos = make(map[expression.HasExpressions]*advisor.QueryInfo, 1)
+}
+
+func (this *builder) endSubqIndexAdvisor(s *algebra.Select) {
+	this.subqueryInfos[s] = this.queryInfos
+	this.queryInfos = this.saveQueryInfos
+	this.saveQueryInfos = nil
 }
 
 func (this *builder) initialIndexAdvisor(stmt algebra.Statement) {

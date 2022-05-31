@@ -12,16 +12,23 @@ import (
 	"encoding/json"
 )
 
-type Advise struct {
-	execution
-	op    Operator
-	query string
+type StmtAdvice struct {
+	Subquery string
+	Op       Operator
 }
 
-func NewAdvise(op Operator, text string) *Advise {
+type Advise struct {
+	execution
+	op         Operator
+	subqueries []StmtAdvice
+	query      string
+}
+
+func NewAdvise(op Operator, subqueries []StmtAdvice, text string) *Advise {
 	return &Advise{
-		op:    op,
-		query: text,
+		op:         op,
+		subqueries: subqueries,
+		query:      text,
 	}
 }
 
@@ -50,10 +57,21 @@ func (this *Advise) MarshalBase(f func(map[string]interface{})) map[string]inter
 		f(r)
 	} else {
 		r["advice"] = this.op
+		if len(this.subqueries) > 0 {
+			marshalledSubqueries := make([]map[string]interface{}, 0, len(this.subqueries))
+			for _, s := range this.subqueries {
+				op := s.Op.MarshalBase(nil)
+				op["subquery"] = s.Subquery
+				marshalledSubqueries = append(marshalledSubqueries, op)
+			}
+			r["~subqueries"] = marshalledSubqueries
+		}
 	}
 	return r
 }
 
+// Note that advise is never prepared nor distributed across nodes,
+// so this code is never exercised - it might as well be a noop
 func (this *Advise) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
 		Op   json.RawMessage `json:"advice"`

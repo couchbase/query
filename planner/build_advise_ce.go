@@ -27,6 +27,18 @@ func (this *builder) VisitAdvise(stmt *algebra.Advise) (interface{}, error) {
 	return nil, fmt.Errorf("Not supported in CE version. Use https://index-advisor.couchbase.com")
 }
 
+func (this *builder) setAdvisePhase(op int) {
+}
+
+func (this *builder) makeSubqueryInfos(l int) {
+}
+
+func (this *builder) startSubqIndexAdvisor() {
+}
+
+func (this *builder) endSubqIndexAdvisor(s *algebra.Select) {
+}
+
 func (this *builder) initialIndexAdvisor(stmt algebra.Statement) {
 }
 

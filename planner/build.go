@@ -28,9 +28,9 @@ func Build(stmt algebra.Statement, datastore, systemstore datastore.Datastore,
 		checkCostModel(context.FeatureControls())
 	}
 
-	// subquery plan is currently only for explain
+	// subquery plan is currently only for explain and advise
 	// TODO: to be expanded to all statements, plus prepareds
-	if stmt.Type() == "EXPLAIN" {
+	if stmt.Type() == "EXPLAIN" || stmt.Type() == "ADVISE" {
 		builder.setBuilderFlag(BUILDER_PLAN_SUBQUERY)
 	}
 
@@ -86,11 +86,19 @@ func (this *builder) buildSubqueries(stmt algebra.Statement, qp *plan.QueryPlan)
 	if er != nil {
 		return er
 	}
+	if len(subqueries) == 0 {
+		return nil
+	}
+	this.makeSubqueryInfos(len(subqueries))
 	for _, s := range subqueries {
 		subq := s.Select()
 		if qp.HasSubquery(subq) {
 			continue
 		}
+
+		this.startSubqIndexAdvisor()
+		this.initialIndexAdvisor(subq)
+
 		// be warned, this amends the AST for the subqueries
 		p, err := subq.Accept(this)
 		if err != nil {
@@ -103,6 +111,7 @@ func (this *builder) buildSubqueries(stmt algebra.Statement, qp *plan.QueryPlan)
 				qp.AddSubquery(s, o)
 			}
 		}
+		this.endSubqIndexAdvisor(subq)
 	}
 	return nil
 }
