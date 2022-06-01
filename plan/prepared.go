@@ -68,24 +68,24 @@ func NewPrepared(operator Operator, signature value.Value, indexScanKeyspaces ma
 
 func NewPreparedFromEncodedPlan(prepared_stmt string) (*Prepared, []byte, int, errors.Error) {
 	r := 0
+	prepared := NewPrepared(nil, nil, nil)
 	decoded, err := base64.StdEncoding.DecodeString(prepared_stmt)
 	if err != nil {
-		return nil, nil, r, errors.NewPreparedDecodingError(err)
+		return prepared, nil, r, errors.NewPreparedDecodingError(err)
 	}
 	var buf bytes.Buffer
 	buf.Write(decoded)
 	reader, err := gzip.NewReader(&buf)
 	if err != nil {
-		return nil, nil, r, errors.NewPreparedDecodingError(err)
+		return prepared, nil, r, errors.NewPreparedDecodingError(err)
 	}
 	prepared_bytes, err := ioutil.ReadAll(reader)
 	if err != nil {
-		return nil, nil, r, errors.NewPreparedDecodingError(err)
+		return prepared, nil, r, errors.NewPreparedDecodingError(err)
 	}
-	prepared := NewPrepared(nil, nil, nil)
 	version, err := prepared.unmarshalInternal(prepared_bytes)
 	if err != nil {
-		return nil, prepared_bytes, r, errors.NewUnrecognizedPreparedError(err)
+		return prepared, prepared_bytes, r, errors.NewUnrecognizedPreparedError(err)
 	}
 
 	if version < util.PLAN_VERSION {
