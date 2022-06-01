@@ -68,7 +68,7 @@ require (
 )
 
 require (
-	github.com/RoaringBitmap/roaring v1.1.0 // indirect
+	github.com/RoaringBitmap/roaring v0.9.4 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bits-and-blooms/bitset v1.2.2 // indirect
 	github.com/blevesearch/bleve-mapping-ui v0.4.0 // indirect
