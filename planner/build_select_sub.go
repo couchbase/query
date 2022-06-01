@@ -317,24 +317,7 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 	}
 
 	// Serialize the top-level children
-	var rv plan.Operator
-
-	rv = plan.NewSequence(this.children...)
-
-	// process with in a parent sequence
-	if node.With() != nil {
-		cost := OPT_COST_NOT_AVAIL
-		cardinality := OPT_CARD_NOT_AVAIL
-		size := OPT_SIZE_NOT_AVAIL
-		frCost := OPT_COST_NOT_AVAIL
-		if this.useCBO {
-			cost, cardinality, size, frCost = getWithCost(rv, node.With())
-		}
-		rv = plan.NewWith(node.With(), rv, cost, cardinality, size, frCost)
-		this.children = make([]plan.Operator, 0, 1)
-		this.addChildren(rv)
-	}
-	return rv, nil
+	return plan.NewSequence(this.children...), nil
 }
 
 func (this *builder) addLetAndPredicate(let expression.Bindings, pred expression.Expression) {

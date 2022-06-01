@@ -22,11 +22,6 @@ func (this *SemChecker) VisitSubselect(node *algebra.Subselect) (r interface{}, 
 	saveSemFlag := this.semFlag
 	defer func() { this.semFlag = saveSemFlag }()
 	this.unsetSemFlag(_SEM_WHERE | _SEM_ON | _SEM_PROJECTION | _SEM_ADVISOR_FUNC | _SEM_FROM)
-	if node.With() != nil {
-		if err = node.With().MapExpressions(this); err != nil {
-			return nil, err
-		}
-	}
 
 	if node.From() != nil {
 		this.setSemFlag(_SEM_FROM)

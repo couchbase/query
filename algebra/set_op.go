@@ -15,6 +15,36 @@ import (
 	"github.com/couchbase/query/value"
 )
 
+type SetOpType int32
+
+const (
+	SETOP_NONE = SetOpType(iota)
+	SETOP_UNION
+	SETOP_UNION_ALL
+	SETOP_INTERSECT
+	SETOP_INTERSECT_ALL
+	SETOP_EXCEPT
+	SETOP_EXCEPT_ALL
+)
+
+func NewSetOp(first, second Subresult, op SetOpType) Subresult {
+	switch op {
+	case SETOP_UNION:
+		return NewUnion(first, second)
+	case SETOP_UNION_ALL:
+		return NewUnionAll(first, second)
+	case SETOP_INTERSECT:
+		return NewIntersect(first, second)
+	case SETOP_INTERSECT_ALL:
+		return NewIntersectAll(first, second)
+	case SETOP_EXCEPT:
+		return NewExcept(first, second)
+	case SETOP_EXCEPT_ALL:
+		return NewExceptAll(first, second)
+	}
+	return nil
+}
+
 /*
 This is the base class for the set operations. Type setOp
 is a struct that contains two fields that represent

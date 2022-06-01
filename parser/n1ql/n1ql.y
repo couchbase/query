@@ -38,6 +38,8 @@ dimensions       []expression.Bindings
 node             algebra.Node
 statement        algebra.Statement
 
+setopType        algebra.SetOpType
+
 fullselect       *algebra.Select
 subresult        algebra.Subresult
 selectTerm       *algebra.SelectTerm
@@ -398,6 +400,7 @@ tokOffset    int
 
 %type <expr>             paren_expr
 %type <subquery>         subquery_expr
+%type <setopType>        setop
 
 %type <fullselect>       fullselect
 %type <subresult>        select_term select_terms
@@ -416,7 +419,7 @@ tokOffset    int
 %type <expr>             on_keys on_key
 %type <indexRefs>        index_refs
 %type <indexRef>         index_ref
-%type <bindings>         opt_let let opt_with
+%type <bindings>         opt_let let with
 %type <expr>             opt_where where opt_filter
 %type <group>            opt_group group
 %type <bindings>         opt_letting letting
@@ -789,17 +792,32 @@ set_transaction_isolation
 fullselect:
 select_terms opt_order_by
 {
-    $$ = algebra.NewSelect($1, $2, nil, nil) /* OFFSET precedes LIMIT */
+    $$ = algebra.NewSelect($1, nil, $2, nil, nil) /* OFFSET precedes LIMIT */
 }
 |
 select_terms opt_order_by limit opt_offset
 {
-    $$ = algebra.NewSelect($1, $2, $4, $3) /* OFFSET precedes LIMIT */
+    $$ = algebra.NewSelect($1, nil, $2, $4, $3) /* OFFSET precedes LIMIT */
 }
 |
 select_terms opt_order_by offset opt_limit
 {
-    $$ = algebra.NewSelect($1, $2, $3, $4) /* OFFSET precedes LIMIT */
+    $$ = algebra.NewSelect($1, nil, $2, $3, $4) /* OFFSET precedes LIMIT */
+}
+|
+with select_terms opt_order_by
+{
+    $$ = algebra.NewSelect($2, $1, $3, nil, nil) /* OFFSET precedes LIMIT */
+}
+|
+with select_terms opt_order_by limit opt_offset
+{
+    $$ = algebra.NewSelect($2, $1, $3, $5, $4) /* OFFSET precedes LIMIT */
+}
+|
+with select_terms opt_order_by offset opt_limit
+{
+    $$ = algebra.NewSelect($2, $1, $3, $4, $5) /* OFFSET precedes LIMIT */
 }
 ;
 
@@ -809,70 +827,22 @@ subselect
     $$ = $1
 }
 |
-select_terms UNION select_term
+select_terms setop select_term
 {
-    $$ = algebra.NewUnion($1, $3)
+    $$ = algebra.NewSetOp($1, $3, $2)
+    if $$ == nil {
+       yylex.Error("Unexpected Set Operation"+yylex.(*lexer).ErrorContext())
+    }
 }
 |
-select_terms UNION ALL select_term
+subquery_expr setop select_term
 {
-    $$ = algebra.NewUnionAll($1, $4)
-}
-|
-select_terms INTERSECT select_term
-{
-    $$ = algebra.NewIntersect($1, $3)
-}
-|
-select_terms INTERSECT ALL select_term
-{
-    $$ = algebra.NewIntersectAll($1, $4)
-}
-|
-select_terms EXCEPT select_term
-{
-    $$ = algebra.NewExcept($1, $3)
-}
-|
-select_terms EXCEPT ALL select_term
-{
-    $$ = algebra.NewExceptAll($1, $4)
-}
-|
-subquery_expr UNION select_term
-{
+    $1.Select().SetUnderSetOp()
     left_term := algebra.NewSelectTerm($1.Select())
-    $$ = algebra.NewUnion(left_term, $3)
-}
-|
-subquery_expr UNION ALL select_term
-{
-    left_term := algebra.NewSelectTerm($1.Select())
-    $$ = algebra.NewUnionAll(left_term, $4)
-}
-|
-subquery_expr INTERSECT select_term
-{
-    left_term := algebra.NewSelectTerm($1.Select())
-    $$ = algebra.NewIntersect(left_term, $3)
-}
-|
-subquery_expr INTERSECT ALL select_term
-{
-    left_term := algebra.NewSelectTerm($1.Select())
-    $$ = algebra.NewIntersectAll(left_term, $4)
-}
-|
-subquery_expr EXCEPT select_term
-{
-    left_term := algebra.NewSelectTerm($1.Select())
-    $$ = algebra.NewExcept(left_term, $3)
-}
-|
-subquery_expr EXCEPT ALL select_term
-{
-    left_term := algebra.NewSelectTerm($1.Select())
-    $$ = algebra.NewExceptAll(left_term, $4)
+    $$ = algebra.NewSetOp(left_term, $3, $2)
+    if $$ == nil {
+       yylex.Error("Unexpected Set Operation"+yylex.(*lexer).ErrorContext())
+    }
 }
 ;
 
@@ -884,6 +854,8 @@ subselect
 |
 subquery_expr
 {
+    // all current uses of select_term is under setop
+    $1.Select().SetUnderSetOp()
     $$ = algebra.NewSelectTerm($1.Select())
 }
 ;
@@ -895,19 +867,50 @@ select_from
 ;
 
 from_select:
-opt_with from opt_let opt_where opt_group opt_window_clause SELECT opt_optim_hints projection
+from opt_let opt_where opt_group opt_window_clause SELECT opt_optim_hints projection
 {
-    $$ = algebra.NewSubselect($1, $2, $3, $4, $5, $6, $9, $8)
+    $$ = algebra.NewSubselect($1, $2, $3, $4, $5, $8, $7)
 }
 ;
 
 select_from:
-opt_with SELECT opt_optim_hints projection opt_from opt_let opt_where opt_group opt_window_clause
+SELECT opt_optim_hints projection opt_from opt_let opt_where opt_group opt_window_clause
 {
-    $$ = algebra.NewSubselect($1, $5, $6, $7, $8, $9, $4, $3)
+    $$ = algebra.NewSubselect($4, $5, $6, $7, $8, $3, $2)
 }
 ;
 
+setop:
+UNION
+{
+    $$ = algebra.SETOP_UNION
+}
+|
+UNION ALL
+{
+    $$ = algebra.SETOP_UNION_ALL
+}
+|
+INTERSECT
+{
+    $$ = algebra.SETOP_INTERSECT
+}
+|
+INTERSECT ALL
+{
+    $$ = algebra.SETOP_INTERSECT_ALL
+}
+|
+EXCEPT
+{
+    $$ = algebra.SETOP_EXCEPT
+}
+|
+EXCEPT ALL
+{
+    $$ = algebra.SETOP_EXCEPT_ALL
+}
+;
 
 /*************************************************
  *
@@ -1563,10 +1566,7 @@ alias EQ expr
  *
  *************************************************/
 
-opt_with:
-/* empty */
-{ $$ = nil }
-|
+with:
 WITH with_list
 {
     $$ = $2

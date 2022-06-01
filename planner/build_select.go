@@ -81,6 +81,18 @@ func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 		return nil, err
 	}
 
+	with := stmt.With()
+	if with != nil {
+		cost := OPT_COST_NOT_AVAIL
+		cardinality := OPT_CARD_NOT_AVAIL
+		size := OPT_SIZE_NOT_AVAIL
+		frCost := OPT_COST_NOT_AVAIL
+		if this.useCBO {
+			cost, cardinality, size, frCost = getWithCost(sub.(plan.Operator), with)
+		}
+		sub = plan.NewWith(with, sub.(plan.Operator), cost, cardinality, size, frCost)
+	}
+
 	if stmtOrder == nil && stmtOffset == nil && stmtLimit == nil {
 		qp.SetPlanOp(sub.(plan.Operator))
 		return qp, nil

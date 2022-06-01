@@ -1,0 +1,25 @@
+[
+    {
+	"testcase": "MB-50881",
+        "statements":"WITH s as ([{\"a\":1}, {\"a\":2}]) SELECT s1.a FROM s AS s1 WHERE s1.a = 1 UNION ALL SELECT s1.a + 10 AS a11 FROM s AS s1 WHERE s1.a = 2",
+        "results": [
+            {
+                "a11": 12
+            },
+            {
+                "a": 1
+            }
+        ]
+    },
+    {
+	"testcase": "MB-52200",
+        "statements":"WITH arrs AS ([1,2,3,4]) SELECT meta().id, FIRST v FOR v IN arrs END AS elem FROM shellTest s WHERE s.c11 = 1 AND type = \"left\"",
+        "results": [
+            {
+                "elem": 1,
+                "id": "test11_withs"
+            }
+        ]
+    }
+]
+
