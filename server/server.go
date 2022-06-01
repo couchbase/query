@@ -1279,7 +1279,7 @@ func (this *Server) getPrepared(request Request, context *execution.Context) (*p
 			}
 		}
 	} else {
-		if request.TxId() != "" && !autoPrepare {
+		if (request.TxId() != "" || request.TxImplicit()) && !autoPrepare {
 			var err errors.Error
 			if prepared, err = this.getPreparedByName(prepared.Name(), request, context); err != nil {
 				return nil, err
