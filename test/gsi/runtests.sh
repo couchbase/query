@@ -40,7 +40,7 @@ do
     fi
     source ./exportval.sh $*
     cd $i
-    go test $verbose -p 1 -tags enterprise ./...
+    go test -exec "env LD_LIBRARY_PATH=${LD_LIBRARY_PATH}" $verbose -p 1 -tags enterprise ./...
     cd ../..
     source ./resetval.sh $*
 done
