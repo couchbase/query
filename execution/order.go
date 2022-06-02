@@ -110,7 +110,11 @@ func (this *Order) afterItems(context *Context) {
 	context.SetSortCount(uint64(this.Len()))
 	context.AddPhaseCount(SORT, uint64(this.Len()))
 
+	earlyOrder := this.plan.IsEarlyOrder()
 	for _, av := range this.values {
+		if earlyOrder {
+			this.resetCachedValues(av)
+		}
 		if !this.sendItem(av) {
 			return
 		}
@@ -120,6 +124,12 @@ func (this *Order) afterItems(context *Context) {
 func (this *Order) releaseValues() {
 	_ORDER_POOL.Put(this.values)
 	this.values = nil
+}
+
+func (this *Order) resetCachedValues(av value.AnnotatedValue) {
+	for _, term := range this.terms {
+		av.RemoveAttachment(term.term)
+	}
 }
 
 func (this *Order) Len() int {

@@ -197,7 +197,11 @@ func (this *PartSortOrder) sortAndStream(context *Context) bool {
 		this.remainingLimit -= uint64(len(this.values))
 	}
 
+	earlyOrder := this.plan.IsEarlyOrder()
 	for n, av := range this.values {
+		if earlyOrder {
+			this.resetCachedValues(av)
+		}
 		if !this.sendItem(av) {
 			this.releaseValuesSubset(context, n, len(this.values))
 			return false
