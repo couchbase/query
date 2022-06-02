@@ -34,6 +34,7 @@ type Fetch struct {
 	base
 	plan       *plan.Fetch
 	keyspace   datastore.Keyspace
+	parent     value.Value
 	deepCopy   bool
 	batchSize  int
 	fetchCount uint64
@@ -49,6 +50,7 @@ func NewFetch(plan *plan.Fetch, context *Context) *Fetch {
 	rv.deepCopy = op == "" || op == "MERGE" || op == "UPDATE"
 	rv.execPhase = FETCH
 	rv.output = rv
+	rv.parent = nil
 
 	return rv
 }
@@ -75,15 +77,16 @@ func (this *Fetch) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent)
 }
 
-func (this *Fetch) beforeItems(context *Context, item value.Value) bool {
+func (this *Fetch) beforeItems(context *Context, parent value.Value) bool {
 	if this.keyspace = this.plan.Keyspace(); this.keyspace == nil {
 		this.keyspace = getKeyspace(this.keyspace, this.plan.Term().FromExpression(), context)
 	}
+	this.parent = parent
 	return this.keyspace != nil
 }
 
 func (this *Fetch) processItem(item value.AnnotatedValue, context *Context) bool {
-	item.ResetCovers()
+	item.ResetCovers(this.parent)
 	ok := this.enbatchSize(item, this, this.batchSize, context, true)
 	if ok {
 		this.fetchCount++
@@ -101,6 +104,7 @@ func (this *Fetch) afterItems(context *Context) {
 	context.AddPhaseCount(FETCH, this.fetchCount)
 	this.fetchCount = 0
 	this.releaseBatch(context)
+	this.parent = nil
 }
 
 func (this *Fetch) flushBatch(context *Context) bool {
