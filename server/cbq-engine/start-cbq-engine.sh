@@ -13,5 +13,6 @@ export NS_SERVER_CBAUTH_RPC_URL="http://127.0.0.1:8091/cbauth-demo"
 
 export CBAUTH_REVRPC_URL="http://Administrator:password@localhost:8091/query"
 export LD_LIBRARY_PATH=${GOPATH}/lib:${LD_LIBRARY_PATH}
+export DYLD_LIBRARY_PATH=$LD_LIBRARY_PATH
 
 ./cbq-engine "$@"
