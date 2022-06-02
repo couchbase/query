@@ -127,5 +127,14 @@
                 "c6": 531
 	    }
         ]
+    },
+    {
+        "testcase": "MB-52417",
+        "statements":"SELECT d.c2 FROM orders d WHERE d.test_id = \"idxfltr\" AND d.c1 = 1 AND d.c2 IN (SELECT RAW b.c2 FROM orders b WHERE b.test_id = \"idxfltr\" AND b.c1 = 1 AND b.c2 IN (SELECT RAW c.c2 FROM orders c USE KEYS[\"ifltr001\"] WHERE d.c2 = b.c2))",
+        "results": [
+            {
+                "c2": 11
+	    }
+        ]
     }
 ]

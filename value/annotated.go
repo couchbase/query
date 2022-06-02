@@ -77,7 +77,7 @@ type AnnotatedValue interface {
 	Covers() Value
 	GetCover(key string) Value
 	SetCover(key string, val Value)
-	ResetCovers()
+	ResetCovers(parent Value)
 	InheritCovers(val Value)
 	CopyAnnotations(av AnnotatedValue)
 	ShareAnnotations(av AnnotatedValue)
@@ -247,8 +247,18 @@ func (this *annotatedValue) SetCover(key string, val Value) {
 	this.covers.SetField(key, val)
 }
 
-func (this *annotatedValue) ResetCovers() {
-	this.covers = nil
+func (this *annotatedValue) ResetCovers(parent Value) {
+	if this.covers == nil {
+		return
+	} else if pav, ok := parent.(*annotatedValue); ok && pav.covers != nil {
+		for k, _ := range this.covers.Fields() {
+			if _, ok := pav.covers.Field(k); !ok {
+				this.covers.UnsetField(k)
+			}
+		}
+	} else {
+		this.covers = nil
+	}
 }
 
 func (this *annotatedValue) InheritCovers(val Value) {
@@ -634,8 +644,8 @@ func (this *annotatedValueSelfReference) SetCover(key string, val Value) {
 	(*annotatedValue)(this).SetCover(key, val)
 }
 
-func (this *annotatedValueSelfReference) ResetCovers() {
-	(*annotatedValue)(this).ResetCovers()
+func (this *annotatedValueSelfReference) ResetCovers(parent Value) {
+	(*annotatedValue)(this).ResetCovers(parent)
 }
 
 func (this *annotatedValueSelfReference) InheritCovers(val Value) {
