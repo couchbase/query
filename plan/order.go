@@ -95,7 +95,9 @@ func (this *Order) MarshalBase(f func(map[string]interface{})) map[string]interf
 	if this.partialSortTermCount > 0 {
 		r["partial_sort_term_count"] = this.partialSortTermCount
 	}
-	r["flags"] = this.flags
+	if this.flags > 0 {
+		r["flags"] = this.flags
+	}
 	if this.offset != nil {
 		r["offset"] = this.offset.Expression().String()
 	}
