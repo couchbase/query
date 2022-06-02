@@ -1135,6 +1135,7 @@ func (this *builder) buildEarlyOrder(iscan3 *plan.IndexScan3, useCBO bool) (plan
 	}
 
 	orderOp := plan.NewOrder(order, offset, limit, cost, cardinality, size, frCost)
+	orderOp.SetEarlyOrder()
 	this.addChildren(orderOp)
 	this.setBuilderFlag(BUILDER_HAS_EARLY_ORDER)
 

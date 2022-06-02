@@ -18,10 +18,15 @@ import (
 	"github.com/couchbase/query/value"
 )
 
+const (
+	_EARLY_ORDER = uint32(1) << iota
+)
+
 type Order struct {
 	readonly
 	optEstimate
 	terms  algebra.SortTerms
+	flags  uint32
 	offset *Offset
 	limit  *Limit
 }
@@ -51,6 +56,14 @@ func (this *Order) Terms() algebra.SortTerms {
 	return this.terms
 }
 
+func (this *Order) IsEarlyOrder() bool {
+	return (this.flags & _EARLY_ORDER) != 0
+}
+
+func (this *Order) SetEarlyOrder() {
+	this.flags |= _EARLY_ORDER
+}
+
 func (this *Order) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
@@ -73,6 +86,9 @@ func (this *Order) MarshalBase(f func(map[string]interface{})) map[string]interf
 		s = append(s, q)
 	}
 	r["sort_terms"] = s
+	if this.flags > 0 {
+		r["flags"] = this.flags
+	}
 	if this.offset != nil {
 		r["offset"] = this.offset.Expression().String()
 	}
@@ -96,6 +112,7 @@ func (this *Order) UnmarshalJSON(body []byte) error {
 			Desc     interface{} `json:"desc"`
 			NullsPos interface{} `json:"nulls_pos"`
 		} `json:"sort_terms"`
+		Flags       uint32                 `json:"flags"`
 		OffsetExpr  string                 `json:"offset"`
 		LimitExpr   string                 `json:"limit"`
 		OptEstimate map[string]interface{} `json:"optimizer_estimates"`
@@ -167,6 +184,7 @@ func (this *Order) UnmarshalJSON(body []byte) error {
 
 		this.terms[i] = algebra.NewSortTerm(expr, desc, nullsPos)
 	}
+	this.flags = _unmarshalled.Flags
 	if offsetExprStr := _unmarshalled.OffsetExpr; offsetExprStr != "" {
 		offsetExpr, err := parser.Parse(offsetExprStr)
 		if err != nil {
