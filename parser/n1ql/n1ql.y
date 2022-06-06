@@ -2871,9 +2871,6 @@ ASC
 DESC
 { $$ = algebra.IK_DESC }
 |
-MISSING
-{ $$ = algebra.IK_MISSING }
-|
 INCLUDE MISSING
 { $$ = algebra.IK_MISSING }
 ;
