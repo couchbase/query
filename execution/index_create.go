@@ -83,10 +83,17 @@ func (this *CreateIndex) RunOnce(context *Context, parent value.Value) {
 			if err != nil {
 				if !errors.IsIndexExistsError(err) || this.plan.Node().FailIfExists() {
 					context.Error(err)
+					return
 				} else {
 					err = nil
 				}
-				return
+			}
+			if (node.Using() == datastore.GSI || node.Using() == datastore.DEFAULT) && !deferred(node.With()) {
+				err = updateStats([]string{node.Name()}, "create_index", this.plan.Keyspace(), context)
+				if err != nil {
+					context.Error(err)
+					return
+				}
 			}
 		} else {
 			if node.Keys().Missing() {
@@ -156,4 +163,13 @@ func (this *CreateIndex) MarshalJSON() ([]byte, error) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)
+}
+
+func deferred(with value.Value) bool {
+	if with != nil && with.Type() == value.OBJECT {
+		if deferred, ok := with.Field("defer_build"); ok {
+			return deferred.Truth()
+		}
+	}
+	return false
 }

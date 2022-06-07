@@ -11,6 +11,7 @@ package execution
 import (
 	"encoding/json"
 
+	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
@@ -81,16 +82,42 @@ func (this *BuildIndexes) RunOnce(context *Context, parent value.Value) {
 			return
 		}
 
+		idxNames := make([]string, 0, len(names))
+		var index datastore.Index
 		for _, name := range names {
-			if _, err = indexer.IndexByName(name); err != nil {
+			index, err = indexer.IndexByName(name)
+			if err != nil {
 				context.Error(errors.NewIndexNotFoundError(name, "execution.build_index.index_by_name", err))
-				return
+				// skip this index in BUILD command, but continue with other indexes
+				continue
+			}
+			state, _, err1 := index.State()
+			if err1 != nil {
+				// skip this index in BUILD command, but continue with other indexes
+				context.Error(err1)
+				continue
+			}
+			if state != datastore.ONLINE {
+				idxNames = append(idxNames, name)
 			}
 		}
 
-		err = indexer.BuildIndexes(context.RequestId(), names...)
+		if len(idxNames) == 0 {
+			return
+		}
+
+		err = indexer.BuildIndexes(context.RequestId(), idxNames...)
 		if err != nil {
 			context.Error(err)
+			return
+		}
+
+		if node.Using() == datastore.GSI || node.Using() == datastore.DEFAULT {
+			err = updateStats(idxNames, "build_index", this.plan.Keyspace(), context)
+			if err != nil {
+				context.Error(err)
+				return
+			}
 		}
 	})
 }

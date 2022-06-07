@@ -303,6 +303,18 @@ func NewIndexNotFoundError(name string, ikey string, e error) Error {
 		InternalCaller: CallerN(1)}
 }
 
+func NewIndexUpdStatsError(names, msg string, e error) Error {
+	c := make(map[string]interface{})
+	c["index_names"] = names
+	if e != nil {
+		c["cause"] = e
+	}
+	return &err{level: EXCEPTION, ICode: E_INDEX_UPD_STATS, IKey: "execution.index.upd_stats",
+		ICause: e, cause: c,
+		InternalMsg:    fmt.Sprintf("Error with UPDATE STATISTICS for indexes (%s): %s", names, msg),
+		InternalCaller: CallerN(1)}
+}
+
 func NewMemoryQuotaExceededError() Error {
 	return &err{level: EXCEPTION, ICode: E_MEMORY_QUOTA_EXCEEDED, IKey: "execution.memory_quota.exceeded",
 		InternalMsg:    "Request has exceeded memory quota",

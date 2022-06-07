@@ -229,6 +229,7 @@ const (
 	E_MISSING_SYSTEMCBO_STATS                 ErrorCode = 5400
 	E_INVALID_INDEX_NAME                      ErrorCode = 5410
 	E_INDEX_NOT_FOUND                         ErrorCode = 5411
+	E_INDEX_UPD_STATS                         ErrorCode = 5415
 	E_MEMORY_QUOTA_EXCEEDED                   ErrorCode = 5500
 	E_NIL_EVALUATE_PARAM                      ErrorCode = 5501
 	E_BUCKET_ACTION                           ErrorCode = 5502
