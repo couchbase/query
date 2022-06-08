@@ -162,8 +162,8 @@ func (this *builder) visitFrom(node *algebra.Subselect, group *algebra.Group,
 		var filter expression.Expression
 		var hasOrder bool
 
-		if this.useCBO && !this.indexAdvisor && this.context.Optimizer() != nil &&
-			!hasOrderedHint(node.OptimHints()) &&
+		orderedHint := hasOrderedHint(node.OptimHints())
+		if this.useCBO && !this.indexAdvisor && this.context.Optimizer() != nil && !orderedHint &&
 			util.IsFeatureEnabled(this.context.FeatureControls(), util.N1QL_JOIN_ENUMERATION) {
 			var limit, offset expression.Expression
 			var order *algebra.Order

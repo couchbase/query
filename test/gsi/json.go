@@ -295,6 +295,7 @@ func run(mockServer *MockServer, queryParams map[string]interface{}, q, namespac
 	query.SetSignature(value.TRUE)
 	query.SetPretty(value.TRUE)
 	query.SetScanConfiguration(consistency)
+	query.SetUseCBO(false)
 	mockServer.server.SetWhitelist(curlWhitelist)
 
 	var gv int
@@ -333,6 +334,12 @@ func run(mockServer *MockServer, queryParams map[string]interface{}, q, namespac
 	if s, ok := queryParams["query_context"]; ok {
 		if qcs, ok := s.(string); ok && qcs != "" {
 			query.SetQueryContext(qcs)
+		}
+	}
+
+	if s, ok := queryParams["use_cbo"]; ok {
+		if b, ok := s.(bool); ok && b {
+			query.SetUseCBO(b)
 		}
 	}
 
