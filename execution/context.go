@@ -916,6 +916,7 @@ func (this *Context) EvaluateSubquery(query *algebra.Select, parent value.Value)
 	if opsFound {
 		sequence = ops
 		collect = opc
+		sequence.reopen(this)
 	} else {
 		pipeline, err := Build(subplan.(plan.Operator), this)
 		if err != nil {
@@ -944,7 +945,6 @@ func (this *Context) EvaluateSubquery(query *algebra.Select, parent value.Value)
 	// mark execution tree for reuse if possible
 	if collect.opState == _DONE {
 		collect.opState = _COMPLETED
-		sequence.reopen(this)
 	}
 	subExecTrees.set(query, sequence, collect)
 
@@ -1024,18 +1024,20 @@ func (this *Context) done() {
 }
 
 func (this *Context) getSubExecTrees() *subqueryArrayMap {
-	if this.contextSubExecTrees() == nil {
-		this.initSubExecTrees()
+	subExecTrees := this.contextSubExecTrees()
+	if subExecTrees != nil {
+		return subExecTrees
 	}
-	return this.contextSubExecTrees()
+	return this.initSubExecTrees()
 }
 
-func (this *Context) initSubExecTrees() {
+func (this *Context) initSubExecTrees() *subqueryArrayMap {
 	this.mutex.Lock()
 	defer this.mutex.Unlock()
 	if this.subExecTrees == nil {
 		this.subExecTrees = newSubqueryArrayMap()
 	}
+	return this.subExecTrees
 }
 
 func (this *Context) contextSubExecTrees() *subqueryArrayMap {
@@ -1045,18 +1047,20 @@ func (this *Context) contextSubExecTrees() *subqueryArrayMap {
 }
 
 func (this *Context) getSubplans() *subqueryMap {
-	if this.contextSubplans() == nil {
-		this.initSubplans()
+	subPlans := this.contextSubplans()
+	if subPlans != nil {
+		return subPlans
 	}
-	return this.contextSubplans()
+	return this.initSubplans()
 }
 
-func (this *Context) initSubplans() {
+func (this *Context) initSubplans() *subqueryMap {
 	this.mutex.Lock()
 	defer this.mutex.Unlock()
 	if this.subplans == nil {
 		this.subplans = newSubqueryMap(true)
 	}
+	return this.subplans
 }
 
 func (this *Context) contextSubplans() *subqueryMap {
@@ -1066,10 +1070,11 @@ func (this *Context) contextSubplans() *subqueryMap {
 }
 
 func (this *Context) getSubresults() *subqueryMap {
-	if this.contextSubresults() == nil {
-		this.initSubresults()
+	subResults := this.contextSubresults()
+	if subResults != nil {
+		return subResults
 	}
-	return this.contextSubresults()
+	return this.initSubresults()
 }
 
 func (this *Context) contextSubresults() *subqueryMap {
@@ -1078,12 +1083,13 @@ func (this *Context) contextSubresults() *subqueryMap {
 	return this.subresults
 }
 
-func (this *Context) initSubresults() {
+func (this *Context) initSubresults() *subqueryMap {
 	this.mutex.Lock()
 	defer this.mutex.Unlock()
 	if this.subresults == nil {
 		this.subresults = newSubqueryMap(false)
 	}
+	return this.subresults
 }
 
 // Synchronized map
@@ -1150,7 +1156,7 @@ func (this *subqueryArrayMap) get(key *algebra.Select) (*Sequence, *Collect, boo
 	l := e[len(e)-1]
 
 	// if we didn't manage to reopen the execution tree, the previous copies are there for profiling only
-	if l.collect.opState != _CREATED {
+	if l.collect.opState != _PAUSED && l.collect.opState != _COMPLETED {
 		this.mutex.Unlock()
 		return nil, nil, false
 	}
