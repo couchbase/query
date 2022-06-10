@@ -55,7 +55,7 @@ func logMessages(logger *goLogger) {
 }
 
 func TestStub(t *testing.T) {
-	logger := NewLogger(os.Stdout, logging.DEBUG, false)
+	logger := NewLogger(os.Stdout, logging.DEBUG)
 	logging.SetLogger(logger)
 
 	logMessages(logger)
@@ -65,8 +65,8 @@ func TestStub(t *testing.T) {
 
 	logMessages(logger)
 
-	fmt.Printf("Changing to json formatter\n")
-	logger.entryFormatter = &jsonFormatter{}
+	fmt.Printf("Changing to standard formatter\n")
+	logger.entryFormatter = &standardFormatter{}
 	logger.SetLevel(logging.DEBUG)
 
 	logMessages(logger)
