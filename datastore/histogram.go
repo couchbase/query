@@ -9,6 +9,8 @@
 package datastore
 
 import (
+	"time"
+
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/value"
 )
@@ -101,7 +103,7 @@ func (this OverflowBins) NumBins() int {
 	return len(this)
 }
 
-const HISTOGRAM_VERSION = 1
+const HISTOGRAM_VERSION = 2
 
 type Histogram struct {
 	version    int32
@@ -115,6 +117,7 @@ type Histogram struct {
 	distrib    DistBins
 	ovrflow    OverflowBins
 	internal   bool
+	updated    time.Time
 }
 
 type ArrayInfo struct {
@@ -134,7 +137,7 @@ func NewArrayInfo(avgArrayLen, missingArr, emptyArr float64) *ArrayInfo {
 func (this *Histogram) SetHistogram(version int32, keyspace string, key expression.Expression,
 	docCount, sampleSize int64, resolution float64,
 	fdistincts, avgArrayLen, missingArr, emptyArr float64,
-	distrib DistBins, ovrflow OverflowBins) {
+	distrib DistBins, ovrflow OverflowBins, updated time.Time) {
 	this.version = version
 	this.keyspace = keyspace
 	this.key = key
@@ -144,6 +147,7 @@ func (this *Histogram) SetHistogram(version int32, keyspace string, key expressi
 	this.fdistincts = fdistincts
 	this.distrib = distrib
 	this.ovrflow = ovrflow
+	this.updated = updated
 
 	if avgArrayLen > 0.0 || missingArr > 0.0 || emptyArr > 0.0 {
 		this.arrayInfo = NewArrayInfo(avgArrayLen, missingArr, emptyArr)
@@ -186,6 +190,10 @@ func (this *Histogram) Distrib() DistBins {
 
 func (this *Histogram) Ovrflow() OverflowBins {
 	return this.ovrflow
+}
+
+func (this *Histogram) Updated() time.Time {
+	return this.updated
 }
 
 func (this *Histogram) SetInternal() {

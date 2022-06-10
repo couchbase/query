@@ -315,6 +315,18 @@ func NewIndexUpdStatsError(names, msg string, e error) Error {
 		InternalCaller: CallerN(1)}
 }
 
+func NewTimeParseError(str string, e error) Error {
+	c := make(map[string]interface{})
+	c["time_string"] = str
+	if e != nil {
+		c["cause"] = e
+	}
+	return &err{level: EXCEPTION, ICode: E_TIME_PARSE, IKey: "execution.upd_stats.time_parse",
+		ICause: e, cause: c,
+		InternalMsg:    fmt.Sprintf("Error parsing time string %s", str),
+		InternalCaller: CallerN(1)}
+}
+
 func NewMemoryQuotaExceededError() Error {
 	return &err{level: EXCEPTION, ICode: E_MEMORY_QUOTA_EXCEEDED, IKey: "execution.memory_quota.exceeded",
 		InternalMsg:    "Request has exceeded memory quota",
