@@ -1020,6 +1020,7 @@ func (this *builder) getIndexFilters(entry *indexEntry, node *algebra.KeyspaceTe
 
 	if util.IsFeatureEnabled(this.context.FeatureControls(), util.N1QL_EARLY_ORDER) && !arrayKey &&
 		this.order != nil && this.limit != nil &&
+		!this.hasBuilderFlag(BUILDER_ORDER_DEPENDS_ON_LET) &&
 		!entry.IsPushDownProperty(_PUSHDOWN_ORDER|_PUSHDOWN_LIMIT|_PUSHDOWN_OFFSET) {
 		nlimit := int64(-1)
 		noffset := int64(-1)
@@ -1085,7 +1086,7 @@ func (this *builder) getIndexFilters(entry *indexEntry, node *algebra.KeyspaceTe
 	namedArgs := this.context.NamedArgs()
 	positionalArgs := this.context.PositionalArgs()
 	for _, fl := range filters {
-		if fl.IsUnnest() {
+		if fl.IsUnnest() || fl.HasSubq() {
 			continue
 		}
 		fltrExpr := fl.FltrExpr()

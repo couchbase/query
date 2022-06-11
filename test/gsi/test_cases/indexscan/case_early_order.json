@@ -277,5 +277,47 @@
                 "type": "purchase"
             }
         ]
+    },
+    {
+        "testcase": "MB-52503. Explain",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IndexScan3' AND v.`filter` IS MISSING END AND ANY o WITHIN p.plan.`~children` SATISFIES o.`#operator` = 'Order' AND o.`limit` IS NOT MISSING AND NOT CONTAINS(o.`sort_terms`[1].`expr`, \"_index_key\") END"
+        },
+        "statements":"SELECT p.customerId, p.type, s FROM purchase AS p LET s = (SELECT RAW SUM(l.count) FROM purchase AS p1 USE KEYS meta(p).id UNNEST p1.lineItems AS l)[0] WHERE s > 0 AND test_id = \"arrayIndex\" AND customerId like \"customer1%\" ORDER BY s DESC, p.customerId OFFSET 10 LIMIT 5",
+        "ordered": true,
+        "results": [
+            {
+                "customerId": "customer157",
+                "s": 20,
+                "type": "purchase"
+            },
+            {
+                "customerId": "customer165",
+                "s": 20,
+                "type": "purchase"
+            },
+            {
+                "customerId": "customer169",
+                "s": 20,
+                "type": "purchase"
+            },
+            {
+                "customerId": "customer179",
+                "s": 20,
+                "type": "purchase"
+            },
+            {
+                "customerId": "customer180",
+                "s": 20,
+                "type": "purchase"
+            }
+        ]
     }
 ]

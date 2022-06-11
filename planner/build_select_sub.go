@@ -86,6 +86,24 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 	}
 	if this.order != nil {
 		this.setBuilderFlag(BUILDER_HAS_ORDER)
+
+		if node.Let() != nil {
+			identifiers := node.Let().Identifiers()
+			// check whether ORDER expressions depends on LET bindings
+			depends := false
+		outer:
+			for _, term := range this.order.Expressions() {
+				for _, id := range identifiers {
+					if term.DependsOn(id) {
+						depends = true
+						break outer
+					}
+				}
+			}
+			if depends {
+				this.setBuilderFlag(BUILDER_ORDER_DEPENDS_ON_LET)
+			}
+		}
 	}
 
 	// Inline LET expressions for index selection
