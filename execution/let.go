@@ -50,18 +50,31 @@ func (this *Let) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *Let) processItem(item value.AnnotatedValue, context *Context) bool {
-	lv := item.Copy().(value.AnnotatedValue)
+	var lv value.AnnotatedValue
+	if item.RefCnt() == 1 {
+		lv = item
+	} else {
+		lv = item.CopyForUpdate().(value.AnnotatedValue)
+		if context.UseRequestQuota() && context.TrackValueSize(lv.Size()) {
+			context.Error(errors.NewMemoryQuotaExceededError())
+			lv.Recycle()
+			return false
+		}
+	}
 	for _, b := range this.plan.Bindings() {
 		v, e := b.Expression().Evaluate(lv, context)
 		if e != nil {
 			context.Error(errors.NewEvaluationError(e, "LET"))
+			lv.Recycle()
 			return false
 		}
 
 		lv.SetField(b.Variable(), v)
 	}
 
-	item.Recycle()
+	if lv != item {
+		item.Recycle()
+	}
 	return this.sendItem(lv)
 }
 
