@@ -28,12 +28,6 @@ func Build(stmt algebra.Statement, datastore, systemstore datastore.Datastore,
 		checkCostModel(context.FeatureControls())
 	}
 
-	// subquery plan is currently only for explain and advise
-	// TODO: to be expanded to all statements, plus prepareds
-	if stmt.Type() == "EXPLAIN" || stmt.Type() == "ADVISE" {
-		builder.setBuilderFlag(BUILDER_PLAN_SUBQUERY)
-	}
-
 	p, err := stmt.Accept(builder)
 
 	if err != nil {
