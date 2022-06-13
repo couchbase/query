@@ -477,7 +477,7 @@ func (this *base) SetBit(b uint8) {
 
 func (this *base) SetRoot(context *Context) {
 	this.isRoot = true
-	this.rootContext = context
+	this.rootContext = nil
 }
 
 func (this *base) SetKeepAlive(children int, context *Context) {

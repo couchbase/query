@@ -908,28 +908,17 @@ func (this *Context) EvaluateSubquery(query *algebra.Select, parent value.Value)
 		subplans.set(query, subplan, subplanIsks)
 	}
 
-	var sequence *Sequence
-	var collect *Collect
-
-	subExecTrees := this.getSubExecTrees()
-	ops, opc, opsFound := subExecTrees.get(query)
-	if opsFound {
-		sequence = ops
-		collect = opc
-		sequence.reopen(this)
-	} else {
-		pipeline, err := Build(subplan.(plan.Operator), this)
-		if err != nil {
-			// Generate our own error for this subquery, in addition to whatever the query above is doing.
-			err1 := errors.NewSubqueryBuildError(err)
-			this.Error(err1)
-			return nil, err1
-		}
-
-		// Collect subquery results
-		collect = NewCollect(plan.NewCollect(), this)
-		sequence = NewSequence(plan.NewSequence(), this, pipeline, collect)
+	pipeline, err := Build(subplan.(plan.Operator), this)
+	if err != nil {
+		// Generate our own error for this subquery, in addition to whatever the query above is doing.
+		err1 := errors.NewSubqueryBuildError(err)
+		this.Error(err1)
+		return nil, err1
 	}
+
+	// Collect subquery results
+	collect := NewCollect(plan.NewCollect(), this)
+	sequence := NewSequence(plan.NewSequence(), this, pipeline, collect)
 	var track int32
 	av, stashTracking := parent.(value.AnnotatedValue)
 	if stashTracking {
@@ -941,12 +930,7 @@ func (this *Context) EvaluateSubquery(query *algebra.Select, parent value.Value)
 	collect.waitComplete()
 
 	results := collect.ValuesOnce()
-
-	// mark execution tree for reuse if possible
-	if collect.opState == _DONE {
-		collect.opState = _COMPLETED
-	}
-	subExecTrees.set(query, sequence, collect)
+	sequence.Done()
 
 	if stashTracking {
 		av.Restore(track)
