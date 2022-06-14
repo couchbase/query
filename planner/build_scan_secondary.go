@@ -51,7 +51,10 @@ func (this *builder) buildSecondaryScan(indexes, arrayIndexes, flex map[datastor
 			pred, node.Alias(), nil, false, false, (len(this.baseKeyspaces) == 1),
 			implicitAnyCover(entry, true, this.context.FeatureControls()))
 
-		this.getIndexFilters(entry, node, baseKeyspace, id)
+		err = this.getIndexFilters(entry, node, baseKeyspace, id)
+		if err != nil {
+			return
+		}
 		if this.hasBuilderFlag(BUILDER_DO_JOIN_FILTER) && !entry.HasFlag(IE_HAS_JOIN_FILTER) {
 			delete(indexes, idx)
 		}
@@ -62,7 +65,7 @@ func (this *builder) buildSecondaryScan(indexes, arrayIndexes, flex map[datastor
 		unnestSargables, err = this.buildUnnestScan(node, pred, subset, unnests,
 			primaryUnnests, unnestIndexes, hasDeltaKeyspace)
 		if err != nil {
-			return nil, 0, err
+			return
 		}
 		// add to regular Secondary IndexScan list
 		for index, entry := range unnestSargables {
@@ -1011,7 +1014,7 @@ func (this *builder) eqJoinFilter(fl *base.Filter, alias string) (bool, expressi
 }
 
 func (this *builder) getIndexFilters(entry *indexEntry, node *algebra.KeyspaceTerm,
-	baseKeyspace *base.BaseKeyspace, id expression.Expression) {
+	baseKeyspace *base.BaseKeyspace, id expression.Expression) (err error) {
 
 	alias := node.Alias()
 	useCBO := this.useCBO && this.keyspaceUseCBO(alias)
@@ -1102,47 +1105,69 @@ func (this *builder) getIndexFilters(entry *indexEntry, node *algebra.KeyspaceTe
 		}
 	}
 
+	namedArgs := this.context.NamedArgs()
+	positionalArgs := this.context.PositionalArgs()
+
 	if util.IsFeatureEnabled(this.context.FeatureControls(), util.N1QL_EARLY_ORDER) && !arrayKey &&
 		this.order != nil && this.limit != nil &&
 		!this.hasBuilderFlag(BUILDER_ORDER_DEPENDS_ON_LET) &&
 		!entry.IsPushDownProperty(_PUSHDOWN_ORDER|_PUSHDOWN_LIMIT|_PUSHDOWN_OFFSET) {
 		nlimit := int64(-1)
 		noffset := int64(-1)
+		limit := this.limit
+		offset := this.offset
+		if len(namedArgs) > 0 || len(positionalArgs) > 0 {
+			limit, err = base.ReplaceParameters(limit, namedArgs, positionalArgs)
+			if err != nil {
+				return
+			}
+			if offset != nil {
+				offset, err = base.ReplaceParameters(offset, namedArgs, positionalArgs)
+				if err != nil {
+					return
+				}
+			}
+		}
 		cons := true
-		lv, static := base.GetStaticInt(this.limit)
+		isParam := false
+		lv, static := base.GetStaticInt(limit)
 		if static {
 			nlimit = lv
 		} else {
 			cons = false
+			switch limit.(type) {
+			case *algebra.NamedParameter, *algebra.PositionalParameter:
+				isParam = true
+			}
 		}
-		if this.offset != nil {
-			ov, static := base.GetStaticInt(this.offset)
+		if offset != nil {
+			ov, static := base.GetStaticInt(offset)
 			if static {
 				noffset = ov
 			} else {
 				cons = false
 			}
 		}
-		if cons && nlimit > 0 {
+		if (cons && nlimit > 0) || isParam {
 			doOrder := true
 			sortTerms := this.order.Expressions()
 			sortExprs := make(expression.Expressions, 0, len(sortTerms))
 			newTerms, found, err := algebra.ReplaceProjectionAlias(sortTerms, this.projection)
-			if err == nil {
-				if !found || this.projection != nil {
-					if found {
-						sortTerms = newTerms
+			if err != nil {
+				return err
+			}
+
+			if !found || this.projection != nil {
+				if found {
+					sortTerms = newTerms
+				}
+				for _, sortExpr := range sortTerms {
+					if expression.IsCovered(sortExpr, alias, coverExprs, false) {
+						sortExprs = append(sortExprs, sortExpr)
+					} else {
+						doOrder = false
+						break
 					}
-					for _, sortExpr := range sortTerms {
-						if expression.IsCovered(sortExpr, alias, coverExprs, false) {
-							sortExprs = append(sortExprs, sortExpr)
-						} else {
-							doOrder = false
-							break
-						}
-					}
-				} else {
-					doOrder = false
 				}
 			} else {
 				doOrder = false
@@ -1152,7 +1177,15 @@ func (this *builder) getIndexFilters(entry *indexEntry, node *algebra.KeyspaceTe
 				entry.orderExprs = sortExprs
 				entry.SetFlags(IE_HAS_EARLY_ORDER, true)
 				if useCBO {
-					sortCard := float64(nlimit + noffset)
+					var sortCard float64
+					if cons {
+						sortCard = float64(nlimit + noffset)
+					} else {
+						// in case limit/offset is not constant, for costing
+						// purpose here assume half of the documents from
+						// the index scan are used for fetch
+						sortCard = 0.5 * entry.cardinality
+					}
 					if sortCard > entry.cardinality {
 						sortCard = entry.cardinality
 					}
@@ -1167,8 +1200,6 @@ func (this *builder) getIndexFilters(entry *indexEntry, node *algebra.KeyspaceTe
 		}
 	}
 
-	namedArgs := this.context.NamedArgs()
-	positionalArgs := this.context.PositionalArgs()
 	for _, fl := range filters {
 		if fl.IsUnnest() || fl.HasSubq() {
 			continue
@@ -1186,16 +1217,15 @@ func (this *builder) getIndexFilters(entry *indexEntry, node *algebra.KeyspaceTe
 			// Also skip filters that is in index condition
 			origExpr := fl.OrigExpr()
 			flExpr := fltrExpr
-			var err error
 			if len(namedArgs) > 0 || len(positionalArgs) > 0 {
 				flExpr, err = base.ReplaceParameters(flExpr, namedArgs, positionalArgs)
 				if err != nil {
-					continue
+					return
 				}
 				if origExpr != nil {
 					origExpr, err = base.ReplaceParameters(origExpr, namedArgs, positionalArgs)
 					if err != nil {
-						continue
+						return
 					}
 				}
 			}
