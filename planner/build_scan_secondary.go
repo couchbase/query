@@ -55,6 +55,8 @@ func (this *builder) buildSecondaryScan(indexes, arrayIndexes, flex map[datastor
 		entry.pushDownProperty = this.indexPushDownProperty(entry, entry.keys, nil,
 			pred, node.Alias(), nil, false, false, (len(this.baseKeyspaces) == 1),
 			implicitAnyCover(entry, true, this.context.FeatureControls()))
+
+		this.getIndexFilters(entry, node, baseKeyspace, id)
 	}
 
 	if len(primaryUnnests) > 0 && len(unnests) > 0 && len(unnestIndexes) > 0 {
