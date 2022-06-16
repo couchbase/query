@@ -30,7 +30,7 @@ import (
 
 	"github.com/couchbase/cbauth"
 	"github.com/couchbase/gomemcached"
-	"github.com/couchbase/gomemcached/client" // package name is memcached
+	memcached "github.com/couchbase/gomemcached/client" // package name is memcached
 	gsi "github.com/couchbase/indexing/secondary/queryport/n1ql"
 	ftsclient "github.com/couchbase/n1fty"
 	"github.com/couchbase/query/auth"
@@ -41,6 +41,7 @@ import (
 	"github.com/couchbase/query/logging"
 	cb "github.com/couchbase/query/primitives/couchbase"
 	"github.com/couchbase/query/server"
+	"github.com/couchbase/query/tenant"
 	"github.com/couchbase/query/transactions"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
@@ -105,6 +106,10 @@ func init() {
 
 	// transaction cache initialization
 	transactions.TranContextCacheInit(_TRAN_CLEANUP_INTERVAL)
+
+	// Pass Deployment Model to gsi+n1fty
+	gsi.SetDeploymentModel(tenant.IsServerless())
+	ftsclient.SetDeploymentModel(tenant.IsServerless())
 }
 
 // store is the root for the couchbase datastore
