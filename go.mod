@@ -45,7 +45,7 @@ require (
 	github.com/couchbase/clog v0.1.0
 	github.com/couchbase/eventing-ee v0.0.0-00010101000000-000000000000
 	github.com/couchbase/go-couchbase v0.1.1
-	github.com/couchbase/go_json v0.0.0-00010101000000-000000000000
+	github.com/couchbase/go_json v0.0.0-20220330123059-4473a21887c8
 	github.com/couchbase/gocbcore/v10 v10.1.2
 	github.com/couchbase/godbc v0.0.0-20210615212222-79da1b49cb4d
 	github.com/couchbase/gomemcached v0.1.4
@@ -62,7 +62,7 @@ require (
 	github.com/russross/blackfriday v1.5.2
 	github.com/samuel/go-zookeeper v0.0.0-20200724154423-2164a8ac840e
 	golang.org/x/crypto v0.0.0-20200820211705-5c72a883971a
-	golang.org/x/net v0.0.0-20211215060638-4ddde0e984e9
+	golang.org/x/net v0.0.0-20220225172249-27dd8689420f
 	gopkg.in/couchbase/gocb.v1 v1.6.7
 )
 
@@ -116,7 +116,7 @@ require (
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/prometheus/client_golang v1.12.2 // indirect
 	github.com/prometheus/client_model v0.2.0 // indirect
-	github.com/prometheus/common v0.32.1 // indirect
+	github.com/prometheus/common v0.34.0 // indirect
 	github.com/prometheus/procfs v0.7.3 // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20200313005456-10cdbea86bc0 // indirect
 	github.com/santhosh-tekuri/jsonschema v1.2.4 // indirect
