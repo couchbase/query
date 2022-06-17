@@ -96,6 +96,7 @@ require (
 	github.com/couchbase/cbft v0.0.0-00010101000000-000000000000 // indirect
 	github.com/couchbase/cbgt v0.0.0-00010101000000-000000000000 // indirect
 	github.com/couchbase/ghistogram v0.1.0 // indirect
+	github.com/couchbase/gocb/v2 v2.5.0 // indirect
 	github.com/couchbase/gocbcore/v9 v9.1.8 // indirect
 	github.com/couchbase/gometa v0.0.0-20200717102231-b0e38b71d711 // indirect
 	github.com/couchbase/hebrew v0.0.0-00010101000000-000000000000 // indirect
