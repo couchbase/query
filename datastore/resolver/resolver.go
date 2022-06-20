@@ -19,6 +19,12 @@ import (
 	"github.com/couchbase/query/errors"
 )
 
+func SetServerless(uri string, serverless bool) {
+	if strings.HasPrefix(uri, "http:") {
+		couchbase.SetServerless(serverless)
+	}
+}
+
 func NewDatastore(uri string) (datastore.Datastore, errors.Error) {
 	if strings.HasPrefix(uri, ".") || strings.HasPrefix(uri, "/") {
 		return file.NewDatastore(uri)

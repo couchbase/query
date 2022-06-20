@@ -247,6 +247,7 @@ func main() {
 		logging.SetDebugFilter(filter)
 	}
 
+	resolver.SetServerless(*DATASTORE, *SERVERLESS)
 	datastore, err := resolver.NewDatastore(*DATASTORE)
 	if err != nil {
 		logging.Errorf("%v", err.Error())

@@ -41,7 +41,6 @@ import (
 	"github.com/couchbase/query/logging"
 	cb "github.com/couchbase/query/primitives/couchbase"
 	"github.com/couchbase/query/server"
-	"github.com/couchbase/query/tenant"
 	"github.com/couchbase/query/transactions"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
@@ -107,9 +106,12 @@ func init() {
 	// transaction cache initialization
 	transactions.TranContextCacheInit(_TRAN_CLEANUP_INTERVAL)
 
-	// Pass Deployment Model to gsi+n1fty
-	gsi.SetDeploymentModel(tenant.IsServerless())
-	ftsclient.SetDeploymentModel(tenant.IsServerless())
+}
+
+// Pass Deployment Model to gsi+n1fty
+func SetServerless(serverless bool) {
+	gsi.SetDeploymentModel(serverless)
+	ftsclient.SetDeploymentModel(serverless)
 }
 
 // store is the root for the couchbase datastore
