@@ -26,15 +26,25 @@ func TestSubqexp(t *testing.T) {
 	runMatch("insert.json", false, false, qc, t)
 
 	runStmt(qc, "CREATE PRIMARY INDEX ON orders")
+	runStmt(qc, "CREATE PRIMARY INDEX ON shellTest")
+	runStmt(qc, "CREATE INDEX ix1 ON shellTest(`from`)")
 
 	runMatch("case_select.json", false, false, qc, t)
 	runMatch("case_keyspace.json", false, false, qc, t)
 	runMatch("case_keyspace.json", true, false, qc, t)
+	runMatch("case_bugs.json", false, false, qc, t)
+
+	runStmt(qc, "DROP INDEX shellTest.ix1")
 
 	rr := runStmt(qc, "delete from orders where test_id = \"subqexp\"")
 	if rr.Err != nil {
 		t.Errorf("did not expect err %s", rr.Err.Error())
 	}
+	rr = runStmt(qc, "delete from shellTest where test_id = \"subqexp\"")
+	if rr.Err != nil {
+		t.Errorf("did not expect err %s", rr.Err.Error())
+	}
 
 	runStmt(qc, "DROP PRIMARY INDEX ON orders")
+	runStmt(qc, "DROP PRIMARY INDEX ON shellTest")
 }

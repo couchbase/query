@@ -59,17 +59,18 @@ type KeyspaceTerm struct {
 	protectedString string
 	extraPrivs      []auth.Privilege
 	validateKeys    bool
+	correlated      bool
 }
 
 func NewKeyspaceTermFromPath(path *Path, as string,
 	keys expression.Expression, indexes IndexRefs) *KeyspaceTerm {
 	protectedString := path.ProtectedString()
-	return &KeyspaceTerm{path, nil, as, keys, indexes, nil, JOIN_HINT_NONE, 0, protectedString, nil, false}
+	return &KeyspaceTerm{path, nil, as, keys, indexes, nil, JOIN_HINT_NONE, 0, protectedString, nil, false, false}
 }
 
 func NewKeyspaceTermFromExpression(expr expression.Expression, as string,
 	keys expression.Expression, indexes IndexRefs, joinHint JoinHint) *KeyspaceTerm {
-	return &KeyspaceTerm{nil, expr, as, keys, indexes, nil, joinHint, 0, "", nil, false}
+	return &KeyspaceTerm{nil, expr, as, keys, indexes, nil, joinHint, 0, "", nil, false, false}
 }
 
 func (this *KeyspaceTerm) Accept(visitor NodeVisitor) (interface{}, error) {
@@ -217,15 +218,31 @@ func (this *KeyspaceTerm) Formalize(parent *expression.Formalizer) (f *expressio
 		f = expression.NewFormalizer("", parent)
 	}
 
+	var keys expression.Expression
 	if this.joinKeys != nil {
+		keys = this.joinKeys
 		_, err = this.joinKeys.Accept(f)
 		if err != nil {
 			return
 		}
 	} else if this.keys != nil {
+		keys = this.keys
 		_, err = this.keys.Accept(f)
 		if err != nil {
 			return
+		}
+	}
+	if keys != nil {
+		var subqs []expression.Subquery
+		subqs, err = expression.ListSubqueries(expression.Expressions{keys}, false)
+		if err != nil {
+			return
+		}
+		for _, subq := range subqs {
+			if subq.IsCorrelated() {
+				this.correlated = true
+				break
+			}
 		}
 	}
 
@@ -555,7 +572,7 @@ func (this *KeyspaceTerm) SetInCorrSubq() {
 Return whether correlated
 */
 func (this *KeyspaceTerm) IsCorrelated() bool {
-	return false
+	return this.correlated
 }
 
 /*

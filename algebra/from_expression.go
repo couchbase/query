@@ -207,6 +207,9 @@ Returns if Expression is (lateral) correlated
 i.e., refers to any keyspace before the expression term in FROM clause
 */
 func (this *ExpressionTerm) IsCorrelated() bool {
+	if this.isKeyspace {
+		return this.keyspaceTerm.IsCorrelated()
+	}
 	return this.correlated
 }
 
