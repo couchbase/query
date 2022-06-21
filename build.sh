@@ -218,6 +218,7 @@ function repo_setup {
     repo_by_gomod go.mod n1fty "" $cbranch $rbranch $defbranch
     repo_by_gomod go.mod cbgt "" $cbranch $rbranch $defbranch
     repo_by_gomod go.mod cbft "" $cbranch $rbranch $defbranch
+    repo_by_gomod ../regulator/go.mod gocb "v2" $defbranch
     repo_by_gomod ../n1fty/go.mod bleve "" $defbranch
     repo_by_gomod ../n1fty/go.mod bleve "v2" $defbranch
     repo_by_gomod ../cbft/go.mod zapx "v11" $defbranch
