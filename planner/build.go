@@ -89,6 +89,11 @@ func (this *builder) buildSubqueries(stmt algebra.Statement, qp *plan.QueryPlan)
 	if len(subqueries) == 0 {
 		return nil
 	}
+	subquery := this.subquery
+	defer func() {
+		this.subquery = subquery
+	}()
+	this.subquery = true
 	this.makeSubqueryInfos(len(subqueries))
 	for _, s := range subqueries {
 		subq := s.Select()

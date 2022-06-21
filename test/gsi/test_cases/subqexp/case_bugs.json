@@ -1,0 +1,28 @@
+[
+    {
+	"testcase": "MB-52629",
+        "statements": "SELECT product.id as id, product.name as name, ( SELECT customer.id AS id, customer.name AS name FROM shellTest customer USE KEYS ( SELECT RAW `to` FROM shellTest WHERE `from`=product.id)) AS customers FROM shellTest product WHERE product.id IN [ \"1\", \"2\"]",
+        "results": [
+            {
+                "customers": [
+                    {
+                        "id": "11",
+                        "name": "Customer 11"
+                    }
+                ],
+                "id": "1",
+                "name": "Product 1"
+            },
+            {
+                "customers": [
+                    {
+                        "id": "12",
+                        "name": "Customer 12"
+                    }
+                ],
+                "id": "2",
+                "name": "Product 2"
+            }
+        ]
+    }
+]
