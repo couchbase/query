@@ -122,7 +122,7 @@ func (this *FlattenKeys) HasMissing(pos int) bool {
 func (this *FlattenKeys) AttributeString(pos int) string {
 	s := ""
 	if this.HasMissing(pos) {
-		s += " MISSING"
+		s += " INCLUDE MISSING"
 	}
 	if this.HasDesc(pos) {
 		s += " DESC"
