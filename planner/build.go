@@ -76,7 +76,9 @@ func (this *builder) chkBldSubqueries(stmt algebra.Statement, qp *plan.QueryPlan
 	if this.hasBuilderFlag(BUILDER_PLAN_SUBQUERY) {
 		err = this.buildSubqueries(stmt, qp)
 		// once plans for subqueries are built, unset builder flag
-		this.unsetBuilderFlag(BUILDER_PLAN_SUBQUERY)
+		if !this.subquery {
+			this.unsetBuilderFlag(BUILDER_PLAN_SUBQUERY)
+		}
 	}
 	return
 }
@@ -89,9 +91,16 @@ func (this *builder) buildSubqueries(stmt algebra.Statement, qp *plan.QueryPlan)
 	if len(subqueries) == 0 {
 		return nil
 	}
+	var saveQInfo *saveQueryInfo
 	subquery := this.subquery
+	if this.indexAdvisor {
+		saveQInfo = this.saveQueryInfo()
+	}
 	defer func() {
 		this.subquery = subquery
+		if this.indexAdvisor {
+			this.restoreQueryInfo(saveQInfo)
+		}
 	}()
 	this.subquery = true
 	this.makeSubqueryInfos(len(subqueries))
@@ -101,22 +110,27 @@ func (this *builder) buildSubqueries(stmt algebra.Statement, qp *plan.QueryPlan)
 			continue
 		}
 
-		this.startSubqIndexAdvisor()
-		this.initialIndexAdvisor(subq)
+		if this.indexAdvisor {
+			this.startSubqIndexAdvisor()
+			this.initialIndexAdvisor(subq)
+		}
 
 		// be warned, this amends the AST for the subqueries
 		p, err := subq.Accept(this)
-		if err != nil {
+		if err == nil {
+			qplan := p.(*plan.QueryPlan)
+			qp.AddSubquery(subq, qplan.PlanOp())
+			for s, o := range qplan.Subqueries() {
+				if !qp.HasSubquery(s) {
+					qp.AddSubquery(s, o)
+				}
+			}
+		} else if !this.indexAdvisor {
 			return err
 		}
-		qplan := p.(*plan.QueryPlan)
-		qp.AddSubquery(subq, qplan.PlanOp())
-		for s, o := range qplan.Subqueries() {
-			if !qp.HasSubquery(s) {
-				qp.AddSubquery(s, o)
-			}
+		if this.indexAdvisor {
+			this.endSubqIndexAdvisor(subq)
 		}
-		this.endSubqIndexAdvisor(subq)
 	}
 	return nil
 }

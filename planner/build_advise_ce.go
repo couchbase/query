@@ -23,11 +23,21 @@ import (
 type collectQueryInfo struct {
 }
 
+type saveQueryInfo struct {
+}
+
 func (this *builder) VisitAdvise(stmt *algebra.Advise) (interface{}, error) {
 	return nil, fmt.Errorf("Not supported in CE version. Use https://index-advisor.couchbase.com")
 }
 
 func (this *builder) setAdvisePhase(op int) {
+}
+
+func (this *builder) saveQueryInfo() *saveQueryInfo {
+	return nil
+}
+
+func (this *builder) restoreQueryInfo(saveQInfo *saveQueryInfo) {
 }
 
 func (this *builder) makeSubqueryInfos(l int) {

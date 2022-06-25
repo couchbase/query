@@ -218,7 +218,6 @@ type collectQueryInfo struct {
 	keyspaceInfos       advisor.KeyspaceInfos
 	queryInfo           *advisor.QueryInfo
 	queryInfos          map[expression.HasExpressions]*advisor.QueryInfo
-	saveQueryInfos      map[expression.HasExpressions]*advisor.QueryInfo
 	subqueryInfos       map[*algebra.Select]map[expression.HasExpressions]*advisor.QueryInfo
 	indexCollector      *scanIdxCol
 	idxCandidates       []datastore.Index
@@ -228,9 +227,35 @@ type collectQueryInfo struct {
 	advisePhase         int
 }
 
+type saveQueryInfo struct {
+	keyspaceInfos advisor.KeyspaceInfos
+	queryInfo     *advisor.QueryInfo
+	queryInfos    map[expression.HasExpressions]*advisor.QueryInfo
+}
+
 func (this *builder) setAdvisePhase(op int) {
 	this.indexAdvisor = true
 	this.advisePhase = op
+}
+
+func (this *builder) saveQueryInfo() *saveQueryInfo {
+	return &saveQueryInfo{
+		keyspaceInfos: this.keyspaceInfos,
+		queryInfo:     this.queryInfo,
+		queryInfos:    this.queryInfos,
+	}
+}
+
+func (this *builder) restoreQueryInfo(saveQInfo *saveQueryInfo) {
+	if saveQInfo != nil {
+		this.queryInfos = saveQInfo.queryInfos
+		this.keyspaceInfos = saveQInfo.keyspaceInfos
+		this.queryInfo = saveQInfo.queryInfo
+	} else {
+		this.queryInfos = nil
+		this.keyspaceInfos = nil
+		this.queryInfo = nil
+	}
 }
 
 func (this *builder) makeSubqueryInfos(l int) {
@@ -238,14 +263,14 @@ func (this *builder) makeSubqueryInfos(l int) {
 }
 
 func (this *builder) startSubqIndexAdvisor() {
-	this.saveQueryInfos = this.queryInfos
 	this.queryInfos = make(map[expression.HasExpressions]*advisor.QueryInfo, 1)
+	this.keyspaceInfos = nil
+	this.queryInfo = nil
 }
 
 func (this *builder) endSubqIndexAdvisor(s *algebra.Select) {
 	this.subqueryInfos[s] = this.queryInfos
-	this.queryInfos = this.saveQueryInfos
-	this.saveQueryInfos = nil
+	this.queryInfos = nil
 }
 
 func (this *builder) initialIndexAdvisor(stmt algebra.Statement) {
