@@ -207,7 +207,7 @@ func (ap *AgentProvider) TxGet(transaction *gocbcore.Transaction, fullName, buck
 		if err := sendOneGet(gop); err != nil {
 			// process other errors before processing PreviousOperationFailed
 			if err1, ok1 := err.(*gocbcore.TransactionOperationFailedError); ok1 &&
-				errors.Is(err1.Unwrap(), gocbcore.ErrPreviousOperationFailed) {
+				errors.Is(err1.InternalUnwrap(), gocbcore.ErrPreviousOperationFailed) {
 				prevErr = err
 				break
 			} else {
@@ -228,7 +228,7 @@ func (ap *AgentProvider) TxGet(transaction *gocbcore.Transaction, fullName, buck
 			// handle key not found error
 			// process other errors before processing PreviousOperationFailed
 			if err1, ok1 := item.Err.(*gocbcore.TransactionOperationFailedError); ok1 &&
-				errors.Is(err1.Unwrap(), gocbcore.ErrPreviousOperationFailed) {
+				errors.Is(err1.InternalUnwrap(), gocbcore.ErrPreviousOperationFailed) {
 				prevErr = item.Err
 			} else {
 				errs = append(errs, item.Err)
@@ -380,7 +380,7 @@ func (ap *AgentProvider) TxWrite(transaction *gocbcore.Transaction, txnInternal 
 		if errOut != nil {
 			// process other errors before processing PreviousOperationFailed
 			if err1, ok1 := errOut.(*gocbcore.TransactionOperationFailedError); ok1 &&
-				errors.Is(err1.Unwrap(), gocbcore.ErrPreviousOperationFailed) {
+				errors.Is(err1.InternalUnwrap(), gocbcore.ErrPreviousOperationFailed) {
 				prevErr = errOut
 				break
 			} else {
@@ -395,7 +395,7 @@ func (ap *AgentProvider) TxWrite(transaction *gocbcore.Transaction, txnInternal 
 		if op.Err != nil {
 			// process other errors before processing PreviousOperationFailed
 			if err1, ok1 := op.Err.(*gocbcore.TransactionOperationFailedError); ok1 &&
-				errors.Is(err1.Unwrap(), gocbcore.ErrPreviousOperationFailed) {
+				errors.Is(err1.InternalUnwrap(), gocbcore.ErrPreviousOperationFailed) {
 				prevErr = op.Err
 			} else {
 				return mapStagingError(op.Err, op.Key, keyspace)
@@ -429,7 +429,7 @@ func mapStagingError(err error, key, ks string) error {
 	e := err
 	if terr, ok := err.(*gocbcore.TransactionOperationFailedError); ok {
 		_, c = ErrorType(err, false)
-		e = terr.Unwrap()
+		e = terr.InternalUnwrap()
 	}
 	if errors.Is(e, gocbcore.ErrDocumentNotFound) {
 		ce := cerrors.NewKeyNotFoundError(key, ks, c)
