@@ -48,7 +48,7 @@ require (
 	github.com/couchbase/go_json v0.0.0-20220330123059-4473a21887c8
 	github.com/couchbase/gocbcore/v10 v10.1.2
 	github.com/couchbase/godbc v0.0.0-20210615212222-79da1b49cb4d
-	github.com/couchbase/gomemcached v0.1.4
+	github.com/couchbase/gomemcached v0.1.5-0.20220627085811-f29815b6005a
 	github.com/couchbase/goutils v0.1.2
 	github.com/couchbase/indexing v0.0.0-00010101000000-000000000000
 	github.com/couchbase/n1fty v0.0.0-00010101000000-000000000000
@@ -61,7 +61,7 @@ require (
 	github.com/peterh/liner v1.2.0
 	github.com/russross/blackfriday v1.5.2
 	github.com/samuel/go-zookeeper v0.0.0-20200724154423-2164a8ac840e
-	golang.org/x/crypto v0.0.0-20200820211705-5c72a883971a
+	golang.org/x/crypto v0.0.0-20220622213112-05595931fe9d
 	golang.org/x/net v0.0.0-20220225172249-27dd8689420f
 	gopkg.in/couchbase/gocb.v1 v1.6.7
 )
@@ -124,6 +124,7 @@ require (
 	github.com/youmark/pkcs8 v0.0.0-20181117223130-1be2e3e5546d // indirect
 	go.etcd.io/bbolt v1.3.6 // indirect
 	golang.org/x/sys v0.0.0-20220520151302-bc2c85ada10a // indirect
+	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211 // indirect
 	golang.org/x/text v0.3.7 // indirect
 	google.golang.org/genproto v0.0.0-20200825200019-8632dd797987 // indirect
 	google.golang.org/grpc v1.31.0 // indirect
