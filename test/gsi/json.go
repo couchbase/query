@@ -60,7 +60,7 @@ var FTS_CBS = "127.0.0.1:8094/"
 var FTS_API_PATH = "api/index/"
 var Namespace_CBS = "default"
 var Consistency_parameter = datastore.SCAN_PLUS
-var curlWhitelist = map[string]interface{}{"all_access": true}
+var curlAllowlist = map[string]interface{}{"all_access": true}
 var NodeServices = "pools/default/nodeServices"
 var Subpath_advise = []string{"indexes", "covering_indexes"}
 
@@ -296,7 +296,7 @@ func run(mockServer *MockServer, queryParams map[string]interface{}, q, namespac
 	query.SetPretty(value.TRUE)
 	query.SetScanConfiguration(consistency)
 	query.SetUseCBO(false)
-	mockServer.server.SetWhitelist(curlWhitelist)
+	mockServer.server.SetAllowlist(curlAllowlist)
 
 	var gv int
 	if txGroup, txOk := queryParams["txgroup"]; txOk {
@@ -435,7 +435,7 @@ func Start(site, pool, namespace string, setGlobals bool) *MockServer {
 	}
 
 	server.SetActives(http.NewActiveRequests(srv))
-	srv.SetWhitelist(curlWhitelist)
+	srv.SetAllowlist(curlAllowlist)
 
 	prepareds.PreparedsReprepareInit(ds, sys)
 	constructor.Init(nil, 6)

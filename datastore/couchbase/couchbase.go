@@ -435,7 +435,7 @@ func (s *store) AuditInfo() (*datastore.AuditInfo, errors.Error) {
 
 	ret := &datastore.AuditInfo{
 		EventDisabled:   events,
-		UserWhitelisted: users,
+		UserAllowlisted: users,
 		AuditEnabled:    auditSpec.AuditdEnabled,
 		Uid:             auditSpec.Uid,
 	}

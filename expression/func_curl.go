@@ -124,14 +124,14 @@ func (this *Curl) Evaluate(item value.Value, context Context) (value.Value, erro
 func (this *Curl) DoEvaluate(context Context, arg1, arg2 value.Value) (value.Value, error) {
 
 	// In order to have restricted access, the administrator will have to create
-	// curl_whitelist on the UI with the all_access field set to false.
+	// curl_allowlist on the UI with the all_access field set to false.
 	// In order to access all endpoints, the administrator will have to create
-	// curl_whitelist.json with the all_access field set to true.
+	// curl_allowlist.json with the all_access field set to true.
 
-	// Before performing any checks curl_whitelist needs to be set on the UI.
+	// Before performing any checks curl_allowlist needs to be set on the UI.
 	// 1. If it is empty, then return with error. (Disable access to the CURL function)
 	// 2. For all other cases, CURL can execute depending on contents of the file, but we defer
-	//    whitelist check to handle_curl()
+	//    allowlist check to handle_curl()
 
 	if this.myCurl == nil {
 		this.myCurl = curl.EasyInit()
@@ -175,16 +175,16 @@ func (this *Curl) DoEvaluate(context Context, arg1, arg2 value.Value) (value.Val
 		}
 	}
 
-	// Get whitelist from UI
-	var whitelist map[string]interface{}
+	// Get allowlist from UI
+	var allowlist map[string]interface{}
 
 	_curlContext := context.(CurlContext)
 	if _curlContext != nil {
-		whitelist = _curlContext.GetWhitelist()
+		allowlist = _curlContext.GetAllowlist()
 	}
 
 	// Now you have the URL and the options with which to call curl.
-	result, err := this.handleCurl(curl_url, options, whitelist)
+	result, err := this.handleCurl(curl_url, options, allowlist)
 
 	if err != nil {
 		return value.NULL_VALUE, err
@@ -235,12 +235,12 @@ func (this *Curl) Constructor() FunctionConstructor {
 	return NewCurl
 }
 
-func (this *Curl) handleCurl(url string, options map[string]interface{}, whitelist map[string]interface{}) (interface{}, error) {
+func (this *Curl) handleCurl(url string, options map[string]interface{}, allowlist map[string]interface{}) (interface{}, error) {
 	// Handle different cases
 
-	// initial check for curl_whitelist.json has been completed. The file exists.
+	// initial check for curl_allowlist.json has been completed. The file exists.
 	// Now we need to access the contents of the file and check for validity.
-	err := whitelistCheck(whitelist, url)
+	err := allowlistCheck(allowlist, url)
 	if err != nil {
 		return nil, err
 	}
@@ -965,7 +965,7 @@ func setResponseSize(maxSize int64) (finalValue int64) {
 
 }
 
-func whitelistCheck(list map[string]interface{}, urlP string) error {
+func allowlistCheck(list map[string]interface{}, urlP string) error {
 	// Structure is as follows
 	// {
 	//  "all_access":true/false,
@@ -983,12 +983,12 @@ func whitelistCheck(list map[string]interface{}, urlP string) error {
 
 	}
 
-	// Whitelist passed through ns server is empty then no access
+	// allowlist passed through ns server is empty then no access
 	if len(list) == 0 {
 		return fmt.Errorf("Allowed list for cluster is empty.")
 	}
 
-	// Whitelist passed through ns server doesnt contain all access field then no access
+	// allowlist passed through ns server doesnt contain all access field then no access
 	allaccess, ok := list["all_access"]
 	if !ok {
 		return fmt.Errorf("all_access does not exist in allowedlist.")
@@ -1051,7 +1051,7 @@ func whitelistCheck(list map[string]interface{}, urlP string) error {
 
 }
 
-// Check if urls fields in whitelist contain the input url
+// Check if urls fields in allowlist contain the input url
 func sliceContains(field []interface{}, url string) (bool, error) {
 	for _, val := range field {
 		nVal, ok := val.(string)
