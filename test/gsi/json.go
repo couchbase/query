@@ -31,6 +31,7 @@ import (
 	"github.com/couchbase/query/datastore/system"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/execution"
+	"github.com/couchbase/query/functions"
 	"github.com/couchbase/query/functions/constructor"
 	"github.com/couchbase/query/logging"
 	log_resolver "github.com/couchbase/query/logging/resolver"
@@ -419,6 +420,9 @@ func Start(site, pool, namespace string, setGlobals bool) *MockServer {
 
 	// Start the prepared statement cache
 	prepareds.PreparedsInit(1024)
+
+	// Start the UDF cache
+	functions.FunctionsInit(1024)
 
 	// Start the completed requests log - keep it small and busy
 	server.RequestsInit(0, 8)

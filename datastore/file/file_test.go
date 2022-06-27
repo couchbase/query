@@ -16,6 +16,7 @@ import (
 
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/tenant"
 	"github.com/couchbase/query/value"
 )
 
@@ -212,4 +213,16 @@ func (this *testingContext) Fatal(fatal errors.Error) {
 
 func (this *testingContext) GetReqDeadline() time.Time {
 	return time.Time{}
+}
+
+func (this *testingContext) RecordFtsRU(ru tenant.Unit) {
+}
+
+func (this *testingContext) RecordGsiRU(ru tenant.Unit) {
+}
+
+func (this *testingContext) RecordKvRU(ru tenant.Unit) {
+}
+
+func (this *testingContext) RecordKvWU(wu tenant.Unit) {
 }

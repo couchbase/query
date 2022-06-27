@@ -23,6 +23,7 @@ import (
 	"github.com/couchbase/query/prepareds"
 	"github.com/couchbase/query/rewrite"
 	"github.com/couchbase/query/semantics"
+	"github.com/couchbase/query/tenant"
 	"github.com/couchbase/query/transactions"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
@@ -101,10 +102,12 @@ func (this *internalOutput) PhaseOperator(p Phases) uint64 {
 }
 
 func (this *internalOutput) FmtPhaseCounts() map[string]interface{} {
+	// never used
 	return nil
 }
 
 func (this *internalOutput) FmtPhaseOperators() map[string]interface{} {
+	// never used
 	return nil
 }
 
@@ -113,10 +116,12 @@ func (this *internalOutput) AddPhaseTime(phase Phases, duration time.Duration) {
 }
 
 func (this *internalOutput) FmtPhaseTimes() map[string]interface{} {
+	// never used
 	return nil
 }
 
 func (this *internalOutput) FmtOptimizerEstimates(op Operator) map[string]interface{} {
+	// never used
 	return nil
 }
 
@@ -125,6 +130,10 @@ func (this *internalOutput) TrackMemory(size uint64) {
 }
 
 func (this *internalOutput) SetTransactionStartTime(t time.Time) {
+	// empty
+}
+
+func (this *internalOutput) AddTenantUnits(s tenant.Service, ru tenant.Unit) {
 	// empty
 }
 

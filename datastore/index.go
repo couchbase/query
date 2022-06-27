@@ -17,6 +17,7 @@ import (
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/logging"
+	"github.com/couchbase/query/tenant"
 	"github.com/couchbase/query/timestamp"
 	"github.com/couchbase/query/value"
 )
@@ -700,6 +701,14 @@ func (this *IndexConnection) Timeout() bool {
 func (this *IndexConnection) QueryContext() QueryContext {
 	context, _ := this.context.(QueryContext)
 	return context
+}
+
+func (this *IndexConnection) RecordGsiRU(ru tenant.Unit) {
+	this.context.RecordGsiRU(ru)
+}
+
+func (this *IndexConnection) RecordFtsRU(ru tenant.Unit) {
+	this.context.RecordFtsRU(ru)
 }
 
 func (this *IndexKey) Expression() expression.Expression {

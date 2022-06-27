@@ -13,6 +13,7 @@ import (
 
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/tenant"
 	"github.com/couchbase/query/value"
 )
 
@@ -27,6 +28,10 @@ type Context interface {
 	Error(errors.Error)
 	Warning(errors.Error)
 	GetReqDeadline() time.Time
+	RecordFtsRU(ru tenant.Unit)
+	RecordGsiRU(ru tenant.Unit)
+	RecordKvRU(ru tenant.Unit)
+	RecordKvWU(wu tenant.Unit)
 }
 
 type contextImpl struct {
@@ -57,6 +62,18 @@ func (ci *contextImpl) FeatureControl() uint64 {
 	return 0
 }
 
+func (ci *contextImpl) RecordFtsRU(ru tenant.Unit) {
+}
+
+func (ci *contextImpl) RecordGsiRU(ru tenant.Unit) {
+}
+
+func (ci *contextImpl) RecordKvRU(ru tenant.Unit) {
+}
+
+func (ci *contextImpl) RecordKvWU(wu tenant.Unit) {
+}
+
 // A subset of execution.Context that is useful at the datastore level.
 type QueryContext interface {
 	GetReqDeadline() time.Time
@@ -71,6 +88,10 @@ type QueryContext interface {
 	DurabilityLevel() DurabilityLevel
 	KvTimeout() time.Duration
 	PreserveExpiry() bool
+	RecordFtsRU(ru tenant.Unit)
+	RecordGsiRU(ru tenant.Unit)
+	RecordKvRU(ru tenant.Unit)
+	RecordKvWU(wu tenant.Unit)
 }
 
 type queryContextImpl struct {
@@ -119,4 +140,16 @@ func (ci *queryContextImpl) KvTimeout() time.Duration {
 
 func (ci *queryContextImpl) PreserveExpiry() bool {
 	return false
+}
+
+func (ci *queryContextImpl) RecordFtsRU(ru tenant.Unit) {
+}
+
+func (ci *queryContextImpl) RecordGsiRU(ru tenant.Unit) {
+}
+
+func (ci *queryContextImpl) RecordKvRU(ru tenant.Unit) {
+}
+
+func (ci *queryContextImpl) RecordKvWU(wu tenant.Unit) {
 }

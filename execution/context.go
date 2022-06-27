@@ -30,6 +30,7 @@ import (
 	"github.com/couchbase/query/logging/event"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/planner"
+	"github.com/couchbase/query/tenant"
 	"github.com/couchbase/query/timestamp"
 	"github.com/couchbase/query/transactions"
 	"github.com/couchbase/query/util"
@@ -141,6 +142,7 @@ type Output interface {
 	AddPhaseTime(phase Phases, duration time.Duration)
 	FmtPhaseTimes() map[string]interface{}
 	FmtOptimizerEstimates(op Operator) map[string]interface{}
+	AddTenantUnits(s tenant.Service, cu tenant.Unit)
 	TrackMemory(size uint64)
 	SetTransactionStartTime(t time.Time)
 }
@@ -210,6 +212,7 @@ type Context struct {
 	tracked             bool
 	bitFilterMap        map[string]*BitFilterTerm
 	bitFilterLock       sync.RWMutex
+	tenantCtx           tenant.Context
 }
 
 func NewContext(requestId string, datastore datastore.Datastore, systemstore datastore.Systemstore,
@@ -812,6 +815,69 @@ func (this *Context) AtrCollection() (string, int) {
 
 func (this *Context) TxExpired() bool {
 	return this.txContext != nil && this.txContext.TxExpired()
+}
+
+// Serverless management
+
+// TODO TENANT placeholder: query CUs are undefined as of yet
+func (this *Context) RecordCU(d time.Duration, m uint64) {
+	if tenant.IsServerless() {
+		if this.tenantCtx == nil {
+			bucket := ""
+			path := algebra.ParseQueryContext(this.queryContext)
+			if len(path) > 1 {
+				bucket = path[1]
+			}
+			this.tenantCtx = tenant.NewTenantCtx(datastore.CredsString(this.credentials), bucket)
+		}
+		units := tenant.RecordCU(this.tenantCtx, d, m)
+		this.output.AddTenantUnits(tenant.QUERY_CU, units)
+	}
+}
+
+// Serverless cost from other services
+// TODO TENANT placeholder: jsevaluator is undefined as of yet
+func (this *Context) RecordJsCU(d time.Duration, m uint64) {
+	if tenant.IsServerless() {
+		if this.tenantCtx == nil {
+			bucket := ""
+			path := algebra.ParseQueryContext(this.queryContext)
+			if len(path) > 1 {
+				bucket = path[1]
+			}
+			this.tenantCtx = tenant.NewTenantCtx(datastore.CredsString(this.credentials), bucket)
+		}
+		units := tenant.RecordJsCU(this.tenantCtx, d, m)
+		this.output.AddTenantUnits(tenant.JS_CU, units)
+	}
+}
+
+// Serverless cost from other services
+
+// TODO TENANT Gsi and Fts are undefined as of yet
+func (this *Context) RecordFtsRU(ru tenant.Unit) {
+	if tenant.IsServerless() {
+		this.output.AddTenantUnits(tenant.FTS_RU, ru)
+	}
+}
+
+func (this *Context) RecordGsiRU(ru tenant.Unit) {
+	if tenant.IsServerless() {
+		this.output.AddTenantUnits(tenant.GSI_RU, ru)
+	}
+}
+
+// Kv returns actual RUs and WUs
+func (this *Context) RecordKvRU(ru tenant.Unit) {
+	if tenant.IsServerless() {
+		this.output.AddTenantUnits(tenant.KV_RU, ru)
+	}
+}
+
+func (this *Context) RecordKvWU(wu tenant.Unit) {
+	if tenant.IsServerless() {
+		this.output.AddTenantUnits(tenant.KV_WU, wu)
+	}
 }
 
 // subquery evaluation

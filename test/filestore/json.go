@@ -28,6 +28,7 @@ import (
 	"github.com/couchbase/query/datastore/system"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/execution"
+	"github.com/couchbase/query/functions"
 	"github.com/couchbase/query/functions/constructor"
 	"github.com/couchbase/query/logging"
 	log_resolver "github.com/couchbase/query/logging/resolver"
@@ -224,6 +225,9 @@ func Start(site, pool, namespace string) *MockServer {
 
 	// Start the prepared statement cache
 	prepareds.PreparedsInit(1024)
+
+	// Start the UDF cache
+	functions.FunctionsInit(1024)
 
 	srv, err := server.NewServer(ds, sys, configstore, acctstore, namespace,
 		false, 10, 10, 4, 4, 0, 0, false, false, false, true,

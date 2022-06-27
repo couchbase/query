@@ -17,6 +17,7 @@ import (
 	"github.com/couchbase/gocbcore/v10"
 	"github.com/couchbase/query/datastore/couchbase/gcagent"
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/tenant"
 )
 
 type MutateOp int
@@ -561,7 +562,7 @@ func (this *TransactionMutations) AddMarker(keyspace string, logType int) (err e
 
 /* Write transaction mutations to  gocbcore transaction
  */
-func (this *TransactionMutations) Write(deadline time.Time) (err error) {
+func (this *TransactionMutations) Write(deadline time.Time) (units tenant.Unit, err error) {
 	// Delete Transaction log. savepoints.
 	var memSize int64
 
@@ -572,19 +573,22 @@ func (this *TransactionMutations) Write(deadline time.Time) (err error) {
 	if this.tranImplicit {
 		// write current delta keyspace
 		dk := &this.curDeltaKeyspace
-		if err = dk.Write(this.transaction, this.txnInternal, "", deadline, &memSize); err != nil {
-			return err
+
+		if units, err = dk.Write(this.transaction, this.txnInternal, "", deadline, &memSize); err != nil {
+			return units, err
 		}
 	}
 
 	// write other keyspaces
 	for k, dk := range this.keyspaces {
-		if err = dk.Write(this.transaction, this.txnInternal, k, deadline, &memSize); err != nil {
-			return err
+		var u tenant.Unit
+		if u, err = dk.Write(this.transaction, this.txnInternal, k, deadline, &memSize); err != nil {
+			return units, err
 		}
+		units += u
 	}
 
-	return this.TrackMemoryQuota(-memSize)
+	return units, this.TrackMemoryQuota(-memSize)
 }
 
 func (this *TransactionMutations) DeleteAll(delta bool, memSize *int64) {
@@ -838,7 +842,7 @@ func (this *TransactionMutations) GetDeltaKeyspaceKeys(keysapce string) (keys ma
 // write mutations to gocbcore-transactions in batches
 
 func (this *DeltaKeyspace) Write(transaction *gocbcore.Transaction, txnInternal *gocbcore.TransactionsManagerInternal,
-	keyspace string, deadline time.Time, memSize *int64) (err error) {
+	keyspace string, deadline time.Time, memSize *int64) (units tenant.Unit, err error) {
 	bSize := len(this.values)
 	if bSize == 0 {
 		return
@@ -855,7 +859,7 @@ func (this *DeltaKeyspace) Write(transaction *gocbcore.Transaction, txnInternal 
 			if mv.Op != MOP_DELETE {
 				// for non delete marshall the data
 				if data, err = json.Marshal(mv.Val); err != nil {
-					return err
+					return units, err
 				}
 			}
 
@@ -875,10 +879,11 @@ func (this *DeltaKeyspace) Write(transaction *gocbcore.Transaction, txnInternal 
 
 			if len(wops) == bSize {
 				// write once batch size reached
+				// TODO TENANT collect from agent provider / ensure units are not negative
 				err = this.ks.agentProvider.TxWrite(transaction, txnInternal, keyspace,
 					this.bucketName, this.scopeName, this.collectionName, this.collId, deadline, wops)
 				if err != nil {
-					return err
+					return units, err
 				}
 				wops = wops[0:0]
 			}
@@ -888,14 +893,15 @@ func (this *DeltaKeyspace) Write(transaction *gocbcore.Transaction, txnInternal 
 
 	if len(wops) > 0 {
 		// write partial batch
+		// TODO TENANT collect from agent provider / ensure units are not negative
 		err = this.ks.agentProvider.TxWrite(transaction, txnInternal, keyspace,
 			this.bucketName, this.scopeName, this.collectionName, this.collId, deadline, wops)
 		if err != nil {
-			return err
+			return units, err
 		}
 	}
 
-	return nil
+	return units, nil
 }
 
 func (this *DeltaKeyspace) Add(key string, mv *MutationValue) {

@@ -11,12 +11,92 @@
 package tenant
 
 import (
+	"time"
+
 	"github.com/gorilla/mux"
 )
 
-func Init(mux *mux.Router, nodeid string, cafile string, serverless bool) {
+type Unit uint64
+type Service int
+type Services [_SIZER]Unit
+type ResourceManager func(string)
+
+const (
+	QUERY_CU = Service(iota)
+	JS_CU
+	GSI_RU
+	FTS_RU
+	KV_RU
+	KV_WU
+	_SIZER
+)
+
+func Init(serverless bool) {
+}
+
+func Start(mux *mux.Router, nodeid string, cafile string) {
+}
+
+func RegisterResourceManager(m ResourceManager) {
 }
 
 func IsServerless() bool {
 	return false
+}
+
+func AddUnit(dest *Unit, u Unit) {
+}
+
+func (this Unit) String() string {
+	return "\"\""
+}
+
+func (this Unit) NonZero() bool {
+	return false
+}
+
+func Throttle(user, bucket string) error {
+	return nil
+}
+
+type Context interface{}
+
+func NewTenantCtx(bucket, user string) Context {
+	return nil
+}
+
+func RecordCU(ctx Context, d time.Duration, m uint64) Unit {
+	return 0
+}
+
+func RecordJsCU(ctx Context, d time.Duration, m uint64) Unit {
+	return 0
+}
+
+func RefundUnits(ctx Context, units Services) error {
+	return nil
+}
+
+func QueryCUName() string {
+	return ""
+}
+
+func JsCUName() string {
+	return ""
+}
+
+func GsiRUName() string {
+	return ""
+}
+
+func FtsRUName() string {
+	return ""
+}
+
+func KvRUName() string {
+	return ""
+}
+
+func KvWUName() string {
+	return ""
 }

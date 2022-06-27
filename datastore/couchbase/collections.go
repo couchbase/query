@@ -311,7 +311,7 @@ func (coll *collection) loadIndexes() {
 }
 
 func (coll *collection) GetRandomEntry(context datastore.QueryContext) (string, value.Value, errors.Error) {
-	return coll.bucket.getRandomEntry(coll.scope.id, coll.id, &memcached.ClientContext{CollId: coll.uid, User: getUser(context)})
+	return coll.bucket.getRandomEntry(context, coll.scope.id, coll.id, &memcached.ClientContext{CollId: coll.uid, User: getUser(context)})
 }
 
 func (coll *collection) Fetch(keys []string, fetchMap map[string]value.AnnotatedValue, context datastore.QueryContext,

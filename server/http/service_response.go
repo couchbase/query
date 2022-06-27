@@ -25,6 +25,7 @@ import (
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/server"
+	"github.com/couchbase/query/tenant"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
@@ -137,6 +138,7 @@ func (this *httpRequest) Failed(srvr *server.Server) {
 	this.markTimeOfCompletion(time.Now())
 
 	this.writeMetrics(srvr.Metrics(), prefix, indent)
+	this.writeServerless(srvr.Metrics(), prefix, indent)
 	this.writeProfile(srvr.Profile(), prefix, indent)
 	this.writeControls(srvr.Controls(), prefix, indent)
 	this.writeString("\n}\n")
@@ -323,6 +325,7 @@ func (this *httpRequest) writeSuffix(srvr *server.Server, state server.State, pr
 		this.writeWarnings(prefix, indent) &&
 		this.writeState(state, prefix) &&
 		this.writeMetrics(srvr.Metrics(), prefix, indent) &&
+		this.writeServerless(srvr.Metrics(), prefix, indent) &&
 		this.writeProfile(srvr.Profile(), prefix, indent) &&
 		this.writeControls(srvr.Controls(), prefix, indent) &&
 		this.writeString("\n}\n")
@@ -687,6 +690,85 @@ func (this *httpRequest) writeTransactionInfo(prefix, indent string) bool {
 	}
 
 	return true
+}
+
+func (this *httpRequest) writeServerless(metrics bool, prefix, indent string) bool {
+	if !tenant.IsServerless() {
+		return true
+	}
+	m := this.Metrics()
+	if m == value.FALSE || (m == value.NONE && !metrics) {
+		return true
+	}
+
+	var newPrefix string
+	if prefix != "" {
+		newPrefix = "\n" + prefix + indent
+	}
+
+	beforeUnits := this.writer.mark()
+	if !(this.writeString(",\n") &&
+		this.writeString(prefix) &&
+		this.writeString("\"computeUnits\": {")) {
+		this.writer.truncate(beforeUnits)
+		return false
+	}
+
+	seen := false
+	buf := this.writer.buf()
+	if this.GetTenantUnits(tenant.QUERY_CU).NonZero() {
+		if seen {
+			fmt.Fprintf(buf, ",")
+		}
+		seen = true
+		fmt.Fprintf(buf, "%s\"%s\": %s", newPrefix, tenant.QueryCUName(), this.GetTenantUnits(tenant.QUERY_CU).String())
+	}
+	if this.GetTenantUnits(tenant.JS_CU).NonZero() {
+		if seen {
+			fmt.Fprintf(buf, ",")
+		}
+		seen = true
+		fmt.Fprintf(buf, "%s\"%s\": %s", newPrefix, tenant.JsCUName(), this.GetTenantUnits(tenant.JS_CU).String())
+	}
+	if this.GetTenantUnits(tenant.GSI_RU).NonZero() {
+		if seen {
+			fmt.Fprintf(buf, ",")
+		}
+		seen = true
+		fmt.Fprintf(buf, "%s\"%s\": %s", newPrefix, tenant.GsiRUName(), this.GetTenantUnits(tenant.GSI_RU).String())
+	}
+	if this.GetTenantUnits(tenant.FTS_RU).NonZero() {
+		if seen {
+			fmt.Fprintf(buf, ",")
+		}
+		seen = true
+		fmt.Fprintf(buf, "%s\"%s\": %s", newPrefix, tenant.FtsRUName(), this.GetTenantUnits(tenant.FTS_RU).String())
+	}
+	if this.GetTenantUnits(tenant.KV_RU).NonZero() {
+		if seen {
+			fmt.Fprintf(buf, ",")
+		}
+		seen = true
+		fmt.Fprintf(buf, "%s\"%s\": %s", newPrefix, tenant.KvRUName(), this.GetTenantUnits(tenant.KV_RU).String())
+	}
+	if this.GetTenantUnits(tenant.KV_WU).NonZero() {
+		if seen {
+			fmt.Fprintf(buf, ",")
+		}
+		seen = true
+		fmt.Fprintf(buf, "%s\"%s\": %s", newPrefix, tenant.KvWUName(), this.GetTenantUnits(tenant.KV_WU).String())
+	}
+
+	// no ouput if no units accounted for
+	if !seen {
+		this.writer.truncate(beforeUnits)
+		return true
+	}
+	if prefix != "" && !(this.writeString("\n") && this.writeString(prefix)) {
+		this.writer.truncate(beforeUnits)
+		return false
+	}
+	return this.writeString("}")
 }
 
 func (this *httpRequest) writeProfile(profile server.Profile, prefix, indent string) bool {

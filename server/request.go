@@ -19,6 +19,7 @@ import (
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/execution"
 	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/tenant"
 	"github.com/couchbase/query/timestamp"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
@@ -266,6 +267,7 @@ type BaseRequest struct {
 	mutationCount atomic.AlignedUint64
 	sortCount     atomic.AlignedUint64
 	phaseStats    [execution.PHASES]phaseStat
+	tenantUnits   tenant.Services
 
 	sync.RWMutex
 	id                   requestIDImpl
@@ -842,6 +844,14 @@ func (this *BaseRequest) FmtOptimizerEstimates(op execution.Operator) map[string
 	}
 
 	return p
+}
+
+func (this *BaseRequest) AddTenantUnits(s tenant.Service, cu tenant.Unit) {
+	tenant.AddUnit(&this.tenantUnits[s], cu)
+}
+
+func (this *BaseRequest) GetTenantUnits(s tenant.Service) tenant.Unit {
+	return this.tenantUnits[s]
 }
 
 func (this *BaseRequest) TrackMemory(size uint64) {

@@ -153,3 +153,13 @@ func NewErrorLimit(limit int, num int, dups int, mut uint64) Error {
 		InternalMsg:    "Request execution aborted as the number of errors raised has reached the maximum permitted.",
 		InternalCaller: CallerN(1)}
 }
+
+func NewServiceTenantThrottledError(e error) Error {
+	return &err{level: EXCEPTION, ICode: E_SERVICE_TENANT_THROTTLED, IKey: "service.tenant.throttled", ICause: e,
+		InternalMsg: "Request has been declined", InternalCaller: CallerN(1)}
+}
+
+func NewServiceTenantInvalidError() Error {
+	return &err{level: EXCEPTION, ICode: E_SERVICE_TENANT_INVALID, IKey: "service.tenant.invalid",
+		InternalMsg: "Request does not have a valid tenant", InternalCaller: CallerN(1)}
+}

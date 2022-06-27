@@ -17,6 +17,7 @@ import (
 	"github.com/couchbase/query/distributed"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
+	"github.com/couchbase/query/tenant"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
@@ -93,24 +94,28 @@ var languages = [_SIZER]LanguageRunner{&missing{}, &empty{}}
 var functions = &functionCache{}
 
 // init functions cache
-func init() {
+func FunctionsInit(limit int) {
 	functions.cache = util.NewGenCache(_LIMIT)
+	functions.cache.SetLimit(limit)
+	tenant.RegisterResourceManager(manageTenant)
+}
+
+func FunctionsSetLimit(limit int) {
+	functions.cache.SetLimit(limit)
+}
+
+func FunctionsLimit() int {
+	return functions.cache.Limit()
+}
+
+//TODO TENANT tenant resource management
+func manageTenant(bucket string) {
 }
 
 func FunctionsNewLanguage(lang Language, runner LanguageRunner) {
 	if runner != nil && lang != _MISSING {
 		languages[lang] = runner
 	}
-}
-
-// configure functions cache
-
-func FunctionsLimit() int {
-	return functions.cache.Limit()
-}
-
-func FunctionsSetLimit(limit int) {
-	functions.cache.SetLimit(limit)
 }
 
 // utilities for functions and system keyspaces

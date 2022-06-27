@@ -26,6 +26,7 @@ import (
 	"github.com/couchbase/cbauth"
 	ntls "github.com/couchbase/goutils/tls"
 	"github.com/couchbase/query/accounting"
+	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/audit"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/distributed"
@@ -34,6 +35,7 @@ import (
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/prepareds"
 	"github.com/couchbase/query/server"
+	"github.com/couchbase/query/tenant"
 	"github.com/couchbase/query/util"
 	"github.com/gorilla/mux"
 )
@@ -409,6 +411,26 @@ func (this *HttpEndpoint) ServeHTTP(resp http.ResponseWriter, req *http.Request)
 			request.Fail(errors.NewServiceUserResultsSizeExceededError())
 			request.Failed(this.server)
 			return
+		}
+	} else if tenant.IsServerless() {
+
+		// TODO TENANT throttling here is easy but may result in double waiting, once
+		// for throttling and once for servicers availability.
+		// A better choice would be near server.go:service_request(), after the queueing
+		// due to servicers load has happened.
+		// this would shorten the overall wait due to throttling, but has the major disadvantage
+		// that it is quite complicated to code and might badly affect queue throughput.
+		// Explore if this code is acceptable or conversely throttling after queuing can be
+		// code efficiently.
+		bucket := ""
+		path := algebra.ParseQueryContext(request.QueryContext())
+		if len(path) > 1 {
+			bucket = path[1]
+		}
+		err := tenant.Throttle(datastore.CredsStringHTTP(request.Credentials()), bucket)
+		if err != nil {
+			request.Fail(errors.NewServiceTenantThrottledError(err))
+			request.Failed(this.server)
 		}
 	}
 

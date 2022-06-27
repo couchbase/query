@@ -18,6 +18,7 @@ import (
 	"github.com/couchbase/query/datastore/mock"
 	"github.com/couchbase/query/distributed"
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/tenant"
 	"github.com/couchbase/query/value"
 )
 
@@ -84,6 +85,18 @@ func (ci *queryContextImpl) GetScanCap() int64 {
 
 func (ci *queryContextImpl) MaxParallelism() int {
 	return 1
+}
+
+func (ci *queryContextImpl) RecordFtsRU(ru tenant.Unit) {
+}
+
+func (ci *queryContextImpl) RecordGsiRU(ru tenant.Unit) {
+}
+
+func (ci *queryContextImpl) RecordKvRU(ru tenant.Unit) {
+}
+
+func (ci *queryContextImpl) RecordKvWU(wu tenant.Unit) {
 }
 
 func TestSystem(t *testing.T) {

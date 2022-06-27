@@ -79,6 +79,8 @@ const (
 	E_SERVICE_USER_REQUEST_SIZE_EXCEEDED      ErrorCode = 1193
 	E_SERVICE_USER_RESULT_SIZE_EXCEEDED       ErrorCode = 1194
 	E_REQUEST_ERROR_LIMIT                     ErrorCode = 1195
+	E_SERVICE_TENANT_THROTTLED                ErrorCode = 1196
+	E_SERVICE_TENANT_INVALID                  ErrorCode = 1197
 	E_ADMIN_CONNECTION                        ErrorCode = 2000
 	E_ADMIN_INVALIDURL                        ErrorCode = 2010
 	E_ADMIN_DECODING                          ErrorCode = 2020

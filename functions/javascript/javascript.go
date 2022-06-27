@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"strings"
 	"sync/atomic"
+	"time"
 
 	"github.com/couchbase/eventing-ee/evaluator/defs"
 	"github.com/couchbase/eventing-ee/evaluator/n1ql_client"
@@ -140,6 +141,9 @@ func (this *javascript) Execute(name functions.FunctionName, body functions.Func
 		library = funcBody.library
 	}
 	res, err := evaluator.Evaluate(library, funcBody.object, opts, args, functions.NewUdfContext(context, funcBody.prefix))
+
+	// TODO TENANT
+	context.RecordJsCU(time.Millisecond, 10*1024)
 	if err.Err != nil {
 		return nil, funcBody.execError(err, funcName)
 	} else {

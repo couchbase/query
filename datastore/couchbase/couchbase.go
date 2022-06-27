@@ -41,6 +41,7 @@ import (
 	"github.com/couchbase/query/logging"
 	cb "github.com/couchbase/query/primitives/couchbase"
 	"github.com/couchbase/query/server"
+	"github.com/couchbase/query/tenant"
 	"github.com/couchbase/query/transactions"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
@@ -724,7 +725,12 @@ func NewDatastore(u string) (s datastore.Datastore, e errors.Error) {
 	store.namespaceCache["default"] = defaultPool
 	logging.Infof("New store created with url %s", u)
 
+	tenant.RegisterResourceManager(func(bucket string) { store.manageTenant(bucket) })
 	return store, nil
+}
+
+// TODO TENANT tenant resource management
+func (s *store) manageTenant(bucket string) {
 }
 
 func loadNamespace(s *store, name string) (*namespace, errors.Error) {
@@ -1625,10 +1631,10 @@ func key(k []byte, clientContext ...*memcached.ClientContext) []byte {
 //
 
 func (k *keyspace) GetRandomEntry(context datastore.QueryContext) (string, value.Value, errors.Error) {
-	return k.getRandomEntry("", "")
+	return k.getRandomEntry(context, "", "")
 }
 
-func (k *keyspace) getRandomEntry(scopeName, collectionName string,
+func (k *keyspace) getRandomEntry(context datastore.QueryContext, scopeName, collectionName string,
 	clientContext ...*memcached.ClientContext) (string, value.Value, errors.Error) {
 	resp, err := k.cbbucket.GetRandomDoc(clientContext...)
 
@@ -1642,7 +1648,7 @@ func (k *keyspace) getRandomEntry(scopeName, collectionName string,
 		return "", nil, errors.NewCbGetRandomEntryError(err)
 	}
 	key := string(key(resp.Key, clientContext...))
-	doc := doFetch(key, k.fullName, resp)
+	doc := doFetch(key, k.fullName, resp, context)
 
 	return key, doc, nil
 }
@@ -1685,6 +1691,7 @@ func (b *keyspace) fetch(fullName, qualifiedName, scopeName, collectionName stri
 		if l == 1 {
 			mcr, err = b.cbbucket.GetsSubDoc(keys[0], context.GetReqDeadline(), subPaths, clientContext...)
 		} else {
+			// TODO TENANT handle refunds on transient failures
 			bulkResponse, err = b.cbbucket.GetBulk(keys, context.GetReqDeadline(), subPaths, context.UseReplica(), clientContext...)
 			defer b.cbbucket.ReleaseGetBulkPools(bulkResponse)
 		}
@@ -1705,7 +1712,7 @@ func (b *keyspace) fetch(fullName, qualifiedName, scopeName, collectionName stri
 
 	if fast {
 		if mcr != nil && err == nil {
-			fetchMap[keys[0]] = doFetch(keys[0], fullName, mcr)
+			fetchMap[keys[0]] = doFetch(keys[0], fullName, mcr, context)
 		}
 
 	} else if l == 1 {
@@ -1721,7 +1728,7 @@ func (b *keyspace) fetch(fullName, qualifiedName, scopeName, collectionName stri
 			}
 		} else {
 			for k, v := range bulkResponse {
-				fetchMap[k] = doFetch(k, fullName, v)
+				fetchMap[k] = doFetch(k, fullName, v, context)
 				i++
 			}
 			logging.Debuga(func() string { return fmt.Sprintf("Requested keys %d Fetched %d keys ", l, i) })
@@ -1731,7 +1738,7 @@ func (b *keyspace) fetch(fullName, qualifiedName, scopeName, collectionName stri
 	return nil
 }
 
-func doFetch(k string, fullName string, v *gomemcached.MCResponse) value.AnnotatedValue {
+func doFetch(k string, fullName string, v *gomemcached.MCResponse, context datastore.QueryContext) value.AnnotatedValue {
 	val := value.NewAnnotatedValue(value.NewParsedValue(v.Body, (v.DataType&byte(0x01) != 0)))
 
 	var flags, expiration uint32
@@ -1756,6 +1763,9 @@ func doFetch(k string, fullName string, v *gomemcached.MCResponse) value.Annotat
 	meta["flags"] = flags
 	meta["expiration"] = expiration
 	val.SetId(k)
+
+	// TODO TENANT
+	context.RecordKvRU(1)
 
 	// Uncomment when needed
 	//logging.Debuga(func() string{ return fmt.Sprintf("CAS Value for key %v is %v flags %v", k, uint64(v.Cas), meta_flags)})
@@ -1982,6 +1992,9 @@ func (b *keyspace) performOp(op MutateOp, qualifiedName, scopeName, collectionNa
 
 			// add the key to the backend
 			added, cas, err = b.cbbucket.AddWithCAS(key, exptime, val, clientContext...)
+
+			// TODO TENANT
+			context.RecordKvWU(1)
 			b.checkRefresh(err)
 			if added == false {
 				// false & err == nil => given key aready exists in the bucket
@@ -2031,6 +2044,9 @@ func (b *keyspace) performOp(op MutateOp, qualifiedName, scopeName, collectionNa
 						MutateOpToName(op), key, cas, flags, val, qualifiedName)
 				})
 				newCas, _, err = b.cbbucket.CasWithMeta(key, int(flags), exptime, cas, val, clientContext...)
+
+				// TODO TENANT
+				context.RecordKvWU(1)
 				if err == nil {
 					// refresh local meta CAS value
 					logging.Debuga(func() string {
@@ -2055,6 +2071,9 @@ func (b *keyspace) performOp(op MutateOp, qualifiedName, scopeName, collectionNa
 				}
 			} else {
 				newCas, err = b.cbbucket.SetWithCAS(key, exptime, val, clientContext...)
+
+				// TODO TENANT
+				context.RecordKvWU(1)
 				b.checkRefresh(err)
 				if err == nil {
 					logging.Debuga(func() string {
@@ -2067,6 +2086,9 @@ func (b *keyspace) performOp(op MutateOp, qualifiedName, scopeName, collectionNa
 			}
 		case MOP_DELETE:
 			err = b.cbbucket.Delete(key, clientContext...)
+
+			// TODO TENANT
+			context.RecordKvWU(1)
 			b.checkRefresh(err)
 		}
 

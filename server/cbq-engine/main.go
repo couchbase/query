@@ -148,6 +148,9 @@ func main() {
 	defer HideConsole(false)
 	flag.Parse()
 
+	// many Init() depend on this
+	tenant.Init(*SERVERLESS)
+
 	numCPUs := runtime.NumCPU()
 	if !*ENTERPRISE && numCPUs > _DEF_CE_MAXCPUS {
 		numCPUs = _DEF_CE_MAXCPUS
@@ -296,7 +299,7 @@ func main() {
 		*PREPARED_LIMIT = _DEF_PREPARED_LIMIT
 	}
 	prepareds.PreparedsInit(*PREPARED_LIMIT)
-	functions.FunctionsSetLimit(*FUNCTIONS_LIMIT)
+	functions.FunctionsInit(*FUNCTIONS_LIMIT)
 	scheduler.SchedulerSetLimit(*TASKS_LIMIT)
 
 	if *DICTIONARY_CACHE_LIMIT <= 0 {
@@ -401,7 +404,7 @@ func main() {
 	server.SetSettingsCallback(endpoint.SettingsCallback)
 
 	constructor.Init(endpoint.Mux(), server.Servicers())
-	tenant.Init(endpoint.Mux(), *UUID, *CA_FILE, *SERVERLESS)
+	tenant.Start(endpoint.Mux(), *UUID, *CA_FILE)
 
 	// topology awareness
 	_ = control.NewManager(*UUID)

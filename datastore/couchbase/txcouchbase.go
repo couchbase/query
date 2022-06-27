@@ -21,6 +21,7 @@ import (
 	"github.com/couchbase/query/datastore/couchbase/gcagent"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
+	"github.com/couchbase/query/tenant"
 	"github.com/couchbase/query/transactions"
 	"github.com/couchbase/query/value"
 )
@@ -137,6 +138,7 @@ func (s *store) StartTransaction(stmtAtomicity bool, context datastore.QueryCont
 			var dataSize int64
 			for _, mutation := range transaction.GetMutations() {
 				var op MutateOp
+
 				switch mutation.OpType {
 				case gocbcore.TransactionStagedMutationInsert:
 					op = MOP_INSERT
@@ -185,13 +187,14 @@ func (s *store) CommitTransaction(stmtAtomicity bool, context datastore.QueryCon
 	}
 
 	var err, cerr error
+	var wu tenant.Unit
 
 	transaction := txMutations.Transaction()
 	txId := transaction.Attempt().ID
 	logging.Tracea(func() string { return fmt.Sprintf("=====%v=====Commit begin write========", txId) })
 
 	// write all mutations to KV
-	err = txMutations.Write(context.GetReqDeadline())
+	wu, err = txMutations.Write(context.GetReqDeadline())
 	if s.gcClient != nil {
 		atrl := transaction.GetATRLocation()
 		s.gcClient.AddAtrLocation(&atrl)
@@ -202,6 +205,9 @@ func (s *store) CommitTransaction(stmtAtomicity bool, context datastore.QueryCon
 			c = ce.Cause()
 		}
 		return errors.NewCommitTransactionError(e, c)
+	}
+	if wu > 0 {
+		context.RecordKvWU(wu)
 	}
 	logging.Tracea(func() string { return fmt.Sprintf("=====%v=====Commit end write========", txId) })
 
@@ -478,8 +484,11 @@ func (ks *keyspace) txFetch(fullName, qualifiedName, scopeName, collectionName, 
 		// Transformed SDK operation, don't ignore key not found error (except insert check)
 		notFoundErr := sdkKv && !sdkKvInsert
 		// fetch the keys that are not present in delta keyspace
+
 		errs := ks.agentProvider.TxGet(transaction, fullName, ks.name, scopeName, collectionName,
 			user, collId, fkeys, subPaths, context.GetReqDeadline(), false, notFoundErr, fetchMap)
+		// TODO TENANT
+		context.RecordKvRU(1)
 		if len(errs) > 0 {
 			if notFoundErr &&
 				(gerrors.Is(errs[0], gocbcore.ErrDocumentNotFound) || gerrors.Is(errs[0], gocbcore.ErrDocumentNotFound)) {
@@ -607,9 +616,13 @@ func (ks *keyspace) txPerformOp(op MutateOp, qualifiedName, scopeName, collectio
 
 	if txMutations.TranImplicit() {
 		// implict transaction write the current batch
-		if terr := txMutations.Write(context.GetReqDeadline()); terr != nil {
+		wu, terr := txMutations.Write(context.GetReqDeadline())
+		if terr != nil {
 			e, c := gcagent.ErrorType(terr, false)
 			return nil, append(errs, errors.NewTransactionStagingError(e, c))
+		}
+		if wu > 0 {
+			context.RecordKvWU(wu)
 		}
 	}
 
