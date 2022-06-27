@@ -35,6 +35,7 @@ import (
    Point to the cluser/query endpoint to connect to.
 */
 var serverFlag string
+var serverList []string
 
 func init() {
 	const (
@@ -527,19 +528,30 @@ func main() {
 	var errCode errors.ErrorCode
 	var errStr string
 	var pURL *command.UrlRes
+	var https bool
 
-	pURL, errCode, errStr = command.ParseURL(serverFlag)
-	if errCode != 0 {
-		s_err := command.HandleError(errCode, errStr)
-		command.PrintError(s_err)
-		os.Exit(1)
-	}
+	sflags := strings.Split(serverFlag, ",")
 
-	serverFlag = pURL.ServerFlag
-
-	//-engine
-	if strings.HasSuffix(serverFlag, "/") == false {
-		serverFlag = serverFlag + "/"
+	for n, s := range sflags {
+		pURL, errCode, errStr = command.ParseURL(s)
+		if errCode != 0 {
+			s_err := command.HandleError(errCode, errStr)
+			command.PrintError(s_err)
+			os.Exit(1)
+		}
+		u := pURL.ServerFlag
+		if strings.HasSuffix(u, "/") == false {
+			u = u + "/"
+		}
+		uhttps := strings.HasPrefix(strings.ToLower(u), "https://")
+		if n == 0 {
+			https = uhttps
+		} else if uhttps != https {
+			s_err := command.HandleError(errors.E_SHELL_INVALID_PROTOCOL, "")
+			command.PrintError(s_err)
+			os.Exit(1)
+		}
+		serverList = append(serverList, u)
 	}
 
 	/* -user : Accept Admin credentials. Prompt for password and set
@@ -668,7 +680,7 @@ func main() {
 		n1ql.SetPrivateKeyPassphrase([]byte(passpFlag))
 	}
 
-	if strings.HasPrefix(strings.ToLower(serverFlag), "https://") && rootFile == "" && certFile == "" && keyFile == "" {
+	if https && rootFile == "" && certFile == "" && keyFile == "" {
 		if noSSLVerify == false {
 			command.PrintStr(command.W, command.SSLVERIFY_FALSE)
 		} else {
@@ -677,23 +689,35 @@ func main() {
 	}
 
 	if noQueryService == false {
-		// Check if connection is possible to the input serverFlag
-		// else failed to connect to. This establishes the dbn1ql handle for future queries
-		pingerr := command.Ping(serverFlag)
-		SERVICE_URL = serverFlag
-		command.SERVICE_URL = serverFlag
-		if pingerr != nil && strings.Contains(pingerr.Error(), "parsePrivateKey") {
-			// Prompt for passphrase and retry
-			newPassp, err := promptPassword(command.PASSPMSG)
-			if err == nil {
-				n1ql.SetPrivateKeyPassphrase(newPassp)
-				pingerr = command.Ping(serverFlag)
+		// Check if connection is possible to one of the supplied servers
+		// This establishes the dbn1ql handle for future queries
+		var newPassp []byte
+		var pingerr error
+		for _, s := range serverList {
+			pingerr = command.Ping(s)
+			SERVICE_URL = s
+			command.SERVICE_URL = s
+			if pingerr != nil && strings.Contains(pingerr.Error(), "parsePrivateKey") {
+				// only prompt once for the password; the same user & password is used with all listed servers
+				var err error
+				if len(newPassp) == 0 {
+					newPassp, err = promptPassword(command.PASSPMSG)
+				}
+				if err == nil {
+					n1ql.SetPrivateKeyPassphrase(newPassp)
+					pingerr = command.Ping(s)
+				}
+			}
+			if pingerr == nil {
+				serverFlag = s
+				break
 			}
 		}
 
 		if pingerr != nil {
 			s_err := command.HandleError(errors.E_SHELL_CONNECTION_REFUSED, pingerr.Error())
 			command.PrintError(s_err)
+			serverList = nil
 			serverFlag = ""
 			command.SERVICE_URL = ""
 			SERVICE_URL = ""
@@ -703,7 +727,7 @@ func main() {
 		/* -quiet : Display Message only if flag not specified
 		 */
 		if !quietFlag && pingerr == nil {
-			s := command.NewMessage(command.STARTUP, fmt.Sprintf("%v", serverFlag)) + command.EXITMSG
+			s := command.NewMessage(command.STARTUP, fmt.Sprintf("%v", SERVICE_URL)) + command.EXITMSG
 			_, werr := io.WriteString(command.W, s)
 			if werr != nil {
 				s_err := command.HandleError(errors.E_SHELL_WRITER_OUTPUT, werr.Error())

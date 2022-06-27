@@ -761,9 +761,9 @@ type UrlRes struct {
 }
 
 // Method to return the new value of the server flag based on input url string
-func ParseURL(serverFlag string) (*UrlRes, errors.ErrorCode, string) {
+func ParseURL(serverURL string) (*UrlRes, errors.ErrorCode, string) {
 
-	pURL := &UrlRes{serverFlag, "", ""}
+	pURL := &UrlRes{serverURL, "", ""}
 
 	// the URL golang Parse method has the limitation that when we pass in a host that is a string
 	// and not an ip, without the protocol scheme, it mis-interprets the url string. For such cases we
@@ -771,16 +771,16 @@ func ParseURL(serverFlag string) (*UrlRes, errors.ErrorCode, string) {
 
 	// If no protocol exists, then append http:// as default protocol.
 
-	if !strings.HasPrefix(strings.ToLower(serverFlag), "https://") &&
-		!strings.HasPrefix(strings.ToLower(serverFlag), "http://") &&
-		!strings.HasPrefix(strings.ToLower(serverFlag), "couchbase://") &&
-		!strings.HasPrefix(strings.ToLower(serverFlag), "couchbases://") {
+	if !strings.HasPrefix(strings.ToLower(serverURL), "https://") &&
+		!strings.HasPrefix(strings.ToLower(serverURL), "http://") &&
+		!strings.HasPrefix(strings.ToLower(serverURL), "couchbase://") &&
+		!strings.HasPrefix(strings.ToLower(serverURL), "couchbases://") {
 		//There is something else wrong and we need to throw an error.
-		serverFlag = "http://" + serverFlag
+		serverURL = "http://" + serverURL
 	}
 
 	//Parse the url
-	parsedURL, err := url.Parse(serverFlag)
+	parsedURL, err := url.Parse(serverURL)
 	if err != nil {
 		return pURL, errors.E_SHELL_INVALID_URL, err.Error()
 	}

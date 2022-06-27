@@ -15,6 +15,7 @@ import ()
 const (
 	CONNECTION_REFUSED_MSG   = ""
 	UNSUPPORTED_PROTOCOL_MSG = "Unsupported protocol scheme "
+	INVALID_PROTOCOL_MSG     = "Invalid protocol. Mixed protocols are not permitted in engine list."
 	NO_SUCH_HOST_MSG         = "No such host "
 	NO_HOST_IN_URL_MSG       = "No host in request URL "
 	UNKNOWN_PORT_TCP_MSG     = "Unknown port "
@@ -66,6 +67,10 @@ func NewShellErrorCannotConnect(msg string) Error {
 
 func NewShellErrorUnsupportedProtocol(msg string) Error {
 	return &err{level: EXCEPTION, ICode: E_SHELL_UNSUPPORTED_PROTOCOL, IKey: "shell.unsupported.protocol", InternalMsg: UNSUPPORTED_PROTOCOL_MSG + msg, InternalCaller: CallerN(1)}
+}
+
+func NewShellErrorInvalidProtocol() Error {
+	return &err{level: EXCEPTION, ICode: E_SHELL_INVALID_PROTOCOL, IKey: "shell.invalid.protocol", InternalMsg: INVALID_PROTOCOL_MSG, InternalCaller: CallerN(1)}
 }
 
 func NewShellErrorNoSuchHost(msg string) Error {

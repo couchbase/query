@@ -67,6 +67,8 @@ func HandleError(err errors.ErrorCode, msg string) errors.Error {
 		return errors.NewShellErrorDriverOpen(msg)
 	case errors.E_SHELL_INVALID_URL:
 		return errors.NewShellErrorInvalidURL(msg)
+	case errors.E_SHELL_INVALID_PROTOCOL:
+		return errors.NewShellErrorInvalidProtocol()
 
 	//Read/Write/Update file errors
 	case errors.E_SHELL_READ_FILE:

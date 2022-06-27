@@ -51,6 +51,7 @@ const (
 	E_SHELL_ON_REFRESH                        ErrorCode = 180
 	E_SHELL_INVALID_ARGUMENT                  ErrorCode = 181
 	E_SHELL_INIT_FAILURE                      ErrorCode = 182
+	E_SHELL_INVALID_PROTOCOL                  ErrorCode = 183
 	E_SHELL_UNKNOWN                           ErrorCode = 199
 	E_SERVICE_READONLY                        ErrorCode = 1000
 	E_SERVICE_HTTP_UNSUPPORTED_METHOD         ErrorCode = 1010

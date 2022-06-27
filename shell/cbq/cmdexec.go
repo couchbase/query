@@ -134,8 +134,21 @@ func command_query(line string, w io.Writer, liner *liner.State) (errors.ErrorCo
 						retry = false
 						err = command.Ping(serverFlag)
 						if err != nil {
-							// There was an issue establishing a connection. Throw the error and return
-							return errors.E_SHELL_CONNECTION_REFUSED, err.Error()
+							for _, s := range serverList {
+								if s == serverFlag {
+									continue
+								}
+								oerr := command.Ping(s)
+								if oerr == nil {
+									err = nil
+									serverFlag = s
+									break
+								}
+							}
+							if err != nil {
+								// There was an issue establishing a connection. Throw the error and return
+								return errors.E_SHELL_CONNECTION_REFUSED, err.Error()
+							}
 						}
 					} else {
 						return err_code, err_str
