@@ -28,7 +28,7 @@ import (
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/functions"
-	"github.com/couchbase/query/functions/bridge"
+	functionsBridge "github.com/couchbase/query/functions/bridge"
 	functionsMeta "github.com/couchbase/query/functions/metakv"
 	functionsResolver "github.com/couchbase/query/functions/resolver"
 	"github.com/couchbase/query/prepareds"
@@ -1876,7 +1876,7 @@ func doTransactionsIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *htt
 	return transactions.NameTransactions(), nil
 }
 
-var localData = map[string]string{"load": "gauge", "active_requests": "counter", "queued_requests": "counter"}
+var localData = map[string]string{"load": "gauge", "load_factor": "gauge", "active_requests": "counter", "queued_requests": "counter"}
 
 func isLocal(metric string) bool {
 	return localData[metric] != ""
@@ -1887,6 +1887,8 @@ func getLocalData(serv *server.Server, metric string) map[string]interface{} {
 	switch metric {
 	case "load":
 		values["value"] = serv.Load()
+	case "load_factor":
+		values["value"] = serv.LoadFactor()
 	case "active_requests":
 		values["count"] = serv.ActiveRequests()
 	case "queued_requests":
@@ -1899,6 +1901,8 @@ func localValue(serv *server.Server, metric string) interface{} {
 	switch metric {
 	case "load":
 		return serv.Load()
+	case "load_factor":
+		return serv.LoadFactor()
 	case "active_requests":
 		return serv.ActiveRequests()
 	case "queued_requests":

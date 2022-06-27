@@ -39,7 +39,10 @@ done
 set -- $args
 
 export GO111MODULE=off
-export CGO_CFLAGS="-I$GOPATH/src/github.com/couchbase/eventing-ee/evaluator/worker/include $CGO_FLAGS"
+export CGO_CFLAGS="-I$GOPATH/src/github.com/couchbase/eventing-ee/evaluator/worker/include  -I$GOPATH/src/github.com/couchbase/sigar/include $CGO_FLAGS"
+export CGO_LDFLAGS="-L$GOPATH/lib ${CGO_LDFLAGS}"
+export LD_LIBRARY_PATH=$GOPATH/lib:${LD_LIBRARY_PATH}
+
 
 go clean -testcache
 
@@ -48,7 +51,11 @@ go clean -testcache
 
 trap interrupt 2 15
 cd ../
-go test $verbose ./... $*
+if [[ `uname` == "Darwin" ]] ; then
+     go test -exec "env LD_LIBRARY_PATH=${LD_LIBRARY_PATH} DYLD_LIBRARY_PATH=${LD_LIBRARY_PATH}" $verbose ./... $*
+else
+     go test $verbose ./... $*
+fi
 
 #Run gsi
 cd test/gsi
