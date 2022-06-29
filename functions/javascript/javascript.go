@@ -22,6 +22,7 @@ import (
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/functions"
 	"github.com/couchbase/query/logging"
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 	"github.com/gorilla/mux"
 )
@@ -63,7 +64,7 @@ func Init(mux *mux.Router, t int) {
 	config := make(map[defs.Config]interface{})
 	config[defs.Threads] = t
 	config[defs.FeatureBitmask] = uint32(8)
-	config[defs.IsIpV6] = false
+	config[defs.IsIpV6] = util.IPv6
 	config[defs.GlobalManagePermission] = "cluster.n1ql.udf_external!manage"
 	config[defs.ScopeManagePermission] = "cluster.collection[%s].n1ql.udf_external!manage"
 	config[defs.SysLogLevel] = 4
