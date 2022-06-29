@@ -39,7 +39,7 @@ var serverList []string
 
 func init() {
 	const (
-		defaultServer = "http://localhost:8091/"
+		defaultServer = "http://localhost:8091/,http://[::1]:8091"
 		usage         = command.USERVERFLAG
 	)
 	flag.StringVar(&serverFlag, "engine", defaultServer, usage)
