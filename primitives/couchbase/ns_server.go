@@ -1291,6 +1291,22 @@ func (p *Pool) GetBucket(name string) (*Bucket, error) {
 	return rv, nil
 }
 
+func (p *Pool) BucketExists(name string) bool {
+	buckets := []Bucket{}
+	err := p.client.parseURLResponse(p.BucketURL["uri"], &buckets)
+	if err != nil {
+		return false
+	}
+	for _, b := range buckets {
+		if b.Name == name {
+			buckets = nil
+			return true
+		}
+	}
+	buckets = nil
+	return false
+}
+
 // Release bucket connections when the pool is no longer in use
 func (p *Pool) Close() {
 

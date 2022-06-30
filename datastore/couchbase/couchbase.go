@@ -1332,15 +1332,17 @@ func newKeyspace(p *namespace, name string) (*keyspace, errors.Error) {
 	cbbucket, err := cbNamespace.GetBucket(name)
 
 	if err != nil {
-		logging.Infof(" keyspace %s not found %v", name, err)
-		// primitives/couchbase caches the buckets
-		// to be sure no such bucket exists right now
-		// we trigger a refresh
+		logging.Infof("keyspace %s not found %v", name, err)
+		// connect and check if the bucket exists
+		if !cbNamespace.BucketExists(name) {
+			return nil, errors.NewCbKeyspaceNotFoundError(err, fullName(p.name, name))
+		}
+		// it does, so we just need to refresh the primitives cache
 		p.reload()
 		cbNamespace = p.getPool()
 
 		// and then check one more time
-		logging.Infof(" Retrying bucket %s", name)
+		logging.Infof("Retrying bucket %s", name)
 		cbbucket, err = cbNamespace.GetBucket(name)
 		if err != nil {
 			// really no such bucket exists
