@@ -312,6 +312,11 @@ func (this *valueExchange) getItem(op *valueExchange) (value.AnnotatedValue, boo
 			break
 		}
 
+		// wake up any voluntary waiters
+		if op.writeWaiters.next != nil {
+			op.writeWaiters.signal()
+		}
+
 		// no more
 		if op.closed {
 			this.oLock.Unlock()
@@ -369,6 +374,11 @@ func (this *valueExchange) getItemChildren(op *valueExchange) (value.AnnotatedVa
 
 		if op.itemsCount > 0 {
 			break
+		}
+
+		// wake up any voluntary waiters
+		if op.writeWaiters.next != nil {
+			op.writeWaiters.signal()
 		}
 
 		// no more
