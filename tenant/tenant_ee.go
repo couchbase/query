@@ -179,5 +179,5 @@ func findTenant(user, bucket string) string {
 	if len(bucket) > 0 {
 		return bucket
 	}
-	return ""
+	return "fakebucket"
 }
