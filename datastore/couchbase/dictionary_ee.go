@@ -68,41 +68,11 @@ func Foreach(f func(string) error) error {
 }
 
 func DropDictionaryEntry(keyspace string) {
-	if isSysBucket(keyspace) || dictionary.IsSysCBOStats(keyspace) {
-		dictionary.DropDictionaryCache()
-	} else {
-		dictionary.DropDictionaryEntry(keyspace)
-	}
+	dictionary.DropDictionaryEntry(keyspace)
 }
 
 func DropDictEntryAndAllCache(keyspace string, context interface{}) {
-	if isSysBucket(keyspace) || dictionary.IsSysCBOStats(keyspace) {
-		dictionary.DropDictionaryCache()
-	} else {
-		dictionary.DropDictEntryAndAllCache(keyspace, context)
-	}
-}
-
-func DropDictionaryCache() {
-	dictionary.DropDictionaryCache()
-}
-
-func isSysBucket(name string) bool {
-	return name == _N1QL_SYSTEM_BUCKET
-}
-
-func chkSysBucket() {
-	// Bucket updater could be triggered by creation of N1QL_SYSTEM_SCOPE/N1QL_CBO_STATS
-	// ignore these
-	if dictionary.IsCreatingSysCBOStats() {
-		return
-	}
-
-	hasSysCBOStats, err := dictionary.CheckSysCBOStats(false, "", true, true)
-	if err == nil && !hasSysCBOStats {
-		// N1QL_SYSTEM_SCOPE or N1QL_CBO_STATS is dropped
-		dictionary.DropDictionaryCache()
-	}
+	dictionary.DropDictEntryAndAllCache(keyspace, context)
 }
 
 const _GRACE_PERIOD = time.Second

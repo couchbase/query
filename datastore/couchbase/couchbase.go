@@ -1416,22 +1416,14 @@ func (p *namespace) KeyspaceDeleteCallback(name string, err error) {
 
 	p.lock.Unlock()
 
-	if cbKeyspace != nil {
-		if isSysBucket(cbKeyspace.name) {
-			DropDictionaryCache()
-		} else {
-			// dropDictCacheEntries() needs to be called outside p.lock
-			// since it'll need to lock it when trying to delete from
-			// N1QL_SYSTEM_BUCKET.N1QL_SYSTEM_SCOPE.N1QL_CBO_STATS
-			dropDictCacheEntries(cbKeyspace)
-		}
-	}
+	// dropDictCacheEntries() needs to be called outside p.lock
+	// since it'll need to lock it when trying to delete from
+	// _system_scope._query
+	dropDictCacheEntries(cbKeyspace)
 }
 
 // Called by primitives/couchbase if a configured keyspace is updated
 func (p *namespace) KeyspaceUpdateCallback(bucket *cb.Bucket) {
-
-	checkSysBucket := false
 
 	p.lock.Lock()
 
@@ -1447,9 +1439,6 @@ func (p *namespace) KeyspaceUpdateCallback(bucket *cb.Bucket) {
 			}
 			ks.cbKeyspace.flags |= _NEEDS_MANIFEST
 			ks.cbKeyspace.newCollectionsManifestUid = uid
-			if isSysBucket(ks.cbKeyspace.name) {
-				checkSysBucket = true
-			}
 		}
 
 		// the KV nodes list has changed, force a refresh on next use
@@ -1466,10 +1455,6 @@ func (p *namespace) KeyspaceUpdateCallback(bucket *cb.Bucket) {
 	}
 
 	p.lock.Unlock()
-
-	if checkSysBucket {
-		chkSysBucket()
-	}
 }
 
 func (b *keyspace) NamespaceId() string {
