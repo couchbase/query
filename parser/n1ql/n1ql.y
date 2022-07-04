@@ -4114,9 +4114,12 @@ expr COLON expr
     $$ = algebra.NewPair($1, $3, nil)
 }
 |
-expr
+expr opt_as_alias
 {
-    name := $1.Alias()
+    name := $2
+    if name == "" {
+      name = $1.Alias()
+    }
     if name == "" {
         yylex.Error(fmt.Sprintf("Object member missing name or value: %s%s", $1.String(), yylex.(*lexer).ErrorContext()))
     }
