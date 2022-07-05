@@ -32,6 +32,7 @@ type Context interface {
 	RecordGsiRU(ru tenant.Unit)
 	RecordKvRU(ru tenant.Unit)
 	RecordKvWU(wu tenant.Unit)
+	Credentials() *auth.Credentials
 }
 
 type contextImpl struct {
@@ -72,6 +73,10 @@ func (ci *contextImpl) RecordKvRU(ru tenant.Unit) {
 }
 
 func (ci *contextImpl) RecordKvWU(wu tenant.Unit) {
+}
+
+func (ci *contextImpl) Credentials() *auth.Credentials {
+	return auth.NewCredentials()
 }
 
 // A subset of execution.Context that is useful at the datastore level.

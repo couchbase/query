@@ -711,6 +711,10 @@ func (this *IndexConnection) RecordFtsRU(ru tenant.Unit) {
 	this.context.RecordFtsRU(ru)
 }
 
+func (this *IndexConnection) User() string {
+	return CredsStringHTTP(this.context.Credentials())
+}
+
 func (this *IndexKey) Expression() expression.Expression {
 	return this.Expr
 }
