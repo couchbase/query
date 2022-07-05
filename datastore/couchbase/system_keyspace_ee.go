@@ -136,7 +136,7 @@ func (s *store) getNumIndexNode() (int, errors.Errors) {
 }
 
 // check for existance of system collection, and create primary index if necessary
-func (s *store) CheckSysCollection(bucketName, requestId string) errors.Error {
+func (s *store) CheckSystemCollection(bucketName, requestId string) errors.Error {
 	sysColl, err := s.GetSystemCollection(bucketName)
 	if err != nil {
 		return err

@@ -22,6 +22,6 @@ func (s *store) GetSystemCollection(bucketName string) (datastore.Keyspace, erro
 	return nil, nil
 }
 
-func (s *store) CheckSysCollection(bucketName, requestId string) errors.Error {
+func (s *store) CheckSystemCollection(bucketName, requestId string) errors.Error {
 	return nil
 }
