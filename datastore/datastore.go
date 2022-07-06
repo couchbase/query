@@ -234,7 +234,7 @@ type Keyspace interface {
 	Release(close bool) // Release any resources held by this object
 }
 
-// range scan
+// sequential scan
 
 type SeqScanRange struct {
 	Start        []byte

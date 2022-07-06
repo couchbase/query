@@ -10,6 +10,7 @@ package couchbase
 
 import (
 	"fmt"
+	"sync/atomic"
 	"time"
 
 	"github.com/couchbase/query/datastore"
@@ -70,13 +71,16 @@ func (this *seqScanIndexer) IndexById(id string) (datastore.Index, qe.Error) {
 }
 
 func (this *seqScanIndexer) IndexByName(name string) (datastore.Index, qe.Error) {
-	if name == _RS_ID {
+	if util.IsFeatureEnabled(util.GetN1qlFeatureControl(), util.N1QL_SEQ_SCAN) && name == _RS_ID {
 		return this.primary[0].(datastore.Index), nil
 	}
 	return nil, qe.NewSSError(qe.E_SS_IDX_NOT_FOUND)
 }
 
 func (this *seqScanIndexer) IndexNames() ([]string, qe.Error) {
+	if !util.IsFeatureEnabled(util.GetN1qlFeatureControl(), util.N1QL_SEQ_SCAN) {
+		return nil, nil
+	}
 	return []string{_RS_ID}, nil
 }
 
@@ -85,10 +89,16 @@ func (this *seqScanIndexer) IndexIds() ([]string, qe.Error) {
 }
 
 func (this *seqScanIndexer) PrimaryIndexes() ([]datastore.PrimaryIndex, qe.Error) {
+	if !util.IsFeatureEnabled(util.GetN1qlFeatureControl(), util.N1QL_SEQ_SCAN) {
+		return nil, nil
+	}
 	return this.primary, nil
 }
 
 func (this *seqScanIndexer) Indexes() ([]datastore.Index, qe.Error) {
+	if !util.IsFeatureEnabled(util.GetN1qlFeatureControl(), util.N1QL_SEQ_SCAN) {
+		return nil, nil
+	}
 	rv := make([]datastore.Index, 0, 1)
 	rv = append(rv, this.primary[0].(datastore.Index))
 	return rv, nil
@@ -325,7 +335,7 @@ func (this *seqScan) doScanEntries(requestId string, ordered bool, offset, limit
 
 	defer conn.Sender().Close()
 
-	this.totalScans++
+	atomic.AddUint64(&this.totalScans, 1)
 
 	if limit <= 0 {
 		return
@@ -429,13 +439,13 @@ func (this *seqScan) doScanEntries(requestId string, ordered bool, offset, limit
 		}
 	}
 	if returned > 0 {
-		this.totalReturnCount += uint64(returned)
+		atomic.AddUint64(&this.totalReturnCount, uint64(returned))
 	}
 }
 
 func (this *seqScan) IndexMetadata() map[string]interface{} {
 	rv := make(map[string]interface{})
-	rv["total_scans"] = this.totalScans
-	rv["total_keys_returned"] = this.totalReturnCount
+	rv["total_scans"] = atomic.LoadUint64(&this.totalScans)
+	rv["total_keys_returned"] = atomic.LoadUint64(&this.totalReturnCount)
 	return rv
 }

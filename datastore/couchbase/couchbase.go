@@ -1314,7 +1314,7 @@ type keyspace struct {
 	flags          int
 	gsiIndexer     datastore.Indexer // GSI index provider
 	ftsIndexer     datastore.Indexer // FTS index provider
-	ssIndexer      datastore.Indexer // range scan provider
+	ssIndexer      datastore.Indexer // sequential scan provider
 	chkIndex       chkIndexDict
 	indexersLoaded bool
 
@@ -1578,7 +1578,7 @@ func (b *keyspace) Indexer(name datastore.IndexType) (datastore.Indexer, errors.
 		if b.ssIndexer != nil {
 			return b.ssIndexer, nil
 		}
-		return nil, errors.NewCbIndexerNotImplementedError(nil, fmt.Sprintf("Range scans may not be enabled"))
+		return nil, errors.NewCbIndexerNotImplementedError(nil, fmt.Sprintf("Sequential scans may not be enabled"))
 	default:
 		return nil, errors.NewCbIndexerNotImplementedError(nil, fmt.Sprintf("Type %s", name))
 	}
@@ -2196,7 +2196,7 @@ func (b *keyspace) Release(bclose bool) {
 		ftsIndexerCloser.Close()
 	}
 
-	// no need to close anything for range scans
+	// no need to close anything for sequential scans
 }
 
 func (b *keyspace) refreshGSIIndexer(url string, poolName string) {

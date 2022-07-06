@@ -714,7 +714,7 @@ func (this *vbRangeScan) sameScan(other *vbRangeScan) bool {
 
 func (this *vbRangeScan) startFrom() ([]byte, bool) {
 	if this.continueFrom != nil {
-		return this.continueFrom, false
+		return this.continueFrom, true
 	}
 	return this.scan.ranges[this.rng].start()
 }
@@ -965,10 +965,10 @@ func (this *vbScanShare) runScan() {
 		}
 	}()
 
-	start, inclStart := this.scans[0].startFrom()
-	end, inclEnd := this.scans[0].endWith()
+	start, exclStart := this.scans[0].startFrom()
+	end, exclEnd := this.scans[0].endWith()
 
-	response, err = conn.CreateRangeScan(vbucket, this.scans[0].scan.collId, start, inclStart, end, inclEnd)
+	response, err = conn.CreateRangeScan(vbucket, this.scans[0].scan.collId, start, exclStart, end, exclEnd)
 	if err != nil {
 		resp, ok := err.(*gomemcached.MCResponse)
 		if ok && resp.Status == gomemcached.KEY_ENOENT {

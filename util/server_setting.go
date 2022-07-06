@@ -39,6 +39,7 @@ const (
 	N1QL_INDEX_MISSING                            // 0x0000000800
 	N1QL_NL_PRIMARYSCAN                           // 0x0000001000
 	N1QL_EARLY_ORDER                              // 0x0000002000
+	N1QL_SEQ_SCAN                                 // 0x0000004000
 	N1QL_ALL_BITS                                 // Add anything above this. This needs to be last one
 )
 
