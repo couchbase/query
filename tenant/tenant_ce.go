@@ -34,7 +34,7 @@ const (
 func Init(serverless bool) {
 }
 
-func Start(mux *mux.Router, nodeid string, cafile string) {
+func Start(mux *mux.Router, nodeid string, cafile string, regulatorsettingsfile string) {
 }
 
 func RegisterResourceManager(m ResourceManager) {

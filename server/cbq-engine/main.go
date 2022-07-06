@@ -141,6 +141,7 @@ var DICTIONARY_CACHE_LIMIT = flag.Int("dictionary-cache-limit", _DEF_DICTIONARY_
 
 // Serverless
 var SERVERLESS = flag.Bool("serverless", false, "Serverless mode")
+var REGULATOR_SETTINGS_FILE = flag.String("regulatorSettingsFile", "", "Regulator settings file")
 
 func main() {
 
@@ -404,7 +405,7 @@ func main() {
 	server.SetSettingsCallback(endpoint.SettingsCallback)
 
 	constructor.Init(endpoint.Mux(), server.Servicers())
-	tenant.Start(endpoint.Mux(), *UUID, *CA_FILE)
+	tenant.Start(endpoint.Mux(), *UUID, *CA_FILE, *REGULATOR_SETTINGS_FILE)
 
 	// topology awareness
 	_ = control.NewManager(*UUID)

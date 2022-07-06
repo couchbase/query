@@ -57,11 +57,11 @@ func Init(serverless bool) {
 	isServerless = serverless
 }
 
-func Start(mux *mux.Router, nodeid string, cafile string) {
+func Start(mux *mux.Router, nodeid string, cafile string, regulatorsettingsfile string) {
 	if !isServerless {
 		return
 	}
-	handle := factory.InitRegulator(regulator.InitSettings{NodeID: service.NodeID(nodeid), TlsCAFile: cafile, Service: regulator.Query})
+	handle := factory.InitRegulator(regulator.InitSettings{NodeID: service.NodeID(nodeid), TlsCAFile: cafile, SettingsFile: regulatorsettingsfile, Service: regulator.Query})
 	mux.Handle(regulator.MeteringEndpoint, handle).Methods("GET")
 }
 
