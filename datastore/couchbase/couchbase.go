@@ -726,9 +726,11 @@ func NewDatastore(u string) (s datastore.Datastore, e errors.Error) {
 	logging.Infof("New store created with url %s", u)
 
 	tenant.RegisterResourceManager(func(bucket string) { store.manageTenant(bucket) })
-	if tenant.IsServerless() {
-		cb.EnableComputeUnits = true
-	}
+	/*
+		if tenant.IsServerless() {
+			cb.EnableComputeUnits = true
+		}
+	*/
 	return store, nil
 }
 
