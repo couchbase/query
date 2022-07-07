@@ -977,21 +977,21 @@ var ErrKeyExists = errors.New("key exists")
 // before being written. It must be JSON-marshalable and it must not
 // be nil.
 func (b *Bucket) Write(k string, flags, exp int, v interface{},
-	opt WriteOptions, context ...*memcached.ClientContext) (err error) {
+	opt WriteOptions, context ...*memcached.ClientContext) (wu uint64, err error) {
 
-	_, err = b.WriteWithCAS(k, flags, exp, v, opt, context...)
+	_, wu, err = b.WriteWithCAS(k, flags, exp, v, opt, context...)
 
-	return err
+	return wu, err
 }
 
 func (b *Bucket) WriteWithCAS(k string, flags, exp int, v interface{},
-	opt WriteOptions, context ...*memcached.ClientContext) (cas uint64, err error) {
+	opt WriteOptions, context ...*memcached.ClientContext) (cas uint64, wu uint64, err error) {
 
 	var data []byte
 	if opt&Raw == 0 {
 		data, err = json.Marshal(v)
 		if err != nil {
-			return cas, err
+			return
 		}
 	} else if v != nil {
 		data = v.([]byte)
@@ -1027,23 +1027,26 @@ func (b *Bucket) WriteWithCAS(k string, flags, exp int, v interface{},
 	if err == nil && (opt&(Persist|Indexable) != 0) {
 		err = b.WaitForPersistence(k, cas, data == nil)
 	}
+	if res != nil {
+		_, wu = res.ComputeUnits()
+	}
 
-	return cas, err
+	return
 }
 
 // Extended CAS operation. These functions will return the mutation token, i.e vbuuid & guard
-func (b *Bucket) CasWithMeta(k string, flags int, exp int, cas uint64, v interface{}, context ...*memcached.ClientContext) (uint64, *MutationToken, error) {
+func (b *Bucket) CasWithMeta(k string, flags int, exp int, cas uint64, v interface{}, context ...*memcached.ClientContext) (uint64, uint64, *MutationToken, error) {
 	return b.WriteCasWithMT(k, flags, exp, cas, v, 0, context...)
 }
 
 func (b *Bucket) WriteCasWithMT(k string, flags, exp int, cas uint64, v interface{},
-	opt WriteOptions, context ...*memcached.ClientContext) (newCas uint64, mt *MutationToken, err error) {
+	opt WriteOptions, context ...*memcached.ClientContext) (newCas uint64, wu uint64, mt *MutationToken, err error) {
 
 	var data []byte
 	if opt&Raw == 0 {
 		data, err = json.Marshal(v)
 		if err != nil {
-			return 0, nil, err
+			return 0, 0, nil, err
 		}
 	} else if v != nil {
 		data = v.([]byte)
@@ -1055,8 +1058,12 @@ func (b *Bucket) WriteCasWithMT(k string, flags, exp int, cas uint64, v interfac
 		return err
 	})
 
+	if res != nil {
+		_, wu = res.ComputeUnits()
+	}
+
 	if err != nil {
-		return 0, nil, err
+		return 0, wu, nil, err
 	}
 
 	// check for extras
@@ -1071,24 +1078,24 @@ func (b *Bucket) WriteCasWithMT(k string, flags, exp int, cas uint64, v interfac
 		err = b.WaitForPersistence(k, res.Cas, data == nil)
 	}
 
-	return res.Cas, mt, err
+	return res.Cas, wu, mt, err
 }
 
 // Set a value in this bucket.
-func (b *Bucket) SetWithCAS(k string, exp int, v interface{}, context ...*memcached.ClientContext) (uint64, error) {
+func (b *Bucket) SetWithCAS(k string, exp int, v interface{}, context ...*memcached.ClientContext) (uint64, uint64, error) {
 	return b.WriteWithCAS(k, 0, exp, v, 0, context...)
 }
 
 // Add adds a value to this bucket; like Set except that nothing
 // happens if the key exists. Return the CAS value.
-func (b *Bucket) AddWithCAS(k string, exp int, v interface{}, context ...*memcached.ClientContext) (bool, uint64, error) {
-	cas, err := b.WriteWithCAS(k, 0, exp, v, AddOnly, context...)
+func (b *Bucket) AddWithCAS(k string, exp int, v interface{}, context ...*memcached.ClientContext) (bool, uint64, uint64, error) {
+	cas, wu, err := b.WriteWithCAS(k, 0, exp, v, AddOnly, context...)
 	if ee, ok := err.(qerrors.Error); ok {
 		if ee.ContainsText(ErrKeyExists.Error()) {
-			return false, 0, nil
+			return false, 0, wu, nil
 		}
 	}
-	return (err == nil), cas, err
+	return (err == nil), cas, wu, err
 }
 
 // Returns collectionUid, manifestUid, error.
@@ -1219,7 +1226,7 @@ func (b *Bucket) GetRandomDoc(context ...*memcached.ClientContext) (*gomemcached
 }
 
 // Delete a key from this bucket.
-func (b *Bucket) Delete(k string, context ...*memcached.ClientContext) error {
+func (b *Bucket) Delete(k string, context ...*memcached.ClientContext) (uint64, error) {
 	return b.Write(k, 0, 0, nil, Raw, context...)
 }
 

@@ -74,6 +74,9 @@ var EnablePreserveExpiry = false
 // Enable KV error map
 var EnableXerror = false
 
+// Enable KV error map
+var EnableComputeUnits = false
+
 // TCP keepalive interval in seconds. Default 30 minutes
 var TCPKeepaliveInterval = 30 * 60
 

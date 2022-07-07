@@ -726,6 +726,9 @@ func NewDatastore(u string) (s datastore.Datastore, e errors.Error) {
 	logging.Infof("New store created with url %s", u)
 
 	tenant.RegisterResourceManager(func(bucket string) { store.manageTenant(bucket) })
+	if tenant.IsServerless() {
+		cb.EnableComputeUnits = true
+	}
 	return store, nil
 }
 
@@ -1761,8 +1764,10 @@ func doFetch(k string, fullName string, v *gomemcached.MCResponse, context datas
 	meta["expiration"] = expiration
 	val.SetId(k)
 
-	// TODO TENANT
-	context.RecordKvRU(1)
+	if tenant.IsServerless() {
+		ru, _ := v.ComputeUnits()
+		context.RecordKvRU(tenant.Unit(ru))
+	}
 
 	// Uncomment when needed
 	//logging.Debuga(func() string{ return fmt.Sprintf("CAS Value for key %v is %v flags %v", k, uint64(v.Cas), meta_flags)})
@@ -1965,6 +1970,7 @@ func (b *keyspace) performOp(op MutateOp, qualifiedName, scopeName, collectionNa
 	retry := errors.NONE
 	var failedDeletes []string
 	var err error
+	var wu uint64
 
 	for _, kv := range pairs {
 		var val interface{}
@@ -1988,10 +1994,9 @@ func (b *keyspace) performOp(op MutateOp, qualifiedName, scopeName, collectionNa
 			var added bool
 
 			// add the key to the backend
-			added, cas, err = b.cbbucket.AddWithCAS(key, exptime, val, clientContext...)
+			added, wu, cas, err = b.cbbucket.AddWithCAS(key, exptime, val, clientContext...)
 
-			// TODO TENANT
-			context.RecordKvWU(1)
+			context.RecordKvWU(tenant.Unit(wu))
 			b.checkRefresh(err)
 			if added == false {
 				// false & err == nil => given key aready exists in the bucket
@@ -2040,10 +2045,9 @@ func (b *keyspace) performOp(op MutateOp, qualifiedName, scopeName, collectionNa
 						" value <ud>%v</ud> for Keyspace <ud>%s</ud>.",
 						MutateOpToName(op), key, cas, flags, val, qualifiedName)
 				})
-				newCas, _, err = b.cbbucket.CasWithMeta(key, int(flags), exptime, cas, val, clientContext...)
+				newCas, wu, _, err = b.cbbucket.CasWithMeta(key, int(flags), exptime, cas, val, clientContext...)
 
-				// TODO TENANT
-				context.RecordKvWU(1)
+				context.RecordKvWU(tenant.Unit(wu))
 				if err == nil {
 					// refresh local meta CAS value
 					logging.Debuga(func() string {
@@ -2067,10 +2071,9 @@ func (b *keyspace) performOp(op MutateOp, qualifiedName, scopeName, collectionNa
 					retry = errors.TRUE
 				}
 			} else {
-				newCas, err = b.cbbucket.SetWithCAS(key, exptime, val, clientContext...)
+				newCas, wu, err = b.cbbucket.SetWithCAS(key, exptime, val, clientContext...)
 
-				// TODO TENANT
-				context.RecordKvWU(1)
+				context.RecordKvWU(tenant.Unit(wu))
 				b.checkRefresh(err)
 				if err == nil {
 					logging.Debuga(func() string {
@@ -2082,10 +2085,9 @@ func (b *keyspace) performOp(op MutateOp, qualifiedName, scopeName, collectionNa
 				}
 			}
 		case MOP_DELETE:
-			err = b.cbbucket.Delete(key, clientContext...)
+			wu, err = b.cbbucket.Delete(key, clientContext...)
 
-			// TODO TENANT
-			context.RecordKvWU(1)
+			context.RecordKvWU(tenant.Unit(wu))
 			b.checkRefresh(err)
 		}
 

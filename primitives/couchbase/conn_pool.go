@@ -141,6 +141,10 @@ func defaultMkConn(host string, ah AuthHandler, tlsConfig *tls.Config, bucketNam
 		features = append(features, memcached.FeatureXerror)
 	}
 
+	if EnableComputeUnits {
+		features = append(features, memcached.FeatureComputeUnits)
+	}
+
 	if len(features) > 0 {
 		res, err := conn.EnableFeatures(features)
 		if err != nil && isTimeoutError(err) {
