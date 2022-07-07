@@ -162,6 +162,8 @@
         ]
     },
     {
+       "comments": "sequential scan is now used",
+       "disabled": true,
        "testcase": "Flatten Array index with UNNEST clause(reverse bindings). Explain",
        "queryParams": {"query_context": "orders._default"},
        "ignore": "index_id",

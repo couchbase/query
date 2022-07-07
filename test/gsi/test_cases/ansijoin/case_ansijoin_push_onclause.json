@@ -16,6 +16,8 @@
     ]
     },
     {
+        "comments":"sequential scans permit this to work",
+        "disabled":true,
         "statements":"SELECT b1.c11, b2.c21, b2.c22 FROM shellTest b1 LEFT JOIN shellTest b2 ON b1.c11 = b2.c21 AND b1.c12 = b2.c22 AND b1.c11 < 3 AND b2.type = \"right\" WHERE b1.type = \"left\" ORDER BY b2.c22",
         "error":"No index available on keyspace `default`:`shellTest` that matches your query. Use CREATE PRIMARY INDEX ON `default`:`shellTest` to create a primary index, or check that your expected index is online."
     }

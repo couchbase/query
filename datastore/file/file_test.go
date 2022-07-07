@@ -14,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/tenant"
@@ -225,4 +226,8 @@ func (this *testingContext) RecordKvRU(ru tenant.Unit) {
 }
 
 func (this *testingContext) RecordKvWU(wu tenant.Unit) {
+}
+
+func (this *testingContext) Credentials() *auth.Credentials {
+	return nil
 }

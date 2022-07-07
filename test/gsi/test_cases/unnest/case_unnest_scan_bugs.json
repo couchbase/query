@@ -1,5 +1,7 @@
 [
     {
+        "comments":"With sequential scans idx2 is no longer chosen",
+        "disabled":true,
         "testcase": "MB-28720",
         "ignore": "index_id",
         "explain": {
