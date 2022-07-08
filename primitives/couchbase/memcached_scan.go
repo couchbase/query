@@ -42,13 +42,9 @@ const _SS_SPILL_FILE_PATTERN = "ss_spill-*"
  * Bucket functions for driving and consuming a scan.
  */
 
-func (b *Bucket) StartKeyScan(scope string, collection string, ranges []*SeqScanRange, offset int64, limit int64, ordered bool,
+func (b *Bucket) StartKeyScan(collId uint32, ranges []*SeqScanRange, offset int64, limit int64, ordered bool,
 	timeout time.Duration, pipelineSize int, kvTimeout time.Duration) (interface{}, qerrors.Error) {
 
-	collId, _, err := b.GetCollectionCID(scope, collection, time.Time{})
-	if err != nil {
-		return nil, qerrors.NewSSError(qerrors.E_SS_CID_GET, err)
-	}
 	if limit == 0 {
 		limit = -1
 	}
@@ -1008,7 +1004,7 @@ func (this *vbScanShare) runScan() {
 		return
 	}
 
-	err = conn.ContinueRangeScan(vbucket, uuid, opaque, this.scans[0].scan.fetchLimit(), 0)
+	err = conn.ContinueRangeScan(vbucket, uuid, opaque, this.scans[0].scan.fetchLimit(), 0, 0)
 	if err != nil {
 		this.reportErrorToAll(qerrors.NewSSError(qerrors.E_SS_CONTINUE, err))
 		return
