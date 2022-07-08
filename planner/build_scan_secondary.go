@@ -607,13 +607,6 @@ Is se narrower or equivalent to te.
 */
 func narrowerOrEquivalent(se, te *indexEntry, shortest bool, predFc map[string]value.Value) bool {
 
-	// always pick an index over a sequential scan
-	if se.index.Type() == datastore.SEQ_SCAN {
-		return false
-	} else if te.index.Type() == datastore.SEQ_SCAN {
-		return true
-	}
-
 	snk, snc := matchedKeysConditions(se, te, shortest, predFc)
 
 	be := bestIndexBySargableKeys(se, te, se.nEqCond, te.nEqCond)
@@ -630,6 +623,10 @@ func narrowerOrEquivalent(se, te *indexEntry, shortest bool, predFc map[string]v
 
 	// non shortest case keep both indexes so that covering can be done on best index
 	if !shortest {
+		// prefer an index over a sequential scan
+		if te.index.Type() == datastore.SEQ_SCAN {
+			return true
+		}
 		return false
 	}
 
@@ -687,6 +684,13 @@ func narrowerOrEquivalent(se, te *indexEntry, shortest bool, predFc map[string]v
 	teKeyFlags := te.IndexKeyFlags()
 	if seKeyFlags != teKeyFlags {
 		return seKeyFlags > teKeyFlags
+	}
+
+	// prefer an index over a sequential scan
+	if te.index.Type() == datastore.SEQ_SCAN {
+		return true
+	} else if se.index.Type() == datastore.SEQ_SCAN {
+		return false
 	}
 
 	return se.cond != nil ||
