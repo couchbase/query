@@ -726,11 +726,11 @@ func NewDatastore(u string) (s datastore.Datastore, e errors.Error) {
 	logging.Infof("New store created with url %s", u)
 
 	tenant.RegisterResourceManager(func(bucket string) { store.manageTenant(bucket) })
-	/*
-		if tenant.IsServerless() {
-			cb.EnableComputeUnits = true
-		}
-	*/
+
+	if tenant.IsServerless() {
+		cb.EnableComputeUnits = true
+	}
+
 	return store, nil
 }
 
@@ -1996,7 +1996,7 @@ func (b *keyspace) performOp(op MutateOp, qualifiedName, scopeName, collectionNa
 			var added bool
 
 			// add the key to the backend
-			added, wu, cas, err = b.cbbucket.AddWithCAS(key, exptime, val, clientContext...)
+			added, cas, wu, err = b.cbbucket.AddWithCAS(key, exptime, val, clientContext...)
 
 			context.RecordKvWU(tenant.Unit(wu))
 			b.checkRefresh(err)
