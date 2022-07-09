@@ -146,6 +146,11 @@ func (this *builder) buildIndexProjection(entry *indexEntry, exprs expression.Ex
 
 		if allKeys && primaryKey {
 			indexProjection = nil
+		} else if !primaryKey && len(indexProjection.EntryKeys) == 0 {
+			// it's possible with leading missing key index to not have anything
+			// necessary from the index; avoid generating an empty index projection
+			// in such cases.
+			indexProjection.PrimaryKey = true
 		}
 	}
 
