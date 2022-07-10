@@ -356,7 +356,7 @@ func (this *HttpEndpoint) ServeHTTP(resp http.ResponseWriter, req *http.Request)
 			user.uuid = strings.Replace(user.uuid, "-", "_", -1)
 			limits, err := cbauth.GetUserLimits(userName, "local", "query")
 			if err != nil {
-				logging.Infof("No user limits fouund for user <ud>%v</ud> - limits not enforced", userName)
+				logging.Infof("No user limits found for user <ud>%v</ud> - limits not enforced", userName)
 			} else {
 				user.amendLimits(limits)
 				user.limitsVersion = this.trackedUsersVersion
@@ -370,7 +370,7 @@ func (this *HttpEndpoint) ServeHTTP(resp http.ResponseWriter, req *http.Request)
 			if this.trackedUsersVersion != user.limitsVersion {
 				limits, err := cbauth.GetUserLimits(userName, "local", "query")
 				if err != nil {
-					logging.Infof("No user limits fouund for user <ud>%v</ud> - limits not changed")
+					logging.Infof("No user limits found for user <ud>%v</ud> - limits not changed")
 				} else {
 					user.amendLimits(limits)
 					user.limitsVersion = this.trackedUsersVersion
@@ -421,17 +421,18 @@ func (this *HttpEndpoint) ServeHTTP(resp http.ResponseWriter, req *http.Request)
 		// this would shorten the overall wait due to throttling, but has the major disadvantage
 		// that it is quite complicated to code and might badly affect queue throughput.
 		// Explore if this code is acceptable or conversely throttling after queuing can be
-		// code efficiently.
+		// coded efficiently.
 		bucket := ""
 		path := algebra.ParseQueryContext(request.QueryContext())
 		if len(path) > 1 {
 			bucket = path[1]
 		}
-		err := tenant.Throttle(datastore.CredsStringHTTP(request.Credentials()), bucket)
+		ctx, err := tenant.Throttle(datastore.CredsStringHTTP(request.Credentials()), bucket, datastore.GetUserBuckets(request.Credentials()))
 		if err != nil {
 			request.Fail(errors.NewServiceTenantThrottledError(err))
 			request.Failed(this.server)
 		}
+		request.SetTenantCtx(ctx)
 	}
 
 	defer this.doStats(request, this.server)

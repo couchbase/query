@@ -822,14 +822,6 @@ func (this *Context) TxExpired() bool {
 // TODO TENANT placeholder: query CUs are undefined as of yet
 func (this *Context) RecordCU(d time.Duration, m uint64) {
 	if tenant.IsServerless() {
-		if this.tenantCtx == nil {
-			bucket := ""
-			path := algebra.ParseQueryContext(this.queryContext)
-			if len(path) > 1 {
-				bucket = path[1]
-			}
-			this.tenantCtx = tenant.NewTenantCtx(datastore.CredsString(this.credentials), bucket)
-		}
 		units := tenant.RecordCU(this.tenantCtx, d, m)
 		this.output.AddTenantUnits(tenant.QUERY_CU, units)
 	}
@@ -839,14 +831,6 @@ func (this *Context) RecordCU(d time.Duration, m uint64) {
 // TODO TENANT placeholder: jsevaluator is undefined as of yet
 func (this *Context) RecordJsCU(d time.Duration, m uint64) {
 	if tenant.IsServerless() {
-		if this.tenantCtx == nil {
-			bucket := ""
-			path := algebra.ParseQueryContext(this.queryContext)
-			if len(path) > 1 {
-				bucket = path[1]
-			}
-			this.tenantCtx = tenant.NewTenantCtx(datastore.CredsString(this.credentials), bucket)
-		}
 		units := tenant.RecordJsCU(this.tenantCtx, d, m)
 		this.output.AddTenantUnits(tenant.JS_CU, units)
 	}
@@ -1364,6 +1348,10 @@ func (this *Context) SetTracked(t bool) {
 
 func (this *Context) IsTracked() bool {
 	return this.tracked
+}
+
+func (this *Context) SetTenantCtx(ctx tenant.Context) {
+	this.tenantCtx = ctx
 }
 
 // Return the cached regex for the input operator only if the like pattern is unchanged

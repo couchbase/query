@@ -50,6 +50,7 @@ type Datastore interface {
 	PreAuthorize(*auth.Privileges)                                                         // Transform privileges in the internal format
 	CredsString(*http.Request) string                                                      // Return name from credentials in http request
 	GetUserUUID(*auth.Credentials) string                                                  // Returns user UUID for stats
+	GetUserBuckets(*auth.Credentials) []string                                             // Returns buckets user has access to for serverless accounting
 	SetLogLevel(level logging.Level)                                                       // Set log level of in-process indexers
 	Inferencer(name InferenceType) (Inferencer, errors.Error)                              // Schema inference provider by name, e.g. INF_DEFAULT
 	Inferencers() ([]Inferencer, errors.Error)                                             // List of schema inference providers

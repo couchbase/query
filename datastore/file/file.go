@@ -101,6 +101,10 @@ func (s *store) GetUserUUID(*auth.Credentials) string {
 	return ""
 }
 
+func (s *store) GetUserBuckets(*auth.Credentials) []string {
+	return []string{}
+}
+
 func (s *store) PreAuthorize(*auth.Privileges) {
 }
 

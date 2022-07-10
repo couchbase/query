@@ -175,6 +175,8 @@ type Request interface {
 	GetErrorLimit() int
 	SetTracked()
 	Tracked() bool
+	SetTenantCtx(ctx tenant.Context)
+	TenantCtx() tenant.Context
 
 	setSleep() // internal methods for load control
 	sleep()
@@ -340,6 +342,7 @@ type BaseRequest struct {
 	resultSize           int64
 	serviceDuration      time.Duration
 	tracked              bool
+	tenantCtx            tenant.Context
 }
 
 type requestIDImpl struct {
@@ -1093,6 +1096,14 @@ func (this *BaseRequest) SetTracked() {
 
 func (this *BaseRequest) Tracked() bool {
 	return this.tracked
+}
+
+func (this *BaseRequest) SetTenantCtx(ctx tenant.Context) {
+	this.tenantCtx = ctx
+}
+
+func (this *BaseRequest) TenantCtx() tenant.Context {
+	return this.tenantCtx
 }
 
 func (this *BaseRequest) Results() chan bool {

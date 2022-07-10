@@ -12,6 +12,7 @@ package tenant
 
 import (
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/couchbase/cbauth/service"
@@ -30,6 +31,10 @@ type Unit atomic.AlignedUint64
 type Service int
 type Services [_SIZER]Unit
 type ResourceManager func(string)
+
+type Context regulator.UserCtx
+
+var adminUserCtx = regulator.NewUserCtx("", "")
 
 const (
 	QUERY_CU = Service(iota)
@@ -88,11 +93,32 @@ func (this Unit) NonZero() bool {
 	return this > 0
 }
 
-func Throttle(user, bucket string) error {
-	tenant := findTenant(user, bucket)
-	if tenant == "" {
-		return errors.NewServiceTenantInvalidError()
+func Throttle(user, bucket string, buckets []string) (Context, error) {
+
+	// TODO TENANT proper check for administrator
+	// Administrator doesn't have associated buckets
+	if strings.ToLower(user) == "administrator" {
+		return adminUserCtx, nil
 	}
+	tenant := bucket
+	if tenant == "" {
+		if len(buckets) == 0 {
+			return nil, errors.NewServiceTenantMissingError()
+		}
+		tenant = buckets[0]
+	} else {
+		found := false
+		for _, b := range buckets {
+			if b == tenant {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return nil, errors.NewServiceTenantNotAuthorizedError(bucket)
+		}
+	}
+
 	ctx := regulator.NewUserCtx(tenant, user)
 	r, d, e := regulator.CheckQuota(ctx, &regulator.CheckQuotaOpts{
 		MaxThrottle:       time.Duration(0),
@@ -103,36 +129,38 @@ func Throttle(user, bucket string) error {
 	})
 	switch r {
 	case regulator.CheckResultNormal:
-		return nil
+		return ctx, nil
 	case regulator.CheckResultThrottle:
 		time.Sleep(d)
-		return nil
+		return ctx, nil
 	default:
-		return e
+		return ctx, e
 	}
-}
-
-type Context regulator.UserCtx
-
-func NewTenantCtx(user, bucket string) Context {
-	tenant := findTenant(user, bucket)
-	return regulator.NewUserCtx(tenant, user).(Context)
 }
 
 // TODO define units for query and js-evaluator
 func RecordCU(ctx Context, d time.Duration, m uint64) Unit {
 	units, _ := metering.QueryEvalComputeToCU(d, m)
-	regulator.RecordUnits(ctx, units)
+	if ctx != adminUserCtx {
+		regulator.RecordUnits(ctx, units)
+	}
 	return Unit(units.Whole())
 }
 
 func RecordJsCU(ctx Context, d time.Duration, m uint64) Unit {
 	units, _ := metering.QueryUDFComputeToCU(d, m)
-	regulator.RecordUnits(ctx, units)
+	if ctx != adminUserCtx {
+		regulator.RecordUnits(ctx, units)
+	}
 	return Unit(units.Whole())
 }
 
 func RefundUnits(ctx Context, units Services) error {
+
+	// no refund needed for full admin
+	if ctx != adminUserCtx {
+		return nil
+	}
 	for s, u := range units {
 		if u > 0 {
 			ru, err := regulator.NewUnits(toReg[s].service, toReg[s].unit, uint64(u))
@@ -171,13 +199,4 @@ func KvRUName() string {
 
 func KvWUName() string {
 	return "kvWU"
-}
-
-func findTenant(user, bucket string) string {
-
-	// TODO temporary until cbauth gives us buckets associated with users
-	if len(bucket) > 0 {
-		return bucket
-	}
-	return "fakebucket"
 }

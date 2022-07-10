@@ -625,6 +625,7 @@ func (this *Server) setupRequestContext(request Request) bool {
 	context.SetScanConsistency(request.ScanConsistency(), request.OriginalScanConsistency())
 	context.SetPreserveExpiry(request.PreserveExpiry())
 	context.SetTracked(request.Tracked())
+	context.SetTenantCtx(request.TenantCtx())
 
 	if request.TxId() != "" {
 		err := context.SetTransactionInfo(request.TxId(), request.TxStmtNum())

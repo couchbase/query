@@ -21,6 +21,8 @@ type Service int
 type Services [_SIZER]Unit
 type ResourceManager func(string)
 
+type Context interface{}
+
 const (
 	QUERY_CU = Service(iota)
 	JS_CU
@@ -55,14 +57,8 @@ func (this Unit) NonZero() bool {
 	return false
 }
 
-func Throttle(user, bucket string) error {
-	return nil
-}
-
-type Context interface{}
-
-func NewTenantCtx(bucket, user string) Context {
-	return nil
+func Throttle(user, bucket string, buckets []string) (Context, error) {
+	return new(Context), nil
 }
 
 func RecordCU(ctx Context, d time.Duration, m uint64) Unit {

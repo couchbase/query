@@ -64,3 +64,10 @@ func GetUserUUID(creds *auth.Credentials) string {
 	}
 	return _DATASTORE.GetUserUUID(creds)
 }
+
+func GetUserBuckets(creds *auth.Credentials) []string {
+	if _DATASTORE == nil || creds == nil {
+		return []string{}
+	}
+	return _DATASTORE.GetUserBuckets(creds)
+}

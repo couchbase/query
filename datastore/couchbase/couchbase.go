@@ -370,6 +370,24 @@ func (s *store) GetUserUUID(credentials *auth.Credentials) string {
 	return ""
 }
 
+func (s *store) GetUserBuckets(credentials *auth.Credentials) []string {
+	if s.CbAuthInit == false {
+		// cbauth is not initialized. Access to SASL protected buckets will be
+		// denied by the couchbase server
+		logging.Warnf("CbAuth not intialized")
+		return []string{}
+	}
+	if credentials.HttpRequest == nil {
+		return []string{}
+	}
+	creds, err := cbauth.AuthWebCreds(credentials.HttpRequest)
+	if creds != nil && err == nil {
+		res, _ := cbauth.GetUserBuckets(creds.User())
+		return res
+	}
+	return []string{}
+}
+
 func (s *store) PreAuthorize(privileges *auth.Privileges) {
 	cbPreAuthorize(privileges)
 }

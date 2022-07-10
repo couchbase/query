@@ -159,7 +159,12 @@ func NewServiceTenantThrottledError(e error) Error {
 		InternalMsg: "Request has been declined", InternalCaller: CallerN(1)}
 }
 
-func NewServiceTenantInvalidError() Error {
-	return &err{level: EXCEPTION, ICode: E_SERVICE_TENANT_INVALID, IKey: "service.tenant.invalid",
+func NewServiceTenantMissingError() Error {
+	return &err{level: EXCEPTION, ICode: E_SERVICE_TENANT_MISSING, IKey: "service.tenant.missing",
 		InternalMsg: "Request does not have a valid tenant", InternalCaller: CallerN(1)}
+}
+
+func NewServiceTenantNotAuthorizedError(bucket string) Error {
+	return &err{level: EXCEPTION, ICode: E_SERVICE_TENANT_NOT_AUTHORIZED, IKey: "service.tenant.not.authorized",
+		InternalMsg: fmt.Sprintf("Request is not authorized for tenant %v", bucket), InternalCaller: CallerN(1)}
 }
