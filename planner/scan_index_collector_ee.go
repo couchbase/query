@@ -525,7 +525,7 @@ func formalizeIndexKeys(alias string, keys expression.Expressions) expression.Ex
 }
 
 func extractInfo(index datastore.Index, keyspaceAlias string, keyspace datastore.Keyspace, deferred, validatePhase bool) *iaplan.IndexInfo {
-	if index == nil || (validatePhase && index.Type() != datastore.VIRTUAL) {
+	if index == nil || (validatePhase && index.Type() != datastore.VIRTUAL) || index.Type() == datastore.SEQ_SCAN {
 		return nil
 	}
 
