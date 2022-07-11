@@ -48,7 +48,6 @@ require (
 	github.com/couchbase/gocbcore/v10 v10.0.9-0.20220228174725-170b8c650e3f
 	github.com/couchbase/godbc v0.0.0-20210615212222-79da1b49cb4d
 	github.com/couchbase/gomemcached v0.1.4
-	github.com/couchbase/gometa v0.0.0-20200717102231-b0e38b71d711 // indirect
 	github.com/couchbase/goutils v0.1.2
 	github.com/couchbase/indexing v0.0.0-00010101000000-000000000000
 	github.com/couchbase/n1fty v0.0.0-00010101000000-000000000000
@@ -60,10 +59,8 @@ require (
 	github.com/natefinch/npipe v0.0.0-20160621034901-c1b8fa8bdcce // indirect
 	github.com/opentracing/opentracing-go v1.2.0 // indirect
 	github.com/peterh/liner v1.2.0
-	github.com/rcrowley/go-metrics v0.0.0-20200313005456-10cdbea86bc0 // indirect
 	github.com/russross/blackfriday v1.5.2
 	github.com/samuel/go-zookeeper v0.0.0-20200724154423-2164a8ac840e
-	github.com/santhosh-tekuri/jsonschema v1.2.4 // indirect
 	golang.org/x/crypto v0.0.0-20200820211705-5c72a883971a
 	golang.org/x/net v0.0.0-20211215060638-4ddde0e984e9
 	gopkg.in/couchbase/gocb.v1 v1.6.7
