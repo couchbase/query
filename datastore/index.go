@@ -447,6 +447,30 @@ type Index4 interface {
 
 ////////////////////////////////////////////////////////////////////////
 //
+// Index API5 introduced in Elixir for Indexer accounting.
+//
+////////////////////////////////////////////////////////////////////////
+
+type CountIndex5 interface {
+	CountIndex2
+
+	// Perform a count on index
+	Count5(requestId string, spans Spans2, cons ScanConsistency, vector timestamp.Vector, conn *IndexConnection) (
+		int64, errors.Error)
+
+	// Perform a count distinct on index
+	CountDistinct5(requestId string, spans Spans2, cons ScanConsistency, vector timestamp.Vector, conn *IndexConnection) (
+		int64, errors.Error)
+}
+
+////////////////////////////////////////////////////////////////////////
+//
+// End of Index API5.
+//
+////////////////////////////////////////////////////////////////////////
+
+////////////////////////////////////////////////////////////////////////
+//
 // FTS Index API
 //
 ////////////////////////////////////////////////////////////////////////
@@ -641,6 +665,14 @@ func NewSizedIndexConnection(size int64, context Context) (*IndexConnection, err
 		context: context,
 	}
 	newEntryExchange(&rv.sender, maxSize)
+	return rv, nil
+}
+
+func NewSimpleIndexConnection(context Context) (*IndexConnection, errors.Error) {
+	rv := &IndexConnection{
+		context: context,
+	}
+	newEntryExchange(&rv.sender, 1)
 	return rv, nil
 }
 
