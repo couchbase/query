@@ -51,7 +51,11 @@ func (this *seqScanIndexer) SetConnectionSecurityConfig(conSecConfig *datastore.
 }
 
 func (this *seqScanIndexer) BucketId() string {
-	return this.keyspace.NamespaceId()
+	scope := this.keyspace.Scope()
+	if scope != nil {
+		return scope.BucketId()
+	}
+	return this.keyspace.Id()
 }
 
 func (this *seqScanIndexer) ScopeId() string {
