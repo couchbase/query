@@ -312,15 +312,17 @@ func (this *builder) extractIndexJoin(index datastore.Index, keyspace datastore.
 	if this.indexAdvisor {
 		if index != nil {
 			info := extractInfo(index, node.Alias(), keyspace, false, this.advisePhase == _VALIDATE)
-			if cover { //covering index
-				info.SetIdxStatusCovering()
+			if info != nil {
+				if cover { //covering index
+					info.SetIdxStatusCovering()
+				}
+				if this.advisePhase == _VALIDATE {
+					info.SetCostBased(cost > 0 && cardinality > 0)
+					this.validatedIdxes = append(this.validatedIdxes, info)
+					return
+				}
+				this.queryInfo.SetCurIndex(info)
 			}
-			if this.advisePhase == _VALIDATE {
-				info.SetCostBased(cost > 0 && cardinality > 0)
-				this.validatedIdxes = append(this.validatedIdxes, info)
-				return
-			}
-			this.queryInfo.SetCurIndex(info)
 		}
 		if this.advisePhase == _RECOMMEND {
 			if !cover {
@@ -741,7 +743,10 @@ func getExistAndDeferredIndexes(keyspace datastore.Keyspace, alias string, index
 				if infos == nil {
 					infos = make(iaplan.IndexInfos, 0, 1)
 				}
-				infos = append(infos, extractInfo(idx, alias, keyspace, false, false))
+				info := extractInfo(idx, alias, keyspace, false, false)
+				if info != nil {
+					infos = append(infos, info)
+				}
 
 			} else {
 				state, _, er := idx.State()
@@ -757,7 +762,10 @@ func getExistAndDeferredIndexes(keyspace datastore.Keyspace, alias string, index
 				if infos == nil {
 					infos = make(iaplan.IndexInfos, 0, 1)
 				}
-				infos = append(infos, extractInfo(idx, alias, keyspace, true, false))
+				info := extractInfo(idx, alias, keyspace, true, false)
+				if info != nil {
+					infos = append(infos, info)
+				}
 			}
 
 		}
