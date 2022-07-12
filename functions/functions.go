@@ -338,7 +338,7 @@ func checkDelete(name FunctionName, context Context) (*FunctionEntry, errors.Err
 		priv := GetPrivilege(name, f.FunctionBody)
 		privs := auth.NewPrivileges()
 		privs.Add(f.Key(), priv, auth.PRIV_PROPS_NONE)
-		err := Authorize(f.privs, context.Credentials())
+		err := Authorize(privs, context.Credentials())
 		if err != nil {
 			return nil, err
 		}
@@ -352,7 +352,10 @@ func PreLoad(name FunctionName) bool {
 }
 
 func CheckDelete(name FunctionName, context Context) errors.Error {
-	_, e := checkDelete(name, context)
+	f, e := checkDelete(name, context)
+	if f == nil && e == nil {
+		return errors.NewMissingFunctionError(name.Name())
+	}
 	return e
 }
 
