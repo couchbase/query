@@ -10,6 +10,7 @@ package couchbase
 
 import (
 	"fmt"
+	"math"
 	"sync/atomic"
 	"time"
 
@@ -142,6 +143,8 @@ type seqScan struct {
 	keyspace         datastore.Keyspace
 	totalScans       uint64
 	totalReturnCount uint64
+	lastScanAt       int64
+	lastScanCount    uint64
 }
 
 func (this *seqScan) KeyspaceId() string {
@@ -340,6 +343,7 @@ func (this *seqScan) doScanEntries(requestId string, ordered bool, offset, limit
 	defer conn.Sender().Close()
 
 	atomic.AddUint64(&this.totalScans, 1)
+	atomic.StoreInt64(&this.lastScanAt, int64(util.Now()))
 
 	if limit <= 0 {
 		return
@@ -349,7 +353,7 @@ func (this *seqScan) doScanEntries(requestId string, ordered bool, offset, limit
 	rqd := conn.GetReqDeadline()
 	deadline := util.Time(0)
 	if !rqd.IsZero() {
-		deadline = util.Now() + util.Time(rqd.Sub(time.Now()).Nanoseconds())
+		deadline = util.Time(rqd.UnixNano())
 	} else {
 		// if not, use a default to ensure we never hang entirely here
 		deadline = util.Now() + util.Time(_DEFAULT_REQUEST_TIMEOUT)
@@ -443,13 +447,31 @@ func (this *seqScan) doScanEntries(requestId string, ordered bool, offset, limit
 		}
 	}
 	if returned > 0 {
-		atomic.AddUint64(&this.totalReturnCount, uint64(returned))
+		n := atomic.AddUint64(&this.totalReturnCount, uint64(returned))
+		if n < uint64(returned) {
+			atomic.StoreUint64(&this.totalReturnCount, uint64(returned))
+			atomic.StoreUint64(&this.totalScans, uint64(1))
+		}
 	}
+	atomic.StoreUint64(&this.lastScanCount, uint64(returned))
 }
 
 func (this *seqScan) IndexMetadata() map[string]interface{} {
 	rv := make(map[string]interface{})
-	rv["total_scans"] = atomic.LoadUint64(&this.totalScans)
-	rv["total_keys_returned"] = atomic.LoadUint64(&this.totalReturnCount)
+	ts := atomic.LoadUint64(&this.totalScans)
+	tk := atomic.LoadUint64(&this.totalReturnCount)
+	rv["total_scans"] = ts
+	rv["total_keys_returned"] = tk
+	avg := uint64(0)
+	if ts > 0 {
+		avg = uint64(math.Round(float64(tk) / float64(ts)))
+	}
+	rv["average_keys_per_scan"] = avg
+	ls := atomic.LoadInt64(&this.lastScanAt)
+	if ls != 0 {
+		rv["last_scan_time"] = time.UnixMilli(ls / 1000000).Format(expression.DEFAULT_FORMAT)
+		lsc := atomic.LoadUint64(&this.lastScanCount)
+		rv["last_scan_keys"] = lsc
+	}
 	return rv
 }

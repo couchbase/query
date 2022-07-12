@@ -27,6 +27,7 @@ var _rs = map[ErrorCode][2]string{
 	E_SS_FETCH_WAIT_TIMEOUT: {"fetch_wait", "Timed out polling scan for data"},
 	E_SS_WORKER_ABORT:       {"worker_abort", "A fatal error occurred in scan processing"},
 	E_SS_SPILL:              {"spill", "Operation failed on scan spill file"},
+	E_SS_VALIDATE:           {"validate_key", "Failed to validate document key"},
 }
 
 func NewSSError(code ErrorCode, args ...interface{}) Error {

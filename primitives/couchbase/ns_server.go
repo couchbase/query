@@ -41,7 +41,7 @@ var HTTPTransport = &http.Transport{MaxIdleConnsPerHost: MaxIdleConnsPerHost}
 var HTTPClient = &http.Client{Transport: HTTPTransport, Timeout: ClientTimeOut}
 
 // PoolSize is the size of each connection pool (per host).
-var PoolSize = 64
+var PoolSize = 96
 
 // PoolOverflow is the number of overflow connections allowed in a
 // pool.
@@ -198,6 +198,7 @@ type Node struct {
 	Uptime               int                           `json:"uptime,string"`
 	Version              string                        `json:"version"`
 	ThisNode             bool                          `json:"thisNode,omitempty"`
+	CpuCount             int                           `json:"cpuCount"`
 }
 
 // A Pool of nodes and buckets.

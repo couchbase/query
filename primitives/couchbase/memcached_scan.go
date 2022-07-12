@@ -12,55 +12,60 @@ import (
 	"bufio"
 	"bytes"
 	"container/heap"
+	"container/list"
 	"fmt"
 	"io"
+	"math/rand"
 	"os"
 	"runtime"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
-	"unicode"
 
 	"github.com/couchbase/gomemcached"
 	memcached "github.com/couchbase/gomemcached/client"
 	qerrors "github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
+	"github.com/couchbase/query/sort"
 	"github.com/couchbase/query/util"
 )
 
-const _SS_MAX_CONCURRENT_VBSCANS_PER_SERVER = 1
+var _SS_MAX_CONCURRENT_VBSCANS_PER_SERVER = -1
+var initL sync.Mutex
 
-// try to size this to avoid blocking, particularly during initial creation when all are scheduled for first run
-const _RSW_CHANNEL_SIZE = 100 /* max concurrent scans */ * _SS_MAX_CONCURRENT_VBSCANS_PER_SERVER * 2 /* avg ranges per scan */
+const _SS_SMALL_RESULT_SET = 100
 const _SS_MAX_DURATION = time.Minute * 10
 const _SS_MAX_KEYS_PER_REQUEST = uint32(10240) // try to avoid more than one scan per v-bucket
 const _SS_INIT_KEYS = 256
-const _SS_SPILL_BUFFER = 32768
+const _SS_KEY_BUFFER = 10240
+const _SS_SPILL_BUFFER = 10240
 const _SS_SPILL_FILE_PATTERN = "ss_spill-*"
+const _SS_MAX_WORKER_IDLE = time.Minute * 60
+const _SS_MONITOR_INTERVAL = time.Minute * 15
 
 /*
  * Bucket functions for driving and consuming a scan.
  */
 
-func (b *Bucket) StartKeyScan(collId uint32, ranges []*SeqScanRange, offset int64, limit int64, ordered bool,
-	timeout time.Duration, pipelineSize int, kvTimeout time.Duration) (interface{}, qerrors.Error) {
+func (b *Bucket) StartKeyScan(collId uint32, scope string, collection string, ranges []*SeqScanRange, offset int64, limit int64,
+	ordered bool, timeout time.Duration, pipelineSize int, kvTimeout time.Duration) (interface{}, qerrors.Error) {
 
 	if limit == 0 {
 		limit = -1
 	}
 
-	scan := &seqScan{
-		collId:       collId,
-		ranges:       ranges,
-		ordered:      ordered,
-		limit:        limit,
-		offset:       offset,
-		pipelineSize: pipelineSize,
-		kvTimeout:    kvTimeout,
+	if scope != "" && collection != "" {
+		var err error
+		collId, _, err = b.GetCollectionCID(scope, collection, time.Time{})
+		if err != nil {
+			return nil, qerrors.NewSSError(qerrors.E_SS_CID_GET, err)
+		}
 	}
-	scan.ch = make(chan interface{}, 1)
 
-	go scan.seqScanCoordinator(b, timeout)
+	scan := NewSeqScan(collId, ranges, offset, limit, ordered, pipelineSize, kvTimeout)
+
+	go scan.coordinator(b, timeout)
 
 	return scan, nil
 }
@@ -127,46 +132,6 @@ func (this *SeqScanRange) Init(s []byte, exls bool, e []byte, exle bool) {
 	this.e = append(e, byte(0x0)) // force exact termination
 }
 
-func (this *SeqScanRange) String() string {
-	var b strings.Builder
-	b.WriteRune('[')
-	if this.exls {
-		b.WriteRune('-')
-	} else {
-		b.WriteRune('+')
-	}
-	for _, c := range this.s {
-		if c != 0xff && unicode.IsPrint(rune(c)) {
-			b.WriteRune(rune(c))
-		} else {
-			b.WriteString(fmt.Sprintf("<%02x>", byte(c)))
-		}
-	}
-	b.WriteRune(':')
-	if this.exle {
-		b.WriteRune('-')
-	} else {
-		b.WriteRune('+')
-	}
-	for _, c := range this.e {
-		if c != 0xff && unicode.IsPrint(rune(c)) {
-			b.WriteRune(rune(c))
-		} else {
-			b.WriteString(fmt.Sprintf("<%02x>", byte(c)))
-		}
-	}
-	b.WriteRune(']')
-	return b.String()
-}
-
-func (this *SeqScanRange) startFilter() []byte {
-	return this.s
-}
-
-func (this *SeqScanRange) endFilter() []byte {
-	return this.e
-}
-
 func (this *SeqScanRange) start() ([]byte, bool) {
 	return this.s, this.exls
 }
@@ -175,7 +140,7 @@ func (this *SeqScanRange) end() ([]byte, bool) {
 	return this.e, this.exle
 }
 
-func (this *SeqScanRange) singleKey() bool {
+func (this *SeqScanRange) isSingleKey() bool {
 	if this.exls != this.exle || this.exls != false {
 		return false
 	}
@@ -194,43 +159,40 @@ func (this *SeqScanRange) singleKey() bool {
 }
 
 /*
- * ready queue for seqScan
+ * V-bucket scan result ready queue.
  */
 
 type rQueue struct {
 	sync.Mutex
-	ready     []*vbRangeScan
-	head      int
-	tail      int
+	ready     *list.List
 	cancelled bool
 	timedout  bool
 	cond      sync.Cond
 }
 
+func (this *rQueue) init() {
+	this.ready = list.New()
+	this.cond.L = this
+}
+
 func (this *rQueue) cancel() {
 	this.Lock()
 	this.cancelled = true
-	this.cond.Signal()
+	this.cond.Broadcast()
 	this.Unlock()
 }
 
 func (this *rQueue) timeout() {
 	this.Lock()
 	this.timedout = true
-	this.cond.Signal()
+	this.cond.Broadcast()
 	this.Unlock()
 }
 
 func (this *rQueue) enqueue(scan *vbRangeScan) {
 	this.Lock()
-	// don't need to worry about wrapping over head since ready is sized to maximum possible up front
-	this.ready[this.tail] = scan
-	this.tail++
-	if this.tail == cap(this.ready) {
-		this.tail = 0
-	}
-	this.ready = append(this.ready, scan)
-	this.cond.Signal()
+	this.ready.PushBack(scan)
+	this.cond.Broadcast()
 	this.Unlock()
 }
 
@@ -238,12 +200,10 @@ func (this *rQueue) pop() *vbRangeScan {
 	var rv *vbRangeScan
 	this.Lock()
 	for !this.cancelled && !this.timedout {
-		if this.tail != this.head {
-			rv = this.ready[this.head]
-			this.head++
-			if this.head == cap(this.ready) {
-				this.head = 0
-			}
+		e := this.ready.Front()
+		if e != nil {
+			rv = e.Value.(*vbRangeScan)
+			this.ready.Remove(e)
 			break
 		} else {
 			this.cond.Wait()
@@ -269,17 +229,31 @@ type seqScan struct {
 	pipelineSize int
 	kvTimeout    time.Duration
 	readyQueue   rQueue
+	fetchLimit   uint32
 }
 
-func (this *seqScan) fetchLimit() uint32 {
-	l := _SS_MAX_KEYS_PER_REQUEST
-	if this.limit > 0 {
-		l = uint32(this.limit + this.offset)
+func NewSeqScan(collId uint32, ranges []*SeqScanRange, offset int64, limit int64, ordered bool,
+	pipelineSize int, kvTimeout time.Duration) *seqScan {
+
+	scan := &seqScan{
+		collId:       collId,
+		ranges:       ranges,
+		ordered:      ordered,
+		limit:        limit,
+		offset:       offset,
+		pipelineSize: pipelineSize,
+		kvTimeout:    kvTimeout,
 	}
-	if l > _SS_MAX_KEYS_PER_REQUEST {
-		l = _SS_MAX_KEYS_PER_REQUEST
+	scan.ch = make(chan interface{}, 1)
+	scan.fetchLimit = _SS_MAX_KEYS_PER_REQUEST
+	if scan.limit > 0 {
+		scan.fetchLimit = uint32(scan.limit + scan.offset)
 	}
-	return l
+	if scan.fetchLimit > _SS_MAX_KEYS_PER_REQUEST {
+		scan.fetchLimit = _SS_MAX_KEYS_PER_REQUEST
+	}
+	scan.readyQueue.init()
+	return scan
 }
 
 func (this *seqScan) timeout() {
@@ -318,7 +292,36 @@ func (this *seqScan) getRange(n int) *SeqScanRange {
 	return this.ranges[n]
 }
 
-func (this *seqScan) seqScanCoordinator(b *Bucket, scanTimeout time.Duration) {
+func (this *seqScan) coordinator(b *Bucket, scanTimeout time.Duration) {
+	if _SS_MAX_CONCURRENT_VBSCANS_PER_SERVER == -1 {
+		initL.Lock()
+		if _SS_MAX_CONCURRENT_VBSCANS_PER_SERVER == -1 {
+			minCC := 1024
+			nodes := b.Nodes()
+			for _, n := range nodes {
+				found := false
+				for _, s := range n.Services {
+					if s == "kv" {
+						found = true
+						break
+					}
+				}
+				if !found {
+					continue
+				}
+				cc := int(float64(n.CpuCount) / float64(len(n.Services)) * 0.75)
+				if cc < minCC {
+					minCC = cc
+				}
+			}
+			if minCC < 1 {
+				minCC = 1
+			}
+			_SS_MAX_CONCURRENT_VBSCANS_PER_SERVER = minCC
+			logging.Infof("Max concurrent v-bucket range scans per server set to: %v", _SS_MAX_CONCURRENT_VBSCANS_PER_SERVER)
+		}
+		initL.Unlock()
+	}
 
 	returnCount := int64(0)
 	returnLimit := this.limit
@@ -326,61 +329,102 @@ func (this *seqScan) seqScanCoordinator(b *Bucket, scanTimeout time.Duration) {
 	if scanTimeout <= 0 {
 		scanTimeout = _SS_MAX_DURATION
 	}
-	maxEndTime := util.Now() + util.Time(scanTimeout)
 
-	// snapshot of vbmap to use to distribute vb scans
 	smap := b.VBServerMap()
 	vblist := smap.VBucketMap
 
 	numServers := len(smap.ServerList)
+	if numServers < 1 {
+		logging.Severef("Sequential scan coordinator: [%p] invalid VB map for bucket %v - no server list", this, b.Name)
+		this.reportError(qerrors.NewSSError(qerrors.E_SS_FAILED))
+		return
+	}
 
 	// initialise / resize worker pool if necessary
 	_RSW.initWorkers(numServers)
-	defer _RSW.releaseWorkers()
-
-	this.readyQueue.ready = make([]*vbRangeScan, len(vblist)*len(this.ranges))
-	this.readyQueue.cond.L = &this.readyQueue
 
 	var vbScans vbRangeScanHeap
 	vbScans = (vbRangeScanHeap)(make([]*vbRangeScan, 0, len(vblist)*len(this.ranges)))
 
+	cancelAll := func() {
+		for i := range vbScans {
+			vbScans[i].deferRelease = (vbScans[i].state == _VBS_WORKING)
+			atomic.StoreInt32((*int32)(&vbScans[i].state), int32(_VBS_CANCELLED))
+		}
+		_RSW.cancelQueuedScans(this)
+	}
+
 	defer func() {
 		for _, v := range vbScans {
-			v.release()
+			if !v.deferRelease {
+				v.release()
+			}
 		}
 	}()
 
-	servers := make([]int, len(smap.ServerList))
-
-	timeout := time.AfterFunc(maxEndTime.Sub(util.Now()), func() {
+	queues := make([]int, numServers)
+	timeout := time.AfterFunc(scanTimeout, func() {
 		this.timeout()
 	})
 	defer func() {
 		timeout.Stop()
 	}()
 
+	queued := 0
+	if !this.ordered && this.fetchLimit < _SS_SMALL_RESULT_SET {
+		// queue only one request initially as we're likely to serviced by just one
+		queued = len(queues)*_SS_MAX_CONCURRENT_VBSCANS_PER_SERVER - 1
+	}
 	for rNum := range this.ranges {
 		var min, max int
-		if this.getRange(rNum).singleKey() {
-			min = int(b.VBHash(string(this.getRange(rNum).startFilter())))
+		var singleKey bool
+		if this.getRange(rNum).isSingleKey() {
+			f, _ := this.getRange(rNum).start()
+			min = int(b.VBHash(string(f)))
 			max = min + 1
+			singleKey = true
 		} else {
 			min = 0
 			max = len(vblist)
+			singleKey = false
 		}
-		for i := min; i < max; i++ {
+		for vb := min; vb < max; vb++ {
 			server := 0
-			if len(vblist[i]) > 0 {
-				server = vblist[i][0]
-			}
-			vbs := &vbRangeScan{scan: this, b: b, vb: uint16(i), rng: rNum, server: server}
-			vbScans = append(vbScans, vbs)
-			if servers[server] < _SS_MAX_CONCURRENT_VBSCANS_PER_SERVER {
-				if !this.queueVBScan(vbs) {
-					vbScans.cancelAll()
+			if len(vblist[vb]) > 0 {
+				// first server that's in the list
+				for n := 0; n < len(vblist[vb]); n++ {
+					server = vblist[vb][n]
+					if server < numServers {
+						break
+					}
+				}
+				if server >= numServers {
+					logging.Severef("Sequential scan coordinator: [%p] Invalid server: %d (max valid: %d)",
+						this, server, numServers-1)
+					this.reportError(qerrors.NewSSError(qerrors.E_SS_FAILED))
+					cancelAll()
 					return
 				}
-				servers[server]++
+			}
+			vbs := &vbRangeScan{scan: this, b: b, vb: uint16(vb), rng: rNum, queue: server, singleKey: singleKey}
+			vbScans = append(vbScans, vbs)
+		}
+		if queued < len(queues)*_SS_MAX_CONCURRENT_VBSCANS_PER_SERVER {
+			// pick a random scan to start from so there is a greater chance of spreading load
+			n := rand.Int() % len(vbScans)
+			for i := 0; i < len(vbScans); i++ {
+				if queues[vbScans[n].queue] < _SS_MAX_CONCURRENT_VBSCANS_PER_SERVER {
+					if !this.queueVBScan(vbScans[n]) {
+						cancelAll()
+						return
+					}
+					queues[vbScans[n].queue]++
+					queued++
+				}
+				n++
+				if n == len(vbScans) {
+					n = 0
+				}
 			}
 		}
 	}
@@ -388,19 +432,22 @@ func (this *seqScan) seqScanCoordinator(b *Bucket, scanTimeout time.Duration) {
 
 	completed := false
 processing:
-	for !completed && !this.timedout && !this.inactive {
+	for !completed && !this.timedout && !this.inactive && len(vbScans) > 0 {
 		vbscan := this.readyQueue.pop()
 		if vbscan == nil {
 			break
 		} else {
-			servers[vbscan.server]--
+			queues[vbscan.queue]--
 			if vbscan.state == _VBS_WORKED {
 				vbscan.state = _VBS_PROCESSING
-			} else if vbscan.state != _VBS_ERROR {
+			} else if vbscan.state == _VBS_CANCELLED {
+				vbScans.Remove(vbscan)
+				vbscan.release()
+				continue
 			}
 			if vbscan.err != nil || vbscan.state == _VBS_ERROR {
 				// a worker encountered an error; cancel all workers and we're done
-				vbScans.cancelAll()
+				cancelAll()
 				this.reportError(vbscan.err)
 				return
 			}
@@ -425,6 +472,7 @@ processing:
 					// forward results
 					// read the keys
 					if !vbscan.seek(start) {
+						logging.Debugf("BUG: scan seek failed")
 					}
 					for start < len(vbscan.keys) {
 						batch := len(vbscan.keys) - start
@@ -442,7 +490,7 @@ processing:
 							}
 						}
 						if !this.reportResults(keys, timeout) {
-							vbScans.cancelAll()
+							cancelAll()
 							this.reportError(qerrors.NewSSError(qerrors.E_SS_TIMEOUT))
 							return
 						}
@@ -451,13 +499,12 @@ processing:
 					}
 					err := vbscan.truncate()
 					if err != nil {
-						vbScans.cancelAll()
+						cancelAll()
 						this.reportError(err.(qerrors.Error))
 						return
 					}
 				}
 				if this.limit > 0 && returnLimit == 0 {
-					vbScans.cancelAll()
 					break processing
 				}
 				if vbscan.kvOpsComplete {
@@ -517,7 +564,7 @@ processing:
 								smallest.state = _VBS_READY
 								err := smallest.truncate()
 								if err != nil {
-									vbScans.cancelAll()
+									cancelAll()
 									this.reportError(err.(qerrors.Error))
 									return
 								}
@@ -537,7 +584,7 @@ processing:
 						if len(batch) == cap(batch) {
 							// forward results
 							if !this.reportResults(batch, timeout) {
-								vbScans.cancelAll()
+								cancelAll()
 								this.reportError(qerrors.NewSSError(qerrors.E_SS_TIMEOUT))
 								return
 							}
@@ -547,13 +594,12 @@ processing:
 					if len(batch) > 0 {
 						// forward results
 						if !this.reportResults(batch, timeout) {
-							vbScans.cancelAll()
+							cancelAll()
 							this.reportError(qerrors.NewSSError(qerrors.E_SS_TIMEOUT))
 							return
 						}
 					}
 					if this.limit > 0 && returnLimit == 0 {
-						vbScans.cancelAll()
 						break processing
 					}
 				}
@@ -562,29 +608,34 @@ processing:
 			// try to ensure we don't get stuck just fetching one vb
 			completed = true
 			t := 0
-			for s := range servers {
-				t += servers[s]
+			for s := range queues {
+				t += queues[s]
 			}
-			max := len(servers) * _SS_MAX_CONCURRENT_VBSCANS_PER_SERVER
-			if t < max {
-				for _, vbs := range vbScans {
+			if t < len(queues)*_SS_MAX_CONCURRENT_VBSCANS_PER_SERVER && len(vbScans) > 0 {
+				n := rand.Int() % len(vbScans)
+				for c := 0; c < len(vbScans); c++ {
+					vbs := vbScans[n]
+					n++
+					if n == len(vbScans) {
+						n = 0
+					}
 					// skip the one that has just reported to give others a chance
 					if !vbs.kvOpsComplete && vbs.state == _VBS_READY && vbs != vbscan {
 						completed = false
-						if len(vbs.keys) == 0 && servers[vbs.server] < _SS_MAX_CONCURRENT_VBSCANS_PER_SERVER {
+						if len(vbs.keys) == 0 && queues[vbs.queue] < _SS_MAX_CONCURRENT_VBSCANS_PER_SERVER {
 							if !this.queueVBScan(vbs) {
-								vbScans.cancelAll()
+								cancelAll()
 								return
 							}
-							servers[vbs.server]++
+							queues[vbs.queue]++
 							t++
-							if t >= max {
+							if t >= len(queues)*_SS_MAX_CONCURRENT_VBSCANS_PER_SERVER {
 								break
 							}
 						}
 					} else if vbs.state == _VBS_ERROR {
 						// will only be in error state if aborted during processing (panic)
-						vbScans.cancelAll()
+						cancelAll()
 						if vbs.err == nil {
 							vbs.err = qerrors.NewSSError(qerrors.E_SS_WORKER_ABORT)
 						}
@@ -594,13 +645,14 @@ processing:
 						completed = false
 					}
 				}
-				if t < max && vbscan != nil && !vbscan.kvOpsComplete { // check the one that has just reported
+				// check the one that has just reported
+				if t < len(queues)*_SS_MAX_CONCURRENT_VBSCANS_PER_SERVER && vbscan != nil && !vbscan.kvOpsComplete {
 					completed = false
-					if len(vbscan.keys) == 0 && servers[vbscan.server] < _SS_MAX_CONCURRENT_VBSCANS_PER_SERVER {
+					if len(vbscan.keys) == 0 && queues[vbscan.queue] < _SS_MAX_CONCURRENT_VBSCANS_PER_SERVER {
 						if !this.queueVBScan(vbscan) {
 							return
 						}
-						servers[vbscan.server]++
+						queues[vbscan.queue]++
 					}
 				}
 			}
@@ -611,11 +663,13 @@ processing:
 	}
 
 	// make sure we don't leave anything lingering
-	vbScans.cancelAll()
+	cancelAll()
 
-	// send final end of data indicator
-	if !this.reportResults([]string(nil), timeout) {
-		this.reportError(qerrors.NewSSError(qerrors.E_SS_TIMEOUT))
+	if !this.inactive && !this.timedout {
+		// send final end of data indicator
+		if !this.reportResults([]string(nil), timeout) {
+			this.reportError(qerrors.NewSSError(qerrors.E_SS_TIMEOUT))
+		}
 	}
 }
 
@@ -629,15 +683,14 @@ func (this *seqScan) queueVBScan(vbscan *vbRangeScan) bool {
 	if this.inactive {
 		return false
 	}
-	_RSW.queueScan(vbscan.server, vbscan)
-	return true
+	return _RSW.queueScan(vbscan)
 }
 
 /*
  * Individual v-bucket scan.
  */
 
-type vbRsState int
+type vbRsState int32
 
 const (
 	_VBS_READY vbRsState = iota
@@ -674,12 +727,16 @@ type vbRangeScan struct {
 	b             *Bucket
 	vb            uint16
 	rng           int
-	server        int
+	singleKey     bool
+	queue         int
 	state         vbRsState
+	deferRelease  bool
 	kvOpsComplete bool
 	continueFrom  []byte
 
 	spill      *os.File
+	buffer     []byte
+	offset     uint32
 	keys       []uint32
 	currentKey int
 	reader     *bufio.Reader
@@ -688,29 +745,11 @@ type vbRangeScan struct {
 	err qerrors.Error
 }
 
-func (this *vbRangeScan) sameScan(other *vbRangeScan) bool {
-	if this.vb != other.vb ||
-		this.server != other.server ||
-		this.b != other.b {
-
-		return false
-	}
-	ts, tsi := this.startFrom()
-	os, osi := other.startFrom()
-	if tsi != osi || bytes.Compare(ts, os) != 0 {
-		return false
-	}
-	te, tei := this.endWith()
-	oe, oei := other.endWith()
-	if tei != oei || bytes.Compare(te, oe) != 0 {
-		return false
-	}
-	return true
-}
-
 func (this *vbRangeScan) startFrom() ([]byte, bool) {
 	if this.continueFrom != nil {
-		return this.continueFrom, true
+		rv := this.continueFrom
+		this.continueFrom = nil
+		return rv, true
 	}
 	return this.scan.ranges[this.rng].start()
 }
@@ -719,8 +758,16 @@ func (this *vbRangeScan) endWith() ([]byte, bool) {
 	return this.scan.ranges[this.rng].end()
 }
 
+func (this *vbRangeScan) setContinueFrom(val []byte) {
+	this.continueFrom = make([]byte, len(val))
+	copy(this.continueFrom, val)
+}
+
 func (this *vbRangeScan) release() {
 	this.truncate() // release space
+	if this.spill != nil {
+		this.spill.Close()
+	}
 	this.spill = nil
 	this.reader = nil
 	this.keys = nil
@@ -729,13 +776,16 @@ func (this *vbRangeScan) release() {
 
 func (this *vbRangeScan) truncate() error {
 	var err error
+	if this.buffer != nil {
+		this.buffer = this.buffer[:0]
+	}
 	if this.keys != nil {
 		this.keys = this.keys[:0]
 	}
 	if this.spill != nil {
 		var size int64
 		size, err = this.spill.Seek(0, os.SEEK_END)
-		if err == nil {
+		if err == nil && size > 0 {
 			_, err = this.spill.Seek(0, os.SEEK_SET)
 			if err == nil {
 				err = this.spill.Truncate(0)
@@ -745,6 +795,7 @@ func (this *vbRangeScan) truncate() error {
 			}
 		}
 	}
+	this.offset = 0
 	if err == nil {
 		return nil
 	}
@@ -763,18 +814,20 @@ func (this *vbRangeScan) seek(n int) bool {
 	if n < 0 || n >= len(this.keys) {
 		return false
 	}
-	off := int64(0)
-	if n > 0 {
-		off = int64(this.keys[n-1])
-	}
-	_, err := this.spill.Seek(off, os.SEEK_SET)
-	if err != nil {
-		return false
-	}
-	if this.reader == nil {
-		this.reader = bufio.NewReaderSize(this.spill, _SS_SPILL_BUFFER)
-	} else {
-		this.reader.Reset(this.spill)
+	if this.offset >= uint32(cap(this.buffer)) {
+		off := int64(0)
+		if n > 0 {
+			off = int64(this.keys[n-1])
+		}
+		_, err := this.spill.Seek(off, os.SEEK_SET)
+		if err != nil {
+			return false
+		}
+		if this.reader == nil {
+			this.reader = bufio.NewReaderSize(this.spill, _SS_SPILL_BUFFER)
+		} else {
+			this.reader.Reset(this.spill)
+		}
 	}
 	this.currentKey = n
 	return this.readCurrent()
@@ -789,7 +842,12 @@ func (this *vbRangeScan) readCurrent() bool {
 		this.head = make([]byte, 0, l)
 	}
 	this.head = this.head[:l]
-	_, err := io.ReadFull(this.reader, this.head)
+	var err error
+	if this.offset >= uint32(cap(this.buffer)) {
+		_, err = io.ReadFull(this.reader, this.head)
+	} else {
+		copy(this.head, this.buffer[this.keyStart(this.currentKey):])
+	}
 	return err == nil
 }
 
@@ -805,6 +863,16 @@ func (this *vbRangeScan) keyLen(n int) int {
 		return int(this.keys[0])
 	}
 	return int(this.keys[n] - this.keys[n-1])
+}
+
+func (this *vbRangeScan) keyStart(n int) int {
+	if n < 0 || n >= len(this.keys) {
+		return -1
+	}
+	if n == 0 {
+		return 0
+	}
+	return int(this.keys[n-1])
 }
 
 func (this *vbRangeScan) advance() bool {
@@ -833,6 +901,53 @@ func (this *vbRangeScan) reportError(err qerrors.Error) {
 
 func (this *vbRangeScan) sendData() {
 	this.scan.readyQueue.enqueue(this)
+}
+
+func (this *vbRangeScan) addKey(key []byte) bool {
+	var err error
+	if this.buffer == nil {
+		this.buffer = make([]byte, 0, _SS_KEY_BUFFER)
+	}
+	if this.offset+uint32(len(key)) >= uint32(cap(this.buffer)) && this.spill == nil {
+		this.spill, err = util.CreateTemp(_SS_SPILL_FILE_PATTERN, true)
+		if err != nil {
+			this.reportError(qerrors.NewSSError(qerrors.E_SS_SPILL, err))
+			return false
+		}
+	}
+	if this.keys == nil {
+		this.keys = make([]uint32, 0, _SS_INIT_KEYS)
+	}
+	if this.offset < uint32(cap(this.buffer)) && this.offset+uint32(len(key)) >= uint32(cap(this.buffer)) {
+		// flush the buffer to spill file
+		_, err = this.spill.Write(this.buffer)
+		if err != nil {
+			this.reportError(qerrors.NewSSError(qerrors.E_SS_SPILL, err))
+			return false
+		}
+		this.buffer = this.buffer[:0]
+	}
+	this.offset += uint32(len(key))
+	if this.offset >= uint32(cap(this.buffer)) {
+		if !util.UseTemp(this.spill.Name(), int64(len(key))) {
+			this.reportError(qerrors.NewTempFileQuotaExceededError())
+			return false
+		}
+		_, err = this.spill.Write(key)
+		if err != nil {
+			this.reportError(qerrors.NewSSError(qerrors.E_SS_SPILL, err))
+			return false
+		}
+	} else {
+		this.buffer = append(this.buffer, key...)
+	}
+	if len(this.keys) == cap(this.keys) {
+		nw := make([]uint32, len(this.keys), cap(this.keys)*2)
+		copy(nw, this.keys)
+		this.keys = nw
+	}
+	this.keys = append(this.keys, this.offset)
+	return true
 }
 
 /*
@@ -866,216 +981,161 @@ func (this *vbRangeScanHeap) Remove(vbscan *vbRangeScan) {
 	}
 }
 
-func (this *vbRangeScanHeap) cancelAll() {
-	for i := range *this {
-		(*this)[i].state = _VBS_CANCELLED
-	}
-}
-
 /*
  * Grouped list container for scans.  Handles actual KV interaction.
  */
 
-type vbScanShare struct {
-	next  *vbScanShare
-	scans []*vbRangeScan
-}
-
-func (this *vbScanShare) runScan() {
-	var scanReq int64
-	var scanRes int64
-
-	// walk scans list and remove any cancelled scans
-	for i := 0; i < len(this.scans); i++ {
-		if this.scans[i].scan.inactive {
-			this.removeScan(i)
-			i--
+func (this *vbRangeScan) validateSingleKey(conn *memcached.Client) bool {
+	key, _ := this.startFrom()
+	ok, err := conn.ValidateKey(this.vbucket(), string(key))
+	if err != nil {
+		this.reportError(qerrors.NewSSError(qerrors.E_SS_VALIDATE, err))
+		return true
+	}
+	this.kvOpsComplete = true
+	if !ok {
+		// success but no data
+		if this.keys != nil {
+			this.keys = this.keys[:0]
+		}
+		err = this.truncate()
+		if err != nil {
+			this.reportError(qerrors.NewSSError(qerrors.E_SS_SPILL, err))
+		}
+	} else {
+		if !this.addKey(key) {
+			this.reportError(qerrors.NewError(nil, "validateSingleKey: failed to add key to scan results"))
 		}
 	}
-	if len(this.scans) == 0 {
-		return
+	if this.state != _VBS_CANCELLED {
+		this.state = _VBS_WORKED
 	}
+	this.sendData()
+	return true
+}
 
-	for _, s := range this.scans {
-		s.state = _VBS_WORKING
+func (this *vbRangeScan) runScan(conn *memcached.Client) bool {
+	if this.state != _VBS_WORKING {
+		// cancelled whilst connection was being obtained
+		return true
 	}
-
 	defer func() {
-		for _, s := range this.scans {
-			if s.state == _VBS_WORKING {
-				s.state = _VBS_ERROR
-			}
+		if this.state == _VBS_WORKING {
+			this.state = _VBS_ERROR
+		}
+		if this.deferRelease {
+			this.release()
 		}
 	}()
 
-	// since shared (same) with all, just use the first one's
-	vbucket := this.scans[0].vbucket()
-	b := this.scans[0].b
+	if this.singleKey {
+		return this.validateSingleKey(conn)
+	}
 
 	var err error
 	var response *gomemcached.MCResponse
-	var conn *memcached.Client
-	var pool *connectionPool
 
 	uuid := make([]byte, 16)
 	opaque := uint32(0)
 
-	cancelScanFunc := func(mc *memcached.Client, vb uint16) error {
-		mc.CancelRangeScan(vbucket, uuid, opaque)
-		return nil
+	cancelScan := func(keepConn bool) bool {
+		_RSW.queueCancel(this, uuid)
+		return keepConn
 	}
 
-	desc := &doDescriptor{useReplicas: false, version: b.Version, maxTries: b.backOffRetries(), retry: true}
-	for desc.attempts = 0; desc.attempts < desc.maxTries; {
-		conn, pool, err = b.getVbConnection(uint32(vbucket), desc)
-		if err != nil {
-			if desc.retry {
-				desc.attempts++
-				continue
-			}
-			this.reportErrorToAll(qerrors.NewSSError(qerrors.E_SS_CONN, err))
-			return
-		}
-		break
-	}
-	if conn == nil {
-		b.do3(vbucket, cancelScanFunc, false, false, 1) // unlikely to succeed, but try anyway
-		this.reportErrorToAll(qerrors.NewSSError(qerrors.E_SS_CONN, err))
-		return
-	}
-	if DefaultTimeout > 0 {
-		conn.SetDeadline(getDeadline(noDeadline, DefaultTimeout))
-	} else {
-		conn.SetDeadline(noDeadline)
-	}
-	if desc.replica > 0 {
-		conn.SetReplica(true)
-	}
+	start, exclStart := this.startFrom()
+	end, exclEnd := this.endWith()
 
-	defer func() {
-		if desc.discard {
-			pool.Discard(conn)
-		} else {
-			conn.SetReplica(false)
-			pool.Return(conn)
-		}
-	}()
-
-	start, exclStart := this.scans[0].startFrom()
-	end, exclEnd := this.scans[0].endWith()
-
-	response, err = conn.CreateRangeScan(vbucket, this.scans[0].scan.collId, start, exclStart, end, exclEnd)
-	if err != nil {
+	response, err = conn.CreateRangeScan(this.vbucket(), this.scan.collId, start, exclStart, end, exclEnd)
+	if err != nil || len(response.Body) < 16 {
 		resp, ok := err.(*gomemcached.MCResponse)
 		if ok && resp.Status == gomemcached.KEY_ENOENT {
 			// success but no data
-			for _, s := range this.scans {
-				s.kvOpsComplete = true
-				if s.keys != nil {
-					s.keys = s.keys[:0]
-				}
-				if s.spill != nil {
-					err = s.truncate()
-					if err != nil {
-						s.reportError(qerrors.NewSSError(qerrors.E_SS_SPILL, err))
-					}
-				}
+			this.kvOpsComplete = true
+			if this.keys != nil {
+				this.keys = this.keys[:0]
 			}
-			if !this.sendDataToAll() {
-				logging.Debugf("DATA SEND FAILED")
+			err = this.truncate()
+			if err != nil {
+				this.reportError(qerrors.NewSSError(qerrors.E_SS_SPILL, err))
+			} else {
+				this.state = _VBS_WORKED
+				this.sendData()
 			}
-			return
+			return true
 		}
-		this.reportErrorToAll(qerrors.NewSSError(qerrors.E_SS_CREATE, err))
-		return
+		if err == nil {
+			logging.Debuga(func() string {
+				return fmt.Sprintf("[%p,%d] runScan: create failed, response: %v", this, this.vbucket(), response)
+			})
+			this.reportError(qerrors.NewSSError(qerrors.E_SS_CREATE))
+		} else {
+			logging.Debuga(func() string {
+				return fmt.Sprintf("[%p,%d] runScan: create failed, error: %v", this, this.vbucket(), err)
+			})
+			this.reportError(qerrors.NewSSError(qerrors.E_SS_CREATE, err))
+		}
+		return ok // only retain the connection if a valid KV error response
 	}
 	opaque = response.Opaque
 	copy(uuid, response.Body[0:16])
-
-	for n := 0; n < len(this.scans); {
-		if this.scans[n].state == _VBS_CANCELLED {
-			this.removeScan(n)
-		} else {
-			n++
-		}
-	}
-	if len(this.scans) == 0 {
-		b.do3(vbucket, cancelScanFunc, false, false, 1)
-		return
+	if this.state == _VBS_CANCELLED {
+		return cancelScan(true)
 	}
 
-	err = conn.ContinueRangeScan(vbucket, uuid, opaque, this.scans[0].scan.fetchLimit(), 0, 0)
+	err = conn.ContinueRangeScan(this.vbucket(), uuid, opaque, this.scan.fetchLimit, 0, 0)
 	if err != nil {
-		this.reportErrorToAll(qerrors.NewSSError(qerrors.E_SS_CONTINUE, err))
-		return
+		this.reportError(qerrors.NewSSError(qerrors.E_SS_CONTINUE, err))
+		return cancelScan(false)
 	}
-	scanReq++
-	for n := 0; n < len(this.scans); {
-		s := this.scans[n]
-		if s.spill == nil {
-			s.spill, err = util.CreateTemp(_SS_SPILL_FILE_PATTERN, true)
-			if err != nil {
-				s.reportError(qerrors.NewSSError(qerrors.E_SS_SPILL, err))
-				if !this.removeScan(n) {
-					desc.discard = true // as it will need to drain an unknown number of responses otherwise
-					b.do3(vbucket, cancelScanFunc, false, false, 1)
-					return
-				}
-				continue
-			}
-		} else {
-			err = s.truncate()
-			if err != nil {
-				s.reportError(err.(qerrors.Error))
-				if !this.removeScan(n) {
-					desc.discard = true // as it will need to drain an unknown number of responses otherwise
-					b.do3(vbucket, cancelScanFunc, false, false, 1)
-					return
-				}
-				continue
-			}
-		}
-		if s.keys == nil {
-			s.keys = make([]uint32, 0, _SS_INIT_KEYS)
-		} else {
-			s.keys = s.keys[:0]
-		}
-		n++
+	err = this.truncate()
+	if err != nil {
+		this.reportError(err.(qerrors.Error))
+		return cancelScan(false)
 	}
-	offset := uint32(0)
+	cancelWorking := func() bool {
+		if response.Status == gomemcached.RANGE_SCAN_COMPLETE {
+			return true
+		} else if response.Status == gomemcached.RANGE_SCAN_MORE {
+			_, err := conn.CancelRangeScan(this.vbucket(), uuid, 0)
+			if err != nil {
+				resp, ok := err.(*gomemcached.MCResponse)
+				if ok && resp.Status == gomemcached.KEY_ENOENT {
+					err = nil
+				}
+			}
+			return err == nil
+		}
+		return cancelScan(false)
+	}
 	// loop receiving and accumulating results into all the vbRangeScans
-processing:
 	for {
-		for n := 0; n < len(this.scans); {
-			if this.scans[n].state == _VBS_CANCELLED {
-				this.removeScan(n)
-			} else {
-				n++
-			}
-		}
-		if len(this.scans) == 0 {
-			desc.discard = true // as it will need to drain an unknown number of responses otherwise
-			b.do3(vbucket, cancelScanFunc, false, false, 1)
-			break processing
+		if this.state == _VBS_CANCELLED {
+			return cancelScan(false)
 		}
 
 		// Receive a CONTINUE SCAN response
-		response, err = conn.ReceiveWithDeadline(time.Now().Add(this.scans[0].scan.kvTimeout))
+		response, err = conn.ReceiveWithDeadline(time.Now().Add(this.scan.kvTimeout))
 		if err != nil {
 			resp, ok := err.(*gomemcached.MCResponse)
 			if ok && resp.Status != gomemcached.SUCCESS &&
 				resp.Status != gomemcached.RANGE_SCAN_MORE &&
 				resp.Status != gomemcached.RANGE_SCAN_COMPLETE {
 
-				this.reportErrorToAll(qerrors.NewSSError(qerrors.E_SS_CONTINUE, err))
-				break processing
+				this.reportError(qerrors.NewSSError(qerrors.E_SS_CONTINUE, err))
+				return cancelScan(false)
 			}
 		}
-		scanRes++
 
+		if this.state == _VBS_CANCELLED {
+			return cancelWorking()
+		}
+
+		lastStart := 0
+		lastEnd := 0
 		if len(response.Body) > 0 {
 			var l, p uint32
-			for i := 0; i < len(response.Body); {
+			for i := 0; i < len(response.Body) && this.state == _VBS_WORKING; {
 				// read a length... leb128 format (use 32-bits even though length will likely never be this large)
 				l = uint32(0)
 				for shift := 0; i < len(response.Body); {
@@ -1090,228 +1150,495 @@ processing:
 				if i+int(l) > len(response.Body) {
 					l = uint32(len(response.Body) - int(i))
 				}
-				offset += l
-				for n := 0; n < len(this.scans); {
-					if !util.UseTemp(this.scans[n].spill.Name(), int64(l)) {
-						this.scans[n].reportError(qerrors.NewTempFileQuotaExceededError())
-						if !this.removeScan(n) {
-							desc.discard = true // as it will need to drain an unknown number of responses otherwise
-							b.do3(vbucket, cancelScanFunc, false, false, 1)
-							break processing
-						}
-						continue
-					}
-					_, err = this.scans[n].spill.Write(response.Body[i : i+int(l)])
-					if err != nil {
-						this.scans[n].reportError(qerrors.NewSSError(qerrors.E_SS_SPILL, err))
-						if !this.removeScan(n) {
-							desc.discard = true // as it will need to drain an unknown number of responses otherwise
-							b.do3(vbucket, cancelScanFunc, false, false, 1)
-							break processing
-						}
-						continue
-					} else {
-						if len(this.scans[n].keys) == cap(this.scans[n].keys) {
-							nw := make([]uint32, len(this.scans[n].keys), cap(this.scans[n].keys)<<2)
-							copy(nw, this.scans[n].keys)
-							this.scans[n].keys = nw
-						}
-						this.scans[n].keys = append(this.scans[n].keys, offset)
-					}
-					n++
+				lastStart = i
+				lastEnd = i + int(l)
+				if !this.addKey(response.Body[lastStart:lastEnd]) {
+					// addKey will have reported the error already
+					return cancelWorking()
 				}
 				i += int(l)
 			}
+		}
+		if this.state == _VBS_CANCELLED {
+			return cancelWorking()
 		}
 
 		if len(response.Body) == 0 ||
 			response.Status == gomemcached.RANGE_SCAN_MORE ||
 			response.Status == gomemcached.RANGE_SCAN_COMPLETE {
 
+			keepConn := true
 			if response.Status != gomemcached.RANGE_SCAN_MORE {
 				// end of scan
-				for _, s := range this.scans {
-					s.kvOpsComplete = true
+				this.kvOpsComplete = true
+			} else {
+				if len(response.Body) >= lastEnd && lastStart != lastEnd {
+					this.setContinueFrom(response.Body[lastStart:lastEnd])
 				}
+				_, err := conn.CancelRangeScan(this.vbucket(), uuid, 0)
+				if err != nil {
+					resp, ok := err.(*gomemcached.MCResponse)
+					if ok && resp.Status == gomemcached.KEY_ENOENT {
+						err = nil
+					}
+				}
+				keepConn = (err == nil)
 			}
-			if !this.sendDataToAll() {
-				logging.Debugf("DATA SEND FAILED")
-			}
-			break processing
+			this.state = _VBS_WORKED
+			this.sendData()
+			return keepConn
 		}
 	}
-}
-
-func (this *vbScanShare) removeScan(n int) bool {
-	if n < 0 {
-		n = 0
-	}
-	if n < len(this.scans)-1 {
-		copy(this.scans[n:], this.scans[n+1:])
-	}
-	this.scans = this.scans[:len(this.scans)-1]
-	return len(this.scans) != 0
-}
-
-func (this *vbScanShare) reportErrorToAll(err qerrors.Error) {
-	for _, s := range this.scans {
-		s.reportError(err)
-	}
-}
-
-func (this *vbScanShare) sendDataToAll() bool {
-	succeeded := false
-	for _, s := range this.scans {
-		if s.state == _VBS_CANCELLED {
-			continue
-		}
-		s.state = _VBS_WORKED
-		s.sendData()
-		succeeded = true
-	}
-	return succeeded
 }
 
 /*
- * Pooled workers and work lists organised by data server.
+ * Range scan workers & queues.
  */
 
-type rswQueue struct {
+type scanCancel struct {
+	vbucket uint16
+	uuid    []byte
+	b       *Bucket
+}
+
+type scanCancelSlice []*scanCancel
+
+func (this scanCancelSlice) Len() int           { return len(this) }
+func (this scanCancelSlice) Less(i, j int) bool { return this[i].b.Name < this[i].b.Name }
+func (this scanCancelSlice) Swap(i, j int)      { this[i], this[j] = this[j], this[i] }
+
+type rswCancelQueue struct {
 	sync.RWMutex
-	scans *vbScanShare
+	scans scanCancelSlice
 	abort bool
 	cond  sync.Cond
+	queue *rswQueue
 }
 
-type rswControl struct {
-	sync.RWMutex
-	queues      []*rswQueue
-	nextRSWID   int
-	activeScans int
-	shrink      bool
-}
-
-var _RSW = &rswControl{}
-
-func (this *rswControl) queueScan(qNum int, vbscan *vbRangeScan) {
-	this.RLock()
-	queue := this.queues[qNum]
-	this.RUnlock()
-	queue.Lock()
-	if queue.scans == nil {
-		scan := &vbScanShare{}
-		scan.scans = append(scan.scans, vbscan)
-		queue.scans = scan
-	} else {
-		// walk list looking for same scans
-		for e := queue.scans; e != nil; e = e.next {
-			if e.scans[0].sameScan(vbscan) {
-				// share if the same
-				e.scans = append(e.scans, vbscan)
-				break
-			} else if e.next == nil {
-				// new at end of list
-				scan := &vbScanShare{}
-				scan.scans = append(scan.scans, vbscan)
-				e.next = scan
-				break
-			}
-		}
-	}
-	queue.cond.Signal()
-	queue.Unlock()
-}
-
-func (this *rswControl) nextScanShare(qNum int) *vbScanShare {
-	this.RLock()
-	queue := this.queues[qNum]
-	this.RUnlock()
-	queue.Lock()
-	rv := queue.scans
-	if queue.scans != nil {
-		queue.scans = rv.next
-		rv.next = nil
-	}
-	queue.Unlock()
-	return rv
-}
-
-func (this *rswControl) initWorkers(servers int) {
-
-	if servers < 1 {
-		servers = 1
-	}
-
-	this.Lock()
-	if this.queues == nil {
-		this.queues = make([]*rswQueue, 0, 128)
-	}
-	for len(this.queues) < servers {
-		nq := &rswQueue{}
-		nq.cond.L = nq
-		this.queues = append(this.queues, nq)
-		for i := 0; i < _SS_MAX_CONCURRENT_VBSCANS_PER_SERVER; i++ {
-			go this.runWorker(len(this.queues)-1, this.nextRSWID)
-			this.nextRSWID++
-		}
-	}
-	if len(this.queues) > servers {
-		this.shrink = true
-	}
-	this.activeScans++
-	this.Unlock()
-}
-
-func (this *rswControl) releaseWorkers() {
-	this.Lock()
-	this.activeScans--
-	if this.activeScans <= 0 {
-		if this.activeScans != 0 {
-			this.activeScans = 0
-		}
-		if this.shrink {
-			for _, q := range this.queues {
-				q.Lock()
-				q.abort = true
-				q.cond.Signal()
-				q.Unlock()
-			}
-			this.queues = nil
-			this.shrink = false
-		}
-	}
-	this.Unlock()
-}
-
-func (this *rswControl) runWorker(qNum int, id int) {
+func (cqueue *rswCancelQueue) runWorker() {
+	var cr scanCancelSlice
+	cqueueLocked := false
+	cqueueQLocked := false
 	defer func() {
 		r := recover()
 		if r != nil {
 			buf := make([]byte, 1<<16)
 			n := runtime.Stack(buf, false)
 			s := string(buf[0:n])
-			logging.Severef("Range scan worker [%v] {%v} panic: %v\n%v", id, qNum, r, s)
+			logging.Severef("Range scan cancel worker {%p} panic: %v\n%v", cqueue, r, s)
+			// cannot panic and die
+			if cqueueLocked {
+				cqueue.Unlock()
+			}
+			if !cqueueQLocked {
+				cqueue.queue.Lock()
+			}
+			if cr != nil && cqueue.queue != nil {
+				// clean-up to ensure we don't end up with stuck v-buckets
+				for i := range cr {
+					if len(cr[i].uuid) > 0 {
+						if _, ok := cqueue.queue.active[cr[i].vbucket]; ok {
+							cqueue.queue.active[cr[i].vbucket]--
+						}
+					}
+				}
+			}
+			cqueue.queue.Unlock()
+			go cqueue.runWorker()
 		}
-		// cannot panic and die
-		go this.runWorker(qNum, id)
 	}()
 
-	queue := this.queues[qNum]
+	var err error
+	var conn *memcached.Client
+	var pool *connectionPool
+	var b *Bucket
+	cqueue.Lock()
+	cqueueLocked = true
+	for {
+		if cqueue.abort {
+			cqueue.Unlock()
+			cqueueLocked = false
+			if conn != nil {
+				conn.SetReplica(false)
+				pool.Return(conn)
+				conn = nil
+			}
+			// worker pool is shrinking so exit gracefully
+			return
+		} else if cqueue.scans == nil {
+			// relinquish any held connection before waiting for more work
+			if conn != nil {
+				conn.SetReplica(false)
+				pool.Return(conn)
+				conn = nil
+			}
+			cqueue.cond.Wait()
+		} else {
+			cr := cqueue.scans
+			cqueue.scans = nil
+			cqueue.Unlock()
+			cqueueLocked = false
+			if cr != nil {
+				sort.Sort(cr)
+				var replica bool
+				var vbucket uint16
+			cancel:
+				for i := range cr {
+					if conn != nil && (b != cr[i].b || (replica && cr[i].vbucket != vbucket)) {
+						conn.SetReplica(false)
+						pool.Return(conn)
+						conn = nil
+					}
+					if conn == nil {
+						b = cr[i].b
+						replica = false
+						vbucket = cr[i].vbucket
+						desc := &doDescriptor{useReplicas: true, version: b.Version, maxTries: b.backOffRetries(), retry: true}
+						for desc.attempts = 0; desc.attempts < desc.maxTries; {
+							conn, pool, err = b.getVbConnection(uint32(vbucket), desc)
+							if err != nil {
+								if desc.retry {
+									desc.attempts++
+									continue
+								}
+								conn = nil
+							}
+							break
+						}
+						if conn == nil {
+							break cancel
+						}
+						if desc.replica > 0 {
+							conn.SetReplica(true)
+							replica = true
+						}
+					}
+					// always reset the deadline for each new piece of work
+					conn.SetDeadline(getDeadline(noDeadline, DefaultTimeout))
+					// TODO: batch by bucket, if/when protcol changes to support batch cancellations
+					_, err := conn.CancelRangeScan(cr[i].vbucket, cr[i].uuid, 0)
+					if err != nil {
+						resp, ok := err.(*gomemcached.MCResponse)
+						if !ok || resp.Status != gomemcached.KEY_ENOENT {
+							logging.Debuga(func() string {
+								return fmt.Sprintf("%s: vb %d cancel failed: %v", uuidAsString(cr[i].uuid), cr[i].vbucket, err)
+							})
+							pool.Discard(conn)
+							conn = nil
+						}
+					}
+					cqueue.queue.Lock()
+					cqueueQLocked = true
+					cqueue.queue.active[cr[i].vbucket]--
+					cr[i].uuid = cr[i].uuid[:0]
+					cqueueQLocked = false
+					cqueue.queue.Unlock()
+				}
+			}
+			cqueue.Lock()
+			cqueueLocked = true
+		}
+	}
+}
+
+type rswQueue struct {
+	sync.RWMutex
+	scans     *list.List
+	active    map[uint16]int
+	abort     bool
+	waitStart util.Time
+	cond      sync.Cond
+	cqueue    *rswCancelQueue
+}
+
+// queue must be locked on entry
+func (queue *rswQueue) nextScanLocked() *vbRangeScan {
+	for e := queue.scans.Front(); e != nil; e = e.Next() {
+		vbscan := e.Value.(*vbRangeScan)
+		cnt, found := queue.active[vbscan.vbucket()]
+		if !found || cnt <= 0 {
+			queue.scans.Remove(e)
+			queue.active[vbscan.vbucket()] = 1
+			return vbscan
+		}
+	}
+	return nil
+}
+
+func (queue *rswQueue) addScan(vbscan *vbRangeScan) {
 	queue.Lock()
+	queue.scans.PushBack(vbscan)
+	queue.cond.Broadcast()
+	queue.Unlock()
+}
+
+func (queue *rswQueue) finishScan(vbscan *vbRangeScan) {
+	queue.Lock()
+	queue.finishScanLocked(vbscan)
+	queue.Unlock()
+}
+
+func (queue *rswQueue) finishScanLocked(vbscan *vbRangeScan) {
+	queue.active[vbscan.vbucket()]--
+}
+
+func (queue *rswQueue) cancelSeqScan(ss *seqScan) {
+	queue.Lock()
+	for e := queue.scans.Front(); e != nil; {
+		vbscan := e.Value.(*vbRangeScan)
+		en := e.Next()
+		if vbscan.scan == ss {
+			queue.scans.Remove(e)
+		}
+		e = en
+	}
+	queue.Unlock()
+}
+
+func (queue *rswQueue) runWorker() {
+	var vbscan *vbRangeScan
+	queueLocked := false
+	defer func() {
+		r := recover()
+		if r != nil {
+			buf := make([]byte, 1<<16)
+			n := runtime.Stack(buf, false)
+			s := string(buf[0:n])
+			logging.Severef("Range scan worker [%p] panic: %v\n%v", queue, r, s)
+			// cannot panic and die
+			if queueLocked {
+				queue.Unlock()
+			}
+			if vbscan != nil && vbscan.state == _VBS_WORKING {
+				// clean-up to ensure we don't end up with stuck v-buckets
+				queue.finishScan(vbscan)
+			}
+			go queue.runWorker()
+		}
+	}()
+
+	var err error
+	var conn *memcached.Client
+	var pool *connectionPool
+	var b *Bucket
+	var vb uint16
+	var replica bool
+
+	queue.Lock()
+	queueLocked = true
 	for {
 		if queue.abort {
 			queue.Unlock()
-			// pool is shrinking so exit gracefully
+			queueLocked = false
+			if conn != nil {
+				conn.SetReplica(false)
+				pool.Return(conn)
+				conn = nil
+			}
+			// worker pool is shrinking so exit gracefully
 			return
-		} else if queue.scans == nil {
+		} else if queue.scans.Front() == nil {
+			// relinquish any held connection before waiting for more work
+			if conn != nil {
+				conn.SetReplica(false)
+				pool.Return(conn)
+				conn = nil
+			}
+			queue.waitStart = util.Now()
 			queue.cond.Wait()
+			queue.waitStart = 0
 		} else {
+			vbscan := queue.nextScanLocked()
+			if vbscan != nil && !atomic.CompareAndSwapInt32((*int32)(&vbscan.state), int32(_VBS_SCHEDULED), int32(_VBS_WORKING)) {
+				queue.finishScanLocked(vbscan)
+				vbscan = nil
+				continue
+			}
 			queue.Unlock()
-			ss := this.nextScanShare(qNum)
-			if ss != nil {
-				ss.runScan()
+			queueLocked = false
+			if vbscan != nil {
+				if conn != nil && (b != vbscan.b || (replica && vbscan.vbucket() != vb)) {
+					conn.SetReplica(false)
+					pool.Return(conn)
+					conn = nil
+				}
+				run := true
+				if conn == nil {
+					// the connection here can be reused for any future scans handled by this worker since each scan queue is
+					// bound to a single server
+					b = vbscan.b
+					vb = vbscan.vbucket()
+					replica = false
+					desc := &doDescriptor{useReplicas: false, version: b.Version, maxTries: b.backOffRetries(), retry: true}
+					for desc.attempts = 0; desc.attempts < desc.maxTries; {
+						conn, pool, err = b.getVbConnection(uint32(vb), desc)
+						if err != nil {
+							if desc.retry {
+								desc.attempts++
+								continue
+							}
+							vbscan.reportError(qerrors.NewSSError(qerrors.E_SS_CONN, err))
+							conn = nil
+							run = false
+						}
+						break
+					}
+					if conn == nil && run == true {
+						vbscan.reportError(qerrors.NewSSError(qerrors.E_SS_CONN, err))
+						run = false
+					}
+					if conn != nil {
+						if desc.replica > 0 {
+							conn.SetReplica(true)
+							replica = true
+						}
+					}
+				}
+				if run == true {
+					// always reset the deadline for each new piece of work
+					conn.SetDeadline(getDeadline(noDeadline, _SS_MAX_DURATION))
+					if !vbscan.runScan(conn) {
+						pool.Discard(conn)
+						conn = nil
+					}
+				}
 			}
 			queue.Lock()
+			queueLocked = true
+			if vbscan != nil {
+				queue.finishScanLocked(vbscan)
+			}
 		}
 	}
+}
+
+/*
+ * Queues by server, access and controllers.
+ */
+
+type rswControl struct {
+	sync.RWMutex
+	queues []*rswQueue
+}
+
+var _RSW = &rswControl{}
+
+func (this *rswControl) queueScan(vbscan *vbRangeScan) bool {
+	this.RLock()
+	if vbscan.queue >= len(this.queues) {
+		l := len(this.queues)
+		this.RUnlock()
+		logging.Severef("Sequential scan: Invalid queue %v (# of queues: %v)", vbscan.queue, l)
+		return false
+	}
+	queue := this.queues[vbscan.queue]
+	this.RUnlock()
+	queue.addScan(vbscan)
+	return true
+}
+
+func (this *rswControl) cancelQueuedScans(ss *seqScan) {
+	this.RLock()
+	for _, q := range this.queues {
+		q.cancelSeqScan(ss)
+	}
+	this.RUnlock()
+}
+
+func (this *rswControl) queueCancel(vbscan *vbRangeScan, uuid []byte) {
+	this.RLock()
+	if vbscan.queue >= len(this.queues) {
+		l := len(this.queues)
+		this.RUnlock()
+		logging.Severef("Sequential scan: Invalid queue %v (# of queues: %v) for cancel", vbscan.queue, l)
+		return
+	}
+	queue := this.queues[vbscan.queue]
+	this.RUnlock()
+	if queue.cqueue == nil {
+		return
+	}
+	queue.cqueue.Lock()
+	if queue.cqueue.scans == nil {
+		queue.cqueue.scans = make([]*scanCancel, 0, 256)
+	} else if len(queue.cqueue.scans) == cap(queue.cqueue.scans) {
+		n := make([]*scanCancel, len(queue.cqueue.scans), cap(queue.cqueue.scans)*2)
+		copy(n, queue.cqueue.scans)
+		queue.cqueue.scans = n
+		logging.Debuga(func() string {
+			return fmt.Sprintf("[%p] queueCancel: new cap: %v", queue.cqueue, cap(queue.cqueue.scans))
+		})
+	}
+	queue.cqueue.scans = append(queue.cqueue.scans, &scanCancel{vbucket: vbscan.vbucket(), uuid: uuid, b: vbscan.b})
+	queue.Lock()
+	queue.active[vbscan.vbucket()]++
+	queue.Unlock()
+	queue.cqueue.cond.Broadcast()
+	queue.cqueue.Unlock()
+}
+
+func (this *rswControl) initWorkers(servers int) {
+	if servers < 1 {
+		servers = 1
+	}
+	this.Lock()
+	if this.queues == nil {
+		// first time init
+		this.queues = make([]*rswQueue, 0, 32)
+		go this.monitorWorkers()
+	}
+	// add workers if necessary
+	for len(this.queues) < servers {
+		cqueue := &rswCancelQueue{}
+		cqueue.cond.L = cqueue
+		nq := &rswQueue{scans: list.New(), active: make(map[uint16]int, 1024), cqueue: cqueue}
+		nq.cond.L = nq
+		cqueue.queue = nq
+		this.queues = append(this.queues, nq)
+		go cqueue.runWorker()
+		for i := 0; i < _SS_MAX_CONCURRENT_VBSCANS_PER_SERVER; i++ {
+			go nq.runWorker()
+		}
+	}
+	this.Unlock()
+}
+
+func (this *rswControl) monitorWorkers() {
+	for {
+		time.Sleep(_SS_MONITOR_INTERVAL)
+		mark := util.Now()
+		this.Lock()
+		var n int
+		for n = len(this.queues) - 1; n > 0; n-- {
+			this.queues[n].Lock()
+			if this.queues[n].waitStart == 0 || mark.Sub(this.queues[n].waitStart) < _SS_MAX_WORKER_IDLE {
+				this.queues[n].Unlock()
+				break
+			}
+			this.queues[n].cqueue.Lock()
+			this.queues[n].cqueue.abort = true
+			this.queues[n].cqueue.cond.Broadcast()
+			this.queues[n].cqueue.Unlock()
+			this.queues[n].cqueue = nil
+			this.queues[n].abort = true
+			this.queues[n].cond.Broadcast()
+			this.queues[n].Unlock()
+			this.queues[n] = nil
+		}
+		if n < len(this.queues)-1 {
+			this.queues = this.queues[:n+1]
+		}
+		this.Unlock()
+	}
+}
+
+func uuidAsString(uuid []byte) string {
+	var sb strings.Builder
+	for i, b := range uuid {
+		sb.WriteString(fmt.Sprintf("%02x", b))
+		if i == 3 || i == 5 || i == 7 || i == 9 {
+			sb.WriteRune('-')
+		}
+	}
+	return sb.String()
 }

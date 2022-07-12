@@ -2432,8 +2432,14 @@ func (ks *keyspace) StartKeyScan(ranges []*datastore.SeqScanRange, offset int64,
 		r[i].Init(ranges[i].Start, ranges[i].ExcludeStart, ranges[i].End, ranges[i].ExcludeEnd)
 	}
 
-	collId := ks.scopes["_default"].keyspaces["_default"].uid
-	return ks.cbbucket.StartKeyScan(collId, r, offset, limit, ordered, timeout, pipelineSize, kvTimeout)
+	scope, ok := ks.scopes["_default"]
+	if ok {
+		coll, ok := scope.keyspaces["_default"]
+		if ok {
+			return ks.cbbucket.StartKeyScan(coll.uid, "", "", r, offset, limit, ordered, timeout, pipelineSize, kvTimeout)
+		}
+	}
+	return ks.cbbucket.StartKeyScan(0, "_default", "_default", r, offset, limit, ordered, timeout, pipelineSize, kvTimeout)
 }
 
 func (ks *keyspace) StopKeyScan(scan interface{}) errors.Error {

@@ -398,7 +398,7 @@ func (coll *collection) StartKeyScan(ranges []*datastore.SeqScanRange, offset in
 		r[i].Init(ranges[i].Start, ranges[i].ExcludeStart, ranges[i].End, ranges[i].ExcludeEnd)
 	}
 
-	return coll.bucket.cbbucket.StartKeyScan(coll.uid, r, offset, limit, ordered, timeout, pipelineSize, kvTimeout)
+	return coll.bucket.cbbucket.StartKeyScan(coll.uid, "", "", r, offset, limit, ordered, timeout, pipelineSize, kvTimeout)
 }
 
 func (coll *collection) StopKeyScan(scan interface{}) errors.Error {
