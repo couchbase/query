@@ -11,6 +11,7 @@
 package tenant
 
 import (
+	"net/http"
 	"strconv"
 	"strings"
 	"time"
@@ -33,6 +34,11 @@ type Services [_SIZER]Unit
 type ResourceManager func(string)
 
 type Context regulator.UserCtx
+type Endpoint interface {
+	Mux() *mux.Router
+	Authorize(req *http.Request) errors.Error
+	WriteError(err errors.Error, w http.ResponseWriter, req *http.Request)
+}
 
 var adminUserCtx = regulator.NewUserCtx("", "")
 
@@ -55,21 +61,31 @@ var toReg = [_SIZER]struct {
 	{regulator.Index, regulator.Read},
 	{regulator.Search, regulator.Read},
 	{regulator.Data, regulator.Read},
-	{regulator.Data, regulator.Read},
+	{regulator.Data, regulator.Write},
 }
 
 func Init(serverless bool) {
 	isServerless = serverless
 }
 
-func Start(mux *mux.Router, nodeid string, cafile string, regulatorsettingsfile string) {
+func Start(endpoint Endpoint, nodeid string, cafile string, regulatorsettingsfile string) {
 	if !isServerless {
 		return
 	}
 	handle := factory.InitRegulator(regulator.InitSettings{NodeID: service.NodeID(nodeid), TlsCAFile: cafile,
 		SettingsFile: regulatorsettingsfile, Service: regulator.Query,
 		ServiceCheckMask: regulator.Index | regulator.Search})
-	mux.Handle(regulator.MeteringEndpoint, handle).Methods("GET")
+	mux := endpoint.Mux()
+	tenantHandler := func(w http.ResponseWriter, req *http.Request) {
+		err := endpoint.Authorize(req)
+		if err != nil {
+			endpoint.WriteError(err, w, req)
+			return
+		}
+		handle.WriteMetrics(w)
+	}
+	mux.HandleFunc(regulator.MeteringEndpoint, tenantHandler).Methods("GET")
+	mux.HandleFunc("/_prometheusMetricsHigh", tenantHandler).Methods("GET")
 }
 
 func RegisterResourceManager(m ResourceManager) {

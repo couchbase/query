@@ -12,8 +12,6 @@ package tenant
 
 import (
 	"time"
-
-	"github.com/gorilla/mux"
 )
 
 type Unit uint64
@@ -22,6 +20,7 @@ type Services [_SIZER]Unit
 type ResourceManager func(string)
 
 type Context interface{}
+type Endpoint interface{}
 
 const (
 	QUERY_CU = Service(iota)
@@ -36,7 +35,7 @@ const (
 func Init(serverless bool) {
 }
 
-func Start(mux *mux.Router, nodeid string, cafile string, regulatorsettingsfile string) {
+func Start(endpoint Endpoint, nodeid string, cafile string, regulatorsettingsfile string) {
 }
 
 func RegisterResourceManager(m ResourceManager) {

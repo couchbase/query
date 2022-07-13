@@ -34,6 +34,7 @@ import (
 	"github.com/couchbase/query/prepareds"
 	"github.com/couchbase/query/scheduler"
 	"github.com/couchbase/query/server"
+	"github.com/couchbase/query/tenant"
 	"github.com/couchbase/query/transactions"
 	"github.com/couchbase/query/value"
 	"github.com/gorilla/mux"
@@ -134,9 +135,6 @@ func (this *HttpEndpoint) registerAccountingHandlers() {
 	prometheusLowHandler := func(w http.ResponseWriter, req *http.Request) {
 		this.wrapAPI(w, req, doPrometheusLow)
 	}
-	prometheusHighHandler := func(w http.ResponseWriter, req *http.Request) {
-		this.wrapAPI(w, req, doPrometheusHigh)
-	}
 	transactionsIndexHandler := func(w http.ResponseWriter, req *http.Request) {
 		this.wrapAPI(w, req, doTransactionsIndex)
 	}
@@ -180,7 +178,6 @@ func (this *HttpEndpoint) registerAccountingHandlers() {
 		indexesPrefix + "/dictionary_cache":               {handler: dictionaryIndexHandler, methods: []string{"GET"}},
 		indexesPrefix + "/tasks_cache":                    {handler: tasksIndexHandler, methods: []string{"GET"}},
 		prometheusLow:                                     {handler: prometheusLowHandler, methods: []string{"GET"}},
-		prometheusHigh:                                    {handler: prometheusHighHandler, methods: []string{"GET"}},
 		indexesPrefix + "/transactions":                   {handler: transactionsIndexHandler, methods: []string{"GET"}},
 		functionsBackupPrefix + "/backup":                 {handler: functionsGlobalBackupHandler, methods: []string{"GET", "POST"}},
 		functionsBackupPrefix + "/bucket/{bucket}/backup": {handler: functionsBucketBackupHandler, methods: []string{"GET", "POST"}},
@@ -188,6 +185,14 @@ func (this *HttpEndpoint) registerAccountingHandlers() {
 
 	for route, h := range routeMap {
 		this.mux.HandleFunc(route, h.handler).Methods(h.methods...)
+	}
+
+	// prometheus is a special case, as it may be handled by the tenant code
+	if !tenant.IsServerless() {
+		prometheusHighHandler := func(w http.ResponseWriter, req *http.Request) {
+			this.wrapAPI(w, req, doPrometheusHigh)
+		}
+		this.mux.HandleFunc(prometheusHigh, prometheusHighHandler).Methods("GET")
 	}
 
 	this.mux.HandleFunc(expvarsRoute, expvarsHandler).Methods("GET")
@@ -383,6 +388,19 @@ func (endpoint *HttpEndpoint) getCredentialsFromRequest(ds datastore.Datastore, 
 	}
 	creds.HttpRequest = req
 	return creds, nil, isInternal
+}
+
+func (endpoint *HttpEndpoint) Authorize(req *http.Request) errors.Error {
+	ds := datastore.GetDatastore()
+	creds, err, _ := endpoint.getCredentialsFromRequest(ds, req)
+	if err != nil {
+		return err
+	}
+
+	privs := auth.NewPrivileges()
+	privs.Add("", auth.PRIV_QUERY_STATS, auth.PRIV_PROPS_NONE)
+	_, err = ds.Authorize(privs, creds)
+	return err
 }
 
 func (endpoint *HttpEndpoint) verifyCredentialsFromRequest(api string, priv auth.Privilege, req *http.Request, af *audit.ApiAuditFields) (errors.Error, bool) {

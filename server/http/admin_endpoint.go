@@ -78,6 +78,10 @@ func (this *HttpEndpoint) wrapAPI(w http.ResponseWriter, req *http.Request, f ap
 	audit.SubmitApiRequest(&auditFields)
 }
 
+func (this *HttpEndpoint) WriteError(err errors.Error, w http.ResponseWriter, req *http.Request) {
+	writeError(w, err)
+}
+
 // Returns the HTTP error code, e.g. 500.
 func writeError(w http.ResponseWriter, err errors.Error) int {
 	w.Header().Set("Content-Type", "application/json")

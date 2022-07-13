@@ -405,7 +405,7 @@ func main() {
 	server.SetSettingsCallback(endpoint.SettingsCallback)
 
 	constructor.Init(endpoint.Mux(), server.Servicers())
-	tenant.Start(endpoint.Mux(), *UUID, *CA_FILE, *REGULATOR_SETTINGS_FILE)
+	tenant.Start(endpoint, *UUID, *CA_FILE, *REGULATOR_SETTINGS_FILE)
 
 	// topology awareness
 	_ = control.NewManager(*UUID)
