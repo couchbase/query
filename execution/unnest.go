@@ -122,6 +122,11 @@ func (this *Unnest) processItem(item value.AnnotatedValue, context *Context) boo
 				return false
 			}
 
+			if av != item && context.UseRequestQuota() && context.TrackValueSize(av.Size()) {
+				context.Error(errors.NewMemoryQuotaExceededError())
+				av.Recycle()
+				return false
+			}
 			if !this.sendItem(av) {
 				av.Recycle()
 				return false
