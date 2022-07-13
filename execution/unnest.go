@@ -97,21 +97,28 @@ func (this *Unnest) processItem(item value.AnnotatedValue, context *Context) boo
 		}
 		av.SetField(this.plan.Alias(), actv)
 
+		pass := true
 		if filter != nil {
 			result, err := filter.Evaluate(av, context)
 			if err != nil {
 				context.Error(errors.NewEvaluationError(err, "unnest filter"))
 				return false
 			}
-			if result.Truth() {
-				if !this.sendItem(av) {
-					return false
-				}
-			} else {
+			if !result.Truth() {
 				av.Recycle()
+				pass = false
 			}
-		} else if !this.sendItem(av) {
-			return false
+		}
+		if pass {
+			if av != item && context.UseRequestQuota() && context.TrackValueSize(av.Size()) {
+				context.Error(errors.NewMemoryQuotaExceededError())
+				av.Recycle()
+				return false
+			}
+			if !this.sendItem(av) {
+				av.Recycle()
+				return false
+			}
 		}
 
 		// no more
