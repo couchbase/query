@@ -158,8 +158,7 @@ func setFor(t *algebra.SetTerm, clone, item value.AnnotatedValue, context *Conte
 		if err != nil {
 			return nil, err
 		}
-
-		t.Path().Set(cvals[i], v, context)
+		t.Path().Set(cvals[i], v.CopyForUpdate(), context)
 	}
 
 	return clone, nil
