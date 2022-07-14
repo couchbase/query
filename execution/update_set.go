@@ -103,6 +103,10 @@ func setPath(t *algebra.SetTerm, clone, item value.AnnotatedValue, context *Cont
 		return nil, err
 	}
 
+	if t.Value().Static() != nil {
+		v = v.CopyForUpdate()
+	}
+
 	if t.Meta() != nil {
 		if opVal, ok := clone.GetAttachment("options").(value.Value); ok && opVal.Type() != value.MISSING {
 			t.Path().Set(opVal, v, context)
@@ -140,7 +144,6 @@ func setFor(t *algebra.SetTerm, clone, item value.AnnotatedValue, context *Conte
 	if len(ivals) != len(cvals) {
 		return clone, nil
 	}
-
 	when := t.UpdateFor().When()
 	for i := 0; i < len(cvals); i++ {
 		if when != nil {
@@ -158,7 +161,10 @@ func setFor(t *algebra.SetTerm, clone, item value.AnnotatedValue, context *Conte
 		if err != nil {
 			return nil, err
 		}
-		t.Path().Set(cvals[i], v.CopyForUpdate(), context)
+		if t.Value().Static() != nil {
+			v = v.CopyForUpdate()
+		}
+		t.Path().Set(cvals[i], v, context)
 	}
 
 	return clone, nil
