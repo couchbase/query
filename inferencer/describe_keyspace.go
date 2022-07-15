@@ -277,7 +277,7 @@ func (di *DefaultInferencer) InferKeyspace(context datastore.QueryContext, ks da
 		return
 	}
 
-	retriever, err := MakeUnifiedDocumentRetriever(context, ks, options.SampleSize, options.Flags)
+	retriever, err := MakeUnifiedDocumentRetriever("infer", context, ks, options.SampleSize, options.Flags)
 	if err != nil {
 		if !err.IsWarning() {
 			conn.Error(err)

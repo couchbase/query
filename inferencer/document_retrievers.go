@@ -149,6 +149,7 @@ func (this indexArray) Less(i, j int) bool {
 }
 
 type UnifiedDocumentRetriever struct {
+	name           string
 	ks             datastore.Keyspace
 	rnd            datastore.RandomEntryProvider
 	lastRnd        datastore.RandomEntryProvider
@@ -169,6 +170,10 @@ type UnifiedDocumentRetriever struct {
 	scanSampleSize int
 	offset         int64
 	lastKeys       value.Values
+}
+
+func (udr *UnifiedDocumentRetriever) Name() string {
+	return udr.name + "_retriever"
 }
 
 func (udr *UnifiedDocumentRetriever) Reset() {
@@ -226,13 +231,14 @@ func (udr *UnifiedDocumentRetriever) Close() {
 	runtime.SetFinalizer(udr, nil)
 }
 
-func MakeUnifiedDocumentRetriever(context datastore.QueryContext, ks datastore.Keyspace, sampleSize int, flags Flag) (
+func MakeUnifiedDocumentRetriever(name string, context datastore.QueryContext, ks datastore.Keyspace, sampleSize int, flags Flag) (
 	*UnifiedDocumentRetriever, errors.Error) {
 
 	var errs []errors.Error
 
 	udr := new(UnifiedDocumentRetriever)
 	runtime.SetFinalizer(udr, udrFinalizer)
+	udr.name = name
 	udr.ks = ks
 	udr.dedup = make(map[string]bool)
 	udr.currentIndex = -1
@@ -556,8 +562,10 @@ next_index:
 				start = int64(udr.scanBlockSize) - (udr.offset % int64(udr.scanBlockSize))
 				start %= int64(udr.scanBlockSize)
 			} else {
+				udr.lastKeys = nil
 				udr.spans[0].Ranges[0].Low = nil
 				udr.spans[0].Ranges[0].Inclusion = datastore.BOTH
+				udr.spans[0].Ranges = udr.spans[0].Ranges[:1]
 
 				// set-up for index-based options
 				remainingSampleSize := udr.sampleSize - udr.returned
@@ -574,7 +582,7 @@ next_index:
 				// break the number of keys down into blocks within which the samples can be randomly picked
 				// this is to try ensure more even distribution of sampling across the key range
 				ci := udr.indexes[udr.currentIndex].(datastore.CountIndex2)
-				nk, err := ci.CountDistinct("retriever", nil, datastore.UNBOUNDED, nil)
+				nk, err := ci.CountDistinct(udr.Name(), nil, datastore.UNBOUNDED, nil)
 				if err != nil {
 					docCount, err := udr.ks.Count(datastore.NULL_QUERY_CONTEXT)
 					if err != nil {
@@ -597,7 +605,7 @@ next_index:
 			if udr.isFlagOff(NO_RANDOM_INDEX_SAMPLE) && udr.scanBlockSize > udr.scanSampleSize {
 				// if the scan block size is greater than the index count, use the index count so we get at least 1 sample from it
 				ci := udr.indexes[udr.currentIndex].(datastore.CountIndex2)
-				count, err := ci.CountDistinct("retriever", nil, datastore.UNBOUNDED, nil)
+				count, err := ci.CountDistinct(udr.Name(), nil, datastore.UNBOUNDED, nil)
 				if err == nil && int64(udr.scanBlockSize) > count {
 					if int(count) > udr.scanSampleSize {
 						udr.offset = int64(rand.Int() % (int(count) - udr.scanSampleSize))
@@ -739,7 +747,7 @@ func (udr *UnifiedDocumentRetriever) restartScan(offset int64) {
 			proj.EntryKeys[i] = i
 		}
 	}
-	go index.Scan3("retriever", udr.spans, false, false, proj, offset, ss, nil, nil, datastore.UNBOUNDED, nil, udr.iconn)
+	go index.Scan3(udr.Name(), udr.spans, false, false, proj, offset, ss, nil, nil, datastore.UNBOUNDED, nil, udr.iconn)
 
 	logging.Debuga(func() string {
 		return fmt.Sprintf("UnifiedDocumentRetriever: scanning index %v (scan: %v, offset: %v, low: %v (first of %d))",
