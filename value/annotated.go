@@ -251,7 +251,7 @@ func (this *annotatedValue) SetCover(key string, val Value) {
 func (this *annotatedValue) ResetCovers(parent Value) {
 	if this.covers == nil {
 		return
-	} else if pav, ok := parent.(*annotatedValue); ok && pav.covers != nil {
+	} else if pav, ok := parent.(*annotatedValue); ok && pav != nil && pav.covers != nil {
 		for k, _ := range this.covers.Fields() {
 			if _, ok := pav.covers.Field(k); !ok {
 				this.covers.UnsetField(k)
