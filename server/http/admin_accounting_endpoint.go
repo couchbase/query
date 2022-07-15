@@ -399,7 +399,7 @@ func (endpoint *HttpEndpoint) Authorize(req *http.Request) errors.Error {
 
 	privs := auth.NewPrivileges()
 	privs.Add("", auth.PRIV_QUERY_STATS, auth.PRIV_PROPS_NONE)
-	_, err = ds.Authorize(privs, creds)
+	err = ds.Authorize(privs, creds)
 	return err
 }
 
@@ -420,7 +420,7 @@ func (endpoint *HttpEndpoint) verifyCredentialsFromRequest(api string, priv auth
 
 	privs := auth.NewPrivileges()
 	privs.Add(api, priv, auth.PRIV_PROPS_NONE)
-	_, err = ds.Authorize(privs, creds)
+	err = ds.Authorize(privs, creds)
 	return err, isInternal
 }
 

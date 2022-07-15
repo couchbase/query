@@ -24,7 +24,6 @@ package datastore
 import (
 	"bytes"
 	"fmt"
-	"net/http"
 	"strings"
 	"time"
 	"unicode"
@@ -39,26 +38,26 @@ const SYSTEM_NAMESPACE = "#system"
 
 // Datastore represents a cluster or single-node server.
 type Datastore interface {
-	Id() string                                                                            // Id of this datastore
-	URL() string                                                                           // URL to this datastore
-	Info() Info                                                                            // Secondary information about this datastore
-	NamespaceIds() ([]string, errors.Error)                                                // Ids of the namespaces contained in this datastore
-	NamespaceNames() ([]string, errors.Error)                                              // Names of the namespaces contained in this datastore
-	NamespaceById(id string) (Namespace, errors.Error)                                     // Find a namespace in this datastore using the namespace's Id
-	NamespaceByName(name string) (Namespace, errors.Error)                                 // Find a namespace in this datastore using the namespace's name
-	Authorize(*auth.Privileges, *auth.Credentials) (auth.AuthenticatedUsers, errors.Error) // Perform authorization and return nil if successful
-	PreAuthorize(*auth.Privileges)                                                         // Transform privileges in the internal format
-	CredsString(*http.Request) string                                                      // Return name from credentials in http request
-	GetUserUUID(*auth.Credentials) string                                                  // Returns user UUID for stats
-	GetUserBuckets(*auth.Credentials) []string                                             // Returns buckets user has access to for serverless accounting
-	SetLogLevel(level logging.Level)                                                       // Set log level of in-process indexers
-	Inferencer(name InferenceType) (Inferencer, errors.Error)                              // Schema inference provider by name, e.g. INF_DEFAULT
-	Inferencers() ([]Inferencer, errors.Error)                                             // List of schema inference providers
-	StatUpdater() (StatUpdater, errors.Error)                                              // Statistics Updater
-	UserInfo() (value.Value, errors.Error)                                                 // The users, and their roles. JSON data.
-	GetUserInfoAll() ([]User, errors.Error)                                                // Get information about all the users.
-	PutUserInfo(u *User) errors.Error                                                      // Set information for a specific user.
-	GetRolesAll() ([]Role, errors.Error)                                                   // Get all roles that exist in the system.
+	Id() string                                                 // Id of this datastore
+	URL() string                                                // URL to this datastore
+	Info() Info                                                 // Secondary information about this datastore
+	NamespaceIds() ([]string, errors.Error)                     // Ids of the namespaces contained in this datastore
+	NamespaceNames() ([]string, errors.Error)                   // Names of the namespaces contained in this datastore
+	NamespaceById(id string) (Namespace, errors.Error)          // Find a namespace in this datastore using the namespace's Id
+	NamespaceByName(name string) (Namespace, errors.Error)      // Find a namespace in this datastore using the namespace's name
+	Authorize(*auth.Privileges, *auth.Credentials) errors.Error // Perform authorization and return nil if successful
+	PreAuthorize(*auth.Privileges)                              // Transform privileges in the internal format
+	CredsString(*auth.Credentials) string                       // Return name from credentials in http request
+	GetUserUUID(*auth.Credentials) string                       // Returns user UUID for stats
+	GetUserBuckets(*auth.Credentials) []string                  // Returns buckets user has access to for serverless accounting
+	SetLogLevel(level logging.Level)                            // Set log level of in-process indexers
+	Inferencer(name InferenceType) (Inferencer, errors.Error)   // Schema inference provider by name, e.g. INF_DEFAULT
+	Inferencers() ([]Inferencer, errors.Error)                  // List of schema inference providers
+	StatUpdater() (StatUpdater, errors.Error)                   // Statistics Updater
+	UserInfo() (value.Value, errors.Error)                      // The users, and their roles. JSON data.
+	GetUserInfoAll() ([]User, errors.Error)                     // Get information about all the users.
+	PutUserInfo(u *User) errors.Error                           // Set information for a specific user.
+	GetRolesAll() ([]Role, errors.Error)                        // Get all roles that exist in the system.
 
 	AuditInfo() (*AuditInfo, errors.Error)
 	ProcessAuditUpdateStream(callb func(uid string) error) errors.Error

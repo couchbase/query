@@ -9,7 +9,6 @@
 package system
 
 import (
-	"net/http"
 	"time"
 
 	"github.com/couchbase/query/auth"
@@ -151,9 +150,9 @@ func (s *store) NamespaceByName(name string) (datastore.Namespace, errors.Error)
 	return s.actualStore.NamespaceByName(name)
 }
 
-func (s *store) Authorize(*auth.Privileges, *auth.Credentials) (auth.AuthenticatedUsers, errors.Error) {
+func (s *store) Authorize(*auth.Privileges, *auth.Credentials) errors.Error {
 	logging.Logf(logging.INFO, "System authorize")
-	return nil, nil
+	return nil
 }
 
 func (s *store) GetUserUUID(*auth.Credentials) string {
@@ -167,7 +166,7 @@ func (s *store) GetUserBuckets(*auth.Credentials) []string {
 func (s *store) PreAuthorize(*auth.Privileges) {
 }
 
-func (s *store) CredsString(req *http.Request) string {
+func (s *store) CredsString(*auth.Credentials) string {
 	return ""
 }
 

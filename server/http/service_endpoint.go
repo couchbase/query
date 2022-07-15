@@ -335,13 +335,13 @@ func (this *HttpEndpoint) ServeHTTP(resp http.ResponseWriter, req *http.Request)
 	// ESCAPE analysis workaround
 	request := requestPool.Get().(*httpRequest)
 	*request = httpRequest{}
-	newHttpRequest(request, resp, req, this.bufpool, this.server.RequestSizeCap(), this.server.Namespace())
+	newHttpRequest(request, resp, req, this.bufpool, this.server.RequestSizeCap(), this.server.Namespace(), this.trackUsers)
 	defer func() {
 		requestPool.Put(request)
 	}()
 
 	if this.trackUsers {
-		userName := datastore.CredsStringHTTP(request.Credentials())
+		userName := datastore.FirstCred(request.Credentials())
 		this.usersLock.Lock()
 		user := this.trackedUsers[userName]
 		request.SetTracked()
@@ -427,7 +427,7 @@ func (this *HttpEndpoint) ServeHTTP(resp http.ResponseWriter, req *http.Request)
 		if len(path) > 1 {
 			bucket = path[1]
 		}
-		ctx, err := tenant.Throttle(datastore.CredsStringHTTP(request.Credentials()), bucket, datastore.GetUserBuckets(request.Credentials()))
+		ctx, err := tenant.Throttle(datastore.FirstCred(request.Credentials()), bucket, datastore.GetUserBuckets(request.Credentials()))
 		if err != nil {
 			request.Fail(errors.NewServiceTenantThrottledError(err))
 			request.Failed(this.server)
@@ -701,7 +701,7 @@ func (this *HttpEndpoint) doStats(request *httpRequest, srvr *server.Server) {
 	request.CompleteRequest(request_time, service_time, transaction_time, request.resultCount,
 		request.resultSize, request.GetErrorCount(), request.req, srvr)
 	if this.trackUsers {
-		userName := datastore.CredsStringHTTP(request.Credentials())
+		userName := datastore.FirstCred(request.Credentials())
 		this.usersLock.RLock()
 		user := this.trackedUsers[userName]
 		this.usersLock.RUnlock()

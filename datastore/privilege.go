@@ -15,45 +15,23 @@ import (
 )
 
 func CredsArray(creds *auth.Credentials) []string {
-	credsLen := 1
 	if creds != nil {
-		credsLen += len(creds.Users)
-	}
-	credsList := make([]string, 0, credsLen)
-	credsMap := make(map[string]bool, credsLen)
-	if credsLen > 1 {
-		for k := range creds.Users {
-			if k == "" {
-				continue
-			}
-			if _, found := credsMap[k]; found {
-				continue
-			}
-			credsMap[k] = true
-			credsList = append(credsList, k)
+		if len(creds.CbauthCredentialsList) == 0 {
+			GetDatastore().Authorize(nil, creds)
 		}
+		return []string(creds.AuthenticatedUsers)
 	}
-	ds := GetDatastore()
-	if ds != nil && creds != nil {
-		reqName := ds.CredsString(creds.HttpRequest)
-		if reqName != "" {
-			if _, found := credsMap[reqName]; !found {
-				credsMap[reqName] = true
-				credsList = append(credsList, reqName)
-			}
-		}
-	}
-	return credsList
+	return []string{}
 }
 
 func CredsString(creds *auth.Credentials) string {
 	return strings.Join(CredsArray(creds), ",")
 }
 
-func CredsStringHTTP(creds *auth.Credentials) string {
+func FirstCred(creds *auth.Credentials) string {
 	ds := GetDatastore()
 	if ds != nil && creds != nil {
-		return ds.CredsString(creds.HttpRequest)
+		return ds.CredsString(creds)
 	}
 	return ""
 }

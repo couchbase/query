@@ -137,7 +137,7 @@ func TestSimpleSelect(t *testing.T) {
 
 func runCases(t *testing.T, cases []testCase) {
 	for _, c := range cases {
-		_, err := cbAuthorize(c.authSource, c.privs, c.creds)
+		err := cbAuthorize(c.authSource, c.privs, c.creds)
 		if c.shouldSucceed {
 			if err != nil {
 				t.Fatalf("Case %s should succeed, but it failed with error %v.", c.purpose, err)

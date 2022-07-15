@@ -30,6 +30,7 @@ import (
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/prepareds"
 	"github.com/couchbase/query/server"
+	"github.com/couchbase/query/tenant"
 	"github.com/couchbase/query/timestamp"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
@@ -61,7 +62,7 @@ type httpRequest struct {
 
 var zeroScanVectorSource = &ZeroScanVectorSource{}
 
-func newHttpRequest(rv *httpRequest, resp http.ResponseWriter, req *http.Request, bp BufferPool, size int, namespace string) {
+func newHttpRequest(rv *httpRequest, resp http.ResponseWriter, req *http.Request, bp BufferPool, size int, namespace string, trackUsers bool) {
 
 	var httpArgs httpRequestArgs
 	var err errors.Error
@@ -144,12 +145,11 @@ func newHttpRequest(rv *httpRequest, resp http.ResponseWriter, req *http.Request
 			creds.HttpRequest = req
 			rv.SetCredentials(creds)
 
+			// TODO remove passwordless buckets and turn on in all cases
 			// This means we got creds. Now we need to see if they are authorized users.
-			if !pwdlessbkts {
-				var authUsers auth.AuthenticatedUsers
-
-				authUsers, err1 = datastore.GetDatastore().Authorize(nil, creds)
-				if authUsers == nil {
+			if trackUsers || tenant.IsServerless() || !pwdlessbkts {
+				err1 = datastore.GetDatastore().Authorize(nil, creds)
+				if err1 != nil || len(creds.AuthenticatedUsers) == 0 {
 
 					// This means the users associated with the input credentials do not have authorization.
 					// Throw an error

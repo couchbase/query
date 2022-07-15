@@ -22,6 +22,6 @@ func Init() {
 }
 
 func authorize(privileges *auth.Privileges, credentials *auth.Credentials) errors.Error {
-	_, err := datastore.GetDatastore().Authorize(privileges, credentials)
+	err := datastore.GetDatastore().Authorize(privileges, credentials)
 	return err
 }

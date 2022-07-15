@@ -19,7 +19,6 @@ package mock
 import (
 	"encoding/json"
 	"fmt"
-	"net/http"
 	"strconv"
 	"strings"
 
@@ -80,8 +79,8 @@ func (s *store) NamespaceByName(name string) (p datastore.Namespace, e errors.Er
 	return
 }
 
-func (s *store) Authorize(*auth.Privileges, *auth.Credentials) (auth.AuthenticatedUsers, errors.Error) {
-	return nil, nil
+func (s *store) Authorize(*auth.Privileges, *auth.Credentials) errors.Error {
+	return nil
 }
 
 func (s *store) GetUserUUID(*auth.Credentials) string {
@@ -95,7 +94,7 @@ func (s *store) GetUserBuckets(*auth.Credentials) []string {
 func (s *store) PreAuthorize(*auth.Privileges) {
 }
 
-func (s *store) CredsString(req *http.Request) string {
+func (s *store) CredsString(*auth.Credentials) string {
 	return ""
 }
 

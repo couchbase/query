@@ -264,7 +264,7 @@ func isClientCertPresent(req *http.Request) bool {
 	return req != nil && req.TLS != nil && req.TLS.PeerCertificates != nil
 }
 
-func cbAuthorize(s authSource, privileges *auth.Privileges, credentials *auth.Credentials) (auth.AuthenticatedUsers, errors.Error) {
+func cbAuthorize(s authSource, privileges *auth.Privileges, credentials *auth.Credentials) errors.Error {
 
 	var reason error
 
@@ -308,13 +308,13 @@ func cbAuthorize(s authSource, privileges *auth.Privileges, credentials *auth.Cr
 
 				clientAuthType, err1 := cbauth.GetClientCertAuthType()
 				if err1 != nil {
-					return nil, errors.NewDatastoreAuthorizationError(err1)
+					return errors.NewDatastoreAuthorizationError(err1)
 				}
 
 				// If enable or mandatory and client cert is present, and you see an error
 				// Then return the error.
 				if clientAuthType != tls.NoClientCert && isClientCertPresent(req) {
-					return nil, errors.NewDatastoreAuthorizationError(err)
+					return errors.NewDatastoreAuthorizationError(err)
 				} else if clientAuthType == tls.NoClientCert && impersonation != "" {
 					reason = errors.NewDatastoreAuthorizationError(err)
 				}
@@ -344,12 +344,22 @@ func cbAuthorize(s authSource, privileges *auth.Privileges, credentials *auth.Cr
 				creds, err := s.auth(un, password)
 				if err != nil {
 					logging.Debugf("Unable to authorize <ud>%s</ud>. Error - %v", username, err)
-					return nil, errors.NewDatastoreAuthorizationError(err)
+					return errors.NewDatastoreAuthorizationError(err)
 				} else {
 					reason = nil
 					credentialsList = append(credentialsList, creds)
 					if un != "" {
-						authenticatedUsers = append(authenticatedUsers, userKeyString(creds))
+						un = userKeyString(creds)
+						found := false
+						for _, u := range authenticatedUsers {
+							if un == u {
+								found = true
+								break
+							}
+						}
+						if !found {
+							authenticatedUsers = append(authenticatedUsers, un)
+						}
 					}
 				}
 			}
@@ -361,7 +371,7 @@ func cbAuthorize(s authSource, privileges *auth.Privileges, credentials *auth.Cr
 
 	// No privileges to check? Done.
 	if privileges == nil || len(privileges.List) == 0 {
-		return credentials.AuthenticatedUsers, nil
+		return nil
 	}
 
 	// Check every requested privilege against the credentials list.
@@ -369,12 +379,12 @@ func cbAuthorize(s authSource, privileges *auth.Privileges, credentials *auth.Cr
 	remainingPrivileges, err := authAgainstCreds(s, privileges.List, credentials.CbauthCredentialsList)
 
 	if err != nil {
-		return nil, errors.NewDatastoreAuthorizationError(err)
+		return errors.NewDatastoreAuthorizationError(err)
 	}
 
 	if len(remainingPrivileges) == 0 {
 		// Everything is authorized. Success!
-		return credentials.AuthenticatedUsers, nil
+		return nil
 	}
 
 	// Derive possible default credentials from remaining privileges.
@@ -383,15 +393,15 @@ func cbAuthorize(s authSource, privileges *auth.Privileges, credentials *auth.Cr
 	deniedPrivileges, err := authAgainstCreds(s, remainingPrivileges, defaultCredentials)
 
 	if err != nil {
-		return nil, errors.NewDatastoreAuthorizationError(err)
+		return errors.NewDatastoreAuthorizationError(err)
 	}
 
 	if len(deniedPrivileges) == 0 {
 		// Authorized using defaults.
-		return credentials.AuthenticatedUsers, nil
+		return nil
 	}
 	msg := messageForDeniedPrivilege(deniedPrivileges[0])
-	return nil, errors.NewDatastoreInsufficientCredentials(msg, reason)
+	return errors.NewDatastoreInsufficientCredentials(msg, reason)
 }
 
 func cbPreAuthorize(privileges *auth.Privileges) {

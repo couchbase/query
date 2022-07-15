@@ -342,62 +342,47 @@ func (s *store) authWebCreds(req *http.Request) (cbauth.Creds, error) {
 	return cbauth.AuthWebCreds(req)
 }
 
-func (s *store) Authorize(privileges *auth.Privileges, credentials *auth.Credentials) (auth.AuthenticatedUsers, errors.Error) {
+func (s *store) Authorize(privileges *auth.Privileges, credentials *auth.Credentials) errors.Error {
 	if s.CbAuthInit == false {
 		// cbauth is not initialized. Access to SASL protected buckets will be
 		// denied by the couchbase server
 		logging.Warnf("CbAuth not intialized")
-		return nil, nil
+		return nil
 	}
 	return cbAuthorize(s, privileges, credentials)
 }
 
-func (s *store) GetUserUUID(credentials *auth.Credentials) string {
-	if s.CbAuthInit == false {
-		// cbauth is not initialized. Access to SASL protected buckets will be
-		// denied by the couchbase server
-		logging.Warnf("CbAuth not intialized")
-		return ""
-	}
-	if credentials.HttpRequest == nil {
-		return ""
-	}
-	creds, _ := cbauth.AuthWebCreds(credentials.HttpRequest)
-	if creds != nil {
-		res, _ := creds.Uuid()
-		return res
+func (s *store) GetUserUUID(creds *auth.Credentials) string {
+	if creds != nil && len(creds.CbauthCredentialsList) > 0 {
+		uuid, err := creds.CbauthCredentialsList[0].Uuid()
+		if err == nil {
+			return uuid
+		}
 	}
 	return ""
 }
 
-func (s *store) GetUserBuckets(credentials *auth.Credentials) []string {
+func (s *store) GetUserBuckets(creds *auth.Credentials) []string {
 	if s.CbAuthInit == false {
 		// cbauth is not initialized. Access to SASL protected buckets will be
 		// denied by the couchbase server
 		logging.Warnf("CbAuth not intialized")
 		return []string{}
 	}
-	if credentials.HttpRequest == nil {
+	if creds == nil || len(creds.CbauthCredentialsList) == 0 {
 		return []string{}
 	}
-	creds, err := cbauth.AuthWebCreds(credentials.HttpRequest)
-	if creds != nil && err == nil {
-		res, _ := cbauth.GetUserBuckets(creds.User())
-		return res
-	}
-	return []string{}
+	res, _ := cbauth.GetUserBuckets(creds.CbauthCredentialsList[0].User())
+	return res
 }
 
 func (s *store) PreAuthorize(privileges *auth.Privileges) {
 	cbPreAuthorize(privileges)
 }
 
-func (s *store) CredsString(req *http.Request) string {
-	if req != nil {
-		creds, err := cbauth.AuthWebCreds(req)
-		if err == nil {
-			return creds.Name()
-		}
+func (s *store) CredsString(creds *auth.Credentials) string {
+	if creds != nil && len(creds.CbauthCredentialsList) > 0 {
+		return creds.CbauthCredentialsList[0].Name()
 	}
 	return ""
 }

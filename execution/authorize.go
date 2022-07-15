@@ -98,7 +98,7 @@ func (this *Authorize) RunOnce(context *Context, parent value.Value) {
 				return
 			}
 
-			_, err := ds.Authorize(privs, context.Credentials())
+			err := ds.Authorize(privs, context.Credentials())
 			if err != nil {
 				context.Fatal(err)
 				this.fail(context)

@@ -425,7 +425,7 @@ func makeMockServer() *server.Server {
 func (this *testServer) testHandler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		this.query_request = &httpRequest{}
-		newHttpRequest(this.query_request, w, r, NewSyncPool(1024), 1024, "default")
+		newHttpRequest(this.query_request, w, r, NewSyncPool(1024), 1024, "default", false)
 		if this.query_request.State() == server.FATAL {
 			return
 		}
