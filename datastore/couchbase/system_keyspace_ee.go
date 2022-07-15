@@ -19,14 +19,184 @@ import (
 	"github.com/couchbase/query-ee/dictionary"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
+	cb "github.com/couchbase/query/primitives/couchbase"
 	"github.com/couchbase/query/value"
 )
 
 const (
-	_SYSTEM_SCOPE      = dictionary.SYSTEM_SCOPE
-	_SYSTEM_COLLECTION = dictionary.SYSTEM_COLLECTION
-	_SYSTEM_PRIM_INDEX = dictionary.SYSTEM_PRIM_INDEX
+	_N1QL_SYSTEM_BUCKET       = dictionary.N1QL_SYSTEM_BUCKET
+	_N1QL_SYSTEM_SCOPE        = dictionary.N1QL_SYSTEM_SCOPE
+	_N1QL_CBO_STATS           = dictionary.N1QL_CBO_STATS
+	_CBO_STATS_PRIMARY_INDEX  = dictionary.CBO_STATS_PRIMARY_INDEX
+	_BUCKET_SYSTEM_SCOPE      = dictionary.BUCKET_SYSTEM_SCOPE
+	_BUCKET_SYSTEM_COLLECTION = dictionary.BUCKET_SYSTEM_COLLECTION
+	_BUCKET_SYSTEM_PRIM_INDEX = dictionary.BUCKET_SYSTEM_PRIM_INDEX
 )
+
+func (s *store) CreateSystemCBOStats(requestId string) errors.Error {
+	defaultPool, er := loadNamespace(s, "default")
+	if er != nil {
+		return er
+	}
+
+	// create/get system bucket/scope/collection
+	sysBucket, er := defaultPool.keyspaceByName(_N1QL_SYSTEM_BUCKET)
+	if er != nil {
+		// only ignore bucket/keyspace not found error
+		if er.Code() != errors.E_CB_KEYSPACE_NOT_FOUND && er.Code() != errors.E_CB_BUCKET_NOT_FOUND {
+			return er
+		}
+
+		// create bucket
+		_, err := cb.GetSystemBucket(&s.client, defaultPool.cbNamespace, _N1QL_SYSTEM_BUCKET)
+		if err != nil {
+			return errors.NewCbCreateSystemBucketError(_N1QL_SYSTEM_BUCKET, err)
+		}
+
+		// no need for a retry loop, cb.GetSystemBucket() call above should
+		// have made sure that BucketMap is updated already
+		defaultPool.refresh()
+		sysBucket, er = defaultPool.keyspaceByName(_N1QL_SYSTEM_BUCKET)
+		if er != nil {
+			return er
+		}
+	}
+
+	sysScope, er := sysBucket.ScopeByName(_N1QL_SYSTEM_SCOPE)
+	if er != nil {
+		if er.Code() != errors.E_CB_SCOPE_NOT_FOUND {
+			// only ignore scope not found error
+			return er
+		}
+
+		// allow "already exists" error in case of duplicated Create call
+		er = sysBucket.CreateScope(_N1QL_SYSTEM_SCOPE)
+		if er != nil && !cb.AlreadyExistsError(er) {
+			return er
+		}
+
+		// retry till we have the newly created scope available
+		maxRetry := 8
+		interval := 250 * time.Millisecond
+		for i := 0; i < maxRetry; i++ {
+			time.Sleep(interval)
+			interval *= 2
+
+			// reload sysBucket
+			sysBucket.setNeedsManifest()
+			sysBucket, er = defaultPool.keyspaceByName(_N1QL_SYSTEM_BUCKET)
+			if er != nil {
+				return er
+			}
+
+			sysScope, er = sysBucket.ScopeByName(_N1QL_SYSTEM_SCOPE)
+			if sysScope != nil {
+				break
+			} else if er != nil && er.Code() != errors.E_CB_SCOPE_NOT_FOUND {
+				return er
+			}
+		}
+		if sysScope == nil {
+			return errors.NewCbBucketCreateScopeError(_N1QL_SYSTEM_BUCKET+"."+_N1QL_SYSTEM_SCOPE, nil)
+		}
+	}
+
+	cboStats, er := sysScope.KeyspaceByName(_N1QL_CBO_STATS)
+	if er != nil {
+		if er.Code() != errors.E_CB_KEYSPACE_NOT_FOUND {
+			// only ignore keyspace not found error
+			return er
+		}
+
+		// allow "already exists" error in case of duplicated Create call
+		er = sysScope.CreateCollection(_N1QL_CBO_STATS)
+		if er != nil && !cb.AlreadyExistsError(er) {
+			return er
+		}
+
+		// retry till we have the newly created collection available
+		maxRetry := 8
+		interval := 250 * time.Millisecond
+		for i := 0; i < maxRetry; i++ {
+			time.Sleep(interval)
+			interval *= 2
+
+			// reload sysBucket
+			sysBucket.setNeedsManifest()
+			sysBucket, er = defaultPool.keyspaceByName(_N1QL_SYSTEM_BUCKET)
+			if er != nil {
+				return er
+			}
+
+			sysScope, er = sysBucket.ScopeByName(_N1QL_SYSTEM_SCOPE)
+			if er != nil {
+				return er
+			}
+
+			cboStats, er = sysScope.KeyspaceByName(_N1QL_CBO_STATS)
+			if cboStats != nil {
+				break
+			} else if er != nil && er.Code() != errors.E_CB_KEYSPACE_NOT_FOUND {
+				return er
+			}
+		}
+		if cboStats == nil {
+			return errors.NewCbBucketCreateCollectionError(_N1QL_SYSTEM_BUCKET+"."+_N1QL_SYSTEM_SCOPE+"."+_N1QL_CBO_STATS, nil)
+		}
+	}
+
+	// create primary index
+	// make sure we have indexer3 first
+	indexer, er := cboStats.Indexer(datastore.GSI)
+	if er != nil {
+		return er
+	}
+
+	indexer3, ok := indexer.(datastore.Indexer3)
+	if !ok {
+		cb.DropSystemBucket(&s.client, _N1QL_SYSTEM_BUCKET)
+		return errors.NewInvalidGSIIndexerError("Cannot create system bucket/scope/collection")
+	}
+
+	_, er = indexer3.IndexByName(_CBO_STATS_PRIMARY_INDEX)
+	if er != nil {
+		if er.Code() != errors.E_CB_INDEX_NOT_FOUND {
+			// only ignore index not found error
+			return er
+		}
+
+		er = s.CreateSysPrimaryIndex(_CBO_STATS_PRIMARY_INDEX, requestId, indexer3)
+		if er != nil {
+			return er
+		}
+	}
+
+	return nil
+}
+
+func (s *store) HasSystemCBOStats() (bool, errors.Error) {
+	defaultPool, er := loadNamespace(s, "default")
+	if er != nil {
+		return false, er
+	}
+
+	sysBucket, er := defaultPool.BucketByName(_N1QL_SYSTEM_BUCKET)
+	if er != nil {
+		return false, er
+	}
+
+	sysScope, er := sysBucket.ScopeByName(_N1QL_SYSTEM_SCOPE)
+	if er != nil {
+		return false, er
+	}
+
+	cboStats, er := sysScope.KeyspaceByName(_N1QL_CBO_STATS)
+	if er != nil {
+		return false, er
+	}
+
+	return (cboStats != nil), nil
+}
 
 func (s *store) CreateSysPrimaryIndex(idxName, requestId string, indexer3 datastore.Indexer3) errors.Error {
 	// get number of index nodes in the cluster, and create the primary index
@@ -100,8 +270,12 @@ func (s *store) CreateSysPrimaryIndex(idxName, requestId string, indexer3 datast
 	return nil
 }
 
+func (s *store) GetSystemCBOStats() (datastore.Keyspace, errors.Error) {
+	return datastore.GetKeyspace("default", _N1QL_SYSTEM_BUCKET, _N1QL_SYSTEM_SCOPE, _N1QL_CBO_STATS)
+}
+
 func (s *store) GetSystemCollection(bucketName string) (datastore.Keyspace, errors.Error) {
-	return datastore.GetKeyspace("default", bucketName, _SYSTEM_SCOPE, _SYSTEM_COLLECTION)
+	return datastore.GetKeyspace("default", bucketName, _BUCKET_SYSTEM_SCOPE, _BUCKET_SYSTEM_COLLECTION)
 }
 
 func (s *store) getNumIndexNode() (int, errors.Errors) {
@@ -152,7 +326,7 @@ func (s *store) CheckSystemCollection(bucketName, requestId string) errors.Error
 		return errors.NewInvalidGSIIndexerError("Cannot get primary index on system collection")
 	}
 
-	_, er = indexer3.IndexByName(_SYSTEM_PRIM_INDEX)
+	_, er = indexer3.IndexByName(_BUCKET_SYSTEM_PRIM_INDEX)
 	if er != nil {
 		if er.Code() != errors.E_CB_INDEX_NOT_FOUND {
 			// only ignore index not found error
@@ -160,7 +334,7 @@ func (s *store) CheckSystemCollection(bucketName, requestId string) errors.Error
 		}
 
 		// create primary index on system collection if not already exists
-		er = s.CreateSysPrimaryIndex(_SYSTEM_PRIM_INDEX, requestId, indexer3)
+		er = s.CreateSysPrimaryIndex(_BUCKET_SYSTEM_PRIM_INDEX, requestId, indexer3)
 		if er != nil {
 			return er
 		}

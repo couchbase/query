@@ -172,6 +172,18 @@ func (s *store) GetRolesAll() ([]datastore.Role, errors.Error) {
 	}, nil
 }
 
+func (s *store) CreateSystemCBOStats(requestId string) errors.Error {
+	return nil
+}
+
+func (s *store) GetSystemCBOStats() (datastore.Keyspace, errors.Error) {
+	return nil, nil
+}
+
+func (s *store) HasSystemCBOStats() (bool, errors.Error) {
+	return false, nil
+}
+
 func (s *store) GetSystemCollection(bucketName string) (datastore.Keyspace, errors.Error) {
 	return nil, nil
 }
