@@ -347,10 +347,7 @@ func PreLoad(name FunctionName) bool {
 }
 
 func CheckDelete(name FunctionName, context Context) errors.Error {
-	f, e := checkDelete(name, context)
-	if f == nil && e == nil {
-		return errors.NewMissingFunctionError(name.Name())
-	}
+	_, e := checkDelete(name, context)
 	return e
 }
 
