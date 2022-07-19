@@ -509,6 +509,19 @@ func setSpecialSpan(rg *plan.Range2) {
 	}
 }
 
+func isSpecialSpan(sspans SargSpans, flag uint32) bool {
+	if tspans, ok := sspans.(*TermSpans); ok {
+		spans := tspans.spans
+		if len(spans) == 1 {
+			rgs := spans[0].Ranges
+			if len(rgs) == 1 {
+				return (rgs[0].Flags & flag) != 0
+			}
+		}
+	}
+	return false
+}
+
 func ConvertSpans2ToSpan(spans2 plan.Spans2, total int) (plan.Spans, bool) {
 	exact := true
 	spans := make(plan.Spans, 0, len(spans2))
