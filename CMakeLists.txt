@@ -92,4 +92,5 @@ ENDIF (NOT CBQ_ONLY)
 
 GoModBuild (TARGET cbq PACKAGE github.com/couchbase/query/shell/cbq
   INSTALL_PATH bin
-  GOVERSION ${GOVERSION})
+  GOVERSION ${GOVERSION}
+  LDFLAGS "-X github.com/couchbase/query/shell/cbq/command.SHELL_VERSION=${PRODUCT_VERSION}")

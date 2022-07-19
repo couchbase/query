@@ -37,8 +37,6 @@ const (
 )
 
 const (
-	SHELL_VERSION = "2.1"
-
 	MAX_ARGS  = math.MaxInt16
 	ZERO_ARGS = 0
 	ONE_ARG   = 1
@@ -46,6 +44,8 @@ const (
 )
 
 var (
+	//Used to get build version
+	SHELL_VERSION = "unset: build issue" // is set by correct build process
 	//Used to manage connections
 	SERVICE_URL = ""
 	//Used to disconnect from the endpoint
