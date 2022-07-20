@@ -427,7 +427,19 @@ func (this *HttpEndpoint) ServeHTTP(resp http.ResponseWriter, req *http.Request)
 		if len(path) > 1 {
 			bucket = path[1]
 		}
-		ctx, err := tenant.Throttle(datastore.FirstCred(request.Credentials()), bucket, datastore.GetUserBuckets(request.Credentials()))
+		timeout := time.Duration(0)
+		if serverTimeout, requestTimeout := this.server.Timeout(), request.Timeout(); serverTimeout != 0 && requestTimeout != 0 {
+			if serverTimeout < requestTimeout {
+				timeout = serverTimeout
+			} else {
+				timeout = requestTimeout
+			}
+		} else if serverTimeout != 0 {
+			timeout = serverTimeout
+		} else if requestTimeout != 0 {
+			timeout = requestTimeout
+		}
+		ctx, err := tenant.Throttle(datastore.FirstCred(request.Credentials()), bucket, datastore.GetUserBuckets(request.Credentials()), timeout)
 		if err != nil {
 			request.Fail(errors.NewServiceTenantThrottledError(err))
 			request.Failed(this.server)

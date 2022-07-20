@@ -52,6 +52,10 @@ const (
 	_SIZER
 )
 
+const (
+	TIMEOUT = 5 * time.Second
+)
+
 var toReg = [_SIZER]struct {
 	service regulator.Service
 	unit    regulator.UnitType
@@ -111,7 +115,7 @@ func (this Unit) NonZero() bool {
 	return this > 0
 }
 
-func Throttle(user, bucket string, buckets []string) (Context, error) {
+func Throttle(user, bucket string, buckets []string, timeout time.Duration) (Context, error) {
 
 	// TODO TENANT proper check for administrator
 	// Administrator doesn't have associated buckets
@@ -136,12 +140,14 @@ func Throttle(user, bucket string, buckets []string) (Context, error) {
 			return nil, errors.NewServiceTenantNotAuthorizedError(bucket)
 		}
 	}
-
+	if timeout == time.Duration(0) {
+		timeout = TIMEOUT
+	}
 	ctx := regulator.NewUserCtx(tenant, user)
 	r, d, e := regulator.CheckQuota(ctx, &regulator.CheckQuotaOpts{
-		MaxThrottle:       time.Duration(0),
+		MaxThrottle:       timeout,
 		NoThrottle:        false,
-		NoReject:          true,
+		NoReject:          false,
 		EstimatedDuration: time.Duration(0),
 		EstimatedUnits:    []regulator.Units{},
 	})
