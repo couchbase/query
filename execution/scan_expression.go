@@ -62,6 +62,10 @@ func (this *ExpressionScan) RunOnce(context *Context, parent value.Value) {
 		// use cached results if available
 		if !correlated && this.results != nil {
 			for _, av := range this.results {
+				if context.UseRequestQuota() && context.TrackValueSize(av.Size()) {
+					context.Error(errors.NewMemoryQuotaExceededError())
+					return
+				}
 				this.sendItem(av)
 			}
 			return
@@ -118,6 +122,14 @@ func (this *ExpressionScan) RunOnce(context *Context, parent value.Value) {
 
 			if !correlated {
 				this.results = append(this.results, av)
+				if context.UseRequestQuota() && context.TrackValueSize(av.Size()) {
+					context.Error(errors.NewMemoryQuotaExceededError())
+					return
+				}
+			}
+			if context.UseRequestQuota() && context.TrackValueSize(av.Size()) {
+				context.Error(errors.NewMemoryQuotaExceededError())
+				return
 			}
 			this.sendItem(av)
 		}
