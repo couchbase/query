@@ -566,7 +566,7 @@ func refreshScopesAndCollections(mani *cb.Manifest, bucket *keyspace) (map[strin
 			if atomic.AddInt32(&oldScope.cleaning, 1) == 1 {
 				for n, _ := range oldScope.keyspaces {
 					if scope.keyspaces[n] == nil {
-						DropDictionaryEntry(oldScope.keyspaces[n].QualifiedName())
+						DropDictionaryEntry(oldScope.keyspaces[n].QualifiedName(), false)
 					}
 				}
 			}
@@ -584,7 +584,7 @@ func refreshScopesAndCollections(mani *cb.Manifest, bucket *keyspace) (map[strin
 
 		// not here anymore
 		if scopes[n] == nil {
-			clearOldScope(bucket, oldScopes[n])
+			clearOldScope(bucket, oldScopes[n], false)
 		}
 	}
 
@@ -594,11 +594,11 @@ func refreshScopesAndCollections(mani *cb.Manifest, bucket *keyspace) (map[strin
 func dropDictCacheEntries(bucket *keyspace) {
 	for n, s := range bucket.scopes {
 		bucket.scopes[n] = nil
-		clearOldScope(bucket, s)
+		clearOldScope(bucket, s, true)
 	}
 }
 
-func clearOldScope(bucket *keyspace, s *scope) {
+func clearOldScope(bucket *keyspace, s *scope, isDropBucket bool) {
 
 	// MB-43070 only have one stat cleaner
 	if atomic.AddInt32(&s.cleaning, 1) != 1 {
@@ -607,7 +607,7 @@ func clearOldScope(bucket *keyspace, s *scope) {
 	for n, val := range s.keyspaces {
 		if val != nil {
 			s.keyspaces[n] = nil
-			DropDictionaryEntry(val.QualifiedName())
+			DropDictionaryEntry(val.QualifiedName(), isDropBucket)
 			// invoke Release(..) on collection for any cleanup
 			val.Release(false)
 		}

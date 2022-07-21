@@ -21,6 +21,7 @@ import (
 	"github.com/couchbase/query-ee/dictionary"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/tenant"
 	"github.com/couchbase/query/util"
 )
 
@@ -67,11 +68,19 @@ func Foreach(f func(string) error) error {
 	return dictionary.Foreach(f)
 }
 
-func DropDictionaryEntry(keyspace string) {
+func DropDictionaryEntry(keyspace string, isDropBucket bool) {
 	if isSysBucket(keyspace) || dictionary.IsSysCBOStats(keyspace) {
 		dictionary.DropDictionaryCache()
 	} else {
-		dictionary.DropDictionaryEntry(keyspace)
+		serverless := tenant.IsServerless()
+		if serverless && isDropBucket {
+			// in serverless mode, if bucket is being dropped, only need to drop
+			// from dictionary cache; the _system scope is being dropped as part
+			// of bucket drop and thus no need to remove entries from there
+			dictionary.DropDictCacheEntry(keyspace, false)
+		} else {
+			dictionary.DropDictionaryEntry(keyspace, serverless)
+		}
 	}
 }
 
@@ -79,7 +88,7 @@ func DropDictEntryAndAllCache(keyspace string, context interface{}) {
 	if isSysBucket(keyspace) || dictionary.IsSysCBOStats(keyspace) {
 		dictionary.DropDictionaryCache()
 	} else {
-		dictionary.DropDictEntryAndAllCache(keyspace, context)
+		dictionary.DropDictEntryAndAllCache(keyspace, tenant.IsServerless(), context)
 	}
 }
 

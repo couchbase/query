@@ -60,7 +60,7 @@ func Foreach(f func(string) error) error {
 	return nil
 }
 
-func DropDictionaryEntry(keyspace string) {
+func DropDictionaryEntry(keyspace string, isDropBucket bool) {
 	// no-op
 }
 
