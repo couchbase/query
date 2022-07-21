@@ -44,10 +44,13 @@ func (b *indexKeyspace) Name() string {
 	return b.name
 }
 
-func handleKeyspace(keyspace datastore.Keyspace, warnF func(err errors.Error), includeResults bool, handleF func(id string)) errors.Error {
+func handleKeyspace(keyspace datastore.Keyspace, warnF func(err errors.Error), includeResults bool, handleF func(id string), includeSeqScan bool) errors.Error {
 	indexers, excp := keyspace.Indexers()
 	if excp == nil {
 		for _, indexer := range indexers {
+			if !includeSeqScan && indexer.Name() == datastore.SEQ_SCAN {
+				continue
+			}
 			err := indexer.Refresh()
 			if err == nil {
 
@@ -83,6 +86,7 @@ func (b *indexKeyspace) Count(context datastore.QueryContext) (int64, errors.Err
 	if excp == nil {
 		canAccessAll := canAccessSystemTables(context)
 
+		includeSeqScan := b.Name() == KEYSPACE_NAME_ALL_INDEXES
 	loop:
 		for _, namespaceId := range namespaceIds {
 			namespace, excp = b.store.NamespaceById(namespaceId)
@@ -104,7 +108,7 @@ func (b *indexKeyspace) Count(context datastore.QueryContext) (int64, errors.Err
 							context.Warning(err)
 						}, includeDefaultKeyspace, func(id string) {
 							count++
-						})
+						}, includeSeqScan)
 					}
 					if excp != nil {
 						break loop
@@ -132,7 +136,7 @@ func (b *indexKeyspace) Count(context datastore.QueryContext) (int64, errors.Err
 										context.Warning(err)
 									}, includeResults, func(id string) {
 										count++
-									})
+									}, includeSeqScan)
 								}
 								if excp != nil {
 									break loop
@@ -492,6 +496,7 @@ func (pi *indexIndex) ScanEntries(requestId string, limit int64, cons datastore.
 	vector timestamp.Vector, conn *datastore.IndexConnection) {
 	defer conn.Sender().Close()
 
+	includeSeqScan := pi.keyspace.Name() == KEYSPACE_NAME_ALL_INDEXES
 	namespaceIds, err := pi.keyspace.store.NamespaceIds()
 	if err == nil {
 		canAccessAll := canAccessSystemTables(conn.QueryContext())
@@ -525,7 +530,7 @@ func (pi *indexIndex) ScanEntries(requestId string, limit int64, cons datastore.
 								}
 								keys[key] = true
 							}
-						})
+						}, includeSeqScan)
 						keys = nil
 					}
 					if excp != nil {
@@ -567,7 +572,7 @@ func (pi *indexIndex) ScanEntries(requestId string, limit int64, cons datastore.
 											}
 											keys[key] = true
 										}
-									})
+									}, includeSeqScan)
 									keys = nil
 								}
 								if excp != nil {
