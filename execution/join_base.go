@@ -106,8 +106,9 @@ func (this *joinBase) joinFetch(keyspace datastore.Keyspace, subPaths []string, 
 		for _, val := range pairMap {
 			size += val.Size()
 		}
-		if context.TrackValueSize(size) {
-			context.Error(errors.NewMemoryQuotaExceededError())
+		err := context.TrackValueSize(size)
+		if err != nil {
+			context.Error(err)
 			fetchOk = false
 		}
 	}
@@ -164,9 +165,12 @@ func (this *joinBase) joinEntries(keyCount map[string]int, pairMap map[string]va
 
 				joined.SetField(alias, av)
 
-				if useQuota && context.TrackValueSize(size) {
-					context.Error(errors.NewMemoryQuotaExceededError())
-					return false
+				if useQuota {
+					err := context.TrackValueSize(size)
+					if err != nil {
+						context.Error(err)
+						return false
+					}
 				}
 
 				if onFilter != nil {
@@ -240,10 +244,13 @@ func (this *joinBase) nestEntries(keyCount map[string]int, pairMap map[string]va
 		if len(nvs) != 0 {
 			av.SetField(alias, nvs)
 
-			if useQuota && context.TrackValueSize(size) {
-				context.Error(errors.NewMemoryQuotaExceededError())
-				av.Recycle()
-				return false
+			if useQuota {
+				err := context.TrackValueSize(size)
+				if err != nil {
+					context.Error(err)
+					av.Recycle()
+					return false
+				}
 			}
 			if !this.sendItem(av) {
 				return false

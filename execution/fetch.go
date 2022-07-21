@@ -12,7 +12,6 @@ import (
 	"encoding/json"
 
 	"github.com/couchbase/query/datastore"
-	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
@@ -192,10 +191,13 @@ func (this *Fetch) flushBatch(context *Context) bool {
 			fv.SetAttachment("smeta", av.GetAttachment("smeta"))
 			av.SetField(this.plan.Term().Alias(), fv)
 
-			if context.UseRequestQuota() && context.TrackValueSize(av.Size()) {
-				context.Error(errors.NewMemoryQuotaExceededError())
-				av.Recycle()
-				return false
+			if context.UseRequestQuota() {
+				err := context.TrackValueSize(av.Size())
+				if err != nil {
+					context.Error(err)
+					av.Recycle()
+					return false
+				}
 			}
 
 			if !this.sendItem(av) {
@@ -228,10 +230,13 @@ func (this *Fetch) flushBatch(context *Context) bool {
 			fv.SetAttachment("smeta", av.GetAttachment("smeta"))
 			av.SetField(this.plan.Term().Alias(), fv)
 
-			if context.UseRequestQuota() && context.TrackValueSize(av.Size()) {
-				context.Error(errors.NewMemoryQuotaExceededError())
-				av.Recycle()
-				return false
+			if context.UseRequestQuota() {
+				err := context.TrackValueSize(av.Size())
+				if err != nil {
+					context.Error(err)
+					av.Recycle()
+					return false
+				}
 			}
 
 			if !this.sendItem(av) {

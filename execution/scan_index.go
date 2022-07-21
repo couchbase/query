@@ -242,11 +242,14 @@ func (this *spanScan) RunOnce(context *Context, parent value.Value) {
 
 							av.SetField(this.plan.Term().Alias(), av)
 
-							if context.UseRequestQuota() && context.TrackValueSize(av.Size()) {
-								context.Error(errors.NewMemoryQuotaExceededError())
-								av.Recycle()
-								ok = false
-								break
+							if context.UseRequestQuota() {
+								err := context.TrackValueSize(av.Size())
+								if err != nil {
+									context.Error(err)
+									av.Recycle()
+									ok = false
+									break
+								}
 							}
 						}
 

@@ -55,10 +55,13 @@ func (this *Let) processItem(item value.AnnotatedValue, context *Context) bool {
 		lv = item
 	} else {
 		lv = item.CopyForUpdate().(value.AnnotatedValue)
-		if context.UseRequestQuota() && context.TrackValueSize(lv.Size()) {
-			context.Error(errors.NewMemoryQuotaExceededError())
-			lv.Recycle()
-			return false
+		if context.UseRequestQuota() {
+			err := context.TrackValueSize(lv.Size())
+			if err != nil {
+				context.Error(err)
+				lv.Recycle()
+				return false
+			}
 		}
 	}
 	for _, b := range this.plan.Bindings() {

@@ -120,9 +120,12 @@ func (this *FinalGroup) afterItems(context *Context) {
 			aggregates[agg.String()], _ = agg.Default(nil, context)
 		}
 
-		if context.UseRequestQuota() && context.TrackValueSize(av.Size()) {
-			context.Error(errors.NewMemoryQuotaExceededError())
-			av.Recycle()
+		if context.UseRequestQuota() {
+			err := context.TrackValueSize(av.Size())
+			if err != nil {
+				context.Error(err)
+				av.Recycle()
+			}
 		} else {
 			this.sendItem(av)
 		}

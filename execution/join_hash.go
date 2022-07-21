@@ -295,10 +295,13 @@ func (this *HashJoin) checkSendItem(av value.AnnotatedValue, quotaFunc func() ui
 			return true
 		}
 	}
-	if context.UseRequestQuota() && context.TrackValueSize(quotaFunc()) {
-		context.Error(errors.NewMemoryQuotaExceededError())
-		if recycle {
-			av.Recycle()
+	if context.UseRequestQuota() {
+		err := context.TrackValueSize(quotaFunc())
+		if err != nil {
+			context.Error(err)
+			if recycle {
+				av.Recycle()
+			}
 		}
 		return false
 

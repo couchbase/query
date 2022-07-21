@@ -17,7 +17,6 @@ import (
 	"github.com/couchbase/query/distributed"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
-	"github.com/couchbase/query/tenant"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
@@ -97,7 +96,6 @@ var functions = &functionCache{}
 func FunctionsInit(limit int) {
 	functions.cache = util.NewGenCache(_LIMIT)
 	functions.cache.SetLimit(limit)
-	tenant.RegisterResourceManager(manageTenant)
 }
 
 func FunctionsSetLimit(limit int) {
@@ -106,10 +104,6 @@ func FunctionsSetLimit(limit int) {
 
 func FunctionsLimit() int {
 	return functions.cache.Limit()
-}
-
-//TODO TENANT tenant resource management
-func manageTenant(bucket string) {
 }
 
 func FunctionsNewLanguage(lang Language, runner LanguageRunner) {
@@ -157,6 +151,25 @@ func FunctionClear(key string, f func(*FunctionEntry)) bool {
 		}
 	}
 	return functions.cache.Delete(key, process)
+}
+
+func ClearScopeEntries(namespace, bucket, scope string) {
+	var del bool
+	var id string
+
+	nonBlocking := func(k string, e interface{}) bool {
+		path := e.(*FunctionEntry).Path()
+		del = len(path) == 4 && namespace == path[0] && bucket == path[1] && scope == path[2]
+		id = k
+		return true
+	}
+	blocking := func() bool {
+		if del {
+			functions.cache.Delete(id, nil)
+		}
+		return true
+	}
+	functions.cache.ForEach(nonBlocking, blocking)
 }
 
 // name resolution

@@ -28,6 +28,7 @@ import (
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/logging/event"
+	"github.com/couchbase/query/memory"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/planner"
 	"github.com/couchbase/query/tenant"
@@ -153,7 +154,6 @@ const (
 )
 
 type Context struct {
-	inUseMemory         uint64
 	requestId           string
 	datastore           datastore.Datastore
 	systemstore         datastore.Systemstore
@@ -213,6 +213,7 @@ type Context struct {
 	bitFilterMap        map[string]*BitFilterTerm
 	bitFilterLock       sync.RWMutex
 	tenantCtx           tenant.Context
+	memorySession       memory.MemorySession
 }
 
 func NewContext(requestId string, datastore datastore.Datastore, systemstore datastore.Systemstore,
@@ -303,9 +304,12 @@ func (this *Context) Copy() *Context {
 		preserveExpiry:      this.preserveExpiry,
 		flags:               this.flags,
 		reqTimeout:          this.reqTimeout,
+		memoryQuota:         this.memoryQuota,
 		allowlist:           this.allowlist,
 		udfValueMap:         this.udfValueMap,
 		recursionCount:      this.recursionCount,
+		tenantCtx:           this.tenantCtx,
+		memorySession:       this.memorySession,
 	}
 
 	rv.SetDurability(this.DurabilityLevel(), this.DurabilityTimeout())
@@ -503,12 +507,14 @@ func (this *Context) SetReqDeadline(reqDeadline time.Time) {
 	this.reqDeadline = reqDeadline
 }
 
-func (this *Context) GetMemoryQuota() uint64 {
-	return this.memoryQuota
-}
-
 func (this *Context) SetMemoryQuota(memoryQuota uint64) {
 	this.memoryQuota = memoryQuota * 1024 * 1024
+}
+
+func (this *Context) SetMemoryManager(m memory.MemoryManager) {
+	if m != nil {
+		this.memorySession = m.Register()
+	}
 }
 
 func (this *Context) GetPipelineCap() int64 {
@@ -642,21 +648,30 @@ func (this *Context) Warning(wrn errors.Error) {
 // memory quota
 
 func (this *Context) UseRequestQuota() bool {
-	return this.memoryQuota > 0
+	return this.memorySession != nil
 }
 
 func (this *Context) ProducerThrottleQuota() uint64 {
 	return this.memoryQuota / 10
 }
 
-func (this *Context) TrackValueSize(size uint64) bool {
-	sz := atomic.AddUint64(&this.inUseMemory, size)
+func (this *Context) TrackValueSize(size uint64) errors.Error {
+	sz, _, err := this.memorySession.Track(size)
 	this.output.TrackMemory(sz)
-	return sz > this.memoryQuota
+	if this.memoryQuota > 0 && sz > this.memoryQuota {
+		return errors.NewMemoryQuotaExceededError()
+	}
+	return err
 }
 
 func (this *Context) ReleaseValueSize(size uint64) {
-	atomic.AddUint64(&this.inUseMemory, ^(size - 1))
+	this.memorySession.Track(^(size - 1))
+}
+
+func (this *Context) Release() {
+	if this.memorySession != nil {
+		this.memorySession.Release()
+	}
 }
 
 // UDF memory storage
@@ -1352,6 +1367,10 @@ func (this *Context) IsTracked() bool {
 
 func (this *Context) SetTenantCtx(ctx tenant.Context) {
 	this.tenantCtx = ctx
+}
+
+func (this *Context) TenantBucket() string {
+	return tenant.Bucket(this.tenantCtx)
 }
 
 // Return the cached regex for the input operator only if the like pattern is unchanged

@@ -31,6 +31,7 @@ import (
 	"github.com/couchbase/query/execution"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/logging/event"
+	"github.com/couchbase/query/memory"
 	"github.com/couchbase/query/parser/n1ql"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/planner"
@@ -38,6 +39,7 @@ import (
 	"github.com/couchbase/query/rewrite"
 	"github.com/couchbase/query/semantics"
 	queryMetakv "github.com/couchbase/query/server/settings/couchbase"
+	"github.com/couchbase/query/tenant"
 	"github.com/couchbase/query/transactions"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
@@ -1065,6 +1067,12 @@ func (this *Server) serviceRequest(request Request) {
 		memoryQuota = this.memoryQuota
 	}
 	context.SetMemoryQuota(memoryQuota)
+
+	if tenant.IsServerless() {
+		context.SetMemoryManager(tenant.Manager(context.TenantBucket()))
+	} else if memoryQuota > 0 || memory.Quota() > 0 {
+		context.SetMemoryManager(memory.Manager())
+	}
 
 	context.SetIsPrepared(request.Prepared() != nil)
 	build := time.Now()

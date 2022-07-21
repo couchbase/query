@@ -165,8 +165,9 @@ func (this *HashNest) processItem(item value.AnnotatedValue, context *Context) b
 			iSz := item.Size()
 			jSz := joined.Size()
 			if jSz > iSz {
-				if context.TrackValueSize(jSz - iSz) {
-					context.Error(errors.NewMemoryQuotaExceededError())
+				err := context.TrackValueSize(jSz - iSz)
+				if err != nil {
+					context.Error(err)
 					return false
 				}
 			} else {

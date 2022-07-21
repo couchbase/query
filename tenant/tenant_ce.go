@@ -60,6 +60,10 @@ func Throttle(user, bucket string, buckets []string, timeout time.Duration) (Con
 	return new(Context), nil
 }
 
+func Bucket(ctx Context) string {
+	return ""
+}
+
 func RecordCU(ctx Context, d time.Duration, m uint64) Unit {
 	return 0
 }

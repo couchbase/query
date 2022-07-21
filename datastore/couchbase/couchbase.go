@@ -737,8 +737,41 @@ func NewDatastore(u string) (s datastore.Datastore, e errors.Error) {
 	return store, nil
 }
 
-// TODO TENANT tenant resource management
 func (s *store) manageTenant(bucket string) {
+	var cbKeyspace *keyspace
+
+	p := s.namespaceCache["default"]
+
+	// nothing to unload
+	if p == nil {
+		return
+	}
+	logging.Infof("Unloading tenant %v", bucket)
+	p.lock.Lock()
+
+	ks, ok := p.keyspaceCache[bucket]
+	if ok && ks.cbKeyspace != nil {
+		cbKeyspace = ks.cbKeyspace
+		ks.cbKeyspace.Release(false)
+		delete(p.keyspaceCache, bucket)
+
+		// keyspace has been deleted, force full auto reprepare check
+		p.version++
+	} else {
+		logging.Warnf("Keyspace %v not configured on this server", bucket)
+	}
+	p.lock.Unlock()
+
+	if cbKeyspace != nil {
+		if isSysBucket(cbKeyspace.name) {
+			DropDictionaryCache()
+		} else {
+			// clearDictCacheEntries() needs to be called outside p.lock
+			// since it'll need to lock it when trying to delete from
+			// system collection
+			clearDictCacheEntries(cbKeyspace)
+		}
+	}
 }
 
 func loadNamespace(s *store, name string) (*namespace, errors.Error) {

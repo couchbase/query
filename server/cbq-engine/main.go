@@ -34,6 +34,7 @@ import (
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/logging/event"
 	log_resolver "github.com/couchbase/query/logging/resolver"
+	"github.com/couchbase/query/memory"
 	"github.com/couchbase/query/prepareds"
 	"github.com/couchbase/query/scheduler"
 	server_package "github.com/couchbase/query/server"
@@ -65,6 +66,7 @@ const (
 	_DEF_DICTIONARY_CACHE_LIMIT = 16384
 	_DEF_TASKS_LIMIT            = 16384
 	_DEF_MEMORY_QUOTA           = 0
+	_DEF_NODE_QUOTA             = 0
 	_DEF_CE_MAXCPUS             = 4
 	_DEF_REQUEST_ERROR_LIMIT    = 16
 )
@@ -109,6 +111,7 @@ var ENTERPRISE = flag.Bool("enterprise", true, "Enterprise mode")
 var MAX_INDEX_API = flag.Int("max-index-api", datastore_package.INDEX_API_MAX, "Max Index API")
 var N1QL_FEAT_CTRL = flag.Uint64("n1ql-feat-ctrl", util.DEF_N1QL_FEAT_CTRL, "N1QL Feature Controls")
 var MEMORY_QUOTA = flag.Uint64("memory-quota", _DEF_MEMORY_QUOTA, "Maximum amount of document memory allowed per request, in MB")
+var NODE_QUOTA = flag.Uint64("node-quota", _DEF_NODE_QUOTA, "Maximum amount of document memory allowed per node, in MB")
 
 //cpu and memory profiling flags
 var CPU_PROFILE = flag.String("cpuprofile", "", "write cpu profile to file")
@@ -151,6 +154,9 @@ func main() {
 
 	// many Init() depend on this
 	tenant.Init(*SERVERLESS)
+
+	memory.Config(*NODE_QUOTA, []int{*SERVICERS, *PLUS_SERVICERS})
+	tenant.Config(*NODE_QUOTA)
 
 	numCPUs := runtime.NumCPU()
 	if !*ENTERPRISE && numCPUs > _DEF_CE_MAXCPUS {

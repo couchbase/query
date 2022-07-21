@@ -29,7 +29,6 @@ import (
 	"github.com/couchbase/query/planner"
 	"github.com/couchbase/query/rewrite"
 	"github.com/couchbase/query/semantics"
-	"github.com/couchbase/query/tenant"
 	"github.com/couchbase/query/util"
 )
 
@@ -82,11 +81,6 @@ func PreparedsInit(limit int) {
 		"__update": "PREPARE __update FROM UPDATE $1 AS d USE KEYS $2 SET d = $3, META(d).expiration = $4.expiration RETURNING META(d).id, META(d).cas, TO_STR(META(d).cas) AS scas, META(d).txnMeta, d AS doc;",
 		"__delete": "PREPARE __delete FROM DELETE FROM $1 AS d USE KEYS $2;",
 	}
-	tenant.RegisterResourceManager(manageTenant)
-}
-
-// TODO TENANT tenant resource management
-func manageTenant(bucket string) {
 }
 
 // initialize the cache from a different node

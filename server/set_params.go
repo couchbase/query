@@ -23,9 +23,11 @@ import (
 	"github.com/couchbase/query/functions"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/logging/event"
+	"github.com/couchbase/query/memory"
 	"github.com/couchbase/query/prepareds"
 	"github.com/couchbase/query/scheduler"
 	queryMetakv "github.com/couchbase/query/server/settings/couchbase"
+	"github.com/couchbase/query/tenant"
 	"github.com/couchbase/query/util"
 )
 
@@ -86,11 +88,13 @@ var _SETTERS = map[string]Setter{
 	SERVICERS: func(s *Server, o interface{}) errors.Error {
 		value := getNumber(o)
 		s.SetServicers(int(value))
+		memory.Config(memory.Quota(), []int{s.Servicers(), s.PlusServicers()})
 		return nil
 	},
 	PLUSSERVICERS: func(s *Server, o interface{}) errors.Error {
 		value := getNumber(o)
 		s.SetPlusServicers(int(value))
+		memory.Config(memory.Quota(), []int{s.Servicers(), s.PlusServicers()})
 		return nil
 	},
 	TIMEOUTSETTING: func(s *Server, o interface{}) errors.Error {
@@ -167,6 +171,12 @@ var _SETTERS = map[string]Setter{
 	MEMORYQUOTA: func(s *Server, o interface{}) errors.Error {
 		value := getNumber(o)
 		s.SetMemoryQuota(uint64(value))
+		return nil
+	},
+	NODEQUOTA: func(s *Server, o interface{}) errors.Error {
+		value := getNumber(o)
+		memory.Config(uint64(value), []int{s.Servicers(), s.PlusServicers()})
+		tenant.Config(uint64(value))
 		return nil
 	},
 	USECBO: func(s *Server, o interface{}) errors.Error {
@@ -472,6 +482,7 @@ func FillSettings(settings map[string]interface{}, srvr *Server) map[string]inte
 	settings[MUTEXPROFILE] = srvr.MutexProfile()
 	settings[FUNCLIMIT] = functions.FunctionsLimit()
 	settings[MEMORYQUOTA] = srvr.MemoryQuota()
+	settings[NODEQUOTA] = memory.Quota()
 	settings[USECBO] = srvr.UseCBO()
 	settings[ATRCOLLECTION] = srvr.AtrCollection()
 	settings[NUMATRS] = srvr.NumAtrs()

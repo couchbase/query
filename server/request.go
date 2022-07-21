@@ -264,7 +264,6 @@ func SetActives(ar ActiveRequests) {
 type BaseRequest struct {
 	// Aligned ints need to be declared right at the top
 	// of the struct to avoid alignment issues on x86 platforms
-	inUseMemory   atomic.AlignedUint64
 	usedMemory    atomic.AlignedUint64
 	mutationCount atomic.AlignedUint64
 	sortCount     atomic.AlignedUint64
@@ -860,10 +859,6 @@ func (this *BaseRequest) GetTenantUnits(s tenant.Service) tenant.Unit {
 func (this *BaseRequest) TrackMemory(size uint64) {
 	util.TestAndSetUint64(&this.usedMemory, size,
 		func(old, new uint64) bool { return old < new }, 1)
-}
-
-func (this *BaseRequest) ReleaseValueSize(size uint64) {
-	atomic.AddUint64(&this.inUseMemory, ^(size - 1))
 }
 
 func (this *BaseRequest) UsedMemory() uint64 {

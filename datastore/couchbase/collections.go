@@ -23,7 +23,8 @@ import (
 
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
-	functions "github.com/couchbase/query/functions/metakv"
+	"github.com/couchbase/query/functions"
+	functionsStorage "github.com/couchbase/query/functions/metakv"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/value"
 )
@@ -613,5 +614,20 @@ func clearOldScope(bucket *keyspace, s *scope, isDropBucket bool) {
 		}
 	}
 
-	functions.DropScope(bucket.namespace.name, bucket.name, s.Name())
+	functionsStorage.DropScope(bucket.namespace.name, bucket.name, s.Name())
+}
+
+func clearDictCacheEntries(bucket *keyspace) {
+	for i, s := range bucket.scopes {
+		bucket.scopes[i] = nil
+		for j, val := range s.keyspaces {
+			if val != nil {
+				s.keyspaces[j] = nil
+				DropDictCacheEntry(val.QualifiedName(), false)
+				// invoke Release(..) on collection for any cleanup
+				val.Release(false)
+			}
+		}
+		functions.ClearScopeEntries(bucket.namespace.name, bucket.name, s.Name())
+	}
 }

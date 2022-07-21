@@ -242,11 +242,14 @@ func (this *Merge) processAction(item value.AnnotatedValue, context *Context,
 				item1 := item
 				if delete != nil {
 					item1 = item.CopyForUpdate().(value.AnnotatedValue)
-					if context.UseRequestQuota() && context.TrackValueSize(item1.Size()) {
-						context.Error(errors.NewMemoryQuotaExceededError())
-						item1.Recycle()
-						item.Recycle()
-						return false
+					if context.UseRequestQuota() {
+						err := context.TrackValueSize(item1.Size())
+						if err != nil {
+							context.Error(err)
+							item1.Recycle()
+							item.Recycle()
+							return false
+						}
 					}
 				}
 				this.matched[key] = true

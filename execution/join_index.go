@@ -189,10 +189,13 @@ func (this *IndexJoin) joinCoveredEntries(item value.AnnotatedValue,
 		jv := this.setDocumentKey(entry.PrimaryKey, value.NewAnnotatedValue(nil), 0, context)
 		joined.SetField(this.plan.Term().Alias(), jv)
 
-		if useQuota && context.TrackValueSize(size) {
-			context.Error(errors.NewMemoryQuotaExceededError())
-			joined.Recycle()
-			return false
+		if useQuota {
+			err := context.TrackValueSize(size)
+			if err != nil {
+				context.Error(err)
+				joined.Recycle()
+				return false
+			}
 		}
 		if !this.sendItem(joined) {
 			return false

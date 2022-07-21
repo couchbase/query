@@ -162,6 +162,13 @@ func Throttle(user, bucket string, buckets []string, timeout time.Duration) (Con
 	}
 }
 
+func Bucket(ctx Context) string {
+	if ctx != nil {
+		return ctx.Bucket()
+	}
+	return ""
+}
+
 // TODO define units for query and js-evaluator
 func RecordCU(ctx Context, d time.Duration, m uint64) Unit {
 	units, _ := metering.QueryEvalComputeToCU(d, m)

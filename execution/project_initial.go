@@ -87,8 +87,9 @@ func (this *InitialProject) processItem(item value.AnnotatedValue, context *Cont
 				iSz := item.Size()
 				pSz := pv.Size()
 				if pSz > iSz {
-					if context.TrackValueSize(pSz - iSz) {
-						context.Error(errors.NewMemoryQuotaExceededError())
+					err := context.TrackValueSize(pSz - iSz)
+					if err != nil {
+						context.Error(err)
 						item.Recycle()
 						return false
 					}
@@ -121,8 +122,9 @@ func (this *InitialProject) processItem(item value.AnnotatedValue, context *Cont
 			iSz := item.Size()
 			aSz := av.Size()
 			if aSz > iSz {
-				if context.TrackValueSize(aSz - iSz) {
-					context.Error(errors.NewMemoryQuotaExceededError())
+				err := context.TrackValueSize(aSz - iSz)
+				if err != nil {
+					context.Error(err)
 					av.Recycle()
 					return false
 				}
@@ -193,8 +195,9 @@ func (this *InitialProject) processTerms(item value.AnnotatedValue, context *Con
 		iSz := item.Size()
 		pSz := pv.Size()
 		if pSz > iSz {
-			if context.TrackValueSize(pSz - iSz) {
-				context.Error(errors.NewMemoryQuotaExceededError())
+			err := context.TrackValueSize(pSz - iSz)
+			if err != nil {
+				context.Error(err)
 				pv.Recycle()
 				return false
 			}

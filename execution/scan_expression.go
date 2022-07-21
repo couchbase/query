@@ -64,10 +64,13 @@ func (this *ExpressionScan) RunOnce(context *Context, parent value.Value) {
 		if !correlated && this.results != nil {
 			for _, av := range this.results {
 				av.Track()
-				if context.UseRequestQuota() && context.TrackValueSize(av.Size()) {
-					context.Error(errors.NewMemoryQuotaExceededError())
-					av.Recycle()
-					return
+				if context.UseRequestQuota() {
+					err := context.TrackValueSize(av.Size())
+					if err != nil {
+						context.Error(err)
+						av.Recycle()
+						return
+					}
 				}
 				if !this.sendItem(av) {
 					av.Recycle()
@@ -150,17 +153,23 @@ func (this *ExpressionScan) RunOnce(context *Context, parent value.Value) {
 
 			if !correlated {
 				av.Track()
-				if context.UseRequestQuota() && context.TrackValueSize(av.Size()) {
+				if context.UseRequestQuota() {
+					err := context.TrackValueSize(av.Size())
+					if err != nil {
+						context.Error(errors.NewMemoryQuotaExceededError())
+						av.Recycle()
+						return
+					}
+				}
+				results = append(results, av)
+			}
+			if context.UseRequestQuota() {
+				err := context.TrackValueSize(av.Size())
+				if err != nil {
 					context.Error(errors.NewMemoryQuotaExceededError())
 					av.Recycle()
 					return
 				}
-				results = append(results, av)
-			}
-			if context.UseRequestQuota() && context.TrackValueSize(av.Size()) {
-				context.Error(errors.NewMemoryQuotaExceededError())
-				av.Recycle()
-				return
 			}
 			if !this.sendItem(av) {
 				av.Recycle()

@@ -333,6 +333,19 @@ func NewMemoryQuotaExceededError() Error {
 		InternalCaller: CallerN(1)}
 }
 
+func NewNodeQuotaExceededError() Error {
+	return &err{level: EXCEPTION, ICode: E_NODE_QUOTA_EXCEEDED, IKey: "execution.node_quota.exceeded",
+		InternalMsg:    "Query node has run out of memory",
+		InternalCaller: CallerN(1)}
+}
+
+func NewTenantQuotaExceededError(t string) Error {
+	c := map[string]interface{}{"tenant": t}
+	return &err{level: EXCEPTION, ICode: E_TENANT_QUOTA_EXCEEDED, IKey: "execution.tenant_quota.exceeded",
+		InternalMsg: fmt.Sprintf("Tenant %v has run out of memory", t), cause: c,
+		InternalCaller: CallerN(1)}
+}
+
 func NewNilEvaluateParamError(param string) Error {
 	return &err{level: EXCEPTION, ICode: E_NIL_EVALUATE_PARAM, IKey: "execution.evaluate.nil.param",
 		InternalMsg:    fmt.Sprintf("nil '%s' parameter for evaluation", param),

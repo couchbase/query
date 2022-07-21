@@ -188,6 +188,7 @@ func (this *httpRequest) Execute(srvr *server.Server, context *execution.Context
 		this.SetTransactionStartTime(context.TxContext().TxStartTime())
 		this.SetTxTimeout(context.TxContext().TxTimeout())
 	}
+	context.Release()
 
 	now := time.Now()
 	this.Output().AddPhaseTime(execution.RUN, now.Sub(this.ExecTime()))

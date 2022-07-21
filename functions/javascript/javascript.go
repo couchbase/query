@@ -53,6 +53,8 @@ var threadCount int32
 // - evaluator client does not yet take context
 // - indexing issues: identify functions as deterministic and not running N1QL code
 
+// TODO TENANT cleanup tenant runners
+
 func Init(mux *mux.Router, t int) {
 	functions.FunctionsNewLanguage(functions.JAVASCRIPT, &javascript{})
 

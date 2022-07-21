@@ -47,6 +47,7 @@ const (
 	FUNCLIMIT             = "functions-limit"
 	TASKLIMIT             = "tasks-limit"
 	MEMORYQUOTA           = "memory-quota"
+	NODEQUOTA             = "node-quota"
 	USECBO                = "use-cbo"
 	TXTIMEOUT             = "txtimeout"
 	ATRCOLLECTION         = "atrcollection"
@@ -101,6 +102,7 @@ var CHECKERS_MIN = map[string]int{
 	FUNCLIMIT:       2,
 	TASKLIMIT:       2,
 	MEMORYQUOTA:     0,
+	NODEQUOTA:       0,
 	NUMATRS:         2,
 }
 
