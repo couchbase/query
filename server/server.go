@@ -499,6 +499,17 @@ func (this *Server) SetTimeout(timeout time.Duration) {
 	this.timeout = timeout
 }
 
+func (this *Server) RequestTimeout(requestTimeout time.Duration) time.Duration {
+	var timeout time.Duration
+	if requestTimeout > 0 {
+		timeout = requestTimeout
+	}
+	if this.timeout > 0 && (timeout == 0 || this.timeout < timeout) {
+		timeout = this.timeout
+	}
+	return timeout
+}
+
 func (this *Server) TxTimeout() time.Duration {
 	return this.txTimeout
 }

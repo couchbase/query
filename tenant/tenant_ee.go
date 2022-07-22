@@ -52,10 +52,6 @@ const (
 	_SIZER
 )
 
-const (
-	TIMEOUT = 5 * time.Second
-)
-
 var toReg = [_SIZER]struct {
 	service regulator.Service
 	unit    regulator.UnitType
@@ -139,9 +135,6 @@ func Throttle(user, bucket string, buckets []string, timeout time.Duration) (Con
 		if !found {
 			return nil, errors.NewServiceTenantNotAuthorizedError(bucket)
 		}
-	}
-	if timeout == time.Duration(0) {
-		timeout = TIMEOUT
 	}
 	ctx := regulator.NewUserCtx(tenant, user)
 	r, d, e := regulator.CheckQuota(ctx, &regulator.CheckQuotaOpts{
