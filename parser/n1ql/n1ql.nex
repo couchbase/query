@@ -364,13 +364,13 @@
     return IDENT
 }
 
-/\$[a-zA-Z_][a-zA-Z0-9_]*/ {
+/[$|@][a-zA-Z_][a-zA-Z0-9_]*/ {
     lval.s = yylex.Text()[1:]
     yylex.logToken(yylex.Text(), "NAMED_PARAM - %s", lval.s)
     return NAMED_PARAM
 }
 
-/\$[1-9][0-9]*/ {
+/[$|@][1-9][0-9]*/ {
     lval.n, _ = strconv.ParseInt(yylex.Text()[1:], 10, 64)
     yylex.logToken(yylex.Text(), "POSITIONAL_PARAM - %d", lval.n)
     return POSITIONAL_PARAM

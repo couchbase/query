@@ -51,7 +51,7 @@ func (this *Unset) ExecCommand(args []string) (errors.ErrorCode, string) {
 	} else {
 		//Check what kind of parameter needs to be Unset.
 		// For query parameters
-		if strings.HasPrefix(args[0], "-$") {
+		if strings.HasPrefix(args[0], "-$") || strings.HasPrefix(args[0], "-@") {
 			// For Named Parameters
 			vble := args[0]
 			vble = vble[2:]

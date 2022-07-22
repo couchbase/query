@@ -40031,14 +40031,18 @@ var dfas = []dfa{
 		},
 	}, []int{ /* Start-of-input transitions */ -1, -1, -1}, []int{ /* End-of-input transitions */ -1, -1, -1}, nil},
 
-	// \$[a-zA-Z_][a-zA-Z0-9_]*
+	// [$|@][a-zA-Z_][a-zA-Z0-9_]*
 	{[]bool{false, false, true, true}, []func(rune) int{ // Transitions
 		func(r rune) int {
 			switch r {
 			case 36:
 				return 1
+			case 64:
+				return 1
 			case 95:
 				return -1
+			case 124:
+				return 1
 			}
 			switch {
 			case 48 <= r && r <= 57:
@@ -40054,8 +40058,12 @@ var dfas = []dfa{
 			switch r {
 			case 36:
 				return -1
+			case 64:
+				return -1
 			case 95:
 				return 2
+			case 124:
+				return -1
 			}
 			switch {
 			case 48 <= r && r <= 57:
@@ -40071,8 +40079,12 @@ var dfas = []dfa{
 			switch r {
 			case 36:
 				return -1
+			case 64:
+				return -1
 			case 95:
 				return 3
+			case 124:
+				return -1
 			}
 			switch {
 			case 48 <= r && r <= 57:
@@ -40088,8 +40100,12 @@ var dfas = []dfa{
 			switch r {
 			case 36:
 				return -1
+			case 64:
+				return -1
 			case 95:
 				return 3
+			case 124:
+				return -1
 			}
 			switch {
 			case 48 <= r && r <= 57:
@@ -40103,11 +40119,15 @@ var dfas = []dfa{
 		},
 	}, []int{ /* Start-of-input transitions */ -1, -1, -1, -1}, []int{ /* End-of-input transitions */ -1, -1, -1, -1}, nil},
 
-	// \$[1-9][0-9]*
+	// [$|@][1-9][0-9]*
 	{[]bool{false, false, true, true}, []func(rune) int{ // Transitions
 		func(r rune) int {
 			switch r {
 			case 36:
+				return 1
+			case 64:
+				return 1
+			case 124:
 				return 1
 			}
 			switch {
@@ -40122,6 +40142,10 @@ var dfas = []dfa{
 			switch r {
 			case 36:
 				return -1
+			case 64:
+				return -1
+			case 124:
+				return -1
 			}
 			switch {
 			case 48 <= r && r <= 48:
@@ -40135,6 +40159,10 @@ var dfas = []dfa{
 			switch r {
 			case 36:
 				return -1
+			case 64:
+				return -1
+			case 124:
+				return -1
 			}
 			switch {
 			case 48 <= r && r <= 48:
@@ -40147,6 +40175,10 @@ var dfas = []dfa{
 		func(r rune) int {
 			switch r {
 			case 36:
+				return -1
+			case 64:
+				return -1
+			case 124:
 				return -1
 			}
 			switch {

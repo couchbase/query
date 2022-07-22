@@ -1098,14 +1098,14 @@ func newUrlArgs(req *http.Request, urlArgs *urlArgs) errors.Error {
 			delete(req.Form, arg)
 			continue
 		}
-		if newArg[0] == '$' {
+		if newArg[0] == '$' || newArg[0] == '@' {
 			delete(req.Form, arg)
 			switch len(val) {
 			case 0:
 				//This is an error - there _has_ to be a value for a named argument
 				return errors.NewServiceErrorMissingValue(fmt.Sprintf("named argument %s", arg))
 			case 1:
-				named = addNamedArg(named, newArg, value.NewValue([]byte(util.TrimSpace(val[0]))))
+				named = addNamedArg(named, newArg[1:], value.NewValue([]byte(util.TrimSpace(val[0]))))
 			default:
 				return errors.NewServiceErrorMultipleValues(arg)
 			}
@@ -1166,7 +1166,7 @@ func (this *urlArgs) storeDirect(f int, parm string, val interface{}) errors.Err
 	return err
 }
 
-// A named argument is an argument of the form: $<identifier>=json_value
+// A named argument is an argument of the form: $|@<identifier>=json_value
 func (this *urlArgs) getNamedArgs() map[string]value.Value {
 	return this.named
 }
@@ -1493,8 +1493,8 @@ func newJsonArgs(req *http.Request, p *jsonArgs) errors.Error {
 		if newArg == "" {
 			continue
 		}
-		if newArg[0] == '$' {
-			p.named = addNamedArg(p.named, newArg, value.NewValue(val))
+		if newArg[0] == '$' || newArg[0] == '@' {
+			p.named = addNamedArg(p.named, newArg[1:], value.NewValue(val))
 			continue
 		}
 		lowerArg := strings.ToLower(newArg)
@@ -2047,8 +2047,8 @@ func addNamedArg(args map[string]value.Value, name string, arg value.Value) map[
 		args = make(map[string]value.Value)
 	}
 	name = util.TrimSpace(name)
-	// The '$' is trimmed from the argument name when added to args:
-	args[strings.TrimPrefix(name, "$")] = arg
+	args[name] = arg
+
 	return args
 }
 

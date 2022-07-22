@@ -149,7 +149,7 @@ func Resolve(param string) (val value.Value, err_code errors.ErrorCode, err_str 
 			val = StrToVal(st_val)
 		}
 
-	} else if strings.HasPrefix(param, "-$") {
+	} else if strings.HasPrefix(param, "-$") || strings.HasPrefix(param, "-@") {
 		key := param[2:]
 		v, ok := NamedParam[key]
 		if !ok {
@@ -384,7 +384,7 @@ func PushOrSet(args []string, pushvalue bool) (errors.ErrorCode, string) {
 	// Check what kind of parameter needs to be set or pushed
 	// depending on the pushvalue boolean value.
 
-	if strings.HasPrefix(args[0], "-$") {
+	if strings.HasPrefix(args[0], "-$") || strings.HasPrefix(args[0], "-@") {
 
 		// For Named Parameters
 		vble := args[0]
