@@ -146,6 +146,7 @@ func (this *builder) buildAnsiJoinOp(node *algebra.AnsiJoin) (op plan.Operator, 
 
 		var hjoin *plan.HashJoin
 		var buildRight bool
+		var hjErr error
 		var jps, hjps *joinPlannerState
 		var hjOnclause expression.Expression
 		jps = this.saveJoinPlannerState()
@@ -169,29 +170,21 @@ func (this *builder) buildAnsiJoinOp(node *algebra.AnsiJoin) (op plan.Operator, 
 		}
 
 		if util.IsFeatureEnabled(this.context.FeatureControls(), util.N1QL_HASH_JOIN) {
-			tryHash := false
-			if useCBO {
+			tryHash := true
+			if useCBO && joinEnum {
 				/* during join enumeration hash join is built separately */
-				if !joinEnum {
-					tryHash = true
-				}
-			} else if preferHash {
-				// only consider hash join when USE HASH hint is specified
-				tryHash = true
+				tryHash = false
 			}
 			if tryHash {
-				hjoin, buildRight, err = this.buildHashJoin(node, filter, selec, nil, nil, nil)
-				if err != nil && !useCBO {
-					// in case of CBO, ignore error (e.g. no index found)
-					// try nested-loop below
-					return nil, err
-				}
+				hjoin, buildRight, hjErr = this.buildHashJoin(node, filter, selec, nil, nil, nil)
 				if hjoin != nil {
-					if useCBO && !preferHash {
-						if useFr {
-							hjCost = hjoin.FrCost()
-						} else {
-							hjCost = hjoin.Cost()
+					if !preferHash {
+						if useCBO {
+							if useFr {
+								hjCost = hjoin.FrCost()
+							} else {
+								hjCost = hjoin.Cost()
+							}
 						}
 						hjps = this.saveJoinPlannerState()
 						hjOnclause = node.Onclause()
@@ -222,11 +215,11 @@ func (this *builder) buildAnsiJoinOp(node *algebra.AnsiJoin) (op plan.Operator, 
 		this.restoreJoinPlannerState(jps)
 		node.SetOnclause(origOnclause)
 		right.SetUnderNL()
-		scans, primaryJoinKeys, newOnclause, newFilter, cost, cardinality, size, frCost, err := this.buildAnsiJoinScan(right, node.Onclause(), filter, node.Outer(), "join")
+		scans, primaryJoinKeys, newOnclause, newFilter, cost, cardinality, size, frCost, nlErr := this.buildAnsiJoinScan(right, node.Onclause(), filter, node.Outer(), "join")
 		right.UnsetUnderNL()
-		if err != nil && !useCBO {
-			// in case of CBO, defer returning error in case hash join is feasible
-			return nil, err
+		if nlErr != nil && hjoin == nil {
+			// if hash join is feasible, defer returning error
+			return nil, nlErr
 		}
 
 		if baseKeyspace.HasIndexHintError() {
@@ -277,7 +270,7 @@ func (this *builder) buildAnsiJoinOp(node *algebra.AnsiJoin) (op plan.Operator, 
 				right.SetUnderNL()
 			}
 			return plan.NewNLJoin(node, plan.NewSequence(scans...), newFilter, cost, cardinality, size, frCost), nil
-		} else if hjCost > 0.0 {
+		} else if hjoin != nil {
 			this.restoreJoinPlannerState(hjps)
 			node.SetOnclause(hjOnclause)
 			if preferNL && !joinEnum {
@@ -294,9 +287,11 @@ func (this *builder) buildAnsiJoinOp(node *algebra.AnsiJoin) (op plan.Operator, 
 				this.resetOrder()
 			}
 			return hjoin, nil
-		} else if err != nil && useCBO {
+		} else if nlErr != nil {
 			// error occurred and neither nested-loop join nor hash join is available
-			return nil, err
+			return nil, nlErr
+		} else if hjErr != nil {
+			return nil, hjErr
 		}
 
 		if !right.IsPrimaryJoin() {
@@ -447,6 +442,7 @@ func (this *builder) buildAnsiNestOp(node *algebra.AnsiNest) (op plan.Operator, 
 
 		var hnest *plan.HashNest
 		var buildRight bool
+		var hnErr error
 		var jps, hjps *joinPlannerState
 		var hnOnclause expression.Expression
 		jps = this.saveJoinPlannerState()
@@ -463,26 +459,18 @@ func (this *builder) buildAnsiNestOp(node *algebra.AnsiNest) (op plan.Operator, 
 		nlIndexHintError := false
 
 		if util.IsFeatureEnabled(this.context.FeatureControls(), util.N1QL_HASH_JOIN) {
-			tryHash := false
-			if useCBO {
+			tryHash := true
+			if useCBO && joinEnum {
 				/* during join enumeration hash join is built separately */
-				if !joinEnum {
-					tryHash = true
-				}
-			} else if preferHash {
-				// only consider hash nest when USE HASH hint is specified
-				tryHash = true
+				tryHash = false
 			}
 			if tryHash {
-				hnest, buildRight, err = this.buildHashNest(node, filter, selec, nil, nil, nil)
-				if err != nil && !useCBO {
-					// in case of CBO, ignore error (e.g. no index found)
-					// try nested-loop below
-					return nil, err
-				}
+				hnest, buildRight, hnErr = this.buildHashNest(node, filter, selec, nil, nil, nil)
 				if hnest != nil {
-					if useCBO && !preferHash {
-						hnCost = hnest.Cost()
+					if !preferHash {
+						if useCBO {
+							hnCost = hnest.Cost()
+						}
 						hjps = this.saveJoinPlannerState()
 						hnOnclause = node.Onclause()
 						if baseKeyspace.HasIndexHintError() {
@@ -512,11 +500,11 @@ func (this *builder) buildAnsiNestOp(node *algebra.AnsiNest) (op plan.Operator, 
 		this.restoreJoinPlannerState(jps)
 		node.SetOnclause(origOnclause)
 		right.SetUnderNL()
-		scans, primaryJoinKeys, newOnclause, newFilter, cost, cardinality, size, frCost, err := this.buildAnsiJoinScan(right, node.Onclause(), nil, node.Outer(), "nest")
+		scans, primaryJoinKeys, newOnclause, newFilter, cost, cardinality, size, frCost, nlErr := this.buildAnsiJoinScan(right, node.Onclause(), nil, node.Outer(), "nest")
 		right.UnsetUnderNL()
-		if err != nil && !useCBO {
-			// in case of CBO, defer returning error in case hash join is feasible
-			return nil, err
+		if nlErr != nil && hnest == nil {
+			// if hash nest is feasible, defer returning error
+			return nil, nlErr
 		}
 
 		if baseKeyspace.HasIndexHintError() {
@@ -560,7 +548,7 @@ func (this *builder) buildAnsiNestOp(node *algebra.AnsiNest) (op plan.Operator, 
 				right.SetUnderNL()
 			}
 			return plan.NewNLNest(node, plan.NewSequence(scans...), newFilter, cost, cardinality, size, frCost), nil
-		} else if hnCost > 0.0 {
+		} else if hnest != nil {
 			this.restoreJoinPlannerState(hjps)
 			node.SetOnclause(hnOnclause)
 			if preferNL && !joinEnum {
@@ -577,9 +565,11 @@ func (this *builder) buildAnsiNestOp(node *algebra.AnsiNest) (op plan.Operator, 
 				this.resetOrder()
 			}
 			return hnest, nil
-		} else if err != nil && useCBO {
+		} else if nlErr != nil {
 			// error occurred and neither nested-loop join nor hash join is available
-			return nil, err
+			return nil, nlErr
+		} else if hnErr != nil {
+			return nil, hnErr
 		}
 
 		if !right.IsPrimaryJoin() {
