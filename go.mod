@@ -46,7 +46,7 @@ require (
 	github.com/couchbase/eventing-ee v0.0.0-00010101000000-000000000000
 	github.com/couchbase/go-couchbase v0.1.1
 	github.com/couchbase/go_json v0.0.0-20220330123059-4473a21887c8
-	github.com/couchbase/gocbcore/v10 v10.1.3
+	github.com/couchbase/gocbcore/v10 v10.1.4
 	github.com/couchbase/godbc v0.0.0-20210615212222-79da1b49cb4d
 	github.com/couchbase/gomemcached v0.1.5-0.20220627085811-f29815b6005a
 	github.com/couchbase/goutils v0.1.2
@@ -96,7 +96,7 @@ require (
 	github.com/couchbase/cbft v0.0.0-00010101000000-000000000000 // indirect
 	github.com/couchbase/cbgt v0.0.0-00010101000000-000000000000 // indirect
 	github.com/couchbase/ghistogram v0.1.0 // indirect
-	github.com/couchbase/gocb/v2 v2.5.1 // indirect
+	github.com/couchbase/gocb/v2 v2.5.2 // indirect
 	github.com/couchbase/gocbcore/v9 v9.1.8 // indirect
 	github.com/couchbase/gometa v0.0.0-20200717102231-b0e38b71d711 // indirect
 	github.com/couchbase/hebrew v0.0.0-00010101000000-000000000000 // indirect
