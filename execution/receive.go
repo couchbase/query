@@ -30,7 +30,7 @@ func NewReceive(plan *plan.Receive, context *Context) *Receive {
 		plan: plan,
 	}
 
-	newRedirectBase(&rv.base)
+	newRedirectBase(&rv.base, context)
 	rv.base.setInline()
 	rv.dormant()
 	rv.output = rv

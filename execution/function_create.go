@@ -27,7 +27,7 @@ func NewCreateFunction(plan *plan.CreateFunction, context *Context) *CreateFunct
 		plan: plan,
 	}
 
-	newRedirectBase(&rv.base)
+	newRedirectBase(&rv.base, context)
 	rv.output = rv
 	return rv
 }

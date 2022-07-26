@@ -27,7 +27,7 @@ func NewDropFunction(plan *plan.DropFunction, context *Context) *DropFunction {
 		plan: plan,
 	}
 
-	newRedirectBase(&rv.base)
+	newRedirectBase(&rv.base, context)
 	rv.output = rv
 	return rv
 }

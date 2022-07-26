@@ -200,27 +200,20 @@ func RefundUnits(ctx Context, units Services) error {
 	return nil
 }
 
-// TODO collect from regulator
-func QueryCUName() string {
-	return "queryCU"
-}
+func Units2Map(serv Services) map[string]interface{} {
+	var out []regulator.Units
 
-func JsCUName() string {
-	return "jsCU"
-}
-
-func GsiRUName() string {
-	return "gsiRU"
-}
-
-func FtsRUName() string {
-	return "ftsRU"
-}
-
-func KvRUName() string {
-	return "kvRU"
-}
-
-func KvWUName() string {
-	return "kvWU"
+	for s, u := range serv {
+		if u.NonZero() {
+			ru, err := regulator.NewUnits(toReg[s].service, toReg[s].unit, uint64(u))
+			if err != nil {
+				continue
+			}
+			out = append(out, ru)
+		}
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return regulator.UnitsToMap(true, out...)
 }

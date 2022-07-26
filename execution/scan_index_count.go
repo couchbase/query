@@ -27,7 +27,7 @@ func NewIndexCountScan(plan *plan.IndexCountScan, context *Context) *IndexCountS
 		plan: plan,
 	}
 
-	newRedirectBase(&rv.base)
+	newRedirectBase(&rv.base, context)
 	rv.output = rv
 	return rv
 }

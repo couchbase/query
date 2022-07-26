@@ -39,7 +39,7 @@ func NewStream(plan *plan.Stream, context *Context) *Stream {
 	if context.MaxParallelism() == 1 {
 		newSerializedBase(&rv.base, context)
 	} else {
-		newRedirectBase(&rv.base)
+		newRedirectBase(&rv.base, context)
 	}
 	rv.stopContext = context
 	rv.output = rv

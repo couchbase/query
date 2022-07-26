@@ -27,7 +27,7 @@ func NewExecuteFunction(plan *plan.ExecuteFunction, context *Context) *ExecuteFu
 		plan: plan,
 	}
 
-	newRedirectBase(&rv.base)
+	newRedirectBase(&rv.base, context)
 	rv.output = rv
 	return rv
 }

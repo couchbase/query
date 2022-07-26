@@ -55,7 +55,7 @@ func NewParallelSequence(plan *plan.Sequence, isParallel bool, context *Context,
 
 	// we'll even use the last child's value exchange and save allocating
 	// an unused one for ourselves
-	newRedirectBase(&rv.base)
+	newRedirectBase(&rv.base, context)
 	rv.base.setInline()
 	prevBase.exchangeMove(&rv.base)
 	rv.output = rv

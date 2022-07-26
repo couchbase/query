@@ -35,6 +35,7 @@ type internalOutput struct {
 	mutationCount uint64
 	err           errors.Error
 	abort         bool
+	output        Output
 }
 
 func (this *internalOutput) SetUp() {
@@ -90,11 +91,11 @@ func (this *internalOutput) SortCount() uint64 {
 }
 
 func (this *internalOutput) AddPhaseCount(p Phases, c uint64) {
-	// empty
+	this.output.AddPhaseCount(p, c)
 }
 
 func (this *internalOutput) AddPhaseOperator(p Phases) {
-	// empty
+	this.output.AddPhaseOperator(p)
 }
 
 func (this *internalOutput) PhaseOperator(p Phases) uint64 {
@@ -112,7 +113,7 @@ func (this *internalOutput) FmtPhaseOperators() map[string]interface{} {
 }
 
 func (this *internalOutput) AddPhaseTime(phase Phases, duration time.Duration) {
-	// empty
+	this.output.AddPhaseTime(phase, duration)
 }
 
 func (this *internalOutput) FmtPhaseTimes() map[string]interface{} {
@@ -126,7 +127,7 @@ func (this *internalOutput) FmtOptimizerEstimates(op Operator) map[string]interf
 }
 
 func (this *internalOutput) TrackMemory(size uint64) {
-	// empty
+	this.output.TrackMemory(size)
 }
 
 func (this *internalOutput) SetTransactionStartTime(t time.Time) {
@@ -135,6 +136,15 @@ func (this *internalOutput) SetTransactionStartTime(t time.Time) {
 
 func (this *internalOutput) AddTenantUnits(s tenant.Service, ru tenant.Unit) {
 	// empty
+}
+
+func (this *internalOutput) AddCpuTime(d time.Duration) {
+	this.output.AddCpuTime(d)
+}
+
+func (this *Context) newOutput(output *internalOutput) *internalOutput {
+	output.output = this.output
+	return output
 }
 
 func (this *Context) EvaluateStatement(statement string, namedArgs map[string]value.Value, positionalArgs value.Values,
@@ -405,7 +415,7 @@ func (this *Context) ExecutePrepared(prepared *plan.Prepared, isPrepared bool,
 
 	var outputBuf internalOutput
 	var results value.Value
-	output := &outputBuf
+	output := this.newOutput(&outputBuf)
 
 	keep := this.output
 
@@ -464,7 +474,7 @@ func (this *Context) OpenPrepared(baseContext *Context, stmtType string, prepare
 }, error) {
 	handle := &executionHandle{}
 	handle.context = this
-	handle.output = &internalOutput{}
+	handle.output = this.newOutput(&internalOutput{})
 	handle.context.output = handle.output
 
 	handle.context.SetIsPrepared(isPrepared)

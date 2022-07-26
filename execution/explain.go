@@ -26,7 +26,7 @@ func NewExplain(plan plan.Operator, context *Context) *Explain {
 		plan: plan,
 	}
 
-	newRedirectBase(&rv.base)
+	newRedirectBase(&rv.base, context)
 	rv.output = rv
 	return rv
 }

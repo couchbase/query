@@ -27,7 +27,7 @@ func NewCreatePrimaryIndex(plan *plan.CreatePrimaryIndex, context *Context) *Cre
 		plan: plan,
 	}
 
-	newRedirectBase(&rv.base)
+	newRedirectBase(&rv.base, context)
 	rv.output = rv
 	return rv
 }

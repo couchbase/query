@@ -76,26 +76,6 @@ func RefundUnits(ctx Context, units Services) error {
 	return nil
 }
 
-func QueryCUName() string {
-	return ""
-}
-
-func JsCUName() string {
-	return ""
-}
-
-func GsiRUName() string {
-	return ""
-}
-
-func FtsRUName() string {
-	return ""
-}
-
-func KvRUName() string {
-	return ""
-}
-
-func KvWUName() string {
-	return ""
+func Units2Map(serv Services) map[string]interface{} {
+	return nil
 }

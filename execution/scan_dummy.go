@@ -33,7 +33,7 @@ func init() {
 func NewDummyScan(plan *plan.DummyScan, context *Context) *DummyScan {
 	rv := _DUMMYSCAN_OP_POOL.Get().(*DummyScan)
 	rv.plan = plan
-	newRedirectBase(&rv.base)
+	newRedirectBase(&rv.base, context)
 	rv.output = rv
 	return rv
 }

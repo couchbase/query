@@ -41,7 +41,7 @@ func NewAuthorize(plan *plan.Authorize, context *Context, child Operator, dynami
 	rv.plan = plan
 	rv.child = child
 	rv.dynamicAuthorize = dynamicAuthorize
-	newRedirectBase(&rv.base)
+	newRedirectBase(&rv.base, context)
 	rv.base.setInline()
 	rv.output = rv
 	return rv

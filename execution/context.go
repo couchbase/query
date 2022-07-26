@@ -143,6 +143,7 @@ type Output interface {
 	AddPhaseTime(phase Phases, duration time.Duration)
 	FmtPhaseTimes() map[string]interface{}
 	FmtOptimizerEstimates(op Operator) map[string]interface{}
+	AddCpuTime(duration time.Duration)
 	AddTenantUnits(s tenant.Service, cu tenant.Unit)
 	TrackMemory(size uint64)
 	SetTransactionStartTime(t time.Time)
@@ -585,6 +586,9 @@ func (this *Context) AddPhaseTime(phase Phases, duration time.Duration) {
 	this.output.AddPhaseTime(phase, duration)
 }
 
+func (this *Context) queryCU(duration time.Duration) {
+}
+
 func setup(context *Context, item value.AnnotatedValue) bool {
 	context.output.SetUp()
 	context.result = result
@@ -834,12 +838,8 @@ func (this *Context) TxExpired() bool {
 
 // Serverless management
 
-// TODO TENANT placeholder: query CUs are undefined as of yet
-func (this *Context) RecordCU(d time.Duration, m uint64) {
-	if tenant.IsServerless() {
-		units := tenant.RecordCU(this.tenantCtx, d, m)
-		this.output.AddTenantUnits(tenant.QUERY_CU, units)
-	}
+func (this *Context) recordCU(d time.Duration) {
+	this.output.AddCpuTime(d)
 }
 
 // Serverless cost from other services
@@ -1367,6 +1367,10 @@ func (this *Context) IsTracked() bool {
 
 func (this *Context) SetTenantCtx(ctx tenant.Context) {
 	this.tenantCtx = ctx
+}
+
+func (this *Context) TenantCtx() tenant.Context {
+	return this.tenantCtx
 }
 
 func (this *Context) TenantBucket() string {

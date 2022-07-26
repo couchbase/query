@@ -143,6 +143,7 @@ type base struct {
 	startTime      util.Time
 	execPhase      Phases
 	phaseTimes     func(time.Duration)
+	queryCU        func(time.Duration)
 	execTime       time.Duration
 	chanTime       time.Duration
 	servTime       time.Duration
@@ -197,6 +198,7 @@ func newBase(dest *base, context *Context) {
 	newValueExchange(&dest.valueExchange, context.GetPipelineCap())
 	dest.execPhase = PHASES
 	dest.phaseTimes = func(t time.Duration) {}
+	dest.queryCU = func(t time.Duration) { context.recordCU(t) }
 	dest.activeCond.L = &dest.activeLock
 	dest.doSend = parallelSend
 	dest.closeConsumer = false
@@ -205,11 +207,12 @@ func newBase(dest *base, context *Context) {
 
 // The output of this operator will be redirected elsewhere, so we
 // allocate a minimal itemChannel.
-func newRedirectBase(dest *base) {
+func newRedirectBase(dest *base, context *Context) {
 	*dest = base{}
 	newValueExchange(&dest.valueExchange, 1)
 	dest.execPhase = PHASES
 	dest.phaseTimes = func(t time.Duration) {}
+	dest.queryCU = func(t time.Duration) { context.recordCU(t) }
 	dest.activeCond.L = &dest.activeLock
 	dest.doSend = parallelSend
 	dest.closeConsumer = false
@@ -226,6 +229,7 @@ func newSerializedBase(dest *base, context *Context) {
 	newValueExchange(&dest.valueExchange, 1)
 	dest.execPhase = PHASES
 	dest.phaseTimes = func(t time.Duration) {}
+	dest.queryCU = func(t time.Duration) { context.recordCU(t) }
 	dest.activeCond.L = &dest.activeLock
 	dest.doSend = parallelSend
 	dest.closeConsumer = false
@@ -248,6 +252,7 @@ func (this *base) copy(dest *base) {
 	dest.parent = this.parent
 	dest.execPhase = this.execPhase
 	dest.phaseTimes = this.phaseTimes
+	dest.queryCU = this.queryCU
 	dest.activeCond.L = &dest.activeLock
 	dest.serializable = this.serializable
 	dest.inline = this.inline
@@ -1433,6 +1438,7 @@ func (this *base) switchPhase(p timePhases) {
 	case _EXECTIME:
 		this.addExecTime(d)
 		this.phaseTimes(d)
+		this.queryCU(d)
 	case _SERVTIME:
 		this.addServTime(d)
 		this.phaseTimes(d)

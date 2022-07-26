@@ -25,7 +25,7 @@ func NewCountScan(plan *plan.CountScan, context *Context) *CountScan {
 		plan: plan,
 	}
 
-	newRedirectBase(&rv.base)
+	newRedirectBase(&rv.base, context)
 	rv.output = rv
 	return rv
 }

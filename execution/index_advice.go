@@ -24,7 +24,7 @@ func NewIndexAdvisor(plan plan.Operator, context *Context) *IndexAdvice {
 		plan: plan,
 	}
 
-	newRedirectBase(&rv.base)
+	newRedirectBase(&rv.base, context)
 	rv.output = rv
 	return rv
 }

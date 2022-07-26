@@ -189,6 +189,10 @@ func (this *httpRequest) Execute(srvr *server.Server, context *execution.Context
 		this.SetTxTimeout(context.TxContext().TxTimeout())
 	}
 	context.Release()
+	if tenant.IsServerless() {
+		units := tenant.RecordCU(context.TenantCtx(), this.CpuTime(), this.UsedMemory())
+		this.AddTenantUnits(tenant.QUERY_CU, units)
+	}
 
 	now := time.Now()
 	this.Output().AddPhaseTime(execution.RUN, now.Sub(this.ExecTime()))
@@ -702,74 +706,34 @@ func (this *httpRequest) writeServerless(metrics bool, prefix, indent string) bo
 		return true
 	}
 
-	var newPrefix string
-	if prefix != "" {
-		newPrefix = "\n" + prefix + indent
+	v := tenant.Units2Map(this.TenantUnits())
+	if len(v) == 0 {
+		return true
+	}
+
+	var bytes []byte
+	var err error
+	if indent == "" {
+		bytes, err = json.Marshal(v)
+	} else {
+		bytes, err = json.MarshalIndent(v, prefix, indent)
+	}
+	if err != nil {
+		return false
 	}
 
 	beforeUnits := this.writer.mark()
 	if !(this.writeString(",\n") &&
 		this.writeString(prefix) &&
-		this.writeString("\"computeUnits\": {")) {
+		this.writeString("\"billingUnits\": ")) {
 		this.writer.truncate(beforeUnits)
 		return false
 	}
-
-	seen := false
-	buf := this.writer.buf()
-	if this.GetTenantUnits(tenant.QUERY_CU).NonZero() {
-		if seen {
-			fmt.Fprintf(buf, ",")
-		}
-		seen = true
-		fmt.Fprintf(buf, "%s\"%s\": %s", newPrefix, tenant.QueryCUName(), this.GetTenantUnits(tenant.QUERY_CU).String())
-	}
-	if this.GetTenantUnits(tenant.JS_CU).NonZero() {
-		if seen {
-			fmt.Fprintf(buf, ",")
-		}
-		seen = true
-		fmt.Fprintf(buf, "%s\"%s\": %s", newPrefix, tenant.JsCUName(), this.GetTenantUnits(tenant.JS_CU).String())
-	}
-	if this.GetTenantUnits(tenant.GSI_RU).NonZero() {
-		if seen {
-			fmt.Fprintf(buf, ",")
-		}
-		seen = true
-		fmt.Fprintf(buf, "%s\"%s\": %s", newPrefix, tenant.GsiRUName(), this.GetTenantUnits(tenant.GSI_RU).String())
-	}
-	if this.GetTenantUnits(tenant.FTS_RU).NonZero() {
-		if seen {
-			fmt.Fprintf(buf, ",")
-		}
-		seen = true
-		fmt.Fprintf(buf, "%s\"%s\": %s", newPrefix, tenant.FtsRUName(), this.GetTenantUnits(tenant.FTS_RU).String())
-	}
-	if this.GetTenantUnits(tenant.KV_RU).NonZero() {
-		if seen {
-			fmt.Fprintf(buf, ",")
-		}
-		seen = true
-		fmt.Fprintf(buf, "%s\"%s\": %s", newPrefix, tenant.KvRUName(), this.GetTenantUnits(tenant.KV_RU).String())
-	}
-	if this.GetTenantUnits(tenant.KV_WU).NonZero() {
-		if seen {
-			fmt.Fprintf(buf, ",")
-		}
-		seen = true
-		fmt.Fprintf(buf, "%s\"%s\": %s", newPrefix, tenant.KvWUName(), this.GetTenantUnits(tenant.KV_WU).String())
-	}
-
-	// no ouput if no units accounted for
-	if !seen {
-		this.writer.truncate(beforeUnits)
-		return true
-	}
-	if prefix != "" && !(this.writeString("\n") && this.writeString(prefix)) {
+	if !this.writer.writeBytes(bytes) {
 		this.writer.truncate(beforeUnits)
 		return false
 	}
-	return this.writeString("}")
+	return true
 }
 
 func (this *httpRequest) writeProfile(profile server.Profile, prefix, indent string) bool {

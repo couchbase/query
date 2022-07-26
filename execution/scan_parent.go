@@ -25,7 +25,7 @@ func NewParentScan(plan *plan.ParentScan, context *Context) *ParentScan {
 		plan: plan,
 	}
 
-	newRedirectBase(&rv.base)
+	newRedirectBase(&rv.base, context)
 	rv.output = rv
 	return rv
 }

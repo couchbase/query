@@ -34,7 +34,7 @@ func NewStartTransaction(plan *plan.StartTransaction, context *Context) *StartTr
 		plan: plan,
 	}
 
-	newRedirectBase(&rv.base)
+	newRedirectBase(&rv.base, context)
 	rv.output = rv
 	return rv
 }
@@ -149,7 +149,7 @@ func NewCommitTransaction(plan *plan.CommitTransaction, context *Context) *Commi
 		plan: plan,
 	}
 
-	newRedirectBase(&rv.base)
+	newRedirectBase(&rv.base, context)
 	rv.output = rv
 	return rv
 }
@@ -218,7 +218,7 @@ func NewRollbackTransaction(plan *plan.RollbackTransaction, context *Context) *R
 		plan: plan,
 	}
 
-	newRedirectBase(&rv.base)
+	newRedirectBase(&rv.base, context)
 	rv.output = rv
 	return rv
 }
@@ -288,7 +288,7 @@ func NewTransactionIsolation(plan *plan.TransactionIsolation, context *Context) 
 		plan: plan,
 	}
 
-	newRedirectBase(&rv.base)
+	newRedirectBase(&rv.base, context)
 	rv.output = rv
 	return rv
 }
@@ -354,7 +354,7 @@ func NewSavepoint(plan *plan.Savepoint, context *Context) *Savepoint {
 		plan: plan,
 	}
 
-	newRedirectBase(&rv.base)
+	newRedirectBase(&rv.base, context)
 	rv.output = rv
 	return rv
 }

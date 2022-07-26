@@ -28,7 +28,7 @@ func NewCreateIndex(plan *plan.CreateIndex, context *Context) *CreateIndex {
 		plan: plan,
 	}
 
-	newRedirectBase(&rv.base)
+	newRedirectBase(&rv.base, context)
 	rv.output = rv
 	return rv
 }

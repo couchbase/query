@@ -267,6 +267,7 @@ type BaseRequest struct {
 	usedMemory    atomic.AlignedUint64
 	mutationCount atomic.AlignedUint64
 	sortCount     atomic.AlignedUint64
+	cpuTime       atomic.AlignedUint64
 	phaseStats    [execution.PHASES]phaseStat
 	tenantUnits   tenant.Services
 
@@ -854,6 +855,18 @@ func (this *BaseRequest) AddTenantUnits(s tenant.Service, cu tenant.Unit) {
 
 func (this *BaseRequest) GetTenantUnits(s tenant.Service) tenant.Unit {
 	return this.tenantUnits[s]
+}
+
+func (this *BaseRequest) TenantUnits() tenant.Services {
+	return this.tenantUnits
+}
+
+func (this *BaseRequest) AddCpuTime(duration time.Duration) {
+	atomic.AddUint64(&(this.cpuTime), uint64(duration))
+}
+
+func (this *BaseRequest) CpuTime() time.Duration {
+	return time.Duration(this.cpuTime)
 }
 
 func (this *BaseRequest) TrackMemory(size uint64) {

@@ -50,7 +50,6 @@ type Context interface {
 	Infer(value.Value, value.Value) (value.Value, error)
 	SetTracked(bool)
 	IsTracked() bool
-	RecordCU(d time.Duration, m uint64)
 	RecordJsCU(d time.Duration, m uint64)
 }
 

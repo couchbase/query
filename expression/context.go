@@ -52,7 +52,6 @@ type Context interface {
 	SetTracked(bool)
 	IsTracked() bool
 	RecordJsCU(d time.Duration, m uint64)
-	RecordCU(d time.Duration, m uint64)
 }
 
 type ExecutionHandle interface {

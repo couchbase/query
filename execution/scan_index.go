@@ -83,7 +83,7 @@ func (this *IndexScan) RunOnce(context *Context, parent value.Value) {
 		this.children = _INDEX_SCAN_POOL.Get()
 
 		for i, span := range spans {
-			scan := newSpanScan(this, span)
+			scan := newSpanScan(this, span, context)
 			scan.SetOutput(this.output)
 			scan.SetBit(this.bit)
 			this.children = append(this.children, scan)
@@ -147,14 +147,14 @@ type spanScan struct {
 	indexScan *IndexScan
 }
 
-func newSpanScan(parent *IndexScan, span *plan.Span) *spanScan {
+func newSpanScan(parent *IndexScan, span *plan.Span, context *Context) *spanScan {
 	rv := &spanScan{
 		plan:      parent.plan,
 		span:      span,
 		indexScan: parent,
 	}
 
-	newRedirectBase(&rv.base)
+	newRedirectBase(&rv.base, context)
 	rv.newStopChannel()
 	rv.parent = parent
 	rv.output = parent.output
