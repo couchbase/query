@@ -60,9 +60,9 @@ require (
 	github.com/mattn/go-runewidth v0.0.3
 	github.com/peterh/liner v1.2.0
 	github.com/russross/blackfriday v1.5.2
-	github.com/samuel/go-zookeeper v0.0.0-20200724154423-2164a8ac840e
-	golang.org/x/crypto v0.0.0-20220622213112-05595931fe9d
-	golang.org/x/net v0.0.0-20220225172249-27dd8689420f
+	github.com/samuel/go-zookeeper v0.0.0-20201211165307-7117e9ea2414
+	golang.org/x/crypto v0.0.0-20220722155217-630584e8d5aa
+	golang.org/x/net v0.0.0-20220726230323-06994584191e
 	gopkg.in/couchbase/gocb.v1 v1.6.7
 )
 
@@ -123,7 +123,7 @@ require (
 	github.com/santhosh-tekuri/jsonschema v1.2.4 // indirect
 	github.com/youmark/pkcs8 v0.0.0-20181117223130-1be2e3e5546d // indirect
 	go.etcd.io/bbolt v1.3.6 // indirect
-	golang.org/x/sys v0.0.0-20220520151302-bc2c85ada10a // indirect
+	golang.org/x/sys v0.0.0-20220722155257-8c9f86f7a55f // indirect
 	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211 // indirect
 	golang.org/x/text v0.3.7 // indirect
 	google.golang.org/genproto v0.0.0-20200825200019-8632dd797987 // indirect
