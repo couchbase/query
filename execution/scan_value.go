@@ -85,6 +85,14 @@ func (this *ValueScan) RunOnce(context *Context, parent value.Value) {
 				av.SetAttachment("options", options)
 			}
 
+			if context.UseRequestQuota() {
+				err := context.TrackValueSize(av.Size() + val.Size() + key.Size())
+				if err != nil {
+					context.Error(err)
+					av.Recycle()
+					return
+				}
+			}
 			if !this.sendItem(av) {
 				return
 			}

@@ -113,6 +113,9 @@ func (this *SendUpsert) flushBatch(context *Context) bool {
 				val = av
 			}
 
+			if context.UseRequestQuota() {
+				context.ReleaseValueSize(av.Size())
+			}
 			if optionsExpr != nil {
 				options, err = optionsExpr.Evaluate(av, context)
 				if err != nil {
@@ -133,6 +136,9 @@ func (this *SendUpsert) flushBatch(context *Context) bool {
 			if !ok {
 				context.Error(errors.NewUpsertValueError(av.GetValue()))
 				continue
+			}
+			if context.UseRequestQuota() {
+				context.ReleaseValueSize(key.Size() + val.Size())
 			}
 
 			options, _ = av.GetAttachment("options").(value.Value)
@@ -183,6 +189,14 @@ func (this *SendUpsert) flushBatch(context *Context) bool {
 		av := value.NewAnnotatedValue(make(map[string]interface{}, 1))
 		av.CopyAnnotations(dv)
 		av.SetField(this.plan.Alias(), dv)
+		if context.UseRequestQuota() {
+			err := context.TrackValueSize(av.Size())
+			if err != nil {
+				context.Error(err)
+				av.Recycle()
+				return false
+			}
+		}
 		if !this.sendItem(av) {
 			return false
 		}

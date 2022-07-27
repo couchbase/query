@@ -51,6 +51,11 @@ func (this *Discard) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *Discard) processItem(item value.AnnotatedValue, context *Context) bool {
+
+	// item not used past this point
+	if context.UseRequestQuota() {
+		context.ReleaseValueSize(item.Size())
+	}
 	item.Recycle()
 	return true
 }
