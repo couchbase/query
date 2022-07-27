@@ -156,7 +156,7 @@ func main() {
 	tenant.Init(*SERVERLESS)
 
 	memory.Config(*NODE_QUOTA, []int{*SERVICERS, *PLUS_SERVICERS})
-	tenant.Config(*NODE_QUOTA)
+	tenant.Config(memory.Quota())
 
 	numCPUs := runtime.NumCPU()
 	if !*ENTERPRISE && numCPUs > _DEF_CE_MAXCPUS {

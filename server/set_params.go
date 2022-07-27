@@ -176,7 +176,7 @@ var _SETTERS = map[string]Setter{
 	NODEQUOTA: func(s *Server, o interface{}) errors.Error {
 		value := getNumber(o)
 		memory.Config(uint64(value), []int{s.Servicers(), s.PlusServicers()})
-		tenant.Config(uint64(value))
+		tenant.Config(memory.Quota())
 		return nil
 	},
 	USECBO: func(s *Server, o interface{}) errors.Error {
@@ -337,11 +337,15 @@ func ProcessSettings(settings map[string]interface{}, srvr *Server) (err errors.
 			set_it := _SETTERS[s]
 			serr := set_it(srvr, value)
 			if serr == nil {
-				if s == SERVICERS {
+				switch s {
+				case SERVICERS:
 					value = srvr.Servicers()
-				} else if s == PLUSSERVICERS {
+				case PLUSSERVICERS:
 					value = srvr.PlusServicers()
+				case NODEQUOTA:
+					value = memory.Quota()
 				}
+
 				logging.Infof("Query Configuration changed for %v. New value is %v", s, value)
 			} else {
 				logging.Infof("Could not change query Configuration %v to %v: %v", s, value, serr)

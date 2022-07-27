@@ -15,20 +15,13 @@ import (
 	"github.com/couchbase/query/memory"
 )
 
-type memoryManager struct {
-}
-
 type memorySession struct {
 }
 
 func Config(quota uint64) {
 }
 
-func Manager(tenant string) memory.MemoryManager {
-	return &memoryManager{}
-}
-
-func (this *memoryManager) Register() memory.MemorySession {
+func Register(context Context) memory.MemorySession {
 	return &memorySession{}
 }
 

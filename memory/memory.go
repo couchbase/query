@@ -12,6 +12,7 @@ import (
 	"sync/atomic"
 
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/logging"
 )
 
 type MemoryManager interface {
@@ -25,9 +26,10 @@ type MemorySession interface {
 }
 
 type memoryManager struct {
-	setting uint64
-	max     uint64
-	curr    uint64
+	setting  uint64
+	max      uint64
+	curr     uint64
+	reserved uint64
 }
 
 type memorySession struct {
@@ -42,13 +44,21 @@ const _MEMORY_TOKEN uint64 = 1 * _MB
 func Config(max uint64, servicers []int) {
 	manager.setting = max
 	manager.max = max * _MB
-	manager.curr = 0
 
 	// we reserve a memory token for each configured servicer so that
 	// we don't have to keep track how many more could be starting
+	c := uint64(0)
 	for _, v := range servicers {
-		manager.curr += uint64(v) * _MEMORY_TOKEN
+		c += uint64(v) * _MEMORY_TOKEN
 	}
+	if manager.max > 0 && manager.max < c {
+		manager.max = c
+		manager.setting = c / _MEMORY_TOKEN
+		logging.Infof("amending memory manager max from requested %v to %v", max, manager.setting)
+	}
+	atomic.AddUint64(&manager.curr, ^(manager.reserved - 1))
+	atomic.AddUint64(&manager.curr, c)
+	manager.reserved = c
 }
 
 var manager memoryManager
@@ -57,12 +67,8 @@ func Quota() uint64 {
 	return manager.setting
 }
 
-func Manager() MemoryManager {
-	return &manager
-}
-
-func (this *memoryManager) Register() MemorySession {
-	return &memorySession{0, _MEMORY_TOKEN, this}
+func Register() MemorySession {
+	return &memorySession{0, _MEMORY_TOKEN, &manager}
 }
 
 func (this *memorySession) Track(size uint64) (uint64, uint64, errors.Error) {

@@ -339,10 +339,19 @@ func NewNodeQuotaExceededError() Error {
 		InternalCaller: CallerN(1)}
 }
 
-func NewTenantQuotaExceededError(t string) Error {
-	c := map[string]interface{}{"tenant": t}
+func NewTenantQuotaExceededError(t string, u string) Error {
+	var msg string
+	var c interface{}
+	if t != "" {
+		mc := make(map[string]interface{}, 1)
+		mc["tenant"] = t
+		c = mc
+		msg = fmt.Sprintf("Tenant %v has run out of memory", t)
+	} else {
+		msg = fmt.Sprintf("User %v has run out of memory", u)
+	}
 	return &err{level: EXCEPTION, ICode: E_TENANT_QUOTA_EXCEEDED, IKey: "execution.tenant_quota.exceeded",
-		InternalMsg: fmt.Sprintf("Tenant %v has run out of memory", t), cause: c,
+		InternalMsg: msg, cause: c,
 		InternalCaller: CallerN(1)}
 }
 

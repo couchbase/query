@@ -1080,9 +1080,9 @@ func (this *Server) serviceRequest(request Request) {
 	context.SetMemoryQuota(memoryQuota)
 
 	if tenant.IsServerless() {
-		context.SetMemoryManager(tenant.Manager(context.TenantBucket()))
+		context.SetMemorySession(tenant.Register(context.TenantCtx()))
 	} else if memoryQuota > 0 || memory.Quota() > 0 {
-		context.SetMemoryManager(memory.Manager())
+		context.SetMemorySession(memory.Register())
 	}
 
 	context.SetIsPrepared(request.Prepared() != nil)

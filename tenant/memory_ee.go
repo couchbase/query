@@ -31,6 +31,7 @@ type memoryManager struct {
 type memorySession struct {
 	manager *memoryManager
 	session memory.MemorySession
+	context Context
 }
 
 const _MB = 1024 * 1024
@@ -46,22 +47,20 @@ func Config(quota uint64) {
 	perTenantQuota = quota * _MB / _TENANT_QUOTA_RATIO
 }
 
-func Manager(tenant string) memory.MemoryManager {
+func Register(context Context) memory.MemorySession {
+	tenant := Bucket(context)
 	lock.Lock()
-	m := managers[tenant]
-	if m == nil {
-		m = &memoryManager{inUseMemory: 0, sessions: 0, tenant: tenant}
-		managers[tenant] = m
+	manager := managers[tenant]
+	if manager == nil {
+		manager = &memoryManager{inUseMemory: 0, sessions: 0, tenant: tenant}
+		managers[tenant] = manager
 	}
 	lock.Unlock()
-	return m
-}
 
-func (this *memoryManager) Register() memory.MemorySession {
-	atomic.AddInt32(&this.sessions, 1)
-	session := memory.Manager().Register()
-	atomic.AddUint64(&this.inUseMemory, session.Allocated())
-	return &memorySession{this, session}
+	atomic.AddInt32(&manager.sessions, 1)
+	session := memory.Register()
+	atomic.AddUint64(&manager.inUseMemory, session.Allocated())
+	return &memorySession{manager, session, context}
 }
 
 func (this *memoryManager) expire() {
@@ -93,7 +92,7 @@ func (this *memorySession) Track(size uint64) (uint64, uint64, errors.Error) {
 
 		// TODO TENANT there is an opportunity here to give tenants different quotas
 		if perTenantQuota > 0 && inUse > perTenantQuota {
-			return top, allocated, errors.NewTenantQuotaExceededError(this.manager.tenant)
+			return top, allocated, errors.NewTenantQuotaExceededError(this.manager.tenant, this.context.User())
 		}
 	}
 	return top, allocated, nil

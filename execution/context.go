@@ -512,9 +512,9 @@ func (this *Context) SetMemoryQuota(memoryQuota uint64) {
 	this.memoryQuota = memoryQuota * 1024 * 1024
 }
 
-func (this *Context) SetMemoryManager(m memory.MemoryManager) {
+func (this *Context) SetMemorySession(m memory.MemorySession) {
 	if m != nil {
-		this.memorySession = m.Register()
+		this.memorySession = m
 	}
 }
 

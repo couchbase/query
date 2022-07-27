@@ -40,8 +40,6 @@ type Endpoint interface {
 	WriteError(err errors.Error, w http.ResponseWriter, req *http.Request)
 }
 
-var adminUserCtx = regulator.NewUserCtx("", "")
-
 const (
 	QUERY_CU = Service(iota)
 	JS_CU
@@ -53,15 +51,16 @@ const (
 )
 
 var toReg = [_SIZER]struct {
-	service regulator.Service
-	unit    regulator.UnitType
+	service  regulator.Service
+	unit     regulator.UnitType
+	billable bool
 }{
-	{regulator.Query, regulator.Compute},
-	{regulator.Query, regulator.Compute},
-	{regulator.Index, regulator.Read},
-	{regulator.Search, regulator.Read},
-	{regulator.Data, regulator.Read},
-	{regulator.Data, regulator.Write},
+	{regulator.Query, regulator.Compute, false}, // query, not billable
+	{regulator.Query, regulator.Compute, true},  // js, billable
+	{regulator.Index, regulator.Read, true},     // gsi, billable
+	{regulator.Search, regulator.Read, true},    // fts, billable
+	{regulator.Data, regulator.Read, true},      // kv ru, billable
+	{regulator.Data, regulator.Write, true},     // kv wu, billable
 }
 
 func Init(serverless bool) {
@@ -116,7 +115,7 @@ func Throttle(user, bucket string, buckets []string, timeout time.Duration) (Con
 	// TODO TENANT proper check for administrator
 	// Administrator doesn't have associated buckets
 	if strings.ToLower(user) == "administrator" {
-		return adminUserCtx, nil
+		return regulator.NewUserCtx("", user), nil
 	}
 	tenant := bucket
 	if tenant == "" {
@@ -161,11 +160,17 @@ func Bucket(ctx Context) string {
 	}
 	return ""
 }
+func User(ctx Context) string {
+	if ctx != nil {
+		return ctx.User()
+	}
+	return ""
+}
 
 // TODO define units for query and js-evaluator
 func RecordCU(ctx Context, d time.Duration, m uint64) Unit {
 	units, _ := metering.QueryEvalComputeToCU(d, m)
-	if ctx != adminUserCtx {
+	if ctx.Bucket() != "" {
 		regulator.RecordUnits(ctx, units)
 	}
 	return Unit(units.Whole())
@@ -173,7 +178,7 @@ func RecordCU(ctx Context, d time.Duration, m uint64) Unit {
 
 func RecordJsCU(ctx Context, d time.Duration, m uint64) Unit {
 	units, _ := metering.QueryUDFComputeToCU(d, m)
-	if ctx != adminUserCtx {
+	if ctx.Bucket() != "" {
 		regulator.RecordUnits(ctx, units)
 	}
 	return Unit(units.Whole())
@@ -182,11 +187,11 @@ func RecordJsCU(ctx Context, d time.Duration, m uint64) Unit {
 func RefundUnits(ctx Context, units Services) error {
 
 	// no refund needed for full admin
-	if ctx != adminUserCtx {
+	if ctx.Bucket() == "" {
 		return nil
 	}
 	for s, u := range units {
-		if u > 0 {
+		if u.NonZero() && toReg[s].billable {
 			ru, err := regulator.NewUnits(toReg[s].service, toReg[s].unit, uint64(u))
 			if err != nil {
 				return err
@@ -204,7 +209,7 @@ func Units2Map(serv Services) map[string]interface{} {
 	var out []regulator.Units
 
 	for s, u := range serv {
-		if u.NonZero() {
+		if u.NonZero() && toReg[s].billable {
 			ru, err := regulator.NewUnits(toReg[s].service, toReg[s].unit, uint64(u))
 			if err != nil {
 				continue
@@ -215,5 +220,5 @@ func Units2Map(serv Services) map[string]interface{} {
 	if len(out) == 0 {
 		return nil
 	}
-	return regulator.UnitsToMap(true, out...)
+	return regulator.UnitsToMap(false, out...)
 }
