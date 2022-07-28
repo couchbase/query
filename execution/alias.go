@@ -72,7 +72,18 @@ func (this *Alias) processItem(item value.AnnotatedValue, context *Context) bool
 	av.ShareAnnotations(item)
 	av.SetField(this.plan.Alias(), item)
 	if this.hasBuildBitFilter() && !this.buildBitFilters(av, context) {
+		av.Recycle()
 		return false
+	}
+
+	// we should really use av.Size() - item.Size() but this is faster
+	if context.UseRequestQuota() {
+		err := context.TrackValueSize(uint64(len(this.plan.Alias())))
+		if err != nil {
+			context.Error(err)
+			av.Recycle()
+			return false
+		}
 	}
 	return this.sendItem(av)
 }
