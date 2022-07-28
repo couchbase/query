@@ -33,7 +33,7 @@ type Fetch struct {
 	base
 	plan       *plan.Fetch
 	keyspace   datastore.Keyspace
-	parent     value.Value
+	parentVal  value.Value
 	deepCopy   bool
 	batchSize  int
 	fetchCount uint64
@@ -84,12 +84,12 @@ func (this *Fetch) beforeItems(context *Context, parent value.Value) bool {
 	if this.keyspace = this.plan.Keyspace(); this.keyspace == nil {
 		this.keyspace = getKeyspace(this.keyspace, this.plan.Term().FromExpression(), context)
 	}
-	this.parent = parent
+	this.parentVal = parent
 	return this.keyspace != nil
 }
 
 func (this *Fetch) processItem(item value.AnnotatedValue, context *Context) bool {
-	item.ResetCovers(this.parent)
+	item.ResetCovers(this.parentVal)
 	ok := this.enbatchSize(item, this, this.batchSize, context, true)
 	if ok {
 		this.fetchCount++
@@ -110,7 +110,7 @@ func (this *Fetch) afterItems(context *Context) {
 	this.mk.report(context, this.plan.Term().Alias)
 	// if this is the inner leg of a NL join, we don't want to repeatedly report the same keys as missing
 	this.mk.validate = false
-	this.parent = nil
+	this.parentVal = nil
 }
 
 func (this *Fetch) flushBatch(context *Context) bool {
