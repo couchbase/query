@@ -51,7 +51,7 @@ func NewFetch(plan *plan.Fetch, context *Context) *Fetch {
 	rv.execPhase = FETCH
 	rv.output = rv
 	rv.mk.validate = plan.Term().ValidateKeys()
-	rv.parent = nil
+	rv.parentVal = nil
 
 	return rv
 }
