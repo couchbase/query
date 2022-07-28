@@ -192,9 +192,13 @@ function repo_by_gomod {
             grepo="${repo}/${subbranch}"
         fi
         C=`grep "${grepo}" $file | grep -v module | grep -v replace | grep -v indirect| grep -v "${repo}-"`
+        bpath=`echo $repo|awk -F/ '{print $1}'`
+        if [ -z "$C" ] && [ "$bpath" == "blevesearch" ]; then
+            C=`grep "${grepo}" $file | grep -v module | grep -v replace | grep indirect| grep -v "${repo}-"`
+        fi
         if [[ -z "$C" ]]
         then
-            C="../${repo} $4"
+            C="github.com/couchbase/${repo} $4"
         fi
         gpath=`echo $C| awk '{print $1}'`
         vers=`echo $C| awk '{print $2}'`
@@ -226,6 +230,9 @@ function repo_setup {
     repo_by_gomod ../cbft/go.mod zapx "v13" $defbranch
     repo_by_gomod ../cbft/go.mod zapx "v14" $defbranch
     repo_by_gomod ../cbft/go.mod zapx "v15" $defbranch
+    repo_by_gomod ../n1fty/go.mod blevesearch/geo "" $defbranch
+    repo_by_gomod ../n1fty/go.mod blevesearch/bleve_index_api "" $defbranch
+    repo_by_gomod ../n1fty/go.mod blevesearch/scorch_segment_api "v2" $defbranch
     repo_by_gomod go.mod gocbcore "v10" $defbranch
     repo_by_gomod ../cbgt/go.mod gocbcore "v9" $defbranch
     repo_by_gomod go.mod x/net "" `go version |  awk -F'[. ]' '{print "release-branch." $3 "." $4}'` $defbranch
