@@ -1100,6 +1100,13 @@ func newUrlArgs(req *http.Request, urlArgs *urlArgs) errors.Error {
 		}
 		if newArg[0] == '$' || newArg[0] == '@' {
 			delete(req.Form, arg)
+
+			// If there already exists an entry in named parameter map for the argument then the argument value has been set multiple times in the request using a different prefix - either @|$
+			_, ok := named[newArg[1:]]
+			if ok {
+				return errors.NewServiceErrorMultipleValues(arg)
+			}
+
 			switch len(val) {
 			case 0:
 				//This is an error - there _has_ to be a value for a named argument
@@ -1494,6 +1501,13 @@ func newJsonArgs(req *http.Request, p *jsonArgs) errors.Error {
 			continue
 		}
 		if newArg[0] == '$' || newArg[0] == '@' {
+
+			// If there already exists an entry in named parameter map for the argument then the argument value has been set multiple times in the request
+			_, ok := p.named[newArg[1:]]
+			if ok {
+				return errors.NewServiceErrorMultipleValues(newArg)
+			}
+
 			p.named = addNamedArg(p.named, newArg[1:], value.NewValue(val))
 			continue
 		}
