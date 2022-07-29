@@ -60,9 +60,9 @@ require (
 	github.com/opentracing/opentracing-go v1.2.0 // indirect
 	github.com/peterh/liner v1.2.0
 	github.com/russross/blackfriday v1.5.2
-	github.com/samuel/go-zookeeper v0.0.0-20200724154423-2164a8ac840e
-	golang.org/x/crypto v0.0.0-20200820211705-5c72a883971a
-	golang.org/x/net v0.0.0-20211215060638-4ddde0e984e9
+	github.com/samuel/go-zookeeper v0.0.0-20201211165307-7117e9ea2414
+	golang.org/x/crypto v0.0.0-20220722155217-630584e8d5aa
+	golang.org/x/net v0.0.0-20220728211354-c7608f3a8462
 	gopkg.in/couchbase/gocb.v1 v1.6.7
 	gopkg.in/couchbase/gocbcore.v7 v7.1.18 // indirect
 	gopkg.in/couchbaselabs/gocbconnstr.v1 v1.0.4 // indirect
