@@ -176,6 +176,8 @@ var _FUNCTIONS = map[string]Function{
 	"title":     &Title{},
 	"trim":      &Trim{},
 	"upper":     &Upper{},
+	"urldecode": &URLDecode{},
+	"urlencode": &URLEncode{},
 
 	// Regular expressions
 	"contains_regex":   &RegexpContains{},

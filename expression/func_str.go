@@ -10,6 +10,7 @@ package expression
 
 import (
 	"math"
+	"net/url"
 	"regexp"
 	"strings"
 
@@ -1678,4 +1679,97 @@ func padString(item value.Value, context Context, operands Expressions, right bo
 		padded.WriteString(s)
 	}
 	return value.NewValue(padded.String()), nil
+}
+
+///////////////////////////////////////////////////
+//
+// URLEncode
+//
+///////////////////////////////////////////////////
+
+type URLEncode struct {
+	UnaryFunctionBase
+}
+
+func NewURLEncode(operand Expression) Function {
+	rv := &URLEncode{
+		*NewUnaryFunctionBase("urlencode", operand),
+	}
+
+	rv.expr = rv
+	return rv
+}
+
+func (this *URLEncode) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *URLEncode) Type() value.Type { return value.STRING }
+
+func (this *URLEncode) Evaluate(item value.Value, context Context) (value.Value, error) {
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if arg.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else if arg.Type() != value.STRING {
+		return value.NULL_VALUE, nil
+	}
+
+	rv := url.QueryEscape(arg.ToString())
+	return value.NewValue(rv), nil
+}
+
+func (this *URLEncode) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return NewURLEncode(operands[0])
+	}
+}
+
+///////////////////////////////////////////////////
+//
+// URLDecode
+//
+///////////////////////////////////////////////////
+
+type URLDecode struct {
+	UnaryFunctionBase
+}
+
+func NewURLDecode(operand Expression) Function {
+	rv := &URLDecode{
+		*NewUnaryFunctionBase("urlencode", operand),
+	}
+
+	rv.expr = rv
+	return rv
+}
+
+func (this *URLDecode) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *URLDecode) Type() value.Type { return value.STRING }
+
+func (this *URLDecode) Evaluate(item value.Value, context Context) (value.Value, error) {
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if arg.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else if arg.Type() != value.STRING {
+		return value.NULL_VALUE, nil
+	}
+
+	rv, err := url.QueryUnescape(arg.ToString())
+	if err != nil {
+		return value.NULL_VALUE, nil
+	}
+	return value.NewValue(rv), nil
+}
+
+func (this *URLDecode) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return NewURLDecode(operands[0])
+	}
 }
