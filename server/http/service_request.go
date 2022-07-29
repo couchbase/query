@@ -1114,7 +1114,7 @@ func newUrlArgs(req *http.Request, urlArgs *urlArgs) errors.Error {
 			case 1:
 				named = addNamedArg(named, newArg[1:], value.NewValue([]byte(util.TrimSpace(val[0]))))
 			default:
-				return errors.NewServiceErrorMultipleValues(arg)
+				return errors.NewServiceErrorMultipleValues("'" + newArg[1:] + "'")
 			}
 			continue
 		}
