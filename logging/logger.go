@@ -190,18 +190,68 @@ func Debuga(f func() string) {
 	if !cachedDebug || !filterDebug() {
 		return
 	}
-	loggerMutex.Lock()
-	defer loggerMutex.Unlock()
-	logger.Debuga(f)
+	pc, fname, lineno, ok := runtime.Caller(1)
+	if ok {
+		fnc := runtime.FuncForPC(pc)
+		var fl string
+		if fnc != nil {
+			n := fnc.Name()
+			i := strings.LastIndexByte(n, '(')
+			if i == -1 {
+				i = strings.LastIndexByte(n, '.')
+				if i != -1 {
+					i++
+				}
+			}
+			if i < 0 {
+				i = 0
+			}
+			fl = fmtpkg.Sprintf(" (%s|%s:%d)", n[i:], path.Base(fname), lineno)
+		} else {
+			fl = fmtpkg.Sprintf(" (%s:%d)", path.Base(fname), lineno)
+		}
+		loggerMutex.Lock()
+		defer loggerMutex.Unlock()
+		logger.Debuga(func() string { return f() + fl })
+	} else {
+		loggerMutex.Lock()
+		defer loggerMutex.Unlock()
+		logger.Debuga(f)
+	}
 }
 
 func Tracea(f func() string) {
 	if !cachedTrace || !filterDebug() {
 		return
 	}
-	loggerMutex.Lock()
-	defer loggerMutex.Unlock()
-	logger.Tracea(f)
+	pc, fname, lineno, ok := runtime.Caller(1)
+	if ok {
+		fnc := runtime.FuncForPC(pc)
+		var fl string
+		if fnc != nil {
+			n := fnc.Name()
+			i := strings.LastIndexByte(n, '(')
+			if i == -1 {
+				i = strings.LastIndexByte(n, '.')
+				if i != -1 {
+					i++
+				}
+			}
+			if i < 0 {
+				i = 0
+			}
+			fl = fmtpkg.Sprintf(" (%s|%s:%d)", n[i:], path.Base(fname), lineno)
+		} else {
+			fl = fmtpkg.Sprintf(" (%s:%d)", path.Base(fname), lineno)
+		}
+		loggerMutex.Lock()
+		defer loggerMutex.Unlock()
+		logger.Tracea(func() string { return f() + fl })
+	} else {
+		loggerMutex.Lock()
+		defer loggerMutex.Unlock()
+		logger.Tracea(f)
+	}
 }
 
 func Requesta(rlevel Level, f func() string) {
@@ -416,6 +466,9 @@ func SetLevel(level Level) {
 func LogLevel() Level {
 	loggerMutex.RLock()
 	defer loggerMutex.RUnlock()
+	if logger == nil {
+		return NONE
+	}
 	return logger.Level()
 }
 
