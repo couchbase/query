@@ -11,6 +11,7 @@ package execution
 import (
 	"encoding/json"
 
+	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
 )
@@ -66,6 +67,13 @@ func (this *Alias) processItem(item value.AnnotatedValue, context *Context) bool
 	}
 	av.ShareAnnotations(item)
 	av.SetField(this.plan.Alias(), item)
+
+	// we should really use av.Size() - item.Size() but this is faster
+	if context.UseRequestQuota() && context.TrackValueSize(uint64(len(this.plan.Alias()))) {
+		context.Error(errors.NewMemoryQuotaExceededError())
+		av.Recycle()
+		return false
+	}
 	return this.sendItem(av)
 }
 
