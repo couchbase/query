@@ -56,7 +56,7 @@ func (this Unit) NonZero() bool {
 	return false
 }
 
-func Throttle(user, bucket string, buckets []string, timeout time.Duration) (Context, error) {
+func Throttle(isAdmin bool, user, bucket string, buckets []string, timeout time.Duration) (Context, error) {
 	return new(Context), nil
 }
 

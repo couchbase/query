@@ -36,6 +36,18 @@ func FirstCred(creds *auth.Credentials) string {
 	return ""
 }
 
+func IsAdmin(creds *auth.Credentials) bool {
+	ds := GetDatastore()
+	if ds != nil && creds != nil {
+
+		// TODO TENANT agree on appropriate privilege
+		privs := auth.NewPrivileges()
+		privs.Add("", auth.PRIV_SYSTEM_READ, 0)
+		return ds.Authorize(privs, creds) == nil
+	}
+	return false
+}
+
 func GetUserUUID(creds *auth.Credentials) string {
 	if _DATASTORE == nil || creds == nil {
 		return ""

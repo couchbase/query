@@ -13,7 +13,6 @@ package tenant
 import (
 	"net/http"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/couchbase/cbauth/service"
@@ -110,11 +109,9 @@ func (this Unit) NonZero() bool {
 	return this > 0
 }
 
-func Throttle(user, bucket string, buckets []string, timeout time.Duration) (Context, error) {
+func Throttle(isAdmin bool, user, bucket string, buckets []string, timeout time.Duration) (Context, error) {
 
-	// TODO TENANT proper check for administrator
-	// Administrator doesn't have associated buckets
-	if strings.ToLower(user) == "administrator" {
+	if isAdmin && len(buckets) == 0 {
 		return regulator.NewUserCtx("", user), nil
 	}
 	tenant := bucket
