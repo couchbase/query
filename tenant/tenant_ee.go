@@ -66,11 +66,11 @@ func Init(serverless bool) {
 	isServerless = serverless
 }
 
-func Start(endpoint Endpoint, nodeid string, cafile string, regulatorsettingsfile string) {
+func Start(endpoint Endpoint, nodeid string, regulatorsettingsfile string) {
 	if !isServerless {
 		return
 	}
-	handle := factory.InitRegulator(regulator.InitSettings{NodeID: service.NodeID(nodeid), TlsCAFile: cafile,
+	handle := factory.InitRegulator(regulator.InitSettings{NodeID: service.NodeID(nodeid),
 		SettingsFile: regulatorsettingsfile, Service: regulator.Query,
 		ServiceCheckMask: regulator.Index | regulator.Search})
 	mux := endpoint.Mux()

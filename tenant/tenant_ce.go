@@ -35,7 +35,7 @@ const (
 func Init(serverless bool) {
 }
 
-func Start(endpoint Endpoint, nodeid string, cafile string, regulatorsettingsfile string) {
+func Start(endpoint Endpoint, nodeid string, regulatorsettingsfile string) {
 }
 
 func RegisterResourceManager(m ResourceManager) {
