@@ -236,6 +236,7 @@ const (
 	E_INDEX_NOT_FOUND                         ErrorCode = 5411
 	E_INDEX_UPD_STATS                         ErrorCode = 5415
 	E_TIME_PARSE                              ErrorCode = 5416
+	E_JOIN_ON_PRIMARY_DOCS_EXCEEDED           ErrorCode = 5420
 	E_MEMORY_QUOTA_EXCEEDED                   ErrorCode = 5500
 	E_NIL_EVALUATE_PARAM                      ErrorCode = 5501
 	E_BUCKET_ACTION                           ErrorCode = 5502

@@ -167,7 +167,7 @@ func (this *builder) buildPredicateScan(keyspace datastore.Keyspace, node *algeb
 	}
 
 	// do not consider primary index for ANSI JOIN or ANSI NEST
-	nlPrimaryScan := !util.IsFeatureEnabled(this.context.FeatureControls(), util.N1QL_NL_PRIMARYSCAN)
+	nlPrimaryScan := !util.IsFeatureEnabled(this.context.FeatureControls(), util.N1QL_NL_PRIMARYSCAN) || this.hasBuilderFlag(BUILDER_JOIN_ON_PRIMARY)
 	var primaryKey expression.Expressions
 
 	if !node.IsAnsiJoinOp() || node.IsUnderHash() || node.IsSystem() || nlPrimaryScan {
@@ -243,7 +243,7 @@ func (this *builder) buildSubsetScan(keyspace datastore.Keyspace, node *algebra.
 
 	join := node.IsAnsiJoinOp()
 	hash := node.IsUnderHash()
-	nlPrimaryScan := !util.IsFeatureEnabled(this.context.FeatureControls(), util.N1QL_NL_PRIMARYSCAN)
+	nlPrimaryScan := !util.IsFeatureEnabled(this.context.FeatureControls(), util.N1QL_NL_PRIMARYSCAN) || this.hasBuilderFlag(BUILDER_JOIN_ON_PRIMARY)
 	if join {
 		this.resetPushDowns()
 	}
@@ -255,7 +255,7 @@ func (this *builder) buildSubsetScan(keyspace datastore.Keyspace, node *algebra.
 	if join && baseKeyspace.OnclauseOnly() {
 		pred = baseKeyspace.Onclause()
 	}
-	if !this.hasBuilderFlag(BUILDER_CHK_INDEX_ORDER) {
+	if !this.hasBuilderFlag(BUILDER_CHK_INDEX_ORDER | BUILDER_JOIN_ON_PRIMARY) {
 		// Prefer OR scan
 		if or, ok := pred.(*expression.Or); ok {
 
@@ -302,7 +302,7 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm,
 	var scanbuf [4]plan.SecondaryScan
 	scans := scanbuf[0:1]
 
-	if !join && !this.hasBuilderFlag(BUILDER_CHK_INDEX_ORDER|BUILDER_DO_JOIN_FILTER) {
+	if !join && !this.hasBuilderFlag(BUILDER_CHK_INDEX_ORDER|BUILDER_DO_JOIN_FILTER|BUILDER_JOIN_ON_PRIMARY) {
 		// Consider pattern matching indexes
 		err = this.PatternFor(baseKeyspace, indexes, formalizer)
 		if err != nil {
@@ -325,7 +325,7 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm,
 
 	// collect UNNEST bindings when HINT indexes has FTS index
 	var ubs expression.Bindings
-	if !this.hasBuilderFlag(BUILDER_CHK_INDEX_ORDER | BUILDER_DO_JOIN_FILTER) {
+	if !this.hasBuilderFlag(BUILDER_CHK_INDEX_ORDER | BUILDER_DO_JOIN_FILTER | BUILDER_JOIN_ON_PRIMARY) {
 		if this.hintIndexes && this.from != nil {
 			for _, idx := range indexes {
 				if idx.Type() == datastore.FTS {
@@ -369,7 +369,7 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm,
 	// pred has SEARCH() function get sargable FTS indexes
 	var searchSargables []*indexEntry
 	var searchFns map[string]*search.Search
-	if !node.IsUnderNL() && !this.hasBuilderFlag(BUILDER_CHK_INDEX_ORDER|BUILDER_DO_JOIN_FILTER) {
+	if !node.IsUnderNL() && !this.hasBuilderFlag(BUILDER_CHK_INDEX_ORDER|BUILDER_DO_JOIN_FILTER|BUILDER_JOIN_ON_PRIMARY) {
 		searchFns = make(map[string]*search.Search)
 		if err = collectFTSSearch(node.Alias(), searchFns, pred); err != nil {
 			return nil, 0, err
@@ -412,7 +412,7 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm,
 	}
 
 	// Try dynamic scan
-	if !join && !this.hasBuilderFlag(BUILDER_CHK_INDEX_ORDER|BUILDER_DO_JOIN_FILTER) &&
+	if !join && !this.hasBuilderFlag(BUILDER_CHK_INDEX_ORDER|BUILDER_DO_JOIN_FILTER|BUILDER_JOIN_ON_PRIMARY) &&
 		len(arrays) > 0 && baseKeyspace.OrigPred() != nil {
 		// Try pushdowns
 		if indexPushDowns.order == nil || this.orderScan != nil {

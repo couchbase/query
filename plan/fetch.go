@@ -20,9 +20,10 @@ import (
 type Fetch struct {
 	readonly
 	optEstimate
-	keyspace datastore.Keyspace
-	term     *algebra.KeyspaceTerm
-	subPaths []string
+	keyspace    datastore.Keyspace
+	term        *algebra.KeyspaceTerm
+	subPaths    []string
+	cacheResult bool
 }
 
 func NewFetch(keyspace datastore.Keyspace, term *algebra.KeyspaceTerm, subPaths []string,
@@ -56,6 +57,14 @@ func (this *Fetch) SubPaths() []string {
 	return this.subPaths
 }
 
+func (this *Fetch) HasCacheResult() bool {
+	return this.cacheResult
+}
+
+func (this *Fetch) SetCacheResult() {
+	this.cacheResult = true
+}
+
 func (this *Fetch) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
@@ -75,6 +84,9 @@ func (this *Fetch) MarshalBase(f func(map[string]interface{})) map[string]interf
 	}
 	if this.term.ValidateKeys() {
 		r["validate_keys"] = true
+	}
+	if this.cacheResult {
+		r["cache_result"] = true
 	}
 
 	if optEstimate := marshalOptEstimate(&this.optEstimate); optEstimate != nil {
@@ -100,6 +112,7 @@ func (this *Fetch) UnmarshalJSON(body []byte) error {
 		OptEstimate  map[string]interface{} `json:"optimizer_estimates"`
 		SubPaths     []string               `json:"subpaths"`
 		ValidateKeys bool                   `json:"validate_keys"`
+		CacheResult  bool                   `json:"cache_result"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -126,6 +139,9 @@ func (this *Fetch) UnmarshalJSON(body []byte) error {
 		this.term.SetUnderNL()
 	}
 	this.term.SetValidateKeys(_unmarshalled.ValidateKeys)
+	if _unmarshalled.CacheResult {
+		this.cacheResult = true
+	}
 
 	return err
 }

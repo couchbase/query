@@ -327,6 +327,16 @@ func NewTimeParseError(str string, e error) Error {
 		InternalCaller: CallerN(1)}
 }
 
+func NewNLInnerPrimaryDocsExceeded(alias string, limit int) Error {
+	c := make(map[string]interface{})
+	c["keyspace_alias"] = alias
+	c["limit"] = limit
+	return &err{level: EXCEPTION, ICode: E_JOIN_ON_PRIMARY_DOCS_EXCEEDED, IKey: "execution.nljoin_inner_primary.docs_exceeded",
+		cause:          c,
+		InternalMsg:    fmt.Sprintf("Inner of nested-loop join (%s) cannot have more than %d documents without appropriate secondary index", alias, limit),
+		InternalCaller: CallerN(1)}
+}
+
 func NewMemoryQuotaExceededError() Error {
 	return &err{level: EXCEPTION, ICode: E_MEMORY_QUOTA_EXCEEDED, IKey: "execution.memory_quota.exceeded",
 		InternalMsg:    "Request has exceeded memory quota",

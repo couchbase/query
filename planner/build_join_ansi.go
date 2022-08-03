@@ -217,10 +217,6 @@ func (this *builder) buildAnsiJoinOp(node *algebra.AnsiJoin) (op plan.Operator, 
 		right.SetUnderNL()
 		scans, primaryJoinKeys, newOnclause, newFilter, cost, cardinality, size, frCost, nlErr := this.buildAnsiJoinScan(right, node.Onclause(), filter, node.Outer(), "join")
 		right.UnsetUnderNL()
-		if nlErr != nil && hjoin == nil {
-			// if hash join is feasible, defer returning error
-			return nil, nlErr
-		}
 
 		if baseKeyspace.HasIndexHintError() {
 			nlIndexHintError = true
@@ -270,7 +266,7 @@ func (this *builder) buildAnsiJoinOp(node *algebra.AnsiJoin) (op plan.Operator, 
 				right.SetUnderNL()
 			}
 			return plan.NewNLJoin(node, plan.NewSequence(scans...), newFilter, cost, cardinality, size, frCost), nil
-		} else if hjoin != nil {
+		} else if hjoin != nil && !right.IsPrimaryJoin() {
 			this.restoreJoinPlannerState(hjps)
 			node.SetOnclause(hjOnclause)
 			if preferNL && !joinEnum {
@@ -287,14 +283,48 @@ func (this *builder) buildAnsiJoinOp(node *algebra.AnsiJoin) (op plan.Operator, 
 				this.resetOrder()
 			}
 			return hjoin, nil
-		} else if nlErr != nil {
-			// error occurred and neither nested-loop join nor hash join is available
-			return nil, nlErr
-		} else if hjErr != nil {
-			return nil, hjErr
 		}
 
 		if !right.IsPrimaryJoin() {
+			// as last resort, build primary scan as inner
+			right.SetUnderNL()
+			primary, newFilter, newOnclause, err := this.buildInnerPrimaryScan(right, filter, node.Onclause())
+			right.UnsetUnderNL()
+			if err != nil {
+				return nil, err
+			}
+
+			if primary != nil {
+				this.maxParallelism = 1
+
+				if useCBO {
+					cost, cardinality, size, frCost = primary.Cost(), primary.Cardinality(), primary.Size(), primary.FrCost()
+					if cost > 0.0 && cardinality > 0.0 && size > 0 && frCost > 0.0 {
+						cost, cardinality, size, frCost = getNLJoinCost(this.lastOp, primary, baseKeyspace.Filters(), node.Outer(), "join")
+					} else {
+						useCBO = false
+					}
+
+					if useCBO && (selec > 0.0) && (newFilter != nil) {
+						cost, cardinality, size, frCost = getSimpleFilterCost(right.Alias(),
+							cost, cardinality, selec, size, frCost)
+					}
+				}
+				if newOnclause != nil {
+					node.SetOnclause(newOnclause)
+				}
+				if nlIndexHintError {
+					baseKeyspace.SetIndexHintError()
+				}
+				if !joinEnum {
+					right.SetUnderNL()
+				}
+				return plan.NewNLJoin(node, primary, newFilter, cost, cardinality, size, frCost), nil
+			} else if nlErr != nil {
+				return nil, nlErr
+			} else if hjErr != nil {
+				return nil, hjErr
+			}
 			return nil, errors.NewPlanInternalError(fmt.Sprintf("buildAnsiJoin: no plan built for %s", node.Alias()))
 		}
 
@@ -502,10 +532,6 @@ func (this *builder) buildAnsiNestOp(node *algebra.AnsiNest) (op plan.Operator, 
 		right.SetUnderNL()
 		scans, primaryJoinKeys, newOnclause, newFilter, cost, cardinality, size, frCost, nlErr := this.buildAnsiJoinScan(right, node.Onclause(), nil, node.Outer(), "nest")
 		right.UnsetUnderNL()
-		if nlErr != nil && hnest == nil {
-			// if hash nest is feasible, defer returning error
-			return nil, nlErr
-		}
 
 		if baseKeyspace.HasIndexHintError() {
 			nlIndexHintError = true
@@ -548,7 +574,7 @@ func (this *builder) buildAnsiNestOp(node *algebra.AnsiNest) (op plan.Operator, 
 				right.SetUnderNL()
 			}
 			return plan.NewNLNest(node, plan.NewSequence(scans...), newFilter, cost, cardinality, size, frCost), nil
-		} else if hnest != nil {
+		} else if hnest != nil && !right.IsPrimaryJoin() {
 			this.restoreJoinPlannerState(hjps)
 			node.SetOnclause(hnOnclause)
 			if preferNL && !joinEnum {
@@ -565,14 +591,48 @@ func (this *builder) buildAnsiNestOp(node *algebra.AnsiNest) (op plan.Operator, 
 				this.resetOrder()
 			}
 			return hnest, nil
-		} else if nlErr != nil {
-			// error occurred and neither nested-loop join nor hash join is available
-			return nil, nlErr
-		} else if hnErr != nil {
-			return nil, hnErr
 		}
 
 		if !right.IsPrimaryJoin() {
+			// as last resort, build primary scan as inner
+			right.SetUnderNL()
+			primary, newFilter, newOnclause, err := this.buildInnerPrimaryScan(right, filter, node.Onclause())
+			right.UnsetUnderNL()
+			if err != nil {
+				return nil, err
+			}
+
+			if primary != nil {
+				this.maxParallelism = 1
+
+				if useCBO {
+					cost, cardinality, size, frCost = primary.Cost(), primary.Cardinality(), primary.Size(), primary.FrCost()
+					if cost > 0.0 && cardinality > 0.0 && size > 0 && frCost > 0.0 {
+						cost, cardinality, size, frCost = getNLJoinCost(this.lastOp, primary, baseKeyspace.Filters(), node.Outer(), "join")
+					} else {
+						useCBO = false
+					}
+
+					if useCBO && (selec > 0.0) && (newFilter != nil) {
+						cost, cardinality, size, frCost = getSimpleFilterCost(right.Alias(),
+							cost, cardinality, selec, size, frCost)
+					}
+				}
+				if newOnclause != nil {
+					node.SetOnclause(newOnclause)
+				}
+				if nlIndexHintError {
+					baseKeyspace.SetIndexHintError()
+				}
+				if !joinEnum {
+					right.SetUnderNL()
+				}
+				return plan.NewNLNest(node, primary, newFilter, cost, cardinality, size, frCost), nil
+			} else if nlErr != nil {
+				return nil, nlErr
+			} else if hnErr != nil {
+				return nil, hnErr
+			}
 			return nil, errors.NewPlanInternalError(fmt.Sprintf("buildAnsiNest: no plan built for %s", node.Alias()))
 		}
 
@@ -813,62 +873,11 @@ func (this *builder) buildAnsiJoinScan(node *algebra.KeyspaceTerm, onclause, fil
 		// the original onclause if newOnclause is not set).
 		newFilter = filter
 	} else {
-		if filter != nil {
-			newFilter = filter.Copy()
-		}
-
-		if onclause != nil {
-			newOnclause = onclause.Copy()
-		}
-
-		// do right-hand-side covering index scan first, in case an ANY clause contains
-		// a join filter, if part of the join filter gets transformed first, the ANY clause
-		// will no longer match during transformation.
-		// (note this assumes the ANY clause is on the right-hand-side keyspace)
-		for _, op := range this.coveringScans {
-			coverer := expression.NewCoverer(op.Covers(), op.FilterCovers())
-			if arrayKey := op.ImplicitArrayKey(); arrayKey != nil {
-				newFilter, newOnclause, primaryJoinKeys, err =
-					this.renameAnyExpression(arrayKey, newFilter, newOnclause, primaryJoinKeys)
-			}
-			if err == nil {
-				newFilter, newOnclause, primaryJoinKeys, err =
-					this.coverExpression(coverer, newFilter, newOnclause, primaryJoinKeys)
-			}
-			if err != nil {
-				return nil, nil, nil, nil,
-					OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, err
-			}
-		}
-
-		for _, op := range coveringScans {
-			coverer := expression.NewCoverer(op.Covers(), op.FilterCovers())
-			if arrayKey := op.ImplicitArrayKey(); arrayKey != nil {
-				newFilter, newOnclause, primaryJoinKeys, err =
-					this.renameAnyExpression(arrayKey, newFilter, newOnclause, primaryJoinKeys)
-			}
-			if err == nil {
-				newFilter, newOnclause, primaryJoinKeys, err =
-					this.coverExpression(coverer, newFilter, newOnclause, primaryJoinKeys)
-			}
-			if err != nil {
-				return nil, nil, nil, nil,
-					OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, err
-			}
-
-			// also need to perform cover transformation for index spans for
-			// right-hand-side index scans since left-hand-side expressions
-			// could be used as part of index spans for right-hand-side index scan
-			for _, child := range this.children {
-				if secondary, ok := child.(plan.SecondaryScan); ok {
-					err := secondary.CoverJoinSpanExpressions(coverer, op.ImplicitArrayKey())
-					if err != nil {
-						return nil, nil, nil, nil,
-							OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, err
-					}
-
-				}
-			}
+		newFilter, newOnclause, primaryJoinKeys, err = this.joinCoverTransformation(coveringScans,
+			this.coveringScans, filter, onclause, primaryJoinKeys, nil, nil, true)
+		if err != nil {
+			return nil, nil, nil, nil,
+				OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, err
 		}
 	}
 
@@ -1184,80 +1193,11 @@ func (this *builder) buildHashJoinOp(right algebra.SimpleFromTerm, left algebra.
 		}
 
 		// perform cover transformation of leftExprs and rightExprs and onclause
-		if filter != nil {
-			newFilter = filter.Copy()
-		}
-
-		if onclause != nil {
-			newOnclause = onclause.Copy()
-		}
-
-		for _, op := range this.coveringScans {
-			coverer := expression.NewCoverer(op.Covers(), op.FilterCovers())
-			if arrayKey := op.ImplicitArrayKey(); arrayKey != nil {
-				newFilter, newOnclause, _, err =
-					this.renameAnyExpression(arrayKey, newFilter, newOnclause, nil)
-				if err != nil {
-					return nil, nil, nil, nil, nil, nil, false,
-						OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, err
-				}
-				anyRenamer := expression.NewAnyRenamer(arrayKey)
-				for i, _ := range rightExprs {
-					rightExprs[i], err = anyRenamer.Map(rightExprs[i])
-					if err != nil {
-						return nil, nil, nil, nil, nil, nil, false,
-							OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, err
-					}
-				}
-			}
-
-			newFilter, newOnclause, _, err = this.coverExpression(coverer, newFilter, newOnclause, nil)
-			if err != nil {
-				return nil, nil, nil, nil, nil, nil, false,
-					OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, err
-			}
-
-			for i, _ := range rightExprs {
-				rightExprs[i], err = coverer.Map(rightExprs[i])
-				if err != nil {
-					return nil, nil, nil, nil, nil, nil, false,
-						OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, err
-				}
-			}
-		}
-
-		for _, op := range coveringScans {
-			coverer := expression.NewCoverer(op.Covers(), op.FilterCovers())
-			if arrayKey := op.ImplicitArrayKey(); arrayKey != nil {
-				newFilter, newOnclause, _, err =
-					this.renameAnyExpression(arrayKey, newFilter, newOnclause, nil)
-				if err != nil {
-					return nil, nil, nil, nil, nil, nil, false,
-						OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, err
-				}
-				anyRenamer := expression.NewAnyRenamer(arrayKey)
-				for i, _ := range leftExprs {
-					leftExprs[i], err = anyRenamer.Map(leftExprs[i])
-					if err != nil {
-						return nil, nil, nil, nil, nil, nil, false,
-							OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, err
-					}
-				}
-			}
-
-			newFilter, newOnclause, _, err = this.coverExpression(coverer, newFilter, newOnclause, nil)
-			if err != nil {
-				return nil, nil, nil, nil, nil, nil, false,
-					OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, err
-			}
-
-			for i, _ := range leftExprs {
-				leftExprs[i], err = coverer.Map(leftExprs[i])
-				if err != nil {
-					return nil, nil, nil, nil, nil, nil, false,
-						OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, err
-				}
-			}
+		newFilter, newOnclause, _, err = this.joinCoverTransformation(coveringScans,
+			this.coveringScans, filter, onclause, nil, leftExprs, rightExprs, false)
+		if err != nil {
+			return nil, nil, nil, nil, nil, nil, false,
+				OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, nil
 		}
 	}
 
@@ -1443,6 +1383,247 @@ func (this *builder) buildAnsiJoinSimpleFromTerm(node algebra.SimpleFromTerm, on
 	}
 
 	return this.children, newOnclause, cost, cardinality, size, frCost, nil
+}
+
+const _MAX_NL_INNER_PRIMARY_SCAN_SIZE = 1000
+
+func (this *builder) buildInnerPrimaryScan(right *algebra.KeyspaceTerm,
+	filter, onclause expression.Expression) (
+	plan.Operator, expression.Expression, expression.Expression, error) {
+
+	docCount := this.getDocCount(right.Alias())
+	if docCount > _MAX_NL_INNER_PRIMARY_SCAN_SIZE {
+		return nil, nil, nil, nil
+	}
+
+	children := this.children
+	subChildren := this.subChildren
+	coveringScans := this.coveringScans
+	countScan := this.countScan
+	orderScan := this.orderScan
+	lastOp := this.lastOp
+	indexPushDowns := this.storeIndexPushDowns()
+	this.setBuilderFlag(BUILDER_JOIN_ON_PRIMARY)
+	defer func() {
+		this.children = children
+		this.subChildren = subChildren
+		this.countScan = countScan
+		this.orderScan = orderScan
+		this.lastOp = lastOp
+		this.restoreIndexPushDowns(indexPushDowns, true)
+
+		if len(this.coveringScans) > 0 {
+			this.coveringScans = append(coveringScans, this.coveringScans...)
+		} else {
+			this.coveringScans = coveringScans
+		}
+
+		this.unsetBuilderFlag(BUILDER_JOIN_ON_PRIMARY)
+	}()
+
+	this.children = make([]plan.Operator, 0, 8)
+	this.subChildren = make([]plan.Operator, 0, 8)
+	this.coveringScans = nil
+	this.countScan = nil
+	this.order = nil
+	this.orderScan = nil
+	this.limit = nil
+	this.offset = nil
+	this.lastOp = nil
+
+	useCBO := this.useCBO && this.keyspaceUseCBO(right.Alias())
+	baseKeyspace, _ := this.baseKeyspaces[right.Alias()]
+	filters := baseKeyspace.Filters()
+
+	_, err := right.Accept(this)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	if len(this.subChildren) > 0 {
+		this.addChildren(this.addSubchildrenParallel())
+	}
+
+	// The Accept() call above for the inner side would have marked the index flag
+	// on the filters, which is necessary for cost calculations later in the function.
+	// Make sure the index flag is cleared since this is temporary.
+	// The index flag will be permenantly marked after we've chosen a join method.
+	if useCBO && len(filters) > 0 {
+		defer filters.ClearIndexFlag()
+	}
+
+	var newFilter, newOnclause expression.Expression
+	if !this.joinEnum() {
+		newFilter, newOnclause, _, err = this.joinCoverTransformation(coveringScans,
+			this.coveringScans, filter, onclause, nil, nil, nil, true)
+		if err != nil {
+			return nil, nil, nil, err
+		}
+	}
+
+	if len(this.children) > 0 {
+		err = this.markCachedScans(this.children...)
+		if err != nil {
+			return nil, nil, nil, err
+		}
+		return plan.NewSequence(this.children...), newFilter, newOnclause, nil
+	}
+	return nil, nil, nil, errors.NewPlanInternalError(fmt.Sprintf("buildInnerPrimaryScan: no scan built for inner keyspace %s", right.Alias()))
+}
+
+func (this *builder) joinCoverTransformation(leftCoveringScans, rightCoveringScans []plan.CoveringOperator,
+	filter, onclause, primaryJoinKeys expression.Expression,
+	leftExprs, rightExprs expression.Expressions, nl bool) (
+	newFilter, newOnclause, newPrimaryJoinKeys expression.Expression, err error) {
+
+	if len(leftCoveringScans) == 0 && len(rightCoveringScans) == 0 {
+		newFilter, newOnclause, newPrimaryJoinKeys = filter, onclause, primaryJoinKeys
+		return
+	}
+
+	if filter != nil {
+		newFilter = filter.Copy()
+	}
+
+	if onclause != nil {
+		newOnclause = onclause.Copy()
+	}
+
+	if primaryJoinKeys != nil {
+		newPrimaryJoinKeys = primaryJoinKeys.Copy()
+	}
+
+	// do right-hand-side covering index scan first, in case an ANY clause contains
+	// a join filter, if part of the join filter gets transformed first, the ANY clause
+	// will no longer match during transformation.
+	// (note this assumes the ANY clause is on the right-hand-side keyspace)
+	for _, op := range rightCoveringScans {
+		coverer := expression.NewCoverer(op.Covers(), op.FilterCovers())
+		if arrayKey := op.ImplicitArrayKey(); arrayKey != nil {
+			newFilter, newOnclause, newPrimaryJoinKeys, err =
+				this.renameAnyExpression(arrayKey, newFilter, newOnclause, newPrimaryJoinKeys)
+			if err != nil {
+				return
+			}
+			if len(rightExprs) > 0 {
+				anyRenamer := expression.NewAnyRenamer(arrayKey)
+				for i, _ := range rightExprs {
+					rightExprs[i], err = anyRenamer.Map(rightExprs[i])
+					if err != nil {
+						return
+					}
+				}
+			}
+		}
+
+		newFilter, newOnclause, newPrimaryJoinKeys, err = this.coverExpression(coverer, newFilter, newOnclause, newPrimaryJoinKeys)
+		if err != nil {
+			return
+		}
+
+		for i, _ := range rightExprs {
+			rightExprs[i], err = coverer.Map(rightExprs[i])
+			if err != nil {
+				return
+			}
+		}
+	}
+
+	for _, op := range leftCoveringScans {
+		coverer := expression.NewCoverer(op.Covers(), op.FilterCovers())
+		if arrayKey := op.ImplicitArrayKey(); arrayKey != nil {
+			newFilter, newOnclause, newPrimaryJoinKeys, err =
+				this.renameAnyExpression(arrayKey, newFilter, newOnclause, newPrimaryJoinKeys)
+			if err != nil {
+				return
+			}
+			if len(leftExprs) > 0 {
+				anyRenamer := expression.NewAnyRenamer(arrayKey)
+				for i, _ := range leftExprs {
+					leftExprs[i], err = anyRenamer.Map(leftExprs[i])
+					if err != nil {
+						return
+					}
+				}
+			}
+		}
+
+		newFilter, newOnclause, newPrimaryJoinKeys, err = this.coverExpression(coverer, newFilter, newOnclause, newPrimaryJoinKeys)
+		if err != nil {
+			return
+		}
+
+		for i, _ := range leftExprs {
+			leftExprs[i], err = coverer.Map(leftExprs[i])
+			if err != nil {
+				return
+			}
+		}
+
+		if nl {
+			// also need to perform cover transformation for index spans for
+			// right-hand-side index scans since left-hand-side expressions
+			// could be used as part of index spans for right-hand-side index scan
+			// (note this.children at this point contains the plan for the inner)
+			for _, child := range this.children {
+				if secondary, ok := child.(plan.SecondaryScan); ok {
+					err = secondary.CoverJoinSpanExpressions(coverer, op.ImplicitArrayKey())
+					if err != nil {
+						return
+					}
+				}
+			}
+		}
+	}
+
+	return
+}
+
+func (this *builder) markCachedScans(ops ...plan.Operator) error {
+	for i := len(ops) - 1; i >= 0; i-- {
+		switch op := ops[i].(type) {
+		case *plan.Fetch:
+			op.SetCacheResult()
+		case *plan.IndexScan3:
+			if op.Covering() {
+				// check for references to lefthand side and mark cache result
+				keyspaces := make(map[string]string, len(this.baseKeyspaces))
+				for _, baseKeyspace := range this.baseKeyspaces {
+					if baseKeyspace.PlanDone() {
+						keyspaces[baseKeyspace.Name()] = baseKeyspace.Keyspace()
+					}
+				}
+				ref := false
+			loop:
+				for _, span := range op.Spans() {
+					for _, rg := range span.Ranges {
+						var expr expression.Expression
+						if rg.Low != nil && rg.High != nil {
+							expr = expression.NewAnd(rg.Low, rg.High)
+						} else if rg.Low != nil {
+							expr = rg.Low
+						} else {
+							expr = rg.High
+						}
+						if expr != nil {
+							keyspaceRefs, err := expression.CountKeySpaces(expr, keyspaces)
+							if err != nil {
+								return err
+							}
+							if len(keyspaceRefs) > 0 {
+								ref = true
+								break loop
+							}
+						}
+					}
+				}
+				if !ref {
+					op.SetCacheResult()
+				}
+			}
+		}
+	}
+	return nil
 }
 
 func (this *builder) markPlanFlags(op plan.Operator, term algebra.SimpleFromTerm) error {

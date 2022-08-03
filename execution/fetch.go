@@ -10,8 +10,10 @@ package execution
 
 import (
 	"encoding/json"
+	"math"
 
 	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
@@ -19,6 +21,8 @@ import (
 
 var _FETCH_OP_POOL util.FastPool
 var _DUMMYFETCH_OP_POOL util.FastPool
+
+const _MAX_RESULT_CACHE_SIZE = 1000
 
 func init() {
 	util.NewFastPool(&_FETCH_OP_POOL, func() interface{} {
@@ -35,9 +39,12 @@ type Fetch struct {
 	keyspace   datastore.Keyspace
 	parentVal  value.Value
 	deepCopy   bool
+	hasCache   bool
 	batchSize  int
 	fetchCount uint64
 	mk         missingKeys
+	results    value.AnnotatedValues
+	context    *Context
 }
 
 func NewFetch(plan *plan.Fetch, context *Context) *Fetch {
@@ -76,7 +83,47 @@ func (this *Fetch) PlanOp() plan.Operator {
 }
 
 func (this *Fetch) RunOnce(context *Context, parent value.Value) {
-	this.runConsumer(this, context, parent)
+	if !this.plan.HasCacheResult() || !this.hasCache {
+		this.runConsumer(this, context, parent)
+	} else {
+		defer context.Recover(&this.base) // Recover from any panic
+		active := this.active()
+		this.switchPhase(_EXECTIME)
+		defer func() {
+			this.notify()
+			this.switchPhase(_NOTIME)
+			this.close(context)
+		}()
+
+		if !active {
+			return
+		}
+
+		// maxParallelism is 1. Use cached values
+		for _, sv := range this.results {
+			var av value.AnnotatedValue
+			if this.deepCopy {
+				av = sv.CopyForUpdate().(value.AnnotatedValue)
+			} else {
+				av = sv.Copy().(value.AnnotatedValue)
+			}
+
+			av.Track()
+			if context.UseRequestQuota() {
+				err := context.TrackValueSize(av.Size())
+				if err != nil {
+					context.Error(err)
+					av.Recycle()
+					return
+				}
+			}
+
+			if !this.sendItem(av) {
+				av.Recycle()
+				break
+			}
+		}
+	}
 }
 
 func (this *Fetch) beforeItems(context *Context, parent value.Value) bool {
@@ -85,6 +132,15 @@ func (this *Fetch) beforeItems(context *Context, parent value.Value) bool {
 		this.keyspace = getKeyspace(this.keyspace, this.plan.Term().FromExpression(), context)
 	}
 	this.parentVal = parent
+	if this.plan.HasCacheResult() && this.results == nil {
+		var size int = _MAX_RESULT_CACHE_SIZE
+		cardinality := int(math.Ceil(this.plan.Cardinality()))
+		if cardinality > 0 && cardinality < size {
+			size = cardinality
+		}
+		this.results = make(value.AnnotatedValues, 0, size)
+		this.context = context
+	}
 	return this.keyspace != nil
 }
 
@@ -111,6 +167,9 @@ func (this *Fetch) afterItems(context *Context) {
 	// if this is the inner leg of a NL join, we don't want to repeatedly report the same keys as missing
 	this.mk.validate = false
 	this.parentVal = nil
+	if this.plan.HasCacheResult() {
+		this.hasCache = true
+	}
 }
 
 func (this *Fetch) flushBatch(context *Context) bool {
@@ -136,6 +195,8 @@ func (this *Fetch) flushBatch(context *Context) bool {
 
 	fetchMap := _STRING_ANNOTATED_POOL.Get()
 	defer _STRING_ANNOTATED_POOL.Put(fetchMap)
+
+	cacheResult := this.plan.HasCacheResult()
 
 	if l == 1 {
 		var keys [1]string
@@ -200,7 +261,21 @@ func (this *Fetch) flushBatch(context *Context) bool {
 				}
 			}
 
+			if cacheResult && !this.hasCache {
+				av.Track()
+				if context.UseRequestQuota() {
+					err := context.TrackValueSize(av.Size())
+					if err != nil {
+						context.Error(err)
+						av.Recycle()
+						return false
+					}
+				}
+				this.results = append(this.results, av)
+			}
+
 			if !this.sendItem(av) {
+				av.Recycle()
 				return false
 			}
 		} else {
@@ -239,7 +314,26 @@ func (this *Fetch) flushBatch(context *Context) bool {
 				}
 			}
 
+			if cacheResult && !this.hasCache {
+				av.Track()
+				if context.UseRequestQuota() {
+					err := context.TrackValueSize(av.Size())
+					if err != nil {
+						context.Error(err)
+						av.Recycle()
+						return false
+					}
+				}
+				if len(this.results) >= _MAX_RESULT_CACHE_SIZE {
+					context.Error(errors.NewNLInnerPrimaryDocsExceeded(this.plan.Term().Alias(), _MAX_RESULT_CACHE_SIZE))
+					av.Recycle()
+					return false
+				}
+				this.results = append(this.results, av)
+			}
+
 			if !this.sendItem(av) {
+				av.Recycle()
 				return false
 			}
 		} else {
@@ -259,6 +353,17 @@ func (this *Fetch) MarshalJSON() ([]byte, error) {
 
 func (this *Fetch) Done() {
 	this.baseDone()
+	if this.plan.HasCacheResult() && this.results != nil {
+		context := this.context
+		for _, av := range this.results {
+			if context != nil && context.UseRequestQuota() {
+				context.ReleaseValueSize(av.Size())
+			}
+			av.Recycle()
+		}
+		this.results = nil
+		this.hasCache = false
+	}
 	if this.isComplete() {
 		_FETCH_OP_POOL.Put(this)
 	}

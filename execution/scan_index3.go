@@ -29,6 +29,8 @@ type IndexScan3 struct {
 	children []Operator
 	keys     map[string]bool
 	pool     bool
+	results  value.AnnotatedValues
+	context  *Context
 }
 
 func NewIndexScan3(plan *plan.IndexScan3, context *Context) *IndexScan3 {
@@ -64,6 +66,43 @@ func (this *IndexScan3) RunOnce(context *Context, parent value.Value) {
 		defer this.cleanup(context)
 		if !active {
 			return
+		}
+
+		// use cached results if available
+		cacheResult := this.plan.HasCacheResult()
+		if cacheResult && this.results != nil {
+			for _, av := range this.results {
+				av.Track()
+				if context.UseRequestQuota() {
+					err := context.TrackValueSize(av.Size())
+					if err != nil {
+						context.Error(err)
+						av.Recycle()
+						return
+					}
+				}
+				if !this.sendItem(av) {
+					av.Recycle()
+					break
+				}
+			}
+			return
+		}
+
+		var results value.AnnotatedValues
+		if cacheResult {
+			var size int = _MAX_RESULT_CACHE_SIZE
+			cardinality := int(math.Ceil(this.plan.Cardinality()))
+			if cardinality > 0 && cardinality < size {
+				size = cardinality
+			}
+			results = make(value.AnnotatedValues, 0, size)
+			this.context = context
+			defer func() {
+				for _, av := range results {
+					av.Recycle()
+				}
+			}()
 		}
 
 		if this.plan.HasDeltaKeyspace() {
@@ -206,6 +245,25 @@ func (this *IndexScan3) RunOnce(context *Context, parent value.Value) {
 						}
 
 						av.SetBit(this.bit)
+
+						if cacheResult {
+							av.Track()
+							if context.UseRequestQuota() {
+								err := context.TrackValueSize(av.Size())
+								if err != nil {
+									context.Error(errors.NewMemoryQuotaExceededError())
+									av.Recycle()
+									return
+								}
+							}
+							if len(results) >= _MAX_RESULT_CACHE_SIZE {
+								context.Error(errors.NewNLInnerPrimaryDocsExceeded(this.plan.Term().Alias(), _MAX_RESULT_CACHE_SIZE))
+								av.Recycle()
+								return
+							}
+							results = append(results, av)
+						}
+
 						ok = this.sendItem(av)
 						docs++
 						if docs > _PHASE_UPDATE_COUNT {
@@ -220,6 +278,7 @@ func (this *IndexScan3) RunOnce(context *Context, parent value.Value) {
 				return
 			}
 		}
+		this.results, results = results, nil
 	})
 }
 
@@ -373,6 +432,16 @@ func (this *IndexScan3) SendAction(action opAction) {
 func (this *IndexScan3) Done() {
 	this.baseDone()
 	this.keys, this.pool = this.deltaKeyspaceDone(this.keys, this.pool)
+	if this.plan.HasCacheResult() && this.results != nil {
+		context := this.context
+		for _, av := range this.results {
+			if context != nil && context.UseRequestQuota() {
+				context.ReleaseValueSize(av.Size())
+			}
+			av.Recycle()
+		}
+		this.results = nil
+	}
 }
 
 func getIndexKeyNames(index datastore.Index, covers expression.Covers) []string {

@@ -25,6 +25,7 @@ const (
 	ISCAN_HAS_DYNAMIC_IN_SPAN
 	ISCAN_EARLY_ORDER
 	ISCAN_EARLY_OFFSET
+	ISCAN_CACHE_RESULT
 )
 
 type IndexScan3 struct {
@@ -149,6 +150,14 @@ func (this *IndexScan3) HasEarlyOffset() bool {
 
 func (this *IndexScan3) SetEarlyOffset() {
 	this.flags |= ISCAN_EARLY_OFFSET
+}
+
+func (this *IndexScan3) HasCacheResult() bool {
+	return (this.flags & ISCAN_CACHE_RESULT) != 0
+}
+
+func (this *IndexScan3) SetCacheResult() {
+	this.flags |= ISCAN_CACHE_RESULT
 }
 
 func (this *IndexScan3) Projection() *IndexProjection {
@@ -380,6 +389,10 @@ func (this *IndexScan3) MarshalBase(f func(map[string]interface{})) map[string]i
 		r["has_dynamic_in"] = true
 	}
 
+	if this.HasCacheResult() {
+		r["cache_result"] = true
+	}
+
 	if this.term.IsUnderNL() {
 		r["nested_loop"] = this.term.IsUnderNL()
 	}
@@ -472,6 +485,7 @@ func (this *IndexScan3) UnmarshalJSON(body []byte) error {
 		Reverse          bool                   `json:"reverse"`
 		Distinct         bool                   `json:"distinct"`
 		DynamicIn        bool                   `json:"has_dynamic_in"`
+		CacheResult      bool                   `json:"cache_result"`
 		UnderNL          bool                   `json:"nested_loop"`
 		GroupAggs        *IndexGroupAggregates  `json:"index_group_aggs"`
 		Projection       *IndexProjection       `json:"index_projection"`
@@ -512,6 +526,9 @@ func (this *IndexScan3) UnmarshalJSON(body []byte) error {
 	}
 	if _unmarshalled.DynamicIn {
 		flags |= ISCAN_HAS_DYNAMIC_IN_SPAN
+	}
+	if _unmarshalled.CacheResult {
+		flags |= ISCAN_CACHE_RESULT
 	}
 	this.flags = flags
 	this.groupAggs = _unmarshalled.GroupAggs

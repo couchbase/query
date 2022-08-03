@@ -40,6 +40,12 @@ func (this *builder) buildSecondaryScan(indexes, arrayIndexes, flex map[datastor
 		}
 	}
 
+	// if considering primary scan for nested-loop join, we can bail out here after
+	// consideration of covering scan above
+	if this.hasBuilderFlag(BUILDER_JOIN_ON_PRIMARY) {
+		return
+	}
+
 	hasDeltaKeyspace := this.context.HasDeltaKeyspace(baseKeyspace.Keyspace())
 
 	if this.group != nil || hasDeltaKeyspace {
