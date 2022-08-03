@@ -381,7 +381,8 @@ func main() {
 			" use-cbo=%v"+
 			" timeout=%v"+
 			" txtimeout=%v"+
-			" gc-percent=%v",
+			" gc-percent=%v"+
+			" node-quota=%v",
 			util.VERSION,
 			datastore.Info().Version(),
 			*DATASTORE,
@@ -401,6 +402,7 @@ func main() {
 			server.Timeout(),
 			server.TxTimeout(),
 			*_GOGC_PERCENT,
+			memory.Quota(),
 		)
 	})
 
