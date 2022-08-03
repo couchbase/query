@@ -13,8 +13,6 @@ import (
 	_ "unsafe" // required to use //go:linkname
 )
 
-const DEFAULT_FORMAT = "2006-01-02T15:04:05.999Z07:00"
-
 type Time int64
 
 //go:noescape

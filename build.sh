@@ -222,7 +222,6 @@ function repo_setup {
     repo_by_gomod go.mod n1fty "" $cbranch $rbranch $defbranch
     repo_by_gomod go.mod cbgt "" $cbranch $rbranch $defbranch
     repo_by_gomod go.mod cbft "" $cbranch $rbranch $defbranch
-    repo_by_gomod go.mod sigar "" $cbranch $rbranch $defbranch
     repo_by_gomod ../regulator/go.mod gocb "v2" $defbranch
     repo_by_gomod ../n1fty/go.mod bleve "" $defbranch
     repo_by_gomod ../n1fty/go.mod bleve "v2" $defbranch
@@ -290,7 +289,7 @@ function DevStandaloneSetup {
 # turn off go module for non repo sync build or standalone build
 if [[ ( ! -d ../../../../../cbft && "$GOPATH" != "") || ( $sflag != 0) ]]; then
     export GO111MODULE=off
-    export CGO_CFLAGS="-I$GOPATH/src/github.com/couchbase/eventing-ee/evaluator/worker/include -I$GOPATH/src/github.com/couchbase/sigar/include $CGO_FLAGS"
+    export CGO_CFLAGS="-I$GOPATH/src/github.com/couchbase/eventing-ee/evaluator/worker/include $CGO_FLAGS"
     export CGO_LDFLAGS="-L$GOPATH/lib $CGO_LDFLAGS"
     export LD_LIBRARY_PATH=$GOPATH/lib:${LD_LIBRARY_PATH}
     cmd="go get $* $uflag -d -v ./..."

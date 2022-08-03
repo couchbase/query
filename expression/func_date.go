@@ -18,7 +18,6 @@ import (
 	"unicode"
 
 	"github.com/couchbase/query/errors"
-	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
@@ -4505,7 +4504,7 @@ func determineKnownFormat(s string) string {
 /*
 Represents the default format of the time string.
 */
-const DEFAULT_FORMAT = util.DEFAULT_FORMAT
+const DEFAULT_FORMAT = "2006-01-02T15:04:05.999Z07:00"
 
 // Used solely for the %D format specifier
 const DEFAULT_SHORT_DATE_FORMAT = "2006-01-02"

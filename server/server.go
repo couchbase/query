@@ -39,7 +39,6 @@ import (
 	"github.com/couchbase/query/rewrite"
 	"github.com/couchbase/query/semantics"
 	queryMetakv "github.com/couchbase/query/server/settings/couchbase"
-	"github.com/couchbase/query/system"
 	"github.com/couchbase/query/tenant"
 	"github.com/couchbase/query/transactions"
 	"github.com/couchbase/query/util"
@@ -166,9 +165,6 @@ type Server struct {
 	gcpercent         int
 	shutdown          int
 	requestErrorLimit int
-	memoryStats       runtime.MemStats
-	lastTotalTime     int64
-	lastNow           time.Time
 }
 
 // Default and min Keep Alive Length
@@ -244,7 +240,6 @@ func NewServer(store datastore.Datastore, sys datastore.Systemstore, config clus
 		nsm[ss[i]] = true
 	}
 	n1ql.SetNamespaces(nsm)
-	rv.StartStatsCollector()
 
 	return rv, nil
 }
@@ -509,8 +504,6 @@ func (this *Server) RequestTimeout(requestTimeout time.Duration) time.Duration {
 	if requestTimeout > 0 {
 		timeout = requestTimeout
 	}
-
-	// never allow request side timeout to be higher than server side timeout
 	if this.timeout > 0 && (timeout == 0 || this.timeout < timeout) {
 		timeout = this.timeout
 	}
@@ -1113,7 +1106,14 @@ func (this *Server) serviceRequest(request Request) {
 		return
 	}
 
-	timeout := this.RequestTimeout(request.Timeout())
+	timeout := request.Timeout()
+
+	// never allow request side timeout to be higher than
+	// server side timeout
+	if this.timeout > 0 && (this.timeout < timeout || timeout <= 0) {
+		timeout = this.timeout
+	}
+
 	timeout = context.AdjustTimeout(timeout, request.Type(), request.IsPrepare())
 	if timeout != request.Timeout() {
 		request.SetTimeout(timeout)
@@ -1703,104 +1703,5 @@ func HostNameandPort(node string) (host, port string) {
 		port = ""
 	}
 
-	return
-}
-
-const (
-	_SERVICE_PERCENT_LIMIT   = 100
-	_SERVICE_OVERHEAD_FACTOR = 2            // 2 requests per servicer is normal
-	_CPU_PERCENT             = 80           // 80% CPU used consider CPU intensive
-	_MEMORY_PERCENT          = 80           // 80% Memory used consider Memory intensive
-	_MEMORY_QUOTA            = float64(0.5) // 50% of system memory
-	_DEF_MEMORY_USAGE        = uint64(1)
-)
-
-func (this *Server) LoadFactor() int {
-	// consider one request per servicer in queue is normal
-	servicers := util.MaxInt(int(this.ServicerUsage()/_SERVICE_OVERHEAD_FACTOR), _SERVICE_PERCENT_LIMIT)
-	cpu := int(this.CpuUsage(true))
-	memory := int(this.MemoryUsage(true))
-	// max of all of them
-	return util.MaxInt(util.MaxInt(servicers, cpu), memory)
-
-}
-
-func (this *Server) ServicerUsage() int {
-	reqplus := this.plusQueue.load(this.txQueueCount())
-	unbound := this.unboundQueue.load(0)
-	if int(reqplus/_SERVICE_OVERHEAD_FACTOR) >= _SERVICE_PERCENT_LIMIT || reqplus > unbound {
-		// request_plus is higher than unbounded, so request plus intensive
-		return reqplus
-	} else {
-		// unbounded intensive
-		return unbound
-	}
-}
-
-func (this *Server) CpuUsage(refresh bool) float64 {
-	// get process cpu usage
-	cpu, _, _, _, _ := system.GetSystemStats(nil, refresh, false)
-	if cpu == 0 {
-		// no data, calculate alternative approach
-		newUtime, newStime := util.CpuTimes()
-		totalTime := newUtime + newStime
-		now := time.Now()
-		dur := float64(now.Sub(this.lastNow))
-		if dur <= 0 {
-			dur = 1.0
-		}
-		cpu = float64(totalTime-this.lastTotalTime) / dur
-		this.lastTotalTime = totalTime
-		this.lastNow = now
-	}
-
-	// cpu percent per core
-	return util.RoundPlaces(cpu/float64(util.NumCPU()), 2)
-}
-
-func (this *Server) MemoryUsage(refresh bool) uint64 {
-	// get go runtime memory stats
-	ms := this.MemoryStats(refresh)
-	mem_used := ms.HeapInuse + ms.HeapIdle - ms.HeapReleased + ms.GCSys
-	if memory.Quota() > 0 {
-		return uint64((mem_used * 100) / memory.Quota())
-	}
-
-	// no node quota. caulculate Query engine memory quota as 50% system memory
-	// get system memory info
-	_, _, total, _, _ := system.GetSystemStats(nil, refresh, false)
-	if total <= 0 {
-		return _DEF_MEMORY_USAGE
-	}
-	quota := uint64(float64(total) * _MEMORY_QUOTA)
-	mup := uint64((mem_used * 100) / quota)
-
-	/*
-		// what happens 50% memory not aviable on the system??
-		avilable := quota - mem_used
-		if avilable > free {
-			// mup += uint64(((avilable - free) * 100) / quota)
-		}
-	*/
-
-	if mup > _DEF_MEMORY_USAGE {
-		return mup
-	}
-	return _DEF_MEMORY_USAGE
-
-}
-
-// extract go runtime stats
-func (this *Server) MemoryStats(refresh bool) (ms runtime.MemStats) {
-	if refresh {
-		runtime.ReadMemStats(&ms)
-		this.Lock()
-		this.memoryStats = ms
-		this.Unlock()
-	} else {
-		this.RLock()
-		ms = this.memoryStats
-		this.RUnlock()
-	}
 	return
 }

@@ -102,7 +102,7 @@ func (g *gometricsAccountingStore) Vitals() (interface{}, errors.Error) {
 
 	return VitalsRecord{
 		Uptime:         uptime.String(),
-		LocalTime:      now.Format(util.DEFAULT_FORMAT),
+		LocalTime:      now.String(),
 		Version:        util.VERSION,
 		TotThreads:     runtime.NumGoroutine(),
 		Cores:          runtime.GOMAXPROCS(0),
