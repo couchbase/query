@@ -52,16 +52,6 @@ func (this *nullValue) WriteJSON(w io.Writer, prefix, indent string, fast bool) 
 	return err
 }
 
-func (this nullValue) WriteSpill(w io.Writer, buf []byte) error {
-	b := []byte{_SPILL_TYPE_VALUE_NULL}
-	_, err := w.Write(b)
-	return err
-}
-
-func (this nullValue) ReadSpill(w io.Reader, buf []byte) error {
-	return nil
-}
-
 /*
 Type NULL
 */

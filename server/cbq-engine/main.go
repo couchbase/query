@@ -258,9 +258,6 @@ func main() {
 	}
 
 	resolver.SetServerless(*DATASTORE, *SERVERLESS)
-	// default until settings adjust
-	util.SetTemp(os.TempDir(), 0)
-
 	datastore, err := resolver.NewDatastore(*DATASTORE)
 	if err != nil {
 		logging.Errorf("%v", err.Error())

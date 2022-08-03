@@ -231,18 +231,6 @@ var _SETTERS = map[string]Setter{
 	                   s.SettingsCallback()("enforce_limits", o)
 	                   return nil
 	*/
-	QUERY_TMP_DIR: func(s *Server, o interface{}) errors.Error {
-		if err := util.SetTempDir(o.(string)); err != nil {
-			return errors.NewServiceErrorBadValue(err, "settings")
-		}
-		return nil
-	},
-	QUERY_TMP_LIMIT: func(s *Server, o interface{}) errors.Error {
-		if err := util.SetTempQuota(int64(getNumber(o)) * util.MiB); err != nil {
-			return errors.NewServiceErrorBadValue(err, "settings")
-		}
-		return nil
-	},
 }
 
 func getNumber(o interface{}) float64 {
@@ -527,7 +515,6 @@ func SetParamValuesForAll(cfg queryMetakv.Config, srvr *Server) {
 		paramName, ok := queryMetakv.INDEXERPARAM[key]
 		if ok {
 			idxrSettings[paramName] = val
-			querySettings[paramName] = val
 		} else {
 			// QUERY PARAM
 			paramName, ok := queryMetakv.GLOBALPARAM[key]

@@ -14,7 +14,6 @@ import (
 
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
-	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
@@ -22,57 +21,15 @@ import (
 type InitialGroup struct {
 	base
 	plan   *plan.InitialGroup
-	groups *value.AnnotatedMap
+	groups map[string]value.AnnotatedValue
 }
 
 func NewInitialGroup(plan *plan.InitialGroup, context *Context) *InitialGroup {
-
-	var shouldSpill func(uint64, uint64) bool
-	if plan.CanSpill() && context.UseRequestQuota() {
-		shouldSpill = func(c uint64, n uint64) bool {
-			return (c+n) > context.ProducerThrottleQuota() && context.CurrentQuotaUsage() > 0.75
-		}
-	} else {
-		maxSize := context.AvailableMemory()
-		if maxSize > 0 {
-			maxSize = uint64(float64(maxSize) / float64(util.NumCPU()) * 0.05) // 5% of per CPU free memory
-		}
-		if maxSize < _MIN_SIZE {
-			maxSize = _MIN_SIZE
-		}
-		shouldSpill = func(c uint64, n uint64) bool {
-			return (c + n) > maxSize
-		}
-	}
-	trackMem := func(size int64) {
-		if context.UseRequestQuota() {
-			if size < 0 {
-				context.ReleaseValueSize(uint64(-size))
-			} else {
-				if err := context.TrackValueSize(uint64(size)); err != nil {
-					context.Fatal(errors.NewMemoryQuotaExceededError())
-				}
-			}
-		}
-	}
-	merge := func(v1 value.AnnotatedValue, v2 value.AnnotatedValue) value.AnnotatedValue {
-		a1 := v1.GetAttachment("aggregates").(map[string]value.Value)
-		a2 := v2.GetAttachment("aggregates").(map[string]value.Value)
-		for _, agg := range plan.Aggregates() {
-			a := agg.String()
-			v, e := agg.CumulateIntermediate(a2[a], a1[a], nil)
-			if e != nil {
-				return nil
-			}
-			a1[a] = v
-		}
-		return v1
-	}
-
 	rv := &InitialGroup{
 		plan:   plan,
-		groups: value.NewAnnotatedMap(shouldSpill, trackMem, merge),
+		groups: make(map[string]value.AnnotatedValue),
 	}
+
 	newBase(&rv.base, context)
 	rv.output = rv
 	return rv
@@ -85,7 +42,7 @@ func (this *InitialGroup) Accept(visitor Visitor) (interface{}, error) {
 func (this *InitialGroup) Copy() Operator {
 	rv := &InitialGroup{
 		plan:   this.plan,
-		groups: this.groups.Copy(),
+		groups: make(map[string]value.AnnotatedValue),
 	}
 	this.base.copy(&rv.base)
 	return rv
@@ -96,7 +53,6 @@ func (this *InitialGroup) PlanOp() plan.Operator {
 }
 
 func (this *InitialGroup) RunOnce(context *Context, parent value.Value) {
-	defer this.groups.Release()
 	this.runConsumer(this, context, parent)
 }
 
@@ -114,23 +70,22 @@ func (this *InitialGroup) processItem(item value.AnnotatedValue, context *Contex
 	}
 
 	// Get or seed the group value
-	recycle := false
-	gv := this.groups.Get(gk)
+	gv := this.groups[gk]
 	handleQuota := false
 	if gv == nil {
 
 		// avoid recycling of seeding values
+		item.Track()
 		gv = item
+		this.groups[gk] = gv
 
 		aggregates := make(map[string]value.Value, len(this.plan.Aggregates()))
 		gv.SetAttachment("aggregates", aggregates)
 		for _, agg := range this.plan.Aggregates() {
 			aggregates[agg.String()], _ = agg.Default(nil, context)
 		}
-		this.groups.Set(gk, gv)
 	} else {
 		handleQuota = context.UseRequestQuota()
-		recycle = true
 	}
 
 	// Cumulate aggregates
@@ -155,21 +110,17 @@ func (this *InitialGroup) processItem(item value.AnnotatedValue, context *Contex
 	if handleQuota {
 		context.ReleaseValueSize(item.Size())
 	}
-	if recycle {
-		item.Recycle()
-	}
+	item.Recycle()
 
 	return true
 }
 
 func (this *InitialGroup) afterItems(context *Context) {
-	this.groups.Foreach(func(key string, av value.AnnotatedValue) bool {
+	for _, av := range this.groups {
 		if !this.sendItem(av) {
-			return false
+			return
 		}
-		return true
-	})
-	this.groups.Release()
+	}
 }
 
 func (this *InitialGroup) MarshalJSON() ([]byte, error) {
@@ -180,6 +131,7 @@ func (this *InitialGroup) MarshalJSON() ([]byte, error) {
 }
 
 func (this *InitialGroup) reopen(context *Context) bool {
-	this.groups.Release()
-	return this.baseReopen(context)
+	rv := this.baseReopen(context)
+	this.groups = make(map[string]value.AnnotatedValue)
+	return rv
 }

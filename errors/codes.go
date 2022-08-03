@@ -186,7 +186,7 @@ const (
 	E_EXECUTION_INTERNAL                      ErrorCode = 5002
 	E_EXECUTION_PARAMETER                     ErrorCode = 5003
 	E_PARSING                                 ErrorCode = 5004
-	E_TEMP_FILE_QUOTA                         ErrorCode = 5005
+	E_TEMP_FILE_QUOTA_EXCEEDED                ErrorCode = 5005
 	E_EVALUATION_ABORT                        ErrorCode = 5010
 	E_EVALUATION                              ErrorCode = 5011
 	E_EXPLAIN                                 ErrorCode = 5015
@@ -243,13 +243,6 @@ const (
 	W_MISSING_KEY                             ErrorCode = 5503
 	E_NODE_QUOTA_EXCEEDED                     ErrorCode = 5600
 	E_TENANT_QUOTA_EXCEEDED                   ErrorCode = 5601
-	E_VALUE_RECONSTRUCT                       ErrorCode = 5700
-	E_VALUE_INVALID                           ErrorCode = 5701
-	E_VALUE_SPILL_CREATE                      ErrorCode = 5702
-	E_VALUE_SPILL_READ                        ErrorCode = 5703
-	E_VALUE_SPILL_WRITE                       ErrorCode = 5704
-	E_VALUE_SPILL_SIZE                        ErrorCode = 5705
-	E_VALUE_SPILL_SEEK                        ErrorCode = 5706
 	E_SCHEDULER                               ErrorCode = 6001
 	E_DUPLICATE_TASK                          ErrorCode = 6002
 	E_TASK_RUNNING                            ErrorCode = 6003

@@ -46,25 +46,6 @@ func (this intValue) WriteJSON(w io.Writer, prefix, indent string, fast bool) er
 	return err
 }
 
-func (this intValue) WriteSpill(w io.Writer, buf []byte) error {
-	b := []byte{_SPILL_TYPE_VALUE}
-	_, err := w.Write(b)
-	if err == nil {
-		err = writeSpillValue(w, int64(this), buf)
-	}
-	return err
-}
-
-func (this intValue) ReadSpill(r io.Reader, buf []byte) error {
-	v, err := readSpillValue(r, buf)
-	if err == nil && v != nil {
-		this = intValue(v.(int64))
-	} else {
-		this = intValue(0)
-	}
-	return err
-}
-
 /*
 Type NUMBER
 */

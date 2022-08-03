@@ -60,25 +60,6 @@ func (this boolValue) WriteJSON(w io.Writer, prefix, indent string, fast bool) e
 	return err
 }
 
-func (this boolValue) WriteSpill(w io.Writer, buf []byte) error {
-	b := []byte{_SPILL_TYPE_VALUE}
-	_, err := w.Write(b)
-	if err == nil {
-		err = writeSpillValue(w, (bool)(this), buf)
-	}
-	return err
-}
-
-func (this boolValue) ReadSpill(r io.Reader, buf []byte) error {
-	v, err := readSpillValue(r, buf)
-	if err == nil && v != nil {
-		this = boolValue(v.(bool))
-	} else {
-		this = false
-	}
-	return err
-}
-
 /*
 Type BOOLEAN
 */

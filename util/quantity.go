@@ -28,9 +28,9 @@ func ParseQuantity(s string) (int, error) {
 	}
 	switch rune(s[l-n]) {
 	case 'm':
-		m = MiB
+		m = 1024 * 1024
 	case 'k':
-		m = KiB
+		m = 1024
 	}
 	for _, suf := range quantityTypes {
 		s = strings.TrimSuffix(s, suf)

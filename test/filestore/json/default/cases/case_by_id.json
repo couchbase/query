@@ -67,8 +67,6 @@
                 },
                 {
                     "#operator": "Order",
-                    "can_spill": true,
-                    "clip_values": true,
                     "sort_terms": [
                         {
                             "expr": "(`game`.`id`)"
@@ -141,8 +139,6 @@
                 },
                 {
                     "#operator": "Order",
-                    "can_spill": true,
-                    "clip_values": true,
                     "sort_terms": [
                         {
                             "expr": "(`game`.`id`)"
@@ -203,8 +199,6 @@
                 },
                 {
                     "#operator": "Order",
-                    "can_spill": true,
-                    "clip_values": true,
                     "sort_terms": [
                         {
                             "expr": "(`game`.`id`)"
@@ -276,8 +270,6 @@
                 },
                 {
                     "#operator": "Order",
-                    "can_spill": true,
-                    "clip_values": true,
                     "sort_terms": [
                         {
                             "expr": "(`game`.`id`)"
@@ -314,7 +306,6 @@
                                 "aggregates": [
                                     "count(*)"
                                 ],
-                                "can_spill": true,
                                 "group_keys": []
                             }
                         ]
@@ -325,7 +316,6 @@
                     "aggregates": [
                         "count(*)"
                     ],
-                    "can_spill": true,
                     "group_keys": []
                 },
                 {
@@ -333,7 +323,6 @@
                     "aggregates": [
                         "count(*)"
                     ],
-                    "can_spill": true,
                     "group_keys": []
                 },
                 {
@@ -394,7 +383,6 @@
                                             "count(*)",
                                             "min((`game`.`score`))"
                                         ],
-                                        "can_spill": true,
                                         "group_keys": []
                                     }
                                 ]
@@ -406,7 +394,6 @@
                                 "count(*)",
                                 "min((`game`.`score`))"
                             ],
-                            "can_spill": true,
                             "group_keys": []
                         },
                         {
@@ -415,7 +402,6 @@
                                 "count(*)",
                                 "min((`game`.`score`))"
                             ],
-                            "can_spill": true,
                             "group_keys": []
                         },
                         {
@@ -442,8 +428,6 @@
                 },
                 {
                     "#operator": "Order",
-                    "can_spill": true,
-                    "clip_values": true,
                     "sort_terms": [
                         {
                             "expr": "min((`game`.`score`))"
@@ -490,7 +474,6 @@
                                 "aggregates": [
                                     "count(*)"
                                 ],
-                                "can_spill": true,
                                 "group_keys": []
                             }
                         ]
@@ -501,7 +484,6 @@
                     "aggregates": [
                         "count(*)"
                     ],
-                    "can_spill": true,
                     "group_keys": []
                 },
                 {
@@ -509,7 +491,6 @@
                     "aggregates": [
                         "count(*)"
                     ],
-                    "can_spill": true,
                     "group_keys": []
                 },
                 {

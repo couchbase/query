@@ -9,7 +9,6 @@
 package value
 
 import (
-	"encoding/binary"
 	"io"
 	"unsafe"
 
@@ -89,66 +88,6 @@ func (this *ScopeValue) WriteJSON(w io.Writer, prefix, indent string, fast bool)
 	}
 	val := objectValue(this.Fields())
 	return val.WriteJSON(w, prefix, indent, false)
-}
-
-func (this *ScopeValue) WriteSpill(w io.Writer, buf []byte) error {
-	free := false
-	if buf == nil {
-		buf = _SPILL_POOL.Get()
-		free = true
-	}
-	buf = buf[:6]
-	buf[0] = _SPILL_TYPE_VALUE_SCOPE
-	if this.nested {
-		buf[1] = 1
-	} else {
-		buf[1] = 0
-	}
-	binary.BigEndian.PutUint32(buf[2:], uint32(this.refCnt))
-	_, err := w.Write(buf)
-	if err == nil {
-		err = writeSpillValue(w, this.Value, buf)
-		if err == nil {
-			err = writeSpillValue(w, this.parent, buf)
-		}
-	}
-	if free {
-		_SPILL_POOL.Put(buf)
-	}
-	return err
-}
-
-func (this *ScopeValue) ReadSpill(r io.Reader, buf []byte) error {
-	free := false
-	if buf == nil {
-		buf = _SPILL_POOL.Get()
-		free = true
-	}
-	buf = buf[:5]
-	_, err := r.Read(buf)
-	if err == nil {
-		this.nested = (buf[0] != 0)
-		this.refCnt = int32(binary.BigEndian.Uint32(buf[1:]))
-		var v interface{}
-		v, err = readSpillValue(r, buf)
-		if err == nil && v != nil {
-			this.Value = v.(Value)
-		} else {
-			this.Value = nil
-		}
-		if err == nil {
-			v, err = readSpillValue(r, buf)
-			if err == nil && v != nil {
-				this.parent = v.(Value)
-			} else {
-				this.parent = nil
-			}
-		}
-	}
-	if free {
-		_SPILL_POOL.Put(buf)
-	}
-	return err
 }
 
 func (this *ScopeValue) Copy() Value {
@@ -301,8 +240,4 @@ func (this *ScopeValue) recycle(lvl int32) {
 		this.Value = nil
 		scopePool.Put(unsafe.Pointer(this))
 	}
-}
-
-func (this *ScopeValue) RefCnt() int32 {
-	return this.refCnt
 }

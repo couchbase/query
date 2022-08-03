@@ -62,8 +62,6 @@
                     },
                     {
                         "#operator": "Order",
-                        "can_spill": true,
-                        "clip_values": true,
                         "limit": "2",
                         "sort_terms": [
                             {
@@ -147,8 +145,6 @@
                     },
                     {
                         "#operator": "Order",
-                        "can_spill": true,
-                        "clip_values": true,
                         "sort_terms": [
                             {
                                 "expr": "(`product`.`productId`)"
@@ -257,8 +253,6 @@
                     },
                     {
                         "#operator": "Order",
-                        "can_spill": true,
-                        "clip_values": true,
                         "limit": "1",
                         "sort_terms": [
                             {

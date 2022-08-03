@@ -9,7 +9,6 @@
 package util
 
 import (
-	"fmt"
 	"os"
 	"path"
 	"sync"
@@ -26,19 +25,17 @@ type tempInfoT struct {
 var tempInfo tempInfoT
 var tempMutex sync.RWMutex
 
-func SetTemp(loc string, quota int64) error {
+func SetTemp(loc string, quota int64) {
 	tempMutex.Lock()
 	if quota < 0 {
 		quota = 0
 	}
 	if !path.IsAbs(loc) {
 		logging.Errorf("Attempt to set relative temporary path: %v", loc)
-		tempMutex.Unlock()
-		return fmt.Errorf("Attempt to set relative temporary path")
+		loc = os.TempDir()
 	} else if _, err := os.Stat(loc); err != nil {
 		logging.Errorf("Attempt to set invalid or inaccessible temporary path: %v (%v)", loc, err)
-		tempMutex.Unlock()
-		return fmt.Errorf("Attempt to set invalid or inaccessible temporary path")
+		loc = os.TempDir()
 	}
 	if tempInfo.loc != loc {
 		tempInfo.inuse = 0
@@ -47,27 +44,11 @@ func SetTemp(loc string, quota int64) error {
 	tempInfo.quota = quota
 	logging.Infof("Temporary file path set to: %v, quota: %v", loc, quota)
 	tempMutex.Unlock()
-	return nil
-}
-
-func SetTempDir(loc string) error {
-	return SetTemp(loc, TempQuota())
-}
-
-func SetTempQuota(q int64) error {
-	return SetTemp(TempLocation(), q)
 }
 
 func TempLocation() string {
 	tempMutex.RLock()
 	rv := tempInfo.loc
-	tempMutex.RUnlock()
-	return rv
-}
-
-func TempQuota() int64 {
-	tempMutex.RLock()
-	rv := tempInfo.quota
 	tempMutex.RUnlock()
 	return rv
 }
@@ -101,10 +82,7 @@ func ReleaseTemp(pathname string, sz int64) {
 	if tempInfo.quota > 0 && (pathname == "" || loc == tempInfo.loc) {
 		tempInfo.inuse -= sz
 		if tempInfo.inuse < 0 {
-			logging.Debuga(func() string {
-				return fmt.Sprintf("Error in temp space accounting for %v: inuse=%v, size=%v",
-					tempInfo.loc, tempInfo.inuse, sz)
-			})
+			logging.Debugf("Error in temp space accounting for %v: inuse=%v, size=%v", tempInfo.loc, tempInfo.inuse, sz)
 			tempInfo.inuse = 0
 		}
 	}

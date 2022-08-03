@@ -56,16 +56,6 @@ func (this missingValue) WriteJSON(w io.Writer, prefix, indent string, fast bool
 	return err
 }
 
-func (this missingValue) WriteSpill(w io.Writer, buf []byte) error {
-	b := []byte{_SPILL_TYPE_VALUE_MISSING}
-	_, err := w.Write(b)
-	return err
-}
-
-func (this missingValue) ReadSpill(r io.Reader, buf []byte) error {
-	return nil
-}
-
 /*
 Description of which property or index was undefined (if known).
 If not known, return a message stating Missing field or index.
