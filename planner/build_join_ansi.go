@@ -608,7 +608,7 @@ func (this *builder) buildAnsiNestOp(node *algebra.AnsiNest) (op plan.Operator, 
 				if useCBO {
 					cost, cardinality, size, frCost = primary.Cost(), primary.Cardinality(), primary.Size(), primary.FrCost()
 					if cost > 0.0 && cardinality > 0.0 && size > 0 && frCost > 0.0 {
-						cost, cardinality, size, frCost = getNLJoinCost(this.lastOp, primary, baseKeyspace.Filters(), node.Outer(), "join")
+						cost, cardinality, size, frCost = getNLJoinCost(this.lastOp, primary, baseKeyspace.Filters(), node.Outer(), "nest")
 					} else {
 						useCBO = false
 					}
