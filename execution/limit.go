@@ -84,10 +84,14 @@ func (this *Limit) processItem(item value.AnnotatedValue, context *Context) bool
 		this.limit--
 		return this.sendItem(item)
 	} else {
-		if context.UseRequestQuota() {
-			context.ReleaseValueSize(item.Size())
+
+		// MB-53235 for serialized operators item management rests with the producer
+		if !this.serialized {
+			if context.UseRequestQuota() {
+				context.ReleaseValueSize(item.Size())
+			}
+			item.Recycle()
 		}
-		item.Recycle()
 		return false
 	}
 }

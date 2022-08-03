@@ -73,11 +73,15 @@ func (this *Stream) processItem(item value.AnnotatedValue, context *Context) boo
 		this.addOutDocs(1)
 	}
 
-	// item not used past this point
-	if context.UseRequestQuota() {
-		context.ReleaseValueSize(item.Size())
+	// MB-53235 for serialized operators item management rests with the producer
+	if ok || !this.serialized {
+
+		// item not used past this point
+		if context.UseRequestQuota() {
+			context.ReleaseValueSize(item.Size())
+		}
+		item.Recycle()
 	}
-	item.Recycle()
 	return ok
 }
 
