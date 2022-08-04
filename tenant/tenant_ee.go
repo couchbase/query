@@ -146,6 +146,8 @@ func Throttle(isAdmin bool, user, bucket string, buckets []string, timeout time.
 	case regulator.CheckResultThrottle:
 		time.Sleep(d)
 		return ctx, nil
+	case regulator.CheckResultReject:
+		return nil, errors.NewRejectRequestError(d)
 	default:
 		return ctx, e
 	}
