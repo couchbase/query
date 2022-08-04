@@ -343,7 +343,7 @@ func (this *seqScan) doScanEntries(requestId string, ordered bool, offset, limit
 	defer conn.Sender().Close()
 
 	atomic.AddUint64(&this.totalScans, 1)
-	atomic.StoreInt64(&this.lastScanAt, int64(util.Now()))
+	atomic.StoreInt64(&this.lastScanAt, int64(time.Now().UnixNano()))
 
 	if limit <= 0 {
 		return
