@@ -1770,13 +1770,13 @@ func (b *keyspace) fetch(fullName, qualifiedName, scopeName, collectionName stri
 
 	} else if l == 1 {
 		if mcr != nil && err == nil {
-			fetchMap[keys[0]] = getSubDocFetchResults(keys[0], mcr, subPaths, noVirtualDocAttr)
+			fetchMap[keys[0]] = getSubDocFetchResults(keys[0], mcr, subPaths, noVirtualDocAttr, context)
 		}
 	} else {
 		i := 0
 		if ls > 0 {
 			for k, v := range bulkResponse {
-				fetchMap[k] = getSubDocFetchResults(k, v, subPaths, noVirtualDocAttr)
+				fetchMap[k] = getSubDocFetchResults(k, v, subPaths, noVirtualDocAttr, context)
 				i++
 			}
 		} else {
@@ -1828,7 +1828,7 @@ func doFetch(k string, fullName string, v *gomemcached.MCResponse, context datas
 	return val
 }
 
-func getSubDocFetchResults(k string, v *gomemcached.MCResponse, subPaths []string, noVirtualDocAttr bool) value.AnnotatedValue {
+func getSubDocFetchResults(k string, v *gomemcached.MCResponse, subPaths []string, noVirtualDocAttr bool, context datastore.QueryContext) value.AnnotatedValue {
 	responseIter := 0
 	i := 0
 	xVal := map[string]interface{}{}
@@ -1903,6 +1903,11 @@ func getSubDocFetchResults(k string, v *gomemcached.MCResponse, subPaths []strin
 	}
 
 	val.SetId(k)
+
+	if tenant.IsServerless() {
+		ru, _ := v.ComputeUnits()
+		context.RecordKvRU(tenant.Unit(ru))
+	}
 
 	return val
 }
