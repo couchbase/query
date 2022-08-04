@@ -905,6 +905,10 @@ func (this *vbRangeScan) sendData() {
 
 func (this *vbRangeScan) addKey(key []byte) bool {
 	var err error
+	if bytes.HasPrefix(key, []byte("_txn:")) {
+		// exclude transaction binary documents
+		return true
+	}
 	if this.buffer == nil {
 		this.buffer = make([]byte, 0, _SS_KEY_BUFFER)
 	}
