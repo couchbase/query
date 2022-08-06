@@ -63,7 +63,6 @@ const (
 	E_SERVICE_UNRECOGNIZED_PARAMETER          ErrorCode = 1065
 	E_SERVICE_TYPE_MISMATCH                   ErrorCode = 1070
 	E_SERVICE_TIMEOUT                         ErrorCode = 1080
-	E_SERVICE_REJECT                          ErrorCode = 1085
 	E_SERVICE_INVALID_JSON                    ErrorCode = 1100
 	E_SERVICE_CLIENTID                        ErrorCode = 1110
 	E_SERVICE_MEDIA_TYPE                      ErrorCode = 1120
@@ -83,6 +82,7 @@ const (
 	E_SERVICE_TENANT_THROTTLED                ErrorCode = 1196
 	E_SERVICE_TENANT_MISSING                  ErrorCode = 1197
 	E_SERVICE_TENANT_NOT_AUTHORIZED           ErrorCode = 1198
+	E_SERVICE_TENANT_REJECTED                 ErrorCode = 1199
 	E_ADMIN_CONNECTION                        ErrorCode = 2000
 	E_ADMIN_INVALIDURL                        ErrorCode = 2010
 	E_ADMIN_DECODING                          ErrorCode = 2020

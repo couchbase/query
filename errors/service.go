@@ -59,21 +59,6 @@ func NewServiceErrorTypeMismatch(feature string, expected string) Error {
 		InternalMsg: fmt.Sprintf("%s has to be of type %s", feature, expected), InternalCaller: CallerN(1)}
 }
 
-func NewRejectRequestError(duration time.Duration) Error {
-	var (
-		message string
-		cause   map[string]interface{} = make(map[string]interface{})
-	)
-	if duration == 0 {
-		message = "Request rejected. Retry later"
-	} else {
-		message = fmt.Sprintf("Request rejected. Retry after %v", duration)
-	}
-	cause["retry_after"] = duration
-	return &err{level: EXCEPTION, ICode: E_SERVICE_REJECT, IKey: "reject", cause: cause,
-		InternalMsg: message, InternalCaller: CallerN(1), retry: TRUE}
-}
-
 func NewTimeoutError(timeout time.Duration) Error {
 	return &err{level: EXCEPTION, ICode: E_SERVICE_TIMEOUT, IKey: "timeout",
 		InternalMsg: fmt.Sprintf("Timeout %v exceeded", timeout), InternalCaller: CallerN(1), retry: TRUE}
@@ -182,4 +167,19 @@ func NewServiceTenantMissingError() Error {
 func NewServiceTenantNotAuthorizedError(bucket string) Error {
 	return &err{level: EXCEPTION, ICode: E_SERVICE_TENANT_NOT_AUTHORIZED, IKey: "service.tenant.not.authorized",
 		InternalMsg: fmt.Sprintf("Request is not authorized for tenant %v", bucket), InternalCaller: CallerN(1)}
+}
+
+func NewServiceTenantRejectedError(duration time.Duration) Error {
+	var (
+		message string
+		cause   map[string]interface{} = make(map[string]interface{})
+	)
+	if duration == 0 {
+		message = "Request rejected. Retry later"
+	} else {
+		message = fmt.Sprintf("Request rejected. Retry after %v", duration)
+	}
+	cause["retry_after"] = duration
+	return &err{level: EXCEPTION, ICode: E_SERVICE_TENANT_REJECTED, IKey: "service.tenant.rejected", cause: cause,
+		InternalMsg: message, InternalCaller: CallerN(1), retry: TRUE}
 }

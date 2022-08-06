@@ -12,6 +12,8 @@ package tenant
 
 import (
 	"time"
+
+	"github.com/couchbase/query/errors"
 )
 
 type Unit uint64
@@ -56,7 +58,7 @@ func (this Unit) NonZero() bool {
 	return false
 }
 
-func Throttle(isAdmin bool, user, bucket string, buckets []string, timeout time.Duration) (Context, error) {
+func Throttle(isAdmin bool, user, bucket string, buckets []string, timeout time.Duration) (Context, errors.Error) {
 	return new(Context), nil
 }
 

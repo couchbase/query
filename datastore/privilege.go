@@ -40,9 +40,8 @@ func IsAdmin(creds *auth.Credentials) bool {
 	ds := GetDatastore()
 	if ds != nil && creds != nil {
 
-		// TODO TENANT agree on appropriate privilege
 		privs := auth.NewPrivileges()
-		privs.Add("", auth.PRIV_SYSTEM_READ, 0)
+		privs.Add("", auth.PRIV_ADMIN, 0)
 		return ds.Authorize(privs, creds) == nil
 	}
 	return false

@@ -430,7 +430,7 @@ func (this *HttpEndpoint) ServeHTTP(resp http.ResponseWriter, req *http.Request)
 		ctx, err := tenant.Throttle(datastore.IsAdmin(request.Credentials()), datastore.FirstCred(request.Credentials()), bucket,
 			datastore.GetUserBuckets(request.Credentials()), this.server.RequestTimeout(request.Timeout()))
 		if err != nil {
-			request.Fail(errors.NewServiceTenantThrottledError(err))
+			request.Fail(err)
 			request.Failed(this.server)
 		}
 		request.SetTenantCtx(ctx)

@@ -108,6 +108,12 @@ func mapErrorToHttpResponse(err errors.Error, def int) int {
 		return http.StatusFailedDependency
 	case errors.E_CB_NAMESPACE_NOT_FOUND:
 		return http.StatusFailedDependency
+	case errors.E_SERVICE_TENANT_REJECTED:
+		return http.StatusTooManyRequests
+	case errors.E_SERVICE_TENANT_MISSING:
+		return http.StatusUnauthorized
+	case errors.E_SERVICE_TENANT_NOT_AUTHORIZED:
+		return http.StatusUnauthorized
 	default:
 		return def
 	}

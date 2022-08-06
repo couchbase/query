@@ -109,17 +109,14 @@ func (this Unit) NonZero() bool {
 	return this > 0
 }
 
-func Throttle(isAdmin bool, user, bucket string, buckets []string, timeout time.Duration) (Context, error) {
+func Throttle(isAdmin bool, user, bucket string, buckets []string, timeout time.Duration) (Context, errors.Error) {
 
-	if isAdmin && len(buckets) == 0 {
+	if isAdmin {
 		return regulator.NewUserCtx("", user), nil
 	}
 	tenant := bucket
 	if tenant == "" {
-		if len(buckets) == 0 {
-			return nil, errors.NewServiceTenantMissingError()
-		}
-		tenant = buckets[0]
+		return nil, errors.NewServiceTenantMissingError()
 	} else {
 		found := false
 		for _, b := range buckets {
@@ -147,9 +144,9 @@ func Throttle(isAdmin bool, user, bucket string, buckets []string, timeout time.
 		time.Sleep(d)
 		return ctx, nil
 	case regulator.CheckResultReject:
-		return nil, errors.NewRejectRequestError(d)
+		return nil, errors.NewServiceTenantRejectedError(d)
 	default:
-		return ctx, e
+		return ctx, errors.NewServiceTenantThrottledError(e)
 	}
 }
 

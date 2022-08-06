@@ -87,6 +87,11 @@ func privilegeString(namespace, target, obj string, requested auth.Privilege) (s
 		permission = join3Strings("cluster.bucket[", target, "].n1ql.meta!backup")
 	case auth.PRIV_XATTRS:
 		permission = join5Strings("cluster.", obj, "[", target, "].data.sxattr!read")
+	case auth.PRIV_ADMIN:
+
+		// this is a special case - to check that the user is an admin, we check an impossible privilege
+		// only administrators pass checks on undefined privileges
+		permission = "cluster.admin.internal.nothrottle!read"
 	default:
 		return "", fmt.Errorf("Invalid Privileges")
 	}
