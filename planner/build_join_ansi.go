@@ -393,6 +393,14 @@ func (this *builder) buildAnsiJoinOp(node *algebra.AnsiJoin) (op plan.Operator, 
 					return hjoin, err
 				}
 			}
+		} else {
+			if preferHash {
+				if inferJoinHint {
+					leftBaseKeyspace.MarkHashUnavailable()
+				} else {
+					baseKeyspace.MarkHashUnavailable()
+				}
+			}
 		}
 
 		scans, newOnclause, cost, cardinality, size, frCost, err := this.buildAnsiJoinSimpleFromTerm(right, node.Onclause(), node.Outer(), "join")
@@ -400,6 +408,13 @@ func (this *builder) buildAnsiJoinOp(node *algebra.AnsiJoin) (op plan.Operator, 
 			return nil, err
 		}
 
+		if preferHash && !joinEnum {
+			if inferJoinHint {
+				leftBaseKeyspace.SetJoinHintError()
+			} else {
+				baseKeyspace.SetJoinHintError()
+			}
+		}
 		if newOnclause != nil {
 			node.SetOnclause(newOnclause)
 		}
@@ -697,6 +712,14 @@ func (this *builder) buildAnsiNestOp(node *algebra.AnsiNest) (op plan.Operator, 
 					return hnest, err
 				}
 			}
+		} else {
+			if preferHash {
+				if inferJoinHint {
+					leftBaseKeyspace.MarkHashUnavailable()
+				} else {
+					baseKeyspace.MarkHashUnavailable()
+				}
+			}
 		}
 
 		scans, newOnclause, cost, cardinality, size, frCost, err := this.buildAnsiJoinSimpleFromTerm(right, node.Onclause(), node.Outer(), "nest")
@@ -704,6 +727,13 @@ func (this *builder) buildAnsiNestOp(node *algebra.AnsiNest) (op plan.Operator, 
 			return nil, err
 		}
 
+		if preferHash && !joinEnum {
+			if inferJoinHint {
+				leftBaseKeyspace.SetJoinHintError()
+			} else {
+				baseKeyspace.SetJoinHintError()
+			}
+		}
 		if newOnclause != nil {
 			node.SetOnclause(newOnclause)
 		}
