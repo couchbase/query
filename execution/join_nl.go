@@ -10,7 +10,6 @@ package execution
 
 import (
 	"encoding/json"
-	"fmt"
 
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
@@ -202,15 +201,12 @@ func processAnsiExec(item value.AnnotatedValue, right_item value.AnnotatedValue,
 	for _, alias := range aliases {
 		val, ok := right_item.Field(alias)
 		if !ok {
-			if len(aliases) > 1 {
-				// in case of HASH JOIN, when there are multiple aliases on the
-				// build side, value could be MISSING for an alias, if right_item
-				// contains the result of an outer join
-				continue
-			} else {
-				context.Error(errors.NewExecutionInternalError(fmt.Sprintf("processAnsiExec: annotated value not found for %s", alias)))
-				return false, false, nil
-			}
+			// it's possible to have a MISSING value for an alias, e.g.,
+			// in case of HASH JOIN, when there are multiple aliases on the
+			// build side, value could be MISSING for an alias, if right_item
+			// contains the result of an outer join;
+			// or if a MISSING value is specified explicitly in an expression term
+			continue
 		}
 
 		joined.SetField(alias, val)

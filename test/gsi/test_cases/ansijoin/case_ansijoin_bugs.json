@@ -236,6 +236,50 @@
 	]
     },
     {
+        "testcase": "MB-53298, part 1",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'HashJoin' AND v.`outer` = true END"
+        },
+        "statements":"SELECT x, y FROM [1, 2] AS x LEFT JOIN [1, MISSING] AS y ON x = y",
+        "results": [
+            {
+                "x": 1,
+                "y": 1
+            },
+            {
+                "x": 2
+            }
+	]
+    },
+    {
+        "testcase": "MB-53298, part 2",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'NestedLoopJoin' AND v.`outer` = true END"
+        },
+        "statements":"SELECT x, y FROM [1, 2] AS x LEFT JOIN [1, MISSING] AS y USE HASH(PROBE) ON x = y",
+        "results": [
+            {
+                "x": 1,
+                "y": 1
+            },
+            {
+                "x": 2
+            }
+	]
+    },
+    {
         "testcase": "MB-53377",
         "explain": {
             "disabled": false,
