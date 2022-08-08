@@ -80,10 +80,17 @@ func (this *CreatePrimaryIndex) RunOnce(context *Context, parent value.Value) {
 			if err != nil {
 				if !errors.IsIndexExistsError(err) || this.plan.Node().FailIfExists() {
 					context.Error(err)
+					return
 				} else {
 					err = nil
 				}
-				return
+			}
+			if (node.Using() == datastore.GSI || node.Using() == datastore.DEFAULT) && !deferred(node.With()) {
+				err = updateStats([]string{node.Name()}, "create_primary_index", this.plan.Keyspace(), context)
+				if err != nil {
+					context.Error(err)
+					return
+				}
 			}
 		} else {
 			if node.Partition() != nil {

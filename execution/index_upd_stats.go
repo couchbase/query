@@ -22,14 +22,12 @@ import (
 type IndexUpdStatParams struct {
 	keyspace datastore.Keyspace
 	idxNames []string
-	allNames string
 }
 
-func newIndexUpdStatParams(keyspace datastore.Keyspace, idxNames []string, allNames string) *IndexUpdStatParams {
+func newIndexUpdStatParams(keyspace datastore.Keyspace, idxNames []string) *IndexUpdStatParams {
 	return &IndexUpdStatParams{
 		keyspace: keyspace,
 		idxNames: idxNames,
-		allNames: allNames,
 	}
 }
 
@@ -40,7 +38,7 @@ func updateStats(names []string, subClass string, keyspace datastore.Keyspace, c
 		return errors.NewIndexUpdStatsError(allNames, "error getting sessionName", err)
 	}
 
-	params := newIndexUpdStatParams(keyspace, names, allNames)
+	params := newIndexUpdStatParams(keyspace, names)
 	err = scheduler.ScheduleTask(sessionName, "update_statistics", subClass, time.Second,
 		updateIndexStats, nil, params, context)
 	if err != nil {
@@ -58,7 +56,6 @@ func updateIndexStats(context scheduler.Context, parms interface{}) (interface{}
 	}
 	keyspace := idxUpdStatParams.keyspace
 	idxNames := idxUpdStatParams.idxNames
-	allNames := idxUpdStatParams.allNames
 	if keyspace == nil || len(idxNames) == 0 || algebra.IsSystem(keyspace.NamespaceId()) {
 		return nil, nil
 	}
@@ -68,7 +65,12 @@ func updateIndexStats(context scheduler.Context, parms interface{}) (interface{}
 		return nil, []errors.Error{err}
 	}
 
-	for _, name := range idxNames {
+	var allNames string
+	for i, name := range idxNames {
+		if i > 0 {
+			allNames += ","
+		}
+		allNames += "`" + name + "`"
 		// wait for index to be online
 		iteration := 0
 		interval := time.Second
@@ -107,11 +109,11 @@ func updateIndexStats(context scheduler.Context, parms interface{}) (interface{}
 	if scope != nil {
 		bucket = scope.Bucket()
 		if bucket != nil {
-			fullName += "`" + bucket.Name() + "`."
+			fullName += "`" + bucket.Id() + "`."
 		}
-		fullName += "`" + scope.Name() + "`."
+		fullName += "`" + scope.Id() + "`."
 	}
-	fullName += "`" + keyspace.Name() + "`"
+	fullName += "`" + keyspace.Id() + "`"
 	query := "UPDATE STATISTICS FOR " + fullName + " INDEX(" + allNames + ")"
 	_, _, err1 := context.EvaluateStatement(query, nil, nil, false, true)
 	if err1 != nil {
