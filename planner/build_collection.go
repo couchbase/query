@@ -10,20 +10,33 @@ package planner
 
 import (
 	"github.com/couchbase/query/algebra"
+	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
 )
 
-func getScope(parts ...string) (datastore.Scope, errors.Error) {
+func getScope(credentials *auth.Credentials, parts ...string) (datastore.Scope, errors.Error) {
 	if len(parts) != 4 {
 		return nil, errors.NewDatastoreInvalidCollectionPartsError(parts...)
 	}
-	return datastore.GetScope(parts[0:3]...)
+
+	s, err := datastore.GetScope(parts[0:3]...)
+
+	if err != nil {
+		err1 := datastore.CheckBucketAccess(credentials, err, parts[0], parts[1])
+
+		if err1 != nil {
+			return s, err1
+		}
+
+	}
+
+	return s, err
 }
 
 func (this *builder) VisitCreateCollection(stmt *algebra.CreateCollection) (interface{}, error) {
-	scope, err := getScope(stmt.Keyspace().Path().Parts()...)
+	scope, err := getScope(this.context.dsContext.Credentials(), stmt.Keyspace().Path().Parts()...)
 	if err != nil {
 		return nil, err
 	}
@@ -31,7 +44,7 @@ func (this *builder) VisitCreateCollection(stmt *algebra.CreateCollection) (inte
 }
 
 func (this *builder) VisitDropCollection(stmt *algebra.DropCollection) (interface{}, error) {
-	scope, err := getScope(stmt.Keyspace().Path().Parts()...)
+	scope, err := getScope(this.context.dsContext.Credentials(), stmt.Keyspace().Path().Parts()...)
 	if err != nil {
 		return nil, err
 	}

@@ -31,6 +31,7 @@ import (
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
+	"github.com/couchbase/query/tenant"
 	"github.com/couchbase/query/value"
 )
 
@@ -517,3 +518,35 @@ type Role struct {
 }
 
 var NO_STRINGS = make([]string, 0)
+
+// In serverless mode ,check if the bucket passed to the function is accessible to the user
+// If the bucket is not accessible, return generic "Access Denied" error
+// If the user is an Admin, then skip this check since Admin has access to all buckets
+// If the namespace is "#system" the generic error message is not to be returned - since system namespace is documented, the existing error messages are allowed for tenant users
+func CheckBucketAccess(credentials *auth.Credentials, e errors.Error, namespace string, bucket string) errors.Error {
+
+	if tenant.IsServerless() && !IsAdmin(credentials) {
+		code := e.Code()
+
+		if code == errors.E_DATASTORE_INVALID_BUCKET_PARTS || namespace == "#system" {
+			return nil
+		}
+
+		// the buckets the user has access to
+		userBuckets := GetUserBuckets(credentials)
+
+		if len(userBuckets) == 0 {
+			return errors.NewCbAccessDeniedError(bucket)
+		}
+
+		for _, b := range userBuckets {
+			if bucket == b {
+				return nil
+			}
+		}
+
+		return errors.NewCbAccessDeniedError(bucket)
+	}
+
+	return nil
+}

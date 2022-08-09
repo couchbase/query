@@ -8,8 +8,6 @@
 
 package errors
 
-import ()
-
 // Couchbase authorization error
 func NewDatastoreAuthorizationError(e error) Error {
 	return &err{level: EXCEPTION, ICode: E_DATASTORE_AUTHORIZATION, IKey: "datastore.couchbase.authorization_error", ICause: e,
@@ -28,8 +26,11 @@ func NewDatastoreUnableToRetrieveRoles(e error) Error {
 		InternalMsg: "Unable to retrieve roles from server.", InternalCaller: CallerN(1)}
 }
 
-func NewDatastoreInsufficientCredentials(msg string, e error) Error {
+func NewDatastoreInsufficientCredentials(msg string, e error, path []string) Error {
+	c := make(map[string]interface{})
+	c["cause"] = e
+	c["path"] = path
 	return &err{level: EXCEPTION, ICode: E_DATASTORE_INSUFFICIENT_CREDENTIALS,
 		IKey:        "datastore.couchbase.insufficient_credentials",
-		InternalMsg: msg, InternalCaller: CallerN(1), cause: e}
+		InternalMsg: msg, InternalCaller: CallerN(1), cause: c}
 }

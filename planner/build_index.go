@@ -8,12 +8,13 @@
 package planner
 
 import (
+	"strings"
+
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
-	"strings"
 )
 
 func (this *builder) VisitCreatePrimaryIndex(stmt *algebra.CreatePrimaryIndex) (interface{}, error) {
@@ -161,6 +162,15 @@ func (this *builder) getNameKeyspace(ks *algebra.KeyspaceRef, dynamic bool) (dat
 		virtualKeyspace, err1 := this.getVirtualKeyspace(ks.Path().Namespace(), ks.Path().Parts())
 		if err1 == nil {
 			return virtualKeyspace, nil
+		}
+	}
+
+	if err != nil {
+		parts := path.Parts()
+		err2 := datastore.CheckBucketAccess(this.context.dsContext.Credentials(), err, parts[0], parts[1])
+
+		if err2 != nil {
+			return keyspace, err2
 		}
 	}
 

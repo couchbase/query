@@ -229,6 +229,12 @@ func handlePrepared(rv *httpRequest, httpArgs httpRequestArgs, parm string, val 
 		err != nil && err.Code() == errors.E_NO_SUCH_PREPARED {
 		encoded_plan, plan_err := httpArgs.getString(_ENCODED_PLAN, "")
 		if plan_err == nil && encoded_plan != "" && encoded_plan != prepareds.EmptyPlan {
+
+			// in serverless mode, use of encoded plan is not allowed
+			if tenant.IsServerless() {
+				return errors.NewEncodedPlanUseNotAllowedError()
+			}
+
 			var decoded_plan *plan.Prepared
 
 			// Monitoring API: we only need to track the prepared

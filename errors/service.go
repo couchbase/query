@@ -183,3 +183,7 @@ func NewServiceTenantRejectedError(duration time.Duration) Error {
 	return &err{level: EXCEPTION, ICode: E_SERVICE_TENANT_REJECTED, IKey: "service.tenant.rejected", cause: cause,
 		InternalMsg: message, InternalCaller: CallerN(1), retry: TRUE}
 }
+
+func NewEncodedPlanUseNotAllowedError() Error {
+	return &err{level: EXCEPTION, ICode: E_ENCODED_PLAN_NOT_ALLOWED, IKey: "server.encoded_plan_use_not_allowed_error", InternalMsg: "Encoded plan use is not allowed in serverless mode.", InternalCaller: CallerN(1)}
+}

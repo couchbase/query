@@ -10,12 +10,28 @@ package planner
 
 import (
 	"github.com/couchbase/query/algebra"
+	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/plan"
 )
 
+func getBucket(credentials *auth.Credentials, parts ...string) (datastore.Bucket, error) {
+
+	bucket, err := datastore.GetBucket(parts...)
+
+	if err != nil {
+		err1 := datastore.CheckBucketAccess(credentials, err, parts[0], parts[1])
+
+		if err1 != nil {
+			return bucket, err1
+		}
+	}
+
+	return bucket, err
+}
+
 func (this *builder) VisitCreateScope(stmt *algebra.CreateScope) (interface{}, error) {
-	bucket, err := datastore.GetBucket(stmt.Scope().Path().Namespace(), stmt.Scope().Path().Bucket())
+	bucket, err := getBucket(this.context.dsContext.Credentials(), stmt.Scope().Path().Namespace(), stmt.Scope().Path().Bucket())
 	if err != nil {
 		return nil, err
 	}
@@ -23,7 +39,7 @@ func (this *builder) VisitCreateScope(stmt *algebra.CreateScope) (interface{}, e
 }
 
 func (this *builder) VisitDropScope(stmt *algebra.DropScope) (interface{}, error) {
-	bucket, err := datastore.GetBucket(stmt.Scope().Path().Namespace(), stmt.Scope().Path().Bucket())
+	bucket, err := getBucket(this.context.dsContext.Credentials(), stmt.Scope().Path().Namespace(), stmt.Scope().Path().Bucket())
 	if err != nil {
 		return nil, err
 	}

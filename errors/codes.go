@@ -175,6 +175,7 @@ const (
 	E_NO_ANSI_JOIN                            ErrorCode = 4330
 	E_PARTITION_INDEX_NOT_SUPPORTED           ErrorCode = 4340
 	E_GSI                                     ErrorCode = 4350
+	E_ENCODED_PLAN_NOT_ALLOWED                ErrorCode = 4400
 	E_CBO                                     ErrorCode = 4600
 	E_INDEX_STAT                              ErrorCode = 4610
 	_RETIRED_4901                                       = 4901
@@ -357,6 +358,7 @@ const (
 	E_DML_MC                                  ErrorCode = 12034
 	E_CB_NOT_PRIMARY_INDEX                    ErrorCode = 12035
 	E_DML_INSERT                              ErrorCode = 12036
+	E_ACCESS_DENIED                           ErrorCode = 12037
 	_RETIRED_13010                                      = 13010
 	_RETIRED_13011                                      = 13011
 	E_DATASTORE_CLUSTER                       ErrorCode = 13012

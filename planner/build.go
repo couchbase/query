@@ -402,6 +402,15 @@ func (this *builder) getTermKeyspace(node *algebra.KeyspaceTerm) (datastore.Keys
 		}
 	}
 
+	if err != nil {
+		parts := path.Parts()
+		err2 := datastore.CheckBucketAccess(this.context.dsContext.Credentials(), err, parts[0], parts[1])
+
+		if err2 != nil {
+			return keyspace, err2
+		}
+	}
+
 	if err == nil && this.indexAdvisor {
 		this.setKeyspaceFound()
 	}

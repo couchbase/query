@@ -249,3 +249,9 @@ func NewBucketActionError(e interface{}, attempts int) Error {
 	return &err{level: EXCEPTION, ICode: E_BUCKET_ACTION, IKey: "datastore.couchbase.bucket.action",
 		InternalMsg: fmt.Sprintf("Unable to complete action after %v attempts", attempts), cause: c, InternalCaller: CallerN(1)}
 }
+
+// Generic "Access Denied" to a bucket error
+func NewCbAccessDeniedError(bucket string) Error {
+	return &err{level: EXCEPTION, ICode: E_ACCESS_DENIED, IKey: "datastore.couchbase.access_denied",
+		InternalMsg: fmt.Sprintf("User does not have access to %s", bucket), cause: bucket, InternalCaller: CallerN(1)}
+}
