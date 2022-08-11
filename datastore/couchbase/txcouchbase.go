@@ -91,7 +91,9 @@ func (s *store) StartTransaction(stmtAtomicity bool, context datastore.QueryCont
 		if resume {
 			atrCollectionName := txContext.AtrCollection()
 
-			rtxConfig := &gocbcore.ResumeTransactionOptions{BucketAgentProvider: bucketAgentProvider}
+			rtxConfig := &gocbcore.ResumeTransactionOptions{BucketAgentProvider: bucketAgentProvider,
+				TransactionLogger: gcagent.NewGocbcoreTransactionLogger(),
+			}
 			transaction, terr = gcAgentTxs.ResumeTransactionAttempt(txnData, rtxConfig)
 
 			if terr == nil && atrCollectionName != "" {
@@ -108,8 +110,10 @@ func (s *store) StartTransaction(stmtAtomicity bool, context datastore.QueryCont
 			}
 		} else {
 			txConfig := &gocbcore.TransactionOptions{ExpirationTime: txContext.TxTimeout(),
-				DurabilityLevel: gocbcore.TransactionDurabilityLevel(txContext.TxDurabilityLevel()),
+				DurabilityLevel:   gocbcore.TransactionDurabilityLevel(txContext.TxDurabilityLevel()),
+				TransactionLogger: gcagent.NewGocbcoreTransactionLogger(),
 			}
+
 			if txContext.KvTimeout() > 0 {
 				txConfig.KeyValueTimeout = txContext.KvTimeout()
 			}

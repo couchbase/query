@@ -15,6 +15,21 @@ import (
 	"github.com/couchbase/query/logging"
 )
 
+type GocbcoreTransactionLogger struct {
+}
+
+func NewGocbcoreTransactionLogger() *GocbcoreTransactionLogger {
+	return &GocbcoreTransactionLogger{}
+}
+
+func (tl *GocbcoreTransactionLogger) Log(level gocbcore.LogLevel, offset int, txnID, attemptID, fmt string,
+	args ...interface{}) error {
+	if level == gocbcore.LogInfo {
+		level = gocbcore.LogDebug
+	}
+	return gocbcoreLogger.Log(level, offset, txnID+"/"+attemptID+" "+fmt, args...)
+}
+
 type GocbcoreLogger struct {
 }
 
