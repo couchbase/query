@@ -51,7 +51,7 @@ type preparedCache struct {
 type CacheEntry struct {
 	Prepared       *plan.Prepared
 	LastUse        time.Time
-	Uses           int32
+	Uses           atomic.AlignedInt64
 	ServiceTime    atomic.AlignedUint64
 	RequestTime    atomic.AlignedUint64
 	MinServiceTime atomic.AlignedUint64
@@ -256,7 +256,7 @@ func (this *preparedCache) get(fullName string, track bool) *CacheEntry {
 	rv, ok := cv.(*CacheEntry)
 	if ok {
 		if track {
-			atomic.AddInt32(&rv.Uses, 1)
+			atomic.AddInt64(&rv.Uses, 1)
 
 			// this is not exactly accurate, but since the MRU queue is
 			// managed properly, we'd rather be inaccurate and make the
@@ -295,7 +295,7 @@ func (this *preparedCache) add(prepared *plan.Prepared, populated bool, track bo
 			oldEntry.Prepared = prepared
 			oldEntry.populated = false
 			if track {
-				atomic.AddInt32(&oldEntry.Uses, 1)
+				atomic.AddInt64(&oldEntry.Uses, 1)
 
 				// as before
 				oldEntry.LastUse = when
