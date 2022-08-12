@@ -631,7 +631,7 @@ func (this *AggregateInfo) windowFramePositions(op *WindowAggregate, c int64) (*
 			if wfe.HasModifier(algebra.WINDOW_FRAME_BETWEEN) {
 				wfe = wfes[1]
 				if wfe.HasModifier(algebra.WINDOW_FRAME_UNBOUNDED_FOLLOWING) {
-					eIndex = op.nItems - 1
+					eIndex = op.nItems
 				} else if wfe.HasModifier(algebra.WINDOW_FRAME_CURRENT_ROW) {
 					eIndex = cIndex
 					if !windowFrame.RowsWindowFrame() {
