@@ -72,7 +72,7 @@ type FunctionEntry struct {
 	privs          *auth.Privileges
 	tag            atomic.AlignedInt64
 	LastUse        time.Time
-	Uses           int32
+	Uses           atomic.AlignedInt64
 	ServiceTime    atomic.AlignedUint64
 	MinServiceTime atomic.AlignedUint64
 	MaxServiceTime atomic.AlignedUint64
@@ -493,7 +493,7 @@ func ExecuteFunction(name FunctionName, modifiers Modifier, values []value.Value
 
 	// update stats
 	serviceTime := time.Since(start)
-	atomic.AddInt32(&entry.Uses, 1)
+	atomic.AddInt64(&entry.Uses, 1)
 
 	// this is strictly not correct, but we'd rather have an approximate time than lock
 	entry.LastUse = start
