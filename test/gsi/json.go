@@ -815,9 +815,12 @@ func checkExplain(qc *MockServer, queryParams map[string]interface{}, namespace 
 
 	explainStmt := "EXPLAIN " + statement
 	resultsActual, _, errActual := Run(qc, queryParams, explainStmt, namespace, namedArgs, positionalArgs, nil)
-	if errActual != nil || len(resultsActual) != 1 {
+	if errActual != nil {
 		return go_er.New(fmt.Sprintf("(%v) error actual: code - %d, msg - %s"+
 			", for case file: %v, index: %v%s", explainStmt, errActual.Code(), errActual.Error(), fname, i, findIndex(content, i)))
+	} else if len(resultsActual) != 1 {
+		return go_er.New(fmt.Sprintf("(%v) unexpected number of results returned (%d)"+
+			", for case file: %v, index: %v%s", explainStmt, len(resultsActual), fname, i, findIndex(content, i)))
 	}
 
 	namedParams := make(map[string]value.Value, 1)
