@@ -71,6 +71,7 @@ func NewInlineBody(expr expression.Expression, text string) (functions.FunctionB
 
 func (this *inlineBody) SetVarNames(vars []string) errors.Error {
 	var bindings expression.Bindings
+	var f *expression.Formalizer
 
 	this.varNames = vars
 
@@ -87,6 +88,7 @@ func (this *inlineBody) SetVarNames(vars []string) errors.Error {
 		args := expression.NewSimpleBinding("args", c)
 		args.SetStatic(true)
 		bindings = expression.Bindings{args}
+		f = expression.NewFormalizer("", nil)
 	} else {
 		bindings = make(expression.Bindings, len(vars))
 		i := 0
@@ -95,10 +97,10 @@ func (this *inlineBody) SetVarNames(vars []string) errors.Error {
 			bindings[i].SetStatic(true)
 			i++
 		}
+		f = expression.NewFunctionFormalizer("", nil)
 	}
 
-	f := expression.NewFormalizer("", nil)
-	f.SetWiths(bindings)
+	f.SetPermanentWiths(bindings)
 	f.PushBindings(bindings, true)
 	_, err := this.expr.Accept(f)
 	if err != nil {

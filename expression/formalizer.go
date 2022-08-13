@@ -22,6 +22,7 @@ const (
 	FORM_MAP_SELF     = 1 << iota // Map SELF to keyspace: used in sarging index
 	FORM_MAP_KEYSPACE             // Map keyspace to SELF: used in creating index
 	FORM_INDEX_SCOPE              // formalizing index key or index condition
+	FORM_IN_FUNCTION              // We are setting variables for function invocation
 )
 
 const (
@@ -54,9 +55,17 @@ func NewKeyspaceFormalizer(keyspace string, parent *Formalizer) *Formalizer {
 	return newFormalizer(keyspace, parent, false, true)
 }
 
+func NewFunctionFormalizer(keyspace string, parent *Formalizer) *Formalizer {
+	rv := newFormalizer(keyspace, parent, false, false)
+	rv.flags |= FORM_IN_FUNCTION
+	return rv
+}
+
 func newFormalizer(keyspace string, parent *Formalizer, mapSelf, mapKeyspace bool) *Formalizer {
 	var pv, av value.Value
 	var withs map[string]bool
+
+	flags := uint32(0)
 	if parent != nil {
 		pv = parent.allowed
 		av = parent.aliases
@@ -70,7 +79,6 @@ func newFormalizer(keyspace string, parent *Formalizer, mapSelf, mapKeyspace boo
 		}
 	}
 
-	flags := uint32(0)
 	if mapSelf {
 		flags |= FORM_MAP_SELF
 	}
@@ -101,6 +109,10 @@ func (this *Formalizer) mapSelf() bool {
 
 func (this *Formalizer) mapKeyspace() bool {
 	return (this.flags & FORM_MAP_KEYSPACE) != 0
+}
+
+func (this *Formalizer) InFunction() bool {
+	return (this.flags & FORM_IN_FUNCTION) != 0
 }
 
 func (this *Formalizer) indexScope() bool {
@@ -541,6 +553,15 @@ func (this *Formalizer) SetWiths(withs Bindings) {
 	}
 	for _, b := range withs {
 		this.withs[b.Variable()] = false
+	}
+}
+
+func (this *Formalizer) SetPermanentWiths(withs Bindings) {
+	if this.withs == nil {
+		this.withs = make(map[string]bool, len(withs))
+	}
+	for _, b := range withs {
+		this.withs[b.Variable()] = true
 	}
 }
 

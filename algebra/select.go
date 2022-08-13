@@ -28,13 +28,14 @@ clause.
 type Select struct {
 	statementBase
 
-	subresult  Subresult             `json:"subresult"`
-	with       expression.Bindings   `json:"with"`
-	order      *Order                `json:"order"`
-	offset     expression.Expression `json:"offset"`
-	limit      expression.Expression `json:"limit"`
-	correlated bool                  `json:"correlated"`
-	setop      bool                  `json:"setop"`
+	subresult    Subresult             `json:"subresult"`
+	with         expression.Bindings   `json:"with"`
+	order        *Order                `json:"order"`
+	offset       expression.Expression `json:"offset"`
+	limit        expression.Expression `json:"limit"`
+	correlated   bool                  `json:"correlated"`
+	hasVariables bool                  `json:"hasVariables"` // not actually propagated
+	setop        bool                  `json:"setop"`
 }
 
 /*
@@ -214,6 +215,9 @@ For the subresult of the subquery, call Formalize, for the order
 by clause call MapExpressions, for limit and offset call Accept.
 */
 func (this *Select) FormalizeSubquery(parent *expression.Formalizer) (err error) {
+	if parent != nil && parent.InFunction() {
+		this.hasVariables = true
+	}
 	if parent != nil && !this.setop {
 		withs := parent.SaveWiths()
 		defer parent.RestoreWiths(withs)
@@ -342,6 +346,10 @@ func (this *Select) IsCorrelated() bool {
 
 func (this *Select) SetCorrelated() {
 	this.correlated = true
+}
+
+func (this *Select) HasVariables() bool {
+	return this.hasVariables
 }
 
 /*
