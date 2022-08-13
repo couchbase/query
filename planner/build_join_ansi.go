@@ -869,7 +869,7 @@ func (this *builder) buildAnsiJoinScan(node *algebra.KeyspaceTerm, onclause, fil
 		}
 
 		if err != nil {
-			return nil, nil, nil, nil, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, err
+			return nil, primaryJoinKeys, nil, nil, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, err
 		}
 	}
 
@@ -906,7 +906,7 @@ func (this *builder) buildAnsiJoinScan(node *algebra.KeyspaceTerm, onclause, fil
 		newFilter, newOnclause, primaryJoinKeys, err = this.joinCoverTransformation(coveringScans,
 			this.coveringScans, filter, onclause, primaryJoinKeys, nil, nil, true)
 		if err != nil {
-			return nil, nil, nil, nil,
+			return nil, primaryJoinKeys, nil, nil,
 				OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, err
 		}
 	}
