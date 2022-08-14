@@ -105,16 +105,19 @@ func (this *Merge) RunOnce(context *Context, parent value.Value) {
 		if update != nil {
 			this.children = append(this.children, update)
 			this.inputs = append(this.inputs, updateInput)
+			update.SetStop(this)
 		}
 
 		if delete != nil {
 			this.children = append(this.children, delete)
 			this.inputs = append(this.inputs, deleteInput)
+			delete.SetStop(this)
 		}
 
 		if insert != nil {
 			this.children = append(this.children, insert)
 			this.inputs = append(this.inputs, insertInput)
+			insert.SetStop(this)
 		}
 
 		for _, child := range this.children {

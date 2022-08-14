@@ -162,7 +162,7 @@ func (this *builder) buildCreateSecondaryScan(indexes, flex map[datastore.Index]
 			_, indexKeyOrders, _ = this.useIndexOrder(entry, entry.keys)
 		}
 
-		if entry.index.Type() != datastore.SYSTEM {
+		if index.Type() != datastore.SYSTEM {
 			this.collectIndexKeyspaceNames(baseKeyspace.Keyspace())
 		}
 
@@ -174,10 +174,18 @@ func (this *builder) buildCreateSecondaryScan(indexes, flex map[datastore.Index]
 			offset = this.offset
 		}
 
+		skipNewKeys := false
+		if index.Type() == datastore.SEQ_SCAN {
+			skipNewKeys = baseKeyspace.Keyspace() == this.skipKeyspace
+			if skipNewKeys {
+				this.mustSkipKeys = true
+			}
+		}
+
 		scan = entry.spans.CreateScan(index, node, this.context.IndexApiVersion(), false, false,
 			overlapSpans(pred), false, offset, limit, idxProj, indexKeyOrders, nil,
 			covers, filterCovers, filter, entry.cost, entry.cardinality,
-			entry.size, entry.frCost, baseKeyspace, hasDeltaKeyspace)
+			entry.size, entry.frCost, baseKeyspace, hasDeltaKeyspace, skipNewKeys)
 
 		if iscan3, ok := scan.(*plan.IndexScan3); ok {
 			if entry.HasFlag(IE_HAS_EARLY_ORDER) {

@@ -76,6 +76,7 @@ func (this *PrimaryScan3) RunOnce(context *Context, parent value.Value) {
 
 func (this *PrimaryScan3) scanPrimary(context *Context, parent value.Value) {
 	this.conn = datastore.NewIndexConnection(context)
+	this.conn.SetSkipNewKeys(this.plan.SkipNewKeys())
 	this.conn.SetPrimary()
 	defer this.conn.Dispose()  // Dispose of the connection
 	defer this.conn.SendStop() // Notify index that I have stopped
@@ -142,6 +143,7 @@ func (this *PrimaryScan3) scanPrimary(context *Context, parent value.Value) {
 		// do chunked scans; lastEntry the starting point
 		// old connection will be disposed by the defer above
 		this.conn = datastore.NewIndexConnection(context)
+		this.conn.SetSkipNewKeys(this.plan.SkipNewKeys())
 		this.conn.SetPrimary()
 		lastEntry, nitems = this.scanPrimaryChunk(context, parent, this.conn, lastEntry, limit)
 		emsg = "Primary index chunked scan"

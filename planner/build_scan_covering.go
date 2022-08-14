@@ -360,11 +360,19 @@ func (this *builder) buildCreateCoveringScan(entry *indexEntry, node *algebra.Ke
 		}
 	}
 
+	skipNewKeys := false
+	if index.Type() == datastore.SEQ_SCAN {
+		skipNewKeys = baseKeyspace.Keyspace() == this.skipKeyspace
+		if skipNewKeys {
+			this.mustSkipKeys = true
+		}
+	}
+
 	// build plan for IndexScan
 	scan = entry.spans.CreateScan(index, node, this.context.IndexApiVersion(), false, projDistinct,
 		overlapSpans(pred), array, this.offset, this.limit, indexProjection, indexKeyOrders,
 		indexGroupAggs, covers, filterCovers, filter, entry.cost, entry.cardinality,
-		entry.size, entry.frCost, baseKeyspace, hasDeltaKeyspace)
+		entry.size, entry.frCost, baseKeyspace, hasDeltaKeyspace, skipNewKeys)
 	if scan != nil {
 		scan.SetImplicitArrayKey(arrayKey)
 		if entry.index.Type() != datastore.SYSTEM {
@@ -447,7 +455,7 @@ func (this *builder) buildCoveringPushdDownIndexScan2(entry *indexEntry, node *a
 	this.maxParallelism = 1
 	scan := entry.spans.CreateScan(entry.index, node, this.context.IndexApiVersion(), false, false, overlapSpans(pred),
 		array, nil, expression.ONE_EXPR, indexProjection, indexKeyOrders, nil, covers, filterCovers, nil,
-		OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, baseKeyspace, false)
+		OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, baseKeyspace, false, false)
 	if scan != nil {
 		if entry.index.Type() != datastore.SYSTEM {
 			this.collectIndexKeyspaceNames(baseKeyspace.Keyspace())

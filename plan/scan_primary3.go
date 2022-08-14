@@ -31,13 +31,14 @@ type PrimaryScan3 struct {
 	offset           expression.Expression
 	limit            expression.Expression
 	hasDeltaKeyspace bool
+	skipNewKeys      bool
 }
 
 func NewPrimaryScan3(index datastore.PrimaryIndex3, keyspace datastore.Keyspace,
 	term *algebra.KeyspaceTerm, offset, limit expression.Expression,
 	projection *IndexProjection, orderTerms IndexKeyOrders,
 	groupAggs *IndexGroupAggregates, cost, cardinality float64,
-	size int64, frCost float64, hasDeltaKeyspace bool) *PrimaryScan3 {
+	size int64, frCost float64, hasDeltaKeyspace bool, skipNewKeys bool) *PrimaryScan3 {
 	rv := &PrimaryScan3{
 		index:            index,
 		indexer:          index.Indexer(),
@@ -49,6 +50,7 @@ func NewPrimaryScan3(index datastore.PrimaryIndex3, keyspace datastore.Keyspace,
 		offset:           offset,
 		limit:            limit,
 		hasDeltaKeyspace: hasDeltaKeyspace,
+		skipNewKeys:      skipNewKeys,
 	}
 	setOptEstimate(&rv.optEstimate, cost, cardinality, size, frCost)
 	return rv
@@ -114,6 +116,10 @@ func (this *PrimaryScan3) GetIndex() datastore.Index {
 	return this.index
 }
 
+func (this *PrimaryScan3) SkipNewKeys() bool {
+	return this.skipNewKeys
+}
+
 func (this *PrimaryScan3) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
@@ -156,6 +162,10 @@ func (this *PrimaryScan3) MarshalBase(f func(map[string]interface{})) map[string
 		r["has_delta_keyspace"] = this.hasDeltaKeyspace
 	}
 
+	if this.skipNewKeys {
+		r["skip_new_keys"] = this.skipNewKeys
+	}
+
 	if f != nil {
 		f(r)
 	}
@@ -179,6 +189,7 @@ func (this *PrimaryScan3) UnmarshalJSON(body []byte) error {
 		Limit            string                 `json:"limit"`
 		OptEstimate      map[string]interface{} `json:"optimizer_estimates"`
 		HasDeltaKeyspace bool                   `json:"has_delta_keyspace"`
+		SkipNewKeys      bool                   `json:"skip_new_keys"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -190,6 +201,7 @@ func (this *PrimaryScan3) UnmarshalJSON(body []byte) error {
 	this.orderTerms = _unmarshalled.OrderTerms
 	this.groupAggs = _unmarshalled.GroupAggs
 	this.hasDeltaKeyspace = _unmarshalled.HasDeltaKeyspace
+	this.skipNewKeys = _unmarshalled.SkipNewKeys
 
 	if _unmarshalled.Offset != "" {
 		this.offset, err = parser.Parse(_unmarshalled.Offset)

@@ -370,7 +370,6 @@ func (this *seqScan) doScanEntries(requestId string, ordered bool, offset, limit
 	if offset < 0 {
 		offset = 0
 	}
-
 	var ss interface{}
 	var err qe.Error
 	var timeout bool
@@ -387,6 +386,8 @@ func (this *seqScan) doScanEntries(requestId string, ordered bool, offset, limit
 		<-scanTimeout.C
 	}
 	defer scanTimeout.Stop()
+
+	skipNewKeys := conn.SkipNewKeys()
 
 	for cont := true; cont && !conn.Sender().IsStopped() && (limit <= 0 || returned < limit); {
 		if util.Now() >= deadline {
@@ -416,6 +417,9 @@ func (this *seqScan) doScanEntries(requestId string, ordered bool, offset, limit
 
 		// send the keys on
 		for i := range keys {
+			if skipNewKeys && conn.SkipKey(keys[i]) {
+				continue
+			}
 			entry := datastore.IndexEntry{PrimaryKey: keys[i]}
 
 			scanTimeout.Reset(deadline.Sub(util.Now()))

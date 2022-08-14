@@ -29,6 +29,11 @@ func NewExecutionParameterError(what string) Error {
 		InternalMsg: fmt.Sprintf("Execution parameter error: %v", what), InternalCaller: CallerN(1)}
 }
 
+func NewExecutionKeyValidationSpaceError() Error {
+	return &err{level: EXCEPTION, ICode: E_EXECUTION_KEY_VALIDATION, IKey: "execution.key_validation",
+		InternalMsg: "Out of key validation space.", InternalCaller: CallerN(1)}
+}
+
 func NewParsingError(e error, ctx string) Error {
 	return &err{level: EXCEPTION, ICode: E_PARSING, IKey: "execution.expression.parse.failed",
 		ICause:         e,

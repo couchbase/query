@@ -33,6 +33,7 @@ type Context interface {
 	RecordKvRU(ru tenant.Unit)
 	RecordKvWU(wu tenant.Unit)
 	Credentials() *auth.Credentials
+	SkipKey(key string) bool
 }
 
 type contextImpl struct {
@@ -77,6 +78,10 @@ func (ci *contextImpl) RecordKvWU(wu tenant.Unit) {
 
 func (ci *contextImpl) Credentials() *auth.Credentials {
 	return auth.NewCredentials()
+}
+
+func (ci *contextImpl) SkipKey(key string) bool {
+	return false
 }
 
 // A subset of execution.Context that is useful at the datastore level.

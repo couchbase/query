@@ -203,6 +203,8 @@ type builder struct {
 	lastOp               plan.Operator // last operator built, to get cost/cardinality info
 	aliases              map[string]bool
 	partialSortTermCount int
+	skipKeyspace         string
+	mustSkipKeys         bool
 }
 
 func (this *builder) Copy() *builder {

@@ -29,9 +29,10 @@ func init() {
 
 type SendInsert struct {
 	base
-	plan     *plan.SendInsert
-	keyspace datastore.Keyspace
-	limit    int64
+	plan        *plan.SendInsert
+	keyspace    datastore.Keyspace
+	limit       int64
+	skipNewKeys bool
 }
 
 func NewSendInsert(plan *plan.SendInsert, context *Context) *SendInsert {
@@ -52,6 +53,7 @@ func (this *SendInsert) Copy() Operator {
 	rv := _SENDINSERT_OP_POOL.Get().(*SendInsert)
 	rv.plan = this.plan
 	rv.limit = this.limit
+	rv.skipNewKeys = this.skipNewKeys
 	this.base.copy(&rv.base)
 	return rv
 }
@@ -222,7 +224,11 @@ func (this *SendInsert) flushBatch(context *Context) bool {
 	}
 
 	// Capture the inserted keys in case there is a RETURNING clause
+	skipNewKeys := this.plan.SkipNewKeys()
 	for _, dp := range dpairs {
+		if skipNewKeys && !context.AddKeyToSkip(dp.Name) {
+			return false
+		}
 		dv := value.NewAnnotatedValue(dp.Value)
 		av := value.NewAnnotatedValue(make(map[string]interface{}, 1))
 		av.ShareAnnotations(dv)

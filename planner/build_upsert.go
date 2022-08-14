@@ -24,6 +24,8 @@ func (this *builder) VisitUpsert(stmt *algebra.Upsert) (interface{}, error) {
 		return nil, err
 	}
 
+	this.skipKeyspace = keyspace.QualifiedName()
+
 	children := make([]plan.Operator, 0, 4)
 
 	cost := OPT_COST_NOT_AVAIL
@@ -68,7 +70,7 @@ func (this *builder) VisitUpsert(stmt *algebra.Upsert) (interface{}, error) {
 	}
 
 	upsert := plan.NewSendUpsert(keyspace, ksref, stmt.Key(), stmt.Value(), stmt.Options(),
-		cost, cardinality, size, frCost)
+		cost, cardinality, size, frCost, this.mustSkipKeys)
 	subChildren := make([]plan.Operator, 0, 4)
 	subChildren = append(subChildren, upsert)
 

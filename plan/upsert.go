@@ -20,24 +20,26 @@ import (
 type SendUpsert struct {
 	dml
 	optEstimate
-	keyspace datastore.Keyspace
-	term     *algebra.KeyspaceRef
-	alias    string
-	key      expression.Expression
-	value    expression.Expression
-	options  expression.Expression
+	keyspace    datastore.Keyspace
+	term        *algebra.KeyspaceRef
+	alias       string
+	key         expression.Expression
+	value       expression.Expression
+	options     expression.Expression
+	skipNewKeys bool
 }
 
 func NewSendUpsert(keyspace datastore.Keyspace, ksref *algebra.KeyspaceRef,
 	key, value, options expression.Expression, cost, cardinality float64,
-	size int64, frCost float64) *SendUpsert {
+	size int64, frCost float64, skipNewKeys bool) *SendUpsert {
 	rv := &SendUpsert{
-		keyspace: keyspace,
-		term:     ksref,
-		alias:    ksref.Alias(),
-		key:      key,
-		value:    value,
-		options:  options,
+		keyspace:    keyspace,
+		term:        ksref,
+		alias:       ksref.Alias(),
+		key:         key,
+		value:       value,
+		options:     options,
+		skipNewKeys: skipNewKeys,
 	}
 	setOptEstimate(&rv.optEstimate, cost, cardinality, size, frCost)
 	return rv
@@ -75,6 +77,10 @@ func (this *SendUpsert) Options() expression.Expression {
 	return this.options
 }
 
+func (this *SendUpsert) SkipNewKeys() bool {
+	return this.skipNewKeys
+}
+
 func (this *SendUpsert) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
@@ -94,6 +100,10 @@ func (this *SendUpsert) MarshalBase(f func(map[string]interface{})) map[string]i
 
 	if this.options != nil {
 		r["options"] = this.options.String()
+	}
+
+	if this.skipNewKeys {
+		r["skip_new_keys"] = this.skipNewKeys
 	}
 
 	if optEstimate := marshalOptEstimate(&this.optEstimate); optEstimate != nil {
@@ -120,6 +130,7 @@ func (this *SendUpsert) UnmarshalJSON(body []byte) error {
 		As          string                 `json:"as"`
 		Alias       string                 `json:"alias"`
 		OptEstimate map[string]interface{} `json:"optimizer_estimates"`
+		SkipNewKeys bool                   `json:"skip_new_keys"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -149,6 +160,7 @@ func (this *SendUpsert) UnmarshalJSON(body []byte) error {
 	}
 
 	this.alias = _unmarshalled.Alias
+	this.skipNewKeys = _unmarshalled.SkipNewKeys
 
 	unmarshalOptEstimate(&this.optEstimate, _unmarshalled.OptEstimate)
 

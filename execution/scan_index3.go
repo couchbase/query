@@ -114,6 +114,7 @@ func (this *IndexScan3) RunOnce(context *Context, parent value.Value) {
 		}
 
 		this.conn = datastore.NewIndexConnection(context)
+		this.conn.SetSkipNewKeys(this.plan.SkipNewKeys())
 		defer this.conn.Dispose()  // Dispose of the connection
 		defer this.conn.SendStop() // Notify index that I have stopped
 

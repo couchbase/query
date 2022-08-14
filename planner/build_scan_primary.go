@@ -59,9 +59,18 @@ func (this *builder) buildPrimaryScan(keyspace datastore.Keyspace, node *algebra
 		if this.useCBO && this.keyspaceUseCBO(node.Alias()) {
 			cost, cardinality, size, frCost = primaryIndexScanCost(primary, this.context.RequestId(), this.context)
 		}
+
+		skipNewKeys := false
+		if primary3.Type() == datastore.SEQ_SCAN {
+			skipNewKeys = baseKeyspace.Keyspace() == this.skipKeyspace
+			if skipNewKeys {
+				this.mustSkipKeys = true
+			}
+		}
+
 		return plan.NewPrimaryScan3(primary3, keyspace, node, this.offset, this.limit,
 			plan.NewIndexProjection(0, true), indexOrder, nil, cost, cardinality,
-			size, frCost, hasDeltaKeyspace), nil
+			size, frCost, hasDeltaKeyspace, skipNewKeys), nil
 	}
 
 	var limit expression.Expression

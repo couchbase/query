@@ -51,6 +51,7 @@ type IndexScan3 struct {
 	implicitArrayKey *expression.All
 	hasDeltaKeyspace bool
 	fullCover        bool
+	skipNewKeys      bool
 }
 
 func NewIndexScan3(index datastore.Index3, term *algebra.KeyspaceTerm, spans Spans2,
@@ -59,7 +60,7 @@ func NewIndexScan3(index datastore.Index3, term *algebra.KeyspaceTerm, spans Spa
 	groupAggs *IndexGroupAggregates, covers expression.Covers,
 	filterCovers map[*expression.Cover]value.Value, filter expression.Expression,
 	cost, cardinality float64, size int64, frCost float64,
-	hasDeltaKeyspace bool) *IndexScan3 {
+	hasDeltaKeyspace bool, skipNewKeys bool) *IndexScan3 {
 	flags := uint32(0)
 	if reverse {
 		flags |= ISCAN_IS_REVERSE_SCAN
@@ -85,6 +86,7 @@ func NewIndexScan3(index datastore.Index3, term *algebra.KeyspaceTerm, spans Spa
 		filterCovers:     filterCovers,
 		filter:           filter,
 		hasDeltaKeyspace: hasDeltaKeyspace,
+		skipNewKeys:      skipNewKeys,
 	}
 
 	if len(covers) > 0 {
@@ -359,6 +361,10 @@ func (this *IndexScan3) String() string {
 	return string(bytes)
 }
 
+func (this *IndexScan3) SkipNewKeys() bool {
+	return this.skipNewKeys
+}
+
 func (this *IndexScan3) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
@@ -450,6 +456,10 @@ func (this *IndexScan3) MarshalBase(f func(map[string]interface{})) map[string]i
 		r["has_delta_keyspace"] = this.hasDeltaKeyspace
 	}
 
+	if this.skipNewKeys {
+		r["skip_new_keys"] = this.skipNewKeys
+	}
+
 	if this.HasBuildBitFilter() {
 		this.marshalBuildBitFilters(r)
 	}
@@ -502,6 +512,7 @@ func (this *IndexScan3) UnmarshalJSON(body []byte) error {
 		BuildBitFilters  []json.RawMessage      `json:"build_bit_filters"`
 		ProbeBitFilters  []json.RawMessage      `json:"probe_bit_filters"`
 		_                string                 `json:"index_partition_by"`
+		SkipNewKeys      bool                   `json:"skip_new_keys"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -535,6 +546,7 @@ func (this *IndexScan3) UnmarshalJSON(body []byte) error {
 	this.projection = _unmarshalled.Projection
 	this.orderTerms = _unmarshalled.OrderTerms
 	this.hasDeltaKeyspace = _unmarshalled.HasDeltaKeyspace
+	this.skipNewKeys = _unmarshalled.SkipNewKeys
 
 	if _unmarshalled.UnderNL {
 		this.term.SetUnderNL()

@@ -602,10 +602,11 @@ type Statistics interface {
 }
 
 type IndexConnection struct {
-	sender  EntryExchange
-	context Context
-	timeout bool
-	primary bool
+	sender      EntryExchange
+	context     Context
+	timeout     bool
+	primary     bool
+	skipNewKeys bool
 }
 
 type Sender interface {
@@ -746,6 +747,18 @@ func (this *IndexConnection) RecordFtsRU(ru tenant.Unit) {
 
 func (this *IndexConnection) User() string {
 	return FirstCred(this.context.Credentials())
+}
+
+func (this *IndexConnection) SetSkipNewKeys(on bool) {
+	this.skipNewKeys = on
+}
+
+func (this *IndexConnection) SkipNewKeys() bool {
+	return this.skipNewKeys
+}
+
+func (this *IndexConnection) SkipKey(key string) bool {
+	return this.context.SkipKey(key)
 }
 
 func (this *IndexKey) Expression() expression.Expression {

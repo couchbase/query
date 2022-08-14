@@ -184,7 +184,11 @@ func (this *SendUpsert) flushBatch(context *Context) bool {
 	}
 
 	// Capture the upserted keys in case there is a RETURNING clause
+	skipNewKeys := this.plan.SkipNewKeys()
 	for _, dp := range dpairs {
+		if skipNewKeys && !context.AddKeyToSkip(dp.Name) {
+			return false
+		}
 		dv := value.NewAnnotatedValue(dp.Value)
 		av := value.NewAnnotatedValue(make(map[string]interface{}, 1))
 		av.CopyAnnotations(dv)

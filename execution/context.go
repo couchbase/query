@@ -216,6 +216,8 @@ type Context struct {
 	bitFilterLock       sync.RWMutex
 	tenantCtx           tenant.Context
 	memorySession       memory.MemorySession
+	keysToSkip          *sync.Map
+	keysToSkipLength    int32
 }
 
 func NewContext(requestId string, datastore datastore.Datastore, systemstore datastore.Systemstore,
@@ -259,6 +261,7 @@ func NewContext(requestId string, datastore datastore.Datastore, systemstore dat
 		likeRegexMap:     nil,
 		reqTimeout:       reqTimeout,
 		udfValueMap:      &sync.Map{},
+		keysToSkip:       &sync.Map{},
 	}
 
 	if rv.maxParallelism <= 0 || rv.maxParallelism > util.NumCPU() {
@@ -312,6 +315,8 @@ func (this *Context) Copy() *Context {
 		recursionCount:      this.recursionCount,
 		tenantCtx:           this.tenantCtx,
 		memorySession:       this.memorySession,
+		keysToSkip:          this.keysToSkip,
+		keysToSkipLength:    this.keysToSkipLength,
 	}
 
 	rv.SetDurability(this.DurabilityLevel(), this.DurabilityTimeout())
@@ -1488,4 +1493,30 @@ func (this *Context) clearBitFilter(alias, idxId string) {
 		delete(this.bitFilterMap, alias)
 		this.bitFilterLock.Unlock()
 	}
+}
+
+// the problem with this is it is effectively a limit on the size of an INSERT operation...
+const _MAX_NEW_KEYS_TO_SKIP_BEFORE_ERROR = 10000
+
+func (this *Context) SkipKey(key string) bool {
+	_, found := this.keysToSkip.Load(key)
+	return found
+}
+
+func (this *Context) AddKeyToSkip(key string) bool {
+	_, loaded := this.keysToSkip.LoadOrStore(key, nil)
+	if !loaded {
+		atomic.AddInt32(&this.keysToSkipLength, 1)
+		if this.UseRequestQuota() {
+			err := this.TrackValueSize(uint64(len(key)))
+			if err != nil {
+				this.Error(err)
+				return false
+			}
+		} else if this.keysToSkipLength >= _MAX_NEW_KEYS_TO_SKIP_BEFORE_ERROR {
+			this.Error(errors.NewExecutionKeyValidationSpaceError())
+			return false
+		}
+	}
+	return true
 }

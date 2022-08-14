@@ -34,6 +34,8 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 	this.baseKeyspaces[targetKeyspace.Name()] = targetKeyspace
 	this.collectKeyspaceNames()
 
+	this.skipKeyspace = targetKeyspace.Keyspace()
+
 	var left algebra.SimpleFromTerm
 	var err error
 
@@ -316,7 +318,7 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 		}
 
 		insert = plan.NewSendInsert(keyspace, ksref, keyExpr, act.Value(), act.Options(), stmt.Limit(), cost, cardinality, size,
-			frCost)
+			frCost, this.mustSkipKeys)
 		if this.useCBO && cost > 0.0 {
 			insertCost = cost
 			insertCard = cardinality

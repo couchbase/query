@@ -24,6 +24,8 @@ func (this *builder) VisitInsert(stmt *algebra.Insert) (interface{}, error) {
 		return nil, err
 	}
 
+	this.skipKeyspace = keyspace.QualifiedName()
+
 	children := make([]plan.Operator, 0, 4)
 
 	cost := OPT_COST_NOT_AVAIL
@@ -68,7 +70,7 @@ func (this *builder) VisitInsert(stmt *algebra.Insert) (interface{}, error) {
 	}
 
 	insert := plan.NewSendInsert(keyspace, ksref, stmt.Key(), stmt.Value(), stmt.Options(),
-		nil, cost, cardinality, size, frCost)
+		nil, cost, cardinality, size, frCost, this.mustSkipKeys)
 	subChildren := make([]plan.Operator, 0, 4)
 	subChildren = append(subChildren, insert)
 
