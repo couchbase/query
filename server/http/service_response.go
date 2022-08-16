@@ -452,18 +452,18 @@ func (this *httpRequest) writeError(err errors.Error, first bool, prefix, indent
 	}
 
 	var er error
-	var bytes []byte
-
-	if newPrefix == "" && indent == "" {
-		bytes, er = json.Marshal(m)
-	} else {
-		bytes, er = json.MarshalIndent(m, newPrefix, indent)
+	var bb bytes.Buffer
+	enc := json.NewEncoder(&bb)
+	enc.SetEscapeHTML(false)
+	if newPrefix != "" || indent != "" {
+		enc.SetIndent(newPrefix, indent)
 	}
+	er = enc.Encode(m)
 	if er != nil {
 		return false
 	}
 
-	return this.writeString(newPrefix) && this.writeString(string(bytes))
+	return this.writeString(newPrefix) && this.writeString(string(bytes.TrimSuffix(bb.Bytes(), []byte{'\n'})))
 }
 
 // For CAS mismatch errors where no mutations have taken place, we can explicitly set retry to true

@@ -16,6 +16,7 @@ messages.
 package errors
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -252,7 +253,14 @@ func (e *err) MarshalJSON() ([]byte, error) {
 		!strings.HasPrefix("e.InternalCaller", "unknown:") {
 		m["caller"] = e.InternalCaller
 	}
-	return json.Marshal(m)
+	var bb bytes.Buffer
+	enc := json.NewEncoder(&bb)
+	enc.SetEscapeHTML(false)
+	err := enc.Encode(m)
+	if err != nil {
+		return nil, err
+	}
+	return bb.Bytes(), nil
 }
 
 func (e *err) UnmarshalJSON(body []byte) error {
