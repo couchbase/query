@@ -65,6 +65,7 @@
     {
         "statements": "SELECT 1/0 AS result",
         "description": "again this sytnax forces the change sign operator",
+        "warningCode": 5036,
         "results": [
         {
             "result": null
@@ -75,6 +76,7 @@
     {
         "statements": "SELECT -1/0 AS result",
         "description": "again this sytnax forces the change sign operator",
+        "warningCode": 5036,
         "results": [
         {
             "result": null
@@ -85,6 +87,7 @@
     {
         "statements": "SELECT 0/0 AS result",
         "description": "again this sytnax forces the change sign operator",
+        "warningCode": 5036,
         "results": [
         {
             "result": null

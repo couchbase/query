@@ -26,6 +26,7 @@
     {
         "description": "Integer functions",
         "statements": "SELECT IDIV(5, 2) AS idiv, DIV(5, 2) AS div, IMOD(5, 2) AS imod, IDIV(5, 0) AS idiv_zero, IMOD(5, 0) AS imod_zero",
+        "warningCode": 5036,
         "results": [
             {
                 "idiv": 2,
