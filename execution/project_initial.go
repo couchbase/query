@@ -131,7 +131,9 @@ func (this *InitialProject) processItem(item value.AnnotatedValue, context *Cont
 				context.ReleaseValueSize(iSz - aSz)
 			}
 		}
-		item.Recycle()
+		if v != item {
+			item.Recycle()
+		}
 		return this.sendItem(av)
 	} else {
 		// Any other projection
