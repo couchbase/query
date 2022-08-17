@@ -259,6 +259,7 @@ func NewMissingIf(first, second Expression) Function {
 		*NewBinaryFunctionBase("missingif", first, second),
 	}
 
+	rv.setConditional()
 	rv.expr = rv
 	return rv
 }
@@ -333,6 +334,7 @@ func NewNullIf(first, second Expression) Function {
 		*NewBinaryFunctionBase("nullif", first, second),
 	}
 
+	rv.setConditional()
 	rv.expr = rv
 	return rv
 }
@@ -407,6 +409,7 @@ func NewNVL(first, second Expression) Function {
 		*NewBinaryFunctionBase("nvl", first, second),
 	}
 
+	rv.setConditional()
 	rv.expr = rv
 	return rv
 }
@@ -476,6 +479,7 @@ func NewNVL2(first, second, third Expression) Function {
 		*NewTernaryFunctionBase("nvl2", first, second, third),
 	}
 
+	rv.setConditional()
 	rv.expr = rv
 	return rv
 }
@@ -536,6 +540,7 @@ func NewDecode(operands ...Expression) Function {
 		*NewFunctionBase("decode", operands...),
 	}
 
+	rv.setConditional()
 	rv.expr = rv
 	return rv
 }
