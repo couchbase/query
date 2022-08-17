@@ -20,6 +20,7 @@ import (
 	"github.com/couchbase/query/prepareds"
 	"github.com/couchbase/query/timestamp"
 	"github.com/couchbase/query/value"
+	"github.com/couchbase/query/util"
 )
 
 type preparedsKeyspace struct {
@@ -128,7 +129,7 @@ func (b *preparedsKeyspace) Fetch(keys []string, keysMap map[string]value.Annota
 
 				// only give times for entries that have completed at least one execution
 				if entry.Uses > 0 && entry.RequestTime > 0 {
-					itemMap["lastUse"] = entry.LastUse.String()
+					itemMap["lastUse"] = entry.LastUse.Format(util.DEFAULT_FORMAT)
 					itemMap["avgElapsedTime"] = (time.Duration(entry.RequestTime) /
 						time.Duration(entry.Uses)).String()
 					itemMap["avgServiceTime"] = (time.Duration(entry.ServiceTime) /

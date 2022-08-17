@@ -37,6 +37,7 @@ import (
 	"github.com/couchbase/query/tenant"
 	"github.com/couchbase/query/transactions"
 	"github.com/couchbase/query/value"
+	"github.com/couchbase/query/util"
 	"github.com/gorilla/mux"
 )
 
@@ -511,7 +512,7 @@ func doPrepared(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 
 			// only give times for entries that have completed at least one execution
 			if entry.Uses > 0 && entry.RequestTime > 0 {
-				itemMap["lastUse"] = entry.LastUse.String()
+				itemMap["lastUse"] = entry.LastUse.Format(util.DEFAULT_FORMAT)
 				itemMap["avgElapsedTime"] = (time.Duration(entry.RequestTime) /
 					time.Duration(entry.Uses)).String()
 				itemMap["avgServiceTime"] = (time.Duration(entry.ServiceTime) /
@@ -567,7 +568,7 @@ func doPrepareds(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Reques
 			data[i]["statement"] = d.Prepared.Text()
 			data[i]["uses"] = d.Uses
 			if d.Uses > 0 {
-				data[i]["lastUse"] = d.LastUse.String()
+				data[i]["lastUse"] = d.LastUse.Format(util.DEFAULT_FORMAT)
 			}
 			i++
 			return true
@@ -618,7 +619,7 @@ func doFunction(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 
 			// only give times for entries that have completed at least one execution
 			if entry.Uses > 0 && entry.ServiceTime > 0 {
-				itemMap["lastUse"] = entry.LastUse.String()
+				itemMap["lastUse"] = entry.LastUse.Format(util.DEFAULT_FORMAT)
 				itemMap["avgServiceTime"] = (time.Duration(entry.ServiceTime) /
 					time.Duration(entry.Uses)).String()
 				itemMap["minServiceTime"] = time.Duration(entry.MinServiceTime).String()
@@ -656,7 +657,7 @@ func doFunctions(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Reques
 			d.Signature(data[i])
 			d.Body(data[i])
 			if d.Uses > 0 {
-				data[i]["lastUse"] = d.LastUse.String()
+				data[i]["lastUse"] = d.LastUse.Format(util.DEFAULT_FORMAT)
 			}
 			i++
 			return true
@@ -782,7 +783,7 @@ func doTask(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af
 				"name":       entry.Name,
 				"id":         entry.Id,
 				"state":      entry.State,
-				"submitTime": entry.PostTime.String(),
+				"submitTime": entry.PostTime.Format(util.DEFAULT_FORMAT),
 				"delay":      entry.Delay.String(),
 			}
 			if entry.Results != nil {
@@ -792,10 +793,10 @@ func doTask(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af
 				itemMap["errors"] = entry.Errors
 			}
 			if !entry.StartTime.IsZero() {
-				itemMap["startTime"] = entry.StartTime.String()
+				itemMap["startTime"] = entry.StartTime.Format(util.DEFAULT_FORMAT)
 			}
 			if !entry.EndTime.IsZero() {
-				itemMap["stopTime"] = entry.EndTime.String()
+				itemMap["stopTime"] = entry.EndTime.Format(util.DEFAULT_FORMAT)
 			}
 			res = itemMap
 		})
@@ -836,13 +837,13 @@ func doTasks(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, a
 			if d.Errors != nil {
 				data[i]["errors"] = d.Errors
 			}
-			data[i]["submitTime"] = d.PostTime.String()
+			data[i]["submitTime"] = d.PostTime.Format(util.DEFAULT_FORMAT)
 			data[i]["delay"] = d.Delay.String()
 			if !d.StartTime.IsZero() {
-				data[i]["startTime"] = d.StartTime.String()
+				data[i]["startTime"] = d.StartTime.Format(util.DEFAULT_FORMAT)
 			}
 			if !d.EndTime.IsZero() {
-				data[i]["stopTime"] = d.EndTime.String()
+				data[i]["stopTime"] = d.EndTime.Format(util.DEFAULT_FORMAT)
 			}
 			i++
 			return true

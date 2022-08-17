@@ -19,6 +19,7 @@ import (
 	"github.com/couchbase/query/functions"
 	"github.com/couchbase/query/timestamp"
 	"github.com/couchbase/query/value"
+	"github.com/couchbase/query/util"
 )
 
 type functionsCacheKeyspace struct {
@@ -105,7 +106,7 @@ func (b *functionsCacheKeyspace) Fetch(keys []string, keysMap map[string]value.A
 
 				// only give times for entries that have completed at least one execution
 				if entry.Uses > 0 && entry.ServiceTime > 0 {
-					itemMap["lastUse"] = entry.LastUse.String()
+					itemMap["lastUse"] = entry.LastUse.Format(util.DEFAULT_FORMAT)
 					itemMap["avgServiceTime"] = (time.Duration(entry.ServiceTime) /
 						time.Duration(entry.Uses)).String()
 					itemMap["minServiceTime"] = time.Duration(entry.MinServiceTime).String()

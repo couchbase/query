@@ -17,6 +17,7 @@ import (
 	"github.com/couchbase/query/scheduler"
 	"github.com/couchbase/query/timestamp"
 	"github.com/couchbase/query/value"
+	"github.com/couchbase/query/util"
 )
 
 type tasksCacheKeyspace struct {
@@ -97,7 +98,7 @@ func (b *tasksCacheKeyspace) Fetch(keys []string, keysMap map[string]value.Annot
 					"name":       entry.Name,
 					"id":         entry.Id,
 					"state":      entry.State,
-					"submitTime": entry.PostTime.String(),
+					"submitTime": entry.PostTime.Format(util.DEFAULT_FORMAT),
 					"delay":      entry.Delay.String(),
 				}
 				if entry.Results != nil {
@@ -113,10 +114,10 @@ func (b *tasksCacheKeyspace) Fetch(keys []string, keysMap map[string]value.Annot
 					itemMap["errors"] = errors
 				}
 				if !entry.StartTime.IsZero() {
-					itemMap["startTime"] = entry.StartTime.String()
+					itemMap["startTime"] = entry.StartTime.Format(util.DEFAULT_FORMAT)
 				}
 				if !entry.EndTime.IsZero() {
-					itemMap["stopTime"] = entry.EndTime.String()
+					itemMap["stopTime"] = entry.EndTime.Format(util.DEFAULT_FORMAT)
 				}
 				if node != "" {
 					itemMap["node"] = node
