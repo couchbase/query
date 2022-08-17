@@ -84,7 +84,7 @@ func (this *inlineBody) SetVarNames(vars []string) errors.Error {
 	   as correlated
 	*/
 	c := expression.NewConstant("")
-	if vars == nil {
+	if len(vars) == 0 {
 		args := expression.NewSimpleBinding("args", c)
 		args.SetStatic(true)
 		bindings = expression.Bindings{args}
