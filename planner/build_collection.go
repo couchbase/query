@@ -24,7 +24,7 @@ func getScope(credentials *auth.Credentials, parts ...string) (datastore.Scope, 
 	s, err := datastore.GetScope(parts[0:3]...)
 
 	if err != nil {
-		err1 := datastore.CheckBucketAccess(credentials, err, parts[0], parts[1])
+		err1 := datastore.CheckBucketAccess(credentials, err, parts, nil)
 
 		if err1 != nil {
 			return s, err1
@@ -40,6 +40,7 @@ func (this *builder) VisitCreateCollection(stmt *algebra.CreateCollection) (inte
 	if err != nil {
 		return nil, err
 	}
+
 	return plan.NewQueryPlan(plan.NewCreateCollection(scope, stmt)), nil
 }
 

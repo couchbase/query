@@ -12,6 +12,7 @@ import (
 	"fmt"
 
 	"github.com/couchbase/query/algebra"
+	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
@@ -21,7 +22,7 @@ import (
 func (this *builder) buildPrimaryScan(keyspace datastore.Keyspace, node *algebra.KeyspaceTerm,
 	indexes []datastore.Index, id expression.Expression, force, exact, hasDeltaKeyspace bool) (
 	plan.Operator, error) {
-	primary, err := buildPrimaryIndex(keyspace, indexes, node, force)
+	primary, err := buildPrimaryIndex(keyspace, indexes, node, force, this.context.dsContext.Credentials())
 	if primary == nil || err != nil {
 		return nil, err
 	}
@@ -72,7 +73,7 @@ func (this *builder) buildPrimaryScan(keyspace datastore.Keyspace, node *algebra
 	return plan.NewPrimaryScan(primary, keyspace, node, limit, hasDeltaKeyspace), nil
 }
 
-func buildPrimaryIndex(keyspace datastore.Keyspace, indexes []datastore.Index, node *algebra.KeyspaceTerm, force bool) (
+func buildPrimaryIndex(keyspace datastore.Keyspace, indexes []datastore.Index, node *algebra.KeyspaceTerm, force bool, credentials *auth.Credentials) (
 	primary datastore.PrimaryIndex, err error) {
 	ok := false
 
@@ -119,6 +120,12 @@ func buildPrimaryIndex(keyspace datastore.Keyspace, indexes []datastore.Index, n
 	}
 
 	if primary == nil {
+
+		err := datastore.CheckBucketAccess(credentials, nil, node.Path().Parts(), nil)
+
+		if err != nil {
+			return nil, err
+		}
 		return nil, errors.NewWrapPlanError(errors.NewNoPrimaryIndexError(node.PathString()))
 	}
 

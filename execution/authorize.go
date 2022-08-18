@@ -104,12 +104,10 @@ func (this *Authorize) RunOnce(context *Context, parent value.Value) {
 					cause, _ := err.Cause().(map[string]interface{})
 					path, _ := cause["path"].([]string)
 
-					if len(path) > 0 {
-						// In serverless mode, if the user does not have permissions on a bucket, then a generic error message must be displayed instead of the specific error message associated with code E_DATASTORE_INSUFFICIENT_CREDENTIALS
-						err1 := datastore.CheckBucketAccess(context.Credentials(), err, path[0], path[1])
-						if err1 != nil {
-							err = err1
-						}
+					// In serverless mode, if the user does not have permissions on a bucket, then a generic error message must be displayed instead of the specific error message associated with code E_DATASTORE_INSUFFICIENT_CREDENTIALS
+					err1 := datastore.CheckBucketAccess(context.Credentials(), err, path, privs)
+					if err1 != nil {
+						err = err1
 					}
 				}
 				context.Fatal(err)

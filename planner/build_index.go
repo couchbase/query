@@ -167,7 +167,7 @@ func (this *builder) getNameKeyspace(ks *algebra.KeyspaceRef, dynamic bool) (dat
 
 	if err != nil {
 		parts := path.Parts()
-		err2 := datastore.CheckBucketAccess(this.context.dsContext.Credentials(), err, parts[0], parts[1])
+		err2 := datastore.CheckBucketAccess(this.context.dsContext.Credentials(), err, parts, nil)
 
 		if err2 != nil {
 			return keyspace, err2

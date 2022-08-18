@@ -88,6 +88,7 @@ type functionCache struct {
 }
 
 var Authorize func(privileges *auth.Privileges, credentials *auth.Credentials) errors.Error
+var CheckBucketAccess func(credentials *auth.Credentials, e errors.Error, path []string, privs *auth.Privileges) errors.Error
 
 var languages = [_SIZER]LanguageRunner{&missing{}, &empty{}}
 var functions = &functionCache{}
@@ -474,6 +475,17 @@ func ExecuteFunction(name FunctionName, modifiers Modifier, values []value.Value
 	// go and do the dirty deed
 	err = Authorize(entry.privs, context.Credentials())
 	if err != nil {
+		if err.Code() == errors.E_DATASTORE_INSUFFICIENT_CREDENTIALS {
+			cause, _ := err.Cause().(map[string]interface{})
+			path, _ := cause["path"].([]string)
+
+			err1 := CheckBucketAccess(context.Credentials(), err, path, entry.privs)
+
+			if err1 != nil {
+				err = err1
+			}
+		}
+
 		return nil, err
 	}
 
@@ -533,13 +545,14 @@ func (entry *FunctionEntry) add() *FunctionEntry {
 }
 
 func (entry *FunctionEntry) loadPrivileges() errors.Error {
-	privs, err := entry.FunctionBody.Privileges()
+	bodyPrivs, err := entry.FunctionBody.Privileges()
 	if err != nil {
 		return err
 	}
-	if privs == nil {
-		privs = auth.NewPrivileges()
-	}
+
+	privs := auth.NewPrivileges()
+
+	// Find the privilege required to execute the function
 	if entry.IsGlobal() {
 		if entry.IsExternal() {
 			privs.Add("", auth.PRIV_QUERY_EXECUTE_FUNCTIONS_EXTERNAL, auth.PRIV_PROPS_NONE)
@@ -553,7 +566,13 @@ func (entry *FunctionEntry) loadPrivileges() errors.Error {
 			privs.Add(entry.Key(), auth.PRIV_QUERY_EXECUTE_SCOPE_FUNCTIONS, auth.PRIV_PROPS_NONE)
 		}
 	}
-	entry.privs = privs
+
+	if privs == nil {
+		entry.privs = privs
+	} else { // to add the privilege required to execute the function first, so that its Authorization check occurs first too
+		privs.AddAll(bodyPrivs)
+		entry.privs = privs
+	}
 	return nil
 }
 

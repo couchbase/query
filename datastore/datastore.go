@@ -523,18 +523,34 @@ var NO_STRINGS = make([]string, 0)
 // If the bucket is not accessible, return generic "Access Denied" error
 // If the user is an Admin, then skip this check since Admin has access to all buckets
 // If the namespace is "#system" the generic error message is not to be returned - since system namespace is documented, the existing error messages are allowed for tenant users
-func CheckBucketAccess(credentials *auth.Credentials, e errors.Error, namespace string, bucket string) errors.Error {
+func CheckBucketAccess(credentials *auth.Credentials, e errors.Error, path []string, privs *auth.Privileges) errors.Error {
 
 	if tenant.IsServerless() && !IsAdmin(credentials) {
-		code := e.Code()
 
+		if len(path) == 0 {
+			return nil
+		}
+
+		// if the query is to create a global inline/ external function, the generic error message isnt to be returned
+		if privs != nil {
+			if len(privs.List) == 1 {
+				priv := privs.List[0].Priv
+
+				if priv == auth.PRIV_QUERY_MANAGE_FUNCTIONS || priv == auth.PRIV_QUERY_MANAGE_FUNCTIONS_EXTERNAL {
+					return nil
+				}
+			}
+		}
+
+		code := e.Code()
+		namespace := path[0]
 		if code == errors.E_DATASTORE_INVALID_BUCKET_PARTS || namespace == "#system" {
 			return nil
 		}
 
 		// the buckets the user has access to
 		userBuckets := GetUserBuckets(credentials)
-
+		bucket := path[1]
 		if len(userBuckets) == 0 {
 			return errors.NewCbAccessDeniedError(bucket)
 		}

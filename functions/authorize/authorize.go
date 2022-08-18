@@ -19,9 +19,15 @@ import (
 
 func Init() {
 	functions.Authorize = authorize
+	functions.CheckBucketAccess = checkBucketAccess
 }
 
 func authorize(privileges *auth.Privileges, credentials *auth.Credentials) errors.Error {
 	err := datastore.GetDatastore().Authorize(privileges, credentials)
+	return err
+}
+
+func checkBucketAccess(credentials *auth.Credentials, e errors.Error, path []string, privs *auth.Privileges) errors.Error {
+	err := datastore.CheckBucketAccess(credentials, e, path, privs)
 	return err
 }
