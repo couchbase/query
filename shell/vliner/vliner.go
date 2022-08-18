@@ -851,70 +851,99 @@ mainLoop:
 				var m string
 				switch cmd[0] {
 				case 'r':
-					if 1 < len(cmd) && 1 != classify(cmd[1]) {
-						fileName := strings.TrimSpace(string(cmd[1:]))
-						if 0 == len(fileName) {
-							m = "[Missing filename]"
+					var n int
+					for n = 1; len(cmd) > n; n++ {
+						if 0 == classify(cmd[n]) {
+							break
+						}
+					}
+					if len(cmd) <= n {
+						m = "[Missing filename]"
+						break
+					}
+					fileName := strings.TrimSpace(string(cmd[n:]))
+					if len(fileName) == 0 {
+						m = "[Missing filename]"
+					} else if "r" == string(cmd[:n]) || "read" == string(cmd[:n]) {
+						f, ferr := os.Open(fileName)
+						if nil != ferr {
+							m = fmt.Sprintf("[%s]", ferr.Error())
 						} else {
-							f, ferr := os.Open(fileName)
-							if nil != ferr {
-								m = fmt.Sprintf("[%s]", ferr.Error())
+							reader := bufio.NewReader(f)
+							content, ferr := reader.ReadString(0)
+							if nil != ferr && io.EOF != ferr {
+								m = fmt.Sprintf(" [%s]", ferr.Error())
 							} else {
-								reader := bufio.NewReader(f)
-								content, ferr := reader.ReadString(0)
-								if nil != ferr && io.EOF != ferr {
-									m = fmt.Sprintf(" [%s]", ferr.Error())
+								if 0 == pos {
+									line = append([]rune(content), line...)
+								} else if len(line) > pos {
+									line = append(append(line[:pos], []rune(content)...), line[pos:]...)
 								} else {
-									if 0 == pos {
-										line = append([]rune(content), line...)
-									} else if len(line) > pos {
-										line = append(append(line[:pos], []rune(content)...), line[pos:]...)
-									} else {
-										line = append(line, []rune(content)...)
-									}
+									line = append(line, []rune(content)...)
 								}
-								f.Close()
-								m = fmt.Sprintf("\"%s\" %vC", fileName, len(content))
 							}
+							f.Close()
+							m = fmt.Sprintf("\"%s\" %vC", fileName, len(content))
 						}
 					} else {
-						m = "[Missing filename]"
+						m = fmt.Sprintf("[Invalid command: %s/%s/%s]", string(cmd), string(cmd[:n]), fileName)
 					}
 				case 'w':
-					if 1 < len(cmd) && 1 != classify(cmd[1]) {
-						fileName := strings.TrimSpace(string(cmd[1:]))
-						if '!' != cmd[1] {
-							f, _ := os.Open(fileName)
+					var n int
+					for n = 1; len(cmd) > n; n++ {
+						if 0 == classify(cmd[n]) {
+							break
+						}
+					}
+					force := false
+					token := string(cmd[:n])
+					if '!' == cmd[n-1] {
+						force = true
+						token = string(cmd[:n-1])
+					}
+					if len(cmd) <= n {
+						m = "[Missing filename]"
+						break
+					}
+					fileName := strings.TrimSpace(string(cmd[n:]))
+					if len(fileName) == 0 {
+						m = "[Missing filename]"
+					} else if "w" == token || "write" == token {
+						var f *os.File
+						var ferr error
+						if !force {
+							f, _ = os.Open(fileName)
 							if nil != f {
 								f.Close()
 								m = fmt.Sprintf("[File %s exists]", fileName)
 							}
-						} else {
-							if 2 == len(cmd) {
-								fileName = ""
-							} else {
-								fileName = strings.TrimSpace(string(cmd[2:]))
-							}
 						}
-						if 0 == len(fileName) {
-							m = "[Missing filename]"
-						}
-						if 0 == len(m) {
-							f, ferr := os.OpenFile(fileName, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0755)
+						if f == nil {
+							f, ferr = os.OpenFile(fileName, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0755)
 							if nil != ferr {
 								m = fmt.Sprintf("[%s]", ferr.Error())
-							} else {
-								f.WriteString(string(line))
-								f.Close()
-								m = fmt.Sprintf("\"%s\" %vC written", fileName, len(line))
+								f = nil
 							}
+							f.WriteString(string(line))
+							f.Close()
+							m = fmt.Sprintf("\"%s\" %vC written", fileName, len(line))
 						}
 					} else {
-						m = "[Missing filename]"
+						m = fmt.Sprintf("[Invalid command: %s]", string(cmd))
 					}
 				case 'c':
 					if "clear" == string(cmd) {
 						s.clearTerm()
+					} else {
+						m = fmt.Sprintf("[Invalid command: %s]", string(cmd))
+					}
+				case 'q':
+					if '!' == cmd[len(cmd)-1] {
+						cmd = cmd[:len(cmd)-1]
+					}
+					if "q" == string(cmd) || "quit" == string(cmd) {
+						done = 2
+						break mainLoop
 					} else {
 						m = fmt.Sprintf("[Invalid command: %s]", string(cmd))
 					}
