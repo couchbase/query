@@ -67,22 +67,24 @@ func NewInvalidFunctionNameError(name string, e error) Error {
 }
 
 func NewMetaKVError(where string, what error) Error {
-	return &err{level: EXCEPTION, ICode: E_METAKV, IKey: "function.storage.error", ICause: what,
+	c := make(map[string]interface{})
+	c["cause"] = where
+	return &err{level: EXCEPTION, ICode: E_FUNCTIONS_STORAGE, IKey: "function.storage.error", ICause: what, cause: c,
 		InternalMsg:    fmt.Sprintf("Could not access function definition for %v because %v", where, what),
 		InternalCaller: CallerN(1)}
 }
 
 // same number and key as above, not an error
 func NewMetaKVChangeCounterError(what error) Error {
-	return &err{level: EXCEPTION, ICode: E_METAKV, IKey: "function.storage.error", ICause: what,
+	return &err{level: EXCEPTION, ICode: E_FUNCTIONS_STORAGE, IKey: "function.storage.error", ICause: what,
 		InternalMsg:    fmt.Sprintf("Could not access functions change counter because %v", what),
 		InternalCaller: CallerN(1)}
 }
 
 // same number and key as above, not an error
-func NewMetaKVIndexError(what error) Error {
-	return &err{level: EXCEPTION, ICode: E_METAKV, IKey: "function.storage.error", ICause: what,
-		InternalMsg:    fmt.Sprintf("Could not access functions definitions because %v", what),
+func NewStorageAccessError(where string, what error) Error {
+	return &err{level: EXCEPTION, ICode: E_FUNCTIONS_STORAGE, IKey: "function.storage.error", ICause: what,
+		InternalMsg:    fmt.Sprintf("Could not access functions definitions during %v because %v", where, what),
 		InternalCaller: CallerN(1)}
 }
 

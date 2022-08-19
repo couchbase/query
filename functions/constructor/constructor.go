@@ -19,7 +19,9 @@ import (
 	"github.com/couchbase/query/functions/golang"
 	"github.com/couchbase/query/functions/inline"
 	"github.com/couchbase/query/functions/javascript"
-	storage "github.com/couchbase/query/functions/metakv"
+	metaStorage "github.com/couchbase/query/functions/metakv"
+	systemStorage "github.com/couchbase/query/functions/system"
+	"github.com/couchbase/query/tenant"
 	"github.com/gorilla/mux"
 )
 
@@ -29,7 +31,8 @@ func Init(mux *mux.Router, threads int) {
 	functionsBridge.NewGolangBody = golang.NewGolangBody
 	functionsBridge.NewJavascriptBody = javascript.NewJavascriptBody
 	authorize.Init()
-	storage.Init()
+	metaStorage.Init()
+	systemStorage.Init()
 	golang.Init()
 	inline.Init()
 	javascript.Init(mux, threads)
@@ -53,11 +56,15 @@ func newGlobalFunction(elem []string, namespace string, queryContext string) (fu
 	}
 	switch len(elem) {
 	case 1:
-		return storage.NewGlobalFunction(namespace, elem[0])
+		return metaStorage.NewGlobalFunction(namespace, elem[0])
 	case 2:
-		return storage.NewGlobalFunction(ns, elem[1])
+		return metaStorage.NewGlobalFunction(ns, elem[1])
 	case 4:
-		return storage.NewScopeFunction(ns, elem[1], elem[2], elem[3])
+		if tenant.IsServerless() {
+			return systemStorage.NewScopeFunction(ns, elem[1], elem[2], elem[3])
+		} else {
+			return metaStorage.NewScopeFunction(ns, elem[1], elem[2], elem[3])
+		}
 	default:
 		return nil, errors.NewInvalidFunctionNameError(elem[len(elem)-1], fmt.Errorf("invalid function path"))
 	}

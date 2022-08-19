@@ -288,7 +288,7 @@ const (
 	E_INTERNAL_FUNCTION                       ErrorCode = 10103
 	E_ARGUMENTS_MISMATCH                      ErrorCode = 10104
 	E_INVALID_FUNCTION_NAME                   ErrorCode = 10105
-	E_METAKV                                  ErrorCode = 10106
+	E_FUNCTIONS_STORAGE                       ErrorCode = 10106
 	E_FUNCTION_ENCODING                       ErrorCode = 10107
 	E_FUNCTIONS_DISABLED                      ErrorCode = 10108
 	E_FUNCTION_EXECUTION                      ErrorCode = 10109

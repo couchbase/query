@@ -258,13 +258,21 @@ func (path *Path) ProtectedString() string {
 }
 
 func (path *Path) string(forceBackticks bool, isContext bool) string {
+	return pathFromParts(forceBackticks, isContext, path.elements...)
+}
+
+func PathFromParts(elements ...string) string {
+	return pathFromParts(false, false, elements...)
+}
+
+func pathFromParts(forceBackticks bool, isContext bool, elements ...string) string {
 	acc := ""
-	lastIndex := len(path.elements) - 1
+	lastIndex := len(elements) - 1
 	if isContext {
 		lastIndex--
 	}
 	for i := 0; i <= lastIndex; i++ {
-		s := path.elements[i]
+		s := elements[i]
 
 		// The first element, i.e. the namespace, may be an empty string.
 		// That means we can omit it, and the separator after it.
@@ -386,6 +394,14 @@ func ValidateQueryContext(queryContext string) errors.Error {
 		return errors.NewQueryContextError("too many context elements")
 	}
 	return nil
+}
+
+func PartsFromPath(path string) int {
+	res, parts := validatePathOrContext(path)
+	if res != "" {
+		return -1
+	}
+	return parts
 }
 
 func validatePathOrContext(queryContext string) (string, int) {

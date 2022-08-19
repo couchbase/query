@@ -24,7 +24,7 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/functions"
-	functionsStorage "github.com/couchbase/query/functions/metakv"
+	functionsStorage "github.com/couchbase/query/functions/storage"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/value"
 )

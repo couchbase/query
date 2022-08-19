@@ -95,6 +95,14 @@ func NewParsedValueWithOptions(bytes []byte, isValidated, useState bool) Value {
 	return rv
 }
 
+func ToJSON(v Value) []byte {
+	val, ok := v.(*parsedValue)
+	if !ok || val.raw == nil {
+		return nil
+	}
+	return val.raw
+}
+
 /*
 Used to return the type of input bytes. It ranges over bytes,
 and classifies it into an object (if '{' is seen), array ('['),

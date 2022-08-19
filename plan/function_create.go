@@ -15,6 +15,7 @@ import (
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/functions"
 	"github.com/couchbase/query/functions/resolver"
+	"github.com/couchbase/query/functions/storage"
 )
 
 // Create function
@@ -95,7 +96,7 @@ func (this *CreateFunction) UnmarshalJSON(bytes []byte) error {
 		return err
 	}
 
-	this.name, err = makeName(_unmarshalled.Identity)
+	this.name, err = storage.MakeName(_unmarshalled.Identity)
 	if err != nil {
 		return err
 	}

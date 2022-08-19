@@ -14,6 +14,7 @@ import (
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/functions"
+	"github.com/couchbase/query/functions/storage"
 )
 
 // Execute function
@@ -73,7 +74,7 @@ func (this *ExecuteFunction) UnmarshalJSON(bytes []byte) error {
 		return err
 	}
 
-	this.name, err = makeName(_unmarshalled.Identity)
+	this.name, err = storage.MakeName(_unmarshalled.Identity)
 	if err != nil {
 		return err
 	}

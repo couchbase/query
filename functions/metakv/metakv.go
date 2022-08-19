@@ -22,6 +22,7 @@ import (
 	"github.com/couchbase/query/functions"
 	"github.com/couchbase/query/functions/resolver"
 	"github.com/couchbase/query/logging"
+	"github.com/couchbase/query/value"
 )
 
 const _FUNC_PATH = "/query/functions/"
@@ -76,6 +77,15 @@ func setChange() {
 	}
 }
 
+func NewChangeCounter() int32 {
+	setChange()
+	return changeCounter
+}
+
+func ChangeCounter() int32 {
+	return changeCounter
+}
+
 // dodgy, but the not found error is not exported in metakv
 func isNotFoundError(err error) bool {
 	return err != nil && err.Error() == "Not found"
@@ -104,24 +114,76 @@ func DropScope(namespace, bucket, scope string) {
 	})
 }
 
-func Foreach(f func(path string, value []byte) error) error {
+func Foreach(b string, f func(path string, v value.Value) error) error {
+	if b == "" {
+		return metakv.IterateChildren(_FUNC_PATH, func(kve metakv.KVEntry) error {
+			path := kve.Path[len(_FUNC_PATH):]
+			if algebra.PartsFromPath(path) == 2 {
+				return f(path, value.NewValue(kve.Value))
+			}
+			return nil
+		})
+	}
 	return metakv.IterateChildren(_FUNC_PATH, func(kve metakv.KVEntry) error {
-		return f(kve.Path[len(_FUNC_PATH):], kve.Value)
+		path := kve.Path[len(_FUNC_PATH):]
+		parts := algebra.ParsePath(path)
+		if len(parts) == 4 && parts[1] == b {
+			return f(path, value.NewValue(kve.Value))
+		}
+		return nil
 	})
 }
 
-func Get(path string) ([]byte, error) {
-	body, _, err := metakv.Get(_FUNC_PATH + path)
-	return body, err
+func Scan(b string, f func(path string) error) error {
+	if b == "" {
+		return metakv.IterateChildren(_FUNC_PATH, func(kve metakv.KVEntry) error {
+			path := kve.Path[len(_FUNC_PATH):]
+			if algebra.PartsFromPath(path) == 2 {
+				return f(path)
+			}
+			return nil
+		})
+	}
+	return metakv.IterateChildren(_FUNC_PATH, func(kve metakv.KVEntry) error {
+		path := kve.Path[len(_FUNC_PATH):]
+		parts := algebra.ParsePath(path)
+		if len(parts) == 4 && parts[1] == b {
+			return f(path)
+		}
+		return nil
+	})
 }
 
-func Count() (int64, error) {
-	children, err := metakv.ListAllChildren(_FUNC_PATH)
+func Get(path string) (value.Value, error) {
+	body, _, err := metakv.Get(_FUNC_PATH + path)
 	if err != nil {
-		return -1, err
-	} else {
-		return int64(len(children)), nil
+		return nil, err
 	}
+	return value.NewValue(body), nil
+}
+
+func Count(b string) (int64, error) {
+	var count int64
+
+	if b == "" {
+		err := metakv.IterateChildren(_FUNC_PATH, func(kve metakv.KVEntry) error {
+			path := kve.Path[len(_FUNC_PATH):]
+			if algebra.PartsFromPath(path) == 2 {
+				count++
+			}
+			return nil
+		})
+		return count, err
+	}
+	err := metakv.IterateChildren(_FUNC_PATH, func(kve metakv.KVEntry) error {
+		path := kve.Path[len(_FUNC_PATH):]
+		parts := algebra.ParsePath(path)
+		if len(parts) == 4 && parts[1] == b {
+			count++
+		}
+		return nil
+	})
+	return count, err
 }
 
 type metaEntry struct {

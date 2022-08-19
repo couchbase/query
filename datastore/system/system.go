@@ -94,6 +94,7 @@ func (s *store) PrivilegesFromPath(fullname string, keyspace string, privilege a
 		case KEYSPACE_NAME_INDEXES:
 		case KEYSPACE_NAME_ALL_INDEXES:
 		case KEYSPACE_NAME_MY_USER_INFO:
+		case KEYSPACE_NAME_FUNCTIONS:
 
 		// system read for everything else
 		default:

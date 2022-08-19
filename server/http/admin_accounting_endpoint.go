@@ -29,8 +29,8 @@ import (
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/functions"
 	functionsBridge "github.com/couchbase/query/functions/bridge"
-	functionsMeta "github.com/couchbase/query/functions/metakv"
 	functionsResolver "github.com/couchbase/query/functions/resolver"
+	functionsStorage "github.com/couchbase/query/functions/storage"
 	"github.com/couchbase/query/prepareds"
 	"github.com/couchbase/query/scheduler"
 	"github.com/couchbase/query/server"
@@ -865,21 +865,21 @@ func doFunctionsGlobalBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req 
 			return nil, err
 		}
 
-		numFunctions, err1 := functionsMeta.Count()
+		numFunctions, err1 := functionsStorage.Count("")
 		if err1 != nil {
-			return nil, errors.NewMetaKVIndexError(err1)
+			return nil, errors.NewStorageAccessError("backup", err1)
 		}
 		data := make([]interface{}, 0, numFunctions)
 
-		snapshot := func(name string, val []byte) error {
+		snapshot := func(name string, v value.Value) error {
 			path := algebra.ParsePath(name)
 			if len(path) == 2 {
-				data = append(data, value.NewParsedValue(val, false))
+				data = append(data, v)
 			}
 			return nil
 		}
 
-		functionsMeta.Foreach(snapshot)
+		functionsStorage.Foreach("", snapshot)
 		return makeBackupHeader(data), nil
 
 	case "POST":
@@ -954,17 +954,20 @@ func doFunctionsBucketBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req 
 		if err != nil {
 			return nil, err
 		}
-		numFunctions, _ := functionsMeta.Count()
-		data := make([]interface{}, 0, numFunctions)
-		snapshot := func(name string, val []byte) error {
-			path := algebra.ParsePath(name)
-			if len(path) == 4 && path[1] == bucket && filterEval(path, include, exclude) {
-				data = append(data, value.NewParsedValue(val, false))
-			}
-			return nil
-		}
+		data := make([]interface{}, 0)
 
-		functionsMeta.Foreach(snapshot)
+		// do not archive functions if the metadata is already stored in KV
+		if functionsStorage.ExternalBucketArchive() {
+			snapshot := func(name string, v value.Value) error {
+				path := algebra.ParsePath(name)
+				if len(path) == 4 && path[1] == bucket && filterEval(path, include, exclude) {
+					data = append(data, v)
+				}
+				return nil
+			}
+
+			functionsStorage.Foreach(bucket, snapshot)
+		}
 		return makeBackupHeader(data), nil
 
 	case "POST":
@@ -999,33 +1002,36 @@ func doFunctionsBucketBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req 
 			return nil, err
 		}
 
-		// if it's not an array, we'll try a single function
-		if data[0] != '[' {
-			err := doFunctionRestore(data, 4, bucket, include, exclude, remap)
-			if err != nil {
-				return nil, err
+		// do not restore UDFs if metadata is stored in KV
+		if functionsStorage.ExternalBucketArchive() {
+			// if it's not an array, we'll try a single function
+			if data[0] != '[' {
+				err := doFunctionRestore(data, 4, bucket, include, exclude, remap)
+				if err != nil {
+					return nil, err
+				}
+				return "", nil
 			}
-			return "", nil
+			index := 0
+			json.SetIndexState(&iState, data)
+			for {
+				v, err := iState.FindIndex(index)
+				if err != nil {
+					iState.Release()
+					return nil, errors.NewServiceErrorBadValue(err, "UDF restore body")
+				}
+				if string(v) == "" {
+					break
+				}
+				index++
+				err1 := doFunctionRestore(v, 4, bucket, include, exclude, remap)
+				if err1 != nil {
+					iState.Release()
+					return nil, err1
+				}
+			}
+			iState.Release()
 		}
-		index := 0
-		json.SetIndexState(&iState, data)
-		for {
-			v, err := iState.FindIndex(index)
-			if err != nil {
-				iState.Release()
-				return nil, errors.NewServiceErrorBadValue(err, "UDF restore body")
-			}
-			if string(v) == "" {
-				break
-			}
-			index++
-			err1 := doFunctionRestore(v, 4, bucket, include, exclude, remap)
-			if err1 != nil {
-				iState.Release()
-				return nil, err1
-			}
-		}
-		iState.Release()
 	default:
 		return nil, errors.NewServiceErrorHttpMethod(req.Method)
 	}
