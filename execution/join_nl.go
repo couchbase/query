@@ -270,9 +270,8 @@ func (this *NLJoin) checkSendItem(av value.AnnotatedValue, quotaFunc func() uint
 			if recycle {
 				av.Recycle()
 			}
+			return false
 		}
-		return false
-
 	}
 	return this.sendItem(av)
 }

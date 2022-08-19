@@ -302,9 +302,8 @@ func (this *HashJoin) checkSendItem(av value.AnnotatedValue, quotaFunc func() ui
 			if recycle {
 				av.Recycle()
 			}
+			return false
 		}
-		return false
-
 	}
 	return this.sendItem(av)
 }
