@@ -410,6 +410,11 @@ func (this *builder) visitGroup(group *algebra.Group, aggs algebra.Aggregates) {
 			if cost > 0.0 && cardinality > 0.0 && size > 0 {
 				costInitial, cardinalityInitial, costIntermediate, cardinalityIntermediate, costFinal, cardinalityFinal =
 					getGroupCosts(group, aggs, cost, cardinality, size, this.keyspaceNames, this.maxParallelism)
+				if costInitial <= 0.0 || cardinalityInitial <= 0.0 ||
+					costIntermediate <= 0.0 || cardinalityIntermediate <= 0.0 ||
+					costFinal <= 0.0 || cardinalityFinal <= 0.0 {
+					size = OPT_SIZE_NOT_AVAIL
+				}
 			}
 		}
 		aggv := sortAggregatesSlice(aggs)
