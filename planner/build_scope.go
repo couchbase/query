@@ -31,7 +31,7 @@ func getBucket(credentials *auth.Credentials, parts ...string) (datastore.Bucket
 }
 
 func (this *builder) VisitCreateScope(stmt *algebra.CreateScope) (interface{}, error) {
-	bucket, err := getBucket(this.context.dsContext.Credentials(), stmt.Scope().Path().Namespace(), stmt.Scope().Path().Bucket())
+	bucket, err := getBucket(this.context.Credentials(), stmt.Scope().Path().Namespace(), stmt.Scope().Path().Bucket())
 	if err != nil {
 		return nil, err
 	}
@@ -40,7 +40,7 @@ func (this *builder) VisitCreateScope(stmt *algebra.CreateScope) (interface{}, e
 }
 
 func (this *builder) VisitDropScope(stmt *algebra.DropScope) (interface{}, error) {
-	bucket, err := getBucket(this.context.dsContext.Credentials(), stmt.Scope().Path().Namespace(), stmt.Scope().Path().Bucket())
+	bucket, err := getBucket(this.context.Credentials(), stmt.Scope().Path().Namespace(), stmt.Scope().Path().Bucket())
 	if err != nil {
 		return nil, err
 	}

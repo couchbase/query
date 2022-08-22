@@ -21,6 +21,7 @@ import (
 
 	"github.com/couchbase/go_json"
 
+	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/datastore/resolver"
 	"github.com/couchbase/query/datastore/system"
@@ -422,6 +423,11 @@ func makeMockServer() *server.Server {
 	return server
 }
 
+var _ALL_USERS = auth.Credentials{
+	map[string]string{
+		"dummy": "dummy",
+	}, nil, nil, nil}
+
 func (this *testServer) testHandler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		this.query_request = &httpRequest{}
@@ -429,6 +435,7 @@ func (this *testServer) testHandler() http.Handler {
 		if this.query_request.State() == server.FATAL {
 			return
 		}
+		this.query_request.SetCredentials(&_ALL_USERS)
 		this.query_server.ServiceRequest(this.query_request)
 	})
 }

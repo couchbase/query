@@ -9,6 +9,7 @@
 package planner
 
 import (
+	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/value"
 )
@@ -25,12 +26,13 @@ type PrepareContext struct {
 	optimizer       Optimizer
 	deltaKeyspaces  map[string]bool
 	dsContext       datastore.QueryContext
+	isPrepare       bool
 }
 
 func NewPrepareContext(rv *PrepareContext, requestId, queryContext string,
 	namedArgs map[string]value.Value, positionalArgs value.Values,
 	indexApiVersion int, featureControls uint64, useFts, useCBO bool, optimizer Optimizer,
-	deltaKeyspaces map[string]bool, dsContext datastore.QueryContext) {
+	deltaKeyspaces map[string]bool, dsContext datastore.QueryContext, isPrepare bool) {
 	rv.requestId = requestId
 	rv.queryContext = queryContext
 	rv.namedArgs = namedArgs
@@ -42,6 +44,7 @@ func NewPrepareContext(rv *PrepareContext, requestId, queryContext string,
 	rv.optimizer = optimizer
 	rv.deltaKeyspaces = deltaKeyspaces
 	rv.dsContext = dsContext
+	rv.isPrepare = isPrepare
 	return
 }
 
@@ -100,4 +103,26 @@ func (this *PrepareContext) DeltaKeyspaces() map[string]bool {
 func (this *PrepareContext) HasDeltaKeyspace(keyspace string) bool {
 	_, ok := this.deltaKeyspaces[keyspace]
 	return ok
+}
+
+// some planner usage is done by internal users (eg auto reprepare), and thus it does
+// not have credentials
+// we don't have to filter error messages for these use cases.
+func (this *PrepareContext) Credentials() *auth.Credentials {
+	if this.dsContext == nil {
+		return nil
+	}
+	return this.dsContext.Credentials()
+}
+
+// don't provide credentials for prepared statements (MB-24871)
+func (this *PrepareContext) Context() datastore.QueryContext {
+	if this.isPrepare {
+		return nil
+	}
+	return this.dsContext
+}
+
+func (this *PrepareContext) SetIsPrepare() {
+	this.isPrepare = true
 }

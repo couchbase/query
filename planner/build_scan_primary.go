@@ -22,7 +22,7 @@ import (
 func (this *builder) buildPrimaryScan(keyspace datastore.Keyspace, node *algebra.KeyspaceTerm,
 	indexes []datastore.Index, id expression.Expression, force, exact, hasDeltaKeyspace bool) (
 	plan.Operator, error) {
-	primary, err := buildPrimaryIndex(keyspace, indexes, node, force, this.context.dsContext.Credentials())
+	primary, err := buildPrimaryIndex(keyspace, indexes, node, force, this.context.Credentials())
 	if primary == nil || err != nil {
 		return nil, err
 	}

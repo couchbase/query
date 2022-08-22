@@ -1160,7 +1160,7 @@ func (this *Server) getPrepared(request Request, context *execution.Context) (*p
 		var prepContext planner.PrepareContext
 		planner.NewPrepareContext(&prepContext, request.Id().String(), request.QueryContext(), nil, nil,
 			request.IndexApiVersion(), request.FeatureControls(), request.UseFts(),
-			request.UseCBO(), context.Optimizer(), context.DeltaKeyspaces(), nil)
+			request.UseCBO(), context.Optimizer(), context.DeltaKeyspaces(), dsContext, true)
 
 		name = prepareds.GetAutoPrepareName(request.Statement(), &prepContext)
 		if name != "" {
@@ -1223,13 +1223,12 @@ func (this *Server) getPrepared(request Request, context *execution.Context) (*p
 		if isPrepare {
 			namedArgs = nil
 			positionalArgs = nil
-			dsContext = nil
 		}
 
 		var prepContext planner.PrepareContext
 		planner.NewPrepareContext(&prepContext, request.Id().String(), request.QueryContext(), namedArgs,
 			positionalArgs, request.IndexApiVersion(), request.FeatureControls(), request.UseFts(),
-			request.UseCBO(), context.Optimizer(), context.DeltaKeyspaces(), dsContext)
+			request.UseCBO(), context.Optimizer(), context.DeltaKeyspaces(), dsContext, isPrepare)
 		if stmt, ok := stmt.(*algebra.Advise); ok {
 			stmt.SetContext(context)
 		}

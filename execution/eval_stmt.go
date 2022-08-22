@@ -246,7 +246,7 @@ func (this *Context) PrepareStatement(statement string, namedArgs map[string]val
 	var prepContext planner.PrepareContext
 	planner.NewPrepareContext(&prepContext, this.requestId, this.queryContext, namedArgs,
 		positionalArgs, this.indexApiVersion, this.featureControls, this.useFts, this.useCBO, this.optimizer,
-		this.deltaKeyspaces, this)
+		this.deltaKeyspaces, this, false)
 
 	if autoPrepare {
 		name = prepareds.GetAutoPrepareName(statement, &prepContext)
@@ -258,6 +258,7 @@ func (this *Context) PrepareStatement(statement string, namedArgs map[string]val
 				}
 				return nil, prepared, true, nil
 			}
+			prepContext.SetIsPrepare()
 		} else {
 			autoPrepare = false
 		}
@@ -310,6 +311,7 @@ func (this *Context) PrepareStatement(statement string, namedArgs map[string]val
 	case *algebra.Prepare:
 		prepContext.SetNamedArgs(nil)
 		prepContext.SetPositionalArgs(nil)
+		prepContext.SetIsPrepare()
 	case *algebra.Advise:
 		st.SetContext(this)
 	}

@@ -36,7 +36,7 @@ func getScope(credentials *auth.Credentials, parts ...string) (datastore.Scope, 
 }
 
 func (this *builder) VisitCreateCollection(stmt *algebra.CreateCollection) (interface{}, error) {
-	scope, err := getScope(this.context.dsContext.Credentials(), stmt.Keyspace().Path().Parts()...)
+	scope, err := getScope(this.context.Credentials(), stmt.Keyspace().Path().Parts()...)
 	if err != nil {
 		return nil, err
 	}
@@ -45,7 +45,7 @@ func (this *builder) VisitCreateCollection(stmt *algebra.CreateCollection) (inte
 }
 
 func (this *builder) VisitDropCollection(stmt *algebra.DropCollection) (interface{}, error) {
-	scope, err := getScope(this.context.dsContext.Credentials(), stmt.Keyspace().Path().Parts()...)
+	scope, err := getScope(this.context.Credentials(), stmt.Keyspace().Path().Parts()...)
 	if err != nil {
 		return nil, err
 	}

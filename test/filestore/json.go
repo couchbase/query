@@ -22,6 +22,7 @@ import (
 
 	"github.com/couchbase/query/accounting"
 	acct_resolver "github.com/couchbase/query/accounting/resolver"
+	"github.com/couchbase/query/auth"
 	config_resolver "github.com/couchbase/query/clustering/resolver"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/datastore/resolver"
@@ -156,6 +157,11 @@ func (this *MockServer) doStats(request *MockQuery) {
 	request.CompleteRequest(0, 0, 0, request.resultCount, 0, 0, nil, this.server)
 }
 
+var _ALL_USERS = auth.Credentials{
+	map[string]string{
+		"dummy": "dummy",
+	}, nil, nil, nil}
+
 func Run(mockServer *MockServer, p bool, q string, namedArgs map[string]value.Value, positionalArgs []value.Value, namespace string) *RunResult {
 	var metrics value.Tristate
 	scanConfiguration := &scanConfigImpl{}
@@ -181,6 +187,7 @@ func Run(mockServer *MockServer, p bool, q string, namedArgs map[string]value.Va
 	query.SetSignature(value.TRUE)
 	query.SetPretty(pretty)
 	query.SetScanConfiguration(scanConfiguration)
+	query.SetCredentials(&_ALL_USERS)
 
 	defer mockServer.doStats(query)
 

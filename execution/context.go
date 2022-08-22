@@ -937,7 +937,7 @@ func (this *Context) EvaluateSubquery(query *algebra.Select, parent value.Value)
 				var prepContext planner.PrepareContext
 				planner.NewPrepareContext(&prepContext, this.requestId, this.queryContext, nil, nil,
 					this.indexApiVersion, this.featureControls, this.useFts, this.useCBO, this.optimizer,
-					nil, this)
+					nil, this, false)
 				qp, subplanIsks, err = planner.Build(query, this.datastore, this.systemstore, this.namespace,
 					true, false, &prepContext)
 
@@ -973,7 +973,7 @@ func (this *Context) EvaluateSubquery(query *algebra.Select, parent value.Value)
 		var prepContext planner.PrepareContext
 		planner.NewPrepareContext(&prepContext, this.requestId, this.queryContext, this.namedArgs,
 			this.positionalArgs, this.indexApiVersion, this.featureControls, this.useFts, this.useCBO, this.optimizer,
-			this.deltaKeyspaces, this)
+			this.deltaKeyspaces, this, false)
 		qp, subplanIsks, err = planner.Build(query, this.datastore, this.systemstore,
 			this.namespace, true, false, &prepContext)
 
