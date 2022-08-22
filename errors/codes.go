@@ -203,6 +203,7 @@ const (
 	E_INSERT_KEY_TYPE                         ErrorCode = 5070
 	E_INSERT_OPTIONS_TYPE                     ErrorCode = 5071
 	E_UPSERT_KEY                              ErrorCode = 5072
+	E_UPSERT_KEY_ALREADY_MUTATED              ErrorCode = 5073
 	E_UPSERT_VALUE                            ErrorCode = 5075
 	E_UPSERT_KEY_TYPE                         ErrorCode = 5078
 	E_UPSERT_OPTIONS_TYPE                     ErrorCode = 5079

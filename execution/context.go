@@ -1520,3 +1520,14 @@ func (this *Context) AddKeyToSkip(key string) bool {
 	}
 	return true
 }
+
+func (this *Context) ReleaseSkipKeys() {
+	if this.UseRequestQuota() {
+		this.keysToSkip.Range(func(key, value interface{}) bool {
+			this.ReleaseValueSize(uint64(len(key.(string))))
+			return true
+		})
+	}
+	this.keysToSkip = &sync.Map{}
+	this.keysToSkipLength = 0
+}

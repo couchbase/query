@@ -121,6 +121,15 @@ func NewUpsertKeyTypeError(v interface{}) Error {
 		InternalCaller: CallerN(1)}
 }
 
+func NewUpsertKeyAlreadyMutatedError(ks string, key string) Error {
+	c := make(map[string]interface{})
+	c["keyspace"] = ks
+	c["key"] = key
+	return &err{level: EXCEPTION, ICode: E_UPSERT_KEY_ALREADY_MUTATED, IKey: "execution.upsert_key_already_mutated",
+		InternalMsg: "Cannot act on the same key multiple times in an UPSERT statement.", cause: c,
+		InternalCaller: CallerN(1)}
+}
+
 func NewUpsertOptionsTypeError(v interface{}) Error {
 	return &err{level: EXCEPTION, ICode: E_UPSERT_OPTIONS_TYPE, IKey: "execution.upsert_options_type_error",
 		InternalMsg:    fmt.Sprintf("Cannot UPSERT non-OBJECT options %v of type %T.", v, v),

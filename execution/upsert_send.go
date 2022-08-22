@@ -64,6 +64,7 @@ func (this *SendUpsert) processItem(item value.AnnotatedValue, context *Context)
 
 func (this *SendUpsert) afterItems(context *Context) {
 	this.flushBatch(context)
+	context.ReleaseSkipKeys()
 }
 
 func (this *SendUpsert) flushBatch(context *Context) bool {
@@ -149,6 +150,10 @@ func (this *SendUpsert) flushBatch(context *Context) bool {
 			context.Error(errors.NewUpsertKeyTypeError(key))
 			continue
 		}
+		if context.SkipKey(dpair.Name) {
+			context.Error(errors.NewUpsertKeyAlreadyMutatedError(this.keyspace.QualifiedName(), dpair.Name))
+			return false // halt mutations
+		}
 
 		if options != nil && options.Type() != value.OBJECT {
 			context.Error(errors.NewInsertOptionsTypeError(options))
@@ -184,9 +189,8 @@ func (this *SendUpsert) flushBatch(context *Context) bool {
 	}
 
 	// Capture the upserted keys in case there is a RETURNING clause
-	skipNewKeys := this.plan.SkipNewKeys()
 	for _, dp := range dpairs {
-		if skipNewKeys && !context.AddKeyToSkip(dp.Name) {
+		if !context.AddKeyToSkip(dp.Name) {
 			return false
 		}
 		dv := value.NewAnnotatedValue(dp.Value)
@@ -194,7 +198,7 @@ func (this *SendUpsert) flushBatch(context *Context) bool {
 		av.CopyAnnotations(dv)
 		av.SetField(this.plan.Alias(), dv)
 		if context.UseRequestQuota() {
-			err := context.TrackValueSize(av.Size())
+			err := context.TrackValueSize(av.Size() + uint64(len(dp.Name)))
 			if err != nil {
 				context.Error(err)
 				av.Recycle()
