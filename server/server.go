@@ -1716,7 +1716,7 @@ const (
 
 func (this *Server) LoadFactor() int {
 	// consider one request per servicer in queue is normal
-	servicers := util.MaxInt(int(this.ServicerUsage()/_SERVICE_OVERHEAD_FACTOR), _SERVICE_PERCENT_LIMIT)
+	servicers := util.MinInt(int(this.ServicerUsage()/_SERVICE_OVERHEAD_FACTOR), _SERVICE_PERCENT_LIMIT)
 	cpu := int(this.CpuUsage(true))
 	memory := int(this.MemoryUsage(true))
 	// max of all of them
