@@ -22,11 +22,13 @@ type ExpressionScan struct {
 	buildBitFilterBase
 	plan    *plan.ExpressionScan
 	results value.AnnotatedValues
+	context *Context
 }
 
 func NewExpressionScan(plan *plan.ExpressionScan, context *Context) *ExpressionScan {
 	rv := &ExpressionScan{
-		plan: plan,
+		plan:    plan,
+		context: context,
 	}
 
 	newBase(&rv.base, context)
@@ -124,8 +126,15 @@ func (this *ExpressionScan) RunOnce(context *Context, parent value.Value) {
 			this.results = nil
 			results = make(value.AnnotatedValues, 0, len(acts))
 			defer func() {
-				for i := range results {
-					results[i].Recycle()
+				if context != nil && context.UseRequestQuota() {
+					for _, val := range results {
+						context.ReleaseValueSize(val.Size())
+						val.Recycle()
+					}
+				} else {
+					for _, val := range results {
+						val.Recycle()
+					}
 				}
 			}()
 		}
@@ -182,8 +191,16 @@ func (this *ExpressionScan) RunOnce(context *Context, parent value.Value) {
 
 func (this *ExpressionScan) Done() {
 	this.baseDone()
-	for i := range this.results {
-		this.results[i].Recycle()
+
+	if this.context != nil && this.context.UseRequestQuota() {
+		for _, val := range this.results {
+			this.context.ReleaseValueSize(val.Size())
+			val.Recycle()
+		}
+	} else {
+		for _, val := range this.results {
+			val.Recycle()
+		}
 	}
 	this.results = nil
 }
