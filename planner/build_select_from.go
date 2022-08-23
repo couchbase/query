@@ -208,10 +208,11 @@ func (this *builder) visitFrom(node *algebra.Subselect, group *algebra.Group,
 				return err
 			}
 			// join filter hints are checked/marked after all join/nest/unnest are done
-			err = this.markJoinFilterHints()
+			err = this.MarkJoinFilterHints()
 			if err != nil {
 				return err
 			}
+			this.CheckBitFilters(this.children, this.subChildren)
 		}
 	} else {
 		// No FROM clause

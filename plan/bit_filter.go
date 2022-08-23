@@ -268,6 +268,28 @@ func (this *BuildBitFilterBase) GetBuildBitFilters() BitFilters {
 	return this.buildBitFilters
 }
 
+func (this *BuildBitFilterBase) RemoveBuildBitFilter(alias string) {
+	for i, bf := range this.buildBitFilters {
+		if bf.alias == alias {
+			this.buildBitFilters[i] = nil
+		}
+	}
+}
+
+func (this *BuildBitFilterBase) CompactBuildBitFilters() {
+	newBuildBitFilters := make(BitFilters, 0, len(this.buildBitFilters))
+	for _, bf := range this.buildBitFilters {
+		if bf != nil {
+			newBuildBitFilters = append(newBuildBitFilters, bf)
+		}
+	}
+	if len(newBuildBitFilters) > 0 {
+		this.buildBitFilters = newBuildBitFilters
+	} else {
+		this.buildBitFilters = nil
+	}
+}
+
 func (this *BuildBitFilterBase) marshalBuildBitFilters(r map[string]interface{}) {
 	buildBFs := make([]interface{}, 0, len(this.buildBitFilters))
 	for _, bbf := range this.buildBitFilters {
@@ -308,6 +330,28 @@ func (this *ProbeBitFilterBase) SetProbeBitFilters(alias string, probeExprs []*B
 
 func (this *ProbeBitFilterBase) GetProbeBitFilters() BitFilters {
 	return this.probeBitFilters
+}
+
+func (this *ProbeBitFilterBase) RemoveProbeBitFilter(alias string) {
+	for i, bf := range this.probeBitFilters {
+		if bf.alias == alias {
+			this.probeBitFilters[i] = nil
+		}
+	}
+}
+
+func (this *ProbeBitFilterBase) CompactProbeBitFilters() {
+	newProbeBitFilters := make(BitFilters, 0, len(this.probeBitFilters))
+	for _, bf := range this.probeBitFilters {
+		if bf != nil {
+			newProbeBitFilters = append(newProbeBitFilters, bf)
+		}
+	}
+	if len(newProbeBitFilters) > 0 {
+		this.probeBitFilters = newProbeBitFilters
+	} else {
+		this.probeBitFilters = nil
+	}
 }
 
 func (this *ProbeBitFilterBase) marshalProbeBitFilters(r map[string]interface{}) {

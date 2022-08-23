@@ -2351,3 +2351,128 @@ func checkScanJoinFilterHint(baseKeyspaces map[string]*base.BaseKeyspace,
 	}
 	return
 }
+
+func checkProbeBFAliases(probeAliases map[string]map[string]bool, gather bool, ops ...plan.Operator) {
+	for i := len(ops) - 1; i >= 0; i-- {
+		switch op := ops[i].(type) {
+		case *plan.IndexScan3:
+			if !op.Covering() {
+				alias := op.Term().Alias()
+				buildAliases := probeAliases[alias]
+				if gather && buildAliases == nil {
+					buildAliases = make(map[string]bool, len(probeAliases)-1)
+					probeAliases[alias] = buildAliases
+				}
+				for _, probeBF := range op.GetProbeBitFilters() {
+					if gather {
+						buildAliases[probeBF.Alias()] = true
+					} else {
+						checkBaseProbeBFAliases(buildAliases, op.GetProbeFilterBase())
+					}
+				}
+			}
+		case *plan.DistinctScan:
+			checkScanProbeBFAliases(probeAliases, gather, op.Scan())
+		case *plan.IntersectScan:
+			checkScanProbeBFAliases(probeAliases, gather, op.Scans()...)
+		case *plan.OrderedIntersectScan:
+			checkScanProbeBFAliases(probeAliases, gather, op.Scans()...)
+		case *plan.UnionScan:
+			checkScanProbeBFAliases(probeAliases, gather, op.Scans()...)
+		case *plan.Parallel:
+			checkProbeBFAliases(probeAliases, gather, op.Child())
+		case *plan.Sequence:
+			checkProbeBFAliases(probeAliases, gather, op.Children()...)
+		case *plan.HashJoin:
+			if !op.Outer() {
+				checkProbeBFAliases(probeAliases, gather, op.Child())
+			}
+		case *plan.Alias:
+			// skip next term (SubqueryTerm)
+			i--
+		}
+	}
+}
+
+func checkScanProbeBFAliases(probeAliases map[string]map[string]bool, gather bool, scans ...plan.SecondaryScan) {
+	for _, scan := range scans {
+		checkProbeBFAliases(probeAliases, gather, scan)
+	}
+}
+
+func checkBaseProbeBFAliases(buildAliases map[string]bool, op *plan.ProbeBitFilterBase) {
+	compact := false
+	for _, probeBF := range op.GetProbeBitFilters() {
+		buildAlias := probeBF.Alias()
+		if _, ok := buildAliases[buildAlias]; ok {
+			op.RemoveProbeBitFilter(buildAlias)
+			compact = true
+		}
+	}
+	if compact {
+		op.CompactProbeBitFilters()
+	}
+}
+
+func checkBuildBFAliases(probeAliases map[string]map[string]bool, ops ...plan.Operator) {
+	for i := len(ops) - 1; i >= 0; i-- {
+		switch op := ops[i].(type) {
+		case *plan.IndexScan3:
+			if op.Covering() {
+				checkBaseBuildBFAliases(probeAliases, op.Term().Alias(), op.GetBuildFilterBase())
+			}
+		case *plan.DistinctScan:
+			checkScanBuildBFAliases(probeAliases, op.Scan())
+		case *plan.IntersectScan:
+			checkScanBuildBFAliases(probeAliases, op.Scans()...)
+		case *plan.OrderedIntersectScan:
+			checkScanBuildBFAliases(probeAliases, op.Scans()...)
+		case *plan.UnionScan:
+			checkScanBuildBFAliases(probeAliases, op.Scans()...)
+		case *plan.ExpressionScan:
+			checkBaseBuildBFAliases(probeAliases, op.Alias(), op.GetBuildFilterBase())
+		case *plan.Unnest:
+			checkBaseBuildBFAliases(probeAliases, op.Alias(), op.GetBuildFilterBase())
+		case *plan.Filter:
+			checkBaseBuildBFAliases(probeAliases, op.Alias(), op.GetBuildFilterBase())
+		case *plan.Parallel:
+			checkBuildBFAliases(probeAliases, op.Child())
+		case *plan.Sequence:
+			checkBuildBFAliases(probeAliases, op.Children()...)
+		case *plan.HashJoin:
+			if !op.Outer() {
+				checkBuildBFAliases(probeAliases, op.Child())
+			}
+		case *plan.Alias:
+			checkBaseBuildBFAliases(probeAliases, op.Alias(), op.GetBuildFilterBase())
+			// skip next term (SubqueryTerm)
+			i--
+		}
+	}
+}
+
+func checkScanBuildBFAliases(probeAliases map[string]map[string]bool, scans ...plan.SecondaryScan) {
+	for _, scan := range scans {
+		checkBuildBFAliases(probeAliases, scan)
+	}
+}
+
+func checkBaseBuildBFAliases(probeAliases map[string]map[string]bool, buildAlias string, op *plan.BuildBitFilterBase) {
+	compact := false
+	for _, buildBF := range op.GetBuildBitFilters() {
+		probeAlias := buildBF.Alias()
+		buildAliases := probeAliases[probeAlias]
+		if _, ok := buildAliases[buildAlias]; ok {
+			delete(buildAliases, buildAlias)
+			if len(buildAliases) == 0 {
+				delete(probeAliases, probeAlias)
+			}
+		} else {
+			op.RemoveBuildBitFilter(probeAlias)
+			compact = true
+		}
+	}
+	if compact {
+		op.CompactBuildBitFilters()
+	}
+}

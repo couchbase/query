@@ -429,7 +429,7 @@ func (this *builder) markOptimHints(alias string, includeJoin bool) (err error) 
 	return nil
 }
 
-func (this *builder) markJoinFilterHints() (err error) {
+func (this *builder) MarkJoinFilterHints() (err error) {
 	if len(this.subChildren) > 0 {
 		err = checkJoinFilterHint(this.baseKeyspaces, this.subChildren...)
 		if err != nil {

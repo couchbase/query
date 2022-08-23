@@ -53,7 +53,10 @@ type Builder interface {
 		outerCoveringScans []plan.CoveringOperator, outerFilter expression.Expression) (
 		[]plan.Operator, []plan.Operator, []plan.CoveringOperator, expression.Expression, error)
 
-	MarkOptimHints() error
+	MarkKeyspaceHints() error
+	MarkJoinFilterHints() error
+	CheckBitFilters(qPlan, subPlan []plan.Operator)
+	CheckJoinFilterHints(qPlan, subPlan []plan.Operator) (hintError bool, err error)
 }
 
 func (this *builder) GetBaseKeyspaces() map[string]*base.BaseKeyspace {
@@ -361,12 +364,48 @@ func (this *builder) BuildUnnest(unnest *algebra.Unnest, outerPlan, outerSubPlan
 	return this.children, this.subChildren, this.coveringScans, this.filter, nil
 }
 
-func (this *builder) MarkOptimHints() (err error) {
+func (this *builder) MarkKeyspaceHints() (err error) {
 	for alias, _ := range this.baseKeyspaces {
 		err = this.markOptimHints(alias, true)
 		if err != nil {
 			return err
 		}
 	}
-	return this.markJoinFilterHints()
+	return
+}
+
+func (this *builder) CheckJoinFilterHints(qPlan, subPlan []plan.Operator) (hintError bool, err error) {
+	err = checkJoinFilterHint(this.baseKeyspaces, subPlan...)
+	for _, baseKeyspace := range this.baseKeyspaces {
+		if baseKeyspace.HasJoinFltrHintError() {
+			hintError = true
+			baseKeyspace.UnsetJoinFltrHintError()
+		}
+	}
+	if err != nil || hintError {
+		return
+	}
+
+	err = checkJoinFilterHint(this.baseKeyspaces, qPlan...)
+	for _, baseKeyspace := range this.baseKeyspaces {
+		if baseKeyspace.HasJoinFltrHintError() {
+			hintError = true
+			baseKeyspace.UnsetJoinFltrHintError()
+		}
+	}
+	return
+}
+
+func (this *builder) CheckBitFilters(qPlan, subPlan []plan.Operator) {
+	probeAliases := make(map[string]map[string]bool, len(this.baseKeyspaces))
+	checkProbeBFAliases(probeAliases, true, subPlan...)
+	checkProbeBFAliases(probeAliases, true, qPlan...)
+
+	checkBuildBFAliases(probeAliases, subPlan...)
+	checkBuildBFAliases(probeAliases, qPlan...)
+
+	if len(probeAliases) > 0 {
+		checkProbeBFAliases(probeAliases, false, subPlan...)
+		checkProbeBFAliases(probeAliases, false, qPlan...)
+	}
 }
