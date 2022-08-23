@@ -66,6 +66,7 @@ type AnnotatedValue interface {
 	Stash() int32
 	Restore(lvl int32)
 	Seen() bool
+	SetValue(Value)
 	GetValue() Value
 	Attachments() map[string]interface{}
 	GetAttachment(key string) interface{}
@@ -184,6 +185,10 @@ func (this *annotatedValue) SetField(field string, val interface{}) error {
 		}
 	}
 	return err
+}
+
+func (this *annotatedValue) SetValue(v Value) {
+	this.Value = v
 }
 
 func (this *annotatedValue) GetValue() Value {
@@ -838,6 +843,10 @@ func (this *annotatedValueSelfReference) Recycle() {
 
 func (this *annotatedValueSelfReference) RefCnt() int32 {
 	return 0
+}
+
+func (this *annotatedValueSelfReference) SetValue(v Value) {
+	(*annotatedValue)(this).SetValue(v)
 }
 
 func (this *annotatedValueSelfReference) GetValue() Value {

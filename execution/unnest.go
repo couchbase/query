@@ -88,20 +88,30 @@ func (this *Unnest) processItem(item value.AnnotatedValue, context *Context) boo
 	// Attach and send
 	for {
 		var av value.AnnotatedValue
+		var actv value.AnnotatedValue
 
-		actv := value.NewAnnotatedValue(act)
+		if actv == nil {
+			actv = value.NewAnnotatedValue(act)
+		} else {
+			actv.SetValue(act)
+		}
 		actv.SetAttachment("unnest_position", idx)
 
 		idx++
-		newAct, ok := ev.Index(idx)
+		nextAct, isValidIndex := ev.Index(idx)
 
-		isEnd := newAct.Type() == value.MISSING && !ok
-		if isEnd {
+		if !isValidIndex {
+			if av != nil {
+				av.Recycle()
+			}
 			av = item
+			av.SetField(this.plan.Alias(), actv)
 		} else {
-			av = value.NewAnnotatedValue(item.Copy())
+			if av == nil {
+				av = value.NewAnnotatedValue(item.Copy())
+				av.SetField(this.plan.Alias(), actv)
+			}
 		}
-		av.SetField(this.plan.Alias(), actv)
 
 		pass := true
 		if filter != nil {
@@ -110,10 +120,8 @@ func (this *Unnest) processItem(item value.AnnotatedValue, context *Context) boo
 				context.Error(errors.NewEvaluationError(err, "unnest filter"))
 				return false
 			}
-			if !result.Truth() {
-				av.Recycle()
-				pass = false
-			}
+			pass = result.Truth()
+			result = nil
 		}
 
 		if pass {
@@ -133,14 +141,23 @@ func (this *Unnest) processItem(item value.AnnotatedValue, context *Context) boo
 			if !this.sendItem(av) {
 				av.Recycle()
 				return false
+			} else {
+				av = nil
+				actv = nil
 			}
 		}
 
 		// no more
-		if isEnd {
+		if !isValidIndex {
+			if actv != nil {
+				actv.Recycle()
+			}
+			if av != nil {
+				av.Recycle()
+			}
 			break
 		}
-		act = newAct
+		act = nextAct
 	}
 
 	return true
