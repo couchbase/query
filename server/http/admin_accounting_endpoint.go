@@ -36,8 +36,8 @@ import (
 	"github.com/couchbase/query/server"
 	"github.com/couchbase/query/tenant"
 	"github.com/couchbase/query/transactions"
-	"github.com/couchbase/query/value"
 	"github.com/couchbase/query/util"
+	"github.com/couchbase/query/value"
 	"github.com/gorilla/mux"
 )
 

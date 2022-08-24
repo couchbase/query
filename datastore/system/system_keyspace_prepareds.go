@@ -19,8 +19,8 @@ import (
 	"github.com/couchbase/query/expression/parser"
 	"github.com/couchbase/query/prepareds"
 	"github.com/couchbase/query/timestamp"
-	"github.com/couchbase/query/value"
 	"github.com/couchbase/query/util"
+	"github.com/couchbase/query/value"
 )
 
 type preparedsKeyspace struct {

@@ -18,8 +18,8 @@ import (
 	"github.com/couchbase/query/expression/parser"
 	"github.com/couchbase/query/functions"
 	"github.com/couchbase/query/timestamp"
-	"github.com/couchbase/query/value"
 	"github.com/couchbase/query/util"
+	"github.com/couchbase/query/value"
 )
 
 type functionsCacheKeyspace struct {
