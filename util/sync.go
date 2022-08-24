@@ -241,6 +241,11 @@ func (l *poolList) Put(e *poolEntry) {
 	l.Unlock()
 }
 
+/*
+ * We use non-atomic operations on the counters to reduce contention.  This does mean that we may skip caching values and/or have
+ * a sparsely populated array, but overall with enough pressure we cache sufficient elements to be of value still whilst not
+ * penalising the throughput.  The only operation that must be atomic is the acquisition of an element from the pool.
+ */
 type LocklessPool struct {
 	getNext uint32
 	putNext uint32
@@ -251,19 +256,18 @@ type LocklessPool struct {
 func NewLocklessPool(p *LocklessPool, f func() unsafe.Pointer) {
 	*p = LocklessPool{}
 	p.f = f
+	p.getNext = _POOL_SIZE / 2
 }
 
 func (p *LocklessPool) Get() unsafe.Pointer {
-	l := atomic.LoadUint32(&p.getNext) % _POOL_SIZE
-	e := atomic.SwapPointer(&p.pool[l], nil)
+	l := p.getNext % _POOL_SIZE
+	e := atomic.SwapPointer(&p.pool[l], nil) // must be atomic to prevent multiple users
 
 	// niet
 	if e == nil {
 		return p.f()
 	} else {
-
-		// move to the next slot
-		atomic.AddUint32(&p.getNext, 1)
+		p.getNext++
 		return e
 	}
 
@@ -271,8 +275,9 @@ func (p *LocklessPool) Get() unsafe.Pointer {
 }
 
 func (p *LocklessPool) Put(s unsafe.Pointer) {
-	l := (atomic.AddUint32(&p.putNext, 1) - 1) % _POOL_SIZE
-	atomic.StorePointer(&p.pool[l], s)
+	l := p.putNext % _POOL_SIZE
+	p.putNext++
+	p.pool[l] = s
 }
 
 type WaitCount struct {
