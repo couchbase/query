@@ -82,7 +82,7 @@ func (this *InitialProject) processItem(item value.AnnotatedValue, context *Cont
 			item.SetSelf(true)
 			return this.sendItem(item)
 		} else {
-			pv := value.EMPTY_ANNOTATED_OBJECT.CopyForUpdate().(value.AnnotatedValue)
+			pv := value.EMPTY_ANNOTATED_OBJECT
 			if context.UseRequestQuota() {
 				iSz := item.Size()
 				pSz := pv.Size()
