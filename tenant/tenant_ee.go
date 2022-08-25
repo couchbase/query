@@ -22,6 +22,7 @@ import (
 	"github.com/couchbase/regulator/factory"
 	"github.com/couchbase/regulator/metering"
 	"github.com/gorilla/mux"
+	"github.com/couchbase/query/distributed"
 )
 
 var isServerless bool
@@ -213,4 +214,20 @@ func Units2Map(serv Services) map[string]interface{} {
 		return nil
 	}
 	return regulator.UnitsToMap(false, out...)
+}
+
+func EncodeNodeName(name string) string {
+	if isServerless {
+		return distributed.RemoteAccess().NodeUUID(name)
+	} else {
+		return name
+	}
+}
+
+func DecodeNodeName(name string) string {
+	if isServerless {
+		return distributed.RemoteAccess().UUIDToHost(name)
+	} else {
+		return name
+	}
 }

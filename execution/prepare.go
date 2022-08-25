@@ -16,6 +16,7 @@ import (
 	"github.com/couchbase/query/prepareds"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
+	"github.com/couchbase/query/tenant"
 )
 
 type Prepare struct {
@@ -75,7 +76,7 @@ func (this *Prepare) RunOnce(context *Context, parent value.Value) {
 		// We are going to amend the prepared name, so make a copy not
 		// to affect the cache
 		val := value.NewValue(this.prepared).Copy()
-		host := distributed.RemoteAccess().WhoAmI()
+		host := tenant.EncodeNodeName(distributed.RemoteAccess().WhoAmI())
 		name, ok := val.Actual().(map[string]interface{})["name"].(string)
 		if host != "" && ok {
 			name = distributed.RemoteAccess().MakeKey(host, name)

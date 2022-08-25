@@ -29,6 +29,7 @@ import (
 	"github.com/couchbase/query/planner"
 	"github.com/couchbase/query/rewrite"
 	"github.com/couchbase/query/semantics"
+	"github.com/couchbase/query/tenant"
 	"github.com/couchbase/query/util"
 )
 
@@ -482,6 +483,9 @@ func (prepareds *preparedCache) getPrepared(preparedName string, queryContext st
 	metaCheck := (options & OPT_METACHECK) != 0
 
 	host, name := distributed.RemoteAccess().SplitKey(preparedName)
+	if host != "" {
+		host = tenant.DecodeNodeName(host)
+	}
 	statement, ok := predefinedPrepareStatements[name]
 	if ok {
 		queryContext = ""

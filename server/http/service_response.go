@@ -242,7 +242,7 @@ func (this *httpRequest) writePrepared(prefix, indent string) bool {
 	if this.AutoExecute() != value.TRUE || prepared == nil {
 		return true
 	}
-	host := distributed.RemoteAccess().WhoAmI()
+	host := tenant.EncodeNodeName(distributed.RemoteAccess().WhoAmI())
 	name := distributed.RemoteAccess().MakeKey(host, prepared.Name())
 	return this.writeString(",\n") && this.writeString(prefix) && this.writeString("\"prepared\": \"") && this.writeString(name) && this.writeString("\"")
 }
@@ -813,7 +813,7 @@ func (this *httpRequest) writeProfile(profile server.Profile, prefix, indent str
 		if !this.writer.printf("%s\"requestTime\": \"%s\"", newPrefix, this.RequestTime().Format(expression.DEFAULT_FORMAT)) {
 			logging.Infof("Error writing request time")
 		}
-		if !this.writer.printf(",%s\"servicingHost\": \"%s\"", newPrefix, distributed.RemoteAccess().WhoAmI()) {
+		if !this.writer.printf(",%s\"servicingHost\": \"%s\"", newPrefix, tenant.EncodeNodeName(distributed.RemoteAccess().WhoAmI())) {
 			logging.Infof("Error writing servicing host")
 		}
 		needComma = true

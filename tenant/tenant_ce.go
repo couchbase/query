@@ -81,3 +81,11 @@ func RefundUnits(ctx Context, units Services) error {
 func Units2Map(serv Services) map[string]interface{} {
 	return nil
 }
+
+func EncodeNodeName(name string) string {
+	return name
+}
+
+func DecodeNodeName(name string) string {
+	return name
+}
