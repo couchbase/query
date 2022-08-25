@@ -442,6 +442,21 @@ func init() {
 	flag.StringVar(&histFlag, "hist", defaultval, command.NewShorthandMsg("history"))
 }
 
+/*
+	Option : -query_context or -qc
+	Args   : Query Context
+*/
+var queryContextFlag string
+
+func init() {
+	const (
+		defaultval = ""
+		usage      = command.UQUERY_CONTEXT
+	)
+	flag.StringVar(&queryContextFlag, "query_context", defaultval, usage)
+	flag.StringVar(&queryContextFlag, "qc", defaultval, command.NewShorthandMsg("query_context"))
+}
+
 var (
 	SERVICE_URL  string
 	DISCONNECT   bool
@@ -686,6 +701,17 @@ func main() {
 		} else {
 			command.PrintStr(command.W, command.SSLVERIFY_TRUE)
 		}
+	}
+
+	// If the -query_context command line option is specified, SET the 'query_context' Query Parameter with the option's value
+	if queryContextFlag != "" {
+		err_code, err_str := command.PushValue_Helper(true, command.QueryParam, "query_context", queryContextFlag)
+		if err_code != 0 {
+			s_err := command.HandleError(err_code, err_str)
+			command.PrintError(s_err)
+		}
+
+		n1ql.SetQueryParams("query_context", queryContextFlag)
 	}
 
 	if noQueryService == false {
