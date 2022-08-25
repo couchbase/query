@@ -30,12 +30,12 @@ func NewFinalGroup(plan *plan.FinalGroup, context *Context) *FinalGroup {
 	var shouldSpill func(uint64, uint64) bool
 	if context.UseRequestQuota() {
 		shouldSpill = func(c uint64, n uint64) bool {
-			return (c+n) > context.ProducerThrottleQuota() && context.CurrentQuotaUsage() > 0.75
+			return (c+n) > context.ProducerThrottleQuota() && context.CurrentQuotaUsage() > _GROUP_QUOTA_THRESHOLD
 		}
 	} else {
 		maxSize := context.AvailableMemory()
 		if maxSize > 0 {
-			maxSize = uint64(float64(maxSize) / float64(util.NumCPU()) * 0.05) // 5% of per CPU free memory
+			maxSize = uint64(float64(maxSize) / float64(util.NumCPU()) * _GROUP_AVAILABLE_MEMORY_THRESHOLD)
 		}
 		if maxSize < _MIN_SIZE {
 			maxSize = _MIN_SIZE
@@ -44,6 +44,7 @@ func NewFinalGroup(plan *plan.FinalGroup, context *Context) *FinalGroup {
 			return (c + n) > maxSize
 		}
 	}
+
 	trackMem := func(size int64) {
 		if context.UseRequestQuota() {
 			if size < 0 {

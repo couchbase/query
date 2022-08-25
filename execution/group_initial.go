@@ -18,6 +18,11 @@ import (
 	"github.com/couchbase/query/value"
 )
 
+const (
+	_GROUP_QUOTA_THRESHOLD            = 0.75 // % quota usage
+	_GROUP_AVAILABLE_MEMORY_THRESHOLD = 0.15 // % per CPU free memory
+)
+
 // Grouping of input data.
 type InitialGroup struct {
 	base
@@ -30,12 +35,12 @@ func NewInitialGroup(plan *plan.InitialGroup, context *Context) *InitialGroup {
 	var shouldSpill func(uint64, uint64) bool
 	if plan.CanSpill() && context.UseRequestQuota() {
 		shouldSpill = func(c uint64, n uint64) bool {
-			return (c+n) > context.ProducerThrottleQuota() && context.CurrentQuotaUsage() > 0.75
+			return (c+n) > context.ProducerThrottleQuota() && context.CurrentQuotaUsage() > _GROUP_QUOTA_THRESHOLD
 		}
 	} else {
 		maxSize := context.AvailableMemory()
 		if maxSize > 0 {
-			maxSize = uint64(float64(maxSize) / float64(util.NumCPU()) * 0.05) // 5% of per CPU free memory
+			maxSize = uint64(float64(maxSize) / float64(util.NumCPU()) * _GROUP_AVAILABLE_MEMORY_THRESHOLD)
 		}
 		if maxSize < _MIN_SIZE {
 			maxSize = _MIN_SIZE
