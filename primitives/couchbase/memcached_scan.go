@@ -49,7 +49,7 @@ const _SS_MONITOR_INTERVAL = time.Minute * 15
  */
 
 func (b *Bucket) StartKeyScan(collId uint32, scope string, collection string, ranges []*SeqScanRange, offset int64, limit int64,
-	ordered bool, timeout time.Duration, pipelineSize int, kvTimeout time.Duration) (interface{}, qerrors.Error) {
+	ordered bool, timeout time.Duration, pipelineSize int, kvTimeout time.Duration, serverless bool) (interface{}, qerrors.Error) {
 
 	if limit == 0 {
 		limit = -1
@@ -63,20 +63,20 @@ func (b *Bucket) StartKeyScan(collId uint32, scope string, collection string, ra
 		}
 	}
 
-	scan := NewSeqScan(collId, ranges, offset, limit, ordered, pipelineSize, kvTimeout)
+	scan := NewSeqScan(collId, ranges, offset, limit, ordered, pipelineSize, kvTimeout, serverless)
 
 	go scan.coordinator(b, timeout)
 
 	return scan, nil
 }
 
-func (b *Bucket) StopKeyScan(scan interface{}) qerrors.Error {
+func (b *Bucket) StopKeyScan(scan interface{}) (uint64, qerrors.Error) {
 	ss, ok := scan.(*seqScan)
 	if !ok {
-		return qerrors.NewSSError(qerrors.E_SS_INVALID, "stop")
+		return 0, qerrors.NewSSError(qerrors.E_SS_INVALID, "stop")
 	}
 	ss.cancel()
-	return nil
+	return ss.runits, nil
 }
 
 func (b *Bucket) FetchKeys(scan interface{}, timeout time.Duration) ([]string, qerrors.Error, bool) {
@@ -230,10 +230,12 @@ type seqScan struct {
 	kvTimeout    time.Duration
 	readyQueue   rQueue
 	fetchLimit   uint32
+	serverless   bool
+	runits       uint64
 }
 
 func NewSeqScan(collId uint32, ranges []*SeqScanRange, offset int64, limit int64, ordered bool,
-	pipelineSize int, kvTimeout time.Duration) *seqScan {
+	pipelineSize int, kvTimeout time.Duration, serverless bool) *seqScan {
 
 	scan := &seqScan{
 		collId:       collId,
@@ -243,6 +245,7 @@ func NewSeqScan(collId uint32, ranges []*SeqScanRange, offset int64, limit int64
 		offset:       offset,
 		pipelineSize: pipelineSize,
 		kvTimeout:    kvTimeout,
+		serverless:   serverless,
 	}
 	scan.ch = make(chan interface{}, 1)
 	scan.fetchLimit = _SS_MAX_KEYS_PER_REQUEST
@@ -264,6 +267,10 @@ func (this *seqScan) timeout() {
 func (this *seqScan) cancel() {
 	this.inactive = true
 	this.readyQueue.cancel()
+}
+
+func (this *seqScan) addRU(ru uint64) {
+	atomic.AddUint64(&this.runits, ru)
 }
 
 func (this *seqScan) reportError(err qerrors.Error) bool {
@@ -1081,6 +1088,10 @@ func (this *vbRangeScan) runScan(conn *memcached.Client) bool {
 		}
 		return ok // only retain the connection if a valid KV error response
 	}
+	if this.scan.serverless {
+		ru, _ := response.ComputeUnits()
+		this.scan.addRU(ru)
+	}
 	opaque = response.Opaque
 	copy(uuid, response.Body[0:16])
 	if this.state == _VBS_CANCELLED {
@@ -1129,6 +1140,10 @@ func (this *vbRangeScan) runScan(conn *memcached.Client) bool {
 				this.reportError(qerrors.NewSSError(qerrors.E_SS_CONTINUE, err))
 				return cancelScan(false)
 			}
+		}
+		if this.scan.serverless {
+			ru, _ := response.ComputeUnits()
+			this.scan.addRU(ru)
 		}
 
 		if this.state == _VBS_CANCELLED {

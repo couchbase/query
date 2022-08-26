@@ -2429,7 +2429,7 @@ func (b *keyspace) IsBucket() bool {
 }
 
 func (ks *keyspace) StartKeyScan(ranges []*datastore.SeqScanRange, offset int64, limit int64, ordered bool,
-	timeout time.Duration, pipelineSize int, kvTimeout time.Duration) (interface{}, errors.Error) {
+	timeout time.Duration, pipelineSize int, kvTimeout time.Duration, serverless bool) (interface{}, errors.Error) {
 
 	r := make([]*cb.SeqScanRange, len(ranges))
 	for i := range ranges {
@@ -2441,13 +2441,15 @@ func (ks *keyspace) StartKeyScan(ranges []*datastore.SeqScanRange, offset int64,
 	if ok {
 		coll, ok := scope.keyspaces["_default"]
 		if ok {
-			return ks.cbbucket.StartKeyScan(coll.uid, "", "", r, offset, limit, ordered, timeout, pipelineSize, kvTimeout)
+			return ks.cbbucket.StartKeyScan(coll.uid, "", "", r, offset, limit, ordered, timeout, pipelineSize, kvTimeout,
+				serverless)
 		}
 	}
-	return ks.cbbucket.StartKeyScan(0, "_default", "_default", r, offset, limit, ordered, timeout, pipelineSize, kvTimeout)
+	return ks.cbbucket.StartKeyScan(0, "_default", "_default", r, offset, limit, ordered, timeout, pipelineSize, kvTimeout,
+		serverless)
 }
 
-func (ks *keyspace) StopKeyScan(scan interface{}) errors.Error {
+func (ks *keyspace) StopKeyScan(scan interface{}) (uint64, errors.Error) {
 	return ks.cbbucket.StopKeyScan(scan)
 }
 

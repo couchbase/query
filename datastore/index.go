@@ -761,6 +761,10 @@ func (this *IndexConnection) SkipKey(key string) bool {
 	return this.context.SkipKey(key)
 }
 
+func (this *IndexConnection) Context() Context {
+	return this.context
+}
+
 func (this *IndexKey) Expression() expression.Expression {
 	return this.Expr
 }
