@@ -28,7 +28,6 @@ import (
 	qerrors "github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/sort"
-	"github.com/couchbase/query/tenant"
 	"github.com/couchbase/query/util"
 )
 
@@ -71,13 +70,13 @@ func (b *Bucket) StartKeyScan(collId uint32, scope string, collection string, ra
 	return scan, nil
 }
 
-func (b *Bucket) StopKeyScan(scan interface{}) (uint64, qerrors.Error) {
+func (b *Bucket) StopKeyScan(scan interface{}) qerrors.Error {
 	ss, ok := scan.(*seqScan)
 	if !ok {
-		return 0, qerrors.NewSSError(qerrors.E_SS_INVALID, "stop")
+		return qerrors.NewSSError(qerrors.E_SS_INVALID, "stop")
 	}
 	ss.cancel()
-	return ss.runits, nil
+	return nil
 }
 
 func (b *Bucket) FetchKeys(scan interface{}, timeout time.Duration) ([]string, qerrors.Error, bool) {
@@ -231,7 +230,6 @@ type seqScan struct {
 	kvTimeout    time.Duration
 	readyQueue   rQueue
 	fetchLimit   uint32
-	runits       uint64
 }
 
 func NewSeqScan(collId uint32, ranges []*SeqScanRange, offset int64, limit int64, ordered bool,
@@ -266,10 +264,6 @@ func (this *seqScan) timeout() {
 func (this *seqScan) cancel() {
 	this.inactive = true
 	this.readyQueue.cancel()
-}
-
-func (this *seqScan) addRU(ru uint64) {
-	atomic.AddUint64(&this.runits, ru)
 }
 
 func (this *seqScan) reportError(err qerrors.Error) bool {
@@ -1087,10 +1081,6 @@ func (this *vbRangeScan) runScan(conn *memcached.Client) bool {
 		}
 		return ok // only retain the connection if a valid KV error response
 	}
-	if tenant.IsServerless() {
-		ru, _ := response.ComputeUnits()
-		this.scan.addRU(ru)
-	}
 	opaque = response.Opaque
 	copy(uuid, response.Body[0:16])
 	if this.state == _VBS_CANCELLED {
@@ -1139,10 +1129,6 @@ func (this *vbRangeScan) runScan(conn *memcached.Client) bool {
 				this.reportError(qerrors.NewSSError(qerrors.E_SS_CONTINUE, err))
 				return cancelScan(false)
 			}
-		}
-		if tenant.IsServerless() {
-			ru, _ := response.ComputeUnits()
-			this.scan.addRU(ru)
 		}
 
 		if this.state == _VBS_CANCELLED {

@@ -2447,7 +2447,7 @@ func (ks *keyspace) StartKeyScan(ranges []*datastore.SeqScanRange, offset int64,
 	return ks.cbbucket.StartKeyScan(0, "_default", "_default", r, offset, limit, ordered, timeout, pipelineSize, kvTimeout)
 }
 
-func (ks *keyspace) StopKeyScan(scan interface{}) (uint64, errors.Error) {
+func (ks *keyspace) StopKeyScan(scan interface{}) errors.Error {
 	return ks.cbbucket.StopKeyScan(scan)
 }
 
