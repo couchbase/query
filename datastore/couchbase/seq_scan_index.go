@@ -18,6 +18,7 @@ import (
 	qe "github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/logging"
+	"github.com/couchbase/query/tenant"
 	"github.com/couchbase/query/timestamp"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
@@ -445,10 +446,12 @@ func (this *seqScan) doScanEntries(requestId string, ordered bool, offset, limit
 	}
 
 	if ss != nil {
-		err = scanner.StopKeyScan(ss)
+		var ru uint64
+		ru, err = scanner.StopKeyScan(ss)
 		if err != nil {
 			conn.Error(qe.NewSSError(qe.E_SS_FAILED, err))
 		}
+		conn.Context().RecordKvRU(tenant.Unit(ru))
 	}
 	if returned > 0 {
 		n := atomic.AddUint64(&this.totalReturnCount, uint64(returned))
