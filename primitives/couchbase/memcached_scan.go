@@ -270,7 +270,9 @@ func (this *seqScan) cancel() {
 }
 
 func (this *seqScan) addRU(ru uint64) {
-	atomic.AddUint64(&this.runits, ru)
+	if ru != 0 {
+		atomic.AddUint64(&this.runits, ru)
+	}
 }
 
 func (this *seqScan) reportError(err qerrors.Error) bool {

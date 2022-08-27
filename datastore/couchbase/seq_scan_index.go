@@ -452,7 +452,9 @@ func (this *seqScan) doScanEntries(requestId string, ordered bool, offset, limit
 		if err != nil {
 			conn.Error(qe.NewSSError(qe.E_SS_FAILED, err))
 		}
-		conn.Context().RecordKvRU(tenant.Unit(ru))
+		if ru > 0 {
+			conn.Context().RecordKvRU(tenant.Unit(ru))
+		}
 	}
 	if returned > 0 {
 		n := atomic.AddUint64(&this.totalReturnCount, uint64(returned))
