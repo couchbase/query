@@ -60,10 +60,11 @@ type cbConfigStore struct {
 	cbConn       *couchbase.Client
 	clusterIds   []string
 	clusters     map[string]*cbCluster
+	uuid         string
 }
 
 // create a cbConfigStore given the path to a couchbase instance
-func NewConfigstore(path string) (clustering.ConfigurationStore, errors.Error) {
+func NewConfigstore(path string, uuid string) (clustering.ConfigurationStore, errors.Error) {
 	if strings.HasPrefix(path, _PREFIX) {
 		path = path[len(_PREFIX):]
 	}
@@ -78,6 +79,7 @@ func NewConfigstore(path string) (clustering.ConfigurationStore, errors.Error) {
 		poolSrvRev:   -999,
 		cbConn:       &c,
 		clusters:     make(map[string]*cbCluster, 1),
+		uuid:         uuid,
 	}
 
 	// pool names are set once and for all on connection,
@@ -478,8 +480,8 @@ func (this *cbConfigStore) checkPoolServices(pool *couchbase.Pool, poolServices 
 			return "", "", errors.NewAdminGetNodeError(nil, msg)
 		}
 
-		// now that we have identified the node, is n1ql actually running?
 		found := 0
+		// now that we have identified the node, is n1ql actually running?
 		for serv, proto := range n1qlProtocols {
 			port, ok := node.Services[serv]
 			ourPort, ook := this.ourPorts[proto]
@@ -490,7 +492,7 @@ func (this *cbConfigStore) checkPoolServices(pool *couchbase.Pool, poolServices 
 			if ok {
 				if ook && port == ourPort {
 					found++
-				} else {
+				} else if len(this.uuid) == 0 {
 					return "", clustering.STANDALONE, nil
 				}
 			}
@@ -506,7 +508,7 @@ func (this *cbConfigStore) checkPoolServices(pool *couchbase.Pool, poolServices 
 
 			// we found no n1ql service port - is n1ql provisioned in this node?
 			for _, node := range pool.Nodes {
-				if !node.ThisNode {
+				if !node.ThisNode || node.NodeUUID != this.uuid {
 					continue
 				}
 				for _, s := range node.Services {
@@ -529,46 +531,6 @@ func (this *cbConfigStore) checkPoolServices(pool *couchbase.Pool, poolServices 
 		}
 	}
 	return "", "", nil
-}
-
-func (this *cbConfigStore) NodeUUID(host string) (string, errors.Error) {
-	if this.poolName == "" {
-		_, _, err := this.doNameState()
-		if err != nil {
-			return "", err
-		}
-	}
-	pool, err := this.cbConn.GetPool(this.poolName)
-	if err != nil {
-		return "", errors.NewAdminGetNodeError(err, this.poolName)
-	}
-	host = strings.ToLower(host)
-	for _, n := range pool.Nodes {
-		if strings.ToLower(n.Hostname) == host {
-			return n.NodeUUID, nil
-		}
-	}
-	return "", errors.NewAdminNoNodeError(host)
-}
-
-func (this *cbConfigStore) UUIDToHost(uuid string) (string, errors.Error) {
-	if this.poolName == "" {
-		_, _, err := this.doNameState()
-		if err != nil {
-			return "", err
-		}
-	}
-	pool, err := this.cbConn.GetPool(this.poolName)
-	if err != nil {
-		return "", errors.NewAdminGetNodeError(err, this.poolName)
-	}
-	uuid = strings.ToLower(uuid)
-	for _, n := range pool.Nodes {
-		if strings.ToLower(n.NodeUUID) == uuid {
-			return n.Hostname, nil
-		}
-	}
-	return "", errors.NewAdminNoNodeError(uuid)
 }
 
 // Type services associates a protocol with a port number
@@ -600,6 +562,7 @@ type cbCluster struct {
 	queryNodeNames    []string                      `json:"-"`
 	queryNodeServices map[string]services           `json:"-"`
 	queryNodes        map[string]*cbQueryNodeConfig `json:"-"`
+	queryNodeUUIDs    map[string]string             `json:"-"`
 	capabilities      map[string]bool               `json:"-"`
 	poolSrvRev        int                           `json:"-"`
 	lastCheck         util.Time                     `json:"-"`
@@ -677,6 +640,11 @@ func (this *cbCluster) QueryNodeNames() ([]string, errors.Error) {
 	// If pool services and cluster rev do not match, update the cluster's rev and query node data:
 	queryNodeNames := []string{}
 	queryNodeServices := map[string]services{}
+	queryNodeUUIDs := make(map[string]string)
+	pool, err := configStore.cbConn.GetPool(configStore.poolName)
+	if err != nil {
+		return nil, errors.NewAdminGetNodeError(err, configStore.poolName)
+	}
 	for _, nodeServices := range poolServices.NodesExt {
 		var queryServices services
 		for name, protocol := range n1qlProtocols {
@@ -725,6 +693,14 @@ func (this *cbCluster) QueryNodeNames() ([]string, errors.Error) {
 
 		queryNodeNames = append(queryNodeNames, nodeId)
 		queryNodeServices[nodeId] = queryServices
+
+		// Get NodeUUID
+		for _, n := range pool.Nodes {
+			if n.Hostname == nodeId {
+				queryNodeUUIDs[nodeId] = n.NodeUUID
+				break
+			}
+		}
 	}
 
 	var capabilities map[string]bool
@@ -752,6 +728,7 @@ func (this *cbCluster) QueryNodeNames() ([]string, errors.Error) {
 	this.Lock()
 	defer this.Unlock()
 	this.queryNodeNames = queryNodeNames
+	this.queryNodeUUIDs = queryNodeUUIDs
 	this.queryNodeServices = queryNodeServices
 	this.queryNodes = make(map[string]*cbQueryNodeConfig)
 	this.capabilities = capabilities
@@ -785,9 +762,12 @@ func (this *cbCluster) QueryNodeByName(name string) (clustering.QueryNode, error
 		return nil, errors.NewAdminNoNodeError(name)
 	}
 
+	uuid, _ := this.queryNodeUUIDs[name]
+
 	qryNode := &cbQueryNodeConfig{
 		ClusterName:   this.Name(),
 		QueryNodeName: qryNodeName,
+		QueryNodeUUID: uuid,
 	}
 
 	// We find the host based on query name
@@ -942,10 +922,32 @@ func (this *cbCluster) ReportEventAsync(event string) {
 	}()
 }
 
+func (this *cbCluster) NodeUUID(host string) (string, errors.Error) {
+	qni, err := this.QueryNodeByName(host)
+	if err != nil {
+		return "", err
+	}
+	return qni.NodeUUID(), nil
+}
+
+func (this *cbCluster) UUIDToHost(uuid string) (string, errors.Error) {
+	_, err := this.QueryNodeNames()
+	if err != nil {
+		return "", err
+	}
+	for h, u := range this.queryNodeUUIDs {
+		if u == uuid {
+			return h, nil
+		}
+	}
+	return "", errors.NewAdminNoNodeError(uuid)
+}
+
 // cbQueryNodeConfig implements clustering.QueryNode
 type cbQueryNodeConfig struct {
 	ClusterName   string                    `json:"cluster"`
 	QueryNodeName string                    `json:"name"`
+	QueryNodeUUID string                    `json:"uuid"`
 	Query         string                    `json:"queryEndpoint,omitempty"`
 	Admin         string                    `json:"adminEndpoint,omitempty"`
 	QuerySSL      string                    `json:"querySecure,omitempty"`
@@ -991,6 +993,10 @@ func (this *cbQueryNodeConfig) Standalone() clustering.Standalone {
 
 func (this *cbQueryNodeConfig) Options() clustering.QueryNodeOptions {
 	return this.OptionsCL
+}
+
+func (this *cbQueryNodeConfig) NodeUUID() string {
+	return this.QueryNodeUUID
 }
 
 func getJsonString(i interface{}) string {

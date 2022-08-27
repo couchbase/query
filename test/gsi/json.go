@@ -408,7 +408,7 @@ func Start(site, pool, namespace string, setGlobals bool) *MockServer {
 		datastore.SetSystemstore(sys)
 	}
 
-	configstore, err := config_resolver.NewConfigstore("stub:")
+	configstore, err := config_resolver.NewConfigstore("stub:", "")
 	if err != nil {
 		logging.Errorf("Could not connect to configstore: %v", err)
 	}

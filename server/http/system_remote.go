@@ -641,12 +641,20 @@ func (this *systemRemoteHttp) WhoAmI() string {
 }
 
 func (this *systemRemoteHttp) NodeUUID(host string) string {
-	uuid, _ := this.configStore.NodeUUID(host)
+	cluster, err := this.configStore.Cluster()
+	if err != nil {
+		return ""
+	}
+	uuid, _ := cluster.NodeUUID(host)
 	return uuid
 }
 
 func (this *systemRemoteHttp) UUIDToHost(uuid string) string {
-	host, _ := this.configStore.UUIDToHost(uuid)
+	cluster, err := this.configStore.Cluster()
+	if err != nil {
+		return ""
+	}
+	host, _ := cluster.UUIDToHost(uuid)
 	return host
 }
 
