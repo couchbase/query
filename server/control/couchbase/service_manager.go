@@ -34,6 +34,7 @@ type ServiceMgr struct {
 	waiters  waiters
 
 	thisHost string
+	enabled  bool
 }
 
 // to reduce the occasions when host is looked up from node ID, cache it here
@@ -51,6 +52,8 @@ type state struct {
 
 type waiter chan state
 type waiters map[waiter]struct{}
+
+const _INIT_WARN_TIME = 5
 
 func NewManager(uuid string) Manager {
 	var mgr *ServiceMgr
@@ -90,11 +93,18 @@ func (m *ServiceMgr) setInitialNodeList() {
 
 	// wait for the node to be part of a cluster
 	m.thisHost = distributed.RemoteAccess().WhoAmI()
+	i := 0
 	for distributed.RemoteAccess().Starting() && m.thisHost == "" {
+		if i >= _INIT_WARN_TIME {
+			logging.Warnf("Cluster initialisation taking longer than expected.")
+			i = 0
+		}
 		time.Sleep(time.Second)
 		m.thisHost = distributed.RemoteAccess().WhoAmI()
+		i++
 	}
 	if m.thisHost == "" {
+		m.thisHost = string(m.nodeInfo.NodeID)
 		// we won't get a server list so exit
 		return
 	}
@@ -115,21 +125,28 @@ func (m *ServiceMgr) setInitialNodeList() {
 		info = append(info, ' ')
 	}
 
-	// since preparation may take a short time it is technically possible to receive new topology from the orchestrator before
-	// we're able to update with our initial understanding; don't overwrite if this is the case
+	m.mu.Lock()
 	set := false
-	m.updateState(func(s *state) {
+	m.updateStateLOCKED(func(s *state) {
 		if s.servers == nil {
 			s.servers = nodeList
 			set = true
 		}
 	})
+	m.enabled = true
+	if !set {
+		// set by PrepareTopologyChange message being received before this has completed so just validate/update the admin ops
+		checkPrepareOperations(m.servers, "ServiceMgr::setInitialNodeList")
+	}
+	m.mu.Unlock()
 
 	if set {
 		if len(info) == 0 {
 			info = append(info, []rune("no active nodes")...)
 		}
 		logging.Infof("Initial topology: %v", string(info))
+	} else {
+		logging.Infof("Topology already set.")
 	}
 }
 
@@ -233,6 +250,11 @@ func (m *ServiceMgr) GetTaskList(rev service.Revision, cancel service.Cancel) (*
 
 func (m *ServiceMgr) CancelTask(id string, rev service.Revision) error {
 	logging.Debuga(func() string { return fmt.Sprintf("ServiceMgr::CancelTask entry %v %v", id, DecodeRev(rev)) })
+
+	if !m.enabled {
+		logging.Debuga(func() string { return "ServiceMgr::CancelTask exit: not enabled" })
+		return nil // do nothing, but don't fail
+	}
 
 	timeout := time.Duration(0)
 	data := "cancel=true"
@@ -344,7 +366,7 @@ func (m *ServiceMgr) GetCurrentTopology(rev service.Revision, cancel service.Can
 	topology.Rev = EncodeRev(state.rev)
 	m.mu.Lock()
 	if m.servers != nil && len(m.servers) != 0 {
-		if m.thisHost != "" {
+		if m.enabled {
 			checkPrepareOperations(m.servers, "ServiceMgr::GetCurrentTopology")
 		}
 		for _, s := range m.servers {
@@ -367,8 +389,8 @@ func (m *ServiceMgr) GetCurrentTopology(rev service.Revision, cancel service.Can
 func prepareOperation(host string, caller string) interface{} {
 	ps, err := distributed.RemoteAccess().PrepareAdminOp(host, "shutdown", "", nil, distributed.NO_CREDS, "")
 	if err != nil {
-		logging.Debuga(func() string {
-			return fmt.Sprintf("%v Failed to prepare admin operation for %v: %v", caller, host, err)
+		logging.Warna(func() string {
+			return fmt.Sprintf("%v Failed to prepare admin operation for [%v]: %v", caller, host, err)
 		})
 	}
 	return ps
@@ -377,7 +399,14 @@ func prepareOperation(host string, caller string) interface{} {
 func checkPrepareOperations(servers []queryServer, caller string) {
 	for i := range servers {
 		if servers[i].nodeInfo.Opaque == nil {
-			servers[i].nodeInfo.Opaque = prepareOperation(servers[i].host, caller)
+			if servers[i].host == "" {
+				servers[i].host = distributed.RemoteAccess().UUIDToHost(string(servers[i].nodeInfo.NodeID))
+			}
+			if servers[i].host == "" {
+				logging.Warnf("%v: Unable to resolve host for node %v", caller, string(servers[i].nodeInfo.NodeID))
+			} else {
+				servers[i].nodeInfo.Opaque = prepareOperation(servers[i].host, caller)
+			}
 		}
 	}
 }
@@ -387,15 +416,15 @@ func (m *ServiceMgr) PrepareTopologyChange(change service.TopologyChange) error 
 	logging.Debuga(func() string { return fmt.Sprintf("ServiceMgr::PrepareTopologyChange entry: %v", change) })
 
 	if change.Type != service.TopologyChangeTypeFailover && change.Type != service.TopologyChangeTypeRebalance {
-		logging.Debugf("ServiceMgr::PrepareTopologyChange exit")
+		logging.Infof("ServiceMgr::PrepareTopologyChange exit [type: %v]", change.Type)
 		return service.ErrNotSupported
 	}
 
-	level := logging.INFO
-	if m.thisHost == "" {
-		level = logging.DEBUG
+	if m.servers != nil {
+		logging.Infof("Preparing for possible topology change")
+	} else {
+		logging.Infof("Preparing topology")
 	}
-	logging.Logf(level, "Preparing for possible topology change")
 
 	// for each node we know about, cache its shutdown URL
 	info := make([]rune, 0, len(change.KeepNodes)*64)
@@ -456,7 +485,7 @@ func (m *ServiceMgr) PrepareTopologyChange(change service.TopologyChange) error 
 	if len(info) == 0 {
 		info = append(info, []rune("no active nodes")...)
 	}
-	logging.Logf(level, "Topology: %s", string(info))
+	logging.Infof("Topology: %s", string(info))
 	logging.Debugf("ServiceMgr::PrepareTopologyChange exit")
 	return nil
 }
@@ -467,7 +496,7 @@ func (m *ServiceMgr) PrepareTopologyChange(change service.TopologyChange) error 
 func (m *ServiceMgr) StartTopologyChange(change service.TopologyChange) error {
 	logging.Debuga(func() string { return fmt.Sprintf("ServiceMgr::StartTopologyChange %v", change) })
 
-	if m.thisHost == "" {
+	if !m.enabled {
 		logging.Debuga(func() string { return "ServiceMgr::StartTopologyChange exit: not enabled" })
 		return nil // do nothing, but don't fail
 	}

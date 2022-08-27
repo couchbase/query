@@ -66,7 +66,7 @@ func (z *zkConfigStore) URL() string {
 	return "zookeeper:" + z.url
 }
 
-func (z *zkConfigStore) SetOptions(monitor clustering.StateMonitor, httpAddr, httpsAddr string, managed bool) errors.Error {
+func (z *zkConfigStore) SetOptions(httpAddr, httpsAddr string, managed bool) errors.Error {
 	return nil
 }
 
@@ -171,14 +171,6 @@ func (z *zkConfigStore) State() (clustering.Mode, errors.Error) {
 
 func (z *zkConfigStore) Cluster() (clustering.Cluster, errors.Error) {
 	return nil, nil
-}
-
-func (z *zkConfigStore) NodeUUID(string) (string, errors.Error) {
-	return "", nil
-}
-
-func (z *zkConfigStore) UUIDToHost(string) (string, errors.Error) {
-	return "", nil
 }
 
 // zkCluster implements clustering.Cluster
@@ -397,6 +389,14 @@ func (z *zkCluster) GetQueryNodes() ([]clustering.QueryNode, errors.Error) {
 func (this *zkCluster) ReportEventAsync(event string) {
 }
 
+func (this *zkCluster) NodeUUID(string) (string, errors.Error) {
+	return "", nil
+}
+
+func (this *zkCluster) UUIDToHost(string) (string, errors.Error) {
+	return "", nil
+}
+
 // zkQueryNodeConfig implements clustering.QueryNode
 type zkQueryNodeConfig struct {
 	ClusterName      string                    `json:"cluster_name"`
@@ -453,6 +453,10 @@ func (z *zkQueryNodeConfig) Cluster() clustering.Cluster {
 
 func (z *zkQueryNodeConfig) Name() string {
 	return z.QueryNodeName
+}
+
+func (z *zkQueryNodeConfig) NodeUUID() string {
+	return z.Name()
 }
 
 func (z *zkQueryNodeConfig) QueryEndpoint() string {

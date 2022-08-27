@@ -34,6 +34,7 @@ const (
 	CLUSTER_STUB_ID                  string = "ClusterStubID"
 	CLUSTER_STUB_NAME                string = "ClusterStubName"
 	QUERY_NODE_STUB_ID               string = "QueryNodeStubID"
+	QUERY_NODE_STUB_UUID             string = "QueryNodeStubUUID"
 	QUERY_NODE_STUB_QUERY_ENDPOINT   string = "QueryNodeStubQueryEndPoint"
 	QUERY_NODE_STUB_CLUSTER_ENDPOINT string = "QueryNodeStubClusterEndPoint"
 )
@@ -61,7 +62,7 @@ func (ConfigurationStoreStub) URL() string {
 	return CONFIGURATION_STORE_STUB_URL
 }
 
-func (ConfigurationStoreStub) SetOptions(monitor clustering.StateMonitor, httpAddr, httpsAddr string, managed bool) errors.Error {
+func (ConfigurationStoreStub) SetOptions(httpAddr, httpsAddr string, managed bool) errors.Error {
 	return nil
 }
 
@@ -99,14 +100,6 @@ func (ConfigurationStoreStub) State() (clustering.Mode, errors.Error) {
 
 func (ConfigurationStoreStub) Cluster() (clustering.Cluster, errors.Error) {
 	return nil, nil
-}
-
-func (ConfigurationStoreStub) NodeUUID(host string) (string, errors.Error) {
-	return "", nil
-}
-
-func (ConfigurationStoreStub) UUIDToHost(uuid string) (string, errors.Error) {
-	return "", nil
 }
 
 // ClusterStub is a stub implementation of clustering.Cluster
@@ -164,6 +157,14 @@ func (ClusterStub) Settings() (map[string]interface{}, errors.Error) {
 func (ClusterStub) ReportEventAsync(event string) {
 }
 
+func (ClusterStub) NodeUUID(host string) (string, errors.Error) {
+	return "", nil
+}
+
+func (ClusterStub) UUIDToHost(uuid string) (string, errors.Error) {
+	return "", nil
+}
+
 // StandaloneStub is a stub implementation of clustering.Standalone
 type StandaloneStub struct{}
 
@@ -192,6 +193,10 @@ func (QueryNodeStub) Cluster() clustering.Cluster {
 
 func (QueryNodeStub) Name() string {
 	return QUERY_NODE_STUB_ID
+}
+
+func (QueryNodeStub) NodeUUID() string {
+	return QUERY_NODE_STUB_UUID
 }
 
 func (QueryNodeStub) QueryEndpoint() string {

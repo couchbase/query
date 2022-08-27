@@ -273,10 +273,12 @@ func main() {
 	datastore.SetConnectionSecurityConfig(nullSecurityConfig)
 
 	// configstore should be set before the system datastore
-	configstore, err := config_resolver.NewConfigstore(*CONFIGSTORE)
+	configstore, err := config_resolver.NewConfigstore(*CONFIGSTORE, *UUID)
 	if err != nil {
 		logging.Errorf("Could not connect to configstore: %v", err)
 	}
+	// configstore options must be set immediately after creation as other start-up operations will depend on them being set
+	configstore.SetOptions(*HTTP_ADDR, *HTTPS_ADDR, (*HTTP_ADDR == _DEF_HTTP && *HTTPS_ADDR == _DEF_HTTPS))
 
 	// ditto for distributed access for monitoring
 	// also distributed is used by many init() functions and should be done as early as possible
@@ -359,7 +361,6 @@ func main() {
 	server.SetMemoryQuota(*MEMORY_QUOTA)
 	server.SetGCPercent(*_GOGC_PERCENT)
 	server.SetRequestErrorLimit(*REQUEST_ERROR_LIMIT)
-	configstore.SetOptions(server, *HTTP_ADDR, *HTTPS_ADDR, (*HTTP_ADDR == _DEF_HTTP && *HTTPS_ADDR == _DEF_HTTPS))
 
 	audit.StartAuditService(*DATASTORE, server.Servicers()+server.PlusServicers())
 
