@@ -112,7 +112,7 @@ func (this *BuildIndexes) RunOnce(context *Context, parent value.Value) {
 			return
 		}
 
-		if node.Using() == datastore.GSI || node.Using() == datastore.DEFAULT {
+		if context.useCBO && (node.Using() == datastore.GSI || node.Using() == datastore.DEFAULT) {
 			err = updateStats(idxNames, "build_index", this.plan.Keyspace(), context)
 			if err != nil {
 				context.Error(err)
