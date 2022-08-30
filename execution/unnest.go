@@ -86,10 +86,9 @@ func (this *Unnest) processItem(item value.AnnotatedValue, context *Context) boo
 	buildBitFltr := this.hasBuildBitFilter()
 
 	// Attach and send
+	var av value.AnnotatedValue
+	var actv value.AnnotatedValue
 	for {
-		var av value.AnnotatedValue
-		var actv value.AnnotatedValue
-
 		if actv == nil {
 			actv = value.NewAnnotatedValue(act)
 		} else {
