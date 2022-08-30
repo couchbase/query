@@ -1715,10 +1715,14 @@ const (
 )
 
 func (this *Server) LoadFactor() int {
+	return getQsLoadFactor()
+}
+
+func (this *Server) loadFactor(refresh bool) int {
 	// consider one request per servicer in queue is normal
 	servicers := util.MinInt(int(this.ServicerUsage()/_SERVICE_OVERHEAD_FACTOR), _SERVICE_PERCENT_LIMIT)
-	cpu := int(this.CpuUsage(true))
-	memory := int(this.MemoryUsage(true))
+	cpu := int(this.CpuUsage(refresh))
+	memory := int(this.MemoryUsage(refresh))
 	// max of all of them
 	return util.MaxInt(util.MaxInt(servicers, cpu), memory)
 

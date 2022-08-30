@@ -9,6 +9,7 @@
 package server
 
 import (
+	"sync/atomic"
 	"time"
 
 	json "github.com/couchbase/go_json"
@@ -17,17 +18,24 @@ import (
 )
 
 const (
-	_STATS_INTRVL = 30 * time.Second
-	_LOG_INTRVL   = 10
+	_STATS_INTRVL   = 30 * time.Second // load factor interval
+	_LOG_INTRVL     = 10               // log interval 5min
+	_MOVING_WINDOW  = 30               // 15min, load factor moving average of 15min i.e 30 values
+	DEF_LOAD_FACTOR = 35               // default load factor above 30% so that at start no nodes will be added
 )
+
+var qsLoadFactor uint32 // Query Service moving average Load Factor
 
 //////////////////////////////////////////////////////////////
 // Concrete Type/Struct
 //////////////////////////////////////////////////////////////
 
 type statsCollector struct {
-	server *Server
-	stats  *system.SystemStats
+	server           *Server
+	stats            *system.SystemStats
+	loadFactors      [_MOVING_WINDOW]int
+	sumOfLoadFactors int
+	nLoadFactors     int
 }
 
 //////////////////////////////////////////////////////////////
@@ -47,11 +55,17 @@ func (this *Server) StartStatsCollector() (err error) {
 		logging.Errorf("StartStatsCollector error : %v", err)
 		return err
 	}
+	for i := 0; i < len(collector.loadFactors); i++ {
+		collector.loadFactors[i] = DEF_LOAD_FACTOR
+		collector.sumOfLoadFactors += collector.loadFactors[i]
+		collector.nLoadFactors += 1
+	}
 
 	// skip the first one
 	collector.stats.ProcessCpuPercent()
 	collector.stats.ProcessRSS()
 	collector.stats.GetTotalAndFreeMem(false)
+	updateQsLoadFactor(int(collector.sumOfLoadFactors / collector.nLoadFactors))
 
 	// start stats collection
 	go collector.runCollectStats()
@@ -71,24 +85,29 @@ func (c *statsCollector) runCollectStats() {
 		go c.runCollectStats()
 	}()
 
-	count := 0
+	index := 0
 	refresh := true
 	mstats := make(map[string]interface{}, 20)
+
 	for range ticker.C {
-		_, rss, total, free, err := system.GetSystemStats(c.stats, refresh, count == 0)
+		_, rss, total, free, err := system.GetSystemStats(c.stats, refresh, index == 0)
 		if err != nil {
 			logging.Debugf("statsCollector error : %v", err)
 		}
 		c.server.MemoryStats(refresh)
+		loadFactor := c.server.loadFactor(refresh)
+		c.sumOfLoadFactors += (loadFactor - c.loadFactors[index])
+		c.loadFactors[index] = loadFactor
+		updateQsLoadFactor(int(c.sumOfLoadFactors / c.nLoadFactors))
 
-		if count == 0 {
+		if (index % _LOG_INTRVL) == 0 {
 			getQueryEngineStats(c.server, mstats, rss, total, free)
 			if buf, e := json.Marshal(mstats); e == nil {
 				logging.Infof("Query Engine Stats %v", string(buf))
 			}
 		}
-		count++
-		count %= _LOG_INTRVL
+		index++
+		index %= c.nLoadFactors
 	}
 }
 
@@ -96,7 +115,7 @@ func getQueryEngineStats(server *Server, mstats map[string]interface{}, rss, tot
 	mstats["process.rss"] = rss
 	mstats["host.memory.total"] = total
 	mstats["host.memory.free"] = free
-	mstats["loadfactor"] = server.LoadFactor()
+	mstats["loadfactor"] = getQsLoadFactor()
 	mstats["load"] = server.Load()
 	mstats["process.service.usage"] = server.ServicerUsage()
 	mstats["process.percore.cpupercent"] = server.CpuUsage(false)
@@ -114,4 +133,12 @@ func getQueryEngineStats(server *Server, mstats map[string]interface{}, rss, tot
 	for n, v := range mv {
 		mstats[n] = v
 	}
+}
+
+func updateQsLoadFactor(loadFactor int) {
+	atomic.StoreUint32(&qsLoadFactor, uint32(loadFactor))
+}
+
+func getQsLoadFactor() int {
+	return int(atomic.LoadUint32(&qsLoadFactor))
 }
