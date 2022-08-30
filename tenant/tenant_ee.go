@@ -166,17 +166,13 @@ func User(ctx Context) string {
 // TODO define units for query and js-evaluator
 func RecordCU(ctx Context, d time.Duration, m uint64) Unit {
 	units, _ := metering.QueryEvalComputeToCU(d, m)
-	if ctx.Bucket() != "" {
-		regulator.RecordUnits(ctx, units)
-	}
+	regulator.RecordUnits(ctx, units)
 	return Unit(units.Whole())
 }
 
 func RecordJsCU(ctx Context, d time.Duration, m uint64) Unit {
 	units, _ := metering.QueryUDFComputeToCU(d, m)
-	if ctx.Bucket() != "" {
-		regulator.RecordUnits(ctx, units)
-	}
+	regulator.RecordUnits(ctx, units)
 	return Unit(units.Whole())
 }
 
