@@ -244,6 +244,10 @@ func (this *testingContext) Credentials() *auth.Credentials {
 	return nil
 }
 
+func (this *testingContext) SkipKey(key string) bool {
+	return false
+}
+
 // Helper function to scan the primary index of given keyspace with given span
 func doIndexScan(t *testing.T, b datastore.Keyspace, span *datastore.Span) (
 	e []*datastore.IndexEntry, excp errors.Error) {

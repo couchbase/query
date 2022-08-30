@@ -99,6 +99,10 @@ func (ci *queryContextImpl) RecordKvRU(ru tenant.Unit) {
 func (ci *queryContextImpl) RecordKvWU(wu tenant.Unit) {
 }
 
+func (ci *queryContextImpl) SkipKey(key string) bool {
+	return false
+}
+
 func TestSystem(t *testing.T) {
 	// Use mock to test system; 2 namespaces with 5 keyspaces per namespace
 	m, err := mock.NewDatastore("mock:namespaces=2,keyspaces=5,items=5000")

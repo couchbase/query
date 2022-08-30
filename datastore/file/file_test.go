@@ -231,3 +231,7 @@ func (this *testingContext) RecordKvWU(wu tenant.Unit) {
 func (this *testingContext) Credentials() *auth.Credentials {
 	return nil
 }
+
+func (this *testingContext) SkipKey(key string) bool {
+	return false
+}
