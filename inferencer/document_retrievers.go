@@ -735,6 +735,7 @@ next_index:
 
 func (udr *UnifiedDocumentRetriever) restartScan(offset int64) {
 	udr.iconn = datastore.NewIndexConnection(datastore.NULL_CONTEXT)
+	udr.iconn.SetSkipMetering(true)
 	index := udr.indexes[udr.currentIndex].(datastore.Index3)
 	proj := &datastore.IndexProjection{PrimaryKey: true}
 	ss := int64(math.MaxInt64)

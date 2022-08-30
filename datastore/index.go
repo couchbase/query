@@ -602,11 +602,12 @@ type Statistics interface {
 }
 
 type IndexConnection struct {
-	sender      EntryExchange
-	context     Context
-	timeout     bool
-	primary     bool
-	skipNewKeys bool
+	sender       EntryExchange
+	context      Context
+	timeout      bool
+	primary      bool
+	skipNewKeys  bool
+	skipMetering bool
 }
 
 type Sender interface {
@@ -755,6 +756,14 @@ func (this *IndexConnection) SetSkipNewKeys(on bool) {
 
 func (this *IndexConnection) SkipNewKeys() bool {
 	return this.skipNewKeys
+}
+
+func (this *IndexConnection) SetSkipMetering(on bool) {
+	this.skipMetering = on
+}
+
+func (this *IndexConnection) SkipMetering() bool {
+	return this.skipMetering
 }
 
 func (this *IndexConnection) SkipKey(key string) bool {
