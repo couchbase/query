@@ -52,11 +52,11 @@ func Get(key string) (DictCacheEntry, error) {
 	return nil, nil
 }
 
-func Count() (int64, error) {
+func Count(bucketName string, context datastore.QueryContext, check func(context datastore.QueryContext, elems ...string) bool) (int64, error) {
 	return -1, nil
 }
 
-func Foreach(f func(string) error) error {
+func Foreach(bucketName string, context datastore.QueryContext, check func(context datastore.QueryContext, elems ...string) bool, proc func(string) error) error {
 	return nil
 }
 

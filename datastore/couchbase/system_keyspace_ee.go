@@ -254,14 +254,27 @@ func (s *store) CreateSysPrimaryIndex(idxName, requestId string, indexer3 datast
 
 	var sysIndex datastore.Index
 	maxRetry := 8
+	if idxName == _BUCKET_SYSTEM_PRIM_INDEX {
+		maxRetry = 10
+	}
 	interval := 250 * time.Millisecond
 	for i := 0; i < maxRetry; i++ {
 		time.Sleep(interval)
 		interval *= 2
 
+		er = indexer3.Refresh()
+		if er != nil {
+			return er
+		}
 		sysIndex, er = indexer3.IndexByName(idxName)
 		if sysIndex != nil {
-			break
+			state, _, err1 := sysIndex.State()
+			if err1 != nil {
+				return err1
+			}
+			if state == datastore.ONLINE {
+				break
+			}
 		} else if er != nil && er.Code() != errors.E_CB_INDEX_NOT_FOUND {
 			return er
 		}

@@ -60,12 +60,12 @@ func Get(key string) (DictCacheEntry, error) {
 	return ce.(DictCacheEntry), nil
 }
 
-func Count() (int64, error) {
-	return dictionary.Count()
+func Count(bucketName string, context datastore.QueryContext, check func(context datastore.QueryContext, elems ...string) bool) (int64, error) {
+	return dictionary.Count(bucketName, context, check)
 }
 
-func Foreach(f func(string) error) error {
-	return dictionary.Foreach(f)
+func Foreach(bucketName string, context datastore.QueryContext, check func(context datastore.QueryContext, elems ...string) bool, proc func(string) error) error {
+	return dictionary.Foreach(bucketName, context, check, proc)
 }
 
 func DropDictionaryEntry(keyspace string, isDropBucket bool) {

@@ -38,12 +38,21 @@ func (b *dictionaryKeyspace) Name() string {
 }
 
 func (b *dictionaryKeyspace) Count(context datastore.QueryContext) (int64, errors.Error) {
-	count, err := dictionary.Count()
-	if err == nil {
-		return count, nil
-	} else {
-		return 0, errors.NewSystemCollectionError("Count from system collection", err)
+	var count int64
+	var check func(context datastore.QueryContext, elems ...string) bool
+	credentials := context.Credentials()
+	if !datastore.IsAdmin(credentials) {
+		check = canRead
 	}
+	buckets := datastore.GetDatastore().GetUserBuckets(credentials)
+	for _, bk := range buckets {
+		cnt, err := dictionary.Count(bk, context, check)
+		if err != nil {
+			return 0, errors.NewSystemCollectionError("Count from system collection", err)
+		}
+		count += cnt
+	}
+	return count, nil
 }
 
 func (b *dictionaryKeyspace) Size(context datastore.QueryContext) (int64, errors.Error) {
@@ -194,12 +203,22 @@ func (pi *dictionaryIndex) ScanEntries(requestId string, limit int64, cons datas
 	vector timestamp.Vector, conn *datastore.IndexConnection) {
 	defer conn.Sender().Close()
 
-	err := dictionary.Foreach(func(path string) error {
-		entry := datastore.IndexEntry{PrimaryKey: path}
-		sendSystemKey(conn, &entry)
-		return nil
-	})
-	if err != nil {
-		conn.Error(errors.NewSystemCollectionError("Iterate through system collection", err))
+	context := conn.QueryContext()
+	var check func(context datastore.QueryContext, elems ...string) bool
+	credentials := context.Credentials()
+	if !datastore.IsAdmin(credentials) {
+		check = canRead
+	}
+	buckets := datastore.GetDatastore().GetUserBuckets(credentials)
+	for _, bk := range buckets {
+		err := dictionary.Foreach(bk, context, check, func(path string) error {
+			entry := datastore.IndexEntry{PrimaryKey: path}
+			sendSystemKey(conn, &entry)
+			return nil
+		})
+		if err != nil {
+			conn.Error(errors.NewSystemCollectionError("Iterate through system collection", err))
+			return
+		}
 	}
 }
