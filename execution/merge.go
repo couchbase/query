@@ -105,19 +105,19 @@ func (this *Merge) RunOnce(context *Context, parent value.Value) {
 		if update != nil {
 			this.children = append(this.children, update)
 			this.inputs = append(this.inputs, updateInput)
-			update.SetStop(this)
+			update.SetStop(newActionStopNotifier(this))
 		}
 
 		if delete != nil {
 			this.children = append(this.children, delete)
 			this.inputs = append(this.inputs, deleteInput)
-			delete.SetStop(this)
+			delete.SetStop(newActionStopNotifier(this))
 		}
 
 		if insert != nil {
 			this.children = append(this.children, insert)
 			this.inputs = append(this.inputs, insertInput)
-			insert.SetStop(this)
+			insert.SetStop(newActionStopNotifier(this))
 		}
 
 		for _, child := range this.children {
@@ -432,3 +432,19 @@ func (this *Merge) Done() {
 var _MERGE_OPERATOR_POOL = NewOperatorPool(3)
 var _MERGE_CHANNEL_POOL = NewChannelPool(3)
 var _MERGE_KEY_POOL = util.NewStringBoolPool(1024)
+
+// The sole purpose of this notifier is to interrupt a waiting exchange when an action halts before all items have been processed
+// It is separate from the Merge operator as an action stopping need not stop the operator itself
+type actionStopNotifier struct {
+	exchange *valueExchange
+}
+
+func (this *actionStopNotifier) SendAction(action opAction) {
+	if this.exchange.isWaiting() {
+		this.exchange.sendStop()
+	}
+}
+
+func newActionStopNotifier(op Operator) *actionStopNotifier {
+	return &actionStopNotifier{exchange: &op.getBase().valueExchange}
+}

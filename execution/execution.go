@@ -23,10 +23,16 @@ import (
 
 type stopChannel chan int
 
+type OpSendAction interface {
+	SendAction(action opAction) // Stop or Pause the operator
+}
+
 type Operator interface {
 	json.Marshaler // used for profiling
 
 	consumer
+
+	OpSendAction
 
 	Accept(visitor Visitor) (interface{}, error)
 	ValueExchange() *valueExchange                 // Closed by this operator
@@ -34,8 +40,8 @@ type Operator interface {
 	SetInput(op Operator)                          // Can be set
 	Output() Operator                              // Written by this operator
 	SetOutput(op Operator)                         // Can be set
-	Stop() Operator                                // Notified when this operator stops
-	SetStop(op Operator)                           // Can be set
+	Stop() OpSendAction                            // Notified when this operator stops
+	SetStop(op OpSendAction)                       // Can be set
 	Parent() Operator                              // Notified when this operator stops
 	SetParent(parent Operator)                     // Can be set
 	Bit() uint8                                    // Child bit
@@ -47,7 +53,6 @@ type Operator interface {
 	SerializeOutput(op Operator, context *Context) // Has the producer run the consumer inline
 	Copy() Operator                                // Keep input/output/parent; make new channels
 	RunOnce(context *Context, parent value.Value)  // Uses Once.Do() to run exactly once; never panics
-	SendAction(action opAction)                    // Stop or Pause the operator
 	Done()                                         // Frees and pools resources
 
 	reopen(context *Context) bool // resets operator to initial state

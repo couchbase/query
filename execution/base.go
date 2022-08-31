@@ -130,7 +130,7 @@ type base struct {
 	quota          uint64
 	input          Operator
 	output         Operator
-	stop           Operator
+	stop           OpSendAction
 	parent         Operator
 	once           util.Once
 	serializable   bool
@@ -456,11 +456,11 @@ func (this *base) SetOutput(op Operator) {
 	}
 }
 
-func (this *base) Stop() Operator {
+func (this *base) Stop() OpSendAction {
 	return this.stop
 }
 
-func (this *base) SetStop(op Operator) {
+func (this *base) SetStop(op OpSendAction) {
 	this.stop = op
 }
 
@@ -1057,7 +1057,7 @@ func (this *base) notifyStop() {
 	this.notifyStop1(stop)
 }
 
-func (this *base) notifyStop1(stop Operator) {
+func (this *base) notifyStop1(stop OpSendAction) {
 	if stop != nil {
 		var action opAction
 		this.activeCond.L.Lock()
