@@ -48,8 +48,16 @@ func (this *sarg) getSarg(pred expression.Expression) expression.Expression {
 	}
 
 	cpred := pred.Static()
-	if cpred != nil || (!this.isJoin && !this.baseKeyspace.IsInCorrSubq()) {
+	if cpred != nil {
 		return cpred
+	} else if !this.isJoin {
+		if !this.baseKeyspace.IsInCorrSubq() {
+			return nil
+		} else if expression.HasKeyspaceReferences(pred, this.keyspaceNames) {
+			// in correlated subquery, check whether it references any other
+			// keyspaces in current query block (joins)
+			return nil
+		}
 	}
 
 	if pred.Indexable() {
