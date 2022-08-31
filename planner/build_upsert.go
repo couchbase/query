@@ -24,7 +24,9 @@ func (this *builder) VisitUpsert(stmt *algebra.Upsert) (interface{}, error) {
 		return nil, err
 	}
 
-	this.skipKeyspace = keyspace.QualifiedName()
+	if keyspace != nil {
+		this.skipKeyspace = keyspace.QualifiedName()
+	}
 
 	children := make([]plan.Operator, 0, 4)
 

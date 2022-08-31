@@ -62,7 +62,7 @@ func (this *builder) buildPrimaryScan(keyspace datastore.Keyspace, node *algebra
 
 		skipNewKeys := false
 		if primary3.Type() == datastore.SEQ_SCAN {
-			skipNewKeys = baseKeyspace.Keyspace() == this.skipKeyspace
+			skipNewKeys = this.skipKeyspace != "" && baseKeyspace.Keyspace() == this.skipKeyspace
 			if skipNewKeys {
 				this.mustSkipKeys = true
 			}

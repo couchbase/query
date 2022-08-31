@@ -362,7 +362,7 @@ func (this *builder) buildCreateCoveringScan(entry *indexEntry, node *algebra.Ke
 
 	skipNewKeys := false
 	if index.Type() == datastore.SEQ_SCAN {
-		skipNewKeys = baseKeyspace.Keyspace() == this.skipKeyspace
+		skipNewKeys = this.skipKeyspace != "" && baseKeyspace.Keyspace() == this.skipKeyspace
 		if skipNewKeys {
 			this.mustSkipKeys = true
 		}

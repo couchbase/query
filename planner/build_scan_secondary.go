@@ -176,7 +176,7 @@ func (this *builder) buildCreateSecondaryScan(indexes, flex map[datastore.Index]
 
 		skipNewKeys := false
 		if index.Type() == datastore.SEQ_SCAN {
-			skipNewKeys = baseKeyspace.Keyspace() == this.skipKeyspace
+			skipNewKeys = this.skipKeyspace != "" && baseKeyspace.Keyspace() == this.skipKeyspace
 			if skipNewKeys {
 				this.mustSkipKeys = true
 			}
