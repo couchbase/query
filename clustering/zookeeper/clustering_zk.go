@@ -173,6 +173,14 @@ func (z *zkConfigStore) Cluster() (clustering.Cluster, errors.Error) {
 	return nil, nil
 }
 
+func (z *zkConfigStore) NodeUUID(string) (string, errors.Error) {
+	return "", nil
+}
+
+func (z *zkConfigStore) UUIDToHost(string) (string, errors.Error) {
+	return "", nil
+}
+
 // zkCluster implements clustering.Cluster
 type zkCluster struct {
 	configStore    clustering.ConfigurationStore `json:"-"`
@@ -389,14 +397,6 @@ func (z *zkCluster) GetQueryNodes() ([]clustering.QueryNode, errors.Error) {
 func (this *zkCluster) ReportEventAsync(event string) {
 }
 
-func (this *zkCluster) NodeUUID(string) (string, errors.Error) {
-	return "", nil
-}
-
-func (this *zkCluster) UUIDToHost(string) (string, errors.Error) {
-	return "", nil
-}
-
 // zkQueryNodeConfig implements clustering.QueryNode
 type zkQueryNodeConfig struct {
 	ClusterName      string                    `json:"cluster_name"`
@@ -453,10 +453,6 @@ func (z *zkQueryNodeConfig) Cluster() clustering.Cluster {
 
 func (z *zkQueryNodeConfig) Name() string {
 	return z.QueryNodeName
-}
-
-func (z *zkQueryNodeConfig) NodeUUID() string {
-	return z.Name()
 }
 
 func (z *zkQueryNodeConfig) QueryEndpoint() string {

@@ -21,9 +21,9 @@ import (
 	"github.com/couchbase/query/errors"
 )
 
-func NewConfigstore(uri string, uuid string) (clustering.ConfigurationStore, errors.Error) {
+func NewConfigstore(uri string) (clustering.ConfigurationStore, errors.Error) {
 	if strings.HasPrefix(uri, "http:") {
-		return clustering_cb.NewConfigstore(uri, uuid)
+		return clustering_cb.NewConfigstore(uri)
 	}
 
 	if strings.HasPrefix(uri, "zookeeper:") {

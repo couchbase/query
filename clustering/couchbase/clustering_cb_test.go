@@ -49,7 +49,7 @@ func TestCBClustering(t *testing.T) {
 	ds, err := mock.NewDatastore("mock:")
 	as, err := accounting_stub.NewAccountingStore("stub:")
 
-	cs, err := NewConfigstore("http://"+couchbase_location+":8091", "")
+	cs, err := NewConfigstore("http://" + couchbase_location + ":8091")
 	if err != nil {
 		t.Fatal("Error creating configstore: ", err)
 	}

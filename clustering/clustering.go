@@ -65,6 +65,8 @@ type ConfigurationStore interface {
 	State() (Mode, errors.Error)                                                            // The clustering state of the local node
 	Cluster() (Cluster, errors.Error)                                                       // The cluster the local belongs to
 	SetOptions(monitor StateMonitor, httpAddr, httpsAddr string, managed bool) errors.Error // Set options for the local ConfigurationStore
+	NodeUUID(string) (string, errors.Error)                                                 // Retrieve the UUID of the host
+	UUIDToHost(string) (string, errors.Error)                                               // Retrieve the hostname for the UUID
 }
 
 type StateMonitor interface {
@@ -86,9 +88,7 @@ type Cluster interface {
 	Capability(string) bool                                // Check if cluster possesses a certain capability
 	Settings() (map[string]interface{}, errors.Error)      // Get cluster wide settings
 
-	ReportEventAsync(event string)            // Cluster's event logging
-	NodeUUID(string) (string, errors.Error)   // Retrieve the UUID of the host
-	UUIDToHost(string) (string, errors.Error) // Retrieve the hostname for the UUID
+	ReportEventAsync(event string) // Cluster's event logging
 }
 
 type Standalone interface {
@@ -102,7 +102,6 @@ type Standalone interface {
 type QueryNode interface {
 	Cluster() Cluster          // The Cluster that this QueryNode belongs to
 	Name() string              // Name of this QueryNode (unique within the cluster)
-	NodeUUID() string          // UUID of the QueryNode
 	QueryEndpoint() string     // Endpoint for serving N1QL queries
 	ClusterEndpoint() string   // Endpoint for serving admin commands
 	QuerySecure() string       // Endpoint for serving secure N1QL queries

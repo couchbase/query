@@ -273,7 +273,7 @@ func main() {
 	datastore.SetConnectionSecurityConfig(nullSecurityConfig)
 
 	// configstore should be set before the system datastore
-	configstore, err := config_resolver.NewConfigstore(*CONFIGSTORE, *UUID)
+	configstore, err := config_resolver.NewConfigstore(*CONFIGSTORE)
 	if err != nil {
 		logging.Errorf("Could not connect to configstore: %v", err)
 	}

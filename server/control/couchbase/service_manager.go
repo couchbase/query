@@ -34,7 +34,6 @@ type ServiceMgr struct {
 	waiters  waiters
 
 	thisHost string
-	enabled  bool
 }
 
 // to reduce the occasions when host is looked up from node ID, cache it here
@@ -96,12 +95,9 @@ func (m *ServiceMgr) setInitialNodeList() {
 		m.thisHost = distributed.RemoteAccess().WhoAmI()
 	}
 	if m.thisHost == "" {
-		m.thisHost = string(m.nodeInfo.NodeID)
 		// we won't get a server list so exit
 		return
 	}
-
-	m.enabled = true
 
 	// our topology is just the list of nodes in the cluster (or ourselves)
 	topology := distributed.RemoteAccess().GetNodeNames()
@@ -348,7 +344,7 @@ func (m *ServiceMgr) GetCurrentTopology(rev service.Revision, cancel service.Can
 	topology.Rev = EncodeRev(state.rev)
 	m.mu.Lock()
 	if m.servers != nil && len(m.servers) != 0 {
-		if m.enabled {
+		if m.thisHost != "" {
 			checkPrepareOperations(m.servers, "ServiceMgr::GetCurrentTopology")
 		}
 		for _, s := range m.servers {
@@ -391,23 +387,15 @@ func (m *ServiceMgr) PrepareTopologyChange(change service.TopologyChange) error 
 	logging.Debuga(func() string { return fmt.Sprintf("ServiceMgr::PrepareTopologyChange entry: %v", change) })
 
 	if change.Type != service.TopologyChangeTypeFailover && change.Type != service.TopologyChangeTypeRebalance {
-		logging.Infof("ServiceMgr::PrepareTopologyChange exit [type: %v]", change.Type)
+		logging.Debugf("ServiceMgr::PrepareTopologyChange exit")
 		return service.ErrNotSupported
 	}
 
-	if !m.enabled && m.thisHost == "" {
-		logging.Infof("ServiceMgr::PrepareTopologyChange waiting for initialisation...")
-		// we're here ahead of initialisation; wait...
-		for m.thisHost == "" {
-			time.Sleep(time.Second)
-		}
+	level := logging.INFO
+	if m.thisHost == "" {
+		level = logging.DEBUG
 	}
-	if !m.enabled {
-		logging.Debugf("ServiceMgr::PrepareTopologyChange exit [not enabled]")
-		return nil
-	}
-
-	logging.Infof("Preparing for possible topology change")
+	logging.Logf(level, "Preparing for possible topology change")
 
 	// for each node we know about, cache its shutdown URL
 	info := make([]rune, 0, len(change.KeepNodes)*64)
@@ -419,18 +407,20 @@ func (m *ServiceMgr) PrepareTopologyChange(change service.TopologyChange) error 
 		var ps interface{}
 		var host string
 		ps = nil
-		// see if we can reuse the prepared operation
-		// note: this means we may take less time here but are susceptible to stale data
-		for _, o := range s {
-			if o.nodeInfo.NodeID == n.NodeInfo.NodeID {
-				ps = o.nodeInfo.Opaque
-				host = o.host
-				break
+		if m.thisHost != "" {
+			// see if we can reuse the prepared operation
+			// note: this means we may take less time here but are susceptible to stale data
+			for _, o := range s {
+				if o.nodeInfo.NodeID == n.NodeInfo.NodeID {
+					ps = o.nodeInfo.Opaque
+					host = o.host
+					break
+				}
 			}
-		}
-		if ps == nil {
-			host = distributed.RemoteAccess().UUIDToHost(string(n.NodeInfo.NodeID))
-			ps = prepareOperation(host, "ServiceMgr::PrepareTopologyChange")
+			if ps == nil {
+				host = distributed.RemoteAccess().UUIDToHost(string(n.NodeInfo.NodeID))
+				ps = prepareOperation(host, "ServiceMgr::PrepareTopologyChange")
+			}
 		}
 		servers = append(servers, queryServer{host, service.NodeInfo{n.NodeInfo.NodeID, service.Priority(0), ps}})
 		info = append(info, []rune(n.NodeInfo.NodeID)...)
@@ -466,7 +456,7 @@ func (m *ServiceMgr) PrepareTopologyChange(change service.TopologyChange) error 
 	if len(info) == 0 {
 		info = append(info, []rune("no active nodes")...)
 	}
-	logging.Infof("Topology: %s", string(info))
+	logging.Logf(level, "Topology: %s", string(info))
 	logging.Debugf("ServiceMgr::PrepareTopologyChange exit")
 	return nil
 }
@@ -477,7 +467,7 @@ func (m *ServiceMgr) PrepareTopologyChange(change service.TopologyChange) error 
 func (m *ServiceMgr) StartTopologyChange(change service.TopologyChange) error {
 	logging.Debuga(func() string { return fmt.Sprintf("ServiceMgr::StartTopologyChange %v", change) })
 
-	if !m.enabled {
+	if m.thisHost == "" {
 		logging.Debuga(func() string { return "ServiceMgr::StartTopologyChange exit: not enabled" })
 		return nil // do nothing, but don't fail
 	}
