@@ -1540,6 +1540,9 @@ func (this *base) marshalTimes(r map[string]interface{}) {
 		var versions []interface{}
 
 		if this.rootContext != nil {
+			if !this.rootContext.PlanPreparedTime().IsZero() {
+				r["#planPreparedTime"] = this.rootContext.PlanPreparedTime().Format(util.DEFAULT_FORMAT)
+			}
 			subqueryTimes := this.rootContext.getSubqueryTimes()
 			if subqueryTimes != nil {
 				r["~subqueries"] = subqueryTimes

@@ -127,6 +127,10 @@ func (b *preparedsKeyspace) Fetch(keys []string, keysMap map[string]value.Annota
 					itemMap["node"] = node
 				}
 
+				if !entry.Prepared.PreparedTime().IsZero() {
+					itemMap["planPreparedTime"] = entry.Prepared.PreparedTime().Format(util.DEFAULT_FORMAT)
+				}
+
 				// only give times for entries that have completed at least one execution
 				if entry.Uses > 0 && entry.RequestTime > 0 {
 					itemMap["lastUse"] = entry.LastUse.Format(util.DEFAULT_FORMAT)

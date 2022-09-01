@@ -218,6 +218,7 @@ type Context struct {
 	memorySession       memory.MemorySession
 	keysToSkip          *sync.Map
 	keysToSkipLength    int32
+	planPreparedTime    time.Time // time the plan was created
 }
 
 func NewContext(requestId string, datastore datastore.Datastore, systemstore datastore.Systemstore,
@@ -317,6 +318,7 @@ func (this *Context) Copy() *Context {
 		memorySession:       this.memorySession,
 		keysToSkip:          this.keysToSkip,
 		keysToSkipLength:    this.keysToSkipLength,
+		planPreparedTime:    this.planPreparedTime,
 	}
 
 	rv.SetDurability(this.DurabilityLevel(), this.DurabilityTimeout())
@@ -1530,4 +1532,12 @@ func (this *Context) ReleaseSkipKeys() {
 	}
 	this.keysToSkip = &sync.Map{}
 	this.keysToSkipLength = 0
+}
+
+func (this *Context) SetPlanPreparedTime(time time.Time) {
+	this.planPreparedTime = time
+}
+
+func (this *Context) PlanPreparedTime() time.Time {
+	return this.planPreparedTime
 }

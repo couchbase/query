@@ -307,11 +307,13 @@ func (this *Context) PrepareStatement(statement string, namedArgs map[string]val
 		return nil, nil, false, err
 	}
 
+	isPrepare := false // if the statement is a PREPARE statement
 	switch st := stmt.(type) {
 	case *algebra.Prepare:
 		prepContext.SetNamedArgs(nil)
 		prepContext.SetPositionalArgs(nil)
 		prepContext.SetIsPrepare()
+		isPrepare = true
 	case *algebra.Advise:
 		st.SetContext(this)
 	}
@@ -329,6 +331,14 @@ func (this *Context) PrepareStatement(statement string, namedArgs map[string]val
 
 	if readonly && !prepared.Readonly() {
 		return nil, nil, false, fmt.Errorf("not a readonly request")
+	}
+
+	// find the time the plan was generated if the statement is a PREPARE statement or auto_prepare is true
+	// So that query plans of prepared statements can have their creation time set
+	var prep time.Time
+	if autoPrepare || isPrepare {
+		prep = time.Now()
+		this.SetPlanPreparedTime(prep)
 	}
 
 	// EXECUTE doesn't get a plan. Get the plan from the cache.
@@ -352,7 +362,6 @@ func (this *Context) PrepareStatement(statement string, namedArgs map[string]val
 		isPrepared = true
 
 	default:
-
 		// even though this is not a prepared statement, add the
 		// text for the benefit of context.Recover(): we can
 		// output the text in case of crashes
@@ -364,6 +373,7 @@ func (this *Context) PrepareStatement(statement string, namedArgs map[string]val
 			prepared.SetNamespace(this.namespace)
 			prepared.SetQueryContext(this.queryContext)
 			prepared.SetUseFts(this.useFts)
+			prepared.SetPreparedTime(prep) // set the time the plan was generated
 			prepareds.AddAutoPreparePlan(stmt, prepared)
 		}
 

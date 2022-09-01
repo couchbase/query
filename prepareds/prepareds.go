@@ -763,6 +763,7 @@ func reprepare(prepared *plan.Prepared, deltaKeyspaces map[string]bool, phaseTim
 	pl.SetQueryContext(prepared.QueryContext())
 	pl.SetUseFts(prepared.UseFts())
 	pl.SetUseCBO(prepared.UseCBO())
+	pl.SetPreparedTime(prep) // reset the time the plan was re-prepared as the time the plan was generated
 
 	_, err = pl.BuildEncodedPlan()
 	if err != nil {
@@ -813,6 +814,7 @@ func predefinedPrepareStatement(name, statement, queryContext, namespace string)
 		return nil, errors.NewNoSuchPreparedWithContextError(name, "")
 	}
 
+	prepared.SetPreparedTime(time.Now()) // set the time the plan was generated
 	prepared.SetName(name)
 	prepared.SetText(statement)
 	prepared.SetIndexApiVersion(prepContext.IndexApiVersion())

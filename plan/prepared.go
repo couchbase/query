@@ -17,6 +17,7 @@ import (
 	"sort"
 	"strconv"
 	"sync"
+	"time"
 
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
@@ -38,6 +39,7 @@ type Prepared struct {
 	queryContext    string
 	useFts          bool
 	useCBO          bool
+	preparedTime    time.Time // time the plan was generated
 
 	indexScanKeyspaces              map[string]bool
 	indexers                        []idxVersion // for reprepare checking
@@ -494,4 +496,12 @@ func (this *Prepared) txHashCode(deltaKeyspaces map[string]bool) (hashCode strin
 	}
 
 	return hashCode
+}
+
+func (this *Prepared) SetPreparedTime(time time.Time) {
+	this.preparedTime = time
+}
+
+func (this *Prepared) PreparedTime() time.Time {
+	return this.preparedTime
 }

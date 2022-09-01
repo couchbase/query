@@ -1037,6 +1037,7 @@ func (this *Server) serviceRequest(request Request) {
 		request.Fail(err)
 	} else {
 		context.SetPrepared(prepared)
+		context.SetPlanPreparedTime(prepared.PreparedTime())
 		if (this.readonly || value.ToBool(request.Readonly())) &&
 			(prepared != nil && !prepared.Readonly()) {
 			request.Fail(errors.NewServiceErrorReadonly("The server or request is read-only" +
@@ -1239,6 +1240,9 @@ func (this *Server) getPrepared(request Request, context *execution.Context) (*p
 		if err != nil {
 			return nil, errors.NewPlanError(err, "")
 		}
+
+		// set the time the plan was generated
+		prepared.SetPreparedTime(prep)
 
 		// EXECUTE doesn't get a plan. Get the plan from the cache.
 		switch stmt.Type() {
