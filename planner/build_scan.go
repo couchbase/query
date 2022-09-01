@@ -170,7 +170,8 @@ func (this *builder) buildPredicateScan(keyspace datastore.Keyspace, node *algeb
 	nlPrimaryScan := !util.IsFeatureEnabled(this.context.FeatureControls(), util.N1QL_NL_PRIMARYSCAN) || this.hasBuilderFlag(BUILDER_JOIN_ON_PRIMARY)
 	var primaryKey expression.Expressions
 
-	if !node.IsAnsiJoinOp() || node.IsUnderHash() || node.IsSystem() || nlPrimaryScan {
+	if !baseKeyspace.IsInCorrSubq() &&
+		(!node.IsAnsiJoinOp() || node.IsUnderHash() || node.IsSystem() || nlPrimaryScan) {
 		primaryKey = expression.Expressions{id}
 	}
 
