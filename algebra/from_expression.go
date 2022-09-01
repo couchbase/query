@@ -147,15 +147,23 @@ func (this *ExpressionTerm) Formalize(parent *expression.Formalizer) (f *express
 		return nil, err
 	}
 
-	f = expression.NewFormalizer("", parent)
-	this.fromExpr, err = f.Map(this.fromExpr)
+	f1 := expression.NewFormalizer("", parent)
+	this.fromExpr, err = f1.Map(this.fromExpr)
 	if err != nil {
 		return
 	}
 
 	// Determine if this expression contains any correlated references
-	this.correlated = f.CheckCorrelated()
+	this.correlated = f1.CheckCorrelated()
 
+	// for checking fromExpr we need a new formalizer, however, if this ExpressionTerm
+	// is under an ANSI join/nest operation we need to use the parent's formalizer
+	if this.IsAnsiJoinOp() {
+		f = parent
+		f.SetKeyspace("")
+	} else {
+		f = f1
+	}
 	f.SetAllowedExprTermAlias(alias)
 	f.SetAlias(this.as)
 	return
