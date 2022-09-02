@@ -178,6 +178,7 @@ func (this *builder) visitFrom(node *algebra.Subselect, group *algebra.Group,
 				return err
 			}
 		}
+		node.AddSubqueryTermHints(this.gatherSubqueryTermHints())
 	} else {
 		// No FROM clause
 		this.resetPushDowns()

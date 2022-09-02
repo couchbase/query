@@ -367,6 +367,15 @@ func (this *Subselect) SetOptimHints(optimHints *OptimHints) {
 	this.optimHints = optimHints
 }
 
+func (this *Subselect) AddSubqueryTermHints(subqTermHints []*SubqOptimHints) {
+	if len(subqTermHints) > 0 {
+		if this.optimHints == nil {
+			this.optimHints = NewOptimHints(nil, false)
+		}
+		this.optimHints.AddSubqTermHints(subqTermHints)
+	}
+}
+
 /*
    Representation as a N1QL string.
 */

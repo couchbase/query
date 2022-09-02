@@ -77,6 +77,8 @@ func deriveOptimHints(baseKeyspaces map[string]*base.BaseKeyspace, optimHints *a
 			optimHints = algebra.NewOptimHints(nil, false)
 		}
 
+		// sort the new hints for explain purpose
+		algebra.SortOptimHints(newHints)
 		optimHints.AddHints(newHints)
 	}
 
@@ -280,4 +282,21 @@ func (this *builder) markOptimHints(alias string) (err error) {
 	}
 
 	return nil
+}
+
+func (this *builder) gatherSubqueryTermHints() []*algebra.SubqOptimHints {
+	var subqTermHints []*algebra.SubqOptimHints
+	for _, ks := range this.baseKeyspaces {
+		node := ks.Node()
+		if node != nil {
+			if subqTerm, ok := node.(*algebra.SubqueryTerm); ok {
+				optimHints := subqTerm.Subquery().OptimHints()
+				if optimHints != nil {
+					subqHints := algebra.NewSubqOptimHints(subqTerm.Alias(), optimHints)
+					subqTermHints = append(subqTermHints, subqHints)
+				}
+			}
+		}
+	}
+	return subqTermHints
 }
