@@ -86,21 +86,18 @@ func (c *statsCollector) runCollectStats() {
 	}()
 
 	index := 0
-	refresh := true
 	mstats := make(map[string]interface{}, 20)
 
 	for range ticker.C {
-		_, rss, total, free, err := system.GetSystemStats(c.stats, refresh, index == 0)
-		if err != nil {
-			logging.Debugf("statsCollector error : %v", err)
-		}
-		c.server.MemoryStats(refresh)
-		loadFactor := c.server.loadFactor(refresh)
+		loadFactor := c.server.loadFactor(true)
 		c.sumOfLoadFactors += (loadFactor - c.loadFactors[index])
 		c.loadFactors[index] = loadFactor
 		updateQsLoadFactor(int(c.sumOfLoadFactors / c.nLoadFactors))
-
 		if (index % _LOG_INTRVL) == 0 {
+			_, rss, total, free, err := system.GetSystemStats(c.stats, false, true)
+			if err != nil {
+				logging.Debugf("statsCollector error : %v", err)
+			}
 			getQueryEngineStats(c.server, mstats, rss, total, free)
 			if buf, e := json.Marshal(mstats); e == nil {
 				logging.Infof("Query Engine Stats %v", string(buf))
