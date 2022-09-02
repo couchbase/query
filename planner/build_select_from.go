@@ -214,6 +214,7 @@ func (this *builder) visitFrom(node *algebra.Subselect, group *algebra.Group,
 			}
 			this.CheckBitFilters(this.children, this.subChildren)
 		}
+		node.AddSubqueryTermHints(this.gatherSubqueryTermHints())
 	} else {
 		// No FROM clause
 		this.resetPushDowns()

@@ -99,8 +99,9 @@ type OptimHint interface {
 }
 
 type OptimHints struct {
-	hints     []OptimHint
-	jsonStyle bool // JSON style hints
+	hints         []OptimHint
+	jsonStyle     bool              // JSON style hints
+	subqTermHints []*SubqOptimHints // optimizer hints from SubqueryTerms
 }
 
 func NewOptimHints(hints []OptimHint, jsonStyle bool) *OptimHints {
@@ -120,6 +121,14 @@ func (this *OptimHints) JSONStyle() bool {
 
 func (this *OptimHints) AddHints(hints []OptimHint) {
 	this.hints = append(this.hints, hints...)
+}
+
+func (this *OptimHints) SubqTermHints() []*SubqOptimHints {
+	return this.subqTermHints
+}
+
+func (this *OptimHints) AddSubqTermHints(subqTermHints []*SubqOptimHints) {
+	this.subqTermHints = append(this.subqTermHints, subqTermHints...)
 }
 
 func (this *OptimHints) String() string {
@@ -1982,7 +1991,6 @@ func newOrderedHint(val value.Value) ([]OptimHint, bool) {
 // hints_followed, hints_not_followed, invalid_hints
 func (this *OptimHints) MarshalJSON() ([]byte, error) {
 	var followed, not_followed, invalid, errored, unknown []interface{}
-
 	for _, hint := range this.hints {
 		obj := formatOptimHint(hint, this.jsonStyle)
 		switch hint.State() {
@@ -1999,7 +2007,7 @@ func (this *OptimHints) MarshalJSON() ([]byte, error) {
 		}
 	}
 
-	r := make(map[string]interface{}, 5)
+	r := make(map[string]interface{}, 6)
 	if len(followed) > 0 {
 		r["hints_followed"] = followed
 	}
@@ -2016,6 +2024,13 @@ func (this *OptimHints) MarshalJSON() ([]byte, error) {
 		r["hints_status_unknown"] = unknown
 	}
 
+	if len(this.subqTermHints) > 0 {
+		subqs := make([]interface{}, 0, len(this.subqTermHints))
+		for _, subq := range this.subqTermHints {
+			subqs = append(subqs, subq)
+		}
+		r["~from_clause_subqueries"] = subqs
+	}
 	return json.Marshal(r)
 }
 
@@ -2040,4 +2055,23 @@ func SortOptimHints(hints []OptimHint) {
 	sort.Slice(hints, func(i, j int) bool {
 		return hints[i].sortString() < hints[j].sortString()
 	})
+}
+
+type SubqOptimHints struct {
+	alias string
+	hints *OptimHints
+}
+
+func NewSubqOptimHints(alias string, hints *OptimHints) *SubqOptimHints {
+	return &SubqOptimHints{
+		alias: alias,
+		hints: hints,
+	}
+}
+
+func (this *SubqOptimHints) MarshalJSON() ([]byte, error) {
+	r := make(map[string]interface{}, 2)
+	r["alias"] = this.alias
+	r["optimizer_hints"] = this.hints
+	return json.Marshal(r)
 }
