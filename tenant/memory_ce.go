@@ -38,7 +38,7 @@ func (this *memorySession) Release() {
 }
 
 func (this *memorySession) AvailableMemory() uint64 {
-	return system.AvailableMemory()
+	return system.GetMemFree()
 }
 
 func (this *memorySession) InUseMemory() uint64 {

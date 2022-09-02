@@ -19,7 +19,7 @@ var memFree uint64    // free mem in bytes (EXCLUDING inactive OS kernel pages i
 
 func GetSystemStats(stats *SystemStats, refresh, log bool) (cpu float64, rss, total, free uint64, err error) {
 	if !refresh {
-		return getCpuPercent(), getRSS(), getMemTotal(), getMemFree(), nil
+		return getCpuPercent(), getRSS(), getMemTotal(), GetMemFree(), nil
 	}
 
 	if stats == nil {
@@ -94,6 +94,6 @@ func updateMemFree(mem uint64) {
 	atomic.StoreUint64(&memFree, mem)
 }
 
-func getMemFree() uint64 {
+func GetMemFree() uint64 {
 	return atomic.LoadUint64(&memFree)
 }
