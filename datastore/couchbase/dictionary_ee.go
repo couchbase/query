@@ -61,10 +61,16 @@ func Get(key string) (DictCacheEntry, error) {
 }
 
 func Count(bucketName string, context datastore.QueryContext, check func(context datastore.QueryContext, elems ...string) bool) (int64, error) {
+	if isSysBucket(bucketName) {
+		return 0, nil
+	}
 	return dictionary.Count(bucketName, context, check)
 }
 
 func Foreach(bucketName string, context datastore.QueryContext, check func(context datastore.QueryContext, elems ...string) bool, proc func(string) error) error {
+	if isSysBucket(bucketName) {
+		return nil
+	}
 	return dictionary.Foreach(bucketName, context, check, proc)
 }
 
