@@ -162,10 +162,11 @@ const (
 	BUILDER_PLAN_SUBQUERY
 	BUILDER_ORDER_DEPENDS_ON_LET
 	BUILDER_JOIN_ON_PRIMARY
+	BUILDER_NL_INNER
 )
 
 const BUILDER_PRESERVED_FLAGS = (BUILDER_PLAN_HAS_ORDER | BUILDER_HAS_EARLY_ORDER)
-const BUILDER_PASSTHRU_FLAGS = (BUILDER_PLAN_SUBQUERY)
+const BUILDER_PASSTHRU_FLAGS = (BUILDER_PLAN_SUBQUERY | BUILDER_NL_INNER)
 
 type builder struct {
 	indexPushDowns
@@ -340,6 +341,20 @@ func (this *builder) setJoinEnum() {
 
 func (this *builder) unsetJoinEnum() {
 	this.builderFlags &^= BUILDER_JOIN_ENUM
+}
+
+func (this *builder) setNLInner() bool {
+	nlInner := this.hasBuilderFlag(BUILDER_NL_INNER)
+	if !nlInner {
+		this.setBuilderFlag(BUILDER_NL_INNER)
+	}
+	return nlInner
+}
+
+func (this *builder) restoreNLInner(nlInner bool) {
+	if !nlInner {
+		this.unsetBuilderFlag(BUILDER_NL_INNER)
+	}
 }
 
 func (this *builder) hasBuilderFlag(flag uint32) bool {

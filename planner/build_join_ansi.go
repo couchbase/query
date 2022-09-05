@@ -170,7 +170,7 @@ func (this *builder) buildAnsiJoinOp(node *algebra.AnsiJoin) (op plan.Operator, 
 		}
 
 		if util.IsFeatureEnabled(this.context.FeatureControls(), util.N1QL_HASH_JOIN) {
-			tryHash := true
+			tryHash := !this.hasBuilderFlag(BUILDER_NL_INNER)
 			if useCBO && joinEnum {
 				/* during join enumeration hash join is built separately */
 				tryHash = false
@@ -411,7 +411,7 @@ func (this *builder) buildAnsiJoinOp(node *algebra.AnsiJoin) (op plan.Operator, 
 		if util.IsFeatureEnabled(this.context.FeatureControls(), util.N1QL_HASH_JOIN) {
 			// for expression term and subquery term, consider hash join
 			// even without USE HASH hint, as long as USE NL is not specified
-			if !joinEnum && !preferNL {
+			if !joinEnum && !this.hasBuilderFlag(BUILDER_NL_INNER) && !preferNL {
 				hjoin, _, err := this.buildHashJoin(node, filter, selec, nil, nil, nil)
 				if hjoin != nil || err != nil {
 					return hjoin, err
@@ -528,7 +528,7 @@ func (this *builder) buildAnsiNestOp(node *algebra.AnsiNest) (op plan.Operator, 
 		nlIndexHintError := false
 
 		if util.IsFeatureEnabled(this.context.FeatureControls(), util.N1QL_HASH_JOIN) {
-			tryHash := true
+			tryHash := !this.hasBuilderFlag(BUILDER_NL_INNER)
 			if useCBO && joinEnum {
 				/* during join enumeration hash join is built separately */
 				tryHash = false
@@ -754,7 +754,7 @@ func (this *builder) buildAnsiNestOp(node *algebra.AnsiNest) (op plan.Operator, 
 		if util.IsFeatureEnabled(this.context.FeatureControls(), util.N1QL_HASH_JOIN) {
 			// for expression term and subquery term, consider hash join
 			// even without USE HASH hint, as long as USE NL is not specified
-			if !joinEnum && !preferNL {
+			if !joinEnum && !this.hasBuilderFlag(BUILDER_NL_INNER) && !preferNL {
 				hnest, _, err := this.buildHashNest(node, filter, selec, nil, nil, nil)
 				if hnest != nil || err != nil {
 					return hnest, err
@@ -901,7 +901,9 @@ func (this *builder) buildAnsiJoinScan(node *algebra.KeyspaceTerm, onclause, fil
 		}
 	}
 
+	nlInner := this.setNLInner()
 	_, err = node.Accept(this)
+	this.restoreNLInner(nlInner)
 	if err != nil {
 		switch e := err.(type) {
 		case errors.Error:
@@ -912,7 +914,9 @@ func (this *builder) buildAnsiJoinScan(node *algebra.KeyspaceTerm, onclause, fil
 				// on clause and where clause filters, try using just
 				// the on clause filters
 				baseKeyspace.SetOnclauseOnly()
+				nlInner = this.setNLInner()
 				_, err = node.Accept(this)
+				this.restoreNLInner(nlInner)
 			}
 		}
 
@@ -1442,7 +1446,9 @@ func (this *builder) buildAnsiJoinSimpleFromTerm(node algebra.SimpleFromTerm, on
 	this.subChildren = nil
 	this.lastOp = nil
 
+	nlInner := this.setNLInner()
 	_, err = node.Accept(this)
+	this.restoreNLInner(nlInner)
 	if err != nil {
 		return nil, nil, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, err
 	}
