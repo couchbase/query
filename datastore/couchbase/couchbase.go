@@ -230,6 +230,7 @@ func (info *infoImpl) Services(node string) (map[string]interface{}, []errors.Er
 
 					newServices := make(map[string]interface{}, 3)
 					newServices["name"] = fullhostName(n.Hostname)
+					newServices["uuid"] = n.NodeUUID
 					for _, s := range n.Services {
 						servicesCopy = append(servicesCopy, s)
 					}

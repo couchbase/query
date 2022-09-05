@@ -17,12 +17,12 @@ import (
 
 	"github.com/couchbase/cbauth/service"
 	atomic "github.com/couchbase/go-couchbase/platform"
+	"github.com/couchbase/query/distributed"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/regulator"
 	"github.com/couchbase/regulator/factory"
 	"github.com/couchbase/regulator/metering"
 	"github.com/gorilla/mux"
-	"github.com/couchbase/query/distributed"
 )
 
 var isServerless bool

@@ -14,9 +14,9 @@ import (
 	"github.com/couchbase/query/distributed"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/prepareds"
+	"github.com/couchbase/query/tenant"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
-	"github.com/couchbase/query/tenant"
 )
 
 type Prepare struct {
