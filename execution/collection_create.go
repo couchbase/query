@@ -61,7 +61,7 @@ func (this *CreateCollection) RunOnce(context *Context, parent value.Value) {
 
 		// Actually create collection
 		this.switchPhase(_SERVTIME)
-		err := this.plan.Scope().CreateCollection(this.plan.Node().Name())
+		err := this.plan.Scope().CreateCollection(this.plan.Node().Name(), this.plan.Node().With())
 		if err != nil {
 			if !errors.IsCollectionExistsError(err) || this.plan.Node().FailIfExists() {
 				context.Error(err)

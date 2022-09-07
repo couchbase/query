@@ -27,16 +27,18 @@ type CreateCollection struct {
 
 	keyspace     *KeyspaceRef `json:"keyspace"`
 	failIfExists bool         `json:"failIfExists"`
+	with         value.Value  `json:"with"`
 }
 
 /*
 The function NewCreateCollection returns a pointer to the
 CreateCollection struct with the input argument values as fields.
 */
-func NewCreateCollection(keyspace *KeyspaceRef, failIfExists bool) *CreateCollection {
+func NewCreateCollection(keyspace *KeyspaceRef, failIfExists bool, with value.Value) *CreateCollection {
 	rv := &CreateCollection{
 		keyspace:     keyspace,
 		failIfExists: failIfExists,
+		with:         with,
 	}
 
 	rv.stmt = rv
@@ -103,6 +105,10 @@ Returns the name of the collection to be created
 */
 func (this *CreateCollection) Name() string {
 	return this.keyspace.Path().Keyspace()
+}
+
+func (this *CreateCollection) With() value.Value {
+	return this.with
 }
 
 /*

@@ -539,12 +539,12 @@ func (b *Bucket) DropScope(scope string) error {
 	return client.parseDeleteURLResponseTerse("/pools/default/buckets/"+uriAdj(b.Name)+"/scopes/"+uriAdj(scope), nil, nil)
 }
 
-func (b *Bucket) CreateCollection(scope string, collection string) error {
+func (b *Bucket) CreateCollection(scope string, collection string, maxTTL int) error {
 	b.RLock()
 	pool := b.pool
 	client := pool.client
 	b.RUnlock()
-	args := map[string]interface{}{"name": collection}
+	args := map[string]interface{}{"name": collection, "maxTTL": maxTTL}
 	return client.parsePostURLResponseTerse("/pools/default/buckets/"+uriAdj(b.Name)+"/scopes/"+uriAdj(scope)+"/collections", args, nil)
 }
 

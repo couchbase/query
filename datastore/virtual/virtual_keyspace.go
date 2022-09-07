@@ -134,7 +134,7 @@ func (sc *virtualScope) KeyspaceByName(name string) (datastore.Keyspace, errors.
 	return sc.keyspace, nil
 }
 
-func (sc *virtualScope) CreateCollection(name string) errors.Error {
+func (sc *virtualScope) CreateCollection(name string, with value.Value) errors.Error {
 	return errors.NewCbBucketCreateCollectionError(name, fmt.Errorf("not supported by virtual scopes"))
 }
 

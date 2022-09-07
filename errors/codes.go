@@ -369,6 +369,8 @@ const (
 	E_CB_NOT_PRIMARY_INDEX                    ErrorCode = 12035
 	E_DML_INSERT                              ErrorCode = 12036
 	E_ACCESS_DENIED                           ErrorCode = 12037
+	E_WITH_INVALID_OPTION                     ErrorCode = 12038
+	E_WITH_INVALID_TYPE                       ErrorCode = 12039
 	_RETIRED_13010                                      = 13010
 	_RETIRED_13011                                      = 13011
 	E_DATASTORE_CLUSTER                       ErrorCode = 13012

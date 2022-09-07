@@ -109,7 +109,7 @@ func (s *store) CreateSystemCBOStats(requestId string) errors.Error {
 		}
 
 		// allow "already exists" error in case of duplicated Create call
-		er = sysScope.CreateCollection(_N1QL_CBO_STATS)
+		er = sysScope.CreateCollection(_N1QL_CBO_STATS, nil)
 		if er != nil && !cb.AlreadyExistsError(er) {
 			return er
 		}

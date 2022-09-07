@@ -338,7 +338,7 @@ func (cs *CollectionsScope) KeyspaceByName(name string) (Keyspace, errors.Error)
 	return nil, errors.NewCbKeyspaceNotFoundError(nil, name)
 }
 
-func (cs *CollectionsScope) CreateCollection(name string) errors.Error {
+func (cs *CollectionsScope) CreateCollection(name string, with value.Value) errors.Error {
 	return errors.NewScopesNotSupportedError(cs.Name())
 }
 

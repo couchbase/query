@@ -479,7 +479,6 @@ tokOffset        int
 %type <scopeRef>         named_scope_ref
 %type <partitionTerm>    index_partition
 %type <indexType>        index_using opt_index_using
-%type <val>              index_with opt_index_with
 %type <expr>             index_term_expr index_where
 %type <indexKeyTerm>     index_term flatten_keys_expr
 %type <indexKeyTerms>    index_terms flatten_keys_exprs opt_flatten_keys_exprs
@@ -489,7 +488,6 @@ tokOffset        int
 %type <expr>             update_stat_term
 
 %type <inferenceType>    opt_infer_using
-%type <val>              infer_ustat_with opt_infer_ustat_with
 
 %type <ss>               user_list
 %type <keyspaceRefs>     keyspace_scope_list
@@ -517,6 +515,8 @@ tokOffset        int
 %type <optimHints>          hints_input opt_optim_hints
 %type <optimHintArr>        optim_hints optim_hint
 %type <ss>                  opt_hint_args hint_args
+
+%type <val>                with_clause opt_with_clause
 
 %start input
 
@@ -673,18 +673,18 @@ USING construction_expr
 ;
 
 infer:
-INFER keyspace_collection simple_keyspace_ref opt_infer_using opt_infer_ustat_with
+INFER keyspace_collection simple_keyspace_ref opt_infer_using opt_with_clause
 {
     $$ = algebra.NewInferKeyspace($3, $4, $5)
 }
 |
-INFER keyspace_path opt_as_alias opt_infer_using opt_infer_ustat_with
+INFER keyspace_path opt_as_alias opt_infer_using opt_with_clause
 {
     kr := algebra.NewKeyspaceRefFromPath($2, $3)
     $$ = algebra.NewInferKeyspace(kr, $4, $5)
 }
 |
-INFER expr opt_infer_using opt_infer_ustat_with
+INFER expr opt_infer_using opt_with_clause
 {
     var pth *algebra.Path
     var err errors.Error
@@ -731,25 +731,6 @@ opt_infer_using:
 /* empty */
 {
     $$ = datastore.INF_DEFAULT
-}
-;
-
-opt_infer_ustat_with:
-/* empty */
-{
-    $$ = nil
-}
-|
-infer_ustat_with
-;
-
-infer_ustat_with:
-WITH expr
-{
-    $$ = $2.Value()
-    if $$ == nil {
-        yylex.Error("WITH value must be static"+yylex.(*lexer).ErrorContext())
-    }
 }
 ;
 
@@ -2656,9 +2637,9 @@ DROP SCOPE named_scope_ref opt_if_exists
  *************************************************/
 
 create_collection:
-CREATE COLLECTION named_keyspace_ref opt_if_not_exists
+CREATE COLLECTION named_keyspace_ref opt_if_not_exists opt_with_clause
 {
-    $$ = algebra.NewCreateCollection($3, $4)
+    $$ = algebra.NewCreateCollection($3, $4, $5)
 }
 ;
 
@@ -2701,13 +2682,13 @@ TRUNCATE
  *************************************************/
 
 create_index:
-CREATE PRIMARY INDEX opt_primary_name opt_if_not_exists ON named_keyspace_ref index_partition opt_index_using opt_index_with
+CREATE PRIMARY INDEX opt_primary_name opt_if_not_exists ON named_keyspace_ref index_partition opt_index_using opt_with_clause
 {
     $$ = algebra.NewCreatePrimaryIndex($4, $7, $8, $9, $10, $5)
 }
 |
 CREATE INDEX index_name opt_if_not_exists
-ON named_keyspace_ref LPAREN index_terms RPAREN index_partition index_where opt_index_using opt_index_with
+ON named_keyspace_ref LPAREN index_terms RPAREN index_partition index_where opt_index_using opt_with_clause
 {
     $$ = algebra.NewCreateIndex($3, $6, $8, $10, $11, $12, $13, $4)
 }
@@ -2840,25 +2821,6 @@ USING GSI
 USING FTS
 {
     $$ = datastore.FTS
-}
-;
-
-opt_index_with:
-/* empty */
-{
-    $$ = nil
-}
-|
-index_with
-;
-
-index_with:
-WITH expr
-{
-    $$ = $2.Value()
-    if $$ == nil {
-        yylex.Error("WITH value must be static"+yylex.(*lexer).ErrorContext())
-    }
 }
 ;
 
@@ -3023,12 +2985,12 @@ IF EXISTS
  *************************************************/
 
 alter_index:
-ALTER INDEX simple_named_keyspace_ref DOT index_name opt_index_using index_with
+ALTER INDEX simple_named_keyspace_ref DOT index_name opt_index_using with_clause
 {
     $$ = algebra.NewAlterIndex($3, $5, $6, $7)
 }
 |
-ALTER INDEX index_name ON named_keyspace_ref opt_index_using index_with
+ALTER INDEX index_name ON named_keyspace_ref opt_index_using with_clause
 {
     $$ = algebra.NewAlterIndex($5, $3, $6, $7)
 }
@@ -3254,7 +3216,7 @@ EXECUTE FUNCTION func_name LPAREN opt_exprs RPAREN
  *************************************************/
 
 update_statistics:
-UPDATE STATISTICS opt_for named_keyspace_ref LPAREN update_stat_terms RPAREN opt_infer_ustat_with
+UPDATE STATISTICS opt_for named_keyspace_ref LPAREN update_stat_terms RPAREN opt_with_clause
 {
     $$ = algebra.NewUpdateStatistics($4, $6, $8)
 }
@@ -3269,27 +3231,27 @@ UPDATE STATISTICS opt_for named_keyspace_ref DELETE ALL
     $$ = algebra.NewUpdateStatisticsDelete($4, nil)
 }
 |
-UPDATE STATISTICS opt_for named_keyspace_ref INDEX LPAREN exprs RPAREN opt_index_using opt_infer_ustat_with
+UPDATE STATISTICS opt_for named_keyspace_ref INDEX LPAREN exprs RPAREN opt_index_using opt_with_clause
 {
     $$ = algebra.NewUpdateStatisticsIndex($4, $7, $9, $10)
 }
 |
-UPDATE STATISTICS opt_for named_keyspace_ref INDEX ALL opt_index_using opt_infer_ustat_with
+UPDATE STATISTICS opt_for named_keyspace_ref INDEX ALL opt_index_using opt_with_clause
 {
     $$ = algebra.NewUpdateStatisticsIndexAll($4, $7, $8)
 }
 |
-UPDATE STATISTICS FOR INDEX simple_named_keyspace_ref DOT index_name opt_index_using opt_infer_ustat_with
+UPDATE STATISTICS FOR INDEX simple_named_keyspace_ref DOT index_name opt_index_using opt_with_clause
 {
     $$ = algebra.NewUpdateStatisticsIndex($5, expression.Expressions{expression.NewIdentifier($7)}, $8, $9)
 }
 |
-UPDATE STATISTICS FOR INDEX index_name ON named_keyspace_ref opt_index_using opt_infer_ustat_with
+UPDATE STATISTICS FOR INDEX index_name ON named_keyspace_ref opt_index_using opt_with_clause
 {
     $$ = algebra.NewUpdateStatisticsIndex($7, expression.Expressions{expression.NewIdentifier($5)}, $8, $9)
 }
 |
-ANALYZE opt_keyspace_collection named_keyspace_ref LPAREN update_stat_terms RPAREN opt_infer_ustat_with
+ANALYZE opt_keyspace_collection named_keyspace_ref LPAREN update_stat_terms RPAREN opt_with_clause
 {
     $$ = algebra.NewUpdateStatistics($3, $5, $7)
 }
@@ -3304,22 +3266,22 @@ ANALYZE opt_keyspace_collection named_keyspace_ref DELETE STATISTICS
     $$ = algebra.NewUpdateStatisticsDelete($3, nil)
 }
 |
-ANALYZE opt_keyspace_collection named_keyspace_ref INDEX LPAREN exprs RPAREN opt_index_using opt_infer_ustat_with
+ANALYZE opt_keyspace_collection named_keyspace_ref INDEX LPAREN exprs RPAREN opt_index_using opt_with_clause
 {
     $$ = algebra.NewUpdateStatisticsIndex($3, $6, $8, $9)
 }
 |
-ANALYZE opt_keyspace_collection named_keyspace_ref INDEX ALL opt_index_using opt_infer_ustat_with
+ANALYZE opt_keyspace_collection named_keyspace_ref INDEX ALL opt_index_using opt_with_clause
 {
     $$ = algebra.NewUpdateStatisticsIndexAll($3, $6, $7)
 }
 |
-ANALYZE INDEX simple_named_keyspace_ref DOT index_name opt_index_using opt_infer_ustat_with
+ANALYZE INDEX simple_named_keyspace_ref DOT index_name opt_index_using opt_with_clause
 {
     $$ = algebra.NewUpdateStatisticsIndex($3, expression.Expressions{expression.NewIdentifier($5)}, $6, $7)
 }
 |
-ANALYZE INDEX index_name ON named_keyspace_ref opt_index_using opt_infer_ustat_with
+ANALYZE INDEX index_name ON named_keyspace_ref opt_index_using opt_with_clause
 {
     $$ = algebra.NewUpdateStatisticsIndex($5, expression.Expressions{expression.NewIdentifier($3)}, $6, $7)
 }
@@ -4953,3 +4915,22 @@ SAVEPOINT savepoint_name
     $$ = algebra.NewSavepoint($2)
 }
 ;
+
+opt_with_clause:
+/* empty */
+{
+    $$ = nil
+}
+|
+with_clause
+;
+with_clause:
+WITH expr
+{
+    $$ = $2.Value()
+    if $$ == nil {
+        yylex.Error("WITH value must be static"+yylex.(*lexer).ErrorContext())
+    }
+}
+;
+

@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/value"
 )
 
 // Create collection
@@ -55,6 +56,8 @@ func (this *CreateCollection) MarshalBase(f func(map[string]interface{})) map[st
 	// invert so the default if not present is to fail if exists
 	r["ifNotExists"] = !this.node.FailIfExists()
 
+	r["with"] = this.node.With()
+
 	if f != nil {
 		f(r)
 	}
@@ -63,12 +66,13 @@ func (this *CreateCollection) MarshalBase(f func(map[string]interface{})) map[st
 
 func (this *CreateCollection) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_           string `json:"#operator"`
-		Namespace   string `json:"namespace"`
-		Bucket      string `json:"bucket"`
-		Scope       string `json:"scope"`
-		Keyspace    string `json:"keyspace"`
-		IfNotExists bool   `json:"ifNotExists"`
+		_           string          `json:"#operator"`
+		Namespace   string          `json:"namespace"`
+		Bucket      string          `json:"bucket"`
+		Scope       string          `json:"scope"`
+		Keyspace    string          `json:"keyspace"`
+		IfNotExists bool            `json:"ifNotExists"`
+		With        json.RawMessage `json:"with"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -83,8 +87,12 @@ func (this *CreateCollection) UnmarshalJSON(body []byte) error {
 		return err
 	}
 
+	var with value.Value
+	if len(_unmarshalled.With) > 0 {
+		with = value.NewValue([]byte(_unmarshalled.With))
+	}
 	// invert IfNotExists to obtain FailIfExists
-	this.node = algebra.NewCreateCollection(ksref, !_unmarshalled.IfNotExists)
+	this.node = algebra.NewCreateCollection(ksref, !_unmarshalled.IfNotExists, with)
 	return nil
 }
 

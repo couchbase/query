@@ -173,8 +173,8 @@ type Scope interface {
 	KeyspaceById(name string) (Keyspace, errors.Error)   // Find a keyspace in this scope using the keyspace's id
 	KeyspaceByName(name string) (Keyspace, errors.Error) // Find a keyspace in this scope using the keyspace's name
 
-	CreateCollection(name string) errors.Error // Create a new collection
-	DropCollection(name string) errors.Error   // Drop a collection
+	CreateCollection(name string, with value.Value) errors.Error // Create a new collection
+	DropCollection(name string) errors.Error                     // Drop a collection
 }
 
 // Keyspace is a map of key-value entries (typically key-document, but

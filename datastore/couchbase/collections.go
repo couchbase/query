@@ -114,8 +114,23 @@ func (sc *scope) KeyspaceByName(name string) (datastore.Keyspace, errors.Error) 
 	return nil, errors.NewCbKeyspaceNotFoundError(nil, sc.objectFullName(name))
 }
 
-func (sc *scope) CreateCollection(name string) errors.Error {
-	err := sc.bucket.cbbucket.CreateCollection(sc.id, name)
+const _CREATE_COLLECTION_MAXTTL = "maxTTL"
+
+var _CREATE_COLLECTION_OPTIONS = []string{_CREATE_COLLECTION_MAXTTL}
+
+func (sc *scope) CreateCollection(name string, with value.Value) errors.Error {
+	maxTTL := 0
+	if with != nil {
+		err := validateWithOptions(with, _CREATE_COLLECTION_OPTIONS)
+		if err != nil {
+			return errors.NewCbBucketCreateCollectionError(sc.objectFullName(name), err)
+		}
+		maxTTL, err = getIntWithOption(with, _CREATE_COLLECTION_MAXTTL)
+		if err != nil {
+			return errors.NewCbBucketCreateCollectionError(sc.objectFullName(name), err)
+		}
+	}
+	err := sc.bucket.cbbucket.CreateCollection(sc.id, name, maxTTL)
 	if err != nil {
 		return errors.NewCbBucketCreateCollectionError(sc.objectFullName(name), err)
 	}
@@ -631,4 +646,48 @@ func clearDictCacheEntries(bucket *keyspace) {
 		}
 		functions.ClearScopeEntries(bucket.namespace.name, bucket.name, s.Name())
 	}
+}
+
+func validateWithOptions(with value.Value, valid []string) error {
+	for k, _ := range with.Fields() {
+		found := false
+		for _, v := range valid {
+			if k == v {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return errors.NewWithInvalidOptionError(k)
+		}
+	}
+	return nil
+}
+
+func getIntWithOption(with value.Value, opt string) (int, error) {
+	v, found := with.Field(opt)
+	if !found || v.Type() != value.NUMBER {
+		return 0, errors.NewWithInvalidValueError(opt)
+	}
+	i, ok := value.IsIntValue(v)
+	if !ok {
+		return 0, errors.NewWithInvalidValueError(opt)
+	}
+	return int(i), nil
+}
+
+func getStringWithOption(with value.Value, opt string) (string, error) {
+	v, found := with.Field(opt)
+	if !found || v.Type() != value.STRING {
+		return "", errors.NewWithInvalidValueError(opt)
+	}
+	return v.ToString(), nil
+}
+
+func getBoolWithOption(with value.Value, opt string) (bool, error) {
+	v, found := with.Field(opt)
+	if !found || v.Type() != value.BOOLEAN {
+		return false, errors.NewWithInvalidValueError(opt)
+	}
+	return v.Truth(), nil
 }

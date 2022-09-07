@@ -162,38 +162,83 @@ func NewCbSecurityConfigNotProvided(bucket string) Error {
 }
 
 func NewCbCreateSystemBucketError(s string, e error) Error {
+	c := make(map[string]interface{})
+	if _, ok := e.(Error); ok {
+		c["error"] = e
+	} else if e != nil {
+		c["error"] = e.Error()
+	}
+	c["system_bucket"] = s
 	return &err{level: EXCEPTION, ICode: E_CB_CREATE_SYSTEM_BUCKET, IKey: "datastore.couchbase.create_system_bucket", ICause: e,
-		InternalMsg: "Error while creating system bucket " + s, InternalCaller: CallerN(1)}
+		cause: c, InternalMsg: "Error while creating system bucket " + s, InternalCaller: CallerN(1)}
 }
 
 func NewCbBucketCreateScopeError(s string, e error) Error {
+	c := make(map[string]interface{})
+	if _, ok := e.(Error); ok {
+		c["error"] = e
+	} else if e != nil {
+		c["error"] = e.Error()
+	}
+	c["scope"] = s
 	return &err{level: EXCEPTION, ICode: E_CB_BUCKET_CREATE_SCOPE, IKey: "datastore.couchbase.create_scope", ICause: e,
-		InternalMsg: "Error while creating scope " + s, InternalCaller: CallerN(1)}
+		cause: c, InternalMsg: "Error while creating scope " + s, InternalCaller: CallerN(1)}
 }
 
 func NewCbBucketDropScopeError(s string, e error) Error {
+	c := make(map[string]interface{})
+	if _, ok := e.(Error); ok {
+		c["error"] = e
+	} else if e != nil {
+		c["error"] = e.Error()
+	}
+	c["scope"] = s
 	return &err{level: EXCEPTION, ICode: E_CB_BUCKET_DROP_SCOPE, IKey: "datastore.couchbase.drop_scope", ICause: e,
-		InternalMsg: "Error while dropping scope " + s, InternalCaller: CallerN(1)}
+		cause: c, InternalMsg: "Error while dropping scope " + s, InternalCaller: CallerN(1)}
 }
 
-func NewCbBucketCreateCollectionError(c string, e error) Error {
+func NewCbBucketCreateCollectionError(coll string, e error) Error {
+	c := make(map[string]interface{})
+	if _, ok := e.(Error); ok {
+		c["error"] = e
+	} else if e != nil {
+		c["error"] = e.Error()
+	}
+	c["collection"] = coll
 	return &err{level: EXCEPTION, ICode: E_CB_BUCKET_CREATE_COLLECTION, IKey: "datastore.couchbase.create_collection", ICause: e,
-		InternalMsg: "Error while creating collection " + c, InternalCaller: CallerN(1)}
+		cause: c, InternalMsg: "Error while creating collection " + coll, InternalCaller: CallerN(1)}
 }
 
-func NewCbBucketDropCollectionError(c string, e error) Error {
+func NewCbBucketDropCollectionError(coll string, e error) Error {
+	c := make(map[string]interface{})
+	if _, ok := e.(Error); ok {
+		c["error"] = e
+	} else if e != nil {
+		c["error"] = e.Error()
+	}
+	c["collection"] = coll
 	return &err{level: EXCEPTION, ICode: E_CB_BUCKET_DROP_COLLECTION, IKey: "datastore.couchbase.drop_collection", ICause: e,
-		InternalMsg: "Error while dropping collection " + c, InternalCaller: CallerN(1)}
+		cause: c, InternalMsg: "Error while dropping collection " + coll, InternalCaller: CallerN(1)}
 }
 
-func NewCbBucketFlushCollectionError(c string, e error) Error {
+func NewCbBucketFlushCollectionError(coll string, e error) Error {
+	c := make(map[string]interface{})
+	if _, ok := e.(Error); ok {
+		c["error"] = e
+	} else if e != nil {
+		c["error"] = e.Error()
+	}
+	c["collection"] = coll
 	return &err{level: EXCEPTION, ICode: E_CB_BUCKET_FLUSH_COLLECTION, IKey: "datastore.couchbase.flush_collection", ICause: e,
-		InternalMsg: "Error while flushing collection " + c, InternalCaller: CallerN(1)}
+		cause: c, InternalMsg: "Error while flushing collection " + coll, InternalCaller: CallerN(1)}
 }
 
 func NewBinaryDocumentMutationError(op, key string) Error {
+	c := make(map[string]interface{})
+	c["operation"] = op
+	c["key"] = key
 	return &err{level: EXCEPTION, ICode: E_BINARY_DOCUMENT_MUTATION, IKey: "mutation.binarydocument.not_supported",
-		InternalMsg:    op + " of binary document is not supported: " + key,
+		InternalMsg: op + " of binary document is not supported: " + key, cause: c,
 		InternalCaller: CallerN(1)}
 }
 
@@ -210,7 +255,6 @@ func NewPreserveExpiryNotSupported() Error {
 }
 
 // this is only embedded in 12009
-
 func newCASMismatchError() Error {
 	return &err{level: EXCEPTION, ICode: E_CAS_MISMATCH, IKey: "datastore.couchbase.CAS_mismatch",
 		InternalMsg: "CAS mismatch", InternalCaller: CallerN(2)} // note caller level
@@ -254,4 +298,18 @@ func NewBucketActionError(e interface{}, attempts int) Error {
 func NewCbAccessDeniedError(entity string) Error {
 	return &err{level: EXCEPTION, ICode: E_ACCESS_DENIED, IKey: "datastore.couchbase.access_denied",
 		InternalMsg: fmt.Sprintf("User does not have access to %s", entity), cause: entity, InternalCaller: CallerN(1)}
+}
+
+func NewWithInvalidOptionError(opt string) Error {
+	c := make(map[string]interface{})
+	c["option"] = opt
+	return &err{level: EXCEPTION, ICode: E_WITH_INVALID_OPTION, IKey: "datastore.with.invalid_option", cause: c,
+		InternalMsg: "Invalid option '" + opt + "'", InternalCaller: CallerN(1)}
+}
+
+func NewWithInvalidValueError(opt string) Error {
+	c := make(map[string]interface{})
+	c["option"] = opt
+	return &err{level: EXCEPTION, ICode: E_WITH_INVALID_TYPE, IKey: "datastore.with.invalid_value", cause: c,
+		InternalMsg: "Invalid value for '" + opt + "'", InternalCaller: CallerN(1)}
 }
