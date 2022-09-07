@@ -122,7 +122,7 @@ func (this *mapSpillFileHeap) Pop() interface{} {
 }
 
 type AnnotatedMap struct {
-	sync.Mutex
+	sync.RWMutex
 	shouldSpill func(uint64, uint64) bool
 	trackMemory func(int64)
 	merge       func(AnnotatedValue, AnnotatedValue) AnnotatedValue
@@ -143,6 +143,7 @@ func NewAnnotatedMap(
 		shouldSpill: shouldSpill,
 		trackMemory: trackMemory,
 		merge:       merge,
+		inMem:       make(map[string]AnnotatedValue, _INITIAL_MAP_SIZE),
 	}
 
 	return rv
@@ -153,42 +154,56 @@ func (this *AnnotatedMap) Copy() *AnnotatedMap {
 		shouldSpill: this.shouldSpill,
 		trackMemory: this.trackMemory,
 		merge:       this.merge,
+		inMem:       make(map[string]AnnotatedValue, _INITIAL_MAP_SIZE),
 	}
 	return rv
 }
 
-func (this *AnnotatedMap) Get(key string) AnnotatedValue {
-	this.Lock()
-	defer this.Unlock()
+func (this *AnnotatedMap) Load(key string) AnnotatedValue {
+	this.RLock()
 	rv, ok := this.inMem[key]
+	this.RUnlock()
 	if !ok {
 		return nil
 	}
 	return rv
 }
 
-func (this *AnnotatedMap) Set(key string, av AnnotatedValue) errors.Error {
+func (this *AnnotatedMap) Store(key string, av AnnotatedValue) errors.Error {
+	var err errors.Error
 	this.Lock()
-	defer this.Unlock()
-	if this.inMem == nil {
-		this.inMem = make(map[string]AnnotatedValue, _INITIAL_MAP_SIZE)
-	}
-
-	keySize := uint64(len(key))
 	existing, ok := this.inMem[key]
 	if ok {
 		this.memSize -= existing.Size()
-		keySize = 0
+		err = this.setLOCKED(key, 0, av)
+	} else {
+		err = this.setLOCKED(key, uint64(len(key)), av)
 	}
+	this.Unlock()
+	return err
+}
+
+func (this *AnnotatedMap) LoadOrStore(key string, av AnnotatedValue) (AnnotatedValue, bool, errors.Error) {
+	this.Lock()
+	existing, ok := this.inMem[key]
+	if ok {
+		this.Unlock()
+		return existing, false, nil
+	}
+	err := this.setLOCKED(key, uint64(len(key)), av)
+	this.Unlock()
+	return av, true, err
+}
+
+func (this *AnnotatedMap) setLOCKED(key string, keySize uint64, av AnnotatedValue) errors.Error {
+
 	if this.shouldSpill != nil && this.memSize > 0 && this.shouldSpill(this.memSize, keySize+av.Size()) {
 		if err := this.spillToDisk(); err != nil {
 			return err
 		}
 	}
-
 	this.inMem[key] = av
 	this.memSize += keySize + av.Size()
-
 	return nil
 }
 
@@ -256,12 +271,12 @@ func (this *AnnotatedMap) spillToDisk() errors.Error {
 
 func (this *AnnotatedMap) Foreach(f func(string, AnnotatedValue) bool) errors.Error {
 	this.Lock()
-	defer this.Unlock()
 	returned := 0
 	if this.spill != nil {
 		for i := range this.spill {
 			err := this.spill[i].rewind(this.trackMemory)
 			if err != nil {
+				this.Unlock()
 				logging.Debugf("[%p] rewind failed on [%d] %s: %v", this, i, this.spill[i].f.Name(), err)
 				return errors.NewValueError(errors.E_VALUE_SPILL_READ, err)
 			}
@@ -269,6 +284,7 @@ func (this *AnnotatedMap) Foreach(f func(string, AnnotatedValue) bool) errors.Er
 		sort.Sort(&this.spill)
 		err := this.mergeKeys()
 		if err != nil {
+			this.Unlock()
 			return errors.NewValueError(errors.E_VALUE_SPILL_READ, err)
 		}
 		// in-memory map needs to be accessed in sorted key order for merging with spilled maps
@@ -282,16 +298,19 @@ func (this *AnnotatedMap) Foreach(f func(string, AnnotatedValue) bool) errors.Er
 		for n < len(keys) || len(this.spill) > 0 {
 			if n < len(keys) && (len(this.spill) == 0 || keys[n] < this.spill[0].current.key) {
 				if !f(keys[n], this.inMem[keys[n]]) {
+					this.Unlock()
 					return nil
 				}
 				delete(this.inMem, keys[n])
 				n++
 			} else if len(this.spill) > 0 && (n >= len(keys) || keys[n] > this.spill[0].current.key) {
 				if !f(this.spill[0].current.key, this.spill[0].current.val) {
+					this.Unlock()
 					return nil
 				}
 				err := this.spill[0].nextValue(this.trackMemory)
 				if err != io.EOF && err != nil {
+					this.Unlock()
 					return errors.NewValueError(errors.E_VALUE_SPILL_READ, err)
 				} else if err == io.EOF {
 					d := heap.Pop(&this.spill).(*mapSpillFile)
@@ -302,6 +321,7 @@ func (this *AnnotatedMap) Foreach(f func(string, AnnotatedValue) bool) errors.Er
 				}
 				err = this.mergeKeys()
 				if err != nil {
+					this.Unlock()
 					return errors.NewValueError(errors.E_VALUE_SPILL_READ, err)
 				}
 			} else {
@@ -314,6 +334,7 @@ func (this *AnnotatedMap) Foreach(f func(string, AnnotatedValue) bool) errors.Er
 					this.trackMemory(int64(merged.Size()))
 				}
 				if !f(keys[n], merged) {
+					this.Unlock()
 					return nil
 				}
 				// recycle as these will never flow out of this container if they aren't the merged result
@@ -327,6 +348,7 @@ func (this *AnnotatedMap) Foreach(f func(string, AnnotatedValue) bool) errors.Er
 				n++
 				err := this.spill[0].nextValue(this.trackMemory)
 				if err != io.EOF && err != nil {
+					this.Unlock()
 					return errors.NewValueError(errors.E_VALUE_SPILL_READ, err)
 				} else if err == io.EOF {
 					d := heap.Pop(&this.spill).(*mapSpillFile)
@@ -337,6 +359,7 @@ func (this *AnnotatedMap) Foreach(f func(string, AnnotatedValue) bool) errors.Er
 				}
 				err = this.mergeKeys()
 				if err != nil {
+					this.Unlock()
 					return errors.NewValueError(errors.E_VALUE_SPILL_READ, err)
 				}
 			}
@@ -351,6 +374,7 @@ func (this *AnnotatedMap) Foreach(f func(string, AnnotatedValue) bool) errors.Er
 		}
 	}
 	this.Release() // foreach is a one-off...
+	this.Unlock()
 	logging.Debuga(func() string {
 		return fmt.Sprintf("[%p] items: %v, accumSpillTime: %v", this, returned, this.accumSpillTime)
 	})
@@ -406,6 +430,14 @@ func (this *AnnotatedMap) Release() {
 		this.accumSpillTime += this.spill[i].read
 	}
 	this.spill = nil
-	this.inMem = nil
+	if len(this.inMem) > 0 {
+		if len(this.inMem) <= _INITIAL_MAP_SIZE {
+			for k, _ := range this.inMem {
+				delete(this.inMem, k)
+			}
+		} else {
+			this.inMem = make(map[string]AnnotatedValue, _INITIAL_MAP_SIZE)
+		}
+	}
 	this.memSize = 0
 }

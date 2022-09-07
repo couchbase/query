@@ -107,17 +107,13 @@ func (this *FinalGroup) processItem(item value.AnnotatedValue, context *Context)
 	}
 
 	// Get or seed the group value
-	gv := this.groups.Get(gk)
-	if gv != nil {
-		context.Fatal(errors.NewDuplicateFinalGroupError())
+	gv, set, err := this.groups.LoadOrStore(gk, item)
+	if err != nil {
+		context.Fatal(errors.NewEvaluationError(err, "GROUP key"))
 		item.Recycle()
 		return false
-	}
-
-	gv = item
-	err := this.groups.Set(gk, gv)
-	if err != nil {
-		context.Fatal(err)
+	} else if !set {
+		context.Fatal(errors.NewDuplicateFinalGroupError())
 		item.Recycle()
 		return false
 	}

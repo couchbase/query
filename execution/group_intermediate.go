@@ -115,11 +115,13 @@ func (this *IntermediateGroup) processItem(item value.AnnotatedValue, context *C
 	}
 
 	// Get or seed the group value
-	gv := this.groups.Get(gk)
-	if gv == nil {
-
+	gv, set, err := this.groups.LoadOrStore(gk, item)
+	if err != nil {
+		context.Fatal(errors.NewEvaluationError(err, "GROUP key"))
+		item.Recycle()
+		return false
+	} else if set {
 		// avoid recycling of seeding values
-		this.groups.Set(gk, item)
 		return true
 	}
 	// Cumulate aggregates

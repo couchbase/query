@@ -120,19 +120,18 @@ func (this *InitialGroup) processItem(item value.AnnotatedValue, context *Contex
 
 	// Get or seed the group value
 	recycle := false
-	gv := this.groups.Get(gk)
 	handleQuota := false
-	if gv == nil {
-
-		// avoid recycling of seeding values
-		gv = item
-
+	gv, set, err := this.groups.LoadOrStore(gk, item)
+	if err != nil {
+		context.Fatal(errors.NewEvaluationError(err, "GROUP key"))
+		item.Recycle()
+		return false
+	} else if set {
 		aggregates := make(map[string]value.Value, len(this.plan.Aggregates()))
 		gv.SetAttachment("aggregates", aggregates)
 		for _, agg := range this.plan.Aggregates() {
 			aggregates[agg.String()], _ = agg.Default(nil, context)
 		}
-		this.groups.Set(gk, gv)
 	} else {
 		handleQuota = context.UseRequestQuota()
 		recycle = true
