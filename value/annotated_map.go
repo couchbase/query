@@ -42,10 +42,17 @@ type mapSpillFile struct {
 func (this *mapSpillFile) rewind(trackMemory func(int64)) error {
 	_, err := this.f.Seek(0, os.SEEK_SET)
 	if err != nil {
-		return err
+		return errors.NewValueError(errors.E_VALUE_SPILL_READ, err)
 	}
 	this.reader = bufio.NewReaderSize(this.f, 64*util.KiB)
-	return this.nextValue(trackMemory)
+	err = this.nextValue(trackMemory)
+	if err != nil {
+		if _, ok := err.(errors.Error); ok {
+			return err
+		}
+		return errors.NewValueError(errors.E_VALUE_SPILL_READ, err)
+	}
+	return nil
 }
 
 func (this *mapSpillFile) Read(b []byte) (int, error) {

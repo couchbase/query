@@ -158,12 +158,15 @@ func (this *Order) afterItems(context *Context) {
 	context.AddPhaseCount(SORT, uint64(this.values.Length()))
 
 	earlyOrder := this.plan.IsEarlyOrder()
-	this.values.Foreach(func(av value.AnnotatedValue) bool {
+	err := this.values.Foreach(func(av value.AnnotatedValue) bool {
 		if earlyOrder {
 			this.resetCachedValues(av)
 		}
 		return this.sendItem(av)
 	})
+	if err != nil {
+		context.Error(err.(errors.Error))
+	}
 	logging.Debuga(func() string { return this.values.Stats() })
 }
 

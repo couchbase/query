@@ -146,13 +146,17 @@ func (this *FinalGroup) processItem(item value.AnnotatedValue, context *Context)
 
 func (this *FinalGroup) afterItems(context *Context) {
 	groups_len := 0
-	this.groups.Foreach(func(key string, av value.AnnotatedValue) bool {
+	err := this.groups.Foreach(func(key string, av value.AnnotatedValue) bool {
 		groups_len++
 		if !this.sendItem(av) {
 			return false
 		}
 		return true
 	})
+	if err != nil {
+		context.Error(err)
+		return
+	}
 
 	// Mo matching inputs, so send default values
 	if len(this.plan.Keys()) == 0 && groups_len == 0 {

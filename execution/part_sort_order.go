@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
@@ -176,7 +177,7 @@ func (this *PartSortOrder) sortAndStream(context *Context) bool {
 
 	rv := true
 	if this.limit == nil || this.remainingLimit > 0 {
-		this.values.Foreach(func(av value.AnnotatedValue) bool {
+		err := this.values.Foreach(func(av value.AnnotatedValue) bool {
 			if this.remainingOffset == 0 {
 				if !this.sendItem(av) {
 					rv = false
@@ -197,6 +198,10 @@ func (this *PartSortOrder) sortAndStream(context *Context) bool {
 			}
 			return true
 		})
+		if err != nil {
+			context.Error(err.(errors.Error))
+			return false
+		}
 	}
 	logging.Debuga(func() string { return this.values.Stats() })
 	this.values.Truncate(nil)

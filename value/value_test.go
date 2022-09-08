@@ -794,7 +794,7 @@ func TestSpillingArray(t *testing.T) {
 	check[1] = av.GetId().(string)
 
 	checkIndex := 0
-	array.Foreach(func(av AnnotatedValue) bool {
+	err := array.Foreach(func(av AnnotatedValue) bool {
 		if check[checkIndex] != av.GetId().(string) {
 			t.Errorf("documents not in order: expected '%v' at position %v found '%v'",
 				check[checkIndex], checkIndex, av.GetId().(string))
@@ -803,6 +803,9 @@ func TestSpillingArray(t *testing.T) {
 		checkIndex++
 		return true
 	})
+	if err != nil {
+		t.Errorf("Error: %v", err)
+	}
 
 	if tracking != 0 {
 		t.Errorf("memory accounting error, found %v (should be 0)", tracking)
@@ -872,7 +875,7 @@ func TestSpillingMap(t *testing.T) {
 	check[av.GetId().(string)] = re.ReplaceAllString(fmt.Sprintf("%#v", av), "(<address>)") // erase pointer address values
 
 	// values will have to swap in and out of memory for the foreach to complete on all values
-	themap.Foreach(func(key string, av AnnotatedValue) bool {
+	err := themap.Foreach(func(key string, av AnnotatedValue) bool {
 		if key != av.GetId().(string) {
 			t.Errorf("incorrect key '%v' for value '%#v' in map ", key, av)
 		}
@@ -892,6 +895,9 @@ func TestSpillingMap(t *testing.T) {
 		}
 		return true
 	})
+	if err != nil {
+		t.Errorf("Error: %v", err)
+	}
 
 	if tracking != 0 {
 		t.Errorf("memory accounting error, found %v (should be 0)", tracking)

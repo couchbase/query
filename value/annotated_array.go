@@ -39,10 +39,17 @@ type spillFile struct {
 func (this *spillFile) rewind() error {
 	_, err := this.f.Seek(0, os.SEEK_SET)
 	if err != nil {
-		return err
+		return errors.NewValueError(errors.E_VALUE_SPILL_READ, err)
 	}
 	this.reader = bufio.NewReaderSize(this.f, 64*util.KiB)
-	return this.nextValue()
+	err = this.nextValue()
+	if err != nil {
+		if _, ok := err.(errors.Error); ok {
+			return err
+		}
+		return errors.NewValueError(errors.E_VALUE_SPILL_READ, err)
+	}
+	return nil
 }
 
 func (this *spillFile) Read(b []byte) (int, error) {
