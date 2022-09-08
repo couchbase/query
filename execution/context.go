@@ -912,7 +912,7 @@ func (this *Context) EvaluateSubquery(query *algebra.Select, parent value.Value)
 	var subplan, subplanIsks interface{}
 	planFound := false
 
-	useCache := !query.IsCorrelated() && !query.HasVariables()
+	useCache := useSubqCachedResult(query)
 	if useCache {
 		subresults := this.getSubresults()
 		subresult, _, ok := subresults.get(query)
@@ -1054,6 +1054,10 @@ func (this *Context) EvaluateSubquery(query *algebra.Select, parent value.Value)
 	}
 
 	return results, nil
+}
+
+func useSubqCachedResult(query *algebra.Select) bool {
+	return !query.IsCorrelated() && !query.HasVariables()
 }
 
 func (this *Context) DatastoreURL() string {

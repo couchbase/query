@@ -170,7 +170,7 @@ func (this *builder) buildAnsiJoinOp(node *algebra.AnsiJoin) (op plan.Operator, 
 		}
 
 		if util.IsFeatureEnabled(this.context.FeatureControls(), util.N1QL_HASH_JOIN) {
-			tryHash := !this.hasBuilderFlag(BUILDER_NL_INNER)
+			tryHash := true
 			if useCBO && joinEnum {
 				/* during join enumeration hash join is built separately */
 				tryHash = false
@@ -411,7 +411,7 @@ func (this *builder) buildAnsiJoinOp(node *algebra.AnsiJoin) (op plan.Operator, 
 		if util.IsFeatureEnabled(this.context.FeatureControls(), util.N1QL_HASH_JOIN) {
 			// for expression term and subquery term, consider hash join
 			// even without USE HASH hint, as long as USE NL is not specified
-			if !joinEnum && !this.hasBuilderFlag(BUILDER_NL_INNER) && !preferNL {
+			if !joinEnum && !preferNL {
 				hjoin, _, err := this.buildHashJoin(node, filter, selec, nil, nil, nil)
 				if hjoin != nil || err != nil {
 					return hjoin, err
@@ -528,7 +528,7 @@ func (this *builder) buildAnsiNestOp(node *algebra.AnsiNest) (op plan.Operator, 
 		nlIndexHintError := false
 
 		if util.IsFeatureEnabled(this.context.FeatureControls(), util.N1QL_HASH_JOIN) {
-			tryHash := !this.hasBuilderFlag(BUILDER_NL_INNER)
+			tryHash := true
 			if useCBO && joinEnum {
 				/* during join enumeration hash join is built separately */
 				tryHash = false
@@ -754,7 +754,7 @@ func (this *builder) buildAnsiNestOp(node *algebra.AnsiNest) (op plan.Operator, 
 		if util.IsFeatureEnabled(this.context.FeatureControls(), util.N1QL_HASH_JOIN) {
 			// for expression term and subquery term, consider hash join
 			// even without USE HASH hint, as long as USE NL is not specified
-			if !joinEnum && !this.hasBuilderFlag(BUILDER_NL_INNER) && !preferNL {
+			if !joinEnum && !preferNL {
 				hnest, _, err := this.buildHashNest(node, filter, selec, nil, nil, nil)
 				if hnest != nil || err != nil {
 					return hnest, err

@@ -23,6 +23,7 @@ type ExpressionScan struct {
 	alias      string
 	correlated bool
 	filter     expression.Expression
+	subqPlan   Operator
 }
 
 func NewExpressionScan(fromExpr expression.Expression, alias string, correlated bool,
@@ -67,6 +68,18 @@ func (this *ExpressionScan) Filter() expression.Expression {
 
 func (this *ExpressionScan) SetFilter(filter expression.Expression) {
 	this.filter = filter
+}
+
+// subqPlan: in case a SubqueryTerm is used under inner of a nested-loop join, we put an
+// ExpressionScan on top of the subquery; in this case we need to add the query plan of
+// the subquery in the "~subqueries" section of explain plan.
+
+func (this *ExpressionScan) SubqueryPlan() Operator {
+	return this.subqPlan
+}
+
+func (this *ExpressionScan) SetSubqueryPlan(subqPlan Operator) {
+	this.subqPlan = subqPlan
 }
 
 func (this *ExpressionScan) MarshalJSON() ([]byte, error) {
