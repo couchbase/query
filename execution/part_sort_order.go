@@ -12,7 +12,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
@@ -199,7 +198,7 @@ func (this *PartSortOrder) sortAndStream(context *Context) bool {
 			return true
 		})
 		if err != nil {
-			context.Error(err.(errors.Error))
+			context.Error(err)
 			return false
 		}
 	}

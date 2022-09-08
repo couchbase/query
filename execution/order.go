@@ -165,7 +165,7 @@ func (this *Order) afterItems(context *Context) {
 		return this.sendItem(av)
 	})
 	if err != nil {
-		context.Error(err.(errors.Error))
+		context.Error(err)
 	}
 	logging.Debuga(func() string { return this.values.Stats() })
 }

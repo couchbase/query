@@ -177,9 +177,9 @@ func (this *AnnotatedArray) Append(v AnnotatedValue) errors.Error {
 		this.mem = this.acquire(this.heapSize)
 	}
 	sz := uint64(0)
-	if this.shouldSpill != nil && this.memSize > 0 {
+	if this.shouldSpill != nil {
 		sz = v.Size()
-		if this.shouldSpill(this.memSize, sz) {
+		if this.memSize > 0 && this.shouldSpill(this.memSize, sz) {
 			logging.Debuga(func() string {
 				return fmt.Sprintf("[%p] need to spill: %v+%v, heapSize: %v",
 					this, this.memSize, sz, this.heapSize)
@@ -284,7 +284,7 @@ func (this *AnnotatedArray) spillToDisk() error {
 	return nil
 }
 
-func (this *AnnotatedArray) Foreach(f func(AnnotatedValue) bool) error {
+func (this *AnnotatedArray) Foreach(f func(AnnotatedValue) bool) errors.Error {
 
 	if this.mem == nil {
 		this.mem = this.acquire(0)
@@ -311,8 +311,8 @@ func (this *AnnotatedArray) Foreach(f func(AnnotatedValue) bool) error {
 		heap.Init(&this.spill)
 
 		for {
-			av, err := this.nextSorted()
-			if err != nil {
+			av, err, eof := this.nextSorted()
+			if err != nil || eof {
 				return err
 			}
 			if !f(av) {
@@ -321,8 +321,8 @@ func (this *AnnotatedArray) Foreach(f func(AnnotatedValue) bool) error {
 		}
 	} else {
 		for {
-			av, err := this.nextUnsorted()
-			if err != nil {
+			av, err, eof := this.nextUnsorted()
+			if err != nil || eof {
 				return err
 			}
 			if !f(av) {
@@ -332,15 +332,15 @@ func (this *AnnotatedArray) Foreach(f func(AnnotatedValue) bool) error {
 	}
 }
 
-func (this *AnnotatedArray) nextUnsorted() (AnnotatedValue, error) {
+func (this *AnnotatedArray) nextUnsorted() (AnnotatedValue, errors.Error, bool) {
 	for {
 		if this.iterator.fileIndex >= len(this.spill) {
 			if this.iterator.memIndex >= len(this.mem) {
-				return nil, io.EOF
+				return nil, nil, true
 			}
 			rv := this.mem[this.iterator.memIndex]
 			this.iterator.memIndex++
-			return rv, nil
+			return rv, nil, false
 		}
 		err := this.spill[this.iterator.fileIndex].nextValue()
 		if err == io.EOF {
@@ -352,18 +352,18 @@ func (this *AnnotatedArray) nextUnsorted() (AnnotatedValue, error) {
 		}
 		if err != nil {
 			if err == io.EOF {
-				return nil, err
+				return nil, nil, true
 			}
-			return nil, errors.NewValueError(errors.E_VALUE_SPILL_READ, err)
+			return nil, errors.NewValueError(errors.E_VALUE_SPILL_READ, err), false
 		}
 		if this.trackMemory != nil {
 			this.trackMemory(int64(this.spill[this.iterator.fileIndex].current.Size()))
 		}
-		return this.spill[this.iterator.fileIndex].current, nil
+		return this.spill[this.iterator.fileIndex].current, nil, false
 	}
 }
 
-func (this *AnnotatedArray) nextSorted() (AnnotatedValue, error) {
+func (this *AnnotatedArray) nextSorted() (AnnotatedValue, errors.Error, bool) {
 	var smallest *spillFile
 	if this.spill != nil {
 		smallest = this.spill[0]
@@ -372,23 +372,22 @@ func (this *AnnotatedArray) nextSorted() (AnnotatedValue, error) {
 		if smallest == nil || smallest.current == nil || this.less(this.mem[this.iterator.memIndex], smallest.current) {
 			rv := this.mem[this.iterator.memIndex]
 			this.iterator.memIndex++
-			return rv, nil
+			return rv, nil, false
 		}
 	}
 	if smallest == nil || smallest.current == nil {
-		return nil, io.EOF
+		return nil, nil, true
 	}
 	rv := smallest.current
 	err := smallest.nextValue()
 	if err != io.EOF && err != nil {
-		logging.Debugf("err: %v", err)
-		return nil, errors.NewValueError(errors.E_VALUE_SPILL_READ, err)
+		return nil, errors.NewValueError(errors.E_VALUE_SPILL_READ, err), false
 	}
 	if this.trackMemory != nil && smallest.current != nil {
 		this.trackMemory(int64(smallest.current.Size()))
 	}
 	heap.Fix(&this.spill, 0)
-	return rv, nil
+	return rv, nil, false
 }
 
 func (this *AnnotatedArray) Release() {
