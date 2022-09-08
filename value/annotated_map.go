@@ -173,7 +173,7 @@ func (this *AnnotatedMap) Set(key string, av AnnotatedValue) errors.Error {
 		this.memSize -= existing.Size()
 		keySize = 0
 	}
-	if this.shouldSpill != nil && this.shouldSpill(this.memSize, keySize+av.Size()) {
+	if this.shouldSpill != nil && this.memSize > 0 && this.shouldSpill(this.memSize, keySize+av.Size()) {
 		if err := this.spillToDisk(); err != nil {
 			return err
 		}
@@ -187,6 +187,10 @@ func (this *AnnotatedMap) Set(key string, av AnnotatedValue) errors.Error {
 
 func (this *AnnotatedMap) spillToDisk() errors.Error {
 	var err error
+	if this.memSize == 0 || len(this.inMem) == 0 {
+		// nothing to spill
+		return nil
+	}
 	start := time.Now()
 	spill := &mapSpillFile{}
 	spill.f, err = util.CreateTemp(_SPILL_FILE_PATTERN, true)

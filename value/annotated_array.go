@@ -170,7 +170,7 @@ func (this *AnnotatedArray) Append(v AnnotatedValue) errors.Error {
 		this.mem = this.acquire(this.heapSize)
 	}
 	sz := uint64(0)
-	if this.shouldSpill != nil {
+	if this.shouldSpill != nil && this.memSize > 0 {
 		sz = v.Size()
 		if this.shouldSpill(this.memSize, sz) {
 			logging.Debuga(func() string {
@@ -221,6 +221,10 @@ func (this *AnnotatedArray) Append(v AnnotatedValue) errors.Error {
 }
 
 func (this *AnnotatedArray) spillToDisk() error {
+	if this.memSize == 0 || len(this.mem) == 0 {
+		// nothing to spill
+		return nil
+	}
 	if logging.LogLevel() == logging.DEBUG && this.heapSize > 0 {
 		logging.Debugf("[%p] switching from heap to standard", this)
 	}

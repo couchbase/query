@@ -685,7 +685,7 @@ func (this *Context) Release() {
 }
 
 func (this *Context) CurrentQuotaUsage() float64 {
-	if this.memorySession == nil {
+	if this.memorySession == nil || this.memoryQuota == 0 {
 		return 0.0
 	}
 	sz := this.memorySession.InUseMemory()
