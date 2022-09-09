@@ -19,12 +19,13 @@ import (
 
 // AccountingStore represents a store for maintaining all accounting data (metrics, statistics, events)
 type AccountingStore interface {
-	Id() string                          // Id of this AccountingStore
-	URL() string                         // URL to this AccountingStore
-	MetricRegistry() MetricRegistry      // The MetricRegistry that this AccountingStore is managing
-	MetricReporter() MetricReporter      // The MetricReporter that this AccountingStore is using
-	Vitals() (interface{}, errors.Error) // The Vital Signs of the entity that this AccountingStore
-	NewCounter() Counter                 // Create individual metrics
+	Id() string                                                   // Id of this AccountingStore
+	URL() string                                                  // URL to this AccountingStore
+	MetricRegistry() MetricRegistry                               // The MetricRegistry that this AccountingStore is managing
+	MetricReporter() MetricReporter                               // The MetricReporter that this AccountingStore is using
+	Vitals() (map[string]interface{}, errors.Error)               // The Vital Signs of the entity that this AccountingStore
+	ExternalVitals(map[string]interface{}) map[string]interface{} // Vitals comeing from outside
+	NewCounter() Counter                                          // Create individual metrics
 	NewGauge() Gauge
 	NewMeter() Meter
 	NewTimer() Timer

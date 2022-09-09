@@ -20,36 +20,47 @@ import (
 	"github.com/couchbase/query/accounting"
 	"github.com/couchbase/query/accounting/metrics"
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/server"
+	"github.com/couchbase/query/system"
 	"github.com/couchbase/query/util"
 )
 
 type gometricsAccountingStore struct {
 	sync.Mutex
-	registry accounting.MetricRegistry
-	reporter accounting.MetricReporter
-	vitals   map[string]interface{}
+	registry      accounting.MetricRegistry
+	reporter      accounting.MetricReporter
+	stats         *system.SystemStats
+	lastUtime     int64
+	lastStime     int64
+	lastPauseTime uint64
+	lastNow       time.Time
+	startTime     time.Time
+	vitals        map[string]interface{}
 }
 
-func NewAccountingStore() accounting.AccountingStore {
+func NewAccountingStore() (accounting.AccountingStore, errors.Error) {
+	var err error
 	rv := &gometricsAccountingStore{
 		registry: &goMetricRegistry{},
 		reporter: &goMetricReporter{},
-		vitals:   map[string]interface{}{},
 	}
 
-	var lastUtime, lastStime int64
-	var lastPauseTime uint64
-	var lastNow time.Time
-	startTime := time.Now()
+	// open sigar for stats
+	rv.stats, err = system.NewSystemStats()
+	if err != nil {
+		logging.Errorf("Accounting store error : %v", err)
+		return nil, errors.NewAdminStartError(err)
+	}
 
-	rv.vitals["lastUtime"] = lastUtime
-	rv.vitals["lastStime"] = lastStime
-	rv.vitals["lastNow"] = lastNow
-	rv.vitals["lastPauseTime"] = lastPauseTime
-	rv.vitals["startTime"] = startTime
+	// skip the first one
+	rv.stats.ProcessCpuPercent()
+	rv.stats.ProcessRSS()
+	rv.stats.GetTotalAndFreeMem(false)
 
-	return rv
+	rv.startTime = time.Now()
+
+	return rv, nil
 }
 
 func (g *gometricsAccountingStore) Id() string {
@@ -68,7 +79,7 @@ func (g *gometricsAccountingStore) MetricReporter() accounting.MetricReporter {
 	return g.reporter
 }
 
-func (g *gometricsAccountingStore) Vitals() (interface{}, errors.Error) {
+func (g *gometricsAccountingStore) Vitals() (map[string]interface{}, errors.Error) {
 	var mem runtime.MemStats
 
 	runtime.ReadMemStats(&mem)
@@ -79,16 +90,16 @@ func (g *gometricsAccountingStore) Vitals() (interface{}, errors.Error) {
 	newUtime, newStime := util.CpuTimes()
 
 	g.Lock()
-	uptime := now.Sub(g.vitals["startTime"].(time.Time))
-	dur := float64(now.Sub(g.vitals["lastNow"].(time.Time)))
-	uPerc := float64(newUtime-g.vitals["lastUtime"].(int64)) / dur
-	sPerc := float64(newStime-g.vitals["lastStime"].(int64)) / dur
-	pausePerc := float64(mem.PauseTotalNs-g.vitals["lastPauseTime"].(uint64)) / dur
+	uptime := now.Sub(g.startTime)
+	dur := float64(now.Sub(g.lastNow))
+	uPerc := float64(newUtime-g.lastUtime) / dur
+	sPerc := float64(newStime-g.lastStime) / dur
+	pausePerc := float64(mem.PauseTotalNs-g.lastPauseTime) / dur
 
-	g.vitals["lastNow"] = now
-	g.vitals["lastUtime"] = newUtime
-	g.vitals["lastStime"] = newStime
-	g.vitals["lastPauseTime"] = mem.PauseTotalNs
+	g.lastNow = now
+	g.lastUtime = newUtime
+	g.lastStime = newStime
+	g.lastPauseTime = mem.PauseTotalNs
 	g.Unlock()
 
 	actCount, _ := server.ActiveRequestsCount()
@@ -99,63 +110,55 @@ func (g *gometricsAccountingStore) Vitals() (interface{}, errors.Error) {
 	} else {
 		prepPercent = 0.0
 	}
+	rv := map[string]interface{}{
+		"uptime":                    uptime.String(),
+		"local.time":                now.Format(util.DEFAULT_FORMAT),
+		"version":                   util.VERSION,
+		"total.threads":             runtime.NumGoroutine(),
+		"cores":                     runtime.GOMAXPROCS(0),
+		"gc.num":                    mem.NextGC,
+		"gc.pause.time":             time.Duration(mem.PauseTotalNs).String(),
+		"gc.pause.percent":          util.RoundPlaces(pausePerc, 4),
+		"memory.usage":              mem.Alloc,
+		"memory.total":              mem.TotalAlloc,
+		"memory.system":             mem.Sys,
+		"cpu.user.percent":          util.RoundPlaces(uPerc, 4),
+		"cpu.sys.percent":           util.RoundPlaces(sPerc, 4),
+		"request.completed.count":   totCount,
+		"request.active.count":      int64(actCount),
+		"request.per.sec.1min":      util.RoundPlaces(request_timer.Rate1(), 4),
+		"request.per.sec.5min":      util.RoundPlaces(request_timer.Rate5(), 4),
+		"request.per.sec.15min":     util.RoundPlaces(request_timer.Rate15(), 4),
+		"request_time.mean":         time.Duration(request_timer.Mean()).String(),
+		"request_time.median":       time.Duration(request_timer.Percentile(.5)).String(),
+		"request_time.80percentile": time.Duration(request_timer.Percentile(.8)).String(),
+		"request_time.95percentile": time.Duration(request_timer.Percentile(.95)).String(),
+		"request_time.99percentile": time.Duration(request_timer.Percentile(.99)).String(),
+		"request.prepared.percent":  prepPercent,
+	}
+	g.Lock()
+	_, rss, total, free, err := system.GetSystemStats(g.stats, false, true)
+	if err == nil {
+		rv["process.rss"] = rss
+		rv["host.memory.total"] = total
+		rv["host.memory.free"] = free
 
-	return VitalsRecord{
-		Uptime:         uptime.String(),
-		LocalTime:      now.Format(util.DEFAULT_FORMAT),
-		Version:        util.VERSION,
-		TotThreads:     runtime.NumGoroutine(),
-		Cores:          runtime.GOMAXPROCS(0),
-		GCNum:          mem.NextGC,
-		GCPauseTime:    time.Duration(mem.PauseTotalNs).String(),
-		GCPausePercent: util.RoundPlaces(pausePerc, 4),
-		MemoryUsage:    mem.Alloc,
-		MemoryTotal:    mem.TotalAlloc,
-		MemorySys:      mem.Sys,
-		CPUUser:        util.RoundPlaces(uPerc, 4),
-		CPUSys:         util.RoundPlaces(sPerc, 4),
-		ReqCount:       totCount,
-		ActCount:       int64(actCount),
-		Req1min:        util.RoundPlaces(request_timer.Rate1(), 4),
-		Req5min:        util.RoundPlaces(request_timer.Rate5(), 4),
-		Req15min:       util.RoundPlaces(request_timer.Rate15(), 4),
-		ReqMean:        time.Duration(request_timer.Mean()).String(),
-		ReqMedian:      time.Duration(request_timer.Percentile(.5)).String(),
-		Req80:          time.Duration(request_timer.Percentile(.8)).String(),
-		Req95:          time.Duration(request_timer.Percentile(.95)).String(),
-		Req99:          time.Duration(request_timer.Percentile(.99)).String(),
-		Prepared:       prepPercent,
-	}, nil
-
+	} else {
+		logging.Debugf("statsCollector error : %v", err)
+	}
+	for n, v := range g.vitals {
+		rv[n] = v
+	}
+	g.Unlock()
+	return rv, nil
 }
 
-type VitalsRecord struct {
-	Uptime         string  `json:"uptime"`
-	LocalTime      string  `json:"local.time"`
-	Version        string  `json:"version"`
-	TotThreads     int     `json:"total.threads"`
-	Cores          int     `json:"cores"`
-	GCNum          uint64  `json:"gc.num"`
-	GCPauseTime    string  `json:"gc.pause.time"`
-	GCPausePercent float64 `json:"gc.pause.percent"`
-	MemoryUsage    uint64  `json:"memory.usage"`
-	MemoryTotal    uint64  `json:"memory.total"`
-	MemorySys      uint64  `json:"memory.system"`
-	CPUUser        float64 `json:"cpu.user.percent"`
-	CPUSys         float64 `json:"cpu.sys.percent"`
-	ReqCount       int64   `json:"request.completed.count"`
-	ActCount       int64   `json:"request.active.count"`
-	Req1min        float64 `json:"request.per.sec.1min"`
-	Req5min        float64 `json:"request.per.sec.5min"`
-	Req15min       float64 `json:"request.per.sec.15min"`
-	ReqMean        string  `json:"request_time.mean"`
-	ReqMedian      string  `json:"request_time.median"`
-	Req80          string  `json:"request_time.80percentile"`
-	Req95          string  `json:"request_time.95percentile"`
-	Req99          string  `json:"request_time.99percentile"`
-	Prepared       float64 `json:"request.prepared.percent"`
-
-	// FIXME Active vs Queued threads, local time, version, direct vs prepared, network
+func (g *gometricsAccountingStore) ExternalVitals(vitals map[string]interface{}) map[string]interface{} {
+	g.Lock()
+	oldVitals := g.vitals
+	g.vitals = vitals
+	g.Unlock()
+	return oldVitals
 }
 
 func (g *gometricsAccountingStore) NewCounter() accounting.Counter {

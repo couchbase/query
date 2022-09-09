@@ -19,6 +19,11 @@ func NewAdminConnectionError(e error, msg string) Error {
 		InternalMsg: "Error connecting to " + msg, InternalCaller: CallerN(1)}
 }
 
+func NewAdminStartError(e error) Error {
+	return &err{level: EXCEPTION, ICode: E_ADMIN_START, IKey: "admin.accounting.start", ICause: e,
+		InternalMsg: fmt.Sprintf("Error accounting manager: %v", e), InternalCaller: CallerN(1)}
+}
+
 func NewAdminInvalidURL(component string, url string) Error {
 	return &err{level: EXCEPTION, ICode: E_ADMIN_INVALIDURL, IKey: "admin.invalid_url",
 		InternalMsg: fmt.Sprintf("Invalid %s url: %s", component, url), InternalCaller: CallerN(1)}

@@ -340,6 +340,10 @@ func doVitals(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, 
 	af.EventTypeId = audit.API_ADMIN_VITALS
 	switch req.Method {
 	case "GET":
+		err, _ := endpoint.verifyCredentialsFromRequest("system:vitals", auth.PRIV_SYSTEM_READ, req, af)
+		if err != nil {
+			return nil, err
+		}
 		acctStore := endpoint.server.AccountingStore()
 		return acctStore.Vitals()
 	default:
@@ -348,7 +352,7 @@ func doVitals(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, 
 }
 
 // Credentials can come from two sources: the basic username/password
-// from basic authorizatio, and from a "creds" value, which encodes
+// from basic authorization, and from a "creds" value, which encodes
 // in JSON an array of username/password pairs, like this:
 //   [{"user":"foo", "pass":"foopass"}, {"user":"bar", "pass": "barpass"}]
 func (endpoint *HttpEndpoint) getCredentialsFromRequest(ds datastore.Datastore, req *http.Request) (*auth.Credentials, errors.Error, bool) {

@@ -11,6 +11,7 @@ package system
 import (
 	"time"
 
+	"github.com/couchbase/query/accounting"
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
@@ -47,12 +48,14 @@ const KEYSPACE_NAME_NODES = "nodes"
 const KEYSPACE_NAME_APPLICABLE_ROLES = "applicable_roles"
 const KEYSPACE_NAME_TASKS_CACHE = "tasks_cache"
 const KEYSPACE_NAME_TRANSACTIONS = "transactions"
+const KEYSPACE_NAME_VITALS = "vitals"
 
 // TODO, sync with fetch timeout
 const scanTimeout = 30 * time.Second
 
 type store struct {
 	actualStore              datastore.Datastore
+	acctStore                accounting.AccountingStore
 	systemDatastoreNamespace *namespace
 }
 
@@ -258,8 +261,8 @@ func (s *store) TransactionDeltaKeyScan(keyspace string, conn *datastore.IndexCo
 	defer conn.Sender().Close()
 }
 
-func NewDatastore(actualStore datastore.Datastore) (datastore.Systemstore, errors.Error) {
-	s := &store{actualStore: actualStore}
+func NewDatastore(actualStore datastore.Datastore, acctStore accounting.AccountingStore) (datastore.Systemstore, errors.Error) {
+	s := &store{actualStore: actualStore, acctStore: acctStore}
 
 	e := s.loadNamespace()
 	if e != nil {

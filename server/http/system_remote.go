@@ -308,6 +308,7 @@ func (this *systemRemoteHttp) GetRemoteKeys(nodes []string, endpoint string,
 // get a specified remote document from a remote node
 func (this *systemRemoteHttp) GetRemoteDoc(node string, key string, endpoint string, command string,
 	docFn func(map[string]interface{}), warnFn func(warn errors.Error), creds distributed.Creds, authToken string) {
+	var loc string
 	var body []byte
 	var doc map[string]interface{}
 
@@ -320,7 +321,13 @@ func (this *systemRemoteHttp) GetRemoteDoc(node string, key string, endpoint str
 	}
 
 	cp := this.getCommParams()
-	body, opErr := this.doRemoteOp(queryNode, endpoint+"/"+key, command, "", "fetch", creds, authToken, cp)
+	if key != "" {
+		loc = endpoint + "/" + key
+	} else {
+		loc = endpoint
+	}
+
+	body, opErr := this.doRemoteOp(queryNode, loc, command, "", "fetch", creds, authToken, cp)
 	if opErr != nil {
 		if warnFn != nil {
 			warnFn(opErr)

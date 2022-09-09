@@ -112,7 +112,7 @@ func TestSystem(t *testing.T) {
 	datastore.SetDatastore(m)
 
 	// Create systems store with mock m as the ActualStore
-	s, err := NewDatastore(m)
+	s, err := NewDatastore(m, nil)
 	if err != nil {
 		t.Fatalf("failed to create system store: %v", err)
 	}

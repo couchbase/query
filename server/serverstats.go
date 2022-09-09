@@ -14,7 +14,6 @@ import (
 
 	json "github.com/couchbase/go_json"
 	"github.com/couchbase/query/logging"
-	"github.com/couchbase/query/system"
 )
 
 const (
@@ -32,7 +31,6 @@ var qsLoadFactor uint32 // Query Service moving average Load Factor
 
 type statsCollector struct {
 	server           *Server
-	stats            *system.SystemStats
 	loadFactors      [_MOVING_WINDOW]int
 	sumOfLoadFactors int
 	nLoadFactors     int
@@ -49,22 +47,12 @@ func (this *Server) StartStatsCollector() (err error) {
 
 	collector := &statsCollector{server: this}
 
-	// open sigar for stats
-	collector.stats, err = system.NewSystemStats()
-	if err != nil {
-		logging.Errorf("StartStatsCollector error : %v", err)
-		return err
-	}
 	for i := 0; i < len(collector.loadFactors); i++ {
 		collector.loadFactors[i] = DEF_LOAD_FACTOR
 		collector.sumOfLoadFactors += collector.loadFactors[i]
 		collector.nLoadFactors += 1
 	}
 
-	// skip the first one
-	collector.stats.ProcessCpuPercent()
-	collector.stats.ProcessRSS()
-	collector.stats.GetTotalAndFreeMem(false)
 	updateQsLoadFactor(int(collector.sumOfLoadFactors / collector.nLoadFactors))
 
 	// start stats collection
@@ -86,49 +74,33 @@ func (c *statsCollector) runCollectStats() {
 	}()
 
 	index := 0
-	mstats := make(map[string]interface{}, 20)
 
+	oldStats := make(map[string]interface{}, 6)
+	newStats := make(map[string]interface{}, 6)
+	c.server.AccountingStore().ExternalVitals(oldStats)
 	for range ticker.C {
 		loadFactor := c.server.loadFactor(true)
 		c.sumOfLoadFactors += (loadFactor - c.loadFactors[index])
 		c.loadFactors[index] = loadFactor
 		updateQsLoadFactor(int(c.sumOfLoadFactors / c.nLoadFactors))
+
+		newStats["loadfactor"] = getQsLoadFactor()
+		newStats["load"] = c.server.Load()
+		newStats["process.service.usage"] = c.server.ServicerUsage()
+		newStats["process.percore.cpupercent"] = c.server.CpuUsage(false)
+		newStats["process.memory.usage"] = c.server.MemoryUsage(false)
+		newStats["request.queued.count"] = c.server.QueuedRequests()
+		oldStats = c.server.AccountingStore().ExternalVitals(newStats)
+		newStats = oldStats
+
 		if (index % _LOG_INTRVL) == 0 {
-			_, rss, total, free, err := system.GetSystemStats(c.stats, false, true)
-			if err != nil {
-				logging.Debugf("statsCollector error : %v", err)
-			}
-			getQueryEngineStats(c.server, mstats, rss, total, free)
+			mstats, _ := c.server.AccountingStore().Vitals()
 			if buf, e := json.Marshal(mstats); e == nil {
 				logging.Infof("Query Engine Stats %v", string(buf))
 			}
 		}
 		index++
 		index %= c.nLoadFactors
-	}
-}
-
-func getQueryEngineStats(server *Server, mstats map[string]interface{}, rss, total, free uint64) {
-	mstats["process.rss"] = rss
-	mstats["host.memory.total"] = total
-	mstats["host.memory.free"] = free
-	mstats["loadfactor"] = getQsLoadFactor()
-	mstats["load"] = server.Load()
-	mstats["process.service.usage"] = server.ServicerUsage()
-	mstats["process.percore.cpupercent"] = server.CpuUsage(false)
-	mstats["process.memory.usage"] = server.MemoryUsage(false)
-	mstats["request.queued.count"] = server.QueuedRequests()
-
-	var mv map[string]interface{}
-	v, e := server.AccountingStore().Vitals()
-	if e == nil {
-		body, e := json.Marshal(v)
-		if e == nil {
-			json.Unmarshal(body, &mv)
-		}
-	}
-	for n, v := range mv {
-		mstats[n] = v
 	}
 }
 

@@ -210,7 +210,12 @@ func Start(site, pool, namespace string) *MockServer {
 	}
 	datastore.SetDatastore(ds)
 
-	sys, err := system.NewDatastore(ds)
+	acctstore, err := acct_resolver.NewAcctstore("stub:")
+	if err != nil {
+		logging.Errorf("Could not connect to acctstore: %v", err)
+	}
+
+	sys, err := system.NewDatastore(ds, acctstore)
 	if err != nil {
 		logging.Errorf("%v", err.Error())
 		os.Exit(1)
@@ -220,11 +225,6 @@ func Start(site, pool, namespace string) *MockServer {
 	configstore, err := config_resolver.NewConfigstore("stub:", "")
 	if err != nil {
 		logging.Errorf("Could not connect to configstore: %v", err)
-	}
-
-	acctstore, err := acct_resolver.NewAcctstore("stub:")
-	if err != nil {
-		logging.Errorf("Could not connect to acctstore: %v", err)
 	}
 
 	// Start the completed requests log - keep it small and busy

@@ -47,8 +47,12 @@ func (AccountingStoreStub) MetricReporter() accounting.MetricReporter {
 	return MetricReporterStub{}
 }
 
-func (AccountingStoreStub) Vitals() (interface{}, errors.Error) {
+func (AccountingStoreStub) Vitals() (map[string]interface{}, errors.Error) {
 	return nil, nil
+}
+
+func (AccountingStoreStub) ExternalVitals(vals map[string]interface{}) map[string]interface{} {
+	return nil
 }
 
 func (AccountingStoreStub) NewCounter() accounting.Counter {

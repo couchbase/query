@@ -246,6 +246,13 @@ func (p *namespace) loadKeyspaces() (e errors.Error) {
 	}
 
 	p.keyspaces[transactions.Name()] = transactions
+
+	vitals, e := newVitalsKeyspace(p)
+	if e != nil {
+		return e
+	}
+
+	p.keyspaces[vitals.Name()] = vitals
 	return nil
 }
 

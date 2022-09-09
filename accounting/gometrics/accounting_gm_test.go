@@ -13,7 +13,7 @@ import (
 )
 
 func TestGoMetrics(t *testing.T) {
-	acctstore := NewAccountingStore()
+	acctstore, _ := NewAccountingStore()
 
 	if acctstore == nil {
 		t.Fatalf("Expected to create AccountingStore")

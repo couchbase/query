@@ -24,7 +24,7 @@ func NewAcctstore(uri string) (accounting.AccountingStore, errors.Error) {
 	}
 
 	if strings.HasPrefix(uri, "gometrics:") {
-		return accounting_gm.NewAccountingStore(), nil
+		return accounting_gm.NewAccountingStore()
 	}
 
 	return nil, errors.NewAdminInvalidURL("AccountingStore", uri)
