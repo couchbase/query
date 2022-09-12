@@ -428,6 +428,10 @@ func (b *keyspace) Delete(deletes value.Pairs, context datastore.QueryContext, p
 	return 0, nil, errors.Errors{errors.NewOtherNotImplementedError(nil, "for Mock datastore")}
 }
 
+func (b *keyspace) SetSubDoc(string, value.Pairs, datastore.QueryContext) (value.Pairs, errors.Error) {
+	return nil, errors.NewOtherNotImplementedError(nil, "for mock datastore.")
+}
+
 func (b *keyspace) Release(close bool) {
 }
 

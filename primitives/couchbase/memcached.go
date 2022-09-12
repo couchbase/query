@@ -301,6 +301,12 @@ func (b *Bucket) processOpError(vb uint32, lastError error, node string, desc *d
 			desc.errorString = "Retrying Memcached error (%v) FOR %v(vbid:%d, keys:<ud>%v</ud>)"
 			desc.backOffAttempts++
 			desc.retry = backOff(desc.backOffAttempts, desc.maxTries, backOffDuration, true)
+		case gomemcached.SYNC_WRITE_IN_PROGRESS:
+			desc.backOffAttempts++
+			desc.retry = backOff(desc.backOffAttempts, desc.maxTries, backOffDuration, true)
+		case gomemcached.SYNC_WRITE_RECOMMITINPROGRESS:
+			desc.backOffAttempts++
+			desc.retry = backOff(desc.backOffAttempts, desc.maxTries, backOffDuration, true)
 		}
 	} else if lastError != nil {
 		if isOutOfBoundsError(lastError) {
@@ -1315,7 +1321,9 @@ func (b *Bucket) GetCollectionCID(scope string, collection string, reqDeadline t
 }
 
 // Get a value straight from Memcached
-func (b *Bucket) GetsMC(key string, active func() bool, reqDeadline time.Time, kvTimeout time.Duration, useReplica bool, context ...*memcached.ClientContext) (*gomemcached.MCResponse, error) {
+func (b *Bucket) GetsMC(key string, active func() bool, reqDeadline time.Time, kvTimeout time.Duration, useReplica bool,
+	context ...*memcached.ClientContext) (*gomemcached.MCResponse, error) {
+
 	var err error
 	var response *gomemcached.MCResponse
 
@@ -1348,7 +1356,9 @@ func (b *Bucket) GetsMC(key string, active func() bool, reqDeadline time.Time, k
 }
 
 // Get a value through the subdoc API
-func (b *Bucket) GetsSubDoc(key string, reqDeadline time.Time, kvTimeout time.Duration, subPaths []string, context ...*memcached.ClientContext) (*gomemcached.MCResponse, error) {
+func (b *Bucket) GetsSubDoc(key string, reqDeadline time.Time, kvTimeout time.Duration, paths []string,
+	context ...*memcached.ClientContext) (*gomemcached.MCResponse, error) {
+
 	var err error
 	var response *gomemcached.MCResponse
 
@@ -1365,12 +1375,32 @@ func (b *Bucket) GetsSubDoc(key string, reqDeadline time.Time, kvTimeout time.Du
 			return err
 		}
 		mc.SetDeadline(dl)
-		response, err1 = mc.GetSubdoc(vb, key, subPaths, context...)
-		if err1 != nil {
-			return err1
-		}
-		return nil
+		response, err1 = mc.GetSubdoc(vb, key, paths, context...)
+		return err1
 	}, false, false, b.backOffRetries())
+	return response, err
+}
+
+// Set values through the subdoc API
+func (b *Bucket) SetsSubDoc(key string, ops []memcached.SubDocOp, context ...*memcached.ClientContext) (
+	*gomemcached.MCResponse, error) {
+
+	if key == "" {
+		return nil, nil
+	}
+
+	var err error
+	var err1 error
+	var response *gomemcached.MCResponse
+
+	err1 = b.do2(key, func(mc *memcached.Client, vb uint16) error {
+		mc.SetDeadline(noDeadline)
+		response, err = mc.SetSubdoc(vb, key, ops, context...)
+		return err
+	}, false, false, b.backOffRetries())
+	if err == nil && err1 != nil {
+		err = err1
+	}
 	return response, err
 }
 
@@ -1431,36 +1461,6 @@ func (b *Bucket) GetRandomDoc(context ...*memcached.ClientContext) (*gomemcached
 // Delete a key from this bucket.
 func (b *Bucket) Delete(k string, context ...*memcached.ClientContext) (uint64, error) {
 	return b.Write(k, 0, 0, nil, Raw, context...)
-}
-
-// Incr increments the value at a given key by amt and defaults to def if no value present.
-func (b *Bucket) Incr(k string, amt, def uint64, exp int, context ...*memcached.ClientContext) (val uint64, err error) {
-	var rv uint64
-	err = b.do(k, func(mc *memcached.Client, vb uint16) error {
-		res, err := mc.Incr(vb, k, amt, def, exp, context...)
-		if err != nil {
-			return err
-		}
-		rv = res
-		return nil
-	})
-	atomic.AddUint64(&b.writeCount, 1)
-	return rv, err
-}
-
-// Decr decrements the value at a given key by amt and defaults to def if no value present
-func (b *Bucket) Decr(k string, amt, def uint64, exp int, context ...*memcached.ClientContext) (val uint64, err error) {
-	var rv uint64
-	err = b.do(k, func(mc *memcached.Client, vb uint16) error {
-		res, err := mc.Decr(vb, k, amt, def, exp, context...)
-		if err != nil {
-			return err
-		}
-		rv = res
-		return nil
-	})
-	atomic.AddUint64(&b.writeCount, 1)
-	return rv, err
 }
 
 // Wrapper around memcached.CASNext()

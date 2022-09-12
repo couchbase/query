@@ -414,6 +414,8 @@ const (
 	E_WITH_INVALID_TYPE                       ErrorCode = 12039
 	E_INVALID_COMPRESSED_VALUE                ErrorCode = 12040
 	E_CB_BUCKET_CLOSED                        ErrorCode = 12041
+	E_CB_SUBDOC_GET                           ErrorCode = 12042
+	E_CB_SUBDOC_SET                           ErrorCode = 12043
 	_RETIRED_13010                                      = 13010
 	_RETIRED_13011                                      = 13011
 	E_DATASTORE_CLUSTER                       ErrorCode = 13012
@@ -509,4 +511,21 @@ const (
 	E_VIRTUAL_KEYSPACE_NOT_FOUND              ErrorCode = 19011
 	E_VIRTUAL_BUCKET_CREATE_COLLECTION        ErrorCode = 19012
 	E_VIRTUAL_BUCKET_DROP_COLLECTION          ErrorCode = 19013
+	E_SEQUENCE_NOT_ENABLED                    ErrorCode = 19100
+	E_SEQUENCE_CREATE                         ErrorCode = 19101
+	E_SEQUENCE_ALTER                          ErrorCode = 19102
+	E_SEQUENCE_DROP                           ErrorCode = 19103
+	E_SEQUENCE_INVALID_RANGE                  ErrorCode = 19104
+	E_SEQUENCE_INVALID_CACHE                  ErrorCode = 19105
+	E_SEQUENCE_NOT_FOUND                      ErrorCode = 19106
+	E_SEQUENCE                                ErrorCode = 19107
+	E_SEQUENCE_ALREADY_EXISTS                 ErrorCode = 19108
+	E_SEQUENCE_METAKV                         ErrorCode = 19109
+	E_SEQUENCE_INVALID_DATA                   ErrorCode = 19110
+	E_SEQUENCE_EXHAUSTED                      ErrorCode = 19111
+	E_SEQUENCE_CYCLE                          ErrorCode = 19112
+	E_SEQUENCE_INVALID_NAME                   ErrorCode = 19113
+	E_SEQUENCE_READ_ONLY_REQ                  ErrorCode = 19114
+	W_SEQUENCE_CACHE_SIZE                     ErrorCode = 19115
+	E_SEQUENCE_NAME_PARTS                     ErrorCode = 19116
 )

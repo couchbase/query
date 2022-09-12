@@ -163,4 +163,9 @@ type Visitor interface {
 	VisitRollbackTransaction(op *RollbackTransaction) (interface{}, error)
 	VisitTransactionIsolation(op *TransactionIsolation) (interface{}, error)
 	VisitSavepoint(op *Savepoint) (interface{}, error)
+
+	// Sequences
+	VisitCreateSequence(op *CreateSequence) (interface{}, error)
+	VisitDropSequence(op *DropSequence) (interface{}, error)
+	VisitAlterSequence(op *AlterSequence) (interface{}, error)
 }

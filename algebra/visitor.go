@@ -100,6 +100,10 @@ type Visitor interface {
 	VisitRollbackTransaction(stmt *RollbackTransaction) (interface{}, error)
 	VisitTransactionIsolation(stmt *TransactionIsolation) (interface{}, error)
 	VisitSavepoint(stmt *Savepoint) (interface{}, error)
+
+	VisitCreateSequence(stmt *CreateSequence) (interface{}, error)
+	VisitDropSequence(stmt *DropSequence) (interface{}, error)
+	VisitAlterSequence(stmt *AlterSequence) (interface{}, error)
 }
 
 type NodeVisitor interface {

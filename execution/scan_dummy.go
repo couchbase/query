@@ -63,12 +63,13 @@ func (this *DummyScan) RunOnce(context *Context, parent value.Value) {
 			return
 		}
 
-		av := value.EMPTY_ANNOTATED_OBJECT
-
+		var av value.AnnotatedValue
+		// must use a new empty map as the returned value may be modified downstream
 		if parent != nil {
-			// must use a new empty map as the returned value may be modified downstream
 			cv := value.NewScopeValue(map[string]interface{}{}, parent)
 			av = value.NewAnnotatedValue(cv)
+		} else {
+			av = value.EMPTY_ANNOTATED_OBJECT.CopyForUpdate().(value.AnnotatedValue)
 		}
 
 		if context.UseRequestQuota() {

@@ -22,6 +22,7 @@ import (
 var NULL_CONTEXT Context = &contextImpl{}
 
 var NULL_QUERY_CONTEXT QueryContext = &queryContextImpl{}
+var MAJORITY_QUERY_CONTEXT QueryContext = &majorityQueryContextImpl{}
 
 type Context interface {
 	GetScanCap() int64
@@ -240,4 +241,12 @@ func (ci *queryContextImpl) DurationStyle() util.DurationStyle {
 
 func (ci *queryContextImpl) FormatDuration(time.Duration) string {
 	return ""
+}
+
+type majorityQueryContextImpl struct {
+	queryContextImpl
+}
+
+func (ci *majorityQueryContextImpl) DurabilityLevel() DurabilityLevel {
+	return DL_MAJORITY
 }

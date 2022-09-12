@@ -245,15 +245,26 @@ func (p *namespace) loadKeyspaces() (e errors.Error) {
 	if e != nil {
 		return e
 	}
-
 	p.keyspaces[transactions.Name()] = transactions
 
 	vitals, e := newVitalsKeyspace(p)
 	if e != nil {
 		return e
 	}
-
 	p.keyspaces[vitals.Name()] = vitals
+
+	qk, e := newSequencesKeyspace(p, p.store.actualStore, KEYSPACE_NAME_SEQUENCES, true)
+	if e != nil {
+		return e
+	}
+	p.keyspaces[qk.Name()] = qk
+
+	aqk, e := newSequencesKeyspace(p, p.store.actualStore, KEYSPACE_NAME_ALL_SEQUENCES, true)
+	if e != nil {
+		return e
+	}
+	p.keyspaces[aqk.Name()] = aqk
+
 	return nil
 }
 

@@ -23,41 +23,41 @@ func messageForDeniedPrivilege(pair auth.PrivilegePair) string {
 	role := ""
 	switch pair.Priv {
 	case auth.PRIV_READ:
-		privilege = "data read queries"
+		privilege = "run data read queries"
 		role = fmt.Sprintf("bucket_full_access on %s", keyspace)
 	case auth.PRIV_WRITE:
-		privilege = "data write queries"
+		privilege = "run data write queries"
 		role = fmt.Sprintf("bucket_full_access on %s", keyspace)
 	case auth.PRIV_UPSERT:
-		privilege = "data upsert queries"
+		privilege = "run data upsert queries"
 		role = fmt.Sprintf("bucket_full_access on %s", keyspace)
 	case auth.PRIV_SYSTEM_READ:
-		privilege = "queries accessing the system tables"
+		privilege = "run queries accessing the system tables"
 		role = "admin"
 	case auth.PRIV_SECURITY_WRITE:
-		privilege = "queries updating user information"
+		privilege = "run queries updating user information"
 		role = "admin"
 	case auth.PRIV_SECURITY_READ:
-		privilege = "queries accessing user information"
+		privilege = "run queries accessing user information"
 		role = "admin"
 	case auth.PRIV_QUERY_SELECT:
-		privilege = fmt.Sprintf("SELECT queries on %s", keyspace)
+		privilege = fmt.Sprintf("run SELECT queries on %s", keyspace)
 		role = fmt.Sprintf("bucket_full_access on %s", keyspace)
 	case auth.PRIV_QUERY_UPDATE:
-		privilege = fmt.Sprintf("UPDATE queries on %s", keyspace)
+		privilege = fmt.Sprintf("run UPDATE queries on %s", keyspace)
 		role = fmt.Sprintf("bucket_full_access on %s", keyspace)
 	case auth.PRIV_QUERY_INSERT:
-		privilege = fmt.Sprintf("INSERT queries on %s", keyspace)
+		privilege = fmt.Sprintf("run INSERT queries on %s", keyspace)
 		role = fmt.Sprintf("bucket_full_access on %s", keyspace)
 	case auth.PRIV_QUERY_DELETE:
-		privilege = fmt.Sprintf("DELETE queries on %s", keyspace)
+		privilege = fmt.Sprintf("run DELETE queries on %s", keyspace)
 		role = fmt.Sprintf("bucket_full_access on %s", keyspace)
 	case auth.PRIV_QUERY_BUILD_INDEX, auth.PRIV_QUERY_CREATE_INDEX,
 		auth.PRIV_QUERY_ALTER_INDEX, auth.PRIV_QUERY_DROP_INDEX, auth.PRIV_QUERY_LIST_INDEX:
-		privilege = "index operations"
+		privilege = "run index operations"
 		role = fmt.Sprintf("bucket_full_access on %s", keyspace)
 	case auth.PRIV_QUERY_EXTERNAL_ACCESS:
-		privilege = "queries using the CURL() function"
+		privilege = "run queries using the CURL() function"
 		role = "admin"
 	case auth.PRIV_BACKUP_CLUSTER:
 		privilege = "backup cluster metadata"
@@ -89,10 +89,16 @@ func messageForDeniedPrivilege(pair auth.PrivilegePair) string {
 	case auth.PRIV_QUERY_EXECUTE_SCOPE_FUNCTIONS_EXTERNAL:
 		privilege = "execute scope external functions"
 		role = fmt.Sprintf("query_execute_external_functions on %s", keyspace)
+	case auth.PRIV_QUERY_MANAGE_SEQUENCES:
+		privilege = "manage sequences"
+		role = fmt.Sprintf("query_manage_sequences on %s", keyspace)
+	case auth.PRIV_QUERY_USE_SEQUENCES:
+		privilege = "use sequences"
+		role = fmt.Sprintf("query_use_sequences on %s", keyspace)
 	default:
-		privilege = "this type of query"
+		privilege = "run this type of query"
 		role = "admin"
 	}
 
-	return fmt.Sprintf("User does not have credentials to run %s. Add role %s to allow the query to run.", privilege, role)
+	return fmt.Sprintf("User does not have credentials to %s. Add role %s to allow the statement to run.", privilege, role)
 }

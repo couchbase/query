@@ -2601,7 +2601,7 @@
     {
       "id": 28728,
       "name": "N1QL backup / restore API request",
-      "description": "An HTTP request was made to archive or restore N1QL metadata ",
+      "description": "An HTTP request was made to archive or restore N1QL metadata",
       "sync": false,
       "enabled": false,
       "filtering_permitted": true,
@@ -2726,6 +2726,211 @@
       "optional_fields": {
         "errorCode": 1,
         "errorMessage": ""
+      }
+    },
+    {
+      "id": 28733,
+      "name": "/admin/sequences_cache API request",
+      "description": "An HTTP request was made to access sequences",
+      "sync": false,
+      "enabled": false,
+      "filtering_permitted": true,
+      "mandatory_fields": {
+        "timestamp": "",
+        "real_userid": {
+          "domain": "",
+          "user": ""
+        },
+        "remote": {
+          "ip": "",
+          "port": 1
+        },
+        "httpMethod": "",
+        "httpResultCode": 1
+      },
+      "optional_fields": {
+        "errorCode": 1,
+        "errorMessage": ""
+      }
+    },
+    {
+      "id": 28734,
+      "name": "CREATE SEQUENCE statement",
+      "description": "A N1QL CREATE SEQUENCE statement was executed",
+      "sync": false,
+      "enabled": false,
+      "filtering_permitted": true,
+      "mandatory_fields": {
+        "timestamp": "",
+        "real_userid": {
+          "domain": "",
+          "user": ""
+        },
+        "remote": {
+          "ip": "",
+          "port": 1
+        },
+        "local": {
+          "ip": "",
+          "port": 1
+        },
+        "requestId": "",
+        "statement": "",
+        "isAdHoc": true,
+        "userAgent": "",
+        "node": "",
+        "status": "",
+        "metrics": {
+          "elapsedTime": "1.0s",
+          "executionTime": "0.75s",
+          "resultCount": 1,
+          "resultSize": 18,
+          "mutationCount": 0,
+          "sortCount": 1,
+          "errorCount": 0,
+          "warningCount": 1
+        }
+      },
+      "optional_fields": {
+        "clientContextId": "",
+        "queryContext": "",
+        "namedArgs": {
+          "name1": "",
+          "name2": ""
+        },
+        "positionalArgs": [
+          ""
+        ],
+        "errors": [
+          {
+            "code": 1000,
+            "msg": ""
+          },
+          {
+            "code": 1001,
+            "msg": ""
+          }
+        ]
+      }
+    },
+    {
+      "id": 28735,
+      "name": "ALTER SEQUENCE statement",
+      "description": "A N1QL ALTER SEQUENCE statement was executed",
+      "sync": false,
+      "enabled": false,
+      "filtering_permitted": true,
+      "mandatory_fields": {
+        "timestamp": "",
+        "real_userid": {
+          "domain": "",
+          "user": ""
+        },
+        "remote": {
+          "ip": "",
+          "port": 1
+        },
+        "local": {
+          "ip": "",
+          "port": 1
+        },
+        "requestId": "",
+        "statement": "",
+        "isAdHoc": true,
+        "userAgent": "",
+        "node": "",
+        "status": "",
+        "metrics": {
+          "elapsedTime": "1.0s",
+          "executionTime": "0.75s",
+          "resultCount": 1,
+          "resultSize": 18,
+          "mutationCount": 0,
+          "sortCount": 1,
+          "errorCount": 0,
+          "warningCount": 1
+        }
+      },
+      "optional_fields": {
+        "clientContextId": "",
+        "queryContext": "",
+        "namedArgs": {
+          "name1": "",
+          "name2": ""
+        },
+        "positionalArgs": [
+          ""
+        ],
+        "errors": [
+          {
+            "code": 1000,
+            "msg": ""
+          },
+          {
+            "code": 1001,
+            "msg": ""
+          }
+        ]
+      }
+    },
+    {
+      "id": 28736,
+      "name": "DROP SEQUENCE statement",
+      "description": "A N1QL DROP SEQUENCE statement was executed",
+      "sync": false,
+      "enabled": false,
+      "filtering_permitted": true,
+      "mandatory_fields": {
+        "timestamp": "",
+        "real_userid": {
+          "domain": "",
+          "user": ""
+        },
+        "remote": {
+          "ip": "",
+          "port": 1
+        },
+        "local": {
+          "ip": "",
+          "port": 1
+        },
+        "requestId": "",
+        "statement": "",
+        "isAdHoc": true,
+        "userAgent": "",
+        "node": "",
+        "status": "",
+        "metrics": {
+          "elapsedTime": "1.0s",
+          "executionTime": "0.75s",
+          "resultCount": 1,
+          "resultSize": 18,
+          "mutationCount": 0,
+          "sortCount": 1,
+          "errorCount": 0,
+          "warningCount": 1
+        }
+      },
+      "optional_fields": {
+        "clientContextId": "",
+        "queryContext": "",
+        "namedArgs": {
+          "name1": "",
+          "name2": ""
+        },
+        "positionalArgs": [
+          ""
+        ],
+        "errors": [
+          {
+            "code": 1000,
+            "msg": ""
+          },
+          {
+            "code": 1001,
+            "msg": ""
+          }
+        ]
       }
     }
   ]

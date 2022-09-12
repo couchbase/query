@@ -649,7 +649,8 @@ func (this *Server) setupRequestContext(request Request) bool {
 	}
 
 	context := execution.NewContext(request.Id().String(), this.datastore, this.systemstore, namespace,
-		this.readonly, maxParallelism, request.ScanCap(), request.PipelineCap(), request.PipelineBatch(),
+		this.readonly || request.Readonly() == value.TRUE,
+		maxParallelism, request.ScanCap(), request.PipelineCap(), request.PipelineBatch(),
 		request.NamedArgs(), request.PositionalArgs(), request.Credentials(), request.ScanConsistency(),
 		request.ScanVectorSource(), request.Output(), nil, request.IndexApiVersion(), request.FeatureControls(),
 		request.QueryContext(), request.UseFts(), request.UseCBO(), optimizer, request.KvTimeout(), request.Timeout())

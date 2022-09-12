@@ -100,6 +100,11 @@ func privilegeString(namespace, target, obj string, requested auth.Privilege) (s
 		permission = "cluster.admin.internal.nothrottle!read"
 	case auth.PRIV_CLUSTER_ADMIN:
 		permission = "cluster.admin!write"
+
+	case auth.PRIV_QUERY_MANAGE_SEQUENCES:
+		permission = join5Strings("cluster.", obj, "[", target, "].n1ql.sequences!manage")
+	case auth.PRIV_QUERY_USE_SEQUENCES:
+		permission = join5Strings("cluster.", obj, "[", target, "].n1ql.sequences!execute")
 	default:
 		return "", fmt.Errorf("Invalid Privileges")
 	}

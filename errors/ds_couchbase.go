@@ -152,12 +152,16 @@ func NewAuditStreamHandlerFailed(e error) Error {
 }
 
 func NewCbBucketNotFoundError(e error, msg string) Error {
-	return &err{level: EXCEPTION, ICode: E_CB_BUCKET_NOT_FOUND, IKey: "datastore.couchbase.bucket_not_found", ICause: e,
+	c := make(map[string]interface{})
+	c["bucket"] = msg
+	return &err{level: EXCEPTION, ICode: E_CB_BUCKET_NOT_FOUND, IKey: "datastore.couchbase.bucket_not_found", ICause: e, cause: c,
 		InternalMsg: "Bucket not found in CB datastore " + msg, InternalCaller: CallerN(1)}
 }
 
 func NewCbScopeNotFoundError(e error, msg string) Error {
-	return &err{level: EXCEPTION, ICode: E_CB_SCOPE_NOT_FOUND, IKey: "datastore.couchbase.scope_not_found", ICause: e,
+	c := make(map[string]interface{})
+	c["scope"] = msg
+	return &err{level: EXCEPTION, ICode: E_CB_SCOPE_NOT_FOUND, IKey: "datastore.couchbase.scope_not_found", ICause: e, cause: c,
 		InternalMsg: "Scope not found in CB datastore " + msg, InternalCaller: CallerN(1)}
 }
 
@@ -330,4 +334,18 @@ func NewInvalidCompressedValueError(e error, d interface{}) Error {
 	c["data"] = d
 	return &err{level: EXCEPTION, ICode: E_INVALID_COMPRESSED_VALUE, IKey: "datastore.invalid_value", cause: c,
 		InternalMsg: "Invalid compressed value", InternalCaller: CallerN(1)}
+}
+
+func NewSubDocGetError(e error) Error {
+	c := make(map[string]interface{})
+	c["error"] = e.Error()
+	return &err{level: EXCEPTION, ICode: E_CB_SUBDOC_GET, IKey: "datastore.subdoc.get", cause: c,
+		InternalMsg: "Sub-doc get operation failed", InternalCaller: CallerN(1)}
+}
+
+func NewSubDocSetError(e error) Error {
+	c := make(map[string]interface{})
+	c["error"] = e.Error()
+	return &err{level: EXCEPTION, ICode: E_CB_SUBDOC_SET, IKey: "datastore.subdoc.set", cause: c,
+		InternalMsg: "Sub-doc set operation failed", InternalCaller: CallerN(1)}
 }

@@ -282,6 +282,10 @@ func (this *virtualKeyspace) Delete(deletes value.Pairs, context datastore.Query
 	return 0, nil, errors.Errors{errors.NewVirtualKSNotSupportedError(nil, "Delete for virtual keyspace.")}
 }
 
+func (this *virtualKeyspace) SetSubDoc(string, value.Pairs, datastore.QueryContext) (value.Pairs, errors.Error) {
+	return nil, errors.NewVirtualKSNotSupportedError(nil, "Sub-doc operations.")
+}
+
 func (this *virtualKeyspace) Release(close bool) {}
 
 func (this *virtualKeyspace) Flush() errors.Error {

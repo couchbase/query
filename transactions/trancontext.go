@@ -54,6 +54,7 @@ type TranContext struct {
 	uses                int32
 	txMutations         interface{}
 	memoryQuota         uint64
+	sequences           map[string]int64
 }
 
 func NewTxContext(txImplicit bool, txData []byte, txTimeout, txDurabilityTimeout, kvTimeout time.Duration,
@@ -304,6 +305,25 @@ func (this *TranContext) MemoryQuota() uint64 {
 	return uint64(this.memoryQuota)
 }
 
+func (this *TranContext) Sequence(name string) (int64, bool) {
+	this.mutex.Lock()
+	defer this.mutex.Unlock()
+	if this.sequences == nil {
+		return 0, false
+	}
+	num, ok := this.sequences[name]
+	return num, ok
+}
+
+func (this *TranContext) SetSequence(name string, val int64) {
+	this.mutex.Lock()
+	defer this.mutex.Unlock()
+	if this.sequences == nil {
+		this.sequences = make(map[string]int64)
+	}
+	this.sequences[name] = val
+}
+
 func (this *TranContext) Content(r map[string]interface{}) {
 	r["id"] = this.txId
 	r["timeout"] = util.OutputDuration(this.txTimeout)
@@ -334,6 +354,9 @@ func (this *TranContext) Content(r map[string]interface{}) {
 	r["status"] = this.txStatus
 	if this.memoryQuota > 0 {
 		r["memoryQuota"] = this.memoryQuota
+	}
+	if this.sequences != nil {
+		r["sequences"] = this.sequences
 	}
 
 	usedMemory := int64(_TXCONTEXT_SIZE + len(this.txData) + len(this.AtrCollection()))

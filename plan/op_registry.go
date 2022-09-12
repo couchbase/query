@@ -196,4 +196,9 @@ var _OPERATORS = map[string]Operator{
 	"RollbackTransaction":  &RollbackTransaction{},
 	"TransactionIsolation": &TransactionIsolation{},
 	"Savepoint":            &Savepoint{},
+
+	// Sequences
+	"CreateSequence": &CreateSequence{},
+	"AlterSequence":  &AlterSequence{},
+	"DropSequence":   &DropSequence{},
 }

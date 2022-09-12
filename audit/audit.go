@@ -437,6 +437,9 @@ var _EVENT_TYPE_MAP = map[string]uint32{
 	"ROLLBACK_SAVEPOINT":        28723,
 	"SET_TRANSACTION_ISOLATION": 28724,
 	"SAVEPOINT":                 28725,
+	"CREATE_SEQUENCE":           28734,
+	"ALTER_SEQUENCE":            28735,
+	"DROP_SEQUENCE":             28736,
 }
 
 func Submit(event Auditable) {
@@ -512,6 +515,7 @@ const (
 	API_ADMIN_GC                         = 28730
 	API_ADMIN_FFDC                       = 28731
 	API_ADMIN_STREAM_LOG                 = 28732
+	API_ADMIN_SEQUENCES                  = 28733
 )
 
 func SubmitApiRequest(event *ApiAuditFields) {

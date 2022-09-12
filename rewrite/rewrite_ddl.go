@@ -63,3 +63,15 @@ func (this *Rewrite) VisitDropFunction(stmt *algebra.DropFunction) (interface{},
 func (this *Rewrite) VisitExecuteFunction(stmt *algebra.ExecuteFunction) (interface{}, error) {
 	return stmt, stmt.MapExpressions(this)
 }
+
+func (this *Rewrite) VisitCreateSequence(stmt *algebra.CreateSequence) (interface{}, error) {
+	return stmt, stmt.MapExpressions(this)
+}
+
+func (this *Rewrite) VisitDropSequence(stmt *algebra.DropSequence) (interface{}, error) {
+	return stmt, stmt.MapExpressions(this)
+}
+
+func (this *Rewrite) VisitAlterSequence(stmt *algebra.AlterSequence) (interface{}, error) {
+	return stmt, stmt.MapExpressions(this)
+}

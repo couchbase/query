@@ -30,6 +30,8 @@ do
     curl --silent -X POST -u $Auth -d name=${collpath[2]} $Site/${collpath[0]}/scopes/${collpath[1]}/collections > /dev/null
 done
 
+curl --silent -X POST -u $Auth -d name=seqs $Site/orders/scopes > /dev/null
+
 cd filestore
 
 mkdir -p data/dimestore/product
@@ -45,6 +47,11 @@ do
   Id=${i}owner
   Name=OwnerOf${i}
   Password=${i}pass
-  curl --silent -X PUT $UsersSite$Id -d name=$Name -d roles=bucket_full_access[${i}],query_manage_global_functions,query_execute_global_functions,query_execute_global_external_functions,query_manage_global_external_functions -d password=$Password -u $Auth > /dev/null
+  Roles=bucket_full_access[${i}],query_manage_global_functions,query_execute_global_functions,query_execute_global_external_functions,query_manage_global_external_functions
+  if [ ${i} = "orders" ]
+  then
+    Roles="${Roles},query_manage_sequences[${i}:seqs],query_use_sequences[${i}:seqs]"
+  fi
+  curl --silent -X PUT $UsersSite$Id -d name=$Name -d roles=${Roles} -d password=$Password -u $Auth > /dev/null
 done
 

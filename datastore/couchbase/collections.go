@@ -9,6 +9,7 @@
 package couchbase
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"strconv"
@@ -26,6 +27,7 @@ import (
 	"github.com/couchbase/query/functions"
 	functionsStorage "github.com/couchbase/query/functions/storage"
 	"github.com/couchbase/query/logging"
+	"github.com/couchbase/query/sequences"
 	"github.com/couchbase/query/value"
 )
 
@@ -119,18 +121,18 @@ const _CREATE_COLLECTION_MAXTTL = "maxTTL"
 var _CREATE_COLLECTION_OPTIONS = []string{_CREATE_COLLECTION_MAXTTL}
 
 func (sc *scope) CreateCollection(name string, with value.Value) errors.Error {
-	maxTTL := 0
+	maxTTL := int64(0)
 	if with != nil {
 		err := validateWithOptions(with, _CREATE_COLLECTION_OPTIONS)
 		if err != nil {
 			return errors.NewCbBucketCreateCollectionError(sc.objectFullName(name), err)
 		}
-		maxTTL, err = getIntWithOption(with, _CREATE_COLLECTION_MAXTTL)
+		maxTTL, _, err = getIntWithOption(with, _CREATE_COLLECTION_MAXTTL, false)
 		if err != nil {
 			return errors.NewCbBucketCreateCollectionError(sc.objectFullName(name), err)
 		}
 	}
-	err := sc.bucket.cbbucket.CreateCollection(sc.id, name, maxTTL)
+	err := sc.bucket.cbbucket.CreateCollection(sc.id, name, int(maxTTL))
 	if err != nil {
 		return errors.NewCbBucketCreateCollectionError(sc.objectFullName(name), err)
 	}
@@ -145,6 +147,10 @@ func (sc *scope) DropCollection(name string) errors.Error {
 	}
 	sc.bucket.setNeedsManifest()
 	return nil
+}
+
+func (sc *scope) DropAllSequences() {
+	sequences.DropAllSequences(sc.bucket.namespace.name, sc.bucket.name, sc.id)
 }
 
 type collection struct {
@@ -373,6 +379,31 @@ func (coll *collection) Upsert(upserts value.Pairs, context datastore.QueryConte
 func (coll *collection) Delete(deletes value.Pairs, context datastore.QueryContext, preserveMutations bool) (int, value.Pairs, errors.Errors) {
 	return coll.bucket.performOp(MOP_DELETE, coll.QualifiedName(), coll.scope.id, coll.id,
 		deletes, preserveMutations, context, &memcached.ClientContext{CollId: coll.uid, User: getUser(context)})
+}
+
+func (coll *collection) SetSubDoc(key string, elems value.Pairs, context datastore.QueryContext) (
+	value.Pairs, errors.Error) {
+
+	cc := &memcached.ClientContext{CollId: coll.uid, User: getUser(context)}
+	err := setMutateClientContext(context, cc)
+	if err != nil {
+		return nil, err
+	}
+	ops := make([]memcached.SubDocOp, len(elems))
+	for i := range elems {
+		ops[i].Path = elems[i].Name
+		b, e := json.Marshal(elems[i].Value)
+		if e != nil {
+			return nil, errors.NewSubDocSetError(e)
+		}
+		ops[i].Value = b
+		ops[i].Counter = (elems[i].Options != nil && elems[i].Options.Truth())
+	}
+	mcr, e := coll.bucket.cbbucket.SetsSubDoc(key, ops, cc)
+	if e != nil {
+		return nil, errors.NewSubDocSetError(e)
+	}
+	return processSubDocResults(ops, mcr), nil
 }
 
 func (coll *collection) Release(bclose bool) {
@@ -638,6 +669,7 @@ func clearOldScope(bucket *keyspace, s *scope, isDropBucket bool) {
 		}
 	}
 
+	s.DropAllSequences()
 	functionsStorage.DropScope(bucket.namespace.name, bucket.name, s.Name())
 }
 
@@ -672,30 +704,39 @@ func validateWithOptions(with value.Value, valid []string) error {
 	return nil
 }
 
-func getIntWithOption(with value.Value, opt string) (int, error) {
+func getIntWithOption(with value.Value, opt string, optional bool) (int64, bool, error) {
 	v, found := with.Field(opt)
 	if !found || v.Type() != value.NUMBER {
-		return 0, errors.NewWithInvalidValueError(opt)
+		if !found && optional {
+			return 0, false, nil
+		}
+		return 0, true, errors.NewWithInvalidValueError(opt)
 	}
 	i, ok := value.IsIntValue(v)
 	if !ok {
-		return 0, errors.NewWithInvalidValueError(opt)
+		return 0, true, errors.NewWithInvalidValueError(opt)
 	}
-	return int(i), nil
+	return i, true, nil
 }
 
-func getStringWithOption(with value.Value, opt string) (string, error) {
+func getStringWithOption(with value.Value, opt string, optional bool) (string, bool, error) {
 	v, found := with.Field(opt)
 	if !found || v.Type() != value.STRING {
-		return "", errors.NewWithInvalidValueError(opt)
+		if !found && optional {
+			return "", false, nil
+		}
+		return "", true, errors.NewWithInvalidValueError(opt)
 	}
-	return v.ToString(), nil
+	return v.ToString(), true, nil
 }
 
-func getBoolWithOption(with value.Value, opt string) (bool, error) {
+func getBoolWithOption(with value.Value, opt string, optional bool) (bool, bool, error) {
 	v, found := with.Field(opt)
 	if !found || v.Type() != value.BOOLEAN {
-		return false, errors.NewWithInvalidValueError(opt)
+		if !found && optional {
+			return false, false, nil
+		}
+		return false, true, errors.NewWithInvalidValueError(opt)
 	}
-	return v.Truth(), nil
+	return v.Truth(), true, nil
 }

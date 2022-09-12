@@ -28,6 +28,7 @@ var statement_syntax = map[string][][]string{
 		[]string{"role_statement"},
 		[]string{"function_statement"},
 		[]string{"transaction_statement"},
+		[]string{"sequence_statement"},
 	},
 	"advise": [][]string{
 		[]string{"ADVISE", "[index]", "statement"},
@@ -846,6 +847,7 @@ var statement_syntax = map[string][][]string{
 	},
 	"c_expr": [][]string{
 		[]string{"literal"},
+		[]string{"sequence_expr"},
 		[]string{"construction_expr"},
 		[]string{"<identifier>"},
 		[]string{"<identifier>i"},
@@ -1089,5 +1091,96 @@ var statement_syntax = map[string][][]string{
 	},
 	"with_clause": [][]string{
 		[]string{"WITH", "expression"},
+	},
+	"sequence_object_name": [][]string{
+		[]string{"<identifier>"},
+	},
+	"sequence_full_name": [][]string{
+		[]string{"[namespace_name]", "sequence_object_name"},
+		[]string{"[namespace_name]", "path_part", "DOT", "path_part", "DOT", "sequence_object_name"},
+		[]string{"[namespace_name]", "path_part", "DOT", "sequence_object_name"},
+	},
+	"sequence_statement": [][]string{
+		[]string{"create_sequence"},
+		[]string{"drop_sequence"},
+		[]string{"alter_sequence"},
+	},
+	"create_sequence": [][]string{
+		[]string{"CREATE", "SEQUENCE", "sequence_name_options", "seq_create_options"},
+	},
+	"sequence_name_options": [][]string{
+		[]string{"sequence_name_option"},
+		[]string{"sequence_name_options", "sequence_name_option"},
+	},
+	"sequence_name_option": [][]string{
+		[]string{"IF", "NOT", "EXISTS"},
+		[]string{"sequence_full_name"},
+	},
+	"seq_create_options": [][]string{
+		[]string{"seq_create_options", "seq_create_option"},
+	},
+	"seq_create_option": [][]string{
+		[]string{"maxvalue"},
+		[]string{"minvalue"},
+		[]string{"cycle"},
+		[]string{"cache"},
+	},
+	"drop_sequence": [][]string{
+		[]string{"DROP", "SEQUENCE", "sequence_full_name", "[if_exists]"},
+		[]string{"DROP", "SEQUENCE", "IF", "EXISTS", "sequence_full_name"},
+	},
+	"alter_sequence": [][]string{
+		[]string{"ALTER", "SEQUENCE", "sequence_full_name", "with_clause"},
+		[]string{"ALTER", "SEQUENCE", "sequence_full_name", "seq_alter_options"},
+	},
+	"seq_alter_options": [][]string{
+		[]string{"seq_alter_option"},
+		[]string{"seq_alter_options", "seq_alter_option"},
+	},
+	"seq_alter_option": [][]string{
+		[]string{"maxvalue"},
+		[]string{"minvalue"},
+		[]string{"cycle"},
+		[]string{"cache"},
+	},
+	"sequence_with": [][]string{
+		[]string{"WITH", "expression"},
+	},
+	"start_with": [][]string{
+		[]string{"START", "WITH", "expression"},
+	},
+	"restart_with": [][]string{
+		[]string{"RESTART", "[with_clause]"},
+	},
+	"increment_by": [][]string{
+		[]string{"INCREMENT", "BY", "expression"},
+	},
+	"maxvalue": [][]string{
+		[]string{"NO", "MAXVALUE"},
+		[]string{"MAXVALUE", "expression"},
+	},
+	"minvalue": [][]string{
+		[]string{"NO", "MINVALUE"},
+		[]string{"MINVALUE", "expression"},
+	},
+	"cycle": [][]string{
+		[]string{"NO", "CYCLE"},
+		[]string{"CYCLE"},
+	},
+	"cache": [][]string{
+		[]string{"NO", "CACHE"},
+		[]string{"CACHE", "expression"},
+	},
+	"sequence_next": [][]string{
+		[]string{"NEXTVAL", "FOR", "<identifier>"},
+		[]string{"NEXT", "VALUE", "FOR", "<identifier>"},
+	},
+	"sequence_prev": [][]string{
+		[]string{"PREVVAL", "FOR", "<identifier>"},
+		[]string{"PREV", "VALUE", "FOR", "<identifier>"},
+	},
+	"sequence_expr": [][]string{
+		[]string{"sequence_next"},
+		[]string{"sequence_prev"},
 	},
 }

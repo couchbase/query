@@ -2,6 +2,7 @@
 package n1ql
 
 import "fmt"
+import "math"
 import "strings"
 import "github.com/couchbase/clog"
 import "github.com/couchbase/query/algebra"
@@ -11,10 +12,18 @@ import "github.com/couchbase/query/expression"
 import "github.com/couchbase/query/expression/search"
 import "github.com/couchbase/query/functions"
 import "github.com/couchbase/query/functions/bridge"
+import "github.com/couchbase/query/sequences"
 import "github.com/couchbase/query/value"
 
 func logDebugGrammar(format string, v ...interface{}) {
     clog.To("PARSER", format, v...)
+}
+
+type nameValueContext struct {
+    name   string
+    value  value.Value
+    line   int
+    column int
 }
 
 %}
@@ -111,6 +120,8 @@ identifier       *expression.Identifier
 optimHintArr     []algebra.OptimHint
 optimHints       *algebra.OptimHints
 
+vpair            *nameValueContext
+vpairs           []*nameValueContext
 // token offset into the statement
 tokOffset        int
 
@@ -141,6 +152,7 @@ column int
 %token BUILD
 %token BY
 %token CALL
+%token CACHE
 %token CASE
 %token CAST
 %token CLUSTER
@@ -234,12 +246,16 @@ column int
 %token MAPPING
 %token MATCHED
 %token MATERIALIZED
+%token MAXVALUE
 %token MERGE
 %token MINUS
 %token MISSING
+%token MINVALUE
 %token NAMESPACE
 %token NAMESPACE_ID
 %token NEST
+%token NEXT
+%token NEXTVAL
 %token NL
 %token NO
 %token NOT
@@ -265,6 +281,8 @@ column int
 %token POOL
 %token PRECEDING
 %token PREPARE
+%token PREV
+%token PREVVAL
 %token PRIMARY
 %token PRIVATE
 %token PRIVILEGE
@@ -280,6 +298,7 @@ column int
 %token RENAME
 %token REPLACE
 %token RESPECT
+%token RESTART
 %token RESTRICT
 %token RETURN
 %token RETURNING
@@ -297,6 +316,7 @@ column int
 %token SELF
 %token SEMI
 %token SET
+%token SEQUENCE
 %token SHOW
 %token SOME
 %token START
@@ -537,6 +557,15 @@ column int
 %type <exprs>              opt_exclude
 
 %type <cyclecheck>         opt_cycle_clause
+%type <statement>          sequence_stmt create_sequence drop_sequence alter_sequence
+%type <keyspacePath>       sequence_full_name
+%type <vpairs>             sequence_name_options
+%type <vpair>              sequence_name_option
+%type <s>                  opt_namespace_name sequence_object_name sequence_next sequence_prev
+%type <expr>               sequence_expr
+
+%type <vpair>  start_with increment_by maxvalue minvalue cache cycle restart_with seq_alter_option seq_create_option sequence_with
+%type <vpairs> seq_alter_options seq_create_options
 
 %start input
 
@@ -603,6 +632,8 @@ role_stmt
 function_stmt
 |
 transaction_stmt
+|
+sequence_stmt
 ;
 
 advise:
@@ -670,7 +701,7 @@ ident_or_default from_or_as
     $$ = $1
 }
 |
-_invalid_prepared_identifier
+_invalid_case_insensitive_identifier from_or_as
 {
     return yylex.(*lexer).FatalError("Prepared identifier must be case sensitive", $<line>1, $<column>1)
 }
@@ -681,8 +712,8 @@ STR from_or_as
 }
 ;
 
-_invalid_prepared_identifier:
-IDENT_ICASE from_or_as
+_invalid_case_insensitive_identifier:
+IDENT_ICASE
 ;
 
 from_or_as:
@@ -1544,14 +1575,10 @@ ident_or_default
   }
 }
 |
-_invalid_keyspace_name
+_invalid_case_insensitive_identifier
 {
     return yylex.(*lexer).FatalError("Keyspace term must be case sensitive", $<line>1, $<column>1)
 }
-;
-
-_invalid_keyspace_name:
-IDENT_ICASE
 ;
 
 opt_use:
@@ -3702,6 +3729,8 @@ expr DOT ident LPAREN opt_exprs RPAREN
     var path []string
 
     switch other := $1.(type) {
+    case *expression.SequenceOperation:
+        return yylex.(*lexer).FatalError("syntax error", $<line>4, $<column>4)
     case *expression.Identifier:
         path = []string { other.Alias(), $3.Identifier() }
         dummyPath, err := algebra.NewPathFromElementsWithContext([]string { other.Alias(), $3.Identifier() },
@@ -3737,84 +3766,149 @@ expr DOT ident LPAREN opt_exprs RPAREN
 /* Nested */
 expr DOT ident
 {
-    fn := expression.NewFieldName($3.Identifier(), false)
-    fn.ExprBase().SetErrorContext($<line>3,$<column>3)
-    $$ = expression.NewField($1, fn)
-    $$.ExprBase().SetErrorContext($3.ExprBase().GetErrorContext())
+    switch t := $1.(type) {
+    case *expression.SequenceOperation:
+        if !t.AddPart($3.Identifier()) {
+            l, c := t.ExprBase().GetErrorContext()
+            return yylex.(*lexer).FatalError("Invalid sequence name", l, c)
+        }
+        $$ = t
+    default:
+        fn := expression.NewFieldName($3.Identifier(), false)
+        fn.ExprBase().SetErrorContext($<line>3,$<column>3)
+        $$ = expression.NewField($1, fn)
+        $$.ExprBase().SetErrorContext($3.ExprBase().GetErrorContext())
+    }
 }
 |
 expr DOT ident_icase
 {
-    fn := expression.NewFieldName($3.Identifier(), true)
-    fn.ExprBase().SetErrorContext($<line>3,$<column>3)
-    field := expression.NewField($1, fn)
-    field.SetCaseInsensitive(true)
-    $$ = field
-    $$.ExprBase().SetErrorContext($3.ExprBase().GetErrorContext())
+    switch t := $1.(type) {
+    case *expression.SequenceOperation:
+        l, c := t.ExprBase().GetErrorContext()
+        return yylex.(*lexer).FatalError("Invalid sequence name", l, c)
+    default:
+        fn := expression.NewFieldName($3.Identifier(), true)
+        fn.ExprBase().SetErrorContext($<line>3,$<column>3)
+        field := expression.NewField($1, fn)
+        field.SetCaseInsensitive(true)
+        $$ = field
+        $$.ExprBase().SetErrorContext($3.ExprBase().GetErrorContext())
+    }
 }
 |
 expr DOT LBRACKET expr RBRACKET
 {
-    $$ = expression.NewField($1, $4)
-    $$.ExprBase().SetErrorContext($1.ExprBase().GetErrorContext())
+    switch $1.(type) {
+    case *expression.SequenceOperation:
+        return yylex.(*lexer).FatalError("syntax error", $<line>3, $<column>3)
+    default:
+        $$ = expression.NewField($1, $4)
+        $$.ExprBase().SetErrorContext($1.ExprBase().GetErrorContext())
+    }
 }
 |
 expr DOT LBRACKET expr RBRACKET_ICASE
 {
-    field := expression.NewField($1, $4)
-    field.SetCaseInsensitive(true)
-    $$ = field
-    $$.ExprBase().SetErrorContext($1.ExprBase().GetErrorContext())
+    switch $1.(type) {
+    case *expression.SequenceOperation:
+        return yylex.(*lexer).FatalError("syntax error", $<line>3, $<column>3)
+    default:
+        field := expression.NewField($1, $4)
+        field.SetCaseInsensitive(true)
+        $$ = field
+        $$.ExprBase().SetErrorContext($1.ExprBase().GetErrorContext())
+    }
 }
 |
 expr LBRACKET RANDOM_ELEMENT RBRACKET
 {
-    $$ = expression.NewRandomElement($1)
-    $$.(*expression.RandomElement).SetOperator()
-    $$.ExprBase().SetErrorContext($1.ExprBase().GetErrorContext())
+    switch $1.(type) {
+    case *expression.SequenceOperation:
+        return yylex.(*lexer).FatalError("syntax error", $<line>2, $<column>2)
+    default:
+        $$ = expression.NewRandomElement($1)
+        $$.(*expression.RandomElement).SetOperator()
+        $$.ExprBase().SetErrorContext($1.ExprBase().GetErrorContext())
+    }
 }
 |
 expr LBRACKET expr RBRACKET
 {
-    $$ = expression.NewElement($1, $3)
-    $$.ExprBase().SetErrorContext($1.ExprBase().GetErrorContext())
+    switch $1.(type) {
+    case *expression.SequenceOperation:
+        return yylex.(*lexer).FatalError("syntax error", $<line>2, $<column>2)
+    default:
+        $$ = expression.NewElement($1, $3)
+        $$.ExprBase().SetErrorContext($1.ExprBase().GetErrorContext())
+    }
 }
 |
 expr LBRACKET expr COLON RBRACKET
 {
-    $$ = expression.NewSlice($1, $3)
-    $$.ExprBase().SetErrorContext($1.ExprBase().GetErrorContext())
+    switch $1.(type) {
+    case *expression.SequenceOperation:
+        return yylex.(*lexer).FatalError("syntax error", $<line>2, $<column>2)
+    default:
+        $$ = expression.NewSlice($1, $3)
+        $$.ExprBase().SetErrorContext($1.ExprBase().GetErrorContext())
+    }
 }
 |
 expr LBRACKET expr COLON expr RBRACKET
 {
-    $$ = expression.NewSlice($1, $3, $5)
-    $$.ExprBase().SetErrorContext($1.ExprBase().GetErrorContext())
+    switch $1.(type) {
+    case *expression.SequenceOperation:
+        return yylex.(*lexer).FatalError("syntax error", $<line>2, $<column>2)
+    default:
+        $$ = expression.NewSlice($1, $3, $5)
+        $$.ExprBase().SetErrorContext($1.ExprBase().GetErrorContext())
+    }
 }
 |
 expr LBRACKET COLON expr RBRACKET
 {
-    $$ = expression.NewSliceEnd($1, $4)
-    $$.ExprBase().SetErrorContext($1.ExprBase().GetErrorContext())
+    switch $1.(type) {
+    case *expression.SequenceOperation:
+        return yylex.(*lexer).FatalError("syntax error", $<line>2, $<column>2)
+    default:
+        $$ = expression.NewSliceEnd($1, $4)
+        $$.ExprBase().SetErrorContext($1.ExprBase().GetErrorContext())
+    }
 }
 |
 expr LBRACKET COLON RBRACKET
 {
-    $$ = expression.NewSlice($1)
-    $$.ExprBase().SetErrorContext($1.ExprBase().GetErrorContext())
+    switch $1.(type) {
+    case *expression.SequenceOperation:
+        return yylex.(*lexer).FatalError("syntax error", $<line>2, $<column>2)
+    default:
+        $$ = expression.NewSlice($1)
+        $$.ExprBase().SetErrorContext($1.ExprBase().GetErrorContext())
+    }
 }
 |
 expr LBRACKET RBRACKET
 {
-    $$ = expression.NewSlice($1)
-    $$.ExprBase().SetErrorContext($1.ExprBase().GetErrorContext())
+    switch $1.(type) {
+    case *expression.SequenceOperation:
+        return yylex.(*lexer).FatalError("syntax error", $<line>2, $<column>2)
+    default:
+        $$ = expression.NewSlice($1)
+        $$.ExprBase().SetErrorContext($1.ExprBase().GetErrorContext())
+    }
 }
 |
 expr LBRACKET STAR RBRACKET
 {
-    $$ = expression.NewArrayStar($1)
-    $$.(*expression.ArrayStar).SetOperator()
-    $$.ExprBase().SetErrorContext($1.ExprBase().GetErrorContext())
+    switch $1.(type) {
+    case *expression.SequenceOperation:
+        return yylex.(*lexer).FatalError("syntax error", $<line>2, $<column>2)
+    default:
+        $$ = expression.NewArrayStar($1)
+        $$.(*expression.ArrayStar).SetOperator()
+        $$.ExprBase().SetErrorContext($1.ExprBase().GetErrorContext())
+    }
 }
 |
 /* Arithmetic */
@@ -4063,6 +4157,8 @@ c_expr:
 /* Literal */
 literal
 |
+sequence_expr
+|
 /* Construction */
 construction_expr
 |
@@ -4145,7 +4241,6 @@ LPAREN expr RPAREN
 {
     $$ = expression.NewIndexCondition($4)
 }
-
 ;
 
 b_expr:
@@ -4157,6 +4252,8 @@ b_expr DOT ident_or_default LPAREN opt_exprs RPAREN
     var path []string
 
     switch other := $1.(type) {
+    case *expression.SequenceOperation:
+        return yylex.(*lexer).FatalError("syntax error", $<line>4, $<column>4)
     case *expression.Identifier:
         path = []string { other.Alias(), $3 }
             dummyPath, err := algebra.NewPathFromElementsWithContext([]string { other.Alias(), $3 },
@@ -4192,70 +4289,125 @@ b_expr DOT ident_or_default LPAREN opt_exprs RPAREN
 /* Nested */
 b_expr DOT ident_or_default
 {
-    fn := expression.NewFieldName($3, false)
-    fn.ExprBase().SetErrorContext($<line>3,$<column>3)
-    $$ = expression.NewField($1, fn)
-    $$.ExprBase().SetErrorContext($1.ExprBase().GetErrorContext())
+    switch t := $1.(type) {
+    case *expression.SequenceOperation:
+        if !t.AddPart($3) {
+            l, c := t.ExprBase().GetErrorContext()
+            return yylex.(*lexer).FatalError("Invalid sequence name", l, c)
+        }
+        $$ = t
+    default:
+        fn := expression.NewFieldName($3, false)
+        fn.ExprBase().SetErrorContext($<line>3,$<column>3)
+        $$ = expression.NewField($1, fn)
+        $$.ExprBase().SetErrorContext($1.ExprBase().GetErrorContext())
+    }
 }
 |
 b_expr DOT ident_icase
 {
-    fn := expression.NewFieldName($3.Identifier(), true)
-    fn.ExprBase().SetErrorContext($<line>3,$<column>3)
-    field := expression.NewField($1, fn)
-    field.SetCaseInsensitive(true)
-    $$ = field
-    $$.ExprBase().SetErrorContext($1.ExprBase().GetErrorContext())
+    switch t := $1.(type) {
+    case *expression.SequenceOperation:
+        l, c := t.ExprBase().GetErrorContext()
+        return yylex.(*lexer).FatalError("Invalid sequence name", l, c)
+    default:
+        fn := expression.NewFieldName($3.Identifier(), true)
+        fn.ExprBase().SetErrorContext($<line>3,$<column>3)
+        field := expression.NewField($1, fn)
+        field.SetCaseInsensitive(true)
+        $$ = field
+        $$.ExprBase().SetErrorContext($1.ExprBase().GetErrorContext())
+    }
 }
 |
 b_expr DOT LBRACKET expr RBRACKET
 {
-    $$ = expression.NewField($1, $4)
-    $$.ExprBase().SetErrorContext($1.ExprBase().GetErrorContext())
+    switch $1.(type) {
+    case *expression.SequenceOperation:
+        return yylex.(*lexer).FatalError("syntax error", $<line>2, $<column>2)
+    default:
+        $$ = expression.NewField($1, $4)
+        $$.ExprBase().SetErrorContext($1.ExprBase().GetErrorContext())
+    }
 }
 |
 b_expr DOT LBRACKET expr RBRACKET_ICASE
 {
-    field := expression.NewField($1, $4)
-    field.SetCaseInsensitive(true)
-    $$ = field
-    $$.ExprBase().SetErrorContext($1.ExprBase().GetErrorContext())
+    switch $1.(type) {
+    case *expression.SequenceOperation:
+        return yylex.(*lexer).FatalError("syntax error", $<line>2, $<column>2)
+    default:
+        field := expression.NewField($1, $4)
+        field.SetCaseInsensitive(true)
+        $$ = field
+        $$.ExprBase().SetErrorContext($1.ExprBase().GetErrorContext())
+    }
 }
 |
 b_expr LBRACKET expr RBRACKET
 {
-    $$ = expression.NewElement($1, $3)
-    $$.ExprBase().SetErrorContext($1.ExprBase().GetErrorContext())
+    switch $1.(type) {
+    case *expression.SequenceOperation:
+        return yylex.(*lexer).FatalError("syntax error", $<line>2, $<column>2)
+    default:
+        $$ = expression.NewElement($1, $3)
+        $$.ExprBase().SetErrorContext($1.ExprBase().GetErrorContext())
+    }
 }
 |
 b_expr LBRACKET expr COLON RBRACKET
 {
-    $$ = expression.NewSlice($1, $3)
-    $$.ExprBase().SetErrorContext($1.ExprBase().GetErrorContext())
+    switch $1.(type) {
+    case *expression.SequenceOperation:
+        return yylex.(*lexer).FatalError("syntax error", $<line>2, $<column>2)
+    default:
+        $$ = expression.NewSlice($1, $3)
+        $$.ExprBase().SetErrorContext($1.ExprBase().GetErrorContext())
+    }
 }
 |
 b_expr LBRACKET COLON expr RBRACKET
 {
-    $$ = expression.NewSliceEnd($1, $4)
-    $$.ExprBase().SetErrorContext($1.ExprBase().GetErrorContext())
+    switch $1.(type) {
+    case *expression.SequenceOperation:
+        return yylex.(*lexer).FatalError("syntax error", $<line>2, $<column>2)
+    default:
+        $$ = expression.NewSliceEnd($1, $4)
+        $$.ExprBase().SetErrorContext($1.ExprBase().GetErrorContext())
+    }
 }
 |
 b_expr LBRACKET expr COLON expr RBRACKET
 {
-    $$ = expression.NewSlice($1, $3, $5)
-    $$.ExprBase().SetErrorContext($1.ExprBase().GetErrorContext())
+    switch $1.(type) {
+    case *expression.SequenceOperation:
+        return yylex.(*lexer).FatalError("syntax error", $<line>2, $<column>2)
+    default:
+        $$ = expression.NewSlice($1, $3, $5)
+        $$.ExprBase().SetErrorContext($1.ExprBase().GetErrorContext())
+    }
 }
 |
 b_expr LBRACKET COLON RBRACKET
 {
-    $$ = expression.NewSlice($1)
-    $$.ExprBase().SetErrorContext($1.ExprBase().GetErrorContext())
+    switch $1.(type) {
+    case *expression.SequenceOperation:
+        return yylex.(*lexer).FatalError("syntax error", $<line>2, $<column>2)
+    default:
+        $$ = expression.NewSlice($1)
+        $$.ExprBase().SetErrorContext($1.ExprBase().GetErrorContext())
+    }
 }
 |
 b_expr LBRACKET STAR RBRACKET
 {
-    $$ = expression.NewArrayStar($1)
-    $$.ExprBase().SetErrorContext($1.ExprBase().GetErrorContext())
+    switch $1.(type) {
+    case *expression.SequenceOperation:
+        return yylex.(*lexer).FatalError("syntax error", $<line>2, $<column>2)
+    default:
+        $$ = expression.NewArrayStar($1)
+        $$.ExprBase().SetErrorContext($1.ExprBase().GetErrorContext())
+    }
 }
 |
 /* Arithmetic */
@@ -5254,8 +5406,414 @@ WITH expr
 {
     $$ = $2.Value()
     if $$ == nil {
-        yylex.(*lexer).ErrorWithContext("WITH value must be static", $<line>2, $<column>2)
+        return yylex.(*lexer).FatalError("WITH value must be static", $<line>2, $<column>2)
     }
 }
 ;
 
+/*************************************************
+ *
+ * Sequences
+ *
+ *************************************************/
+
+opt_namespace_name:
+{
+    $$ = yylex.(*lexer).Namespace()
+}
+|
+namespace_name
+{
+    $$ = $1
+}
+;
+
+sequence_object_name:
+ident_or_default
+{
+  $$ = strings.TrimSpace($1)
+  if $$ != $1 || $$ == "" {
+    return yylex.(*lexer).FatalError(fmt.Sprintf("Invalid identifier '%v'", $1), $<line>1, $<column>1)
+  }
+}
+|
+_invalid_case_insensitive_identifier
+{
+    return yylex.(*lexer).FatalError("Invalid sequence name", $<line>1, $<column>1)
+}
+;
+
+sequence_full_name:
+opt_namespace_name sequence_object_name
+{
+    p, err := algebra.NewVariablePathWithContext($2, $1, yylex.(*lexer).QueryContext())
+    if err != nil {
+        return yylex.(*lexer).FatalError(err.Error(), $<line>2, $<column>2)
+    }
+    if p == nil || p.Scope() == "" {
+        return yylex.(*lexer).FatalError("Invalid sequence name", $<line>2, $<column>2)
+    }
+    $$ = p
+}
+|
+opt_namespace_name path_part DOT path_part DOT sequence_object_name
+{
+    $$ = algebra.NewPathLong($1, $2, $4, $6)
+}
+|
+opt_namespace_name path_part DOT sequence_object_name
+{
+    p, err := algebra.NewPathFromElementsWithContext([]string{$2, $4}, $1, yylex.(*lexer).QueryContext())
+    if err != nil {
+        return yylex.(*lexer).FatalError(err.Error(), $<line>2, $<column>2)
+    }
+    if p == nil || p.Scope() == "" {
+        return yylex.(*lexer).FatalError("Invalid sequence name", $<line>2, $<column>2)
+    }
+    $$ = p
+}
+;
+
+sequence_stmt:
+create_sequence
+|
+drop_sequence
+|
+alter_sequence
+;
+
+create_sequence:
+CREATE SEQUENCE sequence_name_options seq_create_options
+{
+    failOnExists := true
+    var name *algebra.Path
+    for _, v := range $3 {
+        if v.name == "" {
+            if !failOnExists {
+                return yylex.(*lexer).FatalError("syntax error - IF NOT EXISTS already specified", v.line, v.column)
+            }
+            failOnExists =false
+        } else {
+            if name != nil {
+                return yylex.(*lexer).FatalError("syntax error - name already provided", v.line, v.column)
+            }
+            name = algebra.NewPathFromElements(algebra.ParsePath(v.name))
+        }
+    }
+    if name == nil {
+        return yylex.(*lexer).FatalError("syntax error - sequence name is required", $<line>3, $<column>3)
+    }
+    var with value.Value
+    validate := func(m map[string]interface{}, v *nameValueContext) string {
+        if v.name == "with" {
+            if len(m) != 0 {
+                return "WITH may not be used with other options"
+            } else if v.value.Type() == value.OBJECT {
+                m["with"] = v.value
+                return ""
+            }
+        } else {
+            if _, ok := m["with"]; ok {
+              return "options may not be used with WITH clause"
+            }
+        }
+        if _, ok := m[v.name]; ok {
+            return "duplicate option"
+        }
+        if v.name == sequences.OPT_CYCLE && v.value.Type() == value.BOOLEAN {
+            m[v.name] = v.value.Truth()
+            return ""
+        } else if v.value.Type() == value.NUMBER {
+            if i, ok := value.IsIntValue(v.value); ok {
+                  m[v.name] = i
+                  return ""
+            }
+        }
+        return "invalid option value"
+    }
+    if len($4) > 0 {
+        m := make(map[string]interface{},len($4))
+        for _, vp := range $4 {
+            if err := validate(m, vp); err != "" {
+                return yylex.(*lexer).FatalError("syntax error - " + err, vp.line, vp.column)
+            }
+        }
+        if len(m) > 0 {
+            if w, ok := m["with"]; ok {
+                with = value.NewValue(w)
+            } else {
+                with = value.NewValue(m)
+            }
+        }
+    }
+    $$ = algebra.NewCreateSequence(name, failOnExists, with)
+}
+;
+
+sequence_name_options:
+sequence_name_option
+{
+    $$ = append([]*nameValueContext(nil), $1)
+}
+|
+sequence_name_options sequence_name_option
+{
+    $$ = append($1, $2)
+}
+;
+
+sequence_name_option:
+IF NOT EXISTS
+{
+    $$ = &nameValueContext{"", nil, $<line>1, $<column>1}
+}
+|
+sequence_full_name
+{
+    $$ = &nameValueContext{$1.SimpleString(), nil, $<line>1, $<column>1}
+}
+;
+
+seq_create_options:
+/* empty */
+{
+    $$ = nil
+}
+|
+seq_create_options seq_create_option
+{
+    $$ = append($1, $2)
+}
+;
+
+seq_create_option: sequence_with | start_with | increment_by | maxvalue | minvalue | cycle | cache ;
+
+drop_sequence:
+DROP SEQUENCE sequence_full_name opt_if_exists
+{
+    $$ = algebra.NewDropSequence($3, $4)
+}
+|
+DROP SEQUENCE IF EXISTS sequence_full_name
+{
+    $$ = algebra.NewDropSequence($5, false)
+}
+;
+
+alter_sequence:
+ALTER SEQUENCE sequence_full_name with_clause
+{
+    if $4 == nil || $4.Type() != value.OBJECT || !$4.Truth() {
+        return yylex.(*lexer).FatalError("syntax error - invalid options object", $<line>4, $<column>4)
+    }
+    $$ = algebra.NewAlterSequence($3, $4)
+}
+|
+ALTER SEQUENCE sequence_full_name seq_alter_options
+{
+    if len($4) == 0 {
+        return yylex.(*lexer).FatalError("syntax error - missing options", $<line>4, $<column>4)
+    }
+    var with value.Value
+    validate := func(m map[string]interface{}, v *nameValueContext) string {
+        if _, ok := m[v.name]; ok {
+            return "duplicate option"
+        }
+        if v.name == sequences.OPT_CYCLE && v.value.Type() == value.BOOLEAN {
+            m[v.name] = v.value.Truth()
+            return ""
+        } else if v.name == sequences.OPT_RESTART && v.value.Type() == value.NULL {
+            m[v.name] = true
+            return ""
+        } else if v.value.Type() == value.NUMBER {
+            if i, ok := value.IsIntValue(v.value); ok {
+                  m[v.name] = i
+                  return ""
+            }
+        }
+        return "invalid option value"
+    }
+    m := make(map[string]interface{},len($4))
+    for _, vp := range $4 {
+        if err := validate(m, vp); err != "" {
+            return yylex.(*lexer).FatalError("syntax error - " + err, vp.line, vp.column)
+        }
+    }
+    if len(m) > 0 {
+        with = value.NewValue(m)
+    }
+    $$ = algebra.NewAlterSequence($3, with)
+}
+;
+
+seq_alter_options:
+seq_alter_option
+{
+  $$ = append([]*nameValueContext(nil), $1)
+}
+|
+seq_alter_options seq_alter_option
+{
+  $$ = append($1, $2)
+}
+;
+
+seq_alter_option: restart_with | increment_by | maxvalue | minvalue | cycle | cache ;
+
+sequence_with:
+WITH expr
+{
+    v := $2.Value()
+    if v == nil {
+        return yylex.(*lexer).FatalError("WITH value must be static", $<line>2, $<column>2)
+    }
+    $$ = &nameValueContext{"with", v, $<line>1, $<column>1}
+}
+;
+
+start_with:
+START WITH expr
+{
+    v := $3.Value()
+    if v == nil {
+        yylex.(*lexer).ErrorWithContext("Option value must be static", $<line>3, $<column>3)
+    }
+    $$ = &nameValueContext{sequences.OPT_START, v, $<line>1, $<column>1}
+}
+;
+
+restart_with:
+RESTART opt_with_clause
+{
+    if $2 == nil {
+        $$ = &nameValueContext{sequences.OPT_RESTART, value.NULL_VALUE, $<line>1, $<column>1}
+    } else {
+        $$ = &nameValueContext{sequences.OPT_RESTART, $2, $<line>1, $<column>1}
+    }
+}
+;
+
+increment_by:
+INCREMENT BY expr
+{
+    v := $3.Value()
+    if v == nil {
+        yylex.(*lexer).ErrorWithContext("Option value must be static", $<line>3, $<column>3)
+    }
+    $$ = &nameValueContext{sequences.OPT_INCR, v, $<line>1, $<column>1}
+}
+;
+
+maxvalue:
+NO MAXVALUE
+{
+    $$ = &nameValueContext{sequences.OPT_MAX, value.NewValue(math.MaxInt64), $<line>1, $<column>1}
+}
+|
+MAXVALUE expr
+{
+    v := $2.Value()
+    if v == nil {
+        yylex.(*lexer).ErrorWithContext("Option value must be static", $<line>2, $<column>2)
+    }
+    $$ = &nameValueContext{sequences.OPT_MAX, v, $<line>1, $<column>1}
+}
+;
+
+minvalue:
+NO MINVALUE
+{
+    $$ = &nameValueContext{sequences.OPT_MIN, value.NewValue(math.MinInt64), $<line>1, $<column>1}
+}
+|
+MINVALUE expr
+{
+    v := $2.Value()
+    if v == nil {
+        yylex.(*lexer).ErrorWithContext("Option value must be static", $<line>2, $<column>2)
+    }
+    $$ = &nameValueContext{sequences.OPT_MIN, v, $<line>1, $<column>1}
+}
+;
+
+cycle:
+NO CYCLE
+{
+    $$ = &nameValueContext{sequences.OPT_CYCLE, value.FALSE_VALUE, $<line>1, $<column>1}
+}
+|
+CYCLE
+{
+    $$ = &nameValueContext{sequences.OPT_CYCLE, value.TRUE_VALUE, $<line>1, $<column>1}
+}
+;
+
+cache:
+NO CACHE
+{
+    $$ = &nameValueContext{sequences.OPT_CACHE, value.ONE_VALUE, $<line>1, $<column>1}
+}
+|
+CACHE expr
+{
+    v := $2.Value()
+    if v == nil {
+        return yylex.(*lexer).FatalError("Option value must be static", $<line>2, $<column>2)
+    }
+    $$ = &nameValueContext{sequences.OPT_CACHE, v, $<line>1, $<column>1}
+}
+;
+
+sequence_next:
+NEXTVAL FOR ident_or_default
+{
+  $$ = $3
+}
+|
+NEXT VALUE FOR ident_or_default
+{
+  $$ = $4
+}
+;
+
+sequence_prev:
+PREVVAL FOR ident_or_default
+{
+  $$ = $3
+}
+|
+PREV VALUE FOR ident_or_default
+{
+  $$ = $4
+}
+;
+
+sequence_expr:
+sequence_next
+{
+    defs := algebra.ParseQueryContext(yylex.(*lexer).QueryContext())
+    if defs[0] == "" {
+        defs[0] = "default"
+    }
+    s := expression.NewSequenceNext(defs...)
+    s.ExprBase().SetErrorContext($<line>1, $<column>1)
+    if !s.AddPart($1) {
+        return yylex.(*lexer).FatalError("Invalid sequence name", $<line>1, $<column>1)
+    }
+    $$ = s
+}
+|
+sequence_prev
+{
+    defs := algebra.ParseQueryContext(yylex.(*lexer).QueryContext())
+    if defs[0] == "" {
+        defs[0] = "default"
+    }
+    s := expression.NewSequencePrev(defs...)
+    s.ExprBase().SetErrorContext($<line>1, $<column>1)
+    if !s.AddPart($1) {
+        return yylex.(*lexer).FatalError("Invalid sequence name", $<line>1, $<column>1)
+    }
+    $$ = s
+}
+;

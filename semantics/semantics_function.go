@@ -37,6 +37,13 @@ func (this *SemChecker) VisitFunction(expr expression.Function) (interface{}, er
 				return expr, errors.NewTranFunctionNotSupportedError(nexpr.Name())
 			}
 		*/
+	case *expression.SequenceOperation:
+		if !nexpr.IsNameValid() {
+			return expr, errors.NewSequenceError(errors.E_SEQUENCE_NAME_PARTS, nexpr.FullName(), nexpr.ErrorContext())
+		}
+		if this.hasSemFlag(_SEM_WHERE | _SEM_ON) {
+			return nil, errors.NewSemanticsError(nil, "Sequence operations are not allowed in WHERE/ON clauses")
+		}
 	}
 	return expr, expr.MapChildren(this)
 }

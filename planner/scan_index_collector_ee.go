@@ -589,3 +589,15 @@ func getIndexPartitionToString(index datastore.Index) (rv string) {
 	rv += ")"
 	return
 }
+
+func (this *scanIdxCol) VisitCreateSequence(op *plan.CreateSequence) (interface{}, error) {
+	return nil, nil
+}
+
+func (this *scanIdxCol) VisitDropSequence(op *plan.DropSequence) (interface{}, error) {
+	return nil, nil
+}
+
+func (this *scanIdxCol) VisitAlterSequence(op *plan.AlterSequence) (interface{}, error) {
+	return nil, nil
+}

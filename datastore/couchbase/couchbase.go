@@ -17,6 +17,7 @@ package couchbase
 
 import (
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
 	"io"
 	"math"
@@ -40,6 +41,7 @@ import (
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
 	cb "github.com/couchbase/query/primitives/couchbase"
+	"github.com/couchbase/query/sequences"
 	"github.com/couchbase/query/server"
 	"github.com/couchbase/query/tenant"
 	"github.com/couchbase/query/transactions"
@@ -1628,6 +1630,7 @@ func newKeyspace(p *namespace, name string, version *uint64) (*keyspace, errors.
 	if !cbbucket.RunBucketUpdater2(p.KeyspaceUpdateCallback, p.KeyspaceDeleteCallback) {
 		return nil, errors.NewCbBucketClosedError(fullName(p.name, name))
 	} else {
+		go sequences.CleanupStaleSequences(p.name, name)
 		logging.Infof("Loaded Bucket %s", name)
 	}
 
@@ -1664,6 +1667,7 @@ func (p *namespace) KeyspaceDeleteCallback(name string, err error) {
 			// since it'll need to lock it when trying to delete from
 			// system collection
 			dropDictCacheEntries(cbKeyspace)
+			sequences.DropAllSequences(p.name, cbKeyspace.name, "")
 		}
 	}
 }
@@ -1990,7 +1994,8 @@ func (b *keyspace) fetch(fullName, qualifiedName, scopeName, collectionName stri
 	ls := len(subPaths)
 	fast := l == 1 && ls == 0
 	if fast {
-		mcr, err = b.cbbucket.GetsMC(keys[0], context.IsActive, context.GetReqDeadline(), context.KvTimeout(), context.UseReplica(), clientContext...)
+		mcr, err = b.cbbucket.GetsMC(keys[0], context.IsActive, context.GetReqDeadline(), context.KvTimeout(), context.UseReplica(),
+			clientContext...)
 	} else {
 		if ls > 0 && (subPaths[0] != "$document" && subPaths[0] != "$document.exptime") {
 			subPaths = append([]string{"$document"}, subPaths...)
@@ -2001,7 +2006,8 @@ func (b *keyspace) fetch(fullName, qualifiedName, scopeName, collectionName stri
 			mcr, err = b.cbbucket.GetsSubDoc(keys[0], context.GetReqDeadline(), context.KvTimeout(), subPaths, clientContext...)
 		} else {
 			// TODO TENANT handle refunds on transient failures
-			bulkResponse, err = b.cbbucket.GetBulk(keys, context.IsActive, context.GetReqDeadline(), context.KvTimeout(), subPaths, context.UseReplica(), clientContext...)
+			bulkResponse, err = b.cbbucket.GetBulk(keys, context.IsActive, context.GetReqDeadline(), context.KvTimeout(), subPaths,
+				context.UseReplica(), clientContext...)
 			defer b.cbbucket.ReleaseGetBulkPools(bulkResponse)
 		}
 	}
@@ -2285,8 +2291,9 @@ type parallelInfo struct {
 	mCount int // number of successfully mutated pairs
 }
 
-func (b *keyspace) performOp(op MutateOp, qualifiedName, scopeName, collectionName string, pairs value.Pairs, preserveMutations bool,
-	context datastore.QueryContext, clientContext ...*memcached.ClientContext) (mCount int, mPairs value.Pairs, errs errors.Errors) {
+func (b *keyspace) performOp(op MutateOp, qualifiedName, scopeName, collectionName string, pairs value.Pairs,
+	preserveMutations bool, context datastore.QueryContext, clientContext ...*memcached.ClientContext) (
+	mCount int, mPairs value.Pairs, errs errors.Errors) {
 
 	numPairs := len(pairs)
 
@@ -2610,6 +2617,50 @@ func (b *keyspace) Upsert(upserts value.Pairs, context datastore.QueryContext, p
 
 func (b *keyspace) Delete(deletes value.Pairs, context datastore.QueryContext, preserveMutations bool) (int, value.Pairs, errors.Errors) {
 	return b.performOp(MOP_DELETE, b.QualifiedName(), "", "", deletes, preserveMutations, context)
+}
+
+func (b *keyspace) SetSubDoc(key string, elems value.Pairs, context datastore.QueryContext) (
+	value.Pairs, errors.Error) {
+
+	cc := &memcached.ClientContext{User: getUser(context)}
+	err := setMutateClientContext(context, cc)
+	if err != nil {
+		return nil, err
+	}
+	ops := make([]memcached.SubDocOp, len(elems))
+	for i := range elems {
+		ops[i].Path = elems[i].Name
+		b, e := json.Marshal(elems[i].Value)
+		if e != nil {
+			return nil, errors.NewSubDocSetError(e)
+		}
+		ops[i].Value = b
+		ops[i].Counter = (elems[i].Options != nil && elems[i].Options.Truth())
+	}
+	mcr, e := b.cbbucket.SetsSubDoc(key, ops, cc)
+	if e != nil {
+		return nil, errors.NewSubDocSetError(e)
+	}
+	return processSubDocResults(ops, mcr), nil
+}
+
+func processSubDocResults(ops []memcached.SubDocOp, v *gomemcached.MCResponse) value.Pairs {
+	res := make(value.Pairs, 0, len(ops))
+	index := 0
+	for i := 0; i < len(v.Body)-6 && index < len(ops); {
+		index = int(v.Body[i])
+		i++
+		status := gomemcached.Status(binary.BigEndian.Uint16(v.Body[i:]))
+		i += 2
+		l := int(binary.BigEndian.Uint32(v.Body[i:]))
+		i += 4
+		val := v.Body[i : i+l]
+		i += l
+		if status != gomemcached.SUBDOC_PATH_NOT_FOUND && index < len(ops) {
+			res = append(res, value.Pair{Name: ops[index].Path, Value: value.NewValue(val), Options: value.NewValue(index)})
+		}
+	}
+	return res
 }
 
 func (b *keyspace) Release(bclose bool) {

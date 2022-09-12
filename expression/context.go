@@ -108,3 +108,9 @@ type ExecutePreparedContext interface {
 	// Only accepts non-prepared statements
 	ExecutePreparedExt(prepared interface{}, namedArgs map[string]value.Value, positionalArgs value.Values) (value.Value, uint64, error)
 }
+
+type SequenceContext interface {
+	Context
+	NextSequenceValue(name string) (int64, errors.Error)
+	CurrentSequenceValue(name string) (int64, errors.Error)
+}

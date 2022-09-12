@@ -43,6 +43,7 @@ import (
 	"github.com/couchbase/query/memory"
 	"github.com/couchbase/query/prepareds"
 	"github.com/couchbase/query/scheduler"
+	"github.com/couchbase/query/sequences"
 	"github.com/couchbase/query/server"
 	"github.com/couchbase/query/server/http/router"
 	"github.com/couchbase/query/tenant"
@@ -52,20 +53,21 @@ import (
 )
 
 const (
-	accountingPrefix      = adminPrefix + "/stats"
-	vitalsPrefix          = adminPrefix + "/vitals"
-	preparedsPrefix       = adminPrefix + "/prepareds"
-	requestsPrefix        = adminPrefix + "/active_requests"
-	completedsPrefix      = adminPrefix + "/completed_requests"
-	functionsPrefix       = adminPrefix + "/functions_cache"
-	dictionaryPrefix      = adminPrefix + "/dictionary_cache"
-	tasksPrefix           = adminPrefix + "/tasks_cache"
-	indexesPrefix         = adminPrefix + "/indexes"
-	expvarsRoute          = "/debug/vars"
-	prometheusLow         = "/_prometheusMetrics"
-	prometheusHigh        = "/_prometheusMetricsHigh"
-	transactionsPrefix    = adminPrefix + "/transactions"
-	functionsBackupPrefix = "/api/v1"
+	accountingPrefix   = adminPrefix + "/stats"
+	vitalsPrefix       = adminPrefix + "/vitals"
+	preparedsPrefix    = adminPrefix + "/prepareds"
+	requestsPrefix     = adminPrefix + "/active_requests"
+	completedsPrefix   = adminPrefix + "/completed_requests"
+	functionsPrefix    = adminPrefix + "/functions_cache"
+	dictionaryPrefix   = adminPrefix + "/dictionary_cache"
+	tasksPrefix        = adminPrefix + "/tasks_cache"
+	indexesPrefix      = adminPrefix + "/indexes"
+	expvarsRoute       = "/debug/vars"
+	prometheusLow      = "/_prometheusMetrics"
+	prometheusHigh     = "/_prometheusMetricsHigh"
+	transactionsPrefix = adminPrefix + "/transactions"
+	fnBackupPrefix     = "/api/v1"
+	sequencesPrefix    = adminPrefix + "/sequences_cache"
 )
 
 func expvarsHandler(w http.ResponseWriter, req *http.Request) {
@@ -171,6 +173,12 @@ func (this *HttpEndpoint) registerAccountingHandlers() {
 	logHandler := func(w http.ResponseWriter, req *http.Request) {
 		this.wrapAPI(w, req, doLog)
 	}
+	sequenceIndexHandler := func(w http.ResponseWriter, req *http.Request) {
+		this.wrapAPI(w, req, doSequenceIndex)
+	}
+	sequenceHandler := func(w http.ResponseWriter, req *http.Request) {
+		this.wrapAPI(w, req, doSequence)
+	}
 	routeMap := map[string]struct {
 		handler handlerFunc
 		methods []string
@@ -201,13 +209,15 @@ func (this *HttpEndpoint) registerAccountingHandlers() {
 		prometheusLow:                         {handler: prometheusLowHandler, methods: []string{"GET"}},
 		indexesPrefix + "/transactions":       {handler: transactionsIndexHandler, methods: []string{"GET"}},
 
-		functionsBackupPrefix + "/backup":                 {handler: functionsGlobalBackupHandler, methods: []string{"GET", "POST"}},
-		functionsBackupPrefix + "/bucket/{bucket}/backup": {handler: functionsBucketBackupHandler, methods: []string{"GET", "POST"}},
+		fnBackupPrefix + "/backup":                 {handler: functionsGlobalBackupHandler, methods: []string{"GET", "POST"}},
+		fnBackupPrefix + "/bucket/{bucket}/backup": {handler: functionsBucketBackupHandler, methods: []string{"GET", "POST"}},
 
 		adminPrefix + "/gc":                {handler: forceGCHandler, methods: []string{"GET", "POST"}},
 		adminPrefix + "/ffdc":              {handler: manualFFDCHandler, methods: []string{"POST"}},
 		adminPrefix + "/log/{file}":        {handler: logHandler, methods: []string{"GET"}},
 		adminPrefix + "/log/stream/{file}": {handler: logHandler, methods: []string{"GET"}},
+		indexesPrefix + "/sequences":       {handler: sequenceIndexHandler, methods: []string{"GET"}},
+		sequencesPrefix + "/{name}":        {handler: sequenceHandler, methods: []string{"GET"}},
 	}
 
 	for route, h := range routeMap {
@@ -313,7 +323,9 @@ func doStat(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af
 	}
 }
 
-func doPrometheusLow(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
+func doPrometheusLow(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
+	interface{}, errors.Error) {
+
 	af.EventTypeId = audit.API_DO_NOT_AUDIT
 	err, _ := endpoint.verifyCredentialsFromRequest("", auth.PRIV_QUERY_STATS, req, nil)
 	if err != nil {
@@ -364,7 +376,9 @@ func doPrometheusLow(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Re
 	return textPlain(""), nil
 }
 
-func doEmpty(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
+func doEmpty(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
+	interface{}, errors.Error) {
+
 	af.EventTypeId = audit.API_DO_NOT_AUDIT
 	err, _ := endpoint.verifyCredentialsFromRequest("", auth.PRIV_QUERY_STATS, req, nil)
 	if err != nil {
@@ -375,12 +389,16 @@ func doEmpty(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, a
 	return textPlain(""), nil
 }
 
-func doNotFound(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
+func doNotFound(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
+	interface{}, errors.Error) {
+
 	accounting.UpdateCounter(accounting.INVALID_REQUESTS)
 	return nil, nil
 }
 
-func doVitals(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
+func doVitals(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
+	interface{}, errors.Error) {
+
 	af.EventTypeId = audit.API_ADMIN_VITALS
 	switch req.Method {
 	case "GET":
@@ -413,7 +431,9 @@ func CaptureVitals(endpoint *HttpEndpoint, w io.Writer) error {
 }
 
 // Credentials only come from the basic username/password
-func (endpoint *HttpEndpoint) getCredentialsFromRequest(ds datastore.Datastore, req *http.Request) (*auth.Credentials, errors.Error, bool) {
+func (endpoint *HttpEndpoint) getCredentialsFromRequest(ds datastore.Datastore, req *http.Request) (*auth.Credentials,
+	errors.Error, bool) {
+
 	isInternal := false
 
 	// only avoid auditing for internal users
@@ -464,7 +484,9 @@ func (endpoint *HttpEndpoint) Authorize(req *http.Request) errors.Error {
 	return err
 }
 
-func (endpoint *HttpEndpoint) verifyCredentialsFromRequest(api string, priv auth.Privilege, req *http.Request, af *audit.ApiAuditFields) (errors.Error, bool) {
+func (endpoint *HttpEndpoint) verifyCredentialsFromRequest(api string, priv auth.Privilege, req *http.Request,
+	af *audit.ApiAuditFields) (errors.Error, bool) {
+
 	ds := datastore.GetDatastore()
 	creds, err, isInternal := endpoint.getCredentialsFromRequest(ds, req)
 	if err != nil {
@@ -614,7 +636,9 @@ func preparedWorkHorse(entry *prepareds.CacheEntry, profiling bool, redact bool,
 	return itemMap
 }
 
-func doPrepareds(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
+func doPrepareds(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
+	interface{}, errors.Error) {
+
 	af.EventTypeId = audit.API_ADMIN_PREPAREDS
 	switch req.Method {
 	case "GET", "POST":
@@ -777,7 +801,9 @@ func doDictionaryEntry(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.
 	}
 }
 
-func doDictionary(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
+func doDictionary(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
+	interface{}, errors.Error) {
+
 	af.EventTypeId = audit.API_ADMIN_DICTIONARY
 	switch req.Method {
 	case "GET":
@@ -882,7 +908,9 @@ func doTask(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af
 	}
 }
 
-func doTasks(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
+func doTasks(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
+	interface{}, errors.Error) {
+
 	af.EventTypeId = audit.API_ADMIN_TASKS
 	switch req.Method {
 	case "GET":
@@ -944,7 +972,9 @@ func doTasks(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, a
 	}
 }
 
-func doFunctionsGlobalBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
+func doFunctionsGlobalBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
+	interface{}, errors.Error) {
+
 	af.EventTypeId = audit.API_ADMIN_FUNCTIONS_BACKUP
 	switch req.Method {
 	case "GET":
@@ -996,7 +1026,6 @@ func doFunctionsGlobalBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req 
 			if err != nil {
 				return nil, err
 			}
-			return "", nil
 		}
 		index := 0
 		json.SetIndexState(&iState, data)
@@ -1143,7 +1172,6 @@ func makeBackupHeader(v interface{}) interface{} {
 
 func checkBackupHeader(d []byte) ([]byte, errors.Error) {
 	var oState json.KeyState
-
 	json.SetKeyState(&oState, d)
 	magic, err := oState.FindKey(_MAGIC_KEY)
 	if err != nil || string(magic) != "\""+_MAGIC+"\"" {
@@ -1219,7 +1247,8 @@ func newFilter(p string) (matcher, errors.Error) {
 			if len(s) > 0 && len(elems) > 1 {
 				s[elems[1]] = true
 			} else {
-				return nil, errors.NewServiceErrorBadValue(go_errors.New("filter includes duplicate entries"), "UDF restore parameters")
+				return nil, errors.NewServiceErrorBadValue(go_errors.New("filter includes duplicate entries"),
+					"UDF restore parameters")
 			}
 
 			// currently we ignore overlapping and duplicates
@@ -1281,7 +1310,8 @@ func newRemapper(p string) (remapper, errors.Error) {
 		inElems := parsePath(rm[0])
 		outElems := parsePath(rm[1])
 		if len(inElems) != len(outElems) || len(inElems) > 2 {
-			return nil, errors.NewServiceErrorBadValue(go_errors.New("remapper has mismatching or invalid entries"), "UDF restore parameter")
+			return nil, errors.NewServiceErrorBadValue(go_errors.New("remapper has mismatching or invalid entries"),
+				"UDF restore parameter")
 		}
 		s, ok := m[inElems[0]]
 
@@ -1291,7 +1321,8 @@ func newRemapper(p string) (remapper, errors.Error) {
 			if len(inElems) > 0 && !foundEmpty {
 				s[inElems[1]] = outElems
 			} else {
-				return nil, errors.NewServiceErrorBadValue(go_errors.New("filter includes duplicate entries"), "UDF restore parameter")
+				return nil, errors.NewServiceErrorBadValue(go_errors.New("filter includes duplicate entries"),
+					"UDF restore parameter")
 			}
 
 			// currently we ignore overlapping and duplicates
@@ -1333,8 +1364,8 @@ func (r remapper) remap(bucket string, path []string) {
 //     time and restore function definitions with different parameter lists
 //   - remapping to an existing scope will replace existing functions, with the same or different signature, which may not be
 //     intended, however a different conflict resolution would prevent going back in time
-//   - be aware that remapping may have other side effects: for query context based statements contained within functions, the new targets
-//     will be under the new bucket / scope query context, while accesses with full path will remain unchanged.
+//   - be aware that remapping may have other side effects: for query context based statements contained within functions, the new
+//     targets will be under the new bucket / scope query context, while accesses with full path will remain unchanged.
 //     this makes perfect sense, but may not necessarely be what the user intended
 func doFunctionRestore(v []byte, l int, b string, include, exclude matcher, remap remapper) errors.Error {
 	var oState json.KeyState
@@ -1651,7 +1682,9 @@ func activeRequestWorkHorse(endpoint *HttpEndpoint, request server.Request, prof
 	return reqMap
 }
 
-func doActiveRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
+func doActiveRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
+	interface{}, errors.Error) {
+
 	af.EventTypeId = audit.API_ADMIN_PREPAREDS
 	err, _ := endpoint.verifyCredentialsFromRequest("system:active_requests", auth.PRIV_SYSTEM_READ, req, af)
 	if err != nil {
@@ -1887,7 +1920,9 @@ func completedRequestWorkHorse(request *server.RequestLogEntry, profiling bool, 
 	return reqMap
 }
 
-func doCompletedRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
+func doCompletedRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
+	interface{}, errors.Error) {
+
 	af.EventTypeId = audit.API_ADMIN_COMPLETED_REQUESTS
 	err, _ := endpoint.verifyCredentialsFromRequest("system:completed_requests", auth.PRIV_SYSTEM_READ, req, af)
 	if err != nil {
@@ -1955,7 +1990,9 @@ func interfaceRedacted(in interface{}, redact bool) interface{} {
 	return in
 }
 
-func doPreparedIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
+func doPreparedIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
+	interface{}, errors.Error) {
+
 	af.EventTypeId = audit.API_DO_NOT_AUDIT
 	err, _ := endpoint.verifyCredentialsFromRequest("system:active_requests", auth.PRIV_SYSTEM_READ, req, af)
 	if err != nil {
@@ -1986,7 +2023,9 @@ func doPreparedIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Re
 	return keys, nil
 }
 
-func doRequestIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
+func doRequestIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
+	interface{}, errors.Error) {
+
 	af.EventTypeId = audit.API_DO_NOT_AUDIT
 	err, _ := endpoint.verifyCredentialsFromRequest("system:active_requests", auth.PRIV_SYSTEM_READ, req, af)
 	if err != nil {
@@ -2025,7 +2064,9 @@ func doRequestIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 	return requests, nil
 }
 
-func doCompletedIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
+func doCompletedIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
+	interface{}, errors.Error) {
+
 	af.EventTypeId = audit.API_DO_NOT_AUDIT
 	err, _ := endpoint.verifyCredentialsFromRequest("system:completed_requests", auth.PRIV_SYSTEM_READ, req, af)
 	if err != nil {
@@ -2058,7 +2099,9 @@ func doCompletedIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.R
 	return completed, nil
 }
 
-func doFunctionsIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
+func doFunctionsIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
+	interface{}, errors.Error) {
+
 	af.EventTypeId = audit.API_DO_NOT_AUDIT
 	err, _ := endpoint.verifyCredentialsFromRequest("system:functions_cache", auth.PRIV_SYSTEM_READ, req, af)
 	if err != nil {
@@ -2067,7 +2110,9 @@ func doFunctionsIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.R
 	return functions.NameFunctions(), nil
 }
 
-func doDictionaryIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
+func doDictionaryIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
+	interface{}, errors.Error) {
+
 	af.EventTypeId = audit.API_DO_NOT_AUDIT
 	err, _ := endpoint.verifyCredentialsFromRequest("system:dictionary_cache", auth.PRIV_SYSTEM_READ, req, af)
 	if err != nil {
@@ -2076,7 +2121,9 @@ func doDictionaryIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.
 	return dictionary.NameDictCacheEntries(), nil
 }
 
-func doTasksIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
+func doTasksIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
+	interface{}, errors.Error) {
+
 	af.EventTypeId = audit.API_DO_NOT_AUDIT
 	err, _ := endpoint.verifyCredentialsFromRequest("system:tasks", auth.PRIV_SYSTEM_READ, req, af)
 	if err != nil {
@@ -2227,8 +2274,8 @@ func doForceGC(ep *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *a
 
 var earliest time.Time
 
-func doManualFFDC(ep *HttpEndpoint, w http.ResponseWriter, req *http.Request,
-	af *audit.ApiAuditFields) (interface{}, errors.Error) {
+func doManualFFDC(ep *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
+	interface{}, errors.Error) {
 
 	af.EventTypeId = audit.API_ADMIN_FFDC
 	err, _ := ep.verifyCredentialsFromRequest("", auth.PRIV_CLUSTER_ADMIN, req, af)
@@ -2254,8 +2301,7 @@ func doManualFFDC(ep *HttpEndpoint, w http.ResponseWriter, req *http.Request,
 	}
 }
 
-func doLog(ep *HttpEndpoint, w http.ResponseWriter, req *http.Request,
-	af *audit.ApiAuditFields) (interface{}, errors.Error) {
+func doLog(ep *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
 
 	af.EventTypeId = audit.API_ADMIN_STREAM_LOG
 	err, _ := ep.verifyCredentialsFromRequest("", auth.PRIV_SYSTEM_READ, req, af)
@@ -2305,5 +2351,39 @@ func doLog(ep *HttpEndpoint, w http.ResponseWriter, req *http.Request,
 		if info, e := file.Stat(); e == nil && info.Size() >= pos {
 			file.Seek(pos, os.SEEK_SET)
 		}
+	}
+}
+
+func doSequenceIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
+	interface{}, errors.Error) {
+
+	af.EventTypeId = audit.API_ADMIN_SEQUENCES
+	err, _ := endpoint.verifyCredentialsFromRequest("system:sequences", auth.PRIV_SYSTEM_READ, req, af)
+	if err != nil {
+		return nil, err
+	}
+	return sequences.ListCachedSequences(), nil
+}
+
+func doSequence(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
+	interface{}, errors.Error) {
+
+	_, name := router.RequestValue(req, "name")
+	af.EventTypeId = audit.API_ADMIN_SEQUENCES
+	af.Name = name
+
+	if req.Method == "GET" {
+		err, _ := endpoint.verifyCredentialsFromRequest("system:sequences", auth.PRIV_SYSTEM_READ, req, af)
+		if err != nil {
+			return nil, err
+		}
+		var res interface{}
+		av, err := sequences.FetchSequence(name, true)
+		if av != nil {
+			res = av.Actual()
+		}
+		return res, nil
+	} else {
+		return nil, errors.NewServiceErrorHttpMethod(req.Method)
 	}
 }

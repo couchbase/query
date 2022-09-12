@@ -130,3 +130,15 @@ func semCheckFlattenKeys(exprs expression.Expressions) (err error) {
 
 	return err
 }
+
+func (this *SemChecker) VisitCreateSequence(stmt *algebra.CreateSequence) (interface{}, error) {
+	return nil, stmt.MapExpressions(this)
+}
+
+func (this *SemChecker) VisitDropSequence(stmt *algebra.DropSequence) (interface{}, error) {
+	return nil, stmt.MapExpressions(this)
+}
+
+func (this *SemChecker) VisitAlterSequence(stmt *algebra.AlterSequence) (interface{}, error) {
+	return nil, stmt.MapExpressions(this)
+}

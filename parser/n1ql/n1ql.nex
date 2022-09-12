@@ -160,6 +160,7 @@
 /[bB][uU][iI][lL][dD]/           { yylex.logToken(yylex.Text(), "BUILD"); return BUILD }
 /[bB][yY]/                       { yylex.logToken(yylex.Text(), "BY"); return BY }
 /[cC][aA][lL][lL]/               { yylex.logToken(yylex.Text(), "CALL"); return CALL }
+/[cC][aA][cC][hH][eE]/           { yylex.logToken(yylex.Text(), "CACHE"); return CACHE }
 /[cC][aA][sS][eE]/               { yylex.logToken(yylex.Text(), "CASE"); return CASE }
 /[cC][aA][sS][tT]/               { yylex.logToken(yylex.Text(), "CAST"); return CAST }
 /[cC][lL][uU][sS][tT][eE][rR]/   { yylex.logToken(yylex.Text(), "CLUSTER"); return CLUSTER }
@@ -265,10 +266,14 @@
 /[mM][aA][pP][pP][iI][nN][gG]/   { yylex.logToken(yylex.Text(), "MAPPING"); return MAPPING }
 /[mM][aA][tT][cC][hH][eE][dD]/   { yylex.logToken(yylex.Text(), "MATCHED"); return MATCHED }
 /[mM][aA][tT][eE][rR][iI][aA][lL][iI][zZ][eE][dD]/ { yylex.logToken(yylex.Text(), "MATERIALIZED"); return MATERIALIZED }
+/[mM][aA][xX][vV][aA][lL][uU][eE]/ { yylex.logToken(yylex.Text(), "MAXVALUE"); return MAXVALUE }
 /[mM][eE][rR][gG][eE]/           { yylex.logToken(yylex.Text(), "MERGE"); return MERGE }
+/[mM][iI][nN][vV][aA][lL][uU][eE]/ { yylex.logToken(yylex.Text(), "MINVALUE"); return MINVALUE }
 /[mM][iI][sS][sS][iI][nN][gG]/   { yylex.logToken(yylex.Text(), "MISSING"); return MISSING }
 /[nN][aA][mM][eE][sS][pP][aA][cC][eE]/ { yylex.logToken(yylex.Text(), "NAMESPACE"); return NAMESPACE }
 /[nN][eE][sS][tT]/               { yylex.logToken(yylex.Text(), "NEST"); return NEST }
+/[nN][eE][xX][tT]/               { yylex.logToken(yylex.Text(), "NEXT"); return NEXT }
+/[nN][eE][xX][tT][vV][aA][lL]/   { yylex.logToken(yylex.Text(), "NEXTVAL"); return NEXTVAL }
 /[nN][lL]/                       { yylex.logToken(yylex.Text(), "NL"); return NL }
 /[nN][oO]/                       { yylex.logToken(yylex.Text(), "NO"); return NO }
 /[nN][oO][tT]/                   { yylex.logToken(yylex.Text(), "NOT"); return NOT }
@@ -297,6 +302,11 @@
     lval.tokOffset = yylex.curOffset
     return PREPARE
 }
+
+/[pP][rR][eE][vV]/                 { yylex.logToken(yylex.Text(), "PREV"); return PREV }
+/[pP][rR][eE][vV][iI][oO][uU][sS]/ { yylex.logToken(yylex.Text(), "PREV"); return PREV }
+/[pP][rR][eE][vV][vV][aA][lL]/     { yylex.logToken(yylex.Text(), "PREVVAL"); return PREVVAL }
+
 /[pP][rR][iI][mM][aA][rR][yY]/   { yylex.logToken(yylex.Text(), "PRIMARY"); return PRIMARY }
 /[pP][rR][iI][vV][aA][tT][eE]/   { yylex.logToken(yylex.Text(), "PRIVATE"); return PRIVATE }
 /[pP][rR][iI][vV][iI][lL][eE][gG][eE]/ { yylex.logToken(yylex.Text(), "PRIVILEGE"); return PRIVILEGE }
@@ -312,6 +322,7 @@
 /[rR][eE][nN][aA][mM][eE]/       { yylex.logToken(yylex.Text(), "RENAME"); return RENAME }
 /[rR][eE][pP][lL][aA][cC][eE]/   { yylex.logToken(yylex.Text(), "REPLACE"); lval.s = yylex.Text(); return REPLACE }
 /[rR][eE][sS][pP][eE][cC][tT]/   { yylex.logToken(yylex.Text(), "RESPECT"); return RESPECT }
+/[rR][eE][sS][tT][aA][rR][tT]/   { yylex.logToken(yylex.Text(), "RESTART"); return RESTART }
 /[rR][eE][sS][tT][rR][iI][cC][tT]/ { yylex.logToken(yylex.Text(), "RESTRICT"); return RESTRICT }
 /[rR][eE][tT][uU][rR][nN]/       { yylex.logToken(yylex.Text(), "RETURN"); return RETURN }
 /[rR][eE][tT][uU][rR][nN][iI][nN][gG]/ { yylex.logToken(yylex.Text(), "RETURNING"); return RETURNING }
@@ -327,6 +338,7 @@
 /[sS][cC][oO][pP][eE]/           { yylex.logToken(yylex.Text(), "SCOPE"); return SCOPE }
 /[sS][eE][lL][eE][cC][tT]/       { yylex.logToken(yylex.Text(), "SELECT"); return SELECT }
 /[sS][eE][lL][fF]/               { yylex.logToken(yylex.Text(), "SELF"); return SELF }
+/[sS][eE][qQ][uU][eE][nN][cC][eE]/ { yylex.logToken(yylex.Text(), "SEQUENCE"); return SEQUENCE }
 /[sS][eE][tT]/                   { yylex.logToken(yylex.Text(), "SET"); return SET }
 /[sS][hH][oO][wW]/               { yylex.logToken(yylex.Text(), "SHOW"); return SHOW }
 /[sS][oO][mM][eE]/               { yylex.logToken(yylex.Text(), "SOME"); return SOME }

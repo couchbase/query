@@ -440,16 +440,36 @@ func IsCollectionExistsError(e error) bool {
 	return IsExistsError("Collection", e)
 }
 
+func IsSequenceExistsError(e error) bool {
+	if err, ok := e.(Error); ok && err.Code() == E_SEQUENCE_ALREADY_EXISTS {
+		return true
+	}
+	return IsExistsError("Sequence", e)
+}
+
 func IsIndexNotFoundError(e error) bool {
+	if err, ok := e.(Error); ok && (err.Code() == E_INDEX_NOT_FOUND || err.Code() == E_CB_INDEX_NOT_FOUND) {
+		return true
+	}
 	return IsNotFoundError("Index", e)
 }
 
 func IsScopeNotFoundError(e error) bool {
+	if err, ok := e.(Error); ok && err.Code() == E_CB_SCOPE_NOT_FOUND {
+		return true
+	}
 	return IsNotFoundError("Scope", e)
 }
 
 func IsCollectionNotFoundError(e error) bool {
 	return IsNotFoundError("Collection", e)
+}
+
+func IsSequenceNotFoundError(e error) bool {
+	if err, ok := e.(Error); ok && err.Code() == E_SEQUENCE_NOT_FOUND {
+		return true
+	}
+	return IsNotFoundError("Sequence", e)
 }
 
 // search initial error text and all cause nesting levels for the given string
@@ -477,28 +497,41 @@ func (e *err) ContainsText(text string) bool {
 	}
 }
 
-func NewTempFileQuotaExceededError() Error {
-	return &err{level: EXCEPTION, ICode: E_TEMP_FILE_QUOTA, IKey: "quota.temp_file.exceeded", InternalCaller: CallerN(1),
-		InternalMsg: "Temporary file quota exceeded"}
-}
-
 func (e *err) HasCause(code ErrorCode) bool {
 	if e.Code() == code {
 		return true
 	}
-	switch cause := e.cause.(type) {
-	case map[string]interface{}:
-		for _, v := range cause {
-			if ve, ok := v.(Error); ok {
-				if ve.HasCause(code) {
-					return true
+	c := e.Cause()
+	for c != nil {
+		switch cse := c.(type) {
+		case Error:
+			if cse.Code() == code {
+				return true
+			}
+			c = cse.Cause()
+		case map[string]interface{}:
+			cde, ok := cse["code"]
+			if ok {
+				switch cde := cde.(type) {
+				case int32:
+					if cde == int32(code) {
+						return true
+					}
+				case ErrorCode:
+					if cde == code {
+						return true
+					}
 				}
 			}
+			c, _ = cse["cause"]
+		default:
+			c = nil
 		}
-		return false
-	case Error:
-		return cause.HasCause(code)
-	default:
-		return false
 	}
+	return false
+}
+
+func NewTempFileQuotaExceededError() Error {
+	return &err{level: EXCEPTION, ICode: E_TEMP_FILE_QUOTA, IKey: "quota.temp_file.exceeded", InternalCaller: CallerN(1),
+		InternalMsg: "Temporary file quota exceeded"}
 }

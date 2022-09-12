@@ -54,6 +54,8 @@ const (
 	PRIV_XATTRS                                 Privilege = 32 // Ability to read system xattrs
 	PRIV_ADMIN                                  Privilege = 33 // User is a full or read admin
 	PRIV_CLUSTER_ADMIN                          Privilege = 34 // User has cluster_admin auth
+	PRIV_QUERY_MANAGE_SEQUENCES                 Privilege = 35 // CREATE/ALTER/DROP sequences
+	PRIV_QUERY_USE_SEQUENCES                    Privilege = 36 // get/advance sequence values
 )
 
 type PrivilegePair struct {

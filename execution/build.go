@@ -773,3 +773,16 @@ func (this *builder) VisitTransactionIsolation(plan *plan.TransactionIsolation) 
 func (this *builder) VisitSavepoint(plan *plan.Savepoint) (interface{}, error) {
 	return checkOp(NewSavepoint(plan, this.context), this.context)
 }
+
+// Sequences
+func (this *builder) VisitCreateSequence(plan *plan.CreateSequence) (interface{}, error) {
+	return checkOp(NewCreateSequence(plan, this.context), this.context)
+}
+
+func (this *builder) VisitDropSequence(plan *plan.DropSequence) (interface{}, error) {
+	return checkOp(NewDropSequence(plan, this.context), this.context)
+}
+
+func (this *builder) VisitAlterSequence(plan *plan.AlterSequence) (interface{}, error) {
+	return checkOp(NewAlterSequence(plan, this.context), this.context)
+}

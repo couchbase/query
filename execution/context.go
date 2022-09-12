@@ -32,6 +32,7 @@ import (
 	"github.com/couchbase/query/memory"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/planner"
+	"github.com/couchbase/query/sequences"
 	"github.com/couchbase/query/system"
 	"github.com/couchbase/query/tenant"
 	"github.com/couchbase/query/timestamp"
@@ -2159,4 +2160,22 @@ func (this *Context) SetDurationStyle(style util.DurationStyle) {
 
 func (this *Context) FormatDuration(d time.Duration) string {
 	return util.FormatDuration(d, this.durationStyle)
+}
+
+func (this *Context) NextSequenceValue(name string) (int64, errors.Error) {
+	v, e := sequences.NextSequenceValue(name)
+	if this.txContext != nil && this.txContext.TxValid() == nil {
+		this.txContext.SetSequence(name, v)
+	}
+	return v, e
+}
+
+func (this *Context) CurrentSequenceValue(name string) (int64, errors.Error) {
+	if this.txContext != nil && this.txContext.TxValid() == nil {
+		if v, ok := this.txContext.Sequence(name); ok {
+			return v, nil
+		}
+	}
+	v, e := sequences.CurrentSequenceValue(name)
+	return v, e
 }

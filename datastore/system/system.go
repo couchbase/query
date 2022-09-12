@@ -50,6 +50,8 @@ const KEYSPACE_NAME_APPLICABLE_ROLES = "applicable_roles"
 const KEYSPACE_NAME_TASKS_CACHE = "tasks_cache"
 const KEYSPACE_NAME_TRANSACTIONS = "transactions"
 const KEYSPACE_NAME_VITALS = "vitals"
+const KEYSPACE_NAME_SEQUENCES = "sequences"
+const KEYSPACE_NAME_ALL_SEQUENCES = "all_sequences"
 
 // TODO, sync with fetch timeout
 const scanTimeout = 30 * time.Second
@@ -108,6 +110,8 @@ func (s *store) PrivilegesFromPath(fullname string, keyspace string, privilege a
 		case KEYSPACE_NAME_ALL_INDEXES:
 		case KEYSPACE_NAME_MY_USER_INFO:
 		case KEYSPACE_NAME_FUNCTIONS:
+		case KEYSPACE_NAME_SEQUENCES:
+		case KEYSPACE_NAME_ALL_SEQUENCES:
 
 		// currently these keyspaces require system read for select if on prem
 		// and open (but limited to the user) for elixir

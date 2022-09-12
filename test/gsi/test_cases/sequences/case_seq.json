@@ -1,0 +1,109 @@
+[
+    {
+        "statements": "DROP SEQUENCE IF EXISTS orders.seqs.seq1",
+        "results": []
+    },
+    {
+        "statements": "DROP SEQUENCE IF EXISTS orders.seqs.seq2",
+        "results": []
+    },
+    {
+        "statements": "DROP SEQUENCE IF EXISTS orders.seqs.seq3",
+        "results": []
+    },
+    {
+        "statements": "DROP SEQUENCE IF EXISTS orders.seqs.seq4",
+        "results": []
+    },
+    {
+        "statements": "CREATE SEQUENCE orders.seqs.seq1",
+        "results": []
+    },
+    {
+        "statements": "CREATE SEQUENCE orders.seqs.seq2 WITH {\"increment\":-1}",
+        "results": []
+    },
+    {
+        "statements": "CREATE SEQUENCE orders.seqs.seq3 START WITH 1000 MINVALUE 999 MAXVALUE 1001 CYCLE",
+        "results": []
+    },
+    {
+        "statements": "CREATE SEQUENCE orders.seqs.seq4 START WITH 2000 MAXVALUE 2002 NO CYCLE",
+        "results": []
+    },
+    {
+       "statements": "SELECT NEXT VALUE FOR orders.seqs.seq1 sv, t FROM array_range(0,5) t",
+       "results": [
+            { "sv": 0, "t": 0 },
+            { "sv": 1, "t": 1 },
+            { "sv": 2, "t": 2 },
+            { "sv": 3, "t": 3 },
+            { "sv": 4, "t": 4 }
+        ]
+    },
+    {
+       "statements": "SELECT NEXT VALUE FOR orders.seqs.seq2 sv FROM array_range(0,5) t",
+       "results": [
+            { "sv": 0 },
+            { "sv": -1 },
+            { "sv": -2 },
+            { "sv": -3 },
+            { "sv": -4 }
+        ]
+    },
+    {
+       "statements": "SELECT NEXT VALUE FOR orders.seqs.seq3 sv FROM array_range(0,3) t",
+       "results": [
+            { "sv": 1000 },
+            { "sv": 1001 },
+            { "sv": 999 }
+        ]
+    },
+    {
+       "statements": "SELECT NEXT VALUE FOR orders.seqs.seq4 sv FROM array_range(0,5) t",
+       "results": [
+            { "sv": 2000 },
+            { "sv": 2001 },
+            { "sv": 2002 }
+        ],
+        "errorCode":5010
+    },
+    {
+        "statements": "BEGIN WORK"
+    },
+    {
+        "statements": "INSERT INTO orders VALUES(TO_STRING(NEXTVAL FOR orders.seqs.seq1),{\"id\":NEXTVAL FOR orders.seqs.seq1,\"test_id\":\"seq\"})",
+        "results": []
+    },
+    {
+        "statements": "INSERT INTO orders VALUES(TO_STRING(NEXTVAL FOR orders.seqs.seq1),{\"id\":PREVVAL FOR orders.seqs.seq1,\"test_id\":\"seq\"})",
+        "results": []
+    },
+    {
+        "statements": "INSERT INTO orders(KEY k,VALUE v) SELECT TO_STRING(NEXTVAL FOR orders.seqs.seq1) k,{\"id\":NEXTVAL FOR orders.seqs.seq1,\"test_id\":\"seq\"} v",
+        "results": []
+    },
+    {
+        "statements": "COMMIT"
+    },
+    {
+        "statements": "SELECT meta().id,* FROM orders WHERE test_id = 'seq'",
+        "results": [
+            {"id":"50","orders":{"id":51,"test_id":"seq"}},
+            {"id":"52","orders":{"id":52,"test_id":"seq"}},
+            {"id":"53","orders":{"id":53,"test_id":"seq"}}
+        ]
+    },
+    {
+        "statements": "ALTER SEQUENCE orders.seqs.seq1 RESTART WITH 100",
+        "results": []
+    },
+    {
+        "statements": "SELECT *, y, NEXT VALUE FOR orders.seqs.seq1 nv1, NEXT VALUE FOR orders.seqs.seq1 nv2, x FROM array_range(0,3) t LET x = NEXT VALUE FOR orders.seqs.seq1 ,y = (SELECT PREV VALUE FOR orders.seqs.seq1 a, NEXT VALUE FOR orders.seqs.seq1 b FROM array_range(0, 2) tt, t for_correlation) ORDER BY t",
+        "results": [
+            {"t":0,"y":[{"a":100,"b":101},{"a":101,"b":102}],"nv1":100,"nv2":100,"x":100},
+            {"t":1,"y":[{"a":103,"b":104},{"a":104,"b":105}],"nv1":103,"nv2":103,"x":103},
+            {"t":2,"y":[{"a":106,"b":107},{"a":107,"b":108}],"nv1":106,"nv2":106,"x":106}
+        ]
+    }
+]

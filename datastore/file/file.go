@@ -659,6 +659,10 @@ func (b *keyspace) Delete(deletes value.Pairs, context datastore.QueryContext, p
 	return dCount, deleted, nil
 }
 
+func (b *keyspace) SetSubDoc(string, value.Pairs, datastore.QueryContext) (value.Pairs, errors.Error) {
+	return nil, errors.NewFileNotSupported(nil, "Sub-doc operations are not supported for file-based datastore.")
+}
+
 func (b *keyspace) Release(close bool) {
 }
 

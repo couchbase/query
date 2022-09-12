@@ -120,6 +120,10 @@ func (this *keyspaceBase) setNamespace(namespace *namespace) {
 	this.namespace = namespace
 }
 
+func (this *keyspaceBase) SetSubDoc(string, value.Pairs, datastore.QueryContext) (value.Pairs, errors.Error) {
+	return nil, _ERRS_SYSTEM_NOT_SUPPORTED[0]
+}
+
 // Index stuff
 
 type indexBase struct {

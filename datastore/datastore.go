@@ -241,19 +241,21 @@ type Keyspace interface {
 
 	// Used by DML statements
 	// For insert and upsert, nil input keys are replaced with auto-generated keys
-	/*
-		@params
-		preserveMutations : whether the method should preserve & return the mutated keys to the caller
+	//
+	//	@params
+	//	preserveMutations : whether the method should preserve & return the mutated keys to the caller
+	//
+	//	Returns:
+	//	1. Number of successfully mutated keys
+	//	2. Slice of successfully mutated keys (if preserveMutations = true)
+	//	3. List of errors
+	//
+	Insert(inserts value.Pairs, context QueryContext, preserveMutations bool) (int, value.Pairs, errors.Errors) // Bulk key-value
+	Update(updates value.Pairs, context QueryContext, preserveMutations bool) (int, value.Pairs, errors.Errors) // Bulk key-value
+	Upsert(upserts value.Pairs, context QueryContext, preserveMutations bool) (int, value.Pairs, errors.Errors) // Bulk key-value
+	Delete(deletes value.Pairs, context QueryContext, preserveMutations bool) (int, value.Pairs, errors.Errors) // Bulk key-value
 
-		Returns:
-		1. Number of successfully mutated keys
-		2. Slice of successfully mutated keys (if preserveMutations = true)
-		3. List of errors
-	*/
-	Insert(inserts value.Pairs, context QueryContext, preserveMutations bool) (int, value.Pairs, errors.Errors) // Bulk key-value insert into this keyspace
-	Update(updates value.Pairs, context QueryContext, preserveMutations bool) (int, value.Pairs, errors.Errors) // Bulk key-value updates into this keyspace
-	Upsert(upserts value.Pairs, context QueryContext, preserveMutations bool) (int, value.Pairs, errors.Errors) // Bulk key-value upserts into this keyspace
-	Delete(deletes value.Pairs, context QueryContext, preserveMutations bool) (int, value.Pairs, errors.Errors) // Bulk key-value deletes from this keyspace
+	SetSubDoc(key string, elems value.Pairs, context QueryContext) (value.Pairs, errors.Error)
 
 	Flush() errors.Error // For flush collection
 	IsBucket() bool
