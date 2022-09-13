@@ -3162,9 +3162,9 @@ LANGUAGE INLINE AS expr
     }
 }
 |
-LANGUAGE GOLANG AS STR AT STR
+LANGUAGE JAVASCRIPT AS STR
 {
-    body, err := functionsBridge.NewGolangBody($6, $4)
+    body, err := functionsBridge.NewJavascriptBody("","", $4)
     if err != nil {
         yylex.Error(err.Error()+yylex.(*lexer).ErrorContext())
     } else {
@@ -3174,7 +3174,17 @@ LANGUAGE GOLANG AS STR AT STR
 |
 LANGUAGE JAVASCRIPT AS STR AT STR
 {
-    body, err := functionsBridge.NewJavascriptBody($6, $4)
+    body, err := functionsBridge.NewJavascriptBody($6, $4, "")
+    if err != nil {
+        yylex.Error(err.Error()+yylex.(*lexer).ErrorContext())
+    } else {
+        $$ = body
+    }
+}
+|
+LANGUAGE GOLANG AS STR AT STR
+{
+    body, err := functionsBridge.NewGolangBody($6, $4)
     if err != nil {
         yylex.Error(err.Error()+yylex.(*lexer).ErrorContext())
     } else {

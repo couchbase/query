@@ -463,4 +463,5 @@ const (
 	E_VIRTUAL_KEYSPACE_NOT_FOUND              ErrorCode = 19011
 	E_VIRTUAL_BUCKET_CREATE_COLLECTION        ErrorCode = 19012
 	E_VIRTUAL_BUCKET_DROP_COLLECTION          ErrorCode = 19013
+	E_TEMP_INTERNAL_JS_EXECUTE                ErrorCode = 20000 // temporary error code
 )

@@ -28,6 +28,6 @@ var NewGolangBody func(library, object string) (functions.FunctionBody, errors.E
 	return nil, nil
 }
 
-var NewJavascriptBody func(library, object string) (functions.FunctionBody, errors.Error) = func(library, object string) (functions.FunctionBody, errors.Error) {
+var NewJavascriptBody func(library, object, text string) (functions.FunctionBody, errors.Error) = func(library, object, text string) (functions.FunctionBody, errors.Error) {
 	return nil, nil
 }

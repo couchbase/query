@@ -42,6 +42,7 @@ type javascriptBody struct {
 	object   string
 	prefix   string
 	libName  string
+	text     string // Internal JS functions have the function's JS code stored
 }
 
 var enabled = false
@@ -113,6 +114,11 @@ func (this *javascript) Execute(name functions.FunctionName, body functions.Func
 		return nil, errors.NewInternalFunctionError(goerrors.New("Wrong language being executed!"), funcName)
 	}
 
+	// If the function is an Internal JS function, temporarily throw an error when it is being executed
+	if funcBody.text != "" {
+		return nil, errors.NewTempInternalJSExecuteError(funcName)
+	}
+
 	if funcBody.varNames != nil && len(values) != len(funcBody.varNames) {
 		return nil, errors.NewArgumentsMismatchError(funcName)
 	}
@@ -166,15 +172,15 @@ func (this *javascriptBody) execError(err defs.Error, name string) errors.Error 
 	}
 }
 
-func NewJavascriptBody(library, object string) (functions.FunctionBody, errors.Error) {
-	return NewJavascriptBodyWithDetails(library, object, "", "")
+func NewJavascriptBody(library, object, text string) (functions.FunctionBody, errors.Error) {
+	return NewJavascriptBodyWithDetails(library, object, "", "", text)
 }
 
-func NewJavascriptBodyWithDetails(library, object, prefix, libName string) (functions.FunctionBody, errors.Error) {
+func NewJavascriptBodyWithDetails(library, object, prefix, libName, text string) (functions.FunctionBody, errors.Error) {
 	if !enabled {
 		return nil, errors.NewFunctionsDisabledError("javascript")
 	}
-	return &javascriptBody{library: library, object: object, prefix: prefix, libName: libName}, nil
+	return &javascriptBody{library: library, object: object, prefix: prefix, libName: libName, text: text}, nil
 }
 
 func (this *javascriptBody) SetVarNames(vars []string) errors.Error {
@@ -183,6 +189,11 @@ func (this *javascriptBody) SetVarNames(vars []string) errors.Error {
 }
 
 func (this *javascriptBody) SetStorage(context functions.Context, path []string) errors.Error {
+	// If it is an Internal JS function
+	if this.text != "" {
+		return nil
+	}
+
 	var storageContext string
 
 	if len(path) == 4 {
@@ -227,8 +238,7 @@ func (this *javascriptBody) Lang() functions.Language {
 
 func (this *javascriptBody) Body(object map[string]interface{}) {
 	object["#language"] = "javascript"
-	object["library"] = this.library
-	object["object"] = this.object
+
 	if this.varNames != nil {
 		vars := make([]value.Value, len(this.varNames))
 		for v, _ := range this.varNames {
@@ -236,11 +246,19 @@ func (this *javascriptBody) Body(object map[string]interface{}) {
 		}
 		object["parameters"] = vars
 	}
-	if this.prefix != "" {
-		object["prefix"] = this.prefix
-	}
-	if this.libName != "" {
-		object["libName"] = this.libName
+
+	if this.text != "" { // If is an Internal JS function
+		object["text"] = this.text
+	} else {
+		object["library"] = this.library
+		object["object"] = this.object
+
+		if this.prefix != "" {
+			object["prefix"] = this.prefix
+		}
+		if this.libName != "" {
+			object["libName"] = this.libName
+		}
 	}
 }
 

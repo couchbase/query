@@ -148,3 +148,8 @@ func NewAdvisorInvalidArgs(args []string) Error {
 	return &err{level: EXCEPTION, ICode: E_ADVISOR_INVALID_ARGS, IKey: "function.advisor.invalid_arguments",
 		InternalMsg: "Advisor: Invalid arguments.", cause: c, InternalCaller: CallerN(1)}
 }
+
+func NewTempInternalJSExecuteError(name string) Error {
+	return &err{level: EXCEPTION, ICode: E_TEMP_INTERNAL_JS_EXECUTE, IKey: "function.temporary.internalJSExecute",
+		InternalMsg: "Temporary error if Internal JS Function is executed."}
+}

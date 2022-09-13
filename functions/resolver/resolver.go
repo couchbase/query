@@ -137,15 +137,19 @@ func MakeBody(name string, bytes []byte) (functions.FunctionBody, errors.Error) 
 			Object     string   `json:"object"`
 			Prefix     string   `json:"prefix"`
 			Name       string   `json:"name"`
+			Text       string   `json:"text"`
 		}
 		err := json.Unmarshal(bytes, &_unmarshalled)
 		if err != nil {
 			return nil, errors.NewFunctionEncodingError("decode body", name, err)
 		}
-		if _unmarshalled.Object == "" || _unmarshalled.Library == "" {
-			return nil, errors.NewFunctionEncodingError("decode body", name, go_errors.New("object is missing"))
+
+		// Check if the function body is a valid combination of library, object and text
+		// This is to ensure that the function body is valid to be considered as either Internal JS or External JS function
+		if !(_unmarshalled.Text == "" && _unmarshalled.Object != "" && _unmarshalled.Library != "") && !(_unmarshalled.Text != "" && _unmarshalled.Object == "" && _unmarshalled.Library == "") {
+			return nil, errors.NewFunctionEncodingError("decode body", name, go_errors.New("invalid function definition"))
 		}
-		body, newErr := javascript.NewJavascriptBodyWithDetails(_unmarshalled.Library, _unmarshalled.Object, _unmarshalled.Prefix, _unmarshalled.Name)
+		body, newErr := javascript.NewJavascriptBodyWithDetails(_unmarshalled.Library, _unmarshalled.Object, _unmarshalled.Prefix, _unmarshalled.Name, _unmarshalled.Text)
 		if body != nil {
 			newErr = body.SetVarNames(_unmarshalled.Parameters)
 		}

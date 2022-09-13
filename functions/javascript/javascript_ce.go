@@ -24,11 +24,11 @@ type javascriptBody struct {
 func Init(mix *mux.Router, t int) {
 }
 
-func NewJavascriptBody(library, object string) (functions.FunctionBody, errors.Error) {
+func NewJavascriptBody(library, object, text string) (functions.FunctionBody, errors.Error) {
 	return nil, errors.NewFunctionsNotSupported("javascript")
 }
 
-func NewJavascriptBodyWithDetails(library, object, prefix, name string) (functions.FunctionBody, errors.Error) {
+func NewJavascriptBodyWithDetails(library, object, prefix, name, text string) (functions.FunctionBody, errors.Error) {
 	return nil, errors.NewFunctionsNotSupported("javascript")
 }
 
