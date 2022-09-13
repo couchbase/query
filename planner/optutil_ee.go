@@ -349,7 +349,8 @@ func getUnnestPredSelec(pred expression.Expression, variable string, mapping exp
 }
 
 func optChooseIntersectScan(keyspace datastore.Keyspace, sargables map[datastore.Index]*indexEntry,
-	nTerms int, alias string, advisorValidate bool, context *PrepareContext) map[datastore.Index]*indexEntry {
+	nTerms int, alias string, limit, offset expression.Expression, advisorValidate, singleKeyspace bool,
+	context *PrepareContext) map[datastore.Index]*indexEntry {
 
 	if keyspace == nil {
 		return sargables
@@ -359,28 +360,78 @@ func optChooseIntersectScan(keyspace datastore.Keyspace, sargables map[datastore
 
 	hasPdOrder := false
 	hasEarlyOrder := false
+	orderSelec := OPT_SELEC_NOT_AVAIL
 	for s, e := range sargables {
 		skipKeys := make([]bool, len(e.sargKeys))
 		icost := base.NewIndexCost(s, e.cost, e.cardinality, e.selectivity, e.size, e.frCost, skipKeys)
 		if e.IsPushDownProperty(_PUSHDOWN_ORDER) {
 			icost.SetPdOrder()
 			hasPdOrder = true
+			if orderSelec <= 0.0 || e.selectivity < orderSelec {
+				orderSelec = e.selectivity
+			}
 		} else if e.HasFlag(IE_HAS_EARLY_ORDER) {
 			icost.SetEarlyOrder()
 			hasEarlyOrder = true
+			if orderSelec <= 0.0 || e.selectivity < orderSelec {
+				orderSelec = e.selectivity
+			}
 		}
 		indexes = append(indexes, icost)
 	}
 
-	if hasPdOrder && hasEarlyOrder {
-		// this should not happen, but just in case, remove the earlyOrder
-		origIndexes := indexes
-		indexes = make([]*base.IndexCost, 0, len(origIndexes))
-		for _, idx := range origIndexes {
-			if !idx.HasEarlyOrder() {
-				indexes = append(indexes, idx)
+	var nlimit, noffset int64
+	if singleKeyspace && orderSelec > 0.0 {
+		nlimit, _ = base.GetStaticInt(limit)
+		noffset, _ = base.GetStaticInt(offset)
+		if nlimit > 0 && noffset > 0 {
+			nlimit += noffset
+		}
+	}
+	if hasPdOrder && nTerms > 0 {
+		// If some plans have Order pushdown, then add a SORT cost to all plans that
+		// do not have Order pushdown.
+		// Note that since we are still at keyspace level, the SORT cost is not going
+		// to be the same as actual SORT cost which is done at the top of the plan,
+		// however this is the best estimation we could do at this level.
+		// (also ignore limit and offset for this calculation).
+		for _, ic := range indexes {
+			if !ic.HasPdOrder() {
+				sortCost, _, _, _ := getSortCost(ic.Size(), nTerms, ic.Cardinality(), nlimit, 0)
+				if sortCost > 0.0 {
+					ic.SetCost(ic.Cost() + sortCost)
+				}
 			}
 		}
+	}
+
+	if hasPdOrder && hasEarlyOrder {
+		// choose the best among the indexes that provide order (pushdown or early)
+		var bestIndex *base.IndexCost
+		var bestCost float64
+		for _, idx := range indexes {
+			if !idx.HasPdOrder() && !idx.HasEarlyOrder() {
+				continue
+			}
+			cost := idx.Cost()
+			if nlimit > 0 && idx.HasPdOrder() {
+				// account for "limit" in pushdown order
+				selec := idx.Selectivity()
+				tlimit := int64(float64(nlimit)*selec/orderSelec + 0.5)
+				cost, _, _, _ = optutil.CalcLimitCostInput(cost, idx.Cardinality(),
+					idx.Size(), idx.FrCost(), tlimit, -1)
+			}
+			if bestIndex == nil {
+				bestIndex = idx
+				bestCost = cost
+			} else if cost < bestCost ||
+				(cost == bestCost && idx.Cardinality() < bestIndex.Cardinality()) {
+				bestIndex = idx
+				bestCost = cost
+			}
+		}
+		index := bestIndex.Index()
+		return map[datastore.Index]*indexEntry{index: sargables[index]}
 	} else if hasEarlyOrder {
 		// choose the best one with early order
 		var bestIndex *base.IndexCost
@@ -396,23 +447,6 @@ func optChooseIntersectScan(keyspace datastore.Keyspace, sargables map[datastore
 		}
 		index := bestIndex.Index()
 		return map[datastore.Index]*indexEntry{index: sargables[index]}
-	}
-
-	if hasPdOrder && nTerms > 0 {
-		// If some plans have Order pushdown, then add a SORT cost to all plans that
-		// do not have Order pushdown.
-		// Note that since we are still at keyspace level, the SORT cost is not going
-		// to be the same as actual SORT cost which is done at the top of the plan,
-		// however this is the best estimation we could do at this level.
-		// (also ignore limit and offset for this calculation).
-		for _, ic := range indexes {
-			if !ic.HasPdOrder() {
-				sortCost, _, _, _ := getSortCost(ic.Size(), nTerms, ic.Cardinality(), 0, 0)
-				if sortCost > 0.0 {
-					ic.SetCost(ic.Cost() + sortCost)
-				}
-			}
-		}
 	}
 
 	adjustIndexSelectivity(indexes, sargables, alias, advisorValidate, context)

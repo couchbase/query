@@ -674,7 +674,7 @@ func narrowerOrEquivalent(se, te *indexEntry, shortest bool, predFc map[string]v
 
 	return se.cond != nil ||
 		len(se.keys) < len(te.keys) ||
-		!(te.nSargKeys == 0 && se.nSargKeys == 0 && te.index.IsPrimary())
+		(te.nSargKeys == 0 && se.nSargKeys == 0 && se.index.IsPrimary())
 }
 
 // Calculates how many keys te sargable keys matched with se sargable keys and se condition
@@ -705,6 +705,11 @@ outer:
 
 // for CBO, prune indexes that has similar leading index keys
 func matchedLeadingKeys(se, te *indexEntry, predFc map[string]value.Value) bool {
+	if se.nSargKeys == 0 && te.nSargKeys == 0 &&
+		se.HasFlag(IE_LEADINGMISSING) && te.HasFlag(IE_LEADINGMISSING) {
+		return true
+	}
+
 	nkeys := 0
 	ncond := 0
 	for i, tk := range te.sargKeys {
@@ -886,7 +891,8 @@ func (this *builder) chooseIntersectScan(sargables map[datastore.Index]*indexEnt
 	}
 
 	return optChooseIntersectScan(keyspace, sargables, nTerms, node.Alias(),
-		this.advisorValidate(), this.context)
+		this.limit, this.offset, this.advisorValidate(), len(this.baseKeyspaces) == 1,
+		this.context)
 }
 
 func bestIndexBySargableKeys(se, te *indexEntry, snc, tnc int) *indexEntry {
