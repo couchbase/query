@@ -132,6 +132,18 @@ func (this *seqScanIndexer) CreateIndex2(requestId, name string, seekKey express
 	return nil, qe.NewSSError(qe.E_SS_NOT_SUPPORTED, "CREATE INDEX is")
 }
 
+func (this *seqScanIndexer) CreateIndex3(requestId, name string, rangeKey datastore.IndexKeys,
+	indexPartition *datastore.IndexPartition, where expression.Expression, with value.Value) (datastore.Index, qe.Error) {
+
+	return nil, qe.NewSSError(qe.E_SS_NOT_SUPPORTED, "CREATE INDEX is")
+}
+
+func (this *seqScanIndexer) CreatePrimaryIndex3(requestId, name string, indexPartition *datastore.IndexPartition,
+	with value.Value) (datastore.PrimaryIndex, qe.Error) {
+
+	return nil, qe.NewSSError(qe.E_SS_NOT_SUPPORTED, "CREATE PRIMARY INDEX is")
+}
+
 func (this *seqScanIndexer) Refresh() qe.Error {
 	return nil
 }
@@ -346,8 +358,10 @@ func (this *seqScan) doScanEntries(requestId string, ordered bool, offset, limit
 	atomic.AddUint64(&this.totalScans, 1)
 	atomic.StoreInt64(&this.lastScanAt, int64(time.Now().UnixNano()))
 
-	if limit <= 0 {
+	if limit < 0 {
 		return
+	} else if limit == 0 {
+		limit = math.MaxInt64
 	}
 
 	// deadline will be set whenever there is a request timeout set
@@ -376,8 +390,11 @@ func (this *seqScan) doScanEntries(requestId string, ordered bool, offset, limit
 	var timeout bool
 
 	to := deadline.Sub(util.Now())
-	ss, err = scanner.StartKeyScan(ranges, offset, limit, ordered, to, conn.Sender().Capacity(), conn.QueryContext().KvTimeout(),
-		tenant.IsServerless())
+	kvTo := time.Duration(datastore.DEF_KVTIMEOUT)
+	if conn.QueryContext() != nil {
+		kvTo = conn.QueryContext().KvTimeout()
+	}
+	ss, err = scanner.StartKeyScan(ranges, offset, limit, ordered, to, conn.Sender().Capacity(), kvTo, tenant.IsServerless())
 	if err != nil {
 		conn.Error(qe.NewSSError(qe.E_SS_FAILED, err))
 		return
@@ -422,7 +439,7 @@ func (this *seqScan) doScanEntries(requestId string, ordered bool, offset, limit
 			if skipNewKeys && conn.SkipKey(keys[i]) {
 				continue
 			}
-			entry := datastore.IndexEntry{PrimaryKey: keys[i]}
+			entry := &datastore.IndexEntry{PrimaryKey: keys[i]}
 
 			scanTimeout.Reset(deadline.Sub(util.Now()))
 			select {
@@ -430,7 +447,7 @@ func (this *seqScan) doScanEntries(requestId string, ordered bool, offset, limit
 				conn.SendTimeout()
 				conn.Error(qe.NewSSError(qe.E_SS_FAILED, qe.NewSSError(qe.E_SS_TIMEOUT)))
 			default:
-				cont = conn.Sender().SendEntry(&entry)
+				cont = conn.Sender().SendEntry(entry)
 				if !scanTimeout.Stop() {
 					<-scanTimeout.C
 				}

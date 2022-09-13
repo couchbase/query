@@ -468,7 +468,7 @@ func (this *httpRequest) writeError(err errors.Error, first bool, prefix, indent
 
 // For CAS mismatch errors where no mutations have taken place, we can explicitly set retry to true
 func checkForPossibleRetry(err errors.Error, mutations bool) errors.Tristate {
-	if mutations || err.Code() != errors.E_CB_DML || err.Cause() != nil {
+	if mutations || err.Code() != errors.E_CB_DML || err.Cause() == nil {
 		return err.Retry()
 	}
 	if c, ok := err.Cause().(errors.Error); ok && c.Code() == errors.E_CAS_MISMATCH {
