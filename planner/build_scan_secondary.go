@@ -921,7 +921,8 @@ func (this *builder) chooseIntersectScan(sargables map[datastore.Index]*indexEnt
 	}
 
 	return optChooseIntersectScan(keyspace, sargables, nTerms, node.Alias(),
-		this.advisorValidate(), this.context)
+		this.limit, this.offset, this.advisorValidate(), len(this.baseKeyspaces) == 1,
+		this.context)
 }
 
 func bestIndexBySargableKeys(se, te *indexEntry, snc, tnc int) *indexEntry {
