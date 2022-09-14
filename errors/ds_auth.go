@@ -34,3 +34,8 @@ func NewDatastoreInsufficientCredentials(msg string, e error, path []string) Err
 		IKey:        "datastore.couchbase.insufficient_credentials",
 		InternalMsg: msg, InternalCaller: CallerN(1), cause: c}
 }
+
+func NewDatastoreUnableToRetrieveBuckets(e error) Error {
+	return &err{level: EXCEPTION, ICode: E_DATASTORE_UNABLE_TO_RETRIEVE_BUCKETS, IKey: "datastore.couchbase.retrieve_buckets", ICause: e,
+		InternalMsg: "Unable to retrieve buckets from server.", InternalCaller: CallerN(1)}
+}

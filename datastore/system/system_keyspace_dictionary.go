@@ -39,7 +39,7 @@ func (b *dictionaryKeyspace) Name() string {
 
 func (b *dictionaryKeyspace) Count(context datastore.QueryContext) (int64, errors.Error) {
 	var count int64
-	var check func(context datastore.QueryContext, elems ...string) bool
+	var check func(context datastore.QueryContext, ds datastore.Datastore, elems ...string) bool
 	credentials := context.Credentials()
 	if !datastore.IsAdmin(credentials) {
 		check = canRead
@@ -204,7 +204,7 @@ func (pi *dictionaryIndex) ScanEntries(requestId string, limit int64, cons datas
 	defer conn.Sender().Close()
 
 	context := conn.QueryContext()
-	var check func(context datastore.QueryContext, elems ...string) bool
+	var check func(context datastore.QueryContext, ds datastore.Datastore, elems ...string) bool
 	credentials := context.Credentials()
 	if !datastore.IsAdmin(credentials) {
 		check = canRead

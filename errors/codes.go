@@ -377,6 +377,7 @@ const (
 	E_DATASTORE_CLUSTER                       ErrorCode = 13012
 	E_DATASTORE_UNABLE_TO_RETRIEVE_ROLES      ErrorCode = 13013
 	E_DATASTORE_INSUFFICIENT_CREDENTIALS      ErrorCode = 13014
+	E_DATASTORE_UNABLE_TO_RETRIEVE_BUCKETS    ErrorCode = 13015
 	E_INDEX_SCAN_SIZE                         ErrorCode = 14000
 	E_FILE_DATASTORE                          ErrorCode = 15000
 	E_FILE_NAMESPACE_NOT_FOUND                ErrorCode = 15001

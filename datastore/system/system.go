@@ -20,9 +20,9 @@ import (
 	"github.com/couchbase/query/value"
 )
 
-const STORE_ID = "system"
+const STORE_ID = datastore.SYSTEM_NAMESPACE_NAME
 const NAMESPACE_ID = datastore.SYSTEM_NAMESPACE
-const NAMESPACE_NAME = datastore.SYSTEM_NAMESPACE
+const NAMESPACE_NAME = datastore.SYSTEM_NAMESPACE_NAME
 const KEYSPACE_NAME_DATASTORES = "datastores"
 const KEYSPACE_NAME_NAMESPACES = "namespaces"
 const KEYSPACE_NAME_BUCKETS = "buckets"

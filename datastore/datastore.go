@@ -36,6 +36,7 @@ import (
 )
 
 const SYSTEM_NAMESPACE = "#system"
+const SYSTEM_NAMESPACE_NAME = "system"
 
 // Datastore represents a cluster or single-node server.
 type Datastore interface {
@@ -108,9 +109,9 @@ type Info interface {
 // to qualify keyspace names. No assumptions are made about namespaces and
 // isolation, resource management, or any other concerns.
 type Namespace interface {
-	DatastoreId() string // Id of the datastore that contains this namespace
-	Id() string          // Id of this namespace
-	Name() string        // Name of this namespace
+	Datastore() Datastore // The datastore that contains this namespace
+	Id() string           // Id of this namespace
+	Name() string         // Name of this namespace
 
 	// For keyspaces that appear directly under namespaces, such as system keyspaces.
 	KeyspaceIds() ([]string, errors.Error)               // Ids of the keyspaces contained in this namespace
@@ -125,8 +126,8 @@ type Namespace interface {
 	BucketById(name string) (Bucket, errors.Error)   // Find a bucket in this namespace using the bucket's id
 	BucketByName(name string) (Bucket, errors.Error) // Find a bucket in this namespace using the bucket's name
 
-	// All keyspaces and buckets
-	Objects(preload bool) ([]Object, errors.Error) // All first level namespace objects
+	// All keyspaces and buckets visible to the user
+	Objects(credentials *auth.Credentials, preload bool) ([]Object, errors.Error) // All first level namespace objects
 }
 
 type Object struct {
@@ -366,7 +367,7 @@ func getNamespace(parts ...string) (Namespace, errors.Error) {
 		namespace = "default"
 	}
 
-	return datastore.NamespaceByName(namespace)
+	return datastore.NamespaceById(namespace)
 }
 
 func GetKeyspace(parts ...string) (Keyspace, errors.Error) {

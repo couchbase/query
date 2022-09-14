@@ -117,8 +117,7 @@ func TestSystem(t *testing.T) {
 		t.Fatalf("failed to create system store: %v", err)
 	}
 
-	// The systems store should have keyspaces "system", "namespaces", "keyspaces", "indexes"
-	p, err := s.NamespaceByName(datastore.SYSTEM_NAMESPACE)
+	p, err := s.NamespaceById(datastore.SYSTEM_NAMESPACE)
 	if err != nil {
 		t.Fatalf("failed to get system namespace: %v", err)
 	}

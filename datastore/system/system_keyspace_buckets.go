@@ -49,10 +49,10 @@ func (b *bucketKeyspace) Count(context datastore.QueryContext) (int64, errors.Er
 		for _, namespaceId := range namespaceIds {
 			namespace, excp := b.store.NamespaceById(namespaceId)
 			if excp == nil {
-				objects, excp := namespace.Objects(true)
+				objects, excp := namespace.Objects(context.Credentials(), true)
 				if excp == nil {
 					for _, object := range objects {
-						excludeResult := !canAccessAll && !canRead(context, namespaceId, object.Id)
+						excludeResult := !canAccessAll && !canRead(context, nil, namespaceId, object.Id)
 
 						// The list of bucket ids can include memcached buckets.
 						// We do not want to include them in the count of
@@ -101,15 +101,10 @@ func (b *bucketKeyspace) Fetch(keys []string, keysMap map[string]value.Annotated
 	var e errors.Error
 	var item value.AnnotatedValue
 
-	canAccessAll := canAccessSystemTables(context)
 	for _, k := range keys {
 		err, elems := splitBucketId(k)
 		if err != nil {
 			errs = append(errs, err)
-			continue
-		}
-		if !canAccessAll && !canRead(context, elems[0], elems[1]) {
-			context.Warning(errors.NewSystemFilteredRowsWarning("system:buckets"))
 			continue
 		}
 		item, e = b.fetchOne(elems[0], elems[1])
@@ -136,7 +131,7 @@ func (b *bucketKeyspace) fetchOne(ns string, bn string) (value.AnnotatedValue, e
 		bucket, err := namespace.BucketById(bn)
 		if bucket != nil {
 			doc := value.NewAnnotatedValue(map[string]interface{}{
-				"datastore_id": namespace.DatastoreId(),
+				"datastore_id": namespace.Datastore().Id(),
 				"namespace_id": namespace.Id(),
 				"namespace":    namespace.Name(),
 				"name":         bucket.Name(),
@@ -246,7 +241,7 @@ func (pi *bucketIndex) Scan(requestId string, span *datastore.Span, distinct boo
 			for _, namespaceId := range namespaceIds {
 				namespace, err = pi.keyspace.store.NamespaceById(namespaceId)
 				if err == nil {
-					objects, err = namespace.Objects(true)
+					objects, err = namespace.Objects(conn.QueryContext().Credentials(), true)
 					if err == nil {
 						for _, object := range objects {
 
@@ -296,7 +291,7 @@ func (pi *bucketIndex) ScanEntries(requestId string, limit int64, cons datastore
 		for _, namespaceId := range namespaceIds {
 			namespace, err = pi.keyspace.store.NamespaceById(namespaceId)
 			if err == nil {
-				objects, err = namespace.Objects(true)
+				objects, err = namespace.Objects(conn.QueryContext().Credentials(), true)
 				if err == nil {
 					for _, object := range objects {
 

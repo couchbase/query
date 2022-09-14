@@ -203,8 +203,8 @@ type namespace struct {
 	keyspaceNames []string
 }
 
-func (p *namespace) DatastoreId() string {
-	return p.store.Id()
+func (p *namespace) Datastore() datastore.Datastore {
+	return p.store
 }
 
 func (p *namespace) Id() string {
@@ -223,7 +223,7 @@ func (p *namespace) KeyspaceNames() ([]string, errors.Error) {
 	return p.keyspaceNames, nil
 }
 
-func (p *namespace) Objects(preload bool) ([]datastore.Object, errors.Error) {
+func (p *namespace) Objects(credentials *auth.Credentials, preload bool) ([]datastore.Object, errors.Error) {
 	rv := make([]datastore.Object, len(p.keyspaceNames))
 	i := 0
 	for _, k := range p.keyspaceNames {

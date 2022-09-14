@@ -862,8 +862,8 @@ const (
 	_STATS_REFRESH_THRESHOLD     time.Duration = 1 * time.Second
 )
 
-func (p *namespace) DatastoreId() string {
-	return p.store.Id()
+func (p *namespace) Datastore() datastore.Datastore {
+	return p.store
 }
 
 func (p *namespace) Id() string {
@@ -891,20 +891,24 @@ func (p *namespace) KeyspaceNames() ([]string, errors.Error) {
 	return rv, nil
 }
 
-func (p *namespace) Objects(preload bool) ([]datastore.Object, errors.Error) {
+func (p *namespace) Objects(credentials *auth.Credentials, preload bool) ([]datastore.Object, errors.Error) {
 	p.refresh()
-	p.nslock.RLock()
-	rv := make([]datastore.Object, len(p.cbNamespace.BucketMap))
+	b, err := cbauth.GetUserBuckets(credentials.CbauthCredentialsList[0].User())
+	if err != nil {
+		return nil, errors.NewDatastoreUnableToRetrieveBuckets(err)
+	}
+
+	rv := make([]datastore.Object, len(b))
+	for i := range b {
+		rv[i] = datastore.Object{b[i], b[i], false, false}
+	}
+
 	i := 0
 
-	for name, _ := range p.cbNamespace.BucketMap {
-		rv[i] = datastore.Object{name, name, false, false}
-		i++
-	}
-	p.nslock.RUnlock()
-
+	// separate loops because rv might shrink if the entry is nether a bucket nor a keyspace
 	for i = 0; i < len(rv); {
 		var defaultCollection datastore.Keyspace
+
 		name := rv[i].Name
 
 		p.lock.RLock()
@@ -955,6 +959,7 @@ func (p *namespace) Objects(preload bool) ([]datastore.Object, errors.Error) {
 		}
 		i++
 	}
+	b = nil // to aid the GC
 	return rv, nil
 }
 

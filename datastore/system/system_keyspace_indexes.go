@@ -93,13 +93,13 @@ func (b *indexKeyspace) Count(context datastore.QueryContext) (int64, errors.Err
 			if excp != nil {
 				break loop
 			}
-			objects, excp = namespace.Objects(true)
+			objects, excp = namespace.Objects(context.Credentials(), true)
 			if excp != nil {
 				break loop
 			}
 			for _, object := range objects {
-				includeDefaultKeyspace := canAccessAll || (canRead(context, namespaceId, object.Id) &&
-					canListIndexes(context, namespaceId, object.Id))
+				includeDefaultKeyspace := canAccessAll || (canRead(context, namespace.Datastore(), namespaceId, object.Id) &&
+					canListIndexes(context, namespace.Datastore(), namespaceId, object.Id))
 
 				if object.IsKeyspace {
 					keyspace, excp = namespace.KeyspaceById(object.Id)
@@ -123,15 +123,15 @@ func (b *indexKeyspace) Count(context datastore.QueryContext) (int64, errors.Err
 					for _, scopeId := range scopeIds {
 						scope, excp = bucket.ScopeById(scopeId)
 						if scope != nil {
-							includeScope := includeDefaultKeyspace || (canRead(context, namespaceId, object.Id, scopeId) &&
-								canListIndexes(context, namespaceId, object.Id, scopeId))
+							includeScope := includeDefaultKeyspace || (canRead(context, namespace.Datastore(), namespaceId, object.Id, scopeId) &&
+								canListIndexes(context, namespace.Datastore(), namespaceId, object.Id, scopeId))
 							keyspaceIds, _ := scope.KeyspaceIds()
 							for _, keyspaceId := range keyspaceIds {
 								keyspace, excp = scope.KeyspaceById(keyspaceId)
 								if excp == nil {
 
-									includeResults := includeScope || (canRead(context, namespaceId, object.Id, scopeId, keyspaceId) &&
-										canListIndexes(context, namespaceId, object.Id, scopeId, keyspaceId))
+									includeResults := includeScope || (canRead(context, namespace.Datastore(), namespaceId, object.Id, scopeId, keyspaceId) &&
+										canListIndexes(context, namespace.Datastore(), namespaceId, object.Id, scopeId, keyspaceId))
 									excp = handleKeyspace(keyspace, func(err errors.Error) {
 										context.Warning(err)
 									}, includeResults, func(id string) {
@@ -231,6 +231,7 @@ func (b *indexKeyspace) fetchOne(key string, keysMap map[string]value.AnnotatedV
 			"id":           index.Id(),
 			"name":         index.Name(),
 			"keyspace_id":  keyspace.Id(),
+			"namespace":    namespace.Name(),
 			"namespace_id": namespace.Id(),
 			"datastore_id": b.store.URL(),
 			"index_key":    datastoreObjectToJSONSafe(indexKeyToIndexKeyStringArray(index)),
@@ -317,6 +318,7 @@ func (b *indexKeyspace) fetchOneCollection(key string, keysMap map[string]value.
 			"keyspace_id":  keyspace.Id(),
 			"scope_id":     scope.Id(),
 			"bucket_id":    bucket.Id(),
+			"namespace":    namespace.Name(),
 			"namespace_id": namespace.Id(),
 			"datastore_id": b.store.URL(),
 			"index_key":    datastoreObjectToJSONSafe(indexKeyToIndexKeyStringArray(index)),
@@ -479,18 +481,30 @@ func (pi *indexIndex) Scan(requestId string, span *datastore.Span, distinct bool
 }
 
 // Do the presented credentials authorize the user to read the namespace/keyspace bucket?
-func canRead(context datastore.QueryContext, elems ...string) bool {
+func canRead(context datastore.QueryContext, ds datastore.Datastore, elems ...string) bool {
 	privs := auth.NewPrivileges()
-	privs.Add(algebra.NewPathFromElements(elems).FullName(), auth.PRIV_QUERY_SELECT, auth.PRIV_PROPS_NONE)
+	systemStore, ok := ds.(datastore.Systemstore)
+	path := algebra.NewPathFromElements(elems).FullName()
+	if ok && ds != nil {
+		systemStore.PrivilegesFromPath(path, elems[1], auth.PRIV_QUERY_SELECT, privs)
+	} else {
+		privs.Add(path, auth.PRIV_QUERY_SELECT, auth.PRIV_PROPS_NONE)
+	}
 	err := datastore.GetDatastore().Authorize(privs, context.Credentials())
 	res := err == nil
 	return res
 }
 
 // Do the presented credentials authorize the user to list indexes of the namespace/keyspace bucket?
-func canListIndexes(context datastore.QueryContext, elems ...string) bool {
+func canListIndexes(context datastore.QueryContext, ds datastore.Datastore, elems ...string) bool {
 	privs := auth.NewPrivileges()
-	privs.Add(algebra.NewPathFromElements(elems).FullName(), auth.PRIV_QUERY_LIST_INDEX, auth.PRIV_PROPS_NONE)
+	path := algebra.NewPathFromElements(elems).FullName()
+	systemStore, ok := ds.(datastore.Systemstore)
+	if ok && ds != nil {
+		systemStore.PrivilegesFromPath(path, elems[1], auth.PRIV_QUERY_SELECT, privs)
+	} else {
+		privs.Add(path, auth.PRIV_QUERY_LIST_INDEX, auth.PRIV_PROPS_NONE)
+	}
 	err := datastore.GetDatastore().Authorize(privs, context.Credentials())
 	res := err == nil
 	return res
@@ -509,14 +523,14 @@ func (pi *indexIndex) ScanEntries(requestId string, limit int64, cons datastore.
 			if err != nil {
 				continue
 			}
-			objects, err := namespace.Objects(true)
+			objects, err := namespace.Objects(conn.QueryContext().Credentials(), true)
 			if err != nil {
 				continue
 			}
 		loop:
 			for _, object := range objects {
-				includeDefaultKeyspace := canAccessAll || (canRead(conn.QueryContext(), namespaceId, object.Id) &&
-					canListIndexes(conn.QueryContext(), namespaceId, object.Id))
+				includeDefaultKeyspace := canAccessAll || (canRead(conn.QueryContext(), namespace.Datastore(), namespaceId, object.Id) &&
+					canListIndexes(conn.QueryContext(), namespace.Datastore(), namespaceId, object.Id))
 				if object.IsKeyspace {
 					keyspace, excp := namespace.KeyspaceById(object.Id)
 					if excp == nil {
@@ -550,8 +564,8 @@ func (pi *indexIndex) ScanEntries(requestId string, limit int64, cons datastore.
 					for _, scopeId := range scopeIds {
 						scope, _ := bucket.ScopeById(scopeId)
 						if scope != nil {
-							includeScope := includeDefaultKeyspace || (canRead(conn.QueryContext(), namespaceId, object.Id, scopeId) &&
-								canListIndexes(conn.QueryContext(), namespaceId, object.Id, scopeId))
+							includeScope := includeDefaultKeyspace || (canRead(conn.QueryContext(), namespace.Datastore(), namespaceId, object.Id, scopeId) &&
+								canListIndexes(conn.QueryContext(), namespace.Datastore(), namespaceId, object.Id, scopeId))
 							keyspaceIds, _ := scope.KeyspaceIds()
 							for _, keyspaceId := range keyspaceIds {
 								if pi.keyspace.skipSystem && keyspaceId[0] == '_' {
@@ -561,8 +575,8 @@ func (pi *indexIndex) ScanEntries(requestId string, limit int64, cons datastore.
 								keyspace, excp := scope.KeyspaceById(keyspaceId)
 								if keyspace != nil {
 									keys := make(map[string]bool, 64)
-									includeResults := includeScope || (canRead(conn.QueryContext(), namespaceId, object.Id, scopeId, keyspaceId) &&
-										canListIndexes(conn.QueryContext(), namespaceId, object.Id, scopeId, keyspaceId))
+									includeResults := includeScope || (canRead(conn.QueryContext(), namespace.Datastore(), namespaceId, object.Id, scopeId, keyspaceId) &&
+										canListIndexes(conn.QueryContext(), namespace.Datastore(), namespaceId, object.Id, scopeId, keyspaceId))
 									excp = handleKeyspace(keyspace, func(err errors.Error) {
 										conn.Warning(err)
 									}, includeResults, func(id string) {

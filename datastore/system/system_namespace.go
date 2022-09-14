@@ -9,6 +9,7 @@
 package system
 
 import (
+	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 )
@@ -20,8 +21,8 @@ type namespace struct {
 	keyspaces map[string]datastore.Keyspace
 }
 
-func (p *namespace) DatastoreId() string {
-	return p.store.Id()
+func (p *namespace) Datastore() datastore.Datastore {
+	return p.store
 }
 
 func (p *namespace) Id() string {
@@ -46,7 +47,7 @@ func (p *namespace) KeyspaceNames() ([]string, errors.Error) {
 	return rv, nil
 }
 
-func (p *namespace) Objects(preload bool) ([]datastore.Object, errors.Error) {
+func (p *namespace) Objects(credentials *auth.Credentials, preload bool) ([]datastore.Object, errors.Error) {
 	rv := make([]datastore.Object, len(p.keyspaces))
 	i := 0
 	for k, _ := range p.keyspaces {

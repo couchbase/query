@@ -183,7 +183,7 @@ func (this *builder) getNameKeyspace(ks *algebra.KeyspaceRef, dynamic bool) (dat
 
 func (this *builder) getVirtualKeyspace(namespaceStr string, path []string) (datastore.Keyspace, error) {
 	ds := this.datastore
-	namespace, err := ds.NamespaceByName(namespaceStr)
+	namespace, err := ds.NamespaceById(namespaceStr)
 	if err != nil {
 		return nil, err
 	}

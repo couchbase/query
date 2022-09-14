@@ -194,7 +194,7 @@ type metaEntry struct {
 func NewGlobalFunction(namespace string, name string) (functions.FunctionName, errors.Error) {
 	rv := &metaEntry{}
 	algebra.SetPathShort(namespace, name, &rv.path)
-	ns, err := datastore.GetDatastore().NamespaceByName(namespace)
+	ns, err := datastore.GetDatastore().NamespaceById(namespace)
 	if ns == nil {
 		return nil, errors.NewInvalidFunctionNameError(rv.path.FullName(), err)
 	}
