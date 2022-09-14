@@ -332,7 +332,7 @@
 	]
     },
     {
-        "testcase": "MB-53601",
+        "testcase": "MB-53601, part 1",
         "explain": {
             "disabled": false,
             "results": [
@@ -343,6 +343,24 @@
             "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'NestedLoopJoin' AND v.`alias` = 'final' AND ANY s WITHIN v.`~child`.`~children` SATISFIES s.`#operator` = 'ExpressionScan' AND s.`alias` = 'final' AND s.`uncorrelated` = true END END AND ARRAY_LENGTH(p.`~subqueries`) > 0"
         },
         "statements":"SELECT d1.c21 FROM shellTest d1 JOIN ( SELECT d2.c11 FROM shellTest d2 JOIN ( SELECT d3.c11 FROM shellTest AS d3 WHERE d3.type = \"left\" AND d3.c11 < 3) AS d10 ON d2.c11 = d10.c11 WHERE d2.type = \"left\" AND d2.c11 = 1) AS final USE NL ON d1.c21 = final.c11 WHERE d1.type = \"right\"",
+        "results": [
+            {
+                "c21": 1
+            }
+	]
+    },
+    {
+        "testcase": "MB-53601, part 2",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'NestedLoopJoin' AND v.`alias` = 'd10' AND ANY s WITHIN v.`~child`.`~children` SATISFIES s.`#operator` = 'ExpressionScan' AND s.`alias` = 'd10' AND s.`uncorrelated` = true END END AND ARRAY_LENGTH(p.`~subqueries`) > 0"
+        },
+        "statements":"SELECT d1.c21 FROM shellTest d1 JOIN ( SELECT d2.c11 FROM shellTest d2 JOIN ( SELECT d3.c11 FROM shellTest AS d3 WHERE d3.type = \"left\" AND d3.c11 < 3) AS d10 USE NL ON d2.c11 = d10.c11 WHERE d2.type = \"left\" AND d2.c11 = 1) AS final USE HASH(build) ON d1.c21 = final.c11 WHERE d1.type = \"right\"",
         "results": [
             {
                 "c21": 1

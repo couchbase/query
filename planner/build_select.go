@@ -321,7 +321,10 @@ func addFromSubqueries(qp *plan.QueryPlan, optimHints *algebra.OptimHints, ops .
 			addFromSubqueries(qp, optimHints, op.Child())
 		case *plan.NLNest:
 			addFromSubqueries(qp, optimHints, op.Child())
+		case *plan.HashJoin:
+			addFromSubqueries(qp, optimHints, op.Child())
+		case *plan.HashNest:
+			addFromSubqueries(qp, optimHints, op.Child())
 		}
-		// no need to check hash join/nest since they should not appear under nl join/nest
 	}
 }
