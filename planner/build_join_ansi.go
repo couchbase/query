@@ -2281,6 +2281,9 @@ func getBuildBFInfo(buildInfosMap map[string]*base.BuildInfo,
 			err = getBuildBFInfo(buildInfosMap, buildAliases, op.Children()...)
 		case *plan.Parallel:
 			err = getBuildBFInfo(buildInfosMap, buildAliases, op.Child())
+		case *plan.Alias:
+			// skip next term (SubqueryTerm)
+			i--
 		}
 		if err != nil {
 			return
