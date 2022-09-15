@@ -28,11 +28,11 @@ type FinalGroup struct {
 func NewFinalGroup(plan *plan.FinalGroup, context *Context) *FinalGroup {
 
 	var shouldSpill func(uint64, uint64) bool
-	if context.UseRequestQuota() {
+	if plan.CanSpill() && context.UseRequestQuota() {
 		shouldSpill = func(c uint64, n uint64) bool {
 			return (c+n) > context.ProducerThrottleQuota() && context.CurrentQuotaUsage() > _GROUP_QUOTA_THRESHOLD
 		}
-	} else {
+	} else if plan.CanSpill() {
 		maxSize := context.AvailableMemory()
 		if maxSize > 0 {
 			maxSize = uint64(float64(maxSize) / float64(util.NumCPU()) * _GROUP_AVAILABLE_MEMORY_THRESHOLD)
@@ -153,7 +153,6 @@ func (this *FinalGroup) afterItems(context *Context) {
 		context.Error(err)
 		return
 	}
-
 	// Mo matching inputs, so send default values
 	if len(this.plan.Keys()) == 0 && groups_len == 0 {
 		av := value.NewAnnotatedValue(nil)
@@ -167,10 +166,10 @@ func (this *FinalGroup) afterItems(context *Context) {
 			if err := context.TrackValueSize(av.Size()); err != nil {
 				context.Error(err)
 				av.Recycle()
+				return
 			}
-		} else {
-			this.sendItem(av)
 		}
+		this.sendItem(av)
 	}
 }
 

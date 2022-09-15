@@ -28,11 +28,11 @@ type IntermediateGroup struct {
 func NewIntermediateGroup(plan *plan.IntermediateGroup, context *Context) *IntermediateGroup {
 
 	var shouldSpill func(uint64, uint64) bool
-	if context.UseRequestQuota() {
+	if plan.CanSpill() && context.UseRequestQuota() {
 		shouldSpill = func(c uint64, n uint64) bool {
 			return (c+n) > context.ProducerThrottleQuota() && context.CurrentQuotaUsage() > _GROUP_QUOTA_THRESHOLD
 		}
-	} else {
+	} else if plan.CanSpill() {
 		maxSize := context.AvailableMemory()
 		if maxSize > 0 {
 			maxSize = uint64(float64(maxSize) / float64(util.NumCPU()) * _GROUP_AVAILABLE_MEMORY_THRESHOLD)

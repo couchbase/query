@@ -37,7 +37,7 @@ func NewInitialGroup(plan *plan.InitialGroup, context *Context) *InitialGroup {
 		shouldSpill = func(c uint64, n uint64) bool {
 			return (c+n) > context.ProducerThrottleQuota() && context.CurrentQuotaUsage() > _GROUP_QUOTA_THRESHOLD
 		}
-	} else {
+	} else if plan.CanSpill() {
 		maxSize := context.AvailableMemory()
 		if maxSize > 0 {
 			maxSize = uint64(float64(maxSize) / float64(util.NumCPU()) * _GROUP_AVAILABLE_MEMORY_THRESHOLD)
