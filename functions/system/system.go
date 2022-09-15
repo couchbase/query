@@ -18,7 +18,6 @@ import (
 	"github.com/couchbase/query/functions"
 	"github.com/couchbase/query/functions/metakv"
 	"github.com/couchbase/query/functions/resolver"
-	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
@@ -43,10 +42,8 @@ func DropScope(namespace, bucket, scope string) {
 }
 
 func Foreach(b string, f func(path string, v value.Value) error) error {
-	logging.Infof("in foreach %v", b)
 	return scanSystemCollection(b, func(key string, systemCollection datastore.Keyspace) error {
 		s, fn := key2parts(key)
-		logging.Infof("in scan %v %v %v", key, s, fn)
 
 		// skip entries that are not udfs
 		if s == "" {
@@ -62,10 +59,8 @@ func Foreach(b string, f func(path string, v value.Value) error) error {
 }
 
 func Scan(b string, f func(path string) error) error {
-	logging.Infof("in scan %v", b)
 	return scanSystemCollection(b, func(key string, systemCollection datastore.Keyspace) error {
 		s, fn := key2parts(key)
-		logging.Infof("in scan %v %v %v", key, s, fn)
 
 		// skip entries that are not udfs
 		if s == "" {
@@ -218,7 +213,6 @@ func key2parts(key string) (string, string) {
 	if dot <= 1 {
 		return "", ""
 	}
-	logging.Infof("found %v %v %v", key, key[:dot], key[dot+1:])
 	return key[:dot], key[dot+1:]
 }
 
