@@ -892,7 +892,10 @@ func (p *namespace) KeyspaceNames() ([]string, errors.Error) {
 }
 
 func (p *namespace) Objects(credentials *auth.Credentials, preload bool) ([]datastore.Object, errors.Error) {
-	p.refresh()
+	if len(credentials.CbauthCredentialsList) == 0 {
+		return nil, errors.NewDatastoreUnableToRetrieveBuckets(fmt.Errorf("empty credentials"))
+	}
+
 	b, err := cbauth.GetUserBuckets(credentials.CbauthCredentialsList[0].User())
 	if err != nil {
 		return nil, errors.NewDatastoreUnableToRetrieveBuckets(err)
@@ -902,6 +905,8 @@ func (p *namespace) Objects(credentials *auth.Credentials, preload bool) ([]data
 	for i := range b {
 		rv[i] = datastore.Object{b[i], b[i], false, false}
 	}
+
+	p.refresh()
 
 	i := 0
 

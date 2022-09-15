@@ -17,6 +17,7 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+
 	// "time"
 
 	json "github.com/couchbase/go_json"
@@ -839,7 +840,7 @@ func TestSpillingMap(t *testing.T) {
 	av.SetId("doc1")
 	av.SetField("selfref", av)
 	av.GetMeta() // ensures the meta map is created since we call GetMeta() when spilling (which'll create it if not done here)
-	themap.Set(av.GetId().(string), av)
+	themap.LoadOrStore(av.GetId().(string), av)
 	check[av.GetId().(string)] = re.ReplaceAllString(fmt.Sprintf("%#v", av), "(<address>)") // erase pointer address values
 	spillThreshold += av.Size()
 
@@ -850,7 +851,7 @@ func TestSpillingMap(t *testing.T) {
 	av.SetId("doc2")
 	av.SetField("selfref", av)
 	av.GetMeta()
-	themap.Set(av.GetId().(string), av)
+	themap.LoadOrStore(av.GetId().(string), av)
 	check[av.GetId().(string)] = re.ReplaceAllString(fmt.Sprintf("%#v", av), "(<address>)") // erase pointer address values
 	spillThreshold += av.Size()
 
@@ -861,7 +862,7 @@ func TestSpillingMap(t *testing.T) {
 	av.SetId("doc3")
 	av.SetField("selfref", av)
 	av.GetMeta()
-	themap.Set(av.GetId().(string), av)
+	themap.LoadOrStore(av.GetId().(string), av)
 	check[av.GetId().(string)] = re.ReplaceAllString(fmt.Sprintf("%#v", av), "(<address>)") // erase pointer address values
 
 	s = NewScopeValue(make(map[string]interface{}), nil)
@@ -871,7 +872,7 @@ func TestSpillingMap(t *testing.T) {
 	av.SetId("doc4")
 	av.SetField("selfref", av)
 	av.GetMeta()
-	themap.Set(av.GetId().(string), av)
+	themap.LoadOrStore(av.GetId().(string), av)
 	check[av.GetId().(string)] = re.ReplaceAllString(fmt.Sprintf("%#v", av), "(<address>)") // erase pointer address values
 
 	// values will have to swap in and out of memory for the foreach to complete on all values
