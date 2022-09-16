@@ -198,7 +198,7 @@ type Node struct {
 	Uptime               int                           `json:"uptime,string"`
 	Version              string                        `json:"version"`
 	ThisNode             bool                          `json:"thisNode,omitempty"`
-	CpuCount             int                           `json:"cpuCount"`
+	CpuCount             interface{}                   `json:"cpuCount"`
 }
 
 // A Pool of nodes and buckets.

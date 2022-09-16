@@ -318,7 +318,14 @@ func (this *seqScan) coordinator(b *Bucket, scanTimeout time.Duration) {
 				if !found {
 					continue
 				}
-				cc := int(float64(n.CpuCount) / float64(len(n.Services)) * 0.75)
+				var cc int
+				switch ccnt := n.CpuCount.(type) {
+				case float64:
+					cc = int(ccnt / float64(len(n.Services)) * 0.75)
+				default:
+					logging.Infof("Unable to determine CPU count for %v[%v]", n.NodeUUID, n.Hostname)
+					cc = 1
+				}
 				if cc < minCC {
 					minCC = cc
 				}
