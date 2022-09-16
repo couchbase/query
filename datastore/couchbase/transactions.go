@@ -879,7 +879,6 @@ func (this *DeltaKeyspace) Write(transaction *gocbcore.Transaction, txnInternal 
 
 			if len(wops) == bSize {
 				// write once batch size reached
-				// TODO TENANT collect from agent provider / ensure units are not negative
 				err = this.ks.agentProvider.TxWrite(transaction, txnInternal, keyspace,
 					this.bucketName, this.scopeName, this.collectionName, this.collId, deadline, wops)
 				if err != nil {
@@ -893,7 +892,6 @@ func (this *DeltaKeyspace) Write(transaction *gocbcore.Transaction, txnInternal 
 
 	if len(wops) > 0 {
 		// write partial batch
-		// TODO TENANT collect from agent provider / ensure units are not negative
 		err = this.ks.agentProvider.TxWrite(transaction, txnInternal, keyspace,
 			this.bucketName, this.scopeName, this.collectionName, this.collId, deadline, wops)
 		if err != nil {

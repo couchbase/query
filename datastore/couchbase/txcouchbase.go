@@ -88,12 +88,21 @@ func (s *store) StartTransaction(stmtAtomicity bool, context datastore.QueryCont
 			return CollectionAgentProvider(bucketName, "_default", "_default", oboUser)
 		}
 
+		txUnitHandler := func(result *gocbcore.ResourceUnitResult) {
+			if result.ReadUnits > 0 {
+				context.RecordKvRU(tenant.Unit(result.ReadUnits))
+			}
+			if result.WriteUnits > 0 {
+				context.RecordKvWU(tenant.Unit(result.WriteUnits))
+			}
+		}
 		if resume {
 			atrCollectionName := txContext.AtrCollection()
 
 			rtxConfig := &gocbcore.ResumeTransactionOptions{BucketAgentProvider: bucketAgentProvider,
 				TransactionLogger: gcagent.NewGocbcoreTransactionLogger(),
 			}
+			rtxConfig.Internal.ResourceUnitCallback = txUnitHandler
 			transaction, terr = gcAgentTxs.ResumeTransactionAttempt(txnData, rtxConfig)
 
 			if terr == nil && atrCollectionName != "" {
@@ -113,6 +122,7 @@ func (s *store) StartTransaction(stmtAtomicity bool, context datastore.QueryCont
 				DurabilityLevel:   gocbcore.TransactionDurabilityLevel(txContext.TxDurabilityLevel()),
 				TransactionLogger: gcagent.NewGocbcoreTransactionLogger(),
 			}
+			txConfig.Internal.ResourceUnitCallback = txUnitHandler
 
 			if txContext.KvTimeout() > 0 {
 				txConfig.KeyValueTimeout = txContext.KvTimeout()

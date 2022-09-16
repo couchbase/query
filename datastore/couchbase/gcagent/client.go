@@ -21,6 +21,7 @@ import (
 	"github.com/couchbase/gocbcore/v10/connstr"
 	ntls "github.com/couchbase/goutils/tls"
 	"github.com/couchbase/query/logging"
+	"github.com/couchbase/query/tenant"
 	"github.com/couchbase/query/util"
 )
 
@@ -129,6 +130,8 @@ func agentConfig(url, options string, rv *Client) (*gocbcore.AgentConfig, error)
 	}
 	config.SecurityConfig.NoTLSSeedNode = true
 	config.SecurityConfig.UseTLS = (rv.TLSRootCAs() != nil)
+
+	config.InternalConfig.EnableResourceUnitsTrackingHello = tenant.IsServerless()
 
 	connSpec, err := connstr.Parse(url + options)
 	if err == nil {
