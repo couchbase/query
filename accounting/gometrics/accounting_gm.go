@@ -21,6 +21,7 @@ import (
 	"github.com/couchbase/query/accounting/metrics"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
+	"github.com/couchbase/query/memory"
 	"github.com/couchbase/query/server"
 	"github.com/couchbase/query/system"
 	"github.com/couchbase/query/util"
@@ -146,6 +147,7 @@ func (g *gometricsAccountingStore) Vitals() (map[string]interface{}, errors.Erro
 	} else {
 		logging.Debugf("statsCollector error : %v", err)
 	}
+	rv["host.memory.quota"] = memory.Quota()
 	for n, v := range g.vitals {
 		rv[n] = v
 	}
