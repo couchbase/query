@@ -585,11 +585,14 @@ func (this *builder) minimalIndexes(sargables map[datastore.Index]*indexEntry, s
 			}
 
 			if useCBO && shortest {
-				seCost := se.scanCost()
-				teCost := te.scanCost()
-				if matchedLeadingKeys(se, te, predFc) &&
-					(seCost < teCost || (seCost == teCost && se.cardinality < te.cardinality)) {
+				if t.Type() == datastore.SEQ_SCAN && te.nSargKeys == 0 {
 					delete(sargables, t)
+				} else if matchedLeadingKeys(se, te, predFc) {
+					seCost := se.scanCost()
+					teCost := te.scanCost()
+					if seCost < teCost || (seCost == teCost && se.cardinality < te.cardinality) {
+						delete(sargables, t)
+					}
 				}
 			} else {
 				if narrowerOrEquivalent(se, te, shortest, predFc) {
@@ -740,6 +743,11 @@ outer:
 
 // for CBO, prune indexes that has similar leading index keys
 func matchedLeadingKeys(se, te *indexEntry, predFc map[string]value.Value) bool {
+	if se.nSargKeys == 0 && te.nSargKeys == 0 &&
+		se.HasFlag(IE_LEADINGMISSING) && te.HasFlag(IE_LEADINGMISSING) {
+		return true
+	}
+
 	nkeys := 0
 	ncond := 0
 	for i, tk := range te.sargKeys {
