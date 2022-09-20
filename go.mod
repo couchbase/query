@@ -48,7 +48,7 @@ require (
 	github.com/couchbase/go_json v0.0.0-20220330123059-4473a21887c8
 	github.com/couchbase/gocbcore/v10 v10.1.5-0.20220914162543-e8fb96235d17
 	github.com/couchbase/godbc v0.0.0-20210615212222-79da1b49cb4d
-	github.com/couchbase/gomemcached v0.1.5-0.20220627085811-f29815b6005a
+	github.com/couchbase/gomemcached v0.1.5-0.20220916124424-884dec4ebb14
 	github.com/couchbase/goutils v0.1.2
 	github.com/couchbase/indexing v0.0.0-00010101000000-000000000000
 	github.com/couchbase/n1fty v0.0.0-00010101000000-000000000000
