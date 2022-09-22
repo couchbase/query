@@ -99,17 +99,20 @@ func (this *In) Evaluate(item value.Value, context Context) (value.Value, error)
 	if hashTab == nil || buildHT {
 		for _, s := range sa {
 			v := value.NewValue(s)
-			if first.Type() > value.NULL && v.Type() > value.NULL {
+			if v.Type() > value.NULL {
 				if buildHT {
 					err := hashTab.Put(v, true, value.MarshalValue, value.EqualValue, 0)
 					if err != nil {
 						inlistHash.hashLock.Unlock()
 						return nil, errors.NewHashTablePutError(err)
 					}
-				} else {
+				} else if first.Type() > value.NULL {
 					if first.Equals(v).Truth() {
 						return value.TRUE_VALUE, nil
 					}
+				} else {
+					// first.Type() == value.NULL
+					null = true
 				}
 			} else if v.Type() == value.MISSING {
 				if buildHT {
@@ -118,7 +121,7 @@ func (this *In) Evaluate(item value.Value, context Context) (value.Value, error)
 					missing = true
 				}
 			} else {
-				// first.Type() == value.NULL || v.Type() == value.NULL
+				// v.Type() == value.NULL
 				if buildHT {
 					inlistHash.SetNull()
 				} else {
@@ -132,18 +135,22 @@ func (this *In) Evaluate(item value.Value, context Context) (value.Value, error)
 	}
 
 	if hashTab != nil {
-		outVal, err := hashTab.Get(first, value.MarshalValue, value.EqualValue)
-		if err != nil {
-			return nil, errors.NewHashTableGetError(err)
-		}
-		if outVal != nil {
-			return value.TRUE_VALUE, nil
+		if first.Type() > value.NULL {
+			outVal, err := hashTab.Get(first, value.MarshalValue, value.EqualValue)
+			if err != nil {
+				return nil, errors.NewHashTableGetError(err)
+			}
+			if outVal != nil {
+				return value.TRUE_VALUE, nil
+			}
+		} else {
+			null = true
 		}
 	}
 
-	if null || (buildHT && inlistHash.HasNull()) {
+	if null || (inlistHash != nil && inlistHash.HasNull()) {
 		return value.NULL_VALUE, nil
-	} else if missing || (buildHT && inlistHash.HasMissing()) {
+	} else if missing || (inlistHash != nil && inlistHash.HasMissing()) {
 		return value.MISSING_VALUE, nil
 	} else {
 		return value.FALSE_VALUE, nil

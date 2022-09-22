@@ -41,6 +41,9 @@ func TestInlist(t *testing.T) {
 	// test dynamic index span expansion on IN-list as host variables
 	runMatch("case_inlist_dynamic_span.json", true, true, qc, t)
 
+	// bug fixes
+	runMatch("case_inlist_hash_bugs.json", false, false, qc, t)
+
 	fmt.Println("Dropping indexes")
 	runStmt(qc, "DROP INDEX shellTest.st_idx1")
 	runStmt(qc, "DROP INDEX shellTest.st_idx2")
