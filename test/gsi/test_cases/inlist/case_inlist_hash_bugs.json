@@ -1,7 +1,7 @@
 [
     {
         "testcase": "MB-53774",
-        "statements":"SELECT d FROM [NULL, 1, 2, 3] AS d WHERE d IN [ 17, 16, 14, 2, 3, 7, 12, null, 19, 4, 13, 15, 18, 6, 5, 9, 11, 8, 10 ]",
+        "statements":"SELECT d FROM [NULL, 1, 2, 3, NULL] AS d WHERE d IN [ 17, 16, 14, 2, 3, 7, 12, null, 19, 4, 13, 15, 18, 6, 5, 9, 11, 8, 10 ]",
         "results": [
         {
             "d": 2
