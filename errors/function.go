@@ -149,7 +149,11 @@ func NewAdvisorInvalidArgs(args []string) Error {
 		InternalMsg: "Advisor: Invalid arguments.", cause: c, InternalCaller: CallerN(1)}
 }
 
-func NewTempInternalJSExecuteError(name string) Error {
-	return &err{level: EXCEPTION, ICode: E_TEMP_INTERNAL_JS_EXECUTE, IKey: "function.temporary.internalJSExecute",
-		InternalMsg: "Temporary error if Internal JS Function is executed."}
+func NewFunctionLoadingError(function string, reason interface{}) Error {
+	c := make(map[string]interface{})
+	c["function"] = function
+	c["reason"] = reason
+	return &err{level: EXCEPTION, ICode: E_FUNCTION_LOADING, IKey: "function.loading.error", cause: c,
+		InternalMsg:    fmt.Sprintf("Error loading function '%v'", function),
+		InternalCaller: CallerN(1)}
 }

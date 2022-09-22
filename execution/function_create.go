@@ -13,6 +13,7 @@ import (
 
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/functions"
+	"github.com/couchbase/query/functions/javascript"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
 )
@@ -61,6 +62,14 @@ func (this *CreateFunction) RunOnce(context *Context, parent value.Value) {
 
 		// Actually create function
 		var err errors.Error
+
+		// If the function is an Internal JS function, load the JS function body, to check if it is syntactically correct
+		err = javascript.LoadFunction(this.plan.Name(), this.plan.Body(), true)
+
+		if err != nil {
+			context.Error(err)
+			return
+		}
 
 		replace := this.plan.Replace()
 		if !this.plan.FailIfExists() {

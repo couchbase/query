@@ -19,6 +19,7 @@ import (
 
 	"github.com/couchbase/eventing-ee/evaluator/defs"
 	"github.com/couchbase/eventing-ee/evaluator/n1ql_client"
+	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/functions"
@@ -45,10 +46,13 @@ type javascriptBody struct {
 	text     string // Internal JS functions have the function's JS code stored
 }
 
-var enabled = false
-var evaluator defs.Evaluator
+var externalJSEnabled = false
+var externalJSEvaluator defs.Evaluator
 var threads int32
 var threadCount int32
+var libStore defs.LibStore
+var internalJSEvaluator defs.Evaluator
+var internalJSEnabled = false
 
 // FIXME to be sorted
 // - evaluator client does not yet take context
@@ -64,7 +68,9 @@ func Init(mux *mux.Router, t int) {
 	} else if t > _MAX_SERVICERS {
 		t = _MAX_SERVICERS
 	}
-	engine := n1ql_client.SingleInstance
+
+	// Create the engine for external JS functions
+	externalJSEngine := n1ql_client.SingleInstance
 	config := make(map[defs.Config]interface{})
 	config[defs.Threads] = t
 	config[defs.FeatureBitmask] = uint32(8)
@@ -77,35 +83,69 @@ func Init(mux *mux.Router, t int) {
 	}
 	threads = int32(t)
 
-	err := engine.Configure(config)
+	err := externalJSEngine.Configure(config)
 	if err.Err == nil {
 		if mux != nil {
-			handle := engine.UIHandler()
+			handle := externalJSEngine.UIHandler()
 			mux.NewRoute().PathPrefix(handle.Path()).Methods("GET", "POST", "DELETE").HandlerFunc(handle.Handler())
 		}
 		if err.Err == nil {
-			err = engine.Start()
+			err = externalJSEngine.Start()
 		}
 	}
 
 	if err.Err != nil {
 		logging.Infof("Unable to start javascript evaluator client, err : %v", err.Err)
 	} else {
-		evaluator = engine.Fetch()
-		if evaluator == nil {
+		externalJSEvaluator = externalJSEngine.Fetch()
+		if externalJSEvaluator == nil {
 			logging.Infof("Unable to retrieve javascript evaluator")
 		} else {
-			enabled = true
+			externalJSEnabled = true
 		}
+	}
+
+	// Create a new engine for Internal JS functions
+	configInternalJS := make(map[defs.Config]interface{})
+	configInternalJS[defs.Threads] = t
+	configInternalJS[defs.FeatureBitmask] = uint32(8)
+	configInternalJS[defs.IsIpV6] = util.IPv6
+	configInternalJS[defs.GlobalManagePermission] = "cluster.n1ql.udf_external!manage"
+	configInternalJS[defs.ScopeManagePermission] = "cluster.collection[%s].n1ql.udf_external!manage"
+	configInternalJS[defs.SysLogLevel] = 4
+	configInternalJS[defs.SysLogCallback] = func(level, msg string, ctx interface{}) {
+		logging.Infof("Internal jsevaluator: %s", msg)
+	}
+
+	internalJSEngine := n1ql_client.NewEngine()
+	err = internalJSEngine.Configure(configInternalJS)
+
+	if err.Err == nil {
+		err = internalJSEngine.Start()
+	}
+
+	if err.Err != nil {
+		logging.Infof("Unable to start internal javascript evaluator client, err : %v", err.Err)
+	} else {
+		internalJSEvaluator = internalJSEngine.Fetch()
+		if internalJSEvaluator == nil {
+			logging.Infof("Unable to retrieve internal javascript evaluator")
+		} else {
+			internalJSEnabled = true
+		}
+	}
+
+	libStore = internalJSEngine.GetLibStore()
+
+	if libStore == nil {
+		logging.Infof("libStore is nil")
+		internalJSEnabled = false
+
 	}
 }
 
 func (this *javascript) Execute(name functions.FunctionName, body functions.FunctionBody, modifiers functions.Modifier, values []value.Value, context functions.Context) (value.Value, errors.Error) {
 	var args []interface{}
-
-	if !enabled {
-		return nil, errors.NewFunctionsDisabledError("javascript")
-	}
 
 	funcName := name.Name()
 	funcBody, ok := body.(*javascriptBody)
@@ -114,9 +154,14 @@ func (this *javascript) Execute(name functions.FunctionName, body functions.Func
 		return nil, errors.NewInternalFunctionError(goerrors.New("Wrong language being executed!"), funcName)
 	}
 
-	// If the function is an Internal JS function, temporarily throw an error when it is being executed
-	if funcBody.text != "" {
-		return nil, errors.NewTempInternalJSExecuteError(funcName)
+	if funcBody.text == "" {
+		if !externalJSEnabled {
+			return nil, errors.NewFunctionsDisabledError("External javascript")
+		}
+	} else {
+		if !internalJSEnabled {
+			return nil, errors.NewFunctionsDisabledError("Internal javascript")
+		}
 	}
 
 	if funcBody.varNames != nil && len(values) != len(funcBody.varNames) {
@@ -142,13 +187,36 @@ func (this *javascript) Execute(name functions.FunctionName, body functions.Func
 	if levels > 1 && levels > int(threads-runners) {
 		return nil, errors.NewFunctionExecutionNestedError(levels, funcName)
 	}
-	library := funcBody.libName
 
-	// if nested paths are not specified, just use the unformalized library
-	if library == "" {
-		library = funcBody.library
+	var res interface{}
+	var err defs.Error
+
+	if funcBody.text == "" { // the function is an External JS function
+		library := funcBody.libName
+
+		// if nested paths are not specified, just use the unformalized library
+		if library == "" {
+			library = funcBody.library
+		}
+		res, err = externalJSEvaluator.Evaluate(library, funcBody.object, opts, args, functions.NewUdfContext(context, funcBody.prefix))
+
+	} else { // the function is an Internal JS function
+
+		// If the function body's text has not already been loaded, load it
+		// For internal JS functions, the libName i.e the JS library will be the full path of the function
+		path := name.Path()
+		library := algebra.PathFromParts(path...)
+		_, isLoaded := libStore.Read(library)
+
+		if !isLoaded {
+			err1 := LoadFunction(name, body, false)
+			if err1 != nil {
+				return nil, err1
+			}
+		}
+
+		res, err = internalJSEvaluator.Evaluate(library, funcName, opts, args, functions.NewUdfContext(context, funcBody.prefix))
 	}
-	res, err := evaluator.Evaluate(library, funcBody.object, opts, args, functions.NewUdfContext(context, funcBody.prefix))
 
 	// TODO TENANT
 	context.RecordJsCU(time.Millisecond, 10*1024)
@@ -177,8 +245,14 @@ func NewJavascriptBody(library, object, text string) (functions.FunctionBody, er
 }
 
 func NewJavascriptBodyWithDetails(library, object, prefix, libName, text string) (functions.FunctionBody, errors.Error) {
-	if !enabled {
-		return nil, errors.NewFunctionsDisabledError("javascript")
+	if text == "" {
+		if !externalJSEnabled {
+			return nil, errors.NewFunctionsDisabledError("External javascript")
+		}
+	} else {
+		if !internalJSEnabled {
+			return nil, errors.NewFunctionsDisabledError("Internal javascript")
+		}
 	}
 	return &javascriptBody{library: library, object: object, prefix: prefix, libName: libName, text: text}, nil
 }
@@ -278,4 +352,38 @@ func (this *javascriptBody) IsExternal() bool {
 
 func (this *javascriptBody) Privileges() (*auth.Privileges, errors.Error) {
 	return nil, nil
+}
+
+// For internal JS functions load the JS code in the function body text to LibStore
+func LoadFunction(name functions.FunctionName, body functions.FunctionBody, unloadAfter bool) errors.Error {
+	funcBody, ok := body.(*javascriptBody)
+
+	if !ok || (ok && funcBody.text == "") {
+		return nil
+	}
+
+	path := name.Path()
+	library := algebra.PathFromParts(path...)
+
+	// For internal JS functions, the libName i.e the JS library will be the full path of the function
+	err := libStore.Load(library, funcBody.text)
+
+	if err.Err != nil {
+		return loadError(err, library)
+	}
+
+	if unloadAfter {
+		libStore.Unload(library)
+	}
+
+	return nil
+}
+
+func loadError(err defs.Error, name string) errors.Error {
+	if err.Details != nil {
+		return errors.NewFunctionLoadingError(name, err.Details)
+	} else {
+		errorText := fmt.Errorf("%v %v", err.Message, err.Err)
+		return errors.NewFunctionLoadingError(name, errorText.Error())
+	}
 }
