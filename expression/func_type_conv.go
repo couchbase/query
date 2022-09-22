@@ -12,6 +12,8 @@ import (
 	"fmt"
 	"math"
 	"strconv"
+	"strings"
+	"unicode"
 
 	"github.com/couchbase/query/value"
 )
@@ -239,12 +241,12 @@ parse as numbers are those numbers and all other values
 are null (For e.g. "123" is 123 but "a12" will be NULL).
 */
 type ToNumber struct {
-	UnaryFunctionBase
+	FunctionBase
 }
 
-func NewToNumber(operand Expression) Function {
+func NewToNumber(operands ...Expression) Function {
 	rv := &ToNumber{
-		*NewUnaryFunctionBase("to_number", operand),
+		*NewFunctionBase("to_number", operands...),
 	}
 
 	rv.expr = rv
@@ -265,6 +267,7 @@ func (this *ToNumber) Evaluate(item value.Value, context Context) (value.Value, 
 	if err != nil {
 		return nil, err
 	}
+
 	switch arg.Type() {
 	case value.MISSING, value.NULL, value.NUMBER:
 		return arg, nil
@@ -272,11 +275,51 @@ func (this *ToNumber) Evaluate(item value.Value, context Context) (value.Value, 
 		a := arg.Actual().(bool)
 		if a {
 			return value.ONE_VALUE, nil
-		} else {
-			return value.ZERO_VALUE, nil
 		}
-	case value.STRING:
+		return value.ZERO_VALUE, nil
+	}
+
+	if arg.Type() == value.STRING {
 		s := arg.ToString()
+		if len(this.operands) > 1 {
+			strip := ""
+			sarg, err := this.operands[1].Evaluate(item, context)
+			if err != nil {
+				return nil, err
+			}
+			if sarg.Type() == value.STRING {
+				strip = sarg.Actual().(string)
+			} else {
+				return value.NULL_VALUE, nil
+			}
+			decimalCommaPos := -1
+			res := make([]rune, 0, len(s))
+			for _, r := range s {
+				if r == '.' && decimalCommaPos >= 0 {
+					decimalCommaPos = -2
+				}
+				if !unicode.IsSpace(r) && (strip == "" || strings.IndexRune(strip, r) == -1) {
+					if r == ',' {
+						if decimalCommaPos == -1 {
+							decimalCommaPos = len(res)
+						} else {
+							decimalCommaPos = -2
+						}
+					} else if r == '.' {
+						decimalCommaPos = -2
+					}
+					res = append(res, r)
+				}
+			}
+			if len(res) == 0 {
+				return value.NULL_VALUE, nil
+			}
+			if decimalCommaPos >= 0 {
+				res[decimalCommaPos] = '.'
+			}
+			s = string(res)
+		}
+
 		i, err := strconv.ParseInt(s, 10, 64)
 		if err == nil && ((i > math.MinInt64 && i < math.MaxInt64) || strconv.FormatInt(i, 10) == s) {
 			return value.NewValue(i), nil
@@ -290,14 +333,13 @@ func (this *ToNumber) Evaluate(item value.Value, context Context) (value.Value, 
 	return value.NULL_VALUE, nil
 }
 
-/*
-Factory method pattern.
-*/
 func (this *ToNumber) Constructor() FunctionConstructor {
-	return func(operands ...Expression) Function {
-		return NewToNumber(operands[0])
-	}
+	return NewToNumber
 }
+
+func (this *ToNumber) MinArgs() int { return 1 }
+
+func (this *ToNumber) MaxArgs() int { return 2 }
 
 ///////////////////////////////////////////////////
 //
