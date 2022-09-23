@@ -199,7 +199,10 @@ func (this *builder) buildAnsiJoinOp(node *algebra.AnsiJoin) (op plan.Operator, 
 		newKeyspaceTerm.SetJoinKeys(primaryJoinKeys)
 
 		// need to get extra filters in the ON-clause that's not the primary join filter
-		onFilter := getOnclauseFilter(baseKeyspace.Filters())
+		onFilter, err := this.getOnclauseFilter(baseKeyspace.Filters())
+		if err != nil {
+			return nil, err
+		}
 
 		cost = OPT_COST_NOT_AVAIL
 		cardinality = OPT_CARD_NOT_AVAIL
@@ -388,7 +391,10 @@ func (this *builder) buildAnsiNestOp(node *algebra.AnsiNest) (op plan.Operator, 
 		newKeyspaceTerm.SetJoinKeys(primaryJoinKeys)
 
 		// need to get extra filters in the ON-clause that's not the primary join filter
-		onFilter := getOnclauseFilter(baseKeyspace.Filters())
+		onFilter, err := this.getOnclauseFilter(baseKeyspace.Filters())
+		if err != nil {
+			return nil, err
+		}
 
 		cost = OPT_COST_NOT_AVAIL
 		cardinality = OPT_CARD_NOT_AVAIL
@@ -1270,19 +1276,33 @@ func markIndexFlags(index datastore.Index, spans plan.Spans2, baseKeyspace *base
 	return nil
 }
 
-func getOnclauseFilter(filters base.Filters) expression.Expression {
+func (this *builder) getOnclauseFilter(filters base.Filters) (expression.Expression, error) {
 	terms := make(expression.Expressions, 0, len(filters))
 	for _, fltr := range filters {
 		if fltr.IsOnclause() && !fltr.IsPrimaryJoin() {
 			terms = append(terms, fltr.FltrExpr())
 		}
 	}
+	var filter expression.Expression
+	var err error
 	if len(terms) == 0 {
-		return nil
+		return nil, nil
 	} else if len(terms) == 1 {
-		return terms[0]
+		filter = terms[0]
+	} else {
+		filter = expression.NewAnd(terms...)
 	}
-	return expression.NewAnd(terms...)
+	if len(this.coveringScans) > 0 {
+		filter = filter.Copy()
+		for _, op := range this.coveringScans {
+			coverer := expression.NewCoverer(op.Covers(), op.FilterCovers())
+			filter, err = coverer.Map(filter)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+	return filter, nil
 }
 
 // if both nested-loop join and hash join are to be attempted (in case of CBO),
