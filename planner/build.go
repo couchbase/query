@@ -82,6 +82,7 @@ const (
 	BUILDER_HAS_GROUP
 	BUILDER_HAS_ORDER
 	BUILDER_HAS_WINDOW_AGGS
+	BUILDER_OR_SUBTERM
 )
 
 type builder struct {
@@ -246,6 +247,10 @@ func (this *builder) hasBuilderFlag(flag uint32) bool {
 
 func (this *builder) setBuilderFlag(flag uint32) {
 	this.builderFlags |= flag
+}
+
+func (this *builder) unsetBuilderFlag(flag uint32) {
+	this.builderFlags &^= flag
 }
 
 func (this *builder) collectKeyspaceNames() {

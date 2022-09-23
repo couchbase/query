@@ -656,7 +656,7 @@ func (this *builder) sargIndexes(baseKeyspace *base.BaseKeyspace, underHash bool
 		var err error
 
 		useFilters := true
-		if isOrPred {
+		if isOrPred && this.hasBuilderFlag(BUILDER_OR_SUBTERM) {
 			useFilters = false
 		} else {
 			for _, key := range se.keys {
@@ -676,7 +676,7 @@ func (this *builder) sargIndexes(baseKeyspace *base.BaseKeyspace, underHash bool
 				se.maxKeys, orIsJoin, useCBO, baseKeyspace, this.keyspaceNames,
 				advisorValidate, this.context)
 		}
-		if err != nil || spans.Size() == 0 {
+		if err != nil || spans == nil || spans.Size() == 0 {
 			logging.Errora(func() string {
 				return fmt.Sprintf("Sargable index not sarged: pred:<ud>%v</ud> sarg_keys:<ud>%v</ud> error:%v",
 					pred,

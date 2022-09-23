@@ -68,10 +68,12 @@ func (this *builder) buildOrScanNoPushdowns(node *algebra.KeyspaceTerm, id expre
 
 	where := this.where
 	cover := this.cover
+	this.setBuilderFlag(BUILDER_OR_SUBTERM)
 
 	defer func() {
 		this.where = where
 		this.cover = cover
+		this.unsetBuilderFlag(BUILDER_OR_SUBTERM)
 	}()
 
 	this.cover = nil
