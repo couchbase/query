@@ -277,7 +277,7 @@ func (p *LocklessPool) Get() unsafe.Pointer {
 func (p *LocklessPool) Put(s unsafe.Pointer) {
 	l := p.putNext % _POOL_SIZE
 	p.putNext++
-	p.pool[l] = s
+	atomic.StorePointer(&p.pool[l], s)
 }
 
 type WaitCount struct {
