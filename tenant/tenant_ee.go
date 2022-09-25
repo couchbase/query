@@ -11,14 +11,18 @@
 package tenant
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/couchbase/cbauth/service"
 	atomic "github.com/couchbase/go-couchbase/platform"
 	"github.com/couchbase/query/distributed"
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/logging"
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/regulator"
 	"github.com/couchbase/regulator/factory"
 	"github.com/couchbase/regulator/metering"
@@ -27,6 +31,8 @@ import (
 
 var isServerless bool
 var resourceManagers []ResourceManager
+var throttleTimes map[string]util.Time = make(map[string]util.Time, _MAX_TENANTS)
+var throttleLock sync.RWMutex
 
 type Unit atomic.AlignedUint64
 type Service int
@@ -49,6 +55,8 @@ const (
 	KV_WU
 	_SIZER
 )
+
+const _THROTTLE_DELAY = 500 * time.Millisecond
 
 var toReg = [_SIZER]struct {
 	service  regulator.Service
@@ -130,6 +138,7 @@ func Throttle(isAdmin bool, user, bucket string, buckets []string, timeout time.
 			return nil, errors.NewServiceTenantNotAuthorizedError(bucket)
 		}
 	}
+
 	ctx := regulator.NewUserCtx(tenant, user)
 	r, d, e := regulator.CheckQuota(ctx, &regulator.CheckQuotaOpts{
 		MaxThrottle:       timeout,
@@ -140,6 +149,32 @@ func Throttle(isAdmin bool, user, bucket string, buckets []string, timeout time.
 	})
 	switch r {
 	case regulator.CheckResultNormal:
+
+		// if KV is throttling this tenant slow it down before the request starts in order
+		// to use the would be KV throttling to service other less active tenants
+		// the query throttling will limit KV requests which in turn will lessen KV need
+		// for throttling
+		throttleLock.RLock()
+		lastTime, ok := throttleTimes[bucket]
+		throttleLock.RUnlock()
+		if ok {
+			t := util.Now()
+			d := t.Sub(lastTime)
+
+			if d > time.Duration(0) {
+				// TODO record throttles
+				logging.Debuga(func() string { return fmt.Sprintf("bucket %v throttled for %v by query", bucket, d) })
+				time.Sleep(d)
+			}
+
+			// remove delay hint to minimise cost
+			throttleLock.Lock()
+			currLastTime, ook := throttleTimes[bucket]
+			if ook && currLastTime == lastTime {
+				delete(throttleTimes, bucket)
+			}
+			throttleLock.Unlock()
+		}
 		return ctx, nil
 	case regulator.CheckResultThrottle:
 		time.Sleep(d)
@@ -230,4 +265,17 @@ func DecodeNodeName(name string) string {
 	} else {
 		return name
 	}
+}
+
+func Suspend(bucket string, delay time.Duration) {
+	t := util.Now().Add(delay)
+	throttleLock.Lock()
+	oldT, ok := throttleTimes[bucket]
+	if !ok || t.Sub(oldT) > time.Duration(0) {
+
+		// TODO record throttles
+		logging.Debuga(func() string { return fmt.Sprintf("bucket %v throttled to %v by KV", bucket, t) })
+		throttleTimes[bucket] = t
+	}
+	throttleLock.Unlock()
 }

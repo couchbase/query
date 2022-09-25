@@ -27,6 +27,7 @@ import (
 	"github.com/couchbase/gomemcached/client" // package name is 'memcached'
 	qerrors "github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
+	"github.com/couchbase/query/tenant"
 	"github.com/couchbase/query/util"
 )
 
@@ -42,6 +43,10 @@ const maxBulkRetries = 5000
 const backOffDuration time.Duration = 100 * time.Millisecond
 const minBackOffRetriesLimit = 25  // exponentail backOff result in over 30sec (25*13*0.1s)
 const maxBackOffRetriesLimit = 100 // exponentail backOff result in over 2min (100*13*0.1s)
+
+// if KV has dealt with too many requests in the current period, we will wait this much
+const defThrottleRequeue = 500 * time.Millisecond
+const maxThrottleRequeue = 1000000 // incoming value is an int in microseconds
 
 // Return true if error is KEY_EEXISTS
 func IsKeyEExistsError(err error) bool {
@@ -90,6 +95,7 @@ func IsUnknownCollection(err error) bool {
 // infrastructure for GetBulk() and Do()
 type doDescriptor struct {
 	retry           bool
+	delay           time.Duration
 	discard         bool
 	useReplicas     bool
 	version         int
@@ -220,10 +226,27 @@ func (b *Bucket) getVbConnection(vb uint32, desc *doDescriptor) (conn *memcached
 	return nil, nil, err
 }
 
+// WOULD_THROTTLE response from KV
+type delayResp struct {
+	delay int `json:"next_tick_us"`
+}
+
+func getDelay(resp *gomemcached.MCResponse) time.Duration {
+	delayResp := &delayResp{}
+
+	// the response is in usec and must be less than a second
+	if json.Unmarshal(resp.Body, &delayResp) == nil && delayResp.delay > 0 && delayResp.delay < maxThrottleRequeue {
+		return time.Duration(delayResp.delay * 1000)
+	}
+
+	return defThrottleRequeue
+}
+
 // second part of the retry loop: handle the command errors and retry strategy
 func (b *Bucket) processOpError(vb uint32, lastError error, node string, desc *doDescriptor) {
 	desc.retry = false
 	desc.discard = false
+	desc.delay = time.Duration(0)
 
 	// MB-30967 / MB-31001 implement back off for transient errors
 	if resp, ok := lastError.(*gomemcached.MCResponse); ok {
@@ -253,6 +276,10 @@ func (b *Bucket) processOpError(vb uint32, lastError error, node string, desc *d
 			// MB-28842: in case of NMVB, check if the node is still part of the map
 			// and ditch the connection if it isn't.
 			desc.discard = b.obsoleteNode(node)
+		case gomemcached.WOULD_THROTTLE:
+			desc.retry = true
+			desc.delay = getDelay(resp)
+			tenant.Suspend(b.Name, desc.delay)
 		case gomemcached.NOT_SUPPORTED:
 			b.Refresh()
 			desc.discard = b.obsoleteNode(node)
@@ -427,6 +454,11 @@ func (b *Bucket) do3(vb uint16, f func(mc *memcached.Client, vb uint16) error, d
 		if !desc.retry {
 			desc.attempts++
 			break
+		}
+
+		// KV is not willing to service any more requests for this interval
+		if desc.delay > time.Duration(0) {
+			time.Sleep(desc.delay)
 		}
 	}
 
@@ -636,8 +668,8 @@ func backOff(attempt, maxAttempts int, duration time.Duration, exponential bool)
 }
 
 func (b *Bucket) doBulkGet(vb uint16, keys []string, reqDeadline time.Time,
-	ch chan<- map[string]*gomemcached.MCResponse, ech chan<- error, subPaths []string,
-	useReplica bool, eStatus *errorStatus, context ...*memcached.ClientContext) {
+	ech chan<- error, subPaths []string, useReplica bool, eStatus *errorStatus,
+	context ...*memcached.ClientContext) (map[string]*gomemcached.MCResponse, time.Duration) {
 
 	rv := _STRING_MCRESPONSE_POOL.Get()
 	done := false
@@ -691,6 +723,11 @@ func (b *Bucket) doBulkGet(vb uint16, keys []string, reqDeadline time.Time,
 			}
 			if desc.retry {
 				err = nil
+
+				// KV can't service in this time cycle
+				// free the worker, who will requeue for the rest
+				done = desc.delay != time.Duration(0)
+
 			} else if err == nil {
 				done = true
 			} else {
@@ -700,17 +737,17 @@ func (b *Bucket) doBulkGet(vb uint16, keys []string, reqDeadline time.Time,
 		}()
 
 		if err != nil {
-			return
+			return rv, time.Duration(0)
 		}
 	}
 
 	if desc.attempts >= maxBulkRetries {
-		err := fmt.Errorf("bulkget exceeded MaxBulkRetries for %v(vbid:%d,keys:<ud>%v</ud>)", bname, vb, keys)
+		err := fmt.Errorf("bulkget exceeded MaxBulkRetries for %v(vbid:%d,keys:<ud>%v</ud>) %v %v", bname, vb, keys)
 		logging.Errorf("%v", err.Error())
 		ech <- err
 	}
 
-	ch <- rv
+	return rv, desc.delay
 }
 
 type errorStatus struct {
@@ -768,17 +805,56 @@ func vbBulkGetWorker(ch chan *vbBulkGet) {
 	}()
 
 	for vbg := range ch {
-		vbDoBulkGet(vbg)
+		delay := vbDoBulkGet(vbg)
+		if delay > time.Duration(0) {
+			go func(newVbg *vbBulkGet, delay time.Duration) {
+				time.Sleep(delay)
+				ch <- newVbg
+			}(vbg, delay)
+		}
 	}
 }
 
-func vbDoBulkGet(vbg *vbBulkGet) {
-	defer vbg.wg.Done()
+func vbDoBulkGet(vbg *vbBulkGet) time.Duration {
+	var delay time.Duration
+	var rv map[string]*gomemcached.MCResponse
+
+	defer func() {
+
+		// in a panic this will be 0 and we will free the client
+		vbg.wg.Done()
+	}()
 	defer func() {
 		// Workers cannot panic and die
 		recover()
 	}()
-	vbg.b.doBulkGet(vbg.k, vbg.keys, vbg.reqDeadline, vbg.ch, vbg.ech, vbg.subPaths, vbg.useReplica, vbg.groupError, vbg.context...)
+	rv, delay = vbg.b.doBulkGet(vbg.k, vbg.keys, vbg.reqDeadline, vbg.ech, vbg.subPaths, vbg.useReplica, vbg.groupError, vbg.context...)
+	if delay != time.Duration(0) {
+
+		// find received documents and remove the keys from the key slice
+		if len(rv) > 0 {
+			newKeys := make([]string, 0, len(vbg.keys))
+			for _, k := range vbg.keys {
+				_, ok := rv[k]
+				if !ok {
+					newKeys = append(newKeys, k)
+				}
+			}
+			vbg.keys = newKeys
+		}
+		// free the worker and try again
+		if len(vbg.keys) > 0 {
+			vbg.wg.Add(1)
+		} else {
+
+			// should never happen
+			delay = time.Duration(0)
+		}
+	}
+	if len(rv) > 0 {
+		vbg.ch <- rv
+	}
+	return delay
 }
 
 var _ERR_CHAN_FULL = fmt.Errorf("Data request queue full, aborting query.")

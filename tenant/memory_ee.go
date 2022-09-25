@@ -40,7 +40,7 @@ const _CLEANUP_INTERVAL = 30 * time.Minute
 const _MAX_TENANTS = 80
 
 var managers map[string]*memoryManager = make(map[string]*memoryManager, _MAX_TENANTS)
-var lock sync.Mutex
+var managersLock sync.Mutex
 var perTenantQuota uint64
 
 func Config(quota uint64) {
@@ -49,13 +49,13 @@ func Config(quota uint64) {
 
 func Register(context Context) memory.MemorySession {
 	tenant := Bucket(context)
-	lock.Lock()
+	managersLock.Lock()
 	manager := managers[tenant]
 	if manager == nil {
 		manager = &memoryManager{inUseMemory: 0, sessions: 0, tenant: tenant}
 		managers[tenant] = manager
 	}
-	lock.Unlock()
+	managersLock.Unlock()
 
 	atomic.AddInt32(&manager.sessions, 1)
 	session := memory.Register()
@@ -74,9 +74,9 @@ func (this *memoryManager) expire() {
 	this.timer.Stop()
 	this.timer = nil
 	this.Unlock()
-	lock.Lock()
+	managersLock.Lock()
 	delete(managers, this.tenant)
-	lock.Unlock()
+	managersLock.Unlock()
 	for _, f := range resourceManagers {
 		f(this.tenant)
 	}

@@ -29,6 +29,10 @@ func Since(t Time) time.Duration {
 	return time.Duration(Time(nanotime()) - t)
 }
 
+func (this Time) Add(d time.Duration) Time {
+	return Time(this + Time(d))
+}
+
 func (this Time) Sub(t Time) time.Duration {
 	return time.Duration(this - t)
 }

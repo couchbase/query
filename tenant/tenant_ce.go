@@ -89,3 +89,6 @@ func EncodeNodeName(name string) string {
 func DecodeNodeName(name string) string {
 	return name
 }
+
+func Suspend(bucket string, delay time.Duration) {
+}
