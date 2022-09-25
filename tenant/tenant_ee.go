@@ -113,7 +113,7 @@ func (this Unit) NonZero() bool {
 func Throttle(isAdmin bool, user, bucket string, buckets []string, timeout time.Duration) (Context, errors.Error) {
 
 	if isAdmin {
-		return regulator.NewUserCtx("", user), nil
+		return regulator.NewUserCtx(bucket, user), nil
 	}
 	tenant := bucket
 	if tenant == "" {
