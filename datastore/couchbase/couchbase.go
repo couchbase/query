@@ -735,6 +735,7 @@ func NewDatastore(u string) (s datastore.Datastore, e errors.Error) {
 		cb.EnableComputeUnits = true
 		cb.EnableHandleThrottle = true
 		cb.Suspend = tenant.Suspend
+		cb.IsSuspended = tenant.IsSuspended
 	}
 
 	return store, nil

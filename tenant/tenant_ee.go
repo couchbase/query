@@ -306,3 +306,13 @@ func Suspend(bucket string, delay time.Duration, node string) {
 		})
 	}
 }
+
+func IsSuspended(bucket string) bool {
+	throttleLock.Lock()
+	t, suspended := throttleTimes[bucket]
+	if suspended && util.Now().Sub(t) > time.Duration(0) {
+		suspended = false
+	}
+	throttleLock.Unlock()
+	return suspended
+}

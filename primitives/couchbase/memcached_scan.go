@@ -840,6 +840,7 @@ type vbRangeScan struct {
 	kvOpsComplete bool
 	continueFrom  []byte
 
+	uuid       []byte
 	spill      *os.File
 	buffer     []byte
 	offset     uint32
@@ -1124,7 +1125,7 @@ func (this *vbRangeScan) validateSingleKey(conn *memcached.Client) bool {
 	return true
 }
 
-func (this *vbRangeScan) runScan(conn *memcached.Client) bool {
+func (this *vbRangeScan) runScan(conn *memcached.Client, node string) bool {
 	if this.state != _VBS_WORKING {
 		// cancelled whilst connection was being obtained
 		return true
@@ -1144,8 +1145,8 @@ func (this *vbRangeScan) runScan(conn *memcached.Client) bool {
 
 	var err error
 	var response *gomemcached.MCResponse
+	var uuid []byte
 
-	uuid := make([]byte, 16)
 	opaque := uint32(0)
 
 	cancelScan := func(keepConn bool) bool {
@@ -1154,55 +1155,104 @@ func (this *vbRangeScan) runScan(conn *memcached.Client) bool {
 	}
 
 	fetchLimit := this.scan.fetchLimit
-	if this.sampleSize != 0 {
-		fetchLimit = uint32(this.sampleSize)
-		response, err = conn.CreateRandomScan(this.vbucket(), this.scan.collId, this.sampleSize)
-	} else {
-		start, exclStart := this.startFrom()
-		end, exclEnd := this.endWith()
-		response, err = conn.CreateRangeScan(this.vbucket(), this.scan.collId, start, exclStart, end, exclEnd)
-	}
-	if err != nil || len(response.Body) < 16 {
-		resp, ok := err.(*gomemcached.MCResponse)
-		if ok && resp.Status == gomemcached.KEY_ENOENT {
-			// success but no data
-			this.kvOpsComplete = true
-			if this.keys != nil {
-				this.keys = this.keys[:0]
-			}
-			err = this.truncate()
-			if err != nil {
-				this.reportError(qerrors.NewSSError(qerrors.E_SS_SPILL, err))
-			} else {
-				this.state = _VBS_WORKED
-				this.sendData()
-			}
-			return true
-		}
-		if err == nil {
-			logging.Debuga(func() string {
-				return fmt.Sprintf("[%p,%d] runScan: create failed, response: %v", this, this.vbucket(), response)
-			})
-			this.reportError(qerrors.NewSSError(qerrors.E_SS_CREATE))
+
+	createScan := func() (bool, bool) {
+		if this.sampleSize != 0 {
+			fetchLimit = uint32(this.sampleSize)
+			response, err = conn.CreateRandomScan(this.vbucket(), this.scan.collId, this.sampleSize)
 		} else {
-			logging.Debuga(func() string {
-				return fmt.Sprintf("[%p,%d] runScan: create failed, error: %v", this, this.vbucket(), err)
-			})
-			this.reportError(qerrors.NewSSError(qerrors.E_SS_CREATE, err))
+			start, exclStart := this.startFrom()
+			end, exclEnd := this.endWith()
+			response, err = conn.CreateRangeScan(this.vbucket(), this.scan.collId, start, exclStart, end, exclEnd)
 		}
-		return ok // only retain the connection if a valid KV error response
-	}
-	if this.scan.serverless {
-		ru, _ := response.ComputeUnits()
-		this.scan.addRU(ru)
-	}
-	opaque = response.Opaque
-	copy(uuid, response.Body[0:16])
-	if this.state == _VBS_CANCELLED {
-		return cancelScan(true)
+		if err != nil || len(response.Body) < 16 {
+			resp, ok := err.(*gomemcached.MCResponse)
+			if ok && resp.Status == gomemcached.KEY_ENOENT {
+				// success but no data
+				this.kvOpsComplete = true
+				if this.keys != nil {
+					this.keys = this.keys[:0]
+				}
+				err = this.truncate()
+				if err != nil {
+					this.reportError(qerrors.NewSSError(qerrors.E_SS_SPILL, err))
+				} else {
+					this.state = _VBS_WORKED
+					this.sendData()
+				}
+				return false, true
+			} else if ok && resp.Status == gomemcached.WOULD_THROTTLE {
+				logging.Debuga(func() string {
+					return fmt.Sprintf("[%p,%d] runScan: throttling on scan creation: %s", this, this.vbucket(), this.b.Name)
+				})
+				// scan hasn't started so re-queue it so we can return and handle something else
+				Suspend(this.b.Name, getDelay(resp), node)
+				if !_RSW.reQueueScan(this) {
+					this.reportError(qerrors.NewSSError(qerrors.E_SS_CREATE, err))
+				}
+				return false, true
+			}
+			if err == nil {
+				logging.Debuga(func() string {
+					return fmt.Sprintf("[%p,%d] runScan: create failed, response: %v", this, this.vbucket(), response)
+				})
+				this.reportError(qerrors.NewSSError(qerrors.E_SS_CREATE))
+			} else {
+				logging.Debuga(func() string {
+					return fmt.Sprintf("[%p,%d] runScan: create failed, error: %v", this, this.vbucket(), err)
+				})
+				this.reportError(qerrors.NewSSError(qerrors.E_SS_CREATE, err))
+			}
+			return false, ok // only retain the connection if a valid KV error response
+		}
+		if this.scan.serverless {
+			ru, _ := response.ComputeUnits()
+			this.scan.addRU(ru)
+		}
+		opaque = response.Opaque
+		copy(uuid, response.Body[0:16])
+		if this.state == _VBS_CANCELLED {
+			return false, cancelScan(true)
+		}
+		return true, false
 	}
 
-	err = conn.ContinueRangeScan(this.vbucket(), uuid, opaque, fetchLimit, 0, 0)
+	retryable := false
+	if this.uuid != nil {
+		uuid = this.uuid
+		this.uuid = nil
+		retryable = true
+	} else {
+		uuid = make([]byte, 16)
+		cont, rv := createScan()
+		if !cont {
+			return rv
+		}
+	}
+
+	for {
+		err = conn.ContinueRangeScan(this.vbucket(), uuid, opaque, fetchLimit, 0, 0)
+		if resp, ok := err.(*gomemcached.MCResponse); ok {
+			if resp.Status == gomemcached.WOULD_THROTTLE {
+				logging.Debuga(func() string {
+					return fmt.Sprintf("[%p,%d] runScan: throttling on scan continue: %s", this, this.vbucket(), this.b.Name)
+				})
+				Suspend(this.b.Name, getDelay(resp), node)
+				this.uuid = uuid // scan is open; we'll try to continue with it when re-run
+				if !_RSW.reQueueScan(this) {
+					this.reportError(qerrors.NewSSError(qerrors.E_SS_CONTINUE, err))
+				}
+				return true
+			} else if resp.Status == gomemcached.KEY_EEXISTS && retryable {
+				cont, rv := createScan()
+				if !cont {
+					return rv
+				}
+				continue
+			}
+		}
+		break
+	}
 	if err != nil {
 		this.reportError(qerrors.NewSSError(qerrors.E_SS_CONTINUE, err))
 		return cancelScan(false)
@@ -1480,9 +1530,13 @@ func (queue *rswQueue) nextScanLocked() *vbRangeScan {
 		vbscan := e.Value.(*vbRangeScan)
 		cnt, found := queue.active[vbscan.vbucket()]
 		if !found || cnt <= 0 {
-			queue.scans.Remove(e)
-			queue.active[vbscan.vbucket()] = 1
-			return vbscan
+			// If suspended don't schedule the scan. Since we'll spin checking as the list isn't empty, we'll pick up suspended
+			// items as soon as the suspension is lifted.
+			if !IsSuspended(vbscan.b.Name) {
+				queue.scans.Remove(e)
+				queue.active[vbscan.vbucket()] = 1
+				return vbscan
+			}
 		}
 	}
 	return nil
@@ -1620,7 +1674,7 @@ func (queue *rswQueue) runWorker() {
 				if run == true {
 					// always reset the deadline for each new piece of work
 					conn.SetDeadline(getDeadline(noDeadline, _SS_MAX_DURATION))
-					if !vbscan.runScan(conn) {
+					if !vbscan.runScan(conn, pool.Node()) {
 						pool.Discard(conn)
 						conn = nil
 					}
@@ -1645,6 +1699,13 @@ type rswControl struct {
 }
 
 var _RSW = &rswControl{}
+
+func (this *rswControl) reQueueScan(vbscan *vbRangeScan) bool {
+	if !atomic.CompareAndSwapInt32((*int32)(&vbscan.state), int32(_VBS_WORKING), int32(_VBS_SCHEDULED)) {
+		return false
+	}
+	return this.queueScan(vbscan)
+}
 
 func (this *rswControl) queueScan(vbscan *vbRangeScan) bool {
 	this.RLock()

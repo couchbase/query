@@ -96,3 +96,7 @@ func DecodeNodeName(name string) string {
 
 func Suspend(bucket string, delay time.Duration, node string) {
 }
+
+func IsSuspended(bucket string) bool {
+	return false
+}
