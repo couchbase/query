@@ -27,7 +27,6 @@ import (
 	"github.com/couchbase/gomemcached/client" // package name is 'memcached'
 	qerrors "github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
-	"github.com/couchbase/query/tenant"
 	"github.com/couchbase/query/util"
 )
 
@@ -279,7 +278,6 @@ func (b *Bucket) processOpError(vb uint32, lastError error, node string, desc *d
 		case gomemcached.WOULD_THROTTLE:
 			desc.retry = true
 			desc.delay = getDelay(resp)
-			tenant.Suspend(b.Name, desc.delay)
 		case gomemcached.NOT_SUPPORTED:
 			b.Refresh()
 			desc.discard = b.obsoleteNode(node)
