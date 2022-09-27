@@ -78,7 +78,9 @@ var EnableXerror = false
 var EnableComputeUnits = false
 
 // Enable KV handing throttle handling
+// NB having to use a functional variable because primitives cannot directly reference tenant, since it references system, and it's used outside of query
 var EnableHandleThrottle = false
+var Suspend func(string, time.Duration) = func(n string, d time.Duration) {}
 
 // TCP keepalive interval in seconds. Default 30 minutes
 var TCPKeepaliveInterval = 30 * 60

@@ -278,6 +278,7 @@ func (b *Bucket) processOpError(vb uint32, lastError error, node string, desc *d
 		case gomemcached.WOULD_THROTTLE:
 			desc.retry = true
 			desc.delay = getDelay(resp)
+			Suspend(b.Name, desc.delay)
 		case gomemcached.NOT_SUPPORTED:
 			b.Refresh()
 			desc.discard = b.obsoleteNode(node)

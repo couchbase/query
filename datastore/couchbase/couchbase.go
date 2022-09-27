@@ -734,6 +734,7 @@ func NewDatastore(u string) (s datastore.Datastore, e errors.Error) {
 	if tenant.IsServerless() {
 		cb.EnableComputeUnits = true
 		cb.EnableHandleThrottle = true
+		cb.Suspend = tenant.Suspend
 	}
 
 	return store, nil
