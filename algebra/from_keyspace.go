@@ -60,17 +60,18 @@ type KeyspaceTerm struct {
 	extraPrivs      []auth.Privilege
 	validateKeys    bool
 	correlated      bool
+	fromTwoParts    bool
 }
 
 func NewKeyspaceTermFromPath(path *Path, as string,
 	keys expression.Expression, indexes IndexRefs) *KeyspaceTerm {
 	protectedString := path.ProtectedString()
-	return &KeyspaceTerm{path, nil, as, keys, indexes, nil, JOIN_HINT_NONE, 0, protectedString, nil, false, false}
+	return &KeyspaceTerm{path, nil, as, keys, indexes, nil, JOIN_HINT_NONE, 0, protectedString, nil, false, false, false}
 }
 
 func NewKeyspaceTermFromExpression(expr expression.Expression, as string,
 	keys expression.Expression, indexes IndexRefs, joinHint JoinHint) *KeyspaceTerm {
-	return &KeyspaceTerm{nil, expr, as, keys, indexes, nil, joinHint, 0, "", nil, false, false}
+	return &KeyspaceTerm{nil, expr, as, keys, indexes, nil, joinHint, 0, "", nil, false, false, false}
 }
 
 func (this *KeyspaceTerm) Accept(visitor NodeVisitor) (interface{}, error) {
@@ -640,4 +641,12 @@ func (this *KeyspaceTerm) Path() *Path {
 
 func (this *KeyspaceTerm) PathString() string {
 	return this.protectedString
+}
+
+func (this *KeyspaceTerm) SetFromTwoParts() {
+	this.fromTwoParts = true
+}
+
+func (this *KeyspaceTerm) FromTwoParts() bool {
+	return this.fromTwoParts
 }

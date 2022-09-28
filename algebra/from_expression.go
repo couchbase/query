@@ -109,6 +109,9 @@ func (this *ExpressionTerm) Formalize(parent *expression.Formalizer) (f *express
 		// MB-46856 if the expression path is longer than 1, use the bucket
 		if !isIdentifier && path.IsCollection() {
 			_, ok := parent.Aliases().Field(path.Bucket())
+			if !ok && this.keyspaceTerm.FromTwoParts() {
+				_, ok = parent.Aliases().Field(path.Scope())
+			}
 			this.isKeyspace = !ok
 		} else {
 			_, ok := parent.Aliases().Field(this.keyspaceTerm.Keyspace())

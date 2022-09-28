@@ -1300,17 +1300,18 @@ expr opt_as_alias opt_use
                     $1.ErrorContext()))
             }
         case *expression.Field:
-	    path := other.Path()
+            path := other.Path()
             if len(path) == 2 {
-		longPath, err := algebra.NewPathFromElementsWithContext([]string{ path[0], path[1] }, yylex.(*lexer).Namespace(),
-				yylex.(*lexer).QueryContext())
-		if err != nil {
-		    isExpr = true
-		} else {
-		    ksterm := algebra.NewKeyspaceTermFromPath(longPath, $2, $3.Keys(), $3.Indexes())
-		    ksterm.SetValidateKeys($3.ValidateKeys())
-		    $$ = algebra.NewExpressionTerm(other, $2, ksterm, other.Parenthesis() == false, $3.JoinHint())
-		}
+                longPath, err := algebra.NewPathFromElementsWithContext([]string{ path[0], path[1] }, yylex.(*lexer).Namespace(),
+                    yylex.(*lexer).QueryContext())
+                if err != nil {
+                    isExpr = true
+                } else {
+                    ksterm := algebra.NewKeyspaceTermFromPath(longPath, $2, $3.Keys(), $3.Indexes())
+                    ksterm.SetFromTwoParts()
+                    ksterm.SetValidateKeys($3.ValidateKeys())
+                    $$ = algebra.NewExpressionTerm(other, $2, ksterm, other.Parenthesis() == false, $3.JoinHint())
+                }
             } else if len(path) == 3 {
                 ksterm := algebra.NewKeyspaceTermFromPath(algebra.NewPathLong(yylex.(*lexer).Namespace(), path[0], path[1],
                     path[2]), $2, $3.Keys(), $3.Indexes())
