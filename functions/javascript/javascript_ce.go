@@ -53,3 +53,7 @@ func (this *javascriptBody) SetStorage(context functions.Context, path []string)
 func (this *javascriptBody) Indexable() value.Tristate {
 	return value.FALSE
 }
+
+func LoadFunction(name functions.FunctionName, body functions.FunctionBody, unloadAfter bool) errors.Error {
+	return nil
+}
