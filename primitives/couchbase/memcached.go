@@ -741,7 +741,7 @@ func (b *Bucket) doBulkGet(vb uint16, keys []string, reqDeadline time.Time,
 	}
 
 	if desc.attempts >= maxBulkRetries {
-		err := fmt.Errorf("bulkget exceeded MaxBulkRetries for %v(vbid:%d,keys:<ud>%v</ud>) %v %v", bname, vb, keys)
+		err := fmt.Errorf("bulkget exceeded MaxBulkRetries for %v(vbid:%d,keys:<ud>%v</ud>)", bname, vb, keys)
 		logging.Errorf("%v", err.Error())
 		ech <- err
 	}
