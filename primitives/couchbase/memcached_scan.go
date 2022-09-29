@@ -43,6 +43,7 @@ const _SS_SPILL_BUFFER = 10240
 const _SS_SPILL_FILE_PATTERN = "ss_spill-*"
 const _SS_MAX_WORKER_IDLE = time.Minute * 60
 const _SS_MONITOR_INTERVAL = time.Minute * 15
+const _SS_MIN_SAMPLE_SIZE = 16
 
 /*
  * Bucket functions for driving and consuming a scan.
@@ -70,6 +71,24 @@ func (b *Bucket) StartKeyScan(collId uint32, scope string, collection string, ra
 	return scan, nil
 }
 
+func (b *Bucket) StartRandomScan(collId uint32, scope string, collection string, sampleSize int, timeout time.Duration,
+	pipelineSize int, kvTimeout time.Duration, serverless bool) (interface{}, qerrors.Error) {
+
+	if scope != "" && collection != "" {
+		var err error
+		collId, _, err = b.GetCollectionCID(scope, collection, time.Time{})
+		if err != nil {
+			return nil, qerrors.NewSSError(qerrors.E_SS_CID_GET, err)
+		}
+	}
+
+	scan := NewRandomScan(collId, sampleSize, pipelineSize, kvTimeout, serverless)
+
+	go scan.coordinator(b, timeout)
+
+	return scan, nil
+}
+
 func (b *Bucket) StopKeyScan(scan interface{}) (uint64, qerrors.Error) {
 	ss, ok := scan.(*seqScan)
 	if !ok {
@@ -88,9 +107,15 @@ func (b *Bucket) FetchKeys(scan interface{}, timeout time.Duration) ([]string, q
 	if !ok {
 		return nil, qerrors.NewSSError(qerrors.E_SS_INVALID, "fetch"), false
 	}
-
 	if err == nil {
 		if ss.inactive {
+			select {
+			case i := <-ss.ch:
+				if e, ok := i.(qerrors.Error); ok {
+					return nil, e, false
+				}
+			default:
+			}
 			return nil, qerrors.NewSSError(qerrors.E_SS_INACTIVE, "fetch"), false
 		}
 		to := time.NewTimer(timeout)
@@ -232,6 +257,7 @@ type seqScan struct {
 	fetchLimit   uint32
 	serverless   bool
 	runits       uint64
+	sampleSize   int
 }
 
 func NewSeqScan(collId uint32, ranges []*SeqScanRange, offset int64, limit int64, ordered bool,
@@ -255,6 +281,23 @@ func NewSeqScan(collId uint32, ranges []*SeqScanRange, offset int64, limit int64
 	if scan.fetchLimit > _SS_MAX_KEYS_PER_REQUEST {
 		scan.fetchLimit = _SS_MAX_KEYS_PER_REQUEST
 	}
+	scan.readyQueue.init()
+	return scan
+}
+
+func NewRandomScan(collId uint32, sampleSize int, pipelineSize int, kvTimeout time.Duration, serverless bool) *seqScan {
+
+	if sampleSize <= _SS_MIN_SAMPLE_SIZE {
+		sampleSize = _SS_MIN_SAMPLE_SIZE
+	}
+	scan := &seqScan{
+		collId:       collId,
+		sampleSize:   sampleSize,
+		pipelineSize: pipelineSize,
+		kvTimeout:    kvTimeout,
+		serverless:   serverless,
+	}
+	scan.ch = make(chan interface{}, 1)
 	scan.readyQueue.init()
 	return scan
 }
@@ -386,25 +429,13 @@ func (this *seqScan) coordinator(b *Bucket, scanTimeout time.Duration) {
 		timeout.Stop()
 	}()
 
-	queued := 0
-	if !this.ordered && this.fetchLimit < _SS_SMALL_RESULT_SET {
-		// queue only one request initially as we're likely to serviced by just one
-		queued = len(queues)*_SS_MAX_CONCURRENT_VBSCANS_PER_SERVER - 1
-	}
-	for rNum := range this.ranges {
-		var min, max int
-		var singleKey bool
-		if this.getRange(rNum).isSingleKey() {
-			f, _ := this.getRange(rNum).start()
-			min = int(b.VBHash(string(f)))
-			max = min + 1
-			singleKey = true
-		} else {
-			min = 0
-			max = len(vblist)
-			singleKey = false
+	if this.sampleSize != 0 {
+		returnLimit = int64(this.sampleSize)
+		sampleSize := (this.sampleSize + len(vblist) - 1) / len(vblist)
+		if sampleSize < _SS_MIN_SAMPLE_SIZE {
+			sampleSize = _SS_MIN_SAMPLE_SIZE
 		}
-		for vb := min; vb < max; vb++ {
+		for vb := 0; vb < len(vblist); vb++ {
 			server := 0
 			if len(vblist[vb]) > 0 {
 				// first server that's in the list
@@ -422,24 +453,82 @@ func (this *seqScan) coordinator(b *Bucket, scanTimeout time.Duration) {
 					return
 				}
 			}
-			vbs := &vbRangeScan{scan: this, b: b, vb: uint16(vb), rng: rNum, queue: server, singleKey: singleKey}
+			vbs := &vbRangeScan{scan: this, b: b, vb: uint16(vb), queue: server, sampleSize: sampleSize}
 			vbScans = append(vbScans, vbs)
 		}
-		if queued < len(queues)*_SS_MAX_CONCURRENT_VBSCANS_PER_SERVER {
-			// pick a random scan to start from so there is a greater chance of spreading load
-			n := rand.Int() % len(vbScans)
-			for i := 0; i < len(vbScans); i++ {
-				if queues[vbScans[n].queue] < _SS_MAX_CONCURRENT_VBSCANS_PER_SERVER {
-					if !this.queueVBScan(vbScans[n]) {
+		// pick a random scan to start from so there is a greater chance of spreading load
+		n := rand.Int() % len(vbScans)
+		queued := 0
+		for i := 0; i < len(vbScans) && queued < len(queues)*_SS_MAX_CONCURRENT_VBSCANS_PER_SERVER; i++ {
+			if queues[vbScans[n].queue] < _SS_MAX_CONCURRENT_VBSCANS_PER_SERVER {
+				if !this.queueVBScan(vbScans[n]) {
+					cancelAll()
+					return
+				}
+				queues[vbScans[n].queue]++
+				queued++
+			}
+			n++
+			if n == len(vbScans) {
+				n = 0
+			}
+		}
+	} else {
+		queued := 0
+		if !this.ordered && this.fetchLimit < _SS_SMALL_RESULT_SET {
+			// queue only one request initially as we're likely to serviced by just one
+			queued = len(queues)*_SS_MAX_CONCURRENT_VBSCANS_PER_SERVER - 1
+		}
+		for rNum := range this.ranges {
+			var min, max int
+			var singleKey bool
+			if this.getRange(rNum).isSingleKey() {
+				f, _ := this.getRange(rNum).start()
+				min = int(b.VBHash(string(f)))
+				max = min + 1
+				singleKey = true
+			} else {
+				min = 0
+				max = len(vblist)
+				singleKey = false
+			}
+			for vb := min; vb < max; vb++ {
+				server := 0
+				if len(vblist[vb]) > 0 {
+					// first server that's in the list
+					for n := 0; n < len(vblist[vb]); n++ {
+						server = vblist[vb][n]
+						if server < numServers {
+							break
+						}
+					}
+					if server >= numServers {
+						logging.Severef("Sequential scan coordinator: [%p] Invalid server: %d (max valid: %d)",
+							this, server, numServers-1)
+						this.reportError(qerrors.NewSSError(qerrors.E_SS_FAILED))
 						cancelAll()
 						return
 					}
-					queues[vbScans[n].queue]++
-					queued++
 				}
-				n++
-				if n == len(vbScans) {
-					n = 0
+				vbs := &vbRangeScan{scan: this, b: b, vb: uint16(vb), rng: rNum, queue: server, singleKey: singleKey}
+				vbScans = append(vbScans, vbs)
+			}
+			if queued < len(queues)*_SS_MAX_CONCURRENT_VBSCANS_PER_SERVER {
+				// pick a random scan to start from so there is a greater chance of spreading load
+				n := rand.Int() % len(vbScans)
+				for i := 0; i < len(vbScans); i++ {
+					if queues[vbScans[n].queue] < _SS_MAX_CONCURRENT_VBSCANS_PER_SERVER {
+						if !this.queueVBScan(vbScans[n]) {
+							cancelAll()
+							return
+						}
+						queues[vbScans[n].queue]++
+						queued++
+					}
+					n++
+					if n == len(vbScans) {
+						n = 0
+					}
 				}
 			}
 		}
@@ -743,6 +832,7 @@ type vbRangeScan struct {
 	b             *Bucket
 	vb            uint16
 	rng           int
+	sampleSize    int
 	singleKey     bool
 	queue         int
 	state         vbRsState
@@ -1063,10 +1153,15 @@ func (this *vbRangeScan) runScan(conn *memcached.Client) bool {
 		return keepConn
 	}
 
-	start, exclStart := this.startFrom()
-	end, exclEnd := this.endWith()
-
-	response, err = conn.CreateRangeScan(this.vbucket(), this.scan.collId, start, exclStart, end, exclEnd)
+	fetchLimit := this.scan.fetchLimit
+	if this.sampleSize != 0 {
+		fetchLimit = uint32(this.sampleSize)
+		response, err = conn.CreateRandomScan(this.vbucket(), this.scan.collId, this.sampleSize)
+	} else {
+		start, exclStart := this.startFrom()
+		end, exclEnd := this.endWith()
+		response, err = conn.CreateRangeScan(this.vbucket(), this.scan.collId, start, exclStart, end, exclEnd)
+	}
 	if err != nil || len(response.Body) < 16 {
 		resp, ok := err.(*gomemcached.MCResponse)
 		if ok && resp.Status == gomemcached.KEY_ENOENT {
@@ -1107,7 +1202,7 @@ func (this *vbRangeScan) runScan(conn *memcached.Client) bool {
 		return cancelScan(true)
 	}
 
-	err = conn.ContinueRangeScan(this.vbucket(), uuid, opaque, this.scan.fetchLimit, 0, 0)
+	err = conn.ContinueRangeScan(this.vbucket(), uuid, opaque, fetchLimit, 0, 0)
 	if err != nil {
 		this.reportError(qerrors.NewSSError(qerrors.E_SS_CONTINUE, err))
 		return cancelScan(false)
@@ -1196,7 +1291,7 @@ func (this *vbRangeScan) runScan(conn *memcached.Client) bool {
 			response.Status == gomemcached.RANGE_SCAN_COMPLETE {
 
 			keepConn := true
-			if response.Status != gomemcached.RANGE_SCAN_MORE {
+			if response.Status != gomemcached.RANGE_SCAN_MORE || this.sampleSize != 0 {
 				// end of scan
 				this.kvOpsComplete = true
 			} else {

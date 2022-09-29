@@ -12,7 +12,7 @@ import (
 	"fmt"
 )
 
-var _rs = map[ErrorCode][2]string{
+var _ss = map[ErrorCode][2]string{
 	E_SS_IDX_NOT_FOUND:      {"idx_not_found", "Index not found"},
 	E_SS_NOT_SUPPORTED:      {"not_supported", "%v not supported for scan"},
 	E_SS_FAILED:             {"failed", "Scan failed"},
@@ -32,7 +32,7 @@ var _rs = map[ErrorCode][2]string{
 
 func NewSSError(code ErrorCode, args ...interface{}) Error {
 	e := &err{level: EXCEPTION, ICode: code, InternalCaller: CallerN(1),
-		IKey: "datastore.seq_scan." + _rs[code][0], InternalMsg: _rs[code][1]}
+		IKey: "datastore.seq_scan." + _ss[code][0], InternalMsg: _ss[code][1]}
 	var fmtArgs []interface{}
 	for _, a := range args {
 		switch a := a.(type) {
@@ -41,9 +41,9 @@ func NewSSError(code ErrorCode, args ...interface{}) Error {
 		case Error:
 			e.cause = a
 		case error:
-			e.cause = a
+			e.cause = a.Error()
 		default:
-			panic("invalid arguments to NewRSError")
+			panic("invalid arguments to NewSSError")
 		}
 	}
 	if len(fmtArgs) > 0 {

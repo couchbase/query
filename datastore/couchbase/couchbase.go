@@ -2470,6 +2470,19 @@ func (ks *keyspace) FetchKeys(scan interface{}, timeout time.Duration) ([]string
 	return ks.cbbucket.FetchKeys(scan, timeout)
 }
 
+func (ks *keyspace) StartRandomScan(sampleSize int, timeout time.Duration, pipelineSize int, kvTimeout time.Duration,
+	serverless bool) (interface{}, errors.Error) {
+
+	scope, ok := ks.scopes["_default"]
+	if ok {
+		coll, ok := scope.keyspaces["_default"]
+		if ok {
+			return ks.cbbucket.StartRandomScan(coll.uid, "", "", sampleSize, timeout, pipelineSize, kvTimeout, serverless)
+		}
+	}
+	return ks.cbbucket.StartRandomScan(0, "_default", "_default", sampleSize, timeout, pipelineSize, kvTimeout, serverless)
+}
+
 func getCollectionId(clientContext ...*memcached.ClientContext) (collectionId uint32, user string) {
 	if len(clientContext) > 0 {
 		return clientContext[0].CollId, clientContext[0].User

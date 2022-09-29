@@ -14,6 +14,7 @@ import (
 	"math/rand"
 	"runtime"
 	"sort"
+	"time"
 
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
@@ -22,6 +23,7 @@ import (
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/plannerbase"
 	"github.com/couchbase/query/primitives/couchbase"
+	"github.com/couchbase/query/tenant"
 	"github.com/couchbase/query/value"
 )
 
@@ -32,6 +34,7 @@ const _RANDOM_THRESHOLD = 0.75
 const _MAX_INDEXES_TRIED_PER_DOC = 10
 const _MAX_NUM_SCANS = 20000
 const _MAX_SAMPLE_SIZE = 1000000
+const _FETCH_TIMEOUT = time.Second * 10
 
 type Flag int
 
@@ -51,6 +54,7 @@ const (
 	ALLOW_SUPERSET_CONDITIONS
 	CACHE_KEYS
 	RANDOM_ENTRY_LAST
+	NO_RANDOM_SCAN
 )
 
 var flags_map = map[string]Flag{
@@ -69,6 +73,7 @@ var flags_map = map[string]Flag{
 	"allow_superset_conditions":    ALLOW_SUPERSET_CONDITIONS,
 	"cache_keys":                   CACHE_KEYS,
 	"random_entry_last":            RANDOM_ENTRY_LAST,
+	"no_random_scan":               NO_RANDOM_SCAN,
 }
 
 type DocumentRetriever interface {
@@ -153,6 +158,10 @@ type UnifiedDocumentRetriever struct {
 	ks             datastore.Keyspace
 	rnd            datastore.RandomEntryProvider
 	lastRnd        datastore.RandomEntryProvider
+	rs             datastore.RandomScanProvider
+	rs_scan        interface{}
+	rs_keys        []string
+	rs_key         int
 	iconn          *datastore.IndexConnection
 	returned       int
 	sampleSize     int
@@ -181,11 +190,17 @@ func (udr *UnifiedDocumentRetriever) Reset() {
 		udr.iconn.Sender().Close()
 		udr.iconn = nil
 	}
+	if udr.rs != nil && udr.rs_scan != nil {
+		udr.rs.StopKeyScan(udr.rs_scan)
+		udr.rs_scan = nil
+		udr.rs = nil
+	}
 	udr.returned = 0
 	udr.currentIndex = -1
 	udr.dedup = make(map[string]bool)
 	udr.docs = make(map[string]value.AnnotatedValue, 1)
 	udr.keys = nil
+	udr.rs_keys = nil
 	udr.scanNum = 0
 	udr.lastKeys = nil
 	udr.cacheActive = udr.isFlagOn(CACHE_KEYS)
@@ -206,12 +221,18 @@ func (udr *UnifiedDocumentRetriever) isFlagOff(what Flag) bool {
 	return (udr.flags & what) == 0
 }
 
-// safety net to ensure we don't leak index connections
+// safety net to ensure we don't leak index connections or random scans
 func udrFinalizer(udr *UnifiedDocumentRetriever) {
 	if udr.iconn != nil {
 		logging.Warnf("UDR: Finalizer closing index connection.")
 		udr.iconn.Sender().Close()
 		udr.iconn = nil
+	}
+	if udr.rs != nil && udr.rs_scan != nil {
+		logging.Warnf("UDR: Finalizer closing random scan.")
+		udr.rs.StopKeyScan(udr.rs_scan)
+		udr.rs_scan = nil
+		udr.rs = nil
 	}
 }
 
@@ -220,12 +241,18 @@ func (udr *UnifiedDocumentRetriever) Close() {
 		udr.iconn.Sender().Close()
 		udr.iconn = nil
 	}
+	if udr.rs != nil && udr.rs_scan != nil {
+		udr.rs.StopKeyScan(udr.rs_scan)
+		udr.rs_scan = nil
+		udr.rs = nil
+	}
 	// hints for GC
 	udr.dedup = nil
 	udr.docs = nil
 	udr.cache = nil
 	udr.cacheActive = false
 	udr.keys = nil
+	udr.rs_keys = nil
 	udr.indexes = nil
 	udr.lastKeys = nil
 	runtime.SetFinalizer(udr, nil)
@@ -245,7 +272,7 @@ func MakeUnifiedDocumentRetriever(name string, context datastore.QueryContext, k
 	udr.flags = flags
 	udr.scanNum = 0
 
-	docCount, err := ks.Count(datastore.NULL_QUERY_CONTEXT)
+	docCount, err := ks.Count(context)
 	if err != nil {
 		return nil, errors.NewInferKeyspaceError(ks.Name(), err)
 	}
@@ -284,6 +311,27 @@ func MakeUnifiedDocumentRetriever(name string, context datastore.QueryContext, k
 	logging.Debuga(func() string { return fmt.Sprintf("UDR: sampleSize: %v", udr.sampleSize) })
 
 	var ok bool
+
+	if udr.isFlagOff(NO_RANDOM_SCAN) {
+		udr.rs, ok = ks.(datastore.RandomScanProvider)
+		if ok {
+			udr.rs_key = 0
+			var err errors.Error
+			udr.rs_scan, err = udr.rs.StartRandomScan(udr.sampleSize, 0, int(datastore.GetScanCap()), context.KvTimeout(),
+				tenant.IsServerless())
+			if err != nil {
+				logging.Debuga(func() string { return fmt.Sprintf("UDR: random scan start failed: %v", err) })
+				errs = append(errs, err)
+				udr.rs = nil
+			}
+		} else {
+			logging.Debugf("UDR: RandomScanProvider not supported")
+			errs = append(errs, errors.NewInferNoRandomScanProvider(ks.Name()))
+		}
+	} else {
+		logging.Debugf("UDR: flags exclude random scan")
+	}
+
 	if udr.isFlagOff(NO_RANDOM_ENTRY) {
 		udr.rnd, ok = ks.(datastore.RandomEntryProvider)
 		if ok {
@@ -295,16 +343,16 @@ func MakeUnifiedDocumentRetriever(name string, context datastore.QueryContext, k
 				}
 			}
 			if i == _KEYS_NOT_FOUND {
-				logging.Debuga(func() string { return "UDR: not returning random documents" })
+				logging.Debugf("UDR: not returning random documents")
 				errs = append(errs, errors.NewInferNoRandomDocuments(ks.Name()))
 				udr.rnd = nil
 			}
 		} else {
-			logging.Debuga(func() string { return "UDR: RandomEntryProvider not supported" })
+			logging.Debugf("UDR: RandomEntryProvider not supported")
 			errs = append(errs, errors.NewInferNoRandomEntryProvider(ks.Name()))
 		}
 	} else {
-		logging.Debuga(func() string { return "UDR: flags exclude random" })
+		logging.Debugf("UDR: flags exclude random entry")
 	}
 
 	if udr.isFlagOff(NO_PRIMARY_INDEX) || udr.isFlagOff(NO_SECONDARY_INDEX) {
@@ -342,11 +390,11 @@ func MakeUnifiedDocumentRetriever(name string, context datastore.QueryContext, k
 					}
 				}
 				if err != nil || !found {
-					logging.Debuga(func() string { return "UDR: no primary index" })
+					logging.Debugf("UDR: no primary index")
 					errs = append(errs, errors.NewInferNoSuitablePrimaryIndex(ks.Name()))
 				}
 			} else {
-				logging.Debuga(func() string { return "UDR: flags exclude primary" })
+				logging.Debugf("UDR: flags exclude primary")
 			}
 
 			if udr.isFlagOff(NO_SECONDARY_INDEX) {
@@ -403,7 +451,7 @@ func MakeUnifiedDocumentRetriever(name string, context datastore.QueryContext, k
 					}
 				}
 				if err != nil || !found {
-					logging.Debuga(func() string { return "UDR: no secondary index" })
+					logging.Debugf("UDR: no secondary index")
 					errs = append(errs, errors.NewInferNoSuitableSecondaryIndex(ks.Name()))
 				}
 
@@ -455,22 +503,31 @@ func MakeUnifiedDocumentRetriever(name string, context datastore.QueryContext, k
 					})
 				}
 			} else {
-				logging.Debuga(func() string { return "UDR: flags or primary exclude secondary" })
+				logging.Debugf("UDR: flags or primary exclude secondary")
 			}
 
-			logging.Debuga(func() string { return fmt.Sprintf("UDR: rnd: %v idxs: %v", udr.rnd != nil, len(udr.indexes)) })
+			logging.Debuga(func() string {
+				return fmt.Sprintf("UDR: rs: %v rnd: %v idxs: %v", udr.rs != nil, udr.rnd != nil,
+					len(udr.indexes))
+			})
 			return udr, nil
 		} else {
 			errs = append(errs, errors.NewInferKeyspaceError(ks.Name(), err))
 		}
 	}
 
-	if udr.rnd == nil && len(udr.indexes) == 0 {
+	if udr.rs == nil && udr.rnd == nil && len(udr.indexes) == 0 {
 		return nil, errors.NewInferCreateRetrieverFailed(errs...)
 	}
 
 	// will be a random only retriever
-	logging.Debuga(func() string { return "UDR: random only retriever" })
+	if udr.rnd == nil {
+		logging.Debugf("UDR: random scan only retriever")
+	} else if udr.rs == nil {
+		logging.Debugf("UDR: random entry only retriever")
+	} else {
+		logging.Debugf("UDR: random (either) only retriever")
+	}
 	return udr, nil
 }
 
@@ -493,7 +550,7 @@ func (udr *UnifiedDocumentRetriever) getRandom(context datastore.QueryContext) (
 		udr.cacheKey(key)
 		return key, value, nil
 	}
-	logging.Debuga(func() string { return "UnifiedDocumentRetriever: maximum random duplicates reached" })
+	logging.Debugf("UnifiedDocumentRetriever: maximum random duplicates reached")
 	return _EMPTY_KEY, nil, nil
 }
 
@@ -503,6 +560,14 @@ func (udr *UnifiedDocumentRetriever) GetNextDoc(context datastore.QueryContext) 
 			udr.iconn.Sender().Close()
 			udr.iconn = nil
 		}
+		if udr.rs != nil && udr.rs_scan != nil {
+			ru, err := udr.rs.StopKeyScan(udr.rs_scan)
+			if ru > 0 {
+				context.RecordKvRU(tenant.Unit(ru))
+			}
+			udr.rs_scan = nil
+			return _EMPTY_KEY, nil, err
+		}
 		return _EMPTY_KEY, nil, nil
 	}
 
@@ -511,7 +576,7 @@ func (udr *UnifiedDocumentRetriever) GetNextDoc(context datastore.QueryContext) 
 		if udr.returned >= len(udr.cache) {
 			return _EMPTY_KEY, nil, nil
 		}
-		errs := udr.ks.Fetch(udr.cache[udr.returned:udr.returned+1], udr.docs, datastore.NULL_QUERY_CONTEXT, nil)
+		errs := udr.ks.Fetch(udr.cache[udr.returned:udr.returned+1], udr.docs, context, nil)
 
 		if errs != nil {
 			return _EMPTY_KEY, nil, errs[0]
@@ -525,7 +590,61 @@ func (udr *UnifiedDocumentRetriever) GetNextDoc(context datastore.QueryContext) 
 		return k, udr.docs[k], nil
 	}
 
+	if udr.rs != nil {
+		for {
+			if udr.rs_key >= len(udr.rs_keys) {
+				var err errors.Error
+				udr.rs_keys, err, _ = udr.rs.FetchKeys(udr.rs_scan, _FETCH_TIMEOUT)
+				if err != nil {
+					if udr.returned == 0 && (udr.rnd != nil || len(udr.indexes) > 0) {
+						logging.Debuga(func() string {
+							return fmt.Sprintf("UDR: random scan fetch failed (%v) trying other methods", err)
+						})
+						udr.rs.StopKeyScan(udr.rs_scan)
+						udr.rs = nil
+						udr.rs_scan = nil
+						break
+					}
+					return _EMPTY_KEY, nil, err
+				}
+				logging.Debuga(func() string { return fmt.Sprintf("UDR: fetched %d keys from random scan", len(udr.rs_keys)) })
+				udr.rs_key = 0
+			}
+			if udr.rs_key >= len(udr.rs_keys) {
+				ru, err := udr.rs.StopKeyScan(udr.rs_scan)
+				if ru > 0 {
+					context.RecordKvRU(tenant.Unit(ru))
+				}
+				udr.rs_scan = nil
+				return _EMPTY_KEY, nil, err
+			}
+			if udr.docs == nil {
+				udr.docs = make(map[string]value.AnnotatedValue, 1)
+			}
+			errs := udr.ks.Fetch(udr.rs_keys[udr.rs_key:udr.rs_key+1], udr.docs, context, nil)
+			if errs != nil {
+				return _EMPTY_KEY, nil, errs[0]
+			} else if len(udr.docs) == 0 {
+				ru, err := udr.rs.StopKeyScan(udr.rs_scan)
+				if ru > 0 {
+					context.RecordKvRU(tenant.Unit(ru))
+				}
+				udr.rs_scan = nil
+				return _EMPTY_KEY, nil, err
+			}
+			k := udr.rs_keys[udr.rs_key]
+			udr.cacheKey(k)
+			udr.rs_key++
+			udr.returned++
+			defer func() { delete(udr.docs, k) }()
+			return k, udr.docs[k], nil
+		}
+	}
+
 	if udr.rnd != nil && udr.isFlagOff(RANDOM_ENTRY_LAST) {
+		if udr.returned == 0 {
+			logging.Debugf("UDR: retrieving using random entry retriever")
+		}
 		k, v, e := udr.getRandom(context)
 		if v != nil || e != nil {
 			return k, v, e
@@ -547,10 +666,15 @@ next_index:
 			udr.currentIndex++
 			if udr.currentIndex >= len(udr.indexes) || (udr.currentIndex > 0 && udr.isFlagOn(SINGLE_INDEX)) {
 				logging.Debuga(func() string {
+					ci := udr.currentIndex
+					if ci > len(udr.indexes) {
+						ci = len(udr.indexes)
+					}
 					return fmt.Sprintf("UnifiedDocumentRetriever: ending index scanning after %v index(es), %v docs returned",
-						udr.currentIndex, udr.returned)
+						ci, udr.returned)
 				})
 				if udr.isFlagOn(RANDOM_ENTRY_LAST) && udr.rnd != nil {
+					logging.Debugf("UDR: switching to random entry retriever")
 					udr.flags &^= RANDOM_ENTRY_LAST
 					return udr.getRandom(context)
 				}
@@ -584,7 +708,7 @@ next_index:
 				ci := udr.indexes[udr.currentIndex].(datastore.CountIndex2)
 				nk, err := ci.CountDistinct(udr.Name(), nil, datastore.UNBOUNDED, nil)
 				if err != nil {
-					docCount, err := udr.ks.Count(datastore.NULL_QUERY_CONTEXT)
+					docCount, err := udr.ks.Count(context)
 					if err != nil {
 						return _EMPTY_KEY, nil, err
 					}
@@ -709,7 +833,7 @@ next_index:
 			}
 		}
 
-		errs := udr.ks.Fetch(udr.keys[0:1], udr.docs, datastore.NULL_QUERY_CONTEXT, nil)
+		errs := udr.ks.Fetch(udr.keys[0:1], udr.docs, context, nil)
 
 		if errs != nil {
 			return _EMPTY_KEY, nil, errs[0]
@@ -809,7 +933,7 @@ func (kvrdr *KVRandomDocumentRetriever) GetNextDoc(context datastore.QueryContex
 
 	// try to retrieve the next document
 	duplicatesSeen := 0
-	for duplicatesSeen < 100 {
+	for duplicatesSeen < _MAX_DUPLICATES {
 		resp, err := kvrdr.bucket.GetRandomDoc()
 
 		if err != nil {

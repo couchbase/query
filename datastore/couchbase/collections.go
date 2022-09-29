@@ -425,6 +425,12 @@ func (coll *collection) FetchKeys(scan interface{}, timeout time.Duration) ([]st
 	return coll.bucket.cbbucket.FetchKeys(scan, timeout)
 }
 
+func (coll *collection) StartRandomScan(sampleSize int, timeout time.Duration, pipelineSize int, kvTimeout time.Duration,
+	serverless bool) (interface{}, errors.Error) {
+
+	return coll.bucket.cbbucket.StartRandomScan(coll.uid, "", "", sampleSize, timeout, pipelineSize, kvTimeout, serverless)
+}
+
 func buildScopesAndCollections(mani *cb.Manifest, bucket *keyspace) (map[string]*scope, datastore.Keyspace) {
 	scopes := make(map[string]*scope, len(mani.Scopes))
 	var defaultCollection *collection

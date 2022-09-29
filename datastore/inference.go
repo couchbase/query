@@ -9,6 +9,8 @@
 package datastore
 
 import (
+	"time"
+
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/value"
@@ -22,6 +24,13 @@ const (
 
 type RandomEntryProvider interface {
 	GetRandomEntry(context QueryContext) (string, value.Value, errors.Error)
+}
+
+type RandomScanProvider interface {
+	StartRandomScan(sampleSize int, timeout time.Duration, pipelineSize int, kvTimeout time.Duration, serverless bool) (
+		interface{}, errors.Error)
+	StopKeyScan(scan interface{}) (uint64, errors.Error)
+	FetchKeys(scan interface{}, timeout time.Duration) ([]string, errors.Error, bool)
 }
 
 type Inferencer interface {
