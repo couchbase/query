@@ -37,10 +37,6 @@ ENDIF(BUILD_ENTERPRISE)
 SET (_extra_deps)
 
 SET (GOVERSION 1.18)
-GoPrivateMod (MODULE cbftx PATH ../../../../../cbftx)
-GoPrivateMod (MODULE hebrew PATH ../../../../../hebrew)
-GoPrivateMod (MODULE eventing-ee)
-GoPrivateMod (MODULE query-ee)
 
 STRING(REGEX REPLACE "-[^-]*$" "-N1QL" QUERY_VERSION ${PRODUCT_VERSION})
 SET (LDFLAGS "-X github.com/couchbase/query/util.VERSION=${QUERY_VERSION}")
