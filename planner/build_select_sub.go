@@ -292,7 +292,7 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 				cost, cardinality, size, frCost = getInitialProjectCost(projection, cost, cardinality, size, frCost)
 			}
 		}
-		this.addSubChildren(plan.NewInitialProject(projection, cost, cardinality, size, frCost))
+		this.addSubChildren(plan.NewInitialProject(projection, cost, cardinality, size, frCost, !this.subquery))
 
 		// Initial DISTINCT (parallel)
 		if projection.Distinct() || this.setOpDistinct {

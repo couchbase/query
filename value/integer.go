@@ -39,7 +39,7 @@ func (this intValue) MarshalJSON() ([]byte, error) {
 	return []byte(s), nil
 }
 
-func (this intValue) WriteJSON(w io.Writer, prefix, indent string, fast bool) error {
+func (this intValue) WriteJSON(order []string, w io.Writer, prefix, indent string, fast bool) error {
 	s := strconv.FormatInt(int64(this), 10)
 	b := []byte(s)
 	_, err := w.Write(b)

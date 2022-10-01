@@ -78,14 +78,18 @@ func (this *Projection) Signature() value.Value {
 		return value.NewValue(this.terms[0].expr.Type().String())
 	}
 
-	rv := value.NewValue(make(map[string]interface{}, len(this.terms)))
+	rv := value.NewAnnotatedValue(make(map[string]interface{}, len(this.terms)))
+	var order []string
 	for _, term := range this.terms {
 		if term.star {
 			rv.SetField("*", "*")
+			order = append(order, "*")
 		} else {
 			rv.SetField(term.alias, term.expr.Type().String())
+			order = append(order, term.alias)
 		}
 	}
+	rv.SetProjection(rv, order)
 
 	return rv
 }

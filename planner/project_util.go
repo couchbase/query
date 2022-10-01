@@ -39,7 +39,7 @@ func (this *builder) buildDMLProject(projection *algebra.Projection, subChildren
 		}
 	}
 
-	subChildren = append(subChildren, plan.NewInitialProject(projection, cost, cardinality, size, frCost))
+	subChildren = append(subChildren, plan.NewInitialProject(projection, cost, cardinality, size, frCost, true))
 
 	// TODO retire
 	subChildren = maybeFinalProject(subChildren)

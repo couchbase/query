@@ -89,7 +89,8 @@ type AnnotatedValue interface {
 	SetBit(b uint8)
 	Self() bool
 	SetSelf(s bool)
-	SetProjection(proj Value)
+	SetProjection(proj Value, order []string)
+	ProjectionOrder() []string
 	Original() AnnotatedValue
 	RefCnt() int32
 	ResetOriginal()
@@ -129,6 +130,7 @@ type annotatedValue struct {
 	original          Value
 	annotatedOrig     AnnotatedValue
 	noRecycle         bool
+	projectionOrder   []string
 }
 
 func (this *annotatedValue) String() string {
@@ -139,8 +141,8 @@ func (this *annotatedValue) MarshalJSON() ([]byte, error) {
 	return this.Value.MarshalJSON()
 }
 
-func (this *annotatedValue) WriteJSON(w io.Writer, prefix, indent string, fast bool) error {
-	return this.Value.WriteJSON(w, prefix, indent, fast)
+func (this *annotatedValue) WriteJSON(order []string, w io.Writer, prefix, indent string, fast bool) error {
+	return this.Value.WriteJSON(order, w, prefix, indent, fast)
 }
 
 func (this *annotatedValue) Copy() Value {
@@ -416,9 +418,16 @@ func (this *annotatedValue) SetId(id interface{}) {
 	}
 }
 
-func (this *annotatedValue) SetProjection(proj Value) {
-	this.original = this.Value
-	this.Value = proj
+func (this *annotatedValue) SetProjection(proj Value, order []string) {
+	if this != proj {
+		this.original = this.Value
+		this.Value = proj
+	}
+	this.projectionOrder = order
+}
+
+func (this *annotatedValue) ProjectionOrder() []string {
+	return this.projectionOrder
 }
 
 // Originals are not to be recycled
@@ -547,6 +556,7 @@ func (this *annotatedValue) recycle(lvl int32) {
 		}
 	}
 	this.sharedAnnotations = false
+	this.projectionOrder = nil
 	this.id = nil
 	annotatedPool.Put(unsafe.Pointer(this))
 }
@@ -776,7 +786,7 @@ func (this *annotatedValueSelfReference) MarshalJSON() ([]byte, error) {
 	return []byte(nil), nil
 }
 
-func (this *annotatedValueSelfReference) WriteJSON(w io.Writer, prefix, indent string, fast bool) error {
+func (this *annotatedValueSelfReference) WriteJSON(order []string, w io.Writer, prefix, indent string, fast bool) error {
 	return nil
 }
 
@@ -937,8 +947,11 @@ func (this *annotatedValueSelfReference) SetSelf(s bool) {
 	(*annotatedValue)(this).SetSelf(s)
 }
 
-func (this *annotatedValueSelfReference) SetProjection(proj Value) {
-	(*annotatedValue)(this).SetProjection(proj)
+func (this *annotatedValueSelfReference) SetProjection(proj Value, order []string) {
+	(*annotatedValue)(this).SetProjection(proj, order)
+}
+func (this *annotatedValueSelfReference) ProjectionOrder() []string {
+	return (*annotatedValue)(this).ProjectionOrder()
 }
 
 func (this *annotatedValueSelfReference) Original() AnnotatedValue {

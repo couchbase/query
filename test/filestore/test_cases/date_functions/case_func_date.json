@@ -81,6 +81,7 @@
                         "~children": [
                             {
                                 "#operator": "InitialProject",
+                                "preserve_order": true,
                                 "result_terms": [
                                     {
                                         "expr": "clock_str(\"2006-01-02\")"

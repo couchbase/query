@@ -154,6 +154,7 @@ type Output interface {
 // context flags
 const (
 	CONTEXT_IS_ADVISOR = 1 << iota // Advisor() function
+	CONTEXT_PRESERVE_PROJECTION_ORDER
 )
 
 type Context struct {
@@ -322,6 +323,7 @@ func (this *Context) Copy() *Context {
 		planPreparedTime:    this.planPreparedTime,
 	}
 
+	rv.SetPreserveProjectionOrder(false) // always reset on copy
 	rv.SetDurability(this.DurabilityLevel(), this.DurabilityTimeout())
 
 	return rv
@@ -1424,6 +1426,20 @@ func (this *Context) SetAdvisor() {
 
 func (this *Context) IsAdvisor() bool {
 	return (this.flags & CONTEXT_IS_ADVISOR) != 0
+}
+
+func (this *Context) SetPreserveProjectionOrder(on bool) bool {
+	prev := (this.flags & CONTEXT_PRESERVE_PROJECTION_ORDER) != 0
+	if on {
+		this.flags |= CONTEXT_PRESERVE_PROJECTION_ORDER
+	} else {
+		this.flags &^= CONTEXT_PRESERVE_PROJECTION_ORDER
+	}
+	return prev
+}
+
+func (this *Context) PreserveProjectionOrder() bool {
+	return (this.flags & CONTEXT_PRESERVE_PROJECTION_ORDER) != 0
 }
 
 func (this *Context) SetTracked(t bool) {

@@ -49,6 +49,7 @@
                                         },
                                         {
                                             "#operator": "InitialProject",
+                                            "preserve_order": true,
                                             "result_terms": [
                                                 {
                                                     "expr": "(meta(`product`).`id`)"
@@ -131,6 +132,7 @@
                                         },
                                         {
                                             "#operator": "InitialProject",
+                                            "preserve_order": true,
                                             "result_terms": [
                                                 {
                                                     "expr": "(`product`.`name`)"
@@ -237,6 +239,7 @@
                                         },
                                         {
                                             "#operator": "InitialProject",
+                                            "preserve_order": true,
                                             "result_terms": [
                                                 {
                                                     "expr": "(`product`.`name`)"

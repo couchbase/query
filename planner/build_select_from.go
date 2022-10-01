@@ -433,8 +433,11 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 }
 
 func (this *builder) VisitSubqueryTerm(node *algebra.SubqueryTerm) (interface{}, error) {
+	sa := this.subquery
+	this.subquery = true
 	subquery := node.Subquery()
 	qp, err := subquery.Accept(this)
+	this.subquery = sa
 	if err != nil {
 		this.processadviseJF(node.Alias())
 		return nil, err

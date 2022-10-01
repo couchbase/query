@@ -148,3 +148,7 @@ func (this *IndexContext) IsTracked() bool {
 
 func (this *IndexContext) RecordJsCU(d time.Duration, m uint64) {
 }
+
+func (this *IndexContext) PreserveProjectionOrder() bool {
+	return false
+}

@@ -49,6 +49,7 @@
                                 "~children": [
                                     {
                                         "#operator": "InitialProject",
+                                        "preserve_order": true,
                                         "result_terms": [
                                             {
                                                 "expr": "(`catalog`.`dimensions`)"
@@ -124,6 +125,7 @@
                                 "~children": [
                                     {
                                         "#operator": "InitialProject",
+                                        "preserve_order": true,
                                         "result_terms": [
                                             {
                                                 "as": "first_name",

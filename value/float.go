@@ -50,7 +50,7 @@ func (this floatValue) MarshalJSON() ([]byte, error) {
 	}
 }
 
-func (this floatValue) WriteJSON(w io.Writer, prefix, indent string, fast bool) error {
+func (this floatValue) WriteJSON(order []string, w io.Writer, prefix, indent string, fast bool) error {
 	b, err := this.MarshalJSON()
 	if err != nil {
 		return err

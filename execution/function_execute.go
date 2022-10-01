@@ -76,6 +76,7 @@ func (this *ExecuteFunction) RunOnce(context *Context, parent value.Value) {
 			}
 		}
 
+		context.SetPreserveProjectionOrder(false)
 		val, err := functions.ExecuteFunction(this.plan.Name(), functions.NONE, args, context)
 		if err != nil {
 			context.Error(err)

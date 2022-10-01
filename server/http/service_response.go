@@ -302,7 +302,8 @@ func (this *httpRequest) Result(item value.AnnotatedValue) bool {
 	beforeResult := this.writer.mark()
 
 	if success {
-		err := item.WriteJSON(this.writer.buf(), this.prefix, this.indent, item.Self())
+		order := item.ProjectionOrder()
+		err := item.WriteJSON(order, this.writer.buf(), this.prefix, this.indent, item.Self())
 		if err != nil {
 			this.Error(errors.NewServiceErrorInvalidJSON(err))
 			this.SetState(server.FATAL)
@@ -329,7 +330,11 @@ func (this *httpRequest) writeValue(item value.Value, prefix, indent string, fas
 		return this.writeString("null")
 	}
 	beforeWriteJSON := this.writer.mark()
-	err := item.WriteJSON(this.writer.buf(), prefix, indent, fast)
+	var order []string
+	if av, ok := item.(value.AnnotatedValue); ok {
+		order = av.ProjectionOrder()
+	}
+	err := item.WriteJSON(order, this.writer.buf(), prefix, indent, fast)
 	if err != nil {
 		this.writer.truncate(beforeWriteJSON)
 		return this.writer.printf("\"ERROR: %v\"", err)

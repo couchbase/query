@@ -55,6 +55,7 @@ type Context interface {
 	IsTracked() bool
 	RecordJsCU(d time.Duration, m uint64)
 	IsAdmin() bool
+	PreserveProjectionOrder() bool
 }
 
 type ExecutionHandle interface {

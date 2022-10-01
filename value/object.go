@@ -101,7 +101,7 @@ func (this objectValue) MarshalJSON() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func (this objectValue) WriteJSON(w io.Writer, prefix, indent string, fast bool) (err error) {
+func (this objectValue) WriteJSON(order []string, w io.Writer, prefix, indent string, fast bool) (err error) {
 	if this == nil {
 		_, err = w.Write(_NULL_BYTES)
 		return
@@ -149,30 +149,54 @@ func (this objectValue) WriteJSON(w io.Writer, prefix, indent string, fast bool)
 				if _, err = stringWriter.WriteString(" "); err != nil {
 					return err
 				}
-				if err = v.WriteJSON(w, fullPrefix[1:], indent, fast); err != nil {
+				if err = v.WriteJSON(nil, w, fullPrefix[1:], indent, fast); err != nil {
 					return
 				}
 			} else {
-				if err = v.WriteJSON(w, "", "", fast); err != nil {
+				if err = v.WriteJSON(nil, w, "", "", fast); err != nil {
 					return
 				}
 			}
 		}
 	} else if l > 0 {
 
-		var names []string
-		if l <= _NAME_CAP {
-			var nameBuf [_NAME_CAP]string
-			names = nameBuf[0:len(this)]
-		} else {
-			names = _NAME_POOL.GetCapped(len(this))
-			defer _NAME_POOL.Put(names)
-			names = names[0:len(this)]
+		if l > len(order) {
+			var remaining []string
+			if l <= _NAME_CAP {
+				var nameBuf [_NAME_CAP]string
+				remaining = nameBuf[:0]
+			} else {
+				remaining = _NAME_POOL.GetCapped(l)
+				defer _NAME_POOL.Put(remaining)
+				remaining = remaining[:0]
+			}
+			if order != nil {
+				for n, _ := range this {
+					found := false
+					for i := range order {
+						if order[i] == n {
+							found = true
+							break
+						}
+					}
+					if !found {
+						remaining = append(remaining, n)
+					}
+				}
+				if len(remaining) > 0 {
+					sort.Strings(remaining)
+					order = append(order, remaining...)
+				}
+			} else {
+				remaining = remaining[:l]
+				order = sortedNames(this, remaining)
+			}
 		}
 
-		names = sortedNames(this, names)
-
-		for _, n := range names {
+		for _, n := range order {
+			if _, found := this[n]; !found {
+				continue
+			}
 			v := NewValue(this[n])
 			if v.Type() == MISSING {
 				continue
@@ -209,11 +233,11 @@ func (this objectValue) WriteJSON(w io.Writer, prefix, indent string, fast bool)
 			}
 
 			if writePrefix {
-				if err = v.WriteJSON(w, fullPrefix[1:], indent, false); err != nil {
+				if err = v.WriteJSON(nil, w, fullPrefix[1:], indent, false); err != nil {
 					return err
 				}
 			} else {
-				if err = v.WriteJSON(w, "", "", fast); err != nil {
+				if err = v.WriteJSON(nil, w, "", "", fast); err != nil {
 					return err
 				}
 			}

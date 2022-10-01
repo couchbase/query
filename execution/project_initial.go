@@ -14,13 +14,15 @@ import (
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/sort"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
 type InitialProject struct {
 	base
-	plan *plan.InitialProject
+	plan  *plan.InitialProject
+	order []string
 }
 
 var _INITPROJ_OP_POOL util.FastPool
@@ -57,6 +59,11 @@ func (this *InitialProject) PlanOp() plan.Operator {
 
 func (this *InitialProject) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent)
+}
+
+func (this *InitialProject) beforeItems(context *Context, parent value.Value) bool {
+	this.order = nil
+	return true
 }
 
 func (this *InitialProject) processItem(item value.AnnotatedValue, context *Context) bool {
@@ -117,7 +124,7 @@ func (this *InitialProject) processItem(item value.AnnotatedValue, context *Cont
 		}
 		av := value.NewAnnotatedValue(sv)
 		av.ShareAnnotations(item)
-		av.SetProjection(v)
+		av.SetProjection(v, nil)
 		if context.UseRequestQuota() {
 			iSz := item.Size()
 			aSz := av.Size()
@@ -156,15 +163,26 @@ func (this *InitialProject) processTerms(item value.AnnotatedValue, context *Con
 
 	p := value.NewValue(make(map[string]interface{}, n+(this.plan.StarTermCount()*7)))
 
+	var order map[string]int
+	nextOrder := 0
+	doOrder := context.PreserveProjectionOrder() && this.plan.PreserveOrder() && this.order == nil
+	if doOrder {
+		order = _PROJECTION_ORDER_POOL.Get()
+	}
 	for _, term := range this.plan.Terms() {
-		if term.Result().Alias() != "" {
+		alias := term.Result().Alias()
+		if alias != "" {
 			v, err := term.Result().Expression().Evaluate(item, context)
 			if err != nil {
 				context.Error(errors.NewEvaluationError(err, "projection"))
 				return false
 			}
 
-			p.SetField(term.Result().Alias(), v)
+			if doOrder {
+				order[alias] = nextOrder
+				nextOrder++
+			}
+			p.SetField(alias, v)
 
 			// Explicit aliases override data
 			if term.Result().As() != "" {
@@ -183,16 +201,48 @@ func (this *InitialProject) processTerms(item value.AnnotatedValue, context *Con
 			}
 
 			// Latest star overwrites previous star
-			switch sa := starval.Actual().(type) {
-			case map[string]interface{}:
-				for k, v := range sa {
-					p.SetField(k, v)
+			if sa, ok := starval.Actual().(map[string]interface{}); ok {
+				if doOrder {
+					for k, v := range sa {
+						order[k] = nextOrder
+						p.SetField(k, v)
+					}
+					nextOrder++
+				} else {
+					for k, v := range sa {
+						p.SetField(k, v)
+					}
 				}
 			}
 		}
 	}
-
-	pv.SetProjection(p) //	pv.SetAttachment("projection", p)
+	if this.order != nil {
+		pv.SetProjection(p, this.order)
+	} else if order != nil {
+		sl := &sortableList{}
+		sl.list = make([]string, len(order))
+		sl.mp = &order
+		if nextOrder == len(order) && this.plan.StarTermCount() == 0 {
+			for k, v := range order {
+				sl.list[v] = k
+			}
+		} else {
+			i := 0
+			for k, _ := range order {
+				sl.list[i] = k
+				i++
+			}
+			sort.Sort(sl)
+		}
+		sl.mp = nil
+		_PROJECTION_ORDER_POOL.Put(order)
+		if this.plan.StarTermCount() == 0 {
+			this.order = sl.list
+		}
+		pv.SetProjection(p, sl.list)
+	} else {
+		pv.SetProjection(p, nil)
+	}
 	if context.UseRequestQuota() {
 		iSz := item.Size()
 		pSz := pv.Size()
@@ -223,8 +273,29 @@ func (this *InitialProject) MarshalJSON() ([]byte, error) {
 }
 
 func (this *InitialProject) Done() {
+	this.order = nil
 	this.baseDone()
 	if this.isComplete() {
 		_INITPROJ_OP_POOL.Put(this)
 	}
+}
+
+var _PROJECTION_ORDER_POOL = util.NewStringIntPool(256)
+
+type sortableList struct {
+	list []string
+	mp   *map[string]int
+}
+
+func (this sortableList) Len() int { return len(this.list) }
+func (this sortableList) Less(i int, j int) bool {
+	a := (*this.mp)[this.list[i]]
+	b := (*this.mp)[this.list[j]]
+	if a == b {
+		return this.list[i] < this.list[j]
+	}
+	return a < b
+}
+func (this sortableList) Swap(i int, j int) {
+	this.list[i], this.list[j] = this.list[j], this.list[i]
 }

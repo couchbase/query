@@ -53,6 +53,7 @@
                                     },
                                     {
                                         "#operator": "InitialProject",
+                                        "preserve_order": true,
                                         "result_terms": [
                                             {
                                                 "expr": "self",
@@ -127,6 +128,7 @@
                                     },
                                     {
                                         "#operator": "InitialProject",
+                                        "preserve_order": true,
                                         "result_terms": [
                                             {
                                                 "expr": "self",
@@ -189,6 +191,7 @@
                                     },
                                     {
                                         "#operator": "InitialProject",
+                                        "preserve_order": true,
                                         "result_terms": [
                                             {
                                                 "expr": "self",
@@ -263,6 +266,7 @@
                                     },
                                     {
                                         "#operator": "InitialProject",
+                                        "preserve_order": true,
                                         "result_terms": [
                                             {
                                                 "expr": "(meta(`game`).`id`)"
@@ -344,6 +348,7 @@
                         "~children": [
                             {
                                 "#operator": "InitialProject",
+                                "preserve_order": true,
                                 "result_terms": [
                                     {
                                         "as": "c",
@@ -425,6 +430,7 @@
                                 "~children": [
                                     {
                                         "#operator": "InitialProject",
+                                        "preserve_order": true,
                                         "result_terms": [
                                             {
                                                 "expr": "count(*)"
@@ -519,6 +525,7 @@
                         "~children": [
                             {
                                 "#operator": "InitialProject",
+                                "preserve_order": true,
                                 "result_terms": [
                                     {
                                         "as": "c",

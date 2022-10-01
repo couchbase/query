@@ -58,7 +58,7 @@ func (this sliceValue) ReadSpill(r io.Reader, buf []byte) error {
 	return err
 }
 
-func (this sliceValue) WriteJSON(w io.Writer, prefix, indent string, fast bool) (err error) {
+func (this sliceValue) WriteJSON(order []string, w io.Writer, prefix, indent string, fast bool) (err error) {
 	if this == nil {
 		_, err = w.Write(_NULL_BYTES)
 		return
@@ -88,11 +88,11 @@ func (this sliceValue) WriteJSON(w io.Writer, prefix, indent string, fast bool) 
 			if _, err = stringWriter.WriteString(fullPrefix); err != nil {
 				return
 			}
-			if err = v.WriteJSON(w, fullPrefix[1:], indent, fast); err != nil {
+			if err = v.WriteJSON(order, w, fullPrefix[1:], indent, fast); err != nil {
 				return
 			}
 		} else {
-			if err = v.WriteJSON(w, "", "", fast); err != nil {
+			if err = v.WriteJSON(order, w, "", "", fast); err != nil {
 				return
 			}
 		}
@@ -437,8 +437,8 @@ func (this *listValue) MarshalJSON() ([]byte, error) {
 	return this.slice.MarshalJSON()
 }
 
-func (this *listValue) WriteJSON(w io.Writer, prefix, indent string, fast bool) (err error) {
-	return this.slice.WriteJSON(w, prefix, indent, fast)
+func (this *listValue) WriteJSON(order []string, w io.Writer, prefix, indent string, fast bool) (err error) {
+	return this.slice.WriteJSON(order, w, prefix, indent, fast)
 }
 
 func (this *listValue) WriteSpill(w io.Writer, buf []byte) error {

@@ -146,10 +146,10 @@ func (this *parsedValue) MarshalJSON() ([]byte, error) {
 	return this.unwrap().MarshalJSON()
 }
 
-func (this *parsedValue) WriteJSON(w io.Writer, prefix, indent string, fast bool) error {
+func (this *parsedValue) WriteJSON(order []string, w io.Writer, prefix, indent string, fast bool) error {
 	raw := this.raw
-	if prefix != "" || indent != "" || raw == nil {
-		return this.unwrap().WriteJSON(w, prefix, indent, fast)
+	if prefix != "" || indent != "" || raw == nil || order != nil {
+		return this.unwrap().WriteJSON(order, w, prefix, indent, fast)
 	}
 	_, err := w.Write(raw)
 	return err

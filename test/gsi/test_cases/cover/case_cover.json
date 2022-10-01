@@ -46,6 +46,7 @@
                                 },
                                 {
                                     "#operator": "InitialProject",
+                                    "preserve_order": true,
                                     "result_terms": [
                                         {
                                             "expr": "(`shellTest`.`f2`)"
@@ -113,6 +114,7 @@
                                 },
                                 {
                                     "#operator": "InitialProject",
+                                    "preserve_order": true,
                                     "result_terms": [
                                         {
                                             "expr": "`f2`"
@@ -167,6 +169,7 @@
                                 },
                                 {
                                     "#operator": "InitialProject",
+                                    "preserve_order": true,
                                     "result_terms": [
                                         {
                                             "expr": "(`f1`.`f2`)"
@@ -235,6 +238,7 @@
                                 },
                                 {
                                     "#operator": "InitialProject",
+                                    "preserve_order": true,
                                     "result_terms": [
                                         {
                                             "expr": "cover ((`shellTest`.`f2`))"
@@ -308,6 +312,7 @@
                             "~children": [
                                 {
                                     "#operator": "InitialProject",
+                                    "preserve_order": true,
                                     "result_terms": [
                                         {
                                             "expr": "cover ((`d1`.`k0`))"
@@ -377,6 +382,7 @@
                                 },
                                 {
                                     "#operator": "InitialProject",
+                                    "preserve_order": true,
                                     "result_terms": [
                                         {
                                             "expr": "cover ((`d`.`x`))"
@@ -456,6 +462,7 @@
                             "~children": [
                                 {
                                     "#operator": "InitialProject",
+                                    "preserve_order": true,
                                     "result_terms": [
                                         {
                                             "expr": "(`d1`.`k0`)"
@@ -545,6 +552,7 @@
                             "~children": [
                                 {
                                     "#operator": "InitialProject",
+                                    "preserve_order": true,
                                     "result_terms": [
                                         {
                                             "expr": "cover ((`d1`.`k0`))"
@@ -621,6 +629,7 @@
                                 },
                                 {
                                     "#operator": "InitialProject",
+                                    "preserve_order": true,
                                     "result_terms": [
                                         {
                                             "as": "b1id",
@@ -705,6 +714,7 @@
                                 },
                                 {
                                     "#operator": "InitialProject",
+                                    "preserve_order": true,
                                     "result_terms": [
                                         {
                                             "expr": "cover ((`shellTest`.`email`))"
@@ -781,6 +791,7 @@
                                 },
                                 {
                                     "#operator": "InitialProject",
+                                    "preserve_order": true,
                                     "result_terms": [
                                         {
                                             "expr": "cover (((`store`.`main`).`status`))"
@@ -849,6 +860,7 @@
                                         },
                                         {
                                             "#operator": "InitialProject",
+                                            "preserve_order": true,
                                             "result_terms": [
                                                 {
                                                     "as": "o",

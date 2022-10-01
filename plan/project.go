@@ -22,17 +22,19 @@ type InitialProject struct {
 	projection    *algebra.Projection
 	terms         ProjectTerms
 	starTermCount int
+	preserveOrder bool
 }
 
 func NewInitialProject(projection *algebra.Projection, cost, cardinality float64,
-	size int64, frCost float64) *InitialProject {
+	size int64, frCost float64, preserveOrder bool) *InitialProject {
 
 	results := projection.Terms()
 	terms := make(ProjectTerms, len(results))
 
 	rv := &InitialProject{
-		projection: projection,
-		terms:      terms,
+		projection:    projection,
+		terms:         terms,
+		preserveOrder: preserveOrder,
 	}
 
 	for i, res := range results {
@@ -67,6 +69,10 @@ func (this *InitialProject) Terms() ProjectTerms {
 
 func (this *InitialProject) StarTermCount() int {
 	return this.starTermCount
+}
+
+func (this *InitialProject) PreserveOrder() bool {
+	return this.preserveOrder
 }
 
 func (this *InitialProject) MarshalJSON() ([]byte, error) {
@@ -108,6 +114,9 @@ func (this *InitialProject) MarshalBase(f func(map[string]interface{})) map[stri
 		s = append(s, t)
 	}
 	r["result_terms"] = s
+	if this.preserveOrder {
+		r["preserve_order"] = this.preserveOrder
+	}
 	if f != nil {
 		f(r)
 	}
@@ -122,9 +131,10 @@ func (this *InitialProject) UnmarshalJSON(body []byte) error {
 			As   string `json:"as"`
 			Star bool   `json:"star"`
 		} `json:"result_terms"`
-		Distinct    bool                   `json:"distinct"`
-		Raw         bool                   `json:"raw"`
-		OptEstimate map[string]interface{} `json:"optimizer_estimates"`
+		Distinct      bool                   `json:"distinct"`
+		Raw           bool                   `json:"raw"`
+		OptEstimate   map[string]interface{} `json:"optimizer_estimates"`
+		PreserveOrder bool                   `json:"preserve_order"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -156,6 +166,7 @@ func (this *InitialProject) UnmarshalJSON(body []byte) error {
 
 	this.projection = projection
 	this.terms = project_terms
+	this.preserveOrder = _unmarshalled.PreserveOrder
 
 	unmarshalOptEstimate(&this.optEstimate, _unmarshalled.OptEstimate)
 
