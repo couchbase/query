@@ -52,7 +52,7 @@ go clean -testcache
 trap interrupt 2 15
 cd ../
 if [[ `uname` == "Darwin" ]] ; then
-     go test -exec "env LD_LIBRARY_PATH=${LD_LIBRARY_PATH} DYLD_LIBRARY_PATH=${LD_LIBRARY_PATH}" $verbose ./... $*
+     go test -exec "env LD_LIBRARY_PATH=${LD_LIBRARY_PATH} DYLD_LIBRARY_PATH=${LD_LIBRARY_PATH}" -p 1 $verbose ./... $*
 else
      go test $verbose ./... $*
 fi
