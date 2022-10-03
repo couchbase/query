@@ -190,7 +190,7 @@ func (this *lexer) Lex(lval *yySymType) int {
 		return IDENT
 	}
 
-	if lval.s == datastore.GetSystemstore().Id() {
+	if datastore.GetSystemstore() != nil && tok == datastore.GetSystemstore().Id() {
 		return SYSTEM
 	}
 
