@@ -194,7 +194,9 @@ func (this *AnnotatedArray) Append(v AnnotatedValue) errors.Error {
 		nm := this.acquire(len(this.mem) << 1)
 		nm = nm[:len(this.mem)]
 		copy(nm, this.mem)
-		this.release(this.mem)
+		if this.release != nil {
+			this.release(this.mem)
+		}
 		this.mem = nm
 	}
 	if this.heapSize > 0 {
@@ -392,7 +394,9 @@ func (this *AnnotatedArray) nextSorted() (AnnotatedValue, errors.Error, bool) {
 
 func (this *AnnotatedArray) Release() {
 	this.Truncate(nil)
-	this.release(this.mem)
+	if this.release != nil {
+		this.release(this.mem)
+	}
 	this.mem = nil
 }
 

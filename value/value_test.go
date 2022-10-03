@@ -754,7 +754,6 @@ func TestSpillingArray(t *testing.T) {
 		return c > spillThreshold
 	}
 	acquire := func(size int) AnnotatedValues { return make(AnnotatedValues, 0, size) }
-	release := func(p AnnotatedValues) {}
 	trackMem := func(sz int64) {
 		tracking -= sz
 	}
@@ -765,7 +764,7 @@ func TestSpillingArray(t *testing.T) {
 		n2 := m2["name"].(string) + m2["surname"].(string)
 		return strings.Compare(n1, n2) < 0
 	}
-	array := NewAnnotatedArray(acquire, release, shouldSpill, trackMem, lessThan)
+	array := NewAnnotatedArray(acquire, nil, shouldSpill, trackMem, lessThan)
 	check := make([]string, 4)
 
 	av := NewAnnotatedValue([]byte(`{"name":"Marty","surname":"McFly"}`))
