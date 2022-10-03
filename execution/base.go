@@ -568,6 +568,11 @@ func (this *base) SendAction(action opAction) {
 	this.baseSendAction(action)
 }
 
+func (this *base) isRunning() bool {
+	state := this.opState
+	return state == _RUNNING
+}
+
 // action for the terminal operator case
 func (this *base) baseSendAction(action opAction) bool {
 

@@ -110,7 +110,7 @@ func (this *SendInsert) afterItems(context *Context) {
 func (this *SendInsert) flushBatch(context *Context) bool {
 	defer this.releaseBatch(context)
 
-	if len(this.batch) == 0 {
+	if len(this.batch) == 0 || !this.isRunning() {
 		return true
 	}
 

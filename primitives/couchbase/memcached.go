@@ -40,12 +40,13 @@ type MutationToken struct {
 // Maximum number of times to retry a chunk of a bulk get on error.
 const maxBulkRetries = 5000
 const backOffDuration time.Duration = 100 * time.Millisecond
-const minBackOffRetriesLimit = 25  // exponentail backOff result in over 30sec (25*13*0.1s)
-const maxBackOffRetriesLimit = 100 // exponentail backOff result in over 2min (100*13*0.1s)
+const minBackOffRetriesLimit = 25  // exponential backOff result in over 30sec (25*13*0.1s)
+const maxBackOffRetriesLimit = 100 // exponential backOff result in over 2min (100*13*0.1s)
 
 // if KV has dealt with too many requests in the current period, we will wait this much
 const defThrottleRequeue = 500 * time.Millisecond
 const maxThrottleRequeue = 1000000 // incoming value is an int in microseconds
+const throttleAdjustment = 1000    // we wait 5% less than what KV says
 
 // Return true if error is KEY_EEXISTS
 func IsKeyEExistsError(err error) bool {
@@ -227,15 +228,15 @@ func (b *Bucket) getVbConnection(vb uint32, desc *doDescriptor) (conn *memcached
 
 // WOULD_THROTTLE response from KV
 type delayResp struct {
-	delay int `json:"next_tick_us"`
+	Delay int `json:"next_tick_us"`
 }
 
 func getDelay(resp *gomemcached.MCResponse) time.Duration {
 	delayResp := &delayResp{}
 
 	// the response is in usec and must be less than a second
-	if json.Unmarshal(resp.Body, &delayResp) == nil && delayResp.delay > 0 && delayResp.delay < maxThrottleRequeue {
-		return time.Duration(delayResp.delay * 1000)
+	if json.Unmarshal(resp.Body, &delayResp) == nil && delayResp.Delay > 0 && delayResp.Delay < maxThrottleRequeue {
+		return time.Duration(delayResp.Delay * throttleAdjustment)
 	}
 
 	return defThrottleRequeue
@@ -278,7 +279,9 @@ func (b *Bucket) processOpError(vb uint32, lastError error, node string, desc *d
 		case gomemcached.WOULD_THROTTLE:
 			desc.retry = true
 			desc.delay = getDelay(resp)
-			Suspend(b.Name, desc.delay)
+			if desc.delay > backOffDuration {
+				Suspend(b.Name, desc.delay, node)
+			}
 		case gomemcached.NOT_SUPPORTED:
 			b.Refresh()
 			desc.discard = b.obsoleteNode(node)
@@ -458,6 +461,7 @@ func (b *Bucket) do3(vb uint16, f func(mc *memcached.Client, vb uint16) error, d
 		// KV is not willing to service any more requests for this interval
 		if desc.delay > time.Duration(0) {
 			time.Sleep(desc.delay)
+			desc.attempts--
 		}
 	}
 

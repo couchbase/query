@@ -151,7 +151,7 @@ func (this *IndexNest) afterItems(context *Context) {
 func (this *IndexNest) flushBatch(context *Context) bool {
 	defer this.releaseBatch(context)
 
-	if len(this.joinBatch) == 0 {
+	if len(this.joinBatch) == 0 || !this.isRunning() {
 		return true
 	}
 

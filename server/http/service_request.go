@@ -47,8 +47,9 @@ type httpRequest struct {
 	resultCount  int
 	resultSize   int
 
-	prefix string
-	indent string
+	prefix   string
+	indent   string
+	refunded bool
 
 	elapsedTime            time.Duration
 	executionTime          time.Duration

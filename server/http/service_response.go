@@ -204,6 +204,13 @@ func (this *httpRequest) Execute(srvr *server.Server, context *execution.Context
 	this.Output().AddPhaseTime(execution.RUN, now.Sub(this.ExecTime()))
 	this.markTimeOfCompletion(now)
 
+	this.refunded = tenant.NeedRefund(context.TenantCtx(), this.Errors(), this.Warnings())
+	if this.refunded {
+
+		// TODO wait for services requests to complete
+		// TODO write that we have refunded
+		tenant.RefundUnits(context.TenantCtx(), this.TenantUnits())
+	}
 	state := this.State()
 	this.writeSuffix(srvr, state, this.prefix, this.indent)
 	this.writer.noMoreData()
@@ -732,6 +739,19 @@ func (this *httpRequest) writeServerless(metrics bool, prefix, indent string) bo
 	if !(this.writeString(",\n") &&
 		this.writeString(prefix) &&
 		this.writeString("\"billingUnits\": ")) {
+		this.writer.truncate(beforeUnits)
+		return false
+	}
+	if !this.writer.writeBytes(bytes) {
+		this.writer.truncate(beforeUnits)
+		return false
+	}
+	if !this.refunded {
+		return true
+	}
+	if !(this.writeString(",\n") &&
+		this.writeString(prefix) &&
+		this.writeString("\"refundedUnits\": ")) {
 		this.writer.truncate(beforeUnits)
 		return false
 	}

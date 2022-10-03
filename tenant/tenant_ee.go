@@ -33,6 +33,7 @@ var isServerless bool
 var resourceManagers []ResourceManager
 var throttleTimes map[string]util.Time = make(map[string]util.Time, _MAX_TENANTS)
 var throttleLock sync.RWMutex
+var thisNodeId service.NodeID
 
 type Unit atomic.AlignedUint64
 type Service int
@@ -79,6 +80,7 @@ func Start(endpoint Endpoint, nodeid string, regulatorsettingsfile string) {
 	if !isServerless {
 		return
 	}
+	thisNodeId = service.NodeID(nodeid)
 	handle := factory.InitRegulator(regulator.InitSettings{NodeID: service.NodeID(nodeid),
 		SettingsFile: regulatorsettingsfile, Service: regulator.Query,
 		ServiceCheckMask: regulator.Index | regulator.Search})
@@ -162,7 +164,12 @@ func Throttle(isAdmin bool, user, bucket string, buckets []string, timeout time.
 			d := t.Sub(lastTime)
 
 			if d > time.Duration(0) {
-				// TODO record throttles
+				regulator.RecordExternalThrottle(ctx, regulator.ExternalThrottleSpec{
+					Duration: d,
+					Timing:   regulator.Preceding,
+					Service:  regulator.Query,
+					NodeID:   thisNodeId,
+				})
 				logging.Debuga(func() string { return fmt.Sprintf("bucket %v throttled for %v by query", bucket, d) })
 				time.Sleep(d)
 			}
@@ -210,6 +217,17 @@ func RecordJsCU(ctx Context, d time.Duration, m uint64) Unit {
 	units, _ := metering.QueryUDFComputeToCU(d, m)
 	regulator.RecordUnits(ctx, units)
 	return Unit(units.Whole())
+}
+
+func NeedRefund(ctx Context, errs []errors.Error, warns []errors.Error) bool {
+
+	// TODO extend
+	for _, e := range errs {
+		if e.Code() == errors.E_NODE_QUOTA_EXCEEDED {
+			return true
+		}
+	}
+	return false
 }
 
 func RefundUnits(ctx Context, units Services) error {
@@ -267,15 +285,24 @@ func DecodeNodeName(name string) string {
 	}
 }
 
-func Suspend(bucket string, delay time.Duration) {
+func Suspend(bucket string, delay time.Duration, node string) {
 	t := util.Now().Add(delay)
 	throttleLock.Lock()
 	oldT, ok := throttleTimes[bucket]
-	if !ok || t.Sub(oldT) > time.Duration(0) {
-
-		// TODO record throttles
-		logging.Debuga(func() string { return fmt.Sprintf("bucket %v throttled to %v by KV", bucket, t) })
+	doLog := !ok || t.Sub(oldT) > time.Duration(0)
+	if doLog {
+		doLog = true
 		throttleTimes[bucket] = t
 	}
 	throttleLock.Unlock()
+	if doLog {
+		logging.Debuga(func() string { return fmt.Sprintf("bucket %v throttled to %v by KV", bucket, t) })
+		ctx := regulator.NewBucketCtx(bucket)
+		regulator.RecordExternalThrottle(ctx, regulator.ExternalThrottleSpec{
+			Duration: delay,
+			Timing:   regulator.Preceding,
+			Service:  regulator.Data,
+			HostPort: node,
+		})
+	}
 }

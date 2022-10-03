@@ -74,6 +74,10 @@ func RecordJsCU(ctx Context, d time.Duration, m uint64) Unit {
 	return 0
 }
 
+func NeedRefund(ctx Context, errs []errors.Error, warns []errors.Error) bool {
+	return false
+}
+
 func RefundUnits(ctx Context, units Services) error {
 	return nil
 }
@@ -90,5 +94,5 @@ func DecodeNodeName(name string) string {
 	return name
 }
 
-func Suspend(bucket string, delay time.Duration) {
+func Suspend(bucket string, delay time.Duration, node string) {
 }

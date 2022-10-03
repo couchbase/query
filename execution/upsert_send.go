@@ -70,7 +70,7 @@ func (this *SendUpsert) afterItems(context *Context) {
 func (this *SendUpsert) flushBatch(context *Context) bool {
 	defer this.releaseBatch(context)
 
-	if len(this.batch) == 0 {
+	if len(this.batch) == 0 || !this.isRunning() {
 		return true
 	}
 

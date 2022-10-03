@@ -81,7 +81,7 @@ func (this *Join) afterItems(context *Context) {
 func (this *Join) flushBatch(context *Context) bool {
 	defer this.resetBatch(context)
 
-	if len(this.joinBatch) == 0 {
+	if len(this.joinBatch) == 0 || !this.isRunning() {
 		return true
 	}
 
