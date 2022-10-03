@@ -901,6 +901,7 @@ func MakeExpressionDocumentRetriever(context datastore.QueryContext, expr expres
 		}
 		// stream subqueries to save on caching a potentially large result-set all at once, even though it means processing this
 		// statement a second time
+		logging.Debuga(func() string { return sq.Select().String() })
 		edr.subquery, err = ectx.OpenStatement(sq.Select().String(), nil, nil, false, true)
 		if err != nil {
 			return nil, errors.NewInferExpressionEvalFailed(err)

@@ -15,6 +15,7 @@ import (
 	"strings"
 
 	"github.com/couchbase/query/algebra"
+	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/logging"
 )
@@ -166,9 +167,15 @@ func (this *lexer) Lex(lval *yySymType) int {
 	}
 
 	// is it a namespace?
-	_, found := namespaces[lval.s]
+	tok := lval.s
+	if tok[0] == '#' {
+		tok = tok[1:]
+	}
+	_, found := namespaces[tok]
 	if !found {
 		return IDENT
+	} else {
+		lval.s = tok
 	}
 
 	// save the current token value and check the next
@@ -181,6 +188,10 @@ func (this *lexer) Lex(lval *yySymType) int {
 	// not a colon, so we have an identifier
 	if this.saved != COLON {
 		return IDENT
+	}
+
+	if lval.s == datastore.GetSystemstore().Id() {
+		return SYSTEM
 	}
 
 	return NAMESPACE_ID
