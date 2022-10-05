@@ -55,6 +55,7 @@ const (
 	CACHE_KEYS
 	RANDOM_ENTRY_LAST
 	NO_RANDOM_SCAN
+	SAMPLE_ALL_DOCS
 )
 
 var flags_map = map[string]Flag{
@@ -74,6 +75,7 @@ var flags_map = map[string]Flag{
 	"cache_keys":                   CACHE_KEYS,
 	"random_entry_last":            RANDOM_ENTRY_LAST,
 	"no_random_scan":               NO_RANDOM_SCAN,
+	"sample_all_docs":              SAMPLE_ALL_DOCS,
 }
 
 type DocumentRetriever interface {
@@ -279,7 +281,7 @@ func MakeUnifiedDocumentRetriever(name string, context datastore.QueryContext, k
 
 	if udr.isFlagOff(NO_LIMIT_RANDOM) {
 		if float64(sampleSize) >= float64(docCount)*_RANDOM_THRESHOLD {
-			udr.flags |= RANDOM_ENTRY_LAST | NO_RANDOM_INDEX_SAMPLE
+			udr.flags |= RANDOM_ENTRY_LAST | NO_RANDOM_INDEX_SAMPLE | SAMPLE_ALL_DOCS
 			sampleSize = int(docCount)
 		}
 	}
@@ -301,6 +303,7 @@ func MakeUnifiedDocumentRetriever(name string, context datastore.QueryContext, k
 
 	if sampleSize <= 0 || sampleSize > int(docCount) {
 		udr.sampleSize = int(docCount)
+		udr.flags |= SAMPLE_ALL_DOCS
 	} else {
 		udr.sampleSize = sampleSize
 	}
@@ -317,8 +320,13 @@ func MakeUnifiedDocumentRetriever(name string, context datastore.QueryContext, k
 		if ok {
 			udr.rs_key = 0
 			var err errors.Error
-			udr.rs_scan, err = udr.rs.StartRandomScan(udr.sampleSize, 0, int(datastore.GetScanCap()), context.KvTimeout(),
-				tenant.IsServerless())
+			if udr.isFlagOn(SAMPLE_ALL_DOCS) {
+				udr.rs_scan, err = udr.rs.StartRandomScan(math.MaxInt, 0, int(datastore.GetScanCap()), context.KvTimeout(),
+					tenant.IsServerless())
+			} else {
+				udr.rs_scan, err = udr.rs.StartRandomScan(udr.sampleSize, 0, int(datastore.GetScanCap()), context.KvTimeout(),
+					tenant.IsServerless())
+			}
 			if err != nil {
 				logging.Debuga(func() string { return fmt.Sprintf("UDR: random scan start failed: %v", err) })
 				errs = append(errs, err)

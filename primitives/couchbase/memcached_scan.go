@@ -15,6 +15,7 @@ import (
 	"container/list"
 	"fmt"
 	"io"
+	"math"
 	"math/rand"
 	"os"
 	"runtime"
@@ -431,9 +432,14 @@ func (this *seqScan) coordinator(b *Bucket, scanTimeout time.Duration) {
 
 	if this.sampleSize != 0 {
 		returnLimit = int64(this.sampleSize)
-		sampleSize := (this.sampleSize + len(vblist) - 1) / len(vblist)
-		if sampleSize < _SS_MIN_SAMPLE_SIZE {
-			sampleSize = _SS_MIN_SAMPLE_SIZE
+		var sampleSize int
+		if this.sampleSize == math.MaxInt {
+			sampleSize = this.sampleSize
+		} else {
+			sampleSize = (this.sampleSize + len(vblist) - 1) / len(vblist)
+			if sampleSize < _SS_MIN_SAMPLE_SIZE {
+				sampleSize = _SS_MIN_SAMPLE_SIZE
+			}
 		}
 		for vb := 0; vb < len(vblist); vb++ {
 			server := 0
