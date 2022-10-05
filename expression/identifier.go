@@ -117,8 +117,9 @@ func (this *Identifier) Indexable() bool {
 func (this *Identifier) EquivalentTo(other Expression) bool {
 	switch other := other.(type) {
 	case *Identifier:
-		return (this.identifier == other.identifier) &&
-			(this.caseInsensitive == other.caseInsensitive)
+		return (this.identifier == other.identifier) ||
+			((this.caseInsensitive || other.caseInsensitive) &&
+				strings.ToLower(this.identifier) == strings.ToLower(other.identifier))
 	default:
 		return false
 	}
@@ -127,8 +128,9 @@ func (this *Identifier) EquivalentTo(other Expression) bool {
 func (this *Identifier) CoveredBy(keyspace string, exprs Expressions, options CoveredOptions) Covered {
 	// MB-25317, if this is not the right keyspace, ignore the expression altogether
 	// MB-25370 this only applies for keyspace terms, not variables!
-	if (this.IsKeyspaceAlias() && this.identifier != keyspace) || this.IsWithAlias() ||
-		this.IsProjectionAlias() || (!options.hasCoverBindVar() && this.IsBindingVariable()) {
+	if (this.IsKeyspaceAlias() && ((!this.CaseInsensitive() && this.identifier != keyspace) ||
+		(this.CaseInsensitive() && strings.ToLower(this.identifier) != strings.ToLower(keyspace)))) ||
+		this.IsWithAlias() || this.IsProjectionAlias() || (!options.hasCoverBindVar() && this.IsBindingVariable()) {
 		return CoveredSkip
 	}
 

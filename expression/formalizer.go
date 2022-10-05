@@ -10,6 +10,7 @@ package expression
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/value"
@@ -292,9 +293,24 @@ func (this *Formalizer) VisitObject(expr *Object) (interface{}, error) {
 Formalize Identifier.
 */
 func (this *Formalizer) VisitIdentifier(expr *Identifier) (interface{}, error) {
-	identifier := expr.Identifier()
-
-	ident_val, ok := this.allowed.Field(identifier)
+	var identifier string
+	var ident_val value.Value
+	var ok bool
+	if expr.CaseInsensitive() {
+		ok = false
+		identifier = strings.ToLower(expr.Identifier())
+		for n, v := range this.allowed.Fields() {
+			if strings.ToLower(n) == identifier {
+				identifier = n
+				ident_val = v.(value.Value)
+				ok = true
+				break
+			}
+		}
+	} else {
+		identifier = expr.Identifier()
+		ident_val, ok = this.allowed.Field(identifier)
+	}
 	if ok {
 		// if sarging for index, for index keys or index conditions,
 		// don't match with keyspace alias

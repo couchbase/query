@@ -663,6 +663,11 @@ ident_or_default from_or_as
     $$ = $1
 }
 |
+IDENT_ICASE from_or_as
+{
+    return yylex.(*lexer).FatalError("Prepared identifier must be case sensitive", $<line>1, $<column>1)
+}
+|
 STR from_or_as
 {
     $$ = $1
@@ -684,6 +689,11 @@ AS
 execute:
 EXECUTE expr execute_using
 {
+    if id, ok := $2.(*expression.Identifier); ok {
+        if id.CaseInsensitive() {
+            return yylex.(*lexer).FatalError("Prepared identifier must be case sensitive", $<line>2, $<column>2)
+        }
+    }
     $$ = algebra.NewExecute($2, $3)
 }
 ;
@@ -1395,6 +1405,9 @@ expr opt_as_alias opt_use
             sqterm.SetErrorContext(l, c)
             $$ = sqterm
         case *expression.Identifier:
+            if other.CaseInsensitive() {
+                return yylex.(*lexer).FatalError("Keyspace term must be case sensitive", $<line>1, $<column>1)
+            }
             ksterm := algebra.NewKeyspaceTermFromPath(algebra.NewPathWithContext(other.Alias(), yylex.(*lexer).Namespace(),
                 yylex.(*lexer).QueryContext()), $2, $3.Keys(), $3.Indexes())
             ksterm.SetValidateKeys($3.ValidateKeys())
@@ -1421,6 +1434,10 @@ expr opt_as_alias opt_use
                 if err != nil {
                     isExpr = true
                 } else {
+                    if cs := other.GetFirstCaseSensitivePathElement(); cs != nil {
+                        l, c := cs.GetErrorContext()
+                        return yylex.(*lexer).FatalError("Keyspace term must be case sensitive", l, c)
+                    }
                     ksterm := algebra.NewKeyspaceTermFromPath(longPath, $2, $3.Keys(), $3.Indexes())
                     ksterm.SetFromTwoParts()
                     ksterm.SetValidateKeys($3.ValidateKeys())
@@ -1428,6 +1445,10 @@ expr opt_as_alias opt_use
                     $$ = algebra.NewExpressionTerm(other, $2, ksterm, other.Parenthesis() == false, $3.JoinHint())
                 }
             } else if len(path) == 3 {
+                if cs := other.GetFirstCaseSensitivePathElement(); cs != nil {
+                    l, c := cs.GetErrorContext()
+                    return yylex.(*lexer).FatalError("Keyspace term must be case sensitive", l, c)
+                }
                 ksterm := algebra.NewKeyspaceTermFromPath(algebra.NewPathLong(yylex.(*lexer).Namespace(), path[0], path[1],
                     path[2]), $2, $3.Keys(), $3.Indexes())
                 ksterm.SetValidateKeys($3.ValidateKeys())
@@ -1514,6 +1535,11 @@ ident_or_default
   if $$ != $1 || $$ == "" {
     return yylex.(*lexer).FatalError(fmt.Sprintf("Invalid identifier '%v'", $1), $<line>1, $<column>1)
   }
+}
+|
+IDENT_ICASE
+{
+    return yylex.(*lexer).FatalError("Keyspace term must be case sensitive", $<line>1, $<column>1)
 }
 ;
 
@@ -3498,13 +3524,17 @@ ident_or_default
 |
 path DOT ident_or_default
 {
-    $$ = expression.NewField($1, expression.NewFieldName($3, false))
+    fn := expression.NewFieldName($3, false)
+    fn.ExprBase().SetErrorContext($<line>3,$<column>3)
+    $$ = expression.NewField($1, fn)
     $$.ExprBase().SetErrorContext($<line>1,$<column>1)
 }
 |
-path DOT IDENT_ICASE
+path DOT ident_icase
 {
-    field := expression.NewField($1, expression.NewFieldName($3, true))
+    fn := expression.NewFieldName($3.Identifier(), true)
+    fn.ExprBase().SetErrorContext($<line>3,$<column>3)
+    field := expression.NewField($1, fn)
     field.SetCaseInsensitive(true)
     $$ = field
     $$.ExprBase().SetErrorContext($<line>1,$<column>1)
@@ -3551,6 +3581,7 @@ IDENT_ICASE
 {
     $$ = expression.NewIdentifier($1)
     $$.ExprBase().SetErrorContext($<line>1,$<column>1)
+    $$.SetCaseInsensitive(true)
 }
 ;
 
@@ -3598,13 +3629,17 @@ expr DOT ident LPAREN opt_exprs RPAREN
 /* Nested */
 expr DOT ident
 {
-    $$ = expression.NewField($1, expression.NewFieldName($3.Identifier(), false))
+    fn := expression.NewFieldName($3.Identifier(), false)
+    fn.ExprBase().SetErrorContext($<line>3,$<column>3)
+    $$ = expression.NewField($1, fn)
     $$.ExprBase().SetErrorContext($3.ExprBase().GetErrorContext())
 }
 |
 expr DOT ident_icase
 {
-    field := expression.NewField($1, expression.NewFieldName($3.Identifier(), true))
+    fn := expression.NewFieldName($3.Identifier(), true)
+    fn.ExprBase().SetErrorContext($<line>3,$<column>3)
+    field := expression.NewField($1, fn)
     field.SetCaseInsensitive(true)
     $$ = field
     $$.ExprBase().SetErrorContext($3.ExprBase().GetErrorContext())
@@ -4049,13 +4084,17 @@ b_expr DOT ident_or_default LPAREN opt_exprs RPAREN
 /* Nested */
 b_expr DOT ident_or_default
 {
-    $$ = expression.NewField($1, expression.NewFieldName($3, false))
+    fn := expression.NewFieldName($3, false)
+    fn.ExprBase().SetErrorContext($<line>3,$<column>3)
+    $$ = expression.NewField($1, fn)
     $$.ExprBase().SetErrorContext($1.ExprBase().GetErrorContext())
 }
 |
-b_expr DOT IDENT_ICASE
+b_expr DOT ident_icase
 {
-    field := expression.NewField($1, expression.NewFieldName($3, true))
+    fn := expression.NewFieldName($3.Identifier(), true)
+    fn.ExprBase().SetErrorContext($<line>3,$<column>3)
+    field := expression.NewField($1, fn)
     field.SetCaseInsensitive(true)
     $$ = field
     $$.ExprBase().SetErrorContext($1.ExprBase().GetErrorContext())

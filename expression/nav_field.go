@@ -32,6 +32,8 @@ func NewField(first, second Expression) *Field {
 	}
 
 	switch second := second.(type) {
+	case *FieldName:
+		rv.caseInsensitive = second.CaseInsensitive()
 	case *Identifier:
 		rv.caseInsensitive = second.CaseInsensitive()
 	}
@@ -185,9 +187,7 @@ func (this *Field) Indexable() bool {
 func (this *Field) EquivalentTo(other Expression) bool {
 	switch other := other.(type) {
 	case *Field:
-		return (this.caseInsensitive == other.caseInsensitive) &&
-			this.First().EquivalentTo(other.First()) &&
-			this.Second().EquivalentTo(other.Second())
+		return this.First().EquivalentTo(other.First()) && this.Second().EquivalentTo(other.Second())
 	default:
 		return false
 	}
@@ -383,6 +383,35 @@ outer:
 	return out
 }
 
+func (this *Field) GetFirstCaseSensitivePathElement() Expression {
+	switch first := this.First().(type) {
+	case *Field:
+		if i, ok := first.First().(*Identifier); ok && i.CaseInsensitive() {
+			return i
+		}
+		if fn, ok := first.Second().(*FieldName); ok && fn.CaseInsensitive() {
+			return fn
+		}
+	case *Identifier:
+		if first.CaseInsensitive() {
+			return first
+		}
+	}
+	if fn, ok := this.Second().(*FieldName); ok && fn.CaseInsensitive() {
+		return fn
+	}
+	if this.CaseInsensitive() {
+		return this
+	}
+	return nil
+}
+
+func (this *Field) Copy() Expression {
+	rv := this.BinaryFunctionBase.Copy().(*Field)
+	rv.caseInsensitive = this.caseInsensitive
+	return rv
+}
+
 /*
 FieldName represents the Field. It implements Constant and has a field
 name as string. This class overrides the Alias() method so that the
@@ -424,8 +453,9 @@ func (this *FieldName) Alias() string {
 func (this *FieldName) EquivalentTo(other Expression) bool {
 	switch other := other.(type) {
 	case *FieldName:
-		return (this.name == other.name) &&
-			(this.caseInsensitive == other.caseInsensitive)
+		return (this.name == other.name) ||
+			((this.caseInsensitive || other.caseInsensitive) &&
+				strings.ToLower(this.name) == strings.ToLower(other.name))
 	default:
 		return this.valueEquivalentTo(other)
 	}
@@ -445,8 +475,9 @@ func (this *FieldName) CoveredBy(keyspace string, exprs Expressions, options Cov
 
 		switch eType := expr.(type) {
 		case *FieldName:
-			isEquivalent = (this.name == eType.name) &&
-				(this.caseInsensitive == eType.caseInsensitive)
+			isEquivalent = ((this.caseInsensitive || eType.caseInsensitive) &&
+				strings.ToLower(this.name) == strings.ToLower(eType.name)) ||
+				this.name == eType.name
 		case *Identifier:
 			isEquivalent = (this.caseInsensitive &&
 				strings.ToLower(this.name) == strings.ToLower(eType.identifier)) ||

@@ -8,6 +8,10 @@
 
 package expression
 
+import (
+	"strings"
+)
+
 // retrieve identifier expression for a keyspace
 func GetKeyspaceIdentifier(alias string, expr Expression) *Identifier {
 	retriever := NewKSIdentRetriever(alias)
@@ -35,8 +39,12 @@ func NewKSIdentRetriever(keyspace string) *ksIdentRetriever {
 }
 
 func (this *ksIdentRetriever) VisitIdentifier(ident *Identifier) (interface{}, error) {
-	if this.ident == nil && this.keyspace == ident.Identifier() {
-		this.ident = ident
+	if this.ident == nil {
+		if this.keyspace == ident.Identifier() ||
+			(ident.CaseInsensitive() && strings.ToLower(this.keyspace) == strings.ToLower(ident.Identifier())) {
+
+			this.ident = ident
+		}
 	}
 	return nil, nil
 }

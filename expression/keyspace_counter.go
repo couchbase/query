@@ -64,15 +64,24 @@ func (this *keyspaceCounter) VisitField(expr *Field) (interface{}, error) {
 }
 
 func (this *keyspaceCounter) VisitIdentifier(expr *Identifier) (interface{}, error) {
-	keyspace := expr.String()
-	keyspace = strings.Trim(keyspace, "`")
+	keyspace := expr.Identifier()
 	if len(keyspace) == 0 {
 		return nil, errors.NewPlanInternalError("keyspaceCounter.VisitIdentifier: empty keyspace name")
 	}
 
-	if _, ok := this.baseKeyspaces[keyspace]; ok {
-		if _, ok = this.keyspaces[keyspace]; !ok {
-			this.keyspaces[keyspace] = this.baseKeyspaces[keyspace]
+	if expr.CaseInsensitive() {
+		keyspace = strings.ToLower(keyspace)
+		for k, _ := range this.baseKeyspaces {
+			if keyspace == strings.ToLower(k) {
+				this.keyspaces[k] = this.baseKeyspaces[k]
+				break
+			}
+		}
+	} else {
+		if _, ok := this.baseKeyspaces[keyspace]; ok {
+			if _, ok = this.keyspaces[keyspace]; !ok {
+				this.keyspaces[keyspace] = this.baseKeyspaces[keyspace]
+			}
 		}
 	}
 

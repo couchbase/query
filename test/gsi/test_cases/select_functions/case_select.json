@@ -495,5 +495,42 @@
         "a": 4
       }
     ]
+  },
+  {
+    "comment": "Case insensitive identifer in projection",
+    "statements": "SELECT t.`title`i FROM {\"TITLE\":\"found\"} t",
+    "results": [
+      {
+        "title": "found"
+      }
+    ]
+  },
+  {
+    "comment": "Case insensitive identifer in filter",
+    "statements": "SELECT t.* FROM {\"TITLE\":\"found\"} t WHERE t.`title`i = 'found'",
+    "results": [
+      {
+        "TITLE": "found"
+      }
+    ]
+  },
+  {
+    "comment": "Case insensitive identifer in join",
+    "statements": "SELECT COUNT(1) count FROM {\"field\":1} a JOIN {\"field\":1} b ON a.`FIELD`i = b.`Field`i",
+    "results": [
+      {
+        "count": 1
+      }
+    ]
+  },
+  {
+    "comment": "Case insensitive identifer duplicate alias (second term is not a duplicate because of case)",
+    "statements": "SELECT t.`title`i, t.`Title`i, t.title",
+    "error": "Duplicate result alias 'title' (near line 1, column 34)."
+  },
+  {
+    "comment": "Case insensitive identifer not permitted for keyspace",
+    "statements": "SELECT * FROM `orders`i",
+    "error": "Keyspace term must be case sensitive (near line 1, column 15)"
   }
 ]
