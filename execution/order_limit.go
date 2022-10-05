@@ -135,6 +135,14 @@ func (this *OrderLimit) afterItems(context *Context) {
 
 	if offset < int64(this.values.Length()) {
 		this.Order.afterItems(context)
+	} else {
+		this.Order.values.Truncate(
+			func(v value.AnnotatedValue) {
+				if context.UseRequestQuota() {
+					context.ReleaseValueSize(v.Size())
+				}
+				v.Recycle()
+			})
 	}
 
 	// Set the sort count to the number of processed rows.
