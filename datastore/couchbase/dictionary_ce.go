@@ -13,6 +13,7 @@
 // Currently, the community edition does not have access to dictionary
 // cache, so this function is no-op.
 
+//go:build !enterprise
 // +build !enterprise
 
 package couchbase

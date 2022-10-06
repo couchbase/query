@@ -13,6 +13,7 @@
 // Currently, the community edition does not have access to update
 // statistics, so this stub returns an error.
 
+//go:build !enterprise
 // +build !enterprise
 
 package couchbase

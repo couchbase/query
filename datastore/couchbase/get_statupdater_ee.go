@@ -14,6 +14,7 @@
 // includes update statistics. This file is only built in with
 // the enterprise edition.
 
+//go:build enterprise
 // +build enterprise
 
 package couchbase
