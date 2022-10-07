@@ -21,7 +21,7 @@ import (
 type javascriptBody struct {
 }
 
-func Init(mix *mux.Router, t int) {
+func Init(mix *mux.Router) {
 }
 
 func NewJavascriptBody(library, object, text string) (functions.FunctionBody, errors.Error) {
