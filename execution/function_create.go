@@ -13,7 +13,6 @@ import (
 
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/functions"
-	"github.com/couchbase/query/functions/javascript"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
 )
@@ -64,9 +63,10 @@ func (this *CreateFunction) RunOnce(context *Context, parent value.Value) {
 		var err errors.Error
 
 		// If the function is an Internal JS function, load the JS function body, to check if it is syntactically correct
-		err = javascript.LoadFunction(this.plan.Name(), this.plan.Body(), true)
+		err = this.plan.Body().Load(this.plan.Name())
 
 		if err != nil {
+			this.plan.Body().Unload(this.plan.Name())
 			context.Error(err)
 			return
 		}

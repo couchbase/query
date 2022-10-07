@@ -64,6 +64,8 @@ type FunctionBody interface {
 	SwitchContext() value.Tristate
 	IsExternal() bool
 	Privileges() (*auth.Privileges, errors.Error)
+	Load(FunctionName) errors.Error
+	Unload(FunctionName)
 }
 
 type FunctionEntry struct {
@@ -145,11 +147,12 @@ func FunctionDo(key string, f func(*FunctionEntry)) {
 func FunctionClear(key string, f func(*FunctionEntry)) bool {
 	var process func(interface{}) = nil
 
-	if f != nil {
-		process = func(entry interface{}) {
-			ce := entry.(*FunctionEntry)
+	process = func(entry interface{}) {
+		ce := entry.(*FunctionEntry)
+		if f != nil {
 			f(ce)
 		}
+		ce.Unload(ce.FunctionName)
 	}
 	return functions.cache.Delete(key, process)
 }
@@ -159,8 +162,10 @@ func ClearScopeEntries(namespace, bucket, scope string) {
 	var id string
 
 	nonBlocking := func(k string, e interface{}) bool {
-		path := e.(*FunctionEntry).Path()
+		ce := e.(*FunctionEntry)
+		path := ce.Path()
 		del = len(path) == 4 && namespace == path[0] && bucket == path[1] && scope == path[2]
+		ce.Unload(ce.FunctionName)
 		id = k
 		return true
 	}
@@ -255,7 +260,9 @@ func AddFunction(name FunctionName, body FunctionBody, replace bool) errors.Erro
 		})
 
 		if !added {
-			functions.cache.Delete(key, nil)
+			functions.cache.Delete(key, func(ce interface{}) {
+				ce.(*FunctionEntry).Unload(ce.(*FunctionEntry).FunctionName)
+			})
 			logging.Debugf("Conflict in saving function to cache, key <ud>%v</ud>", key)
 		}
 
@@ -284,7 +291,9 @@ func DeleteFunction(name FunctionName, context Context) errors.Error {
 		key := name.Key()
 
 		// if successful clear the cache locally
-		functions.cache.Delete(key, nil)
+		functions.cache.Delete(key, func(ce interface{}) {
+			ce.(*FunctionEntry).Unload(ce.(*FunctionEntry).FunctionName)
+		})
 
 		// and remotely
 		distributed.RemoteAccess().DoRemoteOps([]string{}, "functions_cache", "DELETE", key, "",
@@ -622,4 +631,11 @@ func (this *missing) SetStorage(context Context, path []string) errors.Error {
 
 func (this *missing) Execute(name FunctionName, body FunctionBody, modifiers Modifier, values []value.Value, context Context) (value.Value, errors.Error) {
 	return nil, errors.NewMissingFunctionError(name.Name())
+}
+
+func (this *missing) Load(name FunctionName) errors.Error {
+	return nil
+}
+
+func (this *missing) Unload(name FunctionName) {
 }

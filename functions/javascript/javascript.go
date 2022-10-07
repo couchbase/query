@@ -14,6 +14,7 @@ import (
 	goerrors "errors"
 	"fmt"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -24,6 +25,7 @@ import (
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/functions"
 	"github.com/couchbase/query/logging"
+	"github.com/couchbase/query/tenant"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 	"github.com/gorilla/mux"
@@ -31,8 +33,10 @@ import (
 
 // we won't let a javascript function execute more than 2 minutes
 const _MAX_TIMEOUT = 120000
-const _MIN_SERVICERS = 6
-const _MAX_SERVICERS = 96
+const _DEF_RUNNERS = 32
+const _MIN_THREADS_THRESHOLD = 4
+const _MAX_THREAD_COUNT = 4096
+const _MAX_LEVELS = 128
 
 type javascript struct {
 }
@@ -46,106 +50,180 @@ type javascriptBody struct {
 	text     string // Internal JS functions have the function's JS code stored
 }
 
-var externalJSEnabled = false
-var externalJSEvaluator defs.Evaluator
-var threads int32
-var threadCount int32
-var libStore defs.LibStore
-var internalJSEvaluator defs.Evaluator
-var internalJSEnabled = false
+type evaluatorDesc struct {
+	threads     int32
+	threadCount int32
+	name        string
+	engine      defs.Engine
+	evaluator   defs.Evaluator
+	libStore    defs.LibStore
+}
 
-// FIXME to be sorted
-// - evaluator client does not yet take context
+var external evaluatorDesc
+var internal evaluatorDesc
+var tenants map[string]*evaluatorDesc
+var tenantsLock sync.RWMutex
+
 // - indexing issues: identify functions as deterministic and not running N1QL code
 
 // TODO TENANT cleanup tenant runners
 
-func Init(mux *mux.Router, t int) {
+func Init(mux *mux.Router) {
 	functions.FunctionsNewLanguage(functions.JAVASCRIPT, &javascript{})
 
-	if t < _MIN_SERVICERS {
-		t = _MIN_SERVICERS
-	} else if t > _MAX_SERVICERS {
-		t = _MAX_SERVICERS
-	}
+	// TODO for serverless the global engine is there to service couchbase provided global libraries
+	// we may decide to disable it completely
 
 	// Create the engine for external JS functions
-	externalJSEngine := n1ql_client.SingleInstance
+	external.engine = n1ql_client.SingleInstance
+	external.name = "external jsevaluator"
 	config := make(map[defs.Config]interface{})
-	config[defs.Threads] = t
+	config[defs.Threads] = _DEF_RUNNERS
 	config[defs.FeatureBitmask] = uint32(8)
 	config[defs.IsIpV6] = util.IPv6
 	config[defs.GlobalManagePermission] = "cluster.n1ql.udf_external!manage"
 	config[defs.ScopeManagePermission] = "cluster.collection[%s].n1ql.udf_external!manage"
 	config[defs.SysLogLevel] = 4
 	config[defs.SysLogCallback] = func(level, msg string, ctx interface{}) {
-		logging.Infof("jsevaluator: %s", msg)
+		logging.Infof("external jsevaluator: %s", msg)
 	}
-	threads = int32(t)
+	external.threads = int32(_DEF_RUNNERS)
 
-	err := externalJSEngine.Configure(config)
+	err := external.engine.Configure(config)
 	if err.Err == nil {
 		if mux != nil {
-			handle := externalJSEngine.UIHandler()
+			handle := external.engine.UIHandler()
 			mux.NewRoute().PathPrefix(handle.Path()).Methods("GET", "POST", "DELETE").HandlerFunc(handle.Handler())
 		}
 		if err.Err == nil {
-			err = externalJSEngine.Start()
+			err = external.engine.Start()
 		}
 	}
 
 	if err.Err != nil {
 		logging.Infof("Unable to start javascript evaluator client, err : %v", err.Err)
 	} else {
-		externalJSEvaluator = externalJSEngine.Fetch()
-		if externalJSEvaluator == nil {
+		external.evaluator = external.engine.Fetch()
+		if external.evaluator == nil {
 			logging.Infof("Unable to retrieve javascript evaluator")
 		} else {
-			externalJSEnabled = true
+			logging.Infof("Started jsevaluator for %v with %v runners", external.name, _DEF_RUNNERS)
 		}
 	}
 
-	// Create a new engine for Internal JS functions
-	configInternalJS := make(map[defs.Config]interface{})
-	configInternalJS[defs.Threads] = t
-	configInternalJS[defs.FeatureBitmask] = uint32(8)
-	configInternalJS[defs.IsIpV6] = util.IPv6
-	configInternalJS[defs.GlobalManagePermission] = "cluster.n1ql.udf_external!manage"
-	configInternalJS[defs.ScopeManagePermission] = "cluster.collection[%s].n1ql.udf_external!manage"
-	configInternalJS[defs.SysLogLevel] = 4
-	configInternalJS[defs.SysLogCallback] = func(level, msg string, ctx interface{}) {
-		logging.Infof("Internal jsevaluator: %s", msg)
+	if tenant.IsServerless() {
+		tenants = make(map[string]*evaluatorDesc)
+		tenant.RegisterResourceManager(manageTenant)
+	} else {
+		internal.name = "internal javascript"
+		internal.engine, internal.libStore, internal.evaluator, _ = newEngine(internal.name, _DEF_RUNNERS)
+		internal.threads = int32(_DEF_RUNNERS)
+		if internal.libStore == nil {
+			internal.evaluator = nil
+		}
+	}
+}
+
+func newEngine(desc string, t int) (defs.Engine, defs.LibStore, defs.Evaluator, defs.Error) {
+	var evaluator defs.Evaluator
+
+	config := make(map[defs.Config]interface{})
+	config[defs.Threads] = t
+	config[defs.FeatureBitmask] = uint32(8)
+	config[defs.IsIpV6] = util.IPv6
+	config[defs.SysLogLevel] = 4
+
+	config[defs.SysLogCallback] = func(level, msg string, ctx interface{}) {
+		logging.Infof("jsevaluator for %v: %s", desc, msg)
 	}
 
-	internalJSEngine := n1ql_client.NewEngine()
-	err = internalJSEngine.Configure(configInternalJS)
+	engine := n1ql_client.NewEngine()
+	err := engine.Configure(config)
 
 	if err.Err == nil {
-		err = internalJSEngine.Start()
+		err = engine.Start()
 	}
 
 	if err.Err != nil {
-		logging.Infof("Unable to start internal javascript evaluator client, err : %v", err.Err)
+		logging.Infof("Unable to start javascript evaluator client for %v, err : %v", desc, err.Err)
 	} else {
-		internalJSEvaluator = internalJSEngine.Fetch()
-		if internalJSEvaluator == nil {
-			logging.Infof("Unable to retrieve internal javascript evaluator")
-		} else {
-			internalJSEnabled = true
+		evaluator = engine.Fetch()
+		if evaluator == nil {
+			logging.Infof("Unable to retrieve javascript evaluator for %v", desc)
 		}
 	}
 
-	libStore = internalJSEngine.GetLibStore()
+	libStore := engine.GetLibStore()
 
 	if libStore == nil {
-		logging.Infof("libStore is nil")
-		internalJSEnabled = false
+		logging.Infof("Failed to prime evaluator for %v: libStore is nil", desc)
 
+	} else {
+		logging.Infof("Started jsevaluator for %v with %v runners", desc, t)
 	}
+	return engine, libStore, evaluator, err
+}
+
+func manageTenant(bucket string) {
+	tenantsLock.Lock()
+	desc := tenants[bucket]
+	delete(tenants, bucket)
+	tenantsLock.Unlock()
+	if desc != nil {
+		desc.engine.Destroy()
+		logging.Infof("Unloading jsevaluator tenant %v", bucket)
+	}
+}
+
+func getEvaluator(name functions.FunctionName) (*evaluatorDesc, errors.Error) {
+	var tenant string
+	var err defs.Error
+
+	path := name.Path()
+
+	// yawser! a global UDF in serverless! Administrator must be up to something!
+	if len(path) == 2 {
+		tenant = "#internal"
+	} else {
+		tenant = path[1]
+	}
+	tenantsLock.RLock()
+	desc := tenants[tenant]
+	tenantsLock.RUnlock()
+	if desc != nil {
+		return desc, nil
+	}
+
+	// not there
+	tenantsLock.Lock()
+
+	// somebody created in the interim?
+	desc = tenants[tenant]
+	if desc != nil {
+		tenantsLock.Unlock()
+		return desc, nil
+	}
+	desc = &evaluatorDesc{}
+	desc.engine, desc.libStore, desc.evaluator, err = newEngine(tenant, _DEF_RUNNERS)
+	if err.Err != nil {
+		tenantsLock.Unlock()
+		if err.Details != nil {
+			return nil, errors.NewEvaluatorLoadingError(tenant, err.Details)
+		} else {
+			errorText := fmt.Errorf("%v %v", err.Message, err.Err)
+			return nil, errors.NewEvaluatorLoadingError(tenant, errorText.Error())
+		}
+	}
+	desc.threads = _DEF_RUNNERS
+	desc.name = tenant
+	tenants[tenant] = desc
+	tenantsLock.Unlock()
+	return desc, nil
 }
 
 func (this *javascript) Execute(name functions.FunctionName, body functions.FunctionBody, modifiers functions.Modifier, values []value.Value, context functions.Context) (value.Value, errors.Error) {
 	var args []interface{}
+	var evaluator *evaluatorDesc
 
 	funcName := name.Name()
 	funcBody, ok := body.(*javascriptBody)
@@ -155,13 +233,18 @@ func (this *javascript) Execute(name functions.FunctionName, body functions.Func
 	}
 
 	if funcBody.text == "" {
-		if !externalJSEnabled {
-			return nil, errors.NewFunctionsDisabledError("External javascript")
+		evaluator = &external
+	} else if tenant.IsServerless() {
+		var err errors.Error
+		evaluator, err = getEvaluator(name)
+		if evaluator == nil {
+			return nil, err
 		}
 	} else {
-		if !internalJSEnabled {
-			return nil, errors.NewFunctionsDisabledError("Internal javascript")
-		}
+		evaluator = &internal
+	}
+	if evaluator.evaluator == nil {
+		return nil, errors.NewFunctionsDisabledError(evaluator.name)
 	}
 
 	if funcBody.varNames != nil && len(values) != len(funcBody.varNames) {
@@ -177,67 +260,86 @@ func (this *javascript) Execute(name functions.FunctionName, body functions.Func
 		timeout = _MAX_TIMEOUT
 	}
 	opts := map[defs.Option]interface{}{defs.SideEffects: (modifiers & functions.READONLY) == 0, defs.Timeout: timeout}
-	runners := atomic.AddInt32(&threadCount, 1)
-	defer atomic.AddInt32(&threadCount, -1)
+	runners := atomic.AddInt32(&(*evaluator).threadCount, 1)
+	defer atomic.AddInt32(&(*evaluator).threadCount, -1)
 	levels := context.IncRecursionCount(1)
 	defer context.IncRecursionCount(-1)
-
-	// make sure that requests don't flood the runners by calling nested functions too deeply
-	// the higher the load, the lower the threshold
-	if levels > 1 && levels > int(threads-runners) {
+	if levels > _MAX_LEVELS {
 		return nil, errors.NewFunctionExecutionNestedError(levels, funcName)
+	}
+
+	// inflate the pools if required
+	// beyond the maximum number of runners the function will have to wait for a runner to be free
+	if evaluator.threads-runners < _MIN_THREADS_THRESHOLD && evaluator.threads < _MAX_THREAD_COUNT {
+
+		newThreads, inflateErr := evaluator.engine.InflatePoolBy(_DEF_RUNNERS)
+		if newThreads > 0 {
+			atomic.AddInt32(&(*evaluator).threads, int32(newThreads))
+			logging.Infof("Adding %v runners to evaluator %v: actual increment %v to %v", _DEF_RUNNERS, evaluator.name, newThreads, evaluator.threads)
+		} else {
+			logging.Infof("Adding %v runners to evaluator %v: error %v", _DEF_RUNNERS, evaluator.name, inflateErr)
+			switch {
+			case inflateErr.Details != nil:
+				return nil, errors.NewEvaluatorInflatingError(evaluator.name, inflateErr.Details)
+			case inflateErr.Err != nil:
+				errorText := fmt.Errorf("%v %v", inflateErr.Message, inflateErr.Err)
+				return nil, errors.NewEvaluatorInflatingError(evaluator.name, errorText.Error())
+			default:
+				return nil, errors.NewEvaluatorInflatingError(evaluator.name, fmt.Errorf("could not allocate threads, but no error received"))
+			}
+		}
 	}
 
 	var res interface{}
 	var err defs.Error
+	var library string
 
-	if funcBody.text == "" { // the function is an External JS function
-		library := funcBody.libName
+	if funcBody.text == "" {
+		library = funcBody.libName
+		funcName = funcBody.object
 
 		// if nested paths are not specified, just use the unformalized library
 		if library == "" {
 			library = funcBody.library
 		}
-		res, err = externalJSEvaluator.Evaluate(library, funcBody.object, opts, args, functions.NewUdfContext(context, funcBody.prefix))
-
-	} else { // the function is an Internal JS function
+	} else {
 
 		// If the function body's text has not already been loaded, load it
-		// For internal JS functions, the libName i.e the JS library will be the full path of the function
-		path := name.Path()
-		library := algebra.PathFromParts(path...)
-		_, isLoaded := libStore.Read(library)
+		library = nameToLibrary(name)
+		_, isLoaded := evaluator.libStore.Read(library)
 
 		if !isLoaded {
-			err1 := LoadFunction(name, body, false)
+			err1 := body.Load(name)
 			if err1 != nil {
 				return nil, err1
 			}
 		}
 
-		res, err = internalJSEvaluator.Evaluate(library, funcName, opts, args, functions.NewUdfContext(context, funcBody.prefix))
+	}
+	res, err = evaluator.evaluator.Evaluate(library, funcName, opts, args, functions.NewUdfContext(context, funcBody.prefix))
+
+	// deflate the pool if required
+	if evaluator.threads-evaluator.threadCount > _DEF_RUNNERS {
+		newThreads := evaluator.engine.DeflatePoolBy(_DEF_RUNNERS)
+		atomic.AddInt32(&(*evaluator).threads, -int32(newThreads))
+		logging.Infof("Dropping %v runners from evaluator %v: actual decrement %v to %v", _DEF_RUNNERS, evaluator.name, newThreads, evaluator.threads)
 	}
 
 	// TODO TENANT
 	context.RecordJsCU(time.Millisecond, 10*1024)
-	if err.Err != nil {
-		return nil, funcBody.execError(err, funcName)
-	} else {
-		return value.NewValue(res), nil
+	switch {
+	case err.Err == nil:
+	case err.IsNestedErr:
+		return nil, errors.NewInnerFunctionExecutionError(fmt.Sprintf("(%v:%v)", library, funcName),
+			funcName, fmt.Errorf("%v", err.Message))
+	case err.Details != nil:
+		return nil, errors.NewFunctionExecutionError(fmt.Sprintf("(%v:%v)", library, funcName),
+			funcName, err.Details)
+	default:
+		return nil, errors.NewFunctionExecutionError(fmt.Sprintf("(%v:%v)", library, funcName),
+			funcName, fmt.Errorf("%v %v", err.Err, err.Message))
 	}
-}
-
-func (this *javascriptBody) execError(err defs.Error, name string) errors.Error {
-	if err.IsNestedErr {
-		return errors.NewInnerFunctionExecutionError(fmt.Sprintf("(%v:%v)", this.library, this.object),
-			name, fmt.Errorf("%v", err.Message))
-	} else if err.Details != nil {
-		return errors.NewFunctionExecutionError(fmt.Sprintf("(%v:%v)", this.library, this.object),
-			name, err.Details)
-	} else {
-		return errors.NewFunctionExecutionError(fmt.Sprintf("(%v:%v)", this.library, this.object),
-			name, fmt.Errorf("%v %v", err.Err, err.Message))
-	}
+	return value.NewValue(res), nil
 }
 
 func NewJavascriptBody(library, object, text string) (functions.FunctionBody, errors.Error) {
@@ -245,14 +347,18 @@ func NewJavascriptBody(library, object, text string) (functions.FunctionBody, er
 }
 
 func NewJavascriptBodyWithDetails(library, object, prefix, libName, text string) (functions.FunctionBody, errors.Error) {
+	var evaluator *evaluatorDesc
+
+	enabled := false
 	if text == "" {
-		if !externalJSEnabled {
-			return nil, errors.NewFunctionsDisabledError("External javascript")
-		}
+		enabled = external.evaluator != nil
+	} else if tenant.IsServerless() {
+		enabled = tenants != nil
 	} else {
-		if !internalJSEnabled {
-			return nil, errors.NewFunctionsDisabledError("Internal javascript")
-		}
+		enabled = internal.evaluator != nil
+	}
+	if !enabled {
+		return nil, errors.NewFunctionsDisabledError(evaluator.name)
 	}
 	return &javascriptBody{library: library, object: object, prefix: prefix, libName: libName, text: text}, nil
 }
@@ -354,36 +460,56 @@ func (this *javascriptBody) Privileges() (*auth.Privileges, errors.Error) {
 	return nil, nil
 }
 
-// For internal JS functions load the JS code in the function body text to LibStore
-func LoadFunction(name functions.FunctionName, body functions.FunctionBody, unloadAfter bool) errors.Error {
-	funcBody, ok := body.(*javascriptBody)
+func (this *javascriptBody) Load(name functions.FunctionName) errors.Error {
+	var evaluator *evaluatorDesc
 
-	if !ok || (ok && funcBody.text == "") {
+	if this.text == "" {
 		return nil
 	}
 
-	path := name.Path()
-	library := algebra.PathFromParts(path...)
+	if tenant.IsServerless() {
+		var err errors.Error
 
-	// For internal JS functions, the libName i.e the JS library will be the full path of the function
-	err := libStore.Load(library, funcBody.text)
-
-	if err.Err != nil {
-		return loadError(err, library)
+		evaluator, err = getEvaluator(name)
+		if err != nil {
+			return err
+		}
+	} else {
+		evaluator = &internal
 	}
 
-	if unloadAfter {
-		libStore.Unload(library)
-	}
+	err := evaluator.libStore.Load(nameToLibrary(name), this.text)
 
-	return nil
+	switch {
+	case err.Err == nil:
+		return nil
+	case err.Details != nil:
+		return errors.NewFunctionLoadingError(name.Name(), err.Details)
+	default:
+		errorText := fmt.Errorf("%v %v", err.Message, err.Err)
+		return errors.NewFunctionLoadingError(name.Name(), errorText.Error())
+	}
 }
 
-func loadError(err defs.Error, name string) errors.Error {
-	if err.Details != nil {
-		return errors.NewFunctionLoadingError(name, err.Details)
-	} else {
-		errorText := fmt.Errorf("%v %v", err.Message, err.Err)
-		return errors.NewFunctionLoadingError(name, errorText.Error())
+func (this *javascriptBody) Unload(name functions.FunctionName) {
+	var evaluator *evaluatorDesc
+
+	if this.text == "" {
+		return
 	}
+	if tenant.IsServerless() {
+		var err errors.Error
+
+		evaluator, err = getEvaluator(name)
+		if err != nil {
+			return
+		}
+	} else {
+		evaluator = &internal
+	}
+	evaluator.libStore.Unload(algebra.PathFromParts(name.Path()...))
+}
+
+func nameToLibrary(name functions.FunctionName) string {
+	return algebra.PathFromParts(name.Path()...)
 }

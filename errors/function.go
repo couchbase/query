@@ -157,3 +157,21 @@ func NewFunctionLoadingError(function string, reason interface{}) Error {
 		InternalMsg:    fmt.Sprintf("Error loading function '%v'", function),
 		InternalCaller: CallerN(1)}
 }
+
+func NewEvaluatorLoadingError(tenant string, reason interface{}) Error {
+	c := make(map[string]interface{})
+	c["tenant"] = tenant
+	c["reason"] = reason
+	return &err{level: EXCEPTION, ICode: E_FUNCTION_LOADING, IKey: "function.tenant.loading.error", cause: c,
+		InternalMsg:    fmt.Sprintf("Error loading evaluator for '%v'", tenant),
+		InternalCaller: CallerN(1)}
+}
+
+func NewEvaluatorInflatingError(tenant string, reason interface{}) Error {
+	c := make(map[string]interface{})
+	c["tenant"] = tenant
+	c["reason"] = reason
+	return &err{level: EXCEPTION, ICode: E_FUNCTION_LOADING, IKey: "function.tenant.inflating.error", cause: c,
+		InternalMsg:    fmt.Sprintf("Error adding javascript runners to evaluator for '%v'", tenant),
+		InternalCaller: CallerN(1)}
+}

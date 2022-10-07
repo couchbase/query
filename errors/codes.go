@@ -302,6 +302,8 @@ const (
 	E_INNER_FUNCTION_EXECUTION                ErrorCode = 10113
 	E_LIBRARY_PATH_ERROR                      ErrorCode = 10114
 	E_FUNCTION_LOADING                        ErrorCode = 10115
+	E_EVALUATOR_LOADING                       ErrorCode = 10116
+	E_EVALUATOR_INFLATING                     ErrorCode = 10117
 	E_DATASTORE_INVALID_BUCKET_PARTS          ErrorCode = 10200
 	E_QUERY_CONTEXT                           ErrorCode = 10201
 	E_BUCKET_NO_DEFAULT_COLLECTION            ErrorCode = 10202

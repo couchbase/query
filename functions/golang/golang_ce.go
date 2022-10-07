@@ -47,3 +47,10 @@ func (this *golangBody) SetStorage(context functions.Context, path []string) err
 func (this *golangBody) Indexable() value.Tristate {
 	return value.FALSE
 }
+
+func (this *golangBody) Load(name functions.FunctionName) errors.Error {
+	return nil
+}
+
+func (this *golangBody) Unload(name functions.FunctionName) {
+}

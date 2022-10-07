@@ -35,7 +35,7 @@ func Init(mux *mux.Router, threads int) {
 	systemStorage.Init()
 	golang.Init()
 	inline.Init()
-	javascript.Init(mux, threads)
+	javascript.Init(mux)
 }
 
 func newGlobalFunction(elem []string, namespace string, queryContext string) (functions.FunctionName, errors.Error) {

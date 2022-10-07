@@ -54,6 +54,9 @@ func (this *javascriptBody) Indexable() value.Tristate {
 	return value.FALSE
 }
 
-func LoadFunction(name functions.FunctionName, body functions.FunctionBody, unloadAfter bool) errors.Error {
+func (this *javascriptBody) Load(name functions.FunctionName) errors.Error {
 	return nil
+}
+
+func (this *javascriptBody) Unload(name functions.FunctionName) {
 }
