@@ -663,6 +663,10 @@ func (this *Context) UseRequestQuota() bool {
 	return this.memorySession != nil
 }
 
+func (this *Context) MemoryQuota() uint64 {
+	return this.memoryQuota
+}
+
 func (this *Context) ProducerThrottleQuota() uint64 {
 	return this.memoryQuota / 10
 }
