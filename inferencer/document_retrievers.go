@@ -389,6 +389,11 @@ func MakeUnifiedDocumentRetriever(name string, context datastore.QueryContext, k
 						if err != nil || state != datastore.ONLINE {
 							continue
 						}
+
+						// if the Index does not implement the PrimaryIndex3 interface - like system keyspace indexes - do not consider the index
+						if _, ok := index.(datastore.PrimaryIndex3); !ok {
+							continue
+						}
 						udr.indexes = append(udr.indexes, index.(datastore.Index))
 						found = true
 						logging.Debuga(func() string { return fmt.Sprintf("UDR: primary index (%v) found", index.Name()) })
@@ -518,7 +523,6 @@ func MakeUnifiedDocumentRetriever(name string, context datastore.QueryContext, k
 				return fmt.Sprintf("UDR: rs: %v rnd: %v idxs: %v", udr.rs != nil, udr.rnd != nil,
 					len(udr.indexes))
 			})
-			return udr, nil
 		} else {
 			errs = append(errs, errors.NewInferKeyspaceError(ks.Name(), err))
 		}
