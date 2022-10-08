@@ -46,6 +46,8 @@ const _SS_MAX_WORKER_IDLE = time.Minute * 60
 const _SS_MONITOR_INTERVAL = time.Minute * 15
 const _SS_MIN_SAMPLE_SIZE = 16
 const _SS_MIN_SCAN_SIZE = 256
+const _SS_RETRIES = 10
+const _SS_RETRY_DELAY = time.Millisecond * 100
 
 /*
  * Bucket functions for driving and consuming a scan.
@@ -460,7 +462,7 @@ func (this *seqScan) coordinator(b *Bucket, scanTimeout time.Duration) {
 					return
 				}
 			}
-			vbs := &vbRangeScan{scan: this, b: b, vb: uint16(vb), queue: server, sampleSize: sampleSize}
+			vbs := &vbRangeScan{scan: this, b: b, vb: uint16(vb), queue: server, sampleSize: sampleSize, retries: _SS_RETRIES}
 			vbScans = append(vbScans, vbs)
 		}
 		// pick a random scan to start from so there is a greater chance of spreading load
@@ -517,7 +519,14 @@ func (this *seqScan) coordinator(b *Bucket, scanTimeout time.Duration) {
 						return
 					}
 				}
-				vbs := &vbRangeScan{scan: this, b: b, vb: uint16(vb), rng: rNum, queue: server, singleKey: singleKey}
+				vbs := &vbRangeScan{scan: this,
+					b:         b,
+					vb:        uint16(vb),
+					rng:       rNum,
+					queue:     server,
+					singleKey: singleKey,
+					retries:   _SS_RETRIES,
+				}
 				vbScans = append(vbScans, vbs)
 			}
 			if queued < len(queues)*_SS_MAX_CONCURRENT_VBSCANS_PER_SERVER {
@@ -864,6 +873,9 @@ type vbRangeScan struct {
 	head       []byte
 
 	err qerrors.Error
+
+	retries    int
+	delayUntil util.Time
 }
 
 func (this *vbRangeScan) startFrom() ([]byte, bool) {
@@ -1240,6 +1252,18 @@ func (this *vbRangeScan) runScan(conn *memcached.Client, node string) bool {
 				logging.Debuga(func() string {
 					return fmt.Sprintf("[%p,%d] create failed, error: %v", this, this.vbucket(), err)
 				})
+				if this.retries > 0 {
+					this.retries--
+					this.delayUntil = util.Now().Add(_SS_RETRY_DELAY)
+					logging.Errora(func() string {
+						return fmt.Sprintf("Range scan [%p,%d] creation failed with: %v. Remaining retries: %v",
+							this, this.vbucket(), err, this.retries)
+					})
+					if !_RSW.reQueueScan(this) {
+						this.reportError(qerrors.NewSSError(qerrors.E_SS_CREATE, err))
+					}
+					return false, false // do not retain the connection on a retry
+				}
 				this.reportError(qerrors.NewSSError(qerrors.E_SS_CREATE, err))
 			}
 			return false, ok // only retain the connection if a valid KV error response
@@ -1610,7 +1634,7 @@ func (queue *rswQueue) nextScanLocked() *vbRangeScan {
 		if !found || cnt <= 0 {
 			// If suspended don't schedule the scan. Since we'll spin checking as the list isn't empty, we'll pick up suspended
 			// items as soon as the suspension is lifted.
-			if !IsSuspended(vbscan.b.Name) {
+			if !IsSuspended(vbscan.b.Name) && vbscan.delayUntil <= util.Now() {
 				queue.scans.Remove(e)
 				queue.active[vbscan.vbucket()] = 1
 				return vbscan
@@ -1732,7 +1756,12 @@ func (queue *rswQueue) runWorker() {
 								desc.attempts++
 								continue
 							}
-							vbscan.reportError(qerrors.NewSSError(qerrors.E_SS_CONN, err))
+							if vbscan.retries > 0 {
+								vbscan.retries--
+								vbscan.delayUntil = util.Now().Add(_SS_RETRY_DELAY)
+							} else {
+								vbscan.reportError(qerrors.NewSSError(qerrors.E_SS_CONN, err))
+							}
 							conn = nil
 							run = false
 						}
@@ -1755,6 +1784,14 @@ func (queue *rswQueue) runWorker() {
 					if !vbscan.runScan(conn, pool.Node()) {
 						pool.Discard(conn)
 						conn = nil
+					}
+				} else if conn == nil && vbscan != nil && vbscan.delayUntil > util.Now() {
+					logging.Errora(func() string {
+						return fmt.Sprintf("Range scan [%p,%d] connection failed with: %v. Remaining retries: %v",
+							vbscan, vbscan.vbucket(), err, vbscan.retries)
+					})
+					if !_RSW.reQueueScan(vbscan) {
+						vbscan.reportError(qerrors.NewSSError(qerrors.E_SS_CONN, err))
 					}
 				}
 			}
