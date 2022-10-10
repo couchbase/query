@@ -25,9 +25,7 @@ ELSE (BUILD_ENTERPRISE)
     SET (_gotags "community")
 ENDIF(BUILD_ENTERPRISE)
 
-#Use centralize Go version
-#SET (GOVERSION 1.18)
-
+SET (GOVERSION 1.11.4)
 SET (LDFLAGS)
 IF (APPLE)
   # Suppress warning from FindCouchbaseGo
@@ -42,7 +40,7 @@ IF (APPLE)
 ENDIF ()
 
 IF (NOT CBQ_ONLY)
-  GoYacc (TARGET n1ql-yacc YFILE "${PROJECT_SOURCE_DIR}/parser/n1ql/n1ql.y")
+  GoYacc (GOVERSION 1.7.6 TARGET n1ql-yacc YFILE "${PROJECT_SOURCE_DIR}/parser/n1ql/n1ql.y")
 
   GET_FILENAME_COMPONENT (CURL_LIBRARY_DIR "${CURL_LIBRARIES}" DIRECTORY)
   GoInstall (TARGET cbq-engine PACKAGE github.com/couchbase/query/server/cbq-engine
