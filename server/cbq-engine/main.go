@@ -47,7 +47,9 @@ import (
 // this function must be the first executed so as to clearly delineate cbq-engine start in the query.log
 func init() {
 	os.Stderr.WriteString("\n")
-	logging.Infoa(func() string { return fmt.Sprintf("cbq-engine starting version=%v", util.VERSION) })
+	logging.Infoa(func() string {
+		return fmt.Sprintf("cbq-engine starting version=%v go-version=%s", util.VERSION, runtime.Version())
+	})
 	debug.SetGCPercent(_GOGC_PERCENT_DEFAULT)
 	setOpenFilesLimit()
 }

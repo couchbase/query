@@ -10,6 +10,7 @@ package command
 
 import (
 	"io"
+	"runtime"
 
 	"github.com/couchbase/query/errors"
 )
@@ -42,8 +43,13 @@ func (this *Version) ExecCommand(args []string) (errors.ErrorCode, string) {
 	if len(args) != 0 {
 		return errors.E_SHELL_TOO_MANY_ARGS, ""
 	} else {
-		_, werr := io.WriteString(W, NewMessage(VERSIONMSG, SHELL_VERSION)+"\n")
-		_, werr = io.WriteString(W, SERVERVERSIONMSG)
+		_, werr := io.WriteString(W, NewMessage(GOVERSIONMSG, runtime.Version())+"\n")
+		if werr == nil {
+			_, werr = io.WriteString(W, NewMessage(VERSIONMSG, SHELL_VERSION)+"\n")
+		}
+		if werr == nil {
+			_, werr = io.WriteString(W, SERVERVERSIONMSG)
+		}
 		if werr != nil {
 			return errors.E_SHELL_WRITER_OUTPUT, werr.Error()
 		}

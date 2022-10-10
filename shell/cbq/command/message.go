@@ -73,7 +73,8 @@ const (
 		"ANY KIND,\neither express or implied. See the License for the specific " +
 		"language governing permissions\nand limitations under the License.\n"
 
-	VERSIONMSG       = " SHELL VERSION "
+	VERSIONMSG       = " SHELL VERSION"
+	GOVERSIONMSG     = " GO VERSION"
 	SERVERVERSIONMSG = "\n Use N1QL queries select version(); or select min_version(); to display server version.\n"
 
 	//SET
