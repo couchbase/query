@@ -9,7 +9,6 @@
 
 // This implements remote system keyspace access for the REST based http package
 
-//go:build enterprise
 // +build enterprise
 
 package http
