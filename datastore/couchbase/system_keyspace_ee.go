@@ -20,6 +20,7 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	cb "github.com/couchbase/query/primitives/couchbase"
+	"github.com/couchbase/query/tenant"
 	"github.com/couchbase/query/value"
 )
 
@@ -199,28 +200,31 @@ func (s *store) HasSystemCBOStats() (bool, errors.Error) {
 }
 
 func (s *store) CreateSysPrimaryIndex(idxName, requestId string, indexer3 datastore.Indexer3) errors.Error {
-	// get number of index nodes in the cluster, and create the primary index
+	// if not serverless, get number of index nodes in the cluster, and create the primary index
 	// with replicas in the following fashion:
 	//    numIndexNode >= 4    ==> num_replica = 2
 	//    numIndexNode >  1    ==> num_replica = 1
 	//    numIndexNode == 1    ==> no replica
-	numIndexNode, errs := s.getNumIndexNode()
-	if len(errs) > 0 {
-		return errs[0]
-	}
-
+	// for serverless, the number of replica is determined automatically
 	var with value.Value
 	var replica map[string]interface{}
 	num_replica := 0
-	if numIndexNode >= 4 {
-		num_replica = 2
-	} else if numIndexNode > 1 {
-		num_replica = 1
-	}
-	if num_replica > 0 {
-		replica = make(map[string]interface{}, 1)
-		replica["num_replica"] = num_replica
-		with = value.NewValue(replica)
+	if !tenant.IsServerless() {
+		numIndexNode, errs := s.getNumIndexNode()
+		if len(errs) > 0 {
+			return errs[0]
+		}
+
+		if numIndexNode >= 4 {
+			num_replica = 2
+		} else if numIndexNode > 1 {
+			num_replica = 1
+		}
+		if num_replica > 0 {
+			replica = make(map[string]interface{}, 1)
+			replica["num_replica"] = num_replica
+			with = value.NewValue(replica)
+		}
 	}
 
 	_, er := indexer3.CreatePrimaryIndex3(requestId, idxName, nil, with)
