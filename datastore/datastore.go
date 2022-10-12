@@ -48,6 +48,7 @@ type Datastore interface {
 	NamespaceById(id string) (Namespace, errors.Error)          // Find a namespace in this datastore using the namespace's Id
 	NamespaceByName(name string) (Namespace, errors.Error)      // Find a namespace in this datastore using the namespace's name
 	Authorize(*auth.Privileges, *auth.Credentials) errors.Error // Perform authorization and return nil if successful
+	AdminUser(string) (string, string, error)                   // Admin credentials for a specific node
 	PreAuthorize(*auth.Privileges)                              // Transform privileges in the internal format
 	CredsString(*auth.Credentials) string                       // Return name from credentials in http request
 	GetUserUUID(*auth.Credentials) string                       // Returns user UUID for stats

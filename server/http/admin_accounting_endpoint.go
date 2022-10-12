@@ -786,13 +786,14 @@ func doTask(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af
 
 		scheduler.TaskDo(name, func(entry *scheduler.TaskEntry) {
 			itemMap := map[string]interface{}{
-				"class":      entry.Class,
-				"subClass":   entry.SubClass,
-				"name":       entry.Name,
-				"id":         entry.Id,
-				"state":      entry.State,
-				"submitTime": entry.PostTime.Format(util.DEFAULT_FORMAT),
-				"delay":      entry.Delay.String(),
+				"class":        entry.Class,
+				"subClass":     entry.SubClass,
+				"name":         entry.Name,
+				"id":           entry.Id,
+				"state":        entry.State,
+				"queryContext": entry.QueryContext,
+				"submitTime":   entry.PostTime.Format(util.DEFAULT_FORMAT),
+				"delay":        entry.Delay.String(),
 			}
 			if entry.Results != nil {
 				itemMap["results"] = entry.Results
@@ -839,6 +840,7 @@ func doTasks(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, a
 			data[i]["name"] = d.Name
 			data[i]["id"] = d.Id
 			data[i]["state"] = d.State
+			data[i]["queryContext"] = d.QueryContext
 			if d.Results != nil {
 				data[i]["results"] = d.Results
 			}

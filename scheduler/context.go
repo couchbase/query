@@ -24,6 +24,7 @@ import (
 type Context interface {
 	Now() time.Time
 	DatastoreVersion() string
+	QueryContext() string
 	EvaluateStatement(statement string, namedArgs map[string]value.Value, positionalArgs value.Values, subquery, readonly bool) (value.Value, uint64, error)
 }
 

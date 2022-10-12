@@ -83,6 +83,10 @@ func (s *store) Authorize(*auth.Privileges, *auth.Credentials) errors.Error {
 	return nil
 }
 
+func (s *store) AdminUser(node string) (string, string, error) {
+	return "", "", nil
+}
+
 func (s *store) GetUserUUID(*auth.Credentials) string {
 	return ""
 }

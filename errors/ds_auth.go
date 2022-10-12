@@ -39,3 +39,11 @@ func NewDatastoreUnableToRetrieveBuckets(e error) Error {
 	return &err{level: EXCEPTION, ICode: E_DATASTORE_UNABLE_TO_RETRIEVE_BUCKETS, IKey: "datastore.couchbase.retrieve_buckets", ICause: e,
 		InternalMsg: "Unable to retrieve buckets from server.", InternalCaller: CallerN(1)}
 }
+
+func NewNoAdminPrivilegeError(e error) Error {
+	c := make(map[string]interface{})
+	c["cause"] = e
+	return &err{level: EXCEPTION, ICode: E_DATASTORE_NO_ADMIN,
+		IKey:        "datastore.couchbase.no.admin",
+		InternalMsg: "Unable to determine admin credentials", InternalCaller: CallerN(1), cause: c}
+}

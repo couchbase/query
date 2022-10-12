@@ -28,7 +28,9 @@ type Context interface {
 	Credentials() *auth.Credentials
 	DatastoreVersion() string
 	NewQueryContext(queryContext string, readonly bool) interface{}
+	AdminContext() (interface{}, error)
 	QueryContext() string
+	QueryContextParts() []string
 	GetTxContext() interface{}
 	SetTxContext(t interface{})
 	Readonly() bool
@@ -52,6 +54,7 @@ type Context interface {
 	SetTracked(bool)
 	IsTracked() bool
 	RecordJsCU(d time.Duration, m uint64)
+	IsAdmin() bool
 }
 
 type ExecutionHandle interface {

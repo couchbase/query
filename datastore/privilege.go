@@ -9,6 +9,7 @@
 package datastore
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/couchbase/query/auth"
@@ -45,6 +46,20 @@ func IsAdmin(creds *auth.Credentials) bool {
 		return ds.Authorize(privs, creds) == nil
 	}
 	return false
+}
+
+func AdminCreds(node string) (*auth.Credentials, error) {
+	if _DATASTORE == nil {
+		return nil, fmt.Errorf("datastore not initialized")
+	}
+	u, p, err := _DATASTORE.AdminUser(node)
+	if err != nil {
+		return nil, err
+	}
+	creds := &auth.Credentials{}
+	users := map[string]string{u: p}
+	creds.Users = users
+	return creds, nil
 }
 
 func GetUserUUID(creds *auth.Credentials) string {

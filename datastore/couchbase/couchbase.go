@@ -353,6 +353,16 @@ func (s *store) Authorize(privileges *auth.Privileges, credentials *auth.Credent
 	return cbAuthorize(s, privileges, credentials)
 }
 
+func (s *store) AdminUser(node string) (string, string, error) {
+	if s.CbAuthInit == false {
+		// cbauth is not initialized. Access to SASL protected buckets will be
+		// denied by the couchbase server
+		logging.Warnf("CbAuth not intialized")
+		return "", "", fmt.Errorf("CbAuth not initialized")
+	}
+	return cbauth.GetHTTPServiceAuth(node)
+}
+
 func (s *store) GetUserUUID(creds *auth.Credentials) string {
 	if creds != nil && len(creds.CbauthCredentialsList) > 0 {
 		uuid, err := creds.CbauthCredentialsList[0].Uuid()

@@ -90,8 +90,16 @@ func (this *IndexContext) NewQueryContext(queryContext string, readonly bool) in
 	return nil
 }
 
+func (this *IndexContext) AdminContext() (interface{}, error) {
+	return nil, nil
+}
+
 func (this *IndexContext) QueryContext() string {
 	return ""
+}
+
+func (this *IndexContext) QueryContextParts() []string {
+	return nil
 }
 
 func (this *IndexContext) GetTxContext() interface{} {
@@ -100,6 +108,10 @@ func (this *IndexContext) GetTxContext() interface{} {
 
 func (this *IndexContext) SetTxContext(c interface{}) {
 	// no-op
+}
+
+func (this *IndexContext) IsAdmin() bool {
+	return false
 }
 
 func (this *IndexContext) SetAdvisor() {

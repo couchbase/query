@@ -25,9 +25,12 @@ type Context interface {
 	Now() time.Time
 	GetTimeout() time.Duration
 	Credentials() *auth.Credentials
+	IsAdmin() bool
 	DatastoreVersion() string
 	NewQueryContext(queryContext string, readonly bool) interface{}
+	AdminContext() (interface{}, error)
 	QueryContext() string
+	QueryContextParts() []string
 	GetTxContext() interface{}
 	SetTxContext(c interface{})
 	Readonly() bool

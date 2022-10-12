@@ -24,6 +24,7 @@ import (
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/distributed"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/logging"
@@ -333,8 +334,28 @@ func (this *Context) NewQueryContext(queryContext string, readonly bool) interfa
 	return rv
 }
 
+func (this *Context) AdminContext() (interface{}, error) {
+	node := distributed.RemoteAccess().WhoAmI()
+	if node == "" {
+
+		// This can only happen for nodes running autside of the cluster
+		return nil, errors.NewNoAdminPrivilegeError(fmt.Errorf("cannot establish node name"))
+	}
+	creds, err := datastore.AdminCreds(node)
+	if err != nil {
+		return nil, errors.NewNoAdminPrivilegeError(err)
+	}
+	rv := this.Copy()
+	rv.credentials = creds
+	return rv, nil
+}
+
 func (this *Context) QueryContext() string {
 	return this.queryContext
+}
+
+func (this *Context) QueryContextParts() []string {
+	return algebra.ParseQueryContext(this.queryContext)
 }
 
 func (this *Context) RequestId() string {
@@ -455,6 +476,10 @@ func (this *Context) AdjustTimeout(timeout time.Duration, stmtType string, isPre
 
 func (this *Context) Credentials() *auth.Credentials {
 	return this.credentials
+}
+
+func (this *Context) IsAdmin() bool {
+	return datastore.IsAdmin(this.credentials)
 }
 
 func (this *Context) UrlCredentials(urlS string) *auth.Credentials {

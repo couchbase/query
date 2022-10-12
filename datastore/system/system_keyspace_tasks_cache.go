@@ -93,13 +93,14 @@ func (b *tasksCacheKeyspace) Fetch(keys []string, keysMap map[string]value.Annot
 			// local entry
 			scheduler.TaskDo(localKey, func(entry *scheduler.TaskEntry) {
 				itemMap := map[string]interface{}{
-					"class":      entry.Class,
-					"subClass":   entry.SubClass,
-					"name":       entry.Name,
-					"id":         entry.Id,
-					"state":      entry.State,
-					"submitTime": entry.PostTime.Format(util.DEFAULT_FORMAT),
-					"delay":      entry.Delay.String(),
+					"class":        entry.Class,
+					"subClass":     entry.SubClass,
+					"name":         entry.Name,
+					"id":           entry.Id,
+					"state":        entry.State,
+					"queryContext": entry.QueryContext,
+					"submitTime":   entry.PostTime.Format(util.DEFAULT_FORMAT),
+					"delay":        entry.Delay.String(),
 				}
 				if entry.Results != nil {
 					itemMap["results"] = entry.Results

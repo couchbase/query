@@ -30,19 +30,20 @@ const (
 type TaskFunc func(Context, interface{}) (interface{}, []errors.Error)
 
 type TaskEntry struct {
-	Class     string
-	SubClass  string
-	Name      string
-	Id        string
-	Exec      TaskFunc
-	Stop      TaskFunc
-	PostTime  time.Time
-	StartTime time.Time
-	EndTime   time.Time
-	Delay     time.Duration
-	State     State
-	Results   interface{}
-	Errors    []errors.Error
+	Class        string
+	SubClass     string
+	Name         string
+	Id           string
+	Exec         TaskFunc
+	Stop         TaskFunc
+	PostTime     time.Time
+	StartTime    time.Time
+	EndTime      time.Time
+	Delay        time.Duration
+	State        State
+	Results      interface{}
+	Errors       []errors.Error
+	QueryContext string
 
 	timer      *time.Timer
 	parameters interface{}
@@ -116,17 +117,18 @@ func ScheduleTask(name, class, subClass string, delay time.Duration, exec, stop 
 	}
 
 	task := &TaskEntry{
-		Name:       name,
-		Class:      class,
-		SubClass:   subClass,
-		Delay:      delay,
-		PostTime:   time.Now(),
-		Exec:       exec,
-		Stop:       stop,
-		State:      SCHEDULED,
-		Id:         id,
-		parameters: parms,
-		context:    context,
+		Name:         name,
+		Class:        class,
+		SubClass:     subClass,
+		Delay:        delay,
+		PostTime:     time.Now(),
+		Exec:         exec,
+		Stop:         stop,
+		State:        SCHEDULED,
+		Id:           id,
+		QueryContext: context.QueryContext(),
+		parameters:   parms,
+		context:      context,
 	}
 
 	// lose any old completed run, so to preserve key uniqueness
