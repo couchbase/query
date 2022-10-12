@@ -1715,6 +1715,7 @@ const (
 	_CPU_PERCENT             = 80           // 80% CPU used consider CPU intensive
 	_MEMORY_PERCENT          = 80           // 80% Memory used consider Memory intensive
 	_MEMORY_QUOTA            = float64(0.5) // 50% of system memory
+	_MEMORY_CACHES           = float64(0.5)
 	_DEF_MEMORY_USAGE        = uint64(1)
 )
 
@@ -1769,8 +1770,12 @@ func (this *Server) MemoryUsage(refresh bool) uint64 {
 	// get go runtime memory stats
 	ms := this.MemoryStats(refresh)
 	mem_used := ms.HeapInuse + ms.HeapIdle - ms.HeapReleased + ms.GCSys
-	if memory.Quota() > 0 {
-		return uint64((mem_used * 100) / memory.Quota())
+	mem_quota := memory.Quota()
+	if mem_quota > 0 {
+		// mem_quota is Values quota only. In Serverless this set to 50% of node RAM
+		// Add 50% of that for caches and process memory, i.e. 75% of node RAM
+		mem_quota += uint64(float64(mem_quota) * _MEMORY_CACHES)
+		return uint64((mem_used * 100) / mem_quota)
 	}
 
 	// no node quota. caulculate Query engine memory quota as 50% system memory
