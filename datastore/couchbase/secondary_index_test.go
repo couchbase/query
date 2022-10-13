@@ -1,4 +1,4 @@
-// +build ignore
+//go:build ignore
 
 /*
 Copyright 2014-Present Couchbase, Inc.

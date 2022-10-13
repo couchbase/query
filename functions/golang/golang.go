@@ -6,7 +6,7 @@
 //  be governed by the Apache License, Version 2.0, included in the file
 //  licenses/APL.txt.
 
-// +build enterprise,go1.10,!windows,!solaris
+//go:build enterprise && go1.10 && !windows && !solaris
 
 package golang
 
