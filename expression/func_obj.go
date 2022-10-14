@@ -613,6 +613,9 @@ func (this *ObjectPaths) Evaluate(item value.Value, context Context) (value.Valu
 				pf.fieldPattern = false
 			}
 		}
+		if i, ok := options.Field("ignorecase"); ok && i.Type() == value.BOOLEAN && i.Truth() {
+			pf.ignoreCase = true
+		}
 		if p, ok := options.Field("pattern"); ok {
 			pattern := p.ToString()
 			if len(pattern) > 0 {
@@ -622,6 +625,18 @@ func (this *ObjectPaths) Evaluate(item value.Value, context Context) (value.Valu
 						if !rex.Truth() {
 							pattern = regexp.QuoteMeta(pattern)
 						}
+					}
+					if e, ok := options.Field("exact"); ok && e.Type() == value.BOOLEAN {
+						if e.Truth() {
+							if pattern[0] != '^' {
+								pattern = "^" + pattern
+							}
+							// doesn't matter if we double up on the end anchor
+							pattern = pattern + "$"
+						}
+					}
+					if pf.ignoreCase {
+						pattern = strings.ToLower(pattern)
 					}
 					pf.re, err = regexp.Compile(pattern)
 					if err != nil {
@@ -693,6 +708,7 @@ type pathFilter struct {
 	re           *regexp.Regexp
 	fieldPattern bool
 	index        bool
+	ignoreCase   bool
 }
 
 func (this *pathFilter) getNamesFromArray(names []string, prefix string, a []interface{}) []string {
@@ -730,7 +746,7 @@ func (this *pathFilter) getNames(names []string, prefix string, m map[string]int
 		} else {
 			name = prefix + name
 		}
-		if this.comps && matchPattern(name, this.re, this.fieldPattern) {
+		if this.comps && matchPattern(name, this.re, this.fieldPattern, this.ignoreCase) {
 			names = append(names, name)
 		}
 		names = this.processValueForNames(names, name, val)
@@ -750,16 +766,20 @@ func (this *pathFilter) processValueForNames(names []string, prefix string, val 
 	case map[string]interface{}:
 		names = this.getNames(names, prefix, ov)
 	default:
-		if !this.comps && matchPattern(prefix, this.re, this.fieldPattern) {
+		if !this.comps && matchPattern(prefix, this.re, this.fieldPattern, this.ignoreCase) {
 			names = append(names, prefix)
 		}
 	}
 	return names
 }
 
-func matchPattern(s string, re *regexp.Regexp, fieldPattern bool) bool {
+func matchPattern(s string, re *regexp.Regexp, fieldPattern bool, ignoreCase bool) bool {
 	if re == nil {
 		return true
+	}
+	if ignoreCase {
+		// pattern will have already been forced to lower case
+		s = strings.ToLower(s)
 	}
 	if !fieldPattern {
 		return re.MatchString(s)
@@ -935,6 +955,8 @@ func (this *ObjectPairsNested) Evaluate(item value.Value, context Context) (valu
 	pf.comps = false
 	pf.index = false
 	pf.fieldPattern = false
+	pf.ignoreCase = false
+	nameOnly := false
 	if len(this.operands) > 1 {
 		options, err := this.operands[1].Evaluate(item, context)
 		if err != nil {
@@ -948,6 +970,14 @@ func (this *ObjectPairsNested) Evaluate(item value.Value, context Context) (valu
 		if c, ok := options.Field("composites"); ok && c.Type() == value.BOOLEAN {
 			pf.comps = c.Truth()
 		}
+		if r, ok := options.Field("report"); ok && r.Type() == value.STRING {
+			switch r.ToString() {
+			case "field":
+				nameOnly = true
+			case "path":
+				nameOnly = false
+			}
+		}
 		if ps, ok := options.Field("patternspace"); ok && ps.Type() == value.STRING {
 			switch ps.ToString() {
 			case "field":
@@ -955,6 +985,9 @@ func (this *ObjectPairsNested) Evaluate(item value.Value, context Context) (valu
 			case "path":
 				pf.fieldPattern = false
 			}
+		}
+		if i, ok := options.Field("ignorecase"); ok && i.Type() == value.BOOLEAN && i.Truth() {
+			pf.ignoreCase = true
 		}
 		if p, ok := options.Field("pattern"); ok {
 			pattern := p.ToString()
@@ -965,6 +998,18 @@ func (this *ObjectPairsNested) Evaluate(item value.Value, context Context) (valu
 						if !rex.Truth() {
 							pattern = regexp.QuoteMeta(pattern)
 						}
+					}
+					if e, ok := options.Field("exact"); ok && e.Type() == value.BOOLEAN {
+						if e.Truth() {
+							if pattern[0] != '^' {
+								pattern = "^" + pattern
+							}
+							// doesn't matter if we double up on the end anchor
+							pattern = pattern + "$"
+						}
+					}
+					if pf.ignoreCase {
+						pattern = strings.ToLower(pattern)
 					}
 					pf.re, err = regexp.Compile(pattern)
 					if err != nil {
@@ -996,7 +1041,7 @@ func (this *ObjectPairsNested) Evaluate(item value.Value, context Context) (valu
 
 	l *= 3
 	pairs = make(util.Pairs, 0, l)
-	pairs = pf.processPairValue(pairs, "", arg)
+	pairs = pf.processPairValue(pairs, "", arg, "", nameOnly)
 	sort.Sort(pairs)
 
 	rv := make([]interface{}, len(pairs))
@@ -1012,67 +1057,93 @@ type pairFilter struct {
 	re           *regexp.Regexp
 	fieldPattern bool
 	index        bool
+	ignoreCase   bool
 }
 
-func (this *pairFilter) getPairsFromArray(pairs util.Pairs, prefix string, a []interface{}) util.Pairs {
+func (this *pairFilter) getPairsFromArray(pairs util.Pairs, prefix string, a []interface{}, basename string, nameOnly bool) util.Pairs {
+
 	if this.index == true {
+		// composites are forced to false with index set, so no need to check them here
 		for _, val := range a {
-			pairs = this.processPairValue(pairs, prefix+"[]", val)
+			pairs = this.processPairValue(pairs, prefix+"[]", val, "", nameOnly)
 		}
 	} else {
 		for i, val := range a {
-			pairs = this.processPairValue(pairs, prefix+fmt.Sprintf("[%d]", i), val)
+			index := fmt.Sprintf("[%d]", i)
+			if this.comps && matchPattern(prefix+index, this.re, this.fieldPattern, this.ignoreCase) {
+				if nameOnly {
+					pairs = addComposite(pairs, basename+index, val)
+				} else {
+					pairs = addComposite(pairs, prefix+index, val)
+				}
+			}
+			pairs = this.processPairValue(pairs, prefix+index, val, "", nameOnly)
 		}
 	}
 	return pairs
 }
 
-func (this *pairFilter) getPairs(pairs util.Pairs, prefix string, m map[string]interface{}) util.Pairs {
+func (this *pairFilter) getPairs(pairs util.Pairs, prefix string, m map[string]interface{}, nameOnly bool) util.Pairs {
 	if len(prefix) > 0 {
 		prefix = prefix + "."
 	}
 	for name, val := range m {
+		basename := name
 		if strings.IndexAny(name, " \t.`") != -1 || this.index == true {
-			name = strings.Replace(name, "`", "\\u0060", -1)
-			name = prefix + "`" + name + "`"
+			basename = strings.Replace(name, "`", "\\u0060", -1)
+			name = prefix + "`" + basename + "`"
 		} else {
 			name = prefix + name
 		}
-		if this.comps && matchPattern(name, this.re, this.fieldPattern) {
-			// only add if it is actually a composite value
-			withAct, ok := val.(interface{ Actual() interface{} })
-			if ok {
-				val = withAct.Actual()
-			}
-			add := false
-			switch val.(type) {
-			case []interface{}:
-				add = true
-			case map[string]interface{}:
-				add = true
-			}
-			if add {
-				pairs = append(pairs, util.Pair{Name: name, Value: val})
+		if this.comps && matchPattern(name, this.re, this.fieldPattern, this.ignoreCase) {
+			if nameOnly {
+				pairs = addComposite(pairs, basename, val)
+			} else {
+				pairs = addComposite(pairs, name, val)
 			}
 		}
-		pairs = this.processPairValue(pairs, name, val)
+		pairs = this.processPairValue(pairs, name, val, basename, nameOnly)
 	}
 	return pairs
 }
 
-func (this *pairFilter) processPairValue(pairs util.Pairs, prefix string, val interface{}) util.Pairs {
+func addComposite(pairs util.Pairs, name string, val interface{}) util.Pairs {
+	// only add if it is actually a composite value
+	withAct, ok := val.(interface{ Actual() interface{} })
+	if ok {
+		val = withAct.Actual()
+	}
+	add := false
+	switch val.(type) {
+	case []interface{}:
+		add = true
+	case map[string]interface{}:
+		add = true
+	}
+	if add {
+		pairs = append(pairs, util.Pair{Name: name, Value: val})
+	}
+	return pairs
+}
+
+func (this *pairFilter) processPairValue(pairs util.Pairs, prefix string, val interface{}, basename string, nameOnly bool) util.Pairs {
+
 	withAct, ok := val.(interface{ Actual() interface{} })
 	if ok {
 		val = withAct.Actual()
 	}
 	switch ov := val.(type) {
 	case []interface{}:
-		pairs = this.getPairsFromArray(pairs, prefix, ov)
+		pairs = this.getPairsFromArray(pairs, prefix, ov, basename, nameOnly)
 	case map[string]interface{}:
-		pairs = this.getPairs(pairs, prefix, ov)
+		pairs = this.getPairs(pairs, prefix, ov, nameOnly)
 	default:
-		if matchPattern(prefix, this.re, this.fieldPattern) {
-			pairs = append(pairs, util.Pair{Name: prefix, Value: val})
+		if matchPattern(prefix, this.re, this.fieldPattern, this.ignoreCase) {
+			if nameOnly {
+				pairs = append(pairs, util.Pair{Name: basename, Value: val})
+			} else {
+				pairs = append(pairs, util.Pair{Name: prefix, Value: val})
+			}
 		}
 	}
 	return pairs
@@ -1900,6 +1971,7 @@ func (this *ObjectFilter) Evaluate(item value.Value, context Context) (value.Val
 	ff.aNote = subscript
 	ff.fieldPattern = false
 	ff.comps = true
+	ff.ignoreCase = false
 
 	if len(this.operands) > 1 {
 		options, err := this.operands[1].Evaluate(item, context)
@@ -1927,6 +1999,9 @@ func (this *ObjectFilter) Evaluate(item value.Value, context Context) (value.Val
 				ff.fieldPattern = false
 			}
 		}
+		if i, ok := options.Field("ignorecase"); ok && i.Type() == value.BOOLEAN && i.Truth() {
+			ff.ignoreCase = true
+		}
 		if p, ok := options.Field("pattern"); ok {
 			pattern := p.ToString()
 			if len(pattern) > 0 {
@@ -1937,6 +2012,18 @@ func (this *ObjectFilter) Evaluate(item value.Value, context Context) (value.Val
 							pattern = regexp.QuoteMeta(pattern)
 						}
 					}
+					if e, ok := options.Field("exact"); ok && e.Type() == value.BOOLEAN {
+						if e.Truth() {
+							if pattern[0] != '^' {
+								pattern = "^" + pattern
+							}
+							// doesn't matter if we double up on the end anchor
+							pattern = pattern + "$"
+						}
+					}
+					if ff.ignoreCase {
+						pattern = strings.ToLower(pattern)
+					}
 					ff.re, err = regexp.Compile(pattern)
 					if err != nil {
 						return nil, err
@@ -1946,7 +2033,7 @@ func (this *ObjectFilter) Evaluate(item value.Value, context Context) (value.Val
 		}
 	}
 
-	obj := ff.processValueForFields("", arg.Actual())
+	obj := ff.processValueForFields("", arg)
 	return value.NewValue(obj), nil
 }
 
@@ -1971,6 +2058,7 @@ type fieldFilter struct {
 	comps        bool
 	re           *regexp.Regexp
 	fieldPattern bool
+	ignoreCase   bool
 }
 
 func (this *fieldFilter) getFieldsFromArray(prefix string, a []interface{}) []interface{} {
@@ -2011,7 +2099,7 @@ func (this *fieldFilter) getFields(prefix string, m map[string]interface{}) inte
 		} else {
 			mname = prefix + name
 		}
-		if this.comps && matchPattern(mname, this.re, this.fieldPattern) {
+		if this.comps && matchPattern(mname, this.re, this.fieldPattern, this.ignoreCase) {
 			res[name] = val
 		} else {
 			// else check nested
@@ -2026,19 +2114,30 @@ func (this *fieldFilter) getFields(prefix string, m map[string]interface{}) inte
 
 func (this *fieldFilter) processValueForFields(prefix string, val interface{}) interface{} {
 
-	withAct, ok := val.(interface{ Actual() interface{} })
-	if ok {
+	var res interface{}
+	var nv interface{}
+
+	if v, ok := val.(value.Value); ok && v.Type() == value.NULL {
+		// distinguish between a NULL value and nil
+		nv = val
+	}
+
+	if withAct, ok := val.(interface{ Actual() interface{} }); ok {
 		val = withAct.Actual()
 	}
-	var res interface{}
+
 	switch ov := val.(type) {
 	case []interface{}:
 		res = this.getFieldsFromArray(prefix, ov)
 	case map[string]interface{}:
 		res = this.getFields(prefix, ov)
 	default:
-		if !this.comps && matchPattern(prefix, this.re, this.fieldPattern) {
-			res = val
+		if !this.comps && matchPattern(prefix, this.re, this.fieldPattern, this.ignoreCase) {
+			if nv != nil {
+				res = nv
+			} else {
+				res = val
+			}
 		}
 	}
 	if av, ok := res.([]interface{}); ok {
@@ -2056,12 +2155,25 @@ func (this *fieldFilter) processValueForFields(prefix string, val interface{}) i
 func precompilePattern(options value.Value) *regexp.Regexp {
 	var re *regexp.Regexp
 	if p, ok := options.Field("pattern"); ok {
+		pattern := p.ToString()
 		if rex, ok := options.Field("regex"); ok && rex.Type() == value.BOOLEAN {
 			if !rex.Truth() {
-				p = value.NewValue(regexp.QuoteMeta(p.ToString()))
+				pattern = regexp.QuoteMeta(pattern)
 			}
 		}
-		re, _ = precompileRegexp(p, false)
+		if e, ok := options.Field("exact"); ok && e.Type() == value.BOOLEAN {
+			if e.Truth() {
+				if pattern[0] != '^' {
+					pattern = "^" + pattern
+				}
+				// doesn't matter if we double up on the end anchor
+				pattern = pattern + "$"
+			}
+		}
+		if i, ok := options.Field("ignorecase"); ok && i.Type() == value.BOOLEAN && i.Truth() {
+			pattern = strings.ToLower(pattern)
+		}
+		re, _ = precompileRegexp(value.NewValue(pattern), false)
 	}
 	return re
 }
