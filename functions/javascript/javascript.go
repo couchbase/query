@@ -19,7 +19,6 @@ import (
 	"time"
 
 	"github.com/couchbase/eventing-ee/evaluator/defs"
-	"github.com/couchbase/eventing-ee/evaluator/n1ql_client"
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/errors"
@@ -75,21 +74,36 @@ func Init(mux *mux.Router) {
 	// we may decide to disable it completely
 
 	// Create the engine for external JS functions
-	external.engine = n1ql_client.SingleInstance
+	external.engine = defs.SingleInstance
 	external.name = "external jsevaluator"
-	config := make(map[defs.Config]interface{})
-	config[defs.Threads] = _DEF_RUNNERS
-	config[defs.FeatureBitmask] = uint32(8)
-	config[defs.IsIpV6] = util.IPv6
-	config[defs.GlobalManagePermission] = "cluster.n1ql.udf_external!manage"
-	config[defs.ScopeManagePermission] = "cluster.collection[%s].n1ql.udf_external!manage"
-	config[defs.SysLogLevel] = 4
-	config[defs.SysLogCallback] = func(level, msg string, ctx interface{}) {
-		logging.Infof("external jsevaluator: %s", msg)
+
+	globalCfg := defs.GlobalConfig{
+		GlobalManagePermission: "cluster.n1ql.udf_external!manage",
+		ScopeManagePermission:  "cluster.collection[%s].n1ql.udf_external!manage",
 	}
+
+	configErr := defs.ConfigureGlobalConfig(globalCfg)
+	if (configErr != defs.Error{}) {
+		logging.Infof("Global config error: %v", configErr)
+		return
+	}
+
+	engConfig := defs.StaticEngineConfig{
+		WorkerCount:    _DEF_RUNNERS,
+		FeatureBitmask: uint32(8),
+		IsIpV6:         util.IPv6,
+		SysLogCallback: func(level, ts string, msg string, ctx interface{}) {
+			logging.Infof("jsevaluator: %s", msg)
+		},
+	}
+
+	dynConfig := defs.DynamicEngineConfig{
+		LogLevel: 4,
+	}
+
 	external.threads = int32(_DEF_RUNNERS)
 
-	err := external.engine.Configure(config)
+	err := external.engine.Configure(engConfig, dynConfig)
 	if err.Err == nil {
 		if mux != nil {
 			handle := external.engine.UIHandler()
@@ -127,19 +141,25 @@ func Init(mux *mux.Router) {
 func newEngine(desc string, t int) (defs.Engine, defs.LibStore, defs.Evaluator, defs.Error) {
 	var evaluator defs.Evaluator
 
-	config := make(map[defs.Config]interface{})
-	config[defs.Threads] = t
-	config[defs.FeatureBitmask] = uint32(8)
-	config[defs.IsIpV6] = util.IPv6
-	config[defs.SysLogLevel] = 4
-
-	config[defs.SysLogCallback] = func(level, msg string, ctx interface{}) {
-		logging.Infof("jsevaluator for %v: %s", desc, msg)
+	engConfig := defs.StaticEngineConfig{
+		WorkerCount:    _DEF_RUNNERS,
+		FeatureBitmask: uint32(8),
+		IsIpV6:         util.IPv6,
+		SysLogCallback: func(level, ts string, msg string, ctx interface{}) {
+			logging.Infof("jsevaluator for %v: %s", desc, msg)
+		},
 	}
 
-	engine := n1ql_client.NewEngine()
-	err := engine.Configure(config)
+	dynConfig := defs.DynamicEngineConfig{
+		LogLevel: 4,
+	}
 
+	engine, err := defs.NewEngine()
+	if (err != defs.Error{}) {
+		logging.Infof("Unable to create new Engine for %v", desc)
+	}
+
+	err = engine.Configure(engConfig, dynConfig)
 	if err.Err == nil {
 		err = engine.Start()
 	}
@@ -259,7 +279,10 @@ func (this *javascript) Execute(name functions.FunctionName, body functions.Func
 	if timeout == 0 || timeout > _MAX_TIMEOUT {
 		timeout = _MAX_TIMEOUT
 	}
-	opts := map[defs.Option]interface{}{defs.SideEffects: (modifiers & functions.READONLY) == 0, defs.Timeout: timeout}
+	opts := defs.Options{
+		SideEffects: (modifiers & functions.READONLY) == 0,
+		Timeout:     uint32(timeout),
+	}
 	runners := atomic.AddInt32(&(*evaluator).threadCount, 1)
 	defer atomic.AddInt32(&(*evaluator).threadCount, -1)
 	levels := context.IncRecursionCount(1)
