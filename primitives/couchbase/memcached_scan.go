@@ -1369,17 +1369,7 @@ func (this *vbRangeScan) runScan(conn *memcached.Client, node string) bool {
 						})
 						Suspend(this.b.Name, getDelay(resp), node)
 						if this.sampleSize == 0 && len(this.keys) > 0 {
-							_, err := conn.CancelRangeScan(this.vbucket(), uuid, 0)
-							if err != nil {
-								resp, ok := err.(*gomemcached.MCResponse)
-								if ok && resp.Status == gomemcached.KEY_ENOENT {
-									err = nil
-								}
-							}
 							this.setContinueFromLastKey()
-							this.state = _VBS_WORKED
-							this.sendData()
-							return err == nil
 						} else if this.sampleSize == 0 {
 							this.setContinueFrom(start, exclStart)
 						}
