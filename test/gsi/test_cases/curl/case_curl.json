@@ -1,8 +1,11 @@
-[{
-        "statements": "select res from curl(\"http://127.0.0.1:8091/pools/default/nodeServices\", {\"get\":true,\"user\":\"Administrator:password\"}).nodesExt[0].services.kv res",
+[
+    {
+        "statements": "select res from curl(\"http://127.0.0.1:8091/pools/default/nodeServices\", {\"get\":true,\"user\":\"Administrator:password\",\"ciphers\":\"AES128-SHA\"}).nodesExt[0].services.kv res",
+        "userArgs": { "Administrator":"password" },
         "results": [
-        {
-           "res": 11210
-        }
-    ]
-}]
+            {
+               "res": 11210
+            }
+        ]
+    }
+]
