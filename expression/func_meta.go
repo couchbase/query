@@ -272,6 +272,7 @@ func (this *Self) Type() value.Type { return value.JSON }
 Returns the input item.
 */
 func (this *Self) Evaluate(item value.Value, context Context) (value.Value, error) {
+	item.Track()
 	return item, nil
 }
 

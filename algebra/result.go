@@ -268,6 +268,7 @@ type ResultTerm struct {
 	star  bool                  `json:"star"`
 	as    string                `json:"as"`
 	alias string                `json:"_"`
+	self  bool                  `json:"self"`
 }
 
 /*
@@ -277,14 +278,19 @@ to the fields of the struct. The value of alias string
 is not set here.
 */
 func NewResultTerm(expr expression.Expression, star bool, as string) *ResultTerm {
+	self := false
 	if expr == nil {
 		expr = expression.SELF
+		self = true
+	} else if expr.EquivalentTo(expression.SELF) {
+		self = true
 	}
 
 	return &ResultTerm{
 		expr: expr,
 		star: star,
 		as:   as,
+		self: self,
 	}
 }
 
@@ -353,6 +359,10 @@ func (this *ResultTerm) Alias() string {
 	return this.alias
 }
 
+func (this *ResultTerm) Self() bool {
+	return this.self
+}
+
 /*
 Set the terms alias string. If star is true then
 return the input integer as is. If the as string
@@ -393,5 +403,6 @@ func (this *ResultTerm) MarshalJSON() ([]byte, error) {
 		r["expr"] = expression.NewStringer().Visit(this.expr)
 	}
 	r["star"] = this.star
+	r["self"] = this.self
 	return json.Marshal(r)
 }

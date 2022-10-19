@@ -12,7 +12,6 @@ import (
 	"encoding/json"
 
 	"github.com/couchbase/query/errors"
-	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/sort"
 	"github.com/couchbase/query/util"
@@ -83,9 +82,10 @@ func (this *InitialProject) processItem(item value.AnnotatedValue, context *Cont
 	result := terms[0].Result()
 	expr := result.Expression()
 
-	if result.Star() && (expr == expression.SELF || expr == nil) {
+	if result.Star() && result.Self() {
 		// Unprefixed star
 		if item.Type() == value.OBJECT {
+			item.SetValue(value.NewValue(item.Actual()))
 			item.SetSelf(true)
 			return this.sendItem(item)
 		} else {
@@ -118,6 +118,9 @@ func (this *InitialProject) processItem(item value.AnnotatedValue, context *Cont
 			av.Track()
 		}
 
+		if result.Self() {
+			v = value.NewValue(v.Actual())
+		}
 		sv := value.NewScopeValue(make(map[string]interface{}, 1), item)
 		if result.As() != "" {
 			sv.SetField(result.As(), v)
@@ -139,9 +142,7 @@ func (this *InitialProject) processItem(item value.AnnotatedValue, context *Cont
 				context.ReleaseValueSize(iSz - aSz)
 			}
 		}
-		if v != item {
-			item.Recycle()
-		}
+		item.Recycle()
 		return this.sendItem(av)
 	} else {
 		// Any other projection
@@ -176,6 +177,9 @@ func (this *InitialProject) processTerms(item value.AnnotatedValue, context *Con
 			if err != nil {
 				context.Error(errors.NewEvaluationError(err, "projection"))
 				return false
+			}
+			if term.Result().Self() {
+				v = value.NewValue(v.Actual())
 			}
 
 			if doOrder {
