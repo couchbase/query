@@ -466,9 +466,15 @@ func (b *Bucket) do3(vb uint16, f func(mc *memcached.Client, vb uint16) error, d
 	}
 
 	if resp, ok := lastError.(*gomemcached.MCResponse); ok {
-		err := gomemcached.StatusNames[resp.Status]
-		if err == "" {
-			err = fmt.Sprintf("KV status %v", resp.Status)
+		var err string
+
+		if gomemcached.IsTenantLimit(resp) {
+			err = gomemcached.StatusDesc[resp.Status]
+		} else {
+			err = gomemcached.StatusNames[resp.Status]
+			if err == "" {
+				err = fmt.Sprintf("KV status %v", resp.Status)
+			}
 		}
 		return qerrors.NewBucketActionError(err, desc.attempts)
 	} else {
