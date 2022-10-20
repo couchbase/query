@@ -10,9 +10,20 @@ package semantics
 
 import (
 	"github.com/couchbase/query/algebra"
+	"github.com/couchbase/query/expression"
 )
 
 func (this *SemChecker) VisitCreateFunction(stmt *algebra.CreateFunction) (interface{}, error) {
+
+	// this code cannot go in algebra, functions or functions/inline because of circular references
+	// between algebra, expression and functions
+	body, ok := stmt.Body().(interface{ Expressions() expression.Expressions })
+	if ok {
+		exprs := body.Expressions()
+		if len(exprs) > 0 {
+			return nil, exprs.MapExpressions(this)
+		}
+	}
 	return nil, nil
 }
 

@@ -177,3 +177,7 @@ func (this *inlineBody) Load(name functions.FunctionName) errors.Error {
 
 func (this *inlineBody) Unload(name functions.FunctionName) {
 }
+
+func (this *inlineBody) Expressions() expression.Expressions {
+	return expression.Expressions{this.expr}
+}
