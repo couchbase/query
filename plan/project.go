@@ -14,6 +14,7 @@ import (
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/expression/parser"
+	"github.com/couchbase/query/value"
 )
 
 type InitialProject struct {
@@ -117,6 +118,9 @@ func (this *InitialProject) MarshalBase(f func(map[string]interface{})) map[stri
 	if this.preserveOrder {
 		r["preserve_order"] = this.preserveOrder
 	}
+	if this.projection.Exclude() != nil {
+		r["exclude"] = this.projection.Exclude()
+	}
 	if f != nil {
 		f(r)
 	}
@@ -135,6 +139,7 @@ func (this *InitialProject) UnmarshalJSON(body []byte) error {
 		Raw           bool                   `json:"raw"`
 		OptEstimate   map[string]interface{} `json:"optimizer_estimates"`
 		PreserveOrder bool                   `json:"preserve_order"`
+		Exclude       expression.Expressions `json:"exclude"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -153,7 +158,7 @@ func (this *InitialProject) UnmarshalJSON(body []byte) error {
 		}
 		terms[i] = algebra.NewResultTerm(expr, term_data.Star, term_data.As)
 	}
-	projection := algebra.NewProjection(_unmarshalled.Distinct, terms)
+	projection := algebra.NewProjection(_unmarshalled.Distinct, terms, _unmarshalled.Exclude)
 	projection.SetRaw(_unmarshalled.Raw)
 	results := projection.Terms()
 	project_terms := make(ProjectTerms, len(results))
@@ -307,7 +312,7 @@ func (this *IndexCountProject) UnmarshalJSON(body []byte) error {
 		}
 		terms[i] = algebra.NewResultTerm(expr, false, term_data.As)
 	}
-	projection := algebra.NewProjection(false, terms)
+	projection := algebra.NewProjection(false, terms, nil)
 	projection.SetRaw(_unmarshalled.Raw)
 	results := projection.Terms()
 	project_terms := make(ProjectTerms, len(results))
@@ -327,9 +332,18 @@ func (this *IndexCountProject) UnmarshalJSON(body []byte) error {
 type ProjectTerms []*ProjectTerm
 
 type ProjectTerm struct {
-	result *algebra.ResultTerm
+	result   *algebra.ResultTerm
+	mustCopy value.Tristate
 }
 
 func (this *ProjectTerm) Result() *algebra.ResultTerm {
 	return this.result
+}
+
+func (this *ProjectTerm) MustCopy() value.Tristate {
+	return this.mustCopy
+}
+
+func (this *ProjectTerm) SetMustCopy(s value.Tristate) {
+	this.mustCopy = s
 }

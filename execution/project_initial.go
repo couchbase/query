@@ -10,8 +10,10 @@ package execution
 
 import (
 	"encoding/json"
+	"strings"
 
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/sort"
 	"github.com/couchbase/query/util"
@@ -20,8 +22,9 @@ import (
 
 type InitialProject struct {
 	base
-	plan  *plan.InitialProject
-	order []string
+	plan       *plan.InitialProject
+	order      []string
+	exclusions [][]string
 }
 
 var _INITPROJ_OP_POOL util.FastPool
@@ -62,6 +65,7 @@ func (this *InitialProject) RunOnce(context *Context, parent value.Value) {
 
 func (this *InitialProject) beforeItems(context *Context, parent value.Value) bool {
 	this.order = nil
+	this.exclusions = nil
 	return true
 }
 
@@ -87,7 +91,12 @@ func (this *InitialProject) processItem(item value.AnnotatedValue, context *Cont
 		if item.Type() == value.OBJECT {
 			item.SetValue(value.NewValue(item.Actual()))
 			item.SetSelf(true)
-			return this.sendItem(item)
+			exclusions, err := this.getExclusions(true, item, context)
+			if err != nil {
+				context.Error(errors.NewEvaluationError(err, "projection"))
+				return false
+			}
+			return this.excludeAndSend(exclusions, item, context)
 		} else {
 			pv := value.EMPTY_ANNOTATED_OBJECT
 			if context.UseRequestQuota() {
@@ -154,6 +163,7 @@ func (this *InitialProject) afterItems(context *Context) {
 	if context.IsAdvisor() {
 		context.AddPhaseOperator(ADVISOR)
 	}
+	this.exclusions = nil
 }
 
 func (this *InitialProject) processTerms(item value.AnnotatedValue, context *Context) bool {
@@ -170,6 +180,12 @@ func (this *InitialProject) processTerms(item value.AnnotatedValue, context *Con
 	if doOrder {
 		order = _PROJECTION_ORDER_POOL.Get()
 	}
+	exclusions, err := this.getExclusions(false, item, context)
+	if err != nil {
+		context.Error(errors.NewEvaluationError(err, "projection"))
+		return false
+	}
+
 	for _, term := range this.plan.Terms() {
 		alias := term.Result().Alias()
 		if alias != "" {
@@ -186,6 +202,32 @@ func (this *InitialProject) processTerms(item value.AnnotatedValue, context *Con
 				order[alias] = nextOrder
 				nextOrder++
 			}
+			if term.MustCopy() == value.NONE {
+				if len(exclusions) > 0 {
+					found := false
+					for i := range exclusions {
+						if exclusions[i][0][0] == 'i' && strings.ToLower(exclusions[i][0][1:]) == strings.ToLower(alias) {
+							found = true
+						} else if exclusions[i][0][1:] == alias {
+							found = true
+						}
+						if found == true {
+							break
+						}
+					}
+					if found {
+						v = v.CopyForUpdate()
+						if this.exclusions != nil {
+							term.SetMustCopy(value.TRUE)
+						}
+					} else if this.exclusions != nil {
+						term.SetMustCopy(value.FALSE)
+					}
+				}
+			} else if term.MustCopy() == value.TRUE {
+				v = v.CopyForUpdate()
+			}
+
 			p.SetField(alias, v)
 
 			// Explicit aliases override data
@@ -202,6 +244,40 @@ func (this *InitialProject) processTerms(item value.AnnotatedValue, context *Con
 					context.Error(errors.NewEvaluationError(err, "projection"))
 					return false
 				}
+			}
+
+			if term.MustCopy() == value.NONE {
+				if len(exclusions) > 0 {
+					sa, ok := starval.Actual().(map[string]interface{})
+					if ok {
+						found := false
+						for i := range exclusions {
+							if exclusions[i][0][0] == 'i' {
+								for k, _ := range sa {
+									if strings.ToLower(k) == strings.ToLower(exclusions[i][0][1:]) {
+										found = true
+										break
+									}
+								}
+							} else if _, ok := sa[exclusions[i][0][1:]]; ok {
+								found = true
+							}
+							if found == true {
+								break
+							}
+						}
+						if found {
+							starval = starval.CopyForUpdate()
+							if this.exclusions != nil {
+								term.SetMustCopy(value.TRUE)
+							}
+						} else if this.exclusions != nil {
+							term.SetMustCopy(value.FALSE)
+						}
+					}
+				}
+			} else if term.MustCopy() == value.TRUE {
+				starval = starval.CopyForUpdate()
 			}
 
 			// Latest star overwrites previous star
@@ -262,7 +338,7 @@ func (this *InitialProject) processTerms(item value.AnnotatedValue, context *Con
 		}
 	}
 	item.Recycle()
-	if !this.sendItem(pv) {
+	if !this.excludeAndSend(exclusions, pv, context) {
 		pv.Recycle()
 		return false
 	}
@@ -302,4 +378,40 @@ func (this sortableList) Less(i int, j int) bool {
 }
 func (this sortableList) Swap(i int, j int) {
 	this.list[i], this.list[j] = this.list[j], this.list[i]
+}
+
+func (this *InitialProject) getExclusions(singlequalification bool, item value.AnnotatedValue, context *Context) (
+	[][]string, error) {
+
+	var exclusions [][]string
+	if this.exclusions != nil {
+		exclusions = this.exclusions
+	} else {
+		var cache bool
+		var err error
+		exclusions, cache, err = expression.GetReferences(this.plan.Projection().Exclude(), item, context, singlequalification)
+		if err != nil {
+			return nil, nil
+		}
+		if cache {
+			this.exclusions = exclusions
+		}
+	}
+	return exclusions, nil
+}
+
+func (this *InitialProject) excludeAndSend(exclusions [][]string, item value.AnnotatedValue, context *Context) bool {
+	if len(exclusions) != 0 {
+		if ia, ok := item.Actual().(map[string]interface{}); ok {
+			before := item.Size()
+			for _, e := range exclusions {
+				expression.DeleteFromObject(ia, e)
+			}
+			after := item.Size()
+			if before != after && context.UseRequestQuota() {
+				context.ReleaseValueSize(before - after)
+			}
+		}
+	}
+	return this.sendItem(item)
 }

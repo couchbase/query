@@ -13,8 +13,11 @@ import (
 	"math"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 
+	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
@@ -1356,6 +1359,129 @@ func (this *ObjectRemove) Constructor() FunctionConstructor {
 
 ///////////////////////////////////////////////////
 //
+// ObjectRemoveFields
+//
+///////////////////////////////////////////////////
+
+type ObjectRemoveFields struct {
+	FunctionBase
+}
+
+func NewObjectRemoveFields(operands ...Expression) Function {
+	rv := &ObjectRemoveFields{
+		*NewFunctionBase("object_remove_fields", operands...),
+	}
+
+	rv.expr = rv
+	return rv
+}
+
+func (this *ObjectRemoveFields) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *ObjectRemoveFields) Type() value.Type { return value.OBJECT }
+
+func (this *ObjectRemoveFields) Evaluate(item value.Value, context Context) (value.Value, error) {
+	var rv interface{}
+	var obj value.AnnotatedValue
+	null := false
+	missing := false
+
+	for i, op := range this.operands {
+		arg, err := op.Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		} else if arg.Type() == value.MISSING {
+			missing = true
+		} else if arg.Type() == value.NULL {
+			null = true
+		} else if !null && !missing {
+			if i == 0 {
+				if arg.Type() != value.OBJECT {
+					null = true
+				} else {
+					rv = arg.CopyForUpdate()
+					obj = value.NewAnnotatedValue(arg)
+				}
+			} else {
+				if arg.Type() == value.STRING {
+					n := arg.ToString()
+					if len(n) > 0 {
+						exp, err := context.Parse(n)
+						if err != nil {
+							return nil, err
+						}
+						if e, ok := exp.(Expression); ok {
+							ref, err := getReference(e, obj, context)
+							if err != nil {
+								return nil, err
+							}
+							rv = DeleteFromObject(rv, reverseReference(ref))
+						} else {
+							null = true
+						}
+					}
+				} else if arg.Type() == value.ARRAY {
+					act := arg.Actual().([]interface{})
+				act_array:
+					for j := range act {
+						var n string
+						switch t := act[j].(type) {
+						case value.Value:
+							if t.Type() != value.STRING {
+								null = true
+								break act_array
+							}
+							n = t.ToString()
+						case string:
+							n = t
+						default:
+							null = true
+							break act_array
+						}
+						if len(n) > 0 {
+							exp, err := context.Parse(n)
+							if err != nil {
+								return nil, err
+							}
+							if e, ok := exp.(Expression); ok {
+								ref, err := getReference(e, obj, context)
+								if err != nil {
+									return nil, err
+								}
+								rv = DeleteFromObject(rv, reverseReference(ref))
+							} else {
+								null = true
+								break act_array
+							}
+						}
+					}
+				} else {
+					null = true
+				}
+			}
+		}
+	}
+
+	if missing {
+		return value.MISSING_VALUE, nil
+	} else if null {
+		return value.NULL_VALUE, nil
+	}
+
+	return value.NewValue(rv), nil
+}
+
+func (this *ObjectRemoveFields) MinArgs() int { return 2 }
+func (this *ObjectRemoveFields) MaxArgs() int { return math.MaxInt16 }
+
+func (this *ObjectRemoveFields) Constructor() FunctionConstructor {
+	return NewObjectRemoveFields
+}
+
+///////////////////////////////////////////////////
+//
 // ObjectRename
 //
 ///////////////////////////////////////////////////
@@ -2176,4 +2302,405 @@ func precompilePattern(options value.Value) *regexp.Regexp {
 		re, _ = precompileRegexp(value.NewValue(pattern), false)
 	}
 	return re
+}
+
+/*
+ * Deletes the field listed in parts in "ref" from the object "i"
+ */
+func DeleteFromObject(i interface{}, ref []string) interface{} {
+	switch t := i.(type) {
+	case value.Value:
+		switch t := t.Actual().(type) {
+		case map[string]interface{}:
+			return DeleteFromObject(t, ref)
+		case []interface{}:
+			return DeleteFromObject(t, ref)
+		default:
+			return t
+		}
+	case map[string]interface{}:
+		switch len(ref) {
+		case 0:
+			return t
+		case 1:
+			r := ref[0][1:]
+			if ref[0][0] == 'i' {
+				for k, _ := range t {
+					if strings.ToLower(k) == strings.ToLower(r) {
+						delete(t, k)
+						break
+					}
+				}
+			} else {
+				delete(t, r)
+			}
+		default:
+			r := ref[0][1:]
+			if ref[0][0] == 'i' {
+				for k, field := range t {
+					if strings.ToLower(k) == strings.ToLower(r) {
+						t[k] = DeleteFromObject(field, ref[1:])
+						break
+					}
+				}
+			} else {
+				if field, ok := t[r]; ok {
+					t[r] = DeleteFromObject(field, ref[1:])
+				}
+			}
+		}
+		return t
+	case []interface{}:
+		if len(ref) < 1 {
+			return i
+		} else if len(ref) == 1 {
+			if ref[0] == "*" {
+				t = t[:0]
+			} else if strings.IndexRune(ref[0], ':') != -1 {
+				parts := strings.Split(ref[0], ":")
+				if len(parts) != 2 {
+					return i
+				}
+				s64, err := strconv.ParseUint(parts[0], 10, 64)
+				if err != nil || int(s64) >= len(t) {
+					return i
+				}
+				s := int(s64)
+				e64, err := strconv.ParseInt(parts[1], 10, 64)
+				if err != nil {
+					return i
+				}
+				e := int(e64)
+				if e < 0 {
+					t = t[:s]
+				} else if s < e {
+					if e > len(t) {
+						e = len(t)
+					}
+					if s == len(t)-1 {
+						t = t[:len(t)-1]
+					} else {
+						copy(t[s:], t[e:])
+						t = t[:len(t)-(e-s)]
+					}
+				}
+			} else {
+				n64, err := strconv.ParseUint(ref[0], 10, 64)
+				if err != nil {
+					return i
+				}
+				n := int(n64)
+				if n >= len(t) {
+					return i
+				}
+				if n >= 0 && n < len(t) {
+					copy(t[n:], t[n+1:])
+					t = t[:len(t)-1]
+				}
+			}
+			return t
+		}
+		if ref[0] == "*" {
+			for n := range t {
+				t[n] = DeleteFromObject(t[n], ref[1:])
+			}
+		} else if strings.IndexRune(ref[0], ':') != -1 {
+			parts := strings.Split(ref[0], ":")
+			if len(parts) != 2 {
+				return i
+			}
+			s64, err := strconv.ParseUint(parts[0], 10, 64)
+			if err != nil || int(s64) >= len(t) {
+				return i
+			}
+			s := int(s64)
+			e64, err := strconv.ParseInt(parts[1], 10, 64)
+			if err != nil {
+				return i
+			}
+			e := int(e64)
+			if e < 0 {
+				e = len(t)
+			} else if e > len(t) {
+				e = len(t)
+			}
+			if s < len(t) && s < e {
+				for i := s; i < e; i++ {
+					t[i] = DeleteFromObject(t[i], ref[1:])
+				}
+			}
+		} else {
+			n, err := strconv.ParseUint(ref[0], 10, 64)
+			if err != nil || int(n) >= len(t) {
+				return i
+			}
+			t[n] = DeleteFromObject(t[n], ref[1:])
+		}
+		return t
+	}
+	return i
+}
+
+func splitStrings(src string) []string {
+	var res []string
+	quoted := false
+	start := 0
+	for i := range src {
+		switch src[i] {
+		case '`':
+			quoted = !quoted
+		case ',':
+			if !quoted {
+				if i-start > 0 {
+					s := strings.TrimSpace(src[start:i])
+					if len(s) > 0 {
+						res = append(res, s)
+					}
+				}
+				start = i + 1
+			}
+		}
+	}
+	if !quoted && start < len(src) {
+		s := strings.TrimSpace(src[start:])
+		if len(s) > 0 {
+			res = append(res, s)
+		}
+	}
+	return res
+}
+
+func getReference(ex Expression, item value.AnnotatedValue, context Context) ([]string, error) {
+	var res []string
+	switch e := ex.(type) {
+	case *Field:
+		if fn, ok := e.Second().(*FieldName); ok {
+			if fn.CaseInsensitive() {
+				res = append(res, "i"+fn.Alias())
+			} else {
+				res = append(res, " "+fn.Alias())
+			}
+		} else {
+			r, err := e.Second().Evaluate(item, context)
+			if err != nil {
+				return nil, err
+			}
+			if r.Type() == value.NULL || r.Type() == value.MISSING {
+				return nil, errors.NewInvalidExpressionError(e.String(), "NULL or missing field name")
+			}
+			res = append(res, " "+r.ToString())
+		}
+		ref, err := getReference(e.First(), item, context)
+		if err != nil {
+			return nil, err
+		}
+		res = append(res, ref...)
+	case *Identifier:
+		if e.CaseInsensitive() {
+			res = append(res, "i"+e.Alias())
+		} else {
+			res = append(res, " "+e.Alias())
+		}
+	case *ArrayStar:
+		res = append(res, "*")
+		ref, err := getReference(e.Operand(), item, context)
+		if err != nil {
+			return nil, err
+		}
+		res = append(res, ref...)
+	case *Slice:
+		start := 0
+		end := -1
+		startEx := e.Start()
+		if startEx != nil {
+			v, err := startEx.Evaluate(item, context)
+			if err != nil {
+				return nil, err
+			} else if v.Type() == value.NUMBER {
+				start = int(value.AsNumberValue(v).Int64())
+			} else {
+				return nil, errors.NewInvalidExpressionError(e.String(), "Invalid slice specification")
+			}
+		}
+		endEx := e.End()
+		if endEx != nil {
+			v, err := endEx.Evaluate(item, context)
+			if err != nil {
+				return nil, err
+			} else if v.Type() == value.NUMBER {
+				end = int(value.AsNumberValue(v).Int64())
+				if end < 0 {
+					return nil, errors.NewInvalidExpressionError(e.String(), "Invalid slice specification")
+				}
+			} else {
+				return nil, errors.NewInvalidExpressionError(e.String(), "Invalid slice specification")
+			}
+		}
+		if (end >= start || end == -1) && start >= 0 {
+			ref, err := getReference(e.Operands()[0], item, context)
+			if err != nil {
+				return nil, err
+			}
+			res = append([]string{fmt.Sprintf("%d:%d", start, end)}, ref...)
+		} else {
+			return nil, errors.NewInvalidExpressionError(e.String(), "Invalid slice specification")
+		}
+	case *Element:
+		second, err := e.Second().Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		} else {
+			if second.Type() == value.STRING {
+				if second.Actual().(string) == "*" {
+					res = append(res, "*")
+				} else {
+					return nil, errors.NewInvalidExpressionError(e.String(), "Invalid array element")
+				}
+			} else if second.Type() == value.NUMBER {
+				iv := int(second.Actual().(float64))
+				if iv >= 0 {
+					res = append(res, fmt.Sprintf("%d", iv))
+				} else {
+					return nil, errors.NewInvalidExpressionError(e.String(), "Invalid array element")
+				}
+			} else {
+				return nil, errors.NewInvalidExpressionError(e.String(), "Invalid array element")
+			}
+			ref, err := getReference(e.First(), item, context)
+			if err != nil {
+				return nil, err
+			}
+			res = append(res, ref...)
+		}
+	default:
+		logging.Debuga(func() string { return fmt.Sprintf("Unsupported expression type: %T", e) })
+		return nil, errors.NewUnsupportedExpressionError(e.String(), nil)
+	}
+	return res, nil
+}
+
+func reverseReference(in []string) []string {
+	l := len(in) - 1
+	for i := 0; i < len(in)/2; i++ {
+		in[i], in[l-i] = in[l-i], in[i]
+	}
+	return in
+}
+
+func GetReferences(exs Expressions, item value.AnnotatedValue, context Context, singleQualification bool) (
+	[][]string, bool, error) {
+
+	var references [][]string
+	constant := true
+	for _, ex := range exs {
+		switch ex.(type) {
+		case *Field:
+			ref, err := getReference(ex, item, context)
+			if err != nil {
+				return nil, false, err
+			}
+			if singleQualification {
+				ref = checkBinding(item, ref)
+			}
+			references = append(references, reverseReference(ref))
+		case *Identifier:
+			ref, err := getReference(ex, item, context)
+			if err != nil {
+				return nil, false, err
+			}
+			if singleQualification {
+				ref = checkBinding(item, ref)
+			}
+			references = append(references, reverseReference(ref))
+		case *Slice:
+			ref, err := getReference(ex, item, context)
+			if err != nil {
+				return nil, false, err
+			}
+			if singleQualification {
+				ref = checkBinding(item, ref)
+			}
+			references = append(references, reverseReference(ref))
+		case *Element:
+			ref, err := getReference(ex, item, context)
+			if err != nil {
+				return nil, false, err
+			}
+			if singleQualification {
+				ref = checkBinding(item, ref)
+			}
+			references = append(references, reverseReference(ref))
+		case *ArrayStar:
+			ref, err := getReference(ex, item, context)
+			if err != nil {
+				return nil, false, err
+			}
+			if singleQualification {
+				ref = checkBinding(item, ref)
+			}
+			references = append(references, reverseReference(ref))
+		default:
+			v, err := ex.Evaluate(item, context)
+			if err != nil {
+				return nil, false, err
+			}
+			constant = constant && ex.Static() != nil
+			if v.Type() == value.STRING {
+				strs := splitStrings(v.ToString())
+				for _, str := range strs {
+					exp, err := context.Parse(str)
+					if err != nil {
+						if strings.Index(err.Error(), "syntax error") != -1 {
+							err = errors.NewParsingError(err, " "+str)
+						}
+						return nil, false, err
+					}
+					if e, ok := exp.(Expression); ok {
+						ref, err := getReference(e, item, context)
+						if err != nil {
+							return nil, false, err
+						}
+						if singleQualification {
+							ref = checkBinding(item, ref)
+						}
+						references = append(references, reverseReference(ref))
+					} else {
+						return nil, false, errors.NewInvalidExpressionError(e.String(), nil)
+					}
+				}
+			} else if v.Type() != value.MISSING && v.Type() != value.NULL {
+				return nil, false, errors.NewUnsupportedExpressionError(ex.String(), "Does not evaluate to a string")
+			}
+		}
+	}
+	logging.Debuga(func() string { return fmt.Sprintf("%v", references) })
+	return references, constant, nil
+}
+
+func checkBinding(item value.AnnotatedValue, ref []string) []string {
+	if len(ref) < 1 {
+		return ref
+	}
+	v := item.GetValue().Actual()
+	if m, ok := v.(map[string]interface{}); ok {
+		if len(m) != 1 {
+			return ref
+		}
+		i := len(ref) - 1
+		if ref[i][0] == 'i' {
+			for k, _ := range m {
+				if strings.ToLower(k) == strings.ToLower(ref[i][1:]) {
+					return ref
+				}
+			}
+		} else if _, ok := m[ref[i][1:]]; ok {
+			return ref
+		}
+		for k, _ := range m {
+			ref = append(ref, " "+k)
+		}
+	} else {
+		logging.Debuga(func() string { return fmt.Sprintf("unknown type %T", v) })
+	}
+	return ref
 }

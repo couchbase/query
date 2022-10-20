@@ -196,6 +196,8 @@ const (
 	E_EXPLAIN                                 ErrorCode = 5015
 	E_GROUP_UPDATE                            ErrorCode = 5020
 	E_INVALID_VALUE                           ErrorCode = 5030
+	E_INVALID_EXPRESSION                      ErrorCode = 5031
+	E_UNSUPPORTED_EXPRESSION                  ErrorCode = 5032
 	E_RANGE                                   ErrorCode = 5035
 	W_DIVIDE_BY_ZERO                          ErrorCode = 5036
 	E_DUPLICATE_FINAL_GROUP                   ErrorCode = 5040

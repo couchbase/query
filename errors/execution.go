@@ -68,6 +68,26 @@ func NewInvalidValueError(msg string) Error {
 		InternalMsg: msg, InternalCaller: CallerN(1)}
 }
 
+func NewInvalidExpressionError(exp string, details interface{}) Error {
+	c := make(map[string]interface{})
+	c["expression"] = exp
+	if details != nil {
+		c["details"] = details
+	}
+	return &err{level: EXCEPTION, ICode: E_INVALID_EXPRESSION, IKey: "execution.invalid_expression", cause: c,
+		InternalMsg: "Invalid expression", InternalCaller: CallerN(1)}
+}
+
+func NewUnsupportedExpressionError(exp string, details interface{}) Error {
+	c := make(map[string]interface{})
+	c["expression"] = exp
+	if details != nil {
+		c["details"] = details
+	}
+	return &err{level: EXCEPTION, ICode: E_UNSUPPORTED_EXPRESSION, IKey: "execution.unsupported_expression", cause: c,
+		InternalMsg: "Unsupported expression", InternalCaller: CallerN(1)}
+}
+
 func NewRangeError(termType string) Error {
 	return &err{level: EXCEPTION, ICode: E_RANGE, IKey: "execution.range_error",
 		InternalMsg: fmt.Sprintf("Out of range evaluating %s.", termType), InternalCaller: CallerN(1)}

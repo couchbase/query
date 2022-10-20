@@ -402,5 +402,97 @@
                 "lookup": 2
             }
         ]
+    },
+    {
+        "comment":"EXCLUDE clause: implicit keyspace",
+        "statements": "SELECT * EXCLUDE orderlines FROM orders USE KEYS[\"1234_select_func\"]",
+        "results": [
+            {
+                "orders": {
+                    "custId": "customer312",
+                    "id": "1234",
+                    "test_id": "select_func",
+                    "type": "order"
+                }
+            }
+        ]
+    },
+    {
+        "comment":"EXCLUDE clause: explicit keyspace",
+        "statements": "SELECT * EXCLUDE orders.orderlines FROM orders USE KEYS[\"1234_select_func\"]",
+        "results": [
+            {
+                "orders": {
+                    "custId": "customer312",
+                    "id": "1234",
+                    "test_id": "select_func",
+                    "type": "order"
+                }
+            }
+        ]
+    },
+    {
+        "comment":"EXCLUDE clause: simple mixed",
+        "statements": "SELECT * EXCLUDE orderlines, orders.custId FROM orders USE KEYS[\"1234_select_func\"]",
+        "results": [
+            {
+                "orders": {
+                    "id": "1234",
+                    "test_id": "select_func",
+                    "type": "order"
+                }
+            }
+        ]
+    },
+    {
+        "comment":"EXCLUDE clause: simple multiple",
+        "statements": "SELECT * EXCLUDE o1.orderlines, o2.orderlines FROM orders o1 USE KEYS[\"1234_select_func\"], orders o2 USE KEYS[\"1200_select_func\"]",
+        "results": [
+            {
+                "o1": {
+                    "custId": "customer312",
+                    "id": "1234",
+                    "test_id": "select_func",
+                    "type": "order"
+                },
+                "o2": {
+                    "custId": "customer18",
+                    "id": "1200",
+                    "shipped-on": "2012/01/02",
+                    "test_id": "select_func",
+                    "type": "order"
+                }
+            }
+        ]
+    },
+    {
+        "comment":"EXCLUDE clause: simple array element",
+        "statements": "SELECT o1.* EXCLUDE orderlines[1] FROM orders o1 USE KEYS[\"1234_select_func\"]",
+        "results": [
+            {
+                "custId": "customer312",
+                "id": "1234",
+                "orderlines": [
+                    {
+                        "productId": "coffee01",
+                        "qty": 2
+                    }
+                ],
+                "test_id": "select_func",
+                "type": "order"
+            }
+        ]
+    },
+    {
+        "comment":"EXCLUDE clause: string type",
+        "statements": "SELECT * EXCLUDE to_string(t.hideme) FROM {\"a\":1,\"b\":2,\"c\":3,\"hideme\":\"hideme,b\"} t",
+        "results": [
+            {
+                "t": {
+                    "a": 1,
+                    "c": 3
+                }
+            }
+        ]
     }
 ]

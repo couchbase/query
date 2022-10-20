@@ -518,6 +518,8 @@ tokOffset        int
 
 %type <val>                with_clause opt_with_clause
 
+%type <exprs>              opt_exclude
+
 %start input
 
 %%
@@ -1034,9 +1036,9 @@ hint_args IDENT
  *************************************************/
 
 projection:
-opt_quantifier projects
+opt_quantifier projects opt_exclude
 {
-    $$ = algebra.NewProjection($1, $2)
+    $$ = algebra.NewProjection($1, $2, $3)
 }
 |
 opt_quantifier raw expr opt_as_alias
@@ -1054,6 +1056,18 @@ ALL
 |
 DISTINCT
 { $$ = true }
+;
+
+opt_exclude:
+/* empty */
+{
+    $$ = nil
+}
+|
+EXCLUDE exprs
+{
+    $$ = $2
+}
 ;
 
 raw:
@@ -2038,7 +2052,7 @@ RETURNING returns
 returns:
 projects
 {
-    $$ = algebra.NewProjection(false, $1)
+    $$ = algebra.NewProjection(false, $1, nil)
 }
 |
 raw expr

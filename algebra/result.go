@@ -25,9 +25,10 @@ represent if the keywords DISTINCT and RAW are used in the
 query. Terms represent the result expression.
 */
 type Projection struct {
-	distinct bool        `json:"distinct"`
-	raw      bool        `json:"raw"`
-	terms    ResultTerms `json:"terms"`
+	distinct bool                   `json:"distinct"`
+	raw      bool                   `json:"raw"`
+	terms    ResultTerms            `json:"terms"`
+	exclude  expression.Expressions `json:"exclude"`
 }
 
 /*
@@ -37,11 +38,12 @@ struct, and setting raw to false. This is for select clauses
 without the RAW keyword specified. Call setAliases() to set
 the alias string.
 */
-func NewProjection(distinct bool, terms ResultTerms) *Projection {
+func NewProjection(distinct bool, terms ResultTerms, exclude expression.Expressions) *Projection {
 	rv := &Projection{
 		distinct: distinct,
 		raw:      false,
 		terms:    terms,
+		exclude:  exclude,
 	}
 
 	rv.setAliases()
@@ -223,6 +225,10 @@ func (this *Projection) Terms() ResultTerms {
 	return this.terms
 }
 
+func (this *Projection) Exclude() expression.Expressions {
+	return this.exclude
+}
+
 /*
 Set the result term alias by calling setAlias for
 each term.
@@ -242,6 +248,9 @@ func (this *Projection) MarshalJSON() ([]byte, error) {
 	r["distinct"] = this.distinct
 	r["raw"] = this.raw
 	r["terms"] = this.terms
+	if this.exclude != nil {
+		r["exclude"] = this.exclude
+	}
 	return json.Marshal(r)
 }
 
