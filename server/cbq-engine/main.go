@@ -339,6 +339,7 @@ func main() {
 		os.Exit(1)
 	}
 
+	memory.Config(memory.Quota(), []int{server.Servicers(), server.PlusServicers()})
 	datastore_package.SetSystemstore(server.Systemstore())
 	prepareds.PreparedsReprepareInit(datastore, sys)
 
