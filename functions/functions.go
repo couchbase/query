@@ -64,6 +64,7 @@ type FunctionBody interface {
 	SwitchContext() value.Tristate
 	IsExternal() bool
 	Privileges() (*auth.Privileges, errors.Error)
+	Test(name FunctionName) errors.Error
 	Load(FunctionName) errors.Error
 	Unload(FunctionName)
 }
@@ -253,6 +254,9 @@ func AddFunction(name FunctionName, body FunctionBody, replace bool) errors.Erro
 				return util.REPLACE
 			}
 
+			// empty any existing N1QL managed javascript function cache entry
+			(ce.(*FunctionEntry)).FunctionBody.Unload((ce.(*FunctionEntry)).FunctionName)
+
 			// this should never be happening, but if somebody pushed it in the cache
 			// in spite of us actually saving it, the cache can't be trusted!
 			added = false
@@ -438,6 +442,9 @@ func ExecuteFunction(name FunctionName, modifiers Modifier, values []value.Value
 					// our body is newer
 					if e.tag < tag || (tag < 0 && e.tag > 0) {
 						e.tag = tag
+
+						// unload N1QL managed javascript body, as it might be stale
+						body.Unload(e.FunctionName)
 						e.FunctionBody = body
 						e.FunctionName.ResetStorage()
 						resetPrivs = true
@@ -631,6 +638,10 @@ func (this *missing) SetStorage(context Context, path []string) errors.Error {
 
 func (this *missing) Execute(name FunctionName, body FunctionBody, modifiers Modifier, values []value.Value, context Context) (value.Value, errors.Error) {
 	return nil, errors.NewMissingFunctionError(name.Name())
+}
+
+func (this *missing) Test(name FunctionName) errors.Error {
+	return nil
 }
 
 func (this *missing) Load(name FunctionName) errors.Error {

@@ -155,6 +155,10 @@ func (this *golangBody) Privileges() (*auth.Privileges, errors.Error) {
 	return nil, nil
 }
 
+func (this *golangBody) Test(name functions.FunctionName) errors.Error {
+	return nil
+}
+
 func (this *golangBody) Load(name functions.FunctionName) errors.Error {
 	return nil
 }

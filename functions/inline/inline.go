@@ -171,6 +171,10 @@ func (this *inlineBody) Privileges() (*auth.Privileges, errors.Error) {
 	return privileges, nil
 }
 
+func (this *inlineBody) Test(name functions.FunctionName) errors.Error {
+	return nil
+}
+
 func (this *inlineBody) Load(name functions.FunctionName) errors.Error {
 	return nil
 }

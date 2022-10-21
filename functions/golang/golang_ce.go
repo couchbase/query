@@ -48,6 +48,10 @@ func (this *golangBody) Indexable() value.Tristate {
 	return value.FALSE
 }
 
+func (this *golangBody) Test(name functions.FunctionName) errors.Error {
+	return nil
+}
+
 func (this *golangBody) Load(name functions.FunctionName) errors.Error {
 	return nil
 }

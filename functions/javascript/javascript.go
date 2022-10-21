@@ -460,7 +460,24 @@ func (this *javascriptBody) Privileges() (*auth.Privileges, errors.Error) {
 	return nil, nil
 }
 
+func (this *javascriptBody) Test(name functions.FunctionName) errors.Error {
+
+	// avoid overwriting any existing entry
+	id := "test_" + nameToLibrary(name)
+	err := this.load(name, id)
+	this.unload(name, id)
+	return err
+}
+
 func (this *javascriptBody) Load(name functions.FunctionName) errors.Error {
+	return this.load(name, nameToLibrary(name))
+}
+
+func (this *javascriptBody) Unload(name functions.FunctionName) {
+	this.unload(name, nameToLibrary(name))
+}
+
+func (this *javascriptBody) load(name functions.FunctionName, id string) errors.Error {
 	var evaluator *evaluatorDesc
 
 	if this.text == "" {
@@ -478,7 +495,7 @@ func (this *javascriptBody) Load(name functions.FunctionName) errors.Error {
 		evaluator = &internal
 	}
 
-	err := evaluator.libStore.Load(nameToLibrary(name), this.text)
+	err := evaluator.libStore.Load(id, this.text)
 
 	switch {
 	case err.Err == nil:
@@ -491,7 +508,7 @@ func (this *javascriptBody) Load(name functions.FunctionName) errors.Error {
 	}
 }
 
-func (this *javascriptBody) Unload(name functions.FunctionName) {
+func (this *javascriptBody) unload(name functions.FunctionName, id string) {
 	var evaluator *evaluatorDesc
 
 	if this.text == "" {
@@ -507,7 +524,7 @@ func (this *javascriptBody) Unload(name functions.FunctionName) {
 	} else {
 		evaluator = &internal
 	}
-	evaluator.libStore.Unload(algebra.PathFromParts(name.Path()...))
+	evaluator.libStore.Unload(id)
 }
 
 func nameToLibrary(name functions.FunctionName) string {

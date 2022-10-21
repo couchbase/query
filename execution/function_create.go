@@ -63,10 +63,9 @@ func (this *CreateFunction) RunOnce(context *Context, parent value.Value) {
 		var err errors.Error
 
 		// If the function is an Internal JS function, load the JS function body, to check if it is syntactically correct
-		err = this.plan.Body().Load(this.plan.Name())
+		err = this.plan.Body().Test(this.plan.Name())
 
 		if err != nil {
-			this.plan.Body().Unload(this.plan.Name())
 			context.Error(err)
 			return
 		}
