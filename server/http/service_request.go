@@ -651,6 +651,16 @@ func handleErrorLimit(rv *httpRequest, httpArgs httpRequestArgs, parm string, va
 	return err
 }
 
+func handleSortProjection(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+	sp, err := httpArgs.getTristateVal(parm, val)
+	if err != nil && sp == value.FALSE {
+		rv.SetSortProjection(false)
+	} else {
+		rv.SetSortProjection(true)
+	}
+	return nil
+}
+
 // For audit.Auditable interface.
 func (this *httpRequest) ElapsedTime() time.Duration {
 	return this.elapsedTime
@@ -784,6 +794,7 @@ const ( // Request argument names
 	NUMATRS            = "numatrs"
 	PRESERVE_EXPIRY    = "preserve_expiry"
 	ERROR_LIMIT        = "error_limit"
+	SORT_PROJECTION    = "sort_projection"
 )
 
 type argHandler struct {
@@ -838,6 +849,7 @@ var _PARAMETERS = map[string]*argHandler{
 	NUMATRS:         {handleNumAtrs, false},
 	PRESERVE_EXPIRY: {handlePreserveExpiry, false},
 	ERROR_LIMIT:     {handleErrorLimit, false},
+	SORT_PROJECTION: {handleSortProjection, false},
 }
 
 // common storage for the httpArgs implementations

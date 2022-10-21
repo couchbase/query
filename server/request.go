@@ -177,6 +177,7 @@ type Request interface {
 	Tracked() bool
 	SetTenantCtx(ctx tenant.Context)
 	TenantCtx() tenant.Context
+	SortProjection() bool
 
 	setSleep() // internal methods for load control
 	sleep()
@@ -343,6 +344,7 @@ type BaseRequest struct {
 	serviceDuration      time.Duration
 	tracked              bool
 	tenantCtx            tenant.Context
+	sortProjection       bool
 }
 
 type requestIDImpl struct {
@@ -1292,4 +1294,12 @@ func (this *BaseRequest) IsAdHoc() bool {
 // For audit.Auditable interface.
 func (this *BaseRequest) ClientContextId() string {
 	return this.ClientID().String()
+}
+
+func (this *BaseRequest) SetSortProjection(on bool) {
+	this.sortProjection = on
+}
+
+func (this *BaseRequest) SortProjection() bool {
+	return this.sortProjection
 }

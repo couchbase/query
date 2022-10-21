@@ -259,6 +259,11 @@ func (this *httpRequest) writeSignature(server_flag bool, signature value.Value,
 	if s == value.FALSE || (s == value.NONE && !server_flag) {
 		return true
 	}
+	if this.SortProjection() {
+		if av, ok := signature.(value.AnnotatedValue); ok {
+			av.SetProjection(signature, nil)
+		}
+	}
 	return this.writeString(",\n") && this.writeString(prefix) && this.writeString("\"signature\": ") && this.writeValue(signature, prefix, indent, true)
 }
 

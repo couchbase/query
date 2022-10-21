@@ -646,7 +646,7 @@ func (this *Server) setupRequestContext(request Request) bool {
 	context.SetPreserveExpiry(request.PreserveExpiry())
 	context.SetTracked(request.Tracked())
 	context.SetTenantCtx(request.TenantCtx())
-	context.SetPreserveProjectionOrder(true)
+	context.SetPreserveProjectionOrder(!request.SortProjection())
 
 	if request.TxId() != "" {
 		err := context.SetTransactionInfo(request.TxId(), request.TxStmtNum())
