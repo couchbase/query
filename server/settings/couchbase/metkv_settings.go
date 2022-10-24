@@ -64,13 +64,14 @@ func Subscribe(callb metakv.Callback, path string, cancelCh chan struct{}) {
 	}()
 }
 
+var lastConfig Config
+
 func SetupSettingsNotifier(callb func(Config), cancelCh chan struct{}) {
 	// Callback function that processes the input key value given by metakv.
 
 	metaKvCallback := func(kve metakv.KVEntry) error {
 		if kve.Path == QuerySettingsMetaPath {
-			logging.Infof("New settings received: %s", string(kve.Value))
-
+			logging.Debuga(func() string { return fmt.Sprintf("kve.Value: %s", string(kve.Value)) })
 			// To be able to process these settings correctly, convert to a map
 			// from string to value.Value.
 
@@ -85,7 +86,7 @@ func SetupSettingsNotifier(callb func(Config), cancelCh chan struct{}) {
 
 			// Commenting out this call as we do not allow propogating settings unless it is
 			// NS server doing the call
-			// Un-comment if we need to propogate settings set by query.
+			// Un-comment if we need to propagate settings set by query.
 
 			// Do a metakv.Set for the values
 			// Set the updates for the given key-value pair for each parameter.
@@ -97,7 +98,11 @@ func SetupSettingsNotifier(callb func(Config), cancelCh chan struct{}) {
 
 			// Callback function defined by the caller where you can
 			// manipilate the input values.
-			callb(newConfig)
+			if lastConfig == nil || !newConfig.Equals(lastConfig).Truth() {
+				logging.Infof("New settings received: %s", string(kve.Value))
+				callb(newConfig)
+			}
+			lastConfig = newConfig
 		}
 		return nil
 	}

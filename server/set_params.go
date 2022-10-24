@@ -27,8 +27,10 @@ import (
 	"github.com/couchbase/query/prepareds"
 	"github.com/couchbase/query/scheduler"
 	queryMetakv "github.com/couchbase/query/server/settings/couchbase"
+	"github.com/couchbase/query/sort"
 	"github.com/couchbase/query/tenant"
 	"github.com/couchbase/query/util"
+	"github.com/couchbase/query/value"
 )
 
 type Setter func(*Server, interface{}) errors.Error
@@ -323,11 +325,7 @@ var reportAllInitially = true
 
 func ProcessSettings(settings map[string]interface{}, srvr *Server) (err errors.Error) {
 	prev := make(map[string]interface{})
-	if !reportAllInitially {
-		prev = FillSettings(prev, srvr)
-	} else {
-		reportAllInitially = false
-	}
+	prev = FillSettings(prev, srvr)
 
 	for setting, value := range settings {
 		var cerr errors.Error
@@ -348,18 +346,7 @@ func ProcessSettings(settings map[string]interface{}, srvr *Server) (err errors.
 		if found && ok {
 			set_it := _SETTERS[s]
 			serr := set_it(srvr, value)
-			if serr == nil {
-				switch s {
-				case SERVICERS:
-					value = srvr.Servicers()
-				case PLUSSERVICERS:
-					value = srvr.PlusServicers()
-				case NODEQUOTA:
-					value = memory.Quota()
-				}
-
-				logging.Infof("Query Configuration changed for %v. New value is %v", s, value)
-			} else {
+			if serr != nil {
 				logging.Infof("Could not change query Configuration %v to %v: %v", s, value, serr)
 			}
 		} else {
@@ -383,7 +370,8 @@ func ProcessSettings(settings map[string]interface{}, srvr *Server) (err errors.
 
 	current := make(map[string]interface{})
 	current = FillSettings(current, srvr)
-	reportChangedValues(prev, current)
+	reportChangedValues(prev, current, reportAllInitially)
+	reportAllInitially = false
 
 	return err
 }
@@ -424,9 +412,17 @@ func compare(a, b interface{}) bool {
 	}
 }
 
-func reportChangedValues(prev map[string]interface{}, current map[string]interface{}) {
+func reportChangedValues(prev map[string]interface{}, current map[string]interface{}, all bool) {
 	changed := make([]interface{}, 0, len(current))
-	for k, v := range current {
+
+	names := make([]string, 0, len(current))
+	for setting, _ := range current {
+		names = append(names, setting)
+	}
+	sort.Strings(names)
+
+	for _, k := range names {
+		v := current[k]
 		p, ok := prev[k]
 		same := false
 		if ok && reflect.TypeOf(v) == reflect.TypeOf(p) {
@@ -456,12 +452,19 @@ func reportChangedValues(prev map[string]interface{}, current map[string]interfa
 				same = p == v
 			}
 		}
-		if !same {
+		if !same || all {
 			changed = append(changed, k)
 			changeRecord := make(map[string]interface{})
 			changeRecord["from"] = p
 			changeRecord["to"] = v
 			changed = append(changed, changeRecord)
+			if _, ok := v.(map[string]interface{}); !ok {
+				if !same {
+					logging.Infof("Query Configuration changed for %v from %v to %v", k, p, v)
+				} else {
+					logging.Infof("Query Configuration changed for %v. New value is %v", k, v)
+				}
+			}
 		}
 	}
 	if len(changed) > 0 {
@@ -531,13 +534,14 @@ func SetParamValuesForAll(cfg queryMetakv.Config, srvr *Server) {
 		} else {
 			// QUERY PARAM
 			paramName, ok := queryMetakv.GLOBALPARAM[key]
-			if ok && paramName == "curl_whitelist" {
+			if ok && (paramName == "curl_whitelist" || paramName == "curl_allowedlist") {
 				// Set the allowlist value to pass to context
-				srvr.SetAllowlist(val.(map[string]interface{}))
-				logging.Infof("New Value for curl allowed list <ud>%v</ud>", val)
-			} else if ok && paramName == "curl_allowedlist" {
-				srvr.SetAllowlist(val.(map[string]interface{}))
-				logging.Infof("New Value for curl allowed list <ud>%v</ud>", val)
+				al := value.NewValue(srvr.GetAllowlist())
+				nal := value.NewValue(val)
+				if !al.Equals(nal).Truth() {
+					srvr.SetAllowlist(val.(map[string]interface{}))
+					logging.Infof("New Value for curl allowed list <ud>%v</ud>", val)
+				}
 			} else {
 				querySettings[key] = val
 			}

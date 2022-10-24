@@ -43,9 +43,11 @@ func SetTemp(loc string, quota int64) error {
 	if tempInfo.loc != loc {
 		tempInfo.inuse = 0
 	}
-	tempInfo.loc = loc
-	tempInfo.quota = quota
-	logging.Infof("Temporary file path set to: %v, quota: %v", loc, quota)
+	if tempInfo.loc != loc || tempInfo.quota != quota {
+		tempInfo.loc = loc
+		tempInfo.quota = quota
+		logging.Infof("Temporary file path set to: %v, quota: %v", loc, quota)
+	}
 	tempMutex.Unlock()
 	return nil
 }
