@@ -282,6 +282,7 @@ const (
 	E_INFER_INDEX_WARNING                     ErrorCode = 7018
 	E_INFER_GET_RANDOM                        ErrorCode = 7019
 	E_INFER_NO_RANDOM_SCAN                    ErrorCode = 7020
+	E_INFER_NO_SEQUENTIAL_SCAN                ErrorCode = 7021
 	E_DATASTORE_AUTHORIZATION                 ErrorCode = 10000
 	E_FTS_MISSING_PORT_ERR                    ErrorCode = 10003
 	E_NODE_INFO_ACCESS_ERR                    ErrorCode = 10004

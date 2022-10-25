@@ -44,7 +44,7 @@ const _SS_SPILL_BUFFER = 10240
 const _SS_SPILL_FILE_PATTERN = "ss_spill-*"
 const _SS_MAX_WORKER_IDLE = time.Minute * 60
 const _SS_MONITOR_INTERVAL = time.Minute * 15
-const _SS_MIN_SAMPLE_SIZE = 16
+const _SS_MIN_SAMPLE_SIZE = 1
 const _SS_MIN_SCAN_SIZE = 256
 const _SS_RETRIES = 10
 const _SS_RETRY_DELAY = time.Millisecond * 100
@@ -440,9 +440,10 @@ func (this *seqScan) coordinator(b *Bucket, scanTimeout time.Duration) {
 			sampleSize = this.sampleSize
 		} else {
 			sampleSize = (this.sampleSize + len(vblist) - 1) / len(vblist)
-			if sampleSize < _SS_MIN_SAMPLE_SIZE {
-				sampleSize = _SS_MIN_SAMPLE_SIZE
-			}
+			// adjust to compensate for probability based sampling in the range scan meaning we're likely to get
+			// fewer samples than requested
+			sampleSize += int(math.Ceil(float64(sampleSize) * 0.2724 * math.Pow(float64(sampleSize), -0.419)))
+			returnLimit = int64(sampleSize * len(vblist))
 		}
 		for vb := 0; vb < len(vblist); vb++ {
 			server := 0
@@ -1201,7 +1202,8 @@ func (this *vbRangeScan) runScan(conn *memcached.Client, node string) bool {
 				if this.sampleSize == math.MaxInt {
 					return fmt.Sprintf("[%p,%d] Creating random scan to sample all keys", this, this.vbucket())
 				} else {
-					return fmt.Sprintf("[%p,%d] Creating random scan with sample size: %d", this, this.vbucket(), this.sampleSize)
+					return fmt.Sprintf("[%p,%d] Creating random scan with sample size %d and limit %d",
+						this, this.vbucket(), this.sampleSize, fetchLimit)
 				}
 			})
 			response, err = conn.CreateRandomScan(this.vbucket(), this.scan.collId, this.sampleSize)
@@ -1316,13 +1318,13 @@ func (this *vbRangeScan) runScan(conn *memcached.Client, node string) bool {
 		// allow retry with new scan when continue of previously created scan fails
 		for {
 			logging.Debuga(func() string {
-				return fmt.Sprintf("[%p,%d] continuing scan: %s", this, this.vbucket(), uuidAsString(uuid))
+				return fmt.Sprintf("[%p,%d] continuing %s with scan limit %d", this, this.vbucket(), uuidAsString(uuid), fetchLimit)
 			})
 			err = conn.ContinueRangeScan(this.vbucket(), uuid, opaque, fetchLimit, 0, 0)
 			if resp, ok := err.(*gomemcached.MCResponse); ok {
 				if resp.Status == gomemcached.WOULD_THROTTLE {
 					logging.Debuga(func() string {
-						return fmt.Sprintf("[%p,%d] throttling %v on scan continue: %s",
+						return fmt.Sprintf("[%p,%d] throttling %v on continue of %s",
 							this, this.vbucket(), this.b.Name, uuidAsString(uuid))
 					})
 					Suspend(this.b.Name, getDelay(resp), node)
@@ -1364,7 +1366,7 @@ func (this *vbRangeScan) runScan(conn *memcached.Client, node string) bool {
 
 					if resp.Status == gomemcached.WOULD_THROTTLE {
 						logging.Debuga(func() string {
-							return fmt.Sprintf("[%p,%d] throttling %v on scan %v receive after %d keys",
+							return fmt.Sprintf("[%p,%d] throttling %v on %v receive after %d keys",
 								this, this.vbucket(), this.b.Name, uuidAsString(uuid), len(this.keys))
 						})
 						Suspend(this.b.Name, getDelay(resp), node)
@@ -1396,8 +1398,9 @@ func (this *vbRangeScan) runScan(conn *memcached.Client, node string) bool {
 			lastStart := 0
 			lastEnd := 0
 			if len(response.Body) > 0 {
+				num_keys := 0
 				var l, p uint32
-				for i := 0; i < len(response.Body) && this.state == _VBS_WORKING; {
+				for i := 0; i < len(response.Body) && this.state == _VBS_WORKING && len(this.keys) < int(fetchLimit); {
 					// read a length... leb128 format (use 32-bits even though length will likely never be this large)
 					l = uint32(0)
 					for shift := 0; i < len(response.Body); {
@@ -1418,8 +1421,13 @@ func (this *vbRangeScan) runScan(conn *memcached.Client, node string) bool {
 						// addKey will have reported the error already
 						return cancelWorking()
 					}
+					num_keys++
 					i += int(l)
 				}
+				logging.Debuga(func() string {
+					return fmt.Sprintf("[%p,%v] processed %v keys from response of %v bytes",
+						this, this.vbucket(), num_keys, len(response.Body))
+				})
 			}
 			if this.state == _VBS_CANCELLED {
 				return cancelWorking()

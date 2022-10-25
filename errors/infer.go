@@ -107,6 +107,13 @@ func NewInferNoSuitableSecondaryIndex(k string) Error {
 		InternalMsg: "No suitable secondary index found.", InternalCaller: CallerN(1)}
 }
 
+func NewInferNoSequentialScan(k string) Error {
+	c := make(map[string]interface{})
+	c["keyspace"] = k
+	return &err{level: EXCEPTION, ICode: E_INFER_NO_SEQUENTIAL_SCAN, IKey: "infer.keyspace.no_sequentialscan", cause: c,
+		InternalMsg: "Sequential scan not available .", InternalCaller: CallerN(1)}
+}
+
 func NewInferTimeout(to int32) Error {
 	c := make(map[string]interface{})
 	c["infer_timeout"] = to
