@@ -283,7 +283,11 @@ function DevStandaloneSetup {
     fi
     if [[ ! -f ../eventing-ee/evaluator/impl/gen/parser/global_config_schema.go ]]
     then
-    (cd ../eventing-ee/evaluator/impl/gen/convertschema; go run generate.go  ../../parser/global_config_schema.json GlobalConfigSchema ../parser/global_config_schema.go)
+         (cd ../eventing-ee/evaluator/impl/gen/convertschema; go run generate.go  ../../parser/global_config_schema.json GlobalConfigSchema ../parser/global_config_schema.go)
+    fi
+    if [[ ! -f ../eventing-ee/evaluator/impl/gen/parser/dynamic_config_schema.go ]]
+    then
+         (cd ../eventing-ee/evaluator/impl/gen/convertschema; go run generate.go  ../../parser/dynamic_config_schema.json DynamicConfigSchema ../parser/dynamic_config_schema.go)
     fi
 }
 
