@@ -85,6 +85,8 @@ func (c *statsCollector) runCollectStats() {
 
 	lastDumpTime := util.Time(0) // temporary addition
 
+	dumpTriggered := false
+
 	oldStats := make(map[string]interface{}, 6)
 	newStats := make(map[string]interface{}, 6)
 	c.server.AccountingStore().ExternalVitals(oldStats)
@@ -140,7 +142,39 @@ func (c *statsCollector) runCollectStats() {
 			newStats["bucket.IO.stats"] = bstats
 		}
 
+		if ac, ok := c.server.AccountingStore().(interface{ CompletedRequests() int64 }); ok {
+			newStats["request.completed.count"] = ac.CompletedRequests()
+		}
 		oldStats = c.server.AccountingStore().ExternalVitals(newStats)
+
+		ncc, _ := newStats["request.completed.count"].(int64)
+		occ, _ := oldStats["request.completed.count"].(int64)
+
+		if ncc == occ { // no progress in last interval
+			if dumpTriggered == false {
+				if c.server.unboundQueue.isFull() {
+					logging.DumpAllStacks(logging.WARN, "Unbound request queue full")
+					dumpTriggered = true
+				} else if c.server.plusQueue.isFull() {
+					logging.DumpAllStacks(logging.WARN, "Plus request queue full")
+					dumpTriggered = true
+				}
+			} else {
+				if !c.server.unboundQueue.isFull() && !c.server.plusQueue.isFull() {
+					dumpTriggered = false
+				}
+			}
+
+			ratio := c.server.QueuedRequests() / (c.server.Servicers() + c.server.PlusServicers())
+			if ratio >= 3 {
+				logging.Warnf("No processed requests with queue of %v", c.server.QueuedRequests())
+			}
+		} else {
+			if !c.server.unboundQueue.isFull() && !c.server.plusQueue.isFull() {
+				dumpTriggered = false
+			}
+		}
+
 		newStats = oldStats
 
 		// Start: temporary addition hence literal constants
