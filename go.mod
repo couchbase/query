@@ -2,7 +2,7 @@ module github.com/couchbase/query
 
 go 1.18
 
-replace golang.org/x/text => golang.org/x/text v0.3.7
+replace golang.org/x/text => golang.org/x/text v0.4.0
 
 replace github.com/couchbase/cbauth => ../cbauth
 
@@ -126,7 +126,7 @@ require (
 	go.etcd.io/bbolt v1.3.6 // indirect
 	golang.org/x/sys v0.0.0-20220804214406-8e32c043e418 // indirect
 	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211 // indirect
-	golang.org/x/text v0.3.7 // indirect
+	golang.org/x/text v0.4.0 // indirect
 	google.golang.org/genproto v0.0.0-20200825200019-8632dd797987 // indirect
 	google.golang.org/grpc v1.31.0 // indirect
 	google.golang.org/protobuf v1.28.1 // indirect
