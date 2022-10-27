@@ -1,158 +1,155 @@
 [
-{
-	"statements": "SELECT firstName, OBJECT_LENGTH(customer.ccInfo) AS infolen FROM customer WHERE test_id=\"obj_func\" ORDER BY objlen, firstName LIMIT 3",
-	"results": [
-        {
-            "firstName": "Abagail",
-            "infolen": 3
-        },
-        {
-            "firstName": "Abdullah",
-            "infolen": 3
-        },
-        {
-            "firstName": "Abe",
-            "infolen": 3
-        }
+  {
+    "statements": "SELECT firstName, OBJECT_LENGTH(customer.ccInfo) AS infolen FROM customer WHERE test_id=\"obj_func\" ORDER BY objlen, firstName LIMIT 3",
+    "results": [
+      {
+        "firstName": "Abagail",
+        "infolen": 3
+      },
+      {
+        "firstName": "Abdullah",
+        "infolen": 3
+      },
+      {
+        "firstName": "Abe",
+        "infolen": 3
+      }
     ]
-},
-
-{
-	"statements": "SELECT OBJECT_NAMES(ccInfo) as infonames FROM customer WHERE test_id=\"obj_func\" limit 3",
-	"results": [
-        {
-            "infonames": [
-                "cardExpiry",
-                "cardNumber",
-                "cardType"
-            ]
-        },
-        {
-            "infonames": [
-                "cardExpiry",
-                "cardNumber",
-                "cardType"
-            ]
-        },
-        {
-            "infonames": [
-                "cardExpiry",
-                "cardNumber",
-                "cardType"
-            ]
-        }
+  },
+  {
+    "statements": "SELECT OBJECT_NAMES(ccInfo) as infonames FROM customer WHERE test_id=\"obj_func\" limit 3",
+    "results": [
+      {
+        "infonames": [
+          "cardExpiry",
+          "cardNumber",
+          "cardType"
+        ]
+      },
+      {
+        "infonames": [
+          "cardExpiry",
+          "cardNumber",
+          "cardType"
+        ]
+      },
+      {
+        "infonames": [
+          "cardExpiry",
+          "cardNumber",
+          "cardType"
+        ]
+      }
     ]
-},
-
-{
-	"statements": "SELECT OBJECT_PAIRS(ccInfo) as infopairs FROM customer WHERE test_id=\"obj_func\" ORDER BY infopairs, firstname LIMIT 3",
-	"results": [
-        {
-            "infopairs": [
-                {
-                    "name": "cardExpiry",
-                    "val": "2011-10-12"
-                },
-                {
-                    "name": "cardNumber",
-                    "val": "1211-1221-1234-2201"
-                },
-                {
-                    "name": "cardType",
-                    "val": "americanexpress"
-                }
-            ]
-        },
-        {
-            "infopairs": [
-                {
-                    "name": "cardExpiry",
-                    "val": "2011-10-12"
-                },
-                {
-                    "name": "cardNumber",
-                    "val": "1211-1221-1234-2201"
-                },
-                {
-                    "name": "cardType",
-                    "val": "americanexpress"
-                }
-            ]
-        },
-        {
-            "infopairs": [
-                {
-                    "name": "cardExpiry",
-                    "val": "2011-10-12"
-                },
-                {
-                    "name": "cardNumber",
-                    "val": "1211-1221-1234-2201"
-                },
-                {
-                    "name": "cardType",
-                    "val": "americanexpress"
-                }
-            ]
-        }
+  },
+  {
+    "statements": "SELECT OBJECT_PAIRS(ccInfo) as infopairs FROM customer WHERE test_id=\"obj_func\" ORDER BY infopairs, firstname LIMIT 3",
+    "results": [
+      {
+        "infopairs": [
+          {
+            "name": "cardExpiry",
+            "val": "2011-10-12"
+          },
+          {
+            "name": "cardNumber",
+            "val": "1211-1221-1234-2201"
+          },
+          {
+            "name": "cardType",
+            "val": "americanexpress"
+          }
+        ]
+      },
+      {
+        "infopairs": [
+          {
+            "name": "cardExpiry",
+            "val": "2011-10-12"
+          },
+          {
+            "name": "cardNumber",
+            "val": "1211-1221-1234-2201"
+          },
+          {
+            "name": "cardType",
+            "val": "americanexpress"
+          }
+        ]
+      },
+      {
+        "infopairs": [
+          {
+            "name": "cardExpiry",
+            "val": "2011-10-12"
+          },
+          {
+            "name": "cardNumber",
+            "val": "1211-1221-1234-2201"
+          },
+          {
+            "name": "cardType",
+            "val": "americanexpress"
+          }
+        ]
+      }
     ]
-},
-
-{
-	"statements": "SELECT firstName, OBJECT_VALUES(ccInfo) as infovals FROM customer WHERE test_id=\"obj_func\" ORDER BY infovals, firstName LIMIT 3",
-	"results": [
-        {
-            "firstName": "Celestine",
-            "infovals": [
-                "2011-10-12",
-                "1211-1221-1234-2201",
-                "americanexpress"
-            ]
-        },
-        {
-            "firstName": "Ed",
-            "infovals": [
-                "2011-10-12",
-                "1211-1221-1234-2201",
-                "americanexpress"
-            ]
-        },
-        {
-            "firstName": "Forest",
-            "infovals": [
-                "2011-10-12",
-                "1211-1221-1234-2201",
-                "americanexpress"
-            ]
-        }
+  },
+  {
+    "statements": "SELECT firstName, OBJECT_VALUES(ccInfo) as infovals FROM customer WHERE test_id=\"obj_func\" ORDER BY infovals, firstName LIMIT 3",
+    "results": [
+      {
+        "firstName": "Celestine",
+        "infovals": [
+          "2011-10-12",
+          "1211-1221-1234-2201",
+          "americanexpress"
+        ]
+      },
+      {
+        "firstName": "Ed",
+        "infovals": [
+          "2011-10-12",
+          "1211-1221-1234-2201",
+          "americanexpress"
+        ]
+      },
+      {
+        "firstName": "Forest",
+        "infovals": [
+          "2011-10-12",
+          "1211-1221-1234-2201",
+          "americanexpress"
+        ]
+      }
     ]
-},
-{
-	"statements": "SELECT OBJECT_paths(customer) as paths FROM customer WHERE test_id='obj_func' LIMIT 1",
-	"results": [
-        {
-            "paths": [
-                "ccInfo",
-                "ccInfo.cardExpiry",
-                "ccInfo.cardNumber",
-                "ccInfo.cardType",
-                "customerId",
-                "dateAdded",
-                "dateLastActive",
-                "emailAddress",
-                "firstName",
-                "lastName",
-                "phoneNumber",
-                "postalCode",
-                "state",
-                "test_id",
-                "type"
-            ]
-        }
+  },
+  {
+    "statements": "SELECT OBJECT_paths(customer) as paths FROM customer WHERE test_id='obj_func' LIMIT 1",
+    "results": [
+      {
+        "paths": [
+          "ccInfo",
+          "ccInfo.cardExpiry",
+          "ccInfo.cardNumber",
+          "ccInfo.cardType",
+          "customerId",
+          "dateAdded",
+          "dateLastActive",
+          "emailAddress",
+          "firstName",
+          "lastName",
+          "phoneNumber",
+          "postalCode",
+          "state",
+          "test_id",
+          "type"
+        ]
+      }
     ]
-},
-{
-    "statements":"SELECT OBJECT_pairs_nested(t,{'composites':true}) FROM {'a':1,'b':2,'c':{'a':[{'b':3},{'b':4},{'b':[{'c':5}]}]}} t",
+  },
+  {
+    "statements": "SELECT OBJECT_pairs_nested(t,{'composites':true}) FROM {'a':1,'b':2,'c':{'a':[{'b':3},{'b':4},{'b':[{'c':5}]}]}} t",
     "results": [
       {
         "$1": [
@@ -203,12 +200,34 @@
             ]
           },
           {
+            "name": "c.a[0]",
+            "val": {
+              "b": 3
+            }
+          },
+          {
             "name": "c.a[0].b",
             "val": 3
           },
           {
+            "name": "c.a[1]",
+            "val": {
+              "b": 4
+            }
+          },
+          {
             "name": "c.a[1].b",
             "val": 4
+          },
+          {
+            "name": "c.a[2]",
+            "val": {
+              "b": [
+                {
+                  "c": 5
+                }
+              ]
+            }
           },
           {
             "name": "c.a[2].b",
@@ -219,6 +238,12 @@
             ]
           },
           {
+            "name": "c.a[2].b[0]",
+            "val": {
+              "c": 5
+            }
+          },
+          {
             "name": "c.a[2].b[0].c",
             "val": 5
           }
@@ -227,7 +252,7 @@
     ]
   },
   {
-    "statements":"SELECT OBJECT_pairs_nested(t,{'pattern':'\\\\[2\\\\].b'}) FROM {'a':1,'b':2,'c':{'a':[{'b':3},{'b':4},{'b':[{'c':5}]}]}} t",
+    "statements": "SELECT OBJECT_pairs_nested(t,{'pattern':'\\\\[2\\\\].b'}) FROM {'a':1,'b':2,'c':{'a':[{'b':3},{'b':4},{'b':[{'c':5}]}]}} t",
     "results": [
       {
         "$1": [
@@ -240,56 +265,56 @@
     ]
   },
   {
-    "statements":"SELECT OBJECT_pairs_nested(t) FROM {'a':1,'b':2,'c':{'a':[{'b':3},{'b':4},{'b':[{'c':5}]}]}} t",
+    "statements": "SELECT OBJECT_pairs_nested(t) FROM {'a':1,'b':2,'c':{'a':[{'b':3},{'b':4},{'b':[{'c':5}]}]}} t",
     "results": [
       {
-          "$1": [
-              {
-                  "name": "a",
-                  "val": 1
-              },
-              {
-                  "name": "b",
-                  "val": 2
-              },
-              {
-                  "name": "c.a[0].b",
-                  "val": 3
-              },
-              {
-                  "name": "c.a[1].b",
-                  "val": 4
-              },
-              {
-                  "name": "c.a[2].b[0].c",
-                  "val": 5
-              }
-          ]
+        "$1": [
+          {
+            "name": "a",
+            "val": 1
+          },
+          {
+            "name": "b",
+            "val": 2
+          },
+          {
+            "name": "c.a[0].b",
+            "val": 3
+          },
+          {
+            "name": "c.a[1].b",
+            "val": 4
+          },
+          {
+            "name": "c.a[2].b[0].c",
+            "val": 5
+          }
+        ]
       }
     ]
   },
   {
-    "statements":"SELECT object_field(c, 'ccInfo.cardExpiry'),object_field(c, '`CCINFO`i.cardExpiry') FROM customer c WHERE c.test_id='obj_func' ORDER BY customerId LIMIT 5",
+    "statements": "SELECT object_field(c, 'ccInfo.cardExpiry'),object_field(c, '`CCINFO`i.cardExpiry') FROM customer c WHERE c.test_id='obj_func' ORDER BY customerId LIMIT 5",
     "results": [
       {
-          "$1": "2012-11-12",
-          "$2": "2012-11-12"
+        "$1": "2012-11-12",
+        "$2": "2012-11-12"
       },
       {
-          "$1": "2011-10-12",
-          "$2": "2011-10-12"
+        "$1": "2011-10-12",
+        "$2": "2011-10-12"
       },
       {
-          "$1": "2012-11-12",
-          "$2": "2012-11-12"
+        "$1": "2012-11-12",
+        "$2": "2012-11-12"
       },
       {
-          "$1": "2015-11-11",
-          "$2": "2015-11-11"
+        "$1": "2015-11-11",
+        "$2": "2015-11-11"
       },
       {
-          "$1": "2011-10-12",
-          "$2": "2011-10-12"
+        "$1": "2011-10-12",
+        "$2": "2011-10-12"
       }
     ]
   }

@@ -1,528 +1,528 @@
 [
   {
-     "statements":"SELECT OBJECT_ADD({'f1': 1}, 'f2', 2) ",
-     "results": [
-	{
-            "$1": {
-                "f1": 1,
-                "f2": 2
-            }
+    "statements": "SELECT OBJECT_ADD({'f1': 1}, 'f2', 2) ",
+    "results": [
+      {
+        "$1": {
+          "f1": 1,
+          "f2": 2
         }
+      }
     ]
   },
   {
-     "statements":"SELECT OBJECT_ADD(NULL, 'f2', 2) ",
-     "results": [
-        {
-            "$1": null
+    "statements": "SELECT OBJECT_ADD(NULL, 'f2', 2) ",
+    "results": [
+      {
+        "$1": null
+      }
+    ]
+  },
+  {
+    "statements": "SELECT OBJECT_ADD(MISSING, 'f2', 2) ",
+    "results": [
+      {}
+    ]
+  },
+  {
+    "statements": "SELECT OBJECT_ADD({'f1': 1}, MISSING, 2) ",
+    "results": [
+      {}
+    ]
+  },
+  {
+    "statements": "SELECT OBJECT_ADD({'f1': 1}, 'f2', MISSING) ",
+    "results": [
+      {
+        "$1": {
+          "f1": 1
         }
+      }
     ]
   },
   {
-     "statements":"SELECT OBJECT_ADD(MISSING, 'f2', 2) ",
-     "results": [
-        {}
+    "statements": "SELECT OBJECT_ADD({'f1': 1}, 2, 2) ",
+    "results": [
+      {
+        "$1": null
+      }
     ]
   },
   {
-     "statements":"SELECT OBJECT_ADD({'f1': 1}, MISSING, 2) ",
-     "results": [
-        {}
+    "statements": "SELECT OBJECT_LENGTH(details) as objlen FROM default:catalog ORDER BY objlen",
+    "results": [
+      {
+        "objlen": 5
+      },
+      {
+        "objlen": 6
+      },
+      {
+        "objlen": 6
+      }
     ]
   },
   {
-     "statements":"SELECT OBJECT_ADD({'f1': 1}, 'f2', MISSING) ",
-     "results": [
-        {
-            "$1": {
-                "f1": 1
-            }
-        }
+    "statements": "SELECT OBJECT_NAMES(details) as objname FROM default:catalog ORDER BY objname ",
+    "results": [
+      {
+        "objname": [
+          "actors",
+          "director",
+          "format",
+          "genre",
+          "runtime",
+          "title"
+        ]
+      },
+      {
+        "objname": [
+          "actors",
+          "director",
+          "format",
+          "genre",
+          "runtime",
+          "title"
+        ]
+      },
+      {
+        "objname": [
+          "author",
+          "genre",
+          "package",
+          "published",
+          "title"
+        ]
+      }
     ]
   },
   {
-     "statements":"SELECT OBJECT_ADD({'f1': 1}, 2, 2) ",
-     "results": [
-        {
-            "$1": null
-        }
-    ]
-  },
-    {
-        "statements": "SELECT OBJECT_LENGTH(details) as objlen FROM default:catalog ORDER BY objlen",
-        "results": [
+    "statements": "SELECT OBJECT_PAIRS(details) as objpairs FROM default:catalog ORDER BY objpairs",
+    "results": [
+      {
+        "objpairs": [
           {
-            "objlen": 5
-        },
-        {
-            "objlen": 6
-        },
-        {
-            "objlen": 6
-        }
-]
-    },
-  {
-     "statements": "SELECT OBJECT_NAMES(details) as objname FROM default:catalog ORDER BY objname ",
-     "results": [
-        {
-            "objname": [
-                "actors",
-                "director",
-                "format",
-                "genre",
-                "runtime",
-                "title"
+            "name": "actors",
+            "val": [
+              "Benedict Cumberbatch",
+              "Martin Freeman"
             ]
-        },
-        {
-            "objname": [
-                "actors",
-                "director",
-                "format",
-                "genre",
-                "runtime",
-                "title"
+          },
+          {
+            "name": "director",
+            "val": [
+              "Euros Lyn",
+              "Paul Mcguigan"
             ]
-        },
-        {
-            "objname": [
-                "author",
-                "genre",
-                "package",
-                "published",
-                "title"
+          },
+          {
+            "name": "format",
+            "val": "Box Set"
+          },
+          {
+            "name": "genre",
+            "val": [
+              "Crime",
+              "Thriller"
             ]
-        }
+          },
+          {
+            "name": "runtime",
+            "val": "266.0 mins"
+          },
+          {
+            "name": "title",
+            "val": "SHERLOCK: SERIES 1"
+          }
+        ]
+      },
+      {
+        "objpairs": [
+          {
+            "name": "actors",
+            "val": [
+              "Jessica Chastain",
+              "Mark Strong"
+            ]
+          },
+          {
+            "name": "director",
+            "val": "Kathryn Bigelow"
+          },
+          {
+            "name": "format",
+            "val": "DVD"
+          },
+          {
+            "name": "genre",
+            "val": [
+              "Action",
+              "Thriller"
+            ]
+          },
+          {
+            "name": "runtime",
+            "val": "157 mins"
+          },
+          {
+            "name": "title",
+            "val": "ZERO DARK THIRTY"
+          }
+        ]
+      },
+      {
+        "objpairs": [
+          {
+            "name": "author",
+            "val": "Dan Brown"
+          },
+          {
+            "name": "genre",
+            "val": [
+              "Fiction",
+              "Thriller"
+            ]
+          },
+          {
+            "name": "package",
+            "val": "Hardcover"
+          },
+          {
+            "name": "published",
+            "val": "05/14/2013"
+          },
+          {
+            "name": "title",
+            "val": "INFERNO"
+          }
+        ]
+      }
     ]
   },
   {
-    "statements":"SELECT OBJECT_PAIRS(details) as objpairs FROM default:catalog ORDER BY objpairs",
+    "statements": "SELECT OBJECT_PUT({'f1': 1}, 'f2', 2) ",
     "results": [
-        {
-            "objpairs": [
-                {
-                    "name": "actors",
-                    "val": [
-                        "Benedict Cumberbatch",
-                        "Martin Freeman"
-                    ]
-                },
-                {
-                    "name": "director",
-                    "val": [
-                        "Euros Lyn",
-                        "Paul Mcguigan"
-                    ]
-                },
-                {
-                    "name": "format",
-                    "val": "Box Set"
-                },
-                {
-                    "name": "genre",
-                    "val": [
-                        "Crime",
-                        "Thriller"
-                    ]
-                },
-                {
-                    "name": "runtime",
-                    "val": "266.0 mins"
-                },
-                {
-                    "name": "title",
-                    "val": "SHERLOCK: SERIES 1"
-                }
-            ]
-        },
-        {
-            "objpairs": [
-                {
-                    "name": "actors",
-                    "val": [
-                        "Jessica Chastain",
-                        "Mark Strong"
-                    ]
-                },
-                {
-                    "name": "director",
-                    "val": "Kathryn Bigelow"
-                },
-                {
-                    "name": "format",
-                    "val": "DVD"
-                },
-                {
-                    "name": "genre",
-                    "val": [
-                        "Action",
-                        "Thriller"
-                    ]
-                },
-                {
-                    "name": "runtime",
-                    "val": "157 mins"
-                },
-                {
-                    "name": "title",
-                    "val": "ZERO DARK THIRTY"
-                }
-            ]
-        },
-        {
-            "objpairs": [
-                {
-                    "name": "author",
-                    "val": "Dan Brown"
-                },
-                {
-                    "name": "genre",
-                    "val": [
-                        "Fiction",
-                        "Thriller"
-                    ]
-                },
-                {
-                    "name": "package",
-                    "val": "Hardcover"
-                },
-                {
-                    "name": "published",
-                    "val": "05/14/2013"
-                },
-                {
-                    "name": "title",
-                    "val": "INFERNO"
-                }
-            ]
+      {
+        "$1": {
+          "f1": 1,
+          "f2": 2
         }
+      }
     ]
   },
   {
-     "statements":"SELECT OBJECT_PUT({'f1': 1}, 'f2', 2) ",
-     "results": [
-	{
-            "$1": {
-                "f1": 1,
-                "f2": 2
-            }
-        }
-    ]
-  },
-  {
-     "statements":"SELECT OBJECT_PUT(NULL, 'f2', 2) ",
-     "results": [
-        {
-            "$1": null
-        }
-    ]
-  },
-  {
-     "statements":"SELECT OBJECT_PUT(MISSING, 'f2', 2) ",
-     "results": [
-        {}
-    ]
-  },
-  {
-     "statements":"SELECT OBJECT_PUT({'f1': 1}, MISSING, 2) ",
-     "results": [
-        {}
-    ]
-  },
-  {
-     "statements":"SELECT OBJECT_PUT({'f1': 1}, 'f2', MISSING) ",
-     "results": [
-        {
-            "$1": {
-                "f1": 1
-            }
-        }
-    ]
-  },
-  {
-     "statements":"SELECT OBJECT_PUT({'f1': 1}, 2, 2) ",
-     "results": [
-        {
-            "$1": null
-        }
-    ]
-  },
-  {
-     "statements":"SELECT OBJECT_PUT({'f1': 1, 'f2': 2}, 'f2', 3) ",
-     "results": [
-        {
-            "$1": {
-                "f1": 1,
-                "f2": 3
-            }
-        }
-    ]
-  },
-  {
-     "statements":"SELECT OBJECT_PUT({'f1': 1, 'f2': 2}, 'f2', MISSING) ",
-     "results": [
-        {
-            "$1": {
-                "f1": 1
-            }
-        }
-    ]
-  },
-  {
-     "statements":"SELECT OBJECT_REMOVE({'f1': 1, 'f2': 2}, 'f2') ",
-     "results": [
-        {
-            "$1": {
-                "f1": 1
-            }
-        }
-    ]
-  },
-  {
-     "statements":"SELECT OBJECT_REMOVE({'f1': 1, 'f2': 2}, 'f3') ",
-     "results": [
-        {
-            "$1": {
-                "f1": 1,
-                "f2": 2
-            }
-        }
-    ]
-  },
-  {
-     "statements":"SELECT OBJECT_REMOVE(NULL, 'f2') ",
-     "results": [
-        {
-            "$1": null
-        }
-    ]
-  },
-  {
-     "statements":"SELECT OBJECT_REMOVE(MISSING, 'f2') ",
-     "results": [
-        {}
-    ]
-  },
-  {
-     "statements":"SELECT OBJECT_VALUES(details) as objvalues FROM default:catalog ORDER BY objvalues ",
-     "results": [
-        {
-            "objvalues": [
-                "Dan Brown",
-                [
-                    "Fiction",
-                    "Thriller"
-                ],
-                "Hardcover",
-                "05/14/2013",
-                "INFERNO"
-            ]
-        },
-        {
-            "objvalues": [
-                [
-                    "Benedict Cumberbatch",
-                    "Martin Freeman"
-                ],
-                [
-                    "Euros Lyn",
-                    "Paul Mcguigan"
-                ],
-                "Box Set",
-                [
-                    "Crime",
-                    "Thriller"
-                ],
-                "266.0 mins",
-                "SHERLOCK: SERIES 1"
-            ]
-        },
-        {
-            "objvalues": [
-                [
-                    "Jessica Chastain",
-                    "Mark Strong"
-                ],
-                "Kathryn Bigelow",
-                "DVD",
-                [
-                    "Action",
-                    "Thriller"
-                ],
-                "157 mins",
-                "ZERO DARK THIRTY"
-            ]
-        }
-    ]
-  },
-  {
-     "statements":"select OBJECT_UNWRAP(TOARRAY(orders.id)) AS a from default:orders ORDER BY a",
-     "results": [
-        {
-            "a": null
-        },
-        {
-            "a": null
-        },
-        {
-            "a": null
-        },
-        {
-            "a": null
-        }
-    ]
-  },
-  {
-     "statements":"select OBJECT_UNWRAP({'id': 1})",
-     "results": [
-        {
-            "$1": 1
-        }
-     ]
-  },
-  {
-     "statements":"select OBJECT_UNWRAP(MISSING)",
-     "results": [
-               {}
-     ]
-  },
-  {
-    "statements":"select OBJECT_CONCAT({'a':1, 'd':4}, {'b':2}, {'c':3, 'e':5}, {})",
+    "statements": "SELECT OBJECT_PUT(NULL, 'f2', 2) ",
     "results": [
-        {
-            "$1": {
-                "a": 1,
-                "b": 2,
-                "c": 3,
-                "d": 4,
-                "e": 5
-            }
-        }
+      {
+        "$1": null
+      }
     ]
   },
   {
-    "statements":"select OBJECT_REMOVE({'a':1, 'b':2, 'c':3}, 'b', 'c')",
+    "statements": "SELECT OBJECT_PUT(MISSING, 'f2', 2) ",
     "results": [
-        {
-            "$1": {
-                "a": 1
-            }
-        }
+      {}
     ]
   },
   {
-    "statements":"select OBJECT_RENAME({'a':1, 'b':2, 'c':3}, 'b', 'd')",
+    "statements": "SELECT OBJECT_PUT({'f1': 1}, MISSING, 2) ",
     "results": [
-        {
-            "$1": {
-                "a": 1,
-                "c": 3,
-                "d": 2
-            }
-        }
+      {}
     ]
   },
   {
-    "statements":"select OBJECT_REPLACE({'a':1, 'b':2, 'c':3}, 2, 4)",
+    "statements": "SELECT OBJECT_PUT({'f1': 1}, 'f2', MISSING) ",
     "results": [
-        {
-            "$1": {
-                "a": 1,
-                "b": 4,
-                "c": 3
-            }
+      {
+        "$1": {
+          "f1": 1
         }
+      }
     ]
   },
   {
-    "statements":"SELECT OBJECT_PATHS(t) FROM {'a':1,'b':2,'c':3} t",
+    "statements": "SELECT OBJECT_PUT({'f1': 1}, 2, 2) ",
     "results": [
-        {
-            "$1": [
-                "a",
-                "b",
-                "c"
-            ]
-        }
+      {
+        "$1": null
+      }
     ]
   },
   {
-    "statements":"SELECT OBJECT_PATHS(t,{'unique':true,'arraysubscript':false}) FROM {'a':1,'b':2,'c':{'a':[{'b':3},{'b':4},{'b':[{'c':5}]}]}} t",
+    "statements": "SELECT OBJECT_PUT({'f1': 1, 'f2': 2}, 'f2', 3) ",
     "results": [
-        {
-            "$1": [
-                "a",
-                "b",
-                "c",
-                "c.a",
-                "c.a[*].b",
-                "c.a[*].b[*].c"
-            ]
+      {
+        "$1": {
+          "f1": 1,
+          "f2": 3
         }
+      }
     ]
   },
   {
-    "statements":"SELECT OBJECT_PATHS(t,{'unique':false,'arraysubscript':false}) FROM {'a':1,'b':2,'c':{'a':[{'b':3},{'b':4},{'b':[{'c':5}]}]}} t",
+    "statements": "SELECT OBJECT_PUT({'f1': 1, 'f2': 2}, 'f2', MISSING) ",
     "results": [
-        {
-            "$1": [
-                "a",
-                "b",
-                "c",
-                "c.a",
-                "c.a[*].b",
-                "c.a[*].b",
-                "c.a[*].b",
-                "c.a[*].b[*].c"
-            ]
+      {
+        "$1": {
+          "f1": 1
         }
+      }
     ]
   },
   {
-    "statements":"SELECT OBJECT_PATHS(t,{'arraysubscript':true}) FROM {'a':1,'b':2,'c':{'a':[{'b':3},{'b':4},{'b':[{'c':5}]}]}} t",
+    "statements": "SELECT OBJECT_REMOVE({'f1': 1, 'f2': 2}, 'f2') ",
     "results": [
-        {
-            "$1": [
-                "a",
-                "b",
-                "c",
-                "c.a",
-                "c.a[0].b",
-                "c.a[1].b",
-                "c.a[2].b",
-                "c.a[2].b[0].c"
-            ]
+      {
+        "$1": {
+          "f1": 1
         }
+      }
     ]
   },
   {
-    "statements":"SELECT OBJECT_PATHS(t,{'composites':false}) FROM {'a':1,'b':2,'c':{'a':[{'b':3},{'b':4},{'b':[{'c':5}]}]}} t",
+    "statements": "SELECT OBJECT_REMOVE({'f1': 1, 'f2': 2}, 'f3') ",
     "results": [
-        {
-            "$1": [
-                "a",
-                "b",
-                "c.a[0].b",
-                "c.a[1].b",
-                "c.a[2].b[0].c"
-            ]
+      {
+        "$1": {
+          "f1": 1,
+          "f2": 2
         }
+      }
     ]
   },
   {
-    "statements":"SELECT OBJECT_PATHS(t,{'pattern':'2'}) FROM {'a':1,'b':2,'c':{'a':[{'b':3},{'b':4},{'b':[{'c':5}]}]}} t",
+    "statements": "SELECT OBJECT_REMOVE(NULL, 'f2') ",
     "results": [
-        {
-            "$1": [
-                "c.a[2].b",
-                "c.a[2].b[0].c"
-            ]
-        }
+      {
+        "$1": null
+      }
     ]
   },
   {
-    "statements":"SELECT OBJECT_pairs_nested(t,{'composites':true}) FROM {'a':1,'b':2,'c':{'a':[{'b':3},{'b':4},{'b':[{'c':5}]}]}} t",
+    "statements": "SELECT OBJECT_REMOVE(MISSING, 'f2') ",
+    "results": [
+      {}
+    ]
+  },
+  {
+    "statements": "SELECT OBJECT_VALUES(details) as objvalues FROM default:catalog ORDER BY objvalues ",
+    "results": [
+      {
+        "objvalues": [
+          "Dan Brown",
+          [
+            "Fiction",
+            "Thriller"
+          ],
+          "Hardcover",
+          "05/14/2013",
+          "INFERNO"
+        ]
+      },
+      {
+        "objvalues": [
+          [
+            "Benedict Cumberbatch",
+            "Martin Freeman"
+          ],
+          [
+            "Euros Lyn",
+            "Paul Mcguigan"
+          ],
+          "Box Set",
+          [
+            "Crime",
+            "Thriller"
+          ],
+          "266.0 mins",
+          "SHERLOCK: SERIES 1"
+        ]
+      },
+      {
+        "objvalues": [
+          [
+            "Jessica Chastain",
+            "Mark Strong"
+          ],
+          "Kathryn Bigelow",
+          "DVD",
+          [
+            "Action",
+            "Thriller"
+          ],
+          "157 mins",
+          "ZERO DARK THIRTY"
+        ]
+      }
+    ]
+  },
+  {
+    "statements": "select OBJECT_UNWRAP(TOARRAY(orders.id)) AS a from default:orders ORDER BY a",
+    "results": [
+      {
+        "a": null
+      },
+      {
+        "a": null
+      },
+      {
+        "a": null
+      },
+      {
+        "a": null
+      }
+    ]
+  },
+  {
+    "statements": "select OBJECT_UNWRAP({'id': 1})",
+    "results": [
+      {
+        "$1": 1
+      }
+    ]
+  },
+  {
+    "statements": "select OBJECT_UNWRAP(MISSING)",
+    "results": [
+      {}
+    ]
+  },
+  {
+    "statements": "select OBJECT_CONCAT({'a':1, 'd':4}, {'b':2}, {'c':3, 'e':5}, {})",
+    "results": [
+      {
+        "$1": {
+          "a": 1,
+          "b": 2,
+          "c": 3,
+          "d": 4,
+          "e": 5
+        }
+      }
+    ]
+  },
+  {
+    "statements": "select OBJECT_REMOVE({'a':1, 'b':2, 'c':3}, 'b', 'c')",
+    "results": [
+      {
+        "$1": {
+          "a": 1
+        }
+      }
+    ]
+  },
+  {
+    "statements": "select OBJECT_RENAME({'a':1, 'b':2, 'c':3}, 'b', 'd')",
+    "results": [
+      {
+        "$1": {
+          "a": 1,
+          "c": 3,
+          "d": 2
+        }
+      }
+    ]
+  },
+  {
+    "statements": "select OBJECT_REPLACE({'a':1, 'b':2, 'c':3}, 2, 4)",
+    "results": [
+      {
+        "$1": {
+          "a": 1,
+          "b": 4,
+          "c": 3
+        }
+      }
+    ]
+  },
+  {
+    "statements": "SELECT OBJECT_PATHS(t) FROM {'a':1,'b':2,'c':3} t",
+    "results": [
+      {
+        "$1": [
+          "a",
+          "b",
+          "c"
+        ]
+      }
+    ]
+  },
+  {
+    "statements": "SELECT OBJECT_PATHS(t,{'unique':true,'arraysubscript':false}) FROM {'a':1,'b':2,'c':{'a':[{'b':3},{'b':4},{'b':[{'c':5}]}]}} t",
+    "results": [
+      {
+        "$1": [
+          "a",
+          "b",
+          "c",
+          "c.a",
+          "c.a[*].b",
+          "c.a[*].b[*].c"
+        ]
+      }
+    ]
+  },
+  {
+    "statements": "SELECT OBJECT_PATHS(t,{'unique':false,'arraysubscript':false}) FROM {'a':1,'b':2,'c':{'a':[{'b':3},{'b':4},{'b':[{'c':5}]}]}} t",
+    "results": [
+      {
+        "$1": [
+          "a",
+          "b",
+          "c",
+          "c.a",
+          "c.a[*].b",
+          "c.a[*].b",
+          "c.a[*].b",
+          "c.a[*].b[*].c"
+        ]
+      }
+    ]
+  },
+  {
+    "statements": "SELECT OBJECT_PATHS(t,{'arraysubscript':true}) FROM {'a':1,'b':2,'c':{'a':[{'b':3},{'b':4},{'b':[{'c':5}]}]}} t",
+    "results": [
+      {
+        "$1": [
+          "a",
+          "b",
+          "c",
+          "c.a",
+          "c.a[0].b",
+          "c.a[1].b",
+          "c.a[2].b",
+          "c.a[2].b[0].c"
+        ]
+      }
+    ]
+  },
+  {
+    "statements": "SELECT OBJECT_PATHS(t,{'composites':false}) FROM {'a':1,'b':2,'c':{'a':[{'b':3},{'b':4},{'b':[{'c':5}]}]}} t",
+    "results": [
+      {
+        "$1": [
+          "a",
+          "b",
+          "c.a[0].b",
+          "c.a[1].b",
+          "c.a[2].b[0].c"
+        ]
+      }
+    ]
+  },
+  {
+    "statements": "SELECT OBJECT_PATHS(t,{'pattern':'2'}) FROM {'a':1,'b':2,'c':{'a':[{'b':3},{'b':4},{'b':[{'c':5}]}]}} t",
+    "results": [
+      {
+        "$1": [
+          "c.a[2].b",
+          "c.a[2].b[0].c"
+        ]
+      }
+    ]
+  },
+  {
+    "statements": "SELECT OBJECT_pairs_nested(t,{'composites':true}) FROM {'a':1,'b':2,'c':{'a':[{'b':3},{'b':4},{'b':[{'c':5}]}]}} t",
     "results": [
       {
         "$1": [
@@ -573,12 +573,34 @@
             ]
           },
           {
+            "name": "c.a[0]",
+            "val": {
+              "b": 3
+            }
+          },
+          {
             "name": "c.a[0].b",
             "val": 3
           },
           {
+            "name": "c.a[1]",
+            "val": {
+              "b": 4
+            }
+          },
+          {
             "name": "c.a[1].b",
             "val": 4
+          },
+          {
+            "name": "c.a[2]",
+            "val": {
+              "b": [
+                {
+                  "c": 5
+                }
+              ]
+            }
           },
           {
             "name": "c.a[2].b",
@@ -589,6 +611,12 @@
             ]
           },
           {
+            "name": "c.a[2].b[0]",
+            "val": {
+              "c": 5
+            }
+          },
+          {
             "name": "c.a[2].b[0].c",
             "val": 5
           }
@@ -597,7 +625,7 @@
     ]
   },
   {
-    "statements":"SELECT OBJECT_pairs_nested(t,{'pattern':'\\\\[2\\\\].b'}) FROM {'a':1,'b':2,'c':{'a':[{'b':3},{'b':4},{'b':[{'c':5}]}]}} t",
+    "statements": "SELECT OBJECT_pairs_nested(t,{'pattern':'\\\\[2\\\\].b'}) FROM {'a':1,'b':2,'c':{'a':[{'b':3},{'b':4},{'b':[{'c':5}]}]}} t",
     "results": [
       {
         "$1": [
@@ -610,61 +638,61 @@
     ]
   },
   {
-    "statements":"SELECT OBJECT_pairs_nested(t) FROM {'a':1,'b':2,'c':{'a':[{'b':3},{'b':4},{'b':[{'c':5}]}]}} t",
+    "statements": "SELECT OBJECT_pairs_nested(t) FROM {'a':1,'b':2,'c':{'a':[{'b':3},{'b':4},{'b':[{'c':5}]}]}} t",
     "results": [
       {
-          "$1": [
-              {
-                  "name": "a",
-                  "val": 1
-              },
-              {
-                  "name": "b",
-                  "val": 2
-              },
-              {
-                  "name": "c.a[0].b",
-                  "val": 3
-              },
-              {
-                  "name": "c.a[1].b",
-                  "val": 4
-              },
-              {
-                  "name": "c.a[2].b[0].c",
-                  "val": 5
-              }
-          ]
+        "$1": [
+          {
+            "name": "a",
+            "val": 1
+          },
+          {
+            "name": "b",
+            "val": 2
+          },
+          {
+            "name": "c.a[0].b",
+            "val": 3
+          },
+          {
+            "name": "c.a[1].b",
+            "val": 4
+          },
+          {
+            "name": "c.a[2].b[0].c",
+            "val": 5
+          }
+        ]
       }
     ]
   },
   {
-    "statements":"select raw object_filter(a,{'pattern':'bb$','composites':true}) from {'a':[{'bb':{'c':0}},{'cd':1},{'d':1},{'dc':[2,{'x':true}]}]} a",
+    "statements": "select raw object_filter(a,{'pattern':'bb$','composites':true}) from {'a':[{'bb':{'c':0}},{'cd':1},{'d':1},{'dc':[2,{'x':true}]}]} a",
     "results": [
       {
-          "a": [
-              {
-                  "bb": {
-                      "c": 0
-                  }
-              }
-          ]
+        "a": [
+          {
+            "bb": {
+              "c": 0
+            }
+          }
+        ]
       }
     ]
   },
   {
-    "statements":"select raw object_filter(a,{'pattern':'a[3].dc[1].x','regex':false}) from {'a':[{'bb':{'c':0}},{'cd':1},{'d':1},{'dc':[2,{'x':true}]}]} a",
+    "statements": "select raw object_filter(a,{'pattern':'a[3].dc[1].x','regex':false}) from {'a':[{'bb':{'c':0}},{'cd':1},{'d':1},{'dc':[2,{'x':true}]}]} a",
     "results": [
       {
-          "a": [
+        "a": [
+          {
+            "dc": [
               {
-                  "dc": [
-                      {
-                          "x": true
-                      }
-                  ]
+                "x": true
               }
-          ]
+            ]
+          }
+        ]
       }
     ]
   }
