@@ -20,6 +20,7 @@ import (
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
+	"github.com/couchbase/query/tenant"
 )
 
 func privilegeString(namespace, target, obj string, requested auth.Privilege) (string, error) {
@@ -50,7 +51,12 @@ func privilegeString(namespace, target, obj string, requested auth.Privilege) (s
 	case auth.PRIV_QUERY_BUILD_INDEX:
 		permission = join5Strings("cluster.", obj, "[", target, "].n1ql.index!build")
 	case auth.PRIV_QUERY_CREATE_INDEX:
-		permission = join5Strings("cluster.", obj, "[", target, "].n1ql.index!create")
+		// In serverless mode, check for privileges to create regular indexes
+		if tenant.IsServerless() {
+			permission = join5Strings("cluster.", obj, "[", target, "].n1ql.index!create")
+		} else { // In on-prem mode, check for privileges to create indexes with no restrictions on parameters in WITH clause
+			permission = join5Strings("cluster.", obj, "[", target, "].n1ql.index.parameterized!create")
+		}
 	case auth.PRIV_QUERY_ALTER_INDEX:
 		permission = join5Strings("cluster.", obj, "[", target, "].n1ql.index!alter")
 	case auth.PRIV_QUERY_DROP_INDEX:

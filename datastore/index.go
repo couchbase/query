@@ -463,6 +463,17 @@ type CountIndex5 interface {
 		int64, errors.Error)
 }
 
+// Indexer5 interface introduced to handle restrictions on parameters in WITH clause in serverless mode
+type Indexer5 interface {
+	Indexer3
+
+	CreateIndex5(requestId, name string, rangeKey IndexKeys, indexPartition *IndexPartition,
+		where expression.Expression, with value.Value, conn *IndexConnection) (Index, errors.Error)
+
+	CreatePrimaryIndex5(requestId, name string, indexPartition *IndexPartition,
+		with value.Value, conn *IndexConnection) (PrimaryIndex, errors.Error)
+}
+
 ////////////////////////////////////////////////////////////////////////
 //
 // End of Index API5.
