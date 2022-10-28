@@ -17,12 +17,14 @@ import (
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/util"
 )
 
 func (this *builder) buildPrimaryScan(keyspace datastore.Keyspace, node *algebra.KeyspaceTerm,
 	indexes []datastore.Index, id expression.Expression, force, exact, hasDeltaKeyspace bool) (
 	plan.Operator, error) {
-	primary, err := buildPrimaryIndex(keyspace, indexes, node, force, this.context.Credentials())
+	primary, err := buildPrimaryIndex(keyspace, indexes, node, force, this.context.Credentials(),
+		util.IsFeatureEnabled(this.context.FeatureControls(), util.N1QL_SEQ_SCAN))
 	if primary == nil || err != nil {
 		return nil, err
 	}
@@ -82,13 +84,16 @@ func (this *builder) buildPrimaryScan(keyspace datastore.Keyspace, node *algebra
 	return plan.NewPrimaryScan(primary, keyspace, node, limit, hasDeltaKeyspace), nil
 }
 
-func buildPrimaryIndex(keyspace datastore.Keyspace, indexes []datastore.Index, node *algebra.KeyspaceTerm, force bool, credentials *auth.Credentials) (
-	primary datastore.PrimaryIndex, err error) {
+func buildPrimaryIndex(keyspace datastore.Keyspace, indexes []datastore.Index, node *algebra.KeyspaceTerm, force bool,
+	credentials *auth.Credentials, inclSeqScan bool) (primary datastore.PrimaryIndex, err error) {
+
 	ok := false
 
 	// Prefer hints
 	for _, index := range indexes {
 		if !index.IsPrimary() {
+			continue
+		} else if !inclSeqScan && index.Type() == datastore.SEQ_SCAN {
 			continue
 		}
 
@@ -111,6 +116,9 @@ func buildPrimaryIndex(keyspace datastore.Keyspace, indexes []datastore.Index, n
 	}
 
 	for _, indexer := range indexers {
+		if !inclSeqScan && indexer.Name() == datastore.SEQ_SCAN {
+			continue
+		}
 		primaries, er := indexer.PrimaryIndexes()
 		if er != nil {
 			return nil, er

@@ -98,7 +98,8 @@ func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.Keyspa
 		virtualIndexes = this.getIdxCandidates()
 	}
 	if len(baseKeyspace.IndexHints()) > 0 || this.context.UseFts() {
-		hints, err = allHints(keyspace, baseKeyspace.IndexHints(), virtualIndexes, this.context.IndexApiVersion(), this.context.UseFts())
+		hints, err = allHints(keyspace, baseKeyspace.IndexHints(), virtualIndexes, this.context.IndexApiVersion(),
+			this.context.UseFts(), util.IsFeatureEnabled(this.context.FeatureControls(), util.N1QL_SEQ_SCAN))
 		if nil != hints {
 			defer _INDEX_POOL.Put(hints)
 		} else if len(baseKeyspace.IndexHints()) > 0 {
@@ -125,7 +126,8 @@ func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.Keyspa
 			// derive IS NOT NULL predicate
 			err = deriveNotNullFilter(keyspace, baseKeyspace, this.useCBO,
 				this.context.IndexApiVersion(), virtualIndexes,
-				this.advisorValidate(), this.context, this.aliases)
+				this.advisorValidate(), this.context, this.aliases,
+				util.IsFeatureEnabled(this.context.FeatureControls(), util.N1QL_SEQ_SCAN))
 			if err != nil {
 				return nil, nil, err
 			}
@@ -167,7 +169,8 @@ func (this *builder) buildPredicateScan(keyspace datastore.Keyspace, node *algeb
 	}
 
 	// do not consider primary index for ANSI JOIN or ANSI NEST
-	nlPrimaryScan := !util.IsFeatureEnabled(this.context.FeatureControls(), util.N1QL_NL_PRIMARYSCAN) || this.hasBuilderFlag(BUILDER_JOIN_ON_PRIMARY)
+	nlPrimaryScan := !util.IsFeatureEnabled(this.context.FeatureControls(),
+		util.N1QL_NL_PRIMARYSCAN) || this.hasBuilderFlag(BUILDER_JOIN_ON_PRIMARY)
 	var primaryKey expression.Expressions
 
 	if !baseKeyspace.IsInCorrSubq() &&
@@ -205,7 +208,8 @@ func (this *builder) buildPredicateScan(keyspace datastore.Keyspace, node *algeb
 		}
 	}
 
-	others, err := allIndexes(keyspace, hints, virtualIndexes, this.context.IndexApiVersion(), len(searchFns) > 0)
+	others, err := allIndexes(keyspace, hints, virtualIndexes, this.context.IndexApiVersion(), len(searchFns) > 0,
+		util.IsFeatureEnabled(this.context.FeatureControls(), util.N1QL_SEQ_SCAN))
 	if nil != others {
 		defer _INDEX_POOL.Put(others)
 	}
@@ -620,8 +624,8 @@ func poolAllocIndexSlice(indexes []datastore.Index) []datastore.Index {
 }
 
 // all HINT indexes
-func allHints(keyspace datastore.Keyspace, hints []algebra.OptimHint, virtualIndexes []datastore.Index, indexApiVersion int, useFts bool) (
-	[]datastore.Index, error) {
+func allHints(keyspace datastore.Keyspace, hints []algebra.OptimHint, virtualIndexes []datastore.Index, indexApiVersion int,
+	useFts bool, inclSeqScan bool) ([]datastore.Index, error) {
 
 	var indexes []datastore.Index
 	// check if HINT has FTS index refrence
@@ -643,6 +647,9 @@ func allHints(keyspace datastore.Keyspace, hints []algebra.OptimHint, virtualInd
 	}
 
 	for _, indexer := range indexers {
+		if !inclSeqScan && indexer.Name() == datastore.SEQ_SCAN {
+			continue
+		}
 		indexerFts := false
 		if indexer.Name() == datastore.FTS {
 			indexerFts = true
@@ -757,8 +764,8 @@ inclFts indicates to include FTS index or not
         * false - right side of some JOINs, no SERACH() function
 */
 
-func allIndexes(keyspace datastore.Keyspace, skip, virtualIndexes []datastore.Index, indexApiVersion int, inclFts bool) (
-	[]datastore.Index, error) {
+func allIndexes(keyspace datastore.Keyspace, skip, virtualIndexes []datastore.Index, indexApiVersion int, inclFts bool,
+	inclSeqScan bool) ([]datastore.Index, error) {
 
 	var indexes []datastore.Index
 
@@ -779,6 +786,8 @@ func allIndexes(keyspace datastore.Keyspace, skip, virtualIndexes []datastore.In
 	for _, indexer := range indexers {
 		// no FTS indexes needed and  indexer is FTS skip the indexer
 		if !inclFts && indexer.Name() == datastore.FTS {
+			continue
+		} else if !inclSeqScan && indexer.Name() == datastore.SEQ_SCAN {
 			continue
 		}
 
