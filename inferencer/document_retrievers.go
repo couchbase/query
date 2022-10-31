@@ -591,6 +591,9 @@ func MakeUnifiedDocumentRetriever(name string, context datastore.QueryContext, k
 	}
 
 	if udr.rs == nil && udr.rnd == nil && len(udr.indexes) == 0 && udr.ss == nil {
+		if len(errs) == 0 {
+			errs = append(errs, errors.NewInferNoRetrievers(ks.Name()))
+		}
 		return nil, errors.NewInferCreateRetrieverFailed(errs...)
 	}
 
