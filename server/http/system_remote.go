@@ -561,7 +561,7 @@ func (this *systemRemoteHttp) doRemoteEndpointOp(fullEndpoint string, command st
 		var opErr errors.Error
 
 		err = json.Unmarshal(body, &opErr)
-		if err != nil || len(body) == 0 {
+		if err != nil || len(body) == 0 || strings.TrimSpace(opErr.Error()) == "" {
 
 			// MB-28264 we could not unmarshal an error from a remote node
 			// just create an error from the body
@@ -571,9 +571,16 @@ func (this *systemRemoteHttp) doRemoteEndpointOp(fullEndpoint string, command st
 				ep = u.Path
 			}
 			errText := string(body)
-			if errText == "" {
-				errText = "no data received"
+			if strings.TrimSpace(errText) == "" {
+				if resp.StatusCode == http.StatusForbidden {
+					errText = "no permissions"
+				} else if resp.StatusCode == http.StatusNotFound {
+					errText = "object not found"
+				} else {
+					errText = "no data received"
+				}
 			}
+
 			return nil, errors.NewSystemRemoteWarning(goErr.New(errText), op, ep)
 		}
 		return nil, opErr
