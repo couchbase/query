@@ -83,7 +83,7 @@ func (this *memorySession) Track(size uint64) (uint64, uint64, errors.Error) {
 
 	// only amend the curren memory limit if the manager has a limit
 	if max > 0 && top > currentLimit {
-		newSize = currentLimit - top
+		newSize = top - currentLimit
 		if newSize < _MEMORY_TOKEN {
 			newSize = _MEMORY_TOKEN
 		}
