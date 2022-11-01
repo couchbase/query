@@ -403,7 +403,7 @@ func (this *Formalizer) PushBindings(bindings Bindings, push bool) (err error) {
 				if b.Expression() != nil {
 					errContext = b.Expression().ErrorContext()
 				}
-				err = fmt.Errorf("Duplicate variable %v%v already in scope.", b.Variable(), errContext)
+				err = fmt.Errorf("Duplicate variable: %v%v already in scope.", b.Variable(), errContext)
 				return
 			}
 		} else {
@@ -431,7 +431,7 @@ func (this *Formalizer) PushBindings(bindings Bindings, push bool) (err error) {
 					if b.Expression() != nil {
 						errContext = b.Expression().ErrorContext()
 					}
-					err = fmt.Errorf("Duplicate variable %v%v already in scope.", b.NameVariable(), errContext)
+					err = fmt.Errorf("Duplicate variable: %v%v already in scope.", b.NameVariable(), errContext)
 					return
 				}
 			} else {

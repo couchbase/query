@@ -173,6 +173,21 @@ func (this *ScopeValue) CopyForUpdate() Value {
 		this.parent.Track()
 	}
 	rv.nested = this.nested
+	if this.nested {
+		fields := rv.Value.(objectValue)
+		for _, v := range fields {
+			switch v := v.(type) {
+			case *ScopeValue:
+				if v.RefCnt() == 1 {
+					v.Track()
+				}
+			case *annotatedValue:
+				if v.RefCnt() == 1 {
+					v.Track()
+				}
+			}
+		}
+	}
 	return rv
 }
 

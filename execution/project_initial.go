@@ -91,6 +91,9 @@ func (this *InitialProject) processItem(item value.AnnotatedValue, context *Cont
 		if item.Type() == value.OBJECT {
 			item.SetValue(value.NewValue(item.Actual()))
 			item.SetSelf(true)
+			for k, _ := range this.plan.BindingNames() {
+				item.UnsetField(k)
+			}
 			exclusions, err := this.getExclusions(true, item, context)
 			if err != nil {
 				context.Error(errors.NewEvaluationError(err, "projection"))
@@ -186,6 +189,8 @@ func (this *InitialProject) processTerms(item value.AnnotatedValue, context *Con
 		return false
 	}
 
+	bindingNames := this.plan.BindingNames()
+
 	for _, term := range this.plan.Terms() {
 		alias := term.Result().Alias()
 		if alias != "" {
@@ -237,47 +242,56 @@ func (this *InitialProject) processTerms(item value.AnnotatedValue, context *Con
 		} else {
 			// Star
 			starval := item.GetValue()
+			// remove bindings up front
+			if len(bindingNames) > 0 {
+				starval = starval.Copy()
+				for k, _ := range bindingNames {
+					starval.UnsetField(k)
+				}
+			}
 			if term.Result().Expression() != nil {
 				var err error
-				starval, err = term.Result().Expression().Evaluate(item, context)
+				starval, err = term.Result().Expression().Evaluate(starval, context)
 				if err != nil {
 					context.Error(errors.NewEvaluationError(err, "projection"))
 					return false
 				}
 			}
 
-			if term.MustCopy() == value.NONE {
-				if len(exclusions) > 0 {
-					sa, ok := starval.Actual().(map[string]interface{})
-					if ok {
-						found := false
-						for i := range exclusions {
-							if exclusions[i][0][0] == 'i' {
-								for k, _ := range sa {
-									if strings.ToLower(k) == strings.ToLower(exclusions[i][0][1:]) {
-										found = true
-										break
+			if len(bindingNames) > 0 {
+				if term.MustCopy() == value.NONE {
+					if len(exclusions) > 0 {
+						sa, ok := starval.Actual().(map[string]interface{})
+						if ok {
+							found := false
+							for i := range exclusions {
+								if exclusions[i][0][0] == 'i' {
+									for k, _ := range sa {
+										if strings.ToLower(k) == strings.ToLower(exclusions[i][0][1:]) {
+											found = true
+											break
+										}
 									}
+								} else if _, ok := sa[exclusions[i][0][1:]]; ok {
+									found = true
 								}
-							} else if _, ok := sa[exclusions[i][0][1:]]; ok {
-								found = true
+								if found == true {
+									break
+								}
 							}
-							if found == true {
-								break
+							if found {
+								starval = starval.CopyForUpdate()
+								if this.exclusions != nil {
+									term.SetMustCopy(value.TRUE)
+								}
+							} else if this.exclusions != nil {
+								term.SetMustCopy(value.FALSE)
 							}
-						}
-						if found {
-							starval = starval.CopyForUpdate()
-							if this.exclusions != nil {
-								term.SetMustCopy(value.TRUE)
-							}
-						} else if this.exclusions != nil {
-							term.SetMustCopy(value.FALSE)
 						}
 					}
+				} else if term.MustCopy() == value.TRUE {
+					starval = starval.CopyForUpdate()
 				}
-			} else if term.MustCopy() == value.TRUE {
-				starval = starval.CopyForUpdate()
 			}
 
 			// Latest star overwrites previous star

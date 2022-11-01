@@ -14,6 +14,7 @@ import (
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/expression/parser"
+	"github.com/couchbase/query/sort"
 	"github.com/couchbase/query/value"
 )
 
@@ -24,10 +25,11 @@ type InitialProject struct {
 	terms         ProjectTerms
 	starTermCount int
 	preserveOrder bool
+	bindingNames  map[string]bool
 }
 
 func NewInitialProject(projection *algebra.Projection, cost, cardinality float64,
-	size int64, frCost float64, preserveOrder bool) *InitialProject {
+	size int64, frCost float64, preserveOrder bool, bindings expression.Bindings) *InitialProject {
 
 	results := projection.Terms()
 	terms := make(ProjectTerms, len(results))
@@ -45,6 +47,12 @@ func NewInitialProject(projection *algebra.Projection, cost, cardinality float64
 
 		if res.Star() {
 			rv.starTermCount++
+		}
+	}
+	if rv.starTermCount > 0 && len(bindings) > 0 {
+		rv.bindingNames = make(map[string]bool, len(bindings))
+		for _, b := range bindings {
+			rv.bindingNames[b.Variable()] = true
 		}
 	}
 
@@ -74,6 +82,10 @@ func (this *InitialProject) StarTermCount() int {
 
 func (this *InitialProject) PreserveOrder() bool {
 	return this.preserveOrder
+}
+
+func (this *InitialProject) BindingNames() map[string]bool {
+	return this.bindingNames
 }
 
 func (this *InitialProject) MarshalJSON() ([]byte, error) {
@@ -121,6 +133,14 @@ func (this *InitialProject) MarshalBase(f func(map[string]interface{})) map[stri
 	if this.projection.Exclude() != nil {
 		r["exclude"] = this.projection.Exclude()
 	}
+	if len(this.bindingNames) > 0 {
+		names := make([]string, 0, len(this.bindingNames))
+		for k, _ := range this.bindingNames {
+			names = append(names, k)
+		}
+		sort.Strings(names)
+		r["bindings"] = names
+	}
 	if f != nil {
 		f(r)
 	}
@@ -140,6 +160,7 @@ func (this *InitialProject) UnmarshalJSON(body []byte) error {
 		OptEstimate   map[string]interface{} `json:"optimizer_estimates"`
 		PreserveOrder bool                   `json:"preserve_order"`
 		Exclude       expression.Expressions `json:"exclude"`
+		Bindings      []string               `json:"bindings"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -172,6 +193,14 @@ func (this *InitialProject) UnmarshalJSON(body []byte) error {
 	this.projection = projection
 	this.terms = project_terms
 	this.preserveOrder = _unmarshalled.PreserveOrder
+	if len(_unmarshalled.Bindings) > 0 {
+		this.bindingNames = make(map[string]bool, len(_unmarshalled.Bindings))
+		for i := range _unmarshalled.Bindings {
+			this.bindingNames[_unmarshalled.Bindings[i]] = true
+		}
+	} else {
+		this.bindingNames = nil
+	}
 
 	unmarshalOptEstimate(&this.optEstimate, _unmarshalled.OptEstimate)
 

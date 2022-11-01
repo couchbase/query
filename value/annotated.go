@@ -472,10 +472,8 @@ func (this *annotatedValue) ResetOriginal() {
 		annotatedPool.Put(unsafe.Pointer(val))
 		this.annotatedOrig = nil
 	}
-	if this.original != nil {
-		this.original.Recycle()
-		this.original = nil
-	}
+	// don't recycle as may have untracked reference in a field
+	this.original = nil
 }
 
 func (this *annotatedValue) Stash() int32 {
@@ -514,7 +512,7 @@ func (this *annotatedValue) recycle(lvl int32) {
 
 		// TODO enable
 		// panic("annotated value already recycled")
-		logging.Infof("annotated value already recycled")
+		logging.Infof("[%p] annotated value already recycled", this)
 		return
 	}
 

@@ -292,7 +292,22 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 				cost, cardinality, size, frCost = getInitialProjectCost(projection, cost, cardinality, size, frCost)
 			}
 		}
-		this.addSubChildren(plan.NewInitialProject(projection, cost, cardinality, size, frCost, !this.subquery))
+		// exclude bindings from star expression expansions
+		var bindings expression.Bindings
+		if node.Let() != nil {
+			bindings = node.Let()
+		}
+		if group != nil && group.Letting() != nil {
+			if bindings == nil {
+				bindings = group.Letting()
+			} else {
+				bindings = bindings.Copy()
+				for _, b := range group.Letting() {
+					bindings = append(bindings, b)
+				}
+			}
+		}
+		this.addSubChildren(plan.NewInitialProject(projection, cost, cardinality, size, frCost, !this.subquery, bindings))
 
 		// Initial DISTINCT (parallel)
 		if projection.Distinct() || this.setOpDistinct {
