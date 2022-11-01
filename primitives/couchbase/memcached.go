@@ -535,16 +535,19 @@ type BucketStats int
 const (
 	StatCount = BucketStats(iota)
 	StatSize
+	StatMemSize
 )
 
 var bucketStatString = []string{
 	"curr_items",
+	"ep_value_size",
 	"ep_value_size",
 }
 
 var collectionStatString = []string{
 	"items",
 	"data_size",
+	"collections_mem_used",
 }
 
 // Get selected bucket or collection stats
