@@ -34,6 +34,7 @@ import (
 const _MAX_TIMEOUT = 120000
 const _DEF_RUNNERS = 32
 const _MIN_THREADS_THRESHOLD = 4
+const _DEFLATE_THRESHOLD = 48
 const _MAX_THREAD_COUNT = 4096
 const _MAX_LEVELS = 128
 
@@ -50,12 +51,13 @@ type javascriptBody struct {
 }
 
 type evaluatorDesc struct {
-	threads     int32
-	threadCount int32
-	name        string
-	engine      defs.Engine
-	evaluator   defs.Evaluator
-	libStore    defs.LibStore
+	threads   int32
+	available int32
+	amending  int32
+	name      string
+	engine    defs.Engine
+	evaluator defs.Evaluator
+	libStore  defs.LibStore
 }
 
 var external evaluatorDesc
@@ -235,6 +237,7 @@ func getEvaluator(name functions.FunctionName) (*evaluatorDesc, errors.Error) {
 		}
 	}
 	desc.threads = _DEF_RUNNERS
+	desc.available = desc.threads
 	desc.name = tenant
 	tenants[tenant] = desc
 	tenantsLock.Unlock()
@@ -283,8 +286,8 @@ func (this *javascript) Execute(name functions.FunctionName, body functions.Func
 		SideEffects: (modifiers & functions.READONLY) == 0,
 		Timeout:     uint32(timeout),
 	}
-	runners := atomic.AddInt32(&(*evaluator).threadCount, 1)
-	defer atomic.AddInt32(&(*evaluator).threadCount, -1)
+	available := atomic.AddInt32(&(*evaluator).available, -1)
+	defer atomic.AddInt32(&(*evaluator).available, 1)
 	levels := context.IncRecursionCount(1)
 	defer context.IncRecursionCount(-1)
 	if levels > _MAX_LEVELS {
@@ -293,24 +296,30 @@ func (this *javascript) Execute(name functions.FunctionName, body functions.Func
 
 	// inflate the pools if required
 	// beyond the maximum number of runners the function will have to wait for a runner to be free
-	if evaluator.threads-runners < _MIN_THREADS_THRESHOLD && evaluator.threads < _MAX_THREAD_COUNT {
+	// we keep track of the remaining runners, rather than the active to be sure that only one request
+	// at a time inflates the runner pool
+	if available == _MIN_THREADS_THRESHOLD && evaluator.threads < _MAX_THREAD_COUNT {
+		if atomic.AddInt32(&(*evaluator).amending, 1) == 1 {
 
-		newThreads, inflateErr := evaluator.engine.InflatePoolBy(_DEF_RUNNERS)
-		if newThreads > 0 {
-			atomic.AddInt32(&(*evaluator).threads, int32(newThreads))
-			logging.Infof("Adding %v runners to evaluator %v: actual increment %v to %v", _DEF_RUNNERS, evaluator.name, newThreads, evaluator.threads)
-		} else {
-			logging.Infof("Adding %v runners to evaluator %v: error %v", _DEF_RUNNERS, evaluator.name, inflateErr)
-			switch {
-			case inflateErr.Details != nil:
-				return nil, errors.NewEvaluatorInflatingError(evaluator.name, inflateErr.Details)
-			case inflateErr.Err != nil:
-				errorText := fmt.Errorf("%v %v", inflateErr.Message, inflateErr.Err)
-				return nil, errors.NewEvaluatorInflatingError(evaluator.name, errorText.Error())
-			default:
-				return nil, errors.NewEvaluatorInflatingError(evaluator.name, fmt.Errorf("could not allocate threads, but no error received"))
+			newThreads, inflateErr := evaluator.engine.InflatePoolBy(_DEF_RUNNERS)
+			if newThreads > 0 {
+				totThreads := atomic.AddInt32(&(*evaluator).threads, int32(newThreads))
+				atomic.AddInt32(&(*evaluator).available, int32(newThreads))
+				logging.Infof("Adding %v runners to evaluator %v: actual increment %v to %v", _DEF_RUNNERS, evaluator.name, newThreads, totThreads)
+			} else {
+				logging.Infof("Adding %v runners to evaluator %v: error %v", _DEF_RUNNERS, evaluator.name, inflateErr)
+				switch {
+				case inflateErr.Details != nil:
+					return nil, errors.NewEvaluatorInflatingError(evaluator.name, inflateErr.Details)
+				case inflateErr.Err != nil:
+					errorText := fmt.Errorf("%v %v", inflateErr.Message, inflateErr.Err)
+					return nil, errors.NewEvaluatorInflatingError(evaluator.name, errorText.Error())
+				default:
+					return nil, errors.NewEvaluatorInflatingError(evaluator.name, fmt.Errorf("could not allocate threads, but no error received"))
+				}
 			}
 		}
+		atomic.AddInt32(&(*evaluator).amending, -1)
 	}
 
 	var res interface{}
@@ -342,10 +351,14 @@ func (this *javascript) Execute(name functions.FunctionName, body functions.Func
 	res, err = evaluator.evaluator.Evaluate(library, funcName, opts, args, functions.NewUdfContext(context, funcBody.prefix))
 
 	// deflate the pool if required
-	if evaluator.threads-evaluator.threadCount > _DEF_RUNNERS {
-		newThreads := evaluator.engine.DeflatePoolBy(_DEF_RUNNERS)
-		atomic.AddInt32(&(*evaluator).threads, -int32(newThreads))
-		logging.Infof("Dropping %v runners from evaluator %v: actual decrement %v to %v", _DEF_RUNNERS, evaluator.name, newThreads, evaluator.threads)
+	if evaluator.threads > _DEF_RUNNERS && evaluator.available >= _DEFLATE_THRESHOLD {
+		if atomic.AddInt32(&(*evaluator).amending, 1) == 1 {
+			newThreads := evaluator.engine.DeflatePoolBy(_DEF_RUNNERS)
+			totThreads := atomic.AddInt32(&(*evaluator).threads, -int32(newThreads))
+			atomic.AddInt32(&(*evaluator).available, -int32(newThreads))
+			logging.Infof("Dropping %v runners from evaluator %v: actual decrement %v to %v", _DEF_RUNNERS, evaluator.name, newThreads, totThreads)
+		}
+		atomic.AddInt32(&(*evaluator).amending, -1)
 	}
 
 	// TODO TENANT
