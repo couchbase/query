@@ -307,16 +307,17 @@ func (this *javascript) Execute(name functions.FunctionName, body functions.Func
 				atomic.AddInt32(&(*evaluator).available, int32(newThreads))
 				logging.Infof("Adding %v runners to evaluator %v: actual increment %v to %v", _DEF_RUNNERS, evaluator.name, newThreads, totThreads)
 			} else {
-				logging.Infof("Adding %v runners to evaluator %v: error %v", _DEF_RUNNERS, evaluator.name, inflateErr)
+				var errorText interface{}
+
 				switch {
 				case inflateErr.Details != nil:
-					return nil, errors.NewEvaluatorInflatingError(evaluator.name, inflateErr.Details)
+					errorText = inflateErr.Details
 				case inflateErr.Err != nil:
-					errorText := fmt.Errorf("%v %v", inflateErr.Message, inflateErr.Err)
-					return nil, errors.NewEvaluatorInflatingError(evaluator.name, errorText.Error())
+					errorText = fmt.Sprintf("%v %v", inflateErr.Message, inflateErr.Err)
 				default:
-					return nil, errors.NewEvaluatorInflatingError(evaluator.name, fmt.Errorf("could not allocate threads, but no error received"))
+					errorText = "could not allocate threads, but no error received"
 				}
+				logging.Infof("Adding %v runners to evaluator %v: error %v", _DEF_RUNNERS, evaluator.name, errorText)
 			}
 		}
 		atomic.AddInt32(&(*evaluator).amending, -1)
