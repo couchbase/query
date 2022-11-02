@@ -145,7 +145,9 @@ func (this *SendUpsert) flushBatch(context *Context) bool {
 				context.ReleaseValueSize(key.Size() + val.Size())
 			}
 
-			options, _ = av.GetAttachment("options").(value.Value)
+			if options, ok = av.GetAttachment("options").(value.Value); ok {
+				options = options.CopyForUpdate()
+			}
 		}
 
 		dpair.Name, ok = key.Actual().(string)
