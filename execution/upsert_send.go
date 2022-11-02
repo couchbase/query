@@ -124,6 +124,9 @@ func (this *SendUpsert) flushBatch(context *Context) bool {
 						fmt.Sprintf("UPSERT value for %v", av.GetValue())))
 					continue
 				}
+				if optionsExpr.Value() != nil && options.Equals(optionsExpr.Value()) == value.TRUE_VALUE {
+					options = options.CopyForUpdate()
+				}
 			}
 		} else {
 			// UPSERT ... VALUES

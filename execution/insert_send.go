@@ -164,6 +164,9 @@ func (this *SendInsert) flushBatch(context *Context) bool {
 						fmt.Sprintf("INSERT value for %v", av.GetValue())))
 					continue
 				}
+				if optionsExpr.Value() != nil && options.Equals(optionsExpr.Value()) == value.TRUE_VALUE {
+					options = options.CopyForUpdate()
+				}
 			}
 		} else {
 			// INSERT ... VALUES
