@@ -298,6 +298,7 @@ func (this *javascript) Execute(name functions.FunctionName, body functions.Func
 	// beyond the maximum number of runners the function will have to wait for a runner to be free
 	// we keep track of the remaining runners, rather than the active to be sure that only one request
 	// at a time inflates the runner pool
+	var errorText interface{}
 	if available == _MIN_THREADS_THRESHOLD && evaluator.threads < _MAX_THREAD_COUNT {
 		if atomic.AddInt32(&(*evaluator).amending, 1) == 1 {
 
@@ -307,7 +308,6 @@ func (this *javascript) Execute(name functions.FunctionName, body functions.Func
 				atomic.AddInt32(&(*evaluator).available, int32(newThreads))
 				logging.Infof("Adding %v runners to evaluator %v: actual increment %v to %v", _DEF_RUNNERS, evaluator.name, newThreads, totThreads)
 			} else {
-				var errorText interface{}
 
 				switch {
 				case inflateErr.Details != nil:
@@ -321,6 +321,11 @@ func (this *javascript) Execute(name functions.FunctionName, body functions.Func
 			}
 		}
 		atomic.AddInt32(&(*evaluator).amending, -1)
+	}
+
+	// avoid possible self stalls if the requested has a majority of the executing functions
+	if errorText != nil && levels > int((evaluator.threads-available)/2) {
+		return nil, errors.NewEvaluatorInflatingError(evaluator.name, fmt.Errorf("%v", errorText))
 	}
 
 	var res interface{}
