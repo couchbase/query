@@ -69,7 +69,17 @@ func (this *CreateIndex) RunOnce(context *Context, parent value.Value) {
 			return
 		}
 
-		if indexer3, ok := indexer.(datastore.Indexer3); ok {
+		var ok3 bool
+		var indexer3 datastore.Indexer3
+
+		var ok5 bool
+		var indexer5 datastore.Indexer5
+
+		if indexer5, ok5 = indexer.(datastore.Indexer5); !ok5 {
+			indexer3, ok3 = indexer.(datastore.Indexer3)
+		}
+
+		if ok3 || ok5 {
 			var indexPartition *datastore.IndexPartition
 
 			if node.Partition() != nil {
@@ -78,8 +88,16 @@ func (this *CreateIndex) RunOnce(context *Context, parent value.Value) {
 			}
 
 			rangeKeys := this.getRangeKeys(node.Keys())
-			_, err = indexer3.CreateIndex3(context.RequestId(), node.Name(), rangeKeys,
-				indexPartition, node.Where(), node.With())
+
+			if ok5 {
+				conn, _ := datastore.NewSimpleIndexConnection(context)
+				_, err = indexer5.CreateIndex5(context.RequestId(), node.Name(), rangeKeys,
+					indexPartition, node.Where(), node.With(), conn)
+			} else {
+				_, err = indexer3.CreateIndex3(context.RequestId(), node.Name(), rangeKeys,
+					indexPartition, node.Where(), node.With())
+			}
+
 			if err != nil {
 				if !errors.IsIndexExistsError(err) || this.plan.Node().FailIfExists() {
 					context.Error(err)
