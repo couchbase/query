@@ -1600,6 +1600,7 @@ func (b *keyspace) needsTimeRefresh(threshold time.Duration) bool {
 var ds2cb = []cb.BucketStats{
 	cb.StatCount,
 	cb.StatSize,
+	cb.StatMemSize,
 }
 
 func (b *keyspace) Stats(context datastore.QueryContext, which []datastore.KeyspaceStats) ([]int64, errors.Error) {

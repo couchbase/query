@@ -98,6 +98,8 @@ func (this *keyspaceBase) Stats(context datastore.QueryContext, which []datastor
 			val, err = ks.Count(context)
 		case datastore.KEYSPACE_SIZE:
 			val, err = ks.Size(context)
+		case datastore.KEYSPACE_MEM_SIZE:
+			val = -1
 		}
 		if err != nil {
 			return nil, err

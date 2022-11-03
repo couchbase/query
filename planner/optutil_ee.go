@@ -31,7 +31,7 @@ func checkCostModel(featureControls uint64) {
 }
 
 func optDocCount(keyspace string) int64 {
-	docCount, _, _ := dictionary.GetKeyspaceInfo(keyspace)
+	docCount, _, _, _ := dictionary.GetKeyspaceInfo(keyspace)
 	return docCount
 }
 

@@ -223,6 +223,8 @@ func (this *virtualKeyspace) Stats(context datastore.QueryContext, which []datas
 			val, err = this.Count(context)
 		case datastore.KEYSPACE_SIZE:
 			val, err = this.Size(context)
+		case datastore.KEYSPACE_MEM_SIZE:
+			val = -1
 		}
 		if err != nil {
 			return nil, err

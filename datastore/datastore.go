@@ -318,6 +318,7 @@ type KeyspaceStats int
 const (
 	KEYSPACE_COUNT = KeyspaceStats(iota)
 	KEYSPACE_SIZE
+	KEYSPACE_MEM_SIZE
 )
 
 type KeyspaceMetadata interface {
