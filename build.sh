@@ -15,7 +15,16 @@
 # Note standalone build requires libraries from installed server, make sure installed server is
 # compatible with source that is being built
 
-PRODUCT_VERSION=${PRODUCT_VERSION:-"7.2.0-local_build"}
+DEF_VERSION="local_build"
+if [ -f /opt/couchbase/VERSION.txt ]
+then
+  DEF_VERSION=`head -1 /opt/couchbase/VERSION.txt|sed 's/-.*/-local_build/'`
+elif [ -f "/Applications/Couchbase Server.app/Contents/Resources/couchbase-core/VERSION.txt" ]
+  DEF_VERSION=`head -1 "/Applications/Couchbase Server.app'/Contents/Resources/couchbase-core/VERSION.txt"\
+    |sed 's/-.*/-local_build/'`
+fi
+
+PRODUCT_VERSION=${PRODUCT_VERSION:-$DEF_VERSION}
 export PRODUCT_VERSION
 
 args=""
