@@ -451,12 +451,6 @@ type Index4 interface {
 //
 ////////////////////////////////////////////////////////////////////////
 
-type Index5 interface {
-	Index3
-
-	Alter5(requestId string, with value.Value, conn *IndexConnection) (Index, errors.Error)
-}
-
 type CountIndex5 interface {
 	CountIndex2
 
