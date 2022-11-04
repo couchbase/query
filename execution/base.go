@@ -125,40 +125,42 @@ const (
 
 type base struct {
 	valueExchange
-	conn           *datastore.IndexConnection
-	stopChannel    stopChannel
-	quota          uint64
-	input          Operator
-	output         Operator
-	stop           OpSendAction
-	parent         Operator
-	once           util.Once
-	serializable   bool
-	serialized     bool
-	inline         bool
-	doSend         func(this *base, op Operator, item value.AnnotatedValue) bool
-	closeConsumer  bool
-	batch          []value.AnnotatedValue
-	timePhase      timePhases
-	startTime      util.Time
-	execPhase      Phases
-	phaseTimes     func(time.Duration)
-	queryCU        func(time.Duration)
-	execTime       time.Duration
-	chanTime       time.Duration
-	servTime       time.Duration
-	inDocs         int64
-	outDocs        int64
-	phaseSwitches  int64
-	stopped        bool
-	isRoot         bool
-	bit            uint8
-	contextTracked *Context
-	rootContext    *Context
-	childrenLeft   int32
-	activeCond     sync.Cond
-	activeLock     sync.Mutex
-	opState        opState
+	externalStop  func(bool)
+	funcLock      sync.RWMutex
+	conn          *datastore.IndexConnection
+	stopChannel   stopChannel
+	quota         uint64
+	input         Operator
+	output        Operator
+	stop          OpSendAction
+	parent        Operator
+	once          util.Once
+	serializable  bool
+	serialized    bool
+	inline        bool
+	doSend        func(this *base, op Operator, item value.AnnotatedValue) bool
+	closeConsumer bool
+	batch         []value.AnnotatedValue
+	timePhase     timePhases
+	startTime     util.Time
+	execPhase     Phases
+	phaseTimes    func(time.Duration)
+	queryCU       func(time.Duration)
+	execTime      time.Duration
+	chanTime      time.Duration
+	servTime      time.Duration
+	inDocs        int64
+	outDocs       int64
+	phaseSwitches int64
+	stopped       bool
+	isRoot        bool
+	bit           uint8
+	operatorCtx   opContext
+	rootContext   *Context
+	childrenLeft  int32
+	activeCond    sync.Cond
+	activeLock    sync.Mutex
+	opState       opState
 }
 
 const _ITEM_CAP = 512
@@ -203,6 +205,7 @@ func newBase(dest *base, context *Context) {
 	dest.doSend = parallelSend
 	dest.closeConsumer = false
 	dest.quota = context.ProducerThrottleQuota()
+	dest.operatorCtx = opContext{dest, context}
 }
 
 // The output of this operator will be redirected elsewhere, so we
@@ -216,6 +219,7 @@ func newRedirectBase(dest *base, context *Context) {
 	dest.activeCond.L = &dest.activeLock
 	dest.doSend = parallelSend
 	dest.closeConsumer = false
+	dest.operatorCtx = opContext{dest, context}
 }
 
 // This operator will be serialised - allocate valueExchange dynamically
@@ -235,6 +239,7 @@ func newSerializedBase(dest *base, context *Context) {
 	dest.closeConsumer = false
 	dest.serializable = true
 	dest.quota = context.ProducerThrottleQuota()
+	dest.operatorCtx = opContext{dest, context}
 }
 
 func (this *base) setInline() {
@@ -260,6 +265,7 @@ func (this *base) copy(dest *base) {
 	dest.doSend = parallelSend
 	dest.closeConsumer = false
 	dest.quota = this.quota
+	dest.operatorCtx = opContext{dest, this.operatorCtx.Context}
 }
 
 // reset the operator to an initial state
@@ -296,7 +302,6 @@ func (this *base) close(context *Context) {
 		this.output = nil
 		this.parent = nil
 		this.stop = nil
-		this.contextTracked = nil
 	}
 }
 
@@ -357,7 +362,6 @@ func (this *base) baseDone() {
 		this.output = nil
 		this.parent = nil
 		this.stop = nil
-		this.contextTracked = nil
 	}
 	this.activeCond.L.Unlock()
 	if rootContext != nil {
@@ -395,7 +399,6 @@ func (this *base) baseReopen(context *Context) bool {
 	if this.conn != nil {
 		this.conn = nil
 	}
-	this.contextTracked = nil
 	this.childrenLeft = 0
 	this.stopped = false
 	this.serialized = false
@@ -486,7 +489,6 @@ func (this *base) SetRoot(context *Context) {
 }
 
 func (this *base) SetKeepAlive(children int, context *Context) {
-	this.contextTracked = context
 	this.childrenLeft = int32(children)
 }
 
@@ -504,7 +506,6 @@ func (this *base) SerializeOutput(op Operator, context *Context) {
 	this.closeConsumer = true
 	base := op.getBase()
 	base.serialized = true
-	base.contextTracked = context
 }
 
 // MB-38469 / go issue 18138 initial goroutine stack too small
@@ -535,9 +536,10 @@ func execOp(op Operator, context *Context, parent value.Value) {
 func (this *base) fork(op Operator, context *Context, parent value.Value) {
 	base := op.getBase()
 	if base.inline || base.serialized {
+		phase := this.timePhase
 		this.switchPhase(_NOTIME)
 		op.RunOnce(context, parent)
-		this.switchPhase(_EXECTIME)
+		this.switchPhase(phase)
 	} else {
 		go execOp(op, context, parent)
 		// go op.RunOnce(context, parent)
@@ -566,6 +568,12 @@ func OpStop(op Operator) {
 // send an action
 func (this *base) SendAction(action opAction) {
 	this.baseSendAction(action)
+}
+
+func (this *base) setExternalStop(stop func(bool)) {
+	this.funcLock.Lock()
+	this.externalStop = stop
+	this.funcLock.Unlock()
 }
 
 func (this *base) isRunning() bool {
@@ -621,9 +629,7 @@ func (this *base) baseSendAction(action opAction) bool {
 		}
 		this.activeCond.L.Unlock()
 		rv = true
-		this.switchPhase(_CHANTIME)
 		this.valueExchange.sendStop()
-		this.switchPhase(_EXECTIME)
 	case _STOPPING:
 		if action == _ACTION_STOP {
 			this.opState = _HALTING
@@ -636,6 +642,11 @@ func (this *base) baseSendAction(action opAction) bool {
 	default:
 		this.activeCond.L.Unlock()
 	}
+	this.funcLock.RLock()
+	if this.externalStop != nil {
+		this.externalStop(action == _ACTION_STOP)
+	}
+	this.funcLock.RUnlock()
 	return rv
 }
 
@@ -660,7 +671,7 @@ func (this *base) chanSendAction(action opAction) {
 			this.opState = _STOPPING
 		}
 		this.activeCond.L.Unlock()
-		this.switchPhase(_CHANTIME)
+		this.switchPhase(_NOTIME)
 		this.valueExchange.sendStop()
 		select {
 		case this.stopChannel <- 0:
@@ -693,12 +704,13 @@ func (this *base) connSendAction(conn *datastore.IndexConnection, action opActio
 			this.opState = _STOPPING
 		}
 		this.activeCond.L.Unlock()
+		phase := this.timePhase
 		this.switchPhase(_CHANTIME)
 		this.valueExchange.sendStop()
 		if conn != nil {
 			conn.SendStop()
 		}
-		this.switchPhase(_EXECTIME)
+		this.switchPhase(phase)
 	} else {
 		this.activeCond.L.Unlock()
 	}
@@ -958,7 +970,7 @@ func serializedSend(this *base, op Operator, item value.AnnotatedValue) bool {
 		if opBase.isStopped() {
 			this.stopped = true
 		} else {
-			rv = op.processItem(item, opBase.contextTracked)
+			rv = op.processItem(item, opBase.operatorCtx.Context)
 			if rv {
 				opBase.addInDocs(1)
 			} else {
@@ -1029,7 +1041,7 @@ func (this *base) keepAlive(op Operator) bool {
 	}
 	if go_atomic.AddInt32(&this.childrenLeft, -1) == 0 {
 		this.notify()
-		op.close(this.contextTracked)
+		op.close(this.operatorCtx.Context)
 	}
 	return true
 }
@@ -1288,7 +1300,7 @@ func (this *base) getDocumentKey(item value.AnnotatedValue, context *Context) (s
 }
 
 func (this *base) evaluateKey(keyExpr expression.Expression, item value.AnnotatedValue, context *Context) ([]string, bool) {
-	kv, e := keyExpr.Evaluate(item, context)
+	kv, e := keyExpr.Evaluate(item, &this.operatorCtx)
 	if e != nil {
 		context.Error(errors.NewEvaluationError(e, "keys"))
 		return nil, false
@@ -1379,7 +1391,6 @@ func (this *base) release(context *Context) {
 	this.output = nil
 	this.parent = nil
 	this.stop = nil
-	this.contextTracked = nil
 }
 
 func (this *base) waitComplete() {

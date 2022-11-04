@@ -67,7 +67,7 @@ func (this *ExecuteFunction) RunOnce(context *Context, parent value.Value) {
 		if l > 0 {
 			args = make([]value.Value, l)
 			for e, _ := range exprs {
-				ev, err := exprs[e].Evaluate(parent, context)
+				ev, err := exprs[e].Evaluate(parent, &this.operatorCtx)
 				if err != nil {
 					context.Error(errors.NewEvaluationError(err, "ExecuteFunction"))
 					return
@@ -77,7 +77,7 @@ func (this *ExecuteFunction) RunOnce(context *Context, parent value.Value) {
 		}
 
 		context.SetPreserveProjectionOrder(false)
-		val, err := functions.ExecuteFunction(this.plan.Name(), functions.NONE, args, context)
+		val, err := functions.ExecuteFunction(this.plan.Name(), functions.NONE, args, &this.operatorCtx)
 		if err != nil {
 			context.Error(err)
 		} else {

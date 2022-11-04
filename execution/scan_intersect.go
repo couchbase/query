@@ -105,7 +105,7 @@ func (this *IntersectScan) RunOnce(context *Context, parent value.Value) {
 			this.fork(scan, context, parent)
 		}
 
-		limit := evalLimitOffset(this.plan.Limit(), parent, int64(-1), this.plan.Covering(), context)
+		limit := evalLimitOffset(this.plan.Limit(), parent, int64(-1), this.plan.Covering(), &this.operatorCtx)
 		n := len(this.scans)
 		nscans := len(this.scans)
 		childBits := int64(0)

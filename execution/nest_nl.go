@@ -78,13 +78,13 @@ func (this *NLNest) beforeItems(context *Context, parent value.Value) bool {
 			this.ansiFlags |= ANSI_ONCLAUSE_FALSE
 		}
 	} else {
-		this.plan.Onclause().EnableInlistHash(context)
-		SetSearchInfo(this.aliasMap, parent, context, this.plan.Onclause())
+		this.plan.Onclause().EnableInlistHash(&this.operatorCtx)
+		SetSearchInfo(this.aliasMap, parent, &this.operatorCtx, this.plan.Onclause())
 	}
 
 	filter := this.plan.Filter()
 	if filter != nil {
-		filter.EnableInlistHash(context)
+		filter.EnableInlistHash(&this.operatorCtx)
 	}
 
 	return true
@@ -122,12 +122,12 @@ loop:
 				var match bool
 				aliases := []string{this.plan.Alias()}
 				match, ok, _ = processAnsiExec(item, right_item, this.plan.Onclause(),
-					aliases, this.ansiFlags, context, "nest")
+					aliases, this.ansiFlags, &this.operatorCtx, "nest")
 				if ok && match {
 					right_items = append(right_items, right_item)
 				}
 
-				// TODO break out and child.SendAction(_ACTION_STOP) here for semin-scans
+				// TODO break out and child.SendAction(_ACTION_STOP) here for semi-scans
 			} else if child >= 0 {
 				n--
 			} else {
@@ -156,7 +156,7 @@ loop:
 	}
 	if joined != nil {
 		if this.plan.Filter() != nil {
-			result, err := this.plan.Filter().Evaluate(joined, context)
+			result, err := this.plan.Filter().Evaluate(joined, &this.operatorCtx)
 			if err != nil {
 				context.Error(errors.NewEvaluationError(err, "nested-loop nest filter"))
 				return false
@@ -187,11 +187,11 @@ loop:
 
 func (this *NLNest) afterItems(context *Context) {
 	if (this.ansiFlags & (ANSI_ONCLAUSE_TRUE | ANSI_ONCLAUSE_FALSE)) == 0 {
-		this.plan.Onclause().ResetMemory(context)
+		this.plan.Onclause().ResetMemory(&this.operatorCtx)
 	}
 	filter := this.plan.Filter()
 	if filter != nil {
-		filter.ResetMemory(context)
+		filter.ResetMemory(&this.operatorCtx)
 	}
 }
 

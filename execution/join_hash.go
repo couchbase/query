@@ -81,8 +81,8 @@ func (this *HashJoin) beforeItems(context *Context, parent value.Value) bool {
 				this.ansiFlags |= ANSI_ONCLAUSE_FALSE
 			}
 		} else {
-			onclause.EnableInlistHash(context)
-			SetSearchInfo(this.aliasMap, parent, context, onclause)
+			onclause.EnableInlistHash(&this.operatorCtx)
+			SetSearchInfo(this.aliasMap, parent, &this.operatorCtx, onclause)
 		}
 	} else {
 		// for comma-separated join, treat it as having a TRUE onclause
@@ -91,7 +91,7 @@ func (this *HashJoin) beforeItems(context *Context, parent value.Value) bool {
 
 	filter := this.plan.Filter()
 	if filter != nil {
-		filter.EnableInlistHash(context)
+		filter.EnableInlistHash(&this.operatorCtx)
 	}
 
 	// build hash table
@@ -108,7 +108,7 @@ func (this *HashJoin) beforeItems(context *Context, parent value.Value) bool {
 	this.fork(this.child, context, parent)
 
 	ok := buildHashTab(&(this.base), this.child, this.hashTab,
-		this.plan.BuildExprs(), this.buildVals, context)
+		this.plan.BuildExprs(), this.buildVals, &this.operatorCtx)
 	if !ok {
 		return false
 	}
@@ -123,7 +123,7 @@ func (this *HashJoin) beforeItems(context *Context, parent value.Value) bool {
 }
 
 func buildHashTab(base *base, buildOp Operator, hashTab *util.HashTable,
-	buildExprs expression.Expressions, buildVals value.Values, context *Context) bool {
+	buildExprs expression.Expressions, buildVals value.Values, context *opContext) bool {
 	var err error
 	stopped := false
 	n := 1
@@ -181,7 +181,7 @@ loop:
 }
 
 func getProbeVal(item value.AnnotatedValue, probeExprs expression.Expressions,
-	probeVals value.Values, context *Context) value.Value {
+	probeVals value.Values, context *opContext) value.Value {
 
 	var err error
 	for i, pe := range probeExprs {
@@ -207,7 +207,7 @@ func (this *HashJoin) processItem(item value.AnnotatedValue, context *Context) b
 	ok := true
 	matched := false
 
-	probeVal := getProbeVal(item, this.plan.ProbeExprs(), this.probeVals, context)
+	probeVal := getProbeVal(item, this.plan.ProbeExprs(), this.probeVals, &this.operatorCtx)
 	if probeVal == nil {
 		return false
 	}
@@ -221,12 +221,12 @@ func (this *HashJoin) processItem(item value.AnnotatedValue, context *Context) b
 			var match bool
 			var joined value.AnnotatedValue
 			match, ok, joined = processAnsiExec(item, right_item, this.plan.Onclause(),
-				this.plan.BuildAliases(), this.ansiFlags, context, "join")
+				this.plan.BuildAliases(), this.ansiFlags, &this.operatorCtx, "join")
 			if match && ok {
 				matched = true
 				ok = this.checkSendItem(joined, func() uint64 {
 					return joined.Size()
-				}, true, this.plan.Filter(), context)
+				}, true, this.plan.Filter(), &this.operatorCtx)
 			} else if joined != nil {
 				joined.Recycle()
 			}
@@ -245,7 +245,7 @@ func (this *HashJoin) processItem(item value.AnnotatedValue, context *Context) b
 	if this.plan.Outer() && !matched {
 		return this.checkSendItem(item, func() uint64 {
 			return 0
-		}, false, this.plan.Filter(), context)
+		}, false, this.plan.Filter(), &this.operatorCtx)
 	} else if context.UseRequestQuota() {
 		context.ReleaseValueSize(item.Size())
 	}
@@ -259,12 +259,12 @@ func (this *HashJoin) afterItems(context *Context) {
 	if (this.ansiFlags & (ANSI_ONCLAUSE_TRUE | ANSI_ONCLAUSE_FALSE)) == 0 {
 		onclause := this.plan.Onclause()
 		if onclause != nil {
-			onclause.ResetMemory(context)
+			onclause.ResetMemory(&this.operatorCtx)
 		}
 	}
 	filter := this.plan.Filter()
 	if filter != nil {
-		filter.ResetMemory(context)
+		filter.ResetMemory(&this.operatorCtx)
 	}
 }
 
@@ -278,7 +278,7 @@ func (this *HashJoin) dropHashTable(context *Context) {
 	}
 }
 
-func (this *HashJoin) checkSendItem(av value.AnnotatedValue, quotaFunc func() uint64, recycle bool, filter expression.Expression, context *Context) bool {
+func (this *HashJoin) checkSendItem(av value.AnnotatedValue, quotaFunc func() uint64, recycle bool, filter expression.Expression, context *opContext) bool {
 	if filter != nil {
 		result, err := filter.Evaluate(av, context)
 		if err != nil {

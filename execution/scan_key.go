@@ -83,7 +83,7 @@ func (this *KeyScan) RunOnce(context *Context, parent value.Value) {
 			}
 		}
 
-		keys, e := this.plan.Keys().Evaluate(parent, context)
+		keys, e := this.plan.Keys().Evaluate(parent, &this.operatorCtx)
 		if e != nil {
 			context.Error(errors.NewEvaluationError(e, "KEYS"))
 			return

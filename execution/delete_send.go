@@ -81,7 +81,7 @@ func (this *SendDelete) processItem(item value.AnnotatedValue, context *Context)
 func (this *SendDelete) beforeItems(context *Context, parent value.Value) bool {
 	this.mk.reset()
 
-	this.keyspace = getKeyspace(this.plan.Keyspace(), this.plan.Term().ExpressionTerm(), context)
+	this.keyspace = getKeyspace(this.plan.Keyspace(), this.plan.Term().ExpressionTerm(), &this.operatorCtx)
 	if this.keyspace == nil {
 		return false
 	}
@@ -90,7 +90,7 @@ func (this *SendDelete) beforeItems(context *Context, parent value.Value) bool {
 		return true
 	}
 
-	limit, err := this.plan.Limit().Evaluate(parent, context)
+	limit, err := this.plan.Limit().Evaluate(parent, &this.operatorCtx)
 	if err != nil {
 		context.Error(errors.NewEvaluationError(err, "LIMIT clause"))
 		return false

@@ -276,7 +276,7 @@ func (this *spanScan) scan(context *Context, conn *datastore.IndexConnection, pa
 
 	// for nested-loop join we need to pass in values from left-hand-side (outer) of the join
 	// for span evaluation
-	dspan, empty, err := evalSpan(this.span, parent, context)
+	dspan, empty, err := evalSpan(this.span, parent, &this.operatorCtx)
 	if err != nil || empty {
 		if err != nil {
 			context.Error(errors.NewEvaluationError(err, "span"))
@@ -285,7 +285,7 @@ func (this *spanScan) scan(context *Context, conn *datastore.IndexConnection, pa
 		return
 	}
 
-	limit := evalLimitOffset(this.plan.Limit(), parent, math.MaxInt64, this.plan.Covering(), context)
+	limit := evalLimitOffset(this.plan.Limit(), parent, math.MaxInt64, this.plan.Covering(), &this.operatorCtx)
 
 	keyspaceTerm := this.plan.Term()
 	scanVector := context.ScanVectorSource().ScanVector(keyspaceTerm.Namespace(), keyspaceTerm.Path().Bucket())
@@ -293,7 +293,7 @@ func (this *spanScan) scan(context *Context, conn *datastore.IndexConnection, pa
 		context.ScanConsistency(), scanVector, conn)
 }
 
-func evalSpan(ps *plan.Span, parent value.Value, context *Context) (*datastore.Span, bool, error) {
+func evalSpan(ps *plan.Span, parent value.Value, context *opContext) (*datastore.Span, bool, error) {
 	var err error
 	var empty bool
 

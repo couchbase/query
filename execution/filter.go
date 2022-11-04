@@ -64,8 +64,8 @@ func (this *Filter) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *Filter) beforeItems(context *Context, parent value.Value) bool {
-	this.plan.Condition().EnableInlistHash(context)
-	SetSearchInfo(this.aliasMap, parent, context, this.plan.Condition())
+	this.plan.Condition().EnableInlistHash(&this.operatorCtx)
+	SetSearchInfo(this.aliasMap, parent, &this.operatorCtx, this.plan.Condition())
 	buildBitFilters := this.plan.GetBuildBitFilters()
 	if len(buildBitFilters) > 0 {
 		this.createLocalBuildFilters(buildBitFilters)
@@ -74,7 +74,7 @@ func (this *Filter) beforeItems(context *Context, parent value.Value) bool {
 }
 
 func (this *Filter) processItem(item value.AnnotatedValue, context *Context) bool {
-	val, e := this.plan.Condition().Evaluate(item, context)
+	val, e := this.plan.Condition().Evaluate(item, &this.operatorCtx)
 	if e != nil {
 		context.Error(errors.NewEvaluationError(e, "filter"))
 		return false
@@ -86,7 +86,7 @@ func (this *Filter) processItem(item value.AnnotatedValue, context *Context) boo
 			context.AddPhaseCount(FILTER, this.docs)
 			this.docs = 0
 		}
-		if this.hasBuildBitFilter() && !this.buildBitFilters(item, context) {
+		if this.hasBuildBitFilter() && !this.buildBitFilters(item, &this.operatorCtx) {
 			return false
 		}
 		return this.sendItem(item)
@@ -100,7 +100,7 @@ func (this *Filter) processItem(item value.AnnotatedValue, context *Context) boo
 }
 
 func (this *Filter) afterItems(context *Context) {
-	this.plan.Condition().ResetMemory(context)
+	this.plan.Condition().ResetMemory(&this.operatorCtx)
 	if this.docs > 0 {
 		context.AddPhaseCount(FILTER, this.docs)
 		this.docs = 0

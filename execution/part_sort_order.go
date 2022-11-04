@@ -153,7 +153,6 @@ func (this *PartSortOrder) processItem(item value.AnnotatedValue, context *Conte
 func (this *PartSortOrder) afterItems(context *Context) {
 	defer this.releaseValues()
 	defer func() {
-		this.context = nil
 		this.terms = nil
 		context.SetSortCount(this.sortCount)
 		context.AddPhaseCount(SORT, this.numProcessedRows)
@@ -262,12 +261,12 @@ func (this *PartSortOrder) remainingTermsLessThan(v1 value.AnnotatedValue, v2 va
 		i += this.partialSortTermCount
 		s := this.terms[i].term
 
-		ev1, e = getOriginalCachedValue(v1, term.Expression(), s, this.context)
+		ev1, e = getOriginalCachedValue(v1, term.Expression(), s, &this.operatorCtx)
 		if e != nil {
 			return false
 		}
 
-		ev2, e = getOriginalCachedValue(v2, term.Expression(), s, this.context)
+		ev2, e = getOriginalCachedValue(v2, term.Expression(), s, &this.operatorCtx)
 		if e != nil {
 			return false
 		}
@@ -307,12 +306,12 @@ func (this *PartSortOrder) samePartialSortValues(v1 value.AnnotatedValue, v2 val
 		}
 		s := this.terms[i].term
 
-		ev1, e = getOriginalCachedValue(v1, term.Expression(), s, this.context)
+		ev1, e = getOriginalCachedValue(v1, term.Expression(), s, &this.operatorCtx)
 		if e != nil {
 			return false
 		}
 
-		ev2, e = getOriginalCachedValue(v2, term.Expression(), s, this.context)
+		ev2, e = getOriginalCachedValue(v2, term.Expression(), s, &this.operatorCtx)
 		if e != nil {
 			return false
 		}

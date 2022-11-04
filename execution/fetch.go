@@ -129,7 +129,7 @@ func (this *Fetch) RunOnce(context *Context, parent value.Value) {
 func (this *Fetch) beforeItems(context *Context, parent value.Value) bool {
 	this.mk.reset()
 	if this.keyspace = this.plan.Keyspace(); this.keyspace == nil {
-		this.keyspace = getKeyspace(this.keyspace, this.plan.Term().FromExpression(), context)
+		this.keyspace = getKeyspace(this.keyspace, this.plan.Term().FromExpression(), &this.operatorCtx)
 	}
 	this.parentVal = parent
 	if this.plan.HasCacheResult() && this.results == nil {

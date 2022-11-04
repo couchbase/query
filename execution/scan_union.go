@@ -92,8 +92,8 @@ func (this *UnionScan) RunOnce(context *Context, parent value.Value) {
 			this.fork(scan, context, parent)
 		}
 
-		limit := evalLimitOffset(this.plan.Limit(), parent, int64(-1), this.plan.Covering(), context)
-		offset := evalLimitOffset(this.plan.Offset(), parent, int64(0), this.plan.Covering(), context)
+		limit := evalLimitOffset(this.plan.Limit(), parent, int64(-1), this.plan.Covering(), &this.operatorCtx)
+		offset := evalLimitOffset(this.plan.Offset(), parent, int64(0), this.plan.Covering(), &this.operatorCtx)
 		n := len(this.scans)
 		ok := true
 

@@ -152,3 +152,11 @@ func (this *IndexContext) RecordJsCU(d time.Duration, m uint64) {
 func (this *IndexContext) PreserveProjectionOrder() bool {
 	return false
 }
+
+func (this *IndexContext) Park(stop func(stop bool)) {
+	// no-op
+}
+
+func (this *IndexContext) Resume() {
+	// no-op
+}

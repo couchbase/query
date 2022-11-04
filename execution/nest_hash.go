@@ -81,13 +81,13 @@ func (this *HashNest) beforeItems(context *Context, parent value.Value) bool {
 			this.ansiFlags |= ANSI_ONCLAUSE_FALSE
 		}
 	} else {
-		this.plan.Onclause().EnableInlistHash(context)
-		SetSearchInfo(this.aliasMap, parent, context, this.plan.Onclause())
+		this.plan.Onclause().EnableInlistHash(&this.operatorCtx)
+		SetSearchInfo(this.aliasMap, parent, &this.operatorCtx, this.plan.Onclause())
 	}
 
 	filter := this.plan.Filter()
 	if filter != nil {
-		filter.EnableInlistHash(context)
+		filter.EnableInlistHash(&this.operatorCtx)
 	}
 
 	// build hash table
@@ -104,7 +104,7 @@ func (this *HashNest) beforeItems(context *Context, parent value.Value) bool {
 	this.fork(this.child, context, parent)
 
 	return buildHashTab(&(this.base), this.child, this.hashTab,
-		this.plan.BuildExprs(), this.buildVals, context)
+		this.plan.BuildExprs(), this.buildVals, &this.operatorCtx)
 }
 
 func (this *HashNest) processItem(item value.AnnotatedValue, context *Context) bool {
@@ -115,7 +115,7 @@ func (this *HashNest) processItem(item value.AnnotatedValue, context *Context) b
 	var right_items value.AnnotatedValues
 	ok := true
 
-	probeVal := getProbeVal(item, this.plan.ProbeExprs(), this.probeVals, context)
+	probeVal := getProbeVal(item, this.plan.ProbeExprs(), this.probeVals, &this.operatorCtx)
 	if probeVal == nil {
 		return false
 	}
@@ -129,7 +129,7 @@ func (this *HashNest) processItem(item value.AnnotatedValue, context *Context) b
 			var match bool
 			aliases := []string{this.plan.BuildAlias()}
 			match, ok, _ = processAnsiExec(item, right_item, this.plan.Onclause(),
-				aliases, this.ansiFlags, context, "nest")
+				aliases, this.ansiFlags, &this.operatorCtx, "nest")
 			if match && ok {
 				right_items = append(right_items, right_item)
 			}
@@ -152,7 +152,7 @@ func (this *HashNest) processItem(item value.AnnotatedValue, context *Context) b
 	}
 	if joined != nil {
 		if this.plan.Filter() != nil {
-			result, err := this.plan.Filter().Evaluate(joined, context)
+			result, err := this.plan.Filter().Evaluate(joined, &this.operatorCtx)
 			if err != nil {
 				context.Error(errors.NewEvaluationError(err, "hash nest filter"))
 				return false
@@ -184,11 +184,11 @@ func (this *HashNest) processItem(item value.AnnotatedValue, context *Context) b
 func (this *HashNest) afterItems(context *Context) {
 	this.dropHashTable(context)
 	if (this.ansiFlags & (ANSI_ONCLAUSE_TRUE | ANSI_ONCLAUSE_FALSE)) == 0 {
-		this.plan.Onclause().ResetMemory(context)
+		this.plan.Onclause().ResetMemory(&this.operatorCtx)
 	}
 	filter := this.plan.Filter()
 	if filter != nil {
-		filter.ResetMemory(context)
+		filter.ResetMemory(&this.operatorCtx)
 	}
 }
 

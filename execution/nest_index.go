@@ -62,7 +62,7 @@ func (this *IndexNest) RunOnce(context *Context, parent value.Value) {
 
 func (this *IndexNest) processItem(item value.AnnotatedValue, context *Context) bool {
 	defer this.switchPhase(_EXECTIME)
-	idv, e := this.plan.IdExpr().Evaluate(item, context)
+	idv, e := this.plan.IdExpr().Evaluate(item, &this.operatorCtx)
 	if e != nil {
 		context.Error(errors.NewEvaluationError(e, fmt.Sprintf("NEST FOR %s", this.plan.For())))
 		return false
@@ -165,7 +165,7 @@ func (this *IndexNest) flushBatch(context *Context) bool {
 
 	this.validateKeys(pairMap)
 
-	return fetchOk && this.nestEntries(keyCount, pairMap, this.plan.Outer(), nil, this.plan.Term().Alias(), context)
+	return fetchOk && this.nestEntries(keyCount, pairMap, this.plan.Outer(), nil, this.plan.Term().Alias(), &this.operatorCtx)
 }
 
 func (this *IndexNest) MarshalJSON() ([]byte, error) {

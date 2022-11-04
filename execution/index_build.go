@@ -76,7 +76,7 @@ func (this *BuildIndexes) RunOnce(context *Context, parent value.Value) {
 			return
 		}
 
-		names, err1 := getIndexNames(context, parent, node.Names(), "build_index")
+		names, err1 := getIndexNames(&this.operatorCtx, parent, node.Names(), "build_index")
 		if err1 != nil {
 			context.Error(err1)
 			return
@@ -122,7 +122,7 @@ func (this *BuildIndexes) RunOnce(context *Context, parent value.Value) {
 	})
 }
 
-func getIndexNames(context *Context, av value.Value, exprs expression.Expressions, err_key string) ([]string, errors.Error) {
+func getIndexNames(context *opContext, av value.Value, exprs expression.Expressions, err_key string) ([]string, errors.Error) {
 	ikey := "execution." + err_key + ".get_index_name"
 	rv := make([]string, 0, len(exprs))
 	for _, expr := range exprs {

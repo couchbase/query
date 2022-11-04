@@ -55,6 +55,8 @@ type Context interface {
 	IsTracked() bool
 	RecordJsCU(d time.Duration, m uint64)
 	PreserveProjectionOrder() bool
+	Park(func(bool))
+	Resume()
 }
 
 type CurlContext interface {

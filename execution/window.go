@@ -26,7 +26,6 @@ Window operator specific information
 type WindowAggregate struct {
 	base
 	plan         *plan.WindowAggregate
-	context      *Context
 	values       value.AnnotatedValues
 	pbyValues    value.Values
 	pby          expression.Expressions
@@ -167,8 +166,7 @@ func (this *WindowAggregate) hasFlags(flags uint32) bool {
 /*
   Window operator initial setup information
 */
-func (this *WindowAggregate) setupTerms(context *Context, parent value.Value) bool {
-	this.context = context
+func (this *WindowAggregate) setupTerms(parent value.Value) bool {
 	largestOrderAgg := this.plan.Aggregates()[0]
 	this.aggs = make([]*AggregateInfo, 0, len(this.plan.Aggregates()))
 	this.addFlags(_WINDOW_RELEASE_CURRENTROW)
@@ -189,9 +187,9 @@ func (this *WindowAggregate) setupTerms(context *Context, parent value.Value) bo
 
 		// setup aggregate information.
 		aInfo := &AggregateInfo{agg: agg, id: agg.String(), wTerm: wTerm, flags: flags}
-		err := aInfo.setOnce(context, parent)
+		err := aInfo.setOnce(&this.operatorCtx, parent)
 		if err != nil {
-			context.Fatal(errors.NewWindowEvaluationError(err, "Error inital setup"))
+			this.operatorCtx.Fatal(errors.NewWindowEvaluationError(err, "Error inital setup"))
 			return false
 		}
 		this.aggs = append(this.aggs, aInfo)
@@ -237,7 +235,7 @@ func (this *AggregateInfo) hasFlags(flags uint32) bool {
  Setup aggregate specific information
 */
 
-func (this *AggregateInfo) setOnce(context *Context, parent value.Value) (err error) {
+func (this *AggregateInfo) setOnce(context *opContext, parent value.Value) (err error) {
 
 	// No ORDER BY all rows in parttition has same aggregate value. Evaluate once.
 	this.once = this.wTerm.OrderBy() == nil && !this.hasFlags(_WINDOW_ROW_NUMBER)
@@ -328,7 +326,7 @@ func (this *AggregateInfo) setOnce(context *Context, parent value.Value) (err er
 func (this *AggregateInfo) evaluatePreAggregate(op *WindowAggregate, wf *windowFrame, cItem int64) (err error) {
 
 	// set default value
-	this.val, err = this.preAgg.Default(op.values[cItem], op.context)
+	this.val, err = this.preAgg.Default(op.values[cItem], &op.operatorCtx)
 	if err != nil {
 		return err
 	}
@@ -344,14 +342,14 @@ func (this *AggregateInfo) evaluatePreAggregate(op *WindowAggregate, wf *windowF
 			continue
 		}
 
-		this.val, err = this.preAgg.CumulateInitial(op.values[c], this.val, op.context)
+		this.val, err = this.preAgg.CumulateInitial(op.values[c], this.val, &op.operatorCtx)
 		if err != nil {
 			return err
 		}
 	}
 
 	// final result
-	this.preVal, err = this.agg.ComputeFinal(this.val, op.context)
+	this.preVal, err = this.agg.ComputeFinal(this.val, &op.operatorCtx)
 	return err
 }
 
@@ -381,7 +379,7 @@ func (this *AggregateInfo) evaluate(op *WindowAggregate, wf *windowFrame, cItem 
 			if wf.cIndex > 0 {
 				// remove the outgoing row of frame from cumVal
 				if (wf.cIndex >= wf.sIndex && wf.sIndex > 0) || (wf.cIndex < wf.sIndex && wf.sIndex < op.nItems) {
-					this.val, err = this.agg.CumulateRemove(op.values[wf.sIndex-1], this.val, op.context)
+					this.val, err = this.agg.CumulateRemove(op.values[wf.sIndex-1], this.val, &op.operatorCtx)
 					if err != nil {
 						return err
 					}
@@ -404,7 +402,7 @@ func (this *AggregateInfo) evaluate(op *WindowAggregate, wf *windowFrame, cItem 
 				// setup item for ranking functions
 				item, err = this.getWindowRow(c, op.values[c], op)
 				if err == nil {
-					this.val, err = this.agg.CumulateInitial(item, this.val, op.context)
+					this.val, err = this.agg.CumulateInitial(item, this.val, &op.operatorCtx)
 				}
 				if err != nil {
 					return err
@@ -423,7 +421,7 @@ func (this *AggregateInfo) evaluate(op *WindowAggregate, wf *windowFrame, cItem 
 			// non incremental aggregation
 			empty = true
 			// default aggregation value
-			this.val, err = this.agg.Default(op.values[cItem], op.context)
+			this.val, err = this.agg.Default(op.values[cItem], &op.operatorCtx)
 			if err != nil {
 				return err
 			}
@@ -435,7 +433,7 @@ func (this *AggregateInfo) evaluate(op *WindowAggregate, wf *windowFrame, cItem 
 					// setup item for ranking functions
 					item, err = this.getWindowRow(c, op.values[c], op)
 					if err == nil {
-						this.val, err = this.agg.CumulateInitial(item, this.val, op.context)
+						this.val, err = this.agg.CumulateInitial(item, this.val, &op.operatorCtx)
 					}
 					if err != nil {
 						return err
@@ -447,11 +445,11 @@ func (this *AggregateInfo) evaluate(op *WindowAggregate, wf *windowFrame, cItem 
 
 	if empty || s > e {
 		// no frame or empty row
-		this.val, err = this.agg.Default(op.values[cItem], op.context)
+		this.val, err = this.agg.Default(op.values[cItem], &op.operatorCtx)
 	}
 
 	// final aggregation value
-	this.val, err = this.agg.ComputeFinal(this.val, op.context)
+	this.val, err = this.agg.ComputeFinal(this.val, &op.operatorCtx)
 
 	return err
 }
@@ -463,7 +461,7 @@ evaluate the Value aggregates
 func (this *AggregateInfo) evaluateValueFuncs(op *WindowAggregate, wf *windowFrame, sItem, eItem, cItem int64) (empty bool, err error) {
 	empty = false
 	// default aggregate value
-	this.val, err = this.agg.Default(op.values[cItem], op.context)
+	this.val, err = this.agg.Default(op.values[cItem], &op.operatorCtx)
 	if err != nil {
 		return false, err
 	}
@@ -506,7 +504,7 @@ func (this *AggregateInfo) evaluateValueFuncs(op *WindowAggregate, wf *windowFra
 		// include in aggregation if not excluded
 		if !wf.excludeRow(c) {
 			empty = false
-			this.val, err = this.agg.CumulateInitial(op.values[c], this.val, op.context)
+			this.val, err = this.agg.CumulateInitial(op.values[c], this.val, &op.operatorCtx)
 			if err != nil {
 				return false, err
 			}
@@ -514,7 +512,7 @@ func (this *AggregateInfo) evaluateValueFuncs(op *WindowAggregate, wf *windowFra
 		repeats--
 		if repeats == 0 {
 			// check if aggregation is done early when no more duplicates
-			done, err := this.agg.IsCumulateDone(this.val, op.context)
+			done, err := this.agg.IsCumulateDone(this.val, &op.operatorCtx)
 			if err != nil || done {
 				return empty, err
 			}
@@ -682,13 +680,13 @@ func (this *AggregateInfo) windowValuePos(op *WindowAggregate, val value.Value, 
 	collation := int64(1)
 	if this.wTerm.WindowFrame().RangeWindowFrame() {
 		pos = cIndex
-		if op.oby[0].Descending(op.context) {
+		if op.oby[0].Descending(&op.operatorCtx) {
 			collation = int64(-1)
 		}
 
 		var rangeVal, currentObyVal value.Value
 
-		currentObyVal, err = getCachedValue(op.values[cIndex], op.oby[0].Expression(), op.obyTerms[0], op.context)
+		currentObyVal, err = getCachedValue(op.values[cIndex], op.oby[0].Expression(), op.obyTerms[0], &op.operatorCtx)
 		if err != nil || currentObyVal == nil ||
 			!(currentObyVal.Type() == value.NUMBER || currentObyVal.Type() <= value.NULL) {
 			return cIndex, true, err
@@ -800,7 +798,7 @@ func (this *AggregateInfo) windowOrderDuplicatesDirection(op *WindowAggregate, c
 
 	cobyValues := make(value.Values, len(this.wTerm.OrderBy().Terms()))
 	for i, obyExpr := range oby.Expressions() {
-		cobyValues[i], err = getCachedValue(op.values[cIndex], obyExpr, op.obyTerms[i], op.context)
+		cobyValues[i], err = getCachedValue(op.values[cIndex], obyExpr, op.obyTerms[i], &op.operatorCtx)
 		if err != nil || cobyValues[i] == nil {
 			return
 		}
@@ -808,7 +806,7 @@ func (this *AggregateInfo) windowOrderDuplicatesDirection(op *WindowAggregate, c
 	var cc bool
 
 	for pos := cIndex + direction; pos >= 0 && pos < op.nItems; pos = pos + direction {
-		cc, err = isNewWindowValues(op.values[pos], false, oby.Expressions(), cobyValues, op.obyTerms, op.context)
+		cc, err = isNewWindowValues(op.values[pos], false, oby.Expressions(), cobyValues, op.obyTerms, &op.operatorCtx)
 		if err != nil || cc {
 			return
 		}
@@ -835,7 +833,7 @@ func (this *AggregateInfo) windowValueRangePeerPos(op *WindowAggregate, rangeVal
 	var dups int64
 	var otherObyVal value.Value
 	for pos = cIndex; (direction < 0 && pos >= 0) || (direction > 0 && pos < op.nItems); pos = pos + direction {
-		otherObyVal, err = getCachedValue(op.values[pos], op.oby[0].Expression(), op.obyTerms[0], op.context)
+		otherObyVal, err = getCachedValue(op.values[pos], op.oby[0].Expression(), op.obyTerms[0], &op.operatorCtx)
 
 		if err != nil || otherObyVal == nil {
 			return pos - direction, false, err
@@ -866,7 +864,7 @@ func (this *AggregateInfo) windowValueRangePeerPos(op *WindowAggregate, rangeVal
 
 // value_expr must be a constant or expression and must evaluate to a positive numeric value.
 func (this *AggregateInfo) windowValidateValExpr(valExpr expression.Expression,
-	rangeWindow bool, context *Context, parent value.Value) (value.Value, error) {
+	rangeWindow bool, context *opContext, parent value.Value) (value.Value, error) {
 
 	val, err := valExpr.Evaluate(parent, context)
 	if err != nil {
@@ -884,7 +882,7 @@ func (this *AggregateInfo) windowValidateValExpr(valExpr expression.Expression,
 func (this *AggregateInfo) evaluateObyValues(item value.AnnotatedValue, op *WindowAggregate) error {
 	if this.wTerm.OrderBy() != nil {
 		if err := evaluateWindowByValues(item, this.wTerm.OrderBy().Expressions(), this.obyValues,
-			op.obyTerms, op.context); err != nil {
+			op.obyTerms, &op.operatorCtx); err != nil {
 			return err
 		}
 	}
@@ -898,7 +896,7 @@ func (this *AggregateInfo) isNewCollationValue(item value.AnnotatedValue, obyVal
 	if this.wTerm.OrderBy() == nil {
 		return false, nil
 	}
-	return isNewWindowValues(item, this.newCollationValue, this.wTerm.OrderBy().Expressions(), obyValues, op.obyTerms, op.context)
+	return isNewWindowValues(item, this.newCollationValue, this.wTerm.OrderBy().Expressions(), obyValues, op.obyTerms, &op.operatorCtx)
 }
 
 // Sets up window frame
@@ -970,7 +968,7 @@ func (this *WindowAggregate) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *WindowAggregate) beforeItems(context *Context, parent value.Value) bool {
-	return this.setupTerms(context, parent)
+	return this.setupTerms(parent)
 }
 
 func (this *WindowAggregate) processItem(item value.AnnotatedValue, context *Context) bool {
@@ -1014,15 +1012,14 @@ func (this *WindowAggregate) afterItems(context *Context) {
 	// end process all items
 	this.afterWindowPartition(true)
 	this.releaseValues()
-	this.context = nil
 }
 
 func (this *WindowAggregate) isNewPartition(item value.AnnotatedValue) (rv bool, err error) {
-	return isNewWindowValues(item, this.newPartition, this.pby, this.pbyValues, this.pbyTerms, this.context)
+	return isNewWindowValues(item, this.newPartition, this.pby, this.pbyValues, this.pbyTerms, &this.operatorCtx)
 }
 
 func isNewWindowValues(item value.AnnotatedValue, firstVal bool, exprs expression.Expressions, values value.Values,
-	names []string, context *Context) (bool, error) {
+	names []string, context *opContext) (bool, error) {
 
 	if firstVal {
 		return true, nil
@@ -1047,7 +1044,7 @@ func isNewWindowValues(item value.AnnotatedValue, firstVal bool, exprs expressio
 }
 
 func evaluateWindowByValues(item value.AnnotatedValue, exprs expression.Expressions, values value.Values, names []string,
-	context *Context) error {
+	context *opContext) error {
 	var err error
 	for i, expr := range exprs {
 		values[i], err = getCachedValue(item, expr, names[i], context)
@@ -1059,8 +1056,8 @@ func evaluateWindowByValues(item value.AnnotatedValue, exprs expression.Expressi
 }
 
 func (this *WindowAggregate) evaluatePbyValues(item value.AnnotatedValue) bool {
-	if err := evaluateWindowByValues(item, this.pby, this.pbyValues, this.pbyTerms, this.context); err != nil {
-		this.context.Fatal(errors.NewWindowEvaluationError(err, "Error evaluating Window partition value."))
+	if err := evaluateWindowByValues(item, this.pby, this.pbyValues, this.pbyTerms, &this.operatorCtx); err != nil {
+		this.operatorCtx.Fatal(errors.NewWindowEvaluationError(err, "Error evaluating Window partition value."))
 		return false
 	}
 
@@ -1070,7 +1067,7 @@ func (this *WindowAggregate) evaluatePbyValues(item value.AnnotatedValue) bool {
 			aInfo.newCollationValue = true
 		}
 		if aInfo.incremental {
-			aInfo.cumVal, _ = aInfo.agg.Default(nil, this.context)
+			aInfo.cumVal, _ = aInfo.agg.Default(nil, &this.operatorCtx)
 		}
 	}
 
@@ -1152,7 +1149,7 @@ func (this *WindowAggregate) processWindowAggregates(c int64, item value.Annotat
 				if c == 0 || (!aInfo.once && aInfo.dupsFollowing == 0) {
 					err = aInfo.evaluatePreAggregate(this, wf, c)
 					if err != nil {
-						this.context.Fatal(errors.NewWindowEvaluationError(err, "Error evaluating Window function."))
+						this.operatorCtx.Fatal(errors.NewWindowEvaluationError(err, "Error evaluating Window function."))
 						return false
 					}
 				} else if aInfo.dupsFollowing > 0 {
@@ -1167,7 +1164,7 @@ func (this *WindowAggregate) processWindowAggregates(c int64, item value.Annotat
 			}
 
 			if err != nil {
-				this.context.Fatal(errors.NewWindowEvaluationError(err, "Error evaluating Window function."))
+				this.operatorCtx.Fatal(errors.NewWindowEvaluationError(err, "Error evaluating Window function."))
 				return false
 			}
 		} else if aInfo.dupsFollowing > 0 {

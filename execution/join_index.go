@@ -65,7 +65,7 @@ func (this *IndexJoin) RunOnce(context *Context, parent value.Value) {
 
 func (this *IndexJoin) processItem(item value.AnnotatedValue, context *Context) bool {
 	defer this.switchPhase(_EXECTIME)
-	idv, e := this.plan.IdExpr().Evaluate(item, context)
+	idv, e := this.plan.IdExpr().Evaluate(item, &this.operatorCtx)
 	if e != nil {
 		context.Error(errors.NewEvaluationError(e, fmt.Sprintf("JOIN FOR %s", this.plan.For())))
 		return false
@@ -240,7 +240,7 @@ func (this *IndexJoin) flushBatch(context *Context) bool {
 
 	this.validateKeys(pairMap)
 
-	return fetchOk && this.joinEntries(keyCount, pairMap, this.plan.Outer(), nil, this.plan.Term().Alias(), context)
+	return fetchOk && this.joinEntries(keyCount, pairMap, this.plan.Outer(), nil, this.plan.Term().Alias(), &this.operatorCtx)
 }
 
 func (this *IndexJoin) MarshalJSON() ([]byte, error) {

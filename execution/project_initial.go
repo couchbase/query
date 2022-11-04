@@ -121,7 +121,7 @@ func (this *InitialProject) processItem(item value.AnnotatedValue, context *Cont
 		}
 	} else if this.plan.Projection().Raw() {
 		// Raw projection of an expression
-		v, err := expr.Evaluate(item, context)
+		v, err := expr.Evaluate(item, &this.operatorCtx)
 		if err != nil {
 			context.Error(errors.NewEvaluationError(err, "projection"))
 			return false
@@ -194,7 +194,7 @@ func (this *InitialProject) processTerms(item value.AnnotatedValue, context *Con
 	for _, term := range this.plan.Terms() {
 		alias := term.Result().Alias()
 		if alias != "" {
-			v, err := term.Result().Expression().Evaluate(item, context)
+			v, err := term.Result().Expression().Evaluate(item, &this.operatorCtx)
 			if err != nil {
 				context.Error(errors.NewEvaluationError(err, "projection"))
 				return false
@@ -251,7 +251,7 @@ func (this *InitialProject) processTerms(item value.AnnotatedValue, context *Con
 			}
 			if term.Result().Expression() != nil {
 				var err error
-				starval, err = term.Result().Expression().Evaluate(starval, context)
+				starval, err = term.Result().Expression().Evaluate(starval, &this.operatorCtx)
 				if err != nil {
 					context.Error(errors.NewEvaluationError(err, "projection"))
 					return false
@@ -403,7 +403,7 @@ func (this *InitialProject) getExclusions(singlequalification bool, item value.A
 	} else {
 		var cache bool
 		var err error
-		exclusions, cache, err = expression.GetReferences(this.plan.Projection().Exclude(), item, context, singlequalification)
+		exclusions, cache, err = expression.GetReferences(this.plan.Projection().Exclude(), item, &this.operatorCtx, singlequalification)
 		if err != nil {
 			return nil, nil
 		}

@@ -16,7 +16,7 @@ import (
 	"github.com/couchbase/query/value"
 )
 
-func groupKey(item value.Value, keys expression.Expressions, context *Context) (string, error) {
+func groupKey(item value.Value, keys expression.Expressions, context *opContext) (string, error) {
 	kvs := _GROUP_KEY_POOL.GetCapped(len(keys))
 	defer _GROUP_KEY_POOL.Put(kvs)
 

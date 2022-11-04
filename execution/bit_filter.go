@@ -168,7 +168,7 @@ func (this *buildBitFilterBase) createLocalBuildFilters(buildBitFilters plan.Bit
 	}
 }
 
-func (this *buildBitFilterBase) buildBitFilters(item value.AnnotatedValue, context *Context) bool {
+func (this *buildBitFilterBase) buildBitFilters(item value.AnnotatedValue, context *opContext) bool {
 	for _, bfs := range this.localBuildFilters {
 		for _, bf := range bfs {
 			_, err := processBitFilters(item, bf.BitFilter(), bf.Expressions(), true, context)
@@ -224,7 +224,7 @@ func (this *probeBitFilterBase) getLocalProbeFilters(probeBitFilters plan.BitFil
 	return nil
 }
 
-func (this *probeBitFilterBase) probeBitFilters(item value.AnnotatedValue, context *Context) (bool, bool) {
+func (this *probeBitFilterBase) probeBitFilters(item value.AnnotatedValue, context *opContext) (bool, bool) {
 	for _, bfs := range this.localProbeFilters {
 		for _, bf := range bfs {
 			pass, err := processBitFilters(item, bf.BitFilter(), bf.Expressions(), false, context)
@@ -251,7 +251,7 @@ func (this *probeBitFilterBase) clearProbeBitFilters(context *Context) {
 }
 
 func processBitFilters(av value.AnnotatedValue, bitFilter *BloomFilter,
-	bitFilterExprs expression.Expressions, build bool, context *Context) (bool, errors.Error) {
+	bitFilterExprs expression.Expressions, build bool, context *opContext) (bool, errors.Error) {
 
 	vals := make(value.Values, 0, len(bitFilterExprs))
 	for _, exp := range bitFilterExprs {

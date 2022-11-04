@@ -155,7 +155,7 @@ func (this *Merge) RunOnce(context *Context, parent value.Value) {
 
 func (this *Merge) processKeyMatch(item value.AnnotatedValue,
 	context *Context, update, delete, insert Operator) bool {
-	kv, e := this.plan.Key().Evaluate(item, context)
+	kv, e := this.plan.Key().Evaluate(item, &this.operatorCtx)
 	if e != nil {
 		context.Error(errors.NewEvaluationError(e, "MERGE key"))
 		return false
@@ -233,7 +233,7 @@ func (this *Merge) processAction(item value.AnnotatedValue, context *Context,
 		if update != nil {
 			matched := true
 			if this.plan.UpdateFilter() != nil {
-				val, err := this.plan.UpdateFilter().Evaluate(item, context)
+				val, err := this.plan.UpdateFilter().Evaluate(item, &this.operatorCtx)
 				matched = err == nil && val.Truth()
 			}
 			if matched {
@@ -266,7 +266,7 @@ func (this *Merge) processAction(item value.AnnotatedValue, context *Context,
 			if ok {
 				matched := true
 				if this.plan.DeleteFilter() != nil {
-					val, err := this.plan.DeleteFilter().Evaluate(item, context)
+					val, err := this.plan.DeleteFilter().Evaluate(item, &this.operatorCtx)
 					matched = err == nil && val.Truth()
 				}
 				if matched {
@@ -295,7 +295,7 @@ func (this *Merge) processAction(item value.AnnotatedValue, context *Context,
 					context.Error(errors.NewExecutionInternalError("Merge.processAction: incorrect type for insert operator"))
 					return false
 				}
-				kv, e := ins.plan.Key().Evaluate(item, context)
+				kv, e := ins.plan.Key().Evaluate(item, &this.operatorCtx)
 				if e != nil {
 					context.Error(errors.NewEvaluationError(e, "MERGE INSERT key"))
 					return false
@@ -308,7 +308,7 @@ func (this *Merge) processAction(item value.AnnotatedValue, context *Context,
 			}
 			matched := true
 			if this.plan.InsertFilter() != nil {
-				val, err := this.plan.InsertFilter().Evaluate(item, context)
+				val, err := this.plan.InsertFilter().Evaluate(item, &this.operatorCtx)
 				matched = err == nil && val.Truth()
 			}
 			if matched {

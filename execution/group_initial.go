@@ -110,7 +110,7 @@ func (this *InitialGroup) processItem(item value.AnnotatedValue, context *Contex
 	var gk string
 	if len(this.plan.Keys()) > 0 {
 		var e error
-		gk, e = groupKey(item, this.plan.Keys(), context)
+		gk, e = groupKey(item, this.plan.Keys(), &this.operatorCtx)
 		if e != nil {
 			context.Fatal(errors.NewEvaluationError(e, "GROUP key"))
 			item.Recycle()
@@ -130,7 +130,7 @@ func (this *InitialGroup) processItem(item value.AnnotatedValue, context *Contex
 		aggregates := make(map[string]value.Value, len(this.plan.Aggregates()))
 		gv.SetAttachment("aggregates", aggregates)
 		for _, agg := range this.plan.Aggregates() {
-			aggregates[agg.String()], _ = agg.Default(nil, context)
+			aggregates[agg.String()], _ = agg.Default(nil, &this.operatorCtx)
 		}
 	} else {
 		handleQuota = context.UseRequestQuota()
@@ -147,7 +147,7 @@ func (this *InitialGroup) processItem(item value.AnnotatedValue, context *Contex
 	}
 
 	for _, agg := range this.plan.Aggregates() {
-		v, e := agg.CumulateInitial(item, aggregates[agg.String()], context)
+		v, e := agg.CumulateInitial(item, aggregates[agg.String()], &this.operatorCtx)
 		if e != nil {
 			context.Fatal(errors.NewGroupUpdateError(e, "Error updating initial GROUP value."))
 			item.Recycle()

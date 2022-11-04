@@ -85,8 +85,8 @@ func (this *DistinctScan) RunOnce(context *Context, parent value.Value) {
 		this.SetInput(this.scan)
 		this.fork(this.scan, context, parent)
 
-		limit := evalLimitOffset(this.plan.Limit(), parent, int64(-1), this.plan.Covering(), context)
-		offset := evalLimitOffset(this.plan.Offset(), parent, int64(0), this.plan.Covering(), context)
+		limit := evalLimitOffset(this.plan.Limit(), parent, int64(-1), this.plan.Covering(), &this.operatorCtx)
+		offset := evalLimitOffset(this.plan.Offset(), parent, int64(0), this.plan.Covering(), &this.operatorCtx)
 		n := 1
 		ok := true
 

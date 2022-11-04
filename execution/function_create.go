@@ -76,10 +76,10 @@ func (this *CreateFunction) RunOnce(context *Context, parent value.Value) {
 			replace = false
 		}
 		if replace {
-			err = functions.CheckDelete(this.plan.Name(), context)
+			err = functions.CheckDelete(this.plan.Name(), &this.operatorCtx)
 		}
 		if err == nil {
-			err = this.plan.Body().SetStorage(context, this.plan.Name().Path())
+			err = this.plan.Body().SetStorage(&this.operatorCtx, this.plan.Name().Path())
 		}
 		if err == nil {
 			this.switchPhase(_SERVTIME)

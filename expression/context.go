@@ -56,6 +56,8 @@ type Context interface {
 	RecordJsCU(d time.Duration, m uint64)
 	IsAdmin() bool
 	PreserveProjectionOrder() bool
+	Park(func(bool))
+	Resume()
 }
 
 type ExecutionHandle interface {

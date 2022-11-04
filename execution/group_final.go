@@ -98,7 +98,7 @@ func (this *FinalGroup) processItem(item value.AnnotatedValue, context *Context)
 	var gk string
 	if len(this.plan.Keys()) > 0 {
 		var e error
-		gk, e = groupKey(item, this.plan.Keys(), context)
+		gk, e = groupKey(item, this.plan.Keys(), &this.operatorCtx)
 		if e != nil {
 			context.Fatal(errors.NewEvaluationError(e, "GROUP key"))
 			item.Recycle()
@@ -123,7 +123,7 @@ func (this *FinalGroup) processItem(item value.AnnotatedValue, context *Context)
 	switch aggregates := aggregates.(type) {
 	case map[string]value.Value:
 		for _, agg := range this.plan.Aggregates() {
-			v, e := agg.ComputeFinal(aggregates[agg.String()], context)
+			v, e := agg.ComputeFinal(aggregates[agg.String()], &this.operatorCtx)
 			if e != nil {
 				context.Fatal(errors.NewGroupUpdateError(e, "Error updating final GROUP value."))
 				item.Recycle()
@@ -159,7 +159,7 @@ func (this *FinalGroup) afterItems(context *Context) {
 		aggregates := make(map[string]value.Value, len(this.plan.Aggregates()))
 		av.SetAttachment("aggregates", aggregates)
 		for _, agg := range this.plan.Aggregates() {
-			aggregates[agg.String()], _ = agg.Default(nil, context)
+			aggregates[agg.String()], _ = agg.Default(nil, &this.operatorCtx)
 		}
 
 		if context.UseRequestQuota() {

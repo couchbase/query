@@ -15,12 +15,12 @@ import (
 	"github.com/couchbase/query/value"
 )
 
-func buildFor(f *algebra.UpdateFor, val value.Value, context *Context) (
+func buildFor(f *algebra.UpdateFor, val value.Value, context *opContext) (
 	vals []value.Value, mismatch bool, err error) {
 	return buildFors(f.Bindings(), value.Values{val}, context)
 }
 
-func buildFors(dimensions []expression.Bindings, vals value.Values, context *Context) (
+func buildFors(dimensions []expression.Bindings, vals value.Values, context *opContext) (
 	rvals []value.Value, mismatch bool, err error) {
 	if len(dimensions) == 0 {
 		return
@@ -64,7 +64,7 @@ func buildFors(dimensions []expression.Bindings, vals value.Values, context *Con
 	return buildFors(dimensions[1:], nvals, context)
 }
 
-func arraysFor(bindings expression.Bindings, val value.Value, context *Context) (
+func arraysFor(bindings expression.Bindings, val value.Value, context *opContext) (
 	arrays, buffers [][]interface{}, pairs [][]util.IPair, n int, mismatch bool, err error) {
 	var bv value.Value
 
