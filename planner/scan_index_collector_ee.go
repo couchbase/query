@@ -84,10 +84,6 @@ func (this *scanIdxCol) VisitPrimaryScan3(op *plan.PrimaryScan3) (interface{}, e
 	return nil, nil
 }
 
-func (this *scanIdxCol) VisitParentScan(op *plan.ParentScan) (interface{}, error) {
-	return nil, nil
-}
-
 func (this *scanIdxCol) VisitIndexScan(op *plan.IndexScan) (interface{}, error) {
 	info := extractInfo(op.Index(), this.alias, this.keyspace, false, this.validatePhase)
 	if info != nil {

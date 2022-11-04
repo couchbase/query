@@ -209,9 +209,6 @@ Plans include the following operators:
     * __KeyScan__: Does not perform a scan. Directly treats the
       provided keys as a scan.
 
-    * __ParentScan__: Used for UNNEST. Treats the parent object as the
-      result of a scan.
-
     * __ValueScan__: Used for the VALUES clause of INSERT and UPSERT
       statements. Treats the provided values as the result of a scan.
 

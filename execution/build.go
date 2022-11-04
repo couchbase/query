@@ -106,10 +106,6 @@ func (this *builder) VisitPrimaryScan3(plan *plan.PrimaryScan3) (interface{}, er
 	return checkOp(NewPrimaryScan3(plan, this.context), this.context)
 }
 
-func (this *builder) VisitParentScan(plan *plan.ParentScan) (interface{}, error) {
-	return checkOp(NewParentScan(plan, this.context), this.context)
-}
-
 func (this *builder) VisitIndexScan(plan *plan.IndexScan) (interface{}, error) {
 	this.setScannedIndexes(plan.Term())
 	this.setAliasMap(plan.Term())
