@@ -3957,7 +3957,17 @@ func timeToStrPercentFormat(t time.Time, format string) string {
 					return fmt.Sprintf("!(Invalid format: '%s')", format)
 				}
 			}
+			colons := 0
+			for format[i] == ':' {
+				colons++
+				i++
+			}
+			if colons > 0 && format[i] != 'z' {
+				return fmt.Sprintf("!(Invalid format: '%s')", format)
+			}
 			switch format[i] {
+			case 'x':
+				fallthrough
 			case 'D':
 				res = append(res, []rune(t.Format(DEFAULT_SHORT_DATE_FORMAT))...)
 			case 'F':
@@ -4060,10 +4070,32 @@ func timeToStrPercentFormat(t time.Time, format string) string {
 				res = append(res, formatInt(width, 2, pad, t.Second())...)
 			case 's':
 				res = append(res, formatInt(width, 0, pad, int(t.Unix()))...)
+			case 'r':
+				p := false
+				h := t.Hour()
+				if h == 0 {
+					h = 12
+				} else if h > 12 {
+					p = true
+					h -= 12
+				}
+				res = append(res, formatInt(width, 2, pad, h)...)
+				res = append(res, rune(':'))
+				res = append(res, formatInt(width, 2, pad, t.Minute())...)
+				res = append(res, rune(':'))
+				res = append(res, formatInt(width, 2, pad, t.Second())...)
+				res = append(res, rune(' '))
+				if !p {
+					res = append(res, []rune("AM")...)
+				} else {
+					res = append(res, []rune("PM")...)
+				}
 			case 'R':
 				res = append(res, formatInt(width, 2, pad, t.Hour())...)
 				res = append(res, rune(':'))
 				res = append(res, formatInt(width, 2, pad, t.Minute())...)
+			case 'X':
+				fallthrough
 			case 'T':
 				res = append(res, formatInt(width, 2, pad, t.Hour())...)
 				res = append(res, rune(':'))
@@ -4078,16 +4110,92 @@ func timeToStrPercentFormat(t time.Time, format string) string {
 				_, off := t.Zone()
 				h := off / (60 * 60)
 				m := off - (h * 60 * 60)
+				s := m % 60
 				m /= 60
 				if m < 0 {
 					m = m * -1
+					s = s * -1
 				}
-				res = append(res, []rune(fmt.Sprintf("%+03d%02d", h, m))...)
+				switch colons {
+				case 0:
+					res = append(res, []rune(fmt.Sprintf("%+03d%02d", h, m))...)
+				case 1:
+					res = append(res, []rune(fmt.Sprintf("%+03d:%02d", h, m))...)
+				case 2:
+					res = append(res, []rune(fmt.Sprintf("%+03d:%02d:%02d", h, m, s))...)
+				case 3:
+					if m == 0 && s == 0 {
+						res = append(res, []rune(fmt.Sprintf("%+03d", h))...)
+					} else if s == 0 {
+						res = append(res, []rune(fmt.Sprintf("%+03d:%02d", h, m))...)
+					} else {
+						res = append(res, []rune(fmt.Sprintf("%+03d:%02d:%02d", h, m, s))...)
+					}
+				default:
+					return fmt.Sprintf("!(Invalid format: '%s')", format)
+				}
 			case 'Z':
 				zone, _ := t.Zone()
 				res = append(res, []rune(zone)...)
 			case '%':
 				res = append(res, rune('%'))
+			case 'V':
+				_, w := t.ISOWeek()
+				res = append(res, formatInt(width, 1, pad, w)...)
+			case 'G':
+				y, _ := t.ISOWeek()
+				res = append(res, formatInt(width, 1, pad, y)...)
+			case 'j':
+				res = append(res, formatInt(width, 1, pad, t.YearDay())...)
+			case 'q':
+				q := (int(t.Month()) - 1) / 3
+				res = append(res, formatInt(width, 1, pad, q+1)...)
+			case 'u':
+				w := int(t.Weekday())
+				if w == 0 {
+					w = 7
+				}
+				res = append(res, formatInt(width, 1, pad, w)...)
+			case 'w':
+				res = append(res, formatInt(width, 1, pad, int(t.Weekday()))...)
+			case 'U':
+				first := time.Date(t.Year(), 1, 1, 0, 0, 0, 0, t.Location())
+				fd := int(first.Weekday())
+				d := t.YearDay() - 1 + fd
+				w := d / 7
+				res = append(res, formatInt(width, 1, pad, w)...)
+			case 'W':
+				first := time.Date(t.Year(), 1, 1, 0, 0, 0, 0, t.Location())
+				fd := int(first.Weekday())
+				fd -= 1
+				if fd < 0 {
+					fd += 7
+				}
+				d := t.YearDay() - 1 + fd
+				w := d / 7
+				res = append(res, formatInt(width, 1, pad, w)...)
+			case '#':
+				n := t.Unix()
+				if n < 0 {
+					n = 0
+				}
+				h := n / (60 * 60)
+				n -= h * (60 * 60)
+				m := n / 60
+				s := n % 60
+				res = append(res, []rune(fmt.Sprintf("%d:%02d:%02d", h, m, s))...)
+			case '@':
+				n := t.UnixMilli()
+				if n < 0 {
+					n = 0
+				}
+				h := n / (60 * 60 * 1000)
+				n -= h * (60 * 60 * 1000)
+				m := n / (60 * 1000)
+				n -= m * (60 * 1000)
+				s := n / 1000
+				n %= 1000
+				res = append(res, []rune(fmt.Sprintf("%d:%02d:%02d.%03d", h, m, s, n))...)
 			default:
 				res = append(res, []rune(fmt.Sprintf("!(Unknown format: '%c')", format[i]))...)
 			}
