@@ -21,7 +21,7 @@ then
   DEF_VERSION=`head -1 /opt/couchbase/VERSION.txt|sed 's/-.*/-local_build/'`
 elif [ -f "/Applications/Couchbase Server.app/Contents/Resources/couchbase-core/VERSION.txt" ]
 then
-  DEF_VERSION=`head -1 "/Applications/Couchbase Server.app'/Contents/Resources/couchbase-core/VERSION.txt"\
+  DEF_VERSION=`head -1 "/Applications/Couchbase Server.app/Contents/Resources/couchbase-core/VERSION.txt"\
     |sed 's/-.*/-local_build/'`
 fi
 
