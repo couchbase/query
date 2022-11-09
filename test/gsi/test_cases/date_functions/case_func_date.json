@@ -82,6 +82,7 @@
                         "~children": [
                             {
                                 "#operator": "InitialProject",
+                                "discard_original": true,
                                 "preserve_order": true,
                                 "result_terms": [
                                     {

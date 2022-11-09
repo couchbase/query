@@ -1,498 +1,499 @@
 [
-    {
-       "statements": "SELECT 1+1 as two",
-       "results": [
-        {
-            "two": 2
-        }
-    ]    
-    },
-
-    {
-        "statements": "SELECT custId, id FROM orders WHERE test_id=\"select_func\" ORDER BY id",
-        "results": [
-        {
-            "custId": "customer18",
-            "id": "1200"
-        },
-        {
-            "custId": "customer312",
-            "id": "1234"
-        },
-        {
-            "custId": "customer12",
-            "id": "1235"
-        },
-        {
-            "custId": "customer38",
-            "id": "1236"
-        }
-    ] 
-    },
-
-    {
-        "statements": "select id, orderlines FROM orders WHERE test_id=\"select_func\" order by id",
-        "results": [
-        {
-            "id": "1200",
-            "orderlines": [
-                {
-                    "productId": "coffee01",
-                    "qty": 1
-                },
-                {
-                    "productId": "sugar22",
-                    "qty": 1
-                }
-            ]
-        },
-        {
-            "id": "1234",
-            "orderlines": [
-                {
-                    "productId": "coffee01",
-                    "qty": 2
-                },
-                {
-                    "productId": "tea111",
-                    "qty": 1
-                }
-            ]
-        },
-        {
-            "id": "1235",
-            "orderlines": [
-                {
-                    "productId": "tea111",
-                    "qty": 1
-                },
-                {
-                    "productId": "sugar22",
-                    "qty": 1
-                }
-            ]
-        },
-        {
-            "id": "1236",
-            "orderlines": [
-                {
-                    "productId": "coffee01",
-                    "qty": 1
-                },
-                {
-                    "productId": "sugar22",
-                    "qty": 1
-                }
-            ]
-        }
+  {
+    "statements": "SELECT 1+1 as two",
+    "results": [
+      {
+        "two": 2
+      }
     ]
-    },
-
-    {
-        "statements": "SELECT `shipped-on` FROM orders WHERE test_id=\"select_func\" ORDER BY `shipped-on`",
-        "results": [
-        {},
-        {},
-        {
-            "shipped-on": null
-        },
-        {
-            "shipped-on": "2012/01/02"
-        }
+  },
+  {
+    "statements": "SELECT custId, id FROM orders WHERE test_id=\"select_func\" ORDER BY id",
+    "results": [
+      {
+        "custId": "customer18",
+        "id": "1200"
+      },
+      {
+        "custId": "customer312",
+        "id": "1234"
+      },
+      {
+        "custId": "customer12",
+        "id": "1235"
+      },
+      {
+        "custId": "customer38",
+        "id": "1236"
+      }
     ]
-    },
-
-    {
-        "statements": "SELECT orderlines[0].productId FROM orders WHERE test_id=\"select_func\" ORDER BY orderlines[0].productId",
-        "results": [
-        {
-            "productId": "coffee01"
-        },
-        {
-            "productId": "coffee01"
-        },
-        {
-            "productId": "coffee01"
-        },
-        {
-            "productId": "tea111"
-        }
-    ]
-    },
-
-    {
-        "statements": "SELECT orderlines[0].* FROM orders WHERE test_id=\"select_func\" ORDER BY orderlines[0].productId, orderlines[0].qty",
-        "results": [
-        {
+  },
+  {
+    "statements": "select id, orderlines FROM orders WHERE test_id=\"select_func\" order by id",
+    "results": [
+      {
+        "id": "1200",
+        "orderlines": [
+          {
             "productId": "coffee01",
             "qty": 1
-        },
-        {
-            "productId": "coffee01",
+          },
+          {
+            "productId": "sugar22",
             "qty": 1
-        },
-        {
+          }
+        ]
+      },
+      {
+        "id": "1234",
+        "orderlines": [
+          {
             "productId": "coffee01",
             "qty": 2
-        },
-        {
+          },
+          {
             "productId": "tea111",
             "qty": 1
-        }
-    ]
-    },
-
-    {
-        "statements": "SELECT orderlines[0].productId.* FROM orders WHERE test_id=\"select_func\" ORDER BY orderlines[0].productId",
-        "results": [
-        {},
-        {},
-        {},
-        {}
-    ]
-    },
-
-    {
-        "statements": "SELECT orderlines[0].*, orderlines[1].* FROM orders WHERE test_id=\"select_func\" ORDER BY orderlines[0].productId, orderlines[1].productId",
-        "results": [
-        {
-            "productId": "sugar22",
-            "qty": 1
-        },
-        {
-            "productId": "sugar22",
-            "qty": 1
-        },
-        {
+          }
+        ]
+      },
+      {
+        "id": "1235",
+        "orderlines": [
+          {
             "productId": "tea111",
             "qty": 1
-        },
-        {
+          },
+          {
             "productId": "sugar22",
             "qty": 1
-        }
-    ]
-    },
-
-    {
-        "statements": "SELECT orderlines[0].*, id, orderlines[1].* FROM orders WHERE test_id=\"select_func\" ORDER BY orderlines[0].productId, id",
-        "results": [
-        {
-            "id": "1200",
-            "productId": "sugar22",
-            "qty": 1
-        },
-        {
-            "id": "1234",
-            "productId": "tea111",
-            "qty": 1
-        },
-        {
-            "id": "1236",
-            "productId": "sugar22",
-            "qty": 1
-        },
-        {
-            "id": "1235",
-            "productId": "sugar22",
-            "qty": 1
-        }
-    ]
-    },
-
-    {
-        "statements": "SELECT 1, orderlines[0] as totords FROM orders WHERE test_id=\"select_func\" ORDER BY 1, totords",
-        "results": [
-        {
-            "$1": 1,
-            "totords": {
-                "productId": "coffee01",
-                "qty": 1
-            }
-        },
-        {
-            "$1": 1,
-            "totords": {
-                "productId": "coffee01",
-                "qty": 1
-            }
-        },
-        {
-            "$1": 1,
-            "totords": {
-                "productId": "coffee01",
-                "qty": 2
-            }
-        },
-        {
-            "$1": 1,
-            "totords": {
-                "productId": "tea111",
-                "qty": 1
-            }
-        }
-    ]
-    },
-
-
-    {
-        "statements": "SELECT orderlines[0].productId AS productId, orderlines[0] AS totords FROM orders WHERE test_id=\"select_func\" ORDER BY productId, totords.qty",
-        "results": [
-        {
+          }
+        ]
+      },
+      {
+        "id": "1236",
+        "orderlines": [
+          {
             "productId": "coffee01",
-            "totords": {
-                "productId": "coffee01",
-                "qty": 1
-            }
+            "qty": 1
+          },
+          {
+            "productId": "sugar22",
+            "qty": 1
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "statements": "SELECT `shipped-on` FROM orders WHERE test_id=\"select_func\" ORDER BY `shipped-on`",
+    "results": [
+      {},
+      {},
+      {
+        "shipped-on": null
+      },
+      {
+        "shipped-on": "2012/01/02"
+      }
+    ]
+  },
+  {
+    "statements": "SELECT orderlines[0].productId FROM orders WHERE test_id=\"select_func\" ORDER BY orderlines[0].productId",
+    "results": [
+      {
+        "productId": "coffee01"
+      },
+      {
+        "productId": "coffee01"
+      },
+      {
+        "productId": "coffee01"
+      },
+      {
+        "productId": "tea111"
+      }
+    ]
+  },
+  {
+    "statements": "SELECT orderlines[0].* FROM orders WHERE test_id=\"select_func\" ORDER BY orderlines[0].productId, orderlines[0].qty",
+    "results": [
+      {
+        "productId": "coffee01",
+        "qty": 1
+      },
+      {
+        "productId": "coffee01",
+        "qty": 1
+      },
+      {
+        "productId": "coffee01",
+        "qty": 2
+      },
+      {
+        "productId": "tea111",
+        "qty": 1
+      }
+    ]
+  },
+  {
+    "statements": "SELECT orderlines[0].productId.* FROM orders WHERE test_id=\"select_func\" ORDER BY orderlines[0].productId",
+    "results": [
+      {},
+      {},
+      {},
+      {}
+    ]
+  },
+  {
+    "statements": "SELECT orderlines[0].*, orderlines[1].* FROM orders WHERE test_id=\"select_func\" ORDER BY orderlines[0].productId, orderlines[1].productId",
+    "results": [
+      {
+        "productId": "sugar22",
+        "qty": 1
+      },
+      {
+        "productId": "sugar22",
+        "qty": 1
+      },
+      {
+        "productId": "tea111",
+        "qty": 1
+      },
+      {
+        "productId": "sugar22",
+        "qty": 1
+      }
+    ]
+  },
+  {
+    "statements": "SELECT orderlines[0].*, id, orderlines[1].* FROM orders WHERE test_id=\"select_func\" ORDER BY orderlines[0].productId, id",
+    "results": [
+      {
+        "id": "1200",
+        "productId": "sugar22",
+        "qty": 1
+      },
+      {
+        "id": "1234",
+        "productId": "tea111",
+        "qty": 1
+      },
+      {
+        "id": "1236",
+        "productId": "sugar22",
+        "qty": 1
+      },
+      {
+        "id": "1235",
+        "productId": "sugar22",
+        "qty": 1
+      }
+    ]
+  },
+  {
+    "statements": "SELECT 1, orderlines[0] as totords FROM orders WHERE test_id=\"select_func\" ORDER BY 1, totords",
+    "results": [
+      {
+        "$1": 1,
+        "totords": {
+          "productId": "coffee01",
+          "qty": 1
+        }
+      },
+      {
+        "$1": 1,
+        "totords": {
+          "productId": "coffee01",
+          "qty": 1
+        }
+      },
+      {
+        "$1": 1,
+        "totords": {
+          "productId": "coffee01",
+          "qty": 2
+        }
+      },
+      {
+        "$1": 1,
+        "totords": {
+          "productId": "tea111",
+          "qty": 1
+        }
+      }
+    ]
+  },
+  {
+    "statements": "SELECT orderlines[0].productId AS productId, orderlines[0] AS totords FROM orders WHERE test_id=\"select_func\" ORDER BY productId, totords.qty",
+    "results": [
+      {
+        "productId": "coffee01",
+        "totords": {
+          "productId": "coffee01",
+          "qty": 1
+        }
+      },
+      {
+        "productId": "coffee01",
+        "totords": {
+          "productId": "coffee01",
+          "qty": 1
+        }
+      },
+      {
+        "productId": "coffee01",
+        "totords": {
+          "productId": "coffee01",
+          "qty": 2
+        }
+      },
+      {
+        "productId": "tea111",
+        "totords": {
+          "productId": "tea111",
+          "qty": 1
+        }
+      }
+    ]
+  },
+  {
+    "statements": "SELECT custId, orderlines[1].* FROM orders WHERE test_id=\"select_func\" ORDER BY custId",
+    "results": [
+      {
+        "custId": "customer12",
+        "productId": "sugar22",
+        "qty": 1
+      },
+      {
+        "custId": "customer18",
+        "productId": "sugar22",
+        "qty": 1
+      },
+      {
+        "custId": "customer312",
+        "productId": "tea111",
+        "qty": 1
+      },
+      {
+        "custId": "customer38",
+        "productId": "sugar22",
+        "qty": 1
+      }
+    ]
+  },
+  {
+    "statements": "SELECT orderlines[0] FROM orders WHERE test_id=\"select_func\" ORDER BY custId LIMIT 1",
+    "results": [
+      {
+        "$1": {
+          "productId": "tea111",
+          "qty": 1
+        }
+      }
+    ]
+  },
+  {
+    "statements": "SELECT {\"name\": id} AS custom_obj FROM orders WHERE test_id=\"select_func\" ORDER BY custom_obj",
+    "results": [
+      {
+        "custom_obj": {
+          "name": "1200"
+        }
+      },
+      {
+        "custom_obj": {
+          "name": "1234"
+        }
+      },
+      {
+        "custom_obj": {
+          "name": "1235"
+        }
+      },
+      {
+        "custom_obj": {
+          "name": "1236"
+        }
+      }
+    ]
+  },
+  {
+    "statements": "SELECT id FROM orders WHERE `shipped-on` IS VALUED AND test_id=\"select_func\" ORDER BY id",
+    "results": [
+      {
+        "id": "1200"
+      }
+    ]
+  },
+  {
+    "statements": "SELECT `shipped-on`, custId, id FROM orders WHERE `shipped-on` IS NULL AND test_id=\"select_func\" ORDER BY id",
+    "results": [
+      {
+        "custId": "customer38",
+        "id": "1236",
+        "shipped-on": null
+      }
+    ]
+  },
+  {
+    "statements": "SELECT custId FROM orders WHERE id = \"1236\" AND test_id=\"select_func\"",
+    "results": [
+      {
+        "custId": "customer38"
+      }
+    ]
+  },
+  {
+    "statements": "SELECT `shipped-on` FROM orders WHERE test_id=\"select_func\" ORDER BY `shipped-on`",
+    "results": [
+      {},
+      {},
+      {
+        "shipped-on": null
+      },
+      {
+        "shipped-on": "2012/01/02"
+      }
+    ]
+  },
+  {
+    "statements": "SELECT orderlines[0].qty FROM orders WHERE test_id=\"select_func\" ORDER BY custId",
+    "results": [
+      {
+        "qty": 1
+      },
+      {
+        "qty": 1
+      },
+      {
+        "qty": 2
+      },
+      {
+        "qty": 1
+      }
+    ]
+  },
+  {
+    "namedArgs": {
+      "field": "one"
+    },
+    "statements": "SELECT t.[t.lookup],t.[$field] FROM {\"lookup\":\"two\",\"one\":1,\"two\":2} t",
+    "results": [
+      {
+        "$1": 1,
+        "lookup": 2
+      }
+    ]
+  },
+  {
+    "comment": "EXCLUDE clause: implicit keyspace",
+    "statements": "SELECT * EXCLUDE orderlines FROM orders USE KEYS[\"1234_select_func\"]",
+    "results": [
+      {
+        "orders": {
+          "custId": "customer312",
+          "id": "1234",
+          "test_id": "select_func",
+          "type": "order"
+        }
+      }
+    ]
+  },
+  {
+    "comment": "EXCLUDE clause: explicit keyspace",
+    "statements": "SELECT * EXCLUDE orders.orderlines FROM orders USE KEYS[\"1234_select_func\"]",
+    "results": [
+      {
+        "orders": {
+          "custId": "customer312",
+          "id": "1234",
+          "test_id": "select_func",
+          "type": "order"
+        }
+      }
+    ]
+  },
+  {
+    "comment": "EXCLUDE clause: simple mixed",
+    "statements": "SELECT * EXCLUDE orderlines, orders.custId FROM orders USE KEYS[\"1234_select_func\"]",
+    "results": [
+      {
+        "orders": {
+          "id": "1234",
+          "test_id": "select_func",
+          "type": "order"
+        }
+      }
+    ]
+  },
+  {
+    "comment": "EXCLUDE clause: simple multiple",
+    "statements": "SELECT * EXCLUDE o1.orderlines, o2.orderlines FROM orders o1 USE KEYS[\"1234_select_func\"], orders o2 USE KEYS[\"1200_select_func\"]",
+    "results": [
+      {
+        "o1": {
+          "custId": "customer312",
+          "id": "1234",
+          "test_id": "select_func",
+          "type": "order"
         },
-        {
+        "o2": {
+          "custId": "customer18",
+          "id": "1200",
+          "shipped-on": "2012/01/02",
+          "test_id": "select_func",
+          "type": "order"
+        }
+      }
+    ]
+  },
+  {
+    "comment": "EXCLUDE clause: simple array element",
+    "statements": "SELECT o1.* EXCLUDE orderlines[1] FROM orders o1 USE KEYS[\"1234_select_func\"]",
+    "results": [
+      {
+        "custId": "customer312",
+        "id": "1234",
+        "orderlines": [
+          {
             "productId": "coffee01",
-            "totords": {
-                "productId": "coffee01",
-                "qty": 1
-            }
-        },
-        {
-            "productId": "coffee01",
-            "totords": {
-                "productId": "coffee01",
-                "qty": 2
-            }
-        },
-        {
-            "productId": "tea111",
-            "totords": {
-                "productId": "tea111",
-                "qty": 1
-            }
-        }
-    ]
-    },
-
-    {
-        "statements": "SELECT custId, orderlines[1].* FROM orders WHERE test_id=\"select_func\" ORDER BY custId",
-        "results": [
-        {
-            "custId": "customer12",
-            "productId": "sugar22",
-            "qty": 1
-        },
-        {
-            "custId": "customer18",
-            "productId": "sugar22",
-            "qty": 1
-        },
-        {
-            "custId": "customer312",
-            "productId": "tea111",
-            "qty": 1
-        },
-        {
-            "custId": "customer38",
-            "productId": "sugar22",
-            "qty": 1
-        }
-    ]
-    },
-
-    {
-        "statements": "SELECT orderlines[0] FROM orders WHERE test_id=\"select_func\" ORDER BY custId LIMIT 1",
-        "results": [
-        {
-            "$1": {
-                "productId": "tea111",
-                "qty": 1
-            }
-        }
-    ]
-    },
-   
-    {
-        "statements": "SELECT {\"name\": id} AS custom_obj FROM orders WHERE test_id=\"select_func\" ORDER BY custom_obj",
-        "results": [
-        {
-            "custom_obj": {
-                "name": "1200"
-            }
-        },
-        {
-            "custom_obj": {
-                "name": "1234"
-            }
-        },
-        {
-            "custom_obj": {
-                "name": "1235"
-            }
-        },
-        {
-            "custom_obj": {
-                "name": "1236"
-            }
-        }
-    ]
-    }, 
-    
-    {
-        "statements" : "SELECT id FROM orders WHERE `shipped-on` IS VALUED AND test_id=\"select_func\" ORDER BY id",
-        "results": [
-        {
-            "id": "1200"
-        }
-    ]
-    },
-
-    {
-        "statements" : "SELECT `shipped-on`, custId, id FROM orders WHERE `shipped-on` IS NULL AND test_id=\"select_func\" ORDER BY id",
-        "results": [
-        {
-            "custId": "customer38",
-            "id": "1236",
-            "shipped-on": null
-        }
-    ]
-    },
-
-    {
-        "statements" : "SELECT custId FROM orders WHERE id = \"1236\" AND test_id=\"select_func\"",
-        "results": [
-        {
-            "custId": "customer38"
-        }
-    ]
-    },
-
-    {
-        "statements" : "SELECT `shipped-on` FROM orders WHERE test_id=\"select_func\" ORDER BY `shipped-on`",
-        "results": [
-        {},
-        {},
-        {
-            "shipped-on": null
-        },
-        {
-            "shipped-on": "2012/01/02"
-        }
-    ]
-    },
-
-    {
-        "statements" : "SELECT orderlines[0].qty FROM orders WHERE test_id=\"select_func\" ORDER BY custId",
-        "results": [
-        {
-            "qty": 1
-        },
-        {
-            "qty": 1
-        },
-        {
             "qty": 2
-        },
-        {
-            "qty": 1
-        }
+          }
+        ],
+        "test_id": "select_func",
+        "type": "order"
+      }
     ]
-    },
-    {
-        "namedArgs": {"field": "one"},
-        "statements": "SELECT t.[t.lookup],t.[$field] FROM {\"lookup\":\"two\",\"one\":1,\"two\":2} t",
-        "results": [
-            {
-                "$1": 1,
-                "lookup": 2
-            }
-        ]
-    },
-    {
-        "comment":"EXCLUDE clause: implicit keyspace",
-        "statements": "SELECT * EXCLUDE orderlines FROM orders USE KEYS[\"1234_select_func\"]",
-        "results": [
-            {
-                "orders": {
-                    "custId": "customer312",
-                    "id": "1234",
-                    "test_id": "select_func",
-                    "type": "order"
-                }
-            }
-        ]
-    },
-    {
-        "comment":"EXCLUDE clause: explicit keyspace",
-        "statements": "SELECT * EXCLUDE orders.orderlines FROM orders USE KEYS[\"1234_select_func\"]",
-        "results": [
-            {
-                "orders": {
-                    "custId": "customer312",
-                    "id": "1234",
-                    "test_id": "select_func",
-                    "type": "order"
-                }
-            }
-        ]
-    },
-    {
-        "comment":"EXCLUDE clause: simple mixed",
-        "statements": "SELECT * EXCLUDE orderlines, orders.custId FROM orders USE KEYS[\"1234_select_func\"]",
-        "results": [
-            {
-                "orders": {
-                    "id": "1234",
-                    "test_id": "select_func",
-                    "type": "order"
-                }
-            }
-        ]
-    },
-    {
-        "comment":"EXCLUDE clause: simple multiple",
-        "statements": "SELECT * EXCLUDE o1.orderlines, o2.orderlines FROM orders o1 USE KEYS[\"1234_select_func\"], orders o2 USE KEYS[\"1200_select_func\"]",
-        "results": [
-            {
-                "o1": {
-                    "custId": "customer312",
-                    "id": "1234",
-                    "test_id": "select_func",
-                    "type": "order"
-                },
-                "o2": {
-                    "custId": "customer18",
-                    "id": "1200",
-                    "shipped-on": "2012/01/02",
-                    "test_id": "select_func",
-                    "type": "order"
-                }
-            }
-        ]
-    },
-    {
-        "comment":"EXCLUDE clause: simple array element",
-        "statements": "SELECT o1.* EXCLUDE orderlines[1] FROM orders o1 USE KEYS[\"1234_select_func\"]",
-        "results": [
-            {
-                "custId": "customer312",
-                "id": "1234",
-                "orderlines": [
-                    {
-                        "productId": "coffee01",
-                        "qty": 2
-                    }
-                ],
-                "test_id": "select_func",
-                "type": "order"
-            }
-        ]
-    },
-    {
-        "comment":"EXCLUDE clause: string type",
-        "statements": "SELECT * EXCLUDE to_string(t.hideme) FROM {\"a\":1,\"b\":2,\"c\":3,\"hideme\":\"hideme,b\"} t",
-        "results": [
-            {
-                "t": {
-                    "a": 1,
-                    "c": 3
-                }
-            }
-        ]
-    }
+  },
+  {
+    "comment": "EXCLUDE clause: string type",
+    "statements": "SELECT * EXCLUDE to_string(t.hideme) FROM {\"a\":1,\"b\":2,\"c\":3,\"hideme\":\"hideme,b\"} t",
+    "results": [
+      {
+        "t": {
+          "a": 1,
+          "c": 3
+        }
+      }
+    ]
+  },
+  {
+    "comment": "Don't preserve original values beyond projection without order in statement block",
+    "statements": "(SELECT x.a FROM [{\"a\":1},{\"a\":3}] x) UNION (SELECT y.a FROM [{\"a\":2},{\"a\":4}] y) ORDER BY a",
+    "results": [
+      {
+        "a": 1
+      },
+      {
+        "a": 2
+      },
+      {
+        "a": 3
+      },
+      {
+        "a": 4
+      }
+    ]
+  }
 ]
