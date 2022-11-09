@@ -87,6 +87,7 @@ type AnnotatedValue interface {
 	SetSelf(s bool)
 	SetProjection(proj Value)
 	Original() AnnotatedValue
+	ResetOriginal()
 }
 
 func NewAnnotatedValue(val interface{}) AnnotatedValue {
@@ -436,6 +437,19 @@ func (this *annotatedValue) Original() AnnotatedValue {
 	return av
 }
 
+func (this *annotatedValue) ResetOriginal() {
+	if this.annotatedOrig != nil {
+		val := this.annotatedOrig.(*annotatedValue)
+		val.covers = nil
+		val.attachments = nil
+		val.meta = nil
+		annotatedPool.Put(unsafe.Pointer(val))
+		this.annotatedOrig = nil
+	}
+	// don't recycle as may have untracked reference in a field
+	this.original = nil
+}
+
 func (this *annotatedValue) Stash() int32 {
 	return atomic.AddInt32(&this.refCnt, 1) - 1
 }
@@ -682,4 +696,8 @@ func (this *annotatedValueSelfReference) SetProjection(proj Value) {
 
 func (this *annotatedValueSelfReference) Original() AnnotatedValue {
 	return (*annotatedValue)(this).Original()
+}
+
+func (this *annotatedValueSelfReference) ResetOriginal() {
+	(*annotatedValue)(this).ResetOriginal()
 }

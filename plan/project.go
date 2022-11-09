@@ -19,20 +19,22 @@ import (
 type InitialProject struct {
 	readonly
 	optEstimate
-	projection    *algebra.Projection
-	terms         ProjectTerms
-	starTermCount int
+	projection      *algebra.Projection
+	terms           ProjectTerms
+	starTermCount   int
+	discardOriginal bool
 }
 
 func NewInitialProject(projection *algebra.Projection, cost, cardinality float64,
-	size int64, frCost float64) *InitialProject {
+	size int64, frCost float64, discardOriginal bool) *InitialProject {
 
 	results := projection.Terms()
 	terms := make(ProjectTerms, len(results))
 
 	rv := &InitialProject{
-		projection: projection,
-		terms:      terms,
+		projection:      projection,
+		terms:           terms,
+		discardOriginal: discardOriginal,
 	}
 
 	for i, res := range results {
@@ -67,6 +69,10 @@ func (this *InitialProject) Terms() ProjectTerms {
 
 func (this *InitialProject) StarTermCount() int {
 	return this.starTermCount
+}
+
+func (this *InitialProject) DiscardOriginal() bool {
+	return this.discardOriginal
 }
 
 func (this *InitialProject) MarshalJSON() ([]byte, error) {
@@ -108,6 +114,9 @@ func (this *InitialProject) MarshalBase(f func(map[string]interface{})) map[stri
 		s = append(s, t)
 	}
 	r["result_terms"] = s
+	if this.discardOriginal {
+		r["discard_original"] = this.discardOriginal
+	}
 	if f != nil {
 		f(r)
 	}
@@ -125,6 +134,7 @@ func (this *InitialProject) UnmarshalJSON(body []byte) error {
 		Distinct    bool                   `json:"distinct"`
 		Raw         bool                   `json:"raw"`
 		OptEstimate map[string]interface{} `json:"optimizer_estimates"`
+		DiscardOrig bool                   `json:"discard_original"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -156,6 +166,7 @@ func (this *InitialProject) UnmarshalJSON(body []byte) error {
 
 	this.projection = projection
 	this.terms = project_terms
+	this.discardOriginal = _unmarshalled.DiscardOrig
 
 	unmarshalOptEstimate(&this.optEstimate, _unmarshalled.OptEstimate)
 
