@@ -307,7 +307,8 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 				}
 			}
 		}
-		this.addSubChildren(plan.NewInitialProject(projection, cost, cardinality, size, frCost, !this.subquery, bindings))
+		this.addSubChildren(plan.NewInitialProject(projection, cost, cardinality, size, frCost, !this.subquery, bindings,
+			!this.delayProjection))
 
 		// Initial DISTINCT (parallel)
 		if projection.Distinct() || this.setOpDistinct {

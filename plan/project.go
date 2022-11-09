@@ -21,23 +21,25 @@ import (
 type InitialProject struct {
 	readonly
 	optEstimate
-	projection    *algebra.Projection
-	terms         ProjectTerms
-	starTermCount int
-	preserveOrder bool
-	bindingNames  map[string]bool
+	projection      *algebra.Projection
+	terms           ProjectTerms
+	starTermCount   int
+	preserveOrder   bool
+	bindingNames    map[string]bool
+	discardOriginal bool
 }
 
 func NewInitialProject(projection *algebra.Projection, cost, cardinality float64,
-	size int64, frCost float64, preserveOrder bool, bindings expression.Bindings) *InitialProject {
+	size int64, frCost float64, preserveOrder bool, bindings expression.Bindings, discardOriginal bool) *InitialProject {
 
 	results := projection.Terms()
 	terms := make(ProjectTerms, len(results))
 
 	rv := &InitialProject{
-		projection:    projection,
-		terms:         terms,
-		preserveOrder: preserveOrder,
+		projection:      projection,
+		terms:           terms,
+		preserveOrder:   preserveOrder,
+		discardOriginal: discardOriginal,
 	}
 
 	for i, res := range results {
@@ -86,6 +88,10 @@ func (this *InitialProject) PreserveOrder() bool {
 
 func (this *InitialProject) BindingNames() map[string]bool {
 	return this.bindingNames
+}
+
+func (this *InitialProject) DiscardOriginal() bool {
+	return this.discardOriginal
 }
 
 func (this *InitialProject) MarshalJSON() ([]byte, error) {
@@ -141,6 +147,9 @@ func (this *InitialProject) MarshalBase(f func(map[string]interface{})) map[stri
 		sort.Strings(names)
 		r["bindings"] = names
 	}
+	if this.discardOriginal {
+		r["discard_original"] = this.discardOriginal
+	}
 	if f != nil {
 		f(r)
 	}
@@ -161,6 +170,7 @@ func (this *InitialProject) UnmarshalJSON(body []byte) error {
 		PreserveOrder bool                   `json:"preserve_order"`
 		Exclude       expression.Expressions `json:"exclude"`
 		Bindings      []string               `json:"bindings"`
+		DiscardOrig   bool                   `json:"discard_original"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -201,6 +211,7 @@ func (this *InitialProject) UnmarshalJSON(body []byte) error {
 	} else {
 		this.bindingNames = nil
 	}
+	this.discardOriginal = _unmarshalled.DiscardOrig
 
 	unmarshalOptEstimate(&this.optEstimate, _unmarshalled.OptEstimate)
 
