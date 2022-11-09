@@ -38,6 +38,7 @@
                                         "~children": [
                                             {
                                                 "#operator": "InitialProject",
+                                                "discard_original": true,
                                                 "result_terms": [
                                                     {
                                                         "expr": "(`prepareds`.`name`)"

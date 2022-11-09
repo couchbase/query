@@ -333,6 +333,7 @@
                         "~children": [
                             {
                                 "#operator": "InitialProject",
+                                "discard_original": true,
                                 "result_terms": [
                                     {
                                         "as": "c",
@@ -500,6 +501,7 @@
                         "~children": [
                             {
                                 "#operator": "InitialProject",
+                                "discard_original": true,
                                 "result_terms": [
                                     {
                                         "as": "c",

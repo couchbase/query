@@ -82,6 +82,7 @@
                         "~children": [
                             {
                                 "#operator": "InitialProject",
+                                "discard_original": true,
                                 "result_terms": [
                                     {
                                         "expr": "clock_str(\"2006-01-02\")"
