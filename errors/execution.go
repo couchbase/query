@@ -451,3 +451,11 @@ func NewValueError(code ErrorCode, args ...interface{}) Error {
 	}
 	return e
 }
+
+func NewCurlExecutionError(e error) Error {
+	c := make(map[string]interface{})
+	c["error"] = e
+	return &err{level: EXCEPTION, ICode: E_EXECUTION_CURL, IKey: "execution.curl",
+		InternalMsg: "Error executing CURL function", cause: c,
+		InternalCaller: CallerN(1)}
+}
