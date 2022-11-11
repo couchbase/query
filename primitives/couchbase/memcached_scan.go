@@ -46,7 +46,7 @@ const _SS_MAX_WORKER_IDLE = time.Minute * 60
 const _SS_MONITOR_INTERVAL = time.Minute * 15
 const _SS_MIN_SAMPLE_SIZE = 1
 const _SS_MIN_SCAN_SIZE = 256
-const _SS_RETRIES = 10
+const _SS_RETRIES = 35
 const _SS_RETRY_DELAY = time.Millisecond * 100
 
 /*
@@ -1099,6 +1099,11 @@ func (this *vbRangeScan) addKey(key []byte) bool {
 	return true
 }
 
+func (this *vbRangeScan) setupRetry() {
+	this.delayUntil = util.Now().Add(_SS_RETRY_DELAY + (time.Duration(_SS_RETRIES-this.retries) * _SS_RETRY_DELAY))
+	this.retries--
+}
+
 /*
  * Heap implementation to support ordered results.
  */
@@ -1255,8 +1260,7 @@ func (this *vbRangeScan) runScan(conn *memcached.Client, node string) bool {
 					return fmt.Sprintf("[%p,%d] create failed, error: %v", this, this.vbucket(), err)
 				})
 				if this.retries > 0 {
-					this.retries--
-					this.delayUntil = util.Now().Add(_SS_RETRY_DELAY)
+					this.setupRetry()
 					logging.Errora(func() string {
 						return fmt.Sprintf("Range scan [%p,%d] creation failed with: %v. Remaining retries: %v",
 							this, this.vbucket(), err, this.retries)
@@ -1755,8 +1759,7 @@ func (queue *rswQueue) runWorker() {
 								continue
 							}
 							if vbscan.retries > 0 {
-								vbscan.retries--
-								vbscan.delayUntil = util.Now().Add(_SS_RETRY_DELAY)
+								vbscan.setupRetry()
 							} else {
 								vbscan.reportError(qerrors.NewSSError(qerrors.E_SS_CONN, err))
 							}
