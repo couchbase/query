@@ -203,7 +203,7 @@ function repo_by_gomod {
         fi
         C=`grep "${grepo}" $file | grep -v module | grep -v replace | grep -v indirect| grep -v "${repo}-"`
         bpath=`echo $repo|awk -F/ '{print $1}'`
-        if [ -z "$C" ] && [ "$bpath" == "blevesearch" ]; then
+        if [ -z "$C" ]; then
             C=`grep "${grepo}" $file | grep -v module | grep -v replace | grep indirect| grep -v "${repo}-"`
         fi
         if [[ -z "$C" ]]
@@ -211,8 +211,13 @@ function repo_by_gomod {
             C="github.com/couchbase/${repo} $4"
         fi
         gpath=`echo $C| awk '{print $1}'`
-        vers=`echo $C| awk '{print $2}'`
-        get_path_subpath_commit "$repo" "$gpath" "$vers" $@
+	vers=`echo $C| awk '{print $2}'|awk -F- '{print $NF}'`
+	if [[ $@ == "" ]]; then
+	     # use go.mod version
+             get_path_subpath_commit "$repo" "$gpath" "$vers" "" "$vers"
+	else
+             get_path_subpath_commit "$repo" "$gpath" "$vers" $@
+	fi
     fi
 }
 
@@ -242,11 +247,20 @@ function repo_setup {
     repo_by_gomod ../cbft/go.mod zapx "v14" $defbranch
     repo_by_gomod ../cbft/go.mod zapx "v15" $defbranch
     repo_by_gomod ../n1fty/go.mod blevesearch/geo "" $defbranch
+    repo_by_gomod ../n1fty/go.mod blevesearch/sear "" $defbranch
     repo_by_gomod ../n1fty/go.mod blevesearch/bleve_index_api "" $defbranch
     repo_by_gomod ../n1fty/go.mod blevesearch/scorch_segment_api "v2" $defbranch
     repo_by_gomod go.mod gocbcore "v10" $defbranch
     repo_by_gomod ../cbgt/go.mod gocbcore "v9" $defbranch
     repo_by_gomod go.mod x/net "" `go version |  awk -F'[. ]' '{print "release-branch." $3 "." $4}'` $defbranch
+
+    repo_by_gomod go.mod prometheus/common
+    repo_by_gomod go.mod client_model
+    repo_by_gomod go.mod procfs
+    repo_by_gomod go.mod client_golang
+    repo_by_gomod go.mod golang_protobuf_extensions
+    repo_by_gomod go.mod aws-sdk-go
+    repo_by_gomod go.mod tools-common
 }
 
 function DevStandaloneSetup {
@@ -256,6 +270,12 @@ function DevStandaloneSetup {
     repo_setup
 
     # indexer generated files
+    if [[ -f ~/devbld/protoc-gen-go ]]
+    then
+            ln -sf ~/devbld/protoc-gen-go $GOPATH/bin
+	    (cd $GOPATH/src/github.com/couchbase/indexing/secondary/protobuf/query; protoc -I. --plugin=protoc-gen-go=$GOPATH/bin//protoc-gen-go query.proto --go_out=`pwd`)
+    fi
+
     if [[ (! -f ../indexing/secondary/protobuf/query/query.pb.go) ]]
     then
         base=
