@@ -1378,8 +1378,12 @@ func (p *namespace) KeyspaceUpdateCallback(bucket *cb.Bucket) {
 		}
 
 		// the KV nodes list has changed, force a refresh on next use
-		if len(ks.cbKeyspace.cbbucket.VBServerMap().ServerList) != len(bucket.VBSMJson.ServerList) {
+		if ks.cbKeyspace.cbbucket.ChangedVBServerMap(&bucket.VBSMJson) {
+			logging.Infof("Bucket updater: vbMap changed for bucket %v", bucket.Name)
 			ks.cbKeyspace.flags |= _NEEDS_REFRESH
+
+			// bucket will be reloaded, we don't need an updater anymore
+			ks.cbKeyspace.cbbucket.StopUpdater()
 		}
 		ks.cbKeyspace.Unlock()
 	} else {
@@ -1772,6 +1776,7 @@ func (k *keyspace) checkRefresh(err error) {
 		k.Lock()
 		k.flags |= _NEEDS_REFRESH
 		k.Unlock()
+		k.cbbucket.StopUpdater()
 	} else if cb.IsUnknownCollection(err) {
 		k.Lock()
 		k.flags |= _NEEDS_MANIFEST
@@ -1991,6 +1996,7 @@ func (b *keyspace) Release(bclose bool) {
 	b.agentProvider = nil
 	b.Unlock()
 	if bclose {
+		b.cbbucket.StopUpdater()
 		b.cbbucket.Close()
 	}
 	if agentProvider != nil {
