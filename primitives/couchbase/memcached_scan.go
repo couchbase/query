@@ -1347,6 +1347,21 @@ func (this *vbRangeScan) runScan(conn *memcached.Client, node string) bool {
 					}
 					retryable = false
 					continue
+				} else if resp.Status == gomemcached.NOT_MY_VBUCKET && this.retries > 0 {
+					if this.sampleSize == 0 && len(this.keys) > 0 {
+						this.setContinueFromLastKey()
+					} else if this.sampleSize == 0 {
+						this.setContinueFrom(start, exclStart)
+					}
+					this.setupRetry()
+					logging.Errora(func() string {
+						return fmt.Sprintf("Range scan [%p,%d] %v continue failed with: %v. Remaining retries: %v",
+							this, this.vbucket(), uuidAsString(uuid), resp.Status, this.retries)
+					})
+					if !_RSW.reQueueScan(this) {
+						this.reportError(qerrors.NewSSError(qerrors.E_SS_CONTINUE, err))
+					}
+					return false
 				}
 			}
 			break
@@ -1384,6 +1399,21 @@ func (this *vbRangeScan) runScan(conn *memcached.Client, node string) bool {
 							this.reportError(qerrors.NewSSError(qerrors.E_SS_CONTINUE, err))
 						}
 						return true
+					} else if resp.Status == gomemcached.NOT_MY_VBUCKET && this.retries > 0 {
+						if this.sampleSize == 0 && len(this.keys) > 0 {
+							this.setContinueFromLastKey()
+						} else if this.sampleSize == 0 {
+							this.setContinueFrom(start, exclStart)
+						}
+						this.setupRetry()
+						logging.Errora(func() string {
+							return fmt.Sprintf("Range scan [%p,%d] %v continue failed with: %v. Remaining retries: %v",
+								this, this.vbucket(), uuidAsString(uuid), resp.Status, this.retries)
+						})
+						if !_RSW.reQueueScan(this) {
+							this.reportError(qerrors.NewSSError(qerrors.E_SS_CONTINUE, err))
+						}
+						return cancelScan(false)
 					} else {
 						this.reportError(qerrors.NewSSError(qerrors.E_SS_CONTINUE, err))
 						return cancelScan(false)
