@@ -41,6 +41,7 @@ type Formalizer struct {
 	identifiers *value.ScopeValue
 	aliases     *value.ScopeValue
 	flags       uint32
+	correlation map[string]bool
 }
 
 func NewFormalizer(keyspace string, parent *Formalizer) *Formalizer {
@@ -63,7 +64,7 @@ func NewFunctionFormalizer(keyspace string, parent *Formalizer) *Formalizer {
 
 func newFormalizer(keyspace string, parent *Formalizer, mapSelf, mapKeyspace bool) *Formalizer {
 	var pv, av value.Value
-	var withs map[string]bool
+	var withs, correlation map[string]bool
 
 	flags := uint32(0)
 	if parent != nil {
@@ -75,6 +76,12 @@ func newFormalizer(keyspace string, parent *Formalizer, mapSelf, mapKeyspace boo
 			withs = make(map[string]bool, len(parent.withs))
 			for k, v := range parent.withs {
 				withs[k] = v
+			}
+		}
+		if len(parent.correlation) > 0 {
+			correlation = make(map[string]bool, len(parent.correlation))
+			for k, v := range parent.correlation {
+				correlation[k] = v
 			}
 		}
 	}
@@ -93,6 +100,7 @@ func newFormalizer(keyspace string, parent *Formalizer, mapSelf, mapKeyspace boo
 		identifiers: value.NewScopeValue(make(map[string]interface{}, 64), nil),
 		aliases:     value.NewScopeValue(make(map[string]interface{}), av),
 		flags:       flags,
+		correlation: correlation,
 	}
 
 	if !mapKeyspace && keyspace != "" {
@@ -266,7 +274,7 @@ func (this *Formalizer) VisitIdentifier(expr *Identifier) (interface{}, error) {
 			if subq_term_flags != 0 && !expr.IsSubqTermAlias() {
 				expr.SetSubqTermAlias(true)
 			}
-			if correlated_flags != 0 && !expr.IsCorrelated() {
+			if !expr.IsCorrelated() && (correlated_flags != 0 || this.CheckCorrelation(identifier)) {
 				expr.SetCorrelated(true)
 			}
 			return expr, nil
@@ -379,15 +387,20 @@ func (this *Formalizer) PushBindings(bindings Bindings, push bool) (err error) {
 
 		// check for correlated reference in binding expr
 		correlated := this.CheckCorrelatedParams(allowed, identifiers)
-		if !correlated {
-			subqueries, er := ListSubqueries(Expressions{expr}, false)
-			if er != nil {
-				return er
-			}
-			for _, subq := range subqueries {
-				if subq.IsCorrelated() {
-					correlated = true
-					break
+		subqueries, er := ListSubqueries(Expressions{expr}, false)
+		if er != nil {
+			return er
+		}
+		for _, subq := range subqueries {
+			if subq.IsCorrelated() {
+				for k, v := range subq.GetCorrelation() {
+					if this.CheckCorrelation(k) {
+						correlated = true
+						if this.correlation == nil {
+							this.correlation = make(map[string]bool)
+						}
+						this.correlation[k] = v
+					}
 				}
 			}
 		}
@@ -598,6 +611,10 @@ func (this *Formalizer) RestoreWiths(withs map[string]bool) {
 	this.withs = withs
 }
 
+func (this *Formalizer) GetCorrelation() map[string]bool {
+	return this.correlation
+}
+
 func (this *Formalizer) CheckCorrelated() bool {
 	return this.CheckCorrelatedParams(this.allowed, this.identifiers)
 }
@@ -605,6 +622,7 @@ func (this *Formalizer) CheckCorrelated() bool {
 func (this *Formalizer) CheckCorrelatedParams(allowed, identifiers *value.ScopeValue) bool {
 	immediate := allowed.GetValue().Fields()
 
+	correlated := false
 	for id, id_val := range identifiers.Fields() {
 		if _, ok := immediate[id]; !ok {
 			if this.WithAlias(id) {
@@ -613,9 +631,19 @@ func (this *Formalizer) CheckCorrelatedParams(allowed, identifiers *value.ScopeV
 					continue
 				}
 			}
-			return true
+			correlated = true
+			if this.correlation == nil {
+				this.correlation = make(map[string]bool)
+			}
+			this.correlation[id] = true
 		}
 	}
 
-	return false
+	return correlated
+}
+
+func (this *Formalizer) CheckCorrelation(alias string) bool {
+	immediate := this.allowed.GetValue().Fields()
+	_, ok := immediate[alias]
+	return !ok
 }

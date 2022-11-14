@@ -185,6 +185,10 @@ func (this *Unnest) IsCorrelated() bool {
 	return this.left.IsCorrelated()
 }
 
+func (this *Unnest) GetCorrelation() map[string]bool {
+	return this.left.GetCorrelation()
+}
+
 /*
 Marshals input unnest terms into byte array.
 */

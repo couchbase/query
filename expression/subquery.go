@@ -19,6 +19,7 @@ type Subquery interface {
 
 	Formalize(parent *Formalizer) error
 	IsCorrelated() bool
+	GetCorrelation() map[string]bool
 }
 
 /*

@@ -23,6 +23,7 @@ type ExpressionTerm struct {
 	correlated   bool
 	joinHint     JoinHint
 	property     uint32
+	correlation  map[string]bool
 }
 
 /*
@@ -30,7 +31,7 @@ Constructor.
 */
 func NewExpressionTerm(fromExpr expression.Expression, as string,
 	keyspaceTerm *KeyspaceTerm, isKeyspace bool, joinHint JoinHint) *ExpressionTerm {
-	return &ExpressionTerm{fromExpr, as, keyspaceTerm, isKeyspace, false, joinHint, 0}
+	return &ExpressionTerm{fromExpr, as, keyspaceTerm, isKeyspace, false, joinHint, 0, nil}
 }
 
 /*
@@ -158,6 +159,10 @@ func (this *ExpressionTerm) Formalize(parent *expression.Formalizer) (f *express
 
 	// Determine if this expression contains any correlated references
 	this.correlated = f1.CheckCorrelated()
+	if this.correlated {
+		this.correlation = addSimpleTermCorrelation(this.correlation, f1.GetCorrelation(),
+			this.IsAnsiJoinOp(), parent)
+	}
 
 	// for checking fromExpr we need a new formalizer, however, if this ExpressionTerm
 	// is under an ANSI join/nest operation we need to use the parent's formalizer
@@ -222,6 +227,13 @@ func (this *ExpressionTerm) IsCorrelated() bool {
 		return this.keyspaceTerm.IsCorrelated()
 	}
 	return this.correlated
+}
+
+func (this *ExpressionTerm) GetCorrelation() map[string]bool {
+	if this.isKeyspace {
+		return this.keyspaceTerm.GetCorrelation()
+	}
+	return this.correlation
 }
 
 /*

@@ -203,7 +203,11 @@ func (this *AnsiNest) SetPushable(pushable bool) {
 Returns whether contains correlation reference
 */
 func (this *AnsiNest) IsCorrelated() bool {
-	return this.left.IsCorrelated() || this.right.IsCorrelated()
+	return joinCorrelated(this.left, this.right)
+}
+
+func (this *AnsiNest) GetCorrelation() map[string]bool {
+	return getJoinCorrelation(this.left, this.right)
 }
 
 /*

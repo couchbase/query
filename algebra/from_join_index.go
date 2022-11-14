@@ -174,7 +174,11 @@ func (this *IndexJoin) For() string {
 Returns whether contains correlation reference
 */
 func (this *IndexJoin) IsCorrelated() bool {
-	return this.left.IsCorrelated() || this.right.IsCorrelated()
+	return this.left.IsCorrelated()
+}
+
+func (this *IndexJoin) GetCorrelation() map[string]bool {
+	return this.left.GetCorrelation()
 }
 
 /*

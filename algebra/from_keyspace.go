@@ -61,17 +61,18 @@ type KeyspaceTerm struct {
 	validateKeys    bool
 	correlated      bool
 	fromTwoParts    bool
+	correlation     map[string]bool
 }
 
 func NewKeyspaceTermFromPath(path *Path, as string,
 	keys expression.Expression, indexes IndexRefs) *KeyspaceTerm {
 	protectedString := path.ProtectedString()
-	return &KeyspaceTerm{path, nil, as, keys, indexes, nil, JOIN_HINT_NONE, 0, protectedString, nil, false, false, false}
+	return &KeyspaceTerm{path, nil, as, keys, indexes, nil, JOIN_HINT_NONE, 0, protectedString, nil, false, false, false, nil}
 }
 
 func NewKeyspaceTermFromExpression(expr expression.Expression, as string,
 	keys expression.Expression, indexes IndexRefs, joinHint JoinHint) *KeyspaceTerm {
-	return &KeyspaceTerm{nil, expr, as, keys, indexes, nil, joinHint, 0, "", nil, false, false, false}
+	return &KeyspaceTerm{nil, expr, as, keys, indexes, nil, joinHint, 0, "", nil, false, false, false, nil}
 }
 
 func (this *KeyspaceTerm) Accept(visitor NodeVisitor) (interface{}, error) {
@@ -213,6 +214,23 @@ func (this *KeyspaceTerm) Formalize(parent *expression.Formalizer) (f *expressio
 		return
 	}
 
+	_, ok := parent.Allowed().Field(keyspace)
+	if ok {
+		if this.IsAnsiJoin() {
+			errString = "JOIN"
+		} else if this.IsAnsiNest() {
+			errString = "NEST"
+		} else {
+			errString = "subquery"
+		}
+		var errContext string
+		if this.fromExpr != nil {
+			errContext = this.fromExpr.ErrorContext()
+		}
+		err = errors.NewDuplicateAliasError(errString, keyspace+errContext, "semantics.keyspace.duplicate_alias")
+		return nil, err
+	}
+
 	if this.IsAnsiJoinOp() {
 		f = parent
 	} else {
@@ -242,26 +260,10 @@ func (this *KeyspaceTerm) Formalize(parent *expression.Formalizer) (f *expressio
 		for _, subq := range subqs {
 			if subq.IsCorrelated() {
 				this.correlated = true
-				break
+				this.correlation = addSimpleTermCorrelation(this.correlation,
+					subq.GetCorrelation(), this.IsAnsiJoinOp(), parent)
 			}
 		}
-	}
-
-	_, ok := parent.Allowed().Field(keyspace)
-	if ok {
-		if this.IsAnsiJoin() {
-			errString = "JOIN"
-		} else if this.IsAnsiNest() {
-			errString = "NEST"
-		} else {
-			errString = "subquery"
-		}
-		var errContext string
-		if this.fromExpr != nil {
-			errContext = this.fromExpr.ErrorContext()
-		}
-		err = errors.NewDuplicateAliasError(errString, keyspace+errContext, "semantics.keyspace.duplicate_alias")
-		return nil, err
 	}
 
 	if this.IsAnsiJoinOp() {
@@ -574,6 +576,10 @@ Return whether correlated
 */
 func (this *KeyspaceTerm) IsCorrelated() bool {
 	return this.correlated
+}
+
+func (this *KeyspaceTerm) GetCorrelation() map[string]bool {
+	return this.correlation
 }
 
 /*
