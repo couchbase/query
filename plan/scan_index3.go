@@ -26,6 +26,7 @@ const (
 	ISCAN_EARLY_ORDER
 	ISCAN_EARLY_OFFSET
 	ISCAN_CACHE_RESULT
+	ISCAN_EARLY_LIMIT
 )
 
 type IndexScan3 struct {
@@ -144,6 +145,14 @@ func (this *IndexScan3) HasEarlyOrder() bool {
 
 func (this *IndexScan3) SetEarlyOrder() {
 	this.flags |= ISCAN_EARLY_ORDER
+}
+
+func (this *IndexScan3) HasEarlyLimit() bool {
+	return (this.flags & ISCAN_EARLY_LIMIT) != 0
+}
+
+func (this *IndexScan3) SetEarlyLimit() {
+	this.flags |= ISCAN_EARLY_LIMIT
 }
 
 func (this *IndexScan3) HasEarlyOffset() bool {
