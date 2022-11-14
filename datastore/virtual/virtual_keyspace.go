@@ -103,4 +103,4 @@ func (this *virtualKeyspace) Delete(deletes []string, context datastore.QueryCon
 	return nil, errors.NewVirtualKSNotSupportedError(nil, "Delete for virtual keyspace.")
 }
 
-func (this *virtualKeyspace) Release() {}
+func (this *virtualKeyspace) Release(close bool) {}

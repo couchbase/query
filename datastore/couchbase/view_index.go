@@ -466,7 +466,7 @@ func (vi *viewIndex) Scan(requestId string, span *datastore.Span, distinct bool,
 						delete(vi.keyspace.namespace.keyspaceCache, vi.keyspace.Name())
 						vi.keyspace.namespace.lock.Unlock()
 						// close this bucket
-						vi.keyspace.Release()
+						vi.keyspace.Release(true)
 						// ask the pool to refresh
 						vi.keyspace.namespace.reload()
 						// bucket doesnt exist any more

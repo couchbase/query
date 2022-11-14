@@ -1002,8 +1002,7 @@ func (p *namespace) reload2(newpool *cb.Pool) {
 		}
 		newbucket, err := newpool.GetBucket(name)
 		if err != nil {
-			ks.cbKeyspace.flags |= _DELETED
-			ks.cbKeyspace.cbbucket.Close()
+			ks.cbKeyspace.Release(true)
 			logging.Errorf(" Error retrieving bucket %s - %v", name, err)
 			delete(p.keyspaceCache, name)
 
@@ -1051,6 +1050,7 @@ const (
 )
 
 type keyspace struct {
+	sync.RWMutex
 	namespace   *namespace
 	name        string
 	cbbucket    *cb.Bucket
@@ -1140,7 +1140,7 @@ func newKeyspace(p *namespace, name string) (*keyspace, errors.Error) {
 	}
 
 	// Create a bucket updater that will keep the couchbase bucket fresh.
-	cbbucket.RunBucketUpdater(p.KeyspaceDeleteCallback)
+	cbbucket.RunBucketUpdater2(p.KeyspaceUpdateCallback, p.KeyspaceDeleteCallback)
 
 	return rv, nil
 }
@@ -1155,7 +1155,7 @@ func (p *namespace) KeyspaceDeleteCallback(name string, err error) {
 	if ok && ks.cbKeyspace != nil {
 		logging.Infof("Keyspace %v being deleted", name)
 		dropDictCacheEntry(name)
-		ks.cbKeyspace.flags |= _DELETED
+		ks.cbKeyspace.Release(false)
 		delete(p.keyspaceCache, name)
 
 		// keyspace has been deleted, force full auto reprepare check
@@ -1163,6 +1163,30 @@ func (p *namespace) KeyspaceDeleteCallback(name string, err error) {
 	} else {
 		logging.Warnf("Keyspace %v not configured on this server", name)
 	}
+}
+
+// Called by go-couchbase if a configured keyspace is updated
+func (p *namespace) KeyspaceUpdateCallback(bucket *cb.Bucket) {
+	p.lock.Lock()
+
+	ks, ok := p.keyspaceCache[bucket.Name]
+	if ok && ks.cbKeyspace != nil {
+		ks.cbKeyspace.Lock()
+
+		// the KV nodes list has changed, force a refresh on next use
+		if ks.cbKeyspace.cbbucket.ChangedVBServerMap(&bucket.VBSMJson) {
+			logging.Infof("Bucket updater: vbMap changed for bucket %v", bucket.Name)
+			ks.cbKeyspace.flags |= _NEEDS_REFRESH
+
+			// bucket will be reloaded, we don't need an updater anymore
+			ks.cbKeyspace.cbbucket.StopUpdater()
+		}
+		ks.cbKeyspace.Unlock()
+	} else {
+		logging.Warnf("Keyspace %v not configured on this server", bucket.Name)
+	}
+
+	p.lock.Unlock()
 }
 
 func (b *keyspace) NamespaceId() string {
@@ -1468,7 +1492,10 @@ func opToString(op int) string {
 
 func (k *keyspace) checkRefresh(err error) {
 	if cb.IsRefreshRequired(err) {
+		k.Lock()
 		k.flags |= _NEEDS_REFRESH
+		k.Unlock()
+		k.cbbucket.StopUpdater()
 	}
 }
 
@@ -1629,9 +1656,14 @@ func (b *keyspace) Delete(deletes []string, context datastore.QueryContext) ([]s
 	return actualDeletes, nil
 }
 
-func (b *keyspace) Release() {
+func (b *keyspace) Release(bclose bool) {
+	b.Lock()
 	b.flags |= _DELETED
-	b.cbbucket.Close()
+	b.Unlock()
+	if bclose {
+		b.cbbucket.StopUpdater()
+		b.cbbucket.Close()
+	}
 }
 
 func (b *keyspace) refreshGSIIndexer(url string, poolName string) {

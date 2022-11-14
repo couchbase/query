@@ -27,7 +27,7 @@ type applicableRolesKeyspace struct {
 	indexer datastore.Indexer
 }
 
-func (b *applicableRolesKeyspace) Release() {
+func (b *applicableRolesKeyspace) Release(close bool) {
 }
 
 func (b *applicableRolesKeyspace) NamespaceId() string {

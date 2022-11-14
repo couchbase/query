@@ -252,7 +252,7 @@ func (coll *collection) Delete(deletes []string, context datastore.QueryContext)
 	return nil, errors.NewNotImplemented("collection.Delete()")
 }
 
-func (coll *collection) Release() {
+func (coll *collection) Release(close bool) {
 	// do nothing
 }
 

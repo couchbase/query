@@ -26,7 +26,7 @@ type userInfoKeyspace struct {
 	indexer datastore.Indexer
 }
 
-func (b *userInfoKeyspace) Release() {
+func (b *userInfoKeyspace) Release(close bool) {
 }
 
 func (b *userInfoKeyspace) NamespaceId() string {

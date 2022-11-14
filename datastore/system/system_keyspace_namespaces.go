@@ -23,7 +23,7 @@ type namespaceKeyspace struct {
 	indexer datastore.Indexer
 }
 
-func (b *namespaceKeyspace) Release() {
+func (b *namespaceKeyspace) Release(close bool) {
 }
 
 func (b *namespaceKeyspace) NamespaceId() string {

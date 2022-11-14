@@ -26,7 +26,7 @@ type functionsKeyspace struct {
 	si   datastore.Indexer
 }
 
-func (b *functionsKeyspace) Release() {
+func (b *functionsKeyspace) Release(close bool) {
 }
 
 func (b *functionsKeyspace) NamespaceId() string {

@@ -543,7 +543,7 @@ func (b *keyspace) Delete(deletes []string, context datastore.QueryContext) ([]s
 	return deleted, nil
 }
 
-func (b *keyspace) Release() {
+func (b *keyspace) Release(close bool) {
 }
 
 func (b *keyspace) path() string {

@@ -404,7 +404,7 @@ func (ks *CollectionsKeyspace) Delete(deletes []string, context QueryContext) ([
 	return nil, errors.NewNotImplemented("CollectionsKeyspace.Delete()")
 }
 
-func (ks *CollectionsKeyspace) Release() {
+func (ks *CollectionsKeyspace) Release(close bool) {
 	// do nothing
 }
 

@@ -324,7 +324,7 @@ func (b *keyspace) Delete(deletes []string, context datastore.QueryContext) ([]s
 	return nil, errors.NewOtherNotImplementedError(nil, "for Mock datastore")
 }
 
-func (b *keyspace) Release() {
+func (b *keyspace) Release(close bool) {
 }
 
 type mockIndexer struct {

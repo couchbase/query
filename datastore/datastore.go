@@ -167,7 +167,7 @@ type Keyspace interface {
 	Upsert(upserts []value.Pair) ([]value.Pair, errors.Error)               // Bulk key-value upserts into this keyspace
 	Delete(deletes []string, context QueryContext) ([]string, errors.Error) // Bulk key-value deletes from this keyspace
 
-	Release() // Release any resources held by this object
+	Release(close bool) // Release any resources held by this object
 }
 
 // Globally accessible Datastore instance

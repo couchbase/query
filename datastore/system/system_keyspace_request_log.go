@@ -28,7 +28,7 @@ type requestLogKeyspace struct {
 	indexer datastore.Indexer
 }
 
-func (b *requestLogKeyspace) Release() {
+func (b *requestLogKeyspace) Release(close bool) {
 }
 
 func (b *requestLogKeyspace) NamespaceId() string {

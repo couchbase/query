@@ -23,7 +23,7 @@ type dualKeyspace struct {
 	di   datastore.Indexer
 }
 
-func (b *dualKeyspace) Release() {
+func (b *dualKeyspace) Release(close bool) {
 }
 
 func (b *dualKeyspace) NamespaceId() string {

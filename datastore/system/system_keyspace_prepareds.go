@@ -29,7 +29,7 @@ type preparedsKeyspace struct {
 	indexer datastore.Indexer
 }
 
-func (b *preparedsKeyspace) Release() {
+func (b *preparedsKeyspace) Release(close bool) {
 }
 
 func (b *preparedsKeyspace) NamespaceId() string {

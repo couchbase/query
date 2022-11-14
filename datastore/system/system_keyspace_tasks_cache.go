@@ -26,7 +26,7 @@ type tasksCacheKeyspace struct {
 	indexer datastore.Indexer
 }
 
-func (b *tasksCacheKeyspace) Release() {
+func (b *tasksCacheKeyspace) Release(close bool) {
 }
 
 func (b *tasksCacheKeyspace) NamespaceId() string {
