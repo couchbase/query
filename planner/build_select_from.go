@@ -309,15 +309,29 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 						useCBO = false
 					}
 				}
-			} else if iscan3.HasEarlyOffset() {
-				op, err := this.buildEarlyOffset(iscan3, useCBO)
-				if err != nil {
-					return nil, err
+			} else {
+				if iscan3.HasEarlyOffset() {
+					op, err := this.buildEarlyOffset(iscan3, useCBO)
+					if err != nil {
+						return nil, err
+					}
+					if useCBO {
+						cost, cardinality, size, frCost = op.Cost(), op.Cardinality(), op.Size(), op.FrCost()
+						if cost <= 0.0 || cardinality <= 0.0 || size <= 0 || frCost <= 0.0 {
+							useCBO = false
+						}
+					}
 				}
-				if useCBO {
-					cost, cardinality, size, frCost = op.Cost(), op.Cardinality(), op.Size(), op.FrCost()
-					if cost <= 0.0 || cardinality <= 0.0 || size <= 0 || frCost <= 0.0 {
-						useCBO = false
+				if iscan3.HasEarlyLimit() {
+					op, err := this.buildEarlyLimit(iscan3, useCBO)
+					if err != nil {
+						return nil, err
+					}
+					if useCBO {
+						cost, cardinality, size, frCost = op.Cost(), op.Cardinality(), op.Size(), op.FrCost()
+						if cost <= 0.0 || cardinality <= 0.0 || size <= 0 || frCost <= 0.0 {
+							useCBO = false
+						}
 					}
 				}
 			}
@@ -1109,28 +1123,31 @@ func (this *builder) buildEarlyOrder(iscan3 *plan.IndexScan3, useCBO bool) (plan
 	}
 	order := algebra.NewOrder(newTerms)
 	// no need for any cost information for Limit/Offset inside Order
-	limit := plan.NewLimit(this.limit, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL)
+	var limit *plan.Limit
 	var offset *plan.Offset
-	if this.offset != nil {
-		offset = plan.NewOffset(this.offset, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL)
-	}
-	if useCBO {
-		var nlimit, noffset int64
-		if this.limit != nil {
-			nlimit, _ = base.GetStaticInt(this.limit)
+	if iscan3.HasEarlyLimit() {
+		limit = plan.NewLimit(this.limit, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL)
+		if this.offset != nil && iscan3.HasEarlyOffset() {
+			offset = plan.NewOffset(this.offset, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL)
 		}
-		if this.offset != nil {
-			noffset, _ = base.GetStaticInt(this.offset)
-		}
-		scost, scard, ssize, sfrCost := getSortCost(size, len(this.order.Terms()), cardinality, nlimit, noffset)
-		if scost > 0.0 && scard > 0.0 && ssize > 0.0 && sfrCost > 0.0 {
-			cost += scost
-			cardinality = scard
-			size = ssize
-			frCost += sfrCost
-		} else {
-			useCBO = false
-			cost, cardinality, size, frCost = OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL
+		if useCBO {
+			var nlimit, noffset int64
+			if this.limit != nil {
+				nlimit, _ = base.GetStaticInt(this.limit)
+			}
+			if this.offset != nil && iscan3.HasEarlyOffset() {
+				noffset, _ = base.GetStaticInt(this.offset)
+			}
+			scost, scard, ssize, sfrCost := getSortCost(size, len(this.order.Terms()), cardinality, nlimit, noffset)
+			if scost > 0.0 && scard > 0.0 && ssize > 0.0 && sfrCost > 0.0 {
+				cost += scost
+				cardinality = scard
+				size = ssize
+				frCost += sfrCost
+			} else {
+				useCBO = false
+				cost, cardinality, size, frCost = OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL
+			}
 		}
 	}
 
@@ -1149,6 +1166,26 @@ func (this *builder) buildEarlyOrder(iscan3 *plan.IndexScan3, useCBO bool) (plan
 
 	this.resetOffsetLimit()
 	return orderOp, nil
+}
+
+func (this *builder) buildEarlyLimit(lastOp plan.Operator, useCBO bool) (
+	plan.Operator, error) {
+
+	if this.limit == nil {
+		return nil, errors.NewPlanInternalError("buildEarlyLimit: early limit without expected limit information")
+	}
+	cost, cardinality, size, frCost := lastOp.Cost(), lastOp.Cardinality(), lastOp.Size(), lastOp.FrCost()
+	if useCBO {
+		nlimit, _ := base.GetStaticInt(this.limit)
+		noffset := int64(-1)
+		if this.offset != nil {
+			noffset, _ = base.GetStaticInt(this.offset)
+		}
+		cost, cardinality, size, frCost = getLimitCost(lastOp, nlimit, noffset)
+	}
+	limitOp := plan.NewLimit(this.limit, cost, cardinality, size, frCost)
+	this.addChildren(limitOp)
+	return limitOp, nil
 }
 
 func (this *builder) buildEarlyOffset(lastOp plan.Operator, useCBO bool) (

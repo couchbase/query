@@ -177,13 +177,20 @@ func (this *builder) buildCreateSecondaryScan(indexes, flex map[datastore.Index]
 			if entry.HasFlag(IE_HAS_EARLY_ORDER) {
 				iscan3.SetEarlyOrder()
 				iscan3.SetEarlyOrderExprs(entry.orderExprs)
-				if this.offset != nil && entry.IsPushDownProperty(_PUSHDOWN_EXACTSPANS) {
-					iscan3.SetEarlyOffset()
+				if entry.IsPushDownProperty(_PUSHDOWN_EXACTSPANS) {
+					iscan3.SetEarlyLimit()
+					if this.offset != nil {
+						iscan3.SetEarlyOffset()
+					}
 				}
 			} else if entry.IsPushDownProperty(_PUSHDOWN_ORDER) &&
-				this.offset != nil && !entry.IsPushDownProperty(_PUSHDOWN_OFFSET) &&
 				entry.IsPushDownProperty(_PUSHDOWN_EXACTSPANS) {
-				iscan3.SetEarlyOffset()
+				if this.limit != nil && !entry.IsPushDownProperty(_PUSHDOWN_LIMIT) {
+					iscan3.SetEarlyLimit()
+				}
+				if this.offset != nil && !entry.IsPushDownProperty(_PUSHDOWN_OFFSET) {
+					iscan3.SetEarlyOffset()
+				}
 			}
 		}
 
