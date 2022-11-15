@@ -1347,7 +1347,7 @@ func (this *vbRangeScan) runScan(conn *memcached.Client, node string) bool {
 					}
 					retryable = false
 					continue
-				} else if resp.Status == gomemcached.NOT_MY_VBUCKET && this.retries > 0 {
+				} else if (resp.Status == gomemcached.NOT_MY_VBUCKET || resp.Status == gomemcached.KEY_ENOENT) && this.retries > 0 {
 					if this.sampleSize == 0 && len(this.keys) > 0 {
 						this.setContinueFromLastKey()
 					} else if this.sampleSize == 0 {
@@ -1367,6 +1367,10 @@ func (this *vbRangeScan) runScan(conn *memcached.Client, node string) bool {
 			break
 		}
 		if err != nil {
+			logging.Debuga(func() string {
+				return fmt.Sprintf("[%p,%d] %v continue for %v failed: %v",
+					this, this.vbucket(), this.b.Name, uuidAsString(uuid), err)
+			})
 			this.reportError(qerrors.NewSSError(qerrors.E_SS_CONTINUE, err))
 			return cancelScan(false)
 		}
@@ -1399,7 +1403,9 @@ func (this *vbRangeScan) runScan(conn *memcached.Client, node string) bool {
 							this.reportError(qerrors.NewSSError(qerrors.E_SS_CONTINUE, err))
 						}
 						return true
-					} else if resp.Status == gomemcached.NOT_MY_VBUCKET && this.retries > 0 {
+					} else if (resp.Status == gomemcached.NOT_MY_VBUCKET || resp.Status == gomemcached.KEY_ENOENT) &&
+						this.retries > 0 {
+
 						if this.sampleSize == 0 && len(this.keys) > 0 {
 							this.setContinueFromLastKey()
 						} else if this.sampleSize == 0 {
@@ -1415,6 +1421,10 @@ func (this *vbRangeScan) runScan(conn *memcached.Client, node string) bool {
 						}
 						return cancelScan(false)
 					} else {
+						logging.Debuga(func() string {
+							return fmt.Sprintf("[%p,%d] %v receive on %v failed receive after %d keys: %v",
+								this, this.vbucket(), this.b.Name, uuidAsString(uuid), len(this.keys), err)
+						})
 						this.reportError(qerrors.NewSSError(qerrors.E_SS_CONTINUE, err))
 						return cancelScan(false)
 					}
