@@ -27,6 +27,7 @@ import (
 	"github.com/couchbase/query/distributed"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/execution"
+	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/prepareds"
 	"github.com/couchbase/query/server"
@@ -187,6 +188,30 @@ func newHttpRequest(rv *httpRequest, resp http.ResponseWriter, req *http.Request
 	if err != nil {
 		rv.Fail(err)
 	}
+	// start - temporary logging of requests
+	logging.Debuga(func() string {
+		data := make(map[string]interface{}, 7)
+		data["request"] = rv.Id().String()
+		data["prepared"] = (rv.PreparedId() != "")
+		data["statement"] = rv.EventStatement()
+		data["query_context"] = rv.QueryContext()
+		data["named_args"] = httpArgs.getNamedArgs()
+		a := make(map[string]interface{})
+		if rv.jsonArgs.req != nil {
+			for i := 0; i < rv.jsonArgs.args.count; i++ {
+				a[rv.jsonArgs.args.parms[i].name] = rv.jsonArgs.args.parms[i].val
+			}
+		} else {
+			for param, val := range req.Form {
+				a[param] = val
+			}
+		}
+		data["args"] = a
+		data["client_context_id"] = rv.ClientContextId()
+		b, _ := json.Marshal(data)
+		return string(b)
+	})
+	// end - temporary logging of requests
 	rv.jsonArgs = jsonArgs{}
 	rv.urlArgs = urlArgs{}
 }
