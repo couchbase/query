@@ -126,7 +126,6 @@ func Init(mux *mux.Router) {
 			logging.Infof("Started jsevaluator for %v with %v runners", external.name, _DEF_RUNNERS)
 		}
 	}
-
 	if tenant.IsServerless() {
 		tenants = make(map[string]*evaluatorDesc)
 		tenant.RegisterResourceManager(manageTenant)
@@ -192,7 +191,7 @@ func manageTenant(bucket string) {
 	delete(tenants, bucket)
 	tenantsLock.Unlock()
 	if desc != nil {
-		desc.engine.Destroy()
+		desc.engine.Shutdown()
 		logging.Infof("Unloading jsevaluator tenant %v", bucket)
 	}
 }
@@ -344,7 +343,7 @@ func (this *javascript) Execute(name functions.FunctionName, body functions.Func
 
 		// If the function body's text has not already been loaded, load it
 		library = nameToLibrary(name)
-		_, isLoaded := evaluator.libStore.Read(library)
+		_, isLoaded, _ := evaluator.libStore.Read(library)
 
 		if !isLoaded {
 			err1 := body.Load(name)
@@ -361,7 +360,7 @@ func (this *javascript) Execute(name functions.FunctionName, body functions.Func
 	// deflate the pool if required
 	if evaluator.threads > _DEF_RUNNERS && evaluator.available >= _DEFLATE_THRESHOLD {
 		if atomic.AddInt32(&(*evaluator).amending, 1) == 1 {
-			newThreads := evaluator.engine.DeflatePoolBy(_DEF_RUNNERS)
+			newThreads, _ := evaluator.engine.DeflatePoolBy(_DEF_RUNNERS)
 			totThreads := atomic.AddInt32(&(*evaluator).threads, -int32(newThreads))
 			atomic.AddInt32(&(*evaluator).available, -int32(newThreads))
 			logging.Infof("Dropping %v runners from evaluator %v: actual decrement %v to %v", _DEF_RUNNERS, evaluator.name, newThreads, totThreads)
