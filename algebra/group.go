@@ -9,6 +9,7 @@
 package algebra
 
 import (
+	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 )
 
@@ -25,6 +26,7 @@ type Group struct {
 	by      expression.Expressions `json:by`
 	letting expression.Bindings    `json:"letting"`
 	having  expression.Expression  `json:"having"`
+	groupAs string                 `json:"groupAs"`
 }
 
 /*
@@ -32,10 +34,11 @@ The function NewGroup returns a pointer to the Group
 struct that has its field sort terms set to the input
 argument expressions.
 */
-func NewGroup(by GroupTerms, letting expression.Bindings, having expression.Expression) *Group {
+func NewGroup(by GroupTerms, letting expression.Bindings, having expression.Expression, groupAs string) *Group {
 	rv := &Group{
-		by:     by.Expressions(),
-		having: having,
+		by:      by.Expressions(),
+		having:  having,
+		groupAs: groupAs,
 	}
 
 	var byAlias expression.Bindings
@@ -62,6 +65,15 @@ func (this *Group) Formalize(f *expression.Formalizer) error {
 			if err != nil {
 				return err
 			}
+		}
+	}
+
+	if this.groupAs != "" {
+		if _, ok := f.Allowed().Field(this.groupAs); !ok {
+			f.SetAllowedGroupAsAlias(this.groupAs)
+			f.SetAlias(this.groupAs)
+		} else {
+			return errors.NewDuplicateAliasError("GROUP AS", this.groupAs, "semantics.groupAs.duplicate_alias")
 		}
 	}
 
@@ -147,6 +159,10 @@ func (this *Group) String() string {
 		}
 	}
 
+	if this.groupAs != "" {
+		s += " GROUP AS " + this.groupAs
+	}
+
 	if this.letting != nil {
 		s += " letting " + stringBindings(this.letting)
 	}
@@ -177,6 +193,10 @@ Returns the having condition expression.
 */
 func (this *Group) Having() expression.Expression {
 	return this.having
+}
+
+func (this *Group) GroupAs() string {
+	return this.groupAs
 }
 
 type GroupTerms []*GroupTerm

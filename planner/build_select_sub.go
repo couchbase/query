@@ -151,8 +151,14 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 
 	// Infer WHERE clause from aggregates
 	group := node.Group()
+
+	// When there is a Group As clause do not allow index grouping and aggregation
+	if group != nil && group.GroupAs() != "" {
+		this.cover = nil
+	}
+
 	if group == nil && len(aggs) > 0 {
-		group = algebra.NewGroup(nil, nil, nil)
+		group = algebra.NewGroup(nil, nil, nil, "")
 		this.where = this.constrainAggregate(this.where, aggs)
 	}
 
@@ -163,6 +169,12 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 		allowed := value.NewScopeValue(make(map[string]interface{}, len(proj)), nil)
 
 		groupKeys := group.By()
+
+		// Add Group As alias to groupKeys
+		if group.GroupAs() != "" {
+			groupKeys = append(groupKeys, expression.NewIdentifier(group.GroupAs()))
+		}
+
 		letting := group.Letting()
 		// Only aggregates and group keys are allowed in LETTING caluse
 		if letting != nil {
@@ -435,11 +447,19 @@ func (this *builder) visitGroup(group *algebra.Group, aggs algebra.Aggregates) {
 		}
 		aggv := sortAggregatesSlice(aggs)
 		canSpill := util.IsFeatureEnabled(this.context.FeatureControls(), util.N1QL_SPILL_TO_DISK)
+
+		var allowedGroupAsFields []string
+		if group.GroupAs() != "" {
+			for k, _ := range this.keyspaceNames {
+				allowedGroupAsFields = append(allowedGroupAsFields, k)
+			}
+		}
+
 		this.addSubChildren(plan.NewInitialGroup(group.By(), aggv,
-			costInitial, cardinalityInitial, size, costInitial, canSpill))
+			costInitial, cardinalityInitial, size, costInitial, canSpill, group.GroupAs(), allowedGroupAsFields))
 		this.addChildren(this.addSubchildrenParallel())
 		this.addChildren(plan.NewIntermediateGroup(group.By(), aggv,
-			costIntermediate, cardinalityIntermediate, size, costIntermediate, canSpill))
+			costIntermediate, cardinalityIntermediate, size, costIntermediate, canSpill, group.GroupAs()))
 		this.addChildren(plan.NewFinalGroup(group.By(), aggv,
 			costFinal, cardinalityFinal, size, costFinal, canSpill))
 	}

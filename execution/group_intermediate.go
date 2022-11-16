@@ -66,6 +66,23 @@ func NewIntermediateGroup(plan *plan.IntermediateGroup, context *Context) *Inter
 			}
 			a1[a] = v
 		}
+
+		// If the Group As clause is present, merge the values of the Group As field in the entries as well
+		if plan.GroupAs() != "" {
+			groupAsv1, ok1 := v1.Field(plan.GroupAs())
+			groupAsv2, ok2 := v2.Field(plan.GroupAs())
+
+			if !ok1 || !ok2 {
+				context.Fatal(errors.NewExecutionInternalError("No GROUP AS field in item"))
+				return nil
+			}
+
+			act1, _ := groupAsv1.Actual().([]interface{})
+			act2, _ := groupAsv2.Actual().([]interface{})
+			act := append(act1, act2...)
+			v1.SetField(plan.GroupAs(), act)
+		}
+
 		return v1
 	}
 
@@ -116,6 +133,7 @@ func (this *IntermediateGroup) processItem(item value.AnnotatedValue, context *C
 
 	// Get or seed the group value
 	gv, set, err := this.groups.LoadOrStore(gk, item)
+
 	if err != nil {
 		context.Fatal(errors.NewEvaluationError(err, "GROUP key"))
 		item.Recycle()
@@ -136,7 +154,6 @@ func (this *IntermediateGroup) processItem(item value.AnnotatedValue, context *C
 	if context.UseRequestQuota() {
 		context.ReleaseValueSize(item.Size())
 	}
-	item.Recycle()
 
 	cumulative := gv.GetAttachment("aggregates").(map[string]value.Value)
 	if !ok {
@@ -156,6 +173,30 @@ func (this *IntermediateGroup) processItem(item value.AnnotatedValue, context *C
 
 		cumulative[a] = v
 	}
+
+	// If Group As clause is present, append all the items in the Group As array to the existing entry's Group As array
+	if this.plan.GroupAs() != "" {
+		groupAsv1, ok1 := item.Field(this.plan.GroupAs())
+		groupAsv2, ok2 := gv.Field(this.plan.GroupAs())
+
+		if !ok1 || !ok2 {
+			context.Fatal(errors.NewExecutionInternalError("No GROUP AS field in item"))
+			return false
+		}
+
+		act1, _ := groupAsv1.Actual().([]interface{})
+		act2, _ := groupAsv2.Actual().([]interface{})
+		act := append(act2, act1...)
+		gv.SetField(this.plan.GroupAs(), value.NewValue(act))
+
+		err = this.groups.AdjustSize(groupAsv1.Size()) // account for added field
+		if err != nil {
+			context.Fatal(err)
+			return false
+		}
+
+	}
+	item.Recycle()
 
 	return true
 }

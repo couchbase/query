@@ -2785,5 +2785,17 @@
  },
  {
   "statements":"INSERT INTO orders VALUES(UUID(),{\"c0\":4,\"c1\":104,\"c2\":204,\"c3\":305,\"c4\":401,\"c5\":504,\"c6\":601,\"c7\":703,\"c8\":803,\"c9\":905,\"test_id\" : \"median_agg_func\"})"
+ },
+ { 
+    "statements":"INSERT INTO customer (KEY,VALUE) VALUES(UUID(), { \"type\": \"customer\", \"firstName\": \"Tonie\", \"lastName\": \"Cogar\", \"emailAddress\": \"tcogar0@fc2.com\", \"custId\": \"customer312\", \"test_id\": \"agg_func\" })" 
+ } ,
+ { 
+    "statements":"INSERT INTO customer (KEY,VALUE) VALUES(UUID(), { \"type\": \"customer\", \"firstName\": \"Sharron\", \"lastName\": \"Strettle\", \"emailAddress\": \"sstrettle1@smugmug.com\", \"custId\": \"customer18\", \"test_id\": \"agg_func\" })" 
+ } ,
+ { 
+    "statements":"INSERT INTO customer (KEY,VALUE) VALUES(UUID(), { \"type\": \"customer\", \"firstName\": \"Marris\", \"lastName\": \"Burren\", \"emailAddress\": \"mburren2@acquirethisname.com\", \"custId\": \"customer12\", \"test_id\": \"agg_func\" })" 
+ } , 
+ { 
+    "statements":"INSERT INTO customer (KEY,VALUE) VALUES(UUID(), { \"type\": \"customer\", \"firstName\": \"Natal\", \"lastName\": \"Sleicht\", \"emailAddress\": \"nsleicht3@vimeo.com\", \"custId\": \"customer38\", \"test_id\": \"agg_func\" })" 
  }
 ]

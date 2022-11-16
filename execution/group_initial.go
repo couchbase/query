@@ -71,6 +71,17 @@ func NewInitialGroup(plan *plan.InitialGroup, context *Context) *InitialGroup {
 			}
 			a1[a] = v
 		}
+
+		// If the Group As clause is present, merge the values of the Group As field in the entries as well
+		if plan.GroupAs() != "" {
+			groupAsv1, _ := v1.Field(plan.GroupAs())
+			groupAsv2, _ := v2.Field(plan.GroupAs())
+
+			act1, _ := groupAsv1.Actual().([]interface{})
+			act2, _ := groupAsv2.Actual().([]interface{})
+			act := append(act1, act2...)
+			v1.SetField(plan.GroupAs(), act)
+		}
 		return v1
 	}
 
@@ -121,7 +132,9 @@ func (this *InitialGroup) processItem(item value.AnnotatedValue, context *Contex
 	// Get or seed the group value
 	recycle := false
 	handleQuota := false
+
 	gv, set, err := this.groups.LoadOrStore(gk, item)
+
 	if err != nil {
 		context.Fatal(errors.NewEvaluationError(err, "GROUP key"))
 		item.Recycle()
@@ -156,6 +169,43 @@ func (this *InitialGroup) processItem(item value.AnnotatedValue, context *Contex
 
 		aggregates[agg.String()] = v
 	}
+
+	// Update the Group Key's entry in the Map with the Group As field in the item
+	if this.plan.GroupAs() != "" {
+		// Create the entry for the Group As array field
+		groupAs := make(map[string]interface{}, len(this.plan.GroupAsFields()))
+		itemAct := item.Actual().(map[string]interface{})
+
+		// Only add the allowed group as fields from the item to the Group As entry
+		for _, k := range this.plan.GroupAsFields() {
+			field, ok := itemAct[k]
+			if ok {
+				groupAs[k] = field
+			}
+		}
+
+		// Add the Group As field to the groupKey's entry in the map
+		groupAsField, ok := gv.Field(this.plan.GroupAs())
+
+		var act []interface{}
+		if !ok {
+			act = make([]interface{}, 0, 1)
+		} else {
+			act = groupAsField.Actual().([]interface{})
+		}
+
+		groupAsVal := value.NewValue(groupAs)
+		act = append(act, groupAsVal)
+		gv.SetField(this.plan.GroupAs(), value.NewValue(act))
+
+		err := this.groups.AdjustSize(groupAsVal.Size()) // account for added field
+		if err != nil {
+			context.Fatal(err)
+			return false
+		}
+
+	}
+
 	if handleQuota {
 		context.ReleaseValueSize(item.Size())
 	}

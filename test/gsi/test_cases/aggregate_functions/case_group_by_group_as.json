@@ -1,0 +1,214 @@
+[
+    {
+       "description":"Query to check that Index grouping and aggregation is not done when GROUP AS clause is present.  This query would have otherwise been covered if the Group As clause was not present",
+       "explain": {
+         "disabled": false,
+         "results": [
+             {
+                 "present": true
+             }
+         ],
+         "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.index_group_aggs IS MISSING AND v.covers IS MISSING END"
+     },
+       "statements":"SELECT custId, COUNT(*) AS count FROM orders WHERE custId AND test_id = \"agg_func\" GROUP BY custId GROUP AS g  ORDER BY count, custId LIMIT 4;",
+       "results":[
+          {
+             "custId":"customer12",
+             "count":1
+          },
+          {
+             "custId":"customer18",
+             "count":1
+          },
+          {
+             "custId":"customer312",
+             "count":1
+          },
+          {
+             "custId":"customer38",
+             "count":1
+          }
+       ]
+    },
+    {
+       "description":"Group As with COUNT to check if length of group as field is accurate",
+       "statements":"SELECT color as product_color, len(g) as count_group_items, COUNT(*) AS count FROM product where test_id = \"agg_func\" GROUP BY color GROUP AS g ORDER BY product_color LIMIT 5;",
+       "results": [
+         {
+             "product_color": "azure",
+             "count_group_items": 41,
+             "count": 41
+         },
+         {
+             "product_color": "black",
+             "count_group_items": 39,
+             "count": 39
+         },
+         {
+             "product_color": "blue",
+             "count_group_items": 23,
+             "count": 23
+         },
+         {
+             "product_color": "cyan",
+             "count_group_items": 23,
+             "count": 23
+         },
+         {
+             "product_color": "fuchsia",
+             "count_group_items": 26,
+             "count": 26
+         }
+      ]
+    },
+    {
+       "description":"Query that has a LET clause and CTE and references the Group As field in a subquery",
+       "statements":"WITH cte1 AS (SELECT 1) SELECT custId, COUNT(*) AS count, (SELECT g1.o.id id, g1.o.cte1 cte1 , g1.o.var var FROM g g1) AS group_ids FROM orders o LET var = 1000 WHERE test_id = \"agg_func\" GROUP BY custId GROUP AS g  ORDER BY count, custId LIMIT 4;",
+       "results":[
+          {
+             "custId":"customer12",
+             "count":1,
+             "group_ids":[
+                {
+                   "id":"1235"
+                }
+             ]
+          },
+          {
+             "custId":"customer18",
+             "count":1,
+             "group_ids":[
+                {
+                   "id":"1200"
+                }
+             ]
+          },
+          {
+             "custId":"customer312",
+             "count":1,
+             "group_ids":[
+                {
+                   "id":"1234"
+                }
+             ]
+          },
+          {
+             "custId":"customer38",
+             "count":1,
+             "group_ids":[
+                {
+                   "id":"1236"
+                }
+             ]
+          }
+       ]
+    },
+    {
+      "description":"Query with a join - there is a field for each keyspace in the Group As output",
+      "statements":"SELECT c.custId, count(*) AS count, g FROM orders o INNER JOIN customer c ON o.custId = c.custId AND o.test_id = \"agg_func\" AND c.test_id = \"agg_func\" GROUP BY c.custId GROUP AS g ORDER BY count, c.custId LIMIT 1;",
+      "results": [
+         {
+             "custId": "customer12",
+             "count": 1,
+             "g": [
+                 {
+                     "c": {
+                         "custId": "customer12",
+                         "emailAddress": "mburren2@acquirethisname.com",
+                         "firstName": "Marris",
+                         "lastName": "Burren",
+                         "test_id": "agg_func",
+                         "type": "customer"
+                     },
+                     "o": {
+                         "custId": "customer12",
+                         "id": "1235",
+                         "orderlines": [
+                             {
+                                 "productId": "tea111",
+                                 "qty": 1
+                             },
+                             {
+                                 "productId": "sugar22",
+                                 "qty": 1
+                             }
+                         ],
+                         "test_id": "agg_func",
+                         "type": "order"
+                     }
+                 }
+             ]
+         }
+      ]
+    },
+    {
+      "description":"Query referencing an element in the Group As array in the projection",
+      "statements":"SELECT id, COUNT(*) AS count, g[0].orders.id AS group_ids FROM orders WHERE custId AND test_id = \"agg_func\" GROUP BY id GROUP AS g ORDER BY count, id LIMIT 4;",
+      "results": [
+         {
+             "id": "1200",
+             "count": 1,
+             "group_ids": "1200"
+         },
+         {
+             "id": "1234",
+             "count": 1,
+             "group_ids": "1234"
+         },
+         {
+             "id": "1235",
+             "count": 1,
+             "group_ids": "1235"
+         },
+         {
+             "id": "1236",
+             "count": 1,
+             "group_ids": "1236"
+         }
+      ]
+   },
+   {
+      "description":"Query referencing the Group As alias in the HAVING clause",
+      "statements":"SELECT color AS product_color, len(g) AS count_group_items FROM product WHERE test_id = \"agg_func\" GROUP BY color GROUP AS g HAVING len(g) > 25 ORDER BY product_color LIMIT 3;",
+      "results": [
+         {
+             "product_color": "azure",
+             "count_group_items": 41
+         },
+         {
+             "product_color": "black",
+             "count_group_items": 39
+         },
+         {
+             "product_color": "fuchsia",
+             "count_group_items": 26
+         }
+      ]
+   },
+   {
+      "description":"Query referencing the Group As alias in the LETTING clause",
+      "statements":"SELECT id, COUNT(*) as count, var as group_ids FROM orders WHERE custId AND test_id = \"agg_func\" GROUP BY id GROUP AS g  LETTING var = g[0].orders.id ORDER BY count, id LIMIT 4;",
+      "results": [
+         {
+             "id": "1200",
+             "count": 1,
+             "group_ids": "1200"
+         },
+         {
+             "id": "1234",
+             "count": 1,
+             "group_ids": "1234"
+         },
+         {
+             "id": "1235",
+             "count": 1,
+             "group_ids": "1235"
+         },
+         {
+             "id": "1236",
+             "count": 1,
+             "group_ids": "1236"
+         }
+      ]
+   }
+ ]

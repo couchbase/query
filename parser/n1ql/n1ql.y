@@ -426,6 +426,7 @@ tokOffset        int
 %type <bindings>         opt_let let with
 %type <expr>             opt_where where opt_filter
 %type <group>            opt_group group
+%type <s>                opt_group_as
 %type <bindings>         opt_letting letting
 %type <expr>             opt_having having
 %type <resultTerm>       project
@@ -1762,14 +1763,14 @@ group
 ;
 
 group:
-GROUP BY group_terms opt_letting opt_having
+GROUP BY group_terms opt_group_as opt_letting opt_having
 {
-    $$ = algebra.NewGroup($3, $4, $5)
+    $$ = algebra.NewGroup($3, $5, $6, $4)
 }
 |
 letting
 {
-    $$ = algebra.NewGroup(nil, $1, nil)
+    $$ = algebra.NewGroup(nil, $1, nil, "")
 }
 ;
 
@@ -1825,6 +1826,17 @@ HAVING expr
 }
 ;
 
+opt_group_as:
+/* empty */
+{
+    $$ = ""
+}
+|
+GROUP AS IDENT
+{
+    $$ = $3
+}
+;
 
 /*************************************************
  *

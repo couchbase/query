@@ -562,6 +562,12 @@ func (this *Formalizer) SetAllowedSubqTermAlias(alias string) {
 	this.allowed.SetField(alias, value.NewValue(ident_flags))
 }
 
+// alias must be non-empty
+func (this *Formalizer) SetAllowedGroupAsAlias(alias string) {
+	ident_flags := uint32(IDENT_IS_GROUP_AS)
+	this.allowed.SetField(alias, value.NewValue(ident_flags))
+}
+
 func (this *Formalizer) WithAlias(alias string) bool {
 	if this.withs != nil {
 		_, ok := this.withs[alias]

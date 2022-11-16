@@ -130,9 +130,22 @@ SELECT g, (SELECT d2.* FROM d2 USE KEYS d.foo) AS d2
 FROM d
 GROUP BY g;
 */
+
 func (this *Subquery) SurvivesGrouping(groupKeys expression.Expressions, allowed *value.ScopeValue) (
 	bool, expression.Expression) {
-	return !this.query.IsCorrelated(), nil
+
+	if !this.query.IsCorrelated() {
+		return true, nil
+	}
+
+	// If the subquery is correlated only with the Group As alias, then it can survive grouping
+	for _, v := range this.GetCorrelation() {
+		if (v & expression.IDENT_IS_GROUP_AS) == 0 {
+			return false, nil
+		}
+	}
+
+	return true, nil
 }
 
 /*

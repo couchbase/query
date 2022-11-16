@@ -197,7 +197,7 @@ func (this *AnnotatedMap) LoadOrStore(key string, av AnnotatedValue) (AnnotatedV
 
 func (this *AnnotatedMap) setLOCKED(key string, keySize uint64, av AnnotatedValue) errors.Error {
 
-	if this.shouldSpill != nil && this.memSize > 0 && this.shouldSpill(this.memSize, keySize+av.Size()) {
+	if this.wouldSpill(keySize + av.Size()) {
 		if err := this.spillToDisk(); err != nil {
 			return err
 		}
@@ -440,4 +440,27 @@ func (this *AnnotatedMap) Release() {
 		}
 	}
 	this.memSize = 0
+}
+
+// Returns if the size to be added would result in spilling
+func (this *AnnotatedMap) wouldSpill(size uint64) bool {
+	return this.shouldSpill != nil && this.memSize > 0 && this.shouldSpill(this.memSize, size)
+}
+
+// Adjust size of map
+// if size added causes spilling - spill map to disk
+func (this *AnnotatedMap) AdjustSize(size uint64) errors.Error {
+	this.Lock()
+	this.memSize += size
+
+	// if added size would cause spilling - spill the map
+	if this.wouldSpill(0) {
+		if err := this.spillToDisk(); err != nil {
+			this.Unlock()
+			return err
+		}
+	}
+
+	this.Unlock()
+	return nil
 }
