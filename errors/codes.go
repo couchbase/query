@@ -83,6 +83,7 @@ const (
 	E_SERVICE_TENANT_MISSING                  ErrorCode = 1197
 	E_SERVICE_TENANT_NOT_AUTHORIZED           ErrorCode = 1198
 	E_SERVICE_TENANT_REJECTED                 ErrorCode = 1199
+	E_SERVICE_TENANT_NOT_FOUND                ErrorCode = 1120
 	E_ADMIN_CONNECTION                        ErrorCode = 2000
 	E_ADMIN_START                             ErrorCode = 2001
 	E_ADMIN_INVALIDURL                        ErrorCode = 2010

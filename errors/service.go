@@ -169,6 +169,11 @@ func NewServiceTenantNotAuthorizedError(bucket string) Error {
 		InternalMsg: fmt.Sprintf("Request is not authorized for tenant %v", bucket), InternalCaller: CallerN(1)}
 }
 
+func NewServiceTenantNotFoundError(bucket string) Error {
+	return &err{level: EXCEPTION, ICode: E_SERVICE_TENANT_NOT_FOUND, IKey: "service.tenant.not.found",
+		InternalMsg: fmt.Sprintf("Tenant not found %v", bucket), InternalCaller: CallerN(1)}
+}
+
 func NewServiceTenantRejectedError(duration time.Duration) Error {
 	var (
 		message string

@@ -40,7 +40,11 @@ type Service int
 type Services [_SIZER]Unit
 type ResourceManager func(string)
 
-type Context regulator.UserCtx
+type Context interface {
+	regulator.Ctx
+	User() string
+}
+
 type Endpoint interface {
 	Mux() *mux.Router
 	Authorize(req *http.Request) errors.Error
@@ -121,13 +125,18 @@ func (this Unit) NonZero() bool {
 }
 
 func Throttle(isAdmin bool, user, bucket string, buckets []string, timeout time.Duration) (Context, errors.Error) {
+	var ctx Context
 
-	if isAdmin {
-		return regulator.NewUserCtx(bucket, user), nil
-	}
 	tenant := bucket
 	if tenant == "" {
-		return nil, errors.NewServiceTenantMissingError()
+		if isAdmin {
+			ctx = regulator.NewNoBucketCtx(user)
+
+			// currently we don't throttle requests that have no tenant associated
+			return ctx, nil
+		} else {
+			return nil, errors.NewServiceTenantMissingError()
+		}
 	} else {
 		found := false
 		for _, b := range buckets {
@@ -137,11 +146,15 @@ func Throttle(isAdmin bool, user, bucket string, buckets []string, timeout time.
 			}
 		}
 		if !found {
-			return nil, errors.NewServiceTenantNotAuthorizedError(bucket)
+			if isAdmin {
+				return nil, errors.NewServiceTenantNotFoundError(bucket)
+			} else {
+				return nil, errors.NewServiceTenantNotAuthorizedError(bucket)
+			}
 		}
+		ctx = regulator.NewUserCtx(tenant, user)
 	}
 
-	ctx := regulator.NewUserCtx(tenant, user)
 	r, d, e := regulator.CheckQuota(ctx, &regulator.CheckQuotaOpts{
 		MaxThrottle:       timeout,
 		NoThrottle:        false,
@@ -194,8 +207,9 @@ func Throttle(isAdmin bool, user, bucket string, buckets []string, timeout time.
 }
 
 func Bucket(ctx Context) string {
-	if ctx != nil {
-		return ctx.Bucket()
+	bucketCtx, _ := ctx.(interface{ Bucket() string })
+	if bucketCtx != nil {
+		return bucketCtx.Bucket()
 	}
 	return ""
 }
@@ -231,9 +245,10 @@ func NeedRefund(ctx Context, errs []errors.Error, warns []errors.Error) bool {
 }
 
 func RefundUnits(ctx Context, units Services) error {
+	bucketCtx, _ := ctx.(interface{ Bucket() string })
 
 	// no refund needed for full admin
-	if ctx.Bucket() == "" {
+	if bucketCtx == nil || bucketCtx.Bucket() == "" {
 		return nil
 	}
 	for s, u := range units {
