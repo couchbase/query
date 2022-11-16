@@ -718,7 +718,7 @@ func narrowerOrEquivalent(se, te *indexEntry, shortest bool, predFc map[string]v
 
 	return se.cond != nil ||
 		len(se.keys) < len(te.keys) ||
-		!(te.nSargKeys == 0 && se.nSargKeys == 0 && te.index.IsPrimary())
+		(te.nSargKeys == 0 && se.nSargKeys == 0 && se.index.IsPrimary())
 }
 
 // Calculates how many keys te sargable keys matched with se sargable keys and se condition
