@@ -75,7 +75,6 @@ require (
 	github.com/blevesearch/bleve/v2 v2.3.5 // indirect
 	github.com/blevesearch/bleve_index_api v1.0.4 // indirect
 	github.com/blevesearch/geo v0.1.15 // indirect
-	github.com/blevesearch/go-metrics v0.0.0-20201227073835-cf1acfcdf475 // indirect
 	github.com/blevesearch/go-porterstemmer v1.0.3 // indirect
 	github.com/blevesearch/goleveldb v1.0.1 // indirect
 	github.com/blevesearch/gtreap v0.1.1 // indirect
@@ -103,7 +102,7 @@ require (
 	github.com/couchbase/gometa v0.0.0-20220803182802-05cb6b2e299f // indirect
 	github.com/couchbase/hebrew v0.0.0-00010101000000-000000000000 // indirect
 	github.com/couchbase/moss v0.3.0 // indirect
-	github.com/couchbase/tools-common v0.0.0-20220928120928-69aba4a231be // indirect
+	github.com/couchbase/tools-common v0.0.0-20221109180603-a4213f4d9c25 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dustin/go-jsonpointer v0.0.0-20140810065344-75939f54b39e // indirect
 	github.com/dustin/gojson v0.0.0-20150115165335-af16e0e771e2 // indirect

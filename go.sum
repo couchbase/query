@@ -63,8 +63,6 @@ github.com/blevesearch/bleve_index_api v1.0.4 h1:mtlzsyJjMIlDngqqB1mq8kPryUMIuEV
 github.com/blevesearch/bleve_index_api v1.0.4/go.mod h1:YXMDwaXFFXwncRS8UobWs7nvo0DmusriM1nztTlj1ms=
 github.com/blevesearch/geo v0.1.15 h1:0NybEduqE5fduFRYiUKF0uqybAIFKXYjkBdXKYn7oA4=
 github.com/blevesearch/geo v0.1.15/go.mod h1:cRIvqCdk3cgMhGeHNNe6yPzb+w56otxbfo1FBJfR2Pc=
-github.com/blevesearch/go-metrics v0.0.0-20201227073835-cf1acfcdf475 h1:kDy+zgJFJJoJYBvdfBSiZYBbdsUL0XcjHYWezpQBGPA=
-github.com/blevesearch/go-metrics v0.0.0-20201227073835-cf1acfcdf475/go.mod h1:9eJDeqxJ3E7WnLebQUlPD7ZjSce7AnDb9vjGmMCbD0A=
 github.com/blevesearch/go-porterstemmer v1.0.3 h1:GtmsqID0aZdCSNiY8SkuPJ12pD4jI+DdXTAn4YRcHCo=
 github.com/blevesearch/go-porterstemmer v1.0.3/go.mod h1:angGc5Ht+k2xhJdZi511LtmxuEf0OVpvUUNrwmM1P7M=
 github.com/blevesearch/goleveldb v1.0.1 h1:iAtV2Cu5s0GD1lwUiekkFHe2gTMCCNVj2foPclDLIFI=
@@ -128,8 +126,8 @@ github.com/couchbase/gocbcore/v9 v9.1.8 h1:79VOjo+lOJpEG99vA6AIQCuwMizYe1TUDK2yn
 github.com/couchbase/gocbcore/v9 v9.1.8/go.mod h1:jOSQeBSECyNvD7aS4lfuaw+pD5t6ciTOf8hrDP/4Nus=
 github.com/couchbase/moss v0.3.0 h1:7NCCtyk6iGCr0egU6mxnx5wLqDSlRKkJJXOJp3seHMI=
 github.com/couchbase/moss v0.3.0/go.mod h1:9MaHIaRuy9pvLPUJxB8sh8OrLfyDczECVL37grCIubs=
-github.com/couchbase/tools-common v0.0.0-20220928120928-69aba4a231be h1:AnVhWwapNJNQ94amRWgzkfhPiBgpHaY45z0x4LXlAwg=
-github.com/couchbase/tools-common v0.0.0-20220928120928-69aba4a231be/go.mod h1:MXY/Thc0fvmQ0GNf3l7nFqF1LLyHHaY1YzRd1cvI3UY=
+github.com/couchbase/tools-common v0.0.0-20221109180603-a4213f4d9c25 h1:vCXTJZ0w/WWT+5APdVGDgDyGfyuLojR3yW1KJNDNHtY=
+github.com/couchbase/tools-common v0.0.0-20221109180603-a4213f4d9c25/go.mod h1:MXY/Thc0fvmQ0GNf3l7nFqF1LLyHHaY1YzRd1cvI3UY=
 github.com/couchbasedeps/go-curl v0.0.0-20190830233031-f0b2afc926ec h1:mVbbrQChG/+citrbPl7gPumTN39U/6isDI7VzShrRIQ=
 github.com/couchbasedeps/go-curl v0.0.0-20190830233031-f0b2afc926ec/go.mod h1:ZLaSGBNRCwL1Kd8Ka/bJ3NspTmFcEeis2mr7vflJS7M=
 github.com/couchbaselabs/gocaves/client v0.0.0-20220223122017-22859b310bd2 h1:UlwJ2GWpZQAQCLHyO3xHKcqAjUUcX2w7FKpbxCIUQks=
