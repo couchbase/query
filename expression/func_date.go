@@ -1,4 +1,5 @@
 //  Copyright 2014-Present Couchbase, Inc.
+
 //
 //  Use of this software is governed by the Business Source License included
 //  in the file licenses/BSL-Couchbase.txt.  As of the Change Date specified
@@ -2877,11 +2878,21 @@ func strToTimePercentFormat(s string, format string) (time.Time, error) {
 					return t, fmt.Errorf("Invalid format: '%s'", format)
 				}
 			}
+			colons := 0
+			for format[i] == ':' {
+				colons++
+				i++
+			}
+			if colons > 0 && format[i] != 'z' {
+				return t, fmt.Errorf("Invalid format: '%s'", format)
+			}
 			switch format[i] {
 			case '%':
 				if s[n] != '%' {
 					return t, fmt.Errorf("Failed to parse '%c' in date string (found '%c')", format[i], s[n])
 				}
+			case 'x':
+				fallthrough
 			case 'D':
 				if n+len(DEFAULT_SHORT_DATE_FORMAT) <= len(s) {
 					pt, err := time.ParseInLocation(DEFAULT_SHORT_DATE_FORMAT, s[n:n+len(DEFAULT_SHORT_DATE_FORMAT)], time.Local)
@@ -3101,6 +3112,8 @@ func strToTimePercentFormat(s string, format string) (time.Time, error) {
 					return t, fmt.Errorf("Invalid minute in date string")
 				}
 				n += l
+			case 'X':
+				fallthrough
 			case 'T':
 				hour, l = gatherNumber(s[n:], 2, pad == padSpace)
 				if (pad == noPad && l == 0) || (pad != noPad && l != 2) || hour < 0 || hour > 23 {
@@ -3159,6 +3172,143 @@ func strToTimePercentFormat(s string, format string) (time.Time, error) {
 				zonem = 0
 				h12 = false
 				n += l
+			case 'r':
+				hour, l = gatherNumber(s[n:], 2, pad == padSpace)
+				if (pad == noPad && l == 0) || (pad != noPad && l != 2) || hour < 1 || hour > 12 {
+					return t, fmt.Errorf("Invalid hour in date string")
+				}
+				h12 = false
+				n += l
+				if s[n] == ':' {
+					n++
+				}
+				minute, l = gatherNumber(s[n:], 2, pad == padSpace)
+				if (pad == noPad && l == 0) || (pad != noPad && l != 2) || minute < 0 || minute > 59 {
+					return t, fmt.Errorf("Invalid minute in date string")
+				}
+				n += l
+				if s[n] == ':' {
+					n++
+				}
+				second, l = gatherNumber(s[n:], 2, pad == padSpace)
+				if (pad == noPad && l == 0) || (pad != noPad && l != 2) || second < 0 || second > 59 {
+					return t, fmt.Errorf("Invalid second in date string")
+				}
+				n += l
+				if n+1 < len(s) && ((s[n] == 'a' || s[n] == 'p') || (preferUpper && (s[n] == 'A' || s[n] == 'P'))) &&
+					(s[n+1] == 'm' || (preferUpper && s[n+1] == 'M')) {
+					if s[n] == 'p' || s[n] == 'P' {
+						pm = true
+					} else {
+						pm = false
+					}
+					n += 2
+				} else {
+					return t, fmt.Errorf("Invalid 12-hour indicator date string")
+				}
+			case 'V':
+				// parse but do nothing with it
+				isoWeek, l := gatherNumber(s[n:], 2, pad == padSpace)
+				if (pad == noPad && l < 1) || (pad != noPad && l != 2) || isoWeek < 1 || isoWeek > 53 {
+					return t, fmt.Errorf("Invalid ISO week number in date string")
+				}
+				n += l
+			case 'G':
+				// parse but do nothing with it
+				isoYear, l := gatherNumber(s[n:], 4, pad == padSpace)
+				if (pad == noPad && l < 1) || (pad != noPad && l != 4) || isoYear < 0 {
+					return t, fmt.Errorf("Invalid ISO year in date string")
+				}
+				n += l
+			case 'j':
+				// parse but do nothing with it
+				dayOfYear, l := gatherNumber(s[n:], 3, pad == padSpace)
+				if (pad == noPad && l < 1) || (pad != noPad && l != 3) || dayOfYear < 1 || dayOfYear > 366 {
+					return t, fmt.Errorf("Invalid day of year in date string")
+				}
+				n += l
+			case 'q':
+				// parse but do nothing with it
+				quarter, l := gatherNumber(s[n:], 2, pad == padSpace)
+				if (pad == noPad && l < 1) || (pad != noPad && l != 2) || quarter < 1 || quarter > 4 {
+					return t, fmt.Errorf("Invalid quarter in date string")
+				}
+				n += l
+			case 'u':
+				// parse but do nothing with it
+				dow, l := gatherNumber(s[n:], 2, pad == padSpace)
+				if (pad == noPad && l < 1) || (pad != noPad && l != 2) || dow < 1 || dow > 7 {
+					return t, fmt.Errorf("Invalid day of week in date string")
+				}
+				n += l
+			case 'w':
+				// parse but do nothing with it
+				dow, l := gatherNumber(s[n:], 2, pad == padSpace)
+				if (pad == noPad && l < 1) || (pad != noPad && l != 2) || dow < 0 || dow > 6 {
+					return t, fmt.Errorf("Invalid day of week in date string")
+				}
+				n += l
+			case 'U':
+				fallthrough
+			case 'W':
+				// parse but do nothing with it
+				week, l := gatherNumber(s[n:], 2, pad == padSpace)
+				if (pad == noPad && l < 1) || (pad != noPad && l != 2) || week < 0 || week > 53 {
+					return t, fmt.Errorf("Invalid day of week in date string")
+				}
+				n += l
+			case '@':
+				fallthrough
+			case '#':
+				var hh, mm, ss, ff int
+				hh, l = gatherNumber(s[n:], 10, pad == padSpace)
+				if (l < 1) || hh < 0 {
+					return t, fmt.Errorf("Invalid hours in date string")
+				}
+				n += l
+				if s[n] == ':' {
+					n++
+				}
+				mm, l = gatherNumber(s[n:], 2, pad == padSpace)
+				if (pad == noPad && l < 1) || (pad != noPad && l != 2) || mm < 0 || mm > 59 {
+					return t, fmt.Errorf("Invalid minutes in date string")
+				}
+				n += l
+				if s[n] == ':' {
+					n++
+				}
+				ss, l = gatherNumber(s[n:], 2, pad == padSpace)
+				if (pad == noPad && l < 1) || (pad != noPad && l != 2) || ss < 0 || ss > 59 {
+					return t, fmt.Errorf("Invalid seconds in date string")
+				}
+				n += l
+				if format[i] == '@' {
+					if s[n] == '.' {
+						n++
+					}
+					ff, l = gatherNumber(s[n:], 3, pad == padSpace)
+					if (pad == noPad && l < 1) || (pad != noPad && l != 3) || ff < 0 || ff > 999 {
+						return t, fmt.Errorf("Invalid fraction in date string")
+					}
+					n += l
+				} else {
+					ff = 0
+				}
+				ms := (hh * 3600000) + (mm * 60000) + (ss * 1000) + ff
+				t = millisToTime(float64(ms))
+				if i+1 == len(format) && n == len(s) {
+					return t, nil
+				}
+				year = t.Year()
+				century = year / 100
+				year %= 100
+				month = int(t.Month())
+				day = t.Day()
+				hour = t.Hour()
+				minute = t.Minute()
+				second = t.Second()
+				fraction = t.Nanosecond()
+				h12 = false
 			default:
 				return t, fmt.Errorf("Invalid format '%c' (position %d)", format[i], i)
 			}
