@@ -282,7 +282,7 @@ func (this *Formalizer) VisitIdentifier(expr *Identifier) (interface{}, error) {
 	}
 
 	if this.keyspace == "" {
-		return nil, fmt.Errorf("Ambiguous reference to field '%v'%v.", identifier, expr.ErrorContext())
+		return nil, errors.NewAmbiguousReferenceError(identifier, expr.ErrorContext())
 	}
 
 	if this.mapKeyspace() {
@@ -399,7 +399,7 @@ func (this *Formalizer) PushBindings(bindings Bindings, push bool) (err error) {
 				if b.Expression() != nil {
 					errContext = b.Expression().ErrorContext()
 				}
-				err = fmt.Errorf("Duplicate variable: %v%v already in scope.", b.Variable(), errContext)
+				err = errors.NewDuplicateVariableError(b.Variable(), errContext)
 				return
 			}
 		} else {
@@ -427,7 +427,7 @@ func (this *Formalizer) PushBindings(bindings Bindings, push bool) (err error) {
 					if b.Expression() != nil {
 						errContext = b.Expression().ErrorContext()
 					}
-					err = fmt.Errorf("Duplicate variable: %v%v already in scope.", b.NameVariable(), errContext)
+					err = errors.NewDuplicateVariableError(b.NameVariable(), errContext)
 					return
 				}
 			} else {
@@ -637,7 +637,7 @@ func (this *Formalizer) AddCorrelatedIdentifiers(correlation map[string]bool) er
 		if _, ok := this.identifiers.Field(k); !ok {
 			v, ok1 := this.allowed.Field(k)
 			if !ok1 {
-				return fmt.Errorf("Internal error: correlation reference %s is not in allowed", k)
+				return errors.NewFormalizerInternalError(fmt.Sprintf("correlation reference %s is not in allowed", k))
 			}
 			this.identifiers.SetField(k, v)
 		}
