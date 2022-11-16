@@ -231,46 +231,37 @@ func (this *KeyspaceTerm) Formalize(parent *expression.Formalizer) (f *expressio
 		return nil, err
 	}
 
-	if this.IsAnsiJoinOp() {
-		f = parent
-	} else {
-		f = expression.NewFormalizer("", parent)
-	}
+	f1 := expression.NewFormalizer("", parent)
 
 	var keys expression.Expression
 	if this.joinKeys != nil {
 		keys = this.joinKeys
-		_, err = this.joinKeys.Accept(f)
+		_, err = this.joinKeys.Accept(f1)
 		if err != nil {
 			return
 		}
 	} else if this.keys != nil {
 		keys = this.keys
-		_, err = this.keys.Accept(f)
+		_, err = this.keys.Accept(f1)
 		if err != nil {
 			return
 		}
 	}
 	if keys != nil {
-		var subqs []expression.Subquery
-		subqs, err = expression.ListSubqueries(expression.Expressions{keys}, false)
-		if err != nil {
-			return
-		}
-		for _, subq := range subqs {
-			if subq.IsCorrelated() {
-				this.correlated = true
-				this.correlation = addSimpleTermCorrelation(this.correlation,
-					subq.GetCorrelation(), this.IsAnsiJoinOp(), parent)
-			}
+		this.correlated = f1.CheckCorrelated()
+		if this.correlated {
+			this.correlation = addSimpleTermCorrelation(this.correlation,
+				f1.GetCorrelation(), this.IsAnsiJoinOp(), parent)
 		}
 	}
 
 	if this.IsAnsiJoinOp() {
+		f = parent
 		f.SetKeyspace("")
 		f.SetAllowedAlias(keyspace, true)
 		f.SetAlias(this.As())
 	} else {
+		f = f1
 		f.SetAlias(this.As())
 		f.SetKeyspace(keyspace)
 	}

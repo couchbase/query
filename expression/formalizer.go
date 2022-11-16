@@ -386,24 +386,7 @@ func (this *Formalizer) PushBindings(bindings Bindings, push bool) (err error) {
 		b.SetExpression(expr)
 
 		// check for correlated reference in binding expr
-		correlated := this.CheckCorrelatedParams(allowed, identifiers)
-		subqueries, er := ListSubqueries(Expressions{expr}, false)
-		if er != nil {
-			return er
-		}
-		for _, subq := range subqueries {
-			if subq.IsCorrelated() {
-				for k, v := range subq.GetCorrelation() {
-					if this.CheckCorrelation(k) {
-						correlated = true
-						if this.correlation == nil {
-							this.correlation = make(map[string]bool)
-						}
-						this.correlation[k] = v
-					}
-				}
-			}
-		}
+		correlated := this.CheckCorrelated()
 
 		if ident_val, ok := allowed.Field(b.Variable()); ok {
 			ident_flags = uint32(ident_val.ActualForIndex().(int64))
@@ -616,26 +599,27 @@ func (this *Formalizer) GetCorrelation() map[string]bool {
 }
 
 func (this *Formalizer) CheckCorrelated() bool {
-	return this.CheckCorrelatedParams(this.allowed, this.identifiers)
-}
-
-func (this *Formalizer) CheckCorrelatedParams(allowed, identifiers *value.ScopeValue) bool {
-	immediate := allowed.GetValue().Fields()
+	immediate := this.allowed.GetValue().Fields()
 
 	correlated := false
-	for id, id_val := range identifiers.Fields() {
+	for id, id_val := range this.identifiers.Fields() {
 		if _, ok := immediate[id]; !ok {
 			if this.WithAlias(id) {
 				id_flags := uint32(value.NewValue(id_val).ActualForIndex().(int64))
 				if (id_flags & IDENT_IS_CORRELATED) == 0 {
 					continue
 				}
+				// for a correlated WITH variable, the actual correlation would have
+				// already been added to this.correlation when the WITH expression
+				// is being checked (in PushBindings()), there is no need to add
+				// the WITH alias itself to this.correlation
+			} else {
+				if this.correlation == nil {
+					this.correlation = make(map[string]bool)
+				}
+				this.correlation[id] = true
 			}
 			correlated = true
-			if this.correlation == nil {
-				this.correlation = make(map[string]bool)
-			}
-			this.correlation[id] = true
 		}
 	}
 
@@ -646,4 +630,17 @@ func (this *Formalizer) CheckCorrelation(alias string) bool {
 	immediate := this.allowed.GetValue().Fields()
 	_, ok := immediate[alias]
 	return !ok
+}
+
+func (this *Formalizer) AddCorrelatedIdentifiers(correlation map[string]bool) error {
+	for k, _ := range correlation {
+		if _, ok := this.identifiers.Field(k); !ok {
+			v, ok1 := this.allowed.Field(k)
+			if !ok1 {
+				return fmt.Errorf("Internal error: correlation reference %s is not in allowed", k)
+			}
+			this.identifiers.SetField(k, v)
+		}
+	}
+	return nil
 }

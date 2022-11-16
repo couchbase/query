@@ -140,12 +140,19 @@ This method calls FormalizeSubquery to qualify all the children
 of the query, and returns an error if any.
 */
 func (this *Subquery) Formalize(parent *expression.Formalizer) error {
-	var keyspace string
-	if parent != nil {
-		keyspace = parent.Keyspace()
+	err := this.query.FormalizeSubquery(parent)
+	if err != nil {
+		return err
 	}
-	f := expression.NewFormalizer(keyspace, parent)
-	return this.query.FormalizeSubquery(f)
+
+	// if the subquery is correlated, add the correlation reference to
+	// the parent formalizer such that any nested correlation can be detected
+	// at the next level
+	if this.query.IsCorrelated() {
+		err = parent.AddCorrelatedIdentifiers(this.query.GetCorrelation())
+	}
+
+	return err
 }
 
 /*
