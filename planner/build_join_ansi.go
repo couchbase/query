@@ -2015,23 +2015,11 @@ func setProbeBitFilters(baseKeyspaces map[string]*base.BaseKeyspace,
 						if err != nil {
 							return
 						}
-						if len(dups) > 0 {
-							buildBFInfo, _ := buildBFInfos[index]
-							curExprs := buildBFInfo.Expressions()
-							newExprs := make(expression.Expressions, 0, len(curExprs))
-							if len(curExprs) != len(dups) {
-								return false, errors.NewPlanInternalError("setProbeBitFilters: len(curExprs) != len(dups)")
-							}
-							for i, _ := range dups {
-								if !dups[i] {
-									newExprs = append(newExprs, curExprs[i])
-								}
-							}
-							if len(newExprs) == 0 {
-								delete(buildBFInfos, index)
-								if len(buildBFInfos) == 0 {
-									binfo.SetSkip()
-								}
+						// if present, only expect a single entry
+						if len(dups) > 0 && dups[0] {
+							delete(buildBFInfos, index)
+							if len(buildBFInfos) == 0 {
+								binfo.SetSkip()
 							}
 						}
 					}
