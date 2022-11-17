@@ -133,6 +133,12 @@ func (this *IndexFtsSearch) RunOnce(context *Context, parent value.Value) {
 								av.SetCover(covers[3].Text(), smeta)
 							}
 							av.SetField(this.plan.Term().Alias(), av)
+
+							if context.UseRequestQuota() && context.TrackValueSize(av.Size()) {
+								context.Error(errors.NewMemoryQuotaExceededError())
+								av.Recycle()
+								break
+							}
 						}
 						av.SetAttachment("smeta", map[string]interface{}{outName: entry.MetaData})
 						av.SetBit(this.bit)
