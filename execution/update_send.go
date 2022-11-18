@@ -151,7 +151,11 @@ func (this *SendUpdate) flushBatch(context *Context) bool {
 		pairs[i].Name = key
 
 		var options value.Value
+		var before uint64
 
+		if context.UseRequestQuota() {
+			before = item.Size()
+		}
 		clone := item.GetAttachment("clone")
 		switch clone := clone.(type) {
 		case value.AnnotatedValue:
@@ -180,6 +184,17 @@ func (this *SendUpdate) flushBatch(context *Context) bool {
 			context.Error(errors.NewInvalidValueError(fmt.Sprintf(
 				"Invalid UPDATE value of type %T.", clone)))
 			return false
+		}
+		if context.UseRequestQuota() {
+			after := item.Size()
+			if before > after {
+				context.ReleaseValueSize(before - after)
+			} else if before < after {
+				if context.TrackValueSize(after - before) {
+					context.Error(errors.NewMemoryQuotaExceededError())
+					return false
+				}
+			}
 		}
 	}
 
