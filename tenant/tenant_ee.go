@@ -69,7 +69,7 @@ var toReg = [_SIZER]struct {
 	billable bool
 }{
 	{regulator.Query, regulator.Compute, false}, // query, not billable
-	{regulator.Query, regulator.Compute, true},  // js, billable
+	{regulator.Query, regulator.Compute, false}, // js, billable
 	{regulator.Index, regulator.Read, true},     // gsi, billable
 	{regulator.Search, regulator.Read, true},    // fts, billable
 	{regulator.Data, regulator.Read, true},      // kv ru, billable
