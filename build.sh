@@ -201,10 +201,10 @@ function repo_by_gomod {
         if [[ $subbranch != "" ]]; then
             grepo="${repo}/${subbranch}"
         fi
-        C=`grep "${grepo}" $file | grep -v module | grep -v replace | grep -v indirect| grep -v "${repo}-"`
+        C=`grep -w "${grepo}" $file | grep -v module | grep -v replace | grep -v indirect| grep -v "${repo}-"`
         bpath=`echo $repo|awk -F/ '{print $1}'`
         if [ -z "$C" ]; then
-            C=`grep "${grepo}" $file | grep -v module | grep -v replace | grep indirect| grep -v "${repo}-"`
+            C=`grep -w "${grepo}" $file | grep -v module | grep -v replace | grep indirect| grep -v "${repo}-"`
         fi
         if [[ -z "$C" ]]
         then
