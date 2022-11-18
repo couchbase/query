@@ -160,7 +160,7 @@ func (this *SendUpdate) flushBatch(context *Context) bool {
 			}
 
 			// Adjust expiration to absolute value
-			pairs[i].Options = adjustExpiration(options)
+			pairs[i].Options = adjustExpiration(options, false)
 			// Update in the meta attachment so that it reflects in RETURNING clause
 			setMetaExpiration(cav, pairs[i].Options)
 
@@ -227,16 +227,15 @@ func getExpiration(options value.Value) (exptime uint32) {
 
 const _MONTH = uint32(30 * 24 * 60 * 60)
 
-func adjustExpiration(options value.Value) value.Value {
-	expiration := getExpiration(options)
-	if expiration > 0 && expiration < _MONTH {
+func adjustExpiration(options value.Value, copyOptions bool) value.Value {
+	expiration, present := getExpiration(options)
+	if present && expiration > 0 && expiration < _MONTH {
 		expiration += uint32(time.Now().UTC().Unix())
-	}
-
-	if options != nil && options.Type() == value.OBJECT {
+		if copyOptions {
+			options = options.CopyForUpdate()
+		}
 		options.SetField("expiration", expiration)
 	}
-
 	return options
 }
 
