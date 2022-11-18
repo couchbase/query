@@ -124,10 +124,11 @@ func (this *SendInsert) flushBatch(context *Context) bool {
 	valExpr := this.plan.Value()
 	optionsExpr := this.plan.Options()
 	var err error
-	var ok bool
+	var ok, copyOptions bool
 	i := 0
 
 	for _, av := range this.batch {
+		copyOptions = true
 		dpairs = dpairs[0 : i+1]
 		dpair := &dpairs[i]
 		var key, val, options value.Value
@@ -159,6 +160,9 @@ func (this *SendInsert) flushBatch(context *Context) bool {
 						fmt.Sprintf("INSERT value for %v", av.GetValue())))
 					continue
 				}
+				if optionsExpr.Value() == nil || options.Equals(optionsExpr.Value()) != value.TRUE_VALUE {
+					copyOptions = false
+				}
 			}
 		} else {
 			// INSERT ... VALUES
@@ -188,7 +192,7 @@ func (this *SendInsert) flushBatch(context *Context) bool {
 			continue
 		}
 
-		dpair.Options = adjustExpiration(options)
+		dpair.Options = adjustExpiration(options, copyOptions)
 		expiration, _ := getExpiration(dpair.Options)
 		dpair.Value = this.setDocumentKey(dpair.Name, value.NewAnnotatedValue(val), expiration, context)
 		i++
