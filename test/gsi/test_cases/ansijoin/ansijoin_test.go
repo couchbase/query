@@ -107,6 +107,9 @@ func TestAnsiJoin(t *testing.T) {
 	// test COMMA form ANSI join syntax
 	runMatch("case_comma_form_ansijoin_simple.json", false, false, qc, t)
 
+	// test LATERAL join syntax
+	runMatch("case_ansijoin_lateral.json", false, false, qc, t)
+
 	fmt.Println("Dropping indexes")
 	runStmt(qc, "DROP INDEX customer.cust_lastName_firstName_customerId")
 	runStmt(qc, "DROP INDEX customer.cust_customerId_lastName_firstName")

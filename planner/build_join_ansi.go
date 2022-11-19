@@ -1033,20 +1033,20 @@ func (this *builder) buildHashJoinOp(right algebra.SimpleFromTerm, left algebra.
 		// if USE HASH and USE KEYS are specified together, make sure the document key
 		// expressions does not reference any keyspaces, otherwise hash join cannot be
 		// used.
-		if ksterm.Keys() != nil && ksterm.Keys().Static() == nil {
+		if right.IsCorrelated() || right.IsLateralJoin() {
 			return nil, nil, nil, nil, nil, nil, false, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, nil
 		}
 		keyspace = ksterm.Keyspace()
 	case *algebra.ExpressionTerm:
 		// hash join cannot handle expression term with any correlated references
-		if right.IsCorrelated() {
+		if right.IsCorrelated() || right.IsLateralJoin() {
 			return nil, nil, nil, nil, nil, nil, false, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, nil
 		}
 
 		defaultBuildRight = true
 	case *algebra.SubqueryTerm:
 		// hash join cannot handle correlated subquery
-		if right.Subquery().IsCorrelated() {
+		if right.IsCorrelated() || right.IsLateralJoin() {
 			return nil, nil, nil, nil, nil, nil, false, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, nil
 		}
 

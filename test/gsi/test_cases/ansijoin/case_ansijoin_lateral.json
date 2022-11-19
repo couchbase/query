@@ -1,0 +1,364 @@
+[
+    {
+        "testcase": "ANSI JOIN syntax, inner join, subquery term",
+        "statements":"SELECT c.firstName, c.lastName, c.customerId, p.purchaseId FROM customer c JOIN LATERAL (SELECT purchaseId FROM purchase WHERE c.customerId = customerId) AS p ON p.purchaseId IS NOT MISSING WHERE c.lastName = \"Wyman\" ORDER BY p.purchaseId LIMIT 10",
+        "ordered": true,
+        "results": [
+        {
+            "firstName": "Emile",
+            "lastName": "Wyman",
+            "customerId": "customer729",
+            "purchaseId": "purchase1537"
+        },
+        {
+            "firstName": "Emile",
+            "lastName": "Wyman",
+            "customerId": "customer729",
+            "purchaseId": "purchase1829"
+        },
+        {
+            "firstName": "Emile",
+            "lastName": "Wyman",
+            "customerId": "customer729",
+            "purchaseId": "purchase2308"
+        },
+        {
+            "firstName": "Sydnie",
+            "lastName": "Wyman",
+            "customerId": "customer605",
+            "purchaseId": "purchase2408"
+        },
+        {
+            "firstName": "Sydnie",
+            "lastName": "Wyman",
+            "customerId": "customer605",
+            "purchaseId": "purchase2635"
+        },
+        {
+            "firstName": "Emile",
+            "lastName": "Wyman",
+            "customerId": "customer729",
+            "purchaseId": "purchase2933"
+        },
+        {
+            "firstName": "Emile",
+            "lastName": "Wyman",
+            "customerId": "customer729",
+            "purchaseId": "purchase336"
+        },
+        {
+            "firstName": "Emile",
+            "lastName": "Wyman",
+            "customerId": "customer729",
+            "purchaseId": "purchase3990"
+        },
+        {
+            "firstName": "Sydnie",
+            "lastName": "Wyman",
+            "customerId": "customer605",
+            "purchaseId": "purchase4530"
+        },
+        {
+            "firstName": "Emile",
+            "lastName": "Wyman",
+            "customerId": "customer729",
+            "purchaseId": "purchase4707"
+        }
+    ]
+    },
+    {
+        "testcase": "ANSI JOIN syntax, left outer join, subquery term",
+        "statements":"SELECT c.firstName, c.lastName, c.customerId, p.purchaseId FROM customer c LEFT OUTER JOIN LATERAL (SELECT purchaseId FROM purchase WHERE c.customerId = customerId) AS p ON p.purchaseId IS NOT MISSING WHERE c.lastName = \"Wyman\" ORDER BY p.purchaseId LIMIT 10",
+        "ordered": true,
+        "results": [
+        {
+            "firstName": "Sherwood",
+            "lastName": "Wyman",
+            "customerId": "customer112"
+        },
+        {
+            "firstName": "Emile",
+            "lastName": "Wyman",
+            "customerId": "customer729",
+            "purchaseId": "purchase1537"
+        },
+        {
+            "firstName": "Emile",
+            "lastName": "Wyman",
+            "customerId": "customer729",
+            "purchaseId": "purchase1829"
+        },
+        {
+            "firstName": "Emile",
+            "lastName": "Wyman",
+            "customerId": "customer729",
+            "purchaseId": "purchase2308"
+        },
+        {
+            "firstName": "Sydnie",
+            "lastName": "Wyman",
+            "customerId": "customer605",
+            "purchaseId": "purchase2408"
+        },
+        {
+            "firstName": "Sydnie",
+            "lastName": "Wyman",
+            "customerId": "customer605",
+            "purchaseId": "purchase2635"
+        },
+        {
+            "firstName": "Emile",
+            "lastName": "Wyman",
+            "customerId": "customer729",
+            "purchaseId": "purchase2933"
+        },
+        {
+            "firstName": "Emile",
+            "lastName": "Wyman",
+            "customerId": "customer729",
+            "purchaseId": "purchase336"
+        },
+        {
+            "firstName": "Emile",
+            "lastName": "Wyman",
+            "customerId": "customer729",
+            "purchaseId": "purchase3990"
+        },
+        {
+            "firstName": "Sydnie",
+            "lastName": "Wyman",
+            "customerId": "customer605",
+            "purchaseId": "purchase4530"
+        }
+    ]
+    },
+    {
+        "testcase": "ANSI JOIN syntax, comma-separated join, subquery term",
+        "statements":"SELECT c.firstName, c.lastName, c.customerId, p.purchaseId FROM customer c, LATERAL (SELECT purchaseId FROM purchase WHERE c.customerId = customerId) AS p WHERE c.lastName = \"Wyman\" ORDER BY p.purchaseId LIMIT 10",
+        "ordered": true,
+        "results": [
+        {
+            "firstName": "Emile",
+            "lastName": "Wyman",
+            "customerId": "customer729",
+            "purchaseId": "purchase1537"
+        },
+        {
+            "firstName": "Emile",
+            "lastName": "Wyman",
+            "customerId": "customer729",
+            "purchaseId": "purchase1829"
+        },
+        {
+            "firstName": "Emile",
+            "lastName": "Wyman",
+            "customerId": "customer729",
+            "purchaseId": "purchase2308"
+        },
+        {
+            "firstName": "Sydnie",
+            "lastName": "Wyman",
+            "customerId": "customer605",
+            "purchaseId": "purchase2408"
+        },
+        {
+            "firstName": "Sydnie",
+            "lastName": "Wyman",
+            "customerId": "customer605",
+            "purchaseId": "purchase2635"
+        },
+        {
+            "firstName": "Emile",
+            "lastName": "Wyman",
+            "customerId": "customer729",
+            "purchaseId": "purchase2933"
+        },
+        {
+            "firstName": "Emile",
+            "lastName": "Wyman",
+            "customerId": "customer729",
+            "purchaseId": "purchase336"
+        },
+        {
+            "firstName": "Emile",
+            "lastName": "Wyman",
+            "customerId": "customer729",
+            "purchaseId": "purchase3990"
+        },
+        {
+            "firstName": "Sydnie",
+            "lastName": "Wyman",
+            "customerId": "customer605",
+            "purchaseId": "purchase4530"
+        },
+        {
+            "firstName": "Emile",
+            "lastName": "Wyman",
+            "customerId": "customer729",
+            "purchaseId": "purchase4707"
+        }
+    ]
+    },
+    {
+        "testcase": "ANSI JOIN syntax, inner join, expression term",
+        "statements":"SELECT l.c12, r FROM shellTest l JOIN LATERAL l.a11 r ON l.c11 = r WHERE l.type = \"left\" ORDER BY l.c12",
+        "ordered": true,
+        "results": [
+        {
+            "c12": 10,
+            "r": 1
+        },
+        {
+            "c12": 30,
+            "r": 3
+        }
+    ]
+    },
+    {
+        "testcase": "ANSI JOIN syntax, left outer join, expression term",
+        "statements":"SELECT l.c12, r FROM shellTest l LEFT JOIN LATERAL l.a11 r ON l.c11 = r WHERE l.c11 > 0 AND l.type = \"left\" ORDER BY l.c12",
+        "ordered": true,
+        "results": [
+        {
+            "c12": 10,
+            "r": 1
+        },
+        {
+            "c12": 20
+        },
+        {
+            "c12": 30,
+            "r": 3
+        },
+        {
+            "c12": 40
+        }
+    ]
+    },
+    {
+        "testcase": "ANSI JOIN syntax, comma-separated join, expression term",
+        "statements":"SELECT l.c12, r FROM shellTest l, LATERAL l.a11 r WHERE l.c11 = r AND l.type = \"left\" ORDER BY l.c12",
+        "ordered": true,
+        "results": [
+        {
+            "c12": 10,
+            "r": 1
+        },
+        {
+            "c12": 30,
+            "r": 3
+        }
+    ]
+    },
+    {
+        "testcase": "ANSI JOIN syntax, inner join, keyspace term",
+        "statements":"SELECT l.c12, r.c21 FROM shellTest l JOIN LATERAL shellTest r USE KEYS(REPLACE(meta(l).id, \"test1\", \"test2\")) ON l.c11 = r.c21 AND r.type = \"right\" WHERE l.type = \"left\" ORDER BY l.c12",
+        "ordered": true,
+        "results": [
+        {
+            "c12": 10,
+            "c21": 1
+        },
+        {
+            "c12": 20,
+            "c21": 2
+        }
+    ]
+    },
+    {
+        "testcase": "ANSI JOIN syntax, left outer join, keyspace term",
+        "statements":"SELECT l.c12, r.c21 FROM shellTest l LEFT JOIN LATERAL shellTest r USE KEYS(REPLACE(meta(l).id, \"test1\", \"test2\")) ON l.c11 = r.c21 AND r.type = \"right\" WHERE l.c11 > 0 AND l.type = \"left\" ORDER BY l.c12",
+        "ordered": true,
+        "results": [
+        {
+            "c12": 10,
+            "c21": 1
+        },
+        {
+            "c12": 20,
+            "c21": 2
+        },
+        {
+            "c12": 30
+        },
+        {
+            "c12": 40
+        }
+    ]
+    },
+    {
+        "testcase": "ANSI JOIN syntax, comma-separated join, keyspace term",
+        "statements":"SELECT l.c12, r.c21 FROM shellTest l, LATERAL shellTest r USE KEYS(REPLACE(meta(l).id, \"test1\", \"test2\")) WHERE l.c11 = r.c21 AND r.type = \"right\" AND l.type = \"left\" ORDER BY l.c12",
+        "ordered": true,
+        "results": [
+        {
+            "c12": 10,
+            "c21": 1
+        },
+        {
+            "c12": 20,
+            "c21": 2
+        }
+    ]
+    },
+    {
+        "testcase": "ANSI NEST syntax, inner nest, subquery term",
+        "statements":"SELECT c.firstName, c.lastName, c.customerId, ARRAY_LENGTH(p) AS num_purchases FROM customer c NEST LATERAL (SELECT purchaseId FROM purchase WHERE c.customerId = customerId) AS p ON p.purchaseId IS NOT MISSING WHERE c.lastName = \"Wyman\" ORDER BY c.customerId",
+        "ordered": true,
+        "results": [
+        {
+            "firstName": "Sydnie",
+            "lastName": "Wyman",
+            "customerId": "customer605",
+            "num_purchases": 10
+        },
+        {
+            "firstName": "Emile",
+            "lastName": "Wyman",
+            "customerId": "customer729",
+            "num_purchases": 14
+        }
+    ]
+    },
+    {
+        "testcase": "ANSI NEST syntax, left outer nest, subquery term",
+        "statements":"SELECT c.firstName, c.lastName, c.customerId, ARRAY_LENGTH(p) AS num_purchases FROM customer c LEFT NEST LATERAL (SELECT purchaseId FROM purchase WHERE c.customerId = customerId) AS p ON p.purchaseId IS NOT MISSING WHERE c.lastName = \"Wyman\" ORDER BY c.customerId",
+        "ordered": true,
+        "results": [
+        {
+            "firstName": "Sherwood",
+            "lastName": "Wyman",
+            "customerId": "customer112",
+            "num_purchases": 0
+        },
+        {
+            "firstName": "Sydnie",
+            "lastName": "Wyman",
+            "customerId": "customer605",
+            "num_purchases": 10
+        },
+        {
+            "firstName": "Emile",
+            "lastName": "Wyman",
+            "customerId": "customer729",
+            "num_purchases": 14
+        }
+    ]
+    },
+    {
+        "testcase": "ANSI JOIN syntax, right outer join, error",
+        "statements":"SELECT l.c12, r.c21 FROM shellTest l RIGHT JOIN LATERAL shellTest r USE KEYS(REPLACE(meta(l).id, \"test1\", \"test2\")) ON l.c11 = r.c21 AND r.type = \"right\" WHERE l.c11 > 0 AND l.type = \"left\" ORDER BY l.c12",
+        "error": "LATERAL cannot be specified in RIGHT OUTER JOIN (r) - line 1, column 155, near 'AND r.type = \"right\"', at: WHERE"
+    },
+    {
+        "testcase": "lookup join syntax, error",
+        "statements":"SELECT l.c12, r.c21 FROM shellTest l JOIN LATERAL shellTest r ON KEYS \"test2\" || l.c11 || \"_ansijoin\" WHERE l.c11 > 0 AND l.type = \"left\" ORDER BY l.c12",
+        "error": "LATERAL cannot be specified in lookup join with ON KEYS clause (r) - line 1, column 103, near 'l.c11 || \"_ansijoin\"', at: WHERE"
+    },
+    {
+        "testcase": "index join syntax, error",
+        "statements":"SELECT l.c12, r.c21 FROM shellTest l JOIN LATERAL shellTest r ON KEY \"test2\" || l.c11 || \"_ansijoin\" FOR l WHERE l.c11 > 0 AND l.type = \"left\" ORDER BY l.c12",
+        "error": "LATERAL cannot be specified in index join with ON KEY...FOR clause (r) - line 1, column 106, near '1 || \"_ansijoin\" FOR', at: l"
+    }
+]
+

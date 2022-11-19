@@ -156,6 +156,10 @@ func (this *BaseKeyspace) IsCommaJoin() bool {
 	return this.node != nil && this.node.IsCommaJoin()
 }
 
+func (this *BaseKeyspace) IsLateralJoin() bool {
+	return this.node != nil && this.node.IsLateralJoin()
+}
+
 func (this *BaseKeyspace) HasInferJoinHint() bool {
 	return this.node != nil && this.node.HasInferJoinHint()
 }

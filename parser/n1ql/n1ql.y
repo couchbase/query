@@ -211,6 +211,7 @@ tokOffset        int
 %token KNOWN
 %token LANGUAGE
 %token LAST
+%token LATERAL
 %token LEFT
 %token LET
 %token LETTING
@@ -1194,6 +1195,21 @@ from_terms COMMA from_term
             $3.Expressions()[0].ExprBase().ErrorContext()))
     }
 }
+|
+from_terms COMMA LATERAL from_term
+{
+    // enforce the RHS being a SimpleFromTerm here so we can produce a more meaningful error
+    switch rterm := $4.(type) {
+    case algebra.SimpleFromTerm:
+        rterm.SetAnsiJoin()
+        rterm.SetCommaJoin()
+        rterm.SetLateralJoin()
+        $$ = algebra.NewAnsiJoin($1, false, rterm, nil)
+    default:
+        yylex.Error(fmt.Sprintf("Right side (%s%s) of a COMMA in a FROM clause must be a simple term or sub-query", $4.String(),
+            $4.Expressions()[0].ExprBase().ErrorContext()))
+    }
+}
 ;
 
 from_term:
@@ -1214,6 +1230,11 @@ from_term opt_join_type JOIN simple_from_term on_keys
     $$ = algebra.NewJoin($1, $2, ksterm)
 }
 |
+from_term opt_join_type JOIN LATERAL simple_from_term on_keys
+{
+    return yylex.(*lexer).FatalError(fmt.Sprintf("LATERAL cannot be specified in lookup join with ON KEYS clause (%s)",$5.Alias())+yylex.(*lexer).ErrorContext())
+}
+|
 from_term opt_join_type JOIN simple_from_term on_key FOR IDENT
 {
     ksterm := algebra.GetKeyspaceTerm($4)
@@ -1227,6 +1248,11 @@ from_term opt_join_type JOIN simple_from_term on_key FOR IDENT
     $$ = algebra.NewIndexJoin($1, $2, ksterm, $7)
 }
 |
+from_term opt_join_type JOIN LATERAL simple_from_term on_key FOR IDENT
+{
+    return yylex.(*lexer).FatalError(fmt.Sprintf("LATERAL cannot be specified in index join with ON KEY...FOR clause (%s)",$5.Alias())+yylex.(*lexer).ErrorContext())
+}
+|
 from_term opt_join_type NEST simple_from_term on_keys
 {
     ksterm := algebra.GetKeyspaceTerm($4)
@@ -1237,6 +1263,11 @@ from_term opt_join_type NEST simple_from_term on_keys
         ksterm.SetValidateKeys($5.HasExprFlag(expression.EXPR_VALIDATE_KEYS))
     }
     $$ = algebra.NewNest($1, $2, ksterm)
+}
+|
+from_term opt_join_type NEST LATERAL simple_from_term on_keys
+{
+    return yylex.(*lexer).FatalError(fmt.Sprintf("LATERAL cannot be specified in lookup nest with ON KEYS clause (%s)",$5.Alias())+yylex.(*lexer).ErrorContext())
 }
 |
 from_term opt_join_type NEST simple_from_term on_key FOR IDENT
@@ -1252,6 +1283,11 @@ from_term opt_join_type NEST simple_from_term on_key FOR IDENT
     $$ = algebra.NewIndexNest($1, $2, ksterm, $7)
 }
 |
+from_term opt_join_type NEST LATERAL simple_from_term on_key FOR IDENT
+{
+    return yylex.(*lexer).FatalError(fmt.Sprintf("LATERAL cannot be specified in index nest with ON KEY...FOR clause (%s)",$5.Alias())+yylex.(*lexer).ErrorContext())
+}
+|
 from_term opt_join_type unnest expr opt_as_alias
 {
     $$ = algebra.NewUnnest($1, $2, $4, $5)
@@ -1263,16 +1299,35 @@ from_term opt_join_type JOIN simple_from_term ON expr
     $$ = algebra.NewAnsiJoin($1, $2, $4, $6)
 }
 |
+from_term opt_join_type JOIN LATERAL simple_from_term ON expr
+{
+    $5.SetAnsiJoin()
+    $5.SetLateralJoin()
+    $$ = algebra.NewAnsiJoin($1, $2, $5, $7)
+}
+|
 from_term opt_join_type NEST simple_from_term ON expr
 {
     $4.SetAnsiNest()
     $$ = algebra.NewAnsiNest($1, $2, $4, $6)
 }
 |
+from_term opt_join_type NEST LATERAL simple_from_term ON expr
+{
+    $5.SetAnsiNest()
+    $5.SetLateralJoin()
+    $$ = algebra.NewAnsiNest($1, $2, $5, $7)
+}
+|
 simple_from_term RIGHT opt_outer JOIN simple_from_term ON expr
 {
     $1.SetAnsiJoin()
     $$ = algebra.NewAnsiRightJoin($1, $5, $7)
+}
+|
+simple_from_term RIGHT opt_outer JOIN LATERAL simple_from_term ON expr
+{
+    return yylex.(*lexer).FatalError(fmt.Sprintf("LATERAL cannot be specified in RIGHT OUTER JOIN (%s)",$6.Alias())+yylex.(*lexer).ErrorContext())
 }
 ;
 

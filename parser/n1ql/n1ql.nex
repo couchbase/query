@@ -245,6 +245,7 @@
 /[kK][nN][oO][wW][nN]/           { yylex.logToken(yylex.Text(), "KNOWN"); return KNOWN }
 /[lL][aA][nN][gG][uU][aA][gG][eE]/ { yylex.logToken(yylex.Text(), "LANGUAGE"); return LANGUAGE }
 /[lL][aA][sS][tT]/               { yylex.logToken(yylex.Text(), "LAST"); return LAST }
+/[lL][aA][tT][eE][rR][aA][lL]/   { yylex.logToken(yylex.Text(), "LATERAL"); return LATERAL }
 /[lL][eE][fF][tT]/               { yylex.logToken(yylex.Text(), "LEFT"); return LEFT }
 /[lL][eE][tT]/                   { yylex.logToken(yylex.Text(), "LET"); return LET }
 /[lL][eE][tT][tT][iI][nN][gG]/   { yylex.logToken(yylex.Text(), "LETTING"); return LETTING }

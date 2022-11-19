@@ -88,6 +88,9 @@ type SimpleFromTerm interface {
 	SetInferJoinHint()
 	HasTransferJoinHint() bool
 	SetTransferJoinHint()
+	IsLateralJoin() bool
+	SetLateralJoin()
+	UnsetLateralJoin()
 }
 
 type JoinTerm interface {
@@ -162,4 +165,14 @@ func getJoinCorrelation(left, right FromTerm) map[string]bool {
 		}
 	}
 	return correlation
+}
+
+func checkLateralCorrelation(term SimpleFromTerm) {
+	for _, v := range term.GetCorrelation() {
+		if !v {
+			term.SetLateralJoin()
+			return
+		}
+	}
+	term.UnsetLateralJoin()
 }
