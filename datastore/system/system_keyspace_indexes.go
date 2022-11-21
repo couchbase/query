@@ -11,6 +11,7 @@ package system
 import (
 	"encoding/json"
 	"strings"
+	"time"
 
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/auth"
@@ -19,6 +20,7 @@ import (
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/timestamp"
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
@@ -261,7 +263,7 @@ func (b *indexKeyspace) fetchOne(key string, keysMap map[string]value.AnnotatedV
 		}
 
 		if ixm, ok := index.(interface{ IndexMetadata() map[string]interface{} }); ok {
-			doc.SetField("metadata", datastoreObjectToJSONSafe(ixm.IndexMetadata()))
+			doc.SetField("metadata", processStats(datastoreObjectToJSONSafe(ixm.IndexMetadata()).(map[string]interface{})))
 		}
 
 		keysMap[key] = doc
@@ -348,7 +350,7 @@ func (b *indexKeyspace) fetchOneCollection(key string, keysMap map[string]value.
 		}
 
 		if ixm, ok := index.(interface{ IndexMetadata() map[string]interface{} }); ok {
-			doc.SetField("metadata", datastoreObjectToJSONSafe(ixm.IndexMetadata()))
+			doc.SetField("metadata", processStats(datastoreObjectToJSONSafe(ixm.IndexMetadata()).(map[string]interface{})))
 		}
 
 		keysMap[key] = doc
@@ -603,4 +605,20 @@ func (pi *indexIndex) ScanEntries(requestId string, limit int64, cons datastore.
 			}
 		}
 	}
+}
+
+func processStats(m map[string]interface{}) map[string]interface{} {
+	m["last_scan_time"] = nil
+	if s, ok := m["stats"]; ok {
+		if sm, ok := s.(map[string]interface{}); ok {
+			if lkst, ok := sm["last_known_scan_time"]; ok {
+				if v, ok := lkst.(float64); ok {
+					if v != 0 {
+						m["last_scan_time"] = time.UnixMicro(int64(v) / 1000).Format(util.DEFAULT_FORMAT)
+					}
+				}
+			}
+		}
+	}
+	return m
 }
