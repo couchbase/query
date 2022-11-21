@@ -183,16 +183,21 @@ func (this *Order) makeMinimal(item value.AnnotatedValue, context *Context) {
 	if useQuota {
 		sz = item.Size()
 	}
-	aggs := item.GetAttachment("aggregates")
+	origAtt := item.Attachments()
 	item.ResetAttachments()
-	if aggs != nil {
+	if aggs, ok := origAtt["aggregates"]; ok && aggs != nil {
 		item.SetAttachment("aggregates", aggs)
 	}
 	for i, term := range this.plan.Terms() {
 		_, err := getOriginalCachedValue(item, term.Expression(), this.terms[i].term, &this.operatorCtx)
 		if err != nil {
+			for k, v := range origAtt {
+				item.SetAttachment(k, v)
+			}
+			return
 		}
 	}
+	origAtt = nil
 	item.ResetCovers(nil)
 	item.ResetMeta()
 	item.ResetOriginal()

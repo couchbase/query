@@ -18,7 +18,7 @@ import (
 	"github.com/couchbase/query/util"
 )
 
-const _DEFAULT_OBJECT_SIZE = 10
+const _DEFAULT_OBJECT_SIZE = 2
 
 /*
 ScopeValue provides alias scoping for subqueries, ranging, LETs,

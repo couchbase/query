@@ -1727,9 +1727,9 @@ func (this *Server) loadFactor(refresh bool) int {
 	// consider one request per servicer in queue is normal
 	servicers := util.MinInt(int(this.ServicerUsage()/_SERVICE_OVERHEAD_FACTOR), _SERVICE_PERCENT_LIMIT)
 	cpu := int(this.CpuUsage(refresh))
-	memory := int(this.MemoryUsage(refresh))
+	memory, _ := this.MemoryUsage(refresh)
 	// max of all of them
-	return util.MaxInt(util.MaxInt(servicers, cpu), memory)
+	return util.MaxInt(util.MaxInt(servicers, cpu), int(memory))
 
 }
 
@@ -1766,7 +1766,7 @@ func (this *Server) CpuUsage(refresh bool) float64 {
 	return util.RoundPlaces(cpu/float64(util.NumCPU()), 2)
 }
 
-func (this *Server) MemoryUsage(refresh bool) uint64 {
+func (this *Server) MemoryUsage(refresh bool) (uint64, uint64) {
 	// get go runtime memory stats
 	ms := this.MemoryStats(refresh)
 	mem_used := ms.HeapInuse + ms.HeapIdle - ms.HeapReleased + ms.GCSys
@@ -1775,14 +1775,14 @@ func (this *Server) MemoryUsage(refresh bool) uint64 {
 		// mem_quota is Values quota only. In Serverless this set to 50% of node RAM
 		// Add 50% of that for caches and process memory, i.e. 75% of node RAM
 		mem_quota += uint64(float64(mem_quota) * _MEMORY_CACHES)
-		return uint64(util.MinInt(int((mem_used*100)/mem_quota), _MEMORY_PERCENT))
+		return uint64(util.MinInt(int((mem_used*100)/mem_quota), _MEMORY_PERCENT)), ms.LastGC
 	}
 
 	// no node quota. caulculate Query engine memory quota as 50% system memory
 	// get system memory info
 	_, _, total, _, _ := system.GetSystemStats(nil, refresh, false)
 	if total <= 0 {
-		return _DEF_MEMORY_USAGE
+		return _DEF_MEMORY_USAGE, ms.LastGC
 	}
 	quota := uint64(float64(total) * _MEMORY_QUOTA)
 	mup := uint64((mem_used * 100) / quota)
@@ -1796,9 +1796,9 @@ func (this *Server) MemoryUsage(refresh bool) uint64 {
 	*/
 
 	if mup > _DEF_MEMORY_USAGE {
-		return uint64(util.MinInt(int(mup), _MEMORY_PERCENT))
+		return uint64(util.MinInt(int(mup), _MEMORY_PERCENT)), ms.LastGC
 	}
-	return _DEF_MEMORY_USAGE
+	return _DEF_MEMORY_USAGE, ms.LastGC
 
 }
 

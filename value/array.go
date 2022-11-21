@@ -405,9 +405,9 @@ func (this sliceValue) ContainsMatchingToken(matcher MatchFunc, options Value) b
 }
 
 func (this sliceValue) Size() uint64 {
-	size := uint64(0)
+	size := uint64(_INTERFACE_SIZE * len(this))
 	for e, _ := range this {
-		size += NewValue(this[e]).Size()
+		size += anySize(this[e])
 	}
 	return size
 }
@@ -578,9 +578,9 @@ func (this *listValue) ContainsMatchingToken(matcher MatchFunc, options Value) b
 }
 
 func (this *listValue) Size() uint64 {
-	size := uint64(0)
+	size := uint64(_INTERFACE_SIZE * len(this.slice))
 	for e, _ := range this.slice {
-		size += NewValue(this.slice[e]).Size()
+		size += anySize(this.slice[e])
 	}
 	return size
 }

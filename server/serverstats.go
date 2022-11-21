@@ -9,11 +9,13 @@
 package server
 
 import (
+	"runtime"
 	"sync/atomic"
 	"time"
 
 	json "github.com/couchbase/go_json"
 	"github.com/couchbase/query/logging"
+	"github.com/couchbase/query/util"
 )
 
 const (
@@ -65,6 +67,7 @@ func (this *Server) StartStatsCollector() (err error) {
 // Gather Cpu/Memory
 //
 func (c *statsCollector) runCollectStats() {
+	var lastGC uint64
 	ticker := time.NewTicker(_STATS_INTRVL)
 	defer func() {
 		ticker.Stop()
@@ -88,7 +91,7 @@ func (c *statsCollector) runCollectStats() {
 		newStats["load"] = c.server.Load()
 		newStats["process.service.usage"] = c.server.ServicerUsage()
 		newStats["process.percore.cpupercent"] = c.server.CpuUsage(false)
-		newStats["process.memory.usage"] = c.server.MemoryUsage(false)
+		newStats["process.memory.usage"], lastGC = c.server.MemoryUsage(false)
 		newStats["request.queued.count"] = c.server.QueuedRequests()
 		oldStats = c.server.AccountingStore().ExternalVitals(newStats)
 		newStats = oldStats
@@ -101,6 +104,11 @@ func (c *statsCollector) runCollectStats() {
 		}
 		index++
 		index %= c.nLoadFactors
+
+		if util.Now().UnixNano()-int64(lastGC) > int64(_STATS_INTRVL) {
+			logging.Debugf("Running GC")
+			runtime.GC()
+		}
 	}
 }
 

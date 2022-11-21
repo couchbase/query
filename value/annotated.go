@@ -11,6 +11,7 @@ package value
 import (
 	"encoding/binary"
 	"io"
+	"math/bits"
 	"reflect"
 	"unsafe"
 
@@ -19,7 +20,7 @@ import (
 	"github.com/couchbase/query/util"
 )
 
-const _DEFAULT_ATTACHMENT_SIZE = 10
+const _DEFAULT_ATTACHMENT_SIZE = 2
 
 type AnnotatedValues []AnnotatedValue
 
@@ -189,6 +190,38 @@ func (this *annotatedValue) SetField(field string, val interface{}) error {
 	return err
 }
 
+func (this *annotatedValue) Size() uint64 {
+	sz := this.Value.Size() + uint64(unsafe.Sizeof(*this))
+	if this.id != nil {
+		if s, ok := this.id.(string); ok {
+			sz += uint64(len(s))
+		}
+	}
+	if !this.sharedAnnotations {
+		n := 1 << bits.Len64(uint64(len(this.attachments)))
+		sz += uint64(_INTERFACE_SIZE*n) + _MAP_SIZE
+		for k, v := range this.attachments {
+			sz += uint64(len(k))
+			sz += anySize(v)
+		}
+	}
+	n := 1 << bits.Len64(uint64(len(this.meta)))
+	sz += uint64(_INTERFACE_SIZE*n) + _MAP_SIZE
+	for k, v := range this.meta {
+		sz += uint64(len(k))
+		sz += anySize(v)
+	}
+	n = 1 << bits.Len64(uint64(len(this.projectionOrder)))
+	sz += uint64(_POINTER_SIZE * n)
+	for i := range this.projectionOrder {
+		sz += uint64(len(this.projectionOrder[i]))
+	}
+	if this.covers != nil {
+		sz += this.covers.Size()
+	}
+	return sz
+}
+
 func (this *annotatedValue) SetValue(v Value) {
 	this.Value = v
 }
@@ -209,7 +242,6 @@ func (this *annotatedValue) GetAttachment(key string) interface{} {
 	if this.attachments != nil {
 		return this.attachments[key]
 	}
-
 	return nil
 }
 
@@ -217,7 +249,6 @@ func (this *annotatedValue) SetAttachment(key string, val interface{}) {
 	if this.attachments == nil {
 		this.attachments = make(map[string]interface{}, _DEFAULT_ATTACHMENT_SIZE)
 	}
-
 	this.attachments[key] = val
 }
 
@@ -255,7 +286,6 @@ func (this *annotatedValue) GetCover(key string) Value {
 		rv, _ := this.covers.Field(key)
 		return rv
 	}
-
 	return nil
 }
 
@@ -263,7 +293,6 @@ func (this *annotatedValue) SetCover(key string, val Value) {
 	if this.covers == nil {
 		this.covers = NewScopeValue(make(map[string]interface{}), nil)
 	}
-
 	this.covers.SetField(key, val)
 }
 

@@ -17,6 +17,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+	"math/bits"
 	"reflect"
 	"strconv"
 
@@ -32,6 +33,12 @@ const (
 	NONE Tristate = iota
 	FALSE
 	TRUE
+)
+
+const (
+	_MAP_SIZE       = 24
+	_INTERFACE_SIZE = 16
+	_POINTER_SIZE   = 8
 )
 
 /*
@@ -483,6 +490,70 @@ func NewValue(val interface{}) Value {
 		}
 
 		panic(fmt.Sprintf("Cannot create value for type %T.", val))
+	}
+}
+
+/*
+Used by some Value.Size() functions to obtain the size of elements.
+*/
+func anySize(v interface{}) uint64 {
+	switch v := v.(type) {
+	case Value:
+		return v.Size()
+	case string:
+		return uint64(len(v))
+	case map[string]interface{}:
+		n := 1 << bits.Len64(uint64(len(v)))
+		s := uint64(_INTERFACE_SIZE*n) + _MAP_SIZE
+		for k, vv := range v {
+			s += uint64(len(k))
+			s += anySize(vv)
+		}
+		return s
+	case map[string]Value:
+		n := 1 << bits.Len64(uint64(len(v)))
+		s := uint64(_POINTER_SIZE*n) + _MAP_SIZE
+		for k, vv := range v {
+			s += uint64(len(k))
+			s += vv.Size()
+		}
+		return s
+	case []interface{}:
+		s := uint64(_INTERFACE_SIZE * cap(v))
+		for i := range v {
+			s += anySize(v[i])
+		}
+		return s
+	case []Value:
+		s := uint64(_POINTER_SIZE * cap(v))
+		for i := range v {
+			s += v[i].Size()
+		}
+		return s
+	case []AnnotatedValue:
+		s := uint64(_POINTER_SIZE * cap(v))
+		for i := range v {
+			s += v[i].Size()
+		}
+		return s
+	case Values:
+		s := uint64(_POINTER_SIZE * cap(v))
+		for i := range v {
+			s += v[i].Size()
+		}
+		return s
+	case int32:
+		return 4
+	case uint32:
+		return 4
+	case float32:
+		return 4
+	case uint8:
+		return 1
+	case bool:
+		return 1
+	default:
+		return 8
 	}
 }
 
