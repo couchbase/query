@@ -608,13 +608,15 @@ func (pi *indexIndex) ScanEntries(requestId string, limit int64, cons datastore.
 }
 
 func processStats(m map[string]interface{}) map[string]interface{} {
-	m["last_scan_time"] = nil
-	if s, ok := m["stats"]; ok {
-		if sm, ok := s.(map[string]interface{}); ok {
-			if lkst, ok := sm["last_known_scan_time"]; ok {
-				if v, ok := lkst.(float64); ok {
-					if v != 0 {
-						m["last_scan_time"] = time.UnixMicro(int64(v) / 1000).Format(util.DEFAULT_FORMAT)
+	if _, ok := m["last_scan_time"]; !ok {
+		m["last_scan_time"] = nil
+		if s, ok := m["stats"]; ok {
+			if sm, ok := s.(map[string]interface{}); ok {
+				if lkst, ok := sm["last_known_scan_time"]; ok {
+					if v, ok := lkst.(float64); ok {
+						if v != 0 {
+							m["last_scan_time"] = time.UnixMicro(int64(v) / 1000).Format(util.DEFAULT_FORMAT)
+						}
 					}
 				}
 			}
