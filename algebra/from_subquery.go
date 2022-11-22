@@ -86,14 +86,22 @@ func (this *SubqueryTerm) Formalize(parent *expression.Formalizer) (f *expressio
 		return nil, err
 	}
 
-	f = expression.NewFormalizer(alias, parent)
-	err = this.subquery.FormalizeSubquery(f)
+	f1 := expression.NewFormalizer(alias, parent)
+	err = this.subquery.FormalizeSubquery(f1)
 	if err != nil {
 		return
 	}
 
+	// for checking subquery we need a new formalizer, however, if this SubqueryTerm
+	// is under an ANSI join/nest operation we need to use the parent's formalizer
+	if this.IsAnsiJoinOp() {
+		f = parent
+		f.SetKeyspace("")
+	} else {
+		f = f1
+	}
 	f.SetAllowedSubqTermAlias(alias)
-	f.SetAlias(this.Alias())
+	f.SetAlias(this.as)
 	return
 }
 

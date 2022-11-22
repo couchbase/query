@@ -250,6 +250,42 @@
         "results": [
             {}
 	]
+    },
+    {
+        "testcase": "MB-53565, part 1: no correlation",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ARRAY_LENGTH(p.`~subqueries`) = 1 AND NOT CONTAINS(p.`~subqueries`[0].subquery, \"correlated \")"
+        },
+        "statements":"WITH cte1 AS ( SELECT * FROM (SELECT t1.*, t2.* FROM [{\"a\":1}] AS t1 JOIN [{\"b\":1}] AS t2 ON t1.a = t2.b) lhs JOIN shellTest AS c1 USE HASH(build) ON lhs.a = c1.c11 WHERE c1.type = \"left\" ) SELECT count(*) AS cnt FROM cte1",
+        "results": [
+            {
+                "cnt": 1
+            }
+	]
+    },
+    {
+        "testcase": "MB-53565, part 2: index span with correlation",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY sub IN p.`~subqueries` SATISFIES CONTAINS(sub.subquery, \"correlated \") AND ANY v WITHIN sub.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`spans`[0].`range`[0].low = 'null' END END"
+        },
+        "statements":"WITH cte1 AS (SELECT t1.a FROM [{\"a\":1}] AS t1), cte2 AS (SELECT t2.b FROM [{\"b\":1}] AS t2), cte3 AS ( SELECT * FROM (SELECT t1.*, t2.* FROM cte1 AS t1 JOIN cte2 AS t2 ON t1.a = t2.b) lhs JOIN shellTest AS c1 USE HASH(build) ON lhs.a = c1.c11 WHERE c1.type = \"left\" ) SELECT count(*) AS cnt FROM cte3",
+        "results": [
+            {
+                "cnt": 1
+            }
+	]
     }
 ]
 
