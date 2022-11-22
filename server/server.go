@@ -892,6 +892,14 @@ func (this *Server) txQueueCount() int {
 	return int(this.transactionQueues.queueCnt)
 }
 
+func (this *Server) ActiveRequests() int {
+	return this.plusQueue.activeRequests() + this.unboundQueue.activeRequests()
+}
+
+func (this *Server) QueuedRequests() int {
+	return this.unboundQueue.queuedRequests() + this.plusQueue.queuedRequests() + this.txQueueCount()
+}
+
 func (this *Server) serviceRequest(request Request) {
 	defer func() {
 		err := recover()
