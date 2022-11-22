@@ -185,7 +185,7 @@ func (this *Unnest) IsCorrelated() bool {
 	return this.left.IsCorrelated()
 }
 
-func (this *Unnest) GetCorrelation() map[string]bool {
+func (this *Unnest) GetCorrelation() map[string]uint32 {
 	return this.left.GetCorrelation()
 }
 

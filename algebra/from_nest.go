@@ -172,7 +172,7 @@ func (this *Nest) IsCorrelated() bool {
 	return this.left.IsCorrelated()
 }
 
-func (this *Nest) GetCorrelation() map[string]bool {
+func (this *Nest) GetCorrelation() map[string]uint32 {
 	return this.left.GetCorrelation()
 }
 

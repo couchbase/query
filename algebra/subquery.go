@@ -167,6 +167,6 @@ func (this *Subquery) IsCorrelated() bool {
 	return this.query.IsCorrelated()
 }
 
-func (this *Subquery) GetCorrelation() map[string]bool {
+func (this *Subquery) GetCorrelation() map[string]uint32 {
 	return this.query.GetCorrelation()
 }

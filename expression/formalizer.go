@@ -41,7 +41,7 @@ type Formalizer struct {
 	identifiers *value.ScopeValue
 	aliases     *value.ScopeValue
 	flags       uint32
-	correlation map[string]bool
+	correlation map[string]uint32
 }
 
 func NewFormalizer(keyspace string, parent *Formalizer) *Formalizer {
@@ -64,7 +64,8 @@ func NewFunctionFormalizer(keyspace string, parent *Formalizer) *Formalizer {
 
 func newFormalizer(keyspace string, parent *Formalizer, mapSelf, mapKeyspace bool) *Formalizer {
 	var pv, av value.Value
-	var withs, correlation map[string]bool
+	var withs map[string]bool
+	var correlation map[string]uint32
 
 	flags := uint32(0)
 	if parent != nil {
@@ -79,7 +80,7 @@ func newFormalizer(keyspace string, parent *Formalizer, mapSelf, mapKeyspace boo
 			}
 		}
 		if len(parent.correlation) > 0 {
-			correlation = make(map[string]bool, len(parent.correlation))
+			correlation = make(map[string]uint32, len(parent.correlation))
 			for k, v := range parent.correlation {
 				correlation[k] = v
 			}
@@ -251,7 +252,9 @@ func (this *Formalizer) VisitIdentifier(expr *Identifier) (interface{}, error) {
 		unnest_flags := ident_flags & IDENT_IS_UNNEST_ALIAS
 		expr_term_flags := ident_flags & IDENT_IS_EXPR_TERM
 		subq_term_flags := ident_flags & IDENT_IS_SUBQ_TERM
+		group_as_flags := ident_flags & IDENT_IS_GROUP_AS
 		correlated_flags := ident_flags & IDENT_IS_CORRELATED
+		lateral_flags := ident_flags & IDENT_IS_LATERAL_CORR
 		if !this.indexScope() || keyspace_flags == 0 || expr.IsKeyspaceAlias() {
 			this.identifiers.SetField(identifier, ident_val)
 			// for user specified keyspace alias (such as alias.c1)
@@ -274,8 +277,14 @@ func (this *Formalizer) VisitIdentifier(expr *Identifier) (interface{}, error) {
 			if subq_term_flags != 0 && !expr.IsSubqTermAlias() {
 				expr.SetSubqTermAlias(true)
 			}
+			if group_as_flags != 0 && !expr.IsGroupAsAlias() {
+				expr.SetGroupAsAlias(true)
+			}
 			if !expr.IsCorrelated() && (correlated_flags != 0 || this.CheckCorrelation(identifier)) {
 				expr.SetCorrelated(true)
+			}
+			if lateral_flags != 0 && !expr.IsLateralCorr() {
+				expr.SetLateralCorr(true)
 			}
 			return expr, nil
 		}
@@ -594,7 +603,7 @@ func (this *Formalizer) RestoreWiths(withs map[string]bool) {
 	this.withs = withs
 }
 
-func (this *Formalizer) GetCorrelation() map[string]bool {
+func (this *Formalizer) GetCorrelation() map[string]uint32 {
 	return this.correlation
 }
 
@@ -604,8 +613,8 @@ func (this *Formalizer) CheckCorrelated() bool {
 	correlated := false
 	for id, id_val := range this.identifiers.Fields() {
 		if _, ok := immediate[id]; !ok {
+			id_flags := uint32(value.NewValue(id_val).ActualForIndex().(int64))
 			if this.WithAlias(id) {
-				id_flags := uint32(value.NewValue(id_val).ActualForIndex().(int64))
 				if (id_flags & IDENT_IS_CORRELATED) == 0 {
 					continue
 				}
@@ -615,9 +624,9 @@ func (this *Formalizer) CheckCorrelated() bool {
 				// the WITH alias itself to this.correlation
 			} else {
 				if this.correlation == nil {
-					this.correlation = make(map[string]bool)
+					this.correlation = make(map[string]uint32)
 				}
-				this.correlation[id] = true
+				this.correlation[id] |= id_flags
 			}
 			correlated = true
 		}
@@ -632,7 +641,7 @@ func (this *Formalizer) CheckCorrelation(alias string) bool {
 	return !ok
 }
 
-func (this *Formalizer) AddCorrelatedIdentifiers(correlation map[string]bool) error {
+func (this *Formalizer) AddCorrelatedIdentifiers(correlation map[string]uint32) error {
 	for k, _ := range correlation {
 		if _, ok := this.identifiers.Field(k); !ok {
 			v, ok1 := this.allowed.Field(k)

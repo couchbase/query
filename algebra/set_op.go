@@ -69,15 +69,15 @@ func (this *setOp) IsCorrelated() bool {
 	return this.first.IsCorrelated() || this.second.IsCorrelated()
 }
 
-func (this *setOp) GetCorrelation() map[string]bool {
+func (this *setOp) GetCorrelation() map[string]uint32 {
 	firstCorrelation := this.first.GetCorrelation()
 	secondCorrelation := this.second.GetCorrelation()
-	correlation := make(map[string]bool, len(firstCorrelation)+len(secondCorrelation))
+	correlation := make(map[string]uint32, len(firstCorrelation)+len(secondCorrelation))
 	for k, v := range firstCorrelation {
-		correlation[k] = v
+		correlation[k] |= v
 	}
 	for k, v := range secondCorrelation {
-		correlation[k] = v
+		correlation[k] |= v
 	}
 	return correlation
 }

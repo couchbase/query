@@ -23,7 +23,7 @@ type ExpressionTerm struct {
 	correlated   bool
 	joinHint     JoinHint
 	property     uint32
-	correlation  map[string]bool
+	correlation  map[string]uint32
 }
 
 /*
@@ -237,7 +237,7 @@ func (this *ExpressionTerm) IsCorrelated() bool {
 	return this.correlated
 }
 
-func (this *ExpressionTerm) GetCorrelation() map[string]bool {
+func (this *ExpressionTerm) GetCorrelation() map[string]uint32 {
 	if this.isKeyspace {
 		return this.keyspaceTerm.GetCorrelation()
 	}

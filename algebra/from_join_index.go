@@ -177,7 +177,7 @@ func (this *IndexJoin) IsCorrelated() bool {
 	return this.left.IsCorrelated()
 }
 
-func (this *IndexJoin) GetCorrelation() map[string]bool {
+func (this *IndexJoin) GetCorrelation() map[string]uint32 {
 	return this.left.GetCorrelation()
 }
 

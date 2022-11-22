@@ -62,7 +62,7 @@ type KeyspaceTerm struct {
 	validateKeys    bool
 	correlated      bool
 	fromTwoParts    bool
-	correlation     map[string]bool
+	correlation     map[string]uint32
 }
 
 func NewKeyspaceTermFromPath(path *Path, as string,
@@ -589,7 +589,7 @@ func (this *KeyspaceTerm) IsCorrelated() bool {
 	return this.correlated
 }
 
-func (this *KeyspaceTerm) GetCorrelation() map[string]bool {
+func (this *KeyspaceTerm) GetCorrelation() map[string]uint32 {
 	return this.correlation
 }
 

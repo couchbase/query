@@ -36,7 +36,7 @@ type Select struct {
 	correlated   bool                  `json:"correlated"`
 	hasVariables bool                  `json:"hasVariables"` // not actually propagated
 	setop        bool                  `json:"setop"`
-	correlation  map[string]bool       `json:"correlation"`
+	correlation  map[string]uint32     `json:"correlation"`
 }
 
 /*
@@ -271,10 +271,10 @@ func (this *Select) FormalizeSubquery(parent *expression.Formalizer) (err error)
 			correlation := f.GetCorrelation()
 			this.correlated = correlated
 			if this.correlation == nil {
-				this.correlation = make(map[string]bool, len(correlation))
+				this.correlation = make(map[string]uint32, len(correlation))
 			}
 			for k, v := range correlation {
-				this.correlation[k] = v
+				this.correlation[k] |= v
 			}
 		}
 	}
@@ -305,10 +305,10 @@ func (this *Select) FormalizeSubquery(parent *expression.Formalizer) (err error)
 	if len(fields) > 0 {
 		this.correlated = true
 		if this.correlation == nil {
-			this.correlation = make(map[string]bool, len(fields))
+			this.correlation = make(map[string]uint32, len(fields))
 		}
 		for k, _ := range fields {
-			this.correlation[k] = true
+			this.correlation[k] |= expression.IDENT_IS_UNKNOWN
 		}
 	}
 
@@ -358,7 +358,7 @@ func (this *Select) SetCorrelated() {
 	this.correlated = true
 }
 
-func (this *Select) GetCorrelation() map[string]bool {
+func (this *Select) GetCorrelation() map[string]uint32 {
 	return this.correlation
 }
 
@@ -442,7 +442,7 @@ type Subresult interface {
 	/*
 	   Get correlation
 	*/
-	GetCorrelation() map[string]bool
+	GetCorrelation() map[string]uint32
 
 	/*
 	   Checks if projection is raw

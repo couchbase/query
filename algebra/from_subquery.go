@@ -19,7 +19,7 @@ type SubqueryTerm struct {
 	as          string
 	joinHint    JoinHint
 	property    uint32
-	correlation map[string]bool
+	correlation map[string]uint32
 }
 
 /*
@@ -231,7 +231,7 @@ func (this *SubqueryTerm) IsCorrelated() bool {
 	return this.subquery.IsCorrelated()
 }
 
-func (this *SubqueryTerm) GetCorrelation() map[string]bool {
+func (this *SubqueryTerm) GetCorrelation() map[string]uint32 {
 	return this.correlation
 }
 

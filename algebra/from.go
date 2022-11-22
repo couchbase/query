@@ -66,7 +66,7 @@ type FromTerm interface {
 	/*
 	   Get correlation references
 	*/
-	GetCorrelation() map[string]bool
+	GetCorrelation() map[string]uint32
 }
 
 type SimpleFromTerm interface {
@@ -118,12 +118,12 @@ func GetKeyspaceTerm(term SimpleFromTerm) *KeyspaceTerm {
 	}
 }
 
-func addSimpleTermCorrelation(curCorrelation, newCorrelation map[string]bool, join bool,
-	parent *expression.Formalizer) map[string]bool {
+func addSimpleTermCorrelation(curCorrelation, newCorrelation map[string]uint32, join bool,
+	parent *expression.Formalizer) map[string]uint32 {
 	if curCorrelation == nil {
-		curCorrelation = make(map[string]bool, len(newCorrelation))
+		curCorrelation = make(map[string]uint32, len(newCorrelation))
 	}
-	for k, _ := range newCorrelation {
+	for k, v := range newCorrelation {
 		// differentiate lateral correlation with nested correlation
 		// if the correlation is lateral (with a previous keyspace)
 		// then this correlation should not be propagated up
@@ -131,7 +131,10 @@ func addSimpleTermCorrelation(curCorrelation, newCorrelation map[string]bool, jo
 		if join {
 			lateral = !parent.CheckCorrelation(k)
 		}
-		curCorrelation[k] = !lateral
+		if lateral {
+			v |= expression.IDENT_IS_LATERAL_CORR
+		}
+		curCorrelation[k] |= v
 	}
 	return curCorrelation
 }
@@ -143,7 +146,7 @@ func joinCorrelated(left, right FromTerm) bool {
 	if right.IsCorrelated() {
 		for _, v := range right.GetCorrelation() {
 			// skip lateral correlation
-			if v {
+			if (v & expression.IDENT_IS_LATERAL_CORR) == 0 {
 				return true
 			}
 		}
@@ -151,17 +154,17 @@ func joinCorrelated(left, right FromTerm) bool {
 	return false
 }
 
-func getJoinCorrelation(left, right FromTerm) map[string]bool {
+func getJoinCorrelation(left, right FromTerm) map[string]uint32 {
 	leftCorrelation := left.GetCorrelation()
 	rightCorrelation := right.GetCorrelation()
-	correlation := make(map[string]bool, len(leftCorrelation)+len(rightCorrelation))
+	correlation := make(map[string]uint32, len(leftCorrelation)+len(rightCorrelation))
 	for k, v := range leftCorrelation {
-		correlation[k] = v
+		correlation[k] |= v
 	}
 	for k, v := range rightCorrelation {
 		// skip lateral correlation
-		if v {
-			correlation[k] = v
+		if (v & expression.IDENT_IS_LATERAL_CORR) == 0 {
+			correlation[k] |= v
 		}
 	}
 	return correlation
@@ -169,7 +172,7 @@ func getJoinCorrelation(left, right FromTerm) map[string]bool {
 
 func checkLateralCorrelation(term SimpleFromTerm) {
 	for _, v := range term.GetCorrelation() {
-		if !v {
+		if (v & expression.IDENT_IS_LATERAL_CORR) != 0 {
 			term.SetLateralJoin()
 			return
 		}

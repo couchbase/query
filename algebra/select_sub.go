@@ -31,7 +31,7 @@ type Subselect struct {
 	window      WindowTerms           `json:"window"`
 	optimHints  *OptimHints           `json:"optimizer_hints"`
 	correlated  bool                  `json:"correlated"`
-	correlation map[string]bool       `json:"correlated_variables"`
+	correlation map[string]uint32     `json:"correlated_references"`
 }
 
 /*
@@ -121,22 +121,22 @@ func (this *Subselect) Formalize(parent *expression.Formalizer) (f *expression.F
 	if this.correlated {
 		correlation := f.GetCorrelation()
 		if this.correlation == nil {
-			this.correlation = make(map[string]bool, len(correlation))
+			this.correlation = make(map[string]uint32, len(correlation))
 		}
 		for k, v := range correlation {
-			this.correlation[k] = v
+			this.correlation[k] |= v
 		}
 	}
 
 	if this.from != nil && this.from.IsCorrelated() {
 		correlation := this.from.GetCorrelation()
 		if this.correlation == nil {
-			this.correlation = make(map[string]bool, len(correlation))
+			this.correlation = make(map[string]uint32, len(correlation))
 		}
 		for k, v := range correlation {
 			if f.CheckCorrelation(k) {
 				this.correlated = true
-				this.correlation[k] = v
+				this.correlation[k] |= v
 			}
 		}
 	}
@@ -315,7 +315,7 @@ func (this *Subselect) SetCorrelated() {
 	this.correlated = true
 }
 
-func (this *Subselect) GetCorrelation() map[string]bool {
+func (this *Subselect) GetCorrelation() map[string]uint32 {
 	return this.correlation
 }
 

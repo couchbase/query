@@ -206,7 +206,7 @@ func (this *AnsiNest) IsCorrelated() bool {
 	return joinCorrelated(this.left, this.right)
 }
 
-func (this *AnsiNest) GetCorrelation() map[string]bool {
+func (this *AnsiNest) GetCorrelation() map[string]uint32 {
 	return getJoinCorrelation(this.left, this.right)
 }
 
