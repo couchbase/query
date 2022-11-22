@@ -389,7 +389,8 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 }
 
 func (this *builder) VisitSubqueryTerm(node *algebra.SubqueryTerm) (interface{}, error) {
-	qp, err := node.Subquery().Accept(this)
+	subquery := node.Subquery()
+	qp, err := subquery.Accept(this)
 	if err != nil {
 		this.processadviseJF(node.Alias())
 		return nil, err
@@ -405,8 +406,17 @@ func (this *builder) VisitSubqueryTerm(node *algebra.SubqueryTerm) (interface{},
 	if !ok {
 		return nil, errors.NewPlanInternalError("VisitSubqueryTerm: baseKeyspace not found for " + node.Alias())
 	}
-	this.addChildren(selOp, plan.NewAlias(node.Alias(), baseKeyspace.IsPrimaryTerm(),
-		selOp.Cost(), selOp.Cardinality(), selOp.Size(), selOp.FrCost()))
+
+	if this.hasBuilderFlag(BUILDER_NL_INNER) {
+		// make an ExpressionScan with the subquery as expression
+		// also save the subquery plan such that it can be added later to "~subqueries"
+		exprScan := plan.NewExpressionScan(algebra.NewSubquery(subquery), node.Alias(), subquery.IsCorrelated(), nil, selOp.Cost(), selOp.Cardinality(), selOp.Size(), selOp.FrCost())
+		exprScan.SetSubqueryPlan(selOp)
+		this.addChildren(exprScan)
+	} else {
+		this.addChildren(selOp, plan.NewAlias(node.Alias(), baseKeyspace.IsPrimaryTerm(),
+			selOp.Cost(), selOp.Cardinality(), selOp.Size(), selOp.FrCost()))
+	}
 
 	if len(this.baseKeyspaces) > 1 {
 		filter, _, err := this.getFilter(node.Alias(), false, nil)

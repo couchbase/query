@@ -10,8 +10,8 @@ package execution
 
 import (
 	"encoding/json"
-	_ "fmt"
 
+	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
@@ -57,10 +57,19 @@ func (this *ExpressionScan) RunOnce(context *Context, parent value.Value) {
 			return
 		}
 
-		correlated := this.plan.IsCorrelated()
+		useCache := false
+		if !this.plan.IsCorrelated() {
+			if subq, ok := this.plan.FromExpr().(*algebra.Subquery); ok {
+				// if the subquery evaluation is caching result already, no need
+				// to cache result here
+				useCache = !useSubqCachedResult(subq.Select())
+			} else {
+				useCache = true
+			}
+		}
 
 		// use cached results if available
-		if !correlated && this.results != nil {
+		if useCache && this.results != nil {
 			for _, av := range this.results {
 				if context.UseRequestQuota() && context.TrackValueSize(av.Size()) {
 					context.Error(errors.NewMemoryQuotaExceededError())
@@ -100,7 +109,7 @@ func (this *ExpressionScan) RunOnce(context *Context, parent value.Value) {
 		}
 
 		acts := actuals.([]interface{})
-		if !correlated {
+		if useCache {
 			this.results = make(value.AnnotatedValues, 0, len(acts))
 		}
 		for _, act := range acts {
@@ -120,7 +129,7 @@ func (this *ExpressionScan) RunOnce(context *Context, parent value.Value) {
 				}
 			}
 
-			if !correlated {
+			if useCache {
 				this.results = append(this.results, av)
 				if context.UseRequestQuota() && context.TrackValueSize(av.Size()) {
 					context.Error(errors.NewMemoryQuotaExceededError())

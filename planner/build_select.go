@@ -80,6 +80,9 @@ func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
+	subOp := sub.(plan.Operator)
+
+	addFromSubqueries(qp, stmt.OptimHints(), subOp)
 
 	with := stmt.With()
 	if with != nil {
@@ -88,19 +91,19 @@ func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 		size := OPT_SIZE_NOT_AVAIL
 		frCost := OPT_COST_NOT_AVAIL
 		if this.useCBO {
-			cost, cardinality, size, frCost = getWithCost(sub.(plan.Operator), with)
+			cost, cardinality, size, frCost = getWithCost(subOp, with)
 		}
-		sub = plan.NewWith(with, sub.(plan.Operator), cost, cardinality, size, frCost)
+		subOp = plan.NewWith(with, subOp, cost, cardinality, size, frCost)
 	}
 
 	if stmtOrder == nil && stmtOffset == nil && stmtLimit == nil {
-		qp.SetPlanOp(sub.(plan.Operator))
+		qp.SetPlanOp(subOp)
 		return qp, nil
 	}
 
 	children := make([]plan.Operator, 0, 5)
-	children = append(children, sub.(plan.Operator))
-	lastOp := sub.(plan.Operator)
+	children = append(children, subOp)
+	lastOp := subOp
 	cost := lastOp.Cost()
 	cardinality := lastOp.Cardinality()
 	size := lastOp.Size()
@@ -222,4 +225,41 @@ func newOffsetLimitExpr(expr expression.Expression, offset bool) (expression.Exp
 		return nil, errors.NewInvalidValueError(fmt.Sprintf("Invalid OFFSET value %v", actual))
 	}
 	return nil, errors.NewInvalidValueError(fmt.Sprintf("Invalid LIMIT value %v", actual))
+}
+
+// check for any SubqueryTerm that falls under inner of nested-loop join, in which case we build an
+// ExpressionScan on top of the subquery; need to add the subquery and its plan to "~subqueries"
+func addFromSubqueries(qp *plan.QueryPlan, optimHints *algebra.OptimHints, ops ...plan.Operator) {
+	for _, op := range ops {
+		switch op := op.(type) {
+		case *plan.ExpressionScan:
+			if subq, ok := op.FromExpr().(*algebra.Subquery); ok {
+				o := op.SubqueryPlan()
+				if o != nil {
+					subSelect := subq.Select()
+					qp.AddSubquery(subSelect, o)
+					// optimizer hints from the SubqueryTerm was added to
+					// the parent query's optimizer hints; since the SubqueryTerm
+					// now appears in "~subqueries" section it'll have its own
+					// optimizer hints, and thus no longer need to be included
+					// in the parent query's optimizer hints
+					removeSubqueryTermHints(optimHints, op.Alias())
+					// nested SubqueryTerm?
+					addFromSubqueries(qp, subSelect.OptimHints(), o)
+				}
+			}
+		case *plan.Parallel:
+			addFromSubqueries(qp, optimHints, op.Child())
+		case *plan.Sequence:
+			addFromSubqueries(qp, optimHints, op.Children()...)
+		case *plan.NLJoin:
+			addFromSubqueries(qp, optimHints, op.Child())
+		case *plan.NLNest:
+			addFromSubqueries(qp, optimHints, op.Child())
+		case *plan.HashJoin:
+			addFromSubqueries(qp, optimHints, op.Child())
+		case *plan.HashNest:
+			addFromSubqueries(qp, optimHints, op.Child())
+		}
+	}
 }

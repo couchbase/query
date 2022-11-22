@@ -668,7 +668,9 @@ func (this *builder) buildAnsiJoinScan(node *algebra.KeyspaceTerm, onclause, fil
 		}
 	}
 
+	nlInner := this.setNLInner()
 	_, err = node.Accept(this)
+	this.restoreNLInner(nlInner)
 	if err != nil {
 		switch e := err.(type) {
 		case errors.Error:
@@ -679,7 +681,9 @@ func (this *builder) buildAnsiJoinScan(node *algebra.KeyspaceTerm, onclause, fil
 				// on clause and where clause filters, try using just
 				// the on clause filters
 				baseKeyspace.SetOnclauseOnly()
+				nlInner = this.setNLInner()
 				_, err = node.Accept(this)
+				this.restoreNLInner(nlInner)
 			}
 		}
 
@@ -1229,7 +1233,9 @@ func (this *builder) buildAnsiJoinSimpleFromTerm(node algebra.SimpleFromTerm, on
 	this.subChildren = nil
 	this.lastOp = nil
 
+	nlInner := this.setNLInner()
 	_, err = node.Accept(this)
+	this.restoreNLInner(nlInner)
 	if err != nil {
 		return nil, nil, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, err
 	}
@@ -1459,6 +1465,9 @@ func (this *builder) getOnclauseFilter(filters base.Filters) (expression.Express
 	}
 	if this.joinEnum() {
 		return filter, nil
+	}
+	if len(this.coveringScans) > 0 {
+		filter = filter.Copy()
 	}
 	for _, op := range this.coveringScans {
 		coverer := expression.NewCoverer(op.Covers(), op.FilterCovers())

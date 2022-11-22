@@ -1202,9 +1202,13 @@ func (this *OptimHints) MarshalJSON() ([]byte, error) {
 	if len(this.subqTermHints) > 0 {
 		subqs := make([]interface{}, 0, len(this.subqTermHints))
 		for _, subq := range this.subqTermHints {
-			subqs = append(subqs, subq)
+			if subq != nil {
+				subqs = append(subqs, subq)
+			}
 		}
-		r["~from_clause_subqueries"] = subqs
+		if len(subqs) > 0 {
+			r["~from_clause_subqueries"] = subqs
+		}
 	}
 	return json.Marshal(r)
 }
@@ -1242,6 +1246,10 @@ func NewSubqOptimHints(alias string, hints *OptimHints) *SubqOptimHints {
 		alias: alias,
 		hints: hints,
 	}
+}
+
+func (this *SubqOptimHints) Alias() string {
+	return this.alias
 }
 
 func (this *SubqOptimHints) MarshalJSON() ([]byte, error) {
