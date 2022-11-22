@@ -1918,6 +1918,9 @@ func (this *builder) getOnclauseFilter(filters base.Filters) (expression.Express
 	if this.joinEnum() {
 		return filter, nil
 	}
+	if len(this.coveringScans) > 0 {
+		filter = filter.Copy()
+	}
 	for _, op := range this.coveringScans {
 		coverer := expression.NewCoverer(op.Covers(), op.FilterCovers())
 		if arrayKey := op.ImplicitArrayKey(); arrayKey != nil {
