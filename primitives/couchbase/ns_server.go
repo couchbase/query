@@ -1050,7 +1050,8 @@ func (b *Bucket) GetCollectionsManifest() (*Manifest, error) {
 	if err != nil {
 		return nil, fmt.Errorf("Unable to get connection to retrieve collections manifest: %v. No collections access to bucket %s.", err, b.Name)
 	}
-	client.SetDeadline(getDeadline(time.Time{}, DefaultTimeout))
+	dl, _ := getDeadline(noDeadline, DefaultTimeout)
+	client.SetDeadline(dl)
 
 	// We need to select the bucket before GetCollectionsManifest()
 	// will work. This is sometimes done at startup (see defaultMkConn())

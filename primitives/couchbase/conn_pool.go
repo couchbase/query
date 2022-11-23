@@ -107,7 +107,8 @@ func defaultMkConn(host string, ah AuthHandler, tlsConfig *tls.Config, bucketNam
 	}
 
 	if DefaultTimeout > 0 {
-		conn.SetDeadline(getDeadline(noDeadline, DefaultTimeout))
+		dl, _ := getDeadline(noDeadline, DefaultTimeout)
+		conn.SetDeadline(dl)
 	}
 
 	if TCPKeepalive == true {

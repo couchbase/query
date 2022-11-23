@@ -15,6 +15,12 @@ import (
 
 const DEFAULT_FORMAT = "2006-01-02T15:04:05.999Z07:00"
 
+var base int64
+
+func init() {
+	base = time.Now().UnixNano() - nanotime()
+}
+
 type Time int64
 
 //go:noescape
@@ -35,4 +41,8 @@ func (this Time) Add(d time.Duration) Time {
 
 func (this Time) Sub(t Time) time.Duration {
 	return time.Duration(this - t)
+}
+
+func (this Time) UnixNano() int64 {
+	return int64(this) + base
 }

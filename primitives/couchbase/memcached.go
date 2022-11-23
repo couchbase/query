@@ -433,7 +433,8 @@ func (b *Bucket) do3(vb uint16, f func(mc *memcached.Client, vb uint16) error, d
 			return err
 		}
 		if deadline && DefaultTimeout > 0 {
-			conn.SetDeadline(getDeadline(noDeadline, DefaultTimeout))
+			dl, _ := getDeadline(noDeadline, DefaultTimeout)
+			conn.SetDeadline(dl)
 		} else {
 			conn.SetDeadline(noDeadline)
 		}
@@ -495,7 +496,8 @@ func getStatsParallelFunc(fn func(key, val []byte), sn string, b *Bucket, offset
 	conn, err := pool.Get()
 
 	if err == nil {
-		conn.SetDeadline(getDeadline(time.Time{}, DefaultTimeout))
+		dl, _ := getDeadline(noDeadline, DefaultTimeout)
+		conn.SetDeadline(dl)
 		err = conn.StatsFunc(which, fn)
 		pool.Return(conn)
 	}
@@ -653,15 +655,17 @@ func isAddrNotAvailable(err error) bool {
 	return strings.Contains(estr, "cannot assign requested address")
 }
 
-func getDeadline(reqDeadline time.Time, duration time.Duration) time.Time {
+func getDeadline(reqDeadline time.Time, duration time.Duration) (time.Time, error) {
 	if reqDeadline.IsZero() {
 		if duration > 0 {
-			return time.Unix(time.Now().Unix(), 0).Add(duration)
+			return time.Unix(0, util.Now().Add(duration).UnixNano()), nil
 		} else {
-			return noDeadline
+			return noDeadline, nil
 		}
+	} else if util.Now().UnixNano() > reqDeadline.UnixNano() {
+		return reqDeadline, fmt.Errorf("Deadline expired")
 	}
-	return reqDeadline
+	return reqDeadline, nil
 }
 
 func backOff(attempt, maxAttempts int, duration time.Duration, exponential bool) bool {
@@ -714,7 +718,13 @@ func (b *Bucket) doBulkGet(vb uint16, keys []string, reqDeadline time.Time,
 			}
 			lastError = nil
 
-			conn.SetDeadline(getDeadline(reqDeadline, DefaultTimeout))
+			dl, err := getDeadline(reqDeadline, DefaultTimeout)
+			if err != nil {
+				logging.Debugf("Request deadline expired.")
+				pool.Return(conn)
+				return err
+			}
+			conn.SetDeadline(dl)
 			if desc.replica > 0 {
 				conn.SetReplica(true)
 			}
@@ -1197,7 +1207,12 @@ func (b *Bucket) GetCollectionCID(scope string, collection string, reqDeadline t
 	err = b.Do2(key, func(mc *memcached.Client, vb uint16) error {
 		var err1 error
 
-		mc.SetDeadline(getDeadline(reqDeadline, DefaultTimeout))
+		dl, err := getDeadline(reqDeadline, DefaultTimeout)
+		if err != nil {
+			logging.Debugf("Request deadline expired")
+			return err
+		}
+		mc.SetDeadline(dl)
 		_, err1 = mc.SelectBucket(b.Name)
 		if err1 != nil {
 			return err1
@@ -1229,7 +1244,12 @@ func (b *Bucket) GetsMC(key string, reqDeadline time.Time, useReplica bool, cont
 	err = b.Do2(key, func(mc *memcached.Client, vb uint16) error {
 		var err1 error
 
-		mc.SetDeadline(getDeadline(reqDeadline, DefaultTimeout))
+		dl, err := getDeadline(reqDeadline, DefaultTimeout)
+		if err != nil {
+			logging.Debugf("Request deadline expired")
+			return err
+		}
+		mc.SetDeadline(dl)
 		response, err1 = mc.Get(vb, key, context...)
 		if err1 != nil {
 			return err1
@@ -1251,7 +1271,12 @@ func (b *Bucket) GetsSubDoc(key string, reqDeadline time.Time, subPaths []string
 	err = b.Do2(key, func(mc *memcached.Client, vb uint16) error {
 		var err1 error
 
-		mc.SetDeadline(getDeadline(reqDeadline, DefaultTimeout))
+		dl, err := getDeadline(reqDeadline, DefaultTimeout)
+		if err != nil {
+			logging.Debugf("Request deadline expired")
+			return err
+		}
+		mc.SetDeadline(dl)
 		response, err1 = mc.GetSubdoc(vb, key, subPaths, context...)
 		if err1 != nil {
 			return err1
@@ -1293,7 +1318,8 @@ func (b *Bucket) GetRandomDoc(context ...*memcached.ClientContext) (*gomemcached
 	if err != nil {
 		return nil, err
 	}
-	conn.SetDeadline(getDeadline(time.Time{}, DefaultTimeout))
+	dl, _ := getDeadline(noDeadline, DefaultTimeout)
+	conn.SetDeadline(dl)
 
 	// We may need to select the bucket before GetRandomDoc()
 	// will work. This is sometimes done at startup (see defaultMkConn())
