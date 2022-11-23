@@ -884,6 +884,14 @@ func (this *runQueue) load(txqueueCnt int) int {
 	return 100 * (int(this.runCnt) + int(this.queueCnt) + txqueueCnt) / this.servicers
 }
 
+func (this *runQueue) activeRequests() int {
+	return int(this.runCnt) + this.queuedRequests()
+}
+
+func (this *runQueue) queuedRequests() int {
+	return int(this.queueCnt)
+}
+
 func (this *Server) Load() int {
 	return this.plusQueue.load(this.txQueueCount()) + this.unboundQueue.load(0)
 }
