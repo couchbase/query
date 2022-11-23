@@ -127,11 +127,7 @@ func addSimpleTermCorrelation(curCorrelation, newCorrelation map[string]uint32, 
 		// differentiate lateral correlation with nested correlation
 		// if the correlation is lateral (with a previous keyspace)
 		// then this correlation should not be propagated up
-		lateral := false
-		if join {
-			lateral = !parent.CheckCorrelation(k)
-		}
-		if lateral {
+		if join && !parent.CheckCorrelation(k) {
 			v |= expression.IDENT_IS_LATERAL_CORR
 		}
 		curCorrelation[k] |= v
