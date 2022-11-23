@@ -85,7 +85,7 @@ var Suspend func(string, time.Duration, string) = func(b string, d time.Duration
 var IsSuspended func(string) bool = func(n string) bool { return false }
 
 // Enable KV tracing (timing information)
-var EnableTracing = true
+var EnableTracing = false
 
 // TCP keepalive interval in seconds. Default 30 minutes
 var TCPKeepaliveInterval = 30 * 60
