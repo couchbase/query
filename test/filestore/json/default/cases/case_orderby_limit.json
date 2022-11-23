@@ -63,8 +63,7 @@
                 },
                 {
                     "#operator": "Order",
-                    "can_spill": true,
-                    "clip_values": true,
+                    "flags": 6,
                     "limit": "1",
                     "offset": "1",
                     "sort_terms": [
@@ -147,8 +146,7 @@
                 },
                 {
                     "#operator": "Order",
-                    "can_spill": true,
-                    "clip_values": true,
+                    "flags": 6,
                     "limit": "3",
                     "sort_terms": [
                         {

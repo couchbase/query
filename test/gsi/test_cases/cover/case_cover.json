@@ -886,8 +886,7 @@
                     },
                     {
                         "#operator": "Order",
-                        "can_spill":true,
-                        "clip_values": true,
+                        "flags": 6,
                         "sort_terms": [
                             {
                                 "expr": "(`o` + 1)"

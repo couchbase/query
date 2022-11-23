@@ -22,7 +22,7 @@ type InitialGroup struct {
 	optEstimate
 	keys       expression.Expressions
 	aggregates algebra.Aggregates
-	canSpill   bool
+	flags      uint32
 }
 
 func NewInitialGroup(keys expression.Expressions, aggregates algebra.Aggregates,
@@ -30,7 +30,9 @@ func NewInitialGroup(keys expression.Expressions, aggregates algebra.Aggregates,
 	rv := &InitialGroup{
 		keys:       keys,
 		aggregates: aggregates,
-		canSpill:   canSpill,
+	}
+	if canSpill {
+		rv.flags |= _CAN_SPILL
 	}
 	setOptEstimate(&rv.optEstimate, cost, cardinality, size, frCost)
 	return rv
@@ -53,7 +55,7 @@ func (this *InitialGroup) Aggregates() algebra.Aggregates {
 }
 
 func (this *InitialGroup) CanSpill() bool {
-	return this.canSpill
+	return (this.flags & _CAN_SPILL) != 0
 }
 
 func (this *InitialGroup) MarshalJSON() ([]byte, error) {
@@ -75,8 +77,8 @@ func (this *InitialGroup) MarshalBase(f func(map[string]interface{})) map[string
 	if optEstimate := marshalOptEstimate(&this.optEstimate); optEstimate != nil {
 		r["optimizer_estimates"] = optEstimate
 	}
-	if this.canSpill {
-		r["can_spill"] = true
+	if this.flags > 0 {
+		r["flags"] = this.flags
 	}
 	if f != nil {
 		f(r)
@@ -90,7 +92,7 @@ func (this *InitialGroup) UnmarshalJSON(body []byte) error {
 		Keys        []string               `json:"group_keys"`
 		Aggs        []string               `json:"aggregates"`
 		OptEstimate map[string]interface{} `json:"optimizer_estimates"`
-		CanSpill    bool                   `json:"can_spill"`
+		Flags       uint32                 `json:"flags"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -117,7 +119,7 @@ func (this *InitialGroup) UnmarshalJSON(body []byte) error {
 	}
 
 	unmarshalOptEstimate(&this.optEstimate, _unmarshalled.OptEstimate)
-	this.canSpill = _unmarshalled.CanSpill
+	this.flags = _unmarshalled.Flags
 
 	return nil
 }
@@ -128,7 +130,7 @@ type IntermediateGroup struct {
 	optEstimate
 	keys       expression.Expressions
 	aggregates algebra.Aggregates
-	canSpill   bool
+	flags      uint32
 }
 
 func NewIntermediateGroup(keys expression.Expressions, aggregates algebra.Aggregates,
@@ -136,7 +138,9 @@ func NewIntermediateGroup(keys expression.Expressions, aggregates algebra.Aggreg
 	rv := &IntermediateGroup{
 		keys:       keys,
 		aggregates: aggregates,
-		canSpill:   canSpill,
+	}
+	if canSpill {
+		rv.flags |= _CAN_SPILL
 	}
 	setOptEstimate(&rv.optEstimate, cost, cardinality, size, frCost)
 	return rv
@@ -159,7 +163,7 @@ func (this *IntermediateGroup) Aggregates() algebra.Aggregates {
 }
 
 func (this *IntermediateGroup) CanSpill() bool {
-	return this.canSpill
+	return (this.flags & _CAN_SPILL) != 0
 }
 
 func (this *IntermediateGroup) MarshalJSON() ([]byte, error) {
@@ -181,8 +185,8 @@ func (this *IntermediateGroup) MarshalBase(f func(map[string]interface{})) map[s
 	if optEstimate := marshalOptEstimate(&this.optEstimate); optEstimate != nil {
 		r["optimizer_estimates"] = optEstimate
 	}
-	if this.canSpill {
-		r["can_spill"] = true
+	if this.flags > 0 {
+		r["flags"] = this.flags
 	}
 	if f != nil {
 		f(r)
@@ -196,7 +200,7 @@ func (this *IntermediateGroup) UnmarshalJSON(body []byte) error {
 		Keys        []string               `json:"group_keys"`
 		Aggs        []string               `json:"aggregates"`
 		OptEstimate map[string]interface{} `json:"optimizer_estimates"`
-		CanSpill    bool                   `json:"can_spill"`
+		Flags       uint32                 `json:"flags"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -223,7 +227,7 @@ func (this *IntermediateGroup) UnmarshalJSON(body []byte) error {
 	}
 
 	unmarshalOptEstimate(&this.optEstimate, _unmarshalled.OptEstimate)
-	this.canSpill = _unmarshalled.CanSpill
+	this.flags = _unmarshalled.Flags
 
 	return nil
 }
@@ -234,7 +238,7 @@ type FinalGroup struct {
 	optEstimate
 	keys       expression.Expressions
 	aggregates algebra.Aggregates
-	canSpill   bool
+	flags      uint32
 }
 
 func NewFinalGroup(keys expression.Expressions, aggregates algebra.Aggregates,
@@ -242,7 +246,9 @@ func NewFinalGroup(keys expression.Expressions, aggregates algebra.Aggregates,
 	rv := &FinalGroup{
 		keys:       keys,
 		aggregates: aggregates,
-		canSpill:   canSpill,
+	}
+	if canSpill {
+		rv.flags |= _CAN_SPILL
 	}
 	setOptEstimate(&rv.optEstimate, cost, cardinality, size, frCost)
 	return rv
@@ -265,7 +271,7 @@ func (this *FinalGroup) Aggregates() algebra.Aggregates {
 }
 
 func (this *FinalGroup) CanSpill() bool {
-	return this.canSpill
+	return (this.flags & _CAN_SPILL) != 0
 }
 
 func (this *FinalGroup) MarshalJSON() ([]byte, error) {
@@ -287,8 +293,8 @@ func (this *FinalGroup) MarshalBase(f func(map[string]interface{})) map[string]i
 	if optEstimate := marshalOptEstimate(&this.optEstimate); optEstimate != nil {
 		r["optimizer_estimates"] = optEstimate
 	}
-	if this.canSpill {
-		r["can_spill"] = true
+	if this.flags > 0 {
+		r["flags"] = this.flags
 	}
 	if f != nil {
 		f(r)
@@ -302,7 +308,7 @@ func (this *FinalGroup) UnmarshalJSON(body []byte) error {
 		Keys        []string               `json:"group_keys"`
 		Aggs        []string               `json:"aggregates"`
 		OptEstimate map[string]interface{} `json:"optimizer_estimates"`
-		CanSpill    bool                   `json:"can_spill"`
+		Flags       uint32                 `json:"flags"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -329,7 +335,7 @@ func (this *FinalGroup) UnmarshalJSON(body []byte) error {
 	}
 
 	unmarshalOptEstimate(&this.optEstimate, _unmarshalled.OptEstimate)
-	this.canSpill = _unmarshalled.CanSpill
+	this.flags = _unmarshalled.Flags
 
 	return nil
 }

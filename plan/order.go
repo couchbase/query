@@ -20,6 +20,8 @@ import (
 
 const (
 	_EARLY_ORDER = uint32(1) << iota
+	_CAN_SPILL
+	_CLIP_VALUES
 )
 
 type Order struct {
@@ -30,8 +32,6 @@ type Order struct {
 	flags                uint32
 	offset               *Offset
 	limit                *Limit
-	clipValues           bool
-	canSpill             bool
 }
 
 const _FALLBACK_NUM = 64 * 1024
@@ -43,8 +43,12 @@ func NewOrder(order *algebra.Order, partialSortTermCount int, offset *Offset, li
 		partialSortTermCount: partialSortTermCount,
 		offset:               offset,
 		limit:                limit,
-		clipValues:           clipValues,
-		canSpill:             canSpill,
+	}
+	if clipValues {
+		rv.flags |= _CLIP_VALUES
+	}
+	if canSpill {
+		rv.flags |= _CAN_SPILL
 	}
 	setOptEstimate(&rv.optEstimate, cost, cardinality, size, frCost)
 	return rv
@@ -108,12 +112,6 @@ func (this *Order) MarshalBase(f func(map[string]interface{})) map[string]interf
 	if this.limit != nil {
 		r["limit"] = this.limit.Expression().String()
 	}
-	if this.clipValues {
-		r["clip_values"] = this.clipValues
-	}
-	if this.clipValues {
-		r["can_spill"] = this.canSpill
-	}
 	if optEstimate := marshalOptEstimate(&this.optEstimate); optEstimate != nil {
 		r["optimizer_estimates"] = optEstimate
 	}
@@ -136,8 +134,6 @@ func (this *Order) UnmarshalJSON(body []byte) error {
 		OffsetExpr           string                 `json:"offset"`
 		LimitExpr            string                 `json:"limit"`
 		OptEstimate          map[string]interface{} `json:"optimizer_estimates"`
-		ClipValues           bool                   `json:"clip_values"`
-		CanSpill             bool                   `json:"can_spill"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -224,8 +220,6 @@ func (this *Order) UnmarshalJSON(body []byte) error {
 
 	this.partialSortTermCount = _unmarshalled.PartialSortTermCount
 	unmarshalOptEstimate(&this.optEstimate, _unmarshalled.OptEstimate)
-	this.clipValues = _unmarshalled.ClipValues
-	this.canSpill = _unmarshalled.CanSpill
 
 	return nil
 }
@@ -243,11 +237,11 @@ func (this *Order) Limit() *Limit {
 }
 
 func (this *Order) ClipValues() bool {
-	return this.clipValues
+	return (this.flags & _CLIP_VALUES) != 0
 }
 
 func (this *Order) CanSpill() bool {
-	return this.canSpill
+	return (this.flags & _CAN_SPILL) != 0
 }
 
 func OrderFallbackNum() int {
