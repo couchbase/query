@@ -177,7 +177,7 @@ func (this *SendUpsert) flushBatch(context *Context) bool {
 
 	// Perform the actual UPSERT
 	var errs errors.Errors
-	dpairs, errs = this.keyspace.Upsert(dpairs, context)
+	dpairs, errs = this.keyspace.Upsert(dpairs, &this.operatorCtx)
 
 	this.switchPhase(_EXECTIME)
 

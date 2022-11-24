@@ -174,6 +174,10 @@ func (this *opContext) Resume() {
 	this.base.switchPhase(_EXECTIME)
 }
 
+func (this *opContext) IsActive() bool {
+	return this.base.opState == _RUNNING
+}
+
 func (this *opContext) Copy() *opContext {
 	return &opContext{this.base, this.Context.Copy()}
 }
@@ -385,6 +389,10 @@ func (this *Context) AdminContext() (interface{}, error) {
 	rv := this.Copy()
 	rv.credentials = creds
 	return rv, nil
+}
+
+func (this *Context) IsActive() bool {
+	return true
 }
 
 func (this *Context) QueryContext() string {

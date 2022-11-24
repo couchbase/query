@@ -102,6 +102,7 @@ type QueryContext interface {
 	RecordGsiRU(ru tenant.Unit)
 	RecordKvRU(ru tenant.Unit)
 	RecordKvWU(wu tenant.Unit)
+	IsActive() bool
 }
 
 type queryContextImpl struct {
@@ -162,4 +163,8 @@ func (ci *queryContextImpl) RecordKvRU(ru tenant.Unit) {
 }
 
 func (ci *queryContextImpl) RecordKvWU(wu tenant.Unit) {
+}
+
+func (ci *queryContextImpl) IsActive() bool {
+	return true
 }

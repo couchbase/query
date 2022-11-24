@@ -683,7 +683,7 @@ func backOff(attempt, maxAttempts int, duration time.Duration, exponential bool)
 	return false
 }
 
-func (b *Bucket) doBulkGet(vb uint16, keys []string, reqDeadline time.Time,
+func (b *Bucket) doBulkGet(vb uint16, keys []string, active func() bool, reqDeadline time.Time,
 	ech chan<- error, subPaths []string, useReplica bool, eStatus *errorStatus,
 	context ...*memcached.ClientContext) (map[string]*gomemcached.MCResponse, time.Duration) {
 
@@ -693,6 +693,9 @@ func (b *Bucket) doBulkGet(vb uint16, keys []string, reqDeadline time.Time,
 	desc := &doDescriptor{useReplicas: useReplica, version: b.Version, maxTries: b.backOffRetries()}
 	var lastError error
 	for ; desc.attempts < maxBulkRetries && !done && !eStatus.errStatus; desc.attempts++ {
+		if !active() {
+			return rv, desc.delay
+		}
 
 		// This stack frame exists to ensure we can clean up
 		// connection at a reasonable time.
@@ -788,6 +791,7 @@ type vbBulkGet struct {
 	useReplica  bool
 	groupError  *errorStatus
 	context     []*memcached.ClientContext
+	active      func() bool
 }
 
 const _NUM_CHANNELS = 5
@@ -850,7 +854,7 @@ func vbDoBulkGet(vbg *vbBulkGet) time.Duration {
 		// Workers cannot panic and die
 		recover()
 	}()
-	rv, delay = vbg.b.doBulkGet(vbg.k, vbg.keys, vbg.reqDeadline, vbg.ech, vbg.subPaths, vbg.useReplica, vbg.groupError, vbg.context...)
+	rv, delay = vbg.b.doBulkGet(vbg.k, vbg.keys, vbg.active, vbg.reqDeadline, vbg.ech, vbg.subPaths, vbg.useReplica, vbg.groupError, vbg.context...)
 	if delay != time.Duration(0) {
 
 		// find received documents and remove the keys from the key slice
@@ -881,7 +885,7 @@ func vbDoBulkGet(vbg *vbBulkGet) time.Duration {
 
 var _ERR_CHAN_FULL = fmt.Errorf("Data request queue full, aborting query.")
 
-func (b *Bucket) processBulkGet(kdm map[uint16][]string, reqDeadline time.Time,
+func (b *Bucket) processBulkGet(kdm map[uint16][]string, active func() bool, reqDeadline time.Time,
 	ch chan<- map[string]*gomemcached.MCResponse, ech chan<- error, subPaths []string,
 	useReplica bool, eStatus *errorStatus, context ...*memcached.ClientContext) {
 
@@ -909,6 +913,7 @@ func (b *Bucket) processBulkGet(kdm map[uint16][]string, reqDeadline time.Time,
 			useReplica:  useReplica,
 			groupError:  eStatus,
 			context:     context,
+			active:      active,
 		}
 
 		wg.Add(1)
@@ -968,15 +973,15 @@ func errorCollector(ech <-chan error, eout chan<- error, eStatus *errorStatus) {
 // map array for each key.  Keys that were not found will not be included in
 // the map.
 
-func (b *Bucket) GetBulk(keys []string, reqDeadline time.Time, subPaths []string, useReplica bool, context ...*memcached.ClientContext) (map[string]*gomemcached.MCResponse, error) {
-	return b.getBulk(keys, reqDeadline, subPaths, useReplica, context...)
+func (b *Bucket) GetBulk(keys []string, active func() bool, reqDeadline time.Time, subPaths []string, useReplica bool, context ...*memcached.ClientContext) (map[string]*gomemcached.MCResponse, error) {
+	return b.getBulk(keys, active, reqDeadline, subPaths, useReplica, context...)
 }
 
 func (b *Bucket) ReleaseGetBulkPools(rv map[string]*gomemcached.MCResponse) {
 	_STRING_MCRESPONSE_POOL.Put(rv)
 }
 
-func (b *Bucket) getBulk(keys []string, reqDeadline time.Time, subPaths []string, useReplica bool, context ...*memcached.ClientContext) (map[string]*gomemcached.MCResponse, error) {
+func (b *Bucket) getBulk(keys []string, active func() bool, reqDeadline time.Time, subPaths []string, useReplica bool, context ...*memcached.ClientContext) (map[string]*gomemcached.MCResponse, error) {
 	kdm := _VB_STRING_POOL.Get()
 	defer _VB_STRING_POOL.Put(kdm)
 	for _, k := range keys {
@@ -999,7 +1004,7 @@ func (b *Bucket) getBulk(keys []string, reqDeadline time.Time, subPaths []string
 	ech := make(chan error)
 
 	go errorCollector(ech, eout, groupErrorStatus)
-	go b.processBulkGet(kdm, reqDeadline, ch, ech, subPaths, useReplica, groupErrorStatus, context...)
+	go b.processBulkGet(kdm, active, reqDeadline, ch, ech, subPaths, useReplica, groupErrorStatus, context...)
 
 	var rv map[string]*gomemcached.MCResponse
 
@@ -1233,7 +1238,7 @@ func (b *Bucket) GetCollectionCID(scope string, collection string, reqDeadline t
 }
 
 // Get a value straight from Memcached
-func (b *Bucket) GetsMC(key string, reqDeadline time.Time, useReplica bool, context ...*memcached.ClientContext) (*gomemcached.MCResponse, error) {
+func (b *Bucket) GetsMC(key string, active func() bool, reqDeadline time.Time, useReplica bool, context ...*memcached.ClientContext) (*gomemcached.MCResponse, error) {
 	var err error
 	var response *gomemcached.MCResponse
 
@@ -1244,6 +1249,11 @@ func (b *Bucket) GetsMC(key string, reqDeadline time.Time, useReplica bool, cont
 	err = b.Do2(key, func(mc *memcached.Client, vb uint16) error {
 		var err1 error
 
+		// if the operator is not running, break the loop with an is not found
+		if !active() {
+			response = &gomemcached.MCResponse{Status: gomemcached.KEY_ENOENT}
+			return nil
+		}
 		dl, err := getDeadline(reqDeadline, DefaultTimeout)
 		if err != nil {
 			logging.Debugf("Request deadline expired")
