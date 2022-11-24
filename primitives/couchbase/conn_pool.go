@@ -53,6 +53,8 @@ type connectionPool struct {
 	bailOut     chan bool
 	poolSize    int
 	connCount   uint64
+	connOpen    uint64
+	connClosed  uint64
 	inUse       bool
 	encrypted   bool
 	tlsConfig   *tls.Config
@@ -295,6 +297,7 @@ func (cp *connectionPool) GetWithTimeout(d time.Duration) (rv *memcached.Client,
 				<-cp.createsem
 			} else {
 				atomic.AddUint64(&cp.connCount, 1)
+				atomic.AddUint64(&cp.connOpen, 1)
 			}
 			return rv, err
 		case <-t.C:
@@ -343,6 +346,7 @@ func (cp *connectionPool) Return(c *memcached.Client) {
 // useful for ditching connections to the wrong node after a rebalance
 func (cp *connectionPool) Discard(c *memcached.Client) {
 	<-cp.createsem
+	atomic.AddUint64(&cp.connClosed, 1)
 	c.Close()
 }
 
@@ -363,6 +367,8 @@ func (cp *connectionPool) connCloser() {
 		case <-t.C:
 		}
 		t.Reset(ConnCloserInterval)
+		logging.Infof("bucket %s node %s connections opened %v closed %v open %v requested %v",
+			cp.bucket, cp.host, cp.connOpen, cp.connClosed, cp.connOpen-cp.connClosed, cp.connCount)
 
 		// no overflow connections open or sustained requests for connections
 		// nothing to do until the next cycle
