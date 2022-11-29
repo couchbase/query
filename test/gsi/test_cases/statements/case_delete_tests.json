@@ -1,0 +1,121 @@
+[
+    {
+        "description":"DELETE with OFFSET and LIMIT. Offset is pushed to the index_custId index",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "correct": true
+                }
+            ],
+            "statement": "SELECT true AS correct FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`offset` IS NOT MISSING END"
+        },
+        "statements":"DELETE FROM customer WHERE custId IS NOT MISSING AND test_id = \"delete_statement\" OFFSET 3 LIMIT 3 RETURNING custId;",
+        "results": [
+            {
+                "custId": "customer12"
+            },
+            {
+                "custId": "customer13"
+            },
+            {
+                "custId": "customer14"
+            }
+        ]
+    },
+    {
+        "description":"SELECT statement to verify the remaining documents after DELETE",
+        "statements":"SELECT custId FROM customer WHERE custId IS NOT MISSING AND test_id = \"delete_statement\"",
+        "results": [
+            {
+                "custId": "customer1"
+            },
+            {
+                "custId": "customer10"
+            },
+            {
+                "custId": "customer11"
+            },
+            {
+                "custId": "customer15"
+            },
+            {
+                "custId": "customer2"
+            },
+            {
+                "custId": "customer3"
+            },
+            {
+                "custId": "customer4"
+            },
+            {
+                "custId": "customer5"
+            },
+            {
+                "custId": "customer6"
+            },
+            {
+                "custId": "customer7"
+            },
+            {
+                "custId": "customer8"
+            },
+            {
+                "custId": "customer9"
+            }
+        ]
+    },
+    {
+        "description":"DELETE with OFFSET and LIMIT. Offset is NOT pushed to the index_custId index",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "correct": true
+                }
+            ],
+            "statement": "SELECT true AS correct FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`offset` IS MISSING END"
+        },
+        "statements":"DELETE FROM customer WHERE custId IS NOT MISSING AND test_id = \"delete_statement\" AND emailAddress IS NOT MISSING OFFSET 3 LIMIT 3 RETURNING custId;",
+        "results": [
+            {
+                "custId": "customer15"
+            },
+            {
+                "custId": "customer2"
+            },
+            {
+                "custId": "customer3"
+            }
+        ]
+    },
+    {
+        "description":"DELETE operation with only OFFSET clause",
+        "statements":"DELETE FROM customer WHERE custId IS NOT MISSING AND test_id = \"delete_statement\" OFFSET 6 RETURNING custId",
+        "results": [
+            {
+                "custId": "customer7"
+            },
+            {
+                "custId": "customer8"
+            },
+            {
+                "custId": "customer9"
+            }
+        ]
+    },
+    {
+        "description":"DELETE operation with only LIMIT clause",
+        "statements":"DELETE FROM customer WHERE custId IS NOT MISSING AND test_id = \"delete_statement\" LIMIT 2 RETURNING custId",
+        "results": [
+            {
+                "custId": "customer1"
+            },
+            {
+                "custId": "customer10"
+            }
+        ]
+    }
+]
+
+ 

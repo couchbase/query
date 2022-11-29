@@ -21,7 +21,7 @@ Represents the delete DML statement. Type Delete is a
 struct that contains fields mapping to each clause in
 the delete stmt.  Keyspace is the keyspace-ref, keys
 expression represents the use keys clause, the where
-and limit expression map to the where and limit clause
+,limit, offset expression map to the where, limit, offset clause
 and returning represents the returning clause.
 */
 type Delete struct {
@@ -32,6 +32,7 @@ type Delete struct {
 	indexes      IndexRefs             `json:"indexes"`
 	where        expression.Expression `json:"where"`
 	limit        expression.Expression `json:"limit"`
+	offset       expression.Expression `json:"offset"`
 	returning    *Projection           `json:"returning"`
 	optimHints   *OptimHints           `json:"optimizer_hints"`
 	validateKeys bool                  `json:"validate_keys"`
@@ -43,13 +44,14 @@ struct by assigning the input attributes to the fields
 of the struct
 */
 func NewDelete(keyspace *KeyspaceRef, keys expression.Expression, indexes IndexRefs,
-	where, limit expression.Expression, returning *Projection, optimHints *OptimHints, validateKeys bool) *Delete {
+	where, limit, offset expression.Expression, returning *Projection, optimHints *OptimHints, validateKeys bool) *Delete {
 	rv := &Delete{
 		keyspace:     keyspace,
 		keys:         keys,
 		indexes:      indexes,
 		where:        where,
 		limit:        limit,
+		offset:       offset,
 		returning:    returning,
 		optimHints:   optimHints,
 		validateKeys: validateKeys,
@@ -111,6 +113,13 @@ func (this *Delete) MapExpressions(mapper expression.Mapper) (err error) {
 		}
 	}
 
+	if this.offset != nil {
+		this.offset, err = mapper.Map(this.offset)
+		if err != nil {
+			return err
+		}
+	}
+
 	if this.returning != nil {
 		err = this.returning.MapExpressions(mapper)
 	}
@@ -134,6 +143,10 @@ func (this *Delete) Expressions() expression.Expressions {
 
 	if this.limit != nil {
 		exprs = append(exprs, this.limit)
+	}
+
+	if this.offset != nil {
+		exprs = append(exprs, this.offset)
 	}
 
 	if this.returning != nil {
@@ -209,6 +222,13 @@ func (this *Delete) Formalize() (err error) {
 		}
 	}
 
+	if this.offset != nil {
+		_, err = this.offset.Accept(empty)
+		if err != nil {
+			return
+		}
+	}
+
 	if this.returning != nil {
 		_, err = this.returning.Formalize(f)
 	}
@@ -256,6 +276,14 @@ delete statement.
 */
 func (this *Delete) Limit() expression.Expression {
 	return this.limit
+}
+
+/*
+Returns the expression for the Offset clause in the
+delete statement.
+*/
+func (this *Delete) Offset() expression.Expression {
+	return this.offset
 }
 
 /*

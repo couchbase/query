@@ -2200,9 +2200,19 @@ UPSERT INTO keyspace_ref LPAREN key_val_options_expr_header RPAREN fullselect op
  *************************************************/
 
 delete:
-DELETE opt_optim_hints FROM keyspace_ref opt_use_del_upd opt_where opt_limit opt_returning
+DELETE opt_optim_hints FROM keyspace_ref opt_use_del_upd opt_where limit opt_offset opt_returning            /* LIMIT clause precedes OFFSET clause */
 {
-  $$ = algebra.NewDelete($4, $5.Keys(), $5.Indexes(), $6, $7, $8, $2, $5.ValidateKeys())
+  $$ = algebra.NewDelete($4, $5.Keys(), $5.Indexes(), $6, $7, $8, $9, $2, $5.ValidateKeys())
+}
+|
+DELETE opt_optim_hints FROM keyspace_ref opt_use_del_upd opt_where offset opt_limit opt_returning           /* OFFSET clause precedes LIMIT clause */
+{
+  $$ = algebra.NewDelete($4, $5.Keys(), $5.Indexes(), $6, $8, $7, $9, $2, $5.ValidateKeys())
+}
+|
+DELETE opt_optim_hints FROM keyspace_ref opt_use_del_upd opt_where opt_returning
+{
+  $$ = algebra.NewDelete($4, $5.Keys(), $5.Indexes(), $6, nil, nil, $7, $2, $5.ValidateKeys())
 }
 ;
 

@@ -36,7 +36,7 @@ func (this *builder) VisitDelete(stmt *algebra.Delete) (interface{}, error) {
 
 	mustFetch := stmt.Returning() != nil || this.context.DeltaKeyspaces() != nil
 	optimHints := stmt.OptimHints()
-	optimHints, err = this.beginMutate(keyspace, ksref, stmt.Keys(), stmt.Indexes(), stmt.Limit(),
+	optimHints, err = this.beginMutate(keyspace, ksref, stmt.Keys(), stmt.Indexes(), stmt.Limit(), stmt.Offset(),
 		mustFetch, optimHints, stmt.ValidateKeys())
 	if err != nil {
 		return nil, err
@@ -50,11 +50,14 @@ func (this *builder) VisitDelete(stmt *algebra.Delete) (interface{}, error) {
 	cardinality := OPT_CARD_NOT_AVAIL
 	size := OPT_SIZE_NOT_AVAIL
 	frCost := OPT_COST_NOT_AVAIL
-	if this.useCBO && this.keyspaceUseCBO(ksref.Alias()) && this.lastOp != nil {
-		cost = this.lastOp.Cost()
-		cardinality = this.lastOp.Cardinality()
-		size = this.lastOp.Size()
-		frCost = this.lastOp.FrCost()
+
+	lastOp := this.lastOp
+
+	if this.useCBO && this.keyspaceUseCBO(ksref.Alias()) && lastOp != nil {
+		cost = lastOp.Cost()
+		cardinality = lastOp.Cardinality()
+		size = lastOp.Size()
+		frCost = lastOp.FrCost()
 		if cost > 0.0 && cardinality > 0.0 && size > 0 && frCost > 0.0 {
 			cost, cardinality, size, frCost = getDeleteCost(stmt.Limit(),
 				cost, cardinality, size, frCost)
@@ -69,20 +72,45 @@ func (this *builder) VisitDelete(stmt *algebra.Delete) (interface{}, error) {
 		deleteSubChildren = this.buildDMLProject(stmt.Returning(), deleteSubChildren)
 	}
 
-	if stmt.Limit() != nil {
-		seqChildren := make([]plan.Operator, 0, 3)
+	if stmt.Limit() != nil || stmt.Offset() != nil {
+		seqChildren := make([]plan.Operator, 0, 4)
+		nOffset := int64(-1)
+
 		if len(subChildren) > 0 {
 			seqChildren = append(seqChildren, this.addParallel(subChildren...))
 		}
-		if this.useCBO && cost > 0.0 && cardinality > 0.0 && size > 0 && frCost > 0.0 {
-			nlimit := int64(0)
-			lv, static := base.GetStaticInt(stmt.Limit())
-			if static {
-				nlimit = lv
+
+		// If offset clause is present and has not been pushed down to index - add Offset operator to plan
+		if stmt.Offset() != nil && !this.hasBuilderFlag(BUILDER_OFFSET_PUSHDOWN) {
+			// cost of Offset
+			if this.useCBO && cost > 0.0 && cardinality > 0.0 && size > 0 && frCost > 0.0 {
+				ov, static := base.GetStaticInt(stmt.Offset())
+				if static {
+					nOffset = ov
+				} else {
+					nOffset = 0
+				}
+				cost, cardinality, size, frCost = getOffsetCost(lastOp, nOffset)
 			}
-			cost, cardinality, size, frCost = getLimitCost(this.lastOp, nlimit, -1)
+			offsetOp := plan.NewOffset(stmt.Offset(), cost, cardinality, size, frCost)
+			seqChildren = append(seqChildren, offsetOp)
+			lastOp = offsetOp
 		}
-		seqChildren = append(seqChildren, plan.NewLimit(stmt.Limit(), cost, cardinality, size, frCost))
+
+		if stmt.Limit() != nil {
+			if this.useCBO && cost > 0.0 && cardinality > 0.0 && size > 0 && frCost > 0.0 {
+				nlimit := int64(0)
+				lv, static := base.GetStaticInt(stmt.Limit())
+				if static {
+					nlimit = lv
+				}
+				cost, cardinality, size, frCost = getLimitCost(lastOp, nlimit, nOffset)
+			}
+			limitOp := plan.NewLimit(stmt.Limit(), cost, cardinality, size, frCost)
+			seqChildren = append(seqChildren, limitOp)
+			lastOp = limitOp
+		}
+
 		seqChildren = append(seqChildren, this.addParallel(deleteSubChildren...))
 		this.addChildren(plan.NewSequence(seqChildren...))
 	} else {

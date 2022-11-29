@@ -17,7 +17,7 @@ import (
 )
 
 func (this *builder) beginMutate(keyspace datastore.Keyspace, ksref *algebra.KeyspaceRef,
-	keys expression.Expression, indexes algebra.IndexRefs, limit expression.Expression,
+	keys expression.Expression, indexes algebra.IndexRefs, limit expression.Expression, offset expression.Expression,
 	mustFetch bool, optimHints *algebra.OptimHints, validateKeys bool) (*algebra.OptimHints, error) {
 
 	ksref.SetDefaultNamespace(this.namespace)
@@ -46,7 +46,7 @@ func (this *builder) beginMutate(keyspace datastore.Keyspace, ksref *algebra.Key
 	}()
 
 	this.limit = limit
-	this.offset = nil
+	this.offset = offset
 	this.requirePrimaryKey = true
 	this.baseKeyspaces = make(map[string]*base.BaseKeyspace, _MAP_KEYSPACE_CAP)
 	baseKeyspace := base.NewBaseKeyspace(ksref.Alias(), ksref.Path(), term, 1)
@@ -86,6 +86,11 @@ func (this *builder) beginMutate(keyspace datastore.Keyspace, ksref *algebra.Key
 
 	if err != nil {
 		return nil, err
+	}
+
+	// if the Offset has been pushed down to index
+	if this.offset != nil {
+		this.setBuilderFlag(BUILDER_OFFSET_PUSHDOWN)
 	}
 
 	this.addChildren(scan)
