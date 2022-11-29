@@ -442,7 +442,7 @@ func (this *seqScan) coordinator(b *Bucket, scanTimeout time.Duration) {
 			sampleSize = (this.sampleSize + len(vblist) - 1) / len(vblist)
 			// adjust to compensate for probability based sampling in the range scan meaning we're likely to get
 			// fewer samples than requested
-			sampleSize += int(math.Ceil(float64(sampleSize) * 0.2724 * math.Pow(float64(sampleSize), -0.419)))
+			sampleSize += int(math.Ceil(float64(sampleSize) * 0.2153 * math.Pow(float64(sampleSize), -0.398)))
 			returnLimit = int64(sampleSize * len(vblist))
 		}
 		for vb := 0; vb < len(vblist); vb++ {
