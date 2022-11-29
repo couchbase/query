@@ -1858,7 +1858,7 @@ func doTransactionsIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *htt
 	return transactions.NameTransactions(), nil
 }
 
-var localData = map[string]string{"load": "gauge", "active_requests": "counter", "queued_requests": "counter"}
+var localData = map[string]string{"load": "gauge", "active_requests": "gauge", "queued_requests": "gauge"}
 
 func isLocal(metric string) bool {
 	return localData[metric] != ""
