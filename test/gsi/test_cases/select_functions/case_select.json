@@ -465,17 +465,18 @@
         "type": "order"
       }
     ]
+  },
+  {
+    "namedArgs": {
+      "field": "one"
     },
-    {
-        "namedArgs": {"field": "one"},
-        "statements": "SELECT t.[t.lookup],t.[$field] FROM {\"lookup\":\"two\",\"one\":1,\"two\":2} t",
-        "results": [
-            {
-                "$1": 1,
-                "lookup": 2
-            }
-        ]
-    }
+    "statements": "SELECT t.[t.lookup],t.[$field] FROM {\"lookup\":\"two\",\"one\":1,\"two\":2} t",
+    "results": [
+      {
+        "$1": 1,
+        "lookup": 2
+      }
+    ]
   },
   {
     "comment": "Don't preserve original values beyond projection without order in statement block",
