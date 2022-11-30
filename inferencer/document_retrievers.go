@@ -245,7 +245,7 @@ func MakeUnifiedDocumentRetriever(name string, context datastore.QueryContext, k
 	udr.flags = flags
 	udr.scanNum = 0
 
-	docCount, err := ks.Count(datastore.NULL_QUERY_CONTEXT)
+	docCount, err := ks.Count(context)
 	if err != nil {
 		return nil, errors.NewInferKeyspaceError(ks.Name(), err)
 	}
@@ -331,6 +331,11 @@ func MakeUnifiedDocumentRetriever(name string, context datastore.QueryContext, k
 						// make sure that the index is online
 						state, _, err := index.State()
 						if err != nil || state != datastore.ONLINE {
+							continue
+						}
+
+						// if the Index does not implement the PrimaryIndex3 interface - like system keyspace indexes - do not consider the index
+						if _, ok := index.(datastore.PrimaryIndex3); !ok {
 							continue
 						}
 						udr.indexes = append(udr.indexes, index.(datastore.Index))
@@ -459,7 +464,6 @@ func MakeUnifiedDocumentRetriever(name string, context datastore.QueryContext, k
 			}
 
 			logging.Debuga(func() string { return fmt.Sprintf("UDR: rnd: %v idxs: %v", udr.rnd != nil, len(udr.indexes)) })
-			return udr, nil
 		} else {
 			errs = append(errs, errors.NewInferKeyspaceError(ks.Name(), err))
 		}
@@ -511,7 +515,7 @@ func (udr *UnifiedDocumentRetriever) GetNextDoc(context datastore.QueryContext) 
 		if udr.returned >= len(udr.cache) {
 			return _EMPTY_KEY, nil, nil
 		}
-		errs := udr.ks.Fetch(udr.cache[udr.returned:udr.returned+1], udr.docs, datastore.NULL_QUERY_CONTEXT, nil)
+		errs := udr.ks.Fetch(udr.cache[udr.returned:udr.returned+1], udr.docs, context, nil)
 
 		if errs != nil {
 			return _EMPTY_KEY, nil, errs[0]
@@ -584,7 +588,7 @@ next_index:
 				ci := udr.indexes[udr.currentIndex].(datastore.CountIndex2)
 				nk, err := ci.CountDistinct(udr.Name(), nil, datastore.UNBOUNDED, nil)
 				if err != nil {
-					docCount, err := udr.ks.Count(datastore.NULL_QUERY_CONTEXT)
+					docCount, err := udr.ks.Count(context)
 					if err != nil {
 						return _EMPTY_KEY, nil, err
 					}
@@ -709,7 +713,7 @@ next_index:
 			}
 		}
 
-		errs := udr.ks.Fetch(udr.keys[0:1], udr.docs, datastore.NULL_QUERY_CONTEXT, nil)
+		errs := udr.ks.Fetch(udr.keys[0:1], udr.docs, context, nil)
 
 		if errs != nil {
 			return _EMPTY_KEY, nil, errs[0]

@@ -54,7 +54,7 @@ func NewInferNoRandomEntryProvider(k string) Error {
 	c := make(map[string]interface{})
 	c["keyspace"] = k
 	return &err{level: EXCEPTION, ICode: E_INFER_NO_RANDOM_ENTRY, IKey: "infer.keyspace.no_random_entry_provider", cause: c,
-		InternalMsg:    "Keyspace does not implement RandomEntryProvider interface.",
+		InternalMsg:    "Keyspace does not support random document retreival.",
 		InternalCaller: CallerN(1)}
 }
 

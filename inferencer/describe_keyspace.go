@@ -262,7 +262,7 @@ func (di *DefaultInferencer) Name() datastore.InferenceType {
 func (di *DefaultInferencer) InferKeyspace(context datastore.QueryContext, ks datastore.Keyspace, with value.Value,
 	conn *datastore.ValueConnection) {
 
-	docCount, _ := ks.Count(datastore.NULL_QUERY_CONTEXT)
+	docCount, _ := ks.Count(context)
 
 	defer close(conn.ValueChannel())
 
