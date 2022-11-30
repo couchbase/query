@@ -477,6 +477,13 @@ func (this *Curl) handleCurl(url string, options map[string]interface{}, allowli
 				return nil, fmt.Errorf("Incorrect type for result-cap option in CURL ")
 			}
 			responseSize = setResponseSize(value.AsNumberValue(inputVal).Int64())
+		case "verbose":
+			// verbose only writes to STDERR so only permit it when DEBUG logging is enabled too
+			if inputVal.Truth() && logging.LogLevel() == logging.DEBUG {
+				this.myCurl.Setopt(curl.OPT_VERBOSE, 1)
+			} else {
+				this.myCurl.Setopt(curl.OPT_VERBOSE, 0)
+			}
 		default:
 			return nil, fmt.Errorf("CURL option %v is not supported.", k)
 
@@ -566,10 +573,10 @@ func (this *Curl) simpleGet(url string) {
 }
 
 func (this *Curl) curlAuth(val string) {
+	logging.Debuga(func() string { return fmt.Sprintf("val: \"%v\"", val) })
 	if val == "" {
 		this.myCurl.Setopt(curl.OPT_USERPWD, "")
 	} else {
-		val = val[1 : len(val)-1]
 		if !strings.Contains(val, ":") {
 			// Append an empty password if there isnt one
 			val = val + ":" + ""
