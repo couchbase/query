@@ -278,7 +278,7 @@ func auditSettingsWorker(auditor *standardAuditor, num int) {
 				logging.Infof("Audit update handler function %d: Got updated audit settings: %+v", num, stringifyauditInfo(*auditInfo))
 				change := n1qlConfigurationChangeEvent{
 					Timestamp:  time.Now().Format("2006-01-02T15:04:05.000Z07:00"),
-					RealUserid: adt.RealUserId{Domain: "couchbase", Username: "couchbase"},
+					RealUserid: adt.RealUserId{Domain: "local", Username: "@cbq-engine"},
 					Uuid:       auditInfo.Uid,
 				}
 
