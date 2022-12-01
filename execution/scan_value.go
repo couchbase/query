@@ -86,7 +86,7 @@ func (this *ValueScan) RunOnce(context *Context, parent value.Value) {
 			}
 
 			if context.UseRequestQuota() {
-				err := context.TrackValueSize(av.Size() + val.Size() + key.Size())
+				err := context.TrackValueSize(av.Size())
 				if err != nil {
 					context.Error(err)
 					av.Recycle()

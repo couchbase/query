@@ -186,7 +186,7 @@ func (this *SendUpdate) flushBatch(context *Context) bool {
 			return false
 		}
 		if context.UseRequestQuota() {
-			after := item.Size()
+			after := item.RecalculateSize()
 			if before > after {
 				context.ReleaseValueSize(before - after)
 			} else if before < after {

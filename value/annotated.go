@@ -95,6 +95,7 @@ type AnnotatedValue interface {
 	Original() AnnotatedValue
 	RefCnt() int32
 	ResetOriginal()
+	RecalculateSize() uint64
 }
 
 func NewAnnotatedValue(val interface{}) AnnotatedValue {
@@ -132,6 +133,7 @@ type annotatedValue struct {
 	annotatedOrig     AnnotatedValue
 	noRecycle         bool
 	projectionOrder   []string
+	cachedSize        uint64
 }
 
 func (this *annotatedValue) String() string {
@@ -191,6 +193,9 @@ func (this *annotatedValue) SetField(field string, val interface{}) error {
 }
 
 func (this *annotatedValue) Size() uint64 {
+	if this.cachedSize != 0 {
+		return this.cachedSize
+	}
 	sz := this.Value.Size() + uint64(unsafe.Sizeof(*this))
 	if this.id != nil {
 		if s, ok := this.id.(string); ok {
@@ -219,7 +224,13 @@ func (this *annotatedValue) Size() uint64 {
 	if this.covers != nil {
 		sz += this.covers.Size()
 	}
+	this.cachedSize = sz
 	return sz
+}
+
+func (this *annotatedValue) RecalculateSize() uint64 {
+	this.cachedSize = 0
+	return this.Size()
 }
 
 func (this *annotatedValue) SetValue(v Value) {
@@ -798,6 +809,10 @@ func (this *annotatedValueSelfReference) Type() Type {
 }
 
 func (this *annotatedValueSelfReference) Size() uint64 {
+	return 0
+}
+
+func (this *annotatedValueSelfReference) RecalculateSize() uint64 {
 	return 0
 }
 
