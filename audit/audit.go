@@ -278,13 +278,13 @@ func auditSettingsWorker(auditor *standardAuditor, num int) {
 				logging.Infof("Audit update handler function %d: Got updated audit settings: %+v", num, stringifyauditInfo(*auditInfo))
 				change := n1qlConfigurationChangeEvent{
 					Timestamp:  time.Now().Format("2006-01-02T15:04:05.000Z07:00"),
-					RealUserid: adt.RealUserId{Domain: "internal", Username: "couchbase"},
+					RealUserid: adt.RealUserId{Domain: "couchbase", Username: "couchbase"},
 					Uuid:       auditInfo.Uid,
 				}
 
 				e := auditor.auditService.Write(28703, &change)
 				if e != nil {
-					return fmt.Errorf("Audit settings worker %d: Unable to send configuration change message: %v", num, err)
+					return fmt.Errorf("Audit settings worker %d: Unable to send configuration change message: %v", num, e)
 				}
 				logging.Infof("Audit update handler function %d: wrote config change message.", num)
 
