@@ -186,6 +186,10 @@ func (this *opContext) NewQueryContext(queryContext string, readonly bool) inter
 	return &opContext{this.base, this.Context.NewQueryContext(queryContext, readonly).(*Context)}
 }
 
+func NewOpContext(context *Context) *opContext {
+	return &opContext{nil, context}
+}
+
 func (this *opContext) AdminContext() (interface{}, error) {
 	rv, err := this.Context.AdminContext()
 	if err != nil {

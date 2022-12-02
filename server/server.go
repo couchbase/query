@@ -1232,7 +1232,7 @@ func (this *Server) getPrepared(request Request, context *execution.Context) (*p
 			positionalArgs, request.IndexApiVersion(), request.FeatureControls(), request.UseFts(),
 			request.UseCBO(), context.Optimizer(), context.DeltaKeyspaces(), dsContext, isPrepare)
 		if stmt, ok := stmt.(*algebra.Advise); ok {
-			stmt.SetContext(context)
+			stmt.SetContext(execution.NewOpContext(context))
 		}
 
 		prepared, err = planner.BuildPrepared(stmt, this.datastore, this.systemstore, context.Namespace(),
