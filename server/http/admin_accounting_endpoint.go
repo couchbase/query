@@ -202,11 +202,14 @@ func (this *HttpEndpoint) registerAccountingHandlers() {
 }
 
 func doStats(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
-	acctStore := endpoint.server.AccountingStore()
-	reg := acctStore.MetricRegistry()
-
 	switch req.Method {
 	case "GET":
+		err, _ := endpoint.verifyCredentialsFromRequest("system:stats", auth.PRIV_SYSTEM_READ, req, af)
+		if err != nil {
+			return nil, err
+		}
+		acctStore := endpoint.server.AccountingStore()
+		reg := acctStore.MetricRegistry()
 		af.EventTypeId = audit.API_DO_NOT_AUDIT
 		stats := make(map[string]interface{})
 		for name, metric := range reg.Counters() {
@@ -253,6 +256,11 @@ func doStat(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af
 
 	switch req.Method {
 	case "GET":
+		err, _ := endpoint.verifyCredentialsFromRequest("system:stats", auth.PRIV_SYSTEM_READ, req, af)
+		if err != nil {
+			return nil, err
+		}
+
 		af.EventTypeId = audit.API_DO_NOT_AUDIT
 		if isLocal(name) {
 			return getLocalData(endpoint.server, name), nil
@@ -265,6 +273,11 @@ func doStat(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af
 			}
 		}
 	case "DELETE":
+		err, _ := endpoint.verifyCredentialsFromRequest("system:stats", auth.PRIV_SYSTEM_READ, req, af)
+		if err != nil {
+			return nil, err
+		}
+
 		return nil, reg.Unregister(name)
 	default:
 		return nil, errors.NewServiceErrorHttpMethod(req.Method)
