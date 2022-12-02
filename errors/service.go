@@ -180,9 +180,9 @@ func NewServiceTenantRejectedError(duration time.Duration) Error {
 		cause   map[string]interface{} = make(map[string]interface{})
 	)
 	if duration == 0 {
-		message = "Request rejected. Retry later"
+		message = "Request rejected due to limiting or throttling. Retry later"
 	} else {
-		message = fmt.Sprintf("Request rejected. Retry after %v", duration)
+		message = fmt.Sprintf("Request rejected due to limiting or throttling. Retry after %v", duration)
 	}
 	cause["retry_after"] = duration
 	return &err{level: EXCEPTION, ICode: E_SERVICE_TENANT_REJECTED, IKey: "service.tenant.rejected", cause: cause,
