@@ -72,7 +72,7 @@ func (this *UpdateStatistics) RunOnce(context *Context, parent value.Value) {
 
 		if this.plan.Node().Delete() {
 			go updstat.DeleteStatistics(this.plan.Keyspace(), this.plan.Node().Terms(),
-				conn, context)
+				conn, &this.operatorCtx)
 		} else {
 			var indexes []datastore.Index
 			var err1 errors.Error
