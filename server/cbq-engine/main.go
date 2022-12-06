@@ -452,11 +452,19 @@ func main() {
 // signalCatcher blocks until a signal is received and then takes appropriate action
 func signalCatcher(server *server_package.Server, endpoint *http.HttpEndpoint) {
 	sig_chan := make(chan os.Signal, 4)
-	signal.Notify(sig_chan, os.Interrupt, syscall.SIGTERM)
+	signal.Notify(sig_chan, os.Interrupt, syscall.SIGTERM, util.SIGCONT)
 
 	var s os.Signal
-	select {
-	case s = <-sig_chan:
+	for {
+		select {
+		case s = <-sig_chan:
+		}
+		if s == util.SIGCONT {
+			util.ResyncTime()
+			logging.Infof("Resuming cbq-engine process")
+		} else {
+			break
+		}
 	}
 	if server.CpuProfile() != "" {
 		logging.Infof("Stopping CPU profile")
