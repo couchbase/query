@@ -16,6 +16,7 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/couchbase/query/distributed"
@@ -134,21 +135,23 @@ func (this *httpRequest) Execute(srvr *server.Server, signature value.Value) {
 	this.writePrefix(srvr, signature, this.prefix, this.indent)
 
 	// release writer
-	this.Done()
+	this.writer.releaseExternal()
 
 	// wait for somebody to tell us we're done, or toast
 	select {
 	case <-this.Results():
 		this.Stop(server.COMPLETED)
+
+		// no need to wait for writer
 	case <-this.StopExecute():
 
 		// wait for operator before continuing
-		<-this.Results()
+		this.writer.getInternal()
 	case <-this.httpCloseNotify:
 		this.Stop(server.CLOSED)
 
 		// wait for operator before continuing
-		<-this.Results()
+		this.writer.getInternal()
 	}
 
 	now := time.Now()
@@ -218,15 +221,12 @@ func (this *httpRequest) prettyStrings(serverPretty, result bool) (string, strin
 }
 
 func (this *httpRequest) SetUp() {
-
-	// wait for prefix
-	this.Wait()
 }
 
 func (this *httpRequest) Result(item value.AnnotatedValue) bool {
 	var success bool
 
-	if this.Halted() {
+	if this.writer.getExternal() {
 		return false
 	}
 
@@ -262,6 +262,7 @@ func (this *httpRequest) Result(item value.AnnotatedValue) bool {
 	if !success {
 		this.writer.truncate(beforeWrites)
 	}
+	this.writer.releaseInternal()
 	return success
 }
 
@@ -629,6 +630,12 @@ type bufferedWriter struct {
 	closed      bool
 	header      bool // headers required
 	lastFlush   time.Time
+	started     bool
+	stopped     bool
+	inUse       bool
+	waiter      bool
+	cond        sync.Cond
+	lock        sync.Mutex
 }
 
 const _PRINTF_THRESHOLD = 128
@@ -640,6 +647,63 @@ func NewBufferedWriter(w *bufferedWriter, r *httpRequest, bp BufferPool) {
 	w.closed = false
 	w.header = true
 	w.lastFlush = time.Now()
+	w.started = false
+	w.stopped = false
+	w.inUse = false
+	w.waiter = false
+	w.cond.L = &w.lock
+}
+
+func (this *bufferedWriter) getExternal() bool {
+	this.lock.Lock()
+	// if the writer is no longer available, return control to the operator, so that
+	// it can cleanup after itself
+	if this.stopped {
+		this.lock.Unlock()
+		return true
+	}
+	// wait until ServeHTTP() has stopped using the writer
+	if !this.started {
+		this.waiter = true
+		this.cond.Wait()
+	}
+	this.inUse = true
+	this.lock.Unlock()
+	return false
+}
+
+func (this *bufferedWriter) releaseExternal() {
+	this.lock.Lock()
+	this.started = true
+	if this.waiter {
+		this.waiter = false
+		this.lock.Unlock()
+		this.cond.Signal()
+	} else {
+		this.lock.Unlock()
+	}
+}
+
+func (this *bufferedWriter) getInternal() {
+	this.lock.Lock()
+	if this.inUse {
+		this.waiter = true
+		this.cond.Wait()
+	}
+	this.stopped = true
+	this.lock.Unlock()
+}
+
+func (this *bufferedWriter) releaseInternal() {
+	this.lock.Lock()
+	this.inUse = false
+	if this.waiter {
+		this.waiter = false
+		this.lock.Unlock()
+		this.cond.Signal()
+	} else {
+		this.lock.Unlock()
+	}
 }
 
 func (this *bufferedWriter) writeBytes(s []byte) bool {
