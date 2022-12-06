@@ -9,6 +9,7 @@
 package util
 
 import (
+	"sync/atomic"
 	"time"
 	_ "unsafe" // required to use //go:linkname
 )
@@ -18,7 +19,7 @@ const DEFAULT_FORMAT = "2006-01-02T15:04:05.999Z07:00"
 var base int64
 
 func init() {
-	base = time.Now().UnixNano() - nanotime()
+	ResyncTime()
 }
 
 type Time int64
@@ -44,5 +45,9 @@ func (this Time) Sub(t Time) time.Duration {
 }
 
 func (this Time) UnixNano() int64 {
-	return int64(this) + base
+	return int64(this) + atomic.LoadInt64(&base)
+}
+
+func ResyncTime() {
+	atomic.StoreInt64(&base, time.Now().UnixNano()-nanotime())
 }
