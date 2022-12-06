@@ -16,6 +16,7 @@ import (
 	json "github.com/couchbase/go_json"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/util"
+	"github.com/couchbase/query/value"
 )
 
 const (
@@ -93,6 +94,7 @@ func (c *statsCollector) runCollectStats() {
 		newStats["process.percore.cpupercent"] = c.server.CpuUsage(false)
 		newStats["process.memory.usage"], lastGC = c.server.MemoryUsage(false)
 		newStats["request.queued.count"] = c.server.QueuedRequests()
+		newStats["allocated_values"] = value.AllocatedValuesCount()
 		oldStats = c.server.AccountingStore().ExternalVitals(newStats)
 		newStats = oldStats
 

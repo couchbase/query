@@ -1906,7 +1906,13 @@ func doTransactionsIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *htt
 	return transactions.NameTransactions(), nil
 }
 
-var localData = map[string]string{"load": "gauge", "load_factor": "gauge", "active_requests": "gauge", "queued_requests": "gauge"}
+var localData = map[string]string{
+	"load":             "gauge",
+	"load_factor":      "gauge",
+	"active_requests":  "gauge",
+	"queued_requests":  "gauge",
+	"allocated_values": "gauge",
+}
 
 func isLocal(metric string) bool {
 	return localData[metric] != ""
@@ -1920,9 +1926,11 @@ func getLocalData(serv *server.Server, metric string) map[string]interface{} {
 	case "load_factor":
 		values["value"] = serv.LoadFactor()
 	case "active_requests":
-		values["count"] = serv.ActiveRequests()
+		values["value"] = serv.ActiveRequests()
 	case "queued_requests":
-		values["count"] = serv.QueuedRequests()
+		values["value"] = serv.QueuedRequests()
+	case "allocated_values":
+		values["value"] = value.AllocatedValuesCount()
 	}
 	return values
 }
@@ -1937,6 +1945,8 @@ func localValue(serv *server.Server, metric string) interface{} {
 		return serv.ActiveRequests()
 	case "queued_requests":
 		return serv.QueuedRequests()
+	case "allocated_values":
+		return value.AllocatedValuesCount()
 	}
 	return nil
 }

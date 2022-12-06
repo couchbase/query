@@ -25,6 +25,7 @@ import (
 	"github.com/couchbase/query/server"
 	"github.com/couchbase/query/system"
 	"github.com/couchbase/query/util"
+	"github.com/couchbase/query/value"
 )
 
 type gometricsAccountingStore struct {
@@ -136,6 +137,7 @@ func (g *gometricsAccountingStore) Vitals() (map[string]interface{}, errors.Erro
 		"request_time.95percentile": time.Duration(request_timer.Percentile(.95)).String(),
 		"request_time.99percentile": time.Duration(request_timer.Percentile(.99)).String(),
 		"request.prepared.percent":  prepPercent,
+		"allocated_values":          value.AllocatedValuesCount(),
 	}
 	g.Lock()
 	_, rss, total, free, err := system.GetSystemStats(g.stats, false, true)
