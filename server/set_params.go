@@ -143,10 +143,43 @@ var _SETTERS = map[string]Setter{
 	CONTROLS: setControlsAdmin,
 	N1QLFEATCTRL: func(s *Server, o interface{}) errors.Error {
 		value := getHexNumber(o)
+		var prev uint64
 		if s.enterprise {
-			util.SetN1qlFeatureControl(uint64(value))
+			prev = util.SetN1qlFeatureControl(uint64(value))
 		} else {
-			util.SetN1qlFeatureControl(uint64(value) | (util.CE_N1QL_FEAT_CTRL & ^util.N1QL_ENCODED_PLAN))
+			prev = util.SetN1qlFeatureControl(uint64(value) | (util.CE_N1QL_FEAT_CTRL & ^util.N1QL_ENCODED_PLAN))
+		}
+
+		// log what features have changed in the new n1ql-feat-ctrl bitset
+		new := uint64(value)
+		if new != prev {
+			changes := strings.Builder{}
+
+			enabled, disabled := util.ChangedFeatures(prev, new)
+
+			e := len(enabled)
+			d := len(disabled)
+
+			if e > 0 || d > 0 {
+				changes.WriteString("Changes: ")
+
+			}
+
+			if e > 0 {
+				for _, v := range enabled {
+					changes.WriteString(v)
+					changes.WriteString(" enabled. ")
+				}
+			}
+
+			if d > 0 {
+				for _, v := range disabled {
+					changes.WriteString(v)
+					changes.WriteString(" disabled. ")
+				}
+			}
+
+			logging.Infof("n1ql-feat-ctrl has changed from %#x to %#x. %s", prev, value, changes.String())
 		}
 		return nil
 	},

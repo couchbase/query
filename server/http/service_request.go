@@ -139,7 +139,7 @@ func newHttpRequest(rv *httpRequest, resp http.ResponseWriter, req *http.Request
 	if err == nil {
 		// handle parameters that can't be handled dynamically
 		// get credentials even in case of error - for auditing and logging
-		pwdlessbkts := util.IsFeatureEnabled(rv.FeatureControls(), util.N1QL_DISABLE_PWD_BKT)
+		pwdlessbkts := util.IsFeatureEnabled(rv.FeatureControls(), util.N1QL_PASSWORDLESS_BKT)
 
 		// Creds check
 		creds, err1 = getCredentials(httpArgs)

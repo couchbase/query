@@ -672,8 +672,14 @@ func (this *httpRequest) writeControls(controls bool, prefix, indent string) boo
 		}
 	}
 
-	if !this.writeString(",") || !this.writer.printf("%s\"n1ql_feat_ctrl\": \"%v\"", newPrefix, this.FeatureControls()) {
-		logging.Infof("Error writing n1l_feat_ctrl")
+	if !this.writeString(",") || !this.writer.printf("%s\"n1ql_feat_ctrl\": \"%#x\"", newPrefix, this.FeatureControls()) {
+		logging.Infof("Error writing n1ql_feat_ctrl")
+	}
+
+	// Disabled features in n1ql_feat_ctrl bitset
+	bytes, err := json.MarshalIndent(util.DisabledFeatures(this.FeatureControls()), prefix, indent)
+	if err != nil || !this.writeString(",") || !this.writer.printf("%s\"disabledFeatures\":", newPrefix) || !this.writer.writeBytes(bytes) {
+		logging.Infof("Error writing disabledFeatures")
 	}
 
 	if !this.writeString(",") || !this.writer.printf("%s\"stmtType\": \"%v\"", newPrefix, this.Type()) {
