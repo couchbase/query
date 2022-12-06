@@ -161,8 +161,6 @@ const (
 	INDEX_SCANS
 	PRIMARY_SCANS
 
-	ACTIVE_REQUESTS
-	QUEUED_REQUESTS
 	INVALID_REQUESTS
 
 	REQUEST_TIME
@@ -210,8 +208,6 @@ const (
 	_INDEX_SCANS   = "index_scans"
 	_PRIMARY_SCANS = "primary_scans"
 
-	_ACTIVE_REQUESTS  = "active_requests"
-	_QUEUED_REQUESTS  = "queued_requests"
 	_INVALID_REQUESTS = "invalid_requests"
 
 	_REQUEST_TIME     = "request_time"
