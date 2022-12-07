@@ -79,6 +79,8 @@ func (this *CreateIndex) RunOnce(context *Context, parent value.Value) {
 			indexer3, ok3 = indexer.(datastore.Indexer3)
 		}
 
+		var idx datastore.Index
+
 		if ok3 || ok5 {
 			var indexPartition *datastore.IndexPartition
 
@@ -91,10 +93,10 @@ func (this *CreateIndex) RunOnce(context *Context, parent value.Value) {
 
 			if ok5 {
 				conn, _ := datastore.NewSimpleIndexConnection(context)
-				_, err = indexer5.CreateIndex5(context.RequestId(), node.Name(), rangeKeys,
+				idx, err = indexer5.CreateIndex5(context.RequestId(), node.Name(), rangeKeys,
 					indexPartition, node.Where(), node.With(), conn)
 			} else {
-				_, err = indexer3.CreateIndex3(context.RequestId(), node.Name(), rangeKeys,
+				idx, err = indexer3.CreateIndex3(context.RequestId(), node.Name(), rangeKeys,
 					indexPartition, node.Where(), node.With())
 			}
 
@@ -126,7 +128,7 @@ func (this *CreateIndex) RunOnce(context *Context, parent value.Value) {
 
 			if indexer2, ok := indexer.(datastore.Indexer2); ok {
 				rangeKeys := this.getRangeKeys(node.Keys())
-				_, err = indexer2.CreateIndex2(context.RequestId(), node.Name(), node.SeekKeys(),
+				idx, err = indexer2.CreateIndex2(context.RequestId(), node.Name(), node.SeekKeys(),
 					rangeKeys, node.Where(), node.With())
 				if err != nil {
 					if !errors.IsIndexExistsError(err) || this.plan.Node().FailIfExists() {
@@ -142,7 +144,7 @@ func (this *CreateIndex) RunOnce(context *Context, parent value.Value) {
 					return
 				}
 
-				_, err = indexer.CreateIndex(context.RequestId(), node.Name(), node.SeekKeys(),
+				idx, err = indexer.CreateIndex(context.RequestId(), node.Name(), node.SeekKeys(),
 					node.RangeKeys(), node.Where(), node.With())
 				if err != nil {
 					if !errors.IsIndexExistsError(err) || this.plan.Node().FailIfExists() {
@@ -153,6 +155,31 @@ func (this *CreateIndex) RunOnce(context *Context, parent value.Value) {
 					return
 				}
 			}
+		}
+
+		m := make(map[string]interface{}, 2)
+		m["name"] = node.Name()
+		if idx != nil {
+			m["id"] = idx.Id()
+			state, msg, err := idx.State()
+			if err == nil {
+				m["state"] = state.String()
+				if msg != "" {
+					m["message"] = msg
+				}
+			}
+		}
+		av := value.NewAnnotatedValue(m)
+		if context.UseRequestQuota() {
+			err := context.TrackValueSize(av.Size())
+			if err != nil {
+				context.Error(err)
+				av.Recycle()
+				return
+			}
+		}
+		if !this.sendItem(av) {
+			av.Recycle()
 		}
 	})
 }
