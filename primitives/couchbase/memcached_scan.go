@@ -248,6 +248,7 @@ func (this *rQueue) pop() *vbRangeScan {
 
 type seqScan struct {
 	ch           chan interface{}
+	abortch      chan bool
 	inactive     bool
 	timedout     bool
 	collId       uint32
@@ -278,6 +279,7 @@ func NewSeqScan(collId uint32, ranges []*SeqScanRange, offset int64, limit int64
 		serverless:   serverless,
 	}
 	scan.ch = make(chan interface{}, 1)
+	scan.abortch = make(chan bool, 1)
 	scan.fetchLimit = _SS_MAX_KEYS_PER_REQUEST
 	if scan.limit > 0 {
 		scan.fetchLimit = uint32(scan.limit + scan.offset)
@@ -302,6 +304,7 @@ func NewRandomScan(collId uint32, sampleSize int, pipelineSize int, kvTimeout ti
 		serverless:   serverless,
 	}
 	scan.ch = make(chan interface{}, 1)
+	scan.abortch = make(chan bool, 1)
 	scan.readyQueue.init()
 	return scan
 }
@@ -309,11 +312,13 @@ func NewRandomScan(collId uint32, sampleSize int, pipelineSize int, kvTimeout ti
 func (this *seqScan) timeout() {
 	this.timedout = true
 	this.readyQueue.timeout()
+	this.abortch <- true
 }
 
 func (this *seqScan) cancel() {
 	this.inactive = true
 	this.readyQueue.cancel()
+	this.abortch <- true
 }
 
 func (this *seqScan) addRU(ru uint64) {
@@ -324,19 +329,22 @@ func (this *seqScan) addRU(ru uint64) {
 
 func (this *seqScan) reportError(err qerrors.Error) bool {
 	rv := false
-	select {
-	case this.ch <- err:
-		rv = true
+	if !this.inactive {
+		select {
+		case <-this.abortch:
+		case this.ch <- err:
+			rv = true
+		}
+		this.inactive = true
 	}
-	this.inactive = true
 	return rv
 }
 
-func (this *seqScan) reportResults(data []string, remaining *time.Timer) bool {
+func (this *seqScan) reportResults(data []string) bool {
 	rv := false
 	if !this.inactive && !this.timedout {
 		select {
-		case <-remaining.C:
+		case <-this.abortch:
 		case this.ch <- data:
 			rv = true
 		}
@@ -426,9 +434,7 @@ func (this *seqScan) coordinator(b *Bucket, scanTimeout time.Duration) {
 	}()
 
 	queues := make([]int, numServers)
-	timeout := time.AfterFunc(scanTimeout, func() {
-		this.timeout()
-	})
+	timeout := time.AfterFunc(scanTimeout, this.timeout)
 	defer func() {
 		timeout.Stop()
 	}()
@@ -611,7 +617,7 @@ processing:
 								break
 							}
 						}
-						if !this.reportResults(keys, timeout) {
+						if !this.reportResults(keys) {
 							cancelAll()
 							this.reportError(qerrors.NewSSError(qerrors.E_SS_TIMEOUT))
 							return
@@ -705,7 +711,7 @@ processing:
 						}
 						if len(batch) == cap(batch) {
 							// forward results
-							if !this.reportResults(batch, timeout) {
+							if !this.reportResults(batch) {
 								cancelAll()
 								this.reportError(qerrors.NewSSError(qerrors.E_SS_TIMEOUT))
 								return
@@ -715,7 +721,7 @@ processing:
 					}
 					if len(batch) > 0 {
 						// forward results
-						if !this.reportResults(batch, timeout) {
+						if !this.reportResults(batch) {
 							cancelAll()
 							this.reportError(qerrors.NewSSError(qerrors.E_SS_TIMEOUT))
 							return
@@ -789,7 +795,7 @@ processing:
 
 	if !this.inactive && !this.timedout {
 		// send final end of data indicator
-		if !this.reportResults([]string(nil), timeout) {
+		if !this.reportResults([]string(nil)) {
 			this.reportError(qerrors.NewSSError(qerrors.E_SS_TIMEOUT))
 		}
 	}

@@ -366,13 +366,18 @@ func (this *seqScan) doScanEntries(requestId string, ordered bool, offset, limit
 
 	// deadline will be set whenever there is a request timeout set
 	rqd := conn.GetReqDeadline()
-	deadline := util.Time(0)
+	var tout time.Duration
 	if !rqd.IsZero() {
-		deadline = util.Time(rqd.UnixNano())
+		tout = rqd.Sub(time.Now())
 	} else {
 		// if not, use a default to ensure we never hang entirely here
-		deadline = util.Now() + util.Time(_DEFAULT_REQUEST_TIMEOUT)
+		tout = _DEFAULT_REQUEST_TIMEOUT
 	}
+	if tout <= 0 {
+		conn.Error(qe.NewSSError(qe.E_SS_FAILED, qe.NewSSError(qe.E_SS_TIMEOUT)))
+		return
+	}
+	deadline := util.Now().Add(tout)
 	scanPollTimeout := _SCAN_POLL_TIMOUT
 	returned := int64(0)
 
@@ -389,12 +394,11 @@ func (this *seqScan) doScanEntries(requestId string, ordered bool, offset, limit
 	var err qe.Error
 	var timeout bool
 
-	to := deadline.Sub(util.Now())
 	kvTo := time.Duration(datastore.DEF_KVTIMEOUT)
 	if conn.QueryContext() != nil {
 		kvTo = conn.QueryContext().KvTimeout()
 	}
-	ss, err = scanner.StartKeyScan(ranges, offset, limit, ordered, to, conn.Sender().Capacity(), kvTo, tenant.IsServerless())
+	ss, err = scanner.StartKeyScan(ranges, offset, limit, ordered, tout, conn.Sender().Capacity(), kvTo, tenant.IsServerless())
 	if err != nil {
 		conn.Error(qe.NewSSError(qe.E_SS_FAILED, err))
 		return
