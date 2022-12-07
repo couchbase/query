@@ -85,6 +85,11 @@ func (this *ValueScan) RunOnce(context *Context, parent value.Value) {
 				av.SetAttachment("options", options)
 			}
 
+			if context.UseRequestQuota() && context.TrackValueSize(av.Size()+val.Size()+key.Size()) {
+				context.Error(errors.NewMemoryQuotaExceededError())
+				av.Recycle()
+				return
+			}
 			if !this.sendItem(av) {
 				return
 			}
