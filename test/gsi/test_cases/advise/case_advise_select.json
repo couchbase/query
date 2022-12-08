@@ -491,7 +491,7 @@
                         {
                             "index_statement": "CREATE INDEX adv_type ON `shellTest`(`type` INCLUDE MISSING)",
                             "keyspace_alias": "shellTest",
-                            "recommending_rule": "Leading Index Key Missing."
+                            "recommending_rule": "Leading index key INCLUDE MISSING."
                         }
                     ]
                 }
@@ -657,7 +657,7 @@
                         {
                             "index_statement": "CREATE INDEX adv_type ON `shellTest`(`type` INCLUDE MISSING)",
                             "keyspace_alias": "shellTest",
-                            "recommending_rule": "Leading Index Key Missing."
+                            "recommending_rule": "Leading index key INCLUDE MISSING."
                         }
                     ]
                 }

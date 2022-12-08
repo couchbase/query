@@ -94,9 +94,9 @@
             "recommended_indexes": {
               "indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_self ON `shellTest`(self)",
+                  "index_statement": "CREATE INDEX adv_self13 ON `shellTest`(self[1 : 3] INCLUDE MISSING)",
                   "keyspace_alias": "shellTest_a",
-                  "recommending_rule": "Index keys follow order of predicate types: 7. not null/not missing/valued."
+                  "recommending_rule": "Leading index key INCLUDE MISSING."
                 }
               ]
             }

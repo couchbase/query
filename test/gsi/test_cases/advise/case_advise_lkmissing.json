@@ -36,7 +36,7 @@
                         {
                             "index_statement": "CREATE INDEX adv_state ON `shellTest`(`state` INCLUDE MISSING)",
                             "keyspace_alias": "shellTest_l",
-                            "recommending_rule": "Leading Index Key Missing."
+                            "recommending_rule": "Leading index key INCLUDE MISSING."
                         }
                     ]
                 }
@@ -91,7 +91,7 @@
                         {
                             "index_statement": "CREATE INDEX adv_city_state ON `shellTest`(`city` INCLUDE MISSING,`state`)",
                             "keyspace_alias": "shellTest_l",
-                            "recommending_rule": "Leading Index Key Missing."
+                            "recommending_rule": "Leading index key INCLUDE MISSING."
                         }
                     ]
                 }
@@ -122,7 +122,7 @@
                         {
                             "index_statement": "CREATE INDEX adv_city_state ON `shellTest`(`city` INCLUDE MISSING,`state`)",
                             "keyspace_alias": "shellTest_l",
-                            "recommending_rule": "Leading Index Key Missing."
+                            "recommending_rule": "Leading index key INCLUDE MISSING."
                         }
                     ]
                 }
@@ -151,7 +151,7 @@
                         {
                             "index_statement": "CREATE INDEX adv_city_state ON `shellTest`(`city` INCLUDE MISSING,`state`)",
                             "keyspace_alias": "shellTest_l",
-                            "recommending_rule": "Leading Index Key Missing."
+                            "recommending_rule": "Leading index key INCLUDE MISSING."
                         }
                     ]
                 }
