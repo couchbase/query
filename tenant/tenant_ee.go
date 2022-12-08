@@ -124,7 +124,7 @@ func (this Unit) NonZero() bool {
 	return this > 0
 }
 
-func Throttle(isAdmin bool, user, bucket string, buckets []string, timeout time.Duration) (Context, errors.Error) {
+func Throttle(isAdmin bool, user, bucket string, buckets []string, timeout time.Duration) (Context, time.Duration, errors.Error) {
 	var ctx Context
 
 	tenant := bucket
@@ -133,9 +133,9 @@ func Throttle(isAdmin bool, user, bucket string, buckets []string, timeout time.
 			ctx = regulator.NewNoBucketCtx(user)
 
 			// currently we don't throttle requests that have no tenant associated
-			return ctx, nil
+			return ctx, time.Duration(0), nil
 		} else {
-			return nil, errors.NewServiceTenantMissingError()
+			return nil, time.Duration(0), errors.NewServiceTenantMissingError()
 		}
 	} else {
 		found := false
@@ -147,9 +147,9 @@ func Throttle(isAdmin bool, user, bucket string, buckets []string, timeout time.
 		}
 		if !found {
 			if isAdmin {
-				return nil, errors.NewServiceTenantNotFoundError(bucket)
+				return nil, time.Duration(0), errors.NewServiceTenantNotFoundError(bucket)
 			} else {
-				return nil, errors.NewServiceTenantNotAuthorizedError(bucket)
+				return nil, time.Duration(0), errors.NewServiceTenantNotAuthorizedError(bucket)
 			}
 		}
 		ctx = regulator.NewUserCtx(tenant, user)
@@ -164,6 +164,7 @@ func Throttle(isAdmin bool, user, bucket string, buckets []string, timeout time.
 	})
 	switch r {
 	case regulator.CheckResultNormal:
+		var d time.Duration
 
 		// if KV is throttling this tenant slow it down before the request starts in order
 		// to use the would be KV throttling to service other less active tenants
@@ -174,7 +175,7 @@ func Throttle(isAdmin bool, user, bucket string, buckets []string, timeout time.
 		throttleLock.RUnlock()
 		if ok {
 			t := util.Now()
-			d := t.Sub(lastTime)
+			d = t.Sub(lastTime)
 
 			if d > time.Duration(0) {
 				regulator.RecordExternalThrottle(ctx, regulator.ExternalThrottleSpec{
@@ -195,14 +196,14 @@ func Throttle(isAdmin bool, user, bucket string, buckets []string, timeout time.
 			}
 			throttleLock.Unlock()
 		}
-		return ctx, nil
+		return ctx, d, nil
 	case regulator.CheckResultThrottle:
 		time.Sleep(d)
-		return ctx, nil
+		return ctx, d, nil
 	case regulator.CheckResultReject:
-		return nil, errors.NewServiceTenantRejectedError(d)
+		return nil, time.Duration(0), errors.NewServiceTenantRejectedError(d)
 	default:
-		return ctx, errors.NewServiceTenantThrottledError(e)
+		return ctx, time.Duration(0), errors.NewServiceTenantThrottledError(e)
 	}
 }
 

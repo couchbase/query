@@ -31,6 +31,7 @@ import (
 	functionsBridge "github.com/couchbase/query/functions/bridge"
 	functionsResolver "github.com/couchbase/query/functions/resolver"
 	functionsStorage "github.com/couchbase/query/functions/storage"
+	"github.com/couchbase/query/memory"
 	"github.com/couchbase/query/prepareds"
 	"github.com/couchbase/query/scheduler"
 	"github.com/couchbase/query/server"
@@ -308,6 +309,14 @@ func doPrometheusLow(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Re
 		w.Write([]byte("# TYPE n1ql_" + name + " " + metric + "\n"))
 		w.Write([]byte("n1ql_" + name + " "))
 		w.Write([]byte(fmt.Sprintf("%v\n", localValue(endpoint.server, name))))
+	}
+
+	if tenant.IsServerless() {
+		tenant.Foreach(func(n string, m memory.MemoryManager) {
+			w.Write([]byte("# TYPE n1ql_tenant_memory gauge\n"))
+			w.Write([]byte("n1ql_tenant_memory{bucket=\"" + n + "\"} "))
+			w.Write([]byte(fmt.Sprintf("%v\n", m.AllocatedMemory())))
+		})
 	}
 
 	return textPlain(""), nil
@@ -1912,6 +1921,7 @@ var localData = map[string]string{
 	"active_requests":  "gauge",
 	"queued_requests":  "gauge",
 	"allocated_values": "gauge",
+	"node_memory":      "gauge",
 }
 
 func isLocal(metric string) bool {
@@ -1931,6 +1941,8 @@ func getLocalData(serv *server.Server, metric string) map[string]interface{} {
 		values["value"] = serv.QueuedRequests()
 	case "allocated_values":
 		values["value"] = value.AllocatedValuesCount()
+	case "node_memory":
+		values["value"] = memory.AllocatedMemory()
 	}
 	return values
 }
@@ -1947,6 +1959,8 @@ func localValue(serv *server.Server, metric string) interface{} {
 		return serv.QueuedRequests()
 	case "allocated_values":
 		return value.AllocatedValuesCount()
+	case "node_memory":
+		return memory.AllocatedMemory()
 	}
 	return nil
 }

@@ -19,11 +19,22 @@ import (
 type memorySession struct {
 }
 
+type memoryManager struct {
+}
+
 func Config(quota uint64) {
 }
 
 func Register(context Context) memory.MemorySession {
 	return &memorySession{}
+}
+
+func Foreach(f func(string, memory.MemoryManager)) {
+	// noop
+}
+
+func (this *memoryManager) Expire() {
+	// noop
 }
 
 func (this *memorySession) Track(size uint64) (uint64, uint64, errors.Error) {

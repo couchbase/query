@@ -15,6 +15,8 @@ import (
 
 	json "github.com/couchbase/go_json"
 	"github.com/couchbase/query/logging"
+	"github.com/couchbase/query/memory"
+	"github.com/couchbase/query/tenant"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
@@ -94,7 +96,20 @@ func (c *statsCollector) runCollectStats() {
 		newStats["process.percore.cpupercent"] = c.server.CpuUsage(false)
 		newStats["process.memory.usage"], lastGC = c.server.MemoryUsage(false)
 		newStats["request.queued.count"] = c.server.QueuedRequests()
-		newStats["allocated_values"] = value.AllocatedValuesCount()
+		newStats["node.allocated.values"] = value.AllocatedValuesCount()
+		m := memory.AllocatedMemory()
+		if m > 0 {
+			newStats["node.memory.usage"] = m
+		} else {
+			delete(newStats, "node.memory.usage")
+		}
+		if tenant.IsServerless() {
+			tenants := make(map[string]interface{})
+			tenant.Foreach(func(n string, m memory.MemoryManager) {
+				tenants[n] = m.AllocatedMemory()
+			})
+			newStats["tenant.memory.usage"] = tenants
+		}
 		oldStats = c.server.AccountingStore().ExternalVitals(newStats)
 		newStats = oldStats
 
@@ -111,6 +126,13 @@ func (c *statsCollector) runCollectStats() {
 		if util.Now().UnixNano()-int64(lastGC) > int64(_STATS_INTRVL) {
 			logging.Debugf("Running GC")
 			runtime.GC()
+		}
+
+		// TODO expire tenants if required
+		if false && tenant.IsServerless() {
+			tenant.Foreach(func(n string, m memory.MemoryManager) {
+				m.Expire()
+			})
 		}
 	}
 }

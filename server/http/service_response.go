@@ -746,6 +746,14 @@ func (this *httpRequest) writeServerless(metrics bool, prefix, indent string) bo
 	}
 
 	beforeUnits := this.writer.mark()
+	if this.throttleTime > time.Duration(0) &&
+		!(this.writeString(",\n") &&
+			this.writeString(prefix) &&
+			this.writeString("\"throttleTime\": ") &&
+			this.writeString(this.throttleTime.String())) {
+		this.writer.truncate(beforeUnits)
+		return false
+	}
 	if !(this.writeString(",\n") &&
 		this.writeString(prefix) &&
 		this.writeString("\"billingUnits\": ")) {

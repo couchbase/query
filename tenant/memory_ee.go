@@ -37,6 +37,7 @@ type memorySession struct {
 const _MB = 1024 * 1024
 const _TENANT_QUOTA_RATIO = 2
 const _CLEANUP_INTERVAL = 30 * time.Minute
+const _QUICK_CLEANUP = 2 * time.Second
 const _MAX_TENANTS = 80
 
 var managers map[string]*memoryManager = make(map[string]*memoryManager, _MAX_TENANTS)
@@ -62,6 +63,37 @@ func Register(context Context) memory.MemorySession {
 	session := memory.Register()
 	atomic.AddUint64(&manager.inUseMemory, session.Allocated())
 	return &memorySession{manager, session, context}
+}
+
+func Foreach(f func(string, memory.MemoryManager)) {
+	managersLock.Lock()
+	defer managersLock.Unlock()
+	for n, m := range managers {
+		if m.tenant != "" {
+			f(n, m)
+		}
+		managersLock.Unlock()
+		managersLock.Lock()
+	}
+}
+
+func (this *memoryManager) AllocatedMemory() uint64 {
+	return this.inUseMemory
+}
+
+func (this *memoryManager) Expire() {
+	this.Lock()
+
+	// avoid race condition among doubly scheduled cleaners
+	if this.timer == nil || this.tenant == "" {
+		this.Unlock()
+		return
+	}
+	if this.sessions == 0 {
+		this.timer.Stop()
+		this.timer.Reset(_QUICK_CLEANUP)
+	}
+	this.Unlock()
 }
 
 func (this *memoryManager) expire() {

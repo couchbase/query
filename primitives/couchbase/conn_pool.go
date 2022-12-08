@@ -20,6 +20,8 @@ import (
 	"github.com/couchbase/query/logging"
 )
 
+const _LOG_INTERVAL = 10
+
 // GenericMcdAuthHandler is a kind of AuthHandler that performs
 // special auth exchange (like non-standard auth, possibly followed by
 // select-bucket).
@@ -326,6 +328,7 @@ func (cp *connectionPool) Return(c *memcached.Client) {
 				// closed and we're trying to return a
 				// connection to it anyway.  Just close the
 				// connection.
+				atomic.AddUint64(&cp.connClosed, 1)
 				c.Close()
 			}
 		}()
@@ -334,10 +337,12 @@ func (cp *connectionPool) Return(c *memcached.Client) {
 		case cp.connections <- c:
 		default:
 			<-cp.createsem
+			atomic.AddUint64(&cp.connClosed, 1)
 			c.Close()
 		}
 	} else {
 		<-cp.createsem
+		atomic.AddUint64(&cp.connClosed, 1)
 		c.Close()
 	}
 }
@@ -353,6 +358,7 @@ func (cp *connectionPool) Discard(c *memcached.Client) {
 // asynchronous connection closer
 func (cp *connectionPool) connCloser() {
 	var connCount uint64
+	var logCount = _LOG_INTERVAL
 
 	t := time.NewTimer(ConnCloserInterval)
 	defer t.Stop()
@@ -367,8 +373,12 @@ func (cp *connectionPool) connCloser() {
 		case <-t.C:
 		}
 		t.Reset(ConnCloserInterval)
-		logging.Infof("bucket %s node %s connections opened %v closed %v open %v requested %v",
-			cp.bucket, cp.host, cp.connOpen, cp.connClosed, cp.connOpen-cp.connClosed, cp.connCount)
+		logCount--
+		if logCount == 0 {
+			logging.Infof("bucket %s node %s connections opened %v closed %v open %v (re)used %v",
+				cp.bucket, cp.host, cp.connOpen, cp.connClosed, cp.connOpen-cp.connClosed, cp.connCount)
+			logCount = _LOG_INTERVAL
+		}
 
 		// no overflow connections open or sustained requests for connections
 		// nothing to do until the next cycle

@@ -17,7 +17,8 @@ import (
 )
 
 type MemoryManager interface {
-	Register() MemorySession
+	AllocatedMemory() uint64
+	Expire()
 }
 
 type MemorySession interface {
@@ -72,6 +73,10 @@ func Quota() uint64 {
 
 func Register() MemorySession {
 	return &memorySession{0, _MEMORY_TOKEN, &manager}
+}
+
+func AllocatedMemory() uint64 {
+	return manager.curr
 }
 
 func (this *memorySession) Track(size uint64) (uint64, uint64, errors.Error) {

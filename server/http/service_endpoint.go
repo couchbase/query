@@ -427,8 +427,9 @@ func (this *HttpEndpoint) ServeHTTP(resp http.ResponseWriter, req *http.Request)
 		if len(path) > 1 {
 			bucket = path[1]
 		}
-		ctx, err := tenant.Throttle(datastore.IsAdmin(request.Credentials()), datastore.FirstCred(request.Credentials()), bucket,
+		ctx, d, err := tenant.Throttle(datastore.IsAdmin(request.Credentials()), datastore.FirstCred(request.Credentials()), bucket,
 			datastore.GetUserBuckets(request.Credentials()), this.server.RequestTimeout(request.Timeout()))
+		request.throttleTime = d
 		if err != nil {
 			request.Fail(err)
 			request.Failed(this.server)
