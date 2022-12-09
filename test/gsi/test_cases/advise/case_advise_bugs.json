@@ -1,0 +1,33 @@
+[
+  {
+    "testcase": "MB-54809",
+    "statements": "advise select 1 from shellTest AS b where (NOW_MILLIS() - STR_TO_MILLIS(b.f1.time))/1000 > 300",
+    "advise": true,
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": {
+            "recommended_indexes": {
+              "covering_indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_str_to_millis_f1_time ON `shellTest`(str_to_millis((`f1`.`time`)))",
+                  "keyspace_alias": "shellTest_b"
+                }
+              ],
+              "indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_str_to_millis_f1_time ON `shellTest`(str_to_millis((`f1`.`time`)))",
+                  "keyspace_alias": "shellTest_b",
+                  "recommending_rule": "Index keys follow order of predicate types: 5. less than/greater than."
+                }
+              ]
+            }
+          }
+        },
+        "query": "select 1 from shellTest AS b where (NOW_MILLIS() - STR_TO_MILLIS(b.f1.time))/1000 > 300"
+      }
+    ]
+  }
+]
