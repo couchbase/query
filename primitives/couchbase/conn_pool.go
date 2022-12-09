@@ -319,6 +319,7 @@ func (cp *connectionPool) Return(c *memcached.Client) {
 
 	if cp == nil {
 		c.Close()
+		return
 	}
 
 	if c.IsHealthy() {
@@ -328,7 +329,9 @@ func (cp *connectionPool) Return(c *memcached.Client) {
 				// closed and we're trying to return a
 				// connection to it anyway.  Just close the
 				// connection.
-				atomic.AddUint64(&cp.connClosed, 1)
+				if cp != nil {
+					atomic.AddUint64(&cp.connClosed, 1)
+				}
 				c.Close()
 			}
 		}()
