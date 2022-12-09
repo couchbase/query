@@ -84,7 +84,7 @@ func (c *statsCollector) runCollectStats() {
 	oldStats := make(map[string]interface{}, 6)
 	newStats := make(map[string]interface{}, 6)
 	c.server.AccountingStore().ExternalVitals(oldStats)
-	for range ticker.C {
+	tickerFunc := func() {
 		loadFactor := c.server.loadFactor(true)
 		c.sumOfLoadFactors += (loadFactor - c.loadFactors[index])
 		c.loadFactors[index] = loadFactor
@@ -134,6 +134,11 @@ func (c *statsCollector) runCollectStats() {
 				m.Expire()
 			})
 		}
+	}
+
+	tickerFunc()
+	for range ticker.C {
+		tickerFunc()
 	}
 }
 
