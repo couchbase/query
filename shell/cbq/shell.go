@@ -695,7 +695,7 @@ func main() {
 		n1ql.SetPrivateKeyPassphrase([]byte(passpFlag))
 	}
 
-	if https && rootFile == "" && certFile == "" && keyFile == "" {
+	if https && certFile == "" && keyFile == "" {
 		if noSSLVerify == false {
 			command.PrintStr(command.W, command.SSLVERIFY_FALSE)
 		} else {
