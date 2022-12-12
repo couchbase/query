@@ -171,6 +171,8 @@ func getQsLoadFactor() int {
 }
 
 // start: temporary addition
+var names []string
+
 func dumpHeap() {
 	ts := time.Now().Format(time.RFC3339Nano)
 	name := fmt.Sprintf("%s/ffdcheap_%v_%v", os.TempDir(), os.Getpid(), ts)
@@ -178,12 +180,18 @@ func dumpHeap() {
 	runtime.GC()
 	f, err := os.Create(name)
 	if err == nil {
+		names = append(names, name)
 		pprof.WriteHeapProfile(f)
 		f.Sync()
 		f.Close()
 		logging.Infof("FFDC: heap dumped")
 	} else {
 		logging.Infof("FFDC: failed to create heap output file: %v", err)
+	}
+	if len(names) > 12 {
+		logging.Infof("FFDC: removing dump: %v", names[0])
+		os.Remove(names[0])
+		names = names[1:]
 	}
 }
 
