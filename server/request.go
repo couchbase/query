@@ -239,23 +239,37 @@ type ActiveRequests interface {
 var actives ActiveRequests
 
 func ActiveRequestsCount() (int, errors.Error) {
-	return actives.Count()
+	if actives != nil {
+		return actives.Count()
+	}
+	return 0, nil
 }
 
 func ActiveRequestsDelete(id string) bool {
-	return actives.Delete(id, true)
+	if actives != nil {
+		return actives.Delete(id, true)
+	}
+	return false
 }
 
 func ActiveRequestsGet(id string, f func(Request)) errors.Error {
-	return actives.Get(id, f)
+	if actives != nil {
+		return actives.Get(id, f)
+	}
+	return nil
 }
 
 func ActiveRequestsForEach(nonBlocking func(string, Request) bool, blocking func() bool) {
-	actives.ForEach(nonBlocking, blocking)
+	if actives != nil {
+		actives.ForEach(nonBlocking, blocking)
+	}
 }
 
 func ActiveRequestsLoad() int {
-	return actives.Load()
+	if actives != nil {
+		return actives.Load()
+	}
+	return 0
 }
 
 func SetActives(ar ActiveRequests) {

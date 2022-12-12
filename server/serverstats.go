@@ -9,7 +9,10 @@
 package server
 
 import (
+	"fmt"
+	"os"
 	"runtime"
+	"runtime/pprof"
 	"sync/atomic"
 	"time"
 
@@ -75,11 +78,14 @@ func (c *statsCollector) runCollectStats() {
 	defer func() {
 		ticker.Stop()
 		// cannot panic and die
-		recover()
+		e := recover()
+		logging.Debugf("System stats collector failed with: %v.  Restarting.", e)
 		go c.runCollectStats()
 	}()
 
 	index := 0
+
+	lastDumpTime := util.Time(0) // temporary addition
 
 	oldStats := make(map[string]interface{}, 6)
 	newStats := make(map[string]interface{}, 6)
@@ -113,6 +119,19 @@ func (c *statsCollector) runCollectStats() {
 		oldStats = c.server.AccountingStore().ExternalVitals(newStats)
 		newStats = oldStats
 
+		// Start: temporary addition hence literal constants
+		if newStats != nil {
+			if pmu, ok := newStats["process.memory.usage"]; ok {
+				if mu, ok := pmu.(uint64); ok && mu >= 80 {
+					if util.Since(lastDumpTime) > time.Minute*10 {
+						dumpHeap()
+						lastDumpTime = util.Now()
+					}
+				}
+			}
+		}
+		// End: temporary addition
+
 		if (index % _LOG_INTRVL) == 0 {
 			mstats, _ := c.server.AccountingStore().Vitals()
 			if buf, e := json.Marshal(mstats); e == nil {
@@ -137,6 +156,7 @@ func (c *statsCollector) runCollectStats() {
 	}
 
 	tickerFunc()
+	index--
 	for range ticker.C {
 		tickerFunc()
 	}
@@ -149,3 +169,22 @@ func updateQsLoadFactor(loadFactor int) {
 func getQsLoadFactor() int {
 	return int(atomic.LoadUint32(&qsLoadFactor))
 }
+
+// start: temporary addition
+func dumpHeap() {
+	ts := time.Now().Format(time.RFC3339Nano)
+	name := fmt.Sprintf("%s/ffdcheap_%v_%v", os.TempDir(), os.Getpid(), ts)
+	logging.Infof("FFDC: threshold exceeded, attempting heap dump to: %v", name)
+	runtime.GC()
+	f, err := os.Create(name)
+	if err == nil {
+		pprof.WriteHeapProfile(f)
+		f.Sync()
+		f.Close()
+		logging.Infof("FFDC: heap dumped")
+	} else {
+		logging.Infof("FFDC: failed to create heap output file: %v", err)
+	}
+}
+
+// end temporary addition
