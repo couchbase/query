@@ -143,43 +143,10 @@ var _SETTERS = map[string]Setter{
 	CONTROLS: setControlsAdmin,
 	N1QLFEATCTRL: func(s *Server, o interface{}) errors.Error {
 		value := getHexNumber(o)
-		var prev uint64
 		if s.enterprise {
-			prev = util.SetN1qlFeatureControl(uint64(value))
+			util.SetN1qlFeatureControl(uint64(value))
 		} else {
-			prev = util.SetN1qlFeatureControl(uint64(value) | (util.CE_N1QL_FEAT_CTRL & ^util.N1QL_ENCODED_PLAN))
-		}
-
-		// log what features have changed in the new n1ql-feat-ctrl bitset
-		new := uint64(value)
-		if new != prev {
-			changes := strings.Builder{}
-
-			enabled, disabled := util.ChangedFeatures(prev, new)
-
-			e := len(enabled)
-			d := len(disabled)
-
-			if e > 0 || d > 0 {
-				changes.WriteString("Changes: ")
-
-			}
-
-			if e > 0 {
-				for _, v := range enabled {
-					changes.WriteString(v)
-					changes.WriteString(" enabled. ")
-				}
-			}
-
-			if d > 0 {
-				for _, v := range disabled {
-					changes.WriteString(v)
-					changes.WriteString(" disabled. ")
-				}
-			}
-
-			logging.Infof("n1ql-feat-ctrl has changed from %#x to %#x. %s", prev, value, changes.String())
+			util.SetN1qlFeatureControl(uint64(value) | (util.CE_N1QL_FEAT_CTRL & ^util.N1QL_ENCODED_PLAN))
 		}
 		return nil
 	},
@@ -492,10 +459,25 @@ func reportChangedValues(prev map[string]interface{}, current map[string]interfa
 			changeRecord["to"] = v
 			changed = append(changed, changeRecord)
 			if _, ok := v.(map[string]interface{}); !ok {
+				var extra string
+				// log what features have changed in the new n1ql-feat-ctrl bitset
+				if k == N1QLFEATCTRL {
+					prevVal := uint64(0) // so on start-up all disabled features are logged
+					currVal, _ := strconv.ParseUint(v.(string)[2:], 16, 64)
+
+					if !same && !all {
+						prevVal, _ = strconv.ParseUint(p.(string)[2:], 16, 64)
+					} else {
+						same = true
+					}
+
+					extra = util.DescribeChangedFeatures(prevVal, currVal)
+				}
+
 				if !same {
-					logging.Infof("Query Configuration changed for %v from %v to %v", k, p, v)
+					logging.Infof("Query Configuration changed for %v from %v to %v%s", k, p, v, extra)
 				} else {
-					logging.Infof("Query Configuration changed for %v. New value is %v", k, v)
+					logging.Infof("Query Configuration changed for %v. New value is %v%s", k, v, extra)
 				}
 			}
 		}

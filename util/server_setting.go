@@ -11,6 +11,7 @@ package util
 import (
 	"fmt"
 	"sort"
+	"strings"
 
 	atomic "github.com/couchbase/go-couchbase/platform"
 )
@@ -48,13 +49,13 @@ const (
 )
 
 var N1Ql_Features = map[uint64]string{
-	N1QL_GROUPAGG_PUSHDOWN: fmt.Sprintf("Index Grouping and Aggregate Pushdown (%#x)", N1QL_GROUPAGG_PUSHDOWN),
-	N1QL_HASH_JOIN:         fmt.Sprintf("Hash Join (%#x)", N1QL_HASH_JOIN),
-	N1QL_ENCODED_PLAN:      fmt.Sprintf("Encoded Plans (%#x)", N1QL_ENCODED_PLAN),
-	N1QL_GOLANG_UDF:        fmt.Sprintf("Golang UDFs (%#x)", N1QL_GOLANG_UDF),
-	N1QL_CBO:               fmt.Sprintf("CBO (%#x)", N1QL_CBO),
-	N1QL_FLEXINDEX:         fmt.Sprintf("Flex Index (%#x)", N1QL_FLEXINDEX),
-	//N1QL_CBO_NEW:               fmt.Sprintf("CBO New (%#x)", N1QL_CBO_NEW),	// To-Do : un-comment when CBO New is supported
+	N1QL_GROUPAGG_PUSHDOWN:     fmt.Sprintf("Index Grouping and Aggregate Pushdown (%#x)", N1QL_GROUPAGG_PUSHDOWN),
+	N1QL_HASH_JOIN:             fmt.Sprintf("Hash Join (%#x)", N1QL_HASH_JOIN),
+	N1QL_ENCODED_PLAN:          fmt.Sprintf("Encoded Plans (%#x)", N1QL_ENCODED_PLAN),
+	N1QL_GOLANG_UDF:            fmt.Sprintf("Golang UDFs (%#x)", N1QL_GOLANG_UDF),
+	N1QL_CBO:                   fmt.Sprintf("CBO (%#x)", N1QL_CBO),
+	N1QL_FLEXINDEX:             fmt.Sprintf("Flex Index (%#x)", N1QL_FLEXINDEX),
+	N1QL_CBO_NEW:               fmt.Sprintf("(Reserved for future use) (%#x)", N1QL_CBO_NEW), // To-Do : Change description when CBO New is supported
 	N1QL_PASSWORDLESS_BKT:      fmt.Sprintf("Allow Password-less Buckets (%#x)", N1QL_PASSWORDLESS_BKT),
 	N1QL_READ_FROM_REPLICA_OFF: fmt.Sprintf("Read From Active v-Bucket Only (%#x)", N1QL_READ_FROM_REPLICA_OFF),
 	N1QL_IMPLICIT_ARRAY_COVER:  fmt.Sprintf("Implicit Covering Array Index (%#x)", N1QL_IMPLICIT_ARRAY_COVER),
@@ -109,39 +110,39 @@ func DisabledFeatures(control uint64) []string {
 	return disabled
 }
 
-// Get the features that have changed ( either been enabled or disabled )
-// from the 'prev' bitset to the 'new' bitset
-func ChangedFeatures(prev uint64, new uint64) ([]string, []string) {
-	difference := prev ^ new // the difference between the prev and new n1ql-feat-ctrl bitsets
+// Get the features that have changed ( either been enabled or disabled ) from the 'prev' bitset to the 'new' bitset
+// Used for logging changes
+func DescribeChangedFeatures(prev uint64, new uint64) string {
+	if prev == new {
+		return "No Changes"
+	}
 
-	enabled := make([]string, 0)
-	disabled := make([]string, 0)
+	// there is a difference between the feature bitsets
+	changes := strings.Builder{}
+	flags := make([]uint64, 0, len(N1Ql_Features))
 
-	if difference != 0 { // there is a change in the feature bitset
-		flags := make([]uint64, 0, len(N1Ql_Features))
+	for f := range N1Ql_Features {
+		flags = append(flags, f)
+	}
 
-		for f := range N1Ql_Features {
-			flags = append(flags, f)
-		}
+	sort.Slice(flags, func(i, j int) bool {
+		return flags[i] < flags[j]
+	})
 
-		sort.Slice(flags, func(i, j int) bool {
-			return flags[i] < flags[j]
-		})
+	for _, flag := range flags {
+		feat := N1Ql_Features[flag]
+		old := prev & flag
 
-		for _, flag := range flags {
-			feat := N1Ql_Features[flag]
-			old := prev & flag
-
-			if old != (new & flag) { // the feature bit has changed
-				if old != 0 { // the feature bit was 1 i.e the feature used to be DISABLED .. hence in the new bitset it is now ENABLED
-					enabled = append(enabled, feat)
-				} else {
-					disabled = append(disabled, feat)
-				}
+		if old != (new & flag) { // the feature bit has changed
+			changes.WriteString(", ")
+			changes.WriteString(feat)
+			if old != 0 { // the feature bit was 1 i.e the feature used to be DISABLED .. hence in the new bitset it is now ENABLED
+				changes.WriteString(" enabled")
+			} else {
+				changes.WriteString(" disabled")
 			}
 		}
 	}
 
-	return enabled, disabled
-
+	return changes.String()
 }
