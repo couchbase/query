@@ -9,18 +9,20 @@
 package planner
 
 import (
+	"time"
+
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/plan"
 )
 
 func BuildPrepared(stmt algebra.Statement, datastore, systemstore datastore.Datastore,
-	namespace string, subquery, stream bool, context *PrepareContext) (*plan.Prepared, error) {
-	qp, ik, err := Build(stmt, datastore, systemstore, namespace, subquery, stream, context)
+	namespace string, subquery, stream bool, context *PrepareContext) (*plan.Prepared, error, map[string]time.Duration) {
+	qp, ik, err, subTimes := Build(stmt, datastore, systemstore, namespace, subquery, stream, context)
 	if err != nil {
-		return nil, err
+		return nil, err, subTimes
 	}
 
 	signature := stmt.Signature()
-	return plan.NewPrepared(qp.PlanOp(), signature, ik), nil
+	return plan.NewPrepared(qp.PlanOp(), signature, ik), nil, subTimes
 }

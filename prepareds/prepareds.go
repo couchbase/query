@@ -745,7 +745,7 @@ func reprepare(prepared *plan.Prepared, deltaKeyspaces map[string]bool, phaseTim
 		prepared.IndexApiVersion(), prepared.FeatureControls(), prepared.UseFts(), prepared.UseCBO(),
 		optimizer, deltaKeyspaces, nil, true)
 
-	pl, err := planner.BuildPrepared(stmt.(*algebra.Prepare).Statement(), store, systemstore, prepared.Namespace(),
+	pl, err, _ := planner.BuildPrepared(stmt.(*algebra.Prepare).Statement(), store, systemstore, prepared.Namespace(),
 		false, true, &prepContext)
 	if phaseTime != nil {
 		*phaseTime += time.Since(prep)
@@ -805,7 +805,8 @@ func predefinedPrepareStatement(name, statement, queryContext, namespace string)
 		return nil, errors.NewSemanticsError(err, "")
 	}
 
-	prepared, err := planner.BuildPrepared(stmt.(*algebra.Prepare).Statement(), store, systemstore, namespace, false, true, &prepContext)
+	prepared, err, _ := planner.BuildPrepared(stmt.(*algebra.Prepare).Statement(), store, systemstore, namespace, false, true,
+		&prepContext)
 	if err != nil {
 		return nil, errors.NewPlanError(err, "BuildPrepared")
 	}

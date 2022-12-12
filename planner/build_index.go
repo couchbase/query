@@ -15,6 +15,7 @@ import (
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/util"
 )
 
 func (this *builder) VisitCreatePrimaryIndex(stmt *algebra.CreatePrimaryIndex) (interface{}, error) {
@@ -153,7 +154,9 @@ func (this *builder) getNameKeyspace(ks *algebra.KeyspaceRef, dynamic bool) (dat
 		}
 		return nil, errors.NewError(nil, "placeholder is not allowed in keyspace")
 	}
+	start := util.Now()
 	keyspace, err := datastore.GetKeyspace(path.Parts()...)
+	this.recordSubTime("keyspace.metadata", util.Since(start))
 
 	if err != nil && this.indexAdvisor && !ks.IsSystem() &&
 		(strings.Contains(err.TranslationKey(), "bucket_not_found") ||

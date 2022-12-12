@@ -319,7 +319,7 @@ func (this *Context) PrepareStatement(statement string, namedArgs map[string]val
 	}
 
 	//  monitoring code TBD
-	prepared, err = planner.BuildPrepared(stmt, this.datastore, this.systemstore, this.namespace, subquery, true,
+	prepared, err, _ = planner.BuildPrepared(stmt, this.datastore, this.systemstore, this.namespace, subquery, true,
 		&prepContext)
 	if err != nil {
 		return nil, nil, false, err

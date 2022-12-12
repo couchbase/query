@@ -10,17 +10,19 @@ package planner
 
 import (
 	"strings"
+	"time"
 
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
 	base "github.com/couchbase/query/plannerbase"
+	"github.com/couchbase/query/util"
 )
 
 func Build(stmt algebra.Statement, datastore, systemstore datastore.Datastore,
 	namespace string, subquery, stream bool, context *PrepareContext) (
-	*plan.QueryPlan, map[string]bool, error) {
+	*plan.QueryPlan, map[string]bool, error, map[string]time.Duration) {
 
 	builder := newBuilder(datastore, systemstore, namespace, subquery, context)
 	if context.UseCBO() && context.Optimizer() != nil {
@@ -37,7 +39,7 @@ func Build(stmt algebra.Statement, datastore, systemstore datastore.Datastore,
 	p, err := stmt.Accept(builder)
 
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, err, builder.subTimes
 	}
 
 	qp := p.(*plan.QueryPlan)
@@ -48,7 +50,7 @@ func Build(stmt algebra.Statement, datastore, systemstore datastore.Datastore,
 	if !subquery && !is_prepared {
 		privs, er := stmt.Privileges()
 		if er != nil {
-			return nil, nil, er
+			return nil, nil, er, builder.subTimes
 		}
 
 		if stream {
@@ -69,7 +71,7 @@ func Build(stmt algebra.Statement, datastore, systemstore datastore.Datastore,
 		qp.SetPlanOp(plan.NewAuthorize(privs, op))
 	}
 
-	return qp, indexKeyspaces, nil
+	return qp, indexKeyspaces, nil, builder.subTimes
 }
 
 func (this *builder) chkBldSubqueries(stmt algebra.Statement, qp *plan.QueryPlan) (err error) {
@@ -207,6 +209,7 @@ type builder struct {
 	partialSortTermCount int
 	skipKeyspace         string
 	mustSkipKeys         bool
+	subTimes             map[string]time.Duration
 }
 
 func (this *builder) Copy() *builder {
@@ -407,7 +410,9 @@ func (this *builder) getTermKeyspace(node *algebra.KeyspaceTerm) (datastore.Keys
 	}
 	path.SetDefaultNamespace(this.namespace)
 	ns := strings.ToLower(path.Namespace())
+	start := util.Now()
 	keyspace, err := datastore.GetKeyspace(path.Parts()...)
+	this.recordSubTime("keyspace.metadata", util.Since(start))
 
 	if err != nil && this.indexAdvisor && !algebra.IsSystem(ns) &&
 		(strings.Contains(err.TranslationKey(), "bucket_not_found") ||
@@ -483,4 +488,14 @@ func (this *builder) addSubchildrenParallel() *plan.Parallel {
 	parallel := plan.NewParallel(plan.NewSequence(this.subChildren...), this.maxParallelism)
 	this.subChildren = make([]plan.Operator, 0, 16)
 	return parallel
+}
+
+func (this *builder) recordSubTime(what string, duration time.Duration) {
+	if this.subTimes == nil {
+		this.subTimes = make(map[string]time.Duration)
+	}
+	if existing, ok := this.subTimes[what]; ok {
+		duration += existing
+	}
+	this.subTimes[what] = duration
 }

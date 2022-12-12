@@ -10,6 +10,7 @@ package planner
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/errors"
@@ -24,6 +25,7 @@ type keyspaceFinder struct {
 	outerlevel       int32
 	pushableOnclause expression.Expression
 	unnestDepends    map[string]*expression.Identifier
+	metadataDuration time.Duration
 }
 
 func newKeyspaceFinder(baseKeyspaces map[string]*base.BaseKeyspace, primary string) *keyspaceFinder {
@@ -41,7 +43,8 @@ func (this *keyspaceFinder) addKeyspaceAlias(alias string, path *algebra.Path,
 	if _, ok := this.baseKeyspaces[alias]; ok {
 		return errors.NewPlanInternalError(fmt.Sprintf("addKeyspaceAlias: duplicate keyspace %s", alias))
 	}
-	newBaseKeyspace := base.NewBaseKeyspace(alias, path, node, (1 << len(this.baseKeyspaces)))
+	newBaseKeyspace, duration := base.NewBaseKeyspace(alias, path, node, (1 << len(this.baseKeyspaces)))
+	this.metadataDuration += duration
 	newBaseKeyspace.SetOuterlevel(this.outerlevel)
 	this.baseKeyspaces[alias] = newBaseKeyspace
 	this.keyspaceMap[alias] = newBaseKeyspace.Keyspace()

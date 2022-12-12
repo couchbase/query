@@ -44,6 +44,7 @@ func (this *builder) visitFrom(node *algebra.Subselect, group *algebra.Group,
 		primaryTerm := this.from.PrimaryTerm()
 		keyspaceFinder := newKeyspaceFinder(this.baseKeyspaces, primaryTerm.Alias())
 		_, err := node.From().Accept(keyspaceFinder)
+		this.recordSubTime("keyspace.metadata", keyspaceFinder.metadataDuration)
 		if err != nil {
 			return err
 		}
@@ -987,7 +988,8 @@ func (this *builder) fastCount(node *algebra.Subselect) (bool, error) {
 		}
 	}
 
-	baseKeyspace := base.NewBaseKeyspace(from.Alias(), from.Path(), from, 1)
+	baseKeyspace, duration := base.NewBaseKeyspace(from.Alias(), from.Path(), from, 1)
+	this.recordSubTime("keyspace.metadata", duration)
 	if this.context.HasDeltaKeyspace(baseKeyspace.Keyspace()) {
 		return false, nil
 	}

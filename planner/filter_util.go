@@ -9,6 +9,8 @@
 package planner
 
 import (
+	"time"
+
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/expression"
 	base "github.com/couchbase/query/plannerbase"
@@ -104,19 +106,19 @@ func newIdxKeyDerive(keyExpr expression.Expression) *idxKeyDerive {
 // WHERE clause as well as ON-clause of inner joins
 func deriveNotNullFilter(keyspace datastore.Keyspace, baseKeyspace *base.BaseKeyspace, useCBO bool,
 	indexApiVersion int, virtualIndexes []datastore.Index, advisorValidate bool,
-	context *PrepareContext, aliases map[string]bool, inclSeqScan bool) error {
+	context *PrepareContext, aliases map[string]bool, inclSeqScan bool) (error, time.Duration) {
 
 	// first gather leading index key from all indexes for this keyspace
-	indexes, err := allIndexes(keyspace, nil, virtualIndexes, indexApiVersion, false, inclSeqScan)
+	indexes, err, duration := allIndexes(keyspace, nil, virtualIndexes, indexApiVersion, false, inclSeqScan)
 	if nil != indexes {
 		defer _INDEX_POOL.Put(indexes)
 	}
 	if err != nil {
-		return err
+		return err, duration
 	}
 
 	if len(indexes) == 0 {
-		return nil
+		return nil, duration
 	}
 
 	if useCBO && baseKeyspace.DocCount() < 0 {
@@ -144,7 +146,7 @@ func deriveNotNullFilter(keyspace datastore.Keyspace, baseKeyspace *base.BaseKey
 			key, err = formalizer.Map(key)
 			formalizer.ClearIndexScope()
 			if err != nil {
-				return err
+				return err, duration
 			}
 
 			val := key.String()
@@ -162,7 +164,7 @@ func deriveNotNullFilter(keyspace datastore.Keyspace, baseKeyspace *base.BaseKey
 
 	// in case only primary index or index with leading array index key exists
 	if n == 0 {
-		return nil
+		return nil, duration
 	}
 
 	// next check existing filters
@@ -201,7 +203,7 @@ func deriveNotNullFilter(keyspace datastore.Keyspace, baseKeyspace *base.BaseKey
 				keyMap[val].derive = false
 				n--
 				if n == 0 {
-					return nil
+					return nil, duration
 				}
 			}
 		}
@@ -292,7 +294,7 @@ func deriveNotNullFilter(keyspace datastore.Keyspace, baseKeyspace *base.BaseKey
 		baseKeyspace.AddFilters(newFilters)
 	}
 
-	return nil
+	return nil, duration
 }
 
 func AddDerivedFilter(term expression.Expression, keyspaceNames, origKeyspaceNames map[string]string,

@@ -28,9 +28,11 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 	if source.From() != nil {
 		path = source.From().Path()
 	}
-	sourceKeyspace := base.NewBaseKeyspace(source.Alias(), path, nil, 1)
+	sourceKeyspace, duration := base.NewBaseKeyspace(source.Alias(), path, nil, 1)
+	this.recordSubTime("keyspace.metadata", duration)
 	this.baseKeyspaces[sourceKeyspace.Name()] = sourceKeyspace
-	targetKeyspace := base.NewBaseKeyspace(stmt.KeyspaceRef().Alias(), stmt.KeyspaceRef().Path(), nil, 2)
+	targetKeyspace, duration := base.NewBaseKeyspace(stmt.KeyspaceRef().Alias(), stmt.KeyspaceRef().Path(), nil, 2)
+	this.recordSubTime("keyspace.metadata", duration)
 	this.baseKeyspaces[targetKeyspace.Name()] = targetKeyspace
 	this.collectKeyspaceNames()
 

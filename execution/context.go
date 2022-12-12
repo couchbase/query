@@ -78,6 +78,8 @@ const (
 	INSTANTIATE
 	PARSE
 	PLAN
+	PLAN_KEYSPACE_METADATA
+	PLAN_INDEX_METADATA
 	REPREPARE
 	RUN
 	PHASES // Sizer
@@ -117,11 +119,23 @@ var _PHASE_NAMES = []string{
 
 	ADVISOR: "advisor",
 
-	INSTANTIATE: "instantiate",
-	PARSE:       "parse",
-	PLAN:        "plan",
-	REPREPARE:   "reprepare",
-	RUN:         "run",
+	INSTANTIATE:            "instantiate",
+	PARSE:                  "parse",
+	PLAN:                   "plan",
+	PLAN_KEYSPACE_METADATA: "plan.keyspace.metadata",
+	PLAN_INDEX_METADATA:    "plan.index.metadata",
+	REPREPARE:              "reprepare",
+	RUN:                    "run",
+	PHASES:                 "unknown",
+}
+
+func PhaseByName(name string) Phases {
+	for i := range _PHASE_NAMES {
+		if _PHASE_NAMES[i] == name {
+			return Phases(i)
+		}
+	}
+	return Phases(PHASES)
 }
 
 const _PHASE_UPDATE_COUNT uint64 = 100
@@ -1023,7 +1037,7 @@ func (this *opContext) EvaluateSubquery(query *algebra.Select, parent value.Valu
 				planner.NewPrepareContext(&prepContext, this.requestId, this.queryContext, nil, nil,
 					this.indexApiVersion, this.featureControls, this.useFts, this.useCBO, this.optimizer,
 					nil, this, false)
-				qp, subplanIsks, err = planner.Build(query, this.datastore, this.systemstore, this.namespace,
+				qp, subplanIsks, err, _ = planner.Build(query, this.datastore, this.systemstore, this.namespace,
 					true, false, &prepContext)
 
 				if err != nil {
@@ -1059,7 +1073,7 @@ func (this *opContext) EvaluateSubquery(query *algebra.Select, parent value.Valu
 		planner.NewPrepareContext(&prepContext, this.requestId, this.queryContext, this.namedArgs,
 			this.positionalArgs, this.indexApiVersion, this.featureControls, this.useFts, this.useCBO, this.optimizer,
 			this.deltaKeyspaces, this, false)
-		qp, subplanIsks, err = planner.Build(query, this.datastore, this.systemstore,
+		qp, subplanIsks, err, _ = planner.Build(query, this.datastore, this.systemstore,
 			this.namespace, true, false, &prepContext)
 
 		if err != nil {

@@ -9,10 +9,13 @@
 package plannerbase
 
 import (
+	"time"
+
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/util"
 )
 
 const (
@@ -51,10 +54,10 @@ type BaseKeyspace struct {
 	size          int64
 }
 
-func NewBaseKeyspace(name string, path *algebra.Path, node algebra.SimpleFromTerm,
-	optBit int32) *BaseKeyspace {
+func NewBaseKeyspace(name string, path *algebra.Path, node algebra.SimpleFromTerm, optBit int32) (*BaseKeyspace, time.Duration) {
 
 	var keyspace string
+	var duration time.Duration
 
 	// for expression scans we don't have a keyspace and leave it empty
 	if path != nil {
@@ -65,7 +68,9 @@ func NewBaseKeyspace(name string, path *algebra.Path, node algebra.SimpleFromTer
 		if path.IsCollection() {
 			keyspace = path.SimpleString()
 		} else {
+			start := util.Now()
 			ks, _ := datastore.GetKeyspace(path.Parts()...)
+			duration = util.Since(start)
 
 			// if we can't find it, we use a token full name
 			if ks != nil {
@@ -81,7 +86,7 @@ func NewBaseKeyspace(name string, path *algebra.Path, node algebra.SimpleFromTer
 		keyspace: keyspace,
 		node:     node,
 		optBit:   optBit,
-	}
+	}, duration
 }
 
 func (this *BaseKeyspace) PlanDone() bool {

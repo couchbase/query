@@ -1235,8 +1235,17 @@ func (this *Server) getPrepared(request Request, context *execution.Context) (*p
 			stmt.SetContext(execution.NewOpContext(context))
 		}
 
-		prepared, err = planner.BuildPrepared(stmt, this.datastore, this.systemstore, context.Namespace(),
+		var subTimes map[string]time.Duration
+		prepared, err, subTimes = planner.BuildPrepared(stmt, this.datastore, this.systemstore, context.Namespace(),
 			autoExecute, !autoExecute, &prepContext)
+		if subTimes != nil {
+			for k, v := range subTimes {
+				p := execution.PhaseByName("plan." + k)
+				if p != execution.PHASES {
+					request.Output().AddPhaseTime(p, v)
+				}
+			}
+		}
 		request.Output().AddPhaseTime(execution.PLAN, time.Since(prep))
 		if err != nil {
 			return nil, errors.NewPlanError(err, "")

@@ -10,6 +10,7 @@ package planner
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
@@ -124,10 +125,12 @@ func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.Keyspa
 	if !join && !this.hasBuilderFlag(BUILDER_CHK_INDEX_ORDER|BUILDER_DO_JOIN_FILTER) {
 		if len(baseKeyspace.JoinFilters()) > 0 {
 			// derive IS NOT NULL predicate
-			err = deriveNotNullFilter(keyspace, baseKeyspace, this.useCBO,
+			var duration time.Duration
+			err, duration = deriveNotNullFilter(keyspace, baseKeyspace, this.useCBO,
 				this.context.IndexApiVersion(), virtualIndexes,
 				this.advisorValidate(), this.context, this.aliases,
 				util.IsFeatureEnabled(this.context.FeatureControls(), util.N1QL_SEQ_SCAN))
+			this.recordSubTime("index.metadata", duration)
 			if err != nil {
 				return nil, nil, err
 			}
@@ -208,11 +211,12 @@ func (this *builder) buildPredicateScan(keyspace datastore.Keyspace, node *algeb
 		}
 	}
 
-	others, err := allIndexes(keyspace, hints, virtualIndexes, this.context.IndexApiVersion(), len(searchFns) > 0,
+	others, err, duration := allIndexes(keyspace, hints, virtualIndexes, this.context.IndexApiVersion(), len(searchFns) > 0,
 		util.IsFeatureEnabled(this.context.FeatureControls(), util.N1QL_SEQ_SCAN))
 	if nil != others {
 		defer _INDEX_POOL.Put(others)
 	}
+	this.recordSubTime("index.metadata", duration)
 	if err != nil {
 		return
 	}
@@ -765,13 +769,14 @@ inclFts indicates to include FTS index or not
 */
 
 func allIndexes(keyspace datastore.Keyspace, skip, virtualIndexes []datastore.Index, indexApiVersion int, inclFts bool,
-	inclSeqScan bool) ([]datastore.Index, error) {
+	inclSeqScan bool) ([]datastore.Index, error, time.Duration) {
 
 	var indexes []datastore.Index
 
+	start := util.Now()
 	indexers, err := keyspace.Indexers()
 	if err != nil {
-		return nil, err
+		return nil, err, 0
 	}
 
 	var skipMap map[datastore.Index]bool
@@ -793,7 +798,7 @@ func allIndexes(keyspace datastore.Keyspace, skip, virtualIndexes []datastore.In
 
 		idxes, err := indexer.Indexes()
 		if err != nil {
-			return indexes, err
+			return indexes, err, util.Since(start)
 		}
 
 		for _, idx := range idxes {
@@ -816,7 +821,7 @@ func allIndexes(keyspace datastore.Keyspace, skip, virtualIndexes []datastore.In
 		indexes = append(poolAllocIndexSlice(indexes), idx)
 	}
 
-	return indexes, nil
+	return indexes, nil, util.Since(start)
 }
 
 func checkSubset(pred, cond expression.Expression, context *PrepareContext) bool {
