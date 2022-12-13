@@ -534,6 +534,15 @@ func CheckBucketAccess(credentials *auth.Credentials, e errors.Error, path []str
 			return nil
 		}
 
+		if e != nil && e.Code() == errors.E_DATASTORE_INVALID_BUCKET_PARTS {
+			return nil
+		}
+
+		namespace := path[0]
+		if namespace == "#system" {
+			return nil
+		}
+
 		// if the query is to create a global inline/ external function, the generic error message isnt to be returned
 		if privs != nil {
 			if len(privs.List) == 1 {
@@ -543,12 +552,6 @@ func CheckBucketAccess(credentials *auth.Credentials, e errors.Error, path []str
 					return nil
 				}
 			}
-		}
-
-		code := e.Code()
-		namespace := path[0]
-		if code == errors.E_DATASTORE_INVALID_BUCKET_PARTS || namespace == "#system" {
-			return nil
 		}
 
 		// the buckets the user has access to
