@@ -1,0 +1,21 @@
+[
+  {
+    "statements": "UPSERT INTO orders VALUES (\"ss_k0\",{\"a\":0, \"test_id\":\"ss\"})"
+  },
+  {
+    "statements": "UPSERT INTO orders VALUES (\"ss_k1\",{\"a\":1, \"test_id\":\"ss\"})"
+  },
+  {
+    "statements": "UPSERT INTO orders VALUES (\"ss_k2\",{\"a\":2, \"test_id\":\"ss\"})"
+  },
+  {
+    "statements": "UPSERT INTO orders._default.ss VALUES (\"k0\",{\"a\":1})"
+  },
+  {
+    "statements": "UPSERT INTO orders._default.ss VALUES (\"k1\",{\"a\":2})"
+  },
+  {
+    "statements": "UPSERT INTO orders._default.ss VALUES (\"k2\",{\"a\":3})"
+  }
+]
+

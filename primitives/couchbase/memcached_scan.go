@@ -891,11 +891,11 @@ func (this *vbRangeScan) startFrom() ([]byte, bool) {
 		this.continueFrom = nil
 		return rv, this.continueExcluding
 	}
-	return this.scan.ranges[this.rng].start()
+	return this.scan.getRange(this.rng).start()
 }
 
 func (this *vbRangeScan) endWith() ([]byte, bool) {
-	return this.scan.ranges[this.rng].end()
+	return this.scan.getRange(this.rng).end()
 }
 
 func (this *vbRangeScan) setContinueFrom(val []byte, excluding bool) {
@@ -1147,7 +1147,8 @@ func (this *vbRangeScanHeap) Remove(vbscan *vbRangeScan) {
 
 func (this *vbRangeScan) validateSingleKey(conn *memcached.Client) bool {
 	key, _ := this.startFrom()
-	ok, err := conn.ValidateKey(this.vbucket(), string(key))
+	logging.Debuga(func() string { return fmt.Sprintf("[%p,%v] %v \"%v\"", this, this.vbucket(), key, string(key)) })
+	ok, err := conn.ValidateKey(this.vbucket(), string(key), &memcached.ClientContext{CollId: this.scan.collId})
 	if err != nil {
 		this.reportError(qerrors.NewSSError(qerrors.E_SS_VALIDATE, err))
 		return true

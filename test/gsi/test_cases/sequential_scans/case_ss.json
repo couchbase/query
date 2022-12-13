@@ -1,0 +1,114 @@
+[
+    {
+       "testcase": "Simple bucket select",
+       "explain": {
+         "disabled": false,
+         "results": [
+           {"present":true}
+         ],
+         "statement": "SELECT true AS pressent FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'PrimaryScan%' AND v.using = 'sequentialscan' END"
+       },
+       "statements": "SELECT a FROM orders",
+       "results": [
+           {"a":0},
+           {"a":1},
+           {"a":2}
+        ]
+    },
+    {
+       "testcase": "Simple collection select",
+       "explain": {
+         "disabled": false,
+         "results": [
+           {"present":true}
+         ],
+         "statement": "SELECT true AS pressent FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'PrimaryScan%' AND v.using = 'sequentialscan' END"
+       },
+       "statements": "SELECT a FROM orders._default.ss",
+       "results": [
+           {"a":1},
+           {"a":2},
+           {"a":3}
+        ]
+    },
+    {
+       "testcase": "Singleton bucket select",
+       "explain": {
+         "disabled": false,
+         "results": [
+           {"present":true}
+         ],
+         "statement": "SELECT true AS pressent FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.using = 'sequentialscan' END"
+       },
+       "statements": "SELECT a FROM orders WHERE meta().id = \"ss_k1\"",
+       "results": [
+           {"a":1}
+        ]
+    },
+    {
+       "testcase": "Singleton collection select",
+       "explain": {
+         "disabled": false,
+         "results": [
+           {"present":true}
+         ],
+         "statement": "SELECT true AS pressent FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.using = 'sequentialscan' END"
+       },
+       "statements": "SELECT a FROM orders._default.ss WHERE meta().id = \"k1\"",
+       "results": [
+           {"a":2}
+        ]
+    },
+    {
+       "testcase": "Range bucket select",
+       "explain": {
+         "disabled": false,
+         "results": [
+           {"present":true}
+         ],
+         "statement": "SELECT true AS pressent FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.using = 'sequentialscan' AND v.covers IS NOT MISSING END"
+       },
+       "statements": "SELECT meta().id FROM orders WHERE meta().id LIKE \"ss_k%\"",
+       "results": [
+           {"id":"ss_k0"},
+           {"id":"ss_k1"},
+           {"id":"ss_k2"}
+        ]
+    },
+    {
+       "testcase": "Range collection select",
+       "explain": {
+         "disabled": false,
+         "results": [
+           {"present":true}
+         ],
+         "statement": "SELECT true AS pressent FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.using = 'sequentialscan' AND v.covers IS NOT MISSING END"
+       },
+       "statements": "SELECT meta().id FROM orders._default.ss WHERE meta().id LIKE \"k%\"",
+       "results": [
+           {"id":"k0"},
+           {"id":"k1"},
+           {"id":"k2"}
+        ]
+    },
+    {
+       "testcase": "Ordered bucket select",
+       "statements": "SELECT meta().id FROM orders ORDER BY meta().id",
+       "ordered": true,
+       "results": [
+           {"id":"ss_k0"},
+           {"id":"ss_k1"},
+           {"id":"ss_k2"}
+        ]
+    },
+    {
+       "testcase": "Ordered collection select",
+       "statements": "SELECT meta().id FROM orders._default.ss ORDER BY meta().id",
+       "ordered": true,
+       "results": [
+           {"id":"k0"},
+           {"id":"k1"},
+           {"id":"k2"}
+        ]
+    }
+]
