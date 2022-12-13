@@ -80,6 +80,7 @@ func (this *Unnest) processItem(item value.AnnotatedValue, context *Context) boo
 	filter := this.plan.Filter()
 
 	// Attach and send
+	var baseSize uint64
 	for {
 		var av value.AnnotatedValue
 
@@ -89,9 +90,13 @@ func (this *Unnest) processItem(item value.AnnotatedValue, context *Context) boo
 		idx++
 		newAct, ok := ev.Index(idx)
 
+		baseSize = 0
 		isEnd := newAct.Type() == value.MISSING && !ok
 		if isEnd {
 			av = item
+			if context.UseRequestQuota() {
+				baseSize = item.Size()
+			}
 		} else {
 			av = value.NewAnnotatedValue(item.Copy())
 		}
@@ -110,10 +115,12 @@ func (this *Unnest) processItem(item value.AnnotatedValue, context *Context) boo
 			}
 		}
 		if pass {
-			if av != item && context.UseRequestQuota() && context.TrackValueSize(av.Size()) {
-				context.Error(errors.NewMemoryQuotaExceededError())
-				av.Recycle()
-				return false
+			if context.UseRequestQuota() {
+				if context.TrackValueSize(av.Size() - baseSize) {
+					context.Error(errors.NewMemoryQuotaExceededError())
+					av.Recycle()
+					return false
+				}
 			}
 			if !this.sendItem(av) {
 				av.Recycle()
