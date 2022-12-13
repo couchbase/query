@@ -95,6 +95,12 @@ type ErrorChannel chan Error
 
 var gsiPatterns map[string]*regexp.Regexp
 
+func init() {
+	gsiPatterns = make(map[string]*regexp.Regexp)
+	gsiPatterns["enterprise"] = regexp.MustCompile("(.*) not supported in non-Enterprise Edition")
+	gsiPatterns["exists"] = regexp.MustCompile("Index (.*) already exists")
+}
+
 func NewError(e error, internalMsg string) Error {
 	switch e := e.(type) {
 	case Error: // if given error is already an Error, just return it:
@@ -111,11 +117,6 @@ func NewError(e error, internalMsg string) Error {
 			errText = e.Error()
 		} else {
 			errText = internalMsg
-		}
-		if gsiPatterns == nil {
-			gsiPatterns = make(map[string]*regexp.Regexp)
-			gsiPatterns["enterprise"] = regexp.MustCompile("(.*) not supported in non-Enterprise Edition")
-			gsiPatterns["exists"] = regexp.MustCompile("Index (.*) already exists")
 		}
 		res := gsiPatterns["enterprise"].FindSubmatch([]byte(errText))
 		if res != nil {
