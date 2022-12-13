@@ -15,7 +15,7 @@ import (
 	"testing"
 )
 
-func TestOrderFunctions(t *testing.T) {
+func TestSequentialScans(t *testing.T) {
 	if strings.ToLower(os.Getenv("GSI_TEST")) != "true" {
 		return
 	}
