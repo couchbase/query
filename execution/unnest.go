@@ -88,6 +88,7 @@ func (this *Unnest) processItem(item value.AnnotatedValue, context *Context) boo
 	// Attach and send
 	var av value.AnnotatedValue
 	var actv value.AnnotatedValue
+	var baseSize uint64
 	for {
 		if actv == nil {
 			actv = value.NewAnnotatedValue(act)
@@ -99,11 +100,15 @@ func (this *Unnest) processItem(item value.AnnotatedValue, context *Context) boo
 		idx++
 		nextAct, isValidIndex := ev.Index(idx)
 
+		baseSize = 0
 		if !isValidIndex {
 			if av != nil {
 				av.Recycle()
 			}
 			av = item
+			if context.UseRequestQuota() {
+				baseSize = item.Size()
+			}
 			av.SetField(this.plan.Alias(), actv)
 		} else {
 			if av == nil {
@@ -129,8 +134,8 @@ func (this *Unnest) processItem(item value.AnnotatedValue, context *Context) boo
 				return false
 			}
 
-			if av != item && context.UseRequestQuota() {
-				err := context.TrackValueSize(av.Size())
+			if context.UseRequestQuota() {
+				err := context.TrackValueSize(av.Size() - baseSize)
 				if err != nil {
 					context.Error(err)
 					av.Recycle()
