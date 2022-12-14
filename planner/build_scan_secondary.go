@@ -878,7 +878,9 @@ func (this *builder) sargIndexes(baseKeyspace *base.BaseKeyspace, underHash bool
 
 		if se.HasFlag(IE_LEADINGMISSING) && (spans == nil || spans.Size() == 0) {
 			se.spans = _WHOLE_SPANS.Copy()
-			if pred != nil {
+			if pred == nil || (se.cond != nil && pred.EquivalentTo(se.cond)) || (se.origCond != nil && pred.EquivalentTo(se.origCond)) {
+				se.exactSpans = true
+			} else {
 				se.exactSpans = false
 			}
 			continue

@@ -1,0 +1,25 @@
+[
+    {
+       "testcase": "MB-54859",
+       "queryParams": {"query_context": "orders._default"},
+       "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {"present":true}
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`covers` IS NOT MISSING AND v.`index` = 'pix1' AND v.index_order IS NOT MISSING AND v.`limit` IS NOT MISSING END"
+        },
+       "statements": "SELECT l.fname, l.lname FROM lkm AS l WHERE l.type = 'contacts' ORDER BY l.fname LIMIT 2",
+       "ordered": true,
+       "results": [
+          {
+              "lname": "Klay Thompson"
+          },
+          {
+              "fname": null,
+              "lname": "Draymond Green"
+          }
+        ]
+    }
+]

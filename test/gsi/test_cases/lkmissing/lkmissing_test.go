@@ -31,15 +31,17 @@ func TestLkMissing(t *testing.T) {
 		"mix1",
 		"mix2",
 		"ix_city_state",
+		"",
 	}
 	indexes := []string{
 		"CREATE PRIMARY INDEX %s ON %s;",
 		"CREATE INDEX %s ON %s(team, fname DESC, lname);",
 		"CREATE INDEX %s ON %s(ALL ARRAY FLATTEN_KEYS(c.id INCLUDE MISSING, c.type, c.default) FOR c IN contacts END, fname, lname, team)",
 		"CREATE INDEX %s ON %s(ALL ARRAY FLATTEN_KEYS(c.id, c.type, c.default) FOR c IN contacts END, team)",
-		"CREATE INDEX %s ON %s(fname INCLUDE MISSING DESC, lname, team);",
-		"CREATE INDEX %s ON %s(fname INCLUDE MISSING DESC, lname, team, DISTINCT ARRAY FLATTEN_KEYS(v.id, v.type, v.default) FOR v IN contacts END);",
-		"CREATE INDEX %s ON %s(city, state);",
+		"CREATE INDEX %s ON %s(fname INCLUDE MISSING DESC, lname, team)",
+		"CREATE INDEX %s ON %s(fname INCLUDE MISSING DESC, lname, team, DISTINCT ARRAY FLATTEN_KEYS(v.id, v.type, v.default) FOR v IN contacts END)",
+		"CREATE INDEX %s ON %s(city, state)",
+		"CREATE INDEX %s ON %s(fname INCLUDE MISSING, lname, team) WHERE type = 'contacts'",
 	}
 
 	qc := start_cs()
@@ -64,6 +66,11 @@ func TestLkMissing(t *testing.T) {
 
 	run_test("case_unnest_missing.json", collname, "", "", qc, t)
 	run_drop_index("maix1", collname, qc, t)
+
+	run_drop_index("pix1", collname, qc, t)
+	run_create_index("pix1", collname, indexes[7], qc, t)
+	run_test("case_bugs.json", collname, "", "", qc, t)
+	run_drop_index("pix1", collname, qc, t)
 
 	runStmt(qc, fmt.Sprintf("DELETE FROM %s;", collname)) // Delete the test specific data
 
