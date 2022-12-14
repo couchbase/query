@@ -1920,7 +1920,7 @@ var localData = map[string]string{
 	"load_factor":      "gauge",
 	"active_requests":  "gauge",
 	"queued_requests":  "gauge",
-	"allocated_values": "gauge",
+	"allocated_values": "counter",
 	"node_memory":      "gauge",
 }
 

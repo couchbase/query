@@ -13,7 +13,6 @@ import (
 	"io"
 	"math/bits"
 	"reflect"
-	"runtime"
 	"unsafe"
 
 	atomic "github.com/couchbase/go-couchbase/platform"
@@ -34,15 +33,10 @@ func init() {
 	util.NewLocklessPool(&annotatedPool, func() unsafe.Pointer {
 		atomic.AddInt64(&allocatedValuesCount, 1)
 		rv := &annotatedValue{}
-		runtime.SetFinalizer(rv, fini)
 		return unsafe.Pointer(rv)
 	})
 	EMPTY_ANNOTATED_OBJECT = NewAnnotatedValue(map[string]interface{}{})
 	EMPTY_ANNOTATED_OBJECT.(*annotatedValue).noRecycle = true
-}
-
-func fini(v interface{}) {
-	atomic.AddInt64(&allocatedValuesCount, -1)
 }
 
 func AllocatedValuesCount() int64 {
