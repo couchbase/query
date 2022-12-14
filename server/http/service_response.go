@@ -755,8 +755,9 @@ func (this *httpRequest) writeServerless(metrics bool, prefix, indent string) bo
 	if this.throttleTime > time.Duration(0) &&
 		!(this.writeString(",\n") &&
 			this.writeString(prefix) &&
-			this.writeString("\"throttleTime\": ") &&
-			this.writeString(this.throttleTime.String())) {
+			this.writeString("\"throttleTime\": \"") &&
+			this.writeString(this.throttleTime.String()) &&
+			this.writeString("\"")) {
 		this.writer.truncate(beforeUnits)
 		return false
 	}
