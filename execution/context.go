@@ -201,7 +201,9 @@ func (this *opContext) NewQueryContext(queryContext string, readonly bool) inter
 }
 
 func NewOpContext(context *Context) *opContext {
-	return &opContext{nil, context}
+	b := &base{}
+	newBase(b, context)
+	return &opContext{b, context}
 }
 
 func (this *opContext) AdminContext() (interface{}, error) {
