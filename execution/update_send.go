@@ -228,14 +228,17 @@ func getExpiration(options value.Value) (exptime uint32) {
 const _MONTH = uint32(30 * 24 * 60 * 60)
 
 func adjustExpiration(options value.Value, copyOptions bool) value.Value {
+	if options == nil || options.Type() != value.OBJECT {
+		return options
+	}
 	expiration := getExpiration(options)
 	if expiration > 0 && expiration < _MONTH {
 		expiration += uint32(time.Now().UTC().Unix())
-		if copyOptions {
-			options = options.CopyForUpdate()
-		}
-		options.SetField("expiration", expiration)
 	}
+	if copyOptions {
+		options = options.CopyForUpdate()
+	}
+	options.SetField("expiration", expiration)
 	return options
 }
 
