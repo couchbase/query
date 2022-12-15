@@ -22,5 +22,30 @@
         "query": "select 1 from shellTest AS b where (NOW_MILLIS() - STR_TO_MILLIS(b.f1.time))/1000 > 300"
       }
     ]
+  },
+  {
+    "testcase": "MB-54880",
+    "statements": "advise select name from shellTest where `type` = \"advise\" order by name",
+    "advise": true,
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": {
+            "recommended_indexes": {
+              "covering_indexes": [
+                {
+                  "index_property": "ORDER pushdown",
+                  "index_statement": "CREATE INDEX adv_name_type ON `shellTest`(`name` INCLUDE MISSING) WHERE `type` = 'advise'",
+                  "keyspace_alias": "shellTest"
+                }
+              ]
+            }
+          }
+        },
+        "query": "select name from shellTest where `type` = \"advise\" order by name"
+      }
+    ]
   }
 ]

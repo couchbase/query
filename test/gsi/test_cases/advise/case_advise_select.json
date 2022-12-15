@@ -234,15 +234,8 @@
               "covering_indexes": [
                 {
                   "index_property": "LIMIT pushdown",
-                  "index_statement": "CREATE INDEX adv_test_id_c11 ON `shellTest`(`test_id`,`c11`)",
+                  "index_statement": "CREATE INDEX adv_c11_test_id ON `shellTest`(`c11` INCLUDE MISSING) WHERE `test_id` = 'advise'",
                   "keyspace_alias": "shellTest"
-                }
-              ],
-              "indexes": [
-                {
-                  "index_statement": "CREATE INDEX adv_test_id ON `shellTest`(`test_id`)",
-                  "keyspace_alias": "shellTest",
-                  "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing."
                 }
               ]
             }

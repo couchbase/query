@@ -43,15 +43,15 @@
               "covering_indexes": [
                 {
                   "index_property": "ORDER pushdown, LIMIT pushdown",
-                  "index_statement": "CREATE INDEX adv_test_id_c11DESC ON `shellTest`(`test_id`,`c11` DESC)",
+                  "index_statement": "CREATE INDEX adv_c11DESC_test_id ON `shellTest`(`c11` DESC INCLUDE MISSING) WHERE `test_id` = 'advise'",
                   "keyspace_alias": "shellTest"
                 }
               ],
               "indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_test_id ON `shellTest`(`test_id`)",
+                  "index_statement": "CREATE INDEX adv_c11_test_id ON `shellTest`(`c11` INCLUDE MISSING) WHERE `test_id` = 'advise'",
                   "keyspace_alias": "shellTest",
-                  "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing."
+                  "recommending_rule": "Index keys follow order of predicate types: Leading index key INCLUDE MISSING, 10. flavor for partial index."
                 }
               ]
             }
