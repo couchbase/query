@@ -443,7 +443,7 @@ func (this *builder) collectPredicates(baseKeyspace *base.BaseKeyspace, keyspace
 		return nil
 	}
 	//not advise index to system keyspace
-	if algebra.IsSystem(keyspace.NamespaceId()) {
+	if algebra.IsSystemId(keyspace.NamespaceId()) {
 		return nil
 	}
 	if baseKeyspace == nil {

@@ -56,7 +56,7 @@ func updateIndexStats(context scheduler.Context, parms interface{}) (interface{}
 	}
 	keyspace := idxUpdStatParams.keyspace
 	idxNames := idxUpdStatParams.idxNames
-	if keyspace == nil || len(idxNames) == 0 || algebra.IsSystem(keyspace.NamespaceId()) {
+	if keyspace == nil || len(idxNames) == 0 || algebra.IsSystemId(keyspace.NamespaceId()) {
 		return nil, nil
 	}
 

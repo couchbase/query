@@ -414,7 +414,7 @@ func (this *builder) getTermKeyspace(node *algebra.KeyspaceTerm) (datastore.Keys
 	keyspace, err := datastore.GetKeyspace(path.Parts()...)
 	this.recordSubTime("keyspace.metadata", util.Since(start))
 
-	if err != nil && this.indexAdvisor && !algebra.IsSystem(ns) &&
+	if err != nil && this.indexAdvisor && !algebra.IsSystemId(ns) &&
 		(strings.Contains(err.TranslationKey(), "bucket_not_found") ||
 			strings.Contains(err.TranslationKey(), "scope_not_found") ||
 			strings.Contains(err.TranslationKey(), "keyspace_not_found")) {

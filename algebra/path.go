@@ -29,7 +29,7 @@ func ParsePath(path string) []string {
 	return parsePathOrContext(path)
 }
 
-func IsSystem(namespaceOrPath string) bool {
+func IsSystemId(namespaceOrPath string) bool {
 	l := len(datastore.SYSTEM_NAMESPACE)
 	return len(namespaceOrPath) >= l && namespaceOrPath[0:l] == datastore.SYSTEM_NAMESPACE
 }
