@@ -29,6 +29,7 @@ const (
 	KS_INDEX_HINT_ERROR                 // index hint error
 	KS_JOIN_HINT_ERROR                  // join hint error
 	KS_JOIN_FLTR_HINT_ERROR             // join filter hint error
+	KS_IS_SYSTEM                        // system keyspace
 )
 
 type BaseKeyspace struct {
@@ -58,6 +59,7 @@ func NewBaseKeyspace(name string, path *algebra.Path, node algebra.SimpleFromTer
 
 	var keyspace string
 	var duration time.Duration
+	var ksFlags uint32
 
 	// for expression scans we don't have a keyspace and leave it empty
 	if path != nil {
@@ -79,11 +81,15 @@ func NewBaseKeyspace(name string, path *algebra.Path, node algebra.SimpleFromTer
 				keyspace = path.SimpleString()
 			}
 		}
+		if path.IsSystem() {
+			ksFlags |= KS_IS_SYSTEM
+		}
 	}
 
 	return &BaseKeyspace{
 		name:     name,
 		keyspace: keyspace,
+		ksFlags:  ksFlags,
 		node:     node,
 		optBit:   optBit,
 	}, duration
@@ -147,6 +153,10 @@ func (this *BaseKeyspace) HasOuterFilters() bool {
 
 func (this *BaseKeyspace) SetOuterFilters() {
 	this.ksFlags |= KS_OUTER_FILTERS
+}
+
+func (this *BaseKeyspace) IsSystem() bool {
+	return (this.ksFlags & KS_IS_SYSTEM) != 0
 }
 
 func (this *BaseKeyspace) IsAnsiJoin() bool {

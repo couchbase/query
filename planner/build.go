@@ -443,13 +443,13 @@ func (this *builder) getTermKeyspace(node *algebra.KeyspaceTerm) (datastore.Keys
 
 func (this *builder) getDocCount(alias string) (docCount int64) {
 	baseKeyspace, ok := this.baseKeyspaces[alias]
-	if !ok {
-		return
+	if !ok || baseKeyspace.IsSystem() {
+		return -1
 	}
 	keyspace := baseKeyspace.Keyspace()
 	if keyspace == "" {
 		// not a keyspace
-		return
+		return -1
 	}
 
 	if !baseKeyspace.HasDocCount() {
