@@ -246,19 +246,19 @@ func (s *store) CheckSystemCollection(bucketName, requestId string) errors.Error
 }
 
 func (s *store) StartTransaction(stmtAtomicity bool, context datastore.QueryContext) (map[string]bool, errors.Error) {
-	return nil, errors.NewTranDatastoreNotSupportedError("system")
+	return nil, errors.NewTranDatastoreNotSupportedError(NAMESPACE_NAME)
 }
 
 func (s *store) CommitTransaction(stmtAtomicity bool, context datastore.QueryContext) errors.Error {
-	return errors.NewTranDatastoreNotSupportedError("system")
+	return errors.NewTranDatastoreNotSupportedError(NAMESPACE_NAME)
 }
 
 func (s *store) RollbackTransaction(stmtAtomicity bool, context datastore.QueryContext, sname string) errors.Error {
-	return errors.NewTranDatastoreNotSupportedError("system")
+	return errors.NewTranDatastoreNotSupportedError(NAMESPACE_NAME)
 }
 
 func (s *store) SetSavepoint(stmtAtomicity bool, context datastore.QueryContext, sname string) errors.Error {
-	return errors.NewTranDatastoreNotSupportedError("system")
+	return errors.NewTranDatastoreNotSupportedError(NAMESPACE_NAME)
 }
 
 func (s *store) TransactionDeltaKeyScan(keyspace string, conn *datastore.IndexConnection) {

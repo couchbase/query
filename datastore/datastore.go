@@ -539,7 +539,7 @@ func CheckBucketAccess(credentials *auth.Credentials, e errors.Error, path []str
 		}
 
 		namespace := path[0]
-		if namespace == "#system" {
+		if namespace == SYSTEM_NAMESPACE {
 			return nil
 		}
 
