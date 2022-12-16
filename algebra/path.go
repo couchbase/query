@@ -34,6 +34,11 @@ func IsSystem(namespaceOrPath string) bool {
 	return len(namespaceOrPath) >= l && namespaceOrPath[0:l] == datastore.SYSTEM_NAMESPACE
 }
 
+func IsSystemName(namespaceOrPath string) bool {
+	l := len(datastore.SYSTEM_NAMESPACE_NAME)
+	return len(namespaceOrPath) >= l && namespaceOrPath[0:l] == datastore.SYSTEM_NAMESPACE_NAME
+}
+
 // Create a path from a namespace:keyspace combination.
 func NewPathShort(namespace, keyspace string) *Path {
 	return &Path{
