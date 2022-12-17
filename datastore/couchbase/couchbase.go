@@ -58,9 +58,13 @@ type cbPoolMap struct {
 
 type cbPoolServices struct {
 	name         string
+	lastUpdate   util.Time
 	rev          int
+	pool         cb.Pool
 	nodeServices map[string]interface{}
 }
+
+const _INFO_INTERVAL = time.Second
 
 var _POOLMAP cbPoolMap
 
@@ -162,28 +166,24 @@ func fullhostName(n string) string {
 
 func (info *infoImpl) Topology() ([]string, []errors.Error) {
 	var nodes []string
-	var errs []errors.Error
 
-	for _, p := range info.client.Info.Pools {
-		pool, err := info.client.GetPool(p.Name)
-
-		if err == nil {
-			for _, node := range pool.Nodes {
-				nodes = append(nodes, fullhostName(node.Hostname))
-			}
-			pool.Close()
-		} else {
-			errs = append(errs, errors.NewDatastoreClusterError(err, p.Name))
+	isReadLock, errs := info.refresh()
+	for _, p := range _POOLMAP.poolServices {
+		for node, _ := range p.nodeServices {
+			nodes = append(nodes, node)
 		}
+	}
+	if isReadLock {
+		_POOLMAP.RUnlock()
+	} else {
+		_POOLMAP.Unlock()
 	}
 	return nodes, errs
 }
 
 func (info *infoImpl) Services(node string) (map[string]interface{}, []errors.Error) {
-	var errs []errors.Error
+	isReadLock, errs := info.refresh()
 
-	isReadLock := true
-	_POOLMAP.RLock()
 	defer func() {
 		if isReadLock {
 			_POOLMAP.RUnlock()
@@ -191,32 +191,47 @@ func (info *infoImpl) Services(node string) (map[string]interface{}, []errors.Er
 			_POOLMAP.Unlock()
 		}
 	}()
+	for _, p := range _POOLMAP.poolServices {
+		n, ok := p.nodeServices[node]
+		if ok {
+			return n.(map[string]interface{}), nil
+		}
+	}
+	return map[string]interface{}{}, errs
+}
+
+func (info *infoImpl) refresh() (bool, []errors.Error) {
+	var errs []errors.Error
+
+	isReadLock := true
+	_POOLMAP.RLock()
 
 	// scan the pools
 	for _, p := range info.client.Info.Pools {
+		poolEntry, found := _POOLMAP.poolServices[p.Name]
+		if found && util.Since(poolEntry.lastUpdate) < _INFO_INTERVAL {
+			continue
+		}
+
 		pool, err := info.client.GetPool(p.Name)
 		poolServices, pErr := info.client.GetPoolServices(p.Name)
 
 		if err == nil && pErr == nil {
-			var found bool = false
-			var services cbPoolServices
-
-			services, ok := _POOLMAP.poolServices[p.Name]
-			found = ok && (services.rev == poolServices.Rev)
 
 			// missing the information, rebuild
-			if !found {
+			if !found || poolEntry.rev != poolServices.Rev {
 
 				// promote the lock
 				if isReadLock {
+					var ok bool
+
 					_POOLMAP.RUnlock()
 					_POOLMAP.Lock()
 					isReadLock = false
 
 					// now that we have promoted the lock, did we get beaten by somebody else to it?
-					services, ok = _POOLMAP.poolServices[p.Name]
-					found = ok && (services.rev == poolServices.Rev)
-					if found {
+					poolEntry, ok = _POOLMAP.poolServices[p.Name]
+					if ok && (poolEntry.rev == poolServices.Rev) {
 						continue
 					}
 				}
@@ -228,9 +243,10 @@ func (info *infoImpl) Services(node string) (map[string]interface{}, []errors.Er
 				for _, n := range pool.Nodes {
 					var servicesCopy []interface{}
 
-					newServices := make(map[string]interface{}, 3)
+					newServices := make(map[string]interface{}, 4)
 					newServices["name"] = fullhostName(n.Hostname)
 					newServices["uuid"] = n.NodeUUID
+					newServices["status"] = n.Status
 					for _, s := range n.Services {
 						servicesCopy = append(servicesCopy, s)
 					}
@@ -245,7 +261,7 @@ func (info *infoImpl) Services(node string) (map[string]interface{}, []errors.Er
 							// shouldn't happen, there should always be a mgmt port on each node
 							// we should return an error
 							msg := fmt.Sprintf("NodeServices does not report mgmt endpoint for "+
-								"this node: %v", node)
+								"this node: %v", newServices["name"])
 							errs = append(errs, errors.NewAdminGetNodeError(nil, msg))
 							continue
 						}
@@ -275,11 +291,13 @@ func (info *infoImpl) Services(node string) (map[string]interface{}, []errors.Er
 				}
 				newPoolServices.nodeServices = nodeServices
 				_POOLMAP.poolServices[p.Name] = newPoolServices
-				services = newPoolServices
-			}
-			nodeServices, ok := services.nodeServices[node]
-			if ok {
-				return nodeServices.(map[string]interface{}), errs
+			} else {
+
+				// just update the node statuses
+				for _, n := range pool.Nodes {
+					m := poolEntry.nodeServices[fullhostName(n.Hostname)].(map[string]interface{})
+					m["status"] = n.Status
+				}
 			}
 		} else {
 			if err != nil {
@@ -288,12 +306,46 @@ func (info *infoImpl) Services(node string) (map[string]interface{}, []errors.Er
 			if pErr != nil {
 				errs = append(errs, errors.NewDatastoreClusterError(pErr, p.Name))
 			}
+
+			// promote the lock
+			if isReadLock {
+				_POOLMAP.RUnlock()
+				_POOLMAP.Lock()
+				isReadLock = false
+			}
+
+			// pool not found, remove any previous entry
+			delete(_POOLMAP.poolServices, p.Name)
 		}
 		if err == nil {
 			pool.Close()
 		}
 	}
-	return map[string]interface{}{}, errs
+
+	// cached pool map differs, cleanup
+	if len(_POOLMAP.poolServices) != len(info.client.Info.Pools) {
+
+		// promote the lock
+		if isReadLock {
+			_POOLMAP.RUnlock()
+			_POOLMAP.Lock()
+			isReadLock = false
+		}
+
+		for e, _ := range _POOLMAP.poolServices {
+			found := false
+			for _, p := range info.client.Info.Pools {
+				if e == p.Name {
+					found = true
+					break
+				}
+			}
+			if !found {
+				delete(_POOLMAP.poolServices, e)
+			}
+		}
+	}
+	return isReadLock, errs
 }
 
 func (s *store) NamespaceIds() ([]string, errors.Error) {
