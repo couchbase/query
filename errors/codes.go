@@ -74,6 +74,7 @@ const (
 	E_SERVICE_HTTP_METHOD                     ErrorCode = 1170
 	E_SERVICE_SHUTTING_DOWN                   ErrorCode = 1180
 	E_SERVICE_SHUT_DOWN                       ErrorCode = 1181
+	E_SERVICE_UNAVAILABLE                     ErrorCode = 1182
 	E_SERVICE_USER_REQUEST_EXCEEDED           ErrorCode = 1191
 	E_SERVICE_USER_REQUEST_RATE_EXCEEDED      ErrorCode = 1192
 	E_SERVICE_USER_REQUEST_SIZE_EXCEEDED      ErrorCode = 1193

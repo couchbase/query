@@ -76,7 +76,7 @@ func mapErrorToHttpResponse(err errors.Error, def int) int {
 		return http.StatusBadRequest
 	case errors.E_SERVICE_MEDIA_TYPE:
 		return http.StatusNotAcceptable
-	case errors.E_SERVICE_SHUTTING_DOWN, errors.E_SERVICE_SHUT_DOWN:
+	case errors.E_SERVICE_SHUTTING_DOWN, errors.E_SERVICE_SHUT_DOWN, errors.E_SERVICE_UNAVAILABLE:
 		return http.StatusServiceUnavailable
 	case errors.E_SERVICE_USER_REQUEST_EXCEEDED, errors.E_SERVICE_USER_REQUEST_RATE_EXCEEDED:
 		return http.StatusTooManyRequests

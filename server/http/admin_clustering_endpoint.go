@@ -180,7 +180,11 @@ var pingStatus = struct {
 
 func doPing(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
 	af.EventTypeId = audit.API_ADMIN_PING
-	return &pingStatus, nil
+	if endpoint.server.IsHealthy() {
+		return &pingStatus, nil
+	} else {
+		return nil, errors.NewServiceUnavailableError()
+	}
 }
 
 var localConfig struct {

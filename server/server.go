@@ -605,6 +605,10 @@ func (this *Server) SetRequestErrorLimit(limit int) error {
 	return nil
 }
 
+func (this *Server) IsHealthy() bool {
+	return !this.unboundQueue.isFull() && !this.plusQueue.isFull()
+}
+
 func (this *Server) ServiceRequest(request Request) bool {
 	if !this.setupRequestContext(request) {
 		request.Failed(this)
@@ -787,6 +791,10 @@ func newRunQueue(q *runQueue, num int, txflag bool) {
 func newTxRunQueues(q *txRunQueues, nqueues, num int) {
 	q.size = int32(num)
 	q.txQueues = make(map[string]*runQueue, nqueues)
+}
+
+func (this *runQueue) isFull() bool {
+	return atomic.LoadInt32(&this.queueCnt) >= this.size-1
 }
 
 func (this *runQueue) enqueue(request Request) bool {

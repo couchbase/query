@@ -119,6 +119,11 @@ func NewServiceShutDownError() Error {
 		InternalMsg: "Service shut down", InternalCaller: CallerN(1)}
 }
 
+func NewServiceUnavailableError() Error {
+	return &err{level: EXCEPTION, ICode: E_SERVICE_UNAVAILABLE, IKey: "service.unavailable",
+		InternalMsg: "Service cannot handle requests", InternalCaller: CallerN(1)}
+}
+
 func NewServiceUserRequestExceededError() Error {
 	return &err{level: EXCEPTION, ICode: E_SERVICE_USER_REQUEST_EXCEEDED, IKey: "service.requests.exceeded",
 		InternalMsg: "User has more requests running than allowed", InternalCaller: CallerN(1)}
