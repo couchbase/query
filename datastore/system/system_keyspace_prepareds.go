@@ -9,7 +9,6 @@
 package system
 
 import (
-	"encoding/json"
 	"time"
 
 	"github.com/couchbase/query/datastore"
@@ -149,7 +148,7 @@ func (b *preparedsKeyspace) Fetch(keys []string, keysMap map[string]value.Annota
 				if len(txPrepareds) > 0 {
 					m["txPlans"] = txPlans
 				}
-				m["plan"], _ = json.Marshal(entry.Prepared.Operator)
+				m["plan"] = value.NewMarshalledValue(entry.Prepared.Operator)
 				item.SetId(key)
 				keysMap[key] = item
 			})

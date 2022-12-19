@@ -9,7 +9,6 @@
 package system
 
 import (
-	"encoding/json"
 	"time"
 
 	"github.com/couchbase/query/datastore"
@@ -213,12 +212,10 @@ func (b *activeRequestsKeyspace) Fetch(keys []string, keysMap map[string]value.A
 
 				t := request.GetTimings()
 				if t != nil {
-					bytes, _ := json.Marshal(t)
-					meta["plan"] = bytes
+					meta["plan"] = value.NewMarshalledValue(t)
 					optEstimates := request.Output().FmtOptimizerEstimates(t)
 					if optEstimates != nil {
-						bytes, _ = json.Marshal(optEstimates)
-						meta["optimizerEstimates"] = bytes
+						meta["optimizerEstimates"] = value.NewMarshalledValue(optEstimates)
 					}
 				}
 
