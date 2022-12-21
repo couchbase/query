@@ -563,6 +563,7 @@ type cbCluster struct {
 	queryNodeServices map[string]services           `json:"-"`
 	queryNodes        map[string]*cbQueryNodeConfig `json:"-"`
 	queryNodeUUIDs    map[string]string             `json:"-"`
+	queryNodeHealthy  map[string]bool               `json:"-"`
 	capabilities      map[string]bool               `json:"-"`
 	poolSrvRev        int                           `json:"-"`
 	lastCheck         util.Time                     `json:"-"`
@@ -641,6 +642,7 @@ func (this *cbCluster) QueryNodeNames() ([]string, errors.Error) {
 	queryNodeNames := []string{}
 	queryNodeServices := map[string]services{}
 	queryNodeUUIDs := make(map[string]string)
+	queryNodeHealthy := make(map[string]bool)
 	pool, err := configStore.cbConn.GetPool(configStore.poolName)
 	if err != nil {
 		return nil, errors.NewAdminGetNodeError(err, configStore.poolName)
@@ -698,6 +700,9 @@ func (this *cbCluster) QueryNodeNames() ([]string, errors.Error) {
 		for _, n := range pool.Nodes {
 			if n.Hostname == nodeId {
 				queryNodeUUIDs[nodeId] = n.NodeUUID
+
+				// just in case we are querying an old node that doesn't report the status
+				queryNodeHealthy[nodeId] = n.Status != "unhealthy"
 				break
 			}
 		}
@@ -729,6 +734,7 @@ func (this *cbCluster) QueryNodeNames() ([]string, errors.Error) {
 	defer this.Unlock()
 	this.queryNodeNames = queryNodeNames
 	this.queryNodeUUIDs = queryNodeUUIDs
+	this.queryNodeHealthy = queryNodeHealthy
 	this.queryNodeServices = queryNodeServices
 	this.queryNodes = make(map[string]*cbQueryNodeConfig)
 	this.capabilities = capabilities
@@ -763,11 +769,13 @@ func (this *cbCluster) QueryNodeByName(name string) (clustering.QueryNode, error
 	}
 
 	uuid, _ := this.queryNodeUUIDs[name]
+	healthy, ok := this.queryNodeHealthy[name]
 
 	qryNode := &cbQueryNodeConfig{
 		ClusterName:   this.Name(),
 		QueryNodeName: qryNodeName,
 		QueryNodeUUID: uuid,
+		NodeHealthy:   healthy || !ok, // if a node isn't there don't assume is unhealthy
 	}
 
 	// We find the host based on query name
@@ -948,6 +956,7 @@ type cbQueryNodeConfig struct {
 	ClusterName   string                    `json:"cluster"`
 	QueryNodeName string                    `json:"name"`
 	QueryNodeUUID string                    `json:"uuid"`
+	NodeHealthy   bool                      `json:"-"`
 	Query         string                    `json:"queryEndpoint,omitempty"`
 	Admin         string                    `json:"adminEndpoint,omitempty"`
 	QuerySSL      string                    `json:"querySecure,omitempty"`
@@ -997,6 +1006,10 @@ func (this *cbQueryNodeConfig) Options() clustering.QueryNodeOptions {
 
 func (this *cbQueryNodeConfig) NodeUUID() string {
 	return this.QueryNodeUUID
+}
+
+func (this *cbQueryNodeConfig) Healthy() bool {
+	return this.NodeHealthy
 }
 
 func getJsonString(i interface{}) string {

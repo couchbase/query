@@ -459,6 +459,10 @@ func (z *zkQueryNodeConfig) NodeUUID() string {
 	return z.Name()
 }
 
+func (z *zkQueryNodeConfig) Healthy() bool {
+	return true
+}
+
 func (z *zkQueryNodeConfig) QueryEndpoint() string {
 	return z.QueryEndpointURL
 }

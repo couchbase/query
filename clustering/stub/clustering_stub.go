@@ -199,6 +199,10 @@ func (QueryNodeStub) NodeUUID() string {
 	return QUERY_NODE_STUB_UUID
 }
 
+func (QueryNodeStub) Healthy() bool {
+	return true
+}
+
 func (QueryNodeStub) QueryEndpoint() string {
 	return QUERY_NODE_STUB_QUERY_ENDPOINT
 }

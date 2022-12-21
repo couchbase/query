@@ -237,6 +237,12 @@ func (this *systemRemoteHttp) GetRemoteKeys(nodes []string, endpoint string,
 					}
 					continue
 				}
+				if !queryNode.Healthy() {
+					if warnFn != nil {
+						warnFn(errors.NewSystemRemoteNodeSkippedWarning(queryNode.Name(), "scan", endpoint))
+					}
+					continue
+				}
 
 				body, opErr := this.doRemoteOp(queryNode, "indexes/"+endpoint, "GET", "", "scan", distributed.NO_CREDS, "", cp)
 				if opErr != nil {
@@ -276,6 +282,12 @@ func (this *systemRemoteHttp) GetRemoteKeys(nodes []string, endpoint string,
 			if err != nil {
 				if warnFn != nil {
 					warnFn(err)
+				}
+				continue
+			}
+			if !queryNode.Healthy() {
+				if warnFn != nil {
+					warnFn(errors.NewSystemRemoteNodeSkippedWarning(queryNode.Name(), "scan", endpoint))
 				}
 				continue
 			}

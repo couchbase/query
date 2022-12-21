@@ -105,6 +105,7 @@ type QueryNode interface {
 	ClusterSecure() string     // Endpoint for serving secure admin commands
 	Standalone() Standalone    // The QueryNode's configuration when unclustered
 	Options() QueryNodeOptions // The command line options the query node was started with
+	Healthy() bool             // Is the node usable
 }
 
 type QueryNodeOptions interface {

@@ -61,6 +61,11 @@ func NewSystemRemoteWarning(e error, op string, ks string) Error {
 		InternalMsg: "System datastore : " + op + " on " + ks + " failed", InternalCaller: CallerN(1)}
 }
 
+func NewSystemRemoteNodeSkippedWarning(node, op string, ks string) Error {
+	return &err{level: WARNING, ICode: E_SYSTEM_REMOTE_WARNING, IKey: "datastore.system.remote_warning", ICause: fmt.Errorf("unhealthy %v", node),
+		InternalMsg: "System datastore : skipping unheathy node " + node + " for " + op + " on " + ks + " failed", InternalCaller: CallerN(1)}
+}
+
 func NewSystemUnableToRetrieveError(e error) Error {
 	return &err{level: EXCEPTION, ICode: E_SYSTEM_UNABLE_TO_RETRIEVE, IKey: "datastore.system.unable_to_retrieve", ICause: e,
 		InternalMsg: "System datastore : unable to retrieve user roles from server", InternalCaller: CallerN(1), retry: TRUE}
