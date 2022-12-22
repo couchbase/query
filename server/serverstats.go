@@ -84,6 +84,7 @@ func (c *statsCollector) runCollectStats() {
 	}()
 
 	index := 0
+	unhealthyCount := 0
 
 	lastDumpTime := util.Time(0) // temporary addition
 
@@ -91,6 +92,13 @@ func (c *statsCollector) runCollectStats() {
 	newStats := make(map[string]interface{}, 6)
 	c.server.AccountingStore().ExternalVitals(oldStats)
 	tickerFunc := func() {
+		if c.server.IsHealthy() {
+			unhealthyCount = 0
+			newStats["healthy"] = true
+		} else {
+			unhealthyCount++
+			newStats["healthy"] = unhealthyCount > 1
+		}
 		loadFactor := c.server.loadFactor(true)
 		c.sumOfLoadFactors += (loadFactor - c.loadFactors[index])
 		c.loadFactors[index] = loadFactor
