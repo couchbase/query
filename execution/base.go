@@ -1009,7 +1009,6 @@ func serializedClose(op Operator, opBase *base, context *Context) {
 	op.afterItems(context)
 	opBase.notifyParent()
 	op.close(context)
-	opBase.inactive()
 }
 
 // Override if needed
