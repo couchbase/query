@@ -16,7 +16,7 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/functions"
-	"github.com/couchbase/query/functions/metakv"
+	metaStorage "github.com/couchbase/query/functions/metakv"
 	"github.com/couchbase/query/functions/resolver"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
@@ -321,7 +321,7 @@ func (name *systemEntry) Save(body functions.FunctionBody, replace bool) errors.
 	}
 
 	if len(errs) > 0 {
-		if errs[0].Code() == errors.E_DUPLICATE_KEY {
+		if c, ok := errs[0].Cause().(errors.Error); ok && c.Code() == errors.E_DUPLICATE_KEY {
 			return errors.NewDuplicateFunctionError(name.Name())
 		} else {
 			return errors.NewMetaKVError(name.Name(), errs[0])
