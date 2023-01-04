@@ -1,0 +1,8 @@
+[
+    {
+	"testcase": "MB-54952",
+        "statements":"SELECT * FROM orders WHERE ANY v IN a1 SATISFIES v IS NOT VALUED END AND test_id = \"parameters\"",
+        "results": [
+    ]
+    }
+]
