@@ -14,6 +14,7 @@ import (
 
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/value"
 )
 
@@ -293,6 +294,7 @@ func (this *AggregateBase) evaluate(agg Aggregate, item value.Value,
 		r := recover()
 		if r != nil {
 			err = fmt.Errorf("Error evaluating aggregate: %v.", r)
+			logging.Stackf(logging.DEBUG, "%v", err)
 		}
 	}()
 

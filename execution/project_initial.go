@@ -207,16 +207,17 @@ func (this *InitialProject) processTerms(item value.AnnotatedValue, context *Con
 				order[alias] = nextOrder
 				nextOrder++
 			}
+			// check if we must copy to support the EXCLUDE clause; check if term is referenced in an exclusion (first element)
+			// as alias is constant we can cache the result
 			if term.MustCopy() == value.NONE {
 				if len(exclusions) > 0 {
 					found := false
 					for i := range exclusions {
 						if exclusions[i][0][0] == 'i' && strings.ToLower(exclusions[i][0][1:]) == strings.ToLower(alias) {
 							found = true
+							break
 						} else if exclusions[i][0][1:] == alias {
 							found = true
-						}
-						if found == true {
 							break
 						}
 					}
@@ -242,55 +243,45 @@ func (this *InitialProject) processTerms(item value.AnnotatedValue, context *Con
 		} else {
 			// Star
 			starval := item.GetValue()
-			// remove bindings up front
+			if term.Result().Expression() != nil {
+				var err error
+				starval, err = term.Result().Expression().Evaluate(item, &this.operatorCtx)
+				if err != nil {
+					context.Error(errors.NewEvaluationError(err, "projection"))
+					return false
+				}
+			}
+			// remove bindings
 			if len(bindingNames) > 0 {
 				starval = starval.Copy()
 				for k, _ := range bindingNames {
 					starval.UnsetField(k)
 				}
 			}
-			if term.Result().Expression() != nil {
-				var err error
-				starval, err = term.Result().Expression().Evaluate(starval, &this.operatorCtx)
-				if err != nil {
-					context.Error(errors.NewEvaluationError(err, "projection"))
-					return false
-				}
-			}
 
-			if len(bindingNames) > 0 {
-				if term.MustCopy() == value.NONE {
-					if len(exclusions) > 0 {
-						sa, ok := starval.Actual().(map[string]interface{})
-						if ok {
-							found := false
-							for i := range exclusions {
-								if exclusions[i][0][0] == 'i' {
-									for k, _ := range sa {
-										if strings.ToLower(k) == strings.ToLower(exclusions[i][0][1:]) {
-											found = true
-											break
-										}
-									}
-								} else if _, ok := sa[exclusions[i][0][1:]]; ok {
+			// check if we must copy to support the EXCLUDE clause; check if term is referenced in an exclusion (first element)
+			// as each item may have a different schema, always check
+			if len(exclusions) > 0 {
+				if sa, ok := starval.Actual().(map[string]interface{}); ok {
+					found := false
+				excl:
+					for i := range exclusions {
+						if exclusions[i][0][0] == 'i' {
+							exclKey := strings.ToLower(exclusions[i][0][1:])
+							for k, _ := range sa {
+								if strings.ToLower(k) == exclKey {
 									found = true
-								}
-								if found == true {
-									break
+									break excl
 								}
 							}
-							if found {
-								starval = starval.CopyForUpdate()
-								if this.exclusions != nil {
-									term.SetMustCopy(value.TRUE)
-								}
-							} else if this.exclusions != nil {
-								term.SetMustCopy(value.FALSE)
-							}
+						} else if _, ok := sa[exclusions[i][0][1:]]; ok {
+							found = true
+							break excl
 						}
 					}
-				} else if term.MustCopy() == value.TRUE {
-					starval = starval.CopyForUpdate()
+					if found {
+						starval = starval.CopyForUpdate()
+					}
 				}
 			}
 
@@ -424,7 +415,7 @@ func (this *InitialProject) excludeAndSend(exclusions [][]string, item value.Ann
 			for _, e := range exclusions {
 				expression.DeleteFromObject(ia, e)
 			}
-			after := item.Size()
+			after := item.RecalculateSize()
 			if before != after && context.UseRequestQuota() {
 				context.ReleaseValueSize(before - after)
 			}
