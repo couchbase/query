@@ -170,6 +170,13 @@ func (this *MockQuery) Result(item value.AnnotatedValue) bool {
 	return true
 }
 
+func (this *MockQuery) Loga(l logging.Level, f func() string) {
+}
+
+func (this *MockQuery) LogLevel() logging.Level {
+	return logging.NONE
+}
+
 type MockResponse struct {
 	err       errors.Error
 	results   []interface{}
@@ -962,19 +969,20 @@ func PrepareStmt(qc *MockServer, queryParams map[string]interface{}, namespace, 
 	done := qc.prepDone[statement]
 	qc.RUnlock()
 	if done {
-		return prepareds.GetPreparedWithContext(ra["name"].(string), queryContext, make(map[string]bool, 1), 0, nil)
+		return prepareds.GetPreparedWithContext(ra["name"].(string), queryContext, make(map[string]bool, 1), 0, nil,
+			logging.NULL_LOG)
 	}
 
 	// we redecode the encoded plan to make sure that we can transmit it correctly across nodes
 	rv, err := prepareds.DecodePreparedWithContext(ra["name"].(string), queryContext, ra["encoded_plan"].(string),
-		false, nil, false)
+		false, nil, false, logging.NULL_LOG)
 	if err != nil {
 		return rv, err
 	}
 	qc.Lock()
 	qc.prepDone[statement] = true
 	qc.Unlock()
-	return prepareds.GetPreparedWithContext(ra["name"].(string), queryContext, make(map[string]bool, 1), 0, nil)
+	return prepareds.GetPreparedWithContext(ra["name"].(string), queryContext, make(map[string]bool, 1), 0, nil, logging.NULL_LOG)
 }
 
 /*

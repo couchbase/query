@@ -404,8 +404,9 @@ func (coll *collection) IsBucket() bool {
 	return coll.isBucket
 }
 
-func (coll *collection) StartKeyScan(ranges []*datastore.SeqScanRange, offset int64, limit int64, ordered bool,
-	timeout time.Duration, pipelineSize int, kvTimeout time.Duration, serverless bool) (interface{}, errors.Error) {
+func (coll *collection) StartKeyScan(context datastore.QueryContext, ranges []*datastore.SeqScanRange,
+	offset int64, limit int64, ordered bool, timeout time.Duration, pipelineSize int, kvTimeout time.Duration, serverless bool) (
+	interface{}, errors.Error) {
 
 	r := make([]*cb.SeqScanRange, len(ranges))
 	for i := range ranges {
@@ -413,8 +414,8 @@ func (coll *collection) StartKeyScan(ranges []*datastore.SeqScanRange, offset in
 		r[i].Init(ranges[i].Start, ranges[i].ExcludeStart, ranges[i].End, ranges[i].ExcludeEnd)
 	}
 
-	return coll.bucket.cbbucket.StartKeyScan(coll.uid, "", "", r, offset, limit, ordered, timeout, pipelineSize, kvTimeout,
-		serverless)
+	return coll.bucket.cbbucket.StartKeyScan(context.RequestId(), context, coll.uid, "", "", r, offset, limit, ordered, timeout,
+		pipelineSize, kvTimeout, serverless)
 }
 
 func (coll *collection) StopKeyScan(scan interface{}) (uint64, errors.Error) {
@@ -425,10 +426,11 @@ func (coll *collection) FetchKeys(scan interface{}, timeout time.Duration) ([]st
 	return coll.bucket.cbbucket.FetchKeys(scan, timeout)
 }
 
-func (coll *collection) StartRandomScan(sampleSize int, timeout time.Duration, pipelineSize int, kvTimeout time.Duration,
-	serverless bool) (interface{}, errors.Error) {
+func (coll *collection) StartRandomScan(context datastore.QueryContext, sampleSize int, timeout time.Duration,
+	pipelineSize int, kvTimeout time.Duration, serverless bool) (interface{}, errors.Error) {
 
-	return coll.bucket.cbbucket.StartRandomScan(coll.uid, "", "", sampleSize, timeout, pipelineSize, kvTimeout, serverless)
+	return coll.bucket.cbbucket.StartRandomScan(context.RequestId(), context, coll.uid, "", "", sampleSize, timeout, pipelineSize,
+		kvTimeout, serverless)
 }
 
 func buildScopesAndCollections(mani *cb.Manifest, bucket *keyspace) (map[string]*scope, datastore.Keyspace) {

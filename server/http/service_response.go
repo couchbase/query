@@ -147,6 +147,7 @@ func (this *httpRequest) Failed(srvr *server.Server) {
 	this.writeServerless(srvr.Metrics(), prefix, indent)
 	this.writeProfile(srvr.Profile(), prefix, indent)
 	this.writeControls(srvr.Controls(), prefix, indent)
+	this.writeLog(prefix, indent)
 	this.writeString("\n}\n")
 	this.writer.noMoreData()
 
@@ -365,6 +366,7 @@ func (this *httpRequest) writeSuffix(srvr *server.Server, state server.State, pr
 		this.writeServerless(srvr.Metrics(), prefix, indent) &&
 		this.writeProfile(srvr.Profile(), prefix, indent) &&
 		this.writeControls(srvr.Controls(), prefix, indent) &&
+		this.writeLog(prefix, indent) &&
 		this.writeString("\n}\n")
 }
 
@@ -902,6 +904,53 @@ func (this *httpRequest) writeProfile(profile server.Profile, prefix, indent str
 		return false
 	}
 	return this.writeString("}")
+}
+
+func (this *httpRequest) Loga(l logging.Level, f func() string) {
+	if this.logger.Level() < l {
+		return
+	}
+	this.logger.Loga(l, f)
+}
+
+func (this *httpRequest) Logf(l logging.Level, f string, args ...interface{}) {
+	if this.logger.Level() < l {
+		return
+	}
+	this.logger.Loga(l, func() string { return fmt.Sprintf(f, args...) })
+}
+
+func (this *httpRequest) writeLog(prefix, indent string) bool {
+	if this.logger.Level() == logging.NONE {
+		return true
+	}
+	logger, ok := this.logger.(logging.RequestLogger)
+	if !ok {
+		return true
+	}
+	if !this.writeString(",\n") || !this.writeString(prefix) || !this.writeString("\"log\": [") {
+		return false
+	}
+	var newPrefix string
+	if prefix != "" {
+		newPrefix = "\n" + prefix + indent
+	}
+	first := true
+	ok = logger.Foreach(func(text string) bool {
+		if !first && !this.writeString(",") {
+			return false
+		}
+		b, _ := json.Marshal(text)
+		if !this.writeString(newPrefix) || !this.writeString(string(b)) {
+			return false
+		}
+		return true
+	})
+	logger.Close()
+	if prefix != "" && !(this.writeString("\n") && this.writeString(prefix)) {
+		return false
+	}
+	return this.writeString("]")
 }
 
 // the buffered writer writes the response data in chunks

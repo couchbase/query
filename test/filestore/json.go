@@ -126,6 +126,13 @@ func (this *MockQuery) Result(item value.AnnotatedValue) bool {
 	return true
 }
 
+func (this *MockQuery) Loga(l logging.Level, f func() string) {
+}
+
+func (this *MockQuery) LogLevel() logging.Level {
+	return logging.NONE
+}
+
 type MockResponse struct {
 	err       errors.Error
 	results   []interface{}

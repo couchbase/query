@@ -19,10 +19,20 @@ import (
 
 func NewLogger(uri string) (logging.Logger, errors.Error) {
 	var logger logging.Logger
-	if strings.HasPrefix(uri, "golog") {
+	switch {
+	case strings.HasPrefix(uri, "golog"):
 		logger = logger_golog.NewLogger(os.Stderr, logging.INFO)
 		logging.SetLogger(logger)
 		return logger, nil
+
+	// these are request loggers
+
+	case uri == "builtin":
+		return &logging.TempFileLogger{}, nil
+	case uri == "file":
+		return &logging.FileLogger{}, nil
+	case uri == "null":
+		return logging.NULL_LOG, nil
 	}
 	return nil, errors.NewAdminInvalidURL("Logger", uri)
 }

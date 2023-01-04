@@ -125,6 +125,7 @@ func (this Unit) NonZero() bool {
 }
 
 func Throttle(isAdmin bool, user, bucket string, buckets []string, timeout time.Duration) (Context, time.Duration, errors.Error) {
+
 	var ctx Context
 
 	tenant := bucket

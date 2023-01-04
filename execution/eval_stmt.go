@@ -17,6 +17,7 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/parser/n1ql"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/planner"
@@ -142,6 +143,14 @@ func (this *internalOutput) AddCpuTime(d time.Duration) {
 	this.output.AddCpuTime(d)
 }
 
+func (this *internalOutput) Loga(l logging.Level, f func() string) {
+	this.output.Loga(l, f)
+}
+
+func (this *internalOutput) LogLevel() logging.Level {
+	return this.output.LogLevel()
+}
+
 func (this *Context) newOutput(output *internalOutput) *internalOutput {
 	output.output = this.output
 	return output
@@ -264,7 +273,7 @@ func (this *Context) PrepareStatement(statement string, namedArgs map[string]val
 		}
 	}
 
-	stmt, err := n1ql.ParseStatement2(statement, this.namespace, this.queryContext)
+	stmt, err := n1ql.ParseStatement2(statement, this.namespace, this.queryContext, this)
 	if err != nil {
 		return nil, nil, false, err
 	}
@@ -350,7 +359,7 @@ func (this *Context) PrepareStatement(statement string, namedArgs map[string]val
 		exec, _ := stmt.(*algebra.Execute)
 		prepared, err = prepareds.GetPreparedWithContext(exec.Prepared(), this.queryContext,
 			this.deltaKeyspaces, prepareds.OPT_TRACK|prepareds.OPT_REMOTE|prepareds.OPT_VERIFY,
-			&reprepTime)
+			&reprepTime, this)
 		//  monitoring code TBD
 		if err != nil {
 			return nil, prepared, isPrepared, err

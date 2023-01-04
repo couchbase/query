@@ -29,6 +29,7 @@ import (
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/execution"
 	"github.com/couchbase/query/logging"
+	"github.com/couchbase/query/logging/resolver"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/prepareds"
 	"github.com/couchbase/query/server"
@@ -61,17 +62,23 @@ type httpRequest struct {
 	consCnt  int
 	jsonArgs jsonArgs // ESCAPE analysis workaround
 	urlArgs  urlArgs  // ESCAPE analysis workaround
+
+	logger logging.Logger
 }
 
 var zeroScanVectorSource = &ZeroScanVectorSource{}
 
-func newHttpRequest(rv *httpRequest, resp http.ResponseWriter, req *http.Request, bp BufferPool, size int, namespace string, trackUsers bool) {
+func newHttpRequest(rv *httpRequest, resp http.ResponseWriter, req *http.Request, bp BufferPool, size int, namespace string,
+	trackUsers bool) {
 
 	var httpArgs httpRequestArgs
 	var err errors.Error
 
 	// This is literally when we become aware of the request
 	reqTime := time.Now()
+
+	// handles request level logging
+	rv.logger, _ = resolver.NewLogger("builtin")
 
 	// Limit body size in case of denial-of-service attack
 	req.Body = http.MaxBytesReader(resp, req.Body, int64(size))
@@ -111,6 +118,11 @@ func newHttpRequest(rv *httpRequest, resp http.ResponseWriter, req *http.Request
 	// for GET method, only readonly access
 	if req.Method == "GET" {
 		rv.SetReadonly(value.TRUE)
+	}
+
+	// update the logger with the request Id once it is known
+	if rl, ok := rv.logger.(logging.RequestLogger); ok {
+		rl.SetRequestId(rv.Id().String())
 	}
 
 	userAgent := req.UserAgent()
@@ -249,7 +261,7 @@ func handleEncodedPlan(rv *httpRequest, httpArgs httpRequestArgs, parm string, v
 func handlePrepared(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
 	var phaseTime time.Duration
 
-	prepared_name, prepared, err := getPrepared(httpArgs, rv.QueryContext(), parm, val, &phaseTime)
+	prepared_name, prepared, err := getPrepared(httpArgs, rv.QueryContext(), parm, val, &phaseTime, rv.logger)
 
 	// MB-18841 (encoded_plan processing affects latency)
 	// MB-19509 (encoded_plan may corrupt cache)
@@ -272,7 +284,8 @@ func handlePrepared(rv *httpRequest, httpArgs httpRequestArgs, parm string, val 
 
 			// Monitoring API: we only need to track the prepared
 			// statement if we couldn't do it in getPrepared()
-			decoded_plan, plan_err = prepareds.DecodePreparedWithContext(prepared_name, rv.QueryContext(), encoded_plan, (prepared == nil), &phaseTime, true)
+			decoded_plan, plan_err = prepareds.DecodePreparedWithContext(prepared_name, rv.QueryContext(), encoded_plan,
+				(prepared == nil), &phaseTime, true, rv.logger)
 			if plan_err != nil {
 				err = plan_err
 			} else if decoded_plan != nil {
@@ -693,6 +706,36 @@ func handleSortProjection(rv *httpRequest, httpArgs httpRequestArgs, parm string
 	return nil
 }
 
+func handleLogLevel(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+	v, err := httpArgs.getStringVal(parm, val)
+	if err != nil {
+		return err
+	}
+	l, ok, filter := logging.ParseLevel(v)
+	if !ok {
+		i := strings.Index(v, ":")
+		if i != -1 {
+			lgr, err := resolver.NewLogger(strings.ToLower(v[:i]))
+			if err != nil {
+				return errors.NewServiceErrorBadValue(go_errors.New("Invalid logger specified"), v)
+			}
+			rv.logger = lgr
+			if rl, ok := rv.logger.(logging.RequestLogger); ok {
+				rl.SetRequestId(rv.Id().String())
+			}
+			l, ok, filter = logging.ParseLevel(v[i+1:])
+		}
+	}
+	if !ok {
+		return errors.NewServiceErrorBadValue(go_errors.New("Invalid logging level"), v)
+	}
+	rv.SetLogLevel(l)
+	if filterLogger, ok := rv.logger.(interface{ SetDebugFilter(string) }); ok {
+		filterLogger.SetDebugFilter(filter)
+	}
+	return nil
+}
+
 // For audit.Auditable interface.
 func (this *httpRequest) ElapsedTime() time.Duration {
 	return this.elapsedTime
@@ -769,6 +812,14 @@ func (this *httpRequest) EventLocalAddress() string {
 	return ""
 }
 
+func (this *httpRequest) SetLogLevel(level logging.Level) {
+	this.logger.SetLevel(level)
+}
+
+func (this *httpRequest) LogLevel() logging.Level {
+	return this.logger.Level()
+}
+
 // for audit.Auditable interface.
 func (this *httpRequest) TransactionRemainingTime() string {
 	if !this.TransactionStartTime().IsZero() && this.Type() != "COMMIT" && this.Type() != "ROLLBACK" {
@@ -827,6 +878,7 @@ const ( // Request argument names
 	PRESERVE_EXPIRY    = "preserve_expiry"
 	ERROR_LIMIT        = "error_limit"
 	SORT_PROJECTION    = "sort_projection"
+	LOGLEVEL           = "loglevel"
 )
 
 type argHandler struct {
@@ -882,6 +934,7 @@ var _PARAMETERS = map[string]*argHandler{
 	PRESERVE_EXPIRY: {handlePreserveExpiry, false},
 	ERROR_LIMIT:     {handleErrorLimit, false},
 	SORT_PROJECTION: {handleSortProjection, false},
+	LOGLEVEL:        {handleLogLevel, false},
 }
 
 // common storage for the httpArgs implementations
@@ -945,19 +998,22 @@ func (aa *argsArray) add(name string, val interface{}, fn func(rv *httpRequest, 
 }
 
 func getPrepared(a httpRequestArgs, queryContext string, parm string, val interface{},
-	phaseTime *time.Duration) (string, *plan.Prepared, errors.Error) {
+	phaseTime *time.Duration, log logging.Log) (string, *plan.Prepared, errors.Error) {
 	prepared_name, err := a.getPreparedName(parm, val)
 	if err != nil || prepared_name == "" {
+		log.Debugf("%v %v", parm, err)
 		return "", nil, err
 	}
 
 	// Monitoring API: track prepared statement access
 	prepared, err := prepareds.GetPreparedWithContext(prepared_name, queryContext, nil,
-		prepareds.OPT_TRACK|prepareds.OPT_REMOTE|prepareds.OPT_VERIFY, phaseTime)
+		prepareds.OPT_TRACK|prepareds.OPT_REMOTE|prepareds.OPT_VERIFY, phaseTime, log)
 	if err != nil || prepared == nil {
+		log.Debugf("%v %v", prepared_name, err)
 		return prepared_name, nil, err
 	}
 
+	log.Debuga(func() string { return fmt.Sprintf("%v: %v", prepared_name, prepared.Text()) })
 	return prepared_name, prepared, err
 }
 

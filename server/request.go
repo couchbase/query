@@ -18,6 +18,7 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/execution"
+	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/tenant"
 	"github.com/couchbase/query/timestamp"
@@ -181,6 +182,8 @@ type Request interface {
 	ThrottleTime() time.Duration
 	SetThrottleTime(d time.Duration)
 	Alive() bool
+	Loga(logging.Level, func() string)
+	LogLevel() logging.Level
 
 	setSleep() // internal methods for load control
 	sleep()
@@ -370,6 +373,7 @@ type BaseRequest struct {
 	tenantCtx            tenant.Context
 	sortProjection       bool
 	throttleTime         time.Duration
+	logLevel             logging.Level
 }
 
 type requestIDImpl struct {

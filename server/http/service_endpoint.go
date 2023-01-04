@@ -356,7 +356,9 @@ func (this *HttpEndpoint) ServeHTTP(resp http.ResponseWriter, req *http.Request)
 			user.uuid = strings.Replace(user.uuid, "-", "_", -1)
 			limits, err := cbauth.GetUserLimits(userName, domain, "query")
 			if err != nil {
-				logging.Infof("No user limits found for user <ud>%v</ud> - limits not enforced", userName)
+				s := fmt.Sprintf("No user limits found for user <ud>%v</ud> - limits not enforced", userName)
+				logging.Infof(s)
+				request.Loga(logging.INFO, func() string { return s })
 			} else {
 				user.amendLimits(limits)
 				user.limitsVersion = this.trackedUsersVersion
@@ -370,7 +372,9 @@ func (this *HttpEndpoint) ServeHTTP(resp http.ResponseWriter, req *http.Request)
 			if this.trackedUsersVersion != user.limitsVersion {
 				limits, err := cbauth.GetUserLimits(userName, domain, "query")
 				if err != nil {
-					logging.Infof("No user limits found for user <ud>%v</ud> - limits not changed")
+					s := fmt.Sprintf("No user limits found for user <ud>%v</ud> - limits not changed")
+					logging.Infof(s)
+					request.Loga(logging.INFO, func() string { return s })
 				} else {
 					user.amendLimits(limits)
 					user.limitsVersion = this.trackedUsersVersion
@@ -428,9 +432,11 @@ func (this *HttpEndpoint) ServeHTTP(resp http.ResponseWriter, req *http.Request)
 			bucket = path[1]
 		}
 		userName, _ := datastore.FirstCred(request.Credentials())
+		request.Loga(logging.INFO, func() string { return fmt.Sprintf("Checking throttling for %v", userName) })
 		ctx, d, err := tenant.Throttle(datastore.IsAdmin(request.Credentials()), userName, bucket,
 			datastore.GetUserBuckets(request.Credentials()), this.server.RequestTimeout(request.Timeout()))
 		request.SetThrottleTime(d)
+		request.Loga(logging.INFO, func() string { return fmt.Sprintf("Throttle time: %v", d) })
 		if err != nil {
 			request.Fail(err)
 			request.Failed(this.server)

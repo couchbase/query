@@ -14,6 +14,7 @@ import (
 
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/value"
 )
 
@@ -24,6 +25,7 @@ interface that has a method Now that returns the Time that
 returns the instant it time with a nanosecond precision.
 */
 type Context interface {
+	logging.Log
 	Now() time.Time
 	GetTimeout() time.Duration
 	Credentials() *auth.Credentials

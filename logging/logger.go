@@ -36,28 +36,36 @@ func (level Level) String() string {
 	return _LEVEL_NAMES[level]
 }
 
+func (level Level) Byte() []byte {
+	return []byte{_LEVEL_NAMES[level][0], ' '}
+}
+
+func (level Level) FunctionName() string {
+	n := _LEVEL_NAMES[level]
+	n = n[:1] + strings.ToLower(n[1:])
+	return n
+}
+
 var _LEVEL_NAMES = []string{
-	DEBUG:   "DEBUG",
-	TRACE:   "TRACE",
-	REQUEST: "REQUEST",
-	INFO:    "INFO",
-	WARN:    "WARN",
-	ERROR:   "ERROR",
-	SEVERE:  "SEVERE",
-	FATAL:   "FATAL",
-	NONE:    "NONE",
+	DEBUG:  "DEBUG",
+	TRACE:  "TRACE",
+	INFO:   "INFO",
+	WARN:   "WARN",
+	ERROR:  "ERROR",
+	SEVERE: "SEVERE",
+	FATAL:  "FATAL",
+	NONE:   "NONE",
 }
 
 var _LEVEL_MAP = map[string]Level{
-	"debug":   DEBUG,
-	"trace":   TRACE,
-	"request": REQUEST,
-	"info":    INFO,
-	"warn":    WARN,
-	"error":   ERROR,
-	"severe":  SEVERE,
-	"fatal":   FATAL,
-	"none":    NONE,
+	"debug":  DEBUG,
+	"trace":  TRACE,
+	"info":   INFO,
+	"warn":   WARN,
+	"error":  ERROR,
+	"severe": SEVERE,
+	"fatal":  FATAL,
+	"none":   NONE,
 }
 
 // cache logging enablement to improve runtime performance (reduces from multiple tests to a single test on each call)
@@ -104,30 +112,30 @@ func ParseLevel(name string) (level Level, ok bool, filter string) {
 }
 
 // Logger provides a common interface for logging libraries
-type Logger interface {
+type Log interface {
 	// Higher performance
 	Loga(level Level, f func() string)
 	Debuga(f func() string)
 	Tracea(f func() string)
-	Requesta(rlevel Level, f func() string)
 	Infoa(f func() string)
 	Warna(f func() string)
 	Errora(f func() string)
 	Severea(f func() string)
 	Fatala(f func() string)
-	Audita(f func() string)
 
 	// Printf style
 	Logf(level Level, fmt string, args ...interface{})
 	Debugf(fmt string, args ...interface{})
 	Tracef(fmt string, args ...interface{})
-	Requestf(rlevel Level, fmt string, args ...interface{})
 	Infof(fmt string, args ...interface{})
 	Warnf(fmt string, args ...interface{})
 	Errorf(fmt string, args ...interface{})
 	Severef(fmt string, args ...interface{})
 	Fatalf(fmt string, args ...interface{})
-	Auditf(fmt string, args ...interface{})
+}
+
+type Logger interface {
+	Log
 
 	Stringf(level Level, format string, args ...interface{}) string
 
@@ -138,9 +146,22 @@ type Logger interface {
 	Level() Level   // Get the current logging level
 }
 
+type RequestLogger interface {
+	Logger
+	SetRequestId(string)
+	Foreach(func(string) bool) bool
+	Close()
+}
+
 var logger Logger = nil
 var curLevel Level = DEBUG // initially set to never skip
-var debugFilter []*regexp.Regexp
+
+type _filter struct {
+	re      *regexp.Regexp
+	exclude bool
+}
+
+var debugFilter []_filter
 
 var loggerMutex sync.RWMutex
 
@@ -176,7 +197,12 @@ func SetLogger(newLogger Logger) {
 // to not do this for the printf style variants
 // anonymous function variants
 
-func Loga(level Level, f func() string) {
+func Loga(level Level, f func() string, args ...interface{}) {
+	if len(args) > 0 {
+		if l, ok := args[0].(Log); ok {
+			l.Loga(level, f)
+		}
+	}
 	if skipLogging(level) {
 		return
 	} else if (level == DEBUG || level == TRACE) && !filterDebug() {
@@ -187,30 +213,17 @@ func Loga(level Level, f func() string) {
 	logger.Loga(level, f)
 }
 
-func Debuga(f func() string) {
+func Debuga(f func() string, args ...interface{}) {
+	if len(args) > 0 {
+		if l, ok := args[0].(Log); ok {
+			l.Debuga(f)
+		}
+	}
 	if !cachedDebug || !filterDebug() {
 		return
 	}
-	pc, fname, lineno, ok := runtime.Caller(1)
-	if ok {
-		fnc := runtime.FuncForPC(pc)
-		var fl string
-		if fnc != nil {
-			n := fnc.Name()
-			i := strings.LastIndexByte(n, '(')
-			if i == -1 {
-				i = strings.LastIndexByte(n, '.')
-				if i != -1 {
-					i++
-				}
-			}
-			if i < 0 {
-				i = 0
-			}
-			fl = fmtpkg.Sprintf(" (%s|%s:%d)", n[i:], path.Base(fname), lineno)
-		} else {
-			fl = fmtpkg.Sprintf(" (%s:%d)", path.Base(fname), lineno)
-		}
+	fl := getFileLine(1)
+	if fl != "" {
 		loggerMutex.Lock()
 		defer loggerMutex.Unlock()
 		logger.Debuga(func() string { return f() + fl })
@@ -221,30 +234,17 @@ func Debuga(f func() string) {
 	}
 }
 
-func Tracea(f func() string) {
+func Tracea(f func() string, args ...interface{}) {
+	if len(args) > 0 {
+		if l, ok := args[0].(Log); ok {
+			l.Tracea(f)
+		}
+	}
 	if !cachedTrace || !filterDebug() {
 		return
 	}
-	pc, fname, lineno, ok := runtime.Caller(1)
-	if ok {
-		fnc := runtime.FuncForPC(pc)
-		var fl string
-		if fnc != nil {
-			n := fnc.Name()
-			i := strings.LastIndexByte(n, '(')
-			if i == -1 {
-				i = strings.LastIndexByte(n, '.')
-				if i != -1 {
-					i++
-				}
-			}
-			if i < 0 {
-				i = 0
-			}
-			fl = fmtpkg.Sprintf(" (%s|%s:%d)", n[i:], path.Base(fname), lineno)
-		} else {
-			fl = fmtpkg.Sprintf(" (%s:%d)", path.Base(fname), lineno)
-		}
+	fl := getFileLine(1)
+	if fl != "" {
 		loggerMutex.Lock()
 		defer loggerMutex.Unlock()
 		logger.Tracea(func() string { return f() + fl })
@@ -255,16 +255,12 @@ func Tracea(f func() string) {
 	}
 }
 
-func Requesta(rlevel Level, f func() string) {
-	if !cachedRequest {
-		return
+func Infoa(f func() string, args ...interface{}) {
+	if len(args) > 0 {
+		if l, ok := args[0].(Log); ok {
+			l.Infoa(f)
+		}
 	}
-	loggerMutex.Lock()
-	defer loggerMutex.Unlock()
-	logger.Requesta(rlevel, f)
-}
-
-func Infoa(f func() string) {
 	if !cachedInfo {
 		return
 	}
@@ -273,7 +269,12 @@ func Infoa(f func() string) {
 	logger.Infoa(f)
 }
 
-func Warna(f func() string) {
+func Warna(f func() string, args ...interface{}) {
+	if len(args) > 0 {
+		if l, ok := args[0].(Log); ok {
+			l.Warna(f)
+		}
+	}
 	if !cachedWarn {
 		return
 	}
@@ -282,7 +283,12 @@ func Warna(f func() string) {
 	logger.Warna(f)
 }
 
-func Errora(f func() string) {
+func Errora(f func() string, args ...interface{}) {
+	if len(args) > 0 {
+		if l, ok := args[0].(Log); ok {
+			l.Errora(f)
+		}
+	}
 	if !cachedError {
 		return
 	}
@@ -291,7 +297,12 @@ func Errora(f func() string) {
 	logger.Errora(f)
 }
 
-func Severea(f func() string) {
+func Severea(f func() string, args ...interface{}) {
+	if len(args) > 0 {
+		if l, ok := args[0].(Log); ok {
+			l.Severea(f)
+		}
+	}
 	if !cachedSevere {
 		return
 	}
@@ -300,7 +311,12 @@ func Severea(f func() string) {
 	logger.Severea(f)
 }
 
-func Fatala(f func() string) {
+func Fatala(f func() string, args ...interface{}) {
+	if len(args) > 0 {
+		if l, ok := args[0].(Log); ok {
+			l.Fatala(f)
+		}
+	}
 	if !cachedFatal {
 		return
 	}
@@ -309,18 +325,16 @@ func Fatala(f func() string) {
 	logger.Fatala(f)
 }
 
-func Audita(f func() string) {
-	if !cachedAudit {
-		return
-	}
-	loggerMutex.Lock()
-	defer loggerMutex.Unlock()
-	logger.Audita(f)
-}
-
 // printf-style variants
 
 func Logf(level Level, fmt string, args ...interface{}) {
+	n := len(args)
+	if n > 0 {
+		if l, ok := args[n-1].(Log); ok {
+			n--
+			l.Logf(level, fmt, args[:n]...)
+		}
+	}
 	if skipLogging(level) {
 		return
 	} else if (level == DEBUG || level == TRACE) && !filterDebug() {
@@ -328,132 +342,121 @@ func Logf(level Level, fmt string, args ...interface{}) {
 	}
 	loggerMutex.Lock()
 	defer loggerMutex.Unlock()
-	logger.Logf(level, fmt, args...)
+	logger.Logf(level, fmt, args[:n]...)
 }
 
 func Debugf(fmt string, args ...interface{}) {
+	n := len(args)
+	if n > 0 {
+		if l, ok := args[n-1].(Log); ok {
+			n--
+			l.Debugf(fmt, args[:n]...)
+		}
+	}
 	if !cachedDebug || !filterDebug() {
 		return
 	}
-	pc, fname, lineno, ok := runtime.Caller(1)
-	if ok {
-		fnc := runtime.FuncForPC(pc)
-		if fnc != nil {
-			n := fnc.Name()
-			i := strings.LastIndexByte(n, '(')
-			if i == -1 {
-				i = strings.LastIndexByte(n, '.')
-				if i != -1 {
-					i++
-				}
-			}
-			if i < 0 {
-				i = 0
-			}
-			f := fmtpkg.Sprintf(" (%s|%s:%d)", n[i:], path.Base(fname), lineno)
-			fmt = fmt + f
-		} else {
-			f := fmtpkg.Sprintf(" (%s:%d)", path.Base(fname), lineno)
-			fmt = fmt + f
-		}
-	}
+	fmt += getFileLine(1)
 	loggerMutex.Lock()
 	defer loggerMutex.Unlock()
-	logger.Debugf(fmt, args...)
+	logger.Debugf(fmt, args[:n]...)
 }
 
 func Tracef(fmt string, args ...interface{}) {
+	n := len(args)
+	if n > 0 {
+		if l, ok := args[n-1].(Log); ok {
+			n--
+			l.Tracef(fmt, args[:n]...)
+		}
+	}
 	if !cachedTrace || !filterDebug() {
 		return
 	}
-	pc, fname, lineno, ok := runtime.Caller(1)
-	if ok {
-		fnc := runtime.FuncForPC(pc)
-		if fnc != nil {
-			n := fnc.Name()
-			i := strings.LastIndexByte(n, '(')
-			if i == -1 {
-				i = strings.LastIndexByte(n, '.')
-				if i != -1 {
-					i++
-				}
-			}
-			if i < 0 {
-				i = 0
-			}
-			f := fmtpkg.Sprintf(" (%s|%s:%d)", n[i:], path.Base(fname), lineno)
-			fmt = fmt + f
-		} else {
-			f := fmtpkg.Sprintf(" (%s:%d)", path.Base(fname), lineno)
-			fmt = fmt + f
-		}
-	}
+	fmt += getFileLine(1)
 	loggerMutex.Lock()
 	defer loggerMutex.Unlock()
-	logger.Tracef(fmt, args...)
-}
-
-func Requestf(rlevel Level, fmt string, args ...interface{}) {
-	if !cachedRequest {
-		return
-	}
-	loggerMutex.Lock()
-	defer loggerMutex.Unlock()
-	logger.Requestf(rlevel, fmt, args...)
+	logger.Tracef(fmt, args[:n]...)
 }
 
 func Infof(fmt string, args ...interface{}) {
+	n := len(args)
+	if n > 0 {
+		if l, ok := args[n-1].(Log); ok {
+			n--
+			l.Infof(fmt, args[:n]...)
+		}
+	}
 	if !cachedInfo {
 		return
 	}
 	loggerMutex.Lock()
 	defer loggerMutex.Unlock()
-	logger.Infof(fmt, args...)
+	logger.Infof(fmt, args[:n]...)
 }
 
 func Warnf(fmt string, args ...interface{}) {
+	n := len(args)
+	if n > 0 {
+		if l, ok := args[n-1].(Log); ok {
+			n--
+			l.Warnf(fmt, args[:n]...)
+		}
+	}
 	if !cachedWarn {
 		return
 	}
 	loggerMutex.Lock()
 	defer loggerMutex.Unlock()
-	logger.Warnf(fmt, args...)
+	logger.Warnf(fmt, args[:n]...)
 }
 
 func Errorf(fmt string, args ...interface{}) {
+	n := len(args)
+	if n > 0 {
+		if l, ok := args[n-1].(Log); ok {
+			n--
+			l.Errorf(fmt, args[:n]...)
+		}
+	}
 	if !cachedError {
 		return
 	}
 	loggerMutex.Lock()
 	defer loggerMutex.Unlock()
-	logger.Errorf(fmt, args...)
+	logger.Errorf(fmt, args[:n]...)
 }
 
 func Severef(fmt string, args ...interface{}) {
+	n := len(args)
+	if n > 0 {
+		if l, ok := args[n-1].(Log); ok {
+			n--
+			l.Severef(fmt, args[:n]...)
+		}
+	}
 	if !cachedSevere {
 		return
 	}
 	loggerMutex.Lock()
 	defer loggerMutex.Unlock()
-	logger.Severef(fmt, args...)
+	logger.Severef(fmt, args[:n]...)
 }
 
 func Fatalf(fmt string, args ...interface{}) {
+	n := len(args)
+	if n > 0 {
+		if l, ok := args[n-1].(Log); ok {
+			n--
+			l.Fatalf(fmt, args[:n]...)
+		}
+	}
 	if !cachedFatal {
 		return
 	}
 	loggerMutex.Lock()
 	defer loggerMutex.Unlock()
-	logger.Fatalf(fmt, args...)
-}
-
-func Auditf(fmt string, args ...interface{}) {
-	if !cachedAudit {
-		return
-	}
-	loggerMutex.Lock()
-	defer loggerMutex.Unlock()
-	logger.Auditf(fmt, args...)
+	logger.Fatalf(fmt, args[:n]...)
 }
 
 func SetLevel(level Level) {
@@ -495,26 +498,54 @@ func Stringf(level Level, fmt string, args ...interface{}) string {
 }
 
 func SetDebugFilter(s string) {
+	setDebugFilter(&loggerMutex, &debugFilter, s, Infof)
+}
+
+func setDebugFilter(pMutex sync.Locker, pFilters *[]_filter, s string, log func(string, ...interface{})) {
 	if s == "" {
-		if debugFilter != nil {
-			loggerMutex.Lock()
-			debugFilter = nil
-			loggerMutex.Unlock()
+		if *pFilters != nil {
+			pMutex.Lock()
+			*pFilters = nil
+			pMutex.Unlock()
 		}
 		return
 	}
 	pats := strings.Split(s, ";")
-	df := make([]*regexp.Regexp, 0, len(pats))
+	df := make([]_filter, 0, len(pats))
+	hasInclude := false
 	for _, p := range pats {
-		f, err := regexp.Compile(p)
-		if err == nil {
-			df = append(df, f)
-			Infof("Added debug logging filter: '%s'", p)
+		e := false
+		if p[0] == '-' {
+			e = true
+			p = p[1:]
+		} else {
+			hasInclude = true
+			if strings.HasPrefix(p, "\\-") {
+				p = p[1:]
+			}
+		}
+		if p != "" {
+			f, err := regexp.Compile(p)
+			if err == nil {
+				df = append(df, _filter{f, e})
+				if e {
+					log("Added debug logging exclude filter: '%s'", p)
+				} else {
+					log("Added debug logging include filter: '%s'", p)
+				}
+			}
 		}
 	}
-	loggerMutex.Lock()
-	debugFilter = df
-	loggerMutex.Unlock()
+	if len(df) == 0 {
+		df = nil
+	} else if !hasInclude {
+		// only exclude specified; needs an include filter to so include everything not excluded
+		f, _ := regexp.Compile(".")
+		df = append(df, _filter{f, false})
+	}
+	pMutex.Lock()
+	*pFilters = df
+	pMutex.Unlock()
 }
 
 func filterDebug() bool {
@@ -530,8 +561,9 @@ func filterDebug() bool {
 	df := debugFilter
 	loggerMutex.RUnlock()
 	for _, p := range df {
-		if p.MatchString(pathname) {
-			return true
+		if p.re.MatchString(pathname) {
+			// first match applies
+			return !p.exclude
 		}
 	}
 	return false
@@ -542,8 +574,14 @@ func debugFilterString() string {
 	df := debugFilter
 	loggerMutex.RUnlock()
 	s := ":"
-	for _, e := range df {
-		s += e.String() + ";"
+	for _, f := range df {
+		p := f.re.String()
+		if f.exclude {
+			s += "-"
+		} else if p[0] == '-' {
+			p = "\\" + p
+		}
+		s += p + ";"
 	}
 	return s[:len(s)-1]
 }
@@ -652,3 +690,90 @@ func DumpAllStacks(level Level, msg string) {
 		Logf(level, sb.String())
 	}
 }
+
+func getFileLine(caller int) string {
+	pc, fname, lineno, ok := runtime.Caller(caller + 1)
+	if ok {
+		fnc := runtime.FuncForPC(pc)
+		if fnc != nil {
+			n := fnc.Name()
+			i := strings.LastIndexByte(n, '(')
+			if i == -1 {
+				i = strings.LastIndexByte(n, '.')
+				if i != -1 {
+					i++
+				}
+			}
+			if i < 0 {
+				i = 0
+			}
+			return fmtpkg.Sprintf(" (%s|%s:%d)", n[i:], path.Base(fname), lineno)
+		} else {
+			return fmtpkg.Sprintf(" (%s:%d)", path.Base(fname), lineno)
+		}
+	}
+	return ""
+}
+
+func findCaller(l Level) string {
+	pc := make([]uintptr, 32)
+	n := runtime.Callers(2, pc)
+	if n == 0 {
+		return ""
+	}
+	pc = pc[:n]
+	frames := runtime.CallersFrames(pc)
+	nf := l.FunctionName() + "f"
+	na := l.FunctionName() + "a"
+	for {
+		frame, more := frames.Next()
+		if frame.Function != "" &&
+			!strings.HasSuffix(frame.Function, ".Loga") &&
+			!strings.HasSuffix(frame.Function, ".Logf") &&
+			!strings.HasSuffix(frame.Function, nf) &&
+			!strings.HasSuffix(frame.Function, na) &&
+			!strings.Contains(frame.Function, "/logging.") {
+
+			n := frame.Function
+			i := strings.LastIndexByte(n, '(')
+			if i == -1 {
+				i = strings.LastIndexByte(n, '.')
+				if i != -1 {
+					i++
+				}
+			}
+			if i < 0 {
+				i = 0
+			}
+			return fmtpkg.Sprintf(" (%s|%s:%d)", n[i:], path.Base(frame.File), frame.Line)
+		}
+		if !more {
+			break
+		}
+	}
+	return ""
+}
+
+var NULL_LOG Logger = &nullLogImpl{}
+
+type nullLogImpl struct{}
+
+func (this *nullLogImpl) Loga(level Level, f func() string)                              {}
+func (this *nullLogImpl) Debuga(f func() string)                                         {}
+func (this *nullLogImpl) Tracea(f func() string)                                         {}
+func (this *nullLogImpl) Infoa(f func() string)                                          {}
+func (this *nullLogImpl) Warna(f func() string)                                          {}
+func (this *nullLogImpl) Errora(f func() string)                                         {}
+func (this *nullLogImpl) Severea(f func() string)                                        {}
+func (this *nullLogImpl) Fatala(f func() string)                                         {}
+func (this *nullLogImpl) Logf(level Level, f string, args ...interface{})                {}
+func (this *nullLogImpl) Debugf(f string, args ...interface{})                           {}
+func (this *nullLogImpl) Tracef(f string, args ...interface{})                           {}
+func (this *nullLogImpl) Infof(f string, args ...interface{})                            {}
+func (this *nullLogImpl) Warnf(f string, args ...interface{})                            {}
+func (this *nullLogImpl) Errorf(f string, args ...interface{})                           {}
+func (this *nullLogImpl) Severef(f string, args ...interface{})                          {}
+func (this *nullLogImpl) Fatalf(f string, args ...interface{})                           {}
+func (this *nullLogImpl) Stringf(level Level, format string, args ...interface{}) string { return "" }
+func (this *nullLogImpl) SetLevel(Level)                                                 {}
+func (this *nullLogImpl) Level() Level                                                   { return NONE }

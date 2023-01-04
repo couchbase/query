@@ -163,6 +163,8 @@ type Output interface {
 	AddTenantUnits(s tenant.Service, cu tenant.Unit)
 	TrackMemory(size uint64)
 	SetTransactionStartTime(t time.Time)
+	Loga(logging.Level, func() string)
+	LogLevel() logging.Level
 }
 
 // context flags
@@ -282,6 +284,7 @@ type Context struct {
 	keysToSkip          *sync.Map
 	keysToSkipLength    int32
 	planPreparedTime    time.Time // time the plan was created
+	logLevel            logging.Level
 }
 
 func NewContext(requestId string, datastore datastore.Datastore, systemstore datastore.Systemstore,
@@ -382,6 +385,7 @@ func (this *Context) Copy() *Context {
 		keysToSkip:          this.keysToSkip,
 		keysToSkipLength:    this.keysToSkipLength,
 		planPreparedTime:    this.planPreparedTime,
+		logLevel:            this.logLevel,
 	}
 
 	rv.SetPreserveProjectionOrder(false) // always reset on copy
@@ -1422,10 +1426,10 @@ func (this *Context) Recover(base *base) {
 		s := string(buf[0:n])
 		stmt := "<ud>" + this.prepared.Text() + "</ud>"
 		qc := "<ud>" + this.queryContext + "</ud>"
-		logging.Severef("panic: %v ", err)
-		logging.Severef("request text: %v", stmt)
-		logging.Severef("query context: %v", qc)
-		logging.Severef("stack: %v", s)
+		logging.Severef("panic: %v ", err, this)
+		logging.Severef("request text: %v", stmt, this)
+		logging.Severef("query context: %v", qc, this)
+		logging.Severef("stack: %v", s, this)
 
 		// TODO - this may very well be a duplicate, if the orchestrator is redirecting
 		// the standard error to the same file as the log
@@ -1677,4 +1681,104 @@ func (this *Context) SetPlanPreparedTime(time time.Time) {
 
 func (this *Context) PlanPreparedTime() time.Time {
 	return this.planPreparedTime
+}
+
+func (this *Context) SetLogLevel(l logging.Level) {
+	this.logLevel = l
+}
+
+func (this *Context) Loga(l logging.Level, f func() string) {
+	if this.logLevel >= l {
+		this.output.Loga(l, f)
+	}
+}
+
+func (this *Context) Debuga(f func() string) {
+	if this.logLevel >= logging.DEBUG {
+		this.output.Loga(logging.DEBUG, f)
+	}
+}
+
+func (this *Context) Tracea(f func() string) {
+	if this.logLevel >= logging.TRACE {
+		this.output.Loga(logging.TRACE, f)
+	}
+}
+
+func (this *Context) Infoa(f func() string) {
+	if this.logLevel >= logging.INFO {
+		this.output.Loga(logging.INFO, f)
+	}
+}
+
+func (this *Context) Warna(f func() string) {
+	if this.logLevel >= logging.WARN {
+		this.output.Loga(logging.WARN, f)
+	}
+}
+
+func (this *Context) Errora(f func() string) {
+	if this.logLevel >= logging.ERROR {
+		this.output.Loga(logging.ERROR, f)
+	}
+}
+
+func (this *Context) Severea(f func() string) {
+	if this.logLevel >= logging.SEVERE {
+		this.output.Loga(logging.SEVERE, f)
+	}
+}
+
+func (this *Context) Fatala(f func() string) {
+	if this.logLevel >= logging.FATAL {
+		this.output.Loga(logging.FATAL, f)
+	}
+}
+
+func (this *Context) Logf(l logging.Level, f string, args ...interface{}) {
+	if this.logLevel >= l {
+		this.output.Loga(l, func() string { return fmt.Sprintf(f, args...) })
+	}
+}
+
+func (this *Context) Debugf(f string, args ...interface{}) {
+	if this.logLevel >= logging.DEBUG {
+		this.output.Loga(logging.DEBUG, func() string { return fmt.Sprintf(f, args...) })
+	}
+}
+
+func (this *Context) Tracef(f string, args ...interface{}) {
+	if this.logLevel >= logging.TRACE {
+		this.output.Loga(logging.TRACE, func() string { return fmt.Sprintf(f, args...) })
+	}
+}
+
+func (this *Context) Infof(f string, args ...interface{}) {
+	if this.logLevel >= logging.INFO {
+		this.output.Loga(logging.INFO, func() string { return fmt.Sprintf(f, args...) })
+	}
+}
+
+func (this *Context) Warnf(f string, args ...interface{}) {
+	if this.logLevel >= logging.WARN {
+		this.output.Loga(logging.WARN, func() string { return fmt.Sprintf(f, args...) })
+	}
+}
+
+func (this *Context) Errorf(f string, args ...interface{}) {
+	if this.logLevel >= logging.ERROR {
+		this.output.Loga(logging.ERROR, func() string { return fmt.Sprintf(f, args...) })
+	}
+}
+
+func (this *Context) Severef(f string, args ...interface{}) {
+	if this.logLevel >= logging.SEVERE {
+		this.output.Loga(logging.SEVERE, func() string { return fmt.Sprintf(f, args...) })
+	}
+}
+
+func (this *Context) Fatalf(f string, args ...interface{}) {
+	if this.logLevel >= logging.FATAL {
+		this.output.Loga(logging.FATAL, func() string { return fmt.Sprintf(f, args...) })
+	}
 }

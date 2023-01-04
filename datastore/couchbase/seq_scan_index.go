@@ -355,6 +355,8 @@ func (this *seqScan) doScanEntries(requestId string, ordered bool, offset, limit
 
 	defer conn.Sender().Close()
 
+	conn.QueryContext().Infof("Running sequential scan on %v", this.KeyspaceId())
+
 	atomic.AddUint64(&this.totalScans, 1)
 	atomic.StoreInt64(&this.lastScanAt, int64(time.Now().UnixNano()))
 
@@ -398,7 +400,8 @@ func (this *seqScan) doScanEntries(requestId string, ordered bool, offset, limit
 	if conn.QueryContext() != nil {
 		kvTo = conn.QueryContext().KvTimeout()
 	}
-	ss, err = scanner.StartKeyScan(ranges, offset, limit, ordered, tout, conn.Sender().Capacity(), kvTo, tenant.IsServerless())
+	ss, err = scanner.StartKeyScan(conn.QueryContext(), ranges, offset, limit, ordered, tout, conn.Sender().Capacity(),
+		kvTo, tenant.IsServerless())
 	if err != nil {
 		conn.Error(qe.NewSSError(qe.E_SS_FAILED, err))
 		return
@@ -485,6 +488,8 @@ func (this *seqScan) doScanEntries(requestId string, ordered bool, offset, limit
 		}
 	}
 	atomic.StoreUint64(&this.lastScanCount, uint64(returned))
+
+	conn.QueryContext().Infof("Sequential scan on %v returned %v keys", this.KeyspaceId(), returned)
 }
 
 func (this *seqScan) IndexMetadata() map[string]interface{} {

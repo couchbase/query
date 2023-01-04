@@ -58,15 +58,6 @@ func (gl *goLogger) Tracea(f func() string) {
 	gl.Loga(logging.TRACE, f)
 }
 
-func (gl *goLogger) Requesta(rlevel logging.Level, f func() string) {
-	if gl.logger == nil {
-		return
-	}
-	if logging.REQUEST <= gl.level {
-		gl.log(logging.REQUEST, rlevel, f())
-	}
-}
-
 func (gl *goLogger) Infoa(f func() string) {
 	gl.Loga(logging.INFO, f)
 }
@@ -85,10 +76,6 @@ func (gl *goLogger) Severea(f func() string) {
 
 func (gl *goLogger) Fatala(f func() string) {
 	gl.Loga(logging.FATAL, f)
-}
-
-func (gl *goLogger) Audita(f func() string) {
-	gl.Loga(logging.INFO, f)
 }
 
 // printf-style variants
@@ -110,15 +97,6 @@ func (gl *goLogger) Tracef(format string, args ...interface{}) {
 	gl.Logf(logging.TRACE, format, args...)
 }
 
-func (gl *goLogger) Requestf(rlevel logging.Level, format string, args ...interface{}) {
-	if gl.logger == nil {
-		return
-	}
-	if logging.REQUEST <= gl.level {
-		gl.log(logging.REQUEST, rlevel, fmt.Sprintf(format, args...))
-	}
-}
-
 func (gl *goLogger) Infof(format string, args ...interface{}) {
 	gl.Logf(logging.INFO, format, args...)
 }
@@ -137,10 +115,6 @@ func (gl *goLogger) Severef(format string, args ...interface{}) {
 
 func (gl *goLogger) Fatalf(format string, args ...interface{}) {
 	gl.Logf(logging.FATAL, format, args...)
-}
-
-func (gl *goLogger) Auditf(format string, args ...interface{}) {
-	gl.Logf(logging.INFO, format, args...)
 }
 
 func (gl *goLogger) Level() logging.Level {
