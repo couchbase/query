@@ -179,19 +179,6 @@ func SargForFilters(filters base.Filters, keys expression.Expressions, isMissing
 	}
 
 	if !hasSpan && len(filters) != 0 {
-		// temperary fix for MB-54952:
-		// when a leading array index key is in simplified form, e.g., ALL arr1,
-		// and the ANY predicate is NOT sargable, e.g.
-		// ANY v IN arr1 SATISFIES v IS NOT VALUED END,
-		// previously we generate a _WHOLE_SPANS, with fix for MB-51817 we do not
-		// generate a span. Detect this special case and generate a _WHOLE_SPANS like before.
-		if len(keys) > 0 && exactSpan {
-			if all, ok := keys[0].(*expression.All); ok {
-				if _, ok := all.Array().(*expression.Array); !ok {
-					return _WHOLE_SPANS.Copy(), false, nil
-				}
-			}
-		}
 		return nil, false, nil
 	}
 

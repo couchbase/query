@@ -1,7 +1,33 @@
 [
     {
 	"testcase": "MB-54952",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'PrimaryScan%' END"
+        },
         "statements":"SELECT * FROM orders WHERE ANY v IN a1 SATISFIES v IS NOT VALUED END AND test_id = \"parameters\"",
+        "results": [
+    ]
+    },
+    {
+	"testcase": "MB-54952, part 2, ANY AND EVERY",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'PrimaryScan%' END"
+        },
+        "statements":"SELECT * FROM orders WHERE ANY AND EVERY v IN a1 SATISFIES v IS NOT VALUED END AND test_id = \"parameters\"",
         "results": [
     ]
     }
