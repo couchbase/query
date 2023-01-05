@@ -680,7 +680,7 @@ func initCbAuth(url string) (*cb.Client, error) {
 	transport := cbauth.WrapHTTPTransport(cb.HTTPTransport, nil)
 	cb.HTTPClient.Transport = transport
 
-	client, err := cb.ConnectWithAuth(url, cbauth.NewAuthHandler(nil))
+	client, err := cb.ConnectWithAuth(url, cbauth.NewAuthHandler(nil), cb.USER_AGENT)
 	if err != nil {
 		return nil, err
 	}
@@ -753,7 +753,7 @@ func NewDatastore(u string) (s datastore.Datastore, e errors.Error) {
 		// connect without auth
 		logging.Warnf("Unable to initialize cbAuth, access to couchbase buckets may be restricted")
 		cb.HTTPClient = &http.Client{}
-		client, err = cb.Connect(u)
+		client, err = cb.Connect(u, cb.USER_AGENT)
 		if err != nil {
 			return nil, errors.NewCbConnectionError(err, "url "+u)
 		}
@@ -850,9 +850,9 @@ func loadNamespace(s *store, name string) (*namespace, errors.Error) {
 			var client cb.Client
 
 			if s.CbAuthInit == true {
-				client, err = cb.ConnectWithAuth(url, cbauth.NewAuthHandler(nil))
+				client, err = cb.ConnectWithAuth(url, cbauth.NewAuthHandler(nil), cb.USER_AGENT)
 			} else {
-				client, err = cb.Connect(url)
+				client, err = cb.Connect(url, cb.USER_AGENT)
 			}
 			if err != nil {
 				return nil, errors.NewCbNamespaceNotFoundError(err, name)
@@ -1332,9 +1332,9 @@ func (p *namespace) reload1(err error) (cb.Pool, error) {
 	*/
 
 	if p.store.CbAuthInit == true {
-		client, err = cb.ConnectWithAuth(url, cbauth.NewAuthHandler(nil))
+		client, err = cb.ConnectWithAuth(url, cbauth.NewAuthHandler(nil), cb.USER_AGENT)
 	} else {
-		client, err = cb.Connect(url)
+		client, err = cb.Connect(url, cb.USER_AGENT)
 	}
 	if err != nil {
 		logging.Errorf("Error connecting to URL %s - %v", url, err)

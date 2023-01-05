@@ -67,7 +67,7 @@ func execn1ql(line string, t *testing.T) bool {
 	w := bufio.NewWriter(&b)
 	command.SetWriter(w)
 
-	dBn1ql, err := n1ql.OpenExtended(Server)
+	dBn1ql, err := n1ql.OpenExtended(Server, "test")
 	n1ql.SetUsernamePassword("Administrator", "password")
 	if err != nil {
 		// If the test cannot connect to a server

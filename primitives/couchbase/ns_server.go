@@ -34,6 +34,8 @@ import (
 	"github.com/couchbase/query/logging"
 )
 
+const USER_AGENT = "query"
+
 // HTTPClient to use for REST and view operations.
 var MaxIdleConnsPerHost = 256
 var ClientTimeOut = 10 * time.Second
@@ -603,6 +605,11 @@ type Client struct {
 	Info               Pools
 	tlsConfig          *tls.Config
 	disableNonSSLPorts bool
+	userAgent          string
+}
+
+func (this *Client) SetUserAgent(ua string) {
+	this.userAgent = ua
 }
 
 func maybeAddAuth(req *http.Request, ah AuthHandler) error {
@@ -697,6 +704,14 @@ func doHTTPRequest(req *http.Request) (*http.Response, error) {
 	} else if client == nil {
 		client = HTTPClient
 	}
+
+	ua := req.Header.Get("User-Agent")
+	if ua != "" && ua != USER_AGENT {
+		ua = ua + "/" + USER_AGENT
+	} else {
+		ua = USER_AGENT
+	}
+	req.Header.Set("User-Agent", ua)
 
 	for i := 1; i <= HTTP_MAX_RETRY; i++ {
 		res, err = client.Do(req)
@@ -811,7 +826,8 @@ func queryRestAPI(
 	path string,
 	authHandler AuthHandler,
 	out interface{},
-	terse bool) error {
+	terse bool,
+	userAgent string) error {
 
 	var requestUrl string
 
@@ -824,6 +840,9 @@ func queryRestAPI(
 	req, err := http.NewRequest("GET", requestUrl, nil)
 	if err != nil {
 		return err
+	}
+	if userAgent != "" {
+		req.Header.Set("User-Agent", userAgent)
 	}
 
 	err = maybeAddAuth(req, authHandler)
@@ -865,7 +884,7 @@ func queryRestAPI(
 }
 
 func (c *Client) parseURLResponse(path string, out interface{}) error {
-	return queryRestAPI(c.BaseURL, path, c.ah, out, false)
+	return queryRestAPI(c.BaseURL, path, c.ah, out, false, c.userAgent)
 }
 
 func (c *Client) parsePostURLResponseTerse(path string, params map[string]interface{}, out interface{}) error {
@@ -902,12 +921,13 @@ func BasicAuthFromURL(us string) (ah AuthHandler) {
 
 // ConnectWithAuth connects to a couchbase cluster with the given
 // authentication handler.
-func ConnectWithAuth(baseU string, ah AuthHandler) (c Client, err error) {
+func ConnectWithAuth(baseU string, ah AuthHandler, userAgent string) (c Client, err error) {
 	c.BaseURL, err = ParseURL(baseU)
 	if err != nil {
 		return
 	}
 	c.ah = ah
+	c.SetUserAgent(userAgent)
 
 	return c, c.parseURLResponse("/pools", &c.Info)
 }
@@ -945,8 +965,8 @@ func (c *Client) ClearTLS() {
 
 // Connect to a couchbase cluster.  An authentication handler will be
 // created from the userinfo in the URL if provided.
-func Connect(baseU string) (Client, error) {
-	return ConnectWithAuth(baseU, BasicAuthFromURL(baseU))
+func Connect(baseU string, userAgent string) (Client, error) {
+	return ConnectWithAuth(baseU, BasicAuthFromURL(baseU), userAgent)
 }
 
 // Sample data for scopes and collections as returned from the
@@ -1442,6 +1462,7 @@ func InvokeEndpointWithRetry(url string, u string, p string, cmd string, ctype s
 		req.Header.Add("Content-Type", ctype)
 	}
 	req.SetBasicAuth(u, p)
+	req.Header.Set("User-Agent", USER_AGENT)
 
 	client := &http.Client{}
 

@@ -20,7 +20,7 @@ import (
 func TestGetRolesAll(t *testing.T) {
 	t.Skip("Skip this test, as it needs a live connection")
 
-	client, err := ConnectWithAuth("http://Administrator:password@localhost:8091", cbauth.NewAuthHandler(nil))
+	client, err := ConnectWithAuth("http://Administrator:password@localhost:8091", cbauth.NewAuthHandler(nil), USER_AGENT)
 	if err != nil {
 		t.Fatalf("Unable to connect: %v", err)
 	}

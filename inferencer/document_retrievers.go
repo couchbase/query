@@ -1208,7 +1208,7 @@ func MakeKVRandomDocumentRetriever(serverURL, bucket, bucketPass string, sampleS
 	var client couchbase.Client
 	var err error
 
-	client, err = couchbase.Connect(serverURL)
+	client, err = couchbase.Connect(serverURL, couchbase.USER_AGENT)
 	if err != nil {
 		return nil, errors.NewInferConnectFailed(serverURL, err)
 	}

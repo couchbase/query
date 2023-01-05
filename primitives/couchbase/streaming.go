@@ -108,6 +108,8 @@ func (c *Client) processStream(baseURL *url.URL, path string, authHandler AuthHa
 		return err
 	}
 
+	req.Header.Set("User-Agent", USER_AGENT)
+
 	err = maybeAddAuth(req, authHandler)
 	if err != nil {
 		return err
@@ -280,6 +282,7 @@ func (b *Bucket) UpdateBucket2(streamingFn StreamingFn) error {
 			}
 			return errors.NewBucketUpdaterStreamingError(err)
 		}
+		req.Header.Set("User-Agent", USER_AGENT)
 
 		// Lock here to avoid having pool closed under us.
 		b.RLock()

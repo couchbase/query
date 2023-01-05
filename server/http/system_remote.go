@@ -33,6 +33,7 @@ import (
 	"github.com/couchbase/query/distributed"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
+	"github.com/couchbase/query/primitives/couchbase"
 )
 
 // http implementation of SystemRemoteAccess
@@ -546,6 +547,7 @@ func (this *systemRemoteHttp) doRemoteEndpointOp(fullEndpoint string, command st
 	request, _ := http.NewRequest(command, fullEndpoint, reader)
 	request.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 	request.SetBasicAuth(u, p)
+	request.Header.Set("User-Agent", couchbase.USER_AGENT)
 
 	resp, err := cp.client.Do(request)
 	if err != nil {

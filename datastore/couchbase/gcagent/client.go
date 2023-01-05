@@ -21,6 +21,7 @@ import (
 	"github.com/couchbase/gocbcore/v10/connstr"
 	ntls "github.com/couchbase/goutils/tls"
 	"github.com/couchbase/query/logging"
+	"github.com/couchbase/query/primitives/couchbase"
 	"github.com/couchbase/query/tenant"
 	"github.com/couchbase/query/util"
 )
@@ -109,6 +110,7 @@ func NewClient(url string, caFile, certFile, keyFile string, passphrase []byte) 
 
 func agentConfig(url, options string, rv *Client) (*gocbcore.AgentConfig, error) {
 	config := &gocbcore.AgentConfig{}
+	config.UserAgent = couchbase.USER_AGENT
 	config.DefaultRetryStrategy = gocbcore.NewBestEffortRetryStrategy(nil)
 	config.KVConfig.ConnectTimeout = _CONNECTTIMEOUT
 	config.KVConfig.ConnectionBufferSize = _KVBUFFSERSIZE

@@ -106,7 +106,7 @@ func command_query(line string, w io.Writer, liner *liner.State) (errors.ErrorCo
 			*/
 
 			if command.DbN1ql == nil {
-				command.DbN1ql, err = n1ql.OpenExtended(serverFlag)
+				command.DbN1ql, err = n1ql.OpenExtended(serverFlag, command.USER_AGENT)
 				if err != nil {
 					return errors.E_SHELL_DRIVER_OPEN, err.Error()
 				}

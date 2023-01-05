@@ -20,6 +20,7 @@ import (
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
+	"github.com/couchbase/query/primitives/couchbase"
 	"github.com/couchbase/query/tenant"
 )
 
@@ -310,6 +311,13 @@ func cbAuthorize(s authSource, privileges *auth.Privileges, credentials *auth.Cr
 
 		req := credentials.HttpRequest
 		if req != nil {
+			ua := req.Header.Get("User-Agent")
+			if ua != "" && ua != couchbase.USER_AGENT {
+				ua = ua + "/" + couchbase.USER_AGENT
+			} else {
+				ua = couchbase.USER_AGENT
+			}
+			req.Header.Set("User-Agent", ua)
 			impersonation, _, _ := cbauth.ExtractOnBehalfIdentity(req)
 			creds, err := s.authWebCreds(req)
 			if err == nil {

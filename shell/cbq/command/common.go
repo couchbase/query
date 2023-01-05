@@ -39,6 +39,8 @@ type Credentials []Credential
 
 var DbN1ql n1ql.N1qlDB
 
+const USER_AGENT = "cbq-shell"
+
 func init() {
 
 	/* Populate the Predefined user variable map with default
@@ -630,7 +632,7 @@ func printDesc(cmdname string) (errors.ErrorCode, string) {
 func Ping(server string) error {
 	var err error
 	oldDbN1ql := DbN1ql
-	DbN1ql, err = n1ql.OpenExtended(server)
+	DbN1ql, err = n1ql.OpenExtended(server, USER_AGENT)
 	if err != nil {
 		DbN1ql = oldDbN1ql
 		return err

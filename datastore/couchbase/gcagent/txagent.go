@@ -19,6 +19,7 @@ import (
 	"github.com/couchbase/gocbcore/v10"
 	cerrors "github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
+	"github.com/couchbase/query/primitives/couchbase"
 	"github.com/couchbase/query/value"
 )
 
@@ -58,7 +59,7 @@ type AgentProvider struct {
 func (ap *AgentProvider) CreateAgent() error {
 	config := *ap.client.config
 	config.SecurityConfig.UseTLS = (ap.client.TLSRootCAs() != nil)
-	config.UserAgent = ap.bucketName
+	config.UserAgent = ap.bucketName + "/" + couchbase.USER_AGENT
 	config.BucketName = ap.bucketName
 
 	agent, err := gocbcore.CreateAgent(&config)
