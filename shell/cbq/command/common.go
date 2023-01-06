@@ -225,7 +225,10 @@ func StrToVal(param string) (val value.Value) {
 	// convert to JSON-compliant quoted strings
 	if (strings.HasPrefix(param, "'") && strings.HasSuffix(param, "'")) ||
 		(strings.HasPrefix(param, "`") && strings.HasSuffix(param, "`")) {
-		param = "\"" + param[1:len(param)-1] + "\""
+		b, e := json.Marshal(param[1 : len(param)-1])
+		if e == nil {
+			param = string(b)
+		}
 	}
 
 	bytes := []byte(param)
