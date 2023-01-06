@@ -22,7 +22,7 @@ func (this *sargable) VisitAny(pred *expression.Any) (interface{}, error) {
 		return false, nil
 	}
 
-	var mapping expression.Expression
+	var satisfies, mapping expression.Expression
 	bindings := pred.Bindings()
 	array, ok := all.Array().(*expression.Array)
 	if !ok {
@@ -30,24 +30,25 @@ func (this *sargable) VisitAny(pred *expression.Any) (interface{}, error) {
 			!bindings[0].Expression().EquivalentTo(all.Array()) {
 			return false, nil
 		}
-		array = nil
 		bindVar := expression.NewIdentifier(bindings[0].Variable())
 		bindVar.SetBindingVariable(true)
 		mapping = bindVar
+		satisfies = pred.Satisfies()
 	} else {
 		if !bindings.SubsetOf(array.Bindings()) {
 			return false, nil
 		}
 		mapping = array.ValueMapping()
-	}
 
-	satisfies, err := getSatisfies(pred, this.key, array, this.aliases)
-	if err != nil {
-		return false, err
-	}
+		var err error
+		satisfies, err = getSatisfies(pred, this.key, array, this.aliases)
+		if err != nil {
+			return false, err
+		}
 
-	if array != nil && array.When() != nil && !checkSubset(satisfies, array.When(), this.context) {
-		return false, nil
+		if array.When() != nil && !checkSubset(satisfies, array.When(), this.context) {
+			return false, nil
+		}
 	}
 
 	mappings := expression.Expressions{mapping}
@@ -66,7 +67,7 @@ func getSatisfies(pred, key expression.Expression, array *expression.Array, alia
 		satisfies = p.Satisfies()
 		pBindings = p.Bindings()
 	}
-	if array != nil && expression.HasRenameableBindings(pred, key, aliases) == expression.BINDING_VARS_DIFFER {
+	if expression.HasRenameableBindings(pred, key, aliases) == expression.BINDING_VARS_DIFFER {
 		renamer := expression.NewRenamer(pBindings, array.Bindings())
 		return renamer.Map(satisfies.Copy())
 	}
