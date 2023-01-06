@@ -17,6 +17,7 @@ import (
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/expression/parser"
 	"github.com/couchbase/query/prepareds"
+	"github.com/couchbase/query/tenant"
 	"github.com/couchbase/query/timestamp"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
@@ -44,15 +45,33 @@ func (b *preparedsKeyspace) Name() string {
 
 func (b *preparedsKeyspace) Count(context datastore.QueryContext) (int64, errors.Error) {
 	var count int
+	var creds distributed.Creds
 
+	userName := credsFromContext(context)
+	if userName == "" {
+		creds = distributed.NO_CREDS
+	} else {
+		creds = distributed.Creds(userName)
+	}
 	count = 0
 	distributed.RemoteAccess().GetRemoteKeys([]string{}, "prepareds", func(id string) bool {
 		count++
 		return true
 	}, func(warn errors.Error) {
 		context.Warning(warn)
-	})
-	return int64(prepareds.CountPrepareds() + count), nil
+	}, creds, "")
+	if userName == "" {
+		count += prepareds.CountPrepareds()
+	} else {
+		tenantName := getTenant(context.TenantCtx())
+		prepareds.PreparedsForeach(func(name string, prepared *prepareds.CacheEntry) bool {
+			if checkCacheEntry(prepared, tenantName) {
+				count++
+			}
+			return true
+		}, nil)
+	}
+	return int64(count), nil
 }
 
 func (b *preparedsKeyspace) Size(context datastore.QueryContext) (int64, errors.Error) {
@@ -69,6 +88,16 @@ func (b *preparedsKeyspace) Indexers() ([]datastore.Indexer, errors.Error) {
 
 func (b *preparedsKeyspace) Fetch(keys []string, keysMap map[string]value.AnnotatedValue,
 	context datastore.QueryContext, subPaths []string) (errs errors.Errors) {
+	var creds distributed.Creds
+	var tenantName string
+
+	userName := credsFromContext(context)
+	if userName == "" {
+		creds = distributed.NO_CREDS
+	} else {
+		tenantName = getTenant(context.TenantCtx())
+		creds = distributed.Creds(userName)
+	}
 
 	// now that the node name can change in flight, use a consistent one across fetches
 	whoAmI := distributed.RemoteAccess().WhoAmI()
@@ -93,11 +122,14 @@ func (b *preparedsKeyspace) Fetch(keys []string, keysMap map[string]value.Annota
 				},
 				func(warn errors.Error) {
 					context.Warning(warn)
-				}, distributed.NO_CREDS, "")
+				}, creds, "")
 		} else {
 
 			// local entry
 			prepareds.PreparedDo(localKey, func(entry *prepareds.CacheEntry) {
+				if userName != "" && !checkCacheEntry(entry, tenantName) {
+					return
+				}
 				itemMap := map[string]interface{}{
 					"name":            localKey,
 					"uses":            entry.Uses,
@@ -159,6 +191,16 @@ func (b *preparedsKeyspace) Fetch(keys []string, keysMap map[string]value.Annota
 
 func (b *preparedsKeyspace) Delete(deletes value.Pairs, context datastore.QueryContext) (value.Pairs, errors.Errors) {
 	var err errors.Error
+	var creds distributed.Creds
+	var tenantName string
+
+	userName := credsFromContext(context)
+	if userName == "" {
+		creds = distributed.NO_CREDS
+	} else {
+		tenantName = getTenant(context.TenantCtx())
+		creds = distributed.Creds(userName)
+	}
 
 	// now that the node name can change in flight, use a consistent one across deletes
 	whoAmI := distributed.RemoteAccess().WhoAmI()
@@ -174,11 +216,13 @@ func (b *preparedsKeyspace) Delete(deletes value.Pairs, context datastore.QueryC
 				func(warn errors.Error) {
 					context.Warning(warn)
 				},
-				distributed.NO_CREDS, "")
+				creds, "")
 
 			// local entry
 		} else {
-			err = prepareds.DeletePrepared(localKey)
+			err = prepareds.DeletePreparedFunc(localKey, func(entry *prepareds.CacheEntry) bool {
+				return userName == "" || checkCacheEntry(entry, tenantName)
+			})
 		}
 		if err != nil {
 			deleted := make([]value.Pair, i)
@@ -287,6 +331,11 @@ func (pi *preparedsIndex) Scan(requestId string, span *datastore.Span, distinct 
 		pi.ScanEntries(requestId, limit, cons, vector, conn)
 	} else {
 		var entry *datastore.IndexEntry
+		var creds distributed.Creds
+		var process func(name string, prepared *prepareds.CacheEntry) bool
+		var send func() bool
+		var doSend bool
+		var tenantName string
 		defer conn.Sender().Close()
 
 		spanEvaluator, err := compileSpan(span)
@@ -294,20 +343,45 @@ func (pi *preparedsIndex) Scan(requestId string, span *datastore.Span, distinct 
 			conn.Error(err)
 			return
 		}
-		if spanEvaluator.isEquals() {
 
-			// now that the node name can change in flight, use a consistent one across the scan
-			whoAmI := distributed.RemoteAccess().WhoAmI()
-			if spanEvaluator.key() == whoAmI {
-				prepareds.PreparedsForeach(func(name string, prepared *prepareds.CacheEntry) bool {
+		// now that the node name can change in flight, use a consistent one across the scan
+		whoAmI := distributed.RemoteAccess().WhoAmI()
+		userName := credsFromContext(conn.Context())
+		if userName == "" {
+			creds = distributed.NO_CREDS
+			process = func(name string, prepared *prepareds.CacheEntry) bool {
+				entry = &datastore.IndexEntry{
+					PrimaryKey: distributed.RemoteAccess().MakeKey(whoAmI, name),
+					EntryKey:   value.Values{value.NewValue(whoAmI)},
+				}
+				return true
+			}
+			send = func() bool {
+				return sendSystemKey(conn, entry)
+			}
+		} else {
+			creds = distributed.Creds(userName)
+			tenantName = getTenant(conn.Context().TenantCtx())
+			process = func(name string, prepared *prepareds.CacheEntry) bool {
+				doSend = checkCacheEntry(prepared, tenantName)
+				if doSend {
 					entry = &datastore.IndexEntry{
 						PrimaryKey: distributed.RemoteAccess().MakeKey(whoAmI, name),
 						EntryKey:   value.Values{value.NewValue(whoAmI)},
 					}
-					return true
-				}, func() bool {
+				}
+				return true
+			}
+			send = func() bool {
+				if doSend {
 					return sendSystemKey(conn, entry)
-				})
+				}
+				return true
+			}
+		}
+		if spanEvaluator.isEquals() {
+			if spanEvaluator.key() == whoAmI {
+				prepareds.PreparedsForeach(process, send)
 			} else {
 				nodes := []string{spanEvaluator.key()}
 				distributed.RemoteAccess().GetRemoteKeys(nodes, "prepareds", func(id string) bool {
@@ -319,27 +393,15 @@ func (pi *preparedsIndex) Scan(requestId string, span *datastore.Span, distinct 
 					return sendSystemKey(conn, &indexEntry)
 				}, func(warn errors.Error) {
 					conn.Warning(warn)
-				})
+				}, creds, "")
 			}
 		} else {
-
-			// now that the node name can change in flight, use a consistent one across the scan
-			whoAmI := distributed.RemoteAccess().WhoAmI()
 			nodes := distributed.RemoteAccess().GetNodeNames()
 			eligibleNodes := []string{}
 			for _, node := range nodes {
 				if spanEvaluator.evaluate(node) {
 					if node == whoAmI {
-
-						prepareds.PreparedsForeach(func(name string, prepared *prepareds.CacheEntry) bool {
-							entry = &datastore.IndexEntry{
-								PrimaryKey: distributed.RemoteAccess().MakeKey(whoAmI, name),
-								EntryKey:   value.Values{value.NewValue(whoAmI)},
-							}
-							return true
-						}, func() bool {
-							return sendSystemKey(conn, entry)
-						})
+						prepareds.PreparedsForeach(process, send)
 					} else {
 						eligibleNodes = append(eligibleNodes, node)
 					}
@@ -355,7 +417,7 @@ func (pi *preparedsIndex) Scan(requestId string, span *datastore.Span, distinct 
 					return sendSystemKey(conn, &indexEntry)
 				}, func(warn errors.Error) {
 					conn.Warning(warn)
-				})
+				}, creds, "")
 			}
 		}
 	}
@@ -364,21 +426,61 @@ func (pi *preparedsIndex) Scan(requestId string, span *datastore.Span, distinct 
 func (pi *preparedsIndex) ScanEntries(requestId string, limit int64, cons datastore.ScanConsistency,
 	vector timestamp.Vector, conn *datastore.IndexConnection) {
 	var entry *datastore.IndexEntry
+	var creds distributed.Creds
+	var process func(name string, prepared *prepareds.CacheEntry) bool
+	var send func() bool
+	var doSend bool
+	var tenantName string
 
 	defer conn.Sender().Close()
 
 	// now that the node name can change in flight, use a consistent one across the scan
 	whoAmI := distributed.RemoteAccess().WhoAmI()
-	prepareds.PreparedsForeach(func(name string, prepared *prepareds.CacheEntry) bool {
-		entry = &datastore.IndexEntry{PrimaryKey: distributed.RemoteAccess().MakeKey(whoAmI, name)}
-		return true
-	}, func() bool {
-		return sendSystemKey(conn, entry)
-	})
+
+	userName := credsFromContext(conn.Context())
+	if userName == "" {
+		creds = distributed.NO_CREDS
+		process = func(name string, prepared *prepareds.CacheEntry) bool {
+			entry = &datastore.IndexEntry{PrimaryKey: distributed.RemoteAccess().MakeKey(whoAmI, name)}
+			return true
+		}
+		send = func() bool {
+			return sendSystemKey(conn, entry)
+		}
+	} else {
+		creds = distributed.Creds(userName)
+		tenantName = getTenant(conn.Context().TenantCtx())
+		process = func(name string, prepared *prepareds.CacheEntry) bool {
+			doSend = checkCacheEntry(prepared, tenantName)
+			if doSend {
+				entry = &datastore.IndexEntry{PrimaryKey: distributed.RemoteAccess().MakeKey(whoAmI, name)}
+			}
+			return true
+		}
+		send = func() bool {
+			if doSend {
+				return sendSystemKey(conn, entry)
+			}
+			return true
+		}
+	}
+	prepareds.PreparedsForeach(process, send)
 	distributed.RemoteAccess().GetRemoteKeys([]string{}, "prepareds", func(id string) bool {
 		indexEntry := datastore.IndexEntry{PrimaryKey: id}
 		return sendSystemKey(conn, &indexEntry)
 	}, func(warn errors.Error) {
 		conn.Warning(warn)
-	})
+	}, creds, "")
+}
+
+// TODO this needs to be amended when we support multiple tenants per each user
+// if we decide to list all associated tenants and not just the current one
+func getTenant(context tenant.Context) string {
+
+	// if the user has no tenant associated, then we match no entry
+	return context.Bucket()
+}
+
+func checkCacheEntry(entry *prepareds.CacheEntry, tenantName string) bool {
+	return entry.Prepared.Tenant() == tenantName
 }

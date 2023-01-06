@@ -439,15 +439,35 @@ func (s *store) GetUserBuckets(creds *auth.Credentials) []string {
 	return res
 }
 
+func (s *store) GetImpersonateBuckets(user, domain string) []string {
+	if s.CbAuthInit == false {
+		// cbauth is not initialized. Access to SASL protected buckets will be
+		// denied by the couchbase server
+		logging.Warnf("CbAuth not intialized")
+		return []string{}
+	}
+	if len(user) == 0 {
+		return []string{}
+	}
+	res, _ := cbauth.GetUserBuckets(user, domain)
+	return res
+}
+
 func (s *store) PreAuthorize(privileges *auth.Privileges) {
 	cbPreAuthorize(privileges)
 }
 
-func (s *store) CredsString(creds *auth.Credentials) string {
+func (s *store) CredsString(creds *auth.Credentials) (string, string) {
 	if creds != nil && len(creds.CbauthCredentialsList) > 0 {
-		return creds.CbauthCredentialsList[0].Name()
+		u, d := creds.CbauthCredentialsList[0].User()
+
+		// defensively
+		if d == "" {
+			d = "local"
+		}
+		return u, d
 	}
-	return ""
+	return "", ""
 }
 
 func (s *store) SetLogLevel(level logging.Level) {

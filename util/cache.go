@@ -237,6 +237,26 @@ func (this *GenCache) Delete(id string, cleanup func(interface{})) bool {
 	return false
 }
 
+func (this *GenCache) DeleteWithCheck(id string, cleanup func(interface{}) bool) bool {
+	cacheNum := HashString(id, this.numCaches)
+	this.lock(cacheNum)
+	defer this.locks[cacheNum].Unlock()
+
+	elem, ok := this.maps[cacheNum][id]
+	if ok {
+		res := true
+		if cleanup != nil {
+			res = cleanup(elem.contents)
+		}
+		if res {
+			this.remove(elem, cacheNum)
+			atomic.AddInt32(&this.curSize, -1)
+		}
+		return res
+	}
+	return false
+}
+
 // Returns an element's contents by id
 func (this *GenCache) Get(id string, process func(interface{})) interface{} {
 	cacheNum := HashString(id, this.numCaches)

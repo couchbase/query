@@ -49,7 +49,7 @@ func (b *tasksCacheKeyspace) Count(context datastore.QueryContext) (int64, error
 		return true
 	}, func(warn errors.Error) {
 		context.Warning(warn)
-	})
+	}, distributed.NO_CREDS, "")
 	return int64(scheduler.CountTasks() + count), nil
 }
 
@@ -288,7 +288,7 @@ func (pi *tasksCacheIndex) Scan(requestId string, span *datastore.Span, distinct
 					return sendSystemKey(conn, &indexEntry)
 				}, func(warn errors.Error) {
 					conn.Warning(warn)
-				})
+				}, distributed.NO_CREDS, "")
 			}
 		} else {
 
@@ -324,7 +324,7 @@ func (pi *tasksCacheIndex) Scan(requestId string, span *datastore.Span, distinct
 					return sendSystemKey(conn, &indexEntry)
 				}, func(warn errors.Error) {
 					conn.Warning(warn)
-				})
+				}, distributed.NO_CREDS, "")
 			}
 		}
 	}
@@ -349,5 +349,5 @@ func (pi *tasksCacheIndex) ScanEntries(requestId string, limit int64, cons datas
 		return sendSystemKey(conn, &indexEntry)
 	}, func(warn errors.Error) {
 		conn.Warning(warn)
-	})
+	}, distributed.NO_CREDS, "")
 }

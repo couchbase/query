@@ -373,10 +373,7 @@ func doVitals(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, 
 	}
 }
 
-// Credentials can come from two sources: the basic username/password
-// from basic authorization, and from a "creds" value, which encodes
-// in JSON an array of username/password pairs, like this:
-//   [{"user":"foo", "pass":"foopass"}, {"user":"bar", "pass": "barpass"}]
+// Credentials only come from the basic username/password
 func (endpoint *HttpEndpoint) getCredentialsFromRequest(ds datastore.Datastore, req *http.Request) (*auth.Credentials, errors.Error, bool) {
 	isInternal := false
 
@@ -392,29 +389,25 @@ func (endpoint *HttpEndpoint) getCredentialsFromRequest(ds datastore.Datastore, 
 			isInternal = true
 		}
 	}
-	creds_json := req.FormValue("creds")
-	if creds_json != "" {
-		cred_list := make([]map[string]string, 0, 2)
-		err := json.Unmarshal([]byte(creds_json), &cred_list)
-		if err != nil {
-			return nil, errors.NewAdminCredsError(creds_json, err), false
-		} else {
-			for _, v := range cred_list {
-				user, user_ok := v["user"]
-				pass, pass_ok := v["pass"]
-				if !user_ok || !pass_ok {
-					return nil, errors.NewAdminCredsError(creds_json, nil), false
-				}
-
-				creds.Users[user] = pass
-				if endpoint.internalUser == user {
-					isInternal = true
-				}
-			}
-		}
-	}
 	creds.HttpRequest = req
 	return creds, nil, isInternal
+}
+
+func (endpoint *HttpEndpoint) getImpersonate(req *http.Request) (string, errors.Error) {
+	return req.FormValue("impersonate"), nil
+}
+
+// TODO this needs to be expanded when we support multiple tenants per each user
+func (endpoint *HttpEndpoint) getImpersonateBucket(req *http.Request) (string, string, errors.Error) {
+	impersonate := req.FormValue("impersonate")
+	if len(impersonate) > 0 {
+		userName, domain := datastore.DecodeName(impersonate)
+		buckets := datastore.GetImpersonateBuckets(userName, domain)
+		if len(buckets) > 0 {
+			return impersonate, buckets[0], nil
+		}
+	}
+	return "", "", nil
 }
 
 func (endpoint *HttpEndpoint) Authorize(req *http.Request) errors.Error {
@@ -463,7 +456,12 @@ func doPrepared(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 		if err != nil {
 			return nil, err
 		}
-		err = prepareds.DeletePrepared(name)
+		err = prepareds.DeletePreparedFunc(name, func(e *prepareds.CacheEntry) bool {
+
+			// for serverless user access, we treat entries not owned by the user as not existent
+			tenantName, _, err1 := endpoint.getImpersonateBucket(req)
+			return err1 == nil && (tenantName == "" || e.Prepared.Tenant() == tenantName)
+		})
 		if err != nil {
 			return nil, err
 		}
@@ -508,6 +506,13 @@ func doPrepared(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 		var res interface{}
 
 		prepareds.PreparedDo(name, func(entry *prepareds.CacheEntry) {
+
+			// for serverless user access, we treat entries not owned by the user as not existent
+			tenantName, _, err1 := endpoint.getImpersonateBucket(req)
+			if err1 != nil || (tenantName != "" && entry.Prepared.Tenant() != tenantName) {
+				return
+			}
+
 			itemMap := map[string]interface{}{
 				"name":            entry.Prepared.Name(),
 				"uses":            entry.Uses,
@@ -1409,14 +1414,28 @@ func doActiveRequest(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Re
 			// many log messages to be generated.
 			af.EventTypeId = audit.API_DO_NOT_AUDIT
 		}
-		return activeRequestWorkHorse(endpoint, requestId, (req.Method == "POST")), nil
+		impersonate, err1 := endpoint.getImpersonate(req)
+		if err1 != nil {
+			return nil, err1
+		}
+		return activeRequestWorkHorse(endpoint, requestId, impersonate, (req.Method == "POST")), nil
 
 	} else if req.Method == "DELETE" {
 		err, _ := endpoint.verifyCredentialsFromRequest("system:active_requests", auth.PRIV_SYSTEM_READ, req, af)
 		if err != nil {
 			return nil, err
 		}
-		if endpoint.actives.Delete(requestId, true) {
+		impersonate, err1 := endpoint.getImpersonate(req)
+		if err1 != nil {
+			return nil, err1
+		}
+		if endpoint.actives.Delete(requestId, true, func(r server.Request) bool {
+			if impersonate != "" {
+				users := datastore.CredsArray(r.Credentials())
+				return len(users) > 0 && impersonate == users[0]
+			}
+			return true
+		}) {
 			return nil, errors.NewServiceErrorHttpReq(requestId)
 		}
 
@@ -1426,10 +1445,16 @@ func doActiveRequest(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Re
 	}
 }
 
-func activeRequestWorkHorse(endpoint *HttpEndpoint, requestId string, profiling bool) interface{} {
+func activeRequestWorkHorse(endpoint *HttpEndpoint, requestId string, userName string, profiling bool) interface{} {
 	var res interface{}
 
 	_ = endpoint.actives.Get(requestId, func(request server.Request) {
+		if userName != "" {
+			users := datastore.CredsArray(request.Credentials())
+			if len(users) == 0 || userName != users[0] {
+				return
+			}
+		}
 		reqMap := map[string]interface{}{
 			"requestId": request.Id().String(),
 		}
@@ -1649,13 +1674,23 @@ func doCompletedRequest(endpoint *HttpEndpoint, w http.ResponseWriter, req *http
 			// many log messages to be generated.
 			af.EventTypeId = audit.API_DO_NOT_AUDIT
 		}
-		return completedRequestWorkHorse(requestId, (req.Method == "POST")), nil
+		impersonate, err1 := endpoint.getImpersonate(req)
+		if err1 != nil {
+			return nil, err1
+		}
+		return completedRequestWorkHorse(requestId, impersonate, (req.Method == "POST")), nil
 	} else if req.Method == "DELETE" {
 		err, _ := endpoint.verifyCredentialsFromRequest("system:completed_requests", auth.PRIV_SYSTEM_READ, req, af)
 		if err != nil {
 			return nil, err
 		}
-		err = server.RequestDelete(requestId)
+		impersonate, err1 := endpoint.getImpersonate(req)
+		if err1 != nil {
+			return nil, err1
+		}
+		err = server.RequestDelete(requestId, func(request *server.RequestLogEntry) bool {
+			return impersonate == "" || impersonate == request.Users
+		})
 		if err != nil {
 			return nil, err
 		} else {
@@ -1666,10 +1701,13 @@ func doCompletedRequest(endpoint *HttpEndpoint, w http.ResponseWriter, req *http
 	}
 }
 
-func completedRequestWorkHorse(requestId string, profiling bool) interface{} {
+func completedRequestWorkHorse(requestId string, userName string, profiling bool) interface{} {
 	var res interface{}
 
 	server.RequestDo(requestId, func(request *server.RequestLogEntry) {
+		if userName != "" && userName != request.Users {
+			return
+		}
 		reqMap := map[string]interface{}{
 			"requestId": request.RequestId,
 		}
@@ -1852,25 +1890,69 @@ func doCompletedRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *htt
 
 func doPreparedIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
 	af.EventTypeId = audit.API_DO_NOT_AUDIT
-	return prepareds.NamePrepareds(), nil
+	err, _ := endpoint.verifyCredentialsFromRequest("system:active_requests", auth.PRIV_SYSTEM_READ, req, af)
+	if err != nil {
+		return nil, err
+	}
+	_, tenantName, err := endpoint.getImpersonateBucket(req)
+	if err != nil {
+		return nil, err
+	}
+	numEntries := prepareds.CountPrepareds()
+	keys := make([]string, 0, numEntries)
+	var snapshot func(key string, request *prepareds.CacheEntry) bool
+
+	if tenantName == "" {
+		snapshot = func(key string, prepared *prepareds.CacheEntry) bool {
+			keys = append(keys, key)
+			return true
+		}
+	} else {
+		snapshot = func(key string, prepared *prepareds.CacheEntry) bool {
+			if prepared.Prepared.Tenant() == tenantName {
+				keys = append(keys, key)
+			}
+			return true
+		}
+	}
+	prepareds.PreparedsForeach(snapshot, nil)
+	return keys, nil
 }
 
 func doRequestIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
 	af.EventTypeId = audit.API_DO_NOT_AUDIT
+	err, _ := endpoint.verifyCredentialsFromRequest("system:active_requests", auth.PRIV_SYSTEM_READ, req, af)
+	if err != nil {
+		return nil, err
+	}
+	userName, err := endpoint.getImpersonate(req)
+	if err != nil {
+		return nil, err
+	}
 	numEntries, err := endpoint.actives.Count()
 	if err != nil {
 		return nil, err
 	}
-	requests := make([]string, numEntries)
-	i := 0
-	snapshot := func(requestId string, request server.Request) bool {
-		if i >= numEntries {
+	requests := make([]string, 0, numEntries)
+	var snapshot func(requestId string, request server.Request) bool
+
+	if userName == "" {
+		snapshot = func(requestId string, request server.Request) bool {
 			requests = append(requests, requestId)
-		} else {
-			requests[i] = requestId
+			return true
 		}
-		i++
-		return true
+	} else {
+		snapshot = func(requestId string, request server.Request) bool {
+
+			// for ease of processing we ignore the tenant and
+			// we expect the request to only have the one user
+			// this could be expanded later
+			users := datastore.CredsArray(request.Credentials())
+			if len(users) > 0 && userName == users[0] {
+				requests = append(requests, requestId)
+			}
+			return true
+		}
 	}
 	endpoint.actives.ForEach(snapshot, nil)
 	return requests, nil
@@ -1878,17 +1960,32 @@ func doRequestIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 
 func doCompletedIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
 	af.EventTypeId = audit.API_DO_NOT_AUDIT
+	err, _ := endpoint.verifyCredentialsFromRequest("system:completed_requests", auth.PRIV_SYSTEM_READ, req, af)
+	if err != nil {
+		return nil, err
+	}
+	userName, err := endpoint.getImpersonate(req)
+	if err != nil {
+		return nil, err
+	}
 	numEntries := server.RequestsCount()
-	completed := make([]string, numEntries)
-	i := 0
-	snapshot := func(requestId string, request *server.RequestLogEntry) bool {
-		if i >= numEntries {
+	completed := make([]string, 0, numEntries)
+	var snapshot func(requestId string, request *server.RequestLogEntry) bool
+
+	if userName == "" {
+		snapshot = func(requestId string, request *server.RequestLogEntry) bool {
 			completed = append(completed, requestId)
-		} else {
-			completed[i] = requestId
+			return true
 		}
-		i++
-		return true
+	} else {
+		snapshot = func(requestId string, request *server.RequestLogEntry) bool {
+
+			// ditto
+			if userName == request.Users {
+				completed = append(completed, requestId)
+			}
+			return true
+		}
 	}
 	server.RequestsForeach(snapshot, nil)
 	return completed, nil
@@ -1896,22 +1993,38 @@ func doCompletedIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.R
 
 func doFunctionsIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
 	af.EventTypeId = audit.API_DO_NOT_AUDIT
+	err, _ := endpoint.verifyCredentialsFromRequest("system:functions_cache", auth.PRIV_SYSTEM_READ, req, af)
+	if err != nil {
+		return nil, err
+	}
 	return functions.NameFunctions(), nil
 }
 
 func doDictionaryIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
 	af.EventTypeId = audit.API_DO_NOT_AUDIT
+	err, _ := endpoint.verifyCredentialsFromRequest("system:dictionary_cache", auth.PRIV_SYSTEM_READ, req, af)
+	if err != nil {
+		return nil, err
+	}
 	return dictionary.NameDictCacheEntries(), nil
 }
 
 func doTasksIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
 	af.EventTypeId = audit.API_DO_NOT_AUDIT
+	err, _ := endpoint.verifyCredentialsFromRequest("system:tasks", auth.PRIV_SYSTEM_READ, req, af)
+	if err != nil {
+		return nil, err
+	}
 	return scheduler.NameTasks(), nil
 }
 
 func doTransactionsIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request,
 	af *audit.ApiAuditFields) (interface{}, errors.Error) {
 	af.EventTypeId = audit.API_DO_NOT_AUDIT
+	err, _ := endpoint.verifyCredentialsFromRequest("system:transactions", auth.PRIV_SYSTEM_READ, req, af)
+	if err != nil {
+		return nil, err
+	}
 	return transactions.NameTransactions(), nil
 }
 

@@ -108,11 +108,15 @@ func (s *store) GetUserBuckets(*auth.Credentials) []string {
 	return []string{}
 }
 
+func (s *store) GetImpersonateBuckets(string, string) []string {
+	return []string{}
+}
+
 func (s *store) PreAuthorize(*auth.Privileges) {
 }
 
-func (s *store) CredsString(*auth.Credentials) string {
-	return ""
+func (s *store) CredsString(*auth.Credentials) (string, string) {
+	return "", ""
 }
 
 func (s *store) SetLogLevel(level logging.Level) {

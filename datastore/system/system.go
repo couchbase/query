@@ -17,6 +17,7 @@ import (
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/logging"
+	"github.com/couchbase/query/tenant"
 	"github.com/couchbase/query/value"
 )
 
@@ -64,8 +65,15 @@ func (s *store) PrivilegesFromPath(fullname string, keyspace string, privilege a
 	case auth.PRIV_QUERY_DELETE:
 		switch keyspace {
 
+		// currently these keyspaces require system read for delete if on prem
+		// and open (but limited to the user) for elixir
+		case KEYSPACE_NAME_ACTIVE, KEYSPACE_NAME_REQUESTS, KEYSPACE_NAME_PREPAREDS:
+			if !tenant.IsServerless() {
+				privs.Add("", auth.PRIV_SYSTEM_READ, auth.PRIV_PROPS_NONE)
+			}
+
 		// currently these keyspaces require system read for delete
-		case KEYSPACE_NAME_ACTIVE, KEYSPACE_NAME_REQUESTS, KEYSPACE_NAME_PREPAREDS, KEYSPACE_NAME_FUNCTIONS_CACHE, KEYSPACE_NAME_DICTIONARY_CACHE:
+		case KEYSPACE_NAME_FUNCTIONS_CACHE, KEYSPACE_NAME_DICTIONARY_CACHE:
 			privs.Add("", auth.PRIV_SYSTEM_READ, auth.PRIV_PROPS_NONE)
 
 			// for all other keyspaces, we rely on the implementation do deny access
@@ -98,6 +106,13 @@ func (s *store) PrivilegesFromPath(fullname string, keyspace string, privilege a
 		case KEYSPACE_NAME_ALL_INDEXES:
 		case KEYSPACE_NAME_MY_USER_INFO:
 		case KEYSPACE_NAME_FUNCTIONS:
+
+		// currently these keyspaces require system read for select if on prem
+		// and open (but limited to the user) for elixir
+		case KEYSPACE_NAME_ACTIVE, KEYSPACE_NAME_REQUESTS, KEYSPACE_NAME_PREPAREDS:
+			if !tenant.IsServerless() {
+				privs.Add("", auth.PRIV_SYSTEM_READ, auth.PRIV_PROPS_NONE)
+			}
 
 		// system read for everything else
 		default:
@@ -171,11 +186,15 @@ func (s *store) GetUserBuckets(*auth.Credentials) []string {
 	return []string{}
 }
 
+func (s *store) GetImpersonateBuckets(string, string) []string {
+	return []string{}
+}
+
 func (s *store) PreAuthorize(*auth.Privileges) {
 }
 
-func (s *store) CredsString(*auth.Credentials) string {
-	return ""
+func (s *store) CredsString(*auth.Credentials) (string, string) {
+	return "", ""
 }
 
 func (s *store) SetLogLevel(level logging.Level) {

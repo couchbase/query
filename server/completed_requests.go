@@ -32,6 +32,7 @@ import (
 	"github.com/couchbase/query/execution"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/tenant"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
@@ -83,6 +84,7 @@ type RequestLogEntry struct {
 	RemoteAddr               string
 	UserAgent                string
 	Tag                      string
+	Tenant                   string
 }
 
 type qualifier interface {
@@ -477,13 +479,17 @@ func RequestDo(id string, f func(*RequestLogEntry)) {
 	})
 }
 
-func RequestDelete(id string) errors.Error {
-	if requestLog.cache.Delete(id, func(r interface{}) {
+func RequestDelete(id string, f func(*RequestLogEntry) bool) errors.Error {
+	if requestLog.cache.DeleteWithCheck(id, func(r interface{}) bool {
 		re := r.(*RequestLogEntry)
+		if f != nil && !f(re) {
+			return false
+		}
 		if re.timings != nil {
 			re.timings.Recycle()
 			re.timings = nil
 		}
+		return true
 	}) {
 		return nil
 	} else {
@@ -577,6 +583,7 @@ func LogRequest(request_time, service_time, transactionElapsedTime time.Duration
 		Mutations:       request.MutationCount(),
 		QueryContext:    request.QueryContext(),
 		TxId:            request.TxId(),
+		Tenant:          tenant.Bucket(request.TenantCtx()),
 	}
 	errs := request.Errors()
 	re.Errors = make([]map[string]interface{}, 0, len(errs))

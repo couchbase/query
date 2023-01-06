@@ -341,7 +341,7 @@ func (this *HttpEndpoint) ServeHTTP(resp http.ResponseWriter, req *http.Request)
 	}()
 
 	if this.trackUsers {
-		userName := datastore.FirstCred(request.Credentials())
+		userName, domain := datastore.FirstCred(request.Credentials())
 		this.usersLock.Lock()
 		user := this.trackedUsers[userName]
 		request.SetTracked()
@@ -354,7 +354,7 @@ func (this *HttpEndpoint) ServeHTTP(resp http.ResponseWriter, req *http.Request)
 				outputMeter:    util.NewMeter(time.Minute, time.Minute),
 			}
 			user.uuid = strings.Replace(user.uuid, "-", "_", -1)
-			limits, err := cbauth.GetUserLimits(userName, "local", "query")
+			limits, err := cbauth.GetUserLimits(userName, domain, "query")
 			if err != nil {
 				logging.Infof("No user limits found for user <ud>%v</ud> - limits not enforced", userName)
 			} else {
@@ -368,7 +368,7 @@ func (this *HttpEndpoint) ServeHTTP(resp http.ResponseWriter, req *http.Request)
 			this.usersLock.Unlock()
 		} else {
 			if this.trackedUsersVersion != user.limitsVersion {
-				limits, err := cbauth.GetUserLimits(userName, "local", "query")
+				limits, err := cbauth.GetUserLimits(userName, domain, "query")
 				if err != nil {
 					logging.Infof("No user limits found for user <ud>%v</ud> - limits not changed")
 				} else {
@@ -427,7 +427,8 @@ func (this *HttpEndpoint) ServeHTTP(resp http.ResponseWriter, req *http.Request)
 		if len(path) > 1 {
 			bucket = path[1]
 		}
-		ctx, d, err := tenant.Throttle(datastore.IsAdmin(request.Credentials()), datastore.FirstCred(request.Credentials()), bucket,
+		userName, _ := datastore.FirstCred(request.Credentials())
+		ctx, d, err := tenant.Throttle(datastore.IsAdmin(request.Credentials()), userName, bucket,
 			datastore.GetUserBuckets(request.Credentials()), this.server.RequestTimeout(request.Timeout()))
 		request.throttleTime = d
 		if err != nil {
@@ -454,7 +455,7 @@ func (this *HttpEndpoint) ServeHTTP(resp http.ResponseWriter, req *http.Request)
 	}
 
 	this.actives.Put(request)
-	defer this.actives.Delete(request.Id().String(), false)
+	defer this.actives.Delete(request.Id().String(), false, nil)
 
 	if request.State() == server.FATAL {
 
@@ -703,7 +704,7 @@ func (this *HttpEndpoint) doStats(request *httpRequest, srvr *server.Server) {
 	request.CompleteRequest(request_time, service_time, transaction_time, request.resultCount,
 		request.resultSize, request.GetErrorCount(), request.req, srvr)
 	if this.trackUsers {
-		userName := datastore.FirstCred(request.Credentials())
+		userName, _ := datastore.FirstCred(request.Credentials())
 		this.usersLock.RLock()
 		user := this.trackedUsers[userName]
 		this.usersLock.RUnlock()
@@ -794,12 +795,17 @@ func (this *activeHttpRequests) Get(id string, f func(server.Request)) errors.Er
 	return nil
 }
 
-func (this *activeHttpRequests) Delete(id string, stop bool) bool {
-	this.cache.Delete(id, func(e interface{}) {
+func (this *activeHttpRequests) Delete(id string, stop bool, f func(r server.Request) bool) bool {
+	this.cache.DeleteWithCheck(id, func(e interface{}) bool {
+		r := e.(server.Request)
+		if f != nil && !f(r) {
+			return false
+		}
 		if stop {
 			req := e.(*httpRequest)
 			req.Stop(server.STOPPED)
 		}
+		return true
 	})
 
 	return true

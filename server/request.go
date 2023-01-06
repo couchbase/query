@@ -221,7 +221,7 @@ type ActiveRequests interface {
 	Get(string, func(Request)) errors.Error
 
 	// removes a request from the active queue / returns success
-	Delete(string, bool) bool
+	Delete(string, bool, func(Request) bool) bool
 
 	// request count
 	Count() (int, errors.Error)
@@ -247,7 +247,14 @@ func ActiveRequestsCount() (int, errors.Error) {
 
 func ActiveRequestsDelete(id string) bool {
 	if actives != nil {
-		return actives.Delete(id, true)
+		return actives.Delete(id, true, nil)
+	}
+	return false
+}
+
+func ActiveRequestsDeleteFunc(id string, f func(Request) bool) bool {
+	if actives != nil {
+		return actives.Delete(id, true, f)
 	}
 	return false
 }

@@ -25,7 +25,7 @@ type SystemRemoteAccess interface {
 	// keyFn processes each key, returns false to stop processing keys
 	// warnFn issues warnings
 	GetRemoteKeys(nodes []string, endpoint string, keyFn func(id string) bool,
-		warnFn func(warn errors.Error))
+		warnFn func(warn errors.Error), creds Creds, authToken string)
 
 	// collect a document for a keyspace from a remote node
 	// docFn processes the document
@@ -81,7 +81,7 @@ type SystemRemoteAccess interface {
 
 // It would be convenient to use datastore/Credentials here, but that causes an import circularity,
 // so we define an equivalent here.
-type Creds map[string]string
+type Creds string
 
 type Capability int
 
@@ -94,7 +94,7 @@ const (
 	KV_RANGE_SCANS
 )
 
-var NO_CREDS = make(Creds, 0)
+var NO_CREDS = Creds("")
 
 var _REMOTEACCESS SystemRemoteAccess = NewSystemRemoteStub()
 

@@ -37,6 +37,7 @@ type Prepared struct {
 	featureControls uint64
 	namespace       string
 	queryContext    string
+	tenant          string
 	useFts          bool
 	useCBO          bool
 	preparedTime    time.Time // time the plan was generated
@@ -256,6 +257,16 @@ func (this *Prepared) QueryContext() string {
 
 func (this *Prepared) SetQueryContext(queryContext string) {
 	this.queryContext = queryContext
+	if queryContext != "" {
+		path := algebra.ParseQueryContext(queryContext)
+		if len(path) > 1 {
+			this.tenant = path[1]
+		}
+	}
+}
+
+func (this *Prepared) Tenant() string {
+	return this.tenant
 }
 
 func (this *Prepared) UseFts() bool {

@@ -141,7 +141,7 @@ func PreparedsRemotePrime() {
 					func(warn errors.Error) {
 					}, distributed.NO_CREDS, "")
 				return true
-			}, nil)
+			}, nil, distributed.NO_CREDS, "")
 
 		// we found stuff, that's good enough
 		if count > 0 {
@@ -446,6 +446,21 @@ func AddPrepared(prepared *plan.Prepared) errors.Error {
 
 func DeletePrepared(name string) errors.Error {
 	if prepareds.cache.Delete(name, nil) {
+		return nil
+	}
+	return errors.NewNoSuchPreparedError(name)
+}
+
+func DeletePreparedFunc(name string, f func(*CacheEntry) bool) errors.Error {
+	var process func(interface{}) bool = nil
+
+	if f != nil {
+		process = func(entry interface{}) bool {
+			ce := entry.(*CacheEntry)
+			return f(ce)
+		}
+	}
+	if prepareds.cache.DeleteWithCheck(name, process) {
 		return nil
 	}
 	return errors.NewNoSuchPreparedError(name)

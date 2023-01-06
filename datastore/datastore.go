@@ -50,9 +50,10 @@ type Datastore interface {
 	Authorize(*auth.Privileges, *auth.Credentials) errors.Error // Perform authorization and return nil if successful
 	AdminUser(string) (string, string, error)                   // Admin credentials for a specific node
 	PreAuthorize(*auth.Privileges)                              // Transform privileges in the internal format
-	CredsString(*auth.Credentials) string                       // Return name from credentials in http request
+	CredsString(*auth.Credentials) (string, string)             // Return name, domain from credentials in http request
 	GetUserUUID(*auth.Credentials) string                       // Returns user UUID for stats
 	GetUserBuckets(*auth.Credentials) []string                  // Returns buckets user has access to for serverless accounting
+	GetImpersonateBuckets(string, string) []string              // Returns buckets impersonated user has access to for serverless access
 	SetLogLevel(level logging.Level)                            // Set log level of in-process indexers
 	Inferencer(name InferenceType) (Inferencer, errors.Error)   // Schema inference provider by name, e.g. INF_DEFAULT
 	Inferencers() ([]Inferencer, errors.Error)                  // List of schema inference providers

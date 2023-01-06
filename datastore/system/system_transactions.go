@@ -48,7 +48,7 @@ func (b *transactionsKeyspace) Count(context datastore.QueryContext) (int64, err
 		return true
 	}, func(warn errors.Error) {
 		context.Warning(warn)
-	})
+	}, distributed.NO_CREDS, "")
 	return int64(transactions.CountTransContext() + count), nil
 }
 
@@ -268,7 +268,7 @@ func (pi *transactionsIndex) Scan(requestId string, span *datastore.Span, distin
 					return sendSystemKey(conn, &indexEntry)
 				}, func(warn errors.Error) {
 					conn.Warning(warn)
-				})
+				}, distributed.NO_CREDS, "")
 			}
 		} else {
 
@@ -303,7 +303,7 @@ func (pi *transactionsIndex) Scan(requestId string, span *datastore.Span, distin
 					return sendSystemKey(conn, &indexEntry)
 				}, func(warn errors.Error) {
 					conn.Warning(warn)
-				})
+				}, distributed.NO_CREDS, "")
 			}
 		}
 	}
@@ -328,5 +328,5 @@ func (pi *transactionsIndex) ScanEntries(requestId string, limit int64, cons dat
 		return sendSystemKey(conn, &indexEntry)
 	}, func(warn errors.Error) {
 		conn.Warning(warn)
-	})
+	}, distributed.NO_CREDS, "")
 }

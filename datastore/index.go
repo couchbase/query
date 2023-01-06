@@ -758,7 +758,8 @@ func (this *IndexConnection) RecordFtsRU(ru tenant.Unit) {
 }
 
 func (this *IndexConnection) User() string {
-	return FirstCred(this.context.Credentials())
+	rv, _ := FirstCred(this.context.Credentials())
+	return rv
 }
 
 func (this *IndexConnection) SetSkipNewKeys(on bool) {

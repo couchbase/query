@@ -11,9 +11,10 @@ package system
 import (
 	"fmt"
 
+	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
-	"github.com/couchbase/query/distributed"
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/tenant"
 	"github.com/couchbase/query/value"
 )
 
@@ -264,22 +265,33 @@ func noop(val, key string) bool {
 
 // Credentials
 
-// Return the credentials presented in the context.
-// The second parameter is the ns-server-auth-token value, from the original request,
-// if one is present, else the empty string.
-func credsFromContext(context datastore.QueryContext) (distributed.Creds, string) {
-	credentials := context.Credentials()
-	if credentials == nil {
-		return nil, ""
+type SystemContext interface {
+	Credentials() *auth.Credentials
+	SetFirstCreds(string)
+	FirstCreds() (string, bool)
+}
+
+// Return the user to impersonate from the context credentials
+func credsFromContext(context SystemContext) string {
+	if !tenant.IsServerless() {
+		return ""
 	}
-	creds := make(distributed.Creds, len(credentials.Users))
-	for k, v := range credentials.Users {
-		creds[k] = v
+
+	// do we have a cached full user name?
+	userName, isSet := context.FirstCreds()
+	if isSet {
+		return userName
 	}
-	authToken := ""
-	req := credentials.HttpRequest
-	if req != nil && req.Header.Get("ns-server-ui") == "yes" {
-		authToken = req.Header.Get("ns-server-auth-token")
+	creds := context.Credentials()
+	privs := auth.NewPrivileges()
+	privs.Add("", auth.PRIV_SYSTEM_READ, auth.PRIV_PROPS_NONE)
+	if datastore.GetDatastore().Authorize(privs, creds) == nil {
+
+		// it's an admin, no restrictions
+		userName = ""
+	} else {
+		userName = datastore.EncodeName(datastore.FirstCred(creds))
 	}
-	return creds, authToken
+	context.SetFirstCreds(userName)
+	return userName
 }

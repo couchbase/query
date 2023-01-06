@@ -239,6 +239,8 @@ type Context struct {
 	namedArgs           map[string]value.Value
 	positionalArgs      value.Values
 	credentials         *auth.Credentials
+	firstCreds          string
+	firstCredsSet       bool
 	consistency         datastore.ScanConsistency
 	originalConsistency datastore.ScanConsistency
 	scanVectorSource    timestamp.ScanVectorSource
@@ -545,6 +547,15 @@ func (this *Context) Credentials() *auth.Credentials {
 
 func (this *Context) IsAdmin() bool {
 	return datastore.IsAdmin(this.credentials)
+}
+
+func (this *Context) SetFirstCreds(creds string) {
+	this.firstCreds = creds
+	this.firstCredsSet = true
+}
+
+func (this *Context) FirstCreds() (string, bool) {
+	return this.firstCreds, this.firstCredsSet
 }
 
 func (this *Context) UrlCredentials(urlS string) *auth.Credentials {

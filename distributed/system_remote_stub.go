@@ -34,7 +34,8 @@ func (this systemRemoteStub) SplitKey(key string) (string, string) {
 }
 
 // get remote keys from the specified nodes for the specified endpoint
-func (this systemRemoteStub) GetRemoteKeys(nodes []string, endpoint string, keyFn func(id string) bool, warnFn func(warn errors.Error)) {
+func (this systemRemoteStub) GetRemoteKeys(nodes []string, endpoint string, keyFn func(id string) bool,
+	warnFn func(warn errors.Error), creds Creds, authToken string) {
 
 	// nothing to see here
 }

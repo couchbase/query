@@ -29,12 +29,30 @@ func CredsString(creds *auth.Credentials) string {
 	return strings.Join(CredsArray(creds), ",")
 }
 
-func FirstCred(creds *auth.Credentials) string {
+func FirstCred(creds *auth.Credentials) (string, string) {
 	ds := GetDatastore()
 	if ds != nil && creds != nil {
 		return ds.CredsString(creds)
 	}
-	return ""
+	return "", ""
+}
+
+func EncodeName(user, domain string) string {
+	if domain == "" {
+		return user
+	}
+	return domain + ":" + user
+}
+
+func DecodeName(encodedName string) (string, string) {
+	fields := strings.Split(encodedName, ":")
+	switch len(fields) {
+	case 1:
+		return "", fields[0]
+	case 2:
+		return fields[0], fields[1]
+	}
+	return "", ""
 }
 
 func IsAdmin(creds *auth.Credentials) bool {
@@ -74,4 +92,11 @@ func GetUserBuckets(creds *auth.Credentials) []string {
 		return []string{}
 	}
 	return _DATASTORE.GetUserBuckets(creds)
+}
+
+func GetImpersonateBuckets(user, domain string) []string {
+	if _DATASTORE == nil || len(user) == 0 {
+		return []string{}
+	}
+	return _DATASTORE.GetImpersonateBuckets(user, domain)
 }

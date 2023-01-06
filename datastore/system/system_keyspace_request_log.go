@@ -41,15 +41,32 @@ func (b *requestLogKeyspace) Name() string {
 
 func (b *requestLogKeyspace) Count(context datastore.QueryContext) (int64, errors.Error) {
 	var count int
+	var creds distributed.Creds
 
+	userName := credsFromContext(context)
+	if userName == "" {
+		creds = distributed.NO_CREDS
+	} else {
+		creds = distributed.Creds(userName)
+	}
 	count = 0
 	distributed.RemoteAccess().GetRemoteKeys([]string{}, "completed_requests", func(id string) bool {
 		count++
 		return true
 	}, func(warn errors.Error) {
 		context.Warning(warn)
-	})
-	return int64(server.RequestsCount() + count), nil
+	}, creds, "")
+	if userName == "" {
+		return int64(server.RequestsCount() + count), nil
+	} else {
+		server.RequestsForeach(func(id string, request *server.RequestLogEntry) bool {
+			if checkCompleted(request, userName) {
+				count++
+			}
+			return true
+		}, nil)
+		return int64(count), nil
+	}
 }
 
 func (b *requestLogKeyspace) Size(context datastore.QueryContext) (int64, errors.Error) {
@@ -66,6 +83,14 @@ func (b *requestLogKeyspace) Indexers() ([]datastore.Indexer, errors.Error) {
 
 func (b *requestLogKeyspace) Fetch(keys []string, keysMap map[string]value.AnnotatedValue,
 	context datastore.QueryContext, subPaths []string) (errs errors.Errors) {
+	var creds distributed.Creds
+
+	userName := credsFromContext(context)
+	if userName == "" {
+		creds = distributed.NO_CREDS
+	} else {
+		creds = distributed.Creds(userName)
+	}
 
 	// now that the node name can change in flight, use a consistent one across fetches
 	whoAmI := distributed.RemoteAccess().WhoAmI()
@@ -95,11 +120,14 @@ func (b *requestLogKeyspace) Fetch(keys []string, keysMap map[string]value.Annot
 				func(warn errors.Error) {
 					context.Warning(warn)
 				},
-				distributed.NO_CREDS, "")
+				creds, "")
 		} else {
 
 			// local entry
 			server.RequestDo(localKey, func(entry *server.RequestLogEntry) {
+				if userName != "" && !checkCompleted(entry, userName) {
+					return
+				}
 				item := value.NewAnnotatedValue(map[string]interface{}{
 					"requestId":       localKey,
 					"state":           entry.State,
@@ -213,6 +241,14 @@ func (b *requestLogKeyspace) Fetch(keys []string, keysMap map[string]value.Annot
 
 func (b *requestLogKeyspace) Delete(deletes value.Pairs, context datastore.QueryContext) (value.Pairs, errors.Errors) {
 	var err errors.Error
+	var creds distributed.Creds
+
+	userName := credsFromContext(context)
+	if userName == "" {
+		creds = distributed.NO_CREDS
+	} else {
+		creds = distributed.Creds(userName)
+	}
 
 	// now that the node name can change in flight, use a consistent one across deletes
 	whoAmI := distributed.RemoteAccess().WhoAmI()
@@ -228,11 +264,13 @@ func (b *requestLogKeyspace) Delete(deletes value.Pairs, context datastore.Query
 				func(warn errors.Error) {
 					context.Warning(warn)
 				},
-				distributed.NO_CREDS, "")
+				creds, "")
 
 			// local entry
 		} else {
-			err = server.RequestDelete(localKey)
+			err = server.RequestDelete(localKey, func(request *server.RequestLogEntry) bool {
+				return userName == "" || checkCompleted(request, userName)
+			})
 		}
 
 		// save memory allocations by making a new slice only on errors
@@ -338,10 +376,16 @@ func (pi *requestLogIndex) Drop(requestId string) errors.Error {
 
 func (pi *requestLogIndex) Scan(requestId string, span *datastore.Span, distinct bool, limit int64,
 	cons datastore.ScanConsistency, vector timestamp.Vector, conn *datastore.IndexConnection) {
+
 	if span == nil || pi.primary {
 		pi.ScanEntries(requestId, limit, cons, vector, conn)
 	} else {
 		var entry *datastore.IndexEntry
+		var creds distributed.Creds
+		var process func(name string, request *server.RequestLogEntry) bool
+		var send func() bool
+		var doSend bool
+
 		defer conn.Sender().Close()
 
 		spanEvaluator, err := compileSpan(span)
@@ -349,20 +393,44 @@ func (pi *requestLogIndex) Scan(requestId string, span *datastore.Span, distinct
 			conn.Error(err)
 			return
 		}
-		if spanEvaluator.isEquals() {
 
-			// now that the node name can change in flight, use a consistent one across the scan
-			whoAmI := distributed.RemoteAccess().WhoAmI()
-			if spanEvaluator.key() == distributed.RemoteAccess().WhoAmI() {
-				server.RequestsForeach(func(id string, request *server.RequestLogEntry) bool {
+		// now that the node name can change in flight, use a consistent one across the scan
+		whoAmI := distributed.RemoteAccess().WhoAmI()
+		userName := credsFromContext(conn.Context())
+		if userName == "" {
+			creds = distributed.NO_CREDS
+			process = func(name string, request *server.RequestLogEntry) bool {
+				entry = &datastore.IndexEntry{
+					PrimaryKey: distributed.RemoteAccess().MakeKey(whoAmI, name),
+					EntryKey:   value.Values{value.NewValue(whoAmI)},
+				}
+				return true
+			}
+			send = func() bool {
+				return sendSystemKey(conn, entry)
+			}
+		} else {
+			creds = distributed.Creds(userName)
+			process = func(name string, request *server.RequestLogEntry) bool {
+				doSend = checkCompleted(request, userName)
+				if doSend {
 					entry = &datastore.IndexEntry{
-						PrimaryKey: distributed.RemoteAccess().MakeKey(whoAmI, id),
+						PrimaryKey: distributed.RemoteAccess().MakeKey(whoAmI, name),
 						EntryKey:   value.Values{value.NewValue(whoAmI)},
 					}
-					return true
-				}, func() bool {
+				}
+				return true
+			}
+			send = func() bool {
+				if doSend {
 					return sendSystemKey(conn, entry)
-				})
+				}
+				return true
+			}
+		}
+		if spanEvaluator.isEquals() {
+			if spanEvaluator.key() == distributed.RemoteAccess().WhoAmI() {
+				server.RequestsForeach(process, send)
 			} else {
 				nodes := []string{spanEvaluator.key()}
 				distributed.RemoteAccess().GetRemoteKeys(nodes, "completed_requests", func(id string) bool {
@@ -374,26 +442,15 @@ func (pi *requestLogIndex) Scan(requestId string, span *datastore.Span, distinct
 					return sendSystemKey(conn, &indexEntry)
 				}, func(warn errors.Error) {
 					conn.Warning(warn)
-				})
+				}, creds, "")
 			}
 		} else {
-
-			// now that the node name can change in flight, use a consistent one across the scan
-			whoAmI := distributed.RemoteAccess().WhoAmI()
 			nodes := distributed.RemoteAccess().GetNodeNames()
 			eligibleNodes := []string{}
 			for _, node := range nodes {
 				if spanEvaluator.evaluate(node) {
 					if node == whoAmI {
-						server.RequestsForeach(func(id string, request *server.RequestLogEntry) bool {
-							entry = &datastore.IndexEntry{
-								PrimaryKey: distributed.RemoteAccess().MakeKey(whoAmI, id),
-								EntryKey:   value.Values{value.NewValue(distributed.RemoteAccess().WhoAmI())},
-							}
-							return true
-						}, func() bool {
-							return sendSystemKey(conn, entry)
-						})
+						server.RequestsForeach(process, send)
 					} else {
 						eligibleNodes = append(eligibleNodes, node)
 					}
@@ -409,7 +466,7 @@ func (pi *requestLogIndex) Scan(requestId string, span *datastore.Span, distinct
 					return sendSystemKey(conn, &indexEntry)
 				}, func(warn errors.Error) {
 					conn.Warning(warn)
-				})
+				}, creds, "")
 			}
 		}
 	}
@@ -418,20 +475,51 @@ func (pi *requestLogIndex) Scan(requestId string, span *datastore.Span, distinct
 func (pi *requestLogIndex) ScanEntries(requestId string, limit int64, cons datastore.ScanConsistency,
 	vector timestamp.Vector, conn *datastore.IndexConnection) {
 	var entry *datastore.IndexEntry
+	var creds distributed.Creds
+	var process func(name string, request *server.RequestLogEntry) bool
+	var send func() bool
+	var doSend bool
+
 	defer conn.Sender().Close()
 
 	// now that the node name can change in flight, use a consistent one across the scan
 	whoAmI := distributed.RemoteAccess().WhoAmI()
-	server.RequestsForeach(func(id string, request *server.RequestLogEntry) bool {
-		entry = &datastore.IndexEntry{PrimaryKey: distributed.RemoteAccess().MakeKey(whoAmI, id)}
-		return true
-	}, func() bool {
-		return sendSystemKey(conn, entry)
-	})
+
+	userName := credsFromContext(conn.Context())
+	if userName == "" {
+		creds = distributed.NO_CREDS
+		process = func(name string, request *server.RequestLogEntry) bool {
+			entry = &datastore.IndexEntry{PrimaryKey: distributed.RemoteAccess().MakeKey(whoAmI, name)}
+			return true
+		}
+		send = func() bool {
+			return sendSystemKey(conn, entry)
+		}
+	} else {
+		creds = distributed.Creds(userName)
+		process = func(name string, request *server.RequestLogEntry) bool {
+			doSend = checkCompleted(request, userName)
+			if doSend {
+				entry = &datastore.IndexEntry{PrimaryKey: distributed.RemoteAccess().MakeKey(whoAmI, name)}
+			}
+			return true
+		}
+		send = func() bool {
+			if doSend {
+				return sendSystemKey(conn, entry)
+			}
+			return true
+		}
+	}
+	server.RequestsForeach(process, send)
 	distributed.RemoteAccess().GetRemoteKeys([]string{}, "completed_requests", func(id string) bool {
 		indexEntry := datastore.IndexEntry{PrimaryKey: id}
 		return sendSystemKey(conn, &indexEntry)
 	}, func(warn errors.Error) {
 		conn.Warning(warn)
-	})
+	}, creds, "")
+}
+
+func checkCompleted(request *server.RequestLogEntry, userName string) bool {
+	return userName == request.Users
 }

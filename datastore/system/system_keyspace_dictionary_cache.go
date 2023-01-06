@@ -48,7 +48,7 @@ func (b *dictionaryCacheKeyspace) Count(context datastore.QueryContext) (int64, 
 		return true
 	}, func(warn errors.Error) {
 		context.Warning(warn)
-	})
+	}, distributed.NO_CREDS, "")
 	return int64(dictionary.CountDictCacheEntries() + count), nil
 }
 
@@ -291,7 +291,7 @@ func (pi *dictionaryCacheIndex) Scan(requestId string, span *datastore.Span, dis
 					return sendSystemKey(conn, &indexEntry)
 				}, func(warn errors.Error) {
 					conn.Warning(warn)
-				})
+				}, distributed.NO_CREDS, "")
 			}
 		} else {
 
@@ -327,7 +327,7 @@ func (pi *dictionaryCacheIndex) Scan(requestId string, span *datastore.Span, dis
 					return sendSystemKey(conn, &indexEntry)
 				}, func(warn errors.Error) {
 					conn.Warning(warn)
-				})
+				}, distributed.NO_CREDS, "")
 			}
 		}
 	}
@@ -352,5 +352,5 @@ func (pi *dictionaryCacheIndex) ScanEntries(requestId string, limit int64, cons 
 		return sendSystemKey(conn, &indexEntry)
 	}, func(warn errors.Error) {
 		conn.Warning(warn)
-	})
+	}, distributed.NO_CREDS, "")
 }

@@ -13,7 +13,6 @@
 package http
 
 import (
-	"bytes"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
@@ -184,7 +183,7 @@ func (this *systemRemoteHttp) SplitKey(key string) (string, string) {
 
 // get remote keys from the specified nodes for the specified endpoint
 func (this *systemRemoteHttp) GetRemoteKeys(nodes []string, endpoint string,
-	keyFn func(id string) bool, warnFn func(warn errors.Error)) {
+	keyFn func(id string) bool, warnFn func(warn errors.Error), creds distributed.Creds, authToken string) {
 	var keys []string
 
 	// now that the local node name can change, use a consistent one across the scan
@@ -245,7 +244,7 @@ func (this *systemRemoteHttp) GetRemoteKeys(nodes []string, endpoint string,
 					continue
 				}
 
-				body, opErr := this.doRemoteOp(queryNode, "indexes/"+endpoint, "GET", "", "scan", distributed.NO_CREDS, "", cp)
+				body, opErr := this.doRemoteOp(queryNode, "indexes/"+endpoint, "GET", "", "scan", creds, "", cp)
 				if opErr != nil {
 					if warnFn != nil {
 						warnFn(opErr)
@@ -293,7 +292,7 @@ func (this *systemRemoteHttp) GetRemoteKeys(nodes []string, endpoint string,
 				continue
 			}
 
-			body, opErr := this.doRemoteOp(queryNode, "indexes/"+endpoint, "GET", "", "scan", distributed.NO_CREDS, "", cp)
+			body, opErr := this.doRemoteOp(queryNode, "indexes/"+endpoint, "GET", "", "scan", creds, "", cp)
 			if opErr != nil {
 				if warnFn != nil {
 					warnFn(opErr)
@@ -482,26 +481,6 @@ func (this *systemRemoteHttp) ExecutePreparedAdminOp(op interface{}, command str
 	return this.doRemoteEndpointOp(pop.endpoint, command, data, command, creds, authToken, cp, pop.user, pop.password)
 }
 
-func credsAsJSON(creds distributed.Creds) string {
-	buf := new(bytes.Buffer)
-	buf.WriteString("[")
-	var num = 0
-	for k, v := range creds {
-		if num > 0 {
-			buf.WriteString(",")
-		}
-		buf.WriteString("{")
-		buf.WriteString("\"user\":\"")
-		buf.WriteString(k)
-		buf.WriteString("\",\"pass\":\"")
-		buf.WriteString(v)
-		buf.WriteString("\"}")
-		num++
-	}
-	buf.WriteString("]")
-	return buf.String()
-}
-
 // helper for the REST op
 func (this *systemRemoteHttp) doRemoteOp(node clustering.QueryNode, endpoint string, command string, data string, op string,
 	creds distributed.Creds, authToken string, cp *commParameters) ([]byte, errors.Error) {
@@ -523,10 +502,10 @@ func (this *systemRemoteHttp) getFullEndpoint(node clustering.QueryNode, endpoin
 	} else {
 		fullEndpoint = node.ClusterEndpoint() + "/" + endpoint
 	}
-	numCredentials := len(creds)
-	if numCredentials > 0 {
-		fullEndpoint += "?creds=" + credsAsJSON(creds)
+	if creds != "" {
+		fullEndpoint += "?impersonate=" + string(creds)
 	}
+
 	// Here, I'm leveraging the fact that the node name is the host:port of the mgmt
 	// endpoint associated with the node. This is the same hostport pair that allows us
 	// to access the admin creds for that node.

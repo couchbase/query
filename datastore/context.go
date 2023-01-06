@@ -28,6 +28,9 @@ type Context interface {
 	Error(errors.Error)
 	Warning(errors.Error)
 	GetReqDeadline() time.Time
+	TenantCtx() tenant.Context
+	SetFirstCreds(string)
+	FirstCreds() (string, bool)
 	RecordFtsRU(ru tenant.Unit)
 	RecordGsiRU(ru tenant.Unit)
 	RecordKvRU(ru tenant.Unit)
@@ -64,6 +67,17 @@ func (ci *contextImpl) FeatureControl() uint64 {
 	return 0
 }
 
+func (ci *contextImpl) TenantCtx() tenant.Context {
+	return nil
+}
+
+func (ci *contextImpl) SetFirstCreds(string) {
+}
+
+func (ci *contextImpl) FirstCreds() (string, bool) {
+	return "", true
+}
+
 func (ci *contextImpl) RecordFtsRU(ru tenant.Unit) {
 }
 
@@ -98,6 +112,9 @@ type QueryContext interface {
 	DurabilityLevel() DurabilityLevel
 	KvTimeout() time.Duration
 	PreserveExpiry() bool
+	TenantCtx() tenant.Context
+	SetFirstCreds(string)
+	FirstCreds() (string, bool)
 	RecordFtsRU(ru tenant.Unit)
 	RecordGsiRU(ru tenant.Unit)
 	RecordKvRU(ru tenant.Unit)
@@ -151,6 +168,17 @@ func (ci *queryContextImpl) KvTimeout() time.Duration {
 
 func (ci *queryContextImpl) PreserveExpiry() bool {
 	return false
+}
+
+func (ci *queryContextImpl) TenantCtx() tenant.Context {
+	return nil
+}
+
+func (ci *queryContextImpl) SetFirstCreds(string) {
+}
+
+func (ci *queryContextImpl) FirstCreds() (string, bool) {
+	return "", true
 }
 
 func (ci *queryContextImpl) RecordFtsRU(ru tenant.Unit) {
