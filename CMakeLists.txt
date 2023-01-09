@@ -36,7 +36,7 @@ ELSE (BUILD_ENTERPRISE)
 ENDIF(BUILD_ENTERPRISE)
 SET (_extra_deps)
 
-SET (GOVERSION 1.18)
+SET (GOVERSION 1.19)
 GoPrivateMod (MODULE cbftx PATH ../../../../../cbftx)
 GoPrivateMod (MODULE hebrew PATH ../../../../../hebrew)
 GoPrivateMod (MODULE eventing-ee)
@@ -62,7 +62,7 @@ IF(WIN32)
 ENDIF()
 
 IF (NOT CBQ_ONLY)
-  GoYacc (GOVERSION 1.18 TARGET n1ql-yacc YFILE "${PROJECT_SOURCE_DIR}/parser/n1ql/n1ql.y")
+  GoYacc (GOVERSION 1.19 TARGET n1ql-yacc YFILE "${PROJECT_SOURCE_DIR}/parser/n1ql/n1ql.y")
 
   GET_FILENAME_COMPONENT (CURL_LIBRARY_DIR "${CURL_LIBRARIES}" DIRECTORY)
 
