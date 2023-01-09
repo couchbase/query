@@ -59,8 +59,8 @@ var (
 
 // Max request size from server (cant import because of cyclic dependency)
 const (
-	MIN_RESPONSE_SIZE = 20 * (1 << 20)
-	MAX_RESPONSE_SIZE = 64 * (1 << 20)
+	_MIN_RESPONSE_SIZE          = 20 * util.MiB
+	_MAX_NO_QUOTA_RESPONSE_SIZE = 128 * util.MiB
 )
 
 // Path to certs
@@ -178,7 +178,7 @@ func (this *Curl) DoEvaluate(context Context, arg1, arg2 value.Value) (value.Val
 		return value.NULL_VALUE, fmt.Errorf("Error initializing libcurl")
 	}
 	// Now you have the URL and the options with which to call curl.
-	result, err := this.handleCurl(curl_url, options, allowlist)
+	result, err := this.handleCurl(curl_url, options, allowlist, context)
 
 	this.myCurl.Cleanup()
 	this.myCurl = nil
@@ -232,7 +232,9 @@ func (this *Curl) Constructor() FunctionConstructor {
 	return NewCurl
 }
 
-func (this *Curl) handleCurl(url string, options map[string]interface{}, allowlist map[string]interface{}) (interface{}, error) {
+func (this *Curl) handleCurl(url string, options map[string]interface{}, allowlist map[string]interface{}, context Context) (
+	interface{}, error) {
+
 	// Handle different cases
 
 	// initial check for curl_allowlist.json has been completed. The file exists.
@@ -242,7 +244,12 @@ func (this *Curl) handleCurl(url string, options map[string]interface{}, allowli
 		return nil, err
 	}
 
-	responseSize := setResponseSize(MIN_RESPONSE_SIZE)
+	ctx, ok := context.(QuotaContext)
+	if !ok || !ctx.UseRequestQuota() {
+		ctx = nil
+	}
+
+	responseSize := uint64(_MIN_RESPONSE_SIZE)
 	sizeError := false
 	getMethod := false
 	dataOp := false
@@ -329,7 +336,8 @@ func (this *Curl) handleCurl(url string, options map[string]interface{}, allowli
 				headerVal = []interface{}{headerVal}
 			default:
 				if show_error == true {
-					return nil, fmt.Errorf("Incorrect type for header option " + value.NewValue(val).String() + " in CURL. Header option should be a string value or an array of strings.  ")
+					return nil, fmt.Errorf("Incorrect type for header option " + value.NewValue(val).String() +
+						" in CURL. Header option should be a string value or an array of strings.  ")
 				} else {
 					return nil, nil
 				}
@@ -340,7 +348,8 @@ func (this *Curl) handleCurl(url string, options map[string]interface{}, allowli
 				newHval := value.NewValue(hval)
 				if newHval.Type() != value.STRING {
 					if show_error == true {
-						return nil, fmt.Errorf("Incorrect type for header option " + newHval.String() + " in CURL. Header option should be a string value or an array of strings.  ")
+						return nil, fmt.Errorf("Incorrect type for header option " + newHval.String() +
+							" in CURL. Header option should be a string value or an array of strings.  ")
 					} else {
 						return nil, nil
 					}
@@ -470,13 +479,23 @@ func (this *Curl) handleCurl(url string, options map[string]interface{}, allowli
 			this.myCurl.Setopt(curl.OPT_SSLCERTTYPE, "PEM")
 			this.myCurl.Setopt(curl.OPT_CAINFO, certDir+file)
 		case "result-cap":
-			// In order to restrict size of response use curlopt-range.
-			// Min allowed = 20MB  20971520
-			// Max allowed = request-size-cap default 67 108 864
+			// Restricted to 20MiB - 256MiB
 			if inputVal.Type() != value.NUMBER {
 				return nil, fmt.Errorf("Incorrect type for result-cap option in CURL ")
 			}
-			responseSize = setResponseSize(value.AsNumberValue(inputVal).Int64())
+			// negatives set to minimum
+			rs := value.AsNumberValue(inputVal).Int64()
+			if rs < _MIN_RESPONSE_SIZE {
+				rs = _MIN_RESPONSE_SIZE
+			}
+			// if there is a quota the remaining available memory enforces the upper limit
+			if ctx == nil && rs > _MAX_NO_QUOTA_RESPONSE_SIZE {
+				logging.Debuga(func() string {
+					return fmt.Sprintf("CURL (%v) result-cap %v capped to %v", url, rs, _MAX_NO_QUOTA_RESPONSE_SIZE)
+				})
+				rs = _MAX_NO_QUOTA_RESPONSE_SIZE
+			}
+			responseSize = uint64(rs)
 		case "verbose":
 			// verbose only writes to STDERR so only permit it when DEBUG logging is enabled too
 			if inputVal.Truth() && logging.LogLevel() == logging.DEBUG {
@@ -523,7 +542,7 @@ func (this *Curl) handleCurl(url string, options map[string]interface{}, allowli
 	writeToBufferFunc := func(buf []byte, userdata interface{}) bool {
 		if silent == false {
 			// Check length of buffer b. If it is greater than
-			if int64(b.Len()) > responseSize {
+			if uint64(b.Len()) > responseSize {
 				// No more writing we are all done
 				// If this interrupts the stream of data then we throw not a JSON endpoint error.
 				sizeError = true
@@ -537,6 +556,14 @@ func (this *Curl) handleCurl(url string, options map[string]interface{}, allowli
 
 	this.myCurl.Setopt(curl.OPT_WRITEFUNCTION, writeToBufferFunc)
 	this.myCurl.Setopt(curl.OPT_WRITEDATA, b)
+
+	if ctx != nil {
+		err := ctx.TrackValueSize(responseSize)
+		if err != nil {
+			return nil, err
+		}
+		defer ctx.ReleaseValueSize(responseSize)
+	}
 
 	if err := this.myCurl.Perform(); err != nil {
 		if show_error == true {
@@ -604,35 +631,6 @@ func (this *Curl) curlCiphers(val string) error {
 		this.myCurl.Setopt(curl.OPT_SSL_CIPHER_LIST, cbCiphers)
 	}
 	return nil
-}
-
-func setResponseSize(maxSize int64) int64 {
-	/*
-			 get the first 200 bytes
-			 curl_easy_setopt(curl, CURLOPT_RANGE, "0-199")
-
-			 The unfortunate part is that for HTTP, CURLOPT_RANGE is not always enforced.
-			 In this case we want to be able to still restrict the amount of data written
-			 to the buffer.
-
-			 For now we shall not use this. In the future, if the option becomes enforced
-			 for HTTP then it can be used.
-
-			 finalRange := "0-" + fmt.Sprintf("%s", MIN_REQUEST_SIZE)
-		     finalRange = "0-" + fmt.Sprintf("%s", MAX_REQUEST_SIZE)
-		     finalRange = "0-" + fmt.Sprintf("%s", maxSize)
-
-		     this.myCurl.Setopt(curl.OPT_RANGE, finalRange)
-	*/
-	// Max Value = 64MB
-	// Min Value = 20MB
-	if maxSize > MAX_RESPONSE_SIZE {
-		return MAX_RESPONSE_SIZE
-	} else if maxSize < MIN_RESPONSE_SIZE {
-		return MIN_RESPONSE_SIZE
-	}
-	return maxSize
-
 }
 
 func allowlistCheck(list map[string]interface{}, urlP string) error {

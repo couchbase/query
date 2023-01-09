@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/couchbase/query/auth"
+	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/value"
 )
 
@@ -87,4 +88,10 @@ type ParkableContext interface {
 	Context
 	Park(func(bool))
 	Resume()
+}
+
+type QuotaContext interface {
+	UseRequestQuota() bool
+	TrackValueSize(uint64) errors.Error
+	ReleaseValueSize(uint64)
 }
