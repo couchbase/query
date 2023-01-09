@@ -478,7 +478,7 @@ func (pi *preparedsIndex) ScanEntries(requestId string, limit int64, cons datast
 func getTenant(context tenant.Context) string {
 
 	// if the user has no tenant associated, then we match no entry
-	return context.Bucket()
+	return tenant.Bucket(context)
 }
 
 func checkCacheEntry(entry *prepareds.CacheEntry, tenantName string) bool {
