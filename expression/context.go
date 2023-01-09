@@ -94,4 +94,6 @@ type QuotaContext interface {
 	UseRequestQuota() bool
 	TrackValueSize(uint64) errors.Error
 	ReleaseValueSize(uint64)
+	MemoryQuota() uint64
+	CurrentQuotaUsage() float64
 }

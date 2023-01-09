@@ -59,7 +59,8 @@ var (
 
 // Max request size from server (cant import because of cyclic dependency)
 const (
-	_MIN_RESPONSE_SIZE          = 20 * util.MiB
+	_MIN_RESPONSE_SIZE          = 512 * util.KiB
+	_DEFAULT_RESPONSE_SIZE      = 20 * util.MiB
 	_MAX_NO_QUOTA_RESPONSE_SIZE = 128 * util.MiB
 )
 
@@ -244,12 +245,19 @@ func (this *Curl) handleCurl(url string, options map[string]interface{}, allowli
 		return nil, err
 	}
 
+	var availableQuota uint64
+	responseSize := uint64(_DEFAULT_RESPONSE_SIZE)
+
 	ctx, ok := context.(QuotaContext)
 	if !ok || !ctx.UseRequestQuota() {
 		ctx = nil
+	} else {
+		availableQuota = uint64(float64(ctx.MemoryQuota()) * (1.0 - ctx.CurrentQuotaUsage()))
+		if responseSize > availableQuota {
+			responseSize = availableQuota
+		}
 	}
 
-	responseSize := uint64(_MIN_RESPONSE_SIZE)
 	sizeError := false
 	getMethod := false
 	dataOp := false
@@ -479,23 +487,31 @@ func (this *Curl) handleCurl(url string, options map[string]interface{}, allowli
 			this.myCurl.Setopt(curl.OPT_SSLCERTTYPE, "PEM")
 			this.myCurl.Setopt(curl.OPT_CAINFO, certDir+file)
 		case "result-cap":
-			// Restricted to 20MiB - 256MiB
+			// Restricted to 0.5 - 256 MiB
 			if inputVal.Type() != value.NUMBER {
 				return nil, fmt.Errorf("Incorrect type for result-cap option in CURL ")
 			}
 			// negatives set to minimum
 			rs := value.AsNumberValue(inputVal).Int64()
 			if rs < _MIN_RESPONSE_SIZE {
+				logging.Debuga(func() string {
+					return fmt.Sprintf("CURL (%v) result-cap %v set to %v", url, rs, _MIN_RESPONSE_SIZE)
+				})
 				rs = _MIN_RESPONSE_SIZE
 			}
-			// if there is a quota the remaining available memory enforces the upper limit
-			if ctx == nil && rs > _MAX_NO_QUOTA_RESPONSE_SIZE {
-				logging.Debuga(func() string {
-					return fmt.Sprintf("CURL (%v) result-cap %v capped to %v", url, rs, _MAX_NO_QUOTA_RESPONSE_SIZE)
-				})
-				rs = _MAX_NO_QUOTA_RESPONSE_SIZE
-			}
 			responseSize = uint64(rs)
+			// if there is a quota the remaining available memory enforces the upper limit
+			if ctx == nil && responseSize > _MAX_NO_QUOTA_RESPONSE_SIZE {
+				logging.Debuga(func() string {
+					return fmt.Sprintf("CURL (%v) result-cap %v limited to %v", url, responseSize, _MAX_NO_QUOTA_RESPONSE_SIZE)
+				})
+				responseSize = _MAX_NO_QUOTA_RESPONSE_SIZE
+			} else if ctx != nil && responseSize > availableQuota {
+				logging.Debuga(func() string {
+					return fmt.Sprintf("CURL (%v) result-cap %v limited to %v", url, responseSize, availableQuota)
+				})
+				responseSize = availableQuota
+			}
 		case "verbose":
 			// verbose only writes to STDERR so only permit it when DEBUG logging is enabled too
 			if inputVal.Truth() && logging.LogLevel() == logging.DEBUG {
@@ -574,7 +590,7 @@ func (this *Curl) handleCurl(url string, options map[string]interface{}, allowli
 	}
 
 	if sizeError {
-		return nil, fmt.Errorf("Response Size has been exceeded. The max response capacity is %v", responseSize)
+		return nil, fmt.Errorf("Response size limit of %v has been reached.", responseSize)
 	}
 
 	// The return type can either be and ARRAY or an OBJECT
