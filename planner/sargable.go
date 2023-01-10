@@ -14,7 +14,8 @@ import (
 )
 
 func SargableFor(pred expression.Expression, keys expression.Expressions, missing, gsi bool,
-	context *PrepareContext, aliases map[string]bool) (min, max, sum int, skeys []bool) {
+	isArrays []bool, context *PrepareContext, aliases map[string]bool) (
+	min, max, sum int, skeys []bool) {
 
 	skeys = make([]bool, len(keys))
 	if pred == nil {
@@ -22,7 +23,7 @@ func SargableFor(pred expression.Expression, keys expression.Expressions, missin
 	}
 
 	if or, ok := pred.(*expression.Or); ok {
-		return sargableForOr(or, keys, missing, gsi, context, aliases)
+		return sargableForOr(or, keys, missing, gsi, isArrays, context, aliases)
 	}
 
 	skiped := false
@@ -33,7 +34,7 @@ func SargableFor(pred expression.Expression, keys expression.Expressions, missin
 			return
 		}
 
-		s := &sargable{keys[i], missing, gsi, context, aliases}
+		s := &sargable{keys[i], missing, (i < len(isArrays) && isArrays[i]), gsi, context, aliases}
 
 		r, err := pred.Accept(s)
 
@@ -64,11 +65,11 @@ func SargableFor(pred expression.Expression, keys expression.Expressions, missin
 	return
 }
 
-func sargableForOr(or *expression.Or, keys expression.Expressions, missing, gsi bool,
+func sargableForOr(or *expression.Or, keys expression.Expressions, missing, gsi bool, isArrays []bool,
 	context *PrepareContext, aliases map[string]bool) (min, max, sum int, skeys []bool) {
 
 	for _, c := range or.Operands() {
-		cmin, cmax, csum, cskeys := SargableFor(c, keys, missing, gsi, context, aliases)
+		cmin, cmax, csum, cskeys := SargableFor(c, keys, missing, gsi, isArrays, context, aliases)
 		if (cmin == 0 && !missing) || cmax == 0 || csum < cmin {
 			skeys = make([]bool, len(keys))
 			return 0, 0, 0, skeys
@@ -93,6 +94,7 @@ func sargableForOr(or *expression.Or, keys expression.Expressions, missing, gsi 
 type sargable struct {
 	key     expression.Expression
 	missing bool
+	array   bool
 	gsi     bool
 	context *PrepareContext
 	aliases map[string]bool
@@ -179,7 +181,7 @@ func (this *sargable) VisitLT(pred *expression.LT) (interface{}, error) {
 }
 
 func (this *sargable) VisitIsMissing(pred *expression.IsMissing) (interface{}, error) {
-	if this.missing && pred.Operand().EquivalentTo(this.key) {
+	if this.missing && !this.array && pred.Operand().EquivalentTo(this.key) {
 		return true, nil
 	}
 
@@ -195,6 +197,9 @@ func (this *sargable) VisitIsNotNull(pred *expression.IsNotNull) (interface{}, e
 }
 
 func (this *sargable) VisitIsNotValued(pred *expression.IsNotValued) (interface{}, error) {
+	if this.missing && !this.array && pred.Operand().EquivalentTo(this.key) {
+		return true, nil
+	}
 	return this.visitDefault(pred)
 }
 

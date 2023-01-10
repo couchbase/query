@@ -154,6 +154,23 @@
         ]
     },
     {
+       "testcase": "Index Scan on MISSING index. Cover. On leading key NOT VALUED predicate Explain",
+       "queryParams": {"query_context": "orders._default"},
+       "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {"present":true}
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`covers` IS NOT MISSING AND v.`index` = 'mix1' AND v.spans[0].`range`[0].`high` = 'null' END"
+        },
+       "statements": "SELECT META(l).id FROM lkm AS l WHERE l.fname IS NOT VALUED",
+       "results": [
+           { "id": "thompson01" },
+           { "id": "green01" }
+        ]
+    },
+    {
        "testcase": "Index Scan on non-MISSING index. Cover. Explain",
        "queryParams": {"query_context": "orders._default"},
        "ignore": "index_id",

@@ -1,6 +1,6 @@
 [
     {
-       "testcase": "Unneset Scan MISSING index. Cover. Explain",
+       "testcase": "Unnest Scan MISSING index. Cover. Explain",
        "queryParams": {"query_context": "orders._default"},
        "ignore": "index_id",
         "explain": {
@@ -23,7 +23,7 @@
         ]
     },
     {
-       "testcase": "Unneset Scan MISSING index. Cover. Explain",
+       "testcase": "Unnest Scan MISSING index. Cover. Explain",
        "queryParams": {"query_context": "orders._default"},
        "ignore": "index_id",
         "explain": {
@@ -46,7 +46,7 @@
         ]
     },
     {
-       "testcase": "Unneset Scan MISSING index. Cover. Explain",
+       "testcase": "Unnest Scan MISSING index. Cover. Explain",
        "queryParams": {"query_context": "orders._default"},
        "ignore": "index_id",
         "explain": {
@@ -69,7 +69,7 @@
         ]
     },
     {
-       "testcase": "Unneset Scan MISSING index. Non Cover. Explain",
+       "testcase": "Unnest Scan MISSING index. Non Cover. Explain",
        "queryParams": {"query_context": "orders._default"},
        "ignore": "index_id",
         "explain": {
@@ -94,7 +94,7 @@
         ]
     },
     {
-       "testcase": "Unneset Scan MISSING index. Non Cover. Explain",
+       "testcase": "Unnest Scan MISSING index. Non Cover. Explain",
        "queryParams": {"query_context": "orders._default"},
        "ignore": "index_id",
         "explain": {
@@ -117,7 +117,7 @@
         ]
     },
     {
-       "testcase": "Unneset Scan MISSING index. Non Cover. Explain",
+       "testcase": "Unnest Scan MISSING index. Non Cover. Explain",
        "queryParams": {"query_context": "orders._default"},
        "ignore": "index_id",
         "explain": {
@@ -136,6 +136,100 @@
           {
               "id": "1-888-123-4568",
               "type": "mobile"
+          }
+        ]
+    },
+    {
+       "testcase": "Unnest Scan MISSING index. Non Cover. IS MISSING predicate, Explain",
+       "queryParams": {"query_context": "orders._default"},
+       "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {"present":true}
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`covers` IS MISSING AND v.`index` = 'maix1' AND v.spans[0].`range`[0].high IS MISSING END"
+        },
+       "statements": "SELECT DISTINCT c.id, c.type FROM lkm AS l USE INDEX(maix1) UNNEST l.contacts AS c WHERE c.id IS MISSING",
+       "results": [
+        ]
+    },
+    {
+       "testcase": "Unnest Scan MISSING index. Non Cover. IS NOT VALUED predicate, Explain",
+       "queryParams": {"query_context": "orders._default"},
+       "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {"present":true}
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`covers` IS MISSING AND v.`index` = 'maix1' AND v.spans[0].`range`[0].high IS MISSING END"
+        },
+       "statements": "SELECT DISTINCT c.id, c.type FROM lkm AS l USE INDEX(maix1) UNNEST l.contacts AS c WHERE c.id IS NOT VALUED",
+       "results": [
+        ]
+    },
+    {
+       "testcase": "Unnest Scan MISSING index. Non Cover. IS MISSING predicate, Explain",
+       "queryParams": {"query_context": "orders._default"},
+       "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {"present":true}
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`covers` IS MISSING AND v.`index` = 'maix1' AND v.spans[0].`range`[0].high IS MISSING END"
+        },
+       "statements": "SELECT DISTINCT c.id, c.type FROM lkm AS l USE INDEX(maix1) UNNEST l.contacts AS c WHERE c.default IS MISSING",
+       "results": [
+          {
+              "id": "stephen.curry@gmail.com",
+              "type": "facebook"
+          },
+          {
+              "id": "1-888-123-4568",
+              "type": "mobile"
+          },
+          {
+              "id": "klay.thompson@gmail.com",
+              "type": "facebook"
+          },
+          {
+              "id": "andrew.wigggins@gmail.com"
+          }
+       ]
+    },
+    {
+       "testcase": "Unnest Scan MISSING index. Non Cover. IS NOT VALUED predicate, Explain",
+       "queryParams": {"query_context": "orders._default"},
+       "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {"present":true}
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`covers` IS MISSING AND v.`index` = 'maix1' AND v.spans[0].`range`[0].high IS MISSING END"
+        },
+       "statements": "SELECT DISTINCT c.id, c.type FROM lkm AS l USE INDEX(maix1) UNNEST l.contacts AS c WHERE c.default IS NOT VALUED",
+       "results": [
+          {
+              "id": "stephen.curry@gmail.com",
+              "type": "facebook"
+          },
+          {
+              "id": "1-888-123-4568",
+              "type": "mobile"
+          },
+          {
+              "id": "klay.thompson@gmail.com",
+              "type": "email"
+          },
+          {
+              "id": "klay.thompson@gmail.com",
+              "type": "facebook"
+          },
+          {
+              "id": "andrew.wigggins@gmail.com"
           }
         ]
     }

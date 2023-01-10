@@ -80,7 +80,7 @@ func anySargFor(pred, key, cond expression.Expression, isJoin, doSelec bool,
 	context *PrepareContext) (SargSpans, error) {
 
 	sp, _, err := sargFor(pred, key, isJoin, doSelec, baseKeyspace, keyspaceNames,
-		advisorValidate, isMissing, aliases, context)
+		advisorValidate, isMissing, true, aliases, context)
 	if err != nil || sp == nil {
 		return sp, err
 	}

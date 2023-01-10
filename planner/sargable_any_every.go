@@ -52,6 +52,6 @@ func (this *sargable) VisitAnyEvery(pred *expression.AnyEvery) (interface{}, err
 	}
 
 	mappings := expression.Expressions{mapping}
-	min, _, _, _ := SargableFor(satisfies, mappings, this.missing, this.gsi, this.context, this.aliases)
+	min, _, _, _ := SargableFor(satisfies, mappings, this.missing, this.gsi, []bool{true}, this.context, this.aliases)
 	return min > 0, nil
 }

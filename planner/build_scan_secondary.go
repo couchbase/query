@@ -455,7 +455,7 @@ func (this *builder) sargableIndexes(indexes []datastore.Index, pred, subset exp
 
 		skip := useSkipIndexKeys(index, this.context.IndexApiVersion())
 		missing := indexHasLeadingKeyMissingValues(index, this.context.FeatureControls())
-		min, max, sum, skeys := SargableFor(pred, keys, missing, skip, this.context, this.aliases)
+		min, max, sum, skeys := SargableFor(pred, keys, missing, skip, nil, this.context, this.aliases)
 		exact := min == 0 && pred == nil
 
 		n := min
@@ -848,8 +848,7 @@ func (this *builder) sargIndexes(baseKeyspace *base.BaseKeyspace, underHash bool
 				}
 			}
 		}
-		isMissings := getMissings(se)
-
+		isMissing := se.HasFlag(IE_LEADINGMISSING)
 		validSpans := false
 		if useFilters {
 			filters := baseKeyspace.Filters()
@@ -861,7 +860,7 @@ func (this *builder) sargIndexes(baseKeyspace *base.BaseKeyspace, underHash bool
 			} else {
 				se.exactFilters = make(map[*base.Filter]bool, len(filters))
 			}
-			spans, exactSpans, err = SargForFilters(filters, se.keys, isMissings,
+			spans, exactSpans, err = SargForFilters(filters, se.keys, isMissing, nil,
 				se.maxKeys, underHash, useCBO, baseKeyspace, this.keyspaceNames,
 				advisorValidate, this.aliases, se.exactFilters, this.context)
 			if err == nil && (spans != nil || !isOrPred || !se.HasFlag(IE_LEADINGMISSING)) {
@@ -871,9 +870,9 @@ func (this *builder) sargIndexes(baseKeyspace *base.BaseKeyspace, underHash bool
 			}
 		}
 		if !validSpans {
-			spans, exactSpans, err = SargFor(baseKeyspace.DnfPred(), se, se.keys, isMissings,
-				se.maxKeys, orIsJoin, useCBO, baseKeyspace, this.keyspaceNames,
-				advisorValidate, this.aliases, this.context)
+			spans, exactSpans, err = SargFor(baseKeyspace.DnfPred(), se, se.keys,
+				isMissing, nil, se.maxKeys, orIsJoin, useCBO, baseKeyspace,
+				this.keyspaceNames, advisorValidate, this.aliases, this.context)
 		}
 
 		if se.HasFlag(IE_LEADINGMISSING) && (spans == nil || spans.Size() == 0) {
@@ -994,21 +993,6 @@ func bestIndexBySargableKeys(se, te *indexEntry, snc, tnc int) *indexEntry {
 
 func overlapSpans(expr expression.Expression) bool {
 	return expr != nil && expr.MayOverlapSpans()
-}
-
-func getMissings(entry *indexEntry) (isMissings []bool) {
-	// MB-38287. isMissing true non-array indexkeys only.
-	isMissings = make([]bool, len(entry.keys))
-	size := 1
-	if entry.arrayKey != nil && entry.arrayKey.Flatten() {
-		size = entry.arrayKey.FlattenSize()
-	}
-	for i, _ := range entry.keys {
-		if entry.arrayKey == nil || i < entry.arrayKeyPos || i >= entry.arrayKeyPos+size {
-			isMissings[i] = true
-		}
-	}
-	return
 }
 
 func (this *builder) eqJoinFilter(fl *base.Filter, alias string) (bool, expression.Expression, expression.Expression, *base.BaseKeyspace) {

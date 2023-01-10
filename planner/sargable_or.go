@@ -19,8 +19,9 @@ func (this *sargable) VisitOr(pred *expression.Or) (interface{}, error) {
 	}
 
 	keys := expression.Expressions{this.key}
+	isArrays := []bool{this.array}
 	for _, child := range pred.Operands() {
-		if min, _, _, _ := SargableFor(child, keys, this.missing, this.gsi,
+		if min, _, _, _ := SargableFor(child, keys, this.missing, this.gsi, isArrays,
 			this.context, this.aliases); min <= 0 {
 			return false, nil
 		}

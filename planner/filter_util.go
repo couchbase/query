@@ -277,8 +277,10 @@ func deriveNotNullFilter(keyspace datastore.Keyspace, baseKeyspace *base.BaseKey
 						continue
 					}
 
+					// the "gsi" argument is for skip index keys; we don't need it
+					// here since we only consider the leading index key
 					min, _, _, _ := SargableFor(term, expression.Expressions{idxKeyDerive.keyExpr},
-						false, false, context, aliases)
+						false, false, nil, context, aliases)
 					if min > 0 {
 						keyMap[val].derive = false
 						newFilters = AddDerivedFilter(term, keyspaceNames, origKeyspaceNames,

@@ -38,3 +38,36 @@ func (this *sarg) VisitIsValued(pred *expression.IsValued) (interface{}, error) 
 
 	return nil, nil
 }
+
+func (this *sarg) VisitIsNotValued(pred *expression.IsNotValued) (interface{}, error) {
+	if base.SubsetOf(pred, this.key) {
+		if expression.Equivalent(pred, this.key) {
+			return _EXACT_SELF_SPANS, nil
+		}
+		return _SELF_SPANS, nil
+	}
+
+	if pred.Operand().EquivalentTo(this.key) && this.isMissing {
+		// MB-38287
+		// For array index key requires whole scan because indexer doesn't have info.
+		if !this.isArray {
+			return _NOT_VALUED_SPANS, nil
+		}
+		s := _WHOLE_SPANS.Copy()
+		s.SetExact(false)
+		return s, nil
+	}
+
+	var spans SargSpans
+	if pred.PropagatesNull() {
+		spans = _VALUED_SPANS
+	} else if pred.PropagatesMissing() {
+		spans = _FULL_SPANS
+	}
+
+	if spans != nil && pred.DependsOn(this.key) {
+		return spans, nil
+	}
+
+	return nil, nil
+}

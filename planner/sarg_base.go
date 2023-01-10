@@ -22,12 +22,13 @@ type sarg struct {
 	advisorValidate bool
 	constPred       bool
 	isMissing       bool
+	isArray         bool
 	aliases         map[string]bool
 	context         *PrepareContext
 }
 
 func newSarg(key expression.Expression, baseKeyspace *base.BaseKeyspace,
-	keyspaceNames map[string]string, isJoin, doSelec, advisorValidate, isMissing bool,
+	keyspaceNames map[string]string, isJoin, doSelec, advisorValidate, isMissing, isArray bool,
 	aliases map[string]bool, context *PrepareContext) *sarg {
 	return &sarg{
 		key:             key,
@@ -37,6 +38,7 @@ func newSarg(key expression.Expression, baseKeyspace *base.BaseKeyspace,
 		doSelec:         doSelec,
 		advisorValidate: advisorValidate,
 		isMissing:       isMissing,
+		isArray:         isArray,
 		aliases:         aliases,
 		context:         context,
 	}
@@ -181,10 +183,6 @@ func (this *sarg) VisitBetween(pred *expression.Between) (interface{}, error) {
 
 func (this *sarg) VisitLike(pred *expression.Like) (interface{}, error) {
 	return this.visitLike(pred)
-}
-
-func (this *sarg) VisitIsNotValued(pred *expression.IsNotValued) (interface{}, error) {
-	return this.visitDefault(pred)
 }
 
 // Concat

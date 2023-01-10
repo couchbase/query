@@ -551,6 +551,8 @@ func setSpecialSpan(rg *plan.Range2) {
 		rg.Flags |= plan.RANGE_NULL_SPAN
 	} else if rg.EquivalentTo(_MISSING_SPAN.Ranges[0]) {
 		rg.Flags |= plan.RANGE_MISSING_SPAN
+	} else if rg.EquivalentTo(_NOT_VALUED_SPAN.Ranges[0]) {
+		rg.Flags |= plan.RANGE_NOT_VALUED_SPAN
 	}
 }
 

@@ -332,15 +332,15 @@ func (this *builder) matchUnnest(node *algebra.KeyspaceTerm, pred, subset expres
 		sargKey = unnestIdent
 	}
 
-	keys := getUnnestSargKeys(entry.keys, sargKey)
+	keys, isArrays := getUnnestSargKeys(entry.keys, sargKey)
 	origKeys := keys
 	if origSargKey != nil {
-		origKeys = getUnnestSargKeys(entry.keys, origSargKey)
+		origKeys, _ = getUnnestSargKeys(entry.keys, origSargKey)
 	}
 
 	skip := useSkipIndexKeys(entry.index, this.context.IndexApiVersion())
 	missing := entry.HasFlag(IE_LEADINGMISSING)
-	min, max, sum, skeys := SargableFor(pred, keys, missing, skip, this.context, this.aliases)
+	min, max, sum, skeys := SargableFor(pred, keys, missing, skip, isArrays, this.context, this.aliases)
 
 	n := min
 	if skip && (n > 0 || missing) {
@@ -355,8 +355,7 @@ func (this *builder) matchUnnest(node *algebra.KeyspaceTerm, pred, subset expres
 		return nil, nil, nil, nil
 	}
 
-	isMissings := getMissings(entry)
-	spans, exactSpans, err := SargFor(pred, entry, keys, isMissings, n, false, useCBO,
+	spans, exactSpans, err := SargFor(pred, entry, keys, missing, isArrays, n, false, useCBO,
 		baseKeyspace, this.keyspaceNames, advisorValidate, this.aliases, this.context)
 	if err != nil {
 		return nil, nil, nil, err
@@ -419,20 +418,26 @@ func (this *builder) matchUnnestScan(node *algebra.KeyspaceTerm, pred, subset ex
 }
 
 func getUnnestSargKeys(keys expression.Expressions, sargKey expression.Expression) (
-	rv expression.Expressions) {
+	rv expression.Expressions, isArrays []bool) {
 
+	// replace the array index key with the "unnested" sargKey.
+	// (assumes the array index key is the first index key)
 	rv = make(expression.Expressions, 0, len(keys))
 	if fks, ok := sargKey.(*expression.FlattenKeys); ok {
 		rv = append(rv, fks.Operands()...)
 	} else {
 		rv = append(rv, sargKey)
 	}
+	isArrays = make([]bool, len(rv))
+	for i := 0; i < len(rv); i++ {
+		isArrays[i] = true
+	}
 
 	if len(rv) < len(keys) {
 		rv = append(rv, keys[len(rv):]...)
 	}
 
-	return rv
+	return
 }
 
 func getUnnestFilters(aliases []string) expression.Expressions {

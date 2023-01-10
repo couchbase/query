@@ -177,7 +177,7 @@
             "results": [
                 {"present":true}
             ],
-            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`covers` IS MISSING AND v.`index` = 'mix2' AND v.spans[0].`range`[0].`high` IS MISSING END"
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`covers` IS MISSING AND (v.`index` = 'mix2' OR v.`index` = 'mix1') AND v.spans[0].`range`[0].`high` IS MISSING END"
         },
        "statements": "SELECT META(l).id FROM lkm AS l WHERE ANY v IN l.contacts SATISFIES v.default IS MISSING END",
        "results": [
@@ -201,5 +201,23 @@
        "results": [
            { "id": "thompson01" }
        ]
+    },
+    {
+       "testcase": "Index Scan on MISSING index. Non-Cover. IS NOT VALUED in ANY . Explain",
+       "queryParams": {"query_context": "orders._default"},
+       "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {"present":true}
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`covers` IS MISSING AND (v.`index` = 'mix2' OR v.`index` = 'mix1') AND v.spans[0].`range`[0].`high` IS MISSING END"
+        },
+       "statements": "SELECT META(l).id FROM lkm AS l WHERE ANY v IN l.contacts SATISFIES v.default IS NOT VALUED END",
+       "results": [
+           { "id": "scurry01" },
+           { "id": "wiggins01" },
+           { "id": "thompson01" }
+        ]
     }
 ]

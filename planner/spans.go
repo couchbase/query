@@ -91,6 +91,9 @@ var _MISSING_SPANS *TermSpans
 var _NULL_SPAN *plan.Span2
 var _NULL_SPANS *TermSpans
 
+var _NOT_VALUED_SPAN *plan.Span2
+var _NOT_VALUED_SPANS *TermSpans
+
 var _EXACT_FULL_SPAN *plan.Span2
 var _EXACT_FULL_SPANS *TermSpans
 
@@ -136,4 +139,8 @@ func init() {
 	range2 = plan.NewRange2(nil, expression.NULL_EXPR, datastore.NEITHER, OPT_SELEC_NOT_AVAIL, OPT_SELEC_NOT_AVAIL, plan.RANGE_MISSING_SPAN)
 	_MISSING_SPAN = plan.NewStaticSpan2(nil, plan.Ranges2{range2}, true)
 	_MISSING_SPANS = NewTermSpans(_MISSING_SPAN)
+
+	range2 = plan.NewRange2(nil, expression.NULL_EXPR, datastore.HIGH, OPT_SELEC_NOT_AVAIL, OPT_SELEC_NOT_AVAIL, plan.RANGE_NOT_VALUED_SPAN)
+	_NOT_VALUED_SPAN = plan.NewStaticSpan2(nil, plan.Ranges2{range2}, true)
+	_NOT_VALUED_SPANS = NewTermSpans(_NOT_VALUED_SPAN)
 }
