@@ -1,4 +1,4 @@
-//  Copyright 2014-Present Couchbase, Inc.
+//  cOPYRight 2014-Present Couchbase, Inc.
 //
 //  Use of this software is governed by the Business Source License included
 //  in the file licenses/BSL-Couchbase.txt.  As of the Change Date specified
@@ -251,7 +251,7 @@ func (this *Curl) handleCurl(url string, options map[string]interface{}, allowli
 	ctx, ok := context.(QuotaContext)
 	if !ok || !ctx.UseRequestQuota() {
 		ctx = nil
-	} else {
+	} else if ctx.MemoryQuota() != 0 {
 		availableQuota = uint64(float64(ctx.MemoryQuota()) * (1.0 - ctx.CurrentQuotaUsage()))
 		if responseSize > availableQuota {
 			responseSize = availableQuota
@@ -501,7 +501,7 @@ func (this *Curl) handleCurl(url string, options map[string]interface{}, allowli
 			}
 			responseSize = uint64(rs)
 			// if there is a quota the remaining available memory enforces the upper limit
-			if ctx == nil && responseSize > _MAX_NO_QUOTA_RESPONSE_SIZE {
+			if (ctx == nil || ctx.MemoryQuota() == 0) && responseSize > _MAX_NO_QUOTA_RESPONSE_SIZE {
 				logging.Debuga(func() string {
 					return fmt.Sprintf("CURL (%v) result-cap %v limited to %v", url, responseSize, _MAX_NO_QUOTA_RESPONSE_SIZE)
 				})
