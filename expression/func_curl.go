@@ -245,7 +245,7 @@ func (this *Curl) handleCurl(url string, options map[string]interface{}, allowli
 		return nil, err
 	}
 
-	var availableQuota uint64
+	availableQuota := uint64(_MAX_NO_QUOTA_RESPONSE_SIZE)
 	responseSize := uint64(_DEFAULT_RESPONSE_SIZE)
 
 	ctx, ok := context.(QuotaContext)
@@ -253,6 +253,9 @@ func (this *Curl) handleCurl(url string, options map[string]interface{}, allowli
 		ctx = nil
 	} else if ctx.MemoryQuota() != 0 {
 		availableQuota = uint64(float64(ctx.MemoryQuota()) * (1.0 - ctx.CurrentQuotaUsage()))
+		if availableQuota < _MIN_RESPONSE_SIZE {
+			availableQuota = _MIN_RESPONSE_SIZE
+		}
 		if responseSize > availableQuota {
 			responseSize = availableQuota
 		}
@@ -501,12 +504,7 @@ func (this *Curl) handleCurl(url string, options map[string]interface{}, allowli
 			}
 			responseSize = uint64(rs)
 			// if there is a quota the remaining available memory enforces the upper limit
-			if (ctx == nil || ctx.MemoryQuota() == 0) && responseSize > _MAX_NO_QUOTA_RESPONSE_SIZE {
-				logging.Debuga(func() string {
-					return fmt.Sprintf("CURL (%v) result-cap %v limited to %v", url, responseSize, _MAX_NO_QUOTA_RESPONSE_SIZE)
-				})
-				responseSize = _MAX_NO_QUOTA_RESPONSE_SIZE
-			} else if ctx != nil && responseSize > availableQuota {
+			if responseSize > availableQuota {
 				logging.Debuga(func() string {
 					return fmt.Sprintf("CURL (%v) result-cap %v limited to %v", url, responseSize, availableQuota)
 				})
