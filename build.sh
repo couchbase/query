@@ -315,6 +315,9 @@ function DevStandaloneSetup {
     then
          (cd ../eventing-ee/evaluator/impl/gen/convertschema; go run generate.go  ../../parser/dynamic_config_schema.json DynamicConfigSchema ../parser/dynamic_config_schema.go)
     fi
+    if [[ ! -f ../eventing-ee/evaluator/impl/v8wrapper/process_manager/gen/flatbuf/payload_generated.h ]]; then
+	    (cd ../eventing-ee/evaluator/impl/v8wrapper/process_manager/gen; flatc -c -o flatbuf ../flatbuf/payload.fbs; flatc -g -o . ../flatbuf/payload.fbs)
+    fi
 }
 
 # turn off go module for non repo sync build or standalone build
