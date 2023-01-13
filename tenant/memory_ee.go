@@ -106,12 +106,17 @@ func (this *memoryManager) expire() {
 	}
 	this.timer.Stop()
 	this.timer = nil
+	sessions := this.sessions
 	this.Unlock()
-	managersLock.Lock()
-	delete(managers, this.tenant)
-	managersLock.Unlock()
-	for _, f := range resourceManagers {
-		f(this.tenant)
+
+	// ignore unload if tenant has been in use since the timer was fired
+	if sessions == 0 {
+		managersLock.Lock()
+		delete(managers, this.tenant)
+		managersLock.Unlock()
+		for _, f := range resourceManagers {
+			f(this.tenant)
+		}
 	}
 }
 
