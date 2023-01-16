@@ -197,14 +197,24 @@ func (s *store) CommitTransaction(stmtAtomicity bool, context datastore.QueryCon
 		atrl := transaction.GetATRLocation()
 		s.gcClient.AddAtrLocation(&atrl)
 	}
+	logging.Tracea(func() string { return fmt.Sprintf("=====%v=====Commit end write (%v)========", txId, err) })
 	if err != nil {
+		if transaction != nil {
+			var wg sync.WaitGroup
+			rerr := transaction.Rollback(func(resErr error) {
+				defer wg.Done()
+			})
+			if rerr == nil {
+				wg.Wait()
+			}
+			txMutations.SetTransaction(nil, nil)
+		}
 		e, c := gcagent.ErrorType(err, false)
 		if ce, ok := err.(errors.Error); ok && c == nil {
 			c = ce.Cause()
 		}
 		return errors.NewCommitTransactionError(e, c)
 	}
-	logging.Tracea(func() string { return fmt.Sprintf("=====%v=====Commit end write========", txId) })
 
 	if transaction != nil {
 		var wg sync.WaitGroup
@@ -311,12 +321,15 @@ func (s *store) RollbackTransaction(stmtAtomicity bool, context datastore.QueryC
 				errOut = errors.NewRollbackTransactionError(fmt.Errorf("Panic: %v", r), nil)
 			}
 		}()
+		txId := transaction.Attempt().ID
+		logging.Tracea(func() string { return fmt.Sprintf("=====%v=====Actual Rollback begin========", txId) })
 
 		wg.Add(1)
 		err = transaction.Rollback(func(resErr error) {
 			defer wg.Done()
 			cerr = resErr
 		})
+		logging.Tracea(func() string { return fmt.Sprintf("=====%v=====Actual Rollback end (%v) ========", txId, err) })
 		txMutations.SetTransaction(nil, nil)
 		if err == nil {
 			wg.Wait()
