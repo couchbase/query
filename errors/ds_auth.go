@@ -10,25 +10,31 @@ package errors
 
 // Couchbase authorization error
 func NewDatastoreAuthorizationError(e error) Error {
+	c := make(map[string]interface{})
+	c["error"] = e
 	return &err{level: EXCEPTION, ICode: E_DATASTORE_AUTHORIZATION, IKey: "datastore.couchbase.authorization_error", ICause: e,
-		InternalMsg: "Unable to authorize user.", InternalCaller: CallerN(1)}
+		InternalMsg: "Unable to authorize user.", InternalCaller: CallerN(1), cause: c}
 }
 
 // Error codes 13010-13011 are retired. Do not reuse.
 
 func NewDatastoreClusterError(e error, msg string) Error {
+	c := make(map[string]interface{})
+	c["error"] = e
 	return &err{level: EXCEPTION, ICode: E_DATASTORE_CLUSTER, IKey: "datastore.couchbase.cluster_error", ICause: e,
-		InternalMsg: "Error retrieving cluster " + msg, InternalCaller: CallerN(1)}
+		InternalMsg: "Error retrieving cluster " + msg, InternalCaller: CallerN(1), cause: c}
 }
 
 func NewDatastoreUnableToRetrieveRoles(e error) Error {
-	return &err{level: EXCEPTION, ICode: E_DATASTORE_UNABLE_TO_RETRIEVE_ROLES, IKey: "datastore.couchbase.retrieve_roles", ICause: e,
-		InternalMsg: "Unable to retrieve roles from server.", InternalCaller: CallerN(1)}
+	c := make(map[string]interface{})
+	c["error"] = e
+	return &err{level: EXCEPTION, ICode: E_DATASTORE_UNABLE_TO_RETRIEVE_ROLES, IKey: "datastore.couchbase.retrieve_roles",
+		ICause: e, InternalMsg: "Unable to retrieve roles from server.", InternalCaller: CallerN(1), cause: c}
 }
 
 func NewDatastoreInsufficientCredentials(msg string, e error, path []string) Error {
 	c := make(map[string]interface{})
-	c["cause"] = e
+	c["error"] = e
 	c["path"] = path
 	return &err{level: EXCEPTION, ICode: E_DATASTORE_INSUFFICIENT_CREDENTIALS,
 		IKey:        "datastore.couchbase.insufficient_credentials",
@@ -36,13 +42,15 @@ func NewDatastoreInsufficientCredentials(msg string, e error, path []string) Err
 }
 
 func NewDatastoreUnableToRetrieveBuckets(e error) Error {
-	return &err{level: EXCEPTION, ICode: E_DATASTORE_UNABLE_TO_RETRIEVE_BUCKETS, IKey: "datastore.couchbase.retrieve_buckets", ICause: e,
-		InternalMsg: "Unable to retrieve buckets from server.", InternalCaller: CallerN(1)}
+	c := make(map[string]interface{})
+	c["error"] = e
+	return &err{level: EXCEPTION, ICode: E_DATASTORE_UNABLE_TO_RETRIEVE_BUCKETS, IKey: "datastore.couchbase.retrieve_buckets",
+		ICause: e, InternalMsg: "Unable to retrieve buckets from server.", InternalCaller: CallerN(1), cause: c}
 }
 
 func NewNoAdminPrivilegeError(e error) Error {
 	c := make(map[string]interface{})
-	c["cause"] = e
+	c["error"] = e
 	return &err{level: EXCEPTION, ICode: E_DATASTORE_NO_ADMIN,
 		IKey:        "datastore.couchbase.no.admin",
 		InternalMsg: "Unable to determine admin credentials", InternalCaller: CallerN(1), cause: c}
