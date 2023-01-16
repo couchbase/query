@@ -90,8 +90,12 @@ func NewAdminMakeMetricError(e error, msg string) Error {
 }
 
 func NewAdminAuthError(e error, msg string) Error {
-	c := make(map[string]interface{})
-	c["error"] = e
+	var c interface{}
+	if e != nil {
+		m := make(map[string]interface{})
+		m["error"] = e
+		c = m
+	}
 	return &err{level: EXCEPTION, ICode: E_ADMIN_AUTH, IKey: "admin.clustering.authorize", ICause: e, cause: c,
 		InternalMsg: "Error authorizing against cluster " + msg, InternalCaller: CallerN(1)}
 }

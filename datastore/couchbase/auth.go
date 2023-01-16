@@ -324,6 +324,10 @@ func cbAuthorize(s authSource, privileges *auth.Privileges, credentials *auth.Cr
 				credentialsList = append(credentialsList, creds)
 				authenticatedUsers = append(authenticatedUsers, userKeyString(creds))
 			} else {
+				logging.Debuga(func() string {
+					u, _, _ := cbauth.ExtractCreds(req)
+					return fmt.Sprintf("authWebCreds: <ud>%v</ud> - %v", u, err)
+				})
 
 				clientAuthType, err1 := cbauth.GetClientCertAuthType()
 				if err1 != nil {
