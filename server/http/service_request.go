@@ -19,6 +19,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/couchbase/cbauth"
 	json "github.com/couchbase/go_json"
 	adt "github.com/couchbase/goutils/go-cbaudit"
 	"github.com/couchbase/query/algebra"
@@ -191,24 +192,30 @@ func newHttpRequest(rv *httpRequest, resp http.ResponseWriter, req *http.Request
 	}
 	// start - temporary logging of requests
 	logging.Debuga(func() string {
+		u, _, _ := cbauth.ExtractCreds(req)
 		data := make(map[string]interface{}, 7)
+		data["user"] = u
 		data["request"] = rv.Id().String()
-		data["prepared"] = (rv.PreparedId() != "")
 		data["statement"] = rv.EventStatement()
 		data["query_context"] = rv.QueryContext()
 		data["named_args"] = httpArgs.getNamedArgs()
+		data["client_context_id"] = rv.ClientContextId()
+		// only include fields not already processed in args
 		a := make(map[string]interface{})
 		if rv.jsonArgs.req != nil {
 			for i := 0; i < rv.jsonArgs.args.count; i++ {
-				a[rv.jsonArgs.args.parms[i].name] = rv.jsonArgs.args.parms[i].val
+				if _, ok := data[rv.jsonArgs.args.parms[i].name]; !ok && rv.jsonArgs.args.parms[i].name != "creds" {
+					a[rv.jsonArgs.args.parms[i].name] = rv.jsonArgs.args.parms[i].val
+				}
 			}
 		} else {
 			for param, val := range req.Form {
-				a[param] = val
+				if _, ok := data[param]; !ok && param != "creds" {
+					a[param] = val
+				}
 			}
 		}
 		data["args"] = a
-		data["client_context_id"] = rv.ClientContextId()
 		b, _ := json.Marshal(data)
 		return string(b)
 	})
