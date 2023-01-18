@@ -228,3 +228,16 @@ func (this *Or) Constructor() FunctionConstructor {
 		return NewOr(operands...)
 	}
 }
+
+func (this *Or) EquivalentTo(other Expression) bool {
+	if this.valueEquivalentTo(other) {
+		return true
+	}
+	if o2, ok := other.(*Or); ok {
+		o1, _ := FlattenOr(this)
+		o2, _ = FlattenOr(o2)
+		return o1.CommutativeFunctionBase.doEquivalentTo(o2)
+	} else {
+		return false
+	}
+}

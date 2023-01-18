@@ -102,3 +102,16 @@ func (this *And) Constructor() FunctionConstructor {
 		return NewAnd(operands...)
 	}
 }
+
+func (this *And) EquivalentTo(other Expression) bool {
+	if this.valueEquivalentTo(other) {
+		return true
+	}
+	if a2, ok := other.(*And); ok {
+		a1, _ := FlattenAnd(this)
+		a2, _ = FlattenAnd(a2)
+		return a1.CommutativeFunctionBase.doEquivalentTo(a2)
+	} else {
+		return false
+	}
+}

@@ -493,7 +493,10 @@ func (this *CommutativeFunctionBase) EquivalentTo(other Expression) bool {
 	if this.valueEquivalentTo(other) {
 		return true
 	}
+	return this.doEquivalentTo(other)
+}
 
+func (this *CommutativeFunctionBase) doEquivalentTo(other Expression) bool {
 	that, ok := other.(Function)
 	if !ok {
 		return false
