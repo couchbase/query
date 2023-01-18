@@ -454,10 +454,12 @@ func (b *Bucket) do3(vb uint16, f func(mc *memcached.Client, vb uint16) error, d
 		if lastError == nil {
 			return nil
 		}
+
 		if !desc.retry {
 			desc.attempts++
 			break
 		}
+		atomic.AddUint64(&b.retryCount, 1)
 
 		// KV is not willing to service any more requests for this interval
 		if desc.delay > time.Duration(0) {
@@ -685,17 +687,19 @@ func backOff(attempt, maxAttempts int, duration time.Duration, exponential bool)
 
 func (b *Bucket) doBulkGet(vb uint16, keys []string, active func() bool, reqDeadline time.Time,
 	ech chan<- error, subPaths []string, useReplica bool, eStatus *errorStatus,
-	context ...*memcached.ClientContext) (map[string]*gomemcached.MCResponse, time.Duration) {
+	context ...*memcached.ClientContext) (map[string]*gomemcached.MCResponse, time.Duration, int) {
 
 	rv := _STRING_MCRESPONSE_POOL.Get()
 	done := false
 	bname := b.Name
+	retries := 0
 	desc := &doDescriptor{useReplicas: useReplica, version: b.Version, maxTries: b.backOffRetries()}
 	var lastError error
 	for ; desc.attempts < maxBulkRetries && !done && !eStatus.errStatus; desc.attempts++ {
 		if !active() {
-			return rv, desc.delay
+			return rv, desc.delay, retries
 		}
+		retries++
 
 		// This stack frame exists to ensure we can clean up
 		// connection at a reasonable time.
@@ -762,7 +766,7 @@ func (b *Bucket) doBulkGet(vb uint16, keys []string, active func() bool, reqDead
 		}()
 
 		if err != nil {
-			return rv, time.Duration(0)
+			return rv, time.Duration(0), retries
 		}
 	}
 
@@ -772,7 +776,7 @@ func (b *Bucket) doBulkGet(vb uint16, keys []string, active func() bool, reqDead
 		ech <- err
 	}
 
-	return rv, desc.delay
+	return rv, desc.delay, retries
 }
 
 type errorStatus struct {
@@ -844,6 +848,7 @@ func vbBulkGetWorker(ch chan *vbBulkGet) {
 func vbDoBulkGet(vbg *vbBulkGet) time.Duration {
 	var delay time.Duration
 	var rv map[string]*gomemcached.MCResponse
+	var retries int
 
 	defer func() {
 
@@ -854,7 +859,10 @@ func vbDoBulkGet(vbg *vbBulkGet) time.Duration {
 		// Workers cannot panic and die
 		recover()
 	}()
-	rv, delay = vbg.b.doBulkGet(vbg.k, vbg.keys, vbg.active, vbg.reqDeadline, vbg.ech, vbg.subPaths, vbg.useReplica, vbg.groupError, vbg.context...)
+	rv, delay, retries = vbg.b.doBulkGet(vbg.k, vbg.keys, vbg.active, vbg.reqDeadline, vbg.ech, vbg.subPaths, vbg.useReplica, vbg.groupError, vbg.context...)
+	if retries > 0 {
+		atomic.AddUint64(&vbg.b.retryCount, uint64(retries))
+	}
 	if delay != time.Duration(0) {
 
 		// find received documents and remove the keys from the key slice
@@ -879,6 +887,7 @@ func vbDoBulkGet(vbg *vbBulkGet) time.Duration {
 	}
 	if len(rv) > 0 {
 		vbg.ch <- rv
+		atomic.AddUint64(&vbg.b.readCount, uint64(len(rv)))
 	}
 	return delay
 }
@@ -1161,6 +1170,7 @@ func (b *Bucket) WriteCasWithMT(k string, flags, exp int, cas uint64, v interfac
 		return err
 	})
 
+	atomic.AddUint64(&b.writeCount, 1)
 	if res != nil {
 		_, wu = res.ComputeUnits()
 	}
@@ -1266,6 +1276,7 @@ func (b *Bucket) GetsMC(key string, active func() bool, reqDeadline time.Time, u
 		}
 		return nil
 	}, false, useReplica, b.backOffRetries())
+	atomic.AddUint64(&b.readCount, 1)
 	return response, err
 }
 
@@ -1365,6 +1376,7 @@ func (b *Bucket) Incr(k string, amt, def uint64, exp int, context ...*memcached.
 		rv = res
 		return nil
 	})
+	atomic.AddUint64(&b.writeCount, 1)
 	return rv, err
 }
 
@@ -1379,6 +1391,7 @@ func (b *Bucket) Decr(k string, amt, def uint64, exp int, context ...*memcached.
 		rv = res
 		return nil
 	})
+	atomic.AddUint64(&b.writeCount, 1)
 	return rv, err
 }
 

@@ -7,7 +7,6 @@
 //  the file licenses/APL2.txt.
 
 /*
-
 Package datastore provides a common datastore abstraction over storage
 engines, such as Couchbase server, cloud, mobile, file, 3rd-party
 databases and storage engines, etc.
@@ -17,7 +16,6 @@ The logical hierarchy for the query language is datastore -> namespace -> bucket
 
 TODO: This hierarchy should be revisited and aligned with long-term
 plans before query Beta / GA.
-
 */
 package datastore
 
@@ -84,6 +82,11 @@ type Datastore interface {
 type Systemstore interface {
 	Datastore
 	PrivilegesFromPath(fullname string, keyspace string, privilege auth.Privilege, privs *auth.Privileges)
+}
+
+type Datastore2 interface {
+	Datastore
+	ForeachBucket(func(ExtendedBucket))
 }
 
 type AuditInfo struct {
@@ -161,6 +164,10 @@ type Bucket interface {
 
 	CreateScope(name string) errors.Error // Create a new scope
 	DropScope(name string) errors.Error   // Drop a scope
+}
+type ExtendedBucket interface {
+	Bucket
+	GetIOStats(bool, bool) map[string]interface{} // get an object containing IO stats for the bucket
 }
 
 type Scope interface {

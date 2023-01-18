@@ -17,6 +17,7 @@ import (
 	"time"
 
 	json "github.com/couchbase/go_json"
+	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/memory"
 	"github.com/couchbase/query/tenant"
@@ -48,9 +49,7 @@ type statsCollector struct {
 // Cpu/Memory Collector
 //////////////////////////////////////////////////////////////
 
-//
 // Start Stats collection
-//
 func (this *Server) StartStatsCollector() (err error) {
 
 	collector := &statsCollector{server: this}
@@ -69,9 +68,7 @@ func (this *Server) StartStatsCollector() (err error) {
 	return nil
 }
 
-//
 // Gather Cpu/Memory
-//
 func (c *statsCollector) runCollectStats() {
 	var lastGC uint64
 	ticker := time.NewTicker(_STATS_INTRVL)
@@ -124,6 +121,25 @@ func (c *statsCollector) runCollectStats() {
 			})
 			newStats["tenant.memory.usage"] = tenants
 		}
+
+		// get per bucket stats
+		var bstats map[string]interface{}
+		store, ok := datastore.GetDatastore().(datastore.Datastore2)
+		if ok {
+			store.ForeachBucket(func(b datastore.ExtendedBucket) {
+				stats := b.GetIOStats(false, false)
+				if len(stats) != 0 {
+					if bstats == nil {
+						bstats = make(map[string]interface{})
+					}
+					bstats[b.Name()] = stats
+				}
+			})
+		}
+		if bstats != nil {
+			newStats["bucket.IO.stats"] = bstats
+		}
+
 		oldStats = c.server.AccountingStore().ExternalVitals(newStats)
 		newStats = oldStats
 

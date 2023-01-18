@@ -373,6 +373,14 @@ func (s *store) NamespaceByName(name string) (p datastore.Namespace, e errors.Er
 	return p, nil
 }
 
+func (s *store) ForeachBucket(f func(datastore.ExtendedBucket)) {
+	for _, n := range s.namespaceCache {
+		for _, k := range n.keyspaceCache {
+			f(k.cbKeyspace)
+		}
+	}
+}
+
 // The ns_server admin API is open iff we can access the /pools API without a password.
 func (s *store) adminIsOpen() bool {
 	url := s.connectionUrl + "/pools"
@@ -1608,6 +1616,10 @@ func (p *namespace) KeyspaceUpdateCallback(bucket *cb.Bucket) {
 	if checkSysBucket {
 		chkSysBucket()
 	}
+}
+
+func (b *keyspace) GetIOStats(reset bool, all bool) map[string]interface{} {
+	return b.cbbucket.GetIOStats(reset, all)
 }
 
 func (b *keyspace) NamespaceId() string {

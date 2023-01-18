@@ -311,11 +311,25 @@ func doPrometheusLow(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Re
 		w.Write([]byte(fmt.Sprintf("%v\n", localValue(endpoint.server, name))))
 	}
 
+	bName := "bucket"
 	if tenant.IsServerless() {
 		tenant.Foreach(func(n string, m memory.MemoryManager) {
 			w.Write([]byte("# TYPE n1ql_tenant_memory gauge\n"))
 			w.Write([]byte("n1ql_tenant_memory{bucket=\"" + n + "\"} "))
 			w.Write([]byte(fmt.Sprintf("%v\n", m.AllocatedMemory())))
+		})
+		bName = "tenant"
+	}
+	store, ok := datastore.GetDatastore().(datastore.Datastore2)
+	if ok {
+		store.ForeachBucket(func(b datastore.ExtendedBucket) {
+			stats := b.GetIOStats(false, true)
+			for n, s := range stats {
+				statName := "n1ql_" + bName + "_" + n
+				w.Write([]byte("# TYPE n1ql_" + statName + " gauge\n"))
+				w.Write([]byte(statName + "{bucket=\"" + b.Name() + "\"} "))
+				w.Write([]byte(fmt.Sprintf("%v\n", s)))
+			}
 		})
 	}
 
@@ -1274,17 +1288,17 @@ func (r remapper) remap(bucket string, path []string) {
 }
 
 // Restore semantics:
-// - for global functions, no include, exclude remap is possible.
-//   any non global functions passed will simply be skipped
-// - for scope functions, include, exclude and remap will only operate at scope level
-//   currently no check is made that the target scope exist, which may very well leave stale function definitions
-// - for both cases the only thing that counts is the name, and not the signature, it is therefore possible to go back in
-//   time and restore function definitions with different parameter lists
-// - remapping to an existing scope will replace existing functions, with the same or different signature, which may not be
-//   intended, however a different conflict resolution would prevent going back in time
-// - be aware that remapping may have other side effects: for query context based statements contained within functions, the new targets
-//   will be under the new bucket / scope query context, while accesses with full path will remain unchanged.
-//   this makes perfect sense, but may not necessarely be what the user intended
+//   - for global functions, no include, exclude remap is possible.
+//     any non global functions passed will simply be skipped
+//   - for scope functions, include, exclude and remap will only operate at scope level
+//     currently no check is made that the target scope exist, which may very well leave stale function definitions
+//   - for both cases the only thing that counts is the name, and not the signature, it is therefore possible to go back in
+//     time and restore function definitions with different parameter lists
+//   - remapping to an existing scope will replace existing functions, with the same or different signature, which may not be
+//     intended, however a different conflict resolution would prevent going back in time
+//   - be aware that remapping may have other side effects: for query context based statements contained within functions, the new targets
+//     will be under the new bucket / scope query context, while accesses with full path will remain unchanged.
+//     this makes perfect sense, but may not necessarely be what the user intended
 func doFunctionRestore(v []byte, l int, b string, include, exclude matcher, remap remapper) errors.Error {
 	var oState json.KeyState
 

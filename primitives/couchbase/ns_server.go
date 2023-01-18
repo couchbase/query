@@ -25,6 +25,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 	"unsafe"
 
@@ -249,6 +250,9 @@ type VBucketServerMap struct {
 // take a boolean parameter "bucketLocked".
 type Bucket struct {
 	sync.RWMutex
+	readCount              uint64
+	writeCount             uint64
+	retryCount             uint64
 	AuthType               string             `json:"authType"`
 	Capabilities           []string           `json:"bucketCapabilities"`
 	CapabilitiesVersion    string             `json:"bucketCapabilitiesVer"`
@@ -977,13 +981,14 @@ func Connect(baseU string, userAgent string) (Client, error) {
 // The map key is the name of the scope.
 // Example data:
 // {"uid":"b","scopes":[
-//    {"name":"_default","uid":"0","collections":[
-//       {"name":"_default","uid":"0"}]},
-//    {"name":"myScope1","uid":"8","collections":[
-//       {"name":"myCollectionB","uid":"c"},
-//       {"name":"myCollectionA","uid":"b"}]},
-//    {"name":"myScope2","uid":"9","collections":[
-//       {"name":"myCollectionC","uid":"d"}]}]}
+//
+//	{"name":"_default","uid":"0","collections":[
+//	   {"name":"_default","uid":"0"}]},
+//	{"name":"myScope1","uid":"8","collections":[
+//	   {"name":"myCollectionB","uid":"c"},
+//	   {"name":"myCollectionA","uid":"b"}]},
+//	{"name":"myScope2","uid":"9","collections":[
+//	   {"name":"myCollectionC","uid":"d"}]}]}
 type InputManifest struct {
 	Uid    string
 	Scopes []InputScope
@@ -1312,6 +1317,44 @@ func (b *Bucket) StopUpdater() {
 		b.updater.Close()
 		b.updater = nil
 	}
+}
+
+func (b *Bucket) GetIOStats(reset bool, all bool) map[string]interface{} {
+	var readCount uint64
+	var writeCount uint64
+	var retryCount uint64
+	var rv map[string]interface{}
+
+	if reset {
+		readCount = atomic.SwapUint64(&b.readCount, uint64(0))
+		writeCount = atomic.SwapUint64(&b.writeCount, uint64(0))
+		retryCount = atomic.SwapUint64(&b.retryCount, uint64(0))
+		logging.Infof("read %v write %v retry %v", readCount, writeCount, retryCount)
+	} else {
+		readCount = atomic.LoadUint64(&b.readCount)
+		writeCount = atomic.LoadUint64(&b.writeCount)
+		retryCount = atomic.LoadUint64(&b.retryCount)
+	}
+	if readCount != 0 || all {
+		if rv == nil {
+			rv = make(map[string]interface{})
+		}
+		rv["reads"] = readCount
+	}
+	if writeCount != 0 || all {
+		if rv == nil {
+			rv = make(map[string]interface{})
+		}
+		rv["writes"] = writeCount
+	}
+	if retryCount != 0 || all {
+		if rv == nil {
+			rv = make(map[string]interface{})
+		}
+		rv["retries"] = retryCount
+	}
+	logging.Infof("rv %v", rv)
+	return rv
 }
 
 func bucketFinalizer(b *Bucket) {
