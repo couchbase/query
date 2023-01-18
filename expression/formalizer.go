@@ -29,6 +29,47 @@ const (
 	DEF_OUTNAME = "out"
 )
 
+type WithInfo struct {
+	permanent   bool
+	correlated  bool
+	correlation map[string]uint32
+}
+
+func newWithInfo(correlated bool, correlation map[string]uint32) *WithInfo {
+	return &WithInfo{
+		correlated:  correlated,
+		correlation: correlation,
+	}
+}
+
+func newPermanentWithInfo() *WithInfo {
+	return &WithInfo{
+		permanent: true,
+	}
+}
+
+func (this *WithInfo) Copy() *WithInfo {
+	rv := &WithInfo{
+		permanent:  this.permanent,
+		correlated: this.correlated,
+	}
+	if this.correlated {
+		rv.correlation = make(map[string]uint32, len(this.correlation))
+		for k, v := range this.correlation {
+			rv.correlation[k] = v
+		}
+	}
+	return rv
+}
+
+func (this *WithInfo) IsCorrelated() bool {
+	return this.correlated
+}
+
+func (this *WithInfo) GetCorrelation() map[string]uint32 {
+	return this.correlation
+}
+
 /*
 Convert expressions to full form qualified by keyspace aliases.
 */
@@ -36,7 +77,7 @@ type Formalizer struct {
 	MapperBase
 
 	keyspace    string
-	withs       map[string]bool
+	withs       map[string]*WithInfo
 	allowed     *value.ScopeValue
 	identifiers *value.ScopeValue
 	aliases     *value.ScopeValue
@@ -64,7 +105,7 @@ func NewFunctionFormalizer(keyspace string, parent *Formalizer) *Formalizer {
 
 func newFormalizer(keyspace string, parent *Formalizer, mapSelf, mapKeyspace bool) *Formalizer {
 	var pv, av value.Value
-	var withs map[string]bool
+	var withs map[string]*WithInfo
 	var correlation map[string]uint32
 
 	flags := uint32(0)
@@ -74,9 +115,9 @@ func newFormalizer(keyspace string, parent *Formalizer, mapSelf, mapKeyspace boo
 		mapSelf = mapSelf || parent.mapSelf()
 		mapKeyspace = mapKeyspace || parent.mapKeyspace()
 		if len(parent.withs) > 0 {
-			withs = make(map[string]bool, len(parent.withs))
+			withs = make(map[string]*WithInfo, len(parent.withs))
 			for k, v := range parent.withs {
-				withs[k] = v
+				withs[k] = v.Copy()
 			}
 		}
 		if len(parent.correlation) > 0 {
@@ -255,6 +296,7 @@ func (this *Formalizer) VisitIdentifier(expr *Identifier) (interface{}, error) {
 		group_as_flags := ident_flags & IDENT_IS_GROUP_AS
 		correlated_flags := ident_flags & IDENT_IS_CORRELATED
 		lateral_flags := ident_flags & IDENT_IS_LATERAL_CORR
+		with_flags := ident_flags & IDENT_IS_WITH_ALIAS
 		if !this.indexScope() || keyspace_flags == 0 || expr.IsKeyspaceAlias() {
 			this.identifiers.SetField(identifier, ident_val)
 			// for user specified keyspace alias (such as alias.c1)
@@ -286,8 +328,24 @@ func (this *Formalizer) VisitIdentifier(expr *Identifier) (interface{}, error) {
 			if lateral_flags != 0 && !expr.IsLateralCorr() {
 				expr.SetLateralCorr(true)
 			}
+			if with_flags != 0 && !expr.IsWithAlias() {
+				expr.SetWithAlias(true)
+			}
 			return expr, nil
 		}
+	}
+
+	if wi, ok := this.withs[identifier]; ok {
+		if wi.correlated {
+			if this.correlation == nil {
+				this.correlation = make(map[string]uint32, len(wi.correlation))
+			}
+			for k, v := range wi.correlation {
+				this.correlation[k] = v
+			}
+		}
+		expr.SetWithAlias(true)
+		return expr, nil
 	}
 
 	if this.keyspace == "" {
@@ -483,9 +541,9 @@ func (this *Formalizer) PopBindings() {
 func (this *Formalizer) Copy() *Formalizer {
 	f := NewFormalizer(this.keyspace, nil)
 	if len(this.withs) > 0 {
-		f.withs = make(map[string]bool, len(this.withs))
-		for with, _ := range this.withs {
-			f.withs[with] = true
+		f.withs = make(map[string]*WithInfo, len(this.withs))
+		for with, v := range this.withs {
+			f.withs[with] = v.Copy()
 		}
 	}
 	f.allowed = this.allowed.Copy().(*value.ScopeValue)
@@ -553,6 +611,9 @@ func (this *Formalizer) SetAllowedUnnestAlias(alias string) {
 // alias must be non-empty
 func (this *Formalizer) SetAllowedExprTermAlias(alias string) {
 	ident_flags := uint32(IDENT_IS_KEYSPACE | IDENT_IS_EXPR_TERM)
+	if _, ok := this.withs[alias]; ok {
+		ident_flags |= uint32(IDENT_IS_WITH_ALIAS)
+	}
 	this.allowed.SetField(alias, value.NewValue(ident_flags))
 }
 
@@ -576,36 +637,69 @@ func (this *Formalizer) WithAlias(alias string) bool {
 	return false
 }
 
-func (this *Formalizer) SetWiths(withs Bindings) {
+func (this *Formalizer) WithInfo(alias string) *WithInfo {
+	if this.withs != nil {
+		if info, ok := this.withs[alias]; ok {
+			return info
+		}
+	}
+	return nil
+}
+
+func (this *Formalizer) ProcessWiths(withs Bindings) error {
 	if this.withs == nil {
-		this.withs = make(map[string]bool, len(withs))
+		this.withs = make(map[string]*WithInfo, len(withs))
 	}
-	for _, b := range withs {
-		this.withs[b.Variable()] = false
+
+	for _, with := range withs {
+		errContext := with.expr.ErrorContext()
+		if _, ok := this.withs[with.variable]; ok {
+			return errors.NewDuplicateAliasError("WITH clause", with.variable+errContext, "semantics.with.duplicate_with_alias")
+		}
+		if _, ok := this.allowed.Field(with.variable); ok {
+			return errors.NewDuplicateAliasError("WITH clause", with.variable+errContext, "semantics.with.duplicate_with_alias")
+		}
+
+		f := NewFormalizer("", this)
+		expr, err := f.Map(with.expr)
+		if err != nil {
+			return err
+		}
+		with.expr = expr
+
+		// check for correlation
+		var correlated bool
+		var correlation map[string]uint32
+		if f.CheckCorrelated() {
+			correlated = true
+			correlation = f.GetCorrelation()
+		}
+		this.withs[with.variable] = newWithInfo(correlated, correlation)
 	}
+	return nil
 }
 
 func (this *Formalizer) SetPermanentWiths(withs Bindings) {
 	if this.withs == nil {
-		this.withs = make(map[string]bool, len(withs))
+		this.withs = make(map[string]*WithInfo, len(withs))
 	}
 	for _, b := range withs {
-		this.withs[b.Variable()] = true
+		this.withs[b.Variable()] = newPermanentWithInfo()
 	}
 }
 
-func (this *Formalizer) SaveWiths() map[string]bool {
+func (this *Formalizer) SaveWiths(isSubq bool) map[string]*WithInfo {
 	withs := this.withs
-	this.withs = make(map[string]bool, len(withs))
-	for v, _ := range withs {
-		if withs[v] {
-			this.withs[v] = true
+	this.withs = make(map[string]*WithInfo, len(withs))
+	for k, v := range withs {
+		if isSubq || v.permanent {
+			this.withs[k] = v.Copy()
 		}
 	}
 	return withs
 }
 
-func (this *Formalizer) RestoreWiths(withs map[string]bool) {
+func (this *Formalizer) RestoreWiths(withs map[string]*WithInfo) {
 	this.withs = withs
 }
 

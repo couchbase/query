@@ -30,6 +30,7 @@ const (
 	IDENT_IS_CORRELATED               // binding expr has correlated references
 	IDENT_IS_LATERAL_CORR             // lateral correlation
 	IDENT_IS_GROUP_AS                 // GROUP AS alias
+	IDENT_IS_WITH_ALIAS               // CTE variable (WITH alias)
 )
 
 /*
@@ -354,6 +355,18 @@ func (this *Identifier) SetLateralCorr(lateral bool) {
 		this.identFlags |= IDENT_IS_LATERAL_CORR
 	} else {
 		this.identFlags &^= IDENT_IS_LATERAL_CORR
+	}
+}
+
+func (this *Identifier) IsWithAlias() bool {
+	return (this.identFlags & IDENT_IS_WITH_ALIAS) != 0
+}
+
+func (this *Identifier) SetWithAlias(with bool) {
+	if with {
+		this.identFlags |= IDENT_IS_WITH_ALIAS
+	} else {
+		this.identFlags &^= IDENT_IS_WITH_ALIAS
 	}
 }
 

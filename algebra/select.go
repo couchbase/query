@@ -82,7 +82,7 @@ This method calls FormalizeSubquery to qualify all the children
 of the query, and returns an error if any.
 */
 func (this *Select) Formalize() (err error) {
-	return this.FormalizeSubquery(expression.NewFormalizer("", nil))
+	return this.FormalizeSubquery(expression.NewFormalizer("", nil), this.setop)
 }
 
 /*
@@ -215,28 +215,25 @@ namely the subresult, order, limit and offset within a subquery.
 For the subresult of the subquery, call Formalize, for the order
 by clause call MapExpressions, for limit and offset call Accept.
 */
-func (this *Select) FormalizeSubquery(parent *expression.Formalizer) (err error) {
-	if parent != nil && parent.InFunction() {
-		this.hasVariables = true
-	}
-	if parent != nil && !this.setop {
-		withs := parent.SaveWiths()
+func (this *Select) FormalizeSubquery(parent *expression.Formalizer, isSubq bool) (err error) {
+	if parent != nil {
+		if parent.InFunction() {
+			this.hasVariables = true
+		}
+
+		withs := parent.SaveWiths(isSubq)
 		defer parent.RestoreWiths(withs)
+
+		if this.with != nil {
+			err = parent.ProcessWiths(this.with)
+			if err != nil {
+				return err
+			}
+		}
 	}
 
 	var f *expression.Formalizer
-	if this.with != nil {
-		f = expression.NewFormalizer("", parent)
-		err = f.PushBindings(this.with, false)
-		if err != nil {
-			return err
-		}
-		f.SetWiths(this.with)
-	} else {
-		f = parent
-	}
-
-	f, err = this.subresult.Formalize(f)
+	f, err = this.subresult.Formalize(parent)
 	if err != nil {
 		return err
 	}

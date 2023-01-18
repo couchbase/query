@@ -134,7 +134,7 @@
     {
 	"testcase": "Same CTE alias in top query and nested query, error",
         "statements":"WITH cte1 AS (SELECT a FROM [1,2,3] as a) SELECT cte1.a from cte1 UNION ALL (WITH cte1 as (SELECT a FROM [3,4,5] as a) SELECT cte1.a from cte1)",
-        "error": "Duplicate variable: cte1 (near line 1, column 117) already in scope."
+        "error": "Duplicate WITH clause alias cte1 (near line 1, column 117)"
     },
     {
 	"testcase": "Nested CTE not in parentheses, error",

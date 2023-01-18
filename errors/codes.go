@@ -155,6 +155,7 @@ const (
 	E_REPREPARE                               ErrorCode = 4001
 	E_NO_TERM_NAME                            ErrorCode = 4010
 	E_DUPLICATE_ALIAS                         ErrorCode = 4020
+	E_DUPLICATE_WITH_ALIAS                    ErrorCode = 4021
 	E_UNKNOWN_FOR                             ErrorCode = 4025
 	E_SUBQUERY_MISSING_KEYS                   ErrorCode = 4030
 	E_SUBQUERY_MISSING_INDEX                  ErrorCode = 4035

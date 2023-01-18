@@ -84,6 +84,49 @@
                 "id": "test11_withs"
             }
         ]
+    },
+    {
+	"testcase": "MB-44279 Part 1",
+        "statements":"WITH a1 AS ([{\"EffectiveDate\": \"2021-01-27\"}, {\"EffectiveDate\": \"2021-01-28\"}]) SELECT a1, r FROM a1 UNNEST (SELECT d.EffectiveDate FROM a1 AS d) AS r",
+	"error": "Duplicate FROM expression WITH alias a1 (near line 1, column 140)"
+    },
+    {
+	"testcase": "MB-44279 Part 2",
+        "statements":"WITH a1 AS ([{\"EffectiveDate\": \"2021-01-27\"}, {\"EffectiveDate\": \"2021-01-28\"}]) SELECT l, r FROM a1 AS l UNNEST (SELECT d.EffectiveDate FROM a1 AS d) AS r",
+        "results": [
+            {
+                "l": {
+                    "EffectiveDate": "2021-01-27"
+                },
+                "r": {
+                    "EffectiveDate": "2021-01-27"
+                }
+            },
+            {
+                "l": {
+                    "EffectiveDate": "2021-01-27"
+                },
+                "r": {
+                    "EffectiveDate": "2021-01-28"
+                }
+            },
+            {
+                "l": {
+                    "EffectiveDate": "2021-01-28"
+                },
+                "r": {
+                    "EffectiveDate": "2021-01-27"
+                }
+            },
+            {
+                "l": {
+                    "EffectiveDate": "2021-01-28"
+                },
+                "r": {
+                    "EffectiveDate": "2021-01-28"
+                }
+            }
+        ]
     }
 ]
 

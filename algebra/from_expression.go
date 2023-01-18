@@ -103,9 +103,13 @@ Qualify all identifiers for the parent expression. Checks for
 duplicate aliases.
 */
 func (this *ExpressionTerm) Formalize(parent *expression.Formalizer) (f *expression.Formalizer, err error) {
+	var ident string
+	identExpr, isIdentifier := this.fromExpr.(*expression.Identifier)
+	if isIdentifier {
+		ident = identExpr.Identifier()
+	}
 	if this.keyspaceTerm != nil {
 		path := this.keyspaceTerm.Path()
-		_, isIdentifier := this.fromExpr.(*expression.Identifier)
 
 		// MB-46856 if the expression path is longer than 1, use the bucket
 		if !isIdentifier && path.IsCollection() {
@@ -115,8 +119,9 @@ func (this *ExpressionTerm) Formalize(parent *expression.Formalizer) (f *express
 			}
 			this.isKeyspace = !ok
 		} else {
-			_, ok := parent.Aliases().Field(this.keyspaceTerm.Keyspace())
-			this.isKeyspace = !ok
+			ks := this.keyspaceTerm.Keyspace()
+			_, ok := parent.Aliases().Field(ks)
+			this.isKeyspace = !ok && !parent.WithAlias(ks)
 		}
 	}
 
@@ -143,13 +148,13 @@ func (this *ExpressionTerm) Formalize(parent *expression.Formalizer) (f *express
 		return nil, err
 	}
 
+	var errContext string
+	if this.fromExpr != nil {
+		errContext = this.fromExpr.ErrorContext()
+	}
 	_, ok := parent.Allowed().Field(alias)
-	if ok && !parent.WithAlias(alias) {
-		var errContext string
-		if this.fromExpr != nil {
-			errContext = this.fromExpr.ErrorContext()
-		}
-		err = errors.NewDuplicateAliasError("FROM expression"+errContext, alias, "semantics.fromExpr.duplicate_alias")
+	if ok {
+		err = errors.NewDuplicateAliasError("FROM expression", alias+errContext, "semantics.fromExpr.duplicate_alias")
 		return nil, err
 	}
 
@@ -159,17 +164,36 @@ func (this *ExpressionTerm) Formalize(parent *expression.Formalizer) (f *express
 	}
 
 	f1 := expression.NewFormalizer("", parent)
-	this.fromExpr, err = f1.Map(this.fromExpr)
-	if err != nil {
-		return
-	}
 
-	// Determine if this expression contains any correlated references
-	this.correlated = f1.CheckCorrelated()
-	if this.correlated {
-		this.correlation = addSimpleTermCorrelation(this.correlation, f1.GetCorrelation(),
-			this.IsAnsiJoinOp(), parent)
-		checkLateralCorrelation(this)
+	if ident != "" && parent.WithAlias(ident) {
+		// simple WITH alias
+		_, ok := parent.Allowed().Field(ident)
+		if ok {
+			err = errors.NewDuplicateWithAliasError("FROM expression", ident+errContext, "semantics.fromExpr.duplicate_with_alias")
+			return nil, err
+		}
+		if identExpr != nil {
+			identExpr.SetWithAlias(true)
+		}
+		info := parent.WithInfo(ident)
+		if info != nil && info.IsCorrelated() {
+			this.correlated = true
+			this.correlation = addSimpleTermCorrelation(this.correlation,
+				info.GetCorrelation(), this.IsAnsiJoinOp(), parent)
+		}
+	} else {
+		this.fromExpr, err = f1.Map(this.fromExpr)
+		if err != nil {
+			return
+		}
+
+		// Determine if this expression contains any correlated references
+		this.correlated = f1.CheckCorrelated()
+		if this.correlated {
+			this.correlation = addSimpleTermCorrelation(this.correlation,
+				f1.GetCorrelation(), this.IsAnsiJoinOp(), parent)
+			checkLateralCorrelation(this)
+		}
 	}
 
 	// for checking fromExpr we need a new formalizer, however, if this ExpressionTerm
