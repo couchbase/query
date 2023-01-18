@@ -13,7 +13,7 @@
                         {
                             "Priv": 4,
                             "Props": 0,
-                            "Target": "#system:prepareds"
+                            "Target": ""
                         }
                     ]
                 },

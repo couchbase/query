@@ -228,6 +228,17 @@ func (this *testingContext) GetReqDeadline() time.Time {
 	return time.Time{}
 }
 
+func (this *testingContext) TenantCtx() tenant.Context {
+	return nil
+}
+
+func (this *testingContext) FirstCreds() (string, bool) {
+	return "", true
+}
+
+func (this *testingContext) SetFirstCreds(string) {
+}
+
 func (this *testingContext) RecordFtsRU(ru tenant.Unit) {
 }
 

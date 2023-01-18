@@ -348,7 +348,7 @@ func TestStatementPrivileges(t *testing.T) {
 		testCase{id: "system:prepareds",
 			text: "select * from system:prepareds",
 			expectedPrivs: &auth.Privileges{List: []auth.PrivilegePair{
-				auth.PrivilegePair{Target: "#system:prepareds", Priv: auth.PRIV_SYSTEM_READ},
+				auth.PrivilegePair{Target: "", Priv: auth.PRIV_SYSTEM_READ},
 			}}},
 		//
 		// INDEX statements

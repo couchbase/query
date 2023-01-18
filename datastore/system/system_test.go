@@ -16,7 +16,6 @@ import (
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/datastore/mock"
-	"github.com/couchbase/query/distributed"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/tenant"
 	"github.com/couchbase/query/value"
@@ -77,6 +76,17 @@ func (ci *queryContextImpl) KvTimeout() time.Duration {
 
 func (ci *queryContextImpl) PreserveExpiry() bool {
 	return false
+}
+
+func (ci *queryContextImpl) TenantCtx() tenant.Context {
+	return nil
+}
+
+func (ci *queryContextImpl) FirstCreds() (string, bool) {
+	return "", true
+}
+
+func (ci *queryContextImpl) SetFirstCreds(string) {
 }
 
 func (ci *queryContextImpl) GetScanCap() int64 {

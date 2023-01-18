@@ -140,6 +140,6 @@ func iterateClusters(clusters []clustering.Cluster, t *testing.T) {
 
 func couchbase_running(where string) bool {
 	url_parts := []string{"http://", where, ":8091/"}
-	_, err := couchbase.Connect(strings.Join(url_parts), couchbase.USER_AGENT)
+	_, err := couchbase.Connect(strings.Join(url_parts, ""), couchbase.USER_AGENT)
 	return err == nil
 }
