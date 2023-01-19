@@ -178,6 +178,9 @@ func (b *activeRequestsKeyspace) Fetch(keys []string, keysMap map[string]value.A
 						item.SetField("transactionRemainingTime", remTime.String())
 					}
 				}
+				if request.ThrottleTime() > time.Duration(0) {
+					item.SetField("throttleTime", request.ThrottleTime().String())
+				}
 				p := request.Output().FmtPhaseCounts()
 				if p != nil {
 					item.SetField("phaseCounts", p)

@@ -1584,6 +1584,10 @@ func activeRequestWorkHorse(endpoint *HttpEndpoint, requestId string, userName s
 		if userAgent != "" {
 			reqMap["userAgent"] = userAgent
 		}
+		throttleTime := request.ThrottleTime()
+		if throttleTime > time.Duration(0) {
+			reqMap["throttleTime"] = throttleTime.String()
+		}
 		res = reqMap
 	})
 	return res
@@ -1817,6 +1821,9 @@ func completedRequestWorkHorse(requestId string, userName string, profiling bool
 		}
 		if request.UserAgent != "" {
 			reqMap["userAgent"] = request.UserAgent
+		}
+		if request.ThrottleTime > time.Duration(0) {
+			reqMap["throttleTime"] = request.ThrottleTime.String()
 		}
 		res = reqMap
 	})

@@ -178,6 +178,8 @@ type Request interface {
 	SetTenantCtx(ctx tenant.Context)
 	TenantCtx() tenant.Context
 	SortProjection() bool
+	ThrottleTime() time.Duration
+	SetThrottleTime(d time.Duration)
 
 	setSleep() // internal methods for load control
 	sleep()
@@ -366,6 +368,7 @@ type BaseRequest struct {
 	tracked              bool
 	tenantCtx            tenant.Context
 	sortProjection       bool
+	throttleTime         time.Duration
 }
 
 type requestIDImpl struct {
@@ -1135,6 +1138,14 @@ func (this *BaseRequest) SetTenantCtx(ctx tenant.Context) {
 
 func (this *BaseRequest) TenantCtx() tenant.Context {
 	return this.tenantCtx
+}
+
+func (this *BaseRequest) ThrottleTime() time.Duration {
+	return this.throttleTime
+}
+
+func (this *BaseRequest) SetThrottleTime(d time.Duration) {
+	this.throttleTime = d
 }
 
 func (this *BaseRequest) Results() chan bool {

@@ -9,6 +9,8 @@
 package system
 
 import (
+	"time"
+
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/distributed"
 	"github.com/couchbase/query/errors"
@@ -172,6 +174,9 @@ func (b *requestLogKeyspace) Fetch(keys []string, keysMap map[string]value.Annot
 				}
 				if entry.TransactionRemainingTime > 0 {
 					item.SetField("transactionRemainingTime", entry.TransactionRemainingTime.String())
+				}
+				if entry.ThrottleTime > time.Duration(0) {
+					item.SetField("throttleTime", entry.ThrottleTime.String())
 				}
 				if entry.PreparedName != "" {
 					item.SetField("preparedName", entry.PreparedName)

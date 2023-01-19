@@ -55,7 +55,6 @@ type httpRequest struct {
 
 	elapsedTime            time.Duration
 	executionTime          time.Duration
-	throttleTime           time.Duration
 	transactionElapsedTime time.Duration
 
 	stmtCnt  int

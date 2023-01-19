@@ -7,13 +7,13 @@
 //  the file licenses/APL2.txt.
 
 /*
- Completed_requests provides a way to track completed requests that satisfy certain conditions
- The log itself is written in such a way to be of little burden to the operation of the engine.
- As an example - scanning the log is done acquiring and releasing the relevant mutex for each
- entry in the log.
- This will not provide an exact snapshot at a given moment in time, but more like a 99% accurate
- view - the advantage being that the service can continue to operate uninterrupted, rather than
- halt waiting for the scan to be completed.
+Completed_requests provides a way to track completed requests that satisfy certain conditions
+The log itself is written in such a way to be of little burden to the operation of the engine.
+As an example - scanning the log is done acquiring and releasing the relevant mutex for each
+entry in the log.
+This will not provide an exact snapshot at a given moment in time, but more like a 99% accurate
+view - the advantage being that the service can continue to operate uninterrupted, rather than
+halt waiting for the scan to be completed.
 */
 package server
 
@@ -52,6 +52,7 @@ type RequestLogEntry struct {
 	ServiceTime              time.Duration
 	TransactionElapsedTime   time.Duration
 	TransactionRemainingTime time.Duration
+	ThrottleTime             time.Duration
 	QueryContext             string
 	Statement                string
 	StatementType            string
@@ -668,6 +669,7 @@ func LogRequest(request_time, service_time, transactionElapsedTime time.Duration
 	if tag != "" {
 		re.Tag = tag
 	}
+	re.ThrottleTime = request.ThrottleTime()
 
 	requestLog.cache.Add(re, id, nil)
 	for _, h := range requestLog.handlers {
