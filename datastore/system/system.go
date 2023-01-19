@@ -99,6 +99,8 @@ func (s *store) PrivilegesFromPath(fullname string, keyspace string, privilege a
 		// no further privilegs required
 		case KEYSPACE_NAME_KEYSPACES:
 		case KEYSPACE_NAME_ALL_KEYSPACES:
+		case KEYSPACE_NAME_KEYSPACES_INFO:
+		case KEYSPACE_NAME_ALL_KEYSPACES_INFO:
 		case KEYSPACE_NAME_SCOPES:
 		case KEYSPACE_NAME_ALL_SCOPES:
 		case KEYSPACE_NAME_BUCKETS:
