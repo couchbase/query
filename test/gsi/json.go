@@ -151,6 +151,10 @@ func (this *MockQuery) Expire(state server.State, timeout time.Duration) {
 func (this *MockQuery) SetUp() {
 }
 
+func (this *MockQuery) Alive() bool {
+	return true
+}
+
 func (this *MockQuery) Result(item value.AnnotatedValue) bool {
 	bytes, err := json.Marshal(item)
 	if err != nil {

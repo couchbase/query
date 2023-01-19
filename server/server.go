@@ -688,6 +688,11 @@ func (this *Server) handleRequest(request Request, queue *runQueue) bool {
 		return false
 	}
 
+	if !request.Alive() {
+		request.Failed(this)
+		return true
+	}
+
 	this.serviceRequest(request) // service
 
 	queue.dequeue()
@@ -700,6 +705,11 @@ func (this *Server) handlePlusRequest(request Request, queue *runQueue, transact
 		return false
 	}
 
+	if !request.Alive() {
+		request.Failed(this)
+		return true
+	}
+
 	dequeue := true
 	if request.TxId() != "" {
 		err := this.handlePreTxRequest(request, queue, transactionQueues)
@@ -707,6 +717,10 @@ func (this *Server) handlePlusRequest(request Request, queue *runQueue, transact
 			request.Error(err)
 			request.Failed(this) // don't return
 		} else {
+			if !request.Alive() {
+				request.Failed(this)
+				return true
+			}
 			this.serviceRequest(request) // service
 			dequeue = this.handlePostTxRequest(request, queue, transactionQueues)
 		}
@@ -1118,7 +1132,7 @@ func (this *Server) serviceRequest(request Request) {
 	request.SetTimings(operator)
 	request.Output().AddPhaseTime(execution.INSTANTIATE, time.Since(build))
 
-	if request.State() == FATAL {
+	if request.State() == FATAL || !request.Alive() {
 		request.Failed(this)
 		return
 	}

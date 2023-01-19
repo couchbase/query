@@ -434,6 +434,11 @@ func (this *HttpEndpoint) ServeHTTP(resp http.ResponseWriter, req *http.Request)
 		if err != nil {
 			request.Fail(err)
 			request.Failed(this.server)
+			return
+		}
+		if !request.Active() {
+			request.Failed(this.server)
+			return
 		}
 		request.SetTenantCtx(ctx)
 	}

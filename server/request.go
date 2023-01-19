@@ -180,6 +180,7 @@ type Request interface {
 	SortProjection() bool
 	ThrottleTime() time.Duration
 	SetThrottleTime(d time.Duration)
+	Alive() bool
 
 	setSleep() // internal methods for load control
 	sleep()
