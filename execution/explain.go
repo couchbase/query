@@ -63,8 +63,16 @@ func (this *Explain) RunOnce(context *Context, parent value.Value) {
 			return
 		}
 
-		value := value.NewAnnotatedValue(bytes)
-		this.sendItem(value)
+		av := value.NewAnnotatedValue(bytes)
+		if context.UseRequestQuota() {
+			err := context.TrackValueSize(av.Size())
+			if err != nil {
+				context.Error(err)
+				av.Recycle()
+				return
+			}
+		}
+		this.sendItem(av)
 
 	})
 }

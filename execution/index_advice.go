@@ -55,8 +55,16 @@ func (this *IndexAdvice) RunOnce(context *Context, parent value.Value) {
 			return
 		}
 
-		value := value.NewAnnotatedValue(parent)
-		this.sendItem(value)
+		av := value.NewAnnotatedValue(parent)
+		if context.UseRequestQuota() {
+			err := context.TrackValueSize(av.Size())
+			if err != nil {
+				context.Error(err)
+				av.Recycle()
+				return
+			}
+		}
+		this.sendItem(av)
 
 	})
 }

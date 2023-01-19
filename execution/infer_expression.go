@@ -78,7 +78,16 @@ func (this *InferExpression) RunOnce(context *Context, parent value.Value) {
 			item, cont := this.getItemValue(conn.ValueChannel())
 			if item != nil && cont {
 				val = item.(value.Value)
-				ok = this.sendItem(value.NewAnnotatedValue(val))
+				av := value.NewAnnotatedValue(val)
+				if context.UseRequestQuota() {
+					err := context.TrackValueSize(av.Size())
+					if err != nil {
+						context.Error(err)
+						av.Recycle()
+						return
+					}
+				}
+				ok = this.sendItem(av)
 			} else {
 				break
 			}

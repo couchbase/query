@@ -71,6 +71,14 @@ func (this *IndexCountScan2) RunOnce(context *Context, parent value.Value) {
 
 		av := value.NewAnnotatedValue(count)
 		av.InheritCovers(parent)
+		if context.UseRequestQuota() {
+			err := context.TrackValueSize(av.Size())
+			if err != nil {
+				context.Error(err)
+				av.Recycle()
+				return
+			}
+		}
 		this.sendItem(av)
 	})
 }

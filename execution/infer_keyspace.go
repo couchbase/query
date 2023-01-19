@@ -82,7 +82,16 @@ func (this *InferKeyspace) RunOnce(context *Context, parent value.Value) {
 				// current policy is to only count 'in' documents
 				// from operators, not kv
 				// add this.addInDocs(1) if this changes
-				ok = this.sendItem(value.NewAnnotatedValue(val))
+				av := value.NewAnnotatedValue(val)
+				if context.UseRequestQuota() {
+					err := context.TrackValueSize(av.Size())
+					if err != nil {
+						context.Error(err)
+						av.Recycle()
+						return
+					}
+				}
+				ok = this.sendItem(av)
 			} else {
 				break
 			}

@@ -82,6 +82,14 @@ func (this *ExecuteFunction) RunOnce(context *Context, parent value.Value) {
 			context.Error(err)
 		} else {
 			av := value.NewAnnotatedValue(val)
+			if context.UseRequestQuota() {
+				err := context.TrackValueSize(av.Size())
+				if err != nil {
+					context.Error(err)
+					av.Recycle()
+					return
+				}
+			}
 			this.sendItem(av)
 		}
 	})
