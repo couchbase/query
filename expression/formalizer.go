@@ -345,6 +345,7 @@ func (this *Formalizer) VisitIdentifier(expr *Identifier) (interface{}, error) {
 			}
 		}
 		expr.SetWithAlias(true)
+		expr.SetStaticVariable(true) // WITH variables are considered "static"
 		return expr, nil
 	}
 

@@ -127,6 +127,33 @@
                 }
             }
         ]
+    },
+    {
+	"testcase": "MB-44279 Part 3",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.`plan`.`~child`.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`spans`[0].`range`[0].dynamic_in = true END"
+        },
+        "statements":"WITH cte AS ([1,2,3,4,5,6]) SELECT s.c11 FROM shellTest s WHERE s.c11 IN cte AND type = \"left\"",
+        "results": [
+            {
+                "c11": 1
+            },
+            {
+                "c11": 2
+            },
+            {
+                "c11": 3
+            },
+            {
+                "c11": 4
+            }
+        ]
     }
 ]
 

@@ -174,6 +174,7 @@ func (this *ExpressionTerm) Formalize(parent *expression.Formalizer) (f *express
 		}
 		if identExpr != nil {
 			identExpr.SetWithAlias(true)
+			identExpr.SetStaticVariable(true) // WITH variables are considered "static"
 		}
 		info := parent.WithInfo(ident)
 		if info != nil && info.IsCorrelated() {
