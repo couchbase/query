@@ -1329,7 +1329,6 @@ func (b *Bucket) GetIOStats(reset bool, all bool) map[string]interface{} {
 		readCount = atomic.SwapUint64(&b.readCount, uint64(0))
 		writeCount = atomic.SwapUint64(&b.writeCount, uint64(0))
 		retryCount = atomic.SwapUint64(&b.retryCount, uint64(0))
-		logging.Infof("read %v write %v retry %v", readCount, writeCount, retryCount)
 	} else {
 		readCount = atomic.LoadUint64(&b.readCount)
 		writeCount = atomic.LoadUint64(&b.writeCount)
@@ -1353,7 +1352,6 @@ func (b *Bucket) GetIOStats(reset bool, all bool) map[string]interface{} {
 		}
 		rv["retries"] = retryCount
 	}
-	logging.Infof("rv %v", rv)
 	return rv
 }
 
