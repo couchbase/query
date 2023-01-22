@@ -35,7 +35,7 @@ func (this *golangBody) Body(object map[string]interface{}) {
 	object["functions_feature_disabled"] = true
 }
 
-//ditto
+// ditto
 func (this *golangBody) SetVarNames(vars []string) errors.Error {
 	return nil
 }

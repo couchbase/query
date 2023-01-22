@@ -41,7 +41,7 @@ func (this *javascriptBody) Body(object map[string]interface{}) {
 	object["functions_feature_disabled"] = true
 }
 
-//ditto
+// ditto
 func (this *javascriptBody) SetVarNames(vars []string) errors.Error {
 	return nil
 }

@@ -80,8 +80,10 @@ func Init(mux *mux.Router) {
 	external.name = "external jsevaluator"
 
 	globalCfg := defs.GlobalConfig{
-		GlobalManagePermission: "cluster.n1ql.udf_external!manage",
-		ScopeManagePermission:  "cluster.collection[%s].n1ql.udf_external!manage",
+		GlobalManagePermission:  "cluster.n1ql.udf_external!manage",
+		ScopeManagePermission:   "cluster.collection[%s].n1ql.udf_external!manage",
+		JsRestrictionsEnabled:   tenant.IsServerless(),
+		ProcessIsolationEnabled: tenant.IsServerless(),
 	}
 
 	configErr := defs.ConfigureGlobalConfig(globalCfg)
