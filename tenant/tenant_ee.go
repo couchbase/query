@@ -171,11 +171,10 @@ func Throttle(isAdmin bool, user, bucket string, buckets []string, timeout time.
 		// the query throttling will limit KV requests which in turn will lessen KV need
 		// for throttling
 		throttleLock.RLock()
-		lastTime, ok := throttleTimes[bucket]
+		thottleTime, ok := throttleTimes[bucket]
 		throttleLock.RUnlock()
 		if ok {
-			t := util.Now()
-			d = t.Sub(lastTime)
+			d = thottleTime.Sub(util.Now())
 
 			if d > time.Duration(0) {
 				regulator.RecordExternalThrottle(ctx, regulator.ExternalThrottleSpec{
@@ -184,25 +183,30 @@ func Throttle(isAdmin bool, user, bucket string, buckets []string, timeout time.
 					Service:  regulator.Query,
 					NodeID:   thisNodeId,
 				})
-				logging.Debuga(func() string { return fmt.Sprintf("bucket %v throttled for %v by query", bucket, d) })
+				logging.Debuga(func() string { return fmt.Sprintf("External bucket %v throttled for %v by query", bucket, d) })
 				time.Sleep(d)
+			} else {
+				d = time.Duration(0)
 			}
 
 			// remove delay hint to minimise cost
 			throttleLock.Lock()
-			currLastTime, ook := throttleTimes[bucket]
-			if ook && currLastTime == lastTime {
+			currThottleTime, ook := throttleTimes[bucket]
+			if ook && currThottleTime == thottleTime {
 				delete(throttleTimes, bucket)
 			}
 			throttleLock.Unlock()
 		}
 		return ctx, d, nil
 	case regulator.CheckResultThrottle:
+		logging.Debuga(func() string { return fmt.Sprintf("bucket %v throttled for %v by query (%v)", bucket, d, r) })
 		time.Sleep(d)
 		return ctx, d, nil
 	case regulator.CheckResultReject:
+		logging.Debuga(func() string { return fmt.Sprintf("bucket %v rejected by regulator", bucket) })
 		return nil, time.Duration(0), errors.NewServiceTenantRejectedError(d)
 	default:
+		logging.Debuga(func() string { return fmt.Sprintf("bucket %v error by regulator (%v) ", bucket, e) })
 		return ctx, time.Duration(0), errors.NewServiceTenantThrottledError(e)
 	}
 }
