@@ -138,20 +138,17 @@ func (this *ExpressionTerm) Formalize(parent *expression.Formalizer) (f *express
 		return
 	}
 
-	alias := this.Alias()
-	if alias == "" {
-		var errContext string
-		if this.fromExpr != nil {
-			errContext = this.fromExpr.ErrorContext()
-		}
-		err = errors.NewNoTermNameError("FROM expression"+errContext, "semantics.fromExpr.requires_name_or_alias")
-		return nil, err
-	}
-
 	var errContext string
 	if this.fromExpr != nil {
 		errContext = this.fromExpr.ErrorContext()
 	}
+
+	alias := this.Alias()
+	if alias == "" {
+		err = errors.NewNoTermNameError("FROM expression"+errContext, "semantics.fromExpr.requires_name_or_alias")
+		return nil, err
+	}
+
 	_, ok := parent.Allowed().Field(alias)
 	if ok {
 		err = errors.NewDuplicateAliasError("FROM expression", alias+errContext, "semantics.fromExpr.duplicate_alias")
