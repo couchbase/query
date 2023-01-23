@@ -133,8 +133,10 @@ func (this *PercentRank) CumulateRemove(item, cumulative value.Value, context Co
 
 /*
 The cumulative value
-    part represent the RANK() of the current row
-    nrows represent the total row in the PARTITION
+
+	part represent the RANK() of the current row
+	nrows represent the total row in the PARTITION
+
 Returns Final result as rank minus 1 divided by total rows minus 1
 */
 func (this *PercentRank) ComputeFinal(cumulative value.Value, context Context) (value.Value, error) {
@@ -162,8 +164,9 @@ func (this *PercentRank) ComputeFinal(cumulative value.Value, context Context) (
 The part field in the attachment has how much value to increase to get RANK()
 The nrows field in the attachment has total rows in the PARTITION
 The cumulative value
-    part represent the RANK() of the current row (add the previous rank by value from part)
-    nrows represent the total row in the PARTITION
+
+	part represent the RANK() of the current row (add the previous rank by value from part)
+	nrows represent the total row in the PARTITION
 */
 func (this *PercentRank) cumulatePart(part, cumulative value.Value, context Context) (value.Value, error) {
 	if part == value.NULL_VALUE {

@@ -7,10 +7,8 @@
 //  the file licenses/APL2.txt.
 
 /*
-
 Package file provides a file-based implementation of the datastore
 package.
-
 */
 package file
 

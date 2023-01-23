@@ -91,7 +91,7 @@ type WindowPartitionGroup struct {
 type WindowPartitionGroups []*WindowPartitionGroup
 
 /*
- Order Groups
+Order Groups
 */
 type WindowOrderGroup struct {
 	sortGroups SortGroups
@@ -234,7 +234,7 @@ func (this *builder) addToAnaylticalOrderGroup(wOrderGroup *WindowOrderGroup, so
 }
 
 /*
-  Add aggregate to given order group into right Partition group
+Add aggregate to given order group into right Partition group
 */
 func (this *builder) addToWindowPartitionGroup(wOrderGroup *WindowOrderGroup, agg algebra.Aggregate) {
 	wTerm := agg.WindowTerm()
@@ -473,7 +473,7 @@ func (this SortGroups) GetSortGroupStringMap(nItems int) map[string]*SortGroup {
 }
 
 /*
-  make OrderTerm from SortGroups
+make OrderTerm from SortGroups
 */
 func (this SortGroups) buildOrder() (order *algebra.Order) {
 	if len(this) > 0 {
@@ -500,7 +500,7 @@ func (this SortGroups) buildOrder() (order *algebra.Order) {
 }
 
 /*
- Copy SortGroups
+Copy SortGroups
 */
 func (this SortGroups) Copy() SortGroups {
 

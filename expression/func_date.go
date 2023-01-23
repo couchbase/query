@@ -2810,6 +2810,7 @@ to mean case insensitive and a literal space means any literal character (useful
 portions to be ignored).
 
 Examples:
+
 	format    ...      parses
 	%F                 2021-06-25T04:00:00.000+05:30
 	%D                 2021-06-25

@@ -333,7 +333,7 @@ func (this *Field) SetCaseInsensitive(insensitive bool) {
 }
 
 /*
-   Get the correct xattr path. For meta().xattr._sync, it gives _sync.
+Get the correct xattr path. For meta().xattr._sync, it gives _sync.
 */
 func (this *Field) FieldNames(base Expression, names map[string]bool) (present bool) {
 	if Equivalent(base, this.First()) {

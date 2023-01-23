@@ -66,21 +66,21 @@ func (this *SelectTerm) MapExpressions(mapper expression.Mapper) (err error) {
 }
 
 /*
-   Returns all contained Expressions.
+Returns all contained Expressions.
 */
 func (this *SelectTerm) Expressions() expression.Expressions {
 	return this.query.Expressions()
 }
 
 /*
-   Result terms.
+Result terms.
 */
 func (this *SelectTerm) ResultTerms() ResultTerms {
 	return this.query.Subresult().ResultTerms()
 }
 
 /*
-   Raw projection.
+Raw projection.
 */
 func (this *SelectTerm) Raw() bool {
 	return this.query.Subresult().Raw()
@@ -94,7 +94,7 @@ func (this *SelectTerm) Privileges() (*auth.Privileges, errors.Error) {
 }
 
 /*
-   Representation as a N1QL string.
+Representation as a N1QL string.
 */
 func (this *SelectTerm) String() string {
 	return "(" + this.query.String() + ")"

@@ -16,7 +16,7 @@ import (
 	"github.com/couchbase/query/value"
 )
 
-//Implement Interface Indexer{}
+// Implement Interface Indexer{}
 type VirtualIndexer struct {
 	path    []string
 	indexes map[string]datastore.Index
@@ -67,7 +67,7 @@ func (this *VirtualIndexer) IndexNames() ([]string, errors.Error) {
 	return rv, nil
 }
 
-//Virtual Indexer can only have virtual indexes, virtual index has indexname as indexid
+// Virtual Indexer can only have virtual indexes, virtual index has indexname as indexid
 func (this *VirtualIndexer) IndexById(id string) (datastore.Index, errors.Error) {
 	return this.IndexByName(id)
 }
@@ -120,14 +120,14 @@ func (this *VirtualIndexer) SetLogLevel(level logging.Level) {
 func (this *VirtualIndexer) SetConnectionSecurityConfig(conSecConfig *datastore.ConnectionSecurityConfig) {
 }
 
-//Implement Interface Indexer2{}
+// Implement Interface Indexer2{}
 func (this *VirtualIndexer) CreateIndex2(
 	requestId, name string, seekKey expression.Expressions, rangeKey datastore.IndexKeys,
 	where expression.Expression, with value.Value) (datastore.Index, errors.Error) {
 	return nil, errors.NewVirtualIdxerNotSupportedError(nil, "CREATE INDEX is not supported for virtual indexer2")
 }
 
-//Implement Interface Indexer3{}
+// Implement Interface Indexer3{}
 func (this *VirtualIndexer) CreateIndex3(
 	requestId, name string, rangeKey datastore.IndexKeys, indexPartition *datastore.IndexPartition,
 	where expression.Expression, with value.Value) (datastore.Index, errors.Error) {

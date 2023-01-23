@@ -263,8 +263,8 @@ func (this *builder) VisitExceptAll(node *algebra.ExceptAll) (interface{}, error
 }
 
 /*
-  Checks whether the two result terms are compatible with each other,
-  i.e. could there be duplicates from different arms that can be eliminated
+Checks whether the two result terms are compatible with each other,
+i.e. could there be duplicates from different arms that can be eliminated
 */
 func compatibleResultTerms(first, second algebra.Subresult) bool {
 	firstTerms := first.ResultTerms()

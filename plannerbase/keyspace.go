@@ -363,8 +363,10 @@ func (this *BaseKeyspace) GetUnnests() map[string]string {
 // the UNNEST aliases for the UNNEST SCAN. In case of multiple levels of
 // UNNEST with a nested array index key, the array of UNNEST aliases is
 // populated in an inside-out fashion. E.g.:
-//   ALL ARRAY (ALL ARRAY u FOR u IN v.arr2 END) FOR v IN arr1 END
-//   ... UNNEST d.arr1 AS a UNNEST a.arr2 AS b
+//
+//	ALL ARRAY (ALL ARRAY u FOR u IN v.arr2 END) FOR v IN arr1 END
+//	... UNNEST d.arr1 AS a UNNEST a.arr2 AS b
+//
 // the array of aliases will be ["b", "a"]
 func (this *BaseKeyspace) AddUnnestIndex(index datastore.Index, alias string) {
 	if this.unnestIndexes == nil {

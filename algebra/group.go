@@ -121,7 +121,7 @@ func (this *Group) MapExpressions(mapper expression.Mapper) (err error) {
 }
 
 /*
-   Returns all contained Expressions.
+Returns all contained Expressions.
 */
 func (this *Group) Expressions() expression.Expressions {
 	exprs := make(expression.Expressions, 0, 16)
@@ -142,7 +142,7 @@ func (this *Group) Expressions() expression.Expressions {
 }
 
 /*
-   Representation as a N1QL string.
+Representation as a N1QL string.
 */
 func (this *Group) String() string {
 	s := ""

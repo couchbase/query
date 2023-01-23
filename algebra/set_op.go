@@ -95,21 +95,21 @@ func (this *setOp) MapExpressions(mapper expression.Mapper) (err error) {
 }
 
 /*
-   Returns all contained Expressions.
+Returns all contained Expressions.
 */
 func (this *setOp) Expressions() expression.Expressions {
 	return append(this.first.Expressions(), this.second.Expressions()...)
 }
 
 /*
-   Result terms.
+Result terms.
 */
 func (this *setOp) ResultTerms() ResultTerms {
 	return append(this.first.ResultTerms(), this.second.ResultTerms()...)
 }
 
 /*
-   Raw projection.
+Raw projection.
 */
 func (this *setOp) Raw() bool {
 	return this.first.Raw() && this.second.Raw()
@@ -274,7 +274,7 @@ func (this *Union) Accept(visitor NodeVisitor) (interface{}, error) {
 }
 
 /*
-   Representation as a N1QL string.
+Representation as a N1QL string.
 */
 func (this *Union) String() string {
 	return this.first.String() + " union " + this.second.String()
@@ -317,7 +317,7 @@ func (this *UnionAll) Accept(visitor NodeVisitor) (interface{}, error) {
 }
 
 /*
-   Representation as a N1QL string.
+Representation as a N1QL string.
 */
 func (this *UnionAll) String() string {
 	return this.first.String() + " union all " + this.second.String()
@@ -357,7 +357,7 @@ func (this *Intersect) Accept(visitor NodeVisitor) (interface{}, error) {
 }
 
 /*
-   Representation as a N1QL string.
+Representation as a N1QL string.
 */
 func (this *Intersect) String() string {
 	return this.first.String() + " intersect " + this.second.String()
@@ -398,7 +398,7 @@ func (this *IntersectAll) Accept(visitor NodeVisitor) (interface{}, error) {
 }
 
 /*
-   Representation as a N1QL string.
+Representation as a N1QL string.
 */
 func (this *IntersectAll) String() string {
 	return this.first.String() + " intersect all " + this.second.String()
@@ -438,7 +438,7 @@ func (this *Except) Accept(visitor NodeVisitor) (interface{}, error) {
 }
 
 /*
-   Representation as a N1QL string.
+Representation as a N1QL string.
 */
 func (this *Except) String() string {
 	return this.first.String() + " except " + this.second.String()
@@ -479,7 +479,7 @@ func (this *ExceptAll) Accept(visitor NodeVisitor) (interface{}, error) {
 }
 
 /*
-   Representation as a N1QL string.
+Representation as a N1QL string.
 */
 func (this *ExceptAll) String() string {
 	return this.first.String() + " except all " + this.second.String()

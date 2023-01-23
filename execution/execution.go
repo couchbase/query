@@ -7,10 +7,8 @@
 //  the file licenses/APL2.txt.
 
 /*
-
 Package execution provides query execution. The execution is
 data-parallel to the extent possible.
-
 */
 package execution
 

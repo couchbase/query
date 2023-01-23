@@ -240,8 +240,8 @@ func addJSONHint(r map[string]interface{}, hint OptimHint) {
 }
 
 /*
-   hint_args == nil: hint is just an identifier with no paren, e.g. ORDERED
-   hint_args == []string{}: hint has paren, but nothing inside the paren, e.g. ORDERED()
+hint_args == nil: hint is just an identifier with no paren, e.g. ORDERED
+hint_args == []string{}: hint has paren, but nothing inside the paren, e.g. ORDERED()
 */
 func NewOptimHint(hint_name string, hint_args []string) []OptimHint {
 	var hints []OptimHint

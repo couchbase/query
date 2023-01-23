@@ -92,19 +92,19 @@ func init() {
 }
 
 /*
-	Define a common writer to output the responses to.
+Define a common writer to output the responses to.
 */
 var W io.Writer
 
 /*
-	Used to define aliases
+Used to define aliases
 */
 var AliasCommand = map[string]string{
 	"serverversion": "select version()",
 }
 
 /*
-	Command registry : List of Shell Commands supported by cbq
+Command registry : List of Shell Commands supported by cbq
 */
 var COMMAND_LIST = map[string]ShellCommand{
 
@@ -136,7 +136,7 @@ var COMMAND_LIST = map[string]ShellCommand{
 }
 
 /*
-	Interface to be implemented by shell commands.
+Interface to be implemented by shell commands.
 */
 type ShellCommand interface {
 	/* Name of the comand */

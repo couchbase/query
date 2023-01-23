@@ -509,6 +509,7 @@ func (this *base) SerializeOutput(op Operator, context *Context) {
 }
 
 // MB-38469 / go issue 18138 initial goroutine stack too small
+//
 //go:noinline
 func primeStack() {
 	const _STACK_BUF_SIZE = 512 // 128 multiples, tuned for likely stack usage!

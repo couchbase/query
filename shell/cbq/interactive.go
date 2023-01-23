@@ -25,8 +25,10 @@ const (
 	_TXTIMEOUT = "2m"
 )
 
-/* The following values define the query prompt for cbq.
-   The expected end of line character is a ;.
+/*
+The following values define the query prompt for cbq.
+
+	The expected end of line character is a ;.
 */
 const (
 	QRY_EOL     = ";"
@@ -147,12 +149,14 @@ func handleScriptFlag(liner **liner.State) {
 	}
 }
 
-/* This method is used to handle user interaction with the
-   cli. After combining the multi line input, it is sent to
-   the execute_inpu method which parses and executes the
-   input command. In the event an error is returned from the
-   query execution, it is printed in red. The input prompt is
-   the name of the executable.
+/*
+This method is used to handle user interaction with the
+
+	cli. After combining the multi line input, it is sent to
+	the execute_inpu method which parses and executes the
+	input command. In the event an error is returned from the
+	query execution, it is printed in red. The input prompt is
+	the name of the executable.
 */
 func HandleInteractiveMode(prompt string) {
 
@@ -335,8 +339,10 @@ func HandleInteractiveMode(prompt string) {
 
 }
 
-/* If ^C is pressed then Abort the shell. This is
-   provided by the liner package.
+/*
+If ^C is pressed then Abort the shell. This is
+
+	provided by the liner package.
 */
 func signalCatcher(liner *liner.State) {
 	liner.SetCtrlCAborts(false)

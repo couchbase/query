@@ -27,9 +27,7 @@ type SystemStats struct {
 	pid    C.sigar_pid_t
 }
 
-//
 // Open a new handle
-//
 func NewSystemStats() (*SystemStats, error) {
 
 	var handle *C.sigar_t
@@ -45,9 +43,7 @@ func NewSystemStats() (*SystemStats, error) {
 	return s, nil
 }
 
-//
 // Close handle
-//
 func (s *SystemStats) Close() {
 	if s.handle != nil {
 		C.sigar_close(s.handle)
@@ -119,7 +115,8 @@ func (s *SystemStats) SystemTotalMem() (uint64, error) {
 // actual = false means exclude inactive OS Kernel pages in free memory computation
 // Return Values: (TotalMem, FreeMem, cGroupValues, error)
 // cGroupValues => true if the limits of the container are returned
-//              => false if the system limits are returned
+//
+//	=> false if the system limits are returned
 func (s *SystemStats) GetTotalAndFreeMem(actual bool) (uint64, uint64, bool, error) {
 	var sysTotal, sysFree uint64
 	var cGroupTotal uint64

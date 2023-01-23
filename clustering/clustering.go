@@ -7,17 +7,18 @@
 //  the file licenses/APL2.txt.
 
 /*
+	 Package clustering provides a common clustering abstraction for cluster
+	 configuration management.
 
- Package clustering provides a common clustering abstraction for cluster
- configuration management.
+	 The main abstractions, and their relationships, are:
+	 	ConfigurationStore - used for storing all cluster configuration data.
+		Cluster - Configuration common to a cluster. A cluster is just a set of Query Nodes, so all
+			the Query Nodes belonging to the cluster will share this configuration.
+		Query Node - Configuration for a single instance of the Query Engine. Provides sufficient
+			information to uniquely identify, and interact with, a Query Engine instance.
 
- The main abstractions, and their relationships, are:
- 	ConfigurationStore - used for storing all cluster configuration data.
-	Cluster - Configuration common to a cluster. A cluster is just a set of Query Nodes, so all
-		the Query Nodes belonging to the cluster will share this configuration.
-	Query Node - Configuration for a single instance of the Query Engine. Provides sufficient
-		information to uniquely identify, and interact with, a Query Engine instance.
 The logical hierarchy is as follows:
+
 	ConfigurationStore -> Clusters -> Query Nodes
 */
 package clustering

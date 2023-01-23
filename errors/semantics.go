@@ -182,9 +182,11 @@ func NewFirstTermJoinHintError(alias string) Error {
 		InternalCaller: CallerN(1)}
 }
 
-/* ---- BEGIN MOVED error numbers ----
-   The following error numbers (in the 4000 range) originally reside in plan.go (before the introduction of the semantics package)
-   although they are semantic errors. They are moved from plan.go to semantics.go but their original error numbers are kept.
+/*
+---- BEGIN MOVED error numbers ----
+
+	The following error numbers (in the 4000 range) originally reside in plan.go (before the introduction of the semantics package)
+	although they are semantic errors. They are moved from plan.go to semantics.go but their original error numbers are kept.
 */
 func NewNoTermNameError(termType string, iKey string) Error {
 	return &err{level: EXCEPTION, ICode: E_NO_TERM_NAME, IKey: iKey,

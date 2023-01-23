@@ -60,7 +60,7 @@ func (this *AnsiNest) MapExpressions(mapper expression.Mapper) (err error) {
 }
 
 /*
-   Returns all contained Expressions.
+Returns all contained Expressions.
 */
 func (this *AnsiNest) Expressions() expression.Expressions {
 	exprs := this.left.Expressions()
@@ -89,7 +89,7 @@ func (this *AnsiNest) Privileges() (*auth.Privileges, errors.Error) {
 }
 
 /*
-   Representation as a N1QL string.
+Representation as a N1QL string.
 */
 func (this *AnsiNest) String() string {
 	s := this.left.String()

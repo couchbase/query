@@ -99,7 +99,7 @@ func (this *KeyspaceTerm) MapExpressions(mapper expression.Mapper) (err error) {
 }
 
 /*
-   Returns all contained Expressions.
+Returns all contained Expressions.
 */
 func (this *KeyspaceTerm) Expressions() expression.Expressions {
 	exprs := make(expression.Expressions, 0, 2)
@@ -164,7 +164,7 @@ func PrivilegesFromPath(priv auth.Privilege, path *Path) (*auth.Privileges, erro
 }
 
 /*
-   Representation as a N1QL string.
+Representation as a N1QL string.
 */
 func (this *KeyspaceTerm) String() (s string) {
 

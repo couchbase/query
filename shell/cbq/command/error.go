@@ -15,9 +15,11 @@ import (
 	"github.com/couchbase/query/errors"
 )
 
-/* The following variables are used to display the error
-   messages in red text and then reset the terminal prompt
-   color.
+/*
+The following variables are used to display the error
+
+	messages in red text and then reset the terminal prompt
+	color.
 */
 var reset = "\x1b[0m"
 var fgRed = "\x1b[31m"
@@ -137,7 +139,7 @@ func HandleError(err errors.ErrorCode, msg string) errors.Error {
 }
 
 /*
-	Function to print the error in Red.
+Function to print the error in Red.
 */
 func PrintError(s_err errors.Error) {
 	tmpstr := fmt.Sprintln(fgRed, "ERROR", s_err.Code(), ":", s_err, reset)

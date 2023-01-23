@@ -285,7 +285,7 @@ func NewIndexKeyTerm(expr expression.Expression, attributes uint32) *IndexKeyTer
 }
 
 /*
-   Representation as a N1QL string.
+Representation as a N1QL string.
 */
 func (this *IndexKeyTerm) String(pos int) string {
 	s := this.expr.String()
@@ -362,7 +362,7 @@ func (this IndexKeyTerms) MapExpressions(mapper expression.Mapper) (err error) {
 }
 
 /*
-   Returns all contained Expressions.
+Returns all contained Expressions.
 */
 func (this IndexKeyTerms) Expressions() expression.Expressions {
 	exprs := make(expression.Expressions, len(this))
@@ -385,7 +385,7 @@ func (this IndexKeyTerms) Attributes() []uint32 {
 }
 
 /*
-   Representation as a N1QL string.
+Representation as a N1QL string.
 */
 func (this IndexKeyTerms) String() string {
 	s := ""
@@ -421,21 +421,21 @@ func NewIndexPartitionTerm(strategy datastore.PartitionType, exprs expression.Ex
 }
 
 /*
-   Returns all contained Expressions.
+Returns all contained Expressions.
 */
 func (this *IndexPartitionTerm) Expressions() expression.Expressions {
 	return this.exprs
 }
 
 /*
-   Returns Partition Strategy
+Returns Partition Strategy
 */
 func (this *IndexPartitionTerm) Strategy() datastore.PartitionType {
 	return this.strategy
 }
 
 /*
-   Returns Partition Exprs
+Returns Partition Exprs
 */
 func (this *IndexPartitionTerm) Exprs() expression.Expressions {
 	return this.exprs

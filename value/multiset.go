@@ -203,7 +203,7 @@ func (this *MultiSet) Put(key, item Value, cnt int64) {
 	}
 }
 
-//Removes a single occurrence of the specified element from this multiset, if present.
+// Removes a single occurrence of the specified element from this multiset, if present.
 func (this *MultiSet) Remove(key Value) {
 	this.Put(key, key, -1)
 }

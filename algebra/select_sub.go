@@ -188,7 +188,7 @@ func (this *Subselect) MapExpressions(mapper expression.Mapper) (err error) {
 }
 
 /*
-   Returns all contained Expressions.
+Returns all contained Expressions.
 */
 func (this *Subselect) Expressions() expression.Expressions {
 	exprs := make(expression.Expressions, 0, 16)
@@ -280,7 +280,7 @@ func (this *Subselect) Privileges() (*auth.Privileges, errors.Error) {
 }
 
 /*
-   Representation as a N1QL string.
+Representation as a N1QL string.
 */
 func (this *Subselect) String() string {
 	s := "select " + this.projection.String()
@@ -389,7 +389,7 @@ func (this *Subselect) AddSubqueryTermHints(subqTermHints []*SubqOptimHints) {
 }
 
 /*
-   Representation as a N1QL string.
+Representation as a N1QL string.
 */
 func stringBindings(bindings expression.Bindings) string {
 	s := ""

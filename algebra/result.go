@@ -111,7 +111,7 @@ func (this *Projection) MapExpressions(mapper expression.Mapper) (err error) {
 }
 
 /*
-   Returns all contained Expressions.
+Returns all contained Expressions.
 */
 func (this *Projection) Expressions() expression.Expressions {
 	exprs := make(expression.Expressions, 0, len(this.terms))
@@ -126,7 +126,7 @@ func (this *Projection) Expressions() expression.Expressions {
 }
 
 /*
-   Representation as a N1QL string.
+Representation as a N1QL string.
 */
 func (this *Projection) String() string {
 	s := ""
@@ -315,7 +315,7 @@ func (this *ResultTerm) MapExpression(mapper expression.Mapper) (err error) {
 }
 
 /*
-   Representation as a N1QL string.
+Representation as a N1QL string.
 */
 func (this *ResultTerm) String() string {
 	s := ""

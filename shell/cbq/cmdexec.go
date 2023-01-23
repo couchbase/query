@@ -263,7 +263,7 @@ func ExecN1QLStmt(line string, dBn1ql n1ql.N1qlDB, w io.Writer) (errors.ErrorCod
 	return 0, ""
 }
 
-//Function to remove extra space in between words in a string.
+// Function to remove extra space in between words in a string.
 func trimSpaceInStr(inputStr string) (outputStr string) {
 	whiteSpace := false
 	for _, character := range inputStr {

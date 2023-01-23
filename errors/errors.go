@@ -7,11 +7,9 @@
 //  the file licenses/APL2.txt.
 
 /*
-
 Package err provides user-visible errors and warnings. These errors
 include error codes and will eventually provide multi-language
 messages.
-
 */
 package errors
 

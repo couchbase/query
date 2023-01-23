@@ -114,14 +114,16 @@ func SetTee(on bool) {
 	t.t = on
 }
 
-/* The Resolve method is used to evaluate the input parameter
-   to the \SET / \PUSH / \POP / \UNSET and \ECHO commands. It
-   takes in a string, and resolves it to the appropriate value.
-   The input string can be broadly classified into 2 categories,
-   1. Parameters (here we will need to read the top value from
-   the parameter stack)
-   2. Actual values that can be converted to value.Value using
-   the StrToVal method.
+/*
+The Resolve method is used to evaluate the input parameter
+
+	to the \SET / \PUSH / \POP / \UNSET and \ECHO commands. It
+	takes in a string, and resolves it to the appropriate value.
+	The input string can be broadly classified into 2 categories,
+	1. Parameters (here we will need to read the top value from
+	the parameter stack)
+	2. Actual values that can be converted to value.Value using
+	the StrToVal method.
 */
 func Resolve(param string) (val value.Value, err_code errors.ErrorCode, err_str string) {
 
@@ -217,8 +219,10 @@ func Resolve(param string) (val value.Value, err_code errors.ErrorCode, err_str 
 	return
 }
 
-/* The StrToVal method converts the input string into a
-   value.Value type.
+/*
+The StrToVal method converts the input string into a
+
+	value.Value type.
 */
 func StrToVal(param string) (val value.Value) {
 
@@ -246,8 +250,10 @@ func StrToVal(param string) (val value.Value) {
 
 }
 
-/* The ValToStr method converts the input value into a
-   string type.
+/*
+The ValToStr method converts the input value into a
+
+	string type.
 */
 func ValToStr(item value.Value) string {
 	//Call String() method in value.Value to convert
@@ -642,9 +648,11 @@ func Ping(server string) error {
 	return err
 }
 
-/* Find the HOME environment variable. If it isnt set then
-   try USERPROFILE for windows. If neither is found then
-   the cli cant find the history file to read from.
+/*
+Find the HOME environment variable. If it isnt set then
+
+	try USERPROFILE for windows. If neither is found then
+	the cli cant find the history file to read from.
 */
 func GetHome() (homeDir string, err_code errors.ErrorCode, err_Str string) {
 	//Detect OS using the runtime.GOOS
@@ -750,7 +758,7 @@ func printPath(nval string) (errors.ErrorCode, string) {
 
 }
 
-//Use this method to writestring to output.
+// Use this method to writestring to output.
 func PrintStr(W io.Writer, val string) (errors.ErrorCode, string) {
 	_, werr := io.WriteString(W, val)
 	if werr != nil {

@@ -11,9 +11,10 @@ package couchbase
 
 // Sample data:
 // {"disabled":["12333", "22244"],"uid":"132492431","auditdEnabled":true,
-//  "disabledUsers":[{"name":"bill","domain":"local"},{"name":"bob","domain":"local"}],
-//  "logPath":"/Users/johanlarson/Library/Application Support/Couchbase/var/lib/couchbase/logs",
-//  "rotateInterval":86400,"rotateSize":20971520}
+//
+//	"disabledUsers":[{"name":"bill","domain":"local"},{"name":"bob","domain":"local"}],
+//	"logPath":"/Users/johanlarson/Library/Application Support/Couchbase/var/lib/couchbase/logs",
+//	"rotateInterval":86400,"rotateSize":20971520}
 type AuditSpec struct {
 	Disabled       []uint32    `json:"disabled"`
 	Uid            string      `json:"uid"`

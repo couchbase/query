@@ -118,7 +118,7 @@ func (this *Select) MapExpressions(mapper expression.Mapper) (err error) {
 }
 
 /*
-   Returns all contained Expressions.
+Returns all contained Expressions.
 */
 func (this *Select) Expressions() expression.Expressions {
 	exprs := this.subresult.Expressions()
@@ -183,7 +183,7 @@ func (this *Select) Privileges() (*auth.Privileges, errors.Error) {
 }
 
 /*
-   Representation as a N1QL string.
+Representation as a N1QL string.
 */
 func (this *Select) String() string {
 	var s string

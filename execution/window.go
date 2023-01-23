@@ -64,7 +64,7 @@ type AggregateInfo struct {
 }
 
 /*
- Window frame information
+Window frame information
 */
 type excludeFrame struct {
 	sIndex int64
@@ -164,7 +164,7 @@ func (this *WindowAggregate) hasFlags(flags uint32) bool {
 }
 
 /*
-  Window operator initial setup information
+Window operator initial setup information
 */
 func (this *WindowAggregate) setupTerms(parent value.Value) bool {
 	largestOrderAgg := this.plan.Aggregates()[0]
@@ -522,7 +522,7 @@ func (this *AggregateInfo) evaluateValueFuncs(op *WindowAggregate, wf *windowFra
 }
 
 /*
- Setup Window input row aggregate for ranking
+Setup Window input row aggregate for ranking
 */
 func (this *AggregateInfo) getWindowRow(cIndex int64, item value.AnnotatedValue, op *WindowAggregate) (value.AnnotatedValue, error) {
 
@@ -787,7 +787,7 @@ func (this *AggregateInfo) windowOrderDuplicates(op *WindowAggregate, cIndex int
 }
 
 /*
-  Duplicate calculations
+Duplicate calculations
 */
 func (this *AggregateInfo) windowOrderDuplicatesDirection(op *WindowAggregate, cIndex int64, direction int64) (dups int64, err error) {
 
@@ -1134,7 +1134,7 @@ func (this *WindowAggregate) afterWindowPartition(all bool) bool {
 }
 
 /*
- Aggregate evaluation
+Aggregate evaluation
 */
 func (this *WindowAggregate) processWindowAggregates(c int64, item value.AnnotatedValue) bool {
 	var err error

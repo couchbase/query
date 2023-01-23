@@ -904,7 +904,6 @@ func getFirstErrorContext(m map[string]algebra.Aggregate) string {
 }
 
 /*
-
 Constrain the WHERE condition to reflect the aggregate query. For
 example:
 
@@ -915,7 +914,6 @@ is rewritten as:
 SELECT AVG(v) FROM widget w WHERE v IS NOT NULL;
 
 This enables the query to use an index on v.
-
 */
 func (this *builder) constrainAggregate(cond expression.Expression, aggs algebra.Aggregates) expression.Expression {
 	var first expression.Expression

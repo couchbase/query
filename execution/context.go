@@ -1459,10 +1459,10 @@ func assert(test bool, what string) bool {
 }
 
 /*
-  The map entry for hash list in the context can be shared among all parallel instances
-  of an operator (e.g. Filter), and the same hash table can be shared since all instances
-  should have the same expression for the IN-list and we should have already checked that
-  the elements of the IN-list are "static".
+The map entry for hash list in the context can be shared among all parallel instances
+of an operator (e.g. Filter), and the same hash table can be shared since all instances
+should have the same expression for the IN-list and we should have already checked that
+the elements of the IN-list are "static".
 */
 func (this *Context) GetInlistHash(in *expression.In) *expression.InlistHash {
 	this.inlistHashLock.RLock()

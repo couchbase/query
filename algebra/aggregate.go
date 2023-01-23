@@ -148,14 +148,14 @@ func NewAggregateBase(name string, operands expression.Expressions, flags uint32
 }
 
 /*
- Adds new flags to aggregate
+Adds new flags to aggregate
 */
 func (this *AggregateBase) AddFlags(flags uint32) {
 	this.flags |= flags
 }
 
 /*
- Checks Any flags are set
+Checks Any flags are set
 */
 func (this *AggregateBase) HasFlags(flags uint32) bool {
 	return (this.flags & flags) != 0
@@ -218,7 +218,7 @@ func (this *AggregateBase) IsCumulateDone(cumulative value.Value, context Contex
 }
 
 /*
- Returns string representation of aggregate
+Returns string representation of aggregate
 */
 func (this *AggregateBase) String() string {
 	var buf bytes.Buffer
@@ -343,7 +343,7 @@ func (this *AggregateBase) EquivalentTo(other expression.Expression) bool {
 }
 
 /*
-  Return when aggregate are aggregate are same except names
+Return when aggregate are aggregate are same except names
 */
 func EqualAggregateModifiers(agg1, agg2 Aggregate) bool {
 	wTerm1 := agg1.WindowTerm()
@@ -426,10 +426,10 @@ func (this *AggregateBase) MapChildren(mapper expression.Mapper) error {
 }
 
 /*
- Check if the expressions are depends only on group by or aggregates.
- Regular aggregate this is NO-OP.
- window aggregate the expression in arguments, PARTITION BY, ORDER BY, WINDOWING clause
- must be part of group by or regular aggregates (If there is GORUP BY)
+Check if the expressions are depends only on group by or aggregates.
+Regular aggregate this is NO-OP.
+window aggregate the expression in arguments, PARTITION BY, ORDER BY, WINDOWING clause
+must be part of group by or regular aggregates (If there is GORUP BY)
 */
 func (this *AggregateBase) SurvivesGrouping(groupKeys expression.Expressions,
 	allowed *value.ScopeValue) (bool, expression.Expression) {

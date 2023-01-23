@@ -180,7 +180,6 @@ func (this *cbConfigStore) getPools() []couchbase.RestPool {
 
 // Helper method to retrieve Couchbase services data (/pools/default/nodeServices)
 // and Couchbase pool (cluster) data (/pools/default)
-//
 func (this *cbConfigStore) getPoolServices(name string) (*couchbase.Pool, *couchbase.PoolServices, errors.Error) {
 	nodeServices, err := this.cbConn.GetPoolServices(name)
 	if err != nil {
