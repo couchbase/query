@@ -436,7 +436,7 @@ func (this *HttpEndpoint) ServeHTTP(resp http.ResponseWriter, req *http.Request)
 			request.Failed(this.server)
 			return
 		}
-		if !request.Active() {
+		if !request.Alive() {
 			request.Failed(this.server)
 			return
 		}
