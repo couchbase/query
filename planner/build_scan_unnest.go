@@ -19,7 +19,6 @@ import (
 )
 
 /*
-
 Algorithm for exploiting array indexes with UNNEST.
 
 Consider only INNER UNNESTs. OUTER UNNESTs cannot exploit array
@@ -55,7 +54,6 @@ predicate using the index. If the index has further dimensions,
 i.e. the ARRAY mapping IS another ALL (DISTINCT) ARRAY expression,
 then recursively attempt to chain another UNNEST for the index's next
 dimension.
-
 */
 func (this *builder) buildUnnestIndexes(node *algebra.KeyspaceTerm, from algebra.FromTerm,
 	pred expression.Expression, indexes map[datastore.Index]*indexEntry) (

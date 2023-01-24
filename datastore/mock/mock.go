@@ -7,12 +7,10 @@
 //  the file licenses/APL2.txt.
 
 /*
-
 Package mock provides a fake, mock 100%-in-memory implementation of
 the datastore package, which can be useful for testing.  Because it is
 memory-oriented, performance testing of higher layers may be easier
 with this mock datastore.
-
 */
 package mock
 

@@ -71,6 +71,5 @@ subquery.go : Used to define and subqueries.
 visitor.go : The Gang of Four defines the Visitor as: "Represent an operation to be performed on elements of an object structure. Visitor lets you define a new operation without changing the classes of the elements on which it operates."  The type of Visitor is an interface with a list of methods that are implemented in Stringer.go. Named and Positional parameters are set by its index in the clause and by its name respectively. It is used to separate algorithm from an object structure on which it operates. This results in the ability to add new operations to the existing object structure.
 
 stringer.go: Stringer implements the Visitor methods.
-
 */
 package expression

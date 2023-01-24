@@ -43,7 +43,7 @@ func (this *SubqueryTerm) MapExpressions(mapper expression.Mapper) (err error) {
 }
 
 /*
-   Returns all contained Expressions.
+Returns all contained Expressions.
 */
 func (this *SubqueryTerm) Expressions() expression.Expressions {
 	return this.subquery.Expressions()
@@ -57,7 +57,7 @@ func (this *SubqueryTerm) Privileges() (*auth.Privileges, errors.Error) {
 }
 
 /*
-   Representation as a N1QL string.
+Representation as a N1QL string.
 */
 func (this *SubqueryTerm) String() string {
 	var s string

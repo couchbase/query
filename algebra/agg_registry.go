@@ -69,7 +69,7 @@ const (
 )
 
 /*
- Grouped Aggregate properties.
+Grouped Aggregate properties.
 */
 const (
 	AGGREGATE_ALLOWS_ALL             = AGGREGATE_ALLOWS_REGULAR | AGGREGATE_ALLOWS_DISTINCT | AGGREGATE_ALLOWS_WINDOW | AGGREGATE_ALLOWS_WINDOW_FRAME | AGGREGATE_ALLOWS_FILTER

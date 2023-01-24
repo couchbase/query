@@ -16,10 +16,11 @@ import (
 )
 
 // A keyspace path. Supported forms:
-//    customers (needs queryContext)
-//    system:prepareds
-//    default:customers
-//    default:myBucket.myScope.myCollection
+//
+//	customers (needs queryContext)
+//	system:prepareds
+//	default:customers
+//	default:myBucket.myScope.myCollection
 type Path struct {
 	elements []string `json:"elements"`
 }

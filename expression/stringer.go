@@ -29,6 +29,7 @@ func NewStringer() *Stringer { return &Stringer{} }
 
 /*
 To replace the identifier in expression with the user-defined replacement:
+
 	replacee: identifier to be replaced
 	replacer: replacement for the identifier to be replaced
 	omit: flag for the expression to skip the identifier replacement or not

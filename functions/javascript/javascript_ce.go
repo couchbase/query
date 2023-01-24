@@ -6,6 +6,7 @@
 //  software will be governed by the Apache License, Version 2.0, included in
 //  the file licenses/APL2.txt.
 
+//go:build !enterprise || !go1.10
 // +build !enterprise !go1.10
 
 package javascript
@@ -41,7 +42,7 @@ func (this *javascriptBody) Body(object map[string]interface{}) {
 	object["functions_feature_disabled"] = true
 }
 
-//ditto
+// ditto
 func (this *javascriptBody) SetVarNames(vars []string) errors.Error {
 	return nil
 }

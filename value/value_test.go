@@ -431,8 +431,11 @@ func BenchmarkLargeValue(b *testing.B) {
 	}
 }
 
-/* This benchmark contains a mix of Value creation of various data
-types, Actual() dereferencing, and SetIndex() and SetField(). */
+/*
+	This benchmark contains a mix of Value creation of various data
+
+types, Actual() dereferencing, and SetIndex() and SetField().
+*/
 func BenchmarkProcessing(b *testing.B) {
 	vals := make([]Value, 1<<16)
 

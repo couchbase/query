@@ -54,14 +54,14 @@ func (this *Order) MapExpressions(mapper expression.Mapper) error {
 }
 
 /*
-   Returns all contained Expressions.
+Returns all contained Expressions.
 */
 func (this *Order) Expressions() expression.Expressions {
 	return this.terms.Expressions()
 }
 
 /*
-   Representation as a N1QL string.
+Representation as a N1QL string.
 */
 func (this *Order) String() string {
 	return " ORDER BY " + this.terms.String()
@@ -136,7 +136,7 @@ func (this *SortTerm) Copy() *SortTerm {
 }
 
 /*
-   Representation as a N1QL string.
+Representation as a N1QL string.
 */
 func (this *SortTerm) String() string {
 	s := expression.NewStringer().Visit(this.expr)
@@ -270,7 +270,7 @@ func (this SortTerms) MapExpressions(mapper expression.Mapper) (err error) {
 }
 
 /*
-   Returns all contained Expressions.
+Returns all contained Expressions.
 */
 func (this SortTerms) Expressions() expression.Expressions {
 	exprs := make(expression.Expressions, len(this))
@@ -283,7 +283,7 @@ func (this SortTerms) Expressions() expression.Expressions {
 }
 
 /*
-   Representation as a N1QL string.
+Representation as a N1QL string.
 */
 func (this SortTerms) String() string {
 	s := ""

@@ -209,14 +209,14 @@ func (this *In) ResetMemory(context Context) {
 }
 
 /*
-  Hash tables used in IN-list evaluation.
-  Note that during execution the expression itself comes from
-  the plan, which may be shared among multiple executions, thus
-  no change to the expression itself should be allowed during
-  execution. Therefore hash table should be put somewhere else
-  and not inside the expression itself.
-  We'll use a hash map in the execution context to store a
-  structure (InlistHash) which includes a hash table pointer.
+Hash tables used in IN-list evaluation.
+Note that during execution the expression itself comes from
+the plan, which may be shared among multiple executions, thus
+no change to the expression itself should be allowed during
+execution. Therefore hash table should be put somewhere else
+and not inside the expression itself.
+We'll use a hash map in the execution context to store a
+structure (InlistHash) which includes a hash table pointer.
 */
 const (
 	INEXPR_HASHTAB_CHECKED = 1 << iota

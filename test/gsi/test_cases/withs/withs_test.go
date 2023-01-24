@@ -23,8 +23,8 @@ func TestWiths(t *testing.T) {
 
 	qc := start_cs()
 
-        fmt.Print("\n\nInserting values into Buckets for withs\n\n")
-        runMatch("insert.json", false, false, qc, t)
+	fmt.Print("\n\nInserting values into Buckets for withs\n\n")
+	runMatch("insert.json", false, false, qc, t)
 
 	fmt.Println("Creating indexes")
 	runStmt(qc, "CREATE INDEX st_idx1 on shellTest(c11, c12) WHERE type = \"left\"")

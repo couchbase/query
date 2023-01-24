@@ -7,7 +7,6 @@
 //  the file licenses/APL2.txt.
 
 /*
-
 Package clustering_stub provides a stubbed implementation of the clustering package.
 
 The Stubbed Configuration Store has one cluster, a Stubbed Cluster. This in turn has one
@@ -15,7 +14,6 @@ Query Node, a stubbed Query Node.
 
 Hard coded names are used for Configuration Store Id and URL, Cluster Name and
 Query Node Name, Query Endpoint and Cluster Endpoint.
-
 */
 package clustering_stub
 

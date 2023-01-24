@@ -52,7 +52,7 @@ func (this *Nest) MapExpressions(mapper expression.Mapper) (err error) {
 }
 
 /*
-   Returns all contained Expressions.
+Returns all contained Expressions.
 */
 func (this *Nest) Expressions() expression.Expressions {
 	return append(this.left.Expressions(), this.right.Expressions()...)
@@ -77,7 +77,7 @@ func (this *Nest) Privileges() (*auth.Privileges, errors.Error) {
 }
 
 /*
-   Representation as a N1QL string.
+Representation as a N1QL string.
 */
 func (this *Nest) String() string {
 	s := this.left.String()

@@ -78,7 +78,7 @@ func (this *WindowTerm) Copy() *WindowTerm {
 }
 
 /*
- Copy WindowTerm
+Copy WindowTerm
 */
 func CopyWindowTerm(wTerm *WindowTerm) *WindowTerm {
 	if wTerm == nil {
@@ -88,21 +88,21 @@ func CopyWindowTerm(wTerm *WindowTerm) *WindowTerm {
 }
 
 /*
- Return PartitionBy Info
+Return PartitionBy Info
 */
 func (this *WindowTerm) PartitionBy() expression.Expressions {
 	return this.partitionBy
 }
 
 /*
- Return OrderBy Info
+Return OrderBy Info
 */
 func (this *WindowTerm) OrderBy() *Order {
 	return this.orderBy
 }
 
 /*
- Return Window Info
+Return Window Info
 */
 func (this *WindowTerm) WindowFrame() *WindowFrame {
 	return this.windowFrame
@@ -212,7 +212,7 @@ func (this *WindowTerm) MapExpressions(mapper expression.Mapper) (err error) {
 }
 
 /*
-  Return all expressions used in WindowTerm
+Return all expressions used in WindowTerm
 */
 func (this *WindowTerm) Expressions() expression.Expressions {
 	rv := make(expression.Expressions, 0, 4)
@@ -399,7 +399,7 @@ type WindowFrame struct {
 }
 
 /*
- New window frame
+New window frame
 */
 func NewWindowFrame(modifiers uint32, wfes WindowFrameExtents) *WindowFrame {
 	if len(wfes) == 2 {
@@ -415,7 +415,7 @@ func NewWindowFrame(modifiers uint32, wfes WindowFrameExtents) *WindowFrame {
 }
 
 /*
- Copy window frame
+Copy window frame
 */
 func (this *WindowFrame) Copy() *WindowFrame {
 	return &WindowFrame{
@@ -425,7 +425,7 @@ func (this *WindowFrame) Copy() *WindowFrame {
 }
 
 /*
- String representation
+String representation
 */
 func (this *WindowFrame) String() (s string) {
 	// window frame unit type
@@ -458,21 +458,21 @@ func (this *WindowFrame) String() (s string) {
 }
 
 /*
- Returns window frame extents
+Returns window frame extents
 */
 func (this *WindowFrame) WindowFrameExtents() WindowFrameExtents {
 	return this.windowFrameExtents
 }
 
 /*
- Returns window frame modifiers
+Returns window frame modifiers
 */
 func (this *WindowFrame) WindowFrameModifiers() uint32 {
 	return this.windowFrameModifiers
 }
 
 /*
- Check Any given modifier is set
+Check Any given modifier is set
 */
 func (this *WindowFrame) HasModifier(modifier uint32) bool {
 	return (this.WindowFrameModifiers() & modifier) != 0
@@ -487,28 +487,28 @@ func (this *WindowFrame) RowsWindowFrame() bool {
 }
 
 /*
-  RANGE window frame unit type
+RANGE window frame unit type
 */
 func (this *WindowFrame) RangeWindowFrame() bool {
 	return this.HasModifier(WINDOW_FRAME_RANGE)
 }
 
 /*
-  GROUPS window frame unit type
+GROUPS window frame unit type
 */
 func (this *WindowFrame) GroupsWindowFrame() bool {
 	return this.HasModifier(WINDOW_FRAME_GROUPS)
 }
 
 /*
-  Window Frame has Exclude clause (Required handle of exclude clause)
+Window Frame has Exclude clause (Required handle of exclude clause)
 */
 func (this *WindowFrame) WindowFrameHasExclude() bool {
 	return this.HasModifier(WINDOW_FRAME_EXCLUDE_CURRENT_ROW | WINDOW_FRAME_EXCLUDE_GROUP | WINDOW_FRAME_EXCLUDE_TIES)
 }
 
 /*
- non-constant Expressions used insdide window frame
+non-constant Expressions used insdide window frame
 */
 func (this *WindowFrame) Expressions() expression.Expressions {
 	rv := make(expression.Expressions, 0, 2)
@@ -521,7 +521,7 @@ func (this *WindowFrame) Expressions() expression.Expressions {
 }
 
 /*
- Map expressions
+Map expressions
 */
 func (this *WindowFrame) MapExpressions(mapper expression.Mapper) (err error) {
 	for _, wfe := range this.WindowFrameExtents() {
@@ -570,7 +570,7 @@ func (this WindowFrameExtents) Copy() WindowFrameExtents {
 }
 
 /*
- String representation of window frame extent
+String representation of window frame extent
 */
 func (this *WindowFrameExtent) String() (s string) {
 	if this.HasModifier(WINDOW_FRAME_VALUE_PRECEDING) {
@@ -589,7 +589,7 @@ func (this *WindowFrameExtent) String() (s string) {
 }
 
 /*
- Copy window frame extent
+Copy window frame extent
 */
 func (this *WindowFrameExtent) Copy() *WindowFrameExtent {
 	rv := &WindowFrameExtent{
@@ -604,21 +604,21 @@ func (this *WindowFrameExtent) Copy() *WindowFrameExtent {
 }
 
 /*
- Window frame extent value expression
+Window frame extent value expression
 */
 func (this *WindowFrameExtent) ValueExpression() expression.Expression {
 	return this.valueExpr
 }
 
 /*
- Window frame extent modifiers
+Window frame extent modifiers
 */
 func (this *WindowFrameExtent) Modifiers() uint32 {
 	return this.modifiers
 }
 
 /*
- Window frame extent has Any of the modifier set
+Window frame extent has Any of the modifier set
 */
 func (this *WindowFrameExtent) HasModifier(modifier uint32) bool {
 	return (this.modifiers & modifier) != 0

@@ -591,9 +591,9 @@ func (this *builder) minimalIndexes(sargables map[datastore.Index]*indexEntry, s
 
 /*
 Is se narrower or equivalent to te.
-  true : purge te
-  false: keep both
 
+	true : purge te
+	false: keep both
 */
 func narrowerOrEquivalent(se, te *indexEntry, shortest bool, predFc map[string]value.Value) bool {
 

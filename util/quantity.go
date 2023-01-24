@@ -16,7 +16,9 @@ import (
 // function ParseQuantity:
 // parse a string denotating a memory quantity into the number of bytes it denotes.
 // e.g. given the string "10K", return 10240
+//
 //	given the string "512B", return 512
+//
 // Return an error if the number part of the string cannot be converted to an integer
 func ParseQuantity(s string) (int, error) {
 	quantityTypes := []string{"mb", "kb", "k", "m", "b"}

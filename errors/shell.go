@@ -59,7 +59,7 @@ const (
 	UNKNOWN_ERROR_MSG = ""
 )
 
-//Connection errors
+// Connection errors
 func NewShellErrorCannotConnect(msg string) Error {
 	return &err{level: EXCEPTION, ICode: E_SHELL_CONNECTION_REFUSED, IKey: "shell.connection.refused", InternalMsg: CONNECTION_REFUSED_MSG + msg, InternalCaller: CallerN(1)}
 }
@@ -100,7 +100,7 @@ func NewShellErrorInvalidURL(msg string) Error {
 	return &err{level: EXCEPTION, ICode: E_SHELL_INVALID_URL, IKey: "shell.Invalid.URL", InternalMsg: INVALID_URL_MSG + msg, InternalCaller: CallerN(1)}
 }
 
-//Read/Write/Update file errors
+// Read/Write/Update file errors
 func NewShellErrorReadFile(msg string) Error {
 	return &err{level: EXCEPTION, ICode: E_SHELL_READ_FILE, IKey: "shell.read.history", InternalMsg: READ_FILE_MSG + msg, InternalCaller: CallerN(1)}
 }
@@ -117,7 +117,7 @@ func NewShellErrorCloseFile(msg string) Error {
 	return &err{level: EXCEPTION, ICode: E_SHELL_CLOSE_FILE, IKey: "shell.unable.to.open.file", InternalMsg: FILE_CLOSE_MSG + msg, InternalCaller: CallerN(1)}
 }
 
-//Authentication Errors. Missing or invalid username/password.
+// Authentication Errors. Missing or invalid username/password.
 func NewShellErrorInvalidPassword(msg string) Error {
 	return &err{level: EXCEPTION, ICode: E_SHELL_INVALID_PASSWORD, IKey: "shell.invalid.password", InternalMsg: INVALID_PASSWORD_MSG + msg, InternalCaller: CallerN(1)}
 }
@@ -136,7 +136,7 @@ func NewShellErrorInvalidCredential(msg string) Error {
 
 }
 
-//Command Errors
+// Command Errors
 func NewShellErrorNoSuchCommand(msg string) Error {
 	return &err{level: EXCEPTION, ICode: E_SHELL_NO_SUCH_COMMAND, IKey: "shell.no.such.command", InternalMsg: NO_SUCH_COMMAND_MSG + msg, InternalCaller: CallerN(1)}
 }

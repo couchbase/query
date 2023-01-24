@@ -252,8 +252,10 @@ func (this *Pop) PrintHelp(desc bool) (errors.ErrorCode, string) {
 	return 0, ""
 }
 
-/* Pop the top value of the parameter stack.
-   This is used by the \POP command with no arguments.
+/*
+Pop the top value of the parameter stack.
+
+	This is used by the \POP command with no arguments.
 */
 func Popparam_Helper(param map[string]*Stack, isrestp bool, isnamep bool) (errors.ErrorCode, string) {
 	for name, val := range param {

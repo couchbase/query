@@ -7,7 +7,6 @@
 //  the file licenses/APL2.txt.
 
 /*
-
 Package datastore provides a common datastore abstraction over storage
 engines, such as Couchbase server, cloud, mobile, file, 3rd-party
 databases and storage engines, etc.
@@ -17,7 +16,6 @@ The logical hierarchy for the query language is datastore -> namespace -> bucket
 
 TODO: This hierarchy should be revisited and aligned with long-term
 plans before query Beta / GA.
-
 */
 package datastore
 

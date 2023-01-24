@@ -40,7 +40,7 @@ func getUTF16Rune(s string) (rune, error) {
 	return rn, nil
 }
 
-// Handle permitted JSON escape sequences along with appropriate quotation mark escaping (allows '' as an escaped ')
+// Handle permitted JSON escape sequences along with appropriate quotation mark escaping (allows ” as an escaped ')
 // Ref: https://www.json.org/json-en.html
 func ProcessEscapeSequences(s string) (t string, e error) {
 	if len(s) < 2 {

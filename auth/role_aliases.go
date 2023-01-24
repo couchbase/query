@@ -57,18 +57,22 @@ func RoleToAlias(role string) string {
 
 // Expecting parsed JSON, in a format like this:
 // { "domain":"local",
-//   "id":"reviewowner",
-//   "name":"OwnerOfreview",
-//   "roles":[{"bucket_name":"customer","role":"query_select"},
-//            {"bucket_name":"customer","role":"query_insert"},
-//            {"bucket_name":"review","role":"bucket_full_access"}]}
+//
+//	"id":"reviewowner",
+//	"name":"OwnerOfreview",
+//	"roles":[{"bucket_name":"customer","role":"query_select"},
+//	         {"bucket_name":"customer","role":"query_insert"},
+//	         {"bucket_name":"review","role":"bucket_full_access"}]}
+//
 // Change the roles to their alias forms, like this:
 // { "domain":"local",
-//   "id":"reviewowner",
-//   "name":"OwnerOfreview",
-//   "roles":[{"bucket_name":"customer","role":"select"},
-//            {"bucket_name":"customer","role":"insert"},
-//            {"bucket_name":"review","role":"bucket_full_access"}]}
+//
+//	"id":"reviewowner",
+//	"name":"OwnerOfreview",
+//	"roles":[{"bucket_name":"customer","role":"select"},
+//	         {"bucket_name":"customer","role":"insert"},
+//	         {"bucket_name":"review","role":"bucket_full_access"}]}
+//
 // If the data is in an unexpected format, we leave it as we found it.
 func ConvertRolesToAliases(user map[string]interface{}) {
 	roles, present := user["roles"]

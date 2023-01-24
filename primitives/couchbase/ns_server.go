@@ -929,13 +929,14 @@ func Connect(baseU string) (Client, error) {
 // The map key is the name of the scope.
 // Example data:
 // {"uid":"b","scopes":[
-//    {"name":"_default","uid":"0","collections":[
-//       {"name":"_default","uid":"0"}]},
-//    {"name":"myScope1","uid":"8","collections":[
-//       {"name":"myCollectionB","uid":"c"},
-//       {"name":"myCollectionA","uid":"b"}]},
-//    {"name":"myScope2","uid":"9","collections":[
-//       {"name":"myCollectionC","uid":"d"}]}]}
+//
+//	{"name":"_default","uid":"0","collections":[
+//	   {"name":"_default","uid":"0"}]},
+//	{"name":"myScope1","uid":"8","collections":[
+//	   {"name":"myCollectionB","uid":"c"},
+//	   {"name":"myCollectionA","uid":"b"}]},
+//	{"name":"myScope2","uid":"9","collections":[
+//	   {"name":"myCollectionC","uid":"d"}]}]}
 type InputManifest struct {
 	Uid    string
 	Scopes []InputScope

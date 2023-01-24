@@ -47,7 +47,7 @@ func (this *Join) MapExpressions(mapper expression.Mapper) (err error) {
 }
 
 /*
-   Returns all contained Expressions.
+Returns all contained Expressions.
 */
 func (this *Join) Expressions() expression.Expressions {
 	return append(this.left.Expressions(), this.right.Expressions()...)
@@ -72,7 +72,7 @@ func (this *Join) Privileges() (*auth.Privileges, errors.Error) {
 }
 
 /*
-   Representation as a N1QL string.
+Representation as a N1QL string.
 */
 func (this *Join) String() string {
 	s := this.left.String()

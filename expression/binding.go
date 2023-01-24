@@ -262,7 +262,7 @@ func (this Bindings) MapExpressions(mapper Mapper) (err error) {
 }
 
 /*
-   Returns all contained Expressions.
+Returns all contained Expressions.
 */
 func (this Bindings) Expressions() Expressions {
 	exprs := make(Expressions, len(this))

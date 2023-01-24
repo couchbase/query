@@ -27,8 +27,10 @@ func (stack *Stack) Push(val value.Value) {
 	*stack = append(*stack, val)
 }
 
-/* Return the top element in the stack. If the stack
-   is empty then return ZERO_VALUE.
+/*
+Return the top element in the stack. If the stack
+
+	is empty then return ZERO_VALUE.
 */
 func (stack *Stack) Top() (val value.Value, err_code errors.ErrorCode, err_str string) {
 	if stack.Len() == 0 {
@@ -58,8 +60,10 @@ func (stack *Stack) SetTop(v value.Value) (err_code errors.ErrorCode, err_str st
 	return
 }
 
-/* Delete the top element in the stack. If the stack
-   is empty then print err stack empty
+/*
+Delete the top element in the stack. If the stack
+
+	is empty then print err stack empty
 */
 func (stack *Stack) Pop() (val value.Value, err_code errors.ErrorCode, err_str string) {
 	if stack.Len() == 0 {

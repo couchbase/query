@@ -53,7 +53,7 @@ func (this *ExpressionTerm) MapExpressions(mapper expression.Mapper) (err error)
 }
 
 /*
-   Returns all contained Expressions.
+Returns all contained Expressions.
 */
 func (this *ExpressionTerm) Expressions() expression.Expressions {
 	exprs := make(expression.Expressions, 0, 2)
@@ -78,7 +78,7 @@ func (this *ExpressionTerm) Privileges() (*auth.Privileges, errors.Error) {
 }
 
 /*
-   Representation as a N1QL string.
+Representation as a N1QL string.
 */
 func (this *ExpressionTerm) String() string {
 	s := ""

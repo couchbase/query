@@ -95,8 +95,10 @@ func (this *Push) PrintHelp(desc bool) (errors.ErrorCode, string) {
 	return 0, ""
 }
 
-/* Push value from the Top of the stack onto the parameter stack.
-   This is used by the \PUSH command with no arguments.
+/*
+Push value from the Top of the stack onto the parameter stack.
+
+	This is used by the \PUSH command with no arguments.
 */
 func Pushparam_Helper(param map[string]*Stack, isrestp bool, isnamep bool) (errors.ErrorCode, string) {
 	for name, v := range param {

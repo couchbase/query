@@ -30,10 +30,10 @@ import (
 */
 
 /*
-   Option        : -engine or -e
-   Args          :  <url to the query service or to the cluster>
-   Default value : http://localhost:8091/
-   Point to the cluser/query endpoint to connect to.
+Option        : -engine or -e
+Args          :  <url to the query service or to the cluster>
+Default value : http://localhost:8091/
+Point to the cluser/query endpoint to connect to.
 */
 var serverFlag string
 
@@ -47,9 +47,9 @@ func init() {
 }
 
 /*
-   Option        : -no-engine or -ne
-   Default value : false
-   Enable/Disable startup connection to a query service/cluster endpoint.
+Option        : -no-engine or -ne
+Default value : false
+Enable/Disable startup connection to a query service/cluster endpoint.
 */
 var noQueryService bool
 
@@ -63,10 +63,10 @@ func init() {
 }
 
 /*
-   Option        : -quiet
-   Default value : false
-   Enable/Disable startup connection message for the shell. Also disable echoing queries
-   when using \SOURCE or -f.
+Option        : -quiet
+Default value : false
+Enable/Disable startup connection message for the shell. Also disable echoing queries
+when using \SOURCE or -f.
 */
 var quietFlag bool
 

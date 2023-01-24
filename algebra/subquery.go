@@ -40,7 +40,7 @@ func NewSubquery(query *Select) *Subquery {
 }
 
 /*
-   Representation as a N1QL string.
+Representation as a N1QL string.
 */
 func (this *Subquery) String() string {
 	var s string

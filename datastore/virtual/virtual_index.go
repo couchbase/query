@@ -16,7 +16,7 @@ import (
 	"github.com/couchbase/query/value"
 )
 
-//Implement Index{} interface
+// Implement Index{} interface
 type VirtualIndex struct {
 	keyspace     datastore.Keyspace
 	name         string
@@ -82,7 +82,7 @@ func (this *VirtualIndex) Type() datastore.IndexType {
 	return datastore.VIRTUAL
 }
 
-//Virtual index may be in virtualindexer for virtual keyspace or normal keyspace indexer.
+// Virtual index may be in virtualindexer for virtual keyspace or normal keyspace indexer.
 func (this *VirtualIndex) Indexer() datastore.Indexer {
 	indexer, err := this.keyspace.Indexer(datastore.DEFAULT)
 	if err == nil {
@@ -129,12 +129,12 @@ func (this *VirtualIndex) Scan(requestId string, span *datastore.Span, distinct 
 	vector timestamp.Vector, conn *datastore.IndexConnection) {
 }
 
-//Implement CountIndex{} interface
+// Implement CountIndex{} interface
 func (this *VirtualIndex) Count(span *datastore.Span, cons datastore.ScanConsistency, vector timestamp.Vector) (int64, errors.Error) {
 	return 0, nil
 }
 
-//Implement Index2{} interface
+// Implement Index2{} interface
 func (this *VirtualIndex) RangeKey2() datastore.IndexKeys {
 	if this != nil && this.indexKeys != nil {
 		rangeKeys := make(datastore.IndexKeys, 0, len(this.indexKeys))
@@ -160,7 +160,7 @@ func (this *VirtualIndex) Scan2(requestId string, spans datastore.Spans2, revers
 	vector timestamp.Vector, conn *datastore.IndexConnection) {
 }
 
-//Impelment CountIndex2 interface
+// Impelment CountIndex2 interface
 func (this *VirtualIndex) Count2(requestId string, spans datastore.Spans2, cons datastore.ScanConsistency, vector timestamp.Vector) (int64, errors.Error) {
 	return 0, nil
 }
@@ -173,7 +173,7 @@ func (this *VirtualIndex) CountDistinct(requestId string, spans datastore.Spans2
 	return 0, nil
 }
 
-//Implement Index3{} interface
+// Implement Index3{} interface
 func (this *VirtualIndex) CreateAggregate(requestId string, groupAggs *datastore.IndexGroupAggregates,
 	with value.Value) errors.Error {
 	return errors.NewVirtualIdxNotSupportedError(nil, "CREATE AGGREGATE for virtual index")
@@ -209,7 +209,7 @@ func (this *VirtualIndex) Alter(requestId string, with value.Value) (datastore.I
 	return nil, errors.NewVirtualIdxNotSupportedError(nil, "Alter for virtual index")
 }
 
-//Implement PrimaryIndex3{} interface
+// Implement PrimaryIndex3{} interface
 func (this *VirtualIndex) ScanEntries3(requestId string, projection *datastore.IndexProjection, offset, limit int64,
 	groupAggs *datastore.IndexGroupAggregates, indexOrders datastore.IndexKeyOrders, cons datastore.ScanConsistency,
 	vector timestamp.Vector, conn *datastore.IndexConnection) {
