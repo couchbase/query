@@ -376,7 +376,9 @@ func (s *store) NamespaceByName(name string) (p datastore.Namespace, e errors.Er
 func (s *store) ForeachBucket(f func(datastore.ExtendedBucket)) {
 	for _, n := range s.namespaceCache {
 		for _, k := range n.keyspaceCache {
-			f(k.cbKeyspace)
+			if k.cbKeyspace != nil {
+				f(k.cbKeyspace)
+			}
 		}
 	}
 }
