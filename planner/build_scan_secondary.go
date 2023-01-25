@@ -568,8 +568,7 @@ func (this *builder) minimalIndexes(sargables map[datastore.Index]*indexEntry, s
 					delete(sargables, t)
 				}
 			} else {
-				_, isOr := pred.(*expression.Or)
-				if narrowerOrEquivalent(se, te, shortest, isOr, predFc) {
+				if narrowerOrEquivalent(se, te, shortest, predFc) {
 					delete(sargables, t)
 				}
 			}
@@ -596,7 +595,7 @@ Is se narrower or equivalent to te.
 	true : purge te
 	false: keep both
 */
-func narrowerOrEquivalent(se, te *indexEntry, shortest, isOr bool, predFc map[string]value.Value) bool {
+func narrowerOrEquivalent(se, te *indexEntry, shortest bool, predFc map[string]value.Value) bool {
 
 	snk, snc := matchedKeysConditions(se, te, shortest, predFc)
 
@@ -626,7 +625,7 @@ func narrowerOrEquivalent(se, te *indexEntry, shortest, isOr bool, predFc map[st
 	seKeyFlags := se.IndexKeyFlags()
 	teKeyFlags := te.IndexKeyFlags()
 
-	if te.nSargKeys == snk+snc && sePushDown == tePushDown && seKeyFlags == teKeyFlags {
+	if te.nSargKeys == (snk+snc) && sePushDown == tePushDown && seKeyFlags == teKeyFlags {
 		// if te and se has same sargKeys (or equivalent condition), and there exists
 		// a non-sarged array key, prefer the one without the array key
 		if se.HasFlag(IE_ARRAYINDEXKEY) != te.HasFlag(IE_ARRAYINDEXKEY) {
@@ -647,9 +646,7 @@ func narrowerOrEquivalent(se, te *indexEntry, shortest, isOr bool, predFc map[st
 
 	if te.nSargKeys > 0 {
 		if te.nSargKeys > (snk + snc) {
-			if !isOr || te.minKeys > (snk+snc) {
-				return false
-			}
+			return false
 		} else if te.nSargKeys == (snk+snc) && sePushDown == tePushDown && seKeyFlags == teKeyFlags {
 			if se.minKeys != te.minKeys {
 				// for two indexes with the same sargKeys, favor the one
