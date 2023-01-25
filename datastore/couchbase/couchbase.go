@@ -45,6 +45,7 @@ import (
 	"github.com/couchbase/query/transactions"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
+	"github.com/golang/snappy"
 )
 
 var REQUIRE_CBAUTH bool           // Connection to authorization system must succeed.
@@ -1903,7 +1904,19 @@ func (b *keyspace) fetch(fullName, qualifiedName, scopeName, collectionName stri
 }
 
 func doFetch(k string, fullName string, v *gomemcached.MCResponse, context datastore.QueryContext) value.AnnotatedValue {
-	val := value.NewAnnotatedValue(value.NewParsedValue(v.Body, (v.DataType&byte(0x01) != 0)))
+	raw := v.Body
+	if v.DataType&gomemcached.DatatypeFlagCompressed != 0 {
+		// Uncomment when needed
+		//context.Debuga(func() string { return fmt.Sprintf("Compressed document: %v", k) })
+		var err error
+		raw, err = snappy.Decode(nil, raw)
+		if err != nil {
+			context.Error(errors.NewInvalidCompressedValueError(err, v.Body))
+			logging.Severef("Invalid compressed document received: %v - %v", err, v, context)
+			return nil
+		}
+	}
+	val := value.NewAnnotatedValue(value.NewParsedValue(raw, (v.DataType&gomemcached.DatatypeFlagJSON != 0)))
 
 	var flags, expiration uint32
 
@@ -1977,6 +1990,8 @@ func getSubDocFetchResults(k string, v *gomemcached.MCResponse, subPaths []strin
 		// Final Doc value
 		val = value.NewAnnotatedValue(nil)
 	} else {
+		// Sub-doc API does not use response header's data type.  It decompresses the document before it is sent/received.
+		// (The xattr datatype array will show "snappy" but the data pointed to by respValue here is not compressed.)
 		val = value.NewAnnotatedValue(value.NewParsedValue(respValue, false))
 	}
 

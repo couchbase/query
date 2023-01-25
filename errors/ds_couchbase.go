@@ -313,3 +313,11 @@ func NewWithInvalidValueError(opt string) Error {
 	return &err{level: EXCEPTION, ICode: E_WITH_INVALID_TYPE, IKey: "datastore.with.invalid_value", cause: c,
 		InternalMsg: "Invalid value for '" + opt + "'", InternalCaller: CallerN(1)}
 }
+
+func NewInvalidCompressedValueError(e error, d interface{}) Error {
+	c := make(map[string]interface{})
+	c["error"] = e.Error()
+	c["data"] = d
+	return &err{level: EXCEPTION, ICode: E_INVALID_COMPRESSED_VALUE, IKey: "datastore.invalid_value", cause: c,
+		InternalMsg: "Invalid compressed value", InternalCaller: CallerN(1)}
+}

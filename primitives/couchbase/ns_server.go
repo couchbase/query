@@ -90,6 +90,9 @@ var IsSuspended func(string) bool = func(n string) bool { return false }
 // Enable KV tracing (timing information)
 var EnableTracing = false
 
+// Enable KV data in snappy compressed format
+var EnableSnappyCompression = false
+
 // TCP keepalive interval in seconds. Default 30 minutes
 var TCPKeepaliveInterval = 30 * 60
 

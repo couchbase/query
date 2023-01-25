@@ -28,6 +28,7 @@ import (
 	qerrors "github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/util"
+	"github.com/golang/snappy"
 )
 
 // Mutation Token
@@ -1110,7 +1111,17 @@ func (b *Bucket) WriteWithCAS(k string, flags, exp int, v interface{},
 	}
 
 	var res *gomemcached.MCResponse
+	var compressed bool
 	err = b.Do(k, func(mc *memcached.Client, vb uint16) error {
+		if data != nil && !compressed && mc.IsFeatureEnabled(memcached.FeatureSnappyCompression) {
+			data = snappy.Encode(nil, data)
+			compressed = true
+			if len(context) > 0 {
+				context[0].Compressed = true
+			} else {
+				context = append(context, &memcached.ClientContext{Compressed: true})
+			}
+		}
 		if opt&AddOnly != 0 {
 			res, err = memcached.UnwrapMemcachedError(
 				mc.Add(vb, k, flags, exp, data, context...))
@@ -1165,7 +1176,17 @@ func (b *Bucket) WriteCasWithMT(k string, flags, exp int, cas uint64, v interfac
 	}
 
 	var res *gomemcached.MCResponse
+	var compressed bool
 	err = b.Do(k, func(mc *memcached.Client, vb uint16) error {
+		if data != nil && !compressed && mc.IsFeatureEnabled(memcached.FeatureSnappyCompression) {
+			data = snappy.Encode(nil, data)
+			compressed = true
+			if len(context) > 0 {
+				context[0].Compressed = true
+			} else {
+				context = append(context, &memcached.ClientContext{Compressed: true})
+			}
+		}
 		res, err = mc.SetCas(vb, k, flags, exp, cas, data, context...)
 		return err
 	})

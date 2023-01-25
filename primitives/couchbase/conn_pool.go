@@ -126,6 +126,10 @@ func defaultMkConn(host string, ah AuthHandler, tlsConfig *tls.Config, bucketNam
 		features = append(features, memcached.FeatureDataType)
 	}
 
+	if EnableSnappyCompression == true {
+		features = append(features, memcached.FeatureSnappyCompression)
+	}
+
 	if EnableXattr == true {
 		features = append(features, memcached.FeatureXattr)
 	}

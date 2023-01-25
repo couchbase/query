@@ -1287,14 +1287,14 @@ func (this *vbRangeScan) runScan(conn *memcached.Client, node string) bool {
 						this, this.sampleSize, fetchLimit)
 				}
 			}, this.scan.log)
-			response, err = conn.CreateRandomScan(this.vbucket(), this.scan.collId, this.sampleSize)
+			response, err = conn.CreateRandomScan(this.vbucket(), this.scan.collId, this.sampleSize, false)
 		} else {
 			start, exclStart = this.startFrom()
 			end, exclEnd := this.endWith()
 			logging.Debuga(func() string {
 				return fmt.Sprintf("%s Creating scan from: %v (excl:%v)", this, start, exclStart)
 			}, this.scan.log)
-			response, err = conn.CreateRangeScan(this.vbucket(), this.scan.collId, start, exclStart, end, exclEnd)
+			response, err = conn.CreateRangeScan(this.vbucket(), this.scan.collId, start, exclStart, end, exclEnd, false)
 		}
 		if err != nil || len(response.Body) < 16 {
 			resp, ok := err.(*gomemcached.MCResponse)
