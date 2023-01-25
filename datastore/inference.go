@@ -13,7 +13,6 @@ import (
 
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
-	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/value"
 )
 
@@ -28,7 +27,7 @@ type RandomEntryProvider interface {
 }
 
 type RandomScanProvider interface {
-	StartRandomScan(requesId string, log logging.Log, sampleSize int, timeout time.Duration, pipelineSize int,
+	StartRandomScan(context QueryContext, sampleSize int, timeout time.Duration, pipelineSize int,
 		kvTimeout time.Duration, serverless bool) (interface{}, errors.Error)
 	StopKeyScan(scan interface{}) (uint64, errors.Error)
 	FetchKeys(scan interface{}, timeout time.Duration) ([]string, errors.Error, bool)
