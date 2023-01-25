@@ -601,7 +601,8 @@ func (this *builder) minimalIndexes(sargables map[datastore.Index]*indexEntry, s
 					}
 				}
 			} else {
-				if narrowerOrEquivalent(se, te, shortest, predFc) {
+				_, isOr := pred.(*expression.Or)
+				if narrowerOrEquivalent(se, te, shortest, isOr, predFc) {
 					delete(sargables, t)
 				}
 			}
@@ -628,7 +629,7 @@ Is se narrower or equivalent to te.
 	true : purge te
 	false: keep both
 */
-func narrowerOrEquivalent(se, te *indexEntry, shortest bool, predFc map[string]value.Value) bool {
+func narrowerOrEquivalent(se, te *indexEntry, shortest, isOr bool, predFc map[string]value.Value) bool {
 
 	snk, snc := matchedKeysConditions(se, te, shortest, predFc)
 
@@ -657,8 +658,12 @@ func narrowerOrEquivalent(se, te *indexEntry, shortest bool, predFc map[string]v
 		return true
 	}
 
-	if te.nSargKeys == snk+snc &&
-		se.PushDownProperty() == te.PushDownProperty() {
+	sePushDown := se.PushDownProperty()
+	tePushDown := te.PushDownProperty()
+	seKeyFlags := se.IndexKeyFlags()
+	teKeyFlags := te.IndexKeyFlags()
+
+	if te.nSargKeys == snk+snc && sePushDown == tePushDown && seKeyFlags == teKeyFlags {
 		// if te and se has same sargKeys (or equivalent condition), and there exists
 		// a non-sarged array key, prefer the one without the array key
 		if se.HasFlag(IE_ARRAYINDEXKEY) != te.HasFlag(IE_ARRAYINDEXKEY) {
@@ -679,9 +684,10 @@ func narrowerOrEquivalent(se, te *indexEntry, shortest bool, predFc map[string]v
 
 	if te.nSargKeys > 0 {
 		if te.nSargKeys > (snk + snc) {
-			return false
-		} else if te.nSargKeys == (snk+snc) &&
-			se.PushDownProperty() == te.PushDownProperty() {
+			if !isOr || te.minKeys > (snk+snc) {
+				return false
+			}
+		} else if te.nSargKeys == (snk+snc) && sePushDown == tePushDown && seKeyFlags == teKeyFlags {
 			if se.minKeys != te.minKeys {
 				// for two indexes with the same sargKeys, favor the one
 				// with more consecutive leading sargKeys
@@ -698,13 +704,11 @@ func narrowerOrEquivalent(se, te *indexEntry, shortest bool, predFc map[string]v
 		return se.sumKeys+se.nEqCond > te.sumKeys+te.nEqCond
 	}
 
-	if se.PushDownProperty() != te.PushDownProperty() {
-		return se.PushDownProperty() > te.PushDownProperty()
+	if sePushDown != tePushDown {
+		return sePushDown > tePushDown
 	}
 
 	// prefer one with index filter/join filter/early order
-	seKeyFlags := se.IndexKeyFlags()
-	teKeyFlags := te.IndexKeyFlags()
 	if seKeyFlags != teKeyFlags {
 		return seKeyFlags > teKeyFlags
 	}
