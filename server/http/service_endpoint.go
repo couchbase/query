@@ -341,6 +341,7 @@ func (this *HttpEndpoint) ServeHTTP(resp http.ResponseWriter, req *http.Request)
 	}()
 
 	if this.trackUsers {
+		request.Loga(logging.INFO, func() string { return "Tracking user" })
 		userName, domain := datastore.FirstCred(request.Credentials())
 		this.usersLock.Lock()
 		user := this.trackedUsers[userName]
@@ -372,7 +373,7 @@ func (this *HttpEndpoint) ServeHTTP(resp http.ResponseWriter, req *http.Request)
 			if this.trackedUsersVersion != user.limitsVersion {
 				limits, err := cbauth.GetUserLimits(userName, domain, "query")
 				if err != nil {
-					s := fmt.Sprintf("No user limits found for user <ud>%v</ud> - limits not changed")
+					s := fmt.Sprintf("No user limits found for user <ud>%v</ud> - limits not changed", userName)
 					logging.Infof(s)
 					request.Loga(logging.INFO, func() string { return s })
 				} else {
@@ -467,6 +468,7 @@ func (this *HttpEndpoint) ServeHTTP(resp http.ResponseWriter, req *http.Request)
 
 	this.actives.Put(request)
 	defer this.actives.Delete(request.Id().String(), false, nil)
+	request.Loga(logging.INFO, func() string { return "Request active" })
 
 	if request.State() == server.FATAL {
 

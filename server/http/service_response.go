@@ -944,6 +944,7 @@ func (this *httpRequest) writeLog(prefix, indent string) bool {
 		if !this.writeString(newPrefix) || !this.writeString(string(b)) {
 			return false
 		}
+		first = false
 		return true
 	})
 	logger.Close()

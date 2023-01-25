@@ -79,6 +79,7 @@ func newHttpRequest(rv *httpRequest, resp http.ResponseWriter, req *http.Request
 
 	// handles request level logging
 	rv.logger, _ = resolver.NewLogger("builtin")
+	rv.logger.Infof("Request received")
 
 	// Limit body size in case of denial-of-service attack
 	req.Body = http.MaxBytesReader(resp, req.Body, int64(size))
@@ -229,7 +230,7 @@ func newHttpRequest(rv *httpRequest, resp http.ResponseWriter, req *http.Request
 		data["args"] = a
 		b, _ := json.Marshal(data)
 		return string(b)
-	})
+	}, rv.logger)
 	// end - temporary logging of requests
 	rv.jsonArgs = jsonArgs{}
 	rv.urlArgs = urlArgs{}

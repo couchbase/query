@@ -1020,7 +1020,7 @@ func (this *Server) serviceRequest(request Request) {
 	}()
 
 	context := request.ExecutionContext()
-	context.Debuga(func() string { return "Servicing request" })
+	context.Infoa(func() string { return "Servicing request" })
 	request.Servicing()
 
 	atrCollection := this.AtrCollection()
@@ -1152,6 +1152,7 @@ func (this *Server) serviceRequest(request Request) {
 		context.SetReqDeadline(time.Time{})
 	}
 
+	context.Infoa(func() string { return "Executing request" })
 	request.NotifyStop(operator)
 	request.SetExecTime(time.Now())
 	operator.RunOnce(context, nil)
