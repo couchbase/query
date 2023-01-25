@@ -122,11 +122,11 @@ func (this *builder) buildOrScanNoPushdowns(node *algebra.KeyspaceTerm, id expre
 		scans = make([]plan.SecondaryScan, 0, len(pred.Operands()))
 	}
 
-	minSargLength := 0
+	maxSargLength := 0
 
 	orTerms, truth := expression.FlattenOr(pred)
 	if orTerms == nil || truth {
-		return nil, minSargLength, nil
+		return nil, 0, nil
 	}
 
 	cost := float64(0.0)
@@ -197,8 +197,8 @@ func (this *builder) buildOrScanNoPushdowns(node *algebra.KeyspaceTerm, id expre
 
 			scans = append(scans, scan)
 
-			if minSargLength == 0 || minSargLength > termSargLength {
-				minSargLength = termSargLength
+			if maxSargLength == 0 || maxSargLength < termSargLength {
+				maxSargLength = termSargLength
 			}
 
 			scost := scan.Cost()
@@ -241,5 +241,5 @@ func (this *builder) buildOrScanNoPushdowns(node *algebra.KeyspaceTerm, id expre
 	}
 
 	rv := plan.NewUnionScan(limit, nil, cost, cardinality, size, frCost, scans...)
-	return rv.Streamline(), minSargLength, nil
+	return rv.Streamline(), maxSargLength, nil
 }
