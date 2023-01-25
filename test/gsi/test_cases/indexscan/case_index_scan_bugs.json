@@ -30,5 +30,83 @@
         "statements":"SELECT * FROM orders WHERE ANY AND EVERY v IN a1 SATISFIES v IS NOT VALUED END AND test_id = \"parameters\"",
         "results": [
     ]
+    },
+    {
+	"testcase": "MB-55236, part 1, early order",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'Order' AND CONTAINS(v.`sort_terms`[0].`expr`, \"_index_key\") END"
+        },
+        "statements":"SELECT c2, c3, c4 FROM orders WHERE test_id = \"idxfltr\" AND c1 = 1 AND (c2 = 311 OR c4 = 221) ORDER BY c6 LIMIT 2",
+	"ordered": true,
+        "results": [
+            {
+                "c2": 211,
+                "c4": 221
+            },
+            {
+                "c2": 311,
+                "c3": "Test",
+                "c4": 321
+            }
+    ]
+    },
+    {
+	"testcase": "MB-55236, part 2, different OR subterm ordering, early order",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'Order' AND CONTAINS(v.`sort_terms`[0].`expr`, \"_index_key\") END"
+        },
+        "statements":"SELECT c2, c3, c4 FROM orders WHERE test_id = \"idxfltr\" AND c1 = 1 AND (c4 = 221 OR c2 = 311) ORDER BY c6 LIMIT 2",
+	"ordered": true,
+        "results": [
+            {
+                "c2": 211,
+                "c4": 221
+            },
+            {
+                "c2": 311,
+                "c3": "Test",
+                "c4": 321
+            }
+    ]
+    },
+    {
+	"testcase": "MB-55236, part 3, no limit, no early order, union scan",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'UnionScan' END"
+        },
+        "statements":"SELECT c2, c3, c4 FROM orders WHERE test_id = \"idxfltr\" AND c1 = 1 AND (c4 = 221 OR c2 = 311) ORDER BY c6",
+	"ordered": true,
+        "results": [
+            {
+                "c2": 211,
+                "c4": 221
+            },
+            {
+                "c2": 311,
+                "c3": "Test",
+                "c4": 321
+            }
+    ]
     }
 ]
