@@ -61,10 +61,6 @@ func (b *Bucket) StartKeyScan(requestId string, log logging.Log, collId uint32, 
 		log = logging.NULL_LOG
 	}
 
-	if limit == 0 {
-		limit = -1
-	}
-
 	if scope != "" && collection != "" {
 		var err error
 		collId, _, err = b.GetCollectionCID(scope, collection, time.Time{})
@@ -316,10 +312,10 @@ func NewSeqScan(requestId string, log logging.Log, collId uint32, ranges []*SeqS
 	scan.abortch = make(chan bool, 1)
 	scan.fetchLimit = _SS_MAX_KEYS_PER_REQUEST
 	if scan.limit > 0 {
-		scan.fetchLimit = uint32(scan.limit + scan.offset)
-	}
-	if scan.fetchLimit > _SS_MAX_KEYS_PER_REQUEST {
-		scan.fetchLimit = _SS_MAX_KEYS_PER_REQUEST
+		sz := scan.limit + scan.offset
+		if sz < int64(scan.fetchLimit) && sz > scan.limit {
+			scan.fetchLimit = uint32(sz)
+		}
 	}
 	scan.readyQueue.init()
 	return scan
@@ -462,6 +458,9 @@ func (this *seqScan) coordinator(b *Bucket, scanTimeout time.Duration) {
 
 	returnCount := int64(0)
 	returnLimit := this.limit
+	if this.limit <= 0 {
+		returnLimit = math.MaxInt64
+	}
 
 	if scanTimeout <= 0 {
 		scanTimeout = _SS_MAX_DURATION
@@ -744,7 +743,7 @@ processing:
 					// stream results (merge sorting) until one vb is empty
 					batch := make([]string, 0, this.pipelineSize)
 
-					for (this.limit == 0 || returnLimit > 0) && len(vbScans) > 0 {
+					for (this.limit <= 0 || returnLimit > 0) && len(vbScans) > 0 {
 						smallest := vbScans[0] // no need to pop as we'll Fix() in place (cheaper than Pop+Push)
 						returnCount++
 						if returnCount > this.offset {
