@@ -35,7 +35,7 @@ const (
 	_MINQUEUES      = 4
 	_MAXQUEUES      = 16
 	_QUEUESIZE      = 32 * 1024
-	_KVBUFFSERSIZE  = 16 * 1024
+	_KVBUFFERSIZE  = 16 * 1024
 )
 
 type MemcachedAuthProvider struct {
@@ -113,7 +113,7 @@ func agentConfig(url, options string, rv *Client) (*gocbcore.AgentConfig, error)
 	config.UserAgent = couchbase.USER_AGENT
 	config.DefaultRetryStrategy = gocbcore.NewBestEffortRetryStrategy(nil)
 	config.KVConfig.ConnectTimeout = _CONNECTTIMEOUT
-	config.KVConfig.ConnectionBufferSize = _KVBUFFSERSIZE
+	config.KVConfig.ConnectionBufferSize = _KVBUFFERSIZE
 	// queue size per kv node
 	config.KVConfig.MaxQueueSize = _QUEUESIZE
 	// number of the queues per kv node
