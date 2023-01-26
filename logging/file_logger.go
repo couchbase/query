@@ -44,7 +44,7 @@ func (this *FileLogger) Stringf(l Level, format string, args ...interface{}) str
 }
 
 func (this *FileLogger) log(l Level, fn func() string) {
-	if l < this.logLevel {
+	if l > this.logLevel {
 		return
 	}
 	now := time.Now()

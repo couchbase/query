@@ -77,9 +77,6 @@ func newHttpRequest(rv *httpRequest, resp http.ResponseWriter, req *http.Request
 	// This is literally when we become aware of the request
 	reqTime := time.Now()
 
-	// handles request level logging
-	rv.logger, _ = resolver.NewLogger("builtin")
-
 	// Limit body size in case of denial-of-service attack
 	req.Body = http.MaxBytesReader(resp, req.Body, int64(size))
 
@@ -120,11 +117,6 @@ func newHttpRequest(rv *httpRequest, resp http.ResponseWriter, req *http.Request
 		rv.SetReadonly(value.TRUE)
 	}
 
-	// update the logger with the request Id once it is known
-	if rl, ok := rv.logger.(logging.RequestLogger); ok {
-		rl.SetRequestId(rv.Id().String())
-	}
-
 	userAgent := req.UserAgent()
 	cbUserAgent := req.Header.Get("CB-User-Agent")
 	if cbUserAgent != "" {
@@ -136,8 +128,13 @@ func newHttpRequest(rv *httpRequest, resp http.ResponseWriter, req *http.Request
 	if err == nil {
 		err = httpArgs.processParameters(rv)
 	}
-	// logger may have been changed by parameters so log first message only after processing
-	rv.logger.Infof("Request received at %v", reqTime.Format(logging.SHORT_TIMESTAMP_FORMAT))
+	// update the logger with the request Id once it is known
+	if rv.logger != nil {
+		if rl, ok := rv.logger.(logging.RequestLogger); ok {
+			rl.SetRequestId(rv.Id().String())
+		}
+		rv.logger.Infof("Request received at %v", reqTime.Format(logging.SHORT_TIMESTAMP_FORMAT))
+	}
 
 	if err == nil {
 		if rv.stmtCnt == 0 {
@@ -233,7 +230,9 @@ func newHttpRequest(rv *httpRequest, resp http.ResponseWriter, req *http.Request
 		return string(b)
 	}
 	logging.Debuga(dfn)
-	rv.logger.Infoa(dfn)
+	if rv.logger != nil {
+		rv.logger.Infoa(dfn)
+	}
 	// end - temporary logging of requests
 	rv.jsonArgs = jsonArgs{}
 	rv.urlArgs = urlArgs{}
@@ -265,7 +264,11 @@ func handleEncodedPlan(rv *httpRequest, httpArgs httpRequestArgs, parm string, v
 func handlePrepared(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
 	var phaseTime time.Duration
 
-	prepared_name, prepared, err := getPrepared(httpArgs, rv.QueryContext(), parm, val, &phaseTime, rv.logger)
+	log := rv.logger
+	if log == nil {
+		log = logging.NULL_LOG
+	}
+	prepared_name, prepared, err := getPrepared(httpArgs, rv.QueryContext(), parm, val, &phaseTime, log)
 
 	// MB-18841 (encoded_plan processing affects latency)
 	// MB-19509 (encoded_plan may corrupt cache)
@@ -289,7 +292,7 @@ func handlePrepared(rv *httpRequest, httpArgs httpRequestArgs, parm string, val 
 			// Monitoring API: we only need to track the prepared
 			// statement if we couldn't do it in getPrepared()
 			decoded_plan, plan_err = prepareds.DecodePreparedWithContext(prepared_name, rv.QueryContext(), encoded_plan,
-				(prepared == nil), &phaseTime, true, rv.logger)
+				(prepared == nil), &phaseTime, true, log)
 			if plan_err != nil {
 				err = plan_err
 			} else if decoded_plan != nil {
@@ -733,6 +736,19 @@ func handleLogLevel(rv *httpRequest, httpArgs httpRequestArgs, parm string, val 
 	if !ok {
 		return errors.NewServiceErrorBadValue(go_errors.New("Invalid logging level"), v)
 	}
+	if l == logging.NONE {
+		rv.logger = nil
+	}
+	if rv.logger == nil {
+		if l != logging.NONE {
+			rv.logger, _ = resolver.NewLogger("builtin")
+			if rl, ok := rv.logger.(logging.RequestLogger); ok {
+				rl.SetRequestId(rv.Id().String())
+			}
+		} else {
+			return nil
+		}
+	}
 	rv.SetLogLevel(l)
 	if filterLogger, ok := rv.logger.(interface{ SetDebugFilter(string) }); ok {
 		filterLogger.SetDebugFilter(filter)
@@ -817,11 +833,16 @@ func (this *httpRequest) EventLocalAddress() string {
 }
 
 func (this *httpRequest) SetLogLevel(level logging.Level) {
-	this.logger.SetLevel(level)
+	if this.logger != nil {
+		this.logger.SetLevel(level)
+	}
 }
 
 func (this *httpRequest) LogLevel() logging.Level {
-	return this.logger.Level()
+	if this.logger != nil {
+		return this.logger.Level()
+	}
+	return logging.NONE
 }
 
 // for audit.Auditable interface.

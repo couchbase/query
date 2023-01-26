@@ -907,21 +907,21 @@ func (this *httpRequest) writeProfile(profile server.Profile, prefix, indent str
 }
 
 func (this *httpRequest) Loga(l logging.Level, f func() string) {
-	if this.logger.Level() < l {
+	if this.logger == nil || this.logger.Level() < l {
 		return
 	}
 	this.logger.Loga(l, f)
 }
 
 func (this *httpRequest) Logf(l logging.Level, f string, args ...interface{}) {
-	if this.logger.Level() < l {
+	if this.logger == nil || this.logger.Level() < l {
 		return
 	}
 	this.logger.Loga(l, func() string { return fmt.Sprintf(f, args...) })
 }
 
 func (this *httpRequest) writeLog(prefix, indent string) bool {
-	if this.logger.Level() == logging.NONE {
+	if this.logger == nil || this.logger.Level() == logging.NONE {
 		return true
 	}
 	logger, ok := this.logger.(logging.RequestLogger)
