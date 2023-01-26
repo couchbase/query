@@ -79,7 +79,6 @@ func newHttpRequest(rv *httpRequest, resp http.ResponseWriter, req *http.Request
 
 	// handles request level logging
 	rv.logger, _ = resolver.NewLogger("builtin")
-	rv.logger.Infof("Request received")
 
 	// Limit body size in case of denial-of-service attack
 	req.Body = http.MaxBytesReader(resp, req.Body, int64(size))
@@ -137,6 +136,8 @@ func newHttpRequest(rv *httpRequest, resp http.ResponseWriter, req *http.Request
 	if err == nil {
 		err = httpArgs.processParameters(rv)
 	}
+	// logger may have been changed by parameters so log first message only after processing
+	rv.logger.Infof("Request received at %v", reqTime.Format(logging.SHORT_TIMESTAMP_FORMAT))
 
 	if err == nil {
 		if rv.stmtCnt == 0 {
@@ -203,7 +204,7 @@ func newHttpRequest(rv *httpRequest, resp http.ResponseWriter, req *http.Request
 		rv.Fail(err)
 	}
 	// start - temporary logging of requests
-	logging.Debuga(func() string {
+	dfn := func() string {
 		u, _, _ := cbauth.ExtractCreds(req)
 		data := make(map[string]interface{}, 7)
 		data["user"] = u
@@ -230,7 +231,9 @@ func newHttpRequest(rv *httpRequest, resp http.ResponseWriter, req *http.Request
 		data["args"] = a
 		b, _ := json.Marshal(data)
 		return string(b)
-	}, rv.logger)
+	}
+	logging.Debuga(dfn)
+	rv.logger.Infoa(dfn)
 	// end - temporary logging of requests
 	rv.jsonArgs = jsonArgs{}
 	rv.urlArgs = urlArgs{}

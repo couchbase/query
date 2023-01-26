@@ -36,8 +36,8 @@ func (level Level) String() string {
 	return _LEVEL_NAMES[level]
 }
 
-func (level Level) Byte() []byte {
-	return []byte{_LEVEL_NAMES[level][0], ' '}
+func (level Level) Abbreviation() string {
+	return _ABBREVIATED_LEVEL_NAMES[level]
 }
 
 func (level Level) FunctionName() string {
@@ -57,6 +57,17 @@ var _LEVEL_NAMES = []string{
 	NONE:   "NONE",
 }
 
+var _ABBREVIATED_LEVEL_NAMES = []string{
+	DEBUG:  " D ",
+	TRACE:  " T ",
+	INFO:   " I ",
+	WARN:   " W ",
+	ERROR:  " E ",
+	SEVERE: " S ",
+	FATAL:  " F ",
+	NONE:   " N ",
+}
+
 var _LEVEL_MAP = map[string]Level{
 	"debug":  DEBUG,
 	"trace":  TRACE,
@@ -67,6 +78,9 @@ var _LEVEL_MAP = map[string]Level{
 	"fatal":  FATAL,
 	"none":   NONE,
 }
+
+const FULL_TIMESTAMP_FORMAT = "2006-01-02T15:04:05.000-07:00" // time.RFC3339 with milliseconds
+const SHORT_TIMESTAMP_FORMAT = "2006-01-02T15:04:05.000 "
 
 // cache logging enablement to improve runtime performance (reduces from multiple tests to a single test on each call)
 var (

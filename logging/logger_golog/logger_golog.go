@@ -130,7 +130,7 @@ func (gl *goLogger) log(level logging.Level, rlevel logging.Level, msg string) {
 }
 
 func (gl *goLogger) str(level logging.Level, rlevel logging.Level, msg string) string {
-	tm := time.Now().Format("2006-01-02T15:04:05.000-07:00") // time.RFC3339 with milliseconds
+	tm := time.Now().Format(logging.FULL_TIMESTAMP_FORMAT)
 	return gl.entryFormatter.format(tm, level, rlevel, msg)
 }
 

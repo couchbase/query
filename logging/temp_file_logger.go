@@ -18,7 +18,6 @@ import (
 )
 
 const _MAX_TRACE_SIZE = 64 * 1024 * 1024
-const _TIMESTAMP_FORMAT = "2006-01-02T15:04:05.000 "
 
 func splitOnNUL(data []byte, atEOF bool) (advance int, token []byte, err error) {
 	if atEOF && len(data) == 0 {
@@ -58,10 +57,13 @@ func (this *TempFileLogger) Stringf(l Level, format string, args ...interface{})
 	if l == DEBUG || l == TRACE {
 		fl = getFileLine(1)
 	}
-	return time.Now().Format(_TIMESTAMP_FORMAT) + string(l.Byte()) + fmtpkg.Sprintf(format, args...) + fl
+	return time.Now().Format(SHORT_TIMESTAMP_FORMAT) + string(l.Abbreviation()) + fmtpkg.Sprintf(format, args...) + fl
 }
 
 func (this *TempFileLogger) log(l Level, fn func() string) {
+	if l < this.logLevel {
+		return
+	}
 	now := time.Now()
 	var fl string
 	if l == DEBUG || l == TRACE {
@@ -102,9 +104,12 @@ func (this *TempFileLogger) log(l Level, fn func() string) {
 		this.file.WriteString("... truncated ...")
 		this.file.Write([]byte{0})
 	}
-	this.file.WriteString(now.Format(_TIMESTAMP_FORMAT))
-	this.file.Write(l.Byte())
-	this.file.WriteString(fn() + fl)
+	this.file.WriteString(now.Format(SHORT_TIMESTAMP_FORMAT))
+	this.file.WriteString(l.Abbreviation())
+	this.file.WriteString(fn())
+	if len(fl) > 0 {
+		this.file.WriteString(fl)
+	}
 	this.file.Write([]byte{0})
 	this.Unlock()
 }

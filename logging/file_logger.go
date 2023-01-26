@@ -24,7 +24,7 @@ type FileLogger struct {
 }
 
 func (this *FileLogger) SetRequestId(id string) {
-	this.requestId = id + " "
+	this.requestId = " " + id
 }
 
 func (this *FileLogger) Level() Level {
@@ -40,10 +40,13 @@ func (this *FileLogger) Stringf(l Level, format string, args ...interface{}) str
 	if l == DEBUG || l == TRACE {
 		fl = getFileLine(1)
 	}
-	return time.Now().Format(_TIMESTAMP_FORMAT) + string(l.Byte()) + fmtpkg.Sprintf(format, args...) + fl
+	return time.Now().Format(SHORT_TIMESTAMP_FORMAT) + string(l.Abbreviation()) + fmtpkg.Sprintf(format, args...) + fl
 }
 
 func (this *FileLogger) log(l Level, fn func() string) {
+	if l < this.logLevel {
+		return
+	}
 	now := time.Now()
 	var fl string
 	if l == DEBUG || l == TRACE {
@@ -83,10 +86,14 @@ func (this *FileLogger) log(l Level, fn func() string) {
 		this.file.Seek(0, os.SEEK_END)
 		this.file.WriteString("... truncated ...\n")
 	}
-	this.file.WriteString(now.Format(_TIMESTAMP_FORMAT))
+	this.file.WriteString(now.Format(SHORT_TIMESTAMP_FORMAT))
 	this.file.WriteString(this.requestId)
-	this.file.Write(l.Byte())
-	this.file.WriteString(fn() + fl + "\n")
+	this.file.WriteString(l.Abbreviation())
+	this.file.WriteString(fn())
+	if len(fl) > 0 {
+		this.file.WriteString(fl)
+	}
+	this.file.WriteString("\n")
 	this.Unlock()
 }
 
