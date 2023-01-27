@@ -724,7 +724,7 @@ func handleLogLevel(rv *httpRequest, httpArgs httpRequestArgs, parm string, val 
 		if i != -1 {
 			lgr, err := resolver.NewLogger(strings.ToLower(v[:i]))
 			if err != nil {
-				return errors.NewServiceErrorBadValue(go_errors.New("Invalid logger specified"), v)
+				return errors.NewServiceErrorBadValue(errors.NewServiceErrorUnrecognizedValue("logger", v), parm)
 			}
 			rv.logger = lgr
 			if rl, ok := rv.logger.(logging.RequestLogger); ok {
@@ -734,7 +734,7 @@ func handleLogLevel(rv *httpRequest, httpArgs httpRequestArgs, parm string, val 
 		}
 	}
 	if !ok {
-		return errors.NewServiceErrorBadValue(go_errors.New("Invalid logging level"), v)
+		return errors.NewServiceErrorBadValue(errors.NewServiceErrorUnrecognizedValue("loglevel", v), parm)
 	}
 	if l == logging.NONE {
 		rv.logger = nil

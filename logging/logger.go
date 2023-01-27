@@ -80,7 +80,7 @@ var _LEVEL_MAP = map[string]Level{
 }
 
 const FULL_TIMESTAMP_FORMAT = "2006-01-02T15:04:05.000-07:00" // time.RFC3339 with milliseconds
-const SHORT_TIMESTAMP_FORMAT = "2006-01-02T15:04:05.000 "
+const SHORT_TIMESTAMP_FORMAT = "2006-01-02T15:04:05.000"
 
 // cache logging enablement to improve runtime performance (reduces from multiple tests to a single test on each call)
 var (
