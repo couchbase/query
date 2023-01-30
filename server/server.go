@@ -686,6 +686,8 @@ func (this *Server) setupRequestContext(request Request) bool {
 
 func (this *Server) handleRequest(request Request, queue *runQueue) bool {
 	if !queue.enqueue(request) {
+		request.Fail(errors.NewServiceErrorRequestQueueFull())
+		request.Failed(this)
 		return false
 	}
 
@@ -703,6 +705,8 @@ func (this *Server) handleRequest(request Request, queue *runQueue) bool {
 
 func (this *Server) handlePlusRequest(request Request, queue *runQueue, transactionQueues *txRunQueues) bool {
 	if !queue.enqueue(request) {
+		request.Fail(errors.NewServiceErrorRequestQueueFull())
+		request.Failed(this)
 		return false
 	}
 
