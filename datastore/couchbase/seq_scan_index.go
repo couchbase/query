@@ -355,7 +355,11 @@ func (this *seqScan) doScanEntries(requestId string, ordered bool, offset, limit
 
 	defer conn.Sender().Close()
 
-	conn.QueryContext().Infof("Running sequential scan on %v", this.KeyspaceId())
+	qctx := conn.QueryContext()
+	if qctx == nil {
+		qctx = datastore.NULL_QUERY_CONTEXT
+	}
+	qctx.Infof("Running sequential scan on %v", this.KeyspaceId())
 
 	atomic.AddUint64(&this.totalScans, 1)
 	atomic.StoreInt64(&this.lastScanAt, int64(time.Now().UnixNano()))
@@ -396,12 +400,8 @@ func (this *seqScan) doScanEntries(requestId string, ordered bool, offset, limit
 	var err qe.Error
 	var timeout bool
 
-	kvTo := time.Duration(datastore.DEF_KVTIMEOUT)
-	if conn.QueryContext() != nil {
-		kvTo = conn.QueryContext().KvTimeout()
-	}
-	ss, err = scanner.StartKeyScan(conn.QueryContext(), ranges, offset, limit, ordered, tout, conn.Sender().Capacity(),
-		kvTo, tenant.IsServerless())
+	ss, err = scanner.StartKeyScan(qctx, ranges, offset, limit, ordered, tout, conn.Sender().Capacity(), qctx.KvTimeout(),
+		tenant.IsServerless())
 	if err != nil {
 		conn.Error(qe.NewSSError(qe.E_SS_FAILED, err))
 		return
@@ -489,7 +489,7 @@ func (this *seqScan) doScanEntries(requestId string, ordered bool, offset, limit
 	}
 	atomic.StoreUint64(&this.lastScanCount, uint64(returned))
 
-	conn.QueryContext().Infof("Sequential scan on %v returned %v keys", this.KeyspaceId(), returned)
+	qctx.Infof("Sequential scan on %v returned %v keys", this.KeyspaceId(), returned)
 }
 
 func (this *seqScan) IndexMetadata() map[string]interface{} {
