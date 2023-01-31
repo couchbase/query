@@ -35,7 +35,7 @@ const (
 	_MINQUEUES      = 4
 	_MAXQUEUES      = 16
 	_QUEUESIZE      = 32 * 1024
-	_KVBUFFERSIZE  = 16 * 1024
+	_KVBUFFERSIZE   = 16 * 1024
 )
 
 type MemcachedAuthProvider struct {
