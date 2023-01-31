@@ -2821,6 +2821,8 @@ func (this *ObjectTypesNested) Evaluate(item value.Value, context Context) (valu
 
 func processTypes(v interface{}) interface{} {
 	switch v := v.(type) {
+	case value.Value:
+		return processTypes(v.Actual())
 	case map[string]interface{}:
 		nm := make(map[string]interface{}, len(v))
 		for k, mv := range v {
