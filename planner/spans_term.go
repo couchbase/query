@@ -51,7 +51,7 @@ func (this *TermSpans) CreateScan(
 
 			if cost > 0.0 && cardinality > 0.0 {
 				distCost, distCard, distFrCost := getDistinctScanCost(index,
-					cardinality, baseKeyspace)
+					cardinality, this.spans, baseKeyspace)
 				if distCost > 0.0 && distCard > 0.0 && distFrCost > 0.0 {
 					cost += distCost
 					cardinality = distCard

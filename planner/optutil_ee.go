@@ -230,9 +230,9 @@ func getFetchCost(keyspaceName string, cardinality float64) (float64, int64, flo
 	return optutil.CalcFetchCost(keyspaceName, cardinality)
 }
 
-func getDistinctScanCost(index datastore.Index, cardinality float64,
+func getDistinctScanCost(index datastore.Index, cardinality float64, spans plan.Spans2,
 	baseKeyspace *base.BaseKeyspace) (float64, float64, float64) {
-	return optutil.CalcDistinctScanCost(index, cardinality, true, baseKeyspace)
+	return optutil.CalcDistinctScanCost(index, cardinality, true, spans, baseKeyspace)
 }
 
 func getExpressionScanCost(expr expression.Expression) (float64, float64, int64, float64) {
