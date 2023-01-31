@@ -313,6 +313,8 @@ var _FUNCTIONS = map[string]Function{
 	"object_remove_fields": &ObjectRemoveFields{},
 	"object_rename":        &ObjectRename{},
 	"object_replace":       &ObjectReplace{},
+	"object_types":         &ObjectTypes{},
+	"object_types_nested":  &ObjectTypesNested{},
 	"object_unwrap":        &ObjectUnwrap{},
 	"object_values":        &ObjectValues{},
 

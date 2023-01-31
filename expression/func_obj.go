@@ -839,12 +839,12 @@ value pairs of the object, in N1QL collation order of
 the names.
 */
 type ObjectPairs struct {
-	UnaryFunctionBase
+	FunctionBase
 }
 
-func NewObjectPairs(operand Expression) Function {
+func NewObjectPairs(operands ...Expression) Function {
 	rv := &ObjectPairs{
-		*NewUnaryFunctionBase("object_pairs", operand),
+		*NewFunctionBase("object_pairs", operands...),
 	}
 
 	rv.expr = rv
@@ -879,6 +879,23 @@ func (this *ObjectPairs) Evaluate(item value.Value, context Context) (value.Valu
 		return value.NULL_VALUE, nil
 	}
 
+	types := false
+
+	if len(this.operands) > 1 {
+		options, err := this.operands[1].Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		} else if options.Type() == value.MISSING {
+			return value.MISSING_VALUE, nil
+		} else if options.Type() != value.OBJECT {
+			return value.NULL_VALUE, nil
+		}
+
+		if v, ok := options.Field("types"); ok && v.Type() == value.BOOLEAN {
+			types = v.Truth()
+		}
+	}
+
 	oa := arg.Actual().(map[string]interface{})
 
 	var localBuf [_FIELD_CAP]interface{}
@@ -890,8 +907,14 @@ func (this *ObjectPairs) Evaluate(item value.Value, context Context) (value.Valu
 		defer _FIELD_POOL.Put(fields)
 	}
 
-	for n, v := range oa {
-		fields = append(fields, map[string]interface{}{"name": n, "val": v})
+	if types {
+		for n, v := range oa {
+			fields = append(fields, map[string]interface{}{"name": n, "type": value.NewValue(v).Type().String()})
+		}
+	} else {
+		for n, v := range oa {
+			fields = append(fields, map[string]interface{}{"name": n, "val": v})
+		}
 	}
 
 	sort.Sort(mapList(fields))
@@ -899,14 +922,12 @@ func (this *ObjectPairs) Evaluate(item value.Value, context Context) (value.Valu
 	return value.NewValue(fields), nil
 }
 
-/*
-Factory method pattern.
-*/
 func (this *ObjectPairs) Constructor() FunctionConstructor {
-	return func(operands ...Expression) Function {
-		return NewObjectPairs(operands[0])
-	}
+	return NewObjectPairs
 }
+
+func (this *ObjectPairs) MinArgs() int { return 1 }
+func (this *ObjectPairs) MaxArgs() int { return 2 }
 
 ///////////////////////////////////////////////////
 //
@@ -960,6 +981,7 @@ func (this *ObjectPairsNested) Evaluate(item value.Value, context Context) (valu
 	pf.fieldPattern = false
 	pf.ignoreCase = false
 	nameOnly := false
+	types := false
 	if len(this.operands) > 1 {
 		options, err := this.operands[1].Evaluate(item, context)
 		if err != nil {
@@ -1024,6 +1046,9 @@ func (this *ObjectPairsNested) Evaluate(item value.Value, context Context) (valu
 		if c, ok := options.Field("index"); ok && c.Type() == value.BOOLEAN {
 			pf.index = c.Truth()
 		}
+		if c, ok := options.Field("types"); ok && c.Type() == value.BOOLEAN {
+			types = c.Truth()
+		}
 	}
 
 	// index==true forces no composites
@@ -1048,8 +1073,14 @@ func (this *ObjectPairsNested) Evaluate(item value.Value, context Context) (valu
 	sort.Sort(pairs)
 
 	rv := make([]interface{}, len(pairs))
-	for i, m := range pairs {
-		rv[i] = map[string]interface{}{"name": m.Name, "val": m.Value}
+	if types && !pf.index {
+		for i, m := range pairs {
+			rv[i] = map[string]interface{}{"name": m.Name, "type": value.NewValue(m.Value).Type().String()}
+		}
+	} else {
+		for i, m := range pairs {
+			rv[i] = map[string]interface{}{"name": m.Name, "val": m.Value}
+		}
 	}
 
 	return value.NewValue(rv), nil
@@ -2703,4 +2734,112 @@ func checkBinding(item value.AnnotatedValue, ref []string) []string {
 		logging.Debuga(func() string { return fmt.Sprintf("unknown type %T", v) })
 	}
 	return ref
+}
+
+///////////////////////////////////////////////////
+//
+// ObjectTypes
+//
+///////////////////////////////////////////////////
+
+type ObjectTypes struct {
+	UnaryFunctionBase
+}
+
+func NewObjectTypes(operand Expression) Function {
+	rv := &ObjectTypes{
+		*NewUnaryFunctionBase("object_types", operand),
+	}
+
+	rv.expr = rv
+	return rv
+}
+
+func (this *ObjectTypes) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *ObjectTypes) Type() value.Type { return value.OBJECT }
+
+func (this *ObjectTypes) Evaluate(item value.Value, context Context) (value.Value, error) {
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if arg.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else if arg.Type() != value.OBJECT {
+		return value.NULL_VALUE, nil
+	}
+
+	oa := arg.Actual().(map[string]interface{})
+	rv := make(map[string]interface{}, len(oa))
+
+	for n, v := range oa {
+		rv[n] = value.NewValue(v).Type().String()
+	}
+
+	return value.NewValue(rv), nil
+}
+
+func (this *ObjectTypes) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return NewObjectTypes(operands[0])
+	}
+}
+
+type ObjectTypesNested struct {
+	UnaryFunctionBase
+}
+
+func NewObjectTypesNested(operand Expression) Function {
+	rv := &ObjectTypesNested{
+		*NewUnaryFunctionBase("object_types_nested", operand),
+	}
+
+	rv.expr = rv
+	return rv
+}
+
+func (this *ObjectTypesNested) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *ObjectTypesNested) Type() value.Type { return value.OBJECT }
+
+func (this *ObjectTypesNested) Evaluate(item value.Value, context Context) (value.Value, error) {
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if arg.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else if arg.Type() != value.OBJECT {
+		return value.NULL_VALUE, nil
+	}
+
+	return value.NewValue(processTypes(arg.Actual())), nil
+}
+
+func processTypes(v interface{}) interface{} {
+	switch v := v.(type) {
+	case map[string]interface{}:
+		nm := make(map[string]interface{}, len(v))
+		for k, mv := range v {
+			nm[k] = processTypes(mv)
+		}
+		return nm
+	case []interface{}:
+		na := make([]interface{}, len(v))
+		for i, av := range v {
+			na[i] = processTypes(av)
+		}
+		return na
+	default:
+		return value.NewValue(v).Type().String()
+	}
+}
+
+func (this *ObjectTypesNested) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return NewObjectTypesNested(operands[0])
+	}
 }
