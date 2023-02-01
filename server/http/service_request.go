@@ -133,7 +133,10 @@ func newHttpRequest(rv *httpRequest, resp http.ResponseWriter, req *http.Request
 		if rl, ok := rv.logger.(logging.RequestLogger); ok {
 			rl.SetRequestId(rv.Id().String())
 		}
-		rv.logger.Infof("Request received at %v", reqTime.Format(logging.SHORT_TIMESTAMP_FORMAT))
+		rv.logger.Infoa(func() string {
+			name := tenant.EncodeNodeName(distributed.RemoteAccess().WhoAmI())
+			return fmt.Sprintf("Request received at %v on %v", reqTime.Format(logging.SHORT_TIMESTAMP_FORMAT), name)
+		})
 	}
 
 	if err == nil {
