@@ -203,7 +203,7 @@ func NewEncodedPlanUseNotAllowedError() Error {
 }
 
 func NewServiceErrorRequestQueueFull() Error {
-	return &err{level: EXCEPTION, ICode: E_SERVICE_REQUEST_QUEUE_FULL, IKey: "service.request.queue_full",
+	return &err{level: EXCEPTION, ICode: E_SERVICE_REQUEST_QUEUE_FULL, IKey: "service.request.queue_full", retry: TRUE,
 		InternalMsg: "Request queue full", InternalCaller: CallerN(1)}
 }
 
