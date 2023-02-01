@@ -116,6 +116,8 @@ func mapErrorToHttpResponse(err errors.Error, def int) int {
 		return http.StatusUnauthorized
 	case errors.E_SERVICE_REQUEST_QUEUE_FULL:
 		return http.StatusTooManyRequests
+	case errors.E_SERVICE_NO_CLIENT:
+		return http.StatusBadRequest
 	default:
 		return def
 	}

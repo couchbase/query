@@ -692,6 +692,7 @@ func (this *Server) handleRequest(request Request, queue *runQueue) bool {
 	}
 
 	if !request.Alive() {
+		request.Fail(errors.NewServiceNoClientError())
 		request.Failed(this)
 		return true
 	}
@@ -711,6 +712,7 @@ func (this *Server) handlePlusRequest(request Request, queue *runQueue, transact
 	}
 
 	if !request.Alive() {
+		request.Fail(errors.NewServiceNoClientError())
 		request.Failed(this)
 		return true
 	}
@@ -723,6 +725,7 @@ func (this *Server) handlePlusRequest(request Request, queue *runQueue, transact
 			request.Failed(this) // don't return
 		} else {
 			if !request.Alive() {
+				request.Fail(errors.NewServiceNoClientError())
 				request.Failed(this)
 				return true
 			}
@@ -1138,7 +1141,13 @@ func (this *Server) serviceRequest(request Request) {
 	request.SetTimings(operator)
 	request.Output().AddPhaseTime(execution.INSTANTIATE, time.Since(build))
 
-	if request.State() == FATAL || !request.Alive() {
+	if request.State() == FATAL {
+		request.Failed(this)
+		return
+	}
+
+	if !request.Alive() {
+		request.Fail(errors.NewServiceNoClientError())
 		request.Failed(this)
 		return
 	}

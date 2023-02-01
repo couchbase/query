@@ -206,3 +206,8 @@ func NewServiceErrorRequestQueueFull() Error {
 	return &err{level: EXCEPTION, ICode: E_SERVICE_REQUEST_QUEUE_FULL, IKey: "service.request.queue_full",
 		InternalMsg: "Request queue full", InternalCaller: CallerN(1)}
 }
+
+func NewServiceNoClientError() Error {
+	return &err{level: EXCEPTION, ICode: E_SERVICE_NO_CLIENT, IKey: "service.no_client",
+		InternalMsg: "Client disconnected", InternalCaller: CallerN(1)}
+}

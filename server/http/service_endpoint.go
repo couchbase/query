@@ -444,6 +444,7 @@ func (this *HttpEndpoint) ServeHTTP(resp http.ResponseWriter, req *http.Request)
 			return
 		}
 		if !request.Alive() {
+			request.Fail(errors.NewServiceNoClientError())
 			request.Failed(this.server)
 			return
 		}
