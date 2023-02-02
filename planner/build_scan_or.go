@@ -126,7 +126,7 @@ func (this *builder) buildOrScanNoPushdowns(node *algebra.KeyspaceTerm, id expre
 
 	orTerms, truth := expression.FlattenOr(pred)
 	if orTerms == nil || truth {
-		return nil, minSargLength, nil
+		return nil, 0, nil
 	}
 
 	cost := float64(0.0)
