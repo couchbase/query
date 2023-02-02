@@ -147,6 +147,7 @@ func setMemoryLimit(ml int64) {
 		extra = "(GOMEMLIMIT)"
 		ml = debug.SetMemoryLimit(-1)
 	} else if ml > 0 {
+		ml = int64(float64(ml) * _NODE_QUOTA_MULTIPLIER)
 		if ml > max {
 			ml = max
 			extra = "(NODE QUOTA - LIMITED)"
