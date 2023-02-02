@@ -47,13 +47,15 @@ var perTenantQuota uint64
 
 func Config(quota uint64) {
 	perTenantQuota = quota * _MB / _TENANT_QUOTA_RATIO
-	logging.Infoa(func() string {
-		if perTenantQuota == 0 {
-			return "Tenant quota is not set."
-		} else {
-			return fmt.Sprintf("Tenant quota is %v", logging.HumanReadableSize(int64(perTenantQuota), true))
-		}
-	})
+	if IsServerless() {
+		logging.Infoa(func() string {
+			if perTenantQuota == 0 {
+				return "Tenant quota is not set."
+			} else {
+				return fmt.Sprintf("Tenant quota is %v", logging.HumanReadableSize(int64(perTenantQuota), true))
+			}
+		})
+	}
 }
 
 func Register(context Context) memory.MemorySession {
