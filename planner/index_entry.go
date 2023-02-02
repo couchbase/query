@@ -180,9 +180,9 @@ func (this *indexEntry) HasFlag(flag uint32) bool {
 	return (this.flags & flag) != 0
 }
 
-// return flags relevant for index key values (index filter, early order)
+// return flags relevant for index key values (early order)
 func (this *indexEntry) IndexKeyFlags() uint32 {
-	return (this.flags & (IE_HAS_FILTER | IE_HAS_EARLY_ORDER))
+	return (this.flags & IE_HAS_EARLY_ORDER)
 }
 
 func (this *indexEntry) PushDownProperty() PushDownProperties {

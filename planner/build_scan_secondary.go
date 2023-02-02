@@ -672,6 +672,11 @@ func narrowerOrEquivalent(se, te *indexEntry, shortest bool, predFc map[string]v
 	if seKeyFlags != teKeyFlags {
 		return seKeyFlags > teKeyFlags
 	}
+	seFltr := se.HasFlag(IE_HAS_FILTER)
+	teFltr := te.HasFlag(IE_HAS_FILTER)
+	if seFltr != teFltr {
+		return seFltr
+	}
 
 	return se.cond != nil ||
 		len(se.keys) < len(te.keys) ||
