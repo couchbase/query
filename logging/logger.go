@@ -791,3 +791,37 @@ func (this *nullLogImpl) Fatalf(f string, args ...interface{})                  
 func (this *nullLogImpl) Stringf(level Level, format string, args ...interface{}) string { return "" }
 func (this *nullLogImpl) SetLevel(Level)                                                 {}
 func (this *nullLogImpl) Level() Level                                                   { return NONE }
+
+const (
+	KiB = (1 << 10)
+	MiB = (1 << 20)
+	GiB = (1 << 30)
+)
+
+func HumanReadableSize(sz int64, includeSource bool) string {
+	var s float64
+	var suffix string
+	if sz >= GiB {
+		s = float64(sz) / float64(GiB)
+		suffix = "GiB"
+	} else if sz >= MiB {
+		s = float64(sz) / float64(MiB)
+		suffix = "MiB"
+	} else if sz >= KiB {
+		s = float64(sz) / float64(KiB)
+		suffix = "KiB"
+	} else if includeSource {
+		return fmtpkg.Sprintf("%v", sz)
+	} else if sz == 1 {
+		return "1 byte"
+	} else {
+		return fmtpkg.Sprintf("%v bytes", sz)
+	}
+	num := fmtpkg.Sprintf("%.3f", s)
+	num = strings.TrimSuffix(strings.TrimSuffix(num, "0"), "0")
+	if includeSource {
+		return fmtpkg.Sprintf("%v (%s %s)", sz, num, suffix)
+	} else {
+		return fmtpkg.Sprintf("%s %s", num, suffix)
+	}
+}

@@ -11,6 +11,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"math"
 	"os"
 	"os/signal"
 	"runtime"
@@ -40,6 +41,7 @@ import (
 	server_package "github.com/couchbase/query/server"
 	control "github.com/couchbase/query/server/control/couchbase"
 	"github.com/couchbase/query/server/http"
+	stats "github.com/couchbase/query/system"
 	"github.com/couchbase/query/tenant"
 	"github.com/couchbase/query/util"
 )
@@ -157,6 +159,7 @@ func main() {
 	// many Init() depend on this
 	tenant.Init(*SERVERLESS)
 
+	memory.SetMemoryLimitFunction(setMemoryLimit)
 	memory.Config(*NODE_QUOTA, []int{*SERVICERS, *PLUS_SERVICERS})
 	tenant.Config(memory.Quota())
 
@@ -489,4 +492,53 @@ func signalCatcher(server *server_package.Server, endpoint *http.HttpEndpoint) {
 	// graceful shutdown on SIGTERM
 	server.InitiateShutdownAndWait()
 	os.Exit(0)
+}
+
+const _MEMORY_LIMIT = 0.9
+const _NODE_QUOTA_MULTIPLIER = 1.5
+const _MAX_MEMORY_ABOVE_LIMIT = 8 * util.GiB
+
+func setMemoryLimit(ml int64) {
+	var extra string
+	var oml int64
+
+	max := int64(math.MaxInt64)
+
+	ss, err := stats.NewSystemStats()
+	if err == nil {
+		defer ss.Close()
+		t, err := ss.SystemTotalMem()
+		if err == nil {
+			max = int64(float64(t) * _MEMORY_LIMIT)
+			if int64(t)-max > _MAX_MEMORY_ABOVE_LIMIT {
+				max = int64(t) - _MAX_MEMORY_ABOVE_LIMIT
+				extra = fmt.Sprintf("(%.0f%% of total)", (float64(max)/float64(t))*100)
+			} else {
+				extra = fmt.Sprintf("(%.0f%% of total)", _MEMORY_LIMIT*100)
+			}
+		}
+	}
+
+	if os.Getenv("GOMEMLIMIT") != "" {
+		extra = "(GOMEMLIMIT)"
+		oml = -1
+		ml = debug.SetMemoryLimit(-1)
+	} else if ml > 0 {
+		ml = int64(float64(ml) * _NODE_QUOTA_MULTIPLIER)
+		if ml > max {
+			ml = max
+			extra = "(NODE QUOTA - LIMITED)"
+		} else {
+			extra = "(NODE QUOTA)"
+		}
+		oml = debug.SetMemoryLimit(ml)
+	} else {
+		ml = max
+		oml = debug.SetMemoryLimit(ml)
+	}
+	if oml != ml {
+		logging.Infoa(func() string {
+			return fmt.Sprintf("Soft memory limit: %s %v", logging.HumanReadableSize(ml, false), extra)
+		})
+	}
 }

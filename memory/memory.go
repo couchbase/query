@@ -9,10 +9,6 @@
 package memory
 
 import (
-	"fmt"
-	"math"
-	"os"
-	"runtime/debug"
 	"sync/atomic"
 
 	"github.com/couchbase/query/errors"
@@ -49,6 +45,12 @@ type memorySession struct {
 const _MB = 1024 * 1024
 const _MEMORY_TOKEN uint64 = 1 * _MB
 
+var memLimitFunc func(int64)
+
+func SetMemoryLimitFunction(f func(int64)) {
+	memLimitFunc = f
+}
+
 func Config(max uint64, servicers []int) {
 	manager.setting = max
 	manager.max = max * _MB
@@ -68,7 +70,9 @@ func Config(max uint64, servicers []int) {
 	atomic.AddUint64(&manager.curr, c)
 	manager.reserved = c
 
-	setMemoryLimit(int64(max))
+	if memLimitFunc != nil {
+		memLimitFunc(int64(max))
+	}
 }
 
 var manager memoryManager
@@ -125,42 +129,4 @@ func (this *memorySession) AvailableMemory() uint64 {
 
 func (this *memorySession) InUseMemory() uint64 {
 	return this.inUseMemory
-}
-
-const _MEMORY_LIMIT = 0.9
-const _NODE_QUOTA_MULTIPLIER = 1.5
-
-func setMemoryLimit(ml int64) {
-	var extra string
-	max := int64(math.MaxInt64)
-
-	ss, err := system.NewSystemStats()
-	if err == nil {
-		defer ss.Close()
-		t, err := ss.SystemTotalMem()
-		if err == nil {
-			max = int64(float64(t) * _MEMORY_LIMIT)
-		}
-	}
-
-	if os.Getenv("GOMEMLIMIT") != "" {
-		extra = "(GOMEMLIMIT)"
-		ml = debug.SetMemoryLimit(-1)
-	} else if ml > 0 {
-		ml = int64(float64(ml) * _NODE_QUOTA_MULTIPLIER)
-		if ml > max {
-			ml = max
-			extra = "(NODE QUOTA - LIMITED)"
-		} else {
-			extra = "(NODE QUOTA)"
-		}
-		debug.SetMemoryLimit(ml)
-	} else {
-		extra = fmt.Sprintf("(%v%% of total)", _MEMORY_LIMIT*100)
-		ml = max
-		debug.SetMemoryLimit(ml)
-	}
-	logging.Infoa(func() string {
-		return fmt.Sprintf("Soft memory limit: %v %v", ml, extra)
-	})
 }
