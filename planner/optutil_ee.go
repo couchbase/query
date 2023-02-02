@@ -364,18 +364,30 @@ func optChooseIntersectScan(keyspace datastore.Keyspace, sargables map[datastore
 	orderSelec := OPT_SELEC_NOT_AVAIL
 	for s, e := range sargables {
 		skipKeys := make([]bool, len(e.sargKeys))
-		icost := base.NewIndexCost(s, e.cost, e.cardinality, e.selectivity, e.size, e.frCost, skipKeys)
+		selectivity := e.selectivity
+		cardinality := e.cardinality
+		if e.HasFlag(IE_ARRAYINDEXKEY_SARGABLE) {
+			// array index with sargable array index key
+			selec := optutil.CalcDistinctScanSelec(s, selectivity, e.arrayKeyPos, advisorValidate)
+			if selec > 0.0 {
+				selectivity, cardinality = optutil.AdjustArraySelec(s, selec, cardinality)
+			}
+		} else if e.HasFlag(IE_ARRAYINDEXKEY) {
+			// array index without sargable array index key
+			selectivity, cardinality = optutil.AdjustArraySelec(s, selectivity, cardinality)
+		}
+		icost := base.NewIndexCost(s, e.cost, cardinality, selectivity, e.size, e.frCost, skipKeys)
 		if e.IsPushDownProperty(_PUSHDOWN_ORDER) {
 			icost.SetPdOrder()
 			hasPdOrder = true
-			if orderSelec <= 0.0 || e.selectivity < orderSelec {
-				orderSelec = e.selectivity
+			if orderSelec <= 0.0 || selectivity < orderSelec {
+				orderSelec = selectivity
 			}
 		} else if e.HasFlag(IE_HAS_EARLY_ORDER) {
 			icost.SetEarlyOrder()
 			hasEarlyOrder = true
-			if orderSelec <= 0.0 || e.selectivity < orderSelec {
-				orderSelec = e.selectivity
+			if orderSelec <= 0.0 || selectivity < orderSelec {
+				orderSelec = selectivity
 			}
 		}
 		indexes = append(indexes, icost)
@@ -505,9 +517,17 @@ func adjustIndexSelectivity(indexes []*base.IndexCost, sargables map[datastore.I
 			}
 		}
 		if adjust {
-			sel, e := indexSelec(idx.Index(), entry.sargKeys, idx.SkipKeys(), entry.spans,
+			skipKeys := idx.SkipKeys()
+			sel, e := indexSelec(idx.Index(), entry.sargKeys, skipKeys, entry.spans,
 				alias, considerInternal, context)
 			if e == nil {
+				if entry.HasFlag(IE_ARRAYINDEXKEY_SARGABLE) &&
+					(entry.arrayKeyPos >= len(skipKeys) || !skipKeys[entry.arrayKeyPos]) {
+					selec := optutil.CalcDistinctScanSelec(idx.Index(), sel, entry.arrayKeyPos, considerInternal)
+					if selec > 0 {
+						sel = selec
+					}
+				}
 				origSel := idx.Selectivity()
 				origCard := idx.Cardinality()
 				newCard := (origCard / origSel) * sel
