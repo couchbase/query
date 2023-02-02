@@ -709,6 +709,11 @@ func narrowerOrEquivalent(se, te *indexEntry, shortest bool, predFc map[string]v
 	if seKeyFlags != teKeyFlags {
 		return seKeyFlags > teKeyFlags
 	}
+	seFltr := se.HasFlag(IE_HAS_FILTER)
+	teFltr := te.HasFlag(IE_HAS_FILTER)
+	if seFltr != teFltr {
+		return seFltr
+	}
 
 	// prefer an index over a sequential scan
 	if te.index.Type() == datastore.SEQ_SCAN {
