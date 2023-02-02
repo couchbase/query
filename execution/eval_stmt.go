@@ -71,6 +71,10 @@ func (this *internalOutput) Error(err errors.Error) {
 	}
 }
 
+func (this *internalOutput) SetErrors(err errors.Errors) {
+	// empty
+}
+
 func (this *internalOutput) Warning(wrn errors.Error) {
 	// empty
 }
@@ -837,4 +841,12 @@ func (this *Context) Infer(v value.Value, with value.Value) (value.Value, error)
 		return val, nil
 	}
 	return value.NULL_VALUE, nil
+}
+
+func (this *internalOutput) GetErrorLimit() int {
+	return this.output.GetErrorLimit()
+}
+
+func (this *internalOutput) GetErrorCount() int {
+	return this.output.GetErrorCount()
 }

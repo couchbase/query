@@ -123,6 +123,8 @@ type QueryContext interface {
 	RecordKvWU(wu tenant.Unit)
 	IsActive() bool
 	RequestId() string
+	ErrorLimit() int
+	ErrorCount() int
 }
 
 type queryContextImpl struct {
@@ -220,3 +222,11 @@ func (ci *queryContextImpl) Warnf(f string, args ...interface{})                
 func (ci *queryContextImpl) Errorf(f string, args ...interface{})                    {}
 func (ci *queryContextImpl) Severef(f string, args ...interface{})                   {}
 func (ci *queryContextImpl) Fatalf(f string, args ...interface{})                    {}
+
+func (ci *queryContextImpl) ErrorLimit() int {
+	return errors.DEFAULT_REQUEST_ERROR_LIMIT
+}
+
+func (ci *queryContextImpl) ErrorCount() int {
+	return 0
+}

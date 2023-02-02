@@ -165,6 +165,9 @@ type Output interface {
 	SetTransactionStartTime(t time.Time)
 	Loga(logging.Level, func() string)
 	LogLevel() logging.Level
+	GetErrorLimit() int
+	GetErrorCount() int
+	SetErrors(errs errors.Errors) // add a list of errors
 }
 
 // context flags
@@ -285,6 +288,7 @@ type Context struct {
 	keysToSkipLength    int32
 	planPreparedTime    time.Time // time the plan was created
 	logLevel            logging.Level
+	errorLimit          int
 }
 
 func NewContext(requestId string, datastore datastore.Datastore, systemstore datastore.Systemstore,
@@ -386,6 +390,7 @@ func (this *Context) Copy() *Context {
 		keysToSkipLength:    this.keysToSkipLength,
 		planPreparedTime:    this.planPreparedTime,
 		logLevel:            this.logLevel,
+		errorLimit:          this.errorLimit,
 	}
 
 	rv.SetPreserveProjectionOrder(false) // always reset on copy
@@ -745,9 +750,7 @@ func (this *Context) Error(err errors.Error) {
 }
 
 func (this *Context) Errors(errs errors.Errors) {
-	for _, err := range errs {
-		this.output.Error(err)
-	}
+	this.output.SetErrors(errs)
 }
 
 func (this *Context) Abort(err errors.Error) {
@@ -1781,4 +1784,12 @@ func (this *Context) Fatalf(f string, args ...interface{}) {
 	if this.logLevel >= logging.FATAL {
 		this.output.Loga(logging.FATAL, func() string { return fmt.Sprintf(f, args...) })
 	}
+}
+
+func (this *Context) ErrorLimit() int {
+	return this.output.GetErrorLimit()
+}
+
+func (this *Context) ErrorCount() int {
+	return this.output.GetErrorCount()
 }

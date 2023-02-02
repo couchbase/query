@@ -30,6 +30,7 @@ import (
 	datastore_package "github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/datastore/resolver"
 	"github.com/couchbase/query/datastore/system"
+	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/functions"
 	"github.com/couchbase/query/functions/constructor"
 	"github.com/couchbase/query/logging"
@@ -72,7 +73,7 @@ const (
 	_DEF_MEMORY_QUOTA           = 0
 	_DEF_NODE_QUOTA             = 0
 	_DEF_CE_MAXCPUS             = 4
-	_DEF_REQUEST_ERROR_LIMIT    = 16
+	_DEF_REQUEST_ERROR_LIMIT    = errors.DEFAULT_REQUEST_ERROR_LIMIT
 )
 
 var DATASTORE = flag.String("datastore", "", "Datastore address (http://URL or dir:PATH or mock:)")

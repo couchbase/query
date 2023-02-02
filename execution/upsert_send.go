@@ -20,8 +20,9 @@ import (
 
 type SendUpsert struct {
 	base
-	plan     *plan.SendUpsert
-	keyspace datastore.Keyspace
+	plan      *plan.SendUpsert
+	keyspace  datastore.Keyspace
+	batchSize int
 }
 
 func NewSendUpsert(plan *plan.SendUpsert, context *Context) *SendUpsert {
@@ -32,6 +33,7 @@ func NewSendUpsert(plan *plan.SendUpsert, context *Context) *SendUpsert {
 	newBase(&rv.base, context)
 	rv.execPhase = UPSERT
 	rv.output = rv
+	rv.batchSize = context.GetPipelineBatch()
 	return rv
 }
 
@@ -59,7 +61,7 @@ func (this *SendUpsert) beforeItems(context *Context, parent value.Value) bool {
 }
 
 func (this *SendUpsert) processItem(item value.AnnotatedValue, context *Context) bool {
-	return this.enbatch(item, this, context)
+	return this.enbatchSize(item, this, this.batchSize, context, true)
 }
 
 func (this *SendUpsert) afterItems(context *Context) {
@@ -69,6 +71,17 @@ func (this *SendUpsert) afterItems(context *Context) {
 
 func (this *SendUpsert) flushBatch(context *Context) bool {
 	defer this.releaseBatch(context)
+
+	curQueue := this.queuedItems()
+	if this.batchSize < curQueue {
+		defer func() {
+			size := int(this.output.ValueExchange().cap())
+			if curQueue > size {
+				curQueue = size
+			}
+			this.batchSize = curQueue
+		}()
+	}
 
 	if len(this.batch) == 0 || !this.isRunning() {
 		return true

@@ -29,10 +29,11 @@ func init() {
 
 type SendDelete struct {
 	base
-	plan     *plan.SendDelete
-	keyspace datastore.Keyspace
-	limit    int64
-	mk       missingKeys
+	plan      *plan.SendDelete
+	keyspace  datastore.Keyspace
+	limit     int64
+	mk        missingKeys
+	batchSize int
 }
 
 func NewSendDelete(plan *plan.SendDelete, context *Context) *SendDelete {
@@ -44,6 +45,7 @@ func NewSendDelete(plan *plan.SendDelete, context *Context) *SendDelete {
 	newBase(&rv.base, context)
 	rv.execPhase = DELETE
 	rv.output = rv
+	rv.batchSize = context.GetPipelineBatch()
 	return rv
 }
 
@@ -69,7 +71,7 @@ func (this *SendDelete) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *SendDelete) processItem(item value.AnnotatedValue, context *Context) bool {
-	rv := this.limit != 0 && this.enbatch(item, this, context)
+	rv := this.limit != 0 && this.enbatchSize(item, this, this.batchSize, context, true)
 
 	if this.limit > 0 {
 		this.limit--
@@ -114,6 +116,17 @@ func (this *SendDelete) afterItems(context *Context) {
 
 func (this *SendDelete) flushBatch(context *Context) bool {
 	defer this.releaseBatch(context)
+
+	curQueue := this.queuedItems()
+	if this.batchSize < curQueue {
+		defer func() {
+			size := int(this.output.ValueExchange().cap())
+			if curQueue > size {
+				curQueue = size
+			}
+			this.batchSize = curQueue
+		}()
+	}
 
 	if len(this.batch) == 0 || !this.isRunning() {
 		return true

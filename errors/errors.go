@@ -49,6 +49,10 @@ func ToBool(t Tristate) bool {
 	return t == TRUE
 }
 
+const (
+	DEFAULT_REQUEST_ERROR_LIMIT = 16
+)
+
 // Error will eventually include code, message key, and internal error
 // object (cause) and message
 type Error interface {

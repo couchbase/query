@@ -32,9 +32,10 @@ func init() {
 // Send to keyspace
 type SendUpdate struct {
 	base
-	plan     *plan.SendUpdate
-	keyspace datastore.Keyspace
-	limit    int64
+	plan      *plan.SendUpdate
+	keyspace  datastore.Keyspace
+	limit     int64
+	batchSize int
 }
 
 func NewSendUpdate(plan *plan.SendUpdate, context *Context) *SendUpdate {
@@ -45,6 +46,7 @@ func NewSendUpdate(plan *plan.SendUpdate, context *Context) *SendUpdate {
 	newBase(&rv.base, context)
 	rv.execPhase = UPDATE
 	rv.output = rv
+	rv.batchSize = context.GetPipelineBatch()
 	return rv
 }
 
@@ -69,7 +71,7 @@ func (this *SendUpdate) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *SendUpdate) processItem(item value.AnnotatedValue, context *Context) bool {
-	rv := this.limit != 0 && this.enbatch(item, this, context)
+	rv := this.limit != 0 && this.enbatchSize(item, this, this.batchSize, context, true)
 
 	if this.limit > 0 {
 		this.limit--
@@ -116,6 +118,17 @@ func (this *SendUpdate) afterItems(context *Context) {
 
 func (this *SendUpdate) flushBatch(context *Context) bool {
 	defer this.releaseBatch(context)
+
+	curQueue := this.queuedItems()
+	if this.batchSize < curQueue {
+		defer func() {
+			size := int(this.output.ValueExchange().cap())
+			if curQueue > size {
+				curQueue = size
+			}
+			this.batchSize = curQueue
+		}()
+	}
 
 	if len(this.batch) == 0 || !this.isRunning() {
 		return true

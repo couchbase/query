@@ -139,6 +139,14 @@ func (ci *queryContextImpl) Errorf(f string, args ...interface{})               
 func (ci *queryContextImpl) Severef(f string, args ...interface{})                   {}
 func (ci *queryContextImpl) Fatalf(f string, args ...interface{})                    {}
 
+func (ci *queryContextImpl) ErrorLimit() int {
+	return errors.DEFAULT_REQUEST_ERROR_LIMIT
+}
+
+func (ci *queryContextImpl) ErrorCount() int {
+	return 0
+}
+
 func TestSystem(t *testing.T) {
 	// Use mock to test system; 2 namespaces with 5 keyspaces per namespace
 	m, err := mock.NewDatastore("mock:namespaces=2,keyspaces=5,items=5000")

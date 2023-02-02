@@ -1340,3 +1340,40 @@ func (this *BaseRequest) SetSortProjection(on bool) {
 func (this *BaseRequest) SortProjection() bool {
 	return this.sortProjection
 }
+
+// Add a list of errors
+// If the number of errors exceeds the error limit , append a E_REQUEST_ERROR_LIMIT error to the error list
+func (this *BaseRequest) SetErrors(errs errors.Errors) {
+	this.Lock()
+
+	for _, e1 := range errs {
+		isDuplicate := false
+		for _, e2 := range this.errors {
+			if e1.Code() != 0 && e1.Code() == e2.Code() && e1.Error() == e2.Error() {
+				this.duplicateErrorCount++
+				isDuplicate = true
+				break
+			}
+		}
+
+		if !isDuplicate {
+			this.errorCount++
+			if this.errorLimit <= 0 || (this.errorCount+this.duplicateErrorCount) <= this.errorLimit {
+				this.errors = append(this.errors, e1)
+			}
+		}
+	}
+
+	// Append a single E_REQUEST_ERROR_LIMIT error
+	if this.errorLimit > 0 && ((this.errorCount + this.duplicateErrorCount) > this.errorLimit) {
+		this.errors = append(this.errors, errors.NewErrorLimit(this.errorLimit, this.errorCount, this.duplicateErrorCount, this.MutationCount()))
+		this.aborted = true
+		this.Unlock()
+		this.Stop(FATAL)
+		return
+	}
+
+	this.Unlock()
+
+	return
+}

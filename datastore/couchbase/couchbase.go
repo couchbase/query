@@ -74,6 +74,20 @@ const (
 	_TRAN_CLEANUP_INTERVAL = 1 * time.Minute
 )
 
+type mutationState int // state of the mutation operation
+
+const (
+	_MUTATED mutationState = iota // if the key was mutated successfully
+	_STOPPED                      // if the mutation operation was stopped
+	_FAILED                       // if the mutation failed a reason
+	_NONE
+)
+
+// Max number of mutation workers
+// 1 routine for every 4 CPU cores
+// But, a max of 4 go routines are allowed
+var _MAX_MUTATION_ROUTINES = util.MinInt(util.MaxInt(1, int(util.NumCPU()/4)), 4)
+
 func init() {
 
 	// MB-27415 have a larger overflow pool and close overflow connections asynchronously
@@ -2131,11 +2145,22 @@ func getExpiration(options value.Value) (exptime int, present bool) {
 	return
 }
 
-func (b *keyspace) performOp(op MutateOp, qualifiedName, scopeName, collectionName string, pairs value.Pairs,
-	context datastore.QueryContext, clientContext ...*memcached.ClientContext) (
-	mPairs value.Pairs, errs errors.Errors) {
+// Struct with info passed to the mutation workers
+type parallelInfo struct {
+	sync.Mutex
+	pairs  value.Pairs
+	mPairs value.Pairs
+	errs   errors.Errors
+	wg     *sync.WaitGroup
+	index  int
+}
 
-	if len(pairs) == 0 {
+func (b *keyspace) performOp(op MutateOp, qualifiedName, scopeName, collectionName string, pairs value.Pairs,
+	context datastore.QueryContext, clientContext ...*memcached.ClientContext) (mPairs value.Pairs, errs errors.Errors) {
+
+	numPairs := len(pairs)
+
+	if numPairs == 0 {
 		return
 	}
 
@@ -2150,195 +2175,303 @@ func (b *keyspace) performOp(op MutateOp, qualifiedName, scopeName, collectionNa
 		return
 	}
 
-	mPairs = make(value.Pairs, 0, len(pairs))
-	retry := errors.NONE
-	var failedDeletes []string
-	var err error
-	var wu uint64
+	numRoutines := util.MinInt(numPairs, _MAX_MUTATION_ROUTINES) // number of routines that will each perform mutations
 
-	for _, kv := range pairs {
-		var val interface{}
-		var exptime int
-		var present bool
-		var cas, newCas uint64
-		casMismatch := false
+	if numRoutines == 1 { // If numRoutines = 1, run mutations sequentially
 
-		// operator has been terminated
-		if !context.IsActive() {
-			return
-		}
-		key := kv.Name
-		if op != MOP_DELETE {
-			if kv.Value.Type() == value.BINARY {
-				return nil, append(errs, errors.NewBinaryDocumentMutationError(_MutateOpNames[op], key))
+		mPairs = make(value.Pairs, 0, numPairs)
+
+		for i := 0; i < numPairs; i++ {
+			state, err := b.singleMutationOp(pairs[i], op, qualifiedName, context, clientContext...)
+
+			if state == _MUTATED {
+				mPairs = append(mPairs, pairs[i])
 			}
-			val = kv.Value.ActualForIndex()
-			exptime, present = getExpiration(kv.Options)
+
+			if err != nil {
+				if len(errs) == 0 {
+					errs = make(errors.Errors, 0, numPairs)
+				}
+
+				errs = append(errs, err)
+			}
+
+			// if error limit was hit or a mutation resulted in a stopped state
+			// stop subsequent mutations
+			if state == _STOPPED || (context.ErrorLimit() > 0 && (len(errs)+context.ErrorCount()) > context.ErrorLimit()) {
+				break
+			}
 		}
 
-		switch op {
+		return mPairs, errs
 
-		case MOP_INSERT:
-			var added bool
+	} else { // if the number of keys to be modified is greater than 1 and the number of allowed routines > 1 , run modification operations concurrently
+		p := &parallelInfo{
+			mPairs: make(value.Pairs, 0, numPairs),
+			pairs:  pairs,
+			wg:     &sync.WaitGroup{},
+			index:  0,
+		}
 
-			// add the key to the backend
-			added, cas, wu, err = b.cbbucket.AddWithCAS(key, exptime, val, clientContext...)
+		p.wg.Add(numRoutines)
+
+		// start the go routines that each perform mutations
+		for i := 0; i < numRoutines; i++ {
+			go b.parallelMutationOp(op, qualifiedName, p, context, clientContext...)
+		}
+
+		p.wg.Wait()
+
+		return p.mPairs, p.errs
+	}
+}
+
+// Performs mutation for a single key
+func (b *keyspace) singleMutationOp(kv value.Pair, op MutateOp, qualifiedName string, context datastore.QueryContext, clientContext ...*memcached.ClientContext) (mutationState, errors.Error) {
+	retry := errors.NONE
+	var err error
+	var keyError errors.Error
+	var wu uint64
+	var val interface{}
+	var exptime int
+	var present bool
+	var cas, newCas uint64
+	casMismatch := false
+
+	// operator has been terminated
+	if !context.IsActive() {
+		return _STOPPED, nil
+	}
+
+	key := kv.Name
+	if op != MOP_DELETE {
+		if kv.Value.Type() == value.BINARY {
+			return _STOPPED, errors.NewBinaryDocumentMutationError(_MutateOpNames[op], key)
+		}
+		val = kv.Value.ActualForIndex()
+		exptime, present = getExpiration(kv.Options)
+	}
+
+	switch op {
+
+	case MOP_INSERT:
+		var added bool
+
+		// add the key to the backend
+		added, cas, wu, err = b.cbbucket.AddWithCAS(key, exptime, val, clientContext...)
+
+		context.RecordKvWU(tenant.Unit(wu))
+		b.checkRefresh(err)
+		if added == false {
+			// false & err == nil => given key aready exists in the bucket
+			if err != nil {
+				retry, err = processIfMCError(retry, err, key, qualifiedName)
+				err = errors.NewInsertError(err, key)
+			} else {
+				err = errors.NewDuplicateKeyError(key, "", nil)
+				retry = errors.FALSE
+			}
+		} else { // if err != nil then added is false
+			// refresh local meta CAS value
+			logging.Debuga(func() string {
+				return fmt.Sprintf("After %s: key {<ud>%v</ud>} CAS %v for Keyspace <ud>%s</ud>.",
+					MutateOpToName(op), key, cas, qualifiedName)
+			})
+			SetMetaCas(kv.Value, cas)
+		}
+	case MOP_UPDATE:
+		// check if the key exists and if so then use the cas value
+		// to update the key
+		var flags uint32
+
+		cas, flags, _, err = getMeta(key, kv.Value, true)
+		if err != nil { // Don't perform the update if the meta values are not found
+			logging.Debuga(func() string {
+				return fmt.Sprintf("Failed to get meta value to perform %s on key <ud>%s<ud>"+
+					" for Keyspace <ud>%s</ud>. Error %s",
+					MutateOpToName(op), key, qualifiedName, err)
+			})
+			if retry == errors.NONE {
+				retry = errors.TRUE
+			}
+		} else if err = setPreserveExpiry(present, context, clientContext...); err != nil {
+			logging.Debuga(func() string {
+				return fmt.Sprintf("Failed to preserve the expiration to perform %s on key <ud>%s<ud>"+
+					" for Keyspace <ud>%s</ud>. Error %s",
+					MutateOpToName(op), key, qualifiedName, err)
+			})
+			if retry == errors.NONE {
+				retry = errors.TRUE
+			}
+		} else {
+			logging.Debuga(func() string {
+				return fmt.Sprintf("Before %s: key {<ud>%v</ud>} CAS %v flags <ud>%v</ud>"+
+					" value <ud>%v</ud> for Keyspace <ud>%s</ud>.",
+					MutateOpToName(op), key, cas, flags, val, qualifiedName)
+			})
+			newCas, wu, _, err = b.cbbucket.CasWithMeta(key, int(flags), exptime, cas, val, clientContext...)
 
 			context.RecordKvWU(tenant.Unit(wu))
-			b.checkRefresh(err)
-			if added == false {
-				// false & err == nil => given key aready exists in the bucket
-				if err != nil {
-					retry, err = processIfMCError(retry, err, key, qualifiedName)
-					err = errors.NewInsertError(err, key)
-				} else {
-					err = errors.NewDuplicateKeyError(key, "", nil)
-					retry = errors.FALSE
-				}
-			} else { // if err != nil then added is false
+			if err == nil {
 				// refresh local meta CAS value
 				logging.Debuga(func() string {
-					return fmt.Sprintf("After %s: key {<ud>%v</ud>} CAS %v for Keyspace <ud>%s</ud>.",
+					return fmt.Sprintf("After %s: key {<ud>%v</ud>} CAS %v "+
+						"for Keyspace <ud>%s</ud>.",
 						MutateOpToName(op), key, cas, qualifiedName)
 				})
-				SetMetaCas(kv.Value, cas)
+				SetMetaCas(kv.Value, newCas)
 			}
-		case MOP_UPDATE:
-			// check if the key exists and if so then use the cas value
-			// to update the key
-			var flags uint32
-
-			cas, flags, _, err = getMeta(key, kv.Value, true)
-			if err != nil { // Don't perform the update if the meta values are not found
-				logging.Debuga(func() string {
-					return fmt.Sprintf("Failed to get meta value to perform %s on key <ud>%s<ud>"+
-						" for Keyspace <ud>%s</ud>. Error %s",
-						MutateOpToName(op), key, qualifiedName, err)
-				})
-				if retry == errors.NONE {
-					retry = errors.TRUE
-				}
-			} else if err = setPreserveExpiry(present, context, clientContext...); err != nil {
-				logging.Debuga(func() string {
-					return fmt.Sprintf("Failed to preserve the expiration to perform %s on key <ud>%s<ud>"+
-						" for Keyspace <ud>%s</ud>. Error %s",
-						MutateOpToName(op), key, qualifiedName, err)
-				})
-				if retry == errors.NONE {
-					retry = errors.TRUE
-				}
-			} else {
-				logging.Debuga(func() string {
-					return fmt.Sprintf("Before %s: key {<ud>%v</ud>} CAS %v flags <ud>%v</ud>"+
-						" value <ud>%v</ud> for Keyspace <ud>%s</ud>.",
-						MutateOpToName(op), key, cas, flags, val, qualifiedName)
-				})
-				newCas, wu, _, err = b.cbbucket.CasWithMeta(key, int(flags), exptime, cas, val, clientContext...)
-
-				context.RecordKvWU(tenant.Unit(wu))
-				if err == nil {
-					// refresh local meta CAS value
-					logging.Debuga(func() string {
-						return fmt.Sprintf("After %s: key {<ud>%v</ud>} CAS %v "+
-							"for Keyspace <ud>%s</ud>.",
-							MutateOpToName(op), key, cas, qualifiedName)
-					})
-					SetMetaCas(kv.Value, newCas)
-				}
-				b.checkRefresh(err)
-			}
-
-		case MOP_UPSERT:
-			if err = setPreserveExpiry(present, context, clientContext...); err != nil {
-				logging.Debuga(func() string {
-					return fmt.Sprintf("Failed to preserve the expiration to perform %s on key <ud>%s<ud>"+
-						" for Keyspace <ud>%s</ud>. Error %s",
-						MutateOpToName(op), key, qualifiedName, err)
-				})
-				if retry == errors.NONE {
-					retry = errors.TRUE
-				}
-			} else {
-				newCas, wu, err = b.cbbucket.SetWithCAS(key, exptime, val, clientContext...)
-
-				context.RecordKvWU(tenant.Unit(wu))
-				b.checkRefresh(err)
-				if err == nil {
-					logging.Debuga(func() string {
-						return fmt.Sprintf("After %s: key {<ud>%v</ud>} CAS %v "+
-							"for Keyspace <ud>%s</ud>.",
-							MutateOpToName(op), key, cas, qualifiedName)
-					})
-					SetMetaCas(kv.Value, newCas)
-				}
-			}
-		case MOP_DELETE:
-			wu, err = b.cbbucket.Delete(key, clientContext...)
-
-			context.RecordKvWU(tenant.Unit(wu))
 			b.checkRefresh(err)
 		}
 
-		if err != nil {
-			msg := fmt.Sprintf("Failed to perform %s on key %s", MutateOpToName(op), key)
-			if op == MOP_DELETE {
-				if !isNotFoundError(err) {
-					logging.Debuga(func() string {
-						return fmt.Sprintf("Failed to perform %s on key <ud>%s<ud>"+
-							" for Keyspace <ud>%s</ud>. Error %s",
-							MutateOpToName(op), key, qualifiedName, err)
-					})
-					retry, err = processIfMCError(retry, err, key, qualifiedName)
-					errs = append(errs, errors.NewCbDeleteFailedError(err, key, msg))
-					failedDeletes = append(failedDeletes, key)
-				}
-			} else if isEExistError(err) {
-				if op != MOP_INSERT {
-					casMismatch = true
-					retry = errors.FALSE
-				}
-				logging.Debuga(func() string {
-					if casMismatch {
-						return fmt.Sprintf("Failed to perform %s on key <ud>%s<ud>"+
-							" for Keyspace <ud>%s</ud>."+
-							" CAS mismatch due to concurrent modifications. Error %s",
-							MutateOpToName(op), key, qualifiedName, err)
-					} else {
-						return fmt.Sprintf("Failed to perform %s on key <ud>%s<ud>"+
-							" for Keyspace <ud>%s</ud>."+
-							" Concurrent modifications. Error %s",
-							MutateOpToName(op), key, qualifiedName, err)
-					}
-				})
+	case MOP_UPSERT:
+		if err = setPreserveExpiry(present, context, clientContext...); err != nil {
+			logging.Debuga(func() string {
+				return fmt.Sprintf("Failed to preserve the expiration to perform %s on key <ud>%s<ud>"+
+					" for Keyspace <ud>%s</ud>. Error %s",
+					MutateOpToName(op), key, qualifiedName, err)
+			})
+			if retry == errors.NONE {
+				retry = errors.TRUE
+			}
+		} else {
+			newCas, wu, err = b.cbbucket.SetWithCAS(key, exptime, val, clientContext...)
 
-				retry, err = processIfMCError(retry, err, key, qualifiedName)
-				errs = append(errs, errors.NewCbDMLError(err, msg, casMismatch, retry, key, qualifiedName))
-			} else if isNotFoundError(err) {
-				err = errors.NewKeyNotFoundError(key, "", nil)
-				retry = errors.FALSE
-				errs = append(errs, errors.NewCbDMLError(err, msg, casMismatch, retry, key, qualifiedName))
-			} else {
-				// err contains key, redact
+			context.RecordKvWU(tenant.Unit(wu))
+			b.checkRefresh(err)
+			if err == nil {
+				logging.Debuga(func() string {
+					return fmt.Sprintf("After %s: key {<ud>%v</ud>} CAS %v "+
+						"for Keyspace <ud>%s</ud>.",
+						MutateOpToName(op), key, cas, qualifiedName)
+				})
+				SetMetaCas(kv.Value, newCas)
+			}
+		}
+	case MOP_DELETE:
+		wu, err = b.cbbucket.Delete(key, clientContext...)
+
+		context.RecordKvWU(tenant.Unit(wu))
+		b.checkRefresh(err)
+	}
+
+	if err != nil {
+		msg := fmt.Sprintf("Failed to perform %s on key %s", MutateOpToName(op), key)
+		if op == MOP_DELETE {
+			if !isNotFoundError(err) {
 				logging.Debuga(func() string {
 					return fmt.Sprintf("Failed to perform %s on key <ud>%s<ud>"+
 						" for Keyspace <ud>%s</ud>. Error %s",
 						MutateOpToName(op), key, qualifiedName, err)
 				})
 				retry, err = processIfMCError(retry, err, key, qualifiedName)
-				errs = append(errs, errors.NewCbDMLError(err, msg, casMismatch, retry, key, qualifiedName))
+				keyError = errors.NewCbDeleteFailedError(err, key, msg)
 			}
+		} else if isEExistError(err) {
+			if op != MOP_INSERT {
+				casMismatch = true
+				retry = errors.FALSE
+			}
+			logging.Debuga(func() string {
+				if casMismatch {
+					return fmt.Sprintf("Failed to perform %s on key <ud>%s<ud>"+
+						" for Keyspace <ud>%s</ud>."+
+						" CAS mismatch due to concurrent modifications. Error %s",
+						MutateOpToName(op), key, qualifiedName, err)
+				} else {
+					return fmt.Sprintf("Failed to perform %s on key <ud>%s<ud>"+
+						" for Keyspace <ud>%s</ud>."+
+						" Concurrent modifications. Error %s",
+						MutateOpToName(op), key, qualifiedName, err)
+				}
+			})
+
+			retry, err = processIfMCError(retry, err, key, qualifiedName)
+			keyError = errors.NewCbDMLError(err, msg, casMismatch, retry, key, qualifiedName)
+		} else if isNotFoundError(err) {
+			err = errors.NewKeyNotFoundError(key, "", nil)
+			retry = errors.FALSE
+			keyError = errors.NewCbDMLError(err, msg, casMismatch, retry, key, qualifiedName)
 		} else {
-			mPairs = append(mPairs, kv)
+			// err contains key, redact
+			logging.Debuga(func() string {
+				return fmt.Sprintf("Failed to perform %s on key <ud>%s<ud>"+
+					" for Keyspace <ud>%s</ud>. Error %s",
+					MutateOpToName(op), key, qualifiedName, err)
+			})
+			retry, err = processIfMCError(retry, err, key, qualifiedName)
+			keyError = errors.NewCbDMLError(err, msg, casMismatch, retry, key, qualifiedName)
 		}
+
+		return _FAILED, keyError
 	}
-	return
+
+	return _MUTATED, nil
+}
+
+// Mutation worker
+func (b *keyspace) parallelMutationOp(op MutateOp, qualifiedName string, p *parallelInfo, context datastore.QueryContext, clientCtx ...*memcached.ClientContext) {
+
+	defer func() {
+		r := recover()
+		if r != nil {
+			logging.Stackf(logging.ERROR, "Mutation routine panicked. Panic: %v. Restarting mutation routine.", r)
+
+			// restart mutation worker
+			go b.parallelMutationOp(op, qualifiedName, p, context, clientCtx...)
+		}
+	}()
+
+	var clientContext []*memcached.ClientContext
+
+	if len(clientCtx) > 0 {
+		clientContext = append(clientContext, clientCtx[0].Copy())
+	}
+
+	state := _NONE
+	var err errors.Error
+	var kv value.Pair
+
+	for {
+		p.Lock()
+		if err != nil {
+			if p.errs == nil {
+				p.errs = make(errors.Errors, 0, len(p.pairs))
+			}
+
+			p.errs = append(p.errs, err)
+		}
+
+		if state == _MUTATED {
+			p.mPairs = append(p.mPairs, kv)
+		}
+
+		// Check if subsequent mutations must be stopped - if context is inactive or when error limit is hit
+		// Or if there are no more keys to mutate
+		// If yes - end the mutation worker
+		if !context.IsActive() || p.index >= len(p.pairs) ||
+			(context.ErrorLimit() > 0 && (len(p.errs)+context.ErrorCount() > context.ErrorLimit())) {
+
+			p.Unlock()
+			break
+		}
+
+		kv = p.pairs[p.index]
+		p.index++
+
+		p.Unlock()
+
+		state, err = b.singleMutationOp(kv, op, qualifiedName, context, clientContext...)
+	}
+
+	p.wg.Done()
 }
 
 func processIfMCError(retry errors.Tristate, err error, key string, keyspace string) (errors.Tristate, error) {
 	if mcr, ok := err.(*gomemcached.MCResponse); ok {
 		if gomemcached.IsFatal(mcr) {
 			retry = errors.FALSE
-		} else if retry == errors.NONE {
+		} else {
 			retry = errors.TRUE
 		}
 		err = errors.NewCbDMLMCError(mcr.Status.String(), key, keyspace)
