@@ -134,13 +134,10 @@ func (this *IndexFtsSearch) RunOnce(context *Context, parent value.Value) {
 							}
 							av.SetField(this.plan.Term().Alias(), av)
 
-							if context.UseRequestQuota() {
-								err := context.TrackValueSize(av.Size())
-								if err != nil {
-									context.Error(err)
-									av.Recycle()
-									break
-								}
+							if context.UseRequestQuota() && context.TrackValueSize(av.Size()) {
+								context.Error(errors.NewMemoryQuotaExceededError())
+								av.Recycle()
+								break
 							}
 						}
 						av.SetAttachment("smeta", map[string]interface{}{outName: entry.MetaData})
