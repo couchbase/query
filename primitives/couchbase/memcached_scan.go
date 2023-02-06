@@ -55,7 +55,7 @@ const _SS_RETRY_DELAY = time.Millisecond * 100
 
 func (b *Bucket) StartKeyScan(requestId string, log logging.Log, collId uint32, scope string, collection string,
 	ranges []*SeqScanRange, offset int64, limit int64, ordered bool, timeout time.Duration, pipelineSize int,
-	kvTimeout time.Duration, serverless bool) (interface{}, qerrors.Error) {
+	kvTimeout time.Duration, serverless bool, useReplica bool) (interface{}, qerrors.Error) {
 
 	if log == nil {
 		log = logging.NULL_LOG
@@ -69,7 +69,7 @@ func (b *Bucket) StartKeyScan(requestId string, log logging.Log, collId uint32, 
 		}
 	}
 
-	scan := NewSeqScan(requestId, log, collId, ranges, offset, limit, ordered, pipelineSize, kvTimeout, serverless)
+	scan := NewSeqScan(requestId, log, collId, ranges, offset, limit, ordered, pipelineSize, kvTimeout, serverless, useReplica)
 
 	logging.Debuga(func() string { return scan.String() }, log)
 	go scan.coordinator(b, timeout)
@@ -78,7 +78,7 @@ func (b *Bucket) StartKeyScan(requestId string, log logging.Log, collId uint32, 
 }
 
 func (b *Bucket) StartRandomScan(requestId string, log logging.Log, collId uint32, scope string, collection string,
-	sampleSize int, timeout time.Duration, pipelineSize int, kvTimeout time.Duration, serverless bool) (
+	sampleSize int, timeout time.Duration, pipelineSize int, kvTimeout time.Duration, serverless bool, useReplica bool) (
 	interface{}, qerrors.Error) {
 
 	if log == nil {
@@ -93,7 +93,7 @@ func (b *Bucket) StartRandomScan(requestId string, log logging.Log, collId uint3
 		}
 	}
 
-	scan := NewRandomScan(requestId, log, collId, sampleSize, pipelineSize, kvTimeout, serverless)
+	scan := NewRandomScan(requestId, log, collId, sampleSize, pipelineSize, kvTimeout, serverless, useReplica)
 
 	logging.Debuga(func() string { return scan.String() }, log)
 	go scan.coordinator(b, timeout)
@@ -291,10 +291,11 @@ type seqScan struct {
 	serverless   bool
 	runits       uint64
 	sampleSize   int
+	useReplica   bool
 }
 
 func NewSeqScan(requestId string, log logging.Log, collId uint32, ranges []*SeqScanRange, offset int64, limit int64, ordered bool,
-	pipelineSize int, kvTimeout time.Duration, serverless bool) *seqScan {
+	pipelineSize int, kvTimeout time.Duration, serverless bool, useReplica bool) *seqScan {
 
 	scan := &seqScan{
 		requestId:    requestId,
@@ -307,6 +308,7 @@ func NewSeqScan(requestId string, log logging.Log, collId uint32, ranges []*SeqS
 		pipelineSize: pipelineSize,
 		kvTimeout:    kvTimeout,
 		serverless:   serverless,
+		useReplica:   useReplica,
 	}
 	scan.ch = make(chan interface{}, 1)
 	scan.abortch = make(chan bool, 1)
@@ -322,7 +324,7 @@ func NewSeqScan(requestId string, log logging.Log, collId uint32, ranges []*SeqS
 }
 
 func NewRandomScan(requestId string, log logging.Log, collId uint32, sampleSize int, pipelineSize int, kvTimeout time.Duration,
-	serverless bool) *seqScan {
+	serverless bool, useReplica bool) *seqScan {
 
 	if sampleSize <= _SS_MIN_SAMPLE_SIZE {
 		sampleSize = _SS_MIN_SAMPLE_SIZE
@@ -335,6 +337,7 @@ func NewRandomScan(requestId string, log logging.Log, collId uint32, sampleSize 
 		pipelineSize: pipelineSize,
 		kvTimeout:    kvTimeout,
 		serverless:   serverless,
+		useReplica:   useReplica,
 	}
 	scan.ch = make(chan interface{}, 1)
 	scan.abortch = make(chan bool, 1)
@@ -1855,7 +1858,7 @@ func (queue *rswQueue) runWorker() {
 			queue.Unlock()
 			queueLocked = false
 			if vbscan != nil {
-				if conn != nil && (b != vbscan.b || (replica && vbscan.vbucket() != vb)) {
+				if conn != nil && (b != vbscan.b || (replica && (vbscan.vbucket() != vb || !vbscan.scan.useReplica))) {
 					conn.SetReplica(false)
 					pool.Return(conn)
 					conn = nil
@@ -1867,7 +1870,8 @@ func (queue *rswQueue) runWorker() {
 					b = vbscan.b
 					vb = vbscan.vbucket()
 					replica = false
-					desc := &doDescriptor{useReplicas: false, version: b.Version, maxTries: b.backOffRetries(), retry: true}
+					desc := &doDescriptor{useReplicas: vbscan.scan.useReplica, version: b.Version, maxTries: b.backOffRetries(),
+						retry: true}
 					for desc.attempts = 0; desc.attempts < desc.maxTries; {
 						conn, pool, err = b.getVbConnection(uint32(vb), desc)
 						if err != nil {
