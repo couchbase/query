@@ -400,8 +400,7 @@ func (this *seqScan) doScanEntries(requestId string, ordered bool, offset, limit
 	var err qe.Error
 	var timeout bool
 
-	ss, err = scanner.StartKeyScan(qctx, ranges, offset, limit, ordered, tout, conn.Sender().Capacity(), qctx.KvTimeout(),
-		tenant.IsServerless())
+	ss, err = scanner.StartKeyScan(qctx, ranges, offset, limit, ordered, tout, conn.Sender().Capacity(), tenant.IsServerless())
 	if err != nil {
 		conn.Error(qe.NewSSError(qe.E_SS_FAILED, err))
 		return

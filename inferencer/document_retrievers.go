@@ -329,10 +329,10 @@ func MakeUnifiedDocumentRetriever(name string, context datastore.QueryContext, k
 			var err errors.Error
 			if udr.isFlagOn(SAMPLE_ALL_DOCS) {
 				udr.rs_scan, err = udr.rs.StartRandomScan(context, math.MaxInt, 0,
-					int(datastore.GetScanCap()), context.KvTimeout(), tenant.IsServerless())
+					int(datastore.GetScanCap()), tenant.IsServerless())
 			} else {
 				udr.rs_scan, err = udr.rs.StartRandomScan(context, udr.sampleSize, 0,
-					int(datastore.GetScanCap()), context.KvTimeout(), tenant.IsServerless())
+					int(datastore.GetScanCap()), tenant.IsServerless())
 			}
 			if err != nil {
 				logging.Debuga(func() string { return fmt.Sprintf("random scan start failed: %v", err) }, context)

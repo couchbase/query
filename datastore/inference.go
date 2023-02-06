@@ -27,8 +27,8 @@ type RandomEntryProvider interface {
 }
 
 type RandomScanProvider interface {
-	StartRandomScan(context QueryContext, sampleSize int, timeout time.Duration, pipelineSize int,
-		kvTimeout time.Duration, serverless bool) (interface{}, errors.Error)
+	StartRandomScan(context QueryContext, sampleSize int, timeout time.Duration, pipelineSize int, serverless bool) (
+		interface{}, errors.Error)
 	StopKeyScan(scan interface{}) (uint64, errors.Error)
 	FetchKeys(scan interface{}, timeout time.Duration) ([]string, errors.Error, bool)
 }
