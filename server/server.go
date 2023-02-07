@@ -1367,6 +1367,7 @@ func (this *Server) getPrepared(request Request, context *execution.Context) (*p
 	useReplica := (!util.IsFeatureEnabled(request.FeatureControls(), util.N1QL_READ_FROM_REPLICA_OFF)) && request.Type() == "SELECT" && request.TxId() == ""
 	request.SetUseReplica(useReplica)
 	context.SetUseReplica(useReplica)
+	context.Infof("Read from replicas permitted: %v", useReplica)
 
 	logging.Tracea(func() string {
 		var pl plan.Operator = prepared

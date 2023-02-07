@@ -1261,7 +1261,7 @@ func (this *vbRangeScan) runScan(conn *memcached.Client, node string) bool {
 		}
 	}()
 
-	if this.singleKey {
+	if this.singleKey && !conn.Replica() {
 		return this.validateSingleKey(conn)
 	}
 
