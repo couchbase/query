@@ -15,6 +15,7 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	base "github.com/couchbase/query/plannerbase"
+	"github.com/couchbase/query/util"
 )
 
 // derive new OptimHints based on USE INDEX and USE NL/USE HASH specified in the query
@@ -285,6 +286,7 @@ func (this *builder) processOptimHints(optimHints *algebra.OptimHints) {
 			}
 		}
 
+		start := util.Now()
 		var hasErr bool
 		var msg string
 		var gsiIndexer, ftsIndexer datastore.Indexer
@@ -368,6 +370,9 @@ func (this *builder) processOptimHints(optimHints *algebra.OptimHints) {
 					hint.SetError(algebra.INVALID_FTS_INDEX + errIndexes)
 				}
 			}
+		}
+		if hasGsi || hasFts {
+			this.recordSubTime("index.metadata", util.Since(start))
 		}
 	}
 }
