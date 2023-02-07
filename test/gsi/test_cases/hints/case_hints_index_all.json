@@ -1,0 +1,346 @@
+[
+    {
+	"testcase": "simple INDEX_ALL hint, followed",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "hints_followed": [
+                        "INDEX_ALL(c cust_lastName_firstName_customerId cust_customerId_lastName_firstName)"
+                    ]
+                }
+            ],
+            "statement": "SELECT RAW p.`optimizer_hints` FROM $explan AS p"
+        },
+        "statements":"SELECT /*+ INDEX_ALL(c cust_lastName_firstName_customerId cust_customerId_lastName_firstName) */ lastName, firstName, customerId FROM customer c WHERE lastName LIKE 'Wi%' AND customerId LIKE 'customer1%' ORDER BY lastName",
+        "ordered": true,
+        "results": [
+            {
+                "lastName": "Wilkinson",
+                "firstName": "Emmanuel",
+                "customerId": "customer12"
+            },
+            {
+                "lastName": "Willms",
+                "firstName": "Elena",
+                "customerId": "customer177"
+            },
+            {
+                "lastName": "Wisoky",
+                "firstName": "Devyn",
+                "customerId": "customer17"
+            }
+        ]
+    },
+    {
+	"testcase": "INDEX_ALL with an index that cannot be used",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "hints_not_followed": [
+                        "INDEX_ALL(p purch_customerId_metaid purch_purchaseId): INDEX_ALL hint cannot be followed"
+                    ]
+                }
+            ],
+            "statement": "SELECT RAW p.`optimizer_hints` FROM $explan AS p"
+        },
+        "statements":"SELECT /*+ INDEX_ALL(p purch_customerId_metaid purch_purchaseId) */ customerId, purchaseId FROM purchase p WHERE p.customerId LIKE 'customer36%' AND p.purchaseId LIKE 'purchase17%' AND ARRAY_LENGTH(lineItems) > 2",
+        "results": [
+            {
+                "customerId": "customer36",
+                "purchaseId": "purchase1756"
+            },
+            {
+                "customerId": "customer366",
+                "purchaseId": "purchase1757"
+            }
+        ]
+    },
+    {
+	"testcase": "INDEX_ALL hint with a single index, error",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "invalid_hints": [
+                        "INDEX_ALL(c cust_lastName_firstName_customerId): INDEX_ALL hint must have more than one index specified"
+                    ]
+                }
+            ],
+            "statement": "SELECT RAW p.`optimizer_hints` FROM $explan AS p"
+        },
+        "statements":"SELECT /*+ INDEX_ALL(c cust_lastName_firstName_customerId) */ lastName, firstName, customerId FROM customer c WHERE lastName LIKE 'Wi%' AND customerId LIKE 'customer1%' ORDER BY lastName",
+        "ordered": true,
+        "results": [
+            {
+                "lastName": "Wilkinson",
+                "firstName": "Emmanuel",
+                "customerId": "customer12"
+            },
+            {
+                "lastName": "Willms",
+                "firstName": "Elena",
+                "customerId": "customer177"
+            },
+            {
+                "lastName": "Wisoky",
+                "firstName": "Devyn",
+                "customerId": "customer17"
+            }
+        ]
+    },
+    {
+	"testcase": "INDEX_ALL with 3 indexes",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                     "hints_followed": [
+                         "INDEX_ALL(p purch_customerId_metaid purch_purchaseId purch_customerId_purchaseId)"
+                  ]
+                }
+            ],
+            "statement": "SELECT RAW p.`optimizer_hints` FROM $explan AS p"
+        },
+        "statements":"SELECT /*+ INDEX_ALL(p purch_customerId_metaid purch_purchaseId purch_customerId_purchaseId) */ customerId, purchaseId FROM purchase p WHERE p.customerId LIKE 'customer36%' AND p.purchaseId LIKE 'purchase17%' AND customerId || '_' || test_id LIKE 'customer36%'",
+        "results": [
+            {
+                "customerId": "customer367",
+                "purchaseId": "purchase1727"
+            },
+            {
+                "customerId": "customer366",
+                "purchaseId": "purchase1757"
+            },
+            {
+                "customerId": "customer36",
+                "purchaseId": "purchase1756"
+            }
+        ]
+    },
+    {
+	"testcase": "INDEX_ALL hint and query has OR clause on non-indexed field",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                     "hints_followed": [
+                         "INDEX_ALL(c cust_lastName_firstName_customerId cust_customerId_lastName_firstName)"
+                  ]
+                }
+            ],
+            "statement": "SELECT RAW p.`optimizer_hints` FROM $explan AS p"
+        },
+        "statements":"SELECT /*+ INDEX_ALL(c cust_lastName_firstName_customerId cust_customerId_lastName_firstName) */ lastName, firstName, customerId FROM customer c WHERE lastName LIKE 'Wi%' AND customerId LIKE 'customer1%' AND (state = 'MA' OR state = 'CT') ORDER BY lastName",
+        "ordered": true,
+        "results": [
+            {
+                "lastName": "Willms",
+                "firstName": "Elena",
+                "customerId": "customer177"
+            },
+            {
+                "lastName": "Wisoky",
+                "firstName": "Devyn",
+                "customerId": "customer17"
+            }
+        ]
+    },
+    {
+	"testcase": "INDEX_ALL hint and query has OR clause on indexed field",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                     "hints_followed": [
+                         "INDEX_ALL(c cust_lastName_firstName_customerId cust_customerId_lastName_firstName)"
+                  ]
+                }
+            ],
+            "statement": "SELECT RAW p.`optimizer_hints` FROM $explan AS p"
+        },
+        "statements":"SELECT /*+ INDEX_ALL(c cust_lastName_firstName_customerId cust_customerId_lastName_firstName) */ lastName, firstName, customerId FROM customer c WHERE lastName LIKE 'Wi%' AND (customerId = 'customer17' OR customerId = 'customer177') ORDER BY lastName",
+        "ordered": true,
+        "results": [
+            {
+                "lastName": "Willms",
+                "firstName": "Elena",
+                "customerId": "customer177"
+            },
+            {
+                "lastName": "Wisoky",
+                "firstName": "Devyn",
+                "customerId": "customer17"
+            }
+        ]
+    },
+    {
+	"testcase": "INDEX_ALL with invalid index name",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "hints_with_error": [
+                        "INDEX_ALL(p purch_customerId purch_purchaseId purch_customerId_purchaseId): Invalid indexes specified: purch_customerId"
+                    ]
+                }
+            ],
+            "statement": "SELECT RAW p.`optimizer_hints` FROM $explan AS p"
+        },
+        "statements":"SELECT /*+ INDEX_ALL(p purch_customerId purch_purchaseId purch_customerId_purchaseId) */ customerId, purchaseId FROM purchase p WHERE p.customerId LIKE 'customer36%' AND p.purchaseId LIKE 'purchase17%'",
+        "results": [
+            {
+                "customerId": "customer36",
+                "purchaseId": "purchase1756"
+            },
+            {
+                "customerId": "customer366",
+                "purchaseId": "purchase1757"
+            },
+            {
+                "customerId": "customer367",
+                "purchaseId": "purchase1727"
+            }
+        ]
+    },
+    {
+	"testcase": "Mix INDEX_ALL with another index hint, error",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "hints_with_error": [
+                        "INDEX_ALL(p purch_purchaseId purch_customerId_purchaseId): INDEX_ALL hint cannot be mixed with other index or FTS index hints for keyspace: p",
+                        "AVOID_INDEX(p purch_customerId_metaid): Index hint cannot be mixed with INDEX_ALL hint for keyspace: p"
+                    ]
+                }
+            ],
+            "statement": "SELECT RAW p.`optimizer_hints` FROM $explan AS p"
+        },
+        "statements":"SELECT /*+ INDEX_ALL(p purch_purchaseId purch_customerId_purchaseId) AVOID_INDEX(p purch_customerId_metaid) */ customerId, purchaseId FROM purchase p WHERE p.customerId LIKE 'customer36%' AND p.purchaseId LIKE 'purchase17%'",
+        "results": [
+            {
+                "customerId": "customer36",
+                "purchaseId": "purchase1756"
+            },
+            {
+                "customerId": "customer366",
+                "purchaseId": "purchase1757"
+            },
+            {
+                "customerId": "customer367",
+                "purchaseId": "purchase1727"
+            }
+        ]
+    },
+    {
+	"testcase": "Duplicate INDEX_ALL hint, error",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "hints_with_error": [
+                        "INDEX_ALL(p purch_purchaseId purch_customerId_purchaseId): Duplicated INDEX_ALL hint specified for keyspace: p",
+                        "INDEX_ALL(p purch_customerId_metaid purch_purchaseId): Duplicated INDEX_ALL hint specified for keyspace: p"
+                    ]
+                }
+            ],
+            "statement": "SELECT RAW p.`optimizer_hints` FROM $explan AS p"
+        },
+        "statements":"SELECT /*+ INDEX_ALL(p purch_purchaseId purch_customerId_purchaseId) INDEX_ALL(p purch_customerId_metaid purch_purchaseId) */ customerId, purchaseId FROM purchase p WHERE p.customerId LIKE 'customer36%' AND p.purchaseId LIKE 'purchase17%'",
+        "results": [
+            {
+                "customerId": "customer36",
+                "purchaseId": "purchase1756"
+            },
+            {
+                "customerId": "customer366",
+                "purchaseId": "purchase1757"
+            },
+            {
+                "customerId": "customer367",
+                "purchaseId": "purchase1727"
+            }
+        ]
+    },
+    {
+	"testcase": "INDEX_ALL hint in nested-loop join",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "hints_followed": [
+                        "INDEX_ALL(p purch_customerId_purchaseId purch_purchaseId)",
+                        "INDEX(c cust_lastName_firstName_customerId)",
+                        "USE_NL(p)"
+                    ]
+                }
+            ],
+            "statement": "SELECT RAW p.`optimizer_hints` FROM $explan AS p"
+        },
+        "statements":"SELECT /*+ INDEX_ALL(p purch_customerId_purchaseId purch_purchaseId) INDEX(c cust_lastName_firstName_customerId) USE_NL(p) */ c.firstName, c.lastName, c.customerId, p.purchaseId FROM customer c JOIN purchase p ON c.customerId = p.customerId AND p.purchaseId LIKE 'purchase1%' WHERE c.lastName = 'Champlin'",
+        "results": [
+            {
+                "firstName": "Bryon",
+                "lastName": "Champlin",
+                "customerId": "customer60",
+                "purchaseId": "purchase1747"
+            },
+            {
+                "firstName": "Bryon",
+                "lastName": "Champlin",
+                "customerId": "customer60",
+                "purchaseId": "purchase104"
+            },
+            {
+                "firstName": "Charles",
+                "lastName": "Champlin",
+                "customerId": "customer33",
+                "purchaseId": "purchase1582"
+            },
+            {
+                "firstName": "Charles",
+                "lastName": "Champlin",
+                "customerId": "customer33",
+                "purchaseId": "purchase1704"
+            }
+        ]
+    },
+    {
+	"testcase": "simple json-style INDEX_ALL hint, followed",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "hints_followed": [
+                        {
+                            "hint": "{\"index_all\":{\"indexes\":[\"cust_lastName_firstName_customerId\",\"cust_customerId_lastName_firstName\"],\"keyspace\":\"c\"}}"
+                        }
+                    ]
+                }
+            ],
+            "statement": "SELECT RAW p.`optimizer_hints` FROM $explan AS p"
+        },
+        "statements":"SELECT /*+ {\"index_all\": {\"alias\": \"c\", \"indexes\": [\"cust_lastName_firstName_customerId\", \"cust_customerId_lastName_firstName\"]}} */ lastName, firstName, customerId FROM customer c WHERE lastName LIKE 'Wi%' AND customerId LIKE 'customer1%' ORDER BY lastName",
+        "ordered": true,
+        "results": [
+            {
+                "lastName": "Wilkinson",
+                "firstName": "Emmanuel",
+                "customerId": "customer12"
+            },
+            {
+                "lastName": "Willms",
+                "firstName": "Elena",
+                "customerId": "customer177"
+            },
+            {
+                "lastName": "Wisoky",
+                "firstName": "Devyn",
+                "customerId": "customer17"
+            }
+        ]
+    }
+]
+

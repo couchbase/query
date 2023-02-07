@@ -610,6 +610,11 @@ func (this *builder) VisitJoin(node *algebra.Join) (interface{}, error) {
 		return nil, err
 	}
 
+	err = this.markJoinIndexAllHint(right.Alias())
+	if err != nil {
+		return nil, err
+	}
+
 	cost := OPT_COST_NOT_AVAIL
 	cardinality := OPT_CARD_NOT_AVAIL
 	size := OPT_SIZE_NOT_AVAIL
@@ -653,6 +658,11 @@ func (this *builder) VisitIndexJoin(node *algebra.IndexJoin) (interface{}, error
 	right.SetDefaultNamespace(this.namespace)
 
 	keyspace, err := this.getTermKeyspace(right)
+	if err != nil {
+		return nil, err
+	}
+
+	err = this.markJoinIndexAllHint(right.Alias())
 	if err != nil {
 		return nil, err
 	}

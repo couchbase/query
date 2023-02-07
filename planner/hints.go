@@ -102,8 +102,8 @@ func (this *builder) processOptimHints(optimHints *algebra.OptimHints) {
 
 	numJoinFilterHint := 0
 
-	// For INDEX/INDEX_FTS/NO_INDEX/NO_INDEX_FTS/USE_NL/USE_HASH/NO_USE_NL/NO_USE_HASH hints,
-	// check for duplicated hint specification and add hints to baseKeyspace.
+	// For INDEX/INDEX_FTS/NO_INDEX/NO_INDEX_FTS/INDEX_ALL/USE_NL/USE_HASH/NO_USE_NL/NO_USE_HASH
+	// hints, check for duplicated hint specification and add hints to baseKeyspace.
 	// Note we don't allow mixing of USE style hints (specified after a keyspace in query text)
 	// with same type of hint specified up front
 	for _, hint := range optimHints.Hints() {
@@ -113,7 +113,7 @@ func (this *builder) processOptimHints(optimHints *algebra.OptimHints) {
 
 		var keyspace string
 		var joinHint algebra.JoinHint
-		var indexHint, joinFilterHint, negative bool
+		var indexHint, indexAll, joinFilterHint, negative bool
 
 		switch hint := hint.(type) {
 		case *algebra.HintIndex:
@@ -130,6 +130,9 @@ func (this *builder) processOptimHints(optimHints *algebra.OptimHints) {
 			keyspace = hint.Keyspace()
 			negative = true
 			indexHint = true
+		case *algebra.HintIndexAll:
+			keyspace = hint.Keyspace()
+			indexAll = true
 		case *algebra.HintNL:
 			keyspace = hint.Keyspace()
 			joinHint = algebra.USE_NL
@@ -202,9 +205,17 @@ func (this *builder) processOptimHints(optimHints *algebra.OptimHints) {
 			}
 			baseKeyspace.AddJoinHint(hint)
 		} else if indexHint {
-			if hasDerivedHint(baseKeyspace.IndexHints()) {
+			indexHints := baseKeyspace.IndexHints()
+			if hasIndexAllHint(indexHints) {
+				setMixedIndexAllHintError(hint, keyspace)
+				for _, curHint := range indexHints {
+					if curHint.Type() == algebra.HINT_INDEX_ALL {
+						setMixedIndexAllHintError(curHint, keyspace)
+					}
+				}
+			} else if hasDerivedHint(indexHints) {
 				setDuplicateIndexHintError(hint, keyspace)
-				for _, curHint := range baseKeyspace.IndexHints() {
+				for _, curHint := range indexHints {
 					if !curHint.Derived() {
 						continue
 					}
@@ -228,6 +239,25 @@ func (this *builder) processOptimHints(optimHints *algebra.OptimHints) {
 					if len(hint.Indexes()) == 0 {
 						hint.SetNotFollowed()
 					}
+				}
+			}
+			baseKeyspace.AddIndexHint(hint)
+		} else if indexAll {
+			indexHints := baseKeyspace.IndexHints()
+			if len(indexHints) > 0 {
+				for _, curHint := range indexHints {
+					if curHint.Type() == algebra.HINT_INDEX_ALL {
+						setDuplicateIndexAllHintError(curHint, keyspace)
+						setDuplicateIndexAllHintError(hint, keyspace)
+					} else {
+						setMixedIndexAllHintError(curHint, keyspace)
+						setMixedIndexAllHintError(hint, keyspace)
+					}
+				}
+			} else {
+				ksterm := algebra.GetKeyspaceTerm(node)
+				if ksterm == nil {
+					setNonKeyspaceIndexHintError(hint, keyspace)
 				}
 			}
 			baseKeyspace.AddIndexHint(hint)
@@ -279,7 +309,7 @@ func (this *builder) processOptimHints(optimHints *algebra.OptimHints) {
 		var hasGsi, hasFts bool
 		for _, hint := range indexHints {
 			switch hint.(type) {
-			case *algebra.HintIndex, *algebra.HintNoIndex:
+			case *algebra.HintIndex, *algebra.HintNoIndex, *algebra.HintIndexAll:
 				hasGsi = true
 			case *algebra.HintFTSIndex, *algebra.HintNoFTSIndex:
 				hasFts = true
@@ -317,7 +347,7 @@ func (this *builder) processOptimHints(optimHints *algebra.OptimHints) {
 					if msg == "" {
 						// indexer error
 						switch hint.(type) {
-						case *algebra.HintIndex, *algebra.HintNoIndex:
+						case *algebra.HintIndex, *algebra.HintNoIndex, *algebra.HintIndexAll:
 							msg = algebra.GSI_INDEXER_NOT_AVAIL
 						case *algebra.HintFTSIndex, *algebra.HintNoFTSIndex:
 							msg = algebra.FTS_INDEXER_NOT_AVAIL
@@ -340,6 +370,8 @@ func (this *builder) processOptimHints(optimHints *algebra.OptimHints) {
 					ftsIndexNames = hint.Indexes()
 				case *algebra.HintNoFTSIndex:
 					ftsIndexNames = hint.Indexes()
+				case *algebra.HintIndexAll:
+					gsiIndexNames = hint.Indexes()
 				}
 
 				var errIndexes string
@@ -482,13 +514,82 @@ func setDuplicateIndexHintError(hint algebra.OptimHint, keyspace string) {
 	}
 }
 
+func hasIndexAllHint(hints []algebra.OptimHint) bool {
+	for _, hint := range hints {
+		if hint.Type() == algebra.HINT_INDEX_ALL {
+			return true
+		}
+	}
+	return false
+}
+
+func setDuplicateIndexAllHintError(hint algebra.OptimHint, keyspace string) {
+	hint.SetError(algebra.DUPLICATED_INDEX_ALL_HINT + keyspace)
+}
+
+func setMixedIndexAllHintError(hint algebra.OptimHint, keyspace string) {
+	switch hint := hint.(type) {
+	case *algebra.HintIndex, *algebra.HintNoIndex:
+		hint.SetError(algebra.MIXED_INDEX_WITH_INDEX_ALL + keyspace)
+	case *algebra.HintFTSIndex, *algebra.HintNoFTSIndex:
+		hint.SetError(algebra.MIXED_INDEX_FTS_WITH_INDEX_ALL + keyspace)
+	case *algebra.HintIndexAll:
+		hint.SetError(algebra.MIXED_INDEX_ALL_WITH_INDEX + keyspace)
+	}
+}
+
 func setNonKeyspaceIndexHintError(hint algebra.OptimHint, keyspace string) {
 	switch hint := hint.(type) {
 	case *algebra.HintIndex, *algebra.HintNoIndex:
 		hint.SetError(algebra.NON_KEYSPACE_INDEX_HINT + keyspace)
 	case *algebra.HintFTSIndex, *algebra.HintNoFTSIndex:
 		hint.SetError(algebra.NON_KEYSPACE_INDEX_FTS_HINT + keyspace)
+	case *algebra.HintIndexAll:
+		hint.SetError(algebra.NON_KEYSPACE_INDEX_ALL_HINT + keyspace)
 	}
+}
+
+// if an INDEX_ALL hint is specified, make sure all listed indexes are in sargables
+func checkIndexAllSargable(baseKeyspace *base.BaseKeyspace, sargables map[datastore.Index]*indexEntry) bool {
+	var indexNames []string
+	for _, hint := range baseKeyspace.IndexHints() {
+		if indexAll, ok := hint.(*algebra.HintIndexAll); ok && hint.State() == algebra.HINT_STATE_UNKNOWN {
+			indexNames = indexAll.Indexes()
+			break
+		}
+	}
+
+	if len(indexNames) == 0 {
+		return false
+	}
+
+	indexes := make(map[string]datastore.Index, len(sargables))
+	for index, _ := range sargables {
+		indexes[index.Name()] = index
+	}
+
+	// match indexNames (in hint) with sargable indexes
+	for _, idxName := range indexNames {
+		if _, ok := indexes[idxName]; !ok {
+			return false
+		}
+	}
+
+	return true
+}
+
+// for lookup join and index join
+func (this *builder) markJoinIndexAllHint(alias string) error {
+	baseKeyspace, ok := this.baseKeyspaces[alias]
+	if !ok {
+		return errors.NewPlanInternalError(fmt.Sprintf("markJoinIndexAllHint: baseKeyspace for %s not found", alias))
+	}
+	for _, hint := range baseKeyspace.IndexHints() {
+		if hint.Type() == algebra.HINT_INDEX_ALL {
+			hint.SetError(algebra.INDEX_ALL_LEGACY_JOIN + alias)
+		}
+	}
+	return nil
 }
 
 // Based on hint error flags in BaseKeyspace, mark the original hint (as FOLLOWED or NOT_FOLLOWED).

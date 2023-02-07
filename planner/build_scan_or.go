@@ -41,6 +41,11 @@ func (this *builder) buildOrScan(node *algebra.KeyspaceTerm, baseKeyspace *base.
 		this.restoreIndexPushDowns(indexPushDowns, true)
 	}
 
+	if this.hintIndexes && baseKeyspace.HasIndexAllHint() {
+		// do not consider UNION scans if INDEX_ALL hint is in effect
+		return nil, 0, nil
+	}
+
 	if useCBO {
 		if scan != nil {
 			cost = scan.Cost()

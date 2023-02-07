@@ -33,6 +33,7 @@ const (
 	HINT_NO_NL
 	HINT_JOIN_FILTER
 	HINT_NO_JOIN_FILTER
+	HINT_INDEX_ALL
 )
 
 type HintState int32
@@ -61,8 +62,10 @@ const (
 	DUPLICATED_JOIN_FLTR_HINT      = "Duplicated join filter hint specified for keyspace: "
 	DUPLICATED_INDEX_HINT          = "Duplicated index hint specified for keyspace: "
 	DUPLICATED_INDEX_FTS_HINT      = "Duplicated FTS index hint specified for keyspace: "
+	DUPLICATED_INDEX_ALL_HINT      = "Duplicated INDEX_ALL hint specified for keyspace: "
 	NON_KEYSPACE_INDEX_HINT        = "Index hint specified on non-keyspace: "
 	NON_KEYSPACE_INDEX_FTS_HINT    = "FTS index hint specified on non-keyspace: "
+	NON_KEYSPACE_INDEX_ALL_HINT    = "INDEX_ALL hint specified on non-keyspace: "
 	HASH_JOIN_NOT_AVAILABLE        = "Hash Join/Nest is not supported"
 	HASH_JOIN_BUILD_JOIN_FILTER    = "USE_HASH with BUILD option conflicts with JOIN_FILTER"
 	NL_JOIN_JOIN_FILTER            = "USE_NL conflicts with JOIN_FILTER"
@@ -73,6 +76,7 @@ const (
 	INVALID_FTS_INDEX              = "Invalid FTS indexes specified: "
 	INDEX_HINT_NOT_FOLLOWED        = "INDEX hint cannot be followed"
 	INDEX_FTS_HINT_NOT_FOLLOWED    = "INDEX_FTS hint cannot be followed"
+	INDEX_ALL_HINT_NOT_FOLLOWED    = "INDEX_ALL hint cannot be followed"
 	USE_NL_HINT_NOT_FOLLOWED       = "USE_NL hint cannot be followed"
 	USE_HASH_HINT_NOT_FOLLOWED     = "USE_HASH hint cannot be followed"
 	ORDERED_HINT_NOT_FOLLOWED      = "ORDERED hint cannot be followed"
@@ -91,6 +95,11 @@ const (
 	MERGE_ONKEY_INDEX_HINT_ERR     = "Index hint not supported for target keyspace in a MERGE statement with ON KEY clause"
 	UPD_DEL_JOIN_HINT_ERR          = "Join hint not supported in an UPDATE or DELETE statement"
 	DML_ORDERED_HINT_ERR           = "Ordered hint not supported in DML statements"
+	MIXED_INDEX_ALL_WITH_INDEX     = "INDEX_ALL hint cannot be mixed with other index or FTS index hints for keyspace: "
+	MIXED_INDEX_WITH_INDEX_ALL     = "Index hint cannot be mixed with INDEX_ALL hint for keyspace: "
+	MIXED_INDEX_FTS_WITH_INDEX_ALL = "FTS index hint cannot be mixed with INDEX_ALL hint for keyspace: "
+	INDEX_ALL_SINGLE_INDEX         = "INDEX_ALL hint must have more than one index specified"
+	INDEX_ALL_LEGACY_JOIN          = "INDEX_ALL hint is not supported for keyspace under lookup join or index join: "
 )
 
 type OptimHint interface {
@@ -194,6 +203,9 @@ func addJSONHint(r map[string]interface{}, hint OptimHint) {
 			name = "avoid_index_fts"
 		}
 		obj = hint.formatJSON()
+	case *HintIndexAll:
+		name = "index_all"
+		obj = hint.formatJSON()
 	case *HintNL:
 		name = "use_nl"
 		obj = hint.formatJSON()
@@ -257,10 +269,11 @@ func NewOptimHint(hint_name string, hint_args []string) []OptimHint {
 	var err string
 	lowerName := strings.ToLower(hint_name)
 	switch lowerName {
-	case "index", "index_fts", "no_index", "no_index_fts", "avoid_index", "avoid_index_fts":
+	case "index", "index_fts", "no_index", "no_index_fts", "avoid_index", "avoid_index_fts", "index_all", "index_combine":
 		fts := (lowerName == "index_fts") || (lowerName == "no_index_fts") || (lowerName == "avoid_index_fts")
 		avoid := (lowerName == "avoid_index") || (lowerName == "avoid_index_fts")
 		negative := (lowerName == "no_index") || (lowerName == "no_index_fts") || avoid
+		indexAll := (lowerName == "index_all") || (lowerName == "index_combine")
 		if len(hint_args) == 0 {
 			invalid = true
 			err = MISSING_ARG + hint_name
@@ -276,8 +289,14 @@ func NewOptimHint(hint_name string, hint_args []string) []OptimHint {
 			}
 			indexes = append(indexes, hint_args[i])
 		}
+		if indexAll && len(indexes) < 2 {
+			invalid = true
+			err = INDEX_ALL_SINGLE_INDEX
+		}
 		if !invalid {
-			if fts {
+			if indexAll {
+				hints = []OptimHint{NewIndexAllHint(hint_args[0], indexes)}
+			} else if fts {
 				if negative {
 					hints = []OptimHint{NewNoFTSIndexHint(hint_args[0], indexes, avoid)}
 				} else {
@@ -899,6 +918,106 @@ func (this *HintNoFTSIndex) formatJSON() map[string]interface{} {
 	if len(idxs) > 0 {
 		indexes := make([]interface{}, 0, len(idxs))
 		for _, idx := range idxs {
+			indexes = append(indexes, idx)
+		}
+		r["indexes"] = indexes
+	}
+	return r
+}
+
+type HintIndexAll struct {
+	keyspace string
+	indexes  []string
+	state    HintState
+	err      string
+}
+
+func NewIndexAllHint(keyspace string, indexes []string) *HintIndexAll {
+	return &HintIndexAll{
+		keyspace: keyspace,
+		indexes:  indexes,
+	}
+}
+
+func (this *HintIndexAll) Type() HintType {
+	return HINT_INDEX_ALL
+}
+
+func (this *HintIndexAll) Copy() OptimHint {
+	rv := &HintIndexAll{
+		keyspace: this.keyspace,
+		state:    this.state,
+		err:      this.err,
+	}
+	if len(this.indexes) > 0 {
+		rv.indexes = make([]string, 0, len(this.indexes))
+		rv.indexes = append(rv.indexes, this.indexes...)
+	}
+	return rv
+}
+
+func (this *HintIndexAll) Keyspace() string {
+	return this.keyspace
+}
+
+func (this *HintIndexAll) Indexes() []string {
+	return this.indexes
+}
+
+func (this *HintIndexAll) Derived() bool {
+	return false
+}
+
+func (this *HintIndexAll) State() HintState {
+	return this.state
+}
+
+func (this *HintIndexAll) SetFollowed() {
+	if this.state == HINT_STATE_UNKNOWN {
+		this.state = HINT_STATE_FOLLOWED
+	}
+}
+
+func (this *HintIndexAll) SetNotFollowed() {
+	if this.state == HINT_STATE_UNKNOWN {
+		this.state = HINT_STATE_NOT_FOLLOWED
+		this.err = INDEX_ALL_HINT_NOT_FOLLOWED
+	}
+}
+
+func (this *HintIndexAll) Error() string {
+	return this.err
+}
+
+func (this *HintIndexAll) SetError(err string) {
+	this.err = err
+	this.state = HINT_STATE_ERROR
+}
+
+func (this *HintIndexAll) sortString() string {
+	return fmt.Sprintf("%d%d%t%s%d%s", this.Type(), this.state, false, this.keyspace, len(this.indexes), this.err)
+}
+
+func (this *HintIndexAll) FormatHint(jsonStyle bool) string {
+	if jsonStyle {
+		hint := map[string]interface{}{
+			"index_all": this.formatJSON(),
+		}
+		bytes, _ := json.Marshal(hint)
+		return string(bytes)
+	}
+	args := make([]string, 0, len(this.indexes)+1)
+	args = append(args, this.keyspace)
+	args = append(args, this.indexes...)
+	return formatHint("INDEX_ALL", args)
+}
+
+func (this *HintIndexAll) formatJSON() map[string]interface{} {
+	r := make(map[string]interface{}, 2)
+	r["keyspace"] = this.keyspace
+	if len(this.indexes) > 0 {
+		indexes := make([]interface{}, 0, len(this.indexes))
+		for _, idx := range this.indexes {
 			indexes = append(indexes, idx)
 		}
 		r["indexes"] = indexes
@@ -1691,6 +1810,8 @@ func ParseObjectHints(object expression.Expression) []OptimHint {
 			hints, invalid, err = newNoFTSIndexHints(vval, false)
 		case "avoid_index_fts":
 			hints, invalid, err = newNoFTSIndexHints(vval, true)
+		case "index_all", "index_combine":
+			hints, invalid, err = newIndexAllHints(vval)
 		case "use_nl":
 			hints, invalid, err = newNLHints(vval)
 		case "use_hash":
@@ -1860,6 +1981,31 @@ func procFTSIndexHints(fields map[string]interface{}, negative, avoid bool) (Opt
 		return NewNoFTSIndexHint(keyspace, indexes, avoid), false, ""
 	}
 	return NewFTSIndexHint(keyspace, indexes), false, ""
+}
+
+func newIndexAllHints(val value.Value) ([]OptimHint, bool, string) {
+	return newHints(val, procIndexAllHints, false, false)
+}
+
+func procIndexAllHints(fields map[string]interface{}, negative, avoid bool) (OptimHint, bool, string) {
+	hint_name := "index_all"
+
+	var invalid bool
+	keyspace, indexes, err := getIndexHintInfo(hint_name, fields)
+	if err != "" {
+		invalid = true
+	} else if keyspace == "" {
+		err = MISSING_ARG + hint_name
+		invalid = true
+	} else if len(indexes) < 2 {
+		err = INDEX_ALL_SINGLE_INDEX
+		invalid = true
+	}
+	if invalid {
+		return nil, true, err
+	}
+
+	return NewIndexAllHint(keyspace, indexes), false, ""
 }
 
 func newNLHints(val value.Value) ([]OptimHint, bool, string) {

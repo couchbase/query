@@ -533,6 +533,22 @@ func (this *BaseKeyspace) HasNoJoinFilterHint() bool {
 	return false
 }
 
+func (this *BaseKeyspace) HasIndexAllHint() bool {
+	for _, hint := range this.indexHints {
+		switch hint.State() {
+		case algebra.HINT_STATE_ERROR, algebra.HINT_STATE_INVALID:
+			// ignore
+		default:
+			// there should be only a single index_all hint
+			switch hint.(type) {
+			case *algebra.HintIndexAll:
+				return true
+			}
+		}
+	}
+	return false
+}
+
 func (this *BaseKeyspace) MarkIndexHintError(err string) {
 	for _, hint := range this.indexHints {
 		if hint.State() == algebra.HINT_STATE_UNKNOWN {

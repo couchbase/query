@@ -22,11 +22,12 @@ import (
 type OrderedIntersectScan struct {
 	readonly
 	optEstimate
-	scans []SecondaryScan
-	limit expression.Expression
+	scans   []SecondaryScan
+	limit   expression.Expression
+	allScan bool
 }
 
-func NewOrderedIntersectScan(limit expression.Expression, cost, cardinality float64,
+func NewOrderedIntersectScan(limit expression.Expression, allScan bool, cost, cardinality float64,
 	size int64, frCost float64, scans ...SecondaryScan) *OrderedIntersectScan {
 	cbo := (cost > 0.0) && (cardinality > 0.0)
 	for _, scan := range scans {
@@ -46,10 +47,10 @@ func NewOrderedIntersectScan(limit expression.Expression, cost, cardinality floa
 	n := len(scans)
 	if n > 64 {
 		return NewOrderedIntersectScan(
-			limit, cost, cardinality, size, frCost,
+			limit, allScan, cost, cardinality, size, frCost,
 			scans[0],
-			NewIntersectScan(nil, cost/2.0, cardinality, size, frCost, scans[1:n/2]...),
-			NewIntersectScan(nil, cost/2.0, cardinality, size, frCost, scans[n/2:]...),
+			NewIntersectScan(nil, allScan, cost/2.0, cardinality, size, frCost, scans[1:n/2]...),
+			NewIntersectScan(nil, allScan, cost/2.0, cardinality, size, frCost, scans[n/2:]...),
 		)
 	}
 
@@ -67,8 +68,9 @@ func NewOrderedIntersectScan(limit expression.Expression, cost, cardinality floa
 	}
 
 	rv := &OrderedIntersectScan{
-		scans: scans,
-		limit: limit,
+		scans:   scans,
+		limit:   limit,
+		allScan: allScan,
 	}
 	setOptEstimate(&rv.optEstimate, cost, cardinality, size, frCost)
 	return rv
@@ -85,7 +87,7 @@ func (this *OrderedIntersectScan) New() Operator {
 // AllScan means no early termination
 func (this *OrderedIntersectScan) AllScan() bool {
 	// if ordered intersect scan is chosen by cost, then do not do early termination
-	return this.cost > 0.0 && this.cardinality > 0.0 && this.size > 0 && this.frCost > 0.0
+	return this.allScan || (this.cost > 0.0 && this.cardinality > 0.0 && this.size > 0 && this.frCost > 0.0)
 }
 
 func (this *OrderedIntersectScan) Covers() expression.Covers {
@@ -166,6 +168,10 @@ func (this *OrderedIntersectScan) MarshalBase(f func(map[string]interface{})) ma
 		r["limit"] = expression.NewStringer().Visit(this.limit)
 	}
 
+	if this.allScan {
+		r["all_scan"] = this.allScan
+	}
+
 	if optEstimate := marshalOptEstimate(&this.optEstimate); optEstimate != nil {
 		r["optimizer_estimates"] = optEstimate
 	}
@@ -183,6 +189,7 @@ func (this *OrderedIntersectScan) UnmarshalJSON(body []byte) error {
 		_           string                 `json:"#operator"`
 		Scans       []json.RawMessage      `json:"scans"`
 		Limit       string                 `json:"limit"`
+		AllScan     bool                   `json:"all_scan"`
 		OptEstimate map[string]interface{} `json:"optimizer_estimates"`
 	}
 
@@ -217,6 +224,8 @@ func (this *OrderedIntersectScan) UnmarshalJSON(body []byte) error {
 			return err
 		}
 	}
+
+	this.allScan = _unmarshalled.AllScan
 
 	unmarshalOptEstimate(&this.optEstimate, _unmarshalled.OptEstimate)
 

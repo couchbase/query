@@ -194,6 +194,10 @@ func (this *builder) buildPredicateScan(keyspace datastore.Keyspace, node *algeb
 		}
 		// no scan built with optimizer hints - mark index hint error
 		baseKeyspace.SetIndexHintError()
+		if baseKeyspace.HasIndexAllHint() {
+			// if INDEX_ALL hint is specified and not followed, consider all indexes
+			hints = nil
+		}
 	}
 
 	// collect SEARCH() functions that depends on current keyspace in the predicate
@@ -353,6 +357,16 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm,
 		return nil, 0, err
 	}
 
+	indexAll := this.hintIndexes && baseKeyspace.HasIndexAllHint()
+	if indexAll {
+		if this.hasBuilderFlag(BUILDER_CHK_INDEX_ORDER | BUILDER_DO_JOIN_FILTER | BUILDER_JOIN_ON_PRIMARY) {
+			return nil, 0, nil
+		} else if !checkIndexAllSargable(baseKeyspace, sargables) {
+			// INDEX_ALL hint specified, but not all specified indexes are sargable,
+			return nil, 0, nil
+		}
+	}
+
 	err = this.sargIndexes(baseKeyspace, node.IsUnderHash(), sargables)
 	if err != nil {
 		return nil, 0, err
@@ -372,7 +386,10 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm,
 	}
 
 	// purge any subset indexe and keep superset indexes
-	minimals := this.minimalIndexes(sargables, false, pred, node)
+	minimals := sargables
+	if !indexAll {
+		minimals = this.minimalIndexes(sargables, false, pred, node)
+	}
 	flex = this.minimalFTSFlexIndexes(flex, false)
 
 	// pred has SEARCH() function get sargable FTS indexes
@@ -483,7 +500,7 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm,
 				secondary = scans[1]
 			} else {
 				cost, cardinality, size, frCost := this.intersectScanCost(node, scans[1:]...)
-				secondary = plan.NewIntersectScan(limit, cost, cardinality, size, frCost, scans[1:]...)
+				secondary = plan.NewIntersectScan(limit, indexAll, cost, cardinality, size, frCost, scans[1:]...)
 			}
 		} else {
 			if ordered, ok := scans[0].(*plan.OrderedIntersectScan); ok {
@@ -491,7 +508,7 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm,
 			}
 
 			cost, cardinality, size, frCost := this.intersectScanCost(node, scans...)
-			secondary = plan.NewOrderedIntersectScan(nil, cost, cardinality, size, frCost, scans...)
+			secondary = plan.NewOrderedIntersectScan(nil, indexAll, cost, cardinality, size, frCost, scans...)
 		}
 	}
 
@@ -689,14 +706,14 @@ func allHints(keyspace datastore.Keyspace, hints []algebra.OptimHint, virtualInd
 			hasNoIndex := false
 			inIndex := false
 			inNoIndex := false
+			inIndexAll := false
 			for _, hint := range hints {
 				if hint.State() != algebra.HINT_STATE_UNKNOWN {
 					continue
 				}
 
 				var hintIndexes []string
-				var fts bool
-				var negative bool
+				var fts, negative, indexAll bool
 				switch hint := hint.(type) {
 				case *algebra.HintIndex:
 					hintIndexes = hint.Indexes()
@@ -714,6 +731,9 @@ func allHints(keyspace datastore.Keyspace, hints []algebra.OptimHint, virtualInd
 					hasNoIndex = true
 					fts = true
 					negative = true
+				case *algebra.HintIndexAll:
+					hintIndexes = hint.Indexes()
+					indexAll = true
 				}
 
 				if (indexerFts && fts) || (!indexerFts && !fts) {
@@ -726,7 +746,9 @@ func allHints(keyspace datastore.Keyspace, hints []algebra.OptimHint, virtualInd
 					} else {
 						for _, name := range hintIndexes {
 							if name == idx.Name() {
-								if negative {
+								if indexAll {
+									inIndexAll = true
+								} else if negative {
 									inNoIndex = true
 								} else {
 									inIndex = true
@@ -738,14 +760,22 @@ func allHints(keyspace datastore.Keyspace, hints []algebra.OptimHint, virtualInd
 			}
 
 			use := false
-			if inIndex && inNoIndex {
-				// We should have removed any index from NO_INDEX/NO_INDEX_FTS
-				// hint that is also present in INDEX/INDEX_FTS hint.
-				return nil, errors.NewPlanInternalError(fmt.Sprintf("allHints: unexpected index %s in both INDEX/INDEX_FTS and NO_INDEX/NO_INDEX_FTS hints", idx.Name()))
-			} else if inIndex {
+			if inIndexAll {
+				if inIndex || inNoIndex {
+					// We should have checked for mixed index hints
+					return nil, errors.NewPlanInternalError("allHints: mixed INDEX_ALL hints and other index hints")
+				}
 				use = true
-			} else if !hasIndex && hasNoIndex && !inNoIndex {
-				use = true
+			} else {
+				if inIndex && inNoIndex {
+					// We should have removed any index from NO_INDEX/NO_INDEX_FTS
+					// hint that is also present in INDEX/INDEX_FTS hint.
+					return nil, errors.NewPlanInternalError(fmt.Sprintf("allHints: unexpected index %s in both INDEX/INDEX_FTS and NO_INDEX/NO_INDEX_FTS hints", idx.Name()))
+				} else if inIndex {
+					use = true
+				} else if !hasIndex && hasNoIndex && !inNoIndex {
+					use = true
+				}
 			}
 
 			if use {

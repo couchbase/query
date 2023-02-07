@@ -32,7 +32,9 @@ func (this *builder) buildSecondaryScan(indexes, arrayIndexes, flex map[datastor
 		pred, arrayIndexes)
 	defer releaseUnnestPools(unnests, primaryUnnests)
 
-	if !this.hasBuilderFlag(BUILDER_DO_JOIN_FILTER) {
+	indexAll := this.hintIndexes && baseKeyspace.HasIndexAllHint()
+
+	if !this.hasBuilderFlag(BUILDER_DO_JOIN_FILTER) && !indexAll {
 		scan, sargLength, err = this.buildCovering(indexes, unnestIndexes, flex, node,
 			baseKeyspace, subset, id, searchSargables, unnests)
 		if scan != nil || err != nil {
@@ -80,14 +82,23 @@ func (this *builder) buildSecondaryScan(indexes, arrayIndexes, flex map[datastor
 	}
 
 	return this.buildCreateSecondaryScan(indexes, flex, node, baseKeyspace,
-		pred, id, searchSargables, hasDeltaKeyspace)
+		pred, id, searchSargables, indexAll, hasDeltaKeyspace)
 }
 
 func (this *builder) buildCreateSecondaryScan(indexes, flex map[datastore.Index]*indexEntry,
 	node *algebra.KeyspaceTerm, baseKeyspace *base.BaseKeyspace, pred, id expression.Expression,
-	searchSargables []*indexEntry, hasDeltaKeyspace bool) (scan plan.SecondaryScan, sargLength int, err error) {
+	searchSargables []*indexEntry, indexAll, hasDeltaKeyspace bool) (
+	scan plan.SecondaryScan, sargLength int, err error) {
 
-	indexes = this.minimalIndexes(indexes, true, pred, node)
+	if indexAll {
+		indexes = getIndexAllIndexes(indexes, baseKeyspace)
+		if len(indexes) < 2 {
+			return nil, 0, errors.NewPlanInternalError(fmt.Sprintf("buildCreateSecondaryScan: unexpected number of indexes (%d) for keyspace %s with INDEX_ALL hint", len(indexes), node.Alias()))
+		}
+	} else {
+		indexes = this.minimalIndexes(indexes, true, pred, node)
+	}
+
 	if !this.hasBuilderFlag(BUILDER_DO_JOIN_FILTER) {
 		// Already done. need only for one index
 		// flex = this.minimalFTSFlexIndexes(flex, true)
@@ -272,10 +283,10 @@ func (this *builder) buildCreateSecondaryScan(indexes, flex map[datastore.Index]
 		return scans[1], sargLength, nil
 	} else if scans[0] == nil {
 		cost, cardinality, size, frCost := this.intersectScanCost(node, scans[1:]...)
-		return plan.NewIntersectScan(limit, cost, cardinality, size, frCost, scans[1:]...), sargLength, nil
+		return plan.NewIntersectScan(limit, indexAll, cost, cardinality, size, frCost, scans[1:]...), sargLength, nil
 	} else {
 		cost, cardinality, size, frCost := this.intersectScanCost(node, scans...)
-		scan = plan.NewOrderedIntersectScan(nil, cost, cardinality, size, frCost, scans...)
+		scan = plan.NewOrderedIntersectScan(nil, indexAll, cost, cardinality, size, frCost, scans...)
 		this.orderScan = scan
 		return scan, sargLength, nil
 	}
@@ -1449,4 +1460,28 @@ func (this *builder) buildIndexFilters(entry *indexEntry, baseKeyspace *base.Bas
 	}
 
 	return
+}
+
+func getIndexAllIndexes(indexes map[datastore.Index]*indexEntry, baseKeyspace *base.BaseKeyspace) map[datastore.Index]*indexEntry {
+	var indexNames []string
+	for _, hint := range baseKeyspace.IndexHints() {
+		if idxAll, ok := hint.(*algebra.HintIndexAll); ok {
+			indexNames = idxAll.Indexes()
+		}
+	}
+
+	for index, _ := range indexes {
+		found := false
+		for _, indexName := range indexNames {
+			if index.Name() == indexName {
+				found = true
+				break
+			}
+		}
+		if !found {
+			delete(indexes, index)
+		}
+	}
+
+	return indexes
 }
