@@ -89,7 +89,7 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 	stmt.SetOptimHints(deriveOptimHints(this.baseKeyspaces, stmt.OptimHints()))
 	optimHints := stmt.OptimHints()
 	if optimHints != nil {
-		processOptimHints(this.baseKeyspaces, optimHints)
+		this.processOptimHints(optimHints)
 		markDMLOrderedHintError(optimHints)
 	}
 

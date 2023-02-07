@@ -9,6 +9,8 @@
 package planner
 
 import (
+	"fmt"
+
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
@@ -92,7 +94,7 @@ func deriveOptimHints(baseKeyspaces map[string]*base.BaseKeyspace, optimHints *a
 	return optimHints
 }
 
-func processOptimHints(baseKeyspaces map[string]*base.BaseKeyspace, optimHints *algebra.OptimHints) {
+func (this *builder) processOptimHints(optimHints *algebra.OptimHints) {
 	if optimHints == nil {
 		return
 	}
@@ -162,7 +164,7 @@ func processOptimHints(baseKeyspaces map[string]*base.BaseKeyspace, optimHints *
 			continue
 		}
 
-		baseKeyspace, ok := baseKeyspaces[keyspace]
+		baseKeyspace, ok := this.baseKeyspaces[keyspace]
 		if !ok {
 			// invalid keyspace specified
 			hint.SetError(algebra.INVALID_KEYSPACE + keyspace)
@@ -254,10 +256,117 @@ func processOptimHints(baseKeyspaces map[string]*base.BaseKeyspace, optimHints *
 		}
 	}
 
-	if numJoinFilterHint == len(baseKeyspaces) {
-		for _, baseKeyspace := range baseKeyspaces {
+	if numJoinFilterHint == len(this.baseKeyspaces) {
+		for _, baseKeyspace := range this.baseKeyspaces {
 			for _, hint := range baseKeyspace.JoinFltrHints() {
 				hint.SetError(algebra.ALL_TERM_JOIN_FILTER)
+			}
+		}
+	}
+
+	for _, baseKeyspace := range this.baseKeyspaces {
+		ksterm := algebra.GetKeyspaceTerm(baseKeyspace.Node())
+		if ksterm == nil {
+			continue
+		}
+
+		indexHints := baseKeyspace.IndexHints()
+		if len(indexHints) == 0 {
+			continue
+		}
+
+		var hasGsi, hasFts bool
+		for _, hint := range indexHints {
+			switch hint.(type) {
+			case *algebra.HintIndex, *algebra.HintNoIndex:
+				hasGsi = true
+			case *algebra.HintFTSIndex, *algebra.HintNoFTSIndex:
+				hasFts = true
+			}
+		}
+
+		var hasErr bool
+		var msg string
+		var gsiIndexer, ftsIndexer datastore.Indexer
+		var err error
+		ks, _ := this.getTermKeyspace(ksterm)
+		if ks == nil {
+			hasErr = true
+			msg = algebra.INVALID_KEYSPACE + ksterm.Alias()
+		} else {
+			if hasGsi {
+				gsiIndexer, err = ks.Indexer(datastore.GSI)
+				if err != nil {
+					hasErr = true
+				}
+			}
+			if hasFts {
+				ftsIndexer, err = ks.Indexer(datastore.FTS)
+				if err != nil {
+					hasErr = true
+				}
+			}
+		}
+
+		if hasErr {
+			// mark all index hints with error
+			for _, hint := range indexHints {
+				if hint.State() == algebra.HINT_STATE_UNKNOWN {
+					if msg == "" {
+						// indexer error
+						switch hint.(type) {
+						case *algebra.HintIndex, *algebra.HintNoIndex:
+							msg = algebra.GSI_INDEXER_NOT_AVAIL
+						case *algebra.HintFTSIndex, *algebra.HintNoFTSIndex:
+							msg = algebra.FTS_INDEXER_NOT_AVAIL
+						default:
+							msg = fmt.Sprintf("Unexpected hint in index hints: %T", hint)
+						}
+					}
+					hint.SetError(msg)
+				}
+			}
+		} else {
+			for _, hint := range indexHints {
+				var gsiIndexNames, ftsIndexNames []string
+				switch hint := hint.(type) {
+				case *algebra.HintIndex:
+					gsiIndexNames = hint.Indexes()
+				case *algebra.HintNoIndex:
+					gsiIndexNames = hint.Indexes()
+				case *algebra.HintFTSIndex:
+					ftsIndexNames = hint.Indexes()
+				case *algebra.HintNoFTSIndex:
+					ftsIndexNames = hint.Indexes()
+				}
+
+				var errIndexes string
+				for _, idx := range gsiIndexNames {
+					_, err = gsiIndexer.IndexByName(idx)
+					if err != nil {
+						if errIndexes != "" {
+							errIndexes += ", "
+						}
+						errIndexes += idx
+					}
+				}
+				if errIndexes != "" {
+					hint.SetError(algebra.INVALID_GSI_INDEX + errIndexes)
+					errIndexes = ""
+				}
+
+				for _, idx := range ftsIndexNames {
+					_, err = ftsIndexer.IndexByName(idx)
+					if err != nil {
+						if errIndexes != "" {
+							errIndexes += ", "
+						}
+						errIndexes += idx
+					}
+				}
+				if errIndexes != "" {
+					hint.SetError(algebra.INVALID_FTS_INDEX + errIndexes)
+				}
 			}
 		}
 	}

@@ -52,7 +52,11 @@ const (
 	INVALID_SLASH                  = "Invalid '/' found in "
 	EXTRA_SLASH                    = "Extra '/' found in "
 	INVALID_HASH_OPTION            = "Invalid hash option (BUILD or PROBE only):  "
+	INVALID_NEG_HASH_OPTION        = "Hash option (BUILD or PROBE) not allowed in NO_HASH/AVOID_HASH hints"
 	INVALID_KEYSPACE               = "Invalid keyspace specified: "
+	INVALID_FIELD                  = "Invalid field specified: "
+	INVALID_INDEX                  = "Index name(s) must be string in: "
+	DUPLICATED_KEYSPACE            = "Duplicated keyspace/alias specified in: "
 	DUPLICATED_JOIN_HINT           = "Duplicated join hint specified for keyspace: "
 	DUPLICATED_JOIN_FLTR_HINT      = "Duplicated join filter hint specified for keyspace: "
 	DUPLICATED_INDEX_HINT          = "Duplicated index hint specified for keyspace: "
@@ -63,6 +67,10 @@ const (
 	HASH_JOIN_BUILD_JOIN_FILTER    = "USE_HASH with BUILD option conflicts with JOIN_FILTER"
 	NL_JOIN_JOIN_FILTER            = "USE_NL conflicts with JOIN_FILTER"
 	ALL_TERM_JOIN_FILTER           = "JOIN_FILTER hint cannot be specified on all terms in a query"
+	GSI_INDEXER_NOT_AVAIL          = "GSI Indexer not available"
+	FTS_INDEXER_NOT_AVAIL          = "FTS Indexer not available"
+	INVALID_GSI_INDEX              = "Invalid indexes specified: "
+	INVALID_FTS_INDEX              = "Invalid FTS indexes specified: "
 	INDEX_HINT_NOT_FOLLOWED        = "INDEX hint cannot be followed"
 	INDEX_FTS_HINT_NOT_FOLLOWED    = "INDEX_FTS hint cannot be followed"
 	USE_NL_HINT_NOT_FOLLOWED       = "USE_NL hint cannot be followed"
@@ -329,7 +337,7 @@ func NewOptimHint(hint_name string, hint_args []string) []OptimHint {
 			} else if len(parts) == 2 {
 				if negative {
 					invalid = true
-					err = EXTRA_SLASH + arg
+					err = INVALID_NEG_HASH_OPTION
 				} else {
 					keyspace = parts[0]
 					switch strings.ToLower(parts[1]) {
@@ -1665,43 +1673,44 @@ func ParseObjectHints(object expression.Expression) []OptimHint {
 	optimHints := make([]OptimHint, 0, len(fields))
 	for k, v := range fields {
 		var hints []OptimHint
-		invalid := false
+		var invalid bool
+		var err string
 
 		vval := value.NewValue(v)
 		lowerKey := strings.ToLower(k)
 		switch lowerKey {
 		case "index":
-			hints, invalid = newIndexHints(vval)
+			hints, invalid, err = newIndexHints(vval)
 		case "index_fts":
-			hints, invalid = newFTSIndexHints(vval)
+			hints, invalid, err = newFTSIndexHints(vval)
 		case "no_index":
-			hints, invalid = newNoIndexHints(vval, false)
+			hints, invalid, err = newNoIndexHints(vval, false)
 		case "avoid_index":
-			hints, invalid = newNoIndexHints(vval, true)
+			hints, invalid, err = newNoIndexHints(vval, true)
 		case "no_index_fts":
-			hints, invalid = newNoFTSIndexHints(vval, false)
+			hints, invalid, err = newNoFTSIndexHints(vval, false)
 		case "avoid_index_fts":
-			hints, invalid = newNoFTSIndexHints(vval, true)
+			hints, invalid, err = newNoFTSIndexHints(vval, true)
 		case "use_nl":
-			hints, invalid = newNLHints(vval)
+			hints, invalid, err = newNLHints(vval)
 		case "use_hash":
-			hints, invalid = newHashHints(vval)
+			hints, invalid, err = newHashHints(vval)
 		case "no_use_nl":
-			hints, invalid = newNoNLHints(vval, false)
+			hints, invalid, err = newNoNLHints(vval, false)
 		case "avoid_nl":
-			hints, invalid = newNoNLHints(vval, true)
+			hints, invalid, err = newNoNLHints(vval, true)
 		case "no_use_hash":
-			hints, invalid = newNoHashHints(vval, false)
+			hints, invalid, err = newNoHashHints(vval, false)
 		case "avoid_hash":
-			hints, invalid = newNoHashHints(vval, true)
+			hints, invalid, err = newNoHashHints(vval, true)
 		case "join_filter", "px_join_filter":
-			hints, invalid = newJoinFilterHints(vval)
+			hints, invalid, err = newJoinFilterHints(vval)
 		case "no_join_filter", "no_px_join_filter":
-			hints, invalid = newNoJoinFilterHints(vval, false)
+			hints, invalid, err = newNoJoinFilterHints(vval, false)
 		case "avoid_join_filter":
-			hints, invalid = newNoJoinFilterHints(vval, true)
+			hints, invalid, err = newNoJoinFilterHints(vval, true)
 		case "ordered":
-			hints, invalid = newOrderedHint(vval)
+			hints, invalid, err = newOrderedHint(vval)
 		default:
 			invalid = true
 		}
@@ -1710,7 +1719,10 @@ func ParseObjectHints(object expression.Expression) []OptimHint {
 			r := map[string]interface{}{
 				k: v,
 			}
-			hints = genInvalidJSONHint(r, INVALID_HINT)
+			if err == "" {
+				err = INVALID_HINT
+			}
+			hints = genInvalidJSONHint(r, err)
 		}
 
 		if len(hints) > 0 {
@@ -1728,169 +1740,224 @@ func ParseObjectHints(object expression.Expression) []OptimHint {
 	return optimHints
 }
 
-func newIndexHints(val value.Value) ([]OptimHint, bool) {
+func getIndexHintInfo(hint_name string, fields map[string]interface{}) (keyspace string, indexes []string, err string) {
+	for k, v := range fields {
+		key := strings.ToLower(k)
+		if key == "keyspace" || key == "alias" {
+			if keyspace != "" {
+				err = DUPLICATED_KEYSPACE + hint_name
+				return
+			}
+			keyspace = value.NewValue(v).ToString()
+			if keyspace == "" {
+				err = INVALID_KEYSPACE + hint_name
+				return
+			}
+		} else if key == "indexes" {
+			idxs := value.NewValue(v).Actual()
+			switch idxs := idxs.(type) {
+			case []interface{}:
+				for _, idx := range idxs {
+					name := value.NewValue(idx).ToString()
+					if name == "" {
+						err = INVALID_INDEX + hint_name
+						return
+					} else if strings.Contains(name, "/") {
+						err = INVALID_SLASH + name
+						return
+					}
+					indexes = append(indexes, name)
+				}
+			case nil:
+				// if NULL is specified, ignore (no-op)
+			default:
+				name := value.NewValue(idxs).ToString()
+				if name == "" {
+					err = INVALID_INDEX + hint_name
+					return
+				} else if strings.Contains(name, "/") {
+					err = INVALID_SLASH + name
+					return
+				}
+				indexes = append(indexes, name)
+			}
+		} else {
+			err = INVALID_FIELD + key
+			return
+		}
+	}
+
+	return
+}
+
+func newIndexHints(val value.Value) ([]OptimHint, bool, string) {
 	return newHints(val, procIndexHints, false, false)
 }
 
-func newNoIndexHints(val value.Value, avoid bool) ([]OptimHint, bool) {
+func newNoIndexHints(val value.Value, avoid bool) ([]OptimHint, bool, string) {
 	return newHints(val, procIndexHints, true, avoid)
 }
 
-func procIndexHints(fields map[string]interface{}, negative, avoid bool) (OptimHint, bool) {
-	invalid := false
-	var keyspace string
-	var indexes []string
-	for k, v := range fields {
-		key := strings.ToLower(k)
-		if key == "keyspace" || key == "alias" {
-			keyspace = value.NewValue(v).ToString()
-			if keyspace == "" {
-				invalid = true
-			}
-		} else if key == "indexes" {
-			idxs := value.NewValue(v).Actual()
-			switch idxs := idxs.(type) {
-			case []interface{}:
-				for _, idx := range idxs {
-					name := value.NewValue(idx).ToString()
-					if name == "" {
-						return nil, true
-					}
-					indexes = append(indexes, name)
-				}
-			case nil:
-				// if NULL is specified, ignore (no-op)
-			default:
-				name := value.NewValue(idxs).ToString()
-				if name == "" {
-					return nil, true
-				}
-				indexes = append(indexes, name)
-			}
+func procIndexHints(fields map[string]interface{}, negative, avoid bool) (OptimHint, bool, string) {
+	hint_name := "index"
+	if negative {
+		if avoid {
+			hint_name = "avoid_index"
 		} else {
-			invalid = true
-			break
+			hint_name = "no_index"
 		}
 	}
-	if invalid || keyspace == "" {
-		return nil, true
+
+	var invalid bool
+	keyspace, indexes, err := getIndexHintInfo(hint_name, fields)
+	if err != "" {
+		invalid = true
+	} else if keyspace == "" {
+		err = MISSING_ARG + hint_name
+		invalid = true
+	}
+	if invalid {
+		return nil, true, err
 	}
 
 	if negative {
-		return NewNoIndexHint(keyspace, indexes, avoid), false
+		return NewNoIndexHint(keyspace, indexes, avoid), false, ""
 	}
-	return NewIndexHint(keyspace, indexes), false
+	return NewIndexHint(keyspace, indexes), false, ""
 }
 
-func newFTSIndexHints(val value.Value) ([]OptimHint, bool) {
+func newFTSIndexHints(val value.Value) ([]OptimHint, bool, string) {
 	return newHints(val, procFTSIndexHints, false, false)
 }
 
-func newNoFTSIndexHints(val value.Value, avoid bool) ([]OptimHint, bool) {
+func newNoFTSIndexHints(val value.Value, avoid bool) ([]OptimHint, bool, string) {
 	return newHints(val, procFTSIndexHints, true, avoid)
 }
 
-func procFTSIndexHints(fields map[string]interface{}, negative, avoid bool) (OptimHint, bool) {
-	invalid := false
-	var keyspace string
-	var indexes []string
-	for k, v := range fields {
-		key := strings.ToLower(k)
-		if key == "keyspace" || key == "alias" {
-			keyspace = value.NewValue(v).ToString()
-			if keyspace == "" {
-				invalid = true
-			}
-		} else if key == "indexes" {
-			idxs := value.NewValue(v).Actual()
-			switch idxs := idxs.(type) {
-			case []interface{}:
-				for _, idx := range idxs {
-					name := value.NewValue(idx).ToString()
-					if name == "" {
-						return nil, true
-					}
-					indexes = append(indexes, name)
-				}
-			case nil:
-				// if NULL is specified, ignore (no-op)
-			default:
-				name := value.NewValue(idxs).ToString()
-				if name == "" {
-					return nil, true
-				}
-				indexes = append(indexes, name)
-			}
+func procFTSIndexHints(fields map[string]interface{}, negative, avoid bool) (OptimHint, bool, string) {
+	hint_name := "index_fts"
+	if negative {
+		if avoid {
+			hint_name = "avoid_index_fts"
 		} else {
-			invalid = true
-			break
+			hint_name = "no_index_fts"
 		}
 	}
-	if invalid || keyspace == "" {
-		return nil, true
+
+	var invalid bool
+	keyspace, indexes, err := getIndexHintInfo(hint_name, fields)
+	if err != "" {
+		invalid = true
+	} else if keyspace == "" {
+		err = MISSING_ARG + hint_name
+		invalid = true
+	}
+	if invalid {
+		return nil, true, err
 	}
 
 	if negative {
-		return NewNoFTSIndexHint(keyspace, indexes, avoid), false
+		return NewNoFTSIndexHint(keyspace, indexes, avoid), false, ""
 	}
-	return NewFTSIndexHint(keyspace, indexes), false
+	return NewFTSIndexHint(keyspace, indexes), false, ""
 }
 
-func newNLHints(val value.Value) ([]OptimHint, bool) {
+func newNLHints(val value.Value) ([]OptimHint, bool, string) {
 	return newHints(val, procNLHints, false, false)
 }
 
-func newNoNLHints(val value.Value, avoid bool) ([]OptimHint, bool) {
+func newNoNLHints(val value.Value, avoid bool) ([]OptimHint, bool, string) {
 	return newHints(val, procNLHints, true, avoid)
 }
 
-func procNLHints(fields map[string]interface{}, negative, avoid bool) (OptimHint, bool) {
-	invalid := false
-	var keyspace string
+func procNLHints(fields map[string]interface{}, negative, avoid bool) (OptimHint, bool, string) {
+	hint_name := "use_nl"
+	if negative {
+		if avoid {
+			hint_name = "avoid_nl"
+		} else {
+			hint_name = "no_use_nl"
+		}
+	}
+
+	var keyspace, err string
 	for k, v := range fields {
 		key := strings.ToLower(k)
 		if key == "keyspace" || key == "alias" {
+			if keyspace != "" {
+				err = DUPLICATED_KEYSPACE + hint_name
+				break
+			}
 			keyspace = value.NewValue(v).ToString()
 			if keyspace == "" {
-				invalid = true
+				err = INVALID_KEYSPACE + hint_name
+				break
+			} else if strings.Contains(keyspace, "/") {
+				err = INVALID_SLASH + keyspace
+				break
 			}
 		} else {
-			invalid = true
+			err = INVALID_FIELD + key
 			break
 		}
 	}
-	if invalid || keyspace == "" {
-		return nil, true
+
+	var invalid bool
+	if err != "" {
+		invalid = true
+	} else if keyspace == "" {
+		err = MISSING_ARG + hint_name
+		invalid = true
+	}
+	if invalid {
+		return nil, true, err
 	}
 
 	if negative {
-		return NewNoNLHint(keyspace, avoid), false
+		return NewNoNLHint(keyspace, avoid), false, ""
 	}
-	return NewNLHint(keyspace), false
+	return NewNLHint(keyspace), false, ""
 }
 
-func newHashHints(val value.Value) ([]OptimHint, bool) {
+func newHashHints(val value.Value) ([]OptimHint, bool, string) {
 	return newHints(val, procHashHints, false, false)
 }
 
-func newNoHashHints(val value.Value, avoid bool) ([]OptimHint, bool) {
+func newNoHashHints(val value.Value, avoid bool) ([]OptimHint, bool, string) {
 	return newHints(val, procHashHints, true, avoid)
 }
 
-func procHashHints(fields map[string]interface{}, negative, avoid bool) (OptimHint, bool) {
-	invalid := false
-	var keyspace string
+func procHashHints(fields map[string]interface{}, negative, avoid bool) (OptimHint, bool, string) {
+	hint_name := "use_hash"
+	if negative {
+		if avoid {
+			hint_name = "avoid_hash"
+		} else {
+			hint_name = "no_use_hash"
+		}
+	}
+
+	var keyspace, err string
 	var option HashOption = HASH_OPTION_NONE
 	for k, v := range fields {
 		key := strings.ToLower(k)
 		if key == "keyspace" || key == "alias" {
+			if keyspace != "" {
+				err = DUPLICATED_KEYSPACE + hint_name
+				break
+			}
 			keyspace = value.NewValue(v).ToString()
 			if keyspace == "" {
-				invalid = true
+				err = INVALID_KEYSPACE + hint_name
+				break
+			} else if strings.Contains(keyspace, "/") {
+				err = INVALID_SLASH + keyspace
+				break
 			}
 		} else if key == "option" {
 			if negative {
-				invalid = true
+				err = INVALID_NEG_HASH_OPTION
+				break
 			} else {
 				op := strings.ToLower(value.NewValue(v).ToString())
 				switch op {
@@ -1901,90 +1968,122 @@ func procHashHints(fields map[string]interface{}, negative, avoid bool) (OptimHi
 				case "null":
 				// if null is specified, ignore (no-op)
 				default:
-					invalid = true
+					err = INVALID_HASH_OPTION + op
+				}
+				if err != "" {
+					break
 				}
 			}
 		} else {
-			invalid = true
+			err = INVALID_FIELD + hint_name
 			break
 		}
 	}
-	if invalid || keyspace == "" {
-		return nil, true
+
+	var invalid bool
+	if err != "" {
+		invalid = true
+	} else if keyspace == "" {
+		err = MISSING_ARG + hint_name
+		invalid = true
+	}
+	if invalid {
+		return nil, true, err
 	}
 
 	if negative {
-		return NewNoHashHint(keyspace, avoid), false
+		return NewNoHashHint(keyspace, avoid), false, ""
 	}
-	return NewHashHint(keyspace, option), false
+	return NewHashHint(keyspace, option), false, ""
 }
 
-func newJoinFilterHints(val value.Value) ([]OptimHint, bool) {
+func newJoinFilterHints(val value.Value) ([]OptimHint, bool, string) {
 	return newHints(val, procJoinFilterHints, false, false)
 }
 
-func newNoJoinFilterHints(val value.Value, avoid bool) ([]OptimHint, bool) {
+func newNoJoinFilterHints(val value.Value, avoid bool) ([]OptimHint, bool, string) {
 	return newHints(val, procJoinFilterHints, true, avoid)
 }
 
-func procJoinFilterHints(fields map[string]interface{}, negative, avoid bool) (OptimHint, bool) {
-	invalid := false
-	var keyspace string
+func procJoinFilterHints(fields map[string]interface{}, negative, avoid bool) (OptimHint, bool, string) {
+	hint_name := "join_filter"
+	if negative {
+		if avoid {
+			hint_name = "avoid_join_filter"
+		} else {
+			hint_name = "no_join_filter"
+		}
+	}
+
+	var keyspace, err string
 	for k, v := range fields {
 		key := strings.ToLower(k)
 		if key == "keyspace" || key == "alias" {
+			if keyspace != "" {
+				err = DUPLICATED_KEYSPACE + hint_name
+				break
+			}
 			keyspace = value.NewValue(v).ToString()
 			if keyspace == "" {
-				invalid = true
+				err = INVALID_KEYSPACE + hint_name
+				break
 			}
 		} else {
-			invalid = true
+			err = INVALID_FIELD + key
 			break
 		}
 	}
-	if invalid || keyspace == "" {
-		return nil, true
+
+	var invalid bool
+	if err != "" {
+		invalid = true
+	} else if keyspace == "" {
+		err = MISSING_ARG + hint_name
+		invalid = true
+	}
+	if invalid {
+		return nil, true, err
 	}
 
 	if negative {
-		return NewNoJoinFilterHint(keyspace, avoid), false
+		return NewNoJoinFilterHint(keyspace, avoid), false, ""
 	}
-	return NewJoinFilterHint(keyspace), false
+	return NewJoinFilterHint(keyspace), false, ""
 }
 
-func newHints(val value.Value, procFunc func(map[string]interface{}, bool, bool) (OptimHint, bool), negative, avoid bool) ([]OptimHint, bool) {
+func newHints(val value.Value, procFunc func(map[string]interface{}, bool, bool) (OptimHint, bool, string), negative, avoid bool) ([]OptimHint, bool, string) {
 
 	hints := make([]OptimHint, 0, 1)
 	actual := val.Actual()
 	switch actual := actual.(type) {
 	case []interface{}:
 		for _, a := range actual {
-			ahints, invalid := newHints(value.NewValue(a), procFunc, negative, avoid)
+			ahints, invalid, aerr := newHints(value.NewValue(a), procFunc, negative, avoid)
 			if invalid {
-				return nil, true
+				return nil, true, aerr
 			}
 			if len(ahints) > 0 {
 				hints = append(hints, ahints...)
 			}
 		}
 	case map[string]interface{}:
-		hint, invalid := procFunc(actual, negative, avoid)
+		hint, invalid, err := procFunc(actual, negative, avoid)
 		if invalid {
-			return nil, true
+			return nil, true, err
 		}
 		if hint != nil {
 			hints = append(hints, hint)
 		}
 	}
 
-	return hints, false
+	return hints, false, ""
 }
 
-func newOrderedHint(val value.Value) ([]OptimHint, bool) {
+func newOrderedHint(val value.Value) ([]OptimHint, bool, string) {
 	if val != nil && val.Truth() {
-		return []OptimHint{NewOrderedHint()}, false
+		return []OptimHint{NewOrderedHint()}, false, ""
 	}
-	return nil, true
+	return nil, true, ""
 }
 
 // when marshalling we put the optimizer hints in groups:

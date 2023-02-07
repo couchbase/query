@@ -1,5 +1,38 @@
 [
     {
+	"testcase": "invalid index name specified",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                  "hints_with_error": [
+                      "INDEX(c cust_lastName_firstName_customerId cust_customerId): Invalid indexes specified: cust_customerId"
+                  ]
+                }
+            ],
+            "statement": "SELECT RAW p.`optimizer_hints` FROM $explan AS p"
+        },
+        "statements":"SELECT /*+ INDEX(c cust_lastName_firstName_customerId cust_customerId) */ lastName, firstName, customerId FROM customer c WHERE lastName = 'Champlin' ORDER BY lastName",
+        "ordered": true,
+        "results": [
+        {
+            "lastName": "Champlin",
+            "firstName": "Bryon",
+            "customerId": "customer60"
+        },
+        {
+            "lastName": "Champlin",
+            "firstName": "Charles",
+            "customerId": "customer33"
+        },
+        {
+            "lastName": "Champlin",
+            "firstName": "Gladyce",
+            "customerId": "customer631"
+        }
+        ]
+    },
+    {
 	"testcase": "duplicated hints specified inline and as relational-style",
         "explain": {
             "disabled": false,

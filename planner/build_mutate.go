@@ -76,7 +76,7 @@ func (this *builder) beginMutate(keyspace datastore.Keyspace, ksref *algebra.Key
 
 	optimHints = deriveOptimHints(this.baseKeyspaces, optimHints)
 	if optimHints != nil {
-		processOptimHints(this.baseKeyspaces, optimHints)
+		this.processOptimHints(optimHints)
 		baseKeyspace.MarkJoinHintError(algebra.UPD_DEL_JOIN_HINT_ERR)
 		markDMLOrderedHintError(optimHints)
 	}
