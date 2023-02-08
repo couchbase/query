@@ -272,6 +272,9 @@ func (this *Self) Type() value.Type { return value.JSON }
 Returns the input item.
 */
 func (this *Self) Evaluate(item value.Value, context Context) (value.Value, error) {
+	if item == nil {
+		item = value.NewAnnotatedValue(value.EMPTY_OBJECT_VALUE)
+	}
 	item.Track()
 	return item, nil
 }
