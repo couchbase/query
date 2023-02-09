@@ -11,7 +11,6 @@ package expression
 import (
 	"strings"
 
-	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/value"
 )
 
@@ -80,19 +79,8 @@ func (this *Field) Evaluate(item value.Value, context Context) (value.Value, err
 		static := this.operands[1].Static() != nil
 		// only consider cached value if operand is static
 		if exp == nil || !static {
-			s := second.ToString()
-			r, e := context.Parse(s)
-			if e != nil {
-				e = errors.NewParsingError(e, this.operands[1].ErrorContext())
-				return value.NULL_VALUE, e
-			}
-			exp, _ = r.(Expression)
-			switch i := exp.(type) {
-			case *Identifier:
-				if this.CaseInsensitive() {
-					i.SetCaseInsensitive(true)
-				}
-			}
+			exp = NewIdentifier(second.ToString())
+			exp.(*Identifier).SetCaseInsensitive(this.CaseInsensitive())
 			if static {
 				this.cache = exp
 			}
