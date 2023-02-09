@@ -44,7 +44,24 @@ func (this *sarg) VisitIn(pred *expression.In) (interface{}, error) {
 		}
 	}
 
-	aval := pred.Second().Value()
+	arrayMinMax := false
+	dynamicIn := false
+	var arrayKey expression.Expression
+	selec := OPT_SELEC_NOT_AVAIL
+	defSelec := OPT_SELEC_NOT_AVAIL
+	var err error
+	var keyspaces map[string]string
+	if this.doSelec {
+		defSelec = optDefInSelec(this.baseKeyspace.Keyspace(), this.key.String(), this.advisorValidate)
+		if !this.isJoin {
+			keyspaces = make(map[string]string, 1)
+			keyspaces[this.baseKeyspace.Name()] = this.baseKeyspace.Keyspace()
+		}
+	}
+
+	first := pred.First()
+	second := pred.Second()
+	aval := second.Value()
 	if aval != nil {
 		vals, ok := aval.Actual().([]interface{})
 		if !ok || len(vals) == 0 {
@@ -54,44 +71,73 @@ func (this *sarg) VisitIn(pred *expression.In) (interface{}, error) {
 		// De-dup and Sort before generating spans for EXPLAIN stability
 		vals = expression.SortValArr(vals)
 
-		array = make(expression.Expressions, len(vals))
-		for i, val := range vals {
-			array[i] = expression.NewConstant(val)
+		if len(vals) > plan.FULL_SPAN_FANOUT {
+			// for long IN-list, instead of generating individual spans, just use
+			// array_min()/array_max() as span and evaluate the IN-list after
+			// the index scan
+			arrayMinMax = true
+			arrayKey = second
+			if this.doSelec {
+				minVal := expression.NewConstant(vals[0])
+				maxVal := expression.NewConstant(vals[len(vals)-1])
+				expr1 := expression.NewLE(minVal, first)
+				expr2 := expression.NewLE(first, maxVal)
+				exprAnd := expression.NewAnd(expr1, expr2)
+				if this.isJoin {
+					// for join filter each element of the IN-list may be different
+					keyspaces, err = expression.CountKeySpaces(exprAnd, this.keyspaceNames)
+					if err != nil {
+						return nil, err
+					}
+				}
+				selec, _ = optExprSelec(keyspaces, exprAnd, this.advisorValidate, this.context)
+			}
+		} else {
+			array = make(expression.Expressions, len(vals))
+			for i, val := range vals {
+				array[i] = expression.NewConstant(val)
+			}
 		}
 	}
 
-	if array == nil {
-		second := pred.Second()
+	if array == nil && !arrayMinMax {
 		if acons, ok := second.(*expression.ArrayConstruct); ok {
 			array = acons.Operands()
+			if len(array) > plan.FULL_SPAN_FANOUT {
+				// for long IN-list, instead of generating individual spans, just use
+				// array_min()/array_max() as span and evaluate the IN-list after
+				// the index scan
+				arrayMinMax = true
+				arrayKey = second
+				if this.doSelec {
+					selec = defSelec
+				}
+			}
 		} else {
 			static := this.getSarg(second)
 			if static == nil {
 				return _VALUED_SPANS, nil
 			}
 
-			selec := OPT_SELEC_NOT_AVAIL
-			if this.doSelec {
-				selec = optDefInSelec(this.baseKeyspace.Keyspace(), this.key.String(), this.advisorValidate)
-			}
-			static.SetExprFlag(expression.EXPR_DYNAMIC_IN)
-			range2 := plan.NewRange2(expression.NewArrayMin(static), expression.NewArrayMax(static), datastore.BOTH, selec, OPT_SELEC_NOT_AVAIL, 0)
-			span := plan.NewSpan2(nil, plan.Ranges2{range2}, false)
-			return NewTermSpans(span), nil
+			arrayMinMax = true
+			arrayKey = static
+			dynamicIn = true
+			selec = defSelec
 		}
 	}
 
-	if len(array) == 0 {
+	if arrayMinMax {
+		if dynamicIn {
+			arrayKey.SetExprFlag(expression.EXPR_DYNAMIC_IN)
+		}
+		range2 := plan.NewRange2(expression.NewArrayMin(arrayKey), expression.NewArrayMax(arrayKey), datastore.BOTH, selec, OPT_SELEC_NOT_AVAIL, 0)
+		span := plan.NewSpan2(nil, plan.Ranges2{range2}, false)
+		return NewTermSpans(span), nil
+	} else if len(array) == 0 {
 		return _EMPTY_SPANS, nil
 	}
 
 	spans := make(plan.Spans2, 0, len(array))
-	var keyspaces map[string]string
-	var err error
-	if this.doSelec && !this.isJoin {
-		keyspaces = make(map[string]string, 1)
-		keyspaces[this.baseKeyspace.Name()] = this.baseKeyspace.Keyspace()
-	}
 	for _, elem := range array {
 		static := this.getSarg(elem)
 		if static == nil {
@@ -103,9 +149,9 @@ func (this *sarg) VisitIn(pred *expression.In) (interface{}, error) {
 			continue
 		}
 
-		selec := OPT_SELEC_NOT_AVAIL
+		selec = OPT_SELEC_NOT_AVAIL
 		if this.doSelec {
-			newExpr := expression.NewEq(pred.First(), static)
+			newExpr := expression.NewEq(first, static)
 			if this.isJoin {
 				// for join filter each element of the IN-list may be different
 				keyspaces, err = expression.CountKeySpaces(newExpr, this.keyspaceNames)
