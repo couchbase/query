@@ -71,7 +71,7 @@ func Config(max uint64, servicers []int) {
 	manager.reserved = c
 
 	if memLimitFunc != nil {
-		memLimitFunc(int64(max))
+		memLimitFunc(int64(max * _MB))
 	}
 }
 
