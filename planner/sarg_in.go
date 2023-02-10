@@ -44,9 +44,6 @@ func (this *sarg) VisitIn(pred *expression.In) (interface{}, error) {
 		}
 	}
 
-	arrayMinMax := false
-	dynamicIn := false
-	var arrayKey expression.Expression
 	selec := OPT_SELEC_NOT_AVAIL
 	defSelec := OPT_SELEC_NOT_AVAIL
 	var err error
@@ -75,11 +72,9 @@ func (this *sarg) VisitIn(pred *expression.In) (interface{}, error) {
 			// for long IN-list, instead of generating individual spans, just use
 			// array_min()/array_max() as span and evaluate the IN-list after
 			// the index scan
-			arrayMinMax = true
-			arrayKey = second
+			minVal := expression.NewConstant(vals[0])
+			maxVal := expression.NewConstant(vals[len(vals)-1])
 			if this.doSelec {
-				minVal := expression.NewConstant(vals[0])
-				maxVal := expression.NewConstant(vals[len(vals)-1])
 				expr1 := expression.NewLE(minVal, first)
 				expr2 := expression.NewLE(first, maxVal)
 				exprAnd := expression.NewAnd(expr1, expr2)
@@ -92,6 +87,9 @@ func (this *sarg) VisitIn(pred *expression.In) (interface{}, error) {
 				}
 				selec, _ = optExprSelec(keyspaces, exprAnd, this.advisorValidate, this.context)
 			}
+			range2 := plan.NewRange2(minVal, maxVal, datastore.BOTH, selec, OPT_SELEC_NOT_AVAIL, 0)
+			span := plan.NewSpan2(nil, plan.Ranges2{range2}, false)
+			return NewTermSpans(span), nil
 		} else {
 			array = make(expression.Expressions, len(vals))
 			for i, val := range vals {
@@ -100,7 +98,10 @@ func (this *sarg) VisitIn(pred *expression.In) (interface{}, error) {
 		}
 	}
 
-	if array == nil && !arrayMinMax {
+	if array == nil {
+		arrayMinMax := false
+		dynamicIn := false
+		var arrayKey expression.Expression
 		if acons, ok := second.(*expression.ArrayConstruct); ok {
 			array = acons.Operands()
 			if len(array) > plan.FULL_SPAN_FANOUT {
@@ -124,16 +125,18 @@ func (this *sarg) VisitIn(pred *expression.In) (interface{}, error) {
 			dynamicIn = true
 			selec = defSelec
 		}
+		if arrayMinMax {
+			if dynamicIn {
+				arrayKey.SetExprFlag(expression.EXPR_DYNAMIC_IN)
+			}
+			range2 := plan.NewRange2(expression.NewArrayMin(arrayKey), expression.NewArrayMax(arrayKey), datastore.BOTH, selec, OPT_SELEC_NOT_AVAIL, 0)
+			span := plan.NewSpan2(nil, plan.Ranges2{range2}, false)
+			return NewTermSpans(span), nil
+
+		}
 	}
 
-	if arrayMinMax {
-		if dynamicIn {
-			arrayKey.SetExprFlag(expression.EXPR_DYNAMIC_IN)
-		}
-		range2 := plan.NewRange2(expression.NewArrayMin(arrayKey), expression.NewArrayMax(arrayKey), datastore.BOTH, selec, OPT_SELEC_NOT_AVAIL, 0)
-		span := plan.NewSpan2(nil, plan.Ranges2{range2}, false)
-		return NewTermSpans(span), nil
-	} else if len(array) == 0 {
+	if len(array) == 0 {
 		return _EMPTY_SPANS, nil
 	}
 
