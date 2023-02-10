@@ -219,6 +219,8 @@ func (this *builder) buildPredicateScan(keyspace datastore.Keyspace, node *algeb
 			}
 			return nil, nil, errors.NewNoAnsiJoinError(node.Alias(), op)
 		}
+	} else if this.hasBuilderFlag(BUILDER_CHK_INDEX_ORDER) {
+		return nil, nil, nil
 	} else {
 		return nil, nil, errors.NewPlanInternalError(fmt.Sprintf("buildPredicateScan: No plan generated for %s", node.Alias()))
 	}
@@ -271,6 +273,10 @@ func (this *builder) buildSubsetScan(keyspace datastore.Keyspace, node *algebra.
 			exact = true
 		}
 		primary, err = this.buildPrimaryScan(keyspace, node, indexes, id, force, exact, hasDeltaKeyspace)
+		if this.hasBuilderFlag(BUILDER_CHK_INDEX_ORDER) && order != nil && this.order == nil {
+			// building ORDER plan during join enumeration and primary scan does not have order
+			return nil, nil, nil
+		}
 	}
 	return nil, primary, err
 }
