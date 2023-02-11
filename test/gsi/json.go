@@ -114,6 +114,12 @@ func (this *MockQuery) Error(err errors.Error) {
 	}
 }
 
+func (this *MockQuery) SetErrors(errs errors.Errors) {
+	for _, err := range errs {
+		this.Error(err)
+	}
+}
+
 func (this *MockQuery) Execute(srvr *server.Server, context *execution.Context, reqType string, signature value.Value, startTx bool) {
 	select {
 	case <-this.Results():
