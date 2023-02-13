@@ -54,8 +54,8 @@ func NewOrderedIntersectScan(limit expression.Expression, allScan bool, cost, ca
 		)
 	}
 
-	if cbo {
-		sort.Slice(scans, func(i, j int) bool {
+	if cbo && len(scans) > 2 {
+		sort.Slice(scans[1:], func(i, j int) bool {
 			iCard := scans[i].Cardinality()
 			jCard := scans[j].Cardinality()
 			if iCard < jCard {
