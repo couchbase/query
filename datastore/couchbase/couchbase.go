@@ -287,8 +287,7 @@ func (info *infoImpl) refresh() (bool, []errors.Error) {
 
 							// shouldn't happen, there should always be a mgmt port on each node
 							// we should return an error
-							msg := fmt.Sprintf("NodeServices does not report mgmt endpoint for "+
-								"this node: %v", newServices["name"])
+							msg := fmt.Sprintf("NodeServices does not report mgmt endpoint for this node: %v", newServices["name"])
 							errs = append(errs, errors.NewAdminGetNodeError(nil, msg))
 							continue
 						}
@@ -1303,7 +1302,7 @@ func (p *namespace) refresh() {
 	if util.Since(p.last) < _NAMESPACE_REFRESH_THRESHOLD {
 		return
 	}
-	logging.Debuga(func() string { return fmt.Sprintf("Refreshing pool %s", p.name) })
+	logging.Debugf("Refreshing pool %s", p.name)
 	p.refreshFully()
 }
 
@@ -1365,7 +1364,7 @@ func (p *namespace) refreshFully() {
 }
 
 func (p *namespace) reload() {
-	logging.Debuga(func() string { return fmt.Sprintf("Reload %s", p.name) })
+	logging.Debugf("Reload %s", p.name)
 
 	newpool, err := p.store.client.GetPool(p.name)
 	if err != nil {
@@ -1416,7 +1415,7 @@ func (p *namespace) reload1(err error) (cb.Pool, error) {
 func (p *namespace) reload2(newpool *cb.Pool) {
 	p.lock.Lock()
 	for name, ks := range p.keyspaceCache {
-		logging.Debuga(func() string { return fmt.Sprintf(" Checking keyspace %s", name) })
+		logging.Debugf("Checking keyspace %s", name)
 		if ks.cbKeyspace == nil {
 			if util.Since(ks.lastUse) > _CLEANUP_INTERVAL {
 				delete(p.keyspaceCache, name)
@@ -1426,13 +1425,11 @@ func (p *namespace) reload2(newpool *cb.Pool) {
 		newbucket, err := newpool.GetBucket(name)
 		if err != nil {
 			ks.cbKeyspace.Release(true)
-			logging.Errorf(" Error retrieving bucket %s - %v", name, err)
+			logging.Errorf("Error retrieving bucket %s - %v", name, err)
 			delete(p.keyspaceCache, name)
 
 		} else if ks.cbKeyspace.cbbucket.UUID != newbucket.UUID {
-			logging.Debuga(func() string {
-				return fmt.Sprintf(" UUid of keyspace %v uuid now %v", ks.cbKeyspace.cbbucket.UUID, newbucket.UUID)
-			})
+			logging.Debugf("UUid of keyspace %v uuid now %v", ks.cbKeyspace.cbbucket.UUID, newbucket.UUID)
 			// UUID has changed. Update the keyspace struct with the newbucket
 			// and release old one
 			ks.cbKeyspace.cbbucket.Close()
@@ -1922,7 +1919,7 @@ func (b *keyspace) fetch(fullName, qualifiedName, scopeName, collectionName stri
 				fetchMap[k] = doFetch(k, fullName, v, context)
 				i++
 			}
-			logging.Debuga(func() string { return fmt.Sprintf("Requested keys %d Fetched %d keys ", l, i) })
+			logging.Debugf("Requested keys %d Fetched %d keys ", l, i)
 		}
 	}
 
@@ -1930,39 +1927,38 @@ func (b *keyspace) fetch(fullName, qualifiedName, scopeName, collectionName stri
 }
 
 func doFetch(k string, fullName string, v *gomemcached.MCResponse, context datastore.QueryContext) value.AnnotatedValue {
-	raw := v.Body
-	if v.DataType&gomemcached.DatatypeFlagCompressed != 0 {
+	var val value.AnnotatedValue
+	if v.DataType&gomemcached.DatatypeFlagCompressed == 0 {
+		val = value.NewAnnotatedValue(value.NewParsedValue(v.Body, (v.DataType&gomemcached.DatatypeFlagJSON != 0)))
+	} else {
 		// Uncomment when needed
-		//context.Debuga(func() string { return fmt.Sprintf("Compressed document: %v", k) })
-		var err error
-		raw, err = snappy.Decode(nil, raw)
+		//context.Debugf("Compressed document: %v", k)
+		raw, err := snappy.Decode(nil, v.Body)
 		if err != nil {
 			context.Error(errors.NewInvalidCompressedValueError(err, v.Body))
 			logging.Severef("Invalid compressed document received: %v - %v", err, v, context)
 			return nil
 		}
+		val = value.NewAnnotatedValue(value.NewParsedValue(raw, (v.DataType&gomemcached.DatatypeFlagJSON != 0)))
 	}
-	val := value.NewAnnotatedValue(value.NewParsedValue(raw, (v.DataType&gomemcached.DatatypeFlagJSON != 0)))
 
 	var flags, expiration uint32
 
-	if len(v.Extras) >= 4 {
-		flags = binary.BigEndian.Uint32(v.Extras[0:4])
-	}
-
 	if len(v.Extras) >= 8 {
+		flags = binary.BigEndian.Uint32(v.Extras[0:4])
 		expiration = binary.BigEndian.Uint32(v.Extras[4:8])
-	}
-
-	meta_type := "json"
-	if val.Type() == value.BINARY {
-		meta_type = "base64"
+	} else if len(v.Extras) >= 4 {
+		flags = binary.BigEndian.Uint32(v.Extras[0:4])
 	}
 
 	meta := val.NewMeta()
 	meta["keyspace"] = fullName
 	meta["cas"] = v.Cas
-	meta["type"] = meta_type
+	if val.Type() == value.BINARY {
+		meta["type"] = "base64"
+	} else {
+		meta["type"] = "json"
+	}
 	meta["flags"] = flags
 	meta["expiration"] = expiration
 	val.SetId(k)
@@ -1973,7 +1969,7 @@ func doFetch(k string, fullName string, v *gomemcached.MCResponse, context datas
 	}
 
 	// Uncomment when needed
-	//logging.Debuga(func() string{ return fmt.Sprintf("CAS Value for key %v is %v flags %v", k, uint64(v.Cas), meta_flags)})
+	//logging.Debugf("CAS Value for key %v is %v flags %v", k, uint64(v.Cas), meta_flags)
 
 	return val
 }
@@ -2258,7 +2254,7 @@ func (b *keyspace) singleMutationOp(kv value.Pair, op MutateOp, qualifiedName st
 	key := kv.Name
 	if op != MOP_DELETE {
 		if kv.Value.Type() == value.BINARY {
-			return _STOPPED, errors.NewBinaryDocumentMutationError(_MutateOpNames[op], key)
+			return _STOPPED, errors.NewBinaryDocumentMutationError(MutateOpNames[op], key)
 		}
 		val = kv.Value.ActualForIndex()
 		exptime, present = getExpiration(kv.Options)
@@ -2285,10 +2281,8 @@ func (b *keyspace) singleMutationOp(kv value.Pair, op MutateOp, qualifiedName st
 			}
 		} else { // if err != nil then added is false
 			// refresh local meta CAS value
-			logging.Debuga(func() string {
-				return fmt.Sprintf("After %s: key {<ud>%v</ud>} CAS %v for Keyspace <ud>%s</ud>.",
-					MutateOpToName(op), key, cas, qualifiedName)
-			})
+			logging.Debugf("After %s: key {<ud>%v</ud>} CAS %v for Keyspace <ud>%s</ud>.",
+				MutateOpNames[op], key, cas, qualifiedName)
 			SetMetaCas(kv.Value, cas)
 		}
 	case MOP_UPDATE:
@@ -2298,39 +2292,27 @@ func (b *keyspace) singleMutationOp(kv value.Pair, op MutateOp, qualifiedName st
 
 		cas, flags, _, err = getMeta(key, kv.Value, true)
 		if err != nil { // Don't perform the update if the meta values are not found
-			logging.Debuga(func() string {
-				return fmt.Sprintf("Failed to get meta value to perform %s on key <ud>%s<ud>"+
-					" for Keyspace <ud>%s</ud>. Error %s",
-					MutateOpToName(op), key, qualifiedName, err)
-			})
+			logging.Debugf("Failed to get meta value to perform %s on key <ud>%s<ud> for Keyspace <ud>%s</ud>. Error %s",
+				MutateOpNames[op], key, qualifiedName, err)
 			if retry == errors.NONE {
 				retry = errors.TRUE
 			}
 		} else if err = setPreserveExpiry(present, context, clientContext...); err != nil {
-			logging.Debuga(func() string {
-				return fmt.Sprintf("Failed to preserve the expiration to perform %s on key <ud>%s<ud>"+
-					" for Keyspace <ud>%s</ud>. Error %s",
-					MutateOpToName(op), key, qualifiedName, err)
-			})
+			logging.Debugf("Failed to preserve the expiration to perform %s on key <ud>%s<ud> for Keyspace <ud>%s</ud>. Error %s",
+				MutateOpNames[op], key, qualifiedName, err)
 			if retry == errors.NONE {
 				retry = errors.TRUE
 			}
 		} else {
-			logging.Debuga(func() string {
-				return fmt.Sprintf("Before %s: key {<ud>%v</ud>} CAS %v flags <ud>%v</ud>"+
-					" value <ud>%v</ud> for Keyspace <ud>%s</ud>.",
-					MutateOpToName(op), key, cas, flags, val, qualifiedName)
-			})
+			logging.Debugf("Before %s: key {<ud>%v</ud>} CAS %v flags <ud>%v</ud> value <ud>%v</ud> for Keyspace <ud>%s</ud>.",
+				MutateOpNames[op], key, cas, flags, val, qualifiedName)
 			newCas, wu, _, err = b.cbbucket.CasWithMeta(key, int(flags), exptime, cas, val, clientContext...)
 
 			context.RecordKvWU(tenant.Unit(wu))
 			if err == nil {
 				// refresh local meta CAS value
-				logging.Debuga(func() string {
-					return fmt.Sprintf("After %s: key {<ud>%v</ud>} CAS %v "+
-						"for Keyspace <ud>%s</ud>.",
-						MutateOpToName(op), key, cas, qualifiedName)
-				})
+				logging.Debugf("After %s: key {<ud>%v</ud>} CAS %v for Keyspace <ud>%s</ud>.",
+					MutateOpNames[op], key, cas, qualifiedName)
 				SetMetaCas(kv.Value, newCas)
 			}
 			b.checkRefresh(err)
@@ -2338,11 +2320,8 @@ func (b *keyspace) singleMutationOp(kv value.Pair, op MutateOp, qualifiedName st
 
 	case MOP_UPSERT:
 		if err = setPreserveExpiry(present, context, clientContext...); err != nil {
-			logging.Debuga(func() string {
-				return fmt.Sprintf("Failed to preserve the expiration to perform %s on key <ud>%s<ud>"+
-					" for Keyspace <ud>%s</ud>. Error %s",
-					MutateOpToName(op), key, qualifiedName, err)
-			})
+			logging.Debugf("Failed to preserve the expiration to perform %s on key <ud>%s<ud> for Keyspace <ud>%s</ud>. Error %s",
+				MutateOpNames[op], key, qualifiedName, err)
 			if retry == errors.NONE {
 				retry = errors.TRUE
 			}
@@ -2352,11 +2331,8 @@ func (b *keyspace) singleMutationOp(kv value.Pair, op MutateOp, qualifiedName st
 			context.RecordKvWU(tenant.Unit(wu))
 			b.checkRefresh(err)
 			if err == nil {
-				logging.Debuga(func() string {
-					return fmt.Sprintf("After %s: key {<ud>%v</ud>} CAS %v "+
-						"for Keyspace <ud>%s</ud>.",
-						MutateOpToName(op), key, cas, qualifiedName)
-				})
+				logging.Debugf("After %s: key {<ud>%v</ud>} CAS %v for Keyspace <ud>%s</ud>.",
+					MutateOpNames[op], key, cas, qualifiedName)
 				SetMetaCas(kv.Value, newCas)
 			}
 		}
@@ -2368,14 +2344,11 @@ func (b *keyspace) singleMutationOp(kv value.Pair, op MutateOp, qualifiedName st
 	}
 
 	if err != nil {
-		msg := fmt.Sprintf("Failed to perform %s on key %s", MutateOpToName(op), key)
+		msg := fmt.Sprintf("Failed to perform %s on key %s", MutateOpNames[op], key)
 		if op == MOP_DELETE {
 			if !isNotFoundError(err) {
-				logging.Debuga(func() string {
-					return fmt.Sprintf("Failed to perform %s on key <ud>%s<ud>"+
-						" for Keyspace <ud>%s</ud>. Error %s",
-						MutateOpToName(op), key, qualifiedName, err)
-				})
+				logging.Debugf("Failed to perform %s on key <ud>%s<ud> for Keyspace <ud>%s</ud>. Error %s",
+					MutateOpNames[op], key, qualifiedName, err)
 				retry, err = processIfMCError(retry, err, key, qualifiedName)
 				keyError = errors.NewCbDeleteFailedError(err, key, msg)
 			}
@@ -2384,19 +2357,15 @@ func (b *keyspace) singleMutationOp(kv value.Pair, op MutateOp, qualifiedName st
 				casMismatch = true
 				retry = errors.FALSE
 			}
-			logging.Debuga(func() string {
-				if casMismatch {
-					return fmt.Sprintf("Failed to perform %s on key <ud>%s<ud>"+
-						" for Keyspace <ud>%s</ud>."+
-						" CAS mismatch due to concurrent modifications. Error %s",
-						MutateOpToName(op), key, qualifiedName, err)
-				} else {
-					return fmt.Sprintf("Failed to perform %s on key <ud>%s<ud>"+
-						" for Keyspace <ud>%s</ud>."+
-						" Concurrent modifications. Error %s",
-						MutateOpToName(op), key, qualifiedName, err)
-				}
-			})
+			if casMismatch {
+				logging.Debugf("Failed to perform %s on key <ud>%s<ud> for Keyspace <ud>%s</ud>."+
+					" CAS mismatch due to concurrent modifications. Error %s",
+					MutateOpNames[op], key, qualifiedName, err)
+			} else {
+				logging.Debugf("Failed to perform %s on key <ud>%s<ud> for Keyspace <ud>%s</ud>."+
+					" Concurrent modifications. Error %s",
+					MutateOpNames[op], key, qualifiedName, err)
+			}
 
 			retry, err = processIfMCError(retry, err, key, qualifiedName)
 			keyError = errors.NewCbDMLError(err, msg, casMismatch, retry, key, qualifiedName)
@@ -2406,11 +2375,8 @@ func (b *keyspace) singleMutationOp(kv value.Pair, op MutateOp, qualifiedName st
 			keyError = errors.NewCbDMLError(err, msg, casMismatch, retry, key, qualifiedName)
 		} else {
 			// err contains key, redact
-			logging.Debuga(func() string {
-				return fmt.Sprintf("Failed to perform %s on key <ud>%s<ud>"+
-					" for Keyspace <ud>%s</ud>. Error %s",
-					MutateOpToName(op), key, qualifiedName, err)
-			})
+			logging.Debugf("Failed to perform %s on key <ud>%s<ud> for Keyspace <ud>%s</ud>. Error %s",
+				MutateOpNames[op], key, qualifiedName, err)
 			retry, err = processIfMCError(retry, err, key, qualifiedName)
 			keyError = errors.NewCbDMLError(err, msg, casMismatch, retry, key, qualifiedName)
 		}

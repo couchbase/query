@@ -516,15 +516,15 @@ func ExecuteFunction(name FunctionName, modifiers Modifier, values []value.Value
 			return nil, errors.NewInternalFunctionError(fmt.Errorf("Invalid function context received"), name.Name())
 		}
 	}
-	start := time.Now()
+	start := util.Now()
 	val, err := languages[entry.Lang()].Execute(name, body, modifiers, values, newContext)
 
 	// update stats
-	serviceTime := time.Since(start)
+	serviceTime := util.Now().Sub(start)
 	atomic.AddInt64(&entry.Uses, 1)
 
 	// this is strictly not correct, but we'd rather have an approximate time than lock
-	entry.LastUse = start
+	entry.LastUse = start.ToTime()
 	atomic.AddUint64(&entry.ServiceTime, uint64(serviceTime))
 	util.TestAndSetUint64(&entry.MinServiceTime, uint64(serviceTime),
 		func(old, new uint64) bool { return old > new }, 0)

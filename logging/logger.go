@@ -196,7 +196,6 @@ func skipLogging(level Level) bool {
 
 func SetLogger(newLogger Logger) {
 	loggerMutex.Lock()
-	defer loggerMutex.Unlock()
 	logger = newLogger
 	if logger == nil {
 		curLevel = NONE
@@ -204,12 +203,8 @@ func SetLogger(newLogger Logger) {
 		curLevel = newLogger.Level()
 	}
 	cacheLoggingChange()
+	loggerMutex.Unlock()
 }
-
-// we are using deferred unlocking here throughout as we have to do this
-// for the anonymous function variants even though it would be more efficient
-// to not do this for the printf style variants
-// anonymous function variants
 
 func Loga(level Level, f func() string, args ...interface{}) {
 	if len(args) > 0 {
@@ -223,8 +218,8 @@ func Loga(level Level, f func() string, args ...interface{}) {
 		return
 	}
 	loggerMutex.Lock()
-	defer loggerMutex.Unlock()
 	logger.Loga(level, f)
+	loggerMutex.Unlock()
 }
 
 func Debuga(f func() string, args ...interface{}) {
@@ -237,15 +232,13 @@ func Debuga(f func() string, args ...interface{}) {
 		return
 	}
 	fl := getFileLine(1)
+	loggerMutex.Lock()
 	if fl != "" {
-		loggerMutex.Lock()
-		defer loggerMutex.Unlock()
 		logger.Debuga(func() string { return f() + fl })
 	} else {
-		loggerMutex.Lock()
-		defer loggerMutex.Unlock()
 		logger.Debuga(f)
 	}
+	loggerMutex.Unlock()
 }
 
 func Tracea(f func() string, args ...interface{}) {
@@ -258,15 +251,13 @@ func Tracea(f func() string, args ...interface{}) {
 		return
 	}
 	fl := getFileLine(1)
+	loggerMutex.Lock()
 	if fl != "" {
-		loggerMutex.Lock()
-		defer loggerMutex.Unlock()
 		logger.Tracea(func() string { return f() + fl })
 	} else {
-		loggerMutex.Lock()
-		defer loggerMutex.Unlock()
 		logger.Tracea(f)
 	}
+	loggerMutex.Unlock()
 }
 
 func Infoa(f func() string, args ...interface{}) {
@@ -279,8 +270,8 @@ func Infoa(f func() string, args ...interface{}) {
 		return
 	}
 	loggerMutex.Lock()
-	defer loggerMutex.Unlock()
 	logger.Infoa(f)
+	loggerMutex.Unlock()
 }
 
 func Warna(f func() string, args ...interface{}) {
@@ -293,8 +284,8 @@ func Warna(f func() string, args ...interface{}) {
 		return
 	}
 	loggerMutex.Lock()
-	defer loggerMutex.Unlock()
 	logger.Warna(f)
+	loggerMutex.Unlock()
 }
 
 func Errora(f func() string, args ...interface{}) {
@@ -307,8 +298,8 @@ func Errora(f func() string, args ...interface{}) {
 		return
 	}
 	loggerMutex.Lock()
-	defer loggerMutex.Unlock()
 	logger.Errora(f)
+	loggerMutex.Unlock()
 }
 
 func Severea(f func() string, args ...interface{}) {
@@ -321,8 +312,8 @@ func Severea(f func() string, args ...interface{}) {
 		return
 	}
 	loggerMutex.Lock()
-	defer loggerMutex.Unlock()
 	logger.Severea(f)
+	loggerMutex.Unlock()
 }
 
 func Fatala(f func() string, args ...interface{}) {
@@ -335,8 +326,8 @@ func Fatala(f func() string, args ...interface{}) {
 		return
 	}
 	loggerMutex.Lock()
-	defer loggerMutex.Unlock()
 	logger.Fatala(f)
+	loggerMutex.Unlock()
 }
 
 // printf-style variants
@@ -355,8 +346,8 @@ func Logf(level Level, fmt string, args ...interface{}) {
 		return
 	}
 	loggerMutex.Lock()
-	defer loggerMutex.Unlock()
 	logger.Logf(level, fmt, args[:n]...)
+	loggerMutex.Unlock()
 }
 
 func Debugf(fmt string, args ...interface{}) {
@@ -372,8 +363,8 @@ func Debugf(fmt string, args ...interface{}) {
 	}
 	fmt += getFileLine(1)
 	loggerMutex.Lock()
-	defer loggerMutex.Unlock()
 	logger.Debugf(fmt, args[:n]...)
+	loggerMutex.Unlock()
 }
 
 func Tracef(fmt string, args ...interface{}) {
@@ -389,8 +380,8 @@ func Tracef(fmt string, args ...interface{}) {
 	}
 	fmt += getFileLine(1)
 	loggerMutex.Lock()
-	defer loggerMutex.Unlock()
 	logger.Tracef(fmt, args[:n]...)
+	loggerMutex.Unlock()
 }
 
 func Infof(fmt string, args ...interface{}) {
@@ -405,8 +396,8 @@ func Infof(fmt string, args ...interface{}) {
 		return
 	}
 	loggerMutex.Lock()
-	defer loggerMutex.Unlock()
 	logger.Infof(fmt, args[:n]...)
+	loggerMutex.Unlock()
 }
 
 func Warnf(fmt string, args ...interface{}) {
@@ -421,8 +412,8 @@ func Warnf(fmt string, args ...interface{}) {
 		return
 	}
 	loggerMutex.Lock()
-	defer loggerMutex.Unlock()
 	logger.Warnf(fmt, args[:n]...)
+	loggerMutex.Unlock()
 }
 
 func Errorf(fmt string, args ...interface{}) {
@@ -437,8 +428,8 @@ func Errorf(fmt string, args ...interface{}) {
 		return
 	}
 	loggerMutex.Lock()
-	defer loggerMutex.Unlock()
 	logger.Errorf(fmt, args[:n]...)
+	loggerMutex.Unlock()
 }
 
 func Severef(fmt string, args ...interface{}) {
@@ -453,8 +444,8 @@ func Severef(fmt string, args ...interface{}) {
 		return
 	}
 	loggerMutex.Lock()
-	defer loggerMutex.Unlock()
 	logger.Severef(fmt, args[:n]...)
+	loggerMutex.Unlock()
 }
 
 func Fatalf(fmt string, args ...interface{}) {
@@ -469,25 +460,30 @@ func Fatalf(fmt string, args ...interface{}) {
 		return
 	}
 	loggerMutex.Lock()
-	defer loggerMutex.Unlock()
 	logger.Fatalf(fmt, args[:n]...)
+	loggerMutex.Unlock()
 }
 
 func SetLevel(level Level) {
 	loggerMutex.Lock()
-	defer loggerMutex.Unlock()
 	logger.SetLevel(level)
 	curLevel = level
 	cacheLoggingChange()
+	loggerMutex.Unlock()
 }
 
 func LogLevel() Level {
 	loggerMutex.RLock()
-	defer loggerMutex.RUnlock()
-	if logger == nil {
-		return NONE
+	rv := NONE
+	if logger != nil {
+		rv = logger.Level()
 	}
-	return logger.Level()
+	loggerMutex.RUnlock()
+	return rv
+}
+
+func Logging(l Level) bool {
+	return !skipLogging(l)
 }
 
 func Stackf(level Level, fmt string, args ...interface{}) {
@@ -500,15 +496,16 @@ func Stackf(level Level, fmt string, args ...interface{}) {
 	n := runtime.Stack(buf, false)
 	s := string(buf[0:n])
 	loggerMutex.Lock()
-	defer loggerMutex.Unlock()
 	logger.Logf(level, fmt, args...)
 	logger.Logf(level, s)
+	loggerMutex.Unlock()
 }
 
 func Stringf(level Level, fmt string, args ...interface{}) string {
 	loggerMutex.RLock()
-	defer loggerMutex.RUnlock()
-	return logger.Stringf(level, fmt, args...)
+	rv := logger.Stringf(level, fmt, args...)
+	loggerMutex.RUnlock()
+	return rv
 }
 
 func SetDebugFilter(s string) {

@@ -20,7 +20,7 @@ import (
 	"github.com/couchbase/query/util"
 )
 
-const _DEFAULT_ATTACHMENT_SIZE = 2
+const _DEFAULT_ATTACHMENT_SIZE = 6
 
 type AnnotatedValues []AnnotatedValue
 

@@ -1505,7 +1505,11 @@ func activeRequestWorkHorse(endpoint *HttpEndpoint, requestId string, userName s
 		}
 		reqMap["requestTime"] = request.RequestTime().Format(expression.DEFAULT_FORMAT)
 		reqMap["elapsedTime"] = time.Since(request.RequestTime()).String()
-		reqMap["executionTime"] = time.Since(request.ServiceTime()).String()
+		if request.ServiceTime().IsZero() {
+			reqMap["executionTime"] = util.ZERO_DURATION_STR
+		} else {
+			reqMap["executionTime"] = time.Since(request.ServiceTime()).String()
+		}
 		if !request.TransactionStartTime().IsZero() {
 			reqMap["transactionElapsedTime"] = time.Since(request.TransactionStartTime()).String()
 			remTime := request.TxTimeout() - time.Since(request.TransactionStartTime())
@@ -1653,7 +1657,11 @@ func doActiveRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.R
 		}
 		requests[i]["requestTime"] = request.RequestTime().Format(expression.DEFAULT_FORMAT)
 		requests[i]["elapsedTime"] = time.Since(request.RequestTime()).String()
-		requests[i]["executionTime"] = time.Since(request.ServiceTime()).String()
+		if request.ServiceTime().IsZero() {
+			requests[i]["executionTime"] = util.ZERO_DURATION_STR
+		} else {
+			requests[i]["executionTime"] = time.Since(request.ServiceTime()).String()
+		}
 		if !request.TransactionStartTime().IsZero() {
 			requests[i]["transactionElapsedTime"] = time.Since(request.TransactionStartTime()).String()
 			remTime := request.TxTimeout() - time.Since(request.TransactionStartTime())

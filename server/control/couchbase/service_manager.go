@@ -61,6 +61,7 @@ func NewManager(uuid string) Manager {
 
 	if uuid == "" {
 		logging.Infof("No UUID passed.  Will not register for topology awareness.")
+		logging.Debugf("server::NewManager exit: %v", mgr)
 		return nil
 	}
 
@@ -88,7 +89,10 @@ func NewManager(uuid string) Manager {
 }
 
 func (m *ServiceMgr) setInitialNodeList() {
-	logging.Debugf("ServiceMgr::setInitialNodeList entry")
+	if logging.Logging(logging.DEBUG) {
+		logging.Debugf("ServiceMgr::setInitialNodeList entry")
+		defer logging.Debugf("ServiceMgr::setInitialNodeList exit")
+	}
 
 	// wait for the node to be part of a cluster
 	m.thisHost = distributed.RemoteAccess().WhoAmI()
@@ -377,9 +381,7 @@ func (m *ServiceMgr) GetCurrentTopology(rev service.Revision, cancel service.Can
 func prepareOperation(host string, caller string) interface{} {
 	ps, err := distributed.RemoteAccess().PrepareAdminOp(host, "shutdown", "", nil, distributed.NO_CREDS, "")
 	if err != nil {
-		logging.Warna(func() string {
-			return fmt.Sprintf("%v Failed to prepare admin operation for [%v]: %v", caller, host, err)
-		})
+		logging.Warnf("%v Failed to prepare admin operation for [%v]: %v", caller, host, err)
 	}
 	return ps
 }

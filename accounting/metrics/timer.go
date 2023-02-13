@@ -2,6 +2,8 @@ package metrics
 
 import (
 	"time"
+
+	"github.com/couchbase/query/util"
 )
 
 // Timers capture the duration and rate of events.
@@ -123,9 +125,9 @@ func (t *StandardTimer) Sum() int64 {
 
 // Record the duration of the execution of the given function.
 func (t *StandardTimer) Time(f func()) {
-	ts := time.Now()
+	ts := util.Now()
 	f()
-	t.Update(time.Since(ts))
+	t.Update(util.Now().Sub(ts))
 }
 
 // Record the duration of an event.

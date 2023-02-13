@@ -11,7 +11,6 @@
 package tenant
 
 import (
-	"fmt"
 	"net/http"
 	"strconv"
 	"sync"
@@ -184,7 +183,7 @@ func Throttle(isAdmin bool, user, bucket string, buckets []string, timeout time.
 					Service:  regulator.Query,
 					NodeID:   thisNodeId,
 				})
-				logging.Debuga(func() string { return fmt.Sprintf("External bucket %v throttled for %v by query", bucket, d) })
+				logging.Debugf("External bucket %v throttled for %v by query", bucket, d)
 				time.Sleep(d)
 			} else {
 				d = time.Duration(0)
@@ -200,14 +199,14 @@ func Throttle(isAdmin bool, user, bucket string, buckets []string, timeout time.
 		}
 		return ctx, d, nil
 	case regulator.CheckResultThrottle:
-		logging.Debuga(func() string { return fmt.Sprintf("bucket %v throttled for %v by query (%v)", bucket, d, r) })
+		logging.Debugf("bucket %v throttled for %v by query (%v)", bucket, d, r)
 		time.Sleep(d)
 		return ctx, d, nil
 	case regulator.CheckResultReject:
-		logging.Debuga(func() string { return fmt.Sprintf("bucket %v rejected by regulator", bucket) })
+		logging.Debugf("bucket %v rejected by regulator", bucket)
 		return nil, time.Duration(0), errors.NewServiceTenantRejectedError(d)
 	default:
-		logging.Debuga(func() string { return fmt.Sprintf("bucket %v error by regulator (%v) ", bucket, e) })
+		logging.Debugf("bucket %v error by regulator (%v) ", bucket, e)
 		return ctx, time.Duration(0), errors.NewServiceTenantThrottledError(e)
 	}
 }
@@ -317,7 +316,7 @@ func Suspend(bucket string, delay time.Duration, node string) {
 	}
 	throttleLock.Unlock()
 	if doLog {
-		logging.Debuga(func() string { return fmt.Sprintf("bucket %v throttled to %v by KV", bucket, t) })
+		logging.Debugf("bucket %v throttled to %v by KV", bucket, t)
 		ctx := regulator.NewBucketCtx(bucket)
 		regulator.RecordExternalThrottle(ctx, regulator.ExternalThrottleSpec{
 			Duration: delay,

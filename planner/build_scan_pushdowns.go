@@ -9,8 +9,6 @@
 package planner
 
 import (
-	"fmt"
-
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/expression"
@@ -43,7 +41,7 @@ func (this *builder) indexPushDownProperty(entry *indexEntry, indexKeys,
 	if this.order != nil {
 		if this.group == nil || isPushDownProperty(pushDownProperty, _PUSHDOWN_FULLGROUPAGGS) {
 			ok, _, partSortCount := this.useIndexOrder(entry, entry.keys)
-			logging.Debuga(func() string { return fmt.Sprintf("indexPushDownProperty: ok: %v, count: %v", ok, partSortCount) })
+			logging.Debugf("indexPushDownProperty: ok: %v, count: %v", ok, partSortCount)
 			if ok {
 				pushDownProperty |= _PUSHDOWN_ORDER
 			} else {
@@ -486,7 +484,7 @@ func (this *builder) useIndexOrder(entry *indexEntry, keys expression.Expression
 		return false, nil, 0
 	}
 
-	logging.Debuga(func() string { return fmt.Sprintf("useIndexOrder: entry: %v, order: %v", entry, this.order.Terms()) })
+	logging.Debugf("useIndexOrder: entry: %v, order: %v", entry, this.order.Terms())
 
 	var filters map[string]value.Value
 	if entry.cond != nil {

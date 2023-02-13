@@ -15,6 +15,7 @@ import (
 	"github.com/couchbase/cbauth/metakv"
 	"github.com/couchbase/indexing/secondary/common"
 	"github.com/couchbase/query/logging"
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
@@ -71,7 +72,7 @@ func SetupSettingsNotifier(callb func(Config), cancelCh chan struct{}) {
 
 	metaKvCallback := func(kve metakv.KVEntry) error {
 		if kve.Path == QuerySettingsMetaPath {
-			logging.Debuga(func() string { return fmt.Sprintf("kve.Value: %s", string(kve.Value)) })
+			logging.Debugf("kve.Value: %s", util.ByteToString(kve.Value))
 			// To be able to process these settings correctly, convert to a map
 			// from string to value.Value.
 
@@ -99,7 +100,7 @@ func SetupSettingsNotifier(callb func(Config), cancelCh chan struct{}) {
 			// Callback function defined by the caller where you can
 			// manipilate the input values.
 			if lastConfig == nil || !newConfig.Equals(lastConfig).Truth() {
-				logging.Infof("New settings received: %s", string(kve.Value))
+				logging.Infof("New settings received: %s", util.ByteToString(kve.Value))
 				callb(newConfig)
 			}
 			lastConfig = newConfig

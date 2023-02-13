@@ -16,6 +16,8 @@ import (
 
 const DEFAULT_FORMAT = "2006-01-02T15:04:05.999Z07:00"
 
+var ZERO_DURATION_STR = time.Duration(0).String()
+
 var base int64
 
 func init() {
@@ -50,6 +52,11 @@ func (this Time) Truncate(d time.Duration) Time {
 
 func (this Time) UnixNano() int64 {
 	return int64(this) + atomic.LoadInt64(&base)
+}
+
+func (this Time) ToTime() time.Time {
+	un := int64(this.UnixNano())
+	return time.Unix(un/1e9, un%1e9)
 }
 
 func ResyncTime() {

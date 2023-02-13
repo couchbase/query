@@ -51,6 +51,9 @@ func (this *httpRequest) Output() execution.Output {
 }
 
 func (this *httpRequest) Fail(err errors.Error) {
+	if this.ServiceTime().IsZero() {
+		this.SetServiceTime()
+	}
 	this.SetState(server.FATAL)
 	// Determine the appropriate http response code based on the error
 	httpRespCode := mapErrorToHttpResponse(err, http.StatusInternalServerError)
@@ -166,7 +169,11 @@ func (this *httpRequest) Failed(srvr *server.Server) {
 }
 
 func (this *httpRequest) markTimeOfCompletion(now time.Time) {
-	this.executionTime = now.Sub(this.ServiceTime())
+	if this.ServiceTime().IsZero() {
+		this.executionTime = time.Duration(0)
+	} else {
+		this.executionTime = now.Sub(this.ServiceTime())
+	}
 	this.elapsedTime = now.Sub(this.RequestTime())
 	if !this.TransactionStartTime().IsZero() {
 		this.transactionElapsedTime = now.Sub(this.TransactionStartTime())
@@ -174,12 +181,7 @@ func (this *httpRequest) markTimeOfCompletion(now time.Time) {
 }
 
 func (this *httpRequest) Alive() bool {
-	select {
-	case <-this.req.Context().Done():
-		return false
-	default:
-		return true
-	}
+	return len(this.req.Context().Done()) == 0
 }
 
 func (this *httpRequest) Execute(srvr *server.Server, context *execution.Context, reqType string, signature value.Value, startTx bool) {
@@ -254,7 +256,8 @@ func (this *httpRequest) writePrefix(srvr *server.Server, signature value.Value,
 }
 
 func (this *httpRequest) writeRequestID(prefix string) bool {
-	return this.writeString(prefix) && this.writeString("\"requestID\": \"") && this.writeString(this.Id().String()) && this.writeString("\"")
+	return this.writeString(prefix) && this.writeString("\"requestID\": \"") && this.writeString(this.Id().String()) &&
+		this.writeString("\"")
 }
 
 func (this *httpRequest) writeClientContextID(prefix string) bool {
@@ -272,7 +275,8 @@ func (this *httpRequest) writePrepared(prefix, indent string) bool {
 	}
 	host := tenant.EncodeNodeName(distributed.RemoteAccess().WhoAmI())
 	name := distributed.RemoteAccess().MakeKey(host, prepared.Name())
-	return this.writeString(",\n") && this.writeString(prefix) && this.writeString("\"prepared\": \"") && this.writeString(name) && this.writeString("\"")
+	return this.writeString(",\n") && this.writeString(prefix) && this.writeString("\"prepared\": \"") &&
+		this.writeString(name) && this.writeString("\"")
 }
 
 func (this *httpRequest) writeSignature(server_flag bool, signature value.Value, prefix, indent string) bool {
@@ -285,7 +289,8 @@ func (this *httpRequest) writeSignature(server_flag bool, signature value.Value,
 			av.SetProjection(signature, nil)
 		}
 	}
-	return this.writeString(",\n") && this.writeString(prefix) && this.writeString("\"signature\": ") && this.writeValue(signature, prefix, indent, true)
+	return this.writeString(",\n") && this.writeString(prefix) && this.writeString("\"signature\": ") &&
+		this.writeValue(signature, prefix, indent, true)
 }
 
 func (this *httpRequest) prettyStrings(serverPretty, result bool) (string, string) {

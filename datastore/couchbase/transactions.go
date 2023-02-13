@@ -22,8 +22,6 @@ import (
 
 type MutateOp int
 
-var _MutateOpNames = [...]string{"UNKNOWN", "INSERT", "UPSERT", "UPDATE", "DELETE"}
-
 const (
 	MOP_NONE MutateOp = iota
 	MOP_INSERT
@@ -31,6 +29,14 @@ const (
 	MOP_UPDATE
 	MOP_DELETE
 )
+
+var MutateOpNames = map[MutateOp]string{
+	MOP_NONE:   "UNKNOWN",
+	MOP_INSERT: "INSERT",
+	MOP_UPSERT: "UPSERT",
+	MOP_UPDATE: "UPDATE",
+	MOP_DELETE: "DELETE",
+}
 
 const (
 	MV_FLAGS_WRITE uint32 = 1 << iota
@@ -42,15 +48,6 @@ const (
 	TL_SAVEPOINT
 	TL_DOCUMENT
 )
-
-func MutateOpToName(op MutateOp) string {
-	i := int(op)
-	if i < 0 || i >= len(_MutateOpNames) {
-		i = 0
-	}
-
-	return _MutateOpNames[i]
-}
 
 type MutationValue struct {
 	Op         MutateOp

@@ -746,7 +746,7 @@ func (this *base) queuedItems() int {
 	if this.input == nil {
 		return 0
 	}
-	return this.ValueExchange().queuedItems(this.input.ValueExchange())
+	return this.ValueExchange().queuedItems()
 }
 
 func (this *base) getItemValue(channel value.ValueChannel) (value.Value, bool) {
@@ -1202,7 +1202,7 @@ func (this *base) enbatchSize(item value.AnnotatedValue, b batcher, batchSize in
 	this.batch = append(this.batch, item)
 
 	if len(this.batch) >= batchSize || (immediateFlush && this.output != nil && this.queuedItems() == 0 &&
-		!this.output.getBase().isQueuing(batchSize)) {
+		this.output.getBase().queuedItems() <= (batchSize/2)) {
 
 		if !b.flushBatch(context) {
 			return false
@@ -1210,10 +1210,6 @@ func (this *base) enbatchSize(item value.AnnotatedValue, b batcher, batchSize in
 	}
 
 	return true
-}
-
-func (this *base) isQueuing(batchSize int) bool {
-	return this.queuedItems() > (batchSize / 2)
 }
 
 func (this *base) enbatch(item value.AnnotatedValue, b batcher, context *Context) bool {

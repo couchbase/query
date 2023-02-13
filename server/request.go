@@ -407,7 +407,6 @@ func (this *clientContextIDImpl) String() string {
 func NewBaseRequest(rv *BaseRequest) {
 	rv.timeout = -1
 	rv.txTimeout = datastore.DEF_TXTIMEOUT
-	rv.serviceTime = time.Now()
 	rv.state = SUBMITTED
 	rv.aborted = false
 	rv.stopResult = make(chan bool, 1)
@@ -704,6 +703,10 @@ func (this *BaseRequest) UserAgent() string {
 
 func (this *BaseRequest) SetUserAgent(userAgent string) {
 	this.userAgent = userAgent
+}
+
+func (this *BaseRequest) SetServiceTime() {
+	this.serviceTime = time.Now()
 }
 
 func (this *BaseRequest) Servicing() {

@@ -1060,7 +1060,7 @@ func getPrepared(a httpRequestArgs, queryContext string, parm string, val interf
 		return prepared_name, nil, err
 	}
 
-	log.Debuga(func() string { return fmt.Sprintf("%v: %v", prepared_name, prepared.Text()) })
+	log.Debugf("%v: %v", prepared_name, prepared.Text())
 	return prepared_name, prepared, err
 }
 
@@ -1080,7 +1080,7 @@ func getScanConfiguration(txId string, rv *scanConfigImpl, a httpRequestArgs, na
 		return errors.NewServiceErrorUnrecognizedValue(SCAN_CONSISTENCY, scan_consistency_field)
 	}
 
-	t, err := a.getString(_SCAN_WAIT, "0s")
+	t, err := a.getString(_SCAN_WAIT, util.ZERO_DURATION_STR)
 	if err != nil {
 		return err
 	}

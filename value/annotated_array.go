@@ -180,10 +180,7 @@ func (this *AnnotatedArray) Append(v AnnotatedValue) errors.Error {
 	if this.shouldSpill != nil {
 		sz = v.Size()
 		if this.memSize > 0 && this.shouldSpill(this.memSize, sz) {
-			logging.Debuga(func() string {
-				return fmt.Sprintf("[%p] need to spill: %v+%v, heapSize: %v",
-					this, this.memSize, sz, this.heapSize)
-			})
+			logging.Debugf("[%p] need to spill: %v+%v, heapSize: %v", this, this.memSize, sz, this.heapSize)
 			err := this.spillToDisk()
 			if err != nil {
 				return errors.NewValueError(errors.E_VALUE_SPILL_WRITE, err)
@@ -246,10 +243,7 @@ func (this *AnnotatedArray) spillToDisk() error {
 	if err != nil {
 		return errors.NewValueError(errors.E_VALUE_SPILL_CREATE, err)
 	}
-	logging.Debuga(func() string {
-		return fmt.Sprintf("[%p] spilling to %s (#:%v, sz:%v)",
-			this, sf.Name(), len(this.mem), this.memSize)
-	})
+	logging.Debugf("[%p] spilling to %s (#:%v, sz:%v)", this, sf.Name(), len(this.mem), this.memSize)
 	spf := &spillFile{f: sf, lessFn: this.less}
 	this.spill = append(this.spill, spf)
 	writer := bufio.NewWriter(sf)
@@ -281,7 +275,7 @@ func (this *AnnotatedArray) spillToDisk() error {
 	}
 
 	d := time.Now().Sub(start)
-	logging.Debuga(func() string { return fmt.Sprintf("[%p] spill took: %v. memSize: %v", this, d, this.memSize) })
+	logging.Debugf("[%p] spill took: %v. memSize: %v", this, d, this.memSize)
 	this.mem = this.mem[:0]
 	return nil
 }

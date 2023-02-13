@@ -1530,7 +1530,7 @@ var ErrTimeout = errors.New("timeout")
 func (b *Bucket) WaitForPersistence(k string, cas uint64, deletion bool) error {
 	timeout := 10 * time.Second
 	sleepDelay := 5 * time.Millisecond
-	start := time.Now()
+	start := util.Now()
 	for {
 		time.Sleep(sleepDelay)
 		sleepDelay += sleepDelay / 2 // multiply delay by 1.5 every time
@@ -1548,7 +1548,7 @@ func (b *Bucket) WaitForPersistence(k string, cas uint64, deletion bool) error {
 		if result.PersistenceTime > 0 {
 			timeout = 2 * result.PersistenceTime
 		}
-		if time.Since(start) >= timeout-sleepDelay {
+		if util.Now().Sub(start) >= timeout-sleepDelay {
 			return ErrTimeout
 		}
 	}

@@ -103,10 +103,7 @@ func ReleaseTemp(pathname string, sz int64) {
 	if tempInfo.quota > 0 && (pathname == "" || loc == tempInfo.loc) {
 		tempInfo.inuse -= sz
 		if tempInfo.inuse < 0 {
-			logging.Debuga(func() string {
-				return fmt.Sprintf("Error in temp space accounting for %v: inuse=%v, size=%v",
-					tempInfo.loc, tempInfo.inuse, sz)
-			})
+			logging.Debugf("Error in temp space accounting for %v: inuse=%v, size=%v", tempInfo.loc, tempInfo.inuse, sz)
 			tempInfo.inuse = 0
 		}
 	}

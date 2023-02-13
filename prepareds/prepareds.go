@@ -741,11 +741,11 @@ func distributePrepared(name, plan string) {
 func reprepare(prepared *plan.Prepared, deltaKeyspaces map[string]bool, phaseTime *time.Duration, log logging.Log) (
 	*plan.Prepared, errors.Error) {
 
-	parse := time.Now()
+	parse := util.Now()
 
 	stmt, err := n1ql.ParseStatement2(prepared.Text(), prepared.Namespace(), prepared.QueryContext(), log)
 	if phaseTime != nil {
-		*phaseTime += time.Since(parse)
+		*phaseTime += util.Now().Sub(parse)
 	}
 
 	if err != nil {
@@ -758,7 +758,7 @@ func reprepare(prepared *plan.Prepared, deltaKeyspaces map[string]bool, phaseTim
 	}
 
 	// since this is a reprepare, no need to check semantics again after parsing.
-	prep := time.Now()
+	prep := util.Now()
 	requestId, err := util.UUIDV4()
 	if err != nil {
 		return nil, errors.NewReprepareError(fmt.Errorf("Context is nil"))
@@ -777,7 +777,7 @@ func reprepare(prepared *plan.Prepared, deltaKeyspaces map[string]bool, phaseTim
 	pl, err, _ := planner.BuildPrepared(stmt.(*algebra.Prepare).Statement(), store, systemstore, prepared.Namespace(),
 		false, true, &prepContext)
 	if phaseTime != nil {
-		*phaseTime += time.Since(prep)
+		*phaseTime += util.Now().Sub(prep)
 	}
 	if err != nil {
 		return nil, errors.NewReprepareError(err)
@@ -792,7 +792,7 @@ func reprepare(prepared *plan.Prepared, deltaKeyspaces map[string]bool, phaseTim
 	pl.SetQueryContext(prepared.QueryContext())
 	pl.SetUseFts(prepared.UseFts())
 	pl.SetUseCBO(prepared.UseCBO())
-	pl.SetPreparedTime(prep) // reset the time the plan was re-prepared as the time the plan was generated
+	pl.SetPreparedTime(prep.ToTime()) // reset the time the plan was re-prepared as the time the plan was generated
 
 	_, err = pl.BuildEncodedPlan()
 	if err != nil {

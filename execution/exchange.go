@@ -288,8 +288,8 @@ func (this *valueExchange) sendItem(op *valueExchange, item value.AnnotatedValue
 }
 
 // channel length
-func (this *valueExchange) queuedItems(op *valueExchange) int {
-	return op.itemsCount
+func (this *valueExchange) queuedItems() int {
+	return this.itemsCount
 }
 
 // receive

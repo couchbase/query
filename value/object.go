@@ -161,7 +161,7 @@ func (this objectValue) WriteJSON(order []string, w io.Writer, prefix, indent st
 		}
 	} else if l > 0 {
 
-		if l > len(order) {
+		if order == nil {
 			var remaining []string
 			if l <= _NAME_CAP {
 				var nameBuf [_NAME_CAP]string
@@ -171,34 +171,16 @@ func (this objectValue) WriteJSON(order []string, w io.Writer, prefix, indent st
 				defer _NAME_POOL.Put(remaining)
 				remaining = remaining[:0]
 			}
-			if order != nil {
-				for n, _ := range this {
-					found := false
-					for i := range order {
-						if order[i] == n {
-							found = true
-							break
-						}
-					}
-					if !found {
-						remaining = append(remaining, n)
-					}
-				}
-				if len(remaining) > 0 {
-					sort.Strings(remaining)
-					order = append(order, remaining...)
-				}
-			} else {
-				remaining = remaining[:l]
-				order = sortedNames(this, remaining)
-			}
+			remaining = remaining[:l]
+			order = sortedNames(this, remaining)
 		}
 
 		for _, n := range order {
-			if _, found := this[n]; !found {
+			thisv, found := this[n]
+			if !found {
 				continue
 			}
-			v := NewValue(this[n])
+			v := NewValue(thisv)
 			if v.Type() == MISSING {
 				continue
 			}

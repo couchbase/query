@@ -573,7 +573,7 @@ func (ks *keyspace) txPerformOp(op MutateOp, qualifiedName, scopeName, collectio
 		nop := op
 
 		if val != nil && val.Type() == value.BINARY {
-			return nil, append(errs, errors.NewBinaryDocumentMutationError(_MutateOpNames[op], key))
+			return nil, append(errs, errors.NewBinaryDocumentMutationError(MutateOpNames[op], key))
 		}
 
 		if op != MOP_DELETE {
@@ -601,12 +601,12 @@ func (ks *keyspace) txPerformOp(op MutateOp, qualifiedName, scopeName, collectio
 		cas, _, txnMeta, err1 := getMeta(kv.Name, val, must)
 		if err1 == nil && must {
 			if sdkKv && sdkCas != cas {
-				return nil, append(errs, errors.NewScasMismatch(_MutateOpNames[op], kv.Name, sdkCas, cas))
+				return nil, append(errs, errors.NewScasMismatch(MutateOpNames[op], kv.Name, sdkCas, cas))
 			}
 		}
 
 		if err1 != nil {
-			return nil, append(errs, errors.NewTransactionError(err1, _MutateOpNames[op]))
+			return nil, append(errs, errors.NewTransactionError(err1, MutateOpNames[op]))
 		}
 
 		if nop == MOP_INSERT {
@@ -622,8 +622,7 @@ func (ks *keyspace) txPerformOp(op MutateOp, qualifiedName, scopeName, collectio
 		}
 
 		if retCas > 0 && !SetMetaCas(val, retCas) {
-			return nil, append(errs, errors.NewTransactionError(fmt.Errorf("Setting return cas error"),
-				_MutateOpNames[op]))
+			return nil, append(errs, errors.NewTransactionError(fmt.Errorf("Setting return cas error"), MutateOpNames[op]))
 		}
 
 		// upsert and not already in the fetchMap then add so that same upsert key will make it update in same statement

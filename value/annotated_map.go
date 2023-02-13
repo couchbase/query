@@ -11,7 +11,6 @@ package value
 import (
 	"bufio"
 	"container/heap"
-	"fmt"
 	"io"
 	"os"
 	"sort"
@@ -262,10 +261,7 @@ func (this *AnnotatedMap) spillToDisk() errors.Error {
 	this.spill = append(this.spill, spill)
 	d := time.Now().Sub(start)
 	this.accumSpillTime += d
-	logging.Debuga(func() string {
-		return fmt.Sprintf("[%p,%p] %v mem: %v -> temp: %v (%.3f x)",
-			this, spill, d, imsz, spill.sz, float64(spill.sz)/float64(imsz))
-	})
+	logging.Debugf("[%p,%p] %v mem: %v -> temp: %v (%.3f x)", this, spill, d, imsz, spill.sz, float64(spill.sz)/float64(imsz))
 	return nil
 }
 
@@ -375,9 +371,7 @@ func (this *AnnotatedMap) Foreach(f func(string, AnnotatedValue) bool) errors.Er
 	}
 	this.Release() // foreach is a one-off...
 	this.Unlock()
-	logging.Debuga(func() string {
-		return fmt.Sprintf("[%p] items: %v, accumSpillTime: %v", this, returned, this.accumSpillTime)
-	})
+	logging.Debugf("[%p] items: %v, accumSpillTime: %v", this, returned, this.accumSpillTime)
 	return nil
 }
 

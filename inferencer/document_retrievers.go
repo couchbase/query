@@ -278,7 +278,7 @@ func MakeUnifiedDocumentRetriever(name string, context datastore.QueryContext, k
 	udr.flags = flags
 	udr.scanNum = 0
 
-	logging.Debuga(func() string { return udr.Name() }, context)
+	logging.Debugf("%s", udr.Name(), context)
 
 	docCount, err := ks.Count(context)
 	if err != nil {
@@ -317,7 +317,7 @@ func MakeUnifiedDocumentRetriever(name string, context datastore.QueryContext, k
 		udr.sampleSize = _MAX_SAMPLE_SIZE
 	}
 
-	logging.Debuga(func() string { return fmt.Sprintf("sampleSize: %v", udr.sampleSize) }, context)
+	logging.Debugf("sampleSize: %v", udr.sampleSize, context)
 
 	var ok bool
 
@@ -335,7 +335,7 @@ func MakeUnifiedDocumentRetriever(name string, context datastore.QueryContext, k
 					int(datastore.GetScanCap()), tenant.IsServerless())
 			}
 			if err != nil {
-				logging.Debuga(func() string { return fmt.Sprintf("random scan start failed: %v", err) }, context)
+				logging.Debugf("random scan start failed: %v", err, context)
 				errs = append(errs, err)
 				udr.rs = nil
 			} else {
@@ -408,7 +408,7 @@ func MakeUnifiedDocumentRetriever(name string, context datastore.QueryContext, k
 						}
 						udr.indexes = append(udr.indexes, index.(datastore.Index))
 						found = true
-						logging.Debuga(func() string { return fmt.Sprintf("primary index (%v) found", index.Name()) }, context)
+						logging.Debugf("primary index (%v) found", index.Name(), context)
 						// once a primary index has been picked, we won't bother with secondary indexes
 						udr.flags |= NO_SECONDARY_INDEX
 						methods++
@@ -451,25 +451,17 @@ func MakeUnifiedDocumentRetriever(name string, context datastore.QueryContext, k
 											continue
 										}
 										if plannerbase.SubsetOf(i3.Condition(), other.Condition()) {
-											logging.Debuga(func() string {
-												return fmt.Sprintf("excluding %v - subset of %v",
-													i3.Name(), other.Name())
-											}, context)
+											logging.Debugf("excluding %v - subset of %v", i3.Name(), other.Name(), context)
 											continue secondary_indexes
 										} else if plannerbase.SubsetOf(other.Condition(), i3.Condition()) {
-											logging.Debuga(func() string {
-												return fmt.Sprintf("swapping secondary index %v for %v",
-													i3.Name(), other.Name())
-											}, context)
+											logging.Debugf("swapping secondary index %v for %v", i3.Name(), other.Name(), context)
 											udr.indexes[n] = i3
 											continue secondary_indexes
 										}
 									}
 								}
 								udr.indexes = append(udr.indexes, idx)
-								logging.Debuga(func() string {
-									return fmt.Sprintf("secondary index %v included", idx.Name())
-								}, context)
+								logging.Debugf("secondary index %v included", idx.Name(), context)
 								methods++
 								found = true
 								if udr.isFlagOn(SINGLE_INDEX) {
@@ -497,10 +489,7 @@ func MakeUnifiedDocumentRetriever(name string, context datastore.QueryContext, k
 							}
 							lkey := udr.indexes[i].RangeKey()[0].String()
 							if leading[lkey] {
-								logging.Debuga(func() string {
-									return fmt.Sprintf("%v excluded - duplicate leading key",
-										udr.indexes[i].Name())
-								}, context)
+								logging.Debugf("%v excluded - duplicate leading key", udr.indexes[i].Name(), context)
 								udr.indexes[i] = nil
 								prune = true
 							} else {
@@ -537,10 +526,7 @@ func MakeUnifiedDocumentRetriever(name string, context datastore.QueryContext, k
 				logging.Debugf("flags or primary exclude secondary", context)
 			}
 
-			logging.Debuga(func() string {
-				return fmt.Sprintf("rs: %v rnd: %v idxs: %v", udr.rs != nil, udr.rnd != nil,
-					len(udr.indexes))
-			}, context)
+			logging.Debugf("rs: %v rnd: %v idxs: %v", udr.rs != nil, udr.rnd != nil, len(udr.indexes), context)
 		} else {
 			errs = append(errs, errors.NewInferKeyspaceError(ks.Name(), err))
 		}
@@ -577,7 +563,7 @@ func MakeUnifiedDocumentRetriever(name string, context datastore.QueryContext, k
 					udr.ss = index.(datastore.Index3)
 					methods++
 					found = true
-					logging.Debuga(func() string { return fmt.Sprintf("sequential scan found for %v", ks.Name()) }, context)
+					logging.Debugf("sequential scan found for %v", ks.Name(), context)
 					break
 				}
 			}
@@ -676,7 +662,7 @@ func (udr *UnifiedDocumentRetriever) GetNextDoc(context datastore.QueryContext) 
 		if v != nil || e != nil || !cont {
 			return k, v, e
 		}
-		logging.Debuga(func() string { return "random scan exhausted" }, context)
+		logging.Debugf("random scan exhausted", context)
 		udr.rs = nil
 	}
 
@@ -688,7 +674,7 @@ func (udr *UnifiedDocumentRetriever) GetNextDoc(context datastore.QueryContext) 
 		if v != nil || e != nil {
 			return k, v, e
 		}
-		logging.Debuga(func() string { return "random retriever exhausted" }, context)
+		logging.Debugf("random retriever exhausted", context)
 		udr.rnd = nil
 	}
 
@@ -697,7 +683,7 @@ func (udr *UnifiedDocumentRetriever) GetNextDoc(context datastore.QueryContext) 
 		if v != nil || e != nil || !cont {
 			return k, v, e
 		}
-		logging.Debuga(func() string { return "indexes exhausted" }, context)
+		logging.Debugf("indexes exhausted", context)
 	}
 
 	if udr.ss != nil {
@@ -708,7 +694,7 @@ func (udr *UnifiedDocumentRetriever) GetNextDoc(context datastore.QueryContext) 
 		if v != nil || e != nil || !cont {
 			return k, v, e
 		}
-		logging.Debuga(func() string { return "full scan exhausted" }, context)
+		logging.Debugf("full scan exhausted", context)
 	}
 
 	if udr.iconn != nil {
@@ -727,7 +713,7 @@ func (udr *UnifiedDocumentRetriever) getRandom(context datastore.QueryContext) (
 	for duplicates < _MAX_DUPLICATES {
 		key, value, err := udr.rnd.GetRandomEntry(context)
 		if err != nil {
-			logging.Debuga(func() string { return fmt.Sprintf("random retriever error: %v", err) }, context)
+			logging.Debugf("random retriever error: %v", err, context)
 			return _EMPTY_KEY, nil, errors.NewInferRandomError(err)
 		}
 
@@ -754,9 +740,7 @@ func (udr *UnifiedDocumentRetriever) getNextRandomScan(context datastore.QueryCo
 			udr.keys, err, _ = udr.rs.FetchKeys(udr.rs_scan, _FETCH_TIMEOUT)
 			if err != nil {
 				if udr.returned == 0 && (udr.rnd != nil || len(udr.indexes) > 0 || udr.ss != nil) {
-					logging.Debuga(func() string {
-						return fmt.Sprintf("random scan fetch failed (%v) trying other methods", err)
-					}, context)
+					logging.Debugf("random scan fetch failed (%v) trying other methods", err, context)
 					udr.rs.StopKeyScan(udr.rs_scan)
 					udr.rs = nil
 					udr.rs_scan = nil
@@ -764,7 +748,7 @@ func (udr *UnifiedDocumentRetriever) getNextRandomScan(context datastore.QueryCo
 				}
 				return _EMPTY_KEY, nil, err, false
 			}
-			logging.Debuga(func() string { return fmt.Sprintf("fetched %d keys from random scan", len(udr.keys)) }, context)
+			logging.Debugf("fetched %d keys from random scan", len(udr.keys), context)
 		}
 		if len(udr.keys) == 0 {
 			ru, err := udr.rs.StopKeyScan(udr.rs_scan)
@@ -773,9 +757,7 @@ func (udr *UnifiedDocumentRetriever) getNextRandomScan(context datastore.QueryCo
 			}
 			udr.rs_scan = nil
 			if udr.returned < udr.sampleSize {
-				logging.Debuga(func() string {
-					return fmt.Sprintf("random scan stopped short (%v) of sample size (%v)", udr.returned, udr.sampleSize)
-				}, context)
+				logging.Debugf("random scan stopped short (%v) of sample size (%v)", udr.returned, udr.sampleSize, context)
 				udr.rs = nil
 				return _EMPTY_KEY, nil, err, true
 			}
@@ -815,9 +797,7 @@ func (udr *UnifiedDocumentRetriever) getNextFullScan(context datastore.QueryCont
 			go udr.ss.Scan3(udr.Name(), nil, false, false, proj, 0, int64(math.MaxInt64), nil, nil,
 				datastore.UNBOUNDED, nil, udr.iconn)
 
-			logging.Debuga(func() string {
-				return fmt.Sprintf("scanning %v (scan: %v)", udr.ss.Name(), udr.scanNum)
-			}, context)
+			logging.Debugf("scanning %v (scan: %v)", udr.ss.Name(), udr.scanNum, context)
 		}
 		docCount, err := udr.ks.Count(context)
 		if err != nil {
@@ -864,9 +844,7 @@ func (udr *UnifiedDocumentRetriever) getNextFullScan(context datastore.QueryCont
 		}
 		udr.iconn.Sender().Close()
 		udr.iconn = nil
-		logging.Debuga(func() string {
-			return fmt.Sprintf("sequential scan returned %v keys", len(udr.keys))
-		}, context)
+		logging.Debugf("sequential scan returned %v keys", len(udr.keys), context)
 	}
 
 	for len(udr.keys) > 0 {
@@ -913,8 +891,7 @@ next_index:
 					if ci > len(udr.indexes) {
 						ci = len(udr.indexes)
 					}
-					return fmt.Sprintf("ending index scanning after %v index(es), %v docs returned",
-						ci, udr.returned)
+					return fmt.Sprintf("ending index scanning after %v index(es), %v docs returned", ci, udr.returned)
 				}, context)
 				return _EMPTY_KEY, nil, nil, true
 			}
@@ -957,10 +934,8 @@ next_index:
 				if udr.scanBlockSize < udr.scanSampleSize {
 					udr.scanBlockSize = udr.scanSampleSize
 				}
-				logging.Debuga(func() string {
-					return fmt.Sprintf("%v: ss-size: %v, sb-size: %v, remaining samples: %v",
-						udr.indexes[udr.currentIndex].Name(), udr.scanSampleSize, udr.scanBlockSize, remainingSampleSize)
-				}, context)
+				logging.Debugf("%v: ss-size: %v, sb-size: %v, remaining samples: %v",
+					udr.indexes[udr.currentIndex].Name(), udr.scanSampleSize, udr.scanBlockSize, remainingSampleSize, context)
 			}
 
 			udr.offset = 0
@@ -1111,10 +1086,8 @@ func (udr *UnifiedDocumentRetriever) restartScan(offset int64, context datastore
 	}
 	go index.Scan3(udr.Name(), udr.spans, false, false, proj, offset, ss, nil, nil, datastore.UNBOUNDED, nil, udr.iconn)
 
-	logging.Debuga(func() string {
-		return fmt.Sprintf("scanning index %v (scan: %v, offset: %v, low: %v (first of %d))",
-			udr.indexes[udr.currentIndex].Name(), udr.scanNum, offset, udr.spans[0].Ranges[0].Low, len(udr.spans[0].Ranges))
-	}, context)
+	logging.Debugf("scanning index %v (scan: %v, offset: %v, low: %v (first of %d))", udr.indexes[udr.currentIndex].Name(),
+		udr.scanNum, offset, udr.spans[0].Ranges[0].Low, len(udr.spans[0].Ranges), context)
 }
 
 func (udr *UnifiedDocumentRetriever) restartAfterLastKey(context datastore.QueryContext) {

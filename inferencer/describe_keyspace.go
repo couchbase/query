@@ -177,10 +177,8 @@ func processWith(context datastore.QueryContext, with value.Value) (*DescribeOpt
 
 	if !context.GetReqDeadline().IsZero() {
 		options.InferTimeout = int32(context.GetReqDeadline().Sub(time.Now()).Seconds())
-		logging.Debuga(func() string {
-			return fmt.Sprintf("Setting infer_timeout to %v based on context deadline %v",
-				options.InferTimeout, context.GetReqDeadline())
-		}, context)
+		logging.Debugf("Setting infer_timeout to %v based on context deadline %v",
+			options.InferTimeout, context.GetReqDeadline(), context)
 	}
 
 	if with == nil {

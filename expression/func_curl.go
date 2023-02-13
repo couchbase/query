@@ -497,17 +497,13 @@ func (this *Curl) handleCurl(url string, options map[string]interface{}, allowli
 			// negatives set to minimum
 			rs := value.AsNumberValue(inputVal).Int64()
 			if rs < _MIN_RESPONSE_SIZE {
-				logging.Debuga(func() string {
-					return fmt.Sprintf("CURL (%v) result-cap %v set to %v", url, rs, _MIN_RESPONSE_SIZE)
-				})
+				logging.Debugf("CURL (%v) result-cap %v set to %v", url, rs, _MIN_RESPONSE_SIZE)
 				rs = _MIN_RESPONSE_SIZE
 			}
 			responseSize = uint64(rs)
 			// if there is a quota the remaining available memory enforces the upper limit
 			if responseSize > availableQuota {
-				logging.Debuga(func() string {
-					return fmt.Sprintf("CURL (%v) result-cap %v limited to %v", url, responseSize, availableQuota)
-				})
+				logging.Debugf("CURL (%v) result-cap %v limited to %v", url, responseSize, availableQuota)
 				responseSize = availableQuota
 			}
 		case "verbose":
@@ -614,7 +610,7 @@ func (this *Curl) simpleGet(url string) {
 }
 
 func (this *Curl) curlAuth(val string) {
-	logging.Debuga(func() string { return fmt.Sprintf("val: \"%v\"", val) })
+	logging.Debugf("val: \"%v\"", val)
 	if val == "" {
 		this.myCurl.Setopt(curl.OPT_USERPWD, "")
 	} else {

@@ -18,6 +18,7 @@ import (
 	"github.com/couchbase/query/expression/parser"
 	"github.com/couchbase/query/server"
 	"github.com/couchbase/query/timestamp"
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
@@ -134,11 +135,16 @@ func (b *activeRequestsKeyspace) Fetch(keys []string, keysMap map[string]value.A
 					return
 				}
 
+				et := util.ZERO_DURATION_STR
+				if !request.ServiceTime().IsZero() {
+					et = time.Since(request.ServiceTime()).String()
+				}
+
 				item = value.NewAnnotatedValue(map[string]interface{}{
 					"requestId":       localKey,
 					"requestTime":     request.RequestTime().Format(expression.DEFAULT_FORMAT),
 					"elapsedTime":     time.Since(request.RequestTime()).String(),
-					"executionTime":   time.Since(request.ServiceTime()).String(),
+					"executionTime":   et,
 					"state":           request.State().StateName(),
 					"scanConsistency": request.ScanConsistency(),
 					"n1qlFeatCtrl":    request.FeatureControls(),

@@ -2604,7 +2604,7 @@ func getReference(ex Expression, item value.AnnotatedValue, context Context) ([]
 			res = append(res, ref...)
 		}
 	default:
-		logging.Debuga(func() string { return fmt.Sprintf("Unsupported expression type: %T", e) })
+		logging.Debugf("Unsupported expression type: %T", e)
 		return nil, errors.NewUnsupportedExpressionError(e.String(), nil)
 	}
 	return res, nil
@@ -2704,7 +2704,9 @@ func GetReferences(exs Expressions, item value.AnnotatedValue, context Context, 
 			}
 		}
 	}
-	logging.Debuga(func() string { return fmt.Sprintf("%v", references) })
+	if len(references) > 0 {
+		logging.Debugf("%v", references)
+	}
 	return references, constant, nil
 }
 
@@ -2731,7 +2733,7 @@ func checkBinding(item value.AnnotatedValue, ref []string) []string {
 			ref = append(ref, " "+k)
 		}
 	} else {
-		logging.Debuga(func() string { return fmt.Sprintf("unknown type %T", v) })
+		logging.Debugf("unknown type %T", v)
 	}
 	return ref
 }

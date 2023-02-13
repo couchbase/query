@@ -1032,7 +1032,7 @@ func (this *Server) serviceRequest(request Request) {
 	}()
 
 	context := request.ExecutionContext()
-	context.Infoa(func() string { return "Servicing request" })
+	context.Infof("Servicing request")
 	request.Servicing()
 
 	atrCollection := this.AtrCollection()
@@ -1131,7 +1131,7 @@ func (this *Server) serviceRequest(request Request) {
 	}
 
 	context.SetIsPrepared(request.Prepared() != nil)
-	build := time.Now()
+	build := util.Now()
 	operator, er := execution.Build(prepared, context)
 	if er != nil {
 		error, ok := er.(errors.Error)
@@ -1144,7 +1144,7 @@ func (this *Server) serviceRequest(request Request) {
 
 	operator.SetRoot(context)
 	request.SetTimings(operator)
-	request.Output().AddPhaseTime(execution.INSTANTIATE, time.Since(build))
+	request.Output().AddPhaseTime(execution.INSTANTIATE, util.Now().Sub(build))
 
 	if request.State() == FATAL {
 		request.Failed(this)
@@ -1163,16 +1163,17 @@ func (this *Server) serviceRequest(request Request) {
 		request.SetTimeout(timeout)
 	}
 
+	now := time.Now()
 	if timeout > 0 {
 		request.SetTimer(time.AfterFunc(timeout, func() { request.Expire(TIMEOUT, timeout) }))
-		context.SetReqDeadline(time.Now().Add(timeout))
+		context.SetReqDeadline(now.Add(timeout))
 	} else {
 		context.SetReqDeadline(time.Time{})
 	}
 
-	context.Infoa(func() string { return "Executing request" })
+	context.Infof("Executing request")
 	request.NotifyStop(operator)
-	request.SetExecTime(time.Now())
+	request.SetExecTime(now)
 	operator.RunOnce(context, nil)
 
 	request.Execute(this, context, request.Type(), prepared.Signature(), request.Type() == "START_TRANSACTION")
@@ -1218,9 +1219,9 @@ func (this *Server) getPrepared(request Request, context *execution.Context) (*p
 	}
 
 	if prepared == nil {
-		parse := time.Now()
+		parse := util.Now()
 		stmt, err := n1ql.ParseStatement2(request.Statement(), context.Namespace(), request.QueryContext(), context)
-		request.Output().AddPhaseTime(execution.PARSE, time.Since(parse))
+		request.Output().AddPhaseTime(execution.PARSE, util.Now().Sub(parse))
 		if err != nil {
 			return nil, errors.NewParseSyntaxError(err, "")
 		}
@@ -1261,7 +1262,7 @@ func (this *Server) getPrepared(request Request, context *execution.Context) (*p
 			return nil, errors.NewSemanticsError(err, "")
 		}
 
-		prep := time.Now()
+		prep := util.Now()
 
 		// MB-24871: do not replace named/positional parameters with value for prepare statement
 		// no credentials for prepared statements
@@ -1289,13 +1290,13 @@ func (this *Server) getPrepared(request Request, context *execution.Context) (*p
 				}
 			}
 		}
-		request.Output().AddPhaseTime(execution.PLAN, time.Since(prep))
+		request.Output().AddPhaseTime(execution.PLAN, util.Now().Sub(prep))
 		if err != nil {
 			return nil, errors.NewPlanError(err, "")
 		}
 
 		// set the time the plan was generated
-		prepared.SetPreparedTime(prep)
+		prepared.SetPreparedTime(prep.ToTime())
 
 		// EXECUTE doesn't get a plan. Get the plan from the cache.
 		switch stmt.Type() {

@@ -568,7 +568,7 @@ func (this *seqScan) coordinator(b *Bucket, scanTimeout time.Duration) {
 			var singleKey bool
 			if this.getRange(rNum).isSingleKey() {
 				f, _ := this.getRange(rNum).start()
-				min = int(b.VBHash(string(f)))
+				min = int(b.VBHash(util.ByteToString(f)))
 				max = min + 1
 				singleKey = true
 			} else {
@@ -1122,13 +1122,13 @@ func (this *vbRangeScan) reportError(err qerrors.Error) {
 }
 
 func (this *vbRangeScan) sendData() {
-	logging.Debuga(func() string { return fmt.Sprintf("%s sending %d keys", this, len(this.keys)) }, this.scan.log)
+	logging.Debugf("%s sending %d keys", this, len(this.keys), this.scan.log)
 	this.scan.readyQueue.enqueue(this)
 }
 
 func (this *vbRangeScan) addKey(key []byte) bool {
 	var err error
-	if bytes.HasPrefix(key, []byte("_txn:")) {
+	if bytes.HasPrefix(key, []byte{'_', 't', 'x', 'n', ':'}) {
 		// exclude transaction binary documents
 		return true
 	}
@@ -1219,8 +1219,8 @@ func (this *vbRangeScanHeap) Remove(vbscan *vbRangeScan) {
 
 func (this *vbRangeScan) validateSingleKey(conn *memcached.Client) bool {
 	key, _ := this.startFrom()
-	logging.Debuga(func() string { return fmt.Sprintf("%s %v \"%v\"", this, key, string(key)) }, this.scan.log)
-	ok, err := conn.ValidateKey(this.vbucket(), string(key), &memcached.ClientContext{CollId: this.scan.collId})
+	logging.Debugf("%s %v \"%v\"", this, key, util.ByteToString(key), this.scan.log)
+	ok, err := conn.ValidateKey(this.vbucket(), util.ByteToString(key), &memcached.ClientContext{CollId: this.scan.collId})
 	if err != nil {
 		this.reportError(qerrors.NewSSError(qerrors.E_SS_VALIDATE, err))
 		return true
@@ -1282,21 +1282,17 @@ func (this *vbRangeScan) runScan(conn *memcached.Client, node string) bool {
 	createScan := func() (bool, bool) {
 		if this.sampleSize != 0 {
 			fetchLimit = uint32(this.sampleSize)
-			logging.Debuga(func() string {
-				if this.sampleSize == math.MaxInt {
-					return fmt.Sprintf("%s Creating random scan to sample all keys", this)
-				} else {
-					return fmt.Sprintf("%s Creating random scan with sample size %d and limit %d",
-						this, this.sampleSize, fetchLimit)
-				}
-			}, this.scan.log)
+			if this.sampleSize == math.MaxInt {
+				logging.Debugf("%s Creating random scan to sample all keys", this, this.scan.log)
+			} else {
+				logging.Debugf("%s Creating random scan with sample size %d and limit %d",
+					this, this.sampleSize, fetchLimit, this.scan.log)
+			}
 			response, err = conn.CreateRandomScan(this.vbucket(), this.scan.collId, this.sampleSize, false)
 		} else {
 			start, exclStart = this.startFrom()
 			end, exclEnd := this.endWith()
-			logging.Debuga(func() string {
-				return fmt.Sprintf("%s Creating scan from: %v (excl:%v)", this, start, exclStart)
-			}, this.scan.log)
+			logging.Debugf("%s Creating scan from: %v (excl:%v)", this, start, exclStart, this.scan.log)
 			response, err = conn.CreateRangeScan(this.vbucket(), this.scan.collId, start, exclStart, end, exclEnd, false)
 		}
 		if err != nil || len(response.Body) < 16 {
@@ -1316,9 +1312,7 @@ func (this *vbRangeScan) runScan(conn *memcached.Client, node string) bool {
 				}
 				return false, true
 			} else if ok && resp.Status == gomemcached.WOULD_THROTTLE {
-				logging.Debuga(func() string {
-					return fmt.Sprintf("%s throttling %v on scan creation", this, this.b.Name)
-				}, this.scan.log)
+				logging.Debugf("%s throttling %v on scan creation", this, this.b.Name, this.scan.log)
 				// scan hasn't started so re-queue it so we can return and handle something else
 				Suspend(this.b.Name, getDelay(resp), node)
 				if this.sampleSize == 0 {
@@ -1330,20 +1324,13 @@ func (this *vbRangeScan) runScan(conn *memcached.Client, node string) bool {
 				return false, true
 			}
 			if err == nil {
-				logging.Debuga(func() string {
-					return fmt.Sprintf("%s create failed, response: %v", this, response)
-				}, this.scan.log)
+				logging.Debugf("%s create failed, response: %v", this, response, this.scan.log)
 				this.reportError(qerrors.NewSSError(qerrors.E_SS_CREATE))
 			} else {
-				logging.Debuga(func() string {
-					return fmt.Sprintf("%s create failed, error: %v", this, err)
-				}, this.scan.log)
+				logging.Debugf("%s create failed, error: %v", this, err, this.scan.log)
 				if this.retries > 0 {
 					this.setupRetry()
-					logging.Errora(func() string {
-						return fmt.Sprintf("Range scan %s creation failed with: %v. Remaining retries: %v",
-							this, err, this.retries)
-					})
+					logging.Errorf("Range scan %s creation failed with: %v. Remaining retries: %v", this, err, this.retries)
 					if !_RSW.reQueueScan(this) {
 						this.reportError(qerrors.NewSSError(qerrors.E_SS_CREATE, err))
 					}
@@ -1400,16 +1387,11 @@ func (this *vbRangeScan) runScan(conn *memcached.Client, node string) bool {
 	for {
 		// allow retry with new scan when continue of previously created scan fails
 		for {
-			logging.Debuga(func() string {
-				return fmt.Sprintf("%s continuing %s with scan limit %d", this, uuidAsString(uuid), fetchLimit)
-			}, this.scan.log)
+			logging.Debugf("%s continuing %s with scan limit %d", this, uuidAsString(uuid), fetchLimit, this.scan.log)
 			err = conn.ContinueRangeScan(this.vbucket(), uuid, opaque, fetchLimit, 0, 0)
 			if resp, ok := err.(*gomemcached.MCResponse); ok {
 				if resp.Status == gomemcached.WOULD_THROTTLE {
-					logging.Debuga(func() string {
-						return fmt.Sprintf("%s throttling %v on continue of %s",
-							this, this.b.Name, uuidAsString(uuid))
-					}, this.scan.log)
+					logging.Debugf("%s throttling %v on continue of %s", this, this.b.Name, uuidAsString(uuid), this.scan.log)
 					Suspend(this.b.Name, getDelay(resp), node)
 					this.uuid = uuid // scan is open; we'll try to continue with it when re-run
 					if this.sampleSize == 0 {
@@ -1433,10 +1415,8 @@ func (this *vbRangeScan) runScan(conn *memcached.Client, node string) bool {
 						this.setContinueFrom(start, exclStart)
 					}
 					this.setupRetry()
-					logging.Errora(func() string {
-						return fmt.Sprintf("Range scan %s %v continue failed with: %v. Remaining retries: %v",
-							this, uuidAsString(uuid), resp.Status, this.retries)
-					}, this.scan.log)
+					logging.Errorf("Range scan %s %v continue failed with: %v. Remaining retries: %v",
+						this, uuidAsString(uuid), resp.Status, this.retries, this.scan.log)
 					if !_RSW.reQueueScan(this) {
 						this.reportError(qerrors.NewSSError(qerrors.E_SS_CONTINUE, err))
 					}
@@ -1446,10 +1426,7 @@ func (this *vbRangeScan) runScan(conn *memcached.Client, node string) bool {
 			break
 		}
 		if err != nil {
-			logging.Debuga(func() string {
-				return fmt.Sprintf("%s %v - continue for %v failed: %v",
-					this, this.b.Name, uuidAsString(uuid), err)
-			}, this.scan.log)
+			logging.Debugf("%s %v - continue for %v failed: %v", this, this.b.Name, uuidAsString(uuid), err, this.scan.log)
 			this.reportError(qerrors.NewSSError(qerrors.E_SS_CONTINUE, err))
 			return cancelScan(false)
 		}
@@ -1467,10 +1444,8 @@ func (this *vbRangeScan) runScan(conn *memcached.Client, node string) bool {
 					resp.Status != gomemcached.RANGE_SCAN_COMPLETE {
 
 					if resp.Status == gomemcached.WOULD_THROTTLE {
-						logging.Debuga(func() string {
-							return fmt.Sprintf("%s throttling %v on %v receive after %d keys",
-								this, this.b.Name, uuidAsString(uuid), len(this.keys))
-						}, this.scan.log)
+						logging.Debugf("%s throttling %v on %v receive after %d keys",
+							this, this.b.Name, uuidAsString(uuid), len(this.keys), this.scan.log)
 						Suspend(this.b.Name, getDelay(resp), node)
 						if this.sampleSize == 0 && len(this.keys) > 0 {
 							this.setContinueFromLastKey()
@@ -1491,19 +1466,15 @@ func (this *vbRangeScan) runScan(conn *memcached.Client, node string) bool {
 							this.setContinueFrom(start, exclStart)
 						}
 						this.setupRetry()
-						logging.Errora(func() string {
-							return fmt.Sprintf("Range scan %s %v continue failed with: %v. Remaining retries: %v",
-								this, uuidAsString(uuid), resp.Status, this.retries)
-						}, this.scan.log)
+						logging.Errorf("Range scan %s %v continue failed with: %v. Remaining retries: %v",
+							this, uuidAsString(uuid), resp.Status, this.retries, this.scan.log)
 						if !_RSW.reQueueScan(this) {
 							this.reportError(qerrors.NewSSError(qerrors.E_SS_CONTINUE, err))
 						}
 						return cancelScan(false)
 					} else {
-						logging.Debuga(func() string {
-							return fmt.Sprintf("%s %v receive on %v failed receive after %d keys: %v",
-								this, this.b.Name, uuidAsString(uuid), len(this.keys), err)
-						}, this.scan.log)
+						logging.Debugf("%s %v receive on %v failed receive after %d keys: %v",
+							this, this.b.Name, uuidAsString(uuid), len(this.keys), err, this.scan.log)
 						this.reportError(qerrors.NewSSError(qerrors.E_SS_CONTINUE, err))
 						return cancelScan(false)
 					}
@@ -1547,10 +1518,7 @@ func (this *vbRangeScan) runScan(conn *memcached.Client, node string) bool {
 					num_keys++
 					i += int(l)
 				}
-				logging.Debuga(func() string {
-					return fmt.Sprintf("%s processed %v keys from response of %v bytes",
-						this, num_keys, len(response.Body))
-				}, this.scan.log)
+				logging.Debugf("%s processed %v keys from response of %v bytes", this, num_keys, len(response.Body), this.scan.log)
 			}
 			if this.state == _VBS_CANCELLED {
 				return cancelWorking()
@@ -1620,7 +1588,7 @@ func (cqueue *rswCancelQueue) runWorker() {
 		if r != nil {
 			buf := make([]byte, 1<<16)
 			n := runtime.Stack(buf, false)
-			s := string(buf[0:n])
+			s := util.ByteToString(buf[0:n])
 			logging.Severef("Range scan cancel worker {%p} panic: %v\n%v", cqueue, r, s)
 			// cannot panic and die
 			if cqueueLocked {
@@ -1717,9 +1685,7 @@ func (cqueue *rswCancelQueue) runWorker() {
 					if err != nil {
 						resp, ok := err.(*gomemcached.MCResponse)
 						if !ok || resp.Status != gomemcached.KEY_ENOENT {
-							logging.Debuga(func() string {
-								return fmt.Sprintf("%s: vb %d cancel failed: %v", uuidAsString(cr[i].uuid), cr[i].vbucket, err)
-							})
+							logging.Debugf("%s: vb %d cancel failed: %v", uuidAsString(cr[i].uuid), cr[i].vbucket, err)
 							pool.Discard(conn)
 							conn = nil
 						}
@@ -1804,7 +1770,7 @@ func (queue *rswQueue) runWorker() {
 		if r != nil {
 			buf := make([]byte, 1<<16)
 			n := runtime.Stack(buf, false)
-			s := string(buf[0:n])
+			s := util.ByteToString(buf[0:n])
 			logging.Severef("Range scan worker [%p] panic: %v\n%v", queue, r, s)
 			// cannot panic and die
 			if queueLocked {
@@ -1910,10 +1876,8 @@ func (queue *rswQueue) runWorker() {
 						conn = nil
 					}
 				} else if conn == nil && vbscan != nil && vbscan.delayUntil > util.Now() {
-					logging.Errora(func() string {
-						return fmt.Sprintf("Range scan %s connection failed with: %v. Remaining retries: %v",
-							vbscan, err, vbscan.retries)
-					}, vbscan.scan.log)
+					logging.Errorf("Range scan %s connection failed with: %v. Remaining retries: %v",
+						vbscan, err, vbscan.retries, vbscan.scan.log)
 					if !_RSW.reQueueScan(vbscan) {
 						vbscan.reportError(qerrors.NewSSError(qerrors.E_SS_CONN, err))
 					}
@@ -1988,9 +1952,7 @@ func (this *rswControl) queueCancel(vbscan *vbRangeScan, uuid []byte) {
 		n := make([]*scanCancel, len(queue.cqueue.scans), cap(queue.cqueue.scans)*2)
 		copy(n, queue.cqueue.scans)
 		queue.cqueue.scans = n
-		logging.Debuga(func() string {
-			return fmt.Sprintf("[%p] queueCancel: new cap: %v", queue.cqueue, cap(queue.cqueue.scans))
-		})
+		logging.Debugf("[%p] queueCancel: new cap: %v", queue.cqueue, cap(queue.cqueue.scans))
 	}
 	queue.cqueue.scans = append(queue.cqueue.scans, &scanCancel{vbucket: vbscan.vbucket(), uuid: uuid, b: vbscan.b})
 	queue.Lock()

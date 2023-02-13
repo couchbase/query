@@ -89,10 +89,12 @@ func (this *InitialProject) processItem(item value.AnnotatedValue, context *Cont
 	if result.Star() && result.Self() {
 		// Unprefixed star
 		if item.Type() == value.OBJECT {
-			item.SetValue(value.NewValue(item.Actual()))
 			item.SetSelf(true)
-			for k, _ := range this.plan.BindingNames() {
-				item.UnsetField(k)
+			if len(this.plan.BindingNames()) > 0 {
+				item.SetValue(value.NewValue(item.Actual()))
+				for k, _ := range this.plan.BindingNames() {
+					item.UnsetField(k)
+				}
 			}
 			exclusions, err := this.getExclusions(true, item, context)
 			if err != nil {
@@ -391,13 +393,19 @@ func (this sortableList) Swap(i int, j int) {
 func (this *InitialProject) getExclusions(singlequalification bool, item value.AnnotatedValue, context *Context) (
 	[][]string, error) {
 
+	if len(this.plan.Projection().Exclude()) == 0 {
+		return nil, nil
+	}
+
 	var exclusions [][]string
+
 	if this.exclusions != nil {
 		exclusions = this.exclusions
 	} else {
 		var cache bool
 		var err error
-		exclusions, cache, err = expression.GetReferences(this.plan.Projection().Exclude(), item, &this.operatorCtx, singlequalification)
+		exclusions, cache, err = expression.GetReferences(this.plan.Projection().Exclude(), item, &this.operatorCtx,
+			singlequalification)
 		if err != nil {
 			return nil, nil
 		}
