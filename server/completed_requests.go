@@ -26,7 +26,7 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/couchbase/go_json"
+	json "github.com/couchbase/go_json"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/execution"
@@ -63,7 +63,7 @@ type RequestLogEntry struct {
 	TxId                     string
 	UseFts                   bool
 	UseCBO                   bool
-	UseReplica               bool
+	UseReplica               value.Tristate
 	FeatureControls          uint64
 	ResultCount              int
 	ResultSize               int

@@ -15,6 +15,7 @@ import (
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
+	"github.com/couchbase/query/value"
 )
 
 const (
@@ -60,6 +61,7 @@ const (
 	REQUESTERRORLIMIT     = "request-error-limit"
 	QUERY_TMP_DIR         = "query_tmpspace_dir"
 	QUERY_TMP_LIMIT       = "query_tmpspace_limit"
+	USEREPLICA            = "use-replica"
 )
 
 type Checker func(interface{}) (bool, errors.Error)
@@ -95,6 +97,7 @@ var CHECKERS = map[string]Checker{
 	REQUESTERRORLIMIT:     checkNumber,
 	QUERY_TMP_DIR:         checkString,
 	QUERY_TMP_LIMIT:       checkNumber,
+	USEREPLICA:            checkTristateString,
 	NODEQUOTAVALPERCENT:   checkPercent,
 }
 
@@ -115,6 +118,18 @@ var CHECKERS_MIN = map[string]int{
 func checkBool(val interface{}) (bool, errors.Error) {
 	_, ok := val.(bool)
 	return ok, nil
+}
+
+func checkTristateString(val interface{}) (bool, errors.Error) {
+	t, ok := val.(string)
+
+	if ok {
+		_, ok1 := value.ParseTristateString(t)
+
+		return ok1, nil
+	}
+
+	return false, nil
 }
 
 func checkNumber(val interface{}) (bool, errors.Error) {

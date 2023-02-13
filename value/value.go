@@ -20,6 +20,7 @@ import (
 	"math/bits"
 	"reflect"
 	"strconv"
+	"strings"
 
 	json "github.com/couchbase/go_json"
 	"github.com/couchbase/query/util"
@@ -34,6 +35,34 @@ const (
 	FALSE
 	TRUE
 )
+
+var TRISTATE_NAMES = []string{
+	NONE:  "unset",
+	FALSE: "off",
+	TRUE:  "on",
+}
+
+var TRISTATE_NAME_MAP = map[string]Tristate{
+	"unset": NONE,
+	"off":   FALSE,
+	"on":    TRUE,
+}
+
+func ParseTristateString(ts string) (Tristate, bool) {
+	tv := strings.ToLower(strings.TrimSpace(ts))
+
+	tsv, ok := TRISTATE_NAME_MAP[tv]
+
+	if !ok {
+		return NONE, ok
+	}
+
+	return tsv, true
+}
+
+func TristateToString(tristate Tristate) string {
+	return TRISTATE_NAMES[tristate]
+}
 
 const (
 	_MAP_SIZE       = 24

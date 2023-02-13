@@ -163,8 +163,8 @@ func (b *requestLogKeyspace) Fetch(keys []string, keysMap map[string]value.Annot
 				if entry.UseCBO {
 					item.SetField("useCBO", entry.UseCBO)
 				}
-				if entry.UseReplica {
-					item.SetField("useReplica", entry.UseReplica)
+				if entry.UseReplica == value.TRUE {
+					item.SetField("useReplica", value.TristateToString(entry.UseReplica))
 				}
 				if entry.TxId != "" {
 					item.SetField("txid", entry.TxId)

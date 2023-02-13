@@ -251,6 +251,19 @@ var _SETTERS = map[string]Setter{
 		}
 		return nil
 	},
+	USEREPLICA: func(s *Server, o interface{}) errors.Error {
+		ur, ok := o.(string)
+
+		if ok {
+			urv, ok1 := value.ParseTristateString(ur)
+
+			if ok1 {
+				s.SetUseReplica(urv)
+			}
+		}
+
+		return nil
+	},
 }
 
 func getNumber(o interface{}) float64 {
@@ -534,6 +547,7 @@ func FillSettings(settings map[string]interface{}, srvr *Server) map[string]inte
 	settings[CLEANUPLOSTATTEMPTS] = tranSettings.CleanupLostAttempts()
 	settings[GCPERCENT] = srvr.GCPercent()
 	settings[REQUESTERRORLIMIT] = srvr.RequestErrorLimit()
+	settings[USEREPLICA] = srvr.UseReplicaToString()
 	return settings
 }
 

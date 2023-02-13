@@ -1521,8 +1521,8 @@ func activeRequestWorkHorse(endpoint *HttpEndpoint, requestId string, userName s
 		if request.UseCBO() {
 			reqMap["useCBO"] = request.UseCBO()
 		}
-		if request.UseReplica() {
-			reqMap["useReplica"] = request.UseReplica()
+		if request.UseReplica() == value.TRUE {
+			reqMap["useReplica"] = value.TristateToString(request.UseReplica())
 		}
 		reqMap["n1qlFeatCtrl"] = request.FeatureControls()
 
@@ -1755,8 +1755,8 @@ func completedRequestWorkHorse(requestId string, userName string, profiling bool
 		if request.UseCBO {
 			reqMap["useCBO"] = request.UseCBO
 		}
-		if request.UseReplica {
-			reqMap["useReplica"] = request.UseReplica
+		if request.UseReplica == value.TRUE {
+			reqMap["useReplica"] = value.TristateToString(request.UseReplica)
 		}
 		reqMap["n1qlFeatCtrl"] = request.FeatureControls
 		if request.QueryContext != "" {

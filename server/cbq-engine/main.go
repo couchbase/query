@@ -45,6 +45,7 @@ import (
 	stats "github.com/couchbase/query/system"
 	"github.com/couchbase/query/tenant"
 	"github.com/couchbase/query/util"
+	"github.com/couchbase/query/value"
 )
 
 // this function must be the first executed so as to clearly delineate cbq-engine start in the query.log
@@ -122,6 +123,7 @@ var MAX_INDEX_API = flag.Int("max-index-api", datastore_package.INDEX_API_MAX, "
 var N1QL_FEAT_CTRL = flag.Uint64("n1ql-feat-ctrl", util.DEF_N1QL_FEAT_CTRL, "N1QL Feature Controls")
 var MEMORY_QUOTA = flag.Uint64("memory-quota", _DEF_MEMORY_QUOTA, "Maximum amount of document memory allowed per request, in MB")
 var NODE_QUOTA = flag.Uint64("node-quota", _DEF_NODE_QUOTA, "Maximum amount of document memory allowed per node, in MB")
+var USE_REPLICA = flag.String("use-replica", value.TRISTATE_NAMES[value.FALSE], "Allow reading from replica vBuckets")
 var NODE_QUOTA_VAL_PERCENT = flag.Uint("node-quota-val-percent", _DEF_NODE_QUOTA_VAL_PERCENT,
 	"Percentage of node quota reserved for value memory (0-100).")
 
@@ -377,6 +379,7 @@ func main() {
 	server.SetMemoryQuota(*MEMORY_QUOTA)
 	server.SetGCPercent(*_GOGC_PERCENT)
 	server.SetRequestErrorLimit(*REQUEST_ERROR_LIMIT)
+	server.SetUseReplica(value.TRISTATE_NAME_MAP[*USE_REPLICA])
 
 	audit.StartAuditService(*DATASTORE, server.Servicers()+server.PlusServicers())
 
@@ -403,7 +406,8 @@ func main() {
 			" txtimeout=%v"+
 			" gc-percent=%v"+
 			" node-quota=%v"+
-			" node-quota-val-percent=%v",
+			" node-quota-val-percent=%v"+
+			" use-replica=%v",
 			util.VERSION,
 			datastore.Info().Version(),
 			*DATASTORE,
@@ -425,6 +429,7 @@ func main() {
 			*_GOGC_PERCENT,
 			memory.NodeQuota(),
 			memory.ValPercent(),
+			value.TristateToString(server.UseReplica()),
 		)
 	})
 

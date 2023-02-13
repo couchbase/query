@@ -759,6 +759,24 @@ func handleLogLevel(rv *httpRequest, httpArgs httpRequestArgs, parm string, val 
 	return nil
 }
 
+func handleUseReplica(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+	ur, err := httpArgs.getStringVal(parm, val)
+
+	if err != nil {
+		return err
+	}
+
+	urs, ok := value.ParseTristateString(ur)
+
+	if !ok {
+		return errors.NewServiceErrorBadValue(errors.NewServiceErrorUnrecognizedValue("use_replica", ur), parm)
+	}
+
+	rv.SetUseReplica(urs)
+
+	return nil
+}
+
 // For audit.Auditable interface.
 func (this *httpRequest) ElapsedTime() time.Duration {
 	return this.elapsedTime
@@ -907,6 +925,7 @@ const ( // Request argument names
 	ERROR_LIMIT        = "error_limit"
 	SORT_PROJECTION    = "sort_projection"
 	LOGLEVEL           = "loglevel"
+	USE_REPLICA        = "use_replica"
 )
 
 type argHandler struct {
@@ -963,6 +982,7 @@ var _PARAMETERS = map[string]*argHandler{
 	ERROR_LIMIT:     {handleErrorLimit, false},
 	SORT_PROJECTION: {handleSortProjection, false},
 	LOGLEVEL:        {handleLogLevel, false},
+	USE_REPLICA:     {handleUseReplica, false},
 }
 
 // common storage for the httpArgs implementations

@@ -668,11 +668,11 @@ func (this *httpRequest) writeControls(controls bool, prefix, indent string) boo
 		}
 	}
 
-	if this.UseReplica() {
+	if this.UseReplica() == value.TRUE {
 		if !this.writeString(",") {
 			return false
 		}
-		if err != nil || !this.writer.printf("%s\"use_replica\": \"%v\"", newPrefix, this.UseReplica()) {
+		if err != nil || !this.writer.printf("%s\"use_replica\": \"%v\"", newPrefix, value.TristateToString(this.UseReplica())) {
 			logging.Infof("Error writing use_replica. Error: %v", err)
 		}
 	}

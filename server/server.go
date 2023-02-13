@@ -169,6 +169,7 @@ type Server struct {
 	memoryStats       runtime.MemStats
 	lastTotalTime     int64
 	lastNow           time.Time
+	useReplica        value.Tristate
 }
 
 // Default and min Keep Alive Length
@@ -211,6 +212,7 @@ func NewServer(store datastore.Datastore, sys datastore.Systemstore, config clus
 	store.SetLogLevel(logging.LogLevel())
 	rv.SetMaxParallelism(maxParallelism)
 	rv.SetNumAtrs(datastore.DEF_NUMATRS)
+	rv.SetUseReplica(value.FALSE)
 
 	// set default values
 	rv.SetMaxIndexAPI(datastore.INDEX_API_MAX)
@@ -1364,10 +1366,33 @@ func (this *Server) getPrepared(request Request, context *execution.Context) (*p
 		}
 	}
 
-	useReplica := (!util.IsFeatureEnabled(request.FeatureControls(), util.N1QL_READ_FROM_REPLICA_OFF)) && request.Type() == "SELECT" && request.TxId() == ""
+	// Check if query should allow read from replica
+
+	// Read from replica is by default what the Node Level Param is. But..
+	// If Node Level Param is False - cannot be overridden at request level
+	// If Node Level Param is True -  can be set to False at request level
+	// If Node Level Param is None / Unset - can be set to True or False at request level
+	// But if both Node Level and Request Level Params are Unset - read from replica is set to False
+	useReplica := value.FALSE
+
+	if (request.Type() == "SELECT" || request.Type() == "EXECUTE_FUNCTION") && this.useReplica != value.FALSE {
+
+		if request.UseReplica() == value.NONE {
+			useReplica = this.useReplica
+		} else {
+			useReplica = request.UseReplica()
+		}
+
+		if useReplica == value.NONE {
+			useReplica = value.FALSE
+		}
+	}
+
 	request.SetUseReplica(useReplica)
-	context.SetUseReplica(useReplica)
-	context.Infof("Read from replicas permitted: %v", useReplica)
+	context.SetStmtType(request.Type())
+	context.SetUseReplica(value.ToBool(useReplica))
+
+	context.Infof("Read from replicas permitted: %v", context.UseReplica())
 
 	logging.Tracea(func() string {
 		var pl plan.Operator = prepared
@@ -1856,4 +1881,16 @@ func (this *Server) MemoryStats(refresh bool) (ms runtime.MemStats) {
 		this.RUnlock()
 	}
 	return
+}
+
+func (this *Server) UseReplica() value.Tristate {
+	return this.useReplica
+}
+
+func (this *Server) SetUseReplica(useReplica value.Tristate) {
+	this.useReplica = useReplica
+}
+
+func (this *Server) UseReplicaToString() string {
+	return value.TRISTATE_NAMES[this.useReplica]
 }

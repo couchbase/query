@@ -165,8 +165,8 @@ func (b *activeRequestsKeyspace) Fetch(keys []string, keysMap map[string]value.A
 				if request.UseCBO() {
 					item.SetField("useCBO", request.UseCBO())
 				}
-				if request.UseReplica() {
-					item.SetField("useReplica", request.UseReplica())
+				if request.UseReplica() == value.TRUE {
+					item.SetField("useReplica", value.TristateToString(request.UseReplica()))
 				}
 				if request.TxId() != "" {
 					item.SetField("txid", request.TxId())

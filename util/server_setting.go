@@ -37,7 +37,7 @@ const (
 	N1QL_FLEXINDEX                                // 0x0000000020
 	N1QL_CBO_NEW                                  // 0x0000000040
 	N1QL_PASSWORDLESS_BKT                         // 0x0000000080
-	N1QL_READ_FROM_REPLICA_OFF                    // 0x0000000100
+	N1QL_READ_FROM_REPLICA_OFF                    // 0x0000000100 N1QL_READ_FROM_REPLICA_OFF is a retired feature bit. Must NOT be used.
 	N1QL_IMPLICIT_ARRAY_COVER                     // 0x0000000200
 	N1QL_JOIN_ENUMERATION                         // 0x0000000400
 	N1QL_INDEX_MISSING                            // 0x0000000800
@@ -57,7 +57,7 @@ var N1Ql_Features = map[uint64]string{
 	N1QL_FLEXINDEX:             fmt.Sprintf("Flex Index (%#x)", N1QL_FLEXINDEX),
 	N1QL_CBO_NEW:               fmt.Sprintf("(Reserved for future use) (%#x)", N1QL_CBO_NEW), // To-Do : Change description when CBO New is supported
 	N1QL_PASSWORDLESS_BKT:      fmt.Sprintf("Allow Password-less Buckets (%#x)", N1QL_PASSWORDLESS_BKT),
-	N1QL_READ_FROM_REPLICA_OFF: fmt.Sprintf("Read From Active v-Bucket Only (%#x)", N1QL_READ_FROM_REPLICA_OFF),
+	N1QL_READ_FROM_REPLICA_OFF: fmt.Sprintf("Retired Feature Bit. Do not use. (%#x)", N1QL_READ_FROM_REPLICA_OFF),
 	N1QL_IMPLICIT_ARRAY_COVER:  fmt.Sprintf("Implicit Covering Array Index (%#x)", N1QL_IMPLICIT_ARRAY_COVER),
 	N1QL_JOIN_ENUMERATION:      fmt.Sprintf("Join Enumeration (%#x)", N1QL_JOIN_ENUMERATION),
 	N1QL_INDEX_MISSING:         fmt.Sprintf("Leading Index Key INCLUDE MISSING entries(%#x)", N1QL_INDEX_MISSING),

@@ -182,6 +182,8 @@ func (this *Context) EvaluateStatement(statement string, namedArgs map[string]va
 	if stmtType == "EXECUTE" && isPrepared {
 		stmtType = prepared.Type()
 	}
+
+	newContext.SetStmtType(stmtType)
 	err = this.handleOpenStatements(stmtType)
 	if err != nil {
 		return nil, 0, err
@@ -241,6 +243,8 @@ func (this *Context) OpenStatement(statement string, namedArgs map[string]value.
 	if err != nil {
 		return nil, err
 	}
+
+	newContext.SetStmtType(stmtType)
 	err = this.handleOpenStatements(stmtType)
 	if err != nil {
 		return nil, err

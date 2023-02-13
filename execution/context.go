@@ -223,6 +223,7 @@ func (this *opContext) AdminContext() (interface{}, error) {
 
 type Context struct {
 	requestId           string
+	stmtType            string
 	datastore           datastore.Datastore
 	systemstore         datastore.Systemstore
 	namespace           string
@@ -344,7 +345,8 @@ func NewContext(requestId string, datastore datastore.Datastore, systemstore dat
 
 func (this *Context) Copy() *Context {
 	rv := &Context{
-		requestId:           this.requestId,
+		requestId: this.requestId,
+		// do NOT copy stmtType
 		datastore:           this.datastore,
 		systemstore:         this.systemstore,
 		namespace:           this.namespace,
@@ -581,12 +583,27 @@ func (this *Context) UrlCredentials(urlS string) *auth.Credentials {
 	return &auth.Credentials{map[string]string{u: p}, nil, nil, nil}
 }
 
+/*
+MB-55036: If Read From Replica is set as true in the context:
+And the statement is a SELECT and not within a transaction
+Use Replica is returned as True
+context.UseReplica() is used to determine if we allow KV to return results from replicas during Fetch
+*/
 func (this *Context) UseReplica() bool {
-	return this.useReplica
+	txId := ""
+	txContext := this.txContext
+	if txContext != nil {
+		txId = txContext.TxId()
+	}
+	return this.useReplica && this.stmtType == "SELECT" && txId == ""
 }
 
 func (this *Context) SetUseReplica(r bool) {
 	this.useReplica = r
+}
+
+func (this *Context) SetStmtType(t string) {
+	this.stmtType = t
 }
 
 func (this *Context) ScanConsistency() datastore.ScanConsistency {
