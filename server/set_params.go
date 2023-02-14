@@ -90,13 +90,13 @@ var _SETTERS = map[string]Setter{
 	SERVICERS: func(s *Server, o interface{}) errors.Error {
 		value := getNumber(o)
 		s.SetServicers(int(value))
-		memory.Config(memory.Quota(), []int{s.Servicers(), s.PlusServicers()})
+		memory.Config(memory.NodeQuota(), memory.ValPercent(), []int{s.Servicers(), s.PlusServicers()})
 		return nil
 	},
 	PLUSSERVICERS: func(s *Server, o interface{}) errors.Error {
 		value := getNumber(o)
 		s.SetPlusServicers(int(value))
-		memory.Config(memory.Quota(), []int{s.Servicers(), s.PlusServicers()})
+		memory.Config(memory.NodeQuota(), memory.ValPercent(), []int{s.Servicers(), s.PlusServicers()})
 		return nil
 	},
 	TIMEOUTSETTING: func(s *Server, o interface{}) errors.Error {
@@ -177,7 +177,13 @@ var _SETTERS = map[string]Setter{
 	},
 	NODEQUOTA: func(s *Server, o interface{}) errors.Error {
 		value := getNumber(o)
-		memory.Config(uint64(value), []int{s.Servicers(), s.PlusServicers()})
+		memory.Config(uint64(value), memory.ValPercent(), []int{s.Servicers(), s.PlusServicers()})
+		tenant.Config(memory.Quota())
+		return nil
+	},
+	NODEQUOTAVALPERCENT: func(s *Server, o interface{}) errors.Error {
+		value := getNumber(o)
+		memory.Config(memory.NodeQuota(), uint(value), []int{s.Servicers(), s.PlusServicers()})
 		tenant.Config(memory.Quota())
 		return nil
 	},
@@ -516,7 +522,8 @@ func FillSettings(settings map[string]interface{}, srvr *Server) map[string]inte
 	settings[MUTEXPROFILE] = srvr.MutexProfile()
 	settings[FUNCLIMIT] = functions.FunctionsLimit()
 	settings[MEMORYQUOTA] = srvr.MemoryQuota()
-	settings[NODEQUOTA] = memory.Quota()
+	settings[NODEQUOTA] = memory.NodeQuota()
+	settings[NODEQUOTAVALPERCENT] = memory.ValPercent()
 	settings[USECBO] = srvr.UseCBO()
 	settings[ATRCOLLECTION] = srvr.AtrCollection()
 	settings[NUMATRS] = srvr.NumAtrs()

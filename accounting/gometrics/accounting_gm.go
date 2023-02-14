@@ -152,7 +152,8 @@ func (g *gometricsAccountingStore) Vitals() (map[string]interface{}, errors.Erro
 	} else {
 		logging.Debugf("statsCollector error : %v", err)
 	}
-	rv["host.memory.quota"] = memory.Quota() * util.MiB
+	rv["host.memory.quota"] = memory.NodeQuota() * util.MiB
+	rv["host.memory.value_quota"] = memory.Quota() * util.MiB
 	for n, v := range g.vitals {
 		rv[n] = v
 	}

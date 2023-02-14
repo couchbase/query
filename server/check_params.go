@@ -48,6 +48,7 @@ const (
 	TASKLIMIT             = "tasks-limit"
 	MEMORYQUOTA           = "memory-quota"
 	NODEQUOTA             = "node-quota"
+	NODEQUOTAVALPERCENT   = "node-quota-val-percent"
 	USECBO                = "use-cbo"
 	TXTIMEOUT             = "txtimeout"
 	ATRCOLLECTION         = "atrcollection"
@@ -94,6 +95,7 @@ var CHECKERS = map[string]Checker{
 	REQUESTERRORLIMIT:     checkNumber,
 	QUERY_TMP_DIR:         checkString,
 	QUERY_TMP_LIMIT:       checkNumber,
+	NODEQUOTAVALPERCENT:   checkPercent,
 }
 
 var CHECKERS_MIN = map[string]int{
@@ -232,4 +234,18 @@ func checkPath(val interface{}) (bool, errors.Error) {
 	}
 
 	return ok, nil
+}
+
+func checkPercent(val interface{}) (bool, errors.Error) {
+	switch val := val.(type) {
+	case int64:
+		if val >= 0 && val <= 100 {
+			return true, nil
+		}
+	case float64:
+		if val >= 0.0 && val <= 100 {
+			return true, nil
+		}
+	}
+	return false, nil
 }

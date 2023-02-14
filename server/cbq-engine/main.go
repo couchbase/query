@@ -72,6 +72,7 @@ const (
 	_DEF_TASKS_LIMIT            = 16384
 	_DEF_MEMORY_QUOTA           = 0
 	_DEF_NODE_QUOTA             = 0
+	_DEF_NODE_QUOTA_VAL_PERCENT = 67
 	_DEF_CE_MAXCPUS             = 4
 	_DEF_REQUEST_ERROR_LIMIT    = errors.DEFAULT_REQUEST_ERROR_LIMIT
 )
@@ -80,21 +81,25 @@ var DATASTORE = flag.String("datastore", "", "Datastore address (http://URL or d
 var CONFIGSTORE = flag.String("configstore", "stub:", "Configuration store address (http://URL or stub:)")
 var ACCTSTORE = flag.String("acctstore", "gometrics:", "Accounting store address (http://URL or stub:)")
 var NAMESPACE = flag.String("namespace", "default", "Default namespace")
-var TIMEOUT = flag.Duration("timeout", 0*time.Second, "Server execution timeout, e.g. 500ms or 2s; use zero or negative value to disable")
-var TXTIMEOUT = flag.Duration("txtimeout", 0*time.Second, "Maximum Transaction timeout, e.g. 2m or 2s; use zero or negative to use request level value")
+var TIMEOUT = flag.Duration("timeout", 0*time.Second,
+	"Server execution timeout, e.g. 500ms or 2s; use zero or negative value to disable")
+var TXTIMEOUT = flag.Duration("txtimeout", 0*time.Second,
+	"Maximum Transaction timeout, e.g. 2m or 2s; use zero or negative to use request level value")
 var READONLY = flag.Bool("readonly", false, "Read-only mode")
 var SIGNATURE = flag.Bool("signature", true, "Whether to provide signature")
 var METRICS = flag.Bool("metrics", true, "Whether to provide metrics")
 var PRETTY = flag.Bool("pretty", false, "Pretty output")
 var REQUEST_CAP = flag.Int("request-cap", _DEF_REQUEST_CAP, "Maximum number of queued requests per logical CPU")
 var REQUEST_SIZE_CAP = flag.Int("request-size-cap", server_package.MAX_REQUEST_SIZE, "Maximum size of a request")
-var REQUEST_ERROR_LIMIT = flag.Int("request-error-limit", _DEF_REQUEST_ERROR_LIMIT, "Maximum number of errors to accumulate before aborting a request")
+var REQUEST_ERROR_LIMIT = flag.Int("request-error-limit", _DEF_REQUEST_ERROR_LIMIT,
+	"Maximum number of errors to accumulate before aborting a request")
 var SCAN_CAP = flag.Int64("scan-cap", _DEF_SCAN_CAP, "Maximum buffer size for index scans; use zero or negative value to disable")
 var SERVICERS = flag.Int("servicers", 0, "Servicer count")
 var PLUS_SERVICERS = flag.Int("plus-servicers", 0, "Plus servicer count")
 var MAX_PARALLELISM = flag.Int("max-parallelism", 1, "Maximum parallelism per query; use zero or negative value to use maximum")
 var ORDER_LIMIT = flag.Int64("order-limit", 0, "Maximum LIMIT for ORDER BY clauses; use zero or negative value to disable")
-var MUTATION_LIMIT = flag.Int64("mutation-limit", 0, "Maximum LIMIT for data modification statements; use zero or negative value to disable")
+var MUTATION_LIMIT = flag.Int64("mutation-limit", 0,
+	"Maximum LIMIT for data modification statements; use zero or negative value to disable")
 var HTTP_ADDR = flag.String("http", _DEF_HTTP, "HTTP service address")
 var HTTPS_ADDR = flag.String("https", _DEF_HTTPS, "HTTPS service address")
 
@@ -117,13 +122,16 @@ var MAX_INDEX_API = flag.Int("max-index-api", datastore_package.INDEX_API_MAX, "
 var N1QL_FEAT_CTRL = flag.Uint64("n1ql-feat-ctrl", util.DEF_N1QL_FEAT_CTRL, "N1QL Feature Controls")
 var MEMORY_QUOTA = flag.Uint64("memory-quota", _DEF_MEMORY_QUOTA, "Maximum amount of document memory allowed per request, in MB")
 var NODE_QUOTA = flag.Uint64("node-quota", _DEF_NODE_QUOTA, "Maximum amount of document memory allowed per node, in MB")
+var NODE_QUOTA_VAL_PERCENT = flag.Uint("node-quota-val-percent", _DEF_NODE_QUOTA_VAL_PERCENT,
+	"Percentage of node quota reserved for value memory (0-100).")
 
 // cpu and memory profiling flags
 var CPU_PROFILE = flag.String("cpuprofile", "", "write cpu profile to file")
 var MEM_PROFILE = flag.String("memprofile", "", "write memory profile to this file")
 
 // Monitoring API
-var COMPLETED_THRESHOLD = flag.Int("completed-threshold", _DEF_COMPLETED_THRESHOLD, "cache completed query lasting longer than this many milliseconds")
+var COMPLETED_THRESHOLD = flag.Int("completed-threshold", _DEF_COMPLETED_THRESHOLD,
+	"cache completed query lasting longer than this many milliseconds")
 var COMPLETED_LIMIT = flag.Int("completed-limit", _DEF_COMPLETED_LIMIT, "maximum number of completed requests")
 
 var PREPARED_LIMIT = flag.Int("prepared-limit", _DEF_PREPARED_LIMIT, "maximum number of prepared statements")
@@ -145,7 +153,8 @@ var INTERNAL_CLIENT_KEY = flag.String("clientKeyFile", "", "Internal communicati
 // var PROFILER_PORT = flag.Int("profiler-port", 6060, "profiler listening port")
 
 // Dictionary Cache
-var DICTIONARY_CACHE_LIMIT = flag.Int("dictionary-cache-limit", _DEF_DICTIONARY_CACHE_LIMIT, "maximum number of entries in dictionary cache")
+var DICTIONARY_CACHE_LIMIT = flag.Int("dictionary-cache-limit", _DEF_DICTIONARY_CACHE_LIMIT,
+	"maximum number of entries in dictionary cache")
 
 // Serverless
 var SERVERLESS = flag.Bool("serverless", false, "Serverless mode")
@@ -161,7 +170,7 @@ func main() {
 	tenant.Init(*SERVERLESS)
 
 	memory.SetMemoryLimitFunction(setMemoryLimit)
-	memory.Config(*NODE_QUOTA, []int{*SERVICERS, *PLUS_SERVICERS})
+	memory.Config(*NODE_QUOTA, *NODE_QUOTA_VAL_PERCENT, []int{*SERVICERS, *PLUS_SERVICERS})
 	tenant.Config(memory.Quota())
 
 	numCPUs := runtime.NumCPU()
@@ -343,7 +352,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	memory.Config(memory.Quota(), []int{server.Servicers(), server.PlusServicers()})
+	memory.Config(memory.NodeQuota(), memory.ValPercent(), []int{server.Servicers(), server.PlusServicers()})
 	datastore_package.SetSystemstore(server.Systemstore())
 	prepareds.PreparedsReprepareInit(datastore, sys)
 
@@ -393,7 +402,8 @@ func main() {
 			" timeout=%v"+
 			" txtimeout=%v"+
 			" gc-percent=%v"+
-			" node-quota=%v",
+			" node-quota=%v"+
+			" node-quota-val-percent=%v",
 			util.VERSION,
 			datastore.Info().Version(),
 			*DATASTORE,
@@ -413,7 +423,8 @@ func main() {
 			server.Timeout(),
 			server.TxTimeout(),
 			*_GOGC_PERCENT,
-			memory.Quota(),
+			memory.NodeQuota(),
+			memory.ValPercent(),
 		)
 	})
 
@@ -496,7 +507,6 @@ func signalCatcher(server *server_package.Server, endpoint *http.HttpEndpoint) {
 }
 
 const _MEMORY_LIMIT = 0.9
-const _NODE_QUOTA_MULTIPLIER = 1.5
 const _MAX_MEMORY_ABOVE_LIMIT = 8 * util.GiB
 
 func setMemoryLimit(ml int64) {
@@ -525,7 +535,6 @@ func setMemoryLimit(ml int64) {
 		oml = -1
 		ml = debug.SetMemoryLimit(-1)
 	} else if ml > 0 {
-		ml = int64(float64(ml) * _NODE_QUOTA_MULTIPLIER)
 		if ml > max {
 			ml = max
 			extra = "(NODE QUOTA - LIMITED)"

@@ -30,10 +30,12 @@ type MemorySession interface {
 }
 
 type memoryManager struct {
-	setting  uint64
-	max      uint64
-	curr     uint64
-	reserved uint64
+	setting    uint64
+	max        uint64
+	curr       uint64
+	reserved   uint64
+	nodeQuota  uint64
+	valPercent uint
 }
 
 type memorySession struct {
@@ -51,9 +53,14 @@ func SetMemoryLimitFunction(f func(int64)) {
 	memLimitFunc = f
 }
 
-func Config(max uint64, servicers []int) {
-	manager.setting = max
-	manager.max = max * _MB
+func Config(maxMiB uint64, valPercent uint, servicers []int) {
+	if valPercent > 100 {
+		valPercent = 100
+	}
+	manager.valPercent = valPercent
+	manager.nodeQuota = maxMiB
+	manager.setting = maxMiB * uint64(valPercent) / 100
+	manager.max = manager.setting * _MB
 
 	// we reserve a memory token for each configured servicer so that
 	// we don't have to keep track how many more could be starting
@@ -64,18 +71,27 @@ func Config(max uint64, servicers []int) {
 	if manager.max > 0 && manager.max < c {
 		manager.max = c
 		manager.setting = c / _MEMORY_TOKEN
-		logging.Infof("amending memory manager max from requested %v to %v", max, manager.setting)
+		logging.Infof("Amending memory manager max from requested %v MiB to %v", maxMiB,
+			logging.HumanReadableSize(int64(manager.setting), false))
 	}
 	atomic.AddUint64(&manager.curr, ^(manager.reserved - 1))
 	atomic.AddUint64(&manager.curr, c)
 	manager.reserved = c
 
 	if memLimitFunc != nil {
-		memLimitFunc(int64(max * _MB))
+		memLimitFunc(int64(maxMiB * _MB))
 	}
 }
 
 var manager memoryManager
+
+func NodeQuota() uint64 {
+	return manager.nodeQuota
+}
+
+func ValPercent() uint {
+	return manager.valPercent
+}
 
 func Quota() uint64 {
 	return manager.setting
