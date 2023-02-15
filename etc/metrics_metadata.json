@@ -1,0 +1,202 @@
+{
+	"n1ql_active_requests": {
+		"type": "gauge",
+		"help": "Total number of active requests.",
+		"added": "7.0.0",
+		"notes": "This metric was named query_active_requests in versions before 7.0.0."
+	},
+	"n1ql_at_plus": {
+		"type": "counter",
+		"help": "Total number of N1QL requests with at_plus index consistency.",
+		"added": "7.0.0"
+	},
+	"n1ql_audit_actions": {
+		"type": "counter",
+		"help": "The total number of audit records sent to the server. Some requests cause more than one audit record to be emitted. Records in the output queue that have not yet been sent to the server are not counted.",
+		"added": "7.0.0"
+
+	},
+	"n1ql_audit_actions_failed": {
+		"type": "counter",
+		"help": "The total number of audit records sent to the server that failed.",
+		"added": "7.0.0"
+	},
+	"n1ql_audit_requests_filtered": {
+		"type": "counter",
+		"help": "The number of potentially auditable requests that cause no audit action to be taken.",
+		"added": "7.0.0"
+	},
+	"n1ql_audit_requests_total": {
+		"type": "counter",
+		"help": "The total number of potentially auditable requests sent to the query engine.",
+		"added": "7.0.0"
+	},
+	"n1ql_cancelled": {
+		"type": "counter",
+		"help": "Total number of cancelled requests.",
+		"added": "7.0.0"
+	},
+	"n1ql_deletes": {
+		"type": "counter",
+		"help": "Total number of DELETE operations.",
+		"added": "7.0.0"
+	},
+	"n1ql_errors": {
+		"type": "counter",
+		"help": "The total number of N1QL errors returned so far.",
+		"added": "7.0.0",
+		"uiName": "N1QL Error Rate",
+		"notes": "In the Couchbase Server UI this metric is computed as a rate, with a display name of \"N1QL Error Rate\" or n1ql_errors. This metric was named query_errors in versions before 7.0.0."
+	},
+	"n1ql_index_scans": {
+		"type": "counter",
+		"help": "Total number of secondary index scans.",
+		"added": "7.0.0"
+	},
+	"n1ql_inserts": {
+		"type": "counter",
+		"help": "Total number of INSERT operations.",
+		"added": "7.0.0"
+	},
+	"n1ql_invalid_requests": {
+		"type": "counter",
+		"help": "Total number of requests for unsupported endpoints.",
+		"added": "7.0.0",
+		"uiName": "N1QL Invalid Request Rate",
+		"notes": "In the Couchbase Server UI this metric is computed as a rate, with a display name of \"N1QL Invalid Request Rate\" or n1ql_invalid_requests. This metric was named query_invalid_requests in versions before 7.0.0."
+	},
+	"n1ql_load": {
+		"type": "gauge",
+		"help": "The current utilization factor of the servicers on the query node.",
+		"notes": "This metric is a value ranging from 0 to beyond 100. A value of 0 indicates that there are no servicers that are busy. 100 indicates that all servicers are busy. Greater than 100 indicates that all servicers are busy and there are queued requests.",
+		"added": "7.0.0"
+	},
+	"n1ql_mutations": {
+		"type": "counter",
+		"help": "Total number of document mutations.",
+		"added": "7.0.0"
+	},
+	"n1ql_prepared": {
+		"type": "counter",
+		"help": "Total number of prepared statements executed.",
+		"added": "7.0.0"
+	},
+	"n1ql_primary_scans": {
+		"type": "counter",
+		"help": "Total number of primary index scans.",
+		"added": "7.0.0"
+	},
+	"n1ql_queued_requests": {
+		"type": "gauge",
+		"help": "Total number of queued requests.",
+		"added": "7.0.0",
+		"notes": "This metric was named query_queued_requests in versions before 7.0.0."
+	},
+	"n1ql_request_time": {
+		"type": "counter",
+		"help": "Total end-to-end time to process all queries.",
+		"added": "7.0.0",
+		"unit": "nanoseconds",
+		"uiName": "Query Request Time",
+		"notes" : "In the Couchbase Server UI this metric is computed as an average, with a display name of \"Query Request Time\" or n1ql_avg_req_time. This metric was named query_request_time in versions before 7.0.0."
+
+	},
+	"n1ql_requests": {
+		"type": "counter",
+		"help": "Total number of N1QL requests.",
+		"added": "7.0.0",
+		"uiName": "N1QL Request Rate",
+		"notes": "In the Couchbase Server UI this metric is computed as a rate, with a display name of \"N1QL Request Rate\" or n1ql_requests. This metric was named query_requests in versions before 7.0.0."
+	},
+	"n1ql_requests_1000ms": {
+		"type": "counter",
+		"help": "Number of queries that take longer than 1000ms.",
+		"added": "7.0.0",
+		"uiName": "Queries > 1000ms",
+		"notes": "This metric was named query_requests_1000ms in versions before 7.0.0."
+	},
+	"n1ql_requests_250ms": {
+		"type": "counter",
+		"help": "Number of queries that take longer than 250ms.",
+		"added": "7.0.0",
+		"uiName": "Queries > 250ms",
+		"notes": "This metric was named query_requests_250ms in versions before 7.0.0."
+	},
+	"n1ql_requests_5000ms": {
+		"type": "counter",
+		"help": "Number of queries that take longer than 5000ms.",
+		"added": "7.0.0",
+		"uiName": "Queries > 5000ms",
+		"notes": "This metric was named query_requests_5000ms in versions before 7.0.0."
+	},
+	"n1ql_requests_500ms": {
+		"type": "counter",
+		"help": "Number of queries that take longer than 500ms.",
+		"added": "7.0.0",
+		"uiName": "Queries > 500ms",
+		"notes": "This metric was named query_requests_500ms in versions before 7.0.0."
+	},
+	"n1ql_result_count": {
+		"type": "counter",
+		"help": "Total number of results (documents) returned by the query engine.",
+		"added": "7.0.0",
+		"uiName": "Query Result Items",
+		"notes": "In the Couchbase Server UI this metric is computed as an average, with a display name of \"Query Result Items\" or n1ql_avg_result_count. This metric was named query_result_count in versions before 7.0.0."
+	},
+	"n1ql_result_size": {
+		"type": "counter",
+		"help": "Total size of data returned by the query engine.",
+		"added": "7.0.0",
+		"unit": "bytes",
+		"uiName": "Query Result Size",
+		"notes": "In the Couchbase Server UI this metric is computed as an average, with a display name of \"Query Result Size\" or n1ql_avg_response_size. This metric was named query_result_size in versions before 7.0.0."
+	},
+	"n1ql_scan_plus": {
+		"type": "counter",
+		"help": "Total number of N1QL requests with request_plus index consistency.",
+		"added": "7.0.0"
+	},
+	"n1ql_selects": {
+		"type": "counter",
+		"help": "Total number of SELECT requests.",
+		"added": "7.0.0",
+		"uiName": "N1QL Select Rate",
+		"notes": "In the Couchbase Server UI this metric is computed as a rate, with a display name of \"N1QL Select Rate\" or n1ql_selects. This metric was named query_selects in versions before 7.0.0."
+	},
+	"n1ql_service_time": {
+		"type": "counter",
+		"help": "Time to execute all queries.",
+		"added": "7.0.0",
+		"unit": "nanoseconds",
+		"uiName" : "Query Execution Time",
+		"notes": "In the Couchbase Server UI this metric is computed as an average, with a display name of \"Query Execution Time\" or n1ql_avg_svc_time. This metric was named query_service_time in versions before 7.0.0."
+	},
+	"n1ql_transaction_time": {
+		"type": "counter",
+		"help": "Total elapsed time of transactions so far.",
+		"added": "7.0.0",
+		"unit": "nanoseconds"
+	},
+	"n1ql_transactions": {
+		"type": "counter",
+		"help": "Total number of transactions.",
+		"added": "7.0.0"
+	},
+	"n1ql_unbounded": {
+		"type": "counter",
+		"help": "Total number of N1QL requests with not_bounded index consistency.",
+		"added": "7.0.0"
+	},
+	"n1ql_updates": {
+		"type": "counter",
+		"help": "Total number of UPDATE requests.",
+		"added": "7.0.0"
+	},
+	"n1ql_warnings": {
+		"type": "counter",
+		"help": "The total number of N1QL warnings returned so far.",
+		"added": "7.0.0",
+		"uiName": "N1QL Warning Rate",
+		"notes": "In the Couchbase Server UI this metric is computed as a rate, with a display name of \"N1QL Warning Rate\" or n1ql_warnings. This metric was named query_warnings in versions before 7.0.0."
+	}
+}
