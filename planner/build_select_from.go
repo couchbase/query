@@ -209,7 +209,7 @@ func (this *builder) visitFrom(node *algebra.Subselect, group *algebra.Group,
 				return err
 			}
 			// join filter hints are checked/marked after all join/nest/unnest are done
-			err = this.MarkJoinFilterHints()
+			err = this.MarkJoinFilterHints(this.children, this.subChildren)
 			if err != nil {
 				return err
 			}

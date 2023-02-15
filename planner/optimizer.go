@@ -54,7 +54,7 @@ type Builder interface {
 		[]plan.Operator, []plan.Operator, []plan.CoveringOperator, expression.Expression, error)
 
 	MarkKeyspaceHints() error
-	MarkJoinFilterHints() error
+	MarkJoinFilterHints(children, subChildren []plan.Operator) error
 	CheckBitFilters(qPlan, subPlan []plan.Operator)
 	CheckJoinFilterHints(qPlan, subPlan []plan.Operator) (hintError bool, err error)
 }

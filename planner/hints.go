@@ -14,6 +14,7 @@ import (
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/plan"
 	base "github.com/couchbase/query/plannerbase"
 	"github.com/couchbase/query/util"
 )
@@ -644,15 +645,15 @@ func (this *builder) markOptimHints(alias string, includeJoin bool) (err error) 
 	return nil
 }
 
-func (this *builder) MarkJoinFilterHints() (err error) {
-	if len(this.subChildren) > 0 {
-		err = checkJoinFilterHint(this.baseKeyspaces, this.subChildren...)
+func (this *builder) MarkJoinFilterHints(children, subChildren []plan.Operator) (err error) {
+	if len(subChildren) > 0 {
+		err = checkJoinFilterHint(this.baseKeyspaces, subChildren...)
 		if err != nil {
 			return err
 		}
 	}
-	if len(this.children) > 0 {
-		err = checkJoinFilterHint(this.baseKeyspaces, this.children...)
+	if len(children) > 0 {
+		err = checkJoinFilterHint(this.baseKeyspaces, children...)
 		if err != nil {
 			return err
 		}

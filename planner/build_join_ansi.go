@@ -2013,17 +2013,13 @@ func setProbeBitFilters(baseKeyspaces map[string]*base.BaseKeyspace,
 							coverExprs = append(coverExprs, coverExpr)
 						}
 						probeIdxExprs := []*plan.BitFilterIndex{plan.NewBitFilterIndex(index, coverExprs)}
-						var dups []bool
-						dups, err = op.SetProbeBitFilters(a, probeIdxExprs)
+						// it's ok to have duplicated probe bit filters,
+						// since during join enumeration, at different stages
+						// we may end up generating the same information
+						// multiple times (the plans may be reused)
+						_, err = op.SetProbeBitFilters(a, probeIdxExprs)
 						if err != nil {
 							return
-						}
-						// if present, only expect a single entry
-						if len(dups) > 0 && dups[0] {
-							delete(buildBFInfos, index)
-							if len(buildBFInfos) == 0 {
-								binfo.SetSkip()
-							}
 						}
 					}
 				}
