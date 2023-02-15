@@ -149,8 +149,9 @@ func DisableOverflowConnections() {
 }
 
 // Toggle asynchronous overflow closer
-func EnableAsynchronousCloser(closer bool) {
+func EnableAsynchronousCloser(closer bool, interval time.Duration) {
 	AsynchronousCloser = closer
+	ConnCloserInterval = interval
 }
 
 // Allow TCP keepalive parameters to be set by the application

@@ -83,6 +83,14 @@ const (
 	_NONE
 )
 
+const (
+	_DEFAULT_CONN       = 64
+	_SERVERLESS_CONN    = 16
+	_OVERFLOW_CONN      = 64
+	_DEFAULT_TIMEOUT    = 30 * time.Second
+	_SERVERLESS_TIMEOUT = 20 * time.Second
+)
+
 // Max number of mutation workers
 // 1 routine for every 4 CPU cores
 // But, a max of 4 go routines are allowed
@@ -91,8 +99,8 @@ var _MAX_MUTATION_ROUTINES = util.MinInt(util.MaxInt(1, int(util.NumCPU()/4)), 4
 func init() {
 
 	// MB-27415 have a larger overflow pool and close overflow connections asynchronously
-	cb.SetConnectionPoolParams(64, 64)
-	cb.EnableAsynchronousCloser(true)
+	cb.SetConnectionPoolParams(_DEFAULT_CONN, _OVERFLOW_CONN)
+	cb.EnableAsynchronousCloser(true, _DEFAULT_TIMEOUT)
 
 	val, err := strconv.ParseBool(os.Getenv("REQUIRE_CBAUTH"))
 	if err != nil {
@@ -130,6 +138,10 @@ func init() {
 
 // Pass Deployment Model to gsi+n1fty
 func SetServerless(serverless bool) {
+	if serverless {
+		cb.SetConnectionPoolParams(_SERVERLESS_CONN, _OVERFLOW_CONN)
+		cb.EnableAsynchronousCloser(true, _SERVERLESS_TIMEOUT)
+	}
 	gsi.SetDeploymentModel(serverless)
 	ftsclient.SetDeploymentModel(serverless)
 }

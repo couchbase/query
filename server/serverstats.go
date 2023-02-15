@@ -190,8 +190,16 @@ func (c *statsCollector) runCollectStats() {
 		}
 		// End: temporary addition
 
+		clean := false
 		if (index % _LOG_INTRVL) == 0 {
 			mstats, _ := c.server.AccountingStore().Vitals()
+			prss := mstats["process.rss"]
+			if prss != nil {
+				rss, ok := prss.(uint64)
+				nodeQuota := memory.NodeQuota() * util.MiB
+				clean = ok && rss > nodeQuota && nodeQuota > 0
+			}
+
 			if buf, e := json.Marshal(mstats); e == nil {
 				logging.Infof("Query Engine Stats %v", string(buf))
 			}
@@ -199,18 +207,19 @@ func (c *statsCollector) runCollectStats() {
 		index++
 		index %= c.nLoadFactors
 
+		// expire tenants if required
+		if clean && tenant.IsServerless() {
+			tenant.Foreach(func(n string, m memory.MemoryManager) {
+				m.Expire()
+			})
+		}
+
 		util.ResyncTime()
 		if util.Now().UnixNano()-int64(lastGC) > int64(_STATS_INTRVL) {
 			logging.Debugf("Running GC")
 			runtime.GC()
 		}
 
-		// TODO expire tenants if required
-		if false && tenant.IsServerless() {
-			tenant.Foreach(func(n string, m memory.MemoryManager) {
-				m.Expire()
-			})
-		}
 	}
 
 	tickerFunc()
