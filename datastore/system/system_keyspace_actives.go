@@ -181,6 +181,9 @@ func (b *activeRequestsKeyspace) Fetch(keys []string, keysMap map[string]value.A
 				if request.ThrottleTime() > time.Duration(0) {
 					item.SetField("throttleTime", request.ThrottleTime().String())
 				}
+				if request.CpuTime() > time.Duration(0) {
+					item.SetField("cpuTime", request.CpuTime().String())
+				}
 				p := request.Output().FmtPhaseCounts()
 				if p != nil {
 					item.SetField("phaseCounts", p)

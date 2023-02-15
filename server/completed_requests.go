@@ -53,6 +53,7 @@ type RequestLogEntry struct {
 	TransactionElapsedTime   time.Duration
 	TransactionRemainingTime time.Duration
 	ThrottleTime             time.Duration
+	CpuTime                  time.Duration
 	QueryContext             string
 	Statement                string
 	StatementType            string
@@ -670,6 +671,7 @@ func LogRequest(request_time, service_time, transactionElapsedTime time.Duration
 		re.Tag = tag
 	}
 	re.ThrottleTime = request.ThrottleTime()
+	re.CpuTime = request.CpuTime()
 
 	requestLog.cache.Add(re, id, nil)
 	for _, h := range requestLog.handlers {

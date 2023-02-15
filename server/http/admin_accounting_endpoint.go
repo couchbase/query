@@ -1550,6 +1550,10 @@ func activeRequestWorkHorse(endpoint *HttpEndpoint, requestId string, userName s
 					reqMap["optimizerEstimates"] = p
 				}
 			}
+			cpuTime := request.CpuTime()
+			if cpuTime > time.Duration(0) {
+				reqMap["cpuTime"] = cpuTime.String()
+			}
 
 			var ctrl bool
 			ctr := request.Controls()
@@ -1802,6 +1806,9 @@ func completedRequestWorkHorse(requestId string, userName string, profiling bool
 			timings := request.Timings()
 			if timings != nil {
 				reqMap["timings"] = timings
+			}
+			if request.CpuTime > time.Duration(0) {
+				reqMap["cpuTime"] = request.CpuTime.String()
 			}
 			optEstimates := request.OptEstimates()
 			if optEstimates != nil {

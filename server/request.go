@@ -180,6 +180,7 @@ type Request interface {
 	TenantCtx() tenant.Context
 	SortProjection() bool
 	ThrottleTime() time.Duration
+	CpuTime() time.Duration
 	SetThrottleTime(d time.Duration)
 	Alive() bool
 	Loga(logging.Level, func() string)

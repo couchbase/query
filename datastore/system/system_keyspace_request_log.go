@@ -178,6 +178,9 @@ func (b *requestLogKeyspace) Fetch(keys []string, keysMap map[string]value.Annot
 				if entry.ThrottleTime > time.Duration(0) {
 					item.SetField("throttleTime", entry.ThrottleTime.String())
 				}
+				if entry.CpuTime > time.Duration(0) {
+					item.SetField("cpuTime", entry.CpuTime.String())
+				}
 				if entry.PreparedName != "" {
 					item.SetField("preparedName", entry.PreparedName)
 					item.SetField("preparedText", entry.PreparedText)

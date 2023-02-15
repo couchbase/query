@@ -870,6 +870,9 @@ func (this *httpRequest) writeProfile(profile server.Profile, prefix, indent str
 		if needComma && !this.writeString(",") {
 			return false
 		}
+		if this.CpuTime() > time.Duration(0) && !this.writer.printf("%s\"cpuTime\": \"%s\",", newPrefix, this.CpuTime().String()) {
+			logging.Infof("Error writing request CPU time")
+		}
 		if !this.writer.printf("%s\"requestTime\": \"%s\"", newPrefix, this.RequestTime().Format(expression.DEFAULT_FORMAT)) {
 			logging.Infof("Error writing request time")
 		}
