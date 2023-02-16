@@ -55,7 +55,7 @@ require (
 	github.com/couchbase/query-ee v0.0.0-00010101000000-000000000000
 	github.com/couchbase/regulator v0.0.0-00010101000000-000000000000
 	github.com/couchbasedeps/go-curl v0.0.0-20190830233031-f0b2afc926ec
-	github.com/gorilla/mux v1.8.0
+	github.com/golang/snappy v0.0.4
 	github.com/kylelemons/godebug v1.1.0
 	github.com/mattn/go-runewidth v0.0.3
 	github.com/peterh/liner v1.2.0
@@ -109,9 +109,9 @@ require (
 	github.com/elazarl/go-bindata-assetfs v1.0.1 // indirect
 	github.com/golang/geo v0.0.0-20210211234256-740aa86cb551 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
-	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/flatbuffers v22.11.23+incompatible // indirect
 	github.com/google/uuid v1.3.0 // indirect
+	github.com/gorilla/mux v1.8.0 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.1 // indirect

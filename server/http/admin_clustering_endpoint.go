@@ -26,7 +26,7 @@ import (
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/server"
-	"github.com/gorilla/mux"
+	"github.com/couchbase/query/server/http/router"
 )
 
 const (
@@ -82,13 +82,13 @@ func (this *HttpEndpoint) registerClusterHandlers() {
 	}
 
 	for route, h := range routeMap {
-		this.mux.HandleFunc(route, h.handler).Methods(h.methods...)
+		this.router.Map(route, h.handler, h.methods...)
 	}
-	this.mux.Handle("/debug/pprof/block", newAdminAuthHandlerWrapper(this, pprof.Handler("block")))
-	this.mux.Handle("/debug/pprof/goroutine", newAdminAuthHandlerWrapper(this, pprof.Handler("goroutine")))
-	this.mux.Handle("/debug/pprof/threadcreate", newAdminAuthHandlerWrapper(this, pprof.Handler("threadcreate")))
-	this.mux.Handle("/debug/pprof/heap", newAdminAuthHandlerWrapper(this, pprof.Handler("heap")))
-	this.mux.Handle("/debug/pprof/mutex", newAdminAuthHandlerWrapper(this, pprof.Handler("mutex")))
+	this.router.Map("/debug/pprof/block", newAdminAuthHandlerWrapper(this, pprof.Handler("block")).ServeHTTP)
+	this.router.Map("/debug/pprof/goroutine", newAdminAuthHandlerWrapper(this, pprof.Handler("goroutine")).ServeHTTP)
+	this.router.Map("/debug/pprof/threadcreate", newAdminAuthHandlerWrapper(this, pprof.Handler("threadcreate")).ServeHTTP)
+	this.router.Map("/debug/pprof/heap", newAdminAuthHandlerWrapper(this, pprof.Handler("heap")).ServeHTTP)
+	this.router.Map("/debug/pprof/mutex", newAdminAuthHandlerWrapper(this, pprof.Handler("mutex")).ServeHTTP)
 
 }
 
@@ -260,8 +260,7 @@ func doClusters(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 
 func doCluster(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
 	af.EventTypeId = audit.API_ADMIN_CLUSTERS
-	vars := mux.Vars(req)
-	name := vars["cluster"]
+	_, name := router.RequestValue(req, "cluster")
 	af.Cluster = name
 	cfgStore, cfgErr := endpoint.doConfigStore()
 	if cfgErr != nil {
@@ -284,8 +283,7 @@ func doCluster(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request,
 
 func doNodes(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
 	af.EventTypeId = audit.API_ADMIN_CLUSTERS
-	vars := mux.Vars(req)
-	name := vars["cluster"]
+	_, name := router.RequestValue(req, "cluster")
 	af.Cluster = name
 	cfgStore, cfgErr := endpoint.doConfigStore()
 	if cfgErr != nil {
@@ -311,9 +309,8 @@ func doNodes(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, a
 }
 
 func doNode(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
-	vars := mux.Vars(req)
-	node := vars["node"]
-	name := vars["cluster"]
+	_, name := router.RequestValue(req, "cluster")
+	_, node := router.RequestValue(req, "node")
 
 	af.EventTypeId = audit.API_ADMIN_CLUSTERS
 	af.Node = node

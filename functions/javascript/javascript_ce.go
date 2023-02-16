@@ -13,15 +13,15 @@ package javascript
 import (
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/functions"
+	"github.com/couchbase/query/server/http/router"
 	"github.com/couchbase/query/value"
-	"github.com/gorilla/mux"
 )
 
 // this body is used to fail function creation where not supported
 type javascriptBody struct {
 }
 
-func Init(mix *mux.Router) {
+func Init(router router.Router) {
 }
 
 func NewJavascriptBody(library, object, text string) (functions.FunctionBody, errors.Error) {

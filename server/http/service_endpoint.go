@@ -35,9 +35,9 @@ import (
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/prepareds"
 	"github.com/couchbase/query/server"
+	"github.com/couchbase/query/server/http/router"
 	"github.com/couchbase/query/tenant"
 	"github.com/couchbase/query/util"
-	"github.com/gorilla/mux"
 )
 
 type userMetrics struct {
@@ -69,7 +69,7 @@ type HttpEndpoint struct {
 	listener            map[string]net.Listener
 	listenerTLS         map[string]net.Listener
 	localListener       bool
-	mux                 *mux.Router
+	router              router.Router
 	actives             server.ActiveRequests
 	options             server.ServerOptions
 	connSecConfig       datastore.ConnectionSecurityConfig
@@ -128,8 +128,8 @@ func NewServiceEndpoint(srv *server.Server, staticPath string, metrics bool,
 	return rv
 }
 
-func (this *HttpEndpoint) Mux() *mux.Router {
-	return this.mux
+func (this *HttpEndpoint) Router() router.Router {
+	return this.router
 }
 
 func (this *HttpEndpoint) SettingsCallback(f string, v interface{}) {
@@ -165,7 +165,7 @@ func (this *HttpEndpoint) localhostListen() error {
 	}
 
 	srv := &http.Server{
-		Handler:           this.mux,
+		Handler:           this.router,
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 
@@ -218,7 +218,7 @@ func (this *HttpEndpoint) Listen() error {
 	}
 
 	srv := &http.Server{
-		Handler:           this.mux,
+		Handler:           this.router,
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 
@@ -291,7 +291,7 @@ func (this *HttpEndpoint) ListenTLS() error {
 	}
 
 	srv := &http.Server{
-		Handler:           this.mux,
+		Handler:           this.router,
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 
@@ -550,28 +550,25 @@ func (this *HttpEndpoint) closeListener(l net.Listener) error {
 }
 
 func (this *HttpEndpoint) registerHandlers(staticPath string) {
-	this.mux = mux.NewRouter()
+	this.router = router.NewRouter()
 
-	this.mux.Handle(servicePrefix, this).
-		Methods("GET", "POST")
+	this.router.Map(servicePrefix, this.ServeHTTP, "GET", "POST")
 
 	// TODO: Deprecate (remove) this binding
-	this.mux.Handle("/query", this).
-		Methods("GET", "POST")
+	this.router.Map("/query", this.ServeHTTP, "GET", "POST")
 
 	this.registerClusterHandlers()
 	this.registerAccountingHandlers()
 	this.registerStaticHandlers(staticPath)
 
-	this.mux.Handle(gsiPrefix+"/getInternalVersion", newAdminAuthHandlerWrapper(this, gsi.NewInternalVersionHandler()))
+	this.router.Map(gsiPrefix+"/getInternalVersion", newAdminAuthHandlerWrapper(this, gsi.NewInternalVersionHandler()).ServeHTTP)
 }
 
 func (this *HttpEndpoint) registerStaticHandlers(staticPath string) {
-	this.mux.Handle("/", http.FileServer(http.Dir(staticPath)))
+	this.router.Map("/", http.FileServer(http.Dir(staticPath)).ServeHTTP)
 	pathPrefix := "/tutorial/"
 	pathValue := staticPath + pathPrefix
-	this.mux.PathPrefix(pathPrefix).Handler(http.StripPrefix(pathPrefix,
-		http.FileServer(http.Dir(pathValue))))
+	this.router.MapPrefix(pathPrefix, http.StripPrefix(pathPrefix, http.FileServer(http.Dir(pathValue))).ServeHTTP)
 }
 
 // Reconfigure the node-to-node encryption.

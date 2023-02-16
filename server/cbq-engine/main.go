@@ -434,7 +434,7 @@ func main() {
 
 	server.SetSettingsCallback(endpoint.SettingsCallback)
 
-	constructor.Init(endpoint.Mux(), server.Servicers())
+	constructor.Init(endpoint.Router(), server.Servicers())
 	tenant.Start(endpoint, *UUID, *REGULATOR_SETTINGS_FILE)
 
 	// topology awareness

@@ -21,11 +21,11 @@ import (
 	"github.com/couchbase/query/functions/javascript"
 	metaStorage "github.com/couchbase/query/functions/metakv"
 	systemStorage "github.com/couchbase/query/functions/system"
+	"github.com/couchbase/query/server/http/router"
 	"github.com/couchbase/query/tenant"
-	"github.com/gorilla/mux"
 )
 
-func Init(mux *mux.Router, threads int) {
+func Init(router router.Router, threads int) {
 	functionsBridge.NewFunctionName = newGlobalFunction
 	functionsBridge.NewInlineBody = inline.NewInlineBody
 	functionsBridge.NewGolangBody = golang.NewGolangBody
@@ -35,7 +35,7 @@ func Init(mux *mux.Router, threads int) {
 	systemStorage.Init()
 	golang.Init()
 	inline.Init()
-	javascript.Init(mux)
+	javascript.Init(router)
 }
 
 func newGlobalFunction(elem []string, namespace string, queryContext string) (functions.FunctionName, errors.Error) {

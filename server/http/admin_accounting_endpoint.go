@@ -36,11 +36,11 @@ import (
 	"github.com/couchbase/query/prepareds"
 	"github.com/couchbase/query/scheduler"
 	"github.com/couchbase/query/server"
+	"github.com/couchbase/query/server/http/router"
 	"github.com/couchbase/query/tenant"
 	"github.com/couchbase/query/transactions"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
-	"github.com/gorilla/mux"
 )
 
 const (
@@ -187,7 +187,7 @@ func (this *HttpEndpoint) registerAccountingHandlers() {
 	}
 
 	for route, h := range routeMap {
-		this.mux.HandleFunc(route, h.handler).Methods(h.methods...)
+		this.router.Map(route, h.handler, h.methods...)
 	}
 
 	// prometheus is a special case, as it may be handled by the tenant code
@@ -195,15 +195,17 @@ func (this *HttpEndpoint) registerAccountingHandlers() {
 		prometheusHighHandler := func(w http.ResponseWriter, req *http.Request) {
 			this.wrapAPI(w, req, doPrometheusHigh)
 		}
-		this.mux.HandleFunc(prometheusHigh, prometheusHighHandler).Methods("GET")
+		this.router.Map(prometheusHigh, prometheusHighHandler, "GET")
 	}
 
-	this.mux.HandleFunc(expvarsRoute, expvarsHandler).Methods("GET")
+	this.router.Map(expvarsRoute, expvarsHandler, "GET")
 
-	this.mux.NotFoundHandler = http.HandlerFunc(notFoundHandler)
+	this.router.SetNotFoundHandler(notFoundHandler)
 }
 
-func doStats(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
+func doStats(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
+	interface{}, errors.Error) {
+
 	switch req.Method {
 	case "GET":
 		err, _ := endpoint.verifyCredentialsFromRequest("system:stats", auth.PRIV_SYSTEM_READ, req, af)
@@ -247,9 +249,10 @@ func addMetricData(name string, stats map[string]interface{}, metrics map[string
 	}
 }
 
-func doStat(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
-	vars := mux.Vars(req)
-	name := vars["stat"]
+func doStat(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
+	interface{}, errors.Error) {
+
+	_, name := router.RequestValue(req, "stat")
 	acctStore := endpoint.server.AccountingStore()
 	reg := acctStore.MetricRegistry()
 
@@ -459,9 +462,10 @@ func (endpoint *HttpEndpoint) verifyCredentialsFromRequest(api string, priv auth
 	return err, isInternal
 }
 
-func doPrepared(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
-	vars := mux.Vars(req)
-	name := vars["name"]
+func doPrepared(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
+	interface{}, errors.Error) {
+
+	_, name := router.RequestValue(req, "name")
 
 	af.EventTypeId = audit.API_ADMIN_PREPAREDS
 	af.Name = name
@@ -632,9 +636,10 @@ func doPrepareds(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Reques
 	}
 }
 
-func doFunction(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
-	vars := mux.Vars(req)
-	name := vars["name"]
+func doFunction(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
+	interface{}, errors.Error) {
+
+	_, name := router.RequestValue(req, "name")
 
 	af.EventTypeId = audit.API_ADMIN_FUNCTIONS
 	af.Name = name
@@ -721,9 +726,10 @@ func doFunctions(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Reques
 	}
 }
 
-func doDictionaryEntry(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
-	vars := mux.Vars(req)
-	name := vars["name"]
+func doDictionaryEntry(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
+	interface{}, errors.Error) {
+
+	_, name := router.RequestValue(req, "name")
 
 	af.EventTypeId = audit.API_ADMIN_DICTIONARY
 	af.Name = name
@@ -798,9 +804,10 @@ func doDictionary(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Reque
 	}
 }
 
-func doTask(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
-	vars := mux.Vars(req)
-	name := vars["name"]
+func doTask(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
+	interface{}, errors.Error) {
+
+	_, name := router.RequestValue(req, "name")
 
 	af.EventTypeId = audit.API_ADMIN_TASKS
 	af.Name = name
@@ -988,9 +995,10 @@ func doFunctionsGlobalBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req 
 	return "", nil
 }
 
-func doFunctionsBucketBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
-	vars := mux.Vars(req)
-	bucket := vars["bucket"]
+func doFunctionsBucketBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
+	interface{}, errors.Error) {
+
+	_, bucket := router.RequestValue(req, "bucket")
 	af.EventTypeId = audit.API_ADMIN_FUNCTIONS_BACKUP
 	switch req.Method {
 	case "GET":
@@ -1344,10 +1352,10 @@ func doFunctionRestore(v []byte, l int, b string, include, exclude matcher, rema
 	return nil
 }
 
-func doTransaction(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request,
-	af *audit.ApiAuditFields) (interface{}, errors.Error) {
-	vars := mux.Vars(req)
-	txId := vars["txid"]
+func doTransaction(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
+	interface{}, errors.Error) {
+
+	_, txId := router.RequestValue(req, "txid")
 
 	af.EventTypeId = audit.API_ADMIN_TRANSACTIONS
 	af.Name = txId
@@ -1411,9 +1419,10 @@ func doTransactions(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 	}
 }
 
-func doActiveRequest(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
-	vars := mux.Vars(req)
-	requestId := vars["request"]
+func doActiveRequest(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
+	interface{}, errors.Error) {
+
+	_, requestId := router.RequestValue(req, "request")
 
 	af.EventTypeId = audit.API_ADMIN_ACTIVE_REQUESTS
 	af.Request = requestId
@@ -1679,9 +1688,10 @@ func doActiveRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.R
 	return requests, nil
 }
 
-func doCompletedRequest(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
-	vars := mux.Vars(req)
-	requestId := vars["request"]
+func doCompletedRequest(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
+	interface{}, errors.Error) {
+
+	_, requestId := router.RequestValue(req, "request")
 
 	af.EventTypeId = audit.API_ADMIN_COMPLETED_REQUESTS
 	af.Request = requestId

@@ -24,10 +24,10 @@ import (
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/functions"
 	"github.com/couchbase/query/logging"
+	"github.com/couchbase/query/server/http/router"
 	"github.com/couchbase/query/tenant"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
-	"github.com/gorilla/mux"
 )
 
 // we won't let a javascript function execute more than 2 minutes
@@ -69,7 +69,7 @@ var tenantsLock sync.RWMutex
 
 // TODO TENANT cleanup tenant runners
 
-func Init(mux *mux.Router) {
+func Init(router router.Router) {
 	functions.FunctionsNewLanguage(functions.JAVASCRIPT, &javascript{})
 
 	// TODO for serverless the global engine is there to service couchbase provided global libraries
@@ -109,9 +109,9 @@ func Init(mux *mux.Router) {
 
 	err := external.engine.Configure(engConfig, dynConfig)
 	if err.Err == nil {
-		if mux != nil {
+		if router != nil {
 			handle := external.engine.UIHandler()
-			mux.NewRoute().PathPrefix(handle.Path()).Methods("GET", "POST", "DELETE").HandlerFunc(handle.Handler())
+			router.MapPrefix(handle.Path(), handle.Handler(), "GET", "POST", "DELETE")
 		}
 		if err.Err == nil {
 			err = external.engine.Start()

@@ -22,11 +22,11 @@ import (
 	"github.com/couchbase/query/distributed"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
+	"github.com/couchbase/query/server/http/router"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/regulator"
 	"github.com/couchbase/regulator/factory"
 	"github.com/couchbase/regulator/metering"
-	"github.com/gorilla/mux"
 )
 
 var isServerless bool
@@ -46,7 +46,7 @@ type Context interface {
 }
 
 type Endpoint interface {
-	Mux() *mux.Router
+	Router() router.Router
 	Authorize(req *http.Request) errors.Error
 	WriteError(err errors.Error, w http.ResponseWriter, req *http.Request)
 }
@@ -88,7 +88,7 @@ func Start(endpoint Endpoint, nodeid string, regulatorsettingsfile string) {
 	handle := factory.InitRegulator(regulator.InitSettings{NodeID: service.NodeID(nodeid),
 		SettingsFile: regulatorsettingsfile, Service: regulator.Query,
 		ServiceCheckMask: regulator.Index | regulator.Search})
-	mux := endpoint.Mux()
+	router := endpoint.Router()
 	tenantHandler := func(w http.ResponseWriter, req *http.Request) {
 		err := endpoint.Authorize(req)
 		if err != nil {
@@ -97,8 +97,8 @@ func Start(endpoint Endpoint, nodeid string, regulatorsettingsfile string) {
 		}
 		handle.WriteMetrics(w)
 	}
-	mux.HandleFunc(regulator.MeteringEndpoint, tenantHandler).Methods("GET")
-	mux.HandleFunc("/_prometheusMetricsHigh", tenantHandler).Methods("GET")
+	router.Map(regulator.MeteringEndpoint, tenantHandler, "GET")
+	router.Map("/_prometheusMetricsHigh", tenantHandler, "GET")
 }
 
 func RegisterResourceManager(m ResourceManager) {
