@@ -110,9 +110,15 @@ func SargForFilters(filters base.Filters, keys expression.Expressions, isMissing
 	sargKeys := keys[0:max]
 
 	for _, fl := range filters {
-		if (baseKeyspace.OnclauseOnly() || baseKeyspace.IsOuter()) && !fl.IsOnclause() {
-			// only ON-clause filter should be used
-			continue
+		if fl.IsOnclause() {
+			if baseKeyspace.IsOuter() && fl.NotPushable() {
+				continue
+			}
+		} else {
+			if baseKeyspace.OnclauseOnly() || baseKeyspace.IsOuter() {
+				// only ON-clause filter should be used
+				continue
+			}
 		}
 
 		isJoin := fl.IsJoin() && !underHash

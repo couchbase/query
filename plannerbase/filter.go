@@ -30,6 +30,7 @@ const (
 	FLTR_DERIVED_EQJOIN                // derived equi-join filter
 	FLTR_ADJUST_JOIN_SELEC             // join selectivity adjusted
 	FLTR_SAV_INDEX_SPAN                // saved IN_INDEX_SPAN flag
+	FLTR_NOT_PUSHABLE                  // ON-clause filter that is not pushable
 )
 
 const TEMP_PLAN_FLAGS = (FLTR_IN_INDEX_SPAN | FLTR_IN_HASH_JOIN)
@@ -203,6 +204,14 @@ func (this *Filter) HasAdjustJoinSelec() bool {
 	return (this.fltrFlags & FLTR_ADJUST_JOIN_SELEC) != 0
 }
 
+func (this *Filter) SetNotPushable() {
+	this.fltrFlags |= FLTR_NOT_PUSHABLE
+}
+
+func (this *Filter) NotPushable() bool {
+	return (this.fltrFlags & FLTR_NOT_PUSHABLE) != 0
+}
+
 func (this *Filter) FltrExpr() expression.Expression {
 	return this.fltrExpr
 }
@@ -256,13 +265,14 @@ func (this *Filter) IsPostjoinFilter(onclause expression.Expression, outer bool)
 		return true
 	}
 	if this.IsOnclause() {
+		notPushable := this.NotPushable()
 		// part of current ON-clause?
 		if SubsetOf(onclause, this.fltrExpr) {
-			return false
+			return notPushable
 		}
 		if this.origExpr != nil {
 			if SubsetOf(onclause, this.origExpr) {
-				return false
+				return notPushable
 			}
 		} else if IsDerivedExpr(this.fltrExpr) {
 			var err error
@@ -273,7 +283,7 @@ func (this *Filter) IsPostjoinFilter(onclause expression.Expression, outer bool)
 				return false
 			}
 			if SubsetOf(dnfExpr, this.fltrExpr) {
-				return false
+				return notPushable
 			}
 		}
 

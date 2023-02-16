@@ -40,6 +40,10 @@ func CombineFilters(baseKeyspace *base.BaseKeyspace, includeOnclause bool) error
 			if !includeOnclause {
 				continue
 			}
+
+			if baseKeyspace.IsOuter() && fl.NotPushable() {
+				continue
+			}
 		} else {
 			// MB-38564, MB-46607: in case of outer join, filters from the
 			// WHERE clause should not be pushed to a subservient table

@@ -12,7 +12,6 @@
             "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IndexScan3' AND ARRAY_LENGTH(v.`index_keys`) > 0 AND v.`filter` IS NOT MISSING END"
         },
         "statements":"SELECT d.c1, d.c3, d.c5, d.c6 FROM orders AS d WHERE d.test_id = \"idxfltr\" AND d.c1 = 1 AND LOWER(d.c3) = \"test\" AND d.c5 LIKE \"%abc%\"",
-        "ordered": true,
         "results": [
             {
                 "c1": 1,
@@ -41,7 +40,6 @@
             "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IndexScan3' AND v.`index_keys` IS MISSING AND v.`filter` IS MISSING END"
         },
         "statements":"SELECT d.c1, d.c3, d.c5, d.c6 FROM orders AS d WHERE d.test_id = \"idxfltr\" AND d.c1 = 1 AND d.c3 = \"Test\"",
-        "ordered": true,
         "results": [
             {
                 "c1": 1,
@@ -64,7 +62,6 @@
             "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IndexScan3' AND ARRAY_LENGTH(v.`index_keys`) > 0 AND v.`filter` IS NOT MISSING END"
         },
         "statements":"SELECT d.c1, d.c3, d.c5, d.c6 FROM orders AS d WHERE d.test_id = \"idxfltr\" AND d.c1 = 1 AND meta(d).id LIKE \"%003\"",
-        "ordered": true,
         "results": [
             {
                 "c1": 1,
@@ -87,7 +84,6 @@
             "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IndexScan3' AND ARRAY_LENGTH(v.`index_keys`) > 0 AND v.`filter` IS NOT MISSING END"
         },
         "statements":"SELECT d.c1, d.c3, d.c5, d.c6 FROM orders AS d WHERE d.test_id = \"idxfltr\" AND d.c6 < 500 AND ANY v IN d.a1 SATISFIES v = 5 END",
-        "ordered": true,
         "results": [
             {
                 "c1": 1,
@@ -110,7 +106,6 @@
             "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IndexScan3' AND v.`index_keys` IS MISSING AND v.`filter` IS MISSING END"
         },
         "statements":"SELECT d.c1, d.c2, d.c3, d.c5, d.c6 FROM orders AS d WHERE d.test_id = \"idxfltr\" AND d.c1 = 1 AND (d.c2 < 20 OR d.c2 > 500) AND d.c3 IS NOT NULL",
-        "ordered": true,
         "results": [
             {
                 "c1": 1,
