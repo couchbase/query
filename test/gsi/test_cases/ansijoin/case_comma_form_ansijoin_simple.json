@@ -396,7 +396,7 @@
     ]
     },
     {
-        "statements":"SELECT p.dateAdded,pu.purchasedAt FROM purchase pu JOIN orders o ON pu.customerId = o.customerId, product p WHERE o.productId = p.productId ORDER BY pu.purchasedAt DESC LIMIT 5",
+        "statements":"SELECT p.dateAdded,pu.purchasedAt FROM purchase pu JOIN orders o ON pu.customerId = o.customerId, product p WHERE o.productId = p.productId ORDER BY pu.purchasedAt DESC, p.dateAdded Desc LIMIT 5",
         "ordered": true,
         "results": [
               {
@@ -412,7 +412,7 @@
                 "purchasedAt":"2013-06-10T15:52:36Z"
               },
               {
-                "dateAdded":"2013-05-11T15:52:18Z",
+                "dateAdded":"2014-03-07T15:52:18Z",
                 "purchasedAt":"2013-06-10T15:52:36Z"
               },
               {

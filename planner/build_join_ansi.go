@@ -806,12 +806,8 @@ func (this *builder) processOnclause(alias string, onclause expression.Expressio
 
 	// add ON-clause if it's not already part of this.pushableOnclause
 	if !this.joinEnum() && (outer || !pushable) && onclause != nil {
-		// For the keyspace as the inner of an ANSI JOIN, the processPredicate() call
-		// will effectively put ON clause filters on top of WHERE clause filters
-		// for each keyspace, as a result, both ON clause filters and WHERE clause
-		// filters will be used for index selection for the inner keyspace, which
-		// is ok for outer joins.
-		_, err = this.processPredicate(onclause, true)
+		_, err = ClassifyExprKeyspace(onclause, this.baseKeyspaces, this.keyspaceNames,
+			alias, true, this.useCBO, this.advisorValidate(), this.context)
 		if err != nil {
 			return err
 		}

@@ -429,6 +429,7 @@ func (this *exprClassifier) visitDefault(expr expression.Expression) (interface{
 		return nil, err
 	}
 
+	isOuter := false
 	if this.isOnclause {
 		// remove references to keyspaces that's already processed
 		for kspace, _ := range keyspaces {
@@ -436,6 +437,11 @@ func (this *exprClassifier) visitDefault(expr expression.Expression) (interface{
 				if baseKspace.PlanDone() {
 					delete(keyspaces, kspace)
 				}
+			}
+		}
+		if this.alias != "" {
+			if baseKspace, ok := this.baseKeyspaces[this.alias]; ok && baseKspace.IsOuter() {
+				isOuter = true
 			}
 		}
 	}
@@ -451,13 +457,23 @@ func (this *exprClassifier) visitDefault(expr expression.Expression) (interface{
 			return nil, errors.NewPlanInternalError(fmt.Sprintf("exprClassifier.visitDefault: missing keyspace %s", kspace))
 		}
 
+		notPushable := false
 		if this.isOnclause {
 			if baseKspace.PlanDone() {
 				// skip keyspaces already processed
 				continue
 			} else if this.alias != "" && kspace != this.alias {
-				// if alias is set, only add filter to the specified keyspace
-				continue
+				if baseKspace.IsOuter() && !isOuter {
+					// Predicate from ON-clause of an inner join, but referencing
+					// an outer keyspace, is non-pushable and needs to be added
+					// to the outer keyspace such that it can be evaluated later
+					// as post-join filter for the outer keyspace during join
+					// enumeration. (not an issue without join enumeration).
+					notPushable = true
+				} else {
+					// if alias is set, only add filter to the specified keyspace
+					continue
+				}
 			}
 		}
 
@@ -469,6 +485,9 @@ func (this *exprClassifier) visitDefault(expr expression.Expression) (interface{
 		}
 		if len(subqueries) > 0 {
 			filter.SetSubq()
+		}
+		if notPushable {
+			filter.SetNotPushable()
 		}
 
 		if len(keyspaces) == 1 {
