@@ -204,7 +204,14 @@ func (p *FastPool) Get() interface{} {
 }
 
 func (p *FastPool) Put(s interface{}) {
+	p.PutFn(s, nil)
+}
+
+func (p *FastPool) PutFn(s interface{}, f func(interface{})) {
 	if atomic.LoadInt32(&p.useCount) >= _POOL_SIZE {
+		if f != nil {
+			f(s)
+		}
 		return
 	}
 	l := atomic.AddUint32(&p.putNext, 1) % p.buckets

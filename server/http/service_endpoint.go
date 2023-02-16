@@ -94,7 +94,9 @@ var requestPool util.FastPool
 
 func init() {
 	util.NewFastPool(&requestPool, func() interface{} {
-		return &httpRequest{}
+		r := &httpRequest{}
+		ioIntr.monitor(&r.writer)
+		return r
 	})
 }
 
@@ -337,7 +339,9 @@ func (this *HttpEndpoint) ServeHTTP(resp http.ResponseWriter, req *http.Request)
 	*request = httpRequest{}
 	newHttpRequest(request, resp, req, this.bufpool, this.server.RequestSizeCap(), this.server.Namespace(), this.trackUsers)
 	defer func() {
-		requestPool.Put(request)
+		requestPool.PutFn(request, func(r interface{}) {
+			ioIntr.remove(&(r.(*httpRequest).writer))
+		})
 	}()
 
 	if this.trackUsers {
