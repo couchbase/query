@@ -255,12 +255,8 @@ func (this *BuildBitFilterBase) HasBuildBitFilter() bool {
 	return len(this.buildBitFilters) > 0
 }
 
-func (this *BuildBitFilterBase) SetBuildBitFilters(alias string, buildExprs []*BitFilterIndex) (err error) {
-	var dups []bool
+func (this *BuildBitFilterBase) SetBuildBitFilters(alias string, buildExprs []*BitFilterIndex) (dups []bool, err error) {
 	this.buildBitFilters, dups, err = addBitFilters(this.buildBitFilters, alias, buildExprs)
-	if err == nil && len(dups) > 0 {
-		err = errors.NewPlanInternalError(fmt.Sprintf("SetBuildBitFilters: duplicated bit filter detected for alias %s", alias))
-	}
 	return
 }
 

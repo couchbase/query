@@ -1348,13 +1348,13 @@ func (this *builder) buildHashJoinOp(right algebra.SimpleFromTerm, left algebra.
 			}
 		}
 		found, err = setProbeBitFilters(this.baseKeyspaces, probeAliases, buildAliases,
-			buildInfosMap, auto, filters, this.children...)
+			buildInfosMap, auto, joinEnum, filters, this.children...)
 		if err != nil {
 			return nil, nil, nil, nil, nil, nil, false, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, err
 		}
 		if found {
 			err = setBuildBitFilters(this.baseKeyspaces, buildAliases, probeAliases,
-				buildInfosMap, child)
+				buildInfosMap, joinEnum, child)
 			if err != nil {
 				return nil, nil, nil, nil, nil, nil, false, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, err
 			}
@@ -1972,7 +1972,7 @@ func hasAlias(alias string, aliases []string) bool {
 
 func setProbeBitFilters(baseKeyspaces map[string]*base.BaseKeyspace,
 	probeAliases, buildAliases []string, buildInfosMap map[string]*base.BuildInfo,
-	auto bool, filters base.Filters, ops ...plan.Operator) (found bool, err error) {
+	auto, joinEnum bool, filters base.Filters, ops ...plan.Operator) (found bool, err error) {
 
 	for i := len(ops) - 1; i >= 0; i-- {
 		switch op := ops[i].(type) {
@@ -2009,32 +2009,38 @@ func setProbeBitFilters(baseKeyspaces map[string]*base.BaseKeyspace,
 							coverExprs = append(coverExprs, coverExpr)
 						}
 						probeIdxExprs := []*plan.BitFilterIndex{plan.NewBitFilterIndex(index, coverExprs)}
+						dups, err := op.SetProbeBitFilters(a, probeIdxExprs)
+						if err != nil {
+							return false, err
+						}
 						// it's ok to have duplicated probe bit filters,
 						// since during join enumeration, at different stages
 						// we may end up generating the same information
 						// multiple times (the plans may be reused)
-						_, err = op.SetProbeBitFilters(a, probeIdxExprs)
-						if err != nil {
-							return
+						if !joinEnum && len(dups) > 0 && dups[0] {
+							delete(buildBFInfos, index)
+							if len(buildBFInfos) == 0 {
+								binfo.SetSkip()
+							}
 						}
 					}
 				}
 			}
 		case *plan.DistinctScan:
-			found, err = setScanProbeBitFilters(baseKeyspaces, probeAliases, buildAliases, buildInfosMap, auto, filters, op.Scan())
+			found, err = setScanProbeBitFilters(baseKeyspaces, probeAliases, buildAliases, buildInfosMap, auto, joinEnum, filters, op.Scan())
 		case *plan.IntersectScan:
-			found, err = setScanProbeBitFilters(baseKeyspaces, probeAliases, buildAliases, buildInfosMap, auto, filters, op.Scans()...)
+			found, err = setScanProbeBitFilters(baseKeyspaces, probeAliases, buildAliases, buildInfosMap, auto, joinEnum, filters, op.Scans()...)
 		case *plan.OrderedIntersectScan:
-			found, err = setScanProbeBitFilters(baseKeyspaces, probeAliases, buildAliases, buildInfosMap, auto, filters, op.Scans()...)
+			found, err = setScanProbeBitFilters(baseKeyspaces, probeAliases, buildAliases, buildInfosMap, auto, joinEnum, filters, op.Scans()...)
 		case *plan.UnionScan:
-			found, err = setScanProbeBitFilters(baseKeyspaces, probeAliases, buildAliases, buildInfosMap, auto, filters, op.Scans()...)
+			found, err = setScanProbeBitFilters(baseKeyspaces, probeAliases, buildAliases, buildInfosMap, auto, joinEnum, filters, op.Scans()...)
 		case *plan.Parallel:
-			found, err = setProbeBitFilters(baseKeyspaces, probeAliases, buildAliases, buildInfosMap, auto, filters, op.Child())
+			found, err = setProbeBitFilters(baseKeyspaces, probeAliases, buildAliases, buildInfosMap, auto, joinEnum, filters, op.Child())
 		case *plan.Sequence:
-			found, err = setProbeBitFilters(baseKeyspaces, probeAliases, buildAliases, buildInfosMap, auto, filters, op.Children()...)
+			found, err = setProbeBitFilters(baseKeyspaces, probeAliases, buildAliases, buildInfosMap, auto, joinEnum, filters, op.Children()...)
 		case *plan.HashJoin:
 			if !op.Outer() {
-				found, err = setProbeBitFilters(baseKeyspaces, probeAliases, buildAliases, buildInfosMap, auto, filters, op.Child())
+				found, err = setProbeBitFilters(baseKeyspaces, probeAliases, buildAliases, buildInfosMap, auto, joinEnum, filters, op.Child())
 			}
 		case *plan.Alias:
 			// skip next term (SubqueryTerm)
@@ -2051,11 +2057,11 @@ func setProbeBitFilters(baseKeyspaces map[string]*base.BaseKeyspace,
 
 func setScanProbeBitFilters(baseKeyspaces map[string]*base.BaseKeyspace,
 	probeAliases, buildAliases []string, buildInfosMap map[string]*base.BuildInfo,
-	auto bool, filters base.Filters, scans ...plan.SecondaryScan) (found bool, err error) {
+	auto, joinEnum bool, filters base.Filters, scans ...plan.SecondaryScan) (found bool, err error) {
 
 	var f bool
 	for _, scan := range scans {
-		f, err = setProbeBitFilters(baseKeyspaces, probeAliases, buildAliases, buildInfosMap, auto, filters, scan)
+		f, err = setProbeBitFilters(baseKeyspaces, probeAliases, buildAliases, buildInfosMap, auto, joinEnum, filters, scan)
 		found = found || f
 		if err != nil {
 			return
@@ -2116,7 +2122,7 @@ func unmarkJoinFilters(baseKeyspaces map[string]*base.BaseKeyspace,
 
 func setBuildBitFilters(baseKeyspaces map[string]*base.BaseKeyspace,
 	buildAliases, probeAliases []string, buildInfosMap map[string]*base.BuildInfo,
-	ops ...plan.Operator) (err error) {
+	joinEnum bool, ops ...plan.Operator) (err error) {
 
 	for i := len(ops) - 1; i >= 0; i-- {
 		switch op := ops[i].(type) {
@@ -2146,48 +2152,55 @@ func setBuildBitFilters(baseKeyspaces map[string]*base.BaseKeyspace,
 							size := optBuildBitFilterSize(baseKeyspaces[alias], exps)
 							bfIndex.SetSize(size)
 						}
-						err = op.SetBuildBitFilters(a, buildBFIndexes)
+						dups, err := op.SetBuildBitFilters(a, buildBFIndexes)
 						if err != nil {
-							return
+							return err
+						}
+						// it's ok to have duplicated build bit filters,
+						// since during join enumeration, at different stages
+						// we may end up generating the same information
+						// multiple times (the plans may be reused)
+						if !joinEnum && len(dups) > 0 && dups[0] {
+							return errors.NewPlanInternalError(fmt.Sprintf("setBuildBitFilters: duplicated bit filter detected for alias %s", a))
 						}
 					}
 				}
 			}
 		case *plan.DistinctScan:
-			err = setScanBuildBitFilters(baseKeyspaces, buildAliases, probeAliases, buildInfosMap, op.Scan())
+			err = setScanBuildBitFilters(baseKeyspaces, buildAliases, probeAliases, buildInfosMap, joinEnum, op.Scan())
 		case *plan.IntersectScan:
-			err = setScanBuildBitFilters(baseKeyspaces, buildAliases, probeAliases, buildInfosMap, op.Scans()...)
+			err = setScanBuildBitFilters(baseKeyspaces, buildAliases, probeAliases, buildInfosMap, joinEnum, op.Scans()...)
 		case *plan.OrderedIntersectScan:
-			err = setScanBuildBitFilters(baseKeyspaces, buildAliases, probeAliases, buildInfosMap, op.Scans()...)
+			err = setScanBuildBitFilters(baseKeyspaces, buildAliases, probeAliases, buildInfosMap, joinEnum, op.Scans()...)
 		case *plan.UnionScan:
-			err = setScanBuildBitFilters(baseKeyspaces, buildAliases, probeAliases, buildInfosMap, op.Scans()...)
+			err = setScanBuildBitFilters(baseKeyspaces, buildAliases, probeAliases, buildInfosMap, joinEnum, op.Scans()...)
 		case *plan.ExpressionScan:
 			alias := op.Alias()
 			if hasAlias(alias, buildAliases) {
-				return setBuildFilterBaseFilters(probeAliases, op.GetBuildFilterBase(), buildInfosMap[alias], baseKeyspaces[alias])
+				return setBuildFilterBaseFilters(probeAliases, op.GetBuildFilterBase(), buildInfosMap[alias], baseKeyspaces[alias], joinEnum)
 			}
 		case *plan.Unnest:
 			alias := op.Alias()
 			if hasAlias(alias, buildAliases) {
-				return setBuildFilterBaseFilters(probeAliases, op.GetBuildFilterBase(), buildInfosMap[alias], baseKeyspaces[alias])
+				return setBuildFilterBaseFilters(probeAliases, op.GetBuildFilterBase(), buildInfosMap[alias], baseKeyspaces[alias], joinEnum)
 			}
 		case *plan.Filter:
 			alias := op.Alias()
 			if hasAlias(alias, buildAliases) {
-				return setBuildFilterBaseFilters(probeAliases, op.GetBuildFilterBase(), buildInfosMap[alias], baseKeyspaces[alias])
+				return setBuildFilterBaseFilters(probeAliases, op.GetBuildFilterBase(), buildInfosMap[alias], baseKeyspaces[alias], joinEnum)
 			}
 		case *plan.Parallel:
-			err = setBuildBitFilters(baseKeyspaces, buildAliases, probeAliases, buildInfosMap, op.Child())
+			err = setBuildBitFilters(baseKeyspaces, buildAliases, probeAliases, buildInfosMap, joinEnum, op.Child())
 		case *plan.Sequence:
-			err = setBuildBitFilters(baseKeyspaces, buildAliases, probeAliases, buildInfosMap, op.Children()...)
+			err = setBuildBitFilters(baseKeyspaces, buildAliases, probeAliases, buildInfosMap, joinEnum, op.Children()...)
 		case *plan.HashJoin:
 			if !op.Outer() {
-				err = setBuildBitFilters(baseKeyspaces, buildAliases, probeAliases, buildInfosMap, op.Child())
+				err = setBuildBitFilters(baseKeyspaces, buildAliases, probeAliases, buildInfosMap, joinEnum, op.Child())
 			}
 		case *plan.Alias:
 			alias := op.Alias()
 			if hasAlias(alias, buildAliases) {
-				return setBuildFilterBaseFilters(probeAliases, op.GetBuildFilterBase(), buildInfosMap[alias], baseKeyspaces[alias])
+				return setBuildFilterBaseFilters(probeAliases, op.GetBuildFilterBase(), buildInfosMap[alias], baseKeyspaces[alias], joinEnum)
 			}
 			// skip next term (SubqueryTerm)
 			i--
@@ -2203,10 +2216,10 @@ func setBuildBitFilters(baseKeyspaces map[string]*base.BaseKeyspace,
 
 func setScanBuildBitFilters(baseKeyspaces map[string]*base.BaseKeyspace,
 	buildAliases, probeAliases []string, buildInfosMap map[string]*base.BuildInfo,
-	scans ...plan.SecondaryScan) (err error) {
+	joinEnum bool, scans ...plan.SecondaryScan) (err error) {
 
 	for _, scan := range scans {
-		err = setBuildBitFilters(baseKeyspaces, buildAliases, probeAliases, buildInfosMap, scan)
+		err = setBuildBitFilters(baseKeyspaces, buildAliases, probeAliases, buildInfosMap, joinEnum, scan)
 		if err != nil {
 			return
 		}
@@ -2215,7 +2228,7 @@ func setScanBuildBitFilters(baseKeyspaces map[string]*base.BaseKeyspace,
 }
 
 func setBuildFilterBaseFilters(probeAliases []string, op *plan.BuildBitFilterBase,
-	buildInfo *base.BuildInfo, baseKeyspace *base.BaseKeyspace) (err error) {
+	buildInfo *base.BuildInfo, baseKeyspace *base.BaseKeyspace, joinEnum bool) (err error) {
 
 	if buildInfo == nil || buildInfo.Skip() {
 		return
@@ -2228,9 +2241,16 @@ func setBuildFilterBaseFilters(probeAliases []string, op *plan.BuildBitFilterBas
 				size := optBuildBitFilterSize(baseKeyspace, bf.Expressions())
 				bf.SetSize(size)
 			}
-			err = op.SetBuildBitFilters(a, buildBFIndexes)
+			dups, err := op.SetBuildBitFilters(a, buildBFIndexes)
 			if err != nil {
-				return
+				return err
+			}
+			// it's ok to have duplicated build bit filters,
+			// since during join enumeration, at different stages
+			// we may end up generating the same information
+			// multiple times (the plans may be reused)
+			if !joinEnum && len(dups) > 0 && dups[0] {
+				return errors.NewPlanInternalError(fmt.Sprintf("setBuildFilterBaseFilters: duplicated bit filter detected for alias %s", a))
 			}
 		}
 	}
