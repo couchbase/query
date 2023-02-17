@@ -14,6 +14,7 @@ import (
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/timestamp"
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
@@ -71,10 +72,9 @@ func (this *IndexCountScan) RunOnce(context *Context, parent value.Value) {
 		var count int64
 
 		for _, span := range spans {
-			go func() {
-				primeStack()
+			util.Fork(func(interface{}) {
 				this.scanCount(span, scanVector, countChannel, context)
-			}()
+			}, nil)
 		}
 
 		for n > 0 {

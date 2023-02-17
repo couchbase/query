@@ -17,6 +17,7 @@ import (
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
@@ -84,10 +85,9 @@ func (this *PrimaryScan3) scanPrimary(context *Context, parent value.Value) {
 	offset := evalLimitOffset(this.plan.Offset(), parent, int64(0), false, &this.operatorCtx)
 	limit := evalLimitOffset(this.plan.Limit(), parent, math.MaxInt64, false, &this.operatorCtx)
 
-	go func() {
-		primeStack()
+	util.Fork(func(interface{}) {
 		this.scanEntries(context, this.conn, offset, limit)
-	}()
+	}, nil)
 
 	nitems := uint64(0)
 
@@ -157,10 +157,9 @@ func (this *PrimaryScan3) scanPrimaryChunk(context *Context, parent value.Value,
 	defer conn.Dispose()  // Dispose of the connection
 	defer conn.SendStop() // Notify index that I have stopped
 
-	go func() {
-		primeStack()
+	util.Fork(func(interface{}) {
 		this.scanChunk(context, conn, limit, indexEntry)
-	}()
+	}, nil)
 
 	nitems := uint64(0)
 	var docs uint64 = 0

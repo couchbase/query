@@ -19,6 +19,7 @@ import (
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/expression/search"
 	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
@@ -80,10 +81,9 @@ func (this *IndexFtsSearch) RunOnce(context *Context, parent value.Value) {
 		defer this.conn.Dispose()  // Dispose of the connection
 		defer this.conn.SendStop() // Notify index that I have stopped
 
-		go func() {
-			primeStack()
+		util.Fork(func(interface{}) {
 			this.search(context, this.conn, parent)
-		}()
+		}, nil)
 
 		ok := true
 		var docs uint64 = 0

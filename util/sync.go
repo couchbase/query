@@ -20,6 +20,85 @@ import (
 	atomic "github.com/couchbase/go-couchbase/platform"
 )
 
+// MB-38469 / go issue 18138 initial goroutine stack too small
+// Fork() implements a goroutine call with a higher stack size
+// We use a two prong attack: initial stack growing and goroutoine pooling
+
+const _OP_POOL_SIZE = 128
+
+var getId uint32 = 0
+var putId uint32 = _OP_POOL_SIZE / 2
+
+type workerDesc struct {
+	sync.Mutex
+	w *worker
+}
+
+type worker struct {
+	wg sync.WaitGroup
+	f  func(p interface{})
+	p  interface{}
+}
+
+var workers [_OP_POOL_SIZE]workerDesc
+
+//go:noinline
+func primeStack() {
+	const _STACK_BUF_SIZE = 512 // 128 multiples, tuned for likely stack usage!
+	var buf [_STACK_BUF_SIZE]int64
+
+	// force the compiler to allocate buf
+	for i := 127; i < _STACK_BUF_SIZE; i += 128 {
+		buf[i] = int64(i)
+	}
+
+	_ = stackTop(buf[_STACK_BUF_SIZE-1])
+}
+
+//go:noinline
+func stackTop(v int64) int64 {
+	return v
+}
+
+func (this *worker) work() {
+	primeStack()
+	for {
+		this.f(this.p)
+		this.f = nil
+		this.p = nil
+		pId := atomic.AddUint32(&putId, 1) % _OP_POOL_SIZE
+		workers[pId].Lock()
+		if workers[pId].w != nil {
+			workers[pId].Unlock()
+			return
+		}
+		this.wg.Add(1)
+		workers[pId].w = this
+		workers[pId].Unlock()
+		this.wg.Wait()
+	}
+
+}
+
+func Fork(f func(interface{}), p interface{}) {
+	var w *worker
+	gId := atomic.AddUint32(&getId, 1) % _OP_POOL_SIZE
+	workers[gId].Lock()
+	if workers[gId].w != nil {
+		w = workers[gId].w
+		workers[gId].w = nil
+	}
+	workers[gId].Unlock()
+	if w != nil {
+		w.f = f
+		w.p = p
+		w.wg.Done()
+	} else {
+		w = &worker{f: f, p: p}
+		go w.work()
+	}
+}
+
 // Once is an object that will perform exactly one action.
 type Once struct {
 	done uint32

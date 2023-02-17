@@ -17,6 +17,7 @@ import (
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/sort"
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
@@ -55,6 +56,17 @@ func (this *IndexScan3) Copy() Operator {
 
 func (this *IndexScan3) PlanOp() plan.Operator {
 	return this.plan
+}
+
+type scanDesc struct {
+	scan    *IndexScan3
+	context *Context
+	parent  value.Value
+}
+
+func scanFork(p interface{}) {
+	d := p.(scanDesc)
+	d.scan.scan(d.context, d.scan.conn, d.parent)
 }
 
 func (this *IndexScan3) RunOnce(context *Context, parent value.Value) {
@@ -144,10 +156,7 @@ func (this *IndexScan3) RunOnce(context *Context, parent value.Value) {
 			defer this.clearProbeBitFilters(context)
 		}
 
-		go func() {
-			primeStack()
-			this.scan(context, this.conn, parent)
-		}()
+		util.Fork(scanFork, scanDesc{this, context, parent})
 
 		ok := true
 		var docs uint64 = 0

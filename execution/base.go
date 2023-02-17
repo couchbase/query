@@ -503,32 +503,19 @@ func (this *base) SerializeOutput(op Operator, context *Context) {
 	base.serialized = true
 }
 
-// MB-38469 / go issue 18138 initial goroutine stack too small
-//
-//go:noinline
-func primeStack() {
-	const _STACK_BUF_SIZE = 512 // 128 multiples, tuned for likely stack usage!
-	var buf [_STACK_BUF_SIZE]int64
-
-	// force the compiler to allocate buf
-	for i := 127; i < _STACK_BUF_SIZE; i += 128 {
-		buf[i] = int64(i)
-	}
-
-	_ = stackTop(buf[_STACK_BUF_SIZE-1])
-}
-
-//go:noinline
-func stackTop(v int64) int64 {
-	return v
-}
-
-func execOp(op Operator, context *Context, parent value.Value) {
-	primeStack()
-	op.RunOnce(context, parent)
-}
-
 // fork operator
+// MB-55658 in order to avoid escaping to the heap, avoid anonymous functions
+type opForkDesc struct {
+	op      Operator
+	context *Context
+	parent  value.Value
+}
+
+func opFork(p interface{}) {
+	d := p.(opForkDesc)
+	d.op.RunOnce(d.context, d.parent)
+}
+
 func (this *base) fork(op Operator, context *Context, parent value.Value) {
 	base := op.getBase()
 	if base.inline || base.serialized {
@@ -537,8 +524,7 @@ func (this *base) fork(op Operator, context *Context, parent value.Value) {
 		op.RunOnce(context, parent)
 		this.switchPhase(phase)
 	} else {
-		go execOp(op, context, parent)
-		// go op.RunOnce(context, parent)
+		util.Fork(opFork, opForkDesc{op, context, parent})
 	}
 }
 
