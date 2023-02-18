@@ -1470,7 +1470,7 @@ mainLoop:
 						pos--
 					}
 				}
-				if 0 < pos && len(line) > pos && '\n' == line[pos] && s.multiLine {
+				if 0 < pos && ((len(line) > pos && '\n' == line[pos]) || len(line) == pos) && s.multiLine {
 					pos--
 				}
 				s.stopRecording()
@@ -1675,7 +1675,7 @@ mainLoop:
 			mode = _NORMAL
 			s.replayActive = false
 			s.stopRecording()
-			if 0 < pos && len(line) > pos && '\n' == line[pos] && s.multiLine {
+			if 0 < pos && ((len(line) > pos && '\n' == line[pos]) || len(line) == pos) && s.multiLine {
 				pos--
 			}
 		case 'c':
@@ -2138,6 +2138,9 @@ mainLoop:
 			moved = s.isMultiLine(line)
 		case '%':
 			desiredCol = -1
+			if len(line) <= pos {
+				break
+			}
 			switch line[pos] {
 			case '(':
 				i = find(line, pos, true, 1, ')', '(')
