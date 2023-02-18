@@ -2845,3 +2845,83 @@ func (this *ObjectTypesNested) Constructor() FunctionConstructor {
 		return NewObjectTypesNested(operands[0])
 	}
 }
+
+///////////////////////////////////////////////////
+//
+// ObjectConcat2
+//
+///////////////////////////////////////////////////
+
+type ObjectConcat2 struct {
+	FunctionBase
+}
+
+func NewObjectConcat2(operands ...Expression) Function {
+	rv := &ObjectConcat2{
+		*NewFunctionBase("object_concat2", operands...),
+	}
+
+	rv.expr = rv
+	return rv
+}
+
+func (this *ObjectConcat2) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *ObjectConcat2) Type() value.Type { return value.OBJECT }
+
+func (this *ObjectConcat2) Evaluate(item value.Value, context Context) (value.Value, error) {
+	var rv value.Value
+	null := false
+	missing := false
+	for i, op := range this.operands {
+		arg, err := op.Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		} else if arg.Type() == value.MISSING {
+			missing = true
+		} else if arg.Type() != value.OBJECT && !(arg.Type() == value.ARRAY && i != 0) {
+			null = true
+		} else if arg.Type() == value.ARRAY && !null && !missing {
+			a := arg.Actual().([]interface{})
+			for _, o := range a {
+				av := value.NewValue(o)
+				if av.Type() != value.OBJECT {
+					null = true
+					break
+				}
+				fields := av.Fields()
+				for n, v := range fields {
+					rv.SetField(n, v)
+				}
+			}
+		} else if !null && !missing {
+			if i == 0 {
+				rv = arg.CopyForUpdate()
+			} else {
+				fields := arg.Fields()
+				for n, v := range fields {
+					rv.SetField(n, v)
+				}
+			}
+		}
+
+	}
+
+	if missing {
+		return value.MISSING_VALUE, nil
+	} else if null {
+		return value.NULL_VALUE, nil
+	}
+
+	return rv, nil
+}
+
+func (this *ObjectConcat2) MinArgs() int { return 2 }
+
+func (this *ObjectConcat2) MaxArgs() int { return math.MaxInt16 }
+
+func (this *ObjectConcat2) Constructor() FunctionConstructor {
+	return NewObjectConcat2
+}

@@ -292,6 +292,7 @@ var _FUNCTIONS = map[string]Function{
 	// Object
 	"object_add":           &ObjectAdd{},
 	"object_concat":        &ObjectConcat{},
+	"object_concat2":       &ObjectConcat2{},
 	"object_extract":       &ObjectExtract{},
 	"object_field":         &ObjectField{},
 	"object_filter":        &ObjectFilter{},
