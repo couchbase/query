@@ -696,6 +696,7 @@ func (this *Server) handleRequest(request Request, queue *runQueue) bool {
 	if !request.Alive() {
 		request.Fail(errors.NewServiceNoClientError())
 		request.Failed(this)
+		queue.dequeue()
 		return true
 	}
 
@@ -716,6 +717,7 @@ func (this *Server) handlePlusRequest(request Request, queue *runQueue, transact
 	if !request.Alive() {
 		request.Fail(errors.NewServiceNoClientError())
 		request.Failed(this)
+		queue.dequeue()
 		return true
 	}
 
@@ -729,6 +731,7 @@ func (this *Server) handlePlusRequest(request Request, queue *runQueue, transact
 			if !request.Alive() {
 				request.Fail(errors.NewServiceNoClientError())
 				request.Failed(this)
+				queue.dequeue()
 				return true
 			}
 			this.serviceRequest(request) // service
