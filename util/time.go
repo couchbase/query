@@ -44,6 +44,10 @@ func (this Time) Sub(t Time) time.Duration {
 	return time.Duration(this - t)
 }
 
+func (this Time) Truncate(d time.Duration) Time {
+	return this - (this % Time(d))
+}
+
 func (this Time) UnixNano() int64 {
 	return int64(this) + atomic.LoadInt64(&base)
 }

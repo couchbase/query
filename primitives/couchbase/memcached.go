@@ -41,6 +41,7 @@ type MutationToken struct {
 // Maximum number of times to retry a chunk of a bulk get on error.
 const maxBulkRetries = 5000
 const backOffDuration time.Duration = 100 * time.Millisecond
+const deadlineGranularity time.Duration = 100 * time.Millisecond
 const minBackOffRetriesLimit = 25  // exponential backOff result in over 30sec (25*13*0.1s)
 const maxBackOffRetriesLimit = 100 // exponential backOff result in over 2min (100*13*0.1s)
 
@@ -93,7 +94,7 @@ func IsUnknownCollection(err error) bool {
 	return false
 }
 
-// infrastructure for GetBulk() and Do()
+// infrastructure for GetBulk() and do()
 type doDescriptor struct {
 	retry           bool
 	delay           time.Duration
@@ -409,11 +410,11 @@ func (b *Bucket) backOffRetries() int {
 // Note that this automatically handles transient errors by replaying
 // your function on a "not-my-vbucket" error, so don't assume
 // your command will only be executed once.
-func (b *Bucket) Do(k string, f func(mc *memcached.Client, vb uint16) error) (err error) {
-	return b.Do2(k, f, true, false, 2*len(b.Nodes()))
+func (b *Bucket) do(k string, f func(mc *memcached.Client, vb uint16) error) (err error) {
+	return b.do2(k, f, true, false, 2*len(b.Nodes()))
 }
 
-func (b *Bucket) Do2(k string, f func(mc *memcached.Client, vb uint16) error, deadline bool, useReplicas bool, backOffRetries int) (err error) {
+func (b *Bucket) do2(k string, f func(mc *memcached.Client, vb uint16) error, deadline bool, useReplicas bool, backOffRetries int) (err error) {
 	vb := b.VBHash(k)
 
 	return b.do3(uint16(vb), f, deadline, useReplicas, backOffRetries)
@@ -433,11 +434,13 @@ func (b *Bucket) do3(vb uint16, f func(mc *memcached.Client, vb uint16) error, d
 			}
 			return err
 		}
-		if deadline && DefaultTimeout > 0 {
-			dl, _ := getDeadline(noDeadline, DefaultTimeout)
-			conn.SetDeadline(dl)
-		} else {
-			conn.SetDeadline(noDeadline)
+		if deadline {
+			if DefaultTimeout > 0 {
+				dl, _ := getDeadline(noDeadline, DefaultTimeout)
+				conn.SetDeadline(dl)
+			} else {
+				conn.SetDeadline(noDeadline)
+			}
 		}
 		if desc.replica > 0 {
 			conn.SetReplica(true)
@@ -661,14 +664,16 @@ func isAddrNotAvailable(err error) bool {
 func getDeadline(reqDeadline time.Time, duration time.Duration) (time.Time, error) {
 	if reqDeadline.IsZero() {
 		if duration > 0 {
-			return time.Unix(0, util.Now().Add(duration).UnixNano()), nil
+			return time.Unix(0,
+					util.Now().Add(duration+deadlineGranularity).Truncate(deadlineGranularity).UnixNano()),
+				nil
 		} else {
 			return noDeadline, nil
 		}
 	} else if util.Now().UnixNano() > reqDeadline.UnixNano() {
 		return reqDeadline, fmt.Errorf("Deadline expired")
 	}
-	return reqDeadline, nil
+	return reqDeadline.Truncate(deadlineGranularity).Add(deadlineGranularity), nil
 }
 
 func backOff(attempt, maxAttempts int, duration time.Duration, exponential bool) bool {
@@ -1112,7 +1117,7 @@ func (b *Bucket) WriteWithCAS(k string, flags, exp int, v interface{},
 
 	var res *gomemcached.MCResponse
 	var compressed bool
-	err = b.Do(k, func(mc *memcached.Client, vb uint16) error {
+	err = b.do(k, func(mc *memcached.Client, vb uint16) error {
 		if data != nil && !compressed && mc.IsFeatureEnabled(memcached.FeatureSnappyCompression) {
 			data = snappy.Encode(nil, data)
 			compressed = true
@@ -1177,7 +1182,7 @@ func (b *Bucket) WriteCasWithMT(k string, flags, exp int, cas uint64, v interfac
 
 	var res *gomemcached.MCResponse
 	var compressed bool
-	err = b.Do(k, func(mc *memcached.Client, vb uint16) error {
+	err = b.do(k, func(mc *memcached.Client, vb uint16) error {
 		if data != nil && !compressed && mc.IsFeatureEnabled(memcached.FeatureSnappyCompression) {
 			data = snappy.Encode(nil, data)
 			compressed = true
@@ -1240,7 +1245,7 @@ func (b *Bucket) GetCollectionCID(scope string, collection string, reqDeadline t
 	var key = "DUMMY" // Contact any server.
 	var manifestUid uint32
 	var collUid uint32
-	err = b.Do2(key, func(mc *memcached.Client, vb uint16) error {
+	err = b.do2(key, func(mc *memcached.Client, vb uint16) error {
 		var err1 error
 
 		dl, err := getDeadline(reqDeadline, DefaultTimeout)
@@ -1277,7 +1282,7 @@ func (b *Bucket) GetsMC(key string, active func() bool, reqDeadline time.Time, u
 		return nil, nil
 	}
 
-	err = b.Do2(key, func(mc *memcached.Client, vb uint16) error {
+	err = b.do2(key, func(mc *memcached.Client, vb uint16) error {
 		var err1 error
 
 		// if the operator is not running, break the loop with an is not found
@@ -1310,7 +1315,7 @@ func (b *Bucket) GetsSubDoc(key string, reqDeadline time.Time, subPaths []string
 		return nil, nil
 	}
 
-	err = b.Do2(key, func(mc *memcached.Client, vb uint16) error {
+	err = b.do2(key, func(mc *memcached.Client, vb uint16) error {
 		var err1 error
 
 		dl, err := getDeadline(reqDeadline, DefaultTimeout)
@@ -1389,7 +1394,7 @@ func (b *Bucket) Delete(k string, context ...*memcached.ClientContext) (uint64, 
 // Incr increments the value at a given key by amt and defaults to def if no value present.
 func (b *Bucket) Incr(k string, amt, def uint64, exp int, context ...*memcached.ClientContext) (val uint64, err error) {
 	var rv uint64
-	err = b.Do(k, func(mc *memcached.Client, vb uint16) error {
+	err = b.do(k, func(mc *memcached.Client, vb uint16) error {
 		res, err := mc.Incr(vb, k, amt, def, exp, context...)
 		if err != nil {
 			return err
@@ -1404,7 +1409,7 @@ func (b *Bucket) Incr(k string, amt, def uint64, exp int, context ...*memcached.
 // Decr decrements the value at a given key by amt and defaults to def if no value present
 func (b *Bucket) Decr(k string, amt, def uint64, exp int, context ...*memcached.ClientContext) (val uint64, err error) {
 	var rv uint64
-	err = b.Do(k, func(mc *memcached.Client, vb uint16) error {
+	err = b.do(k, func(mc *memcached.Client, vb uint16) error {
 		res, err := mc.Decr(vb, k, amt, def, exp, context...)
 		if err != nil {
 			return err
@@ -1419,7 +1424,7 @@ func (b *Bucket) Decr(k string, amt, def uint64, exp int, context ...*memcached.
 // Wrapper around memcached.CASNext()
 func (b *Bucket) casNext(k string, exp int, state *memcached.CASState) bool {
 	keepGoing := false
-	state.Err = b.Do(k, func(mc *memcached.Client, vb uint16) error {
+	state.Err = b.do(k, func(mc *memcached.Client, vb uint16) error {
 		keepGoing = mc.CASNext(vb, k, exp, state)
 		return state.Err
 	})
@@ -1462,7 +1467,7 @@ func (b *Bucket) update(k string, exp int, callback UpdateFunc) (newCas uint64, 
 
 // Observe observes the current state of a document.
 func (b *Bucket) Observe(k string) (result memcached.ObserveResult, err error) {
-	err = b.Do(k, func(mc *memcached.Client, vb uint16) error {
+	err = b.do(k, func(mc *memcached.Client, vb uint16) error {
 		result, err = mc.Observe(vb, k)
 		return err
 	})
