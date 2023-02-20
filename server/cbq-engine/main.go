@@ -123,7 +123,7 @@ var MAX_INDEX_API = flag.Int("max-index-api", datastore_package.INDEX_API_MAX, "
 var N1QL_FEAT_CTRL = flag.Uint64("n1ql-feat-ctrl", util.DEF_N1QL_FEAT_CTRL, "N1QL Feature Controls")
 var MEMORY_QUOTA = flag.Uint64("memory-quota", _DEF_MEMORY_QUOTA, "Maximum amount of document memory allowed per request, in MB")
 var NODE_QUOTA = flag.Uint64("node-quota", _DEF_NODE_QUOTA, "Maximum amount of document memory allowed per node, in MB")
-var USE_REPLICA = flag.String("use-replica", value.TRISTATE_NAMES[value.FALSE], "Allow reading from replica vBuckets")
+var USE_REPLICA = flag.String("use-replica", value.TRISTATE_NAMES[value.NONE], "Allow reading from replica vBuckets")
 var NODE_QUOTA_VAL_PERCENT = flag.Uint("node-quota-val-percent", _DEF_NODE_QUOTA_VAL_PERCENT,
 	"Percentage of node quota reserved for value memory (0-100).")
 

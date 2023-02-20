@@ -212,7 +212,7 @@ func NewServer(store datastore.Datastore, sys datastore.Systemstore, config clus
 	store.SetLogLevel(logging.LogLevel())
 	rv.SetMaxParallelism(maxParallelism)
 	rv.SetNumAtrs(datastore.DEF_NUMATRS)
-	rv.SetUseReplica(value.FALSE)
+	rv.SetUseReplica(value.NONE)
 
 	// set default values
 	rv.SetMaxIndexAPI(datastore.INDEX_API_MAX)
