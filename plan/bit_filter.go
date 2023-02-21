@@ -266,7 +266,7 @@ func (this *BuildBitFilterBase) GetBuildBitFilters() BitFilters {
 
 func (this *BuildBitFilterBase) RemoveBuildBitFilter(alias string) {
 	for i, bf := range this.buildBitFilters {
-		if bf.alias == alias {
+		if bf != nil && bf.alias == alias {
 			this.buildBitFilters[i] = nil
 		}
 	}
