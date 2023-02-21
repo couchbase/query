@@ -74,6 +74,7 @@ const (
 	FTS_INDEXER_NOT_AVAIL          = "FTS Indexer not available"
 	INVALID_GSI_INDEX              = "Invalid indexes specified: "
 	INVALID_FTS_INDEX              = "Invalid FTS indexes specified: "
+	JOIN_HINT_FIRST_TERM           = "Join hint (USE HASH or USE NL) cannot be specified on the first from term: "
 	INDEX_HINT_NOT_FOLLOWED        = "INDEX hint cannot be followed"
 	INDEX_FTS_HINT_NOT_FOLLOWED    = "INDEX_FTS hint cannot be followed"
 	INDEX_ALL_HINT_NOT_FOLLOWED    = "INDEX_ALL hint cannot be followed"

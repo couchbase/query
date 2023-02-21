@@ -27,6 +27,7 @@ func (this *builder) selectScan(keyspace datastore.Keyspace, node *algebra.Keysp
 	mutate bool) (op plan.Operator, err error) {
 
 	keys := node.Keys()
+	alias := node.Alias()
 	if keys != nil {
 		if this.hasBuilderFlag(BUILDER_CHK_INDEX_ORDER) {
 			return nil, nil
@@ -44,7 +45,7 @@ func (this *builder) selectScan(keyspace datastore.Keyspace, node *algebra.Keysp
 		cardinality := OPT_CARD_NOT_AVAIL
 		size := OPT_SIZE_NOT_AVAIL
 		frCost := OPT_COST_NOT_AVAIL
-		if this.useCBO && this.keyspaceUseCBO(node.Alias()) {
+		if this.useCBO && this.keyspaceUseCBO(alias) {
 			cost, cardinality, size, frCost = getKeyScanCost(keys)
 		}
 		return plan.NewKeyScan(keys, mutate, cost, cardinality, size, frCost), nil
@@ -56,13 +57,11 @@ func (this *builder) selectScan(keyspace datastore.Keyspace, node *algebra.Keysp
 	}
 
 	if !this.joinEnum() && !node.IsAnsiJoinOp() {
-		includeJoin := false
 		if !node.HasTransferJoinHint() {
-			baseKeyspace, _ := this.baseKeyspaces[node.Alias()]
-			baseKeyspace.SetJoinHintError()
-			includeJoin = true
+			baseKeyspace, _ := this.baseKeyspaces[alias]
+			baseKeyspace.MarkJoinHintError(algebra.JOIN_HINT_FIRST_TERM + alias)
 		}
-		err = this.markOptimHints(node.Alias(), includeJoin)
+		err = this.markOptimHints(alias, false)
 		if err != nil {
 			return nil, err
 		}
@@ -72,7 +71,7 @@ func (this *builder) selectScan(keyspace datastore.Keyspace, node *algebra.Keysp
 		return secondary, nil
 	}
 	if node.IsInCorrSubq() && !node.IsSystem() {
-		return nil, errors.NewSubqueryMissingIndexError(node.Alias())
+		return nil, errors.NewSubqueryMissingIndexError(alias)
 	}
 	if primary != nil {
 		return primary, nil

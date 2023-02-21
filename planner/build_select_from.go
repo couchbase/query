@@ -448,13 +448,14 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 }
 
 func (this *builder) VisitSubqueryTerm(node *algebra.SubqueryTerm) (interface{}, error) {
+	alias := node.Alias()
 	sa := this.subquery
 	this.subquery = true
 	subquery := node.Subquery()
 	qp, err := subquery.Accept(this)
 	this.subquery = sa
 	if err != nil {
-		this.processadviseJF(node.Alias())
+		this.processadviseJF(alias)
 		return nil, err
 	}
 
@@ -464,24 +465,24 @@ func (this *builder) VisitSubqueryTerm(node *algebra.SubqueryTerm) (interface{},
 	this.subChildren = make([]plan.Operator, 0, 16) // sub-children, executed across data-parallel streams
 	selQP := qp.(*plan.QueryPlan)
 	selOp := selQP.PlanOp()
-	baseKeyspace, ok := this.baseKeyspaces[node.Alias()]
+	baseKeyspace, ok := this.baseKeyspaces[alias]
 	if !ok {
-		return nil, errors.NewPlanInternalError(fmt.Sprintf("VisitSubqueryTerm: baseKeyspace for %s not found", node.Alias()))
+		return nil, errors.NewPlanInternalError(fmt.Sprintf("VisitSubqueryTerm: baseKeyspace for %s not found", alias))
 	}
 
 	if this.hasBuilderFlag(BUILDER_NL_INNER) {
 		// make an ExpressionScan with the subquery as expression
 		// also save the subquery plan such that it can be added later to "~subqueries"
-		exprScan := plan.NewExpressionScan(algebra.NewSubquery(subquery), node.Alias(), subquery.IsCorrelated(), nil, selOp.Cost(), selOp.Cardinality(), selOp.Size(), selOp.FrCost())
+		exprScan := plan.NewExpressionScan(algebra.NewSubquery(subquery), alias, subquery.IsCorrelated(), nil, selOp.Cost(), selOp.Cardinality(), selOp.Size(), selOp.FrCost())
 		exprScan.SetSubqueryPlan(selOp)
 		this.addChildren(exprScan)
 	} else {
-		this.addChildren(selOp, plan.NewAlias(node.Alias(), baseKeyspace.IsPrimaryTerm(),
+		this.addChildren(selOp, plan.NewAlias(alias, baseKeyspace.IsPrimaryTerm(),
 			selOp.Cost(), selOp.Cardinality(), selOp.Size(), selOp.FrCost()))
 	}
 
 	if len(this.baseKeyspaces) > 1 {
-		filter, _, err := this.getFilter(node.Alias(), false, nil)
+		filter, _, err := this.getFilter(alias, false, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -494,22 +495,18 @@ func (this *builder) VisitSubqueryTerm(node *algebra.SubqueryTerm) (interface{},
 			frCost := OPT_COST_NOT_AVAIL
 			if this.useCBO {
 				cost, cardinality, size, frCost = getFilterCost(this.lastOp, filter,
-					this.baseKeyspaces, this.keyspaceNames, node.Alias(),
+					this.baseKeyspaces, this.keyspaceNames, alias,
 					this.advisorValidate(), this.context)
 			}
-			this.addSubChildren(plan.NewFilter(filter, node.Alias(), cost, cardinality, size, frCost))
+			this.addSubChildren(plan.NewFilter(filter, alias, cost, cardinality, size, frCost))
 		}
 	}
 
 	if !this.joinEnum() && !node.IsAnsiJoinOp() {
 		if !node.HasTransferJoinHint() {
-			baseKeyspace.SetJoinHintError()
-			err = this.markOptimHints(node.Alias(), true)
-			if err != nil {
-				return nil, err
-			}
+			baseKeyspace.MarkJoinHintError(algebra.JOIN_HINT_FIRST_TERM + alias)
 		}
-		err = this.processKeyspaceDone(node.Alias())
+		err = this.processKeyspaceDone(alias)
 		if err != nil {
 			return nil, err
 		}
@@ -543,33 +540,30 @@ func (this *builder) VisitExpressionTerm(node *algebra.ExpressionTerm) (interfac
 	var filter expression.Expression
 	var selec float64
 	var err error
+	alias := node.Alias()
 	if len(this.baseKeyspaces) > 1 {
-		filter, selec, err = this.getFilter(node.Alias(), false, nil)
+		filter, selec, err = this.getFilter(alias, false, nil)
 		if err != nil {
 			return nil, err
 		}
 
 		if this.useCBO && (filter != nil) && (cost > 0.0) && (cardinality > 0.0) &&
 			(selec > 0.0) && (size > 0) && (frCost > 0.0) {
-			cost, cardinality, size, frCost = getSimpleFilterCost(node.Alias(),
+			cost, cardinality, size, frCost = getSimpleFilterCost(alias,
 				cost, cardinality, selec, size, frCost)
 		}
 	}
-	this.addChildren(plan.NewExpressionScan(node.ExpressionTerm(), node.Alias(), node.IsCorrelated(), filter, cost, cardinality, size, frCost))
+	this.addChildren(plan.NewExpressionScan(node.ExpressionTerm(), alias, node.IsCorrelated(), filter, cost, cardinality, size, frCost))
 
 	if !this.joinEnum() && !node.IsAnsiJoinOp() {
-		baseKeyspace, ok := this.baseKeyspaces[node.Alias()]
+		baseKeyspace, ok := this.baseKeyspaces[alias]
 		if !ok {
-			return nil, errors.NewPlanInternalError(fmt.Sprintf("VisitExpressionTerm: baseKeyspace for %s not found", node.Alias()))
+			return nil, errors.NewPlanInternalError(fmt.Sprintf("VisitExpressionTerm: baseKeyspace for %s not found", alias))
 		}
 		if !node.HasTransferJoinHint() {
-			baseKeyspace.SetJoinHintError()
-			err = this.markOptimHints(node.Alias(), true)
-			if err != nil {
-				return nil, err
-			}
+			baseKeyspace.MarkJoinHintError(algebra.JOIN_HINT_FIRST_TERM + alias)
 		}
-		err = this.processKeyspaceDone(node.Alias())
+		err = this.processKeyspaceDone(alias)
 		if err != nil {
 			return nil, err
 		}

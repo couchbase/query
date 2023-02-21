@@ -403,8 +403,8 @@
             "disabled": false,
             "results": [
                 {
-                  "hints_not_followed": [
-                      "USE_HASH(c): USE_HASH hint cannot be followed"
+                  "hints_with_error": [
+                      "USE_HASH(c): Join hint (USE HASH or USE NL) cannot be specified on the first from term: c"
                   ]
                 }
             ],
@@ -481,8 +481,8 @@
             "disabled": false,
             "results": [
                 {
-                  "hints_not_followed": [
-                      "USE_HASH(c): USE_HASH hint cannot be followed"
+                  "hints_with_error": [
+                      "USE_HASH(c): Join hint (USE HASH or USE NL) cannot be specified on the first from term: c"
                   ]
                 }
             ],
