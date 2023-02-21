@@ -144,8 +144,7 @@ type base struct {
 	timePhase     timePhases
 	startTime     util.Time
 	execPhase     Phases
-	phaseTimes    func(time.Duration)
-	queryCU       func(time.Duration)
+	phaseTimes    func(*Context, Phases, time.Duration)
 	execTime      time.Duration
 	chanTime      time.Duration
 	servTime      time.Duration
@@ -199,8 +198,7 @@ func newBase(dest *base, context *Context) {
 	*dest = base{}
 	newValueExchange(&dest.valueExchange, context.GetPipelineCap())
 	dest.execPhase = PHASES
-	dest.phaseTimes = func(t time.Duration) {}
-	dest.queryCU = func(t time.Duration) { context.recordCU(t) }
+	dest.phaseTimes = emptyPhaseTimes
 	dest.activeCond.L = &dest.activeLock
 	dest.doSend = parallelSend
 	dest.closeConsumer = false
@@ -214,8 +212,7 @@ func newRedirectBase(dest *base, context *Context) {
 	*dest = base{}
 	newValueExchange(&dest.valueExchange, 1)
 	dest.execPhase = PHASES
-	dest.phaseTimes = func(t time.Duration) {}
-	dest.queryCU = func(t time.Duration) { context.recordCU(t) }
+	dest.phaseTimes = emptyPhaseTimes
 	dest.activeCond.L = &dest.activeLock
 	dest.doSend = parallelSend
 	dest.closeConsumer = false
@@ -232,8 +229,7 @@ func newSerializedBase(dest *base, context *Context) {
 	*dest = base{}
 	newValueExchange(&dest.valueExchange, 1)
 	dest.execPhase = PHASES
-	dest.phaseTimes = func(t time.Duration) {}
-	dest.queryCU = func(t time.Duration) { context.recordCU(t) }
+	dest.phaseTimes = emptyPhaseTimes
 	dest.activeCond.L = &dest.activeLock
 	dest.doSend = parallelSend
 	dest.closeConsumer = false
@@ -257,7 +253,6 @@ func (this *base) copy(dest *base) {
 	dest.parent = this.parent
 	dest.execPhase = this.execPhase
 	dest.phaseTimes = this.phaseTimes
-	dest.queryCU = this.queryCU
 	dest.activeCond.L = &dest.activeLock
 	dest.serializable = this.serializable
 	dest.inline = this.inline
@@ -1453,25 +1448,36 @@ func (this *base) switchPhase(p timePhases) {
 	switch oldPhase {
 	case _EXECTIME:
 		this.addExecTime(d)
-		this.phaseTimes(d)
-		this.queryCU(d)
+		this.phaseTimes(this.operatorCtx.Context, this.execPhase, d)
+		this.operatorCtx.Context.recordCU(d)
 	case _SERVTIME:
 		this.addServTime(d)
-		this.phaseTimes(d)
+		this.phaseTimes(this.operatorCtx.Context, this.execPhase, d)
 	case _CHANTIME:
 		this.addChanTime(d)
 	}
 }
 
 // accrues operators and phase times
+// only to be called by non runConsumer operators
 func (this *base) setExecPhase(phase Phases, context *Context) {
 	context.AddPhaseOperator(phase)
 	this.addExecPhase(phase, context)
 }
 
 // accrues phase times (useful where we don't want to count operators)
+// only to be called by non runConsumer operators
 func (this *base) addExecPhase(phase Phases, context *Context) {
-	this.phaseTimes = func(t time.Duration) { context.AddPhaseTime(phase, t) }
+	this.execPhase = phase
+	this.phaseTimes = activePhaseTimes
+}
+
+// MB-55659 do not use anonymous functions with functional pointers, as they leak to the heap
+func emptyPhaseTimes(*Context, Phases, time.Duration) {
+}
+
+func activePhaseTimes(c *Context, p Phases, t time.Duration) {
+	c.AddPhaseTime(p, t)
 }
 
 // operator times and items accrual
