@@ -1872,7 +1872,7 @@ func (b *keyspace) fetch(fullName, qualifiedName, scopeName, collectionName stri
 	ls := len(subPaths)
 	fast := l == 1 && ls == 0
 	if fast {
-		mcr, err = b.cbbucket.GetsMC(keys[0], context.IsActive, context.GetReqDeadline(), context.UseReplica(), clientContext...)
+		mcr, err = b.cbbucket.GetsMC(keys[0], context.IsActive, context.GetReqDeadline(), context.KvTimeout(), context.UseReplica(), clientContext...)
 	} else {
 		if ls > 0 && (subPaths[0] != "$document" && subPaths[0] != "$document.exptime") {
 			subPaths = append([]string{"$document"}, subPaths...)
@@ -1880,10 +1880,10 @@ func (b *keyspace) fetch(fullName, qualifiedName, scopeName, collectionName stri
 		}
 
 		if l == 1 {
-			mcr, err = b.cbbucket.GetsSubDoc(keys[0], context.GetReqDeadline(), subPaths, clientContext...)
+			mcr, err = b.cbbucket.GetsSubDoc(keys[0], context.GetReqDeadline(), context.KvTimeout(), subPaths, clientContext...)
 		} else {
 			// TODO TENANT handle refunds on transient failures
-			bulkResponse, err = b.cbbucket.GetBulk(keys, context.IsActive, context.GetReqDeadline(), subPaths, context.UseReplica(), clientContext...)
+			bulkResponse, err = b.cbbucket.GetBulk(keys, context.IsActive, context.GetReqDeadline(), context.KvTimeout(), subPaths, context.UseReplica(), clientContext...)
 			defer b.cbbucket.ReleaseGetBulkPools(bulkResponse)
 		}
 	}

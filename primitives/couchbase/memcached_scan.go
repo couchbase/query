@@ -1710,7 +1710,7 @@ func (cqueue *rswCancelQueue) runWorker() {
 						}
 					}
 					// always reset the deadline for each new piece of work
-					dl, _ := getDeadline(noDeadline, DefaultTimeout)
+					dl, _ := getDeadline(noDeadline, _NO_TIMEOUT, DefaultTimeout)
 					conn.SetDeadline(dl)
 					// TODO: batch by bucket, if/when protcol changes to support batch cancellations
 					_, err := conn.CancelRangeScan(cr[i].vbucket, cr[i].uuid, 0)
@@ -1902,7 +1902,8 @@ func (queue *rswQueue) runWorker() {
 				}
 				if run == true {
 					// always reset the deadline for each new piece of work
-					dl, _ := getDeadline(noDeadline, _SS_MAX_DURATION)
+					dl, _ := getDeadline(noDeadline, _NO_TIMEOUT, _SS_MAX_DURATION)
+
 					conn.SetDeadline(dl)
 					if !vbscan.runScan(conn, pool.Node()) {
 						pool.Discard(conn)

@@ -16,7 +16,7 @@ import (
 	"time"
 
 	"github.com/couchbase/gomemcached"
-	"github.com/couchbase/gomemcached/client"
+	memcached "github.com/couchbase/gomemcached/client"
 	"github.com/couchbase/query/logging"
 )
 
@@ -111,7 +111,7 @@ func defaultMkConn(host string, ah AuthHandler, tlsConfig *tls.Config, bucketNam
 	}
 
 	if DefaultTimeout > 0 {
-		dl, _ := getDeadline(noDeadline, DefaultTimeout)
+		dl, _ := getDeadline(noDeadline, _NO_TIMEOUT, DefaultTimeout)
 		conn.SetDeadline(dl)
 	}
 

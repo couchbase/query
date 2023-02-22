@@ -24,7 +24,7 @@ import (
 	"unsafe"
 
 	"github.com/couchbase/gomemcached"
-	"github.com/couchbase/gomemcached/client" // package name is 'memcached'
+	memcached "github.com/couchbase/gomemcached/client" // package name is 'memcached'
 	qerrors "github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/util"
@@ -436,7 +436,7 @@ func (b *Bucket) do3(vb uint16, f func(mc *memcached.Client, vb uint16) error, d
 		}
 		if deadline {
 			if DefaultTimeout > 0 {
-				dl, _ := getDeadline(noDeadline, DefaultTimeout)
+				dl, _ := getDeadline(noDeadline, _NO_TIMEOUT, DefaultTimeout)
 				conn.SetDeadline(dl)
 			} else {
 				conn.SetDeadline(noDeadline)
@@ -502,7 +502,7 @@ func getStatsParallelFunc(fn func(key, val []byte), sn string, b *Bucket, offset
 	conn, err := pool.Get()
 
 	if err == nil {
-		dl, _ := getDeadline(noDeadline, DefaultTimeout)
+		dl, _ := getDeadline(noDeadline, _NO_TIMEOUT, DefaultTimeout)
 		conn.SetDeadline(dl)
 		err = conn.StatsFunc(which, fn)
 		pool.Return(conn)
@@ -661,19 +661,52 @@ func isAddrNotAvailable(err error) bool {
 	return strings.Contains(estr, "cannot assign requested address")
 }
 
-func getDeadline(reqDeadline time.Time, duration time.Duration) (time.Time, error) {
-	if reqDeadline.IsZero() {
+// Get the deadline for your connection
+func getDeadline(reqDeadline time.Time, kvTimeout time.Duration, duration time.Duration) (time.Time, error) {
+
+	var now util.Time
+
+	// if both are unset, return default
+	if reqDeadline.IsZero() && kvTimeout <= _NO_TIMEOUT {
 		if duration > 0 {
+			now = util.Now()
 			return time.Unix(0,
-					util.Now().Add(duration+deadlineGranularity).Truncate(deadlineGranularity).UnixNano()),
+					now.Add(duration+deadlineGranularity).Truncate(deadlineGranularity).UnixNano()),
 				nil
 		} else {
 			return noDeadline, nil
 		}
-	} else if util.Now().UnixNano() > reqDeadline.UnixNano() {
-		return reqDeadline, fmt.Errorf("Deadline expired")
+	} else {
+		now = util.Now()
+
+		// if request deadline has been exceeded
+		if !reqDeadline.IsZero() {
+			if now.UnixNano() > reqDeadline.UnixNano() {
+				return reqDeadline, fmt.Errorf("Deadline expired")
+			}
+		}
+
+		// if kvTimeout is set
+		if kvTimeout > _NO_TIMEOUT {
+			kvTimeoutDeadline := time.Unix(0, now.Add(kvTimeout+deadlineGranularity).Truncate(deadlineGranularity).UnixNano())
+
+			if !reqDeadline.IsZero() {
+				reqDeadlineTruncated := reqDeadline.Truncate(deadlineGranularity).Add(deadlineGranularity)
+
+				// if kvTimeout's deadline is earlier than reqDeadline
+				if kvTimeoutDeadline.Sub(reqDeadlineTruncated) < _NO_TIMEOUT {
+					return kvTimeoutDeadline, nil
+				}
+
+				return reqDeadlineTruncated, nil
+			}
+
+			return kvTimeoutDeadline, nil
+		} else {
+			// reqDeadline is set
+			return reqDeadline.Truncate(deadlineGranularity).Add(deadlineGranularity), nil
+		}
 	}
-	return reqDeadline.Truncate(deadlineGranularity).Add(deadlineGranularity), nil
 }
 
 func backOff(attempt, maxAttempts int, duration time.Duration, exponential bool) bool {
@@ -691,7 +724,7 @@ func backOff(attempt, maxAttempts int, duration time.Duration, exponential bool)
 	return false
 }
 
-func (b *Bucket) doBulkGet(vb uint16, keys []string, active func() bool, reqDeadline time.Time,
+func (b *Bucket) doBulkGet(vb uint16, keys []string, active func() bool, reqDeadline time.Time, kvTimeout time.Duration,
 	ech chan<- error, subPaths []string, useReplica bool, eStatus *errorStatus,
 	context ...*memcached.ClientContext) (map[string]*gomemcached.MCResponse, time.Duration, int) {
 
@@ -731,7 +764,9 @@ func (b *Bucket) doBulkGet(vb uint16, keys []string, active func() bool, reqDead
 			}
 			lastError = nil
 
-			dl, err := getDeadline(reqDeadline, DefaultTimeout)
+			// kvTimeout parameter is for a singular KV op but bulkGet handles multiple keys.
+			// Accomodate this by setting the kvTimeout for a bulk get as kvTimeout*numKeys
+			dl, err := getDeadline(reqDeadline, time.Duration(int64(kvTimeout)*int64(len(keys))), DefaultTimeout)
 			if err != nil {
 				logging.Debugf("Request deadline expired.")
 				pool.Return(conn)
@@ -802,9 +837,11 @@ type vbBulkGet struct {
 	groupError  *errorStatus
 	context     []*memcached.ClientContext
 	active      func() bool
+	kvTimeout   time.Duration
 }
 
 const _NUM_CHANNELS = 5
+const _NO_TIMEOUT = time.Duration(0)
 
 var _NUM_CHANNEL_WORKERS = (util.NumCPU() + 1) / 2
 var DefaultDialTimeout = time.Duration(0)
@@ -865,7 +902,7 @@ func vbDoBulkGet(vbg *vbBulkGet) time.Duration {
 		// Workers cannot panic and die
 		recover()
 	}()
-	rv, delay, retries = vbg.b.doBulkGet(vbg.k, vbg.keys, vbg.active, vbg.reqDeadline, vbg.ech, vbg.subPaths, vbg.useReplica, vbg.groupError, vbg.context...)
+	rv, delay, retries = vbg.b.doBulkGet(vbg.k, vbg.keys, vbg.active, vbg.reqDeadline, vbg.kvTimeout, vbg.ech, vbg.subPaths, vbg.useReplica, vbg.groupError, vbg.context...)
 	if retries > 0 {
 		atomic.AddUint64(&vbg.b.retryCount, uint64(retries))
 	}
@@ -900,7 +937,7 @@ func vbDoBulkGet(vbg *vbBulkGet) time.Duration {
 
 var _ERR_CHAN_FULL = fmt.Errorf("Data request queue full, aborting query.")
 
-func (b *Bucket) processBulkGet(kdm map[uint16][]string, active func() bool, reqDeadline time.Time,
+func (b *Bucket) processBulkGet(kdm map[uint16][]string, active func() bool, reqDeadline time.Time, kvTimeout time.Duration,
 	ch chan<- map[string]*gomemcached.MCResponse, ech chan<- error, subPaths []string,
 	useReplica bool, eStatus *errorStatus, context ...*memcached.ClientContext) {
 
@@ -929,6 +966,7 @@ func (b *Bucket) processBulkGet(kdm map[uint16][]string, active func() bool, req
 			groupError:  eStatus,
 			context:     context,
 			active:      active,
+			kvTimeout:   kvTimeout,
 		}
 
 		wg.Add(1)
@@ -988,15 +1026,15 @@ func errorCollector(ech <-chan error, eout chan<- error, eStatus *errorStatus) {
 // map array for each key.  Keys that were not found will not be included in
 // the map.
 
-func (b *Bucket) GetBulk(keys []string, active func() bool, reqDeadline time.Time, subPaths []string, useReplica bool, context ...*memcached.ClientContext) (map[string]*gomemcached.MCResponse, error) {
-	return b.getBulk(keys, active, reqDeadline, subPaths, useReplica, context...)
+func (b *Bucket) GetBulk(keys []string, active func() bool, reqDeadline time.Time, kvTimeout time.Duration, subPaths []string, useReplica bool, context ...*memcached.ClientContext) (map[string]*gomemcached.MCResponse, error) {
+	return b.getBulk(keys, active, reqDeadline, kvTimeout, subPaths, useReplica, context...)
 }
 
 func (b *Bucket) ReleaseGetBulkPools(rv map[string]*gomemcached.MCResponse) {
 	_STRING_MCRESPONSE_POOL.Put(rv)
 }
 
-func (b *Bucket) getBulk(keys []string, active func() bool, reqDeadline time.Time, subPaths []string, useReplica bool, context ...*memcached.ClientContext) (map[string]*gomemcached.MCResponse, error) {
+func (b *Bucket) getBulk(keys []string, active func() bool, reqDeadline time.Time, kvTimeout time.Duration, subPaths []string, useReplica bool, context ...*memcached.ClientContext) (map[string]*gomemcached.MCResponse, error) {
 	kdm := _VB_STRING_POOL.Get()
 	defer _VB_STRING_POOL.Put(kdm)
 	for _, k := range keys {
@@ -1019,7 +1057,7 @@ func (b *Bucket) getBulk(keys []string, active func() bool, reqDeadline time.Tim
 	ech := make(chan error)
 
 	go errorCollector(ech, eout, groupErrorStatus)
-	go b.processBulkGet(kdm, active, reqDeadline, ch, ech, subPaths, useReplica, groupErrorStatus, context...)
+	go b.processBulkGet(kdm, active, reqDeadline, kvTimeout, ch, ech, subPaths, useReplica, groupErrorStatus, context...)
 
 	var rv map[string]*gomemcached.MCResponse
 
@@ -1248,7 +1286,7 @@ func (b *Bucket) GetCollectionCID(scope string, collection string, reqDeadline t
 	err = b.do2(key, func(mc *memcached.Client, vb uint16) error {
 		var err1 error
 
-		dl, err := getDeadline(reqDeadline, DefaultTimeout)
+		dl, err := getDeadline(reqDeadline, _NO_TIMEOUT, DefaultTimeout)
 		if err != nil {
 			logging.Debugf("Request deadline expired")
 			return err
@@ -1274,7 +1312,7 @@ func (b *Bucket) GetCollectionCID(scope string, collection string, reqDeadline t
 }
 
 // Get a value straight from Memcached
-func (b *Bucket) GetsMC(key string, active func() bool, reqDeadline time.Time, useReplica bool, context ...*memcached.ClientContext) (*gomemcached.MCResponse, error) {
+func (b *Bucket) GetsMC(key string, active func() bool, reqDeadline time.Time, kvTimeout time.Duration, useReplica bool, context ...*memcached.ClientContext) (*gomemcached.MCResponse, error) {
 	var err error
 	var response *gomemcached.MCResponse
 
@@ -1290,7 +1328,7 @@ func (b *Bucket) GetsMC(key string, active func() bool, reqDeadline time.Time, u
 			response = &gomemcached.MCResponse{Status: gomemcached.KEY_ENOENT}
 			return nil
 		}
-		dl, err := getDeadline(reqDeadline, DefaultTimeout)
+		dl, err := getDeadline(reqDeadline, kvTimeout, DefaultTimeout)
 		if err != nil {
 			logging.Debugf("Request deadline expired")
 			return err
@@ -1307,7 +1345,7 @@ func (b *Bucket) GetsMC(key string, active func() bool, reqDeadline time.Time, u
 }
 
 // Get a value through the subdoc API
-func (b *Bucket) GetsSubDoc(key string, reqDeadline time.Time, subPaths []string, context ...*memcached.ClientContext) (*gomemcached.MCResponse, error) {
+func (b *Bucket) GetsSubDoc(key string, reqDeadline time.Time, kvTimeout time.Duration, subPaths []string, context ...*memcached.ClientContext) (*gomemcached.MCResponse, error) {
 	var err error
 	var response *gomemcached.MCResponse
 
@@ -1318,7 +1356,7 @@ func (b *Bucket) GetsSubDoc(key string, reqDeadline time.Time, subPaths []string
 	err = b.do2(key, func(mc *memcached.Client, vb uint16) error {
 		var err1 error
 
-		dl, err := getDeadline(reqDeadline, DefaultTimeout)
+		dl, err := getDeadline(reqDeadline, kvTimeout, DefaultTimeout)
 		if err != nil {
 			logging.Debugf("Request deadline expired")
 			return err
@@ -1365,7 +1403,8 @@ func (b *Bucket) GetRandomDoc(context ...*memcached.ClientContext) (*gomemcached
 	if err != nil {
 		return nil, err
 	}
-	dl, _ := getDeadline(noDeadline, DefaultTimeout)
+
+	dl, _ := getDeadline(noDeadline, _NO_TIMEOUT, DefaultTimeout)
 	conn.SetDeadline(dl)
 
 	// We may need to select the bucket before GetRandomDoc()
