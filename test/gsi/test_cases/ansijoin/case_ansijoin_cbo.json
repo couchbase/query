@@ -1,0 +1,64 @@
+[
+    {
+        "testcase": "from case_ansijoin_bugs.json, MB-38564 part4. MB-55560",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true,
+                    "cost": true,
+                    "cardinality": true
+                }
+            ],
+            "statement": "SELECT true AS present, p.cost IS NOT MISSING AS cost, p.cardinality IS NOT MISSING AS cardinality FROM $explan AS p WHERE ANY j WITHIN p.plan.`~children` SATISFIES j.`#operator` = 'NestedLoopJoin' AND j.`alias` = 'r' AND j.`outer` = true AND ANY v WITHIN j.`~child` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`as` = 'r' AND array_length(v.`spans`[0].`range`) = 1 END END"
+        },
+        "queryParams": {"use_cbo": true},
+        "statements":"SELECT l.c11, r.c22, s.c22 AS s22 FROM shellTest l LEFT JOIN shellTest r ON l.c12 = r.c22 AND r.type = \"right\" JOIN shellTest s ON s.c21 = l.c11 + 2 AND s.type = \"right\" AND r.c21 IS MISSING WHERE l.type = \"left\" AND l.c11 > 2",
+        "results": [
+        {
+            "c11": 4,
+            "s22": 60
+        }
+	]
+    },
+    {
+        "testcase": "MB-55547",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true,
+                    "cost": true,
+                    "cardinality": true,
+                    "optimizer_hints": {
+                        "hints_followed": [
+                            "INDEX(l #sequentialscan)"
+                        ]
+                    }
+                }
+            ],
+            "statement": "SELECT true AS present, p.cost IS NOT MISSING AS cost, p.cardinality IS NOT MISSING AS cardinality, p.`optimizer_hints` FROM $explan AS p WHERE ANY j WITHIN p.plan.`~children` SATISFIES j.`#operator` LIKE 'PrimaryScan%' AND j.`as` = 'l' END AND ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'Order' END"
+        },
+        "queryParams": {"use_cbo": true},
+        "statements":"SELECT /*+ INDEX(l `#sequentialscan`) */ l.c11, r.c21, r.c22 FROM shellTest l JOIN shellTest r ON l.c12 = r.c22 AND r.type = \"right\" WHERE l.type = \"left\" ORDER BY r.c21 DESC",
+        "ordered": true,
+        "results": [
+            {
+                "c11": 3,
+                "c21": 3,
+                "c22": 30
+            },
+            {
+                "c11": 2,
+                "c21": 2,
+                "c22": 20
+            },
+            {
+                "c11": 1,
+                "c21": 1,
+                "c22": 10
+            }
+	]
+    }
+]
+

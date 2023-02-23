@@ -1,0 +1,254 @@
+[
+    {
+	"testcase": "from case_hints_simple.json. Join hint on first keyspace",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true,
+                    "cost": true,
+                    "cardinality": true,
+                    "optimizer_hints": {
+                        "hints_followed": [
+                            "USE_HASH(c)"
+                        ]
+                    }
+                }
+            ],
+            "statement": "SELECT true AS present, p.cost IS NOT MISSING AS cost, p.cardinality IS NOT MISSING AS cardinality, p.`optimizer_hints` FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'HashJoin' END"
+        },
+        "queryParams": {"use_cbo": true},
+        "statements":"SELECT /*+ USE_HASH(c) */ c.firstName, c.lastName, c.customerId, p.purchaseId FROM customer c JOIN purchase p ON c.customerId = p.customerId WHERE c.lastName = \"Champlin\" AND c.type = \"customer\" AND p.type = \"purchase\" ORDER BY p.purchaseId LIMIT 10",
+        "ordered": true,
+        "results": [
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase104"
+        },
+        {
+            "customerId": "customer33",
+            "firstName": "Charles",
+            "lastName": "Champlin",
+            "purchaseId": "purchase1582"
+        },
+        {
+            "customerId": "customer33",
+            "firstName": "Charles",
+            "lastName": "Champlin",
+            "purchaseId": "purchase1704"
+        },
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase1747"
+        },
+        {
+            "customerId": "customer631",
+            "firstName": "Gladyce",
+            "lastName": "Champlin",
+            "purchaseId": "purchase2838"
+        },
+        {
+            "customerId": "customer631",
+            "firstName": "Gladyce",
+            "lastName": "Champlin",
+            "purchaseId": "purchase2872"
+        },
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase3344"
+        },
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase3698"
+        },
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase4142"
+        },
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase4315"
+        }
+    ]
+    },
+    {
+	"testcase": "from case_hints_simple.json. Join hint on first subquery term",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true,
+                    "cost": true,
+                    "cardinality": true,
+                    "optimizer_hints": {
+                        "hints_with_error": [
+                            "USE_HASH(c): Join hint (USE HASH or USE NL) cannot be specified on the first from term: c"
+                        ]
+                    }
+                }
+            ],
+            "statement": "SELECT true AS present, p.cost IS NOT MISSING AS cost, p.cardinality IS NOT MISSING AS cardinality, p.`optimizer_hints` FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'NestedLoopJoin' END"
+        },
+        "queryParams": {"use_cbo": true},
+        "statements":"SELECT /*+ USE_HASH(c) */ c.firstName, c.lastName, c.customerId, p.purchaseId FROM (SELECT firstName, lastName, customerId FROM customer WHERE lastName = \"Champlin\" AND type = \"customer\") AS c JOIN purchase p ON c.customerId = p.customerId WHERE p.type = \"purchase\" ORDER BY p.purchaseId LIMIT 10",
+        "ordered": true,
+        "results": [
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase104"
+        },
+        {
+            "customerId": "customer33",
+            "firstName": "Charles",
+            "lastName": "Champlin",
+            "purchaseId": "purchase1582"
+        },
+        {
+            "customerId": "customer33",
+            "firstName": "Charles",
+            "lastName": "Champlin",
+            "purchaseId": "purchase1704"
+        },
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase1747"
+        },
+        {
+            "customerId": "customer631",
+            "firstName": "Gladyce",
+            "lastName": "Champlin",
+            "purchaseId": "purchase2838"
+        },
+        {
+            "customerId": "customer631",
+            "firstName": "Gladyce",
+            "lastName": "Champlin",
+            "purchaseId": "purchase2872"
+        },
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase3344"
+        },
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase3698"
+        },
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase4142"
+        },
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase4315"
+        }
+    ]
+    },
+    {
+	"testcase": "from case_hints_index_all.json. INDEX_ALL hint and query has OR clause on indexed field. MB-55559",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true,
+                    "cost": true,
+                    "cardinality": true,
+                    "optimizer_hints": {
+                        "hints_followed": [
+                            "INDEX_ALL(c cust_lastName_firstName_customerId cust_customerId_lastName_firstName)"
+                        ]
+                    }
+                }
+            ],
+            "statement": "SELECT true AS present, p.cost IS NOT MISSING AS cost, p.cardinality IS NOT MISSING AS cardinality, p.`optimizer_hints` FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'OrderedIntersectScan' AND ARRAY_LENGTH(v.scans) = 2 END"
+        },
+        "queryParams": {"use_cbo": true},
+        "statements":"SELECT /*+ INDEX_ALL(c cust_lastName_firstName_customerId cust_customerId_lastName_firstName) */ lastName, firstName, customerId FROM customer c WHERE lastName LIKE 'Wi%' AND (customerId = 'customer17' OR customerId = 'customer177') ORDER BY lastName",
+        "ordered": true,
+        "results": [
+            {
+                "lastName": "Willms",
+                "firstName": "Elena",
+                "customerId": "customer177"
+            },
+            {
+                "lastName": "Wisoky",
+                "firstName": "Devyn",
+                "customerId": "customer17"
+            }
+        ]
+    },
+    {
+	"testcase": "from case_hints_index_all.json. INDEX_ALL hint in nested-loop join",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true,
+                    "cost": true,
+                    "cardinality": true,
+                    "optimizer_hints": {
+                        "hints_followed": [
+                            "INDEX_ALL(p purch_customerId_purchaseId purch_purchaseId)",
+                            "INDEX(c cust_lastName_firstName_customerId)",
+                            "USE_NL(p)"
+                        ]
+                    }
+                }
+            ],
+            "statement": "SELECT true AS present, p.cost IS NOT MISSING AS cost, p.cardinality IS NOT MISSING AS cardinality, p.`optimizer_hints` FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IntersectScan' AND ARRAY_LENGTH(v.scans) = 2 END AND ANY w WITHIN p.plan.`~children` SATISFIES w.`#operator` = 'NestedLoopJoin' END"
+        },
+        "queryParams": {"use_cbo": true},
+        "statements":"SELECT /*+ INDEX_ALL(p purch_customerId_purchaseId purch_purchaseId) INDEX(c cust_lastName_firstName_customerId) USE_NL(p) */ c.firstName, c.lastName, c.customerId, p.purchaseId FROM customer c JOIN purchase p ON c.customerId = p.customerId AND p.purchaseId LIKE 'purchase1%' WHERE c.lastName = 'Champlin'",
+        "results": [
+            {
+                "firstName": "Bryon",
+                "lastName": "Champlin",
+                "customerId": "customer60",
+                "purchaseId": "purchase1747"
+            },
+            {
+                "firstName": "Bryon",
+                "lastName": "Champlin",
+                "customerId": "customer60",
+                "purchaseId": "purchase104"
+            },
+            {
+                "firstName": "Charles",
+                "lastName": "Champlin",
+                "customerId": "customer33",
+                "purchaseId": "purchase1582"
+            },
+            {
+                "firstName": "Charles",
+                "lastName": "Champlin",
+                "customerId": "customer33",
+                "purchaseId": "purchase1704"
+            }
+        ]
+    }
+]
+

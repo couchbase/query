@@ -110,6 +110,15 @@ func TestAnsiJoin(t *testing.T) {
 	// test LATERAL join syntax
 	runMatch("case_ansijoin_lateral.json", false, false, qc, t)
 
+	// run UPDATE STATISTICS statements
+	runStmt(qc, "UPDATE STATISTICS FOR shellTest INDEX(st_ix11, st_ix21, st_ix23)")
+
+	// run with CBO
+	runMatch("case_ansijoin_cbo.json", false, true, qc, t)
+
+	// DELETE optimizer statistics
+	runStmt(qc, "UPDATE STATISTICS FOR shellTest DELETE ALL")
+
 	fmt.Println("Dropping indexes")
 	runStmt(qc, "DROP INDEX customer.cust_lastName_firstName_customerId")
 	runStmt(qc, "DROP INDEX customer.cust_customerId_lastName_firstName")

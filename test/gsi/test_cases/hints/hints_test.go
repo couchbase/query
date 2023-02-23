@@ -57,6 +57,21 @@ func TestHints(t *testing.T) {
 	// INDEX_ALL hint
 	runMatch("case_hints_index_all.json", false, true, qc, t)
 
+	// run UPDATE STATISTICS statements
+	runStmt(qc, "UPDATE STATISTICS FOR customer (lastName, firstName, customerId, type)")
+	runStmt(qc, "UPDATE STATISTICS FOR purchase (customerId, purchaseId, type, DISTINCT ARRAY pd.product FOR pd IN lineItems END)")
+	runStmt(qc, "UPDATE STATISTICS FOR product INDEX(prod_productId)")
+	runStmt(qc, "UPDATE STATISTICS FOR shellTest INDEX(st_source_idx, st_target_idx)")
+
+	// run with CBO
+	runMatch("case_hints_cbo.json", false, true, qc, t)
+
+	// DELETE optimizer statistics
+	runStmt(qc, "UPDATE STATISTICS FOR customer DELETE ALL")
+	runStmt(qc, "UPDATE STATISTICS FOR product DELETE ALL")
+	runStmt(qc, "UPDATE STATISTICS FOR purchase DELETE ALL")
+	runStmt(qc, "UPDATE STATISTICS FOR shellTest DELETE ALL")
+
 	fmt.Println("Dropping indexes")
 	runStmt(qc, "DROP INDEX customer.cust_lastName_firstName_customerId")
 	runStmt(qc, "DROP INDEX customer.cust_customerId_lastName_firstName")

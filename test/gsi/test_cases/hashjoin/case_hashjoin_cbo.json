@@ -1,0 +1,242 @@
+[
+    {
+        "testcase": "from case_hashjoin_oj2ij",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true,
+                    "cost": true,
+                    "cardinality": true
+                }
+            ],
+            "statement": "SELECT true AS present, p.cost IS NOT MISSING AS cost, p.cardinality IS NOT MISSING AS cardinality FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'HashJoin' AND v.build_aliases[0] = 'c' AND v.`outer` IS MISSING END"
+        },
+        "queryParams": {"use_cbo": true},
+        "statements":"SELECT c.customerId, p.purchaseId, pd.productId FROM customer c LEFT JOIN purchase p USE HASH(probe) ON c.customerId = p.customerId UNNEST p.lineItems as l JOIN product pd ON l.product = pd.productId WHERE c.lastName IN [ \"Gibson\", \"Quitzon\" ] ORDER BY c.customerId, p.purchaseId, pd.productId LIMIT 10",
+        "ordered": true,
+        "results": [
+        {
+            "customerId": "customer132",
+            "productId": "product439",
+            "purchaseId": "purchase1870"
+        },
+        {
+            "customerId": "customer132",
+            "productId": "product805",
+            "purchaseId": "purchase1870"
+        },
+        {
+            "customerId": "customer132",
+            "productId": "product831",
+            "purchaseId": "purchase1870"
+        },
+        {
+            "customerId": "customer132",
+            "productId": "product92",
+            "purchaseId": "purchase1870"
+        },
+        {
+            "customerId": "customer132",
+            "productId": "product93",
+            "purchaseId": "purchase1870"
+        },
+        {
+            "customerId": "customer132",
+            "productId": "product671",
+            "purchaseId": "purchase2172"
+        },
+        {
+            "customerId": "customer132",
+            "productId": "product277",
+            "purchaseId": "purchase2297"
+        },
+        {
+            "customerId": "customer132",
+            "productId": "product463",
+            "purchaseId": "purchase2297"
+        },
+        {
+            "customerId": "customer132",
+            "productId": "product483",
+            "purchaseId": "purchase2297"
+        },
+        {
+            "customerId": "customer132",
+            "productId": "product294",
+            "purchaseId": "purchase3297"
+        }
+    ]
+    },
+    {
+        "testcase": "from case_hashjoin_bugs.json, MB-50041",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true,
+                    "cost": true,
+                    "cardinality": true,
+                    "optimizer_hints": {
+                        "hints_followed": [
+                            "USE_HASH(l2/PROBE)",
+                            "USE_HASH(r/BUILD)"
+                        ]
+                    }
+                }
+            ],
+            "statement": "SELECT true AS present, p.cost IS NOT MISSING AS cost, p.cardinality IS NOT MISSING AS cardinality, p.`optimizer_hints` FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'HashJoin' AND ARRAY_LENGTH(v.`build_aliases`) = 1 END AND ANY u WITHIN p.plan.`~children` SATISFIES u.`#operator` = 'HashJoin' AND u.`outer` = true AND u.`build_aliases`[0] = 'r' END"
+        },
+        "queryParams": {"use_cbo": true},
+        "statements": "SELECT l1.c11, l2.c12, r.c22 FROM shellTest l1 LEFT JOIN shellTest r USE HASH(build) ON l1.c11 = r.c21 AND r.type = \"right\" JOIN shellTest l2 USE HASH(probe) ON l1.c11 = l2.c11 AND l2.type = \"left\" WHERE l1.type = \"left\" ORDER BY l1.c11, r.c22",
+        "ordered": true,
+        "results": [
+        {
+            "c11": 1,
+            "c12": 10,
+            "c22": 10
+        },
+        {
+            "c11": 2,
+            "c12": 20,
+            "c22": 20
+        },
+        {
+            "c11": 2,
+            "c12": 20,
+            "c22": 21
+        },
+        {
+            "c11": 3,
+            "c12": 30,
+            "c22": 30
+        },
+        {
+            "c11": 3,
+            "c12": 30,
+            "c22": 31
+        },
+        {
+            "c11": 3,
+            "c12": 30,
+            "c22": 32
+        },
+        {
+            "c11": 4,
+            "c12": 40
+        }
+    ]
+    },
+    {
+        "testcase": "from case_hashjoin_bitfltr.json",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true,
+                    "cost": true,
+                    "cardinality": true,
+                    "optimizer_hints": {
+                        "hints_followed": [
+                            "JOIN_FILTER(pd)",
+                            "USE_HASH(pd/PROBE)"
+                        ]
+                    }
+                }
+            ],
+            "statement": "SELECT true AS present, p.cost IS NOT MISSING AS cost, p.cardinality IS NOT MISSING AS cardinality, p.`optimizer_hints` FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'HashJoin' AND ARRAY_LENGTH(v.`build_aliases`) = 3 END AND ANY u WITHIN p.plan.`~children` SATISFIES u.`#operator` = 'Unnest' AND u.`as` = 'l' AND ARRAY_LENGTH(u.`build_bit_filters`) > 0 END AND ANY w WITHIN p.plan.`~children` SATISFIES w.`#operator` LIKE 'IndexScan%' AND w.`as` = 'pd' AND ARRAY_LENGTH(w.`probe_bit_filters`) > 0 END"
+        },
+        "queryParams": {"use_cbo": true},
+        "statements":"SELECT /*+ JOIN_FILTER(pd) */ pc.purchaseId, l.product, pd.name, c.lastName, c.firstName FROM purchase pc JOIN customer c ON pc.customerId = c.customerId UNNEST pc.lineItems as l JOIN product pd USE HASH(probe) ON l.product = pd.productId WHERE pc.purchaseId = \"purchase6558\" ORDER BY l.product",
+        "ordered": true,
+        "results": [
+        {
+            "firstName": "Ruthe",
+            "lastName": "Rodriguez",
+            "name": "Brother CP-6500 Computerized Sewing Machine",
+            "product": "product218",
+            "purchaseId": "purchase6558"
+        },
+        {
+            "firstName": "Ruthe",
+            "lastName": "Rodriguez",
+            "name": "Hunter 26406 Architect Series Plus 52-Inch 5-Blade3-Light Ceiling Fan, Brushed Nickel with Chestnut/Maple Blades and Frosted Scalloped Glass Shades",
+            "product": "product376",
+            "purchaseId": "purchase6558"
+        },
+        {
+            "firstName": "Ruthe",
+            "lastName": "Rodriguez",
+            "name": "Boon Glo Nightlight with Portable Balls, White",
+            "product": "product387",
+            "purchaseId": "purchase6558"
+        },
+        {
+            "firstName": "Ruthe",
+            "lastName": "Rodriguez",
+            "name": "Diamondback 2013 Cobra Junior Mountain Bike with 24-Inch Wheels  (Red, 24-Inch/Boys)",
+            "product": "product794",
+            "purchaseId": "purchase6558"
+        }
+    ]
+    },
+    {
+        "testcase": "from case_hashjoin_bitfltr.json",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true,
+                    "cost": true,
+                    "cardinality": true,
+                    "optimizer_hints": {
+                        "hints_followed": [
+                            "JOIN_FILTER(pd)",
+                            "USE_HASH(c/BUILD)",
+                            "USE_HASH(pd/PROBE)"
+                        ]
+                    }
+                }
+            ],
+            "statement": "SELECT true AS present, p.cost IS NOT MISSING AS cost, p.cardinality IS NOT MISSING AS cardinality, p.`optimizer_hints` FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'HashJoin' AND ARRAY_LENGTH(v.`build_aliases`) = 3 END AND ANY u WITHIN p.plan.`~children` SATISFIES u.`#operator` = 'Unnest' AND u.`as` = 'l' AND ARRAY_LENGTH(u.`build_bit_filters`) > 0 END AND ANY w WITHIN p.plan.`~children` SATISFIES w.`#operator` LIKE 'IndexScan%' AND w.`as` = 'pd' AND ARRAY_LENGTH(w.`probe_bit_filters`) > 0 END"
+        },
+        "queryParams": {"use_cbo": true},
+        "statements":"SELECT /*+ JOIN_FILTER(pd) */ pc.purchaseId, l.product, pd.name, c.lastName, c.firstName FROM purchase pc JOIN customer c USE HASH(build) ON pc.customerId = c.customerId UNNEST pc.lineItems as l JOIN product pd USE HASH(probe) ON l.product = pd.productId WHERE pc.purchaseId = \"purchase6558\" ORDER BY l.product",
+        "ordered": true,
+        "results": [
+        {
+            "firstName": "Ruthe",
+            "lastName": "Rodriguez",
+            "name": "Brother CP-6500 Computerized Sewing Machine",
+            "product": "product218",
+            "purchaseId": "purchase6558"
+        },
+        {
+            "firstName": "Ruthe",
+            "lastName": "Rodriguez",
+            "name": "Hunter 26406 Architect Series Plus 52-Inch 5-Blade3-Light Ceiling Fan, Brushed Nickel with Chestnut/Maple Blades and Frosted Scalloped Glass Shades",
+            "product": "product376",
+            "purchaseId": "purchase6558"
+        },
+        {
+            "firstName": "Ruthe",
+            "lastName": "Rodriguez",
+            "name": "Boon Glo Nightlight with Portable Balls, White",
+            "product": "product387",
+            "purchaseId": "purchase6558"
+        },
+        {
+            "firstName": "Ruthe",
+            "lastName": "Rodriguez",
+            "name": "Diamondback 2013 Cobra Junior Mountain Bike with 24-Inch Wheels  (Red, 24-Inch/Boys)",
+            "product": "product794",
+            "purchaseId": "purchase6558"
+        }
+    ]
+    }
+]
+
