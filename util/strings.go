@@ -12,6 +12,7 @@ import (
 	"strings"
 	"unicode"
 	"unicode/utf8"
+	"unsafe"
 )
 
 /*
@@ -79,4 +80,8 @@ func TrimSpace(s string) string {
 	}
 
 	return s
+}
+
+func ByteToString(b []byte) string {
+	return *(*string)(unsafe.Pointer(&b))
 }

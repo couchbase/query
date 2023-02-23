@@ -91,11 +91,10 @@ func newHttpRequest(rv *httpRequest, resp http.ResponseWriter, req *http.Request
 			URL_CONTENT  = "application/x-www-form-urlencoded"
 			JSON_CONTENT = "application/json"
 		)
-		content_types := req.Header["Content-Type"]
-		content_type := URL_CONTENT
+		content_type := util.HeaderGet(req.Header, "Content-Type")
 
-		if len(content_types) > 0 {
-			content_type = content_types[0]
+		if content_type == "" {
+			content_type = URL_CONTENT
 		}
 
 		if strings.HasPrefix(content_type, JSON_CONTENT) {
@@ -118,7 +117,7 @@ func newHttpRequest(rv *httpRequest, resp http.ResponseWriter, req *http.Request
 	}
 
 	userAgent := req.UserAgent()
-	cbUserAgent := req.Header.Get("CB-User-Agent")
+	cbUserAgent := util.HeaderGet(req.Header, "CB-User-Agent")
 	if cbUserAgent != "" {
 		userAgent = userAgent + " (" + cbUserAgent + ")"
 	}
@@ -1136,7 +1135,6 @@ func getCredentials(a httpRequestArgs) (*auth.Credentials, errors.Error) {
 	// in  the request, both, or neither. If from both, the credentials are combined.
 	// If neither, this function should return nil, nil.
 	var creds = &auth.Credentials{}
-	creds.Users = make(map[string]string, 0)
 
 	if len(cred_data) > 0 {
 		// Credentials are in request parameters:
@@ -1144,6 +1142,9 @@ func getCredentials(a httpRequestArgs) (*auth.Credentials, errors.Error) {
 			user, user_ok := cred["user"]
 			pass, pass_ok := cred["pass"]
 			if user_ok && pass_ok {
+				if creds.Users == nil {
+					creds.Users = make(map[string]string, 0)
+				}
 				creds.Users[user] = pass
 			} else {
 				return nil, errors.NewServiceErrorMissingValue("user or pass")
@@ -1185,12 +1186,11 @@ var version = acceptType + "; " + versionTag + util.VERSION
 func contentNegotiation(resp http.ResponseWriter, req *http.Request) errors.Error {
 	// set content type to current version
 	resp.Header().Set("Content-Type", version)
-	accept := req.Header["Accept"]
+	desiredContent := util.HeaderGet(req.Header, "Accept")
 	// if no media type specified, default to current version
-	if accept == nil || accept[0] == "*/*" {
+	if desiredContent == "" || desiredContent == "*/*" {
 		return nil
 	}
-	desiredContent := accept[0]
 	// media type must be application/json at least
 	if !strings.HasPrefix(desiredContent, acceptType) {
 		return errors.NewServiceErrorMediaType(desiredContent)
@@ -1636,6 +1636,7 @@ func newJsonArgs(req *http.Request, p *jsonArgs) errors.Error {
 	}
 
 	json.SetScanState(&p.state, bytes)
+	p.state.SetImmutable()
 	for {
 		key, err := p.state.ScanKeys()
 		if err != nil {
@@ -1649,7 +1650,7 @@ func newJsonArgs(req *http.Request, p *jsonArgs) errors.Error {
 		if err != nil {
 			return errors.NewServiceErrorBadValue(err, "getting value")
 		}
-		newArg := util.TrimSpace(string(key))
+		newArg := util.TrimSpace(util.ByteToString(key))
 
 		// ignore empty parameters
 		if newArg == "" {

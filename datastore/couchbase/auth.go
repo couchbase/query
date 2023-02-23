@@ -20,7 +20,6 @@ import (
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
-	"github.com/couchbase/query/primitives/couchbase"
 	"github.com/couchbase/query/tenant"
 )
 
@@ -153,7 +152,7 @@ type cbPrecompiled string
 // Try to get the privileges sought from the availableCredentials credentials.
 // Return the privileges that were not granted.
 func authAgainstCreds(as authSource, privsSought []auth.PrivilegePair, availableCredentials []cbauth.Creds) ([]auth.PrivilegePair, error) {
-	deniedPrivs := make([]auth.PrivilegePair, 0, len(privsSought))
+	var deniedPrivs []auth.PrivilegePair
 	for p, _ := range privsSought {
 		var res bool
 		var err error
@@ -282,8 +281,8 @@ func cbAuthorize(s authSource, privileges *auth.Privileges, credentials *auth.Cr
 
 	if credentials.AuthenticatedUsers == nil {
 
-		authenticatedUsers := make(auth.AuthenticatedUsers, 0, len(credentials.Users))
-		credentialsList := make([]cbauth.Creds, 0, 2)
+		var authenticatedUsers auth.AuthenticatedUsers
+		var credentialsList []cbauth.Creds
 
 		// Create credentials - list and authenticated users to use for auth calls
 		if credentials.Users == nil {
@@ -311,14 +310,6 @@ func cbAuthorize(s authSource, privileges *auth.Privileges, credentials *auth.Cr
 
 		req := credentials.HttpRequest
 		if req != nil {
-			ua := req.Header.Get("User-Agent")
-			if ua != "" && ua != couchbase.USER_AGENT {
-				ua = ua + "/" + couchbase.USER_AGENT
-			} else {
-				ua = couchbase.USER_AGENT
-			}
-			req.Header.Set("User-Agent", ua)
-			impersonation, _, _ := cbauth.ExtractOnBehalfIdentity(req)
 			creds, err := s.authWebCreds(req)
 			if err == nil {
 				credentialsList = append(credentialsList, creds)
@@ -338,8 +329,11 @@ func cbAuthorize(s authSource, privileges *auth.Privileges, credentials *auth.Cr
 				// Then return the error.
 				if clientAuthType != tls.NoClientCert && isClientCertPresent(req) {
 					return errors.NewDatastoreAuthorizationError(err)
-				} else if clientAuthType == tls.NoClientCert && impersonation != "" {
-					reason = errors.NewDatastoreAuthorizationError(err)
+				} else if clientAuthType == tls.NoClientCert {
+					impersonation, _, _ := cbauth.ExtractOnBehalfIdentity(req)
+					if impersonation != "" {
+						reason = errors.NewDatastoreAuthorizationError(err)
+					}
 				}
 			}
 		}
