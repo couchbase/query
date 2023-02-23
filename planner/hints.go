@@ -377,6 +377,10 @@ func (this *builder) processOptimHints(optimHints *algebra.OptimHints) {
 
 				var errIndexes string
 				for _, idx := range gsiIndexNames {
+					// allow `#sequentialscan` as index name
+					if idx == "#sequentialscan" {
+						continue
+					}
 					_, err = gsiIndexer.IndexByName(idx)
 					if err != nil {
 						if errIndexes != "" {
