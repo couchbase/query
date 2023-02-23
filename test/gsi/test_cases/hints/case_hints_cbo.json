@@ -219,7 +219,7 @@
                     }
                 }
             ],
-            "statement": "SELECT true AS present, p.cost IS NOT MISSING AS cost, p.cardinality IS NOT MISSING AS cardinality, p.`optimizer_hints` FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IntersectScan' AND ARRAY_LENGTH(v.scans) = 2 END AND ANY w WITHIN p.plan.`~children` SATISFIES w.`#operator` = 'NestedLoopJoin' END"
+            "statement": "SELECT true AS present, p.cost IS NOT MISSING AS cost, p.cardinality IS NOT MISSING AS cardinality, p.`optimizer_hints` FROM $explan AS p WHERE ANY w WITHIN p.plan.`~children` SATISFIES w.`#operator` = 'NestedLoopJoin' AND ANY v WITHIN w.`~child`.`~children` SATISFIES v.`#operator` = 'IntersectScan' AND ARRAY_LENGTH(v.scans) = 2 END END"
         },
         "queryParams": {"use_cbo": true},
         "statements":"SELECT /*+ INDEX_ALL(p purch_customerId_purchaseId purch_purchaseId) INDEX(c cust_lastName_firstName_customerId) USE_NL(p) */ c.firstName, c.lastName, c.customerId, p.purchaseId FROM customer c JOIN purchase p ON c.customerId = p.customerId AND p.purchaseId LIKE 'purchase1%' WHERE c.lastName = 'Champlin'",
