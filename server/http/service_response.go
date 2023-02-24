@@ -1243,9 +1243,9 @@ func (this *bufferedWriter) noMoreData() {
 }
 
 /*
-  This is to avoid malicious attacks from clients that deliberately do not read from their connection.
-  Connections are monitored and forcibly closed when we detect they've stalled.
-  go-1.19: If there was a simple write with timeout or an individual request write operation deadline API we could use it instead.
+This is to avoid malicious attacks from clients that deliberately do not read from their connection.
+Connections are monitored and forcibly closed when we detect they've stalled.
+go-1.19: If there was a simple write with timeout or an individual request write operation deadline API we could use it instead.
 */
 func (this *bufferedWriter) copyWithTimeout(w io.Writer, s io.Reader) bool {
 	this.ioRemTime = this.ioTimeout // deliberately not atomic
