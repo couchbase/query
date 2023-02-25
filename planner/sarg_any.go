@@ -98,6 +98,7 @@ func anySargFor(pred, key, cond expression.Expression, isJoin, doSelec bool,
 		for _, span := range spans {
 			if len(span.Ranges) == 1 {
 				span.Ranges[0].Selec1 = selec
+				span.Ranges[0].Selec2 = OPT_SELEC_NOT_AVAIL
 				if any {
 					span.Ranges[0].SetFlag(plan.RANGE_ARRAY_ANY)
 				} else {
