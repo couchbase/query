@@ -745,17 +745,25 @@ func (this *BaseRequest) GetWarningCount() int {
 }
 
 func (this *BaseRequest) Error(err errors.Error) {
+	if err.Level() == errors.WARNING {
+		this.Warning(err)
+		return
+	}
 	this.Lock()
 	if this.errorLimit > 0 && this.errorCount+this.duplicateErrorCount >= this.errorLimit {
-		this.errors = append(this.errors, errors.NewErrorLimit(this.errorLimit, this.errorCount, this.duplicateErrorCount,
-			this.MutationCount()))
+		this.errors = append(this.errors,
+			errors.NewErrorLimit(this.errorLimit, this.errorCount, this.duplicateErrorCount, this.MutationCount()))
 		this.errorCount++
 		this.aborted = true
 		this.Unlock()
 		this.Stop(FATAL)
 		return
 	}
-	defer this.Unlock()
+	this.addErrorLOCKED(err)
+	this.Unlock()
+}
+
+func (this *BaseRequest) addErrorLOCKED(err errors.Error) {
 	// don't add duplicate errors
 	for _, e := range this.errors {
 		if err.Code() != 0 && err.Code() == e.Code() && err.Error() == e.Error() {
@@ -769,7 +777,11 @@ func (this *BaseRequest) Error(err errors.Error) {
 
 func (this *BaseRequest) Warning(wrn errors.Error) {
 	this.Lock()
-	defer this.Unlock()
+	this.addWarningLOCKED(wrn)
+	this.Unlock()
+}
+
+func (this *BaseRequest) addWarningLOCKED(wrn errors.Error) {
 	// de-duplicate warnings
 	if wrn.OnceOnly() {
 		for _, w := range this.warnings {
@@ -1350,21 +1362,11 @@ func (this *BaseRequest) SortProjection() bool {
 func (this *BaseRequest) SetErrors(errs errors.Errors) {
 	this.Lock()
 
-	for _, e1 := range errs {
-		isDuplicate := false
-		for _, e2 := range this.errors {
-			if e1.Code() != 0 && e1.Code() == e2.Code() && e1.Error() == e2.Error() {
-				this.duplicateErrorCount++
-				isDuplicate = true
-				break
-			}
-		}
-
-		if !isDuplicate {
-			this.errorCount++
-			if this.errorLimit <= 0 || (this.errorCount+this.duplicateErrorCount) <= this.errorLimit {
-				this.errors = append(this.errors, e1)
-			}
+	for _, err := range errs {
+		if err.Level() == errors.WARNING {
+			this.addWarningLOCKED(err)
+		} else if this.errorLimit <= 0 || (this.errorCount+this.duplicateErrorCount) <= this.errorLimit {
+			this.addErrorLOCKED(err)
 		}
 	}
 
@@ -1374,10 +1376,7 @@ func (this *BaseRequest) SetErrors(errs errors.Errors) {
 		this.aborted = true
 		this.Unlock()
 		this.Stop(FATAL)
-		return
+	} else {
+		this.Unlock()
 	}
-
-	this.Unlock()
-
-	return
 }

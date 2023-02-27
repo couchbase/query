@@ -128,6 +128,8 @@ func mapErrorToHttpResponse(err errors.Error, def int) int {
 		return http.StatusTooManyRequests
 	case errors.E_SERVICE_NO_CLIENT:
 		return http.StatusBadRequest
+	case errors.W_GSI_TRANSIENT:
+		return http.StatusAccepted
 	default:
 		return def
 	}
@@ -458,6 +460,10 @@ func (this *httpRequest) writeWarnings(prefix, indent string) bool {
 			this.writeString(",\n")
 			this.writeString(prefix)
 			this.writeString("\"warnings\": [")
+
+			if this.httpCode() == 0 || this.httpCode() == http.StatusOK {
+				this.setHttpCode(mapErrorToHttpResponse(err, http.StatusOK))
+			}
 		}
 		if !this.writeError(err, first, prefix, indent) {
 			break

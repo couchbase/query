@@ -99,6 +99,7 @@ func NewCbIndexScanTimeoutError(e error) Error {
 func NewCbIndexNotFoundError(args ...interface{}) Error {
 	var e error
 	var name string
+	var c interface{}
 	for _, a := range args {
 		switch at := a.(type) {
 		case error:
@@ -112,15 +113,19 @@ func NewCbIndexNotFoundError(args ...interface{}) Error {
 		}
 	}
 	if name == "" && e != nil {
-		s := strings.Split(e.Error(), " ")
-		if len(s) > 3 && s[0] == "GSI" {
-			name = s[len(s)-3]
+		es := e.Error()
+		if strings.HasPrefix(es, "GSI ") {
+			c = make(map[string]interface{}, 1)
+			e := len(es) - 11
+			if e > 10 {
+				c.(map[string]interface{})["name"] = es[10:e]
+			} else {
+				c.(map[string]interface{})["name"] = ""
+			}
 		}
-	}
-	var c map[string]interface{}
-	if name != "" {
-		c = make(map[string]interface{})
-		c["name"] = name
+	} else if name != "" {
+		c = make(map[string]interface{}, 1)
+		c.(map[string]interface{})["name"] = name
 	}
 	return &err{level: EXCEPTION, ICode: E_CB_INDEX_NOT_FOUND, IKey: "datastore.couchbase.index_not_found", ICause: e, cause: c,
 		InternalMsg: "Index Not Found", InternalCaller: CallerN(1)}

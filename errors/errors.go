@@ -101,6 +101,7 @@ func init() {
 	gsiPatterns = make(map[string]*regexp.Regexp)
 	gsiPatterns["enterprise"] = regexp.MustCompile("(.*) not supported in non-Enterprise Edition")
 	gsiPatterns["exists"] = regexp.MustCompile("Index (.*) already exists")
+	gsiPatterns["reason"] = regexp.MustCompile("(.*)( Reason: | Error=| Error: )(.*)")
 }
 
 func NewError(e error, internalMsg string) Error {
@@ -111,14 +112,16 @@ func NewError(e error, internalMsg string) Error {
 
 	code := E_INTERNAL
 	key := "internal.error"
+	level := EXCEPTION
+	var c interface{}
 
 	// map GSI errors where possible to meaningful error codes
 	if strings.HasPrefix(internalMsg, "GSI ") || (e != nil && strings.HasPrefix(e.Error(), "GSI ")) {
 		errText := ""
 		if e != nil {
-			errText = e.Error()
+			errText = strings.TrimSpace(e.Error())
 		} else {
-			errText = internalMsg
+			errText = strings.TrimSpace(internalMsg)
 		}
 		res := gsiPatterns["enterprise"].FindSubmatch([]byte(errText))
 		if res != nil {
@@ -128,12 +131,32 @@ func NewError(e error, internalMsg string) Error {
 		if res != nil {
 			return NewIndexAlreadyExistsError(string(res[1]))
 		}
-		code = E_GSI
-		key = "indexing.error"
+		m := make(map[string]interface{}, 2)
+		if len(internalMsg) > 4 {
+			m["source"] = internalMsg[4:]
+		}
+		if strings.Contains(errText, "Encountered transient error") {
+			m["error"] = errText
+			code = W_GSI_TRANSIENT
+			key = "indexing.transient_error"
+			level = WARNING
+		} else {
+			res = gsiPatterns["reason"].FindSubmatch([]byte(errText))
+			if res != nil {
+				m["error"] = strings.TrimSpace(string(res[1]))
+				m["reason"] = strings.TrimSpace(string(res[3]))
+			} else {
+				m["error"] = errText
+			}
+			code = E_GSI
+			key = "indexing.error"
+		}
+		if len(m) > 0 {
+			c = m
+		}
 	}
 
-	return &err{level: EXCEPTION, ICode: code, IKey: key, ICause: e,
-		InternalMsg: internalMsg, InternalCaller: CallerN(1)}
+	return &err{level: level, ICode: code, IKey: key, ICause: e, InternalMsg: internalMsg, InternalCaller: CallerN(1), cause: c}
 }
 
 func NewWarning(internalMsg string) Error {
