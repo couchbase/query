@@ -771,6 +771,11 @@ func matchedLeadingKeys(se, te *indexEntry, predFc map[string]value.Value) bool 
 		return true
 	}
 
+	if se.PushDownProperty() != te.PushDownProperty() ||
+		se.IndexKeyFlags() != te.IndexKeyFlags() {
+		return false
+	}
+
 	nkeys := 0
 	ncond := 0
 	for i, tk := range te.sargKeys {
