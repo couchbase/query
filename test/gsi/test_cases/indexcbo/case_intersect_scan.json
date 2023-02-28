@@ -13,6 +13,7 @@
             ],
             "statement": "SELECT true AS present, p.cost IS NOT MISSING AS cost, p.cardinality IS NOT MISSING AS cardinality FROM $explan AS p WHERE EVERY v IN p.plan.`~children` SATISFIES v.`#operator` != 'IntersectScan' END"
         },
+        "queryParams": {"use_cbo": true},
         "statements":"SELECT productId, dateModified FROM product WHERE productId IS NOT MISSING and ANY r IN reviewList SATISFIES r IN [ 'review2201', 'review2203', 'review2205' ] END AND test_id = \"indexCBO\"",
         "results": [
             {

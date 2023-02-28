@@ -38,9 +38,9 @@ func TestIndexCBO(t *testing.T) {
 	runStmt(qc, "UPDATE STATISTICS FOR product INDEX(p_productId_reviews)")
 	runStmt(qc, "UPDATE STATISTICS FOR orders INDEX(iorix1, iorix2)")
 
-	runMatch("case_intersect_scan.json", false, false, qc, t)
+	runMatch("case_intersect_scan.json", false, true, qc, t)
 
-	runMatch("case_union_scan.json", false, false, qc, t)
+	runMatch("case_union_scan.json", false, true, qc, t)
 
 	// DELETE optimizer statistics
 	runStmt(qc, "UPDATE STATISTICS FOR product DELETE ALL")

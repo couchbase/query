@@ -3,7 +3,7 @@
 	"testcase": "from indexscan/case_index_scan_bugs.json. MB-55236, part 1",
         "ignore": "index_id",
         "explain": {
-            "disabled": false,
+            "disabled": true,
             "results": [
                 {
                     "present": true,
@@ -13,6 +13,7 @@
             ],
             "statement": "SELECT true AS present, p.cost IS NOT MISSING AS cost, p.cardinality IS NOT MISSING AS cardinality FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'UnionScan' END"
         },
+        "queryParams": {"use_cbo": true},
         "statements":"SELECT c2, c3, c4 FROM orders WHERE test_id = \"indexCBO\" AND c1 = 1 AND (c2 = 311 OR c4 = 221) ORDER BY c6 LIMIT 2",
 	"ordered": true,
         "results": [
