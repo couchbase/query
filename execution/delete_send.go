@@ -71,7 +71,7 @@ func (this *SendDelete) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *SendDelete) processItem(item value.AnnotatedValue, context *Context) bool {
-	rv := this.limit != 0 && this.enbatchSize(item, this, this.batchSize, context, true)
+	rv := this.limit != 0 && this.enbatchSize(item, this, this.batchSize, context, false)
 
 	if this.limit > 0 {
 		this.limit--
@@ -87,6 +87,9 @@ func (this *SendDelete) beforeItems(context *Context, parent value.Value) bool {
 	if this.keyspace == nil {
 		return false
 	}
+
+	// If there is a RETURNING clause or USE KEYS VALIDATE clause
+	context.SetPreserveMutations(!this.plan.FastDiscard() || this.mk.validate)
 
 	if this.plan.Limit() == nil {
 		return true
@@ -117,13 +120,20 @@ func (this *SendDelete) afterItems(context *Context) {
 func (this *SendDelete) flushBatch(context *Context) bool {
 	defer this.releaseBatch(context)
 
+	fastDiscard := this.plan.FastDiscard()
+
 	curQueue := this.queuedItems()
 	if this.batchSize < curQueue {
 		defer func() {
-			size := int(this.output.ValueExchange().cap())
-			if curQueue > size {
-				curQueue = size
+
+			// If sending items downstream, consider downstream op's ValueExchange capacity
+			if !fastDiscard {
+				size := int(this.output.ValueExchange().cap())
+				if curQueue > size {
+					curQueue = size
+				}
 			}
+
 			this.batchSize = curQueue
 		}()
 	}
@@ -169,9 +179,6 @@ func (this *SendDelete) flushBatch(context *Context) bool {
 	dpairs, errs := this.keyspace.Delete(pairs, &this.operatorCtx)
 	this.switchPhase(_EXECTIME)
 
-	// Update mutation count with number of deleted docs:
-	context.AddMutationCount(uint64(len(dpairs)))
-
 	if this.mk.validate {
 		for _, k := range pairs {
 			deleted := false
@@ -195,9 +202,19 @@ func (this *SendDelete) flushBatch(context *Context) bool {
 		}
 	}
 
-	for _, item := range this.batch {
-		if !this.sendItem(item) {
-			return false
+	if !fastDiscard {
+		for _, item := range this.batch {
+			if !this.sendItem(item) {
+				return false
+			}
+		}
+	} else {
+		for _, item := range this.batch {
+			// item not used past this point
+			if context.UseRequestQuota() {
+				context.ReleaseValueSize(item.Size())
+			}
+			item.Recycle()
 		}
 	}
 

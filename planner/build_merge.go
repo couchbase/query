@@ -243,7 +243,7 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 			cost, cardinality, size, frCost = getUpdateSendCost(stmt.Limit(),
 				cost, cardinality, size, frCost)
 		}
-		ops = append(ops, plan.NewSendUpdate(keyspace, ksref, stmt.Limit(), cost, cardinality, size, frCost))
+		ops = append(ops, plan.NewSendUpdate(keyspace, ksref, stmt.Limit(), cost, cardinality, size, frCost, stmt.Returning() == nil))
 		update = plan.NewSequence(ops...)
 		if this.useCBO && cost > 0.0 {
 			updateCost = cost
@@ -278,7 +278,7 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 				cost, cardinality, size, frCost)
 		}
 
-		delete = plan.NewSendDelete(keyspace, ksref, stmt.Limit(), cost, cardinality, size, frCost)
+		delete = plan.NewSendDelete(keyspace, ksref, stmt.Limit(), cost, cardinality, size, frCost, stmt.Returning() == nil)
 		if this.useCBO && cost > 0.0 {
 			deleteCost = cost
 			deleteCard = cardinality
@@ -320,7 +320,7 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 		}
 
 		insert = plan.NewSendInsert(keyspace, ksref, keyExpr, act.Value(), act.Options(), stmt.Limit(), cost, cardinality, size,
-			frCost, this.mustSkipKeys)
+			frCost, this.mustSkipKeys, stmt.Returning() == nil)
 		if this.useCBO && cost > 0.0 {
 			insertCost = cost
 			insertCard = cardinality
@@ -374,10 +374,6 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 			cost, cardinality, size, frCost = getLimitCost(this.lastOp, nlimit, -1)
 		}
 		this.addChildren(plan.NewLimit(stmt.Limit(), cost, cardinality, size, frCost))
-	}
-
-	if stmt.Returning() == nil {
-		this.addChildren(plan.NewDiscard(cost, cardinality, size, frCost))
 	}
 
 	qp.SetPlanOp(plan.NewSequence(this.children...))

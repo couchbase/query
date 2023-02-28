@@ -72,14 +72,12 @@ func (this *builder) VisitUpsert(stmt *algebra.Upsert) (interface{}, error) {
 	}
 
 	upsert := plan.NewSendUpsert(keyspace, ksref, stmt.Key(), stmt.Value(), stmt.Options(),
-		cost, cardinality, size, frCost, this.mustSkipKeys)
+		cost, cardinality, size, frCost, this.mustSkipKeys, stmt.Returning() == nil)
 	subChildren := make([]plan.Operator, 0, 4)
 	subChildren = append(subChildren, upsert)
 
 	if stmt.Returning() != nil {
 		subChildren = this.buildDMLProject(stmt.Returning(), subChildren)
-	} else {
-		subChildren = append(subChildren, plan.NewDiscard(cost, cardinality, size, frCost))
 	}
 
 	children = append(children, this.addParallel(subChildren...))

@@ -27,11 +27,12 @@ type SendUpsert struct {
 	value       expression.Expression
 	options     expression.Expression
 	skipNewKeys bool
+	fastDiscard bool // if the execution phase should discard items without sending them downstream
 }
 
 func NewSendUpsert(keyspace datastore.Keyspace, ksref *algebra.KeyspaceRef,
 	key, value, options expression.Expression, cost, cardinality float64,
-	size int64, frCost float64, skipNewKeys bool) *SendUpsert {
+	size int64, frCost float64, skipNewKeys bool, fastDiscard bool) *SendUpsert {
 	rv := &SendUpsert{
 		keyspace:    keyspace,
 		term:        ksref,
@@ -40,6 +41,7 @@ func NewSendUpsert(keyspace datastore.Keyspace, ksref *algebra.KeyspaceRef,
 		value:       value,
 		options:     options,
 		skipNewKeys: skipNewKeys,
+		fastDiscard: fastDiscard,
 	}
 	setOptEstimate(&rv.optEstimate, cost, cardinality, size, frCost)
 	return rv
@@ -81,6 +83,10 @@ func (this *SendUpsert) SkipNewKeys() bool {
 	return this.skipNewKeys
 }
 
+func (this *SendUpsert) FastDiscard() bool {
+	return this.fastDiscard
+}
+
 func (this *SendUpsert) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
@@ -110,6 +116,8 @@ func (this *SendUpsert) MarshalBase(f func(map[string]interface{})) map[string]i
 		r["optimizer_estimates"] = optEstimate
 	}
 
+	r["fast_discard"] = this.fastDiscard
+
 	if f != nil {
 		f(r)
 	}
@@ -131,6 +139,7 @@ func (this *SendUpsert) UnmarshalJSON(body []byte) error {
 		Alias       string                 `json:"alias"`
 		OptEstimate map[string]interface{} `json:"optimizer_estimates"`
 		SkipNewKeys bool                   `json:"skip_new_keys"`
+		FastDiscard bool                   `json:"fast_discard"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -161,6 +170,7 @@ func (this *SendUpsert) UnmarshalJSON(body []byte) error {
 
 	this.alias = _unmarshalled.Alias
 	this.skipNewKeys = _unmarshalled.SkipNewKeys
+	this.fastDiscard = _unmarshalled.FastDiscard
 
 	unmarshalOptEstimate(&this.optEstimate, _unmarshalled.OptEstimate)
 

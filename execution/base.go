@@ -1203,7 +1203,6 @@ func (this *base) enbatchSize(item value.AnnotatedValue, b batcher, batchSize in
 
 	if len(this.batch) >= batchSize || (immediateFlush && this.output != nil && this.queuedItems() == 0 &&
 		this.output.getBase().queuedItems() <= (batchSize/2)) {
-
 		if !b.flushBatch(context) {
 			return false
 		}

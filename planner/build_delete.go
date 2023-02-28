@@ -64,7 +64,7 @@ func (this *builder) VisitDelete(stmt *algebra.Delete) (interface{}, error) {
 		}
 	}
 
-	sd := plan.NewSendDelete(keyspace, ksref, stmt.Limit(), cost, cardinality, size, frCost)
+	sd := plan.NewSendDelete(keyspace, ksref, stmt.Limit(), cost, cardinality, size, frCost, stmt.Returning() == nil)
 	sd.SetValidateKeys(stmt.ValidateKeys())
 	deleteSubChildren = append(deleteSubChildren, sd)
 
@@ -120,10 +120,6 @@ func (this *builder) VisitDelete(stmt *algebra.Delete) (interface{}, error) {
 			subChildren = deleteSubChildren
 		}
 		this.addChildren(this.addParallel(subChildren...))
-	}
-
-	if stmt.Returning() == nil {
-		this.addChildren(plan.NewDiscard(cost, cardinality, size, frCost))
 	}
 
 	qp.SetPlanOp(plan.NewSequence(this.children...))

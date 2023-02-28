@@ -2161,6 +2161,7 @@ type parallelInfo struct {
 	errs   errors.Errors
 	wg     *sync.WaitGroup
 	index  int
+	mCount int // number of successfully mutated pairs
 }
 
 func (b *keyspace) performOp(op MutateOp, qualifiedName, scopeName, collectionName string, pairs value.Pairs,
@@ -2185,15 +2186,25 @@ func (b *keyspace) performOp(op MutateOp, qualifiedName, scopeName, collectionNa
 
 	numRoutines := util.MinInt(numPairs, _MAX_MUTATION_ROUTINES) // number of routines that will each perform mutations
 
-	if numRoutines == 1 { // If numRoutines = 1, run mutations sequentially
+	// The caller requires the successfully mutated pairs to be returned
+	mPreserve := context.PreserveMutations()
 
-		mPairs = make(value.Pairs, 0, numPairs)
+	if numRoutines == 1 { // If numRoutines = 1, run mutations sequentially
+		// number of successfully mutated pairs
+		mCount := 0
+
+		if mPreserve {
+			mPairs = make(value.Pairs, 0, numPairs)
+		}
 
 		for i := 0; i < numPairs; i++ {
 			state, err := b.singleMutationOp(pairs[i], op, qualifiedName, context, clientContext...)
 
 			if state == _MUTATED {
-				mPairs = append(mPairs, pairs[i])
+				mCount++
+				if mPreserve {
+					mPairs = append(mPairs, pairs[i])
+				}
 			}
 
 			if err != nil {
@@ -2211,14 +2222,21 @@ func (b *keyspace) performOp(op MutateOp, qualifiedName, scopeName, collectionNa
 			}
 		}
 
+		// Update mutation count with number of mutated docs
+		context.AddMutationCount(uint64(mCount))
+
 		return mPairs, errs
 
 	} else { // if the number of keys to be modified is greater than 1 and the number of allowed routines > 1 , run modification operations concurrently
 		p := &parallelInfo{
-			mPairs: make(value.Pairs, 0, numPairs),
 			pairs:  pairs,
 			wg:     &sync.WaitGroup{},
 			index:  0,
+			mCount: 0,
+		}
+
+		if mPreserve {
+			p.mPairs = make(value.Pairs, 0, numPairs)
 		}
 
 		p.wg.Add(numRoutines)
@@ -2229,6 +2247,9 @@ func (b *keyspace) performOp(op MutateOp, qualifiedName, scopeName, collectionNa
 		}
 
 		p.wg.Wait()
+
+		// Update mutation count with number of mutated docs
+		context.AddMutationCount(uint64(p.mCount))
 
 		return p.mPairs, p.errs
 	}
@@ -2409,6 +2430,7 @@ func (b *keyspace) parallelMutationOp(op MutateOp, qualifiedName string, p *para
 	state := _NONE
 	var err errors.Error
 	var kv value.Pair
+	mPreserve := context.PreserveMutations()
 
 	for {
 		p.Lock()
@@ -2421,7 +2443,12 @@ func (b *keyspace) parallelMutationOp(op MutateOp, qualifiedName string, p *para
 		}
 
 		if state == _MUTATED {
-			p.mPairs = append(p.mPairs, kv)
+
+			p.mCount++
+
+			if mPreserve {
+				p.mPairs = append(p.mPairs, kv)
+			}
 		}
 
 		// Check if subsequent mutations must be stopped - if context is inactive or when error limit is hit

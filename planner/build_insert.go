@@ -72,14 +72,12 @@ func (this *builder) VisitInsert(stmt *algebra.Insert) (interface{}, error) {
 	}
 
 	insert := plan.NewSendInsert(keyspace, ksref, stmt.Key(), stmt.Value(), stmt.Options(),
-		nil, cost, cardinality, size, frCost, this.mustSkipKeys)
+		nil, cost, cardinality, size, frCost, this.mustSkipKeys, stmt.Returning() == nil)
 	subChildren := make([]plan.Operator, 0, 4)
 	subChildren = append(subChildren, insert)
 
 	if stmt.Returning() != nil {
 		subChildren = this.buildDMLProject(stmt.Returning(), subChildren)
-	} else {
-		subChildren = append(subChildren, plan.NewDiscard(cost, cardinality, size, frCost))
 	}
 
 	children = append(children, this.addParallel(subChildren...))

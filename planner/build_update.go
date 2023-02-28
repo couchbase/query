@@ -81,7 +81,7 @@ func (this *builder) VisitUpdate(stmt *algebra.Update) (interface{}, error) {
 			cost, cardinality, size, frCost)
 	}
 	updateSubChildren = append(updateSubChildren, plan.NewSendUpdate(keyspace, ksref, stmt.Limit(),
-		cost, cardinality, size, frCost))
+		cost, cardinality, size, frCost, stmt.Returning() == nil))
 
 	if stmt.Returning() != nil {
 		updateSubChildren = this.buildDMLProject(stmt.Returning(), updateSubChildren)
@@ -104,10 +104,6 @@ func (this *builder) VisitUpdate(stmt *algebra.Update) (interface{}, error) {
 	} else {
 		subChildren = append(subChildren, updateSubChildren...)
 		this.addChildren(this.addParallel(subChildren...))
-	}
-
-	if stmt.Returning() == nil {
-		this.addChildren(plan.NewDiscard(cost, cardinality, size, frCost))
 	}
 
 	qp.SetPlanOp(plan.NewSequence(this.children...))

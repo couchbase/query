@@ -57,6 +57,9 @@ func (this *SendUpsert) RunOnce(context *Context, parent value.Value) {
 
 func (this *SendUpsert) beforeItems(context *Context, parent value.Value) bool {
 	this.keyspace = getKeyspace(this.plan.Keyspace(), this.plan.Term().ExpressionTerm(), &this.operatorCtx)
+
+	// If there is a RETURNING clause
+	context.SetPreserveMutations(!this.plan.FastDiscard())
 	return this.keyspace != nil
 }
 
@@ -72,12 +75,17 @@ func (this *SendUpsert) afterItems(context *Context) {
 func (this *SendUpsert) flushBatch(context *Context) bool {
 	defer this.releaseBatch(context)
 
+	fastDiscard := this.plan.FastDiscard()
+
 	curQueue := this.queuedItems()
 	if this.batchSize < curQueue {
 		defer func() {
-			size := int(this.output.ValueExchange().cap())
-			if curQueue > size {
-				curQueue = size
+			// If sending items downstream, consider downstream op's ValueExchange capacity
+			if !fastDiscard {
+				size := int(this.output.ValueExchange().cap())
+				if curQueue > size {
+					curQueue = size
+				}
 			}
 			this.batchSize = curQueue
 		}()
@@ -167,9 +175,12 @@ func (this *SendUpsert) flushBatch(context *Context) bool {
 			context.Error(errors.NewUpsertKeyTypeError(key))
 			continue
 		}
+
 		if context.SkipKey(dpair.Name) {
 			context.Error(errors.NewUpsertKeyAlreadyMutatedError(this.keyspace.QualifiedName(), dpair.Name))
 			return false // halt mutations
+		} else if !context.AddKeyToSkip(dpair.Name) {
+			return false
 		}
 
 		if options != nil && options.Type() != value.OBJECT {
@@ -194,9 +205,6 @@ func (this *SendUpsert) flushBatch(context *Context) bool {
 
 	this.switchPhase(_EXECTIME)
 
-	// Update mutation count with number of upserted docs
-	context.AddMutationCount(uint64(len(dpairs)))
-
 	mutationOk := true
 	if len(errs) > 0 {
 		context.Errors(errs)
@@ -205,25 +213,30 @@ func (this *SendUpsert) flushBatch(context *Context) bool {
 		}
 	}
 
-	// Capture the upserted keys in case there is a RETURNING clause
-	for _, dp := range dpairs {
-		if !context.AddKeyToSkip(dp.Name) {
-			return false
-		}
-		dv := value.NewAnnotatedValue(dp.Value)
-		av := value.NewAnnotatedValue(make(map[string]interface{}, 1))
-		av.CopyAnnotations(dv)
-		av.SetField(this.plan.Alias(), dv)
-		if context.UseRequestQuota() {
-			err := context.TrackValueSize(av.Size() + uint64(len(dp.Name)))
-			if err != nil {
-				context.Error(err)
-				av.Recycle()
+	if !fastDiscard {
+		for _, dp := range dpairs {
+
+			// Capture the upserted keys in case there is a RETURNING clause
+			dv := value.NewAnnotatedValue(dp.Value)
+			av := value.NewAnnotatedValue(make(map[string]interface{}, 1))
+			av.CopyAnnotations(dv)
+			av.SetField(this.plan.Alias(), dv)
+			if context.UseRequestQuota() {
+				err := context.TrackValueSize(av.Size() + uint64(len(dp.Name)))
+				if err != nil {
+					context.Error(err)
+					av.Recycle()
+					return false
+				}
+			}
+			if !this.sendItem(av) {
 				return false
 			}
 		}
-		if !this.sendItem(av) {
-			return false
+	} else {
+		for _, item := range this.batch {
+			// item not used past this point
+			item.Recycle()
 		}
 	}
 

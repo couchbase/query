@@ -561,7 +561,15 @@ func (ks *keyspace) txPerformOp(op MutateOp, qualifiedName, scopeName, collectio
 		}
 	}
 
-	mPairs = make(value.Pairs, 0, len(pairs))
+	// The caller requires the successfully mutated pairs to be returned
+	mPreserve := context.PreserveMutations()
+
+	// number of successfully mutated pairs
+	mCount := 0
+	if mPreserve {
+		mPairs = make(value.Pairs, 0, len(pairs))
+	}
+
 	var retCas uint64
 	for _, kv := range pairs {
 		var data interface{}
@@ -632,7 +640,11 @@ func (ks *keyspace) txPerformOp(op MutateOp, qualifiedName, scopeName, collectio
 			}
 		}
 
-		mPairs = append(mPairs, kv)
+		mCount++
+		if mPreserve {
+			mPairs = append(mPairs, kv)
+		}
+
 	}
 
 	if txMutations.TranImplicit() {
@@ -647,6 +659,7 @@ func (ks *keyspace) txPerformOp(op MutateOp, qualifiedName, scopeName, collectio
 		}
 	}
 
+	context.AddMutationCount(uint64(mCount))
 	return
 }
 

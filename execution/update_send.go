@@ -71,7 +71,7 @@ func (this *SendUpdate) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *SendUpdate) processItem(item value.AnnotatedValue, context *Context) bool {
-	rv := this.limit != 0 && this.enbatchSize(item, this, this.batchSize, context, true)
+	rv := this.limit != 0 && this.enbatchSize(item, this, this.batchSize, context, false)
 
 	if this.limit > 0 {
 		this.limit--
@@ -85,6 +85,9 @@ func (this *SendUpdate) beforeItems(context *Context, parent value.Value) bool {
 	if this.keyspace == nil {
 		return false
 	}
+
+	// If there is a RETURNING clause
+	context.SetPreserveMutations(!this.plan.FastDiscard())
 
 	if this.plan.Limit() == nil {
 		return true
@@ -119,13 +122,20 @@ func (this *SendUpdate) afterItems(context *Context) {
 func (this *SendUpdate) flushBatch(context *Context) bool {
 	defer this.releaseBatch(context)
 
+	fastDiscard := this.plan.FastDiscard()
+
 	curQueue := this.queuedItems()
 	if this.batchSize < curQueue {
 		defer func() {
-			size := int(this.output.ValueExchange().cap())
-			if curQueue > size {
-				curQueue = size
+
+			// If sending items downstream, consider downstream op's ValueExchange capacity
+			if !fastDiscard {
+				size := int(this.output.ValueExchange().cap())
+				if curQueue > size {
+					curQueue = size
+				}
 			}
+
 			this.batchSize = curQueue
 		}()
 	}
@@ -218,9 +228,6 @@ func (this *SendUpdate) flushBatch(context *Context) bool {
 
 	this.switchPhase(_EXECTIME)
 
-	// Update mutation count with number of updated docs
-	context.AddMutationCount(uint64(len(pairs)))
-
 	mutationOk := true
 	if len(errs) > 0 {
 		context.Errors(errs)
@@ -229,9 +236,19 @@ func (this *SendUpdate) flushBatch(context *Context) bool {
 		}
 	}
 
-	for _, item := range this.batch {
-		if !this.sendItem(item) {
-			return false
+	if !fastDiscard {
+		for _, item := range this.batch {
+			if !this.sendItem(item) {
+				return false
+			}
+		}
+	} else {
+		for _, item := range this.batch {
+			// item not used past this point
+			if context.UseRequestQuota() {
+				context.ReleaseValueSize(item.Size())
+			}
+			item.Recycle()
 		}
 	}
 

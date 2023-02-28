@@ -25,15 +25,17 @@ type SendDelete struct {
 	alias        string
 	limit        expression.Expression
 	validateKeys bool
+	fastDiscard  bool // if the execution phase should discard items without sending them downstream
 }
 
 func NewSendDelete(keyspace datastore.Keyspace, ksref *algebra.KeyspaceRef, limit expression.Expression,
-	cost, cardinality float64, size int64, frCost float64) *SendDelete {
+	cost, cardinality float64, size int64, frCost float64, fastDiscard bool) *SendDelete {
 	rv := &SendDelete{
-		keyspace: keyspace,
-		term:     ksref,
-		alias:    ksref.Alias(),
-		limit:    limit,
+		keyspace:    keyspace,
+		term:        ksref,
+		alias:       ksref.Alias(),
+		limit:       limit,
+		fastDiscard: fastDiscard,
 	}
 	setOptEstimate(&rv.optEstimate, cost, cardinality, size, frCost)
 	return rv
@@ -71,6 +73,10 @@ func (this *SendDelete) Limit() expression.Expression {
 	return this.limit
 }
 
+func (this *SendDelete) FastDiscard() bool {
+	return this.fastDiscard
+}
+
 func (this *SendDelete) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
@@ -92,6 +98,8 @@ func (this *SendDelete) MarshalBase(f func(map[string]interface{})) map[string]i
 		r["optimizer_estimates"] = optEstimate
 	}
 
+	r["fast_discard"] = this.fastDiscard
+
 	if f != nil {
 		f(r)
 	}
@@ -111,6 +119,7 @@ func (this *SendDelete) UnmarshalJSON(body []byte) error {
 		Limit        string                 `json:"limit"`
 		OptEstimate  map[string]interface{} `json:"optimizer_estimates"`
 		ValidateKeys bool                   `json:"validate_keys"`
+		FastDiscard  bool                   `json:"fast_discard"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -120,6 +129,7 @@ func (this *SendDelete) UnmarshalJSON(body []byte) error {
 
 	this.alias = _unmarshalled.Alias
 	this.validateKeys = _unmarshalled.ValidateKeys
+	this.fastDiscard = _unmarshalled.FastDiscard
 
 	if _unmarshalled.Limit != "" {
 		this.limit, err = parser.Parse(_unmarshalled.Limit)

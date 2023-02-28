@@ -608,6 +608,8 @@ func (b *keyspace) performOp(op int, kvPairs value.Pairs, context datastore.Quer
 		}
 	}
 
+	context.AddMutationCount(uint64(len(rParis)))
+
 	return
 
 }

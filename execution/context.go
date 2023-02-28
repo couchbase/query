@@ -290,6 +290,7 @@ type Context struct {
 	planPreparedTime    time.Time // time the plan was created
 	logLevel            logging.Level
 	errorLimit          int
+	preserveMutations   bool // For DML execution - whether successfully mutated keys must be preserved and returned to the caller
 }
 
 func NewContext(requestId string, datastore datastore.Datastore, systemstore datastore.Systemstore,
@@ -1810,4 +1811,12 @@ func (this *Context) ErrorLimit() int {
 
 func (this *Context) ErrorCount() int {
 	return this.output.GetErrorCount()
+}
+
+func (this *Context) PreserveMutations() bool {
+	return this.preserveMutations
+}
+
+func (this *Context) SetPreserveMutations(preserveMutations bool) {
+	this.preserveMutations = preserveMutations
 }

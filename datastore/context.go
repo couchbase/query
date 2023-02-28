@@ -125,6 +125,13 @@ type QueryContext interface {
 	RequestId() string
 	ErrorLimit() int
 	ErrorCount() int
+	AddMutationCount(uint64)
+
+	// Whether performOp() must return the successfully mutated pairs to the caller for later processing
+	// Ex. - i ) RETURNING clause in DML queries
+	//       ii) USE KEYS VALIDATE in DELETE
+	//       iii) Halloween Problem checks in INSERT and UPSERT
+	PreserveMutations() bool
 }
 
 type queryContextImpl struct {
@@ -229,4 +236,12 @@ func (ci *queryContextImpl) ErrorLimit() int {
 
 func (ci *queryContextImpl) ErrorCount() int {
 	return 0
+}
+
+func (ci *queryContextImpl) PreserveMutations() bool {
+	return true
+}
+
+func (ci *queryContextImpl) AddMutationCount(i uint64) {
+	// empty
 }

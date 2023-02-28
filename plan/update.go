@@ -213,19 +213,21 @@ func (this *Unset) UnmarshalJSON(body []byte) error {
 type SendUpdate struct {
 	dml
 	optEstimate
-	keyspace datastore.Keyspace
-	term     *algebra.KeyspaceRef
-	alias    string
-	limit    expression.Expression
+	keyspace    datastore.Keyspace
+	term        *algebra.KeyspaceRef
+	alias       string
+	limit       expression.Expression
+	fastDiscard bool // if the execution phase should discard items without sending them downstream
 }
 
 func NewSendUpdate(keyspace datastore.Keyspace, ksref *algebra.KeyspaceRef,
-	limit expression.Expression, cost, cardinality float64, size int64, frCost float64) *SendUpdate {
+	limit expression.Expression, cost, cardinality float64, size int64, frCost float64, fastDiscard bool) *SendUpdate {
 	rv := &SendUpdate{
-		keyspace: keyspace,
-		term:     ksref,
-		alias:    ksref.Alias(),
-		limit:    limit,
+		keyspace:    keyspace,
+		term:        ksref,
+		alias:       ksref.Alias(),
+		limit:       limit,
+		fastDiscard: fastDiscard,
 	}
 	setOptEstimate(&rv.optEstimate, cost, cardinality, size, frCost)
 	return rv
@@ -255,6 +257,10 @@ func (this *SendUpdate) Limit() expression.Expression {
 	return this.limit
 }
 
+func (this *SendUpdate) FastDiscard() bool {
+	return this.fastDiscard
+}
+
 func (this *SendUpdate) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
@@ -271,6 +277,8 @@ func (this *SendUpdate) MarshalBase(f func(map[string]interface{})) map[string]i
 	if optEstimate := marshalOptEstimate(&this.optEstimate); optEstimate != nil {
 		r["optimizer_estimates"] = optEstimate
 	}
+
+	r["fast_discard"] = this.fastDiscard
 
 	if f != nil {
 		f(r)
@@ -290,6 +298,7 @@ func (this *SendUpdate) UnmarshalJSON(body []byte) error {
 		Alias       string                 `json:"alias"`
 		Limit       string                 `json:"limit"`
 		OptEstimate map[string]interface{} `json:"optimizer_estimates"`
+		FastDiscard bool                   `json:"fast_discard"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -298,6 +307,7 @@ func (this *SendUpdate) UnmarshalJSON(body []byte) error {
 	}
 
 	this.alias = _unmarshalled.Alias
+	this.fastDiscard = _unmarshalled.FastDiscard
 
 	if _unmarshalled.Limit != "" {
 		this.limit, err = parser.Parse(_unmarshalled.Limit)

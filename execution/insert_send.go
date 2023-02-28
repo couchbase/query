@@ -69,7 +69,7 @@ func (this *SendInsert) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *SendInsert) processItem(item value.AnnotatedValue, context *Context) bool {
-	rv := this.limit != 0 && this.enbatchSize(item, this, this.batchSize, context, true)
+	rv := this.limit != 0 && this.enbatchSize(item, this, this.batchSize, context, false)
 
 	if this.limit > 0 {
 		this.limit--
@@ -83,6 +83,9 @@ func (this *SendInsert) beforeItems(context *Context, parent value.Value) bool {
 	if this.keyspace == nil {
 		return false
 	}
+
+	// If there is a RETURNING clause or the index used was #sequentialScan and we need to make the Halloween Problem checks
+	context.SetPreserveMutations(!this.plan.FastDiscard() || this.plan.SkipNewKeys())
 
 	if this.plan.Limit() == nil {
 		return true
@@ -112,12 +115,17 @@ func (this *SendInsert) afterItems(context *Context) {
 func (this *SendInsert) flushBatch(context *Context) bool {
 	defer this.releaseBatch(context)
 
+	fastDiscard := this.plan.FastDiscard()
+
 	curQueue := this.queuedItems()
 	if this.batchSize < curQueue {
 		defer func() {
-			size := int(this.output.ValueExchange().cap())
-			if curQueue > size {
-				curQueue = size
+			// If sending items downstream, consider downstream op's ValueExchange capacity
+			if !fastDiscard {
+				size := int(this.output.ValueExchange().cap())
+				if curQueue > size {
+					curQueue = size
+				}
 			}
 			this.batchSize = curQueue
 		}()
@@ -229,9 +237,6 @@ func (this *SendInsert) flushBatch(context *Context) bool {
 
 	this.switchPhase(_EXECTIME)
 
-	// Update mutation count with number of inserted docs
-	context.AddMutationCount(uint64(len(dpairs)))
-
 	mutationOk := true
 	if len(errs) > 0 {
 		context.Errors(errs)
@@ -240,27 +245,40 @@ func (this *SendInsert) flushBatch(context *Context) bool {
 		}
 	}
 
-	// Capture the inserted keys in case there is a RETURNING clause
-	skipNewKeys := this.plan.SkipNewKeys()
-	for _, dp := range dpairs {
-		if skipNewKeys && !context.AddKeyToSkip(dp.Name) {
-			return false
-		}
-		dv := value.NewAnnotatedValue(dp.Value)
-		av := value.NewAnnotatedValue(make(map[string]interface{}, 1))
-		av.ShareAnnotations(dv)
-		av.SetField(this.plan.Alias(), dv)
-
-		if context.UseRequestQuota() {
-			err := context.TrackValueSize(av.Size())
-			if err != nil {
-				context.Error(err)
-				av.Recycle()
+	if context.PreserveMutations() {
+		skipNewKeys := this.plan.SkipNewKeys()
+		for _, dp := range dpairs {
+			if skipNewKeys && !context.AddKeyToSkip(dp.Name) {
 				return false
 			}
+
+			// Capture the inserted keys in case there is a RETURNING clause
+			if !fastDiscard {
+				dv := value.NewAnnotatedValue(dp.Value)
+				av := value.NewAnnotatedValue(make(map[string]interface{}, 1))
+				av.ShareAnnotations(dv)
+				av.SetField(this.plan.Alias(), dv)
+
+				if context.UseRequestQuota() {
+					err := context.TrackValueSize(av.Size())
+					if err != nil {
+						context.Error(err)
+						av.Recycle()
+						return false
+					}
+				}
+
+				if !this.sendItem(av) {
+					return false
+				}
+			}
 		}
-		if !this.sendItem(av) {
-			return false
+	}
+
+	if fastDiscard {
+		for _, item := range this.batch {
+			// item not used past this point
+			item.Recycle()
 		}
 	}
 
