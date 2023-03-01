@@ -90,8 +90,12 @@ func (this *InitialProject) processItem(item value.AnnotatedValue, context *Cont
 		// Unprefixed star
 		if item.Type() == value.OBJECT {
 			item.SetSelf(true)
+			// remove WITH bindings
+			if sv, ok := item.GetValue().(*value.ScopeValue); ok {
+				item.SetValue(sv.GetValue())
+			}
+			// remove LET bindings
 			if len(this.plan.BindingNames()) > 0 {
-				item.SetValue(value.NewValue(item.Actual()))
 				for k, _ := range this.plan.BindingNames() {
 					item.UnsetField(k)
 				}
