@@ -16,6 +16,7 @@ import "C"
 import (
 	"errors"
 	"fmt"
+	"math"
 
 	"github.com/couchbase/query/logging"
 )
@@ -176,17 +177,23 @@ func (h *SystemStats) SigarCpuGet() (*SigarCpuT, error) {
 		return nil, errors.New(fmt.Sprintf("sigar_cpu_get failed.  Err=%v", C.sigar_strerror(h.handle, err)))
 	}
 	return &SigarCpuT{
-		Sys:     uint64(cpu.sys),
-		User:    uint64(cpu.user),
-		Nice:    uint64(cpu.nice),
-		Irq:     uint64(cpu.irq),
-		SoftIrq: uint64(cpu.soft_irq),
-		Wait:    uint64(cpu.wait),
-		Idle:    uint64(cpu.idle),
-		Stolen:  uint64(cpu.stolen),
-
-		Total: uint64(cpu.total),
+		Sys:     isImplemented(uint64(cpu.sys)),
+		User:    isImplemented(uint64(cpu.user)),
+		Nice:    isImplemented(uint64(cpu.nice)),
+		Irq:     isImplemented(uint64(cpu.irq)),
+		SoftIrq: isImplemented(uint64(cpu.soft_irq)),
+		Wait:    isImplemented(uint64(cpu.wait)),
+		Idle:    isImplemented(uint64(cpu.idle)),
+		Stolen:  isImplemented(uint64(cpu.stolen)),
+		Total:   isImplemented(uint64(cpu.total)),
 	}, nil
+}
+
+func isImplemented(v uint64) uint64 {
+	if v != math.MaxUint64 {
+		return v
+	}
+	return 0
 }
 
 // SigarControlGroupInfo holds just the subset of C.sigar_control_group_info_t GSI uses. There are
