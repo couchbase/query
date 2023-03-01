@@ -52,6 +52,13 @@ func (this *builder) buildOrScan(node *algebra.KeyspaceTerm, baseKeyspace *base.
 			cardinality = scan.Cardinality()
 			if cost <= 0.0 || cardinality <= 0.0 {
 				useCBO = false
+			} else {
+				fetchCost, _, _ := getFetchCost(baseKeyspace.Keyspace(), cardinality)
+				if fetchCost > 0.0 {
+					cost += fetchCost
+				} else {
+					useCBO = false
+				}
 			}
 		} else {
 			useCBO = false
@@ -65,10 +72,14 @@ func (this *builder) buildOrScan(node *algebra.KeyspaceTerm, baseKeyspace *base.
 		orCost = orScan.Cost()
 		orCardinality = orScan.Cardinality()
 		if orCost > 0.0 && orCardinality > 0.0 {
-			if cost < orCost || (cost == orCost && cardinality < orCardinality) {
-				return scan, sargLength, err
-			} else if orCost < cost || (orCost == cost && orCardinality < cardinality) {
-				return orScan, orSargLength, orErr
+			fetchCost, _, _ := getFetchCost(baseKeyspace.Keyspace(), orCardinality)
+			if fetchCost > 0.0 {
+				orCost += fetchCost
+				if cost < orCost || (cost == orCost && cardinality < orCardinality) {
+					return scan, sargLength, err
+				} else if orCost < cost || (orCost == cost && orCardinality < cardinality) {
+					return orScan, orSargLength, orErr
+				}
 			}
 		}
 	}
