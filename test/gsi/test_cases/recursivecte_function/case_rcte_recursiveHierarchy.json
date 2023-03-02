@@ -1,0 +1,33 @@
+[
+   {
+      "testcase": "recursivecte recursive reportsHierarchy or tree traversal",
+      "statements": "SELECT e.* ,recursive_cte(\"SELECT e1.name, e1.reportsTo FROM `orders`._default.empSmall e1 WHERE e1.reportsTo=$1 \",\"select e2.name, e2.reportsTo FROM `orders`._default.empSmall e2 JOIN $anchor m on e2.reportsTo = m.name\", {\"arguments\":[e.name]}) as reportsHierarchy FROM `orders`._default.empSmall e WHERE e.reportsTo IS MISSING;",
+      "results": [
+         {
+            "name": "Dev",
+            "reportsHierarchy": [
+                {
+                    "name": "Eliot",
+                    "reportsTo": "Dev"
+                },
+                {
+                    "name": "Andrew",
+                    "reportsTo": "Eliot"
+                },
+                {
+                    "name": "Ron",
+                    "reportsTo": "Eliot"
+                },
+                {
+                    "name": "Dan",
+                    "reportsTo": "Andrew"
+                },
+                {
+                    "name": "Asya",
+                    "reportsTo": "Ron"
+                }
+            ]
+        }
+      ]
+   }
+]

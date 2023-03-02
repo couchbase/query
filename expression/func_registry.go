@@ -461,5 +461,6 @@ var _FUNCTIONS = map[string]Function{
 	"infervalue":  &InferValue{},
 	"infer":       &InferValue{},
 
-	"_timeseries": &TimeSeries{},
+	"_timeseries":   &TimeSeries{},
+	"recursive_cte": &RecursiveCte{},
 }

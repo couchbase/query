@@ -1,0 +1,53 @@
+[
+    {
+        "testcase": "recursivecte graph traversal, with cycles",
+        "statements": "SELECT t.*, recursive_cte(\"SELECT a.airport, a.connects , 0 as depth FROM `orders`._default.airports a USE INDEX (adv_airport_idx1 USING GSI) WHERE a.airport=$nearestAirport\", \"SELECT a.*, 1+m.depth as depth FROM $anchor m,`orders`._default.airports a WHERE a.airport IN m.connects ORDER BY a.airport\", {\"arguments\":{\"nearestAirport\":t.nearestAirport}, \"cycle\":[\"airport\"]}) as routes FROM `orders`._default.travelers as t WHERE t.name=\"Jeff\";",
+        "ordered": true,
+        "results":   [
+            {
+                "name": "Jeff",
+                "nearestAirport": "BOS",
+                "routes": [
+                    {
+                        "airport": "BOS",
+                        "connects": [
+                            "JFK",
+                            "PWM"
+                        ],
+                        "depth": 0
+                    },
+                    {
+                        "airport": "JFK",
+                        "connects": [
+                            "BOS",
+                            "ORD"
+                        ],
+                        "depth": 1
+                    },
+                    {
+                        "airport": "PWM",
+                        "connects": [
+                            "BOS",
+                            "LHR"
+                        ],
+                        "depth": 1
+                    },
+                    {
+                        "airport": "LHR",
+                        "connects": [
+                            "PWM"
+                        ],
+                        "depth": 2
+                    },
+                    {
+                        "airport": "ORD",
+                        "connects": [
+                            "JFK"
+                        ],
+                        "depth": 2
+                    }
+                ]
+            }
+        ]
+    }
+]

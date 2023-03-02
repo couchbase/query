@@ -1101,3 +1101,19 @@ func (this *internalOutput) GetErrorLimit() int {
 func (this *internalOutput) GetErrorCount() int {
 	return this.output.GetErrorCount()
 }
+
+func (this *Context) PrepareStatementExt(statement string) (interface{}, error) {
+	_, prepared, _, err := this.PrepareStatement(statement, nil, nil, false, true, false)
+	return prepared, err
+}
+
+func (this *Context) ExecutePreparedExt(prepared interface{}, namedArgs map[string]value.Value, positionalArgs value.Values) (value.Value, uint64, error) {
+
+	orgPrepared, ok := prepared.(*plan.Prepared)
+
+	if !ok {
+		return nil, 0, errors.NewExecutionPanicError(nil, "casting prepared interface to plan.prepared failed")
+	}
+
+	return this.ExecutePrepared(orgPrepared, false, namedArgs, positionalArgs, "", false, "")
+}

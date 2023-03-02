@@ -101,3 +101,10 @@ type QuotaContext interface {
 	MemoryQuota() uint64
 	CurrentQuotaUsage() float64
 }
+
+type ExecutePreparedContext interface {
+	PrepareStatementExt(statement string) (interface{}, error)
+
+	// Only accepts non-prepared statements
+	ExecutePreparedExt(prepared interface{}, namedArgs map[string]value.Value, positionalArgs value.Values) (value.Value, uint64, error)
+}

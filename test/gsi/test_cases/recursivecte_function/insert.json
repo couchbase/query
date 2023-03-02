@@ -1,0 +1,64 @@
+[
+    {
+        "statements": "UPSERT INTO orders._default.empSmall VALUES ('emp0',{\"name\" : \"Dev\" })"
+    },
+    {
+        "statements": "UPSERT INTO orders._default.empSmall VALUES ('emp1',{\"name\" : \"Eliot\", \"reportsTo\" : \"Dev\" })"
+    },
+    {
+        "statements": "UPSERT INTO orders._default.empSmall VALUES ('emp2',{\"name\" : \"Ron\", \"reportsTo\" : \"Eliot\" })"
+    },
+    {
+        "statements": "UPSERT INTO orders._default.empSmall VALUES ('emp3',{\"name\" : \"Andrew\", \"reportsTo\" : \"Eliot\" })"
+    },
+    {
+        "statements": "UPSERT INTO orders._default.empSmall VALUES ('emp4',{\"name\" : \"Asya\", \"reportsTo\" : \"Ron\" })"
+    },
+    {
+        "statements":"UPSERT INTO orders._default.empSmall VALUES ('emp5',{\"name\" : \"Dan\", \"reportsTo\" : \"Andrew\" })"
+    },
+
+    {
+        "statements":"UPSERT INTO orders._default.airports VALUES ('a1',  { \"airport\" : \"JFK\", \"connects\" : [ \"BOS\", \"ORD\" ] })"
+    },
+    {
+        "statements":"UPSERT INTO orders._default.airports VALUES ('a2', { \"airport\" : \"BOS\", \"connects\" : [ \"JFK\", \"PWM\" ] })"
+    },
+    {
+        "statements":"UPSERT INTO orders._default.airports VALUES ('a3',{ \"airport\" : \"ORD\", \"connects\" : [ \"JFK\" ] } )"
+    },
+    {
+        "statements":"UPSERT INTO orders._default.airports VALUES ('a4',{ \"airport\" : \"PWM\", \"connects\" : [ \"BOS\", \"LHR\" ] })"
+    },
+    {
+        "statements":"UPSERT INTO orders._default.airports VALUES ('a5',{ \"airport\" : \"LHR\", \"connects\" : [ \"PWM\" ] })"
+    },
+
+
+    {
+        "statements":"UPSERT INTO orders._default.travelers VALUES ('t1',{\"name\" : \"Dev\", \"nearestAirport\" : \"JFK\" })"
+    },
+    {
+        "statements":"UPSERT INTO orders._default.travelers VALUES ('t2',{\"name\" : \"Eliot\", \"nearestAirport\" : \"JFK\" })"
+    },
+    {
+        "statements":"UPSERT INTO orders._default.travelers VALUES ('t2',{\"name\" : \"Jeff\", \"nearestAirport\" : \"BOS\" })"
+    },
+
+
+    {
+        "statements":"UPSERT INTO shellTest._default.cycleTest VALUES ('c0', { \"_from\" : 1, \"_to\":2 })"
+    },
+    {
+        "statements":"UPSERT INTO shellTest._default.cycleTest VALUES ('c1', { \"_from\" : 1, \"_to\":100 })"
+    },
+    {
+        "statements":"UPSERT INTO shellTest._default.cycleTest VALUES ('c2', { \"_from\" : 2, \"_to\":3 })"
+    },
+    {
+        "statements":"UPSERT INTO shellTest._default.cycleTest VALUES ('c3', { \"_from\" : 3, \"_to\":4 })"
+    },
+    {
+        "statements":"UPSERT INTO shellTest._default.cycleTest VALUES ('c4', { \"_from\" : 4, \"_to\":1 })"
+    }
+]

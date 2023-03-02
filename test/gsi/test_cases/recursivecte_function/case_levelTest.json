@@ -1,0 +1,23 @@
+[
+    {
+        "testcase": "recursivecte level test",
+        "statements":"select res.* from recursive_cte(\"SELECT 0 as r\", \"SELECT 0 as r\", {\"levels\":4}) as res",
+        "results":[
+            {
+                "r": 0
+            },
+            {
+                "r": 0
+            },
+            {
+                "r": 0
+            },
+            {
+                "r": 0
+            },
+            {
+                "r": 0
+            }
+        ]
+    }
+]

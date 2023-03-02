@@ -1,0 +1,14 @@
+[
+    {
+        "testcase": "recursivecte docs limit test",
+        "statements": "select res.* FROM recursive_cte(\"SELECT 0 as r\", \"SELECT 0 as r\", {\"documents\":2}) as res",
+        "results": [
+            {
+                "r": 0
+            },
+            {
+                "r": 0
+            }
+        ]
+    }
+]

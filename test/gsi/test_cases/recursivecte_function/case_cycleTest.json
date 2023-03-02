@@ -1,0 +1,38 @@
+[
+    {
+        "testcase": "recursivecte cycle test",
+        "statements": "select res.* FROM recursive_cte(\"SELECT 0 as depth, 1 as _from, 1 as _to\", \"SELECT m.depth+1 as depth, a._from, a._to FROM $anchor m,`shellTest`._default.cycleTest AS a WHERE a._from=m._to\", {\"cycle\":[\"_from\", \"_to\"]}) as res;",
+        "results":  [
+            {
+                "_from": 1,
+                "_to": 1,
+                "depth": 0
+            },
+            {
+                "_from": 1,
+                "_to": 2,
+                "depth": 1
+            },
+            {
+                "_from": 1,
+                "_to": 100,
+                "depth": 1
+            },
+            {
+                "_from": 2,
+                "_to": 3,
+                "depth": 2
+            },
+            {
+                "_from": 3,
+                "_to": 4,
+                "depth": 3
+            },
+            {
+                "_from": 4,
+                "_to": 1,
+                "depth": 4
+            }
+        ]
+    }
+]
