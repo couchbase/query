@@ -260,6 +260,13 @@ func (this *ScopeValue) Parent() Value {
 	return this.parent
 }
 
+func (this *ScopeValue) ResetParent() {
+	if this.parent != nil {
+		this.parent.Recycle()
+		this.parent = nil
+	}
+}
+
 /*
 Return the immediate map.
 */
