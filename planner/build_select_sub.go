@@ -672,11 +672,13 @@ func (this *builder) inferUnnestPredicates(from algebra.FromTerm) {
 	for _, unnest := range primaryUnnests {
 		ident := expression.NewIdentifier(unnest.Alias())
 		ident.SetUnnestAlias(true)
-		notMissing := expression.NewIsNotMissing(ident)
-		notMissing.SetExprFlag(expression.EXPR_UNNEST_NOT_MISSING)
-		isArray := expression.NewIsArray(unnest.Expression())
-		isArray.SetExprFlag(expression.EXPR_UNNEST_ISARRAY)
-		andTerms = append(andTerms, isArray, notMissing)
+		if unnest.Expression().Indexable() {
+			notMissing := expression.NewIsNotMissing(ident)
+			notMissing.SetExprFlag(expression.EXPR_UNNEST_NOT_MISSING)
+			isArray := expression.NewIsArray(unnest.Expression())
+			isArray.SetExprFlag(expression.EXPR_UNNEST_ISARRAY)
+			andTerms = append(andTerms, isArray, notMissing)
+		}
 	}
 
 	this.where = expression.NewAnd(andTerms...)

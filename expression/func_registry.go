@@ -459,4 +459,6 @@ var _FUNCTIONS = map[string]Function{
 	"infer_value": &InferValue{},
 	"infervalue":  &InferValue{},
 	"infer":       &InferValue{},
+
+	"_timeseries": &TimeSeries{},
 }

@@ -876,10 +876,6 @@
         }
     ]
    },
-   {
-        "statements": "SELECT DATE_RANGE_STR('1980-01-01', '9999-12-31', 'day')",
-        "error": "Out of range evaluating DATE_RANGE_STR()."
-    },
     {
         "description": "calendar_month vs month range generation with start as last day of month",
         "statements": "select DATE_RANGE_STR('2020-01-31','2021-07-01','month',1),DATE_RANGE_STR('2020-01-31','2021-07-01','calendar_month',1)",

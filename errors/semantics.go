@@ -25,6 +25,21 @@ func NewSemanticsError(e error, msg string) Error {
 	}
 }
 
+func NewSemanticsWithCauseError(e error, msg string) Error {
+	switch e := e.(type) {
+	case Error: // if given error is already an Error, just return it:
+		return e
+	default:
+		var c map[string]interface{}
+		if e != nil {
+			c = make(map[string]interface{})
+			c["cause"] = e.Error()
+		}
+		return &err{level: EXCEPTION, ICode: E_SEMANTICS, IKey: "semantics_error", cause: c,
+			InternalMsg: msg, InternalCaller: CallerN(1)}
+	}
+}
+
 func NewJoinNestNoJoinHintError(op string, alias string, iKey string) Error {
 	return &err{level: EXCEPTION, ICode: E_JOIN_NEST_NO_JOIN_HINT, IKey: iKey,
 		InternalMsg:    fmt.Sprintf("%s on %s cannot have join hint (USE HASH or USE NL).", op, alias),
