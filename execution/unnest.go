@@ -12,21 +12,24 @@ import (
 	"encoding/json"
 
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
 )
 
 type Unnest struct {
 	base
-	plan *plan.Unnest
+	plan           *plan.Unnest
+	timeSeries     bool
+	timeSeriesData *expression.TimeSeriesData
 }
 
 func NewUnnest(plan *plan.Unnest, context *Context) *Unnest {
 	rv := &Unnest{
 		plan: plan,
 	}
-
 	newBase(&rv.base, context)
+	_, rv.timeSeries = plan.Term().Expression().(*expression.TimeSeries)
 	rv.output = rv
 	return rv
 }
@@ -38,6 +41,7 @@ func (this *Unnest) Accept(visitor Visitor) (interface{}, error) {
 func (this *Unnest) Copy() Operator {
 	rv := &Unnest{plan: this.plan}
 	this.base.copy(&rv.base)
+	rv.timeSeries = this.timeSeries
 	return rv
 }
 
@@ -58,6 +62,9 @@ func (this *Unnest) beforeItems(context *Context, parent value.Value) bool {
 }
 
 func (this *Unnest) processItem(item value.AnnotatedValue, context *Context) bool {
+	if this.timeSeries {
+		return this.processTimeSeriesItem(item, context)
+	}
 	ev, err := this.plan.Term().Expression().Evaluate(item, context)
 	if err != nil {
 		context.Error(errors.NewEvaluationError(err, "UNNEST path"))
@@ -78,7 +85,6 @@ func (this *Unnest) processItem(item value.AnnotatedValue, context *Context) boo
 	}
 
 	filter := this.plan.Filter()
-
 	// Attach and send
 	var baseSize uint64
 	for {
@@ -133,6 +139,124 @@ func (this *Unnest) processItem(item value.AnnotatedValue, context *Context) boo
 			break
 		}
 		act = newAct
+	}
+
+	return true
+}
+
+func (this *Unnest) processTimeSeriesItem(item value.AnnotatedValue, context *Context) bool {
+	texpr, ok := this.plan.Term().Expression().(*expression.TimeSeries)
+	if !ok {
+		return false
+	}
+
+	if this.timeSeriesData == nil {
+		operands := texpr.Operands()
+		var tsKeep bool
+		var tsRanges, tsProject value.Value
+		var err error
+		// Construct timeseries data once per document
+		if len(operands) > 1 {
+			_, tsKeep, tsRanges, tsProject, err = texpr.GetOptionFields(operands[1], item, context)
+		}
+		if err == nil {
+			this.timeSeriesData, err = expression.NewTimeSeriesData(texpr.AliasName(), texpr.TsPaths(),
+				tsKeep, tsRanges, tsProject, context)
+		}
+		if err != nil {
+			context.Error(errors.NewEvaluationWithCauseError(err, "timeseries expression"))
+			return false
+		}
+	}
+
+	// Evaluate paths against document
+	rv, err := this.timeSeriesData.Evaluate(item, context)
+	defer this.timeSeriesData.ResetTsData()
+	if err != nil {
+		context.Error(errors.NewEvaluationWithCauseError(err, "timeseries expression"))
+		return false
+	}
+
+	var nitem value.AnnotatedValue
+	if path, ok := this.timeSeriesData.TsDataExpr().(expression.Path); ok && !this.timeSeriesData.TsKeep() {
+		// strip of the tsdata path from original document
+		nitem = value.NewAnnotatedValue(item.Copy())
+		path.Unset(nitem, context)
+	} else {
+		nitem = item
+	}
+
+	if rv != nil && rv.Type() <= value.NULL {
+		return !this.plan.Term().Outer() || !this.timeSeriesData.AllData() || this.sendItem(nitem)
+	}
+
+	if qok, qokOuter := this.timeSeriesData.Qualified(this.plan.Term().Outer()); !qok {
+		return qokOuter || this.sendItem(nitem)
+	}
+
+	// empty, treat as outer unnest
+	act, idx, ok := this.timeSeriesData.GetNextValue(0)
+	if !ok {
+		return !this.plan.Term().Outer() || (idx != 0) || !this.timeSeriesData.AllData() || this.sendItem(nitem)
+	}
+
+	filter := this.plan.Filter()
+	// Attach and send
+	var baseSize uint64
+	var nextAct value.Value
+
+	// iterate of over timeseries data points
+	for {
+		var av value.AnnotatedValue
+
+		actv := value.NewAnnotatedValue(act)
+		actv.SetAttachment("unnest_position", idx-1)
+
+		nextAct, idx, ok = this.timeSeriesData.GetNextValue(idx)
+		baseSize = 0
+		isEnd := act.Type() == value.MISSING && !ok
+		if isEnd {
+			av = nitem
+			if context.UseRequestQuota() {
+				baseSize = nitem.Size()
+			}
+		} else {
+			av = value.NewAnnotatedValue(nitem.Copy())
+		}
+		av.SetField(this.plan.Alias(), actv)
+
+		pass := true
+		if filter != nil {
+			result, err := filter.Evaluate(av, context)
+			if err != nil {
+				context.Error(errors.NewEvaluationError(err, "unnest filter"))
+				return false
+			}
+			if !result.Truth() {
+				av.Recycle()
+				pass = false
+			}
+		}
+		if pass {
+			if context.UseRequestQuota() {
+				if context.TrackValueSize(av.Size() - baseSize) {
+					context.Error(errors.NewMemoryQuotaExceededError())
+					av.Recycle()
+					return false
+				}
+			}
+			if !this.sendItem(av) {
+				av.Recycle()
+				return false
+			}
+		}
+
+		// no more
+		if isEnd {
+			break
+		}
+
+		act = nextAct
 	}
 
 	return true

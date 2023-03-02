@@ -1,0 +1,152 @@
+[
+    {
+       "testcase": "timeseries (ire regular). No ts_ranges",
+       "queryParams": {"query_context": "orders._default"},
+       "statements": "SELECT RAW t FROM ts AS d USE KEYS ['ir01'] UNNEST _timeseries(d) AS t",
+       "results": [
+	       { "_t": 1677730930000, "_v0": 16.3 },
+               { "_t": 1677730931000, "_v0": 16.31 },
+               { "_t": 1677730932000, "_v0": 16.32 },
+               { "_t": 1677730933000, "_v0": 16.33 },
+               { "_t": 1677730934000, "_v0": 16.34 },
+               { "_t": 1677730935000, "_v0": 16.35 },
+               { "_t": 1677730936000, "_v0": 16.36 },
+               { "_t": 1677730937000, "_v0": 16.37 },
+               { "_t": 1677730938000, "_v0": 16.38 },
+               { "_t": 1677730939000, "_v0": 16.39 }
+              ]
+    },
+    {
+       "testcase": "timeseries (ire regular). Single ts_ranges",
+       "queryParams": {"query_context": "orders._default"},
+       "statements": "SELECT RAW t FROM ts AS d USE KEYS ['ir01','ir02','ir03'] UNNEST _timeseries(d, {'ts_ranges':[1677730948000, 1677730952000]}) AS t",
+       "results": [
+	       { "_t": 1677730948000, "_v0": 16.48 },
+               { "_t": 1677730949000, "_v0": 16.49 },
+               { "_t": 1677730950000, "_v0": 16.5 },
+               { "_t": 1677730951000, "_v0": 16.51 },
+               { "_t": 1677730952000, "_v0": 16.52 }
+              ]
+    },
+    {
+       "testcase": "timeseries (ire regular). Single ts_ranges (ts_ranges ts_start > ts_end)",
+       "queryParams": {"query_context": "orders._default"},
+       "statements": "SELECT RAW t FROM ts AS d USE KEYS ['ir01','ir02','ir03'] UNNEST _timeseries(d, {'ts_ranges':[1677730948000, 1677730942000]}) AS t",
+       "results": [
+              ]
+    },
+    {
+       "testcase": "timeseries (ire regular). Single ts_ranges. Named Parameter",
+       "queryParams": {"query_context": "orders._default"},
+       "namedArgs": {"ts_ranges": [1677730948000, 1677730952000]},
+       "statements": "SELECT RAW t FROM ts AS d USE KEYS ['ir01','ir02','ir03'] UNNEST _timeseries(d, {'ts_ranges':$ts_ranges}) AS t",
+       "results": [
+	       { "_t": 1677730948000, "_v0": 16.48 },
+               { "_t": 1677730949000, "_v0": 16.49 },
+               { "_t": 1677730950000, "_v0": 16.5 },
+               { "_t": 1677730951000, "_v0": 16.51 },
+               { "_t": 1677730952000, "_v0": 16.52 }
+              ]
+    },
+    {
+       "testcase": "Index Scan on MISSING index. ARRAY Index. Cover. Index order. Explain",
+       "testcase": "timeseries (ire regular). Multiple ts_ranges. Named Parameter",
+       "queryParams": {"query_context": "orders._default"},
+       "namedArgs": {"ts_ranges": [[1677730948000, 1677730949000], [1677730951000, 1677730952000]]},
+       "statements": "SELECT RAW t FROM ts AS d USE KEYS ['ir01','ir02','ir03'] UNNEST _timeseries(d, {'ts_ranges':$ts_ranges}) AS t",
+       "results": [
+	       { "_t": 1677730948000, "_v0": 16.48 },
+               { "_t": 1677730949000, "_v0": 16.49 },
+               { "_t": 1677730951000, "_v0": 16.51 },
+               { "_t": 1677730952000, "_v0": 16.52 }
+              ]
+    },
+    {
+       "testcase": "timeseries (regular). No ts_ranges",
+       "queryParams": {"query_context": "orders._default"},
+       "statements": "SELECT RAW t FROM ts AS d USE KEYS ['r01'] UNNEST _timeseries(d) AS t",
+       "results": [
+	       { "_t": 1677730930000, "_v0": 16.3 },
+               { "_t": 1677730931000, "_v0": 16.31 },
+               { "_t": 1677730932000, "_v0": 16.32 },
+               { "_t": 1677730933000, "_v0": 16.33 },
+               { "_t": 1677730934000, "_v0": 16.34 },
+               { "_t": 1677730935000, "_v0": 16.35 },
+               { "_t": 1677730936000, "_v0": 16.36 },
+               { "_t": 1677730937000, "_v0": 16.37 },
+               { "_t": 1677730938000, "_v0": 16.38 },
+               { "_t": 1677730939000, "_v0": 16.39 }
+              ]
+    },
+    {
+       "testcase": "timeseries (regular). Single ts_ranges",
+       "queryParams": {"query_context": "orders._default"},
+       "statements": "SELECT RAW t FROM ts AS d USE KEYS ['r01','r02','r03'] UNNEST _timeseries(d, {'ts_ranges':[1677730948000, 1677730952000]}) AS t",
+       "results": [
+	       { "_t": 1677730948000, "_v0": 16.48 },
+               { "_t": 1677730949000, "_v0": 16.49 },
+               { "_t": 1677730950000, "_v0": 16.5 },
+               { "_t": 1677730951000, "_v0": 16.51 },
+               { "_t": 1677730952000, "_v0": 16.52 }
+              ]
+    },
+    {
+       "testcase": "timeseries (regular). Single ts_ranges. Named Parameter",
+       "queryParams": {"query_context": "orders._default"},
+       "namedArgs": {"ts_ranges": [1677730948000, 1677730952000]},
+       "statements": "SELECT RAW t FROM ts AS d USE KEYS ['r01','r02','r03'] UNNEST _timeseries(d, {'ts_ranges':$ts_ranges}) AS t",
+       "results": [
+	       { "_t": 1677730948000, "_v0": 16.48 },
+               { "_t": 1677730949000, "_v0": 16.49 },
+               { "_t": 1677730950000, "_v0": 16.5 },
+               { "_t": 1677730951000, "_v0": 16.51 },
+               { "_t": 1677730952000, "_v0": 16.52 }
+              ]
+    },
+    {
+       "testcase": "timeseries (regular). Multiple ts_ranges. Named Parameter",
+       "queryParams": {"query_context": "orders._default"},
+       "namedArgs": {"ts_ranges": [[1677730948000, 1677730949000], [1677730951000, 1677730952000]]},
+       "statements": "SELECT RAW t FROM ts AS d USE KEYS ['r01','r02','r03'] UNNEST _timeseries(d, {'ts_ranges':$ts_ranges}) AS t",
+       "results": [
+	       { "_t": 1677730948000, "_v0": 16.48 },
+               { "_t": 1677730949000, "_v0": 16.49 },
+               { "_t": 1677730951000, "_v0": 16.51 },
+               { "_t": 1677730952000, "_v0": 16.52 }
+              ]
+    },
+    {
+       "testcase": "timeseries (ire regular). Using index. Single ts_ranges. Named Parameter",
+       "queryParams": {"query_context": "orders._default"},
+       "namedArgs": {"ts_ranges": [1677730948000, 1677730952000]},
+       "statements": "SELECT RAW t FROM ts AS d UNNEST _timeseries(d, {'ts_ranges':$ts_ranges}) AS t WHERE d.ticker = 'BASE' AND d.ts_interval IS MISSING AND ($ts_ranges[0] BETWEEN d.ts_start AND d.ts_end OR (d.ts_start BETWEEN $ts_ranges[0] AND $ts_ranges[1] AND d.ts_end BETWEEN $ts_ranges[0]  AND $ts_ranges[1] ) OR $ts_ranges[1] BETWEEN d.ts_start AND d.ts_end)",
+       "results": [
+	       { "_t": 1677730948000, "_v0": 16.48 },
+               { "_t": 1677730949000, "_v0": 16.49 },
+               { "_t": 1677730950000, "_v0": 16.5 },
+               { "_t": 1677730951000, "_v0": 16.51 },
+               { "_t": 1677730952000, "_v0": 16.52 }
+              ]
+    },
+    {
+       "testcase": "timeseries (ire regular). Using index. Multiple ts_ranges. Named Parameter",
+       "queryParams": {"query_context": "orders._default"},
+       "namedArgs": {"ts_ranges": [[1677730948000, 1677730949000], [1677730951000, 1677730952000]]},
+       "statements": "SELECT RAW t FROM ts AS d UNNEST _timeseries(d, {'ts_ranges':$ts_ranges}) AS t WHERE d.ticker = 'BASE' AND d.ts_interval IS MISSING AND ($ts_ranges[0][0] BETWEEN d.ts_start AND d.ts_end OR (d.ts_start BETWEEN $ts_ranges[0][0] AND $ts_ranges[0][1] AND d.ts_end BETWEEN $ts_ranges[0][0] AND $ts_ranges[0][1] ) OR $ts_ranges[0][1] BETWEEN d.ts_start AND d.ts_end OR $ts_ranges[1][0] BETWEEN d.ts_start AND d.ts_end OR (d.ts_start BETWEEN $ts_ranges[1][0] AND $ts_ranges[1][1] AND d.ts_end BETWEEN $ts_ranges[1][0] AND $ts_ranges[1][1] ) OR $ts_ranges[1][1] BETWEEN d.ts_start AND d.ts_end)",
+       "results": [
+	       { "_t": 1677730948000, "_v0": 16.48 },
+               { "_t": 1677730949000, "_v0": 16.49 },
+               { "_t": 1677730951000, "_v0": 16.51 },
+               { "_t": 1677730952000, "_v0": 16.52 }
+              ]
+    },
+    {
+       "testcase": "timeseries (ire regular). Using ts_project",
+       "queryParams": {"query_context": "orders._default"},
+       "statements": "SELECT t.* FROM { 'ts_data': [[1677730950000, 16.50, 50], [1677730951000, 16.51, 51]], 'ts_start':1677730950000, 'ts_end':1677730951000 } AS d UNNEST _timeseries(d, {'ts_ranges':[1677730950000, 1677730958000], 'ts_project':1}) AS t",
+       "results": [
+	       { "_t": 1677730950000, "_v1": 50 },
+               { "_t": 1677730951000, "_v1": 51 }
+              ]
+    }
+]
