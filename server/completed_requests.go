@@ -263,6 +263,8 @@ func RequestsCheckQualifier(name string, op RequestsOp, condition interface{}, t
 		_, err = newAborted(condition)
 	case "error":
 		_, err = newReqError(condition)
+	case "errors":
+		_, err = newReqErrorCount(condition)
 	case "user":
 		_, err = newUser(condition)
 	case "client":
@@ -313,6 +315,8 @@ func RequestsAddQualifier(name string, condition interface{}, tag string) errors
 		q, err = newAborted(condition)
 	case "error":
 		q, err = newReqError(condition)
+	case "errors":
+		q, err = newReqErrorCount(condition)
 	case "user":
 		q, err = newUser(condition)
 	case "client":
@@ -1467,4 +1471,56 @@ func (this *plan_element) evaluate(request *BaseRequest, req *http.Request) bool
 		}
 	}
 	return true
+}
+
+// 13- error count (errors)
+type reqErrorCount struct {
+	count int
+}
+
+func newReqErrorCount(c interface{}) (*reqErrorCount, errors.Error) {
+	switch c := c.(type) {
+	case int:
+		if c >= 0 {
+			return &reqErrorCount{count: c}, nil
+		}
+	case int64:
+		if c >= 0 {
+			return &reqErrorCount{count: int(c)}, nil
+		}
+	}
+	return nil, errors.NewCompletedQualifierInvalidArgument("errors", c)
+}
+
+func (this *reqErrorCount) name() string {
+	return "errors"
+}
+
+func (this *reqErrorCount) unique() bool {
+	return false
+}
+
+func (this *reqErrorCount) condition() interface{} {
+	return this.count
+}
+
+func (this *reqErrorCount) isCondition(c interface{}) bool {
+	switch c.(type) {
+	case int:
+		return c.(int) == this.count
+	case int64:
+		return int(c.(int64)) == this.count
+	}
+	return false
+}
+
+func (this *reqErrorCount) checkCondition(c interface{}) errors.Error {
+	return nil
+}
+
+func (this *reqErrorCount) evaluate(request *BaseRequest, req *http.Request) bool {
+	if request.GetErrorCount() >= this.count {
+		return true
+	}
+	return false
 }
