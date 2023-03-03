@@ -4346,7 +4346,8 @@ FLATTEN_KEYS LPAREN opt_flatten_keys_exprs RPAREN
     f, ok := expression.GetFunction(fname)
     if ok {
         if len($3) < f.MinArgs() || len($3) > f.MaxArgs() {
-            return yylex.(*lexer).FatalError(fmt.Sprintf("Number of arguments to function %s%s must be between %d and %d.", fname, ectx, f.MinArgs(), f.MaxArgs()))
+            return yylex.(*lexer).FatalError(fmt.Sprintf("Number of arguments to function %s%s must be between %d and %d.",
+                                                          fname, ectx, f.MinArgs(), f.MaxArgs()))
         } else {
             $$ = f.Constructor()($3.Expressions()...)
             if fk, ok := $$.(*expression.FlattenKeys); ok {
@@ -4370,9 +4371,11 @@ NTH_VALUE LPAREN exprs RPAREN opt_from_first_last opt_nulls_treatment window_fun
                 ectx = $3[0].ErrorContext()
             }
             if f.MinArgs() == f.MaxArgs() {
-                yylex.Error(fmt.Sprintf("Number of arguments to function %s%s must be %d.", fname, ectx, f.MaxArgs()))
+                return yylex.(*lexer).FatalError(fmt.Sprintf("Number of arguments to function %s%s must be %d.",
+                                                              fname, ectx, f.MaxArgs()))
             } else {
-                yylex.Error(fmt.Sprintf("Number of arguments to function %s%s must be between %d and %d.", fname, ectx, f.MinArgs(), f.MaxArgs()))
+                return yylex.(*lexer).FatalError(fmt.Sprintf("Number of arguments to function %s%s must be between %d and %d.",
+                                                              fname, ectx, f.MinArgs(), f.MaxArgs()))
             }
         } else {
             $$ = f.Constructor()($3...)
@@ -4413,9 +4416,11 @@ function_name LPAREN opt_exprs RPAREN opt_filter opt_nulls_treatment opt_window_
             yylex.Error(fmt.Sprintf("FILTER clause syntax is not valid for function %s%s.", fname, ectx))
         } else if len($3) < f.MinArgs() || len($3) > f.MaxArgs() {
             if f.MinArgs() == f.MaxArgs() {
-                yylex.Error(fmt.Sprintf("Number of arguments to function %s%s must be %d.", fname, ectx, f.MaxArgs()))
+                return yylex.(*lexer).FatalError(fmt.Sprintf("Number of arguments to function %s%s must be %d.",
+                                                              fname, ectx, f.MaxArgs()))
             } else {
-                yylex.Error(fmt.Sprintf("Number of arguments to function %s%s must be between %d and %d.", fname, ectx, f.MinArgs(), f.MaxArgs()))
+                return yylex.(*lexer).FatalError(fmt.Sprintf("Number of arguments to function %s%s must be between %d and %d.",
+                                                              fname, ectx, f.MinArgs(), f.MaxArgs()))
             }
         } else {
             $$ = f.Constructor()($3...)
