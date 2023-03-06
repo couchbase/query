@@ -405,6 +405,7 @@ func (this *Context) NewQueryContext(queryContext string, readonly bool) interfa
 	rv := this.Copy()
 	rv.queryContext = queryContext
 	rv.readonly = readonly
+	rv.subExecTrees = this.getSubExecTrees()
 	return rv
 }
 
