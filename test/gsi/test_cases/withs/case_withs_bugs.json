@@ -154,6 +154,29 @@
                 "c11": 4
             }
         ]
+    },
+    {
+	"testcase": "MB-55835",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.`plan`.`~child`.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`as` = 's' AND v.`covers` IS NOT MISSING END"
+        },
+        "statements":"WITH cte AS ([{\"c1\": 1}, {\"c1\":2}]) SELECT s.c12, cte1.c1 FROM shellTest s, cte cte1 WHERE s.c11 = cte1.c1 AND s.type = \"left\"",
+        "results": [
+            {
+                "c12": 10,
+                "c1": 1
+            },
+            {
+                "c12": 20,
+                "c1": 2
+            }
+        ]
     }
 ]
 
