@@ -746,7 +746,7 @@ func (this *base) queuedItems() int {
 	if this.input == nil {
 		return 0
 	}
-	return this.ValueExchange().queuedItems()
+	return this.input.ValueExchange().queuedItems()
 }
 
 func (this *base) getItemValue(channel value.ValueChannel) (value.Value, bool) {
