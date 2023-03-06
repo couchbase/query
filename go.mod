@@ -62,7 +62,7 @@ require (
 	github.com/russross/blackfriday v1.5.2
 	github.com/samuel/go-zookeeper v0.0.0-20201211165307-7117e9ea2414
 	golang.org/x/crypto v0.0.0-20220924013350-4ba4fb4dd9e7
-	golang.org/x/net v0.0.0-20220923203811-8be639271d50
+	golang.org/x/net v0.7.0
 	gopkg.in/couchbase/gocb.v1 v1.6.7
 )
 
@@ -132,9 +132,9 @@ require (
 	github.com/youmark/pkcs8 v0.0.0-20201027041543-1326539a0a0a // indirect
 	go.etcd.io/bbolt v1.3.6 // indirect
 	golang.org/x/exp v0.0.0-20220921164117-439092de6870 // indirect
-	golang.org/x/sys v0.0.0-20220919091848-fb04ddd9f9c8 // indirect
-	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211 // indirect
-	golang.org/x/text v0.4.0 // indirect
+	golang.org/x/sys v0.5.0 // indirect
+	golang.org/x/term v0.5.0 // indirect
+	golang.org/x/text v0.7.0 // indirect
 	golang.org/x/time v0.0.0-20220922220347-f3bd1da661af // indirect
 	google.golang.org/genproto v0.0.0-20220923205249-dd2d53f1fffc // indirect
 	google.golang.org/grpc v1.49.0 // indirect
