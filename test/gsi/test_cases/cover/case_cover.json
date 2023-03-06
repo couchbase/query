@@ -455,8 +455,7 @@
                                {
                                     "#operator": "Unnest",
                                     "as": "d2",
-                                    "expr": "(`d1`.`a`)",
-                                    "filter": "(`d2` is not missing)"
+                                    "expr": "(`d1`.`a`)"
                                 }
                             ]
                         }
@@ -546,8 +545,7 @@
                                 {
                                     "#operator": "Unnest",
                                     "as": "d2",
-                                    "expr": "cover ((`d1`.`k1`))",
-                                    "filter": "(`d2` is not missing)"
+                                    "expr": "cover ((`d1`.`k1`))"
                                 }
                             ]
                         }

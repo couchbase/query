@@ -1189,6 +1189,12 @@ func (this *builder) getFilter(alias string, join bool, onclause expression.Expr
 
 		fltr := fl.FltrExpr()
 		origFltr := fl.OrigExpr()
+
+		if (origFltr != nil && origFltr.HasExprFlag(expression.EXPR_UNNEST_NOT_MISSING)) ||
+			fltr.HasExprFlag(expression.EXPR_UNNEST_NOT_MISSING) {
+			continue
+		}
+
 		if origFltr != nil {
 			terms = append(terms, origFltr.Copy())
 			if this.filter != nil {
