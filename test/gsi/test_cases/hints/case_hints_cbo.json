@@ -84,7 +84,7 @@
     ]
     },
     {
-	"testcase": "from case_hints_simple.json. Join hint on first subquery term",
+	"testcase": "from case_hints_simple.json. Join hint on first subquery term, no join enumeration",
         "explain": {
             "disabled": false,
             "results": [
@@ -93,6 +93,9 @@
                     "cost": true,
                     "cardinality": true,
                     "optimizer_hints": {
+                        "hints_followed": [
+                            "ORDERED"
+                        ],
                         "hints_with_error": [
                             "USE_HASH(c): Join hint (USE HASH or USE NL) cannot be specified on the first from term: c"
                         ]
@@ -100,6 +103,90 @@
                 }
             ],
             "statement": "SELECT true AS present, p.cost IS NOT MISSING AS cost, p.cardinality IS NOT MISSING AS cardinality, p.`optimizer_hints` FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'NestedLoopJoin' END"
+        },
+        "queryParams": {"use_cbo": true},
+        "statements":"SELECT /*+ ORDERED USE_HASH(c) */ c.firstName, c.lastName, c.customerId, p.purchaseId FROM (SELECT firstName, lastName, customerId FROM customer WHERE lastName = \"Champlin\" AND type = \"customer\") AS c JOIN purchase p ON c.customerId = p.customerId WHERE p.type = \"purchase\" ORDER BY p.purchaseId LIMIT 10",
+        "ordered": true,
+        "results": [
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase104"
+        },
+        {
+            "customerId": "customer33",
+            "firstName": "Charles",
+            "lastName": "Champlin",
+            "purchaseId": "purchase1582"
+        },
+        {
+            "customerId": "customer33",
+            "firstName": "Charles",
+            "lastName": "Champlin",
+            "purchaseId": "purchase1704"
+        },
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase1747"
+        },
+        {
+            "customerId": "customer631",
+            "firstName": "Gladyce",
+            "lastName": "Champlin",
+            "purchaseId": "purchase2838"
+        },
+        {
+            "customerId": "customer631",
+            "firstName": "Gladyce",
+            "lastName": "Champlin",
+            "purchaseId": "purchase2872"
+        },
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase3344"
+        },
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase3698"
+        },
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase4142"
+        },
+        {
+            "customerId": "customer60",
+            "firstName": "Bryon",
+            "lastName": "Champlin",
+            "purchaseId": "purchase4315"
+        }
+    ]
+    },
+    {
+	"testcase": "from case_hints_simple.json. Join hint on first subquery term, with join enumeration",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true,
+                    "cost": true,
+                    "cardinality": true,
+                    "optimizer_hints": {
+                        "hints_followed": [
+                            "USE_HASH(c)"
+                        ]
+                    }
+                }
+            ],
+            "statement": "SELECT true AS present, p.cost IS NOT MISSING AS cost, p.cardinality IS NOT MISSING AS cardinality, p.`optimizer_hints` FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'HashJoin' END"
         },
         "queryParams": {"use_cbo": true},
         "statements":"SELECT /*+ USE_HASH(c) */ c.firstName, c.lastName, c.customerId, p.purchaseId FROM (SELECT firstName, lastName, customerId FROM customer WHERE lastName = \"Champlin\" AND type = \"customer\") AS c JOIN purchase p ON c.customerId = p.customerId WHERE p.type = \"purchase\" ORDER BY p.purchaseId LIMIT 10",

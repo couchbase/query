@@ -30,6 +30,9 @@ const (
 	KS_JOIN_HINT_ERROR                  // join hint error
 	KS_JOIN_FLTR_HINT_ERROR             // join filter hint error
 	KS_IS_SYSTEM                        // system keyspace
+	KS_IS_KEYSPACETERM                  // KeyspaceTerm
+	KS_IS_EXPRTERM                      // ExprTerm
+	KS_IS_SUBQTERM                      // SubqTerm
 )
 
 type BaseKeyspace struct {
@@ -84,6 +87,20 @@ func NewBaseKeyspace(name string, path *algebra.Path, node algebra.SimpleFromTer
 		if path.IsSystem() {
 			ksFlags |= KS_IS_SYSTEM
 		}
+	}
+
+	switch term := node.(type) {
+	case *algebra.KeyspaceTerm:
+		ksFlags |= KS_IS_KEYSPACETERM
+	case *algebra.ExpressionTerm:
+		if term.IsKeyspace() {
+			ksFlags |= KS_IS_KEYSPACETERM
+			node = term.KeyspaceTerm()
+		} else {
+			ksFlags |= KS_IS_EXPRTERM
+		}
+	case *algebra.SubqueryTerm:
+		ksFlags |= KS_IS_SUBQTERM
 	}
 
 	return &BaseKeyspace{
@@ -157,6 +174,18 @@ func (this *BaseKeyspace) SetOuterFilters() {
 
 func (this *BaseKeyspace) IsSystem() bool {
 	return (this.ksFlags & KS_IS_SYSTEM) != 0
+}
+
+func (this *BaseKeyspace) IsKeyspaceTerm() bool {
+	return (this.ksFlags & KS_IS_KEYSPACETERM) != 0
+}
+
+func (this *BaseKeyspace) IsExpressionTerm() bool {
+	return (this.ksFlags & KS_IS_EXPRTERM) != 0
+}
+
+func (this *BaseKeyspace) IsSubqueryTerm() bool {
+	return (this.ksFlags & KS_IS_SUBQTERM) != 0
 }
 
 func (this *BaseKeyspace) IsAnsiJoin() bool {
@@ -340,6 +369,19 @@ func (this *BaseKeyspace) Node() algebra.SimpleFromTerm {
 }
 
 func (this *BaseKeyspace) SetNode(node algebra.SimpleFromTerm) {
+	switch term := node.(type) {
+	case *algebra.KeyspaceTerm:
+		this.ksFlags |= KS_IS_KEYSPACETERM
+	case *algebra.ExpressionTerm:
+		if term.IsKeyspace() {
+			this.ksFlags |= KS_IS_KEYSPACETERM
+			node = term.KeyspaceTerm()
+		} else {
+			this.ksFlags |= KS_IS_EXPRTERM
+		}
+	case *algebra.SubqueryTerm:
+		this.ksFlags |= KS_IS_SUBQTERM
+	}
 	this.node = node
 }
 
