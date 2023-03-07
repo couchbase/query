@@ -76,9 +76,8 @@ func (this *Alias) processItem(item value.AnnotatedValue, context *Context) bool
 		return false
 	}
 
-	// we should really use av.Size() - item.Size() but this is faster
 	if context.UseRequestQuota() {
-		err := context.TrackValueSize(uint64(len(this.plan.Alias())))
+		err := context.TrackValueSize(av.Size() - item.Size())
 		if err != nil {
 			context.Error(err)
 			av.Recycle()

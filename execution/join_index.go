@@ -162,15 +162,15 @@ func (this *IndexJoin) joinCoveredEntries(item value.AnnotatedValue,
 	useQuota := context.UseRequestQuota()
 	for j, entry := range entries {
 		var joined value.AnnotatedValue
-		var size uint64
+		var alreadyAccountedForSize uint64
 
 		if j < len(entries)-1 {
 			joined = item.Copy().(value.AnnotatedValue)
-			if useQuota {
-				size = joined.Size()
-			}
 		} else {
 			joined = item
+			if useQuota {
+				alreadyAccountedForSize = joined.Size()
+			}
 		}
 
 		// FIXME covers size
@@ -190,7 +190,7 @@ func (this *IndexJoin) joinCoveredEntries(item value.AnnotatedValue,
 		joined.SetField(this.plan.Term().Alias(), jv)
 
 		if useQuota {
-			err := context.TrackValueSize(size)
+			err := context.TrackValueSize(joined.RecalculateSize() - alreadyAccountedForSize)
 			if err != nil {
 				context.Error(err)
 				joined.Recycle()
@@ -201,7 +201,6 @@ func (this *IndexJoin) joinCoveredEntries(item value.AnnotatedValue,
 			return false
 		}
 	}
-	// TODO Recycle
 
 	return true
 }

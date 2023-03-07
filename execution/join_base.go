@@ -134,7 +134,7 @@ func (this *joinBase) joinEntries(keyCount map[string]int, pairMap map[string]va
 		if foundKeys != 0 {
 			useQuota := context.UseRequestQuota()
 			for _, key := range item.Keys {
-				var size uint64
+				var alreadyAccountedForSize uint64
 
 				pv, ok := pairMap[key]
 				if !ok {
@@ -144,29 +144,29 @@ func (this *joinBase) joinEntries(keyCount map[string]int, pairMap map[string]va
 				var joined value.AnnotatedValue
 				if foundKeys > 1 || (outer && onFilter != nil) {
 					joined = value.NewAnnotatedValue(item.Value.Copy())
-					if useQuota {
-						size += joined.Size()
-					}
 				} else {
 					joined = item.Value
+					if useQuota {
+						alreadyAccountedForSize += joined.Size()
+					}
 				}
 				foundKeys--
 
 				var av value.AnnotatedValue
 				if keyCount[key] > 1 {
 					av = value.NewAnnotatedValue(pv.Copy())
-					if useQuota {
-						size += av.Size()
-					}
 				} else {
 					av = pv
+					if useQuota {
+						alreadyAccountedForSize += av.Size()
+					}
 				}
 				keyCount[key]--
 
 				joined.SetField(alias, av)
 
 				if useQuota {
-					err := context.TrackValueSize(size)
+					err := context.TrackValueSize(joined.RecalculateSize() - alreadyAccountedForSize)
 					if err != nil {
 						context.Error(err)
 						return false
@@ -205,7 +205,7 @@ func (this *joinBase) nestEntries(keyCount map[string]int, pairMap map[string]va
 	useQuota := context.UseRequestQuota()
 
 	for _, item := range this.joinBatch {
-		var size uint64
+		var alreadyAccountedForSize uint64
 
 		av := item.Value
 		nvs := make([]interface{}, 0, len(item.Keys))
@@ -219,11 +219,11 @@ func (this *joinBase) nestEntries(keyCount map[string]int, pairMap map[string]va
 				var jv value.AnnotatedValue
 				if keyCount[key] > 1 {
 					jv = value.NewAnnotatedValue(pv.Copy())
-					if useQuota {
-						size += jv.Size()
-					}
 				} else {
 					jv = pv
+					if useQuota {
+						alreadyAccountedForSize += jv.Size()
+					}
 				}
 				keyCount[key]--
 
@@ -242,15 +242,17 @@ func (this *joinBase) nestEntries(keyCount map[string]int, pairMap map[string]va
 		}
 
 		if len(nvs) != 0 {
-			av.SetField(alias, nvs)
-
 			if useQuota {
-				err := context.TrackValueSize(size)
+				alreadyAccountedForSize += av.Size()
+				av.SetField(alias, nvs)
+				err := context.TrackValueSize(av.RecalculateSize() - alreadyAccountedForSize)
 				if err != nil {
 					context.Error(err)
 					av.Recycle()
 					return false
 				}
+			} else {
+				av.SetField(alias, nvs)
 			}
 			if !this.sendItem(av) {
 				return false
@@ -258,7 +260,18 @@ func (this *joinBase) nestEntries(keyCount map[string]int, pairMap map[string]va
 		} else if outer {
 			if len(item.Keys) != 0 {
 				// non missing keys
-				av.SetField(alias, value.EMPTY_ARRAY_VALUE)
+				if useQuota {
+					alreadyAccountedForSize = av.Size()
+					av.SetField(alias, value.EMPTY_ARRAY_VALUE)
+					err := context.TrackValueSize(av.RecalculateSize() - alreadyAccountedForSize)
+					if err != nil {
+						context.Error(err)
+						av.Recycle()
+						return false
+					}
+				} else {
+					av.SetField(alias, value.EMPTY_ARRAY_VALUE)
+				}
 			}
 			if !this.sendItem(av) {
 				return false
