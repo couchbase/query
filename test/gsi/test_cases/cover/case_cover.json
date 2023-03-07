@@ -450,7 +450,7 @@
                                {
                                     "#operator": "Filter",
                                     "alias": "d1",
-                                    "condition": "(((`d1`.`k0`) = 1) and is_array((`d1`.`a`)))"
+                                    "condition": "((`d1`.`k0`) = 1)"
                                },
                                {
                                     "#operator": "Unnest",
@@ -506,7 +506,7 @@
                             "cover ((`d1`.`k1`))",
                             "cover ((meta(`d1`).`id`))"
                         ],
-                        "filter": "((cover ((`d1`.`k0`)) = 1) and is_array(cover ((`d1`.`k1`))))",
+                        "filter": "(cover ((`d1`.`k0`)) = 1)",
                         "index": "ixCover2",
                         "index_projection": {
                             "entry_keys": [

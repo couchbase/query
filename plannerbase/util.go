@@ -63,3 +63,15 @@ func ReplaceParameters(pred expression.Expression, namedArgs map[string]value.Va
 func IsDerivedExpr(expr expression.Expression) bool {
 	return expr != nil && expr.HasExprFlag(expression.EXPR_DERIVED_FROM_LIKE|expression.EXPR_DERIVED_RANGE1|expression.EXPR_DERIVED_RANGE2)
 }
+
+func IgnoreFilter(fl *Filter) bool {
+	fltrExpr := fl.fltrExpr
+	origExpr := fl.origExpr
+
+	exprFlags := uint64(expression.EXPR_UNNEST_NOT_MISSING | expression.EXPR_UNNEST_ISARRAY)
+	if origExpr != nil && origExpr.HasExprFlag(exprFlags) {
+		return true
+	}
+
+	return fltrExpr.HasExprFlag(exprFlags)
+}

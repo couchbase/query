@@ -114,6 +114,23 @@
                 "x": 2
             }
         ]
+    },
+    {
+        "testcase": "MB-55849",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`index` = 'ix102' END"
+        },
+        "statements":"SELECT d.a, u FROM shellTest AS d UNNEST ARRAY_CONCAT(d.a, d.b) AS u",
+        "ordered": true,
+        "results": [
+        ]
     }
 ]
 

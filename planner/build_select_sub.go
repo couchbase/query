@@ -674,14 +674,9 @@ func (this *builder) inferUnnestPredicates(from algebra.FromTerm) {
 		ident.SetUnnestAlias(true)
 		notMissing := expression.NewIsNotMissing(ident)
 		notMissing.SetExprFlag(expression.EXPR_UNNEST_NOT_MISSING)
-		unnestExpr := unnest.Expression()
-		if unnestExpr.Type() != value.ARRAY {
-			isArray := expression.NewIsArray(unnestExpr)
-			isArray.SetExprFlag(expression.EXPR_UNNEST_ISARRAY)
-			andTerms = append(andTerms, isArray, notMissing)
-		} else {
-			andTerms = append(andTerms, notMissing)
-		}
+		isArray := expression.NewIsArray(unnest.Expression())
+		isArray.SetExprFlag(expression.EXPR_UNNEST_ISARRAY)
+		andTerms = append(andTerms, isArray, notMissing)
 	}
 
 	this.where = expression.NewAnd(andTerms...)
