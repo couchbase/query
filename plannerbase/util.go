@@ -68,7 +68,7 @@ func IgnoreFilter(fl *Filter) bool {
 	fltrExpr := fl.fltrExpr
 	origExpr := fl.origExpr
 
-	exprFlags := uint64(expression.EXPR_UNNEST_NOT_MISSING | expression.EXPR_UNNEST_ISARRAY)
+	exprFlags := uint64(expression.EXPR_UNNEST_NOT_MISSING | expression.EXPR_UNNEST_ISARRAY | expression.EXPR_JOIN_NOT_NULL)
 	if origExpr != nil && origExpr.HasExprFlag(exprFlags) {
 		return true
 	}

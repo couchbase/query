@@ -308,6 +308,7 @@ func AddDerivedFilter(term expression.Expression, keyspaceNames, origKeyspaceNam
 	optBit int32, context *PrepareContext) base.Filters {
 
 	newExpr := expression.NewIsNotNull(term)
+	newExpr.SetExprFlag(expression.EXPR_JOIN_NOT_NULL)
 	newFilter := base.NewFilter(newExpr, newExpr, keyspaceNames, origKeyspaceNames, isOnclause, false)
 	newFilter.SetDerived()
 	if useCBO {
