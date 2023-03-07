@@ -162,9 +162,12 @@ func (this *joinBase) joinEntries(keyCount map[string]int, pairMap map[string]va
 
 				joined.SetField(alias, av)
 
-				if useQuota && context.TrackValueSize(size) {
-					context.Error(errors.NewMemoryQuotaExceededError())
-					return false
+				if useQuota {
+					size += uint64(len(alias))
+					if context.TrackValueSize(size) {
+						context.Error(errors.NewMemoryQuotaExceededError())
+						return false
+					}
 				}
 
 				if onFilter != nil {
@@ -238,10 +241,13 @@ func (this *joinBase) nestEntries(keyCount map[string]int, pairMap map[string]va
 		if len(nvs) != 0 {
 			av.SetField(alias, nvs)
 
-			if useQuota && context.TrackValueSize(size) {
-				context.Error(errors.NewMemoryQuotaExceededError())
-				av.Recycle()
-				return false
+			if useQuota {
+				size += uint64(len(alias))
+				if context.TrackValueSize(size) {
+					context.Error(errors.NewMemoryQuotaExceededError())
+					av.Recycle()
+					return false
+				}
 			}
 			if !this.sendItem(av) {
 				return false
@@ -250,6 +256,14 @@ func (this *joinBase) nestEntries(keyCount map[string]int, pairMap map[string]va
 			if len(item.Keys) != 0 {
 				// non missing keys
 				av.SetField(alias, value.EMPTY_ARRAY_VALUE)
+				if useQuota {
+					size = value.EMPTY_ARRAY_VALUE.Size() + uint64(len(alias))
+					if context.TrackValueSize(size) {
+						context.Error(errors.NewMemoryQuotaExceededError())
+						av.Recycle()
+						return false
+					}
+				}
 			}
 			if !this.sendItem(av) {
 				return false

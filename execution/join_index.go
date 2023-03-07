@@ -179,14 +179,13 @@ func (this *IndexJoin) joinCoveredEntries(item value.AnnotatedValue,
 			joined.SetCover(covers[i].Text(), ek)
 		}
 
-		joined.SetCover(covers[len(covers)-1].Text(),
-			value.NewValue(entry.PrimaryKey))
+		joined.SetCover(covers[len(covers)-1].Text(), value.NewValue(entry.PrimaryKey))
 
 		// For chained INDEX JOIN's
 		jv := this.setDocumentKey(entry.PrimaryKey, value.NewAnnotatedValue(nil), 0, context)
 		joined.SetField(this.plan.Term().Alias(), jv)
 
-		if useQuota && context.TrackValueSize(size) {
+		if useQuota && context.TrackValueSize(size+uint64(len(this.plan.Term().Alias()))) {
 			context.Error(errors.NewMemoryQuotaExceededError())
 			joined.Recycle()
 			return false
@@ -195,7 +194,6 @@ func (this *IndexJoin) joinCoveredEntries(item value.AnnotatedValue,
 			return false
 		}
 	}
-	// TODO Recycle
 
 	return true
 }
