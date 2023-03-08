@@ -93,3 +93,5 @@ ENDIF (NOT CBQ_ONLY)
 GoModBuild (TARGET cbq PACKAGE github.com/couchbase/query/shell/cbq
   INSTALL_PATH bin
   GOVERSION ${GOVERSION})
+
+INSTALL (FILES etc/metrics_metadata.json DESTINATION "etc/couchbase/n1ql")
