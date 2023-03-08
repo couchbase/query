@@ -179,7 +179,7 @@ func (this *lexer) Lex(lval *yySymType) int {
 
 	// is it a namespace?
 	tok := lval.s
-	if tok[0] == '#' {
+	if len(tok) > 1 && tok[0] == '#' {
 		tok = tok[1:]
 	}
 	_, found := namespaces[tok]
