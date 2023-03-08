@@ -734,12 +734,21 @@ func TestValueSpilling(t *testing.T) {
 		rts := fmt.Sprintf("%T: %#v", v, v)
 		rts = re.ReplaceAllString(rts, "(<address>)") // erase pointer address values
 		if rts != bts {
-			t.Errorf("'%v' has incorrect reconstructed value:\n%v\ninstead of\n%v", p.name, rts, bts)
+			rts = strings.ReplaceAll(rts, ",", ",\n")
+			bts = strings.ReplaceAll(bts, ",", ",\n")
+
+			d := diffpkg.Diff(bts, rts)
+
+			t.Errorf("'%v' has incorrect reconstructed value:\n%v", p.name, d)
 			continue
 		}
 		if av, ok := v.(Value); ok {
 			if !p.value.(Value).EquivalentTo(av) {
 				t.Errorf("'%v' reconstructed value is not equivalent:\n%#v\nshould be\n%#v", p.name, av, p.value)
+			}
+			if p.value.(Value).Size() != av.Size() {
+				t.Errorf("'%v' reconstructed annotated value size differs: %v should be %v",
+					p.name, av.Size(), p.value.(Value).Size())
 			}
 		}
 	}

@@ -141,8 +141,8 @@ type annotatedValue struct {
 	original          Value
 	annotatedOrig     AnnotatedValue
 	noRecycle         bool
-	projectionOrder   []string
-	cachedSize        uint64
+	projectionOrder   []string // transient: no need to spill
+	cachedSize        uint64   // do not spill
 }
 
 func (this *annotatedValue) String() string {
