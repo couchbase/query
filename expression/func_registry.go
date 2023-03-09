@@ -318,6 +318,7 @@ var _FUNCTIONS = map[string]Function{
 	"object_types_nested":  &ObjectTypesNested{},
 	"object_unwrap":        &ObjectUnwrap{},
 	"object_values":        &ObjectValues{},
+	"redact":               &Redact{},
 
 	// JSON
 	"decode_json":  &JSONDecode{},
