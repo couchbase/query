@@ -51,6 +51,7 @@ func newAnnotatedValue() *annotatedValue {
 	rv.self = false
 	rv.noRecycle = false
 	rv.sharedAnnotations = false
+	rv.cachedSize = 0
 	return rv
 }
 
