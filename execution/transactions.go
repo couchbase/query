@@ -13,6 +13,7 @@ import (
 	"fmt"
 
 	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/distributed"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/transactions"
@@ -119,6 +120,14 @@ func (this *StartTransaction) RunOnce(context *Context, parent value.Value) {
 		// return transaction id
 		sv := value.NewScopeValue(make(map[string]interface{}, 2), parent)
 		sv.SetField("txid", context.txContext.TxId())
+
+		// return nodeUUID
+		host := distributed.RemoteAccess().WhoAmI()
+		if host != "" {
+			nodeUUID := distributed.RemoteAccess().NodeUUID(host)
+			sv.SetField("nodeUUID", nodeUUID)
+		}
+
 		if !this.sendItem(value.NewAnnotatedValue(sv)) {
 			err = errors.NewStartTransactionError(fmt.Errorf("sendItem"), nil)
 			return
