@@ -164,7 +164,7 @@ func (this *SendUpsert) flushBatch(context *Context) bool {
 				continue
 			}
 			if context.UseRequestQuota() {
-				context.ReleaseValueSize(key.Size() + val.Size())
+				context.ReleaseValueSize(av.Size())
 			}
 
 			options, _ = av.GetAttachment("options").(value.Value)
