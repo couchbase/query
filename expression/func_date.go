@@ -4606,159 +4606,116 @@ var _DATE_FORMATS = []string{
 // efficient to try analyse what fields exist than to try parsing with all other entries.
 // (Better still would be to just parse the date string directly)
 func determineKnownFormat(s string) string {
+	s = strings.TrimSpace(s)
 	if len(s) < 8 {
 		return ""
 	}
+	dt := ""
+	// date part
 	if s[4] == '-' && len(s) >= 10 {
-		// formats with date part
 		if s[7] != '-' {
 			return ""
 		}
-		for i, r := range s[:10] {
-			if !(i == 4 || i == 7 || unicode.IsDigit(r)) {
+		for i := 0; i < 10; i++ {
+			if !(i == 4 || i == 7 || isdigit(s[i])) {
 				return ""
 			}
 		}
 		if len(s) == 10 {
 			return "2006-01-02"
 		}
-		if s[10] != 'T' && s[10] != ' ' {
+		n := 10
+		if s[n] == ' ' {
+			for len(s) > n+1 && s[n+1] == ' ' {
+				n++
+			}
+		}
+		if s[n] != 'T' && s[n] != ' ' {
 			return ""
 		}
-		if len(s) < 19 {
-			return ""
-		}
-		for i, r := range s[11:19] {
-			if !(((i == 2 || i == 5) && r == ':') || unicode.IsDigit(r)) {
-				return ""
-			}
-		}
-		if len(s) == 19 {
-			return "2006-01-02" + string(s[10:11]) + "15:04:05"
-		}
-		if len(s) > 19 && (s[19] == 'Z' || s[19] == '+' || s[19] == '-') {
-			for i, r := range s[20:] {
-				if !((i == 2 && r == ':') || unicode.IsDigit(r)) {
+		dt = "2006-01-02" + s[n:n+1]
+		s = s[n+1:]
+	}
+
+	// time part
+	if s[2] == ':' && s[5] == ':' {
+		for i := 0; i < 8; i++ {
+			if i == 2 || i == 5 {
+				if s[i] != ':' {
 					return ""
 				}
-			}
-			if len(s) == 25 && s[22] == ':' {
-				return "2006-01-02" + string(s[10:11]) + "15:04:05Z07:00"
-			} else if len(s) == 24 {
-				return "2006-01-02" + string(s[10:11]) + "15:04:05Z0700"
-			} else if len(s) == 22 {
-				return "2006-01-02" + string(s[10:11]) + "15:04:05Z07"
-			} else if len(s) == 20 {
-				return "2006-01-02" + string(s[10:11]) + "15:04:05Z07" // never 'Z' without the '07'
-			}
-			return ""
-		}
-		if s[19] != '.' {
-			return ""
-		}
-		tz := -1
-		colon := -1
-		part := s[20:]
-		for i, r := range part {
-			if r == 'Z' || r == '+' || r == '-' {
-				if tz != -1 {
-					return ""
-				}
-				tz = i
-			} else if r == ':' && tz != -1 {
-				if colon != -1 {
-					return ""
-				}
-				colon = i
-			} else if !unicode.IsDigit(r) {
-				return ""
-			}
-		}
-		if tz != -1 {
-			if tz == 0 {
-				return ""
-			}
-			if colon != -1 {
-				if colon != len(part)-3 || colon != tz+3 {
-					return ""
-				}
-				return "2006-01-02" + string(s[10:11]) + "15:04:05.999Z07:00"
-			} else {
-				if tz == len(part)-5 {
-					return "2006-01-02" + string(s[10:11]) + "15:04:05.999Z0700"
-				} else if tz == len(part)-3 {
-					return "2006-01-02" + string(s[10:11]) + "15:04:05.999Z07"
-				} else if tz == len(part)-1 && part[tz] == 'Z' {
-					return "2006-01-02" + string(s[10:11]) + "15:04:05.999Z07" // never 'Z' without the '07'
-				}
-				return ""
-			}
-		} else {
-			return "2006-01-02" + string(s[10:11]) + "15:04:05.999"
-		}
-	} else if s[2] == ':' && s[5] == ':' {
-		// formats with only time part
-		for i, r := range s[:8] {
-			if !(((i == 2 || i == 5) && r == ':') || unicode.IsDigit(r)) {
+			} else if !isdigit(s[i]) {
 				return ""
 			}
 		}
 		if len(s) == 8 {
-			return "15:04:05"
+			return dt + "15:04:05"
 		}
-		if s[8] == 'Z' || s[8] == '+' || s[8] == '-' {
-			if len(s) == 9 && s[8] == 'Z' {
-				return "15:04:05Z07:00"
+		n := 8
+		frac := ""
+		// fractions
+		if s[n] == '.' {
+			n++
+			i := 0
+			for n+i < len(s) && isdigit(s[n+i]) {
+				i++
 			}
-			if len(s) != 14 {
+			if i == 0 {
+				return ""
+			} else if i <= 3 {
+				frac = ".999"
+			} else if i <= 6 {
+				frac = ".000000"
+			} else if i <= 9 {
+				frac = ".000000000"
+			} else {
 				return ""
 			}
-			for i, r := range s[9:] {
-				if (i == 2 && r != ':') || (i != 2 && !unicode.IsDigit(r)) {
-					return ""
+			if len(s) == n+i {
+				return dt + "15:04:05" + frac
+			}
+			n += i
+		}
+
+		sep := frac + "Z"
+		// TZ
+		if s[n] == ' ' {
+			for n < len(s) && s[n] == ' ' {
+				n++
+			}
+			sep = frac + " Z"
+		}
+		if len(s) > n && s[n] == 'Z' || s[n] == '+' || s[n] == '-' {
+			if s[n] == 'Z' {
+				if len(s) == n+1 {
+					return dt + "15:04:05" + sep + "07:00"
 				}
+				return ""
 			}
-			return "15:04:05Z07:00"
-		}
-		if s[8] != '.' || len(s) == 9 {
-			return ""
-		}
-		tz := -1
-		colon := -1
-		part := s[9:]
-		for i, r := range part {
-			if r == 'Z' || r == '+' || r == '-' {
-				if tz != -1 {
-					return ""
+			if !isdigit(s[n+1]) || !isdigit(s[n+2]) {
+				return ""
+			}
+			if len(s) == n+3 {
+				return dt + "15:04:05" + sep + "07"
+			}
+			if len(s) == n+5 {
+				if isdigit(s[n+3]) || isdigit(s[n+4]) {
+					return dt + "15:04:05" + sep + "0700"
 				}
-				tz = i
-			} else if r == ':' && tz != -1 {
-				if colon != -1 {
-					return ""
-				}
-				colon = i
-			} else if !unicode.IsDigit(r) {
 				return ""
 			}
-		}
-		if tz != -1 {
-			if tz == 0 || colon == -1 {
+			if len(s) != n+6 || s[n+3] != ':' || !isdigit(s[n+4]) || !isdigit(s[n+5]) {
 				return ""
 			}
-			if colon != len(part)-3 || colon != tz+3 {
-				return ""
-			}
-			return "15:04:05.999Z07:00"
-		} else {
-			if len(s) == 18 {
-				return "15:04:05.000000000"
-			} else if len(s) == 15 {
-				return "15:04:05.000000"
-			}
-			return "15:04:05.999"
+			return dt + "15:04:05" + sep + "07:00"
 		}
 	}
 	return ""
+}
+
+func isdigit(b byte) bool {
+	// should really be unicode.IsDigit but this ought to be faster
+	return b >= '0' && b <= '9'
 }
 
 /*
