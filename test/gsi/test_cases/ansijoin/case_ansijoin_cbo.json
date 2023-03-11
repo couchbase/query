@@ -22,6 +22,22 @@
 	]
     },
     {
+        "testcase": "from case_ansijoin_bugs.json, MB-53377",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ARRAY_LENGTH(p.`~subqueries`) = 1 AND ANY v WITHIN p.`~subqueries`[0].plan.`~children` SATISFIES v.`#operator` = 'Join' END"
+        },
+        "statements":"SELECT  (SELECT RAW 1 FROM  x AS l JOIN shellTest AS r ON meta(r).id = \"1\")[0] AS d FROM [1] AS x",
+        "results": [
+            {}
+	]
+    },
+    {
         "testcase": "MB-55547",
         "explain": {
             "disabled": false,
