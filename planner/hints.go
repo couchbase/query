@@ -83,7 +83,9 @@ func deriveOptimHints(baseKeyspaces map[string]*base.BaseKeyspace, optimHints *a
 		}
 	}
 
-	if len(newHints) > 0 {
+	// if a subquery (inside SubqueryTerm) is processed multiple times, e.g. during
+	// join enumeration, do not add the same set of derived hints multiple times
+	if len(newHints) > 0 && (optimHints == nil || !hasDerivedHint(optimHints.Hints())) {
 		if optimHints == nil {
 			optimHints = algebra.NewOptimHints(nil, false)
 		}
