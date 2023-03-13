@@ -78,6 +78,7 @@ func Init(router router.Router) {
 	// Create the engine for external JS functions
 	external.engine = defs.SingleInstance
 	external.name = "external jsevaluator"
+	external.available = _DEF_RUNNERS
 
 	globalCfg := defs.GlobalConfig{
 		GlobalManagePermission:  "cluster.n1ql.udf_external!manage",
@@ -135,6 +136,7 @@ func Init(router router.Router) {
 		internal.name = "internal javascript"
 		internal.engine, internal.libStore, internal.evaluator, _ = newEngine(internal.name, _DEF_RUNNERS)
 		internal.threads = int32(_DEF_RUNNERS)
+		internal.available = _DEF_RUNNERS
 		if internal.libStore == nil {
 			internal.evaluator = nil
 		}
