@@ -84,7 +84,7 @@ func Init(router router.Router) {
 		GlobalManagePermission:  "cluster.n1ql.udf_external!manage",
 		ScopeManagePermission:   "cluster.collection[%s].n1ql.udf_external!manage",
 		JsRestrictionsEnabled:   tenant.IsServerless(),
-		ProcessIsolationEnabled: tenant.IsServerless(),
+		ProcessIsolationEnabled: true, // tenant.IsServerless(),
 	}
 
 	configErr := defs.ConfigureGlobalConfig(globalCfg)
