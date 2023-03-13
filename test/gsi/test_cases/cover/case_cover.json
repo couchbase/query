@@ -1,7 +1,7 @@
 [
     {
         "statements":"EXPLAIN SELECT f2, f3 FROM shellTest WHERE f1=5",
-        "ignore":["index_id", "cost", "cardinality"],
+        "ignore":["index_id", "cost", "cardinality", "optimizer_estimates"],
         "results": [
         {
             "plan": {
@@ -68,7 +68,7 @@
     },
     {
         "statements":"EXPLAIN SELECT f2, f3 FROM shellTest f2 WHERE f1=5",
-        "ignore":["index_id", "cost", "cardinality"],
+        "ignore":["index_id", "cost", "cardinality", "optimizer_estimates"],
         "results": [
         {
             "plan": {
@@ -137,7 +137,7 @@
     },
     {
         "statements":"EXPLAIN SELECT f2, f3 FROM shellTest f1 WHERE f2=5",
-        "ignore":["index_id", "cost", "cardinality"],
+        "ignore":["index_id", "cost", "cardinality", "optimizer_estimates"],
         "results": [
         {
             "plan": {
@@ -193,7 +193,7 @@
     },
     {
         "statements":"EXPLAIN SELECT f2, f1 FROM shellTest WHERE f1=5",
-        "ignore":["index_id", "cost", "cardinality"],
+        "ignore":["index_id", "cost", "cardinality", "optimizer_estimates"],
         "results": [
         {
             "plan": {
@@ -263,7 +263,7 @@
     },
     {
         "statements":"EXPLAIN SELECT d1.k0,d1.k1,d2.k3 FROM shellTest d1 JOIN shellTest d2 ON KEYS d1.k1 WHERE d1.k0=1",
-        "ignore":["index_id", "cost", "cardinality"],
+        "ignore":["index_id", "cost", "cardinality", "optimizer_estimates"],
         "results": [
         {
             "plan": {
@@ -341,7 +341,7 @@
     },
     {
         "statements":"explain select d.x from shellTest d where x IN (select raw b.x from shellTest b where b.x IN (select raw d.x from shellTest c use keys[\"kk02\"]))",
-        "ignore":["index_id", "cost", "cardinality", "~subqueries"],
+        "ignore":["index_id", "cost", "cardinality", "optimizer_estimates", "~subqueries"],
         "results": [
         {
             "plan": {
@@ -406,7 +406,7 @@
     },
     {
         "statements":"EXPLAIN SELECT d1.k0,d1.k1,d2.k3 FROM shellTest d1 UNNEST d1.a d2 WHERE d1.k0=1",
-        "ignore":["index_id", "cost", "cardinality"],
+        "ignore":["index_id", "cost", "cardinality", "optimizer_estimates"],
         "results": [
         {
             "plan": {
@@ -492,7 +492,7 @@
     },
     {
         "statements":"EXPLAIN SELECT d1.k0,d1.k1,d2.k3 FROM shellTest d1 UNNEST d1.k1 d2 WHERE d1.k0=1",
-        "ignore":["index_id", "cost", "cardinality"],
+        "ignore":["index_id", "cost", "cardinality", "optimizer_estimates"],
         "results": [
         {
             "plan": {
@@ -582,7 +582,7 @@
     },
     {
         "statements":"explain SELECT meta(b1).id b1id, meta(b2).id b2id FROM shellTest b1 JOIN shellTest b2 ON KEY b2.docid FOR b1 WHERE meta(b1).id > ''",
-        "ignore":["index_id", "cost", "cardinality"],
+        "ignore":["index_id", "cost", "cardinality", "optimizer_estimates"],
         "results": [
         {
             "plan": {
@@ -659,7 +659,7 @@
     },
     {
         "statements":"explain select email,VMs[0].RAM from shellTest where email LIKE '%@%.%' and VMs[0].RAM > 5 and join_day > 10",
-        "ignore":["index_id", "cost", "cardinality"],
+        "ignore":["index_id", "cost", "cardinality", "optimizer_estimates"],
         "results": [
         {
             "plan": {
@@ -743,7 +743,7 @@
     },
     {
         "statements":"explain SELECT store.main.status FROM shellTest store LEFT JOIN shellTest item ON KEY item.main.owner FOR store WHERE store.main.status = \"OPEN\"",
-        "ignore":["index_id", "cost", "cardinality"],
+        "ignore":["index_id", "cost", "cardinality", "optimizer_estimates"],
         "results": [
         {
             "plan": {
@@ -818,7 +818,7 @@
     },
     {
         "statements":"explain SELECT f2 AS o FROM shellTest WHERE f1 = 10 ORDER BY o + 1",
-        "ignore":["index_id", "cost", "cardinality"],
+        "ignore":["index_id", "cost", "cardinality", "optimizer_estimates"],
         "results": [
         {
             "plan": {
