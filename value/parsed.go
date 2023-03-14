@@ -135,7 +135,11 @@ func (this *parsedValue) ToString() string {
 }
 
 func (this *parsedValue) MarshalJSON() ([]byte, error) {
-	return this.unwrap().MarshalJSON()
+	v := this.unwrap()
+	if v != nil {
+		return v.MarshalJSON()
+	}
+	return _NULL_BYTES, nil
 }
 
 func (this *parsedValue) WriteJSON(w io.Writer, prefix, indent string, fast bool) error {
