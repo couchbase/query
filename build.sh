@@ -250,6 +250,7 @@ function repo_setup {
     repo_by_gomod ../n1fty/go.mod blevesearch/sear "" $defbranch
     repo_by_gomod ../n1fty/go.mod blevesearch/bleve_index_api "" $defbranch
     repo_by_gomod ../n1fty/go.mod blevesearch/scorch_segment_api "v2" $defbranch
+    repo_by_gomod ../n1fty/go.mod go.etcd.io/bbolt "" $defbranch
     repo_by_gomod go.mod gocbcore "v10" $defbranch
     repo_by_gomod go.mod gocbcore "v9" $defbranch
     repo_by_gomod go.mod x/net "" `go version |  awk -F'[. ]' '{print "release-branch." $3 "." $4}'` $defbranch
