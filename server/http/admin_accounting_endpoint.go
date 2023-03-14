@@ -160,11 +160,11 @@ func (this *HttpEndpoint) registerAccountingHandlers() {
 		accountingPrefix:                                  {handler: statsHandler, methods: []string{"GET"}},
 		accountingPrefix + "/{stat}":                      {handler: statHandler, methods: []string{"GET", "DELETE"}},
 		vitalsPrefix:                                      {handler: vitalsHandler, methods: []string{"GET"}},
-		preparedsPrefix:                                   {handler: preparedsHandler, methods: []string{"GET"}},
+		preparedsPrefix:                                   {handler: preparedsHandler, methods: []string{"GET", "POST"}},
 		preparedsPrefix + "/{name}":                       {handler: preparedHandler, methods: []string{"GET", "POST", "DELETE", "PUT"}},
-		requestsPrefix:                                    {handler: requestsHandler, methods: []string{"GET"}},
+		requestsPrefix:                                    {handler: requestsHandler, methods: []string{"GET", "POST"}},
 		requestsPrefix + "/{request}":                     {handler: requestHandler, methods: []string{"GET", "POST", "DELETE"}},
-		completedsPrefix:                                  {handler: completedsHandler, methods: []string{"GET"}},
+		completedsPrefix:                                  {handler: completedsHandler, methods: []string{"GET", "POST"}},
 		completedsPrefix + "/{request}":                   {handler: completedHandler, methods: []string{"GET", "POST", "DELETE"}},
 		functionsPrefix:                                   {handler: functionsHandler, methods: []string{"GET"}},
 		functionsPrefix + "/{name}":                       {handler: functionHandler, methods: []string{"GET", "POST", "DELETE"}},
@@ -522,61 +522,15 @@ func doPrepared(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 			af.EventTypeId = audit.API_DO_NOT_AUDIT
 		}
 
+		profiling := req.Method == "POST"
 		var res interface{}
-
 		prepareds.PreparedDo(name, func(entry *prepareds.CacheEntry) {
-
 			// for serverless user access, we treat entries not owned by the user as not existent
 			tenantName, _, err1 := endpoint.getImpersonateBucket(req)
 			if err1 != nil || (tenantName != "" && entry.Prepared.Tenant() != tenantName) {
 				return
 			}
-
-			itemMap := map[string]interface{}{
-				"name":            entry.Prepared.Name(),
-				"uses":            entry.Uses,
-				"statement":       entry.Prepared.Text(),
-				"indexApiVersion": entry.Prepared.IndexApiVersion(),
-				"featureControls": entry.Prepared.FeatureControls(),
-			}
-			if entry.Prepared.QueryContext() != "" {
-				itemMap["queryContext"] = entry.Prepared.QueryContext()
-			}
-			if entry.Prepared.EncodedPlan() != "" {
-				itemMap["encoded_plan"] = entry.Prepared.EncodedPlan()
-			}
-			isks := entry.Prepared.IndexScanKeyspaces()
-			if len(isks) > 0 {
-				itemMap["indexScanKeyspaces"] = isks
-			}
-			txPrepareds, txPlans := entry.Prepared.TxPrepared()
-			if len(txPrepareds) > 0 {
-				itemMap["txPrepareds"] = txPrepareds
-			}
-			if req.Method == "POST" {
-				itemMap["plan"] = entry.Prepared.Operator
-				if len(txPlans) > 0 {
-					itemMap["txPlans"] = txPlans
-				}
-			}
-
-			if !entry.Prepared.PreparedTime().IsZero() {
-				itemMap["planPreparedTime"] = entry.Prepared.PreparedTime().Format(util.DEFAULT_FORMAT)
-			}
-
-			// only give times for entries that have completed at least one execution
-			if entry.Uses > 0 && entry.RequestTime > 0 {
-				itemMap["lastUse"] = entry.LastUse.Format(util.DEFAULT_FORMAT)
-				itemMap["avgElapsedTime"] = (time.Duration(entry.RequestTime) /
-					time.Duration(entry.Uses)).String()
-				itemMap["avgServiceTime"] = (time.Duration(entry.ServiceTime) /
-					time.Duration(entry.Uses)).String()
-				itemMap["minElapsedTime"] = time.Duration(entry.MinRequestTime).String()
-				itemMap["minServiceTime"] = time.Duration(entry.MinServiceTime).String()
-				itemMap["maxElapsedTime"] = time.Duration(entry.MaxRequestTime).String()
-				itemMap["maxServiceTime"] = time.Duration(entry.MaxServiceTime).String()
-			}
-			res = itemMap
+			res = preparedWorkHorse(entry, profiling)
 		})
 		return res, nil
 	} else {
@@ -584,51 +538,72 @@ func doPrepared(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 	}
 }
 
+func preparedWorkHorse(entry *prepareds.CacheEntry, profiling bool) interface{} {
+	itemMap := map[string]interface{}{
+		"name":            entry.Prepared.Name(),
+		"uses":            entry.Uses,
+		"statement":       entry.Prepared.Text(),
+		"indexApiVersion": entry.Prepared.IndexApiVersion(),
+		"featureControls": entry.Prepared.FeatureControls(),
+	}
+	if entry.Prepared.QueryContext() != "" {
+		itemMap["queryContext"] = entry.Prepared.QueryContext()
+	}
+	if entry.Prepared.EncodedPlan() != "" {
+		itemMap["encoded_plan"] = entry.Prepared.EncodedPlan()
+	}
+	isks := entry.Prepared.IndexScanKeyspaces()
+	if len(isks) > 0 {
+		itemMap["indexScanKeyspaces"] = isks
+	}
+	txPrepareds, txPlans := entry.Prepared.TxPrepared()
+	if len(txPrepareds) > 0 {
+		itemMap["txPrepareds"] = txPrepareds
+	}
+	if profiling {
+		itemMap["plan"] = entry.Prepared.Operator
+		if len(txPlans) > 0 {
+			itemMap["txPlans"] = txPlans
+		}
+	}
+
+	if !entry.Prepared.PreparedTime().IsZero() {
+		itemMap["planPreparedTime"] = entry.Prepared.PreparedTime().Format(util.DEFAULT_FORMAT)
+	}
+
+	// only give times for entries that have completed at least one execution
+	if entry.Uses > 0 && entry.RequestTime > 0 {
+		itemMap["lastUse"] = entry.LastUse.Format(util.DEFAULT_FORMAT)
+		itemMap["avgElapsedTime"] = (time.Duration(entry.RequestTime) /
+			time.Duration(entry.Uses)).String()
+		itemMap["avgServiceTime"] = (time.Duration(entry.ServiceTime) /
+			time.Duration(entry.Uses)).String()
+		itemMap["minElapsedTime"] = time.Duration(entry.MinRequestTime).String()
+		itemMap["minServiceTime"] = time.Duration(entry.MinServiceTime).String()
+		itemMap["maxElapsedTime"] = time.Duration(entry.MaxRequestTime).String()
+		itemMap["maxServiceTime"] = time.Duration(entry.MaxServiceTime).String()
+	}
+	return itemMap
+}
+
 func doPrepareds(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
 	af.EventTypeId = audit.API_ADMIN_PREPAREDS
 	switch req.Method {
-	case "GET":
+	case "GET", "POST":
 		err, _ := endpoint.verifyCredentialsFromRequest("system:prepareds", auth.PRIV_SYSTEM_READ, req, af)
 		if err != nil {
 			return nil, err
 		}
 
 		numPrepareds := prepareds.CountPrepareds()
-		data := make([]map[string]interface{}, numPrepareds)
-		i := 0
+		data := make([]interface{}, 0, numPrepareds)
+		profiling := req.Method == "POST"
 
-		snapshot := func(name string, d *prepareds.CacheEntry) bool {
-
-			// FIXME quick hack to avoid overruns
-			if i >= numPrepareds {
-				return false
-			}
-			data[i] = map[string]interface{}{}
-			data[i]["name"] = d.Prepared.Name()
-			if d.Prepared.QueryContext() != "" {
-				data[i]["queryContext"] = d.Prepared.QueryContext()
-			}
-			if d.Prepared.EncodedPlan() != "" {
-				data[i]["encoded_plan"] = d.Prepared.EncodedPlan()
-			}
-			isks := d.Prepared.IndexScanKeyspaces()
-			if len(isks) > 0 {
-				data[i]["indexScanKeyspaces"] = isks
-			}
-			txPrepareds, _ := d.Prepared.TxPrepared()
-			if len(txPrepareds) > 0 {
-				data[i]["txPrepareds"] = txPrepareds
-			}
-			data[i]["statement"] = d.Prepared.Text()
-			data[i]["uses"] = d.Uses
-			if d.Uses > 0 {
-				data[i]["lastUse"] = d.LastUse.Format(util.DEFAULT_FORMAT)
-			}
-			i++
+		prepareds.PreparedsForeach(func(name string, d *prepareds.CacheEntry) bool {
+			p := preparedWorkHorse(d, profiling)
+			data = append(data, p)
 			return true
-		}
-
-		prepareds.PreparedsForeach(snapshot, nil)
+		}, nil)
 		return data, nil
 
 	default:
@@ -1442,7 +1417,7 @@ func doActiveRequest(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Re
 		if err1 != nil {
 			return nil, err1
 		}
-		return activeRequestWorkHorse(endpoint, requestId, impersonate, (req.Method == "POST")), nil
+		return processActiveRequest(endpoint, requestId, impersonate, (req.Method == "POST")), nil
 
 	} else if req.Method == "DELETE" {
 		err, _ := endpoint.verifyCredentialsFromRequest("system:active_requests", auth.PRIV_SYSTEM_READ, req, af)
@@ -1469,7 +1444,7 @@ func doActiveRequest(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Re
 	}
 }
 
-func activeRequestWorkHorse(endpoint *HttpEndpoint, requestId string, userName string, profiling bool) interface{} {
+func processActiveRequest(endpoint *HttpEndpoint, requestId string, userName string, profiling bool) interface{} {
 	var res interface{}
 
 	_ = endpoint.actives.Get(requestId, func(request server.Request) {
@@ -1479,136 +1454,141 @@ func activeRequestWorkHorse(endpoint *HttpEndpoint, requestId string, userName s
 				return
 			}
 		}
-		reqMap := map[string]interface{}{
-			"requestId": request.Id().String(),
-		}
-		cId := request.ClientID().String()
-		if cId != "" {
-			reqMap["clientContextID"] = cId
-		}
-		if request.Statement() != "" {
-			reqMap["statement"] = request.Statement()
-		}
-		if request.Type() != "" {
-			reqMap["statementType"] = request.Type()
-		}
-		if request.QueryContext() != "" {
-			reqMap["queryContext"] = request.QueryContext()
-		}
-		if request.Prepared() != nil {
-			p := request.Prepared()
-			reqMap["preparedName"] = p.Name()
-			reqMap["preparedText"] = p.Text()
-		}
-		if request.TxId() != "" {
-			reqMap["txid"] = request.TxId()
-		}
-		reqMap["requestTime"] = request.RequestTime().Format(expression.DEFAULT_FORMAT)
-		reqMap["elapsedTime"] = time.Since(request.RequestTime()).String()
-		if request.ServiceTime().IsZero() {
-			reqMap["executionTime"] = util.ZERO_DURATION_STR
-		} else {
-			reqMap["executionTime"] = time.Since(request.ServiceTime()).String()
-		}
-		if !request.TransactionStartTime().IsZero() {
-			reqMap["transactionElapsedTime"] = time.Since(request.TransactionStartTime()).String()
-			remTime := request.TxTimeout() - time.Since(request.TransactionStartTime())
-			if remTime > 0 {
-				reqMap["transactionRemainingTime"] = remTime.String()
-			}
-		}
-		reqMap["state"] = request.State().StateName()
-		reqMap["scanConsistency"] = request.ScanConsistency()
-		if request.UseFts() {
-			reqMap["useFts"] = request.UseFts()
-		}
-		if request.UseCBO() {
-			reqMap["useCBO"] = request.UseCBO()
-		}
-		if request.UseReplica() == value.TRUE {
-			reqMap["useReplica"] = value.TristateToString(request.UseReplica())
-		}
-		reqMap["n1qlFeatCtrl"] = request.FeatureControls()
-
-		p := request.Output().FmtPhaseCounts()
-		if p != nil {
-			reqMap["phaseCounts"] = p
-		}
-		p = request.Output().FmtPhaseOperators()
-		if p != nil {
-			reqMap["phaseOperators"] = p
-		}
-		p = request.Output().FmtPhaseTimes()
-		if p != nil {
-			reqMap["phaseTimes"] = p
-		}
-		usedMemory := request.UsedMemory()
-		if usedMemory != 0 {
-			reqMap["usedMemory"] = usedMemory
-		}
-		if profiling {
-
-			prof := request.Profile()
-			if prof == server.ProfUnset {
-				prof = endpoint.server.Profile()
-			}
-			t := request.GetTimings()
-
-			// TODO - check lifetime of entry
-			// by the time we marshal, is this still valid?
-			if (prof == server.ProfOn || prof == server.ProfBench) && t != nil {
-				reqMap["timings"] = t
-				p = request.Output().FmtOptimizerEstimates(t)
-				if p != nil {
-					reqMap["optimizerEstimates"] = p
-				}
-			}
-			cpuTime := request.CpuTime()
-			if cpuTime > time.Duration(0) {
-				reqMap["cpuTime"] = cpuTime.String()
-			}
-
-			var ctrl bool
-			ctr := request.Controls()
-			if ctr == value.NONE {
-				ctrl = endpoint.server.Controls()
-			} else {
-				ctrl = (ctr == value.TRUE)
-			}
-			if ctrl {
-				na := request.NamedArgs()
-				if na != nil {
-					reqMap["namedArgs"] = na
-				}
-				pa := request.PositionalArgs()
-				if pa != nil {
-					reqMap["positionalArgs"] = pa
-				}
-				memoryQuota := request.MemoryQuota()
-				if memoryQuota != 0 {
-					reqMap["memoryQuota"] = memoryQuota
-				}
-			}
-		}
-		credsString := datastore.CredsString(request.Credentials())
-		if credsString != "" {
-			reqMap["users"] = credsString
-		}
-		remoteAddr := request.RemoteAddr()
-		if remoteAddr != "" {
-			reqMap["remoteAddr"] = remoteAddr
-		}
-		userAgent := request.UserAgent()
-		if userAgent != "" {
-			reqMap["userAgent"] = userAgent
-		}
-		throttleTime := request.ThrottleTime()
-		if throttleTime > time.Duration(0) {
-			reqMap["throttleTime"] = throttleTime.String()
-		}
-		res = reqMap
+		res = activeRequestWorkHorse(endpoint, request, profiling)
 	})
 	return res
+}
+
+func activeRequestWorkHorse(endpoint *HttpEndpoint, request server.Request, profiling bool) interface{} {
+	reqMap := map[string]interface{}{
+		"requestId": request.Id().String(),
+	}
+	cId := request.ClientID().String()
+	if cId != "" {
+		reqMap["clientContextID"] = cId
+	}
+	if request.Statement() != "" {
+		reqMap["statement"] = request.Statement()
+	}
+	if request.Type() != "" {
+		reqMap["statementType"] = request.Type()
+	}
+	if request.QueryContext() != "" {
+		reqMap["queryContext"] = request.QueryContext()
+	}
+	if request.Prepared() != nil {
+		p := request.Prepared()
+		reqMap["preparedName"] = p.Name()
+		reqMap["preparedText"] = p.Text()
+	}
+	if request.TxId() != "" {
+		reqMap["txid"] = request.TxId()
+	}
+	reqMap["requestTime"] = request.RequestTime().Format(expression.DEFAULT_FORMAT)
+	reqMap["elapsedTime"] = time.Since(request.RequestTime()).String()
+	if request.ServiceTime().IsZero() {
+		reqMap["executionTime"] = util.ZERO_DURATION_STR
+	} else {
+		reqMap["executionTime"] = time.Since(request.ServiceTime()).String()
+	}
+	if !request.TransactionStartTime().IsZero() {
+		reqMap["transactionElapsedTime"] = time.Since(request.TransactionStartTime()).String()
+		remTime := request.TxTimeout() - time.Since(request.TransactionStartTime())
+		if remTime > 0 {
+			reqMap["transactionRemainingTime"] = remTime.String()
+		}
+	}
+	reqMap["state"] = request.State().StateName()
+	reqMap["scanConsistency"] = request.ScanConsistency()
+	if request.UseFts() {
+		reqMap["useFts"] = request.UseFts()
+	}
+	if request.UseCBO() {
+		reqMap["useCBO"] = request.UseCBO()
+	}
+	if request.UseReplica() == value.TRUE {
+		reqMap["useReplica"] = value.TristateToString(request.UseReplica())
+	}
+	reqMap["n1qlFeatCtrl"] = request.FeatureControls()
+
+	p := request.Output().FmtPhaseCounts()
+	if p != nil {
+		reqMap["phaseCounts"] = p
+	}
+	p = request.Output().FmtPhaseOperators()
+	if p != nil {
+		reqMap["phaseOperators"] = p
+	}
+	p = request.Output().FmtPhaseTimes()
+	if p != nil {
+		reqMap["phaseTimes"] = p
+	}
+	usedMemory := request.UsedMemory()
+	if usedMemory != 0 {
+		reqMap["usedMemory"] = usedMemory
+	}
+	if profiling {
+
+		prof := request.Profile()
+		if prof == server.ProfUnset {
+			prof = endpoint.server.Profile()
+		}
+		t := request.GetTimings()
+
+		// TODO - check lifetime of entry
+		// by the time we marshal, is this still valid?
+		if (prof == server.ProfOn || prof == server.ProfBench) && t != nil {
+			reqMap["timings"] = t
+			p = request.Output().FmtOptimizerEstimates(t)
+			if p != nil {
+				reqMap["optimizerEstimates"] = p
+			}
+		}
+		cpuTime := request.CpuTime()
+		if cpuTime > time.Duration(0) {
+			reqMap["cpuTime"] = cpuTime.String()
+		}
+
+		var ctrl bool
+		ctr := request.Controls()
+		if ctr == value.NONE {
+			ctrl = endpoint.server.Controls()
+		} else {
+			ctrl = (ctr == value.TRUE)
+		}
+		if ctrl {
+			na := request.NamedArgs()
+			if na != nil {
+				reqMap["namedArgs"] = na
+			}
+			pa := request.PositionalArgs()
+			if pa != nil {
+				reqMap["positionalArgs"] = pa
+			}
+			memoryQuota := request.MemoryQuota()
+			if memoryQuota != 0 {
+				reqMap["memoryQuota"] = memoryQuota
+			}
+		}
+	}
+	credsString := datastore.CredsString(request.Credentials())
+	if credsString != "" {
+		reqMap["users"] = credsString
+	}
+	remoteAddr := request.RemoteAddr()
+	if remoteAddr != "" {
+		reqMap["remoteAddr"] = remoteAddr
+	}
+	userAgent := request.UserAgent()
+	if userAgent != "" {
+		reqMap["userAgent"] = userAgent
+	}
+	throttleTime := request.ThrottleTime()
+	if throttleTime > time.Duration(0) {
+		reqMap["throttleTime"] = throttleTime.String()
+	}
+
+	return reqMap
 }
 
 func doActiveRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
@@ -1623,76 +1603,14 @@ func doActiveRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.R
 		return nil, err
 	}
 
-	requests := make([]map[string]interface{}, numRequests)
-	i := 0
+	requests := make([]interface{}, 0, numRequests)
+	profiling := req.Method == "POST"
 
-	snapshot := func(requestId string, request server.Request) bool {
-
-		// FIXME quick hack to avoid overruns
-		if i >= numRequests {
-			return false
-		}
-		requests[i] = map[string]interface{}{}
-		requests[i]["requestId"] = request.Id().String()
-		cId := request.ClientID().String()
-		if cId != "" {
-			requests[i]["clientContextID"] = cId
-		}
-		if request.Statement() != "" {
-			requests[i]["statement"] = request.Statement()
-		}
-		if request.Type() != "" {
-			requests[i]["statementType"] = request.Type()
-		}
-		if request.Prepared() != nil {
-			p := request.Prepared()
-			requests[i]["preparedName"] = p.Name()
-			requests[i]["preparedStatement"] = p.Text()
-		}
-		if request.QueryContext() != "" {
-			requests[i]["queryContext"] = request.QueryContext()
-		}
-		if request.TxId() != "" {
-			requests[i]["txid"] = request.TxId()
-		}
-		requests[i]["requestTime"] = request.RequestTime().Format(expression.DEFAULT_FORMAT)
-		requests[i]["elapsedTime"] = time.Since(request.RequestTime()).String()
-		if request.ServiceTime().IsZero() {
-			requests[i]["executionTime"] = util.ZERO_DURATION_STR
-		} else {
-			requests[i]["executionTime"] = time.Since(request.ServiceTime()).String()
-		}
-		if !request.TransactionStartTime().IsZero() {
-			requests[i]["transactionElapsedTime"] = time.Since(request.TransactionStartTime()).String()
-			remTime := request.TxTimeout() - time.Since(request.TransactionStartTime())
-			if remTime > 0 {
-				requests[i]["transactionRemainingTime"] = remTime.String()
-			}
-		}
-		requests[i]["state"] = request.State().StateName()
-		requests[i]["scanConsistency"] = request.ScanConsistency()
-
-		credsString := datastore.CredsString(request.Credentials())
-		if credsString != "" {
-			requests[i]["users"] = credsString
-		}
-
-		p := request.Output().FmtPhaseCounts()
-		if p != nil {
-			requests[i]["phaseCounts"] = p
-		}
-		p = request.Output().FmtPhaseOperators()
-		if p != nil {
-			requests[i]["phaseOperators"] = p
-		}
-		p = request.Output().FmtPhaseTimes()
-		if p != nil {
-			requests[i]["phaseTimes"] = p
-		}
-		i++
+	endpoint.actives.ForEach(func(requestId string, request server.Request) bool {
+		r := activeRequestWorkHorse(endpoint, request, profiling)
+		requests = append(requests, r)
 		return true
-	}
-	endpoint.actives.ForEach(snapshot, nil)
+	}, nil)
 	return requests, nil
 }
 
@@ -1719,7 +1637,7 @@ func doCompletedRequest(endpoint *HttpEndpoint, w http.ResponseWriter, req *http
 		if err1 != nil {
 			return nil, err1
 		}
-		return completedRequestWorkHorse(requestId, impersonate, (req.Method == "POST")), nil
+		return processCompletedRequest(requestId, impersonate, (req.Method == "POST")), nil
 	} else if req.Method == "DELETE" {
 		err, _ := endpoint.verifyCredentialsFromRequest("system:completed_requests", auth.PRIV_SYSTEM_READ, req, af)
 		if err != nil {
@@ -1742,118 +1660,122 @@ func doCompletedRequest(endpoint *HttpEndpoint, w http.ResponseWriter, req *http
 	}
 }
 
-func completedRequestWorkHorse(requestId string, userName string, profiling bool) interface{} {
+func processCompletedRequest(requestId string, userName string, profiling bool) interface{} {
 	var res interface{}
 
 	server.RequestDo(requestId, func(request *server.RequestLogEntry) {
 		if userName != "" && userName != request.Users {
 			return
 		}
-		reqMap := map[string]interface{}{
-			"requestId": request.RequestId,
-		}
-		if request.ClientId != "" {
-			reqMap["clientContextID"] = request.ClientId
-		}
-		reqMap["state"] = request.State
-		reqMap["scanConsistency"] = request.ScanConsistency
-		if request.UseFts {
-			reqMap["useFts"] = request.UseFts
-		}
-		if request.UseCBO {
-			reqMap["useCBO"] = request.UseCBO
-		}
-		if request.UseReplica == value.TRUE {
-			reqMap["useReplica"] = value.TristateToString(request.UseReplica)
-		}
-		reqMap["n1qlFeatCtrl"] = request.FeatureControls
-		if request.QueryContext != "" {
-			reqMap["queryContext"] = request.QueryContext
-		}
-		if request.Statement != "" {
-			reqMap["statement"] = request.Statement
-		}
-		if request.StatementType != "" {
-			reqMap["statementType"] = request.StatementType
-		}
-		if request.PreparedName != "" {
-			reqMap["preparedName"] = request.PreparedName
-			reqMap["preparedText"] = request.PreparedText
-		}
-		if request.TxId != "" {
-			reqMap["txid"] = request.TxId
-		}
-		reqMap["requestTime"] = request.Time.Format(expression.DEFAULT_FORMAT)
-		reqMap["elapsedTime"] = request.ElapsedTime.String()
-		reqMap["serviceTime"] = request.ServiceTime.String()
-		if request.TransactionElapsedTime > 0 {
-			reqMap["transactionElapsedTime"] = request.TransactionElapsedTime.String()
-		}
-		if request.TransactionRemainingTime > 0 {
-			reqMap["transactionRemainingTime"] = request.TransactionRemainingTime.String()
-		}
-		reqMap["resultCount"] = request.ResultCount
-		reqMap["resultSize"] = request.ResultSize
-		reqMap["errorCount"] = request.ErrorCount
-		if request.Mutations != 0 {
-			reqMap["mutations"] = request.Mutations
-		}
-		if request.PhaseCounts != nil {
-			reqMap["phaseCounts"] = request.PhaseCounts
-		}
-		if request.PhaseOperators != nil {
-			reqMap["phaseOperators"] = request.PhaseOperators
-		}
-		if request.PhaseTimes != nil {
-			reqMap["phaseTimes"] = request.PhaseTimes
-		}
-		if request.UsedMemory != 0 {
-			reqMap["usedMemory"] = request.UsedMemory
-		}
-		if request.Tag != "" {
-			reqMap["~tag"] = request.Tag
-		}
-
-		if profiling {
-			if request.NamedArgs != nil {
-				reqMap["namedArgs"] = request.NamedArgs
-			}
-			if request.PositionalArgs != nil {
-				reqMap["positionalArgs"] = request.PositionalArgs
-			}
-			timings := request.Timings()
-			if timings != nil {
-				reqMap["timings"] = timings
-			}
-			if request.CpuTime > time.Duration(0) {
-				reqMap["cpuTime"] = request.CpuTime.String()
-			}
-			optEstimates := request.OptEstimates()
-			if optEstimates != nil {
-				reqMap["optimizerEstimates"] = optEstimates
-			}
-			if request.Errors != nil {
-				reqMap["errors"] = request.Errors
-			}
-			if request.MemoryQuota != 0 {
-				reqMap["memoryQuota"] = request.MemoryQuota
-			}
-		}
-		if request.Users != "" {
-			reqMap["users"] = request.Users
-		}
-		if request.RemoteAddr != "" {
-			reqMap["remoteAddr"] = request.RemoteAddr
-		}
-		if request.UserAgent != "" {
-			reqMap["userAgent"] = request.UserAgent
-		}
-		if request.ThrottleTime > time.Duration(0) {
-			reqMap["throttleTime"] = request.ThrottleTime.String()
-		}
-		res = reqMap
+		res = completedRequestWorkHorse(request, profiling)
 	})
 	return res
+}
+
+func completedRequestWorkHorse(request *server.RequestLogEntry, profiling bool) interface{} {
+	reqMap := map[string]interface{}{
+		"requestId": request.RequestId,
+	}
+	if request.ClientId != "" {
+		reqMap["clientContextID"] = request.ClientId
+	}
+	reqMap["state"] = request.State
+	reqMap["scanConsistency"] = request.ScanConsistency
+	if request.UseFts {
+		reqMap["useFts"] = request.UseFts
+	}
+	if request.UseCBO {
+		reqMap["useCBO"] = request.UseCBO
+	}
+	if request.UseReplica == value.TRUE {
+		reqMap["useReplica"] = value.TristateToString(request.UseReplica)
+	}
+	reqMap["n1qlFeatCtrl"] = request.FeatureControls
+	if request.QueryContext != "" {
+		reqMap["queryContext"] = request.QueryContext
+	}
+	if request.Statement != "" {
+		reqMap["statement"] = request.Statement
+	}
+	if request.StatementType != "" {
+		reqMap["statementType"] = request.StatementType
+	}
+	if request.PreparedName != "" {
+		reqMap["preparedName"] = request.PreparedName
+		reqMap["preparedText"] = request.PreparedText
+	}
+	if request.TxId != "" {
+		reqMap["txid"] = request.TxId
+	}
+	reqMap["requestTime"] = request.Time.Format(expression.DEFAULT_FORMAT)
+	reqMap["elapsedTime"] = request.ElapsedTime.String()
+	reqMap["serviceTime"] = request.ServiceTime.String()
+	if request.TransactionElapsedTime > 0 {
+		reqMap["transactionElapsedTime"] = request.TransactionElapsedTime.String()
+	}
+	if request.TransactionRemainingTime > 0 {
+		reqMap["transactionRemainingTime"] = request.TransactionRemainingTime.String()
+	}
+	reqMap["resultCount"] = request.ResultCount
+	reqMap["resultSize"] = request.ResultSize
+	reqMap["errorCount"] = request.ErrorCount
+	if request.Mutations != 0 {
+		reqMap["mutations"] = request.Mutations
+	}
+	if request.PhaseCounts != nil {
+		reqMap["phaseCounts"] = request.PhaseCounts
+	}
+	if request.PhaseOperators != nil {
+		reqMap["phaseOperators"] = request.PhaseOperators
+	}
+	if request.PhaseTimes != nil {
+		reqMap["phaseTimes"] = request.PhaseTimes
+	}
+	if request.UsedMemory != 0 {
+		reqMap["usedMemory"] = request.UsedMemory
+	}
+	if request.Tag != "" {
+		reqMap["~tag"] = request.Tag
+	}
+
+	if profiling {
+		if request.NamedArgs != nil {
+			reqMap["namedArgs"] = request.NamedArgs
+		}
+		if request.PositionalArgs != nil {
+			reqMap["positionalArgs"] = request.PositionalArgs
+		}
+		timings := request.Timings()
+		if timings != nil {
+			reqMap["timings"] = timings
+		}
+		if request.CpuTime > time.Duration(0) {
+			reqMap["cpuTime"] = request.CpuTime.String()
+		}
+		optEstimates := request.OptEstimates()
+		if optEstimates != nil {
+			reqMap["optimizerEstimates"] = optEstimates
+		}
+		if request.Errors != nil {
+			reqMap["errors"] = request.Errors
+		}
+		if request.MemoryQuota != 0 {
+			reqMap["memoryQuota"] = request.MemoryQuota
+		}
+	}
+	if request.Users != "" {
+		reqMap["users"] = request.Users
+	}
+	if request.RemoteAddr != "" {
+		reqMap["remoteAddr"] = request.RemoteAddr
+	}
+	if request.UserAgent != "" {
+		reqMap["userAgent"] = request.UserAgent
+	}
+	if request.ThrottleTime > time.Duration(0) {
+		reqMap["throttleTime"] = request.ThrottleTime.String()
+	}
+	return reqMap
 }
 
 func doCompletedRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
@@ -1864,74 +1786,14 @@ func doCompletedRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *htt
 	}
 
 	numRequests := server.RequestsCount()
-	requests := make([]map[string]interface{}, numRequests)
-	i := 0
+	requests := make([]interface{}, 0, numRequests)
+	profiling := req.Method == "POST"
 
-	snapshot := func(requestId string, request *server.RequestLogEntry) bool {
-
-		// FIXME quick hack to avoid overruns
-		if i >= numRequests {
-			return false
-		}
-		requests[i] = map[string]interface{}{}
-		requests[i]["requestId"] = request.RequestId
-		if request.ClientId != "" {
-			requests[i]["clientContextID"] = request.ClientId
-		}
-		requests[i]["state"] = request.State
-		requests[i]["scanConsistency"] = request.ScanConsistency
-		if request.Statement != "" {
-			requests[i]["statement"] = request.Statement
-		}
-		if request.StatementType != "" {
-			requests[i]["statementType"] = request.StatementType
-		}
-		if request.QueryContext != "" {
-			requests[i]["queryContext"] = request.QueryContext
-		}
-		if request.PreparedName != "" {
-			requests[i]["preparedName"] = request.PreparedName
-			requests[i]["preparedText"] = request.PreparedText
-		}
-		if request.TxId != "" {
-			requests[i]["txid"] = request.TxId
-		}
-		requests[i]["requestTime"] = request.Time.Format(expression.DEFAULT_FORMAT)
-		requests[i]["elapsedTime"] = request.ElapsedTime.String()
-		requests[i]["serviceTime"] = request.ServiceTime.String()
-		if request.TransactionElapsedTime > 0 {
-			requests[i]["transactionElapsedTime"] = request.TransactionElapsedTime.String()
-		}
-		if request.TransactionRemainingTime > 0 {
-			requests[i]["transactionRemainingTime"] = request.TransactionRemainingTime.String()
-		}
-		requests[i]["resultCount"] = request.ResultCount
-		requests[i]["resultSize"] = request.ResultSize
-		requests[i]["errorCount"] = request.ErrorCount
-		if request.Mutations != 0 {
-			requests[i]["mutations"] = request.Mutations
-		}
-		if request.PhaseCounts != nil {
-			requests[i]["phaseCounts"] = request.PhaseCounts
-		}
-		if request.PhaseOperators != nil {
-			requests[i]["phaseOperators"] = request.PhaseOperators
-		}
-		if request.PhaseTimes != nil {
-			requests[i]["phaseTimes"] = request.PhaseTimes
-		}
-		if request.Users != "" {
-			requests[i]["users"] = request.Users
-		}
-		if request.Tag != "" {
-			requests[i]["~tag"] = request.Tag
-		}
-
-		// FIXME more stats
-		i++
+	server.RequestsForeach(func(requestId string, request *server.RequestLogEntry) bool {
+		r := completedRequestWorkHorse(request, profiling)
+		requests = append(requests, r)
 		return true
-	}
-	server.RequestsForeach(snapshot, nil)
+	}, nil)
 	return requests, nil
 }
 
