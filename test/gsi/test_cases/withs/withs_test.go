@@ -29,6 +29,7 @@ func TestWiths(t *testing.T) {
 	fmt.Println("Creating indexes")
 	runStmt(qc, "CREATE INDEX st_idx1 on shellTest(c11, c12) WHERE type = \"left\"")
 	runStmt(qc, "CREATE INDEX st_idx2 on shellTest(c21, c22) WHERE type = \"right\"")
+	runStmt(qc, "CREATE INDEX st_idx3 on shellTest(c12, a11, c11) WHERE type = \"left\"")
 
 	fmt.Println("Running Withs test cases")
 
@@ -41,6 +42,7 @@ func TestWiths(t *testing.T) {
 	fmt.Println("Dropping indexes")
 	runStmt(qc, "DROP INDEX shellTest.st_idx1")
 	runStmt(qc, "DROP INDEX shellTest.st_idx2")
+	runStmt(qc, "DROP INDEX shellTest.st_idx3")
 
 	// create primary indexes
 	runStmt(qc, "CREATE PRIMARY INDEX ON shellTest")

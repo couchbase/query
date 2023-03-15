@@ -20,6 +20,95 @@
                 "id": "test11_withs"
             }
         ]
+    },
+    {
+	"testcase": "MB-55978, part 1",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.`plan`.`~child`.`~children` SATISFIES v.`#operator` = 'ExpressionScan' AND v.`alias` = 'c1' AND v.`nested_loop` = true AND v.`uncorrelated` = true END"
+        },
+        "statements":"WITH a AS ([1, 2, 3]) SELECT c1, st.c12 FROM shellTest st JOIN a AS c1 USE NL ON st.c11 = c1 WHERE st.type = \"left\"",
+        "results": [
+            {
+                "c1": 1,
+                "c12": 10
+            },
+            {
+                "c1": 2,
+                "c12": 20
+            },
+            {
+                "c1": 3,
+                "c12": 30
+            }
+        ]
+    },
+    {
+	"testcase": "MB-55978, part 2, ExpressionScan inside correlated subquery, main query covered",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY u WITHIN p.`plan`.`~children` SATISFIES u.`#operator` LIKE 'IndexScan%' AND u.`covers` IS NOT MISSING END AND ANY v WITHIN p.`~subqueries`[0].plan.`~children` SATISFIES v.`#operator` = 'ExpressionScan' AND v.`alias` = 's' AND v.`uncorrelated` IS MISSING END"
+        },
+        "statements":"SELECT (SELECT s, st.c11 FROM st.a11 AS s) AS sub FROM shellTest AS st WHERE st.c12 = 30 AND st.type = \"left\"",
+        "results": [
+            {
+                "sub": [
+                    {
+                        "c11": 3,
+                        "s": 3
+                    },
+                    {
+                        "c11": 3,
+                        "s": 4
+                    },
+                    {
+                        "c11": 3,
+                        "s": 20
+                    },
+                    {
+                        "c11": 3,
+                        "s": 40
+                    }
+                ]
+            }
+        ]
+    },
+    {
+	"testcase": "MB-55978, part 3, ExpressionScan under nested-loop join inside correlated subquery, main query covered",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY u WITHIN p.`plan`.`~children` SATISFIES u.`#operator` LIKE 'IndexScan%' AND u.`covers` IS NOT MISSING END AND ANY v WITHIN p.`~subqueries`[0].plan.`~child`.`~children` SATISFIES v.`#operator` = 'ExpressionScan' AND v.`alias` = 'a1' AND v.`nested_loop` = true AND v.`uncorrelated` = true END"
+        },
+        "statements":"SELECT (WITH a AS ([20, 40]) SELECT s, st.c11 FROM st.a11 AS s JOIN a AS a1 USE NL ON a1 = s) AS sub FROM shellTest AS st WHERE st.c12 = 30 AND st.type = \"left\"",
+        "results": [
+            {
+                "sub": [
+                    {
+                        "c11": 3,
+                        "s": 20
+                    },
+                    {
+                        "c11": 3,
+                        "s": 40
+                    }
+                ]
+            }
+        ]
     }
 ]
 
