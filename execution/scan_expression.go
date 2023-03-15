@@ -169,6 +169,12 @@ func (this *ExpressionScan) RunOnce(context *Context, parent value.Value) {
 				return
 			}
 
+			if this.plan.IsUnderNL() {
+				// Reset Covers (inherited from parent) if under nested-loop join
+				// (this needs to be done after the expression evaluations above)
+				av.ResetCovers(nil)
+			}
+
 			if useCache {
 				av.Track()
 				if context.UseRequestQuota() {

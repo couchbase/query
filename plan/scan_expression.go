@@ -19,20 +19,22 @@ type ExpressionScan struct {
 	readonly
 	optEstimate
 	BuildBitFilterBase
-	fromExpr   expression.Expression
-	alias      string
-	correlated bool
-	filter     expression.Expression
-	subqPlan   Operator
+	fromExpr    expression.Expression
+	alias       string
+	correlated  bool
+	nested_loop bool
+	filter      expression.Expression
+	subqPlan    Operator
 }
 
-func NewExpressionScan(fromExpr expression.Expression, alias string, correlated bool,
+func NewExpressionScan(fromExpr expression.Expression, alias string, correlated, nested_loop bool,
 	filter expression.Expression, cost, cardinality float64, size int64, frCost float64) *ExpressionScan {
 	rv := &ExpressionScan{
-		fromExpr:   fromExpr,
-		alias:      alias,
-		correlated: correlated,
-		filter:     filter,
+		fromExpr:    fromExpr,
+		alias:       alias,
+		correlated:  correlated,
+		nested_loop: nested_loop,
+		filter:      filter,
 	}
 	setOptEstimate(&rv.optEstimate, cost, cardinality, size, frCost)
 	return rv
@@ -60,6 +62,10 @@ func (this *ExpressionScan) Alias() string {
 
 func (this *ExpressionScan) IsCorrelated() bool {
 	return this.correlated
+}
+
+func (this *ExpressionScan) IsUnderNL() bool {
+	return this.nested_loop
 }
 
 func (this *ExpressionScan) Filter() expression.Expression {
@@ -93,6 +99,9 @@ func (this *ExpressionScan) MarshalBase(f func(map[string]interface{})) map[stri
 	if !this.correlated {
 		r["uncorrelated"] = !this.correlated
 	}
+	if this.nested_loop {
+		r["nested_loop"] = this.nested_loop
+	}
 	if this.filter != nil {
 		r["filter"] = expression.NewStringer().Visit(this.filter)
 	}
@@ -114,6 +123,7 @@ func (this *ExpressionScan) UnmarshalJSON(body []byte) error {
 		FromExpr        string                 `json:"expr"`
 		Alias           string                 `json:"alias"`
 		UnCorrelated    bool                   `json:"uncorrelated"`
+		NestedLoop      bool                   `json:"nested_loop"`
 		Filter          string                 `json:"filter"`
 		OptEstimate     map[string]interface{} `json:"optimizer_estimates"`
 		BuildBitFilters []json.RawMessage      `json:"build_bit_filters"`
@@ -134,6 +144,7 @@ func (this *ExpressionScan) UnmarshalJSON(body []byte) error {
 	// we set correlated to be true just to be safe, i.e., if
 	// no info in the plan, then assume correlated is true.
 	this.correlated = !_unmarshalled.UnCorrelated
+	this.nested_loop = _unmarshalled.NestedLoop
 
 	if _unmarshalled.Filter != "" {
 		this.filter, err = parser.Parse(_unmarshalled.Filter)
