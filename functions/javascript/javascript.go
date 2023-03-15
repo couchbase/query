@@ -394,18 +394,21 @@ func NewJavascriptBody(library, object, text string) (functions.FunctionBody, er
 }
 
 func NewJavascriptBodyWithDetails(library, object, prefix, libName, text string) (functions.FunctionBody, errors.Error) {
-	var evaluator *evaluatorDesc
-
+	var evalName string
 	enabled := false
+
 	if text == "" {
 		enabled = external.evaluator != nil
+		evalName = external.name
 	} else if tenant.IsServerless() {
 		enabled = tenants != nil
+		evalName = "tenant evaluator"
 	} else {
 		enabled = internal.evaluator != nil
+		evalName = internal.name
 	}
 	if !enabled {
-		return nil, errors.NewFunctionsDisabledError(evaluator.name)
+		return nil, errors.NewFunctionsDisabledError(evalName)
 	}
 	return &javascriptBody{library: library, object: object, prefix: prefix, libName: libName, text: text}, nil
 }
