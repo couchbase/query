@@ -13,6 +13,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/test/gsi"
 )
 
@@ -39,7 +40,7 @@ func runMatch(filename string, prepared, explain bool, qc *gsi.MockServer, t *te
 	gsi.RunMatch(filename, prepared, explain, qc, t)
 }
 
-func runStmt(mockServer *gsi.MockServer, q string) *gsi.RunResult {
+func runStmt(mockServer *gsi.MockServer, q string) ([]interface{}, []errors.Error, errors.Error) {
 	return gsi.RunStmt(mockServer, q)
 }
 
