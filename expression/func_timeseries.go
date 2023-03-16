@@ -498,8 +498,7 @@ func (this *TimeSeriesData) GetTimeSeriesValue(tdata value.Value, idx int) (valu
 		i := 0
 		if v, ok := tdata.Index(i); ok {
 			if v.Type() == value.NUMBER {
-				atime = value.AsNumberValue(v).Int64()
-				if this.tsRanges.ValidRange(atime) {
+				if atime, aok := value.IsIntValue(v); aok && this.tsRanges.ValidRange(atime) {
 					m = make(map[string]interface{}, 2)
 					m["_t"] = atime
 					if this.tsProjectAll {
@@ -574,11 +573,4 @@ func (this TimeSeriesRanges) Qualified(dstart, dend int64) bool {
 	}
 	return len(this) == 0
 
-}
-
-func getInt64(v value.Value) (int64, bool) {
-	if v.Type() == value.NUMBER {
-		return value.IsIntValue(v)
-	}
-	return 0, false
 }
