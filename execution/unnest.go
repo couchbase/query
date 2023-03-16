@@ -203,6 +203,7 @@ func (this *Unnest) processTimeSeriesItem(item value.AnnotatedValue, context *Co
 	filter := this.plan.Filter()
 	// Attach and send
 	var baseSize uint64
+	var isValidIndex bool
 	var nextAct value.Value
 
 	// iterate of over timeseries data points
@@ -212,10 +213,9 @@ func (this *Unnest) processTimeSeriesItem(item value.AnnotatedValue, context *Co
 		actv := value.NewAnnotatedValue(act)
 		actv.SetAttachment("unnest_position", idx-1)
 
-		nextAct, idx, ok = this.timeSeriesData.GetNextValue(idx)
+		nextAct, idx, isValidIndex = this.timeSeriesData.GetNextValue(idx)
 		baseSize = 0
-		isEnd := act.Type() == value.MISSING && !ok
-		if isEnd {
+		if !isValidIndex {
 			av = nitem
 			if context.UseRequestQuota() {
 				baseSize = nitem.Size()
@@ -252,7 +252,7 @@ func (this *Unnest) processTimeSeriesItem(item value.AnnotatedValue, context *Co
 		}
 
 		// no more
-		if isEnd {
+		if !isValidIndex {
 			break
 		}
 
