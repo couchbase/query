@@ -276,7 +276,7 @@ var _CHECK_SET = map[string]CheckAndSetPathValue{
 		if v.Type() == value.MISSING {
 			t.tsInterval = 0
 			return true
-		} else if n, nok := value.IsIntValue(v); nok {
+		} else if n, nok := value.IsIntValue(v); nok && n >= 0 {
 			t.tsInterval = n
 			return true
 		}
