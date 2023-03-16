@@ -336,13 +336,13 @@ func GetTimeSeriesProject(tsProject value.Value) (all bool, rv map[int]bool) {
 		idx := 0
 		p, pok := tsProject.Index(0)
 		for pok {
-			if n, ok := value.IsIntValue(p); ok {
+			if n, ok := value.IsIntValue(p); ok && n >= 0 {
 				rv[int(n)] = true
 			}
 			idx++
 			p, pok = tsProject.Index(idx)
 		}
-	} else if n, ok := value.IsIntValue(tsProject); ok {
+	} else if n, ok := value.IsIntValue(tsProject); ok && n >= 0 {
 		rv[int(n)] = true
 	}
 
