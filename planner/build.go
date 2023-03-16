@@ -54,7 +54,13 @@ func Build(stmt algebra.Statement, datastore, systemstore datastore.Datastore,
 		}
 
 		if stream {
-			op = plan.NewSequence(op, plan.NewStream(op.Cost(), op.Cardinality(), op.Size(), op.FrCost()))
+
+			// Do not serialize Stream Op when the stmt is MERGE
+			// Because in MERGE - with Serialization of Stream - whichever child DML op finishes first, notifies Stream
+			// And can cause early termination
+			serializable := stmt.Type() != "MERGE"
+
+			op = plan.NewSequence(op, plan.NewStream(op.Cost(), op.Cardinality(), op.Size(), op.FrCost(), serializable))
 		}
 
 		// Always insert an Authorize operator, even if no privileges need to

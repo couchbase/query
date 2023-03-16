@@ -36,7 +36,7 @@ func NewStream(plan *plan.Stream, context *Context) *Stream {
 
 	// Stream does not run inside a parallel group and is not
 	// guaranteed to have a single producer
-	if context.MaxParallelism() == 1 {
+	if plan.Serializable() && context.MaxParallelism() == 1 {
 		newSerializedBase(&rv.base, context)
 	} else {
 		newRedirectBase(&rv.base, context)
@@ -75,7 +75,6 @@ func (this *Stream) processItem(item value.AnnotatedValue, context *Context) boo
 
 	// MB-53235 for serialized operators item management rests with the producer
 	if ok || !this.serialized {
-
 		// item not used past this point
 		if context.UseRequestQuota() {
 			context.ReleaseValueSize(item.Size())

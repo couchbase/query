@@ -196,6 +196,8 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 	var updateCard, deleteCard, insertCard float64
 	var updateFrCost, deleteFrCost, insertFrCost float64
 
+	fastDiscard := stmt.Returning() == nil && stmt.Limit() == nil
+
 	if actions.Update() != nil {
 		act := actions.Update()
 		ops := make([]plan.Operator, 0, 4)
@@ -243,7 +245,7 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 			cost, cardinality, size, frCost = getUpdateSendCost(stmt.Limit(),
 				cost, cardinality, size, frCost)
 		}
-		ops = append(ops, plan.NewSendUpdate(keyspace, ksref, stmt.Limit(), cost, cardinality, size, frCost, stmt.Returning() == nil))
+		ops = append(ops, plan.NewSendUpdate(keyspace, ksref, stmt.Limit(), cost, cardinality, size, frCost, fastDiscard))
 		update = plan.NewSequence(ops...)
 		if this.useCBO && cost > 0.0 {
 			updateCost = cost
@@ -278,7 +280,7 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 				cost, cardinality, size, frCost)
 		}
 
-		delete = plan.NewSendDelete(keyspace, ksref, stmt.Limit(), cost, cardinality, size, frCost, stmt.Returning() == nil)
+		delete = plan.NewSendDelete(keyspace, ksref, stmt.Limit(), cost, cardinality, size, frCost, fastDiscard)
 		if this.useCBO && cost > 0.0 {
 			deleteCost = cost
 			deleteCard = cardinality
@@ -320,7 +322,7 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 		}
 
 		insert = plan.NewSendInsert(keyspace, ksref, keyExpr, act.Value(), act.Options(), stmt.Limit(), cost, cardinality, size,
-			frCost, this.mustSkipKeys, stmt.Returning() == nil)
+			frCost, this.mustSkipKeys, fastDiscard)
 		if this.useCBO && cost > 0.0 {
 			insertCost = cost
 			insertCard = cardinality
@@ -374,6 +376,10 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 			cost, cardinality, size, frCost = getLimitCost(this.lastOp, nlimit, -1)
 		}
 		this.addChildren(plan.NewLimit(stmt.Limit(), cost, cardinality, size, frCost))
+	}
+
+	if stmt.Returning() == nil && stmt.Limit() != nil {
+		this.addChildren(plan.NewDiscard(cost, cardinality, size, frCost))
 	}
 
 	qp.SetPlanOp(plan.NewSequence(this.children...))

@@ -128,9 +128,10 @@ type QueryContext interface {
 	AddMutationCount(uint64)
 
 	// Whether performOp() must return the successfully mutated pairs to the caller for later processing
-	// Ex. - i ) RETURNING clause in DML queries
-	//       ii) USE KEYS VALIDATE in DELETE
+	// Ex. - i )  RETURNING clause in DML queries
+	//       ii)  USE KEYS VALIDATE in DELETE
 	//       iii) Halloween Problem checks in INSERT and UPSERT
+	//       iv)  LIMIT clause in MERGE
 	PreserveMutations() bool
 }
 

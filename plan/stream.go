@@ -8,15 +8,19 @@
 
 package plan
 
-import "encoding/json"
+import (
+	"encoding/json"
+)
 
 type Stream struct {
 	readonly
+	serializable bool
 	optEstimate
 }
 
-func NewStream(cost, cardinality float64, size int64, frCost float64) *Stream {
+func NewStream(cost, cardinality float64, size int64, frCost float64, serializable bool) *Stream {
 	rv := &Stream{}
+	rv.serializable = serializable
 	setOptEstimate(&rv.optEstimate, cost, cardinality, size, frCost)
 	return rv
 }
@@ -29,6 +33,10 @@ func (this *Stream) New() Operator {
 	return &Stream{}
 }
 
+func (this *Stream) Serializable() bool {
+	return this.serializable
+}
+
 func (this *Stream) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
@@ -38,6 +46,9 @@ func (this *Stream) MarshalBase(f func(map[string]interface{})) map[string]inter
 	if optEstimate := marshalOptEstimate(&this.optEstimate); optEstimate != nil {
 		r["optimizer_estimates"] = optEstimate
 	}
+
+	r["serializable"] = this.serializable
+
 	if f != nil {
 		f(r)
 	}
@@ -46,8 +57,9 @@ func (this *Stream) MarshalBase(f func(map[string]interface{})) map[string]inter
 
 func (this *Stream) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_           string                 `json:"#operator"`
-		OptEstimate map[string]interface{} `json:"optimizer_estimates"`
+		_            string                 `json:"#operator"`
+		OptEstimate  map[string]interface{} `json:"optimizer_estimates"`
+		Serializable bool                   `json:"serializable"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -56,6 +68,8 @@ func (this *Stream) UnmarshalJSON(body []byte) error {
 	}
 
 	unmarshalOptEstimate(&this.optEstimate, _unmarshalled.OptEstimate)
+
+	this.serializable = _unmarshalled.Serializable
 
 	return nil
 }
