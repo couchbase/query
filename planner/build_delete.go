@@ -37,7 +37,7 @@ func (this *builder) VisitDelete(stmt *algebra.Delete) (interface{}, error) {
 	mustFetch := stmt.Returning() != nil || this.context.DeltaKeyspaces() != nil
 	optimHints := stmt.OptimHints()
 	optimHints, err = this.beginMutate(keyspace, ksref, stmt.Keys(), stmt.Indexes(), stmt.Limit(), stmt.Offset(),
-		mustFetch, optimHints, stmt.ValidateKeys())
+		mustFetch, optimHints)
 	if err != nil {
 		return nil, err
 	}

@@ -27,7 +27,7 @@ type Fetch struct {
 }
 
 func NewFetch(keyspace datastore.Keyspace, term *algebra.KeyspaceTerm, subPaths []string,
-	cost, cardinality float64, size int64, frCost float64, validateKeys bool) *Fetch {
+	cost, cardinality float64, size int64, frCost float64) *Fetch {
 	rv := &Fetch{
 		keyspace: keyspace,
 		term:     term,

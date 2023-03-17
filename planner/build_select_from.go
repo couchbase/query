@@ -407,7 +407,7 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 				frCost = OPT_COST_NOT_AVAIL
 			}
 		}
-		this.addChildren(plan.NewFetch(keyspace, node, names, cost, cardinality, size, frCost, node.ValidateKeys()))
+		this.addChildren(plan.NewFetch(keyspace, node, names, cost, cardinality, size, frCost))
 
 		// no need to separate out the filter if the query has a single keyspace
 		if len(this.baseKeyspaces) > 1 &&
