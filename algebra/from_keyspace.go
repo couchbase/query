@@ -22,8 +22,6 @@ const (
 	TERM_ANSI_JOIN       = 1 << iota // right-hand side of ANSI JOIN
 	TERM_ANSI_NEST                   // right-hand side of ANSI NEST
 	TERM_PRIMARY_JOIN                // join on primary key (meta().id)
-	TERM_UNDER_NL                    // inner side of nested-loop join
-	TERM_UNDER_HASH                  // right-hand side of Hash Join
 	TERM_INDEX_JOIN_NEST             // right-hand side of index join/nest
 	TERM_IN_CORR_SUBQ                // inside a correlated subquery
 	TERM_COMMA_JOIN                  // right-hand side of comma-separated join
@@ -444,20 +442,6 @@ func (this *KeyspaceTerm) IsCommaJoin() bool {
 }
 
 /*
-Returns whether under inner of nested-loop join
-*/
-func (this *KeyspaceTerm) IsUnderNL() bool {
-	return (this.property & TERM_UNDER_NL) != 0
-}
-
-/*
-Returns whether this keyspace is being considered for Hash Join
-*/
-func (this *KeyspaceTerm) IsUnderHash() bool {
-	return (this.property & TERM_UNDER_HASH) != 0
-}
-
-/*
 Returns whether it's right-hand side of index join/nest
 */
 func (this *KeyspaceTerm) IsIndexJoinNest() bool {
@@ -527,34 +511,6 @@ Set COMMA JOIN property
 */
 func (this *KeyspaceTerm) SetCommaJoin() {
 	this.property |= TERM_COMMA_JOIN
-}
-
-/*
-Set UNDER NL property
-*/
-func (this *KeyspaceTerm) SetUnderNL() {
-	this.property |= TERM_UNDER_NL
-}
-
-/*
-Unset UNDER NL property
-*/
-func (this *KeyspaceTerm) UnsetUnderNL() {
-	this.property &^= TERM_UNDER_NL
-}
-
-/*
-Set UNDER HASH property
-*/
-func (this *KeyspaceTerm) SetUnderHash() {
-	this.property |= TERM_UNDER_HASH
-}
-
-/*
-Unset UNDER HASH property
-*/
-func (this *KeyspaceTerm) UnsetUnderHash() {
-	this.property &^= TERM_UNDER_HASH
 }
 
 /*

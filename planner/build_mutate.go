@@ -129,9 +129,9 @@ func (this *builder) beginMutate(keyspace datastore.Keyspace, ksref *algebra.Key
 					frCost = OPT_COST_NOT_AVAIL
 				}
 			}
-			fetch = plan.NewFetch(keyspace, term, names, cost, cardinality, size, frCost)
+			fetch = plan.NewFetch(keyspace, term, names, cost, cardinality, size, frCost, this.hasBuilderFlag(BUILDER_NL_INNER))
 		} else {
-			fetch = plan.NewDummyFetch(keyspace, term, cost, cardinality, size, frCost)
+			fetch = plan.NewDummyFetch(keyspace, term, cost, cardinality, size, frCost, this.hasBuilderFlag(BUILDER_NL_INNER))
 		}
 		this.addSubChildren(fetch)
 	}

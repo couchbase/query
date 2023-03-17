@@ -29,11 +29,12 @@ type IndexFtsSearch struct {
 	covers           expression.Covers
 	filterCovers     map[*expression.Cover]value.Value
 	hasDeltaKeyspace bool
+	nested_loop      bool
 }
 
 func NewIndexFtsSearch(index datastore.Index, term *algebra.KeyspaceTerm,
 	searchInfo *FTSSearchInfo, covers expression.Covers,
-	filterCovers map[*expression.Cover]value.Value, hasDeltaKeyspace bool) *IndexFtsSearch {
+	filterCovers map[*expression.Cover]value.Value, hasDeltaKeyspace, nested_loop bool) *IndexFtsSearch {
 
 	rv := &IndexFtsSearch{
 		index:            index,
@@ -43,6 +44,7 @@ func NewIndexFtsSearch(index datastore.Index, term *algebra.KeyspaceTerm,
 		covers:           covers,
 		filterCovers:     filterCovers,
 		hasDeltaKeyspace: hasDeltaKeyspace,
+		nested_loop:      nested_loop,
 	}
 
 	rv.keyspace, _ = datastore.GetKeyspace(term.Path().Parts()...)
@@ -108,7 +110,7 @@ func (this *IndexFtsSearch) SetOffset(offset expression.Expression) {
 }
 
 func (this *IndexFtsSearch) IsUnderNL() bool {
-	return this.term.IsUnderNL()
+	return this.nested_loop
 }
 
 func (this *IndexFtsSearch) CoverJoinSpanExpressions(coverer *expression.Coverer,
@@ -176,8 +178,8 @@ func (this *IndexFtsSearch) MarshalBase(f func(map[string]interface{})) map[stri
 		r["as"] = this.term.As()
 	}
 
-	if this.term.IsUnderNL() {
-		r["nested_loop"] = this.term.IsUnderNL()
+	if this.nested_loop {
+		r["nested_loop"] = this.nested_loop
 	}
 
 	if this.searchInfo != nil {
@@ -241,9 +243,7 @@ func (this *IndexFtsSearch) UnmarshalJSON(body []byte) error {
 		return err
 	}
 
-	if _unmarshalled.UnderNL {
-		this.term.SetUnderNL()
-	}
+	this.nested_loop = _unmarshalled.UnderNL
 
 	this.indexer, err = this.keyspace.Indexer(_unmarshalled.Using)
 	if err != nil {

@@ -214,9 +214,7 @@ func (this *builder) buildAnsiJoinOp(node *algebra.AnsiJoin) (op plan.Operator, 
 		// restore before attempting to build nested-loop join
 		this.restoreJoinPlannerState(jps)
 		node.SetOnclause(origOnclause)
-		right.SetUnderNL()
 		scans, primaryJoinKeys, newOnclause, newFilter, cost, cardinality, size, frCost, nlErr := this.buildAnsiJoinScan(right, node.Onclause(), filter, node.Outer(), "join")
-		right.UnsetUnderNL()
 
 		if baseKeyspace.HasIndexHintError() {
 			nlIndexHintError = true
@@ -262,9 +260,6 @@ func (this *builder) buildAnsiJoinOp(node *algebra.AnsiJoin) (op plan.Operator, 
 			if nlIndexHintError {
 				baseKeyspace.SetIndexHintError()
 			}
-			if !joinEnum {
-				right.SetUnderNL()
-			}
 			return plan.NewNLJoin(node, plan.NewSequence(scans...), newFilter, cost, cardinality, size, frCost), nil
 		} else if hjoin != nil && !right.IsPrimaryJoin() && !preferNL {
 			this.restoreJoinPlannerState(hjps)
@@ -280,9 +275,7 @@ func (this *builder) buildAnsiJoinOp(node *algebra.AnsiJoin) (op plan.Operator, 
 
 		if !right.IsPrimaryJoin() {
 			// as last resort, build primary scan as inner
-			right.SetUnderNL()
 			primary, newFilter, newOnclause, err := this.buildInnerPrimaryScan(right, filter, node.Onclause())
-			right.UnsetUnderNL()
 			if err != nil {
 				return nil, err
 			}
@@ -315,9 +308,6 @@ func (this *builder) buildAnsiJoinOp(node *algebra.AnsiJoin) (op plan.Operator, 
 				}
 				if nlIndexHintError {
 					baseKeyspace.SetIndexHintError()
-				}
-				if !joinEnum {
-					right.SetUnderNL()
 				}
 				return plan.NewNLJoin(node, primary, newFilter, cost, cardinality, size, frCost), nil
 			} else if hjoin != nil {
@@ -568,9 +558,7 @@ func (this *builder) buildAnsiNestOp(node *algebra.AnsiNest) (op plan.Operator, 
 		// restore before attempting to build nested-loop nest
 		this.restoreJoinPlannerState(jps)
 		node.SetOnclause(origOnclause)
-		right.SetUnderNL()
 		scans, primaryJoinKeys, newOnclause, newFilter, cost, cardinality, size, frCost, nlErr := this.buildAnsiJoinScan(right, node.Onclause(), nil, node.Outer(), "nest")
-		right.UnsetUnderNL()
 
 		if baseKeyspace.HasIndexHintError() {
 			nlIndexHintError = true
@@ -609,9 +597,6 @@ func (this *builder) buildAnsiNestOp(node *algebra.AnsiNest) (op plan.Operator, 
 			if nlIndexHintError {
 				baseKeyspace.SetIndexHintError()
 			}
-			if !joinEnum {
-				right.SetUnderNL()
-			}
 			return plan.NewNLNest(node, plan.NewSequence(scans...), newFilter, cost, cardinality, size, frCost), nil
 		} else if hnest != nil && !right.IsPrimaryJoin() && !preferNL {
 			this.restoreJoinPlannerState(hjps)
@@ -627,9 +612,7 @@ func (this *builder) buildAnsiNestOp(node *algebra.AnsiNest) (op plan.Operator, 
 
 		if !right.IsPrimaryJoin() {
 			// as last resort, build primary scan as inner
-			right.SetUnderNL()
 			primary, newFilter, newOnclause, err := this.buildInnerPrimaryScan(right, filter, node.Onclause())
-			right.UnsetUnderNL()
 			if err != nil {
 				return nil, err
 			}
@@ -662,9 +645,6 @@ func (this *builder) buildAnsiNestOp(node *algebra.AnsiNest) (op plan.Operator, 
 				}
 				if nlIndexHintError {
 					baseKeyspace.SetIndexHintError()
-				}
-				if !joinEnum {
-					right.SetUnderNL()
 				}
 				return plan.NewNLNest(node, primary, newFilter, cost, cardinality, size, frCost), nil
 			} else if hnest != nil {
@@ -1236,14 +1216,10 @@ func (this *builder) buildHashJoinOp(right algebra.SimpleFromTerm, left algebra.
 		// if we are doing nested-loop join. However, for hash join, since both sides of the
 		// hash join are independent of each other, we cannot use join filters for index selection
 		// when planning for the right-hand side.
-		if ksterm != nil {
-			ksterm.SetUnderHash()
-			defer func() {
-				ksterm.UnsetUnderHash()
-			}()
-		}
 
+		this.setBuilderFlag(BUILDER_UNDER_HASH)
 		_, err = right.Accept(this)
+		this.unsetBuilderFlag(BUILDER_UNDER_HASH)
 		if err != nil {
 			return nil, nil, nil, nil, nil, nil, false,
 				OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, err

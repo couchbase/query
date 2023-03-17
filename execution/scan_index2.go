@@ -102,7 +102,7 @@ func (this *IndexScan2) RunOnce(context *Context, parent value.Value) {
 			entryKeys = proj.EntryKeys
 		}
 
-		if this.plan.Term().IsUnderNL() {
+		if this.plan.IsUnderNL() {
 			scope_value = nil
 		}
 

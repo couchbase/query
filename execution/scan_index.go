@@ -210,7 +210,7 @@ func (this *spanScan) RunOnce(context *Context, parent value.Value) {
 		// for right hand side of nested-loop join we don't want to include parent values
 		// in the returned scope_value
 		scope_value := parent
-		if this.plan.Term().IsUnderNL() {
+		if this.plan.IsUnderNL() {
 			scope_value = nil
 		}
 

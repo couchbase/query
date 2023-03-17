@@ -320,7 +320,7 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 		//   primary join --> use lookup join instead of nested-loop join
 		//   hash join --> use nested-loop join instead of hash join
 		//   join enumeration --> if no scan path, wait till join
-		if node.IsPrimaryJoin() || node.IsUnderHash() || this.joinEnum() {
+		if node.IsPrimaryJoin() || this.hasBuilderFlag(BUILDER_UNDER_HASH) || this.joinEnum() {
 			return nil, nil
 		} else {
 			return nil, errors.NewPlanInternalError("VisitKeyspaceTerm: no plan generated")
@@ -407,7 +407,7 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 				frCost = OPT_COST_NOT_AVAIL
 			}
 		}
-		this.addChildren(plan.NewFetch(keyspace, node, names, cost, cardinality, size, frCost))
+		this.addChildren(plan.NewFetch(keyspace, node, names, cost, cardinality, size, frCost, this.hasBuilderFlag(BUILDER_NL_INNER)))
 
 		// no need to separate out the filter if the query has a single keyspace
 		if len(this.baseKeyspaces) > 1 &&

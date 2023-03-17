@@ -176,7 +176,7 @@ func (this *builder) buildPredicateScan(keyspace datastore.Keyspace, node *algeb
 	var primaryKey expression.Expressions
 
 	if !baseKeyspace.IsInCorrSubq() &&
-		(!node.IsAnsiJoinOp() || node.IsUnderHash() || node.IsSystem() || nlPrimaryScan) {
+		(!node.IsAnsiJoinOp() || this.hasBuilderFlag(BUILDER_UNDER_HASH) || node.IsSystem() || nlPrimaryScan) {
 		primaryKey = expression.Expressions{id}
 	}
 
@@ -201,7 +201,7 @@ func (this *builder) buildPredicateScan(keyspace datastore.Keyspace, node *algeb
 
 	// collect SEARCH() functions that depends on current keyspace in the predicate
 	var searchFns map[string]*search.Search
-	if !node.IsUnderNL() {
+	if !this.hasBuilderFlag(BUILDER_NL_INNER) {
 		pred := baseKeyspace.DnfPred()
 		if node.IsAnsiJoinOp() && baseKeyspace.OnclauseOnly() {
 			pred = baseKeyspace.Onclause()
@@ -232,7 +232,7 @@ func (this *builder) buildPredicateScan(keyspace datastore.Keyspace, node *algeb
 	}
 
 	if node.IsAnsiJoinOp() {
-		if node.IsPrimaryJoin() || node.IsUnderHash() || node.IsSystem() || nlPrimaryScan {
+		if node.IsPrimaryJoin() || this.hasBuilderFlag(BUILDER_UNDER_HASH) || node.IsSystem() || nlPrimaryScan {
 			return nil, nil, nil
 		} else {
 			op := "join"
@@ -254,7 +254,7 @@ func (this *builder) buildSubsetScan(keyspace datastore.Keyspace, node *algebra.
 	secondary plan.Operator, primary plan.Operator, err error) {
 
 	join := node.IsAnsiJoinOp()
-	hash := node.IsUnderHash()
+	hash := this.hasBuilderFlag(BUILDER_UNDER_HASH)
 	nlPrimaryScan := !util.IsFeatureEnabled(this.context.FeatureControls(), util.N1QL_NL_PRIMARYSCAN) || this.hasBuilderFlag(BUILDER_JOIN_ON_PRIMARY)
 	if join {
 		this.resetPushDowns()
@@ -355,7 +355,7 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm,
 	}
 
 	sargables, arrays, flex, err := this.sargableIndexes(indexes, pred, subset, primaryKey,
-		formalizer, ubs, node.IsUnderNL())
+		formalizer, ubs, this.hasBuilderFlag(BUILDER_NL_INNER))
 	if err != nil {
 		return nil, 0, err
 	}
@@ -370,7 +370,7 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm,
 		}
 	}
 
-	err = this.sargIndexes(baseKeyspace, node.IsUnderHash(), sargables)
+	err = this.sargIndexes(baseKeyspace, this.hasBuilderFlag(BUILDER_UNDER_HASH), sargables)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -398,7 +398,7 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm,
 	// pred has SEARCH() function get sargable FTS indexes
 	var searchSargables []*indexEntry
 	var searchFns map[string]*search.Search
-	if !node.IsUnderNL() && !this.hasBuilderFlag(BUILDER_CHK_INDEX_ORDER|BUILDER_DO_JOIN_FILTER|BUILDER_JOIN_ON_PRIMARY) {
+	if !this.hasBuilderFlag(BUILDER_NL_INNER | BUILDER_CHK_INDEX_ORDER | BUILDER_DO_JOIN_FILTER | BUILDER_JOIN_ON_PRIMARY) {
 		searchFns = make(map[string]*search.Search)
 		if err = collectFTSSearch(node.Alias(), searchFns, pred); err != nil {
 			return nil, 0, err

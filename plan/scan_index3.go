@@ -53,6 +53,7 @@ type IndexScan3 struct {
 	hasDeltaKeyspace bool
 	fullCover        bool
 	skipNewKeys      bool
+	nested_loop      bool
 }
 
 func NewIndexScan3(index datastore.Index3, term *algebra.KeyspaceTerm, spans Spans2,
@@ -61,7 +62,7 @@ func NewIndexScan3(index datastore.Index3, term *algebra.KeyspaceTerm, spans Spa
 	groupAggs *IndexGroupAggregates, covers expression.Covers,
 	filterCovers map[*expression.Cover]value.Value, filter expression.Expression,
 	cost, cardinality float64, size int64, frCost float64,
-	hasDeltaKeyspace bool, skipNewKeys bool) *IndexScan3 {
+	hasDeltaKeyspace, skipNewKeys, nested_loop bool) *IndexScan3 {
 	flags := uint32(0)
 	if reverse {
 		flags |= ISCAN_IS_REVERSE_SCAN
@@ -88,6 +89,7 @@ func NewIndexScan3(index datastore.Index3, term *algebra.KeyspaceTerm, spans Spa
 		filter:           filter,
 		hasDeltaKeyspace: hasDeltaKeyspace,
 		skipNewKeys:      skipNewKeys,
+		nested_loop:      nested_loop,
 	}
 
 	if len(covers) > 0 {
@@ -354,7 +356,7 @@ func (this *IndexScan3) Filter() expression.Expression {
 }
 
 func (this *IndexScan3) IsUnderNL() bool {
-	return this.term.IsUnderNL()
+	return this.nested_loop
 }
 
 func (this *IndexScan3) HasDeltaKeyspace() bool {
@@ -408,8 +410,8 @@ func (this *IndexScan3) MarshalBase(f func(map[string]interface{})) map[string]i
 		r["cache_result"] = true
 	}
 
-	if this.term.IsUnderNL() {
-		r["nested_loop"] = this.term.IsUnderNL()
+	if this.nested_loop {
+		r["nested_loop"] = this.nested_loop
 	}
 
 	if this.projection != nil {
@@ -556,10 +558,7 @@ func (this *IndexScan3) UnmarshalJSON(body []byte) error {
 	this.orderTerms = _unmarshalled.OrderTerms
 	this.hasDeltaKeyspace = _unmarshalled.HasDeltaKeyspace
 	this.skipNewKeys = _unmarshalled.SkipNewKeys
-
-	if _unmarshalled.UnderNL {
-		this.term.SetUnderNL()
-	}
+	this.nested_loop = _unmarshalled.UnderNL
 
 	if _unmarshalled.Offset != "" {
 		this.offset, err = parser.Parse(_unmarshalled.Offset)

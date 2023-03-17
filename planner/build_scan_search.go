@@ -163,7 +163,8 @@ func (this *builder) CreateFTSSearch(index datastore.Index, node *algebra.Keyspa
 
 	return plan.NewIndexFtsSearch(index, node,
 		plan.NewFTSSearchInfo(expression.NewConstant(sfn.FieldName()), sfn.Query(), sfn.Options(),
-			this.offset, this.limit, order, sfn.OutName()), covers, filterCovers, hasDeltaKeySpace)
+			this.offset, this.limit, order, sfn.OutName()), covers, filterCovers,
+		hasDeltaKeySpace, this.hasBuilderFlag(BUILDER_NL_INNER))
 }
 
 // SEARCH() function pagination

@@ -88,7 +88,7 @@ func (this *IndexCountScan2) SetOffset(offset expression.Expression) {
 }
 
 func (this *IndexCountScan2) IsUnderNL() bool {
-	return this.term.IsUnderNL()
+	return false
 }
 
 func (this *IndexCountScan2) CoverJoinSpanExpressions(coverer *expression.Coverer,

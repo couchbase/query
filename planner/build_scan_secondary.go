@@ -196,7 +196,8 @@ func (this *builder) buildCreateSecondaryScan(indexes, flex map[datastore.Index]
 		scan = entry.spans.CreateScan(index, node, this.context.IndexApiVersion(), false, false,
 			overlapSpans(pred), false, offset, limit, idxProj, indexKeyOrders, nil,
 			covers, filterCovers, filter, entry.cost, entry.cardinality,
-			entry.size, entry.frCost, baseKeyspace, hasDeltaKeyspace, skipNewKeys)
+			entry.size, entry.frCost, baseKeyspace, hasDeltaKeyspace, skipNewKeys,
+			this.hasBuilderFlag(BUILDER_NL_INNER))
 
 		if iscan3, ok := scan.(*plan.IndexScan3); ok {
 			if entry.HasFlag(IE_HAS_EARLY_ORDER) {
@@ -1096,7 +1097,7 @@ func (this *builder) getIndexFilters(entry *indexEntry, node *algebra.KeyspaceTe
 		}
 	} else if baseKeyspace.IsOuter() || baseKeyspace.IsUnnest() || baseKeyspace.HasNoJoinFilterHint() {
 		includeJoin = false
-	} else if node.IsAnsiJoinOp() && !node.IsUnderHash() {
+	} else if node.IsAnsiJoinOp() && !this.hasBuilderFlag(BUILDER_UNDER_HASH) {
 		includeJoin = false
 	} else if !useCBO && !baseKeyspace.HasJoinFilterHint() {
 		includeJoin = false
