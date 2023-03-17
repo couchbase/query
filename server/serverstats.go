@@ -10,14 +10,13 @@ package server
 
 import (
 	"fmt"
-	"os"
 	"runtime"
-	"runtime/pprof"
 	"sync/atomic"
 	"time"
 
 	json "github.com/couchbase/go_json"
 	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/ffdc"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/memory"
 	"github.com/couchbase/query/tenant"
@@ -83,10 +82,6 @@ func (c *statsCollector) runCollectStats() {
 	index := 0
 	unhealthyCount := 0
 
-	lastDumpTime := util.Time(0) // temporary addition
-
-	dumpTriggered := false
-
 	oldStats := make(map[string]interface{}, 6)
 	newStats := make(map[string]interface{}, 6)
 	c.server.AccountingStore().ExternalVitals(oldStats)
@@ -151,27 +146,10 @@ func (c *statsCollector) runCollectStats() {
 		occ, _ := oldStats["request.completed.count"].(int64)
 
 		if ncc == occ { // no progress in last interval
-			if dumpTriggered == false {
-				if c.server.unboundQueue.isFull() {
-					logging.DumpAllStacks(logging.WARN, "Unbound request queue full")
-					dumpTriggered = true
-				} else if c.server.plusQueue.isFull() {
-					logging.DumpAllStacks(logging.WARN, "Plus request queue full")
-					dumpTriggered = true
-				}
-			} else {
-				if !c.server.unboundQueue.isFull() && !c.server.plusQueue.isFull() {
-					dumpTriggered = false
-				}
-			}
-
 			ratio := c.server.QueuedRequests() / (c.server.Servicers() + c.server.PlusServicers())
 			if ratio >= 3 {
 				logging.Warnf("No processed requests with queue of %v", c.server.QueuedRequests())
-			}
-		} else {
-			if !c.server.unboundQueue.isFull() && !c.server.plusQueue.isFull() {
-				dumpTriggered = false
+				ffdc.Capture("Stalled queue processing", ffdc.Stacks, ffdc.Active)
 			}
 		}
 
@@ -181,10 +159,7 @@ func (c *statsCollector) runCollectStats() {
 		if newStats != nil {
 			if pmu, ok := newStats["process.memory.usage"]; ok {
 				if mu, ok := pmu.(uint64); ok && mu >= 80 {
-					if util.Since(lastDumpTime) > time.Minute*10 {
-						dumpHeap()
-						lastDumpTime = util.Now()
-					}
+					ffdc.Capture(fmt.Sprintf("Memory threshold exceeded: %v >= 80", mu), ffdc.Heap, ffdc.Stacks)
 				}
 			}
 		}
@@ -236,30 +211,3 @@ func updateQsLoadFactor(loadFactor int) {
 func getQsLoadFactor() int {
 	return int(atomic.LoadUint32(&qsLoadFactor))
 }
-
-// start: temporary addition
-var names []string
-
-func dumpHeap() {
-	ts := time.Now().Format(time.RFC3339Nano)
-	name := fmt.Sprintf("%s/ffdcheap_%v_%v", os.TempDir(), os.Getpid(), ts)
-	logging.Infof("FFDC: threshold exceeded, attempting heap dump to: %v", name)
-	runtime.GC()
-	f, err := os.Create(name)
-	if err == nil {
-		names = append(names, name)
-		pprof.WriteHeapProfile(f)
-		f.Sync()
-		f.Close()
-		logging.Infof("FFDC: heap dumped")
-	} else {
-		logging.Infof("FFDC: failed to create heap output file: %v", err)
-	}
-	if len(names) > 12 {
-		logging.Infof("FFDC: removing dump: %v", names[0])
-		os.Remove(names[0])
-		names = names[1:]
-	}
-}
-
-// end temporary addition

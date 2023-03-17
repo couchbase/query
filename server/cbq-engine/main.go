@@ -11,6 +11,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io"
 	"math"
 	"os"
 	"os/signal"
@@ -31,6 +32,7 @@ import (
 	"github.com/couchbase/query/datastore/resolver"
 	"github.com/couchbase/query/datastore/system"
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/ffdc"
 	"github.com/couchbase/query/functions"
 	"github.com/couchbase/query/functions/constructor"
 	"github.com/couchbase/query/logging"
@@ -52,7 +54,7 @@ import (
 func init() {
 	os.Stderr.WriteString("\n")
 	logging.Infoa(func() string {
-		return fmt.Sprintf("cbq-engine starting version=%v go-version=%s", util.VERSION, runtime.Version())
+		return fmt.Sprintf("cbq-engine starting version=%v go-version=%s pid=%d", util.VERSION, runtime.Version(), os.Getpid())
 	})
 	debug.SetGCPercent(_GOGC_PERCENT_DEFAULT)
 	setOpenFilesLimit()
@@ -187,6 +189,8 @@ func main() {
 
 	runtime.GOMAXPROCS(util.MinInt(numCPUs, maxProcs))
 	numProcs := util.NumCPU()
+
+	ffdc.Init()
 
 	// Use the IPv4/IPv6 flags to setup listener bool value
 	// This is for external interfaces / listeners
@@ -437,6 +441,11 @@ func main() {
 	endpoint := http.NewServiceEndpoint(server, *STATIC_PATH, *METRICS,
 		*HTTP_ADDR, *HTTPS_ADDR, *CA_FILE, *CERT_FILE, *KEY_FILE)
 
+	ffdc.Set(ffdc.Completed, http.CaptureCompletedRequests)
+	ffdc.Set(ffdc.Active, func(w io.Writer) error {
+		return http.CaptureActiveRequests(endpoint, w)
+	})
+
 	server.SetSettingsCallback(endpoint.SettingsCallback)
 
 	constructor.Init(endpoint.Router(), server.Servicers())
@@ -493,15 +502,16 @@ func signalCatcher(server *server_package.Server, endpoint *http.HttpEndpoint) {
 	if server.MemProfile() != "" {
 		f, err := os.Create(server.MemProfile())
 		if err != nil {
-			logging.Errorf("Cannot create memory profile file@ %v", err)
+			logging.Errorf("Cannot create memory profile file: %v", err)
 		} else {
-
-			logging.Infof("Writing  Memory profile")
+			logging.Infof("Writing Memory profile")
 			pprof.WriteHeapProfile(f)
 			f.Close()
 		}
 	}
-	if s == os.Interrupt {
+	if s == syscall.SIGTERM {
+		ffdc.Capture("SIGTERM received", ffdc.Active, ffdc.Completed, ffdc.Heap, ffdc.Stacks)
+	} else if s == os.Interrupt {
 		// Interrupt (ctrl-C) => Immediate (ungraceful) exit
 		logging.Infof("Shutting down immediately")
 		os.Exit(0)

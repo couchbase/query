@@ -29,6 +29,7 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/execution"
+	"github.com/couchbase/query/ffdc"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/logging/event"
 	"github.com/couchbase/query/memory"
@@ -688,6 +689,7 @@ func (this *Server) setupRequestContext(request Request) bool {
 
 func (this *Server) handleRequest(request Request, queue *runQueue) bool {
 	if !queue.enqueue(request) {
+		ffdc.Capture("Request queue full", ffdc.Stacks, ffdc.Active, ffdc.Completed)
 		request.Fail(errors.NewServiceErrorRequestQueueFull())
 		request.Failed(this)
 		return false
@@ -709,6 +711,7 @@ func (this *Server) handleRequest(request Request, queue *runQueue) bool {
 
 func (this *Server) handlePlusRequest(request Request, queue *runQueue, transactionQueues *txRunQueues) bool {
 	if !queue.enqueue(request) {
+		ffdc.Capture("Plus request queue full", ffdc.Stacks, ffdc.Active, ffdc.Completed)
 		request.Fail(errors.NewServiceErrorRequestQueueFull())
 		request.Failed(this)
 		return false

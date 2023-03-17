@@ -489,7 +489,7 @@ func (this *HttpEndpoint) ServeHTTP(resp http.ResponseWriter, req *http.Request)
 		res = this.server.PlusServiceRequest(request)
 	}
 
-	if !res {
+	if !res && request.httpCode() == 0 {
 		resp.WriteHeader(http.StatusServiceUnavailable)
 	}
 }

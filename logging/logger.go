@@ -10,6 +10,7 @@ package logging
 
 import (
 	fmtpkg "fmt"
+	"log"
 	"path"
 	"regexp"
 	"runtime"
@@ -821,4 +822,21 @@ func HumanReadableSize(sz int64, includeSource bool) string {
 	} else {
 		return fmtpkg.Sprintf("%s %s", num, suffix)
 	}
+}
+
+// Wraps the log package default logger so logging is consistent
+var _wrapper = &wrapper{}
+
+type wrapper struct {
+}
+
+func (this *wrapper) Write(p []byte) (n int, err error) {
+	Infof(string(p))
+	return len(p), nil
+}
+
+func init() {
+	log.Default().SetOutput(_wrapper)
+	log.Default().SetPrefix("")
+	log.Default().SetFlags(0)
 }

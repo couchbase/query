@@ -9,8 +9,10 @@
 package http
 
 import (
+	"bytes"
 	go_errors "errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"strings"
@@ -1614,6 +1616,36 @@ func doActiveRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.R
 	return requests, nil
 }
 
+// TODO: redaction
+func CaptureActiveRequests(endpoint *HttpEndpoint, w io.Writer) error {
+	var buf bytes.Buffer
+	var err error
+	first := true
+	_, err = w.Write([]byte{'['})
+	if err != nil {
+		return err
+	}
+	endpoint.actives.ForEach(func(requestId string, request server.Request) bool {
+		if !first {
+			_, err = w.Write([]byte{','})
+		}
+		if err == nil {
+			r := activeRequestWorkHorse(endpoint, request, false)
+			err = json.MarshalNoEscapeToBuffer(r, &buf)
+			if err == nil {
+				_, err = buf.WriteTo(w)
+				buf.Reset()
+			}
+		}
+		first = false
+		return err == nil
+	}, nil)
+	if err == nil {
+		_, err = w.Write([]byte{']'})
+	}
+	return err
+}
+
 func doCompletedRequest(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
 	interface{}, errors.Error) {
 
@@ -1795,6 +1827,36 @@ func doCompletedRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *htt
 		return true
 	}, nil)
 	return requests, nil
+}
+
+// TODO: redaction
+func CaptureCompletedRequests(w io.Writer) error {
+	var buf bytes.Buffer
+	var err error
+	first := true
+	_, err = w.Write([]byte{'['})
+	if err != nil {
+		return err
+	}
+	server.RequestsForeach(func(requestId string, request *server.RequestLogEntry) bool {
+		if !first {
+			_, err = w.Write([]byte{','})
+		}
+		if err == nil {
+			r := completedRequestWorkHorse(request, false)
+			err = json.MarshalNoEscapeToBuffer(r, &buf)
+			if err == nil {
+				_, err = buf.WriteTo(w)
+				buf.Reset()
+			}
+		}
+		first = false
+		return err == nil
+	}, nil)
+	if err == nil {
+		_, err = w.Write([]byte{']'})
+	}
+	return err
 }
 
 func doPreparedIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
