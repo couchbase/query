@@ -62,7 +62,8 @@
                             ]
                         },
                         {
-                            "#operator": "Stream"
+                            "#operator": "Stream",
+                            "serializable": true
                         }
                     ]
                 }
