@@ -76,15 +76,13 @@ func (this *TimeSeries) Indexable() bool { return false }
 
 func (this *TimeSeries) ValidOperands() (err error) {
 	// First argument must be path (only identifier used for keyspace)
-	op := this.operands[0]
-	a, _, e := PathString(op)
-	if a == "" || e != nil {
+	if a, ok := this.operands[0].(*Identifier); !ok || a.Alias() == "" {
 		return fmt.Errorf("First argument must be keyspace alias.")
 	}
 
 	if len(this.operands) > 1 {
 		// second argument must be OBJECT
-		op = this.operands[1]
+		op := this.operands[1]
 		val := op.Value()
 		if (val != nil && val.Type() != value.OBJECT) || op.Static() == nil {
 			return fmt.Errorf("Second argument must be OBJECT and can only contain constants or positional/named parameters.")
@@ -176,8 +174,10 @@ func (this *TimeSeries) GetOptionFields(arg Expression, item value.Value, contex
 
 // keyspace name
 func (this *TimeSeries) AliasName() string {
-	a, _, _ := PathString(this.operands[0])
-	return a
+	if a, ok := this.operands[0].(*Identifier); ok {
+		return a.Alias()
+	}
+	return ""
 }
 
 // path names strings from options to retrive from the document
