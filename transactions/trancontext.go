@@ -29,6 +29,7 @@ const (
 	TX_INUSE TxStatus = 1 << iota
 	TX_EXPIRED
 	TX_RELEASED
+	TX_PROGRESS
 )
 
 type TranContext struct {
@@ -234,6 +235,26 @@ func (this *TranContext) TxInUse() bool {
 	this.mutex.RLock()
 	defer this.mutex.RUnlock()
 	return this.txStatus&TX_INUSE != 0
+}
+
+func (this *TranContext) SetTxProgress(b bool) bool {
+	this.mutex.Lock()
+	defer this.mutex.Unlock()
+	if b {
+		if this.txStatus&TX_PROGRESS != 0 {
+			return false
+		}
+		this.txStatus |= TX_PROGRESS
+	} else {
+		this.txStatus &^= TX_PROGRESS
+	}
+	return true
+}
+
+func (this *TranContext) TxProgress() bool {
+	this.mutex.RLock()
+	defer this.mutex.RUnlock()
+	return this.txStatus&TX_PROGRESS != 0
 }
 
 func (this *TranContext) SetTxInUse(inuse bool) errors.Error {

@@ -117,7 +117,7 @@ func (this *TranContextCache) doTransactionCleanup() {
 
 		snapshot := func(name string, d interface{}) bool {
 			tranContext := d.(*TranContext)
-			if tranContext.TxExpired() {
+			if tranContext.TxExpired() && !tranContext.TxProgress() {
 				if !tranContext.TxInUse() {
 					data = append(data, tranContext)
 				} else if tranContext.TxTimeRemaining() < _TX_CLEANUP_AFTER {
@@ -131,7 +131,7 @@ func (this *TranContextCache) doTransactionCleanup() {
 
 		tranContextCache.cache.ForEach(snapshot, nil)
 		for _, tranContext := range data {
-			if tranContext.TxExpired() && !tranContext.TxInUse() {
+			if tranContext.TxExpired() && !tranContext.TxInUse() && !tranContext.TxProgress() {
 				tranContextCache.cache.Delete(tranContext.TxId(), nil)
 				if context != nil && ds != nil {
 					context.SetTxContext(tranContext)

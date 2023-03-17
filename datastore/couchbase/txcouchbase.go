@@ -200,8 +200,15 @@ func (s *store) CommitTransaction(stmtAtomicity bool, context datastore.QueryCon
 		return txMutations.MergeDeltaKeyspace()
 	}
 
+	if txContext.TxExpired() {
+		return errors.NewTransactionExpired(nil)
+	}
+
 	var err, cerr error
 	var wu tenant.Unit
+
+	txContext.SetTxProgress(true)
+	defer txContext.SetTxProgress(false)
 
 	transaction := txMutations.Transaction()
 	txId := transaction.Attempt().ID
@@ -317,6 +324,11 @@ func (s *store) RollbackTransaction(stmtAtomicity bool, context datastore.QueryC
 		}
 		return err
 	}
+	if ok := txContext.SetTxProgress(true); !ok {
+		// Cleanup & Rollback (one of them will cleanup)
+		return nil
+	}
+	defer txContext.SetTxProgress(false)
 
 	var err, cerr error
 
