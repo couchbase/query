@@ -1747,14 +1747,14 @@ func completedRequestWorkHorse(request *server.RequestLogEntry, profiling bool) 
 		}
 		timings := request.Timings()
 		if timings != nil {
-			reqMap["timings"] = timings
+			reqMap["timings"] = value.NewValue(timings)
 		}
 		if request.CpuTime > time.Duration(0) {
 			reqMap["cpuTime"] = request.CpuTime.String()
 		}
 		optEstimates := request.OptEstimates()
 		if optEstimates != nil {
-			reqMap["optimizerEstimates"] = optEstimates
+			reqMap["optimizerEstimates"] = value.NewValue(optEstimates)
 		}
 		if request.Errors != nil {
 			reqMap["errors"] = request.Errors

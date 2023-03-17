@@ -109,6 +109,10 @@ func (b *requestLogKeyspace) Fetch(keys []string, keysMap map[string]value.Annot
 					if ok {
 						delete(doc, "timings")
 					}
+					t, ok = doc["optimizerEstimates"]
+					if ok {
+						delete(doc, "optimizerEstimates")
+					}
 					remoteValue := value.NewAnnotatedValue(doc)
 					meta := remoteValue.NewMeta()
 					meta["keyspace"] = b.fullName
@@ -233,11 +237,11 @@ func (b *requestLogKeyspace) Fetch(keys []string, keysMap map[string]value.Annot
 				meta["keyspace"] = b.fullName
 				timings := entry.Timings()
 				if timings != nil {
-					meta["plan"] = timings
+					meta["plan"] = value.NewValue(timings)
 				}
 				optEstimates := entry.OptEstimates()
 				if optEstimates != nil {
-					meta["optimizerEstimates"] = optEstimates
+					meta["optimizerEstimates"] = value.NewValue(optEstimates)
 				}
 				item.SetId(key)
 				keysMap[key] = item

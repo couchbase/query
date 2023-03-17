@@ -76,8 +76,8 @@ type RequestLogEntry struct {
 	PhaseTimes               map[string]interface{}
 	PhaseCounts              map[string]interface{}
 	PhaseOperators           map[string]interface{}
-	timings                  value.Value
-	optEstimates             value.Value
+	timings                  []byte
+	optEstimates             map[string]interface{}
 	NamedArgs                map[string]value.Value
 	PositionalArgs           value.Values
 	MemoryQuota              uint64
@@ -491,10 +491,6 @@ func RequestDelete(id string, f func(*RequestLogEntry) bool) errors.Error {
 		if f != nil && !f(re) {
 			return false
 		}
-		if re.timings != nil {
-			re.timings.Recycle()
-			re.timings = nil
-		}
 		return true
 	}) {
 		return nil
@@ -629,18 +625,18 @@ func LogRequest(request_time, service_time, transactionElapsedTime time.Duration
 	if timings != nil {
 		parsed := request.GetFmtTimings()
 		if len(parsed) > 0 {
-			re.timings = value.NewValue(parsed)
+			re.timings = parsed
 		} else {
 			v, err := json.Marshal(timings)
 			if len(v) > 0 && err == nil {
-				re.timings = value.NewValue(v)
+				re.timings = v
 			}
 		}
 		estimates := request.GetFmtOptimizerEstimates()
 		if len(parsed) > 0 {
-			re.optEstimates = value.NewValue(estimates)
+			re.optEstimates = estimates
 		} else {
-			re.optEstimates = value.NewValue(request.FmtOptimizerEstimates(timings))
+			re.optEstimates = request.FmtOptimizerEstimates(timings)
 		}
 	}
 
@@ -683,11 +679,11 @@ func LogRequest(request_time, service_time, transactionElapsedTime time.Duration
 	}
 }
 
-func (this *RequestLogEntry) Timings() interface{} {
+func (this *RequestLogEntry) Timings() []byte {
 	return this.timings
 }
 
-func (this *RequestLogEntry) OptEstimates() interface{} {
+func (this *RequestLogEntry) OptEstimates() map[string]interface{} {
 	return this.optEstimates
 }
 

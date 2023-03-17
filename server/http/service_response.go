@@ -925,7 +925,7 @@ func (this *httpRequest) writeProfile(profile server.Profile, prefix, indent str
 					logging.Infof("Error writing optimizerEstimates: %v", err)
 				}
 			}
-			this.SetFmtOptimizerEstimates(e)
+			this.SetFmtOptimizerEstimates(optEstimates)
 		}
 	}
 	if prefix != "" && !(this.writeString("\n") && this.writeString(prefix)) {

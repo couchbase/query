@@ -169,8 +169,8 @@ type Request interface {
 	GetTimings() execution.Operator
 	SetFmtTimings(e []byte)
 	GetFmtTimings() []byte
-	SetFmtOptimizerEstimates(t []byte)
-	GetFmtOptimizerEstimates() []byte
+	SetFmtOptimizerEstimates(e map[string]interface{})
+	GetFmtOptimizerEstimates() map[string]interface{}
 	IsAdHoc() bool
 	SetErrorLimit(limit int)
 	GetErrorLimit() int
@@ -343,7 +343,7 @@ type BaseRequest struct {
 	stopOperator         execution.Operator // notified when request execution stops
 	timings              execution.Operator
 	fmtTimings           []byte
-	fmtEstimates         []byte
+	fmtEstimates         map[string]interface{}
 	controls             value.Tristate
 	profile              Profile
 	indexApiVersion      int    // Index API version
@@ -941,11 +941,11 @@ func (this *BaseRequest) GetFmtTimings() []byte {
 	return this.fmtTimings
 }
 
-func (this *BaseRequest) SetFmtOptimizerEstimates(e []byte) {
+func (this *BaseRequest) SetFmtOptimizerEstimates(e map[string]interface{}) {
 	this.fmtEstimates = e
 }
 
-func (this *BaseRequest) GetFmtOptimizerEstimates() []byte {
+func (this *BaseRequest) GetFmtOptimizerEstimates() map[string]interface{} {
 	return this.fmtEstimates
 }
 
