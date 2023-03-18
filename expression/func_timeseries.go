@@ -366,7 +366,7 @@ func getTimeSeriesRange(trange value.Value) (rv *TimeSeriesRange, skip bool) {
 
 // See the format near Evaluate()
 // Convert multiple range (Ignore invalid once) predicate array into Structure.
-// If all are invalid ranges then add range of -1 to 0.
+// If all are invalid ranges then add range of 0 to -1.
 
 func GetTimeSeriesRanges(tranges value.Value) (rv TimeSeriesRanges) {
 	if tranges == nil || tranges.Type() == value.MISSING {
@@ -397,7 +397,7 @@ func GetTimeSeriesRanges(tranges value.Value) (rv TimeSeriesRanges) {
 		}
 	}
 	if len(rv) == 0 {
-		rv = append(rv, NewTimeSeriesRange(-1, 0))
+		rv = append(rv, NewTimeSeriesRange(0, -1))
 	}
 	return rv
 }
@@ -567,7 +567,7 @@ func (this TimeSeriesRanges) ValidRange(val int64) bool {
 
 func (this TimeSeriesRanges) Qualified(dstart, dend int64) bool {
 	for _, t := range this {
-		if dstart <= t.end || dend >= t.start {
+		if t.start <= t.end && (dstart <= t.end || dend >= t.start) {
 			return true
 		}
 	}

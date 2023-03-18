@@ -191,7 +191,7 @@ func (this *Unnest) processTimeSeriesItem(item value.AnnotatedValue, context *Co
 	}
 
 	if qok, qokOuter := this.timeSeriesData.Qualified(this.plan.Term().Outer()); !qok {
-		return qokOuter || this.sendItem(nitem)
+		return !qokOuter || this.sendItem(nitem)
 	}
 
 	// empty, treat as outer unnest
