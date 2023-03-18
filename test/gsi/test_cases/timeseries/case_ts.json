@@ -119,7 +119,7 @@
        "testcase": "timeseries (ire regular). Using index. Single ts_ranges. Named Parameter",
        "queryParams": {"query_context": "orders._default"},
        "namedArgs": {"ts_ranges": [1677730948000, 1677730952000]},
-       "statements": "SELECT RAW t FROM ts AS d UNNEST _timeseries(d, {'ts_ranges':$ts_ranges}) AS t WHERE d.ticker = 'BASE' AND d.ts_interval IS MISSING AND ($ts_ranges[0] BETWEEN d.ts_start AND d.ts_end OR (d.ts_start BETWEEN $ts_ranges[0] AND $ts_ranges[1] AND d.ts_end BETWEEN $ts_ranges[0]  AND $ts_ranges[1] ) OR $ts_ranges[1] BETWEEN d.ts_start AND d.ts_end)",
+       "statements": "SELECT RAW t FROM ts AS d UNNEST _timeseries(d, {'ts_ranges':$ts_ranges}) AS t WHERE d.ticker = 'BASE' AND d.ts_interval IS MISSING AND d.ts_start <= $ts_ranges[1] AND d.ts_end >= $ts_ranges[0]",
        "results": [
 	       { "_t": 1677730948000, "_v0": 16.48 },
                { "_t": 1677730949000, "_v0": 16.49 },
@@ -132,7 +132,7 @@
        "testcase": "timeseries (ire regular). Using index. Multiple ts_ranges. Named Parameter",
        "queryParams": {"query_context": "orders._default"},
        "namedArgs": {"ts_ranges": [[1677730948000, 1677730949000], [1677730951000, 1677730952000]]},
-       "statements": "SELECT RAW t FROM ts AS d UNNEST _timeseries(d, {'ts_ranges':$ts_ranges}) AS t WHERE d.ticker = 'BASE' AND d.ts_interval IS MISSING AND ($ts_ranges[0][0] BETWEEN d.ts_start AND d.ts_end OR (d.ts_start BETWEEN $ts_ranges[0][0] AND $ts_ranges[0][1] AND d.ts_end BETWEEN $ts_ranges[0][0] AND $ts_ranges[0][1] ) OR $ts_ranges[0][1] BETWEEN d.ts_start AND d.ts_end OR $ts_ranges[1][0] BETWEEN d.ts_start AND d.ts_end OR (d.ts_start BETWEEN $ts_ranges[1][0] AND $ts_ranges[1][1] AND d.ts_end BETWEEN $ts_ranges[1][0] AND $ts_ranges[1][1] ) OR $ts_ranges[1][1] BETWEEN d.ts_start AND d.ts_end)",
+       "statements": "SELECT RAW t FROM ts AS d UNNEST _timeseries(d, {'ts_ranges':$ts_ranges}) AS t WHERE d.ticker = 'BASE' AND d.ts_interval IS MISSING AND ((d.ts_start <= $ts_ranges[0][1] AND d.ts_end >= $ts_ranges[0][0]) OR (d.ts_start <= $ts_ranges[1][1] AND d.ts_end >= $ts_ranges[1][0]))",
        "results": [
 	       { "_t": 1677730948000, "_v0": 16.48 },
                { "_t": 1677730949000, "_v0": 16.49 },
