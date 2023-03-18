@@ -566,8 +566,13 @@ func (this TimeSeriesRanges) ValidRange(val int64) bool {
 }
 
 func (this TimeSeriesRanges) Qualified(dstart, dend int64) bool {
+	if dend < dstart {
+		return false
+	}
 	for _, t := range this {
-		if t.start <= t.end && (dstart <= t.end || dend >= t.start) {
+		if t.start <= t.end &&
+			((t.start >= dstart && t.start <= dend) || // t.start is middle of the document
+				(dstart >= t.start && dstart <= t.end)) { // document start >= t.start
 			return true
 		}
 	}
