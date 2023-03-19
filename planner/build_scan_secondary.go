@@ -734,9 +734,20 @@ func narrowerOrEquivalent(se, te *indexEntry, shortest bool, predFc map[string]v
 		return false
 	}
 
-	return se.cond != nil ||
-		len(se.keys) < len(te.keys) ||
-		(te.nSargKeys == 0 && se.nSargKeys == 0 && se.index.IsPrimary())
+	if len(se.keys) != len(te.keys) {
+		return len(se.keys) < len(te.keys)
+	}
+
+	// favor primary index over missing-leading key index
+	if te.nSargKeys == 0 && se.nSargKeys == 0 {
+		if se.index.IsPrimary() && te.cond == nil {
+			return true
+		} else if te.index.IsPrimary() && se.cond == nil {
+			return false
+		}
+	}
+
+	return se.cond != nil || (te.nSargKeys == (snk + snc))
 }
 
 // Calculates how many keys te sargable keys matched with se sargable keys and se condition
@@ -861,8 +872,12 @@ func (this *builder) sargIndexes(baseKeyspace *base.BaseKeyspace, underHash bool
 		}
 
 		useFilters := true
-		if isOrPred && this.hasBuilderFlag(BUILDER_OR_SUBTERM) {
-			useFilters = false
+		if isOrPred {
+			if this.hasBuilderFlag(BUILDER_OR_SUBTERM) {
+				useFilters = false
+			} else {
+				useFilters = this.orSargUseFilters(pred.(*expression.Or), se)
+			}
 		} else {
 			for _, key := range se.keys {
 				if _, ok := key.(*expression.And); ok {
@@ -1490,4 +1505,32 @@ func getIndexAllIndexes(indexes map[datastore.Index]*indexEntry, baseKeyspace *b
 	}
 
 	return indexes
+}
+
+func (this *builder) orSargUseFilters(pred *expression.Or, entry *indexEntry) bool {
+	skip := useSkipIndexKeys(entry.index, this.context.IndexApiVersion())
+	missing := indexHasLeadingKeyMissingValues(entry.index, this.context.FeatureControls())
+
+	// if all subterms of OR gives the same set of sargable keys, use individual filters
+	var min, max int
+	var skeys []bool
+	for i, child := range pred.Operands() {
+		cmin, cmax, _, cskeys := SargableFor(child, entry.sargKeys, missing, skip, nil, this.context, this.aliases)
+		if i == 0 {
+			min = cmin
+			max = cmax
+			skeys = cskeys
+		} else {
+			if cmin != min || cmax != max || len(cskeys) != len(skeys) {
+				return false
+			}
+			for j := 0; j < len(skeys); j++ {
+				if cskeys[j] != skeys[j] {
+					return false
+				}
+			}
+		}
+	}
+
+	return true
 }

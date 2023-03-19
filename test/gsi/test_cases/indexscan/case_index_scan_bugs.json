@@ -108,5 +108,48 @@
                 "c4": 321
             }
     ]
+    },
+    {
+	"testcase": "MB-42039/MB-42187",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE EVERY v WITHIN p.plan.`~children` SATISFIES (v.`#operator` IS MISSING OR v.`#operator` != 'IntersectScan') END"
+        },
+        "statements":"SELECT * FROM shellTest WHERE c1 = 1 AND c2 = 10",
+	"ordered": true,
+        "results": [
+    ]
+    },
+    {
+	"testcase": "MB-56039",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`index` = 'iorix2' AND v.`index_keys` IS NOT MISSING AND ARRAY_LENGTH(v.spans) = 2 AND ARRAY_LENGTH(v.spans[0].`range`) = 3 AND ARRAY_LENGTH(v.spans[1].`range`) = 2 END"
+        },
+        "statements":"SELECT c2, c3, c4 FROM orders WHERE test_id = \"idxfltr\" AND c1 = 1 AND ((15 BETWEEN c2 AND c4) OR (c2 BETWEEN 200 AND 300)) ORDER BY c6 LIMIT 2",
+	"ordered": true,
+        "results": [
+            {
+                "c2": 11,
+                "c3": "test",
+                "c4": 21
+            },
+            {
+                "c2": 211,
+                "c4": 221
+            }
+    ]
     }
 ]

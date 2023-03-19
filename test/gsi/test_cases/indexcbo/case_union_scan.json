@@ -40,7 +40,7 @@
                     "cardinality": true
                 }
             ],
-            "statement": "SELECT true AS present, p.cost IS NOT MISSING AS cost, p.cardinality IS NOT MISSING AS cardinality FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'UnionScan' END"
+            "statement": "SELECT true AS present, p.cost IS NOT MISSING AS cost, p.cardinality IS NOT MISSING AS cardinality FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND ARRAY_LENGTH(v.spans) > 1 END"
         },
         "queryParams": {"use_cbo": true},
         "statements":"SELECT c2, c3, c4 FROM orders WHERE test_id = \"indexCBO\" AND c1 = 1 AND (c2 = 311 OR c4 = 221) ORDER BY c6",
