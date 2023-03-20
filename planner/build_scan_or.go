@@ -76,7 +76,7 @@ func (this *builder) buildOrScan(node *algebra.KeyspaceTerm, baseKeyspace *base.
 	if err == nil && scan != nil {
 		if orErr != nil || orScan == nil || sargLength > orSargLength {
 			return scan, sargLength, nil
-		} else if sargLength == orSargLength {
+		} else {
 			idx := scan.GetIndex()
 			orIdx := orScan.GetIndex()
 			if idx != nil && !idx.IsPrimary() && orIdx != nil {
