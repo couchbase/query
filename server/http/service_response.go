@@ -183,7 +183,12 @@ func (this *httpRequest) markTimeOfCompletion(now time.Time) {
 }
 
 func (this *httpRequest) Alive() bool {
-	return len(this.req.Context().Done()) == 0
+	select {
+	case <-this.req.Context().Done():
+		return false
+	default:
+		return true
+	}
 }
 
 func (this *httpRequest) Execute(srvr *server.Server, context *execution.Context, reqType string, signature value.Value, startTx bool) {
