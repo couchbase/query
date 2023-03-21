@@ -345,7 +345,7 @@ func (this *builder) indexGroupLeadingIndexKeysMatch(entry *indexEntry, indexKey
 func (this *builder) checkExactSpans(entry *indexEntry, pred expression.Expression, alias string,
 	unnestAliases []string, unnestFiletrs expression.Expressions, implicitAny bool) bool {
 	// spans are not exact
-	if !entry.exactSpans || hasUnknownsInSargableArrayKey(entry) {
+	if !entry.exactSpans || hasUnknownsInSargableArrayKey(entry) || entry.HasFlag(IE_OR_NON_SARG_EXPR) {
 		return false
 	}
 	if pred == nil {

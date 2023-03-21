@@ -59,7 +59,7 @@ func sargForOr(or *expression.Or, entry *indexEntry, keys expression.Expressions
 		spans[i] = s
 		exact = exact && ex
 
-		if exact && (max1 < max) {
+		if exact && (max1 < max) && !entry.HasFlag(IE_OR_NON_SARG_EXPR) {
 			// check for non-sargable key in predicate
 			exprs, _, err := indexCoverExpressions(entry, keys[:max1], c, nil, baseKeyspace.Name(), context)
 			if err != nil {
@@ -67,7 +67,7 @@ func sargForOr(or *expression.Or, entry *indexEntry, keys expression.Expressions
 			}
 			implicitAny := implicitAnyCover(entry, true, context.FeatureControls())
 			if !expression.IsCovered(c, baseKeyspace.Name(), exprs, implicitAny) {
-				exact = false
+				entry.SetFlags(IE_OR_NON_SARG_EXPR, true)
 			}
 		}
 	}

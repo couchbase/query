@@ -908,6 +908,7 @@ func (this *builder) sargIndexes(baseKeyspace *base.BaseKeyspace, underHash bool
 			}
 		}
 		if !validSpans {
+			useFilters = false
 			spans, exactSpans, err = SargFor(baseKeyspace.DnfPred(), se, se.keys,
 				isMissing, nil, se.maxKeys, orIsJoin, useCBO, baseKeyspace,
 				this.keyspaceNames, advisorValidate, this.aliases, this.context)
@@ -942,6 +943,10 @@ func (this *builder) sargIndexes(baseKeyspace *base.BaseKeyspace, underHash bool
 			exactSpans = spans.ExactSpan1(len(se.keys))
 		}
 		se.exactSpans = exactSpans
+
+		if isOrPred && useFilters {
+			se.SetFlags(IE_OR_USE_FILTERS, true)
+		}
 	}
 
 	return nil
@@ -1131,6 +1136,11 @@ func (this *builder) getIndexFilters(entry *indexEntry, node *algebra.KeyspaceTe
 	joinFilters := baseKeyspace.JoinFilters()
 	nFilters := len(filters)
 	nJoinFilters := len(joinFilters)
+	pred := baseKeyspace.DnfPred()
+	isOrPred := false
+	if _, ok := pred.(*expression.Or); ok {
+		isOrPred = true
+	}
 
 	for _, fl := range filters {
 		if fl.IsJoin() {
@@ -1269,67 +1279,85 @@ func (this *builder) getIndexFilters(entry *indexEntry, node *algebra.KeyspaceTe
 		}
 	}
 
-	for _, fl := range filters {
-		if fl.IsUnnest() || fl.HasSubq() {
-			continue
-		}
-		fltrExpr := fl.FltrExpr()
-		derived := false
-		orig := false
-		if _, ok := entry.exactFilters[fl]; ok {
-			// Skip the filters used to generate exact spans since these are
-			// supposedly evaluated by the indexer already.
-			// It is possible that a span starts out exact but was turned to non-exact
-			// later, but this will not cause wrong result (just potential inefficiency)
-			continue
-		} else if entry.cond != nil {
-			// Also skip filters that is in index condition
-			origExpr := fl.OrigExpr()
-			flExpr := fltrExpr
-			if len(namedArgs) > 0 || len(positionalArgs) > 0 {
-				flExpr, err = base.ReplaceParameters(flExpr, namedArgs, positionalArgs)
-				if err != nil {
-					return
+	if !isPushDownProperty(entry.pushDownProperty, _PUSHDOWN_EXACTSPANS) {
+		missing := indexHasLeadingKeyMissingValues(index, this.context.FeatureControls())
+		skip := useSkipIndexKeys(index, this.context.IndexApiVersion())
+		chkOr := isOrPred && !entry.HasFlag(IE_OR_USE_FILTERS)
+		for _, fl := range filters {
+			if fl.IsUnnest() || fl.HasSubq() {
+				continue
+			}
+			fltrExpr := fl.FltrExpr()
+			derived := false
+			orig := false
+			subOr := false
+			if chkOr {
+				orFltr := this.orGetIndexFilter(fltrExpr, entry.sargKeys, baseKeyspace, missing, skip)
+				if orFltr == nil {
+					continue
+				} else if orFltr != fltrExpr {
+					fltrExpr = orFltr
+					subOr = true
 				}
-				if origExpr != nil {
-					origExpr, err = base.ReplaceParameters(origExpr, namedArgs, positionalArgs)
+			} else if _, ok := entry.exactFilters[fl]; ok {
+				// Skip the filters used to generate exact spans since these are
+				// supposedly evaluated by the indexer already.
+				// It is possible that a span starts out exact but was turned to non-exact
+				// later, but this will not cause wrong result (just potential inefficiency)
+				continue
+			}
+
+			if !subOr && entry.cond != nil {
+				// Also skip filters that is in index condition
+				origExpr := fl.OrigExpr()
+				flExpr := fltrExpr
+				if len(namedArgs) > 0 || len(positionalArgs) > 0 {
+					flExpr, err = base.ReplaceParameters(flExpr, namedArgs, positionalArgs)
 					if err != nil {
 						return
 					}
-				}
-			}
-			if base.SubsetOf(entry.cond, flExpr) {
-				continue
-			}
-			if origExpr != nil && base.SubsetOf(entry.origCond, origExpr) {
-				continue
-			}
-		}
-		if base.IsDerivedExpr(fltrExpr) && !fl.IsJoin() {
-			derived = true
-			if fl.OrigExpr() != nil {
-				fltrExpr = fl.OrigExpr()
-				orig = true
-			}
-		}
-		if expression.IsCovered(fltrExpr, alias, coverExprs, false) {
-			if !fl.IsJoin() {
-				if useCBO {
-					if fl.Selec() > 0.0 {
-						selec *= fl.Selec()
-					} else {
-						useCBO = false
-						selec = OPT_SELEC_NOT_AVAIL
+					if origExpr != nil {
+						origExpr, err = base.ReplaceParameters(origExpr, namedArgs, positionalArgs)
+						if err != nil {
+							return
+						}
 					}
 				}
-				if !derived || orig {
-					indexFilters = append(indexFilters, fltrExpr)
+				if base.SubsetOf(entry.cond, flExpr) {
+					continue
 				}
-			} else if includeJoin {
-				eq, self, other, joinKeyspace := this.eqJoinFilter(fl, alias)
-				if eq && self != nil && other != nil && joinKeyspace != nil {
-					hasIndexJoinFilters = true
-					baseKeyspace.AddBFSource(joinKeyspace, index, self, other, fl)
+				if origExpr != nil && base.SubsetOf(entry.origCond, origExpr) {
+					continue
+				}
+			}
+			if base.IsDerivedExpr(fltrExpr) && !fl.IsJoin() {
+				derived = true
+				if fl.OrigExpr() != nil {
+					fltrExpr = fl.OrigExpr()
+					orig = true
+				}
+			}
+			if expression.IsCovered(fltrExpr, alias, coverExprs, false) {
+				if !fl.IsJoin() {
+					if useCBO {
+						if fl.Selec() > 0.0 {
+							if !subOr {
+								selec *= fl.Selec()
+							}
+						} else {
+							useCBO = false
+							selec = OPT_SELEC_NOT_AVAIL
+						}
+					}
+					if !derived || orig {
+						indexFilters = append(indexFilters, fltrExpr)
+					}
+				} else if includeJoin {
+					eq, self, other, joinKeyspace := this.eqJoinFilter(fl, alias)
+					if eq && self != nil && other != nil && joinKeyspace != nil {
+						hasIndexJoinFilters = true
+						baseKeyspace.AddBFSource(joinKeyspace, index, self, other, fl)
+					}
 				}
 			}
 		}
@@ -1533,4 +1561,84 @@ func (this *builder) orSargUseFilters(pred *expression.Or, entry *indexEntry) bo
 	}
 
 	return true
+}
+
+func (this *builder) orGetIndexFilter(pred expression.Expression, keys expression.Expressions,
+	baseKeyspace *base.BaseKeyspace, missing, skip bool) expression.Expression {
+	var orOps expression.Expressions
+	if or, ok := pred.(*expression.Or); ok {
+		orOps = or.Operands()
+	} else {
+		orOps = expression.Expressions{pred}
+	}
+
+	modified := false
+	terms := make(expression.Expressions, 0, len(orOps))
+	for _, op := range orOps {
+		var term expression.Expression
+		var andOps expression.Expressions
+		if and, ok := op.(*expression.And); ok {
+			andOps = and.Operands()
+		} else {
+			andOps = expression.Expressions{op}
+		}
+		for _, op1 := range andOps {
+			add := true
+			for i, key := range keys {
+				min, _, _, _ := SargableFor(op1, expression.Expressions{key},
+					(missing || i > 0), skip, nil, this.context, this.aliases)
+				if min == 0 {
+					continue
+				}
+				rs, exact, err := sargFor(op1, key, false, false, baseKeyspace,
+					this.keyspaceNames, this.advisorValidate(),
+					(missing || i > 0), false, this.aliases, this.context)
+				if err == nil && rs != nil && exact {
+					add = false
+					break
+
+				}
+			}
+			if add {
+				if term == nil {
+					term = op1
+				} else {
+					term = expression.NewAnd(term, op1)
+				}
+			} else {
+				modified = true
+			}
+		}
+		if term == nil {
+			// one of the OR subterms is "empty", i.e., true
+			return nil
+		}
+		// avoid adding redundant term
+		found := false
+		for i := 0; i < len(terms); i++ {
+			if base.SubsetOf(terms[i], term) {
+				terms[i] = term
+				found = true
+				break
+			}
+		}
+		if !found {
+			terms = append(terms, term)
+		}
+	}
+
+	if !modified {
+		return pred
+	}
+
+	var rv expression.Expression
+	if len(terms) == 0 {
+		return nil
+	} else if len(terms) == 1 {
+		rv = terms[0]
+	} else {
+		rv = expression.NewOr(terms...)
+	}
+
+	return rv
 }

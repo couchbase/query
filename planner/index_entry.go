@@ -38,6 +38,8 @@ const (
 	IE_HAS_FILTER
 	IE_HAS_JOIN_FILTER
 	IE_HAS_EARLY_ORDER
+	IE_OR_USE_FILTERS
+	IE_OR_NON_SARG_EXPR
 )
 
 type indexEntry struct {
