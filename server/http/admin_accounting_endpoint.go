@@ -332,7 +332,7 @@ func doPrometheusLow(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Re
 			stats := b.GetIOStats(false, true)
 			for n, s := range stats {
 				statName := "n1ql_" + bName + "_" + n
-				w.Write([]byte("# TYPE n1ql_" + statName + " gauge\n"))
+				w.Write([]byte("# TYPE " + statName + " gauge\n"))
 				w.Write([]byte(statName + "{bucket=\"" + b.Name() + "\"} "))
 				w.Write([]byte(fmt.Sprintf("%v\n", s)))
 			}

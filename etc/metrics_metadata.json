@@ -38,6 +38,7 @@
 	"n1ql_bucket_reads": {
 		"type": "guage",
 		"help": "The total number of reads on the bucket.",
+		"notes": "This is a metric specific to provisioned mode.",
 		"added": "7.5.0",
 		"labels": [
 			"bucket"
@@ -46,6 +47,7 @@
 	"n1ql_bucket_retries": {
 		"type": "guage",
 		"help": "The total number of retries on the bucket.",
+		"notes": "This is a metric specific to provisioned mode.",
 		"added": "7.5.0",
 		"labels": [
 			"bucket"
@@ -54,6 +56,7 @@
 	"n1ql_bucket_writes": {
 		"type": "guage",
 		"help": "The total number of writes on the bucket.",
+		"notes": "This is a metric specific to provisioned mode.",
 		"added": "7.5.0",
 		"labels": [
 			"bucket"
