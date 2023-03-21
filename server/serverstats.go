@@ -9,7 +9,6 @@
 package server
 
 import (
-	"fmt"
 	"runtime"
 	"sync/atomic"
 	"time"
@@ -149,8 +148,12 @@ func (c *statsCollector) runCollectStats() {
 			ratio := c.server.QueuedRequests() / (c.server.Servicers() + c.server.PlusServicers())
 			if ratio >= 3 {
 				logging.Warnf("No processed requests with queue of %v", c.server.QueuedRequests())
-				ffdc.Capture("Stalled queue processing", ffdc.Stacks, ffdc.Active)
+				ffdc.Capture(ffdc.StalledQueue)
+			} else {
+				ffdc.Reset(ffdc.StalledQueue)
 			}
+		} else {
+			ffdc.Reset(ffdc.StalledQueue)
 		}
 
 		newStats = oldStats
@@ -159,7 +162,10 @@ func (c *statsCollector) runCollectStats() {
 		if newStats != nil {
 			if pmu, ok := newStats["process.memory.usage"]; ok {
 				if mu, ok := pmu.(uint64); ok && mu >= 80 {
-					ffdc.Capture(fmt.Sprintf("Memory threshold exceeded: %v >= 80", mu), ffdc.Heap, ffdc.Stacks)
+					logging.Warnf("Memory threshold exceeded: %v > 80", mu)
+					ffdc.Capture(ffdc.MemoryThreshold)
+				} else {
+					ffdc.Reset(ffdc.MemoryThreshold)
 				}
 			}
 		}

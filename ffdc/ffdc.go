@@ -16,10 +16,11 @@ import (
 	"io/fs"
 	"os"
 	"path"
-	"runtime"
 	"runtime/pprof"
 	"sort"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"time"
 	"unicode"
 
@@ -28,23 +29,33 @@ import (
 
 // First Failure Data Capture (FFDC)
 
-const _FFDC_FILE_LIMIT = 24
-const _FFDC_MIN_INTERVAL = time.Minute * 10
+const _FFDC_OCCURENCE_LIMIT = 10
+const _FFDC_MIN_INTERVAL = time.Second * 10
+
+const (
+	Heap      = "heap"
+	Stacks    = "grtn"
+	Completed = "creq"
+	Active    = "areq"
+)
+
+const fileNamePrefix = "query_ffdc"
+const defaultLogsPath = "var/lib/couchbase/logs"
+const staticConfigFile = "etc/couchbase/static_config"
 
 var _path string
 var pidString string
-var files []string
 
 var operations = map[string]func(io.Writer) error{
 	Heap: func(w io.Writer) error {
-		p := pprof.Lookup(Heap)
+		p := pprof.Lookup("heap")
 		if p != nil {
 			return p.WriteTo(w, 0)
 		}
 		return nil
 	},
 	Stacks: func(w io.Writer) error {
-		p := pprof.Lookup(Stacks)
+		p := pprof.Lookup("goroutine")
 		if p != nil {
 			return p.WriteTo(w, 2)
 		}
@@ -52,18 +63,125 @@ var operations = map[string]func(io.Writer) error{
 	},
 }
 
-var whenLast = make(map[string]time.Time)
+type occurrence struct {
+	when  time.Time
+	ts    string
+	files []string
+}
 
-const (
-	Heap      = "heap"
-	Stacks    = "goroutine"
-	Completed = "completed_requests"
-	Active    = "active_requests"
-)
+func (this *occurrence) capture(event string, what string) {
+	name := strings.Join([]string{fileNamePrefix, event, what, pidString, this.ts}, "_")
+	f, err := os.Create(path.Join(getPath(), name))
+	if err == nil {
+		this.files = append(this.files, name)
+		zip := gzip.NewWriter(f)
+		err = operations[what](zip) // if it panics it is because there is a problem with the event definition
+		zip.Close()
+		f.Sync()
+		f.Close()
+		if err != nil {
+			logging.Errorf("FFDC: Error capturing '%v' to %v: %v", what, name, err)
+		} else {
+			logging.Infof("FFDC: Captured: %v", path.Base(name))
+		}
+	} else {
+		logging.Errorf("FFDC: failed to create '%v' dump file: %v - %v", what, name, err)
+	}
+}
 
-const fileNamePrefix = "query_ffdc"
-const defaultLogsPath = "/var/lib/couchbase/logs"
-const staticConfigFile = "/etc/couchbase/static_config"
+type reason struct {
+	sync.Mutex
+	count       int64
+	event       string
+	msg         string
+	actions     []string
+	occurrences []*occurrence
+}
+
+func (this *reason) shouldCapture() *occurrence {
+	if atomic.AddInt64(&this.count, 1) > 2 {
+		return nil
+	}
+	now := time.Now()
+	if len(this.occurrences) > 0 {
+		if now.Sub(this.occurrences[len(this.occurrences)-1].when) < _FFDC_MIN_INTERVAL {
+			atomic.AddInt64(&this.count, -1)
+			return nil
+		}
+	}
+	if len(this.occurrences) >= _FFDC_OCCURENCE_LIMIT {
+		this.cleanup()
+	}
+	occ := &occurrence{when: now, ts: now.Format(time.RFC3339Nano)}
+	this.occurrences = append(this.occurrences, occ)
+	return occ
+}
+
+func (this *reason) capture() {
+	this.Lock()
+	occ := this.shouldCapture()
+	this.Unlock()
+	if occ != nil {
+		logging.Warnf("FFDC: %s", this.msg)
+		for i := range this.actions {
+			occ.capture(this.event, this.actions[i])
+		}
+	}
+}
+
+func (this *reason) reset() {
+	atomic.StoreInt64(&this.count, 0)
+}
+
+func (this *reason) cleanup() {
+	// remove references to inaccessible files
+	for i := 0; i < len(this.occurrences); {
+		for j := 0; j < len(this.occurrences[i].files); {
+			if _, err := os.Stat(path.Join(getPath(), this.occurrences[i].files[j])); err != nil {
+				logging.Infof("FFDC: dump has been removed: %v", this.occurrences[i].files[j])
+				if j+1 < len(this.occurrences[i].files) {
+					copy(this.occurrences[i].files[j:], this.occurrences[i].files[j+1:])
+				}
+				this.occurrences[i].files = this.occurrences[i].files[:len(this.occurrences[i].files)-1]
+			} else {
+				j++
+			}
+		}
+		if len(this.occurrences[i].files) == 0 {
+			if i+1 < len(this.occurrences) {
+				copy(this.occurrences[i:], this.occurrences[i+1:])
+			}
+			this.occurrences = this.occurrences[:len(this.occurrences)-1]
+		} else {
+			i++
+		}
+	}
+	if len(this.occurrences) < _FFDC_OCCURENCE_LIMIT {
+		return
+	}
+	// drop from the middle
+	n := _FFDC_OCCURENCE_LIMIT / 2
+	occ := this.occurrences[n]
+	copy(this.occurrences[n:], this.occurrences[n+1:])
+	this.occurrences = this.occurrences[:len(this.occurrences)-1]
+	for i := range occ.files {
+		logging.Infof("FFDC: removing dump: %v", occ.files[i])
+		os.Remove(path.Join(getPath(), occ.files[i]))
+	}
+	occ.files = nil
+}
+
+func (this *reason) getOccurence(ts string) *occurrence {
+	if len(this.occurrences) > 0 {
+		occ := this.occurrences[len(this.occurrences)-1]
+		if len(occ.files) == 0 || strings.HasSuffix(occ.files[0], ts) {
+			return occ
+		}
+	}
+	occ := &occurrence{ts: ts}
+	this.occurrences = append(this.occurrences, occ)
+	return occ
+}
 
 // We are not passed the path to the logs so this is a (dirty?) means of obtaining it
 func getPath() string {
@@ -74,7 +192,7 @@ func getPath() string {
 		}
 		installDir = path.Dir(path.Dir(installDir))
 		var p string
-		f, err := os.Open(installDir + staticConfigFile)
+		f, err := os.Open(path.Join(installDir, staticConfigFile))
 		if err == nil {
 			s := bufio.NewScanner(f)
 			s.Split(func(data []byte, atEOF bool) (int, []byte, error) {
@@ -112,7 +230,7 @@ func getPath() string {
 			f.Close()
 		}
 		if p == "" {
-			p = installDir + defaultLogsPath
+			p = path.Join(installDir, defaultLogsPath)
 		}
 		if _, err := os.Stat(p); err != nil {
 			p = os.TempDir()
@@ -123,22 +241,32 @@ func getPath() string {
 }
 
 func Init() {
-	pidString = fmt.Sprintf("%d", os.Getpid())
+	defer func() {
+		e := recover()
+		if e != nil {
+			logging.Stackf(logging.ERROR, "Panic initialising FFDC: %v", e)
+		}
+	}()
+	pidString = fmt.Sprintf("%08d", os.Getpid())
 	capturePath := getPath()
 	logging.Infof("FFDC: Capture path: %v", capturePath)
-
 	d, err := os.Open(capturePath)
 	if err == nil {
+		var files []string
+		sz := int64(0)
 		for {
-			ents, err := d.ReadDir(_FFDC_FILE_LIMIT)
+			ents, err := d.ReadDir(10)
 			if err == nil {
 				for i := range ents {
 					if !ents[i].IsDir() && strings.HasPrefix(ents[i].Name(), fileNamePrefix) {
-						files = append(files, capturePath+"/"+ents[i].Name())
+						files = append(files, ents[i].Name())
+						if i, err := ents[i].Info(); err == nil {
+							sz += i.Size()
+						}
 					}
 				}
 			}
-			if err != nil || len(ents) < _FFDC_FILE_LIMIT {
+			if err != nil || len(ents) < 10 {
 				break
 			}
 		}
@@ -149,56 +277,21 @@ func Init() {
 				b := strings.LastIndexByte(files[j], '_')
 				return files[i][a:] < files[j][b:]
 			})
+			for i := range files {
+				parts := strings.Split(files[i][len(fileNamePrefix)+1:], "_")
+				if len(parts) < 4 {
+					continue
+				}
+				var occ *occurrence
+				if reas, ok := reasons[parts[0]]; ok {
+					occ = reas.getOccurence(parts[len(parts)-1])
+				}
+				if occ != nil {
+					occ.files = append(occ.files, files[i])
+				}
+			}
 		}
-		logging.Infof("FFDC: Found %v existing dump file(s).", len(files))
-	}
-}
-
-func doCapture(what string, action func(io.Writer) error) {
-	runtime.GC()
-	name := path.Join(getPath(), strings.Join([]string{fileNamePrefix, what, pidString, time.Now().Format(time.RFC3339Nano)}, "_"))
-	f, err := os.Create(name)
-	if err == nil {
-		files = append(files, name)
-		zip := gzip.NewWriter(f)
-		err = action(zip)
-		zip.Close()
-		f.Sync()
-		f.Close()
-		if err != nil {
-			logging.Errorf("FFDC: Error capturing '%v' to %v: %v", what, path.Base(name), err)
-		} else {
-			logging.Infof("FFDC: Captured: %v", path.Base(name))
-		}
-	} else {
-		logging.Errorf("FFDC: failed to create '%v' dump file: %v", what, err)
-	}
-}
-
-func Capture(reason string, args ...string) {
-	if len(reason) < 1 {
-		panic("Invalid FFDC reason")
-	}
-	key := reason
-	if n := strings.IndexByte(reason, ':'); n > 1 {
-		key = key[:n]
-	}
-	if last, ok := whenLast[key]; ok && time.Since(last) < _FFDC_MIN_INTERVAL {
-		return
-	}
-	whenLast[key] = time.Now()
-	logging.Warnf("FFDC: %v", reason)
-	for _, what := range args {
-		if f, ok := operations[what]; ok && f != nil {
-			doCapture(what, f)
-		} else {
-			logging.Errorf("FFDC: Unknown capture type: %v", what)
-		}
-	}
-	for len(files) > _FFDC_FILE_LIMIT {
-		logging.Infof("FFDC: removing dump: %v", path.Base(files[0]))
-		os.Remove(files[0])
-		files = files[1:]
+		logging.Infof("FFDC: Found %v existing dump file(s); %v bytes.", len(files), sz)
 	}
 }
 
@@ -207,4 +300,56 @@ func Set(what string, action func(io.Writer) error) {
 		panic(fmt.Sprintf("Invalid 'what' (%v)(%v) for FFDC.", what, []byte(what)))
 	}
 	operations[what] = action
+}
+
+const (
+	RequestQueueFull = "RQF"
+	PlusQueueFull    = "PQF"
+	StalledQueue     = "SQP"
+	MemoryThreshold  = "MTE"
+	SigTerm          = "SIG"
+)
+
+var reasons = map[string]*reason{
+	RequestQueueFull: &reason{
+		event:   RequestQueueFull,
+		actions: []string{Stacks, Active, Completed},
+		msg:     "Request queue full",
+	},
+	PlusQueueFull: &reason{
+		event:   PlusQueueFull,
+		actions: []string{Stacks, Active, Completed},
+		msg:     "Plus queue full",
+	},
+	StalledQueue: &reason{
+		event:   StalledQueue,
+		actions: []string{Stacks, Active, Completed},
+		msg:     "Stalled queue processing",
+	},
+	MemoryThreshold: &reason{
+		event:   MemoryThreshold,
+		actions: []string{Heap, Stacks, Active, Completed},
+		msg:     "Memory threshold exceeded",
+	},
+	SigTerm: &reason{
+		event:   SigTerm,
+		actions: []string{Heap, Stacks, Active, Completed},
+		msg:     "SIGTERM received",
+	},
+}
+
+func Capture(event string) {
+	r, ok := reasons[event]
+	if !ok {
+		panic("FFDC: Invalid event")
+	}
+	r.capture()
+}
+
+func Reset(event string) {
+	r, ok := reasons[event]
+	if !ok {
+		panic("FFDC: Invalid event")
+	}
+	r.reset()
 }

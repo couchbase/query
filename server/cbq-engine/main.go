@@ -510,7 +510,7 @@ func signalCatcher(server *server_package.Server, endpoint *http.HttpEndpoint) {
 		}
 	}
 	if s == syscall.SIGTERM {
-		ffdc.Capture("SIGTERM received", ffdc.Active, ffdc.Completed, ffdc.Heap, ffdc.Stacks)
+		ffdc.Capture(ffdc.SigTerm)
 	} else if s == os.Interrupt {
 		// Interrupt (ctrl-C) => Immediate (ungraceful) exit
 		logging.Infof("Shutting down immediately")
