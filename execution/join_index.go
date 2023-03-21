@@ -97,9 +97,7 @@ func (this *IndexJoin) processItem(item value.AnnotatedValue, context *Context) 
 			entry, cont := this.getItemEntry(this.conn)
 			if cont {
 				if entry != nil {
-					// current policy is to only count 'in' documents
-					// from operators, not kv
-					// add this.addInDocs(1) if this changes
+					this.addInDocs(1)
 					entries = append(entries, entry)
 				} else {
 					this.mk.add(id)

@@ -94,9 +94,7 @@ func (this *IndexNest) processItem(item value.AnnotatedValue, context *Context) 
 			entry, ok := this.getItemEntry(this.conn)
 			if ok {
 				if entry != nil {
-					// current policy is to only count 'in' documents
-					// from operators, not kv
-					// add this.addInDocs(1) if this changes
+					this.addInDocs(1)
 					entries = append(entries, entry)
 				} else {
 					this.mk.add(id)

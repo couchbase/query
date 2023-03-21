@@ -191,6 +191,7 @@ func (this *IndexScan3) RunOnce(context *Context, parent value.Value) {
 			entry, cont := this.getItemEntry(this.conn)
 			if cont {
 				if entry != nil {
+					this.addInDocs(1)
 					if _, sok := this.keys[entry.PrimaryKey]; !sok {
 						av := this.newEmptyDocumentWithKey(entry.PrimaryKey, scope_value, context)
 						if lcovers > 0 {

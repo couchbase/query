@@ -104,9 +104,7 @@ func (this *PrimaryScan3) scanPrimary(context *Context, parent value.Value) {
 		if ok {
 			if entry != nil {
 				if _, sok := this.keys[entry.PrimaryKey]; !sok {
-					// current policy is to only count 'in' documents
-					// from operators, not kv
-					// add this.addInDocs(1) if this changes
+					this.addInDocs(1)
 					av := this.newEmptyDocumentWithKey(entry.PrimaryKey, parent, context)
 					ok = this.sendItem(av)
 					lastEntry = entry
