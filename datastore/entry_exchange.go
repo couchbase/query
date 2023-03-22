@@ -292,6 +292,10 @@ func (this *EntryExchange) Close() {
 	}
 }
 
+func (this *EntryExchange) IsClosed() bool {
+	return this.closed
+}
+
 func (this *entryQueue) close() {
 	this.vLock.Lock()
 	this.closed = true

@@ -194,7 +194,7 @@ func (udr *UnifiedDocumentRetriever) Name() string {
 
 func (udr *UnifiedDocumentRetriever) Reset() {
 	if udr.iconn != nil {
-		udr.iconn.Sender().Close()
+		udr.iconn.Dispose()
 		udr.iconn = nil
 	}
 	if udr.rs != nil && udr.rs_scan != nil {
@@ -233,7 +233,7 @@ func (udr *UnifiedDocumentRetriever) isFlagOff(what Flag) bool {
 func udrFinalizer(udr *UnifiedDocumentRetriever) {
 	if udr.iconn != nil {
 		logging.Warnf("Finalizer closing index connection.")
-		udr.iconn.Sender().Close()
+		udr.iconn.Dispose()
 		udr.iconn = nil
 	}
 	if udr.rs != nil && udr.rs_scan != nil {
@@ -246,7 +246,7 @@ func udrFinalizer(udr *UnifiedDocumentRetriever) {
 
 func (udr *UnifiedDocumentRetriever) Close() {
 	if udr.iconn != nil {
-		udr.iconn.Sender().Close()
+		udr.iconn.Dispose()
 		udr.iconn = nil
 	}
 	if udr.rs != nil && udr.rs_scan != nil {
@@ -614,7 +614,7 @@ func (udr *UnifiedDocumentRetriever) GetNextDoc(context datastore.QueryContext) 
 		(udr.rs != nil && udr.isFlagOff(SAMPLE_ALLOW_EXTRA))) {
 
 		if udr.iconn != nil {
-			udr.iconn.Sender().Close()
+			udr.iconn.Dispose()
 			udr.iconn = nil
 		}
 		if udr.rs != nil && udr.rs_scan != nil {
@@ -698,7 +698,7 @@ func (udr *UnifiedDocumentRetriever) GetNextDoc(context datastore.QueryContext) 
 	}
 
 	if udr.iconn != nil {
-		udr.iconn.Sender().Close()
+		udr.iconn.Dispose()
 		udr.iconn = nil
 	}
 	if udr.isFlagOn(RANDOM_ENTRY_LAST) && udr.rnd != nil {
@@ -801,7 +801,7 @@ func (udr *UnifiedDocumentRetriever) getNextFullScan(context datastore.QueryCont
 		}
 		docCount, err := udr.ks.Count(context)
 		if err != nil {
-			udr.iconn.Sender().Close()
+			udr.iconn.Dispose()
 			udr.iconn = nil
 			udr.ss = nil
 			return _EMPTY_KEY, nil, err, false
@@ -842,7 +842,7 @@ func (udr *UnifiedDocumentRetriever) getNextFullScan(context datastore.QueryCont
 				sel = int64(rand.Int()) % n
 			}
 		}
-		udr.iconn.Sender().Close()
+		udr.iconn.Dispose()
 		udr.iconn = nil
 		logging.Debugf("sequential scan returned %v keys", len(udr.keys), context)
 	}
@@ -883,7 +883,7 @@ next_index:
 			udr.currentIndex++
 			if udr.currentIndex >= len(udr.indexes) || (udr.currentIndex > 0 && udr.isFlagOn(SINGLE_INDEX)) {
 				if udr.iconn != nil {
-					udr.iconn.Sender().Close()
+					udr.iconn.Dispose()
 					udr.iconn = nil
 				}
 				logging.Debuga(func() string {
@@ -960,7 +960,7 @@ next_index:
 				entry, _ := udr.iconn.Sender().GetEntry()
 				if entry == nil {
 					timeout := udr.iconn.Timeout()
-					udr.iconn.Sender().Close()
+					udr.iconn.Dispose()
 					udr.iconn = nil
 					if timeout {
 						if len(udr.keys) > 0 && udr.indexes[udr.currentIndex].IsPrimary() {
@@ -991,7 +991,7 @@ next_index:
 				} else {
 					duplicates++
 					if duplicates > _MAX_DUPLICATES {
-						udr.iconn.Sender().Close()
+						udr.iconn.Dispose()
 						udr.iconn = nil
 						if len(udr.keys) == 0 {
 							udr.scanNum = 0
@@ -1011,7 +1011,7 @@ next_index:
 			if udr.indexes[udr.currentIndex].IsPrimary() {
 				if udr.iconn != nil {
 					// repeat this index with a different offset
-					udr.iconn.Sender().Close()
+					udr.iconn.Dispose()
 					udr.iconn = nil
 					udr.scanNum++
 					if len(udr.keys) > 0 {
@@ -1034,7 +1034,7 @@ next_index:
 						entry, _ := udr.iconn.Sender().GetEntry()
 						if entry == nil {
 							timeout := udr.iconn.Timeout()
-							udr.iconn.Sender().Close()
+							udr.iconn.Dispose()
 							udr.iconn = nil
 							if timeout && udr.lastKeys != nil {
 								udr.restartAfterLastKey(context)
