@@ -666,7 +666,9 @@ func (this *IndexConnection) Sender() Sender {
 }
 
 func (this *IndexConnection) Fatal(err errors.Error) {
-	this.context.Fatal(err)
+	if !this.sender.IsClosed() {
+		this.context.Fatal(err)
+	}
 }
 
 func (this *IndexConnection) MaxParallelism() int {
@@ -678,11 +680,15 @@ func (this *IndexConnection) Error(err errors.Error) {
 		this.timeout = true
 		return
 	}
-	this.context.Error(err)
+	if !this.sender.IsClosed() {
+		this.context.Error(err)
+	}
 }
 
 func (this *IndexConnection) Warning(wrn errors.Error) {
-	this.context.Warning(wrn)
+	if !this.sender.IsClosed() {
+		this.context.Warning(wrn)
+	}
 }
 
 func (this *IndexConnection) GetReqDeadline() time.Time {

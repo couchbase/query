@@ -178,7 +178,7 @@ func (udr *UnifiedDocumentRetriever) Name() string {
 
 func (udr *UnifiedDocumentRetriever) Reset() {
 	if udr.iconn != nil {
-		udr.iconn.Sender().Close()
+		udr.iconn.Dispose()
 		udr.iconn = nil
 	}
 	udr.returned = 0
@@ -210,14 +210,14 @@ func (udr *UnifiedDocumentRetriever) isFlagOff(what Flag) bool {
 func udrFinalizer(udr *UnifiedDocumentRetriever) {
 	if udr.iconn != nil {
 		logging.Warnf("UDR: Finalizer closing index connection.")
-		udr.iconn.Sender().Close()
+		udr.iconn.Dispose()
 		udr.iconn = nil
 	}
 }
 
 func (udr *UnifiedDocumentRetriever) Close() {
 	if udr.iconn != nil {
-		udr.iconn.Sender().Close()
+		udr.iconn.Dispose()
 		udr.iconn = nil
 	}
 	// hints for GC
@@ -504,7 +504,7 @@ func (udr *UnifiedDocumentRetriever) getRandom(context datastore.QueryContext) (
 func (udr *UnifiedDocumentRetriever) GetNextDoc(context datastore.QueryContext) (string, value.Value, errors.Error) {
 	if udr.returned >= udr.sampleSize {
 		if udr.iconn != nil {
-			udr.iconn.Sender().Close()
+			udr.iconn.Dispose()
 			udr.iconn = nil
 		}
 		return _EMPTY_KEY, nil, nil
@@ -627,7 +627,7 @@ next_index:
 				entry, _ := udr.iconn.Sender().GetEntry()
 				if entry == nil {
 					timeout := udr.iconn.Timeout()
-					udr.iconn.Sender().Close()
+					udr.iconn.Dispose()
 					udr.iconn = nil
 					if timeout {
 						if len(udr.keys) > 0 && udr.indexes[udr.currentIndex].IsPrimary() {
@@ -656,7 +656,7 @@ next_index:
 				} else {
 					duplicates++
 					if duplicates > _MAX_DUPLICATES {
-						udr.iconn.Sender().Close()
+						udr.iconn.Dispose()
 						udr.iconn = nil
 						if len(udr.keys) == 0 {
 							udr.scanNum = 0
@@ -676,7 +676,7 @@ next_index:
 			if udr.indexes[udr.currentIndex].IsPrimary() {
 				if udr.iconn != nil {
 					// repeat this index with a different offset
-					udr.iconn.Sender().Close()
+					udr.iconn.Dispose()
 					udr.iconn = nil
 					udr.scanNum++
 					if len(udr.keys) > 0 {
@@ -699,7 +699,7 @@ next_index:
 						entry, _ := udr.iconn.Sender().GetEntry()
 						if entry == nil {
 							timeout := udr.iconn.Timeout()
-							udr.iconn.Sender().Close()
+							udr.iconn.Dispose()
 							udr.iconn = nil
 							if timeout && udr.lastKeys != nil {
 								udr.restartAfterLastKey()
@@ -727,7 +727,7 @@ next_index:
 		return udr.keys[0], udr.docs[udr.keys[0]], nil
 	}
 	if udr.iconn != nil {
-		udr.iconn.Sender().Close()
+		udr.iconn.Dispose()
 		udr.iconn = nil
 	}
 	if udr.isFlagOn(RANDOM_ENTRY_LAST) && udr.rnd != nil {
