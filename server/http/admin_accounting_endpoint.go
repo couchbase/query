@@ -464,6 +464,11 @@ func (endpoint *HttpEndpoint) verifyCredentialsFromRequest(api string, priv auth
 	return err, isInternal
 }
 
+func doRedact(req *http.Request) bool {
+	val := req.FormValue("redact")
+	return len(val) > 0
+}
+
 func doPrepared(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
 	interface{}, errors.Error) {
 
@@ -532,7 +537,7 @@ func doPrepared(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 			if err1 != nil || (tenantName != "" && entry.Prepared.Tenant() != tenantName) {
 				return
 			}
-			res = preparedWorkHorse(entry, profiling)
+			res = preparedWorkHorse(entry, profiling, doRedact(req))
 		})
 		return res, nil
 	} else {
@@ -540,11 +545,11 @@ func doPrepared(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 	}
 }
 
-func preparedWorkHorse(entry *prepareds.CacheEntry, profiling bool) interface{} {
+func preparedWorkHorse(entry *prepareds.CacheEntry, profiling bool, redact bool) interface{} {
 	itemMap := map[string]interface{}{
 		"name":            entry.Prepared.Name(),
 		"uses":            entry.Uses,
-		"statement":       entry.Prepared.Text(),
+		"statement":       redacted(entry.Prepared.Text(), redact),
 		"indexApiVersion": entry.Prepared.IndexApiVersion(),
 		"featureControls": entry.Prepared.FeatureControls(),
 	}
@@ -601,8 +606,9 @@ func doPrepareds(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Reques
 		data := make([]interface{}, 0, numPrepareds)
 		profiling := req.Method == "POST"
 
+		redact := doRedact(req)
 		prepareds.PreparedsForeach(func(name string, d *prepareds.CacheEntry) bool {
-			p := preparedWorkHorse(d, profiling)
+			p := preparedWorkHorse(d, profiling, redact)
 			data = append(data, p)
 			return true
 		}, nil)
@@ -1419,7 +1425,7 @@ func doActiveRequest(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Re
 		if err1 != nil {
 			return nil, err1
 		}
-		return processActiveRequest(endpoint, requestId, impersonate, (req.Method == "POST")), nil
+		return processActiveRequest(endpoint, requestId, impersonate, (req.Method == "POST"), doRedact(req)), nil
 
 	} else if req.Method == "DELETE" {
 		err, _ := endpoint.verifyCredentialsFromRequest("system:active_requests", auth.PRIV_SYSTEM_READ, req, af)
@@ -1446,7 +1452,7 @@ func doActiveRequest(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Re
 	}
 }
 
-func processActiveRequest(endpoint *HttpEndpoint, requestId string, userName string, profiling bool) interface{} {
+func processActiveRequest(endpoint *HttpEndpoint, requestId string, userName string, profiling bool, redact bool) interface{} {
 	var res interface{}
 
 	_ = endpoint.actives.Get(requestId, func(request server.Request) {
@@ -1456,12 +1462,12 @@ func processActiveRequest(endpoint *HttpEndpoint, requestId string, userName str
 				return
 			}
 		}
-		res = activeRequestWorkHorse(endpoint, request, profiling)
+		res = activeRequestWorkHorse(endpoint, request, profiling, redact)
 	})
 	return res
 }
 
-func activeRequestWorkHorse(endpoint *HttpEndpoint, request server.Request, profiling bool) interface{} {
+func activeRequestWorkHorse(endpoint *HttpEndpoint, request server.Request, profiling bool, redact bool) interface{} {
 	reqMap := map[string]interface{}{
 		"requestId": request.Id().String(),
 	}
@@ -1470,7 +1476,7 @@ func activeRequestWorkHorse(endpoint *HttpEndpoint, request server.Request, prof
 		reqMap["clientContextID"] = cId
 	}
 	if request.Statement() != "" {
-		reqMap["statement"] = request.Statement()
+		reqMap["statement"] = redacted(request.Statement(), redact)
 	}
 	if request.Type() != "" {
 		reqMap["statementType"] = request.Type()
@@ -1561,11 +1567,11 @@ func activeRequestWorkHorse(endpoint *HttpEndpoint, request server.Request, prof
 		if ctrl {
 			na := request.NamedArgs()
 			if na != nil {
-				reqMap["namedArgs"] = na
+				reqMap["namedArgs"] = interfaceRedacted(na, redact)
 			}
 			pa := request.PositionalArgs()
 			if pa != nil {
-				reqMap["positionalArgs"] = pa
+				reqMap["positionalArgs"] = interfaceRedacted(pa, redact)
 			}
 			memoryQuota := request.MemoryQuota()
 			if memoryQuota != 0 {
@@ -1575,7 +1581,7 @@ func activeRequestWorkHorse(endpoint *HttpEndpoint, request server.Request, prof
 	}
 	credsString := datastore.CredsString(request.Credentials())
 	if credsString != "" {
-		reqMap["users"] = credsString
+		reqMap["users"] = redacted(credsString, redact)
 	}
 	remoteAddr := request.RemoteAddr()
 	if remoteAddr != "" {
@@ -1608,15 +1614,15 @@ func doActiveRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.R
 	requests := make([]interface{}, 0, numRequests)
 	profiling := req.Method == "POST"
 
+	redact := doRedact(req)
 	endpoint.actives.ForEach(func(requestId string, request server.Request) bool {
-		r := activeRequestWorkHorse(endpoint, request, profiling)
+		r := activeRequestWorkHorse(endpoint, request, profiling, redact)
 		requests = append(requests, r)
 		return true
 	}, nil)
 	return requests, nil
 }
 
-// TODO: redaction
 func CaptureActiveRequests(endpoint *HttpEndpoint, w io.Writer) error {
 	var buf bytes.Buffer
 	var err error
@@ -1630,7 +1636,7 @@ func CaptureActiveRequests(endpoint *HttpEndpoint, w io.Writer) error {
 			_, err = w.Write([]byte{','})
 		}
 		if err == nil {
-			r := activeRequestWorkHorse(endpoint, request, false)
+			r := activeRequestWorkHorse(endpoint, request, true, true)
 			err = json.MarshalNoEscapeToBuffer(r, &buf)
 			if err == nil {
 				_, err = buf.WriteTo(w)
@@ -1641,7 +1647,7 @@ func CaptureActiveRequests(endpoint *HttpEndpoint, w io.Writer) error {
 		return err == nil
 	}, nil)
 	if err == nil {
-		_, err = w.Write([]byte{']'})
+		_, err = w.Write([]byte{']', '\n'})
 	}
 	return err
 }
@@ -1669,7 +1675,7 @@ func doCompletedRequest(endpoint *HttpEndpoint, w http.ResponseWriter, req *http
 		if err1 != nil {
 			return nil, err1
 		}
-		return processCompletedRequest(requestId, impersonate, (req.Method == "POST")), nil
+		return processCompletedRequest(requestId, impersonate, (req.Method == "POST"), doRedact(req)), nil
 	} else if req.Method == "DELETE" {
 		err, _ := endpoint.verifyCredentialsFromRequest("system:completed_requests", auth.PRIV_SYSTEM_READ, req, af)
 		if err != nil {
@@ -1692,19 +1698,19 @@ func doCompletedRequest(endpoint *HttpEndpoint, w http.ResponseWriter, req *http
 	}
 }
 
-func processCompletedRequest(requestId string, userName string, profiling bool) interface{} {
+func processCompletedRequest(requestId string, userName string, profiling bool, redact bool) interface{} {
 	var res interface{}
 
 	server.RequestDo(requestId, func(request *server.RequestLogEntry) {
 		if userName != "" && userName != request.Users {
 			return
 		}
-		res = completedRequestWorkHorse(request, profiling)
+		res = completedRequestWorkHorse(request, profiling, redact)
 	})
 	return res
 }
 
-func completedRequestWorkHorse(request *server.RequestLogEntry, profiling bool) interface{} {
+func completedRequestWorkHorse(request *server.RequestLogEntry, profiling bool, redact bool) interface{} {
 	reqMap := map[string]interface{}{
 		"requestId": request.RequestId,
 	}
@@ -1727,14 +1733,14 @@ func completedRequestWorkHorse(request *server.RequestLogEntry, profiling bool) 
 		reqMap["queryContext"] = request.QueryContext
 	}
 	if request.Statement != "" {
-		reqMap["statement"] = request.Statement
+		reqMap["statement"] = redacted(request.Statement, redact)
 	}
 	if request.StatementType != "" {
 		reqMap["statementType"] = request.StatementType
 	}
 	if request.PreparedName != "" {
 		reqMap["preparedName"] = request.PreparedName
-		reqMap["preparedText"] = request.PreparedText
+		reqMap["preparedText"] = redacted(request.PreparedText, redact)
 	}
 	if request.TxId != "" {
 		reqMap["txid"] = request.TxId
@@ -1772,21 +1778,21 @@ func completedRequestWorkHorse(request *server.RequestLogEntry, profiling bool) 
 
 	if profiling {
 		if request.NamedArgs != nil {
-			reqMap["namedArgs"] = request.NamedArgs
+			reqMap["namedArgs"] = interfaceRedacted(request.NamedArgs, redact)
 		}
 		if request.PositionalArgs != nil {
-			reqMap["positionalArgs"] = request.PositionalArgs
+			reqMap["positionalArgs"] = interfaceRedacted(request.PositionalArgs, redact)
 		}
 		timings := request.Timings()
 		if timings != nil {
-			reqMap["timings"] = value.NewValue(timings)
+			reqMap["timings"] = value.NewValue(interfaceRedacted(timings, redact))
 		}
 		if request.CpuTime > time.Duration(0) {
 			reqMap["cpuTime"] = request.CpuTime.String()
 		}
 		optEstimates := request.OptEstimates()
 		if optEstimates != nil {
-			reqMap["optimizerEstimates"] = value.NewValue(optEstimates)
+			reqMap["optimizerEstimates"] = value.NewValue(interfaceRedacted(optEstimates, redact))
 		}
 		if request.Errors != nil {
 			reqMap["errors"] = request.Errors
@@ -1796,7 +1802,7 @@ func completedRequestWorkHorse(request *server.RequestLogEntry, profiling bool) 
 		}
 	}
 	if request.Users != "" {
-		reqMap["users"] = request.Users
+		reqMap["users"] = redacted(request.Users, redact)
 	}
 	if request.RemoteAddr != "" {
 		reqMap["remoteAddr"] = request.RemoteAddr
@@ -1821,15 +1827,15 @@ func doCompletedRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *htt
 	requests := make([]interface{}, 0, numRequests)
 	profiling := req.Method == "POST"
 
+	redact := doRedact(req)
 	server.RequestsForeach(func(requestId string, request *server.RequestLogEntry) bool {
-		r := completedRequestWorkHorse(request, profiling)
+		r := completedRequestWorkHorse(request, profiling, redact)
 		requests = append(requests, r)
 		return true
 	}, nil)
 	return requests, nil
 }
 
-// TODO: redaction
 func CaptureCompletedRequests(w io.Writer) error {
 	var buf bytes.Buffer
 	var err error
@@ -1843,7 +1849,7 @@ func CaptureCompletedRequests(w io.Writer) error {
 			_, err = w.Write([]byte{','})
 		}
 		if err == nil {
-			r := completedRequestWorkHorse(request, false)
+			r := completedRequestWorkHorse(request, true, true)
 			err = json.MarshalNoEscapeToBuffer(r, &buf)
 			if err == nil {
 				_, err = buf.WriteTo(w)
@@ -1854,9 +1860,35 @@ func CaptureCompletedRequests(w io.Writer) error {
 		return err == nil
 	}, nil)
 	if err == nil {
-		_, err = w.Write([]byte{']'})
+		_, err = w.Write([]byte{']', '\n'})
 	}
 	return err
+}
+
+func redacted(in string, redact bool) string {
+	if redact {
+		return "<ud>" + in + "</ud>"
+	}
+	return in
+}
+
+func interfaceRedacted(in interface{}, redact bool) interface{} {
+	if redact {
+
+		// turn it to a string
+		val, _ := value.NewValue(in).MarshalJSON()
+
+		// tag it
+		out := make([]byte, 0, len(val)+9)
+		out = append(out, []byte("<ud>")...)
+		out = append(out, val...)
+		out = append(out, []byte("</ud>")...)
+
+		// marshal it again to escape the quotes
+		out, _ = value.NewValue(util.ByteToString(out)).MarshalJSON()
+		return out
+	}
+	return in
 }
 
 func doPreparedIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
