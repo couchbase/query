@@ -316,7 +316,7 @@ func cbAuthorize(s authSource, privileges *auth.Privileges, credentials *auth.Cr
 				authenticatedUsers = append(authenticatedUsers, userKeyString(creds))
 			} else {
 				logging.Debuga(func() string {
-					u, _, _ := cbauth.ExtractCreds(req)
+					u, _, _ := cbauth.ExtractCredsGeneric(req.Header)
 					return fmt.Sprintf("authWebCreds: <ud>%v</ud> - %v", u, err)
 				})
 
@@ -330,7 +330,7 @@ func cbAuthorize(s authSource, privileges *auth.Privileges, credentials *auth.Cr
 				if clientAuthType != tls.NoClientCert && isClientCertPresent(req) {
 					return errors.NewDatastoreAuthorizationError(err)
 				} else if clientAuthType == tls.NoClientCert {
-					impersonation, _, _ := cbauth.ExtractOnBehalfIdentity(req)
+					impersonation, _, _ := cbauth.ExtractOnBehalfIdentityGeneric(req.Header)
 					if impersonation != "" {
 						reason = errors.NewDatastoreAuthorizationError(err)
 					}

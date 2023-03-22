@@ -204,7 +204,7 @@ func newHttpRequest(rv *httpRequest, resp http.ResponseWriter, req *http.Request
 	}
 	// start - temporary logging of requests
 	dfn := func() string {
-		u, _, _ := cbauth.ExtractCreds(req)
+		u, _, _ := cbauth.ExtractCredsGeneric(req.Header)
 		data := make(map[string]interface{}, 7)
 		data["user"] = u
 		data["request"] = rv.Id().String()
