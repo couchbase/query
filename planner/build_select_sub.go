@@ -610,32 +610,27 @@ func (this *builder) inferUnnestPredicates(from algebra.FromTerm) {
 	defer _UNNEST_POOL.Put(unnests)
 	unnests = collectInnerUnnestsFromJoinTerm(joinTerm, unnests)
 
-	// Enumerate primary UNNESTs
-	primaryUnnests := collectPrimaryUnnests(from.PrimaryTerm(), unnests)
-	if nil != primaryUnnests {
-		defer _UNNEST_POOL.Put(primaryUnnests)
-	}
-	if len(primaryUnnests) == 0 {
+	if len(unnests) == 0 {
 		return
 	}
 
 	// INNER UNNESTs cannot be MISSING, so add to WHERE clause
 	var andBuf [32]expression.Expression
 	var andTerms []expression.Expression
-	if 1+(2*len(primaryUnnests)) <= len(andBuf) {
+	if 1+(2*len(unnests)) <= len(andBuf) {
 		andTerms = andBuf[0:0]
 	} else {
-		andTerms = make(expression.Expressions, 0, 1+(2*len(primaryUnnests)))
+		andTerms = make(expression.Expressions, 0, 1+(2*len(unnests)))
 	}
 
 	if this.where != nil {
 		andTerms = append(andTerms, this.where)
 	}
 
-	for _, unnest := range primaryUnnests {
-		ident := expression.NewIdentifier(unnest.Alias())
-		ident.SetUnnestAlias(true)
+	for _, unnest := range unnests {
 		if unnest.Expression().Indexable() {
+			ident := expression.NewIdentifier(unnest.Alias())
+			ident.SetUnnestAlias(true)
 			notMissing := expression.NewIsNotMissing(ident)
 			notMissing.SetExprFlag(expression.EXPR_UNNEST_NOT_MISSING)
 			isArray := expression.NewIsArray(unnest.Expression())

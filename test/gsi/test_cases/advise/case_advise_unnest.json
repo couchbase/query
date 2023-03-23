@@ -95,16 +95,9 @@
           "#operator": "IndexAdvice",
           "adviseinfo": {
             "recommended_indexes": {
-              "covering_indexes": [
-                {
-                  "index_property": "FULL GROUPBY & AGGREGATES pushdown",
-                  "index_statement": "CREATE INDEX adv_ALL_schedule_special_flights_flight ON `shellTest`(ALL ARRAY (ALL ARRAY `x`.`flight` FOR y IN `x`.`special_flights` END) FOR x IN `schedule` END)",
-                  "keyspace_alias": "shellTest"
-                }
-              ],
               "indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_ALL_schedule_special_flights_flight ON `shellTest`(ALL ARRAY (ALL ARRAY `x`.`flight` FOR y IN `x`.`special_flights` END) FOR x IN `schedule` END)",
+                  "index_statement": "CREATE INDEX adv_ALL_schedule_flight ON `shellTest`(ALL ARRAY `x`.`flight` FOR x IN `schedule` END)",
                   "keyspace_alias": "shellTest",
                   "recommending_rule": "Index keys follow order of predicate types: 1. leading array index for unnest."
                 }

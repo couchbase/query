@@ -136,5 +136,173 @@
         "query": "SELECT COUNT(s.c1) AS num FROM shellTest AS s UNNEST a1 AS us WHERE us.type = 'x1'"
       }
     ]
+  },
+  {
+    "testcase": "MB-56088, part 1, no predicate on unnest aliases",
+    "statements": "advise select d.c3 from shellTest AS d UNNEST d.a1 AS a UNNEST OBJECT_VALUES(a.o) AS b WHERE d.c2 BETWEEN 10 AND 20 AND d.c1 = 10",
+    "advise": true,
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": {
+            "recommended_indexes": {
+              "indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_ALL_a1_object_values_a_o_b_c1_c2 ON `shellTest`(ALL ARRAY (ALL ARRAY `b` FOR b IN object_values((`a`.`o`)) END) FOR a IN `a1` END,`c1`,`c2`)",
+                  "keyspace_alias": "shellTest_d",
+                  "recommending_rule": "Index keys follow order of predicate types: 1. leading array index for unnest, 2. equality/null/missing, 4. not less than/between/not greater than."
+                }
+              ]
+            }
+          }
+        },
+        "query": "select d.c3 from shellTest AS d UNNEST d.a1 AS a UNNEST OBJECT_VALUES(a.o) AS b WHERE d.c2 BETWEEN 10 AND 20 AND d.c1 = 10"
+      }
+    ]
+  },
+  {
+    "testcase": "MB-56088, part 2, predicate on level 1 unnest alias",
+    "statements": "advise select d.c3 from shellTest AS d UNNEST d.a1 AS a UNNEST OBJECT_VALUES(a.o) AS b WHERE d.c2 BETWEEN 10 AND 20 AND d.c1 = 10 AND a.x = 20",
+    "advise": true,
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": {
+            "recommended_indexes": {
+              "indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_ALL_a1_x_c1_c2 ON `shellTest`(ALL ARRAY `a`.`x` FOR a IN `a1` END,`c1`,`c2`)",
+                  "keyspace_alias": "shellTest_d",
+                  "recommending_rule": "Index keys follow order of predicate types: 1. leading array index for unnest, 2. equality/null/missing, 4. not less than/between/not greater than."
+                }
+              ]
+            }
+          }
+        },
+        "query": "select d.c3 from shellTest AS d UNNEST d.a1 AS a UNNEST OBJECT_VALUES(a.o) AS b WHERE d.c2 BETWEEN 10 AND 20 AND d.c1 = 10 AND a.x = 20"
+      }
+    ]
+  },
+  {
+    "testcase": "MB-56088, part 3, predicates on level 1 unnest alias",
+    "statements": "advise select d.c3 from shellTest AS d UNNEST d.a1 AS a UNNEST OBJECT_VALUES(a.o) AS b WHERE d.c2 BETWEEN 10 AND 20 AND d.c1 = 10 AND a.x = 20 AND a.y < 30",
+    "advise": true,
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": {
+            "recommended_indexes": {
+              "indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_ALL_a1_x_y_c1_c2 ON `shellTest`(ALL ARRAY FLATTEN_KEYS(`a`.`x`,`a`.`y`) FOR a IN `a1` END,`c1`,`c2`)",
+                  "keyspace_alias": "shellTest_d",
+                  "recommending_rule": "Index keys follow order of predicate types: 1. leading array index for unnest, 2. equality/null/missing, 4. not less than/between/not greater than."
+                }
+              ]
+            }
+          }
+        },
+        "query": "select d.c3 from shellTest AS d UNNEST d.a1 AS a UNNEST OBJECT_VALUES(a.o) AS b WHERE d.c2 BETWEEN 10 AND 20 AND d.c1 = 10 AND a.x = 20 AND a.y < 30"
+      }
+    ]
+  },
+  {
+    "testcase": "MB-56088, part 4, predicate on level 2 unnest alias",
+    "statements": "advise select d.c3 from shellTest AS d UNNEST d.a1 AS a UNNEST OBJECT_VALUES(a.o) AS b WHERE d.c2 BETWEEN 10 AND 20 AND d.c1 = 10 AND b.x = 20",
+    "advise": true,
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": {
+            "recommended_indexes": {
+              "covering_indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_ALL_a1_object_values_a_o_x_c1_c2_c3 ON `shellTest`(ALL ARRAY (ALL ARRAY `b`.`x` FOR b IN object_values((`a`.`o`)) END) FOR a IN `a1` END,`c1`,`c2`,`c3`)",
+                  "keyspace_alias": "shellTest_d"
+                }
+              ],
+              "indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_ALL_a1_object_values_a_o_x_c1_c2 ON `shellTest`(ALL ARRAY (ALL ARRAY `b`.`x` FOR b IN object_values((`a`.`o`)) END) FOR a IN `a1` END,`c1`,`c2`)",
+                  "keyspace_alias": "shellTest_d",
+                  "recommending_rule": "Index keys follow order of predicate types: 1. leading array index for unnest, 2. equality/null/missing, 4. not less than/between/not greater than."
+                }
+              ]
+            }
+          }
+        },
+        "query": "select d.c3 from shellTest AS d UNNEST d.a1 AS a UNNEST OBJECT_VALUES(a.o) AS b WHERE d.c2 BETWEEN 10 AND 20 AND d.c1 = 10 AND b.x = 20"
+      }
+    ]
+  },
+  {
+    "testcase": "MB-56088, part 5, predicates on level 2 unnest alias",
+    "statements": "advise select d.c3 from shellTest AS d UNNEST d.a1 AS a UNNEST OBJECT_VALUES(a.o) AS b WHERE d.c2 BETWEEN 10 AND 20 AND d.c1 = 10 AND b.x = 20 AND b.y < 30",
+    "advise": true,
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": {
+            "recommended_indexes": {
+              "covering_indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_ALL_a1_object_values_a_o_x_y_c1_c2_c3 ON `shellTest`(ALL ARRAY (ALL ARRAY FLATTEN_KEYS(`b`.`x`,`b`.`y`) FOR b IN object_values((`a`.`o`)) END) FOR a IN `a1` END,`c1`,`c2`,`c3`)",
+                  "keyspace_alias": "shellTest_d"
+                }
+              ],
+              "indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_ALL_a1_object_values_a_o_x_y_c1_c2 ON `shellTest`(ALL ARRAY (ALL ARRAY FLATTEN_KEYS(`b`.`x`,`b`.`y`) FOR b IN object_values((`a`.`o`)) END) FOR a IN `a1` END,`c1`,`c2`)",
+                  "keyspace_alias": "shellTest_d",
+                  "recommending_rule": "Index keys follow order of predicate types: 1. leading array index for unnest, 2. equality/null/missing, 4. not less than/between/not greater than."
+                }
+              ]
+            }
+          }
+        },
+        "query": "select d.c3 from shellTest AS d UNNEST d.a1 AS a UNNEST OBJECT_VALUES(a.o) AS b WHERE d.c2 BETWEEN 10 AND 20 AND d.c1 = 10 AND b.x = 20 AND b.y < 30"
+      }
+    ]
+  },
+  {
+    "testcase": "MB-56088, part 6, mixed predicates on level 1 and level 2 unnest alias",
+    "statements": "advise select d.c3 from shellTest AS d UNNEST d.a1 AS a UNNEST OBJECT_VALUES(a.o) AS b WHERE d.c2 BETWEEN 10 AND 20 AND d.c1 = 10 AND a.x = 20 AND b.y < 30",
+    "advise": true,
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": {
+            "recommended_indexes": {
+              "covering_indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_ALL_a1_object_values_a_o_x_y_c1_c2_c3 ON `shellTest`(ALL ARRAY (ALL ARRAY FLATTEN_KEYS(`a`.`x`,`b`.`y`) FOR b IN object_values((`a`.`o`)) END) FOR a IN `a1` END,`c1`,`c2`,`c3`)",
+                  "keyspace_alias": "shellTest_d"
+                }
+              ],
+              "indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_ALL_a1_object_values_a_o_x_y_c1_c2 ON `shellTest`(ALL ARRAY (ALL ARRAY FLATTEN_KEYS(`a`.`x`,`b`.`y`) FOR b IN object_values((`a`.`o`)) END) FOR a IN `a1` END,`c1`,`c2`)",
+                  "keyspace_alias": "shellTest_d",
+                  "recommending_rule": "Index keys follow order of predicate types: 1. leading array index for unnest, 2. equality/null/missing, 4. not less than/between/not greater than."
+                }
+              ]
+            }
+          }
+        },
+        "query": "select d.c3 from shellTest AS d UNNEST d.a1 AS a UNNEST OBJECT_VALUES(a.o) AS b WHERE d.c2 BETWEEN 10 AND 20 AND d.c1 = 10 AND a.x = 20 AND b.y < 30"
+      }
+    ]
   }
 ]
