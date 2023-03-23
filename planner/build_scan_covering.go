@@ -262,6 +262,20 @@ couter:
 		}
 	}
 
+	// Keep indexes with max minKeys
+	minKeys := 0
+	for _, ce := range coveringEntries {
+		if ce.idxEntry.minKeys > minKeys {
+			minKeys = ce.idxEntry.minKeys
+		}
+	}
+
+	for c, ce := range coveringEntries {
+		if ce.idxEntry.minKeys < minKeys {
+			delete(coveringEntries, c)
+		}
+	}
+
 	// Use shortest remaining index
 	minLen := 0
 	for _, ce := range coveringEntries {
