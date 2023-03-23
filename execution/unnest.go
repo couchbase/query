@@ -177,6 +177,17 @@ func (this *Unnest) processTimeSeriesItem(item value.AnnotatedValue, context *Co
 		return false
 	}
 
+	if !this.plan.Term().Outer() || !this.timeSeriesData.AllData() {
+		if rv != nil && rv.Type() <= value.NULL {
+			return true
+		}
+	}
+	if !this.plan.Term().Outer() {
+		if qok, _ := this.timeSeriesData.Qualified(false); !qok {
+			return true
+		}
+	}
+
 	var nitem value.AnnotatedValue
 	if path, ok := this.timeSeriesData.TsDataExpr().(expression.Path); ok && !this.timeSeriesData.TsKeep() {
 		// strip of the tsdata path from original document
@@ -186,12 +197,16 @@ func (this *Unnest) processTimeSeriesItem(item value.AnnotatedValue, context *Co
 		nitem = item
 	}
 
-	if rv != nil && rv.Type() <= value.NULL {
-		return !this.plan.Term().Outer() || !this.timeSeriesData.AllData() || this.sendItem(nitem)
+	if this.plan.Term().Outer() && this.timeSeriesData.AllData() {
+		if rv != nil && rv.Type() <= value.NULL {
+			return this.sendItem(nitem)
+		}
 	}
 
-	if qok, qokOuter := this.timeSeriesData.Qualified(this.plan.Term().Outer()); !qok {
-		return !qokOuter || this.sendItem(nitem)
+	if this.plan.Term().Outer() {
+		if qok, qokOuter := this.timeSeriesData.Qualified(true); !qok {
+			return !qokOuter || this.sendItem(nitem)
+		}
 	}
 
 	// empty, treat as outer unnest
