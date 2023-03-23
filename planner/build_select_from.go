@@ -858,7 +858,9 @@ func (this *builder) VisitUnnest(node *algebra.Unnest) (interface{}, error) {
 		this.resetPushDowns()
 	}
 
-	this.setUnnest()
+	if !node.Outer() {
+		this.setUnnest()
+	}
 
 	_, err := node.Left().Accept(this)
 	if err != nil {
