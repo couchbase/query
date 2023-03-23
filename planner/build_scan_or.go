@@ -28,6 +28,7 @@ func (this *builder) buildOrScan(node *algebra.KeyspaceTerm, baseKeyspace *base.
 	useCBO := this.useCBO && this.keyspaceUseCBO(node.Alias())
 
 	indexPushDowns := this.storeIndexPushDowns()
+	indexHintErr := false
 	if this.cover != nil || this.hasOrderOrOffsetOrLimit() {
 		coveringScans := this.coveringScans
 		scan, sargLength, err = this.buildTermScan(node, baseKeyspace, id, indexes, primaryKey, formalizer)
@@ -36,6 +37,10 @@ func (this *builder) buildOrScan(node *algebra.KeyspaceTerm, baseKeyspace *base.
 			if len(this.coveringScans) > len(coveringScans) || this.countScan != nil ||
 				this.hasOrderOrOffsetOrLimit() {
 				return scan, sargLength, nil
+			}
+			if baseKeyspace.HasIndexHintError() {
+				indexHintErr = true
+				baseKeyspace.UnsetIndexHintError()
 			}
 		}
 		this.restoreIndexPushDowns(indexPushDowns, true)
@@ -66,7 +71,25 @@ func (this *builder) buildOrScan(node *algebra.KeyspaceTerm, baseKeyspace *base.
 	}
 
 	// Try individual OR terms
-	orScan, orSargLength, orErr := this.buildOrScanNoPushdowns(node, id, pred, indexes, primaryKey, formalizer)
+	orScan, orSargLength, orIndexHintErr, orErr := this.buildOrScanNoPushdowns(node, id, pred, indexes, primaryKey, formalizer)
+
+	if scan != nil && orScan != nil {
+		if indexHintErr && !orIndexHintErr {
+			return orScan, orSargLength, orErr
+		} else if !indexHintErr && orIndexHintErr {
+			return scan, sargLength, err
+		} else if indexHintErr || orIndexHintErr {
+			baseKeyspace.SetIndexHintError()
+		}
+	} else if scan != nil {
+		if indexHintErr {
+			baseKeyspace.SetIndexHintError()
+		}
+	} else if orScan != nil {
+		if orIndexHintErr {
+			baseKeyspace.SetIndexHintError()
+		}
+	}
 
 	if useCBO && orScan != nil {
 		orCost = orScan.Cost()
@@ -108,7 +131,7 @@ func (this *builder) buildOrScan(node *algebra.KeyspaceTerm, baseKeyspace *base.
 
 func (this *builder) buildOrScanNoPushdowns(node *algebra.KeyspaceTerm, id expression.Expression,
 	pred *expression.Or, indexes []datastore.Index, primaryKey expression.Expressions,
-	formalizer *expression.Formalizer) (plan.SecondaryScan, int, error) {
+	formalizer *expression.Formalizer) (plan.SecondaryScan, int, bool, error) {
 
 	where := this.where
 	cover := this.cover
@@ -142,7 +165,7 @@ func (this *builder) buildOrScanNoPushdowns(node *algebra.KeyspaceTerm, id expre
 
 	orTerms, truth := expression.FlattenOr(pred)
 	if orTerms == nil || truth {
-		return nil, 0, nil
+		return nil, 0, false, nil
 	}
 
 	cost := float64(0.0)
@@ -166,6 +189,7 @@ func (this *builder) buildOrScanNoPushdowns(node *algebra.KeyspaceTerm, id expre
 	}
 
 	join := node.IsAnsiJoinOp()
+	hintErr := false
 	for i, op := range orTerms.Operands() {
 		if op != nil {
 			if val := op.Value(); val != nil && !val.Truth() {
@@ -181,20 +205,20 @@ func (this *builder) buildOrScanNoPushdowns(node *algebra.KeyspaceTerm, id expre
 		extraExpr, err = ClassifyExpr(op, baseKeyspaces, this.keyspaceNames, join, this.useCBO,
 			this.advisorValidate(), this.context)
 		if err != nil {
-			return nil, 0, err
+			return nil, 0, false, err
 		}
 
 		if baseKeyspace, ok := baseKeyspaces[node.Alias()]; ok {
 			if !join {
 				err = addUnnestPreds(baseKeyspaces, baseKeyspace)
 				if err != nil {
-					return nil, 0, err
+					return nil, 0, false, err
 				}
 			}
 
 			err = CombineFilters(baseKeyspace, join)
 			if err != nil {
-				return nil, 0, err
+				return nil, 0, false, err
 			}
 
 			if baseKeyspace.DnfPred() == nil {
@@ -204,22 +228,27 @@ func (this *builder) buildOrScanNoPushdowns(node *algebra.KeyspaceTerm, id expre
 					//   - in case of ANSI JOIN, an arm references other keyspaces
 					//   - an arm only references named/positional parameters
 					// then OR index path is not feasible.
-					return nil, 0, nil
+					return nil, 0, false, nil
 				} else {
-					return nil, 0, errors.NewPlanInternalError("buildOrScanNoPushdown: missing OR subterm")
+					return nil, 0, false, errors.NewPlanInternalError("buildOrScanNoPushdown: missing OR subterm")
 				}
 			}
 
 			scan, termSargLength, err := this.buildTermScan(node, baseKeyspace,
 				id, indexes, primaryKey, formalizer)
 			if scan == nil || err != nil {
-				return nil, 0, err
+				return nil, 0, false, err
 			}
 
 			scans = append(scans, scan)
 
 			if maxSargLength == 0 || maxSargLength < termSargLength {
 				maxSargLength = termSargLength
+			}
+
+			if baseKeyspace.HasIndexHintError() {
+				hintErr = true
+				baseKeyspace.UnsetIndexHintError()
 			}
 
 			scost := scan.Cost()
@@ -247,7 +276,7 @@ func (this *builder) buildOrScanNoPushdowns(node *algebra.KeyspaceTerm, id expre
 				}
 			}
 		} else {
-			return nil, 0, errors.NewPlanInternalError(fmt.Sprintf("buildOrScanNoPushdowns: missing basekeyspace %s", node.Alias()))
+			return nil, 0, false, errors.NewPlanInternalError(fmt.Sprintf("buildOrScanNoPushdowns: missing basekeyspace %s", node.Alias()))
 		}
 	}
 
@@ -262,5 +291,5 @@ func (this *builder) buildOrScanNoPushdowns(node *algebra.KeyspaceTerm, id expre
 	}
 
 	rv := plan.NewUnionScan(limit, nil, cost, cardinality, size, frCost, scans...)
-	return rv.Streamline(), maxSargLength, nil
+	return rv.Streamline(), maxSargLength, hintErr, nil
 }
