@@ -727,15 +727,24 @@ func narrowerOrEquivalent(se, te *indexEntry, shortest bool, predFc map[string]v
 		return seFltr
 	}
 
+	teType := te.index.Type()
+	seType := se.index.Type()
 	// prefer an index over a sequential scan
-	if te.index.Type() == datastore.SEQ_SCAN {
+	if teType == datastore.SEQ_SCAN {
 		return true
-	} else if se.index.Type() == datastore.SEQ_SCAN {
+	} else if seType == datastore.SEQ_SCAN {
 		return false
 	}
 
 	if len(se.keys) != len(te.keys) {
 		return len(se.keys) < len(te.keys)
+	}
+
+	// for equivalent keys, prefer non-VIRTUAL
+	if teType == datastore.VIRTUAL && seType != datastore.VIRTUAL {
+		return true
+	} else if seType == datastore.VIRTUAL && teType != datastore.VIRTUAL {
+		return false
 	}
 
 	// favor primary index over missing-leading key index
