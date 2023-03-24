@@ -377,13 +377,19 @@ func (this *seqScan) String() string {
 func (this *seqScan) timeout() {
 	this.timedout = true
 	this.readyQueue.timeout()
-	this.abortch <- true
+	select {
+	case this.abortch <- true:
+	default:
+	}
 }
 
 func (this *seqScan) cancel() {
 	this.inactive = true
 	this.readyQueue.cancel()
-	this.abortch <- true
+	select {
+	case this.abortch <- true:
+	default:
+	}
 }
 
 func (this *seqScan) addRU(ru uint64) {
