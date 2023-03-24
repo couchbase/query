@@ -289,14 +289,7 @@ func (this *ObjectInnerPairs) Evaluate(item value.Value, context Context) (value
 
 	oa := removeMissing(arg)
 
-	var localBuf [_FIELD_CAP]interface{}
-	var fields []interface{}
-	if len(oa) <= len(localBuf) {
-		fields = localBuf[0:0]
-	} else {
-		fields = _FIELD_POOL.GetCapped(len(oa))
-		defer _FIELD_POOL.Put(fields)
-	}
+	fields := make([]interface{}, 0, len(oa))
 
 	for n, v := range oa {
 		fields = append(fields, map[string]interface{}{"name": n, "val": v})
@@ -371,15 +364,7 @@ func (this *ObjectInnerValues) Evaluate(item value.Value, context Context) (valu
 
 	oa := removeMissing(arg)
 
-	var localBuf [_FIELD_CAP]interface{}
-	var values []interface{}
-	if len(oa) <= len(localBuf) {
-		values = localBuf[0:0]
-	} else {
-		values = _FIELD_POOL.GetCapped(len(oa))
-		defer _FIELD_POOL.Put(values)
-	}
-
+	values := make([]interface{}, 0, len(oa))
 	for name, _ := range oa {
 		values = append(values, name)
 	}
@@ -502,15 +487,7 @@ func (this *ObjectNames) Evaluate(item value.Value, context Context) (value.Valu
 
 	oa := arg.Actual().(map[string]interface{})
 
-	var localBuf [_FIELD_CAP]interface{}
-	var names []interface{}
-	if len(oa) <= len(localBuf) {
-		names = localBuf[0:0]
-	} else {
-		names = _FIELD_POOL.GetCapped(len(oa))
-		defer _FIELD_POOL.Put(names)
-	}
-
+	names := make([]interface{}, 0, len(oa))
 	for name, _ := range oa {
 		names = append(names, name)
 	}
@@ -858,15 +835,7 @@ func (this *ObjectPairs) Evaluate(item value.Value, context Context) (value.Valu
 
 	oa := arg.Actual().(map[string]interface{})
 
-	var localBuf [_FIELD_CAP]interface{}
-	var fields []interface{}
-	if len(oa) <= len(localBuf) {
-		fields = localBuf[0:0]
-	} else {
-		fields = _FIELD_POOL.GetCapped(len(oa))
-		defer _FIELD_POOL.Put(fields)
-	}
-
+	fields := make([]interface{}, 0, len(oa))
 	for n, v := range oa {
 		fields = append(fields, map[string]interface{}{"name": n, "val": v})
 	}
@@ -1559,15 +1528,7 @@ func (this *ObjectValues) Evaluate(item value.Value, context Context) (value.Val
 
 	oa := arg.Actual().(map[string]interface{})
 
-	var localBuf [_FIELD_CAP]interface{}
-	var values []interface{}
-	if len(oa) <= len(localBuf) {
-		values = localBuf[0:0]
-	} else {
-		values = _FIELD_POOL.GetCapped(len(oa))
-		defer _FIELD_POOL.Put(values)
-	}
-
+	values := make([]interface{}, 0, len(oa))
 	for name, _ := range oa {
 		values = append(values, name)
 	}
@@ -1720,13 +1681,7 @@ func (this *ObjectExtract) Evaluate(item value.Value, context Context) (value.Va
 		// fall-back if we don't have the parsed-only interface
 		oa := arg.Actual().(map[string]interface{})
 
-		var localBuf [_FIELD_CAP]interface{}
-		if len(oa) <= len(localBuf) {
-			fields = localBuf[0:0]
-		} else {
-			fields = _FIELD_POOL.GetCapped(len(oa))
-			defer _FIELD_POOL.Put(fields)
-		}
+		fields = make([]interface{}, 0, len(oa))
 
 		if len(pattern) != 0 {
 			re := this.re
@@ -1850,10 +1805,6 @@ func (this *ObjectField) Constructor() FunctionConstructor {
 		return NewObjectField(operands[0], operands[1])
 	}
 }
-
-const _FIELD_CAP = 16
-
-var _FIELD_POOL = util.NewInterfacePool(256)
 
 ///////////////////////////////////////////////////
 //
