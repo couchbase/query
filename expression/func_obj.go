@@ -1383,6 +1383,11 @@ func (this *ObjectRemoveFields) Accept(visitor Visitor) (interface{}, error) {
 func (this *ObjectRemoveFields) Type() value.Type { return value.OBJECT }
 
 func (this *ObjectRemoveFields) Evaluate(item value.Value, context Context) (value.Value, error) {
+
+	if context == nil {
+		return nil, errors.NewNilEvaluateParamError("context")
+	}
+
 	var rv interface{}
 	var obj value.AnnotatedValue
 	null := false
@@ -1410,7 +1415,7 @@ func (this *ObjectRemoveFields) Evaluate(item value.Value, context Context) (val
 					if len(n) > 0 {
 						exp, err := context.Parse(n)
 						if err != nil {
-							return nil, err
+							return nil, errors.NewInvalidExpressionError(n, err.Error())
 						}
 						if e, ok := exp.(Expression); ok {
 							ref, err := getReference(e, obj, context)
@@ -1443,7 +1448,7 @@ func (this *ObjectRemoveFields) Evaluate(item value.Value, context Context) (val
 						if len(n) > 0 {
 							exp, err := context.Parse(n)
 							if err != nil {
-								return nil, err
+								return nil, errors.NewInvalidExpressionError(n, err.Error())
 							}
 							if e, ok := exp.(Expression); ok {
 								ref, err := getReference(e, obj, context)
@@ -2556,8 +2561,8 @@ func getReference(ex Expression, item value.AnnotatedValue, context Context) ([]
 			res = append(res, ref...)
 		}
 	default:
-		logging.Debugf("Unsupported expression type: %T", e)
-		return nil, errors.NewUnsupportedExpressionError(e.String(), nil)
+		context.Debugf("Unsupported expression: %v Type: %T", e.String(), e)
+		return nil, errors.NewUnsupportedExpressionError(e.String(), "Invalid field reference")
 	}
 	return res, nil
 }

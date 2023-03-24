@@ -199,7 +199,7 @@ func (this *ExpressionBase) Value() value.Value {
 		err := recover()
 		if err != nil {
 			this.value = &_NIL_VALUE
-			logging.Debugf("Panic during evaluation: %v", err)
+			logging.Stackf(logging.DEBUG, "Panic during evaluation: %v", err)
 		}
 	}()
 
