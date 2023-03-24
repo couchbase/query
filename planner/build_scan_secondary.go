@@ -682,6 +682,16 @@ func narrowerOrEquivalent(se, te *indexEntry, shortest bool, predFc map[string]v
 		return len(se.keys) < len(te.keys)
 	}
 
+	teType := te.index.Type()
+	seType := se.index.Type()
+
+	// for equivalent keys, prefer non-VIRTUAL
+	if teType == datastore.VIRTUAL && seType != datastore.VIRTUAL {
+		return true
+	} else if seType == datastore.VIRTUAL && teType != datastore.VIRTUAL {
+		return false
+	}
+
 	// favor primary index over missing-leading key index
 	if te.nSargKeys == 0 && se.nSargKeys == 0 {
 		if se.index.IsPrimary() && te.cond == nil {
