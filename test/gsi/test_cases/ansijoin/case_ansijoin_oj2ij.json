@@ -271,6 +271,73 @@
             "purchaseId": "purchase3297"
         }
     ]
+    },
+    {
+        "testcase": "multiple joins, inner UNNEST from subservient keyspace",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'NestedLoopJoin' AND v.alias = 'p' AND v.`outer` IS MISSING END"
+        },
+        "statements":"SELECT c.customerId, p.purchaseId, l.product productId FROM customer c LEFT JOIN purchase p ON c.customerId = p.customerId UNNEST p.lineItems as l WHERE c.lastName IN [ \"Gibson\", \"Quitzon\" ] ORDER BY c.customerId, p.purchaseId, l.product LIMIT 10",
+        "ordered": true,
+        "results": [
+        {
+            "customerId": "customer132",
+            "productId": "product439",
+            "purchaseId": "purchase1870"
+        },
+        {
+            "customerId": "customer132",
+            "productId": "product805",
+            "purchaseId": "purchase1870"
+        },
+        {
+            "customerId": "customer132",
+            "productId": "product831",
+            "purchaseId": "purchase1870"
+        },
+        {
+            "customerId": "customer132",
+            "productId": "product92",
+            "purchaseId": "purchase1870"
+        },
+        {
+            "customerId": "customer132",
+            "productId": "product93",
+            "purchaseId": "purchase1870"
+        },
+        {
+            "customerId": "customer132",
+            "productId": "product671",
+            "purchaseId": "purchase2172"
+        },
+        {
+            "customerId": "customer132",
+            "productId": "product277",
+            "purchaseId": "purchase2297"
+        },
+        {
+            "customerId": "customer132",
+            "productId": "product463",
+            "purchaseId": "purchase2297"
+        },
+        {
+            "customerId": "customer132",
+            "productId": "product483",
+            "purchaseId": "purchase2297"
+        },
+        {
+            "customerId": "customer132",
+            "productId": "product294",
+            "purchaseId": "purchase3297"
+        }
+    ]
     }
 ]
 

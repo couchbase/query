@@ -59,36 +59,33 @@ func (this *ansijoinOuterToInner) visitAnsiJoin(left algebra.FromTerm, outer boo
 		return false, nil
 	}
 
-	// include unnested aliases from the alias
-	aliases := make([]string, 0, len(this.unnests)+1)
-	aliases = append(aliases, alias)
 	aliasIdent := expression.NewIdentifier(alias)
 	for _, unnest := range this.unnests {
 		if unnest.Expression().DependsOn(aliasIdent) {
-			aliases = append(aliases, unnest.Alias())
+			// if an inner unnest expression includes reference to alias,
+			// then alias cannot be outer
+			return true, nil
 		}
 	}
 
 	chkNullRej := newChkNullRej()
 
-	for _, a := range aliases {
-		baseKeyspace, ok := this.baseKeyspaces[a]
-		if !ok {
-			return false, errors.NewPlanInternalError(fmt.Sprintf("ansijoinOuterToInner: missing baseKeyspace for %s", a))
-		}
+	baseKeyspace, ok := this.baseKeyspaces[alias]
+	if !ok {
+		return false, errors.NewPlanInternalError(fmt.Sprintf("ansijoinOuterToInner: missing baseKeyspace for %s", alias))
+	}
 
-		// the filters and joinfilters attached to each keyspace at this point
-		// are from either WHERE clause or pushable ON clauses
-		for _, fl := range baseKeyspace.Filters() {
-			if nullRejExpr(chkNullRej, a, fl.FltrExpr()) {
-				return true, nil
-			}
+	// the filters and joinfilters attached to each keyspace at this point
+	// are from either WHERE clause or pushable ON clauses
+	for _, fl := range baseKeyspace.Filters() {
+		if nullRejExpr(chkNullRej, alias, fl.FltrExpr()) {
+			return true, nil
 		}
+	}
 
-		for _, jfl := range baseKeyspace.JoinFilters() {
-			if nullRejExpr(chkNullRej, a, jfl.FltrExpr()) {
-				return true, nil
-			}
+	for _, jfl := range baseKeyspace.JoinFilters() {
+		if nullRejExpr(chkNullRej, alias, jfl.FltrExpr()) {
+			return true, nil
 		}
 	}
 
