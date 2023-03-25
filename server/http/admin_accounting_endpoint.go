@@ -393,6 +393,22 @@ func doVitals(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, 
 	}
 }
 
+func CaptureVitals(endpoint *HttpEndpoint, w io.Writer) error {
+	acctStore := endpoint.server.AccountingStore()
+	var err error
+	var v map[string]interface{}
+	v, err = acctStore.Vitals()
+	if err != nil {
+		return err
+	}
+	var buf bytes.Buffer
+	err = json.MarshalNoEscapeToBuffer(v, &buf)
+	if err == nil {
+		_, err = buf.WriteTo(w)
+	}
+	return err
+}
+
 // Credentials only come from the basic username/password
 func (endpoint *HttpEndpoint) getCredentialsFromRequest(ds datastore.Datastore, req *http.Request) (*auth.Credentials, errors.Error, bool) {
 	isInternal := false

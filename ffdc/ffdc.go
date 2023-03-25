@@ -15,7 +15,9 @@ import (
 	"io"
 	"io/fs"
 	"os"
+	"os/exec"
 	"path"
+	"runtime"
 	"runtime/pprof"
 	"sort"
 	"strings"
@@ -37,6 +39,8 @@ const (
 	Stacks    = "grtn"
 	Completed = "creq"
 	Active    = "areq"
+	Netstat   = "nets"
+	Vitals    = "vita"
 )
 
 const fileNamePrefix = "query_ffdc"
@@ -61,6 +65,34 @@ var operations = map[string]func(io.Writer) error{
 		}
 		return nil
 	},
+	Netstat: func(w io.Writer) error {
+		if runtime.GOOS == "windows" {
+			return runCommand(w, "netstat.exe", "-atno")
+		} else {
+			return runCommand(w, "netstat", "-atnp")
+		}
+	},
+}
+
+func runCommand(w io.Writer, path string, options string) error {
+	var cmd *exec.Cmd
+	if options != "" {
+		cmd = exec.Command(path, options)
+	} else {
+		cmd = exec.Command(path)
+	}
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return err
+	}
+	if err = cmd.Start(); err != nil {
+		return err
+	}
+	io.Copy(w, stdout)
+	if err = cmd.Wait(); err != nil {
+		return err
+	}
+	return nil
 }
 
 type occurrence struct {
@@ -70,7 +102,7 @@ type occurrence struct {
 }
 
 func (this *occurrence) capture(event string, what string) {
-	name := strings.Join([]string{fileNamePrefix, event, what, pidString, this.ts}, "_")
+	name := strings.Join([]string{fileNamePrefix, event, what, pidString, this.ts}, "_") + ".gz"
 	f, err := os.Create(path.Join(getPath(), name))
 	if err == nil {
 		this.files = append(this.files, name)
@@ -99,6 +131,7 @@ type reason struct {
 }
 
 func (this *reason) shouldCapture() *occurrence {
+	logging.Debugf("FFDC: \"%v\".shouldCapture(): count: %v, len(occ): %v", this.msg, this.count, len(this.occurrences))
 	if atomic.AddInt64(&this.count, 1) > 2 {
 		return nil
 	}
@@ -118,6 +151,12 @@ func (this *reason) shouldCapture() *occurrence {
 }
 
 func (this *reason) capture() {
+	defer func() {
+		e := recover()
+		if e != nil {
+			logging.Stackf(logging.ERROR, "Panic capturing \"%v\" FFDC: %v", this.event, e)
+		}
+	}()
 	this.Lock()
 	occ := this.shouldCapture()
 	this.Unlock()
@@ -323,12 +362,12 @@ var reasons = map[string]*reason{
 	},
 	StalledQueue: &reason{
 		event:   StalledQueue,
-		actions: []string{Stacks, Active, Completed},
+		actions: []string{Stacks, Active, Completed, Netstat, Vitals},
 		msg:     "Stalled queue processing",
 	},
 	MemoryThreshold: &reason{
 		event:   MemoryThreshold,
-		actions: []string{Heap, Stacks, Active, Completed},
+		actions: []string{Heap, Stacks, Active, Completed, Netstat, Vitals},
 		msg:     "Memory threshold exceeded",
 	},
 	SigTerm: &reason{
@@ -341,15 +380,17 @@ var reasons = map[string]*reason{
 func Capture(event string) {
 	r, ok := reasons[event]
 	if !ok {
-		panic("FFDC: Invalid event")
+		logging.Stackf(logging.ERROR, "FFDC: Invalid event: %v", event)
+	} else {
+		r.capture()
 	}
-	r.capture()
 }
 
 func Reset(event string) {
 	r, ok := reasons[event]
 	if !ok {
-		panic("FFDC: Invalid event")
+		logging.Stackf(logging.ERROR, "FFDC: Invalid event: %v", event)
+	} else {
+		r.reset()
 	}
-	r.reset()
 }

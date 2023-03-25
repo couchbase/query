@@ -445,6 +445,9 @@ func main() {
 	ffdc.Set(ffdc.Active, func(w io.Writer) error {
 		return http.CaptureActiveRequests(endpoint, w)
 	})
+	ffdc.Set(ffdc.Vitals, func(w io.Writer) error {
+		return http.CaptureVitals(endpoint, w)
+	})
 
 	server.SetSettingsCallback(endpoint.SettingsCallback)
 
