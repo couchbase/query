@@ -143,13 +143,18 @@ func (this *parsedValue) ToString() string {
 }
 
 func (this *parsedValue) MarshalJSON() ([]byte, error) {
+	if this.raw != nil {
+		return this.raw, nil
+	}
 	return this.unwrap().MarshalJSON()
 }
 
 func (this *parsedValue) WriteJSON(order []string, w io.Writer, prefix, indent string, fast bool) error {
 	raw := this.raw
-	if prefix != "" || indent != "" || raw == nil || order != nil {
+	if raw == nil || order != nil {
 		return this.unwrap().WriteJSON(order, w, prefix, indent, fast)
+	} else if prefix != "" || indent != "" {
+		return json.IndentWriter(w, raw, prefix, indent)
 	}
 	_, err := w.Write(raw)
 	return err
