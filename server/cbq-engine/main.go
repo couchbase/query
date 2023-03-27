@@ -18,6 +18,7 @@ import (
 	"runtime"
 	"runtime/debug"
 	"runtime/pprof"
+	"strconv"
 	"syscall"
 	"time"
 
@@ -181,13 +182,16 @@ func main() {
 	if !*ENTERPRISE && numCPUs > _DEF_CE_MAXCPUS {
 		numCPUs = _DEF_CE_MAXCPUS
 	}
-
-	maxProcs := numCPUs
-	if os.Getenv("GOMAXPROCS") != "" {
-		maxProcs = runtime.GOMAXPROCS(0)
+	if mproc := os.Getenv("GOQUERY_GOMAXPROCS"); mproc != "" {
+		if n, err := strconv.Atoi(mproc); err == nil && n < numCPUs && n > 0 {
+			numCPUs = n
+		}
+	} else if os.Getenv("GOMAXPROCS") != "" {
+		if n := util.NumCPU(); n < numCPUs && n > 0 {
+			numCPUs = n
+		}
 	}
-
-	runtime.GOMAXPROCS(util.MinInt(numCPUs, maxProcs))
+	runtime.GOMAXPROCS(numCPUs)
 	numProcs := util.NumCPU()
 
 	ffdc.Init()
