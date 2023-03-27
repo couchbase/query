@@ -84,7 +84,7 @@ func (this *UdfContext) ExecuteStatement(statement string, namedArgs map[string]
 			positional[i] = value.NewValue(v)
 		}
 	}
-	return this.context.EvaluateStatement(statement, named, positional, false, this.context.Readonly())
+	return this.context.EvaluateStatement(statement, named, positional, false, this.context.Readonly(), true)
 }
 
 func (this *UdfContext) OpenStatement(statement string, namedArgs map[string]interface{}, positionalArgs []interface{}) (interface{}, error) {
@@ -103,7 +103,7 @@ func (this *UdfContext) OpenStatement(statement string, namedArgs map[string]int
 			positional[i] = value.NewValue(v)
 		}
 	}
-	handle, err := this.context.OpenStatement(statement, named, positional, false, this.context.Readonly())
+	handle, err := this.context.OpenStatement(statement, named, positional, false, this.context.Readonly(), true)
 	if err != nil {
 		return nil, err
 	}

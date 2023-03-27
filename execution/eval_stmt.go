@@ -161,17 +161,48 @@ func (this *Context) newOutput(output *internalOutput) *internalOutput {
 }
 
 func (this *Context) EvaluateStatement(statement string, namedArgs map[string]value.Value, positionalArgs value.Values,
-	subquery, readonly bool) (value.Value, uint64, error) {
+	subquery, readonly bool, doCaching bool) (value.Value, uint64, error) {
 	newContext := this.Copy()
+
+	newContext.udfPlans = this.udfPlans
+	newContext.udfStmtExecTrees = this.udfStmtExecTrees
+
 	txContext := this.TxContext()
 	if txContext != nil {
 		newContext.SetDeltaKeyspaces(this.DeltaKeyspaces())
 		atrCollection, numAtrs := this.AtrCollection()
 		newContext.SetTransactionContext("", false, txContext.TxTimeout(), txContext.TxTimeout(), atrCollection, numAtrs, []byte{})
 	}
-	stmt, prepared, isPrepared, err := newContext.PrepareStatement(statement, namedArgs, positionalArgs, subquery, readonly, false)
-	if err != nil {
-		return nil, 0, err
+
+	var stmt algebra.Statement
+	var prepared *plan.Prepared
+	var isPrepared bool
+	var err error
+
+	doCaching = doCaching && (this.udfPlans != nil)
+	var cacheKey string
+	createPlan := true
+
+	if doCaching {
+		cacheKey = encodeStatement(this.queryContext, statement)
+		if pe, ok := this.udfPlans.get(cacheKey); ok {
+			stmt = *pe.stmt
+			prepared = pe.plan
+			isPrepared = pe.isPrepared
+			createPlan = false
+		}
+	}
+
+	if createPlan {
+		stmt, prepared, isPrepared, err = newContext.PrepareStatement(statement, namedArgs, positionalArgs, subquery, readonly, false)
+
+		if err != nil {
+			return nil, 0, err
+		}
+
+		if doCaching {
+			this.udfPlans.set(cacheKey, planMapEntry{stmt: &stmt, plan: prepared, isPrepared: isPrepared})
+		}
 	}
 
 	namedArgs, positionalArgs, err = newContext.handleUsing(stmt, namedArgs, positionalArgs)
@@ -188,7 +219,7 @@ func (this *Context) EvaluateStatement(statement string, namedArgs map[string]va
 	if err != nil {
 		return nil, 0, err
 	}
-	rv, mutations, err := newContext.ExecutePrepared(prepared, isPrepared, namedArgs, positionalArgs)
+	rv, mutations, err := newContext.ExecutePrepared(prepared, isPrepared, namedArgs, positionalArgs, statement, doCaching)
 	newErr := newContext.completeStatement(stmtType, err == nil, this)
 	if err == nil && newErr != nil {
 		err = newErr
@@ -215,7 +246,7 @@ func (this *Context) completeStatement(stmtType string, success bool, baseContex
 }
 
 func (this *Context) OpenStatement(statement string, namedArgs map[string]value.Value, positionalArgs value.Values,
-	subquery, readonly bool) (interface {
+	subquery, readonly bool, doCaching bool) (interface {
 	Type() string
 	Mutations() uint64
 	Results() (interface{}, uint64, error)
@@ -224,16 +255,48 @@ func (this *Context) OpenStatement(statement string, namedArgs map[string]value.
 	Cancel()
 }, error) {
 	newContext := this.Copy()
+	newContext.udfPlans = this.udfPlans
+	newContext.udfStmtExecTrees = this.udfStmtExecTrees
+
 	txContext := this.TxContext()
 	if txContext != nil {
 		newContext.SetDeltaKeyspaces(this.DeltaKeyspaces())
 		atrCollection, numAtrs := this.AtrCollection()
 		newContext.SetTransactionContext("", false, txContext.TxTimeout(), txContext.TxTimeout(), atrCollection, numAtrs, []byte{})
 	}
-	stmt, prepared, isPrepared, err := newContext.PrepareStatement(statement, namedArgs, positionalArgs, subquery, readonly, false)
-	if err != nil {
-		return nil, err
+
+	var stmt algebra.Statement
+	var prepared *plan.Prepared
+	var isPrepared bool
+	var err error
+
+	doCaching = doCaching && (this.udfPlans != nil)
+	var cacheKey string
+	createPlan := true
+
+	if doCaching {
+		cacheKey = encodeStatement(this.queryContext, statement)
+
+		if pe, ok := this.udfPlans.get(cacheKey); ok {
+			stmt = *pe.stmt
+			prepared = pe.plan
+			isPrepared = pe.isPrepared
+			createPlan = false
+		}
 	}
+
+	if createPlan {
+		stmt, prepared, isPrepared, err = newContext.PrepareStatement(statement, namedArgs, positionalArgs, subquery, readonly, false)
+
+		if err != nil {
+			return nil, err
+		}
+
+		if doCaching {
+			this.udfPlans.set(cacheKey, planMapEntry{stmt: &stmt, plan: prepared, isPrepared: isPrepared})
+		}
+	}
+
 	stmtType := stmt.Type()
 	if stmtType == "EXECUTE" && isPrepared {
 		stmtType = prepared.Type()
@@ -249,7 +312,8 @@ func (this *Context) OpenStatement(statement string, namedArgs map[string]value.
 	if err != nil {
 		return nil, err
 	}
-	return newContext.OpenPrepared(this, stmtType, prepared, isPrepared, namedArgs, positionalArgs)
+
+	return newContext.OpenPrepared(this, stmtType, prepared, isPrepared, namedArgs, positionalArgs, statement, doCaching)
 }
 
 func (this *Context) PrepareStatement(statement string, namedArgs map[string]value.Value, positionalArgs value.Values,
@@ -444,8 +508,7 @@ func (this *Context) handleUsing(stmt algebra.Statement, namedArgs map[string]va
 }
 
 func (this *Context) ExecutePrepared(prepared *plan.Prepared, isPrepared bool,
-	namedArgs map[string]value.Value, positionalArgs value.Values) (value.Value, uint64, error) {
-
+	namedArgs map[string]value.Value, positionalArgs value.Values, statement string, doCaching bool) (value.Value, uint64, error) {
 	var outputBuf internalOutput
 	var results value.Value
 	output := this.newOutput(&outputBuf)
@@ -458,38 +521,67 @@ func (this *Context) ExecutePrepared(prepared *plan.Prepared, isPrepared bool,
 	this.namedArgs = namedArgs
 	this.positionalArgs = positionalArgs
 
-	build := util.Now()
+	var collect *Collect
+	var root Operator
 
-	// Collect statements results
-	collect := NewCollect(plan.NewCollect(), this)
-	pipeline, used, err := Build2(prepared, this, collect)
-	keep.AddPhaseTime(INSTANTIATE, util.Since(build))
+	doCaching = doCaching && (this.udfStmtExecTrees != nil)
+	var cacheKey string
+	createTree := true
 
-	if err != nil {
-		this.output = keep
-		return nil, 0, err
+	if doCaching {
+		cacheKey = encodeStatement(this.queryContext, statement)
+		if rootOp, collectOp, ok := this.udfStmtExecTrees.getAndReopen(cacheKey, this); ok {
+			createTree = false
+			build := util.Now()
+			collect = collectOp.(*Collect)
+			root = rootOp
+			keep.AddPhaseTime(INSTANTIATE, util.Since(build))
+			this.output = keep
+		}
+	}
+
+	if createTree {
+
+		build := util.Now()
+
+		// Collect statements results
+		collect = NewCollect(plan.NewCollect(), this)
+		pipeline, used, err := Build2(prepared, this, collect)
+		keep.AddPhaseTime(INSTANTIATE, util.Since(build))
+
+		if err != nil {
+			this.output = keep
+			return nil, 0, err
+		}
+
+		if used {
+			root = pipeline
+		} else {
+			sequence := NewSequence(plan.NewSequence(), this, pipeline, collect)
+			root = sequence
+		}
 	}
 
 	exec := util.Now()
-	if used {
-		pipeline.RunOnce(this, nil)
+	root.RunOnce(this, nil)
 
-		// Await completion
-		collect.waitComplete()
+	//Await completion
+	collect.waitComplete()
+	results = collect.ValuesOnce()
 
-		results = collect.ValuesOnce()
-		pipeline.Done()
+	// Once execution is complete - add the exec tree to the cache
+	// Cache the root and collect operator
+	if doCaching {
+		// Mark the execution tree for re-opening
+		if collect.opState == _DONE {
+			collect.opState = _COMPLETED
+		}
 
+		this.udfStmtExecTrees.set(cacheKey, root, collect)
 	} else {
-		sequence := NewSequence(plan.NewSequence(), this, pipeline, collect)
-		sequence.RunOnce(this, nil)
-
-		// Await completion
-		collect.waitComplete()
-
-		results = collect.ValuesOnce()
-		sequence.Done()
+		root.Done()
 	}
+
 	this.output = keep
 	this.output.AddPhaseTime(RUN, util.Since(exec))
 
@@ -497,7 +589,7 @@ func (this *Context) ExecutePrepared(prepared *plan.Prepared, isPrepared bool,
 }
 
 func (this *Context) OpenPrepared(baseContext *Context, stmtType string, prepared *plan.Prepared, isPrepared bool,
-	namedArgs map[string]value.Value, positionalArgs value.Values) (interface {
+	namedArgs map[string]value.Value, positionalArgs value.Values, statement string, doCaching bool) (interface {
 	Type() string
 	Mutations() uint64
 	Results() (interface{}, uint64, error)
@@ -515,20 +607,40 @@ func (this *Context) OpenPrepared(baseContext *Context, stmtType string, prepare
 	handle.context.namedArgs = namedArgs
 	handle.context.positionalArgs = positionalArgs
 
-	build := util.Now()
+	doCaching = doCaching && (baseContext.udfStmtExecTrees != nil)
+	var cacheKey string
+	createTree := true
 
-	// Collect statements results
-	handle.input = NewReceive(plan.NewReceive(), handle.context)
-	pipeline, used, err := Build2(prepared, this, handle.input)
-	this.output.AddPhaseTime(INSTANTIATE, util.Since(build))
-	if err != nil {
-		return nil, err
+	if doCaching {
+		cacheKey = encodeStatement(this.queryContext, statement)
+		handle.statement = cacheKey
+
+		if rootOp, receiveOp, ok := baseContext.udfStmtExecTrees.getAndReopen(cacheKey, this); ok {
+			createTree = false
+			build := util.Now()
+			handle.input = receiveOp.(*Receive)
+			handle.root = rootOp
+			this.output.AddPhaseTime(INSTANTIATE, util.Since(build))
+		}
 	}
 
-	if used {
-		handle.root = pipeline
-	} else {
-		handle.root = NewSequence(plan.NewSequence(), this, pipeline, handle.input)
+	if createTree {
+		build := util.Now()
+
+		// Collect statements results
+		handle.input = NewReceive(plan.NewReceive(), handle.context)
+		pipeline, used, err := Build2(prepared, this, handle.input)
+		this.output.AddPhaseTime(INSTANTIATE, util.Since(build))
+
+		if err != nil {
+			return nil, err
+		}
+
+		if used {
+			handle.root = pipeline
+		} else {
+			handle.root = NewSequence(plan.NewSequence(), this, pipeline, handle.input)
+		}
 	}
 
 	handle.stmtType = stmtType
@@ -601,6 +713,7 @@ type executionHandle struct {
 	actualType  string
 	output      *internalOutput
 	stopped     int32
+	statement   string
 }
 
 func (this *executionHandle) Results() (interface{}, uint64, error) {
@@ -625,13 +738,23 @@ func (this *executionHandle) Results() (interface{}, uint64, error) {
 	}
 	if atomic.AddInt32(&this.stopped, 1) == 1 {
 		this.context.output.AddPhaseTime(RUN, util.Since(this.exec))
-		this.root.SendAction(_ACTION_STOP)
+
+		// Send a PAUSE instead of STOP - so we can re-open cached exec trees if required
+		this.root.SendAction(_ACTION_PAUSE)
+
 		newErr := this.context.completeStatement(this.stmtType, this.output.err == nil, this.baseContext)
 		if this.output.err == nil && newErr != nil {
 			this.output.err = newErr
 		}
-		this.root.Done()
+
 		this.baseContext.mutex.Lock()
+
+		// Once execution is complete - add the exec tree to the cache
+		// Cache the root and collect operator
+		if this.baseContext.udfStmtExecTrees != nil {
+			this.baseContext.udfStmtExecTrees.set(this.statement, this.root, this.input)
+		}
+
 		delete(this.baseContext.udfHandleMap, this)
 		this.baseContext.mutex.Unlock()
 	}
@@ -658,13 +781,23 @@ func (this *executionHandle) Complete() (uint64, error) {
 	}
 	if atomic.AddInt32(&this.stopped, 1) == 1 {
 		this.context.output.AddPhaseTime(RUN, util.Since(this.exec))
-		this.root.SendAction(_ACTION_STOP)
+
+		// Send a PAUSE instead of STOP - so we can re-open cached exec trees if required
+		this.root.SendAction(_ACTION_PAUSE)
+
 		newErr := this.context.completeStatement(this.stmtType, this.output.err == nil, this.baseContext)
 		if this.output.err == nil && newErr != nil {
 			this.output.err = newErr
 		}
-		this.root.Done()
+
 		this.baseContext.mutex.Lock()
+
+		// Once execution is complete - add the exec tree to the cache
+		// Cache the root and collect operator
+		if this.baseContext.udfStmtExecTrees != nil {
+			this.baseContext.udfStmtExecTrees.set(this.statement, this.root, this.input)
+		}
+
 		delete(this.baseContext.udfHandleMap, this)
 		this.baseContext.mutex.Unlock()
 	}
@@ -681,13 +814,23 @@ func (this *executionHandle) NextDocument() (value.Value, error) {
 
 	if atomic.AddInt32(&this.stopped, 1) == 1 {
 		this.context.output.AddPhaseTime(RUN, util.Since(this.exec))
-		this.root.SendAction(_ACTION_STOP)
+
+		// Send a PAUSE instead of STOP - so we can re-open cached exec trees if required
+		this.root.SendAction(_ACTION_PAUSE)
+
 		newErr := this.context.completeStatement(this.stmtType, this.output.err == nil, this.baseContext)
 		if this.output.err == nil && newErr != nil {
 			this.output.err = newErr
 		}
-		this.root.Done()
+
 		this.baseContext.mutex.Lock()
+
+		// Once execution is complete - add the exec tree to the cache
+		// Cache the root and collect operator
+		if this.baseContext.udfStmtExecTrees != nil {
+			this.baseContext.udfStmtExecTrees.set(this.statement, this.root, this.input)
+		}
+
 		delete(this.baseContext.udfHandleMap, this)
 		this.baseContext.mutex.Unlock()
 	}
@@ -697,13 +840,23 @@ func (this *executionHandle) NextDocument() (value.Value, error) {
 func (this *executionHandle) Cancel() {
 	if atomic.AddInt32(&this.stopped, 1) == 1 {
 		this.context.output.AddPhaseTime(RUN, util.Since(this.exec))
-		this.root.SendAction(_ACTION_STOP)
+
+		// Send a PAUSE instead of STOP - so we can re-open cached exec trees if required
+		this.root.SendAction(_ACTION_PAUSE)
+
 		newErr := this.context.completeStatement(this.stmtType, this.output.err == nil, this.baseContext)
 		if this.output.err == nil && newErr != nil {
 			this.output.err = newErr
 		}
-		this.root.Done()
+
 		this.baseContext.mutex.Lock()
+
+		// Once execution is complete - add the exec tree to the cache
+		// Cache the root and collect operator
+		if this.baseContext.udfStmtExecTrees != nil {
+			this.baseContext.udfStmtExecTrees.set(this.statement, this.root, this.input)
+		}
+
 		delete(this.baseContext.udfHandleMap, this)
 		this.baseContext.mutex.Unlock()
 	}
@@ -758,7 +911,7 @@ func (this *Context) ExecuteTranStatement(stmtType string, stmtAtomicity bool) (
 
 	_, prepared, isPrepared, err := newContext.PrepareStatement(stmt, nil, nil, false, false, true)
 	if err == nil {
-		res, _, err = newContext.ExecutePrepared(prepared, isPrepared, nil, nil)
+		res, _, err = newContext.ExecutePrepared(prepared, isPrepared, nil, nil, stmt, false)
 	}
 	if err != nil {
 		error, ok := err.(errors.Error)

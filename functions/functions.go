@@ -505,6 +505,15 @@ func ExecuteFunction(name FunctionName, modifiers Modifier, values []value.Value
 		return nil, err
 	}
 
+	// Initialize the UDF execution tree cache and UDF query plan cache
+	// Only for Golang/ Javascript UDF execution
+	// We initialize here - so we dont unecessarily initialize these in the context
+	lang := entry.Lang()
+	if lang == JAVASCRIPT || lang == GOLANG {
+		context.InitUdfPlans()
+		context.InitUdfStmtExecTrees()
+	}
+
 	newContext := context
 	switchContext := body.SwitchContext()
 	readonly := (modifiers & READONLY) != 0
@@ -517,7 +526,7 @@ func ExecuteFunction(name FunctionName, modifiers Modifier, values []value.Value
 		}
 	}
 	start := util.Now()
-	val, err := languages[entry.Lang()].Execute(name, body, modifiers, values, newContext)
+	val, err := languages[lang].Execute(name, body, modifiers, values, newContext)
 
 	// update stats
 	serviceTime := util.Now().Sub(start)

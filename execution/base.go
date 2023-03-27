@@ -394,6 +394,8 @@ func (this *base) baseReopen(context *Context) bool {
 	if this.conn != nil {
 		this.conn = nil
 	}
+
+	this.operatorCtx = opContext{this, context}
 	this.childrenLeft = 0
 	this.stopped = false
 	this.serialized = false
@@ -1551,6 +1553,13 @@ func (this *base) marshalTimes(r map[string]interface{}) {
 			if subqueryTimes != nil {
 				r["~subqueries"] = subqueryTimes
 			}
+
+			udfTimes := this.rootContext.getUdfStmtTimes()
+
+			if udfTimes != nil {
+				r["~udfStatements"] = udfTimes
+			}
+
 		}
 		versions = append(versions, util.VERSION)
 		versions = append(versions, datastore.GetDatastore().Info().Version())

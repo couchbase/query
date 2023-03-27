@@ -59,11 +59,11 @@ func (this *IndexContext) DatastoreVersion() string {
 	return "BOGUS_VERSION"
 }
 
-func (this *IndexContext) EvaluateStatement(statement string, namedArgs map[string]value.Value, positionalArgs value.Values, subquery, readonly bool) (value.Value, uint64, error) {
+func (this *IndexContext) EvaluateStatement(statement string, namedArgs map[string]value.Value, positionalArgs value.Values, subquery, readonly bool, doCaching bool) (value.Value, uint64, error) {
 	return nil, 0, nil
 }
 
-func (this *IndexContext) OpenStatement(statement string, namedArgs map[string]value.Value, positionalArgs value.Values, subquery, readonly bool) (
+func (this *IndexContext) OpenStatement(statement string, namedArgs map[string]value.Value, positionalArgs value.Values, subquery, readonly bool, doCaching bool) (
 	interface {
 		Type() string
 		Mutations() uint64
@@ -178,3 +178,11 @@ func (this *IndexContext) Warnf(f string, args ...interface{})                  
 func (this *IndexContext) Errorf(f string, args ...interface{})                    {}
 func (this *IndexContext) Severef(f string, args ...interface{})                   {}
 func (this *IndexContext) Fatalf(f string, args ...interface{})                    {}
+
+func (this *IndexContext) InitUdfPlans() {
+	// no op
+}
+
+func (this *IndexContext) InitUdfStmtExecTrees() {
+	// no op
+}
