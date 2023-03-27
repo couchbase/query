@@ -1156,7 +1156,7 @@ func (b *Bucket) refresh(preserveConnections bool) error {
 		hostport := tmpb.VBSMJson.ServerList[i]
 		if preserveConnections {
 			pool := b.getConnPoolByHost(hostport, true /* bucket already locked */)
-			if pool != nil && pool.inUse == false && (!pool.encrypted || pool.tlsConfig == client.tlsConfig) {
+			if pool != nil && pool.inUse == false && pool.tlsConfig == client.tlsConfig {
 				// if the hostname and index is unchanged then reuse this pool
 				newcps[i] = pool
 				pool.inUse = true
