@@ -69,7 +69,7 @@ var operations = map[string]func(io.Writer) error{
 		switch runtime.GOOS {
 		case "linux":
 			if runCommand(w, "netstat", "-atnp") == nil {
-				return
+				return nil
 			}
 		case "windows":
 			return runCommand(w, "netstat.exe", "-atno")
