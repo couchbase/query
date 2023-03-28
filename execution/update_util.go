@@ -92,11 +92,12 @@ func arraysFor(bindings expression.Bindings, val value.Value, context *Context) 
 				bv = value.NewValue(bv.Descendants(buffer))
 			}
 
+			if arrays == nil {
+				arrays = _INTERFACES_POOL.GetSized(len(bindings))
+			}
+
 			switch bv.Type() {
 			case value.ARRAY:
-				if arrays == nil {
-					arrays = _INTERFACES_POOL.GetSized(len(bindings))
-				}
 				arrays[i] = bv.Actual().([]interface{})
 			default:
 				arrays[i] = _EMPTY_ARRAY
