@@ -55,7 +55,7 @@ func (this *Base64Encode) Evaluate(item value.Value, context Context) (value.Val
 	} else if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
 	}
-
+	arg.Actual()                  // force unwrapping of parsed values
 	bytes, _ := arg.MarshalJSON() // Ignore errors from BINARY values
 	str := base64.StdEncoding.EncodeToString(bytes)
 	return value.NewValue(str), nil

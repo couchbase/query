@@ -111,6 +111,7 @@ func (this *Hashbytes) Evaluate(item value.Value, context Context) (value.Value,
 		d = []byte(arg.ToString())
 	} else {
 		// hash the JSON representation of non-binary values
+		arg.Actual() // force uwrapping of parsed values
 		d, err = arg.MarshalJSON()
 		if err != nil {
 			return nil, err

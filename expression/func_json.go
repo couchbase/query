@@ -134,6 +134,7 @@ func (this *JSONEncode) Evaluate(item value.Value, context Context) (value.Value
 	if err != nil {
 		return nil, err
 	}
+	arg.Actual() // force unwrapping of parsed values
 	bytes, _ := arg.MarshalJSON()
 	return value.NewValue(string(bytes)), nil
 }
@@ -187,6 +188,7 @@ func (this *EncodedSize) Evaluate(item value.Value, context Context) (value.Valu
 	if err != nil {
 		return nil, err
 	}
+	arg.Actual() // force unwrapping of parsed values
 	bytes, _ := arg.MarshalJSON()
 	return value.NewValue(len(bytes)), nil
 }
