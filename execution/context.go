@@ -1078,8 +1078,12 @@ func (this *opContext) EvaluateSubquery(query *algebra.Select, parent value.Valu
 
 				// MB-32140: do not replace named/positional arguments with its value for prepared statements
 				var prepContext planner.PrepareContext
+				var optimizer planner.Optimizer
+				if this.optimizer != nil {
+					optimizer = this.optimizer.Copy()
+				}
 				planner.NewPrepareContext(&prepContext, this.requestId, this.queryContext, nil, nil,
-					this.indexApiVersion, this.featureControls, this.useFts, this.useCBO, this.optimizer,
+					this.indexApiVersion, this.featureControls, this.useFts, this.useCBO, optimizer,
 					nil, this, false)
 				qp, subplanIsks, err, _ = planner.Build(query, this.datastore, this.systemstore, this.namespace,
 					true, false, &prepContext)
@@ -1114,8 +1118,12 @@ func (this *opContext) EvaluateSubquery(query *algebra.Select, parent value.Valu
 		var err error
 
 		var prepContext planner.PrepareContext
+		var optimizer planner.Optimizer
+		if this.optimizer != nil {
+			optimizer = this.optimizer.Copy()
+		}
 		planner.NewPrepareContext(&prepContext, this.requestId, this.queryContext, this.namedArgs,
-			this.positionalArgs, this.indexApiVersion, this.featureControls, this.useFts, this.useCBO, this.optimizer,
+			this.positionalArgs, this.indexApiVersion, this.featureControls, this.useFts, this.useCBO, optimizer,
 			this.deltaKeyspaces, this, false)
 		qp, subplanIsks, err, _ = planner.Build(query, this.datastore, this.systemstore,
 			this.namespace, true, false, &prepContext)
