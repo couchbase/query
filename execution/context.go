@@ -286,7 +286,6 @@ func (this *Context) Copy() *Context {
 		queryContext:        this.queryContext,
 		useFts:              this.useFts,
 		useCBO:              this.useCBO,
-		optimizer:           this.optimizer,
 		deltaKeyspaces:      this.deltaKeyspaces,
 		txTimeout:           this.txTimeout,
 		txImplicit:          this.txImplicit,
@@ -302,6 +301,10 @@ func (this *Context) Copy() *Context {
 		whitelist:           this.whitelist,
 		udfValueMap:         this.udfValueMap,
 		recursionCount:      this.recursionCount,
+	}
+
+	if this.optimizer != nil {
+		rv.optimizer = this.optimizer.Copy()
 	}
 
 	rv.SetDurability(this.DurabilityLevel(), this.DurabilityTimeout())
@@ -856,8 +859,12 @@ func (this *Context) EvaluateSubquery(query *algebra.Select, parent value.Value)
 
 				// MB-32140: do not replace named/positional arguments with its value for prepared statements
 				var prepContext planner.PrepareContext
+				var optimizer planner.Optimizer
+				if this.optimizer != nil {
+					optimizer = this.optimizer.Copy()
+				}
 				planner.NewPrepareContext(&prepContext, this.requestId, this.queryContext, nil, nil,
-					this.indexApiVersion, this.featureControls, this.useFts, this.useCBO, this.optimizer,
+					this.indexApiVersion, this.featureControls, this.useFts, this.useCBO, optimizer,
 					nil, this)
 				qp, subplanIsks, err = planner.Build(query, this.datastore, this.systemstore, this.namespace,
 					true, false, &prepContext)
@@ -892,8 +899,12 @@ func (this *Context) EvaluateSubquery(query *algebra.Select, parent value.Value)
 		var err error
 
 		var prepContext planner.PrepareContext
+		var optimizer planner.Optimizer
+		if this.optimizer != nil {
+			optimizer = this.optimizer.Copy()
+		}
 		planner.NewPrepareContext(&prepContext, this.requestId, this.queryContext, this.namedArgs,
-			this.positionalArgs, this.indexApiVersion, this.featureControls, this.useFts, this.useCBO, this.optimizer,
+			this.positionalArgs, this.indexApiVersion, this.featureControls, this.useFts, this.useCBO, optimizer,
 			this.deltaKeyspaces, this)
 		qp, subplanIsks, err = planner.Build(query, this.datastore, this.systemstore,
 			this.namespace, true, false, &prepContext)

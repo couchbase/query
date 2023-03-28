@@ -225,8 +225,12 @@ func (this *Context) PrepareStatement(statement string, namedArgs map[string]val
 
 	var name string
 	var prepContext planner.PrepareContext
+	var optimizer planner.Optimizer
+	if this.optimizer != nil {
+		optimizer = this.optimizer.Copy()
+	}
 	planner.NewPrepareContext(&prepContext, this.requestId, this.queryContext, namedArgs,
-		positionalArgs, this.indexApiVersion, this.featureControls, this.useFts, this.useCBO, this.optimizer,
+		positionalArgs, this.indexApiVersion, this.featureControls, this.useFts, this.useCBO, optimizer,
 		this.deltaKeyspaces, this)
 
 	if autoPrepare {
