@@ -66,11 +66,15 @@ var operations = map[string]func(io.Writer) error{
 		return nil
 	},
 	Netstat: func(w io.Writer) error {
-		if runtime.GOOS == "windows" {
+		switch runtime.GOOS {
+		case "linux":
+			if runCommand(w, "netstat", "-atnp") == nil {
+				return
+			}
+		case "windows":
 			return runCommand(w, "netstat.exe", "-atno")
-		} else {
-			return runCommand(w, "netstat", "-atnp")
 		}
+		return runCommand(w, "netstat", "-an")
 	},
 }
 
