@@ -238,17 +238,35 @@ func (this *builder) Copy() *builder {
 		skipDynamic:          this.skipDynamic,
 		requirePrimaryKey:    this.requirePrimaryKey,
 		baseKeyspaces:        base.CopyBaseKeyspacesWithFilters(this.baseKeyspaces),
-		keyspaceNames:        this.keyspaceNames,
-		indexKeyspaceNames:   this.indexKeyspaceNames,
 		pushableOnclause:     expression.Copy(this.pushableOnclause),
 		builderFlags:         this.builderFlags,
 		indexAdvisor:         this.indexAdvisor,
 		useCBO:               this.useCBO,
 		hintIndexes:          this.hintIndexes,
-		aliases:              this.aliases,
 		partialSortTermCount: this.partialSortTermCount,
 		// the following fields are setup during planning process and thus not copied:
 		// children, subChildren, coveringScan, coveredUnnests, countScan, orderScan, lastOp
+	}
+
+	if len(this.keyspaceNames) > 0 {
+		rv.keyspaceNames = make(map[string]string, len(this.keyspaceNames))
+		for k, v := range this.keyspaceNames {
+			rv.keyspaceNames[k] = v
+		}
+	}
+
+	if len(this.indexKeyspaceNames) > 0 {
+		rv.indexKeyspaceNames = make(map[string]bool, len(this.indexKeyspaceNames))
+		for k, v := range this.indexKeyspaceNames {
+			rv.indexKeyspaceNames[k] = v
+		}
+	}
+
+	if len(this.aliases) > 0 {
+		rv.aliases = make(map[string]bool, len(this.aliases))
+		for k, v := range this.aliases {
+			rv.aliases[k] = v
+		}
 	}
 
 	this.indexPushDowns.Copy(&rv.indexPushDowns)

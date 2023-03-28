@@ -370,7 +370,6 @@ func (this *Context) Copy() *Context {
 		queryContext:        this.queryContext,
 		useFts:              this.useFts,
 		useCBO:              this.useCBO,
-		optimizer:           this.optimizer,
 		deltaKeyspaces:      this.deltaKeyspaces,
 		txTimeout:           this.txTimeout,
 		txImplicit:          this.txImplicit,
@@ -394,6 +393,10 @@ func (this *Context) Copy() *Context {
 		planPreparedTime:    this.planPreparedTime,
 		logLevel:            this.logLevel,
 		errorLimit:          this.errorLimit,
+	}
+
+	if this.optimizer != nil {
+		rv.optimizer = this.optimizer.Copy()
 	}
 
 	rv.SetPreserveProjectionOrder(false) // always reset on copy
