@@ -255,18 +255,17 @@ func (this *builder) Copy() *builder {
 		}
 	}
 
-	if len(this.indexKeyspaceNames) > 0 {
-		rv.indexKeyspaceNames = make(map[string]bool, len(this.indexKeyspaceNames))
-		for k, v := range this.indexKeyspaceNames {
-			rv.indexKeyspaceNames[k] = v
-		}
-	}
-
 	if len(this.aliases) > 0 {
 		rv.aliases = make(map[string]bool, len(this.aliases))
 		for k, v := range this.aliases {
 			rv.aliases[k] = v
 		}
+	}
+
+	// indexKeyspaceNames is always allocated
+	rv.indexKeyspaceNames = make(map[string]bool, len(this.indexKeyspaceNames))
+	for k, v := range this.indexKeyspaceNames {
+		rv.indexKeyspaceNames[k] = v
 	}
 
 	this.indexPushDowns.Copy(&rv.indexPushDowns)
