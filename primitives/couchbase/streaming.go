@@ -198,8 +198,9 @@ func (b *Bucket) RunBucketUpdater2(streamingFn StreamingFn, notify NotifyFn) {
 
 	b.Lock()
 	if b.updater != nil {
-		b.updater.Close()
+		bu := b.updater
 		b.updater = nil
+		bu.Close()
 	}
 	b.Unlock()
 	go func() {
@@ -329,16 +330,28 @@ func (b *Bucket) UpdateBucket2(streamingFn StreamingFn) error {
 
 		tmpb := &Bucket{}
 		for {
+			b.Lock()
+			bu := b.updater
+			b.Unlock()
+			if bu != updater {
+				res.Body.Close()
+				logging.Debugf("Bucket updater: Detected new updater for bucket: %v", b.GetName())
+				return nil
+			}
 
 			err := dec.Decode(&tmpb)
+
+			b.Lock()
+			bu = b.updater
+			b.Unlock()
+			if bu != updater {
+				logging.Debugf("Bucket updater: Detected new updater for bucket: %v", b.GetName())
+				return nil
+			}
+
 			if err != nil {
 				returnErr = err
 				res.Body.Close()
-				// if this was closed under us it means a new updater is starting so exit cleanly
-				if strings.Contains(err.Error(), "use of closed network connection") {
-					logging.Debugf("Bucket updater: Notified of new updater for bucket: %v", b.GetName())
-					return nil
-				}
 				break
 			}
 

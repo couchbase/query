@@ -1260,10 +1260,13 @@ func (b *Bucket) Close() {
 }
 
 func (b *Bucket) StopUpdater() {
+	b.Lock()
 	if b.updater != nil {
-		b.updater.Close()
+		bu := b.updater
 		b.updater = nil
+		bu.Close()
 	}
+	b.Unlock()
 }
 
 func bucketFinalizer(b *Bucket) {
