@@ -40,6 +40,7 @@ const (
 	IE_HAS_EARLY_ORDER
 	IE_OR_USE_FILTERS
 	IE_OR_NON_SARG_EXPR
+	IE_LIMIT_OFFSET_COST
 )
 
 type indexEntry struct {

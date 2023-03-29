@@ -190,13 +190,22 @@ func (this *builder) bestCoveringIndex(useCBO bool, node *algebra.KeyspaceTerm,
 		for _, ce := range coveringEntries {
 			entry := ce.idxEntry
 			if entry.cost <= 0.0 {
-				cost, _, card, size, frCost, e := indexScanCost(entry.index, entry.sargKeys,
+				cost, selec, card, size, frCost, e := indexScanCost(entry.index, entry.sargKeys,
 					this.context.RequestId(), entry.spans, node.Alias(),
 					this.advisorValidate(), this.context)
 				if e != nil || (cost <= 0.0 || card <= 0.0 || size <= 0 || frCost <= 0.0) {
 					useCBO = false
 				} else {
-					entry.cardinality, entry.cost, entry.frCost, entry.size = card, cost, frCost, size
+					if entry.IsPushDownProperty(_PUSHDOWN_LIMIT|_PUSHDOWN_OFFSET) &&
+						!entry.HasFlag(IE_LIMIT_OFFSET_COST) {
+						cost, card, frCost, _ = this.getIndexLimitCost(cost, card, frCost, selec)
+						entry.SetFlags(IE_LIMIT_OFFSET_COST, true)
+					}
+					if cost > 0.0 && card > 0.0 && frCost > 0.0 {
+						entry.cardinality, entry.cost, entry.frCost, entry.size = card, cost, frCost, size
+					} else {
+						useCBO = false
+					}
 				}
 			}
 		}

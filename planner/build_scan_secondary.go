@@ -569,6 +569,8 @@ func (this *builder) minimalIndexes(sargables map[datastore.Index]*indexEntry, s
 
 	if useCBO {
 		advisorValidate := this.advisorValidate()
+		baseKeyspace, _ := this.baseKeyspaces[node.Alias()]
+		keyspace := baseKeyspace.Keyspace()
 		for _, se := range sargables {
 			if se.cost <= 0.0 {
 				cost, selec, card, size, frCost, e := indexScanCost(se.index, se.sargKeys,
@@ -578,16 +580,34 @@ func (this *builder) minimalIndexes(sargables map[datastore.Index]*indexEntry, s
 					useCBO = false
 				} else {
 					se.cardinality, se.selectivity, se.cost, se.frCost, se.size = card, selec, cost, frCost, size
-					if shortest {
-						baseKeyspace, _ := this.baseKeyspaces[node.Alias()]
-						fetchCost, _, _ := getFetchCost(baseKeyspace.Keyspace(), card)
+				}
+			}
+			if shortest && se.fetchCost <= 0.0 {
+				fetchCost, _, _ := getFetchCost(keyspace, se.cardinality)
+				if fetchCost > 0.0 {
+					se.fetchCost = fetchCost
+				} else {
+					useCBO = false
+				}
+			}
+			if se.IsPushDownProperty(_PUSHDOWN_LIMIT|_PUSHDOWN_OFFSET) &&
+				!se.HasFlag(IE_LIMIT_OFFSET_COST) {
+				if se.cost > 0.0 && se.cardinality > 0.0 && se.size > 0 && se.frCost > 0.0 {
+					cost, card, frCost, selec := this.getIndexLimitCost(se.cost, se.cardinality, se.frCost, se.selectivity)
+					if cost > 0.0 && card > 0.0 && frCost > 0.0 && selec > 0.0 {
+						se.cost, se.cardinality, se.frCost, se.selectivity = cost, card, frCost, selec
+						// expect shortest is true when pushdown is set
+						fetchCost, _, _ := getFetchCost(keyspace, card)
 						if fetchCost > 0.0 {
 							se.fetchCost = fetchCost
 						} else {
 							useCBO = false
 						}
+					} else {
+						useCBO = false
 					}
 				}
+				se.SetFlags(IE_LIMIT_OFFSET_COST, true)
 			}
 		}
 	}
@@ -1109,10 +1129,19 @@ func (this *builder) getIndexFilters(entry *indexEntry, node *algebra.KeyspaceTe
 		if e != nil || (cost <= 0.0 || card <= 0.0 || size <= 0 || frCost <= 0.0) {
 			useCBO = false
 		} else {
-			entry.cardinality, entry.selectivity, entry.cost, entry.frCost, entry.size = card, selec, cost, frCost, size
-			fetchCost, _, _ := getFetchCost(baseKeyspace.Keyspace(), card)
-			if fetchCost > 0.0 {
-				entry.fetchCost = fetchCost
+			if entry.IsPushDownProperty(_PUSHDOWN_LIMIT|_PUSHDOWN_OFFSET) &&
+				!entry.HasFlag(IE_LIMIT_OFFSET_COST) {
+				cost, card, frCost, selec = this.getIndexLimitCost(cost, card, frCost, selec)
+				entry.SetFlags(IE_LIMIT_OFFSET_COST, true)
+			}
+			if cost > 0.0 && card > 0.0 && frCost > 0.0 && selec > 0.0 {
+				entry.cardinality, entry.selectivity, entry.cost, entry.frCost, entry.size = card, selec, cost, frCost, size
+				fetchCost, _, _ := getFetchCost(baseKeyspace.Keyspace(), card)
+				if fetchCost > 0.0 {
+					entry.fetchCost = fetchCost
+				} else {
+					useCBO = false
+				}
 			} else {
 				useCBO = false
 			}

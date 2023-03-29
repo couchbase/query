@@ -208,6 +208,42 @@ func multiIndexSelec(index datastore.Index, sargKeys expression.Expressions, ski
 	return sel, nil
 }
 
+func (this *builder) getIndexLimitCost(cost, cardinality, frCost, selec float64) (float64, float64, float64, float64) {
+	namedArgs := this.context.NamedArgs()
+	positionalArgs := this.context.PositionalArgs()
+
+	nlimit := int64(-1)
+	noffset := int64(-1)
+	limit := this.limit
+	offset := this.offset
+	if len(namedArgs) > 0 || len(positionalArgs) > 0 {
+		var err error
+		limit, err = base.ReplaceParameters(limit, namedArgs, positionalArgs)
+		if err != nil {
+			return cost, cardinality, frCost, selec
+		}
+		if offset != nil {
+			offset, err = base.ReplaceParameters(offset, namedArgs, positionalArgs)
+			if err != nil {
+				return cost, cardinality, frCost, selec
+			}
+		}
+	}
+
+	lv, static := base.GetStaticInt(limit)
+	if static {
+		nlimit = lv
+	}
+	if offset != nil {
+		ov, static := base.GetStaticInt(offset)
+		if static {
+			noffset = ov
+		}
+	}
+
+	return optutil.IndexLimitCost(nlimit, noffset, cost, cardinality, frCost, selec)
+}
+
 func getIndexProjectionCost(index datastore.Index, indexProjection *plan.IndexProjection,
 	cardinality float64) (float64, float64, int64, float64) {
 	return optutil.CalcIndexProjectionCost(index, indexProjection, cardinality, 0, 0, 0)
