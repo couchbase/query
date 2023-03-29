@@ -36,7 +36,7 @@
 		"added": "7.0.0"
 	},
 	"n1ql_bucket_reads": {
-		"type": "guage",
+		"type": "gauge",
 		"help": "The total number of reads on the bucket.",
 		"notes": "This is a metric specific to provisioned mode.",
 		"added": "7.5.0",
@@ -45,7 +45,7 @@
 		]
 	},
 	"n1ql_bucket_retries": {
-		"type": "guage",
+		"type": "gauge",
 		"help": "The total number of retries on the bucket.",
 		"notes": "This is a metric specific to provisioned mode.",
 		"added": "7.5.0",
@@ -54,7 +54,7 @@
 		]
 	},
 	"n1ql_bucket_writes": {
-		"type": "guage",
+		"type": "gauge",
 		"help": "The total number of writes on the bucket.",
 		"notes": "This is a metric specific to provisioned mode.",
 		"added": "7.5.0",
@@ -224,7 +224,7 @@
         "unit": "bytes"
 	},
 	"n1ql_tenant_reads": {
-		"type": "guage",
+		"type": "gauge",
 		"help": "The total number of reads on the tenant.",
 		"notes": "This is a metric specific to serverless.",
 		"added": "7.5.0",
@@ -233,7 +233,7 @@
 		]
 	},
 	"n1ql_tenant_retries": {
-		"type": "guage",
+		"type": "gauge",
 		"help": "The total number of retries on the tenant.",
 		"notes": "This is a metric specific to serverless.",
 		"added": "7.5.0",
@@ -242,7 +242,7 @@
 		]
 	},
 	"n1ql_tenant_writes": {
-		"type": "guage",
+		"type": "gauge",
 		"help": "The total number of writes on the tenant.",
 		"notes": "This is a metric specific to serverless.",
 		"added": "7.5.0",
