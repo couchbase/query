@@ -124,7 +124,6 @@ func (this Unit) NonZero() bool {
 }
 
 func Throttle(isAdmin bool, user, bucket string, buckets []string, timeout time.Duration) (Context, time.Duration, errors.Error) {
-
 	var ctx Context
 
 	tenant := bucket
@@ -155,59 +154,64 @@ func Throttle(isAdmin bool, user, bucket string, buckets []string, timeout time.
 		ctx = regulator.NewUserCtx(tenant, user)
 	}
 
-	r, d, e := regulator.CheckQuota(ctx, &regulator.CheckQuotaOpts{
-		MaxThrottle:       timeout,
-		NoThrottle:        false,
-		NoReject:          false,
-		EstimatedDuration: time.Duration(0),
-		EstimatedUnits:    []regulator.Units{},
-	})
-	switch r {
-	case regulator.CheckResultNormal:
-		var d time.Duration
+	quotaOpts := &regulator.CheckQuotaOpts{
+                        Timeout: timeout,
+                }
+	for {
+		r, d, e := regulator.CheckQuota(ctx, quotaOpts)
+		switch r {
+		case regulator.CheckResultProceed:
+			var d time.Duration
 
-		// if KV is throttling this tenant slow it down before the request starts in order
-		// to use the would be KV throttling to service other less active tenants
-		// the query throttling will limit KV requests which in turn will lessen KV need
-		// for throttling
-		throttleLock.RLock()
-		thottleTime, ok := throttleTimes[bucket]
-		throttleLock.RUnlock()
-		if ok {
-			d = thottleTime.Sub(util.Now())
+			// if KV is throttling this tenant slow it down before the request starts in order
+			// to use the would be KV throttling to service other less active tenants
+			// the query throttling will limit KV requests which in turn will lessen KV need
+			// for throttling
+			throttleLock.RLock()
+			thottleTime, ok := throttleTimes[bucket]
+			throttleLock.RUnlock()
+			if ok {
+				d = thottleTime.Sub(util.Now())
 
-			if d > time.Duration(0) {
-				regulator.RecordExternalThrottle(ctx, regulator.ExternalThrottleSpec{
-					Duration: d,
-					Timing:   regulator.Preceding,
-					Service:  regulator.Query,
-					NodeID:   thisNodeId,
-				})
-				logging.Debugf("External bucket %v throttled for %v by query", bucket, d)
-				time.Sleep(d)
-			} else {
-				d = time.Duration(0)
+				if d > time.Duration(0) {
+					regulator.RecordExternalThrottle(ctx, regulator.ExternalThrottleSpec{
+						Duration: d,
+						Timing:   regulator.Preceding,
+						Service:  regulator.Query,
+						NodeID:   thisNodeId,
+					})
+					logging.Debugf("External bucket %v throttled for %v by query", bucket, d)
+					time.Sleep(d)
+				} else {
+					d = time.Duration(0)
+				}
+
+				// remove delay hint to minimise cost
+				throttleLock.Lock()
+				currThottleTime, ook := throttleTimes[bucket]
+				if ook && currThottleTime == thottleTime {
+					delete(throttleTimes, bucket)
+				}
+				throttleLock.Unlock()
 			}
+			return ctx, d, nil
+		case regulator.CheckResultThrottleProceed:
+			logging.Debugf("bucket %v throttled for %v by regulator (%v)", bucket, d, r)
+			time.Sleep(d)
+			return ctx, d, nil
+		case regulator.CheckResultThrottleRetry:
 
-			// remove delay hint to minimise cost
-			throttleLock.Lock()
-			currThottleTime, ook := throttleTimes[bucket]
-			if ook && currThottleTime == thottleTime {
-				delete(throttleTimes, bucket)
-			}
-			throttleLock.Unlock()
+			// this code relies on the regulator not to exceed the request or config timeout
+			logging.Debugf("bucket %v throttled for %v by regulator (%v)", bucket, d, r)
+			time.Sleep(d)
+			logging.Debugf("retrying bucket %v previously throttled for %v by regulator (%v)", bucket, d, r)
+		case regulator.CheckResultReject:
+			logging.Debugf("bucket %v rejected by regulator", bucket)
+			return nil, time.Duration(0), errors.NewServiceTenantRejectedError(d)
+		default:
+			logging.Debugf("bucket %v error by regulator (%v) ", bucket, e)
+			return ctx, time.Duration(0), errors.NewServiceTenantThrottledError(e)
 		}
-		return ctx, d, nil
-	case regulator.CheckResultThrottle:
-		logging.Debugf("bucket %v throttled for %v by query (%v)", bucket, d, r)
-		time.Sleep(d)
-		return ctx, d, nil
-	case regulator.CheckResultReject:
-		logging.Debugf("bucket %v rejected by regulator", bucket)
-		return nil, time.Duration(0), errors.NewServiceTenantRejectedError(d)
-	default:
-		logging.Debugf("bucket %v error by regulator (%v) ", bucket, e)
-		return ctx, time.Duration(0), errors.NewServiceTenantThrottledError(e)
 	}
 }
 
