@@ -291,7 +291,7 @@ func (coll *collection) Indexers() ([]datastore.Indexer, errors.Error) {
 
 	if coll.gsiIndexer != nil {
 		indexers = append(indexers, coll.gsiIndexer)
-		err = checkIndexCache(coll.id, coll.gsiIndexer, &coll.chkIndex)
+		err = checkIndexCache(coll.QualifiedName(), coll.gsiIndexer, &coll.chkIndex)
 	}
 	if coll.ftsIndexer != nil {
 		indexers = append(indexers, coll.ftsIndexer)
