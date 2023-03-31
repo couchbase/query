@@ -120,7 +120,7 @@ func chkSysBucket() {
 	}
 }
 
-const _GRACE_PERIOD = time.Second
+const _GRACE_PERIOD = 2 * time.Second
 
 type chkIndexDict struct {
 	sync.RWMutex
@@ -160,29 +160,5 @@ func checkIndexCache(keyspace string, indexer datastore.Indexer, dict *chkIndexD
 
 	defer dict.chkDone()
 
-	indexes := _INDEX_ID_POOL.Get()
-	defer _INDEX_ID_POOL.Put(indexes)
-
-	idxes, err := indexer.Indexes()
-	if err != nil {
-		return err
-	}
-
-	for _, idx := range idxes {
-		state, _, err := idx.State()
-		if err != nil {
-			return err
-		}
-		if state != datastore.ONLINE {
-			continue
-		}
-
-		indexes[idx.Id()] = idx.Name()
-	}
-
-	dictionary.CheckIndexes(keyspace, indexes)
-
-	return nil
+	return dictionary.CheckIndexes(keyspace, indexer)
 }
-
-var _INDEX_ID_POOL = util.NewStringStringPool(256)
