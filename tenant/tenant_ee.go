@@ -155,8 +155,8 @@ func Throttle(isAdmin bool, user, bucket string, buckets []string, timeout time.
 	}
 
 	quotaOpts := &regulator.CheckQuotaOpts{
-                        Timeout: timeout,
-                }
+		Timeout: timeout,
+	}
 	for {
 		r, d, e := regulator.CheckQuota(ctx, quotaOpts)
 		switch r {
