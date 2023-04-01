@@ -220,9 +220,35 @@ func (this *builder) bestCoveringIndex(useCBO bool, node *algebra.KeyspaceTerm,
 			} else {
 				c_pushdown := ce.idxEntry.PushDownProperty()
 				i_pushdown := centry.idxEntry.PushDownProperty()
-				if (c_pushdown > i_pushdown) ||
-					((c_pushdown == i_pushdown) &&
-						(ce.idxEntry.cost < centry.idxEntry.cost)) {
+				if c_pushdown > i_pushdown {
+					centry = ce
+				} else if c_pushdown < i_pushdown {
+					continue
+				}
+				c_cost := ce.idxEntry.cost
+				i_cost := centry.idxEntry.cost
+				if c_cost < i_cost {
+					centry = ce
+				} else if c_cost > i_cost {
+					continue
+				}
+				c_cardinality := ce.idxEntry.cardinality
+				i_cardinality := centry.idxEntry.cardinality
+				if c_cardinality < i_cardinality {
+					centry = ce
+				} else if c_cardinality > i_cardinality {
+					continue
+				}
+				c_sumKeys := ce.idxEntry.sumKeys
+				i_sumKeys := centry.idxEntry.sumKeys
+				if c_sumKeys > i_sumKeys {
+					centry = ce
+				} else if c_sumKeys < i_sumKeys {
+					continue
+				}
+				c_minKeys := ce.idxEntry.minKeys
+				i_minKeys := centry.idxEntry.minKeys
+				if c_minKeys > i_minKeys {
 					centry = ce
 				}
 			}
