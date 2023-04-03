@@ -1445,7 +1445,15 @@ func (this *vbRangeScan) runScan(conn *memcached.Client, node string) bool {
 			response, err = conn.ReceiveWithDeadline(time.Now().Add(this.scan.kvTimeout))
 			if err != nil {
 				resp, ok := err.(*gomemcached.MCResponse)
-				if ok && resp.Status != gomemcached.SUCCESS &&
+
+				if !ok {
+					logging.Debugf("%s %v receive on %v failed receive after %d keys: %v",
+						this, this.b.Name, uuidAsString(uuid), len(this.keys), err, this.scan.log)
+					this.reportError(qerrors.NewSSError(qerrors.E_SS_CONTINUE, err))
+					return cancelScan(false)
+				}
+
+				if resp.Status != gomemcached.SUCCESS &&
 					resp.Status != gomemcached.RANGE_SCAN_MORE &&
 					resp.Status != gomemcached.RANGE_SCAN_COMPLETE {
 
