@@ -33,6 +33,7 @@ import (
 
 const _FFDC_OCCURENCE_LIMIT = 10
 const _FFDC_MIN_INTERVAL = time.Second * 10
+const _MAX_CAPTURE_WAIT_TIME = time.Second * 10
 
 const (
 	Heap      = "heap"
@@ -207,16 +208,23 @@ func (this *reason) shouldCapture() *occurrence {
 	return occ
 }
 
-func (this *reason) capture() {
+func (this *reason) capture(ch chan bool) {
+	locked := false
 	defer func() {
 		e := recover()
 		if e != nil {
 			logging.Stackf(logging.ERROR, "Panic capturing \"%v\" FFDC: %v", this.event, e)
 		}
+		close(ch)
+		if locked {
+			this.Unlock()
+		}
 	}()
 	this.Lock()
+	locked = true
 	occ := this.shouldCapture()
 	this.Unlock()
+	locked = false
 	if occ != nil {
 		logging.Warnf("FFDC: %s", this.msg)
 		for i := range this.actions {
@@ -445,7 +453,14 @@ func Capture(event string) {
 	if !ok {
 		logging.Stackf(logging.ERROR, "FFDC: Invalid event: %v", event)
 	} else {
-		r.capture()
+		// expense of creation here is low compared to actually running the FFDC
+		done := make(chan bool)
+		go r.capture(done)
+		select {
+		case <-done:
+		case <-time.After(_MAX_CAPTURE_WAIT_TIME):
+			logging.Warnf("FFDC: Maximum wait time reached")
+		}
 	}
 }
 
