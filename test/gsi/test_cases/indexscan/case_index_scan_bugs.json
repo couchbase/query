@@ -125,5 +125,47 @@
                 "c4": 221
             }
     ]
+    },
+    {
+	"testcase": "MB-56284 part1",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`index` = 'iorix1' AND v.`covers` IS NOT MISSING AND ARRAY_LENGTH(v.spans) = 2 AND v.`index_group_aggs` IS MISSING END"
+        },
+        "namedArgs": {"qp1": "abc"},
+        "statements":"SELECT count(1) AS cnt FROM orders WHERE test_id = \"idxfltr\" AND c1 = 1 AND ((c2 = 11 AND IFMISSINGORNULL($qp1, \"\") != \"\") OR (IFMISSINGORNULL($qp1, \"\") == \"\"))",
+	"ordered": true,
+        "results": [
+            {
+                "cnt": 1
+            }
+    ]
+    },
+    {
+	"testcase": "MB-56284 part2",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`index` = 'iorix2' AND v.`covers` IS NOT MISSING AND ARRAY_LENGTH(v.spans) = 2 AND v.`index_group_aggs` IS MISSING END"
+        },
+        "namedArgs": {"qp1": "abc"},
+        "statements":"SELECT count(c6) AS cnt FROM orders WHERE test_id = \"idxfltr\" AND c1 = 1 AND ((c2 = 11 AND IFMISSINGORNULL($qp1, \"\") != \"\") OR (IFMISSINGORNULL($qp1, \"\") == \"\"))",
+	"ordered": true,
+        "results": [
+            {
+                "cnt": 1
+            }
+    ]
     }
 ]
