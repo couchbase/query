@@ -36,6 +36,7 @@ const _FFDC_MIN_INTERVAL = time.Second * 10
 
 const (
 	Heap      = "heap"
+	MemStats  = "mems"
 	Stacks    = "grtn"
 	Completed = "creq"
 	Active    = "areq"
@@ -56,6 +57,40 @@ var operations = map[string]func(io.Writer) error{
 		if p != nil {
 			return p.WriteTo(w, 0)
 		}
+		return nil
+	},
+	MemStats: func(w io.Writer) error {
+		var s runtime.MemStats
+		runtime.ReadMemStats(&s)
+		fmt.Fprintf(w, "Alloc........... %v\n", human(s.Alloc))
+		fmt.Fprintf(w, "TotalAlloc...... %v\n", human(s.TotalAlloc))
+		fmt.Fprintf(w, "Sys............. %v\n", human(s.Sys))
+		fmt.Fprintf(w, "Lookups......... %v\n", s.Lookups)
+		fmt.Fprintf(w, "Mallocs......... %v\n", s.Mallocs)
+		fmt.Fprintf(w, "Frees........... %v\n", s.Frees)
+		fmt.Fprintf(w, "HeapAlloc....... %v\n", human(s.HeapAlloc))
+		fmt.Fprintf(w, "HeapSys......... %v\n", human(s.HeapSys))
+		fmt.Fprintf(w, "HeapIdle........ %v\n", human(s.HeapIdle))
+		fmt.Fprintf(w, "HeapInuse....... %v\n", human(s.HeapInuse))
+		fmt.Fprintf(w, "HeapReleased.... %v\n", human(s.HeapReleased))
+		fmt.Fprintf(w, "HeapObjects..... %v\n", s.HeapObjects)
+		fmt.Fprintf(w, "Stack in use.... %v\n", human(s.StackInuse))
+		fmt.Fprintf(w, "Stack sys....... %v\n", human(s.StackSys))
+		fmt.Fprintf(w, "MSpan in use.... %v\n", human(s.MSpanInuse))
+		fmt.Fprintf(w, "MSpan sys....... %v\n", human(s.MSpanSys))
+		fmt.Fprintf(w, "MCache in use... %v\n", human(s.MCacheInuse))
+		fmt.Fprintf(w, "MCache sys...... %v\n", human(s.MCacheSys))
+		fmt.Fprintf(w, "BuckHashSys..... %v\n", human(s.BuckHashSys))
+		fmt.Fprintf(w, "GCSys........... %v\n", human(s.GCSys))
+		fmt.Fprintf(w, "OtherSys........ %v\n", human(s.OtherSys))
+		fmt.Fprintf(w, "NextGC.......... %v\n", s.NextGC)
+		fmt.Fprintf(w, "LastGC.......... %v %v\n", s.LastGC, time.Unix(0, int64(s.LastGC)))
+		fmt.Fprintf(w, "PauseNs......... %v\n", s.PauseNs)
+		fmt.Fprintf(w, "PauseEnd........ %v\n", s.PauseEnd)
+		fmt.Fprintf(w, "NumGC........... %v\n", s.NumGC)
+		fmt.Fprintf(w, "NumForcedGC..... %v\n", s.NumForcedGC)
+		fmt.Fprintf(w, "GCCPUFraction... %v\n", s.GCCPUFraction)
+		fmt.Fprintf(w, "DebugGC......... %v\n", s.DebugGC)
 		return nil
 	},
 	Stacks: func(w io.Writer) error {
@@ -97,6 +132,24 @@ func runCommand(w io.Writer, path string, options string) error {
 		return err
 	}
 	return nil
+}
+
+const (
+	GiB = 1 << 30
+	MiB = 1 << 20
+	KiB = 1 << 10
+)
+
+func human(v uint64) string {
+	if v > GiB {
+		return fmt.Sprintf("%v (%.3f GiB)", v, float64(v)/float64(GiB))
+	} else if v > MiB {
+		return fmt.Sprintf("%v (%.3f MiB)", v, float64(v)/float64(MiB))
+	} else if v > KiB {
+		return fmt.Sprintf("%v (%.3f KiB)", v, float64(v)/float64(KiB))
+	} else {
+		return fmt.Sprintf("%d", v)
+	}
 }
 
 type occurrence struct {
@@ -371,12 +424,12 @@ var reasons = map[string]*reason{
 	},
 	MemoryThreshold: &reason{
 		event:   MemoryThreshold,
-		actions: []string{Heap, Stacks, Active, Completed, Netstat, Vitals},
+		actions: []string{Heap, MemStats, Stacks, Active, Completed, Netstat, Vitals},
 		msg:     "Memory threshold exceeded",
 	},
 	SigTerm: &reason{
 		event:   SigTerm,
-		actions: []string{Heap, Stacks, Active, Completed},
+		actions: []string{Heap, MemStats, Stacks, Active, Completed},
 		msg:     "SIGTERM received",
 	},
 }
