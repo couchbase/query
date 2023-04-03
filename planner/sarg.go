@@ -59,14 +59,22 @@ func sargForOr(or *expression.Or, entry *indexEntry, keys expression.Expressions
 		spans[i] = s
 		exact = exact && ex
 
-		if exact && (max1 < max) && !entry.HasFlag(IE_OR_NON_SARG_EXPR) {
-			// check for non-sargable key in predicate
-			exprs, _, err := indexCoverExpressions(entry, keys[:max1], c, nil, baseKeyspace.Name(), context)
-			if err != nil {
-				return nil, false, err
+		if exact && !entry.HasFlag(IE_OR_NON_SARG_EXPR) {
+			setFlag := false
+			if max1 < max {
+				// check for non-sargable key in predicate
+				exprs, _, err := indexCoverExpressions(entry, keys[:max1], c, nil, baseKeyspace.Name(), context)
+				if err != nil {
+					return nil, false, err
+				}
+				implicitAny := implicitAnyCover(entry, true, context.FeatureControls())
+				if !expression.IsCovered(c, baseKeyspace.Name(), exprs, implicitAny) {
+					entry.SetFlags(IE_OR_NON_SARG_EXPR, true)
+					setFlag = true
+				}
+
 			}
-			implicitAny := implicitAnyCover(entry, true, context.FeatureControls())
-			if !expression.IsCovered(c, baseKeyspace.Name(), exprs, implicitAny) {
+			if !setFlag && hasConstSubExpr(c, keyspaceNames) {
 				entry.SetFlags(IE_OR_NON_SARG_EXPR, true)
 			}
 		}
@@ -334,4 +342,28 @@ func getSargSpans(pred expression.Expression, sargKeys expression.Expressions, i
 	}
 
 	return sargSpans, exactSpan, nil
+}
+
+// this function is called for subterms of an OR clause, it assumes the original OR expression
+// is already flattened, thus it does not expect an OR expression in here
+func hasConstSubExpr(pred expression.Expression, keyspaceNames map[string]string) bool {
+	if pred == nil || len(keyspaceNames) == 0 {
+		return false
+	}
+
+	if and, ok := pred.(*expression.And); ok {
+		for _, op := range and.Operands() {
+			if hasConstSubExpr(op, keyspaceNames) {
+				return true
+			}
+		}
+		return false
+	}
+
+	keyspaces, err := expression.CountKeySpaces(pred, keyspaceNames)
+	if err == nil && len(keyspaces) == 0 {
+		return true
+	}
+
+	return false
 }
