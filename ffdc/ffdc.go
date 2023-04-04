@@ -202,7 +202,7 @@ func (this *reason) shouldCapture() *occurrence {
 	if len(this.occurrences) >= _FFDC_OCCURENCE_LIMIT {
 		this.cleanup()
 	}
-	occ := &occurrence{when: now, ts: now.Format(time.RFC3339Nano)}
+	occ := &occurrence{when: now, ts: now.Format("2006-01-01-150405.000")}
 	this.occurrences = append(this.occurrences, occ)
 	return occ
 }
@@ -404,6 +404,7 @@ const (
 	StalledQueue     = "SQP"
 	MemoryThreshold  = "MTE"
 	SigTerm          = "SIG"
+	Shutdown         = "SDN"
 )
 
 var reasons = map[string]*reason{
@@ -431,6 +432,11 @@ var reasons = map[string]*reason{
 		event:   SigTerm,
 		actions: []string{Heap, MemStats, Stacks, Active, Completed},
 		msg:     "SIGTERM received",
+	},
+	Shutdown: &reason{
+		event:   Shutdown,
+		actions: []string{Active},
+		msg:     "Graceful shutdown threshold exceeded",
 	},
 }
 

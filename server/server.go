@@ -1602,8 +1602,9 @@ func (this *Server) InitiateShutdownAndWait() {
 }
 
 const (
-	_CHECK_INTERVAL  = 100
-	_REPORT_INTERVAL = 10000
+	_CHECK_INTERVAL  = 100 * time.Millisecond
+	_REPORT_INTERVAL = 10 * time.Second
+	_FFDC_THRESHOLD  = 30 * time.Minute
 )
 
 func RunningRequests() int {
@@ -1625,6 +1626,7 @@ func (this *Server) monitorShutdown(timeout time.Duration) {
 		logging.Infof("Shutdown: Waiting for %v active request(s) and %v active transaction(s) to complete.", ar, at)
 		start := time.Now()
 		reportStart := start
+		ffdcStart := start
 		for this.ShuttingDown() {
 			ar = RunningRequests()
 			at = transactions.CountTransContext()
@@ -1633,15 +1635,19 @@ func (this *Server) monitorShutdown(timeout time.Duration) {
 				break
 			}
 			now := time.Now()
-			if now.Sub(reportStart) > time.Millisecond*_REPORT_INTERVAL {
+			if now.Sub(reportStart) > _REPORT_INTERVAL {
 				logging.Infof("Shutdown: Waiting for %v active request(s) and %v active transaction(s) to complete.", ar, at)
 				reportStart = now
+			}
+			if now.Sub(ffdcStart) > _FFDC_THRESHOLD {
+				ffdc.Capture(ffdc.Shutdown)
+				ffdcStart = now
 			}
 			if timeout > 0 && now.Sub(start) > timeout {
 				logging.Infof("Shutdown: Timeout (%v) exceeded.", timeout)
 				break
 			}
-			time.Sleep(time.Millisecond * _CHECK_INTERVAL)
+			time.Sleep(_CHECK_INTERVAL)
 		}
 	} else {
 		logging.Infof("Shutdown: No active requests or transactions.")
