@@ -143,7 +143,7 @@ func (o *Once) Reset() {
 
 const _MIN_BUCKETS = 8
 const _MAX_BUCKETS = 64
-const _POOL_SIZE = 1024
+const _POOL_SIZE = 2048
 
 type FastPool struct {
 	getNext   uint32
