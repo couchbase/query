@@ -549,7 +549,11 @@ func narrowerOrEquivalent(se, te *indexEntry, shortest bool, predFc map[string]v
 		return se.PushDownProperty() > te.PushDownProperty()
 	}
 
-	return se.cond != nil || len(se.keys) <= len(te.keys)
+	if len(se.keys) != len(te.keys) {
+		return len(se.keys) < len(te.keys)
+	}
+
+	return se.cond != nil || (te.nSargKeys == (snk + snc))
 }
 
 // Calculates how many keys te sargable keys matched with se sargable keys and se condition
@@ -656,8 +660,12 @@ func (this *builder) sargIndexes(baseKeyspace *base.BaseKeyspace, underHash bool
 		var err error
 
 		useFilters := true
-		if isOrPred && this.hasBuilderFlag(BUILDER_OR_SUBTERM) {
-			useFilters = false
+		if isOrPred {
+			if this.hasBuilderFlag(BUILDER_OR_SUBTERM) {
+				useFilters = false
+			} else {
+				useFilters = this.orSargUseFilters(pred.(*expression.Or), se)
+			}
 		} else {
 			for _, key := range se.keys {
 				if _, ok := key.(*expression.And); ok {
@@ -779,4 +787,31 @@ func bestIndexBySargableKeys(se, te *indexEntry, snc, tnc int) *indexEntry {
 	}
 
 	return nil
+}
+
+func (this *builder) orSargUseFilters(pred *expression.Or, entry *indexEntry) bool {
+	skip := useSkipIndexKeys(entry.index, this.context.IndexApiVersion())
+
+	// if all subterms of OR gives the same set of sargable keys, use individual filters
+	var min, max int
+	var skeys []bool
+	for i, child := range pred.Operands() {
+		cmin, cmax, _, cskeys := SargableFor(child, entry.sargKeys, false, skip, this.context)
+		if i == 0 {
+			min = cmin
+			max = cmax
+			skeys = cskeys
+		} else {
+			if cmin != min || cmax != max || len(cskeys) != len(skeys) {
+				return false
+			}
+			for j := 0; j < len(skeys); j++ {
+				if cskeys[j] != skeys[j] {
+					return false
+				}
+			}
+		}
+	}
+
+	return true
 }

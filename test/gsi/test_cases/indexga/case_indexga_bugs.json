@@ -47,7 +47,7 @@
                     "present": true
                 }
             ],
-            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`index_group_aggs` IS MISSING AND ARRAY_LENGTH(v.spans) = 1 END"
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`index_group_aggs` IS MISSING AND ARRAY_LENGTH(v.spans) > 1 END"
         },
         "statements": "SELECT count(1) AS cnt FROM orders WHERE (test_id = 'indexga' AND type = 'bugs') AND c1 = 'doc' AND a1 IS NOT MISSING AND c3 BETWEEN 0 AND 20 AND ($myBool OR c2 = false)",
 	"namedArgs": {"myBool": false},
