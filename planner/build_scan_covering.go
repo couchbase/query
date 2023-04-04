@@ -196,17 +196,20 @@ func (this *builder) bestCoveringIndex(useCBO bool, node *algebra.KeyspaceTerm,
 				if e != nil || (cost <= 0.0 || card <= 0.0 || size <= 0 || frCost <= 0.0) {
 					useCBO = false
 				} else {
-					if entry.IsPushDownProperty(_PUSHDOWN_LIMIT|_PUSHDOWN_OFFSET) &&
-						!entry.HasFlag(IE_LIMIT_OFFSET_COST) {
-						cost, card, frCost, _ = this.getIndexLimitCost(cost, card, frCost, selec)
-						entry.SetFlags(IE_LIMIT_OFFSET_COST, true)
-					}
+					entry.cardinality, entry.cost, entry.frCost, entry.size, entry.selectivity = card, cost, frCost, size, selec
+				}
+			}
+			if entry.IsPushDownProperty(_PUSHDOWN_LIMIT|_PUSHDOWN_OFFSET) &&
+				!entry.HasFlag(IE_LIMIT_OFFSET_COST) {
+				if entry.cost > 0.0 && entry.cardinality > 0.0 && entry.size > 0 && entry.frCost > 0.0 {
+					cost, card, frCost, _ := this.getIndexLimitCost(entry.cost, entry.cardinality, entry.frCost, entry.selectivity)
 					if cost > 0.0 && card > 0.0 && frCost > 0.0 {
-						entry.cardinality, entry.cost, entry.frCost, entry.size = card, cost, frCost, size
+						entry.cardinality, entry.cost, entry.frCost = card, cost, frCost
 					} else {
 						useCBO = false
 					}
 				}
+				entry.SetFlags(IE_LIMIT_OFFSET_COST, true)
 			}
 		}
 	}
