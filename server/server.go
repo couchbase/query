@@ -108,12 +108,13 @@ type waitEntry struct {
 }
 
 type runQueue struct {
+	head      atomic.AlignedUint64
+	tail      atomic.AlignedUint64
 	servicers int
 	size      int32
 	runCnt    int32
 	queueCnt  int32
-	head      int32
-	tail      int32
+	fullQueue int32
 	queue     []waitEntry
 	mutex     sync.RWMutex
 }
@@ -815,8 +816,9 @@ func (this *Server) handlePostTxRequest(request Request, queue *runQueue, transa
 }
 
 func newRunQueue(q *runQueue, num int, txflag bool) {
-	q.size = int32(num)
-	q.queue = make([]waitEntry, num)
+	q.size = int32(num + q.servicers)
+	q.fullQueue = int32(num)
+	q.queue = make([]waitEntry, q.size)
 	if !txflag {
 		go q.checkWaiters()
 	}
@@ -828,7 +830,7 @@ func newTxRunQueues(q *txRunQueues, nqueues, num int) {
 }
 
 func (this *runQueue) isFull() bool {
-	return atomic.LoadInt32(&this.queueCnt) >= this.size-1
+	return atomic.LoadInt32(&this.queueCnt) >= this.fullQueue
 }
 
 func (this *runQueue) enqueue(request Request) bool {
@@ -841,7 +843,7 @@ func (this *runQueue) enqueue(request Request) bool {
 		queueCnt := atomic.AddInt32(&this.queueCnt, 1)
 
 		// rats! queue full, can't handle this request
-		if queueCnt >= this.size {
+		if queueCnt > this.fullQueue {
 			atomic.AddInt32(&this.queueCnt, -1)
 			return false
 		}
@@ -878,7 +880,7 @@ func (this *runQueue) dequeue() {
 func (this *runQueue) addRequest(request Request, txQueueMutex, txQueuesMutex *sync.RWMutex) {
 
 	// get the next available entry
-	entry := atomic.AddInt32(&this.tail, 1) % this.size
+	entry := int32(atomic.AddUint64(&this.tail, 1) % uint64(this.size))
 
 	// set up the entry and the request
 	request.setSleep()
@@ -897,7 +899,6 @@ func (this *runQueue) addRequest(request Request, txQueueMutex, txQueuesMutex *s
 	if atomic.CompareAndSwapUint32(&this.queue[entry].state, _WAIT_EMPTY, _WAIT_FULL) {
 		request.sleep()
 	} else {
-
 		// if the waker got there first, continue
 		this.queue[entry].request = nil
 		this.queue[entry].state = _WAIT_EMPTY
@@ -908,7 +909,7 @@ func (this *runQueue) addRequest(request Request, txQueueMutex, txQueuesMutex *s
 func (this *runQueue) releaseRequest(txQueueMutex, txQueuesMutex *sync.RWMutex) {
 
 	// get the next available entry
-	entry := atomic.AddInt32(&this.head, 1) % this.size
+	entry := int32(atomic.AddUint64(&this.head, 1) % uint64(this.size))
 
 	if txQueueMutex != nil {
 		txQueueMutex.Unlock()
@@ -920,11 +921,10 @@ func (this *runQueue) releaseRequest(txQueueMutex, txQueuesMutex *sync.RWMutex) 
 
 	// can we mark the entry as ready to go?
 	if !atomic.CompareAndSwapUint32(&this.queue[entry].state, _WAIT_EMPTY, _WAIT_GO) {
-
 		// nope, the waiter got there first, wake it up
 		request := this.queue[entry].request
-		this.queue[entry].request = nil
 		this.queue[entry].state = _WAIT_EMPTY
+		this.queue[entry].request = nil
 		request.release()
 	}
 }
@@ -963,16 +963,32 @@ func (this *runQueue) checkWaiters() {
 		runCnt := atomic.LoadInt32(&this.runCnt)
 		queueCnt := atomic.LoadInt32(&this.queueCnt)
 		for {
-
 			// no left behind requests
-			if runCnt > 0 || queueCnt == 0 {
+			if runCnt > 0 {
+				break
+			}
+			if queueCnt == 0 {
+				for i := int32(0); i < this.size; i++ {
+					request := this.queue[i].request
+					if request != nil &&
+						atomic.LoadInt32(&this.runCnt) == 0 &&
+						atomic.CompareAndSwapUint32(&this.queue[i].state, _WAIT_FULL, _WAIT_EMPTY) {
+
+						// found a queued request that isn't scheduled to run; let it run
+						this.queue[i].request = nil
+						atomic.AddInt32(&this.runCnt, 1)
+						request.release()
+						logging.Infof("request scheduler released queued request")
+						break
+					}
+				}
 				break
 			}
 			logging.Infof("request scheduler emptying queue: %v requests", queueCnt)
 
 			// can we pull one?
 			queueCnt = atomic.AddInt32(&this.queueCnt, -1)
-			if this.queueCnt < 0 {
+			if queueCnt < 0 {
 
 				// another runner came, went, and emptied the queue
 				atomic.AddInt32(&this.queueCnt, 1)
