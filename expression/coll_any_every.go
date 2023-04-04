@@ -73,6 +73,7 @@ func (this *AnyEvery) Evaluate(item value.Value, context Context) (value.Value, 
 		}
 
 		sv, e := this.satisfies.Evaluate(av, context)
+		av.Recycle()
 		if e != nil {
 			return nil, e
 		}

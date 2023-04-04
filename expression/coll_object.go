@@ -78,16 +78,19 @@ func (this *Object) Evaluate(item value.Value, context Context) (value.Value, er
 		if this.when != nil {
 			wv, e := this.when.Evaluate(av, context)
 			if e != nil {
+				av.Recycle()
 				return nil, e
 			}
 
 			if !wv.Truth() {
+				av.Recycle()
 				continue
 			}
 		}
 
 		nv, e := this.nameMapping.Evaluate(av, context)
 		if e != nil {
+			av.Recycle()
 			return nil, e
 		}
 
@@ -95,12 +98,15 @@ func (this *Object) Evaluate(item value.Value, context Context) (value.Value, er
 		case value.STRING:
 			// Do nothing
 		case value.MISSING:
+			av.Recycle()
 			return value.MISSING_VALUE, nil
 		default:
+			av.Recycle()
 			return value.NULL_VALUE, nil
 		}
 
 		vv, e := this.valueMapping.Evaluate(av, context)
+		av.Recycle()
 		if e != nil {
 			return nil, e
 		}

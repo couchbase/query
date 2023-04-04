@@ -71,6 +71,7 @@ func (this *Any) Evaluate(item value.Value, context Context) (value.Value, error
 		}
 
 		sv, err := this.satisfies.Evaluate(av, context)
+		av.Recycle()
 		if err != nil {
 			return nil, err
 		}

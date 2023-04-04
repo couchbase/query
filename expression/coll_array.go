@@ -92,15 +92,18 @@ func (this *Array) Evaluate(item value.Value, context Context) (value.Value, err
 		if this.when != nil {
 			wv, e := this.when.Evaluate(av, context)
 			if e != nil {
+				av.Recycle()
 				return nil, e
 			}
 
 			if !wv.Truth() {
+				av.Recycle()
 				continue
 			}
 		}
 
 		mv, e := this.valueMapping.Evaluate(av, context)
+		av.Recycle()
 		if e != nil {
 			return nil, e
 		}
@@ -154,15 +157,18 @@ func (this *Array) EvaluateForIndex(item value.Value, context Context) (value.Va
 		if this.when != nil {
 			wv, e := this.when.Evaluate(av, context)
 			if e != nil {
+				av.Recycle()
 				return nil, nil, e
 			}
 
 			if !wv.Truth() {
+				av.Recycle()
 				continue
 			}
 		}
 
 		mv, mvs, e := this.valueMapping.EvaluateForIndex(av, context)
+		av.Recycle()
 		if e != nil {
 			return nil, nil, e
 		}
