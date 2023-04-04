@@ -112,6 +112,8 @@ func (this *exprClassifier) VisitAnd(expr *expression.And) (interface{}, error) 
 		switch op := op.(type) {
 		case *expression.And:
 			_, err = this.VisitAnd(op)
+		case *expression.Or:
+			_, err = this.VisitOr(op)
 		default:
 			_, err = this.visitDefault(op)
 		}
