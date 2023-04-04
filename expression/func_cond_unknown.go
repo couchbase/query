@@ -386,6 +386,10 @@ func (this *NullIf) Constructor() FunctionConstructor {
 	}
 }
 
+func (this *NullIf) DependsOn(other Expression) bool {
+	return this.dependsOn(other)
+}
+
 ///////////////////////////////////////////////////
 //
 // NVL
@@ -509,6 +513,10 @@ func (this *NVL2) Evaluate(item value.Value, context Context) (value.Value, erro
 	return third, nil
 }
 
+func (this *NVL2) DependsOn(other Expression) bool {
+	return this.dependsOn(other)
+}
+
 /*
 Factory method pattern.
 */
@@ -594,4 +602,8 @@ func (this *Decode) MaxArgs() int { return math.MaxInt32 }
 
 func (this *Decode) Constructor() FunctionConstructor {
 	return NewDecode
+}
+
+func (this *Decode) DependsOn(other Expression) bool {
+	return this.dependsOn(other)
 }
