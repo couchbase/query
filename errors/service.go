@@ -165,7 +165,7 @@ func NewErrorLimit(limit int, num int, dups int, mut uint64) Error {
 
 func NewServiceTenantThrottledError(e error) Error {
 	return &err{level: EXCEPTION, ICode: E_SERVICE_TENANT_THROTTLED, IKey: "service.tenant.throttled", ICause: e,
-		InternalMsg: "Request has been declined", InternalCaller: CallerN(1)}
+		InternalMsg: fmt.Sprintf("Request has been declined with %v", e), InternalCaller: CallerN(1)}
 }
 
 func NewServiceTenantMissingError() Error {
