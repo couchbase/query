@@ -556,9 +556,7 @@ outer:
 				partSortTermCount++
 				continue outer
 			} else if eq, _ := entry.spans.EquivalenceRangeAt(i); eq {
-				// orderTerm not yet matched, but can skip equivalence range key
-				indexOrder = append(indexOrder,
-					plan.NewIndexKeyOrders(i, indexKeyIsDescCollation(i, indexKeys)))
+				// orderTerm not yet matched, but can skip equivalence range key, don't add to indexOrder
 				i++
 				if i >= len(keys) {
 					return false, indexOrder, partSortTermCount
