@@ -32,10 +32,11 @@ const (
 )
 
 func (s *store) CreateSystemCBOStats(requestId string) errors.Error {
-	defaultPool, er := loadNamespace(s, "default")
+	dPool, er := s.NamespaceByName("default") // so we're using the cached namespace always
 	if er != nil {
 		return er
 	}
+	defaultPool := dPool.(*namespace)
 
 	// create/get system bucket/scope/collection
 	sysBucket, er := defaultPool.keyspaceByName(_N1QL_SYSTEM_BUCKET)
@@ -236,7 +237,7 @@ func (s *store) CreateSystemCBOStats(requestId string) errors.Error {
 }
 
 func (s *store) HasSystemCBOStats() (bool, errors.Error) {
-	defaultPool, er := loadNamespace(s, "default")
+	defaultPool, er := s.NamespaceByName("default") // so we're using the cached namespace always
 	if er != nil {
 		return false, er
 	}

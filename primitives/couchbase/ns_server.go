@@ -1248,7 +1248,6 @@ func (c *Client) GetPoolServices(name string) (ps PoolServices, err error) {
 // may have open.
 func (b *Bucket) Close() {
 	b.Lock()
-	defer b.Unlock()
 	if b.connPools != nil {
 		for _, c := range b.getConnPools(true /* already locked */) {
 			if c != nil {
@@ -1257,14 +1256,18 @@ func (b *Bucket) Close() {
 		}
 		b.connPools = nil
 	}
+	if b.updater != nil {
+		b.updater.Close()
+		b.updater = nil
+	}
+	b.Unlock()
 }
 
 func (b *Bucket) StopUpdater() {
 	b.Lock()
 	if b.updater != nil {
-		bu := b.updater
+		b.updater.Close()
 		b.updater = nil
-		bu.Close()
 	}
 	b.Unlock()
 }
@@ -1322,6 +1325,8 @@ func (p *Pool) Close() {
 		bucket.Unlock()
 		if needClose {
 			bucket.Close()
+		} else {
+			bucket.StopUpdater()
 		}
 	}
 }

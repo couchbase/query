@@ -1414,8 +1414,9 @@ func (p *namespace) KeyspaceDeleteCallback(name string, err error) {
 }
 
 // Called by primitives/couchbase if a configured keyspace is updated
-func (p *namespace) KeyspaceUpdateCallback(bucket *cb.Bucket) {
+func (p *namespace) KeyspaceUpdateCallback(bucket *cb.Bucket) bool {
 
+	ret := true
 	checkSysBucket := false
 
 	p.lock.Lock()
@@ -1426,9 +1427,11 @@ func (p *namespace) KeyspaceUpdateCallback(bucket *cb.Bucket) {
 		uid, _ := strconv.ParseUint(bucket.CollectionsManifestUid, 16, 64)
 		if ks.cbKeyspace.collectionsManifestUid != uid {
 			if ks.cbKeyspace.collectionsManifestUid == _INVALID_MANIFEST_UID {
-				logging.Infof("Bucket updater: received first manifest id %v for bucket %v", uid, bucket.Name)
+				logging.Infof("[%p] Bucket updater: received first manifest id %v for bucket %v",
+					ks.cbKeyspace.cbbucket, uid, bucket.Name)
 			} else {
-				logging.Infof("Bucket updater: switching manifest id from %v to %v for bucket %v", ks.cbKeyspace.collectionsManifestUid, uid, bucket.Name)
+				logging.Infof("[%p] Bucket updater: switching manifest id from %v to %v for bucket %v",
+					ks.cbKeyspace.cbbucket, ks.cbKeyspace.collectionsManifestUid, uid, bucket.Name)
 			}
 			ks.cbKeyspace.flags |= _NEEDS_MANIFEST
 			ks.cbKeyspace.newCollectionsManifestUid = uid
@@ -1439,11 +1442,11 @@ func (p *namespace) KeyspaceUpdateCallback(bucket *cb.Bucket) {
 
 		// the KV nodes list has changed, force a refresh on next use
 		if ks.cbKeyspace.cbbucket.ChangedVBServerMap(&bucket.VBSMJson) {
-			logging.Infof("Bucket updater: vbMap changed for bucket %v", bucket.Name)
+			logging.Infof("[%p] Bucket updater: vbMap changed for bucket %v", ks.cbKeyspace.cbbucket, bucket.Name)
 			ks.cbKeyspace.flags |= _NEEDS_REFRESH
 
 			// bucket will be reloaded, we don't need an updater anymore
-			ks.cbKeyspace.cbbucket.StopUpdater()
+			ret = false
 		}
 		ks.cbKeyspace.Unlock()
 	} else {
@@ -1455,6 +1458,8 @@ func (p *namespace) KeyspaceUpdateCallback(bucket *cb.Bucket) {
 	if checkSysBucket {
 		chkSysBucket()
 	}
+
+	return ret
 }
 
 func (b *keyspace) NamespaceId() string {
