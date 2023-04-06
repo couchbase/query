@@ -415,7 +415,7 @@ func (coll *collection) StartKeyScan(context datastore.QueryContext, ranges []*d
 	}
 
 	return coll.bucket.cbbucket.StartKeyScan(context.RequestId(), context, coll.uid, "", "", r, offset, limit, ordered, timeout,
-		pipelineSize, context.KvTimeout(), serverless, context.UseReplica())
+		pipelineSize, serverless, context.UseReplica())
 }
 
 func (coll *collection) StopKeyScan(scan interface{}) (uint64, errors.Error) {
@@ -430,7 +430,7 @@ func (coll *collection) StartRandomScan(context datastore.QueryContext, sampleSi
 	pipelineSize int, serverless bool) (interface{}, errors.Error) {
 
 	return coll.bucket.cbbucket.StartRandomScan(context.RequestId(), context, coll.uid, "", "", sampleSize, timeout, pipelineSize,
-		context.KvTimeout(), serverless, context.UseReplica())
+		serverless, context.UseReplica())
 }
 
 func buildScopesAndCollections(mani *cb.Manifest, bucket *keyspace) (map[string]*scope, datastore.Keyspace) {

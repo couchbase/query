@@ -55,7 +55,7 @@ const _SS_RETRY_DELAY = time.Millisecond * 100
 
 func (b *Bucket) StartKeyScan(requestId string, log logging.Log, collId uint32, scope string, collection string,
 	ranges []*SeqScanRange, offset int64, limit int64, ordered bool, timeout time.Duration, pipelineSize int,
-	kvTimeout time.Duration, serverless bool, useReplica bool) (interface{}, qerrors.Error) {
+	serverless bool, useReplica bool) (interface{}, qerrors.Error) {
 
 	if log == nil {
 		log = logging.NULL_LOG
@@ -69,7 +69,7 @@ func (b *Bucket) StartKeyScan(requestId string, log logging.Log, collId uint32, 
 		}
 	}
 
-	scan := NewSeqScan(requestId, log, collId, ranges, offset, limit, ordered, pipelineSize, kvTimeout, serverless, useReplica)
+	scan := NewSeqScan(requestId, log, collId, ranges, offset, limit, ordered, pipelineSize, serverless, useReplica)
 
 	logging.Debuga(func() string { return scan.String() }, log)
 	go scan.coordinator(b, timeout)
@@ -78,7 +78,7 @@ func (b *Bucket) StartKeyScan(requestId string, log logging.Log, collId uint32, 
 }
 
 func (b *Bucket) StartRandomScan(requestId string, log logging.Log, collId uint32, scope string, collection string,
-	sampleSize int, timeout time.Duration, pipelineSize int, kvTimeout time.Duration, serverless bool, useReplica bool) (
+	sampleSize int, timeout time.Duration, pipelineSize int, serverless bool, useReplica bool) (
 	interface{}, qerrors.Error) {
 
 	if log == nil {
@@ -93,7 +93,7 @@ func (b *Bucket) StartRandomScan(requestId string, log logging.Log, collId uint3
 		}
 	}
 
-	scan := NewRandomScan(requestId, log, collId, sampleSize, pipelineSize, kvTimeout, serverless, useReplica)
+	scan := NewRandomScan(requestId, log, collId, sampleSize, pipelineSize, serverless, useReplica)
 
 	logging.Debuga(func() string { return scan.String() }, log)
 	go scan.coordinator(b, timeout)
@@ -285,7 +285,7 @@ type seqScan struct {
 	limit        int64
 	offset       int64
 	pipelineSize int
-	kvTimeout    time.Duration
+	deadline     time.Time
 	readyQueue   rQueue
 	fetchLimit   uint32
 	serverless   bool
@@ -295,7 +295,7 @@ type seqScan struct {
 }
 
 func NewSeqScan(requestId string, log logging.Log, collId uint32, ranges []*SeqScanRange, offset int64, limit int64, ordered bool,
-	pipelineSize int, kvTimeout time.Duration, serverless bool, useReplica bool) *seqScan {
+	pipelineSize int, serverless bool, useReplica bool) *seqScan {
 
 	scan := &seqScan{
 		requestId:    requestId,
@@ -306,7 +306,6 @@ func NewSeqScan(requestId string, log logging.Log, collId uint32, ranges []*SeqS
 		limit:        limit,
 		offset:       offset,
 		pipelineSize: pipelineSize,
-		kvTimeout:    kvTimeout,
 		serverless:   serverless,
 		useReplica:   useReplica,
 	}
@@ -323,8 +322,8 @@ func NewSeqScan(requestId string, log logging.Log, collId uint32, ranges []*SeqS
 	return scan
 }
 
-func NewRandomScan(requestId string, log logging.Log, collId uint32, sampleSize int, pipelineSize int, kvTimeout time.Duration,
-	serverless bool, useReplica bool) *seqScan {
+func NewRandomScan(requestId string, log logging.Log, collId uint32, sampleSize int, pipelineSize int, serverless bool,
+	useReplica bool) *seqScan {
 
 	if sampleSize <= _SS_MIN_SAMPLE_SIZE {
 		sampleSize = _SS_MIN_SAMPLE_SIZE
@@ -335,7 +334,6 @@ func NewRandomScan(requestId string, log logging.Log, collId uint32, sampleSize 
 		collId:       collId,
 		sampleSize:   sampleSize,
 		pipelineSize: pipelineSize,
-		kvTimeout:    kvTimeout,
 		serverless:   serverless,
 		useReplica:   useReplica,
 	}
@@ -508,6 +506,7 @@ func (this *seqScan) coordinator(b *Bucket, scanTimeout time.Duration) {
 	}()
 
 	queues := make([]int, numServers)
+	this.deadline = time.Now().Add(scanTimeout)
 	timeout := time.AfterFunc(scanTimeout, this.timeout)
 	defer func() {
 		timeout.Stop()
@@ -1442,7 +1441,7 @@ func (this *vbRangeScan) runScan(conn *memcached.Client, node string) bool {
 				return cancelScan(false)
 			}
 
-			response, err = conn.ReceiveWithDeadline(time.Now().Add(this.scan.kvTimeout))
+			response, err = conn.ReceiveWithDeadline(this.scan.deadline)
 			if err != nil {
 				resp, ok := err.(*gomemcached.MCResponse)
 

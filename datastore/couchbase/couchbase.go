@@ -2716,11 +2716,11 @@ func (ks *keyspace) StartKeyScan(context datastore.QueryContext, ranges []*datas
 		coll, ok := scope.keyspaces["_default"]
 		if ok {
 			return ks.cbbucket.StartKeyScan(context.RequestId(), context, coll.uid, "", "", r, offset, limit, ordered, timeout,
-				pipelineSize, context.KvTimeout(), serverless, context.UseReplica())
+				pipelineSize, serverless, context.UseReplica())
 		}
 	}
 	return ks.cbbucket.StartKeyScan(context.RequestId(), context, 0, "_default", "_default", r, offset, limit, ordered, timeout,
-		pipelineSize, context.KvTimeout(), serverless, context.UseReplica())
+		pipelineSize, serverless, context.UseReplica())
 }
 
 func (ks *keyspace) StopKeyScan(scan interface{}) (uint64, errors.Error) {
@@ -2739,11 +2739,11 @@ func (ks *keyspace) StartRandomScan(context datastore.QueryContext, sampleSize i
 		coll, ok := scope.keyspaces["_default"]
 		if ok {
 			return ks.cbbucket.StartRandomScan(context.RequestId(), context, coll.uid, "", "", sampleSize, timeout, pipelineSize,
-				context.KvTimeout(), serverless, context.UseReplica())
+				serverless, context.UseReplica())
 		}
 	}
 	return ks.cbbucket.StartRandomScan(context.RequestId(), context, 0, "_default", "_default", sampleSize, timeout, pipelineSize,
-		context.KvTimeout(), serverless, context.UseReplica())
+		serverless, context.UseReplica())
 }
 
 func getCollectionId(clientContext ...*memcached.ClientContext) (collectionId uint32, user string) {
