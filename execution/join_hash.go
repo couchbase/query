@@ -25,8 +25,8 @@ type HashJoin struct {
 	aliasMap  map[string]string
 	ansiFlags uint32
 	hashTab   *util.HashTable
-	buildVals value.Values
-	probeVals value.Values
+	buildVals []interface{}
+	probeVals []interface{}
 }
 
 func NewHashJoin(plan *plan.HashJoin, context *Context, child Operator, aliasMap map[string]string) *HashJoin {
@@ -95,10 +95,10 @@ func (this *HashJoin) beforeItems(context *Context, parent value.Value) bool {
 	}
 
 	// build hash table
-	this.hashTab = util.NewHashTable(util.HASH_TABLE_FOR_HASH_JOIN)
+	this.hashTab = util.NewHashTable(util.HASH_TABLE_FOR_HASH_JOIN, len(this.plan.BuildExprs()))
 
-	this.buildVals = make(value.Values, len(this.plan.BuildExprs()))
-	this.probeVals = make(value.Values, len(this.plan.ProbeExprs()))
+	this.buildVals = make([]interface{}, len(this.plan.BuildExprs()))
+	this.probeVals = make([]interface{}, len(this.plan.ProbeExprs()))
 
 	this.child.SetOutput(this.child)
 	this.child.SetInput(nil)
@@ -123,10 +123,22 @@ func (this *HashJoin) beforeItems(context *Context, parent value.Value) bool {
 }
 
 func buildHashTab(base *base, buildOp Operator, hashTab *util.HashTable,
-	buildExprs expression.Expressions, buildVals value.Values, context *opContext) bool {
+	buildExprs expression.Expressions, buildVals []interface{}, context *opContext) bool {
 	var err error
 	stopped := false
 	n := 1
+
+	var marshal func(interface{}) ([]byte, error)
+	var equal func(interface{}, interface{}) bool
+
+	array := len(buildVals) > 1
+	if array {
+		marshal = value.MarshalArray
+		equal = value.EqualArrayMissingNull
+	} else {
+		marshal = value.MarshalValue
+		equal = value.EqualValueMissingNull
+	}
 
 loop:
 	for {
@@ -140,19 +152,19 @@ loop:
 						return false
 					}
 				}
-				var buildVal value.Value
-				var size uint64
 
-				if len(buildVals) == 1 {
-					buildVal = buildVals[0]
+				var buildVal interface{}
+				var size uint64
+				if array {
+					buildVal = buildVals
 				} else {
-					buildVal = value.NewValue(buildVals)
+					buildVal = buildVals[0]
 				}
 				if context.UseRequestQuota() {
 					size = build_item.Size()
 				}
 
-				err = hashTab.Put(buildVal, build_item, value.MarshalValue, value.EqualValue, size)
+				err = hashTab.Put(buildVal, build_item, marshal, equal, size)
 				if err != nil {
 					context.Error(errors.NewHashTablePutError(err))
 					return false
@@ -181,22 +193,17 @@ loop:
 }
 
 func getProbeVal(item value.AnnotatedValue, probeExprs expression.Expressions,
-	probeVals value.Values, context *opContext) value.Value {
+	probeVals []interface{}, context *opContext) errors.Error {
 
 	var err error
 	for i, pe := range probeExprs {
 		probeVals[i], err = pe.Evaluate(item, context)
 		if err != nil {
-			context.Error(errors.NewEvaluationError(err, "Hash Table Probe Expression"))
-			return nil
+			return errors.NewEvaluationError(err, "Hash Table Probe Expression")
 		}
 	}
 
-	if len(probeVals) == 1 {
-		return probeVals[0]
-	} else {
-		return value.NewValue(probeVals)
-	}
+	return nil
 }
 
 func (this *HashJoin) processItem(item value.AnnotatedValue, context *Context) bool {
@@ -207,11 +214,26 @@ func (this *HashJoin) processItem(item value.AnnotatedValue, context *Context) b
 	ok := true
 	matched := false
 
-	probeVal := getProbeVal(item, this.plan.ProbeExprs(), this.probeVals, &this.operatorCtx)
-	if probeVal == nil {
+	err1 := getProbeVal(item, this.plan.ProbeExprs(), this.probeVals, &this.operatorCtx)
+	if err1 != nil {
+		context.Error(err1)
 		return false
 	}
-	outVal, err = this.hashTab.Get(probeVal, value.MarshalValue, value.EqualValue)
+
+	var probeVal interface{}
+	var marshal func(interface{}) ([]byte, error)
+	var equal func(interface{}, interface{}) bool
+	if len(this.probeVals) == 1 {
+		probeVal = this.probeVals[0]
+		marshal = value.MarshalValue
+		equal = value.EqualValue
+	} else {
+		probeVal = this.probeVals
+		marshal = value.MarshalArray
+		equal = value.EqualArray
+	}
+
+	outVal, err = this.hashTab.Get(probeVal, marshal, equal)
 	if err != nil {
 		context.Error(errors.NewHashTableGetError(err))
 		return false

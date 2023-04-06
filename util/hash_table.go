@@ -56,8 +56,17 @@ type hashEntry struct {
 }
 
 func newHashEntry(hashKey uint64, hashVal, inputVal interface{}) *hashEntry {
-	inputVals := []interface{}{inputVal}
+	inputVals := _ARR_POOL_1.Get()
+	inputVals = append(inputVals, inputVal)
 	return &hashEntry{hashKey, hashVal, inputVals}
+}
+
+func newArrayHashEntry(hashKey uint64, hashVal []interface{}, inputVal interface{}) *hashEntry {
+	inputVals := _ARR_POOL_1.Get()
+	inputVals = append(inputVals, inputVal)
+	hashVals := _ARR_POOL_4.GetCapped(len(hashVal))
+	hashVals = append(hashVals, hashVal...)
+	return &hashEntry{hashKey, hashVals, inputVals}
 }
 
 // hash table purpose
@@ -84,13 +93,15 @@ type HashTable struct {
 	bucket   int          // when iterate or get, bucket position
 	vector   int          // when iterate or get, vector position
 	size     uint64       // size in byte of the hash table
+	array    bool         // using value array?
 }
 
-func NewHashTable(purpose int) *HashTable {
+func NewHashTable(purpose int, arrLen int) *HashTable {
 	rv := &HashTable{
 		mode:   HASH_TABLE_INIT,
 		bucket: -1,
 		vector: -1,
+		array:  arrLen > 1,
 	}
 	size := MIN_HASH_TABLE_SIZE_HASH_JOIN
 	if purpose == HASH_TABLE_FOR_INLIST {
@@ -118,9 +129,18 @@ func (this *HashTable) Put(hashVal, inputVal interface{}, marshal func(interface
 		return err
 	}
 
-	hashEntry := newHashEntry(hashKey, hashVal, inputVal)
+	var entry *hashEntry
+	if this.array {
+		if arr, ok := hashVal.([]interface{}); ok {
+			entry = newArrayHashEntry(hashKey, arr, inputVal)
+		} else {
+			return fmt.Errorf("HashTable.Put: expecting an array, not %T", hashVal)
+		}
+	} else {
+		entry = newHashEntry(hashKey, hashVal, inputVal)
+	}
 
-	err = this.putEntry(hashEntry, equal)
+	err = this.putEntry(entry, equal)
 	if err == nil {
 		this.size += size
 	}
@@ -308,6 +328,12 @@ func (this *HashTable) Drop() {
 	this.mode = HASH_TABLE_DROP
 	for i := 0; i < len(this.entries); i++ {
 		if this.entries[i] != nil {
+			hashVal := this.entries[i].hashVal
+			if this.array {
+				_ARR_POOL_4.Put(hashVal.([]interface{}))
+			}
+			this.entries[i].hashVal = nil
+			_ARR_POOL_1.Put(this.entries[i].inputVals)
 			this.entries[i].inputVals = nil
 			this.entries[i] = nil
 		}
@@ -352,3 +378,6 @@ func GetNumMemCopy(purpose int, size float64) float64 {
 
 	return total * HTLoadThreshold
 }
+
+var _ARR_POOL_1 = NewInterfacePool(1)
+var _ARR_POOL_4 = NewInterfacePool(4)

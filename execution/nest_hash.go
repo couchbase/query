@@ -24,8 +24,8 @@ type HashNest struct {
 	aliasMap  map[string]string
 	ansiFlags uint32
 	hashTab   *util.HashTable
-	buildVals value.Values
-	probeVals value.Values
+	buildVals []interface{}
+	probeVals []interface{}
 }
 
 func NewHashNest(plan *plan.HashNest, context *Context, child Operator, aliasMap map[string]string) *HashNest {
@@ -91,10 +91,10 @@ func (this *HashNest) beforeItems(context *Context, parent value.Value) bool {
 	}
 
 	// build hash table
-	this.hashTab = util.NewHashTable(util.HASH_TABLE_FOR_HASH_JOIN)
+	this.hashTab = util.NewHashTable(util.HASH_TABLE_FOR_HASH_JOIN, len(this.plan.BuildExprs()))
 
-	this.buildVals = make(value.Values, len(this.plan.BuildExprs()))
-	this.probeVals = make(value.Values, len(this.plan.ProbeExprs()))
+	this.buildVals = make([]interface{}, len(this.plan.BuildExprs()))
+	this.probeVals = make([]interface{}, len(this.plan.ProbeExprs()))
 
 	this.child.SetOutput(this.child)
 	this.child.SetInput(nil)
@@ -115,11 +115,26 @@ func (this *HashNest) processItem(item value.AnnotatedValue, context *Context) b
 	var right_items value.AnnotatedValues
 	ok := true
 
-	probeVal := getProbeVal(item, this.plan.ProbeExprs(), this.probeVals, &this.operatorCtx)
-	if probeVal == nil {
+	err1 := getProbeVal(item, this.plan.ProbeExprs(), this.probeVals, &this.operatorCtx)
+	if err1 != nil {
+		context.Error(err1)
 		return false
 	}
-	outVal, err = this.hashTab.Get(probeVal, value.MarshalValue, value.EqualValue)
+
+	var probeVal interface{}
+	var marshal func(interface{}) ([]byte, error)
+	var equal func(interface{}, interface{}) bool
+	if len(this.probeVals) == 1 {
+		probeVal = this.probeVals[0]
+		marshal = value.MarshalValue
+		equal = value.EqualValue
+	} else {
+		probeVal = this.probeVals
+		marshal = value.MarshalArray
+		equal = value.EqualArray
+	}
+
+	outVal, err = this.hashTab.Get(probeVal, marshal, equal)
 	if err != nil {
 		context.Error(errors.NewHashTableGetError(err))
 		return false
