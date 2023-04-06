@@ -27,7 +27,7 @@ type Manager interface {
 }
 
 type ServiceMgr struct {
-	mu *sync.RWMutex
+	sync.Mutex
 	state
 
 	nodeInfo *service.NodeInfo
@@ -35,6 +35,9 @@ type ServiceMgr struct {
 
 	thisHost string
 	enabled  bool
+
+	progress   float64
+	nextRevNum uint64
 }
 
 // to reduce the occasions when host is looked up from node ID, cache it here
@@ -66,7 +69,6 @@ func NewManager(uuid string) Manager {
 	}
 
 	mgr = &ServiceMgr{
-		mu: &sync.RWMutex{},
 		state: state{
 			rev:      0,
 			servers:  nil,
@@ -77,6 +79,7 @@ func NewManager(uuid string) Manager {
 			NodeID:   service.NodeID(uuid),
 			Priority: service.Priority(0),
 		},
+		nextRevNum: 1,
 	}
 
 	mgr.waiters = make(waiters)
@@ -123,7 +126,7 @@ func (m *ServiceMgr) setInitialNodeList() {
 		nodeList = append(nodeList, queryServer{nn, service.NodeInfo{service.NodeID(uuid), service.Priority(0), ps}})
 	}
 
-	m.mu.Lock()
+	m.Lock()
 	set := false
 	m.updateStateLOCKED(func(s *state) {
 		if s.servers == nil {
@@ -136,7 +139,7 @@ func (m *ServiceMgr) setInitialNodeList() {
 		// set by PrepareTopologyChange message being received before this has completed so just validate/update the admin ops
 		checkPrepareOperations(m.servers, "ServiceMgr::setInitialNodeList")
 	}
-	m.mu.Unlock()
+	m.Unlock()
 
 	if set {
 		if len(nodeList) == 0 {
@@ -176,24 +179,25 @@ func (m *ServiceMgr) Shutdown() error {
 // Using this saves us from having to establish and handle another communication mechanism to feed back state to the master
 
 func (m *ServiceMgr) GetTaskList(rev service.Revision, cancel service.Cancel) (*service.TaskList, error) {
-	logging.Debuga(func() string { return fmt.Sprintf("ServiceMgr::GetTaskList entry: %v", DecodeRev(rev)) })
+	logging.Tracea(func() string { return fmt.Sprintf("ServiceMgr::GetTaskList entry: %v", DecodeRev(rev)) })
 
 	curState, err := m.wait(rev, cancel)
 	if err != nil {
-		logging.Debugf("ServiceMgr::GetTaskList exit: error: %v", err)
+		logging.Tracef("ServiceMgr::GetTaskList exit: error: %v", err)
 		return nil, err
 	}
 
 	tasks := &service.TaskList{}
 
-	tasks.Rev = EncodeRev(curState.rev)
+	listRev := curState.rev
 	tasks.Tasks = make([]service.Task, 0)
 
-	m.mu.Lock()
+	m.Lock()
 	changeID := m.state.changeID
 	eject := m.eject
-	m.mu.Unlock()
+	m.Unlock()
 	if changeID != "" { // master
+		var progress float64
 		running := 0
 		if eject != nil {
 			for _, e := range eject {
@@ -229,7 +233,7 @@ func (m *ServiceMgr) GetTaskList(rev service.Revision, cancel service.Cancel) (*
 			m.updateState(func(s *state) {
 				s.eject = eject
 			})
-			progress := 0.1 // consider the initiation the starting 10%
+			progress = 0.1 // consider the initiation the starting 10%
 			if len(eject) > 0 {
 				progress += (float64(len(eject)-running) / float64(len(eject))) * 0.9
 			}
@@ -243,9 +247,21 @@ func (m *ServiceMgr) GetTaskList(rev service.Revision, cancel service.Cancel) (*
 			}
 			tasks.Tasks = append(tasks.Tasks, task)
 		}
+		// if progress has changed, we need a new revision for the tasks list (progress zero here on completion)
+		m.Lock()
+		if progress != m.progress {
+			m.progress = progress
+			listRev++
+			if listRev < m.nextRevNum {
+				listRev = m.nextRevNum
+			}
+			m.nextRevNum = listRev + 1
+		}
+		m.Unlock()
 	}
+	tasks.Rev = EncodeRev(listRev)
 
-	logging.Debugf("ServiceMgr::GetTaskList exit: %v", tasks)
+	logging.Tracef("ServiceMgr::GetTaskList exit: %v", tasks)
 
 	return tasks, nil
 }
@@ -260,7 +276,7 @@ func (m *ServiceMgr) CancelTask(id string, rev service.Revision) error {
 
 	timeout := time.Duration(0)
 	data := "cancel=true"
-	m.mu.Lock()
+	m.Lock()
 
 	currentTask := fmt.Sprintf("shutdown/monitor/%s", m.changeID)
 	if currentTask == id {
@@ -317,16 +333,16 @@ func (m *ServiceMgr) CancelTask(id string, rev service.Revision) error {
 			for i, n := range m.servers {
 				logging.Infof("Current topology %d/%d: %s[%s]", i+1, len(m.servers), n.nodeInfo.NodeID, n.host)
 			}
-			m.mu.Unlock()
+			m.Unlock()
 			logging.Debugf("ServiceMgr::CancelTask exit")
 			return nil
 		} else {
-			m.mu.Unlock()
+			m.Unlock()
 			logging.Debugf("ServiceMgr::CancelTask exit: ejected nodes list is empty.")
 			return service.ErrConflict
 		}
 	}
-	m.mu.Unlock()
+	m.Unlock()
 	logging.Debugf("ServiceMgr::CancelTask exit: unknown task (%v).", id)
 	return service.ErrNotFound
 }
@@ -345,18 +361,18 @@ func appendInOrder(list []queryServer, item queryServer) []queryServer {
 
 // return the current node list as understood by this process
 func (m *ServiceMgr) GetCurrentTopology(rev service.Revision, cancel service.Cancel) (*service.Topology, error) {
-	logging.Debuga(func() string { return fmt.Sprintf("ServiceMgr::GetCurrentTopology entry: rev = %v", DecodeRev(rev)) })
+	logging.Tracea(func() string { return fmt.Sprintf("ServiceMgr::GetCurrentTopology entry: rev = %v", DecodeRev(rev)) })
 
 	state, err := m.wait(rev, cancel)
 	if err != nil {
-		logging.Debugf("ServiceMgr::GetCurrentTopology exit: %v", err)
+		logging.Tracef("ServiceMgr::GetCurrentTopology exit: %v", err)
 		return nil, err
 	}
 
 	topology := &service.Topology{}
 
 	topology.Rev = EncodeRev(state.rev)
-	m.mu.Lock()
+	m.Lock()
 	if m.servers != nil && len(m.servers) != 0 {
 		if m.enabled {
 			checkPrepareOperations(m.servers, "ServiceMgr::GetCurrentTopology")
@@ -367,11 +383,11 @@ func (m *ServiceMgr) GetCurrentTopology(rev service.Revision, cancel service.Can
 	} else {
 		topology.Nodes = append(topology.Nodes, m.nodeInfo.NodeID)
 	}
-	m.mu.Unlock()
+	m.Unlock()
 	topology.IsBalanced = true
 	topology.Messages = nil
 
-	logging.Debuga(func() string {
+	logging.Tracea(func() string {
 		return fmt.Sprintf("ServiceMgr::GetCurrentTopology exit: %v - %v eject: %v", DecodeRev(rev), topology, m.eject)
 	})
 
@@ -418,9 +434,9 @@ func (m *ServiceMgr) PrepareTopologyChange(change service.TopologyChange) error 
 
 	// for each node we know about, cache its shutdown URL
 	servers := make([]queryServer, 0)
-	m.mu.Lock()
+	m.Lock()
 	s := m.servers
-	m.mu.Unlock()
+	m.Unlock()
 	for _, n := range change.KeepNodes {
 		var ps interface{}
 		var host string
@@ -507,8 +523,9 @@ func (m *ServiceMgr) StartTopologyChange(change service.TopologyChange) error {
 		return service.ErrNotSupported
 	}
 
-	m.mu.Lock()
+	m.Lock()
 	if m.eject != nil {
+		m.progress = 0
 		info := make([]rune, 0, len(m.eject)*33)
 		eject := make([]queryServer, 0, len(m.eject))
 		done := util.WaitCount{}
@@ -566,7 +583,7 @@ func (m *ServiceMgr) StartTopologyChange(change service.TopologyChange) error {
 			}
 		})
 	}
-	m.mu.Unlock()
+	m.Unlock()
 
 	logging.Debugf("ServiceMgr::StartTopologyChange exit")
 	return nil
@@ -586,9 +603,9 @@ func DecodeRev(ext service.Revision) uint64 {
 }
 
 func (m *ServiceMgr) updateState(body func(state *state)) {
-	m.mu.Lock()
+	m.Lock()
 	m.updateStateLOCKED(body)
-	m.mu.Unlock()
+	m.Unlock()
 }
 
 func (m *ServiceMgr) updateStateLOCKED(body func(state *state)) {
@@ -607,30 +624,30 @@ func (m *ServiceMgr) updateStateLOCKED(body func(state *state)) {
 
 func (m *ServiceMgr) wait(rev service.Revision, cancel service.Cancel) (state, error) {
 
-	m.mu.Lock()
+	m.Lock()
 
 	currState := m.state
 
 	if rev == nil {
-		m.mu.Unlock()
+		m.Unlock()
 		return currState, nil
 	}
 
 	haveRev := DecodeRev(rev)
 	if haveRev != m.rev {
-		m.mu.Unlock()
+		m.Unlock()
 		return currState, nil
 	}
 
 	ch := make(waiter, 1)
 	m.waiters[ch] = true
-	m.mu.Unlock()
+	m.Unlock()
 
 	select {
 	case <-cancel:
-		m.mu.Lock()
+		m.Lock()
 		delete(m.waiters, ch)
-		m.mu.Unlock()
+		m.Unlock()
 		return state{}, service.ErrCanceled
 	case newState := <-ch:
 		return newState, nil
