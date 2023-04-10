@@ -815,7 +815,7 @@ func (this *runQueue) dequeue() {
 func (this *runQueue) addRequest(request Request, txQueueMutex, txQueuesMutex *sync.RWMutex) {
 
 	// get the next available entry
-	entry := int32(atomic.AddUint64(&this.head, 1) % uint64(this.size))
+	entry := int32(atomic.AddUint64(&this.tail, 1) % uint64(this.size))
 
 	// set up the entry and the request
 	request.setSleep()
