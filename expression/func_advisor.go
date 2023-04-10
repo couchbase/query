@@ -195,7 +195,7 @@ func (this *Advisor) Evaluate(item value.Value, context Context) (value.Value, e
 			newContext = newContext.NewQueryContext(v.queryContext, context.Readonly()).(Context)
 		}
 		r, _, err := newContext.EvaluateStatement(addPrefix(v.stmt, "advise "),
-			nil, nil, false, true, false)
+			nil, nil, false, true, false, "")
 
 		if err != nil {
 			errs = append(errs, NewAdviseError(err, v))
@@ -248,7 +248,7 @@ func (this *Advisor) scheduleTask(sessionName string, duration time.Duration, co
 			// stop monitoring
 			distributed.RemoteAccess().Settings(settings)
 			// collect completed requests
-			res, _, err := context.EvaluateStatement(query, nil, nil, false, true, false)
+			res, _, err := context.EvaluateStatement(query, nil, nil, false, true, false, "")
 			if err != nil {
 				return nil, []errors.Error{errors.NewError(err, "")}
 			}
@@ -260,7 +260,7 @@ func (this *Advisor) scheduleTask(sessionName string, duration time.Duration, co
 			// stop monitoring
 			distributed.RemoteAccess().Settings(settings)
 			// collect completed requests afterwards
-			res, _, err := context.EvaluateStatement(query, nil, nil, false, true, false)
+			res, _, err := context.EvaluateStatement(query, nil, nil, false, true, false, "")
 			if err != nil {
 				return nil, []errors.Error{errors.NewError(err, "")}
 			}
@@ -316,7 +316,7 @@ func getResults(sessionName string, context Context, newContext Context) (value.
 	if tenant.IsServerless() && !context.IsAdmin() {
 		query += queryContext(context)
 	}
-	r, _, err := newContext.(Context).EvaluateStatement(query, nil, nil, false, true, false)
+	r, _, err := newContext.(Context).EvaluateStatement(query, nil, nil, false, true, false, "")
 	if err != nil {
 		return nil, err
 	}
@@ -330,7 +330,7 @@ func getState(sessionName string, context Context, newContext Context) (schedule
 	if tenant.IsServerless() && !context.IsAdmin() {
 		query += queryContext(context)
 	}
-	res, _, err := newContext.(Context).EvaluateStatement(query, nil, nil, false, false, false)
+	res, _, err := newContext.(Context).EvaluateStatement(query, nil, nil, false, false, false, "")
 	if err != nil {
 		return _EMPTY_STATE, err
 	}
@@ -350,12 +350,12 @@ func purgeResults(sessionName string, context Context, newContext Context, analy
 	if tenant.IsServerless() && !context.IsAdmin() {
 		query += queryContext(context)
 	}
-	_, _, err := newContext.(Context).EvaluateStatement(query, nil, nil, false, false, false)
+	_, _, err := newContext.(Context).EvaluateStatement(query, nil, nil, false, false, false, "")
 	if !analysis {
 		//For purge and abort, scheduler.stop func will run upon deletion when task is not nil.
 		//Need to run deleting for another time to reset scheduler.stop to nil and delete the entry.
 		if err == nil {
-			_, _, err = context.(Context).EvaluateStatement(query, nil, nil, false, false, false)
+			_, _, err = context.(Context).EvaluateStatement(query, nil, nil, false, false, false, "")
 		}
 	}
 	if err != nil {
@@ -369,7 +369,7 @@ func listSessions(status string, context Context, newContext Context) (value.Val
 	if tenant.IsServerless() && !context.IsAdmin() {
 		query += queryContext(context)
 	}
-	r, _, err := newContext.(Context).EvaluateStatement(query, nil, nil, false, true, false)
+	r, _, err := newContext.(Context).EvaluateStatement(query, nil, nil, false, true, false, "")
 	if err != nil {
 		return nil, err
 	}

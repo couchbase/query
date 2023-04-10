@@ -1288,7 +1288,13 @@ func (this *Context) getUdfStmtTimes() interface{} {
 			for _, e := range t {
 				et, err := json.Marshal(e.root)
 				if err == nil {
-					times = append(times, map[string]interface{}{"query": query, "executionTimings": value.NewValue(et)})
+					prof := map[string]interface{}{"query": query, "executionTimings": value.NewValue(et)}
+
+					if e.usageMetadata != nil {
+						prof["usage"] = e.usageMetadata
+					}
+
+					times = append(times, prof)
 				}
 			}
 		}
@@ -1905,14 +1911,14 @@ func newUdfExecTreeMap() *udfExecTreeMap {
 // 2. Check if the tree can be re-opened
 // If the tree entry cannot be re-opened, this entry remains in the cache solely for profiling purposes
 // If the tree can be re-opened, remove the entry from the cache while it is in use
-func (this *udfExecTreeMap) getAndReopen(key string, context *Context) (Operator, Operator, bool) {
+func (this *udfExecTreeMap) getAndReopen(key string, context *Context) (execTreeMapEntry, bool) {
 	this.mutex.Lock()
 	defer this.mutex.Unlock()
 
 	t, ok := this.trees[key]
 
 	if !ok || len(t) == 0 {
-		return nil, nil, false
+		return execTreeMapEntry{}, false
 	}
 
 	tree := t[len(t)-1]
@@ -1920,29 +1926,29 @@ func (this *udfExecTreeMap) getAndReopen(key string, context *Context) (Operator
 	// Check state of the Collect/ Receive Operator
 	opState := tree.collRcv.getBase().opState
 	if opState != _PAUSED && opState != _COMPLETED && opState != _DORMANT {
-		return nil, nil, false
+		return execTreeMapEntry{}, false
 	}
 
 	// Check if the exec tree can be re-opened
 	if !tree.root.reopen(context) {
 		logging.Warnf("Failed to reopen execution tree of query: %v", key)
-		return nil, nil, false
+		return execTreeMapEntry{}, false
 	}
 
 	// remove the tree from the map when it is in use
 	this.trees[key] = t[:len(t)-1]
 
-	return tree.root, tree.collRcv, ok
+	return tree, ok
 }
 
-func (this *udfExecTreeMap) set(key string, root Operator, collRcv Operator) {
+func (this *udfExecTreeMap) set(key string, eTree execTreeMapEntry) {
 	this.mutex.Lock()
 	t := this.trees[key]
 
 	if t == nil {
-		t = []execTreeMapEntry{{root, collRcv}}
+		t = []execTreeMapEntry{eTree}
 	} else {
-		t = append(t, execTreeMapEntry{root, collRcv})
+		t = append(t, eTree)
 	}
 
 	this.trees[key] = t
@@ -1986,6 +1992,11 @@ type planMapEntry struct {
 type execTreeMapEntry struct {
 	root    Operator // Root Operator
 	collRcv Operator // Collect or Receive Operator
+
+	// Map to store usage metadata of the cached exec tree
+	// Key : fullName of the function
+	// Value : Number of times the function has used the exec tree entry
+	usageMetadata map[string]int
 }
 
 func (this *Context) InitUdfStmtExecTrees() {

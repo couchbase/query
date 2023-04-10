@@ -90,7 +90,7 @@ func (this *golang) Execute(name functions.FunctionName, body functions.Function
 		args = value.NewValue(values)
 	}
 
-	val, err = udf(args, functions.NewUdfContext(context, ""))
+	val, err = udf(args, functions.NewUdfContext(context, "", name.Key()))
 	if err != nil {
 		return nil, funcBody.execError(err, funcName)
 	} else {

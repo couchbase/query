@@ -521,6 +521,7 @@ func ExecuteFunction(name FunctionName, modifiers Modifier, values []value.Value
 	newContext := context
 	switchContext := body.SwitchContext()
 	readonly := (modifiers & READONLY) != 0
+
 	if switchContext == value.TRUE || (switchContext == value.NONE && (readonly != context.Readonly() || name.QueryContext() != context.QueryContext())) || context.PreserveProjectionOrder() {
 		var ok bool
 

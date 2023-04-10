@@ -1479,7 +1479,7 @@ func (this *Server) setUsingArgs(exec *algebra.Execute, positionalArgs value.Val
 
 func (this *Server) getAutoExecutePrepared(request Request, prepared *plan.Prepared,
 	context *execution.Context) (*plan.Prepared, errors.Error) {
-	res, _, er := context.ExecutePrepared(prepared, false, request.NamedArgs(), request.PositionalArgs(), "", false)
+	res, _, er := context.ExecutePrepared(prepared, false, request.NamedArgs(), request.PositionalArgs(), "", false, "")
 	if er == nil {
 		var name string
 		actual, ok := res.Actual().([]interface{})

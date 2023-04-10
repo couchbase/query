@@ -358,7 +358,7 @@ func (this *javascript) Execute(name functions.FunctionName, body functions.Func
 
 	}
 	context.Park(nil)
-	res, err = evaluator.evaluator.Evaluate(library, funcName, opts, args, functions.NewUdfContext(context, funcBody.prefix))
+	res, err = evaluator.evaluator.Evaluate(library, funcName, opts, args, functions.NewUdfContext(context, funcBody.prefix, name.Key()))
 	context.Resume()
 
 	// deflate the pool if required

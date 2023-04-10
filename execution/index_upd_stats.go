@@ -116,7 +116,7 @@ func updateIndexStats(context scheduler.Context, parms interface{}) (interface{}
 	}
 	fullName += "`" + keyspace.Id() + "`"
 	query := "UPDATE STATISTICS FOR " + fullName + " INDEX(" + allNames + ")"
-	_, _, err1 := context.EvaluateStatement(query, nil, nil, false, true, false)
+	_, _, err1 := context.EvaluateStatement(query, nil, nil, false, true, false, "")
 	if err1 != nil {
 		return nil, []errors.Error{errors.NewIndexUpdStatsError(allNames, "error running Update Statistics statement", err1)}
 	}
