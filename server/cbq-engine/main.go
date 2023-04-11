@@ -187,9 +187,17 @@ func main() {
 			numCPUs = n
 		}
 	} else if os.Getenv("GOMAXPROCS") != "" {
-		if n := util.NumCPU(); n < numCPUs && n > 0 {
+		n := util.NumCPU()
+		if n < numCPUs && n > 0 {
 			numCPUs = n
+		} else if n == numCPUs && tenant.IsServerless() {
+			numCPUs = int(float64(n) * 0.8)
 		}
+	} else if tenant.IsServerless() {
+		numCPUs = int(float64(numCPUs) * 0.8)
+	}
+	if numCPUs <= 0 {
+		numCPUs = 1
 	}
 	runtime.GOMAXPROCS(numCPUs)
 	numProcs := util.NumCPU()
