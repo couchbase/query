@@ -24,7 +24,6 @@ about in the bucket as the scan occurs.
 package util
 
 import (
-	"runtime"
 	"sync"
 
 	atomic "github.com/couchbase/go-couchbase/platform"
@@ -546,8 +545,4 @@ func (this *genSubList) ditch(elem *genElem, list listType) {
 	// help the GC
 	elem.lists[list].next = nil
 	elem.lists[list].prev = nil
-}
-
-func NumCPU() int {
-	return runtime.GOMAXPROCS(0)
 }

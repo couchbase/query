@@ -62,6 +62,7 @@ const (
 	QUERY_TMP_DIR         = "query_tmpspace_dir"
 	QUERY_TMP_LIMIT       = "query_tmpspace_limit"
 	USEREPLICA            = "use-replica"
+	NUM_CPUS              = "num-cpus"
 )
 
 type Checker func(interface{}) (bool, errors.Error)
@@ -113,6 +114,7 @@ var CHECKERS_MIN = map[string]int{
 	MEMORYQUOTA:     0,
 	NODEQUOTA:       0,
 	NUMATRS:         2,
+	NUM_CPUS:        0,
 }
 
 func checkBool(val interface{}) (bool, errors.Error) {

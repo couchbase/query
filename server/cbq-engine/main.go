@@ -18,7 +18,6 @@ import (
 	"runtime"
 	"runtime/debug"
 	"runtime/pprof"
-	"strconv"
 	"syscall"
 	"time"
 
@@ -128,7 +127,8 @@ var MEMORY_QUOTA = flag.Uint64("memory-quota", _DEF_MEMORY_QUOTA, "Maximum amoun
 var NODE_QUOTA = flag.Uint64("node-quota", _DEF_NODE_QUOTA, "Soft memory limit per node, in MB")
 var USE_REPLICA = flag.String("use-replica", value.TRISTATE_NAMES[value.NONE], "Allow reading from replica vBuckets")
 var NODE_QUOTA_VAL_PERCENT = flag.Uint("node-quota-val-percent", _DEF_NODE_QUOTA_VAL_PERCENT,
-	"Percentage of node quota reserved for value memory (0-100).")
+	"Percentage of node quota reserved for value memory (0-100)")
+var NUM_CPUS = flag.Int("num-cpus", 0, "Number of CPUs to use")
 
 // cpu and memory profiling flags
 var CPU_PROFILE = flag.String("cpuprofile", "", "write cpu profile to file")
@@ -178,29 +178,10 @@ func main() {
 	memory.Config(*NODE_QUOTA, *NODE_QUOTA_VAL_PERCENT, []int{*SERVICERS, *PLUS_SERVICERS})
 	tenant.Config(memory.Quota())
 
-	numCPUs := runtime.NumCPU()
-	if !*ENTERPRISE && numCPUs > _DEF_CE_MAXCPUS {
-		numCPUs = _DEF_CE_MAXCPUS
+	if !*ENTERPRISE {
+		util.SetMaxCPUs(_DEF_CE_MAXCPUS)
 	}
-	if mproc := os.Getenv("GOQUERY_GOMAXPROCS"); mproc != "" {
-		if n, err := strconv.Atoi(mproc); err == nil && n < numCPUs && n > 0 {
-			numCPUs = n
-		}
-	} else if os.Getenv("GOMAXPROCS") != "" {
-		n := util.NumCPU()
-		if n < numCPUs && n > 0 {
-			numCPUs = n
-		} else if n == numCPUs && tenant.IsServerless() {
-			numCPUs = int(float64(n) * 0.8)
-		}
-	} else if tenant.IsServerless() {
-		numCPUs = int(float64(numCPUs) * 0.8)
-	}
-	if numCPUs <= 0 {
-		numCPUs = 1
-	}
-	runtime.GOMAXPROCS(numCPUs)
-	numProcs := util.NumCPU()
+	numProcs := util.SetNumCPUs(*NUM_CPUS, tenant.IsServerless())
 
 	ffdc.Init()
 

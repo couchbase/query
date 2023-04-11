@@ -264,6 +264,10 @@ var _SETTERS = map[string]Setter{
 
 		return nil
 	},
+	NUM_CPUS: func(s *Server, o interface{}) errors.Error {
+		util.SetNumCPUs(int(getNumber(o)), tenant.IsServerless())
+		return nil
+	},
 }
 
 func getNumber(o interface{}) float64 {
@@ -548,6 +552,7 @@ func FillSettings(settings map[string]interface{}, srvr *Server) map[string]inte
 	settings[GCPERCENT] = srvr.GCPercent()
 	settings[REQUESTERRORLIMIT] = srvr.RequestErrorLimit()
 	settings[USEREPLICA] = srvr.UseReplicaToString()
+	settings[NUM_CPUS] = util.NumCPU()
 	return settings
 }
 
