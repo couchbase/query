@@ -70,6 +70,12 @@ const (
 	INFER
 	FTS_SEARCH
 	UPDATE_STAT
+	INDEX_SCAN_GSI
+	PRIMARY_SCAN_GSI
+	INDEX_SCAN_FTS
+	PRIMARY_SCAN_FTS
+	INDEX_SCAN_SEQ
+	PRIMARY_SCAN_SEQ
 
 	// Expression layer
 	ADVISOR
@@ -90,32 +96,38 @@ func (phase Phases) String() string {
 }
 
 var _PHASE_NAMES = []string{
-	AUTHORIZE:    "authorize",
-	FETCH:        "fetch",
-	INDEX_SCAN:   "indexScan",
-	PRIMARY_SCAN: "primaryScan",
-	JOIN:         "join",
-	INDEX_JOIN:   "indexJoin",
-	NL_JOIN:      "nestedLoopJoin",
-	HASH_JOIN:    "hashJoin",
-	NEST:         "nest",
-	INDEX_NEST:   "indexNest",
-	NL_NEST:      "nestedLoopNest",
-	HASH_NEST:    "hashNest",
-	COUNT:        "count",
-	INDEX_COUNT:  "indexCount",
-	SORT:         "sort",
-	FILTER:       "filter",
-	PROJECT:      "project",
-	STREAM:       "stream",
-	INSERT:       "insert",
-	DELETE:       "delete",
-	UPDATE:       "update",
-	UPSERT:       "upsert",
-	MERGE:        "merge",
-	INFER:        "inferKeySpace",
-	FTS_SEARCH:   "ftsSearch",
-	UPDATE_STAT:  "updateStatistics",
+	AUTHORIZE:        "authorize",
+	FETCH:            "fetch",
+	INDEX_SCAN:       "indexScan",
+	PRIMARY_SCAN:     "primaryScan",
+	JOIN:             "join",
+	INDEX_JOIN:       "indexJoin",
+	NL_JOIN:          "nestedLoopJoin",
+	HASH_JOIN:        "hashJoin",
+	NEST:             "nest",
+	INDEX_NEST:       "indexNest",
+	NL_NEST:          "nestedLoopNest",
+	HASH_NEST:        "hashNest",
+	COUNT:            "count",
+	INDEX_COUNT:      "indexCount",
+	SORT:             "sort",
+	FILTER:           "filter",
+	PROJECT:          "project",
+	STREAM:           "stream",
+	INSERT:           "insert",
+	DELETE:           "delete",
+	UPDATE:           "update",
+	UPSERT:           "upsert",
+	MERGE:            "merge",
+	INFER:            "inferKeySpace",
+	FTS_SEARCH:       "ftsSearch",
+	UPDATE_STAT:      "updateStatistics",
+	INDEX_SCAN_GSI:   "indexScan.GSI",
+	PRIMARY_SCAN_GSI: "primaryScan.GSI",
+	INDEX_SCAN_FTS:   "indexScan.FTS",
+	PRIMARY_SCAN_FTS: "primaryScan.FTS",
+	INDEX_SCAN_SEQ:   "indexScan.Seq",
+	PRIMARY_SCAN_SEQ: "primaryScan.Seq",
 
 	ADVISOR: "advisor",
 
@@ -730,6 +742,27 @@ func (this *Context) AddPhaseCount(p Phases, c uint64) {
 
 func (this *Context) AddPhaseTime(phase Phases, duration time.Duration) {
 	this.output.AddPhaseTime(phase, duration)
+}
+
+func (this *Context) AddPhaseOperatorWithAgg(p Phases) {
+	this.output.AddPhaseOperator(p)
+	if a, ok := phaseAggs[p]; ok {
+		this.output.AddPhaseOperator(a)
+	}
+}
+
+func (this *Context) AddPhaseCountWithAgg(p Phases, c uint64) {
+	this.output.AddPhaseCount(p, c)
+	if a, ok := phaseAggs[p]; ok {
+		this.output.AddPhaseCount(a, c)
+	}
+}
+
+func (this *Context) AddPhaseTimeWithAgg(p Phases, duration time.Duration) {
+	this.output.AddPhaseTime(p, duration)
+	if a, ok := phaseAggs[p]; ok {
+		this.output.AddPhaseTime(a, duration)
+	}
 }
 
 func (this *Context) queryCU(duration time.Duration) {
@@ -2090,4 +2123,13 @@ func (this *Context) contextUdfPlans() *udfPlanMap {
 	rv := this.udfPlans
 	this.mutex.RUnlock()
 	return rv
+}
+
+var phaseAggs = map[Phases]Phases{
+	INDEX_SCAN_GSI:   INDEX_SCAN,
+	INDEX_SCAN_FTS:   INDEX_SCAN,
+	INDEX_SCAN_SEQ:   INDEX_SCAN,
+	PRIMARY_SCAN_GSI: PRIMARY_SCAN,
+	PRIMARY_SCAN_FTS: PRIMARY_SCAN,
+	PRIMARY_SCAN_SEQ: PRIMARY_SCAN,
 }

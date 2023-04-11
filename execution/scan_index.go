@@ -29,11 +29,12 @@ type IndexScan struct {
 }
 
 func NewIndexScan(plan *plan.IndexScan, context *Context) *IndexScan {
-	rv := &IndexScan{
-		plan: plan,
-	}
-
+	rv := &IndexScan{plan: plan}
 	newBase(&rv.base, context)
+	rv.phase = INDEX_SCAN
+	if p, ok := indexerPhase[plan.Index().Indexer().Name()]; ok {
+		rv.phase = p.index
+	}
 	rv.base.setInline()
 	rv.output = rv
 	return rv
@@ -63,7 +64,7 @@ func (this *IndexScan) RunOnce(context *Context, parent value.Value) {
 		spans := this.plan.Spans()
 		n := len(spans)
 		this.SetKeepAlive(n, context)
-		this.setExecPhase(INDEX_SCAN, context)
+		this.setExecPhaseWithAgg(this.Phase(), context)
 		defer func() { this.switchPhase(_NOTIME) }() // accrue current phase's time
 
 		if !active || !context.assert(n != 0, "Index scan has no spans") {
@@ -76,8 +77,7 @@ func (this *IndexScan) RunOnce(context *Context, parent value.Value) {
 			defer func() {
 				this.keys, this.pool = this.deltaKeyspaceDone(this.keys, this.pool)
 			}()
-			this.keys, this.pool = this.scanDeltaKeyspace(this.plan.Keyspace(), parent,
-				INDEX_SCAN, context, this.plan.Covers())
+			this.keys, this.pool = this.scanDeltaKeyspace(this.plan.Keyspace(), parent, this.Phase(), context, this.plan.Covers())
 		}
 
 		this.children = _INDEX_SCAN_POOL.Get()
@@ -184,9 +184,9 @@ func (this *spanScan) RunOnce(context *Context, parent value.Value) {
 		active := this.active()
 		defer this.close(context)
 		this.switchPhase(_EXECTIME)
-		this.addExecPhase(INDEX_SCAN, context)       // we have already added the scan operator in the primary scan
-		defer func() { this.switchPhase(_NOTIME) }() // accrue current phase's time
-		defer this.notify()                          // Notify that I have stopped
+		this.addExecPhaseWithAgg(this.Phase(), context) // we have already added the scan operator in the primary scan
+		defer func() { this.switchPhase(_NOTIME) }()    // accrue current phase's time
+		defer this.notify()                             // Notify that I have stopped
 		if !active {
 			return
 		}
@@ -202,7 +202,7 @@ func (this *spanScan) RunOnce(context *Context, parent value.Value) {
 
 		var countDocs = func() {
 			if docs > 0 {
-				context.AddPhaseCount(INDEX_SCAN, docs)
+				context.AddPhaseCountWithAgg(this.Phase(), docs)
 			}
 		}
 		defer countDocs()
@@ -254,7 +254,7 @@ func (this *spanScan) RunOnce(context *Context, parent value.Value) {
 						ok = this.sendItem(av)
 						docs++
 						if docs > _PHASE_UPDATE_COUNT {
-							context.AddPhaseCount(INDEX_SCAN, docs)
+							context.AddPhaseCountWithAgg(this.Phase(), docs)
 							docs = 0
 						}
 					}

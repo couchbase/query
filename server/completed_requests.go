@@ -1185,6 +1185,12 @@ func (this *counts) evaluate(request *BaseRequest, req *http.Request) bool {
 	return int64(request.phaseStats[execution.FETCH].count) > this.count ||
 		int64(request.phaseStats[execution.PRIMARY_SCAN].count) > this.count ||
 		int64(request.phaseStats[execution.INDEX_SCAN].count) > this.count ||
+		int64(request.phaseStats[execution.PRIMARY_SCAN_GSI].count) > this.count ||
+		int64(request.phaseStats[execution.INDEX_SCAN_GSI].count) > this.count ||
+		int64(request.phaseStats[execution.PRIMARY_SCAN_FTS].count) > this.count ||
+		int64(request.phaseStats[execution.INDEX_SCAN_FTS].count) > this.count ||
+		int64(request.phaseStats[execution.PRIMARY_SCAN_SEQ].count) > this.count ||
+		int64(request.phaseStats[execution.INDEX_SCAN_SEQ].count) > this.count ||
 		int64(request.phaseStats[execution.NL_JOIN].count) > this.count ||
 		int64(request.phaseStats[execution.HASH_JOIN].count) > this.count ||
 		int64(request.phaseStats[execution.SORT].count) > this.count

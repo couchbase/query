@@ -84,6 +84,24 @@
 		"help": "Total number of secondary index scans.",
 		"added": "7.0.0"
 	},
+	"n1ql_index_scans.GSI": {
+		"type": "counter",
+		"help": "Total number of index scans performed by GSI.",
+		"added": "7.5.0",
+    "notes": "This is a sub-division of n1ql_index_scans."
+	},
+	"n1ql_index_scans.FTS": {
+		"type": "counter",
+		"help": "Total number of index scans performed by FTS.",
+		"added": "7.5.0",
+    "notes": "This is a sub-division of n1ql_index_scans."
+	},
+	"n1ql_index_scans.Seq": {
+		"type": "counter",
+		"help": "Total number of sequential scans.",
+		"added": "7.5.0",
+    "notes": "This is a sub-division of n1ql_index_scans."
+	},
 	"n1ql_inserts": {
 		"type": "counter",
 		"help": "Total number of INSERT operations.",
@@ -128,6 +146,24 @@
 		"type": "counter",
 		"help": "Total number of primary index scans.",
 		"added": "7.0.0"
+	},
+	"n1ql_primary_scans.GSI": {
+		"type": "counter",
+		"help": "Total number of primary scans performed by GSI.",
+		"added": "7.5.0",
+    "notes": "This is a sub-division of n1ql_primary_scans."
+	},
+	"n1ql_primary_scans.FTS": {
+		"type": "counter",
+		"help": "Total number of primary scans performed by FTS.",
+		"added": "7.5.0",
+    "notes": "This is a sub-division of n1ql_primary_scans."
+	},
+	"n1ql_primary_scans.Seq": {
+		"type": "counter",
+		"help": "Total number of primary sequential scans.",
+		"added": "7.5.0",
+    "notes": "This is a sub-division of n1ql_primary_scans."
 	},
 	"n1ql_queued_requests": {
 		"type": "gauge",

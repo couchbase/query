@@ -597,6 +597,12 @@ func (this *HttpEndpoint) doStats(request *httpRequest, srvr *server.Server) {
 		prepared, (request.State() != server.COMPLETED),
 		int(request.PhaseOperator(execution.INDEX_SCAN)),
 		int(request.PhaseOperator(execution.PRIMARY_SCAN)),
+		int(request.PhaseOperator(execution.INDEX_SCAN_GSI)),
+		int(request.PhaseOperator(execution.PRIMARY_SCAN_GSI)),
+		int(request.PhaseOperator(execution.INDEX_SCAN_FTS)),
+		int(request.PhaseOperator(execution.PRIMARY_SCAN_FTS)),
+		int(request.PhaseOperator(execution.INDEX_SCAN_SEQ)),
+		int(request.PhaseOperator(execution.PRIMARY_SCAN_SEQ)),
 		string(request.ScanConsistency()))
 
 	request.CompleteRequest(request_time, service_time, transaction_time, request.resultCount,
