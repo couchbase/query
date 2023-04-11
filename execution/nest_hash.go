@@ -91,7 +91,7 @@ func (this *HashNest) beforeItems(context *Context, parent value.Value) bool {
 	}
 
 	// build hash table
-	this.hashTab = util.NewHashTable(util.HASH_TABLE_FOR_HASH_JOIN, len(this.plan.BuildExprs()))
+	this.hashTab = util.NewHashTable(util.HASH_TABLE_FOR_HASH_JOIN, this.child.PlanOp().Cardinality(), len(this.plan.BuildExprs()))
 
 	this.buildVals = make([]interface{}, len(this.plan.BuildExprs()))
 	this.probeVals = make([]interface{}, len(this.plan.ProbeExprs()))

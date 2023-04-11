@@ -96,16 +96,26 @@ type HashTable struct {
 	array    bool         // using value array?
 }
 
-func NewHashTable(purpose int, arrLen int) *HashTable {
+func NewHashTable(purpose int, cardinality float64, arrLen int) *HashTable {
 	rv := &HashTable{
 		mode:   HASH_TABLE_INIT,
 		bucket: -1,
 		vector: -1,
 		array:  arrLen > 1,
 	}
-	size := MIN_HASH_TABLE_SIZE_HASH_JOIN
+	defSize := MIN_HASH_TABLE_SIZE_HASH_JOIN
 	if purpose == HASH_TABLE_FOR_INLIST {
-		size = MIN_HASH_TABLE_SIZE_INLIST
+		defSize = MIN_HASH_TABLE_SIZE_INLIST
+	}
+	size := int(math.Ceil(cardinality / HTLoadThreshold))
+	if size <= defSize {
+		// this includes the case where size is not valid (i.e. -1)
+		size = defSize
+	} else {
+		size = 1 << int(math.Ceil(math.Log2(float64(size))))
+		if size > MAX_HASH_TABLE_SIZE {
+			size = MAX_HASH_TABLE_SIZE
+		}
 	}
 	rv.entries = make([]*hashEntry, size)
 	return rv

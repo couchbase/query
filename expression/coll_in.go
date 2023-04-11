@@ -98,7 +98,7 @@ func (this *In) Evaluate(item value.Value, context Context) (value.Value, error)
 			}
 		}
 		if buildHT {
-			hashTab = util.NewHashTable(util.HASH_TABLE_FOR_INLIST, 1)
+			hashTab = util.NewHashTable(util.HASH_TABLE_FOR_INLIST, float64(len(sa)), 1)
 			inlistHash.hashTab = hashTab
 			// lock is not released until hash table is built
 		} else {
