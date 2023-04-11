@@ -35,9 +35,6 @@ type ServiceMgr struct {
 
 	thisHost string
 	enabled  bool
-
-	progress   float64
-	nextRevNum uint64
 }
 
 // to reduce the occasions when host is looked up from node ID, cache it here
@@ -51,12 +48,14 @@ type state struct {
 	changeID string
 	servers  []queryServer
 	eject    []queryServer
+	progress float64
 }
 
 type waiter chan state
 type waiters map[waiter]bool
 
 const _INIT_WARN_TIME = 5
+const _MONITOR_POLL_INTERVAL = time.Second
 
 func NewManager(uuid string) Manager {
 	var mgr *ServiceMgr
@@ -79,7 +78,6 @@ func NewManager(uuid string) Manager {
 			NodeID:   service.NodeID(uuid),
 			Priority: service.Priority(0),
 		},
-		nextRevNum: 1,
 	}
 
 	mgr.waiters = make(waiters)
@@ -174,96 +172,111 @@ func (m *ServiceMgr) Shutdown() error {
 	return nil
 }
 
-// There are only active tasks on the master node and only whilst others are being gracefully stopped.  Here we rely on the
-// /admin/shutdown REST interface to obtain information on the progress of the remote graceful shutdown
-// Using this saves us from having to establish and handle another communication mechanism to feed back state to the master
+// There are only active tasks on the master node and only whilst others are being gracefully stopped.
 
 func (m *ServiceMgr) GetTaskList(rev service.Revision, cancel service.Cancel) (*service.TaskList, error) {
-	logging.Tracea(func() string { return fmt.Sprintf("ServiceMgr::GetTaskList entry: %v", DecodeRev(rev)) })
+	logging.Debuga(func() string { return fmt.Sprintf("ServiceMgr::GetTaskList entry: %v", DecodeRev(rev)) })
 
 	curState, err := m.wait(rev, cancel)
 	if err != nil {
-		logging.Tracef("ServiceMgr::GetTaskList exit: error: %v", err)
+		logging.Debugf("ServiceMgr::GetTaskList exit: error: %v", err)
 		return nil, err
 	}
 
 	tasks := &service.TaskList{}
-
-	listRev := curState.rev
+	tasks.Rev = EncodeRev(curState.rev)
 	tasks.Tasks = make([]service.Task, 0)
 
-	m.Lock()
-	changeID := m.state.changeID
-	eject := m.eject
-	m.Unlock()
-	if changeID != "" { // master
-		var progress float64
-		running := 0
-		if eject != nil {
-			for _, e := range eject {
-				if e.nodeInfo.Opaque == nil {
-					e.nodeInfo.Priority = -1
-				}
-				if e.nodeInfo.Priority < 0 {
-					continue
-				}
-				res, err := distributed.RemoteAccess().ExecutePreparedAdminOp(e.nodeInfo.Opaque, "GET", "", nil,
-					distributed.NO_CREDS, "")
-				if res != nil && err == nil {
-					var status struct {
-						Code int32 `json:"code"`
-					}
-					jerr := json.Unmarshal(res, &status)
-					if jerr == nil && errors.ErrorCode(status.Code) != errors.E_SERVICE_SHUT_DOWN {
-						running++
-					} else {
-						e.nodeInfo.Priority = -1
-					}
-				} else {
-					e.nodeInfo.Priority = -1
-				}
-			}
-		}
-		if running == 0 {
+	if curState.changeID != "" { // master
+		if curState.progress < 0.0 {
 			m.updateState(func(s *state) {
 				s.changeID = ""
 				s.eject = nil
 			})
 		} else {
-			m.updateState(func(s *state) {
-				s.eject = eject
-			})
-			progress = 0.1 // consider the initiation the starting 10%
-			if len(eject) > 0 {
-				progress += (float64(len(eject)-running) / float64(len(eject))) * 0.9
-			}
 			task := service.Task{
 				Rev:          EncodeRev(0),
 				ID:           fmt.Sprintf("shutdown/monitor/%s", curState.changeID),
 				Type:         service.TaskTypeRebalance,
 				Status:       service.TaskStatusRunning,
-				Progress:     progress,
+				Progress:     curState.progress,
 				IsCancelable: true, // since it is ignored anyway and ns-server still tries to cancel the task...
 			}
 			tasks.Tasks = append(tasks.Tasks, task)
 		}
-		// if progress has changed, we need a new revision for the tasks list (progress zero here on completion)
-		m.Lock()
-		if progress != m.progress {
-			m.progress = progress
-			listRev++
-			if listRev < m.nextRevNum {
-				listRev = m.nextRevNum
-			}
-			m.nextRevNum = listRev + 1
-		}
-		m.Unlock()
 	}
-	tasks.Rev = EncodeRev(listRev)
 
-	logging.Tracef("ServiceMgr::GetTaskList exit: %v", tasks)
+	logging.Debugf("ServiceMgr::GetTaskList exit: %v", tasks)
 
 	return tasks, nil
+}
+
+// Here we rely on the /admin/shutdown REST interface to obtain information on the progress of the remote graceful shutdown
+// Using this saves us from having to establish and handle another communication mechanism to feed back state to the master
+
+func (m *ServiceMgr) monitorShutdown(changeID string, eject []queryServer) {
+	logging.Debuga(func() string { return fmt.Sprintf("ServiceMgr::monitorShutdown entry: %v - %v", changeID, eject) })
+	if len(eject) == 0 {
+		logging.Debugf("ServiceMgr::monitorShutdown exit - empty ejection list")
+		return
+	}
+	for {
+		m.Lock()
+		cancelled := m.state.changeID != changeID
+		m.Unlock()
+		if cancelled {
+			logging.Debugf("ServiceMgr::monitorShutdown exit - cancelled")
+			return
+		}
+		running := 0
+		for e := range eject {
+			if eject[e].nodeInfo.Opaque == nil {
+				eject[e].nodeInfo.Priority = -1
+			}
+			if eject[e].nodeInfo.Priority < 0 {
+				continue
+			}
+			res, err := distributed.RemoteAccess().ExecutePreparedAdminOp(eject[e].nodeInfo.Opaque, "GET", "", nil,
+				distributed.NO_CREDS, "")
+			if res != nil && err == nil {
+				var status struct {
+					Code int32 `json:"code"`
+				}
+				jerr := json.Unmarshal(res, &status)
+				if jerr == nil && errors.ErrorCode(status.Code) != errors.E_SERVICE_SHUT_DOWN {
+					running++
+				} else {
+					eject[e].nodeInfo.Priority = -1
+				}
+			} else {
+				eject[e].nodeInfo.Priority = -1
+			}
+		}
+		progress := 0.1 + ((float64(len(eject)-running) / float64(len(eject))) * 0.9)
+		m.Lock()
+		cancelled = m.state.changeID != changeID
+		if !cancelled && m.state.progress != progress {
+			m.updateStateLOCKED(func(s *state) {
+				s.eject = eject
+				s.progress = progress
+			})
+		}
+		m.Unlock()
+		if cancelled {
+			logging.Debugf("ServiceMgr::monitorShutdown exit - cancelled")
+			return
+		}
+		if running == 0 {
+			m.updateState(func(s *state) {
+				s.changeID = ""
+				s.eject = nil
+				s.progress = -1.0
+			})
+			break
+		}
+		time.Sleep(_MONITOR_POLL_INTERVAL)
+	}
+	logging.Debugf("ServiceMgr::monitorShutdown exit")
 }
 
 func (m *ServiceMgr) CancelTask(id string, rev service.Revision) error {
@@ -525,7 +538,6 @@ func (m *ServiceMgr) StartTopologyChange(change service.TopologyChange) error {
 
 	m.Lock()
 	if m.eject != nil {
-		m.progress = 0
 		info := make([]rune, 0, len(m.eject)*33)
 		eject := make([]queryServer, 0, len(m.eject))
 		done := util.WaitCount{}
@@ -577,11 +589,16 @@ func (m *ServiceMgr) StartTopologyChange(change service.TopologyChange) error {
 			if len(eject) > 0 {
 				s.changeID = change.ID
 				s.eject = eject
+				s.progress = 0.0
 			} else {
 				s.changeID = ""
 				s.eject = nil
+				s.progress = -1.0
 			}
 		})
+		if len(eject) > 0 {
+			go m.monitorShutdown(change.ID, eject)
+		}
 	}
 	m.Unlock()
 
