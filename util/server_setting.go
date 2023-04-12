@@ -29,23 +29,24 @@ func GetMaxIndexAPI() int {
 }
 
 const (
-	N1QL_GROUPAGG_PUSHDOWN     uint64 = 1 << iota // 0x0000000001
-	N1QL_HASH_JOIN                                // 0x0000000002
-	N1QL_ENCODED_PLAN                             // 0x0000000004
-	N1QL_GOLANG_UDF                               // 0x0000000008
-	N1QL_CBO                                      // 0x0000000010
-	N1QL_FLEXINDEX                                // 0x0000000020
-	N1QL_CBO_NEW                                  // 0x0000000040
-	N1QL_PASSWORDLESS_BKT                         // 0x0000000080
-	N1QL_READ_FROM_REPLICA_OFF                    // 0x0000000100 N1QL_READ_FROM_REPLICA_OFF is a retired feature bit. Must NOT be used.
-	N1QL_IMPLICIT_ARRAY_COVER                     // 0x0000000200
-	N1QL_JOIN_ENUMERATION                         // 0x0000000400
-	N1QL_INDEX_MISSING                            // 0x0000000800
-	N1QL_NL_PRIMARYSCAN                           // 0x0000001000
-	N1QL_EARLY_ORDER                              // 0x0000002000
-	N1QL_SEQ_SCAN                                 // 0x0000004000
-	N1QL_SPILL_TO_DISK                            // 0x0000008000
-	N1QL_ALL_BITS                                 // Add anything above this. This needs to be last one
+	N1QL_GROUPAGG_PUSHDOWN         uint64 = 1 << iota // 0x0000000001
+	N1QL_HASH_JOIN                                    // 0x0000000002
+	N1QL_ENCODED_PLAN                                 // 0x0000000004
+	N1QL_GOLANG_UDF                                   // 0x0000000008
+	N1QL_CBO                                          // 0x0000000010
+	N1QL_FLEXINDEX                                    // 0x0000000020
+	N1QL_CBO_NEW                                      // 0x0000000040
+	N1QL_PASSWORDLESS_BKT                             // 0x0000000080
+	N1QL_READ_FROM_REPLICA_OFF                        // 0x0000000100 N1QL_READ_FROM_REPLICA_OFF is a retired feature bit. Must NOT be used.
+	N1QL_IMPLICIT_ARRAY_COVER                         // 0x0000000200
+	N1QL_JOIN_ENUMERATION                             // 0x0000000400
+	N1QL_INDEX_MISSING                                // 0x0000000800
+	N1QL_NL_PRIMARYSCAN                               // 0x0000001000
+	N1QL_EARLY_ORDER                                  // 0x0000002000
+	N1QL_SEQ_SCAN                                     // 0x0000004000
+	N1QL_SPILL_TO_DISK                                // 0x0000008000
+	N1QL_PARTIAL_GRACEFUL_SHUTDOWN                    // 0x0000010000
+	N1QL_ALL_BITS                                     // Add anything above this. This needs to be last one
 )
 
 var N1Ql_Features = map[uint64]string{
@@ -65,6 +66,8 @@ var N1Ql_Features = map[uint64]string{
 	N1QL_EARLY_ORDER:           fmt.Sprintf("Early Order (%#x)", N1QL_EARLY_ORDER),
 	N1QL_SEQ_SCAN:              fmt.Sprintf("Sequential Scans (%#x)", N1QL_SEQ_SCAN),
 	N1QL_SPILL_TO_DISK:         fmt.Sprintf("Spill To Disk (%#x)", N1QL_SPILL_TO_DISK),
+
+	N1QL_PARTIAL_GRACEFUL_SHUTDOWN: fmt.Sprintf("Partial graceful shutdown (%#x)", N1QL_PARTIAL_GRACEFUL_SHUTDOWN),
 }
 
 const DEF_N1QL_FEAT_CTRL = (N1QL_ENCODED_PLAN | N1QL_GOLANG_UDF | N1QL_CBO_NEW)

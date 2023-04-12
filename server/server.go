@@ -167,6 +167,7 @@ type Server struct {
 	settingsCallback  func(string, interface{})
 	gcpercent         int
 	shutdown          int
+	shutdownStart     time.Time
 	requestErrorLimit int
 	memoryStats       runtime.MemStats
 	lastTotalTime     int64
@@ -664,7 +665,7 @@ func (this *Server) setupRequestContext(request Request) bool {
 		}
 
 		if err != nil {
-			if this.ShuttingDown() {
+			if this.ShuttingDown() && !util.IsFeatureEnabled(util.GetN1qlFeatureControl(), util.N1QL_PARTIAL_GRACEFUL_SHUTDOWN) {
 				if this.ShutDown() {
 					request.Fail(errors.NewServiceShutDownError())
 				} else {
@@ -1568,11 +1569,19 @@ func (this *Server) ShutDown() bool {
 }
 
 func (this *Server) InitiateShutdown(timeout time.Duration) {
+	var what string
 	this.Lock()
 	if this.shutdown == _SERVER_RUNNING {
 		this.shutdown = _REQUESTED
+		if util.IsFeatureEnabled(util.GetN1qlFeatureControl(), util.N1QL_PARTIAL_GRACEFUL_SHUTDOWN) {
+			this.shutdownStart = time.Now()
+			what = "Partial graceful"
+		} else {
+			this.shutdownStart = time.Time{}
+			what = "Graceful"
+		}
 		this.Unlock()
-		logging.Infof("Graceful shutdown initiated.")
+		logging.Infof("%s shutdown initiated.", what)
 		go this.monitorShutdown(timeout)
 	} else {
 		this.Unlock()
@@ -1580,15 +1589,22 @@ func (this *Server) InitiateShutdown(timeout time.Duration) {
 }
 
 func (this *Server) CancelShutdown() {
+	var what string
 	log := false
 	this.Lock()
 	if this.shutdown != _SERVER_RUNNING {
 		this.shutdown = _SERVER_RUNNING
+		if this.shutdownStart.IsZero() {
+			what = "Graceful"
+		} else {
+			what = "Partial graceful"
+			this.shutdownStart = time.Time{}
+		}
 		log = true
 	}
 	this.Unlock()
 	if log {
-		logging.Infof("Graceful shutdown cancelled.")
+		logging.Infof("%s shutdown cancelled.", what)
 	}
 }
 
@@ -1596,7 +1612,7 @@ const _SHUTDOWN_WAIT_LIMIT = 10 * time.Minute
 
 func (this *Server) InitiateShutdownAndWait() {
 	this.InitiateShutdown(_SHUTDOWN_WAIT_LIMIT)
-	for this.ShuttingDown() {
+	for this.ShuttingDown() && !this.ShutDown() {
 		time.Sleep(time.Second)
 	}
 }
@@ -1607,11 +1623,13 @@ const (
 	_FFDC_THRESHOLD  = 30 * time.Minute
 )
 
-func RunningRequests() int {
+func RunningRequests(before time.Time) int {
 	count := 0
 	ActiveRequestsForEach(func(id string, request Request) bool {
 		if request.State() == RUNNING || request.State() == SUBMITTED {
-			count++
+			if before.IsZero() || request.RequestTime().Before(before) {
+				count++
+			}
 		}
 		return true
 	}, nil)
@@ -1620,18 +1638,18 @@ func RunningRequests() int {
 
 func (this *Server) monitorShutdown(timeout time.Duration) {
 	// wait for existing requests to complete
-	ar := RunningRequests()
-	at := transactions.CountTransContext()
+	ar := RunningRequests(this.shutdownStart)
+	at := transactions.CountTransContextBefore(this.shutdownStart)
 	if ar > 0 || at > 0 {
 		logging.Infof("Shutdown: Waiting for %v active request(s) and %v active transaction(s) to complete.", ar, at)
 		start := time.Now()
 		reportStart := start
 		ffdcStart := start
 		for this.ShuttingDown() {
-			ar = RunningRequests()
-			at = transactions.CountTransContext()
+			ar = RunningRequests(this.shutdownStart)
+			at = transactions.CountTransContextBefore(this.shutdownStart)
 			if ar == 0 && at == 0 {
-				logging.Infof("Shutdown: All requests and transactions completed.")
+				logging.Infof("Shutdown: All monitored requests and transactions completed.")
 				break
 			}
 			now := time.Now()
@@ -1650,7 +1668,7 @@ func (this *Server) monitorShutdown(timeout time.Duration) {
 			time.Sleep(_CHECK_INTERVAL)
 		}
 	} else {
-		logging.Infof("Shutdown: No active requests or transactions.")
+		logging.Infof("Shutdown: No active requests or transactions to monitor.")
 	}
 
 	if this.ShuttingDown() {

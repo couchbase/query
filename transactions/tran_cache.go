@@ -63,6 +63,21 @@ func CountTransContext() int {
 	return tranContextCache.cache.Size()
 }
 
+func CountTransContextBefore(before time.Time) int {
+	if before.IsZero() {
+		return CountTransContext()
+	}
+	cnt := 0
+	tranContextCache.cache.ForEach(func(s string, i interface{}) bool {
+		tranContext := i.(*TranContext)
+		if tranContext.startTime.Before(before) {
+			cnt++
+		}
+		return true
+	}, nil)
+	return cnt
+}
+
 func NameTransactions() []string {
 	return tranContextCache.cache.Names()
 }
