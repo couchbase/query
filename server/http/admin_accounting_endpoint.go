@@ -141,10 +141,6 @@ func (this *HttpEndpoint) registerAccountingHandlers() {
 		this.wrapAPI(w, req, doPrometheusLow)
 	}
 
-	prometheusHighHandler := func(w http.ResponseWriter, req *http.Request) {
-		this.wrapAPI(w, req, doEmpty)
-	}
-
 	transactionsIndexHandler := func(w http.ResponseWriter, req *http.Request) {
 		this.wrapAPI(w, req, doTransactionsIndex)
 	}
@@ -188,7 +184,6 @@ func (this *HttpEndpoint) registerAccountingHandlers() {
 		indexesPrefix + "/dictionary_cache":               {handler: dictionaryIndexHandler, methods: []string{"GET"}},
 		indexesPrefix + "/tasks_cache":                    {handler: tasksIndexHandler, methods: []string{"GET"}},
 		prometheusLow:                                     {handler: prometheusLowHandler, methods: []string{"GET"}},
-		prometheusHigh:                                    {handler: prometheusHighHandler, methods: []string{"GET"}},
 		indexesPrefix + "/transactions":                   {handler: transactionsIndexHandler, methods: []string{"GET"}},
 		functionsBackupPrefix + "/backup":                 {handler: functionsGlobalBackupHandler, methods: []string{"GET", "POST"}},
 		functionsBackupPrefix + "/bucket/{bucket}/backup": {handler: functionsBucketBackupHandler, methods: []string{"GET", "POST"}},
@@ -196,6 +191,14 @@ func (this *HttpEndpoint) registerAccountingHandlers() {
 
 	for route, h := range routeMap {
 		this.router.Map(route, h.handler, h.methods...)
+	}
+
+	// prometheus is a special case, as it may be handled by the tenant code
+	if !tenant.IsServerless() {
+		prometheusHighHandler := func(w http.ResponseWriter, req *http.Request) {
+			this.wrapAPI(w, req, doEmpty)
+		}
+		this.router.Map(prometheusHigh, prometheusHighHandler, "GET")
 	}
 
 	this.router.Map(expvarsRoute, expvarsHandler, "GET")
