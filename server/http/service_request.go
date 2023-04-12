@@ -68,8 +68,7 @@ type httpRequest struct {
 
 var zeroScanVectorSource = &ZeroScanVectorSource{}
 
-func newHttpRequest(rv *httpRequest, resp http.ResponseWriter, req *http.Request, bp BufferPool, size int, namespace string,
-	trackUsers bool) {
+func newHttpRequest(rv *httpRequest, resp http.ResponseWriter, req *http.Request, bp BufferPool, size int, namespace string) {
 
 	var httpArgs httpRequestArgs
 	var err errors.Error
@@ -163,7 +162,7 @@ func newHttpRequest(rv *httpRequest, resp http.ResponseWriter, req *http.Request
 
 			// TODO remove passwordless buckets and turn on in all cases
 			// This means we got creds. Now we need to see if they are authorized users.
-			if trackUsers || tenant.IsServerless() || !pwdlessbkts {
+			if tenant.IsServerless() || !pwdlessbkts {
 				err1 = datastore.GetDatastore().Authorize(nil, creds)
 				if err1 != nil || len(creds.AuthenticatedUsers) == 0 {
 

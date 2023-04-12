@@ -140,6 +140,11 @@ func (this *HttpEndpoint) registerAccountingHandlers() {
 	prometheusLowHandler := func(w http.ResponseWriter, req *http.Request) {
 		this.wrapAPI(w, req, doPrometheusLow)
 	}
+
+	prometheusHighHandler := func(w http.ResponseWriter, req *http.Request) {
+		this.wrapAPI(w, req, doEmpty)
+	}
+
 	transactionsIndexHandler := func(w http.ResponseWriter, req *http.Request) {
 		this.wrapAPI(w, req, doTransactionsIndex)
 	}
@@ -183,6 +188,7 @@ func (this *HttpEndpoint) registerAccountingHandlers() {
 		indexesPrefix + "/dictionary_cache":               {handler: dictionaryIndexHandler, methods: []string{"GET"}},
 		indexesPrefix + "/tasks_cache":                    {handler: tasksIndexHandler, methods: []string{"GET"}},
 		prometheusLow:                                     {handler: prometheusLowHandler, methods: []string{"GET"}},
+		prometheusHigh:                                    {handler: prometheusHighHandler, methods: []string{"GET"}},
 		indexesPrefix + "/transactions":                   {handler: transactionsIndexHandler, methods: []string{"GET"}},
 		functionsBackupPrefix + "/backup":                 {handler: functionsGlobalBackupHandler, methods: []string{"GET", "POST"}},
 		functionsBackupPrefix + "/bucket/{bucket}/backup": {handler: functionsBucketBackupHandler, methods: []string{"GET", "POST"}},
@@ -190,14 +196,6 @@ func (this *HttpEndpoint) registerAccountingHandlers() {
 
 	for route, h := range routeMap {
 		this.router.Map(route, h.handler, h.methods...)
-	}
-
-	// prometheus is a special case, as it may be handled by the tenant code
-	if !tenant.IsServerless() {
-		prometheusHighHandler := func(w http.ResponseWriter, req *http.Request) {
-			this.wrapAPI(w, req, doPrometheusHigh)
-		}
-		this.router.Map(prometheusHigh, prometheusHighHandler, "GET")
 	}
 
 	this.router.Map(expvarsRoute, expvarsHandler, "GET")
@@ -342,7 +340,7 @@ func doPrometheusLow(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Re
 	return textPlain(""), nil
 }
 
-func doPrometheusHigh(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
+func doEmpty(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
 	af.EventTypeId = audit.API_DO_NOT_AUDIT
 	err, _ := endpoint.verifyCredentialsFromRequest("", auth.PRIV_QUERY_STATS, req, nil)
 	if err != nil {
@@ -350,27 +348,7 @@ func doPrometheusHigh(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.R
 	}
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	for _, user := range endpoint.trackedUsers {
-		doPrometheusUserStat(w, user.uuid, "requests", "counter", user.activeRequests)
-		doPrometheusUserStat(w, user.uuid, "total_requests", "counter", user.requestMeter.Count())
-		doPrometheusUserStat(w, user.uuid, "request_rate", "gauge", user.requestMeter.Rate())
-		doPrometheusUserStat(w, user.uuid, "ingres_rate", "gauge", user.payloadMeter.Rate()/1024/1024)
-		doPrometheusUserStat(w, user.uuid, "total_ingress", "counter", user.payloadMeter.Count()/1024/1024)
-		doPrometheusUserStat(w, user.uuid, "egress_rate", "gauge", user.outputMeter.Rate()/1024/1024)
-		doPrometheusUserStat(w, user.uuid, "total_egress", "counter", user.outputMeter.Count()/1024/1024)
-		doPrometheusUserStat(w, user.uuid, "requests_failures", "counter", user.requestsFailures)
-		doPrometheusUserStat(w, user.uuid, "request_rate_failures", "counter", user.requestRateFailures)
-		doPrometheusUserStat(w, user.uuid, "ingress_rate_failures", "counter", user.payloadRateFailures)
-		doPrometheusUserStat(w, user.uuid, "egress_rate_failures", "counter", user.outputRateFailures)
-	}
 	return textPlain(""), nil
-}
-
-func doPrometheusUserStat(w http.ResponseWriter, uuid string, metric string, t string, val interface{}) {
-	name := uuid + "_" + metric
-	w.Write([]byte("# TYPE n1ql_" + name + " " + t + "\n"))
-	w.Write([]byte("n1ql_" + name + " "))
-	w.Write([]byte(fmt.Sprintf("%v\n", val)))
 }
 
 func doNotFound(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {

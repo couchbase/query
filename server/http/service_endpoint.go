@@ -17,8 +17,6 @@ import (
 	"net"
 	"net/http"
 	"strings"
-	"sync"
-	"sync/atomic"
 	"time"
 
 	gsi "github.com/couchbase/indexing/secondary/queryport/n1ql"
@@ -40,44 +38,23 @@ import (
 	"github.com/couchbase/query/util"
 )
 
-type userMetrics struct {
-	uuid                 string
-	userRequestRateLimit float64
-	userPayloadLimit     float64
-	userOutputLimit      float64
-	userRequestsLimit    int32
-	activeRequests       int32
-	requestMeter         util.Meter
-	payloadMeter         util.Meter
-	outputMeter          util.Meter
-	requestsFailures     int64
-	requestRateFailures  int64
-	payloadRateFailures  int64
-	outputRateFailures   int64
-	limitsVersion        string
-}
-
 type HttpEndpoint struct {
-	server              *server.Server
-	metrics             bool
-	httpAddr            string
-	httpsAddr           string
-	cafile              string
-	certFile            string
-	keyFile             string
-	bufpool             BufferPool
-	listener            map[string]net.Listener
-	listenerTLS         map[string]net.Listener
-	localListener       bool
-	router              router.Router
-	actives             server.ActiveRequests
-	options             server.ServerOptions
-	connSecConfig       datastore.ConnectionSecurityConfig
-	internalUser        string
-	trackUsers          bool
-	trackedUsers        map[string]*userMetrics
-	trackedUsersVersion string
-	usersLock           sync.RWMutex
+	server        *server.Server
+	metrics       bool
+	httpAddr      string
+	httpsAddr     string
+	cafile        string
+	certFile      string
+	keyFile       string
+	bufpool       BufferPool
+	listener      map[string]net.Listener
+	listenerTLS   map[string]net.Listener
+	localListener bool
+	router        router.Router
+	actives       server.ActiveRequests
+	options       server.ServerOptions
+	connSecConfig datastore.ConnectionSecurityConfig
+	internalUser  string
 }
 
 const (
@@ -337,91 +314,14 @@ func (this *HttpEndpoint) ServeHTTP(resp http.ResponseWriter, req *http.Request)
 	// ESCAPE analysis workaround
 	request := requestPool.Get().(*httpRequest)
 	*request = httpRequest{}
-	newHttpRequest(request, resp, req, this.bufpool, this.server.RequestSizeCap(), this.server.Namespace(), this.trackUsers)
+	newHttpRequest(request, resp, req, this.bufpool, this.server.RequestSizeCap(), this.server.Namespace())
 	defer func() {
 		requestPool.PutFn(request, func(r interface{}) {
 			ioIntr.remove(&(r.(*httpRequest).writer))
 		})
 	}()
 
-	if this.trackUsers {
-		request.Loga(logging.INFO, func() string { return "Tracking user" })
-		userName, domain := datastore.FirstCred(request.Credentials())
-		this.usersLock.Lock()
-		user := this.trackedUsers[userName]
-		request.SetTracked()
-		if user == nil {
-			user = &userMetrics{
-				uuid:           datastore.GetUserUUID(request.Credentials()),
-				activeRequests: 1,
-				requestMeter:   util.NewMeter(time.Minute, time.Minute),
-				payloadMeter:   util.NewMeter(time.Minute, time.Minute),
-				outputMeter:    util.NewMeter(time.Minute, time.Minute),
-			}
-			user.uuid = strings.Replace(user.uuid, "-", "_", -1)
-			limits, err := cbauth.GetUserLimits(userName, domain, "query")
-			if err != nil {
-				s := fmt.Sprintf("No user limits found for user <ud>%v</ud> - limits not enforced", userName)
-				logging.Infof(s)
-				request.Loga(logging.INFO, func() string { return s })
-			} else {
-				user.amendLimits(limits)
-				user.limitsVersion = this.trackedUsersVersion
-			}
-			if this.trackedUsers == nil {
-				this.trackedUsers = make(map[string]*userMetrics)
-			}
-			this.trackedUsers[userName] = user
-			this.usersLock.Unlock()
-		} else {
-			if this.trackedUsersVersion != user.limitsVersion {
-				limits, err := cbauth.GetUserLimits(userName, domain, "query")
-				if err != nil {
-					s := fmt.Sprintf("No user limits found for user <ud>%v</ud> - limits not changed", userName)
-					logging.Infof(s)
-					request.Loga(logging.INFO, func() string { return s })
-				} else {
-					user.amendLimits(limits)
-					user.limitsVersion = this.trackedUsersVersion
-				}
-			}
-			this.usersLock.Unlock()
-			atomic.AddInt32(&user.activeRequests, 1)
-		}
-		reqSize := req.ContentLength
-
-		// if we didn't have a request size we approximate to the statement length
-		if reqSize <= 0 {
-			reqSize = int64(len(request.Statement()))
-		}
-		user.requestMeter.Mark(1, request.RequestTime())
-		user.payloadMeter.Mark(reqSize, request.RequestTime())
-		if user.userRequestsLimit > 0 && user.activeRequests > user.userRequestsLimit {
-			atomic.AddInt64(&user.requestsFailures, 1)
-			atomic.AddInt32(&user.activeRequests, -1)
-			request.Fail(errors.NewServiceUserRequestExceededError())
-			request.Failed(this.server)
-			return
-		} else if user.userRequestRateLimit > 0 && user.requestMeter.Rate() > user.userRequestRateLimit {
-			atomic.AddInt64(&user.requestRateFailures, 1)
-			atomic.AddInt32(&user.activeRequests, -1)
-			request.Fail(errors.NewServiceUserRequestRateExceededError())
-			request.Failed(this.server)
-			return
-		} else if user.userPayloadLimit > 0 && user.payloadMeter.Rate() > user.userPayloadLimit {
-			atomic.AddInt64(&user.payloadRateFailures, 1)
-			atomic.AddInt32(&user.activeRequests, -1)
-			request.Fail(errors.NewServiceUserRequestSizeExceededError())
-			request.Failed(this.server)
-			return
-		} else if user.userOutputLimit > 0 && user.outputMeter.Rate() > user.userOutputLimit {
-			atomic.AddInt64(&user.outputRateFailures, 1)
-			atomic.AddInt32(&user.activeRequests, -1)
-			request.Fail(errors.NewServiceUserResultsSizeExceededError())
-			request.Failed(this.server)
-			return
-		}
-	} else if tenant.IsServerless() {
+	if tenant.IsServerless() {
 
 		// TODO TENANT throttling here is easy but may result in double waiting, once
 		// for throttling and once for servicers availability.
@@ -654,28 +554,6 @@ func (this *HttpEndpoint) SetupSSL() error {
 
 		}
 
-		if (configChange & cbauth.CFG_CHANGE_USER_LIMITS) != 0 {
-			limitsConfig, err := cbauth.GetLimitsConfig()
-			if err != nil {
-				logging.Errorf("unable to retrieve User Limits settings: %v", err)
-				return errors.NewAdminEndpointError(err, "unable to retrieve User Limits settings")
-			}
-			this.trackUsers = limitsConfig.EnforceLimits
-			if this.trackUsers {
-				this.usersLock.Lock()
-				this.trackedUsersVersion = limitsConfig.UserLimitsVersion
-				this.usersLock.Unlock()
-			} else {
-
-				// get rid of user cache:
-				this.usersLock.Lock()
-				for u, _ := range this.trackedUsers {
-					delete(this.trackedUsers, u)
-				}
-				this.usersLock.Unlock()
-			}
-		}
-
 		if settingsUpdated {
 			ds := datastore.GetDatastore()
 			if ds == nil {
@@ -718,61 +596,12 @@ func (this *HttpEndpoint) doStats(request *httpRequest, srvr *server.Server) {
 
 	request.CompleteRequest(request_time, service_time, transaction_time, request.resultCount,
 		request.resultSize, request.GetErrorCount(), request.req, srvr)
-	if this.trackUsers {
-		userName, _ := datastore.FirstCred(request.Credentials())
-		this.usersLock.RLock()
-		user := this.trackedUsers[userName]
-		this.usersLock.RUnlock()
-		if user != nil {
-			atomic.AddInt32(&user.activeRequests, -1)
-			user.outputMeter.Mark(int64(request.resultSize), request.RequestTime())
-		}
-	}
 
 	audit.Submit(request)
 }
 
 func ServicePrefix() string {
 	return servicePrefix
-}
-
-func (this *userMetrics) amendLimits(vars map[string]int) {
-	val, ok := vars["num_concurrent_requests"]
-	if ok && val >= 0 {
-		this.userRequestsLimit = int32(val)
-	} else {
-		this.userRequestsLimit = 0
-	}
-	val, ok = vars["num_queries_per_min"]
-	if ok && val >= 0 {
-		userRequestRateLimit := float64(val)
-		if userRequestRateLimit != this.userRequestRateLimit {
-			this.userRequestRateLimit = userRequestRateLimit
-			this.requestMeter.Reset()
-		}
-	} else {
-		this.userRequestRateLimit = 0
-	}
-	val, ok = vars["ingress_mib_per_min"]
-	if ok && val >= 0 {
-		userPayloadLimit := float64(val) * util.MiB
-		if userPayloadLimit != this.userPayloadLimit {
-			this.userPayloadLimit = userPayloadLimit
-			this.payloadMeter.Reset()
-		}
-	} else {
-		this.userPayloadLimit = 0
-	}
-	val, ok = vars["egress_mib_per_min"]
-	if ok && val >= 0 {
-		userOutputLimit := float64(val) * util.MiB
-		if userOutputLimit != this.userOutputLimit {
-			this.userOutputLimit = userOutputLimit
-			this.outputMeter.Reset()
-		}
-	} else {
-		this.userOutputLimit = 0
-	}
 }
 
 // activeHttpRequests implements server.ActiveRequests for http requests
