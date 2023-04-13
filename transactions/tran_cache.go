@@ -63,14 +63,11 @@ func CountTransContext() int {
 	return tranContextCache.cache.Size()
 }
 
-func CountTransContextBefore(before time.Time) int {
-	if before.IsZero() {
-		return CountTransContext()
-	}
+func CountValidTransContextBefore(before time.Time) int {
 	cnt := 0
 	tranContextCache.cache.ForEach(func(s string, i interface{}) bool {
 		tranContext := i.(*TranContext)
-		if tranContext.startTime.Before(before) {
+		if (before.IsZero() || tranContext.TxStartTime().Before(before)) && tranContext.TxValid() == nil {
 			cnt++
 		}
 		return true

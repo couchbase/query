@@ -1639,7 +1639,7 @@ func RunningRequests(before time.Time) int {
 func (this *Server) monitorShutdown(timeout time.Duration) {
 	// wait for existing requests to complete
 	ar := RunningRequests(this.shutdownStart)
-	at := transactions.CountTransContextBefore(this.shutdownStart)
+	at := transactions.CountValidTransContextBefore(this.shutdownStart)
 	if ar > 0 || at > 0 {
 		logging.Infof("Shutdown: Waiting for %v active request(s) and %v active transaction(s) to complete.", ar, at)
 		start := time.Now()
@@ -1647,7 +1647,7 @@ func (this *Server) monitorShutdown(timeout time.Duration) {
 		ffdcStart := start
 		for this.ShuttingDown() {
 			ar = RunningRequests(this.shutdownStart)
-			at = transactions.CountTransContextBefore(this.shutdownStart)
+			at = transactions.CountValidTransContextBefore(this.shutdownStart)
 			if ar == 0 && at == 0 {
 				logging.Infof("Shutdown: All monitored requests and transactions completed.")
 				break
