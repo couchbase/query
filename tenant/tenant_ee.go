@@ -232,14 +232,24 @@ func User(ctx Context) string {
 // TODO define units for query and js-evaluator
 func RecordCU(ctx Context, d time.Duration, m uint64) Unit {
 	units, _ := metering.QueryEvalComputeToCU(d, m)
-	regulator.RecordUnits(ctx, units)
-	return Unit(units.Whole())
+	regulator.RecordUnits(ctx, units...)
+	if len(units) == 0 {
+		logging.Warnf("bucket %v duration %v memory %v unexpected 0-length response from regulator CU compute",
+			ctx.Bucket(), d, m)
+		return 0
+	}
+	return Unit(units[0].Whole())
 }
 
 func RecordJsCU(ctx Context, d time.Duration, m uint64) Unit {
 	units, _ := metering.QueryUDFComputeToCU(d, m)
-	regulator.RecordUnits(ctx, units)
-	return Unit(units.Whole())
+	regulator.RecordUnits(ctx, units...)
+	if len(units) == 0 {
+		logging.Warnf("bucket %v duration %v memory %v unexpected 0-length response from regulator CU compute",
+			ctx.Bucket(), d, m)
+		return 0
+	}
+	return Unit(units[0].Whole())
 }
 
 func NeedRefund(ctx Context, errs []errors.Error, warns []errors.Error) bool {
