@@ -74,23 +74,6 @@ func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 		this.cover = stmt
 	}
 
-	if this.order != nil {
-		var where expression.Expression
-		if ss, ok := stmt.Subresult().(*algebra.Subselect); ok {
-			where, err = this.getWhere(ss.Where())
-			if err != nil {
-				return nil, err
-			}
-		}
-
-		order := skipFixedOrderTermsAndDedup(this.order, where)
-		if order != nil {
-			this.order = order
-			// if we changed order then we must adjust the stmtOrder too so later operator creation matches
-			stmtOrder = order
-		}
-	}
-
 	qp := plan.NewQueryPlan(nil)
 	err = this.chkBldSubqueries(stmt, qp)
 	if err != nil {
@@ -115,6 +98,13 @@ func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 			cost, cardinality, size, frCost = getWithCost(subOp, with)
 		}
 		subOp = plan.NewWith(with, subOp, cost, cardinality, size, frCost)
+	}
+
+	// if we changed order then we must adjust the stmtOrder too so later operator creation matches
+	if this.hasBuilderFlag(BUILDER_ORDER_MODIFIED) {
+		stmtOrder = this.stmtOrder
+		this.stmtOrder = nil
+		this.unsetBuilderFlag(BUILDER_ORDER_MODIFIED)
 	}
 
 	if stmtOrder == nil && stmtOffset == nil && stmtLimit == nil {
@@ -263,9 +253,10 @@ func skipFixedOrderTermsAndDedup(order *algebra.Order, pred expression.Expressio
 		filterCovers = pred.FilterCovers(filterCovers)
 	}
 
-	sortTerms := make(algebra.SortTerms, 0, len(order.Terms()))
+	origTerms := order.Terms()
+	sortTerms := make(algebra.SortTerms, 0, len(origTerms))
 term_loop:
-	for n, term := range order.Terms() {
+	for n, term := range origTerms {
 		expr := term.Expression()
 		if expr.Static() != nil &&
 			(term.DescendingExpr() != nil && term.DescendingExpr().Static() != nil) &&
@@ -274,7 +265,7 @@ term_loop:
 		}
 
 		for i := 0; i < n; i++ {
-			if expr.EquivalentTo(order.Terms()[i].Expression()) {
+			if expr.EquivalentTo(origTerms[i].Expression()) {
 				// already appears in order by so skip
 				continue term_loop
 			}
@@ -287,6 +278,8 @@ term_loop:
 
 	if len(sortTerms) == 0 {
 		return nil
+	} else if len(sortTerms) == len(origTerms) {
+		return order
 	} else {
 		return algebra.NewOrder(sortTerms)
 	}

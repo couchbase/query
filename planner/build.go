@@ -173,9 +173,10 @@ const (
 	BUILDER_NL_INNER
 	BUILDER_OFFSET_PUSHDOWN // OFFSET is pushed down to index
 	BUILDER_UNDER_HASH
+	BUILDER_ORDER_MODIFIED
 )
 
-const BUILDER_PRESERVED_FLAGS = (BUILDER_PLAN_HAS_ORDER | BUILDER_HAS_EARLY_ORDER)
+const BUILDER_PRESERVED_FLAGS = (BUILDER_PLAN_HAS_ORDER | BUILDER_HAS_EARLY_ORDER | BUILDER_ORDER_MODIFIED)
 const BUILDER_PASSTHRU_FLAGS = (BUILDER_PLAN_SUBQUERY | BUILDER_JOIN_ENUM)
 
 type builder struct {
@@ -214,6 +215,7 @@ type builder struct {
 	lastOp               plan.Operator // last operator built, to get cost/cardinality info
 	aliases              map[string]bool
 	partialSortTermCount int
+	stmtOrder            *algebra.Order // modified Order
 	skipKeyspace         string
 	mustSkipKeys         bool
 	subTimes             map[string]time.Duration

@@ -232,6 +232,15 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 		}
 	}
 
+	if this.order != nil {
+		order := skipFixedOrderTermsAndDedup(this.order, this.filter)
+		if order != this.order {
+			this.order = order
+			this.stmtOrder = order
+			this.setBuilderFlag(BUILDER_ORDER_MODIFIED)
+		}
+	}
+
 	// Identify aggregates for index pushdown for old releases
 	if len(aggs) == 1 && len(group.By()) == 0 {
 	loop:
