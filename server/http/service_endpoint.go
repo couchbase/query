@@ -418,14 +418,19 @@ func (this *HttpEndpoint) ServeHTTP(resp http.ResponseWriter, req *http.Request)
 	// new transactions can't be started as the BEGIN doesn't carry a transaction ID and is ejected here
 	// invalid transaction IDs do pass through here but will be caught in server processing
 	if this.server.ShuttingDown() && request.TxId() == "" {
-		logging.Infof("Incoming request from '%v' rejected during service shutdown.", req.RemoteAddr)
-		if this.server.ShutDown() {
-			request.Fail(errors.NewServiceShutDownError())
+		if util.IsFeatureEnabled(util.GetN1qlFeatureControl(), util.N1QL_PARTIAL_GRACEFUL_SHUTDOWN) {
+			logging.Infof("Request %v from '%v' received during service shutdown and may be terminated before completion.",
+				request.Id(), req.RemoteAddr)
 		} else {
-			request.Fail(errors.NewServiceShuttingDownError())
+			logging.Infof("Incoming request from '%v' rejected during service shutdown.", req.RemoteAddr)
+			if this.server.ShutDown() {
+				request.Fail(errors.NewServiceShutDownError())
+			} else {
+				request.Fail(errors.NewServiceShuttingDownError())
+			}
+			request.Failed(this.server)
+			return
 		}
-		request.Failed(this.server)
-		return
 	}
 
 	this.actives.Put(request)
