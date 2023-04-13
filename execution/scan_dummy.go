@@ -66,11 +66,23 @@ func (this *DummyScan) RunOnce(context *Context, parent value.Value) {
 		av := value.EMPTY_ANNOTATED_OBJECT
 
 		if parent != nil {
-			cv := value.NewScopeValue(_EMPTY_OBJECT, parent)
+			// must use a new empty map as the returned value may be modified downstream
+			cv := value.NewScopeValue(map[string]interface{}{}, parent)
 			av = value.NewAnnotatedValue(cv)
 		}
 
-		this.sendItem(av)
+		if context.UseRequestQuota() {
+			err := context.TrackValueSize(av.Size())
+			if err != nil {
+				context.Error(err)
+				av.Recycle()
+				return
+			}
+		}
+
+		if !this.sendItem(av) {
+			av.Recycle()
+		}
 	})
 }
 
@@ -87,5 +99,3 @@ func (this *DummyScan) Done() {
 		_DUMMYSCAN_OP_POOL.Put(this)
 	}
 }
-
-var _EMPTY_OBJECT = map[string]interface{}{}
