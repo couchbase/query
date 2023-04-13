@@ -27,7 +27,7 @@ type Manager interface {
 }
 
 type ServiceMgr struct {
-	mu *sync.RWMutex
+	sync.RWMutex
 	state
 
 	nodeInfo *service.NodeInfo
@@ -47,10 +47,13 @@ type state struct {
 	changeID string
 	servers  []queryServer
 	eject    []queryServer
+	progress float64
 }
 
 type waiter chan state
 type waiters map[waiter]struct{}
+
+const _MONITOR_POLL_INTERVAL = time.Second
 
 func NewManager(uuid string) Manager {
 	var mgr *ServiceMgr
@@ -63,7 +66,6 @@ func NewManager(uuid string) Manager {
 	}
 
 	mgr = &ServiceMgr{
-		mu: &sync.RWMutex{},
 		state: state{
 			rev:      0,
 			servers:  nil,
@@ -152,83 +154,104 @@ func (m *ServiceMgr) Shutdown() error {
 	return nil
 }
 
-// There are only active tasks on the master node and only whilst others are being gracefully stopped.  Here we rely on the
-// /admin/shutdown REST interface to obtain information on the progress of the remote graceful shutdown
-// Using this saves us from having to establish and handle another communication mechanism to feed back state to the master
-
+// There are only active tasks on the master node and only whilst others are being gracefully stopped.
 func (m *ServiceMgr) GetTaskList(rev service.Revision, cancel service.Cancel) (*service.TaskList, error) {
 	logging.Debuga(func() string { return fmt.Sprintf("ServiceMgr::GetTaskList entry: %v", DecodeRev(rev)) })
-
 	curState, err := m.wait(rev, cancel)
 	if err != nil {
-		logging.Debuga(func() string { return fmt.Sprintf("ServiceMgr::GetTaskList exit: error: %v", err) })
+		logging.Debugf("ServiceMgr::GetTaskList exit: error: %v", err)
 		return nil, err
 	}
-
 	tasks := &service.TaskList{}
-
 	tasks.Rev = EncodeRev(curState.rev)
 	tasks.Tasks = make([]service.Task, 0)
-
-	m.mu.Lock()
-	changeID := m.state.changeID
-	eject := m.eject
-	m.mu.Unlock()
-	if changeID != "" { // master
-		running := 0
-		if eject != nil {
-			for _, e := range eject {
-				if e.nodeInfo.Opaque == nil {
-					e.nodeInfo.Priority = -1
-				}
-				if e.nodeInfo.Priority < 0 {
-					continue
-				}
-				res, err := distributed.RemoteAccess().ExecutePreparedAdminOp(e.nodeInfo.Opaque, "GET", "", nil,
-					distributed.NO_CREDS, "")
-				if res != nil && err == nil {
-					var status struct {
-						Code int32 `json:"code"`
-					}
-					jerr := json.Unmarshal(res, &status)
-					if jerr == nil && errors.ErrorCode(status.Code) != errors.E_SERVICE_SHUT_DOWN {
-						running++
-					} else {
-						e.nodeInfo.Priority = -1
-					}
-				} else {
-					e.nodeInfo.Priority = -1
-				}
-			}
-		}
-		if running == 0 {
+	if curState.changeID != "" { // master
+		if curState.progress < 0.0 {
 			m.updateState(func(s *state) {
 				s.changeID = ""
 				s.eject = nil
 			})
 		} else {
-			m.updateState(func(s *state) {
-				s.eject = eject
-			})
-			progress := 0.1 // consider the initiation the starting 10%
-			if len(eject) > 0 {
-				progress += (float64(len(eject)-running) / float64(len(eject))) * 0.9
-			}
 			task := service.Task{
 				Rev:          EncodeRev(0),
 				ID:           fmt.Sprintf("shutdown/monitor/%s", curState.changeID),
 				Type:         service.TaskTypeRebalance,
 				Status:       service.TaskStatusRunning,
-				Progress:     progress,
+				Progress:     curState.progress,
 				IsCancelable: true, // since it is ignored anyway and ns-server still tries to cancel the task...
 			}
 			tasks.Tasks = append(tasks.Tasks, task)
 		}
 	}
-
-	logging.Debuga(func() string { return fmt.Sprintf("ServiceMgr::GetTaskList exit: %v", tasks) })
-
+	logging.Debugf("ServiceMgr::GetTaskList exit: %v", tasks)
 	return tasks, nil
+}
+
+// Here we rely on the /admin/shutdown REST interface to obtain information on the progress of the remote graceful shutdown
+// Using this saves us from having to establish and handle another communication mechanism to feed back state to the master
+func (m *ServiceMgr) monitorShutdown(changeID string, eject []queryServer) {
+	logging.Debuga(func() string { return fmt.Sprintf("ServiceMgr::monitorShutdown entry: %v - %v", changeID, eject) })
+	if len(eject) == 0 {
+		logging.Debugf("ServiceMgr::monitorShutdown exit - empty ejection list")
+		return
+	}
+	for {
+		m.Lock()
+		cancelled := m.state.changeID != changeID
+		m.Unlock()
+		if cancelled {
+			logging.Debugf("ServiceMgr::monitorShutdown exit - cancelled")
+			return
+		}
+		running := 0
+		for e := range eject {
+			if eject[e].nodeInfo.Opaque == nil {
+				eject[e].nodeInfo.Priority = -1
+			}
+			if eject[e].nodeInfo.Priority < 0 {
+				continue
+			}
+			res, err := distributed.RemoteAccess().ExecutePreparedAdminOp(eject[e].nodeInfo.Opaque, "GET", "", nil,
+				distributed.NO_CREDS, "")
+			if res != nil && err == nil {
+				var status struct {
+					Code int32 `json:"code"`
+				}
+				jerr := json.Unmarshal(res, &status)
+				if jerr == nil && errors.ErrorCode(status.Code) != errors.E_SERVICE_SHUT_DOWN {
+					running++
+				} else {
+					eject[e].nodeInfo.Priority = -1
+				}
+			} else {
+				eject[e].nodeInfo.Priority = -1
+			}
+		}
+		progress := 0.1 + ((float64(len(eject)-running) / float64(len(eject))) * 0.9)
+		m.Lock()
+		cancelled = m.state.changeID != changeID
+		if !cancelled && m.state.progress != progress {
+			m.updateStateLOCKED(func(s *state) {
+				s.eject = eject
+				s.progress = progress
+			})
+		}
+		m.Unlock()
+		if cancelled {
+			logging.Debugf("ServiceMgr::monitorShutdown exit - cancelled")
+			return
+		}
+		if running == 0 {
+			m.updateState(func(s *state) {
+				s.changeID = ""
+				s.eject = nil
+				s.progress = -1.0
+			})
+			break
+		}
+		time.Sleep(_MONITOR_POLL_INTERVAL)
+	}
+	logging.Debugf("ServiceMgr::monitorShutdown exit")
 }
 
 func (m *ServiceMgr) CancelTask(id string, rev service.Revision) error {
@@ -236,8 +259,8 @@ func (m *ServiceMgr) CancelTask(id string, rev service.Revision) error {
 
 	timeout := time.Duration(0)
 	data := "cancel=true"
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	m.Lock()
+	defer m.Unlock()
 
 	currentTask := fmt.Sprintf("shutdown/monitor/%s", m.changeID)
 	if currentTask == id {
@@ -342,7 +365,7 @@ func (m *ServiceMgr) GetCurrentTopology(rev service.Revision, cancel service.Can
 	topology := &service.Topology{}
 
 	topology.Rev = EncodeRev(state.rev)
-	m.mu.Lock()
+	m.Lock()
 	if m.servers != nil && len(m.servers) != 0 {
 		if m.thisHost != "" {
 			checkPrepareOperations(m.servers, "ServiceMgr::GetCurrentTopology")
@@ -353,7 +376,7 @@ func (m *ServiceMgr) GetCurrentTopology(rev service.Revision, cancel service.Can
 	} else {
 		topology.Nodes = append(topology.Nodes, m.nodeInfo.NodeID)
 	}
-	m.mu.Unlock()
+	m.Unlock()
 	topology.IsBalanced = true
 	topology.Messages = nil
 
@@ -400,9 +423,9 @@ func (m *ServiceMgr) PrepareTopologyChange(change service.TopologyChange) error 
 	// for each node we know about, cache its shutdown URL
 	info := make([]rune, 0, len(change.KeepNodes)*64)
 	servers := make([]queryServer, 0)
-	m.mu.Lock()
+	m.Lock()
 	s := m.servers
-	m.mu.Unlock()
+	m.Unlock()
 	for _, n := range change.KeepNodes {
 		var ps interface{}
 		var host string
@@ -491,7 +514,7 @@ func (m *ServiceMgr) StartTopologyChange(change service.TopologyChange) error {
 		return service.ErrNotSupported
 	}
 
-	m.mu.Lock()
+	m.Lock()
 	if m.eject != nil {
 		info := make([]rune, 0, len(m.eject)*33)
 		eject := make([]queryServer, 0, len(m.eject))
@@ -546,45 +569,26 @@ func (m *ServiceMgr) StartTopologyChange(change service.TopologyChange) error {
 			if len(eject) > 0 {
 				s.changeID = change.ID
 				s.eject = eject
+				s.progress = 0.0
 			} else {
 				s.changeID = ""
 				s.eject = nil
+				s.progress = -1.0
 			}
 		})
+		if len(eject) > 0 {
+			go m.monitorShutdown(change.ID, eject)
+		}
 	}
-	m.mu.Unlock()
+	m.Unlock()
 
 	logging.Debugf("ServiceMgr::StartTopologyChange exit")
 	return nil
 }
 
-type Cleanup struct {
-	canceled bool
-	f        func()
-}
-
-func NewCleanup(f func()) *Cleanup {
-	return &Cleanup{
-		canceled: false,
-		f:        f,
-	}
-}
-
-func (c *Cleanup) Run() {
-	if !c.canceled {
-		c.f()
-		c.Cancel()
-	}
-}
-
-func (c *Cleanup) Cancel() {
-	c.canceled = true
-}
-
 func EncodeRev(rev uint64) service.Revision {
 	ext := make(service.Revision, 8)
 	binary.BigEndian.PutUint64(ext, rev)
-
 	return ext
 }
 
@@ -602,58 +606,52 @@ func (m *ServiceMgr) notifyWaitersLOCKED() {
 			ch <- s
 		}
 	}
-
 	m.waiters = make(waiters)
 }
 
 func (m *ServiceMgr) addWaiterLOCKED() waiter {
 	ch := make(waiter, 1)
 	m.waiters[ch] = struct{}{}
-
 	return ch
 }
 
 func (m *ServiceMgr) removeWaiter(w waiter) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
+	m.Lock()
 	delete(m.waiters, w)
+	m.Unlock()
 }
 
 func (m *ServiceMgr) updateState(body func(state *state)) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
+	m.Lock()
 	m.updateStateLOCKED(body)
+	m.Unlock()
 }
 
 func (m *ServiceMgr) updateStateLOCKED(body func(state *state)) {
 	body(&m.state)
 	m.state.rev++
-
 	m.notifyWaitersLOCKED()
 }
 
 func (m *ServiceMgr) wait(rev service.Revision, cancel service.Cancel) (state, error) {
 
-	m.mu.Lock()
-
-	unlock := NewCleanup(func() { m.mu.Unlock() })
-	defer unlock.Run()
+	m.Lock()
 
 	currState := m.copyStateLOCKED()
 
 	if rev == nil {
+		m.Unlock()
 		return currState, nil
 	}
 
 	haveRev := DecodeRev(rev)
 	if haveRev != m.rev {
+		m.Unlock()
 		return currState, nil
 	}
 
 	ch := m.addWaiterLOCKED()
-	unlock.Run()
+	m.Unlock()
 
 	select {
 	case <-cancel:
@@ -666,6 +664,5 @@ func (m *ServiceMgr) wait(rev service.Revision, cancel service.Cancel) (state, e
 
 func (m *ServiceMgr) copyStateLOCKED() state {
 	s := m.state
-
 	return s
 }
