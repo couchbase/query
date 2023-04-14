@@ -358,7 +358,9 @@ func (this *Formalizer) VisitIdentifier(expr *Identifier) (interface{}, error) {
 	} else {
 		keyspaceIdent := NewIdentifier(this.keyspace)
 		keyspaceIdent.SetKeyspaceAlias(true)
-		return NewField(keyspaceIdent, NewFieldName(identifier, expr.CaseInsensitive())), nil
+		field := NewField(keyspaceIdent, NewFieldName(identifier, expr.CaseInsensitive()))
+		field.SetErrorContext(expr.GetErrorContext())
+		return field, nil
 	}
 }
 
