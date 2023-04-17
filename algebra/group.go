@@ -69,7 +69,7 @@ func (this *Group) Formalize(f *expression.Formalizer) error {
 	}
 
 	if this.groupAs != "" {
-		if _, ok := f.Allowed().Field(this.groupAs); !ok {
+		if ok := f.AllowedAlias(this.groupAs, true, false); !ok {
 			f.SetAllowedGroupAsAlias(this.groupAs)
 			f.SetAlias(this.groupAs)
 		} else {

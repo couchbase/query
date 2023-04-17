@@ -402,7 +402,7 @@ func (this *Formalizer) VisitFunction(expr Function) (interface{}, error) {
 				if keyspaceIdent, ok := op.(*Identifier); ok {
 					alias := this.keyspace
 					if this.keyspace == "" {
-						if _, ok = this.Allowed().Field(keyspaceIdent.Alias()); ok {
+						if _, ok = this.allowed.Field(keyspaceIdent.Alias()); ok {
 							alias = keyspaceIdent.Alias()
 						}
 					}
@@ -458,21 +458,27 @@ func (this *Formalizer) PushBindings(bindings Bindings, push bool) (err error) {
 		// check for correlated reference in binding expr
 		correlated := this.CheckCorrelated()
 
-		if ident_val, ok := allowed.Field(b.Variable()); ok {
+		var errContext string
+		if b.Expression() != nil {
+			errContext = b.Expression().ErrorContext()
+		}
+
+		variable := b.Variable()
+		if ident_val, ok := allowed.Field(variable); ok {
 			ident_flags = uint32(ident_val.ActualForIndex().(int64))
 			tmp_flags1 := ident_flags & IDENT_IS_KEYSPACE
 			tmp_flags2 := ident_flags &^ IDENT_IS_KEYSPACE
 			// when sarging index keys, allow variables used in index definition
 			// to be the same as a keyspace alias
 			if !this.indexScope() || tmp_flags1 == 0 || tmp_flags2 != 0 {
-				var errContext string
-				if b.Expression() != nil {
-					errContext = b.Expression().ErrorContext()
-				}
-				err = errors.NewDuplicateVariableError(b.Variable(), errContext)
+				err = errors.NewDuplicateVariableError(variable, errContext)
 				return
 			}
 		} else {
+			if _, ok := this.withs[variable]; ok {
+				err = errors.NewDuplicateVariableError(variable, errContext)
+				return
+			}
 			ident_flags = 0
 		}
 
@@ -488,19 +494,20 @@ func (this *Formalizer) PushBindings(bindings Bindings, push bool) (err error) {
 		aliases.SetField(b.Variable(), ident_val)
 
 		if b.NameVariable() != "" {
-			if ident_val, ok := allowed.Field(b.NameVariable()); ok {
+			variable = b.NameVariable()
+			if ident_val, ok := allowed.Field(variable); ok {
 				ident_flags = uint32(ident_val.ActualForIndex().(int64))
 				tmp_flags1 := ident_flags & IDENT_IS_KEYSPACE
 				tmp_flags2 := ident_flags &^ IDENT_IS_KEYSPACE
 				if !this.indexScope() || tmp_flags1 == 0 || tmp_flags2 != 0 {
-					var errContext string
-					if b.Expression() != nil {
-						errContext = b.Expression().ErrorContext()
-					}
-					err = errors.NewDuplicateVariableError(b.NameVariable(), errContext)
+					err = errors.NewDuplicateVariableError(variable, errContext)
 					return
 				}
 			} else {
+				if _, ok := this.withs[variable]; ok {
+					err = errors.NewDuplicateVariableError(variable, errContext)
+					return
+				}
 				ident_flags = 0
 			}
 
@@ -524,8 +531,8 @@ Restore scope to parent's scope.
 */
 func (this *Formalizer) PopBindings() {
 
-	currLevelAllowed := this.Allowed().GetValue().Fields()
-	currLevelIndentfiers := this.Identifiers().GetValue().Fields()
+	currLevelAllowed := this.allowed.GetValue().Fields()
+	currLevelIndentfiers := this.identifiers.GetValue().Fields()
 
 	this.allowed = this.allowed.Parent().(*value.ScopeValue)
 	this.identifiers = this.identifiers.Parent().(*value.ScopeValue)
@@ -568,16 +575,8 @@ func (this *Formalizer) Keyspace() string {
 	return this.keyspace
 }
 
-func (this *Formalizer) Allowed() *value.ScopeValue {
-	return this.allowed
-}
-
 func (this *Formalizer) Identifiers() *value.ScopeValue {
 	return this.identifiers
-}
-
-func (this *Formalizer) Aliases() *value.ScopeValue {
-	return this.aliases
 }
 
 // Argument must be non-nil
@@ -630,6 +629,31 @@ func (this *Formalizer) SetAllowedSubqTermAlias(alias string) {
 func (this *Formalizer) SetAllowedGroupAsAlias(alias string) {
 	ident_flags := uint32(IDENT_IS_GROUP_AS)
 	this.allowed.SetField(alias, value.NewValue(ident_flags))
+}
+
+func (this *Formalizer) AllowedAlias(alias string, checkWith bool, curScope bool) bool {
+	var allowed value.Value
+	if curScope {
+		// current scope only
+		allowed = this.allowed.GetValue()
+	} else {
+		allowed = this.allowed
+	}
+	if _, ok := allowed.Field(alias); ok {
+		return true
+	}
+	if checkWith {
+		// check WITH alias as well
+		if _, ok := this.withs[alias]; ok {
+			return true
+		}
+	}
+	return false
+}
+
+func (this *Formalizer) HasAlias(alias string) bool {
+	_, ok := this.aliases.Field(alias)
+	return ok
 }
 
 func (this *Formalizer) WithAlias(alias string) bool {

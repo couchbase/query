@@ -151,7 +151,7 @@ func (this *setOp) Formalize(parent *expression.Formalizer) (*expression.Formali
 	terms := this.ResultTerms()
 	f := expression.NewFormalizer("", parent)
 	for _, term := range terms {
-		f.SetAllowedAlias(term.Alias(), true)
+		f.SetAllowedAlias(term.Alias(), false)
 	}
 
 	return f, nil

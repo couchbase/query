@@ -113,14 +113,14 @@ func (this *ExpressionTerm) Formalize(parent *expression.Formalizer) (f *express
 
 		// MB-46856 if the expression path is longer than 1, use the bucket
 		if !isIdentifier && path.IsCollection() {
-			_, ok := parent.Aliases().Field(path.Bucket())
+			ok := parent.HasAlias(path.Bucket())
 			if !ok && this.keyspaceTerm.FromTwoParts() {
-				_, ok = parent.Aliases().Field(path.Scope())
+				ok = parent.HasAlias(path.Scope())
 			}
 			this.isKeyspace = !ok
 		} else {
 			ks := this.keyspaceTerm.Keyspace()
-			_, ok := parent.Aliases().Field(ks)
+			ok := parent.HasAlias(ks)
 			this.isKeyspace = !ok && !parent.WithAlias(ks)
 		}
 	}
@@ -149,8 +149,7 @@ func (this *ExpressionTerm) Formalize(parent *expression.Formalizer) (f *express
 		return nil, err
 	}
 
-	_, ok := parent.Allowed().Field(alias)
-	if ok {
+	if ok := parent.AllowedAlias(alias, alias != ident, false); ok {
 		err = errors.NewDuplicateAliasError("FROM expression", alias+errContext, "semantics.fromExpr.duplicate_alias")
 		return nil, err
 	}
@@ -164,8 +163,7 @@ func (this *ExpressionTerm) Formalize(parent *expression.Formalizer) (f *express
 
 	if ident != "" && parent.WithAlias(ident) {
 		// simple WITH alias
-		_, ok := parent.Allowed().Field(ident)
-		if ok {
+		if ok := parent.AllowedAlias(ident, false, false); ok {
 			err = errors.NewDuplicateWithAliasError("FROM expression", ident+errContext, "semantics.fromExpr.duplicate_with_alias")
 			return nil, err
 		}
