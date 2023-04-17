@@ -800,7 +800,7 @@ func doTask(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af
 		scheduler.DeleteTask(name)
 		return true, nil
 	} else if req.Method == "GET" || req.Method == "POST" {
-		err, isInternal := endpoint.verifyCredentialsFromRequest("system:task_cache", auth.PRIV_SYSTEM_READ, req, af)
+		err, isInternal := endpoint.verifyCredentialsFromRequest("system:tasks_cache", auth.PRIV_SYSTEM_READ, req, af)
 		if err != nil {
 			return nil, err
 		}
@@ -828,13 +828,22 @@ func doTask(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af
 				itemMap["results"] = entry.Results
 			}
 			if entry.Errors != nil {
-				itemMap["errors"] = entry.Errors
+				errors := make([]interface{}, 0, len(entry.Errors))
+				for _, err := range entry.Errors {
+					if err != nil {
+						errors = append(errors, err.Object())
+					}
+				}
+				itemMap["errors"] = errors
 			}
 			if !entry.StartTime.IsZero() {
 				itemMap["startTime"] = entry.StartTime.Format(util.DEFAULT_FORMAT)
 			}
 			if !entry.EndTime.IsZero() {
 				itemMap["stopTime"] = entry.EndTime.Format(util.DEFAULT_FORMAT)
+			}
+			if entry.Description != "" {
+				itemMap["description"] = entry.Description
 			}
 			res = itemMap
 		})
@@ -874,7 +883,13 @@ func doTasks(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, a
 				data[i]["results"] = d.Results
 			}
 			if d.Errors != nil {
-				data[i]["errors"] = d.Errors
+				errors := make([]interface{}, 0, len(d.Errors))
+				for _, err := range d.Errors {
+					if err != nil {
+						errors = append(errors, err.Object())
+					}
+				}
+				data[i]["errors"] = errors
 			}
 			data[i]["submitTime"] = d.PostTime.Format(util.DEFAULT_FORMAT)
 			data[i]["delay"] = d.Delay.String()
@@ -883,6 +898,9 @@ func doTasks(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, a
 			}
 			if !d.EndTime.IsZero() {
 				data[i]["stopTime"] = d.EndTime.Format(util.DEFAULT_FORMAT)
+			}
+			if d.Description != "" {
+				data[i]["description"] = d.Description
 			}
 			i++
 			return true

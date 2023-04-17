@@ -39,8 +39,9 @@ func updateStats(names []string, subClass string, keyspace datastore.Keyspace, c
 	}
 
 	params := newIndexUpdStatParams(keyspace, names)
+	description := keyspace.QualifiedName() + "(" + allNames + ")"
 	err = scheduler.ScheduleTask(sessionName, "update_statistics", subClass, time.Second,
-		updateIndexStats, nil, params, context)
+		updateIndexStats, nil, params, description, context)
 	if err != nil {
 		return errors.NewIndexUpdStatsError(allNames, "error scheduling task", err)
 	}

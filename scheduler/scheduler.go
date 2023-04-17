@@ -44,6 +44,7 @@ type TaskEntry struct {
 	Results      interface{}
 	Errors       []errors.Error
 	QueryContext string
+	Description  string
 
 	timer      *time.Timer
 	parameters interface{}
@@ -109,7 +110,8 @@ func TaskDo(key string, f func(*TaskEntry)) {
 }
 
 // scheduler primitives
-func ScheduleTask(name, class, subClass string, delay time.Duration, exec, stop TaskFunc, parms interface{}, context Context) errors.Error {
+func ScheduleTask(name, class, subClass string, delay time.Duration, exec, stop TaskFunc,
+	parms interface{}, description string, context Context) errors.Error {
 
 	id, err := util.UUIDV5(class+subClass, name)
 	if err != nil {
@@ -127,6 +129,7 @@ func ScheduleTask(name, class, subClass string, delay time.Duration, exec, stop 
 		State:        SCHEDULED,
 		Id:           id,
 		QueryContext: context.QueryContext(),
+		Description:  description,
 		parameters:   parms,
 		context:      context,
 	}

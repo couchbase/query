@@ -265,7 +265,9 @@ func (this *Advisor) scheduleTask(sessionName string, duration time.Duration, co
 				return nil, []errors.Error{errors.NewError(err, "")}
 			}
 			return res, nil
-		}, nil, context)
+		},
+
+		nil, "", context)
 }
 
 func queryContext(context Context) string {

@@ -123,6 +123,9 @@ func (b *tasksCacheKeyspace) Fetch(keys []string, keysMap map[string]value.Annot
 				if node != "" {
 					itemMap["node"] = node
 				}
+				if entry.Description != "" {
+					itemMap["description"] = entry.Description
+				}
 
 				item := value.NewAnnotatedValue(itemMap)
 				item.NewMeta()["keyspace"] = b.fullName
