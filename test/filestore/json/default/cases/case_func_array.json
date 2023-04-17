@@ -85,7 +85,7 @@
   {
      "description":"error for array functions",
      "statements":"SELECT array_vg(LENGTH(title)) FROM default:catalog ORDER BY title",
-     "error": "Invalid function array_vg (near line 1, column 15) (resolving to default:array_vg)"
+     "error": "Invalid function array_vg (resolving to default:array_vg) (near line 1, column 8)"
   },
   {
      "statements":"select ARRAY_CONCAT((ARRAY ol.productId FOR ol IN orderlines END), [id]) AS A FROM default:orders ORDER BY A",

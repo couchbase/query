@@ -57,7 +57,7 @@ func NewAmbiguousReferenceError(ident string, errorContext string) Error {
 
 func NewDuplicateVariableError(variable string, errorContext string) Error {
 	return &err{level: EXCEPTION, ICode: E_DUPLICATE_VARIABLE, IKey: "formalize.duplicate_variable",
-		InternalMsg:    fmt.Sprintf("Duplicate variable: %v%v already in scope.", variable, errorContext),
+		InternalMsg:    fmt.Sprintf("Duplicate variable: '%v' already in scope%s.", variable, errorContext),
 		InternalCaller: CallerN(1)}
 }
 

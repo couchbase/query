@@ -1,28 +1,28 @@
 [
 {
     "statements":"select ARRAY_CONCAT(ARRAY ol.productId FOR ol IN orderlines END) AS A FROM orders WHERE test_id=\"err_cases\" ORDER BY A",
-    "error": "Number of arguments to function ARRAY_CONCAT (near line 1, column 19) must be between 2 and 32767."
+    "error": "Number of arguments to function ARRAY_CONCAT must be between 2 and 32767 (near line 1, column 21)."
 },
 {
     "description":"error for array functions",
     "statements":"SELECT array_vg(LENGTH(id)) FROM orders WHERE test_id=\"err_cases\" ORDER BY id",
-    "error": "Invalid function array_vg (near line 1, column 15) (resolving to dimestore:array_vg)"
+    "error": "Invalid function array_vg (resolving to dimestore:array_vg) (near line 1, column 8)"
 },
 {
 	  "statements": "SELECT META(1,2) FROM orders AS ord UNNEST ord.lineItems.product AS prod WHERE test_id=\"err_cases\"",
-    "error": "Number of arguments to function META (near line 1, column 11) must be between 0 and 1."
+    "error": "Number of arguments to function META must be between 0 and 1 (near line 1, column 13)."
 },
 {
     "statements": "SELECT id, custId AS id FROM orders WHERE test_id=\"err_cases\" ORDER BY title",
-    "error": "Duplicate result alias id (near line 1, column 18)."
+    "error": "Duplicate result alias 'id' (near line 1, column 19)."
 },
 {
     "statements": "SELECT orders.id, C.id, C.type FROM orders AS C WHERE test_id=\"err_cases\" ORDER BY orders.id",
-    "error": "Duplicate result alias id (near line 1, column 20)."
+    "error": "Duplicate result alias 'id' (near line 1, column 21)."
 },
 {
     "statements": "SELECT id, orderlines[0].productId AS id, orderlines[0].productId AS id, id  FROM orders WHERE orderlines[0].qty=1 and orderlines[1].qty>1 and test_id=\"err_cases\" ORDER BY id",
-    "error": "Duplicate result alias id (near line 1, column 25)."
+    "error": "Duplicate result alias 'id' (near line 1, column 36)."
 },
 
 {
@@ -32,7 +32,7 @@
 
 {
     "statements": "SELECT id AS `$2`, custId AS `$2` FROM orders WHERE test_id=\"err_cases\" ORDER BY `$2` LIMIT 1",
-    "error": "Duplicate result alias $2 (near line 1, column 26)."
+    "error": "Duplicate result alias '$2' (near line 1, column 27)."
 }
 ]
 

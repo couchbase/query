@@ -34,7 +34,7 @@ keyspace term contains a name or alias.
 func (this *ScopeRef) Formalize() (f *expression.Formalizer, err error) {
 	keyspace := this.Alias()
 	if keyspace == "" {
-		err = errors.NewNoTermNameError("Keyspace", "semantics.keyspace.reference_requires_name_or_alias")
+		err = errors.NewNoTermNameError("Keyspace", "", "semantics.keyspace.reference_requires_name_or_alias")
 		return
 	}
 

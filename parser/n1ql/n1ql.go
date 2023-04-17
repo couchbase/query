@@ -16,6 +16,7 @@ import (
 
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/logging"
 )
@@ -212,6 +213,20 @@ func (this *lexer) Remainder(offset int) string {
 	return strings.TrimLeft(this.text[offset:], " \t")
 }
 
+func (this *lexer) ErrorWithContext(s string, line int, column int) {
+	if line != 0 {
+		ectx := errors.NewErrorContext(line, column).Error()
+		if ectx != "" {
+			if strings.HasSuffix(s, ".") {
+				s = s[:len(s)-1] + ectx + "."
+			} else {
+				s += ectx
+			}
+		}
+	}
+	this.Error(s)
+}
+
 func (this *lexer) Error(s string) {
 	if s == "syntax error" && this.stop {
 		return
@@ -294,10 +309,10 @@ func (this *lexer) getContextFor(contextLine, contextColumn int) string {
 	return ""
 }
 
-func (this *lexer) FatalError(s string) int {
+func (this *lexer) FatalError(s string, line int, column int) int {
 	this.stop = true
 	this.nex.Stop()
-	this.Error(s)
+	this.ErrorWithContext(s, line, column)
 	return 1
 }
 

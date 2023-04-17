@@ -148,7 +148,7 @@
     {
         "testcase": "MERGE statement with USE KEY hint on target",
         "statements":"MERGE INTO shellTest t USE KEYS [ \"test21_merge\", \"test22_merge\" ] USING shellTest s ON t.c21 = s.c11 WHEN NOT MATCHED THEN INSERT (KEY REPLACE(meta(s).id, \"test1\", \"test2\"), VALUE {\"c21\": s.c11, \"c22\": s.c12 + s.c13, \"type\": \"target\", \"test_id\": s.test_id, \"inserted\": true})",
-        "error": "Keyspace reference cannot have USE KEYS hint in MERGE statement - line 1, column 68, near 'e\", \"test22_merge\" ]', at: USING"
+        "error": "Keyspace reference cannot have USE KEYS hint in MERGE statement (near line 1, column 24)"
     },
     {
         "testcase": "MERGE statement (with ON KEY clause) with USE INDEX hint on target",

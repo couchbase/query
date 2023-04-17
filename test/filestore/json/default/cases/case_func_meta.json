@@ -51,7 +51,7 @@
     },
    {
         "statements": "SELECT  META() as meta_c FROM default:contacts AS contact UNNEST contact.children AS child WHERE contact.name = \"dave\"",
-        "error" : "META() (near line 1, column 15) in query with multiple FROM terms requires an argument."
+        "error" : "META() in query with multiple FROM terms requires an argument (near line 1, column 9)."
     },
      {
         "statements": "SELECT BASE64(contacts) AS b64 FROM default:contacts ORDER BY b64",

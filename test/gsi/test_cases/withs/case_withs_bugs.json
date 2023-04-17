@@ -88,7 +88,7 @@
     {
 	"testcase": "MB-44279 Part 1",
         "statements":"WITH a1 AS ([{\"EffectiveDate\": \"2021-01-27\"}, {\"EffectiveDate\": \"2021-01-28\"}]) SELECT a1, r FROM a1 UNNEST (SELECT d.EffectiveDate FROM a1 AS d) AS r",
-	"error": "Duplicate FROM expression WITH alias a1 (near line 1, column 140)"
+	"error": "Duplicate WITH alias reference in FROM expression: 'a1' (near line 1, column 138)"
     },
     {
 	"testcase": "MB-44279 Part 2",
@@ -270,27 +270,27 @@
     {
         "testcase": "MB-56431, part 1, KeyspaceTerm alias conflict with WITH alias",
         "statements":"WITH a AS ([20, 40]) SELECT a FROM shellTest AS a WHERE a.c12 = 30 AND a.type = \"left\"",
-        "error": "Duplicate FROM alias a"
+        "error": "Duplicate FROM alias 'a'"
     },
     {
         "testcase": "MB-56431, part 2, ExpressionTerm alias conflict with WITH alias",
         "statements":"WITH a AS ([20, 40]) SELECT a FROM [ {\"c12\": 30, \"type\": \"left\"} ] AS a WHERE a.c12 = 30 AND a.type = \"left\"",
-        "error": "Duplicate FROM expression alias a (near line 1, column 65)"
+        "error": "Duplicate FROM expression alias 'a' (near line 1, column 68)"
     },
     {
         "testcase": "MB-56431, part 3, SubqueryTerm alias conflict with WITH alias",
         "statements":"WITH a AS ([20, 40]) SELECT a FROM (SELECT c12, type FROM shellTest) AS a WHERE a.c12 = 30 AND a.type = \"left\"",
-        "error": "Duplicate subquery alias a"
+        "error": "Duplicate subquery alias 'a' (near line 1, column 70)"
     },
     {
         "testcase": "MB-56431, part 4, binding variable conflict with WITH alias",
         "statements":"WITH a AS ([20, 40]) SELECT c11 FROM shellTest AS st WHERE st.c12 = 30 AND st.type = \"left\" AND ANY a IN st.a11 SATISFIES a = 3 END",
-        "error": "Duplicate variable: a (near line 1, column 108) already in scope."
+        "error": "Duplicate variable: 'a' already in scope (near line 1, column 101)."
     },
     {
         "testcase": "MB-56431, part 5, Unnest alias conflict with WITH alias",
         "statements":"WITH a AS ([20, 40]) SELECT a FROM shellTest AS st UNNEST st.a11 AS a WHERE st.c12 = 30 AND st.type = \"left\"",
-        "error": "Duplicate UNNEST alias a"
+        "error": "Duplicate UNNEST alias 'a' (near line 1, column 66)"
     }
 ]
 

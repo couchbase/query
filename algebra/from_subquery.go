@@ -15,18 +15,23 @@ import (
 )
 
 type SubqueryTerm struct {
-	subquery    *Select
-	as          string
-	joinHint    JoinHint
-	property    uint32
-	correlation map[string]uint32
+	subquery     *Select
+	as           string
+	joinHint     JoinHint
+	property     uint32
+	correlation  map[string]uint32
+	errorContext expression.ErrorContext
 }
 
 /*
 Constructor.
 */
 func NewSubqueryTerm(subquery *Select, as string, joinHint JoinHint) *SubqueryTerm {
-	return &SubqueryTerm{subquery, as, joinHint, 0, nil}
+	return &SubqueryTerm{
+		subquery: subquery,
+		as:       as,
+		joinHint: joinHint,
+	}
 }
 
 /*
@@ -77,12 +82,12 @@ duplicate aliases.
 func (this *SubqueryTerm) Formalize(parent *expression.Formalizer) (f *expression.Formalizer, err error) {
 	alias := this.Alias()
 	if alias == "" {
-		err = errors.NewNoTermNameError("FROM Subquery", "semantics.subquery.requires_name_or_alias")
+		err = errors.NewNoTermNameError("FROM Subquery", this.errorContext.String(), "semantics.subquery.requires_name_or_alias")
 		return
 	}
 
 	if ok := parent.AllowedAlias(alias, true, false); ok {
-		err = errors.NewDuplicateAliasError("subquery", alias, "semantics.subquery.duplicate_alias")
+		err = errors.NewDuplicateAliasError("subquery", alias, this.errorContext.String(), "semantics.subquery.duplicate_alias")
 		return nil, err
 	}
 
@@ -272,4 +277,12 @@ func (this *SubqueryTerm) SetLateralJoin() {
 
 func (this *SubqueryTerm) UnsetLateralJoin() {
 	this.property &^= TERM_LATERAL_JOIN
+}
+
+func (this *SubqueryTerm) SetErrorContext(line int, column int) {
+	this.errorContext.Set(line, column)
+}
+
+func (this *SubqueryTerm) ErrorContext() string {
+	return this.errorContext.String()
 }

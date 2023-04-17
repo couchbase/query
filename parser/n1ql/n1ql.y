@@ -109,6 +109,10 @@ optimHints       *algebra.OptimHints
 
 // token offset into the statement
 tokOffset        int
+
+// token location in the statement
+line   int
+column int
 }
 
 %token _ERROR_  // used by the scanner to flag errors
@@ -426,7 +430,7 @@ tokOffset        int
 %type <bindings>         opt_let let with
 %type <expr>             opt_where where opt_filter
 %type <group>            opt_group group
-%type <s>                opt_group_as
+%type <expr>             opt_group_as
 %type <bindings>         opt_letting letting
 %type <expr>             opt_having having
 %type <resultTerm>       project
@@ -700,19 +704,19 @@ INFER expr opt_infer_using opt_with_clause
     case *expression.Field:
         p := other.Path()
         if len(p) == 2 {
-	    pth, err = algebra.NewPathFromElementsWithContext([]string{ p[0], p[1] }, yylex.(*lexer).Namespace(),
+        pth, err = algebra.NewPathFromElementsWithContext([]string{ p[0], p[1] }, yylex.(*lexer).Namespace(),
                                  yylex.(*lexer).QueryContext())
             if err != nil {
-                return yylex.(*lexer).FatalError(err.Error())
+                return yylex.(*lexer).FatalError(err.Error(), $<line>2, $<column>2)
             }
-	} else if len(p) == 3 {
+        } else if len(p) == 3 {
             pth = algebra.NewPathLong(yylex.(*lexer).Namespace(), p[0], p[1], p[2])
-	} else {
-            yylex.(*lexer).FatalError("syntax error")
-	}
+        } else {
+            yylex.(*lexer).FatalError("syntax error", $<line>2, $<column>2)
+        }
         $$ = algebra.NewInferKeyspace(algebra.NewKeyspaceRefFromPath(pth, ""), $3, $4)
     default:
-	$$ = algebra.NewInferExpression($2, $3, $4)
+        $$ = algebra.NewInferExpression($2, $3, $4)
     }
 }
 ;
@@ -857,7 +861,7 @@ select_terms setop select_term
 {
     $$ = algebra.NewSetOp($1, $3, $2)
     if $$ == nil {
-       yylex.Error("Unexpected Set Operation"+yylex.(*lexer).ErrorContext())
+       yylex.(*lexer).ErrorWithContext("Unexpected Set Operation",$<line>2,$<column>2)
     }
 }
 |
@@ -867,7 +871,7 @@ subquery_expr setop select_term
     left_term := algebra.NewSelectTerm($1.Select())
     $$ = algebra.NewSetOp(left_term, $3, $2)
     if $$ == nil {
-       yylex.Error("Unexpected Set Operation"+yylex.(*lexer).ErrorContext())
+       yylex.(*lexer).ErrorWithContext("Unexpected Set Operation",$<line>2,$<column>2)
     }
 }
 ;
@@ -1096,7 +1100,7 @@ project:
 STAR
 {
     $$ = algebra.NewResultTerm(expression.SELF, true, "")
-    $$.Expression().ExprBase().SetErrorContext(yylex.(*lexer).nex.Line()+1,yylex.(*lexer).nex.Column())
+    $$.Expression().ExprBase().SetErrorContext($<line>1,$<column>1)
 }
 |
 expr DOT STAR
@@ -1104,9 +1108,9 @@ expr DOT STAR
     switch e := $1.(type) {
       case *expression.All:
         if e.Distinct() {
-          return yylex.(*lexer).FatalError("syntax error - DISTINCT out of place")
+          return yylex.(*lexer).FatalError("syntax error - DISTINCT out of place", $<line>1, $<column>1)
         } else {
-          return yylex.(*lexer).FatalError("syntax error - ALL out of place")
+          return yylex.(*lexer).FatalError("syntax error - ALL out of place", $<line>1, $<column>1)
         }
     }
     $$ = algebra.NewResultTerm($1, true, "")
@@ -1120,14 +1124,15 @@ expr opt_as_alias
     switch e := $1.(type) {
       case *expression.All:
         if e.Distinct() {
-          return yylex.(*lexer).FatalError("syntax error - DISTINCT out of place")
+          return yylex.(*lexer).FatalError("syntax error - DISTINCT out of place", $<line>1, $<column>1)
         } else {
-          return yylex.(*lexer).FatalError("syntax error - ALL out of place")
+          return yylex.(*lexer).FatalError("syntax error - ALL out of place", $<line>1, $<column>1)
         }
     }
     $$ = algebra.NewResultTerm($1, false, $2)
-    if $1 != nil {
-        $$.Expression().ExprBase().SetErrorContext($1.ExprBase().GetErrorContext())
+    $$.Expression().ExprBase().SetErrorContext($1.ExprBase().GetErrorContext())
+    if $2 != "" {
+        $$.Expression().ExprBase().SetAliasErrorContext($<line>2,$<column>2)
     }
 }
 ;
@@ -1192,8 +1197,9 @@ from_terms COMMA from_term
         rterm.SetCommaJoin()
         $$ = algebra.NewAnsiJoin($1, false, rterm, nil)
     default:
-        yylex.Error(fmt.Sprintf("Right side (%s%s) of a COMMA in a FROM clause must be a simple term or sub-query", $3.String(),
-            $3.Expressions()[0].ExprBase().ErrorContext()))
+        yylex.(*lexer).ErrorWithContext(
+            fmt.Sprintf("Right side (%s) of a COMMA in a FROM clause must be a simple term or sub-query", $3.String()),
+            $<line>3, $<column>3)
     }
 }
 |
@@ -1207,8 +1213,9 @@ from_terms COMMA LATERAL from_term
         rterm.SetLateralJoin()
         $$ = algebra.NewAnsiJoin($1, false, rterm, nil)
     default:
-        yylex.Error(fmt.Sprintf("Right side (%s%s) of a COMMA in a FROM clause must be a simple term or sub-query", $4.String(),
-            $4.Expressions()[0].ExprBase().ErrorContext()))
+        yylex.(*lexer).ErrorWithContext(
+            fmt.Sprintf("Right side (%s) of a COMMA in a FROM clause must be a simple term or sub-query", $4.String()),
+            $<line>4, $<column>4)
     }
 }
 ;
@@ -1223,7 +1230,7 @@ from_term opt_join_type JOIN simple_from_term on_keys
 {
     ksterm := algebra.GetKeyspaceTerm($4)
     if ksterm == nil {
-        yylex.Error("JOIN must be done on a keyspace"+yylex.(*lexer).ErrorContext())
+        yylex.(*lexer).ErrorWithContext("JOIN must be done on a keyspace", $<line>4, $<column>4)
     } else {
         ksterm.SetJoinKeys($5)
         ksterm.SetValidateKeys($5.HasExprFlag(expression.EXPR_VALIDATE_KEYS))
@@ -1233,14 +1240,15 @@ from_term opt_join_type JOIN simple_from_term on_keys
 |
 from_term opt_join_type JOIN LATERAL simple_from_term on_keys
 {
-    return yylex.(*lexer).FatalError(fmt.Sprintf("LATERAL cannot be specified in lookup join with ON KEYS clause (%s)",$5.Alias())+yylex.(*lexer).ErrorContext())
+    return yylex.(*lexer).FatalError(fmt.Sprintf("LATERAL cannot be specified in lookup join with ON KEYS clause (%s)",
+      $5.Alias()),$<line>4,$<column>4)
 }
 |
 from_term opt_join_type JOIN simple_from_term on_key FOR IDENT
 {
     ksterm := algebra.GetKeyspaceTerm($4)
     if ksterm == nil {
-        yylex.Error("JOIN must be done on a keyspace"+yylex.(*lexer).ErrorContext())
+        yylex.(*lexer).ErrorWithContext("JOIN must be done on a keyspace", $<line>4, $<column>4)
     } else {
         ksterm.SetIndexJoinNest()
         ksterm.SetJoinKeys($5)
@@ -1251,14 +1259,15 @@ from_term opt_join_type JOIN simple_from_term on_key FOR IDENT
 |
 from_term opt_join_type JOIN LATERAL simple_from_term on_key FOR IDENT
 {
-    return yylex.(*lexer).FatalError(fmt.Sprintf("LATERAL cannot be specified in index join with ON KEY...FOR clause (%s)",$5.Alias())+yylex.(*lexer).ErrorContext())
+    return yylex.(*lexer).FatalError(fmt.Sprintf("LATERAL cannot be specified in index join with ON KEY...FOR clause (%s)",
+      $5.Alias()),$<line>4,$<column>4)
 }
 |
 from_term opt_join_type NEST simple_from_term on_keys
 {
     ksterm := algebra.GetKeyspaceTerm($4)
     if ksterm == nil {
-        yylex.Error("NEST must be done on a keyspace"+yylex.(*lexer).ErrorContext())
+        yylex.(*lexer).ErrorWithContext("NEST must be done on a keyspace", $<line>4, $<column>4)
     } else {
         ksterm.SetJoinKeys($5)
         ksterm.SetValidateKeys($5.HasExprFlag(expression.EXPR_VALIDATE_KEYS))
@@ -1268,14 +1277,15 @@ from_term opt_join_type NEST simple_from_term on_keys
 |
 from_term opt_join_type NEST LATERAL simple_from_term on_keys
 {
-    return yylex.(*lexer).FatalError(fmt.Sprintf("LATERAL cannot be specified in lookup nest with ON KEYS clause (%s)",$5.Alias())+yylex.(*lexer).ErrorContext())
+    return yylex.(*lexer).FatalError(fmt.Sprintf("LATERAL cannot be specified in lookup nest with ON KEYS clause (%s)",
+      $5.Alias()),$<line>4,$<column>4)
 }
 |
 from_term opt_join_type NEST simple_from_term on_key FOR IDENT
 {
     ksterm := algebra.GetKeyspaceTerm($4)
     if ksterm == nil {
-        yylex.Error("NEST must be done on a keyspace"+yylex.(*lexer).ErrorContext())
+        yylex.(*lexer).ErrorWithContext("NEST must be done on a keyspace", $<line>4, $<column>4)
     } else {
         ksterm.SetIndexJoinNest()
         ksterm.SetJoinKeys($5)
@@ -1286,11 +1296,15 @@ from_term opt_join_type NEST simple_from_term on_key FOR IDENT
 |
 from_term opt_join_type NEST LATERAL simple_from_term on_key FOR IDENT
 {
-    return yylex.(*lexer).FatalError(fmt.Sprintf("LATERAL cannot be specified in index nest with ON KEY...FOR clause (%s)",$5.Alias())+yylex.(*lexer).ErrorContext())
+    return yylex.(*lexer).FatalError(fmt.Sprintf("LATERAL cannot be specified in index nest with ON KEY...FOR clause (%s)",
+      $5.Alias()),$<line>4,$<column>4)
 }
 |
 from_term opt_join_type unnest expr opt_as_alias
 {
+    if $5 != "" {
+        $4.ExprBase().SetAliasErrorContext($<line>5, $<column>5)
+    }
     $$ = algebra.NewUnnest($1, $2, $4, $5)
 }
 |
@@ -1328,7 +1342,8 @@ simple_from_term RIGHT opt_outer JOIN simple_from_term ON expr
 |
 simple_from_term RIGHT opt_outer JOIN LATERAL simple_from_term ON expr
 {
-    return yylex.(*lexer).FatalError(fmt.Sprintf("LATERAL cannot be specified in RIGHT OUTER JOIN (%s)",$6.Alias())+yylex.(*lexer).ErrorContext())
+    return yylex.(*lexer).FatalError(fmt.Sprintf("LATERAL cannot be specified in RIGHT OUTER JOIN (%s)",
+      $6.Alias()),$<line>5,$<column>5)
 }
 ;
 
@@ -1340,34 +1355,43 @@ keyspace_term
 |
 expr opt_as_alias opt_use
 {
+    l := $<line>1
+    c := $<column>1
+    if $2 != "" {
+        l = $<line>2
+        c = $<column>2
+        $1.ExprBase().SetAliasErrorContext(l, c)
+    }
     isExpr := false
     switch other := $1.(type) {
         case *algebra.Subquery:
             if $2 == "" {
-                return yylex.(*lexer).FatalError(fmt.Sprintf("Subquery%s in FROM clause must have an alias.",
-                    $1.ErrorContext()))
+                return yylex.(*lexer).FatalError("Subquery in FROM clause must have an alias.", $<line>1, $<column>1)
             }
             if $3.Keys() != nil || $3.Indexes() != nil {
-                return yylex.(*lexer).FatalError(fmt.Sprintf("FROM Subquery cannot have USE KEYS or USE INDEX%s.",
-                    $1.ErrorContext()))
+                return yylex.(*lexer).FatalError("FROM Subquery cannot have USE KEYS or USE INDEX.", $<line>3, $<column>3)
             }
-            $$ = algebra.NewSubqueryTerm(other.Select(), $2, $3.JoinHint())
+            sqterm := algebra.NewSubqueryTerm(other.Select(), $2, $3.JoinHint())
+            sqterm.SetErrorContext(l, c)
+            $$ = sqterm
         case *expression.Identifier:
             ksterm := algebra.NewKeyspaceTermFromPath(algebra.NewPathWithContext(other.Alias(), yylex.(*lexer).Namespace(),
                 yylex.(*lexer).QueryContext()), $2, $3.Keys(), $3.Indexes())
             ksterm.SetValidateKeys($3.ValidateKeys())
+            ksterm.SetErrorContext(l, c)
             $$ = algebra.NewExpressionTerm(other, $2, ksterm, other.Parenthesis() == false, $3.JoinHint())
         case *algebra.NamedParameter, *algebra.PositionalParameter:
             if $3.Indexes() == nil {
                 if $3.Keys() != nil {
-                    $$ = algebra.NewKeyspaceTermFromExpression(other, $2, $3.Keys(), $3.Indexes(), $3.JoinHint())
-                    $$.(*algebra.KeyspaceTerm).SetValidateKeys($3.ValidateKeys())
+                    ksterm := algebra.NewKeyspaceTermFromExpression(other, $2, $3.Keys(), $3.Indexes(), $3.JoinHint())
+                    ksterm.SetValidateKeys($3.ValidateKeys())
+                    ksterm.SetErrorContext(l, c)
+                    $$ = ksterm
                 } else {
                     $$ = algebra.NewExpressionTerm(other, $2, nil, false, $3.JoinHint())
                 }
             } else {
-                return yylex.(*lexer).FatalError(fmt.Sprintf("FROM <placeholder>%s cannot have USE INDEX.",
-                    $1.ErrorContext()))
+                return yylex.(*lexer).FatalError("FROM <placeholder> cannot have USE INDEX.", $<line>1, $<column>1)
             }
         case *expression.Field:
             path := other.Path()
@@ -1380,12 +1404,14 @@ expr opt_as_alias opt_use
                     ksterm := algebra.NewKeyspaceTermFromPath(longPath, $2, $3.Keys(), $3.Indexes())
                     ksterm.SetFromTwoParts()
                     ksterm.SetValidateKeys($3.ValidateKeys())
+                    ksterm.SetErrorContext(l, c)
                     $$ = algebra.NewExpressionTerm(other, $2, ksterm, other.Parenthesis() == false, $3.JoinHint())
                 }
             } else if len(path) == 3 {
                 ksterm := algebra.NewKeyspaceTermFromPath(algebra.NewPathLong(yylex.(*lexer).Namespace(), path[0], path[1],
                     path[2]), $2, $3.Keys(), $3.Indexes())
                 ksterm.SetValidateKeys($3.ValidateKeys())
+                ksterm.SetErrorContext(l, c)
                 $$ = algebra.NewExpressionTerm(other, $2, ksterm, other.Parenthesis() == false, $3.JoinHint())
             } else {
                 isExpr = true
@@ -1397,8 +1423,7 @@ expr opt_as_alias opt_use
         if $3.Keys() == nil && $3.Indexes() == nil {
             $$ = algebra.NewExpressionTerm($1, $2, nil, false, $3.JoinHint())
         } else {
-            return yylex.(*lexer).FatalError(fmt.Sprintf("FROM Expression cannot have USE KEYS or USE INDEX%s.",
-                $1.ErrorContext()))
+            return yylex.(*lexer).FatalError("FROM Expression cannot have USE KEYS or USE INDEX.", $<line>1, $<column>1)
         }
     }
 }
@@ -1415,6 +1440,11 @@ keyspace_path opt_as_alias opt_use
 {
     ksterm := algebra.NewKeyspaceTermFromPath($1, $2, $3.Keys(), $3.Indexes())
     ksterm.SetValidateKeys($3.ValidateKeys())
+    if $2 != "" {
+        ksterm.SetErrorContext($<line>2, $<column>2)
+    } else {
+        ksterm.SetErrorContext($<line>1, $<column>1)
+    }
     if $3.JoinHint() != algebra.JOIN_HINT_NONE {
         ksterm.SetJoinHint($3.JoinHint())
     }
@@ -1462,8 +1492,7 @@ IDENT
 {
   $$ = strings.TrimSpace($1)
   if $$ != $1 || $$ == "" {
-    return yylex.(*lexer).FatalError(fmt.Sprintf("Invalid identifier '%v'%s", $1,
-      errors.NewErrorContext(yylex.(*lexer).nex.Line()+1,yylex.(*lexer).nex.Column()).Error()))
+    return yylex.(*lexer).FatalError(fmt.Sprintf("Invalid identifier '%v'", $1), $<line>1, $<column>1)
   }
 }
 ;
@@ -1682,6 +1711,7 @@ binding:
 alias EQ expr
 {
     $$ = expression.NewSimpleBinding($1, $3)
+    $$.SetErrorContext($<line>1, $<column>1)
 }
 ;
 
@@ -1718,6 +1748,7 @@ with_term:
 alias AS paren_expr
 {
     $$ = expression.NewSimpleBinding($1, $3)
+    $$.SetErrorContext($<line>1, $<column>1)
     $$.SetStatic(true)
 }
 ;
@@ -1742,7 +1773,7 @@ where:
 WHERE expr
 {
     $$ = $2
-    $$.ExprBase().SetErrorContext(yylex.(*lexer).nex.Line()+1,yylex.(*lexer).nex.Column())
+    $$.ExprBase().SetErrorContext($<line>2,$<column>2)
 }
 ;
 
@@ -1765,7 +1796,15 @@ group
 group:
 GROUP BY group_terms opt_group_as opt_letting opt_having
 {
-    $$ = algebra.NewGroup($3, $5, $6, $4)
+    as := ""
+    if $4 != nil {
+        as = $4.Alias()
+    }
+    g := algebra.NewGroup($3, $5, $6, as)
+    if $4 != nil {
+        g.SetAsErrorContext($4.GetErrorContext())
+    }
+    $$ = g
 }
 |
 letting
@@ -1789,6 +1828,9 @@ group_terms COMMA group_term
 group_term:
 expr opt_as_alias
 {
+    if $2 != "" {
+        $1.ExprBase().SetAliasErrorContext($<line>2,$<column>2)
+    }
     $$ = algebra.NewGroupTerm($1, $2)
 }
 ;
@@ -1822,19 +1864,20 @@ having:
 HAVING expr
 {
     $$ = $2
-    $$.ExprBase().SetErrorContext(yylex.(*lexer).nex.Line()+1,yylex.(*lexer).nex.Column())
+    $$.ExprBase().SetErrorContext($<line>2,$<column>2)
 }
 ;
 
 opt_group_as:
 /* empty */
 {
-    $$ = ""
+    $$ = nil
 }
 |
 GROUP AS IDENT
 {
-    $$ = $3
+    $$ = expression.NewIdentifier($3)
+    $$.ExprBase().SetErrorContext($<line>3, $<column>3)
 }
 ;
 
@@ -1876,7 +1919,7 @@ sort_term:
 expr opt_dir opt_order_nulls
 {
     $$ = algebra.NewSortTerm($1, $2, $3)
-    $$.Expression().ExprBase().SetErrorContext(yylex.(*lexer).nex.Line()+1,yylex.(*lexer).nex.Column())
+    $$.Expression().ExprBase().SetErrorContext($<line>1,$<column>1)
 }
 ;
 
@@ -2006,10 +2049,9 @@ keyspace_name opt_as_alias
 |
 path_part DOT path_part opt_as_alias
 {
-    path, err := algebra.NewPathFromElementsWithContext([]string{ $1, $3 }, yylex.(*lexer).Namespace(),
-		 yylex.(*lexer).QueryContext())
+    path, err := algebra.NewPathFromElementsWithContext([]string{$1,$3}, yylex.(*lexer).Namespace(), yylex.(*lexer).QueryContext())
     if err != nil {
-	return yylex.(*lexer).FatalError(err.Error())
+      return yylex.(*lexer).FatalError(err.Error(), $<line>1, $<column>1)
     }
     $$ = algebra.NewKeyspaceRefFromPath(path, $4)
 }
@@ -2019,7 +2061,7 @@ keyspace_path opt_as_alias
     $$ = algebra.NewKeyspaceRefFromPath($1, $2)
 }
 |
-path_part DOT path_part DOT keyspace_name  opt_as_alias
+path_part DOT path_part DOT keyspace_name opt_as_alias
 {
     path := algebra.NewPathLong(yylex.(*lexer).Namespace(), $1, $3, $5)
     $$ = algebra.NewKeyspaceRefFromPath(path, $6)
@@ -2034,6 +2076,9 @@ simple_keyspace_ref
 |
 param_expr opt_as_alias
 {
+    if $2 != "" {
+        $1.ExprBase().SetAliasErrorContext($<line>2,$<column>2)
+    }
     $$ = algebra.NewKeyspaceRefFromExpression($1, $2)
 }
 ;
@@ -2200,12 +2245,12 @@ UPSERT INTO keyspace_ref LPAREN key_val_options_expr_header RPAREN fullselect op
  *************************************************/
 
 delete:
-DELETE opt_optim_hints FROM keyspace_ref opt_use_del_upd opt_where limit opt_offset opt_returning            /* LIMIT clause precedes OFFSET clause */
+DELETE opt_optim_hints FROM keyspace_ref opt_use_del_upd opt_where limit opt_offset opt_returning /* LIMIT precedes OFFSET */
 {
   $$ = algebra.NewDelete($4, $5.Keys(), $5.Indexes(), $6, $7, $8, $9, $2, $5.ValidateKeys())
 }
 |
-DELETE opt_optim_hints FROM keyspace_ref opt_use_del_upd opt_where offset opt_limit opt_returning           /* OFFSET clause precedes LIMIT clause */
+DELETE opt_optim_hints FROM keyspace_ref opt_use_del_upd opt_where offset opt_limit opt_returning /* OFFSET precedes LIMIT */
 {
   $$ = algebra.NewDelete($4, $5.Keys(), $5.Indexes(), $6, $8, $7, $9, $2, $5.ValidateKeys())
 }
@@ -2271,7 +2316,7 @@ function_meta_expr DOT path EQ expr
     if $1 != nil && algebra.IsValidMetaMutatePath($3){
          $$ = algebra.NewSetTerm($3, $5, nil, $1)
     } else if $1 != nil {
-         return yylex.(*lexer).FatalError(fmt.Sprintf("SET clause has invalid path %s%s",  $3.String(), $3.ErrorContext()))
+         return yylex.(*lexer).FatalError(fmt.Sprintf("SET clause has invalid path %s", $3.String()), $<line>3, $<column>3)
     }
 }
 ;
@@ -2285,7 +2330,7 @@ function_name LPAREN opt_exprs RPAREN
     if ok && strings.ToLower(fname) == "meta" && len($3) >= f.MinArgs() && len($3) <= f.MaxArgs() {
          $$ = f.Constructor()($3...)
     } else {
-         return yylex.(*lexer).FatalError(fmt.Sprintf("Invalid arguments to function %s%s", fname, $1.ErrorContext()))
+         return yylex.(*lexer).FatalError(fmt.Sprintf("Invalid arguments to function %s", fname), $<line>3, $<column>3)
     }
 }
 ;
@@ -2337,21 +2382,25 @@ update_binding:
 variable IN expr
 {
     $$ = expression.NewSimpleBinding($1, $3)
+    $$.SetErrorContext($<line>1, $<column>1)
 }
 |
 variable WITHIN expr
 {
     $$ = expression.NewBinding("", $1, $3, true)
+    $$.SetErrorContext($<line>1, $<column>1)
 }
 |
 variable COLON variable IN expr
 {
     $$ = expression.NewBinding($1, $3, $5, false)
+    $$.SetErrorContext($<line>1, $<column>1)
 }
 |
 variable COLON variable WITHIN expr
 {
     $$ = expression.NewBinding($1, $3, $5, true)
+    $$.SetErrorContext($<line>1, $<column>1)
 }
 ;
 
@@ -2405,21 +2454,22 @@ path opt_update_for
  *************************************************/
 
 merge:
-MERGE opt_optim_hints INTO simple_keyspace_ref opt_use_merge USING simple_from_term ON opt_key expr merge_actions opt_limit opt_returning
+MERGE opt_optim_hints INTO simple_keyspace_ref opt_use_merge USING simple_from_term ON opt_key expr merge_actions
+opt_limit opt_returning
 {
-     switch other := $7.(type) {
-         case *algebra.SubqueryTerm:
-              source := algebra.NewMergeSourceSubquery(other)
-              $$ = algebra.NewMerge($4, $5.Indexes(), source, $9, $10, $11, $12, $13, $2)
-         case *algebra.ExpressionTerm:
-              source := algebra.NewMergeSourceExpression(other)
-              $$ = algebra.NewMerge($4, $5.Indexes(), source, $9, $10, $11, $12, $13, $2)
-         case *algebra.KeyspaceTerm:
-              source := algebra.NewMergeSourceFrom(other)
-              $$ = algebra.NewMerge($4, $5.Indexes(), source, $9, $10, $11, $12, $13, $2)
-         default:
-              yylex.Error("MERGE source term is UNKNOWN"+yylex.(*lexer).ErrorContext())
-     }
+    switch other := $7.(type) {
+    case *algebra.SubqueryTerm:
+        source := algebra.NewMergeSourceSubquery(other)
+        $$ = algebra.NewMerge($4, $5.Indexes(), source, $9, $10, $11, $12, $13, $2)
+    case *algebra.ExpressionTerm:
+        source := algebra.NewMergeSourceExpression(other)
+        $$ = algebra.NewMerge($4, $5.Indexes(), source, $9, $10, $11, $12, $13, $2)
+    case *algebra.KeyspaceTerm:
+        source := algebra.NewMergeSourceFrom(other)
+        $$ = algebra.NewMerge($4, $5.Indexes(), source, $9, $10, $11, $12, $13, $2)
+    default:
+        yylex.(*lexer).ErrorWithContext("MERGE source term is UNKNOWN", $<line>7, $<column>7)
+    }
 }
 ;
 
@@ -2427,9 +2477,10 @@ opt_use_merge:
 opt_use
 {
     if $1.Keys() != nil {
-        yylex.Error("Keyspace reference cannot have USE KEYS hint in MERGE statement"+yylex.(*lexer).ErrorContext())
+        yylex.(*lexer).ErrorWithContext("Keyspace reference cannot have USE KEYS hint in MERGE statement", $<line>1, $<column>1)
     } else if $1.JoinHint() != algebra.JOIN_HINT_NONE {
-        yylex.Error("Keyspace reference cannot have join hint (USE HASH or USE NL) in MERGE statement"+yylex.(*lexer).ErrorContext())
+        yylex.(*lexer).ErrorWithContext("Keyspace reference cannot have join hint (USE HASH or USE NL) in MERGE statement",
+          $<line>1, $<column>1)
     }
     $$ = $1
 }
@@ -2624,7 +2675,7 @@ path_part DOT path_part
     path, err := algebra.NewPathFromElementsWithContext([]string{ $1, $3 }, yylex.(*lexer).Namespace(),
                                  yylex.(*lexer).QueryContext())
     if err != nil {
-        return yylex.(*lexer).FatalError(err.Error())
+        return yylex.(*lexer).FatalError(err.Error(), $<line>1, $<column>1)
     }
     $$ = algebra.NewKeyspaceRefFromPath(path, "")
 }
@@ -2834,9 +2885,10 @@ path_part DOT path_part DOT keyspace_name
 |
 path_part DOT keyspace_name
 {
-    path, err := algebra.NewPathFromElementsWithContext([]string{ $1, $3}, yylex.(*lexer).Namespace(), yylex.(*lexer).QueryContext())
+    path, err := algebra.NewPathFromElementsWithContext([]string{ $1, $3},
+                    yylex.(*lexer).Namespace(), yylex.(*lexer).QueryContext())
     if err != nil {
-        return yylex.(*lexer).FatalError(err.Error())
+        return yylex.(*lexer).FatalError(err.Error(), $<line>1, $<column>1)
     }
     $$ = algebra.NewKeyspaceRefFromPath(path, "")
 }
@@ -2872,7 +2924,7 @@ path_part
 {
     path, err := algebra.NewPathScopeWithContext(yylex.(*lexer).Namespace(), $1, yylex.(*lexer).QueryContext())
     if err != nil {
-	return yylex.(*lexer).FatalError(err.Error())
+        return yylex.(*lexer).FatalError(err.Error(), $<line>1, $<column>1)
     }
     $$ = algebra.NewScopeRefFromPath(path, "")
 }
@@ -3016,7 +3068,7 @@ ikattr ikattr
 {
    attr, valid := algebra.NewIndexKeyTermAttributes($1,$2)
    if !valid {
-       yylex.Error("Duplicate or Invalid index key attribute"+yylex.(*lexer).ErrorContext())
+       yylex.(*lexer).ErrorWithContext("Duplicate or Invalid index key attribute", $<line>2,$<column>2)
    }
    $$ = attr
 }
@@ -3127,8 +3179,7 @@ LPAREN parm_list RPAREN opt_if_not_exists func_body
         }
     }
     if $2.Value().Truth() && !$9 {
-        return yylex.(*lexer).FatalError(
-            fmt.Sprintf("syntax error - OR REPLACE and IF NOT EXISTS are mutually exclusive%s", $2.ErrorContext()))
+        return yylex.(*lexer).FatalError("syntax error - OR REPLACE and IF NOT EXISTS are mutually exclusive", $<line>2, $<column>2)
     }
     $$ = algebra.NewCreateFunction($4, $10, $2.Value().Truth(), $9)
 }
@@ -3143,7 +3194,7 @@ opt_replace:
 OR REPLACE
 {
     $$ = expression.TRUE_EXPR
-    $$.ExprBase().SetErrorContext(yylex.(*lexer).nex.Line()+1,yylex.(*lexer).nex.Column())
+    $$.ExprBase().SetErrorContext($<line>1,$<column>1)
 }
 ;
 
@@ -3165,9 +3216,10 @@ keyspace_name
 |
 path_part DOT path_part
 {
-    dummyPath, err := algebra.NewPathFromElementsWithContext([]string{ $1, $3}, yylex.(*lexer).Namespace(), yylex.(*lexer).QueryContext())
+    dummyPath, err := algebra.NewPathFromElementsWithContext([]string{ $1, $3},
+        yylex.(*lexer).Namespace(), yylex.(*lexer).QueryContext())
     if err != nil {
-        return yylex.(*lexer).FatalError(err.Error())
+        return yylex.(*lexer).FatalError(err.Error(), $<line>1, $<column>1)
     }
     name, err := functionsBridge.NewFunctionName(dummyPath.Parts(), yylex.(*lexer).Namespace(), yylex.(*lexer).QueryContext())
     if err != nil {
@@ -3179,7 +3231,7 @@ path_part DOT path_part
 path_part DOT path_part DOT path_part
 {
     name, err := functionsBridge.NewFunctionName([]string{yylex.(*lexer).Namespace(), $1, $3, $5},
-			yylex.(*lexer).Namespace(), yylex.(*lexer).QueryContext())
+        yylex.(*lexer).Namespace(), yylex.(*lexer).QueryContext())
     if err != nil {
         yylex.Error(err.Error()+yylex.(*lexer).ErrorContext())
     }
@@ -3199,7 +3251,8 @@ namespace_term keyspace_name
 |
 namespace_term path_part DOT path_part DOT keyspace_name
 {
-    name, err := functionsBridge.NewFunctionName([]string{$1, $2, $4, $6}, yylex.(*lexer).Namespace(), yylex.(*lexer).QueryContext())
+    name, err := functionsBridge.NewFunctionName([]string{$1, $2, $4, $6},
+        yylex.(*lexer).Namespace(), yylex.(*lexer).QueryContext())
     if err != nil {
         yylex.Error(err.Error()+yylex.(*lexer).ErrorContext())
     }
@@ -3421,13 +3474,13 @@ path:
 IDENT
 {
     $$ = expression.NewIdentifier($1)
-    $$.ExprBase().SetErrorContext(yylex.(*lexer).nex.Line()+1,yylex.(*lexer).nex.Column())
+    $$.ExprBase().SetErrorContext($<line>1,$<column>1)
 }
 |
 path DOT IDENT
 {
     $$ = expression.NewField($1, expression.NewFieldName($3, false))
-    $$.ExprBase().SetErrorContext(yylex.(*lexer).nex.Line()+1,yylex.(*lexer).nex.Column())
+    $$.ExprBase().SetErrorContext($<line>1,$<column>1)
 }
 |
 path DOT IDENT_ICASE
@@ -3435,13 +3488,13 @@ path DOT IDENT_ICASE
     field := expression.NewField($1, expression.NewFieldName($3, true))
     field.SetCaseInsensitive(true)
     $$ = field
-    $$.ExprBase().SetErrorContext(yylex.(*lexer).nex.Line()+1,yylex.(*lexer).nex.Column())
+    $$.ExprBase().SetErrorContext($<line>1,$<column>1)
 }
 |
 path DOT LBRACKET expr RBRACKET
 {
     $$ = expression.NewField($1, $4)
-    $$.ExprBase().SetErrorContext(yylex.(*lexer).nex.Line()+1,yylex.(*lexer).nex.Column())
+    $$.ExprBase().SetErrorContext($<line>1,$<column>1)
 }
 |
 path DOT LBRACKET expr RBRACKET_ICASE
@@ -3449,13 +3502,13 @@ path DOT LBRACKET expr RBRACKET_ICASE
     field := expression.NewField($1, $4)
     field.SetCaseInsensitive(true)
     $$ = field
-    $$.ExprBase().SetErrorContext(yylex.(*lexer).nex.Line()+1,yylex.(*lexer).nex.Column())
+    $$.ExprBase().SetErrorContext($<line>1,$<column>1)
 }
 |
 path LBRACKET expr RBRACKET
 {
     $$ = expression.NewElement($1, $3)
-    $$.ExprBase().SetErrorContext(yylex.(*lexer).nex.Line()+1,yylex.(*lexer).nex.Column())
+    $$.ExprBase().SetErrorContext($<line>1,$<column>1)
 }
 ;
 
@@ -3470,7 +3523,7 @@ ident:
 IDENT
 {
     $$ = expression.NewIdentifier($1)
-    $$.ExprBase().SetErrorContext(yylex.(*lexer).nex.Line()+1,yylex.(*lexer).nex.Column())
+    $$.ExprBase().SetErrorContext($<line>1,$<column>1)
 }
 ;
 
@@ -3478,7 +3531,7 @@ ident_icase:
 IDENT_ICASE
 {
     $$ = expression.NewIdentifier($1)
-    $$.ExprBase().SetErrorContext(yylex.(*lexer).nex.Line()+1,yylex.(*lexer).nex.Column())
+    $$.ExprBase().SetErrorContext($<line>1,$<column>1)
 }
 ;
 
@@ -3492,21 +3545,21 @@ expr DOT ident LPAREN opt_exprs RPAREN
 
     switch other := $1.(type) {
     case *expression.Identifier:
-	path = []string { other.Alias(), $3.Identifier() }
-	dummyPath, err := algebra.NewPathFromElementsWithContext([]string { other.Alias(), $3.Identifier() },
-		yylex.(*lexer).Namespace(), yylex.(*lexer).QueryContext())
-	if err != nil {
-	    return yylex.(*lexer).FatalError(err.Error())
-	}
-	path = dummyPath.Parts()
+        path = []string { other.Alias(), $3.Identifier() }
+        dummyPath, err := algebra.NewPathFromElementsWithContext([]string { other.Alias(), $3.Identifier() },
+        yylex.(*lexer).Namespace(), yylex.(*lexer).QueryContext())
+        if err != nil {
+            return yylex.(*lexer).FatalError(err.Error(), $<line>1, $<column>1)
+        }
+        path = dummyPath.Parts()
     case *expression.Field:
-	tempPath := other.Path()
-	if len(tempPath) != 2 {
-	    return yylex.(*lexer).FatalError("syntax error")
-	}
-	path = append([]string { yylex.(*lexer).Namespace() }, append(tempPath, $3.Identifier())...)
+        tempPath := other.Path()
+        if len(tempPath) != 2 {
+            return yylex.(*lexer).FatalError("syntax error", $<line>1, $<column>1)
+        }
+        path = append([]string { yylex.(*lexer).Namespace() }, append(tempPath, $3.Identifier())...)
     default:
-	return yylex.(*lexer).FatalError("syntax error")
+        return yylex.(*lexer).FatalError("syntax error", $<line>1, $<column>1)
     }
 
     // NewFunctionName() cannot deal with 3 part names, and considers 2 parts as a global function
@@ -3519,8 +3572,7 @@ expr DOT ident LPAREN opt_exprs RPAREN
     if f != nil {
         $$ = f.Constructor()($5...)
     } else {
-        return yylex.(*lexer).FatalError(fmt.Sprintf("Invalid function %v%s", name.Key(),
-                     errors.NewErrorContext(yylex.(*lexer).nex.Line()+1,yylex.(*lexer).nex.Column()).Error()))
+        return yylex.(*lexer).FatalError(fmt.Sprintf("Invalid function %v", name.Key()), $<line>1, $<column>1)
     }
 }
 |
@@ -3856,7 +3908,7 @@ construction_expr
 IDENT
 {
     $$ = expression.NewIdentifier($1)
-    $$.ExprBase().SetErrorContext(yylex.(*lexer).nex.Line()+1,yylex.(*lexer).nex.Column())
+    $$.ExprBase().SetErrorContext($<line>1,$<column>1)
 }
 |
 /* Identifier */
@@ -3865,14 +3917,14 @@ IDENT_ICASE
     ident := expression.NewIdentifier($1)
     ident.SetCaseInsensitive(true)
     $$ = ident
-    $$.ExprBase().SetErrorContext(yylex.(*lexer).nex.Line()+1,yylex.(*lexer).nex.Column())
+    $$.ExprBase().SetErrorContext($<line>1,$<column>1)
 }
 |
 /* Self */
 SELF
 {
     $$ = expression.NewSelf()
-    $$.ExprBase().SetErrorContext(yylex.(*lexer).nex.Line()+1,yylex.(*lexer).nex.Column())
+    $$.ExprBase().SetErrorContext($<line>1,$<column>1)
 }
 |
 /* Parameter */
@@ -3900,7 +3952,7 @@ paren_expr
 COVER
 {
     if yylex.(*lexer).parsingStatement() {
-        yylex.Error("syntax error")
+        yylex.(*lexer).ErrorWithContext("syntax error", $<line>1, $<column>1)
     }
 }
 LPAREN expr RPAREN
@@ -3912,7 +3964,7 @@ LPAREN expr RPAREN
 _INDEX_KEY
 {
     if yylex.(*lexer).parsingStatement() {
-        yylex.Error("syntax error")
+        yylex.(*lexer).ErrorWithContext("syntax error", $<line>1, $<column>1)
     }
 }
 LPAREN expr RPAREN
@@ -3924,7 +3976,7 @@ LPAREN expr RPAREN
 _INDEX_CONDITION
 {
     if yylex.(*lexer).parsingStatement() {
-        yylex.Error("syntax error")
+        yylex.(*lexer).ErrorWithContext("syntax error", $<line>1, $<column>1)
     }
 }
 LPAREN expr RPAREN
@@ -3944,20 +3996,21 @@ b_expr DOT IDENT LPAREN opt_exprs RPAREN
 
     switch other := $1.(type) {
     case *expression.Identifier:
-	path = []string { other.Alias(), $3 }
-	dummyPath, err := algebra.NewPathFromElementsWithContext([]string { other.Alias(), $3 }, yylex.(*lexer).Namespace(), yylex.(*lexer).QueryContext())
-	if err != nil {
-	    return yylex.(*lexer).FatalError(err.Error())
-	}
-	path = dummyPath.Parts()
+        path = []string { other.Alias(), $3 }
+            dummyPath, err := algebra.NewPathFromElementsWithContext([]string { other.Alias(), $3 },
+            yylex.(*lexer).Namespace(), yylex.(*lexer).QueryContext())
+        if err != nil {
+            return yylex.(*lexer).FatalError(err.Error(), $<line>1, $<column>1)
+        }
+        path = dummyPath.Parts()
     case *expression.Field:
-	tempPath := other.Path()
-	if len(tempPath) != 2 {
-	    return yylex.(*lexer).FatalError("syntax error")
-	}
-	path = append([]string { yylex.(*lexer).Namespace() }, append(tempPath, $3)...)
+        tempPath := other.Path()
+        if len(tempPath) != 2 {
+            return yylex.(*lexer).FatalError("syntax error", $<line>1, $<column>1)
+        }
+        path = append([]string { yylex.(*lexer).Namespace() }, append(tempPath, $3)...)
     default:
-	return yylex.(*lexer).FatalError("syntax error")
+        return yylex.(*lexer).FatalError("syntax error", $<line>1, $<column>1)
     }
 
     // NewFunctionName() cannot deal with 3 part names, and considers 2 parts as a global function
@@ -3970,8 +4023,7 @@ b_expr DOT IDENT LPAREN opt_exprs RPAREN
     if f != nil {
         $$ = f.Constructor()($5...)
     } else {
-        return yylex.(*lexer).FatalError(fmt.Sprintf("Invalid function %v%s", name.Key(),
-                     errors.NewErrorContext(yylex.(*lexer).nex.Line()+1,yylex.(*lexer).nex.Column()).Error()))
+        return yylex.(*lexer).FatalError(fmt.Sprintf("Invalid function %v", name.Key()), $<line>1, $<column>1)
     }
 }
 |
@@ -4096,43 +4148,43 @@ literal:
 NULL
 {
     $$ = expression.NULL_EXPR
-    $$.ExprBase().SetErrorContext(yylex.(*lexer).nex.Line()+1,yylex.(*lexer).nex.Column())
+    $$.ExprBase().SetErrorContext($<line>1,$<column>1)
 }
 |
 MISSING
 {
     $$ = expression.MISSING_EXPR
-    $$.ExprBase().SetErrorContext(yylex.(*lexer).nex.Line()+1,yylex.(*lexer).nex.Column())
+    $$.ExprBase().SetErrorContext($<line>1,$<column>1)
 }
 |
 FALSE
 {
     $$ = expression.FALSE_EXPR
-    $$.ExprBase().SetErrorContext(yylex.(*lexer).nex.Line()+1,yylex.(*lexer).nex.Column())
+    $$.ExprBase().SetErrorContext($<line>1,$<column>1)
 }
 |
 TRUE
 {
     $$ = expression.TRUE_EXPR
-    $$.ExprBase().SetErrorContext(yylex.(*lexer).nex.Line()+1,yylex.(*lexer).nex.Column())
+    $$.ExprBase().SetErrorContext($<line>1,$<column>1)
 }
 |
 NUM
 {
     $$ = expression.NewConstant(value.NewValue($1))
-    $$.ExprBase().SetErrorContext(yylex.(*lexer).nex.Line()+1,yylex.(*lexer).nex.Column())
+    $$.ExprBase().SetErrorContext($<line>1,$<column>1)
 }
 |
 INT
 {
     $$ = expression.NewConstant(value.NewValue($1))
-    $$.ExprBase().SetErrorContext(yylex.(*lexer).nex.Line()+1,yylex.(*lexer).nex.Column())
+    $$.ExprBase().SetErrorContext($<line>1,$<column>1)
 }
 |
 STR
 {
     $$ = expression.NewConstant(value.NewValue($1))
-    $$.ExprBase().SetErrorContext(yylex.(*lexer).nex.Line()+1,yylex.(*lexer).nex.Column())
+    $$.ExprBase().SetErrorContext($<line>1,$<column>1)
 }
 ;
 
@@ -4153,7 +4205,7 @@ object:
 LBRACE opt_members RBRACE
 {
     $$ = expression.NewObjectConstruct(algebra.MapPairs($2))
-    $$.ExprBase().SetErrorContext(yylex.(*lexer).nex.Line()+1,yylex.(*lexer).nex.Column())
+    $$.ExprBase().SetErrorContext($<line>1,$<column>1)
 }
 ;
 
@@ -4191,7 +4243,7 @@ expr opt_as_alias
       name = $1.Alias()
     }
     if name == "" {
-        yylex.Error(fmt.Sprintf("Object member missing name or value: %s%s", $1.String(), yylex.(*lexer).ErrorContext()))
+        yylex.(*lexer).ErrorWithContext(fmt.Sprintf("Object member missing name or value: %s", $1.String()), $<line>1, $<column>1)
     }
 
     $$ = algebra.NewPair(expression.NewConstant(name), $1, nil)
@@ -4202,7 +4254,7 @@ array:
 LBRACKET opt_exprs RBRACKET
 {
     $$ = expression.NewArrayConstruct($2...)
-    $$.ExprBase().SetErrorContext(yylex.(*lexer).nex.Line()+1,yylex.(*lexer).nex.Column())
+    $$.ExprBase().SetErrorContext($<line>1,$<column>1)
 }
 ;
 
@@ -4238,27 +4290,26 @@ NAMED_PARAM
 {
     $$ = algebra.NewNamedParameter($1)
     yylex.(*lexer).countParam()
-    $$.ExprBase().SetErrorContext(yylex.(*lexer).nex.Line()+1,yylex.(*lexer).nex.Column())
+    $$.ExprBase().SetErrorContext($<line>1,$<column>1)
 }
 |
 POSITIONAL_PARAM
 {
     p := int($1)
     if $1 > int64(p) {
-        yylex.Error(fmt.Sprintf("Positional parameter out of range: $%v%s",
-          $1, errors.NewErrorContext(yylex.(*lexer).nex.Line()+1,yylex.(*lexer).nex.Column()).Error()))
+        yylex.(*lexer).ErrorWithContext(fmt.Sprintf("Positional parameter out of range: $%v", $1), $<line>1, $<column>1)
     }
 
     $$ = algebra.NewPositionalParameter(p)
     yylex.(*lexer).countParam()
-    $$.ExprBase().SetErrorContext(yylex.(*lexer).nex.Line()+1,yylex.(*lexer).nex.Column())
+    $$.ExprBase().SetErrorContext($<line>1,$<column>1)
 }
 |
 NEXT_PARAM
 {
     n := yylex.(*lexer).nextParam()
     $$ = algebra.NewPositionalParameter(n)
-    $$.ExprBase().SetErrorContext(yylex.(*lexer).nex.Line()+1,yylex.(*lexer).nex.Column())
+    $$.ExprBase().SetErrorContext($<line>1,$<column>1)
 }
 ;
 
@@ -4337,17 +4388,13 @@ function_expr:
 FLATTEN_KEYS LPAREN opt_flatten_keys_exprs RPAREN
 {
     $$ = nil
-    ectx := ""
-    if len($3) > 0 {
-        ectx = $3[0].Expression().ErrorContext()
-    }
 
     fname := "flatten_keys"
     f, ok := expression.GetFunction(fname)
     if ok {
         if len($3) < f.MinArgs() || len($3) > f.MaxArgs() {
-            return yylex.(*lexer).FatalError(fmt.Sprintf("Number of arguments to function %s%s must be between %d and %d.",
-                                                          fname, ectx, f.MinArgs(), f.MaxArgs()))
+            return yylex.(*lexer).FatalError(fmt.Sprintf("Number of arguments to function %s must be between %d and %d.",
+                                                          fname, f.MinArgs(), f.MaxArgs()), $<line>3, $<column>3)
         } else {
             $$ = f.Constructor()($3.Expressions()...)
             if fk, ok := $$.(*expression.FlattenKeys); ok {
@@ -4355,7 +4402,7 @@ FLATTEN_KEYS LPAREN opt_flatten_keys_exprs RPAREN
             }
         }
     } else {
-        return yylex.(*lexer).FatalError(fmt.Sprintf("Invalid function %s%s.", fname, ectx))
+        return yylex.(*lexer).FatalError(fmt.Sprintf("Invalid function %s.", fname), $<line>1, $<column>1)
     }
 }
 |
@@ -4366,16 +4413,12 @@ NTH_VALUE LPAREN exprs RPAREN opt_from_first_last opt_nulls_treatment window_fun
     f, ok := algebra.GetAggregate(fname, false, false, ($7 != nil))
     if ok {
         if len($3) < f.MinArgs() || len($3) > f.MaxArgs() {
-            ectx := ""
-            if len($3) > 0 {
-                ectx = $3[0].ErrorContext()
-            }
             if f.MinArgs() == f.MaxArgs() {
-                return yylex.(*lexer).FatalError(fmt.Sprintf("Number of arguments to function %s%s must be %d.",
-                                                              fname, ectx, f.MaxArgs()))
+                return yylex.(*lexer).FatalError(fmt.Sprintf("Number of arguments to function %s must be %d.",
+                                                              fname, f.MaxArgs()), $<line>3, $<column>3)
             } else {
-                return yylex.(*lexer).FatalError(fmt.Sprintf("Number of arguments to function %s%s must be between %d and %d.",
-                                                              fname, ectx, f.MinArgs(), f.MaxArgs()))
+                return yylex.(*lexer).FatalError(fmt.Sprintf("Number of arguments to function %s must be between %d and %d.",
+                                                              fname, f.MinArgs(), f.MaxArgs()), $<line>3, $<column>3)
             }
         } else {
             $$ = f.Constructor()($3...)
@@ -4387,18 +4430,13 @@ NTH_VALUE LPAREN exprs RPAREN opt_from_first_last opt_nulls_treatment window_fun
             }
         }
     } else {
-        if len($3) > 0 {
-            return yylex.(*lexer).FatalError(fmt.Sprintf("Invalid function %s%s.", fname, $3[0].ErrorContext()))
-        } else {
-            return yylex.(*lexer).FatalError(fmt.Sprintf("Invalid function %s.", fname))
-        }
+        return yylex.(*lexer).FatalError(fmt.Sprintf("Invalid function %s.", fname), $<line>1, $<column>1)
     }
 }
 |
 function_name LPAREN opt_exprs RPAREN opt_filter opt_nulls_treatment opt_window_function
 {
     fname := $1.Identifier()
-    ectx := $1.ErrorContext()
     $$ = nil
     f, ok := expression.GetFunction(fname)
     if !ok {
@@ -4411,23 +4449,25 @@ function_name LPAREN opt_exprs RPAREN opt_filter opt_nulls_treatment opt_window_
     if ok {
         if ($6 == algebra.AGGREGATE_RESPECTNULLS && !algebra.AggregateHasProperty(fname, algebra.AGGREGATE_WINDOW_RESPECTNULLS)) ||
            ($6 == algebra.AGGREGATE_IGNORENULLS && !algebra.AggregateHasProperty(fname, algebra.AGGREGATE_WINDOW_IGNORENULLS)) {
-            yylex.Error(fmt.Sprintf("RESPECT|IGNORE NULLS syntax is not valid for function %s%s.", fname, ectx))
+            yylex.(*lexer).ErrorWithContext(fmt.Sprintf("RESPECT|IGNORE NULLS syntax is not valid for function %s.", fname),
+                                            $<line>6, $<column>6)
         } else if ($5 != nil && !algebra.AggregateHasProperty(fname, algebra.AGGREGATE_ALLOWS_FILTER)) {
-            yylex.Error(fmt.Sprintf("FILTER clause syntax is not valid for function %s%s.", fname, ectx))
+            yylex.(*lexer).ErrorWithContext(fmt.Sprintf("FILTER clause syntax is not valid for function %s.", fname),
+                $<line>5, $<column>5)
         } else if len($3) < f.MinArgs() || len($3) > f.MaxArgs() {
             if f.MinArgs() == f.MaxArgs() {
-                return yylex.(*lexer).FatalError(fmt.Sprintf("Number of arguments to function %s%s must be %d.",
-                                                              fname, ectx, f.MaxArgs()))
+                return yylex.(*lexer).FatalError(fmt.Sprintf("Number of arguments to function %s must be %d.",
+                                                              fname, f.MaxArgs()), $<line>3, $<column>3)
             } else {
-                return yylex.(*lexer).FatalError(fmt.Sprintf("Number of arguments to function %s%s must be between %d and %d.",
-                                                              fname, ectx, f.MinArgs(), f.MaxArgs()))
+                return yylex.(*lexer).FatalError(fmt.Sprintf("Number of arguments to function %s must be between %d and %d.",
+                                                              fname, f.MinArgs(), f.MaxArgs()), $<line>3, $<column>3)
             }
         } else {
             $$ = f.Constructor()($3...)
             if a, ok := $$.(algebra.Aggregate); ok {
                 a.SetAggregateModifiers($6, $5, $7)
             }
-            $$.ExprBase().SetErrorContext(yylex.(*lexer).nex.Line()+1,yylex.(*lexer).nex.Column())
+            $$.ExprBase().SetErrorContext($<line>1,$<column>1)
         }
     } else {
         var name functions.FunctionName
@@ -4437,7 +4477,7 @@ function_name LPAREN opt_exprs RPAREN opt_filter opt_nulls_treatment opt_window_
         if $5 == nil && $6 == uint32(0) && $7 == nil {
             name, err = functionsBridge.NewFunctionName([]string{fname}, yylex.(*lexer).Namespace(), yylex.(*lexer).QueryContext())
             if err != nil {
-                return yylex.(*lexer).FatalError(err.Error()+yylex.(*lexer).ErrorContext())
+                return yylex.(*lexer).FatalError(err.Error(), $<line>1, $<column>1)
             }
             f = expression.GetUserDefinedFunction(name, yylex.(*lexer).UdfCheck())
             if f != nil {
@@ -4450,7 +4490,7 @@ function_name LPAREN opt_exprs RPAREN opt_filter opt_nulls_treatment opt_window_
             if name != nil {
                 msg = fmt.Sprintf(" (resolving to %s)", name.Key())
             }
-            return yylex.(*lexer).FatalError(fmt.Sprintf("Invalid function %s%s%s", fname, ectx, msg))
+            return yylex.(*lexer).FatalError(fmt.Sprintf("Invalid function %s%s", fname, msg), $<line>1, $<column>1)
         }
     }
 }
@@ -4465,7 +4505,7 @@ function_name LPAREN agg_quantifier expr RPAREN opt_filter opt_window_function
             a.SetAggregateModifiers($3, $6, $7)
         }
     } else {
-        yylex.Error(fmt.Sprintf("Invalid aggregate function %s%s.", fname, $1.ErrorContext()))
+        yylex.(*lexer).ErrorWithContext(fmt.Sprintf("Invalid aggregate function %s.", fname), $<line>1, $<column>1)
     }
 }
 |
@@ -4473,7 +4513,7 @@ function_name LPAREN STAR RPAREN opt_filter opt_window_function
 {
     fname := $1.Identifier()
     if strings.ToLower(fname) != "count" {
-        yylex.Error(fmt.Sprintf("Invalid aggregate function %s(*)%s.", fname, $1.ErrorContext()))
+        yylex.(*lexer).ErrorWithContext(fmt.Sprintf("Invalid aggregate function %s(*).", fname), $<line>1, $<column>1)
     } else {
         agg, ok := algebra.GetAggregate(fname, false, ($5 != nil), ($6 != nil))
         if ok {
@@ -4482,7 +4522,7 @@ function_name LPAREN STAR RPAREN opt_filter opt_window_function
                 a.SetAggregateModifiers(uint32(0), $5, $6)
             }
         } else {
-            yylex.Error(fmt.Sprintf("Invalid aggregate function %s%s.", fname, $1.ErrorContext()))
+            yylex.(*lexer).ErrorWithContext(fmt.Sprintf("Invalid aggregate function %s.", fname), $<line>1, $<column>1)
         }
     }
 }
@@ -4493,8 +4533,7 @@ long_func_name LPAREN opt_exprs RPAREN
     if f != nil {
         $$ = f.Constructor()($3...)
     } else {
-        return yylex.(*lexer).FatalError(fmt.Sprintf("Invalid function %v%s", $1.Key(),
-                     errors.NewErrorContext(yylex.(*lexer).nex.Line()+1,yylex.(*lexer).nex.Column()).Error()))
+        return yylex.(*lexer).FatalError(fmt.Sprintf("Invalid function %v", $1.Key()), $<line>1, $<column>1)
     }
 }
 ;
@@ -4506,7 +4545,7 @@ ident
 REPLACE
 {
     $$ = expression.NewIdentifier($1)
-    $$.ExprBase().SetErrorContext(yylex.(*lexer).nex.Line()+1,yylex.(*lexer).nex.Column())
+    $$.ExprBase().SetErrorContext($<line>1,$<column>1)
 }
 ;
 
@@ -4580,21 +4619,25 @@ coll_binding:
 variable IN expr
 {
     $$ = expression.NewSimpleBinding($1, $3)
+    $$.SetErrorContext($<line>1, $<column>1)
 }
 |
 variable WITHIN expr
 {
     $$ = expression.NewBinding("", $1, $3, true)
+    $$.SetErrorContext($<line>1, $<column>1)
 }
 |
 variable COLON variable IN expr
 {
     $$ = expression.NewBinding($1, $3, $5, false)
+    $$.SetErrorContext($<line>1, $<column>1)
 }
 |
 variable COLON variable WITHIN expr
 {
     $$ = expression.NewBinding($1, $3, $5, true)
+    $$.SetErrorContext($<line>1, $<column>1)
 }
 ;
 
@@ -4662,20 +4705,20 @@ subquery_expr:
 CORRELATED
 {
     if yylex.(*lexer).parsingStatement() {
-        yylex.Error("syntax error")
+        yylex.(*lexer).ErrorWithContext("syntax error", $<line>1, $<column>1)
     }
 }
 LPAREN fullselect RPAREN
 {
     $$ = algebra.NewSubquery($4)
     $$.Select().SetCorrelated()
-    $$.ExprBase().SetErrorContext(yylex.(*lexer).nex.Line()+1,yylex.(*lexer).nex.Column())
+    $$.ExprBase().SetErrorContext($<line>3,$<column>3)
 }
 |
 LPAREN fullselect RPAREN
 {
     $$ = algebra.NewSubquery($2)
-    $$.ExprBase().SetErrorContext(yylex.(*lexer).nex.Line()+1,yylex.(*lexer).nex.Column())
+    $$.ExprBase().SetErrorContext($<line>1,$<column>1)
 }
 ;
 
@@ -5042,7 +5085,7 @@ WITH expr
 {
     $$ = $2.Value()
     if $$ == nil {
-        yylex.Error("WITH value must be static"+yylex.(*lexer).ErrorContext())
+        yylex.(*lexer).ErrorWithContext("WITH value must be static", $<line>2, $<column>2)
     }
 }
 ;

@@ -36,7 +36,7 @@ type Lexer struct {
 
 	// The 'l' and 'c' fields were added for
 	// https://github.com/wagerlabs/docker/blob/65694e801a7b80930961d70c69cba9f2465459be/buildfile.nex
-	// Since then, I introduced the built-in Line() and Column() functions.
+	// Now used to record last seen line & column from the stack.
 	l, c int
 
 	parseResult interface{}
@@ -285,7 +285,7 @@ var dfas = []dfa{
 		},
 	}, []int{ /* Start-of-input transitions */ -1, -1, -1, -1, -1, -1, -1}, []int{ /* End-of-input transitions */ -1, -1, -1, -1, -1, -1, -1}, nil},
 
-	// '(''|\\'|\\[^']|[^'\\])*'?
+	// '(\'\'|\\'|\\[^']|[^'\\])*'?
 	{[]bool{false, true, true, false, true, true, true, true}, []func(rune) int{ // Transitions
 		func(r rune) int {
 			switch r {
@@ -361,7 +361,7 @@ var dfas = []dfa{
 		},
 	}, []int{ /* Start-of-input transitions */ -1, -1, -1, -1, -1, -1, -1, -1}, []int{ /* End-of-input transitions */ -1, -1, -1, -1, -1, -1, -1, -1}, nil},
 
-	// `((``|\\`)|\\[^`]|[^`\\])*`?i
+	// `((\`\`|\\`)|\\[^`]|[^`\\])*`?i
 	{[]bool{false, false, false, false, true, false, false, true, false, false}, []func(rune) int{ // Transitions
 		func(r rune) int {
 			switch r {
@@ -475,7 +475,7 @@ var dfas = []dfa{
 		},
 	}, []int{ /* Start-of-input transitions */ -1, -1, -1, -1, -1, -1, -1, -1, -1, -1}, []int{ /* End-of-input transitions */ -1, -1, -1, -1, -1, -1, -1, -1, -1, -1}, nil},
 
-	// `((``|\\`)|\\[^`]|[^`\\])*`?
+	// `((\`\`|\\`)|\\[^`]|[^`\\])*`?
 	{[]bool{false, true, false, true, true, true, true, true}, []func(rune) int{ // Transitions
 		func(r rune) int {
 			switch r {
@@ -40438,7 +40438,6 @@ var dfas = []dfa{
 		},
 	}, []int{ /* Start-of-input transitions */ -1, -1}, []int{ /* End-of-input transitions */ -1, -1}, nil},
 
-	//
 	{[]bool{false, true}, []func(rune) int{ // Transitions
 		func(r rune) int {
 			switch r {
@@ -40523,7 +40522,7 @@ func (yylex *Lexer) Text() string {
 // The first line is 0.
 func (yylex *Lexer) Line() int {
 	if len(yylex.stack) == 0 {
-		return 0
+		return yylex.l
 	}
 	return yylex.stack[len(yylex.stack)-1].line
 }
@@ -40532,7 +40531,7 @@ func (yylex *Lexer) Line() int {
 // The first column is 0.
 func (yylex *Lexer) Column() int {
 	if len(yylex.stack) == 0 {
-		return 0
+		return yylex.c
 	}
 	return yylex.stack[len(yylex.stack)-1].column
 }
@@ -40555,19 +40554,25 @@ func (yylex *Lexer) next(lvl int) int {
 	return yylex.stack[lvl].i
 }
 func (yylex *Lexer) pop() {
-	yylex.stack = yylex.stack[:len(yylex.stack)-1]
+	l := len(yylex.stack) - 1
+	yylex.l, yylex.c = yylex.stack[l].line, yylex.stack[l].column
+	yylex.stack = yylex.stack[:l]
 }
 func (yylex Lexer) Error(e string) {
 	panic(e)
 }
 
-// Lex runs the lexer. Always returns 0.
+// Lex runs the lexer.
 // When the -s option is given, this function is not generated;
 // instead, the NN_FUN macro runs the lexer.
+// yySymType is expected to include the int fields, line and column.
 func (yylex *Lexer) Lex(lval *yySymType) int {
 OUTER0:
 	for {
-		switch yylex.next(0) {
+		next := yylex.next(0)
+		lval.line = yylex.Line() + 1
+		lval.column = yylex.Column() + 1
+		switch next {
 		case 0:
 			{
 				var e error

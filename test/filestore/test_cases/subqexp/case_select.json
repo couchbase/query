@@ -249,7 +249,7 @@
     },
     {
        "statements": "SELECT id, total FROM orders WHERE test_id = 'subqexp' GROUP by id LETTING total = (SELECT RAW SUM(orderlines.price) FROM orders.orderlines)[0] ORDER BY id",
-       "error": "Expression (correlated (select raw sum((`orderlines`.`price`)) from (`orders`.`orderlines`))[0]) (near line 1, column 139) must depend only on group keys or aggregates."
+       "error": "Expression (correlated (select raw sum((`orderlines`.`price`)) from (`orders`.`orderlines`))[0]) (near line 1, column 84) must depend only on group keys or aggregates."
     },
     {
        "statements": "SELECT id, (SELECT RAW SUM(item.price) FROM items as item)[0] total FROM orders LET items = (SELECT orderlines.* FROM orders.orderlines ORDER BY orderlines.price) WHERE test_id = 'subqexp' ORDER BY id",

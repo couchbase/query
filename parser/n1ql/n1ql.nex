@@ -10,7 +10,7 @@
     return STR
 }
 
-/'(''|\\'|\\[^']|[^'\\])*'?/ {
+/'(\'\'|\\'|\\[^']|[^'\\])*'?/ {
     var e error
 
     lval.s, e = ProcessEscapeSequences(yylex.Text())
@@ -22,7 +22,7 @@
     return STR
 }
 
-/`((``|\\`)|\\[^`]|[^`\\])*`?i/ {
+/`((\`\`|\\`)|\\[^`]|[^`\\])*`?i/ {
     // Case-insensitive identifier
     var e error
 
@@ -37,7 +37,7 @@
     return IDENT_ICASE
 }
 
-/`((``|\\`)|\\[^`]|[^`\\])*`?/ {
+/`((\`\`|\\`)|\\[^`]|[^`\\])*`?/ {
     // Escaped identifier
     var e error
 

@@ -207,7 +207,7 @@ func (this *Merge) Formalize() (err error) {
 	}
 
 	if kf.Keyspace() != "" && kf.Keyspace() == sf.Keyspace() {
-		return errors.NewDuplicateAliasError("MERGE", kf.Keyspace(), "semantics.merge.duplicate_alias")
+		return errors.NewDuplicateAliasError("MERGE", kf.Keyspace(), this.source.ErrorContext(), "semantics.merge.duplicate_alias")
 	}
 
 	f := expression.NewFormalizer("", nil)
@@ -351,6 +351,17 @@ type MergeSource struct {
 	expr  *ExpressionTerm `json:"expr"`
 }
 
+func (this *MergeSource) ErrorContext() string {
+	if this.from != nil {
+		return this.from.ErrorContext()
+	} else if this.query != nil {
+		return this.from.ErrorContext()
+	} else if this.expr != nil {
+		return this.expr.ErrorContext()
+	}
+	return ""
+}
+
 /*
 The function NewMergeSourceFrom returns a pointer
 to the MergeSource struct by assigning the input
@@ -470,7 +481,7 @@ func (this *MergeSource) Formalize() (f *expression.Formalizer, err error) {
 
 	keyspace := this.Alias()
 	if keyspace == "" {
-		err = errors.NewNoTermNameError("MergeSource", "semantics.mergesource.requires_name_or_alias")
+		err = errors.NewNoTermNameError("MergeSource", this.ErrorContext(), "semantics.mergesource.requires_name_or_alias")
 		return nil, err
 	}
 

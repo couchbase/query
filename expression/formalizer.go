@@ -458,10 +458,7 @@ func (this *Formalizer) PushBindings(bindings Bindings, push bool) (err error) {
 		// check for correlated reference in binding expr
 		correlated := this.CheckCorrelated()
 
-		var errContext string
-		if b.Expression() != nil {
-			errContext = b.Expression().ErrorContext()
-		}
+		errContext := b.errorContext.String()
 
 		variable := b.Variable()
 		if ident_val, ok := allowed.Field(variable); ok {
@@ -679,12 +676,12 @@ func (this *Formalizer) ProcessWiths(withs Bindings) error {
 	}
 
 	for _, with := range withs {
-		errContext := with.expr.ErrorContext()
+		errContext := with.errorContext.String()
 		if _, ok := this.withs[with.variable]; ok {
-			return errors.NewDuplicateAliasError("WITH clause", with.variable+errContext, "semantics.with.duplicate_with_alias")
+			return errors.NewDuplicateAliasError("WITH clause", with.variable, errContext, "semantics.with.duplicate_with_alias")
 		}
 		if _, ok := this.allowed.Field(with.variable); ok {
-			return errors.NewDuplicateAliasError("WITH clause", with.variable+errContext, "semantics.with.duplicate_with_alias")
+			return errors.NewDuplicateAliasError("WITH clause", with.variable, errContext, "semantics.with.duplicate_with_alias")
 		}
 
 		f := NewFormalizer("", this)

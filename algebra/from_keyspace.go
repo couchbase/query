@@ -61,17 +61,31 @@ type KeyspaceTerm struct {
 	correlated      bool
 	fromTwoParts    bool
 	correlation     map[string]uint32
+	errorContext    expression.ErrorContext
 }
 
 func NewKeyspaceTermFromPath(path *Path, as string,
 	keys expression.Expression, indexes IndexRefs) *KeyspaceTerm {
 	protectedString := path.ProtectedString()
-	return &KeyspaceTerm{path, nil, as, keys, indexes, nil, JOIN_HINT_NONE, 0, protectedString, nil, false, false, false, nil}
+	return &KeyspaceTerm{
+		path:            path,
+		as:              as,
+		keys:            keys,
+		indexes:         indexes,
+		joinHint:        JOIN_HINT_NONE,
+		protectedString: protectedString,
+	}
 }
 
 func NewKeyspaceTermFromExpression(expr expression.Expression, as string,
 	keys expression.Expression, indexes IndexRefs, joinHint JoinHint) *KeyspaceTerm {
-	return &KeyspaceTerm{nil, expr, as, keys, indexes, nil, joinHint, 0, "", nil, false, false, false, nil}
+	return &KeyspaceTerm{
+		fromExpr: expr,
+		as:       as,
+		keys:     keys,
+		indexes:  indexes,
+		joinHint: joinHint,
+	}
 }
 
 func (this *KeyspaceTerm) Accept(visitor NodeVisitor) (interface{}, error) {
@@ -209,16 +223,12 @@ func (this *KeyspaceTerm) Formalize(parent *expression.Formalizer) (f *expressio
 	}
 	keyspace := this.Alias()
 	if keyspace == "" {
-		err = errors.NewNoTermNameError(errString, "semantics.keyspace.requires_name_or_alias")
+		err = errors.NewNoTermNameError(errString, this.ErrorContext(), "semantics.keyspace.requires_name_or_alias")
 		return
 	}
 
 	if ok := parent.AllowedAlias(keyspace, true, false); ok {
-		var errContext string
-		if this.fromExpr != nil {
-			errContext = this.fromExpr.ErrorContext()
-		}
-		err = errors.NewDuplicateAliasError(errString, keyspace+errContext, "semantics.keyspace.duplicate_alias")
+		err = errors.NewDuplicateAliasError(errString, keyspace, this.ErrorContext(), "semantics.keyspace.duplicate_alias")
 		return nil, err
 	}
 
@@ -614,4 +624,16 @@ func (this *KeyspaceTerm) SetFromTwoParts() {
 
 func (this *KeyspaceTerm) FromTwoParts() bool {
 	return this.fromTwoParts
+}
+
+func (this *KeyspaceTerm) SetErrorContext(line int, column int) {
+	this.errorContext.Set(line, column)
+}
+
+func (this *KeyspaceTerm) ErrorContext() string {
+	errContext := this.errorContext.String()
+	if errContext == "" && this.fromExpr != nil {
+		errContext = this.fromExpr.ErrorContext()
+	}
+	return errContext
 }

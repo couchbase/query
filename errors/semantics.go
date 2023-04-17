@@ -203,24 +203,24 @@ func NewFirstTermJoinHintError(alias string) Error {
 	The following error numbers (in the 4000 range) originally reside in plan.go (before the introduction of the semantics package)
 	although they are semantic errors. They are moved from plan.go to semantics.go but their original error numbers are kept.
 */
-func NewNoTermNameError(termType string, iKey string) Error {
+func NewNoTermNameError(termType string, errContext string, iKey string) Error {
 	return &err{level: EXCEPTION, ICode: E_NO_TERM_NAME, IKey: iKey,
-		InternalMsg: fmt.Sprintf("%s term must have a name or alias", termType), InternalCaller: CallerN(1)}
+		InternalMsg: fmt.Sprintf("%s term%s must have a name or alias", termType, errContext), InternalCaller: CallerN(1)}
 }
 
-func NewDuplicateAliasError(termType string, alias string, iKey string) Error {
+func NewDuplicateAliasError(termType string, alias string, errContext string, iKey string) Error {
 	return &err{level: EXCEPTION, ICode: E_DUPLICATE_ALIAS, IKey: iKey,
-		InternalMsg: fmt.Sprintf("Duplicate %s alias %s", termType, alias), InternalCaller: CallerN(1)}
+		InternalMsg: fmt.Sprintf("Duplicate %s alias '%s'%s", termType, alias, errContext), InternalCaller: CallerN(1)}
 }
 
-func NewDuplicateWithAliasError(termType string, alias string, iKey string) Error {
-	return &err{level: EXCEPTION, ICode: E_DUPLICATE_WITH_ALIAS, IKey: iKey,
-		InternalMsg: fmt.Sprintf("Duplicate %s WITH alias %s", termType, alias), InternalCaller: CallerN(1)}
+func NewDuplicateWithAliasError(termType string, alias string, errContext string, iKey string) Error {
+	return &err{level: EXCEPTION, ICode: E_DUPLICATE_WITH_ALIAS, IKey: iKey, InternalCaller: CallerN(1),
+		InternalMsg: fmt.Sprintf("Duplicate WITH alias reference in %s: '%s'%s", termType, alias, errContext)}
 }
 
 func NewUnknownForError(termType string, keyFor string, iKey string) Error {
 	return &err{level: EXCEPTION, ICode: E_UNKNOWN_FOR, IKey: iKey,
-		InternalMsg: fmt.Sprintf("Unknown %s for alias %s", termType, keyFor), InternalCaller: CallerN(1)}
+		InternalMsg: fmt.Sprintf("Unknown %s for alias '%s'", termType, keyFor), InternalCaller: CallerN(1)}
 }
 
 func NewUseKeysUseIndexesError(termType string, iKey string) Error {

@@ -423,7 +423,7 @@
     },
     {
         "statements":"SELECT * FROM purchase pu, product p JOIN orders ON true",
-        "error":"Right side (`default`:`product` as `p` join `default`:`orders` on true (near line 1, column 52)) of a COMMA in a FROM clause must be a simple term or sub-query"
+        "error":"Right side (`default`:`product` as `p` join `default`:`orders` on true) of a COMMA in a FROM clause must be a simple term or sub-query (near line 1, column 28)"
     },
     {
         "statements":"SELECT c.firstName,p.purchaseId FROM purchase p JOIN orders o ON KEYS ['k1'], customer c WHERE c.customerId = o.customerId",

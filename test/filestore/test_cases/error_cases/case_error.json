@@ -9,6 +9,6 @@
     },
     {
         "statements": "SELECT * FROM product r USE KEYS [\"product1\", \"product10\", \"product100\"] UNNEST product.reviewList r where test_id = \"err_cases\"",
-        "error" : "Duplicate UNNEST alias r (near line 1, column 71)"
+        "error" : "Duplicate UNNEST alias 'r' (near line 1, column 100)"
     }
 ]

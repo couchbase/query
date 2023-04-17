@@ -105,16 +105,12 @@ func (this *Join) Formalize(parent *expression.Formalizer) (f *expression.Formal
 
 	alias := this.Alias()
 	if alias == "" {
-		err = errors.NewNoTermNameError("JOIN", "semantics.join.requires_name_or_alias")
+		err = errors.NewNoTermNameError("JOIN", this.right.errorContext.String(), "semantics.join.requires_name_or_alias")
 		return nil, err
 	}
 
 	if ok := f.AllowedAlias(alias, true, false); ok {
-		var errContext string
-		if len(this.left.Expressions()) > 0 {
-			errContext = this.left.Expressions()[0].ErrorContext()
-		}
-		err = errors.NewDuplicateAliasError("JOIN", alias+errContext, "semantics.join.duplicate_alias")
+		err = errors.NewDuplicateAliasError("JOIN", alias, this.right.errorContext.String(), "semantics.join.duplicate_alias")
 		return nil, err
 	}
 

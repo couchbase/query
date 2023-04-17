@@ -228,7 +228,7 @@
 
     {
         "statements": "SELECT title AS `$2`, details.title AS `$2` FROM catalog LIMIT 1",
-        "error": "Duplicate result alias $2 (near line 1, column 30)."
+        "error": "Duplicate result alias '$2' (near line 1, column 31)."
     }
 
 ]

@@ -179,7 +179,7 @@
     {
         "description": "MB-56317",
         "statements": "SELECT custId, COUNT(1) AS cnt FROM orders WHERE test_id=\"order_func\" GROUP BY custId ORDER BY custId, test_id",
-        "error": "Expression (`orders`.`test_id`) (near line 1, column 0) must depend only on group keys or aggregates."
+        "error": "Expression (`orders`.`test_id`) (near line 1, column 104) must depend only on group keys or aggregates."
     }
 
 ]

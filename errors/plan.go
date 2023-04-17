@@ -151,8 +151,8 @@ func NewIndexAlreadyExistsError(idx string) Error {
 }
 
 func NewAmbiguousMetaError(fn string, ctx string) Error {
-	return &err{level: EXCEPTION, ICode: E_AMBIGUOUS_META, IKey: "plan.ambiguous_meta",
-		InternalMsg: fmt.Sprintf("%s()%s in query with multiple FROM terms requires an argument.", strings.ToUpper(fn), ctx), InternalCaller: CallerN(1)}
+	return &err{level: EXCEPTION, ICode: E_AMBIGUOUS_META, IKey: "plan.ambiguous_meta", InternalCaller: CallerN(1),
+		InternalMsg: fmt.Sprintf("%s() in query with multiple FROM terms requires an argument%s.", strings.ToUpper(fn), ctx)}
 }
 
 func NewIndexerDescCollationError() Error {

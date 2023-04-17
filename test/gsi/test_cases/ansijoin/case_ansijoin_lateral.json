@@ -348,17 +348,17 @@
     {
         "testcase": "ANSI JOIN syntax, right outer join, error",
         "statements":"SELECT l.c12, r.c21 FROM shellTest l RIGHT JOIN LATERAL shellTest r USE KEYS(REPLACE(meta(l).id, \"test1\", \"test2\")) ON l.c11 = r.c21 AND r.type = \"right\" WHERE l.c11 > 0 AND l.type = \"left\" ORDER BY l.c12",
-        "error": "LATERAL cannot be specified in RIGHT OUTER JOIN (r) - line 1, column 155, near 'AND r.type = \"right\"', at: WHERE"
+        "error": "LATERAL cannot be specified in RIGHT OUTER JOIN (r) (near line 1, column 49)"
     },
     {
         "testcase": "lookup join syntax, error",
         "statements":"SELECT l.c12, r.c21 FROM shellTest l JOIN LATERAL shellTest r ON KEYS \"test2\" || l.c11 || \"_ansijoin\" WHERE l.c11 > 0 AND l.type = \"left\" ORDER BY l.c12",
-        "error": "LATERAL cannot be specified in lookup join with ON KEYS clause (r) - line 1, column 103, near 'l.c11 || \"_ansijoin\"', at: WHERE"
+        "error": "LATERAL cannot be specified in lookup join with ON KEYS clause (r) (near line 1, column 43)"
     },
     {
         "testcase": "index join syntax, error",
         "statements":"SELECT l.c12, r.c21 FROM shellTest l JOIN LATERAL shellTest r ON KEY \"test2\" || l.c11 || \"_ansijoin\" FOR l WHERE l.c11 > 0 AND l.type = \"left\" ORDER BY l.c12",
-        "error": "LATERAL cannot be specified in index join with ON KEY...FOR clause (r) - line 1, column 106, near '1 || \"_ansijoin\" FOR', at: l"
+        "error": "LATERAL cannot be specified in index join with ON KEY...FOR clause (r) (near line 1, column 43)"
     }
 ]
 

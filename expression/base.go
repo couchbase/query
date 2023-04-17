@@ -13,7 +13,6 @@ import (
 	"reflect"
 
 	"github.com/couchbase/query/auth"
-	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/value"
 )
@@ -45,29 +44,40 @@ const (
 ExpressionBase is a base class for all expressions.
 */
 type ExpressionBase struct {
-	expr         Expression
-	value        *value.Value
-	exprFlags    uint64
-	line, column int
+	expr              Expression
+	value             *value.Value
+	exprFlags         uint64
+	errorContext      ErrorContext
+	aliasErrorContext ErrorContext
 }
 
 var _NIL_VALUE value.Value
 
 func (this *ExpressionBase) SetErrorContext(line, column int) {
-	this.line = line
-	this.column = column
+	this.errorContext.Set(line, column)
+}
+
+func (this *ExpressionBase) SetAliasErrorContext(line, column int) {
+	this.aliasErrorContext.Set(line, column)
 }
 
 func (this *ExpressionBase) GetErrorContext() (int, int) {
 	if this == nil {
 		return 0, 0
 	}
-	return this.line, this.column
+	return this.errorContext.Get()
 }
 
 func (this *ExpressionBase) ErrorContext() string {
-	if this != nil && this.line > 0 {
-		return errors.NewErrorContext(this.line, this.column).Error()
+	if this != nil {
+		return this.errorContext.String()
+	}
+	return ""
+}
+
+func (this *ExpressionBase) AliasErrorContext() string {
+	if this != nil {
+		return this.aliasErrorContext.String()
 	}
 	return ""
 }
@@ -86,8 +96,8 @@ Make sure expression flags are copied when copying expression
 */
 func (this *ExpressionBase) BaseCopy(oldExpr Expression) {
 	this.setExprFlags(oldExpr.ExprBase().getExprFlags())
-	this.line = oldExpr.ExprBase().line
-	this.column = oldExpr.ExprBase().column
+	this.errorContext = oldExpr.ExprBase().errorContext
+	this.aliasErrorContext = oldExpr.ExprBase().aliasErrorContext
 }
 
 /*

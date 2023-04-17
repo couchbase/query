@@ -107,16 +107,16 @@ func (this *Unnest) Formalize(parent *expression.Formalizer) (f *expression.Form
 
 	alias := this.Alias()
 	if alias == "" {
-		err = errors.NewNoTermNameError("UNNEST", "semantics.unnest.requires_name_or_alias")
+		err = errors.NewNoTermNameError("UNNEST", this.expr.ErrorContext(), "semantics.unnest.requires_name_or_alias")
 		return nil, err
 	}
 
 	if ok := f.AllowedAlias(alias, true, false); ok {
-		var errContext string
-		if len(this.left.Expressions()) > 0 {
-			errContext = this.left.Expressions()[0].ErrorContext()
+		errContext := this.expr.ExprBase().AliasErrorContext()
+		if errContext == "" {
+			errContext = this.expr.ErrorContext()
 		}
-		err = errors.NewDuplicateAliasError("UNNEST", alias+errContext, "semantics.unnest.duplicate_alias")
+		err = errors.NewDuplicateAliasError("UNNEST", alias, errContext, "semantics.unnest.duplicate_alias")
 		return nil, err
 	}
 

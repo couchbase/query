@@ -138,19 +138,24 @@ func (this *ExpressionTerm) Formalize(parent *expression.Formalizer) (f *express
 		return
 	}
 
+	var aliasErrContext string
 	var errContext string
 	if this.fromExpr != nil {
+		aliasErrContext = this.fromExpr.ExprBase().AliasErrorContext()
 		errContext = this.fromExpr.ErrorContext()
+		if aliasErrContext == "" {
+			aliasErrContext = errContext
+		}
 	}
 
 	alias := this.Alias()
 	if alias == "" {
-		err = errors.NewNoTermNameError("FROM expression"+errContext, "semantics.fromExpr.requires_name_or_alias")
+		err = errors.NewNoTermNameError("FROM expression", errContext, "semantics.fromExpr.requires_name_or_alias")
 		return nil, err
 	}
 
 	if ok := parent.AllowedAlias(alias, alias != ident, false); ok {
-		err = errors.NewDuplicateAliasError("FROM expression", alias+errContext, "semantics.fromExpr.duplicate_alias")
+		err = errors.NewDuplicateAliasError("FROM expression", alias, aliasErrContext, "semantics.fromExpr.duplicate_alias")
 		return nil, err
 	}
 
@@ -164,7 +169,8 @@ func (this *ExpressionTerm) Formalize(parent *expression.Formalizer) (f *express
 	if ident != "" && parent.WithAlias(ident) {
 		// simple WITH alias
 		if ok := parent.AllowedAlias(ident, false, false); ok {
-			err = errors.NewDuplicateWithAliasError("FROM expression", ident+errContext, "semantics.fromExpr.duplicate_with_alias")
+			err = errors.NewDuplicateWithAliasError("FROM expression", ident, errContext,
+				"semantics.fromExpr.duplicate_with_alias")
 			return nil, err
 		}
 		if identExpr != nil {
@@ -413,4 +419,17 @@ func (this *ExpressionTerm) MarshalJSON() ([]byte, error) {
 		r["correlated"] = this.correlated
 	}
 	return json.Marshal(r)
+}
+
+func (this *ExpressionTerm) ErrorContext() string {
+	var errContext string
+	if this.isKeyspace {
+		errContext = this.keyspaceTerm.ErrorContext()
+	} else if this.fromExpr != nil {
+		errContext = this.fromExpr.ExprBase().AliasErrorContext()
+		if errContext == "" {
+			errContext = this.fromExpr.ErrorContext()
+		}
+	}
+	return errContext
 }

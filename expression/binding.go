@@ -24,6 +24,7 @@ type Binding struct {
 	expr         Expression `json:"expr"`
 	descend      bool       `json:"desc"`
 	static       bool       `json:"static"`
+	errorContext ErrorContext
 }
 
 const (
@@ -35,11 +36,23 @@ const (
 type BindingVarOptions uint32
 
 func NewBinding(nameVariable, variable string, expr Expression, descend bool) *Binding {
-	return &Binding{nameVariable, variable, expr, descend, false}
+	return &Binding{
+		nameVariable: nameVariable,
+		variable:     variable,
+		expr:         expr,
+		descend:      descend,
+		static:       false,
+	}
 }
 
 func NewSimpleBinding(variable string, expr Expression) *Binding {
-	return &Binding{"", variable, expr, false, false}
+	return &Binding{
+		nameVariable: "",
+		variable:     variable,
+		expr:         expr,
+		descend:      false,
+		static:       false,
+	}
 }
 
 func (this *Binding) Copy() *Binding {
@@ -49,6 +62,7 @@ func (this *Binding) Copy() *Binding {
 		expr:         this.expr.Copy(),
 		descend:      this.descend,
 		static:       this.static,
+		errorContext: this.errorContext,
 	}
 }
 
@@ -95,6 +109,10 @@ func (this *Binding) MarshalJSON() ([]byte, error) {
 	}
 
 	return json.Marshal(r)
+}
+
+func (this *Binding) SetErrorContext(line int, column int) {
+	this.errorContext.Set(line, column)
 }
 
 func (this Bindings) EquivalentTo(other Bindings) bool {

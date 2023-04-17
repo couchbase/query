@@ -217,15 +217,15 @@
     
     {
         "statements": "SELECT title, details.title AS title FROM default:catalog ORDER BY title",
-        "error" : "Duplicate result alias title (near line 1, column 22)."
+        "error" : "Duplicate result alias 'title' (near line 1, column 29)."
     },
     {
         "statements": "SELECT catalog.title, C.title, C.type FROM default:catalog AS C ORDER BY catalog.title",
-        "error" : "Duplicate result alias title (near line 1, column 24)."
+        "error" : "Duplicate result alias 'title' (near line 1, column 25)."
     },
     {
         "statements": "SELECT title, details.format, details.title, title  FROM default:catalog WHERE pricing.list > 300 and pricing.pct_savings >20 ORDER BY title",
-        "error" : "Duplicate result alias title (near line 1, column 38)."
+        "error" : "Duplicate result alias 'title' (near line 1, column 39)."
     },
 
     {
@@ -235,7 +235,7 @@
 
     {
         "statements": "SELECT title AS `$2`, details.title AS `$2` FROM catalog ORDER BY `$2` LIMIT 1",
-        "error": "Duplicate result alias $2 (near line 1, column 30)."
+        "error": "Duplicate result alias '$2' (near line 1, column 37)."
     }
 
 ]

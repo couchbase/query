@@ -23,10 +23,11 @@ may be referred to in the HAVING, SELECT, and ORDER
 BY clauses. Having specifies a condition.
 */
 type Group struct {
-	by      expression.Expressions `json:by`
-	letting expression.Bindings    `json:"letting"`
-	having  expression.Expression  `json:"having"`
-	groupAs string                 `json:"groupAs"`
+	by             expression.Expressions `json:by`
+	letting        expression.Bindings    `json:"letting"`
+	having         expression.Expression  `json:"having"`
+	groupAs        string                 `json:"groupAs"`
+	asErrorContext expression.ErrorContext
 }
 
 /*
@@ -73,7 +74,8 @@ func (this *Group) Formalize(f *expression.Formalizer) error {
 			f.SetAllowedGroupAsAlias(this.groupAs)
 			f.SetAlias(this.groupAs)
 		} else {
-			return errors.NewDuplicateAliasError("GROUP AS", this.groupAs, "semantics.groupAs.duplicate_alias")
+			return errors.NewDuplicateAliasError("GROUP AS", this.groupAs, this.asErrorContext.String(),
+				"semantics.groupAs.duplicate_alias")
 		}
 	}
 
@@ -197,6 +199,10 @@ func (this *Group) Having() expression.Expression {
 
 func (this *Group) GroupAs() string {
 	return this.groupAs
+}
+
+func (this *Group) SetAsErrorContext(line int, column int) {
+	this.asErrorContext.Set(line, column)
 }
 
 type GroupTerms []*GroupTerm

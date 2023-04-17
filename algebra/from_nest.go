@@ -110,16 +110,12 @@ func (this *Nest) Formalize(parent *expression.Formalizer) (f *expression.Formal
 
 	alias := this.Alias()
 	if alias == "" {
-		err = errors.NewNoTermNameError("NEST", "semantics.nest.requires_name_or_alias")
+		err = errors.NewNoTermNameError("NEST", this.right.errorContext.String(), "semantics.nest.requires_name_or_alias")
 		return nil, err
 	}
 
 	if ok := f.AllowedAlias(alias, true, false); ok {
-		var errContext string
-		if len(this.left.Expressions()) > 0 {
-			errContext = this.left.Expressions()[0].ErrorContext()
-		}
-		err = errors.NewDuplicateAliasError("NEST", alias+errContext, "semantics.nest.duplicate_alias")
+		err = errors.NewDuplicateAliasError("NEST", alias, this.right.errorContext.String(), "semantics.nest.duplicate_alias")
 		return nil, err
 	}
 

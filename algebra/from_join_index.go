@@ -106,12 +106,12 @@ func (this *IndexJoin) Formalize(parent *expression.Formalizer) (f *expression.F
 
 	alias := this.Alias()
 	if alias == "" {
-		err = errors.NewNoTermNameError("JOIN", "semantics.join.requires_name_or_alias")
+		err = errors.NewNoTermNameError("JOIN", this.right.errorContext.String(), "semantics.join.requires_name_or_alias")
 		return nil, err
 	}
 
 	if ok := f.AllowedAlias(alias, true, false); ok {
-		err = errors.NewDuplicateAliasError("JOIN", alias, "semantics.join.duplicate_alias")
+		err = errors.NewDuplicateAliasError("JOIN", alias, this.right.errorContext.String(), "semantics.join.duplicate_alias")
 		return nil, err
 	}
 
