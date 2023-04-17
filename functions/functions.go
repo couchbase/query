@@ -242,6 +242,10 @@ func AddFunction(name FunctionName, body FunctionBody, replace bool) errors.Erro
 	err := name.Save(body, replace)
 	if err == nil {
 		function := &FunctionEntry{FunctionName: name, FunctionBody: body}
+		err = function.loadPrivileges()
+		if err != nil {
+			return err
+		}
 		key := name.Key()
 
 		// add it to the cache
