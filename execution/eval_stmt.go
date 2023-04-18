@@ -184,7 +184,7 @@ func (this *Context) EvaluateStatement(statement string, namedArgs map[string]va
 
 	if doCaching {
 		cacheKey = encodeStatement(this.queryContext, statement)
-		if pe, ok := this.udfPlans.get(cacheKey); ok {
+		if pe, ok := this.udfPlans.getAndValidate(cacheKey); ok {
 			stmt = *pe.stmt
 			prepared = pe.plan
 			isPrepared = pe.isPrepared
@@ -200,7 +200,7 @@ func (this *Context) EvaluateStatement(statement string, namedArgs map[string]va
 		}
 
 		if doCaching {
-			this.udfPlans.set(cacheKey, planMapEntry{stmt: &stmt, plan: prepared, isPrepared: isPrepared})
+			this.udfPlans.set(cacheKey, &planMapEntry{stmt: &stmt, plan: prepared, isPrepared: isPrepared})
 		}
 	}
 
@@ -275,7 +275,8 @@ func (this *Context) OpenStatement(statement string, namedArgs map[string]value.
 
 	if doCaching {
 		cacheKey = encodeStatement(this.queryContext, statement)
-		if pe, ok := this.udfPlans.get(cacheKey); ok {
+
+		if pe, ok := this.udfPlans.getAndValidate(cacheKey); ok {
 			stmt = *pe.stmt
 			prepared = pe.plan
 			isPrepared = pe.isPrepared
@@ -291,7 +292,7 @@ func (this *Context) OpenStatement(statement string, namedArgs map[string]value.
 		}
 
 		if doCaching {
-			this.udfPlans.set(cacheKey, planMapEntry{stmt: &stmt, plan: prepared, isPrepared: isPrepared})
+			this.udfPlans.set(cacheKey, &planMapEntry{stmt: &stmt, plan: prepared, isPrepared: isPrepared})
 		}
 	}
 
@@ -523,8 +524,9 @@ func (this *Context) ExecutePrepared(prepared *plan.Prepared, isPrepared bool,
 	var eTree execTreeMapEntry
 	var ok bool
 	var cacheKey string
+	var planId int
 
-	doCaching = doCaching && (this.udfStmtExecTrees != nil)
+	doCaching = doCaching && (this.udfStmtExecTrees != nil) && (this.udfPlans != nil)
 	createTree := true
 
 	if doCaching {
@@ -584,7 +586,9 @@ func (this *Context) ExecutePrepared(prepared *plan.Prepared, isPrepared bool,
 		}
 
 		if createTree {
-			eTree = execTreeMapEntry{root: root, collRcv: collect}
+			// Get the planId of the latest cached plan
+			planId, _ = this.udfPlans.getPlanId(cacheKey)
+			eTree = execTreeMapEntry{root: root, collRcv: collect, planId: planId}
 
 			if funcKey != "" {
 				eTree.usageMetadata = map[string]int{funcKey: 1}
@@ -620,7 +624,7 @@ func (this *Context) OpenPrepared(baseContext *Context, stmtType string, prepare
 	handle.context.namedArgs = namedArgs
 	handle.context.positionalArgs = positionalArgs
 
-	doCaching = doCaching && (baseContext.udfStmtExecTrees != nil)
+	doCaching = doCaching && (baseContext.udfStmtExecTrees != nil) && (this.udfPlans != nil)
 	var cacheKey string
 	createTree := true
 	var eTree execTreeMapEntry
@@ -628,6 +632,7 @@ func (this *Context) OpenPrepared(baseContext *Context, stmtType string, prepare
 
 	var root Operator
 	var receive *Receive
+	var planId int
 
 	if doCaching {
 		cacheKey = encodeStatement(this.queryContext, statement)
@@ -684,8 +689,14 @@ func (this *Context) OpenPrepared(baseContext *Context, stmtType string, prepare
 	if createTree {
 		eTree = execTreeMapEntry{root: root, collRcv: receive}
 
-		if doCaching && funcKey != "" {
-			eTree.usageMetadata = map[string]int{funcKey: 1}
+		if doCaching {
+			// Get the planId of the latest cached plan
+			planId, _ = this.udfPlans.getPlanId(cacheKey)
+			eTree.planId = planId
+
+			if funcKey != "" {
+				eTree.usageMetadata = map[string]int{funcKey: 1}
+			}
 		}
 	}
 

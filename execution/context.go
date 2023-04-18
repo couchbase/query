@@ -1907,10 +1907,13 @@ func newUdfExecTreeMap() *udfExecTreeMap {
 }
 
 // Method to :
-// 1. Get an exec tree entry in the cache for a query
-// 2. Check if the tree can be re-opened
-// If the tree entry cannot be re-opened, this entry remains in the cache solely for profiling purposes
-// If the tree can be re-opened, remove the entry from the cache while it is in use
+//  1. Get an exec tree entry in the cache for a query
+//  2. Check if the tree was created by an invalid plan - by checking if it was created by the latest query plan for this statement
+//  3. Check if the tree can be re-opened
+//
+// If the tree entry cannot be re-opened or was created by an earlier invalid plan
+// this entry remains in the cache solely for profiling purposes
+// If the tree can be re-opened and was created by a valid plan, remove the entry from the cache while it is in use
 func (this *udfExecTreeMap) getAndReopen(key string, context *Context) (execTreeMapEntry, bool) {
 	this.mutex.Lock()
 	defer this.mutex.Unlock()
@@ -1922,6 +1925,12 @@ func (this *udfExecTreeMap) getAndReopen(key string, context *Context) (execTree
 	}
 
 	tree := t[len(t)-1]
+
+	// Check if tree was created by the latest cached plan
+	planId, _ := context.udfPlans.getPlanId(key)
+	if tree.planId != planId {
+		return execTreeMapEntry{}, false
+	}
 
 	// Check state of the Collect/ Receive Operator
 	opState := tree.collRcv.getBase().opState
@@ -1959,24 +1968,74 @@ func (this *udfExecTreeMap) set(key string, eTree execTreeMapEntry) {
 // Key of this map is : (query_context + query statement)
 type udfPlanMap struct {
 	mutex sync.RWMutex
-	plans map[string]planMapEntry
+	plans map[string]*planMapEntry
+
+	// Counter to give a unique id to each entry. Every time a plan is added to the cache this is incremented.
+	planIdCounter int
 }
 
 func newUdfPlanMap() *udfPlanMap {
 	rv := &udfPlanMap{}
-	rv.plans = make(map[string]planMapEntry)
+	rv.plans = make(map[string]*planMapEntry)
+	rv.planIdCounter = 0
 	return rv
 }
 
-func (this *udfPlanMap) get(key string) (planMapEntry, bool) {
+func (this *udfPlanMap) getPlanId(key string) (int, bool) {
 	this.mutex.RLock()
 	rv, ok := this.plans[key]
+
+	var planId int
+
+	if ok {
+		planId = rv.planId
+	}
+
 	this.mutex.RUnlock()
+
+	return planId, ok
+}
+
+// Method to:
+// 1. Check if the query plan exists in the cache
+// 2. Check if the plan is still valid
+func (this *udfPlanMap) getAndValidate(key string) (*planMapEntry, bool) {
+	this.mutex.Lock()
+	defer this.mutex.Unlock()
+
+	rv, ok := this.plans[key]
+
+	var check bool
+
+	if ok {
+		prepared := rv.plan
+
+		// Check if the plan is still valid
+		if rv.populated {
+			check = prepared.MetadataCheck()
+		}
+
+		if !check {
+			check = prepared.Verify()
+			if check {
+				rv.populated = true
+			}
+		}
+
+		ok = check
+	}
+
+	if !ok {
+		return nil, ok
+	}
+
 	return rv, ok
 }
 
-func (this *udfPlanMap) set(key string, plan planMapEntry) {
+func (this *udfPlanMap) set(key string, plan *planMapEntry) {
 	this.mutex.Lock()
+	this.planIdCounter++
+	plan.planId = this.planIdCounter
 	this.plans[key] = plan
 	this.mutex.Unlock()
 }
@@ -1986,12 +2045,15 @@ type planMapEntry struct {
 	plan       *plan.Prepared
 	isPrepared bool
 	stmt       *algebra.Statement
+	planId     int // unique id of this plan entry
+	populated  bool
 }
 
 // Execution Tree Map Entry
 type execTreeMapEntry struct {
 	root    Operator // Root Operator
 	collRcv Operator // Collect or Receive Operator
+	planId  int      // PlanId of the plan that was used to create this exec tree
 
 	// Map to store usage metadata of the cached exec tree
 	// Key : fullName of the function
