@@ -951,7 +951,7 @@ func (this *Context) EvaluateSubquery(query *algebra.Select, parent value.Value)
 	}
 	subExecTrees.set(query, sequence, collect)
 
-	if stashTracking {
+	if stashTracking && track > av.RefCnt() {
 		av.Restore(track)
 	}
 
