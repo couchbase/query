@@ -13,13 +13,14 @@ import (
 	dictionary "github.com/couchbase/query/datastore/couchbase"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/expression/parser"
 	"github.com/couchbase/query/timestamp"
 	"github.com/couchbase/query/value"
 )
 
 type dictionaryKeyspace struct {
 	keyspaceBase
-	si datastore.Indexer
+	indexer datastore.Indexer
 }
 
 func (b *dictionaryKeyspace) Release(close bool) {
@@ -60,11 +61,11 @@ func (b *dictionaryKeyspace) Size(context datastore.QueryContext) (int64, errors
 }
 
 func (b *dictionaryKeyspace) Indexer(name datastore.IndexType) (datastore.Indexer, errors.Error) {
-	return b.si, nil
+	return b.indexer, nil
 }
 
 func (b *dictionaryKeyspace) Indexers() ([]datastore.Indexer, errors.Error) {
-	return []datastore.Indexer{b.si}, nil
+	return []datastore.Indexer{b.indexer}, nil
 }
 
 func (b *dictionaryKeyspace) Fetch(keys []string, keysMap map[string]value.AnnotatedValue,
@@ -136,9 +137,26 @@ func newDictionaryKeyspace(p *namespace, name string) (*dictionaryKeyspace, erro
 	b := new(dictionaryKeyspace)
 	setKeyspaceBase(&b.keyspaceBase, p, name)
 
-	primary := &dictionaryIndex{name: "#primary", keyspace: b}
-	b.si = newSystemIndexer(b, primary)
-	setIndexBase(&primary.indexBase, b.si)
+	primary := &dictionaryIndex{name: "#primary", keyspace: b, primary: true}
+	b.indexer = newSystemIndexer(b, primary)
+	setIndexBase(&primary.indexBase, b.indexer)
+
+	// add a secondary index on `bucket`
+	expr, err := parser.Parse("`bucket`")
+
+	if err == nil {
+		key := expression.Expressions{expr}
+		buckets := &dictionaryIndex{
+			name:     "#buckets",
+			keyspace: b,
+			primary:  false,
+			idxKey:   key,
+		}
+		setIndexBase(&buckets.indexBase, b.indexer)
+		b.indexer.(*systemIndexer).AddIndex(buckets.name, buckets)
+	} else {
+		return nil, errors.NewSystemDatastoreError(err, "")
+	}
 
 	return b, nil
 }
@@ -147,6 +165,8 @@ type dictionaryIndex struct {
 	indexBase
 	name     string
 	keyspace *dictionaryKeyspace
+	primary  bool
+	idxKey   expression.Expressions
 }
 
 func (pi *dictionaryIndex) KeyspaceId() string {
@@ -170,7 +190,7 @@ func (pi *dictionaryIndex) SeekKey() expression.Expressions {
 }
 
 func (pi *dictionaryIndex) RangeKey() expression.Expressions {
-	return nil
+	return pi.idxKey
 }
 
 func (pi *dictionaryIndex) Condition() expression.Expression {
@@ -178,7 +198,7 @@ func (pi *dictionaryIndex) Condition() expression.Expression {
 }
 
 func (pi *dictionaryIndex) IsPrimary() bool {
-	return true
+	return pi.primary
 }
 
 func (pi *dictionaryIndex) State() (state datastore.IndexState, msg string, err errors.Error) {
@@ -196,10 +216,25 @@ func (pi *dictionaryIndex) Drop(requestId string) errors.Error {
 
 func (pi *dictionaryIndex) Scan(requestId string, span *datastore.Span, distinct bool, limit int64,
 	cons datastore.ScanConsistency, vector timestamp.Vector, conn *datastore.IndexConnection) {
-	pi.ScanEntries(requestId, limit, cons, vector, conn)
+	var spanEvaluator compiledSpans
+	var err errors.Error
+
+	if span != nil && !pi.primary {
+		spanEvaluator, err = compileSpan(span)
+		if err != nil {
+			conn.Error(err)
+			return
+		}
+	}
+	pi.scanEntries(requestId, spanEvaluator, limit, cons, vector, conn)
 }
 
 func (pi *dictionaryIndex) ScanEntries(requestId string, limit int64, cons datastore.ScanConsistency,
+	vector timestamp.Vector, conn *datastore.IndexConnection) {
+	pi.scanEntries(requestId, nil, limit, cons, vector, conn)
+}
+
+func (pi *dictionaryIndex) scanEntries(requestId string, spanEvaluator compiledSpans, limit int64, cons datastore.ScanConsistency,
 	vector timestamp.Vector, conn *datastore.IndexConnection) {
 	defer conn.Sender().Close()
 
@@ -211,6 +246,9 @@ func (pi *dictionaryIndex) ScanEntries(requestId string, limit int64, cons datas
 	}
 	buckets := datastore.GetDatastore().GetUserBuckets(credentials)
 	for _, bk := range buckets {
+		if len(spanEvaluator) > 0 && !spanEvaluator.evaluate(bk) {
+			continue
+		}
 		err := dictionary.Foreach(bk, context, check, func(path string) error {
 			entry := datastore.IndexEntry{PrimaryKey: path}
 			sendSystemKey(conn, &entry)

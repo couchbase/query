@@ -18,6 +18,7 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/expression/parser"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/timestamp"
 	"github.com/couchbase/query/util"
@@ -419,9 +420,26 @@ func newIndexesKeyspace(p *namespace, store datastore.Datastore, name string, sk
 	b.skipSystem = skipSystem
 	setKeyspaceBase(&b.keyspaceBase, p, name)
 
-	primary := &indexIndex{name: "#primary", keyspace: b}
+	primary := &indexIndex{name: "#primary", keyspace: b, primary: true}
 	b.indexer = newSystemIndexer(b, primary)
 	setIndexBase(&primary.indexBase, b.indexer)
+
+	// add a secondary index on `bucket_id`
+	expr, err := parser.Parse(`bucket_id`)
+
+	if err == nil {
+		key := expression.Expressions{expr}
+		buckets := &indexIndex{
+			name:     "#buckets",
+			keyspace: b,
+			primary:  false,
+			idxKey:   key,
+		}
+		setIndexBase(&buckets.indexBase, b.indexer)
+		b.indexer.(*systemIndexer).AddIndex(buckets.name, buckets)
+	} else {
+		return nil, errors.NewSystemDatastoreError(err, "")
+	}
 
 	return b, nil
 }
@@ -430,6 +448,8 @@ type indexIndex struct {
 	indexBase
 	name     string
 	keyspace *indexKeyspace
+	primary  bool
+	idxKey   expression.Expressions
 }
 
 func (pi *indexIndex) KeyspaceId() string {
@@ -453,6 +473,17 @@ func (pi *indexIndex) SeekKey() expression.Expressions {
 }
 
 func (pi *indexIndex) RangeKey() expression.Expressions {
+	return pi.idxKey
+}
+
+func (pi *indexIndex) RangeKey2() datastore.IndexKeys {
+	if !pi.primary {
+		rangeKey := &datastore.IndexKey{
+			Expr: pi.idxKey[0],
+		}
+		rangeKey.SetAttribute(datastore.IK_MISSING, true)
+		return datastore.IndexKeys{rangeKey}
+	}
 	return nil
 }
 
@@ -461,7 +492,7 @@ func (pi *indexIndex) Condition() expression.Expression {
 }
 
 func (pi *indexIndex) IsPrimary() bool {
-	return true
+	return pi.primary
 }
 
 func (pi *indexIndex) State() (state datastore.IndexState, msg string, err errors.Error) {
@@ -479,7 +510,33 @@ func (pi *indexIndex) Drop(requestId string) errors.Error {
 
 func (pi *indexIndex) Scan(requestId string, span *datastore.Span, distinct bool, limit int64,
 	cons datastore.ScanConsistency, vector timestamp.Vector, conn *datastore.IndexConnection) {
-	pi.ScanEntries(requestId, limit, cons, vector, conn)
+	var spanEvaluator compiledSpans
+	var err errors.Error
+
+	if span != nil && !pi.primary {
+		spanEvaluator, err = compileSpan(span)
+		if err != nil {
+			conn.Error(err)
+			return
+		}
+	}
+	pi.scanEntries(requestId, spanEvaluator, limit, cons, vector, conn)
+}
+
+func (pi *indexIndex) Scan2(requestId string, spans datastore.Spans2, reverse, distinctAfterProjection,
+	ordered bool, projection *datastore.IndexProjection, offset, limit int64, cons datastore.ScanConsistency,
+	vector timestamp.Vector, conn *datastore.IndexConnection) {
+	var spanEvaluator compiledSpans
+	var err errors.Error
+
+	if spans != nil && !pi.primary {
+		spanEvaluator, err = compileSpan2(spans)
+		if err != nil {
+			conn.Error(err)
+			return
+		}
+	}
+	pi.scanEntries(requestId, spanEvaluator, limit, cons, vector, conn)
 }
 
 // Do the presented credentials authorize the user to read the namespace/keyspace bucket?
@@ -514,6 +571,11 @@ func canListIndexes(context datastore.QueryContext, ds datastore.Datastore, elem
 
 func (pi *indexIndex) ScanEntries(requestId string, limit int64, cons datastore.ScanConsistency,
 	vector timestamp.Vector, conn *datastore.IndexConnection) {
+	pi.scanEntries(requestId, nil, limit, cons, vector, conn)
+}
+
+func (pi *indexIndex) scanEntries(requestId string, spanEvaluator compiledSpans, limit int64, cons datastore.ScanConsistency,
+	vector timestamp.Vector, conn *datastore.IndexConnection) {
 	defer conn.Sender().Close()
 
 	includeSeqScan := pi.keyspace.Name() == KEYSPACE_NAME_ALL_INDEXES
@@ -533,7 +595,7 @@ func (pi *indexIndex) ScanEntries(requestId string, limit int64, cons datastore.
 			for _, object := range objects {
 				includeDefaultKeyspace := canAccessAll || (canRead(conn.QueryContext(), namespace.Datastore(), namespaceId, object.Id) &&
 					canListIndexes(conn.QueryContext(), namespace.Datastore(), namespaceId, object.Id))
-				if object.IsKeyspace {
+				if object.IsKeyspace && (len(spanEvaluator) == 0 || spanEvaluator.acceptMissing()) {
 					keyspace, excp := namespace.KeyspaceById(object.Id)
 					if excp == nil {
 						keys := make(map[string]bool, 64)
@@ -558,6 +620,9 @@ func (pi *indexIndex) ScanEntries(requestId string, limit int64, cons datastore.
 					}
 				}
 				if object.IsBucket {
+					if len(spanEvaluator) != 0 && !spanEvaluator.evaluate(object.Id) {
+						continue loop
+					}
 					bucket, excp := namespace.BucketById(object.Id)
 					if excp != nil {
 						continue loop

@@ -14,6 +14,7 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/expression/parser"
 	functionsStorage "github.com/couchbase/query/functions/storage"
 	"github.com/couchbase/query/timestamp"
 	"github.com/couchbase/query/value"
@@ -21,7 +22,7 @@ import (
 
 type functionsKeyspace struct {
 	keyspaceBase
-	si datastore.Indexer
+	indexer datastore.Indexer
 }
 
 func (b *functionsKeyspace) Release(close bool) {
@@ -98,11 +99,11 @@ func (b *functionsKeyspace) Size(context datastore.QueryContext) (int64, errors.
 }
 
 func (b *functionsKeyspace) Indexer(name datastore.IndexType) (datastore.Indexer, errors.Error) {
-	return b.si, nil
+	return b.indexer, nil
 }
 
 func (b *functionsKeyspace) Indexers() ([]datastore.Indexer, errors.Error) {
-	return []datastore.Indexer{b.si}, nil
+	return []datastore.Indexer{b.indexer}, nil
 }
 
 func (b *functionsKeyspace) Fetch(keys []string, keysMap map[string]value.AnnotatedValue,
@@ -186,10 +187,26 @@ func newFunctionsKeyspace(p *namespace) (*functionsKeyspace, errors.Error) {
 	b := new(functionsKeyspace)
 	setKeyspaceBase(&b.keyspaceBase, p, KEYSPACE_NAME_FUNCTIONS)
 
-	primary := &functionsIndex{name: "#primary", keyspace: b}
-	b.si = newSystemIndexer(b, primary)
-	setIndexBase(&primary.indexBase, b.si)
+	primary := &functionsIndex{name: "#primary", keyspace: b, primary: true}
+	b.indexer = newSystemIndexer(b, primary)
+	setIndexBase(&primary.indexBase, b.indexer)
 
+	// add a secondary index on `bucket_id`
+	expr, err := parser.Parse("`identity`.`bucket`")
+
+	if err == nil {
+		key := expression.Expressions{expr}
+		buckets := &functionsIndex{
+			name:     "#buckets",
+			keyspace: b,
+			primary:  false,
+			idxKey:   key,
+		}
+		setIndexBase(&buckets.indexBase, b.indexer)
+		b.indexer.(*systemIndexer).AddIndex(buckets.name, buckets)
+	} else {
+		return nil, errors.NewSystemDatastoreError(err, "")
+	}
 	return b, nil
 }
 
@@ -197,6 +214,8 @@ type functionsIndex struct {
 	indexBase
 	name     string
 	keyspace *functionsKeyspace
+	primary  bool
+	idxKey   expression.Expressions
 }
 
 func (pi *functionsIndex) KeyspaceId() string {
@@ -220,6 +239,17 @@ func (pi *functionsIndex) SeekKey() expression.Expressions {
 }
 
 func (pi *functionsIndex) RangeKey() expression.Expressions {
+	return pi.idxKey
+}
+
+func (pi *functionsIndex) RangeKey2() datastore.IndexKeys {
+	if !pi.primary {
+		rangeKey := &datastore.IndexKey{
+			Expr: pi.idxKey[0],
+		}
+		rangeKey.SetAttribute(datastore.IK_MISSING, true)
+		return datastore.IndexKeys{rangeKey}
+	}
 	return nil
 }
 
@@ -228,7 +258,7 @@ func (pi *functionsIndex) Condition() expression.Expression {
 }
 
 func (pi *functionsIndex) IsPrimary() bool {
-	return true
+	return pi.primary
 }
 
 func (pi *functionsIndex) State() (state datastore.IndexState, msg string, err errors.Error) {
@@ -246,7 +276,33 @@ func (pi *functionsIndex) Drop(requestId string) errors.Error {
 
 func (pi *functionsIndex) Scan(requestId string, span *datastore.Span, distinct bool, limit int64,
 	cons datastore.ScanConsistency, vector timestamp.Vector, conn *datastore.IndexConnection) {
-	pi.ScanEntries(requestId, limit, cons, vector, conn)
+	var spanEvaluator compiledSpans
+	var err errors.Error
+
+	if span != nil && !pi.primary {
+		spanEvaluator, err = compileSpan(span)
+		if err != nil {
+			conn.Error(err)
+			return
+		}
+	}
+	pi.scanEntries(requestId, spanEvaluator, limit, cons, vector, conn)
+}
+
+func (pi *functionsIndex) Scan2(requestId string, spans datastore.Spans2, reverse, distinctAfterProjection,
+	ordered bool, projection *datastore.IndexProjection, offset, limit int64, cons datastore.ScanConsistency,
+	vector timestamp.Vector, conn *datastore.IndexConnection) {
+	var spanEvaluator compiledSpans
+	var err errors.Error
+
+	if spans != nil && !pi.primary {
+		spanEvaluator, err = compileSpan2(spans)
+		if err != nil {
+			conn.Error(err)
+			return
+		}
+	}
+	pi.scanEntries(requestId, spanEvaluator, limit, cons, vector, conn)
 }
 
 func hasGlobalFunctionsAccess(context datastore.QueryContext) (bool, bool) {
@@ -289,11 +345,16 @@ func hasScopeFunctionsAccess(path string, context datastore.QueryContext) (bool,
 
 func (pi *functionsIndex) ScanEntries(requestId string, limit int64, cons datastore.ScanConsistency,
 	vector timestamp.Vector, conn *datastore.IndexConnection) {
+	pi.scanEntries(requestId, nil, limit, cons, vector, conn)
+}
+
+func (pi *functionsIndex) scanEntries(requestId string, spanEvaluator compiledSpans, limit int64, cons datastore.ScanConsistency,
+	vector timestamp.Vector, conn *datastore.IndexConnection) {
 	defer conn.Sender().Close()
 
 	context := conn.QueryContext()
 	internal, external := hasGlobalFunctionsAccess(context)
-	if internal || external {
+	if (internal || external) && (len(spanEvaluator) == 0 || spanEvaluator.acceptMissing()) {
 		err := functionsStorage.Scan("", func(path string) error {
 			entry := datastore.IndexEntry{PrimaryKey: path}
 			sendSystemKey(conn, &entry)
@@ -306,6 +367,9 @@ func (pi *functionsIndex) ScanEntries(requestId string, limit int64, cons datast
 	}
 	buckets := datastore.GetDatastore().GetUserBuckets(context.Credentials())
 	for _, b := range buckets {
+		if len(spanEvaluator) > 0 && !spanEvaluator.evaluate(b) {
+			continue
+		}
 		err := functionsStorage.Scan(b, func(path string) error {
 			entry := datastore.IndexEntry{PrimaryKey: path}
 			sendSystemKey(conn, &entry)

@@ -14,6 +14,7 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/expression/parser"
 	"github.com/couchbase/query/timestamp"
 	"github.com/couchbase/query/value"
 )
@@ -182,6 +183,23 @@ func newScopesKeyspace(p *namespace, store datastore.Datastore, name string, ski
 	b.indexer = newSystemIndexer(b, primary)
 	setIndexBase(&primary.indexBase, b.indexer)
 
+	// add a secondary index on `bucket_id`
+	expr, err := parser.Parse(`bucket_id`)
+
+	if err == nil {
+		key := expression.Expressions{expr}
+		buckets := &scopeIndex{
+			name:     "#buckets",
+			keyspace: b,
+			primary:  false,
+			idxKey:   key,
+		}
+		setIndexBase(&buckets.indexBase, b.indexer)
+		b.indexer.(*systemIndexer).AddIndex(buckets.name, buckets)
+	} else {
+		return nil, errors.NewSystemDatastoreError(err, "")
+	}
+
 	return b, nil
 }
 
@@ -189,6 +207,8 @@ type scopeIndex struct {
 	indexBase
 	name     string
 	keyspace *scopeKeyspace
+	primary  bool
+	idxKey   expression.Expressions
 }
 
 func (pi *scopeIndex) KeyspaceId() string {
@@ -212,7 +232,7 @@ func (pi *scopeIndex) SeekKey() expression.Expressions {
 }
 
 func (pi *scopeIndex) RangeKey() expression.Expressions {
-	return nil
+	return pi.idxKey
 }
 
 func (pi *scopeIndex) Condition() expression.Expression {
@@ -220,7 +240,7 @@ func (pi *scopeIndex) Condition() expression.Expression {
 }
 
 func (pi *scopeIndex) IsPrimary() bool {
-	return true
+	return pi.primary
 }
 
 func (pi *scopeIndex) State() (state datastore.IndexState, msg string, err errors.Error) {
@@ -273,6 +293,9 @@ func (pi *scopeIndex) Scan(requestId string, span *datastore.Span, distinct bool
 					objects, err = namespace.Objects(conn.QueryContext().Credentials(), true)
 					if err == nil {
 						for _, object := range objects {
+							if !pi.primary && !spanEvaluator.evaluate(object.Id) {
+								continue loop
+							}
 
 							// The list of bucket ids can include memcached buckets.
 							// We do not want to include them in the list
@@ -295,7 +318,7 @@ func (pi *scopeIndex) Scan(requestId string, span *datastore.Span, distinct bool
 								scope, _ := bucket.ScopeById(scopeId)
 								if scope != nil {
 									id := makeId(namespaceId, object.Id, scopeId)
-									if spanEvaluator.evaluate(id) {
+									if !pi.primary || spanEvaluator.evaluate(id) {
 										if !(includeDefaultKeyspace || canRead(conn.QueryContext(), namespace.Datastore(), namespaceId, object.Id, scopeId)) {
 											found := false
 											keyspaceIds, _ := scope.KeyspaceIds()

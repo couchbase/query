@@ -150,20 +150,55 @@ type compiledSpan struct {
 
 	// golang does not allow to compare functional pointers to functions...
 	equality bool
+
+	// check for missing
+	isMissingTest bool
 }
 
-func compileSpan(span *datastore.Span) (*compiledSpan, errors.Error) {
+type compiledSpans []compiledSpan
+
+func (this compiledSpans) isEquals() int {
+	for idx, s := range this {
+		if s.isEquals() {
+			return idx
+		}
+	}
+	return -1
+}
+
+func (this compiledSpans) evaluate(key string) bool {
+	for _, s := range this {
+		if s.evaluate(key) {
+			return true
+		}
+	}
+	return false
+}
+
+func (this compiledSpans) acceptMissing() bool {
+	for _, s := range this {
+		if s.acceptMissing() {
+			return true
+		}
+	}
+	return false
+}
+
+func (this compiledSpans) key(idx int) string {
+	if idx < 0 || idx >= len(this) {
+		return ""
+	}
+	return this[idx].key()
+}
+
+func compileSpan(span *datastore.Span) (compiledSpans, errors.Error) {
 	var err errors.Error
 	var isLowValued, isHighValued bool
 
-	// currently system indexes are either primary or on a single field
-	if len(span.Seek) > 1 || len(span.Range.Low) > 1 || len(span.Range.High) > 1 {
-		return nil, errors.NewSystemDatastoreError(nil, "Invalid number of fields in span")
-	}
-
-	spanEvaluator := &compiledSpan{}
-	if span.Seek != nil {
-		val := span.Seek[0].Actual()
+	cSpans := make(compiledSpans, 0, 2)
+	for _, seek := range span.Seek {
+		spanEvaluator := compiledSpan{}
+		val := seek.Actual()
 		switch t := val.(type) {
 		case string:
 		default:
@@ -174,26 +209,77 @@ func compileSpan(span *datastore.Span) (*compiledSpan, errors.Error) {
 		spanEvaluator.evalLow = equals
 		spanEvaluator.evalHigh = noop
 		spanEvaluator.equality = true
-	} else {
-		spanEvaluator.low, spanEvaluator.evalLow, isLowValued, err = compileRange(span.Range.Low, span.Range.Inclusion, datastore.LOW)
-		if err != nil {
-			return nil, err
-		}
-		spanEvaluator.high, spanEvaluator.evalHigh, isHighValued, err = compileRange(span.Range.High, span.Range.Inclusion, datastore.HIGH)
-		if err != nil {
-			return nil, err
-		}
-		if spanEvaluator.high == spanEvaluator.low && isLowValued && isHighValued {
+		cSpans = append(cSpans, spanEvaluator)
+	}
+	spanEvaluator := compiledSpan{}
+	spanEvaluator.low, spanEvaluator.evalLow, isLowValued, err = compileRange(span.Range.Low, span.Range.Inclusion, datastore.LOW)
+	if err != nil {
+		return nil, err
+	}
+	spanEvaluator.high, spanEvaluator.evalHigh, isHighValued, err = compileRange(span.Range.High, span.Range.Inclusion, datastore.HIGH)
+	if err != nil {
+		return nil, err
+	}
+	if spanEvaluator.high == spanEvaluator.low && isLowValued && isHighValued {
+		spanEvaluator.evalLow = equals
+		spanEvaluator.evalHigh = noop
+		spanEvaluator.equality = true
+	}
+	cSpans = append(cSpans, spanEvaluator)
+	return cSpans, nil
+}
+
+func compileSpan2(spans datastore.Spans2) (compiledSpans, errors.Error) {
+	var err errors.Error
+	var isLowValued, isHighValued bool
+
+	cSpans := make(compiledSpans, 0, len(spans))
+	for _, span := range spans {
+		for _, seek := range span.Seek {
+			spanEvaluator := compiledSpan{}
+			val := seek.Actual()
+			switch t := val.(type) {
+			case string:
+			default:
+				return nil, errors.NewSystemDatastoreError(nil, fmt.Sprintf("Invalid seek value %v of type %T.", t, val))
+			}
+			spanEvaluator.low = val.(string)
+			spanEvaluator.high = spanEvaluator.low
 			spanEvaluator.evalLow = equals
 			spanEvaluator.evalHigh = noop
 			spanEvaluator.equality = true
+			cSpans = append(cSpans, spanEvaluator)
+		}
+		for _, rng := range span.Ranges {
+			spanEvaluator := compiledSpan{}
+			spanEvaluator.low, spanEvaluator.evalLow, isLowValued, err = compileRange2(rng.Low, rng.Inclusion, datastore.LOW)
+			if err != nil {
+				return nil, err
+			}
+			spanEvaluator.high, spanEvaluator.evalHigh, isHighValued, err = compileRange2(rng.High, rng.Inclusion, datastore.HIGH)
+			if err != nil {
+				return nil, err
+			}
+			if spanEvaluator.high == spanEvaluator.low && isLowValued && isHighValued {
+				spanEvaluator.evalLow = equals
+				spanEvaluator.evalHigh = noop
+				spanEvaluator.equality = true
+			} else if isHighValued && !isLowValued && spanEvaluator.evalHigh == nil {
+				spanEvaluator.evalHigh = fail
+				spanEvaluator.isMissingTest = true
+			}
+			cSpans = append(cSpans, spanEvaluator)
 		}
 	}
-	return spanEvaluator, nil
+	return cSpans, nil
 }
 
 func (this *compiledSpan) evaluate(key string) bool {
 	return this.evalHigh(this.high, key) && this.evalLow(this.low, key)
+}
+
+func (this *compiledSpan) acceptMissing() bool {
+	return this.isMissingTest
 }
 
 func (this *compiledSpan) isEquals() bool {
@@ -208,8 +294,15 @@ func compileRange(in value.Values, incl, side datastore.Inclusion) (string, func
 	if len(in) == 0 {
 		return "", noop, false, nil
 	}
-	val := in[0].Actual()
-	t := in[0].Type()
+	return compileRange2(in[0], incl, side)
+}
+
+func compileRange2(in value.Value, incl, side datastore.Inclusion) (string, func(string, string) bool, bool, errors.Error) {
+	if in == nil {
+		return "", noop, false, nil
+	}
+	val := in.Actual()
+	t := in.Type()
 	switch t {
 	case value.STRING:
 	case value.NULL:
@@ -217,6 +310,8 @@ func compileRange(in value.Values, incl, side datastore.Inclusion) (string, func
 		// > null is a noop, < null should never occur and it's an error
 		if side == datastore.LOW {
 			return "", noop, false, nil
+		} else if side == datastore.HIGH && incl == 0 {
+			return "", nil, true, nil
 		}
 		fallthrough
 	default:
@@ -261,6 +356,10 @@ func greaterOrEqual(bottom, key string) bool {
 
 func noop(val, key string) bool {
 	return true
+}
+
+func fail(val, key string) bool {
+	return false
 }
 
 // Credentials

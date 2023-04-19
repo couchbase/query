@@ -199,7 +199,7 @@ func splitAppRolesKey(key string) (err errors.Error, id, roleName, target string
 	return
 }
 
-func (pi *applicableRolesIndex) scanEntries(limit int64, conn *datastore.IndexConnection, compSpan *compiledSpan) {
+func (pi *applicableRolesIndex) scanEntries(limit int64, conn *datastore.IndexConnection, compSpan compiledSpans) {
 	users, err := datastore.GetDatastore().GetUserInfoAll()
 	if err != nil {
 		conn.Error(errors.NewSystemUnableToRetrieveError(err))
@@ -213,7 +213,7 @@ func (pi *applicableRolesIndex) scanEntries(limit int64, conn *datastore.IndexCo
 				return
 			}
 			key := makeAppRolesKey(user.Id, role.Name, role.Target)
-			if compSpan == nil || compSpan.evaluate(key) {
+			if len(compSpan) == 0 || compSpan.evaluate(key) {
 				entry := datastore.IndexEntry{PrimaryKey: key}
 				if !sendSystemKey(conn, &entry) {
 					return

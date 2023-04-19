@@ -15,6 +15,7 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/expression/parser"
 	"github.com/couchbase/query/timestamp"
 	"github.com/couchbase/query/value"
 )
@@ -273,9 +274,26 @@ func newKeyspacesKeyspace(p *namespace, store datastore.Datastore, name string, 
 	b.info = info
 	setKeyspaceBase(&b.keyspaceBase, p, name)
 
-	primary := &keyspaceIndex{name: "#primary", keyspace: b}
+	primary := &keyspaceIndex{name: "#primary", keyspace: b, primary: true}
 	b.indexer = newSystemIndexer(b, primary)
 	setIndexBase(&primary.indexBase, b.indexer)
+
+	// add a secondary index on `bucket_id`
+	expr, err := parser.Parse(`bucket_id`)
+
+	if err == nil {
+		key := expression.Expressions{expr}
+		buckets := &keyspaceIndex{
+			name:     "#buckets",
+			keyspace: b,
+			primary:  false,
+			idxKey:   key,
+		}
+		setIndexBase(&buckets.indexBase, b.indexer)
+		b.indexer.(*systemIndexer).AddIndex(buckets.name, buckets)
+	} else {
+		return nil, errors.NewSystemDatastoreError(err, "")
+	}
 
 	return b, nil
 }
@@ -284,6 +302,8 @@ type keyspaceIndex struct {
 	indexBase
 	name     string
 	keyspace *keyspaceKeyspace
+	primary  bool
+	idxKey   expression.Expressions
 }
 
 func (pi *keyspaceIndex) KeyspaceId() string {
@@ -307,6 +327,17 @@ func (pi *keyspaceIndex) SeekKey() expression.Expressions {
 }
 
 func (pi *keyspaceIndex) RangeKey() expression.Expressions {
+	return pi.idxKey
+}
+
+func (pi *keyspaceIndex) RangeKey2() datastore.IndexKeys {
+	if !pi.primary {
+		rangeKey := &datastore.IndexKey{
+			Expr: pi.idxKey[0],
+		}
+		rangeKey.SetAttribute(datastore.IK_MISSING, true)
+		return datastore.IndexKeys{rangeKey}
+	}
 	return nil
 }
 
@@ -315,7 +346,7 @@ func (pi *keyspaceIndex) Condition() expression.Expression {
 }
 
 func (pi *keyspaceIndex) IsPrimary() bool {
-	return true
+	return pi.primary
 }
 
 func (pi *keyspaceIndex) State() (state datastore.IndexState, msg string, err errors.Error) {
@@ -345,92 +376,126 @@ func splitId(id string) (errors.Error, []string) {
 
 func (pi *keyspaceIndex) Scan(requestId string, span *datastore.Span, distinct bool, limit int64,
 	cons datastore.ScanConsistency, vector timestamp.Vector, conn *datastore.IndexConnection) {
-	var namespace datastore.Namespace
-	var bucket datastore.Bucket
-	var objects []datastore.Object
 
 	if span == nil {
 		pi.ScanEntries(requestId, limit, cons, vector, conn)
 	} else {
-		defer conn.Sender().Close()
 
 		spanEvaluator, err := compileSpan(span)
 		if err != nil {
 			conn.Error(err)
+			conn.Sender().Close()
 			return
 		}
+		pi.scan(requestId, spanEvaluator, limit, cons, vector, conn)
+	}
+}
 
-		var numProduced int64 = 0
-		namespaceIds, err := pi.keyspace.store.NamespaceIds()
-		if err == nil {
-			canAccessAll := canAccessSystemTables(conn.QueryContext())
+func (pi *keyspaceIndex) Scan2(requestId string, spans datastore.Spans2, reverse, distinctAfterProjection,
+	ordered bool, projection *datastore.IndexProjection, offset, limit int64, cons datastore.ScanConsistency,
+	vector timestamp.Vector, conn *datastore.IndexConnection) {
 
-		loop:
-			for _, namespaceId := range namespaceIds {
-				namespace, err = pi.keyspace.store.NamespaceById(namespaceId)
+	if spans == nil {
+		pi.ScanEntries(requestId, limit, cons, vector, conn)
+	} else {
+
+		spanEvaluator, err := compileSpan2(spans)
+		if err != nil {
+			conn.Error(err)
+			conn.Sender().Close()
+			return
+		}
+		pi.scan(requestId, spanEvaluator, limit, cons, vector, conn)
+	}
+}
+
+func (pi *keyspaceIndex) scan(requestId string, spanEvaluator compiledSpans, limit int64,
+	cons datastore.ScanConsistency, vector timestamp.Vector, conn *datastore.IndexConnection) {
+	var namespace datastore.Namespace
+	var bucket datastore.Bucket
+	var objects []datastore.Object
+	var numProduced int64 = 0
+
+	defer conn.Sender().Close()
+	namespaceIds, err := pi.keyspace.store.NamespaceIds()
+	if err == nil {
+		canAccessAll := canAccessSystemTables(conn.QueryContext())
+
+	loop:
+		for _, namespaceId := range namespaceIds {
+			namespace, err = pi.keyspace.store.NamespaceById(namespaceId)
+			if err == nil {
+				objects, err = namespace.Objects(conn.QueryContext().Credentials(), true)
 				if err == nil {
-					objects, err = namespace.Objects(conn.QueryContext().Credentials(), true)
-					if err == nil {
-						for _, object := range objects {
+					for _, object := range objects {
 
-							// The list of bucket ids can include memcached buckets.
-							// We do not want to include them in the list
-							// of queryable buckets. Attempting to retrieve the bucket
-							// record of a memcached bucket returns an error,
-							// which allows us to distinguish these buckets, and exclude them.
-							// See MB-19364 for more info.
-							if object.IsKeyspace {
-								_, err = namespace.KeyspaceByName(object.Id)
-								if err != nil {
-									continue
-								}
+						// The list of bucket ids can include memcached buckets.
+						// We do not want to include them in the list
+						// of queryable buckets. Attempting to retrieve the bucket
+						// record of a memcached bucket returns an error,
+						// which allows us to distinguish these buckets, and exclude them.
+						// See MB-19364 for more info.
+						if object.IsKeyspace {
+							_, err = namespace.KeyspaceByName(object.Id)
+							if err != nil {
+								continue
 							}
-							if object.IsBucket {
-								bucket, err = namespace.BucketByName(object.Id)
-								if err != nil {
-									continue
-								}
+						}
+						if object.IsBucket {
+							bucket, err = namespace.BucketByName(object.Id)
+							if err != nil {
+								continue
 							}
+						}
 
-							includeDefaultKeyspace := canAccessAll || canRead(conn.QueryContext(), namespace.Datastore(), namespaceId, object.Id)
-							if object.IsKeyspace && includeDefaultKeyspace {
-								id := makeId(namespaceId, object.Id)
-								if spanEvaluator.evaluate(id) {
-									entry := datastore.IndexEntry{PrimaryKey: id}
-									if !sendSystemKey(conn, &entry) {
-										return
-									}
-									numProduced++
-									if limit > 0 && numProduced >= limit {
-										break loop
-									}
+						includeDefaultKeyspace := canAccessAll || canRead(conn.QueryContext(), namespace.Datastore(), namespaceId, object.Id)
+						if object.IsKeyspace && includeDefaultKeyspace {
+							var res bool
+
+							id := makeId(namespaceId, object.Id)
+							if pi.primary {
+								res = spanEvaluator.evaluate(id)
+							} else {
+								res = spanEvaluator.acceptMissing()
+							}
+							if res {
+								entry := datastore.IndexEntry{PrimaryKey: id}
+								if !sendSystemKey(conn, &entry) {
+									return
+								}
+								numProduced++
+								if limit > 0 && numProduced >= limit {
+									break loop
 								}
 							}
-							if object.IsBucket {
-								scopeIds, _ := bucket.ScopeIds()
-								for _, scopeId := range scopeIds {
-									scope, _ := bucket.ScopeById(scopeId)
-									if scope != nil {
-										includeScope := includeDefaultKeyspace || canRead(conn.QueryContext(), namespace.Datastore(), namespaceId, object.Id, scopeId)
-										keyspaceIds, _ := scope.KeyspaceIds()
-										for _, keyspaceId := range keyspaceIds {
-											if pi.keyspace.skipSystem && keyspaceId[0] == '_' {
+						}
+						if object.IsBucket {
+							if !pi.primary && !spanEvaluator.evaluate(object.Id) {
+								continue loop
+							}
+							scopeIds, _ := bucket.ScopeIds()
+							for _, scopeId := range scopeIds {
+								scope, _ := bucket.ScopeById(scopeId)
+								if scope != nil {
+									includeScope := includeDefaultKeyspace || canRead(conn.QueryContext(), namespace.Datastore(), namespaceId, object.Id, scopeId)
+									keyspaceIds, _ := scope.KeyspaceIds()
+									for _, keyspaceId := range keyspaceIds {
+										if pi.keyspace.skipSystem && keyspaceId[0] == '_' {
+											continue
+										}
+										id := makeId(namespaceId, object.Id, scopeId, keyspaceId)
+										if !pi.primary || spanEvaluator.evaluate(id) {
+											if !(includeScope || canRead(conn.QueryContext(), namespace.Datastore(), namespaceId, object.Id, scopeId, keyspaceId)) {
+												conn.Warning(errors.NewSystemFilteredRowsWarning("system:keyspaces"))
 												continue
 											}
-											id := makeId(namespaceId, object.Id, scopeId, keyspaceId)
-											if spanEvaluator.evaluate(id) {
-												if !(includeScope || canRead(conn.QueryContext(), namespace.Datastore(), namespaceId, object.Id, scopeId, keyspaceId)) {
-													conn.Warning(errors.NewSystemFilteredRowsWarning("system:keyspaces"))
-													continue
-												}
-												entry := datastore.IndexEntry{PrimaryKey: id}
-												if !sendSystemKey(conn, &entry) {
-													return
-												}
-												numProduced++
-												if limit > 0 && numProduced >= limit {
-													break loop
-												}
+											entry := datastore.IndexEntry{PrimaryKey: id}
+											if !sendSystemKey(conn, &entry) {
+												return
+											}
+											numProduced++
+											if limit > 0 && numProduced >= limit {
+												break loop
 											}
 										}
 									}

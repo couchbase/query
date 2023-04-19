@@ -266,11 +266,12 @@ func (pi *tasksCacheIndex) Scan(requestId string, span *datastore.Span, distinct
 			conn.Error(err)
 			return
 		}
-		if spanEvaluator.isEquals() {
+		idx := spanEvaluator.isEquals()
+		if idx >= 0 {
 
 			// now that the node name can change in flight, use a consistent one across the scan
 			whoAmI := distributed.RemoteAccess().WhoAmI()
-			if spanEvaluator.key() == whoAmI {
+			if spanEvaluator.key(idx) == whoAmI {
 				scheduler.TasksForeach(func(name string, task *scheduler.TaskEntry) bool {
 					entry = &datastore.IndexEntry{
 						PrimaryKey: distributed.RemoteAccess().MakeKey(whoAmI, name),
@@ -281,7 +282,7 @@ func (pi *tasksCacheIndex) Scan(requestId string, span *datastore.Span, distinct
 					return sendSystemKey(conn, entry)
 				})
 			} else {
-				nodes := []string{spanEvaluator.key()}
+				nodes := []string{spanEvaluator.key(idx)}
 				distributed.RemoteAccess().GetRemoteKeys(nodes, "tasks_cache", func(id string) bool {
 					n, _ := distributed.RemoteAccess().SplitKey(id)
 					indexEntry := datastore.IndexEntry{

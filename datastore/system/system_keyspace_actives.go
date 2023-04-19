@@ -462,11 +462,12 @@ func (pi *activeRequestsIndex) Scan(requestId string, span *datastore.Span, dist
 			}
 		}
 
-		if spanEvaluator.isEquals() {
-			if spanEvaluator.key() == whoAmI {
+		idx := spanEvaluator.isEquals()
+		if idx >= 0 {
+			if spanEvaluator.key(idx) == whoAmI {
 				server.ActiveRequestsForEach(process, send)
 			} else {
-				nodes := []string{spanEvaluator.key()}
+				nodes := []string{spanEvaluator.key(idx)}
 				distributed.RemoteAccess().GetRemoteKeys(nodes, "active_requests", func(id string) bool {
 					n, _ := distributed.RemoteAccess().SplitKey(id)
 					indexEntry := datastore.IndexEntry{

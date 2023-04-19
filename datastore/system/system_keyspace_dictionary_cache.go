@@ -266,11 +266,12 @@ func (pi *dictionaryCacheIndex) Scan(requestId string, span *datastore.Span, dis
 			conn.Error(err)
 			return
 		}
-		if spanEvaluator.isEquals() {
+		idx := spanEvaluator.isEquals()
+		if idx >= 0 {
 
 			// now that the node name can change in flight, use a consistent one across the scan
 			whoAmI := distributed.RemoteAccess().WhoAmI()
-			if spanEvaluator.key() == whoAmI {
+			if spanEvaluator.key(idx) == whoAmI {
 				dictionary.DictCacheEntriesForeach(func(name string, d interface{}) bool {
 					entry = &datastore.IndexEntry{
 						PrimaryKey: distributed.RemoteAccess().MakeKey(whoAmI, name),
@@ -281,7 +282,7 @@ func (pi *dictionaryCacheIndex) Scan(requestId string, span *datastore.Span, dis
 					return sendSystemKey(conn, entry)
 				})
 			} else {
-				nodes := []string{spanEvaluator.key()}
+				nodes := []string{spanEvaluator.key(idx)}
 				distributed.RemoteAccess().GetRemoteKeys(nodes, pi.keyspace.name, func(id string) bool {
 					n, _ := distributed.RemoteAccess().SplitKey(id)
 					indexEntry := datastore.IndexEntry{
