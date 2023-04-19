@@ -677,11 +677,19 @@ func collectAdvisorUnnestsLevel(unnestMap map[string]*unnestAdvisorEntry, level 
 	}
 
 	if fu != nil {
-		rv = make(map[string]*unnestAdvisorEntry, len(fu.dependent))
+		rv = make(map[string]*unnestAdvisorEntry, len(unnestMap))
 		rv[fu.unnest.Alias()] = fu
-		for s, _ := range fu.dependent {
+		addUnnestDependent(unnestMap, rv, fu)
+	}
+	return
+}
+
+func addUnnestDependent(unnestMap, rv map[string]*unnestAdvisorEntry, ue *unnestAdvisorEntry) {
+	if ue != nil {
+		for s, _ := range ue.dependent {
 			if u, ok := unnestMap[s]; ok {
 				rv[s] = u
+				addUnnestDependent(unnestMap, rv, u)
 			}
 		}
 	}
