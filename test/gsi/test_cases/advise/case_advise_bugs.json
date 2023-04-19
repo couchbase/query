@@ -215,5 +215,30 @@
         "query": "select d.c3 from shellTest AS d UNNEST d.a1 AS a UNNEST OBJECT_VALUES(a.o) AS b WHERE d.c2 BETWEEN 10 AND 20 AND d.c1 = 10 AND a.x = 20 AND b.y < 30"
       }
     ]
+  },
+  {
+    "testcase": "MB-56528",
+    "statements": "advise SELECT a.c1, u111 FROM shellTest AS a UNNEST a.a1 AS u1 UNNEST u1.a11 AS u11 UNNEST u11.a111 AS u111 WHERE a.o1.id = 'abc' AND u111.name = 'xyz'",
+    "advise": true,
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": {
+            "recommended_indexes": {
+              "indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_ALL_a1_a11_a111_name_o1_id ON `shellTest`(ALL ARRAY (ALL ARRAY (ALL ARRAY `u111`.`name` FOR u111 IN `u11`.`a111` END) FOR u11 IN `u1`.`a11` END) FOR u1 IN `a1` END,`o1`.`id`)",
+                  "keyspace_alias": "shellTest_a",
+                  "recommending_rule": "Index keys follow order of predicate types: 1. leading array index for unnest, 2. equality/null/missing."
+                }
+              ]
+            }
+          }
+        },
+        "query": "SELECT a.c1, u111 FROM shellTest AS a UNNEST a.a1 AS u1 UNNEST u1.a11 AS u11 UNNEST u11.a111 AS u111 WHERE a.o1.id = 'abc' AND u111.name = 'xyz'"
+      }
+    ]
   }
 ]
