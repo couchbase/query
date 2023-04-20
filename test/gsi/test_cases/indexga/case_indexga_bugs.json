@@ -76,5 +76,22 @@
                 "cnt": 0
             }
         ]
+    },
+    {
+        "testcase": "MB-53903",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`limit` IS MISSING END"
+        },
+        "statements": "SELECT 1 FROM orders WHERE (test_id = 'indexga' AND type = 'bugs') AND c1 = 'doc' AND a1 IS NOT MISSING AND (c3 > 20 AND c3 > $c3) LIMIT 2",
+	"namedArgs": {"c3": 15},
+        "results": [
+        ]
     }
 ]
