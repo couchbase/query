@@ -272,7 +272,7 @@ func composeTerms(rs, ns *TermSpans) SargSpans {
 
 			pre := prev.Copy()
 			pre.Ranges = append(pre.Ranges, next.Ranges...)
-			pre.Exact = pre.Exact || next.Exact
+			pre.Exact = pre.Exact && next.Exact
 			pn = append(pn, pre)
 		}
 		if len(pn) != 0 {
@@ -507,6 +507,13 @@ func setSpecialSpan(rg *plan.Range2) {
 	} else if rg.EquivalentTo(_MISSING_SPAN.Ranges[0]) {
 		rg.Flags |= plan.RANGE_MISSING_SPAN
 	}
+}
+
+func isSpecialSpan(sspans SargSpans, flag uint32) bool {
+	if tspans, ok := sspans.(*TermSpans); ok {
+		return len(tspans.spans) == 1 && len(tspans.spans[0].Ranges) == 1 && (tspans.spans[0].Ranges[0].Flags&flag) != 0
+	}
+	return false
 }
 
 func ConvertSpans2ToSpan(spans2 plan.Spans2, total int) (plan.Spans, bool) {

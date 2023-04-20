@@ -251,7 +251,7 @@ func composeSargSpan(sargSpans []SargSpans, exactSpan bool) (SargSpans, bool, er
 		ns.SetExact(exactSpan)
 	}
 
-	return ns, exactSpan, nil
+	return ns, ns.Exact(), nil
 }
 
 /*
@@ -312,6 +312,21 @@ func getSargSpans(pred expression.Expression, sargKeys expression.Expressions, i
 				// index key, we can set exactSpan to true even if it is not exact
 				// for a different key (which appears after this index key)
 				exactSpan = rs.Exact()
+				if exactSpan {
+					// if there is a _VALUED_SPANS from the same simple
+					// predicate (generated when predicate depends on the key),
+					// we can make that exact span as well
+					// (array index cover depends on exact)
+					for j := i + 1; j < n; j++ {
+						os := sargSpans[j]
+						if os != nil && os.Size() > 0 && !os.Exact() &&
+							isSpecialSpan(os, plan.RANGE_VALUED_SPAN) {
+							os = os.Copy()
+							os.SetExact(exactSpan)
+							sargSpans[j] = os
+						}
+					}
+				}
 			} else {
 				exactSpan = exactSpan && rs.Exact()
 			}
