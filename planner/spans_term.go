@@ -274,7 +274,7 @@ func composeTerms(rs, ns *TermSpans) SargSpans {
 
 			pre := prev.Copy()
 			pre.Ranges = append(pre.Ranges, next.Ranges...)
-			pre.Exact = pre.Exact || next.Exact
+			pre.Exact = pre.Exact && next.Exact
 			pn = append(pn, pre)
 		}
 		if len(pn) != 0 {
@@ -558,13 +558,7 @@ func setSpecialSpan(rg *plan.Range2) {
 
 func isSpecialSpan(sspans SargSpans, flag uint32) bool {
 	if tspans, ok := sspans.(*TermSpans); ok {
-		spans := tspans.spans
-		if len(spans) == 1 {
-			rgs := spans[0].Ranges
-			if len(rgs) == 1 {
-				return (rgs[0].Flags & flag) != 0
-			}
-		}
+		return len(tspans.spans) == 1 && len(tspans.spans[0].Ranges) == 1 && (tspans.spans[0].Ranges[0].Flags&flag) != 0
 	}
 	return false
 }
