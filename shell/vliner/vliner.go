@@ -785,6 +785,7 @@ func (s *State) Prompt(prompt string) (string, error) {
 
 	moved := false
 	done := 0
+	repeatSpecified := false
 mainLoop:
 	for 0 == done {
 		// It is simpler when dealing with multiple display character runes to draw the entire input & calculate the cursor
@@ -822,7 +823,9 @@ mainLoop:
 			} else if 0 == repeat {
 				repeat = 1
 			}
+			repeatSpecified = true
 		} else if _NORMAL == mode {
+			repeatSpecified = false
 			repeat = 1
 		}
 		if s.controlChars[ccVINTR] == r { // Ctrl+C typically
@@ -1818,7 +1821,33 @@ mainLoop:
 		case '|':
 			desiredCol = -1
 			startPos = pos
-			pos = repeat - 1
+			if s.multiLine {
+				if pos >= len(line) {
+					pos = len(line) - 1
+				}
+				if len(line) > pos && 0 <= pos && '\n' == line[pos] {
+					pos--
+					if 0 > pos || '\n' == line[pos] {
+						pos++
+					}
+				}
+				for ; 0 < pos && '\n' != line[pos]; pos-- {
+				}
+				if 0 > pos || '\n' == line[pos] {
+					pos++
+				}
+			} else {
+				pos = 0
+			}
+			if len(line) > pos && '\n' != line[pos] && repeatSpecified {
+				for ; 0 < repeat && len(line) > pos; repeat-- {
+					pos++
+					if '\n' == line[pos] {
+						pos--
+						break
+					}
+				}
+			}
 			if pos >= len(line) {
 				pos = len(line) - 1
 			}
