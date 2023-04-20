@@ -1568,7 +1568,7 @@ func (this *Server) ShutDown() bool {
 	return rv
 }
 
-func (this *Server) InitiateShutdown(timeout time.Duration) {
+func (this *Server) InitiateShutdown(timeout time.Duration, reason string) {
 	var what string
 	this.Lock()
 	if this.shutdown == _SERVER_RUNNING {
@@ -1581,7 +1581,7 @@ func (this *Server) InitiateShutdown(timeout time.Duration) {
 			what = "Graceful"
 		}
 		this.Unlock()
-		logging.Infof("%s shutdown initiated.", what)
+		logging.Infof("%s shutdown initiated in response to %s.", what, reason)
 		go this.monitorShutdown(timeout)
 	} else {
 		this.Unlock()
@@ -1610,8 +1610,8 @@ func (this *Server) CancelShutdown() {
 
 const _SHUTDOWN_WAIT_LIMIT = 10 * time.Minute
 
-func (this *Server) InitiateShutdownAndWait() {
-	this.InitiateShutdown(_SHUTDOWN_WAIT_LIMIT)
+func (this *Server) InitiateShutdownAndWait(reason string) {
+	this.InitiateShutdown(_SHUTDOWN_WAIT_LIMIT, reason)
 	for this.ShuttingDown() && !this.ShutDown() {
 		time.Sleep(time.Second)
 	}

@@ -513,7 +513,7 @@ func doShutdown(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 		cancel := req.FormValue("cancel")
 		if !endpoint.server.ShutDown() {
 			if cancel == "" {
-				endpoint.server.InitiateShutdown(timeout)
+				endpoint.server.InitiateShutdown(timeout, "shutdown instruction")
 				return textPlain("shutdown requested\n"), nil
 			} else if endpoint.server.ShuttingDown() {
 				endpoint.server.CancelShutdown()

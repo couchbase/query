@@ -483,6 +483,11 @@ func signalCatcher(server *server_package.Server, endpoint *http.HttpEndpoint) {
 	for {
 		select {
 		case s = <-sig_chan:
+			if scs, ok := s.(syscall.Signal); ok {
+				logging.Infof("Received signal: %d - %s", scs, scs.String())
+			} else {
+				logging.Infof("Received signal: %v", s)
+			}
 		}
 		if s == util.SIGCONT {
 			util.ResyncTime()
@@ -505,15 +510,14 @@ func signalCatcher(server *server_package.Server, endpoint *http.HttpEndpoint) {
 			f.Close()
 		}
 	}
-	if s == syscall.SIGTERM {
-		ffdc.Capture(ffdc.SigTerm)
-	} else if s == os.Interrupt {
+	if s == os.Interrupt {
 		// Interrupt (ctrl-C) => Immediate (ungraceful) exit
 		logging.Infof("Shutting down immediately")
 		os.Exit(0)
 	}
+	ffdc.Capture(ffdc.SigTerm)
 	// graceful shutdown on SIGTERM
-	server.InitiateShutdownAndWait()
+	server.InitiateShutdownAndWait("SIGTERM")
 	os.Exit(0)
 }
 
