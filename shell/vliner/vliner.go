@@ -1839,7 +1839,8 @@ mainLoop:
 			} else {
 				pos = 0
 			}
-			if len(line) > pos && '\n' != line[pos] && repeatSpecified {
+			if len(line) > pos && '\n' != line[pos] && repeatSpecified && 0 < repeat {
+				repeat--
 				for ; 0 < repeat && len(line) > pos; repeat-- {
 					pos++
 					if '\n' == line[pos] {
