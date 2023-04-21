@@ -99,7 +99,8 @@ const (
 )
 
 const (
-	_TX_QUEUE_SIZE = 16
+	_TX_QUEUE_SIZE           = 16
+	_QUEUE_BUFFER_MULTIPLIER = 2
 )
 
 type waitEntry struct {
@@ -117,6 +118,7 @@ type runQueue struct {
 	fullQueue int32
 	queue     []waitEntry
 	mutex     sync.RWMutex
+	name      string
 }
 
 type txRunQueues struct {
@@ -209,8 +211,8 @@ func NewServer(store datastore.Datastore, sys datastore.Systemstore, config clus
 
 	rv.SetServicers(servicers)
 	rv.SetPlusServicers(plusServicers)
-	newRunQueue(&rv.unboundQueue, requestsCap, false)
-	newRunQueue(&rv.plusQueue, plusRequestsCap, false)
+	newRunQueue("unbound", &rv.unboundQueue, requestsCap, false)
+	newRunQueue("plus", &rv.plusQueue, plusRequestsCap, false)
 	newTxRunQueues(&rv.transactionQueues, plusRequestsCap, _TX_QUEUE_SIZE)
 	store.SetLogLevel(logging.LogLevel())
 	rv.SetMaxParallelism(maxParallelism)
@@ -484,7 +486,7 @@ func (this *Server) SetServicers(servicers int) {
 	if servicers <= 0 {
 		servicers = SERVICERS_MULTIPLIER * util.NumCPU()
 	}
-	this.unboundQueue.servicers = servicers
+	this.unboundQueue.SetServicers(servicers)
 	this.Unlock()
 }
 
@@ -497,7 +499,7 @@ func (this *Server) SetPlusServicers(plusServicers int) {
 	if plusServicers <= 0 {
 		plusServicers = PLUSSERVICERS_MULTIPLIER * util.NumCPU()
 	}
-	this.plusQueue.servicers = plusServicers
+	this.plusQueue.SetServicers(plusServicers)
 	this.Unlock()
 }
 
@@ -770,7 +772,7 @@ func (this *Server) handlePreTxRequest(request Request, queue *runQueue, transac
 		txQueue, ok := transactionQueues.txQueues[txId]
 		if !ok {
 			txQueue = &runQueue{servicers: 1}
-			newRunQueue(txQueue, int(transactionQueues.size), true)
+			newRunQueue(txId, txQueue, int(transactionQueues.size), true)
 			transactionQueues.txQueues[txId] = txQueue
 		}
 		txQueue.mutex.Lock()
@@ -816,8 +818,9 @@ func (this *Server) handlePostTxRequest(request Request, queue *runQueue, transa
 	return true
 }
 
-func newRunQueue(q *runQueue, num int, txflag bool) {
-	q.size = int32(num + q.servicers)
+func newRunQueue(n string, q *runQueue, num int, txflag bool) {
+	q.name = n
+	q.size = int32(num + (q.servicers * _QUEUE_BUFFER_MULTIPLIER))
 	q.fullQueue = int32(num)
 	q.queue = make([]waitEntry, q.size)
 	if !txflag {
@@ -828,6 +831,13 @@ func newRunQueue(q *runQueue, num int, txflag bool) {
 func newTxRunQueues(q *txRunQueues, nqueues, num int) {
 	q.size = int32(num)
 	q.txQueues = make(map[string]*runQueue, nqueues)
+}
+
+func (this *runQueue) SetServicers(num int) {
+	if this.size >= 0 && (this.size-this.fullQueue)/_QUEUE_BUFFER_MULTIPLIER < int32(num) {
+		logging.Warnf("Number of servicers for %s queue set to more than initial limit", this.name)
+	}
+	this.servicers = num
 }
 
 func (this *runQueue) isFull() bool {
