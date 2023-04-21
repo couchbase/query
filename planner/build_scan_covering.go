@@ -407,7 +407,7 @@ func (this *builder) buildCreateCoveringScan(entry *indexEntry, node *algebra.Ke
 	}
 	// generate filters for covering index scan
 	var filter expression.Expression
-	if indexGroupAggs == nil && len(this.baseKeyspaces) > 1 &&
+	if indexGroupAggs == nil && (len(this.baseKeyspaces) > 1 || implicitAny) &&
 		(!this.hasBuilderFlag(BUILDER_JOIN_ON_PRIMARY) || !node.IsInCorrSubq()) {
 
 		var err error
