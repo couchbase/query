@@ -280,5 +280,21 @@
              "year": 2021
          }
         ]
+    },
+    {
+       "testcase": "MB-56562. Cover. Explain",
+       "queryParams": {"query_context": "orders._default"},
+       "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {"present":true}
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`covers` IS NOT MISSING AND v.`filter` IS NOT MISSING AND v.`index` = 'ixf10n' END"
+        },
+       "statements": "SELECT META(f).id FROM flattenkeys AS f WHERE f.type = 'book' AND ANY ch IN f.chapters SATISFIES (ANY pg IN ch.pages SATISFIES LOWER(pg.name) = 'page 1' AND ch.description = 'chapter 1 description' END) END AND f.isbn = 3 AND f.year = 2019",
+       "results": [
+           {"id":"book3"}
+        ]
     }
 ]

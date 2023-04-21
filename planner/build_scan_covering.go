@@ -354,7 +354,7 @@ func (this *builder) buildCreateCoveringScan(entry *indexEntry, node *algebra.Ke
 	}
 	// generate filters for covering index scan
 	var filter expression.Expression
-	if indexGroupAggs == nil && len(this.baseKeyspaces) > 1 {
+	if indexGroupAggs == nil && (len(this.baseKeyspaces) > 1 || implicitAny) {
 		var err error
 		filter, cost, cardinality, size, frCost, err = this.getIndexFilter(index, node.Alias(), entry.spans,
 			arrayKey, covers, filterCovers, entry.cost, entry.cardinality, entry.size, entry.frCost)
