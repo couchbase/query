@@ -281,6 +281,8 @@ func (b *Bucket) processOpError(vb uint32, lastError error, node string, desc *d
 		case gomemcached.WOULD_THROTTLE:
 			desc.retry = true
 			desc.delay = getDelay(resp)
+			atomic.AddUint64(&b.kvThrottleCount, 1)
+			atomic.AddUint64(&b.kvThrottleDuration, uint64(desc.delay))
 			if desc.delay > backOffDuration {
 				Suspend(b.Name, desc.delay, node)
 			}
@@ -468,6 +470,7 @@ func (b *Bucket) do3(vb uint16, f func(mc *memcached.Client, vb uint16) error, d
 		// KV is not willing to service any more requests for this interval
 		if desc.delay > time.Duration(0) {
 			time.Sleep(desc.delay)
+			desc.delay = time.Duration(0)
 			desc.attempts--
 		}
 	}

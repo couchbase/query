@@ -257,6 +257,8 @@ type Bucket struct {
 	readCount              uint64
 	writeCount             uint64
 	retryCount             uint64
+	kvThrottleCount        uint64
+	kvThrottleDuration     uint64
 	AuthType               string             `json:"authType"`
 	Capabilities           []string           `json:"bucketCapabilities"`
 	CapabilitiesVersion    string             `json:"bucketCapabilitiesVer"`
@@ -1333,16 +1335,22 @@ func (b *Bucket) GetIOStats(reset bool, all bool) map[string]interface{} {
 	var readCount uint64
 	var writeCount uint64
 	var retryCount uint64
+	var kvThrottleCount uint64
+	var kvThrottleDuration uint64
 	var rv map[string]interface{}
 
 	if reset {
 		readCount = atomic.SwapUint64(&b.readCount, uint64(0))
 		writeCount = atomic.SwapUint64(&b.writeCount, uint64(0))
 		retryCount = atomic.SwapUint64(&b.retryCount, uint64(0))
+		kvThrottleCount = atomic.SwapUint64(&b.kvThrottleCount, uint64(0))
+		kvThrottleDuration = atomic.SwapUint64(&b.kvThrottleDuration, uint64(0))
 	} else {
 		readCount = atomic.LoadUint64(&b.readCount)
 		writeCount = atomic.LoadUint64(&b.writeCount)
 		retryCount = atomic.LoadUint64(&b.retryCount)
+		kvThrottleCount = atomic.LoadUint64(&b.kvThrottleCount)
+		kvThrottleDuration = atomic.LoadUint64(&b.kvThrottleDuration)
 	}
 	if readCount != 0 || all {
 		if rv == nil {
@@ -1361,6 +1369,18 @@ func (b *Bucket) GetIOStats(reset bool, all bool) map[string]interface{} {
 			rv = make(map[string]interface{})
 		}
 		rv["retries"] = retryCount
+	}
+	if kvThrottleCount != 0 || all {
+		if rv == nil {
+			rv = make(map[string]interface{})
+		}
+		rv["kvThrottles"] = kvThrottleCount
+	}
+	if kvThrottleDuration != 0 || all {
+		if rv == nil {
+			rv = make(map[string]interface{})
+		}
+		rv["kvThrottleTime"] = time.Duration(kvThrottleDuration).String()
 	}
 	return rv
 }
