@@ -482,8 +482,8 @@ func doPrepared(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 		err = prepareds.DeletePreparedFunc(name, func(e *prepareds.CacheEntry) bool {
 
 			// for serverless user access, we treat entries not owned by the user as not existent
-			tenantName, _, err1 := endpoint.getImpersonateBucket(req)
-			return err1 == nil && (tenantName == "" || e.Prepared.Tenant() == tenantName)
+			userName, tenantName, err1 := endpoint.getImpersonateBucket(req)
+			return err1 == nil && (userName == "" || e.Prepared.Tenant() == tenantName)
 		})
 		if err != nil {
 			return nil, err
@@ -530,8 +530,8 @@ func doPrepared(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 		var res interface{}
 		prepareds.PreparedDo(name, func(entry *prepareds.CacheEntry) {
 			// for serverless user access, we treat entries not owned by the user as not existent
-			tenantName, _, err1 := endpoint.getImpersonateBucket(req)
-			if err1 != nil || (tenantName != "" && entry.Prepared.Tenant() != tenantName) {
+			userName, tenantName, err1 := endpoint.getImpersonateBucket(req)
+			if err1 != nil || (userName != "" && entry.Prepared.Tenant() != tenantName) {
 				return
 			}
 			res = preparedWorkHorse(entry, profiling, doRedact(req))
@@ -1912,7 +1912,7 @@ func doPreparedIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Re
 	if err != nil {
 		return nil, err
 	}
-	_, tenantName, err := endpoint.getImpersonateBucket(req)
+	userName, tenantName, err := endpoint.getImpersonateBucket(req)
 	if err != nil {
 		return nil, err
 	}
@@ -1920,7 +1920,7 @@ func doPreparedIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Re
 	keys := make([]string, 0, numEntries)
 	var snapshot func(key string, request *prepareds.CacheEntry) bool
 
-	if tenantName == "" {
+	if userName == "" {
 		snapshot = func(key string, prepared *prepareds.CacheEntry) bool {
 			keys = append(keys, key)
 			return true
