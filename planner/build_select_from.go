@@ -1097,8 +1097,8 @@ func offsetPlusLimit(offset, limit expression.Expression) expression.Expression 
 }
 
 func (this *builder) getIndexFilter(index datastore.Index, alias string, sargSpans SargSpans,
-	arrayKey *expression.All, covers expression.Covers, filterCovers map[*expression.Cover]value.Value,
-	cost, cardinality float64, size int64, frCost float64) (
+	arrayKey *expression.All, unnestAliases []string, covers expression.Covers,
+	filterCovers map[*expression.Cover]value.Value, cost, cardinality float64, size int64, frCost float64) (
 	expression.Expression, float64, float64, int64, float64, error) {
 
 	var err error
@@ -1128,6 +1128,25 @@ func (this *builder) getIndexFilter(index datastore.Index, alias string, sargSpa
 	filter, selec, err = this.getFilter(alias, false, nil)
 	if err != nil {
 		return nil, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, err
+	}
+	for _, u := range unnestAliases {
+		unFltr, unSelec, unErr := this.getFilter(u, false, nil)
+		if unErr != nil {
+			return nil, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, unErr
+		}
+		if unFltr != nil {
+			if filter == nil {
+				filter = unFltr
+				selec = unSelec
+			} else {
+				filter = expression.NewAnd(filter, unFltr)
+				if selec > 0.0 && unSelec > 0.0 {
+					selec = selec * unSelec
+				} else {
+					selec = OPT_SELEC_NOT_AVAIL
+				}
+			}
+		}
 	}
 
 	if filter != nil && (len(covers) > 0 || len(filterCovers) > 0) {

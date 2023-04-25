@@ -8,7 +8,7 @@
             "results": [
                 {"present":true}
             ],
-            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`covers` IS NOT MISSING AND v.spans[0].`range`[0].`low` IS NOT MISSING AND v.`index` = 'ixf10ue' END"
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`covers` IS NOT MISSING AND v.spans[0].`range`[0].`low` IS NOT MISSING AND NOT CONTAINS(v.`filter`, '`ch`.`num`') AND v.`index` = 'ixf10ue' END"
         },
        "statements": "SELECT META(f).id, ch.description FROM flattenkeys AS f UNNEST f.chapters AS ch WHERE f.type = 'book' AND ch.num = 1 AND ch.name = 'chapter 1' AND f.isbn = 1 AND f.year = 2020",
        "results": [
@@ -27,7 +27,7 @@
             "results": [
                 {"present":true}
             ],
-            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`covers` IS NOT MISSING AND v.spans[0].`range`[0].`low` IS NOT MISSING AND v.`index` = 'ixf10ue' END"
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`covers` IS NOT MISSING AND v.spans[0].`range`[0].`low` IS NOT MISSING AND NOT CONTAINS(v.`filter`, '`ch`.`num`') AND v.`index` = 'ixf10ue' END"
         },
        "statements": "SELECT META(f).id, ch.description FROM flattenkeys AS f UNNEST f.chapters AS ch WHERE f.type = 'book' AND ch.num = 1 AND ch.name = 'chapter 1' AND ch.xyz IS MISSING AND f.isbn = 1 AND f.year = 2020",
        "results": [

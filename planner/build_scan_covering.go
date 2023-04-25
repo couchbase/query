@@ -411,8 +411,12 @@ func (this *builder) buildCreateCoveringScan(entry *indexEntry, node *algebra.Ke
 		(!this.hasBuilderFlag(BUILDER_JOIN_ON_PRIMARY) || !node.IsInCorrSubq()) {
 
 		var err error
+		var unnestAliases []string
+		if unnestScan {
+			unnestAliases = entry.unnestAliases
+		}
 		filter, cost, cardinality, size, frCost, err = this.getIndexFilter(index, node.Alias(), entry.spans,
-			arrayKey, covers, filterCovers, entry.cost, entry.cardinality, entry.size, entry.frCost)
+			arrayKey, unnestAliases, covers, filterCovers, entry.cost, entry.cardinality, entry.size, entry.frCost)
 		if err != nil {
 			return nil, 0, err
 		}
