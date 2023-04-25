@@ -1111,8 +1111,7 @@ func (this *Server) serviceRequest(request Request) {
 		context.SetPlanPreparedTime(prepared.PreparedTime())
 		if (this.readonly || value.ToBool(request.Readonly())) &&
 			(prepared != nil && !prepared.Readonly()) {
-			request.Fail(errors.NewServiceErrorReadonly("The server or request is read-only" +
-				" and cannot accept this write statement."))
+			request.Fail(errors.NewServiceErrorReadonly())
 		} else if request.TxId() == "" && !request.IsPrepare() {
 			atrCollection := this.AtrCollection()
 			if request.AtrCollection() != "" {
@@ -1142,8 +1141,16 @@ func (this *Server) serviceRequest(request Request) {
 
 	if request.AutoExecute() == value.TRUE {
 		prepared, err = this.getAutoExecutePrepared(request, prepared, context)
+
 		if err != nil {
 			request.Fail(err)
+			request.Failed(this)
+			return
+		}
+
+		// make a read-only check for the prepared statement to be executed
+		if (this.readonly || value.ToBool(request.Readonly())) && (prepared != nil && !prepared.Readonly()) {
+			request.Fail(errors.NewServiceErrorReadonly())
 			request.Failed(this)
 			return
 		}

@@ -380,8 +380,7 @@ func handleReadonly(rv *httpRequest, httpArgs httpRequestArgs, parm string, val 
 	readonly, err := httpArgs.getTristateVal(parm, val)
 	if err == nil {
 		if rv.req.Method == "GET" && readonly == value.FALSE {
-			err = errors.NewServiceErrorReadonly(
-				fmt.Sprintf("%s=false cannot be used with HTTP GET method.", READONLY))
+			err = errors.NewServiceInvalidValueError("false", READONLY, " This cannot be used with HTTP GET method.")
 		} else {
 			rv.SetReadonly(readonly)
 		}

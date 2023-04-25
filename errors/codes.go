@@ -63,6 +63,7 @@ const (
 	E_SERVICE_UNRECOGNIZED_PARAMETER          ErrorCode = 1065
 	E_SERVICE_TYPE_MISMATCH                   ErrorCode = 1070
 	E_SERVICE_TIMEOUT                         ErrorCode = 1080
+	E_SERVICE_INVALID_VALUE                   ErrorCode = 1090
 	E_SERVICE_INVALID_JSON                    ErrorCode = 1100
 	E_SERVICE_CLIENTID                        ErrorCode = 1110
 	E_SERVICE_MEDIA_TYPE                      ErrorCode = 1120

@@ -15,8 +15,9 @@ import (
 
 // service level errors - errors that are created in the service package
 
-func NewServiceErrorReadonly(msg string) Error {
-	return &err{level: EXCEPTION, ICode: E_SERVICE_READONLY, IKey: "service.io.readonly", InternalMsg: msg, InternalCaller: CallerN(1)}
+func NewServiceErrorReadonly() Error {
+	return &err{level: EXCEPTION, ICode: E_SERVICE_READONLY, IKey: "service.io.readonly",
+		InternalMsg: "The server or request is read-only and cannot accept this write statement.", InternalCaller: CallerN(1)}
 }
 
 func NewServiceErrorHTTPMethod(method string) Error {
@@ -210,4 +211,9 @@ func NewServiceErrorRequestQueueFull() Error {
 func NewServiceNoClientError() Error {
 	return &err{level: EXCEPTION, ICode: E_SERVICE_NO_CLIENT, IKey: "service.no_client",
 		InternalMsg: "Client disconnected", InternalCaller: CallerN(1)}
+}
+
+func NewServiceInvalidValueError(value string, feature string, details string) Error {
+	return &err{level: EXCEPTION, ICode: E_SERVICE_READONLY, IKey: "service.io.request.invalid_value",
+		InternalMsg: fmt.Sprintf("%s = %s is invalid.%s", feature, value, details), InternalCaller: CallerN(1)}
 }
