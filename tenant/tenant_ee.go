@@ -85,8 +85,7 @@ func Start(endpoint Endpoint, nodeid string, regulatorsettingsfile string) {
 	}
 	thisNodeId = service.NodeID(nodeid)
 	handle := factory.InitRegulator(regulator.InitSettings{NodeID: service.NodeID(nodeid),
-		SettingsFile: regulatorsettingsfile, Service: regulator.Query,
-		ServiceCheckMask: regulator.Index})
+		SettingsFile: regulatorsettingsfile, Service: regulator.Query})
 	router := endpoint.Router()
 	tenantHandler := func(w http.ResponseWriter, req *http.Request) {
 		err := endpoint.Authorize(req)
