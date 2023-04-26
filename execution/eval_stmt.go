@@ -165,6 +165,7 @@ func (this *Context) EvaluateStatement(statement string, namedArgs map[string]va
 
 	newContext.udfPlans = this.udfPlans
 	newContext.udfStmtExecTrees = this.udfStmtExecTrees
+	newContext.subExecTrees = this.subExecTrees
 
 	txContext := this.TxContext()
 	if txContext != nil {
@@ -256,6 +257,7 @@ func (this *Context) OpenStatement(statement string, namedArgs map[string]value.
 	newContext := this.Copy()
 	newContext.udfPlans = this.udfPlans
 	newContext.udfStmtExecTrees = this.udfStmtExecTrees
+	newContext.subExecTrees = this.subExecTrees
 
 	txContext := this.TxContext()
 	if txContext != nil {
