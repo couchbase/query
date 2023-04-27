@@ -1199,12 +1199,10 @@ func (this *builder) getIndexFilters(entry *indexEntry, node *algebra.KeyspaceTe
 	}
 
 	// skip array index keys
-	arrayKey := false
+	arrayKey := entry.HasFlag(IE_ARRAYINDEXKEY)
 	coverExprs := make(expression.Expressions, 0, len(entry.keys)+1)
 	for _, key := range entry.keys {
-		if isArray, _, _ := key.IsArrayIndexKey(); isArray {
-			arrayKey = true
-		} else {
+		if isArray, _, _ := key.IsArrayIndexKey(); !isArray {
 			coverExprs = append(coverExprs, key)
 		}
 	}
@@ -1321,21 +1319,22 @@ func (this *builder) getIndexFilters(entry *indexEntry, node *algebra.KeyspaceTe
 		missing := indexHasLeadingKeyMissingValues(index, this.context.FeatureControls())
 		skip := useSkipIndexKeys(index, this.context.IndexApiVersion())
 		chkOr := isOrPred && !entry.HasFlag(IE_OR_USE_FILTERS)
+		chkUnnest := entry.HasFlag(IE_ARRAYINDEXKEY_SARGABLE) && len(entry.unnestAliases) > 0
 		for _, fl := range filters {
-			if fl.IsUnnest() || fl.HasSubq() {
+			if (fl.IsUnnest() && !chkUnnest) || fl.HasSubq() {
 				continue
 			}
 			fltrExpr := fl.FltrExpr()
 			derived := false
 			orig := false
-			subOr := false
-			if chkOr {
-				orFltr := this.orGetIndexFilter(fltrExpr, entry.sargKeys, baseKeyspace, missing, skip)
-				if orFltr == nil {
+			subFltr := false
+			if chkOr || chkUnnest {
+				fltr := this.orGetIndexFilter(fltrExpr, entry.sargKeys, baseKeyspace, missing, skip)
+				if fltr == nil {
 					continue
-				} else if orFltr != fltrExpr {
-					fltrExpr = orFltr
-					subOr = true
+				} else if fltr != fltrExpr {
+					fltrExpr = fltr
+					subFltr = true
 				}
 			} else if _, ok := entry.exactFilters[fl]; ok {
 				// Skip the filters used to generate exact spans since these are
@@ -1345,7 +1344,7 @@ func (this *builder) getIndexFilters(entry *indexEntry, node *algebra.KeyspaceTe
 				continue
 			}
 
-			if !subOr && entry.cond != nil {
+			if !subFltr && entry.cond != nil {
 				// Also skip filters that is in index condition
 				origExpr := fl.OrigExpr()
 				flExpr := fltrExpr
@@ -1375,11 +1374,23 @@ func (this *builder) getIndexFilters(entry *indexEntry, node *algebra.KeyspaceTe
 					orig = true
 				}
 			}
-			if expression.IsCovered(fltrExpr, alias, coverExprs, false) {
+			covered := expression.IsCovered(fltrExpr, alias, coverExprs, false)
+			if covered && chkUnnest && fl.IsUnnest() {
+				// for unnest scan, the array index key is replaced with the unnested
+				// array key representation (see getUnnestSargKeys()), thus is already
+				// present in coverExprs
+				for _, unAlias := range entry.unnestAliases {
+					covered = expression.IsCovered(fltrExpr, unAlias, coverExprs, false)
+					if !covered {
+						break
+					}
+				}
+			}
+			if covered {
 				if !fl.IsJoin() {
 					if useCBO {
 						if fl.Selec() > 0.0 {
-							if !subOr {
+							if !subFltr {
 								selec *= fl.Selec()
 							}
 						} else {

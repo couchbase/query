@@ -102,6 +102,13 @@ func (this *builder) buildUnnestScan(node *algebra.KeyspaceTerm, pred, subset ex
 	unnests, primaryUnnests []*algebra.Unnest, unnestIndexes map[datastore.Index]*indexEntry,
 	hasDeltaKeyspace bool) (map[datastore.Index]*indexEntry, error) {
 
+	baseKeyspace, ok := this.baseKeyspaces[node.Alias()]
+	if !ok {
+		return nil, errors.NewPlanInternalError(fmt.Sprintf("buildUnnestScan: cannot find keyspace %s", node.Alias()))
+	}
+	id := expression.NewField(
+		expression.NewMeta(expression.NewIdentifier(node.Alias())),
+		expression.NewFieldName("id", false))
 	sargables := make(map[datastore.Index]*indexEntry, len(primaryUnnests))
 	for _, unnest := range primaryUnnests {
 		for index, idxEntry := range unnestIndexes {
@@ -112,6 +119,10 @@ func (this *builder) buildUnnestScan(node *algebra.KeyspaceTerm, pred, subset ex
 			}
 			if entry != nil {
 				entry.SetPushDownProperty(_PUSHDOWN_NONE) // reset
+				err = this.getIndexFilters(entry, node, baseKeyspace, id)
+				if err != nil {
+					return nil, err
+				}
 				sargables[index] = entry
 			}
 		}

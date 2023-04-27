@@ -116,9 +116,9 @@
             "results": [
                 {"present":true}
             ],
-            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`covers` IS MISSING AND v.spans[0].`range`[0].`low` IS NOT MISSING AND v.`index` = 'ixf10un' END"
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`covers` IS MISSING AND v.spans[0].`range`[0].`low` IS NOT MISSING AND CONTAINS(v.`filter`, '`pg`.`name`') AND NOT CONTAINS(v.`filter`, '`pg`.`xyz`') AND v.`index` = 'ixf10un' END"
         },
-       "statements": "SELECT DISTINCT META(f).id, ch.description FROM flattenkeys AS f UNNEST f.chapters AS ch UNNEST ch.pages AS pg WHERE f.type = 'book' AND pg.num = 1 AND pg.name = 'page 1' AND pg.xyz IS MISSING AND f.isbn = 1 AND f.year = 2020",
+       "statements": "SELECT DISTINCT META(f).id, ch.description FROM flattenkeys AS f UNNEST f.chapters AS ch UNNEST ch.pages AS pg WHERE f.type = 'book' AND pg.num = 1 AND LOWER(pg.name) = 'page 1' AND pg.xyz IS MISSING AND f.isbn = 1 AND f.year = 2020",
        "results": [
           {
             "description": "chapter 1 description",

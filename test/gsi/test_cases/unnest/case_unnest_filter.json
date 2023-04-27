@@ -67,5 +67,37 @@
                 "cnt": 2
             }
     ]
+    },
+    {
+        "testcase": "UNNEST scan, not covered",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`covers` IS MISSING AND CONTAINS(v.`filter`, '`li`.`product`') END"
+        },
+        "statements":"SELECT p.customerId, li.product FROM purchase p UNNEST p.lineItems AS li WHERE li.product LIKE '%roduct28%' AND p.test_id = 'unnest' AND p.customerId = 'customer684' AND p.type = 'purchase'",
+        "results": [
+            {
+                "customerId": "customer684",
+                "product": "product282"
+            },
+            {
+                "customerId": "customer684",
+                "product": "product284"
+            },
+            {
+                "customerId": "customer684",
+                "product": "product289"
+            },
+            {
+                "customerId": "customer684",
+                "product": "product289"
+            }
+    ]
     }
 ]
