@@ -17,6 +17,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"time"
 
 	"github.com/couchbase/query/logging"
 )
@@ -51,21 +52,12 @@ func (s *SystemStats) Close() {
 	}
 }
 
-// ProcessCpuPercent gets the percent CPU this Go runtime has consumed recently. This is in range
-// [0,GOMAXPROCS]*100%, so a value of 123.4 means it is consuming 1.234 CPU cores. This behavior
-// was confirmed by empirical experiments running different numbers of CPU-bound spinners in Indexer
-// and externally (not part of Couchbase). E.g. in an otherwise idle cluster if each of three
-// cbq-engine runs two CPU spinners in a dev environment with all on the same laptop, each one reports
-// ~200% CPU usage even though there is at least 600% CPU being consumed on the entire machine.
-func (s *SystemStats) ProcessCpuPercent() (C.sigar_pid_t, float64, error) {
-	// Sigar returns a ratio of (system_time + user_time) / elapsed time
+func (s *SystemStats) ProcessCpuStats() (C.sigar_pid_t, uint64, uint64, error) {
 	var cpu C.sigar_proc_cpu_t
 	if err := C.sigar_proc_cpu_get(s.handle, s.pid, &cpu); err != C.SIGAR_OK {
-		return C.sigar_pid_t(0), float64(0), errors.New(fmt.Sprintf("Fail to get CPU.  Err=%v", C.sigar_strerror(s.handle, err)))
+		return C.sigar_pid_t(0), uint64(0), uint64(0), errors.New(fmt.Sprintf("Fail to get CPU.  Err=%v", C.sigar_strerror(s.handle, err)))
 	}
-	// Despite its name, cpu.percent is not a percent. It is in range [0, GOMAXPROCS] so needs * 100
-	// to convert it to a percent. It is a double in sigar (C++ equivalent of Go float64).
-	return s.pid, float64(cpu.percent) * 100, nil
+	return s.pid, uint64(cpu.user + cpu.sys), uint64(time.Now().UnixMilli()), nil
 }
 
 // ProcessRSS gets the size in bytes of the memory-resident portion of this Go runtime.
@@ -167,7 +159,6 @@ type SigarCpuT struct {
 	Idle    uint64 // CPU not executing anything and no IO is outstanding
 	Stolen  uint64 // CPU time given to other virtual machines in a VM or cloud environment
 
-	Total uint64 // total elapsed time
 }
 
 // SigarCpuGet Go-wraps the sigar C library sigar_cpu_get function.
@@ -185,7 +176,6 @@ func (h *SystemStats) SigarCpuGet() (*SigarCpuT, error) {
 		Wait:    isImplemented(uint64(cpu.wait)),
 		Idle:    isImplemented(uint64(cpu.idle)),
 		Stolen:  isImplemented(uint64(cpu.stolen)),
-		Total:   isImplemented(uint64(cpu.total)),
 	}, nil
 }
 

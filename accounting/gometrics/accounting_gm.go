@@ -55,7 +55,7 @@ func NewAccountingStore() (accounting.AccountingStore, errors.Error) {
 	}
 
 	// skip the first one
-	rv.stats.ProcessCpuPercent()
+	rv.stats.ProcessCpuStats()
 	rv.stats.ProcessRSS()
 	rv.stats.GetTotalAndFreeMem(false)
 

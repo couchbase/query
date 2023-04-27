@@ -174,6 +174,7 @@ type Server struct {
 	memoryStats       runtime.MemStats
 	lastTotalTime     int64
 	lastNow           time.Time
+	lastCpuPercent    float64
 	useReplica        value.Tristate
 }
 
@@ -1886,13 +1887,17 @@ func (this *Server) CpuUsage(refresh bool) float64 {
 		newUtime, newStime := util.CpuTimes()
 		totalTime := newUtime + newStime
 		now := time.Now()
-		dur := float64(now.Sub(this.lastNow))
-		if dur <= 0 {
-			dur = 1.0
+		dur := now.Sub(this.lastNow)
+		if dur > time.Second {
+			cpu = 100 * (float64(totalTime-this.lastTotalTime) / float64(dur))
+			this.lastTotalTime = totalTime
+			this.lastNow = now
+			this.lastCpuPercent = cpu
+		} else {
+			cpu = this.lastCpuPercent
 		}
-		cpu = float64(totalTime-this.lastTotalTime) / dur
-		this.lastTotalTime = totalTime
-		this.lastNow = now
+	} else {
+		this.lastCpuPercent = cpu
 	}
 
 	// cpu percent per core

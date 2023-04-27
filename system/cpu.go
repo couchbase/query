@@ -3,6 +3,7 @@ package system
 import (
 	"math"
 	"sync/atomic"
+	"time"
 
 	"github.com/couchbase/query/logging"
 )
@@ -12,10 +13,14 @@ import (
 //////////////////////////////////////////////////////////////
 
 // memTotal, memFree account for cgroups if they are supported. See systemStats.go.
-var cpuPercent uint64 // (holds a float64) [0,GOMAXPROCS]*100% percent CPU this Go runtime is using
-var rss uint64        // size in bytes of the memory-resident portion of this Go runtime
-var memTotal uint64   // total memory in bytes available to this Go runtime
-var memFree uint64    // free mem in bytes (EXCLUDING inactive OS kernel pages in bare node case)
+var cpuPercent uint64  // (holds a float64) [0,GOMAXPROCS]*100% percent CPU this Go runtime is using
+var cpuTime uint64     // cpuTime utime+stime
+var cpuLastTime uint64 // last collection time
+var rss uint64         // size in bytes of the memory-resident portion of this Go runtime
+var memTotal uint64    // total memory in bytes available to this Go runtime
+var memFree uint64     // free mem in bytes (EXCLUDING inactive OS kernel pages in bare node case)
+
+var _MIN_DURATION = uint64(time.Second.Milliseconds())
 
 func GetSystemStats(stats *SystemStats, refresh, log bool) (cpu float64, rss, total, free uint64, err error) {
 	if !refresh {
@@ -31,12 +36,18 @@ func GetSystemStats(stats *SystemStats, refresh, log bool) (cpu float64, rss, to
 		defer stats.Close()
 	}
 
-	pid, cpu1, err1 := stats.ProcessCpuPercent()
-	cpu, err = cpu1, err1
-	if err != nil {
-		return
+	pid, total, now, err1 := stats.ProcessCpuStats()
+	if err1 != nil {
+		return getCpuPercent(), getRSS(), getMemTotal(), GetMemFree(), nil
 	}
-	updateCpuPercent(cpu)
+	lastTotal, lastNow, cpuPercent := getCpuStats()
+	dur := now - lastNow
+	if dur > _MIN_DURATION {
+		cpu = 100 * (float64(total-lastTotal) / float64(dur))
+		updateCpuStats(total, now, cpu)
+	} else {
+		cpu = cpuPercent
+	}
 
 	if _, rss, err = stats.ProcessRSS(); err != nil {
 		return
@@ -65,8 +76,14 @@ func GetSystemStats(stats *SystemStats, refresh, log bool) (cpu float64, rss, to
 // Global Function
 //////////////////////////////////////////////////////////////
 
-func updateCpuPercent(cpu float64) {
+func updateCpuStats(total, lastTime uint64, cpu float64) {
+	atomic.StoreUint64(&cpuTime, total)
+	atomic.StoreUint64(&cpuLastTime, lastTime)
 	atomic.StoreUint64(&cpuPercent, math.Float64bits(cpu))
+}
+
+func getCpuStats() (uint64, uint64, float64) {
+	return atomic.LoadUint64(&cpuTime), atomic.LoadUint64(&cpuLastTime), getCpuPercent()
 }
 
 func getCpuPercent() float64 {

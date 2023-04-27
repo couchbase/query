@@ -59,6 +59,10 @@ func (this *Server) StartStatsCollector() (err error) {
 	}
 
 	updateQsLoadFactor(int(collector.sumOfLoadFactors / collector.nLoadFactors))
+	newUtime, newStime := util.CpuTimes()
+	this.lastTotalTime = newUtime + newStime
+	this.lastNow = time.Now()
+	this.lastCpuPercent = 1.0
 
 	// start stats collection
 	go collector.runCollectStats()
