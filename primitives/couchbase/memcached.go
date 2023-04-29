@@ -629,7 +629,8 @@ func IsReadTimeOutError(err error) bool {
 	}
 	estr := err.Error()
 	return strings.Contains(estr, "read tcp") ||
-		strings.Contains(estr, "i/o timeout")
+		strings.Contains(estr, "i/o timeout") ||
+		strings.Contains(estr, "connection timed out")
 }
 
 func isTimeoutError(err error) bool {
