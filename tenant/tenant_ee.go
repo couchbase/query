@@ -26,6 +26,7 @@ import (
 	"github.com/couchbase/regulator"
 	"github.com/couchbase/regulator/factory"
 	"github.com/couchbase/regulator/metering"
+	"github.com/couchbase/regulator/variants"
 )
 
 var isServerless bool
@@ -230,22 +231,32 @@ func User(ctx Context) string {
 
 // TODO define units for query and js-evaluator
 func RecordCU(ctx Context, d time.Duration, m uint64) Unit {
-	units, _ := metering.QueryEvalComputeToCU(d, m)
-	regulator.RecordUnits(ctx, units...)
-	if len(units) == 0 {
-		logging.Warnf("bucket %v duration %v memory %v unexpected 0-length response from regulator CU compute",
-			ctx.Bucket(), d, m)
-		return 0
-	}
-	return Unit(units[0].Whole())
+	units, _ := metering.ComputeUsageToUnits(regulator.Query, d, m, variants.QueryComputeEvalVariant)
+	return recordUnits(ctx, d, m, units)
 }
 
 func RecordJsCU(ctx Context, d time.Duration, m uint64) Unit {
-	units, _ := metering.QueryUDFComputeToCU(d, m)
-	regulator.RecordUnits(ctx, units...)
+	units, _ := metering.ComputeUsageToUnits(regulator.Query, d, m, variants.QueryComputeUdfVariant)
+	return recordUnits(ctx, d, m, units)
+}
+
+func recordUnits(ctx Context, d time.Duration, m uint64, units []regulator.Units) Unit {
+	err := regulator.RecordUnits(ctx, units...)
+	if err != nil {
+		if bucketCtx, ok := ctx.(regulator.BucketCtx); ok {
+			logging.Warnf("bucket %v duration %v memory %v unexpected error from regulator RecordUnits: %v",
+				bucketCtx.Bucket(), d, m, err)
+		} else {
+			logging.Warnf("duration %v memory %v unexpected error from regulator RecordUnits: %v", d, m, err)
+		}
+	}
 	if len(units) == 0 {
-		logging.Warnf("bucket %v duration %v memory %v unexpected 0-length response from regulator CU compute",
-			ctx.Bucket(), d, m)
+		if bucketCtx, ok := ctx.(regulator.BucketCtx); ok {
+			logging.Warnf("bucket %v duration %v memory %v unexpected 0-length response from regulator CU compute",
+				bucketCtx.Bucket(), d, m)
+		} else {
+			logging.Warnf("duration %v memory %v unexpected 0-length response from regulator CU compute", d, m)
+		}
 		return 0
 	}
 	return Unit(units[0].Whole())
