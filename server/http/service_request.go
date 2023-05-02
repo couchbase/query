@@ -149,7 +149,7 @@ func newHttpRequest(rv *httpRequest, resp http.ResponseWriter, req *http.Request
 				var authUsers auth.AuthenticatedUsers
 
 				authUsers, err1 = datastore.GetDatastore().Authorize(nil, creds)
-				if authUsers == nil {
+				if err1 != nil || len(authUsers) == 0 {
 
 					// This means the users associated with the input credentials do not have authorization.
 					// Throw an error
