@@ -203,7 +203,7 @@ func (this *reason) shouldCapture() *occurrence {
 	if len(this.occurrences) >= _FFDC_OCCURENCE_LIMIT {
 		this.cleanup()
 	}
-	occ := &occurrence{when: now, ts: now.Format("2006-01-01-150405.000")}
+	occ := &occurrence{when: now, ts: now.Format("2006-01-02-150405.000")}
 	this.occurrences = append(this.occurrences, occ)
 	return occ
 }
