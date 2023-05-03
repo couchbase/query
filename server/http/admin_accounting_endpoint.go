@@ -15,6 +15,8 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"runtime"
+	"runtime/debug"
 	"strings"
 	"time"
 
@@ -29,6 +31,7 @@ import (
 	"github.com/couchbase/query/distributed"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/ffdc"
 	"github.com/couchbase/query/functions"
 	functionsBridge "github.com/couchbase/query/functions/bridge"
 	functionsResolver "github.com/couchbase/query/functions/resolver"
@@ -156,37 +159,42 @@ func (this *HttpEndpoint) registerAccountingHandlers() {
 	functionsBucketBackupHandler := func(w http.ResponseWriter, req *http.Request) {
 		this.wrapAPI(w, req, doFunctionsBucketBackup)
 	}
+	forceGCHandler := func(w http.ResponseWriter, req *http.Request) {
+		this.wrapAPI(w, req, doForceGC)
+	}
 	routeMap := map[string]struct {
 		handler handlerFunc
 		methods []string
 	}{
-		accountingPrefix:                                  {handler: statsHandler, methods: []string{"GET"}},
-		accountingPrefix + "/{stat}":                      {handler: statHandler, methods: []string{"GET", "DELETE"}},
-		vitalsPrefix:                                      {handler: vitalsHandler, methods: []string{"GET"}},
-		preparedsPrefix:                                   {handler: preparedsHandler, methods: []string{"GET", "POST"}},
-		preparedsPrefix + "/{name}":                       {handler: preparedHandler, methods: []string{"GET", "POST", "DELETE", "PUT"}},
-		requestsPrefix:                                    {handler: requestsHandler, methods: []string{"GET", "POST"}},
-		requestsPrefix + "/{request}":                     {handler: requestHandler, methods: []string{"GET", "POST", "DELETE"}},
-		completedsPrefix:                                  {handler: completedsHandler, methods: []string{"GET", "POST"}},
-		completedsPrefix + "/{request}":                   {handler: completedHandler, methods: []string{"GET", "POST", "DELETE"}},
-		functionsPrefix:                                   {handler: functionsHandler, methods: []string{"GET"}},
-		functionsPrefix + "/{name}":                       {handler: functionHandler, methods: []string{"GET", "POST", "DELETE"}},
-		dictionaryPrefix:                                  {handler: dictionaryHandler, methods: []string{"GET"}},
-		dictionaryPrefix + "/{name}":                      {handler: dictionaryEntryHandler, methods: []string{"GET", "POST", "DELETE"}},
-		tasksPrefix:                                       {handler: tasksHandler, methods: []string{"GET"}},
-		tasksPrefix + "/{name}":                           {handler: taskHandler, methods: []string{"GET", "POST", "DELETE"}},
-		transactionsPrefix:                                {handler: transactionsHandler, methods: []string{"GET"}},
-		transactionsPrefix + "/{txid}":                    {handler: transactionHandler, methods: []string{"GET", "POST", "DELETE"}},
-		indexesPrefix + "/prepareds":                      {handler: preparedIndexHandler, methods: []string{"GET"}},
-		indexesPrefix + "/active_requests":                {handler: requestIndexHandler, methods: []string{"GET"}},
-		indexesPrefix + "/completed_requests":             {handler: completedIndexHandler, methods: []string{"GET"}},
-		indexesPrefix + "/function_cache":                 {handler: functionsIndexHandler, methods: []string{"GET"}},
-		indexesPrefix + "/dictionary_cache":               {handler: dictionaryIndexHandler, methods: []string{"GET"}},
-		indexesPrefix + "/tasks_cache":                    {handler: tasksIndexHandler, methods: []string{"GET"}},
-		prometheusLow:                                     {handler: prometheusLowHandler, methods: []string{"GET"}},
-		indexesPrefix + "/transactions":                   {handler: transactionsIndexHandler, methods: []string{"GET"}},
+		accountingPrefix:                      {handler: statsHandler, methods: []string{"GET"}},
+		accountingPrefix + "/{stat}":          {handler: statHandler, methods: []string{"GET", "DELETE"}},
+		vitalsPrefix:                          {handler: vitalsHandler, methods: []string{"GET"}},
+		preparedsPrefix:                       {handler: preparedsHandler, methods: []string{"GET", "POST"}},
+		preparedsPrefix + "/{name}":           {handler: preparedHandler, methods: []string{"GET", "POST", "DELETE", "PUT"}},
+		requestsPrefix:                        {handler: requestsHandler, methods: []string{"GET", "POST"}},
+		requestsPrefix + "/{request}":         {handler: requestHandler, methods: []string{"GET", "POST", "DELETE"}},
+		completedsPrefix:                      {handler: completedsHandler, methods: []string{"GET", "POST"}},
+		completedsPrefix + "/{request}":       {handler: completedHandler, methods: []string{"GET", "POST", "DELETE"}},
+		functionsPrefix:                       {handler: functionsHandler, methods: []string{"GET"}},
+		functionsPrefix + "/{name}":           {handler: functionHandler, methods: []string{"GET", "POST", "DELETE"}},
+		dictionaryPrefix:                      {handler: dictionaryHandler, methods: []string{"GET"}},
+		dictionaryPrefix + "/{name}":          {handler: dictionaryEntryHandler, methods: []string{"GET", "POST", "DELETE"}},
+		tasksPrefix:                           {handler: tasksHandler, methods: []string{"GET"}},
+		tasksPrefix + "/{name}":               {handler: taskHandler, methods: []string{"GET", "POST", "DELETE"}},
+		transactionsPrefix:                    {handler: transactionsHandler, methods: []string{"GET"}},
+		transactionsPrefix + "/{txid}":        {handler: transactionHandler, methods: []string{"GET", "POST", "DELETE"}},
+		indexesPrefix + "/prepareds":          {handler: preparedIndexHandler, methods: []string{"GET"}},
+		indexesPrefix + "/active_requests":    {handler: requestIndexHandler, methods: []string{"GET"}},
+		indexesPrefix + "/completed_requests": {handler: completedIndexHandler, methods: []string{"GET"}},
+		indexesPrefix + "/function_cache":     {handler: functionsIndexHandler, methods: []string{"GET"}},
+		indexesPrefix + "/dictionary_cache":   {handler: dictionaryIndexHandler, methods: []string{"GET"}},
+		indexesPrefix + "/tasks_cache":        {handler: tasksIndexHandler, methods: []string{"GET"}},
+		prometheusLow:                         {handler: prometheusLowHandler, methods: []string{"GET"}},
+		indexesPrefix + "/transactions":       {handler: transactionsIndexHandler, methods: []string{"GET"}},
+
 		functionsBackupPrefix + "/backup":                 {handler: functionsGlobalBackupHandler, methods: []string{"GET", "POST"}},
 		functionsBackupPrefix + "/bucket/{bucket}/backup": {handler: functionsBucketBackupHandler, methods: []string{"GET", "POST"}},
+		adminPrefix + "/gc":                               {handler: forceGCHandler, methods: []string{"GET", "POST"}},
 	}
 
 	for route, h := range routeMap {
@@ -2139,4 +2147,35 @@ func getMetricData(metric accounting.Metric) map[string]interface{} {
 		values["99.9%"] = ps[4]
 	}
 	return values
+}
+
+func doForceGC(ep *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
+	af.EventTypeId = audit.API_DO_NOT_AUDIT
+
+	err, _ := ep.verifyCredentialsFromRequest("", auth.PRIV_ADMIN, req, af)
+	if err != nil {
+		return textPlain(err.Error() + "\n"), nil
+	}
+
+	switch req.Method {
+	case "GET":
+		var before runtime.MemStats
+		var after runtime.MemStats
+		runtime.ReadMemStats(&before)
+		runtime.GC()
+		runtime.ReadMemStats(&after)
+		logging.Warnf("Admin endpoint forced GC. Freed: %v", ffdc.Human(before.HeapAlloc-after.HeapAlloc))
+		return textPlain("GC invoked\n"), nil
+	case "POST":
+		var before runtime.MemStats
+		var after runtime.MemStats
+		runtime.ReadMemStats(&before)
+		debug.FreeOSMemory()
+		runtime.ReadMemStats(&after)
+		logging.Warnf("Admin endpoint forced GC. Freed: %v Released: %v",
+			ffdc.Human(before.HeapAlloc-after.HeapAlloc),
+			ffdc.Human(after.HeapReleased-before.HeapReleased))
+		return textPlain("GC invoked and memory released\n"), nil
+	}
+	return nil, nil
 }

@@ -63,27 +63,27 @@ var operations = map[string]func(io.Writer) error{
 	MemStats: func(w io.Writer) error {
 		var s runtime.MemStats
 		runtime.ReadMemStats(&s)
-		fmt.Fprintf(w, "Alloc........... %v\n", human(s.Alloc))
-		fmt.Fprintf(w, "TotalAlloc...... %v\n", human(s.TotalAlloc))
-		fmt.Fprintf(w, "Sys............. %v\n", human(s.Sys))
+		fmt.Fprintf(w, "Alloc........... %v\n", Human(s.Alloc))
+		fmt.Fprintf(w, "TotalAlloc...... %v\n", Human(s.TotalAlloc))
+		fmt.Fprintf(w, "Sys............. %v\n", Human(s.Sys))
 		fmt.Fprintf(w, "Lookups......... %v\n", s.Lookups)
 		fmt.Fprintf(w, "Mallocs......... %v\n", s.Mallocs)
 		fmt.Fprintf(w, "Frees........... %v\n", s.Frees)
-		fmt.Fprintf(w, "HeapAlloc....... %v\n", human(s.HeapAlloc))
-		fmt.Fprintf(w, "HeapSys......... %v\n", human(s.HeapSys))
-		fmt.Fprintf(w, "HeapIdle........ %v\n", human(s.HeapIdle))
-		fmt.Fprintf(w, "HeapInuse....... %v\n", human(s.HeapInuse))
-		fmt.Fprintf(w, "HeapReleased.... %v\n", human(s.HeapReleased))
+		fmt.Fprintf(w, "HeapAlloc....... %v\n", Human(s.HeapAlloc))
+		fmt.Fprintf(w, "HeapSys......... %v\n", Human(s.HeapSys))
+		fmt.Fprintf(w, "HeapIdle........ %v\n", Human(s.HeapIdle))
+		fmt.Fprintf(w, "HeapInuse....... %v\n", Human(s.HeapInuse))
+		fmt.Fprintf(w, "HeapReleased.... %v\n", Human(s.HeapReleased))
 		fmt.Fprintf(w, "HeapObjects..... %v\n", s.HeapObjects)
-		fmt.Fprintf(w, "Stack in use.... %v\n", human(s.StackInuse))
-		fmt.Fprintf(w, "Stack sys....... %v\n", human(s.StackSys))
-		fmt.Fprintf(w, "MSpan in use.... %v\n", human(s.MSpanInuse))
-		fmt.Fprintf(w, "MSpan sys....... %v\n", human(s.MSpanSys))
-		fmt.Fprintf(w, "MCache in use... %v\n", human(s.MCacheInuse))
-		fmt.Fprintf(w, "MCache sys...... %v\n", human(s.MCacheSys))
-		fmt.Fprintf(w, "BuckHashSys..... %v\n", human(s.BuckHashSys))
-		fmt.Fprintf(w, "GCSys........... %v\n", human(s.GCSys))
-		fmt.Fprintf(w, "OtherSys........ %v\n", human(s.OtherSys))
+		fmt.Fprintf(w, "Stack in use.... %v\n", Human(s.StackInuse))
+		fmt.Fprintf(w, "Stack sys....... %v\n", Human(s.StackSys))
+		fmt.Fprintf(w, "MSpan in use.... %v\n", Human(s.MSpanInuse))
+		fmt.Fprintf(w, "MSpan sys....... %v\n", Human(s.MSpanSys))
+		fmt.Fprintf(w, "MCache in use... %v\n", Human(s.MCacheInuse))
+		fmt.Fprintf(w, "MCache sys...... %v\n", Human(s.MCacheSys))
+		fmt.Fprintf(w, "BuckHashSys..... %v\n", Human(s.BuckHashSys))
+		fmt.Fprintf(w, "GCSys........... %v\n", Human(s.GCSys))
+		fmt.Fprintf(w, "OtherSys........ %v\n", Human(s.OtherSys))
 		fmt.Fprintf(w, "NextGC.......... %v\n", s.NextGC)
 		fmt.Fprintf(w, "LastGC.......... %v %v\n", s.LastGC, time.Unix(0, int64(s.LastGC)))
 		fmt.Fprintf(w, "PauseNs......... %v\n", s.PauseNs)
@@ -141,7 +141,7 @@ const (
 	KiB = 1 << 10
 )
 
-func human(v uint64) string {
+func Human(v uint64) string {
 	if v > GiB {
 		return fmt.Sprintf("%v (%.3f GiB)", v, float64(v)/float64(GiB))
 	} else if v > MiB {
