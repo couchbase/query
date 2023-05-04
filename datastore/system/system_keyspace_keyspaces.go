@@ -63,7 +63,7 @@ func (b *keyspaceKeyspace) Count(context datastore.QueryContext) (int64, errors.
 		for _, namespaceId := range namespaceIds {
 			namespace, excp := b.store.NamespaceById(namespaceId)
 			if excp == nil {
-				objects, excp := namespace.Objects(context.Credentials(), true)
+				objects, excp := namespace.Objects(context.Credentials(), nil, true)
 				if excp == nil {
 					for _, object := range objects {
 						includeDefaultKeyspace := canAccessAll || canRead(context, namespace.Datastore(), namespaceId, object.Id)
@@ -415,17 +415,22 @@ func (pi *keyspaceIndex) scan(requestId string, spanEvaluator compiledSpans, lim
 	var bucket datastore.Bucket
 	var objects []datastore.Object
 	var numProduced int64 = 0
+	var filter func(string) bool
 
 	defer conn.Sender().Close()
 	namespaceIds, err := pi.keyspace.store.NamespaceIds()
 	if err == nil {
 		canAccessAll := canAccessSystemTables(conn.QueryContext())
-
+		if !pi.primary && len(spanEvaluator) > 0 && !spanEvaluator.acceptMissing() {
+			filter = func(name string) bool {
+				return spanEvaluator.evaluate(name)
+			}
+		}
 	loop:
 		for _, namespaceId := range namespaceIds {
 			namespace, err = pi.keyspace.store.NamespaceById(namespaceId)
 			if err == nil {
-				objects, err = namespace.Objects(conn.QueryContext().Credentials(), true)
+				objects, err = namespace.Objects(conn.QueryContext().Credentials(), filter, true)
 				if err == nil {
 					for _, object := range objects {
 
@@ -526,7 +531,7 @@ func (pi *keyspaceIndex) ScanEntries(requestId string, limit int64, cons datasto
 		for _, namespaceId := range namespaceIds {
 			namespace, err = pi.keyspace.store.NamespaceById(namespaceId)
 			if err == nil {
-				objects, err = namespace.Objects(conn.QueryContext().Credentials(), true)
+				objects, err = namespace.Objects(conn.QueryContext().Credentials(), nil, true)
 				if err == nil {
 					for _, object := range objects {
 

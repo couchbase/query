@@ -96,7 +96,7 @@ func (b *indexKeyspace) Count(context datastore.QueryContext) (int64, errors.Err
 			if excp != nil {
 				break loop
 			}
-			objects, excp = namespace.Objects(context.Credentials(), true)
+			objects, excp = namespace.Objects(context.Credentials(), nil, true)
 			if excp != nil {
 				break loop
 			}
@@ -576,18 +576,24 @@ func (pi *indexIndex) ScanEntries(requestId string, limit int64, cons datastore.
 
 func (pi *indexIndex) scanEntries(requestId string, spanEvaluator compiledSpans, limit int64, cons datastore.ScanConsistency,
 	vector timestamp.Vector, conn *datastore.IndexConnection) {
-	defer conn.Sender().Close()
+	var filter func(string) bool
 
+	defer conn.Sender().Close()
 	includeSeqScan := pi.keyspace.Name() == KEYSPACE_NAME_ALL_INDEXES
 	namespaceIds, err := pi.keyspace.store.NamespaceIds()
 	if err == nil {
+		if !pi.primary && len(spanEvaluator) > 0 && !spanEvaluator.acceptMissing() {
+			filter = func(name string) bool {
+				return spanEvaluator.evaluate(name)
+			}
+		}
 		canAccessAll := canAccessSystemTables(conn.QueryContext())
 		for _, namespaceId := range namespaceIds {
 			namespace, err := pi.keyspace.store.NamespaceById(namespaceId)
 			if err != nil {
 				continue
 			}
-			objects, err := namespace.Objects(conn.QueryContext().Credentials(), true)
+			objects, err := namespace.Objects(conn.QueryContext().Credentials(), filter, true)
 			if err != nil {
 				continue
 			}

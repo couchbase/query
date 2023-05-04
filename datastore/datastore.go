@@ -132,7 +132,7 @@ type Namespace interface {
 	BucketByName(name string) (Bucket, errors.Error) // Find a bucket in this namespace using the bucket's name
 
 	// All keyspaces and buckets visible to the user
-	Objects(credentials *auth.Credentials, preload bool) ([]Object, errors.Error) // All first level namespace objects
+	Objects(credentials *auth.Credentials, filter func(string) bool, preload bool) ([]Object, errors.Error) // All first level namespace objects
 }
 
 type Object struct {

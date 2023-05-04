@@ -52,7 +52,7 @@ func (b *scopeKeyspace) Count(context datastore.QueryContext) (int64, errors.Err
 		for _, namespaceId := range namespaceIds {
 			namespace, excp := b.store.NamespaceById(namespaceId)
 			if excp == nil {
-				objects, excp := namespace.Objects(context.Credentials(), true)
+				objects, excp := namespace.Objects(context.Credentials(), nil, true)
 				if excp == nil {
 					for _, object := range objects {
 						includeDefaultKeyspace := canAccessAll || canRead(context, namespace.Datastore(), namespaceId, object.Id)
@@ -183,8 +183,8 @@ func newScopesKeyspace(p *namespace, store datastore.Datastore, name string, ski
 	b.indexer = newSystemIndexer(b, primary)
 	setIndexBase(&primary.indexBase, b.indexer)
 
-	// add a secondary index on `bucket_id`
-	expr, err := parser.Parse(`bucket_id`)
+	// add a secondary index on `bucket`
+	expr, err := parser.Parse("`bucket`")
 
 	if err == nil {
 		key := expression.Expressions{expr}
@@ -273,12 +273,19 @@ func (pi *scopeIndex) Scan(requestId string, span *datastore.Span, distinct bool
 	if span == nil {
 		pi.ScanEntries(requestId, limit, cons, vector, conn)
 	} else {
+		var filter func(string) bool
+
 		defer conn.Sender().Close()
 
 		spanEvaluator, err := compileSpan(span)
 		if err != nil {
 			conn.Error(err)
 			return
+		}
+		if !pi.primary {
+			filter = func(name string) bool {
+				return spanEvaluator.evaluate(name)
+			}
 		}
 
 		var numProduced int64 = 0
@@ -290,7 +297,7 @@ func (pi *scopeIndex) Scan(requestId string, span *datastore.Span, distinct bool
 			for _, namespaceId := range namespaceIds {
 				namespace, err = pi.keyspace.store.NamespaceById(namespaceId)
 				if err == nil {
-					objects, err = namespace.Objects(conn.QueryContext().Credentials(), true)
+					objects, err = namespace.Objects(conn.QueryContext().Credentials(), filter, true)
 					if err == nil {
 						for _, object := range objects {
 							if !pi.primary && !spanEvaluator.evaluate(object.Id) {
@@ -372,7 +379,7 @@ func (pi *scopeIndex) ScanEntries(requestId string, limit int64, cons datastore.
 		for _, namespaceId := range namespaceIds {
 			namespace, err = pi.keyspace.store.NamespaceById(namespaceId)
 			if err == nil {
-				objects, err = namespace.Objects(conn.QueryContext().Credentials(), true)
+				objects, err = namespace.Objects(conn.QueryContext().Credentials(), nil, true)
 				if err == nil {
 					for _, object := range objects {
 

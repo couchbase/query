@@ -1012,7 +1012,7 @@ func (p *namespace) KeyspaceNames() ([]string, errors.Error) {
 	return rv, nil
 }
 
-func (p *namespace) Objects(credentials *auth.Credentials, preload bool) ([]datastore.Object, errors.Error) {
+func (p *namespace) Objects(credentials *auth.Credentials, filter func(string) bool, preload bool) ([]datastore.Object, errors.Error) {
 	if len(credentials.CbauthCredentialsList) == 0 {
 		return nil, errors.NewDatastoreUnableToRetrieveBuckets(fmt.Errorf("empty credentials"))
 	}
@@ -1022,9 +1022,12 @@ func (p *namespace) Objects(credentials *auth.Credentials, preload bool) ([]data
 		return nil, errors.NewDatastoreUnableToRetrieveBuckets(err)
 	}
 
-	rv := make([]datastore.Object, len(b))
+	rv := make([]datastore.Object, 0, len(b))
 	for i := range b {
-		rv[i] = datastore.Object{b[i], b[i], false, false}
+		if filter != nil && !filter(b[i]) {
+			continue
+		}
+		rv = append(rv, datastore.Object{b[i], b[i], false, false})
 	}
 
 	p.refresh()
