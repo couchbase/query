@@ -179,11 +179,14 @@ func (this *Context) EvaluateStatement(statement string, namedArgs map[string]va
 	var isPrepared bool
 	var err error
 
-	doCaching = doCaching && (this.udfPlans != nil)
+	// Only cache query plans of statements that are not within transactions, do not have named or positional arguments
+	// and do not get their plans from the prepared cache
+	doPlanCaching := doCaching && (this.udfPlans != nil) && txContext == nil && len(namedArgs) == 0 && len(positionalArgs) == 0
+
 	var cacheKey string
 	createPlan := true
 
-	if doCaching {
+	if doPlanCaching {
 		cacheKey = encodeStatement(this.queryContext, statement)
 		if pe, ok := this.udfPlans.getAndValidate(cacheKey); ok {
 			stmt = *pe.stmt
@@ -200,7 +203,8 @@ func (this *Context) EvaluateStatement(statement string, namedArgs map[string]va
 			return nil, 0, err
 		}
 
-		if doCaching {
+		// Do not cache plans that are from prepareds cache
+		if doPlanCaching && !isPrepared {
 			this.udfPlans.set(cacheKey, &planMapEntry{stmt: &stmt, plan: prepared, isPrepared: isPrepared})
 		}
 	}
@@ -271,11 +275,14 @@ func (this *Context) OpenStatement(statement string, namedArgs map[string]value.
 	var isPrepared bool
 	var err error
 
-	doCaching = doCaching && (this.udfPlans != nil)
+	// Only cache query plans of statements that are not within transactions, do not have named or positional arguments
+	// and do not get their plans from the prepared cache
+	doPlanCaching := doCaching && (this.udfPlans != nil) && txContext == nil && len(namedArgs) == 0 && len(positionalArgs) == 0
+
 	var cacheKey string
 	createPlan := true
 
-	if doCaching {
+	if doPlanCaching {
 		cacheKey = encodeStatement(this.queryContext, statement)
 
 		if pe, ok := this.udfPlans.getAndValidate(cacheKey); ok {
@@ -293,7 +300,8 @@ func (this *Context) OpenStatement(statement string, namedArgs map[string]value.
 			return nil, err
 		}
 
-		if doCaching {
+		// Do not cache plans that are from prepareds cache
+		if doPlanCaching && !isPrepared {
 			this.udfPlans.set(cacheKey, &planMapEntry{stmt: &stmt, plan: prepared, isPrepared: isPrepared})
 		}
 	}
@@ -529,24 +537,30 @@ func (this *Context) ExecutePrepared(prepared *plan.Prepared, isPrepared bool,
 	var planId int
 
 	doCaching = doCaching && (this.udfStmtExecTrees != nil) && (this.udfPlans != nil)
+
+	// Only use cached exec trees of statements that are not within transactions, do not have named or positional arguments
+	// and do not get their plans from the prepared cache
+	checkCache := doCaching && this.txContext == nil && !isPrepared && (len(positionalArgs) == 0) && (len(namedArgs) == 0)
 	createTree := true
 
 	if doCaching {
 		cacheKey = encodeStatement(this.queryContext, statement)
 
-		if eTree, ok = this.udfStmtExecTrees.getAndReopen(cacheKey, this); ok {
-			createTree = false
-			build := util.Now()
+		if checkCache {
+			if eTree, ok = this.udfStmtExecTrees.getAndReopen(cacheKey, this); ok {
+				createTree = false
+				build := util.Now()
 
-			collect = eTree.collRcv.(*Collect)
-			root = eTree.root
+				collect = eTree.collRcv.(*Collect)
+				root = eTree.root
 
-			keep.AddPhaseTime(INSTANTIATE, util.Since(build))
-			this.output = keep
+				keep.AddPhaseTime(INSTANTIATE, util.Since(build))
+				this.output = keep
 
-			// Increment the number of times this cached tree entry was used
-			if funcKey != "" {
-				eTree.usageMetadata[funcKey] += 1
+				// Increment the number of times this cached tree entry was used
+				if funcKey != "" {
+					eTree.usageMetadata[funcKey] += 1
+				}
 			}
 		}
 	}
@@ -588,9 +602,17 @@ func (this *Context) ExecutePrepared(prepared *plan.Prepared, isPrepared bool,
 		}
 
 		if createTree {
-			// Get the planId of the latest cached plan
-			planId, _ = this.udfPlans.getPlanId(cacheKey)
-			eTree = execTreeMapEntry{root: root, collRcv: collect, planId: planId}
+			eTree = execTreeMapEntry{root: root, collRcv: collect}
+
+			if !checkCache {
+				eTree.planId = -1
+				eTree.profOnly = true
+			} else {
+				// Get the planId of the latest cached plan
+				planId, _ = this.udfPlans.getPlanId(cacheKey)
+				eTree.planId = planId
+				eTree.profOnly = false
+			}
 
 			if funcKey != "" {
 				eTree.usageMetadata = map[string]int{funcKey: 1}
@@ -627,6 +649,11 @@ func (this *Context) OpenPrepared(baseContext *Context, stmtType string, prepare
 	handle.context.positionalArgs = positionalArgs
 
 	doCaching = doCaching && (baseContext.udfStmtExecTrees != nil) && (this.udfPlans != nil)
+
+	// Only use cached exec trees of statements that are not within transactions, do not have named or positional arguments
+	// and do not get their plans from the prepared cache
+	checkCache := doCaching && this.txContext == nil && !isPrepared && (len(namedArgs) == 0) && (len(positionalArgs) == 0)
+
 	var cacheKey string
 	createTree := true
 	var eTree execTreeMapEntry
@@ -640,16 +667,18 @@ func (this *Context) OpenPrepared(baseContext *Context, stmtType string, prepare
 		cacheKey = encodeStatement(this.queryContext, statement)
 		handle.statement = cacheKey
 
-		if eTree, ok = baseContext.udfStmtExecTrees.getAndReopen(cacheKey, this); ok {
-			createTree = false
-			build := util.Now()
-			receive = eTree.collRcv.(*Receive)
-			root = eTree.root
-			this.output.AddPhaseTime(INSTANTIATE, util.Since(build))
+		if checkCache {
+			if eTree, ok = baseContext.udfStmtExecTrees.getAndReopen(cacheKey, this); ok {
+				createTree = false
+				build := util.Now()
+				receive = eTree.collRcv.(*Receive)
+				root = eTree.root
+				this.output.AddPhaseTime(INSTANTIATE, util.Since(build))
 
-			// Increment the number of times this cached tree entry was used
-			if funcKey != "" {
-				eTree.usageMetadata[funcKey] += 1
+				// Increment the number of times this cached tree entry was used
+				if funcKey != "" {
+					eTree.usageMetadata[funcKey] += 1
+				}
 			}
 		}
 	}
@@ -692,9 +721,15 @@ func (this *Context) OpenPrepared(baseContext *Context, stmtType string, prepare
 		eTree = execTreeMapEntry{root: root, collRcv: receive}
 
 		if doCaching {
-			// Get the planId of the latest cached plan
-			planId, _ = this.udfPlans.getPlanId(cacheKey)
-			eTree.planId = planId
+			if !checkCache {
+				eTree.planId = -1
+				eTree.profOnly = true
+			} else {
+				// Get the planId of the latest cached plan
+				planId, _ = this.udfPlans.getPlanId(cacheKey)
+				eTree.planId = planId
+				eTree.profOnly = false
+			}
 
 			if funcKey != "" {
 				eTree.usageMetadata = map[string]int{funcKey: 1}

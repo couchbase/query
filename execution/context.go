@@ -1944,7 +1944,7 @@ func newUdfExecTreeMap() *udfExecTreeMap {
 //  2. Check if the tree was created by an invalid plan - by checking if it was created by the latest query plan for this statement
 //  3. Check if the tree can be re-opened
 //
-// If the tree entry cannot be re-opened or was created by an earlier invalid plan
+// If the tree entry is only for profiling, cannot be re-opened or was created by an earlier invalid plan
 // this entry remains in the cache solely for profiling purposes
 // If the tree can be re-opened and was created by a valid plan, remove the entry from the cache while it is in use
 func (this *udfExecTreeMap) getAndReopen(key string, context *Context) (execTreeMapEntry, bool) {
@@ -1959,21 +1959,29 @@ func (this *udfExecTreeMap) getAndReopen(key string, context *Context) (execTree
 
 	tree := t[len(t)-1]
 
+	// Check if the tree entry can be attempted to be re-used or if its only for profiling
+	if tree.profOnly {
+		return execTreeMapEntry{}, false
+	}
+
 	// Check if tree was created by the latest cached plan
 	planId, _ := context.udfPlans.getPlanId(key)
 	if tree.planId != planId {
+		tree.profOnly = true
 		return execTreeMapEntry{}, false
 	}
 
 	// Check state of the Collect/ Receive Operator
 	opState := tree.collRcv.getBase().opState
 	if opState != _PAUSED && opState != _COMPLETED && opState != _DORMANT {
+		tree.profOnly = true
 		return execTreeMapEntry{}, false
 	}
 
 	// Check if the exec tree can be re-opened
 	if !tree.root.reopen(context) {
 		logging.Warnf("Failed to reopen execution tree of query: %v", key)
+		tree.profOnly = true
 		return execTreeMapEntry{}, false
 	}
 
@@ -2084,9 +2092,10 @@ type planMapEntry struct {
 
 // Execution Tree Map Entry
 type execTreeMapEntry struct {
-	root    Operator // Root Operator
-	collRcv Operator // Collect or Receive Operator
-	planId  int      // PlanId of the plan that was used to create this exec tree
+	root     Operator // Root Operator
+	collRcv  Operator // Collect or Receive Operator
+	planId   int      // PlanId of the plan that was used to create this exec tree
+	profOnly bool     // If this exec tree entry is only for profiling
 
 	// Map to store usage metadata of the cached exec tree
 	// Key : fullName of the function
