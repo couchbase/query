@@ -2154,18 +2154,19 @@ func doForceGC(ep *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *a
 
 	err, _ := ep.verifyCredentialsFromRequest("", auth.PRIV_ADMIN, req, af)
 	if err != nil {
-		return textPlain(err.Error() + "\n"), nil
+		return nil, err
 	}
 
+	var before runtime.MemStats
+	var after runtime.MemStats
+	resp := make(map[string]interface{}, 1)
 	switch req.Method {
 	case "GET":
-		var before runtime.MemStats
-		var after runtime.MemStats
 		runtime.ReadMemStats(&before)
 		runtime.GC()
 		runtime.ReadMemStats(&after)
 		logging.Warnf("Admin endpoint forced GC. Freed: %v", ffdc.Human(before.HeapAlloc-after.HeapAlloc))
-		return textPlain("GC invoked\n"), nil
+		resp["status"] = "GC invoked"
 	case "POST":
 		var before runtime.MemStats
 		var after runtime.MemStats
@@ -2175,7 +2176,7 @@ func doForceGC(ep *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *a
 		logging.Warnf("Admin endpoint forced GC. Freed: %v Released: %v",
 			ffdc.Human(before.HeapAlloc-after.HeapAlloc),
 			ffdc.Human(after.HeapReleased-before.HeapReleased))
-		return textPlain("GC invoked and memory released\n"), nil
+		resp["status"] = "GC invoked and memory released"
 	}
-	return nil, nil
+	return resp, nil
 }
