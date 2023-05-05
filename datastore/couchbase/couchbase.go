@@ -453,10 +453,8 @@ func (s *store) AdminUser(node string) (string, string, error) {
 
 func (s *store) GetUserUUID(creds *auth.Credentials) string {
 	if creds != nil && len(creds.CbauthCredentialsList) > 0 {
-		uuid, err := creds.CbauthCredentialsList[0].Uuid()
-		if err == nil {
-			return uuid
-		}
+		res, _ := cbauth.GetUserUuid(creds.CbauthCredentialsList[0].User())
+		return res
 	}
 	return ""
 }
