@@ -10,6 +10,7 @@ package value
 
 import (
 	"bufio"
+	"compress/zlib"
 	"container/heap"
 	"fmt"
 	"io"
@@ -24,9 +25,14 @@ import (
 
 const _SPILL_FILE_PATTERN = "av_spill_*"
 
+type writerFlusher interface {
+	io.Writer
+	Flush() error
+}
+
 type spillFile struct {
 	f       *os.File
-	reader  *bufio.Reader
+	reader  io.Reader
 	current AnnotatedValue
 	sz      int64
 
@@ -34,6 +40,8 @@ type spillFile struct {
 	read  time.Duration
 
 	lessFn func(AnnotatedValue, AnnotatedValue) bool
+
+	compress bool
 }
 
 func (this *spillFile) rewind() error {
@@ -41,7 +49,11 @@ func (this *spillFile) rewind() error {
 	if err != nil {
 		return errors.NewValueError(errors.E_VALUE_SPILL_READ, err)
 	}
-	this.reader = bufio.NewReaderSize(this.f, 64*util.KiB)
+	if this.compress {
+		this.reader, _ = zlib.NewReader(this.f)
+	} else {
+		this.reader = bufio.NewReaderSize(this.f, 64*util.KiB)
+	}
 	err = this.nextValue()
 	if err != nil {
 		if _, ok := err.(errors.Error); ok {
@@ -120,12 +132,15 @@ type AnnotatedArray struct {
 	length   int
 	spill    spillFileHeap
 	iterator iterInfo
+
+	compress bool
 }
 
 func NewAnnotatedArray(acquire func(int) AnnotatedValues, release func(AnnotatedValues),
 	shouldSpill func(uint64, uint64) bool,
 	trackMemory func(int64),
-	less func(AnnotatedValue, AnnotatedValue) bool) *AnnotatedArray {
+	less func(AnnotatedValue, AnnotatedValue) bool,
+	compressSpill bool) *AnnotatedArray {
 
 	rv := &AnnotatedArray{
 		acquire:     acquire,
@@ -133,6 +148,7 @@ func NewAnnotatedArray(acquire func(int) AnnotatedValues, release func(Annotated
 		less:        less,
 		shouldSpill: shouldSpill,
 		trackMemory: trackMemory,
+		compress:    compressSpill,
 	}
 	return rv
 }
@@ -144,6 +160,7 @@ func (this *AnnotatedArray) Copy() *AnnotatedArray {
 		less:        this.less,
 		shouldSpill: this.shouldSpill,
 		trackMemory: this.trackMemory,
+		compress:    this.compress,
 	}
 	return rv
 }
@@ -244,9 +261,14 @@ func (this *AnnotatedArray) spillToDisk() error {
 		return errors.NewValueError(errors.E_VALUE_SPILL_CREATE, err)
 	}
 	logging.Debugf("[%p] spilling to %s (#:%v, sz:%v)", this, sf.Name(), len(this.mem), this.memSize)
-	spf := &spillFile{f: sf, lessFn: this.less}
+	spf := &spillFile{f: sf, lessFn: this.less, compress: this.compress}
 	this.spill = append(this.spill, spf)
-	writer := bufio.NewWriter(sf)
+	var writer writerFlusher
+	if this.compress {
+		writer = zlib.NewWriter(sf)
+	} else {
+		writer = bufio.NewWriter(sf)
+	}
 	for i, v := range this.mem {
 		s := time.Now()
 		err := v.WriteSpill(writer, nil)

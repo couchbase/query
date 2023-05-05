@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/couchbase/query/logging"
+	"github.com/couchbase/query/util"
 )
 
 //////////////////////////////////////////////////////////////
@@ -107,10 +108,38 @@ func getMemTotal() uint64 {
 	return atomic.LoadUint64(&memTotal)
 }
 
+var lastFreeRefresh util.Time
+var freeRefresher int32
+
 func updateMemFree(mem uint64) {
 	atomic.StoreUint64(&memFree, mem)
+	lastFreeRefresh = util.Now()
 }
 
 func GetMemFree() uint64 {
 	return atomic.LoadUint64(&memFree)
+}
+
+func GetMemFreePercent() float64 {
+	var f uint64
+	if util.Now().Sub(lastFreeRefresh) > time.Second && atomic.AddInt32(&freeRefresher, 1) == 1 {
+		stats, err := NewSystemStats()
+		if err == nil {
+			if f, err = stats.SystemFreeMem(); err == nil {
+				updateMemFree(f)
+			} else {
+				f = 0
+			}
+			stats.Close()
+		}
+		atomic.StoreInt32(&freeRefresher, 0)
+	}
+	t := getMemTotal()
+	if f == 0 {
+		f = GetMemFree()
+	}
+	if t > 0 {
+		return float64(f) / float64(t)
+	}
+	return 0
 }

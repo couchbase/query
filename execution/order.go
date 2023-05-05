@@ -14,6 +14,7 @@ import (
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/system"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
@@ -42,10 +43,24 @@ func NewOrder(plan *plan.Order, context *Context) *Order {
 	}
 	// here only setting function to test for spilling when quota is in effect
 	var shouldSpill func(uint64, uint64) bool
-	if plan.CanSpill() && plan.ClipValues() {
+	if plan.CanSpill() {
 		if context.UseRequestQuota() {
 			shouldSpill = func(c uint64, n uint64) bool {
-				return (c+n) > context.ProducerThrottleQuota() && context.CurrentQuotaUsage() > 0.75
+				t := 0.75
+				f := system.GetMemFreePercent()
+				switch {
+				case f <= 0.1:
+					t = 0.1
+				case f <= 0.2:
+					t = 0.2
+				case f <= 0.3:
+					t = 0.3
+				case f <= 0.4:
+					t = 0.4
+				case f <= 0.5:
+					t = 0.5
+				}
+				return (c+n) > context.ProducerThrottleQuota() && context.CurrentQuotaUsage() > t
 			}
 		} else {
 			maxSize := context.AvailableMemory()
@@ -82,7 +97,9 @@ func NewOrder(plan *plan.Order, context *Context) *Order {
 		func(p value.AnnotatedValues) { _ORDER_POOL.Put(p) },
 		shouldSpill,
 		trackMem,
-		rv.lessThan)
+		rv.lessThan,
+		!plan.ClipValues(),
+	)
 
 	newBase(&rv.base, context)
 	rv.execPhase = SORT
@@ -202,7 +219,7 @@ func (this *Order) makeMinimal(item value.AnnotatedValue, context *Context) {
 	item.ResetMeta()
 	item.ResetOriginal()
 	if useQuota {
-		sz -= item.Size()
+		sz -= item.RecalculateSize()
 		if sz != 0 {
 			context.ReleaseValueSize(sz)
 		}
