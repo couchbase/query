@@ -21,6 +21,7 @@ type tempInfoT struct {
 	loc   string
 	quota int64
 	inuse int64
+	hwm   int64
 }
 
 var tempInfo tempInfoT
@@ -91,6 +92,8 @@ func UseTemp(pathname string, sz int64) bool {
 		if tempInfo.inuse > tempInfo.quota {
 			tempInfo.inuse -= sz
 			rv = false
+		} else if tempInfo.inuse > tempInfo.hwm {
+			tempInfo.hwm = tempInfo.inuse
 		}
 	}
 	tempMutex.Unlock()
@@ -108,4 +111,12 @@ func ReleaseTemp(pathname string, sz int64) {
 		}
 	}
 	tempMutex.Unlock()
+}
+
+func TempStats() (int64, int64) {
+	tempMutex.Lock()
+	c := tempInfo.inuse
+	h := tempInfo.hwm
+	tempMutex.Unlock()
+	return c, h
 }

@@ -154,6 +154,9 @@ func (g *gometricsAccountingStore) Vitals() (map[string]interface{}, errors.Erro
 	}
 	rv["host.memory.quota"] = memory.NodeQuota() * util.MiB
 	rv["host.memory.value_quota"] = memory.Quota() * util.MiB
+	tc, th := util.TempStats()
+	rv["temp.usage"] = tc
+	rv["temp.hwm"] = th
 	for n, v := range g.vitals {
 		rv[n] = v
 	}
