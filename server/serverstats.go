@@ -127,7 +127,7 @@ func (c *statsCollector) runCollectStats() {
 		store, ok := datastore.GetDatastore().(datastore.Datastore2)
 		if ok {
 			store.ForeachBucket(func(b datastore.ExtendedBucket) {
-				stats := b.GetIOStats(false, false)
+				stats := b.GetIOStats(false, false, false)
 				if len(stats) != 0 {
 					if bstats == nil {
 						bstats = make(map[string]interface{})

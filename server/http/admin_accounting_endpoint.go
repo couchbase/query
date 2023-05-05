@@ -338,7 +338,7 @@ func doPrometheusLow(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Re
 	store, ok := datastore.GetDatastore().(datastore.Datastore2)
 	if ok {
 		store.ForeachBucket(func(b datastore.ExtendedBucket) {
-			stats := b.GetIOStats(false, true)
+			stats := b.GetIOStats(false, true, true)
 			for n, s := range stats {
 				statName := "n1ql_" + bName + "_" + n
 				w.Write([]byte("# TYPE " + statName + " gauge\n"))
