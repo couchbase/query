@@ -14,6 +14,7 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/expression/parser"
 	"github.com/couchbase/query/timestamp"
 	"github.com/couchbase/query/value"
 )
@@ -151,9 +152,25 @@ func newBucketsKeyspace(p *namespace, store datastore.Datastore, name string) (*
 	b.store = store
 	setKeyspaceBase(&b.keyspaceBase, p, name)
 
-	primary := &bucketIndex{name: "#primary", keyspace: b}
+	primary := &bucketIndex{name: "#primary", keyspace: b, primary: true}
 	b.indexer = newSystemIndexer(b, primary)
 	setIndexBase(&primary.indexBase, b.indexer)
+	// add a secondary index on name
+	expr, err := parser.Parse(`name`)
+
+	if err == nil {
+		key := expression.Expressions{expr}
+		buckets := &bucketIndex{
+			name:     "#buckets",
+			keyspace: b,
+			primary:  false,
+			idxKey:   key,
+		}
+		setIndexBase(&buckets.indexBase, b.indexer)
+		b.indexer.(*systemIndexer).AddIndex(buckets.name, buckets)
+	} else {
+		return nil, errors.NewSystemDatastoreError(err, "")
+	}
 
 	return b, nil
 }
@@ -162,6 +179,8 @@ type bucketIndex struct {
 	indexBase
 	name     string
 	keyspace *bucketKeyspace
+	primary  bool
+	idxKey   expression.Expressions
 }
 
 func (pi *bucketIndex) KeyspaceId() string {
@@ -185,7 +204,7 @@ func (pi *bucketIndex) SeekKey() expression.Expressions {
 }
 
 func (pi *bucketIndex) RangeKey() expression.Expressions {
-	return nil
+	return pi.idxKey
 }
 
 func (pi *bucketIndex) Condition() expression.Expression {
@@ -193,7 +212,7 @@ func (pi *bucketIndex) Condition() expression.Expression {
 }
 
 func (pi *bucketIndex) IsPrimary() bool {
-	return true
+	return pi.primary
 }
 
 func (pi *bucketIndex) State() (state datastore.IndexState, msg string, err errors.Error) {
@@ -225,12 +244,19 @@ func (pi *bucketIndex) Scan(requestId string, span *datastore.Span, distinct boo
 	if span == nil {
 		pi.ScanEntries(requestId, limit, cons, vector, conn)
 	} else {
+		var filter func(string) bool
+
 		defer conn.Sender().Close()
 
 		spanEvaluator, err := compileSpan(span)
 		if err != nil {
 			conn.Error(err)
 			return
+		}
+		if !pi.primary {
+			filter = func(name string) bool {
+				return spanEvaluator.evaluate(name)
+			}
 		}
 
 		var numProduced int64 = 0
@@ -241,9 +267,12 @@ func (pi *bucketIndex) Scan(requestId string, span *datastore.Span, distinct boo
 			for _, namespaceId := range namespaceIds {
 				namespace, err = pi.keyspace.store.NamespaceById(namespaceId)
 				if err == nil {
-					objects, err = namespace.Objects(conn.QueryContext().Credentials(), nil, true)
+					objects, err = namespace.Objects(conn.QueryContext().Credentials(), filter, true)
 					if err == nil {
 						for _, object := range objects {
+							if !pi.primary && !spanEvaluator.evaluate(object.Id) {
+								continue loop
+							}
 
 							// The list of bucket ids can include memcached buckets.
 							// We do not want to include them in the list
@@ -252,12 +281,19 @@ func (pi *bucketIndex) Scan(requestId string, span *datastore.Span, distinct boo
 							// which allows us to distinguish these buckets, and exclude them.
 							// See MB-19364 for more info.
 							if object.IsBucket {
+								var res bool
+
 								_, err = namespace.BucketByName(object.Id)
 								if err != nil {
 									continue
 								}
 								id := makeId(namespaceId, object.Id)
-								if spanEvaluator.evaluate(id) {
+								if pi.primary {
+									res = spanEvaluator.evaluate(id)
+								} else {
+									res = spanEvaluator.evaluate(object.Id)
+								}
+								if res {
 									entry := datastore.IndexEntry{PrimaryKey: id}
 									if !sendSystemKey(conn, &entry) {
 										return
