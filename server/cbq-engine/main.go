@@ -447,9 +447,6 @@ func main() {
 	constructor.Init(endpoint.Router(), server.Servicers())
 	tenant.Start(endpoint, *UUID, *REGULATOR_SETTINGS_FILE)
 
-	// topology awareness
-	_ = control.NewManager(*UUID)
-
 	// Since TLS listener has already been started by NewServiceEndpoint
 	// So not starting here
 	// Check later for enterprise -
@@ -467,6 +464,9 @@ func main() {
 		logging.Errorf("Error with Setting up SSL endpoints : %v", err.Error())
 		os.Exit(1)
 	}
+
+	// topology awareness - after listeners are ready to handle requests
+	_ = control.NewManager(*UUID)
 
 	// Now that we are up and running, try to prime the prepareds cache
 	prepareds.PreparedsRemotePrime()
