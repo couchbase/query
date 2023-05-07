@@ -776,7 +776,7 @@ func TestSpillingArray(t *testing.T) {
 		n2 := m2["name"].(string) + m2["surname"].(string)
 		return strings.Compare(n1, n2) < 0
 	}
-	array := NewAnnotatedArray(acquire, nil, shouldSpill, trackMem, lessThan)
+	array := NewAnnotatedArray(acquire, nil, shouldSpill, trackMem, lessThan, false)
 	check := make([]string, 4)
 
 	av := NewAnnotatedValue([]byte(`{"name":"Marty","surname":"McFly"}`))
