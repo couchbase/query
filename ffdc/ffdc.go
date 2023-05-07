@@ -413,6 +413,7 @@ const (
 	MemoryThreshold  = "MTE"
 	SigTerm          = "SIG"
 	Shutdown         = "SDN"
+	MemoryRate       = "MRE"
 )
 
 var reasons = map[string]*reason{
@@ -445,6 +446,11 @@ var reasons = map[string]*reason{
 		event:   Shutdown,
 		actions: []string{Active},
 		msg:     "Graceful shutdown threshold exceeded",
+	},
+	MemoryRate: &reason{
+		event:   MemoryRate,
+		actions: []string{Heap, MemStats, Active, Stacks, Vitals},
+		msg:     "Memory growth rate threshold exceeded",
 	},
 }
 
