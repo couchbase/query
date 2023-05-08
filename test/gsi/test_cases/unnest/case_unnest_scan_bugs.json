@@ -131,6 +131,59 @@
         "ordered": true,
         "results": [
         ]
+    },
+    {
+        "testcase": "MB-56775, part 1, project (unnested) array, not covered",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`index` = 'ix101' AND v.`covers` IS MISSING END"
+        },
+        "statements":"SELECT d.arr10, u.x FROM shellTest AS d UNNEST d.arr10 AS u WHERE u.x > 1",
+        "results": [
+            {
+                "arr10": [
+                    {
+                        "x": 1
+                    },
+                    {
+                        "x": 2
+                    },
+                    {
+                        "x": 1
+                    },
+                    {
+                        "x": 1
+                    }
+                ],
+                "x": 2
+            }
+        ]
+    },
+    {
+        "testcase": "MB-56775, part 2, not project (unnested) array, covered",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`index` = 'ix101' AND v.`covers` IS NOT MISSING END"
+        },
+        "statements":"SELECT meta(d).id, u.x FROM shellTest AS d UNNEST d.arr10 AS u WHERE u.x > 1",
+        "results": [
+            {
+                "id": "test101_unnest",
+                "x": 2
+            }
+        ]
     }
 ]
 

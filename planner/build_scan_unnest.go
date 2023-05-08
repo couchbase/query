@@ -410,13 +410,11 @@ func (this *builder) matchUnnestScan(node *algebra.KeyspaceTerm, pred, subset ex
 	entry.setArrayKey(arrayKey, entry.arrayKeyPos)
 	entry.unnestAliases = getUnnestAliases(entry.arrayKey, unnest)
 
-	unnestFilters, coveredExprs, _, _, err := this.coveringExpressions(node, entry, unnest,
+	unnestFilters, _, _, _, err := this.coveringExpressions(node, entry, unnest,
 		unnests, false)
 	if err != nil {
 		return entry, unnest, arrayKey, err
 	}
-	unnestFilters = append(unnestFilters, coveredExprs...)
-	unnestFilters = append(unnestFilters, getUnnestFilters(entry.unnestAliases)...)
 
 	coverAliases := getUnnestAliases(entry.arrayKey, unnest)
 	entry.pushDownProperty = this.indexPushDownProperty(entry, entry.sargKeys,
