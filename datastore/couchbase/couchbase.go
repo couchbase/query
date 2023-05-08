@@ -700,6 +700,7 @@ func (s *store) SetConnectionSecurityConfig(connSecConfig *datastore.ConnectionS
 	}
 
 	gsi.SetConnectionSecurityConfig(connSecConfig)
+	ftsclient.SetConnectionSecurityConfig(connSecConfig)
 
 	// for any active buckets set new security config
 	for _, n := range s.namespaceCache {
