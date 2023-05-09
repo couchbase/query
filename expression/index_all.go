@@ -72,8 +72,14 @@ func (this *All) EvaluateForIndex(item value.Value, context Context) (value.Valu
 	case value.MISSING:
 		rv = _MISSING_ARRAY
 	default:
-		// Coerce scalar into array
-		rv = value.Values{val}
+		if _, ok := this.array.(*Array); !ok {
+			// for simplified form of array index key, e.g., 'ALL arr1', make sure
+			// it behaves as equivalent array key 'ALL ARRAY v FOR v IN arr1 END'
+			rv = _NULL_ARRAY
+		} else {
+			// Coerce scalar into array
+			rv = value.Values{val}
+		}
 	}
 
 	return val, rv, nil
