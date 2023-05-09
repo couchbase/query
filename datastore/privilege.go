@@ -39,7 +39,7 @@ func FirstCred(creds *auth.Credentials) (string, string) {
 
 func EncodeName(user, domain string) string {
 	if domain == "" {
-		return user
+		return "local:" + user
 	}
 	return domain + ":" + user
 }
@@ -48,9 +48,9 @@ func DecodeName(encodedName string) (string, string) {
 	fields := strings.Split(encodedName, ":")
 	switch len(fields) {
 	case 1:
-		return "", fields[0]
+		return fields[0], "local"
 	case 2:
-		return fields[0], fields[1]
+		return fields[1], fields[0]
 	}
 	return "", ""
 }

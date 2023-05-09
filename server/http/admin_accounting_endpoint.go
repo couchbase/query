@@ -431,6 +431,8 @@ func (endpoint *HttpEndpoint) getImpersonateBucket(req *http.Request) (string, s
 		if len(buckets) > 0 {
 			return impersonate, buckets[0], nil
 		}
+
+		return impersonate, "", nil
 	}
 	return "", "", nil
 }
