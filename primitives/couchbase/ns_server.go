@@ -33,6 +33,7 @@ import (
 	"github.com/couchbase/gomemcached" // package name is 'gomemcached'
 	ntls "github.com/couchbase/goutils/tls"
 	"github.com/couchbase/query/logging"
+	"github.com/couchbase/query/tenant"
 )
 
 const USER_AGENT = "query"
@@ -1370,24 +1371,26 @@ func (b *Bucket) GetIOStats(reset bool, all bool, prometheus bool) map[string]in
 		}
 		rv["retries"] = retryCount
 	}
-	if kvThrottleCount != 0 || all {
-		if rv == nil {
-			rv = make(map[string]interface{})
+	if tenant.IsServerless() {
+		if kvThrottleCount != 0 || all {
+			if rv == nil {
+				rv = make(map[string]interface{})
+			}
+			if prometheus {
+				rv["kv_throttle_count"] = kvThrottleCount
+			} else {
+				rv["kvThrottles"] = kvThrottleCount
+			}
 		}
-		if prometheus {
-			rv["kv_throttle_count"] = kvThrottleCount
-		} else {
-			rv["kvThrottles"] = kvThrottleCount
-		}
-	}
-	if kvThrottleDuration != 0 || all {
-		if rv == nil {
-			rv = make(map[string]interface{})
-		}
-		if prometheus {
-			rv["kv_throttle_seconds_total"] = float64(kvThrottleDuration / uint64(time.Second))
-		} else {
-			rv["kvThrottleTime"] = time.Duration(kvThrottleDuration).String()
+		if kvThrottleDuration != 0 || all {
+			if rv == nil {
+				rv = make(map[string]interface{})
+			}
+			if prometheus {
+				rv["kv_throttle_seconds_total"] = float64(kvThrottleDuration / uint64(time.Second))
+			} else {
+				rv["kvThrottleTime"] = time.Duration(kvThrottleDuration).String()
+			}
 		}
 	}
 	return rv
