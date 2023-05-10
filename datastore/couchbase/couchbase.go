@@ -1650,8 +1650,8 @@ func (p *namespace) KeyspaceUpdateCallback(bucket *cb.Bucket) bool {
 	return ret
 }
 
-func (b *keyspace) GetIOStats(reset bool, all bool, prometheus bool) map[string]interface{} {
-	return b.cbbucket.GetIOStats(reset, all, prometheus)
+func (b *keyspace) GetIOStats(reset bool, all bool, prometheus bool, serverless bool) map[string]interface{} {
+	return b.cbbucket.GetIOStats(reset, all, prometheus, serverless)
 }
 
 func (b *keyspace) NamespaceId() string {

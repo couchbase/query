@@ -1331,7 +1331,7 @@ func (b *Bucket) StopUpdater() {
 	b.Unlock()
 }
 
-func (b *Bucket) GetIOStats(reset bool, all bool, prometheus bool) map[string]interface{} {
+func (b *Bucket) GetIOStats(reset bool, all bool, prometheus bool, serverless bool) map[string]interface{} {
 	var readCount uint64
 	var writeCount uint64
 	var retryCount uint64
@@ -1370,24 +1370,26 @@ func (b *Bucket) GetIOStats(reset bool, all bool, prometheus bool) map[string]in
 		}
 		rv["retries"] = retryCount
 	}
-	if kvThrottleCount != 0 || all {
-		if rv == nil {
-			rv = make(map[string]interface{})
+	if serverless {
+		if kvThrottleCount != 0 || all {
+			if rv == nil {
+				rv = make(map[string]interface{})
+			}
+			if prometheus {
+				rv["kv_throttle_count"] = kvThrottleCount
+			} else {
+				rv["kvThrottles"] = kvThrottleCount
+			}
 		}
-		if prometheus {
-			rv["kv_throttle_count"] = kvThrottleCount
-		} else {
-			rv["kvThrottles"] = kvThrottleCount
-		}
-	}
-	if kvThrottleDuration != 0 || all {
-		if rv == nil {
-			rv = make(map[string]interface{})
-		}
-		if prometheus {
-			rv["kv_throttle_seconds_total"] = float64(kvThrottleDuration / uint64(time.Second))
-		} else {
-			rv["kvThrottleTime"] = time.Duration(kvThrottleDuration).String()
+		if kvThrottleDuration != 0 || all {
+			if rv == nil {
+				rv = make(map[string]interface{})
+			}
+			if prometheus {
+				rv["kv_throttle_seconds_total"] = float64(kvThrottleDuration / uint64(time.Second))
+			} else {
+				rv["kvThrottleTime"] = time.Duration(kvThrottleDuration).String()
+			}
 		}
 	}
 	return rv
