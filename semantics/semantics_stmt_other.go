@@ -31,6 +31,10 @@ func (this *SemChecker) VisitExplain(stmt *algebra.Explain) (interface{}, error)
 	return stmt.Statement().Accept(this)
 }
 
+func (this *SemChecker) VisitExplainFunction(stmt *algebra.ExplainFunction) (interface{}, error) {
+	return nil, nil
+}
+
 func (this *SemChecker) VisitAdvise(stmt *algebra.Advise) (interface{}, error) {
 	if !this.hasSemFlag(_SEM_ENTERPRISE) {
 		return nil, errors.NewEnterpriseFeature("Advise", "semantics.visit_advise")

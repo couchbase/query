@@ -138,6 +138,9 @@ type Visitor interface {
 	// Explain
 	VisitExplain(op *Explain) (interface{}, error)
 
+	// Explain Function
+	VisitExplainFunction(op *ExplainFunction) (interface{}, error)
+
 	// Prepare
 	VisitPrepare(op *Prepare) (interface{}, error)
 

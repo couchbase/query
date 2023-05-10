@@ -21,7 +21,7 @@ import (
 )
 
 func Build(stmt algebra.Statement, datastore, systemstore datastore.Datastore,
-	namespace string, subquery, stream bool, context *PrepareContext) (
+	namespace string, subquery, stream bool, forceSQBuild bool, context *PrepareContext) (
 	*plan.QueryPlan, map[string]bool, error, map[string]time.Duration) {
 
 	builder := newBuilder(datastore, systemstore, namespace, subquery, context)
@@ -30,9 +30,10 @@ func Build(stmt algebra.Statement, datastore, systemstore datastore.Datastore,
 		checkCostModel(context.FeatureControls())
 	}
 
-	// subquery plan is currently only for explain and advise
+	// subquery plan is currently only for explain, explain_function and advise
 	// TODO: to be expanded to all statements, plus prepareds
-	if stmt.Type() == "EXPLAIN" || stmt.Type() == "ADVISE" {
+	// forceSQBuild argument  forces subquery plans to be built
+	if forceSQBuild || stmt.Type() == "EXPLAIN" || stmt.Type() == "EXPLAIN_FUNCTION" || stmt.Type() == "ADVISE" {
 		builder.setBuilderFlag(BUILDER_PLAN_SUBQUERY)
 	}
 

@@ -75,6 +75,11 @@ func NewExplainError(e error, msg string) Error {
 		InternalMsg: msg, InternalCaller: CallerN(1)}
 }
 
+func NewExplainFunctionError(e error, msg string) Error {
+	return &err{level: EXCEPTION, ICode: E_EXPLAIN_FUNCTION, IKey: "execution.explain_function_error", ICause: e,
+		InternalMsg: msg, InternalCaller: CallerN(1)}
+}
+
 func NewGroupUpdateError(e error, msg string) Error {
 	return &err{level: EXCEPTION, ICode: E_GROUP_UPDATE, IKey: "execution.group_update_error", ICause: e,
 		InternalMsg: msg, InternalCaller: CallerN(1)}

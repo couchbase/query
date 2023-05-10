@@ -439,6 +439,11 @@ func (this *scanIdxCol) VisitExplain(op *plan.Explain) (interface{}, error) {
 	return nil, nil
 }
 
+// Explain Function
+func (this *scanIdxCol) VisitExplainFunction(op *plan.ExplainFunction) (interface{}, error) {
+	return nil, nil
+}
+
 // Prepare
 func (this *scanIdxCol) VisitPrepare(op *plan.Prepare) (interface{}, error) {
 	return nil, nil

@@ -33,6 +33,16 @@ func Init() {
 	functions.FunctionsNewLanguage(functions.INLINE, &inline{})
 }
 
+func (this *inline) FunctionStatements(name functions.FunctionName, body functions.FunctionBody) ([]interface{}, errors.Error) {
+	funcBody, ok := body.(*inlineBody)
+
+	if !ok {
+		return nil, errors.NewInternalFunctionError(goerrors.New("Wrong language being executed!"), name.Name())
+	}
+
+	return []interface{}{funcBody.expr}, nil
+}
+
 func (this *inline) Execute(name functions.FunctionName, body functions.FunctionBody, modifiers functions.Modifier, values []value.Value, context functions.Context) (value.Value, errors.Error) {
 	var parent map[string]interface{}
 

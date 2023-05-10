@@ -175,3 +175,9 @@ func NewEvaluatorInflatingError(tenant string, reason interface{}) Error {
 		InternalMsg:    fmt.Sprintf("Error adding javascript runners to evaluator for '%v'", tenant),
 		InternalCaller: CallerN(1)}
 }
+
+func NewFunctionUnsupportedActionError(fType string, action string) Error {
+	return &err{level: EXCEPTION, ICode: E_FUNCTIONS_UNSUPPORTED_ACTION, IKey: "function.unsupported.action.error",
+		InternalMsg:    fmt.Sprintf("%s is not supported for functions of type %s", action, fType),
+		InternalCaller: CallerN(1)}
+}

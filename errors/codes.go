@@ -207,6 +207,7 @@ const (
 	E_EVALUATION_ABORT                        ErrorCode = 5010
 	E_EVALUATION                              ErrorCode = 5011
 	E_EXPLAIN                                 ErrorCode = 5015
+	E_EXPLAIN_FUNCTION                        ErrorCode = 5017
 	E_GROUP_UPDATE                            ErrorCode = 5020
 	E_INVALID_VALUE                           ErrorCode = 5030
 	E_INVALID_EXPRESSION                      ErrorCode = 5031
@@ -321,6 +322,7 @@ const (
 	E_FUNCTION_LOADING                        ErrorCode = 10115
 	E_EVALUATOR_LOADING                       ErrorCode = 10116
 	E_EVALUATOR_INFLATING                     ErrorCode = 10117
+	E_FUNCTIONS_UNSUPPORTED_ACTION            ErrorCode = 10118
 	E_DATASTORE_INVALID_BUCKET_PARTS          ErrorCode = 10200
 	E_QUERY_CONTEXT                           ErrorCode = 10201
 	E_BUCKET_NO_DEFAULT_COLLECTION            ErrorCode = 10202

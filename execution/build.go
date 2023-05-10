@@ -697,6 +697,12 @@ func (this *builder) VisitExplain(plan *plan.Explain) (interface{}, error) {
 	return checkOp(NewExplain(plan, this.context), this.context)
 }
 
+// Explain Function
+func (this *builder) VisitExplainFunction(plan *plan.ExplainFunction) (interface{}, error) {
+	this.dynamicAuthorize = false
+	return checkOp(NewExplainFunction(plan, this.context), this.context)
+}
+
 // Infer
 func (this *builder) VisitInferKeyspace(plan *plan.InferKeyspace) (interface{}, error) {
 	return checkOp(NewInferKeyspace(plan, this.context), this.context)

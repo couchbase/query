@@ -20,6 +20,7 @@ import (
 func Init() {
 	functions.Authorize = authorize
 	functions.CheckBucketAccess = checkBucketAccess
+	functions.HandleDsAuthError = handleDsAuthError
 }
 
 func authorize(privileges *auth.Privileges, credentials *auth.Credentials) errors.Error {
@@ -30,4 +31,8 @@ func authorize(privileges *auth.Privileges, credentials *auth.Credentials) error
 func checkBucketAccess(credentials *auth.Credentials, e errors.Error, path []string, privs *auth.Privileges) errors.Error {
 	err := datastore.CheckBucketAccess(credentials, e, path, privs)
 	return err
+}
+
+func handleDsAuthError(err errors.Error, privs *auth.Privileges, creds *auth.Credentials) errors.Error {
+	return datastore.HandleDsAuthError(err, privs, creds)
 }

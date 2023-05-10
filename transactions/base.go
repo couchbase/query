@@ -14,7 +14,7 @@ func IsValidStatement(txId, stmtType string, tximplicit, allow bool) (bool, stri
 		return true, ""
 	case "EXECUTE", "PREPARE":
 		return true, ""
-	case "EXECUTE_FUNCTION":
+	case "EXECUTE_FUNCTION", "EXPLAIN_FUNCTION":
 		return true, ""
 	case "COMMIT", "ROLLBACK", "ROLLBACK_SAVEPOINT", "SET_TRANSACTION_ISOLATION", "SAVEPOINT":
 		return allow || txId != "", "outside the"

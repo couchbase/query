@@ -83,6 +83,7 @@ type FunctionEntry struct {
 
 type LanguageRunner interface {
 	Execute(name FunctionName, body FunctionBody, modifiers Modifier, values []value.Value, context Context) (value.Value, errors.Error)
+	FunctionStatements(name FunctionName, body FunctionBody) ([]interface{}, errors.Error)
 }
 
 type functionCache struct {
@@ -92,6 +93,7 @@ type functionCache struct {
 
 var Authorize func(privileges *auth.Privileges, credentials *auth.Credentials) errors.Error
 var CheckBucketAccess func(credentials *auth.Credentials, e errors.Error, path []string, privs *auth.Privileges) errors.Error
+var HandleDsAuthError func(err errors.Error, privs *auth.Privileges, creds *auth.Credentials) errors.Error
 
 var languages = [_SIZER]LanguageRunner{&missing{}, &empty{}}
 var functions = &functionCache{}
@@ -396,6 +398,97 @@ func Indexable(name FunctionName) value.Tristate {
 }
 
 func ExecuteFunction(name FunctionName, modifiers Modifier, values []value.Value, context Context) (value.Value, errors.Error) {
+
+	// Get the function's entry
+	body, entry, err := getBodyAndEntry(name)
+
+	if err != nil {
+		return nil, err
+	}
+
+	// go and do the dirty deed
+	err = Authorize(entry.privs, context.Credentials())
+	if err != nil {
+		err = HandleDsAuthError(err, entry.privs, context.Credentials())
+		return nil, err
+	}
+
+	// Initialize the UDF execution tree cache and UDF query plan cache
+	// Only for Golang/ Javascript UDF execution
+	// We initialize here - so we dont unecessarily initialize these in the context
+	lang := entry.Lang()
+	if lang == JAVASCRIPT || lang == GOLANG {
+		context.InitUdfPlans()
+		context.InitUdfStmtExecTrees()
+	}
+
+	newContext := context
+	switchContext := body.SwitchContext()
+	readonly := (modifiers & READONLY) != 0
+
+	if switchContext == value.TRUE || (switchContext == value.NONE && (readonly != context.Readonly() || name.QueryContext() != context.QueryContext())) || context.PreserveProjectionOrder() {
+		var ok bool
+
+		newContext, ok = context.NewQueryContext(name.QueryContext(), readonly).(Context)
+		if !ok {
+			return nil, errors.NewInternalFunctionError(fmt.Errorf("Invalid function context received"), name.Name())
+		}
+	}
+	start := util.Now()
+	val, err := languages[lang].Execute(name, body, modifiers, values, newContext)
+
+	// update stats
+	serviceTime := util.Now().Sub(start)
+	atomic.AddInt64(&entry.Uses, 1)
+
+	// this is strictly not correct, but we'd rather have an approximate time than lock
+	entry.LastUse = start.ToTime()
+	atomic.AddUint64(&entry.ServiceTime, uint64(serviceTime))
+	util.TestAndSetUint64(&entry.MinServiceTime, uint64(serviceTime),
+		func(old, new uint64) bool { return old > new }, 0)
+	util.TestAndSetUint64(&entry.MaxServiceTime, uint64(serviceTime),
+		func(old, new uint64) bool { return old < new }, 0)
+
+	// propagate transaction context if necessary
+	if context != newContext && context.GetTxContext() == nil {
+		newTxContext := newContext.GetTxContext()
+		if newTxContext != nil {
+			context.SetTxContext(newTxContext)
+		}
+	}
+
+	return val, err
+}
+
+// Returns all N1QL query statements inside a function
+func FunctionStatements(name FunctionName, creds *auth.Credentials) (Language, []interface{}, errors.Error) {
+
+	// Get the function's entry and body
+	body, entry, err := getBodyAndEntry(name)
+
+	if err != nil {
+		return _MISSING, nil, err
+	}
+
+	lang := entry.Lang()
+
+	// Verify privileges for the entry
+	// Authorizes privileges required to execute the function
+	// Note: for Inline functions, this performs Authorization for the queries inside the function as well
+	err = Authorize(entry.privs, creds)
+	if err != nil {
+		err = HandleDsAuthError(err, entry.privs, creds)
+		return lang, nil, err
+	}
+
+	rv, err := languages[lang].FunctionStatements(name, body)
+
+	return lang, rv, err
+}
+
+// Returns function entry and function body
+// Returns function body as well - so as to allow cache entry changes to the function body pointer even after.
+func getBodyAndEntry(name FunctionName) (FunctionBody, *FunctionEntry, errors.Error) {
 	var err errors.Error
 	var entry *FunctionEntry
 
@@ -480,7 +573,7 @@ func ExecuteFunction(name FunctionName, modifiers Modifier, values []value.Value
 	}
 
 	if err != nil {
-		return nil, err
+		return body, nil, err
 	}
 
 	// if neither worked, create and cache a missing entry
@@ -492,68 +585,7 @@ func ExecuteFunction(name FunctionName, modifiers Modifier, values []value.Value
 		body = entry.FunctionBody
 	}
 
-	// go and do the dirty deed
-	err = Authorize(entry.privs, context.Credentials())
-	if err != nil {
-		if err.Code() == errors.E_DATASTORE_INSUFFICIENT_CREDENTIALS {
-			cause, _ := err.Cause().(map[string]interface{})
-			path, _ := cause["path"].([]string)
-
-			err1 := CheckBucketAccess(context.Credentials(), err, path, entry.privs)
-
-			if err1 != nil {
-				err = err1
-			}
-		}
-
-		return nil, err
-	}
-
-	// Initialize the UDF execution tree cache and UDF query plan cache
-	// Only for Golang/ Javascript UDF execution
-	// We initialize here - so we dont unecessarily initialize these in the context
-	lang := entry.Lang()
-	if lang == JAVASCRIPT || lang == GOLANG {
-		context.InitUdfPlans()
-		context.InitUdfStmtExecTrees()
-	}
-
-	newContext := context
-	switchContext := body.SwitchContext()
-	readonly := (modifiers & READONLY) != 0
-
-	if switchContext == value.TRUE || (switchContext == value.NONE && (readonly != context.Readonly() || name.QueryContext() != context.QueryContext())) || context.PreserveProjectionOrder() {
-		var ok bool
-
-		newContext, ok = context.NewQueryContext(name.QueryContext(), readonly).(Context)
-		if !ok {
-			return nil, errors.NewInternalFunctionError(fmt.Errorf("Invalid function context received"), name.Name())
-		}
-	}
-	start := util.Now()
-	val, err := languages[lang].Execute(name, body, modifiers, values, newContext)
-
-	// update stats
-	serviceTime := util.Now().Sub(start)
-	atomic.AddInt64(&entry.Uses, 1)
-
-	// this is strictly not correct, but we'd rather have an approximate time than lock
-	entry.LastUse = start.ToTime()
-	atomic.AddUint64(&entry.ServiceTime, uint64(serviceTime))
-	util.TestAndSetUint64(&entry.MinServiceTime, uint64(serviceTime),
-		func(old, new uint64) bool { return old > new }, 0)
-	util.TestAndSetUint64(&entry.MaxServiceTime, uint64(serviceTime),
-		func(old, new uint64) bool { return old < new }, 0)
-
-	// propagate transaction context if necessary
-	if context != newContext && context.GetTxContext() == nil {
-		newTxContext := newContext.GetTxContext()
-		if newTxContext != nil {
-			context.SetTxContext(newTxContext)
-		}
-	}
-
-	return val, err
+	return body, entry, err
 }
 
 // execution cache work horse
@@ -614,6 +646,10 @@ func (this *empty) Execute(name FunctionName, body FunctionBody, modifiers Modif
 	return nil, errors.NewFunctionsNotSupported("")
 }
 
+func (this *empty) FunctionStatements(name FunctionName, body FunctionBody) ([]interface{}, errors.Error) {
+	return nil, errors.NewFunctionUnsupportedActionError("", "EXPLAIN FUNCTION")
+}
+
 // dummy language throwing errors, for caching missing entries
 type missing struct {
 }
@@ -663,4 +699,8 @@ func (this *missing) Load(name FunctionName) errors.Error {
 }
 
 func (this *missing) Unload(name FunctionName) {
+}
+
+func (this *missing) FunctionStatements(name FunctionName, body FunctionBody) ([]interface{}, errors.Error) {
+	return nil, errors.NewMissingFunctionError(name.Name())
 }

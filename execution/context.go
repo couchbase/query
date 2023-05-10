@@ -1129,7 +1129,7 @@ func (this *opContext) EvaluateSubquery(query *algebra.Select, parent value.Valu
 					this.indexApiVersion, this.featureControls, this.useFts, this.useCBO, optimizer,
 					nil, this, false)
 				qp, subplanIsks, err, _ = planner.Build(query, this.datastore, this.systemstore, this.namespace,
-					true, false, &prepContext)
+					true, false, false, &prepContext)
 
 				if err != nil {
 					this.prepared.Unlock()
@@ -1169,7 +1169,7 @@ func (this *opContext) EvaluateSubquery(query *algebra.Select, parent value.Valu
 			this.positionalArgs, this.indexApiVersion, this.featureControls, this.useFts, this.useCBO, optimizer,
 			this.deltaKeyspaces, this, false)
 		qp, subplanIsks, err, _ = planner.Build(query, this.datastore, this.systemstore,
-			this.namespace, true, false, &prepContext)
+			this.namespace, true, false, false, &prepContext)
 
 		if err != nil {
 			// Generate our own error for this subquery, in addition to whatever the query above is doing.

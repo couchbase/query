@@ -589,3 +589,24 @@ func CheckBucketAccess(credentials *auth.Credentials, e errors.Error, path []str
 
 	return nil
 }
+
+// In serverless, if the user does not have permissions on a bucket then a generic error message must be displayed
+// instead of the specific error message associated with E_DATASTORE_INSUFFICIENT_CREDENTIALS for security reasons
+func HandleDsAuthError(err errors.Error, privs *auth.Privileges, creds *auth.Credentials) errors.Error {
+	if err != nil {
+		if err.Code() == errors.E_DATASTORE_INSUFFICIENT_CREDENTIALS {
+			cause, _ := err.Cause().(map[string]interface{})
+			path, _ := cause["path"].([]string)
+
+			err1 := CheckBucketAccess(creds, err, path, privs)
+
+			if err1 != nil {
+				err = err1
+			}
+		}
+
+		return err
+	}
+
+	return nil
+}

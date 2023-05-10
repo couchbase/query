@@ -159,6 +159,9 @@ var _OPERATORS = map[string]Operator{
 	// Explain
 	"Explain": &Explain{},
 
+	// Explain Function
+	"ExplainFunction": &ExplainFunction{},
+
 	// Prepare
 	"Prepare": &Prepare{},
 

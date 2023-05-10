@@ -24,6 +24,10 @@ func (this *Rewrite) VisitExplain(stmt *algebra.Explain) (interface{}, error) {
 	return stmt.Statement().Accept(this)
 }
 
+func (this *Rewrite) VisitExplainFunction(stmt *algebra.ExplainFunction) (interface{}, error) {
+	return stmt, stmt.MapExpressions(this)
+}
+
 func (this *Rewrite) VisitAdvise(stmt *algebra.Advise) (interface{}, error) {
 	return stmt.Statement().Accept(this)
 }

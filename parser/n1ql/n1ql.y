@@ -451,7 +451,7 @@ column int
 %type <expr>             dir opt_dir
 %type <b>                opt_if_not_exists opt_if_exists
 %type <statement>        stmt_body
-%type <statement>        stmt advise explain prepare execute select_stmt dml_stmt ddl_stmt
+%type <statement>        stmt advise explain explain_function prepare execute select_stmt dml_stmt ddl_stmt
 %type <statement>        infer
 %type <statement>        update_statistics
 %type <statement>        insert upsert delete update merge
@@ -569,6 +569,8 @@ prepare
 |
 execute
 |
+explain_function
+|
 stmt
 ;
 
@@ -610,6 +612,12 @@ explain:
 EXPLAIN stmt
 {
     $$ = algebra.NewExplain($2, yylex.(*lexer).Remainder($<tokOffset>1))
+}
+
+explain_function:
+EXPLAIN FUNCTION func_name
+{
+    $$ = algebra.NewExplainFunction($3)
 }
 ;
 
