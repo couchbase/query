@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/couchbase/query/accounting"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/plan"
@@ -27,6 +28,7 @@ const (
 type groupBase struct {
 	groups  *value.AnnotatedMap
 	parents map[string]value.Value
+	spilled bool
 }
 
 func newGroupBase(this *groupBase, context *Context, canSpill bool,
@@ -36,7 +38,12 @@ func newGroupBase(this *groupBase, context *Context, canSpill bool,
 	if canSpill && !context.HasFeature(util.N1QL_DISABLE_SPILL_TO_DISK) {
 		if context.UseRequestQuota() && context.MemoryQuota() > 0 {
 			shouldSpill = func(c uint64, n uint64) bool {
-				return (c+n) > context.ProducerThrottleQuota() && context.CurrentQuotaUsage() > _GROUP_QUOTA_THRESHOLD
+				ret := (c+n) > context.ProducerThrottleQuota() && context.CurrentQuotaUsage() > _GROUP_QUOTA_THRESHOLD
+				if ret && !this.spilled {
+					this.spilled = true
+					accounting.UpdateCounter(accounting.SPILLS_GROUP)
+				}
+				return ret
 			}
 		} else {
 			maxSize := context.AvailableMemory()
@@ -46,7 +53,14 @@ func newGroupBase(this *groupBase, context *Context, canSpill bool,
 			if maxSize < _MIN_SIZE {
 				maxSize = _MIN_SIZE
 			}
-			shouldSpill = func(c uint64, n uint64) bool { return (c + n) > maxSize }
+			shouldSpill = func(c uint64, n uint64) bool {
+				ret := (c + n) > maxSize
+				if ret && !this.spilled {
+					this.spilled = true
+					accounting.UpdateCounter(accounting.SPILLS_GROUP)
+				}
+				return ret
+			}
 		}
 	}
 	var trackMem func(int64)
@@ -74,6 +88,7 @@ func (this *groupBase) Release() {
 		}
 	}
 	this.groups.Release()
+	this.spilled = false
 }
 
 // Deliberately doesn't track/release

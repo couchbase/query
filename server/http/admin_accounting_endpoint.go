@@ -2365,6 +2365,8 @@ var localData = map[string]string{
 	"allocated_values": "counter",
 	"node_memory":      "gauge",
 	"node_rss":         "gauge",
+	"temp_hwm":         "counter",
+	"temp_usage":       "gauge",
 }
 
 func isLocal(metric string) bool {
@@ -2395,6 +2397,10 @@ func getLocalData(serv *server.Server, metric string) map[string]interface{} {
 			}
 			stats.Close()
 		}
+	case "temp_hwm":
+		_, values["value"] = util.TempStats()
+	case "temp_usage":
+		values["value"], _ = util.TempStats()
 	}
 	return values
 }
@@ -2422,6 +2428,12 @@ func localValue(serv *server.Server, metric string) interface{} {
 			stats.Close()
 		}
 		return rss
+	case "temp_hwm":
+		_, t := util.TempStats()
+		return t
+	case "temp_usage":
+		t, _ := util.TempStats()
+		return t
 	}
 	return nil
 }

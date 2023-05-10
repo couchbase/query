@@ -215,6 +215,9 @@ const (
 	USER_ERROR_COUNT
 	SYSTEM_ERROR_COUNT
 
+	SPILLS_ORDER
+	SPILLS_GROUP
+
 	// unknown is always the last and does not have a corresponding name or metric
 	UNKNOWN
 )
@@ -289,6 +292,9 @@ const (
 	_USER_ERROR_COUNT   = "user_error_count"
 	_SYSTEM_ERROR_COUNT = "engine_error_count"
 
+	SPILLS_ORDER_STR = "spills_order"
+	SPILLS_GROUP_STR = "spills_group"
+
 	// gauges
 	USED_MEMORY_HWM = "used_memory_hwm"
 )
@@ -354,6 +360,9 @@ var metricNames = []string{
 
 	_USER_ERROR_COUNT,
 	_SYSTEM_ERROR_COUNT,
+
+	SPILLS_ORDER_STR,
+	SPILLS_GROUP_STR,
 }
 
 var gaugeNames = []string{
