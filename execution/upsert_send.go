@@ -64,7 +64,7 @@ func (this *SendUpsert) beforeItems(context *Context, parent value.Value) bool {
 }
 
 func (this *SendUpsert) processItem(item value.AnnotatedValue, context *Context) bool {
-	return this.enbatchSize(item, this, this.batchSize, context, true)
+	return this.enbatchSize(item, this, this.batchSize, context, false)
 }
 
 func (this *SendUpsert) afterItems(context *Context) {
