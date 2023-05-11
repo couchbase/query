@@ -1091,16 +1091,13 @@
           "ip": "",
           "port": 1
         },
-        "local": {
-          "ip": "",
-          "port": 1
-        },
         "httpMethod": "",
-        "httpResultCode": 1,
+        "httpResultCode": 1
+      },
+      "optional_fields": {
         "errorCode": 1,
         "errorMessage": ""
-      },
-      "optional_fields": {}
+      }
     },
     {
       "id": 28691,
@@ -1119,17 +1116,17 @@
           "ip": "",
           "port": 1
         },
+        "httpMethod": "",
+        "httpResultCode": 1
+      },
+      "optional_fields": {
+        "name": "",
         "local": {
           "ip": "",
           "port": 1
         },
-        "httpMethod": "",
-        "httpResultCode": 1,
         "errorCode": 1,
         "errorMessage": ""
-      },
-      "optional_fields": {
-        "name": ""
       }
     },
     {
@@ -1149,17 +1146,17 @@
           "ip": "",
           "port": 1
         },
+        "httpMethod": "",
+        "httpResultCode": 1
+      },
+      "optional_fields": {
+        "request": "",
         "local": {
           "ip": "",
           "port": 1
         },
-        "httpMethod": "",
-        "httpResultCode": 1,
         "errorCode": 1,
         "errorMessage": ""
-      },
-      "optional_fields": {
-        "request": ""
       }
     },
     {
@@ -1758,17 +1755,17 @@
           "ip": "",
           "port": 1
         },
+        "httpMethod": "",
+        "httpResultCode": 1
+      },
+      "optional_fields": {
+        "request": "",
         "local": {
           "ip": "",
           "port": 1
         },
-        "httpMethod": "",
-        "httpResultCode": 1,
         "errorCode": 1,
         "errorMessage": ""
-      },
-      "optional_fields": {
-        "request": ""
       }
     },
     {
@@ -2639,17 +2636,62 @@
           "ip": "",
           "port": 1
         },
-        "local": {
+        "httpMethod": "",
+        "httpResultCode": 1
+      },
+      "optional_fields": {
+        "errorCode": 1,
+        "errorMessage": ""
+      }
+    },
+    {
+      "id": 28730,
+      "name": "/admin/gc API request",
+      "description": "An HTTP request was made to initate garbage collection",
+      "sync": false,
+      "enabled": false,
+      "filtering_permitted": true,
+      "mandatory_fields": {
+        "timestamp": "",
+        "real_userid": {
+          "domain": "",
+          "user": ""
+        },
+        "remote": {
           "ip": "",
           "port": 1
         },
         "httpMethod": "",
-        "httpResultCode": 1,
-        "errorCode": 1,
-        "errorMessage": ""
+        "httpResultCode": 1
       },
       "optional_fields": {
-        "request": ""
+        "errorCode": 1,
+        "errorMessage": ""
+      }
+    },
+    {
+      "id": 28731,
+      "name": "/admin/ffdc API request",
+      "description": "An HTTP request was made to invoke an FFDC collection",
+      "sync": false,
+      "enabled": false,
+      "filtering_permitted": true,
+      "mandatory_fields": {
+        "timestamp": "",
+        "real_userid": {
+          "domain": "",
+          "user": ""
+        },
+        "remote": {
+          "ip": "",
+          "port": 1
+        },
+        "httpMethod": "",
+        "httpResultCode": 1
+      },
+      "optional_fields": {
+        "errorCode": 1,
+        "errorMessage": ""
       }
     }
   ]

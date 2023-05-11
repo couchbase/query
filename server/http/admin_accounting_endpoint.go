@@ -162,6 +162,9 @@ func (this *HttpEndpoint) registerAccountingHandlers() {
 	forceGCHandler := func(w http.ResponseWriter, req *http.Request) {
 		this.wrapAPI(w, req, doForceGC)
 	}
+	manualFFDCHandler := func(w http.ResponseWriter, req *http.Request) {
+		this.wrapAPI(w, req, doManualFFDC)
+	}
 	routeMap := map[string]struct {
 		handler handlerFunc
 		methods []string
@@ -195,6 +198,7 @@ func (this *HttpEndpoint) registerAccountingHandlers() {
 		functionsBackupPrefix + "/backup":                 {handler: functionsGlobalBackupHandler, methods: []string{"GET", "POST"}},
 		functionsBackupPrefix + "/bucket/{bucket}/backup": {handler: functionsBucketBackupHandler, methods: []string{"GET", "POST"}},
 		adminPrefix + "/gc":                               {handler: forceGCHandler, methods: []string{"GET", "POST"}},
+		adminPrefix + "/ffdc":                             {handler: manualFFDCHandler, methods: []string{"GET", "POST"}},
 	}
 
 	for route, h := range routeMap {
@@ -2152,8 +2156,8 @@ func getMetricData(metric accounting.Metric) map[string]interface{} {
 }
 
 func doForceGC(ep *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
-	af.EventTypeId = audit.API_DO_NOT_AUDIT
 
+	af.EventTypeId = audit.API_ADMIN_GC
 	err, _ := ep.verifyCredentialsFromRequest("", auth.PRIV_ADMIN, req, af)
 	if err != nil {
 		return nil, err
@@ -2161,7 +2165,7 @@ func doForceGC(ep *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *a
 
 	var before runtime.MemStats
 	var after runtime.MemStats
-	resp := make(map[string]interface{}, 1)
+	resp := make(map[string]interface{}, 3)
 	switch req.Method {
 	case "GET":
 		runtime.ReadMemStats(&before)
@@ -2169,6 +2173,7 @@ func doForceGC(ep *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *a
 		runtime.ReadMemStats(&after)
 		logging.Warnf("Admin endpoint forced GC. Freed: %v", ffdc.Human(before.HeapAlloc-after.HeapAlloc))
 		resp["status"] = "GC invoked"
+		resp["freed"] = (before.HeapAlloc - after.HeapAlloc)
 	case "POST":
 		var before runtime.MemStats
 		var after runtime.MemStats
@@ -2179,6 +2184,37 @@ func doForceGC(ep *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *a
 			ffdc.Human(before.HeapAlloc-after.HeapAlloc),
 			ffdc.Human(after.HeapReleased-before.HeapReleased))
 		resp["status"] = "GC invoked and memory released"
+		resp["freed"] = (before.HeapAlloc - after.HeapAlloc)
+		resp["released"] = (after.HeapReleased - before.HeapReleased)
 	}
 	return resp, nil
+}
+
+var earliest time.Time
+
+func doManualFFDC(ep *HttpEndpoint, w http.ResponseWriter, req *http.Request,
+	af *audit.ApiAuditFields) (interface{}, errors.Error) {
+
+	af.EventTypeId = audit.API_ADMIN_FFDC
+	err, _ := ep.verifyCredentialsFromRequest("", auth.PRIV_ADMIN, req, af)
+	if err != nil {
+		return nil, err
+	}
+
+	logging.Warnf("Manual FFDC collection invoked.")
+	if ffdc.Capture(ffdc.Manual) {
+		ffdc.Reset(ffdc.Manual)
+		resp := make(map[string]interface{}, 2)
+		resp["status"] = "FFDC invoked."
+		earliest = time.Now().Add(ffdc.FFDC_MIN_INTERVAL)
+		resp["next_earliest"] = earliest.Format(util.DEFAULT_FORMAT)
+		return resp, nil
+	} else {
+		if time.Now().Before(earliest) {
+			return nil, errors.NewAdminManualFFDCError("Ensure sufficient interval between invocations.",
+				int(earliest.Sub(time.Now()).Seconds()))
+		} else {
+			return nil, errors.NewAdminManualFFDCError("", 0)
+		}
+	}
 }

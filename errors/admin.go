@@ -160,3 +160,14 @@ func NewAdminBodyError(e error) Error {
 	return &err{level: EXCEPTION, ICode: E_ADMIN_BODY, IKey: "admin.accounting.bad_body", ICause: e,
 		InternalMsg: "Error getting request body", InternalCaller: CallerN(1)}
 }
+
+func NewAdminManualFFDCError(msg string, remaining int) Error {
+	var c map[string]interface{}
+	if msg != "" {
+		c = make(map[string]interface{}, 2)
+		c["seconds_before_next"] = remaining
+		c["message"] = msg
+	}
+	return &err{level: EXCEPTION, ICode: E_ADMIN_FFDC, IKey: "admin.ffdc", cause: c,
+		InternalMsg: "FFDC invocation failed.", InternalCaller: CallerN(1)}
+}

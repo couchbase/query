@@ -32,7 +32,7 @@ import (
 // First Failure Data Capture (FFDC)
 
 const _FFDC_OCCURENCE_LIMIT = 10
-const _FFDC_MIN_INTERVAL = time.Second * 10
+const FFDC_MIN_INTERVAL = time.Second * 10
 const _MAX_CAPTURE_WAIT_TIME = time.Second * 10
 
 const (
@@ -195,7 +195,7 @@ func (this *reason) shouldCapture() *occurrence {
 	}
 	now := time.Now()
 	if len(this.occurrences) > 0 {
-		if now.Sub(this.occurrences[len(this.occurrences)-1].when) < _FFDC_MIN_INTERVAL {
+		if now.Sub(this.occurrences[len(this.occurrences)-1].when) < FFDC_MIN_INTERVAL {
 			atomic.AddInt64(&this.count, -1)
 			return nil
 		}
@@ -210,11 +210,13 @@ func (this *reason) shouldCapture() *occurrence {
 
 func (this *reason) capture(ch chan bool) {
 	locked := false
+	ret := false
 	defer func() {
 		e := recover()
 		if e != nil {
 			logging.Stackf(logging.ERROR, "Panic capturing \"%v\" FFDC: %v", this.event, e)
 		}
+		ch <- ret
 		close(ch)
 		if locked {
 			this.Unlock()
@@ -226,6 +228,7 @@ func (this *reason) capture(ch chan bool) {
 	this.Unlock()
 	locked = false
 	if occ != nil {
+		ret = true
 		logging.Warnf("FFDC: %s", this.msg)
 		for i := range this.actions {
 			occ.capture(this.event, this.actions[i])
@@ -414,6 +417,7 @@ const (
 	SigTerm          = "SIG"
 	Shutdown         = "SDN"
 	MemoryRate       = "MRE"
+	Manual           = "MAN"
 )
 
 var reasons = map[string]*reason{
@@ -452,9 +456,15 @@ var reasons = map[string]*reason{
 		actions: []string{Heap, MemStats, Active, Stacks, Vitals},
 		msg:     "Memory growth rate threshold exceeded",
 	},
+	Manual: &reason{
+		event:   Manual,
+		actions: []string{Heap, MemStats, Active, Completed, Stacks, Vitals, Netstat},
+		msg:     "Manual invocation",
+	},
 }
 
-func Capture(event string) {
+func Capture(event string) bool {
+	rv := false
 	r, ok := reasons[event]
 	if !ok {
 		logging.Stackf(logging.ERROR, "FFDC: Invalid event: %v", event)
@@ -463,11 +473,12 @@ func Capture(event string) {
 		done := make(chan bool)
 		go r.capture(done)
 		select {
-		case <-done:
+		case rv = <-done:
 		case <-time.After(_MAX_CAPTURE_WAIT_TIME):
 			logging.Warnf("FFDC: Maximum wait time reached")
 		}
 	}
+	return rv
 }
 
 func Reset(event string) {

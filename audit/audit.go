@@ -347,13 +347,13 @@ func auditWorker(auditor *standardAuditor, num int) {
 			err = auditor.auditService.WriteUsingNonPoolClient(client, entry.eventId, *entry.queryAuditRecord)
 			if err != nil {
 				accounting.UpdateCounter(accounting.AUDIT_ACTIONS_FAILED)
-				logging.Errorf("Audit worker %d: unable to send audit record %+v to audit demon: %v", num, stringifyQueryAR(*entry.queryAuditRecord), err)
+				logging.Errorf("Audit worker %d: unable to send audit record %+v to audit daemon: %v", num, stringifyQueryAR(*entry.queryAuditRecord), err)
 			}
 		} else {
 			err = auditor.auditService.WriteUsingNonPoolClient(client, entry.eventId, *entry.apiAuditRecord)
 			if err != nil {
 				accounting.UpdateCounter(accounting.AUDIT_ACTIONS_FAILED)
-				logging.Errorf("Audit worker %d: unable to send audit record %+v to audit demon: %v", num, stringifyAPIAR(*entry.apiAuditRecord), err)
+				logging.Errorf("Audit worker %d: unable to send audit record %+v to audit daemon: %v", num, stringifyAPIAR(*entry.apiAuditRecord), err)
 			}
 		}
 	}
@@ -509,6 +509,8 @@ const (
 	API_ADMIN_INDEXES_TRANSACTIONS       = 28727
 	API_ADMIN_FUNCTIONS_BACKUP           = 28728
 	API_ADMIN_SHUTDOWN                   = 28729
+	API_ADMIN_GC                         = 28730
+	API_ADMIN_FFDC                       = 28731
 )
 
 func SubmitApiRequest(event *ApiAuditFields) {
