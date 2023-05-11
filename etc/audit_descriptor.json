@@ -1,1832 +1,2655 @@
 {
-  "version" : 2,
-  "module" : "n1ql",
-  "events" : [
+  "version": 2,
+  "module": "n1ql",
+  "events": [
     {
-      "id" : 28672,
-      "name" : "SELECT statement",
-      "description" : "A N1QL SELECT statement was executed",
-      "sync" : false,
-      "enabled" : false,
-      "filtering_permitted" : true,
-      "mandatory_fields" : {
-        "timestamp" : "",
-        "real_userid" : {"domain" : "", "user" : ""},
-        "remote" : {"ip" : "", "port" : 1},
-	"local" : {"ip" : "", "port" : 1},
-
-        "requestId" : "",
-        "statement" : "",
-
-        "isAdHoc" : true,
-        "userAgent" : "",
-        "node" : "",
-
-        "status" : "",
-        "metrics" : {
-          "elapsedTime" : "1.0s",
-          "executionTime" : "0.75s",
-          "transactionElapsedTime" : "0.75s",
-          "transactionRemainingTime" : "0.75s",
-          "resultCount" : 1,
-          "resultSize" : 18,
-          "mutationCount" : 0,
-          "sortCount" : 1,
-          "errorCount" : 0,
-          "warningCount" : 1
-	}
+      "id": 28672,
+      "name": "SELECT statement",
+      "description": "A N1QL SELECT statement was executed",
+      "sync": false,
+      "enabled": false,
+      "filtering_permitted": true,
+      "mandatory_fields": {
+        "timestamp": "",
+        "real_userid": {
+          "domain": "",
+          "user": ""
+        },
+        "remote": {
+          "ip": "",
+          "port": 1
+        },
+        "local": {
+          "ip": "",
+          "port": 1
+        },
+        "requestId": "",
+        "statement": "",
+        "isAdHoc": true,
+        "userAgent": "",
+        "node": "",
+        "status": "",
+        "metrics": {
+          "elapsedTime": "1.0s",
+          "executionTime": "0.75s",
+          "transactionElapsedTime": "0.75s",
+          "transactionRemainingTime": "0.75s",
+          "resultCount": 1,
+          "resultSize": 18,
+          "mutationCount": 0,
+          "sortCount": 1,
+          "errorCount": 0,
+          "warningCount": 1
+        }
       },
-      "optional_fields" : {
-	"clientContextId" : "",
-	"queryContext" : "",
-	"txId" : "",
-        "namedArgs" : { "name1" : "", "name2" : "" },
-        "positionalArgs" : [ "" ],
-        "errors": [{"code":1000, "msg": ""},{"code": 1001,"msg": ""}]
+      "optional_fields": {
+        "clientContextId": "",
+        "queryContext": "",
+        "txId": "",
+        "namedArgs": {
+          "name1": "",
+          "name2": ""
+        },
+        "positionalArgs": [
+          ""
+        ],
+        "errors": [
+          {
+            "code": 1000,
+            "msg": ""
+          },
+          {
+            "code": 1001,
+            "msg": ""
+          }
+        ]
       }
     },
     {
-      "id" : 28673,
-      "name" : "EXPLAIN statement",
-      "description" : "A N1QL EXPLAIN statement was executed",
-      "sync" : false,
-      "enabled" : false,
-      "filtering_permitted" : true,
-      "mandatory_fields" : {
-        "timestamp" : "",
-        "real_userid" : {"domain" : "", "user" : ""},
-        "remote" : {"ip" : "", "port" : 1},
-	"local" : {"ip" : "", "port" : 1},
-
-        "requestId" : "",
-        "statement" : "",
-
-        "isAdHoc" : true,
-        "userAgent" : "",
-        "node" : "",
-
-        "status" : "",
-        "metrics" : {
-          "elapsedTime" : "1.0s",
-          "executionTime" : "0.75s",
-          "transactionElapsedTime" : "0.75s",
-          "transactionRemainingTime" : "0.75s",
-          "resultCount" : 1,
-          "resultSize" : 18,
-          "mutationCount" : 0,
-          "sortCount" : 1,
-          "errorCount" : 0,
-          "warningCount" : 1
-	}
+      "id": 28673,
+      "name": "EXPLAIN statement",
+      "description": "A N1QL EXPLAIN statement was executed",
+      "sync": false,
+      "enabled": false,
+      "filtering_permitted": true,
+      "mandatory_fields": {
+        "timestamp": "",
+        "real_userid": {
+          "domain": "",
+          "user": ""
+        },
+        "remote": {
+          "ip": "",
+          "port": 1
+        },
+        "local": {
+          "ip": "",
+          "port": 1
+        },
+        "requestId": "",
+        "statement": "",
+        "isAdHoc": true,
+        "userAgent": "",
+        "node": "",
+        "status": "",
+        "metrics": {
+          "elapsedTime": "1.0s",
+          "executionTime": "0.75s",
+          "transactionElapsedTime": "0.75s",
+          "transactionRemainingTime": "0.75s",
+          "resultCount": 1,
+          "resultSize": 18,
+          "mutationCount": 0,
+          "sortCount": 1,
+          "errorCount": 0,
+          "warningCount": 1
+        }
       },
-      "optional_fields" : {
-	"clientContextId" : "",
-	"queryContext" : "",
-	"txId" : "",
-        "namedArgs" : { "name1" : "", "name2" : "" },
-        "positionalArgs" : [ "" ],
-        "errors": [{"code":1000, "msg": ""},{"code": 1001,"msg": ""}]
+      "optional_fields": {
+        "clientContextId": "",
+        "queryContext": "",
+        "txId": "",
+        "namedArgs": {
+          "name1": "",
+          "name2": ""
+        },
+        "positionalArgs": [
+          ""
+        ],
+        "errors": [
+          {
+            "code": 1000,
+            "msg": ""
+          },
+          {
+            "code": 1001,
+            "msg": ""
+          }
+        ]
       }
     },
     {
-      "id" : 28674,
-      "name" : "PREPARE statement",
-      "description" : "A N1QL PREPARE statement was executed",
-      "sync" : false,
-      "enabled" : false,
-      "filtering_permitted" : true,
-      "mandatory_fields" : {
-        "timestamp" : "",
-        "real_userid" : {"domain" : "", "user" : ""},
-        "remote" : {"ip" : "", "port" : 1},
-	"local" : {"ip" : "", "port" : 1},
-
-        "requestId" : "",
-        "statement" : "",
-
-        "isAdHoc" : true,
-        "userAgent" : "",
-        "node" : "",
-
-        "status" : "",
-        "metrics" : {
-          "elapsedTime" : "1.0s",
-          "executionTime" : "0.75s",
-          "transactionElapsedTime" : "0.75s",
-          "transactionRemainingTime" : "0.75s",
-          "resultCount" : 1,
-          "resultSize" : 18,
-          "mutationCount" : 0,
-          "sortCount" : 1,
-          "errorCount" : 0,
-          "warningCount" : 1
-	}
+      "id": 28674,
+      "name": "PREPARE statement",
+      "description": "A N1QL PREPARE statement was executed",
+      "sync": false,
+      "enabled": false,
+      "filtering_permitted": true,
+      "mandatory_fields": {
+        "timestamp": "",
+        "real_userid": {
+          "domain": "",
+          "user": ""
+        },
+        "remote": {
+          "ip": "",
+          "port": 1
+        },
+        "local": {
+          "ip": "",
+          "port": 1
+        },
+        "requestId": "",
+        "statement": "",
+        "isAdHoc": true,
+        "userAgent": "",
+        "node": "",
+        "status": "",
+        "metrics": {
+          "elapsedTime": "1.0s",
+          "executionTime": "0.75s",
+          "transactionElapsedTime": "0.75s",
+          "transactionRemainingTime": "0.75s",
+          "resultCount": 1,
+          "resultSize": 18,
+          "mutationCount": 0,
+          "sortCount": 1,
+          "errorCount": 0,
+          "warningCount": 1
+        }
       },
-      "optional_fields" : {
-	"clientContextId" : "",
-	"queryContext" : "",
-	"txId" : "",
-        "namedArgs" : { "name1" : "", "name2" : "" },
-        "positionalArgs" : [ "" ],
-        "errors": [{"code":1000, "msg": ""},{"code": 1001,"msg": ""}]
+      "optional_fields": {
+        "clientContextId": "",
+        "queryContext": "",
+        "txId": "",
+        "namedArgs": {
+          "name1": "",
+          "name2": ""
+        },
+        "positionalArgs": [
+          ""
+        ],
+        "errors": [
+          {
+            "code": 1000,
+            "msg": ""
+          },
+          {
+            "code": 1001,
+            "msg": ""
+          }
+        ]
       }
     },
     {
-      "id" : 28675,
-      "name" : "INFER statement",
-      "description" : "A N1QL INFER statement was executed",
-      "sync" : false,
-      "enabled" : false,
-      "filtering_permitted" : true,
-      "mandatory_fields" : {
-        "timestamp" : "",
-        "real_userid" : {"domain" : "", "user" : ""},
-        "remote" : {"ip" : "", "port" : 1},
-	"local" : {"ip" : "", "port" : 1},
-
-        "requestId" : "",
-        "statement" : "",
-
-        "isAdHoc" : true,
-        "userAgent" : "",
-        "node" : "",
-
-        "status" : "",
-        "metrics" : {
-          "elapsedTime" : "1.0s",
-          "executionTime" : "0.75s",
-          "resultCount" : 1,
-          "resultSize" : 18,
-          "mutationCount" : 0,
-          "sortCount" : 1,
-          "errorCount" : 0,
-          "warningCount" : 1
-	}
+      "id": 28675,
+      "name": "INFER statement",
+      "description": "A N1QL INFER statement was executed",
+      "sync": false,
+      "enabled": false,
+      "filtering_permitted": true,
+      "mandatory_fields": {
+        "timestamp": "",
+        "real_userid": {
+          "domain": "",
+          "user": ""
+        },
+        "remote": {
+          "ip": "",
+          "port": 1
+        },
+        "local": {
+          "ip": "",
+          "port": 1
+        },
+        "requestId": "",
+        "statement": "",
+        "isAdHoc": true,
+        "userAgent": "",
+        "node": "",
+        "status": "",
+        "metrics": {
+          "elapsedTime": "1.0s",
+          "executionTime": "0.75s",
+          "resultCount": 1,
+          "resultSize": 18,
+          "mutationCount": 0,
+          "sortCount": 1,
+          "errorCount": 0,
+          "warningCount": 1
+        }
       },
-      "optional_fields" : {
-	"clientContextId" : "",
-	"queryContext" : "",
-        "namedArgs" : { "name1" : "", "name2" : "" },
-        "positionalArgs" : [ "" ],
-        "errors": [{"code":1000, "msg": ""},{"code": 1001,"msg": ""}]
+      "optional_fields": {
+        "clientContextId": "",
+        "queryContext": "",
+        "namedArgs": {
+          "name1": "",
+          "name2": ""
+        },
+        "positionalArgs": [
+          ""
+        ],
+        "errors": [
+          {
+            "code": 1000,
+            "msg": ""
+          },
+          {
+            "code": 1001,
+            "msg": ""
+          }
+        ]
       }
     },
     {
-      "id" : 28676,
-      "name" : "INSERT statement",
-      "description" : "A N1QL INSERT statement was executed",
-      "sync" : false,
-      "enabled" : false,
-      "filtering_permitted" : true,
-      "mandatory_fields" : {
-        "timestamp" : "",
-        "real_userid" : {"domain" : "", "user" : ""},
-        "remote" : {"ip" : "", "port" : 1},
-	"local" : {"ip" : "", "port" : 1},
-
-        "requestId" : "",
-        "statement" : "",
-
-        "isAdHoc" : true,
-        "userAgent" : "",
-        "node" : "",
-
-        "status" : "",
-        "metrics" : {
-          "elapsedTime" : "1.0s",
-          "executionTime" : "0.75s",
-          "transactionElapsedTime" : "0.75s",
-          "transactionRemainingTime" : "0.75s",
-          "resultCount" : 1,
-          "resultSize" : 18,
-          "mutationCount" : 0,
-          "sortCount" : 1,
-          "errorCount" : 0,
-          "warningCount" : 1
-	}
+      "id": 28676,
+      "name": "INSERT statement",
+      "description": "A N1QL INSERT statement was executed",
+      "sync": false,
+      "enabled": false,
+      "filtering_permitted": true,
+      "mandatory_fields": {
+        "timestamp": "",
+        "real_userid": {
+          "domain": "",
+          "user": ""
+        },
+        "remote": {
+          "ip": "",
+          "port": 1
+        },
+        "local": {
+          "ip": "",
+          "port": 1
+        },
+        "requestId": "",
+        "statement": "",
+        "isAdHoc": true,
+        "userAgent": "",
+        "node": "",
+        "status": "",
+        "metrics": {
+          "elapsedTime": "1.0s",
+          "executionTime": "0.75s",
+          "transactionElapsedTime": "0.75s",
+          "transactionRemainingTime": "0.75s",
+          "resultCount": 1,
+          "resultSize": 18,
+          "mutationCount": 0,
+          "sortCount": 1,
+          "errorCount": 0,
+          "warningCount": 1
+        }
       },
-      "optional_fields" : {
-	"clientContextId" : "",
-	"queryContext" : "",
-	"txId" : "",
-        "namedArgs" : { "name1" : "", "name2" : "" },
-        "positionalArgs" : [ "" ],
-        "errors": [{"code":1000, "msg": ""},{"code": 1001,"msg": ""}]
+      "optional_fields": {
+        "clientContextId": "",
+        "queryContext": "",
+        "txId": "",
+        "namedArgs": {
+          "name1": "",
+          "name2": ""
+        },
+        "positionalArgs": [
+          ""
+        ],
+        "errors": [
+          {
+            "code": 1000,
+            "msg": ""
+          },
+          {
+            "code": 1001,
+            "msg": ""
+          }
+        ]
       }
     },
     {
-      "id" : 28677,
-      "name" : "UPSERT statement",
-      "description" : "A N1QL UPSERT statement was executed",
-      "sync" : false,
-      "enabled" : false,
-      "filtering_permitted" : true,
-      "mandatory_fields" : {
-        "timestamp" : "",
-        "real_userid" : {"domain" : "", "user" : ""},
-        "remote" : {"ip" : "", "port" : 1},
-	"local" : {"ip" : "", "port" : 1},
-
-        "requestId" : "",
-        "statement" : "",
-
-        "isAdHoc" : true,
-        "userAgent" : "",
-        "node" : "",
-
-        "status" : "",
-        "metrics" : {
-          "elapsedTime" : "1.0s",
-          "executionTime" : "0.75s",
-          "transactionElapsedTime" : "0.75s",
-          "transactionRemainingTime" : "0.75s",
-          "resultCount" : 1,
-          "resultSize" : 18,
-          "mutationCount" : 0,
-          "sortCount" : 1,
-          "errorCount" : 0,
-          "warningCount" : 1
-	}
+      "id": 28677,
+      "name": "UPSERT statement",
+      "description": "A N1QL UPSERT statement was executed",
+      "sync": false,
+      "enabled": false,
+      "filtering_permitted": true,
+      "mandatory_fields": {
+        "timestamp": "",
+        "real_userid": {
+          "domain": "",
+          "user": ""
+        },
+        "remote": {
+          "ip": "",
+          "port": 1
+        },
+        "local": {
+          "ip": "",
+          "port": 1
+        },
+        "requestId": "",
+        "statement": "",
+        "isAdHoc": true,
+        "userAgent": "",
+        "node": "",
+        "status": "",
+        "metrics": {
+          "elapsedTime": "1.0s",
+          "executionTime": "0.75s",
+          "transactionElapsedTime": "0.75s",
+          "transactionRemainingTime": "0.75s",
+          "resultCount": 1,
+          "resultSize": 18,
+          "mutationCount": 0,
+          "sortCount": 1,
+          "errorCount": 0,
+          "warningCount": 1
+        }
       },
-      "optional_fields" : {
-	"clientContextId" : "",
-	"queryContext" : "",
-	"txId" : "",
-        "namedArgs" : { "name1" : "", "name2" : "" },
-        "positionalArgs" : [ "" ],
-        "errors": [{"code":1000, "msg": ""},{"code": 1001,"msg": ""}]
+      "optional_fields": {
+        "clientContextId": "",
+        "queryContext": "",
+        "txId": "",
+        "namedArgs": {
+          "name1": "",
+          "name2": ""
+        },
+        "positionalArgs": [
+          ""
+        ],
+        "errors": [
+          {
+            "code": 1000,
+            "msg": ""
+          },
+          {
+            "code": 1001,
+            "msg": ""
+          }
+        ]
       }
     },
     {
-      "id" : 28678,
-      "name" : "DELETE statement",
-      "description" : "A N1QL DELETE statement was executed",
-      "sync" : false,
-      "enabled" : false,
-      "filtering_permitted" : true,
-      "mandatory_fields" : {
-        "timestamp" : "",
-        "real_userid" : {"domain" : "", "user" : ""},
-        "remote" : {"ip" : "", "port" : 1},
-	"local" : {"ip" : "", "port" : 1},
-
-        "requestId" : "",
-        "statement" : "",
-
-        "isAdHoc" : true,
-        "userAgent" : "",
-        "node" : "",
-
-        "status" : "",
-        "metrics" : {
-          "elapsedTime" : "1.0s",
-          "executionTime" : "0.75s",
-          "transactionElapsedTime" : "0.75s",
-          "transactionRemainingTime" : "0.75s",
-          "resultCount" : 1,
-          "resultSize" : 18,
-          "mutationCount" : 0,
-          "sortCount" : 1,
-          "errorCount" : 0,
-          "warningCount" : 1
-	}
+      "id": 28678,
+      "name": "DELETE statement",
+      "description": "A N1QL DELETE statement was executed",
+      "sync": false,
+      "enabled": false,
+      "filtering_permitted": true,
+      "mandatory_fields": {
+        "timestamp": "",
+        "real_userid": {
+          "domain": "",
+          "user": ""
+        },
+        "remote": {
+          "ip": "",
+          "port": 1
+        },
+        "local": {
+          "ip": "",
+          "port": 1
+        },
+        "requestId": "",
+        "statement": "",
+        "isAdHoc": true,
+        "userAgent": "",
+        "node": "",
+        "status": "",
+        "metrics": {
+          "elapsedTime": "1.0s",
+          "executionTime": "0.75s",
+          "transactionElapsedTime": "0.75s",
+          "transactionRemainingTime": "0.75s",
+          "resultCount": 1,
+          "resultSize": 18,
+          "mutationCount": 0,
+          "sortCount": 1,
+          "errorCount": 0,
+          "warningCount": 1
+        }
       },
-      "optional_fields" : {
-	"clientContextId" : "",
-	"queryContext" : "",
-	"txId" : "",
-        "namedArgs" : { "name1" : "", "name2" : "" },
-        "positionalArgs" : [ "" ],
-        "errors": [{"code":1000, "msg": ""},{"code": 1001,"msg": ""}]
+      "optional_fields": {
+        "clientContextId": "",
+        "queryContext": "",
+        "txId": "",
+        "namedArgs": {
+          "name1": "",
+          "name2": ""
+        },
+        "positionalArgs": [
+          ""
+        ],
+        "errors": [
+          {
+            "code": 1000,
+            "msg": ""
+          },
+          {
+            "code": 1001,
+            "msg": ""
+          }
+        ]
       }
     },
     {
-      "id" : 28679,
-      "name" : "UPDATE statement",
-      "description" : "A N1QL UPDATE statement was executed",
-      "sync" : false,
-      "enabled" : false,
-      "filtering_permitted" : true,
-      "mandatory_fields" : {
-        "timestamp" : "",
-        "real_userid" : {"domain" : "", "user" : ""},
-        "remote" : {"ip" : "", "port" : 1},
-	"local" : {"ip" : "", "port" : 1},
-
-        "requestId" : "",
-        "statement" : "",
-
-        "isAdHoc" : true,
-        "userAgent" : "",
-        "node" : "",
-
-        "status" : "",
-        "metrics" : {
-          "elapsedTime" : "1.0s",
-          "executionTime" : "0.75s",
-          "transactionElapsedTime" : "0.75s",
-          "transactionRemainingTime" : "0.75s",
-          "resultCount" : 1,
-          "resultSize" : 18,
-          "mutationCount" : 0,
-          "sortCount" : 1,
-          "errorCount" : 0,
-          "warningCount" : 1
-	}
+      "id": 28679,
+      "name": "UPDATE statement",
+      "description": "A N1QL UPDATE statement was executed",
+      "sync": false,
+      "enabled": false,
+      "filtering_permitted": true,
+      "mandatory_fields": {
+        "timestamp": "",
+        "real_userid": {
+          "domain": "",
+          "user": ""
+        },
+        "remote": {
+          "ip": "",
+          "port": 1
+        },
+        "local": {
+          "ip": "",
+          "port": 1
+        },
+        "requestId": "",
+        "statement": "",
+        "isAdHoc": true,
+        "userAgent": "",
+        "node": "",
+        "status": "",
+        "metrics": {
+          "elapsedTime": "1.0s",
+          "executionTime": "0.75s",
+          "transactionElapsedTime": "0.75s",
+          "transactionRemainingTime": "0.75s",
+          "resultCount": 1,
+          "resultSize": 18,
+          "mutationCount": 0,
+          "sortCount": 1,
+          "errorCount": 0,
+          "warningCount": 1
+        }
       },
-      "optional_fields" : {
-	"clientContextId" : "",
-	"queryContext" : "",
-	"txId" : "",
-        "namedArgs" : { "name1" : "", "name2" : "" },
-        "positionalArgs" : [ "" ],
-        "errors": [{"code":1000, "msg": ""},{"code": 1001,"msg": ""}]
+      "optional_fields": {
+        "clientContextId": "",
+        "queryContext": "",
+        "txId": "",
+        "namedArgs": {
+          "name1": "",
+          "name2": ""
+        },
+        "positionalArgs": [
+          ""
+        ],
+        "errors": [
+          {
+            "code": 1000,
+            "msg": ""
+          },
+          {
+            "code": 1001,
+            "msg": ""
+          }
+        ]
       }
     },
     {
-      "id" : 28680,
-      "name" : "MERGE statement",
-      "description" : "A N1QL MERGE statement was executed",
-      "sync" : false,
-      "enabled" : false,
-      "filtering_permitted" : true,
-      "mandatory_fields" : {
-        "timestamp" : "",
-        "real_userid" : {"domain" : "", "user" : ""},
-        "remote" : {"ip" : "", "port" : 1},
-	"local" : {"ip" : "", "port" : 1},
-
-        "requestId" : "",
-        "statement" : "",
-
-        "isAdHoc" : true,
-        "userAgent" : "",
-        "node" : "",
-
-        "status" : "",
-        "metrics" : {
-          "elapsedTime" : "1.0s",
-          "executionTime" : "0.75s",
-          "transactionElapsedTime" : "0.75s",
-          "transactionRemainingTime" : "0.75s",
-          "resultCount" : 1,
-          "resultSize" : 18,
-          "mutationCount" : 0,
-          "sortCount" : 1,
-          "errorCount" : 0,
-          "warningCount" : 1
-	}
+      "id": 28680,
+      "name": "MERGE statement",
+      "description": "A N1QL MERGE statement was executed",
+      "sync": false,
+      "enabled": false,
+      "filtering_permitted": true,
+      "mandatory_fields": {
+        "timestamp": "",
+        "real_userid": {
+          "domain": "",
+          "user": ""
+        },
+        "remote": {
+          "ip": "",
+          "port": 1
+        },
+        "local": {
+          "ip": "",
+          "port": 1
+        },
+        "requestId": "",
+        "statement": "",
+        "isAdHoc": true,
+        "userAgent": "",
+        "node": "",
+        "status": "",
+        "metrics": {
+          "elapsedTime": "1.0s",
+          "executionTime": "0.75s",
+          "transactionElapsedTime": "0.75s",
+          "transactionRemainingTime": "0.75s",
+          "resultCount": 1,
+          "resultSize": 18,
+          "mutationCount": 0,
+          "sortCount": 1,
+          "errorCount": 0,
+          "warningCount": 1
+        }
       },
-      "optional_fields" : {
-	"clientContextId" : "",
-	"queryContext" : "",
-	"txId" : "",
-        "namedArgs" : { "name1" : "", "name2" : "" },
-        "positionalArgs" : [ "" ],
-        "errors": [{"code":1000, "msg": ""},{"code": 1001,"msg": ""}]
+      "optional_fields": {
+        "clientContextId": "",
+        "queryContext": "",
+        "txId": "",
+        "namedArgs": {
+          "name1": "",
+          "name2": ""
+        },
+        "positionalArgs": [
+          ""
+        ],
+        "errors": [
+          {
+            "code": 1000,
+            "msg": ""
+          },
+          {
+            "code": 1001,
+            "msg": ""
+          }
+        ]
       }
     },
     {
-      "id" : 28681,
-      "name" : "CREATE INDEX statement",
-      "description" : "A N1QL CREATE INDEX statement was executed",
-      "sync" : false,
-      "enabled" : false,
-      "filtering_permitted" : true,
-      "mandatory_fields" : {
-        "timestamp" : "",
-        "real_userid" : {"domain" : "", "user" : ""},
-        "remote" : {"ip" : "", "port" : 1},
-	"local" : {"ip" : "", "port" : 1},
-
-        "requestId" : "",
-        "statement" : "",
-
-        "isAdHoc" : true,
-        "userAgent" : "",
-        "node" : "",
-
-        "status" : "",
-        "metrics" : {
-          "elapsedTime" : "1.0s",
-          "executionTime" : "0.75s",
-          "resultCount" : 1,
-          "resultSize" : 18,
-          "mutationCount" : 0,
-          "sortCount" : 1,
-          "errorCount" : 0,
-          "warningCount" : 1
-	}
+      "id": 28681,
+      "name": "CREATE INDEX statement",
+      "description": "A N1QL CREATE INDEX statement was executed",
+      "sync": false,
+      "enabled": false,
+      "filtering_permitted": true,
+      "mandatory_fields": {
+        "timestamp": "",
+        "real_userid": {
+          "domain": "",
+          "user": ""
+        },
+        "remote": {
+          "ip": "",
+          "port": 1
+        },
+        "local": {
+          "ip": "",
+          "port": 1
+        },
+        "requestId": "",
+        "statement": "",
+        "isAdHoc": true,
+        "userAgent": "",
+        "node": "",
+        "status": "",
+        "metrics": {
+          "elapsedTime": "1.0s",
+          "executionTime": "0.75s",
+          "resultCount": 1,
+          "resultSize": 18,
+          "mutationCount": 0,
+          "sortCount": 1,
+          "errorCount": 0,
+          "warningCount": 1
+        }
       },
-      "optional_fields" : {
-	"clientContextId" : "",
-	"queryContext" : "",
-        "namedArgs" : { "name1" : "", "name2" : "" },
-        "positionalArgs" : [ "" ],
-        "errors": [{"code":1000, "msg": ""},{"code": 1001,"msg": ""}]
+      "optional_fields": {
+        "clientContextId": "",
+        "queryContext": "",
+        "namedArgs": {
+          "name1": "",
+          "name2": ""
+        },
+        "positionalArgs": [
+          ""
+        ],
+        "errors": [
+          {
+            "code": 1000,
+            "msg": ""
+          },
+          {
+            "code": 1001,
+            "msg": ""
+          }
+        ]
       }
     },
     {
-      "id" : 28682,
-      "name" : "DROP INDEX statement",
-      "description" : "A N1QL DROP INDEX statement was executed",
-      "sync" : false,
-      "enabled" : false,
-      "filtering_permitted" : true,
-      "mandatory_fields" : {
-        "timestamp" : "",
-        "real_userid" : {"domain" : "", "user" : ""},
-        "remote" : {"ip" : "", "port" : 1},
-	"local" : {"ip" : "", "port" : 1},
-
-        "requestId" : "",
-        "statement" : "",
-
-        "isAdHoc" : true,
-        "userAgent" : "",
-        "node" : "",
-
-        "status" : "",
-        "metrics" : {
-          "elapsedTime" : "1.0s",
-          "executionTime" : "0.75s",
-          "resultCount" : 1,
-          "resultSize" : 18,
-          "mutationCount" : 0,
-          "sortCount" : 1,
-          "errorCount" : 0,
-          "warningCount" : 1
-	}
+      "id": 28682,
+      "name": "DROP INDEX statement",
+      "description": "A N1QL DROP INDEX statement was executed",
+      "sync": false,
+      "enabled": false,
+      "filtering_permitted": true,
+      "mandatory_fields": {
+        "timestamp": "",
+        "real_userid": {
+          "domain": "",
+          "user": ""
+        },
+        "remote": {
+          "ip": "",
+          "port": 1
+        },
+        "local": {
+          "ip": "",
+          "port": 1
+        },
+        "requestId": "",
+        "statement": "",
+        "isAdHoc": true,
+        "userAgent": "",
+        "node": "",
+        "status": "",
+        "metrics": {
+          "elapsedTime": "1.0s",
+          "executionTime": "0.75s",
+          "resultCount": 1,
+          "resultSize": 18,
+          "mutationCount": 0,
+          "sortCount": 1,
+          "errorCount": 0,
+          "warningCount": 1
+        }
       },
-      "optional_fields" : {
-	"clientContextId" : "",
-	"queryContext" : "",
-        "namedArgs" : { "name1" : "", "name2" : "" },
-        "positionalArgs" : [ "" ],
-        "errors": [{"code":1000, "msg": ""},{"code": 1001,"msg": ""}]
+      "optional_fields": {
+        "clientContextId": "",
+        "queryContext": "",
+        "namedArgs": {
+          "name1": "",
+          "name2": ""
+        },
+        "positionalArgs": [
+          ""
+        ],
+        "errors": [
+          {
+            "code": 1000,
+            "msg": ""
+          },
+          {
+            "code": 1001,
+            "msg": ""
+          }
+        ]
       }
     },
     {
-      "id" : 28683,
-      "name" : "ALTER INDEX statement",
-      "description" : "A N1QL ALTER INDEX statement was executed",
-      "sync" : false,
-      "enabled" : false,
-      "filtering_permitted" : true,
-      "mandatory_fields" : {
-        "timestamp" : "",
-        "real_userid" : {"domain" : "", "user" : ""},
-        "remote" : {"ip" : "", "port" : 1},
-	"local" : {"ip" : "", "port" : 1},
-
-        "requestId" : "",
-        "statement" : "",
-
-        "isAdHoc" : true,
-        "userAgent" : "",
-        "node" : "",
-
-        "status" : "",
-        "metrics" : {
-          "elapsedTime" : "1.0s",
-          "executionTime" : "0.75s",
-          "resultCount" : 1,
-          "resultSize" : 18,
-          "mutationCount" : 0,
-          "sortCount" : 1,
-          "errorCount" : 0,
-          "warningCount" : 1
-	}
+      "id": 28683,
+      "name": "ALTER INDEX statement",
+      "description": "A N1QL ALTER INDEX statement was executed",
+      "sync": false,
+      "enabled": false,
+      "filtering_permitted": true,
+      "mandatory_fields": {
+        "timestamp": "",
+        "real_userid": {
+          "domain": "",
+          "user": ""
+        },
+        "remote": {
+          "ip": "",
+          "port": 1
+        },
+        "local": {
+          "ip": "",
+          "port": 1
+        },
+        "requestId": "",
+        "statement": "",
+        "isAdHoc": true,
+        "userAgent": "",
+        "node": "",
+        "status": "",
+        "metrics": {
+          "elapsedTime": "1.0s",
+          "executionTime": "0.75s",
+          "resultCount": 1,
+          "resultSize": 18,
+          "mutationCount": 0,
+          "sortCount": 1,
+          "errorCount": 0,
+          "warningCount": 1
+        }
       },
-      "optional_fields" : {
-        "namedArgs" : { "name1" : "", "name2" : "" },
-        "positionalArgs" : [ "" ],
-        "errors": [{"code":1000, "msg": ""},{"code": 1001,"msg": ""}]
+      "optional_fields": {
+        "namedArgs": {
+          "name1": "",
+          "name2": ""
+        },
+        "positionalArgs": [
+          ""
+        ],
+        "errors": [
+          {
+            "code": 1000,
+            "msg": ""
+          },
+          {
+            "code": 1001,
+            "msg": ""
+          }
+        ]
       }
     },
     {
-      "id" : 28684,
-      "name" : "BUILD INDEX statement",
-      "description" : "A N1QL BUILD INDEX statement was executed",
-      "sync" : false,
-      "enabled" : false,
-      "filtering_permitted" : true,
-      "mandatory_fields" : {
-        "timestamp" : "",
-        "real_userid" : {"domain" : "", "user" : ""},
-        "remote" : {"ip" : "", "port" : 1},
-	"local" : {"ip" : "", "port" : 1},
-
-        "requestId" : "",
-        "statement" : "",
-
-        "isAdHoc" : true,
-        "userAgent" : "",
-        "node" : "",
-
-        "status" : "",
-        "metrics" : {
-          "elapsedTime" : "1.0s",
-          "executionTime" : "0.75s",
-          "resultCount" : 1,
-          "resultSize" : 18,
-          "mutationCount" : 0,
-          "sortCount" : 1,
-          "errorCount" : 0,
-          "warningCount" : 1
-	}
+      "id": 28684,
+      "name": "BUILD INDEX statement",
+      "description": "A N1QL BUILD INDEX statement was executed",
+      "sync": false,
+      "enabled": false,
+      "filtering_permitted": true,
+      "mandatory_fields": {
+        "timestamp": "",
+        "real_userid": {
+          "domain": "",
+          "user": ""
+        },
+        "remote": {
+          "ip": "",
+          "port": 1
+        },
+        "local": {
+          "ip": "",
+          "port": 1
+        },
+        "requestId": "",
+        "statement": "",
+        "isAdHoc": true,
+        "userAgent": "",
+        "node": "",
+        "status": "",
+        "metrics": {
+          "elapsedTime": "1.0s",
+          "executionTime": "0.75s",
+          "resultCount": 1,
+          "resultSize": 18,
+          "mutationCount": 0,
+          "sortCount": 1,
+          "errorCount": 0,
+          "warningCount": 1
+        }
       },
-      "optional_fields" : {
-	"clientContextId" : "",
-	"queryContext" : "",
-        "namedArgs" : { "name1" : "", "name2" : "" },
-        "positionalArgs" : [ "" ],
-        "errors": [{"code":1000, "msg": ""},{"code": 1001,"msg": ""}]
+      "optional_fields": {
+        "clientContextId": "",
+        "queryContext": "",
+        "namedArgs": {
+          "name1": "",
+          "name2": ""
+        },
+        "positionalArgs": [
+          ""
+        ],
+        "errors": [
+          {
+            "code": 1000,
+            "msg": ""
+          },
+          {
+            "code": 1001,
+            "msg": ""
+          }
+        ]
       }
     },
     {
-      "id" : 28685,
-      "name" : "GRANT ROLE statement",
-      "description" : "A N1QL GRANT ROLE statement was executed",
-      "sync" : false,
-      "enabled" : false,
-      "filtering_permitted" : true,
-      "mandatory_fields" : {
-        "timestamp" : "",
-        "real_userid" : {"domain" : "", "user" : ""},
-        "remote" : {"ip" : "", "port" : 1},
-	"local" : {"ip" : "", "port" : 1},
-
-        "requestId" : "",
-        "statement" : "",
-
-        "isAdHoc" : true,
-        "userAgent" : "",
-        "node" : "",
-
-        "status" : "",
-        "metrics" : {
-          "elapsedTime" : "1.0s",
-          "executionTime" : "0.75s",
-          "resultCount" : 1,
-          "resultSize" : 18,
-          "mutationCount" : 0,
-          "sortCount" : 1,
-          "errorCount" : 0,
-          "warningCount" : 1
-	}
+      "id": 28685,
+      "name": "GRANT ROLE statement",
+      "description": "A N1QL GRANT ROLE statement was executed",
+      "sync": false,
+      "enabled": false,
+      "filtering_permitted": true,
+      "mandatory_fields": {
+        "timestamp": "",
+        "real_userid": {
+          "domain": "",
+          "user": ""
+        },
+        "remote": {
+          "ip": "",
+          "port": 1
+        },
+        "local": {
+          "ip": "",
+          "port": 1
+        },
+        "requestId": "",
+        "statement": "",
+        "isAdHoc": true,
+        "userAgent": "",
+        "node": "",
+        "status": "",
+        "metrics": {
+          "elapsedTime": "1.0s",
+          "executionTime": "0.75s",
+          "resultCount": 1,
+          "resultSize": 18,
+          "mutationCount": 0,
+          "sortCount": 1,
+          "errorCount": 0,
+          "warningCount": 1
+        }
       },
-      "optional_fields" : {
-	"clientContextId" : "",
-	"queryContext" : "",
-        "namedArgs" : { "name1" : "", "name2" : "" },
-        "positionalArgs" : [ "" ],
-        "errors": [{"code":1000, "msg": ""},{"code": 1001,"msg": ""}]
+      "optional_fields": {
+        "clientContextId": "",
+        "queryContext": "",
+        "namedArgs": {
+          "name1": "",
+          "name2": ""
+        },
+        "positionalArgs": [
+          ""
+        ],
+        "errors": [
+          {
+            "code": 1000,
+            "msg": ""
+          },
+          {
+            "code": 1001,
+            "msg": ""
+          }
+        ]
       }
     },
     {
-      "id" : 28686,
-      "name" : "REVOKE ROLE statement",
-      "description" : "A N1QL REVOKE ROLE statement was executed",
-      "sync" : false,
-      "enabled" : false,
-      "filtering_permitted" : true,
-      "mandatory_fields" : {
-        "timestamp" : "",
-        "real_userid" : {"domain" : "", "user" : ""},
-        "remote" : {"ip" : "", "port" : 1},
-	"local" : {"ip" : "", "port" : 1},
-
-        "requestId" : "",
-        "statement" : "",
-
-        "isAdHoc" : true,
-        "userAgent" : "",
-        "node" : "",
-
-        "status" : "",
-        "metrics" : {
-          "elapsedTime" : "1.0s",
-          "executionTime" : "0.75s",
-          "resultCount" : 1,
-          "resultSize" : 18,
-          "mutationCount" : 0,
-          "sortCount" : 1,
-          "errorCount" : 0,
-          "warningCount" : 1
-	}
+      "id": 28686,
+      "name": "REVOKE ROLE statement",
+      "description": "A N1QL REVOKE ROLE statement was executed",
+      "sync": false,
+      "enabled": false,
+      "filtering_permitted": true,
+      "mandatory_fields": {
+        "timestamp": "",
+        "real_userid": {
+          "domain": "",
+          "user": ""
+        },
+        "remote": {
+          "ip": "",
+          "port": 1
+        },
+        "local": {
+          "ip": "",
+          "port": 1
+        },
+        "requestId": "",
+        "statement": "",
+        "isAdHoc": true,
+        "userAgent": "",
+        "node": "",
+        "status": "",
+        "metrics": {
+          "elapsedTime": "1.0s",
+          "executionTime": "0.75s",
+          "resultCount": 1,
+          "resultSize": 18,
+          "mutationCount": 0,
+          "sortCount": 1,
+          "errorCount": 0,
+          "warningCount": 1
+        }
       },
-      "optional_fields" : {
-	"clientContextId" : "",
-	"queryContext" : "",
-        "namedArgs" : { "name1" : "", "name2" : "" },
-        "positionalArgs" : [ "" ],
-        "errors": [{"code":1000, "msg": ""},{"code": 1001,"msg": ""}]
+      "optional_fields": {
+        "clientContextId": "",
+        "queryContext": "",
+        "namedArgs": {
+          "name1": "",
+          "name2": ""
+        },
+        "positionalArgs": [
+          ""
+        ],
+        "errors": [
+          {
+            "code": 1000,
+            "msg": ""
+          },
+          {
+            "code": 1001,
+            "msg": ""
+          }
+        ]
       }
     },
     {
-      "id" : 28687,
-      "name" : "UNRECOGNIZED statement",
-      "description" : "An unrecognized statement was received by the N1QL query engine",
-      "sync" : false,
-      "enabled" : false,
-      "filtering_permitted" : true,
-      "mandatory_fields" : {
-        "timestamp" : "",
-        "real_userid" : {"domain" : "", "user" : ""},
-        "remote" : {"ip" : "", "port" : 1},
-	"local" : {"ip" : "", "port" : 1},
-
-        "requestId" : "",
-        "statement" : "",
-
-        "isAdHoc" : true,
-        "userAgent" : "",
-        "node" : "",
-
-        "status" : "",
-        "metrics" : {
-          "elapsedTime" : "1.0s",
-          "executionTime" : "0.75s",
-          "resultCount" : 1,
-          "resultSize" : 18,
-          "mutationCount" : 0,
-          "sortCount" : 1,
-          "errorCount" : 0,
-          "warningCount" : 1
-	}
+      "id": 28687,
+      "name": "UNRECOGNIZED statement",
+      "description": "An unrecognized statement was received by the N1QL query engine",
+      "sync": false,
+      "enabled": false,
+      "filtering_permitted": true,
+      "mandatory_fields": {
+        "timestamp": "",
+        "real_userid": {
+          "domain": "",
+          "user": ""
+        },
+        "remote": {
+          "ip": "",
+          "port": 1
+        },
+        "local": {
+          "ip": "",
+          "port": 1
+        },
+        "requestId": "",
+        "statement": "",
+        "isAdHoc": true,
+        "userAgent": "",
+        "node": "",
+        "status": "",
+        "metrics": {
+          "elapsedTime": "1.0s",
+          "executionTime": "0.75s",
+          "resultCount": 1,
+          "resultSize": 18,
+          "mutationCount": 0,
+          "sortCount": 1,
+          "errorCount": 0,
+          "warningCount": 1
+        }
       },
-      "optional_fields" : {
-	"clientContextId" : "",
-	"queryContext" : "",
-        "namedArgs" : { "name1" : "", "name2" : "" },
-        "positionalArgs" : [ "" ],
-        "errors": [{"code":1000, "msg": ""},{"code": 1001,"msg": ""}]
+      "optional_fields": {
+        "clientContextId": "",
+        "queryContext": "",
+        "namedArgs": {
+          "name1": "",
+          "name2": ""
+        },
+        "positionalArgs": [
+          ""
+        ],
+        "errors": [
+          {
+            "code": 1000,
+            "msg": ""
+          },
+          {
+            "code": 1001,
+            "msg": ""
+          }
+        ]
       }
     },
     {
-      "id" : 28688,
-      "name" : "CREATE PRIMARY INDEX statement",
-      "description" : "A N1QL CREATE PRIMARY INDEX statement was executed",
-      "sync" : false,
-      "enabled" : false,
-      "filtering_permitted" : true,
-      "mandatory_fields" : {
-        "timestamp" : "",
-        "real_userid" : {"domain" : "", "user" : ""},
-        "remote" : {"ip" : "", "port" : 1},
-	"local" : {"ip" : "", "port" : 1},
-
-        "requestId" : "",
-        "statement" : "",
-
-        "isAdHoc" : true,
-        "userAgent" : "",
-        "node" : "",
-
-        "status" : "",
-        "metrics" : {
-          "elapsedTime" : "1.0s",
-          "executionTime" : "0.75s",
-          "resultCount" : 1,
-          "resultSize" : 18,
-          "mutationCount" : 0,
-          "sortCount" : 1,
-          "errorCount" : 0,
-          "warningCount" : 1
-	}
+      "id": 28688,
+      "name": "CREATE PRIMARY INDEX statement",
+      "description": "A N1QL CREATE PRIMARY INDEX statement was executed",
+      "sync": false,
+      "enabled": false,
+      "filtering_permitted": true,
+      "mandatory_fields": {
+        "timestamp": "",
+        "real_userid": {
+          "domain": "",
+          "user": ""
+        },
+        "remote": {
+          "ip": "",
+          "port": 1
+        },
+        "local": {
+          "ip": "",
+          "port": 1
+        },
+        "requestId": "",
+        "statement": "",
+        "isAdHoc": true,
+        "userAgent": "",
+        "node": "",
+        "status": "",
+        "metrics": {
+          "elapsedTime": "1.0s",
+          "executionTime": "0.75s",
+          "resultCount": 1,
+          "resultSize": 18,
+          "mutationCount": 0,
+          "sortCount": 1,
+          "errorCount": 0,
+          "warningCount": 1
+        }
       },
-      "optional_fields" : {
-	"clientContextId" : "",
-	"queryContext" : "",
-        "namedArgs" : { "name1" : "", "name2" : "" },
-        "positionalArgs" : [ "" ],
-        "errors": [{"code":1000, "msg": ""},{"code": 1001,"msg": ""}]
+      "optional_fields": {
+        "clientContextId": "",
+        "queryContext": "",
+        "namedArgs": {
+          "name1": "",
+          "name2": ""
+        },
+        "positionalArgs": [
+          ""
+        ],
+        "errors": [
+          {
+            "code": 1000,
+            "msg": ""
+          },
+          {
+            "code": 1001,
+            "msg": ""
+          }
+        ]
       }
     },
     {
-      "id" : 28689,
-      "name" : "/admin/stats API request",
-      "description" : "An HTTP request was made to the API at /admin/stats.",
-      "sync" : false,
-      "enabled" : false,
-      "filtering_permitted" : true,
-      "mandatory_fields" : {
-        "timestamp" : "",
-        "real_userid" : {"domain" : "", "user" : ""},
-        "remote" : {"ip" : "", "port" : 1},
-	"local" : {"ip" : "", "port" : 1},
-
+      "id": 28689,
+      "name": "/admin/stats API request",
+      "description": "An HTTP request was made to the API at /admin/stats.",
+      "sync": false,
+      "enabled": false,
+      "filtering_permitted": true,
+      "mandatory_fields": {
+        "timestamp": "",
+        "real_userid": {
+          "domain": "",
+          "user": ""
+        },
+        "remote": {
+          "ip": "",
+          "port": 1
+        },
+        "local": {
+          "ip": "",
+          "port": 1
+        },
         "httpMethod": "",
         "httpResultCode": 1,
         "errorCode": 1,
         "errorMessage": ""
       },
-      "optional_fields" : {
-        "stat" : ""
+      "optional_fields": {
+        "stat": ""
       }
     },
     {
-      "id" : 28690,
-      "name" : "/admin/vitals API request",
-      "description" : "An HTTP request was made to the API at /admin/vitals.",
-      "sync" : false,
-      "enabled" : false,
-      "filtering_permitted" : true,
-      "mandatory_fields" : {
-        "timestamp" : "",
-        "real_userid" : {"domain" : "", "user" : ""},
-        "remote" : {"ip" : "", "port" : 1},
-	"local" : {"ip" : "", "port" : 1},
-
+      "id": 28690,
+      "name": "/admin/vitals API request",
+      "description": "An HTTP request was made to the API at /admin/vitals.",
+      "sync": false,
+      "enabled": false,
+      "filtering_permitted": true,
+      "mandatory_fields": {
+        "timestamp": "",
+        "real_userid": {
+          "domain": "",
+          "user": ""
+        },
+        "remote": {
+          "ip": "",
+          "port": 1
+        },
+        "local": {
+          "ip": "",
+          "port": 1
+        },
         "httpMethod": "",
         "httpResultCode": 1,
         "errorCode": 1,
         "errorMessage": ""
       },
-      "optional_fields" : {
-      }
+      "optional_fields": {}
     },
     {
-      "id" : 28691,
-      "name" : "/admin/prepareds API request",
-      "description" : "An HTTP request was made to the API at /admin/prepareds.",
-      "sync" : false,
-      "enabled" : false,
-      "filtering_permitted" : true,
-      "mandatory_fields" : {
-        "timestamp" : "",
-        "real_userid" : {"domain" : "", "user" : ""},
-        "remote" : {"ip" : "", "port" : 1},
-	"local" : {"ip" : "", "port" : 1},
-
+      "id": 28691,
+      "name": "/admin/prepareds API request",
+      "description": "An HTTP request was made to the API at /admin/prepareds.",
+      "sync": false,
+      "enabled": false,
+      "filtering_permitted": true,
+      "mandatory_fields": {
+        "timestamp": "",
+        "real_userid": {
+          "domain": "",
+          "user": ""
+        },
+        "remote": {
+          "ip": "",
+          "port": 1
+        },
+        "local": {
+          "ip": "",
+          "port": 1
+        },
         "httpMethod": "",
         "httpResultCode": 1,
         "errorCode": 1,
         "errorMessage": ""
       },
-      "optional_fields" : {
-        "name" : ""
+      "optional_fields": {
+        "name": ""
       }
     },
     {
-      "id" : 28692,
-      "name" : "/admin/active_requests API request",
-      "description" : "An HTTP request was made to the API at /admin/active_requests.",
-      "sync" : false,
-      "enabled" : false,
-      "filtering_permitted" : true,
-      "mandatory_fields" : {
-        "timestamp" : "",
-        "real_userid" : {"domain" : "", "user" : ""},
-        "remote" : {"ip" : "", "port" : 1},
-	"local" : {"ip" : "", "port" : 1},
-
+      "id": 28692,
+      "name": "/admin/active_requests API request",
+      "description": "An HTTP request was made to the API at /admin/active_requests.",
+      "sync": false,
+      "enabled": false,
+      "filtering_permitted": true,
+      "mandatory_fields": {
+        "timestamp": "",
+        "real_userid": {
+          "domain": "",
+          "user": ""
+        },
+        "remote": {
+          "ip": "",
+          "port": 1
+        },
+        "local": {
+          "ip": "",
+          "port": 1
+        },
         "httpMethod": "",
         "httpResultCode": 1,
         "errorCode": 1,
         "errorMessage": ""
       },
-      "optional_fields" : {
-        "request" : ""
+      "optional_fields": {
+        "request": ""
       }
     },
     {
-      "id" : 28693,
-      "name" : "/admin/indexes/prepareds API request",
-      "description" : "An HTTP request was made to the API at /admin/indexes/prepareds.",
-      "sync" : false,
-      "enabled" : false,
-      "filtering_permitted" : true,
-      "mandatory_fields" : {
-        "timestamp" : "",
-        "real_userid" : {"domain" : "", "user" : ""},
-        "remote" : {"ip" : "", "port" : 1},
-	"local" : {"ip" : "", "port" : 1},
-
+      "id": 28693,
+      "name": "/admin/indexes/prepareds API request",
+      "description": "An HTTP request was made to the API at /admin/indexes/prepareds.",
+      "sync": false,
+      "enabled": false,
+      "filtering_permitted": true,
+      "mandatory_fields": {
+        "timestamp": "",
+        "real_userid": {
+          "domain": "",
+          "user": ""
+        },
+        "remote": {
+          "ip": "",
+          "port": 1
+        },
+        "local": {
+          "ip": "",
+          "port": 1
+        },
         "httpMethod": "",
         "httpResultCode": 1,
         "errorCode": 1,
         "errorMessage": ""
       },
-      "optional_fields" : {
-      }
+      "optional_fields": {}
     },
     {
-      "id" : 28694,
-      "name" : "/admin/indexes/active_requests API request",
-      "description" : "An HTTP request was made to the API at /admin/indexes/active_requests.",
-      "sync" : false,
-      "enabled" : false,
-      "filtering_permitted" : true,
-      "mandatory_fields" : {
-        "timestamp" : "",
-        "real_userid" : {"domain" : "", "user" : ""},
-        "remote" : {"ip" : "", "port" : 1},
-	"local" : {"ip" : "", "port" : 1},
-
+      "id": 28694,
+      "name": "/admin/indexes/active_requests API request",
+      "description": "An HTTP request was made to the API at /admin/indexes/active_requests.",
+      "sync": false,
+      "enabled": false,
+      "filtering_permitted": true,
+      "mandatory_fields": {
+        "timestamp": "",
+        "real_userid": {
+          "domain": "",
+          "user": ""
+        },
+        "remote": {
+          "ip": "",
+          "port": 1
+        },
+        "local": {
+          "ip": "",
+          "port": 1
+        },
         "httpMethod": "",
         "httpResultCode": 1,
         "errorCode": 1,
         "errorMessage": ""
       },
-      "optional_fields" : {
-      }
+      "optional_fields": {}
     },
     {
-      "id" : 28695,
-      "name" : "/admin/indexes/completed_requests API request",
-      "description" : "An HTTP request was made to the API at /admin/indexes/completed_requests.",
-      "sync" : false,
-      "enabled" : false,
-      "filtering_permitted" : true,
-      "mandatory_fields" : {
-        "timestamp" : "",
-        "real_userid" : {"domain" : "", "user" : ""},
-        "remote" : {"ip" : "", "port" : 1},
-	"local" : {"ip" : "", "port" : 1},
-
+      "id": 28695,
+      "name": "/admin/indexes/completed_requests API request",
+      "description": "An HTTP request was made to the API at /admin/indexes/completed_requests.",
+      "sync": false,
+      "enabled": false,
+      "filtering_permitted": true,
+      "mandatory_fields": {
+        "timestamp": "",
+        "real_userid": {
+          "domain": "",
+          "user": ""
+        },
+        "remote": {
+          "ip": "",
+          "port": 1
+        },
+        "local": {
+          "ip": "",
+          "port": 1
+        },
         "httpMethod": "",
         "httpResultCode": 1,
         "errorCode": 1,
         "errorMessage": ""
       },
-      "optional_fields" : {
-      }
+      "optional_fields": {}
     },
     {
-      "id" : 28697,
-      "name" : "/admin/ping API request",
-      "description" : "An HTTP request was made to the API at /admin/ping.",
-      "sync" : false,
-      "enabled" : false,
-      "filtering_permitted" : true,
-      "mandatory_fields" : {
-        "timestamp" : "",
-        "real_userid" : {"domain" : "", "user" : ""},
-        "remote" : {"ip" : "", "port" : 1},
-	"local" : {"ip" : "", "port" : 1},
-
+      "id": 28697,
+      "name": "/admin/ping API request",
+      "description": "An HTTP request was made to the API at /admin/ping.",
+      "sync": false,
+      "enabled": false,
+      "filtering_permitted": true,
+      "mandatory_fields": {
+        "timestamp": "",
+        "real_userid": {
+          "domain": "",
+          "user": ""
+        },
+        "remote": {
+          "ip": "",
+          "port": 1
+        },
+        "local": {
+          "ip": "",
+          "port": 1
+        },
         "httpMethod": "",
         "httpResultCode": 1,
         "errorCode": 1,
         "errorMessage": ""
       },
-      "optional_fields" : {
-      }
+      "optional_fields": {}
     },
     {
-      "id" : 28698,
-      "name" : "/admin/config API request",
-      "description" : "An HTTP request was made to the API at /admin/config.",
-      "sync" : false,
-      "enabled" : false,
-      "filtering_permitted" : true,
-      "mandatory_fields" : {
-        "timestamp" : "",
-        "real_userid" : {"domain" : "", "user" : ""},
-        "remote" : {"ip" : "", "port" : 1},
-	"local" : {"ip" : "", "port" : 1},
-
+      "id": 28698,
+      "name": "/admin/config API request",
+      "description": "An HTTP request was made to the API at /admin/config.",
+      "sync": false,
+      "enabled": false,
+      "filtering_permitted": true,
+      "mandatory_fields": {
+        "timestamp": "",
+        "real_userid": {
+          "domain": "",
+          "user": ""
+        },
+        "remote": {
+          "ip": "",
+          "port": 1
+        },
+        "local": {
+          "ip": "",
+          "port": 1
+        },
         "httpMethod": "",
         "httpResultCode": 1,
         "errorCode": 1,
         "errorMessage": ""
       },
-      "optional_fields" : {
-      }
+      "optional_fields": {}
     },
     {
-      "id" : 28699,
-      "name" : "/admin/ssl_cert API request",
-      "description" : "An HTTP request was made to the API at /admin/ssl_cert.",
-      "sync" : false,
-      "enabled" : false,
-      "filtering_permitted" : true,
-      "mandatory_fields" : {
-        "timestamp" : "",
-        "real_userid" : {"domain" : "", "user" : ""},
-        "remote" : {"ip" : "", "port" : 1},
-	"local" : {"ip" : "", "port" : 1},
-
+      "id": 28699,
+      "name": "/admin/ssl_cert API request",
+      "description": "An HTTP request was made to the API at /admin/ssl_cert.",
+      "sync": false,
+      "enabled": false,
+      "filtering_permitted": true,
+      "mandatory_fields": {
+        "timestamp": "",
+        "real_userid": {
+          "domain": "",
+          "user": ""
+        },
+        "remote": {
+          "ip": "",
+          "port": 1
+        },
+        "local": {
+          "ip": "",
+          "port": 1
+        },
         "httpMethod": "",
         "httpResultCode": 1,
         "errorCode": 1,
         "errorMessage": ""
       },
-      "optional_fields" : {
-      }
+      "optional_fields": {}
     },
     {
-      "id" : 28700,
-      "name" : "/admin/settings API request",
-      "description" : "An HTTP request was made to the API at /admin/settings.",
-      "sync" : false,
-      "enabled" : false,
-      "filtering_permitted" : true,
-      "mandatory_fields" : {
-        "timestamp" : "",
-        "real_userid" : {"domain" : "", "user" : ""},
-        "remote" : {"ip" : "", "port" : 1},
-	"local" : {"ip" : "", "port" : 1},
-
+      "id": 28700,
+      "name": "/admin/settings API request",
+      "description": "An HTTP request was made to the API at /admin/settings.",
+      "sync": false,
+      "enabled": false,
+      "filtering_permitted": true,
+      "mandatory_fields": {
+        "timestamp": "",
+        "real_userid": {
+          "domain": "",
+          "user": ""
+        },
+        "remote": {
+          "ip": "",
+          "port": 1
+        },
+        "local": {
+          "ip": "",
+          "port": 1
+        },
         "httpMethod": "",
         "httpResultCode": 1,
         "errorCode": 1,
         "errorMessage": ""
       },
-      "optional_fields" : {
-        "values" : {"val1" : "", "val2" : ""}
+      "optional_fields": {
+        "values": {
+          "val1": "",
+          "val2": ""
+        }
       }
     },
     {
-      "id" : 28701,
-      "name" : "/admin/clusters API request",
-      "description" : "An HTTP request was made to the API at /admin/clusters.",
-      "sync" : false,
-      "enabled" : false,
-      "filtering_permitted" : true,
-      "mandatory_fields" : {
-        "timestamp" : "",
-        "real_userid" : {"domain" : "", "user" : ""},
-        "remote" : {"ip" : "", "port" : 1},
-	"local" : {"ip" : "", "port" : 1},
-
+      "id": 28701,
+      "name": "/admin/clusters API request",
+      "description": "An HTTP request was made to the API at /admin/clusters.",
+      "sync": false,
+      "enabled": false,
+      "filtering_permitted": true,
+      "mandatory_fields": {
+        "timestamp": "",
+        "real_userid": {
+          "domain": "",
+          "user": ""
+        },
+        "remote": {
+          "ip": "",
+          "port": 1
+        },
+        "local": {
+          "ip": "",
+          "port": 1
+        },
         "httpMethod": "",
         "httpResultCode": 1,
         "errorCode": 1,
         "errorMessage": ""
       },
-      "optional_fields" : {
-	"cluster" : "",
-	"node" : "",
-        "body" : {"val1" : "", "val2" : ""}
+      "optional_fields": {
+        "cluster": "",
+        "node": "",
+        "body": {
+          "val1": "",
+          "val2": ""
+        }
       }
     },
     {
-      "id" : 28702,
-      "name" : "/admin/completed_requests API request",
-      "description" : "An HTTP request was made to the API at /admin/completed_requests.",
-      "sync" : false,
-      "enabled" : false,
-      "filtering_permitted" : true,
-      "mandatory_fields" : {
-        "timestamp" : "",
-        "real_userid" : {"domain" : "", "user" : ""},
-        "remote" : {"ip" : "", "port" : 1},
-	"local" : {"ip" : "", "port" : 1},
-
+      "id": 28702,
+      "name": "/admin/completed_requests API request",
+      "description": "An HTTP request was made to the API at /admin/completed_requests.",
+      "sync": false,
+      "enabled": false,
+      "filtering_permitted": true,
+      "mandatory_fields": {
+        "timestamp": "",
+        "real_userid": {
+          "domain": "",
+          "user": ""
+        },
+        "remote": {
+          "ip": "",
+          "port": 1
+        },
+        "local": {
+          "ip": "",
+          "port": 1
+        },
         "httpMethod": "",
         "httpResultCode": 1,
         "errorCode": 1,
         "errorMessage": ""
       },
-      "optional_fields" : {
-        "request" : ""
+      "optional_fields": {
+        "request": ""
       }
     },
     {
-      "id" : 28703,
-      "name" : "N1QL configuration",
-      "description" : "States that N1QL is using audit configuration with specified uuid",
-      "sync" : false,
-      "enabled" : true,
-      "filtering_permitted" : false,
-      "mandatory_fields" : {
-        "timestamp" : "",
-        "real_userid" : {"domain" : "", "user" : ""},
-        "uuid" : ""
+      "id": 28703,
+      "name": "N1QL configuration",
+      "description": "States that N1QL is using audit configuration with specified uuid",
+      "sync": false,
+      "enabled": true,
+      "filtering_permitted": false,
+      "mandatory_fields": {
+        "timestamp": "",
+        "real_userid": {
+          "domain": "",
+          "user": ""
+        },
+        "uuid": ""
       },
-      "optional_fields" : {}
-    },
-    { 
-      "id" : 28704,
-      "name" : "/admin/functions API request",
-      "description" : "An HTTP request was made to the API at /admin/functions.",
-      "sync" : false,
-      "enabled" : false,
-      "filtering_permitted" : true,
-      "mandatory_fields" : {
-        "timestamp" : "",
-        "real_userid" : {"domain" : "", "user" : ""},
-        "remote" : {"ip" : "", "port" : 1},
-	"local" : {"ip" : "", "port" : 1},
-        "httpMethod": "", 
-        "httpResultCode": 1,
-        "errorCode": 1, 
-        "errorMessage": ""
-      },
-      "optional_fields" : {
-        "request" : ""
-      }
+      "optional_fields": {}
     },
     {
-      "id" : 28705,
-      "name" : "/admin/indexes/functions API request",
-      "description" : "An HTTP request was made to the API at /admin/indexes/functions.",
-      "sync" : false,
-      "enabled" : false,
-      "filtering_permitted" : true,
-      "mandatory_fields" : {
-        "timestamp" : "",
-        "real_userid" : {"domain" : "", "user" : ""},
-        "remote" : {"ip" : "", "port" : 1},
-	"local" : {"ip" : "", "port" : 1},
+      "id": 28704,
+      "name": "/admin/functions API request",
+      "description": "An HTTP request was made to the API at /admin/functions.",
+      "sync": false,
+      "enabled": false,
+      "filtering_permitted": true,
+      "mandatory_fields": {
+        "timestamp": "",
+        "real_userid": {
+          "domain": "",
+          "user": ""
+        },
+        "remote": {
+          "ip": "",
+          "port": 1
+        },
+        "local": {
+          "ip": "",
+          "port": 1
+        },
         "httpMethod": "",
         "httpResultCode": 1,
         "errorCode": 1,
         "errorMessage": ""
       },
-      "optional_fields" : {
+      "optional_fields": {
+        "request": ""
       }
     },
     {
-      "id" : 28706,
-      "name" : "CREATE FUNCTION statement",
-      "description" : "A N1QL CREATE FUNCTION statement was executed",
-      "sync" : false,
-      "enabled" : false,
-      "filtering_permitted" : true,
-      "mandatory_fields" : {
-        "timestamp" : "",
-        "real_userid" : {"domain" : "", "user" : ""},
-        "remote" : {"ip" : "", "port" : 1},
-	"local" : {"ip" : "", "port" : 1},
-
-        "requestId" : "",
-        "statement" : "",
-
-        "isAdHoc" : true,
-        "userAgent" : "",
-        "node" : "",
-
-        "status" : "",
-        "metrics" : {
-          "elapsedTime" : "1.0s",
-          "executionTime" : "0.75s",
-          "resultCount" : 1,
-          "resultSize" : 18,
-          "mutationCount" : 0,
-          "sortCount" : 1,
-          "errorCount" : 0,
-          "warningCount" : 1
-	}
-      },
-      "optional_fields" : {
-	"clientContextId" : "",
-	"queryContext" : "",
-        "namedArgs" : { "name1" : "", "name2" : "" },
-        "positionalArgs" : [ "" ],
-        "errors": [{"code":1000, "msg": ""},{"code": 1001,"msg": ""}]
-      }
-    },
-    {
-      "id" : 28707,
-      "name" : "DROP FUNCTION statement",
-      "description" : "A N1QL DROP FUNCTION statement was executed",
-      "sync" : false,
-      "enabled" : false,
-      "filtering_permitted" : true,
-      "mandatory_fields" : {
-        "timestamp" : "",
-        "real_userid" : {"domain" : "", "user" : ""},
-        "remote" : {"ip" : "", "port" : 1},
-	"local" : {"ip" : "", "port" : 1},
-
-        "requestId" : "",
-        "statement" : "",
-
-        "isAdHoc" : true,
-        "userAgent" : "",
-        "node" : "",
-
-        "status" : "",
-        "metrics" : {
-          "elapsedTime" : "1.0s",
-          "executionTime" : "0.75s",
-          "resultCount" : 1,
-          "resultSize" : 18,
-          "mutationCount" : 0,
-          "sortCount" : 1,
-          "errorCount" : 0,
-          "warningCount" : 1
-	}
-      },
-      "optional_fields" : {
-	"clientContextId" : "",
-	"queryContext" : "",
-        "namedArgs" : { "name1" : "", "name2" : "" },
-        "positionalArgs" : [ "" ],
-        "errors": [{"code":1000, "msg": ""},{"code": 1001,"msg": ""}]
-      }
-    },
-    {
-      "id" : 28708,
-      "name" : "EXECUTE FUNCTION statement",
-      "description" : "A N1QL EXECUTE FUNCTION statement was executed",
-      "sync" : false,
-      "enabled" : false,
-      "filtering_permitted" : true,
-      "mandatory_fields" : {
-        "timestamp" : "",
-        "real_userid" : {"domain" : "", "user" : ""},
-        "remote" : {"ip" : "", "port" : 1},
-	"local" : {"ip" : "", "port" : 1},
-
-        "requestId" : "",
-        "statement" : "",
-
-        "isAdHoc" : true,
-        "userAgent" : "",
-        "node" : "",
-
-        "status" : "",
-        "metrics" : {
-          "elapsedTime" : "1.0s",
-          "executionTime" : "0.75s",
-          "resultCount" : 1,
-          "resultSize" : 18,
-          "mutationCount" : 0,
-          "sortCount" : 1,
-          "errorCount" : 0,
-          "warningCount" : 1
-	}
-      },
-      "optional_fields" : {
-	"clientContextId" : "",
-	"queryContext" : "",
-        "namedArgs" : { "name1" : "", "name2" : "" },
-        "positionalArgs" : [ "" ],
-        "errors": [{"code":1000, "msg": ""},{"code": 1001,"msg": ""}]
-      }
-    },
-    { 
-      "id" : 28709,
-      "name" : "/admin/tasks API request",
-      "description" : "An HTTP request was made to the API at /admin/tasks.",
-      "sync" : false,
-      "enabled" : false,
-      "filtering_permitted" : true,
-      "mandatory_fields" : {
-        "timestamp" : "",
-        "real_userid" : {"domain" : "", "user" : ""},
-        "remote" : {"ip" : "", "port" : 1},
-	"local" : {"ip" : "", "port" : 1},
-        "httpMethod": "", 
-        "httpResultCode": 1,
-        "errorCode": 1, 
-        "errorMessage": ""
-      },
-      "optional_fields" : {
-        "request" : ""
-      }
-    },
-    {
-      "id" : 28710,
-      "name" : "/admin/indexes/tasks API request",
-      "description" : "An HTTP request was made to the API at /admin/indexes/tasks.",
-      "sync" : false,
-      "enabled" : false,
-      "filtering_permitted" : true,
-      "mandatory_fields" : {
-        "timestamp" : "",
-        "real_userid" : {"domain" : "", "user" : ""},
-        "remote" : {"ip" : "", "port" : 1},
-	"local" : {"ip" : "", "port" : 1},
+      "id": 28705,
+      "name": "/admin/indexes/functions API request",
+      "description": "An HTTP request was made to the API at /admin/indexes/functions.",
+      "sync": false,
+      "enabled": false,
+      "filtering_permitted": true,
+      "mandatory_fields": {
+        "timestamp": "",
+        "real_userid": {
+          "domain": "",
+          "user": ""
+        },
+        "remote": {
+          "ip": "",
+          "port": 1
+        },
+        "local": {
+          "ip": "",
+          "port": 1
+        },
         "httpMethod": "",
         "httpResultCode": 1,
         "errorCode": 1,
         "errorMessage": ""
       },
-      "optional_fields" : {
-      }
+      "optional_fields": {}
     },
-    { 
-      "id" : 28711,
-      "name" : "/admin/dictionary_cache API request",
-      "description" : "An HTTP request was made to the API at /admin/dictionary_cache.",
-      "sync" : false,
-      "enabled" : false,
-      "filtering_permitted" : true,
-      "mandatory_fields" : {
-        "timestamp" : "",
-        "real_userid" : {"domain" : "", "user" : ""},
-        "remote" : {"ip" : "", "port" : 1},
-	"local" : {"ip" : "", "port" : 1},
-        "httpMethod": "", 
-        "httpResultCode": 1,
-        "errorCode": 1, 
-        "errorMessage": ""
+    {
+      "id": 28706,
+      "name": "CREATE FUNCTION statement",
+      "description": "A N1QL CREATE FUNCTION statement was executed",
+      "sync": false,
+      "enabled": false,
+      "filtering_permitted": true,
+      "mandatory_fields": {
+        "timestamp": "",
+        "real_userid": {
+          "domain": "",
+          "user": ""
+        },
+        "remote": {
+          "ip": "",
+          "port": 1
+        },
+        "local": {
+          "ip": "",
+          "port": 1
+        },
+        "requestId": "",
+        "statement": "",
+        "isAdHoc": true,
+        "userAgent": "",
+        "node": "",
+        "status": "",
+        "metrics": {
+          "elapsedTime": "1.0s",
+          "executionTime": "0.75s",
+          "resultCount": 1,
+          "resultSize": 18,
+          "mutationCount": 0,
+          "sortCount": 1,
+          "errorCount": 0,
+          "warningCount": 1
+        }
       },
-      "optional_fields" : {
-        "request" : ""
+      "optional_fields": {
+        "clientContextId": "",
+        "queryContext": "",
+        "namedArgs": {
+          "name1": "",
+          "name2": ""
+        },
+        "positionalArgs": [
+          ""
+        ],
+        "errors": [
+          {
+            "code": 1000,
+            "msg": ""
+          },
+          {
+            "code": 1001,
+            "msg": ""
+          }
+        ]
       }
     },
     {
-      "id" : 28712,
-      "name" : "/admin/indexes/dictionary_cache API request",
-      "description" : "An HTTP request was made to the API at /admin/indexes/dictionary_cache.",
-      "sync" : false,
-      "enabled" : false,
-      "filtering_permitted" : true,
-      "mandatory_fields" : {
-        "timestamp" : "",
-        "real_userid" : {"domain" : "", "user" : ""},
-        "remote" : {"ip" : "", "port" : 1},
-	"local" : {"ip" : "", "port" : 1},
+      "id": 28707,
+      "name": "DROP FUNCTION statement",
+      "description": "A N1QL DROP FUNCTION statement was executed",
+      "sync": false,
+      "enabled": false,
+      "filtering_permitted": true,
+      "mandatory_fields": {
+        "timestamp": "",
+        "real_userid": {
+          "domain": "",
+          "user": ""
+        },
+        "remote": {
+          "ip": "",
+          "port": 1
+        },
+        "local": {
+          "ip": "",
+          "port": 1
+        },
+        "requestId": "",
+        "statement": "",
+        "isAdHoc": true,
+        "userAgent": "",
+        "node": "",
+        "status": "",
+        "metrics": {
+          "elapsedTime": "1.0s",
+          "executionTime": "0.75s",
+          "resultCount": 1,
+          "resultSize": 18,
+          "mutationCount": 0,
+          "sortCount": 1,
+          "errorCount": 0,
+          "warningCount": 1
+        }
+      },
+      "optional_fields": {
+        "clientContextId": "",
+        "queryContext": "",
+        "namedArgs": {
+          "name1": "",
+          "name2": ""
+        },
+        "positionalArgs": [
+          ""
+        ],
+        "errors": [
+          {
+            "code": 1000,
+            "msg": ""
+          },
+          {
+            "code": 1001,
+            "msg": ""
+          }
+        ]
+      }
+    },
+    {
+      "id": 28708,
+      "name": "EXECUTE FUNCTION statement",
+      "description": "A N1QL EXECUTE FUNCTION statement was executed",
+      "sync": false,
+      "enabled": false,
+      "filtering_permitted": true,
+      "mandatory_fields": {
+        "timestamp": "",
+        "real_userid": {
+          "domain": "",
+          "user": ""
+        },
+        "remote": {
+          "ip": "",
+          "port": 1
+        },
+        "local": {
+          "ip": "",
+          "port": 1
+        },
+        "requestId": "",
+        "statement": "",
+        "isAdHoc": true,
+        "userAgent": "",
+        "node": "",
+        "status": "",
+        "metrics": {
+          "elapsedTime": "1.0s",
+          "executionTime": "0.75s",
+          "resultCount": 1,
+          "resultSize": 18,
+          "mutationCount": 0,
+          "sortCount": 1,
+          "errorCount": 0,
+          "warningCount": 1
+        }
+      },
+      "optional_fields": {
+        "clientContextId": "",
+        "queryContext": "",
+        "namedArgs": {
+          "name1": "",
+          "name2": ""
+        },
+        "positionalArgs": [
+          ""
+        ],
+        "errors": [
+          {
+            "code": 1000,
+            "msg": ""
+          },
+          {
+            "code": 1001,
+            "msg": ""
+          }
+        ]
+      }
+    },
+    {
+      "id": 28709,
+      "name": "/admin/tasks API request",
+      "description": "An HTTP request was made to the API at /admin/tasks.",
+      "sync": false,
+      "enabled": false,
+      "filtering_permitted": true,
+      "mandatory_fields": {
+        "timestamp": "",
+        "real_userid": {
+          "domain": "",
+          "user": ""
+        },
+        "remote": {
+          "ip": "",
+          "port": 1
+        },
+        "local": {
+          "ip": "",
+          "port": 1
+        },
         "httpMethod": "",
         "httpResultCode": 1,
         "errorCode": 1,
         "errorMessage": ""
       },
-      "optional_fields" : {
+      "optional_fields": {
+        "request": ""
       }
     },
     {
-      "id" : 28713,
-      "name" : "CREATE SCOPE statement",
-      "description" : "A N1QL CREATE SCOPE statement was executed",
-      "sync" : false,
-      "enabled" : false,
-      "filtering_permitted" : true,
-      "mandatory_fields" : {
-        "timestamp" : "",
-        "real_userid" : {"domain" : "", "user" : ""},
-        "remote" : {"ip" : "", "port" : 1},
-	"local" : {"ip" : "", "port" : 1},
-
-        "requestId" : "",
-        "statement" : "",
-
-        "isAdHoc" : true,
-        "userAgent" : "",
-        "node" : "",
-
-        "status" : "",
-        "metrics" : {
-          "elapsedTime" : "1.0s",
-          "executionTime" : "0.75s",
-          "resultCount" : 1,
-          "resultSize" : 18,
-          "mutationCount" : 0,
-          "sortCount" : 1,
-          "errorCount" : 0,
-          "warningCount" : 1
-	}
-      },
-      "optional_fields" : {
-	"clientContextId" : "",
-	"queryContext" : "",
-        "namedArgs" : { "name1" : "", "name2" : "" },
-        "positionalArgs" : [ "" ],
-        "errors": [{"code":1000, "msg": ""},{"code": 1001,"msg": ""}]
-      }
-    },
-    {
-      "id" : 28714,
-      "name" : "DROP SCOPE statement",
-      "description" : "A N1QL DROP SCOPE statement was executed",
-      "sync" : false,
-      "enabled" : false,
-      "filtering_permitted" : true,
-      "mandatory_fields" : {
-        "timestamp" : "",
-        "real_userid" : {"domain" : "", "user" : ""},
-        "remote" : {"ip" : "", "port" : 1},
-	"local" : {"ip" : "", "port" : 1},
-
-        "requestId" : "",
-        "statement" : "",
-
-        "isAdHoc" : true,
-        "userAgent" : "",
-        "node" : "",
-
-        "status" : "",
-        "metrics" : {
-          "elapsedTime" : "1.0s",
-          "executionTime" : "0.75s",
-          "resultCount" : 1,
-          "resultSize" : 18,
-          "mutationCount" : 0,
-          "sortCount" : 1,
-          "errorCount" : 0,
-          "warningCount" : 1
-	}
-      },
-      "optional_fields" : {
-	"clientContextId" : "",
-	"queryContext" : "",
-        "namedArgs" : { "name1" : "", "name2" : "" },
-        "positionalArgs" : [ "" ],
-        "errors": [{"code":1000, "msg": ""},{"code": 1001,"msg": ""}]
-      }
-    },
-    {
-      "id" : 28715,
-      "name" : "CREATE COLLECTION statement",
-      "description" : "A N1QL CREATE COLLECTION statement was executed",
-      "sync" : false,
-      "enabled" : false,
-      "filtering_permitted" : true,
-      "mandatory_fields" : {
-        "timestamp" : "",
-        "real_userid" : {"domain" : "", "user" : ""},
-        "remote" : {"ip" : "", "port" : 1},
-	"local" : {"ip" : "", "port" : 1},
-
-        "requestId" : "",
-        "statement" : "",
-
-        "isAdHoc" : true,
-        "userAgent" : "",
-        "node" : "",
-
-        "status" : "",
-        "metrics" : {
-          "elapsedTime" : "1.0s",
-          "executionTime" : "0.75s",
-          "resultCount" : 1,
-          "resultSize" : 18,
-          "mutationCount" : 0,
-          "sortCount" : 1,
-          "errorCount" : 0,
-          "warningCount" : 1
-	}
-      },
-      "optional_fields" : {
-	"clientContextId" : "",
-	"queryContext" : "",
-        "namedArgs" : { "name1" : "", "name2" : "" },
-        "positionalArgs" : [ "" ],
-        "errors": [{"code":1000, "msg": ""},{"code": 1001,"msg": ""}]
-      }
-    },
-    {
-      "id" : 28716,
-      "name" : "DROP COLLECTION statement",
-      "description" : "A N1QL DROP COLLECTION statement was executed",
-      "sync" : false,
-      "enabled" : false,
-      "filtering_permitted" : true,
-      "mandatory_fields" : {
-        "timestamp" : "",
-        "real_userid" : {"domain" : "", "user" : ""},
-        "remote" : {"ip" : "", "port" : 1},
-	"local" : {"ip" : "", "port" : 1},
-
-        "requestId" : "",
-        "statement" : "",
-
-        "isAdHoc" : true,
-        "userAgent" : "",
-        "node" : "",
-
-        "status" : "",
-        "metrics" : {
-          "elapsedTime" : "1.0s",
-          "executionTime" : "0.75s",
-          "resultCount" : 1,
-          "resultSize" : 18,
-          "mutationCount" : 0,
-          "sortCount" : 1,
-          "errorCount" : 0,
-          "warningCount" : 1
-	}
-      },
-      "optional_fields" : {
-	"clientContextId" : "",
-	"queryContext" : "",
-        "namedArgs" : { "name1" : "", "name2" : "" },
-        "positionalArgs" : [ "" ],
-        "errors": [{"code":1000, "msg": ""},{"code": 1001,"msg": ""}]
-      }
-    },
-    {
-      "id" : 28717,
-      "name" : "FLUSH COLLECTION statement",
-      "description" : "A N1QL FLUSH COLLECTION statement was executed",
-      "sync" : false,
-      "enabled" : false,
-      "filtering_permitted" : true,
-      "mandatory_fields" : {
-        "timestamp" : "",
-        "real_userid" : {"domain" : "", "user" : ""},
-        "remote" : {"ip" : "", "port" : 1},
-	"local" : {"ip" : "", "port" : 1},
-
-        "requestId" : "",
-        "statement" : "",
-
-        "isAdHoc" : true,
-        "userAgent" : "",
-        "node" : "",
-
-        "status" : "",
-        "metrics" : {
-          "elapsedTime" : "1.0s",
-          "executionTime" : "0.75s",
-          "resultCount" : 1,
-          "resultSize" : 18,
-          "mutationCount" : 0,
-          "sortCount" : 1,
-          "errorCount" : 0,
-          "warningCount" : 1
-	}
-      },
-      "optional_fields" : {
-	"clientContextId" : "",
-	"queryContext" : "",
-        "namedArgs" : { "name1" : "", "name2" : "" },
-        "positionalArgs" : [ "" ],
-        "errors": [{"code":1000, "msg": ""},{"code": 1001,"msg": ""}]
-      }
-    },
-    {
-      "id" : 28718,
-      "name" : "UPDATE STATISTICS statement",
-      "description" : "A N1QL UPDATE STATISTICS statement was executed",
-      "sync" : false,
-      "enabled" : false,
-      "filtering_permitted" : true,
-      "mandatory_fields" : {
-        "timestamp" : "",
-        "real_userid" : {"domain" : "", "user" : ""},
-        "remote" : {"ip" : "", "port" : 1},
-	"local" : {"ip" : "", "port" : 1},
-
-        "requestId" : "",
-        "statement" : "",
-
-        "isAdHoc" : true,
-        "userAgent" : "",
-        "node" : "",
-
-        "status" : "",
-        "metrics" : {
-          "elapsedTime" : "1.0s",
-          "executionTime" : "0.75s",
-          "resultCount" : 1,
-          "resultSize" : 18,
-          "mutationCount" : 0,
-          "sortCount" : 1,
-          "errorCount" : 0,
-          "warningCount" : 1
-	}
-      },
-      "optional_fields" : {
-	"clientContextId" : "",
-	"queryContext" : "",
-        "namedArgs" : { "name1" : "", "name2" : "" },
-        "positionalArgs" : [ "" ],
-        "errors": [{"code":1000, "msg": ""},{"code": 1001,"msg": ""}]
-      }
-    },
-    {
-      "id" : 28719,
-      "name" : "ADVISE statement",
-      "description" : "A N1QL ADVISE statement was executed",
-      "sync" : false,
-      "enabled" : false,
-      "filtering_permitted" : true,
-      "mandatory_fields" : {
-        "timestamp" : "",
-        "real_userid" : {"domain" : "", "user" : ""},
-        "remote" : {"ip" : "", "port" : 1},
-	"local" : {"ip" : "", "port" : 1},
-
-        "requestId" : "",
-        "statement" : "",
-
-        "isAdHoc" : true,
-        "userAgent" : "",
-        "node" : "",
-
-        "status" : "",
-        "metrics" : {
-          "elapsedTime" : "1.0s",
-          "executionTime" : "0.75s",
-          "resultCount" : 1,
-          "resultSize" : 18,
-          "mutationCount" : 0,
-          "sortCount" : 1,
-          "errorCount" : 0,
-          "warningCount" : 1
-	}
-      },
-      "optional_fields" : {
-	"clientContextId" : "",
-	"queryContext" : "",
-        "namedArgs" : { "name1" : "", "name2" : "" },
-        "positionalArgs" : [ "" ],
-        "errors": [{"code":1000, "msg": ""},{"code": 1001,"msg": ""}]
-      }
-    },
-    {
-      "id" : 28720,
-      "name" : "START TRANSACTION statement",
-      "description" : "A N1QL START TRANSACTION statement was executed",
-      "sync" : false,
-      "enabled" : false,
-      "filtering_permitted" : true,
-      "mandatory_fields" : {
-        "timestamp" : "",
-        "real_userid" : {"domain" : "", "user" : ""},
-        "remote" : {"ip" : "", "port" : 1},
-	"local" : {"ip" : "", "port" : 1},
-
-        "requestId" : "",
-        "statement" : "",
-
-        "isAdHoc" : true,
-        "userAgent" : "",
-        "node" : "",
-
-        "status" : "",
-        "metrics" : {
-          "elapsedTime" : "1.0s",
-          "executionTime" : "0.75s",
-          "resultCount" : 1,
-          "resultSize" : 18,
-          "errorCount" : 0,
-          "warningCount" : 1
-	}
-      },
-      "optional_fields" : {
-	"clientContextId" : "",
-        "errors": [{"code":1000, "msg": ""},{"code": 1001,"msg": ""}]
-      }
-    },
-    {
-      "id" : 28721,
-      "name" : "COMMIT TRANSACTION statement",
-      "description" : "A N1QL COMMIT TRANSACTION statement was executed",
-      "sync" : false,
-      "enabled" : false,
-      "filtering_permitted" : true,
-      "mandatory_fields" : {
-        "timestamp" : "",
-        "real_userid" : {"domain" : "", "user" : ""},
-        "remote" : {"ip" : "", "port" : 1},
-	"local" : {"ip" : "", "port" : 1},
-
-        "requestId" : "",
-        "statement" : "",
-	"txId" : "",
-
-        "isAdHoc" : true,
-        "userAgent" : "",
-        "node" : "",
-
-        "status" : "",
-        "metrics" : {
-          "elapsedTime" : "1.0s",
-          "executionTime" : "0.75s",
-          "transactionElapsedTime" : "0.75s",
-          "resultCount" : 1,
-          "resultSize" : 18,
-          "errorCount" : 0,
-          "warningCount" : 1
-	}
-      },
-      "optional_fields" : {
-	"clientContextId" : "",
-        "errors": [{"code":1000, "msg": ""},{"code": 1001,"msg": ""}]
-      }
-    },
-    {
-      "id" : 28722,
-      "name" : "ROLLBACK TRANSACTION statement",
-      "description" : "A N1QL ROLLBACK TRANSACTION statement was executed",
-      "sync" : false,
-      "enabled" : false,
-      "filtering_permitted" : true,
-      "mandatory_fields" : {
-        "timestamp" : "",
-        "real_userid" : {"domain" : "", "user" : ""},
-        "remote" : {"ip" : "", "port" : 1},
-	"local" : {"ip" : "", "port" : 1},
-
-        "requestId" : "",
-        "statement" : "",
-	"txId" : "",
-
-        "isAdHoc" : true,
-        "userAgent" : "",
-        "node" : "",
-
-        "status" : "",
-        "metrics" : {
-          "elapsedTime" : "1.0s",
-          "executionTime" : "0.75s",
-          "transactionElapsedTime" : "0.75s",
-          "resultCount" : 1,
-          "resultSize" : 18,
-          "errorCount" : 0,
-          "warningCount" : 1
-	}
-      },
-      "optional_fields" : {
-	"clientContextId" : "",
-        "errors": [{"code":1000, "msg": ""},{"code": 1001,"msg": ""}]
-      }
-    },
-    {
-      "id" : 28723,
-      "name" : "ROLLBACK TRANSACTION TO SAVEPOINT statement",
-      "description" : "A N1QL ROLLBACK TRANSACTION TO SAVEPOINT statement was executed",
-      "sync" : false,
-      "enabled" : false,
-      "filtering_permitted" : true,
-      "mandatory_fields" : {
-        "timestamp" : "",
-        "real_userid" : {"domain" : "", "user" : ""},
-        "remote" : {"ip" : "", "port" : 1},
-	"local" : {"ip" : "", "port" : 1},
-
-        "requestId" : "",
-        "statement" : "",
-	"txId" : "",
-
-        "isAdHoc" : true,
-        "userAgent" : "",
-        "node" : "",
-
-        "status" : "",
-        "metrics" : {
-          "elapsedTime" : "1.0s",
-          "executionTime" : "0.75s",
-          "transactionElapsedTime" : "0.75s",
-          "transactionRemainingTime" : "0.75s",
-          "resultCount" : 1,
-          "resultSize" : 18,
-          "errorCount" : 0,
-          "warningCount" : 1
-	}
-      },
-      "optional_fields" : {
-	"clientContextId" : "",
-        "errors": [{"code":1000, "msg": ""},{"code": 1001,"msg": ""}]
-      }
-    },
-    {
-      "id" : 28724,
-      "name" : "SET TRANSACTION ISOLATION statement",
-      "description" : "A N1QL SET TRANSACTION ISOLATION statement was executed",
-      "sync" : false,
-      "enabled" : false,
-      "filtering_permitted" : true,
-      "mandatory_fields" : {
-        "timestamp" : "",
-        "real_userid" : {"domain" : "", "user" : ""},
-        "remote" : {"ip" : "", "port" : 1},
-	"local" : {"ip" : "", "port" : 1},
-
-        "requestId" : "",
-        "statement" : "",
-	"txId" : "",
-
-        "isAdHoc" : true,
-        "userAgent" : "",
-        "node" : "",
-
-        "status" : "",
-        "metrics" : {
-          "elapsedTime" : "1.0s",
-          "executionTime" : "0.75s",
-          "transactionElapsedTime" : "0.75s",
-          "transactionRemainingTime" : "0.75s",
-          "resultCount" : 1,
-          "resultSize" : 18,
-          "errorCount" : 0,
-          "warningCount" : 1
-	}
-      },
-      "optional_fields" : {
-	"clientContextId" : "",
-        "errors": [{"code":1000, "msg": ""},{"code": 1001,"msg": ""}]
-      }
-    },
-    {
-      "id" : 28725,
-      "name" : "SAVEPOINT statement",
-      "description" : "A N1QL SAVEPOINT statement was executed",
-      "sync" : false,
-      "enabled" : false,
-      "filtering_permitted" : true,
-      "mandatory_fields" : {
-        "timestamp" : "",
-        "real_userid" : {"domain" : "", "user" : ""},
-        "remote" : {"ip" : "", "port" : 1},
-	"local" : {"ip" : "", "port" : 1},
-
-        "requestId" : "",
-        "statement" : "",
-	"txId" : "",
-
-        "isAdHoc" : true,
-        "userAgent" : "",
-        "node" : "",
-
-        "status" : "",
-        "metrics" : {
-          "elapsedTime" : "1.0s",
-          "executionTime" : "0.75s",
-          "transactionElapsedTime" : "0.75s",
-          "transactionRemainingTime" : "0.75s",
-          "resultCount" : 1,
-          "resultSize" : 18,
-          "errorCount" : 0,
-          "warningCount" : 1
-	}
-      },
-      "optional_fields" : {
-	"clientContextId" : "",
-        "errors": [{"code":1000, "msg": ""},{"code": 1001,"msg": ""}]
-      }
-    },
-    {
-      "id" : 28726,
-      "name" : "/admin/transactions API request",
-      "description" : "An HTTP request was made to the API at /admin/transactions.",
-      "sync" : false,
-      "enabled" : false,
-      "filtering_permitted" : true,
-      "mandatory_fields" : {
-        "timestamp" : "",
-        "real_userid" : {"domain" : "", "user" : ""},
-        "remote" : {"ip" : "", "port" : 1},
-	"local" : {"ip" : "", "port" : 1},
+      "id": 28710,
+      "name": "/admin/indexes/tasks API request",
+      "description": "An HTTP request was made to the API at /admin/indexes/tasks.",
+      "sync": false,
+      "enabled": false,
+      "filtering_permitted": true,
+      "mandatory_fields": {
+        "timestamp": "",
+        "real_userid": {
+          "domain": "",
+          "user": ""
+        },
+        "remote": {
+          "ip": "",
+          "port": 1
+        },
+        "local": {
+          "ip": "",
+          "port": 1
+        },
         "httpMethod": "",
         "httpResultCode": 1,
         "errorCode": 1,
         "errorMessage": ""
       },
-      "optional_fields" : {
-        "request" : ""
-      }
+      "optional_fields": {}
     },
     {
-      "id" : 28727,
-      "name" : "/admin/indexes/transactions API request",
-      "description" : "An HTTP request was made to the API at /admin/indexes/transactions.",
-      "sync" : false,
-      "enabled" : false,
-      "filtering_permitted" : true,
-      "mandatory_fields" : {
-        "timestamp" : "",
-        "real_userid" : {"domain" : "", "user" : ""},
-        "remote" : {"ip" : "", "port" : 1},
-	"local" : {"ip" : "", "port" : 1},
+      "id": 28711,
+      "name": "/admin/dictionary_cache API request",
+      "description": "An HTTP request was made to the API at /admin/dictionary_cache.",
+      "sync": false,
+      "enabled": false,
+      "filtering_permitted": true,
+      "mandatory_fields": {
+        "timestamp": "",
+        "real_userid": {
+          "domain": "",
+          "user": ""
+        },
+        "remote": {
+          "ip": "",
+          "port": 1
+        },
+        "local": {
+          "ip": "",
+          "port": 1
+        },
         "httpMethod": "",
         "httpResultCode": 1,
         "errorCode": 1,
         "errorMessage": ""
       },
-      "optional_fields" : {
-        "request" : ""
+      "optional_fields": {
+        "request": ""
       }
     },
     {
-      "id" : 28728,
-      "name" : "N1QL backup / restore API request",
-      "description" : "An HTTP request was made to archive or restore N1QL metadata ",
-      "sync" : false,
-      "enabled" : false,
-      "filtering_permitted" : true,
-      "mandatory_fields" : {
-        "timestamp" : "",
-        "real_userid" : {"domain" : "", "user" : ""},
-        "remote" : {"ip" : "", "port" : 1},
-        "local" : {"ip" : "", "port" : 1},
+      "id": 28712,
+      "name": "/admin/indexes/dictionary_cache API request",
+      "description": "An HTTP request was made to the API at /admin/indexes/dictionary_cache.",
+      "sync": false,
+      "enabled": false,
+      "filtering_permitted": true,
+      "mandatory_fields": {
+        "timestamp": "",
+        "real_userid": {
+          "domain": "",
+          "user": ""
+        },
+        "remote": {
+          "ip": "",
+          "port": 1
+        },
+        "local": {
+          "ip": "",
+          "port": 1
+        },
         "httpMethod": "",
         "httpResultCode": 1,
         "errorCode": 1,
         "errorMessage": ""
       },
-      "optional_fields" : {
-        "request" : ""
+      "optional_fields": {}
+    },
+    {
+      "id": 28713,
+      "name": "CREATE SCOPE statement",
+      "description": "A N1QL CREATE SCOPE statement was executed",
+      "sync": false,
+      "enabled": false,
+      "filtering_permitted": true,
+      "mandatory_fields": {
+        "timestamp": "",
+        "real_userid": {
+          "domain": "",
+          "user": ""
+        },
+        "remote": {
+          "ip": "",
+          "port": 1
+        },
+        "local": {
+          "ip": "",
+          "port": 1
+        },
+        "requestId": "",
+        "statement": "",
+        "isAdHoc": true,
+        "userAgent": "",
+        "node": "",
+        "status": "",
+        "metrics": {
+          "elapsedTime": "1.0s",
+          "executionTime": "0.75s",
+          "resultCount": 1,
+          "resultSize": 18,
+          "mutationCount": 0,
+          "sortCount": 1,
+          "errorCount": 0,
+          "warningCount": 1
+        }
+      },
+      "optional_fields": {
+        "clientContextId": "",
+        "queryContext": "",
+        "namedArgs": {
+          "name1": "",
+          "name2": ""
+        },
+        "positionalArgs": [
+          ""
+        ],
+        "errors": [
+          {
+            "code": 1000,
+            "msg": ""
+          },
+          {
+            "code": 1001,
+            "msg": ""
+          }
+        ]
       }
     },
     {
-      "id" : 28729,
-      "name" : "/admin/shutdown API request",
-      "description" : "An HTTP request was made to initate graceful shutdown",
-      "sync" : false,
-      "enabled" : false,
-      "filtering_permitted" : true,
-      "mandatory_fields" : {
-        "timestamp" : "",
-        "real_userid" : {"domain" : "", "user" : ""},
-        "remote" : {"ip" : "", "port" : 1},
-        "local" : {"ip" : "", "port" : 1},
+      "id": 28714,
+      "name": "DROP SCOPE statement",
+      "description": "A N1QL DROP SCOPE statement was executed",
+      "sync": false,
+      "enabled": false,
+      "filtering_permitted": true,
+      "mandatory_fields": {
+        "timestamp": "",
+        "real_userid": {
+          "domain": "",
+          "user": ""
+        },
+        "remote": {
+          "ip": "",
+          "port": 1
+        },
+        "local": {
+          "ip": "",
+          "port": 1
+        },
+        "requestId": "",
+        "statement": "",
+        "isAdHoc": true,
+        "userAgent": "",
+        "node": "",
+        "status": "",
+        "metrics": {
+          "elapsedTime": "1.0s",
+          "executionTime": "0.75s",
+          "resultCount": 1,
+          "resultSize": 18,
+          "mutationCount": 0,
+          "sortCount": 1,
+          "errorCount": 0,
+          "warningCount": 1
+        }
+      },
+      "optional_fields": {
+        "clientContextId": "",
+        "queryContext": "",
+        "namedArgs": {
+          "name1": "",
+          "name2": ""
+        },
+        "positionalArgs": [
+          ""
+        ],
+        "errors": [
+          {
+            "code": 1000,
+            "msg": ""
+          },
+          {
+            "code": 1001,
+            "msg": ""
+          }
+        ]
+      }
+    },
+    {
+      "id": 28715,
+      "name": "CREATE COLLECTION statement",
+      "description": "A N1QL CREATE COLLECTION statement was executed",
+      "sync": false,
+      "enabled": false,
+      "filtering_permitted": true,
+      "mandatory_fields": {
+        "timestamp": "",
+        "real_userid": {
+          "domain": "",
+          "user": ""
+        },
+        "remote": {
+          "ip": "",
+          "port": 1
+        },
+        "local": {
+          "ip": "",
+          "port": 1
+        },
+        "requestId": "",
+        "statement": "",
+        "isAdHoc": true,
+        "userAgent": "",
+        "node": "",
+        "status": "",
+        "metrics": {
+          "elapsedTime": "1.0s",
+          "executionTime": "0.75s",
+          "resultCount": 1,
+          "resultSize": 18,
+          "mutationCount": 0,
+          "sortCount": 1,
+          "errorCount": 0,
+          "warningCount": 1
+        }
+      },
+      "optional_fields": {
+        "clientContextId": "",
+        "queryContext": "",
+        "namedArgs": {
+          "name1": "",
+          "name2": ""
+        },
+        "positionalArgs": [
+          ""
+        ],
+        "errors": [
+          {
+            "code": 1000,
+            "msg": ""
+          },
+          {
+            "code": 1001,
+            "msg": ""
+          }
+        ]
+      }
+    },
+    {
+      "id": 28716,
+      "name": "DROP COLLECTION statement",
+      "description": "A N1QL DROP COLLECTION statement was executed",
+      "sync": false,
+      "enabled": false,
+      "filtering_permitted": true,
+      "mandatory_fields": {
+        "timestamp": "",
+        "real_userid": {
+          "domain": "",
+          "user": ""
+        },
+        "remote": {
+          "ip": "",
+          "port": 1
+        },
+        "local": {
+          "ip": "",
+          "port": 1
+        },
+        "requestId": "",
+        "statement": "",
+        "isAdHoc": true,
+        "userAgent": "",
+        "node": "",
+        "status": "",
+        "metrics": {
+          "elapsedTime": "1.0s",
+          "executionTime": "0.75s",
+          "resultCount": 1,
+          "resultSize": 18,
+          "mutationCount": 0,
+          "sortCount": 1,
+          "errorCount": 0,
+          "warningCount": 1
+        }
+      },
+      "optional_fields": {
+        "clientContextId": "",
+        "queryContext": "",
+        "namedArgs": {
+          "name1": "",
+          "name2": ""
+        },
+        "positionalArgs": [
+          ""
+        ],
+        "errors": [
+          {
+            "code": 1000,
+            "msg": ""
+          },
+          {
+            "code": 1001,
+            "msg": ""
+          }
+        ]
+      }
+    },
+    {
+      "id": 28717,
+      "name": "FLUSH COLLECTION statement",
+      "description": "A N1QL FLUSH COLLECTION statement was executed",
+      "sync": false,
+      "enabled": false,
+      "filtering_permitted": true,
+      "mandatory_fields": {
+        "timestamp": "",
+        "real_userid": {
+          "domain": "",
+          "user": ""
+        },
+        "remote": {
+          "ip": "",
+          "port": 1
+        },
+        "local": {
+          "ip": "",
+          "port": 1
+        },
+        "requestId": "",
+        "statement": "",
+        "isAdHoc": true,
+        "userAgent": "",
+        "node": "",
+        "status": "",
+        "metrics": {
+          "elapsedTime": "1.0s",
+          "executionTime": "0.75s",
+          "resultCount": 1,
+          "resultSize": 18,
+          "mutationCount": 0,
+          "sortCount": 1,
+          "errorCount": 0,
+          "warningCount": 1
+        }
+      },
+      "optional_fields": {
+        "clientContextId": "",
+        "queryContext": "",
+        "namedArgs": {
+          "name1": "",
+          "name2": ""
+        },
+        "positionalArgs": [
+          ""
+        ],
+        "errors": [
+          {
+            "code": 1000,
+            "msg": ""
+          },
+          {
+            "code": 1001,
+            "msg": ""
+          }
+        ]
+      }
+    },
+    {
+      "id": 28718,
+      "name": "UPDATE STATISTICS statement",
+      "description": "A N1QL UPDATE STATISTICS statement was executed",
+      "sync": false,
+      "enabled": false,
+      "filtering_permitted": true,
+      "mandatory_fields": {
+        "timestamp": "",
+        "real_userid": {
+          "domain": "",
+          "user": ""
+        },
+        "remote": {
+          "ip": "",
+          "port": 1
+        },
+        "local": {
+          "ip": "",
+          "port": 1
+        },
+        "requestId": "",
+        "statement": "",
+        "isAdHoc": true,
+        "userAgent": "",
+        "node": "",
+        "status": "",
+        "metrics": {
+          "elapsedTime": "1.0s",
+          "executionTime": "0.75s",
+          "resultCount": 1,
+          "resultSize": 18,
+          "mutationCount": 0,
+          "sortCount": 1,
+          "errorCount": 0,
+          "warningCount": 1
+        }
+      },
+      "optional_fields": {
+        "clientContextId": "",
+        "queryContext": "",
+        "namedArgs": {
+          "name1": "",
+          "name2": ""
+        },
+        "positionalArgs": [
+          ""
+        ],
+        "errors": [
+          {
+            "code": 1000,
+            "msg": ""
+          },
+          {
+            "code": 1001,
+            "msg": ""
+          }
+        ]
+      }
+    },
+    {
+      "id": 28719,
+      "name": "ADVISE statement",
+      "description": "A N1QL ADVISE statement was executed",
+      "sync": false,
+      "enabled": false,
+      "filtering_permitted": true,
+      "mandatory_fields": {
+        "timestamp": "",
+        "real_userid": {
+          "domain": "",
+          "user": ""
+        },
+        "remote": {
+          "ip": "",
+          "port": 1
+        },
+        "local": {
+          "ip": "",
+          "port": 1
+        },
+        "requestId": "",
+        "statement": "",
+        "isAdHoc": true,
+        "userAgent": "",
+        "node": "",
+        "status": "",
+        "metrics": {
+          "elapsedTime": "1.0s",
+          "executionTime": "0.75s",
+          "resultCount": 1,
+          "resultSize": 18,
+          "mutationCount": 0,
+          "sortCount": 1,
+          "errorCount": 0,
+          "warningCount": 1
+        }
+      },
+      "optional_fields": {
+        "clientContextId": "",
+        "queryContext": "",
+        "namedArgs": {
+          "name1": "",
+          "name2": ""
+        },
+        "positionalArgs": [
+          ""
+        ],
+        "errors": [
+          {
+            "code": 1000,
+            "msg": ""
+          },
+          {
+            "code": 1001,
+            "msg": ""
+          }
+        ]
+      }
+    },
+    {
+      "id": 28720,
+      "name": "START TRANSACTION statement",
+      "description": "A N1QL START TRANSACTION statement was executed",
+      "sync": false,
+      "enabled": false,
+      "filtering_permitted": true,
+      "mandatory_fields": {
+        "timestamp": "",
+        "real_userid": {
+          "domain": "",
+          "user": ""
+        },
+        "remote": {
+          "ip": "",
+          "port": 1
+        },
+        "local": {
+          "ip": "",
+          "port": 1
+        },
+        "requestId": "",
+        "statement": "",
+        "isAdHoc": true,
+        "userAgent": "",
+        "node": "",
+        "status": "",
+        "metrics": {
+          "elapsedTime": "1.0s",
+          "executionTime": "0.75s",
+          "resultCount": 1,
+          "resultSize": 18,
+          "errorCount": 0,
+          "warningCount": 1
+        }
+      },
+      "optional_fields": {
+        "clientContextId": "",
+        "errors": [
+          {
+            "code": 1000,
+            "msg": ""
+          },
+          {
+            "code": 1001,
+            "msg": ""
+          }
+        ]
+      }
+    },
+    {
+      "id": 28721,
+      "name": "COMMIT TRANSACTION statement",
+      "description": "A N1QL COMMIT TRANSACTION statement was executed",
+      "sync": false,
+      "enabled": false,
+      "filtering_permitted": true,
+      "mandatory_fields": {
+        "timestamp": "",
+        "real_userid": {
+          "domain": "",
+          "user": ""
+        },
+        "remote": {
+          "ip": "",
+          "port": 1
+        },
+        "local": {
+          "ip": "",
+          "port": 1
+        },
+        "requestId": "",
+        "statement": "",
+        "txId": "",
+        "isAdHoc": true,
+        "userAgent": "",
+        "node": "",
+        "status": "",
+        "metrics": {
+          "elapsedTime": "1.0s",
+          "executionTime": "0.75s",
+          "transactionElapsedTime": "0.75s",
+          "resultCount": 1,
+          "resultSize": 18,
+          "errorCount": 0,
+          "warningCount": 1
+        }
+      },
+      "optional_fields": {
+        "clientContextId": "",
+        "errors": [
+          {
+            "code": 1000,
+            "msg": ""
+          },
+          {
+            "code": 1001,
+            "msg": ""
+          }
+        ]
+      }
+    },
+    {
+      "id": 28722,
+      "name": "ROLLBACK TRANSACTION statement",
+      "description": "A N1QL ROLLBACK TRANSACTION statement was executed",
+      "sync": false,
+      "enabled": false,
+      "filtering_permitted": true,
+      "mandatory_fields": {
+        "timestamp": "",
+        "real_userid": {
+          "domain": "",
+          "user": ""
+        },
+        "remote": {
+          "ip": "",
+          "port": 1
+        },
+        "local": {
+          "ip": "",
+          "port": 1
+        },
+        "requestId": "",
+        "statement": "",
+        "txId": "",
+        "isAdHoc": true,
+        "userAgent": "",
+        "node": "",
+        "status": "",
+        "metrics": {
+          "elapsedTime": "1.0s",
+          "executionTime": "0.75s",
+          "transactionElapsedTime": "0.75s",
+          "resultCount": 1,
+          "resultSize": 18,
+          "errorCount": 0,
+          "warningCount": 1
+        }
+      },
+      "optional_fields": {
+        "clientContextId": "",
+        "errors": [
+          {
+            "code": 1000,
+            "msg": ""
+          },
+          {
+            "code": 1001,
+            "msg": ""
+          }
+        ]
+      }
+    },
+    {
+      "id": 28723,
+      "name": "ROLLBACK TRANSACTION TO SAVEPOINT statement",
+      "description": "A N1QL ROLLBACK TRANSACTION TO SAVEPOINT statement was executed",
+      "sync": false,
+      "enabled": false,
+      "filtering_permitted": true,
+      "mandatory_fields": {
+        "timestamp": "",
+        "real_userid": {
+          "domain": "",
+          "user": ""
+        },
+        "remote": {
+          "ip": "",
+          "port": 1
+        },
+        "local": {
+          "ip": "",
+          "port": 1
+        },
+        "requestId": "",
+        "statement": "",
+        "txId": "",
+        "isAdHoc": true,
+        "userAgent": "",
+        "node": "",
+        "status": "",
+        "metrics": {
+          "elapsedTime": "1.0s",
+          "executionTime": "0.75s",
+          "transactionElapsedTime": "0.75s",
+          "transactionRemainingTime": "0.75s",
+          "resultCount": 1,
+          "resultSize": 18,
+          "errorCount": 0,
+          "warningCount": 1
+        }
+      },
+      "optional_fields": {
+        "clientContextId": "",
+        "errors": [
+          {
+            "code": 1000,
+            "msg": ""
+          },
+          {
+            "code": 1001,
+            "msg": ""
+          }
+        ]
+      }
+    },
+    {
+      "id": 28724,
+      "name": "SET TRANSACTION ISOLATION statement",
+      "description": "A N1QL SET TRANSACTION ISOLATION statement was executed",
+      "sync": false,
+      "enabled": false,
+      "filtering_permitted": true,
+      "mandatory_fields": {
+        "timestamp": "",
+        "real_userid": {
+          "domain": "",
+          "user": ""
+        },
+        "remote": {
+          "ip": "",
+          "port": 1
+        },
+        "local": {
+          "ip": "",
+          "port": 1
+        },
+        "requestId": "",
+        "statement": "",
+        "txId": "",
+        "isAdHoc": true,
+        "userAgent": "",
+        "node": "",
+        "status": "",
+        "metrics": {
+          "elapsedTime": "1.0s",
+          "executionTime": "0.75s",
+          "transactionElapsedTime": "0.75s",
+          "transactionRemainingTime": "0.75s",
+          "resultCount": 1,
+          "resultSize": 18,
+          "errorCount": 0,
+          "warningCount": 1
+        }
+      },
+      "optional_fields": {
+        "clientContextId": "",
+        "errors": [
+          {
+            "code": 1000,
+            "msg": ""
+          },
+          {
+            "code": 1001,
+            "msg": ""
+          }
+        ]
+      }
+    },
+    {
+      "id": 28725,
+      "name": "SAVEPOINT statement",
+      "description": "A N1QL SAVEPOINT statement was executed",
+      "sync": false,
+      "enabled": false,
+      "filtering_permitted": true,
+      "mandatory_fields": {
+        "timestamp": "",
+        "real_userid": {
+          "domain": "",
+          "user": ""
+        },
+        "remote": {
+          "ip": "",
+          "port": 1
+        },
+        "local": {
+          "ip": "",
+          "port": 1
+        },
+        "requestId": "",
+        "statement": "",
+        "txId": "",
+        "isAdHoc": true,
+        "userAgent": "",
+        "node": "",
+        "status": "",
+        "metrics": {
+          "elapsedTime": "1.0s",
+          "executionTime": "0.75s",
+          "transactionElapsedTime": "0.75s",
+          "transactionRemainingTime": "0.75s",
+          "resultCount": 1,
+          "resultSize": 18,
+          "errorCount": 0,
+          "warningCount": 1
+        }
+      },
+      "optional_fields": {
+        "clientContextId": "",
+        "errors": [
+          {
+            "code": 1000,
+            "msg": ""
+          },
+          {
+            "code": 1001,
+            "msg": ""
+          }
+        ]
+      }
+    },
+    {
+      "id": 28726,
+      "name": "/admin/transactions API request",
+      "description": "An HTTP request was made to the API at /admin/transactions.",
+      "sync": false,
+      "enabled": false,
+      "filtering_permitted": true,
+      "mandatory_fields": {
+        "timestamp": "",
+        "real_userid": {
+          "domain": "",
+          "user": ""
+        },
+        "remote": {
+          "ip": "",
+          "port": 1
+        },
+        "local": {
+          "ip": "",
+          "port": 1
+        },
         "httpMethod": "",
         "httpResultCode": 1,
         "errorCode": 1,
         "errorMessage": ""
       },
-      "optional_fields" : {
-        "request" : ""
+      "optional_fields": {
+        "request": ""
+      }
+    },
+    {
+      "id": 28727,
+      "name": "/admin/indexes/transactions API request",
+      "description": "An HTTP request was made to the API at /admin/indexes/transactions.",
+      "sync": false,
+      "enabled": false,
+      "filtering_permitted": true,
+      "mandatory_fields": {
+        "timestamp": "",
+        "real_userid": {
+          "domain": "",
+          "user": ""
+        },
+        "remote": {
+          "ip": "",
+          "port": 1
+        },
+        "local": {
+          "ip": "",
+          "port": 1
+        },
+        "httpMethod": "",
+        "httpResultCode": 1,
+        "errorCode": 1,
+        "errorMessage": ""
+      },
+      "optional_fields": {
+        "request": ""
+      }
+    },
+    {
+      "id": 28728,
+      "name": "N1QL backup / restore API request",
+      "description": "An HTTP request was made to archive or restore N1QL metadata ",
+      "sync": false,
+      "enabled": false,
+      "filtering_permitted": true,
+      "mandatory_fields": {
+        "timestamp": "",
+        "real_userid": {
+          "domain": "",
+          "user": ""
+        },
+        "remote": {
+          "ip": "",
+          "port": 1
+        },
+        "local": {
+          "ip": "",
+          "port": 1
+        },
+        "httpMethod": "",
+        "httpResultCode": 1,
+        "errorCode": 1,
+        "errorMessage": ""
+      },
+      "optional_fields": {
+        "request": ""
+      }
+    },
+    {
+      "id": 28729,
+      "name": "/admin/shutdown API request",
+      "description": "An HTTP request was made to initate graceful shutdown",
+      "sync": false,
+      "enabled": false,
+      "filtering_permitted": true,
+      "mandatory_fields": {
+        "timestamp": "",
+        "real_userid": {
+          "domain": "",
+          "user": ""
+        },
+        "remote": {
+          "ip": "",
+          "port": 1
+        },
+        "local": {
+          "ip": "",
+          "port": 1
+        },
+        "httpMethod": "",
+        "httpResultCode": 1,
+        "errorCode": 1,
+        "errorMessage": ""
+      },
+      "optional_fields": {
+        "request": ""
       }
     }
   ]
