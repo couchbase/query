@@ -861,6 +861,7 @@ func InitBulkGet() {
 	DefaultTimeout = 120 * time.Second
 
 	memcached.SetDefaultDialTimeout(DefaultDialTimeout)
+	memcached.SetConnectionName("cbq-engine")
 
 	_VB_BULK_GET_CHANNELS = make([]chan *vbBulkGet, _NUM_CHANNELS)
 
