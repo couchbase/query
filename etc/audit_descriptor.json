@@ -1061,17 +1061,17 @@
           "ip": "",
           "port": 1
         },
+        "httpMethod": "",
+        "httpResultCode": 1
+      },
+      "optional_fields": {
+        "stat": "",
         "local": {
           "ip": "",
           "port": 1
         },
-        "httpMethod": "",
-        "httpResultCode": 1,
         "errorCode": 1,
         "errorMessage": ""
-      },
-      "optional_fields": {
-        "stat": ""
       }
     },
     {
@@ -1176,16 +1176,17 @@
           "ip": "",
           "port": 1
         },
+        "httpMethod": "",
+        "httpResultCode": 1
+      },
+      "optional_fields": {
         "local": {
           "ip": "",
           "port": 1
         },
-        "httpMethod": "",
-        "httpResultCode": 1,
         "errorCode": 1,
         "errorMessage": ""
-      },
-      "optional_fields": {}
+      }
     },
     {
       "id": 28694,
@@ -1204,16 +1205,17 @@
           "ip": "",
           "port": 1
         },
+        "httpMethod": "",
+        "httpResultCode": 1
+      },
+      "optional_fields": {
         "local": {
           "ip": "",
           "port": 1
         },
-        "httpMethod": "",
-        "httpResultCode": 1,
         "errorCode": 1,
         "errorMessage": ""
-      },
-      "optional_fields": {}
+      }
     },
     {
       "id": 28695,
@@ -1232,16 +1234,17 @@
           "ip": "",
           "port": 1
         },
+        "httpMethod": "",
+        "httpResultCode": 1
+      },
+      "optional_fields": {
         "local": {
           "ip": "",
           "port": 1
         },
-        "httpMethod": "",
-        "httpResultCode": 1,
         "errorCode": 1,
         "errorMessage": ""
-      },
-      "optional_fields": {}
+      }
     },
     {
       "id": 28697,
@@ -1260,16 +1263,17 @@
           "ip": "",
           "port": 1
         },
+        "httpMethod": "",
+        "httpResultCode": 1
+      },
+      "optional_fields": {
         "local": {
           "ip": "",
           "port": 1
         },
-        "httpMethod": "",
-        "httpResultCode": 1,
         "errorCode": 1,
         "errorMessage": ""
-      },
-      "optional_fields": {}
+      }
     },
     {
       "id": 28698,
@@ -1288,16 +1292,17 @@
           "ip": "",
           "port": 1
         },
+        "httpMethod": "",
+        "httpResultCode": 1
+      },
+      "optional_fields": {
         "local": {
           "ip": "",
           "port": 1
         },
-        "httpMethod": "",
-        "httpResultCode": 1,
         "errorCode": 1,
         "errorMessage": ""
-      },
-      "optional_fields": {}
+      }
     },
     {
       "id": 28699,
@@ -1316,16 +1321,17 @@
           "ip": "",
           "port": 1
         },
+        "httpMethod": "",
+        "httpResultCode": 1
+      },
+      "optional_fields": {
         "local": {
           "ip": "",
           "port": 1
         },
-        "httpMethod": "",
-        "httpResultCode": 1,
         "errorCode": 1,
         "errorMessage": ""
-      },
-      "optional_fields": {}
+      }
     },
     {
       "id": 28700,
@@ -1344,20 +1350,20 @@
           "ip": "",
           "port": 1
         },
-        "local": {
-          "ip": "",
-          "port": 1
-        },
         "httpMethod": "",
-        "httpResultCode": 1,
-        "errorCode": 1,
-        "errorMessage": ""
+        "httpResultCode": 1
       },
       "optional_fields": {
         "values": {
           "val1": "",
           "val2": ""
-        }
+        },
+        "local": {
+          "ip": "",
+          "port": 1
+        },
+        "errorCode": 1,
+        "errorMessage": ""
       }
     },
     {
@@ -1377,14 +1383,8 @@
           "ip": "",
           "port": 1
         },
-        "local": {
-          "ip": "",
-          "port": 1
-        },
         "httpMethod": "",
-        "httpResultCode": 1,
-        "errorCode": 1,
-        "errorMessage": ""
+        "httpResultCode": 1
       },
       "optional_fields": {
         "cluster": "",
@@ -1392,7 +1392,13 @@
         "body": {
           "val1": "",
           "val2": ""
-        }
+        },
+        "local": {
+          "ip": "",
+          "port": 1
+        },
+        "errorCode": 1,
+        "errorMessage": ""
       }
     },
     {
@@ -1412,17 +1418,17 @@
           "ip": "",
           "port": 1
         },
+        "httpMethod": "",
+        "httpResultCode": 1
+      },
+      "optional_fields": {
+        "request": "",
         "local": {
           "ip": "",
           "port": 1
         },
-        "httpMethod": "",
-        "httpResultCode": 1,
         "errorCode": 1,
         "errorMessage": ""
-      },
-      "optional_fields": {
-        "request": ""
       }
     },
     {
@@ -1459,17 +1465,17 @@
           "ip": "",
           "port": 1
         },
+        "httpMethod": "",
+        "httpResultCode": 1
+      },
+      "optional_fields": {
+        "request": "",
         "local": {
           "ip": "",
           "port": 1
         },
-        "httpMethod": "",
-        "httpResultCode": 1,
         "errorCode": 1,
         "errorMessage": ""
-      },
-      "optional_fields": {
-        "request": ""
       }
     },
     {
@@ -1489,16 +1495,17 @@
           "ip": "",
           "port": 1
         },
+        "httpMethod": "",
+        "httpResultCode": 1
+      },
+      "optional_fields": {
         "local": {
           "ip": "",
           "port": 1
         },
-        "httpMethod": "",
-        "httpResultCode": 1,
         "errorCode": 1,
         "errorMessage": ""
-      },
-      "optional_fields": {}
+      }
     },
     {
       "id": 28706,
@@ -1697,17 +1704,17 @@
           "ip": "",
           "port": 1
         },
+        "httpMethod": "",
+        "httpResultCode": 1
+      },
+      "optional_fields": {
+        "request": "",
         "local": {
           "ip": "",
           "port": 1
         },
-        "httpMethod": "",
-        "httpResultCode": 1,
         "errorCode": 1,
         "errorMessage": ""
-      },
-      "optional_fields": {
-        "request": ""
       }
     },
     {
@@ -1727,16 +1734,17 @@
           "ip": "",
           "port": 1
         },
+        "httpMethod": "",
+        "httpResultCode": 1
+      },
+      "optional_fields": {
         "local": {
           "ip": "",
           "port": 1
         },
-        "httpMethod": "",
-        "httpResultCode": 1,
         "errorCode": 1,
         "errorMessage": ""
-      },
-      "optional_fields": {}
+      }
     },
     {
       "id": 28711,
@@ -1785,16 +1793,17 @@
           "ip": "",
           "port": 1
         },
+        "httpMethod": "",
+        "httpResultCode": 1
+      },
+      "optional_fields": {
         "local": {
           "ip": "",
           "port": 1
         },
-        "httpMethod": "",
-        "httpResultCode": 1,
         "errorCode": 1,
         "errorMessage": ""
-      },
-      "optional_fields": {}
+      }
     },
     {
       "id": 28713,
@@ -2546,17 +2555,17 @@
           "ip": "",
           "port": 1
         },
+        "httpMethod": "",
+        "httpResultCode": 1
+      },
+      "optional_fields": {
+        "request": "",
         "local": {
           "ip": "",
           "port": 1
         },
-        "httpMethod": "",
-        "httpResultCode": 1,
         "errorCode": 1,
         "errorMessage": ""
-      },
-      "optional_fields": {
-        "request": ""
       }
     },
     {
@@ -2576,17 +2585,17 @@
           "ip": "",
           "port": 1
         },
+        "httpMethod": "",
+        "httpResultCode": 1
+      },
+      "optional_fields": {
+        "request": "",
         "local": {
           "ip": "",
           "port": 1
         },
-        "httpMethod": "",
-        "httpResultCode": 1,
         "errorCode": 1,
         "errorMessage": ""
-      },
-      "optional_fields": {
-        "request": ""
       }
     },
     {
@@ -2606,23 +2615,23 @@
           "ip": "",
           "port": 1
         },
+        "httpMethod": "",
+        "httpResultCode": 1
+      },
+      "optional_fields": {
+        "request": "",
         "local": {
           "ip": "",
           "port": 1
         },
-        "httpMethod": "",
-        "httpResultCode": 1,
         "errorCode": 1,
         "errorMessage": ""
-      },
-      "optional_fields": {
-        "request": ""
       }
     },
     {
       "id": 28729,
       "name": "/admin/shutdown API request",
-      "description": "An HTTP request was made to initate graceful shutdown",
+      "description": "An HTTP request was made to initiate graceful shutdown",
       "sync": false,
       "enabled": false,
       "filtering_permitted": true,
@@ -2647,7 +2656,7 @@
     {
       "id": 28730,
       "name": "/admin/gc API request",
-      "description": "An HTTP request was made to initate garbage collection",
+      "description": "An HTTP request was made to run garbage collection",
       "sync": false,
       "enabled": false,
       "filtering_permitted": true,
@@ -2672,7 +2681,7 @@
     {
       "id": 28731,
       "name": "/admin/ffdc API request",
-      "description": "An HTTP request was made to invoke an FFDC collection",
+      "description": "An HTTP request was made to run an FFDC collection",
       "sync": false,
       "enabled": false,
       "filtering_permitted": true,

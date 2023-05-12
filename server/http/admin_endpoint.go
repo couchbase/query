@@ -33,6 +33,7 @@ func (this *HttpEndpoint) wrapAPI(w http.ResponseWriter, req *http.Request, f ap
 		GenericFields: adt.GetAuditBasicFields(req),
 		RemoteAddress: req.RemoteAddr,
 		HttpMethod:    req.Method,
+		LocalAddress:  req.Host,
 	}
 
 	obj, err := f(this, w, req, &auditFields)

@@ -10,6 +10,7 @@ package audit
 
 import (
 	"fmt"
+	"net"
 	"strconv"
 	"strings"
 	"sync"
@@ -22,7 +23,6 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
-	"github.com/couchbase/query/server"
 	"github.com/couchbase/query/util"
 )
 
@@ -549,10 +549,14 @@ func parseAddress(addr string) *addressFields {
 	if addr == "" {
 		return nil
 	}
-	host, port := server.HostNameandPort(addr)
+	host, port, err := net.SplitHostPort(addr)
+	if err != nil {
+		logging.Errorf("Auditing: unable to parse host and port in \"%s\"", addr)
+		return &addressFields{Ip: addr}
+	}
 	p, err := strconv.Atoi(port)
 	if err != nil {
-		logging.Errorf("Auditing: unable to parse port %s of address %s", port, addr)
+		logging.Errorf("Auditing: unable to parse port \"%s\" of address %s", port, addr)
 		return &addressFields{Ip: addr}
 	}
 	return &addressFields{Ip: host, Port: p}
