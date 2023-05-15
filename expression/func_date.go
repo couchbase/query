@@ -4613,7 +4613,7 @@ func determineKnownFormat(s string) string {
 	dt := ""
 	// date part
 	if s[4] == '-' && len(s) >= 10 {
-		if s[7] != '-' {
+		if s[7] != s[4] {
 			return ""
 		}
 		for i := 0; i < 10; i++ {
@@ -4637,9 +4637,17 @@ func determineKnownFormat(s string) string {
 		s = s[n+1:]
 	}
 
+	if s == "" {
+		return dt
+	}
+
+	if len(s) < 5 {
+		return ""
+	}
+
 	// time part
-	if s[2] == ':' && s[5] == ':' {
-		for i := 0; i < 8; i++ {
+	if s[2] == ':' && ((len(s) > 5 && s[5] == ':') || len(s) == 5) {
+		for i := 0; i < 8 && i < len(s); i++ {
 			if i == 2 || i == 5 {
 				if s[i] != ':' {
 					return ""
@@ -4650,6 +4658,10 @@ func determineKnownFormat(s string) string {
 		}
 		if len(s) == 8 {
 			return dt + "15:04:05"
+		} else if len(s) == 5 {
+			return dt + "15:04"
+		} else if len(s) < 8 {
+			return ""
 		}
 		n := 8
 		frac := ""
@@ -4692,7 +4704,7 @@ func determineKnownFormat(s string) string {
 				}
 				return ""
 			}
-			if !isdigit(s[n+1]) || !isdigit(s[n+2]) {
+			if len(s) < n+3 || !isdigit(s[n+1]) || !isdigit(s[n+2]) {
 				return ""
 			}
 			if len(s) == n+3 {
