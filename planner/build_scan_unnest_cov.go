@@ -96,7 +96,6 @@ func (this *builder) buildOneCoveringUnnestScan(node *algebra.KeyspaceTerm,
 	allDistinct := isPushDownProperty(pushDownProperty, _PUSHDOWN_GROUPAGGS)
 	unnestFilters, coveredExprs, filterCovers, coveredUnnests, err := this.coveringExpressions(node,
 		centry.idxEntry, centry.leafUnnest, unnests, allDistinct)
-	unnestFilters = append(unnestFilters, getUnnestFilters(entry.unnestAliases)...)
 	keys := make(expression.Expressions, 0, len(entry.keys)+1)
 	if unnestExprInKeys {
 		coveredExprs = nil
@@ -112,21 +111,12 @@ func (this *builder) buildOneCoveringUnnestScan(node *algebra.KeyspaceTerm,
 	coveringExprs := make(expression.Expressions, 0, len(keys)+len(unnestFilters))
 	coveringExprs = append(coveringExprs, keys...)
 	coveringExprs = append(coveringExprs, unnestFilters...)
-	coveringExprs = append(coveringExprs, coveredExprs...)
-
-	// Unnest on keyspace
-	// FROM default AS d UNNEST d AS v WHERE v > 10;
-	unnestOnKeyspace, ok := centry.rootUnnest.Expression().(*expression.Identifier)
-	if ok && unnestOnKeyspace.Alias() != node.Alias() {
-		unnestOnKeyspace = nil
-	}
 
 	// Is the statement covered by this index?
 	exprs := this.cover.Expressions()
 	for _, expr := range exprs {
-		// unnestOnKeyspace is exact expression pointer of UNNEST d. and skip the covering of that.
-		// Match the pointer with expression to avoid d can be used other place.
-		if unnestOnKeyspace != nil && unnestOnKeyspace == expr {
+		// skip unnest expressions.Use unnest expression pointer for exact expr match.
+		if _, ok := coveredExprs[expr]; ok {
 			continue
 		}
 
@@ -150,11 +140,9 @@ func (this *builder) buildOneCoveringUnnestScan(node *algebra.KeyspaceTerm,
 	centry.filterCovers = filterCovers
 	centry.coveredUnnests = coveredUnnests
 
-	implicitFilters := append(unnestFilters, coveredExprs...)
-	implicitFilters = append(implicitFilters, getUnnestFilters(entry.unnestAliases)...)
 	allKeyspaces := !unnestExprInKeys && (len(this.baseKeyspaces) == len(entry.unnestAliases)+1)
 
-	entry.pushDownProperty = this.indexPushDownProperty(entry, keys, implicitFilters,
+	entry.pushDownProperty = this.indexPushDownProperty(entry, keys, unnestFilters,
 		pred, node.Alias(), coverAliases, true, true, allKeyspaces, false)
 	if len(coveredUnnests) > 0 {
 		entry.pushDownProperty |= _PUSHDOWN_COVERED_UNNEST
@@ -193,12 +181,11 @@ func coveredUnnestBindings(key expression.Expression, allDistinct bool,
 
 func (this *builder) coveringExpressions(node *algebra.KeyspaceTerm, entry *indexEntry,
 	unnest *algebra.Unnest, unnests []*algebra.Unnest, allDistinct bool) (
-	unnestFilters, coveredExprs expression.Expressions, filterCovers map[*expression.Cover]value.Value,
-	coveredUnnests map[*algebra.Unnest]bool, err error) {
+	unnestFilters expression.Expressions, coveredExprs map[expression.Expression]bool,
+	filterCovers map[*expression.Cover]value.Value, coveredUnnests map[*algebra.Unnest]bool, err error) {
 
 	coveredUnnests = make(map[*algebra.Unnest]bool, len(unnests))
-	coveredExprsMap := make(map[expression.Expression]bool, len(unnests))
-	coveredExprs = make(expression.Expressions, 0, 4)
+	coveredExprs = make(map[expression.Expression]bool, len(unnests))
 	unnestFilters = make(expression.Expressions, 0, 4)
 
 	bindings, whens := coveredUnnestBindings(entry.arrayKey, allDistinct, unnest)
@@ -208,10 +195,10 @@ func (this *builder) coveringExpressions(node *algebra.KeyspaceTerm, entry *inde
 		bindingExpr, ok := bindings[uns.As()]
 		if ok && unnestExpr.EquivalentTo(bindingExpr) {
 			coveredUnnests[uns] = true
-			coveredExprsMap[unnestExpr] = true
+			coveredExprs[unnestExpr] = true
 		} else {
 			coveredUnnests = nil
-			coveredExprsMap = nil
+			coveredExprs = nil
 			break
 		}
 	}
@@ -247,9 +234,7 @@ func (this *builder) coveringExpressions(node *algebra.KeyspaceTerm, entry *inde
 		unnestFilters = append(unnestFilters, c.Covered())
 	}
 
-	for e, _ := range coveredExprsMap {
-		coveredExprs = append(coveredExprs, e)
-	}
+	unnestFilters = append(unnestFilters, getUnnestFilters(entry.unnestAliases)...)
 
 	return
 }
