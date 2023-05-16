@@ -61,12 +61,14 @@ func (b *vitalsKeyspace) Fetch(keys []string, keysMap map[string]value.Annotated
 	whoAmI := distributed.RemoteAccess().WhoAmI()
 	for _, key := range keys {
 
-		if key == "" {
+		nodeName := decodeNodeName(key)
+
+		if nodeName == "" {
 			continue
 		}
 
 		// currently we query ourselves because there isn't a direct path from datastore/system to server
-		if key == whoAmI {
+		if nodeName == whoAmI {
 			doc, err := b.namespace.store.acctStore.Vitals()
 			if err != nil {
 				context.Error(err)
@@ -77,7 +79,7 @@ func (b *vitalsKeyspace) Fetch(keys []string, keysMap map[string]value.Annotated
 			remoteValue.SetId(key)
 			keysMap[key] = remoteValue
 		} else {
-			distributed.RemoteAccess().GetRemoteDoc(key, "",
+			distributed.RemoteAccess().GetRemoteDoc(nodeName, "",
 				"vitals", "GET",
 				func(doc map[string]interface{}) {
 					remoteValue := value.NewAnnotatedValue(doc)
@@ -173,7 +175,7 @@ func (pi *vitalsIndex) Scan(requestId string, span *datastore.Span, distinct boo
 		}
 		nodes := distributed.RemoteAccess().GetNodeNames()
 		for _, node := range nodes {
-			key := distributed.RemoteAccess().MakeKey(node, "")
+			key := distributed.RemoteAccess().MakeKey(encodeNodeName(node), "")
 			if spanEvaluator.evaluate(key) {
 				entry := datastore.IndexEntry{PrimaryKey: key}
 				if !sendSystemKey(conn, &entry) {
@@ -196,7 +198,7 @@ func (pi *vitalsIndex) ScanEntries(requestId string, limit int64, cons datastore
 	defer conn.Sender().Close()
 	nodes := distributed.RemoteAccess().GetNodeNames()
 	for _, node := range nodes {
-		entry = &datastore.IndexEntry{PrimaryKey: node}
+		entry = &datastore.IndexEntry{PrimaryKey: encodeNodeName(node)}
 		if !sendSystemKey(conn, entry) {
 			return
 		}

@@ -33,6 +33,7 @@ import (
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/primitives/couchbase"
+	"github.com/couchbase/query/tenant"
 )
 
 // http implementation of SystemRemoteAccess
@@ -182,6 +183,7 @@ func (this *systemRemoteHttp) SplitKey(key string) (string, string) {
 }
 
 // get remote keys from the specified nodes for the specified endpoint
+// Note - "nodes[]" must be a list of node names
 func (this *systemRemoteHttp) GetRemoteKeys(nodes []string, endpoint string,
 	keyFn func(id string) bool, warnFn func(warn errors.Error), creds distributed.Creds, authToken string) {
 	var keys []string
@@ -225,6 +227,7 @@ func (this *systemRemoteHttp) GetRemoteKeys(nodes []string, endpoint string,
 
 			for n, _ := range queryNodeNames {
 				node := queryNodeNames[n]
+				nodeName := tenant.EncodeNodeName(node)
 
 				// skip ourselves, we will be processed locally
 				if node == whoAmI {
@@ -239,7 +242,7 @@ func (this *systemRemoteHttp) GetRemoteKeys(nodes []string, endpoint string,
 				}
 				if !queryNode.Healthy() {
 					if warnFn != nil {
-						warnFn(errors.NewSystemRemoteNodeSkippedWarning(queryNode.Name(), "scan", endpoint))
+						warnFn(errors.NewSystemRemoteNodeSkippedWarning(nodeName, "scan", endpoint))
 					}
 					continue
 				}
@@ -262,7 +265,7 @@ func (this *systemRemoteHttp) GetRemoteKeys(nodes []string, endpoint string,
 
 				if keyFn != nil {
 					for _, key := range keys {
-						if !keyFn("[" + node + "]" + key) {
+						if !keyFn("[" + nodeName + "]" + key) {
 							return
 						}
 					}
@@ -272,12 +275,11 @@ func (this *systemRemoteHttp) GetRemoteKeys(nodes []string, endpoint string,
 	} else {
 
 		for _, node := range nodes {
-
 			// skip ourselves, it will be processed locally
 			if node == whoAmI {
 				continue
 			}
-
+			nodeName := tenant.EncodeNodeName(node)
 			queryNode, err := this.getQueryNode(node, "scan", endpoint)
 			if err != nil {
 				if warnFn != nil {
@@ -287,7 +289,7 @@ func (this *systemRemoteHttp) GetRemoteKeys(nodes []string, endpoint string,
 			}
 			if !queryNode.Healthy() {
 				if warnFn != nil {
-					warnFn(errors.NewSystemRemoteNodeSkippedWarning(queryNode.Name(), "scan", endpoint))
+					warnFn(errors.NewSystemRemoteNodeSkippedWarning(nodeName, "scan", endpoint))
 				}
 				continue
 			}
@@ -308,7 +310,7 @@ func (this *systemRemoteHttp) GetRemoteKeys(nodes []string, endpoint string,
 			}
 			if keyFn != nil {
 				for _, key := range keys {
-					if !keyFn("[" + node + "]" + key) {
+					if !keyFn("[" + nodeName + "]" + key) {
 						return
 					}
 				}
@@ -318,6 +320,7 @@ func (this *systemRemoteHttp) GetRemoteKeys(nodes []string, endpoint string,
 }
 
 // get a specified remote document from a remote node
+// Note - the remote "node" must be the node name
 func (this *systemRemoteHttp) GetRemoteDoc(node string, key string, endpoint string, command string,
 	docFn func(map[string]interface{}), warnFn func(warn errors.Error), creds distributed.Creds, authToken string) {
 	var loc string
@@ -603,7 +606,7 @@ func (this *systemRemoteHttp) getQueryNode(node string, op string, endpoint stri
 			return queryNode, nil
 		}
 	}
-	return nil, errors.NewSystemRemoteWarning(fmt.Errorf("node %v not found", node), op, endpoint)
+	return nil, errors.NewSystemRemoteWarning(fmt.Errorf("node %v not found", tenant.EncodeNodeName(node)), op, endpoint)
 }
 
 // returns the local node identity, as known to the cluster

@@ -74,10 +74,11 @@ func (b *functionsCacheKeyspace) Fetch(keys []string, keysMap map[string]value.A
 	whoAmI := distributed.RemoteAccess().WhoAmI()
 	for _, key := range keys {
 		node, localKey := distributed.RemoteAccess().SplitKey(key)
+		nodeName := decodeNodeName(node)
 
 		// remote entry
-		if len(node) != 0 && node != whoAmI {
-			distributed.RemoteAccess().GetRemoteDoc(node, localKey,
+		if len(nodeName) != 0 && nodeName != whoAmI {
+			distributed.RemoteAccess().GetRemoteDoc(nodeName, localKey,
 				"functions_cache", "POST",
 				func(doc map[string]interface{}) {
 
@@ -129,11 +130,12 @@ func (b *functionsCacheKeyspace) Delete(deletes value.Pairs, context datastore.Q
 	for _, pair := range deletes {
 		name := pair.Name
 		node, localKey := distributed.RemoteAccess().SplitKey(name)
+		nodeName := decodeNodeName(node)
 
 		// remote entry
-		if len(node) != 0 && node != whoAmI {
+		if len(nodeName) != 0 && nodeName != whoAmI {
 
-			distributed.RemoteAccess().GetRemoteDoc(node, localKey,
+			distributed.RemoteAccess().GetRemoteDoc(nodeName, localKey,
 				"functions_cache", "DELETE", nil,
 				func(warn errors.Error) {
 					context.Warning(warn)
@@ -252,10 +254,11 @@ func (pi *functionsCacheIndex) Scan(requestId string, span *datastore.Span, dist
 			return
 		}
 		idx := spanEvaluator.isEquals()
-		if idx >= 0 {
 
-			// now that the node name can change in flight, use a consistent one across the scan
-			whoAmI := distributed.RemoteAccess().WhoAmI()
+		// now that the node name can change in flight, use a consistent one across the scan
+		whoAmI := encodeNodeName(distributed.RemoteAccess().WhoAmI())
+
+		if idx >= 0 {
 			if spanEvaluator.key(idx) == whoAmI {
 				functions.FunctionsForeach(func(name string, function *functions.FunctionEntry) bool {
 					entry = &datastore.IndexEntry{
@@ -267,7 +270,7 @@ func (pi *functionsCacheIndex) Scan(requestId string, span *datastore.Span, dist
 					return sendSystemKey(conn, entry)
 				})
 			} else {
-				nodes := []string{spanEvaluator.key(idx)}
+				nodes := []string{decodeNodeName(spanEvaluator.key(idx))}
 				distributed.RemoteAccess().GetRemoteKeys(nodes, "functions_cache", func(id string) bool {
 					n, _ := distributed.RemoteAccess().SplitKey(id)
 					indexEntry := datastore.IndexEntry{
@@ -280,14 +283,12 @@ func (pi *functionsCacheIndex) Scan(requestId string, span *datastore.Span, dist
 				}, distributed.NO_CREDS, "")
 			}
 		} else {
-
-			// now that the node name can change in flight, use a consistent one across the scan
-			whoAmI := distributed.RemoteAccess().WhoAmI()
 			nodes := distributed.RemoteAccess().GetNodeNames()
 			eligibleNodes := []string{}
 			for _, node := range nodes {
-				if spanEvaluator.evaluate(node) {
-					if node == whoAmI {
+				encodedNode := encodeNodeName(node)
+				if spanEvaluator.evaluate(encodedNode) {
+					if encodedNode == whoAmI {
 
 						functions.FunctionsForeach(func(name string, function *functions.FunctionEntry) bool {
 							entry = &datastore.IndexEntry{
@@ -326,7 +327,7 @@ func (pi *functionsCacheIndex) ScanEntries(requestId string, limit int64, cons d
 	defer conn.Sender().Close()
 
 	// now that the node name can change in flight, use a consistent one across the scan
-	whoAmI := distributed.RemoteAccess().WhoAmI()
+	whoAmI := encodeNodeName(distributed.RemoteAccess().WhoAmI())
 	functions.FunctionsForeach(func(name string, function *functions.FunctionEntry) bool {
 		entry = &datastore.IndexEntry{PrimaryKey: distributed.RemoteAccess().MakeKey(whoAmI, name)}
 		return true

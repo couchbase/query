@@ -394,3 +394,19 @@ func credsFromContext(context SystemContext) string {
 	context.SetFirstCreds(userName)
 	return userName
 }
+
+// In serverless encodes Node Name to NodeUUID
+func encodeNodeName(node string) string {
+	if node != "" {
+		return tenant.EncodeNodeName(node)
+	}
+	return ""
+}
+
+// In serverless decodes NodeUUID to Node Name
+func decodeNodeName(node string) string {
+	if node != "" {
+		return tenant.DecodeNodeName(node)
+	}
+	return ""
+}

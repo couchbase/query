@@ -10,6 +10,7 @@ package expression
 
 import (
 	"github.com/couchbase/query/distributed"
+	"github.com/couchbase/query/tenant"
 	"github.com/couchbase/query/value"
 )
 
@@ -54,12 +55,12 @@ func (this *NodeName) Type() value.Type {
 }
 
 /*
-Wrap the local node name in a value and return it.
+Wraps the local node name (in on-prem) or local nodeUUID (in serverless) in a value and return it.
 WhoAmI() returns no error, but an empty string if
 the service is not part of a cluster
 */
 func (this *NodeName) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return value.NewValue(distributed.RemoteAccess().WhoAmI()), nil
+	return value.NewValue(tenant.EncodeNodeName(distributed.RemoteAccess().WhoAmI())), nil
 }
 
 /*

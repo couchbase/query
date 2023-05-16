@@ -103,10 +103,11 @@ func (b *preparedsKeyspace) Fetch(keys []string, keysMap map[string]value.Annota
 	whoAmI := distributed.RemoteAccess().WhoAmI()
 	for _, key := range keys {
 		node, localKey := distributed.RemoteAccess().SplitKey(key)
+		nodeName := decodeNodeName(node)
 
 		// remote entry
-		if len(node) != 0 && node != whoAmI {
-			distributed.RemoteAccess().GetRemoteDoc(node, localKey,
+		if len(nodeName) != 0 && nodeName != whoAmI {
+			distributed.RemoteAccess().GetRemoteDoc(nodeName, localKey,
 				"prepareds", "POST",
 				func(doc map[string]interface{}) {
 					remoteValue := value.NewAnnotatedValue(doc)
@@ -207,11 +208,12 @@ func (b *preparedsKeyspace) Delete(deletes value.Pairs, context datastore.QueryC
 	for i, pair := range deletes {
 		name := pair.Name
 		node, localKey := distributed.RemoteAccess().SplitKey(name)
+		nodeName := decodeNodeName(node)
 
 		// remote entry
-		if len(node) != 0 && node != whoAmI {
+		if len(nodeName) != 0 && nodeName != whoAmI {
 
-			distributed.RemoteAccess().GetRemoteDoc(node, localKey,
+			distributed.RemoteAccess().GetRemoteDoc(nodeName, localKey,
 				"prepareds", "DELETE", nil,
 				func(warn errors.Error) {
 					context.Warning(warn)
@@ -345,7 +347,7 @@ func (pi *preparedsIndex) Scan(requestId string, span *datastore.Span, distinct 
 		}
 
 		// now that the node name can change in flight, use a consistent one across the scan
-		whoAmI := distributed.RemoteAccess().WhoAmI()
+		whoAmI := encodeNodeName(distributed.RemoteAccess().WhoAmI())
 		userName := credsFromContext(conn.Context())
 		if userName == "" {
 			creds = distributed.NO_CREDS
@@ -384,7 +386,7 @@ func (pi *preparedsIndex) Scan(requestId string, span *datastore.Span, distinct 
 			if spanEvaluator.key(idx) == whoAmI {
 				prepareds.PreparedsForeach(process, send)
 			} else {
-				nodes := []string{spanEvaluator.key(idx)}
+				nodes := []string{decodeNodeName(spanEvaluator.key(idx))}
 				distributed.RemoteAccess().GetRemoteKeys(nodes, "prepareds", func(id string) bool {
 					n, _ := distributed.RemoteAccess().SplitKey(id)
 					indexEntry := datastore.IndexEntry{
@@ -400,8 +402,9 @@ func (pi *preparedsIndex) Scan(requestId string, span *datastore.Span, distinct 
 			nodes := distributed.RemoteAccess().GetNodeNames()
 			eligibleNodes := []string{}
 			for _, node := range nodes {
-				if spanEvaluator.evaluate(node) {
-					if node == whoAmI {
+				encodedNode := encodeNodeName(node)
+				if spanEvaluator.evaluate(encodedNode) {
+					if encodedNode == whoAmI {
 						prepareds.PreparedsForeach(process, send)
 					} else {
 						eligibleNodes = append(eligibleNodes, node)
@@ -436,7 +439,7 @@ func (pi *preparedsIndex) ScanEntries(requestId string, limit int64, cons datast
 	defer conn.Sender().Close()
 
 	// now that the node name can change in flight, use a consistent one across the scan
-	whoAmI := distributed.RemoteAccess().WhoAmI()
+	whoAmI := encodeNodeName(distributed.RemoteAccess().WhoAmI())
 
 	userName := credsFromContext(conn.Context())
 	if userName == "" {
