@@ -11,8 +11,8 @@ github.com/blevesearch/bleve-mapping-ui v0.4.0 h1:UdnaFnr9IYxUvyyoLWeM3j7SsjkBcB
 github.com/blevesearch/bleve-mapping-ui v0.4.0/go.mod h1:KUD8p9gSBGVy8dwN6lQlkG+04xT+GvFR2bEsCjJP5zc=
 github.com/blevesearch/bleve/v2 v2.0.0/go.mod h1:OBP2Pktqik8vEiUlGhuWjYx7KiO4zD542+DHqICwM5w=
 github.com/blevesearch/bleve/v2 v2.2.3-0.20220224151155-3c7d301db56a/go.mod h1:qw2j0QmyfQTtJXeZRFkRQYDZRDALwtG7WZji1eHtegI=
-github.com/blevesearch/bleve/v2 v2.3.4-0.20230405174606-780ae8f3f7ca h1:Y8vn8OPh6Jv4LcsVYUxak8KzBUzKE4/wysyeXmpla0U=
-github.com/blevesearch/bleve/v2 v2.3.4-0.20230405174606-780ae8f3f7ca/go.mod h1:3NBtjJ4ZENIuzztTEZylWgtVdZvMWnbGcTJB7Ry/YeU=
+github.com/blevesearch/bleve/v2 v2.3.4-0.20230516194620-e37055a334e8 h1:+ltU3GZxJAgSQjVA/l6a1iqWsXfZHawraZEx2lyCO/o=
+github.com/blevesearch/bleve/v2 v2.3.4-0.20230516194620-e37055a334e8/go.mod h1:LDlJyyKdygmeO00Zj5pw3cTZqIFzclReYqcLSPcpuDE=
 github.com/blevesearch/bleve_index_api v1.0.0/go.mod h1:fiwKS0xLEm+gBRgv5mumf0dhgFr2mDgZah1pqv1c1M4=
 github.com/blevesearch/bleve_index_api v1.0.1/go.mod h1:fiwKS0xLEm+gBRgv5mumf0dhgFr2mDgZah1pqv1c1M4=
 github.com/blevesearch/bleve_index_api v1.0.2 h1:rO736FwEPMVY1mGi7d4n7CgBB3+tB7uYN7QTjR+Ij+s=
@@ -65,8 +65,8 @@ github.com/blevesearch/zapx/v14 v14.3.4 h1:/FVzSGFG5rbVWfPEqlcaJd8lZSJMQpTdmFhz/
 github.com/blevesearch/zapx/v14 v14.3.4/go.mod h1:b1YhRXXhAj9i+9aOwhRKCHUmJyYieK/QbDvPJDLddUk=
 github.com/blevesearch/zapx/v15 v15.1.10/go.mod h1:4ypq25bwtSQKzwEF1UERyIhmGTbMT3brY/n4NC5gRnM=
 github.com/blevesearch/zapx/v15 v15.3.1/go.mod h1:C+f/97ZzTzK6vt/7sVlZdzZxKu+5+j4SrGCvr9dJzaY=
-github.com/blevesearch/zapx/v15 v15.3.4 h1:/y6AOxRuBiZPFAItqcrKcXPPtlAwuW/jMoOFO7tc7rs=
-github.com/blevesearch/zapx/v15 v15.3.4/go.mod h1:TQ/qDC2q7TSSpeC6Vgr9fDN56Ra0u49lZJQ4v30WEx4=
+github.com/blevesearch/zapx/v15 v15.3.5-0.20230516194434-edc21be64631 h1:BjljKVE+O4t3+qnHrEtdczcnPDhj4Qgr7Ij7uUCfWqQ=
+github.com/blevesearch/zapx/v15 v15.3.5-0.20230516194434-edc21be64631/go.mod h1:TQ/qDC2q7TSSpeC6Vgr9fDN56Ra0u49lZJQ4v30WEx4=
 github.com/buger/jsonparser v1.1.1 h1:2PnMjfWD7wBILjqQbt530v576A/cAbQvEW9gGIpYMUs=
 github.com/buger/jsonparser v1.1.1/go.mod h1:6RYKKt7H4d4+iWqouImQ9R2FZql3VbhNgx27UK13J/0=
 github.com/client9/misspell v0.3.4/go.mod h1:qj6jICC3Q7zFZvVWo7KLAzC3yx5G7kyvSDkc90ppPyw=
@@ -232,7 +232,6 @@ golang.org/x/net v0.0.0-20171107184841-a337091b0525/go.mod h1:mL1N/T3taQHkDXs73r
 golang.org/x/net v0.0.0-20180906233101-161cd47e91fd/go.mod h1:mL1N/T3taQHkDXs73rZJwtUhF3w3ftmwwsq0BUmARs4=
 golang.org/x/net v0.0.0-20190311183353-d8887717615a/go.mod h1:t9HGtf8HONx5eT2rtn7q6eTqICYqUVnKs3thJo3Qplg=
 golang.org/x/net v0.0.0-20211112202133-69e39bad7dc2/go.mod h1:9nx3DQGgdP8bBQD5qxJ1jj9UTztislL4KSBs9R2vV5Y=
-golang.org/x/net v0.0.0-20220728211354-c7608f3a8462/go.mod h1:YDH+HFinaLZZlnHAfSS6ZXJJ9M9t4Dl22yv3iI2vPwk=
 golang.org/x/net v0.8.0 h1:Zrh2ngAOFYneWTAIAPethzeaQLuHwhuBkuV6ZiRnUaQ=
 golang.org/x/net v0.8.0/go.mod h1:QVkue5JL9kW//ek3r6jTKnTFis1tRmNAW2P1shuFdJc=
 golang.org/x/oauth2 v0.0.0-20180821212333-d2e6202438be/go.mod h1:N/0e6XlmueqKjAGxoOufVs8QHGRruUQn6yWY3a++T0U=
@@ -251,11 +250,9 @@ golang.org/x/sys v0.0.0-20201119102817-f84b799fce68/go.mod h1:h1NjWce9XRLGQEsW7w
 golang.org/x/sys v0.0.0-20210423082822-04245dca01da/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20210615035016-665e8c7367d1/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 golang.org/x/sys v0.0.0-20220520151302-bc2c85ada10a/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
-golang.org/x/sys v0.0.0-20220728004956-3c1f35247d10/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 golang.org/x/sys v0.6.0 h1:MVltZSvRTcU2ljQOhs94SXPftV6DCNnZViHeQps87pQ=
 golang.org/x/sys v0.6.0/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 golang.org/x/term v0.0.0-20201126162022-7de9c90e9dd1/go.mod h1:bj7SfCRtBDWHUb9snDiAeCFNEtKQo2Wmx5Cou7ajbmo=
-golang.org/x/term v0.0.0-20210927222741-03fcf44c2211/go.mod h1:jbD1KX2456YbFQfuXm/mYQcufACuNUgVhRMnK/tPxf8=
 golang.org/x/term v0.6.0 h1:clScbb1cHjoCkyRbWwBEUZ5H/tIFu5TAXIqaZD0Gcjw=
 golang.org/x/term v0.6.0/go.mod h1:m6U89DPEgQRMq3DNkDClhWw02AUbt2daBVO4cn4Hv9U=
 golang.org/x/text v0.3.7 h1:olpwvP2KacW1ZWvsR7uQhoyTYvKAupfQrRGBFM352Gk=
