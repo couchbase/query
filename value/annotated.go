@@ -87,6 +87,7 @@ type AnnotatedValue interface {
 	SetSelf(s bool)
 	SetProjection(proj Value)
 	Original() AnnotatedValue
+	RefCnt() int32
 }
 
 func NewAnnotatedValue(val interface{}) AnnotatedValue {
@@ -456,6 +457,10 @@ func (this *annotatedValue) Recycle() {
 	this.recycle(-1)
 }
 
+func (this *annotatedValue) RefCnt() int32 {
+	return atomic.LoadInt32(&this.refCnt)
+}
+
 func (this *annotatedValue) recycle(lvl int32) {
 
 	// do no recycle if other scope values are using this value
@@ -594,6 +599,10 @@ func (this *annotatedValueSelfReference) Track() {
 
 func (this *annotatedValueSelfReference) Recycle() {
 	// deliberately empty
+}
+
+func (this *annotatedValueSelfReference) RefCnt() int32 {
+	return 0
 }
 
 func (this *annotatedValueSelfReference) GetValue() Value {
