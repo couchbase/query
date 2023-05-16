@@ -697,14 +697,14 @@ var AUTH_ERRORS = map[errors.ErrorCode]bool{
 	errors.E_CB_SECURITY_CONFIG_NOT_PROVIDED:    true,
 	errors.E_SYSTEM_UNABLE_TO_RETRIEVE:          true,
 	errors.E_SYSTEM_UNABLE_TO_UPDATE:            true,
-	errors.E_SYSTEM_FILTERED_ROWS_WARNING:       true,
+	errors.W_SYSTEM_FILTERED_ROWS:               true,
 	errors.E_USER_NOT_FOUND:                     true,
 	errors.E_ROLE_REQUIRES_KEYSPACE:             true,
 	errors.E_ROLE_TAKES_NO_KEYSPACE:             true,
 	errors.E_ROLE_NOT_FOUND:                     true,
-	errors.E_ROLE_ALREADY_PRESENT:               true,
-	errors.E_ROLE_NOT_PRESENT:                   true,
-	errors.E_USER_WITH_NO_ROLES:                 true,
+	errors.W_ROLE_ALREADY_PRESENT:               true,
+	errors.W_ROLE_NOT_PRESENT:                   true,
+	errors.W_USER_WITH_NO_ROLES:                 true,
 	errors.E_NODE_INFO_ACCESS_ERR:               true}
 
 func auditError(err []errors.Error) (finalErr []map[string]interface{}) {

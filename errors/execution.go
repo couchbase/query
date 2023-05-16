@@ -257,7 +257,7 @@ func NewRoleAlreadyPresent(user string, role string, bucket string) Error {
 	} else {
 		msg = fmt.Sprintf("User %s already has role %s(%s).", user, role, bucket)
 	}
-	return &err{level: WARNING, ICode: E_ROLE_ALREADY_PRESENT, IKey: "execution.role_already_present",
+	return &err{level: WARNING, ICode: W_ROLE_ALREADY_PRESENT, IKey: "execution.role_already_present",
 		InternalMsg: msg, InternalCaller: CallerN(1)}
 }
 
@@ -268,12 +268,12 @@ func NewRoleNotPresent(user string, role string, bucket string) Error {
 	} else {
 		msg = fmt.Sprintf("User %s did not have role %s(%s).", user, role, bucket)
 	}
-	return &err{level: WARNING, ICode: E_ROLE_NOT_PRESENT, IKey: "execution.role_not_present",
+	return &err{level: WARNING, ICode: W_ROLE_NOT_PRESENT, IKey: "execution.role_not_present",
 		InternalMsg: msg, InternalCaller: CallerN(1)}
 }
 
 func NewUserWithNoRoles(user string) Error {
-	return &err{level: WARNING, ICode: E_USER_WITH_NO_ROLES, IKey: "execution.user_with_no_roles",
+	return &err{level: WARNING, ICode: W_USER_WITH_NO_ROLES, IKey: "execution.user_with_no_roles",
 		InternalMsg:    fmt.Sprintf("User %s has no roles. Connecting with this user may not be possible", user),
 		InternalCaller: CallerN(1)}
 }

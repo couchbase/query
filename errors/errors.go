@@ -70,6 +70,7 @@ type Error interface {
 	Cause() interface{}
 	SetCause(cause interface{})
 	ContainsText(text string) bool
+	HasCause(ErrorCode) bool
 }
 
 type AbortError struct {
@@ -449,4 +450,25 @@ func (e *err) ContainsText(text string) bool {
 func NewTempFileQuotaExceededError() Error {
 	return &err{level: EXCEPTION, ICode: E_TEMP_FILE_QUOTA, IKey: "quota.temp_file.exceeded", InternalCaller: CallerN(1),
 		InternalMsg: "Temporary file quota exceeded"}
+}
+
+func (e *err) HasCause(code ErrorCode) bool {
+	if e.Code() == code {
+		return true
+	}
+	switch cause := e.cause.(type) {
+	case map[string]interface{}:
+		for _, v := range cause {
+			if ve, ok := v.(Error); ok {
+				if ve.HasCause(code) {
+					return true
+				}
+			}
+		}
+		return false
+	case Error:
+		return cause.HasCause(code)
+	default:
+		return false
+	}
 }

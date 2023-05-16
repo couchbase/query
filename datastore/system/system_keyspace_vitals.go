@@ -89,7 +89,9 @@ func (b *vitalsKeyspace) Fetch(keys []string, keysMap map[string]value.Annotated
 					keysMap[key] = remoteValue
 				},
 				func(warn errors.Error) {
-					context.Warning(warn)
+					if !warn.HasCause(errors.W_SYSTEM_REMOTE_NODE_NOT_FOUND) {
+						context.Warning(warn)
+					}
 				}, distributed.NO_CREDS, "")
 		}
 

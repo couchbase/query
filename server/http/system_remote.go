@@ -17,7 +17,6 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	goErr "errors"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -606,7 +605,7 @@ func (this *systemRemoteHttp) getQueryNode(node string, op string, endpoint stri
 			return queryNode, nil
 		}
 	}
-	return nil, errors.NewSystemRemoteWarning(fmt.Errorf("node %v not found", tenant.EncodeNodeName(node)), op, endpoint)
+	return nil, errors.NewSystemRemoteWarning(errors.NewSystemRemoteNodeNotFoundWarning(node), op, endpoint)
 }
 
 // returns the local node identity, as known to the cluster

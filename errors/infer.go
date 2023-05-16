@@ -124,14 +124,14 @@ func NewInferNoRetrievers(k string) Error {
 func NewInferTimeout(to int32) Error {
 	c := make(map[string]interface{})
 	c["infer_timeout"] = to
-	return &err{level: WARNING, ICode: E_INFER_TIMEOUT, IKey: "infer.timeout", cause: c,
+	return &err{level: WARNING, ICode: W_INFER_TIMEOUT, IKey: "infer.timeout", cause: c,
 		InternalMsg: "Stopped after exceeding infer_timeout. Schema may be incomplete.", InternalCaller: CallerN(1)}
 }
 
 func NewInferSizeLimit(l int32) Error {
 	c := make(map[string]interface{})
 	c["max_schema_MB"] = l
-	return &err{level: WARNING, ICode: E_INFER_SIZE_LIMIT, IKey: "infer.size_limit", cause: c,
+	return &err{level: WARNING, ICode: W_INFER_SIZE_LIMIT, IKey: "infer.size_limit", cause: c,
 		InternalMsg: "Stopped after exceeding max_schema_MB. Schema may be incomplete.", InternalCaller: CallerN(1)}
 }
 
@@ -162,7 +162,7 @@ func NewInferGetBucketFailed(b string, e error) Error {
 }
 
 func NewInferIndexWarning() Error {
-	return &err{level: WARNING, ICode: E_INFER_INDEX_WARNING, IKey: "infer.index_warning",
+	return &err{level: WARNING, ICode: W_INFER_INDEX, IKey: "infer.index_warning",
 		InternalMsg:    "Index scanning only; document sample may not be representative.",
 		InternalCaller: CallerN(1)}
 }

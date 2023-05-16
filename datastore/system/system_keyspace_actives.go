@@ -57,7 +57,9 @@ func (b *activeRequestsKeyspace) Count(context datastore.QueryContext) (int64, e
 		count++
 		return true
 	}, func(warn errors.Error) {
-		context.Warning(warn)
+		if !warn.HasCause(errors.W_SYSTEM_REMOTE_NODE_NOT_FOUND) {
+			context.Warning(warn)
+		}
 	}, creds, "")
 	if userName == "" {
 		c, err := server.ActiveRequestsCount()
@@ -124,7 +126,9 @@ func (b *activeRequestsKeyspace) Fetch(keys []string, keysMap map[string]value.A
 				},
 
 				func(warn errors.Error) {
-					context.Warning(warn)
+					if !warn.HasCause(errors.W_SYSTEM_REMOTE_NODE_NOT_FOUND) {
+						context.Warning(warn)
+					}
 				},
 				creds, "")
 		} else {
@@ -296,7 +300,9 @@ func (b *activeRequestsKeyspace) Delete(deletes value.Pairs, context datastore.Q
 			distributed.RemoteAccess().GetRemoteDoc(nodeName, localKey,
 				"active_requests", "DELETE", nil,
 				func(warn errors.Error) {
-					context.Warning(warn)
+					if !warn.HasCause(errors.W_SYSTEM_REMOTE_NODE_NOT_FOUND) {
+						context.Warning(warn)
+					}
 				},
 				creds, "")
 			done = true
@@ -478,7 +484,9 @@ func (pi *activeRequestsIndex) Scan(requestId string, span *datastore.Span, dist
 					}
 					return sendSystemKey(conn, &indexEntry)
 				}, func(warn errors.Error) {
-					conn.Warning(warn)
+					if !warn.HasCause(errors.W_SYSTEM_REMOTE_NODE_NOT_FOUND) {
+						conn.Warning(warn)
+					}
 				}, creds, "")
 			}
 		} else {
@@ -503,7 +511,9 @@ func (pi *activeRequestsIndex) Scan(requestId string, span *datastore.Span, dist
 					}
 					return sendSystemKey(conn, &indexEntry)
 				}, func(warn errors.Error) {
-					conn.Warning(warn)
+					if !warn.HasCause(errors.W_SYSTEM_REMOTE_NODE_NOT_FOUND) {
+						conn.Warning(warn)
+					}
 				}, creds, "")
 			}
 		}
@@ -555,7 +565,9 @@ func (pi *activeRequestsIndex) ScanEntries(requestId string, limit int64, cons d
 		indexEntry := datastore.IndexEntry{PrimaryKey: id}
 		return sendSystemKey(conn, &indexEntry)
 	}, func(warn errors.Error) {
-		conn.Warning(warn)
+		if !warn.HasCause(errors.W_SYSTEM_REMOTE_NODE_NOT_FOUND) {
+			conn.Warning(warn)
+		}
 	}, creds, "")
 }
 

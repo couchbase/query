@@ -203,6 +203,6 @@ func NewPostCommitTransactionWarning(e error, c interface{}) Error {
 	if e != nil {
 		msg = fmt.Sprintf("%s: %v", msg, e)
 	}
-	return &err{level: WARNING, ICode: E_POST_COMMIT_TRANSACTION_WARNING, IKey: "transaction.statement.postcommit",
+	return &err{level: WARNING, ICode: W_POST_COMMIT_TRANSACTION, IKey: "transaction.statement.postcommit",
 		InternalMsg: msg, InternalCaller: CallerN(1), cause: c}
 }

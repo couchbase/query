@@ -47,7 +47,9 @@ func (b *transactionsKeyspace) Count(context datastore.QueryContext) (int64, err
 		count++
 		return true
 	}, func(warn errors.Error) {
-		context.Warning(warn)
+		if !warn.HasCause(errors.W_SYSTEM_REMOTE_NODE_NOT_FOUND) {
+			context.Warning(warn)
+		}
 	}, distributed.NO_CREDS, "")
 	return int64(transactions.CountTransContext() + count), nil
 }
@@ -85,7 +87,9 @@ func (b *transactionsKeyspace) Fetch(keys []string, keysMap map[string]value.Ann
 					keysMap[key] = remoteValue
 				},
 				func(warn errors.Error) {
-					context.Warning(warn)
+					if !warn.HasCause(errors.W_SYSTEM_REMOTE_NODE_NOT_FOUND) {
+						context.Warning(warn)
+					}
 				}, distributed.NO_CREDS, "")
 		} else {
 
@@ -123,7 +127,9 @@ func (b *transactionsKeyspace) Delete(deletes value.Pairs, context datastore.Que
 			distributed.RemoteAccess().GetRemoteDoc(nodeName, localKey,
 				"transactions", "DELETE", nil,
 				func(warn errors.Error) {
-					context.Warning(warn)
+					if !warn.HasCause(errors.W_SYSTEM_REMOTE_NODE_NOT_FOUND) {
+						context.Warning(warn)
+					}
 				},
 				distributed.NO_CREDS, "")
 
@@ -271,7 +277,9 @@ func (pi *transactionsIndex) Scan(requestId string, span *datastore.Span, distin
 					}
 					return sendSystemKey(conn, &indexEntry)
 				}, func(warn errors.Error) {
-					conn.Warning(warn)
+					if !warn.HasCause(errors.W_SYSTEM_REMOTE_NODE_NOT_FOUND) {
+						conn.Warning(warn)
+					}
 				}, distributed.NO_CREDS, "")
 			}
 		} else {
@@ -304,7 +312,9 @@ func (pi *transactionsIndex) Scan(requestId string, span *datastore.Span, distin
 					}
 					return sendSystemKey(conn, &indexEntry)
 				}, func(warn errors.Error) {
-					conn.Warning(warn)
+					if !warn.HasCause(errors.W_SYSTEM_REMOTE_NODE_NOT_FOUND) {
+						conn.Warning(warn)
+					}
 				}, distributed.NO_CREDS, "")
 			}
 		}
@@ -329,6 +339,8 @@ func (pi *transactionsIndex) ScanEntries(requestId string, limit int64, cons dat
 		indexEntry := datastore.IndexEntry{PrimaryKey: id}
 		return sendSystemKey(conn, &indexEntry)
 	}, func(warn errors.Error) {
-		conn.Warning(warn)
+		if !warn.HasCause(errors.W_SYSTEM_REMOTE_NODE_NOT_FOUND) {
+			conn.Warning(warn)
+		}
 	}, distributed.NO_CREDS, "")
 }
