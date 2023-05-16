@@ -67,39 +67,27 @@ func SargableFor(pred expression.Expression, keys expression.Expressions, missin
 func sargableForOr(or *expression.Or, keys expression.Expressions, missing, gsi bool,
 	context *PrepareContext, aliases map[string]bool) (min, max, sum int, skeys []bool) {
 
-	cntKeys := make([]int, len(keys))
 	skeys = make([]bool, len(keys))
 
 	// OR should have already been flattened with DNF transformation
-	for i, c := range or.Operands() {
+	for _, c := range or.Operands() {
 		cmin, cmax, csum, cskeys := SargableFor(c, keys, missing, gsi, context, aliases)
 		if (cmin == 0 && !missing) || cmax == 0 || csum < cmin {
 			return 0, 0, 0, skeys
 		}
 
-		// an index key is only sargable when it is sargable for all subterms of OR
-		for j, _ := range cntKeys {
-			if j >= len(cskeys) || !cskeys[j] {
-				cntKeys[j] = 0
-			} else if i == 0 || cntKeys[j] > 0 {
-				cntKeys[j]++
-			}
+		if min == 0 || min > cmin {
+			min = cmin
 		}
-	}
 
-	skipped := false
-	for i, _ := range cntKeys {
-		if cntKeys[i] > 0 {
-			if !skipped && (i+1) > min {
-				min = i + 1
-			}
-			if (i + 1) > max {
-				max = i + 1
-			}
-			sum += cntKeys[i]
-			skeys[i] = true
-		} else {
-			skipped = true
+		if max == 0 || max < cmax {
+			max = cmax
+		}
+
+		sum += csum
+
+		for i := 0; i < len(cskeys); i++ {
+			skeys[i] = skeys[i] || cskeys[i]
 		}
 	}
 

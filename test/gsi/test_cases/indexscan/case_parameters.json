@@ -184,7 +184,7 @@
                     "present": true
                 }
             ],
-            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IndexScan3' AND v.`index` = 'poix1' AND ARRAY_LENGTH(v.`spans`) = 1 END"
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IndexScan3' AND v.`index` = 'poix1' AND ARRAY_LENGTH(v.`spans`) = 2 END"
         },
 	"namedArgs": {"testid": "parameters", "c2": null},
         "statements":"SELECT c1, c2 FROM orders AS o WHERE o.test_id = $testid AND o.c1 >= 40 AND ($c2 IS NULL OR o.c2 = $c2)",
