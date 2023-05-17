@@ -298,7 +298,8 @@ type Context struct {
 	tenantCtx           tenant.Context
 	memorySession       memory.MemorySession
 	keysToSkip          *sync.Map
-	keysToSkipLength    int32
+	keysToSkipSize      uint64
+	keysToSkipMaxSize   uint64
 	planPreparedTime    time.Time // time the plan was created
 	logLevel            logging.Level
 	errorLimit          int
@@ -404,7 +405,8 @@ func (this *Context) Copy() *Context {
 		tenantCtx:           this.tenantCtx,
 		memorySession:       this.memorySession,
 		keysToSkip:          this.keysToSkip,
-		keysToSkipLength:    this.keysToSkipLength,
+		keysToSkipSize:      this.keysToSkipSize,
+		keysToSkipMaxSize:   this.keysToSkipMaxSize,
 		planPreparedTime:    this.planPreparedTime,
 		logLevel:            this.logLevel,
 		errorLimit:          this.errorLimit,
@@ -1765,7 +1767,7 @@ func (this *Context) clearBitFilter(alias, idxId string) {
 }
 
 // the problem with this is it is effectively a limit on the size of an INSERT operation...
-const _MAX_NEW_KEYS_TO_SKIP_BEFORE_ERROR = 10000
+const _MIN_KEYS_TO_SKIP_SIZE = uint64(128 * util.MiB)
 
 func (this *Context) SkipKey(key string) bool {
 	_, found := this.keysToSkip.Load(key)
@@ -1775,16 +1777,23 @@ func (this *Context) SkipKey(key string) bool {
 func (this *Context) AddKeyToSkip(key string) bool {
 	_, loaded := this.keysToSkip.LoadOrStore(key, nil)
 	if !loaded {
-		atomic.AddInt32(&this.keysToSkipLength, 1)
 		if this.UseRequestQuota() {
 			err := this.TrackValueSize(uint64(len(key)))
 			if err != nil {
 				this.Error(err)
 				return false
 			}
-		} else if this.keysToSkipLength >= _MAX_NEW_KEYS_TO_SKIP_BEFORE_ERROR {
-			this.Error(errors.NewExecutionKeyValidationSpaceError())
-			return false
+		} else {
+			if this.keysToSkipMaxSize == 0 {
+				this.keysToSkipMaxSize = this.AvailableMemory() / uint64(util.NumCPU())
+				if this.keysToSkipMaxSize < _MIN_KEYS_TO_SKIP_SIZE {
+					this.keysToSkipMaxSize = _MIN_KEYS_TO_SKIP_SIZE
+				}
+			}
+			if atomic.AddUint64(&this.keysToSkipSize, uint64(len(key))) > this.keysToSkipMaxSize {
+				this.Error(errors.NewExecutionKeyValidationSpaceError())
+				return false
+			}
 		}
 	}
 	return true
@@ -1798,7 +1807,8 @@ func (this *Context) ReleaseSkipKeys() {
 		})
 	}
 	this.keysToSkip = &sync.Map{}
-	this.keysToSkipLength = 0
+	this.keysToSkipSize = 0
+	this.keysToSkipMaxSize = 0
 }
 
 func (this *Context) SetPlanPreparedTime(time time.Time) {

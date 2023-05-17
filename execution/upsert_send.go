@@ -173,6 +173,7 @@ func (this *SendUpsert) flushBatch(context *Context) bool {
 			continue
 		}
 
+		// use the skip key detection mechanism to ensure we don't mutate a key more than once regardless of the source
 		if context.SkipKey(dpair.Name) {
 			context.Error(errors.NewUpsertKeyAlreadyMutatedError(this.keyspace.QualifiedName(), dpair.Name))
 			return false // halt mutations
