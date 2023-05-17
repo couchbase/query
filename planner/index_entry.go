@@ -206,7 +206,7 @@ func (this *indexEntry) setArrayKey(key *expression.All, pos int) {
 	this.arrayKeyPos = pos
 	if key != nil {
 		this.flags |= IE_ARRAYINDEXKEY
-		if pos > 0 {
+		if pos >= 0 {
 			size := 1
 			if key.Flatten() {
 				size = key.FlattenSize()
