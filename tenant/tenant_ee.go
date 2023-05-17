@@ -11,6 +11,7 @@
 package tenant
 
 import (
+	"io"
 	"net/http"
 	"strconv"
 	"sync"
@@ -88,16 +89,20 @@ func Start(endpoint Endpoint, nodeid string, regulatorsettingsfile string) {
 	handle := factory.InitRegulator(regulator.InitSettings{NodeID: service.NodeID(nodeid),
 		SettingsFile: regulatorsettingsfile, Service: regulator.Query})
 	router := endpoint.Router()
+	router.Map(regulator.MeteringEndpoint, authHandler(endpoint, handle.WriteMetrics), "GET")
+	router.Map("/_prometheusMetricsHigh", authHandler(endpoint, handle.WriteStats), "GET")
+}
+
+func authHandler(endpoint Endpoint, handler func(writer io.Writer) int) func(w http.ResponseWriter, req *http.Request) {
 	tenantHandler := func(w http.ResponseWriter, req *http.Request) {
 		err := endpoint.Authorize(req)
 		if err != nil {
 			endpoint.WriteError(err, w, req)
 			return
 		}
-		handle.WriteMetrics(w)
+		handler(w)
 	}
-	router.Map(regulator.MeteringEndpoint, tenantHandler, "GET")
-	router.Map("/_prometheusMetricsHigh", tenantHandler, "GET")
+	return tenantHandler
 }
 
 func RegisterResourceManager(m ResourceManager) {
