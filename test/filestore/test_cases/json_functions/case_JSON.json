@@ -36,7 +36,7 @@
 },
 
 {
-	"statements": "SELECT JSON_ENCODE(ccInfo) AS encoded FROM customer ORDER BY encoded, firstName LIMIT 3",
+	"statements": "SELECT JSON_ENCODE(ccInfo) AS encoded FROM customer WHERE test_id = \"json_func\" ORDER BY encoded, firstName LIMIT 3",
 	"results": [
         {
             "encoded": "{\"cardExpiry\":\"2011-10-12\",\"cardNumber\":\"1211-1221-1234-2201\",\"cardType\":\"americanexpress\"}"
@@ -51,7 +51,7 @@
 },
 
 {
-	"statements": "SELECT ENCODE_JSON(ccInfo) AS encoded FROM customer ORDER BY encoded, firstName LIMIT 3",
+	"statements": "SELECT ENCODE_JSON(ccInfo) AS encoded FROM customer WHERE test_id = \"json_func\" ORDER BY encoded, firstName LIMIT 3",
 	"results": [
         {
             "encoded": "{\"cardExpiry\":\"2011-10-12\",\"cardNumber\":\"1211-1221-1234-2201\",\"cardType\":\"americanexpress\"}"
@@ -102,7 +102,7 @@
 },
 
 {
-	"statements": "SELECT ENCODED_SIZE(ccInfo) as es from customer ORDER BY es, firstName LIMIT 3",
+	"statements": "SELECT ENCODED_SIZE(ccInfo) as es from customer WHERE test_id = \"json_func\" ORDER BY es, firstName LIMIT 3",
 	"results": [
         {
             "es": 80
@@ -135,7 +135,7 @@
 },
 
 {
-	"statements": "SELECT POLY_LENGTH(ccInfo) as ccpoly FROM customer ORDER BY firstName LIMIT 3",	
+	"statements": "SELECT POLY_LENGTH(ccInfo) as ccpoly FROM customer WHERE test_id = \"json_func\" ORDER BY firstName LIMIT 3",	
 	"results": [
         {
             "ccpoly": 3
