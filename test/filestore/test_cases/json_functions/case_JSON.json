@@ -36,7 +36,7 @@
 },
 
 {
-	"statements": "SELECT JSON_ENCODE(ccInfo) AS encoded FROM customer ORDER BY encoded, firstName LIMIT 3",
+	"statements": "SELECT JSON_ENCODE(ccInfo) AS encoded FROM customer WHERE test_id = \"json_func\" ORDER BY encoded, firstName LIMIT 3",
 	"results": [
         {
             "encoded": "{\"cardExpiry\":\"2011-10-12\",\"cardNumber\":\"1211-1221-1234-2201\",\"cardType\":\"americanexpress\"}"
