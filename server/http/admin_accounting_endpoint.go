@@ -28,7 +28,7 @@ import (
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/functions"
-	"github.com/couchbase/query/functions/bridge"
+	functionsBridge "github.com/couchbase/query/functions/bridge"
 	functionsMeta "github.com/couchbase/query/functions/metakv"
 	functionsResolver "github.com/couchbase/query/functions/resolver"
 	"github.com/couchbase/query/prepareds"
@@ -176,7 +176,7 @@ func (this *HttpEndpoint) registerAccountingHandlers() {
 		indexesPrefix + "/prepareds":                      {handler: preparedIndexHandler, methods: []string{"GET"}},
 		indexesPrefix + "/active_requests":                {handler: requestIndexHandler, methods: []string{"GET"}},
 		indexesPrefix + "/completed_requests":             {handler: completedIndexHandler, methods: []string{"GET"}},
-		indexesPrefix + "/function_cache":                 {handler: functionsIndexHandler, methods: []string{"GET"}},
+		indexesPrefix + "/functions_cache":                {handler: functionsIndexHandler, methods: []string{"GET"}},
 		indexesPrefix + "/dictionary_cache":               {handler: dictionaryIndexHandler, methods: []string{"GET"}},
 		indexesPrefix + "/tasks_cache":                    {handler: tasksIndexHandler, methods: []string{"GET"}},
 		prometheusLow:                                     {handler: prometheusLowHandler, methods: []string{"GET"}},
