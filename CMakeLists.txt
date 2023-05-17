@@ -36,16 +36,11 @@ ELSE (BUILD_ENTERPRISE)
 ENDIF(BUILD_ENTERPRISE)
 SET (_extra_deps)
 
-SET (GOVERSION 1.19)
+SET (GOVERSION SUPPORTED_NEWER)
 
 STRING(REGEX REPLACE "-[^-]*$" "-N1QL" QUERY_VERSION ${PRODUCT_VERSION})
 SET (LDFLAGS "-X github.com/couchbase/query/util.VERSION=${QUERY_VERSION}")
 IF (APPLE)
-  # Suppress warning from FindCouchbaseGo
-  IF (${GOVERSION} VERSION_LESS ${GO_MAC_MINIMUM_VERSION})
-    SET (GOVERSION ${GO_MAC_MINIMUM_VERSION})
-  ENDIF ()
-
   # On OS X 10.11 (El Capitan) upwards we can no longer use DYLD_LIBRARY_PATH to locate
   # runtime dependencies. Instead add the location of libcurl etc to the actual
   # binary itself.
@@ -62,7 +57,7 @@ SET(CGO_INCLUDE_DIRS "${CURL_INCLUDE_DIR};${sigar_SOURCE_DIR}/include")
 SET(CGO_LIBRARY_DIRS "${CURL_LIBRARY_DIR};${sigar_BINARY_DIR}/src")
 
 IF (NOT CBQ_ONLY)
-  GoYacc (GOVERSION 1.19 TARGET n1ql-yacc YFILE "${PROJECT_SOURCE_DIR}/parser/n1ql/n1ql.y")
+  GoYacc (GOVERSION SUPPORTED_NEWER TARGET n1ql-yacc YFILE "${PROJECT_SOURCE_DIR}/parser/n1ql/n1ql.y")
 
   IF (BUILD_ENTERPRISE)
     find_path(NEWEVAL_INCLUDE_DIR worker.h
