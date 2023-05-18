@@ -152,7 +152,7 @@ func NewUpdateStatIndexAllCollectionOnly() Error {
 
 func NewUpdateStatSelf(msg, at string) Error {
 	return &err{level: EXCEPTION, ICode: E_UPDATE_STAT_SELF_NOTALLOWED, IKey: "semantics_update_statistics_self",
-		InternalMsg:    fmt.Sprintf("UPDATE STATISTICS of '%s%s' is not allowed", msg, at),
+		InternalMsg:    fmt.Sprintf("UPDATE STATISTICS of '%s'%s is not allowed", msg, at),
 		InternalCaller: CallerN(1)}
 }
 
@@ -187,7 +187,7 @@ func NewAllDistinctNotAllowed(msg, at string) Error {
 
 func NewCreateIndexSelf(msg, at string) Error {
 	return &err{level: EXCEPTION, ICode: E_CREATE_INDEX_SELF_NOTALLOWED, IKey: "semantics_create_index_self",
-		InternalMsg:    fmt.Sprintf("Index of '%s%s' is not allowed", msg, at),
+		InternalMsg:    fmt.Sprintf("Index of '%s'%s is not allowed", msg, at),
 		InternalCaller: CallerN(1)}
 }
 
