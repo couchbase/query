@@ -249,6 +249,8 @@ func processValue(v interface{}) interface{} {
 		return vt.e
 	case []interface{}:
 		return vt
+	case []string:
+		return vt
 	case int64:
 		return vt
 	case int:
