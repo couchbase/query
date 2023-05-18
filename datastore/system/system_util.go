@@ -220,10 +220,14 @@ func compileSpan(span *datastore.Span) (compiledSpans, errors.Error) {
 	if err != nil {
 		return nil, err
 	}
-	if spanEvaluator.high == spanEvaluator.low && isLowValued && isHighValued {
-		spanEvaluator.evalLow = equals
+
+	if spanEvaluator.high == spanEvaluator.low && isHighValued {
 		spanEvaluator.evalHigh = noop
-		spanEvaluator.equality = true
+
+		if isLowValued {
+			spanEvaluator.evalLow = equals
+			spanEvaluator.equality = true
+		}
 	}
 	cSpans = append(cSpans, spanEvaluator)
 	return cSpans, nil
@@ -264,9 +268,13 @@ func compileSpan2(spans datastore.Spans2) (compiledSpans, errors.Error) {
 				spanEvaluator.evalLow = equals
 				spanEvaluator.evalHigh = noop
 				spanEvaluator.equality = true
-			} else if isHighValued && !isLowValued && spanEvaluator.evalHigh == nil {
-				spanEvaluator.evalHigh = fail
-				spanEvaluator.isMissingTest = true
+			} else if isHighValued && spanEvaluator.evalHigh == nil {
+				if !isLowValued {
+					spanEvaluator.evalHigh = fail
+					spanEvaluator.isMissingTest = true
+				} else {
+					spanEvaluator.evalHigh = noop
+				}
 			}
 			cSpans = append(cSpans, spanEvaluator)
 		}
