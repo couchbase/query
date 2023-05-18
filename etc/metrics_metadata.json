@@ -332,5 +332,118 @@
 		"labels": [
 			"bucket"
 		]
+	},
+	"n1ql_throttle_seconds_total": {
+		"type": "counter",
+		"help": "The total time spent throttling (in seconds).",
+		"unit": "seconds",
+		"added": "7.5.0",
+		"notes": "This is a metric specific to serverless.",
+		"labels": [
+			"bucket",
+			"for"
+		]
+	},
+	"n1ql_throttle_count_total": {
+		"type": "counter",
+		"help": "The number of times Regulator instructed an operation to throttle.",
+		"unit": "seconds",
+		"added": "7.5.0",
+		"notes": "This is a metric specific to serverless.",
+		"labels": [
+			"bucket",
+			"for"
+		]
+	},
+	"n1ql_reject_count_total": {
+		"type": "counter",
+		"help": "The number of times Regulator instructed an operation to be rejected.",
+		"unit": "seconds",
+		"added": "7.5.0",
+		"notes": "This is a metric specific to serverless.",
+		"labels": [
+			"bucket",
+			"for"
+		]
+	},
+	"n1ql_op_count_total": {
+		"type": "counter",
+		"help": "The number of distinct operations recorded with Regulator.",
+		"unit": "seconds",
+		"added": "7.5.0",
+		"notes": "This is a metric specific to serverless.",
+		"labels": [
+			"bucket",
+			"for"
+		]
+	},
+	"n1ql_meter_cu_total": {
+		"type": "counter",
+		"help": "The number of Compute Units (CUs) recorded.",
+		"unit": "seconds",
+		"added": "7.5.0",
+		"notes": "This is a metric specific to serverless.",
+		"labels": [
+			"bucket",
+			"for",
+			"unbilled",
+			"variant"
+		]
+	},
+	"n1ql_credit_cu_count": {
+		"type": "counter",
+		"help": "The number of Compute Units (CUs) refunded.",
+		"unit": "seconds",
+		"added": "7.5.0",
+		"notes": "This is a metric specific to serverless.",
+		"labels": [
+			"bucket",
+			"for",
+			"variant"
+		]
+	},
+	"n1ql_meter_cu_count": {
+		"type": "counter",
+		"help": "The number of distinct operations recording Compute Units (CUs) with Regulator.",
+		"unit": "seconds",
+		"added": "7.5.0",
+		"notes": "This is a metric specific to serverless.",
+		"labels": [
+			"bucket",
+			"for",
+			"unbilled",
+			"variant"
+		]
+	},
+	"n1ql_credit_wu_count": {
+		"type": "counter",
+		"help": "The number of Write Units (WUs) refunded.",
+		"unit": "seconds",
+		"added": "7.5.0",
+		"notes": "This is a metric specific to serverless.",
+		"labels": [
+			"bucket",
+			"for",
+			"variant"
+		]
+	},
+	"n1ql_credit_ru_count": {
+		"type": "counter",
+		"help": "The number of Read Units (RUs) refunded.",
+		"unit": "seconds",
+		"added": "7.5.0",
+		"notes": "This is a metric specific to serverless.",
+		"labels": [
+			"bucket",
+			"for",
+			"variant"
+		]
+	},
+	"n1ql_boot_timestamp_seconds": {
+		"type": "gauge",
+		"help": "The time the service booted in fractional seconds since Unix epoch.",
+		"unit": "seconds",
+		"added": "7.5.0",
+		"notes": "This is a metric specific to serverless."
 	}
 }
