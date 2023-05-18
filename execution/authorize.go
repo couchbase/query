@@ -112,6 +112,7 @@ func (this *Authorize) RunOnce(context *Context, parent value.Value) {
 		this.child.SetOutput(this.output)
 		this.child.SetStop(nil)
 		this.child.SetParent(this)
+		this.stashOutput()
 
 		this.fork(this.child, context, parent)
 	})

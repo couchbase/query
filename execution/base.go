@@ -24,6 +24,7 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
@@ -171,6 +172,8 @@ type base struct {
 	activeLock    sync.Mutex
 	opState       opState
 	phase         Phases
+	inactiveFlag  bool
+	stash         Operator
 }
 
 const _ITEM_CAP = 512
@@ -260,7 +263,11 @@ func (this *base) copy(dest *base) {
 		dest.trackChildren(cap(this.valueExchange.children))
 	}
 	dest.input = this.input
-	dest.output = this.output
+	if this.output == nil && this.stash != nil {
+		dest.output = this.stash
+	} else {
+		dest.output = this.output
+	}
 	dest.parent = this.parent
 	dest.execPhase = this.execPhase
 	dest.phaseTimes = this.phaseTimes
@@ -284,6 +291,11 @@ func (this *base) reopen(context *Context) bool {
 }
 
 func (this *base) close(context *Context) {
+	if this.inactiveFlag {
+		logging.Debugf("[%p] Operator already closed", this)
+		return
+	}
+
 	err := recover()
 	if err != nil {
 		panic(err)
@@ -291,14 +303,12 @@ func (this *base) close(context *Context) {
 
 	this.valueExchange.close()
 
-	if this.output != nil {
-
-		// MB-27362 avoid serialized close recursion
-		if this.closeConsumer {
-			base := this.output.getBase()
-			serializedClose(this.output, base, context)
-		}
+	// MB-27362 avoid serialized close recursion
+	if this.output != nil && this.closeConsumer {
+		base := this.output.getBase()
+		serializedClose(this.output, base, context)
 	}
+
 	this.inactive()
 
 	// operators that never enter a _RUNNING state have to clean after themselves when they finally go
@@ -416,6 +426,8 @@ func (this *base) baseReopen(context *Context) bool {
 	this.opState = _CREATED
 	this.valueExchange.reset()
 	this.once.Reset()
+	this.inactiveFlag = false
+	this.restoreOutput()
 	this.activeCond.L.Unlock()
 	return true
 }
@@ -465,6 +477,19 @@ func (this *base) SetOutput(op Operator) {
 		this.closeConsumer = true
 	} else {
 		this.doSend = parallelSend
+	}
+}
+
+func (this *base) stashOutput() {
+	if this.closeConsumer && this.output != nil {
+		this.stash = this.output
+		this.output = nil
+	}
+}
+
+func (this *base) restoreOutput() {
+	if this.output == nil && this.stash != nil {
+		this.output = this.stash
 	}
 }
 
@@ -932,6 +957,10 @@ func (this *base) runConsumer(cons consumer, context *Context, parent value.Valu
 			if cleanup != nil {
 				cleanup()
 			}
+			// avoid potential to call close twice on the consumer
+			if this.closeConsumer && this.output != nil && this.output == this.parent && this.parent.getBase().childrenLeft != 0 {
+				this.closeConsumer = false
+			}
 			this.notify()
 			this.switchPhase(_NOTIME)
 			this.close(context)
@@ -1375,6 +1404,8 @@ func (this *base) inactive() {
 	case _HALTING:
 		this.opState = _HALTED
 	}
+
+	this.inactiveFlag = true
 	this.activeCond.L.Unlock()
 
 	// wake up whoever wants to free us

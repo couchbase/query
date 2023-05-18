@@ -90,6 +90,7 @@ func (this *IndexScan) RunOnce(context *Context, parent value.Value) {
 			this.children = append(this.children, scan)
 			this.fork(this.children[i], context, parent)
 		}
+		this.stashOutput()
 	})
 }
 
