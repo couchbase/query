@@ -131,6 +131,7 @@ func (this *Sequence) RunOnce(context *Context, parent value.Value) {
 
 		next.SetOutput(this.output)
 		next.SetParent(this)
+		this.stashOutput()
 
 		// Run last child
 		this.fork(next, context, parent)

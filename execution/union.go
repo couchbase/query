@@ -82,6 +82,7 @@ func (this *UnionAll) RunOnce(context *Context, parent value.Value) {
 			child.SetParent(this)
 			this.fork(child, context, parent)
 		}
+		this.stashOutput()
 
 		if !this.childrenWait(n) {
 			this.notifyStop()

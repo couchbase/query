@@ -66,4 +66,6 @@ type Operator interface {
 	accrueTimes(o Operator)
 	time() *base
 	accrueTime(b *base)
+
+	stashOutput()
 }

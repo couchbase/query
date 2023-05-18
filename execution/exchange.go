@@ -473,6 +473,9 @@ func (this *opQueue) signal() {
 
 // last orders!
 func (this *valueQueue) close() {
+	if this.closed {
+		return
+	}
 	this.vLock.Lock()
 	this.closed = true
 

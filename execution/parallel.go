@@ -95,6 +95,7 @@ func (this *Parallel) RunOnce(context *Context, parent value.Value) {
 
 		this.children[0] = this.child
 		this.runChild(this.children[0], context, parent)
+		this.stashOutput()
 	})
 }
 
