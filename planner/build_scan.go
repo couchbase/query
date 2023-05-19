@@ -31,6 +31,11 @@ func (this *builder) selectScan(keyspace datastore.Keyspace, node *algebra.Keysp
 			return nil, nil
 		}
 
+		if !node.IsAnsiJoinOp() && this.falseWhereClause() {
+			// WHERE clause is false, ignore the specified keys, use an empty array
+			keys = expression.EMPTY_ARRAY_EXPR
+		}
+
 		this.resetPushDowns()
 		switch keys.(type) {
 		case *expression.ArrayConstruct, *algebra.NamedParameter, *algebra.PositionalParameter:

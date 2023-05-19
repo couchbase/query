@@ -388,48 +388,60 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 }
 
 func (this *builder) VisitSubqueryTerm(node *algebra.SubqueryTerm) (interface{}, error) {
-	qp, err := node.Subquery().Accept(this)
-	if err != nil {
-		this.processadviseJF(node.Alias())
-		return nil, err
-	}
+	alias := node.Alias()
+	var err error
 
-	this.resetPushDowns()
-
-	this.children = make([]plan.Operator, 0, 16)    // top-level children, executed sequentially
-	this.subChildren = make([]plan.Operator, 0, 16) // sub-children, executed across data-parallel streams
-	selQP := qp.(*plan.QueryPlan)
-	selOp := selQP.PlanOp()
-	baseKeyspace, ok := this.baseKeyspaces[node.Alias()]
+	baseKeyspace, ok := this.baseKeyspaces[alias]
 	if !ok {
-		return nil, errors.NewPlanInternalError("VisitSubqueryTerm: baseKeyspace not found for " + node.Alias())
+		return nil, errors.NewPlanInternalError("VisitSubqueryTerm: baseKeyspace not found for " + alias)
 	}
-	this.addChildren(selOp, plan.NewAlias(node.Alias(), baseKeyspace.IsPrimaryTerm(),
-		selOp.Cost(), selOp.Cardinality(), selOp.Size(), selOp.FrCost()))
 
-	if len(this.baseKeyspaces) > 1 {
-		filter, _, err := this.getFilter(node.Alias(), false, nil)
+	if !node.IsAnsiJoinOp() && this.falseWhereClause() {
+		this.children = make([]plan.Operator, 0, 16)    // top-level children, executed sequentially
+		this.subChildren = make([]plan.Operator, 0, 16) // sub-children, executed across data-parallel streams
+		this.addChildren(_EMPTY_PLAN, plan.NewAlias(alias, baseKeyspace.IsPrimaryTerm(),
+			OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL))
+	} else {
+		qp, err := node.Subquery().Accept(this)
 		if err != nil {
+			this.processadviseJF(alias)
 			return nil, err
 		}
 
-		if filter != nil {
-			// use a Filter operator if there are filters on the subquery term
-			cost := OPT_COST_NOT_AVAIL
-			cardinality := OPT_CARD_NOT_AVAIL
-			size := OPT_SIZE_NOT_AVAIL
-			frCost := OPT_COST_NOT_AVAIL
-			if this.useCBO {
-				cost, cardinality, size, frCost = getFilterCost(this.lastOp, filter,
-					this.baseKeyspaces, this.keyspaceNames, node.Alias(),
-					this.advisorValidate(), this.context)
+		this.resetPushDowns()
+
+		this.children = make([]plan.Operator, 0, 16)    // top-level children, executed sequentially
+		this.subChildren = make([]plan.Operator, 0, 16) // sub-children, executed across data-parallel streams
+		selQP := qp.(*plan.QueryPlan)
+		selOp := selQP.PlanOp()
+
+		this.addChildren(selOp, plan.NewAlias(alias, baseKeyspace.IsPrimaryTerm(),
+			selOp.Cost(), selOp.Cardinality(), selOp.Size(), selOp.FrCost()))
+
+		if len(this.baseKeyspaces) > 1 {
+			filter, _, err := this.getFilter(alias, false, nil)
+			if err != nil {
+				return nil, err
 			}
-			this.addSubChildren(plan.NewFilter(filter, cost, cardinality, size, frCost))
+
+			if filter != nil {
+				// use a Filter operator if there are filters on the subquery term
+				cost := OPT_COST_NOT_AVAIL
+				cardinality := OPT_CARD_NOT_AVAIL
+				size := OPT_SIZE_NOT_AVAIL
+				frCost := OPT_COST_NOT_AVAIL
+				if this.useCBO {
+					cost, cardinality, size, frCost = getFilterCost(this.lastOp, filter,
+						this.baseKeyspaces, this.keyspaceNames, alias,
+						this.advisorValidate(), this.context)
+				}
+				this.addSubChildren(plan.NewFilter(filter, cost, cardinality, size, frCost))
+			}
 		}
 	}
 
 	if !this.joinEnum() && !node.IsAnsiJoinOp() {
-		err = this.processKeyspaceDone(node.Alias())
+		err = this.processKeyspaceDone(alias)
 		if err != nil {
 			return nil, err
 		}
@@ -448,33 +460,41 @@ func (this *builder) VisitExpressionTerm(node *algebra.ExpressionTerm) (interfac
 	this.children = make([]plan.Operator, 0, 16)    // top-level children, executed sequentially
 	this.subChildren = make([]plan.Operator, 0, 16) // sub-children, executed across data-parallel streams
 
-	cost := OPT_COST_NOT_AVAIL
-	cardinality := OPT_CARD_NOT_AVAIL
-	size := OPT_SIZE_NOT_AVAIL
-	frCost := OPT_COST_NOT_AVAIL
-	if this.useCBO {
-		cost, cardinality, size, frCost = getExpressionScanCost(node.ExpressionTerm())
-	}
-
-	var filter expression.Expression
-	var selec float64
+	alias := node.Alias()
 	var err error
-	if len(this.baseKeyspaces) > 1 {
-		filter, selec, err = this.getFilter(node.Alias(), false, nil)
-		if err != nil {
-			return nil, err
+
+	if !node.IsAnsiJoinOp() && this.falseWhereClause() {
+		this.addChildren(_EMPTY_PLAN)
+	} else {
+		cost := OPT_COST_NOT_AVAIL
+		cardinality := OPT_CARD_NOT_AVAIL
+		size := OPT_SIZE_NOT_AVAIL
+		frCost := OPT_COST_NOT_AVAIL
+		if this.useCBO {
+			cost, cardinality, size, frCost = getExpressionScanCost(node.ExpressionTerm())
 		}
 
-		if this.useCBO && (filter != nil) && (cost > 0.0) && (cardinality > 0.0) &&
-			(selec > 0.0) && (size > 0) && (frCost > 0.0) {
-			cost, cardinality, size, frCost = getSimpleFilterCost(node.Alias(),
-				cost, cardinality, selec, size, frCost)
+		var filter expression.Expression
+		var selec float64
+		if len(this.baseKeyspaces) > 1 {
+			filter, selec, err = this.getFilter(alias, false, nil)
+			if err != nil {
+				return nil, err
+			}
+
+			if this.useCBO && (filter != nil) && (cost > 0.0) && (cardinality > 0.0) &&
+				(selec > 0.0) && (size > 0) && (frCost > 0.0) {
+				cost, cardinality, size, frCost = getSimpleFilterCost(alias,
+					cost, cardinality, selec, size, frCost)
+			}
 		}
+
+		this.addChildren(plan.NewExpressionScan(node.ExpressionTerm(), alias, node.IsCorrelated(),
+			filter, cost, cardinality, size, frCost))
 	}
-	this.addChildren(plan.NewExpressionScan(node.ExpressionTerm(), node.Alias(), node.IsCorrelated(), filter, cost, cardinality, size, frCost))
 
 	if !this.joinEnum() && !node.IsAnsiJoinOp() {
-		err = this.processKeyspaceDone(node.Alias())
+		err = this.processKeyspaceDone(alias)
 		if err != nil {
 			return nil, err
 		}
