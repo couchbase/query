@@ -390,7 +390,7 @@
 			"variant"
 		]
 	},
-	"n1ql_credit_cu_count": {
+	"n1ql_credit_cu_total": {
 		"type": "counter",
 		"help": "The number of Compute Units (CUs) refunded.",
 		"unit": "seconds",
@@ -402,7 +402,7 @@
 			"variant"
 		]
 	},
-	"n1ql_meter_cu_count": {
+	"n1ql_counter_cu_total": {
 		"type": "counter",
 		"help": "The number of distinct operations recording Compute Units (CUs) with Regulator.",
 		"unit": "seconds",
@@ -415,7 +415,7 @@
 			"variant"
 		]
 	},
-	"n1ql_credit_wu_count": {
+	"n1ql_credit_wu_total": {
 		"type": "counter",
 		"help": "The number of Write Units (WUs) refunded.",
 		"unit": "seconds",
@@ -427,7 +427,7 @@
 			"variant"
 		]
 	},
-	"n1ql_credit_ru_count": {
+	"n1ql_credit_ru_total": {
 		"type": "counter",
 		"help": "The number of Read Units (RUs) refunded.",
 		"unit": "seconds",
