@@ -1178,7 +1178,7 @@ func (p *namespace) refreshFully() {
 }
 
 func (p *namespace) reload() {
-	logging.Debuga(func() string { return fmt.Sprintf("Reload %s", p.name) })
+	logging.Debugf("[%p] Reload '%s'", p, p.name)
 
 	newpool, err := p.store.client.GetPool(p.name)
 	if err != nil {
@@ -1193,7 +1193,7 @@ func (p *namespace) reload() {
 func (p *namespace) reload1(err error) (cb.Pool, error) {
 	var client cb.Client
 
-	logging.Errorf("Error updating pool name %s: Error %v", p.name, err)
+	logging.Errorf("Error updating pool name <ud>'%s'</ud>: %v", p.name, err)
 	url := p.store.URL()
 
 	/*
@@ -1207,13 +1207,13 @@ func (p *namespace) reload1(err error) (cb.Pool, error) {
 		client, err = cb.Connect(url)
 	}
 	if err != nil {
-		logging.Errorf("Error connecting to URL %s - %v", url, err)
+		logging.Errorf("Error connecting to URL %s: %v", url, err)
 		return cb.Pool{}, err
 	}
 	// check if the default pool exists
 	newpool, err := client.GetPool(p.name)
 	if err != nil {
-		logging.Errorf("Retry Failed Error updating pool name <ud>%s</ud>: Error %v", p.name, err)
+		logging.Errorf("Retry Failed Error updating pool name <ud>%s</ud>: %v", p.name, err)
 		return newpool, err
 	}
 	p.store.client = client
@@ -1229,7 +1229,7 @@ func (p *namespace) reload1(err error) (cb.Pool, error) {
 func (p *namespace) reload2(newpool *cb.Pool) {
 	p.lock.Lock()
 	for name, ks := range p.keyspaceCache {
-		logging.Debuga(func() string { return fmt.Sprintf(" Checking keyspace %s", name) })
+		logging.Debugf("Checking keyspace '%s'", name)
 		if ks.cbKeyspace == nil {
 			if util.Since(ks.lastUse) > _CLEANUP_INTERVAL {
 				delete(p.keyspaceCache, name)
@@ -1239,9 +1239,8 @@ func (p *namespace) reload2(newpool *cb.Pool) {
 		newbucket, err := newpool.GetBucket(name)
 		if err != nil {
 			ks.cbKeyspace.Release(true)
-			logging.Errorf(" Error retrieving bucket %s - %v", name, err)
+			logging.Errorf("Error retrieving bucket '%s': %v", name, err)
 			delete(p.keyspaceCache, name)
-
 		} else if ks.cbKeyspace.cbbucket.UUID != newbucket.UUID {
 			logging.Debuga(func() string {
 				return fmt.Sprintf(" UUid of keyspace %v uuid now %v", ks.cbKeyspace.cbbucket.UUID, newbucket.UUID)
@@ -1250,11 +1249,12 @@ func (p *namespace) reload2(newpool *cb.Pool) {
 			// and release old one
 			ks.cbKeyspace.cbbucket.Close()
 			ks.cbKeyspace.cbbucket = newbucket
+			newbucket.RunBucketUpdater2(p.KeyspaceUpdateCallback, p.KeyspaceDeleteCallback)
 		} else {
-
 			// we are reloading, so close old and set new bucket
 			ks.cbKeyspace.cbbucket.Close()
 			ks.cbKeyspace.cbbucket = newbucket
+			newbucket.RunBucketUpdater2(p.KeyspaceUpdateCallback, p.KeyspaceDeleteCallback)
 		}
 
 		// Not deleted. Check if GSI indexer is available

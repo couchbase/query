@@ -217,7 +217,7 @@ func (b *Bucket) RunBucketUpdater2(streamingFn StreamingFn, notify NotifyFn) {
 				delete(p.BucketMap, name)
 				p.Unlock()
 			}
-			logging.Errorf("[%p] Bucket Updater exited with err %v", b, err)
+			logging.Errorf("[%p] Bucket updater exited: %v", b, err)
 		}
 	}()
 }
@@ -246,11 +246,16 @@ func (b *Bucket) UpdateBucket2(streamingFn StreamingFn) error {
 	var updater io.ReadCloser
 
 	defer func() {
+		log := false
 		b.Lock()
 		if b.updater == updater {
 			b.updater = nil
+			log = true
 		}
 		b.Unlock()
+		if log {
+			logging.Debugf("[%p] Bucket updater: Resetting b.updater (%p) on exit", b, updater)
+		}
 	}()
 
 	for {
@@ -265,13 +270,20 @@ func (b *Bucket) UpdateBucket2(streamingFn StreamingFn) error {
 		}
 
 		streamUrl := fmt.Sprintf("%s/pools/default/bucketsStreaming/%s", b.pool.client.BaseURL, uriAdj(b.GetName()))
-		logging.Infof("[%p] Bucket updater: [%p,%d] Trying with %s", b, updater, failures, streamUrl)
+		logging.Infof("[%p] Bucket updater: Streaming %s", b, streamUrl)
+		logging.Debuga(func() string {
+			p := "<nil>"
+			if updater != nil {
+				p = fmt.Sprintf("%p", updater)
+			}
+			return fmt.Sprintf("[%p] Bucket updater: updater:%s failures:%d", b, p, failures)
+		})
 		req, err := http.NewRequest("GET", streamUrl, nil)
 		if err != nil {
 			if isConnError(err) {
 				failures++
 				if failures < MAX_RETRY_COUNT {
-					logging.Infof("[%p] Bucket updater : %v (Retrying %v)", b, err, failures)
+					logging.Infof("[%p] Bucket updater: %v (Retrying %v)", b, err, failures)
 					time.Sleep(time.Duration(failures) * STREAM_RETRY_PERIOD)
 				} else {
 					returnErr = errors.NewBucketUpdaterStreamingError(err)
@@ -294,7 +306,7 @@ func (b *Bucket) UpdateBucket2(streamingFn StreamingFn) error {
 			if isConnError(err) {
 				failures++
 				if failures < MAX_RETRY_COUNT {
-					logging.Infof("[%p] Bucket updater : %v (Retrying %v)", b, err, failures)
+					logging.Infof("[%p] Bucket updater: %v (Retrying %v)", b, err, failures)
 					time.Sleep(time.Duration(failures) * STREAM_RETRY_PERIOD)
 				} else {
 					returnErr = errors.NewBucketUpdaterStreamingError(err)
@@ -306,8 +318,7 @@ func (b *Bucket) UpdateBucket2(streamingFn StreamingFn) error {
 
 		if res.StatusCode != 200 {
 			bod, _ := ioutil.ReadAll(io.LimitReader(res.Body, 512))
-			logging.Errorf("[%p] Bucket updater: Failed to connect to host, unexpected status code: %v. Body %s",
-				b, res.StatusCode, bod)
+			logging.Errorf("[%p] Bucket updater: %v %s", b, res.StatusCode, bod)
 			res.Body.Close()
 			returnErr = errors.NewBucketUpdaterFailedToConnectToHost(res.StatusCode, bod)
 			failures++
@@ -318,12 +329,12 @@ func (b *Bucket) UpdateBucket2(streamingFn StreamingFn) error {
 			// another updater is running and we should exit cleanly
 			b.Unlock()
 			res.Body.Close()
-			logging.Debugf("[%p] Bucket updater: New updater found for bucket: %v", b, b.GetName())
+			logging.Infof("[%p] Bucket updater: New updater found for '%v'", b, b.GetName())
 			return nil
 		} else if b.closed {
 			b.Unlock()
 			res.Body.Close()
-			logging.Debugf("[%p] Bucket updater: Bucket closed: %v", b, b.GetName())
+			logging.Infof("[%p] Bucket updater: '%v' closed", b, b.GetName())
 			return nil
 		}
 		b.updater = res.Body
@@ -339,7 +350,8 @@ func (b *Bucket) UpdateBucket2(streamingFn StreamingFn) error {
 			b.RUnlock()
 			if terminate {
 				res.Body.Close()
-				logging.Debugf("[%p] Bucket updater: Stopping for bucket: %v", b, b.GetName())
+				logging.Infof("[%p] Bucket updater: Stopping for bucket: %v (changed:%v,closed:%v)",
+					b, b.GetName(), b.updater != updater, b.closed)
 				return nil
 			}
 
@@ -349,11 +361,13 @@ func (b *Bucket) UpdateBucket2(streamingFn StreamingFn) error {
 			terminate = b.updater != updater || b.closed
 			b.RUnlock()
 			if terminate {
-				logging.Debugf("[%p] Bucket updater: Stopping for bucket: %v", b, b.GetName())
+				logging.Infof("[%p] Bucket updater: Stopping for bucket: %v (changed:%v,closed:%v)",
+					b, b.GetName(), b.updater != updater, b.closed)
 				return nil
 			}
 
 			if err != nil {
+				logging.Debugf("[%p] Bucket updater: Decode error: %v", b, err)
 				returnErr = err
 				res.Body.Close()
 				break
