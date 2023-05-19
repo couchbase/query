@@ -2702,6 +2702,31 @@
         "errorCode": 1,
         "errorMessage": ""
       }
+    },
+    {
+      "id": 28732,
+      "name": "/admin/log/ API request",
+      "description": "An HTTP request was made to access diagnostic logs",
+      "sync": false,
+      "enabled": false,
+      "filtering_permitted": true,
+      "mandatory_fields": {
+        "timestamp": "",
+        "real_userid": {
+          "domain": "",
+          "user": ""
+        },
+        "remote": {
+          "ip": "",
+          "port": 1
+        },
+        "httpMethod": "",
+        "httpResultCode": 1
+      },
+      "optional_fields": {
+        "errorCode": 1,
+        "errorMessage": ""
+      }
     }
   ]
 }

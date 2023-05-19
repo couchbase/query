@@ -161,7 +161,7 @@ type occurrence struct {
 
 func (this *occurrence) capture(event string, what string) {
 	name := strings.Join([]string{fileNamePrefix, event, what, pidString, this.ts}, "_") + ".gz"
-	f, err := os.Create(path.Join(getPath(), name))
+	f, err := os.Create(path.Join(GetPath(), name))
 	if err == nil {
 		this.files = append(this.files, name)
 		zip := gzip.NewWriter(f)
@@ -244,7 +244,7 @@ func (this *reason) cleanup() {
 	// remove references to inaccessible files
 	for i := 0; i < len(this.occurrences); {
 		for j := 0; j < len(this.occurrences[i].files); {
-			if _, err := os.Stat(path.Join(getPath(), this.occurrences[i].files[j])); err != nil {
+			if _, err := os.Stat(path.Join(GetPath(), this.occurrences[i].files[j])); err != nil {
 				logging.Infof("FFDC: dump has been removed: %v", this.occurrences[i].files[j])
 				if j+1 < len(this.occurrences[i].files) {
 					copy(this.occurrences[i].files[j:], this.occurrences[i].files[j+1:])
@@ -273,7 +273,7 @@ func (this *reason) cleanup() {
 	this.occurrences = this.occurrences[:len(this.occurrences)-1]
 	for i := range occ.files {
 		logging.Infof("FFDC: removing dump: %v", occ.files[i])
-		os.Remove(path.Join(getPath(), occ.files[i]))
+		os.Remove(path.Join(GetPath(), occ.files[i]))
 	}
 	occ.files = nil
 }
@@ -291,7 +291,7 @@ func (this *reason) getOccurence(ts string) *occurrence {
 }
 
 // We are not passed the path to the logs so this is a (dirty?) means of obtaining it
-func getPath() string {
+func GetPath() string {
 	if _path == "" {
 		installDir := os.Args[0]
 		if os.PathSeparator != '/' {
@@ -355,7 +355,7 @@ func Init() {
 		}
 	}()
 	pidString = fmt.Sprintf("%08d", os.Getpid())
-	capturePath := getPath()
+	capturePath := GetPath()
 	logging.Infof("FFDC: Capture path: %v", capturePath)
 	d, err := os.Open(capturePath)
 	if err == nil {

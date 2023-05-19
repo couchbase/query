@@ -171,3 +171,10 @@ func NewAdminManualFFDCError(msg string, remaining int) Error {
 	return &err{level: EXCEPTION, ICode: E_ADMIN_FFDC, IKey: "admin.ffdc", cause: c,
 		InternalMsg: "FFDC invocation failed.", InternalCaller: CallerN(1)}
 }
+
+func NewAdminLogError(e error) Error {
+	c := make(map[string]interface{}, 2)
+	c["error"] = e
+	return &err{level: EXCEPTION, ICode: E_ADMIN_LOG, IKey: "admin.log_streaming", ICause: e, cause: c,
+		InternalMsg: "Error accessing log", InternalCaller: CallerN(1)}
+}

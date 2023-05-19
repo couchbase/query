@@ -115,6 +115,7 @@ const (
 	E_ADMIN_BAD_SERVICE_PORT                  ErrorCode = 2210
 	E_ADMIN_BODY                              ErrorCode = 2220
 	E_ADMIN_FFDC                              ErrorCode = 2230
+	E_ADMIN_LOG                               ErrorCode = 2240
 	E_PARSE_SYNTAX                            ErrorCode = 3000
 	E_ERROR_CONTEXT                           ErrorCode = 3005
 	E_PARSE_INVALID_ESCAPE_SEQUENCE           ErrorCode = 3006

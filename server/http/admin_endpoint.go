@@ -92,7 +92,9 @@ func writeError(w http.ResponseWriter, err errors.Error) int {
 		return http.StatusInternalServerError
 	}
 	status := mapErrorToHttpResponse(err, http.StatusInternalServerError)
-	w.WriteHeader(status)
+	if err.Code() != errors.E_ADMIN_LOG {
+		w.WriteHeader(status)
+	}
 	w.Write(buf)
 	return status
 }

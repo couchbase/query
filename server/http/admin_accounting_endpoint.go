@@ -15,6 +15,8 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"os"
+	"path"
 	"runtime"
 	"runtime/debug"
 	"strings"
@@ -165,6 +167,9 @@ func (this *HttpEndpoint) registerAccountingHandlers() {
 	manualFFDCHandler := func(w http.ResponseWriter, req *http.Request) {
 		this.wrapAPI(w, req, doManualFFDC)
 	}
+	logHandler := func(w http.ResponseWriter, req *http.Request) {
+		this.wrapAPI(w, req, doLog)
+	}
 	routeMap := map[string]struct {
 		handler handlerFunc
 		methods []string
@@ -197,8 +202,11 @@ func (this *HttpEndpoint) registerAccountingHandlers() {
 
 		functionsBackupPrefix + "/backup":                 {handler: functionsGlobalBackupHandler, methods: []string{"GET", "POST"}},
 		functionsBackupPrefix + "/bucket/{bucket}/backup": {handler: functionsBucketBackupHandler, methods: []string{"GET", "POST"}},
-		adminPrefix + "/gc":                               {handler: forceGCHandler, methods: []string{"GET", "POST"}},
-		adminPrefix + "/ffdc":                             {handler: manualFFDCHandler, methods: []string{"GET", "POST"}},
+
+		adminPrefix + "/gc":                {handler: forceGCHandler, methods: []string{"GET", "POST"}},
+		adminPrefix + "/ffdc":              {handler: manualFFDCHandler, methods: []string{"POST"}},
+		adminPrefix + "/log/{file}":        {handler: logHandler, methods: []string{"GET"}},
+		adminPrefix + "/log/stream/{file}": {handler: logHandler, methods: []string{"GET"}},
 	}
 
 	for route, h := range routeMap {
@@ -2215,6 +2223,60 @@ func doManualFFDC(ep *HttpEndpoint, w http.ResponseWriter, req *http.Request,
 				int(earliest.Sub(time.Now()).Seconds()))
 		} else {
 			return nil, errors.NewAdminManualFFDCError("", 0)
+		}
+	}
+}
+
+func doLog(ep *HttpEndpoint, w http.ResponseWriter, req *http.Request,
+	af *audit.ApiAuditFields) (interface{}, errors.Error) {
+
+	af.EventTypeId = audit.API_ADMIN_STREAM_LOG
+	err, _ := ep.verifyCredentialsFromRequest("", auth.PRIV_SYSTEM_READ, req, af)
+	if err != nil {
+		return nil, err
+	}
+
+	_, fileParam := router.RequestValue(req, "file")
+	if fileParam == "" {
+		fileParam = "query.log"
+	}
+	stream := strings.Contains(req.URL.Path, "/stream/")
+
+	var file *os.File
+	var e error
+	var n int64
+
+	fileName := path.Join(ffdc.GetPath(), fileParam)
+
+	adt := make(map[string]interface{}, 2)
+	adt["file"] = fileName
+	adt["stream"] = stream
+	af.Values = adt
+
+	if file, e = os.Open(fileName); e != nil {
+		return nil, errors.NewAdminLogError(e)
+	}
+
+	for {
+		n, e = io.Copy(w, file)
+		if e != nil && e != io.EOF {
+			return nil, errors.NewAdminLogError(e)
+		}
+		if !stream {
+			return textPlain(""), nil
+		}
+		if n == 0 && req.Context().Err() != nil {
+			return textPlain(""), nil
+		}
+		pos, _ := file.Seek(0, os.SEEK_CUR)
+		file.Close()
+		file = nil
+		time.Sleep(time.Second)
+		if file, e = os.Open(fileName); e != nil {
+			return nil, errors.NewAdminLogError(e)
+		}
+		if info, e := file.Stat(); e == nil && info.Size() >= pos {
+			file.Seek(pos, os.SEEK_SET)
 		}
 	}
 }

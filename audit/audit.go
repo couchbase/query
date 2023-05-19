@@ -511,6 +511,7 @@ const (
 	API_ADMIN_SHUTDOWN                   = 28729
 	API_ADMIN_GC                         = 28730
 	API_ADMIN_FFDC                       = 28731
+	API_ADMIN_STREAM_LOG                 = 28732
 )
 
 func SubmitApiRequest(event *ApiAuditFields) {
