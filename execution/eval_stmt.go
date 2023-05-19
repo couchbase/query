@@ -555,7 +555,6 @@ func (this *Context) ExecutePrepared(prepared *plan.Prepared, isPrepared bool,
 				root = eTree.root
 
 				keep.AddPhaseTime(INSTANTIATE, util.Since(build))
-				this.output = keep
 
 				// Increment the number of times this cached tree entry was used
 				if funcKey != "" {
