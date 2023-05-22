@@ -466,7 +466,12 @@ func (m *ServiceMgr) PrepareTopologyChange(change service.TopologyChange) error 
 			}
 			if ps == nil {
 				host = distributed.RemoteAccess().UUIDToHost(string(n.NodeInfo.NodeID))
-				ps = prepareOperation(host, "ServiceMgr::PrepareTopologyChange")
+				if host != "" {
+					ps = prepareOperation(host, "ServiceMgr::PrepareTopologyChange")
+				} else {
+					logging.Warnf("ServiceMgr::PrepareTopologyChange: Unable to resolve host for node %v",
+						string(n.NodeInfo.NodeID))
+				}
 			}
 		}
 		servers = append(servers, queryServer{host, service.NodeInfo{n.NodeInfo.NodeID, service.Priority(0), ps}})
