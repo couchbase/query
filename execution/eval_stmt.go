@@ -589,7 +589,11 @@ func (this *Context) ExecutePrepared(prepared *plan.Prepared, isPrepared bool,
 	root.RunOnce(this, nil)
 
 	// Await completion
-	collect.waitComplete()
+	// If the root op implements a fork check - make a check. To avoid infinitely waiting
+	if rOp, ok := root.(interface{ HasForkedChild() bool }); (ok && rOp.HasForkedChild()) || !ok {
+		collect.waitComplete()
+	}
+
 	results = collect.ValuesOnce()
 
 	// Once execution is complete - add the exec tree to the cache

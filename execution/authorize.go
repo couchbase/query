@@ -26,6 +26,7 @@ type Authorize struct {
 	dynamicAuthorize bool
 	plan             *plan.Authorize
 	child            Operator
+	hasForkedChild   bool
 }
 
 var _AUTH_OP_POOL util.FastPool
@@ -44,6 +45,7 @@ func NewAuthorize(plan *plan.Authorize, context *Context, child Operator, dynami
 	newRedirectBase(&rv.base, context)
 	rv.base.setInline()
 	rv.output = rv
+	rv.hasForkedChild = false
 	return rv
 }
 
@@ -55,6 +57,7 @@ func (this *Authorize) Copy() Operator {
 	rv := _AUTH_OP_POOL.Get().(*Authorize)
 	rv.plan = this.plan
 	rv.child = this.child.Copy()
+	rv.hasForkedChild = false
 	this.base.copy(&rv.base)
 	return rv
 }
@@ -123,6 +126,7 @@ func (this *Authorize) RunOnce(context *Context, parent value.Value) {
 		this.child.SetParent(this)
 
 		this.fork(this.child, context, parent)
+		this.hasForkedChild = true
 	})
 }
 
@@ -151,6 +155,7 @@ func (this *Authorize) SendAction(action opAction) {
 }
 
 func (this *Authorize) reopen(context *Context) bool {
+	this.hasForkedChild = false
 	rv := this.baseReopen(context)
 	if rv && this.child != nil {
 		rv = this.child.reopen(context)
@@ -195,4 +200,8 @@ func (this *Authorize) getPrivileges(privs *auth.Privileges, context *Context, i
 	})
 
 	return nprivs, rerr
+}
+
+func (this *Authorize) HasForkedChild() bool {
+	return this.hasForkedChild
 }
