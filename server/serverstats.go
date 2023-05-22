@@ -29,7 +29,7 @@ const (
 	_MOVING_WINDOW  = 30               // 15min, load factor moving average of 15min i.e 30 values
 	DEF_LOAD_FACTOR = 35               // default load factor above 30% so that at start no nodes will be added
 
-	_FFDC_MEM_THRESH = 90                                     // FFDC memory use threshold
+	_FFDC_MEM_THRESH = 80                                     // FFDC memory use threshold
 	_FFDC_MEM_RATE   = 10                                     // FFDC memory increase rate threshold
 	_SAMPLES_2_HOURS = int((time.Hour * 2) / _STATS_INTRVL)   // number of samples for determining average memory use
 	_SAMPLES_MIN     = int((time.Minute * 5) / _STATS_INTRVL) // minimum number of samples for average memory use
@@ -76,18 +76,18 @@ func (this *Server) StartStatsCollector() (err error) {
 }
 
 type runningAverage struct {
-	total   int64
-	samples []int64
+	total   uint64
+	samples []uint64
 	index   int
 }
 
 func newRunningAverage(samples int) *runningAverage {
-	rv := &runningAverage{samples: make([]int64, samples)}
+	rv := &runningAverage{samples: make([]uint64, samples)}
 	return rv
 }
 
-func (this *runningAverage) value() int64 {
-	return this.total / int64(this.count())
+func (this *runningAverage) value() uint64 {
+	return this.total / uint64(this.count())
 }
 
 func (this *runningAverage) count() int {
@@ -97,7 +97,7 @@ func (this *runningAverage) count() int {
 	return this.index
 }
 
-func (this *runningAverage) record(v int64) {
+func (this *runningAverage) record(v uint64) {
 	i := this.index & len(this.samples)
 	if this.index >= len(this.samples) {
 		this.total -= this.samples[i]
@@ -186,7 +186,7 @@ func (c *statsCollector) runCollectStats() {
 		// FFDC triggers
 		ncc, _ := newStats["request.completed.count"].(int64)
 		occ, _ := oldStats["request.completed.count"].(int64)
-		mu, _ := newStats["process.memory.usage"].(int64)
+		mu, _ := oldStats["process.memory.usage"].(uint64)
 
 		if ncc == occ { // no progress in last interval
 			ratio := c.server.QueuedRequests() / (c.server.Servicers() + c.server.PlusServicers())
@@ -204,7 +204,7 @@ func (c *statsCollector) runCollectStats() {
 
 		trigger := true
 		if mu >= _FFDC_MEM_THRESH {
-			logging.Warnf("Memory threshold exceeded: %v%% > %v%%", mu, _FFDC_MEM_THRESH)
+			logging.Warnf("Memory threshold exceeded: %v%% >= %v%%", mu, _FFDC_MEM_THRESH)
 			if trigger {
 				ffdc.Capture(ffdc.MemoryThreshold)
 				trigger = false
