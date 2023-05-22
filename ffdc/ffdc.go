@@ -186,6 +186,7 @@ type reason struct {
 	msg         string
 	actions     []string
 	occurrences []*occurrence
+	totalCount  int64
 }
 
 func (this *reason) shouldCapture() *occurrence {
@@ -200,6 +201,7 @@ func (this *reason) shouldCapture() *occurrence {
 			return nil
 		}
 	}
+	this.totalCount++
 	if len(this.occurrences) >= _FFDC_OCCURENCE_LIMIT {
 		this.cleanup()
 	}
@@ -488,4 +490,15 @@ func Reset(event string) {
 	} else {
 		r.reset()
 	}
+}
+
+func Stats(prefix string, res map[string]interface{}, details bool) {
+	tot := int64(0)
+	for k, v := range reasons {
+		tot += v.totalCount
+		if details {
+			res[prefix+k] = v.totalCount
+		}
+	}
+	res[prefix+"total"] = tot
 }

@@ -20,6 +20,7 @@ import (
 	"github.com/couchbase/query/accounting"
 	"github.com/couchbase/query/accounting/metrics"
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/ffdc"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/memory"
 	"github.com/couchbase/query/server"
@@ -160,6 +161,7 @@ func (g *gometricsAccountingStore) Vitals() (map[string]interface{}, errors.Erro
 	for n, v := range g.vitals {
 		rv[n] = v
 	}
+	ffdc.Stats("ffdc.", rv, false)
 	g.Unlock()
 	return rv, nil
 }
