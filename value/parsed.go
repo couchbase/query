@@ -39,6 +39,7 @@ type parsedValue struct {
 	useState     bool
 	keyState     json.KeyState
 	indexState   json.IndexState
+	cleanupState bool  // state was in use when value was unwrapped, so indicate to clean-up when done
 	refCnt       int32 // to check for recycling
 	used         int32 // to access state
 }
@@ -219,7 +220,12 @@ func (this *parsedValue) Field(field string) (Value, bool) {
 		goahead := int32(0)
 		if this.useState {
 			goahead = atomic.AddInt32(&this.used, 1)
-			defer atomic.AddInt32(&this.used, -1)
+			defer func() {
+				if atomic.AddInt32(&this.used, -1) == 0 && this.cleanupState {
+					this.keyState.Release()
+					this.indexState.Release()
+				}
+			}()
 		}
 
 		// Two operators can use the same value at the same time
@@ -318,7 +324,12 @@ func (this *parsedValue) Index(index int) (Value, bool) {
 		goahead := int32(0)
 		if this.useState {
 			goahead = atomic.AddInt32(&this.used, 1)
-			defer atomic.AddInt32(&this.used, -1)
+			defer func() {
+				if atomic.AddInt32(&this.used, -1) == 0 && this.cleanupState {
+					this.keyState.Release()
+					this.indexState.Release()
+				}
+			}()
 		}
 
 		// Two operators can use the same value at the same time
@@ -605,8 +616,13 @@ func (this *parsedValue) unwrap() Value {
 
 		// Release raw memory when no longer needed
 		this.raw = nil
-		this.keyState.Release()
-		this.indexState.Release()
+		if atomic.AddInt32(&this.used, 1) == 1 {
+			this.keyState.Release()
+			this.indexState.Release()
+		} else {
+			this.cleanupState = true
+		}
+		atomic.AddInt32(&this.used, -1)
 		if this.fields != nil || this.elements != nil {
 			this.Lock()
 			for i, field := range this.fields {
