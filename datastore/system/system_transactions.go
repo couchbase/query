@@ -111,7 +111,7 @@ func (b *transactionsKeyspace) Fetch(keys []string, keysMap map[string]value.Ann
 	return
 }
 
-func (b *transactionsKeyspace) Delete(deletes value.Pairs, context datastore.QueryContext) (value.Pairs, errors.Errors) {
+func (b *transactionsKeyspace) Delete(deletes value.Pairs, context datastore.QueryContext, preserveMutations bool) (int, value.Pairs, errors.Errors) {
 	var err errors.Error
 
 	// now that the node name can change in flight, use a consistent one across deletes
@@ -137,15 +137,27 @@ func (b *transactionsKeyspace) Delete(deletes value.Pairs, context datastore.Que
 		} else {
 			err = transactions.DeleteTransContext(localKey, true)
 		}
+
 		if err != nil {
-			deleted := make([]value.Pair, i)
-			if i > 0 {
-				copy(deleted, deletes[0:i-1])
+			errs := errors.Errors{err}
+			if preserveMutations {
+				deleted := make([]value.Pair, i)
+				if i > 0 {
+					copy(deleted, deletes[0:i-1])
+				}
+
+				return i, deleted, errs
+			} else {
+				return i, nil, errs
 			}
-			return deleted, errors.Errors{err}
 		}
 	}
-	return deletes, nil
+
+	if preserveMutations {
+		return len(deletes), deletes, nil
+	} else {
+		return len(deletes), nil, nil
+	}
 }
 
 func newTransactionsKeyspace(p *namespace) (*transactionsKeyspace, errors.Error) {

@@ -88,9 +88,6 @@ func (this *SendDelete) beforeItems(context *Context, parent value.Value) bool {
 		return false
 	}
 
-	// If there is a RETURNING clause or USE KEYS VALIDATE clause
-	context.SetPreserveMutations(!this.plan.FastDiscard() || this.mk.validate)
-
 	if this.plan.Limit() == nil {
 		return true
 	}
@@ -174,9 +171,16 @@ func (this *SendDelete) flushBatch(context *Context) bool {
 		pair.Value = av
 	}
 
+	// If there is a RETURNING clause or USE KEYS VALIDATE clause
+	preserveMutations := (!fastDiscard || this.mk.validate)
+
 	this.switchPhase(_SERVTIME)
 
-	dpairs, errs := this.keyspace.Delete(pairs, &this.operatorCtx)
+	dCount, dpairs, errs := this.keyspace.Delete(pairs, &this.operatorCtx, preserveMutations)
+
+	// Update mutation count with number of deleted docs
+	context.AddMutationCount(uint64(dCount))
+
 	this.switchPhase(_EXECTIME)
 
 	if this.mk.validate {

@@ -302,7 +302,6 @@ type Context struct {
 	planPreparedTime    time.Time // time the plan was created
 	logLevel            logging.Level
 	errorLimit          int
-	preserveMutations   bool            // For DML execution - whether successfully mutated keys must be preserved and returned to the caller
 	udfStmtExecTrees    *udfExecTreeMap // cache of execution trees of embedded N1QL statements in Javascript/Golang UDFs
 	udfPlans            *udfPlanMap     // cache of query plans of embedded N1QL statements in Javascript/Golang UDFs
 }
@@ -1916,14 +1915,6 @@ func (this *Context) ErrorLimit() int {
 
 func (this *Context) ErrorCount() int {
 	return this.output.GetErrorCount()
-}
-
-func (this *Context) PreserveMutations() bool {
-	return this.preserveMutations
-}
-
-func (this *Context) SetPreserveMutations(preserveMutations bool) {
-	this.preserveMutations = preserveMutations
 }
 
 // Exec Tree Map

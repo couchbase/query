@@ -84,9 +84,6 @@ func (this *SendInsert) beforeItems(context *Context, parent value.Value) bool {
 		return false
 	}
 
-	// If there is a RETURNING clause or the index used was #sequentialScan and we need to make the Halloween Problem checks
-	context.SetPreserveMutations(!this.plan.FastDiscard() || this.plan.SkipNewKeys())
-
 	if this.plan.Limit() == nil {
 		return true
 	}
@@ -233,7 +230,15 @@ func (this *SendInsert) flushBatch(context *Context) bool {
 
 	// Perform the actual INSERT
 	var errs errors.Errors
-	dpairs, errs = this.keyspace.Insert(dpairs, &this.operatorCtx)
+	var iCount int
+
+	// If there is a RETURNING clause or the index used was #sequentialScan and we need to make the Halloween Problem checks
+	preserveMutations := (!fastDiscard || this.plan.SkipNewKeys())
+
+	iCount, dpairs, errs = this.keyspace.Insert(dpairs, &this.operatorCtx, preserveMutations)
+
+	// Update mutation count with number of inserted docs
+	context.AddMutationCount(uint64(iCount))
 
 	this.switchPhase(_EXECTIME)
 
@@ -245,7 +250,7 @@ func (this *SendInsert) flushBatch(context *Context) bool {
 		}
 	}
 
-	if context.PreserveMutations() {
+	if preserveMutations {
 		skipNewKeys := this.plan.SkipNewKeys()
 		for _, dp := range dpairs {
 			if skipNewKeys && !context.AddKeyToSkip(dp.Name) {

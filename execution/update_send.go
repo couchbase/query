@@ -86,9 +86,6 @@ func (this *SendUpdate) beforeItems(context *Context, parent value.Value) bool {
 		return false
 	}
 
-	// If there is a RETURNING clause
-	context.SetPreserveMutations(!this.plan.FastDiscard())
-
 	if this.plan.Limit() == nil {
 		return true
 	}
@@ -222,9 +219,15 @@ func (this *SendUpdate) flushBatch(context *Context) bool {
 		}
 	}
 
+	// If there is a RETURNING clause
+	preserveMutations := !fastDiscard
+
 	this.switchPhase(_SERVTIME)
 
-	pairs, errs := this.keyspace.Update(pairs, &this.operatorCtx)
+	uCount, pairs, errs := this.keyspace.Update(pairs, &this.operatorCtx, preserveMutations)
+
+	// Update mutation count with number of updated docs
+	context.AddMutationCount(uint64(uCount))
 
 	this.switchPhase(_EXECTIME)
 

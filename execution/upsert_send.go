@@ -57,9 +57,6 @@ func (this *SendUpsert) RunOnce(context *Context, parent value.Value) {
 
 func (this *SendUpsert) beforeItems(context *Context, parent value.Value) bool {
 	this.keyspace = getKeyspace(this.plan.Keyspace(), this.plan.Term().ExpressionTerm(), &this.operatorCtx)
-
-	// If there is a RETURNING clause
-	context.SetPreserveMutations(!this.plan.FastDiscard())
 	return this.keyspace != nil
 }
 
@@ -201,7 +198,15 @@ func (this *SendUpsert) flushBatch(context *Context) bool {
 
 	// Perform the actual UPSERT
 	var errs errors.Errors
-	dpairs, errs = this.keyspace.Upsert(dpairs, &this.operatorCtx)
+	var uCount int
+
+	// If there is a RETURNING clause
+	preserveMutations := !fastDiscard
+
+	uCount, dpairs, errs = this.keyspace.Upsert(dpairs, &this.operatorCtx, preserveMutations)
+
+	// Update mutation count with number of upserted docs
+	context.AddMutationCount(uint64(uCount))
 
 	this.switchPhase(_EXECTIME)
 

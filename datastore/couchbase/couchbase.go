@@ -2170,8 +2170,8 @@ type parallelInfo struct {
 	mCount int // number of successfully mutated pairs
 }
 
-func (b *keyspace) performOp(op MutateOp, qualifiedName, scopeName, collectionName string, pairs value.Pairs,
-	context datastore.QueryContext, clientContext ...*memcached.ClientContext) (mPairs value.Pairs, errs errors.Errors) {
+func (b *keyspace) performOp(op MutateOp, qualifiedName, scopeName, collectionName string, pairs value.Pairs, preserveMutations bool,
+	context datastore.QueryContext, clientContext ...*memcached.ClientContext) (mCount int, mPairs value.Pairs, errs errors.Errors) {
 
 	numPairs := len(pairs)
 
@@ -2182,7 +2182,7 @@ func (b *keyspace) performOp(op MutateOp, qualifiedName, scopeName, collectionNa
 	if txContext, _ := context.GetTxContext().(*transactions.TranContext); txContext != nil {
 		collId, user := getCollectionId(clientContext...)
 		return b.txPerformOp(op, qualifiedName, scopeName, collectionName, user, collId,
-			pairs, context, txContext)
+			pairs, preserveMutations, context, txContext)
 	}
 
 	if err := setMutateClientContext(context, clientContext...); err != nil {
@@ -2192,14 +2192,11 @@ func (b *keyspace) performOp(op MutateOp, qualifiedName, scopeName, collectionNa
 
 	numRoutines := util.MinInt(numPairs, _MAX_MUTATION_ROUTINES) // number of routines that will each perform mutations
 
-	// The caller requires the successfully mutated pairs to be returned
-	mPreserve := context.PreserveMutations()
-
 	if numRoutines == 1 { // If numRoutines = 1, run mutations sequentially
 		// number of successfully mutated pairs
-		mCount := 0
+		mCount = 0
 
-		if mPreserve {
+		if preserveMutations {
 			mPairs = make(value.Pairs, 0, numPairs)
 		}
 
@@ -2208,7 +2205,7 @@ func (b *keyspace) performOp(op MutateOp, qualifiedName, scopeName, collectionNa
 
 			if state == _MUTATED {
 				mCount++
-				if mPreserve {
+				if preserveMutations {
 					mPairs = append(mPairs, pairs[i])
 				}
 			}
@@ -2228,10 +2225,7 @@ func (b *keyspace) performOp(op MutateOp, qualifiedName, scopeName, collectionNa
 			}
 		}
 
-		// Update mutation count with number of mutated docs
-		context.AddMutationCount(uint64(mCount))
-
-		return mPairs, errs
+		return mCount, mPairs, errs
 
 	} else { // if the number of keys to be modified is greater than 1 and the number of allowed routines > 1 , run modification operations concurrently
 		p := &parallelInfo{
@@ -2241,7 +2235,7 @@ func (b *keyspace) performOp(op MutateOp, qualifiedName, scopeName, collectionNa
 			mCount: 0,
 		}
 
-		if mPreserve {
+		if preserveMutations {
 			p.mPairs = make(value.Pairs, 0, numPairs)
 		}
 
@@ -2249,15 +2243,12 @@ func (b *keyspace) performOp(op MutateOp, qualifiedName, scopeName, collectionNa
 
 		// start the go routines that each perform mutations
 		for i := 0; i < numRoutines; i++ {
-			go b.parallelMutationOp(op, qualifiedName, p, context, clientContext...)
+			go b.parallelMutationOp(op, qualifiedName, p, preserveMutations, context, clientContext...)
 		}
 
 		p.wg.Wait()
 
-		// Update mutation count with number of mutated docs
-		context.AddMutationCount(uint64(p.mCount))
-
-		return p.mPairs, p.errs
+		return p.mCount, p.mPairs, p.errs
 	}
 }
 
@@ -2415,7 +2406,7 @@ func (b *keyspace) singleMutationOp(kv value.Pair, op MutateOp, qualifiedName st
 }
 
 // Mutation worker
-func (b *keyspace) parallelMutationOp(op MutateOp, qualifiedName string, p *parallelInfo, context datastore.QueryContext, clientCtx ...*memcached.ClientContext) {
+func (b *keyspace) parallelMutationOp(op MutateOp, qualifiedName string, p *parallelInfo, preserveMutations bool, context datastore.QueryContext, clientCtx ...*memcached.ClientContext) {
 
 	defer func() {
 		r := recover()
@@ -2423,7 +2414,7 @@ func (b *keyspace) parallelMutationOp(op MutateOp, qualifiedName string, p *para
 			logging.Stackf(logging.ERROR, "Mutation routine panicked. Panic: %v. Restarting mutation routine.", r)
 
 			// restart mutation worker
-			go b.parallelMutationOp(op, qualifiedName, p, context, clientCtx...)
+			go b.parallelMutationOp(op, qualifiedName, p, preserveMutations, context, clientCtx...)
 		}
 	}()
 
@@ -2436,7 +2427,6 @@ func (b *keyspace) parallelMutationOp(op MutateOp, qualifiedName string, p *para
 	state := _NONE
 	var err errors.Error
 	var kv value.Pair
-	mPreserve := context.PreserveMutations()
 
 	for {
 		p.Lock()
@@ -2452,7 +2442,7 @@ func (b *keyspace) parallelMutationOp(op MutateOp, qualifiedName string, p *para
 
 			p.mCount++
 
-			if mPreserve {
+			if preserveMutations {
 				p.mPairs = append(p.mPairs, kv)
 			}
 		}
@@ -2490,21 +2480,21 @@ func processIfMCError(retry errors.Tristate, err error, key string, keyspace str
 	return retry, err
 }
 
-func (b *keyspace) Insert(inserts value.Pairs, context datastore.QueryContext) (value.Pairs, errors.Errors) {
-	return b.performOp(MOP_INSERT, b.QualifiedName(), "", "", inserts, context)
+func (b *keyspace) Insert(inserts value.Pairs, context datastore.QueryContext, preserveMutations bool) (int, value.Pairs, errors.Errors) {
+	return b.performOp(MOP_INSERT, b.QualifiedName(), "", "", inserts, preserveMutations, context)
 
 }
 
-func (b *keyspace) Update(updates value.Pairs, context datastore.QueryContext) (value.Pairs, errors.Errors) {
-	return b.performOp(MOP_UPDATE, b.QualifiedName(), "", "", updates, context)
+func (b *keyspace) Update(updates value.Pairs, context datastore.QueryContext, preserveMutations bool) (int, value.Pairs, errors.Errors) {
+	return b.performOp(MOP_UPDATE, b.QualifiedName(), "", "", updates, preserveMutations, context)
 }
 
-func (b *keyspace) Upsert(upserts value.Pairs, context datastore.QueryContext) (value.Pairs, errors.Errors) {
-	return b.performOp(MOP_UPSERT, b.QualifiedName(), "", "", upserts, context)
+func (b *keyspace) Upsert(upserts value.Pairs, context datastore.QueryContext, preserveMutations bool) (int, value.Pairs, errors.Errors) {
+	return b.performOp(MOP_UPSERT, b.QualifiedName(), "", "", upserts, preserveMutations, context)
 }
 
-func (b *keyspace) Delete(deletes value.Pairs, context datastore.QueryContext) (value.Pairs, errors.Errors) {
-	return b.performOp(MOP_DELETE, b.QualifiedName(), "", "", deletes, context)
+func (b *keyspace) Delete(deletes value.Pairs, context datastore.QueryContext, preserveMutations bool) (int, value.Pairs, errors.Errors) {
+	return b.performOp(MOP_DELETE, b.QualifiedName(), "", "", deletes, preserveMutations, context)
 }
 
 func (b *keyspace) Release(bclose bool) {

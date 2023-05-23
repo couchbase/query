@@ -549,14 +549,15 @@ func opToString(op int) string {
 	return "unknown operation"
 }
 
-func (b *keyspace) performOp(op int, kvPairs value.Pairs, context datastore.QueryContext) (
-	rParis value.Pairs, errs errors.Errors) {
+func (b *keyspace) performOp(op int, kvPairs value.Pairs, preserveMutations bool, context datastore.QueryContext) (
+	rCount int, rParis value.Pairs, errs errors.Errors) {
 
 	if len(kvPairs) == 0 {
-		return nil, errors.Errors{errors.NewFileNoKeysInsertError(nil, "keyspace "+b.Name())}
+		return 0, nil, errors.Errors{errors.NewFileNoKeysInsertError(nil, "keyspace "+b.Name())}
 	}
 
 	rParis = make(value.Pairs, 0)
+	rCount = 0
 
 	// this lock can be mode more granular FIXME
 	b.fileLock.Lock()
@@ -604,32 +605,36 @@ func (b *keyspace) performOp(op int, kvPairs value.Pairs, context datastore.Quer
 		if err != nil {
 			errs = append(errs, errors.NewFileDMLError(nil, opToString(op)+" Failed "+err.Error()))
 		} else {
-			rParis = append(rParis, kv)
+			rCount++
+			if preserveMutations {
+				rParis = append(rParis, kv)
+			}
+
 		}
 	}
-
-	context.AddMutationCount(uint64(len(rParis)))
 
 	return
 
 }
 
-func (b *keyspace) Insert(inserts value.Pairs, context datastore.QueryContext) (value.Pairs, errors.Errors) {
-	return b.performOp(INSERT, inserts, context)
+func (b *keyspace) Insert(inserts value.Pairs, context datastore.QueryContext, preserveMutations bool) (int, value.Pairs, errors.Errors) {
+	return b.performOp(INSERT, inserts, preserveMutations, context)
 }
 
-func (b *keyspace) Update(updates value.Pairs, context datastore.QueryContext) (value.Pairs, errors.Errors) {
-	return b.performOp(UPDATE, updates, context)
+func (b *keyspace) Update(updates value.Pairs, context datastore.QueryContext, preserveMutations bool) (int, value.Pairs, errors.Errors) {
+	return b.performOp(UPDATE, updates, preserveMutations, context)
 }
 
-func (b *keyspace) Upsert(upserts value.Pairs, context datastore.QueryContext) (value.Pairs, errors.Errors) {
-	return b.performOp(UPSERT, upserts, context)
+func (b *keyspace) Upsert(upserts value.Pairs, context datastore.QueryContext, preserveMutations bool) (int, value.Pairs, errors.Errors) {
+	return b.performOp(UPSERT, upserts, preserveMutations, context)
 }
 
-func (b *keyspace) Delete(deletes value.Pairs, context datastore.QueryContext) (value.Pairs, errors.Errors) {
+func (b *keyspace) Delete(deletes value.Pairs, context datastore.QueryContext, preserveMutations bool) (int, value.Pairs, errors.Errors) {
 
 	var fileError []string
 	var deleted value.Pairs
+	dCount := 0
+
 	for _, pair := range deletes {
 		key := pair.Name
 		filename := filepath.Join(b.path(), key+".json")
@@ -638,16 +643,20 @@ func (b *keyspace) Delete(deletes value.Pairs, context datastore.QueryContext) (
 				fileError = append(fileError, err.Error())
 			}
 		} else {
-			deleted = append(deleted, pair)
+			dCount++
+
+			if preserveMutations {
+				deleted = append(deleted, pair)
+			}
 		}
 	}
 
 	if len(fileError) > 0 {
 		errLine := fmt.Sprintf("Delete failed on some keys %v", fileError)
-		return deleted, errors.Errors{errors.NewFileDatastoreError(nil, errLine)}
+		return dCount, deleted, errors.Errors{errors.NewFileDatastoreError(nil, errLine)}
 	}
 
-	return deleted, nil
+	return dCount, deleted, nil
 }
 
 func (b *keyspace) Release(close bool) {

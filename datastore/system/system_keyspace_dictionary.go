@@ -122,7 +122,7 @@ func (b *dictionaryKeyspace) fetchOne(key string) (map[string]interface{}, error
 	return itemMap, nil
 }
 
-func (b *dictionaryKeyspace) Delete(deletes value.Pairs, context datastore.QueryContext) (value.Pairs, errors.Errors) {
+func (b *dictionaryKeyspace) Delete(deletes value.Pairs, context datastore.QueryContext, preserveMutations bool) (int, value.Pairs, errors.Errors) {
 	for _, pair := range deletes {
 		name := pair.Name
 
@@ -130,7 +130,12 @@ func (b *dictionaryKeyspace) Delete(deletes value.Pairs, context datastore.Query
 		// from all the n1ql node caches
 		dictionary.DropDictEntryAndAllCache(name, context)
 	}
-	return deletes, nil
+
+	if preserveMutations {
+		return len(deletes), deletes, nil
+	} else {
+		return len(deletes), nil, nil
+	}
 }
 
 func newDictionaryKeyspace(p *namespace, name string) (*dictionaryKeyspace, errors.Error) {

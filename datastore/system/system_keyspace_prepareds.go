@@ -194,7 +194,7 @@ func (b *preparedsKeyspace) Fetch(keys []string, keysMap map[string]value.Annota
 	return
 }
 
-func (b *preparedsKeyspace) Delete(deletes value.Pairs, context datastore.QueryContext) (value.Pairs, errors.Errors) {
+func (b *preparedsKeyspace) Delete(deletes value.Pairs, context datastore.QueryContext, preserveMutations bool) (int, value.Pairs, errors.Errors) {
 	var err errors.Error
 	var creds distributed.Creds
 	var tenantName string
@@ -232,15 +232,26 @@ func (b *preparedsKeyspace) Delete(deletes value.Pairs, context datastore.QueryC
 				return userName == "" || checkCacheEntry(entry, tenantName)
 			})
 		}
+
 		if err != nil {
-			deleted := make([]value.Pair, i)
-			if i > 0 {
-				copy(deleted, deletes[0:i-1])
+			errs := errors.Errors{err}
+			if preserveMutations {
+				deleted := make([]value.Pair, i)
+				if i > 0 {
+					copy(deleted, deletes[0:i-1])
+				}
+				return i, deleted, errs
+			} else {
+				return i, nil, errs
 			}
-			return deleted, errors.Errors{err}
 		}
 	}
-	return deletes, nil
+
+	if preserveMutations {
+		return len(deletes), deletes, nil
+	} else {
+		return len(deletes), nil, nil
+	}
 }
 
 func newPreparedsKeyspace(p *namespace) (*preparedsKeyspace, errors.Error) {

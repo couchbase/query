@@ -102,12 +102,12 @@ func TestServer(t *testing.T) {
 	fmt.Printf("Keys fetched %v", pair)
 	insertKey := value.Pair{Name: "testBeerKey", Value: value.NewValue(("This is a random test key-value"))}
 
-	_, errs = ks.Insert([]value.Pair{insertKey}, datastore.NULL_QUERY_CONTEXT)
+	_, _, errs = ks.Insert([]value.Pair{insertKey}, datastore.NULL_QUERY_CONTEXT, false)
 	if len(errs) > 0 {
 		t.Fatalf("Cannot insert key %v", insertKey)
 	}
 
-	deleted, errs := ks.Delete([]value.Pair{insertKey}, datastore.NULL_QUERY_CONTEXT)
+	_, deleted, errs := ks.Delete([]value.Pair{insertKey}, datastore.NULL_QUERY_CONTEXT, true)
 	if len(errs) > 0 || (len(deleted) != 1 && deleted[0].Name != insertKey.Name) {
 		t.Fatalf("Failed to delete %v", errs)
 	}

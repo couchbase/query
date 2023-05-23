@@ -135,53 +135,53 @@ func TestFile(t *testing.T) {
 	dmlKey.Name = "fred2"
 	dmlKey.Value = fred
 
-	_, errs = keyspace.Insert([]value.Pair{dmlKey}, datastore.NULL_QUERY_CONTEXT)
+	_, _, errs = keyspace.Insert([]value.Pair{dmlKey}, datastore.NULL_QUERY_CONTEXT, false)
 	if err != nil {
 		t.Errorf("failed to insert fred2: %v", err)
 	}
 
-	_, errs = keyspace.Update([]value.Pair{dmlKey}, datastore.NULL_QUERY_CONTEXT)
+	_, _, errs = keyspace.Update([]value.Pair{dmlKey}, datastore.NULL_QUERY_CONTEXT, false)
 	if err != nil {
 		t.Errorf("failed to insert fred2: %v", err)
 	}
 
-	_, errs = keyspace.Upsert([]value.Pair{dmlKey}, datastore.NULL_QUERY_CONTEXT)
+	_, _, errs = keyspace.Upsert([]value.Pair{dmlKey}, datastore.NULL_QUERY_CONTEXT, false)
 	if len(errs) > 0 {
 		t.Errorf("failed to insert fred2: %v", errs)
 	}
 
 	dmlKey.Name = "fred3"
-	_, errs = keyspace.Upsert([]value.Pair{dmlKey}, datastore.NULL_QUERY_CONTEXT)
+	_, _, errs = keyspace.Upsert([]value.Pair{dmlKey}, datastore.NULL_QUERY_CONTEXT, false)
 	if len(errs) > 0 {
 		t.Errorf("failed to insert fred2: %v", errs)
 	}
 
 	// negative cases
-	_, errs = keyspace.Insert([]value.Pair{dmlKey}, datastore.NULL_QUERY_CONTEXT)
+	_, _, errs = keyspace.Insert([]value.Pair{dmlKey}, datastore.NULL_QUERY_CONTEXT, false)
 	if len(errs) == 0 {
 		t.Errorf("Insert should not have succeeded for fred2")
 	}
 
 	// delete all the freds
 
-	deleted, errs := keyspace.Delete([]value.Pair{value.Pair{Name: "fred2"}, value.Pair{Name: "fred3"}}, datastore.NULL_QUERY_CONTEXT)
+	_, deleted, errs := keyspace.Delete([]value.Pair{value.Pair{Name: "fred2"}, value.Pair{Name: "fred3"}}, datastore.NULL_QUERY_CONTEXT, true)
 	if len(errs) > 0 && len(deleted) != 2 {
 		fmt.Printf("Warning: Failed to delete. Error %v", errs)
 	}
 
-	_, errs = keyspace.Update([]value.Pair{dmlKey}, datastore.NULL_QUERY_CONTEXT)
+	_, _, errs = keyspace.Update([]value.Pair{dmlKey}, datastore.NULL_QUERY_CONTEXT, false)
 	if len(errs) == 0 {
 		t.Errorf("Update should have failed. Key fred3 doesn't exist")
 	}
 
 	// finally upsert the key. this should work
-	_, errs = keyspace.Upsert([]value.Pair{dmlKey}, datastore.NULL_QUERY_CONTEXT)
+	_, _, errs = keyspace.Upsert([]value.Pair{dmlKey}, datastore.NULL_QUERY_CONTEXT, false)
 	if len(errs) > 0 {
 		t.Errorf("failed to insert fred2: %v", errs)
 	}
 
 	// some deletes should fail
-	deleted, errs = keyspace.Delete([]value.Pair{value.Pair{Name: "fred2"}, value.Pair{Name: "fred3"}}, datastore.NULL_QUERY_CONTEXT)
+	_, deleted, errs = keyspace.Delete([]value.Pair{value.Pair{Name: "fred2"}, value.Pair{Name: "fred3"}}, datastore.NULL_QUERY_CONTEXT, true)
 	if len(deleted) != 1 && deleted[0].Name != "fred2" {
 		t.Errorf("failed to delete fred2: %v, #deleted=%d", deleted, len(deleted))
 	}

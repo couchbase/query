@@ -142,7 +142,7 @@ func (b *tasksCacheKeyspace) Fetch(keys []string, keysMap map[string]value.Annot
 	return
 }
 
-func (b *tasksCacheKeyspace) Delete(deletes value.Pairs, context datastore.QueryContext) (value.Pairs, errors.Errors) {
+func (b *tasksCacheKeyspace) Delete(deletes value.Pairs, context datastore.QueryContext, preserveMutations bool) (int, value.Pairs, errors.Errors) {
 
 	// now that the node name can change in flight, use a consistent one across deletes
 	whoAmI := distributed.RemoteAccess().WhoAmI()
@@ -168,7 +168,12 @@ func (b *tasksCacheKeyspace) Delete(deletes value.Pairs, context datastore.Query
 			scheduler.DeleteTask(localKey)
 		}
 	}
-	return deletes, nil
+
+	if preserveMutations {
+		return len(deletes), deletes, nil
+	} else {
+		return len(deletes), nil, nil
+	}
 }
 
 func newTasksCacheKeyspace(p *namespace) (*tasksCacheKeyspace, errors.Error) {

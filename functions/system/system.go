@@ -315,9 +315,9 @@ func (name *systemEntry) Save(body functions.FunctionBody, replace bool) errors.
 	var errs errors.Errors
 
 	if replace {
-		_, errs = systemCollection.Upsert(dpairs, datastore.NULL_QUERY_CONTEXT)
+		_, _, errs = systemCollection.Upsert(dpairs, datastore.NULL_QUERY_CONTEXT, false)
 	} else {
-		_, errs = systemCollection.Insert(dpairs, datastore.NULL_QUERY_CONTEXT)
+		_, _, errs = systemCollection.Insert(dpairs, datastore.NULL_QUERY_CONTEXT, false)
 	}
 
 	if len(errs) > 0 {
@@ -347,12 +347,13 @@ func delete2(systemCollection datastore.Keyspace, key string, name string) error
 	dpairs := make([]value.Pair, 1)
 	dpairs[0].Name = key
 	var errs errors.Errors
+	var mCount int
 
-	pairs, errs := systemCollection.Delete(dpairs, datastore.NULL_QUERY_CONTEXT)
+	mCount, _, errs = systemCollection.Delete(dpairs, datastore.NULL_QUERY_CONTEXT, false)
 	if len(errs) > 0 {
 		return errors.NewMetaKVError(name, errs[0])
 	}
-	if len(pairs) == 0 {
+	if mCount == 0 {
 		errors.NewMissingFunctionError(name)
 	}
 	return nil

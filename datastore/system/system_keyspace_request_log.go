@@ -256,7 +256,7 @@ func (b *requestLogKeyspace) Fetch(keys []string, keysMap map[string]value.Annot
 	return
 }
 
-func (b *requestLogKeyspace) Delete(deletes value.Pairs, context datastore.QueryContext) (value.Pairs, errors.Errors) {
+func (b *requestLogKeyspace) Delete(deletes value.Pairs, context datastore.QueryContext, preserveMutations bool) (int, value.Pairs, errors.Errors) {
 	var err errors.Error
 	var creds distributed.Creds
 
@@ -293,16 +293,27 @@ func (b *requestLogKeyspace) Delete(deletes value.Pairs, context datastore.Query
 			})
 		}
 
-		// save memory allocations by making a new slice only on errors
 		if err != nil {
-			deleted := make([]value.Pair, i)
-			if i > 0 {
-				copy(deleted, deletes[0:i-1])
+			errs := errors.Errors{err}
+			if preserveMutations {
+				// save memory allocations by making a new slice only on errors
+				deleted := make([]value.Pair, i)
+				if i > 0 {
+					copy(deleted, deletes[0:i-1])
+				}
+				return i, deleted, errs
+			} else {
+				return i, nil, errs
 			}
-			return deleted, errors.Errors{err}
+
 		}
 	}
-	return deletes, nil
+
+	if preserveMutations {
+		return len(deletes), deletes, nil
+	} else {
+		return len(deletes), nil, nil
+	}
 }
 
 func newRequestsKeyspace(p *namespace) (*requestLogKeyspace, errors.Error) {

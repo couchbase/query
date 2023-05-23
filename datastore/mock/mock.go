@@ -407,24 +407,24 @@ func genItem(i int, nitems int) (value.AnnotatedValue, errors.Error) {
 	return doc, nil
 }
 
-func (b *keyspace) Insert(inserts value.Pairs, context datastore.QueryContext) (value.Pairs, errors.Errors) {
+func (b *keyspace) Insert(inserts value.Pairs, context datastore.QueryContext, preserveMutations bool) (int, value.Pairs, errors.Errors) {
 	// FIXME
-	return nil, errors.Errors{errors.NewOtherNotImplementedError(nil, "for Mock datastore")}
+	return 0, nil, errors.Errors{errors.NewOtherNotImplementedError(nil, "for Mock datastore")}
 }
 
-func (b *keyspace) Update(updates value.Pairs, context datastore.QueryContext) (value.Pairs, errors.Errors) {
+func (b *keyspace) Update(updates value.Pairs, context datastore.QueryContext, preserveMutations bool) (int, value.Pairs, errors.Errors) {
 	// FIXME
-	return nil, errors.Errors{errors.NewOtherNotImplementedError(nil, "for Mock datastore")}
+	return 0, nil, errors.Errors{errors.NewOtherNotImplementedError(nil, "for Mock datastore")}
 }
 
-func (b *keyspace) Upsert(upserts value.Pairs, context datastore.QueryContext) (value.Pairs, errors.Errors) {
+func (b *keyspace) Upsert(upserts value.Pairs, context datastore.QueryContext, preserveMutations bool) (int, value.Pairs, errors.Errors) {
 	// FIXME
-	return nil, errors.Errors{errors.NewOtherNotImplementedError(nil, "for Mock datastore")}
+	return 0, nil, errors.Errors{errors.NewOtherNotImplementedError(nil, "for Mock datastore")}
 }
 
-func (b *keyspace) Delete(deletes value.Pairs, context datastore.QueryContext) (value.Pairs, errors.Errors) {
+func (b *keyspace) Delete(deletes value.Pairs, context datastore.QueryContext, preserveMutations bool) (int, value.Pairs, errors.Errors) {
 	// FIXME
-	return nil, errors.Errors{errors.NewOtherNotImplementedError(nil, "for Mock datastore")}
+	return 0, nil, errors.Errors{errors.NewOtherNotImplementedError(nil, "for Mock datastore")}
 }
 
 func (b *keyspace) Release(close bool) {

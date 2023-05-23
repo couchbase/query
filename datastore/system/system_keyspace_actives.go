@@ -276,7 +276,7 @@ func (b *activeRequestsKeyspace) Fetch(keys []string, keysMap map[string]value.A
 	return
 }
 
-func (b *activeRequestsKeyspace) Delete(deletes value.Pairs, context datastore.QueryContext) (value.Pairs, errors.Errors) {
+func (b *activeRequestsKeyspace) Delete(deletes value.Pairs, context datastore.QueryContext, preserveMutations bool) (int, value.Pairs, errors.Errors) {
 	var done bool
 	var creds distributed.Creds
 
@@ -314,16 +314,27 @@ func (b *activeRequestsKeyspace) Delete(deletes value.Pairs, context datastore.Q
 			})
 		}
 
-		// save memory allocations by making a new slice only on errors
 		if !done {
-			deleted := make([]value.Pair, i)
-			if i > 0 {
-				copy(deleted, deletes[0:i-1])
+			err := errors.Errors{errors.NewSystemStmtNotFoundError(nil, name)}
+			if preserveMutations {
+				// save memory allocations by making a new slice only on errors
+				deleted := make([]value.Pair, i)
+				if i > 0 {
+					copy(deleted, deletes[0:i-1])
+				}
+				return i, deleted, err
+			} else {
+				return i, nil, err
 			}
-			return deleted, errors.Errors{errors.NewSystemStmtNotFoundError(nil, name)}
+
 		}
 	}
-	return deletes, nil
+
+	if preserveMutations {
+		return len(deletes), deletes, nil
+	} else {
+		return len(deletes), nil, nil
+	}
 }
 
 func newActiveRequestsKeyspace(p *namespace) (*activeRequestsKeyspace, errors.Error) {
