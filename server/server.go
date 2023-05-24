@@ -1847,8 +1847,8 @@ func HostNameandPort(node string) (host, port string) {
 
 const (
 	_SERVICE_PERCENT_LIMIT   = 100
-	_SERVICE_OVERHEAD_FACTOR = 2            // 2 requests per servicer is normal
-	_MEMORY_PERCENT          = 90           // 90% Memory used consider Memory intensive
+	_SERVICE_OVERHEAD_FACTOR = 2 // 2 requests per servicer is normal
+	_MEMORY_PERCENT          = 100
 	_MEMORY_QUOTA            = float64(0.5) // 50% of system memory
 	_DEF_MEMORY_USAGE        = uint64(1)
 )
@@ -1863,7 +1863,7 @@ func (this *Server) loadFactor(refresh bool) int {
 	cpu := int(this.CpuUsage(refresh))
 	memory, _ := this.MemoryUsage(refresh)
 	// max of all of them
-	return util.MaxInt(util.MaxInt(servicers, cpu), int(memory))
+	return util.MaxInt(util.MaxInt(servicers, cpu), util.MinInt(int(memory), _MEMORY_PERCENT))
 
 }
 
@@ -1910,7 +1910,7 @@ func (this *Server) MemoryUsage(refresh bool) (uint64, uint64) {
 	mem_used := ms.HeapInuse + ms.HeapIdle - ms.HeapReleased + ms.GCSys
 	mem_quota := memory.NodeQuota() * util.MiB
 	if mem_quota > 0 {
-		return uint64(util.MinInt(int((mem_used*100)/mem_quota), _MEMORY_PERCENT)), ms.LastGC
+		return uint64((mem_used * 100) / mem_quota), ms.LastGC
 	}
 
 	// no node quota. caulculate Query engine memory quota as 50% system memory
@@ -1931,7 +1931,7 @@ func (this *Server) MemoryUsage(refresh bool) (uint64, uint64) {
 	*/
 
 	if mup > _DEF_MEMORY_USAGE {
-		return uint64(util.MinInt(int(mup), _MEMORY_PERCENT)), ms.LastGC
+		return uint64(mup), ms.LastGC
 	}
 	return _DEF_MEMORY_USAGE, ms.LastGC
 
