@@ -78,3 +78,66 @@ func (this *NodeName) Constructor() FunctionConstructor {
 		return NewNodeName()
 	}
 }
+
+func (this *NodeName) Indexable() bool {
+	return false
+}
+
+///////////////////////////////////////////////////
+//
+// NodeUUID
+//
+///////////////////////////////////////////////////
+
+type NodeUUID struct {
+	UnaryFunctionBase
+}
+
+func NewNodeUUID(operand Expression) Function {
+	rv := &NodeUUID{
+		*NewUnaryFunctionBase("node_uuid", operand),
+	}
+
+	rv.unsetVolatile()
+	rv.expr = rv
+	return rv
+}
+
+func (this *NodeUUID) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *NodeUUID) Type() value.Type {
+	return value.STRING
+}
+
+func (this *NodeUUID) Evaluate(item value.Value, context Context) (value.Value, error) {
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if arg.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else if arg.Type() != value.STRING {
+		return value.NULL_VALUE, nil
+	}
+	host := arg.ToString()
+	if host == "" {
+		host = distributed.RemoteAccess().WhoAmI()
+	}
+
+	return value.NewValue(distributed.RemoteAccess().NodeUUID(host)), nil
+}
+
+func (this *NodeUUID) Static() Expression {
+	return this.expr.(Function)
+}
+
+func (this *NodeUUID) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return NewNodeUUID(operands[0])
+	}
+}
+
+func (this *NodeUUID) Indexable() bool {
+	return false
+}

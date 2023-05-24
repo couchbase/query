@@ -391,6 +391,7 @@ var _FUNCTIONS = map[string]Function{
 
 	// Distributed
 	"node_name": &NodeName{},
+	"node_uuid": &NodeUUID{},
 
 	// Type checking
 	"is_array":   &IsArray{},
