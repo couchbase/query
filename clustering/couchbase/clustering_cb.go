@@ -19,6 +19,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/couchbase/cbauth"
@@ -566,6 +567,7 @@ type cbCluster struct {
 	capabilities      map[string]bool               `json:"-"`
 	poolSrvRev        int                           `json:"-"`
 	lastCheck         util.Time                     `json:"-"`
+	refreshing        int32                         `json:"-"`
 }
 
 // Create a new cbCluster instance
@@ -637,15 +639,21 @@ func (this *cbCluster) QueryNodeNames() ([]string, errors.Error) {
 		return this.queryNodeNames, nil
 	}
 
+	if atomic.AddInt32(&this.refreshing, 1) != 1 && len(this.queryNodeNames) != 0 {
+		atomic.AddInt32(&this.refreshing, -1)
+		return this.queryNodeNames, nil
+	}
+	defer atomic.AddInt32(&this.refreshing, -1)
+
 	// If pool services and cluster rev do not match, update the cluster's rev and query node data:
+	nodes, err := configStore.cbConn.GetPoolNodes(configStore.poolName)
+	if err != nil {
+		return nil, errors.NewAdminGetNodeError(err, configStore.poolName)
+	}
 	queryNodeNames := []string{}
 	queryNodeServices := map[string]services{}
 	queryNodeUUIDs := make(map[string]string)
 	queryNodeHealthy := make(map[string]bool)
-	pool, err := configStore.cbConn.GetPool(configStore.poolName)
-	if err != nil {
-		return nil, errors.NewAdminGetNodeError(err, configStore.poolName)
-	}
 	for _, nodeServices := range poolServices.NodesExt {
 		var queryServices services
 		for name, protocol := range n1qlProtocols {
@@ -696,9 +704,9 @@ func (this *cbCluster) QueryNodeNames() ([]string, errors.Error) {
 		queryNodeServices[nodeId] = queryServices
 
 		// Get NodeUUID
-		for _, n := range pool.Nodes {
+		for _, n := range nodes {
 			if n.Hostname == nodeId {
-				queryNodeUUIDs[nodeId] = n.NodeUUID
+				queryNodeUUIDs[n.NodeUUID] = nodeId
 
 				// just in case we are querying an old node that doesn't report the status
 				queryNodeHealthy[nodeId] = n.Status != "unhealthy"
@@ -706,6 +714,7 @@ func (this *cbCluster) QueryNodeNames() ([]string, errors.Error) {
 			}
 		}
 	}
+	nodes = nil
 
 	var capabilities map[string]bool
 	if len(poolServices.Capabilities) > 0 {
@@ -740,6 +749,7 @@ func (this *cbCluster) QueryNodeNames() ([]string, errors.Error) {
 
 	this.poolSrvRev = poolServices.Rev
 	this.lastCheck = util.Now()
+	logging.Infof("Refreshed cluster information (rev:%v)", poolServices.Rev)
 	return this.queryNodeNames, nil
 }
 
@@ -767,7 +777,13 @@ func (this *cbCluster) QueryNodeByName(name string) (clustering.QueryNode, error
 		return nil, errors.NewAdminNoNodeError(name)
 	}
 
-	uuid, _ := this.queryNodeUUIDs[name]
+	var uuid string
+	for u, h := range this.queryNodeUUIDs {
+		if h == name {
+			uuid = u
+			break
+		}
+	}
 	healthy, ok := this.queryNodeHealthy[name]
 
 	qryNode := &cbQueryNodeConfig{
@@ -942,12 +958,8 @@ func (this *cbCluster) UUIDToHost(uuid string) (string, errors.Error) {
 	if err != nil {
 		return "", err
 	}
-	for h, u := range this.queryNodeUUIDs {
-		if u == uuid {
-			return h, nil
-		}
-	}
-	return "", errors.NewAdminNoNodeError(uuid)
+	host, _ := this.queryNodeUUIDs[uuid]
+	return host, nil
 }
 
 // cbQueryNodeConfig implements clustering.QueryNode

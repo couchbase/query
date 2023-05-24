@@ -1612,3 +1612,36 @@ func InvokeEndpointWithRetry(url string, u string, p string, cmd string, ctype s
 		}
 	}
 }
+
+// obtain and return minimal information on nodes in the pool
+type PoolNode struct {
+	NodeUUID string `json:"nodeUUID"`
+	Hostname string `json:"hostname"`
+	Status   string `json:"status"`
+}
+
+type PoolNodes struct {
+	Nodes []PoolNode `json:"nodes"`
+}
+
+func (c *Client) GetPoolNodes(name string) ([]PoolNode, error) {
+	var poolURI string
+	var err error
+
+	for _, p := range c.Info.Pools {
+		if p.Name == name {
+			poolURI = p.URI
+			break
+		}
+	}
+	if poolURI == "" {
+		return nil, errors.New("No pool named " + name)
+	}
+
+	p := &PoolNodes{}
+	err = c.parseURLResponse(poolURI, p)
+	if err != nil {
+		return nil, err
+	}
+	return p.Nodes, err
+}
