@@ -25,7 +25,8 @@ type memoryManager struct {
 	inUseMemory uint64
 	sessions    int32
 	tenant      string
-	timer       *time.Timer
+	ticks       int32
+	ticker      *time.Ticker
 	sync.Mutex
 }
 
@@ -37,8 +38,9 @@ type memorySession struct {
 
 const _MB = 1024 * 1024
 const _TENANT_QUOTA_RATIO = 2
-const _CLEANUP_INTERVAL = 30 * time.Minute
-const _QUICK_CLEANUP = 2 * time.Second
+const _CLEANUP_TICKER = time.Minute
+const _CLEANUP_COUNT = 30
+const _CLEANUP_INTERVAL = _CLEANUP_TICKER * _CLEANUP_COUNT
 const _MAX_TENANTS = 80
 
 var managers map[string]*memoryManager = make(map[string]*memoryManager, _MAX_TENANTS)
@@ -64,11 +66,15 @@ func Register(context Context) memory.MemorySession {
 	manager := managers[tenant]
 	if manager == nil {
 		manager = &memoryManager{inUseMemory: 0, sessions: 0, tenant: tenant}
+		manager.ticker = time.NewTicker(_CLEANUP_TICKER)
+		go manager.checkExpire()
 		managers[tenant] = manager
 	}
+
+	// make sure the session is accounted for before we unlock the manager list
+	atomic.AddInt32(&manager.sessions, 1)
 	managersLock.Unlock()
 
-	atomic.AddInt32(&manager.sessions, 1)
 	session := memory.Register()
 	atomic.AddUint64(&manager.inUseMemory, session.Allocated())
 	return &memorySession{manager, session, context}
@@ -93,39 +99,64 @@ func (this *memoryManager) AllocatedMemory() uint64 {
 func (this *memoryManager) Expire() {
 	this.Lock()
 
-	// avoid race condition among doubly scheduled cleaners
-	if this.timer == nil || this.tenant == "" {
+	// avoid race conditions between forced and timed expiries
+	if this.ticker == nil {
 		this.Unlock()
 		return
 	}
 	if this.sessions == 0 {
-		this.timer.Stop()
-		this.timer.Reset(_QUICK_CLEANUP)
+		this.ticks = _CLEANUP_COUNT
 	}
 	this.Unlock()
 }
 
-func (this *memoryManager) expire() {
-	this.Lock()
+func (this *memoryManager) checkExpire() {
 
-	// avoid race condition among doubly scheduled cleaners
-	if this.timer == nil {
+	// we cannot just panic
+	defer func() {
+		if recover() != nil {
+			go this.checkExpire()
+		}
+	}()
+
+	for now := range this.ticker.C {
+		scheduled := false
+		this.Lock()
+		if atomic.LoadInt32(&this.sessions) != 0 {
+			this.ticks = 0
+		} else {
+			if this.ticks == 0 {
+				scheduled = true
+			}
+			this.ticks++
+			if this.ticks > _CLEANUP_COUNT {
+				break
+			}
+		}
 		this.Unlock()
+		if scheduled {
+			logging.Infof("Scheduling cleanup of tenant %v for %v", this.tenant, now.Add(_CLEANUP_INTERVAL))
+		}
+	}
+	managersLock.Lock()
+
+	// at this point we are sure that no one can increase the session count
+	if atomic.LoadInt32(&this.sessions) != 0 {
+
+		// deal with the session that started as we decided to cleanup
+		managersLock.Unlock()
+		this.Unlock()
+		go this.checkExpire()
 		return
 	}
-	this.timer.Stop()
-	this.timer = nil
-	sessions := this.sessions
-	this.Unlock()
 
-	// ignore unload if tenant has been in use since the timer was fired
-	if sessions == 0 {
-		managersLock.Lock()
-		delete(managers, this.tenant)
-		managersLock.Unlock()
-		for _, f := range resourceManagers {
-			f(this.tenant)
-		}
+	delete(managers, this.tenant)
+	managersLock.Unlock()
+	this.ticker.Stop()
+	this.ticker = nil
+	this.Unlock()
+	for _, f := range resourceManagers {
+		f(this.tenant)
 	}
 }
 
@@ -150,24 +181,10 @@ func (this *memorySession) Allocated() uint64 {
 }
 
 func (this *memorySession) Release() {
-	remaining := atomic.AddInt32(&this.manager.sessions, -1)
+	atomic.AddInt32(&this.manager.sessions, -1)
 	size := this.session.Allocated()
 	this.session.Release()
 	atomic.AddUint64(&this.manager.inUseMemory, ^(size - 1))
-
-	// no need to cleanup anything if this was a privileged session
-	// any buckets loaded by this session will be unloaded via the streaming subscription
-	if remaining == 0 && this.manager.tenant != "" {
-		this.manager.Lock()
-		if this.manager.timer != nil {
-			this.manager.timer.Stop()
-			this.manager.timer.Reset(_CLEANUP_INTERVAL)
-		} else {
-			this.manager.timer = time.AfterFunc(_CLEANUP_INTERVAL, func() { this.manager.expire() })
-		}
-		this.manager.Unlock()
-		logging.Infof("Scheduling cleanup of tenant %v for %v", this.manager.tenant, time.Now().Add(_CLEANUP_INTERVAL))
-	}
 }
 
 func (this *memorySession) AvailableMemory() uint64 {
