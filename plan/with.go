@@ -11,18 +11,19 @@ package plan
 import (
 	"encoding/json"
 
+	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/expression"
-	"github.com/couchbase/query/expression/unmarshal"
+	"github.com/couchbase/query/expression/parser"
 )
 
 type With struct {
 	readonly
 	optEstimate
-	bindings expression.Bindings
+	bindings expression.Withs
 	child    Operator
 }
 
-func NewWith(bindings expression.Bindings, child Operator, cost, cardinality float64,
+func NewWith(bindings expression.Withs, child Operator, cost, cardinality float64,
 	size int64, frCost float64) *With {
 	rv := &With{
 		bindings: bindings,
@@ -40,7 +41,7 @@ func (this *With) New() Operator {
 	return &With{}
 }
 
-func (this *With) Bindings() expression.Bindings {
+func (this *With) Bindings() expression.Withs {
 	return this.bindings
 }
 
@@ -87,7 +88,7 @@ func (this *With) UnmarshalJSON(body []byte) error {
 		return err
 	}
 
-	this.bindings, err = unmarshal.UnmarshalBindings(_unmarshalled.Bindings)
+	this.bindings, err = unmarshalWiths(_unmarshalled.Bindings)
 
 	err = json.Unmarshal(_unmarshalled.Child, &child_type)
 	if err != nil {
@@ -101,4 +102,28 @@ func (this *With) UnmarshalJSON(body []byte) error {
 	unmarshalOptEstimate(&this.optEstimate, _unmarshalled.OptEstimate)
 
 	return nil
+}
+
+func unmarshalWiths(body []byte) (expression.Withs, error) {
+	var _unmarshalled []struct {
+		Alias string `json:"alias"`
+		Expr  string `json:"expr"`
+	}
+
+	err := json.Unmarshal(body, &_unmarshalled)
+	if err != nil {
+		return nil, err
+	}
+
+	withs := make(expression.Withs, len(_unmarshalled))
+	for i, with := range _unmarshalled {
+		expr, err := parser.Parse(with.Expr)
+		if err != nil {
+			return nil, err
+		}
+
+		withs[i] = algebra.NewWith(with.Alias, expr)
+	}
+
+	return withs, nil
 }

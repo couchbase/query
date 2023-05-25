@@ -34,6 +34,8 @@ whenTerm         *expression.WhenTerm
 whenTerms        expression.WhenTerms
 binding          *expression.Binding
 bindings         expression.Bindings
+with             expression.With
+withs            expression.Withs
 dimensions       []expression.Bindings
 
 node             algebra.Node
@@ -384,8 +386,10 @@ column int
 
 %type <expr>             expr c_expr b_expr
 %type <exprs>            exprs opt_exprs
-%type <binding>          binding with_term
-%type <bindings>         bindings with_list
+%type <binding>          binding
+%type <bindings>         bindings
+%type <with>             with_term
+%type <withs>            with_list
 
 %type <s>                alias as_alias opt_as_alias variable opt_name opt_window_name
 
@@ -427,7 +431,8 @@ column int
 %type <expr>             on_keys on_key
 %type <indexRefs>        index_refs
 %type <indexRef>         index_ref
-%type <bindings>         opt_let let with
+%type <bindings>         opt_let let
+%type <withs>            with
 %type <expr>             opt_where where opt_filter
 %type <group>            opt_group group
 %type <expr>             opt_group_as
@@ -1731,7 +1736,7 @@ WITH with_list
 with_list:
 with_term
 {
-    $$ = expression.Bindings{$1}
+    $$ = expression.Withs{$1}
 }
 |
 with_list COMMA with_term
@@ -1747,9 +1752,8 @@ with_term:
  */
 alias AS paren_expr
 {
-    $$ = expression.NewSimpleBinding($1, $3)
+    $$ = algebra.NewWith($1, $3)
     $$.SetErrorContext($<line>1, $<column>1)
-    $$.SetStatic(true)
 }
 ;
 

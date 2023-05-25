@@ -29,7 +29,7 @@ type Select struct {
 	statementBase
 
 	subresult    Subresult             `json:"subresult"`
-	with         expression.Bindings   `json:"with"`
+	with         expression.Withs      `json:"with"`
 	order        *Order                `json:"order"`
 	offset       expression.Expression `json:"offset"`
 	limit        expression.Expression `json:"limit"`
@@ -43,7 +43,7 @@ type Select struct {
 The function NewSelect returns a pointer to the Select struct
 by assigning the input attributes to the fields of the struct.
 */
-func NewSelect(subresult Subresult, with expression.Bindings, order *Order, offset, limit expression.Expression) *Select {
+func NewSelect(subresult Subresult, with expression.Withs, order *Order, offset, limit expression.Expression) *Select {
 	rv := &Select{
 		subresult: subresult,
 		with:      with,
@@ -377,7 +377,7 @@ func (this *Select) SetUnderSetOp() {
 /*
 Returns the With clause in the select statement.
 */
-func (this *Select) With() expression.Bindings {
+func (this *Select) With() expression.Withs {
 	return this.with
 }
 
@@ -450,4 +450,23 @@ type Subresult interface {
 	   Returns the optimizer hints
 	*/
 	OptimHints() *OptimHints
+}
+
+/*
+Representation as a N1QL WITH clause string.
+*/
+func withBindings(withs expression.Withs) string {
+	if len(withs) == 0 {
+		return ""
+	}
+
+	s := "WITH "
+	for i, with := range withs {
+		if i > 0 {
+			s += ", "
+		}
+		s += with.String()
+	}
+
+	return s
 }

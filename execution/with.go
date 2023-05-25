@@ -92,7 +92,7 @@ func (this *With) RunOnce(context *Context, parent value.Value) {
 				// operators to be set properly by sequences
 				break
 			}
-			wv.SetField(b.Variable(), v)
+			wv.SetField(b.Alias(), v)
 		}
 		this.wv = wv // keep a copy for later recycling
 

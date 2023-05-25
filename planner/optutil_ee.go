@@ -368,7 +368,7 @@ func getLetCost(lastOp plan.Operator) (float64, float64, int64, float64) {
 	return optutil.CalcLetCost(lastOp)
 }
 
-func getWithCost(lastOp plan.Operator, with expression.Bindings) (float64, float64, int64, float64) {
+func getWithCost(lastOp plan.Operator, with expression.Withs) (float64, float64, int64, float64) {
 	return optutil.CalcWithCost(lastOp, with)
 }
 

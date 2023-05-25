@@ -407,23 +407,3 @@ func stringBindings(bindings expression.Bindings) string {
 
 	return s
 }
-
-/*
-   Representation as a N1QL WITH clause string.
-*/
-
-func withBindings(bindings expression.Bindings) string {
-	s := " WITH "
-
-	for i, b := range bindings {
-		if i > 0 {
-			s += ", "
-		}
-
-		s += "`" + b.Variable() + "` AS ( "
-		s += b.Expression().String()
-		s += " ) "
-	}
-
-	return s
-}

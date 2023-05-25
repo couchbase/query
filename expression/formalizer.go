@@ -670,26 +670,27 @@ func (this *Formalizer) WithInfo(alias string) *WithInfo {
 	return nil
 }
 
-func (this *Formalizer) ProcessWiths(withs Bindings) error {
+func (this *Formalizer) ProcessWiths(withs Withs) error {
 	if this.withs == nil {
 		this.withs = make(map[string]*WithInfo, len(withs))
 	}
 
 	for _, with := range withs {
-		errContext := with.errorContext.String()
-		if _, ok := this.withs[with.variable]; ok {
-			return errors.NewDuplicateAliasError("WITH clause", with.variable, errContext, "semantics.with.duplicate_with_alias")
+		errContext := with.ErrorContext()
+		withAlias := with.Alias()
+		if _, ok := this.withs[withAlias]; ok {
+			return errors.NewDuplicateAliasError("WITH clause", withAlias, errContext, "semantics.with.duplicate_with_alias")
 		}
-		if _, ok := this.allowed.Field(with.variable); ok {
-			return errors.NewDuplicateAliasError("WITH clause", with.variable, errContext, "semantics.with.duplicate_with_alias")
+		if _, ok := this.allowed.Field(withAlias); ok {
+			return errors.NewDuplicateAliasError("WITH clause", withAlias, errContext, "semantics.with.duplicate_with_alias")
 		}
 
 		f := NewFormalizer("", this)
-		expr, err := f.Map(with.expr)
+		expr, err := f.Map(with.Expression())
 		if err != nil {
 			return err
 		}
-		with.expr = expr
+		with.SetExpression(expr)
 
 		// check for correlation
 		var correlated bool
@@ -698,16 +699,16 @@ func (this *Formalizer) ProcessWiths(withs Bindings) error {
 			correlated = true
 			correlation = f.GetCorrelation()
 		}
-		this.withs[with.variable] = newWithInfo(correlated, correlation)
+		this.withs[withAlias] = newWithInfo(correlated, correlation)
 	}
 	return nil
 }
 
-func (this *Formalizer) SetPermanentWiths(withs Bindings) {
+func (this *Formalizer) SetPermanentWiths(bindings Bindings) {
 	if this.withs == nil {
-		this.withs = make(map[string]*WithInfo, len(withs))
+		this.withs = make(map[string]*WithInfo, len(bindings))
 	}
-	for _, b := range withs {
+	for _, b := range bindings {
 		this.withs[b.Variable()] = newPermanentWithInfo()
 	}
 }
