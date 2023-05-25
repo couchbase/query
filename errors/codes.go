@@ -85,9 +85,9 @@ const (
 	E_SERVICE_TENANT_MISSING                  ErrorCode = 1197
 	E_SERVICE_TENANT_NOT_AUTHORIZED           ErrorCode = 1198
 	E_SERVICE_TENANT_REJECTED                 ErrorCode = 1199
-	E_SERVICE_TENANT_NOT_FOUND                ErrorCode = 1120
-	E_SERVICE_REQUEST_QUEUE_FULL              ErrorCode = 1121
-	E_SERVICE_NO_CLIENT                       ErrorCode = 1122
+	E_SERVICE_TENANT_NOT_FOUND                ErrorCode = 1200
+	E_SERVICE_REQUEST_QUEUE_FULL              ErrorCode = 1201
+	E_SERVICE_NO_CLIENT                       ErrorCode = 1202
 	E_ADMIN_CONNECTION                        ErrorCode = 2000
 	E_ADMIN_START                             ErrorCode = 2001
 	E_ADMIN_INVALIDURL                        ErrorCode = 2010
