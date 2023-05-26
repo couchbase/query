@@ -76,6 +76,7 @@ func Register(context Context) memory.MemorySession {
 	managersLock.Unlock()
 
 	session := memory.Register()
+	atomic.StoreInt32(&manager.ticks, 0)
 	atomic.AddUint64(&manager.inUseMemory, session.Allocated())
 	return &memorySession{manager, session, context}
 }
@@ -122,14 +123,12 @@ func (this *memoryManager) checkExpire() {
 	for now := range this.ticker.C {
 		scheduled := false
 		this.Lock()
-		if atomic.LoadInt32(&this.sessions) != 0 {
-			this.ticks = 0
-		} else {
-			if this.ticks == 0 {
+		if atomic.LoadInt32(&this.sessions) == 0 {
+			ticks := atomic.AddInt32(&this.ticks, 1)
+			if ticks == 1 {
 				scheduled = true
 			}
-			this.ticks++
-			if this.ticks > _CLEANUP_COUNT {
+			if ticks > _CLEANUP_COUNT {
 				break
 			}
 		}
