@@ -19,6 +19,7 @@ import (
 	"path"
 	"runtime"
 	"runtime/debug"
+	"strconv"
 	"strings"
 	"time"
 
@@ -485,7 +486,8 @@ func (endpoint *HttpEndpoint) verifyCredentialsFromRequest(api string, priv auth
 
 func doRedact(req *http.Request) bool {
 	val := req.FormValue("redact")
-	return len(val) > 0
+	r, _ := strconv.ParseBool(val)
+	return r
 }
 
 func doPrepared(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
@@ -1922,7 +1924,7 @@ func interfaceRedacted(in interface{}, redact bool) interface{} {
 		out = append(out, []byte("</ud>")...)
 
 		// marshal it again to escape the quotes
-		out, _ = value.NewValue(util.ByteToString(out)).MarshalJSON()
+		out, _ = json.MarshalNoEscape(util.ByteToString(out))
 		return out
 	}
 	return in

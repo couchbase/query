@@ -9,6 +9,7 @@
 package http
 
 import (
+	"bytes"
 	"encoding/json"
 	"net/http"
 	"strconv"
@@ -63,13 +64,14 @@ func (this *HttpEndpoint) wrapAPI(w http.ResponseWriter, req *http.Request, f ap
 	} else {
 		p := req.FormValue("pretty")
 		pretty, _ := strconv.ParseBool(p)
-		var buf []byte
+		buf := &bytes.Buffer{}
 		var json_err error
+		enc := json.NewEncoder(buf)
+		enc.SetEscapeHTML(false)
 		if pretty {
-			buf, json_err = json.MarshalIndent(obj, "", "\t")
-		} else {
-			buf, json_err = json.Marshal(obj)
+			enc.SetIndent("", "\t")
 		}
+		json_err = enc.Encode(obj)
 		if json_err != nil {
 			e := errors.NewAdminDecodingError(json_err)
 			status := writeError(w, e)
@@ -81,7 +83,7 @@ func (this *HttpEndpoint) wrapAPI(w http.ResponseWriter, req *http.Request, f ap
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
-		w.Write(buf)
+		buf.WriteTo(w)
 	}
 
 	auditFields.HttpResultCode = http.StatusOK
