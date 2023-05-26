@@ -68,6 +68,7 @@ const (
 	_DEF_PIPELINE_CAP           = 512
 	_DEF_PIPELINE_BATCH         = 16
 	_DEF_COMPLETED_THRESHOLD    = 1000
+	_DEF_COMPLETED_THRESHOLD_SL = 5000
 	_DEF_COMPLETED_LIMIT        = 4000
 	_DEF_PREPARED_LIMIT         = 16384
 	_DEF_FUNCTIONS_LIMIT        = 16384
@@ -135,7 +136,7 @@ var CPU_PROFILE = flag.String("cpuprofile", "", "write cpu profile to file")
 var MEM_PROFILE = flag.String("memprofile", "", "write memory profile to this file")
 
 // Monitoring API
-var COMPLETED_THRESHOLD = flag.Int("completed-threshold", _DEF_COMPLETED_THRESHOLD,
+var COMPLETED_THRESHOLD = flag.Int("completed-threshold", -1,
 	"cache completed query lasting longer than this many milliseconds")
 var COMPLETED_LIMIT = flag.Int("completed-limit", _DEF_COMPLETED_LIMIT, "maximum number of completed requests")
 
@@ -317,6 +318,13 @@ func main() {
 	}
 
 	// Start the completed requests log
+	if *COMPLETED_THRESHOLD == -1 {
+		if tenant.IsServerless() {
+			*COMPLETED_THRESHOLD = _DEF_COMPLETED_THRESHOLD_SL
+		} else {
+			*COMPLETED_THRESHOLD = _DEF_COMPLETED_THRESHOLD
+		}
+	}
 	server_package.RequestsInit(*COMPLETED_THRESHOLD, *COMPLETED_LIMIT)
 
 	// Initialized the prepared statement cache

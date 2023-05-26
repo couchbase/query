@@ -66,6 +66,8 @@ type httpRequest struct {
 	logger logging.Logger
 }
 
+const _DEFAULT_SERVERLESS_REQUEST_TIMEOUT = time.Second * 120
+
 var zeroScanVectorSource = &ZeroScanVectorSource{}
 
 func newHttpRequest(rv *httpRequest, resp http.ResponseWriter, req *http.Request, bp BufferPool, size int, namespace string) {
@@ -123,9 +125,14 @@ func newHttpRequest(rv *httpRequest, resp http.ResponseWriter, req *http.Request
 	rv.SetUserAgent(userAgent)
 	rv.SetRemoteAddr(req.RemoteAddr)
 
+	if tenant.IsServerless() {
+		rv.SetTimeout(_DEFAULT_SERVERLESS_REQUEST_TIMEOUT)
+	}
+
 	if err == nil {
 		err = httpArgs.processParameters(rv)
 	}
+
 	// update the logger with the request Id once it is known
 	if rv.logger != nil {
 		if rl, ok := rv.logger.(logging.RequestLogger); ok {

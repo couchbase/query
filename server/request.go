@@ -370,6 +370,7 @@ type BaseRequest struct {
 	resultCount          int64
 	resultSize           int64
 	serviceDuration      time.Duration
+	totalDuration        time.Duration
 	tracked              bool
 	tenantCtx            tenant.Context
 	sortProjection       bool

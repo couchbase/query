@@ -528,6 +528,7 @@ func LogRequest(request_time, service_time, transactionElapsedTime time.Duration
 	request.resultCount = int64(result_count)
 	request.resultSize = int64(result_size)
 	request.serviceDuration = service_time
+	request.totalDuration = request_time
 	requestLog.RLock()
 	defer requestLog.RUnlock()
 
@@ -733,19 +734,27 @@ func (this *timeThreshold) checkCondition(c interface{}) errors.Error {
 	case int64:
 		return nil
 	}
-	return errors.NewCompletedQualifierInvalidArgument("threshold", c)
+	return errors.NewCompletedQualifierInvalidArgument(this.name(), c)
 }
 
 func (this *timeThreshold) evaluate(request *BaseRequest, req *http.Request) bool {
 
 	// negative threshold means log nothing
 	// zero threshold means log everything (no threshold)
-	if this.threshold < 0 ||
-		(this.threshold >= 0 &&
-			request.serviceDuration < time.Millisecond*this.threshold) {
+	switch {
+	case this.threshold < 0:
 		return false
+	case this.threshold == 0:
+		return true
+	default:
+		if tenant.IsServerless() {
+			return (request.serviceDuration >= time.Millisecond*this.threshold ||
+				request.totalDuration >= time.Millisecond*this.threshold ||
+				request.throttleTime >= time.Millisecond*this.threshold)
+		} else {
+			return request.serviceDuration >= time.Millisecond*this.threshold
+		}
 	}
-	return true
 }
 
 // 2- aborted
@@ -1025,7 +1034,7 @@ func (this *results) checkCondition(c interface{}) errors.Error {
 	case int64:
 		return nil
 	}
-	return errors.NewCompletedQualifierInvalidArgument("results", c)
+	return errors.NewCompletedQualifierInvalidArgument(this.name(), c)
 }
 
 func (this *results) evaluate(request *BaseRequest, req *http.Request) bool {
@@ -1076,7 +1085,7 @@ func (this *mutations) checkCondition(c interface{}) errors.Error {
 	case int64:
 		return nil
 	}
-	return errors.NewCompletedQualifierInvalidArgument("mutations", c)
+	return errors.NewCompletedQualifierInvalidArgument(this.name(), c)
 }
 
 func (this *mutations) evaluate(request *BaseRequest, req *http.Request) bool {
@@ -1127,7 +1136,7 @@ func (this *size) checkCondition(c interface{}) errors.Error {
 	case int64:
 		return nil
 	}
-	return errors.NewCompletedQualifierInvalidArgument("size", c)
+	return errors.NewCompletedQualifierInvalidArgument(this.name(), c)
 }
 
 func (this *size) evaluate(request *BaseRequest, req *http.Request) bool {
@@ -1178,7 +1187,7 @@ func (this *counts) checkCondition(c interface{}) errors.Error {
 	case int64:
 		return nil
 	}
-	return errors.NewCompletedQualifierInvalidArgument("counts", c)
+	return errors.NewCompletedQualifierInvalidArgument(this.name(), c)
 }
 
 func (this *counts) evaluate(request *BaseRequest, req *http.Request) bool {
@@ -1238,7 +1247,7 @@ func (this *statement) checkCondition(c interface{}) errors.Error {
 	case string:
 		return nil
 	}
-	return errors.NewCompletedQualifierInvalidArgument("statement", c)
+	return errors.NewCompletedQualifierInvalidArgument(this.name(), c)
 }
 
 func (this *statement) evaluate(request *BaseRequest, req *http.Request) bool {
@@ -1409,7 +1418,7 @@ func (this *plan_element) checkCondition(c interface{}) errors.Error {
 	case map[string]interface{}:
 		return nil
 	}
-	return errors.NewCompletedQualifierInvalidArgument("plan", c)
+	return errors.NewCompletedQualifierInvalidArgument(this.name(), c)
 }
 
 func (this *plan_element) evaluate(request *BaseRequest, req *http.Request) bool {

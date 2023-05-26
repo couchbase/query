@@ -321,6 +321,8 @@ func (this *HttpEndpoint) ServeHTTP(resp http.ResponseWriter, req *http.Request)
 		})
 	}()
 
+	defer this.doStats(request, this.server)
+
 	if tenant.IsServerless() {
 
 		// TODO TENANT throttling here is easy but may result in double waiting, once
@@ -354,8 +356,6 @@ func (this *HttpEndpoint) ServeHTTP(resp http.ResponseWriter, req *http.Request)
 		}
 		request.SetTenantCtx(ctx)
 	}
-
-	defer this.doStats(request, this.server)
 
 	// check and act on this first to keep possible load as low as possible in the event of unmetered repeat attempts
 	// new transactions can't be started as the BEGIN doesn't carry a transaction ID and is ejected here
