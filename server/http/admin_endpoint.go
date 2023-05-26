@@ -11,6 +11,7 @@ package http
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
 
 	"github.com/couchbase/query/audit"
 	"github.com/couchbase/query/errors"
@@ -60,7 +61,15 @@ func (this *HttpEndpoint) wrapAPI(w http.ResponseWriter, req *http.Request, f ap
 		w.Header().Set("Content-Type", "text/plain")
 		w.Write([]byte(text))
 	} else {
-		buf, json_err := json.Marshal(obj)
+		p := req.FormValue("pretty")
+		pretty, _ := strconv.ParseBool(p)
+		var buf []byte
+		var json_err error
+		if pretty {
+			buf, json_err = json.MarshalIndent(obj, "", "\t")
+		} else {
+			buf, json_err = json.Marshal(obj)
+		}
 		if json_err != nil {
 			e := errors.NewAdminDecodingError(json_err)
 			status := writeError(w, e)
