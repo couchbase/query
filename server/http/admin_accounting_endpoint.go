@@ -176,7 +176,7 @@ func (this *HttpEndpoint) registerAccountingHandlers() {
 		indexesPrefix + "/prepareds":                      {handler: preparedIndexHandler, methods: []string{"GET"}},
 		indexesPrefix + "/active_requests":                {handler: requestIndexHandler, methods: []string{"GET"}},
 		indexesPrefix + "/completed_requests":             {handler: completedIndexHandler, methods: []string{"GET"}},
-		indexesPrefix + "/function_cache":                 {handler: functionsIndexHandler, methods: []string{"GET"}},
+		indexesPrefix + "/functions_cache":                {handler: functionsIndexHandler, methods: []string{"GET"}},
 		indexesPrefix + "/dictionary_cache":               {handler: dictionaryIndexHandler, methods: []string{"GET"}},
 		indexesPrefix + "/tasks_cache":                    {handler: tasksIndexHandler, methods: []string{"GET"}},
 		prometheusLow:                                     {handler: prometheusLowHandler, methods: []string{"GET"}},
@@ -344,7 +344,8 @@ func doVitals(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, 
 // Credentials can come from two sources: the basic username/password
 // from basic authorizatio, and from a "creds" value, which encodes
 // in JSON an array of username/password pairs, like this:
-//   [{"user":"foo", "pass":"foopass"}, {"user":"bar", "pass": "barpass"}]
+//
+//	[{"user":"foo", "pass":"foopass"}, {"user":"bar", "pass": "barpass"}]
 func (endpoint *HttpEndpoint) getCredentialsFromRequest(ds datastore.Datastore, req *http.Request) (*auth.Credentials, errors.Error, bool) {
 	isInternal := false
 
@@ -1212,17 +1213,17 @@ func (r remapper) remap(bucket string, path []string) {
 }
 
 // Restore semantics:
-// - for global functions, no include, exclude remap is possible.
-//   any non global functions passed will simply be skipped
-// - for scope functions, include, exclude and remap will only operate at scope level
-//   currently no check is made that the target scope exist, which may very well leave stale function definitions
-// - for both cases the only thing that counts is the name, and not the signature, it is therefore possible to go back in
-//   time and restore function definitions with different parameter lists
-// - remapping to an existing scope will replace existing functions, with the same or different signature, which may not be
-//   intended, however a different conflict resolution would prevent going back in time
-// - be aware that remapping may have other side effects: for query context based statements contained within functions, the new targets
-//   will be under the new bucket / scope query context, while accesses with full path will remain unchanged.
-//   this makes perfect sense, but may not necessarely be what the user intended
+//   - for global functions, no include, exclude remap is possible.
+//     any non global functions passed will simply be skipped
+//   - for scope functions, include, exclude and remap will only operate at scope level
+//     currently no check is made that the target scope exist, which may very well leave stale function definitions
+//   - for both cases the only thing that counts is the name, and not the signature, it is therefore possible to go back in
+//     time and restore function definitions with different parameter lists
+//   - remapping to an existing scope will replace existing functions, with the same or different signature, which may not be
+//     intended, however a different conflict resolution would prevent going back in time
+//   - be aware that remapping may have other side effects: for query context based statements contained within functions, the new targets
+//     will be under the new bucket / scope query context, while accesses with full path will remain unchanged.
+//     this makes perfect sense, but may not necessarely be what the user intended
 func doFunctionRestore(v []byte, l int, b string, include, exclude matcher, remap remapper) errors.Error {
 	var oState json.KeyState
 
