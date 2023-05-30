@@ -2089,9 +2089,9 @@ func getLocalData(serv *server.Server, metric string) map[string]interface{} {
 	case "load_factor":
 		values["value"] = serv.LoadFactor()
 	case "active_requests":
-		values["value"] = serv.ActiveRequests()
+		values["count"] = serv.ActiveRequests()
 	case "queued_requests":
-		values["value"] = serv.QueuedRequests()
+		values["count"] = serv.QueuedRequests()
 	case "allocated_values":
 		values["value"] = value.AllocatedValuesCount()
 	case "node_memory":
