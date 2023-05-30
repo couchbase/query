@@ -49,9 +49,17 @@ func NewDuplicateFunctionError(f string) Error {
 }
 
 func NewInternalFunctionError(e error, f string) Error {
-	return &err{level: EXCEPTION, ICode: E_INTERNAL_FUNCTION, IKey: "function.internal.error", ICause: e,
-		InternalMsg:    fmt.Sprintf("Operation on function '%v' encountered an unexpected error %v. Please collect the failing statement and contact support", f, e),
-		InternalCaller: CallerN(1)}
+	if f != "" {
+		return &err{level: EXCEPTION, ICode: E_INTERNAL_FUNCTION, IKey: "function.internal.error", ICause: e,
+			InternalMsg: fmt.Sprintf("Operation on function '%v' encountered an unexpected error: %v. "+
+				"Please collect the failing statement and contact support", f, e),
+			InternalCaller: CallerN(1)}
+	} else {
+		return &err{level: EXCEPTION, ICode: E_INTERNAL_FUNCTION, IKey: "function.internal.error", ICause: e,
+			InternalMsg: fmt.Sprintf("Operation on function encountered an unexpected error: %v. "+
+				"Please collect the failing statement and contact support", e),
+			InternalCaller: CallerN(1)}
+	}
 }
 
 func NewArgumentsMismatchError(f string) Error {

@@ -49,7 +49,7 @@ func (this *inline) Execute(name functions.FunctionName, body functions.Function
 	funcBody, ok := body.(*inlineBody)
 
 	if !ok {
-		return nil, errors.NewInternalFunctionError(goerrors.New("Wrong language being executed!"), name.Name())
+		return nil, errors.NewInternalFunctionError(goerrors.New("Wrong language being executed"), name.Name())
 	}
 
 	if funcBody.varNames == nil {
@@ -164,7 +164,7 @@ func (this *inlineBody) IsExternal() bool {
 func (this *inlineBody) Privileges() (*auth.Privileges, errors.Error) {
 	subqueries, err := expression.ListSubqueries(expression.Expressions{this.expr}, false)
 	if err != nil {
-		return nil, errors.NewError(err, "")
+		return nil, errors.NewInternalFunctionError(err, "")
 	}
 
 	privileges := auth.NewPrivileges()

@@ -8,6 +8,8 @@
 
 package errors
 
+import "fmt"
+
 // Couchbase datastore path parsing errors
 
 func NewDatastoreInvalidPathError(w string) Error {
@@ -71,4 +73,14 @@ func NewBucketNoDefaultCollectionError(b string) Error {
 func NewNoDatastoreError() Error {
 	return &err{level: EXCEPTION, ICode: E_NO_DATASTORE, IKey: "datastore.generic.no_datastore",
 		InternalMsg: "No datastore is available", InternalCaller: CallerN(1)}
+}
+
+func NewDatastoreNotSetError() Error {
+	return &err{level: EXCEPTION, ICode: E_DATASTORE_NOT_SET, IKey: "datastore.not_set",
+		InternalMsg: "Datastore not set", InternalCaller: CallerN(1)}
+}
+
+func NewDatastoreInvalidURIError(uri string) Error {
+	return &err{level: EXCEPTION, ICode: E_DATASTORE_INVALID_URI, IKey: "datastore.invalid_uri",
+		InternalMsg: fmt.Sprintf("Invalid datastore uri: %s", uri), InternalCaller: CallerN(1)}
 }

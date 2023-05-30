@@ -1278,7 +1278,7 @@ func (this *ExpressionDocumentRetriever) GetNextDoc(context datastore.QueryConte
 			if e, ok := err.(errors.Error); ok {
 				return _EMPTY_KEY, nil, e
 			} else {
-				return _EMPTY_KEY, nil, errors.NewError(err, "NextDocument failed")
+				return _EMPTY_KEY, nil, errors.NewNextDocumentError(err)
 			}
 		}
 		this.returnIndex++

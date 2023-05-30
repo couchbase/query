@@ -220,7 +220,7 @@ func (this *IndexCountDistinctScan2) UnmarshalJSON(body []byte) error {
 
 	countIndex2, ok := index.(datastore.CountIndex2)
 	if !ok || !countIndex2.CanCountDistinct() {
-		return errors.NewError(nil, "Unable to find CountDistinct() for index")
+		return errors.NewPlanInternalError("Unable to find CountDistinct() for index")
 	}
 	this.index = countIndex2
 

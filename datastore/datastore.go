@@ -378,7 +378,7 @@ func getNamespace(parts ...string) (Namespace, errors.Error) {
 	}
 
 	if datastore == nil {
-		return nil, errors.NewError(nil, "Datastore not set.")
+		return nil, errors.NewDatastoreNotSetError()
 	}
 
 	// FIXME once SetDefaultNamespace is resolved, this should go

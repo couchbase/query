@@ -184,6 +184,7 @@ const (
 	E_INDEXER_DESC_COLLATION                  ErrorCode = 4320
 	E_PLAN_INTERNAL                           ErrorCode = 4321
 	E_ALTER_INDEX                             ErrorCode = 4322
+	E_PLAN_NO_PLACEHOLDER                     ErrorCode = 4323
 	E_NO_ANSI_JOIN                            ErrorCode = 4330
 	E_PARTITION_INDEX_NOT_SUPPORTED           ErrorCode = 4340
 	E_GSI                                     ErrorCode = 4350
@@ -232,6 +233,8 @@ const (
 	E_UNNEST_INVALID_POSITION                 ErrorCode = 5180
 	E_SCAN_VECTOR_TOO_MANY_SCANNED_BUCKETS    ErrorCode = 5190
 	_RETIRED_5200                                       = 5200
+	E_DYNAMIC_AUTH                            ErrorCode = 5201
+	E_TRANSACTIONAL_AUTH                      ErrorCode = 5201
 	E_USER_NOT_FOUND                          ErrorCode = 5210
 	E_ROLE_REQUIRES_KEYSPACE                  ErrorCode = 5220
 	E_ROLE_TAKES_NO_KEYSPACE                  ErrorCode = 5230
@@ -249,6 +252,7 @@ const (
 	E_MERGE_MULTI_INSERT                      ErrorCode = 5330
 	E_WINDOW_EVALUATION                       ErrorCode = 5340
 	E_ADVISE_INDEX                            ErrorCode = 5350
+	E_ADVISE_INVALID_RESULTS                  ErrorCode = 5351
 	E_UPDATE_STATISTICS                       ErrorCode = 5360
 	E_SUBQUERY_BUILD                          ErrorCode = 5370
 	E_INDEX_LEADING_KEY_MISSING_NOT_SUPPORTED ErrorCode = 5380
@@ -300,6 +304,8 @@ const (
 	E_INFER_NO_RANDOM_SCAN                    ErrorCode = 7020
 	E_INFER_NO_SEQUENTIAL_SCAN                ErrorCode = 7021
 	E_INFER_NO_RETRIEVERS                     ErrorCode = 7022
+	E_INFER_OPTIONS                           ErrorCode = 7023
+	E_INFER_NEXT_DOCUMENT                     ErrorCode = 7024
 	E_DATASTORE_AUTHORIZATION                 ErrorCode = 10000
 	E_FTS_MISSING_PORT_ERR                    ErrorCode = 10003
 	E_NODE_INFO_ACCESS_ERR                    ErrorCode = 10004
@@ -404,6 +410,8 @@ const (
 	E_DATASTORE_INSUFFICIENT_CREDENTIALS      ErrorCode = 13014
 	E_DATASTORE_UNABLE_TO_RETRIEVE_BUCKETS    ErrorCode = 13015
 	E_DATASTORE_NO_ADMIN                      ErrorCode = 13016
+	E_DATASTORE_NOT_SET                       ErrorCode = 13017
+	E_DATASTORE_INVALID_URI                   ErrorCode = 13018
 	E_INDEX_SCAN_SIZE                         ErrorCode = 14000
 	E_FILE_DATASTORE                          ErrorCode = 15000
 	E_FILE_NAMESPACE_NOT_FOUND                ErrorCode = 15001
@@ -467,6 +475,7 @@ const (
 	E_TRANSACTION_STAGING                     ErrorCode = 17020
 	E_TRANSACTION_QUEUE_FULL                  ErrorCode = 17021
 	W_POST_COMMIT_TRANSACTION                 ErrorCode = 17022
+	E_GC_AGENT                                ErrorCode = 17096
 	E_TRANCE_NOTSUPPORTED                     ErrorCode = 17097
 	E_MEMORY_ALLOCATION                       ErrorCode = 17098
 	E_TRANSACTION                             ErrorCode = 17099

@@ -1242,7 +1242,8 @@ func (this *vbRangeScan) validateSingleKey(conn *memcached.Client) bool {
 		}
 	} else {
 		if !this.addKey(key) {
-			this.reportError(qerrors.NewError(nil, "validateSingleKey: failed to add key to scan results"))
+			// add key will have reported the error
+			logging.Debugf("%s validateSingleKey: failed to add key (%s) to scan results", this, key, this.scan.log)
 		}
 	}
 	if this.state != _VBS_CANCELLED {

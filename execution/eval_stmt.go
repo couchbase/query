@@ -1006,7 +1006,7 @@ func (this *Context) ExecuteTranStatement(stmtType string, stmtAtomicity bool) (
 	if err != nil {
 		error, ok := err.(errors.Error)
 		if !ok {
-			error = errors.NewError(err, "")
+			error = errors.NewTransactionError(err, "")
 		}
 		return "", nil, error
 	}

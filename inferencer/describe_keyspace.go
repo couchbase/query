@@ -46,7 +46,7 @@ func DescribeKeyspace(context datastore.QueryContext, conn *datastore.ValueConne
 	options *DescribeOptions) (value.Value, errors.Error) {
 
 	if options == nil {
-		return nil, errors.NewError(nil, "Options must be provided") // this is an internal error
+		return nil, errors.NewInferOptionsError()
 	}
 
 	var err errors.Error

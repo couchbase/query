@@ -218,7 +218,7 @@ func (this *IndexCountScan) UnmarshalJSON(body []byte) error {
 	}
 	countIndex, ok := index.(datastore.CountIndex)
 	if !ok {
-		return errors.NewError(nil, "Unable to find Count() for index")
+		return errors.NewPlanInternalError("Unable to find Count() for index")
 	}
 
 	this.index = countIndex

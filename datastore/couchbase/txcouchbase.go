@@ -452,7 +452,7 @@ func (ks *keyspace) txReady(txContext *transactions.TranContext) errors.Error {
 	var err error
 	ks.agentProvider, err = ks.namespace.store.gcClient.CreateAgentProvider(ks.name)
 	if err != nil {
-		return errors.NewError(err, "gcagent agent creation failed")
+		return errors.NewGCAgentError(err, "creation")
 	}
 	return nil
 }
@@ -802,7 +802,7 @@ func initGocb(s *store) (err errors.Error) {
 	}
 
 	if client == nil {
-		err = errors.NewError(cerr, "gcagent client initialization failed")
+		err = errors.NewGCAgentError(cerr, "client initialization")
 		logging.Errorf(err.Error())
 		return err
 	}
@@ -810,7 +810,7 @@ func initGocb(s *store) (err errors.Error) {
 	if cerr != nil {
 		client.Close()
 		s.gcClient = nil
-		return errors.NewError(cerr, "Transaction initialization failed")
+		return errors.NewTransactionError(cerr, "Transaction initialization failed")
 	}
 
 	s.gcClient = client

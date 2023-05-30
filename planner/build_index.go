@@ -152,7 +152,7 @@ func (this *builder) getNameKeyspace(ks *algebra.KeyspaceRef, dynamic bool) (dat
 		if dynamic {
 			return nil, nil
 		}
-		return nil, errors.NewError(nil, "placeholder is not allowed in keyspace")
+		return nil, errors.NewPlanNoPlaceholderError()
 	}
 	start := util.Now()
 	keyspace, err := datastore.GetKeyspace(path.Parts()...)

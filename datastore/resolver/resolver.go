@@ -9,7 +9,6 @@
 package resolver
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/couchbase/query/datastore"
@@ -46,5 +45,5 @@ func NewDatastore(uri string) (datastore.Datastore, errors.Error) {
 		return mock.NewDatastore(uri)
 	}
 
-	return nil, errors.NewError(nil, fmt.Sprintf("Invalid datastore uri: %s", uri))
+	return nil, errors.NewDatastoreInvalidURIError(uri)
 }

@@ -192,4 +192,9 @@ func NewIndexStatError(name, what string) Error {
 		InternalMsg: fmt.Sprintf("Invalid index statistics for index %s: %s", name, what), InternalCaller: CallerN(1)}
 }
 
+func NewPlanNoPlaceholderError() Error {
+	return &err{level: EXCEPTION, ICode: E_PLAN_NO_PLACEHOLDER, IKey: "plain.no_placeholder",
+		InternalMsg: "Placeholder is not allowed in keyspace", InternalCaller: CallerN(1)}
+}
+
 // error numbers 4901, 4902, 4903, 4904 and 4905 are retired, and cannot be reused

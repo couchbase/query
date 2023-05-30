@@ -340,7 +340,7 @@ func getState(sessionName string, context Context, newContext Context) (schedule
 	}
 	val, ok := v.Field("state")
 	if !ok {
-		return _EMPTY_STATE, errors.NewError(nil, "invalid results")
+		return _EMPTY_STATE, errors.NewAdviseInvalidResultsError()
 	}
 	return scheduler.State(val.ToString()), nil
 }

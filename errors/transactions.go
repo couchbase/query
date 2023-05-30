@@ -206,3 +206,11 @@ func NewPostCommitTransactionWarning(e error, c interface{}) Error {
 	return &err{level: WARNING, ICode: W_POST_COMMIT_TRANSACTION, IKey: "transaction.statement.postcommit",
 		InternalMsg: msg, InternalCaller: CallerN(1), cause: c}
 }
+
+func NewGCAgentError(e error, op string) Error {
+	c := make(map[string]interface{}, 2)
+	c["operation"] = op
+	c["error"] = e
+	return &err{level: EXCEPTION, ICode: E_GC_AGENT, IKey: "transaction.gcagent",
+		InternalMsg: "GC agent error", InternalCaller: CallerN(1), cause: c}
+}

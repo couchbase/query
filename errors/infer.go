@@ -172,3 +172,15 @@ func NewInferRandomError(e error) Error {
 		InternalMsg:    "Failed to get random document.",
 		InternalCaller: CallerN(1)}
 }
+
+func NewInferOptionsError() Error {
+	return &err{level: EXCEPTION, ICode: E_INFER_OPTIONS, IKey: "infer.missing_options",
+		InternalMsg: "Options must be provided", InternalCaller: CallerN(1)}
+}
+
+func NewNextDocumentError(e error) Error {
+	c := make(map[string]interface{})
+	c["error"] = e
+	return &err{level: EXCEPTION, ICode: E_INFER_NEXT_DOCUMENT, IKey: "infer.next_document",
+		InternalMsg: "NextDocument failed", InternalCaller: CallerN(1)}
+}

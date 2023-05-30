@@ -283,8 +283,6 @@ func NewUserWithNoRoles(user string) Error {
 		InternalCaller: CallerN(1)}
 }
 
-// Error code 5290 is retired. Do not reuse.
-
 func NewHashTablePutError(e error) Error {
 	return &err{level: EXCEPTION, ICode: E_HASH_TABLE_PUT, IKey: "execution.hash_table_put_error", ICause: e,
 		InternalMsg:    fmt.Sprintf("Hash Table Put failed"),
@@ -478,6 +476,24 @@ func NewCurlExecutionError(e error) Error {
 	c := make(map[string]interface{})
 	c["error"] = e
 	return &err{level: EXCEPTION, ICode: E_EXECUTION_CURL, IKey: "execution.curl",
-		InternalMsg: "Error executing CURL function", cause: c,
-		InternalCaller: CallerN(1)}
+		InternalMsg: "Error executing CURL function", cause: c, InternalCaller: CallerN(1)}
+}
+
+func NewDynamicAuthError(e error) Error {
+	c := make(map[string]interface{}, 1)
+	c["error"] = e
+	return &err{level: EXCEPTION, ICode: E_DYNAMIC_AUTH, IKey: "execution.dynamic_auth",
+		InternalMsg: "Dynamic auth error", cause: c, InternalCaller: CallerN(1)}
+}
+
+func NewTransactionalAuthError(e error) Error {
+	c := make(map[string]interface{}, 1)
+	c["error"] = e
+	return &err{level: EXCEPTION, ICode: E_DYNAMIC_AUTH, IKey: "execution.transactional_auth",
+		InternalMsg: "Transactional auth error", cause: c, InternalCaller: CallerN(1)}
+}
+
+func NewAdviseInvalidResultsError() Error {
+	return &err{level: EXCEPTION, ICode: E_ADVISE_INVALID_RESULTS, IKey: "execution.advise.invalid_results",
+		InternalMsg: "Invalid advise results", InternalCaller: CallerN(1)}
 }

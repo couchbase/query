@@ -88,7 +88,7 @@ func (this *Authorize) RunOnce(context *Context, parent value.Value) {
 			if privs != nil && this.plan.Dynamic() {
 				privs, perr = this.getPrivileges(privs, context, this.dynamicAuthorize)
 				if perr != nil {
-					context.Fatal(errors.NewError(perr, "dynamic authorization"))
+					context.Fatal(errors.NewDynamicAuthError(perr))
 					this.fail(context)
 					return
 				}
@@ -96,7 +96,7 @@ func (this *Authorize) RunOnce(context *Context, parent value.Value) {
 
 			privs, perr = this.addTxPrivileges(privs, context)
 			if perr != nil {
-				context.Fatal(errors.NewError(perr, "transactional authorization"))
+				context.Fatal(errors.NewTransactionalAuthError(perr))
 				this.fail(context)
 				return
 			}
