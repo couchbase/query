@@ -234,7 +234,7 @@ const (
 	E_SCAN_VECTOR_TOO_MANY_SCANNED_BUCKETS    ErrorCode = 5190
 	_RETIRED_5200                                       = 5200
 	E_DYNAMIC_AUTH                            ErrorCode = 5201
-	E_TRANSACTIONAL_AUTH                      ErrorCode = 5201
+	E_TRANSACTIONAL_AUTH                      ErrorCode = 5202
 	E_USER_NOT_FOUND                          ErrorCode = 5210
 	E_ROLE_REQUIRES_KEYSPACE                  ErrorCode = 5220
 	E_ROLE_TAKES_NO_KEYSPACE                  ErrorCode = 5230

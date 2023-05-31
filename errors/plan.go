@@ -193,7 +193,7 @@ func NewIndexStatError(name, what string) Error {
 }
 
 func NewPlanNoPlaceholderError() Error {
-	return &err{level: EXCEPTION, ICode: E_PLAN_NO_PLACEHOLDER, IKey: "plain.no_placeholder",
+	return &err{level: EXCEPTION, ICode: E_PLAN_NO_PLACEHOLDER, IKey: "plan.no_placeholder",
 		InternalMsg: "Placeholder is not allowed in keyspace", InternalCaller: CallerN(1)}
 }
 

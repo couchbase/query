@@ -489,7 +489,7 @@ func NewDynamicAuthError(e error) Error {
 func NewTransactionalAuthError(e error) Error {
 	c := make(map[string]interface{}, 1)
 	c["error"] = e
-	return &err{level: EXCEPTION, ICode: E_DYNAMIC_AUTH, IKey: "execution.transactional_auth",
+	return &err{level: EXCEPTION, ICode: E_TRANSACTIONAL_AUTH, IKey: "execution.transactional_auth",
 		InternalMsg: "Transactional auth error", cause: c, InternalCaller: CallerN(1)}
 }
 
