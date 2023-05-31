@@ -121,6 +121,23 @@ func (m *ServiceMgr) setInitialNodeList() {
 	for _, nn := range topology {
 		ps := prepareOperation(nn, "ServiceMgr::setInitialNodeList")
 		uuid := distributed.RemoteAccess().NodeUUID(nn)
+		i := 0
+		for uuid == "" {
+			if i%10 == 0 {
+				logging.Warnf("Unable to resolve node ID for [%v]. Retrying.", nn)
+			}
+			time.Sleep(time.Second)
+			if m.state.servers != nil {
+				// server list was updated in PrepareTopology change so abort this operation
+				logging.Debugf("ServiceMgr::setInitialNodeList exit - topology already set")
+				return
+			}
+			uuid = distributed.RemoteAccess().NodeUUID(nn)
+			if uuid != "" {
+				logging.Infof("Resolved node ID '%v' for [%v]", uuid, nn)
+			}
+			i++
+		}
 		nodeList = append(nodeList, queryServer{nn, service.NodeInfo{service.NodeID(uuid), service.Priority(0), ps}})
 	}
 
@@ -144,7 +161,7 @@ func (m *ServiceMgr) setInitialNodeList() {
 			logging.Infof("Initial topology: no active nodes")
 		} else {
 			for i, n := range nodeList {
-				logging.Infof("Initial topology %d/%d: %s[%s]", i+1, len(nodeList), n.nodeInfo.NodeID, n.host)
+				logging.Infof("Initial topology %d/%d: [%s / %s]", i+1, len(nodeList), n.nodeInfo.NodeID, n.host)
 			}
 		}
 	} else {
@@ -344,7 +361,7 @@ func (m *ServiceMgr) CancelTask(id string, rev service.Revision) error {
 				}
 			})
 			for i, n := range m.servers {
-				logging.Infof("Current topology %d/%d: %s[%s]", i+1, len(m.servers), n.nodeInfo.NodeID, n.host)
+				logging.Infof("Current topology %d/%d: [%s / %s]", i+1, len(m.servers), n.nodeInfo.NodeID, n.host)
 			}
 			m.Unlock()
 			logging.Debugf("ServiceMgr::CancelTask exit")
@@ -440,9 +457,9 @@ func (m *ServiceMgr) PrepareTopologyChange(change service.TopologyChange) error 
 	}
 
 	if m.servers != nil {
-		logging.Infof("Preparing for possible topology change")
+		logging.Infof("Preparing for possible topology change: %v (%v)", change.ID, change.Type)
 	} else {
-		logging.Infof("Preparing topology")
+		logging.Infof("Preparing topology from: %v (%v)", change.ID, change.Type)
 	}
 
 	// for each node we know about, cache its shutdown URL
@@ -482,7 +499,7 @@ func (m *ServiceMgr) PrepareTopologyChange(change service.TopologyChange) error 
 	for _, o := range s {
 		found := false
 		for _, n := range servers {
-			if o.nodeInfo.NodeID == n.nodeInfo.NodeID {
+			if (o.nodeInfo.NodeID == "" && o.host == n.host) || o.nodeInfo.NodeID == n.nodeInfo.NodeID {
 				found = true
 				break
 			}
@@ -491,20 +508,50 @@ func (m *ServiceMgr) PrepareTopologyChange(change service.TopologyChange) error 
 			eject = append(eject, o)
 		}
 	}
+	// in the unlikely event a node is in the change's eject list but wasn't previously known, add it to the manager's eject list
+	for _, e := range change.EjectNodes {
+		found := false
+		for i := range eject {
+			if eject[i].nodeInfo.NodeID == e.NodeID {
+				found = true
+				break
+			}
+		}
+		if !found {
+			var ps interface{}
+			var host string
+			ps = nil
+			host = distributed.RemoteAccess().UUIDToHost(string(e.NodeID))
+			if host != "" {
+				ps = prepareOperation(host, "ServiceMgr::PrepareTopologyChange")
+			} else {
+				logging.Warnf("ServiceMgr::PrepareTopologyChange: Unable to resolve host for node %v", string(e.NodeID))
+			}
+			eject = append(eject, queryServer{host, service.NodeInfo{e.NodeID, service.Priority(0), ps}})
+		}
+	}
 	if len(eject) != 0 {
 		eject = eject[0:len(eject):len(eject)]
+		if logging.LogLevel() == logging.DEBUG {
+			for i, n := range eject {
+				logging.Debugf("Ejection candidate: %d/%d: [%s / %s]", i+1, len(eject), n.nodeInfo.NodeID, n.host)
+			}
+		}
 	}
 
-	m.updateState(func(s *state) {
+	m.Lock()
+	m.enabled = true
+	m.updateStateLOCKED(func(s *state) {
 		s.servers = servers
 		s.eject = eject
 	})
+	m.Unlock()
 
 	if len(servers) == 0 {
 		logging.Infof("Topology: no active nodes")
 	} else {
 		for i, n := range servers {
-			logging.Infof("Topology %d/%d: %s[%s]", i+1, len(m.servers), n.nodeInfo.NodeID, n.host)
+			logging.Infof("Topology %d/%d: [%s / %s]", i+1, len(m.servers), n.nodeInfo.NodeID, n.host)
 		}
 	}
 	logging.Debugf("ServiceMgr::PrepareTopologyChange exit")
@@ -515,7 +562,7 @@ func (m *ServiceMgr) PrepareTopologyChange(change service.TopologyChange) error 
 
 // This is only invoked on the master which is then responsible for initiating changes on other nodes
 func (m *ServiceMgr) StartTopologyChange(change service.TopologyChange) error {
-	logging.Debugf("ServiceMgr::StartTopologyChange %v", change)
+	logging.Infof("Topology change: %v (%v) initiated.", change.ID, change.Type)
 
 	if !m.enabled {
 		logging.Debugf("ServiceMgr::StartTopologyChange exit: not enabled")
@@ -589,6 +636,7 @@ func (m *ServiceMgr) StartTopologyChange(change service.TopologyChange) error {
 			mutex.Lock()
 			eject = nil
 			mutex.Unlock()
+			logging.Infof("Topology change: no node shutdown operations initiated.")
 		}
 		m.updateStateLOCKED(func(s *state) {
 			if len(eject) > 0 {
@@ -604,6 +652,8 @@ func (m *ServiceMgr) StartTopologyChange(change service.TopologyChange) error {
 		if len(eject) > 0 {
 			go m.monitorShutdown(change.ID, eject)
 		}
+	} else {
+		logging.Infof("Topology change: no action necessary.")
 	}
 	m.Unlock()
 
