@@ -65,8 +65,7 @@ order to convert it to milliseconds, divide it by
 10^6.
 */
 func (this *ClockMillis) Evaluate(item value.Value, context Context) (value.Value, error) {
-	nanos := time.Now().UnixNano()
-	return value.NewValue(float64(nanos) / 1000000.0), nil
+	return value.NewValue(timeToMillis(time.Now())), nil
 }
 
 func (this *ClockMillis) Static() Expression {
@@ -811,12 +810,12 @@ This represents the Date function DATE_FORMAT_STR(expr, format).
 It returns the input date in the expected format.
 */
 type DateFormatStr struct {
-	BinaryFunctionBase
+	FunctionBase
 }
 
-func NewDateFormatStr(first, second Expression) Function {
+func NewDateFormatStr(operands ...Expression) Function {
 	rv := &DateFormatStr{
-		*NewBinaryFunctionBase("date_format_str", first, second),
+		*NewFunctionBase("date_format_str", operands...),
 	}
 
 	rv.expr = rv
@@ -841,32 +840,43 @@ func (this *DateFormatStr) Evaluate(item value.Value, context Context) (value.Va
 	if err != nil {
 		return nil, err
 	}
+	third := second
+	if len(this.operands) == 3 {
+		third, err = this.operands[2].Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		}
+	}
 
-	if first.Type() == value.MISSING || second.Type() == value.MISSING {
+	if first.Type() == value.MISSING || second.Type() == value.MISSING || third.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
-	} else if first.Type() != value.STRING || second.Type() != value.STRING {
+	} else if first.Type() != value.STRING || second.Type() != value.STRING || third.Type() != value.STRING {
 		return value.NULL_VALUE, nil
 	}
 
 	str := first.ToString()
-	t, err := strToTime(str, "")
+	var t time.Time
+	if len(this.operands) == 3 {
+		t, err = strToTime(str, second.ToString())
+	} else {
+		t, err = strToTime(str, "")
+	}
 	if err != nil {
 		return value.NULL_VALUE, nil
 	}
 
-	format := second.ToString()
+	format := third.ToString()
 
 	return value.NewValue(timeToStr(t, format)), nil
 
 }
 
-/*
-Factory method pattern.
-*/
+func (this *DateFormatStr) MinArgs() int { return 2 }
+
+func (this *DateFormatStr) MaxArgs() int { return 3 }
+
 func (this *DateFormatStr) Constructor() FunctionConstructor {
-	return func(operands ...Expression) Function {
-		return NewDateFormatStr(operands[0], operands[1])
-	}
+	return NewDateFormatStr
 }
 
 ///////////////////////////////////////////////////
@@ -1926,8 +1936,7 @@ func (this *NowMillis) Evaluate(item value.Value, context Context) (value.Value,
 	if context == nil {
 		return nil, errors.NewNilEvaluateParamError("context")
 	}
-	nanos := context.Now().UnixNano()
-	return value.NewValue(float64(nanos) / 1000000.0), nil
+	return value.NewValue(timeToMillis(context.Now())), nil
 }
 
 func (this *NowMillis) Static() Expression {
@@ -3138,6 +3147,8 @@ func strToTimePercentFormat(s string, format string) (time.Time, error) {
 					return t, fmt.Errorf("Invalid second in date string")
 				}
 				n += l
+			case 'n':
+				fallthrough
 			case 'N':
 				fraction, l = gatherNumber(s[n:], 9, pad == padSpace)
 				if l == 0 {
@@ -3155,12 +3166,24 @@ func strToTimePercentFormat(s string, format string) (time.Time, error) {
 					return t, err
 				}
 			case 's':
-				epoch := 0
-				epoch, l = gatherNumber(s[n:], 10, pad == padSpace)
-				if l == 0 {
-					return t, fmt.Errorf("Invalid seconds since epoch")
+				var e time.Time
+				if preferUpper {
+					epoch := 0
+					epoch, l = gatherNumber(s[n:], 19, pad == padSpace)
+					if l == 0 {
+						return t, fmt.Errorf("Invalid nanoseconds since epoch")
+					}
+					s := int64(epoch / 1000000000)
+					n := int64(epoch % 1000000000)
+					e = time.Unix(s, n)
+				} else {
+					epoch := 0
+					epoch, l = gatherNumber(s[n:], 10, pad == padSpace)
+					if l == 0 {
+						return t, fmt.Errorf("Invalid seconds since epoch")
+					}
+					e = time.Unix(int64(epoch), 0)
 				}
-				e := time.Unix(int64(epoch), 0)
 				century = e.Year() / 100
 				year = e.Year() % 100
 				month = int(e.Month())
@@ -3588,7 +3611,7 @@ func strToTimeCommonFormat(s string, format string) (time.Time, error) {
 				if (l != 1 && l != 2) || second < 0 || second > 59 {
 					return t, fmt.Errorf("Invalid second in date string")
 				}
-			} else if j == 1 {
+			} else if j == 1 || j == 3 {
 				fraction, l = gatherNumber(s[n:], 9, false)
 				if l == 0 {
 					return t, fmt.Errorf("Invalid fraction in date string")
@@ -4220,7 +4243,11 @@ func timeToStrPercentFormat(t time.Time, format string) string {
 			case 'S':
 				res = append(res, formatInt(width, 2, pad, t.Second())...)
 			case 's':
-				res = append(res, formatInt(width, 0, pad, int(t.Unix()))...)
+				if preferUpper {
+					res = append(res, formatInt(width, 0, pad, int(t.UnixNano()))...)
+				} else {
+					res = append(res, formatInt(width, 0, pad, int(t.Unix()))...)
+				}
 			case 'r':
 				p := false
 				h := t.Hour()
