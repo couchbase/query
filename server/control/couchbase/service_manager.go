@@ -109,6 +109,23 @@ func (m *ServiceMgr) setInitialNodeList() {
 	for _, nn := range topology {
 		ps := prepareOperation(nn, "ServiceMgr::setInitialNodeList")
 		uuid := distributed.RemoteAccess().NodeUUID(nn)
+		i := 0
+		for uuid == "" {
+			if i%10 == 0 {
+				logging.Warnf("Unable to resolve node ID for [%v]. Retrying.", nn)
+			}
+			time.Sleep(time.Second)
+			if m.state.servers != nil {
+				// server list was updated in PrepareTopology change so abort this operation
+				logging.Debugf("ServiceMgr::setInitialNodeList exit - topology already set")
+				return
+			}
+			uuid = distributed.RemoteAccess().NodeUUID(nn)
+			if uuid != "" {
+				logging.Infof("Resolved node ID '%v' for [%v]", uuid, nn)
+			}
+			i++
+		}
 		nodeList = append(nodeList, queryServer{nn, service.NodeInfo{service.NodeID(uuid), service.Priority(0), ps}})
 		info = append(info, []rune(uuid)...)
 		info = append(info, '[')
@@ -458,7 +475,7 @@ func (m *ServiceMgr) PrepareTopologyChange(change service.TopologyChange) error 
 	for _, o := range s {
 		found := false
 		for _, n := range servers {
-			if o.nodeInfo.NodeID == n.nodeInfo.NodeID {
+			if (o.nodeInfo.NodeID == "" && o.host == n.host) || o.nodeInfo.NodeID == n.nodeInfo.NodeID {
 				found = true
 				break
 			}
@@ -467,6 +484,29 @@ func (m *ServiceMgr) PrepareTopologyChange(change service.TopologyChange) error 
 			eject = append(eject, o)
 		}
 	}
+	// in the unlikely event a node is in the change's eject list but wasn't previously known, add it to the manager's eject list
+	for _, e := range change.EjectNodes {
+		found := false
+		for i := range eject {
+			if eject[i].nodeInfo.NodeID == e.NodeID {
+				found = true
+				break
+			}
+		}
+		if !found {
+			var ps interface{}
+			var host string
+			ps = nil
+			host = distributed.RemoteAccess().UUIDToHost(string(e.NodeID))
+			if host != "" {
+				ps = prepareOperation(host, "ServiceMgr::PrepareTopologyChange")
+			} else {
+				logging.Warnf("ServiceMgr::PrepareTopologyChange: Unable to resolve host for node %v", string(e.NodeID))
+			}
+			eject = append(eject, queryServer{host, service.NodeInfo{e.NodeID, service.Priority(0), ps}})
+		}
+	}
+
 	if len(eject) != 0 {
 		eject = eject[0:len(eject):len(eject)]
 	}
