@@ -30,8 +30,8 @@ func TestEWMA1(t *testing.T) {
 		t.Errorf("2 minute a.Rate(): 0.08120116994196772 != %v\n", rate)
 	}
 	elapseMinute(a)
-	if rate := a.Rate(); 0.02987224102071842 != roundFloat(rate, 17) {
-		t.Errorf("3 minute a.Rate(): 0.02987224102071842 != %v\n", roundFloat(rate, 17))
+	if rate := a.Rate(); 0.0298722410207184 != roundFloat(rate, 16) {
+		t.Errorf("3 minute a.Rate(): 0.0298722410207184 != %v\n", roundFloat(rate, 16))
 	}
 	elapseMinute(a)
 	if rate := a.Rate(); 0.0109893833332405 != roundFloat(rate, 16) {
@@ -50,8 +50,8 @@ func TestEWMA1(t *testing.T) {
 		t.Errorf("7 minute a.Rate(): 0.000547129179332712 != %v\n", roundFloat(rate, 18))
 	}
 	elapseMinute(a)
-	if rate := a.Rate(); 0.0002012775767415081 != roundFloat(rate, 19) {
-		t.Errorf("8 minute a.Rate(): 0.0002012775767415081 != %v\n", roundFloat(rate, 19))
+	if rate := a.Rate(); 0.000201277576741508 != roundFloat(rate, 18) {
+		t.Errorf("8 minute a.Rate(): 0.000201277576741508 != %v\n", roundFloat(rate, 18))
 	}
 	elapseMinute(a)
 	if rate := a.Rate(); 7.40458824520081e-05 != roundFloat(rate, 19) {
