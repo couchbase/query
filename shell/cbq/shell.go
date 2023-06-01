@@ -457,6 +457,26 @@ func init() {
 	flag.StringVar(&queryContextFlag, "qc", defaultval, command.NewShorthandMsg("query_context"))
 }
 
+/*
+Option : -advise or -ad
+Args : Enable users to advise on multiple queries
+
+[MB-56912] :
+
+	If -file is set: Advise queries in this file
+	If -file is not set: Advise queries specified via input redirection
+*/
+var adviseFlag bool
+
+func init() {
+	const (
+		usage = command.UADVISE
+	)
+	flag.BoolVar(&adviseFlag, "advise", false, usage)
+	flag.BoolVar(&adviseFlag, "ad", false, command.NewShorthandMsg("advise"))
+
+}
+
 var (
 	SERVICE_URL  string
 	DISCONNECT   bool
@@ -713,7 +733,6 @@ func main() {
 
 		n1ql.SetQueryParams("query_context", queryContextFlag)
 	}
-
 	if noQueryService == false {
 		// Check if connection is possible to one of the supplied servers
 		// This establishes the dbn1ql handle for future queries
@@ -786,7 +805,7 @@ func main() {
 
 	n1ql.SetCBUserAgentHeader("CBQ/" + command.SHELL_VERSION)
 
-	// Handle the inputFlag and ScriptFlag options in HandleInteractiveMode.
+	// Handle the inputFlag, adviseFlag and ScriptFlag options in HandleInteractiveMode.
 	// This is so as to add these to the history.
 
 	HandleInteractiveMode("cbq")

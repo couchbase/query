@@ -45,6 +45,7 @@ const (
 	UCERTFILE      = " Path to chain certificate. \n\t For example : -cert ./client/client/chain.pem"
 	UKEYFILE       = " Path to client key file. \n\t For example : -key ./client/client/client.key"
 	UQUERY_CONTEXT = " Set the query context \n\tFor example : -query_context \"<query_context>\""
+	UADVISE        = " Run ADVISE on all queries in the specified file or that are read from standard input, if a file is not provided with the -file option. \n\tFor example: -advise -file queries.txt"
 
 	//Shorthand message for flags
 	SHORTHAND = " Shorthand for "

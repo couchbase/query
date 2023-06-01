@@ -8,8 +8,6 @@
 
 package errors
 
-import ()
-
 // Shell errors -- errors in the command line shell
 
 const (
