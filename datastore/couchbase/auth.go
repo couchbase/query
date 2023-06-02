@@ -98,6 +98,8 @@ func privilegeString(namespace, target, obj string, requested auth.Privilege) (s
 		// this is a special case - to check that the user is an admin, we check an impossible privilege
 		// only administrators pass checks on undefined privileges
 		permission = "cluster.admin.internal.nothrottle!read"
+	case auth.PRIV_CLUSTER_ADMIN:
+		permission = "cluster.admin!write"
 	default:
 		return "", fmt.Errorf("Invalid Privileges")
 	}

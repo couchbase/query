@@ -53,6 +53,7 @@ const (
 	PRIV_QUERY_SCOPE_ADMIN                      Privilege = 31 // Ability to add, drop, flush scopes and collections
 	PRIV_XATTRS                                 Privilege = 32 // Ability to read system xattrs
 	PRIV_ADMIN                                  Privilege = 33 // User is a full or read admin
+	PRIV_CLUSTER_ADMIN                          Privilege = 34 // User has cluster_admin auth
 )
 
 type PrivilegePair struct {

@@ -2168,7 +2168,7 @@ func getMetricData(metric accounting.Metric) map[string]interface{} {
 func doForceGC(ep *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
 
 	af.EventTypeId = audit.API_ADMIN_GC
-	err, _ := ep.verifyCredentialsFromRequest("", auth.PRIV_ADMIN, req, af)
+	err, _ := ep.verifyCredentialsFromRequest("", auth.PRIV_CLUSTER_ADMIN, req, af)
 	if err != nil {
 		return nil, err
 	}
@@ -2206,7 +2206,7 @@ func doManualFFDC(ep *HttpEndpoint, w http.ResponseWriter, req *http.Request,
 	af *audit.ApiAuditFields) (interface{}, errors.Error) {
 
 	af.EventTypeId = audit.API_ADMIN_FFDC
-	err, _ := ep.verifyCredentialsFromRequest("", auth.PRIV_ADMIN, req, af)
+	err, _ := ep.verifyCredentialsFromRequest("", auth.PRIV_CLUSTER_ADMIN, req, af)
 	if err != nil {
 		return nil, err
 	}
