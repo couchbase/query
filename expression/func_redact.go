@@ -48,6 +48,8 @@ type redactFilter struct {
 	ignorecase value.Tristate
 	strict     value.Tristate
 	omit       value.Tristate
+	fixedlen   value.Tristate
+	mask       string
 }
 
 func (this *Redact) Evaluate(item value.Value, context Context) (value.Value, error) {
@@ -77,7 +79,7 @@ func (this *Redact) Evaluate(item value.Value, context Context) (value.Value, er
 			continue
 		}
 
-		rf := &redactFilter{}
+		rf := &redactFilter{mask: "x"}
 		if nm, ok := options.Field("name"); ok && nm.Type() == value.BOOLEAN {
 			if nm.Truth() {
 				rf.name = value.TRUE
@@ -104,6 +106,16 @@ func (this *Redact) Evaluate(item value.Value, context Context) (value.Value, er
 				rf.omit = value.TRUE
 			} else {
 				rf.omit = value.FALSE
+			}
+		}
+		if s, ok := options.Field("mask"); ok && s.Type() == value.STRING {
+			rf.mask = s.ToString()
+		}
+		if s, ok := options.Field("fixedlength"); ok && s.Type() == value.BOOLEAN {
+			if s.Truth() {
+				rf.fixedlen = value.TRUE
+			} else {
+				rf.fixedlen = value.FALSE
 			}
 		}
 		if p, ok := options.Field("pattern"); ok {
@@ -170,12 +182,14 @@ func (this *Redact) Evaluate(item value.Value, context Context) (value.Value, er
 	}
 
 	n := make(map[string]interface{})
-	this.redact(arg, n, "", false, false, false)
+	this.redact(arg, n, "", false, false, false, false, "x")
 
 	return value.NewValue(n), nil
 }
 
-func (this *Redact) redact(v value.Value, n map[string]interface{}, base string, defRedactV bool, defRedactN bool, defStrict bool) {
+func (this *Redact) redact(v value.Value, n map[string]interface{}, base string, defRedactV bool, defRedactN bool, defStrict bool,
+	defFixedLen bool, defMask string) {
+
 	flds := v.Fields()
 	if flds == nil {
 		return
@@ -189,7 +203,8 @@ func (this *Redact) redact(v value.Value, n map[string]interface{}, base string,
 	sort.Strings(names)
 	for i = range names {
 
-		redactV, redactN, strict, omit := this.shouldRedact(names[i], defRedactV, defRedactN, defStrict)
+		redactV, redactN, strict, omit, fixedlen, mask := this.shouldRedact(names[i], defRedactV, defRedactN, defStrict,
+			defFixedLen, defMask)
 
 		if omit {
 			continue
@@ -211,7 +226,7 @@ func (this *Redact) redact(v value.Value, n map[string]interface{}, base string,
 		switch v.Type() {
 		case value.OBJECT:
 			nn := make(map[string]interface{})
-			this.redact(v, nn, nk, redactV, redactN, strict)
+			this.redact(v, nn, nk, redactV, redactN, strict, fixedlen, mask)
 			n[nk] = value.NewValue(nn)
 		case value.ARRAY:
 			act := v.Actual().([]interface{})
@@ -220,11 +235,11 @@ func (this *Redact) redact(v value.Value, n map[string]interface{}, base string,
 				av := value.NewValue(act[i])
 				if av.Type() == value.OBJECT || av.Type() == value.ARRAY {
 					nm := make(map[string]interface{})
-					this.redact(value.NewValue(act[i]), nm, nk, redactV, redactN, strict)
+					this.redact(value.NewValue(act[i]), nm, nk, redactV, redactN, strict, fixedlen, mask)
 					nn[i] = value.NewValue(nm)
 				} else {
 					if redactV {
-						nn[i] = this.redactValue(av.Actual(), strict)
+						nn[i] = this.redactValue(av.Actual(), strict, fixedlen, mask)
 					} else {
 						nn[i] = av
 					}
@@ -234,16 +249,16 @@ func (this *Redact) redact(v value.Value, n map[string]interface{}, base string,
 		case value.NUMBER:
 			if redactV {
 				if i, ok := value.IsIntValue(v); ok {
-					n[nk] = this.redactValue(i, strict)
+					n[nk] = this.redactValue(i, strict, fixedlen, mask)
 				} else {
-					n[nk] = this.redactValue(v.Actual(), strict)
+					n[nk] = this.redactValue(v.Actual(), strict, fixedlen, mask)
 				}
 			} else {
 				n[nk] = v
 			}
 		default:
 			if redactV {
-				n[nk] = this.redactValue(v.Actual(), strict)
+				n[nk] = this.redactValue(v.Actual(), strict, fixedlen, mask)
 			} else {
 				n[nk] = v
 			}
@@ -251,9 +266,11 @@ func (this *Redact) redact(v value.Value, n map[string]interface{}, base string,
 	}
 }
 
-func (this *Redact) shouldRedact(name string, defV bool, defN bool, defStrict bool) (bool, bool, bool, bool) {
+func (this *Redact) shouldRedact(name string, defV bool, defN bool, defStrict bool, defFixedLen bool, defMask string) (
+	bool, bool, bool, bool, bool, string) {
+
 	if len(this.filters) == 0 {
-		return defV, defN, defStrict, false
+		return defV, defN, defStrict, false, defFixedLen, defMask
 	}
 	for i := range this.filters {
 		n := name
@@ -279,37 +296,51 @@ func (this *Redact) shouldRedact(name string, defV bool, defN bool, defStrict bo
 			default:
 				s = defStrict
 			}
-			return true, n, s, (this.filters[i].omit == value.TRUE)
+			return true, n, s, (this.filters[i].omit == value.TRUE), (this.filters[i].fixedlen == value.TRUE), this.filters[i].mask
 		}
 	}
-	return defV, defN, defStrict, false
+	return defV, defN, defStrict, false, defFixedLen, defMask
 }
 
-func (this *Redact) redactValue(v interface{}, strict bool) interface{} {
+func (this *Redact) redactValue(v interface{}, strict bool, fixedLen bool, mask string) interface{} {
 	switch v := v.(type) {
 	case string:
 		w := strings.Builder{}
 		r := strings.NewReader(v)
-		subs := rune('x')
+		subs := mask
 		if !strict && len(v) <= 30 {
 			// if it is a date then redact with a numeral
 			if _, err := strToTimeTryAllDefaultFormats(v); err == nil {
-				subs = rune('1')
+				subs = "1"
+				fixedLen = false
 			}
 		}
+		if fixedLen {
+			return mask
+		}
+		n := 0
 		for {
 			ru, _, err := r.ReadRune()
 			if err != nil {
 				break
 			}
 			if strict || !unicode.In(ru, unicode.Punct, unicode.Space, unicode.Symbol) {
-				w.WriteRune(subs)
+				if n < len(subs) {
+					w.WriteRune(rune(subs[n]))
+				}
 			} else {
 				w.WriteRune(ru)
+			}
+			n++
+			if n == len(subs) {
+				n = 0
 			}
 		}
 		return w.String()
 	case int:
+		if fixedLen {
+			return 0
+		}
 		s := []byte(fmt.Sprintf("%v", v))
 		for i := range s {
 			if s[i] >= '0' && s[i] <= '9' {
@@ -319,6 +350,9 @@ func (this *Redact) redactValue(v interface{}, strict bool) interface{} {
 		rv, _ := strconv.Atoi(string(s))
 		return rv
 	case int64:
+		if fixedLen {
+			return 0
+		}
 		s := []byte(fmt.Sprintf("%v", v))
 		for i := range s {
 			if s[i] >= '0' && s[i] <= '9' {
@@ -328,6 +362,9 @@ func (this *Redact) redactValue(v interface{}, strict bool) interface{} {
 		rv, _ := strconv.ParseInt(string(s), 10, 64)
 		return rv
 	case float64:
+		if fixedLen {
+			return 0.0
+		}
 		s := []byte(fmt.Sprintf("%g", v))
 		for i := range s {
 			if s[i] >= '0' && s[i] <= '9' {
@@ -337,14 +374,14 @@ func (this *Redact) redactValue(v interface{}, strict bool) interface{} {
 		rv, _ := strconv.ParseFloat(string(s), 10)
 		return rv
 	case bool:
-		if strict {
+		if strict || fixedLen {
 			return false
 		}
 		return v
 	case nil:
 		return nil
 	default:
-		logging.Infof("DVJH: unhandled type %T", v)
+		logging.Debugf("Redact: unhandled type %T", v)
 		return v
 	}
 }
