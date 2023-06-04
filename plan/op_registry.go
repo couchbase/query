@@ -57,6 +57,9 @@ var _OPERATORS = map[string]Operator{
 	"DistinctScan":            &DistinctScan{},
 	"ExpressionScan":          &ExpressionScan{},
 
+	// IndexFtsSearch
+	"IndexFtsSearch": &IndexFtsSearch{},
+
 	// Fetch
 	"Fetch":      &Fetch{},
 	"DummyFetch": &DummyFetch{},
@@ -75,8 +78,12 @@ var _OPERATORS = map[string]Operator{
 	// Let + Letting
 	"Let": &Let{},
 
+	// With
+	"With": &With{},
+
 	// Infer
-	"InferKeyspace": &InferKeyspace{},
+	"InferKeyspace":   &InferKeyspace{},
+	"InferExpression": &InferExpression{},
 
 	// Update Statistics
 	"UpdateStatistics": &UpdateStatistics{},
@@ -165,13 +172,22 @@ var _OPERATORS = map[string]Operator{
 	// Prepare
 	"Prepare": &Prepare{},
 
+	// Scopes
+	"CreateScope": &CreateScope{},
+	"DropScope":   &DropScope{},
+
+	// Collections
+	"CreateCollection": &CreateCollection{},
+	"DropCollection":   &DropCollection{},
+	"FlushCollection":  &FlushCollection{},
+
 	// Functions
 	"CreateFunction":  &CreateFunction{},
 	"DropFunction":    &DropFunction{},
 	"ExecuteFunction": &ExecuteFunction{},
 
 	// Index Advisor
-	"AdviseIndex": &Advise{},
+	"Advise":      &Advise{},
 	"IndexAdvice": &IndexAdvice{},
 
 	// Transactions

@@ -153,6 +153,10 @@ This method calls FormalizeSubquery to qualify all the children
 of the query, and returns an error if any.
 */
 func (this *Subquery) Formalize(parent *expression.Formalizer) error {
+	if parent != nil && parent.IsCheckCorrelation() && this.query.IsCorrelated() {
+		return nil
+	}
+
 	err := this.query.FormalizeSubquery(parent, true)
 	if err != nil {
 		return err
