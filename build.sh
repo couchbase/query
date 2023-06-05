@@ -85,17 +85,17 @@ function checkout_if_necessary {
     then
       return
     fi
-    cmd="$GIT checkout $branch"
-    res=`$cmd 2>&1`
+    cmd1="$GIT checkout $branch"
+    res=`$cmd1 2>&1`
     if [[ $res =~ "did not match any file" ]]
     then
       # try refreshing the repo
       ($GIT pull 2>/dev/null 1>/dev/null)  # no need to report status
-      res=`$cmd 2>&1`
+      res=`$cmd1 2>&1`
     fi
     if [[ ! $res =~ "is now at" ]]
     then
-      report="${report}${D} -> ${cmd}:\n${res}\n"
+      report="${report}${D} -> ${cmd1}:\n${res}\n"
     else
       return  # success
     fi
@@ -238,6 +238,7 @@ function repo_setup {
     repo_by_gomod go.mod cbgt "" $cbranch $rbranch $defbranch
     repo_by_gomod go.mod cbft "" $cbranch $rbranch $defbranch
     repo_by_gomod go.mod sigar "" $cbranch $rbranch $defbranch
+    repo_by_gomod go.mod hebrew "" $cbranch $rbranch $defbranch
     repo_by_gomod ../regulator/go.mod gocb "v2" $defbranch
     repo_by_gomod ../n1fty/go.mod bleve "" $defbranch
     repo_by_gomod ../n1fty/go.mod bleve "v2" $defbranch
