@@ -134,7 +134,8 @@ func (this *Subselect) Formalize(parent *expression.Formalizer) (f *expression.F
 			this.correlation = make(map[string]uint32, len(correlation))
 		}
 		for k, v := range correlation {
-			if f.CheckCorrelation(k) {
+			if f.CheckCorrelation(k) || (v&expression.IDENT_IS_RECURSIVE_WITH) != 0 {
+				/* to add the “self-correlation” from recursive WITH alias reference. */
 				this.correlated = true
 				this.correlation[k] |= v
 			}

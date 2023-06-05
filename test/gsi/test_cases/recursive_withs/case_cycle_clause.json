@@ -1,0 +1,38 @@
+[
+    {
+        "testcase": "cycle <fieldname list> restrict",
+        "statements": "WITH RECURSIVE cyc AS ( SELECT 0 as _from, 1 as _to, 0 as lvl UNION SELECT next._from, next._to, c.lvl+1 as lvl FROM `shellTest`._default.cycleTest next JOIN cyc c ON c._to = next._from) CYCLE _from, _to RESTRICT SELECT cyc.* FROM cyc;",
+        "results":  [
+            {
+                "_from": 0,
+                "_to": 1,
+                "lvl": 0
+            },
+            {
+                "_from": 1,
+                "_to": 2,
+                "lvl": 1
+            },
+            {
+                "_from": 1,
+                "_to": 100,
+                "lvl": 1
+            },
+            {
+                "_from": 2,
+                "_to": 3,
+                "lvl": 2
+            },
+            {
+                "_from": 3,
+                "_to": 4,
+                "lvl": 3
+            },
+            {
+                "_from": 4,
+                "_to": 1,
+                "lvl": 4
+            }
+        ]
+    }
+]

@@ -1,0 +1,11 @@
+[
+ {
+    "statements": "UPSERT INTO orders._default.empSmall VALUES ('emp0',{\"name\" : \"Dev\" }), VALUES ('emp1',{\"name\" : \"Eliot\", \"reportsTo\" : \"Dev\" }), VALUES ('emp2',{\"name\" : \"Ron\", \"reportsTo\" : \"Eliot\" }), VALUES ('emp3',{\"name\" : \"Andrew\", \"reportsTo\" : \"Eliot\" }), VALUES ('emp4',{\"name\" : \"Asya\", \"reportsTo\" : \"Ron\" }), VALUES ('emp5',{\"name\" : \"Dan\", \"reportsTo\" : \"Andrew\" })"
+ },
+ {
+    "statements":"UPSERT INTO shellTest._default.cycleTest VALUES ('c0', { \"_from\" : 1, \"_to\":2 }), VALUES ('c1', { \"_from\" : 1, \"_to\":100 }), VALUES ('c2', { \"_from\" : 2, \"_to\":3 }), VALUES ('c3', { \"_from\" : 3, \"_to\":4 }), VALUES ('c4', { \"_from\" : 4, \"_to\":1 })"
+ },
+ {
+    "statements":"UPSERT INTO purchase VALUES ('p0', { \"name\": \"John Doe\", \"age\": 30, \"contacts\": [{\"type\": \"email\",\"value\": \"john.doe@example.com\"},{\"type\": \"phone\",\"value\": \"555-1234\"}] })"
+ }
+]

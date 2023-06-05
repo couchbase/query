@@ -1,0 +1,12 @@
+[
+    {
+        "testcase": "self reference not allowed in where clause",
+        "statement": "WITH RECURSIVE empHierar AS (SELECT e.name, 0 as lvl FROM `orders`._default.empSmall e WHERE e.reportsTo IS MISSING UNION SELECT * FROM purchases WHERE EXISTS (SELECT * FROM empHierar)) SELECT empHierar.* FROM empHierar;",
+        "error": "Error evaluating WITH"
+    },
+    {
+        "testcase": "self reference not allowed in projection list",
+        "statement": " WITH RECURSIVE empHierar AS (SELECT e.name, 0 as lvl FROM `orders`._default.empSmall e WHERE e.reportsTo IS MISSING UNION SELECT p.*,(SELECT empHierar.* FROm empHierar) as NOPE FROM purchases p) SELECT empHierar.* FROM empHierar;",
+        "error": "Error evaluating WITH"
+    }
+]

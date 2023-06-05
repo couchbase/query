@@ -47,6 +47,11 @@ func (this *SemChecker) VisitJoin(node *algebra.Join) (interface{}, error) {
 		return nil, errors.NewJoinNestNoUseIndexError("JOIN", right.Alias(), "semantics.visit_join.no_use_index")
 	}
 
+	if this.hasSemFlag(_SEM_WITH_RECURSIVE) && node.Outer() {
+		// LEFT, RIGHT,Outer JOIN not allowed as CTE can become infinite recursion
+		return nil, errors.NewRecurionUnsupportedError("OUTER JOIN", "may lead to potential infinite recursion")
+	}
+
 	return nil, this.visitJoin(node.Left(), node.Right())
 }
 
@@ -72,6 +77,12 @@ func (this *SemChecker) VisitIndexJoin(node *algebra.IndexJoin) (interface{}, er
 		return nil, errors.NewJoinNestNoUseIndexError("JOIN", right.Alias(), "semantics.visit_index_join.no_use_index")
 	}
 
+	if this.hasSemFlag(_SEM_WITH_RECURSIVE) && node.Outer() {
+		// // LEFT, RIGHT,Outer JOIN not allowed as CTE can become infinite recursion
+		return nil, errors.NewRecurionUnsupportedError("OUTER JOIN", "may lead to potential infinite recursion")
+
+	}
+
 	return nil, this.visitJoin(node.Left(), node.Right())
 }
 
@@ -94,6 +105,11 @@ func (this *SemChecker) VisitAnsiJoin(node *algebra.AnsiJoin) (r interface{}, er
 		this.setSemFlag(_SEM_ON)
 		_, err = this.Map(node.Onclause())
 		this.unsetSemFlag(_SEM_ON)
+	}
+
+	if this.hasSemFlag(_SEM_WITH_RECURSIVE) && node.Outer() {
+		// // LEFT, RIGHT,Outer JOIN not allowed as CTE can become infinite recursion
+		return nil, errors.NewRecurionUnsupportedError("OUTER JOIN", "may lead to potential infinite recursion")
 	}
 
 	return nil, err

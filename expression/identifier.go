@@ -19,18 +19,19 @@ import (
 Identifier flags
 */
 const (
-	IDENT_IS_UNKNOWN      = 1 << iota // unknown
-	IDENT_IS_KEYSPACE                 // keyspace or its alias or equivalent (e.g. subquery term)
-	IDENT_IS_VARIABLE                 // binding variable
-	IDENT_IS_PROJ_ALIAS               // alias used in projection
-	IDENT_IS_UNNEST_ALIAS             // UNNEST alias
-	IDENT_IS_EXPR_TERM                // expression term
-	IDENT_IS_SUBQ_TERM                // subquery term
-	IDENT_IS_STATIC_VAR               // top level variable (CTE, function parameter...)
-	IDENT_IS_CORRELATED               // binding expr has correlated references
-	IDENT_IS_LATERAL_CORR             // lateral correlation
-	IDENT_IS_GROUP_AS                 // GROUP AS alias
-	IDENT_IS_WITH_ALIAS               // CTE variable (WITH alias)
+	IDENT_IS_UNKNOWN        = 1 << iota // unknown
+	IDENT_IS_KEYSPACE                   // keyspace or its alias or equivalent (e.g. subquery term)
+	IDENT_IS_VARIABLE                   // binding variable
+	IDENT_IS_PROJ_ALIAS                 // alias used in projection
+	IDENT_IS_UNNEST_ALIAS               // UNNEST alias
+	IDENT_IS_EXPR_TERM                  // expression term
+	IDENT_IS_SUBQ_TERM                  // subquery term
+	IDENT_IS_STATIC_VAR                 // top level variable (CTE, function parameter...)
+	IDENT_IS_CORRELATED                 // binding expr has correlated references
+	IDENT_IS_LATERAL_CORR               // lateral correlation
+	IDENT_IS_GROUP_AS                   // GROUP AS alias
+	IDENT_IS_WITH_ALIAS                 // CTE variable (WITH alias)
+	IDENT_IS_RECURSIVE_WITH             // Mark recursive withs
 )
 
 /*
@@ -370,6 +371,15 @@ func (this *Identifier) SetWithAlias(with bool) {
 	} else {
 		this.identFlags &^= IDENT_IS_WITH_ALIAS
 	}
+}
+
+func (this *Identifier) SetRecursiveWith(with bool) {
+	if with {
+		this.identFlags |= IDENT_IS_RECURSIVE_WITH
+	} else {
+		this.identFlags &^= IDENT_IS_RECURSIVE_WITH
+	}
+
 }
 
 func (this *Identifier) SetIdentFlags(aliases map[string]bool, flags uint32) {

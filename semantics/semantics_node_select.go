@@ -48,12 +48,18 @@ func (this *SemChecker) VisitSubselect(node *algebra.Subselect) (r interface{}, 
 	}
 
 	if node.Group() != nil {
+		if this.hasSemFlag(_SEM_WITH_RECURSIVE) {
+			return nil, errors.NewRecursiveWithSemanticError("Grouping is not allowed")
+		}
 		if err = node.Group().MapExpressions(this); err != nil {
 			return nil, err
 		}
 	}
 
 	this.setSemFlag(_SEM_PROJECTION)
+	if this.hasSemFlag(_SEM_WITH_RECURSIVE) && node.Projection().Distinct() {
+		return nil, errors.NewRecursiveWithSemanticError("Distinct not allowed")
+	}
 	err = node.Projection().MapExpressions(this)
 	this.unsetSemFlag(_SEM_PROJECTION)
 	if err != nil {

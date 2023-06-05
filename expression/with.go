@@ -8,10 +8,20 @@
 
 package expression
 
+import "github.com/couchbase/query/value"
+
 type With interface {
 	Alias() string
 	Expression() Expression
 	SetExpression(expr Expression)
+	SetRecursiveExpression(rexpr Expression)
+	IsRecursive() bool
+	SetUnion()
+	IsUnion() bool
+	RecursiveExpression() Expression
+	Config() value.Value
+	CycleFields() Expressions
+	SplitRecursive() error
 	ErrorContext() string
 	SetErrorContext(line int, column int)
 	String() string
@@ -23,6 +33,9 @@ func (this Withs) Expressions() Expressions {
 	exprs := make(Expressions, 0, len(this))
 	for _, with := range this {
 		exprs = append(exprs, with.Expression())
+		if with.IsRecursive() {
+			exprs = append(exprs, with.RecursiveExpression())
+		}
 	}
 
 	return exprs
@@ -36,6 +49,14 @@ func (this Withs) MapExpressions(mapper Mapper) (err error) {
 		}
 
 		b.SetExpression(expr)
+
+		if b.IsRecursive() {
+			rexpr, err := mapper.Map(b.RecursiveExpression())
+			if err != nil {
+				return err
+			}
+			b.SetRecursiveExpression(rexpr)
+		}
 	}
 
 	return

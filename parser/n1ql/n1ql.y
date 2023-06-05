@@ -36,6 +36,8 @@ binding          *expression.Binding
 bindings         expression.Bindings
 with             expression.With
 withs            expression.Withs
+withclause       *algebra.WithClause
+cyclecheck       *algebra.CycleCheck
 dimensions       []expression.Bindings
 
 node             algebra.Node
@@ -152,6 +154,7 @@ column int
 %token COVER
 %token CREATE
 %token CURRENT
+%token CYCLE
 %token DATABASE
 %token DATASET
 %token DATASTORE
@@ -272,10 +275,12 @@ column int
 %token RAW
 %token READ
 %token REALM
+%token RECURSIVE
 %token REDUCE
 %token RENAME
 %token REPLACE
 %token RESPECT
+%token RESTRICT
 %token RETURN
 %token RETURNING
 %token REVOKE
@@ -432,7 +437,7 @@ column int
 %type <indexRefs>        index_refs
 %type <indexRef>         index_ref
 %type <bindings>         opt_let let
-%type <withs>            with
+%type <withclause>       with
 %type <expr>             opt_where where opt_filter
 %type <group>            opt_group group
 %type <expr>             opt_group_as
@@ -527,9 +532,11 @@ column int
 %type <optimHintArr>        optim_hints optim_hint
 %type <ss>                  opt_hint_args hint_args
 
-%type <val>                with_clause opt_with_clause
+%type <val>                with_clause opt_with_clause opt_option_clause
 
 %type <exprs>              opt_exclude
+
+%type <cyclecheck>         opt_cycle_clause
 
 %start input
 
@@ -1769,7 +1776,12 @@ alias EQ expr
 with:
 WITH with_list
 {
-    $$ = $2
+    $$ = algebra.NewWithClause(false, $2)
+}
+|
+WITH RECURSIVE with_list
+{
+    $$ = algebra.NewWithClause(true, $3)
 }
 ;
 
@@ -1790,10 +1802,36 @@ with_term:
 /* we want expressions in parentesheses, but don't want to be
    forced to have subquery expressions in nested parentheses
  */
-alias AS paren_expr
+alias AS paren_expr opt_cycle_clause opt_option_clause
 {
-    $$ = algebra.NewWith($1, $3)
+    $$ = algebra.NewWith($1, $3,nil, false, $5, $4)
     $$.SetErrorContext($<line>1, $<column>1)
+}
+;
+
+opt_option_clause:
+{
+    $$ = nil
+}
+|
+OPTIONS object
+{
+    $$ = $2.Value()
+    if $$ == nil {
+        yylex.(*lexer).ErrorWithContext("OPTIONS value must be static", $<line>2, $<column>2)
+    }
+}
+;
+
+opt_cycle_clause:
+{
+    $$ = nil
+}
+|
+/* non sql std for now */
+CYCLE exprs RESTRICT
+{
+    $$ = algebra.NewCycleCheck($2)
 }
 ;
 

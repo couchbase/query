@@ -173,6 +173,7 @@
 /[cC][oO][vV][eE][rR]/           { yylex.logToken(yylex.Text(), "COVER"); return COVER }
 /[cC][rR][eE][aA][tT][eE]/       { yylex.logToken(yylex.Text(), "CREATE"); return CREATE }
 /[cC][uU][rR][rR][eE][nN][tT]/   { yylex.logToken(yylex.Text(), "CURRENT"); return CURRENT }
+/[cC][yY][cC][lL][eE]/           { yylex.logToken(yylex.Text(), "CYCLE"); return CYCLE }
 /[dD][aA][tT][aA][bB][aA][sS][eE]/ { yylex.logToken(yylex.Text(), "DATABASE"); return DATABASE }
 /[dD][aA][tT][aA][sS][eE][tT]/   { yylex.logToken(yylex.Text(), "DATASET"); return DATASET }
 /[dD][aA][tT][aA][sS][tT][oO][rR][eE]/ { yylex.logToken(yylex.Text(), "DATASTORE"); return DATASTORE }
@@ -306,10 +307,12 @@
 /[rR][aA][wW]/                   { yylex.logToken(yylex.Text(), "RAW"); return RAW }
 /[rR][eE][aA][dD]/               { yylex.logToken(yylex.Text(), "READ"); return READ }
 /[rR][eE][aA][lL][mM]/           { yylex.logToken(yylex.Text(), "REALM"); return REALM }
+/[rR][eE][cC][uU][rR][sS][iI][vV][eE]/ {yylex.logToken(yylex.Text(), "RECURSIVE"); return RECURSIVE}
 /[rR][eE][dD][uU][cC][eE]/       { yylex.logToken(yylex.Text(), "REDUCE"); return REDUCE }
 /[rR][eE][nN][aA][mM][eE]/       { yylex.logToken(yylex.Text(), "RENAME"); return RENAME }
 /[rR][eE][pP][lL][aA][cC][eE]/   { yylex.logToken(yylex.Text(), "REPLACE"); lval.s = yylex.Text(); return REPLACE }
 /[rR][eE][sS][pP][eE][cC][tT]/   { yylex.logToken(yylex.Text(), "RESPECT"); return RESPECT }
+/[rR][eE][sS][tT][rR][iI][cC][tT]/ { yylex.logToken(yylex.Text(), "RESTRICT"); return RESTRICT }
 /[rR][eE][tT][uU][rR][nN]/       { yylex.logToken(yylex.Text(), "RETURN"); return RETURN }
 /[rR][eE][tT][uU][rR][nN][iI][nN][gG]/ { yylex.logToken(yylex.Text(), "RETURNING"); return RETURNING }
 /[rR][eE][vV][oO][kK][eE]/       { yylex.logToken(yylex.Text(), "REVOKE"); return REVOKE }

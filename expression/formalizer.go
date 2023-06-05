@@ -32,9 +32,10 @@ const (
 )
 
 type WithInfo struct {
-	permanent   bool
-	correlated  bool
-	correlation map[string]uint32
+	permanent    bool
+	correlated   bool
+	correlation  map[string]uint32
+	chkRecursive bool
 }
 
 func newWithInfo(correlated bool, correlation map[string]uint32) *WithInfo {
@@ -52,8 +53,9 @@ func newPermanentWithInfo() *WithInfo {
 
 func (this *WithInfo) Copy() *WithInfo {
 	rv := &WithInfo{
-		permanent:  this.permanent,
-		correlated: this.correlated,
+		permanent:    this.permanent,
+		correlated:   this.correlated,
+		chkRecursive: this.chkRecursive,
 	}
 	if this.correlated {
 		rv.correlation = make(map[string]uint32, len(this.correlation))
@@ -70,6 +72,10 @@ func (this *WithInfo) IsCorrelated() bool {
 
 func (this *WithInfo) GetCorrelation() map[string]uint32 {
 	return this.correlation
+}
+
+func (this *WithInfo) IsChkRecursive() bool {
+	return this.chkRecursive
 }
 
 /*
@@ -365,13 +371,21 @@ func (this *Formalizer) VisitIdentifier(expr *Identifier) (interface{}, error) {
 				expr.SetLateralCorr(true)
 			}
 			if with_flags != 0 && !expr.IsWithAlias() {
-				expr.SetWithAlias(true)
+				if wi, ok := this.withs[identifier]; ok {
+					// always set
+					expr.SetWithAlias(true)
+					if wi.chkRecursive {
+						// set if recursive flag is set
+						expr.SetRecursiveWith(true)
+					}
+				}
 			}
 			return expr, nil
 		}
 	}
 
-	if wi, ok := this.withs[identifier]; ok {
+	// do not allow CTE reference anywhere in the recursive query except for the FROM clause
+	if wi, ok := this.withs[identifier]; ok && !wi.chkRecursive {
 		if wi.correlated {
 			err := this.AddCorrelatedIdentifiers(wi.correlation)
 			if err != nil {
@@ -664,8 +678,11 @@ func (this *Formalizer) SetAllowedUnnestAlias(alias string) {
 // alias must be non-empty
 func (this *Formalizer) SetAllowedExprTermAlias(alias string) {
 	ident_flags := uint32(IDENT_IS_KEYSPACE | IDENT_IS_EXPR_TERM)
-	if _, ok := this.withs[alias]; ok {
+	if wi, ok := this.withs[alias]; ok {
 		ident_flags |= uint32(IDENT_IS_WITH_ALIAS)
+		if wi.chkRecursive {
+			ident_flags |= uint32(IDENT_IS_RECURSIVE_WITH)
+		}
 	}
 	this.allowed.SetField(alias, value.NewValue(ident_flags))
 }
@@ -724,12 +741,20 @@ func (this *Formalizer) WithInfo(alias string) *WithInfo {
 	return nil
 }
 
-func (this *Formalizer) ProcessWiths(withs Withs) error {
+func (this *Formalizer) ProcessWiths(withs Withs, recursiveHint bool) error {
 	if this.withs == nil {
 		this.withs = make(map[string]*WithInfo, len(withs))
 	}
 
 	for _, with := range withs {
+		if recursiveHint {
+			// recieved recursive hint
+			err := with.SplitRecursive()
+			if err != nil {
+				return err
+			}
+		}
+
 		errContext := with.ErrorContext()
 		withAlias := with.Alias()
 		if _, ok := this.withs[withAlias]; ok {
@@ -754,6 +779,26 @@ func (this *Formalizer) ProcessWiths(withs Withs) error {
 			correlation = f.GetCorrelation()
 		}
 		this.withs[withAlias] = newWithInfo(correlated, correlation)
+
+		if with.IsRecursive() {
+
+			if f.withs == nil {
+				f.withs = make(map[string]*WithInfo)
+			}
+			// copy withinfo and mark as recursive to set as RECURSIVE_WITH
+			f.withs[withAlias] = newWithInfo(correlated, correlation)
+			// set recursive flag
+			f.withs[withAlias].chkRecursive = true
+
+			rexpr, err := f.Map(with.RecursiveExpression())
+			if err != nil {
+				return err
+			}
+			with.SetRecursiveExpression(rexpr)
+
+			// unset recursive flag
+			f.withs[withAlias].chkRecursive = false
+		}
 	}
 	return nil
 }
@@ -825,7 +870,11 @@ func (this *Formalizer) CheckCorrelation(alias string) bool {
 }
 
 func (this *Formalizer) AddCorrelatedIdentifiers(correlation map[string]uint32) error {
-	for k, _ := range correlation {
+	for k, identFlags := range correlation {
+		if (identFlags & IDENT_IS_RECURSIVE_WITH) != 0 {
+			// skip for recursive alias ref
+			continue
+		}
 		if _, ok := this.identifiers.Field(k); !ok {
 			v, ok1 := this.allowed.Field(k)
 			if !ok1 {

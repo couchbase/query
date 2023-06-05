@@ -1,0 +1,67 @@
+[
+    {
+        "testcase": "order not allowed",
+        "statements": "WITH RECURSIVE empHierar AS (SELECT e.name, 0 as lvl FROM `orders`._default.empSmall e WHERE e.reportsTo IS MISSING UNION SELECT e1.name, e1.reportsTo, manager.lvl+1 as lvl FROM empHierar manager JOIN `orders`._default.empSmall e1 ON manager.name=e1.reportsTo ORDER BY e1.name) SELECT empHierar.* FROM empHierar;",
+        "error": "recursive_with semantics: Order/Limit/Offset not allowed"
+    },
+    {
+        "testcase": "limit not allowed",
+        "statements": "WITH RECURSIVE empHierar AS (SELECT e.name, 0 as lvl FROM `orders`._default.empSmall e WHERE e.reportsTo IS MISSING UNION SELECT e1.name, e1.reportsTo, manager.lvl+1 as lvl FROM empHierar manager JOIN `orders`._default.empSmall e1 ON manager.name=e1.reportsTo LIMIT 2) SELECT empHierar.* FROM empHierar;",
+        "error": "recursive_with semantics: Order/Limit/Offset not allowed"
+    },
+    {
+        "testcase": "offset not allowed",
+        "statements": "WITH RECURSIVE empHierar AS (SELECT e.name, 0 as lvl FROM `orders`._default.empSmall e WHERE e.reportsTo IS MISSING UNION SELECT e1.name, e1.reportsTo, manager.lvl+1 as lvl FROM empHierar manager JOIN `orders`._default.empSmall e1 ON manager.name=e1.reportsTo OFFSET 2) SELECT empHierar.* FROM empHierar;",
+        "error": "recursive_with semantics: Order/Limit/Offset not allowed"
+    },
+    {
+        "testcase": "grouping not allowed",
+        "statements": "WITH RECURSIVE cte AS (SELECT _from , COUNT(_from) FROM `shellTest`._default.cycleTest c GROUP BY _from ) SELECT * FROM cte;",
+        "error": "recursive_with semantics: Grouping is not allowed"
+    },
+    {
+        "testcase": "aggregates/window functions not allowed",
+        "statements": "WITH RECURSIVE cte AS (SELECT MIN(_from) FROM `shellTest`._default.cycleTest c) SELECT * FROM cte;",
+        "error": "recursive_with semantics: Aggregates/Window functions are not allowed"
+    },
+    {
+        "testcase": "don't allow use of DISTINCT",
+        "statements":"WITH RECURSIVE cte AS (SELECT DISTINCT cte._from FROM `shellTest`._default.cycleTest c) SELECT * FROM cte;",
+        "error":"recursive_with semantics: Distinct not allowed"
+    },
+    {
+        "testcase": "don't allow recursive reference in anchor clause",
+        "statements": "WITH RECURSIVE cte AS (SELECT 1 r UNION SELECT cte.r+1 r FROM cte WHERE cte.r<3 UNION SELECT cte.r+2 FROM cte WHERE cte.r<10) SELECT cte.* FROM cte;",
+        "error":"Anchor Clause cannot have recursive reference in FROM expression: cte"
+    },
+    {
+        "testcase": "don't allow more than one recursive refernce in recursive clause",
+        "statements":"WITH RECURSIVE cte AS (SELECT 1 r UNION SELECT 2 r UNION  SELECT c.r+1 r FROM cte c , cte c1 WHERE c.r = c1.r+1 AND c.r<5) SELECT cte.* FROM cte;",
+        "error":"recursive ref:cte must not appear more than once in the FROM clause"
+    },
+    {
+        "testcase": "Don't allow LEFT/RIGHT/OUTER Joins as can lead to to potential infinite recursion",
+        "statements": "WITH RECURSIVE empHierar AS (SELECT e.name, 0 as lvl FROM `orders`._default.empSmall e WHERE e.reportsTo IS MISSING UNION SELECT e1.name, e1.reportsTo, manager.lvl+1 as lvl FROM empHierar manager LEFT JOIN `orders`._default.empSmall e1 ON manager.name=e1.reportsTo) SELECT empHierar.* FROM empHierar;",
+        "error": "recursive_with_unsupported: OUTER JOIN"
+    },
+    {
+        "testcase": "Don't allow LEFT/RIGHT/OUTER Joins as can lead to to potential infinite recursion",
+        "statements":"WITH RECURSIVE empHierar AS (SELECT e.name, 0 as lvl FROM `orders`._default.empSmall e WHERE e.reportsTo IS MISSING UNION SELECT e1.name, e1.reportsTo, manager.lvl+1 as lvl FROM empHierar manager LEFT OUTER JOIN `orders`._default.empSmall e1 ON manager.name=e1.reportsTo) SELECT empHierar.* FROM empHierar;",
+        "error": "recursive_with_unsupported: OUTER JOIN"
+    },
+    {
+        "testcase": "Don't allow LEFT/RIGHT/OUTER Joins as can lead to to potential infinite recursion",
+        "statements": "WITH RECURSIVE empHierar AS (SELECT e.name, 0 as lvl FROM `orders`._default.empSmall e WHERE e.reportsTo IS MISSING UNION SELECT e1.name, e1.reportsTo, manager.lvl+1 as lvl FROM empHierar manager RIGHT JOIN `orders`._default.empSmall e1 ON manager.name=e1.reportsTo) SELECT empHierar.* FROM empHierar;",
+        "error": "recursive_with_unsupported: OUTER JOIN"
+    },
+    {
+        "testcase": "Don't allow LEFT/RIGHT/OUTER Joins as can lead to to potential infinite recursion",
+        "statements": "WITH RECURSIVE empHierar AS (SELECT e.name, 0 as lvl FROM `orders`._default.empSmall e WHERE e.reportsTo IS MISSING UNION SELECT e1.name, e1.reportsTo, manager.lvl+1 as lvl FROM empHierar manager RIGHT OUTER JOIN `orders`._default.empSmall e1 ON manager.name=e1.reportsTo) SELECT empHierar.* FROM empHierar;",
+        "error": "recursive_with_unsupported: OUTER JOIN"
+    },
+    {
+        "testcase": "UNSUPPORTED RECURSION OVER NEST AND INNEST",
+        "statements": "WITH RECURSIVE cte AS ( SELECT * FROM purchase p UNION SELECT * FROM cte UNNEST p.contacts ) SELECT * FROM cte;",
+        "error": "recursive_with_unsupported: UNNEST"
+    }
+]

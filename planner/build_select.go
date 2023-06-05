@@ -47,6 +47,11 @@ func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 		this.partialSortTermCount = prevPartialSortTermCount
 	}()
 
+	if this.subquery && stmt.IsRecursiveWith() && !this.hasBuilderFlag(BUILDER_RECURSIVE_WITH) {
+		this.setBuilderFlag(BUILDER_RECURSIVE_WITH)
+		defer this.unsetBuilderFlag(BUILDER_RECURSIVE_WITH)
+	}
+
 	this.node = stmt
 	stmtOrder := stmt.Order()
 	stmtOffset, err := newOffsetLimitExpr(stmt.Offset(), true)
@@ -98,7 +103,7 @@ func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 		size := OPT_SIZE_NOT_AVAIL
 		frCost := OPT_COST_NOT_AVAIL
 		if this.useCBO {
-			cost, cardinality, size, frCost = getWithCost(subOp, with)
+			cost, cardinality, size, frCost = getWithCost(subOp, with.Bindings())
 		}
 		subOp = plan.NewWith(with, subOp, cost, cardinality, size, frCost)
 	}

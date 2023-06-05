@@ -21,6 +21,7 @@ const (
 	_SEM_PROJECTION
 	_SEM_ADVISOR_FUNC
 	_SEM_FROM
+	_SEM_WITH_RECURSIVE
 )
 
 type SemChecker struct {

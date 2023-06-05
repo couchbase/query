@@ -1,0 +1,37 @@
+[
+    {
+        "testcase": "Recursive mix",
+        "statements": "WITH RECURSIVE a AS (SELECT 1 r) , b AS (SELECT a.r FROM a UNION SELECT b.r+1 r FROM b WHERE b.r<3) SELECT b,a FROM a,b;",
+        "results":  [
+            {
+                "b": {
+                    "r": 1
+                },
+                "a": {
+                    "r": 1
+                }
+            },
+            {
+                "b": {
+                    "r": 2
+                },
+                "a": {
+                    "r": 1
+                }
+            },
+            {
+                "b": {
+                    "r": 3
+                },
+                "a": {
+                    "r": 1
+                }
+            }
+        ] 
+    },
+    {
+        "testcase": "Non-Recursive mix",
+        "statements": "WITH a AS (SELECT 1 r) , b AS (SELECT a.r FROM a UNION SELECT b.r+1 r FROM b WHERE b.r<3) SELECT b,a FROM a,b;",
+        "error": "Error evaluating WITH"
+    }
+]

@@ -10,6 +10,7 @@ package algebra
 
 import (
 	"encoding/json"
+
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
@@ -181,6 +182,16 @@ func (this *ExpressionTerm) Formalize(parent *expression.Formalizer) (f *express
 			identExpr.SetStaticVariable(true) // WITH variables are considered "static"
 		}
 		info := parent.WithInfo(ident)
+		if info != nil && info.IsChkRecursive() {
+			this.correlated = true
+			// for recursive with
+			// manually correlate so runtime expression scan will mark as correlated
+			// and we can update working value in every iteration
+			recursive_ref_corr := expression.IDENT_IS_CORRELATED | expression.IDENT_IS_WITH_ALIAS | expression.IDENT_IS_RECURSIVE_WITH
+			this.correlation = addSimpleTermCorrelation(this.correlation,
+				map[string]uint32{ident: uint32(recursive_ref_corr)},
+				this.IsAnsiJoinOp(), parent)
+		}
 		if info != nil && info.IsCorrelated() {
 			this.correlated = true
 			this.correlation = addSimpleTermCorrelation(this.correlation,

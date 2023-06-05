@@ -1,0 +1,66 @@
+[
+    {
+        "testcase": "levels options",
+        "statements": "WITH RECURSIVE cte AS (SELECT 1 r UNION SELECT 2 r UNION ALL SELECT cte.r+1 r FROM cte) OPTIONS {\"levels\": 4} SELECT cte.* FROM cte;",
+        "results":  [
+            {
+                "r": 1
+            },
+            {
+                "r": 2
+            },
+            {
+                "r": 2
+            },
+            {
+                "r": 3
+            },
+            {
+                "r": 3
+            },
+            {
+                "r": 4
+            },
+            {
+                "r": 4
+            },
+            {
+                "r": 5
+            },
+            {
+                "r": 5
+            },
+            {
+                "r": 6
+            }
+            ]
+    },
+    {
+        "testcase": "documents option",
+        "statements":"WITH RECURSIVE cte AS (SELECT 1 r UNION SELECT 2 r UNION SELECT cte.r+1 as r FROM cte) OPTIONS {\"documents\": 4} SELECT cte.* FROM cte;",
+        "results":  [
+            {
+                "r": 1
+            },
+            {
+                "r": 2
+            },
+            {
+                "r": 3
+            },
+            {
+                "r": 4
+            }
+        ]
+    },
+    {
+        "testcase":"allow only numeric values for options",
+        "statements":" WITH RECURSIVE cte AS (SELECT 1 r UNION SELECT 2 r UNION SELECT cte.r+1 as r FROM cte) OPTIONS {\"abc\": \"SELECT 1\"} SELECT cte.* FROM cte;",
+        "error": "Execution internal error: Config Options must be Numeric, abc:string"
+    },
+    {
+        "testcase":"only valid options are \"levels\" and \"documents\"",
+        "statements": "WITH RECURSIVE cte AS (SELECT 1 r UNION SELECT 2 r UNION SELECT cte.r+1 as r FROM cte) OPTIONS {\"abc\": 1} SELECT cte.* FROM cte;",
+        "error": "Invalid config option abc"
+    }
+]

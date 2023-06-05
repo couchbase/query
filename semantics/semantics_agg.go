@@ -22,6 +22,10 @@ func (this *SemChecker) visitAggregateFunction(agg algebra.Aggregate) (err error
 		return errors.NewSemanticsError(nil, "Aggregates/Window functions are allowed in SELECT only")
 	}
 
+	if this.hasSemFlag(_SEM_WITH_RECURSIVE) {
+		return errors.NewRecursiveWithSemanticError("Aggregates/Window functions are not allowed")
+	}
+
 	aggName := strings.ToUpper(agg.Name())
 
 	// Aggregate syntax has DISTINCT but aggregate doesn't support it

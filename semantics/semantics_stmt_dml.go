@@ -25,24 +25,44 @@ func (this *SemChecker) VisitSelect(stmt *algebra.Select) (r interface{}, err er
 	}
 
 	if stmt.With() != nil {
-		if err = stmt.With().MapExpressions(this); err != nil {
-			return nil, err
+		if stmt.With().IsRecursive() {
+			// if recursive hint is used :- order, limit, offset, group & aggregates are not allowed
+			// order limit offset is handled in splitting
+			this.setSemFlag(_SEM_WITH_RECURSIVE)
+			err = stmt.With().MapExpressions(this)
+			this.unsetSemFlag(_SEM_WITH_RECURSIVE)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			if err = stmt.With().MapExpressions(this); err != nil {
+				return nil, err
+			}
 		}
 	}
 
 	if stmt.Order() != nil {
+		if this.hasSemFlag(_SEM_WITH_RECURSIVE) {
+			return nil, errors.NewRecursiveWithSemanticError("Order not allowed")
+		}
 		if err = stmt.Order().MapExpressions(this); err != nil {
 			return nil, err
 		}
 	}
 
 	if stmt.Offset() != nil {
+		if this.hasSemFlag(_SEM_WITH_RECURSIVE) {
+			return nil, errors.NewRecursiveWithSemanticError("Offset not allowed")
+		}
 		if _, err = this.Map(stmt.Offset()); err != nil {
 			return nil, err
 		}
 	}
 
 	if stmt.Limit() != nil {
+		if this.hasSemFlag(_SEM_WITH_RECURSIVE) {
+			return nil, errors.NewRecursiveWithSemanticError("Limit not allowed")
+		}
 		if _, err = this.Map(stmt.Limit()); err != nil {
 			return nil, err
 		}

@@ -28,22 +28,23 @@ clause.
 type Select struct {
 	statementBase
 
-	subresult    Subresult             `json:"subresult"`
-	with         expression.Withs      `json:"with"`
-	order        *Order                `json:"order"`
-	offset       expression.Expression `json:"offset"`
-	limit        expression.Expression `json:"limit"`
-	correlated   bool                  `json:"correlated"`
-	hasVariables bool                  `json:"hasVariables"` // not actually propagated
-	setop        bool                  `json:"setop"`
-	correlation  map[string]uint32     `json:"correlation"`
+	subresult     Subresult             `json:"subresult"`
+	with          *WithClause           `json:"with"`
+	order         *Order                `json:"order"`
+	offset        expression.Expression `json:"offset"`
+	limit         expression.Expression `json:"limit"`
+	correlated    bool                  `json:"correlated"`
+	hasVariables  bool                  `json:"hasVariables"` // not actually propagated
+	setop         bool                  `json:"setop"`
+	recursiveWith bool                  `json:"recursive_with"`
+	correlation   map[string]uint32     `json:"correlation"`
 }
 
 /*
 The function NewSelect returns a pointer to the Select struct
 by assigning the input attributes to the fields of the struct.
 */
-func NewSelect(subresult Subresult, with expression.Withs, order *Order, offset, limit expression.Expression) *Select {
+func NewSelect(subresult Subresult, with *WithClause, order *Order, offset, limit expression.Expression) *Select {
 	rv := &Select{
 		subresult: subresult,
 		with:      with,
@@ -188,8 +189,8 @@ Representation as a N1QL string.
 func (this *Select) String() string {
 	var s string
 
-	if len(this.with) > 0 {
-		s += withBindings(this.with)
+	if this.with != nil {
+		s += withBindings(this.with.Bindings(), this.with.IsRecursive())
 	}
 
 	s += this.subresult.String()
@@ -225,7 +226,7 @@ func (this *Select) FormalizeSubquery(parent *expression.Formalizer, isSubq bool
 		defer parent.RestoreWiths(withs)
 
 		if this.with != nil {
-			err = parent.ProcessWiths(this.with)
+			err = parent.ProcessWiths(this.with.Bindings(), this.with.IsRecursive())
 			if err != nil {
 				return err
 			}
@@ -377,7 +378,7 @@ func (this *Select) SetUnderSetOp() {
 /*
 Returns the With clause in the select statement.
 */
-func (this *Select) With() expression.Withs {
+func (this *Select) With() *WithClause {
 	return this.with
 }
 
@@ -391,6 +392,14 @@ func (this *Select) CheckSetCorrelated() error {
 	}
 	f := expression.NewChkCorrelationFormalizer("", nil)
 	return this.FormalizeSubquery(f, true)
+}
+
+func (this *Select) IsRecursiveWith() bool {
+	return this.recursiveWith
+}
+
+func (this *Select) SetRecursiveWith(recursiveWith bool) {
+	this.recursiveWith = recursiveWith
 }
 
 /*
@@ -463,12 +472,15 @@ type Subresult interface {
 /*
 Representation as a N1QL WITH clause string.
 */
-func withBindings(withs expression.Withs) string {
+func withBindings(withs expression.Withs, recursive bool) string {
 	if len(withs) == 0 {
 		return ""
 	}
 
 	s := "WITH "
+	if recursive {
+		s += "RECURSIVE "
+	}
 	for i, with := range withs {
 		if i > 0 {
 			s += ", "
