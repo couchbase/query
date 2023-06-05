@@ -44,10 +44,32 @@ func (this floatValue) MarshalJSON() ([]byte, error) {
 		if f == -0 {
 			f = 0
 		}
-
 		s := strconv.FormatFloat(f, 'f', -1, 64)
 		return []byte(s), nil
 	}
+}
+
+func (this floatValue) WriteXML(order []string, w io.Writer, prefix string, indent string, fast bool) error {
+	var err error
+	if prefix != "" {
+		_, err = w.Write([]byte(getFullPrefix(prefix, "")))
+		if err != nil {
+			return err
+		}
+	}
+	_, err = w.Write([]byte("<float>"))
+	if err != nil {
+		return err
+	}
+	b, err := this.MarshalJSON()
+	if err != nil {
+		return err
+	}
+	_, err = w.Write(b)
+	if err == nil {
+		_, err = w.Write([]byte("</float>"))
+	}
+	return err
 }
 
 func (this floatValue) WriteJSON(order []string, w io.Writer, prefix, indent string, fast bool) error {

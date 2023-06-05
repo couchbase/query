@@ -10,6 +10,7 @@ package value
 
 import (
 	"bytes"
+	"encoding/xml"
 	"io"
 	"math/bits"
 	"sort"
@@ -102,6 +103,107 @@ func (this objectValue) MarshalJSON() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
+func (this objectValue) WriteXML(order []string, w io.Writer, prefix string, indent string, fast bool) error {
+	var err error
+
+	if this == nil {
+		_, err = w.Write(_NULL_XML)
+		return err
+	}
+
+	stringWriter := w.(*bytes.Buffer)
+
+	var fullPrefix string
+	var fullValuePrefix string
+	writePrefix := (prefix != "" || indent != "")
+	if writePrefix {
+		fullPrefix = getFullPrefix(prefix, indent)
+		fullValuePrefix = getFullPrefix(fullPrefix[1:], indent)
+	}
+
+	if writePrefix {
+		if _, err = stringWriter.WriteString(fullPrefix[:len(prefix)+1]); err != nil {
+			return err
+		}
+	}
+
+	l := len(this)
+	if l == 0 {
+		_, err = stringWriter.WriteString("<object/>")
+		return err
+	}
+
+	if order == nil {
+		var remaining []string
+		if l <= _NAME_CAP {
+			var nameBuf [_NAME_CAP]string
+			remaining = nameBuf[:0]
+		} else {
+			remaining = _NAME_POOL.GetCapped(l)
+			defer _NAME_POOL.Put(remaining)
+			remaining = remaining[:0]
+		}
+		remaining = remaining[:l]
+		order = sortedNames(this, remaining)
+	}
+
+	if _, err = stringWriter.WriteString("<object>"); err != nil {
+		return err
+	}
+
+	for _, n := range order {
+		thisv, found := this[n]
+		if !found {
+			continue
+		}
+		v := NewValue(thisv)
+		if v.Type() == MISSING {
+			continue
+		}
+
+		if writePrefix {
+			if _, err = stringWriter.WriteString(fullPrefix); err != nil {
+				return err
+			}
+		}
+		if _, err = stringWriter.WriteString("<field name=\""); err != nil {
+			return err
+		}
+		if err = xml.EscapeText(stringWriter, []byte(n)); err != nil {
+			return err
+		}
+		if _, err = stringWriter.WriteString("\">"); err != nil {
+			return err
+		}
+
+		if writePrefix {
+			if err = v.WriteXML(nil, w, fullValuePrefix[1:], indent, false); err != nil {
+				return err
+			}
+		} else {
+			if err = v.WriteXML(nil, w, "", "", fast); err != nil {
+				return err
+			}
+		}
+
+		if writePrefix {
+			if _, err = stringWriter.WriteString(fullPrefix); err != nil {
+				return err
+			}
+		}
+		if _, err = stringWriter.WriteString("</field>"); err != nil {
+			return err
+		}
+	}
+	if writePrefix {
+		if _, err = stringWriter.WriteString(fullPrefix[:len(prefix)+1]); err != nil {
+			return err
+		}
+	}
+	_, err = stringWriter.WriteString("</object>")
+	return err
+}
+
 func (this objectValue) WriteJSON(order []string, w io.Writer, prefix, indent string, fast bool) (err error) {
 	if this == nil {
 		_, err = w.Write(_NULL_BYTES)
@@ -112,7 +214,7 @@ func (this objectValue) WriteJSON(order []string, w io.Writer, prefix, indent st
 	stringWriter := w.(*bytes.Buffer)
 
 	if _, err = stringWriter.WriteString("{"); err != nil {
-		return
+		return err
 	}
 
 	var fullPrefix string
@@ -137,25 +239,25 @@ func (this objectValue) WriteJSON(order []string, w io.Writer, prefix, indent st
 			written++
 			if writePrefix {
 				if _, err = stringWriter.WriteString(fullPrefix); err != nil {
-					return
+					return err
 				}
 			}
 			if err = json.MarshalStringNoEscapeToBuffer(string(n), w.(*bytes.Buffer)); err != nil {
-				return
+				return err
 			}
 			if _, err = stringWriter.WriteString(":"); err != nil {
-				return
+				return err
 			}
 			if writePrefix {
 				if _, err = stringWriter.WriteString(" "); err != nil {
 					return err
 				}
 				if err = v.WriteJSON(nil, w, fullPrefix[1:], indent, fast); err != nil {
-					return
+					return err
 				}
 			} else {
 				if err = v.WriteJSON(nil, w, "", "", fast); err != nil {
-					return
+					return err
 				}
 			}
 		}
@@ -187,14 +289,14 @@ func (this objectValue) WriteJSON(order []string, w io.Writer, prefix, indent st
 
 			if written > 0 {
 				if _, err = stringWriter.WriteString(","); err != nil {
-					return
+					return err
 				}
 			}
 			written++
 
 			if writePrefix {
 				if _, err = stringWriter.WriteString(fullPrefix); err != nil {
-					return
+					return err
 				}
 			}
 

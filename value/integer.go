@@ -9,6 +9,7 @@
 package value
 
 import (
+	"fmt"
 	"io"
 	"math"
 	"strconv"
@@ -37,6 +38,18 @@ func (this intValue) ToString() string {
 func (this intValue) MarshalJSON() ([]byte, error) {
 	s := strconv.FormatInt(int64(this), 10)
 	return []byte(s), nil
+}
+
+func (this intValue) WriteXML(order []string, w io.Writer, prefix string, indent string, fast bool) error {
+	var err error
+	if prefix != "" {
+		_, err = w.Write([]byte(getFullPrefix(prefix, "")))
+		if err != nil {
+			return err
+		}
+	}
+	_, err = w.Write([]byte(fmt.Sprintf("<int>%d</int>", int64(this))))
+	return err
 }
 
 func (this intValue) WriteJSON(order []string, w io.Writer, prefix, indent string, fast bool) error {

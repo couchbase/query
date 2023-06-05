@@ -34,6 +34,7 @@ func NewNullValue() Value {
 }
 
 var _NULL_BYTES = []byte("null")
+var _NULL_XML = []byte("<null/>")
 
 func (this *nullValue) String() string {
 	return "null"
@@ -45,6 +46,18 @@ func (this *nullValue) ToString() string {
 
 func (this *nullValue) MarshalJSON() ([]byte, error) {
 	return _NULL_BYTES, nil
+}
+
+func (this *nullValue) WriteXML(order []string, w io.Writer, prefix string, indent string, fast bool) error {
+	var err error
+	if prefix != "" {
+		_, err = w.Write([]byte(getFullPrefix(prefix, "")))
+		if err != nil {
+			return err
+		}
+	}
+	_, err = w.Write(_NULL_XML)
+	return err
 }
 
 func (this *nullValue) WriteJSON(order []string, w io.Writer, prefix, indent string, fast bool) error {

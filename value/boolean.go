@@ -51,6 +51,30 @@ func (this boolValue) MarshalJSON() ([]byte, error) {
 	}
 }
 
+func (this boolValue) WriteXML(order []string, w io.Writer, prefix, indent string, fast bool) error {
+	var err error
+	if prefix != "" {
+		_, err = w.Write([]byte(getFullPrefix(prefix, "")))
+		if err != nil {
+			return err
+		}
+	}
+	_, err = w.Write([]byte("<bool>"))
+	if err != nil {
+		return err
+	}
+	b, err := this.MarshalJSON()
+	if err != nil {
+		return err
+	}
+	_, err = w.Write(b)
+	if err != nil {
+		return err
+	}
+	_, err = w.Write([]byte("</bool>"))
+	return err
+}
+
 func (this boolValue) WriteJSON(order []string, w io.Writer, prefix, indent string, fast bool) error {
 	b, err := this.MarshalJSON()
 	if err != nil {

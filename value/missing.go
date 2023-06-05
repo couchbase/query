@@ -51,6 +51,18 @@ func (this missingValue) MarshalJSON() ([]byte, error) {
 	return _NULL_BYTES, nil
 }
 
+func (this missingValue) WriteXML(order []string, w io.Writer, prefix string, indent string, fast bool) error {
+	var err error
+	if prefix != "" {
+		_, err = w.Write([]byte(getFullPrefix(prefix, "")))
+		if err != nil {
+			return err
+		}
+	}
+	_, err = w.Write(_NULL_XML)
+	return err
+}
+
 func (this missingValue) WriteJSON(order []string, w io.Writer, prefix, indent string, fast bool) error {
 	_, err := w.Write(_NULL_BYTES)
 	return err

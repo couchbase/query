@@ -12,12 +12,14 @@ import (
 	"bytes"
 	"container/list"
 	"encoding/json"
+	"encoding/xml"
 	"fmt"
 	"io"
 	"net"
 	"net/http"
 	"runtime"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -149,6 +151,17 @@ func (this *httpRequest) setHttpCode(httpRespCode int) {
 }
 
 func (this *httpRequest) Failed(srvr *server.Server) {
+	switch this.format {
+	case XML:
+		this.failedXML(srvr)
+	default:
+		this.failedJSON(srvr)
+	}
+	this.writer.noMoreData()
+	this.Stop(server.FATAL)
+}
+
+func (this *httpRequest) failedJSON(srvr *server.Server) {
 	prefix, indent := this.prettyStrings(srvr.Pretty(), false)
 	this.writeString("{\n")
 	this.writeRequestID(prefix)
@@ -160,14 +173,33 @@ func (this *httpRequest) Failed(srvr *server.Server) {
 	this.markTimeOfCompletion(time.Now())
 
 	this.writeMetrics(srvr.Metrics(), prefix, indent)
+
 	this.writeServerless(srvr.Metrics(), prefix, indent)
 	this.writeProfile(srvr.Profile(), prefix, indent)
 	this.writeControls(srvr.Controls(), prefix, indent)
 	this.writeLog(prefix, indent)
 	this.writeString("\n}\n")
-	this.writer.noMoreData()
+}
 
-	this.Stop(server.FATAL)
+func (this *httpRequest) failedXML(srvr *server.Server) {
+	prefix, indent := this.prettyStrings(srvr.Pretty(), false)
+	this.writeString("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<query>")
+
+	this.writeRequestIDXML(prefix)
+	this.writeClientContextIDXML(prefix)
+	this.writeErrorsXML(prefix, indent)
+	this.writeWarningsXML(prefix, indent)
+	this.writeStateXML(this.State(), prefix)
+
+	this.markTimeOfCompletion(time.Now())
+
+	this.writeMetricsXML(srvr.Metrics(), prefix, indent)
+
+	this.writeServerlessXML(srvr.Metrics(), prefix, indent)
+	this.writeProfileXML(srvr.Profile(), prefix, indent)
+	this.writeControlsXML(srvr.Controls(), prefix, indent)
+	this.writeLogXML(prefix, indent)
+	this.writeString("\n</query>")
 }
 
 func (this *httpRequest) markTimeOfCompletion(now time.Time) {
@@ -195,7 +227,12 @@ func (this *httpRequest) Execute(srvr *server.Server, context *execution.Context
 	this.prefix, this.indent = this.prettyStrings(srvr.Pretty(), false)
 
 	this.setHttpCode(http.StatusOK)
-	this.writePrefix(srvr, signature, this.prefix, this.indent)
+	switch this.format {
+	case XML:
+		this.writePrefixXML(srvr, signature, this.prefix, this.indent)
+	default:
+		this.writePrefix(srvr, signature, this.prefix, this.indent)
+	}
 
 	// release writer
 	this.writer.releaseExternal()
@@ -242,7 +279,12 @@ func (this *httpRequest) Execute(srvr *server.Server, context *execution.Context
 		tenant.RefundUnits(context.TenantCtx(), this.TenantUnits())
 	}
 	state := this.State()
-	this.writeSuffix(srvr, state, this.prefix, this.indent)
+	switch this.format {
+	case XML:
+		this.writeSuffixXML(srvr, state, this.prefix, this.indent)
+	default:
+		this.writeSuffix(srvr, state, this.prefix, this.indent)
+	}
 	this.writer.noMoreData()
 }
 
@@ -262,9 +304,29 @@ func (this *httpRequest) writePrefix(srvr *server.Server, signature value.Value,
 		this.writeString("\"results\": [")
 }
 
+func (this *httpRequest) writePrefixXML(srvr *server.Server, signature value.Value, prefix string, indent string) bool {
+	return this.writeString("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<query>") &&
+		this.writeRequestIDXML(prefix) &&
+		this.writeClientContextIDXML(prefix) &&
+		this.writePreparedXML(prefix, indent) &&
+		this.writeSignatureXML(srvr.Signature(), signature, prefix, indent) &&
+		this.writeString("\n") &&
+		this.writeString(prefix) &&
+		this.writeString("<results>")
+}
+
 func (this *httpRequest) writeRequestID(prefix string) bool {
 	return this.writeString(prefix) && this.writeString("\"requestID\": \"") && this.writeString(this.Id().String()) &&
 		this.writeString("\"")
+}
+
+func (this *httpRequest) writeRequestIDXML(prefix string) bool {
+	if prefix != "" {
+		if !this.writeString("\n") || !this.writeString(prefix) {
+			return false
+		}
+	}
+	return this.writeString("<requestID>") && this.writeString(this.Id().String()) && this.writeString("</requestID>")
 }
 
 func (this *httpRequest) writeClientContextID(prefix string) bool {
@@ -273,6 +335,19 @@ func (this *httpRequest) writeClientContextID(prefix string) bool {
 	}
 	return this.writeString(",\n") && this.writeString(prefix) &&
 		this.writeString("\"clientContextID\": \"") && this.writeString(this.ClientID().String()) && this.writeString("\"")
+}
+
+func (this *httpRequest) writeClientContextIDXML(prefix string) bool {
+	if !this.ClientID().IsValid() {
+		return true
+	}
+	if prefix != "" {
+		if !this.writeString("\n") || !this.writeString(prefix) {
+			return false
+		}
+	}
+	return this.writeString("<clientContextID>") && this.writeString(this.ClientID().String()) &&
+		this.writeString("</clientContextID>")
 }
 
 func (this *httpRequest) writePrepared(prefix, indent string) bool {
@@ -284,6 +359,21 @@ func (this *httpRequest) writePrepared(prefix, indent string) bool {
 	name := distributed.RemoteAccess().MakeKey(host, prepared.Name())
 	return this.writeString(",\n") && this.writeString(prefix) && this.writeString("\"prepared\": \"") &&
 		this.writeString(name) && this.writeString("\"")
+}
+
+func (this *httpRequest) writePreparedXML(prefix string, indent string) bool {
+	prepared := this.Prepared()
+	if this.AutoExecute() != value.TRUE || prepared == nil {
+		return true
+	}
+	host := tenant.EncodeNodeName(distributed.RemoteAccess().WhoAmI())
+	name := distributed.RemoteAccess().MakeKey(host, prepared.Name())
+	if prefix != "" {
+		if !this.writeString("\n") || !this.writeString(prefix) {
+			return false
+		}
+	}
+	return this.writeString("<prepared>") && this.writeString(name) && this.writeString("</prepared>")
 }
 
 func (this *httpRequest) writeSignature(server_flag bool, signature value.Value, prefix, indent string) bool {
@@ -298,6 +388,27 @@ func (this *httpRequest) writeSignature(server_flag bool, signature value.Value,
 	}
 	return this.writeString(",\n") && this.writeString(prefix) && this.writeString("\"signature\": ") &&
 		this.writeValue(signature, prefix, indent, true)
+}
+
+func (this *httpRequest) writeSignatureXML(server_flag bool, signature value.Value, prefix string, indent string) bool {
+	s := this.Signature()
+	if s == value.FALSE || (s == value.NONE && !server_flag) {
+		return true
+	}
+	if this.SortProjection() {
+		if av, ok := signature.(value.AnnotatedValue); ok {
+			av.SetProjection(signature, nil)
+		}
+	}
+	var newPrefix string
+	if prefix != "" {
+		newPrefix = "\n" + prefix + indent
+	}
+	return (newPrefix != "" && !this.writeString(newPrefix[:len(prefix)+1])) ||
+		!this.writeString("<signature>") ||
+		!this.writeValue(signature, newPrefix, indent, true) ||
+		(newPrefix != "" && !this.writeString(newPrefix[:len(prefix)+1])) ||
+		this.writeString("</signature>")
 }
 
 func (this *httpRequest) prettyStrings(serverPretty, result bool) (string, string) {
@@ -329,19 +440,36 @@ func (this *httpRequest) Result(item value.AnnotatedValue) bool {
 	this.writer.timeFlush()
 	beforeWrites := this.writer.mark()
 
-	if this.resultCount == 0 {
-		success = this.writer.write("\n")
-	} else {
-		success = this.writer.write(",\n")
+	var err error
+	var beforeResult int
+
+	switch this.format {
+	case XML:
+		beforeResult = this.writer.mark()
+		order := item.ProjectionOrder()
+		err = item.WriteXML(order, this.writer.buf(), this.prefix+this.indent, this.indent, item.Self())
+		success = err == nil
+		if this.Pretty() != value.TRUE {
+			success = this.writer.write("\n")
+		}
+	default:
+		if this.resultCount == 0 {
+			success = this.writer.write("\n")
+		} else {
+			success = this.writer.write(",\n")
+		}
+		if success {
+			success = this.writer.write(this.prefix)
+		}
+		beforeResult = this.writer.mark()
+
+		if success {
+			order := item.ProjectionOrder()
+			err = item.WriteJSON(order, this.writer.buf(), this.prefix, this.indent, item.Self())
+		}
 	}
-	if success {
-		success = this.writer.write(this.prefix)
-	}
-	beforeResult := this.writer.mark()
 
 	if success {
-		order := item.ProjectionOrder()
-		err := item.WriteJSON(order, this.writer.buf(), this.prefix, this.indent, item.Self())
 		if err != nil {
 			this.Error(errors.NewServiceErrorInvalidJSON(err))
 			this.SetState(server.FATAL)
@@ -366,24 +494,30 @@ func (this *httpRequest) Result(item value.AnnotatedValue) bool {
 	return success
 }
 
-func (this *httpRequest) writeValue(item value.Value, prefix, indent string, fast bool) bool {
+func (this *httpRequest) writeValue(item value.Value, prefix string, indent string, fast bool) bool {
 	if item == nil {
 		return this.writeString("null")
 	}
-	beforeWriteJSON := this.writer.mark()
+	beforeWrite := this.writer.mark()
 	var order []string
 	if av, ok := item.(value.AnnotatedValue); ok {
 		order = av.ProjectionOrder()
 	}
-	err := item.WriteJSON(order, this.writer.buf(), prefix, indent, fast)
+	var err error
+	switch this.format {
+	case XML:
+		err = item.WriteXML(order, this.writer.buf(), prefix, indent, fast)
+	default:
+		err = item.WriteJSON(order, this.writer.buf(), prefix, indent, fast)
+	}
 	if err != nil {
-		this.writer.truncate(beforeWriteJSON)
+		this.writer.truncate(beforeWrite)
 		return this.writer.printf("\"ERROR: %v\"", err)
 	}
 	return true
 }
 
-func (this *httpRequest) writeSuffix(srvr *server.Server, state server.State, prefix, indent string) bool {
+func (this *httpRequest) writeSuffix(srvr *server.Server, state server.State, prefix string, indent string) bool {
 	return this.writeString("\n") && this.writeString(prefix) && this.writeString("]") &&
 		this.writeErrors(prefix, indent) &&
 		this.writeWarnings(prefix, indent) &&
@@ -396,7 +530,30 @@ func (this *httpRequest) writeSuffix(srvr *server.Server, state server.State, pr
 		this.writeString("\n}\n")
 }
 
+func (this *httpRequest) writeSuffixXML(srvr *server.Server, state server.State, prefix string, indent string) bool {
+	if (this.Pretty() == value.TRUE || this.resultCount == 0) && !this.writeString("\n") {
+		return false
+	}
+	return this.writeString(prefix) && this.writeString("</results>") &&
+		this.writeErrorsXML(prefix, indent) &&
+		this.writeWarningsXML(prefix, indent) &&
+		this.writeStateXML(state, prefix) &&
+		this.writeMetricsXML(srvr.Metrics(), prefix, indent) &&
+		this.writeServerlessXML(srvr.Metrics(), prefix, indent) &&
+		this.writeProfileXML(srvr.Profile(), prefix, indent) &&
+		this.writeControlsXML(srvr.Controls(), prefix, indent) &&
+		this.writeLogXML(prefix, indent) &&
+		this.writeString("\n</query>\n")
+}
+
 func (this *httpRequest) writeString(s string) bool {
+	return this.writer.writeBytes([]byte(s))
+}
+
+func (this *httpRequest) writeStringNL(s string) bool {
+	if this.Pretty() == value.TRUE {
+		return this.writer.writeBytes([]byte(s)) && this.writer.writeBytes([]byte{'\n'})
+	}
 	return this.writer.writeBytes([]byte(s))
 }
 
@@ -408,12 +565,24 @@ func (this *httpRequest) writeState(state server.State, prefix string) bool {
 			state = server.ERRORS
 		}
 	}
-
 	return this.writeString(",\n") &&
 		this.writeString(prefix) &&
 		this.writeString("\"status\": \"") &&
 		this.writeString(state.StateName()) &&
 		this.writeString("\"")
+}
+
+func (this *httpRequest) writeStateXML(state server.State, prefix string) bool {
+	if state == server.COMPLETED {
+		if this.GetErrorCount() == 0 {
+			state = server.SUCCESS
+		} else {
+			state = server.ERRORS
+		}
+	}
+	return this.writer.printf("\n%s<status>", prefix) &&
+		this.writeString(state.StateName()) &&
+		this.writeString("</status>")
 }
 
 func (this *httpRequest) writeErrors(prefix string, indent string) bool {
@@ -440,7 +609,7 @@ func (this *httpRequest) writeErrors(prefix string, indent string) bool {
 				this.setHttpCode(mapErrorToHttpResponse(err, http.StatusOK))
 			}
 		}
-		if !this.writeError(err, first, prefix, indent) {
+		if !this.writeError(err, false, prefix, indent) {
 			break
 		}
 		first = false
@@ -450,6 +619,29 @@ func (this *httpRequest) writeErrors(prefix string, indent string) bool {
 		return false
 	}
 	return this.writeString("]")
+}
+
+func (this *httpRequest) writeErrorsXML(prefix string, indent string) bool {
+	var err errors.Error
+
+	if this.GetErrorCount() == 0 {
+		return true
+	}
+
+	first := true
+	if !this.writer.printf("\n%s<errors>", prefix) {
+		return false
+	}
+	for _, err = range this.Errors() {
+		if !first && this.State() != server.FATAL {
+			this.setHttpCode(mapErrorToHttpResponse(err, http.StatusOK))
+		}
+		first = false
+		if !this.writeErrorXML(err, false, prefix, indent) {
+			return false
+		}
+	}
+	return this.writer.printf("\n%s</errors>", prefix)
 }
 
 func (this *httpRequest) writeWarnings(prefix, indent string) bool {
@@ -480,6 +672,29 @@ func (this *httpRequest) writeWarnings(prefix, indent string) bool {
 		return false
 	}
 	return this.writeString("]")
+}
+
+func (this *httpRequest) writeWarningsXML(prefix string, indent string) bool {
+	var err errors.Error
+
+	if this.GetWarningCount() == 0 {
+		return true
+	}
+
+	first := true
+	if !this.writer.printf("\n%s<warnings>", prefix) {
+		return false
+	}
+	for _, err = range this.Errors() {
+		if first && this.httpCode() == 0 || this.httpCode() == http.StatusOK {
+			this.setHttpCode(mapErrorToHttpResponse(err, http.StatusOK))
+		}
+		first = false
+		if !this.writeErrorXML(err, first, prefix, indent) {
+			return false
+		}
+	}
+	return this.writer.printf("\n%s</warnings>", prefix)
 }
 
 func (this *httpRequest) writeError(err errors.Error, first bool, prefix, indent string) bool {
@@ -522,6 +737,16 @@ func (this *httpRequest) writeError(err errors.Error, first bool, prefix, indent
 	}
 
 	return this.writeString(newPrefix) && this.writeString(string(bytes.TrimSuffix(bb.Bytes(), []byte{'\n'})))
+}
+
+func (this *httpRequest) writeErrorXML(err errors.Error, first bool, prefix string, indent string) bool {
+	tag := "error"
+	if err.IsWarning() {
+		tag = "warning"
+	}
+	sb := &strings.Builder{}
+	xml.EscapeText(sb, []byte(err.Error()))
+	return this.writer.printf("\n%s%s<%s code=%d>%s</%s>", prefix, indent, tag, err.Code(), sb.String(), tag)
 }
 
 // For CAS mismatch errors where no mutations have taken place, we can explicitly set retry to true
@@ -610,6 +835,82 @@ func (this *httpRequest) writeMetrics(metrics bool, prefix, indent string) bool 
 		return false
 	}
 	return this.writeString("}")
+}
+
+func (this *httpRequest) writeMetricsXML(metrics bool, prefix string, indent string) bool {
+	m := this.Metrics()
+	if m == value.FALSE || (m == value.NONE && !metrics) {
+		return true
+	}
+
+	var newPrefix string
+	if prefix != "" {
+		newPrefix = "\n" + prefix + indent
+	}
+	var b [64]byte
+	beforeMetrics := this.writer.mark()
+	if newPrefix != "" && !this.writeString(newPrefix[:len(prefix)+1]) {
+		return false
+	}
+	if !(this.writeString("<metrics>") &&
+		this.writeString(newPrefix) &&
+		this.writeString("<elapsedTime>") &&
+		this.writeString(this.elapsedTime.String()) &&
+		this.writeString("</elapsedTime>") &&
+		this.writeString(newPrefix) &&
+		this.writeString("<executionTime>") &&
+		this.writeString(this.executionTime.String()) &&
+		this.writeString("</executionTime>") &&
+		this.writeString(newPrefix) &&
+		this.writeString("<resultCount>") &&
+		this.writer.writeBytes(strconv.AppendInt(b[:0], int64(this.resultCount), 10)) &&
+		this.writeString("</resultCount>") &&
+		this.writeString(newPrefix) &&
+		this.writeString("<resultSize>") &&
+		this.writer.writeBytes(strconv.AppendInt(b[:0], int64(this.resultSize), 10)) &&
+		this.writeString("</resultSize>") &&
+		this.writeString(newPrefix) &&
+		this.writeString("<serviceLoad>") &&
+		this.writer.writeBytes(strconv.AppendInt(b[:0], int64(server.ActiveRequestsLoad()), 10)) &&
+		this.writeString("</serviceLoad>")) {
+
+		this.writer.truncate(beforeMetrics)
+		return false
+	}
+
+	buf := this.writer.buf()
+	if this.UsedMemory() > 0 {
+		fmt.Fprintf(buf, "%s<usedMemory>%d</usedMemory>", newPrefix, this.UsedMemory())
+	}
+
+	if this.MutationCount() > 0 {
+		fmt.Fprintf(buf, "%s<mutationCount>%d</mutationCount>", newPrefix, this.MutationCount())
+	}
+
+	if this.transactionElapsedTime > 0 {
+		fmt.Fprintf(buf, "%s<transactionElapsedTime>%s</transactionElapsedTime>", newPrefix, this.transactionElapsedTime.String())
+	}
+
+	if transactionRemainingTime := this.TransactionRemainingTime(); transactionRemainingTime != "" {
+		fmt.Fprintf(buf, "%s<transactionRemainingTime>%s</transactionRemainingTime>", newPrefix, transactionRemainingTime)
+	}
+
+	if this.SortCount() > 0 {
+		fmt.Fprintf(buf, "%s<sortCount>%d</sortCount>", newPrefix, this.SortCount())
+	}
+
+	if this.GetErrorCount() > 0 {
+		fmt.Fprintf(buf, "%s<errorCount>%d</errorCount>", newPrefix, this.GetErrorCount())
+	}
+
+	if this.GetWarningCount() > 0 {
+		fmt.Fprintf(buf, "%s<warningCount>%d</warningCount>", newPrefix, this.GetWarningCount())
+	}
+
+	if newPrefix != "" && !this.writeString(newPrefix[:len(prefix)+1]) {
+		return false
+	}
+	return this.writeString("</metrics>")
 }
 
 func (this *httpRequest) writeControls(controls bool, prefix, indent string) bool {
@@ -735,35 +1036,173 @@ func (this *httpRequest) writeControls(controls bool, prefix, indent string) boo
 	return this.writeString("}")
 }
 
-func (this *httpRequest) writeTransactionInfo(prefix, indent string) bool {
-	if this.TxId() != "" {
-		if !this.writeString(",") || !this.writer.printf("%s\"txid\": \"%v\"", prefix, this.TxId()) {
-			logging.Infof("Error writing txid")
-		}
+func (this *httpRequest) writeControlsXML(controls bool, prefix string, indent string) bool {
+	var err error
 
-		if !this.writeString(",") || !this.writer.printf("%s\"tximplicit\": \"%v\"", prefix, this.TxImplicit()) {
-			logging.Infof("Error writing tximplicit")
-		}
+	c := this.Controls()
+	if c == value.FALSE || (c == value.NONE && !controls) {
+		return true
+	}
 
-		if !this.writeString(",") || !this.writer.printf("%s\"txstmtnum\": \"%v\"", prefix, this.TxStmtNum()) {
-			logging.Infof("Error writing stmtnum")
-		}
+	namedArgs := this.NamedArgs()
+	positionalArgs := this.PositionalArgs()
 
-		if !this.writeString(",") || !this.writer.printf("%s\"txtimeout\": \"%v\"", prefix, this.TxTimeout()) {
-			logging.Infof("Error writing txtimeout")
-		}
+	var newPrefix string
+	if prefix != "" {
+		newPrefix = "\n" + prefix + indent
+	}
 
-		if !this.writeString(",") || !this.writer.printf("%s\"durability_level\": \"%v\"",
-			prefix, datastore.DurabilityLevelToName(this.DurabilityLevel())) {
-			logging.Infof("Error writing durability_level")
+	if (newPrefix != "" && !this.writeString(newPrefix[:len(prefix)+1])) || !this.writeString("<controls>") {
+		return false
+	}
+	if namedArgs != nil {
+		if !this.writeString(newPrefix) || !this.writeString("<namedArgs>") {
+			return false
 		}
-
-		if !this.writeString(",") ||
-			!this.writer.printf("%s\"durability_timeout\": \"%v\"", prefix, this.DurabilityTimeout()) {
-			logging.Infof("Error writing durability_timeout")
+		val := value.NewValue(namedArgs)
+		err = val.WriteXML(nil, this.writer.buf(), newPrefix, indent, false)
+		if err != nil {
+			logging.Infof("Error writing namedArgs. Error: %v", err)
+		}
+		if !this.writeString(newPrefix) || !this.writeString("</namedArgs>") {
+			return false
+		}
+	}
+	if positionalArgs != nil {
+		if !this.writeString(newPrefix) || !this.writeString("<positionalArgs>") {
+			return false
+		}
+		val := value.NewValue(positionalArgs)
+		err = val.WriteXML(nil, this.writer.buf(), newPrefix, indent, false)
+		if err != nil {
+			logging.Infof("Error writing positionalArgs. Error: %v", err)
+		}
+		if !this.writeString(newPrefix) || !this.writeString("</positionalArgs>") {
+			return false
 		}
 	}
 
+	if err != nil || !this.writer.printf("%s<scan_consistency>%s</scan_consistency>", newPrefix,
+		string(this.ScanConsistency())) {
+
+		logging.Infof("Error writing scan_consistency. Error: %v", err)
+	}
+
+	if this.QueryContext() != "" {
+		if err != nil || !this.writer.printf("%s<queryContext>%s</queryContext>", newPrefix, this.QueryContext()) {
+			logging.Infof("Error writing queryContext. Error: %v", err)
+		}
+	}
+
+	if this.UseFts() {
+		if err != nil || !this.writer.printf("%s<use_fts>%v</use_fts>", newPrefix, this.UseFts()) {
+			logging.Infof("Error writing use_fts. Error: %v", err)
+		}
+	}
+
+	if this.UseCBO() {
+		if err != nil || !this.writer.printf("%s<use_cbo>%v</use_cbo>", newPrefix, this.UseCBO()) {
+			logging.Infof("Error writing use_cbo. Error: %v", err)
+		}
+	}
+
+	if this.UseReplica() == value.TRUE {
+		if err != nil || !this.writer.printf("%s<use_replica>%v</use_replica>", newPrefix,
+			value.TristateToString(this.UseReplica())) {
+
+			logging.Infof("Error writing use_replica. Error: %v", err)
+		}
+	}
+
+	memoryQuota := this.MemoryQuota()
+	if memoryQuota != 0 {
+		if err != nil || !this.writer.printf("%s<memoryQuota>%v</memoryQuota>", newPrefix, memoryQuota) {
+			logging.Infof("Error writing memoryQuota. Error: %v", err)
+		}
+	}
+
+	if !this.writer.printf("%s<n1ql_feat_ctrl>%#x</n1ql_feat_ctrl>", newPrefix, this.FeatureControls()) {
+		logging.Infof("Error writing n1ql_feat_ctrl")
+	}
+
+	// Disabled features in n1ql_feat_ctrl bitset
+	if !this.writer.printf("%s<disabledFeatures>", newPrefix) {
+		logging.Infof("Error writing disabledFeatures")
+	} else {
+		df := util.DisabledFeatures(this.FeatureControls())
+		for i := range df {
+			val := value.NewValue(df[i])
+			err = val.WriteXML(nil, this.writer.buf(), newPrefix+indent, indent, false)
+			if err != nil {
+				logging.Infof("Error writing disabledFeatures. Error: %v", err)
+				break
+			}
+		}
+		if !this.writer.printf("%s</disabledFeatures>", newPrefix) {
+			logging.Infof("Error writing disabledFeatures")
+		}
+	}
+
+	if !this.writer.printf("%s<stmtType>%v</stmtType>", newPrefix, this.Type()) {
+		logging.Infof("Error writing stmtType")
+	}
+
+	this.writeTransactionInfoXML(newPrefix, indent)
+
+	if newPrefix != "" && !this.writeString(newPrefix[:len(prefix)+1]) {
+		return false
+	}
+	return this.writeString("</controls>")
+}
+
+func (this *httpRequest) writeTransactionInfo(prefix, indent string) bool {
+	if this.TxId() != "" {
+		if !this.writer.printf(",%s\"txid\": \"%v\"", prefix, this.TxId()) {
+			logging.Infof("Error writing txid")
+		}
+		if !this.writer.printf(",%s\"tximplicit\": \"%v\"", prefix, this.TxImplicit()) {
+			logging.Infof("Error writing tximplicit")
+		}
+		if !this.writer.printf(",%s\"txstmtnum\": \"%v\"", prefix, this.TxStmtNum()) {
+			logging.Infof("Error writing stmtnum")
+		}
+		if !this.writer.printf(",%s\"txtimeout\": \"%v\"", prefix, this.TxTimeout()) {
+			logging.Infof("Error writing txtimeout")
+		}
+		if !this.writer.printf(",%s\"durability_level\": \"%v\"",
+			prefix, datastore.DurabilityLevelToName(this.DurabilityLevel())) {
+			logging.Infof("Error writing durability_level")
+		}
+		if !this.writer.printf(",%s\"durability_timeout\": \"%v\"", prefix, this.DurabilityTimeout()) {
+			logging.Infof("Error writing durability_timeout")
+		}
+	}
+	return true
+}
+
+func (this *httpRequest) writeTransactionInfoXML(prefix string, indent string) bool {
+	if this.TxId() != "" {
+		if !this.writer.printf("%s<txid>%v<txid>", prefix, this.TxId()) {
+			logging.Infof("Error writing txid")
+		}
+		if !this.writer.printf("%s<tximplicit>%v<tximplicit>", prefix, this.TxImplicit()) {
+			logging.Infof("Error writing tximplicit")
+		}
+		if !this.writer.printf("%s<txstmtnum>%v</txstmtnum>", prefix, this.TxStmtNum()) {
+			logging.Infof("Error writing stmtnum")
+		}
+		if !this.writer.printf("%s<txtimeout>%v</txtimeout>", prefix, this.TxTimeout()) {
+			logging.Infof("Error writing txtimeout")
+		}
+		if !this.writer.printf("%s<durability_level>%v</durability_level>", prefix,
+			datastore.DurabilityLevelToName(this.DurabilityLevel())) {
+
+			logging.Infof("Error writing durability_level")
+		}
+		if !this.writer.printf("%s<durability_timeout>%v</durability_timeout>", prefix, this.DurabilityTimeout()) {
+			logging.Infof("Error writing durability_timeout")
+		}
+	}
 	return true
 }
 
@@ -828,6 +1267,68 @@ func (this *httpRequest) writeServerless(metrics bool, prefix, indent string) bo
 	return true
 }
 
+func (this *httpRequest) writeServerlessXML(metrics bool, prefix string, indent string) bool {
+	if !tenant.IsServerless() {
+		return true
+	}
+	m := this.Metrics()
+	if m == value.FALSE || (m == value.NONE && !metrics) {
+		return true
+	}
+
+	um := tenant.Units2Map(this.TenantUnits())
+	if len(um) == 0 {
+		return true
+	}
+
+	var newPrefix string
+	if prefix != "" {
+		newPrefix = "\n" + prefix
+	}
+
+	beforeUnits := this.writer.mark()
+	if this.ThrottleTime() > time.Duration(0) &&
+		!this.writer.printf("%s<throttleTime>%s</throttleTime>", newPrefix, this.ThrottleTime().String()) {
+
+		this.writer.truncate(beforeUnits)
+		return false
+	}
+	if !this.writeString(newPrefix) || !this.writeString("<billingUnits>") {
+		this.writer.truncate(beforeUnits)
+		return false
+	}
+	b, err := json.Marshal(um)
+	if err != nil {
+		this.writer.truncate(beforeUnits)
+		return false
+	}
+	mi := make(map[string]interface{})
+	err = json.Unmarshal(b, &mi)
+	if err != nil {
+		this.writer.truncate(beforeUnits)
+		return false
+	}
+	val := value.NewValue(m)
+	err = val.WriteXML(nil, this.writer.buf(), newPrefix+indent, indent, false)
+	if err != nil || !this.writeString(newPrefix) || !this.writeString("</billingUnits>") {
+		this.writer.truncate(beforeUnits)
+		return false
+	}
+	if !this.refunded {
+		return true
+	}
+	if !this.writeString(newPrefix) || !this.writeString("<redundedUnits>") {
+		this.writer.truncate(beforeUnits)
+		return false
+	}
+	err = val.WriteXML(nil, this.writer.buf(), newPrefix+indent, indent, false)
+	if err != nil || !this.writeString(newPrefix) || !this.writeString("</redundedUnits>") {
+		this.writer.truncate(beforeUnits)
+		return false
+	}
+	return true
+}
+
 func (this *httpRequest) writeProfile(profile server.Profile, prefix, indent string) bool {
 	var newPrefix string
 	var e []byte
@@ -845,8 +1346,7 @@ func (this *httpRequest) writeProfile(profile server.Profile, prefix, indent str
 	if prefix != "" {
 		newPrefix = "\n" + prefix + indent
 	}
-	rv := this.writeString(",\n") && this.writeString(prefix) && this.writeString("\"profile\": {")
-	if !rv {
+	if !this.writeString(",\n") || !this.writeString(prefix) || !this.writeString("\"profile\": {") {
 		return false
 	}
 	if p != server.ProfOff {
@@ -939,6 +1439,123 @@ func (this *httpRequest) writeProfile(profile server.Profile, prefix, indent str
 	return this.writeString("}")
 }
 
+func (this *httpRequest) writeProfileXML(profile server.Profile, prefix string, indent string) bool {
+	var e []byte
+	var err error
+
+	p := this.Profile()
+	if p == server.ProfUnset {
+		p = profile
+	}
+	if p == server.ProfOff {
+		return true
+	}
+
+	var newPrefix string
+	var newValuePrefix string
+	if prefix != "" {
+		newPrefix = "\n" + prefix + indent
+		newValuePrefix = newPrefix + indent
+	}
+	if (newPrefix != "" && !this.writeString(newPrefix[:len(prefix)+1])) || !this.writeString("<profile>") {
+		return false
+	}
+	if p != server.ProfOff {
+		phaseTimes := this.FmtPhaseTimes()
+		if phaseTimes != nil {
+			if !this.writeString(newPrefix) || !this.writeString("<phaseTimes>") {
+				logging.Infof("Error writing phaseTimes: %v", err)
+			} else {
+				v := value.NewValue(phaseTimes)
+				err = v.WriteXML(nil, this.writer.buf(), newValuePrefix, indent, false)
+				if err != nil || (newPrefix != "" && !this.writeString(newPrefix)) || !this.writeString("</phaseTimes>") {
+					logging.Infof("Error writing phaseTimes: %v", err)
+				}
+			}
+		}
+		phaseCounts := this.FmtPhaseCounts()
+		if phaseCounts != nil {
+			if !this.writeString(newPrefix) || !this.writeString("<phaseCounts>") {
+				logging.Infof("Error writing phaseCounts: %v", err)
+			} else {
+				v := value.NewValue(phaseCounts)
+				err = v.WriteXML(nil, this.writer.buf(), newValuePrefix, indent, false)
+				if err != nil || (newPrefix != "" && !this.writeString(newPrefix)) || !this.writeString("</phaseCounts>") {
+					logging.Infof("Error writing phaseCounts: %v", err)
+				}
+			}
+		}
+		phaseOperators := this.FmtPhaseOperators()
+		if phaseOperators != nil {
+			if !this.writeString(newPrefix) || !this.writeString("<phaseOperators>") {
+				logging.Infof("Error writing phaseOperators: %v", err)
+			} else {
+				v := value.NewValue(phaseOperators)
+				err = v.WriteXML(nil, this.writer.buf(), newValuePrefix, indent, false)
+				if err != nil || (newPrefix != "" && !this.writeString(newPrefix)) || !this.writeString("</phaseOperators>") {
+					logging.Infof("Error writing phaseOperators: %v", err)
+				}
+			}
+		}
+
+		if this.CpuTime() > time.Duration(0) &&
+			(!this.writeString(newPrefix) ||
+				!this.writer.printf("<cpuTime>%s</cpuTime>", this.CpuTime().String())) {
+
+			logging.Infof("Error writing request CPU time")
+		}
+		if !this.writeString(newPrefix) ||
+			!this.writer.printf("<requestTime>%s</requestTime>", this.RequestTime().Format(expression.DEFAULT_FORMAT)) {
+
+			logging.Infof("Error writing request time")
+		}
+		if !this.writeString(newPrefix) ||
+			!this.writer.printf("<servicingHost>%s</servicingHost>", tenant.EncodeNodeName(distributed.RemoteAccess().WhoAmI())) {
+
+			logging.Infof("Error writing servicing host")
+		}
+	}
+	if p == server.ProfOn || p == server.ProfBench {
+		timings := this.GetTimings()
+		if timings != nil {
+			e, err = json.Marshal(timings)
+			if err != nil {
+				logging.Infof("Error writing executionTimings: %v", err)
+			} else {
+				m := make(map[string]interface{})
+				err = json.Unmarshal(e, &m)
+				if err != nil || !this.writeString(newPrefix) || !this.writeString("<executionTimings>") {
+					logging.Infof("Error writing executionTimings: %v", err)
+				} else {
+					v := value.NewValue(m)
+					err = v.WriteXML(nil, this.writer.buf(), newValuePrefix, indent, false)
+					if err != nil || !this.writeString(newPrefix) || !this.writeString("</executionTimings>") {
+						logging.Infof("Error writing executionTimings: %v", err)
+					}
+				}
+				this.SetFmtTimings(e)
+			}
+			optEstimates := this.FmtOptimizerEstimates(timings)
+			if optEstimates != nil {
+				if !this.writeString(newPrefix) || !this.writeString("<optimizerEstimates>") {
+					logging.Infof("Error writing optimizerEstimates: %v", err)
+				} else {
+					v := value.NewValue(optEstimates)
+					err = v.WriteXML(nil, this.writer.buf(), newValuePrefix, indent, false)
+					if err != nil || !this.writeString(newPrefix) || !this.writeString("</optimizerEstimates>") {
+						logging.Infof("Error writing optimizerEstimates: %v", err)
+					}
+				}
+			}
+			this.SetFmtOptimizerEstimates(optEstimates)
+		}
+	}
+	if newPrefix != "" && !this.writeString(newPrefix[:len(prefix)+1]) {
+		return false
+	}
+	return this.writeString("</profile>")
+}
+
 func (this *httpRequest) Loga(l logging.Level, f func() string) {
 	if this.logger == nil || this.logger.Level() < l {
 		return
@@ -985,6 +1602,38 @@ func (this *httpRequest) writeLog(prefix, indent string) bool {
 		return false
 	}
 	return this.writeString("]")
+}
+
+func (this *httpRequest) writeLogXML(prefix string, indent string) bool {
+	if this.logger == nil || this.logger.Level() == logging.NONE {
+		return true
+	}
+	logger, ok := this.logger.(logging.RequestLogger)
+	if !ok {
+		return true
+	}
+	newPrefix := "\n"
+	if prefix != "" {
+		newPrefix = "\n" + prefix + indent
+	}
+	if (newPrefix != "" && !this.writeString(newPrefix[:len(prefix)+1])) || !this.writeString("<log>") {
+		return false
+	}
+	ok = logger.Foreach(func(text string) bool {
+		if !this.writeString(newPrefix) || !this.writeString("<string>") {
+			return false
+		}
+		err := xml.EscapeText(this.writer.buf(), []byte(text))
+		if err != nil || !this.writeString("</string>") {
+			return false
+		}
+		return true
+	})
+	logger.Close()
+	if !this.writeString(newPrefix[:len(prefix)+1]) {
+		return false
+	}
+	return this.writeString("</log>")
 }
 
 // the buffered writer writes the response data in chunks

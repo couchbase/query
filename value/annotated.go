@@ -161,6 +161,10 @@ func (this *annotatedValue) WriteJSON(order []string, w io.Writer, prefix, inden
 	return this.Value.WriteJSON(order, w, prefix, indent, fast)
 }
 
+func (this *annotatedValue) WriteXML(order []string, w io.Writer, prefix, indent string, fast bool) error {
+	return this.Value.WriteXML(order, w, prefix, indent, fast)
+}
+
 func (this *annotatedValue) Copy() Value {
 	rv := newAnnotatedValue()
 	rv.Value = this.Value.Copy()
@@ -865,6 +869,10 @@ func (this *annotatedValueSelfReference) MarshalJSON() ([]byte, error) {
 }
 
 func (this *annotatedValueSelfReference) WriteJSON(order []string, w io.Writer, prefix, indent string, fast bool) error {
+	return nil
+}
+
+func (this *annotatedValueSelfReference) WriteXML(order []string, w io.Writer, prefix, indent string, fast bool) error {
 	return nil
 }
 

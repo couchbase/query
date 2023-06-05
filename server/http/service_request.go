@@ -64,6 +64,8 @@ type httpRequest struct {
 	urlArgs  urlArgs  // ESCAPE analysis workaround
 
 	logger logging.Logger
+
+	format Format
 }
 
 const _DEFAULT_SERVERLESS_REQUEST_TIMEOUT = time.Second * 120
@@ -407,9 +409,14 @@ func handleFormat(rv *httpRequest, httpArgs httpRequestArgs, parm string, val in
 	format_field, err := httpArgs.getStringVal(parm, val)
 	if err == nil && format_field != "" {
 		format := newFormat(format_field)
-		if format == UNDEFINED_FORMAT {
+		switch format {
+		case UNDEFINED_FORMAT:
 			err = errors.NewServiceErrorUnrecognizedValue(FORMAT, format_field)
-		} else if format != JSON {
+		case JSON:
+			rv.format = format
+		case XML:
+			rv.format = format
+		default:
 			err = errors.NewServiceErrorNotImplemented(FORMAT, format_field)
 		}
 	}

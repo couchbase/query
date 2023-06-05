@@ -10,6 +10,7 @@ package value
 
 import (
 	"bytes"
+	"encoding/xml"
 	"fmt"
 	json "github.com/couchbase/go_json"
 	"io"
@@ -59,6 +60,25 @@ func (this stringValue) MarshalJSON() ([]byte, error) {
 
 func (this stringValue) WriteJSON(order []string, w io.Writer, prefix, indent string, fast bool) error {
 	return json.MarshalStringNoEscapeToBuffer(string(this), w.(*bytes.Buffer))
+}
+
+func (this stringValue) WriteXML(order []string, w io.Writer, prefix string, indent string, fast bool) error {
+	var err error
+	if prefix != "" {
+		_, err = w.Write([]byte(getFullPrefix(prefix, "")))
+		if err != nil {
+			return err
+		}
+	}
+	_, err = w.Write([]byte("<string>"))
+	if err != nil {
+		return err
+	}
+	err = xml.EscapeText(w, []byte(this))
+	if err == nil {
+		_, err = w.Write([]byte("</string>"))
+	}
+	return err
 }
 
 func (this stringValue) WriteSpill(w io.Writer, buf []byte) error {

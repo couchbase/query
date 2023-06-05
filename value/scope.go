@@ -83,6 +83,14 @@ func (this *ScopeValue) MarshalJSON() ([]byte, error) {
 	return val.MarshalJSON()
 }
 
+func (this *ScopeValue) WriteXML(order []string, w io.Writer, prefix, indent string, fast bool) error {
+	if this.parent == nil {
+		return this.Value.WriteXML(order, w, prefix, indent, fast)
+	}
+	val := objectValue(this.Fields())
+	return val.WriteXML(order, w, prefix, indent, false)
+}
+
 func (this *ScopeValue) WriteJSON(order []string, w io.Writer, prefix, indent string, fast bool) error {
 	if this.parent == nil {
 		return this.Value.WriteJSON(order, w, prefix, indent, fast)

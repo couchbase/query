@@ -211,6 +211,11 @@ type Value interface {
 	WriteJSON(order []string, w io.Writer, prefix, indent string, fast bool) error
 
 	/*
+	 * Write out in XML format.
+	 */
+	WriteXML(order []string, w io.Writer, prefix, indent string, fast bool) error
+
+	/*
 	   Returns the type of the input based on the previously
 	   defined Types(Data type constant).
 	*/

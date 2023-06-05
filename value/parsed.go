@@ -150,6 +150,10 @@ func (this *parsedValue) MarshalJSON() ([]byte, error) {
 	return this.unwrap().MarshalJSON()
 }
 
+func (this *parsedValue) WriteXML(order []string, w io.Writer, prefix, indent string, fast bool) error {
+	return this.unwrap().WriteXML(order, w, prefix, indent, fast)
+}
+
 func (this *parsedValue) WriteJSON(order []string, w io.Writer, prefix, indent string, fast bool) error {
 	raw := this.raw
 	if raw == nil || order != nil {

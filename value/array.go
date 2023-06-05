@@ -58,6 +58,59 @@ func (this sliceValue) ReadSpill(r io.Reader, buf []byte) error {
 	return err
 }
 
+func (this sliceValue) WriteXML(order []string, w io.Writer, prefix string, indent string, fast bool) error {
+	var err error
+
+	if this == nil {
+		_, err = w.Write(_NULL_XML)
+		return err
+	}
+
+	// TODO workaround for GSI using an old golang that doesn't know about StringWriter
+	stringWriter := w.(*bytes.Buffer)
+
+	var fullPrefix string
+	writePrefix := (prefix != "" && indent != "")
+	if writePrefix {
+		fullPrefix = getFullPrefix(prefix, indent)
+	}
+
+	if writePrefix {
+		if _, err = stringWriter.WriteString(fullPrefix[:len(prefix)+1]); err != nil {
+			return err
+		}
+	}
+	if len(this) == 0 {
+		_, err = stringWriter.WriteString("<array/>")
+		return err
+	}
+
+	if _, err = stringWriter.WriteString("<array>"); err != nil {
+		return err
+	}
+
+	for _, e := range this {
+		v := NewValue(e)
+		if writePrefix {
+			if err = v.WriteXML(order, w, fullPrefix[1:], indent, fast); err != nil {
+				return err
+			}
+		} else {
+			if err = v.WriteXML(order, w, "", "", fast); err != nil {
+				return err
+			}
+		}
+	}
+
+	if writePrefix {
+		if _, err = stringWriter.WriteString(fullPrefix[:len(prefix)+1]); err != nil {
+			return err
+		}
+	}
+	_, err = stringWriter.WriteString("</array>")
+	return err
+}
+
 func (this sliceValue) WriteJSON(order []string, w io.Writer, prefix, indent string, fast bool) (err error) {
 	if this == nil {
 		_, err = w.Write(_NULL_BYTES)
@@ -435,6 +488,10 @@ func (this *listValue) ToString() string {
 
 func (this *listValue) MarshalJSON() ([]byte, error) {
 	return this.slice.MarshalJSON()
+}
+
+func (this *listValue) WriteXML(order []string, w io.Writer, prefix, indent string, fast bool) (err error) {
+	return this.slice.WriteXML(order, w, prefix, indent, fast)
 }
 
 func (this *listValue) WriteJSON(order []string, w io.Writer, prefix, indent string, fast bool) (err error) {

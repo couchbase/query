@@ -42,6 +42,10 @@ func (this *marshalledValue) MarshalJSON() ([]byte, error) {
 	return this.unwrap().MarshalJSON()
 }
 
+func (this *marshalledValue) WriteXML(order []string, w io.Writer, prefix, indent string, fast bool) error {
+	return this.unwrap().WriteXML(order, w, prefix, indent, fast)
+}
+
 func (this *marshalledValue) WriteJSON(order []string, w io.Writer, prefix, indent string, fast bool) error {
 	return this.unwrap().WriteJSON(order, w, prefix, indent, fast)
 }
