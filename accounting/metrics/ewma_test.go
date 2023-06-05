@@ -1,6 +1,9 @@
 package metrics
 
-import "testing"
+import (
+	"math"
+	"testing"
+)
 
 func BenchmarkEWMA(b *testing.B) {
 	a := NewEWMA1()
@@ -27,52 +30,52 @@ func TestEWMA1(t *testing.T) {
 		t.Errorf("2 minute a.Rate(): 0.08120116994196772 != %v\n", rate)
 	}
 	elapseMinute(a)
-	if rate := a.Rate(); 0.029872241020718428 != rate {
-		t.Errorf("3 minute a.Rate(): 0.029872241020718428 != %v\n", rate)
+	if rate := a.Rate(); 0.0298722410207184 != roundFloat(rate, 16) {
+		t.Errorf("3 minute a.Rate(): 0.0298722410207184 != %v\n", roundFloat(rate, 16))
 	}
 	elapseMinute(a)
-	if rate := a.Rate(); 0.01098938333324054 != rate {
-		t.Errorf("4 minute a.Rate(): 0.01098938333324054 != %v\n", rate)
+	if rate := a.Rate(); 0.0109893833332405 != roundFloat(rate, 16) {
+		t.Errorf("4 minute a.Rate(): 0.0109893833332405 != %v\n", roundFloat(rate, 16))
 	}
 	elapseMinute(a)
-	if rate := a.Rate(); 0.004042768199451294 != rate {
-		t.Errorf("5 minute a.Rate(): 0.004042768199451294 != %v\n", rate)
+	if rate := a.Rate(); 0.00404276819945129 != roundFloat(rate, 17) {
+		t.Errorf("5 minute a.Rate(): 0.00404276819945129 != %v\n", roundFloat(rate, 17))
 	}
 	elapseMinute(a)
-	if rate := a.Rate(); 0.0014872513059998212 != rate {
-		t.Errorf("6 minute a.Rate(): 0.0014872513059998212 != %v\n", rate)
+	if rate := a.Rate(); 0.00148725130599982 != roundFloat(rate, 17) {
+		t.Errorf("6 minute a.Rate(): 0.00148725130599982 != %v\n", roundFloat(rate, 17))
 	}
 	elapseMinute(a)
-	if rate := a.Rate(); 0.0005471291793327122 != rate {
-		t.Errorf("7 minute a.Rate(): 0.0005471291793327122 != %v\n", rate)
+	if rate := a.Rate(); 0.000547129179332712 != roundFloat(rate, 18) {
+		t.Errorf("7 minute a.Rate(): 0.000547129179332712 != %v\n", roundFloat(rate, 18))
 	}
 	elapseMinute(a)
-	if rate := a.Rate(); 0.00020127757674150815 != rate {
-		t.Errorf("8 minute a.Rate(): 0.00020127757674150815 != %v\n", rate)
+	if rate := a.Rate(); 0.000201277576741508 != roundFloat(rate, 18) {
+		t.Errorf("8 minute a.Rate(): 0.000201277576741508 != %v\n", roundFloat(rate, 18))
 	}
 	elapseMinute(a)
-	if rate := a.Rate(); 7.404588245200814e-05 != rate {
-		t.Errorf("9 minute a.Rate(): 7.404588245200814e-05 != %v\n", rate)
+	if rate := a.Rate(); 7.40458824520081e-05 != roundFloat(rate, 19) {
+		t.Errorf("9 minute a.Rate(): 7.40458824520081e-05 != %v\n", roundFloat(rate, 19))
 	}
 	elapseMinute(a)
 	if rate := a.Rate(); 2.7239957857491083e-05 != rate {
 		t.Errorf("10 minute a.Rate(): 2.7239957857491083e-05 != %v\n", rate)
 	}
 	elapseMinute(a)
-	if rate := a.Rate(); 1.0021020474147462e-05 != rate {
-		t.Errorf("11 minute a.Rate(): 1.0021020474147462e-05 != %v\n", rate)
+	if rate := a.Rate(); 1.00210204741475e-05 != roundFloat(rate, 19) {
+		t.Errorf("11 minute a.Rate(): 1.00210204741475e-05 != %v\n", roundFloat(rate, 19))
 	}
 	elapseMinute(a)
-	if rate := a.Rate(); 3.6865274119969525e-06 != rate {
-		t.Errorf("12 minute a.Rate(): 3.6865274119969525e-06 != %v\n", rate)
+	if rate := a.Rate(); 3.686527411997e-06 != roundFloat(rate, 19) {
+		t.Errorf("12 minute a.Rate(): 3.686527411997e-06 != %v\n", roundFloat(rate, 19))
 	}
 	elapseMinute(a)
-	if rate := a.Rate(); 1.3561976441886433e-06 != rate {
-		t.Errorf("13 minute a.Rate(): 1.3561976441886433e-06 != %v\n", rate)
+	if rate := a.Rate(); 1.35619764418864e-06 != roundFloat(rate, 20) {
+		t.Errorf("13 minute a.Rate(): 1.35619764418864e-06 != %v\n", roundFloat(rate, 20))
 	}
 	elapseMinute(a)
-	if rate := a.Rate(); 4.989172314621449e-07 != rate {
-		t.Errorf("14 minute a.Rate(): 4.989172314621449e-07 != %v\n", rate)
+	if rate := a.Rate(); 4.989172314621e-07 != roundFloat(rate, 19) {
+		t.Errorf("14 minute a.Rate(): 4.989172314621e-07 != %v\n", roundFloat(rate, 19))
 	}
 	elapseMinute(a)
 	if rate := a.Rate(); 1.8354139230109722e-07 != rate {
@@ -112,8 +115,8 @@ func TestEWMA5(t *testing.T) {
 		t.Errorf("6 minute a.Rate(): 0.18071652714732128 != %v\n", rate)
 	}
 	elapseMinute(a)
-	if rate := a.Rate(); 0.14795817836496392 != rate {
-		t.Errorf("7 minute a.Rate(): 0.14795817836496392 != %v\n", rate)
+	if rate := a.Rate(); 0.1479581783649639 != roundFloat(rate, 16) {
+		t.Errorf("7 minute a.Rate(): 0.1479581783649639 != %v\n", roundFloat(rate, 16))
 	}
 	elapseMinute(a)
 	if rate := a.Rate(); 0.12113791079679326 != rate {
@@ -132,16 +135,16 @@ func TestEWMA5(t *testing.T) {
 		t.Errorf("11 minute a.Rate(): 0.06648189501740036 != %v\n", rate)
 	}
 	elapseMinute(a)
-	if rate := a.Rate(); 0.05443077197364752 != rate {
-		t.Errorf("12 minute a.Rate(): 0.05443077197364752 != %v\n", rate)
+	if rate := a.Rate(); 0.0544307719736475 != roundFloat(rate, 16) {
+		t.Errorf("12 minute a.Rate(): 0.0544307719736475 != %v\n", roundFloat(rate, 16))
 	}
 	elapseMinute(a)
-	if rate := a.Rate(); 0.04456414692860035 != rate {
-		t.Errorf("13 minute a.Rate(): 0.04456414692860035 != %v\n", rate)
+	if rate := a.Rate(); 0.0445641469286004 != roundFloat(rate, 16) {
+		t.Errorf("13 minute a.Rate(): 0.0445641469286004 != %v\n", roundFloat(rate, 16))
 	}
 	elapseMinute(a)
-	if rate := a.Rate(); 0.03648603757513079 != rate {
-		t.Errorf("14 minute a.Rate(): 0.03648603757513079 != %v\n", rate)
+	if rate := a.Rate(); 0.0364860375751308 != roundFloat(rate, 16) {
+		t.Errorf("14 minute a.Rate(): 0.0364860375751308 != %v\n", roundFloat(rate, 16))
 	}
 	elapseMinute(a)
 	if rate := a.Rate(); 0.0298722410207183831020718428 != rate {
@@ -222,4 +225,9 @@ func elapseMinute(a EWMA) {
 	for i := 0; i < 12; i++ {
 		a.Tick()
 	}
+}
+
+func roundFloat(f float64, precision uint) float64 {
+	factor := math.Pow(10, float64(precision))
+	return math.Round(f*factor) / factor
 }

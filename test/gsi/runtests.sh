@@ -40,7 +40,11 @@ do
     fi
     source ./exportval.sh $*
     cd $i
-    go test -exec "env LD_LIBRARY_PATH=${LD_LIBRARY_PATH}" $verbose -p 1 -tags enterprise ./...
+    if [[ `uname` == "Darwin" ]] ; then
+        go test -exec "env LD_LIBRARY_PATH=${LD_LIBRARY_PATH} DYLD_LIBRARY_PATH=${LD_LIBRARY_PATH}" $verbose -p 1 -tags enterprise ./...
+    else
+        go test $verbose -p 1 -tags enterprise ./...
+    fi
     cd ../..
     source ./resetval.sh $*
 done
