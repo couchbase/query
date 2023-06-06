@@ -116,18 +116,7 @@ func (this *Subselect) Formalize(parent *expression.Formalizer) (f *expression.F
 	}
 
 	// Determine if this is a correlated subquery
-	this.correlated = false
-	immediate := f.Allowed().GetValue().Fields()
-
-	for ident, _ := range f.Identifiers().Fields() {
-		if _, ok := immediate[ident]; !ok {
-			if f.WithAlias(ident) {
-				continue
-			}
-			this.correlated = true
-			break
-		}
-	}
+	this.correlated = f.CheckCorrelated()
 
 	if !this.correlated && this.from != nil && this.from.IsCorrelated() {
 		this.correlated = true

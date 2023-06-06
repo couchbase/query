@@ -154,16 +154,7 @@ func (this *ExpressionTerm) Formalize(parent *expression.Formalizer) (f *express
 	}
 
 	// Determine if this expression contains any correlated references
-	immediate := f1.Allowed().GetValue().Fields()
-	for ident, _ := range f1.Identifiers().Fields() {
-		if _, ok := immediate[ident]; !ok {
-			if f1.WithAlias(ident) {
-				continue
-			}
-			this.correlated = true
-			break
-		}
-	}
+	this.correlated = f1.CheckCorrelated()
 
 	// for checking fromExpr we need a new formalizer, however, if this ExpressionTerm
 	// is under an ANSI join/nest operation we need to use the parent's formalizer

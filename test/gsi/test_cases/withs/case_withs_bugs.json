@@ -1,5 +1,38 @@
 [
     {
+	"testcase": "MB-51753",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.`plan`.`~children` SATISFIES v.`#operator` = \"InitialProject\" AND CONTAINS(v.`result_terms`[0].`expr`, \"correlated \") END"
+        },
+        "statements":"SELECT (WITH a AS (s.a11) SELECT RAW c1 FROM a AS c1) AS arr, s.test_id FROM shellTest s WHERE s.c11 IN [1, 2] AND type = \"left\"",
+        "results": [
+            {
+                "arr": [
+                    1,
+                    2,
+                    3,
+                    4
+                ],
+                "test_id": "withs"
+            },
+            {
+                "arr": [
+                    3,
+                    3,
+                    5,
+                    10
+                ],
+                "test_id": "withs"
+            }
+        ]
+    },
+    {
 	"testcase": "MB-50881",
         "statements":"WITH s as ([{\"a\":1}, {\"a\":2}]) SELECT s1.a FROM s AS s1 WHERE s1.a = 1 UNION ALL SELECT s1.a + 10 AS a11 FROM s AS s1 WHERE s1.a = 2",
         "results": [

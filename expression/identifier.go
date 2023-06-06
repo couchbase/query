@@ -27,6 +27,7 @@ const (
 	IDENT_IS_EXPR_TERM                // expression term
 	IDENT_IS_SUBQ_TERM                // subquery term
 	IDENT_IS_STATIC_VAR               // top level variable (CTE, function parameter...)
+	IDENT_IS_CORRELATED               // binding expr has correlated references
 )
 
 /*
@@ -315,6 +316,18 @@ func (this *Identifier) SetSubqTermAlias(subqAlias bool) {
 		this.identFlags |= IDENT_IS_SUBQ_TERM
 	} else {
 		this.identFlags &^= IDENT_IS_SUBQ_TERM
+	}
+}
+
+func (this *Identifier) IsCorrelated() bool {
+	return (this.identFlags & IDENT_IS_CORRELATED) != 0
+}
+
+func (this *Identifier) SetCorrelated(correlated bool) {
+	if correlated {
+		this.identFlags |= IDENT_IS_CORRELATED
+	} else {
+		this.identFlags &^= IDENT_IS_CORRELATED
 	}
 }
 

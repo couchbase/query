@@ -264,13 +264,7 @@ func (this *Select) FormalizeSubquery(parent *expression.Formalizer) (err error)
 
 		if !this.correlated {
 			// Determine if this is a correlated subquery
-			immediate := f.Allowed().GetValue().Fields()
-			for ident, _ := range f.Identifiers().Fields() {
-				if _, ok := immediate[ident]; !ok {
-					this.correlated = true
-					break
-				}
-			}
+			this.correlated = f.CheckCorrelated()
 		}
 	}
 
