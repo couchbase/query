@@ -45,7 +45,7 @@ require (
 	github.com/couchbase/go-couchbase v0.1.1
 	github.com/couchbase/go_json v0.0.0-00010101000000-000000000000
 	github.com/couchbase/gocbcore-transactions v0.0.0-20220110140047-0cfbabaea2ec
-	github.com/couchbase/gocbcore/v10 v10.0.9-0.20220228174725-170b8c650e3f
+	github.com/couchbase/gocbcore/v10 v10.0.10-0.20230606191549-ada1d11ef396
 	github.com/couchbase/godbc v0.0.0-20210615212222-79da1b49cb4d
 	github.com/couchbase/gomemcached v0.1.4
 	github.com/couchbase/goutils v0.1.2
@@ -54,6 +54,7 @@ require (
 	github.com/couchbase/query-ee v0.0.0-00010101000000-000000000000
 	github.com/couchbase/retriever v0.0.0-20150311081435-e3419088e4d3
 	github.com/couchbasedeps/go-curl v0.0.0-20190830233031-f0b2afc926ec
+	github.com/couchbaselabs/gocaves/client v0.0.0-20230307083111-cc3960c624b1 // indirect
 	github.com/gorilla/mux v1.8.0
 	github.com/mattn/go-runewidth v0.0.3
 	github.com/natefinch/npipe v0.0.0-20160621034901-c1b8fa8bdcce // indirect
@@ -61,6 +62,7 @@ require (
 	github.com/peterh/liner v1.2.0
 	github.com/russross/blackfriday v1.5.2
 	github.com/samuel/go-zookeeper v0.0.0-20201211165307-7117e9ea2414
+	github.com/stretchr/testify v1.8.2 // indirect
 	golang.org/x/crypto v0.0.0-20220722155217-630584e8d5aa
 	golang.org/x/net v0.8.0
 	gopkg.in/couchbase/gocb.v1 v1.6.7
