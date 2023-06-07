@@ -1913,18 +1913,10 @@ func redacted(in string, redact bool) string {
 
 func interfaceRedacted(in interface{}, redact bool) interface{} {
 	if redact {
-
-		// turn it to a string
-		val, _ := value.NewValue(in).MarshalJSON()
-
-		// tag it
-		out := make([]byte, 0, len(val)+9)
-		out = append(out, []byte("<ud>")...)
-		out = append(out, val...)
-		out = append(out, []byte("</ud>")...)
-
-		// marshal it again to escape the quotes
-		out, _ = json.MarshalNoEscape(util.ByteToString(out))
+		out := make([]interface{}, 0, 3)
+		out = append(out, "<ud>")
+		out = append(out, in)
+		out = append(out, "</ud>")
 		return out
 	}
 	return in
