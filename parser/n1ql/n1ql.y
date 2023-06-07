@@ -4723,7 +4723,7 @@ CORRELATED
 LPAREN fullselect RPAREN
 {
     $$ = algebra.NewSubquery($4)
-    $$.Select().CheckSetCorrelated(nil)
+    $$.Select().CheckSetCorrelated()
     $$.ExprBase().SetErrorContext($<line>3,$<column>3)
 }
 |

@@ -385,19 +385,17 @@ func (this *Select) OptimHints() *OptimHints {
 	return this.subresult.OptimHints()
 }
 
-func (this *Select) CheckSetCorrelated(f *expression.Formalizer) {
+func (this *Select) CheckSetCorrelated() {
 	if this.correlated {
 		return
 	}
-	if f == nil || !f.IsCheckCorrelation() {
-		f = expression.NewChkCorrelationFormalizer("", f)
-	}
+	f := expression.NewChkCorrelationFormalizer("", nil)
 	err := this.FormalizeSubquery(f, true)
 	if err != nil {
 		// in case of unexpected error, just mark the query as correlated and also mark
 		// the AST nodes as correlated as well, to be safe
 		this.correlated = true
-		markCorrelated(this.subresult, f)
+		markCorrelated(this.subresult)
 	}
 }
 

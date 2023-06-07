@@ -8,25 +8,18 @@
 
 package algebra
 
-import (
-	"github.com/couchbase/query/expression"
-)
-
 // mark AST nodes as correlated when appropriate
-func markCorrelated(node Node, f *expression.Formalizer) error {
-	markCorr := newMarkCorrelation(f)
+func markCorrelated(node Node) error {
+	markCorr := newMarkCorrelation()
 	_, err := node.Accept(markCorr)
 	return err
 }
 
 type markCorrelation struct {
-	formalizer *expression.Formalizer
 }
 
-func newMarkCorrelation(f *expression.Formalizer) *markCorrelation {
-	return &markCorrelation{
-		formalizer: f,
-	}
+func newMarkCorrelation() *markCorrelation {
+	return &markCorrelation{}
 }
 
 func (this *markCorrelation) visitJoin(left FromTerm, right SimpleFromTerm) error {
@@ -74,7 +67,7 @@ func (this *markCorrelation) VisitExpressionTerm(node *ExpressionTerm) (interfac
 }
 
 func (this *markCorrelation) VisitSubqueryTerm(node *SubqueryTerm) (interface{}, error) {
-	node.subquery.CheckSetCorrelated(this.formalizer)
+	// rely on the CORRELATED marking on the subquery itself
 	return nil, nil
 }
 
