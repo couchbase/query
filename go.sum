@@ -85,8 +85,8 @@ github.com/couchbase/gocb/v2 v2.3.2/go.mod h1:NmEbg3pWHURqx5rPR3w/BcBRV5MRkc7i2k
 github.com/couchbase/gocbcore-transactions v0.0.0-20220110140047-0cfbabaea2ec h1:k6wpDK0eIr/2u9kAayqGOcB6b9JRR8fAV4RzIa2xe/U=
 github.com/couchbase/gocbcore-transactions v0.0.0-20220110140047-0cfbabaea2ec/go.mod h1:W+sLc2i+hgGGzm0khKQ4t7kapFiaJitds5uhEWy+NW4=
 github.com/couchbase/gocbcore/v10 v10.0.3/go.mod h1:s6dwBFs4c3+cAzZbo1q0VW+QasudhHJuehE8b8U2YNg=
-github.com/couchbase/gocbcore/v10 v10.0.9-0.20220228174725-170b8c650e3f h1:cdW7sz2Z2UiPT54g8qUb1n12lY/bswc88JJpRjMMYv4=
-github.com/couchbase/gocbcore/v10 v10.0.9-0.20220228174725-170b8c650e3f/go.mod h1:kBLeSPSwcMVT89Q18Z9W8x6KL/LKa+cY6Z/f1LV/lnU=
+github.com/couchbase/gocbcore/v10 v10.0.10-0.20230606191549-ada1d11ef396 h1:V/ZnCkDLF+H8TR8HJ7iI6kfu0E8JaMAG4ziPDuSpCNc=
+github.com/couchbase/gocbcore/v10 v10.0.10-0.20230606191549-ada1d11ef396/go.mod h1:kBLeSPSwcMVT89Q18Z9W8x6KL/LKa+cY6Z/f1LV/lnU=
 github.com/couchbase/gocbcore/v9 v9.1.8 h1:79VOjo+lOJpEG99vA6AIQCuwMizYe1TUDK2ynaDNHqQ=
 github.com/couchbase/gocbcore/v9 v9.1.8/go.mod h1:jOSQeBSECyNvD7aS4lfuaw+pD5t6ciTOf8hrDP/4Nus=
 github.com/couchbase/moss v0.1.0/go.mod h1:9MaHIaRuy9pvLPUJxB8sh8OrLfyDczECVL37grCIubs=
@@ -229,10 +229,8 @@ golang.org/x/crypto v0.0.0-20220722155217-630584e8d5aa h1:zuSxTR4o9y82ebqCUJYNGJ
 golang.org/x/crypto v0.0.0-20220722155217-630584e8d5aa/go.mod h1:IxCIyHEi3zRg3s0A5j5BB6A9Jmi73HwBIUl50j+osU4=
 golang.org/x/lint v0.0.0-20190313153728-d0100b6bd8b3/go.mod h1:6SW0HCj/g11FgYtHlgUYUwCkIfeOF89ocIRzGO/8vkc=
 golang.org/x/net v0.0.0-20171107184841-a337091b0525/go.mod h1:mL1N/T3taQHkDXs73rZJwtUhF3w3ftmwwsq0BUmARs4=
-golang.org/x/net v0.0.0-20180120141536-44b7c21cbf19/go.mod h1:mL1N/T3taQHkDXs73rZJwtUhF3w3ftmwwsq0BUmARs4=
 golang.org/x/net v0.0.0-20180906233101-161cd47e91fd/go.mod h1:mL1N/T3taQHkDXs73rZJwtUhF3w3ftmwwsq0BUmARs4=
 golang.org/x/net v0.0.0-20190311183353-d8887717615a/go.mod h1:t9HGtf8HONx5eT2rtn7q6eTqICYqUVnKs3thJo3Qplg=
-golang.org/x/net v0.0.0-20211020060615-d418f374d309/go.mod h1:9nx3DQGgdP8bBQD5qxJ1jj9UTztislL4KSBs9R2vV5Y=
 golang.org/x/net v0.0.0-20211112202133-69e39bad7dc2/go.mod h1:9nx3DQGgdP8bBQD5qxJ1jj9UTztislL4KSBs9R2vV5Y=
 golang.org/x/net v0.0.0-20220728211354-c7608f3a8462 h1:UreQrH7DbFXSi9ZFox6FNT3WBooWmdANpU+IfkT1T4I=
 golang.org/x/net v0.0.0-20220728211354-c7608f3a8462/go.mod h1:YDH+HFinaLZZlnHAfSS6ZXJJ9M9t4Dl22yv3iI2vPwk=
