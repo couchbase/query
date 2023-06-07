@@ -368,6 +368,16 @@ func (this *Select) OptimHints() *OptimHints {
 	return this.subresult.OptimHints()
 }
 
+func (this *Select) CheckSetCorrelated() {
+	if this.correlated {
+		return
+	}
+	// mark the query as correlated and also mark
+	// the AST nodes as correlated as well, to be safe
+	this.correlated = true
+	markCorrelated(this.subresult)
+}
+
 /*
 The Subresult interface represents the intermediate result of a
 select statement. It inherits from Node.
