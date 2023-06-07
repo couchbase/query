@@ -67,7 +67,7 @@ func (this *markCorrelation) VisitExpressionTerm(node *ExpressionTerm) (interfac
 }
 
 func (this *markCorrelation) VisitSubqueryTerm(node *SubqueryTerm) (interface{}, error) {
-	node.subquery.CheckSetCorrelated()
+	// rely on the CORRELATED marking on the subquery itself
 	return nil, nil
 }
 
