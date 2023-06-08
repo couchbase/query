@@ -12,6 +12,7 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"os"
 	"strings"
@@ -24,6 +25,11 @@ import (
 )
 
 var batch_run = false
+
+// For the -advise option
+const ADVISE_PREFIX = "ADVISE "
+const ADVISOR_PREFIX = "SELECT ADVISOR(["
+const ADVISOR_SUFFIX = "])"
 
 func command_alias(line string, w io.Writer, interactive bool, liner *liner.State) (errors.ErrorCode, string) {
 	// This block handles aliases
@@ -345,21 +351,40 @@ func ExecShellCmd(line string, liner *liner.State) (errors.ErrorCode, string) {
 
 // Helper function to read file based input. Run all the commands as
 // seen in the file given by FILE_INPUT and then return the prompt.
+// Note: if adviseFlag is set but inputFlag is unset - stdin is the file to read from instead of FILE_INPUT
 func readAndExec(liner *liner.State) (errors.ErrorCode, string) {
 
+	var newFileReader *bufio.Reader
 	var isEOF = false
 
-	// Read input file
-	inputFile, err := os.Open(command.FILE_INPUT)
-	if err != nil {
-		return errors.E_SHELL_OPEN_FILE, err.Error()
+	if adviseFlag && inputFlag == "" {
+		f, e := os.Stdin.Stat()
+		if e != nil {
+			return errors.E_SHELL_OPEN_FILE, e.Error()
+		}
+
+		// if stdin is empty, return error
+		// prevents a hang on reading from empty stdin
+		if f.Size() == 0 {
+			return errors.E_SHELL_OPEN_FILE, "stdin: stdin is empty"
+		}
+
+		// Create a new reader for the file
+		newFileReader = bufio.NewReader(os.Stdin)
+
+	} else {
+		// Read input file
+		inputFile, err := os.Open(command.FILE_INPUT)
+		if err != nil {
+			return errors.E_SHELL_OPEN_FILE, err.Error()
+		}
+
+		// Defer file close
+		defer inputFile.Close()
+
+		// Create a new reader for the file
+		newFileReader = bufio.NewReader(inputFile)
 	}
-
-	// Defer file close
-	defer inputFile.Close()
-
-	// Create a new reader for the file
-	newFileReader := bufio.NewReader(inputFile)
 
 	// Final input command string to be executed
 	final_input := " "
@@ -369,6 +394,18 @@ func readAndExec(liner *liner.State) (errors.ErrorCode, string) {
 	prevFile := ""
 	prevreset := command.Getreset()
 	prevfgRed := command.GetfgRed()
+
+	// Variables for -advise option processing
+	// If there is only 1 query in the file perform ADVISE
+	// If there are > 1 queries in the file perform SELECT ADVISOR[".."]; on all queries
+	// Note - we append any line in the file ( except comments ) to the ADVISOR query.
+	// Syntax checks of the appended lines will be done in the engine.
+
+	adviseQuery := ADVISOR_PREFIX // final advise/ advisor statement to be executed
+	qCount := 0                   // number of queries so far
+	adviseEnd := false            // if all queries have been consumed and we can execute the created ADVISE/ ADVISOR stmt
+	prevQ := ""
+	noAdvise := !adviseFlag
 
 	// Loop through th file for every line.
 	for {
@@ -390,7 +427,11 @@ func readAndExec(liner *liner.State) (errors.ErrorCode, string) {
 			// Do not require the last line on the file to have a \n.
 
 			if path == "" && final_input == " " || path == "" && final_input == ";" {
-				break
+				if noAdvise {
+					break
+				}
+				adviseEnd = true
+
 			} else {
 				//This means we have some text on the last line
 				isEOF = true
@@ -398,83 +439,120 @@ func readAndExec(liner *liner.State) (errors.ErrorCode, string) {
 
 		}
 
-		// If any line has a comment, dont count that line for the input,
-		// add it to the history and then discard it.
+		// Process the line read
+		if noAdvise || !adviseEnd {
+			// If any line has a comment, dont count that line for the input,
+			// add it to the history and then discard it.
 
-		if strings.HasPrefix(path, "--") || strings.HasPrefix(path, "#") {
-			errCode, errStr := UpdateHistory(liner, homeDir, path)
-			if errCode != 0 {
-				return errCode, errStr
-			}
-			continue
-		}
-
-		if strings.HasSuffix(path, ";") {
-			// The full input command has been read.
-			final_input = final_input + " " + path
-		} else {
-			if isEOF {
-				// The last line of the file has been read and it doesnt
-				// contain a ;. Hence append one and then run.
-				final_input = final_input + " " + path + ";"
-
-			} else {
-				// Only part of the command has been read. Hence continue
-				// reading until ; is reached.
-				final_input = final_input + " " + path
+			if strings.HasPrefix(path, "--") || strings.HasPrefix(path, "#") {
+				errCode, errStr := UpdateHistory(liner, homeDir, path)
+				if errCode != 0 {
+					return errCode, errStr
+				}
 				continue
 			}
-		}
 
-		// Populate the final string to execute
-		final_input = strings.TrimSpace(final_input)
+			if strings.HasSuffix(path, ";") {
+				// The full input command has been read.
+				final_input = final_input + " " + path
+			} else {
+				if isEOF {
+					// The last line of the file has been read and it doesnt
+					// contain a ;. Hence append one and then run.
+					final_input = final_input + " " + path + ";"
 
-		if final_input == ";" {
-			continue
-		}
-
-		// Print the query along with printing the results, only if -q isnt specified.
-		if !command.QUIET {
-			io.WriteString(command.W, final_input+"\n")
-		}
-
-		//Remove the ; before sending the query to execute
-		final_input = strings.TrimSuffix(final_input, ";")
-
-		// If outputting to a file, then add the statement to the file as well.
-
-		prevFile, outputFile = redirectTo(prevFile, prevreset, prevfgRed)
-
-		if outputFile == os.Stdout {
-			command.SetDispVal(prevreset, prevfgRed)
-			command.SetWriter(os.Stdout)
-		} else {
-			if outputFile != nil {
-				defer outputFile.Close()
-				command.SetWriter(io.Writer(outputFile))
-			}
-		}
-
-		if command.FILE_RW_MODE == true {
-			io.WriteString(command.W, final_input+"\n")
-		}
-
-		errCode, errStr := dispatch_command(final_input, command.W, false, liner)
-		if errCode != 0 {
-			s_err := command.HandleError(errCode, errStr)
-			command.PrintError(s_err)
-
-			if *errorExitFlag {
-				_, werr := io.WriteString(command.W, command.EXITONERR)
-				if werr != nil {
-					command.PrintError(command.HandleError(errors.E_SHELL_WRITER_OUTPUT, werr.Error()))
+				} else {
+					// Only part of the command has been read. Hence continue
+					// reading until ; is reached.
+					final_input = final_input + " " + path
+					continue
 				}
-				liner.Close()
-				os.Clearenv()
-				os.Exit(1)
+			}
+
+			// Populate the final string to execute
+			final_input = strings.TrimSpace(final_input)
+
+			if final_input == ";" {
+				continue
+			}
+
+			// add the queries to the ADVISOR statement
+			if adviseFlag {
+				qCount++
+				// Format specifier %q is used for escaping necessary characters
+				// since each queries will be within ""  in the array of queries in ADVISOR statement
+				if qCount == 1 {
+					adviseQuery += fmt.Sprintf("%q", final_input)
+				} else {
+					adviseQuery += fmt.Sprintf(",%q", final_input)
+				}
+				prevQ = final_input
 			}
 		}
-		io.WriteString(command.W, "\n\n")
+
+		// Execute the statement
+		// Write statement to shell, write statement to file, etc
+		if noAdvise || adviseEnd {
+
+			if adviseFlag {
+				// if only 1 query in the file - perform ADVISE on it
+				if qCount == 1 {
+					adviseQuery = ADVISE_PREFIX + prevQ
+				} else {
+					// if > 1 query in the file - perfom SELECT ADVISOR([...]) on the list of queries
+					adviseQuery += ADVISOR_SUFFIX
+				}
+				final_input = adviseQuery
+			}
+
+			// Print the query along with printing the results, only if -q isnt specified.
+			if !command.QUIET {
+				io.WriteString(command.W, final_input+"\n")
+			}
+
+			//Remove the ; before sending the query to execute
+			final_input = strings.TrimSuffix(final_input, ";")
+
+			// If outputting to a file, then add the statement to the file as well.
+
+			prevFile, outputFile = redirectTo(prevFile, prevreset, prevfgRed)
+
+			if outputFile == os.Stdout {
+				command.SetDispVal(prevreset, prevfgRed)
+				command.SetWriter(os.Stdout)
+			} else {
+				if outputFile != nil {
+					defer outputFile.Close()
+					command.SetWriter(io.Writer(outputFile))
+				}
+			}
+
+			if command.FILE_RW_MODE == true {
+				io.WriteString(command.W, final_input+"\n")
+			}
+
+			errCode, errStr := dispatch_command(final_input, command.W, false, liner)
+			if errCode != 0 {
+				s_err := command.HandleError(errCode, errStr)
+				command.PrintError(s_err)
+
+				if *errorExitFlag {
+					_, werr := io.WriteString(command.W, command.EXITONERR)
+					if werr != nil {
+						command.PrintError(command.HandleError(errors.E_SHELL_WRITER_OUTPUT, werr.Error()))
+					}
+					liner.Close()
+					os.Clearenv()
+					os.Exit(1)
+				}
+			}
+			io.WriteString(command.W, "\n\n")
+
+			if adviseEnd {
+				break
+			}
+		}
+
 		final_input = " "
 	}
 	return 0, ""

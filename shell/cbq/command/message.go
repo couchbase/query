@@ -44,6 +44,7 @@ const (
 	UCACERT     = " Path to root ca certificate to verify identity of server. \n\t For example : -cacert ./root/ca.pem"
 	UCERTFILE   = " Path to chain certificate. \n\t For example : -cert ./client/client/chain.pem"
 	UKEYFILE    = " Path to client key file. \n\t For example : -key ./client/client/client.key"
+	UADVISE     = " Run ADVISE on all queries in the specified file or that are read from standard input, if a file is not provided with the -file option. \n\tFor example: -advise -file queries.txt"
 
 	//Shorthand message for flags
 	SHORTHAND = " Shorthand for "

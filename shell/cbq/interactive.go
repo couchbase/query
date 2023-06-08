@@ -60,11 +60,20 @@ func handleOPModeFlag(outputFile **os.File, prevFile *string) {
 }
 
 // Handle input flag
-
+/*
+   [MB-56912] : Handle advise flag
+   			  if inputFlag is set: inputFlag is input file
+              if input flag is not set: consider stdin as input file
+*/
 func handleIPModeFlag(liner **liner.State) {
-	if inputFlag != "" {
+	if inputFlag != "" || (inputFlag == "" && adviseFlag) {
 		//Read each line from the file and call execute query
-		input_command := "\\source " + inputFlag
+		var input_command string
+		if inputFlag == "" && adviseFlag {
+			input_command = "\\source stdin"
+		} else {
+			input_command = "\\source " + inputFlag
+		}
 
 		// If outputting to a file, then add the statement to the file as well.
 		if command.FILE_RW_MODE == true {
