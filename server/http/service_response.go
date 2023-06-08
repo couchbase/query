@@ -609,7 +609,7 @@ func (this *httpRequest) writeErrors(prefix string, indent string) bool {
 				this.setHttpCode(mapErrorToHttpResponse(err, http.StatusOK))
 			}
 		}
-		if !this.writeError(err, false, prefix, indent) {
+		if !this.writeError(err, first, prefix, indent) {
 			break
 		}
 		first = false
@@ -628,18 +628,18 @@ func (this *httpRequest) writeErrorsXML(prefix string, indent string) bool {
 		return true
 	}
 
-	first := true
 	if !this.writer.printf("\n%s<errors>", prefix) {
 		return false
 	}
+	first := true
 	for _, err = range this.Errors() {
-		if !first && this.State() != server.FATAL {
+		if first && this.State() != server.FATAL {
 			this.setHttpCode(mapErrorToHttpResponse(err, http.StatusOK))
 		}
-		first = false
-		if !this.writeErrorXML(err, false, prefix, indent) {
+		if !this.writeErrorXML(err, prefix, indent) {
 			return false
 		}
+		first = false
 	}
 	return this.writer.printf("\n%s</errors>", prefix)
 }
@@ -681,18 +681,18 @@ func (this *httpRequest) writeWarningsXML(prefix string, indent string) bool {
 		return true
 	}
 
-	first := true
 	if !this.writer.printf("\n%s<warnings>", prefix) {
 		return false
 	}
+	first := true
 	for _, err = range this.Errors() {
-		if first && this.httpCode() == 0 || this.httpCode() == http.StatusOK {
+		if first && (this.httpCode() == 0 || this.httpCode() == http.StatusOK) {
 			this.setHttpCode(mapErrorToHttpResponse(err, http.StatusOK))
 		}
-		first = false
-		if !this.writeErrorXML(err, first, prefix, indent) {
+		if !this.writeErrorXML(err, prefix, indent) {
 			return false
 		}
+		first = false
 	}
 	return this.writer.printf("\n%s</warnings>", prefix)
 }
@@ -739,7 +739,7 @@ func (this *httpRequest) writeError(err errors.Error, first bool, prefix, indent
 	return this.writeString(newPrefix) && this.writeString(string(bytes.TrimSuffix(bb.Bytes(), []byte{'\n'})))
 }
 
-func (this *httpRequest) writeErrorXML(err errors.Error, first bool, prefix string, indent string) bool {
+func (this *httpRequest) writeErrorXML(err errors.Error, prefix string, indent string) bool {
 	tag := "error"
 	if err.IsWarning() {
 		tag = "warning"
