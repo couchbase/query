@@ -1545,12 +1545,12 @@ It truncates ISO 8601 timestamp so that the given date part
 string is the least significant.
 */
 type DateTruncStr struct {
-	BinaryFunctionBase
+	FunctionBase
 }
 
-func NewDateTruncStr(first, second Expression) Function {
+func NewDateTruncStr(operands ...Expression) Function {
 	rv := &DateTruncStr{
-		*NewBinaryFunctionBase("date_trunc_str", first, second),
+		*NewFunctionBase("date_trunc_str", operands...),
 	}
 
 	rv.expr = rv
@@ -1584,37 +1584,46 @@ func (this *DateTruncStr) Evaluate(item value.Value, context Context) (value.Val
 
 	str := first.ToString()
 	part := second.ToString()
-
-	// For date trunc we do not consider the timezone.
-	// This messes up the result of the golang time functions.
-	// To avoid this remove it before processing
-
-	_, tzComponent, _ := strToTimeforTrunc(str)
-	if tzComponent != "" {
-		str = str[:len(str)-len(tzComponent)]
+	format := ""
+	if len(this.operands) > 2 {
+		arg, err := this.operands[2].Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		}
+		if arg.Type() == value.MISSING {
+			return value.MISSING_VALUE, nil
+		} else if arg.Type() != value.STRING {
+			return value.NULL_VALUE, nil
+		}
+		format = arg.ToString()
+	} else {
+		format = formatFromStr(str)
 	}
 
-	t, _, err := strToTimeforTrunc(str)
+	t, err := strToTime(str, format)
 	if err != nil {
 		return value.NULL_VALUE, nil
 	}
+	// add the zone offset effectively negating the zone so zone doesn't interfere with the truncation
+	_, off := t.Zone()
+	t = t.Add(time.Duration(off) * time.Second)
 
 	t, err = dateTrunc(t, part)
 	if err != nil {
 		return value.NULL_VALUE, err
 	}
+	// revert the zone negation
+	t = t.Add(time.Duration(off*-1) * time.Second)
 
-	return value.NewValue(timeToStr(t, formatFromStr(str)) + tzComponent), nil
+	return value.NewValue(timeToStr(t, format)), nil
 }
 
-/*
-Factory method pattern.
-*/
 func (this *DateTruncStr) Constructor() FunctionConstructor {
-	return func(operands ...Expression) Function {
-		return NewDateTruncStr(operands[0], operands[1])
-	}
+	return NewDateTruncStr
 }
+
+func (this *DateTruncStr) MinArgs() int { return 2 }
+func (this *DateTruncStr) MaxArgs() int { return 3 }
 
 ///////////////////////////////////////////////////
 //
@@ -2336,8 +2345,20 @@ func (this *StrToUTC) Evaluate(item value.Value, context Context) (value.Value, 
 
 	str := arg.ToString()
 	var format string
+	var outputFormat string
 	var t time.Time
-	if len(this.operands) == 2 {
+	if len(this.operands) > 2 {
+		arg, err = this.operands[2].Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		} else if arg.Type() == value.MISSING {
+			return value.MISSING_VALUE, nil
+		} else if arg.Type() != value.STRING {
+			return value.NULL_VALUE, nil
+		}
+		outputFormat = arg.ToString()
+	}
+	if len(this.operands) > 1 {
 		arg, err = this.operands[1].Evaluate(item, context)
 		if err != nil {
 			return nil, err
@@ -2347,22 +2368,23 @@ func (this *StrToUTC) Evaluate(item value.Value, context Context) (value.Value, 
 			return value.NULL_VALUE, nil
 		}
 		format = arg.ToString()
-		t, err = strToTime(str, format)
+		if len(this.operands) == 2 {
+			outputFormat = format
+		}
 	} else {
-		format = formatFromStr(str)
-		t, err = strToTime(str, "")
+		outputFormat = formatFromStr(str)
 	}
-
+	t, err = strToTime(str, format)
 	if err != nil {
 		return value.NULL_VALUE, nil
 	}
 
 	t = t.UTC()
 
-	return value.NewValue(timeToStr(t, format)), nil
+	return value.NewValue(timeToStr(t, outputFormat)), nil
 }
 
-func (this *StrToUTC) MaxArgs() int { return 2 }
+func (this *StrToUTC) MaxArgs() int { return 3 }
 func (this *StrToUTC) MinArgs() int { return 1 }
 
 func (this *StrToUTC) Constructor() FunctionConstructor {
@@ -2425,9 +2447,22 @@ func (this *StrToZoneName) Evaluate(item value.Value, context Context) (value.Va
 		return value.NULL_VALUE, nil
 	}
 
-	format := ""
+	var format string
+	var outputFormat string
 	var t time.Time
-	if len(this.operands) == 3 {
+	if len(this.operands) > 3 {
+		var arg value.Value
+		arg, err = this.operands[3].Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		} else if arg.Type() == value.MISSING {
+			return value.MISSING_VALUE, nil
+		} else if arg.Type() != value.STRING {
+			return value.NULL_VALUE, nil
+		}
+		outputFormat = arg.ToString()
+	}
+	if len(this.operands) > 2 {
 		var arg value.Value
 		arg, err = this.operands[2].Evaluate(item, context)
 		if err != nil {
@@ -2438,20 +2473,23 @@ func (this *StrToZoneName) Evaluate(item value.Value, context Context) (value.Va
 			return value.NULL_VALUE, nil
 		}
 		format = arg.ToString()
-		t, err = strToTime(str, format)
+		if len(this.operands) == 3 {
+			outputFormat = format
+		}
 	} else {
 		format = formatFromStr(str)
-		t, err = strToTime(str, "")
+		outputFormat = format
 	}
 
+	t, err = strToTime(str, format)
 	if err != nil {
 		return value.NULL_VALUE, nil
 	}
 
-	return value.NewValue(timeToStr(t.In(loc), format)), nil
+	return value.NewValue(timeToStr(t.In(loc), outputFormat)), nil
 }
 
-func (this *StrToZoneName) MaxArgs() int { return 3 }
+func (this *StrToZoneName) MaxArgs() int { return 4 }
 func (this *StrToZoneName) MinArgs() int { return 2 }
 
 func (this *StrToZoneName) Constructor() FunctionConstructor {
@@ -3407,6 +3445,7 @@ PM   - synonym
 am   - 2 character 12-hour cycle indicator LOWERCASE
 pm   - synonym
 TZD  - timezone specified as either: Z, +hh:mm:ss (seconds ignored), +hh:mm, +hhmm, +hh, <zone-name>
+TZN  - timezone specified as either: Z, +hh:mm:ss (seconds ignored), +hh:mm, +hhmm, +hh, <zone-name>
 MONTH - English month name (uppercase)
 Month - English month name (capitalised)
 month - English month name (lowercase)
@@ -3438,7 +3477,7 @@ var _COMMON_FORMATS = map[rune][]string{ // descending length order is important
 	'p': {"pp", "pm"},
 	'S': {"SS"},
 	's': {"ss", "s"},
-	'T': {"TZD"},
+	'T': {"TZD", "TZN", "T"},
 	'Y': {"YYYY", "YY"},
 }
 
@@ -3623,7 +3662,7 @@ func strToTimeCommonFormat(s string, format string) (time.Time, error) {
 			}
 			i += j - 1
 			n += l
-		} else if i+2 < len(format) && format[i:i+3] == "TZD" {
+		} else if i+2 < len(format) && (format[i:i+3] == "TZD" || format[i:i+3] == "TZN") {
 			var err error
 			n, zoneh, zonem, loc, err = gatherZone(s, n)
 			if err != nil {
@@ -3706,10 +3745,10 @@ func strToTimeCommonFormat(s string, format string) (time.Time, error) {
 			if j > 6 {
 				return t, fmt.Errorf("Invalid day of week in date string")
 			}
-		} else if !unicode.IsPunct(rune(format[i])) {
+		} else if !unicode.IsPunct(rune(format[i])) && format[i] != 'T' {
 			return t, fmt.Errorf("Invalid format")
 		} else {
-			if format[i] != s[n] {
+			if format[i] != 'T' && format[i] != s[n] {
 				return t, fmt.Errorf("Failed to parse '%c' in date string (found '%c')", format[i], s[n])
 			}
 			n++
@@ -3961,50 +4000,6 @@ func strToTimeTryAllDefaultFormats(s string) (time.Time, error) {
 	}
 
 	return t, err
-}
-
-func strToTimeforTrunc(s string) (time.Time, string, error) {
-	var t time.Time
-	var err error
-	var f string
-	found := false
-	newloc, _ := time.LoadLocation("UTC")
-	// first pass try formats that match length before encountering the overhead of parsing all
-	for _, f = range _DATE_FORMATS {
-		if len(f) == len(s) {
-			// Check if the format has a timezone
-			t, err = time.ParseInLocation(f, s, newloc)
-			if err == nil {
-				found = true
-				break
-			}
-		}
-	}
-	if !found {
-		// only check formats we've not checked above
-		for _, f = range _DATE_FORMATS {
-			if len(f) != len(s) {
-				// Check if the format has a timezone
-				t, err = time.ParseInLocation(f, s, newloc)
-				if err == nil {
-					found = true
-					break
-				}
-			}
-		}
-	}
-
-	if found {
-		// Calculate the timezone component for input string
-		pos := strings.Index(f, "Z")
-		tz := ""
-		spos := strings.LastIndexAny(s, "Z+-")
-		if pos > 0 && spos > 0 {
-			tz = s[spos:]
-		}
-		return t, tz, nil
-	}
-	return t, "", err
 }
 
 /*
@@ -4313,8 +4308,12 @@ func timeToStrPercentFormat(t time.Time, format string) string {
 					return fmt.Sprintf("!(Invalid format: '%s')", format)
 				}
 			case 'Z':
-				zone, _ := t.Zone()
-				res = append(res, []rune(zone)...)
+				zone, off := t.Zone()
+				if pad == noPad && off == 0 {
+					res = append(res, rune('Z'))
+				} else {
+					res = append(res, []rune(zone)...)
+				}
 			case '%':
 				res = append(res, rune('%'))
 			case 'V':
@@ -4430,6 +4429,7 @@ pp   - 2 character lower case 12-hour cycle indicator (am/pm)
 am   - synonym
 pm   - synonym
 TZD  - timezone Z or +hh:mm
+TZN  - timezone name
 
 Other characters/sequences are produced literally in the output.
 */
@@ -4521,6 +4521,10 @@ func timeToStrCommonFormat(t time.Time, format string) string {
 				}
 				res = append(res, []rune(fmt.Sprintf("%+03d:%02d", h, m))...)
 			}
+			i += 2
+		} else if i+2 < len(format) && format[i:i+3] == "TZN" {
+			zone, _ := t.Zone()
+			res = append(res, []rune(zone)...)
 			i += 2
 		} else if format[i] == 's' || format[i] == 'S' {
 			n := 0
