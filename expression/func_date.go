@@ -1514,7 +1514,7 @@ func (this *DateTruncMillis) Evaluate(item value.Value, context Context) (value.
 
 	millis := first.Actual().(float64)
 	part := second.ToString()
-	t := millisToTime(millis)
+	t := millisToTime(millis).UTC()
 
 	t, err = dateTrunc(t, part)
 	if err != nil {
@@ -1604,16 +1604,11 @@ func (this *DateTruncStr) Evaluate(item value.Value, context Context) (value.Val
 	if err != nil {
 		return value.NULL_VALUE, nil
 	}
-	// add the zone offset effectively negating the zone so zone doesn't interfere with the truncation
-	_, off := t.Zone()
-	t = t.Add(time.Duration(off) * time.Second)
 
 	t, err = dateTrunc(t, part)
 	if err != nil {
 		return value.NULL_VALUE, err
 	}
-	// revert the zone negation
-	t = t.Add(time.Duration(off*-1) * time.Second)
 
 	return value.NewValue(timeToStr(t, format)), nil
 }
@@ -5021,7 +5016,17 @@ If type day convert to hours.
 func timeTrunc(t time.Time, part string) (time.Time, error) {
 	switch part {
 	case "day":
-		return t.Truncate(time.Duration(24) * time.Hour), nil
+		// add the zone offset effectively negating the zone so zone doesn't
+		// interfere with the truncation
+		_, off := t.Zone()
+		t = t.Add(time.Duration(off) * time.Second)
+
+		t = t.Truncate(time.Duration(24) * time.Hour)
+
+		// revert the zone negation
+		t = t.Add(time.Duration(off*-1) * time.Second)
+
+		return t, nil
 	case "hour":
 		return t.Truncate(time.Hour), nil
 	case "minute":
