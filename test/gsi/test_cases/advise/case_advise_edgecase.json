@@ -476,14 +476,9 @@
             "recommended_indexes": {
               "indexes": [
                 {
-                  "index_statement": "CREATE INDEX adv_a11ISMISSING ON `shellTest`(`a11` IS MISSING) WHERE `a11` IS MISSING",
+                  "index_statement": "CREATE INDEX adv_a11 ON `shellTest`(`a11` INCLUDE MISSING)",
                   "keyspace_alias": "shellTest",
-                  "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing."
-                },
-                {
-                  "index_statement": "CREATE INDEX adv_a11 ON `shellTest`(`a11`)",
-                  "keyspace_alias": "shellTest",
-                  "recommending_rule": "Index keys follow order of predicate types: 7. not null/not missing/valued."
+                  "recommending_rule": "Index keys follow order of predicate types: 1. Common leading key for disjunction (7. not null/not missing/valued)."
                 }
               ]
             }

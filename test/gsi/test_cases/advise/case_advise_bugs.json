@@ -54,5 +54,55 @@
         "query": "SELECT a.c1, u111 FROM shellTest AS a UNNEST a.a1 AS u1 UNNEST u1.a11 AS u11 UNNEST u11.a111 AS u111 WHERE a.o1.id = 'abc' AND u111.name = 'xyz'"
       }
     ]
+  },
+  {
+    "testcase": "MB-57346 part 1",
+    "statements": "advise SELECT * FROM shellTest WHERE (c1 = false OR c1 IS MISSING) ORDER BY c3",
+    "advise": true,
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": {
+            "recommended_indexes": {
+              "indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_c1 ON `shellTest`(`c1` INCLUDE MISSING)",
+                  "keyspace_alias": "shellTest",
+                  "recommending_rule": "Index keys follow order of predicate types: 1. Common leading key for disjunction (2. equality/null/missing)."
+                }
+              ]
+            }
+          }
+        },
+        "query": "SELECT * FROM shellTest WHERE (c1 = false OR c1 IS MISSING) ORDER BY c3"
+      }
+    ]
+  },
+  {
+    "testcase": "MB-57346 part 2",
+    "statements": "advise SELECT * FROM shellTest WHERE (c1 = false OR c1 IS MISSING) AND ANY v IN a1 SATISFIES v = 11 END ORDER BY c3",
+    "advise": true,
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": {
+            "recommended_indexes": {
+              "indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_DISTINCT_a1_c1 ON `shellTest`(DISTINCT ARRAY `v` FOR `v` IN `a1` END,`c1`)",
+                  "keyspace_alias": "shellTest",
+                  "recommending_rule": "Index keys follow order of predicate types: 1. Common leading key for disjunction (2. equality/null/missing, 2. equality/null/missing)."
+                }
+              ]
+            }
+          }
+        },
+        "query": "SELECT * FROM shellTest WHERE (c1 = false OR c1 IS MISSING) AND ANY v IN a1 SATISFIES v = 11 END ORDER BY c3"
+      }
+    ]
   }
 ]
