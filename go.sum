@@ -87,8 +87,8 @@ github.com/couchbase/gocbcore-transactions v0.0.0-20220110140047-0cfbabaea2ec/go
 github.com/couchbase/gocbcore/v10 v10.0.3/go.mod h1:s6dwBFs4c3+cAzZbo1q0VW+QasudhHJuehE8b8U2YNg=
 github.com/couchbase/gocbcore/v10 v10.0.10-0.20230606191549-ada1d11ef396 h1:V/ZnCkDLF+H8TR8HJ7iI6kfu0E8JaMAG4ziPDuSpCNc=
 github.com/couchbase/gocbcore/v10 v10.0.10-0.20230606191549-ada1d11ef396/go.mod h1:kBLeSPSwcMVT89Q18Z9W8x6KL/LKa+cY6Z/f1LV/lnU=
-github.com/couchbase/gocbcore/v9 v9.1.8 h1:79VOjo+lOJpEG99vA6AIQCuwMizYe1TUDK2ynaDNHqQ=
-github.com/couchbase/gocbcore/v9 v9.1.8/go.mod h1:jOSQeBSECyNvD7aS4lfuaw+pD5t6ciTOf8hrDP/4Nus=
+github.com/couchbase/gocbcore/v9 v9.1.10 h1:KUmrGBRDbu6T40LmskEK6u0u41EtSUloKzObnWpvav4=
+github.com/couchbase/gocbcore/v9 v9.1.10/go.mod h1:jOSQeBSECyNvD7aS4lfuaw+pD5t6ciTOf8hrDP/4Nus=
 github.com/couchbase/moss v0.1.0/go.mod h1:9MaHIaRuy9pvLPUJxB8sh8OrLfyDczECVL37grCIubs=
 github.com/couchbase/moss v0.2.0/go.mod h1:9MaHIaRuy9pvLPUJxB8sh8OrLfyDczECVL37grCIubs=
 github.com/couchbase/moss v0.3.0 h1:7NCCtyk6iGCr0egU6mxnx5wLqDSlRKkJJXOJp3seHMI=
