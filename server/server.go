@@ -863,7 +863,7 @@ func (this *runQueue) releaseRequest(txQueueMutex, txQueuesMutex *sync.RWMutex) 
 		this.queue[entry].state = _WAIT_EMPTY
 		this.queue[entry].request = nil
 
-		// MB-56348 this should never happen, but defensively...
+		// MB-57348 this should never happen, but defensively...
 		if request != nil {
 			request.release()
 		}
