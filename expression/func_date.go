@@ -4628,6 +4628,10 @@ var _DATE_FORMATS = []string{
 	"15:04:05",
 }
 
+func isDateSeparator(r rune) bool {
+	return r == '/' || r == '.' || r == '-'
+}
+
 // When the input date's length doesn't exactly match the length of a _DATE_FORMATS entry that successfully parses it, it is more
 // efficient to try analyse what fields exist than to try parsing with all other entries.
 // (Better still would be to just parse the date string directly)
@@ -4638,7 +4642,7 @@ func determineKnownFormat(s string) string {
 	}
 	dt := ""
 	// date part
-	if s[4] == '-' && len(s) >= 10 {
+	if isDateSeparator(rune(s[4])) && len(s) >= 10 {
 		if s[7] != s[4] {
 			return ""
 		}
@@ -4648,7 +4652,7 @@ func determineKnownFormat(s string) string {
 			}
 		}
 		if len(s) == 10 {
-			return "2006-01-02"
+			return fmt.Sprintf("2006%c01%c02", s[4], s[4])
 		}
 		n := 10
 		if s[n] == ' ' {
@@ -4659,7 +4663,7 @@ func determineKnownFormat(s string) string {
 		if s[n] != 'T' && s[n] != ' ' {
 			return ""
 		}
-		dt = "2006-01-02" + s[n:n+1]
+		dt = fmt.Sprintf("2006%c01%c02%c", s[4], s[4], s[n])
 		s = s[n+1:]
 	}
 
