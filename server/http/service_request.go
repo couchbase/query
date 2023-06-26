@@ -160,7 +160,6 @@ func newHttpRequest(rv *httpRequest, resp http.ResponseWriter, req *http.Request
 	if err == nil {
 		// handle parameters that can't be handled dynamically
 		// get credentials even in case of error - for auditing and logging
-		pwdlessbkts := util.IsFeatureEnabled(rv.FeatureControls(), util.N1QL_PASSWORDLESS_BKT)
 
 		// Creds check
 		creds, err1 = getCredentials(httpArgs)
@@ -169,16 +168,13 @@ func newHttpRequest(rv *httpRequest, resp http.ResponseWriter, req *http.Request
 			creds.HttpRequest = req
 			rv.SetCredentials(creds)
 
-			// TODO remove passwordless buckets and turn on in all cases
 			// This means we got creds. Now we need to see if they are authorized users.
-			if tenant.IsServerless() || !pwdlessbkts {
-				err1 = datastore.GetDatastore().Authorize(nil, creds)
-				if err1 != nil || len(creds.AuthenticatedUsers) == 0 {
+			err1 = datastore.GetDatastore().Authorize(nil, creds)
+			if err1 != nil || len(creds.AuthenticatedUsers) == 0 {
 
-					// This means the users associated with the input credentials do not have authorization.
-					// Throw an error
-					err1 = errors.NewAdminAuthError(err1, "cause: Failure to authenticate user")
-				}
+				// This means the users associated with the input credentials do not have authorization.
+				// Throw an error
+				err1 = errors.NewAdminAuthError(err1, "cause: Failure to authenticate user")
 			}
 		}
 		err = err1

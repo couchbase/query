@@ -215,39 +215,6 @@ func authAgainstCred(cbTarget string, availableCredentials []cbauth.Creds) (bool
 	return thisPrivGranted, nil
 }
 
-// Determine the set of keyspaces referenced in the list of privileges, and derive
-// credentials for them with empty passwords. This corresponds to the case of access users that were
-// created for passwordless buckets at upgrate time.
-
-// TODO: ditch this code, when we require that users created for old style passwordless buckets have a password
-// as legacy code, we choose not to make it collection aware
-func deriveDefaultCredentials(as authSource, privs []auth.PrivilegePair) ([]cbauth.Creds, auth.AuthenticatedUsers) {
-	keyspaces := make(map[string]bool, len(privs))
-	for _, pair := range privs {
-		keyspace := pair.Target
-		if keyspace == "" {
-			continue
-		}
-		if strings.Contains(keyspace, ":") {
-			q := strings.Split(keyspace, ":")
-			keyspace = q[1]
-		}
-		keyspaces[keyspace] = true
-	}
-
-	creds := make([]cbauth.Creds, 0, len(keyspaces))
-	authUsers := make(auth.AuthenticatedUsers, 0, len(keyspaces))
-	password := ""
-	for username := range keyspaces {
-		user, err := as.auth(username, password)
-		if err == nil {
-			creds = append(creds, user)
-			authUsers = append(authUsers, username)
-		}
-	}
-	return creds, authUsers
-}
-
 func userKeyString(c cbauth.Creds) string {
 	return join3Strings(c.Domain(), ":", c.Name())
 }
@@ -395,28 +362,14 @@ func cbAuthorize(s authSource, privileges *auth.Privileges, credentials *auth.Cr
 
 	// Check every requested privilege against the credentials list.
 	// if the authentication fails for any of the requested privileges return an error
-	remainingPrivileges, err := authAgainstCreds(s, privileges.List, credentials.CbauthCredentialsList)
-
-	if err != nil {
-		return errors.NewDatastoreAuthorizationError(err)
-	}
-
-	if len(remainingPrivileges) == 0 {
-		// Everything is authorized. Success!
-		return nil
-	}
-
-	// Derive possible default credentials from remaining privileges.
-	defaultCredentials, defaultUsers := deriveDefaultCredentials(s, remainingPrivileges)
-	credentials.AuthenticatedUsers = append(credentials.AuthenticatedUsers, defaultUsers...)
-	deniedPrivileges, err := authAgainstCreds(s, remainingPrivileges, defaultCredentials)
+	deniedPrivileges, err := authAgainstCreds(s, privileges.List, credentials.CbauthCredentialsList)
 
 	if err != nil {
 		return errors.NewDatastoreAuthorizationError(err)
 	}
 
 	if len(deniedPrivileges) == 0 {
-		// Authorized using defaults.
+		// Everything is authorized. Success!
 		return nil
 	}
 

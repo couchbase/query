@@ -150,63 +150,6 @@ func runCases(t *testing.T, cases []testCase) {
 	}
 }
 
-func TestDefaultCredentials(t *testing.T) {
-	privs := auth.NewPrivileges()
-	privs.Add("testbucket", auth.PRIV_QUERY_SELECT, auth.PRIV_PROPS_NONE)
-
-	asNoDefault := &authSourceImpl{
-		users: []authUser{
-			authUser{id: "bob", password: "pwbob", permissions: map[string]bool{}},
-		},
-	}
-
-	asWrongPerms := &authSourceImpl{
-		users: []authUser{
-			authUser{id: "bob", password: "pwbob", permissions: map[string]bool{}},
-			authUser{id: "testbucket", password: "",
-				permissions: map[string]bool{
-					"cluster.bucket[wrong].data.docs!read":      true,
-					"cluster.bucket[wrong].n1ql.select!execute": true,
-				},
-			},
-		},
-	}
-
-	asWrongPassword := &authSourceImpl{
-		users: []authUser{
-			authUser{id: "bob", password: "pwbob", permissions: map[string]bool{}},
-			authUser{id: "testbucket", password: "wrong",
-				permissions: map[string]bool{
-					"cluster.bucket[testbucket].data.docs!read":      true,
-					"cluster.bucket[testbucket].n1ql.select!execute": true,
-				},
-			},
-		},
-	}
-
-	asWorks := &authSourceImpl{
-		users: []authUser{
-			authUser{id: "bob", password: "pwbob", permissions: map[string]bool{}},
-			authUser{id: "testbucket", password: "",
-				permissions: map[string]bool{
-					"cluster.bucket[testbucket].data.docs!read":      true,
-					"cluster.bucket[testbucket].n1ql.select!execute": true,
-				},
-			},
-		},
-	}
-
-	loginCreds := &auth.Credentials{map[string]string{"bob": "pwbob"}, nil, nil, nil}
-
-	cases := []testCase{
-		testCase{purpose: "No Default User", authSource: asNoDefault, privs: privs, creds: loginCreds},
-		testCase{purpose: "Default User Has Wrong Permissions", authSource: asWrongPerms, privs: privs, creds: loginCreds},
-		testCase{purpose: "Default User Has Unexpected Password", authSource: asWrongPassword, privs: privs, creds: loginCreds},
-		testCase{purpose: "Works", authSource: asWorks, privs: privs, creds: loginCreds, shouldSucceed: true},
-	}
-	runCases(t, cases)
-}
-
 type deniedCase struct {
 	data     auth.PrivilegePair
 	expected string
