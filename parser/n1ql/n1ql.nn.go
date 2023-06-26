@@ -8,9 +8,10 @@
 
 package n1ql
 
+import "fmt"
 import "math"
 import "strconv"
-import "github.com/couchbase/clog"
+import "github.com/couchbase/query/logging"
 import (
 	"bufio"
 	"io"
@@ -43950,7 +43951,7 @@ OUTER0:
 				var e error
 
 				lval.s, e = ProcessEscapeSequences(yylex.Text())
-				yylex.logToken(yylex.Text(), "STR - [%s]", lval.s)
+				yylex.curOffset += len(yylex.Text())
 				if e != nil {
 					yylex.reportError("invalid quoted string - " + e.Error())
 					return _ERROR_
@@ -43962,7 +43963,7 @@ OUTER0:
 				var e error
 
 				lval.s, e = ProcessEscapeSequences(yylex.Text())
-				yylex.logToken(yylex.Text(), "STR - [%s]", lval.s)
+				yylex.curOffset += len(yylex.Text())
 				if e != nil {
 					yylex.reportError("invalid quoted string - " + e.Error())
 					return _ERROR_
@@ -43977,7 +43978,7 @@ OUTER0:
 				text := yylex.Text()
 				text = text[0 : len(text)-1]
 				lval.s, e = ProcessEscapeSequences(text)
-				yylex.logToken(yylex.Text(), "IDENT_ICASE - %s", lval.s)
+				yylex.curOffset += len(yylex.Text())
 				if e != nil {
 					yylex.reportError("invalid case insensitive identifier - " + e.Error())
 					return _ERROR_
@@ -43990,7 +43991,7 @@ OUTER0:
 				var e error
 
 				lval.s, e = ProcessEscapeSequences(yylex.Text())
-				yylex.logToken(yylex.Text(), "IDENT - %s", lval.s)
+				yylex.curOffset += len(yylex.Text())
 				if e != nil {
 					yylex.reportError("invalid escaped identifier - " + e.Error())
 					return _ERROR_
@@ -44001,26 +44002,25 @@ OUTER0:
 			{
 				// We differentiate NUM from INT
 				lval.f, _ = strconv.ParseFloat(yylex.Text(), 64)
-				yylex.logToken(yylex.Text(), "NUM - %f", lval.f)
+				yylex.curOffset += len(yylex.Text())
 				return NUM
 			}
 		case 5:
 			{
 				// We differentiate NUM from INT
 				lval.f, _ = strconv.ParseFloat(yylex.Text(), 64)
-				yylex.logToken(yylex.Text(), "NUM - %f", lval.f)
+				yylex.curOffset += len(yylex.Text())
 				return NUM
 			}
 		case 6:
 			{
 				// We differentiate NUM from INT
+				yylex.curOffset += len(yylex.Text())
 				lval.n, _ = strconv.ParseInt(yylex.Text(), 10, 64)
 				if (lval.n > math.MinInt64 && lval.n < math.MaxInt64) || strconv.FormatInt(lval.n, 10) == yylex.Text() {
-					yylex.logToken(yylex.Text(), "INT - %d", lval.n)
 					return INT
 				} else {
 					lval.f, _ = strconv.ParseFloat(yylex.Text(), 64)
-					yylex.logToken(yylex.Text(), "NUM - %f", lval.f)
 					return NUM
 				}
 			}
@@ -44033,1312 +44033,1559 @@ OUTER0:
 			{
 				s := yylex.Text()
 				lval.s = s[2 : len(s)-2]
+				yylex.curOffset += len(s)
 				return OPTIM_HINTS
 			}
 		case 9:
 			{
 				s := yylex.Text()
 				lval.s = s[2:]
+				yylex.curOffset += len(s)
 				return OPTIM_HINTS
 			}
 		case 10:
-			{
-				yylex.logToken(yylex.Text(), "BLOCK_COMMENT (length=%d)", len(yylex.Text())) /* eat up block comment */
+			{ /* eat up block comment */
+				yylex.curOffset += len(yylex.Text())
+				yylex.logToken(yylex.Text(), "BLOCK_COMMENT (length=%d)", len(yylex.Text()))
 			}
 		case 11:
-			{
-				yylex.logToken(yylex.Text(), "LINE_COMMENT (length=%d)", len(yylex.Text())) /* eat up line comment */
+			{ /* eat up line comment */
+				yylex.curOffset += len(yylex.Text())
+				yylex.logToken(yylex.Text(), "LINE_COMMENT (length=%d)", len(yylex.Text()))
 			}
 		case 12:
-			{
-				yylex.logToken(yylex.Text(), "WHITESPACE (count=%d)", len(yylex.Text())) /* eat up whitespace */
+			{ /* eat up whitespace */
+				yylex.curOffset += len(yylex.Text())
 			}
 		case 13:
 			{
-				yylex.logToken(yylex.Text(), "DOT")
+				lval.s = yylex.Text()
+				yylex.curOffset += 1
 				return DOT
 			}
 		case 14:
 			{
-				yylex.logToken(yylex.Text(), "PLUS")
+				lval.s = yylex.Text()
+				yylex.curOffset += 1
 				return PLUS
 			}
 		case 15:
 			{
-				yylex.logToken(yylex.Text(), "MINUS")
+				lval.s = yylex.Text()
+				yylex.curOffset += 1
 				return MINUS
 			}
 		case 16:
 			{
-				yylex.logToken(yylex.Text(), "MULT")
+				lval.s = yylex.Text()
+				yylex.curOffset += 1
 				return STAR
 			}
 		case 17:
 			{
-				yylex.logToken(yylex.Text(), "DIV")
+				lval.s = yylex.Text()
+				yylex.curOffset += 1
 				return DIV
 			}
 		case 18:
 			{
-				yylex.logToken(yylex.Text(), "MOD")
+				lval.s = yylex.Text()
+				yylex.curOffset += 1
 				return MOD
 			}
 		case 19:
 			{
-				yylex.logToken(yylex.Text(), "POW")
+				lval.s = yylex.Text()
+				yylex.curOffset += 1
 				return POW
 			}
 		case 20:
 			{
-				yylex.logToken(yylex.Text(), "DEQ")
+				lval.s = yylex.Text()
+				yylex.curOffset += 2
 				return DEQ
 			}
 		case 21:
 			{
-				yylex.logToken(yylex.Text(), "EQ")
+				lval.s = yylex.Text()
+				yylex.curOffset += 1
 				return EQ
 			}
 		case 22:
 			{
-				yylex.logToken(yylex.Text(), "NE")
+				lval.s = yylex.Text()
+				yylex.curOffset += 2
 				return NE
 			}
 		case 23:
 			{
-				yylex.logToken(yylex.Text(), "NE")
+				lval.s = yylex.Text()
+				yylex.curOffset += 2
 				return NE
 			}
 		case 24:
 			{
-				yylex.logToken(yylex.Text(), "LT")
+				lval.s = yylex.Text()
+				yylex.curOffset += 1
 				return LT
 			}
 		case 25:
 			{
-				yylex.logToken(yylex.Text(), "LTE")
+				lval.s = yylex.Text()
+				yylex.curOffset += 2
 				return LE
 			}
 		case 26:
 			{
-				yylex.logToken(yylex.Text(), "GT")
+				lval.s = yylex.Text()
+				yylex.curOffset += 1
 				return GT
 			}
 		case 27:
 			{
-				yylex.logToken(yylex.Text(), "GTE")
+				lval.s = yylex.Text()
+				yylex.curOffset += 2
 				return GE
 			}
 		case 28:
 			{
-				yylex.logToken(yylex.Text(), "CONCAT")
+				lval.s = yylex.Text()
+				yylex.curOffset += 2
 				return CONCAT
 			}
 		case 29:
 			{
-				yylex.logToken(yylex.Text(), "LPAREN")
+				lval.s = yylex.Text()
+				yylex.curOffset += 1
 				return LPAREN
 			}
 		case 30:
 			{
-				yylex.logToken(yylex.Text(), "RPAREN")
+				lval.s = yylex.Text()
+				yylex.curOffset += 1
 				return RPAREN
 			}
 		case 31:
 			{
-				yylex.logToken(yylex.Text(), "LBRACE")
+				lval.s = yylex.Text()
+				yylex.curOffset++
 				lval.tokOffset = yylex.curOffset
 				return LBRACE
 			}
 		case 32:
 			{
 				lval.tokOffset = yylex.curOffset
-				yylex.logToken(yylex.Text(), "RBRACE")
+				lval.s = yylex.Text()
+				yylex.curOffset++
 				return RBRACE
 			}
 		case 33:
 			{
-				yylex.logToken(yylex.Text(), "COMMA")
+				lval.s = yylex.Text()
+				yylex.curOffset += 1
 				return COMMA
 			}
 		case 34:
 			{
-				yylex.logToken(yylex.Text(), "COLON")
+				lval.s = yylex.Text()
+				yylex.curOffset += 1
 				return COLON
 			}
 		case 35:
 			{
-				yylex.logToken(yylex.Text(), "LBRACKET")
+				lval.s = yylex.Text()
+				yylex.curOffset += 1
 				return LBRACKET
 			}
 		case 36:
 			{
-				yylex.logToken(yylex.Text(), "RBRACKET")
+				lval.s = yylex.Text()
+				yylex.curOffset += 1
 				return RBRACKET
 			}
 		case 37:
 			{
-				yylex.logToken(yylex.Text(), "RBRACKET_ICASE")
+				lval.s = yylex.Text()
+				yylex.curOffset += 2
 				return RBRACKET_ICASE
 			}
 		case 38:
 			{
-				yylex.logToken(yylex.Text(), "SEMI")
+				lval.s = yylex.Text()
+				yylex.curOffset += 1
 				return SEMI
 			}
 		case 39:
 			{
-				yylex.logToken(yylex.Text(), "NOT_A_TOKEN")
+				lval.s = yylex.Text()
+				yylex.curOffset += 1
 				return NOT_A_TOKEN
 			}
 		case 40:
 			{
-				yylex.logToken(yylex.Text(), "_INDEX_CONDITION")
+				lval.s = yylex.Text()
+				yylex.curOffset += 16
 				return _INDEX_CONDITION
 			}
 		case 41:
 			{
-				yylex.logToken(yylex.Text(), "_INDEX_KEY")
+				lval.s = yylex.Text()
+				yylex.curOffset += 10
 				return _INDEX_KEY
 			}
 		case 42:
 			{
-				yylex.logToken(yylex.Text(), "ADVISE")
+				yylex.curOffset += 6
 				lval.tokOffset = yylex.curOffset
 				return ADVISE
 			}
 		case 43:
 			{
-				yylex.logToken(yylex.Text(), "ALL")
+				lval.s = yylex.Text()
+				yylex.curOffset += 3
 				return ALL
 			}
 		case 44:
 			{
-				yylex.logToken(yylex.Text(), "ALTER")
+				lval.s = yylex.Text()
+				yylex.curOffset += 5
 				return ALTER
 			}
 		case 45:
 			{
-				yylex.logToken(yylex.Text(), "ANALYZE")
+				lval.s = yylex.Text()
+				yylex.curOffset += 7
 				return ANALYZE
 			}
 		case 46:
 			{
-				yylex.logToken(yylex.Text(), "AND")
+				lval.s = yylex.Text()
+				yylex.curOffset += 3
 				return AND
 			}
 		case 47:
 			{
-				yylex.logToken(yylex.Text(), "ANY")
+				lval.s = yylex.Text()
+				yylex.curOffset += 3
 				return ANY
 			}
 		case 48:
 			{
-				yylex.logToken(yylex.Text(), "ARRAY")
+				lval.s = yylex.Text()
+				yylex.curOffset += 5
 				return ARRAY
 			}
 		case 49:
 			{
-				yylex.logToken(yylex.Text(), "AS")
+				yylex.curOffset += 2
 				lval.tokOffset = yylex.curOffset
 				return AS
 			}
 		case 50:
 			{
-				yylex.logToken(yylex.Text(), "ASC")
+				lval.s = yylex.Text()
+				yylex.curOffset += 3
 				return ASC
 			}
 		case 51:
 			{
-				yylex.logToken(yylex.Text(), "AT")
+				lval.s = yylex.Text()
+				yylex.curOffset += 2
 				return AT
 			}
 		case 52:
 			{
-				yylex.logToken(yylex.Text(), "BEGIN")
+				lval.s = yylex.Text()
+				yylex.curOffset += 5
 				return BEGIN
 			}
 		case 53:
 			{
-				yylex.logToken(yylex.Text(), "BETWEEN")
+				lval.s = yylex.Text()
+				yylex.curOffset += 7
 				return BETWEEN
 			}
 		case 54:
 			{
-				yylex.logToken(yylex.Text(), "BINARY")
+				lval.s = yylex.Text()
+				yylex.curOffset += 6
 				return BINARY
 			}
 		case 55:
 			{
-				yylex.logToken(yylex.Text(), "BOOLEAN")
+				lval.s = yylex.Text()
+				yylex.curOffset += 7
 				return BOOLEAN
 			}
 		case 56:
 			{
-				yylex.logToken(yylex.Text(), "BREAK")
+				lval.s = yylex.Text()
+				yylex.curOffset += 5
 				return BREAK
 			}
 		case 57:
 			{
-				yylex.logToken(yylex.Text(), "BUCKET")
+				lval.s = yylex.Text()
+				yylex.curOffset += 6
 				return BUCKET
 			}
 		case 58:
 			{
-				yylex.logToken(yylex.Text(), "BUILD")
+				lval.s = yylex.Text()
+				yylex.curOffset += 5
 				return BUILD
 			}
 		case 59:
 			{
-				yylex.logToken(yylex.Text(), "BY")
+				lval.s = yylex.Text()
+				yylex.curOffset += 2
 				return BY
 			}
 		case 60:
 			{
-				yylex.logToken(yylex.Text(), "CALL")
+				lval.s = yylex.Text()
+				yylex.curOffset += 4
 				return CALL
 			}
 		case 61:
 			{
-				yylex.logToken(yylex.Text(), "CACHE")
+				lval.s = yylex.Text()
+				yylex.curOffset += 5
 				return CACHE
 			}
 		case 62:
 			{
-				yylex.logToken(yylex.Text(), "CASE")
+				lval.s = yylex.Text()
+				yylex.curOffset += 4
 				return CASE
 			}
 		case 63:
 			{
-				yylex.logToken(yylex.Text(), "CAST")
+				lval.s = yylex.Text()
+				yylex.curOffset += 4
 				return CAST
 			}
 		case 64:
 			{
-				yylex.logToken(yylex.Text(), "CLUSTER")
+				lval.s = yylex.Text()
+				yylex.curOffset += 7
 				return CLUSTER
 			}
 		case 65:
 			{
-				yylex.logToken(yylex.Text(), "COLLATE")
+				lval.s = yylex.Text()
+				yylex.curOffset += 7
 				return COLLATE
 			}
 		case 66:
 			{
-				yylex.logToken(yylex.Text(), "COLLECTION")
+				lval.s = yylex.Text()
+				yylex.curOffset += 10
 				return COLLECTION
 			}
 		case 67:
 			{
-				yylex.logToken(yylex.Text(), "COMMIT")
+				lval.s = yylex.Text()
+				yylex.curOffset += 6
 				return COMMIT
 			}
 		case 68:
 			{
-				yylex.logToken(yylex.Text(), "COMMITTED")
+				lval.s = yylex.Text()
+				yylex.curOffset += 9
 				return COMMITTED
 			}
 		case 69:
 			{
-				yylex.logToken(yylex.Text(), "CONNECT")
+				lval.s = yylex.Text()
+				yylex.curOffset += 7
 				return CONNECT
 			}
 		case 70:
 			{
-				yylex.logToken(yylex.Text(), "CONTINUE")
+				lval.s = yylex.Text()
+				yylex.curOffset += 8
 				return CONTINUE
 			}
 		case 71:
 			{
-				yylex.logToken(yylex.Text(), "_CORRELATED")
+				lval.s = yylex.Text()
+				yylex.curOffset += 10
 				return _CORRELATED
 			}
 		case 72:
 			{
-				yylex.logToken(yylex.Text(), "_COVER")
+				lval.s = yylex.Text()
+				yylex.curOffset += 5
 				return _COVER
 			}
 		case 73:
 			{
-				yylex.logToken(yylex.Text(), "CREATE")
+				lval.s = yylex.Text()
+				yylex.curOffset += 6
 				return CREATE
 			}
 		case 74:
 			{
-				yylex.logToken(yylex.Text(), "CURRENT")
+				lval.s = yylex.Text()
+				yylex.curOffset += 7
 				return CURRENT
 			}
 		case 75:
 			{
-				yylex.logToken(yylex.Text(), "CYCLE")
+				lval.s = yylex.Text()
+				yylex.curOffset += 5
 				return CYCLE
 			}
 		case 76:
 			{
-				yylex.logToken(yylex.Text(), "DATABASE")
+				lval.s = yylex.Text()
+				yylex.curOffset += 8
 				return DATABASE
 			}
 		case 77:
 			{
-				yylex.logToken(yylex.Text(), "DATASET")
+				lval.s = yylex.Text()
+				yylex.curOffset += 7
 				return DATASET
 			}
 		case 78:
 			{
-				yylex.logToken(yylex.Text(), "DATASTORE")
+				lval.s = yylex.Text()
+				yylex.curOffset += 9
 				return DATASTORE
 			}
 		case 79:
 			{
-				yylex.logToken(yylex.Text(), "DECLARE")
+				lval.s = yylex.Text()
+				yylex.curOffset += 7
 				return DECLARE
 			}
 		case 80:
 			{
-				yylex.logToken(yylex.Text(), "DECREMENT")
+				lval.s = yylex.Text()
+				yylex.curOffset += 9
 				return DECREMENT
 			}
 		case 81:
 			{
-				yylex.logToken(yylex.Text(), "DEFAULT")
+				lval.s = yylex.Text()
+				yylex.curOffset += 7
 				return DEFAULT
 			}
 		case 82:
 			{
-				yylex.logToken(yylex.Text(), "DELETE")
+				lval.s = yylex.Text()
+				yylex.curOffset += 6
 				return DELETE
 			}
 		case 83:
 			{
-				yylex.logToken(yylex.Text(), "DERIVED")
+				lval.s = yylex.Text()
+				yylex.curOffset += 7
 				return DERIVED
 			}
 		case 84:
 			{
-				yylex.logToken(yylex.Text(), "DESC")
+				lval.s = yylex.Text()
+				yylex.curOffset += 4
 				return DESC
 			}
 		case 85:
 			{
-				yylex.logToken(yylex.Text(), "DESCRIBE")
+				lval.s = yylex.Text()
+				yylex.curOffset += 8
 				return DESCRIBE
 			}
 		case 86:
 			{
-				yylex.logToken(yylex.Text(), "DISTINCT")
+				lval.s = yylex.Text()
+				yylex.curOffset += 8
 				return DISTINCT
 			}
 		case 87:
 			{
-				yylex.logToken(yylex.Text(), "DO")
+				lval.s = yylex.Text()
+				yylex.curOffset += 2
 				return DO
 			}
 		case 88:
 			{
-				yylex.logToken(yylex.Text(), "DROP")
+				lval.s = yylex.Text()
+				yylex.curOffset += 4
 				return DROP
 			}
 		case 89:
 			{
-				yylex.logToken(yylex.Text(), "EACH")
+				lval.s = yylex.Text()
+				yylex.curOffset += 4
 				return EACH
 			}
 		case 90:
 			{
-				yylex.logToken(yylex.Text(), "ELEMENT")
+				lval.s = yylex.Text()
+				yylex.curOffset += 7
 				return ELEMENT
 			}
 		case 91:
 			{
-				yylex.logToken(yylex.Text(), "ELSE")
+				lval.s = yylex.Text()
+				yylex.curOffset += 4
 				return ELSE
 			}
 		case 92:
 			{
-				yylex.logToken(yylex.Text(), "END")
+				lval.s = yylex.Text()
+				yylex.curOffset += 3
 				return END
 			}
 		case 93:
 			{
-				yylex.logToken(yylex.Text(), "ESCAPE")
+				lval.s = yylex.Text()
+				yylex.curOffset += 6
 				return ESCAPE
 			}
 		case 94:
 			{
-				yylex.logToken(yylex.Text(), "EVERY")
+				lval.s = yylex.Text()
+				yylex.curOffset += 5
 				return EVERY
 			}
 		case 95:
 			{
-				yylex.logToken(yylex.Text(), "EXCEPT")
+				lval.s = yylex.Text()
+				yylex.curOffset += 6
 				return EXCEPT
 			}
 		case 96:
 			{
-				yylex.logToken(yylex.Text(), "EXCLUDE")
+				lval.s = yylex.Text()
+				yylex.curOffset += 7
 				return EXCLUDE
 			}
 		case 97:
 			{
-				yylex.logToken(yylex.Text(), "EXECUTE")
+				lval.s = yylex.Text()
+				yylex.curOffset += 7
 				return EXECUTE
 			}
 		case 98:
 			{
-				yylex.logToken(yylex.Text(), "EXISTS")
+				lval.s = yylex.Text()
+				yylex.curOffset += 6
 				return EXISTS
 			}
 		case 99:
 			{
-				yylex.logToken(yylex.Text(), "EXPLAIN")
+				yylex.curOffset += 7
 				lval.tokOffset = yylex.curOffset
 				return EXPLAIN
 			}
 		case 100:
 			{
-				yylex.logToken(yylex.Text(), "FALSE")
+				lval.s = yylex.Text()
+				yylex.curOffset += 5
 				return FALSE
 			}
 		case 101:
 			{
-				yylex.logToken(yylex.Text(), "FETCH")
+				lval.s = yylex.Text()
+				yylex.curOffset += 5
 				return FETCH
 			}
 		case 102:
 			{
-				yylex.logToken(yylex.Text(), "FILTER")
+				lval.s = yylex.Text()
+				yylex.curOffset += 6
 				return FILTER
 			}
 		case 103:
 			{
-				yylex.logToken(yylex.Text(), "FIRST")
+				lval.s = yylex.Text()
+				yylex.curOffset += 5
 				return FIRST
 			}
 		case 104:
 			{
-				yylex.logToken(yylex.Text(), "FLATTEN")
+				lval.s = yylex.Text()
+				yylex.curOffset += 7
 				return FLATTEN
 			}
 		case 105:
 			{
-				yylex.logToken(yylex.Text(), "FLATTEN_KEYS")
+				lval.s = yylex.Text()
+				yylex.curOffset += 12
 				return FLATTEN_KEYS
 			}
 		case 106:
 			{
-				yylex.logToken(yylex.Text(), "FLUSH")
+				lval.s = yylex.Text()
+				yylex.curOffset += 5
 				return FLUSH
 			}
 		case 107:
 			{
-				yylex.logToken(yylex.Text(), "FOLLOWING")
+				lval.s = yylex.Text()
+				yylex.curOffset += 9
 				return FOLLOWING
 			}
 		case 108:
 			{
-				yylex.logToken(yylex.Text(), "FOR")
+				lval.s = yylex.Text()
+				yylex.curOffset += 3
 				return FOR
 			}
 		case 109:
 			{
-				yylex.logToken(yylex.Text(), "FORCE")
+				yylex.curOffset += 5
 				lval.tokOffset = yylex.curOffset
 				return FORCE
 			}
 		case 110:
 			{
-				yylex.logToken(yylex.Text(), "FROM")
+				yylex.curOffset += 4
 				lval.tokOffset = yylex.curOffset
 				return FROM
 			}
 		case 111:
 			{
-				yylex.logToken(yylex.Text(), "FTS")
+				lval.s = yylex.Text()
+				yylex.curOffset += 3
 				return FTS
 			}
 		case 112:
 			{
-				yylex.logToken(yylex.Text(), "FUNCTION")
+				lval.s = yylex.Text()
+				yylex.curOffset += 8
 				return FUNCTION
 			}
 		case 113:
 			{
-				yylex.logToken(yylex.Text(), "GOLANG")
+				lval.s = yylex.Text()
+				yylex.curOffset += 6
 				return GOLANG
 			}
 		case 114:
 			{
-				yylex.logToken(yylex.Text(), "GRANT")
+				lval.s = yylex.Text()
+				yylex.curOffset += 5
 				return GRANT
 			}
 		case 115:
 			{
-				yylex.logToken(yylex.Text(), "GROUP")
+				lval.s = yylex.Text()
+				yylex.curOffset += 5
 				return GROUP
 			}
 		case 116:
 			{
-				yylex.logToken(yylex.Text(), "GROUPS")
+				lval.s = yylex.Text()
+				yylex.curOffset += 6
 				return GROUPS
 			}
 		case 117:
 			{
-				yylex.logToken(yylex.Text(), "GSI")
+				lval.s = yylex.Text()
+				yylex.curOffset += 3
 				return GSI
 			}
 		case 118:
 			{
-				yylex.logToken(yylex.Text(), "HASH")
+				lval.s = yylex.Text()
+				yylex.curOffset += 4
 				return HASH
 			}
 		case 119:
 			{
-				yylex.logToken(yylex.Text(), "HAVING")
+				lval.s = yylex.Text()
+				yylex.curOffset += 6
 				return HAVING
 			}
 		case 120:
 			{
-				yylex.logToken(yylex.Text(), "IF")
+				lval.s = yylex.Text()
+				yylex.curOffset += 2
 				return IF
 			}
 		case 121:
 			{
-				yylex.logToken(yylex.Text(), "IGNORE")
+				lval.s = yylex.Text()
+				yylex.curOffset += 6
 				return IGNORE
 			}
 		case 122:
 			{
-				yylex.logToken(yylex.Text(), "ILIKE")
+				lval.s = yylex.Text()
+				yylex.curOffset += 5
 				return ILIKE
 			}
 		case 123:
 			{
-				yylex.logToken(yylex.Text(), "IN")
+				lval.s = yylex.Text()
+				yylex.curOffset += 2
 				return IN
 			}
 		case 124:
 			{
-				yylex.logToken(yylex.Text(), "INCLUDE")
+				lval.s = yylex.Text()
+				yylex.curOffset += 7
 				return INCLUDE
 			}
 		case 125:
 			{
-				yylex.logToken(yylex.Text(), "INCREMENT")
+				lval.s = yylex.Text()
+				yylex.curOffset += 9
 				return INCREMENT
 			}
 		case 126:
 			{
-				yylex.logToken(yylex.Text(), "INDEX")
+				lval.s = yylex.Text()
+				yylex.curOffset += 5
 				return INDEX
 			}
 		case 127:
 			{
-				yylex.logToken(yylex.Text(), "INFER")
+				lval.s = yylex.Text()
+				yylex.curOffset += 5
 				return INFER
 			}
 		case 128:
 			{
-				yylex.logToken(yylex.Text(), "INLINE")
+				lval.s = yylex.Text()
+				yylex.curOffset += 6
 				return INLINE
 			}
 		case 129:
 			{
-				yylex.logToken(yylex.Text(), "INNER")
+				lval.s = yylex.Text()
+				yylex.curOffset += 5
 				return INNER
 			}
 		case 130:
 			{
-				yylex.logToken(yylex.Text(), "INSERT")
+				lval.s = yylex.Text()
+				yylex.curOffset += 6
 				return INSERT
 			}
 		case 131:
 			{
-				yylex.logToken(yylex.Text(), "INTERSECT")
+				lval.s = yylex.Text()
+				yylex.curOffset += 9
 				return INTERSECT
 			}
 		case 132:
 			{
-				yylex.logToken(yylex.Text(), "INTO")
+				lval.s = yylex.Text()
+				yylex.curOffset += 4
 				return INTO
 			}
 		case 133:
 			{
-				yylex.logToken(yylex.Text(), "IS")
+				lval.s = yylex.Text()
+				yylex.curOffset += 2
 				return IS
 			}
 		case 134:
 			{
-				yylex.logToken(yylex.Text(), "ISOLATION")
+				lval.s = yylex.Text()
+				yylex.curOffset += 9
 				return ISOLATION
 			}
 		case 135:
 			{
-				yylex.logToken(yylex.Text(), "JAVASCRIPT")
+				lval.s = yylex.Text()
+				yylex.curOffset += 10
 				return JAVASCRIPT
 			}
 		case 136:
 			{
-				yylex.logToken(yylex.Text(), "JOIN")
+				lval.s = yylex.Text()
+				yylex.curOffset += 4
 				return JOIN
 			}
 		case 137:
 			{
-				yylex.logToken(yylex.Text(), "KEY")
+				lval.s = yylex.Text()
+				yylex.curOffset += 3
 				return KEY
 			}
 		case 138:
 			{
-				yylex.logToken(yylex.Text(), "KEYS")
+				lval.s = yylex.Text()
+				yylex.curOffset += 4
 				return KEYS
 			}
 		case 139:
 			{
-				yylex.logToken(yylex.Text(), "KEYSPACE")
+				lval.s = yylex.Text()
+				yylex.curOffset += 8
 				return KEYSPACE
 			}
 		case 140:
 			{
-				yylex.logToken(yylex.Text(), "KNOWN")
+				lval.s = yylex.Text()
+				yylex.curOffset += 5
 				return KNOWN
 			}
 		case 141:
 			{
-				yylex.logToken(yylex.Text(), "LANGUAGE")
+				lval.s = yylex.Text()
+				yylex.curOffset += 8
 				return LANGUAGE
 			}
 		case 142:
 			{
-				yylex.logToken(yylex.Text(), "LAST")
+				lval.s = yylex.Text()
+				yylex.curOffset += 4
 				return LAST
 			}
 		case 143:
 			{
-				yylex.logToken(yylex.Text(), "LATERAL")
+				lval.s = yylex.Text()
+				yylex.curOffset += 7
 				return LATERAL
 			}
 		case 144:
 			{
-				yylex.logToken(yylex.Text(), "LEFT")
+				lval.s = yylex.Text()
+				yylex.curOffset += 4
 				return LEFT
 			}
 		case 145:
 			{
-				yylex.logToken(yylex.Text(), "LET")
+				lval.s = yylex.Text()
+				yylex.curOffset += 3
 				return LET
 			}
 		case 146:
 			{
-				yylex.logToken(yylex.Text(), "LETTING")
+				lval.s = yylex.Text()
+				yylex.curOffset += 7
 				return LETTING
 			}
 		case 147:
 			{
-				yylex.logToken(yylex.Text(), "LEVEL")
+				lval.s = yylex.Text()
+				yylex.curOffset += 5
 				return LEVEL
 			}
 		case 148:
 			{
-				yylex.logToken(yylex.Text(), "LIKE")
+				lval.s = yylex.Text()
+				yylex.curOffset += 4
 				return LIKE
 			}
 		case 149:
 			{
-				yylex.logToken(yylex.Text(), "LIMIT")
+				lval.s = yylex.Text()
+				yylex.curOffset += 5
 				return LIMIT
 			}
 		case 150:
 			{
-				yylex.logToken(yylex.Text(), "LSM")
+				lval.s = yylex.Text()
+				yylex.curOffset += 3
 				return LSM
 			}
 		case 151:
 			{
-				yylex.logToken(yylex.Text(), "MAP")
+				lval.s = yylex.Text()
+				yylex.curOffset += 3
 				return MAP
 			}
 		case 152:
 			{
-				yylex.logToken(yylex.Text(), "MAPPING")
+				lval.s = yylex.Text()
+				yylex.curOffset += 7
 				return MAPPING
 			}
 		case 153:
 			{
-				yylex.logToken(yylex.Text(), "MATCHED")
+				lval.s = yylex.Text()
+				yylex.curOffset += 7
 				return MATCHED
 			}
 		case 154:
 			{
-				yylex.logToken(yylex.Text(), "MATERIALIZED")
+				lval.s = yylex.Text()
+				yylex.curOffset += 12
 				return MATERIALIZED
 			}
 		case 155:
 			{
-				yylex.logToken(yylex.Text(), "MAXVALUE")
+				lval.s = yylex.Text()
+				yylex.curOffset += 8
 				return MAXVALUE
 			}
 		case 156:
 			{
-				yylex.logToken(yylex.Text(), "MERGE")
+				lval.s = yylex.Text()
+				yylex.curOffset += 5
 				return MERGE
 			}
 		case 157:
 			{
-				yylex.logToken(yylex.Text(), "MINVALUE")
+				lval.s = yylex.Text()
+				yylex.curOffset += 8
 				return MINVALUE
 			}
 		case 158:
 			{
-				yylex.logToken(yylex.Text(), "MISSING")
+				lval.s = yylex.Text()
+				yylex.curOffset += 7
 				return MISSING
 			}
 		case 159:
 			{
-				yylex.logToken(yylex.Text(), "NAMESPACE")
+				lval.s = yylex.Text()
+				yylex.curOffset += 9
 				return NAMESPACE
 			}
 		case 160:
 			{
-				yylex.logToken(yylex.Text(), "NEST")
+				lval.s = yylex.Text()
+				yylex.curOffset += 4
 				return NEST
 			}
 		case 161:
 			{
-				yylex.logToken(yylex.Text(), "NEXT")
+				lval.s = yylex.Text()
+				yylex.curOffset += 4
 				return NEXT
 			}
 		case 162:
 			{
-				yylex.logToken(yylex.Text(), "NEXTVAL")
+				lval.s = yylex.Text()
+				yylex.curOffset += 7
 				return NEXTVAL
 			}
 		case 163:
 			{
-				yylex.logToken(yylex.Text(), "NL")
+				lval.s = yylex.Text()
+				yylex.curOffset += 2
 				return NL
 			}
 		case 164:
 			{
-				yylex.logToken(yylex.Text(), "NO")
+				lval.s = yylex.Text()
+				yylex.curOffset += 2
 				return NO
 			}
 		case 165:
 			{
-				yylex.logToken(yylex.Text(), "NOT")
+				lval.s = yylex.Text()
+				yylex.curOffset += 3
 				return NOT
 			}
 		case 166:
 			{
-				yylex.logToken(yylex.Text(), "NTH_VALUE")
+				lval.s = yylex.Text()
+				yylex.curOffset += 9
 				return NTH_VALUE
 			}
 		case 167:
 			{
-				yylex.logToken(yylex.Text(), "NULL")
+				lval.s = yylex.Text()
+				yylex.curOffset += 4
 				return NULL
 			}
 		case 168:
 			{
-				yylex.logToken(yylex.Text(), "NULLS")
+				lval.s = yylex.Text()
+				yylex.curOffset += 5
 				return NULLS
 			}
 		case 169:
 			{
-				yylex.logToken(yylex.Text(), "NUMBER")
+				lval.s = yylex.Text()
+				yylex.curOffset += 6
 				return NUMBER
 			}
 		case 170:
 			{
-				yylex.logToken(yylex.Text(), "OBJECT")
+				lval.s = yylex.Text()
+				yylex.curOffset += 6
 				return OBJECT
 			}
 		case 171:
 			{
-				yylex.logToken(yylex.Text(), "OFFSET")
+				lval.s = yylex.Text()
+				yylex.curOffset += 6
 				return OFFSET
 			}
 		case 172:
 			{
-				yylex.logToken(yylex.Text(), "ON")
+				lval.s = yylex.Text()
+				yylex.curOffset += 2
 				return ON
 			}
 		case 173:
 			{
-				yylex.logToken(yylex.Text(), "OPTION")
+				lval.s = yylex.Text()
+				yylex.curOffset += 6
 				return OPTION
 			}
 		case 174:
 			{
-				yylex.logToken(yylex.Text(), "OPTIONS")
+				lval.s = yylex.Text()
+				yylex.curOffset += 7
 				return OPTIONS
 			}
 		case 175:
 			{
-				yylex.logToken(yylex.Text(), "OR")
+				lval.s = yylex.Text()
+				yylex.curOffset += 2
 				return OR
 			}
 		case 176:
 			{
-				yylex.logToken(yylex.Text(), "ORDER")
+				lval.s = yylex.Text()
+				yylex.curOffset += 5
 				return ORDER
 			}
 		case 177:
 			{
-				yylex.logToken(yylex.Text(), "OTHERS")
+				lval.s = yylex.Text()
+				yylex.curOffset += 6
 				return OTHERS
 			}
 		case 178:
 			{
-				yylex.logToken(yylex.Text(), "OUTER")
+				lval.s = yylex.Text()
+				yylex.curOffset += 5
 				return OUTER
 			}
 		case 179:
 			{
-				yylex.logToken(yylex.Text(), "OVER")
+				lval.s = yylex.Text()
+				yylex.curOffset += 4
 				return OVER
 			}
 		case 180:
 			{
-				yylex.logToken(yylex.Text(), "PARSE")
+				lval.s = yylex.Text()
+				yylex.curOffset += 5
 				return PARSE
 			}
 		case 181:
 			{
-				yylex.logToken(yylex.Text(), "PARTITION")
+				lval.s = yylex.Text()
+				yylex.curOffset += 9
 				return PARTITION
 			}
 		case 182:
 			{
-				yylex.logToken(yylex.Text(), "PASSWORD")
+				lval.s = yylex.Text()
+				yylex.curOffset += 8
 				return PASSWORD
 			}
 		case 183:
 			{
-				yylex.logToken(yylex.Text(), "PATH")
+				lval.s = yylex.Text()
+				yylex.curOffset += 4
 				return PATH
 			}
 		case 184:
 			{
-				yylex.logToken(yylex.Text(), "POOL")
+				lval.s = yylex.Text()
+				yylex.curOffset += 4
 				return POOL
 			}
 		case 185:
 			{
-				yylex.logToken(yylex.Text(), "PRECEDING")
+				lval.s = yylex.Text()
+				yylex.curOffset += 9
 				return PRECEDING
 			}
 		case 186:
 			{
-				yylex.logToken(yylex.Text(), "PREPARE")
+				yylex.curOffset += 7
 				lval.tokOffset = yylex.curOffset
 				return PREPARE
 			}
 		case 187:
 			{
-				yylex.logToken(yylex.Text(), "PREV")
+				lval.s = yylex.Text()
+				yylex.curOffset += 4
 				return PREV
 			}
 		case 188:
 			{
-				yylex.logToken(yylex.Text(), "PREV")
+				lval.s = yylex.Text()
+				yylex.curOffset += 8
 				return PREV
 			}
 		case 189:
 			{
-				yylex.logToken(yylex.Text(), "PREVVAL")
+				lval.s = yylex.Text()
+				yylex.curOffset += 7
 				return PREVVAL
 			}
 		case 190:
 			{
-				yylex.logToken(yylex.Text(), "PRIMARY")
+				lval.s = yylex.Text()
+				yylex.curOffset += 7
 				return PRIMARY
 			}
 		case 191:
 			{
-				yylex.logToken(yylex.Text(), "PRIVATE")
+				lval.s = yylex.Text()
+				yylex.curOffset += 7
 				return PRIVATE
 			}
 		case 192:
 			{
-				yylex.logToken(yylex.Text(), "PRIVILEGE")
+				lval.s = yylex.Text()
+				yylex.curOffset += 9
 				return PRIVILEGE
 			}
 		case 193:
 			{
-				yylex.logToken(yylex.Text(), "PROCEDURE")
+				lval.s = yylex.Text()
+				yylex.curOffset += 9
 				return PROCEDURE
 			}
 		case 194:
 			{
-				yylex.logToken(yylex.Text(), "PROBE")
+				lval.s = yylex.Text()
+				yylex.curOffset += 5
 				return PROBE
 			}
 		case 195:
 			{
-				yylex.logToken(yylex.Text(), "PUBLIC")
+				lval.s = yylex.Text()
+				yylex.curOffset += 6
 				return PUBLIC
 			}
 		case 196:
 			{
-				yylex.logToken(yylex.Text(), "RANGE")
+				lval.s = yylex.Text()
+				yylex.curOffset += 5
 				return RANGE
 			}
 		case 197:
 			{
-				yylex.logToken(yylex.Text(), "RAW")
+				lval.s = yylex.Text()
+				yylex.curOffset += 3
 				return RAW
 			}
 		case 198:
 			{
-				yylex.logToken(yylex.Text(), "READ")
+				lval.s = yylex.Text()
+				yylex.curOffset += 4
 				return READ
 			}
 		case 199:
 			{
-				yylex.logToken(yylex.Text(), "REALM")
+				lval.s = yylex.Text()
+				yylex.curOffset += 5
 				return REALM
 			}
 		case 200:
 			{
-				yylex.logToken(yylex.Text(), "RECURSIVE")
+				lval.s = yylex.Text()
+				yylex.curOffset += 9
 				return RECURSIVE
 			}
 		case 201:
 			{
-				yylex.logToken(yylex.Text(), "REDUCE")
+				lval.s = yylex.Text()
+				yylex.curOffset += 6
 				return REDUCE
 			}
 		case 202:
 			{
-				yylex.logToken(yylex.Text(), "RENAME")
+				lval.s = yylex.Text()
+				yylex.curOffset += 6
 				return RENAME
 			}
 		case 203:
 			{
-				yylex.logToken(yylex.Text(), "REPLACE")
 				lval.s = yylex.Text()
+				yylex.curOffset += 7
 				return REPLACE
 			}
 		case 204:
 			{
-				yylex.logToken(yylex.Text(), "RESPECT")
+				lval.s = yylex.Text()
+				yylex.curOffset += 7
 				return RESPECT
 			}
 		case 205:
 			{
-				yylex.logToken(yylex.Text(), "RESTART")
+				lval.s = yylex.Text()
+				yylex.curOffset += 7
 				return RESTART
 			}
 		case 206:
 			{
-				yylex.logToken(yylex.Text(), "RESTRICT")
+				lval.s = yylex.Text()
+				yylex.curOffset += 8
 				return RESTRICT
 			}
 		case 207:
 			{
-				yylex.logToken(yylex.Text(), "RETURN")
+				lval.s = yylex.Text()
+				yylex.curOffset += 6
 				return RETURN
 			}
 		case 208:
 			{
-				yylex.logToken(yylex.Text(), "RETURNING")
+				lval.s = yylex.Text()
+				yylex.curOffset += 9
 				return RETURNING
 			}
 		case 209:
 			{
-				yylex.logToken(yylex.Text(), "REVOKE")
+				lval.s = yylex.Text()
+				yylex.curOffset += 6
 				return REVOKE
 			}
 		case 210:
 			{
-				yylex.logToken(yylex.Text(), "RIGHT")
+				lval.s = yylex.Text()
+				yylex.curOffset += 5
 				return RIGHT
 			}
 		case 211:
 			{
-				yylex.logToken(yylex.Text(), "ROLE")
+				lval.s = yylex.Text()
+				yylex.curOffset += 4
 				return ROLE
 			}
 		case 212:
 			{
-				yylex.logToken(yylex.Text(), "ROLLBACK")
+				lval.s = yylex.Text()
+				yylex.curOffset += 8
 				return ROLLBACK
 			}
 		case 213:
 			{
-				yylex.logToken(yylex.Text(), "ROW")
+				lval.s = yylex.Text()
+				yylex.curOffset += 3
 				return ROW
 			}
 		case 214:
 			{
-				yylex.logToken(yylex.Text(), "ROWS")
+				lval.s = yylex.Text()
+				yylex.curOffset += 4
 				return ROWS
 			}
 		case 215:
 			{
-				yylex.logToken(yylex.Text(), "SATISFIES")
+				lval.s = yylex.Text()
+				yylex.curOffset += 9
 				return SATISFIES
 			}
 		case 216:
 			{
-				yylex.logToken(yylex.Text(), "SAVEPOINT")
+				lval.s = yylex.Text()
+				yylex.curOffset += 9
 				return SAVEPOINT
 			}
 		case 217:
 			{
-				yylex.logToken(yylex.Text(), "SCHEMA")
+				lval.s = yylex.Text()
+				yylex.curOffset += 6
 				return SCHEMA
 			}
 		case 218:
 			{
-				yylex.logToken(yylex.Text(), "SCOPE")
+				lval.s = yylex.Text()
+				yylex.curOffset += 5
 				return SCOPE
 			}
 		case 219:
 			{
-				yylex.logToken(yylex.Text(), "SELECT")
+				lval.s = yylex.Text()
+				yylex.curOffset += 6
 				return SELECT
 			}
 		case 220:
 			{
-				yylex.logToken(yylex.Text(), "SELF")
+				lval.s = yylex.Text()
+				yylex.curOffset += 4
 				return SELF
 			}
 		case 221:
 			{
-				yylex.logToken(yylex.Text(), "SEQUENCE")
+				lval.s = yylex.Text()
+				yylex.curOffset += 8
 				return SEQUENCE
 			}
 		case 222:
 			{
-				yylex.logToken(yylex.Text(), "SET")
+				lval.s = yylex.Text()
+				yylex.curOffset += 3
 				return SET
 			}
 		case 223:
 			{
-				yylex.logToken(yylex.Text(), "SHOW")
+				lval.s = yylex.Text()
+				yylex.curOffset += 4
 				return SHOW
 			}
 		case 224:
 			{
-				yylex.logToken(yylex.Text(), "SOME")
+				lval.s = yylex.Text()
+				yylex.curOffset += 4
 				return SOME
 			}
 		case 225:
 			{
-				yylex.logToken(yylex.Text(), "START")
+				lval.s = yylex.Text()
+				yylex.curOffset += 5
 				return START
 			}
 		case 226:
 			{
-				yylex.logToken(yylex.Text(), "STATISTICS")
+				lval.s = yylex.Text()
+				yylex.curOffset += 10
 				return STATISTICS
 			}
 		case 227:
 			{
-				yylex.logToken(yylex.Text(), "STRING")
+				lval.s = yylex.Text()
+				yylex.curOffset += 6
 				return STRING
 			}
 		case 228:
 			{
-				yylex.logToken(yylex.Text(), "SYSTEM")
+				lval.s = yylex.Text()
+				yylex.curOffset += 6
 				return SYSTEM
 			}
 		case 229:
 			{
-				yylex.logToken(yylex.Text(), "THEN")
+				lval.s = yylex.Text()
+				yylex.curOffset += 4
 				return THEN
 			}
 		case 230:
 			{
-				yylex.logToken(yylex.Text(), "TIES")
+				lval.s = yylex.Text()
+				yylex.curOffset += 4
 				return TIES
 			}
 		case 231:
 			{
-				yylex.logToken(yylex.Text(), "TO")
+				lval.s = yylex.Text()
+				yylex.curOffset += 2
 				return TO
 			}
 		case 232:
 			{
-				yylex.logToken(yylex.Text(), "TRAN")
+				lval.s = yylex.Text()
+				yylex.curOffset += 4
 				return TRAN
 			}
 		case 233:
 			{
-				yylex.logToken(yylex.Text(), "TRANSACTION")
+				lval.s = yylex.Text()
+				yylex.curOffset += 11
 				return TRANSACTION
 			}
 		case 234:
 			{
-				yylex.logToken(yylex.Text(), "TRIGGER")
+				lval.s = yylex.Text()
+				yylex.curOffset += 7
 				return TRIGGER
 			}
 		case 235:
 			{
-				yylex.logToken(yylex.Text(), "TRUE")
+				lval.s = yylex.Text()
+				yylex.curOffset += 4
 				return TRUE
 			}
 		case 236:
 			{
-				yylex.logToken(yylex.Text(), "TRUNCATE")
+				lval.s = yylex.Text()
+				yylex.curOffset += 8
 				return TRUNCATE
 			}
 		case 237:
 			{
-				yylex.logToken(yylex.Text(), "UNBOUNDED")
+				lval.s = yylex.Text()
+				yylex.curOffset += 9
 				return UNBOUNDED
 			}
 		case 238:
 			{
-				yylex.logToken(yylex.Text(), "UNDER")
+				lval.s = yylex.Text()
+				yylex.curOffset += 5
 				return UNDER
 			}
 		case 239:
 			{
-				yylex.logToken(yylex.Text(), "UNION")
+				lval.s = yylex.Text()
+				yylex.curOffset += 5
 				return UNION
 			}
 		case 240:
 			{
-				yylex.logToken(yylex.Text(), "UNIQUE")
+				lval.s = yylex.Text()
+				yylex.curOffset += 6
 				return UNIQUE
 			}
 		case 241:
 			{
-				yylex.logToken(yylex.Text(), "UNKNOWN")
+				lval.s = yylex.Text()
+				yylex.curOffset += 7
 				return UNKNOWN
 			}
 		case 242:
 			{
-				yylex.logToken(yylex.Text(), "UNNEST")
+				lval.s = yylex.Text()
+				yylex.curOffset += 6
 				return UNNEST
 			}
 		case 243:
 			{
-				yylex.logToken(yylex.Text(), "UNSET")
+				lval.s = yylex.Text()
+				yylex.curOffset += 5
 				return UNSET
 			}
 		case 244:
 			{
-				yylex.logToken(yylex.Text(), "UPDATE")
+				lval.s = yylex.Text()
+				yylex.curOffset += 6
 				return UPDATE
 			}
 		case 245:
 			{
-				yylex.logToken(yylex.Text(), "UPSERT")
+				lval.s = yylex.Text()
+				yylex.curOffset += 6
 				return UPSERT
 			}
 		case 246:
 			{
-				yylex.logToken(yylex.Text(), "USE")
+				lval.s = yylex.Text()
+				yylex.curOffset += 3
 				return USE
 			}
 		case 247:
 			{
-				yylex.logToken(yylex.Text(), "USER")
+				lval.s = yylex.Text()
+				yylex.curOffset += 4
 				return USER
 			}
 		case 248:
 			{
-				yylex.logToken(yylex.Text(), "USING")
+				lval.s = yylex.Text()
+				yylex.curOffset += 5
 				return USING
 			}
 		case 249:
 			{
-				yylex.logToken(yylex.Text(), "VALIDATE")
+				lval.s = yylex.Text()
+				yylex.curOffset += 8
 				return VALIDATE
 			}
 		case 250:
 			{
-				yylex.logToken(yylex.Text(), "VALUE")
+				lval.s = yylex.Text()
+				yylex.curOffset += 5
 				return VALUE
 			}
 		case 251:
 			{
-				yylex.logToken(yylex.Text(), "VALUED")
+				lval.s = yylex.Text()
+				yylex.curOffset += 6
 				return VALUED
 			}
 		case 252:
 			{
-				yylex.logToken(yylex.Text(), "VALUES")
+				lval.s = yylex.Text()
+				yylex.curOffset += 6
 				return VALUES
 			}
 		case 253:
 			{
-				yylex.logToken(yylex.Text(), "VIA")
+				lval.s = yylex.Text()
+				yylex.curOffset += 3
 				return VIA
 			}
 		case 254:
 			{
-				yylex.logToken(yylex.Text(), "VIEW")
+				lval.s = yylex.Text()
+				yylex.curOffset += 4
 				return VIEW
 			}
 		case 255:
 			{
-				yylex.logToken(yylex.Text(), "WHEN")
+				lval.s = yylex.Text()
+				yylex.curOffset += 4
 				return WHEN
 			}
 		case 256:
 			{
-				yylex.logToken(yylex.Text(), "WHERE")
+				lval.s = yylex.Text()
+				yylex.curOffset += 5
 				return WHERE
 			}
 		case 257:
 			{
-				yylex.logToken(yylex.Text(), "WHILE")
+				lval.s = yylex.Text()
+				yylex.curOffset += 5
 				return WHILE
 			}
 		case 258:
 			{
-				yylex.logToken(yylex.Text(), "WINDOW")
+				lval.s = yylex.Text()
+				yylex.curOffset += 6
 				return WINDOW
 			}
 		case 259:
 			{
-				yylex.logToken(yylex.Text(), "WITH")
+				lval.s = yylex.Text()
+				yylex.curOffset += 4
 				return WITH
 			}
 		case 260:
 			{
-				yylex.logToken(yylex.Text(), "WITHIN")
+				lval.s = yylex.Text()
+				yylex.curOffset += 6
 				return WITHIN
 			}
 		case 261:
 			{
-				yylex.logToken(yylex.Text(), "WORK")
+				lval.s = yylex.Text()
+				yylex.curOffset += 4
 				return WORK
 			}
 		case 262:
 			{
-				yylex.logToken(yylex.Text(), "XOR")
+				lval.s = yylex.Text()
+				yylex.curOffset += 3
 				return XOR
 			}
 		case 263:
 			{
 				lval.s = yylex.Text()
-				yylex.logToken(yylex.Text(), "IDENT - %s", lval.s)
+				yylex.curOffset += len(lval.s)
 				return IDENT
 			}
 		case 264:
 			{
 				lval.s = yylex.Text()[1:]
-				yylex.logToken(yylex.Text(), "NAMED_PARAM - %s", lval.s)
+				yylex.curOffset += len(yylex.Text())
 				return NAMED_PARAM
 			}
 		case 265:
 			{
 				lval.n, _ = strconv.ParseInt(yylex.Text()[1:], 10, 64)
-				yylex.logToken(yylex.Text(), "POSITIONAL_PARAM - %d", lval.n)
+				yylex.curOffset += len(yylex.Text())
 				return POSITIONAL_PARAM
 			}
 		case 266:
 			{
-				yylex.logToken(yylex.Text(), "RANDOM_ELEMENT - ??")
+				yylex.curOffset += 2
 				return RANDOM_ELEMENT
 			}
 		case 267:
 			{
 				lval.n = 0 // Handled by parser
-				yylex.logToken(yylex.Text(), "NEXT_PARAM - ?")
+				yylex.curOffset++
 				return NEXT_PARAM
 			}
 		case 268:
@@ -45358,6 +45605,7 @@ OUTER0:
 				/* this we don't know what it is: we'll let
 				   the parser handle it (and most probably throw a syntax error
 				*/
+				yylex.curOffset += len(yylex.Text())
 				yylex.logToken(yylex.Text(), "UNKNOWN token")
 				return int([]byte(yylex.Text())[0])
 			}
@@ -45371,8 +45619,10 @@ OUTER0:
 	return 0
 }
 func (yylex *Lexer) logToken(text string, format string, v ...interface{}) {
-	yylex.curOffset += len(text)
-	clog.To("LEXER", format, v...)
+	if logging.LogLevel() == logging.TRACE {
+		s := fmt.Sprintf(format, v...)
+		logging.Tracef("Token: >>%s<< - %s", text, s)
+	}
 }
 
 func (yylex *Lexer) ResetOffset() {
