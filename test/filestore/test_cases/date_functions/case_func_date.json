@@ -679,6 +679,15 @@
    },
    {
      "description":"date not in correct format gives null",
+     "statements":"select DATE_PART_STR(\"02/01/2012\",\"month\") as a",
+     "results": [
+        {
+            "a": null
+        }
+     ]
+   },
+   {
+     "description":"date in common format parses",
      "statements":"select DATE_PART_STR(`shipped-on`,\"month\") as a from orders where test_id = \"datefunc\" order by a",
      "results": [
         {},
@@ -686,7 +695,7 @@
             "a": null
         },
         {
-            "a": null
+            "a": 1
         },
         {
             "a": 9
@@ -1144,7 +1153,7 @@
             "a": null
         },
         {
-            "a": null
+            "a": "2012/01/02"
         },
         {
             "a": "2016-09-26T18:33:16.209Z"
@@ -1160,12 +1169,12 @@
             "a": null
         },
         {
-            "$1": null,
-            "a": null
-        },
-        {
             "$1": "2016-09-26T18:33:16.209Z",
             "a": 11
+        },
+        {
+            "$1": "2012/01/02",
+            "a": 16
         }
     ]
    },
