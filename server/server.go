@@ -27,6 +27,7 @@ import (
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/clustering"
 	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/distributed"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/execution"
 	"github.com/couchbase/query/ffdc"
@@ -1417,6 +1418,7 @@ func (this *Server) getPrepared(request Request, context *execution.Context) (*p
 	}
 
 	// Check if query should allow read from replica
+	// Read From Replica can only be allowed if the all query nodes in the cluster possess this capability
 
 	// Read from replica is by default what the Node Level Param is. But..
 	// If Node Level Param is False - cannot be overridden at request level
@@ -1435,6 +1437,11 @@ func (this *Server) getPrepared(request Request, context *execution.Context) (*p
 
 		if useReplica == value.NONE {
 			useReplica = value.FALSE
+		} else if useReplica == value.TRUE {
+			// check if cluster has readFromReplica enabled
+			if !distributed.RemoteAccess().Enabled(distributed.READ_FROM_REPLICA) {
+				useReplica = value.FALSE
+			}
 		}
 	}
 
