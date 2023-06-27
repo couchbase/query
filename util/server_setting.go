@@ -36,7 +36,7 @@ const (
 	N1QL_CBO                                          // 0x0000000010
 	N1QL_FLEXINDEX                                    // 0x0000000020
 	N1QL_CBO_NEW                                      // 0x0000000040
-	N1QL_PASSWORDLESS_BKT                             // 0x0000000080 MB-39484: N1QL_PASSWORDLESS_BKT is a retired feature bit. Must NOT be used.
+	N1QL_PASSWORDLESS_BKT                             // 0x0000000080 [MB-39484]: N1QL_PASSWORDLESS_BKT is a retired feature bit. Must NOT be used.
 	N1QL_READ_FROM_REPLICA_OFF                        // 0x0000000100 N1QL_READ_FROM_REPLICA_OFF is a retired feature bit. Must NOT be used.
 	N1QL_IMPLICIT_ARRAY_COVER                         // 0x0000000200
 	N1QL_JOIN_ENUMERATION                             // 0x0000000400
