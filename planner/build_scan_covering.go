@@ -96,6 +96,11 @@ func (this *builder) buildCoveringScan(idxs map[datastore.Index]*indexEntry,
 
 outer:
 	for index, entry := range indexes {
+		// do not use covering index scans for system indexes
+		if index.Type() == datastore.SYSTEM {
+			continue
+		}
+
 		if !useCBO && entry.arrayKey != nil && narrays < len(coveringEntries) {
 			continue
 		}
