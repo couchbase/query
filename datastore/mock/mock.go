@@ -77,7 +77,8 @@ func (s *store) NamespaceByName(name string) (p datastore.Namespace, e errors.Er
 	return
 }
 
-func (s *store) Authorize(*auth.Privileges, *auth.Credentials) errors.Error {
+func (s *store) Authorize(priv *auth.Privileges, creds *auth.Credentials) errors.Error {
+	creds.AuthenticatedUsers = []string{"dummy"}
 	return nil
 }
 

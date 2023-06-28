@@ -152,6 +152,10 @@ func (ci *queryContextImpl) DurationStyle() util.DurationStyle {
 	return util.DEFAULT
 }
 
+func (ci *queryContextImpl) FormatDuration(time.Duration) string {
+	return ""
+}
+
 func TestSystem(t *testing.T) {
 	// Use mock to test system; 2 namespaces with 5 keyspaces per namespace
 	m, err := mock.NewDatastore("mock:namespaces=2,keyspaces=5,items=5000")
