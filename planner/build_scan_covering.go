@@ -25,8 +25,8 @@ func (this *builder) buildCovering(indexes, unnestIndexes, flex map[datastore.In
 	searchSargables []*indexEntry, unnests []*algebra.Unnest) (
 	scan plan.SecondaryScan, sargLength int, err error) {
 
-	// covering turrned off or ANSI NEST
-	if this.cover == nil || node.IsAnsiNest() {
+	// covering turrned off or ANSI NEST, or system keyspace
+	if this.cover == nil || node.IsAnsiNest() || baseKeyspace.IsSystem() {
 		return
 	}
 
@@ -96,11 +96,6 @@ func (this *builder) buildCoveringScan(idxs map[datastore.Index]*indexEntry,
 
 outer:
 	for index, entry := range indexes {
-		// do not use covering index scans for system indexes
-		if index.Type() == datastore.SYSTEM {
-			continue
-		}
-
 		if !useCBO && entry.arrayKey != nil && narrays < len(coveringEntries) {
 			continue
 		}
