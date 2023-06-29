@@ -365,8 +365,14 @@ func optChooseIntersectScan(keyspace datastore.Keyspace, sargables map[datastore
 		if e.IsPushDownProperty(_PUSHDOWN_ORDER) {
 			icost.SetPdOrder()
 			hasPdOrder = true
+			if e.IsPushDownProperty(_PUSHDOWN_EXACTSPANS) {
+				icost.SetExactSpans()
+			}
 		} else if e.HasFlag(IE_HAS_EARLY_ORDER) {
 			icost.SetEarlyOrder()
+			if e.IsPushDownProperty(_PUSHDOWN_EXACTSPANS) {
+				icost.SetExactSpans()
+			}
 			hasEarlyOrder = true
 		}
 		indexes = append(indexes, icost)
@@ -385,17 +391,20 @@ func optChooseIntersectScan(keyspace datastore.Keyspace, sargables map[datastore
 		// choose the best one with early order
 		var bestIndex *base.IndexCost
 		for _, idx := range indexes {
-			if idx.HasEarlyOrder() {
-				if bestIndex == nil {
-					bestIndex = idx
-				} else if idx.Cardinality() < bestIndex.Cardinality() ||
-					(idx.Cardinality() == bestIndex.Cardinality() && idx.Cost() < bestIndex.Cost()) {
-					bestIndex = idx
-				}
+			if !idx.HasEarlyOrder() || !idx.HasExactSpans() {
+				continue
+			}
+			if bestIndex == nil {
+				bestIndex = idx
+			} else if idx.Cardinality() < bestIndex.Cardinality() ||
+				(idx.Cardinality() == bestIndex.Cardinality() && idx.Cost() < bestIndex.Cost()) {
+				bestIndex = idx
 			}
 		}
-		index := bestIndex.Index()
-		return map[datastore.Index]*indexEntry{index: sargables[index]}
+		if bestIndex != nil {
+			index := bestIndex.Index()
+			return map[datastore.Index]*indexEntry{index: sargables[index]}
+		}
 	}
 
 	if hasPdOrder && nTerms > 0 {
