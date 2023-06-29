@@ -1293,15 +1293,20 @@ func (this *builder) getIndexFilters(entry *indexEntry, node *algebra.KeyspaceTe
 				entry.SetFlags(IE_HAS_EARLY_ORDER, true)
 				if useCBO {
 					var sortCard float64
-					if cons {
-						sortCard = float64(nlimit + noffset)
+					if entry.IsPushDownProperty(_PUSHDOWN_EXACTSPANS) {
+						if cons {
+							sortCard = float64(nlimit + noffset)
+						} else {
+							// in case limit/offset is not constant, for
+							// costing purpose here assume half of the
+							// documents from the index scan are used for
+							// fetch
+							sortCard = 0.5 * entry.cardinality
+						}
+						if sortCard > entry.cardinality {
+							sortCard = entry.cardinality
+						}
 					} else {
-						// in case limit/offset is not constant, for costing
-						// purpose here assume half of the documents from
-						// the index scan are used for fetch
-						sortCard = 0.5 * entry.cardinality
-					}
-					if sortCard > entry.cardinality {
 						sortCard = entry.cardinality
 					}
 					fetchCost, _, _ := getFetchCost(baseKeyspace.Keyspace(), sortCard)
@@ -1320,8 +1325,10 @@ func (this *builder) getIndexFilters(entry *indexEntry, node *algebra.KeyspaceTe
 		skip := useSkipIndexKeys(index, this.context.IndexApiVersion())
 		chkOr := isOrPred && !entry.HasFlag(IE_OR_USE_FILTERS)
 		chkUnnest := entry.HasFlag(IE_ARRAYINDEXKEY_SARGABLE) && len(entry.unnestAliases) > 0
+		extraFltr := false
 		for _, fl := range filters {
 			if (fl.IsUnnest() && !chkUnnest) || fl.HasSubq() {
+				extraFltr = true
 				continue
 			}
 			fltrExpr := fl.FltrExpr()
@@ -1331,6 +1338,7 @@ func (this *builder) getIndexFilters(entry *indexEntry, node *algebra.KeyspaceTe
 			if chkOr || chkUnnest {
 				fltr := this.orGetIndexFilter(fltrExpr, entry.sargKeys, baseKeyspace, missing, skip)
 				if fltr == nil {
+					extraFltr = true
 					continue
 				} else if fltr != fltrExpr {
 					fltrExpr = fltr
@@ -1407,6 +1415,25 @@ func (this *builder) getIndexFilters(entry *indexEntry, node *algebra.KeyspaceTe
 						hasIndexJoinFilters = true
 						baseKeyspace.AddBFSource(joinKeyspace, index, self, other, fl)
 					}
+				}
+			} else {
+				extraFltr = true
+			}
+		}
+
+		if entry.HasFlag(IE_HAS_EARLY_ORDER) && extraFltr {
+			// if no _PUSHDOWN_EXACTSPANS and we have filters that is not
+			// "covered" by the index scan, skip early order since in this
+			// case we cannot pushdown LIMIT to the index scan, and there
+			// are extra filters that could potentially reduce the sort count
+			entry.UnsetFlags(IE_HAS_EARLY_ORDER)
+			entry.orderExprs = nil
+			if useCBO {
+				fetchCost, _, _ := getFetchCost(baseKeyspace.Keyspace(), entry.cardinality)
+				if fetchCost > 0.0 {
+					entry.fetchCost = fetchCost
+				} else {
+					useCBO = false
 				}
 			}
 		}

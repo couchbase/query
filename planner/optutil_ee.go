@@ -416,11 +416,17 @@ func optChooseIntersectScan(keyspace datastore.Keyspace, sargables map[datastore
 		if e.IsPushDownProperty(_PUSHDOWN_ORDER) {
 			icost.SetPdOrder()
 			hasPdOrder = true
+			if e.IsPushDownProperty(_PUSHDOWN_EXACTSPANS) {
+				icost.SetExactSpans()
+			}
 			if orderSelec <= 0.0 || selectivity < orderSelec {
 				orderSelec = selectivity
 			}
 		} else if e.HasFlag(IE_HAS_EARLY_ORDER) {
 			icost.SetEarlyOrder()
+			if e.IsPushDownProperty(_PUSHDOWN_EXACTSPANS) {
+				icost.SetExactSpans()
+			}
 			hasEarlyOrder = true
 			if orderSelec <= 0.0 || selectivity < orderSelec {
 				orderSelec = selectivity
@@ -454,12 +460,13 @@ func optChooseIntersectScan(keyspace datastore.Keyspace, sargables map[datastore
 		}
 	}
 
+	// pick an index scan with order if the index has _PUSHDOWN_EXACTSPANS
 	if hasPdOrder && hasEarlyOrder {
 		// choose the best among the indexes that provide order (pushdown or early)
 		var bestIndex *base.IndexCost
 		var bestCost float64
 		for _, idx := range indexes {
-			if !idx.HasPdOrder() && !idx.HasEarlyOrder() {
+			if (!idx.HasPdOrder() && !idx.HasEarlyOrder()) || !idx.HasExactSpans() {
 				continue
 			}
 			cost := idx.Cost()
@@ -479,23 +486,28 @@ func optChooseIntersectScan(keyspace datastore.Keyspace, sargables map[datastore
 				bestCost = cost
 			}
 		}
-		index := bestIndex.Index()
-		return map[datastore.Index]*indexEntry{index: sargables[index]}
+		if bestIndex != nil {
+			index := bestIndex.Index()
+			return map[datastore.Index]*indexEntry{index: sargables[index]}
+		}
 	} else if hasEarlyOrder {
 		// choose the best one with early order
 		var bestIndex *base.IndexCost
 		for _, idx := range indexes {
-			if idx.HasEarlyOrder() {
-				if bestIndex == nil {
-					bestIndex = idx
-				} else if idx.Cardinality() < bestIndex.Cardinality() ||
-					(idx.Cardinality() == bestIndex.Cardinality() && idx.Cost() < bestIndex.Cost()) {
-					bestIndex = idx
-				}
+			if !idx.HasEarlyOrder() || !idx.HasExactSpans() {
+				continue
+			}
+			if bestIndex == nil {
+				bestIndex = idx
+			} else if idx.Cardinality() < bestIndex.Cardinality() ||
+				(idx.Cardinality() == bestIndex.Cardinality() && idx.Cost() < bestIndex.Cost()) {
+				bestIndex = idx
 			}
 		}
-		index := bestIndex.Index()
-		return map[datastore.Index]*indexEntry{index: sargables[index]}
+		if bestIndex != nil {
+			index := bestIndex.Index()
+			return map[datastore.Index]*indexEntry{index: sargables[index]}
+		}
 	}
 
 	adjustIndexSelectivity(indexes, sargables, alias, advisorValidate, context)

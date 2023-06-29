@@ -17,6 +17,7 @@ type IdxProperty uint32
 const (
 	IDX_PD_ORDER IdxProperty = 1 << iota
 	IDX_EARLY_ORDER
+	IDX_EXACTSPANS
 )
 
 type IndexCost struct {
@@ -109,6 +110,14 @@ func (this *IndexCost) HasEarlyOrder() bool {
 
 func (this *IndexCost) SetEarlyOrder() {
 	this.idxProperty |= IDX_EARLY_ORDER
+}
+
+func (this *IndexCost) HasExactSpans() bool {
+	return (this.idxProperty & IDX_EXACTSPANS) != 0
+}
+
+func (this *IndexCost) SetExactSpans() {
+	this.idxProperty |= IDX_EXACTSPANS
 }
 
 func (this *IndexCost) SkipKeys() []bool {
