@@ -111,6 +111,8 @@ type SecondaryScan interface {
 
 	// get index pointer if single index used, nil if multiple indexes used
 	GetIndex() datastore.Index
+
+	Equals(interface{}) bool
 }
 
 func CopyOperators(ops []Operator) []Operator {

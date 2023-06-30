@@ -667,3 +667,10 @@ func (this *IndexScan3) UnmarshalJSON(body []byte) error {
 func (this *IndexScan3) verify(prepared *Prepared) bool {
 	return verifyIndex(this.index, this.indexer, verifyCovers(this.covers, this.keyspace), prepared)
 }
+
+func (this *IndexScan3) Equals(i interface{}) bool {
+	if is, ok := i.(*IndexScan3); ok {
+		return this.String() == is.String()
+	}
+	return false
+}

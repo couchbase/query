@@ -196,3 +196,10 @@ func (this *DistinctScan) UnmarshalJSON(body []byte) error {
 func (this *DistinctScan) verify(prepared *Prepared) bool {
 	return this.scan.verify(prepared)
 }
+
+func (this *DistinctScan) Equals(i interface{}) bool {
+	if ds, ok := i.(*DistinctScan); ok {
+		return this.String() == ds.String()
+	}
+	return false
+}

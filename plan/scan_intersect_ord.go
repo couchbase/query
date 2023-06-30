@@ -253,3 +253,21 @@ func (this *OrderedIntersectScan) verify(prepared *Prepared) bool {
 
 	return true
 }
+
+func (this *OrderedIntersectScan) Equals(i interface{}) bool {
+	if is, ok := i.(*OrderedIntersectScan); ok {
+		if len(this.scans) != len(is.scans) {
+			return false
+		}
+		for n := range this.scans {
+			if !this.scans[n].Equals(is.scans[n]) {
+				return false
+			}
+		}
+		if this.limit != nil && is.limit != nil {
+			return this.limit.EquivalentTo(is.limit)
+		}
+		return this.limit == is.limit
+	}
+	return false
+}

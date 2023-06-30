@@ -230,3 +230,10 @@ func (this *IndexCountScan2) UnmarshalJSON(body []byte) error {
 func (this *IndexCountScan2) verify(prepared *Prepared) bool {
 	return verifyIndex(this.index, this.indexer, nil, prepared)
 }
+
+func (this *IndexCountScan2) Equals(i interface{}) bool {
+	if cs, ok := i.(*IndexCountScan2); ok {
+		return this.String() == cs.String()
+	}
+	return false
+}

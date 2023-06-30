@@ -139,13 +139,15 @@ func (this *UnionScan) SetCovers(covers expression.Covers) {
 
 func (this *UnionScan) Streamline() SecondaryScan {
 	scans := make([]SecondaryScan, 0, len(this.scans))
-	hash := _STRING_SCANS_POOL.Get()
-	defer _STRING_SCANS_POOL.Put(hash)
 
 	for _, scan := range this.scans {
-		s := scan.String()
-		if _, ok := hash[s]; !ok {
-			hash[s] = true
+		found := false
+		for _, s := range scans {
+			if scan.Equals(s) {
+				found = true
+			}
+		}
+		if !found {
 			scans = append(scans, scan)
 		}
 	}
@@ -272,6 +274,42 @@ func (this *UnionScan) verify(prepared *Prepared) bool {
 	}
 
 	return true
+}
+
+func (this *UnionScan) Equals(i interface{}) bool {
+	if us, ok := i.(*UnionScan); ok {
+		if len(this.scans) != len(us.scans) {
+			return false
+		}
+		for _, s := range this.scans {
+			found := false
+			for _, ss := range us.scans {
+				if s.Equals(ss) {
+					found = true
+					break
+				}
+			}
+			if !found {
+				return false
+			}
+		}
+		if this.limit != nil && us.limit != nil {
+			if !this.limit.EquivalentTo(us.limit) {
+				return false
+			}
+		} else if this.limit != us.limit {
+			return false
+		}
+		if this.offset != nil && us.offset != nil {
+			if !this.offset.EquivalentTo(us.offset) {
+				return false
+			}
+		} else if this.offset != us.offset {
+			return false
+		}
+		return true
+	}
+	return false
 }
 
 var _STRING_SCANS_POOL = util.NewStringBoolPool(16)

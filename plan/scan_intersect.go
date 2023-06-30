@@ -266,3 +266,28 @@ func (this *IntersectScan) verify(prepared *Prepared) bool {
 
 	return true
 }
+
+func (this *IntersectScan) Equals(i interface{}) bool {
+	if is, ok := i.(*IntersectScan); ok {
+		if len(this.scans) != len(is.scans) {
+			return false
+		}
+		for _, s := range this.scans {
+			found := false
+			for _, ss := range is.scans {
+				if s.Equals(ss) {
+					found = true
+					break
+				}
+			}
+			if !found {
+				return false
+			}
+		}
+		if this.limit != nil && is.limit != nil {
+			return this.limit.EquivalentTo(is.limit)
+		}
+		return this.limit == is.limit
+	}
+	return false
+}

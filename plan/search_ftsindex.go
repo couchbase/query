@@ -287,6 +287,13 @@ func (this *IndexFtsSearch) verify(prepared *Prepared) bool {
 	return verifyIndex(this.index, this.indexer, verifyCovers(this.covers, this.keyspace), prepared)
 }
 
+func (this *IndexFtsSearch) Equals(i interface{}) bool {
+	if fs, ok := i.(*IndexFtsSearch); ok {
+		return this.String() == fs.String()
+	}
+	return false
+}
+
 type FTSSearchInfo struct {
 	field   expression.Expression
 	query   expression.Expression
