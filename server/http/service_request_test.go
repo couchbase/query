@@ -64,7 +64,7 @@ func init() {
 		os.Exit(1)
 	}
 	logging.SetLogger(logger)
-	server.RequestsInit(1000, 4000)
+	server.RequestsInit(1000, 4000, 10000)
 	prepareds.PreparedsInit(1024)
 	test_server = newTestServer()
 	prepareds.PreparedsReprepareInit(test_server.query_server.Datastore(), test_server.query_server.Systemstore())

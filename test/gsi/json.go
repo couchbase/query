@@ -220,7 +220,7 @@ func (this *scanConfigImpl) SetScanConsistency(consistency datastore.ScanConsist
 }
 
 func (this *MockServer) doStats(request *MockQuery) {
-	request.CompleteRequest(0, 0, 0, request.resultCount, 0, 0, nil, this.server)
+	request.CompleteRequest(0, 0, 0, request.resultCount, 0, 0, nil, this.server, 0)
 }
 
 func (this *MockServer) getTxId(group int) string {
@@ -442,7 +442,7 @@ func Start(site, pool, namespace string, setGlobals bool) *MockServer {
 	functions.FunctionsInit(1024)
 
 	// Start the completed requests log - keep it small and busy
-	server.RequestsInit(0, 8)
+	server.RequestsInit(0, 8, 10)
 
 	// Start the dictionary cache
 	server.InitDictionaryCache(1024)

@@ -1881,6 +1881,9 @@ func completedRequestWorkHorse(request *server.RequestLogEntry, profiling bool, 
 	if request.ThrottleTime > time.Duration(0) {
 		reqMap["throttleTime"] = util.FormatDuration(request.ThrottleTime, durStyle)
 	}
+	if request.Qualifier != "" {
+		reqMap["~qualifier"] = request.Qualifier
+	}
 	return reqMap
 }
 

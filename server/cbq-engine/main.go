@@ -79,6 +79,7 @@ const (
 	_DEF_NODE_QUOTA_VAL_PERCENT = 67
 	_DEF_CE_MAXCPUS             = 4
 	_DEF_REQUEST_ERROR_LIMIT    = errors.DEFAULT_REQUEST_ERROR_LIMIT
+	_DEF_SEQSCAN_KEYS           = 10000
 )
 
 var DATASTORE = flag.String("datastore", "", "Datastore address (http://URL or dir:PATH or mock:)")
@@ -325,7 +326,7 @@ func main() {
 			*COMPLETED_THRESHOLD = _DEF_COMPLETED_THRESHOLD
 		}
 	}
-	server_package.RequestsInit(*COMPLETED_THRESHOLD, *COMPLETED_LIMIT)
+	server_package.RequestsInit(*COMPLETED_THRESHOLD, *COMPLETED_LIMIT, _DEF_SEQSCAN_KEYS)
 
 	// Initialized the prepared statement cache
 	if *PREPARED_LIMIT <= 0 {

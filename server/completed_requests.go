@@ -87,6 +87,7 @@ type RequestLogEntry struct {
 	UserAgent                string
 	Tag                      string
 	Tenant                   string
+	Qualifier                string
 }
 
 type qualifier interface {
@@ -115,9 +116,26 @@ type RequestLog struct {
 
 var requestLog = &RequestLog{}
 
+var qualTypeMap = map[string]func(interface{}) (qualifier, errors.Error){
+	"threshold":    newTimeThreshold,
+	"aborted":      newAborted,
+	"error":        newReqError,
+	"errors":       newReqErrorCount,
+	"user":         newUser,
+	"client":       newClient,
+	"context":      newContext,
+	"results":      newResults,
+	"size":         newSize,
+	"mutations":    newMutations,
+	"counts":       newCounts,
+	"statement":    newStatement,
+	"plan":         newPlanElement,
+	"seqscan_keys": newSeqScanKeys,
+}
+
 // init completed requests
 
-func RequestsInit(threshold int, limit int) {
+func RequestsInit(threshold int, limit int, seqscan_keys int) {
 	requestLog.Lock()
 	defer requestLog.Unlock()
 
@@ -130,6 +148,12 @@ func RequestsInit(threshold int, limit int) {
 	aq, aErr := newAborted(nil)
 	if aErr == nil {
 		requestLog.qualifiers = append(requestLog.qualifiers, aq)
+	}
+	if seqscan_keys > 0 {
+		sq, sErr := newSeqScanKeys(seqscan_keys)
+		if sErr == nil {
+			requestLog.qualifiers = append(requestLog.qualifiers, sq)
+		}
 	}
 	requestLog.taggedQualifiers = make(map[string][]qualifier)
 
@@ -256,36 +280,11 @@ func RequestsCheckQualifier(name string, op RequestsOp, condition interface{}, t
 	if op != CMP_OP_ADD {
 		return errors.NewCompletedQualifierNotFound(name, condition)
 	}
-	switch name {
-	case "threshold":
-		_, err = newTimeThreshold(condition)
-	case "aborted":
-		_, err = newAborted(condition)
-	case "error":
-		_, err = newReqError(condition)
-	case "errors":
-		_, err = newReqErrorCount(condition)
-	case "user":
-		_, err = newUser(condition)
-	case "client":
-		_, err = newClient(condition)
-	case "context":
-		_, err = newContext(condition)
-	case "results":
-		_, err = newResults(condition)
-	case "size":
-		_, err = newSize(condition)
-	case "mutations":
-		_, err = newMutations(condition)
-	case "counts":
-		_, err = newCounts(condition)
-	case "statement":
-		_, err = newStatement(condition)
-	case "plan":
-		_, err = newPlanElement(condition)
-	default:
+	constr, ok := qualTypeMap[name]
+	if !ok {
 		return errors.NewCompletedQualifierUnknown(name)
 	}
+	_, err = constr(condition)
 	return err
 }
 
@@ -308,36 +307,11 @@ func RequestsAddQualifier(name string, condition interface{}, tag string) errors
 			return errors.NewCompletedQualifierExists(name)
 		}
 	}
-	switch name {
-	case "threshold":
-		q, err = newTimeThreshold(condition)
-	case "aborted":
-		q, err = newAborted(condition)
-	case "error":
-		q, err = newReqError(condition)
-	case "errors":
-		q, err = newReqErrorCount(condition)
-	case "user":
-		q, err = newUser(condition)
-	case "client":
-		q, err = newClient(condition)
-	case "context":
-		q, err = newContext(condition)
-	case "results":
-		q, err = newResults(condition)
-	case "size":
-		q, err = newSize(condition)
-	case "mutations":
-		q, err = newMutations(condition)
-	case "counts":
-		q, err = newCounts(condition)
-	case "statement":
-		q, err = newStatement(condition)
-	case "plan":
-		q, err = newPlanElement(condition)
-	default:
+	constr, ok := qualTypeMap[name]
+	if !ok {
 		return errors.NewCompletedQualifierUnknown(name)
 	}
+	q, err = constr(condition)
 	if err == nil && q != nil {
 		requestLog.setQualList(append(quals, q), tag)
 	}
@@ -368,12 +342,11 @@ func RequestsUpdateQualifier(name string, condition interface{}, tag string) err
 	if iq < 0 {
 		return errors.NewCompletedQualifierNotFound(name, "")
 	}
-	switch name {
-	case "threshold":
-		nq, err = newTimeThreshold(condition)
-	default:
+	constr, ok := qualTypeMap[name]
+	if !ok {
 		return errors.NewCompletedQualifierUnknown(name)
 	}
+	nq, err = constr(condition)
 	if err == nil && nq != nil {
 		quals[iq] = nq
 		requestLog.setQualList(quals, tag)
@@ -516,7 +489,7 @@ func RequestsForeach(nonBlocking func(string, *RequestLogEntry) bool, blocking f
 
 func LogRequest(request_time, service_time, transactionElapsedTime time.Duration,
 	result_count int, result_size int, error_count int, req *http.Request,
-	request *BaseRequest, server *Server) {
+	request *BaseRequest, server *Server, seq_scan_keys int64) {
 
 	// negative limit means no upper bound (handled in cache)
 	// zero limit means log nothing (handled here to avoid time wasting in cache)
@@ -529,6 +502,7 @@ func LogRequest(request_time, service_time, transactionElapsedTime time.Duration
 	request.resultSize = int64(result_size)
 	request.serviceDuration = service_time
 	request.totalDuration = request_time
+	request.seqScanKeys = seq_scan_keys
 	requestLog.RLock()
 	defer requestLog.RUnlock()
 
@@ -554,10 +528,12 @@ func LogRequest(request_time, service_time, transactionElapsedTime time.Duration
 
 	// finally do the untagged
 	// apply all the qualifiers until one is satisfied
+	qualifier := ""
 	if !doLog {
 		for _, q := range requestLog.qualifiers {
 			doLog = q.evaluate(request, req)
 			if doLog {
+				qualifier = q.name()
 				break
 			}
 		}
@@ -673,6 +649,9 @@ func LogRequest(request_time, service_time, transactionElapsedTime time.Duration
 	}
 	re.ThrottleTime = request.ThrottleTime()
 	re.CpuTime = request.CpuTime()
+	if qualifier != "" {
+		re.Qualifier = qualifier
+	}
 
 	requestLog.cache.Add(re, id, nil)
 	for _, h := range requestLog.handlers {
@@ -695,7 +674,7 @@ type timeThreshold struct {
 	threshold time.Duration
 }
 
-func newTimeThreshold(c interface{}) (*timeThreshold, errors.Error) {
+func newTimeThreshold(c interface{}) (qualifier, errors.Error) {
 	switch c.(type) {
 	case int:
 		return &timeThreshold{threshold: time.Duration(c.(int))}, nil
@@ -762,7 +741,7 @@ type aborted struct {
 	// run along, nothing to see here
 }
 
-func newAborted(c interface{}) (*aborted, errors.Error) {
+func newAborted(c interface{}) (qualifier, errors.Error) {
 	return &aborted{}, nil
 }
 
@@ -795,7 +774,7 @@ type reqError struct {
 	errCode int
 }
 
-func newReqError(c interface{}) (*reqError, errors.Error) {
+func newReqError(c interface{}) (qualifier, errors.Error) {
 	switch c.(type) {
 	case int:
 		return &reqError{errCode: c.(int)}, nil
@@ -845,7 +824,7 @@ type user struct {
 	id string
 }
 
-func newUser(c interface{}) (*user, errors.Error) {
+func newUser(c interface{}) (qualifier, errors.Error) {
 	switch c.(type) {
 	case string:
 		return &user{id: c.(string)}, nil
@@ -910,7 +889,7 @@ type client struct {
 	address string
 }
 
-func newClient(c interface{}) (*client, errors.Error) {
+func newClient(c interface{}) (qualifier, errors.Error) {
 	switch c.(type) {
 	case string:
 		return &client{address: c.(string)}, nil
@@ -954,7 +933,7 @@ type context struct {
 	id string
 }
 
-func newContext(c interface{}) (*context, errors.Error) {
+func newContext(c interface{}) (qualifier, errors.Error) {
 	switch c.(type) {
 	case string:
 		return &context{id: c.(string)}, nil
@@ -995,7 +974,7 @@ type results struct {
 	count int64
 }
 
-func newResults(c interface{}) (*results, errors.Error) {
+func newResults(c interface{}) (qualifier, errors.Error) {
 	switch c.(type) {
 	case int:
 		return &results{count: int64(c.(int))}, nil
@@ -1046,7 +1025,7 @@ type mutations struct {
 	count int64
 }
 
-func newMutations(c interface{}) (*mutations, errors.Error) {
+func newMutations(c interface{}) (qualifier, errors.Error) {
 	switch c.(type) {
 	case int:
 		return &mutations{count: int64(c.(int))}, nil
@@ -1097,7 +1076,7 @@ type size struct {
 	size int64
 }
 
-func newSize(c interface{}) (*size, errors.Error) {
+func newSize(c interface{}) (qualifier, errors.Error) {
 	switch c.(type) {
 	case int:
 		return &size{size: int64(c.(int))}, nil
@@ -1148,7 +1127,7 @@ type counts struct {
 	count int64
 }
 
-func newCounts(c interface{}) (*counts, errors.Error) {
+func newCounts(c interface{}) (qualifier, errors.Error) {
 	switch c.(type) {
 	case int:
 		return &counts{count: int64(c.(int))}, nil
@@ -1211,7 +1190,7 @@ type statement struct {
 	like    string
 }
 
-func newStatement(c interface{}) (*statement, errors.Error) {
+func newStatement(c interface{}) (qualifier, errors.Error) {
 	switch c := c.(type) {
 	case string:
 		re, _, err := expression.LikeCompile(c, '\\')
@@ -1324,7 +1303,7 @@ type plan_element struct {
 	criteria elemfilters
 }
 
-func newPlanElement(c interface{}) (*plan_element, errors.Error) {
+func newPlanElement(c interface{}) (qualifier, errors.Error) {
 	switch c := c.(type) {
 	case map[string]interface{}:
 		f := makeMapFilters(c)
@@ -1489,7 +1468,7 @@ type reqErrorCount struct {
 	count int
 }
 
-func newReqErrorCount(c interface{}) (*reqErrorCount, errors.Error) {
+func newReqErrorCount(c interface{}) (qualifier, errors.Error) {
 	switch c := c.(type) {
 	case int:
 		if c >= 0 {
@@ -1508,7 +1487,7 @@ func (this *reqErrorCount) name() string {
 }
 
 func (this *reqErrorCount) unique() bool {
-	return false
+	return true
 }
 
 func (this *reqErrorCount) condition() interface{} {
@@ -1531,6 +1510,58 @@ func (this *reqErrorCount) checkCondition(c interface{}) errors.Error {
 
 func (this *reqErrorCount) evaluate(request *BaseRequest, req *http.Request) bool {
 	if request.GetErrorCount() >= this.count {
+		return true
+	}
+	return false
+}
+
+// 14- sequential scan key count (seqscan_count)
+type seqScanKeys struct {
+	count int64
+}
+
+func newSeqScanKeys(c interface{}) (qualifier, errors.Error) {
+	switch c := c.(type) {
+	case int:
+		if c >= 0 {
+			return &seqScanKeys{count: int64(c)}, nil
+		}
+	case int64:
+		if c >= 0 {
+			return &seqScanKeys{count: c}, nil
+		}
+	}
+	return nil, errors.NewCompletedQualifierInvalidArgument("seqscan_keys", c)
+}
+
+func (this *seqScanKeys) name() string {
+	return "seqscan_keys"
+}
+
+func (this *seqScanKeys) unique() bool {
+	return true
+}
+
+func (this *seqScanKeys) condition() interface{} {
+	return this.count
+}
+
+func (this *seqScanKeys) isCondition(c interface{}) bool {
+	switch c := c.(type) {
+	case int:
+		return int64(c) == this.count
+	case int64:
+		return c == this.count
+	}
+	return false
+}
+
+func (this *seqScanKeys) checkCondition(c interface{}) errors.Error {
+	return nil
+}
+
+func (this *seqScanKeys) evaluate(request *BaseRequest, req *http.Request) bool {
+	if request.seqScanKeys >= this.count {
 		return true
 	}
 	return false

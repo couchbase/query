@@ -515,8 +515,16 @@ func reportChangedValues(prev map[string]interface{}, current map[string]interfa
 
 					extra = util.DescribeChangedFeatures(prevVal, currVal)
 				} else if k == "completed-threshold" {
-					p = p.(time.Duration) * time.Millisecond
-					v = v.(time.Duration) * time.Millisecond
+					if p == nil {
+						p = "nil"
+					} else {
+						p = p.(time.Duration) * time.Millisecond
+					}
+					if v == nil {
+						v = "nil"
+					} else {
+						v = v.(time.Duration) * time.Millisecond
+					}
 				}
 
 				if !same {

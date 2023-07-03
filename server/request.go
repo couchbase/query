@@ -380,6 +380,7 @@ type BaseRequest struct {
 	throttleTime         time.Duration
 	logLevel             logging.Level
 	durationStyle        util.DurationStyle
+	seqScanKeys          int64
 }
 
 type requestIDImpl struct {
@@ -820,6 +821,10 @@ func (this *BaseRequest) AddPhaseCount(p execution.Phases, c uint64) {
 	atomic.AddUint64(&this.phaseStats[p].count, c)
 }
 
+func (this *BaseRequest) PhaseCount(p execution.Phases) uint64 {
+	return uint64(this.phaseStats[p].count)
+}
+
 func (this *BaseRequest) FmtPhaseCounts() map[string]interface{} {
 	var p map[string]interface{} = nil
 
@@ -1254,14 +1259,14 @@ func (this *BaseRequest) release() {
 // this logs the request if needed and takes any other action required to
 // put this request to rest
 func (this *BaseRequest) CompleteRequest(requestTime, serviceTime, transaction_time time.Duration,
-	resultCount int, resultSize int, errorCount int, req *http.Request, server *Server) {
+	resultCount int, resultSize int, errorCount int, req *http.Request, server *Server, seqScanCount int64) {
 
 	if this.timer != nil {
 		this.timer.Stop()
 		this.timer = nil
 	}
 	LogRequest(requestTime, serviceTime, transaction_time, resultCount,
-		resultSize, errorCount, req, this, server)
+		resultSize, errorCount, req, this, server, seqScanCount)
 
 	// Request Profiling - signal that request has completed and
 	// resources can be pooled / released as necessary

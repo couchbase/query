@@ -165,7 +165,7 @@ func (this *scanConfigImpl) ScanVectorSource() timestamp.ScanVectorSource {
 }
 
 func (this *MockServer) doStats(request *MockQuery) {
-	request.CompleteRequest(0, 0, 0, request.resultCount, 0, 0, nil, this.server)
+	request.CompleteRequest(0, 0, 0, request.resultCount, 0, 0, nil, this.server, 0)
 }
 
 var _ALL_USERS = auth.Credentials{
@@ -239,7 +239,7 @@ func Start(site, pool, namespace string) *MockServer {
 	}
 
 	// Start the completed requests log - keep it small and busy
-	server.RequestsInit(0, 8)
+	server.RequestsInit(0, 8, 10)
 
 	// Start the prepared statement cache
 	prepareds.PreparedsInit(1024)

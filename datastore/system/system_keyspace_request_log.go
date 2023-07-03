@@ -251,6 +251,9 @@ func (b *requestLogKeyspace) Fetch(keys []string, keysMap map[string]value.Annot
 					}
 					item.SetField("errors", errors)
 				}
+				if entry.Qualifier != "" {
+					item.SetField("~qualifier", entry.Qualifier)
+				}
 
 				meta := item.NewMeta()
 				meta["keyspace"] = b.fullName

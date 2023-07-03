@@ -138,7 +138,7 @@ func NewCompletedQualifierNotFound(what string, cond interface{}) Error {
 
 func NewCompletedQualifierNotUnique(what string) Error {
 	return &err{level: EXCEPTION, ICode: E_COMPLETED_QUALIFIER_NOT_UNIQUE, IKey: "admin.accounting.completed.not_unique",
-		InternalMsg: "Completed requests qualifier can only be deployed once: " + what, InternalCaller: CallerN(1)}
+		InternalMsg: "Non-unique completed requests qualifier '" + what + "' cannot be updated.", InternalCaller: CallerN(1)}
 }
 
 func NewCompletedQualifierInvalidArgument(what string, cond interface{}) Error {
