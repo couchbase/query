@@ -30,7 +30,7 @@ const (
 	DEF_LOAD_FACTOR = 35               // default load factor above 30% so that at start no nodes will be added
 
 	_FFDC_MEM_THRESH = 80                                     // FFDC memory use threshold
-	_FFDC_MEM_RATE   = 10                                     // FFDC memory increase rate threshold
+	_FFDC_MEM_RATE   = 20                                     // FFDC memory increase rate threshold
 	_SAMPLES_2_HOURS = int((time.Hour * 2) / _STATS_INTRVL)   // number of samples for determining average memory use
 	_SAMPLES_MIN     = int((time.Minute * 5) / _STATS_INTRVL) // minimum number of samples for average memory use
 )
@@ -98,10 +98,8 @@ func (this *runningAverage) count() int {
 }
 
 func (this *runningAverage) record(v uint64) {
-	i := this.index & len(this.samples)
-	if this.index >= len(this.samples) {
-		this.total -= this.samples[i]
-	}
+	i := this.index % len(this.samples)
+	this.total -= this.samples[i] // zero before wrapping
 	this.samples[i] = v
 	this.total += v
 	this.index++
@@ -214,9 +212,9 @@ func (c *statsCollector) runCollectStats() {
 		}
 
 		averageMemoryUsage.record(mu)
-		delta := mu - averageMemoryUsage.value()
+		delta := int64(mu) - int64(averageMemoryUsage.value())
 		if delta > _FFDC_MEM_RATE && averageMemoryUsage.count() > _SAMPLES_MIN {
-			logging.Warnf("Memory growth rate threshold exceeded: %v%% > 10%%", delta, _FFDC_MEM_RATE)
+			logging.Warnf("Memory growth rate threshold exceeded: %v%% > %v%%", delta, _FFDC_MEM_RATE)
 			if trigger {
 				ffdc.Capture(ffdc.MemoryRate)
 				trigger = false
