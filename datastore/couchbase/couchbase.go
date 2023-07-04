@@ -1022,11 +1022,13 @@ func (p *namespace) keyspaceByName(name string) (*keyspace, errors.Error) {
 		entry.cbKeyspace = nil
 	}
 	entry.lastUse = util.Now()
-	p.lock.Unlock()
 
 	// 2) serialize the loading by locking the entry
 	entry.Lock()
-	defer entry.Unlock()
+	defer func() {
+		p.lock.Unlock()
+		entry.Unlock()
+	}()
 
 	// 3) check if somebody has done the job for us in the interim
 	if entry.cbKeyspace != nil {
@@ -1035,7 +1037,9 @@ func (p *namespace) keyspaceByName(name string) (*keyspace, errors.Error) {
 
 	// 4) if previous loads resulted in errors, throttle requests
 	if entry.errCount > 0 && util.Since(entry.lastUse) < _THROTTLING_TIMEOUT {
+		p.lock.Unlock()
 		time.Sleep(_THROTTLING_TIMEOUT)
+		p.lock.Lock()
 	}
 
 	// 5) try the loading
@@ -1249,12 +1253,18 @@ func (p *namespace) reload2(newpool *cb.Pool) {
 			// and release old one
 			ks.cbKeyspace.cbbucket.Close()
 			ks.cbKeyspace.cbbucket = newbucket
-			newbucket.RunBucketUpdater2(p.KeyspaceUpdateCallback, p.KeyspaceDeleteCallback)
+			if !newbucket.RunBucketUpdater2(p.KeyspaceUpdateCallback, p.KeyspaceDeleteCallback) {
+				logging.Errorf("[%p] Bucket '%s' is closed.", newbucket, newbucket.Name)
+				delete(p.keyspaceCache, name)
+			}
 		} else {
 			// we are reloading, so close old and set new bucket
 			ks.cbKeyspace.cbbucket.Close()
 			ks.cbKeyspace.cbbucket = newbucket
-			newbucket.RunBucketUpdater2(p.KeyspaceUpdateCallback, p.KeyspaceDeleteCallback)
+			if !newbucket.RunBucketUpdater2(p.KeyspaceUpdateCallback, p.KeyspaceDeleteCallback) {
+				logging.Errorf("[%p] Bucket '%s' is closed.", newbucket, newbucket.Name)
+				delete(p.keyspaceCache, name)
+			}
 		}
 
 		// Not deleted. Check if GSI indexer is available
@@ -1323,7 +1333,9 @@ func newKeyspace(p *namespace, name string) (*keyspace, errors.Error) {
 		// primitives/couchbase caches the buckets
 		// to be sure no such bucket exists right now
 		// we trigger a refresh
+		p.lock.Unlock()
 		p.reload()
+		p.lock.Lock()
 		cbNamespace = p.getPool()
 
 		// and then check one more time
@@ -1342,6 +1354,10 @@ func newKeyspace(p *namespace, name string) (*keyspace, errors.Error) {
 	connSecConfig := p.store.connSecConfig
 	if connSecConfig == nil {
 		return nil, errors.NewCbSecurityConfigNotProvided(fullName(p.name, name))
+	}
+
+	if cbbucket.IsClosed() {
+		return nil, errors.NewCbBucketClosedError(fullName(p.name, name))
 	}
 
 	rv := &keyspace{
@@ -1371,10 +1387,12 @@ func newKeyspace(p *namespace, name string) (*keyspace, errors.Error) {
 		rv.defaultCollection = rv
 	}
 
-	logging.Infof("Loaded New Bucket %s", name)
-
 	// Create a bucket updater that will keep the couchbase bucket fresh.
-	cbbucket.RunBucketUpdater2(p.KeyspaceUpdateCallback, p.KeyspaceDeleteCallback)
+	if !cbbucket.RunBucketUpdater2(p.KeyspaceUpdateCallback, p.KeyspaceDeleteCallback) {
+		return nil, errors.NewCbBucketClosedError(fullName(p.name, name))
+	} else {
+		logging.Infof("Loaded Bucket %s", name)
+	}
 
 	return rv, nil
 }

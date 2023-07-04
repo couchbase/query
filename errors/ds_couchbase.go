@@ -34,6 +34,11 @@ func NewCbKeyspaceNotFoundError(e error, msg string) Error {
 		InternalMsg: "Keyspace not found in CB datastore: " + msg, InternalCaller: CallerN(1)}
 }
 
+func NewCbBucketClosedError(msg string) Error {
+	return &err{level: EXCEPTION, ICode: E_CB_BUCKET_CLOSED, IKey: "datastore.couchbase.bucket_closed",
+		InternalMsg: "Bucket is closed: " + msg, InternalCaller: CallerN(1)}
+}
+
 func NewCbPrimaryIndexNotFoundError(e error, msg string) Error {
 	return &err{level: EXCEPTION, ICode: E_CB_PRIMARY_INDEX_NOT_FOUND, IKey: "datastore.couchbase.primary_idx_not_found", ICause: e,
 		InternalMsg: "Primary Index not found " + msg, InternalCaller: CallerN(1)}

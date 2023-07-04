@@ -341,6 +341,7 @@ const (
 	E_DML_MC                                  ErrorCode = 12034
 	E_CB_NOT_PRIMARY_INDEX                    ErrorCode = 12035
 	E_DML_INSERT                              ErrorCode = 12036
+	E_CB_BUCKET_CLOSED                        ErrorCode = 12041
 	_RETIRED_13010                                      = 13010
 	_RETIRED_13011                                      = 13011
 	E_DATASTORE_CLUSTER                       ErrorCode = 13012

@@ -275,6 +275,10 @@ type Bucket struct {
 	updater io.ReadCloser
 }
 
+func (b *Bucket) IsClosed() bool {
+	return b.closed
+}
+
 // PoolServices is all the bucket-independent services in a pool
 type PoolServices struct {
 	Rev          int             `json:"rev"`
