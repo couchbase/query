@@ -1522,7 +1522,9 @@ func newKeyspace(p *namespace, name string) (*keyspace, errors.Error) {
 			return nil, errors.NewCbKeyspaceNotFoundError(err, fullName(p.name, name))
 		}
 		// it does, so we just need to refresh the primitives cache
+		p.lock.Unlock()
 		p.reload()
+		p.lock.Lock()
 		cbNamespace = p.getPool()
 
 		// and then check one more time
