@@ -154,7 +154,7 @@ func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 				frCost = OPT_COST_NOT_AVAIL
 			}
 		}
-		order := plan.NewOrder(stmtOrder, offset, limit, cost, cardinality, size, frCost)
+		order := plan.NewOrder(stmtOrder, offset, limit, cost, cardinality, size, frCost, true)
 		children = append(children, order)
 		lastOp = order
 	}

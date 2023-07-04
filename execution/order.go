@@ -75,6 +75,9 @@ func (this *Order) processItem(item value.AnnotatedValue, context *Context) bool
 		this.releaseValues()
 		this.values = values
 	}
+	if this.plan.ClipValues() {
+		this.makeMinimal(item, context)
+	}
 
 	this.values = append(this.values, item)
 	return true
@@ -90,6 +93,11 @@ func (this *Order) setupTerms(context *Context) {
 	}
 }
 
+func (this *Order) beforeItems(context *Context, item value.Value) bool {
+	this.setupTerms(context)
+	return true
+}
+
 func (this *Order) afterItems(context *Context) {
 	defer this.releaseValues()
 	defer func() {
@@ -102,7 +110,6 @@ func (this *Order) afterItems(context *Context) {
 		return
 	}
 
-	this.setupTerms(context)
 	sort.Sort(this)
 
 	context.SetSortCount(uint64(this.Len()))
@@ -127,6 +134,38 @@ func (this *Order) releaseValues() {
 func (this *Order) resetCachedValues(av value.AnnotatedValue) {
 	for _, term := range this.terms {
 		av.RemoveAttachment(term.term)
+	}
+}
+
+func (this *Order) makeMinimal(item value.AnnotatedValue, context *Context) {
+	var sz uint64
+	useQuota := context.UseRequestQuota()
+	if useQuota {
+		sz = item.Size()
+	}
+	origAtt := item.Attachments()
+	item.ResetAttachments()
+	if aggs, ok := origAtt["aggregates"]; ok && aggs != nil {
+		item.SetAttachment("aggregates", aggs)
+	}
+	for i, term := range this.plan.Terms() {
+		_, err := getOriginalCachedValue(item, term.Expression(), this.terms[i].term, this.context)
+		if err != nil {
+			for k, v := range origAtt {
+				item.SetAttachment(k, v)
+			}
+			return
+		}
+	}
+	origAtt = nil
+	item.ResetCovers(nil)
+	item.ResetMeta()
+	item.ResetOriginal()
+	if useQuota {
+		sz -= item.Size()
+		if sz != 0 {
+			context.ReleaseValueSize(sz)
+		}
 	}
 }
 

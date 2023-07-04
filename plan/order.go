@@ -20,6 +20,7 @@ import (
 
 const (
 	_EARLY_ORDER = uint32(1) << iota
+	_CLIP_VALUES
 )
 
 type Order struct {
@@ -34,11 +35,14 @@ type Order struct {
 const _FALLBACK_NUM = 64 * 1024
 
 func NewOrder(order *algebra.Order, offset *Offset, limit *Limit, cost, cardinality float64,
-	size int64, frCost float64) *Order {
+	size int64, frCost float64, clipValues bool) *Order {
 	rv := &Order{
 		terms:  order.Terms(),
 		offset: offset,
 		limit:  limit,
+	}
+	if clipValues {
+		rv.flags |= _CLIP_VALUES
 	}
 	setOptEstimate(&rv.optEstimate, cost, cardinality, size, frCost)
 	return rv
@@ -215,6 +219,10 @@ func (this *Order) Offset() *Offset {
 
 func (this *Order) Limit() *Limit {
 	return this.limit
+}
+
+func (this *Order) ClipValues() bool {
+	return (this.flags & _CLIP_VALUES) != 0
 }
 
 func OrderFallbackNum() int {
