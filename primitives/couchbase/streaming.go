@@ -196,32 +196,36 @@ func doHTTPRequestForUpdate(req *http.Request) (*http.Response, error) {
 	return res, err
 }
 
-func (b *Bucket) RunBucketUpdater2(streamingFn StreamingFn, notify NotifyFn) {
+func (b *Bucket) RunBucketUpdater2(streamingFn StreamingFn, notify NotifyFn) bool {
 
 	b.Lock()
+	rv := !b.closed
 	if b.updater != nil {
 		b.updater.Close()
 		b.updater = nil
 	}
 	b.Unlock()
-	go func() {
-		err := b.UpdateBucket2(streamingFn)
-		if err != nil {
-			if notify != nil {
-				name := b.GetName()
-				notify(name, err)
+	if rv {
+		go func() {
+			err := b.UpdateBucket2(streamingFn)
+			if err != nil {
+				if notify != nil {
+					name := b.GetName()
+					notify(name, err)
 
-				// MB-49772 get rid of the deleted bucket
-				p := b.pool
-				b.Close()
-				p.Lock()
-				p.BucketMap[name] = nil
-				delete(p.BucketMap, name)
-				p.Unlock()
+					// MB-49772 get rid of the deleted bucket
+					p := b.pool
+					b.Close()
+					p.Lock()
+					p.BucketMap[name] = nil
+					delete(p.BucketMap, name)
+					p.Unlock()
+				}
+				logging.Errorf("[%p] Bucket updater exited: %v", b, err)
 			}
-			logging.Errorf("[%p] Bucket updater exited: %v", b, err)
-		}
-	}()
+		}()
+	}
+	return rv
 }
 
 func (b *Bucket) replaceConnPools2(with []*connectionPool, bucketLocked bool) {

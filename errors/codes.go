@@ -403,6 +403,7 @@ const (
 	E_WITH_INVALID_OPTION                     ErrorCode = 12038
 	E_WITH_INVALID_TYPE                       ErrorCode = 12039
 	E_INVALID_COMPRESSED_VALUE                ErrorCode = 12040
+	E_CB_BUCKET_CLOSED                        ErrorCode = 12041
 	_RETIRED_13010                                      = 13010
 	_RETIRED_13011                                      = 13011
 	E_DATASTORE_CLUSTER                       ErrorCode = 13012
