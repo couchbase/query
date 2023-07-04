@@ -70,10 +70,12 @@ type AnnotatedValue interface {
 	GetAttachment(key string) interface{}
 	SetAttachment(key string, val interface{})
 	RemoveAttachment(key string)
+	ResetAttachments()
 	GetId() interface{}
 	SetId(id interface{})
 	NewMeta() map[string]interface{}
 	GetMeta() map[string]interface{}
+	ResetMeta()
 	Covers() Value
 	GetCover(key string) Value
 	SetCover(key string, val Value)
@@ -187,6 +189,10 @@ func (this *annotatedValue) GetValue() Value {
 	return this.Value
 }
 
+func (this *annotatedValue) ResetAttachments() {
+	this.attachments = nil
+}
+
 func (this *annotatedValue) Attachments() map[string]interface{} {
 	return this.attachments
 }
@@ -226,6 +232,10 @@ func (this *annotatedValue) GetMeta() map[string]interface{} {
 		this.meta["id"] = this.id
 	}
 	return this.meta
+}
+
+func (this *annotatedValue) ResetMeta() {
+	this.meta = nil
 }
 
 func (this *annotatedValue) Covers() Value {
@@ -639,6 +649,10 @@ func (this *annotatedValueSelfReference) RemoveAttachment(key string) {
 	(*annotatedValue)(this).RemoveAttachment(key)
 }
 
+func (this *annotatedValueSelfReference) ResetAttachments() {
+	(*annotatedValue)(this).ResetAttachments()
+}
+
 func (this *annotatedValueSelfReference) GetId() interface{} {
 	return (*annotatedValue)(this).GetId()
 }
@@ -653,6 +667,10 @@ func (this *annotatedValueSelfReference) NewMeta() map[string]interface{} {
 
 func (this *annotatedValueSelfReference) GetMeta() map[string]interface{} {
 	return (*annotatedValue)(this).GetMeta()
+}
+
+func (this *annotatedValueSelfReference) ResetMeta() {
+	(*annotatedValue)(this).ResetMeta()
 }
 
 func (this *annotatedValueSelfReference) Covers() Value {
