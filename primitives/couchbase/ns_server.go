@@ -330,6 +330,10 @@ func (b *Bucket) VBServerMap() *VBucketServerMap {
 	return ret
 }
 
+func (b *Bucket) IsClosed() bool {
+	return b.closed
+}
+
 func (b *Bucket) ChangedVBServerMap(new *VBucketServerMap) bool {
 	b.RLock()
 	defer b.RUnlock()
