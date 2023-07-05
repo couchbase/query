@@ -174,8 +174,11 @@ func (this *lexer) Lex(lval *yySymType) int {
 
 	// we are going to treat identifiers specially to resolve
 	// shift reduce conflicts on namespaces
-	if rv != IDENT {
+	if rv != IDENT && rv != DEFAULT {
 		return rv
+	} else if rv == DEFAULT {
+		// treat it similarly as IDENT
+		lval.s = this.nex.Text()
 	}
 
 	// is it a namespace?
@@ -185,7 +188,7 @@ func (this *lexer) Lex(lval *yySymType) int {
 	}
 	_, found := namespaces[tok]
 	if !found {
-		return IDENT
+		return rv
 	} else {
 		lval.s = tok
 	}
@@ -199,7 +202,7 @@ func (this *lexer) Lex(lval *yySymType) int {
 
 	// not a colon, so we have an identifier
 	if this.saved != COLON {
-		return IDENT
+		return rv
 	}
 
 	if datastore.GetSystemstore() != nil && tok == datastore.GetSystemstore().Id() {

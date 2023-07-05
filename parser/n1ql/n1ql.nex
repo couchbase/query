@@ -172,6 +172,7 @@
 /[dD][aA][tT][aA][sS][tT][oO][rR][eE]/ { yylex.logToken(yylex.Text(), "DATASTORE"); return DATASTORE }
 /[dD][eE][cC][lL][aA][rR][eE]/   { yylex.logToken(yylex.Text(), "DECLARE"); return DECLARE }
 /[dD][eE][cC][rR][eE][mM][eE][nN][tT]/ { yylex.logToken(yylex.Text(), "DECREMENT"); return DECREMENT }
+/[dD][eE][fF][aA][uU][lL][tT]/   { yylex.logToken(yylex.Text(), "DEFAULT"); return DEFAULT }
 /[dD][eE][lL][eE][tT][eE]/       { yylex.logToken(yylex.Text(), "DELETE"); return DELETE }
 /[dD][eE][rR][iI][vV][eE][dD]/   { yylex.logToken(yylex.Text(), "DERIVED"); return DERIVED }
 /[dD][eE][sS][cC]/               { yylex.logToken(yylex.Text(), "DESC"); return DESC }
