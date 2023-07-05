@@ -59,3 +59,9 @@ func Args(args interface{}, context interface{}) (Value, Context, error) {
 	}
 	return a, c, nil
 }
+
+// BasicContext interface exposes a limited set of methods to js-evaluator
+type BasicContext interface {
+	StorageContext() string
+	Log(fmt string, args ...interface{})
+}

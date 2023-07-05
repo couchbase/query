@@ -146,3 +146,23 @@ func (this *UdfHandle) NextDocument() (interface{}, error) {
 func (this *UdfHandle) Cancel() {
 	this.handle.Cancel()
 }
+
+// Context to pass to js-evaluator with basic information
+// Currently used for EXPLAIN FUNCTION support
+type UdfBasicContext struct {
+	context Context
+	path    string
+}
+
+func NewUdfBasicContext(context Context, path string) *UdfBasicContext {
+	return &UdfBasicContext{context, path}
+}
+
+func (this *UdfBasicContext) StorageContext() string {
+	return this.path
+}
+
+func (this *UdfBasicContext) Log(fmt string, args ...interface{}) {
+	args = append(args, this.context)
+	logging.Infof(fmt, args...)
+}
