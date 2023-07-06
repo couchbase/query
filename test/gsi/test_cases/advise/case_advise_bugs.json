@@ -290,5 +290,30 @@
         "query": "SELECT * FROM shellTest WHERE (c1 = false OR c1 IS MISSING) AND ANY v IN a1 SATISFIES v = 11 END ORDER BY c3"
       }
     ]
+  },
+  {
+    "testcase": "MB-57729",
+    "statements": "advise SELECT COUNT(s.c1) AS num FROM shellTest AS s UNNEST a1 AS us WHERE us.type = 'x1'",
+    "advise": true,
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": {
+            "recommended_indexes": {
+              "covering_indexes": [
+                {
+                  "index_property": "FULL GROUPBY \u0026 AGGREGATES pushdown",
+                  "index_statement": "CREATE INDEX adv_ALL_a1_type_c1 ON `shellTest`(ALL ARRAY `us`.`type` FOR us IN `a1` END,`c1`)",
+                  "keyspace_alias": "shellTest_s"
+                }
+              ]
+            }
+          }
+        },
+        "query": "SELECT COUNT(s.c1) AS num FROM shellTest AS s UNNEST a1 AS us WHERE us.type = 'x1'"
+      }
+    ]
   }
 ]
