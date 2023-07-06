@@ -23,6 +23,7 @@ import (
 	"bytes"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 	"unicode"
 
@@ -86,7 +87,8 @@ type Systemstore interface {
 
 type Datastore2 interface {
 	Datastore
-	ForeachBucket(func(ExtendedBucket))
+	ForeachBucket(func(ExtendedBucket))  // goes through currently loaded buckets
+	LoadAllBuckets(func(ExtendedBucket)) // loads all buckets
 }
 
 type AuditInfo struct {
@@ -168,6 +170,7 @@ type Bucket interface {
 type ExtendedBucket interface {
 	Bucket
 	GetIOStats(bool, bool, bool, bool) map[string]interface{} // get an object containing IO stats for the bucket
+	HasCapability(Migration) bool
 }
 
 type Scope interface {
@@ -341,6 +344,44 @@ const (
 type KeyspaceMetadata interface {
 	MetadataVersion() uint64 // A counter that shows the current version of the list of objects contained within
 	MetadataId() string      // A unique identifier across all of the stores. We choose the path of the object
+}
+
+// migration infrastructure
+
+type Migration int
+
+const (
+	HAS_SYSTEM_COLLECTION = Migration(iota)
+)
+
+type Migrator func(string)
+
+var migrators map[Migration][]Migrator
+var migratorsLock sync.RWMutex
+
+func RegisterMigrator(f Migrator, t Migration) {
+	migratorsLock.Lock()
+	if migrators == nil {
+		migrators = make(map[Migration][]Migrator)
+	}
+	e := migrators[t]
+	if e != nil {
+		migrators[t] = append(e, f)
+	} else {
+		migrators[t] = append(make([]Migrator, 0, 3), f)
+	}
+	migratorsLock.Unlock()
+}
+
+func ExecuteMigrators(b string, t Migration) {
+	migratorsLock.RLock()
+	s := migrators[t]
+	if s != nil {
+		for _, f := range s {
+			go f(b)
+		}
+	}
+	migratorsLock.RUnlock()
 }
 
 // Globally accessible Datastore instance

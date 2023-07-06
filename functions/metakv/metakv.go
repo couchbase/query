@@ -134,6 +134,36 @@ func Foreach(b string, f func(path string, v value.Value) error) error {
 	})
 }
 
+func ForeachBody(f func(parts []string, b functions.FunctionBody)) {
+	var _unmarshalled struct {
+		Identity   json.RawMessage `json:"identity"`
+		Definition json.RawMessage `json:"definition"`
+	}
+
+	metakv.IterateChildren(_FUNC_PATH, func(kve metakv.KVEntry) error {
+		path := kve.Path[len(_FUNC_PATH):]
+		parts := algebra.ParsePath(path)
+		if len(parts) == 4 {
+
+			// unmarshal signature and body
+			err := json.Unmarshal(kve.Value, &_unmarshalled)
+			if err != nil {
+				logging.Infof("processing %v error %v unmarshalling entry", parts, err)
+			} else {
+
+				// determine language and create body from definition
+				body, err1 := resolver.MakeBody(path, _unmarshalled.Definition)
+				if err1 != nil {
+					logging.Infof("processing %v error %v constructing function body", parts, err1)
+				} else {
+					f(parts, body)
+				}
+			}
+		}
+		return nil
+	})
+}
+
 func Scan(b string, f func(path string) error) error {
 	if b == "" {
 		return metakv.IterateChildren(_FUNC_PATH, func(kve metakv.KVEntry) error {

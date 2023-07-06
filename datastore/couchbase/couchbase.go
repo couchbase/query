@@ -96,6 +96,15 @@ const (
 // But, a max of 4 go routines are allowed
 var _MAX_MUTATION_ROUTINES = util.MinInt(util.MaxInt(1, int(util.NumCPU()/4)), 4)
 
+// bucket capabilities used for migration
+var bucketCapabilities = map[string]datastore.Migration{
+	"querySystemCollection": datastore.HAS_SYSTEM_COLLECTION,
+}
+
+var migration2Capability = map[datastore.Migration]string{
+	datastore.HAS_SYSTEM_COLLECTION: "querySystemCollection",
+}
+
 func init() {
 
 	// MB-27415 have a larger overflow pool and close overflow connections asynchronously
@@ -404,6 +413,19 @@ func (s *store) ForeachBucket(f func(datastore.ExtendedBucket)) {
 		for _, k := range n.keyspaceCache {
 			if k.cbKeyspace != nil {
 				f(k.cbKeyspace)
+			}
+		}
+	}
+}
+
+func (s *store) LoadAllBuckets(f func(datastore.ExtendedBucket)) {
+	for _, n := range s.namespaceCache {
+		n.refresh()
+		for k, _ := range n.cbNamespace.BucketMap {
+			b, _ := n.KeyspaceByName(k)
+			eb, _ := b.(datastore.ExtendedBucket)
+			if eb != nil {
+				f(eb)
 			}
 		}
 	}
@@ -1672,6 +1694,23 @@ func (p *namespace) KeyspaceUpdateCallback(bucket *cb.Bucket) bool {
 			}
 		}
 
+		var missingCapabilities map[string]datastore.Migration
+		if len(ks.cbKeyspace.cbbucket.Capabilities) != len(bucket.Capabilities) {
+			missingCapabilities = make(map[string]datastore.Migration)
+			for _, n := range bucket.Capabilities {
+				c, ok := bucketCapabilities[n]
+				if ok {
+					missingCapabilities[n] = c
+				}
+			}
+			for _, o := range ks.cbKeyspace.cbbucket.Capabilities {
+				delete(missingCapabilities, o)
+			}
+			if len(missingCapabilities) != 0 {
+				ks.cbKeyspace.flags |= _NEEDS_REFRESH
+			}
+		}
+
 		// the KV nodes list has changed, force a refresh on next use
 		if ks.cbKeyspace.cbbucket.ChangedVBServerMap(&bucket.VBSMJson) {
 			logging.Infof("[%p] Bucket updater: vbMap changed for bucket %v", ks.cbKeyspace.cbbucket, bucket.Name)
@@ -1681,6 +1720,14 @@ func (p *namespace) KeyspaceUpdateCallback(bucket *cb.Bucket) bool {
 			ret = false
 		}
 		ks.cbKeyspace.Unlock()
+
+		// if the bucket capability appears, the bucket is *ready* to be migrated
+		// also, for a new bucket, the expectation here is that it will come alive
+		// with all the capabilities correctly set, so that it won't be migrated
+		for cn, c := range missingCapabilities {
+			logging.Infof("Bucket %v migrating to %v", bucket.Name, cn)
+			go datastore.ExecuteMigrators(bucket.Name, c)
+		}
 	} else {
 		logging.Warnf("Keyspace %v not configured on this server", bucket.Name)
 	}
@@ -1696,6 +1743,18 @@ func (p *namespace) KeyspaceUpdateCallback(bucket *cb.Bucket) bool {
 
 func (b *keyspace) GetIOStats(reset bool, all bool, prometheus bool, serverless bool) map[string]interface{} {
 	return b.cbbucket.GetIOStats(reset, all, prometheus, serverless)
+}
+
+func (b *keyspace) HasCapability(m datastore.Migration) bool {
+	c, ok := migration2Capability[m]
+	if ok {
+		for _, o := range b.cbbucket.Capabilities {
+			if o == c {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func (b *keyspace) NamespaceId() string {

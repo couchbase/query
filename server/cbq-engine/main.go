@@ -35,6 +35,7 @@ import (
 	"github.com/couchbase/query/ffdc"
 	"github.com/couchbase/query/functions"
 	"github.com/couchbase/query/functions/constructor"
+	"github.com/couchbase/query/functions/storage"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/logging/event"
 	log_resolver "github.com/couchbase/query/logging/resolver"
@@ -479,6 +480,9 @@ func main() {
 
 	// Now that we are up and running, try to prime the prepareds cache
 	prepareds.PreparedsRemotePrime()
+
+	// functions storage migration last
+	storage.Migrate()
 
 	signalCatcher(server, endpoint)
 }

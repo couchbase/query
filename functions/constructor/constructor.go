@@ -20,9 +20,9 @@ import (
 	"github.com/couchbase/query/functions/inline"
 	"github.com/couchbase/query/functions/javascript"
 	metaStorage "github.com/couchbase/query/functions/metakv"
+	"github.com/couchbase/query/functions/storage"
 	systemStorage "github.com/couchbase/query/functions/system"
 	"github.com/couchbase/query/server/http/router"
-	"github.com/couchbase/query/tenant"
 )
 
 func Init(router router.Router, threads int) {
@@ -60,7 +60,7 @@ func newGlobalFunction(elem []string, namespace string, queryContext string) (fu
 	case 2:
 		return metaStorage.NewGlobalFunction(ns, elem[1])
 	case 4:
-		if tenant.IsServerless() {
+		if storage.UseSystemStorage() {
 			return systemStorage.NewScopeFunction(ns, elem[1], elem[2], elem[3])
 		} else {
 			return metaStorage.NewScopeFunction(ns, elem[1], elem[2], elem[3])
