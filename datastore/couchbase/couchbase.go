@@ -799,6 +799,16 @@ type keyspaceEntry struct {
 	lastUse    util.Time
 }
 
+func (this *keyspaceEntry) recordError() {
+	// We try not to flood the log with errors
+	if this.errCount == 0 {
+		this.errTime = util.Now()
+	} else if util.Since(this.errTime) > _MIN_ERR_INTERVAL {
+		this.errTime = util.Now()
+	}
+	this.errCount++
+}
+
 const (
 	_MIN_ERR_INTERVAL            time.Duration = 5 * time.Second
 	_THROTTLING_TIMEOUT          time.Duration = 10 * time.Millisecond
@@ -912,7 +922,6 @@ func (p *namespace) VirtualKeyspaceByName(path []string) (datastore.Keyspace, er
 }
 
 func (p *namespace) keyspaceByName(name string) (*keyspace, errors.Error) {
-	var err errors.Error
 	var keyspace *keyspace
 
 	// make sure that no one is deleting the keyspace as we check
@@ -1008,6 +1017,8 @@ func (p *namespace) keyspaceByName(name string) (*keyspace, errors.Error) {
 
 	// 1) create the entry if necessary, record time of loading attempt
 	p.lock.Lock()
+	version := p.version // used to detect pool refresh whilst we're busy here
+
 	entry = p.keyspaceCache[name]
 	if entry == nil {
 
@@ -1022,45 +1033,59 @@ func (p *namespace) keyspaceByName(name string) (*keyspace, errors.Error) {
 		entry.cbKeyspace = nil
 	}
 	entry.lastUse = util.Now()
+	p.lock.Unlock()
 
 	// 2) serialize the loading by locking the entry
 	entry.Lock()
-	defer func() {
-		p.lock.Unlock()
-		entry.Unlock()
-	}()
+	defer entry.Unlock()
 
 	// 3) check if somebody has done the job for us in the interim
 	if entry.cbKeyspace != nil {
 		return entry.cbKeyspace, nil
 	}
 
-	// 4) if previous loads resulted in errors, throttle requests
-	if entry.errCount > 0 && util.Since(entry.lastUse) < _THROTTLING_TIMEOUT {
-		p.lock.Unlock()
-		time.Sleep(_THROTTLING_TIMEOUT)
-		p.lock.Lock()
-	}
-
-	// 5) try the loading
-	k, err := newKeyspace(p, name)
-	if err != nil {
-
-		// We try not to flood the log with errors
-		if entry.errCount == 0 {
-			entry.errTime = util.Now()
-		} else if util.Since(entry.errTime) > _MIN_ERR_INTERVAL {
-			entry.errTime = util.Now()
+	// we may have to retry the loading if a refresh completes whilst we're busy here
+	for {
+		// 4) if previous loads resulted in errors, throttle requests
+		if entry.errCount > 0 && util.Since(entry.lastUse) < _THROTTLING_TIMEOUT {
+			time.Sleep(_THROTTLING_TIMEOUT)
 		}
-		entry.errCount++
-		return nil, err
-	}
-	entry.errCount = 0
 
-	// this is the only place where entry.cbKeyspace is set
-	// it is never unset - so it's safe to test cbKeyspace != nil
-	entry.cbKeyspace = k
-	return k, nil
+		// 5) try the loading
+		k, err := newKeyspace(p, name, &version)
+		if err != nil {
+			entry.recordError()
+			// if the bucket was closed under us, then we should retry as the pool has been refreshed
+			if err.Code() == errors.E_CB_BUCKET_CLOSED {
+				if k != nil && k.cbbucket != nil {
+					k.cbbucket.StopUpdater()
+				}
+				k = nil
+				continue // retry
+			}
+			return nil, err
+		}
+
+		// we need to be sure the pool doesn't refresh and close our bucket whilst we're adding this keyspace to the cache so we
+		// acquire the lock again then check the version hasn't changed whilst we've been busy
+		p.lock.Lock()
+		if p.version != version {
+			entry.recordError()
+			version = p.version
+			if k != nil && k.cbbucket != nil {
+				k.cbbucket.StopUpdater()
+			}
+			k = nil
+			p.lock.Unlock()
+			continue // retry
+		}
+		entry.errCount = 0
+		// this is the only place where entry.cbKeyspace is set
+		// it is never unset - so it's safe to test cbKeyspace != nil
+		entry.cbKeyspace = k
+		p.lock.Unlock()
+		return k, nil
+	}
 }
 
 // compare the list of node addresses
@@ -1131,7 +1156,7 @@ func (p *namespace) refreshFully() {
 	if err != nil {
 		newpool, err = p.reload1(err)
 		if err == nil {
-			p.reload2(&newpool)
+			p.reload2(&newpool, nil)
 			p.last = util.Now()
 		}
 		return
@@ -1153,7 +1178,7 @@ func (p *namespace) refreshFully() {
 	}
 	p.nslock.RUnlock()
 	if changed {
-		p.reload2(&newpool)
+		p.reload2(&newpool, nil)
 		p.last = util.Now()
 		return
 	}
@@ -1181,7 +1206,7 @@ func (p *namespace) refreshFully() {
 	p.last = util.Now()
 }
 
-func (p *namespace) reload() {
+func (p *namespace) reload(version *uint64) {
 	logging.Debugf("[%p] Reload '%s'", p, p.name)
 
 	newpool, err := p.store.client.GetPool(p.name)
@@ -1191,7 +1216,7 @@ func (p *namespace) reload() {
 			return
 		}
 	}
-	p.reload2(&newpool)
+	p.reload2(&newpool, version)
 }
 
 func (p *namespace) reload1(err error) (cb.Pool, error) {
@@ -1230,7 +1255,7 @@ func (p *namespace) reload1(err error) (cb.Pool, error) {
 	return newpool, nil
 }
 
-func (p *namespace) reload2(newpool *cb.Pool) {
+func (p *namespace) reload2(newpool *cb.Pool, version *uint64) {
 	p.lock.Lock()
 	for name, ks := range p.keyspaceCache {
 		logging.Debugf("Checking keyspace '%s'", name)
@@ -1277,6 +1302,11 @@ func (p *namespace) reload2(newpool *cb.Pool) {
 			ks.cbKeyspace.refreshFTSIndexer(p.store.URL(), p.Name())
 		}
 	}
+	// keyspaces have been reloaded, force full auto reprepare check
+	p.version++ // this must be done under the lock so we can detect the refresh in the keyspace addition code
+	if version != nil {
+		*version = p.version
+	}
 	p.lock.Unlock()
 
 	// MB-36458 switch pool and...
@@ -1287,9 +1317,6 @@ func (p *namespace) reload2(newpool *cb.Pool) {
 
 	// ...MB-33185 let go of old pool when noone is accessing it
 	oldPool.Close()
-
-	// keyspaces have been reloaded, force full auto reprepare check
-	p.version++
 }
 
 const (
@@ -1323,7 +1350,7 @@ type keyspace struct {
 
 var _NO_SCOPES map[string]*scope = map[string]*scope{}
 
-func newKeyspace(p *namespace, name string) (*keyspace, errors.Error) {
+func newKeyspace(p *namespace, name string, version *uint64) (*keyspace, errors.Error) {
 
 	cbNamespace := p.getPool()
 	cbbucket, err := cbNamespace.GetBucket(name)
@@ -1333,9 +1360,7 @@ func newKeyspace(p *namespace, name string) (*keyspace, errors.Error) {
 		// primitives/couchbase caches the buckets
 		// to be sure no such bucket exists right now
 		// we trigger a refresh
-		p.lock.Unlock()
-		p.reload()
-		p.lock.Lock()
+		p.reload(version)
 		cbNamespace = p.getPool()
 
 		// and then check one more time
