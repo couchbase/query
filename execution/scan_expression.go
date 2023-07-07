@@ -21,13 +21,11 @@ type ExpressionScan struct {
 	base
 	plan    *plan.ExpressionScan
 	results value.AnnotatedValues
-	context *Context
 }
 
 func NewExpressionScan(plan *plan.ExpressionScan, context *Context) *ExpressionScan {
 	rv := &ExpressionScan{
-		plan:    plan,
-		context: context,
+		plan: plan,
 	}
 
 	newBase(&rv.base, context)
@@ -66,13 +64,9 @@ func (this *ExpressionScan) RunOnce(context *Context, parent value.Value) {
 			for _, av := range this.results {
 				if context.UseRequestQuota() && context.TrackValueSize(av.Size()) {
 					context.Error(errors.NewMemoryQuotaExceededError())
-					av.Recycle()
 					return
 				}
-				if !this.sendItem(av) {
-					av.Recycle()
-					break
-				}
+				this.sendItem(av)
 			}
 			return
 		}
@@ -122,7 +116,6 @@ func (this *ExpressionScan) RunOnce(context *Context, parent value.Value) {
 					return
 				}
 				if !result.Truth() {
-					av.Recycle()
 					continue
 				}
 			}
@@ -138,28 +131,11 @@ func (this *ExpressionScan) RunOnce(context *Context, parent value.Value) {
 				context.Error(errors.NewMemoryQuotaExceededError())
 				return
 			}
-			if !this.sendItem(av) {
-				av.Recycle()
-			}
+			this.sendItem(av)
 		}
 
 	})
 
-}
-
-func (this *ExpressionScan) Done() {
-	this.baseDone()
-	if this.context != nil && this.context.UseRequestQuota() {
-		for _, val := range this.results {
-			this.context.ReleaseValueSize(val.Size())
-			val.Recycle()
-		}
-	} else {
-		for i := range this.results {
-			this.results[i].Recycle()
-		}
-	}
-	this.results = nil
 }
 
 func (this *ExpressionScan) MarshalJSON() ([]byte, error) {
