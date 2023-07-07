@@ -1110,7 +1110,6 @@ func (p *namespace) VirtualKeyspaceByName(path []string) (datastore.Keyspace, er
 }
 
 func (p *namespace) keyspaceByName(name string) (*keyspace, errors.Error) {
-	var err errors.Error
 	var keyspace *keyspace
 
 	// make sure that no one is deleting the keyspace as we check
@@ -1233,32 +1232,48 @@ func (p *namespace) keyspaceByName(name string) (*keyspace, errors.Error) {
 		return entry.cbKeyspace, nil
 	}
 
-	// 4) if previous loads resulted in errors, throttle requests
-	if entry.errCount > 0 && util.Since(entry.lastUse) < _THROTTLING_TIMEOUT {
-		time.Sleep(_THROTTLING_TIMEOUT)
-	}
+	// we may have to retry the loading if a refresh completes whilst we're busy here
+	for {
+		// 4) if previous loads resulted in errors, throttle requests
+		if entry.errCount > 0 && util.Since(entry.lastUse) < _THROTTLING_TIMEOUT {
+			time.Sleep(_THROTTLING_TIMEOUT)
+		}
 
-	// 5) try the loading
-	k, err := newKeyspace(p, name)
-	if err != nil {
-		entry.recordError()
-		return nil, err
-	}
+		// 5) try the loading
+		k, err := newKeyspace(p, name, &version)
+		if err != nil {
+			entry.recordError()
+			// if the bucket was closed under us, then we should retry as the pool has been refreshed
+			if err.Code() == errors.E_CB_BUCKET_CLOSED {
+				if k != nil && k.cbbucket != nil {
+					k.cbbucket.StopUpdater()
+				}
+				k = nil
+				continue // retry
+			}
+			return nil, err
+		}
 
-	// we need to be sure the pool doesn't refresh and close our bucket whilst we're adding this keyspace to the cache so we
-	// acquire the lock again then check the version hasn't changed whilst we've been busy
-	p.lock.Lock()
-	defer p.lock.Unlock()
-	if p.version != version {
-		entry.recordError()
-		// if it isn't already closed, it will be soon so the error is OK here
-		return nil, errors.NewCbBucketClosedError(fullName(p.name, name))
+		// we need to be sure the pool doesn't refresh and close our bucket whilst we're adding this keyspace to the cache so we
+		// acquire the lock again then check the version hasn't changed whilst we've been busy
+		p.lock.Lock()
+		if p.version != version {
+			entry.recordError()
+			version = p.version
+			if k != nil && k.cbbucket != nil {
+				k.cbbucket.StopUpdater()
+			}
+			k = nil
+			p.lock.Unlock()
+			continue // retry
+		}
+		entry.errCount = 0
+		// this is the only place where entry.cbKeyspace is set
+		// it is never unset - so it's safe to test cbKeyspace != nil
+		entry.cbKeyspace = k
+		p.lock.Unlock()
+		return k, nil
 	}
-	entry.errCount = 0
-	// this is the only place where entry.cbKeyspace is set
-	// it is never unset - so it's safe to test cbKeyspace != nil
-	entry.cbKeyspace = k
-	return k, nil
 }
 
 // compare the list of node addresses
@@ -1329,7 +1344,7 @@ func (p *namespace) refreshFully() {
 	if err != nil {
 		newpool, err = p.reload1(err)
 		if err == nil {
-			p.reload2(&newpool)
+			p.reload2(&newpool, nil)
 			p.last = util.Now()
 		}
 		return
@@ -1351,7 +1366,7 @@ func (p *namespace) refreshFully() {
 	}
 	p.nslock.RUnlock()
 	if changed {
-		p.reload2(&newpool)
+		p.reload2(&newpool, nil)
 		p.last = util.Now()
 		return
 	}
@@ -1379,7 +1394,7 @@ func (p *namespace) refreshFully() {
 	p.last = util.Now()
 }
 
-func (p *namespace) reload() {
+func (p *namespace) reload(version *uint64) {
 	logging.Debugf("[%p] Reload '%s'", p, p.name)
 
 	newpool, err := p.store.client.GetPool(p.name)
@@ -1389,7 +1404,7 @@ func (p *namespace) reload() {
 			return
 		}
 	}
-	p.reload2(&newpool)
+	p.reload2(&newpool, version)
 }
 
 func (p *namespace) reload1(err error) (cb.Pool, error) {
@@ -1428,7 +1443,7 @@ func (p *namespace) reload1(err error) (cb.Pool, error) {
 	return newpool, nil
 }
 
-func (p *namespace) reload2(newpool *cb.Pool) {
+func (p *namespace) reload2(newpool *cb.Pool, version *uint64) {
 	p.lock.Lock()
 	for name, ks := range p.keyspaceCache {
 		logging.Debugf("Checking keyspace '%s'", name)
@@ -1475,6 +1490,9 @@ func (p *namespace) reload2(newpool *cb.Pool) {
 	}
 	// keyspaces have been reloaded, force full auto reprepare check
 	p.version++ // this must be done under the lock so we can detect the refresh in the keyspace addition code
+	if version != nil {
+		*version = p.version
+	}
 	p.lock.Unlock()
 
 	// MB-36458 switch pool and...
@@ -1519,7 +1537,7 @@ type keyspace struct {
 
 var _NO_SCOPES map[string]*scope = map[string]*scope{}
 
-func newKeyspace(p *namespace, name string) (*keyspace, errors.Error) {
+func newKeyspace(p *namespace, name string, version *uint64) (*keyspace, errors.Error) {
 
 	cbNamespace := p.getPool()
 	cbbucket, err := cbNamespace.GetBucket(name)
@@ -1531,7 +1549,7 @@ func newKeyspace(p *namespace, name string) (*keyspace, errors.Error) {
 			return nil, errors.NewCbKeyspaceNotFoundError(err, fullName(p.name, name))
 		}
 		// it does, so we just need to refresh the primitives cache
-		p.reload()
+		p.reload(version)
 		cbNamespace = p.getPool()
 
 		// and then check one more time
