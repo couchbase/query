@@ -22,17 +22,19 @@ type InitialProject struct {
 	projection    *algebra.Projection
 	terms         ProjectTerms
 	starTermCount int
+	discardOriginal bool
 }
 
 func NewInitialProject(projection *algebra.Projection, cost, cardinality float64,
-	size int64, frCost float64) *InitialProject {
+	size int64, frCost float64, discardOriginal bool) *InitialProject {
 
 	results := projection.Terms()
 	terms := make(ProjectTerms, len(results))
 
 	rv := &InitialProject{
-		projection: projection,
-		terms:      terms,
+		projection:      projection,
+		terms:           terms,
+		discardOriginal: discardOriginal,
 	}
 
 	for i, res := range results {
@@ -67,6 +69,10 @@ func (this *InitialProject) Terms() ProjectTerms {
 
 func (this *InitialProject) StarTermCount() int {
 	return this.starTermCount
+}
+
+func (this *InitialProject) DiscardOriginal() bool {
+	return this.discardOriginal
 }
 
 func (this *InitialProject) MarshalJSON() ([]byte, error) {

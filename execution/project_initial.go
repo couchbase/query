@@ -200,6 +200,9 @@ func (this *InitialProject) processTerms(item value.AnnotatedValue, context *Con
 			context.ReleaseValueSize(iSz - pSz)
 		}
 	}
+	if this.plan.DiscardOriginal() {
+		pv.ResetOriginal()
+	}
 	return this.sendItem(pv)
 }
 

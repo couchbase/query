@@ -87,6 +87,7 @@ type AnnotatedValue interface {
 	SetSelf(s bool)
 	SetProjection(proj Value)
 	Original() AnnotatedValue
+	ResetOriginal()
 	RefCnt() int32
 }
 
@@ -172,11 +173,11 @@ func (this *annotatedValue) SetField(field string, val interface{}) error {
 		err = this.Value.SetField(field, selfRef)
 	} else {
 		err = this.Value.SetField(field, val)
-	}
-	if err == nil {
-		v, ok := val.(Value)
-		if ok {
-			v.Track()
+		if err == nil {
+			v, ok := val.(Value)
+			if ok {
+				v.Track()
+			}
 		}
 	}
 	return err
@@ -435,6 +436,19 @@ func (this *annotatedValue) Original() AnnotatedValue {
 	}
 	this.annotatedOrig = av
 	return av
+}
+
+func (this *annotatedValue) ResetOriginal() {
+	if this.annotatedOrig != nil {
+		val := this.annotatedOrig.(*annotatedValue)
+		val.covers = nil
+		val.attachments = nil
+		val.meta = nil
+		annotatedPool.Put(unsafe.Pointer(val))
+		this.annotatedOrig = nil
+	}
+	// don't recycle as may have untracked reference in a field
+	this.original = nil
 }
 
 func (this *annotatedValue) Stash() int32 {
