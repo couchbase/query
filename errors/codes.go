@@ -165,6 +165,7 @@ const (
 	E_UNKNOWN_FOR                             ErrorCode = 4025
 	E_SUBQUERY_MISSING_KEYS                   ErrorCode = 4030
 	E_SUBQUERY_MISSING_INDEX                  ErrorCode = 4035
+	E_SUBQUERY_PRIMARY_DOCS_EXCEEDED          ErrorCode = 4036
 	E_NO_SUCH_PREPARED                        ErrorCode = 4040
 	E_NO_SUCH_PREPARED_WITH_CONTEXT           ErrorCode = 4041
 	E_UNRECOGNIZED_PREPARED                   ErrorCode = 4050

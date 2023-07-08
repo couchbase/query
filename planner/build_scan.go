@@ -56,7 +56,8 @@ func (this *builder) selectScan(keyspace datastore.Keyspace, node *algebra.Keysp
 		return plan.NewKeyScan(keys, mutate, cost, cardinality, size, frCost), nil
 	}
 
-	secondary, primary, err := this.buildScan(keyspace, node)
+	var primary, secondary plan.Operator
+	secondary, primary, err = this.buildScan(keyspace, node)
 	if err != nil {
 		return nil, err
 	}
@@ -75,14 +76,20 @@ func (this *builder) selectScan(keyspace datastore.Keyspace, node *algebra.Keysp
 	if secondary != nil {
 		return secondary, nil
 	}
+
 	if node.IsInCorrSubq() && !node.IsSystem() {
-		return nil, errors.NewSubqueryMissingIndexError(alias)
-	}
-	if primary != nil {
-		return primary, nil
+		if primary != nil {
+			// early exit if using primary index scan/seq_scan for corrsubq
+			if this.getDocCount(node.Alias()) > _MAX_PRIMARY_INDEX_CACHE_SIZE {
+				return nil, errors.NewSubqueryNumDocsExceeded(node.Alias(), _MAX_PRIMARY_INDEX_CACHE_SIZE)
+			}
+		} else {
+			return nil, errors.NewSubqueryMissingIndexError(node.Alias())
+		}
+
 	}
 
-	return nil, nil
+	return primary, nil
 }
 
 func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.KeyspaceTerm) (
@@ -180,8 +187,8 @@ func (this *builder) buildPredicateScan(keyspace datastore.Keyspace, node *algeb
 		util.N1QL_NL_PRIMARYSCAN) || this.hasBuilderFlag(BUILDER_JOIN_ON_PRIMARY)
 	var primaryKey expression.Expressions
 
-	if !baseKeyspace.IsInCorrSubq() &&
-		(!node.IsAnsiJoinOp() || this.hasBuilderFlag(BUILDER_UNDER_HASH) || node.IsSystem() || nlPrimaryScan) {
+	if (!baseKeyspace.IsInCorrSubq() || this.getDocCount(node.Alias()) <= _MAX_PRIMARY_INDEX_CACHE_SIZE) &&
+		!node.IsAnsiJoinOp() || this.hasBuilderFlag(BUILDER_UNDER_HASH) || node.IsSystem() || nlPrimaryScan {
 		primaryKey = expression.Expressions{id}
 	}
 
@@ -520,7 +527,6 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm,
 		}
 	}
 
-	// Return secondary scan, if any
 	return secondary, sargLength, nil
 }
 

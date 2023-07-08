@@ -298,9 +298,11 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 		return nil, errors.NewPlanInternalError(fmt.Sprintf("VisitKeyspaceTerm: baseKeyspace for %s not found", node.Alias()))
 	}
 
+	var inCorrSubq bool
 	if this.subquery && this.correlated {
 		node.SetInCorrSubq()
 		baseKeyspace.SetInCorrSubq()
+		inCorrSubq = true
 	}
 
 	scan, err := this.selectScan(keyspace, node, false)
@@ -407,7 +409,17 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 				frCost = OPT_COST_NOT_AVAIL
 			}
 		}
-		this.addChildren(plan.NewFetch(keyspace, node, names, cost, cardinality, size, frCost, this.hasBuilderFlag(BUILDER_NL_INNER)))
+		fetch := plan.NewFetch(keyspace, node, names, cost, cardinality, size, frCost, this.hasBuilderFlag(BUILDER_NL_INNER))
+		if inCorrSubq && !this.hasBuilderFlag(BUILDER_JOIN_ON_PRIMARY) {
+			// if underlying scan uses Primary Index
+			// cache results
+			_, ok := scan.(*plan.PrimaryScan3)
+			if ok {
+				this.maxParallelism = 1
+				fetch.SetCacheResult()
+			}
+		}
+		this.addChildren(fetch)
 
 		// no need to separate out the filter if the query has a single keyspace
 		if len(this.baseKeyspaces) > 1 &&
@@ -430,6 +442,14 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 				// separate go thread and can be potentially parallelized
 				this.addSubChildren(plan.NewFilter(filter, node.Alias(), cost, cardinality, size, frCost))
 			}
+		}
+	} else if this.countScan == nil && len(this.coveringScans) > 0 && inCorrSubq && !this.hasBuilderFlag(BUILDER_JOIN_ON_PRIMARY) {
+		// if we have a covering index scan on primary index
+		// cache results of indexscan3
+		op, ok := scan.(*plan.IndexScan3)
+		if ok && op.GetIndex().IsPrimary() {
+			this.maxParallelism = 1
+			op.SetCacheResult()
 		}
 	}
 

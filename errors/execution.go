@@ -396,6 +396,19 @@ func NewNLInnerPrimaryDocsExceeded(alias string, limit int) Error {
 		InternalCaller: CallerN(1)}
 }
 
+func NewSubqueryNumDocsExceeded(keyspace string, limit int) Error {
+	c := make(map[string]interface{})
+	c["keyspace"] = keyspace
+	c["limit"] = limit
+	return &err{level: EXCEPTION,
+		ICode: E_SUBQUERY_PRIMARY_DOCS_EXCEEDED,
+		IKey:  "execution.corrsubq_primary.docs_exceeded",
+		cause: c,
+		InternalMsg: fmt.Sprintf("Correlated subquery's keyspace (%s) cannot have more than %d documents"+
+			" without appropriate secondary index", keyspace, limit),
+		InternalCaller: CallerN(1)}
+}
+
 func NewMemoryQuotaExceededError() Error {
 	return &err{level: EXCEPTION, ICode: E_MEMORY_QUOTA_EXCEEDED, IKey: "execution.memory_quota.exceeded",
 		InternalMsg:    "Request has exceeded memory quota",

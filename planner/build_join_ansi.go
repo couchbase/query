@@ -1441,14 +1441,14 @@ func (this *builder) buildAnsiJoinSimpleFromTerm(node algebra.SimpleFromTerm, on
 	return this.children, newOnclause, cost, cardinality, size, frCost, nil
 }
 
-const _MAX_NL_INNER_PRIMARY_SCAN_SIZE = 1000
+const _MAX_PRIMARY_INDEX_CACHE_SIZE = 1000
 
 func (this *builder) buildInnerPrimaryScan(right *algebra.KeyspaceTerm,
 	filter, onclause expression.Expression) (
 	plan.Operator, expression.Expression, expression.Expression, error) {
 
 	docCount := this.getDocCount(right.Alias())
-	if docCount > _MAX_NL_INNER_PRIMARY_SCAN_SIZE {
+	if docCount > _MAX_PRIMARY_INDEX_CACHE_SIZE {
 		return nil, nil, nil, nil
 	}
 

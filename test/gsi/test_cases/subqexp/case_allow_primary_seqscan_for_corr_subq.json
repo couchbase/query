@@ -1,0 +1,12 @@
+[
+    {
+        "testcase":"primaryscan3 operator, catch limit in fetch",
+        "statements":"SELECT d.a FROM customer d LET v = (SELECT d1.a FROM customer AS d1 WHERE d.a = d1.a);",
+        "error": "Correlated subquery's keyspace (d1) cannot have more than 1000 documents without appropriate secondary index"
+    },
+    {
+        "testcase":"indexscan3 operator, catch limit in indexscan3",
+        "statements":"SELECT d.a FROM customer d LET v = (SELECT meta(d1).id FROM customer AS d1 WHERE d.a = 1);",
+        "error": "Correlated subquery's keyspace (d1) cannot have more than 1000 documents without appropriate secondary index"
+    }
+]
