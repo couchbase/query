@@ -936,7 +936,7 @@ func (this *DatePartMillis) Evaluate(item value.Value, context Context) (value.V
 	}
 
 	// Initialize timezone to nil to avoid processing if not specified.
-	timeZone := _NIL_VALUE
+	var timeZone value.Value
 
 	// Check if time zone is set
 	if len(this.operands) > 2 {
@@ -962,7 +962,7 @@ func (this *DatePartMillis) Evaluate(item value.Value, context Context) (value.V
 	// Convert the input millis to *Time
 	timeVal := millisToTime(millis)
 
-	if timeZone != _NIL_VALUE {
+	if timeZone != nil {
 		// Process the timezone component as it isnt nil
 
 		// Get the timezone and the *Location.
@@ -2727,11 +2727,11 @@ func (this *WeekdayMillis) Evaluate(item value.Value, context Context) (value.Va
 	}
 
 	// Initialize timezone to nil to avoid processing if not specified.
-	timeZone := _NIL_VALUE
+	var timeZone value.Value
 
 	// Check if time zone is set
 	if len(this.operands) > 1 {
-		timeZone, err := this.operands[1].Evaluate(item, context)
+		timeZone, err = this.operands[1].Evaluate(item, context)
 		if err != nil {
 			return nil, err
 		} else if timeZone.Type() == value.MISSING {
@@ -2751,7 +2751,7 @@ func (this *WeekdayMillis) Evaluate(item value.Value, context Context) (value.Va
 	// Convert the input millis to *Time
 	timeVal := millisToTime(millis)
 
-	if timeZone != _NIL_VALUE {
+	if timeZone != nil {
 		// Process the timezone component as it isnt nil
 		// Get the timezone and the *Location.
 		tz := timeZone.ToString()
