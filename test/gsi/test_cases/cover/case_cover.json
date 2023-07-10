@@ -873,6 +873,7 @@
                     },
                     {
                         "#operator": "Order",
+                        "flags": 2,
                         "sort_terms": [
                             {
                                 "expr": "(`o` + 1)"
