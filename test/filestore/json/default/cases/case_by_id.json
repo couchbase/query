@@ -67,6 +67,7 @@
                 },
                 {
                     "#operator": "Order",
+                    "flags": 2,
                     "sort_terms": [
                         {
                             "expr": "(`game`.`id`)"
@@ -139,6 +140,7 @@
                 },
                 {
                     "#operator": "Order",
+                    "flags": 2,
                     "sort_terms": [
                         {
                             "expr": "(`game`.`id`)"
@@ -199,6 +201,7 @@
                 },
                 {
                     "#operator": "Order",
+                    "flags": 2,
                     "sort_terms": [
                         {
                             "expr": "(`game`.`id`)"
@@ -270,6 +273,7 @@
                 },
                 {
                     "#operator": "Order",
+                    "flags": 2,
                     "sort_terms": [
                         {
                             "expr": "(`game`.`id`)"
@@ -428,6 +432,7 @@
                 },
                 {
                     "#operator": "Order",
+                    "flags": 2,
                     "sort_terms": [
                         {
                             "expr": "min((`game`.`score`))"
