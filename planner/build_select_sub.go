@@ -22,6 +22,7 @@ import (
 )
 
 func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error) {
+	prevNode := this.node
 	prevCover := this.cover
 	prevWhere := this.where
 	prevFilter := this.filter
@@ -40,6 +41,7 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 	indexPushDowns := this.storeIndexPushDowns()
 
 	defer func() {
+		this.node = prevNode
 		this.cover = prevCover
 		this.where = prevWhere
 		this.filter = prevFilter

@@ -24,6 +24,7 @@ import (
 func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 	// Restore previous values when exiting. VisitSelect()
 	// can be called multiple times by set operators
+	prevNode := this.node
 	prevCover := this.cover
 	prevOrder := this.order
 	prevLimit := this.limit
@@ -32,6 +33,7 @@ func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 	prevRequirePrimaryKey := this.requirePrimaryKey
 	prevCollectQueryInfo := this.storeCollectQueryInfo()
 	defer func() {
+		this.node = prevNode
 		this.cover = prevCover
 		this.order = prevOrder
 		this.limit = prevLimit
@@ -42,6 +44,7 @@ func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 
 	}()
 
+	this.node = stmt
 	stmtOrder := stmt.Order()
 	stmtOffset, err := newOffsetLimitExpr(stmt.Offset(), true)
 	if err != nil {
