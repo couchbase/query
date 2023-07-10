@@ -17,13 +17,16 @@ func (this *builder) VisitUnion(node *algebra.Union) (interface{}, error) {
 	// Inject DISTINCT into both terms
 	setOpDistinct := this.setOpDistinct
 	this.setOpDistinct = true
+	prevNode := this.node
 	prevCover := this.cover
 
 	defer func() {
+		this.node = prevNode
 		this.cover = prevCover
 		this.setOpDistinct = setOpDistinct
 	}()
 
+	this.node = node.First()
 	this.cover = node.First()
 	this.resetOrderOffsetLimit()
 	this.delayProjection = false // Disable ORDER BY non-projected expressions
@@ -33,6 +36,7 @@ func (this *builder) VisitUnion(node *algebra.Union) (interface{}, error) {
 		return nil, ferr
 	}
 
+	this.node = node.Second()
 	this.cover = node.Second()
 	second, serr := node.Second().Accept(this)
 
@@ -67,10 +71,13 @@ func (this *builder) VisitUnionAll(node *algebra.UnionAll) (interface{}, error) 
 	this.resetOrderOffsetLimit()
 	this.delayProjection = false // Disable ORDER BY non-projected expressions
 
+	prevNode := this.node
 	prevCover := this.cover
 	defer func() {
+		this.node = prevNode
 		this.cover = prevCover
 	}()
+	this.node = node.First()
 	this.cover = node.First()
 
 	first, ferr := node.First().Accept(this)
@@ -78,6 +85,7 @@ func (this *builder) VisitUnionAll(node *algebra.UnionAll) (interface{}, error) 
 		return nil, ferr
 	}
 
+	this.node = node.Second()
 	this.cover = node.Second()
 	second, serr := node.Second().Accept(this)
 	if ferr != nil && this.indexAdvisor {
@@ -104,12 +112,15 @@ func (this *builder) VisitIntersect(node *algebra.Intersect) (interface{}, error
 	// Inject DISTINCT into first term
 	setOpDistinct := this.setOpDistinct
 	this.setOpDistinct = true
+	prevNode := this.node
 	prevCover := this.cover
 	defer func() {
+		this.node = prevNode
 		this.cover = prevCover
 		this.setOpDistinct = setOpDistinct
 	}()
 
+	this.node = node.First()
 	this.cover = node.First()
 	this.resetOrderOffsetLimit()
 	this.delayProjection = false // Disable ORDER BY non-projected expressions
@@ -122,6 +133,7 @@ func (this *builder) VisitIntersect(node *algebra.Intersect) (interface{}, error
 	// Do not inject DISTINCT into second term (done at run time)
 	this.setOpDistinct = false
 
+	this.node = node.Second()
 	this.cover = node.Second()
 	second, serr := node.Second().Accept(this)
 	if ferr != nil && this.indexAdvisor {
@@ -148,10 +160,13 @@ func (this *builder) VisitIntersectAll(node *algebra.IntersectAll) (interface{},
 	this.resetOrderOffsetLimit()
 	this.delayProjection = false // Disable ORDER BY non-projected expressions
 
+	prevNode := this.node
 	prevCover := this.cover
 	defer func() {
+		this.node = prevNode
 		this.cover = prevCover
 	}()
+	this.node = node.First()
 	this.cover = node.First()
 
 	first, ferr := node.First().Accept(this)
@@ -159,6 +174,7 @@ func (this *builder) VisitIntersectAll(node *algebra.IntersectAll) (interface{},
 		return nil, ferr
 	}
 
+	this.node = node.Second()
 	this.cover = node.Second()
 	second, serr := node.Second().Accept(this)
 	if ferr != nil && this.indexAdvisor {
@@ -185,11 +201,14 @@ func (this *builder) VisitExcept(node *algebra.Except) (interface{}, error) {
 	// Inject DISTINCT into first term
 	setOpDistinct := this.setOpDistinct
 	this.setOpDistinct = true
+	prevNode := this.node
 	prevCover := this.cover
 	defer func() {
+		this.node = prevNode
 		this.cover = prevCover
 		this.setOpDistinct = setOpDistinct
 	}()
+	this.node = node.First()
 	this.cover = node.First()
 
 	this.resetOrderOffsetLimit()
@@ -203,6 +222,7 @@ func (this *builder) VisitExcept(node *algebra.Except) (interface{}, error) {
 	// Do not inject DISTINCT into second term (done at run time)
 	this.setOpDistinct = false
 
+	this.node = node.Second()
 	this.cover = node.Second()
 	second, serr := node.Second().Accept(this)
 	if ferr != nil && this.indexAdvisor {
@@ -229,10 +249,13 @@ func (this *builder) VisitExceptAll(node *algebra.ExceptAll) (interface{}, error
 	this.resetOrderOffsetLimit()
 	this.delayProjection = false // Disable ORDER BY non-projected expressions
 
+	prevNode := this.node
 	prevCover := this.cover
 	defer func() {
+		this.node = prevNode
 		this.cover = prevCover
 	}()
+	this.node = node.First()
 	this.cover = node.First()
 
 	first, ferr := node.First().Accept(this)
@@ -240,6 +263,7 @@ func (this *builder) VisitExceptAll(node *algebra.ExceptAll) (interface{}, error
 		return nil, ferr
 	}
 
+	this.node = node.Second()
 	this.cover = node.Second()
 	second, serr := node.Second().Accept(this)
 	if ferr != nil && this.indexAdvisor {

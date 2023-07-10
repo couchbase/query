@@ -27,6 +27,7 @@ func TestXattrs(t *testing.T) {
 	qc := start_cs()
 
 	runStmt(qc, "create primary index on product")
+	runStmt(qc, "create index idx1 on shellTest(c1) where test_id = 'xattrs'")
 
 	fmt.Println("\n\nInserting values into Bucket for Xattrs test \n\n ")
 	runMatch("insert.json", false, false, qc, t)
@@ -38,6 +39,11 @@ func TestXattrs(t *testing.T) {
 
 	// Test non covering index
 	runMatch("case_xattrs.json", false, false, qc, t)
+
+	// Test bug fixes
+	runMatch("case_xattrs_bugs.json", false, true, qc, t)
+
+	runStmt(qc, "drop index shellTest.idx1")
 
 	rr := runStmt(qc, "delete from product where test_id = \"xattrs\"")
 	if rr.Err != nil {
