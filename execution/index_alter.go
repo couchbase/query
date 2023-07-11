@@ -64,6 +64,21 @@ func (this *AlterIndex) RunOnce(context *Context, parent value.Value) {
 		node := this.plan.Node()
 
 		index, ok := this.plan.Index().(datastore.Index3)
+
+		// if Index does not exist
+		if index == nil {
+			// an error might have been generated during plan creation
+			// but its reporting deferred
+			defErr := this.plan.DeferredError()
+
+			if defErr == nil {
+				defErr = errors.NewCbIndexNotFoundError(this.plan.Node().Name())
+			}
+
+			context.Error(defErr)
+			return
+		}
+
 		if !ok {
 			context.Error(errors.NewAlterIndexError())
 			return
