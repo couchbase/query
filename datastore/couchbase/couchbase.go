@@ -1644,7 +1644,7 @@ func (b *keyspace) Indexers() ([]datastore.Indexer, errors.Error) {
 
 // return a document key free from collection ids
 func key(k []byte, clientContext ...*memcached.ClientContext) []byte {
-	if len(clientContext) == 0 {
+	if len(clientContext) == 0 || len(k) <= 1 {
 		return k
 	}
 
@@ -1653,6 +1653,9 @@ func key(k []byte, clientContext ...*memcached.ClientContext) []byte {
 	for collId >= 0x80 {
 		collId >>= 7
 		i++
+	}
+	if i >= len(k) {
+		return []byte("")
 	}
 	return k[i:]
 }
@@ -1682,7 +1685,15 @@ func (k *keyspace) getRandomEntry(scopeName, collectionName string,
 		}
 		return "", nil, errors.NewCbGetRandomEntryError(err)
 	}
+	if len(resp.Key) == 0 {
+		logging.Warnf("%v: empty random document key detected", k.name)
+		return "", nil, nil
+	}
 	key := string(key(resp.Key, clientContext...))
+	if key == "" {
+		logging.Warnf("%v: empty random document key (processed) detected", k.name)
+		return "", nil, nil
+	}
 	doc := doFetch(key, k.fullName, resp)
 
 	return key, doc, nil
