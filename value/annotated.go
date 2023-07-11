@@ -724,3 +724,7 @@ func (this *annotatedValueSelfReference) SetProjection(proj Value) {
 func (this *annotatedValueSelfReference) Original() AnnotatedValue {
 	return (*annotatedValue)(this).Original()
 }
+
+func (this *annotatedValueSelfReference) ResetOriginal() {
+	(*annotatedValue)(this).ResetOriginal()
+}
