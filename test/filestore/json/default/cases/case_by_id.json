@@ -314,7 +314,7 @@
                                 "aggregates": [
                                     "count(*)"
                                 ],
-                                "flags": 2,
+                                "flags": 4,
                                 "group_keys": []
                             }
                         ]
@@ -325,7 +325,7 @@
                     "aggregates": [
                         "count(*)"
                     ],
-                    "flags": 2,
+                    "flags": 4,
                     "group_keys": []
                 },
                 {
@@ -333,7 +333,7 @@
                     "aggregates": [
                         "count(*)"
                     ],
-                    "flags": 2,
+                    "flags": 4,
                     "group_keys": []
                 },
                 {
@@ -396,7 +396,7 @@
                                             "count(*)",
                                             "min((`game`.`score`))"
                                         ],
-                                        "flags": 2,
+                                        "flags": 4,
                                         "group_keys": []
                                     }
                                 ]
@@ -408,7 +408,7 @@
                                 "count(*)",
                                 "min((`game`.`score`))"
                             ],
-                            "flags": 2,
+                            "flags": 4,
                             "group_keys": []
                         },
                         {
@@ -417,7 +417,7 @@
                                 "count(*)",
                                 "min((`game`.`score`))"
                             ],
-                            "flags": 2,
+                            "flags": 4,
                             "group_keys": []
                         },
                         {
@@ -492,7 +492,7 @@
                                 "aggregates": [
                                     "count(*)"
                                 ],
-                                "flags": 2,
+                                "flags": 4,
                                 "group_keys": []
                             }
                         ]
@@ -503,7 +503,7 @@
                     "aggregates": [
                         "count(*)"
                     ],
-                    "flags": 2,
+                    "flags": 4,
                     "group_keys": []
                 },
                 {
@@ -511,7 +511,7 @@
                     "aggregates": [
                         "count(*)"
                     ],
-                    "flags": 2,
+                    "flags": 4,
                     "group_keys": []
                 },
                 {

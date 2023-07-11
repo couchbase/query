@@ -20,8 +20,8 @@ import (
 
 const (
 	_EARLY_ORDER = uint32(1) << iota
-	_CAN_SPILL
 	_CLIP_VALUES
+	_CAN_SPILL
 )
 
 type Order struct {
