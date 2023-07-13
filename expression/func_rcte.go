@@ -16,6 +16,8 @@ import (
 	"github.com/couchbase/query/value"
 )
 
+const _MAX_RECUR_DEPTH = int64(100)
+
 type RecursiveCte struct {
 	FunctionBase
 }
@@ -143,7 +145,8 @@ func (this *RecursiveCte) Evaluate(item value.Value, context Context) (value.Val
 	var currLevel int64
 	for currLevel < nextLevel {
 
-		if configRv.levelLimit >= 0 && iLevel >= configRv.levelLimit {
+		if iLevel >= configRv.levelLimit {
+			context.Infof("Reached %v recursion depth", iLevel)
 			break
 		}
 
@@ -305,7 +308,7 @@ type Config struct {
 func NewConfig() *Config {
 	// default config
 	conRv := Config{
-		levelLimit: -1,
+		levelLimit: _MAX_RECUR_DEPTH,
 		docsLimit:  -1,
 		namedArgs:  make(map[string]value.Value), // init for $anchor expression, in join (recursiveClause)
 	}
