@@ -8,8 +8,6 @@
 
 package errors
 
-import ()
-
 // Datastore File based error codes
 
 func NewFileDatastoreError(e error, msg string) Error {
@@ -48,7 +46,7 @@ func NewFileKeyExists(e error, msg string) Error {
 }
 
 func NewFileDMLError(e error, msg string) Error {
-	return &err{level: EXCEPTION, ICode: E_FILE_DML, IKey: "datastore.file.DML_error", ICause: e,
+	return &err{level: ERROR, ICode: E_FILE_DML, IKey: "datastore.file.DML_error", ICause: e,
 		InternalMsg: "DML Error " + msg, InternalCaller: CallerN(1)}
 }
 

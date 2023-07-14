@@ -26,6 +26,7 @@ import (
 
 const (
 	EXCEPTION = iota
+	ERROR
 	WARNING
 	NOTICE
 	INFO

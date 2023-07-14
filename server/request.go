@@ -38,7 +38,7 @@ const (
 	TIMEOUT
 	CLOSED
 	FATAL
-	ABORTED
+	ABEND /* Changed from ABORTED to ABEND, flags that there was an internal error like panic */
 )
 
 var states = [...]string{
@@ -51,7 +51,7 @@ var states = [...]string{
 	"timeout",
 	"closed",
 	"fatal",
-	"aborted",
+	"aborted", // unchanged for backward compatibility, this is state string for ABEND
 }
 
 type Request interface {
@@ -332,7 +332,7 @@ type BaseRequest struct {
 	execTime             time.Time
 	transactionStartTime time.Time
 	state                State
-	aborted              bool
+	abend                bool
 	errorLimit           int
 	errorCount           int
 	duplicateErrorCount  int
@@ -414,7 +414,7 @@ func NewBaseRequest(rv *BaseRequest) {
 	rv.timeout = -1
 	rv.txTimeout = datastore.DEF_TXTIMEOUT
 	rv.state = SUBMITTED
-	rv.aborted = false
+	rv.abend = false
 	rv.stopResult = make(chan bool, 1)
 	rv.stopExecute = make(chan bool, 1)
 	rv.metrics = value.NONE
@@ -668,8 +668,8 @@ func (this *BaseRequest) SetState(state State) {
 func (this *BaseRequest) State() State {
 	this.RLock()
 	defer this.RUnlock()
-	if this.aborted {
-		return ABORTED
+	if this.abend {
+		return ABEND
 	}
 	return this.state
 }
@@ -727,7 +727,7 @@ func (this *BaseRequest) Fatal(err errors.Error) {
 }
 
 func (this *BaseRequest) Abort(err errors.Error) {
-	this.aborted = true
+	this.abend = true
 	this.Error(err)
 	this.Stop(FATAL)
 }
@@ -756,12 +756,20 @@ func (this *BaseRequest) Error(err errors.Error) {
 		this.Warning(err)
 		return
 	}
+
 	this.Lock()
+	if err.Level() == errors.EXCEPTION {
+		this.errors = append(this.errors, err)
+		this.errorCount++
+		this.Unlock()
+		this.Stop(FATAL)
+		return
+	}
+
 	if this.errorLimit > 0 && this.errorCount+this.duplicateErrorCount >= this.errorLimit {
 		this.errors = append(this.errors,
 			errors.NewErrorLimit(this.errorLimit, this.errorCount, this.duplicateErrorCount, this.MutationCount()))
 		this.errorCount++
-		this.aborted = true
 		this.Unlock()
 		this.Stop(FATAL)
 		return
@@ -1234,7 +1242,6 @@ func (this *BaseRequest) Stop(state State) {
 
 	// guard against the root operator not being set (eg fatal error)
 	if stopOperator != nil {
-
 		// only one in between Stop() and Done() can happen at any one time
 		this.stopGate.Wait()
 		this.stopGate.Add(1)
@@ -1387,6 +1394,14 @@ func (this *BaseRequest) SetErrors(errs errors.Errors) {
 	this.Lock()
 
 	for _, err := range errs {
+		if err.Level() == errors.EXCEPTION {
+			this.errors = append(this.errors, err)
+			this.errorCount++
+			this.Unlock()
+			this.Stop(FATAL)
+			return
+		}
+
 		if err.Level() == errors.WARNING {
 			this.addWarningLOCKED(err)
 		} else if this.errorLimit <= 0 || (this.errorCount+this.duplicateErrorCount) <= this.errorLimit {
@@ -1397,7 +1412,6 @@ func (this *BaseRequest) SetErrors(errs errors.Errors) {
 	// Append a single E_REQUEST_ERROR_LIMIT error
 	if this.errorLimit > 0 && ((this.errorCount + this.duplicateErrorCount) > this.errorLimit) {
 		this.errors = append(this.errors, errors.NewErrorLimit(this.errorLimit, this.errorCount, this.duplicateErrorCount, this.MutationCount()))
-		this.aborted = true
 		this.Unlock()
 		this.Stop(FATAL)
 	} else {
