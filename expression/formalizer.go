@@ -609,6 +609,10 @@ func (this *Formalizer) SetKeyspace(keyspace string) {
 	}
 }
 
+func (this *Formalizer) SetExprSubqKeyspace(keyspace string) {
+	this.keyspace = keyspace
+}
+
 func (this *Formalizer) Keyspace() string {
 	return this.keyspace
 }

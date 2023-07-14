@@ -208,6 +208,7 @@ func (this *ExpressionTerm) Formalize(parent *expression.Formalizer) (f *express
 		f.SetKeyspace("")
 	} else {
 		f = f1
+		f.SetExprSubqKeyspace(alias)
 	}
 	f.SetAllowedExprTermAlias(alias)
 	f.SetAlias(this.as)
