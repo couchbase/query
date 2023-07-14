@@ -24,5 +24,23 @@
                 "name": "Product 2"
             }
         ]
+    },
+    {
+	"testcase": "MB-57863, part 1, ExpressionTerm",
+        "statements": "SELECT month FROM [{\"month\":1}] AS s",
+        "results": [
+            {
+                "month": 1
+            }
+        ]
+    },
+    {
+	"testcase": "MB-57863, part 2, SubqueryTerm",
+        "statements": "SELECT month FROM (SELECT month FROM [{\"month\":1}] AS s) AS sub",
+        "results": [
+            {
+                "month": 1
+            }
+        ]
     }
 ]

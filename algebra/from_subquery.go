@@ -86,7 +86,7 @@ func (this *SubqueryTerm) Formalize(parent *expression.Formalizer) (f *expressio
 		return nil, err
 	}
 
-	f1 := expression.NewFormalizer(alias, parent)
+	f1 := expression.NewFormalizer("", parent)
 	err = this.subquery.FormalizeSubquery(f1)
 	if err != nil {
 		return
@@ -99,6 +99,7 @@ func (this *SubqueryTerm) Formalize(parent *expression.Formalizer) (f *expressio
 		f.SetKeyspace("")
 	} else {
 		f = f1
+		f.SetExprSubqKeyspace(alias)
 	}
 	f.SetAllowedSubqTermAlias(alias)
 	f.SetAlias(this.as)
