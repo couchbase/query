@@ -98,7 +98,7 @@ const (
 
 	//HELP H-> Help
 	HELPMSG             = "\nHelp information for all shell commands.\n\n"
-	HALIAS              = "\\ALIAS [ name value ]\n"
+	HALIAS              = "\\ALIAS [name value]\n"
 	HUNALIAS            = "\\UNALIAS name ...\n"
 	HCONNECT            = "\\CONNECT url\n"
 	HDISCONNECT         = "\\DISCONNECT\n"
@@ -106,14 +106,15 @@ const (
 	HVERSION            = "\\VERSION\n"
 	HECHO               = "\\ECHO args ...\n"
 	HEXIT               = "\\QUIT \n\\EXIT\n"
-	HHELP               = "\\HELP [ args ... ]\n"
-	HSET                = "\\SET [ parameter value ]\n"
-	HPUSH               = "\\PUSH [ parameter value ]\n"
+	HHELP               = "\\HELP [args ...]\n\\HELP SYNTAX [args...]\n"
+	HSET                = "\\SET [parameter value]\n"
+	HPUSH               = "\\PUSH [parameter value]\n"
 	HUNSET              = "\\UNSET parameter\n"
-	HPOP                = "\\POP [ parameter ]\n"
+	HPOP                = "\\POP [parameter]\n"
 	HREDIRECT           = "\\REDIRECT OFF | [TEE] filename \n"
 	HSOURCE             = "\\SOURCE filename\n"
 	HREFRESH_CLUSTERMAP = "\\REFRESH_CLUSTER_MAP\n"
+	HSYNTAX             = "\\SYNTAX [args ...]\n"
 
 	//Messages to print description of shell commands. D-> Description
 	DALIAS = " Create an alias (name) for input value. value can be shell command, " +
@@ -142,7 +143,8 @@ const (
 
 	DHELP = "Display help information for input shell commands. If no args are given, " +
 		"it lists all existing shell commands.\n" +
-		"\tExample : \n\t        \\HELP VERSION; \n\t        \\HELP EXIT DISCONNECT VERSION; \n\t        \\HELP;\n"
+		"\tExample : \n\t        \\HELP VERSION; \n\t        \\HELP EXIT DISCONNECT VERSION; \n\t        \\HELP;\n" +
+		"\nIf SYNTAX is the first command then it operates the same as \\SYNTAX.\n"
 
 	DPOP = "Pop the value of the given parameter from the input parameter stack. " +
 		"parameter is a prefixed name (-creds, -$rate, $user, histfile).\nIf no " +
@@ -171,11 +173,19 @@ const (
 
 	DREDIRECT = "Write output of commands to file (\\REDIRECT filename). " +
 		"To return to STDOUT, execute \\REDIRECT OFF .\n" +
-		"\tExample : \n\t\t \\REDIRECT temp1.txt ;\n\t\t select * from `beer-sample`;\n\t\t \\REDIRECT OFF;"
+		"\tExample : \n\t\t \\REDIRECT temp1.txt ;\n\t\t select * from `beer-sample`;\n\t\t \\REDIRECT OFF;\n"
 
 	DDEFAULT            = "Fix : Does not exist.\n"
 	DREFRESH_CLUSTERMAP = "Refresh the list of query APIs to reflect input service url as cluster. " +
-		"\tExample : \n\t\t \\REFRESH_CLUSTER_MAP;"
+		"\tExample : \n\t\t \\REFRESH_CLUSTER_MAP;\n"
+
+	// SQL++ statement help
+	DSYNTAX = "\nBasic syntax help information for SQL++ statements." +
+		"\nNOTE: This lists syntax that will parse, but this does not imply it is supported.\n" +
+		"\n\te.g. \"ADVISE INFER default\" will pass parsing but will result in error 3250 if executed.\n" +
+		"\nArguments are the initial tokens of the syntax element to display." +
+		"\n\tExample : \n\t\t \\SYNTAX statements;\n\t\t \\SYNTAX create index;\n"
+	UNKNOWN_STATEMENT = "\nUnknown statement or syntax element.\n"
 )
 
 func NewMessage(message string, args ...string) string {

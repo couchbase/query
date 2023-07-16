@@ -59,10 +59,9 @@ func (this *Help) ExecCommand(args []string) (errors.ErrorCode, string) {
 
 		}
 	} else {
-		/* Input Command : \HELP SET \VERSION;
-		   Print help information for input shell commands. The commands
-		   need not contain the \ prefix. Return an error if the Command
-		   doesnt exist. */
+		if args[0] == "syntax" && len(args) > 1 {
+			return COMMAND_LIST["\\syntax"].ExecCommand(args[1:])
+		}
 		for _, val := range args {
 			val = strings.ToLower(val)
 			if strings.HasPrefix(val, "\\") == false {

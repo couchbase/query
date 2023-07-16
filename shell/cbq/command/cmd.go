@@ -34,6 +34,7 @@ const (
 	SOURCE_CMD              = "SOURCE"
 	REDIRECT_CMD            = "REDIRECT"
 	REFRESH_CLUSTER_MAP_CMD = "REFRESH_CLUSTER_MAP"
+	SYNTAX_CMD              = "SYNTAX"
 )
 
 const (
@@ -118,6 +119,7 @@ var COMMAND_LIST = map[string]ShellCommand{
 	"\\help":      &Help{},
 	"\\version":   &Version{},
 	"\\copyright": &Copyright{},
+	"\\syntax":    &Syntax{},
 
 	/* Session Management */
 	"\\set":     &Set{},

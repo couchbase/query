@@ -627,6 +627,9 @@ func printDesc(cmdname string) (errors.ErrorCode, string) {
 	case REFRESH_CLUSTER_MAP_CMD:
 		return PrintStr(W, DREFRESH_CLUSTERMAP)
 
+	case SYNTAX_CMD:
+		return PrintStr(W, DSYNTAX)
+
 	default:
 		return PrintStr(W, DDEFAULT)
 
