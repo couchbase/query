@@ -341,7 +341,7 @@ column int
 
 /* Precedence: lowest to highest */
 %left           ORDER
-%left           UNION INTERESECT EXCEPT
+%left           UNION INTERSECT EXCEPT
 %left           JOIN NEST UNNEST FLATTEN INNER LEFT RIGHT
 %left           OR
 %left           AND
@@ -367,7 +367,6 @@ column int
 
 /* Override precedence */
 %left           LPAREN RPAREN
-%left           NSCOLON
 
 
 /* Types */
