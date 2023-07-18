@@ -217,15 +217,17 @@ func composeSargSpan(sargSpans []SargSpans, exactSpan bool) (SargSpans, bool, er
 	// Truncate sarg spans when they exceed the limit
 	size := 1
 	n := 0
-	for _, spans := range sargSpans {
+	tooMany := -1
+	for i, spans := range sargSpans {
 		sz := 1
 		if spans != nil {
 			sz = spans.Size()
 		}
 
 		if sz == 0 ||
-			(sz > 1 && size > 1 && sz*size > plan.FULL_SPAN_FANOUT) {
+			(sz > 1 && size >= 1 && sz*size > plan.FULL_SPAN_FANOUT) {
 			exactSpan = false
+			tooMany = i
 			break
 		}
 
@@ -234,6 +236,12 @@ func composeSargSpan(sargSpans []SargSpans, exactSpan bool) (SargSpans, bool, er
 	}
 
 	var ns SargSpans
+	if n == 0 && tooMany == 0 {
+		// too many spans on the first index key
+		ns = _WHOLE_SPANS.Copy()
+		ns.SetExact(false)
+		return ns, ns.Exact(), nil
+	}
 
 	// Sarg composite indexes right to left
 	for i := n - 1; i >= 0; i-- {
