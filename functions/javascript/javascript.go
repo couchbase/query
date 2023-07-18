@@ -247,8 +247,8 @@ func getEvaluator(name functions.FunctionName) (*evaluatorDesc, errors.Error) {
 	return desc, nil
 }
 
-// TO-DO : Once js-evaluator supports returning all statements inside a UDF - change this method
-func (this *javascript) FunctionStatements(name functions.FunctionName, body functions.FunctionBody) ([]interface{}, errors.Error) {
+// TODO
+func (this *javascript) FunctionStatements(name functions.FunctionName, body functions.FunctionBody, context functions.Context) (interface{}, errors.Error) {
 	return nil, errors.NewFunctionUnsupportedActionError("javascript", "EXPLAIN FUNCTION")
 }
 

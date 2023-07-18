@@ -33,14 +33,38 @@ func Init() {
 	functions.FunctionsNewLanguage(functions.INLINE, &inline{})
 }
 
-func (this *inline) FunctionStatements(name functions.FunctionName, body functions.FunctionBody) ([]interface{}, errors.Error) {
+// Returns all the queries in the inline UDF body
+// If the function body: Is a subquery - return it
+// If not: return all subqueries in the function body
+func (this *inline) FunctionStatements(name functions.FunctionName, body functions.FunctionBody, context functions.Context) (interface{}, errors.Error) {
 	funcBody, ok := body.(*inlineBody)
 
 	if !ok {
 		return nil, errors.NewInternalFunctionError(goerrors.New("Wrong language being executed!"), name.Name())
 	}
 
-	return []interface{}{funcBody.expr}, nil
+	expr := funcBody.expr
+	var subqueries [](*algebra.Subquery)
+
+	if sq, ok := expr.(*algebra.Subquery); ok {
+		subqueries = append(subqueries, sq)
+	} else {
+		sqs, err := expression.ListSubqueries(expression.Expressions{expr}, false)
+
+		if err != nil {
+			return nil, errors.NewInternalFunctionError(err, "")
+		}
+
+		for _, s := range sqs {
+			sub, ok := s.(*algebra.Subquery)
+
+			if ok {
+				subqueries = append(subqueries, sub)
+			}
+		}
+	}
+
+	return subqueries, nil
 }
 
 func (this *inline) Execute(name functions.FunctionName, body functions.FunctionBody, modifiers functions.Modifier, values []value.Value, context functions.Context) (value.Value, errors.Error) {

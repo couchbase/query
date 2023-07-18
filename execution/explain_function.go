@@ -23,8 +23,14 @@ import (
 
 type ExplainFunction struct {
 	base
-	plan  *plan.ExplainFunction
-	plans map[string]planEntry
+	plan *plan.ExplainFunction
+
+	// Map of plan information
+	// Key: query statement
+	plans map[string]*planEntry
+
+	// line numbers of Dynamic N1QL queries inside a JS UDF
+	dynamicLineNos []uint
 }
 
 func NewExplainFunction(plan *plan.ExplainFunction, context *Context) *ExplainFunction {
@@ -63,34 +69,51 @@ func (this *ExplainFunction) RunOnce(context *Context, parent value.Value) {
 			return
 		}
 
-		lang, stmts, err := functions.FunctionStatements(this.plan.FuncName(), context.Credentials())
+		lang, stmts, err := functions.FunctionStatements(this.plan.FuncName(), context.Credentials(), &this.operatorCtx)
 
 		if err != nil {
-			context.Fatal(err)
+			context.Error(err)
 			return
 		}
 
 		if stmts != nil {
 			if lang == functions.INLINE {
-				this.plans, err = createSQPlans(stmts, context)
 
-				if err != nil {
-					context.Fatal(err)
-					return
+				// if qs == nil , the inline function has no embedded query
+				if qs, ok := stmts.([](*algebra.Subquery)); ok {
+					this.plans, err = createSQPlans(qs, context)
+
+					if err != nil {
+						context.Error(err)
+						return
+					}
 				}
 			} else if lang == functions.JAVASCRIPT {
-				this.plans, err = createStmtPlans(stmts, context)
+				qs, _ := stmts.(map[string]interface{})
+				stmtStrings, ok := qs["embedded"].([]string)
 
-				if err != nil {
-					context.Fatal(err)
-					return
+				if ok {
+					this.plans, err = createStmtPlans(stmtStrings, context)
+
+					if err != nil {
+						context.Error(err)
+						return
+					}
 				}
+
+				if dl, ok := qs["dynamic"].([]uint); ok {
+					this.dynamicLineNos = dl
+				}
+
+			} else {
+				context.Error(errors.NewExplainFunctionError(nil, "Not supported for this function."))
+				return
 			}
 		}
 
 		bytes, errM := this.marshalPlans()
 		if errM != nil {
-			context.Fatal(errors.NewExplainFunctionError(err, "EXPLAIN FUNCTION: Error marshaling JSON plans."))
+			context.Error(errors.NewExplainFunctionError(err, "Error marshaling JSON plans."))
 			return
 		}
 
@@ -124,24 +147,31 @@ func (this *ExplainFunction) Done() {
 type planEntry struct {
 	qPlan      *plan.QueryPlan
 	optimHints *algebra.OptimHints
+	uses       int    // number of times the statement was seen in the function
+	extraInfo  string // optional extra info to return in the marshalled output
 }
 
 func (this *ExplainFunction) marshalPlans() ([]byte, error) {
-	r := make(map[string]interface{}, 2)
+	r := make(map[string]interface{}, 3)
 	r["function"] = this.plan.FuncName().Key()
+
+	if len(this.dynamicLineNos) > 0 {
+		r["line_numbers"] = this.dynamicLineNos
+	}
 
 	if len(this.plans) > 0 {
 		marshalledPlans := make([]map[string]interface{}, 0, len(this.plans))
 
 		for stmt, pe := range this.plans {
 
+			query := map[string]interface{}{
+				"statement": stmt,
+				"uses":      pe.uses,
+			}
+
 			if pe.qPlan != nil {
 				op := pe.qPlan.PlanOp()
-
-				query := map[string]interface{}{
-					"statement": stmt,
-					"plan":      op,
-				}
+				query["plan"] = op
 
 				if op != nil {
 					if op.Cost() > 0.0 {
@@ -182,9 +212,9 @@ func (this *ExplainFunction) marshalPlans() ([]byte, error) {
 				marshalledPlans = append(marshalledPlans, query)
 
 			} else {
-				query := map[string]interface{}{
-					"statement": stmt,
-					"plan":      "EXPLAIN is not supported for statements of type ADVISE, EXPLAIN, EXECUTE",
+
+				if pe.extraInfo != "" {
+					query["plan"] = pe.extraInfo
 				}
 
 				marshalledPlans = append(marshalledPlans, query)
@@ -200,31 +230,35 @@ func (this *ExplainFunction) marshalPlans() ([]byte, error) {
 // Returns a list of subquery plans
 // Since Authorization check for Inline functions' inner subqueries is already done in FunctionStatements()
 // We do not perform another Authorize() check
-func createSQPlans(stmts []interface{}, context *Context) (map[string]planEntry, errors.Error) {
+func createSQPlans(stmts []*algebra.Subquery, context *Context) (map[string]*planEntry, errors.Error) {
 	var prepContext planner.PrepareContext
-	plans := make(map[string]planEntry, len(stmts))
+	plans := make(map[string]*planEntry, len(stmts))
 
 	planner.NewPrepareContext(&prepContext, context.requestId, context.queryContext, context.namedArgs,
 		context.positionalArgs, context.indexApiVersion, context.featureControls, context.useFts, context.useCBO,
 		context.optimizer, context.deltaKeyspaces, context, false)
 
-	for _, stmt := range stmts {
-		if s, ok := stmt.(*algebra.Subquery); ok {
+	for _, s := range stmts {
 
-			statement := s.Select().String()
-			if _, ok := plans[statement]; !ok {
+		statement := s.Select().String()
+		entry, ok := plans[statement]
 
-				// Build the query plan
-				// Set ForceSQBuild = true - so that subquery plans are built as well
-				qp, _, err, _ := planner.Build(s.Select(), context.datastore, context.systemstore, context.namespace, true, false, true, &prepContext)
+		if !ok {
 
-				if err != nil {
-					return nil, errors.NewExplainFunctionError(err, fmt.Sprintf("EXPLAIN FUNCTION: Error building query plan for statement %s", statement))
-				}
+			// Build the query plan
+			// Set ForceSQBuild = true - so that subquery plans are built as well
+			qp, _, err, _ := planner.Build(s.Select(), context.datastore, context.systemstore, context.namespace, true, false, true, &prepContext)
 
-				pe := planEntry{qPlan: qp, optimHints: s.Select().OptimHints()}
-				plans[statement] = pe
+			if err != nil {
+				return nil, errors.NewExplainFunctionError(err, fmt.Sprintf("Error building query plan for statement- %s", statement))
 			}
+
+			pe := planEntry{qPlan: qp, optimHints: s.Select().OptimHints(), uses: 1}
+			plans[statement] = &pe
+		} else {
+			// if a query is in the function > 1 times - do not regenerate its plan information
+			// just increment usage data
+			entry.uses++
 		}
 	}
 
@@ -232,44 +266,58 @@ func createSQPlans(stmts []interface{}, context *Context) (map[string]planEntry,
 }
 
 // Returns a list of plans given list of queries as strings
-func createStmtPlans(stmts []interface{}, context *Context) (map[string]planEntry, errors.Error) {
-
+func createStmtPlans(stmts []string, context *Context) (map[string]*planEntry, errors.Error) {
 	ds := datastore.GetDatastore()
 	creds := context.Credentials()
-	plans := make(map[string]planEntry, len(stmts))
+	plans := make(map[string]*planEntry, len(stmts))
 
-	for _, stmt := range stmts {
-		if s, ok := stmt.(string); ok {
+	for _, s := range stmts {
+		entry, ok := plans[s]
 
-			if _, ok := plans[s]; !ok {
-				canExplain, ast, qp, err := context.ExplainStatement(s, context.namedArgs, context.positionalArgs, false)
+		if !ok {
+			// the values of the statement's named or positional arguments are not passed
+			// since js-evaluator cannot return said values when query requests for all statements inside a UDF
+			canExplain, ast, qp, err := context.ExplainStatement(s, nil, nil, false)
 
-				if err != nil {
-					return nil, errors.NewExplainFunctionError(err, fmt.Sprintf("EXPLAIN FUNCTION: Error building query plan for statement %s", s))
-				}
-
-				// If Explain is disabled on the statement - ADVISE, EXPLAIN, EXECUTE
-				if !canExplain {
-					pe := planEntry{}
-					plans[s] = pe
-					continue
-				}
-
-				privs, errP := ast.Privileges()
-				if errP != nil {
-					return nil, errP
-				}
-
-				// Verify the privileges needed for this individual query
-				errA := ds.Authorize(privs, creds)
-				if errA != nil {
-					errA = datastore.HandleDsAuthError(errA, privs, creds)
-					return nil, errA
-				}
-
-				pe := planEntry{qPlan: qp, optimHints: ast.OptimHints()}
-				plans[s] = pe
+			if err != nil {
+				return nil, errors.NewExplainFunctionError(err, fmt.Sprintf("Error building query plan for statement- %s", s))
 			}
+
+			// If the statement cannot be Explained
+			// But no error was generated
+			// Create an entry to be marshalled - instead of ignoring the statement
+			if !canExplain {
+				pe := planEntry{uses: 1}
+
+				if ast != nil {
+					// Explain is disabled on - ADVISE, EXPLAIN, EXECUTE queries
+					pe.extraInfo = fmt.Sprintf("EXPLAIN is not supported on queries of type %s", ast.Type())
+				}
+
+				plans[s] = &pe
+				continue
+
+			}
+
+			privs, errP := ast.Privileges()
+			if errP != nil {
+				return nil, errP
+			}
+
+			// Verify the privileges needed for this individual query
+			errA := ds.Authorize(privs, creds)
+			if errA != nil {
+				errA = datastore.HandleDsAuthError(errA, privs, creds)
+				return nil, errA
+			}
+
+			pe := planEntry{qPlan: qp, optimHints: ast.OptimHints(), uses: 1}
+			plans[s] = &pe
+
+		} else {
+			// if a query is in the function > 1 times - do not regenerate its plan information
+			// just increment usage data
+			entry.uses++
 		}
 	}
 

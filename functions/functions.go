@@ -83,7 +83,7 @@ type FunctionEntry struct {
 
 type LanguageRunner interface {
 	Execute(name FunctionName, body FunctionBody, modifiers Modifier, values []value.Value, context Context) (value.Value, errors.Error)
-	FunctionStatements(name FunctionName, body FunctionBody) ([]interface{}, errors.Error)
+	FunctionStatements(name FunctionName, body FunctionBody, context Context) (interface{}, errors.Error)
 }
 
 type functionCache struct {
@@ -461,7 +461,7 @@ func ExecuteFunction(name FunctionName, modifiers Modifier, values []value.Value
 }
 
 // Returns all N1QL query statements inside a function
-func FunctionStatements(name FunctionName, creds *auth.Credentials) (Language, []interface{}, errors.Error) {
+func FunctionStatements(name FunctionName, creds *auth.Credentials, context Context) (Language, interface{}, errors.Error) {
 
 	// Get the function's entry and body
 	body, entry, err := getBodyAndEntry(name)
@@ -481,7 +481,7 @@ func FunctionStatements(name FunctionName, creds *auth.Credentials) (Language, [
 		return lang, nil, err
 	}
 
-	rv, err := languages[lang].FunctionStatements(name, body)
+	rv, err := languages[lang].FunctionStatements(name, body, context)
 
 	return lang, rv, err
 }
@@ -646,7 +646,7 @@ func (this *empty) Execute(name FunctionName, body FunctionBody, modifiers Modif
 	return nil, errors.NewFunctionsNotSupported("")
 }
 
-func (this *empty) FunctionStatements(name FunctionName, body FunctionBody) ([]interface{}, errors.Error) {
+func (this *empty) FunctionStatements(name FunctionName, body FunctionBody, context Context) (interface{}, errors.Error) {
 	return nil, errors.NewFunctionUnsupportedActionError("", "EXPLAIN FUNCTION")
 }
 
@@ -701,6 +701,6 @@ func (this *missing) Load(name FunctionName) errors.Error {
 func (this *missing) Unload(name FunctionName) {
 }
 
-func (this *missing) FunctionStatements(name FunctionName, body FunctionBody) ([]interface{}, errors.Error) {
+func (this *missing) FunctionStatements(name FunctionName, body FunctionBody, context Context) (interface{}, errors.Error) {
 	return nil, errors.NewMissingFunctionError(name.Name())
 }

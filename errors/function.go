@@ -131,6 +131,11 @@ func NewFunctionLibraryPathError(path string) Error {
 		InternalCaller: CallerN(1)}
 }
 
+func NewFunctionStatementsError(what string, name string, reason interface{}) Error {
+	return &err{level: EXCEPTION, ICode: E_FUNCTION_STATEMENTS, IKey: "function.statements.error", cause: reason,
+		InternalMsg: fmt.Sprintf("Error getting queries inside function '%v'. %v", name, what), InternalCaller: CallerN(1)}
+}
+
 func NewAdvisorSessionNotFoundError(s string) Error {
 	c := make(map[string]interface{})
 	c["unknown_session"] = s

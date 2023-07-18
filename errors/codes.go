@@ -329,6 +329,7 @@ const (
 	E_EVALUATOR_LOADING                       ErrorCode = 10116
 	E_EVALUATOR_INFLATING                     ErrorCode = 10117
 	E_FUNCTIONS_UNSUPPORTED_ACTION            ErrorCode = 10118
+	E_FUNCTION_STATEMENTS                     ErrorCode = 10119 // error when getting N1QL statements inside a UDF
 	E_DATASTORE_INVALID_BUCKET_PARTS          ErrorCode = 10200
 	E_QUERY_CONTEXT                           ErrorCode = 10201
 	E_BUCKET_NO_DEFAULT_COLLECTION            ErrorCode = 10202

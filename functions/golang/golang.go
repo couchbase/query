@@ -47,7 +47,7 @@ func Init() {
 	}
 }
 
-func (this *golang) FunctionStatements(name functions.FunctionName, body functions.FunctionBody) ([]interface{}, errors.Error) {
+func (this *golang) FunctionStatements(name functions.FunctionName, body functions.FunctionBody, context functions.Context) (interface{}, errors.Error) {
 	return nil, errors.NewFunctionUnsupportedActionError("golang", "EXPLAIN FUNCTION")
 }
 

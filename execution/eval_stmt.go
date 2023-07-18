@@ -1130,14 +1130,19 @@ func (this *Context) ExecutePreparedExt(prepared interface{}, namedArgs map[stri
 	return this.ExecutePrepared(orgPrepared, false, namedArgs, positionalArgs, "", false, "")
 }
 
-// Returns the Root Query Plan for a given query statement
+// Returns the Query Plan for a given query statement
 // Akin to EXPLAIN :
 //
-//		EXPLAIN, EXECUTE, ADVISE statements are not explained
-//		Statements being explained are not cached in prepareds when auto_prepare = true
-//	 	If inside a Tx - check if the statement being explained is valid inside a Tx
+// 		EXPLAIN, EXECUTE, ADVISE statements are not explained
+// 		Statements being explained are not cached in prepareds when auto_prepare = true
+// 	 	If inside a Tx - check if the statement being explained is valid inside a Tx
 //
 // For PREPARE stmts - the query plan of the actual stmt being prepared is returned
+// Returns:
+// 	if statement can be explained
+// 	algebra root node
+// 	query plan
+// 	error
 
 func (this *Context) ExplainStatement(statement string, namedArgs map[string]value.Value, positionalArgs value.Values,
 	subquery bool) (bool, algebra.Statement, *plan.QueryPlan, error) {
@@ -1154,7 +1159,6 @@ func (this *Context) ExplainStatement(statement string, namedArgs map[string]val
 	}
 
 	var stype string
-	var allow bool
 	var stmtBuild algebra.Statement
 
 	stmtBuild = nil     // The statement to create the plan on
@@ -1163,23 +1167,22 @@ func (this *Context) ExplainStatement(statement string, namedArgs map[string]val
 	switch estmt := stmt.(type) {
 	case *algebra.Explain:
 		stype = estmt.Statement().Type()
-		allow = true
 	case *algebra.Advise:
 		stype = estmt.Statement().Type()
-		allow = true
 	case *algebra.Prepare:
 		stype = stmt.Type()
-		allow = true
 		stmtBuild = estmt.Statement()
 		canExplain = true // explain the statement being prepared instead
 	case *algebra.Execute:
 		stype = stmt.Type()
-		allow = false
 	default:
 		stype = stmt.Type()
-		allow = false
 		stmtBuild = stmt
 		canExplain = true
+	}
+
+	if !canExplain {
+		return false, stmt, nil, nil
 	}
 
 	// Check if the statement is valid inside a Tx
@@ -1189,35 +1192,31 @@ func (this *Context) ExplainStatement(statement string, namedArgs map[string]val
 		txId = this.TxContext().TxId()
 		txImplicit = this.TxContext().TxImplicit()
 	}
-	if ok, msg := transactions.IsValidStatement(txId, stype, txImplicit, allow); !ok {
-		return canExplain, nil, nil, errors.NewTranStatementNotSupportedError(stype, msg)
+	if ok, msg := transactions.IsValidStatement(txId, stype, txImplicit, true); !ok {
+		return false, nil, nil, errors.NewTranStatementNotSupportedError(stype, msg)
 	}
 
 	//  monitoring code TBD
 	if _, err = stmt.Accept(rewrite.NewRewrite(rewrite.REWRITE_PHASE1)); err != nil {
-		return canExplain, nil, nil, errors.NewRewriteError(err, "")
+		return false, nil, nil, errors.NewRewriteError(err, "")
 	}
 
 	// Semantic Checks
 	semChecker := semantics.NewSemChecker(true /* FIXME */, stmt.Type(), this.TxContext() != nil)
 	_, err = stmt.Accept(semChecker)
 	if err != nil {
-		return canExplain, nil, nil, err
-	}
-
-	if stmtBuild == nil {
-		return canExplain, nil, nil, nil
+		return false, nil, nil, err
 	}
 
 	// Set ForceSQBuild = true - so that subquery plans are built as well
 	qp, _, err, _ := planner.Build(stmtBuild, this.datastore, this.systemstore, this.namespace, subquery, true, true, &prepContext)
 
 	if err != nil {
-		return canExplain, nil, nil, err
+		return false, nil, nil, err
 	}
 
 	if qp == nil {
-		return canExplain, nil, nil, fmt.Errorf("Failed to build query plan")
+		return false, nil, nil, fmt.Errorf("Failed to build query plan")
 	}
 
 	return canExplain, stmt, qp, nil
