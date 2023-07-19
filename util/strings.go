@@ -85,3 +85,64 @@ func TrimSpace(s string) string {
 func ByteToString(b []byte) string {
 	return *(*string)(unsafe.Pointer(&b))
 }
+
+func RuneIndexToByteIndex(s string, r int) int {
+	ri := 0
+	if r < 0 {
+		return -1
+	} else if r == 0 {
+		return 0
+	}
+	for i := range s {
+		if ri == r {
+			return i
+		}
+		ri++
+	}
+	return -1
+}
+
+func ByteIndexToRuneIndex(s string, b int) int {
+	ri := 0
+	if b < 0 {
+		return -1
+	} else if b == 0 {
+		return 0
+	}
+	for i := range s {
+		if i == b {
+			return ri
+		} else if i > b {
+			return ri - 1 // return the character it lies within
+		}
+		ri++
+	}
+	return -1
+}
+
+func SubStringRune(s string, p int, l int) string {
+	if l == 0 {
+		return ""
+	} else if p == 0 && l == -1 {
+		return s
+	}
+	start := 0
+	ri := 0
+	for i := range s {
+		if ri == p {
+			start = i
+			if l < 0 {
+				return s[start:]
+			}
+		} else if l > 0 && ri == p+l {
+			return s[start:i]
+		}
+		ri++
+	}
+	return s[start:]
+}
+
+func RuneIndex(s string, sub string) int {
+	bi := strings.Index(s, sub)
+	return ByteIndexToRuneIndex(s, bi)
+}

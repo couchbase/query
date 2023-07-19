@@ -13,22 +13,15 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
-///////////////////////////////////////////////////
-//
-// Contains
-//
-///////////////////////////////////////////////////
+// CONTAINS(expr, substr).  Returns true if the string contains the substring.
 
-/*
-This represents the String function CONTAINS(expr, substr).
-It returns true if the string contains the substring.
-*/
 type Contains struct {
 	BinaryFunctionBase
 }
@@ -42,21 +35,12 @@ func NewContains(first, second Expression) Function {
 	return rv
 }
 
-/*
-Visitor pattern.
-*/
 func (this *Contains) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
 func (this *Contains) Type() value.Type { return value.BOOLEAN }
 
-/*
-This method takes in two values and returns new value that returns a boolean
-value that depicts if the second value is contained within the first. If
-either of the input values are missing, return a missing value, and if they
-arent strings then return a null value.
-*/
 func (this *Contains) Evaluate(item value.Value, context Context) (value.Value, error) {
 	first, err := this.operands[0].Evaluate(item, context)
 	if err != nil {
@@ -77,12 +61,8 @@ func (this *Contains) Evaluate(item value.Value, context Context) (value.Value, 
 	return value.NewValue(rv), nil
 }
 
-/*
-If this expression is in the WHERE clause of a partial index, lists
-the Expressions that are implicitly covered.
-
-For boolean functions, simply list this expression.
-*/
+// If this expression is in the WHERE clause of a partial index, lists the Expressions that are implicitly covered.
+// For boolean functions, simply list this expression.
 func (this *Contains) FilterCovers(covers map[string]value.Value) map[string]value.Value {
 	covers[this.String()] = value.TRUE_VALUE
 	return covers
@@ -93,25 +73,14 @@ func (this *Contains) FilterExpressionCovers(covers map[Expression]value.Value) 
 	return covers
 }
 
-/*
-Factory method pattern.
-*/
 func (this *Contains) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
 		return NewContains(operands[0], operands[1])
 	}
 }
 
-///////////////////////////////////////////////////
-//
-// Length
-//
-///////////////////////////////////////////////////
+// LENGTH(expr). Returns the length of the string value.
 
-/*
-This represents the String function LENGTH(expr). It
-returns the length of the string value.
-*/
 type Length struct {
 	UnaryFunctionBase
 }
@@ -120,25 +89,16 @@ func NewLength(operand Expression) Function {
 	rv := &Length{
 		*NewUnaryFunctionBase("length", operand),
 	}
-
 	rv.expr = rv
 	return rv
 }
 
-/*
-Visitor pattern.
-*/
 func (this *Length) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
 func (this *Length) Type() value.Type { return value.NUMBER }
 
-/*
-This method takes in an argument value and returns its length
-as value. If the input type is missing return missing, and if
-it is not string then return null value.
-*/
 func (this *Length) Evaluate(item value.Value, context Context) (value.Value, error) {
 	arg, err := this.operands[0].Evaluate(item, context)
 	if err != nil {
@@ -148,30 +108,57 @@ func (this *Length) Evaluate(item value.Value, context Context) (value.Value, er
 	} else if arg.Type() != value.STRING {
 		return value.NULL_VALUE, nil
 	}
-
-	rv := len(arg.ToString())
-	return value.NewValue(rv), nil
+	return value.NewValue(len(arg.ToString())), nil
 }
 
-/*
-Factory method pattern.
-*/
 func (this *Length) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
 		return NewLength(operands[0])
 	}
 }
 
-///////////////////////////////////////////////////
-//
-// Lower
-//
-///////////////////////////////////////////////////
+// Multi-byte aware variant
 
-/*
-This represents the String function LOWER(expr). It returns
-the lowercase of the string value.
-*/
+type MBLength struct {
+	UnaryFunctionBase
+}
+
+func NewMBLength(operand Expression) Function {
+	rv := &MBLength{
+		*NewUnaryFunctionBase("mb_length", operand),
+	}
+	rv.expr = rv
+	return rv
+}
+
+func (this *MBLength) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *MBLength) Type() value.Type { return value.NUMBER }
+
+func (this *MBLength) Evaluate(item value.Value, context Context) (value.Value, error) {
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if arg.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else if arg.Type() != value.STRING {
+		return value.NULL_VALUE, nil
+	}
+
+	rv := utf8.RuneCountInString(arg.ToString())
+	return value.NewValue(rv), nil
+}
+
+func (this *MBLength) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return NewMBLength(operands[0])
+	}
+}
+
+// LOWER(expr). Returns the input string with all characters converted to lowercase.
+
 type Lower struct {
 	UnaryFunctionBase
 }
@@ -185,21 +172,12 @@ func NewLower(operand Expression) Function {
 	return rv
 }
 
-/*
-Visitor pattern.
-*/
 func (this *Lower) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
 func (this *Lower) Type() value.Type { return value.STRING }
 
-/*
-This method takes in an argument value and returns a
-lowercase string as value. If the input type is
-missing return missing, and if it is not string then
-return null value.
-*/
 func (this *Lower) Evaluate(item value.Value, context Context) (value.Value, error) {
 	arg, err := this.operands[0].Evaluate(item, context)
 	if err != nil {
@@ -214,26 +192,14 @@ func (this *Lower) Evaluate(item value.Value, context Context) (value.Value, err
 	return value.NewValue(rv), nil
 }
 
-/*
-Factory method pattern.
-*/
 func (this *Lower) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
 		return NewLower(operands[0])
 	}
 }
 
-///////////////////////////////////////////////////
-//
-// LTrim
-//
-///////////////////////////////////////////////////
+// LTRIM(expr [, chars ]).  Returns a string with all leading <chars> (whitespace by default) removed.
 
-/*
-This represents the String function LTRIM(expr [, chars ]).
-It returns a string with all leading chars removed
-(whitespace by default).
-*/
 type LTrim struct {
 	FunctionBase
 }
@@ -247,9 +213,6 @@ func NewLTrim(operands ...Expression) Function {
 	return rv
 }
 
-/*
-Visitor pattern.
-*/
 func (this *LTrim) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
@@ -289,42 +252,18 @@ func (this *LTrim) Evaluate(item value.Value, context Context) (value.Value, err
 	return value.NewValue(rv), nil
 }
 
-/*
-Minimum input arguments required for the LTRIM function
-is 1.
-*/
 func (this *LTrim) MinArgs() int { return 1 }
 
-/*
-Maximum input arguments required for the LTRIM function
-is 2.
-*/
 func (this *LTrim) MaxArgs() int { return 2 }
 
-/*
-Factory method pattern.
-*/
 func (this *LTrim) Constructor() FunctionConstructor {
 	return NewLTrim
 }
 
-/*
-Define variable whitespace that constructs a value from
-' ','\t','\n','\f' and '\r'.
-*/
 var _WHITESPACE = value.NewValue(" \t\n\f\r")
 
-///////////////////////////////////////////////////
-//
-// Position0
-//
-///////////////////////////////////////////////////
+// POSITION0(expr, substr).  Returns the first position of the substring within the string, or -1. The position is 0-based.
 
-/*
-This represents the String function POSITION0(expr, substr).
-It returns the first position of the substring within the
-string, or -1. The position is 0-based.
-*/
 type Position0 struct {
 	BinaryFunctionBase
 }
@@ -338,9 +277,6 @@ func NewPosition0(first, second Expression) Function {
 	return rv
 }
 
-/*
-Visitor pattern.
-*/
 func (this *Position0) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
@@ -356,29 +292,56 @@ func (this *Position0) Evaluate(item value.Value, context Context) (value.Value,
 	if err != nil {
 		return nil, err
 	}
-	return strPositionApply(first, second, 0)
+	return strPositionApply(false, first, second, 0)
 }
 
-/*
-Factory method pattern.
-*/
 func (this *Position0) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
 		return NewPosition0(operands[0], operands[1])
 	}
 }
 
-///////////////////////////////////////////////////
-//
-// Position1
-//
-///////////////////////////////////////////////////
+// Multi-byte aware variant
 
-/*
-This represents the String function POSITION0(expr, substr).
-It returns the first position of the substring within the
-string, or -1. The position is 1-based.
-*/
+type MBPosition0 struct {
+	BinaryFunctionBase
+}
+
+func NewMBPosition0(first, second Expression) Function {
+	rv := &MBPosition0{
+		*NewBinaryFunctionBase("mb_position0", first, second),
+	}
+
+	rv.expr = rv
+	return rv
+}
+
+func (this *MBPosition0) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *MBPosition0) Type() value.Type { return value.NUMBER }
+
+func (this *MBPosition0) Evaluate(item value.Value, context Context) (value.Value, error) {
+	first, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+	second, err := this.operands[1].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+	return strPositionApply(true, first, second, 0)
+}
+
+func (this *MBPosition0) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return NewMBPosition0(operands[0], operands[1])
+	}
+}
+
+// Same as Position0 but the returned index is 1-based.
+
 type Position1 struct {
 	BinaryFunctionBase
 }
@@ -392,9 +355,6 @@ func NewPosition1(first, second Expression) Function {
 	return rv
 }
 
-/*
-Visitor pattern.
-*/
 func (this *Position1) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
@@ -410,28 +370,73 @@ func (this *Position1) Evaluate(item value.Value, context Context) (value.Value,
 	if err != nil {
 		return nil, err
 	}
-	return strPositionApply(first, second, 1)
+	return strPositionApply(false, first, second, 1)
 }
 
-/*
-Factory method pattern.
-*/
 func (this *Position1) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
 		return NewPosition1(operands[0], operands[1])
 	}
 }
 
-///////////////////////////////////////////////////
-//
-// Repeat
-//
-///////////////////////////////////////////////////
+// Multi-byte aware variant
 
-/*
-This represents the String function REPEAT(expr, n).
-It returns string formed by repeating expr n times.
-*/
+type MBPosition1 struct {
+	BinaryFunctionBase
+}
+
+func NewMBPosition1(first, second Expression) Function {
+	rv := &MBPosition1{
+		*NewBinaryFunctionBase("mb_position1", first, second),
+	}
+
+	rv.expr = rv
+	return rv
+}
+
+func (this *MBPosition1) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *MBPosition1) Type() value.Type { return value.NUMBER }
+
+func (this *MBPosition1) Evaluate(item value.Value, context Context) (value.Value, error) {
+	first, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+	second, err := this.operands[1].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+	return strPositionApply(true, first, second, 1)
+}
+
+func (this *MBPosition1) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return NewMBPosition1(operands[0], operands[1])
+	}
+}
+
+func strPositionApply(inRunes bool, first, second value.Value, startPos int) (value.Value, error) {
+	if first.Type() == value.MISSING || second.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else if first.Type() != value.STRING || second.Type() != value.STRING {
+		return value.NULL_VALUE, nil
+	}
+
+	var rv int
+	s := first.ToString()
+	if inRunes {
+		rv = util.RuneIndex(s, second.ToString())
+	} else {
+		rv = strings.Index(s, second.ToString())
+	}
+	return value.NewValue(rv + startPos), nil
+}
+
+// REPEAT(expr, n).  Returns string formed by repeating <expr> n times.
+
 type Repeat struct {
 	BinaryFunctionBase
 }
@@ -445,9 +450,6 @@ func NewRepeat(first, second Expression) Function {
 	return rv
 }
 
-/*
-Visitor pattern.
-*/
 func (this *Repeat) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
@@ -484,26 +486,14 @@ func (this *Repeat) Evaluate(item value.Value, context Context) (value.Value, er
 	return value.NewValue(rv), nil
 }
 
-/*
-Factory method pattern.
-*/
 func (this *Repeat) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
 		return NewRepeat(operands[0], operands[1])
 	}
 }
 
-///////////////////////////////////////////////////
-//
-// Replace
-//
-///////////////////////////////////////////////////
+// REPLACE(expr, substr, repl [, n ]).  Replace <n> (default all) occurrences of <substr> in <expr> with <repl>.
 
-/*
-This represents the String function REPLACE(expr, substr, repl [, n ]).
-It returns a string with all occurences of substr replaced with repl.
-If n is given, at most n replacements are performed.
-*/
 type Replace struct {
 	FunctionBase
 }
@@ -517,9 +507,6 @@ func NewReplace(operands ...Expression) Function {
 	return rv
 }
 
-/*
-Visitor pattern.
-*/
 func (this *Replace) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
@@ -572,35 +559,16 @@ func (this *Replace) Evaluate(item value.Value, context Context) (value.Value, e
 	return value.NewValue(rv), nil
 }
 
-/*
-Minimum input arguments required for the REPLACE function
-is 3.
-*/
 func (this *Replace) MinArgs() int { return 3 }
 
-/*
-Maximum input arguments required for the REPLACE function
-is 4.
-*/
 func (this *Replace) MaxArgs() int { return 4 }
 
-/*
-Factory method pattern.
-*/
 func (this *Replace) Constructor() FunctionConstructor {
 	return NewReplace
 }
 
-///////////////////////////////////////////////////
-//
-// Reverse
-//
-///////////////////////////////////////////////////
+// REVERSE(expr). Returns the string in reverse _character_ order.
 
-/*
-This represents the string function REVERSE(expr). It returns the
-reverse order of the unicode characters of the string value.
-*/
 type Reverse struct {
 	UnaryFunctionBase
 }
@@ -614,9 +582,6 @@ func NewReverse(operand Expression) Function {
 	return rv
 }
 
-/*
-Visitor pattern.
-*/
 func (this *Reverse) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
@@ -638,26 +603,14 @@ func (this *Reverse) Evaluate(item value.Value, context Context) (value.Value, e
 	return value.NewValue(r), nil
 }
 
-/*
-Factory method pattern.
-*/
 func (this *Reverse) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
 		return NewReverse(operands[0])
 	}
 }
 
-///////////////////////////////////////////////////
-//
-// RTrim
-//
-///////////////////////////////////////////////////
+// RTRIM(expr, [, chars ]).  Returns a string with all trailing <chars> (whitespace by default) removed.
 
-/*
-This represents the String function RTRIM(expr, [, chars ]).
-It returns a string with all trailing chars removed (whitespace
-by default).
-*/
 type RTrim struct {
 	FunctionBase
 }
@@ -671,9 +624,6 @@ func NewRTrim(operands ...Expression) Function {
 	return rv
 }
 
-/*
-Visitor pattern.
-*/
 func (this *RTrim) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
@@ -713,37 +663,16 @@ func (this *RTrim) Evaluate(item value.Value, context Context) (value.Value, err
 	return value.NewValue(rv), nil
 }
 
-/*
-Minimum input arguments required for the RTRIM function
-is 1.
-*/
 func (this *RTrim) MinArgs() int { return 1 }
 
-/*
-Maximum input arguments required for the RTRIM function
-is 2.
-*/
 func (this *RTrim) MaxArgs() int { return 2 }
 
-/*
-Factory method pattern.
-*/
 func (this *RTrim) Constructor() FunctionConstructor {
 	return NewRTrim
 }
 
-///////////////////////////////////////////////////
-//
-// Split
-//
-///////////////////////////////////////////////////
+// SPLIT(expr [, sep ]).  Split a string into an array of substrings separated by <sep> (default adjacent whitespace).
 
-/*
-This represents the String function SPLIT(expr [, sep ]).
-It splits the string into an array of substrings separated
-by sep. If sep is not given, any combination of whitespace
-characters is used.
-*/
 type Split struct {
 	FunctionBase
 }
@@ -757,9 +686,6 @@ func NewSplit(operands ...Expression) Function {
 	return rv
 }
 
-/*
-Visitor pattern.
-*/
 func (this *Split) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
@@ -808,38 +734,17 @@ func (this *Split) Evaluate(item value.Value, context Context) (value.Value, err
 	return value.NewValue(rv), nil
 }
 
-/*
-Minimum input arguments required for the SPLIT function
-is 1.
-*/
 func (this *Split) MinArgs() int { return 1 }
 
-/*
-Maximum input arguments required for the SPLIT function
-is 2.
-*/
 func (this *Split) MaxArgs() int { return 2 }
 
-/*
-Factory method pattern.
-*/
 func (this *Split) Constructor() FunctionConstructor {
 	return NewSplit
 }
 
-///////////////////////////////////////////////////
-//
-// Substr0 / Substr
-//
-///////////////////////////////////////////////////
+// SUBSTR(expr, position [, length ]).  Return a <length>-character (default: all remaining) substring starting at <position>.
+// <position> is 0-based and if negative, it is taken as a backwards count from the end of the string.
 
-/*
-This represents the String function SUBSTR(expr, position [, length ]).
-It returns a substring from the integer position of the given length,
-or to the end of the string. The position is 0-based, i.e. the first
-position is 0. If position is negative, it is counted from the end
-of the string; -1 is the last position in the string.
-*/
 type Substr0 struct {
 	FunctionBase
 }
@@ -853,9 +758,6 @@ func NewSubstr0(operands ...Expression) Function {
 	return rv
 }
 
-/*
-Visitor pattern.
-*/
 func (this *Substr0) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
@@ -872,41 +774,61 @@ func (this *Substr0) Evaluate(item value.Value, context Context) (value.Value, e
 			return nil, err
 		}
 	}
-	return strSubstrApply(args, 0)
+	return strSubstrApply(false, args, 0)
 }
 
-/*
-Minimum input arguments required for the SUBSTR function
-is 2.
-*/
 func (this *Substr0) MinArgs() int { return 2 }
 
-/*
-Maximum input arguments required for the SUBSTR function
-is 3.
-*/
 func (this *Substr0) MaxArgs() int { return 3 }
 
-/*
-Factory method pattern.
-*/
 func (this *Substr0) Constructor() FunctionConstructor {
 	return NewSubstr0
 }
 
-///////////////////////////////////////////////////
-//
-// Substr1
-//
-///////////////////////////////////////////////////
+// Multi-byte aware variant
 
-/*
-This represents the String function SUBSTR1(expr, position [, length ]).
-It returns a substring from the integer position of the given length,
-or to the end of the string. The position is 1-based, i.e. the first
-position is 0. If position is negative, it is counted from the end
-of the string; -1 is the last position in the string.
-*/
+type MBSubstr0 struct {
+	FunctionBase
+}
+
+func NewMBSubstr0(operands ...Expression) Function {
+	rv := &MBSubstr0{
+		*NewFunctionBase("mb_substr0", operands...),
+	}
+
+	rv.expr = rv
+	return rv
+}
+
+func (this *MBSubstr0) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *MBSubstr0) Type() value.Type { return value.STRING }
+
+func (this *MBSubstr0) Evaluate(item value.Value, context Context) (value.Value, error) {
+	args := _ARGS_POOL.GetSized(len(this.operands))
+	defer _ARGS_POOL.Put(args)
+	for i, op := range this.operands {
+		var err error
+		args[i], err = op.Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return strSubstrApply(true, args, 0)
+}
+
+func (this *MBSubstr0) MinArgs() int { return 2 }
+
+func (this *MBSubstr0) MaxArgs() int { return 3 }
+
+func (this *MBSubstr0) Constructor() FunctionConstructor {
+	return NewMBSubstr0
+}
+
+// Like Substr0 but <position> is 1-based.
+
 type Substr1 struct {
 	FunctionBase
 }
@@ -920,9 +842,6 @@ func NewSubstr1(operands ...Expression) Function {
 	return rv
 }
 
-/*
-Visitor pattern.
-*/
 func (this *Substr1) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
@@ -939,38 +858,140 @@ func (this *Substr1) Evaluate(item value.Value, context Context) (value.Value, e
 			return nil, err
 		}
 	}
-	return strSubstrApply(args, 1)
+	return strSubstrApply(false, args, 1)
 }
 
-/*
-Minimum input arguments required for the SUBSTR function
-is 2.
-*/
 func (this *Substr1) MinArgs() int { return 2 }
 
-/*
-Maximum input arguments required for the SUBSTR function
-is 3.
-*/
 func (this *Substr1) MaxArgs() int { return 3 }
 
-/*
-Factory method pattern.
-*/
 func (this *Substr1) Constructor() FunctionConstructor {
 	return NewSubstr1
 }
 
-///////////////////////////////////////////////////
-//
-// Suffixes
-//
-///////////////////////////////////////////////////
+// Multi-byte aware variant
 
-/*
-This represents the String function SUFFIXES(expr). It returns an
-array of all the suffixes of the string value.
-*/
+type MBSubstr1 struct {
+	FunctionBase
+}
+
+func NewMBSubstr1(operands ...Expression) Function {
+	rv := &MBSubstr1{
+		*NewFunctionBase("mb_substr1", operands...),
+	}
+
+	rv.expr = rv
+	return rv
+}
+
+func (this *MBSubstr1) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *MBSubstr1) Type() value.Type { return value.STRING }
+
+func (this *MBSubstr1) Evaluate(item value.Value, context Context) (value.Value, error) {
+	args := _ARGS_POOL.GetSized(len(this.operands))
+	defer _ARGS_POOL.Put(args)
+	for i, op := range this.operands {
+		var err error
+		args[i], err = op.Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return strSubstrApply(true, args, 1)
+}
+
+func (this *MBSubstr1) MinArgs() int { return 2 }
+
+func (this *MBSubstr1) MaxArgs() int { return 3 }
+
+func (this *MBSubstr1) Constructor() FunctionConstructor {
+	return NewMBSubstr1
+}
+
+func strSubstrApply(inRunes bool, args []value.Value, startPos int) (value.Value, error) {
+	null := false
+
+	if args[0].Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else if args[0].Type() != value.STRING {
+		null = true
+	}
+
+	for i := 1; i < len(args); i++ {
+		switch args[i].Type() {
+		case value.MISSING:
+			return value.MISSING_VALUE, nil
+		case value.NUMBER:
+			vf := args[i].Actual().(float64)
+			if vf != math.Trunc(vf) {
+				null = true
+			}
+		default:
+			null = true
+		}
+	}
+
+	if null {
+		return value.NULL_VALUE, nil
+	}
+
+	str := args[0].ToString()
+	pos := int(args[1].Actual().(float64))
+	var l int
+	if inRunes {
+		l = utf8.RuneCountInString(str)
+	} else {
+		l = len(str)
+	}
+
+	if pos < 0 {
+		pos = l + pos
+	} else if pos > 0 && startPos > 0 {
+		pos = pos - startPos
+	}
+
+	if pos < 0 || pos >= l {
+		return value.NULL_VALUE, nil
+	}
+
+	if inRunes {
+		if len(args) == 2 {
+			return value.NewValue(util.SubStringRune(str, pos, -1)), nil
+		}
+		length := int(args[2].Actual().(float64))
+		if length < 0 {
+			return value.NULL_VALUE, nil
+		}
+
+		if pos+length > l {
+			length = l - pos
+		}
+
+		return value.NewValue(util.SubStringRune(str, pos, length)), nil
+
+	} else {
+		if len(args) == 2 {
+			return value.NewValue(str[pos:]), nil
+		}
+
+		length := int(args[2].Actual().(float64))
+		if length < 0 {
+			return value.NULL_VALUE, nil
+		}
+
+		if pos+length > len(str) {
+			length = len(str) - pos
+		}
+		return value.NewValue(str[pos : pos+length]), nil
+	}
+
+}
+
+// SUFFIXES(expr). Return an array containing all the suffixes of the string value.
+
 type Suffixes struct {
 	UnaryFunctionBase
 }
@@ -984,9 +1005,6 @@ func NewSuffixes(operand Expression) Function {
 	return rv
 }
 
-/*
-Visitor pattern.
-*/
 func (this *Suffixes) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
@@ -1013,26 +1031,14 @@ func (this *Suffixes) Evaluate(item value.Value, context Context) (value.Value, 
 	return value.NewValue(rv), nil
 }
 
-/*
-Factory method pattern.
-*/
 func (this *Suffixes) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
 		return NewSuffixes(operands[0])
 	}
 }
 
-///////////////////////////////////////////////////
-//
-// Title
-//
-///////////////////////////////////////////////////
+// TITLE(expr). Converts the string so that the first letter of each word is uppercase and every other letter is lowercase.
 
-/*
-This represents the String function TITLE(expr). It converts
-the string so that the first letter of each word is uppercase
-and every other letter is lowercase.
-*/
 type Title struct {
 	UnaryFunctionBase
 }
@@ -1046,9 +1052,6 @@ func NewTitle(operand Expression) Function {
 	return rv
 }
 
-/*
-Visitor pattern.
-*/
 func (this *Title) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
@@ -1070,26 +1073,14 @@ func (this *Title) Evaluate(item value.Value, context Context) (value.Value, err
 	return value.NewValue(rv), nil
 }
 
-/*
-Factory method pattern.
-*/
 func (this *Title) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
 		return NewTitle(operands[0])
 	}
 }
 
-///////////////////////////////////////////////////
-//
-// Trim
-//
-///////////////////////////////////////////////////
+// TRIM(expr [, chars ]).  Return a string with all leading and trailing <chars> (whitespace by default) removed.
 
-/*
-This represents the String function TRIM(expr [, chars ]).
-It returns a string with all leading and trailing chars
-removed (whitespace by default).
-*/
 type Trim struct {
 	FunctionBase
 }
@@ -1103,9 +1094,6 @@ func NewTrim(operands ...Expression) Function {
 	return rv
 }
 
-/*
-Visitor pattern.
-*/
 func (this *Trim) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
@@ -1145,35 +1133,16 @@ func (this *Trim) Evaluate(item value.Value, context Context) (value.Value, erro
 	return value.NewValue(rv), nil
 }
 
-/*
-Minimum input arguments required for the TRIM function
-is 1.
-*/
 func (this *Trim) MinArgs() int { return 1 }
 
-/*
-Maximum input arguments required for the TRIM function
-is 2.
-*/
 func (this *Trim) MaxArgs() int { return 2 }
 
-/*
-Factory method pattern.
-*/
 func (this *Trim) Constructor() FunctionConstructor {
 	return NewTrim
 }
 
-///////////////////////////////////////////////////
-//
-// Upper
-//
-///////////////////////////////////////////////////
+// UPPER(expr). Returns the input string with all characters converted to uppercase.
 
-/*
-This represents the String function UPPER(expr). It returns
-the uppercase of the string value.
-*/
 type Upper struct {
 	UnaryFunctionBase
 }
@@ -1187,9 +1156,6 @@ func NewUpper(operand Expression) Function {
 	return rv
 }
 
-/*
-Visitor pattern.
-*/
 func (this *Upper) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
@@ -1210,20 +1176,13 @@ func (this *Upper) Evaluate(item value.Value, context Context) (value.Value, err
 	return value.NewValue(rv), nil
 }
 
-/*
-Factory method pattern.
-*/
 func (this *Upper) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
 		return NewUpper(operands[0])
 	}
 }
 
-///////////////////////////////////////////////////
-//
-// Mask
-//
-///////////////////////////////////////////////////
+// MASK(expr,options)  Apply a mask to a string.
 
 type Mask struct {
 	FunctionBase
@@ -1238,9 +1197,6 @@ func NewMask(operands ...Expression) Function {
 	return rv
 }
 
-/*
-Visitor pattern.
-*/
 func (this *Mask) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
@@ -1356,14 +1312,14 @@ func (this *Mask) Evaluate(item value.Value, context Context) (value.Value, erro
 		if m == nil {
 			return value.NewValue(s), nil
 		}
-		anchorPos = m[0]
+		anchorPos = util.ByteIndexToRuneIndex(s, m[0])
 	}
 
 	var l int
 	if preserve {
-		l = len(s)
+		l = utf8.RuneCountInString(s)
 	} else {
-		l = len(mask)
+		l = utf8.RuneCountInString(mask)
 	}
 
 	if preserve {
@@ -1379,7 +1335,7 @@ func (this *Mask) Evaluate(item value.Value, context Context) (value.Value, erro
 		anchorPos *= -1
 	}
 
-	if anchorPos > len(s) {
+	if anchorPos > utf8.RuneCountInString(s) {
 		return value.NewValue(s), nil
 	}
 
@@ -1455,98 +1411,15 @@ func getReader(s string, reverse bool) *strings.Reader {
 	}
 }
 
-/*
-Minimum input arguments required for the MASK function
-is 1.
-*/
 func (this *Mask) MinArgs() int { return 1 }
 
-/*
-Maximum input arguments required for the MASK function
-is 2.
-*/
 func (this *Mask) MaxArgs() int { return 2 }
 
-/*
-Factory method pattern.
-*/
 func (this *Mask) Constructor() FunctionConstructor {
 	return NewMask
 }
 
-func strPositionApply(first, second value.Value, startPos int) (value.Value, error) {
-	if first.Type() == value.MISSING || second.Type() == value.MISSING {
-		return value.MISSING_VALUE, nil
-	} else if first.Type() != value.STRING || second.Type() != value.STRING {
-		return value.NULL_VALUE, nil
-	}
-
-	rv := strings.Index(first.ToString(), second.ToString())
-	return value.NewValue(rv + startPos), nil
-}
-
-func strSubstrApply(args []value.Value, startPos int) (value.Value, error) {
-	null := false
-
-	if args[0].Type() == value.MISSING {
-		return value.MISSING_VALUE, nil
-	} else if args[0].Type() != value.STRING {
-		null = true
-	}
-
-	for i := 1; i < len(args); i++ {
-		switch args[i].Type() {
-		case value.MISSING:
-			return value.MISSING_VALUE, nil
-		case value.NUMBER:
-			vf := args[i].Actual().(float64)
-			if vf != math.Trunc(vf) {
-				null = true
-			}
-		default:
-			null = true
-		}
-	}
-
-	if null {
-		return value.NULL_VALUE, nil
-	}
-
-	str := args[0].ToString()
-	pos := int(args[1].Actual().(float64))
-
-	if pos < 0 {
-		pos = len(str) + pos
-	} else if pos > 0 && startPos > 0 {
-		pos = pos - startPos
-	}
-
-	if pos < 0 || pos >= len(str) {
-		return value.NULL_VALUE, nil
-	}
-
-	if len(args) == 2 {
-		return value.NewValue(str[pos:]), nil
-	}
-
-	length := int(args[2].Actual().(float64))
-	if length < 0 {
-		return value.NULL_VALUE, nil
-	}
-
-	if pos+length > len(str) {
-		length = len(str) - pos
-	}
-
-	return value.NewValue(str[pos : pos+length]), nil
-
-}
-
-///////////////////////////////////////////////////
-//
-// LPAD
-//
-///////////////////////////////////////////////////
+// LPAD(expr, size [,str])  Pad a string to length on the left (start) using <str> or spaces if <str> is not supplied.
 
 type LPad struct {
 	FunctionBase
@@ -1568,7 +1441,7 @@ func (this *LPad) Accept(visitor Visitor) (interface{}, error) {
 func (this *LPad) Type() value.Type { return value.STRING }
 
 func (this *LPad) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return padString(item, context, this.operands, false)
+	return padString(item, context, this.operands, false, false)
 }
 
 func (this *LPad) MinArgs() int { return 2 }
@@ -1579,11 +1452,40 @@ func (this *LPad) Constructor() FunctionConstructor {
 	return NewLPad
 }
 
-///////////////////////////////////////////////////
-//
-// RPAD
-//
-///////////////////////////////////////////////////
+// Multi-byte aware variant
+
+type MBLPad struct {
+	FunctionBase
+}
+
+func NewMBLPad(operands ...Expression) Function {
+	rv := &MBLPad{
+		*NewFunctionBase("mb_lpad", operands...),
+	}
+
+	rv.expr = rv
+	return rv
+}
+
+func (this *MBLPad) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *MBLPad) Type() value.Type { return value.STRING }
+
+func (this *MBLPad) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return padString(item, context, this.operands, false, true)
+}
+
+func (this *MBLPad) MinArgs() int { return 2 }
+
+func (this *MBLPad) MaxArgs() int { return 3 }
+
+func (this *MBLPad) Constructor() FunctionConstructor {
+	return NewMBLPad
+}
+
+// RPAD(expr, size [,str])  Pad a string to length on the right (end) using <str> or spaces if <str> is not supplied.
 
 type RPad struct {
 	FunctionBase
@@ -1605,7 +1507,7 @@ func (this *RPad) Accept(visitor Visitor) (interface{}, error) {
 func (this *RPad) Type() value.Type { return value.STRING }
 
 func (this *RPad) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return padString(item, context, this.operands, true)
+	return padString(item, context, this.operands, true, false)
 }
 
 func (this *RPad) MinArgs() int { return 2 }
@@ -1616,76 +1518,40 @@ func (this *RPad) Constructor() FunctionConstructor {
 	return NewRPad
 }
 
-func padString(item value.Value, context Context, operands Expressions, right bool) (value.Value, error) {
-	var s string
-	var l int
-	pad := " "
-	null := false
-	missing := false
+// Multi-byte aware variant
 
-	for i, op := range operands {
-		arg, err := op.Evaluate(item, context)
-		if err != nil {
-			return nil, err
-		} else if arg.Type() == value.MISSING {
-			missing = true
-		} else if (i == 0 || i == 2) && arg.Type() != value.STRING {
-			null = true
-		} else if i == 1 && arg.Type() != value.NUMBER {
-			null = true
-		} else if !null && !missing {
-			switch i {
-			case 0:
-				s = arg.ToString()
-			case 1:
-				num := arg.Actual().(float64)
-				if num < 0.0 || num != math.Trunc(num) {
-					null = true
-				} else {
-					l = int(num)
-				}
-			case 2:
-				pad = arg.ToString()
-				if len(pad) < 1 {
-					null = true
-				}
-			}
-		}
-	}
-
-	if missing {
-		return value.MISSING_VALUE, nil
-	} else if null {
-		return value.NULL_VALUE, nil
-	}
-
-	d := l - len(s)
-	if d <= 0 {
-		return value.NewValue(s[:l]), nil
-	}
-	var padded strings.Builder
-	if right {
-		padded.WriteString(s)
-	}
-	for d > 0 {
-		if len(pad) < d {
-			padded.WriteString(pad)
-		} else {
-			padded.WriteString(pad[:d])
-		}
-		d -= len(pad)
-	}
-	if !right {
-		padded.WriteString(s)
-	}
-	return value.NewValue(padded.String()), nil
+type MBRPad struct {
+	FunctionBase
 }
 
-///////////////////////////////////////////////////
-//
-// Formalize
-//
-///////////////////////////////////////////////////
+func NewMBRPad(operands ...Expression) Function {
+	rv := &MBRPad{
+		*NewFunctionBase("mb_rpad", operands...),
+	}
+
+	rv.expr = rv
+	return rv
+}
+
+func (this *MBRPad) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *MBRPad) Type() value.Type { return value.STRING }
+
+func (this *MBRPad) Evaluate(item value.Value, context Context) (value.Value, error) {
+	return padString(item, context, this.operands, true, true)
+}
+
+func (this *MBRPad) MinArgs() int { return 2 }
+
+func (this *MBRPad) MaxArgs() int { return 3 }
+
+func (this *MBRPad) Constructor() FunctionConstructor {
+	return NewMBRPad
+}
+
+// FORMALIZE(expr [,query_context]) Return the formalized (optionally using <query_context>) text of the input statment string.
 
 type Formalize struct {
 	FunctionBase
@@ -1744,13 +1610,10 @@ func (this *Formalize) Constructor() FunctionConstructor {
 }
 
 func (this *Formalize) MinArgs() int { return 1 }
+
 func (this *Formalize) MaxArgs() int { return 2 }
 
-///////////////////////////////////////////////////
-//
-// URLEncode
-//
-///////////////////////////////////////////////////
+// URLENCODE(expr) Return the string URL-encoded. (e.g. " " to "+")
 
 type URLEncode struct {
 	UnaryFunctionBase
@@ -1791,11 +1654,7 @@ func (this *URLEncode) Constructor() FunctionConstructor {
 	}
 }
 
-///////////////////////////////////////////////////
-//
-// URLDecode
-//
-///////////////////////////////////////////////////
+// URLDECODE(expr)  Return the string URL-decoded. (e.g. "+" to " ")
 
 type URLDecode struct {
 	UnaryFunctionBase
@@ -1837,4 +1696,85 @@ func (this *URLDecode) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
 		return NewURLDecode(operands[0])
 	}
+}
+
+func padString(item value.Value, context Context, operands Expressions, right bool, inRunes bool) (value.Value, error) {
+	var s string
+	var l int
+	pad := " "
+	null := false
+	missing := false
+
+	for i, op := range operands {
+		arg, err := op.Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		} else if arg.Type() == value.MISSING {
+			missing = true
+		} else if (i == 0 || i == 2) && arg.Type() != value.STRING {
+			null = true
+		} else if i == 1 && arg.Type() != value.NUMBER {
+			null = true
+		} else if !null && !missing {
+			switch i {
+			case 0:
+				s = arg.ToString()
+			case 1:
+				num := arg.Actual().(float64)
+				if num < 0.0 || num != math.Trunc(num) {
+					null = true
+				} else {
+					l = int(num)
+				}
+			case 2:
+				pad = arg.ToString()
+				if len(pad) < 1 {
+					null = true
+				}
+			}
+		}
+	}
+
+	if missing {
+		return value.MISSING_VALUE, nil
+	} else if null {
+		return value.NULL_VALUE, nil
+	}
+
+	var d int
+	if inRunes {
+		d = l - utf8.RuneCountInString(s)
+	} else {
+		d = l - len(s)
+	}
+	if d <= 0 {
+		if inRunes {
+			return value.NewValue(util.SubStringRune(s, 0, l)), nil
+		}
+		return value.NewValue(s[:l]), nil
+	}
+	var padded strings.Builder
+	if right {
+		padded.WriteString(s)
+	}
+	var lp int
+	if inRunes {
+		lp = utf8.RuneCountInString(pad)
+	} else {
+		lp = len(pad)
+	}
+	for d > 0 {
+		if lp < d {
+			padded.WriteString(pad)
+		} else if inRunes {
+			padded.WriteString(util.SubStringRune(pad, 0, d))
+		} else {
+			padded.WriteString(pad[:d])
+		}
+		d -= lp
+	}
+	if !right {
+		padded.WriteString(s)
+	}
+	return value.NewValue(padded.String()), nil
 }

@@ -659,5 +659,26 @@
             "$5": "**me**ex**to**ask"
         }
       ]
+    },
+    {
+      "statements":"SELECT LENGTH(s) byte_len, MB_LENGTH(s) char_len, POS0(s,sub) byte_pos0, MB_POS0(s,sub) char_pos0, POS1(s,sub) byte_pos1, MB_POS1(s,sub) char_pos1, SUBSTR0(s,3,1) byte_sub0, MB_SUBSTR0(s,3,1) char_sub0, SUBSTR1(s,3,1) byte_sub1, MB_SUBSTR1(s,3,1) char_sub1, LPAD(s,25,sub) byte_lpad, MB_LPAD(s,25,sub) char_lpad, RPAD(s,25,sub) byte_rpad, MB_RPAD(s,25,sub) char_rpad LET s = '日本語で日本', sub = 'で日本'",
+      "results": [
+          {
+              "byte_len": 18,
+              "char_len": 6,
+              "byte_pos0": 9,
+              "char_pos0": 3,
+              "byte_pos1": 10,
+              "char_pos1": 4,
+              "byte_sub0": "\ufffd",
+              "char_sub0": "で",
+              "byte_sub1": "\ufffd",
+              "char_sub1": "語",
+              "byte_lpad": "で日\ufffd日本語で日本",
+              "char_lpad": "で日本で日本で日本で日本で日本で日本で日本語で日本",
+              "byte_rpad": "日本語で日本で日\ufffd",
+              "char_rpad": "日本語で日本で日本で日本で日本で日本で日本で日本で"
+          }
+      ]
     }
 ]
