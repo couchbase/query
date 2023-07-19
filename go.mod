@@ -111,8 +111,6 @@ require (
 	github.com/couchbase/tools-common/types v1.0.0 // indirect
 	github.com/couchbase/tools-common/utils v1.0.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/dustin/go-jsonpointer v0.0.0-20140810065344-75939f54b39e // indirect
-	github.com/dustin/gojson v0.0.0-20150115165335-af16e0e771e2 // indirect
 	github.com/elazarl/go-bindata-assetfs v1.0.1 // indirect
 	github.com/golang/geo v0.0.0-20210211234256-740aa86cb551 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
