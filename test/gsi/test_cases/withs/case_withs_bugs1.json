@@ -93,6 +93,30 @@
         "testcase": "MB-56431, part 5, Unnest alias conflict with WITH alias",
         "statements":"WITH a AS ([20, 40]) SELECT a FROM shellTest AS st UNNEST st.a11 AS a WHERE st.c12 = 30 AND st.type = \"left\"",
         "error": "Duplicate UNNEST alias 'a' (near line 1, column 66)"
+    },
+    {
+	"testcase": "MB-57904",
+        "statements": "select a, (WITH w1 AS (a) SELECT RAW w1) AS b  from [1,2,3] a",
+        "results": [
+             {
+                "a": 1,
+                "b": [
+                    1
+                ]
+            },
+            {
+                "a": 2,
+                "b": [
+                    2
+                ]
+            },
+            {
+                "a": 3,
+                "b": [
+                    3
+                ]
+            }
+        ]
     }
 ]
 

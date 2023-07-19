@@ -89,8 +89,13 @@ type Formalizer struct {
 
 func NewFormalizer(keyspace string, parent *Formalizer) *Formalizer {
 	rv := newFormalizer(keyspace, parent, false, false)
-	if parent != nil && parent.IsCheckCorrelation() {
-		rv.flags |= FORM_CHK_CORRELATION
+	if parent != nil {
+		if parent.IsCheckCorrelation() {
+			rv.flags |= FORM_CHK_CORRELATION
+		}
+		if parent.InFunction() {
+			rv.flags |= FORM_IN_FUNCTION
+		}
 	}
 	return rv
 }
@@ -368,6 +373,10 @@ func (this *Formalizer) VisitIdentifier(expr *Identifier) (interface{}, error) {
 
 	if wi, ok := this.withs[identifier]; ok {
 		if wi.correlated {
+			err := this.AddCorrelatedIdentifiers(wi.correlation)
+			if err != nil {
+				return nil, err
+			}
 			if this.correlation == nil {
 				this.correlation = make(map[string]uint32, len(wi.correlation))
 			}

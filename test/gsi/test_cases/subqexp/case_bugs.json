@@ -42,5 +42,35 @@
                 "month": 1
             }
         ]
+    },
+    {
+	"testcase": "MB-57903",
+        "statements": "select a, (SELECT RAW (SELECT RAW a) ) AS b  from [1,2,3] a",
+        "results": [
+            {
+                "a": 1,
+                "b": [
+                    [
+                        1
+                    ]
+                ]
+            },
+            {
+                "a": 2,
+                "b": [
+                    [
+                        2
+                    ]
+                ]
+            },
+            {
+                "a": 3,
+                "b": [
+                    [
+                        3
+                    ]
+                ]
+            }
+        ]
     }
 ]
