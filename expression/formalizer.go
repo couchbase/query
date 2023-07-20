@@ -829,7 +829,11 @@ func (this *Formalizer) AddCorrelatedIdentifiers(correlation map[string]uint32) 
 		if _, ok := this.identifiers.Field(k); !ok {
 			v, ok1 := this.allowed.Field(k)
 			if !ok1 {
-				return errors.NewFormalizerInternalError(fmt.Sprintf("correlation reference %s is not in allowed", k))
+				if this.IsCheckCorrelation() {
+					v = value.NewValue(uint32(IDENT_IS_CORRELATED))
+				} else {
+					return errors.NewFormalizerInternalError(fmt.Sprintf("correlation reference %s is not in allowed", k))
+				}
 			}
 			this.identifiers.SetField(k, v)
 		}
