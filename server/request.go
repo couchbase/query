@@ -10,6 +10,8 @@ package server
 
 import (
 	"net/http"
+	"os"
+	"runtime"
 	"sync"
 	"time"
 
@@ -19,6 +21,7 @@ import (
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/execution"
 	"github.com/couchbase/query/logging"
+	"github.com/couchbase/query/logging/event"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/tenant"
 	"github.com/couchbase/query/timestamp"
@@ -1285,10 +1288,35 @@ func (this *BaseRequest) CompleteRequest(requestTime, serviceTime, transaction_t
 
 		// sending a stop is illegal after this point
 		this.stopOperator = nil
-		this.timings.Done()
+		this.done()
 		this.stopGate.Done()
 		this.timings = nil
 	}
+}
+
+// this function exists to make sure that if a panic occurs in the Done() machinery
+// the servicer can still be released
+func (this *BaseRequest) done() {
+	defer func() {
+		err := recover()
+		if err != nil {
+			buf := make([]byte, 1<<16)
+			n := runtime.Stack(buf, false)
+			s := string(buf[0:n])
+			stmt := "<ud>" + this.Statement() + "</ud>"
+			qc := "<ud>" + this.QueryContext() + "</ud>"
+			logging.Severef("panic: %v ", err, this.ExecutionContext())
+			logging.Severef("request text: %v", stmt, this.ExecutionContext())
+			logging.Severef("query context: %v", qc, this.ExecutionContext())
+			logging.Severef("stack: %v", s, this.ExecutionContext())
+			os.Stderr.WriteString(s)
+			os.Stderr.Sync()
+			event.Report(event.CRASH, event.ERROR, "error", err, "request-id", this.Id().String(),
+				"statement", event.UpTo(stmt, 500), "query_context", event.UpTo(qc, 250), "stack", event.CompactStack(s, 2000))
+
+		}
+	}()
+	this.timings.Done()
 }
 
 func sendStop(ch chan bool) {
