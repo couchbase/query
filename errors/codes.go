@@ -100,6 +100,7 @@ const (
 	E_COMPLETED_QUALIFIER_NOT_FOUND           ErrorCode = 2180
 	E_COMPLETED_QUALIFIER_NOT_UNIQUE          ErrorCode = 2190
 	E_COMPLETED_QUALIFIER_INVALID_ARGUMENT    ErrorCode = 2200
+	E_COMPLETED_BAD_MAX_SIZE                  ErrorCode = 2201
 	E_ADMIN_BAD_SERVICE_PORT                  ErrorCode = 2210
 	E_ADMIN_BODY                              ErrorCode = 2220
 	E_PARSE_SYNTAX                            ErrorCode = 3000

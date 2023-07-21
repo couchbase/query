@@ -116,6 +116,11 @@ var _SETTERS = map[string]Setter{
 		return nil
 	},
 	CMPOBJECT: setCompleted,
+	CMPMAXPLANSIZE: func(s *Server, o interface{}) errors.Error {
+		value := getNumber(o)
+		RequestsSetMaxPlanSize(int(value))
+		return nil
+	},
 	PRPLIMIT: func(s *Server, o interface{}) errors.Error {
 		value := getNumber(o)
 		prepareds.PreparedsSetLimit(int(value))
@@ -424,6 +429,7 @@ func FillSettings(settings map[string]interface{}, srvr *Server) map[string]inte
 	settings[CMPTHRESHOLD] = threshold
 	settings[CMPLIMIT] = RequestsLimit()
 	settings[CMPOBJECT] = RequestsGetQualifiers()
+	settings[CMPMAXPLANSIZE] = RequestsMaxPlanSize()
 	settings[PRPLIMIT] = prepareds.PreparedsLimit()
 	settings[PRETTY] = srvr.Pretty()
 	settings[MAXINDEXAPI] = srvr.MaxIndexAPI()

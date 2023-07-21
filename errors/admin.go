@@ -140,6 +140,13 @@ func NewCompletedQualifierInvalidArgument(what string, cond interface{}) Error {
 		InternalMsg: "Completed requests qualifier " + what + " cannot accept argument " + condString, InternalCaller: CallerN(1)}
 }
 
+func NewCompletedInvalidPlanSize(sz int) Error {
+	c := make(map[string]interface{}, 2)
+	c["invalid_size"] = sz
+	return &err{level: EXCEPTION, ICode: E_COMPLETED_BAD_MAX_SIZE, IKey: "admin.accounting.completed.bad_max_size", cause: c,
+		InternalMsg: fmt.Sprintf("Completed requests maximum plan size (%v) is invalid.", sz), InternalCaller: CallerN(1)}
+}
+
 func NewAdminBadServicePort(port string) Error {
 	return &err{level: EXCEPTION, ICode: E_ADMIN_BAD_SERVICE_PORT, IKey: "admin.clustering.bad_port",
 		InternalMsg: "Invalid service port: " + port, InternalCaller: CallerN(1)}

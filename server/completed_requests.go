@@ -18,6 +18,7 @@ halt waiting for the scan to be completed.
 package server
 
 import (
+	"fmt"
 	"net/http"
 	"sync"
 	"time"
@@ -26,6 +27,7 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/execution"
+	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
@@ -38,6 +40,9 @@ const (
 	CMP_OP_DEL
 	CMP_OP_UPD
 )
+
+const _DEF_MAX_PLAN_SIZE = 256 * logging.KiB
+const _MAX_PLAN_SIZE_LIMIT = 20*logging.MiB - 128*logging.KiB
 
 type RequestLogEntry struct {
 	RequestId                string
@@ -68,7 +73,7 @@ type RequestLogEntry struct {
 	PhaseTimes               map[string]interface{}
 	PhaseCounts              map[string]interface{}
 	PhaseOperators           map[string]interface{}
-	timings                  value.Value
+	timings                  []byte
 	optEstimates             value.Value
 	NamedArgs                map[string]value.Value
 	PositionalArgs           value.Values
@@ -102,6 +107,7 @@ type RequestLog struct {
 	taggedQualifiers map[string][]qualifier
 	cache            *util.GenCache
 	handlers         map[string]*handler
+	maximumPlanSize  int
 }
 
 var requestLog = &RequestLog{}
@@ -126,9 +132,23 @@ func RequestsInit(threshold int, limit int) {
 
 	requestLog.cache = util.NewGenCache(limit)
 	requestLog.handlers = make(map[string]*handler)
+	requestLog.maximumPlanSize = _DEF_MAX_PLAN_SIZE
 }
 
 // configure completed requests
+
+func RequestsMaxPlanSize() int {
+	return requestLog.maximumPlanSize
+}
+
+func RequestsSetMaxPlanSize(max int) {
+	if max < 0 || max > _MAX_PLAN_SIZE_LIMIT {
+		max = _MAX_PLAN_SIZE_LIMIT
+	}
+	requestLog.Lock()
+	requestLog.maximumPlanSize = max
+	requestLog.Unlock()
+}
 
 func RequestsLimit() int {
 	return requestLog.cache.Limit()
@@ -467,10 +487,7 @@ func RequestDo(id string, f func(*RequestLogEntry)) {
 func RequestDelete(id string) errors.Error {
 	if requestLog.cache.Delete(id, func(r interface{}) {
 		re := r.(*RequestLogEntry)
-		if re.timings != nil {
-			re.timings.Recycle()
-			re.timings = nil
-		}
+		re.timings = nil
 	}) {
 		return nil
 	} else {
@@ -600,14 +617,20 @@ func LogRequest(request_time, service_time, transactionElapsedTime time.Duration
 	// in order not to bloat service memory, we marshal the timings into a value
 	// at the expense of request execution time
 	timings := request.GetTimings()
+	maxPlanSize := RequestsMaxPlanSize()
 	if timings != nil {
 		parsed := request.GetFmtTimings()
 		if len(parsed) > 0 {
-			re.timings = value.NewValue(parsed)
+			re.timings = parsed
+		} else if maxPlanSize == 0 {
+			re.timings = []byte("{\"WARNING\":\"Plan inclusion disabled.\"}")
 		} else {
 			v, err := json.Marshal(timings)
-			if len(v) > 0 && err == nil {
-				re.timings = value.NewValue(v)
+			if len(v) > 0 && err == nil && len(v) <= maxPlanSize {
+				re.timings = v
+			} else if len(v) > maxPlanSize {
+				re.timings = []byte(fmt.Sprintf("{\"WARNING\":\"Plan (%v) exceeds maximum permitted (%v) size.\"}",
+					logging.HumanReadableSize(int64(len(v)), false), logging.HumanReadableSize(int64(maxPlanSize), false)))
 			}
 		}
 		estimates := request.GetFmtOptimizerEstimates()
