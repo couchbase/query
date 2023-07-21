@@ -37,6 +37,7 @@ const (
 	CMPLIMIT              = "completed-limit"
 	CMPPUSH               = "+completed-limit"
 	CMPPOP                = "-completed-limit"
+	CMPMAXPLANSIZE        = "completed-max-plan-size"
 	PRPLIMIT              = "prepared-limit"
 	PRETTY                = "pretty"
 	MAXINDEXAPI           = "max-index-api"
@@ -82,6 +83,7 @@ var CHECKERS = map[string]Checker{
 	CMPOBJECT:             checkCompleted,
 	CMPTHRESHOLD:          checkNumber,
 	CMPLIMIT:              checkNumber,
+	CMPMAXPLANSIZE:        checkNumber,
 	PRETTY:                checkBool,
 	MAXINDEXAPI:           checkNumber,
 	PROFILE:               checkProfileAdmin,
