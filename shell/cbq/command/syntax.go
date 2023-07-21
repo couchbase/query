@@ -155,7 +155,7 @@ func oneLevelOnly(rn string, option int) bool {
 }
 
 func getRules(rules map[string][]int, rn string, option int, level int, nested bool) {
-	if strings.Contains(rn, "expr") && level > 0 {
+	if strings.Contains(rn, "expr") && level > 1 {
 		return
 	}
 	r, ok := statement_syntax[rn]
