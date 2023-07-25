@@ -436,13 +436,11 @@ func (b *Bucket) do3(vb uint16, f func(mc *memcached.Client, vb uint16) error, d
 			}
 			return err
 		}
-		if deadline {
-			if DefaultTimeout > 0 {
-				dl, _ := getDeadline(noDeadline, _NO_TIMEOUT, DefaultTimeout)
-				conn.SetDeadline(dl)
-			} else {
-				conn.SetDeadline(noDeadline)
-			}
+		if deadline && DefaultTimeout > 0 {
+			dl, _ := getDeadline(noDeadline, _NO_TIMEOUT, DefaultTimeout)
+			conn.SetDeadline(dl)
+		} else {
+			conn.SetDeadline(noDeadline)
 		}
 		if desc.replica > 0 {
 			conn.SetReplica(true)
