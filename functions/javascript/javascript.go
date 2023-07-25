@@ -247,9 +247,84 @@ func getEvaluator(name functions.FunctionName) (*evaluatorDesc, errors.Error) {
 	return desc, nil
 }
 
-// TODO
-func (this *javascript) FunctionStatements(name functions.FunctionName, body functions.FunctionBody, context functions.Context) (interface{}, errors.Error) {
-	return nil, errors.NewFunctionUnsupportedActionError("javascript", "EXPLAIN FUNCTION")
+// Returns a map of:
+// Embedded: slice of strings. The Embedded query strings inside the JS UDF
+// Dynamic:  slice of uint. The line numbers of Dynamic N1QL queries inside the JS UDF
+func (this *javascript) FunctionStatements(name functions.FunctionName, body functions.FunctionBody,
+	context functions.Context) (interface{}, errors.Error) {
+	var evaluator *evaluatorDesc
+
+	funcName := name.Name()
+	funcBody, ok := body.(*javascriptBody)
+
+	if !ok {
+		return nil, errors.NewInternalFunctionError(goerrors.New("Wrong language being executed!"), funcName)
+	}
+
+	// Get the evaluator
+	if funcBody.text == "" {
+		evaluator = &external
+	} else if tenant.IsServerless() {
+		var err errors.Error
+		evaluator, err = getEvaluator(name)
+		if evaluator == nil {
+			return nil, err
+		}
+	} else {
+		evaluator = &internal
+	}
+	if evaluator.evaluator == nil {
+		return nil, errors.NewFunctionsDisabledError(evaluator.name)
+	}
+
+	var library string
+
+	if funcBody.text == "" {
+		// External JS UDF
+		library = funcBody.libName
+		funcName = funcBody.object
+
+		// if nested paths are not specified, just use the unformalized library
+		if library == "" {
+			library = funcBody.library
+		}
+	} else {
+		// N1QL managed JS UDF
+		// If the function body's text has not already been loaded, load it
+		library = nameToLibrary(name)
+		_, isLoaded, _ := evaluator.libStore.Read(library)
+
+		if !isLoaded {
+			err1 := body.Load(name)
+			if err1 != nil {
+				return nil, err1
+			}
+		}
+
+	}
+
+	// Note: Since AllStatements() does not invoke a js runner - runner management is not necessary
+
+	queries, err := evaluator.evaluator.AllStatements(library, funcName, functions.NewUdfBasicContext(context, funcBody.prefix))
+
+	if err.Err != nil {
+		if err.Details != nil {
+			return nil, errors.NewFunctionStatementsError(fmt.Sprintf("(%v:%v)", library, funcName), funcName, err.Details)
+		}
+
+		return nil, errors.NewFunctionStatementsError(fmt.Sprintf("(%v:%v)", library, funcName), funcName,
+			fmt.Sprintf("%v:%v", err.Err, err.Message))
+
+	}
+
+	rv := make(map[string]interface{}, 2)
+
+	// slice of strings-  embedded query strings inside the UDF
+	rv["embedded"] = queries.Embedded
+
+	// slice of uint- the line numbers of Dynamic N1QL queries inside the UDF
+	rv["dynamic"] = queries.Dynamic
+	return rv, nil
 }
 
 func (this *javascript) Execute(name functions.FunctionName, body functions.FunctionBody, modifiers functions.Modifier, values []value.Value, context functions.Context) (value.Value, errors.Error) {
