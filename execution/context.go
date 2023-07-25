@@ -1301,7 +1301,8 @@ func (this *Context) getSubqueryTimes() interface{} {
 			mq := q.String()
 			mt, err := json.Marshal(t)
 			if err == nil {
-				times = append(times, map[string]interface{}{"subquery": mq, "executionTimings": value.NewValue(mt)})
+				times = append(times, map[string]interface{}{"subquery": mq, "correlated": q.IsCorrelated(),
+					"executionTimings": value.NewValue(mt)})
 			}
 		}
 		trees.mutex.RUnlock()

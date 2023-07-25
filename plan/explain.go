@@ -62,8 +62,9 @@ func (this *Explain) MarshalBase(f func(map[string]interface{})) map[string]inte
 		marshalledSubqueries := make([]map[string]interface{}, 0, len(subqueries))
 		for t, s := range subqueries {
 			subquery := map[string]interface{}{
-				"subquery": t.String(),
-				"plan":     s,
+				"subquery":   t.String(),
+				"plan":       s,
+				"correlated": t.IsCorrelated(),
 			}
 			optimHints := t.OptimHints()
 			if optimHints != nil {

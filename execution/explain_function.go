@@ -194,8 +194,9 @@ func (this *ExplainFunction) marshalPlans() ([]byte, error) {
 					for k, v := range subqueries {
 
 						subquery := map[string]interface{}{
-							"subquery": k.String(),
-							"plan":     v,
+							"subquery":   k.String(),
+							"plan":       v,
+							"correlated": k.IsCorrelated(),
 						}
 
 						optimHints := k.OptimHints()
