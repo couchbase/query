@@ -1596,13 +1596,13 @@ func (this *Formalize) Evaluate(item value.Value, context Context) (value.Value,
 	evalContext := context.NewQueryContext(qc, context.Readonly())
 
 	s, err := evalContext.(Context).Parse(arg.ToString())
-	if err != nil {
+	if err != nil || s == nil {
 		return value.NULL_VALUE, errors.NewParseSyntaxError(err, "Error formalizing statement")
 	}
 	if st, ok := s.(interface{ String() string }); ok {
 		return value.NewValue(st.String()), nil
 	}
-	return value.NULL_VALUE, nil
+	return value.NewValue(arg.ToString()), nil
 }
 
 func (this *Formalize) Constructor() FunctionConstructor {

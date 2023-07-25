@@ -9,6 +9,7 @@ package execution
 
 import (
 	"fmt"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -1083,7 +1084,10 @@ func (this *Context) Parse(s string) (interface{}, error) {
 	}
 	rvs, err2 := n1ql.ParseStatement2(s, this.Namespace(), this.QueryContext())
 	if err2 != nil {
-		return nil, err
+		if !strings.Contains(err.Error(), "Input was not an expression") {
+			return nil, err
+		}
+		return nil, err2
 	}
 	return rvs, nil
 }
