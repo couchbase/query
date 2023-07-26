@@ -158,6 +158,14 @@ function get_path_subpath_commit {
     shift
 
     subpath=`echo $ipath|awk -F/ '{print $NF}'`
+    tools=`echo $ipath|awk -F/ '{print $(NF-1)}'`
+    if [[ $tools == "tools-common" ]]; then
+        tag=`echo $ipath|awk -F/ '{print $NF}'`
+        ver=$tag/$vers
+        get_repo "$ipath" "$ver" "" "$ver" $ver
+        return
+    fi
+
     if [[ $subpath == $repo ]]; then
         subpath=""
         path=$ipath
@@ -262,7 +270,7 @@ function repo_setup {
     repo_by_gomod go.mod client_golang
     repo_by_gomod go.mod golang_protobuf_extensions
     repo_by_gomod go.mod aws-sdk-go
-    repo_by_gomod go.mod tools-common
+    repo_by_gomod ../cbft/go.mod tools-common/cloud
 }
 
 function DevStandaloneSetup {
