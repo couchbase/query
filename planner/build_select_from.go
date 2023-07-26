@@ -411,7 +411,7 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 
 		// no need to separate out the filter if the query has a single keyspace
 		if len(this.baseKeyspaces) > 1 &&
-			(!this.hasBuilderFlag(BUILDER_JOIN_ON_PRIMARY) || !node.IsInCorrSubq()) {
+			(!this.hasBuilderFlag(BUILDER_JOIN_ON_PRIMARY) && !node.IsInCorrSubq()) {
 
 			filter, _, err := this.getFilter(node.Alias(), false, nil)
 			if err != nil {
