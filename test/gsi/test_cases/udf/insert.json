@@ -1,0 +1,47 @@
+[
+   {
+     "statements": "INSERT INTO customer (KEY,VALUE) VALUES(\"1_udf\", { \"type\": \"customer\", \"firstName\": \"Cordula\", \"lastName\": \"Lumb\", \"emailAddress\": \"clumb@zdnet.com\", \"custId\": \"customer1\", \"age\": 15, \"test_id\": \"udf\" })"
+   },
+   {
+     "statements": "INSERT INTO customer (KEY,VALUE) VALUES(\"2_udf\", { \"type\": \"customer\", \"firstName\": \"Sharron\", \"lastName\": \"Worrel\", \"emailAddress\": \"sworrel@gravatar.com\", \"custId\": \"customer2\", \"age\": 25, \"test_id\": \"udf\" })"
+   },
+   {
+     "statements": "INSERT INTO customer (KEY,VALUE) VALUES(\"3_udf\", { \"type\": \"customer\", \"firstName\": \"Janessa\", \"lastName\": \"Ambresin\", \"emailAddress\": \"janessa@nydailynews.com\", \"custId\": \"customer3\", \"age\": 18, \"test_id\": \"udf\" })"
+   },
+   {
+     "statements": "INSERT INTO customer (KEY,VALUE) VALUES(\"4_udf\", { \"type\": \"customer\", \"firstName\": \"Kayla\", \"lastName\": \"Gerring\", \"emailAddress\": \"kgerring3@marriott.com\", \"custId\": \"customer4\", \"age\": 57, \"test_id\": \"udf\" })"
+   },
+   {
+     "statements": "INSERT INTO customer (KEY,VALUE) VALUES(\"5_udf\", {\"type\":\"customer\",\"firstName\":\"Ginger\",\"lastName\":\"Richardson\",\"emailAddress\":\"grichardson4@nytimes.com\",\"custId\":\"customer5\", \"age\": 42, \"test_id\":\"udf\"})"
+   },
+   {
+     "statements": "INSERT INTO customer (KEY,VALUE) VALUES(\"6_udf\", {\"type\":\"customer\",\"firstName\":\"Ronna\",\"lastName\":\"Whitlow\",\"emailAddress\":\"rwhitlow5@icq.com\",\"custId\":\"customer6\", \"age\": 36, \"test_id\":\"udf\"})"
+   },
+   {
+     "statements": "INSERT INTO customer (KEY,VALUE) VALUES(\"7_udf\", {\"type\":\"customer\",\"firstName\":\"Griselda\",\"lastName\":\"Wanderschek\",\"emailAddress\":\"gwanderschek6@photobucket.com\",\"custId\":\"customer7\", \"age\": 33, \"test_id\":\"udf\"})"
+   },
+   {
+     "statements": "INSERT INTO customer (KEY,VALUE) VALUES(\"8_udf\", {\"type\":\"customer\",\"firstName\":\"Gerrilee\",\"lastName\":\"Purkiss\",\"emailAddress\":\"gpurkiss7@yellowpages.com\",\"custId\":\"customer8\", \"age\": 40, \"test_id\":\"udf\"})"
+   },
+   {
+     "statements": "INSERT INTO customer (KEY,VALUE) VALUES(\"9_udf\", {\"type\":\"customer\",\"firstName\":\"Fanchette\",\"lastName\":\"Sidsaff\",\"emailAddress\":\"fsidsaff8@xrea.com\",\"custId\":\"customer9\", \"age\": 38, \"test_id\":\"udf\"})"
+   },
+   {
+     "statements": "INSERT INTO customer (KEY,VALUE) VALUES(\"10_udf\", {\"type\":\"customer\",\"firstName\":\"Leone\",\"lastName\":\"Stuther\",\"emailAddress\":\"lstuther9@berkeley.edu\",\"custId\":\"customer10\", \"age\": 23, \"test_id\":\"udf\"})"
+   },
+   {
+     "statements": "INSERT INTO customer (KEY,VALUE) VALUES(\"11_udf\", {\"type\":\"customer\",\"firstName\":\"Kathye\",\"lastName\":\"Eadie\",\"emailAddress\":\"keadiea@rediff.com\",\"custId\":\"customer11\", \"age\": 19, \"test_id\":\"udf\"})"
+   },
+   {
+     "statements": "INSERT INTO customer (KEY,VALUE) VALUES(\"12_udf\", {\"type\":\"customer\",\"firstName\":\"Tymon\",\"lastName\":\"Dudden\",\"emailAddress\":\"tduddenb@discuz.net\",\"custId\":\"customer12\", \"age\": 33, \"test_id\":\"udf\"})"
+   },
+   {
+     "statements": "INSERT INTO customer (KEY,VALUE) VALUES(\"13_udf\", {\"type\":\"customer\",\"firstName\":\"Moe\",\"lastName\":\"While\",\"emailAddress\":\"mwhilec@chicagotribune.com\",\"custId\":\"customer13\",\"age\": 59, \"test_id\":\"udf\"})"
+   },
+   {
+     "statements": "INSERT INTO customer (KEY,VALUE) VALUES(\"14_udf\", {\"type\":\"customer\",\"firstName\":\"Nikita\",\"lastName\":\"Royson\",\"emailAddress\":\"nroysond@tumblr.com\",\"custId\":\"customer14\",\"age\": 34, \"test_id\":\"udf\"})"
+   },
+   {
+     "statements": "INSERT INTO customer (KEY,VALUE) VALUES(\"15_udf\", {\"type\":\"customer\",\"firstName\":\"Burton\",\"lastName\":\"Caldes\",\"emailAddress\":\"bcaldese@youtu.be\",\"custId\":\"customer15\",\"age\": 65, \"test_id\":\"udf\"})"
+   }
+ ]

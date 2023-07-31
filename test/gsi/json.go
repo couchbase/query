@@ -169,7 +169,8 @@ func (this *MockQuery) Result(item value.AnnotatedValue) bool {
 
 	this.resultCount++
 
-	var resultLine map[string]interface{}
+	var resultLine interface{}
+
 	json.Unmarshal(bytes, &resultLine)
 
 	this.response.results = append(this.response.results, resultLine)
