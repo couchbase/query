@@ -13,6 +13,8 @@ import (
 	"regexp"
 	"runtime"
 	"strings"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
@@ -277,6 +279,8 @@ func (this *lexer) ErrorContext() string {
 	return s
 }
 
+const _MAX_CONTEXT_LEN = 20
+
 func (this *lexer) getContextFor(contextLine, contextColumn int) string {
 	if len(this.text) == 0 {
 		return ""
@@ -292,22 +296,37 @@ func (this *lexer) getContextFor(contextLine, contextColumn int) string {
 		}
 	}
 	line = eoff
-	eoff += contextColumn - 1
-	if eoff > len(this.text) {
-		eoff = len(this.text) - 1
-	}
-	for ; eoff > line; eoff-- {
-		if this.text[eoff] != ' ' && this.text[eoff] != '\t' {
-			break
+
+	chrs := make([]int, _MAX_CONTEXT_LEN)
+	ch := 0
+	col := 0
+	for eoff < len(this.text) && col < contextColumn {
+		r, s := utf8.DecodeRuneInString(this.text[eoff:])
+		if unicode.IsSpace(r) {
+			chrs[ch%len(chrs)] = -1
+		} else {
+			chrs[ch%len(chrs)] = eoff
 		}
+		ch++
+		eoff += s
+		col++
 	}
-	eoff++
-	soff := eoff - 20
-	if line > soff {
-		soff = line
+	if eoff == 0 {
+		return ""
 	}
-	if soff < eoff {
-		return this.text[soff:eoff]
+	lim := ch + len(chrs)
+	if ch < len(chrs) {
+		lim = ch
+		ch = 0
+	}
+	for ch < lim {
+		s := chrs[ch%len(chrs)]
+		if s > 0 && s != line {
+			return "..." + this.text[s:eoff]
+		} else if s == 0 || s == line {
+			return this.text[s:eoff]
+		}
+		ch++
 	}
 	return ""
 }

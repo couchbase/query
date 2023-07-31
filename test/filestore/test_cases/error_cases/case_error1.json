@@ -27,7 +27,7 @@
 
 {
     "statements": "SELECT lineItems.* AS D FROM orders ORDER BY D",
-    "error": "syntax error - line 1, column 20, near 'SELECT lineItems.*', at: AS (reserved word)"
+    "error": "syntax error - line 1, column 20, near 'SELECT lineItems.* ', at: AS (reserved word)"
 },
 
 {

@@ -139,7 +139,7 @@
     {
 	"testcase": "Nested CTE not in parentheses, error",
         "statements":"WITH cte1 AS (SELECT a FROM [1,2,3] as a) SELECT cte1.a from cte1 UNION ALL WITH cte1 as (SELECT a FROM [3,4,5] as a) SELECT cte1.a from cte1",
-        "error": "syntax error - line 1, column 77, near ' from cte1 UNION ALL', at: WITH (reserved word)"
+        "error": "syntax error - line 1, column 77, near '...from cte1 UNION ALL ', at: WITH (reserved word)"
     }
 ]
 

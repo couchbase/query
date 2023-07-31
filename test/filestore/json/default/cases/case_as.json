@@ -230,7 +230,7 @@
 
     {
         "statements": "SELECT details.* AS D FROM default:catalog ORDER BY D",
-        "error":"syntax error - line 1, column 18, near 'SELECT details.*', at: AS (reserved word)"
+        "error":"syntax error - line 1, column 18, near 'SELECT details.* ', at: AS (reserved word)"
     },
 
     {

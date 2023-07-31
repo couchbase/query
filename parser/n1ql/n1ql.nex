@@ -77,6 +77,12 @@
     }
 }
 
+/[0-9][0-9]*[a-zA-Z_][0-9a-zA-Z_]*/
+{
+    yylex.reportError("invalid number")
+    return _ERROR_
+}
+
 /\/\*\+[^*]?(([^*\/])|(\*+[^\/])|([^*]\/))*\*+\// {
     s := yylex.Text()
     lval.s = s[2:len(s)-2]

@@ -30,7 +30,7 @@
 },
 {
     "statements": "SELECT lineItems.* AS D FROM orders ORDER BY D",
-    "error": "syntax error - line 1, column 20, near 'SELECT lineItems.*', at: AS (reserved word)"
+    "error": "syntax error - line 1, column 20, near 'SELECT lineItems.* ', at: AS (reserved word)"
 },
 {
     "statements": "SELECT id AS `$2`, custId AS `$2` FROM orders WHERE test_id=\"err_cases\" ORDER BY `$2` LIMIT 1",

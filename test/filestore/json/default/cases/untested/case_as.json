@@ -223,12 +223,12 @@
 
     {
         "statements": "SELECT details.* AS D FROM catalog",
-        "error": "syntax error - line 1, column 18, near 'SELECT details.*', at: AS (reserved word)"
+        "error": "syntax error - line 1, column 18, near 'SELECT details.* ', at: AS (reserved word)"
     },
 
     {
         "statements": "SELECT title AS `$2`, details.title AS `$2` FROM catalog LIMIT 1",
-        "error": "Duplicate result alias '$2' (near line 1, column 31)."
+        "error": "Duplicate result alias '$2' (near line 1, column 37)."
     }
 
 ]
