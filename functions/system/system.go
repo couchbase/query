@@ -75,7 +75,7 @@ func Get(path string) (value.Value, error) {
 	if len(parts) != 4 {
 		return nil, errors.NewInvalidFunctionNameError(path, fmt.Errorf("name has %v parts", len(parts)))
 	}
-	systemCollection, err := getSystemCollection(parts[1])
+	systemCollection, err := getSystemCollection(parts[1], false)
 	if err != nil {
 		return nil, err
 	}
@@ -117,22 +117,26 @@ func Count(b string) (int64, error) {
 	return count, err
 }
 
-func getSystemCollection(bucketName string) (systemCollection datastore.Keyspace, err errors.Error) {
+func getSystemCollection(bucketName string, chkIndex bool) (datastore.Keyspace, errors.Error) {
 	store := datastore.GetDatastore()
 	if store == nil {
 		return nil, errors.NewNoDatastoreError()
 	}
 
-	systemCollection, err = store.GetSystemCollection(bucketName)
-	if err != nil {
-		return nil, err
+	if chkIndex {
+		// makre sure system collection exists, and create primary index if not existing
+		requestId, _ := util.UUIDV4()
+		err := store.CheckSystemCollection(bucketName, requestId)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	return systemCollection, nil
+	return store.GetSystemCollection(bucketName)
 }
 
-func getPrimaryIndex(cboStats datastore.Keyspace) (datastore.PrimaryIndex3, errors.Error) {
-	indexer, err := cboStats.Indexer(datastore.GSI)
+func getPrimaryIndex(sysColl datastore.Keyspace) (datastore.PrimaryIndex3, errors.Error) {
+	indexer, err := sysColl.Indexer(datastore.GSI)
 	if err != nil {
 		return nil, err
 	}
@@ -142,14 +146,6 @@ func getPrimaryIndex(cboStats datastore.Keyspace) (datastore.PrimaryIndex3, erro
 	}
 	index, err := indexer3.IndexByName("#primary")
 	if err != nil {
-		if err.Code() == errors.E_CB_INDEX_NOT_FOUND {
-			// when primary index is missing, create it in background
-			// (primary index has been dropped, this should not happen)
-			go func(datastore.Indexer3) {
-				requestId, _ := util.UUIDV4()
-				indexer3.CreatePrimaryIndex3(requestId, "#primary", nil, nil)
-			}(indexer3)
-		}
 		return nil, err
 	}
 	index3, ok := index.(datastore.PrimaryIndex3)
@@ -161,7 +157,7 @@ func getPrimaryIndex(cboStats datastore.Keyspace) (datastore.PrimaryIndex3, erro
 }
 
 func scanSystemCollection(bucketName string, handler func(string, datastore.Keyspace) error) errors.Error {
-	systemCollection, err := getSystemCollection(bucketName)
+	systemCollection, err := getSystemCollection(bucketName, true)
 	if err != nil {
 		return err
 	}
@@ -264,7 +260,7 @@ func (name *systemEntry) Signature(object map[string]interface{}) {
 }
 
 func (name *systemEntry) Load() (functions.FunctionBody, errors.Error) {
-	systemCollection, err := getSystemCollection(name.path.Parts()[1])
+	systemCollection, err := getSystemCollection(name.path.Parts()[1], false)
 	if err != nil {
 		return nil, err
 	}
@@ -304,7 +300,7 @@ func (name *systemEntry) Save(body functions.FunctionBody, replace bool) errors.
 	if len(parts) != 4 {
 		return errors.NewInvalidFunctionNameError(name.Name(), fmt.Errorf("name has %v parts", len(parts)))
 	}
-	systemCollection, err := getSystemCollection(parts[1])
+	systemCollection, err := getSystemCollection(parts[1], false)
 	if err != nil {
 		return err
 	}
@@ -336,7 +332,7 @@ func (name *systemEntry) Delete() errors.Error {
 	if len(parts) != 4 {
 		return errors.NewInvalidFunctionNameError(name.Name(), fmt.Errorf("name has %v parts", len(parts)))
 	}
-	systemCollection, err := getSystemCollection(parts[1])
+	systemCollection, err := getSystemCollection(parts[1], false)
 	if err != nil {
 		return err
 	}

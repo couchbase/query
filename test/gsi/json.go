@@ -33,6 +33,7 @@ import (
 	"github.com/couchbase/query/execution"
 	"github.com/couchbase/query/functions"
 	"github.com/couchbase/query/functions/constructor"
+	"github.com/couchbase/query/functions/storage"
 	"github.com/couchbase/query/logging"
 	log_resolver "github.com/couchbase/query/logging/resolver"
 	"github.com/couchbase/query/plan"
@@ -462,6 +463,8 @@ func Start(site, pool, namespace string, setGlobals bool) *MockServer {
 	prepareds.PreparedsReprepareInit(ds, sys)
 	constructor.Init(nil, 6)
 	srv.SetKeepAlive(1 << 10)
+
+	storage.Migrate()
 
 	mockServer.server = srv
 	mockServer.acctstore = acctstore
