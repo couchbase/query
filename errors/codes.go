@@ -126,6 +126,7 @@ const (
 	E_AMBIGUOUS_REFERENCE                     ErrorCode = 3080
 	E_DUPLICATE_VARIABLE                      ErrorCode = 3081
 	E_FORMALIZER_INTERNAL                     ErrorCode = 3082
+	E_PARSE_INVALID_INPUT                     ErrorCode = 3083
 	E_SEMANTICS                               ErrorCode = 3100
 	E_JOIN_NEST_NO_JOIN_HINT                  ErrorCode = 3110
 	E_JOIN_NEST_NO_USE_KEYS                   ErrorCode = 3120

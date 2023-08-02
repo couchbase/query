@@ -14,6 +14,7 @@ import (
 
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
 	base "github.com/couchbase/query/plannerbase"
@@ -464,6 +465,10 @@ func (this *builder) getTermKeyspace(node *algebra.KeyspaceTerm) (datastore.Keys
 
 	if err == nil && this.indexAdvisor {
 		this.setKeyspaceFound()
+	} else if err != nil && (err.Code() == errors.E_CB_KEYSPACE_NOT_FOUND ||
+		err.Code() == errors.E_CB_BUCKET_NOT_FOUND || err.Code() == errors.E_CB_SCOPE_NOT_FOUND) {
+
+		err.AddErrorContext(node.ErrorContext())
 	}
 
 	return keyspace, err

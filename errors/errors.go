@@ -21,6 +21,7 @@ import (
 	"path"
 	"regexp"
 	"runtime"
+	"strconv"
 	"strings"
 )
 
@@ -72,6 +73,8 @@ type Error interface {
 	SetCause(cause interface{})
 	ContainsText(text string) bool
 	HasCause(ErrorCode) bool
+	ExtractLineAndColumn(map[string]interface{})
+	AddErrorContext(ctx string)
 }
 
 type AbortError struct {
@@ -233,6 +236,7 @@ func (e *err) Object() map[string]interface{} {
 		// ensure m["cause"] contains only basic types
 		m["cause"] = processValue(e.cause)
 	}
+	e.ExtractLineAndColumn(m)
 	return m
 }
 
@@ -363,6 +367,29 @@ func (e *err) Cause() interface{} {
 
 func (e *err) SetCause(cause interface{}) {
 	e.cause = cause
+}
+
+var extractRe = regexp.MustCompile("line ([0-9]+), column ([0-9]+)")
+
+func (e *err) ExtractLineAndColumn(m map[string]interface{}) {
+	if m == nil {
+		return
+	}
+	err := e.Error()
+	if matches := extractRe.FindStringSubmatch(err); matches != nil {
+		m["line"], _ = strconv.Atoi(matches[1])
+		m["column"], _ = strconv.Atoi(matches[2])
+	}
+}
+
+func (e *err) AddErrorContext(ctx string) {
+	if ctx == "" {
+		return
+	}
+	err := e.Error()
+	if extractRe.FindStringSubmatch(err) == nil {
+		e.InternalMsg += ctx
+	}
 }
 
 // only put errors in the reserved range here (7000-9999)

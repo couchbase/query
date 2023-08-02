@@ -723,6 +723,7 @@ func (this *httpRequest) writeError(err errors.Error, first bool, prefix, indent
 			m["cause"] = err.Cause()
 		}
 	}
+	err.ExtractLineAndColumn(m)
 
 	var er error
 	var bb bytes.Buffer

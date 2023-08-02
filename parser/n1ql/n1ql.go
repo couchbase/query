@@ -57,9 +57,9 @@ func parseStatement(input string, namespace string, queryContext string, udfChec
 	doParse(lex)
 
 	if len(lex.errs) > 0 {
-		return nil, fmt.Errorf("%s", strings.Join(lex.errs, " \n "))
+		return nil, errors.NewParseSyntaxError(lex.errs, "")
 	} else if lex.stmt == nil {
-		return nil, fmt.Errorf("Input was not a statement.")
+		return nil, errors.NewParseInvalidInput("statement")
 	} else {
 		err := lex.stmt.Formalize()
 		if err != nil {
@@ -81,9 +81,9 @@ func ParseExpression(input string) (expression.Expression, error) {
 	doParse(lex)
 
 	if len(lex.errs) > 0 {
-		return nil, fmt.Errorf("%s", strings.Join(lex.errs, " \n "))
+		return nil, errors.NewParseSyntaxError(lex.errs, "")
 	} else if lex.expr == nil {
-		return nil, fmt.Errorf("Input was not an expression.")
+		return nil, errors.NewParseInvalidInput("expression")
 	} else {
 		return lex.expr, nil
 	}

@@ -10,17 +10,25 @@ package errors
 
 import (
 	"fmt"
+	"strings"
 )
 
 // Parse errors - errors that are created in the parse package
-func NewParseSyntaxError(e error, msg string) Error {
+func NewParseSyntaxError(e interface{}, msg string) Error {
+	var basicError error
 	switch e := e.(type) {
 	case Error: // if given error is already an Error, just return it:
 		return e
+	case []string:
+		basicError = fmt.Errorf("%s", strings.Join(e, " \n "))
+	case error:
+		basicError = e
+	case nil:
 	default:
-		return &err{level: EXCEPTION, ICode: E_PARSE_SYNTAX, IKey: "parse.syntax_error", ICause: e,
-			InternalMsg: msg, InternalCaller: CallerN(1)}
+		basicError = fmt.Errorf("%v", e)
 	}
+	return &err{level: EXCEPTION, ICode: E_PARSE_SYNTAX, IKey: "parse.syntax_error", ICause: basicError,
+		InternalMsg: msg, InternalCaller: CallerN(1)}
 }
 
 // An error (albeit always text in another error) so that we can make use of translation
@@ -47,6 +55,13 @@ func NewParseMissingClosingQuoteError() Error {
 func NewParseUnescapedEmbeddedQuoteError() Error {
 	return &err{level: EXCEPTION, ICode: E_PARSE_UNESCAPED_EMBEDDED_QUOTE, IKey: "parse.unescaped_embedded_quote",
 		InternalMsg: "unescaped embedded quote", InternalCaller: CallerN(1)}
+}
+
+func NewParseInvalidInput(what string) Error {
+	c := make(map[string]interface{})
+	c["expected"] = what
+	return &err{level: EXCEPTION, ICode: E_PARSE_INVALID_INPUT, IKey: "parse.invalid_input", cause: c,
+		InternalMsg: "Invalid input.", InternalCaller: CallerN(1)}
 }
 
 func NewAmbiguousReferenceError(ident string, errorContext string) Error {

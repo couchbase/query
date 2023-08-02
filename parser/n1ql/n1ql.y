@@ -1417,7 +1417,7 @@ expr opt_as_alias opt_use
             ksterm := algebra.NewKeyspaceTermFromPath(algebra.NewPathWithContext(other.Alias(), yylex.(*lexer).Namespace(),
                 yylex.(*lexer).QueryContext()), $2, $3.Keys(), $3.Indexes())
             ksterm.SetValidateKeys($3.ValidateKeys())
-            ksterm.SetErrorContext(l, c)
+            ksterm.SetErrorContext($<line>1, $<column>1)
             $$ = algebra.NewExpressionTerm(other, $2, ksterm, other.Parenthesis() == false, $3.JoinHint())
         case *algebra.NamedParameter, *algebra.PositionalParameter:
             if $3.Indexes() == nil {
@@ -1447,7 +1447,7 @@ expr opt_as_alias opt_use
                     ksterm := algebra.NewKeyspaceTermFromPath(longPath, $2, $3.Keys(), $3.Indexes())
                     ksterm.SetFromTwoParts()
                     ksterm.SetValidateKeys($3.ValidateKeys())
-                    ksterm.SetErrorContext(l, c)
+                    ksterm.SetErrorContext($<line>1, $<column>1)
                     $$ = algebra.NewExpressionTerm(other, $2, ksterm, other.Parenthesis() == false, $3.JoinHint())
                 }
             } else if len(path) == 3 {
@@ -1458,7 +1458,7 @@ expr opt_as_alias opt_use
                 ksterm := algebra.NewKeyspaceTermFromPath(algebra.NewPathLong(yylex.(*lexer).Namespace(), path[0], path[1],
                     path[2]), $2, $3.Keys(), $3.Indexes())
                 ksterm.SetValidateKeys($3.ValidateKeys())
-                ksterm.SetErrorContext(l, c)
+                ksterm.SetErrorContext($<line>1, $<column>1)
                 $$ = algebra.NewExpressionTerm(other, $2, ksterm, other.Parenthesis() == false, $3.JoinHint())
             } else {
                 isExpr = true
@@ -1487,11 +1487,7 @@ keyspace_path opt_as_alias opt_use
 {
     ksterm := algebra.NewKeyspaceTermFromPath($1, $2, $3.Keys(), $3.Indexes())
     ksterm.SetValidateKeys($3.ValidateKeys())
-    if $2 != "" {
-        ksterm.SetErrorContext($<line>2, $<column>2)
-    } else {
-        ksterm.SetErrorContext($<line>1, $<column>1)
-    }
+    ksterm.SetErrorContext($<line>1, $<column>1)
     if $3.JoinHint() != algebra.JOIN_HINT_NONE {
         ksterm.SetJoinHint($3.JoinHint())
     }
