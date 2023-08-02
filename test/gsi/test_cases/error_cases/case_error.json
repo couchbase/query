@@ -1,7 +1,7 @@
 [
     {
         "statements": "this isn't a query",
-        "error": "syntax error - line 1, column 6, near 'this', at: isn"
+        "error": "syntax error - line 1, column 6, near 'this ', at: isn"
     },
     {
         "statements": "SELECT * FROM",
