@@ -121,7 +121,8 @@ func (this *Advisor) Evaluate(item value.Value, context Context) (value.Value, e
 				distributed.RemoteAccess().Settings(settings_start)
 
 				settings_stop := getSettings(profile, sessionName, response_limit, query_count, numOfQueryNodes, false)
-				err = this.scheduleTask(sessionName, duration, newContext, settings_stop, analyzeWorkload(profile, response_limit, duration.Seconds(), query_count, context))
+				err = this.scheduleTask(sessionName, duration, newContext, settings_stop, analyzeWorkload(profile, response_limit,
+					duration.Seconds(), query_count, context))
 				if err != nil {
 					return nil, err
 				}
@@ -241,7 +242,9 @@ func (this *Advisor) isSession() bool {
 	return false
 }
 
-func (this *Advisor) scheduleTask(sessionName string, duration time.Duration, context Context, settings map[string]interface{}, query string) error {
+func (this *Advisor) scheduleTask(sessionName string, duration time.Duration, context Context, settings map[string]interface{},
+	query string) error {
+
 	return scheduler.ScheduleTask(sessionName, _CLASS, _ANALYZE, duration,
 		func(context scheduler.Context, parms interface{}) (interface{}, []errors.Error) {
 			// stop monitoring
@@ -249,6 +252,7 @@ func (this *Advisor) scheduleTask(sessionName string, duration time.Duration, co
 			// collect completed requests
 			res, _, err := context.EvaluateStatement(query, nil, nil, false, true, false, "")
 			if err != nil {
+				// NewError returns its error argument if it is an Error object
 				return nil, []errors.Error{errors.NewError(err, "")}
 			}
 			return res, nil
@@ -261,6 +265,7 @@ func (this *Advisor) scheduleTask(sessionName string, duration time.Duration, co
 			// collect completed requests afterwards
 			res, _, err := context.EvaluateStatement(query, nil, nil, false, true, false, "")
 			if err != nil {
+				// NewError returns its error argument if it is an Error object
 				return nil, []errors.Error{errors.NewError(err, "")}
 			}
 			return res, nil
@@ -305,13 +310,15 @@ func analyzeWorkload(profile, response_limit string, delta, query_count float64,
 	// exclude internal statements from UI
 	workload += " AND (clientContextID IS MISSING OR clientContextID NOT LIKE \"INTERNAL%\")"
 
-	workload += " AND requestTime BETWEEN \"" + start_time + "\" AND date_add_str(\"" + start_time + "\", " + strconv.FormatFloat(delta, 'f', 0, 64) + ",\"second\") "
-	workload += " ORDER BY requestTime LIMIT " + strconv.FormatFloat(query_count, 'f', 0, 64)
+	workload += " AND requestTime BETWEEN \"" + start_time + "\" AND date_add_str(\"" + start_time + "\", " +
+		strconv.FormatFloat(delta, 'f', 0, 64) + ",\"second\") " + " ORDER BY requestTime LIMIT " +
+		strconv.FormatFloat(query_count, 'f', 0, 64)
 	return "SELECT RAW Advisor((" + workload + "))"
 }
 
 func getResults(sessionName string, context Context, newContext Context) (value.Value, error) {
-	query := "SELECT RAW results FROM system:tasks_cache WHERE class = \"" + _CLASS + "\" AND name = \"" + sessionName + "\" AND ANY v IN results SATISFIES v <> {} END"
+	query := "SELECT RAW results FROM system:tasks_cache WHERE class = \"" + _CLASS + "\" AND name = \"" + sessionName +
+		"\" AND ANY v IN results SATISFIES v <> {} END"
 	if tenant.IsServerless() && !context.IsAdmin() {
 		query += queryContext(context)
 	}
@@ -439,7 +446,9 @@ func getSettings(profile, tag, response_limit string, query_count float64, numbe
 	return settings
 }
 
-func (this *Advisor) getSettingInfo(m map[string]interface{}) (profile, response_limit string, duration time.Duration, query_count float64, err error) {
+func (this *Advisor) getSettingInfo(m map[string]interface{}) (profile, response_limit string, duration time.Duration,
+	query_count float64, err error) {
+
 	val1, ok := m["profile"]
 	if ok {
 		if val1 == nil || val1.(value.Value).Type() != value.STRING {

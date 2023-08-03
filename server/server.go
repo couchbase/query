@@ -1374,12 +1374,8 @@ func (this *Server) serviceRequest(request Request) {
 	build := util.Now()
 	operator, er := execution.Build(prepared, context)
 	if er != nil {
-		error, ok := er.(errors.Error)
-		if ok {
-			request.Fail(error)
-		} else {
-			request.Fail(errors.NewError(er, ""))
-		}
+		// NewError returns its error argument if it is an Error object
+		request.Fail(errors.NewError(er, ""))
 	}
 
 	operator.SetRoot(context)
@@ -1726,9 +1722,7 @@ func (this *Server) getAutoExecutePrepared(request Request, prepared *plan.Prepa
 	}
 
 	if er != nil {
-		if err, ok := er.(errors.Error); ok {
-			return prepared, err
-		}
+		// NewError returns its error argument if it is an Error object
 		return prepared, errors.NewError(er, "")
 	}
 

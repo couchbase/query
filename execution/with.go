@@ -343,7 +343,7 @@ func processConfig(config value.Value) (*ConfigOptions, errors.Error) {
 	}
 
 	if config.Type() != value.OBJECT {
-		return nil, errors.NewError(nil, fmt.Sprintf("invalid config %v", config))
+		return nil, errors.NewExecutionInternalError(fmt.Sprintf("Configuration (%v) is not an object", config.Type().String()))
 	}
 
 	for fieldName := range config.Fields() {
@@ -351,12 +351,13 @@ func processConfig(config value.Value) (*ConfigOptions, errors.Error) {
 
 		if fv.Type() != value.NUMBER {
 			// all options are numeric for now
-			return nil, errors.NewExecutionInternalError(fmt.Sprintf("Config Options must be Numeric, %v:%v", fieldName, fv.Type().String()))
+			return nil, errors.NewExecutionInternalError(fmt.Sprintf("Configuration options must be numeric ('%v' is %v)",
+				fieldName, fv.Type().String()))
 		}
 
 		v, ok := fv.Actual().(float64)
 		if !ok {
-			return nil, errors.NewExecutionInternalError(fmt.Sprintf("couldn't read option value passed for %v", fieldName))
+			return nil, errors.NewExecutionInternalError(fmt.Sprintf("Value for '%v' is invalid", fieldName))
 		}
 
 		switch fieldName {
