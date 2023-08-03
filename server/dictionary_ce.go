@@ -13,3 +13,7 @@ package server
 func InitDictionaryCache(dictCacheLimit int) {
 	// no-op for CE
 }
+
+func MigrateDictionary() {
+	// no-op for CE
+}

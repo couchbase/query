@@ -99,7 +99,7 @@ func Migrate() {
 	// if all the buckets appear migrated attempt migration now
 	if bucketCount == newBucketCount {
 		if migration.Register(_UDF_MIGRATION) {
-			migrate()
+			go migrate()
 		} else if migration.IsComplete(_UDF_MIGRATION) {
 
 			// another process picked it up in the interim

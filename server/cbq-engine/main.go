@@ -481,8 +481,9 @@ func main() {
 	// Now that we are up and running, try to prime the prepareds cache
 	prepareds.PreparedsRemotePrime()
 
-	// functions storage migration last
+	// migrations (functions storage and CBO stats) last
 	storage.Migrate()
+	server_package.MigrateDictionary()
 
 	signalCatcher(server, endpoint)
 }

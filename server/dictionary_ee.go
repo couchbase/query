@@ -17,3 +17,7 @@ import (
 func InitDictionaryCache(dictCacheLimit int) {
 	dictionary.DictionaryCacheInit(dictCacheLimit)
 }
+
+func MigrateDictionary() {
+	dictionary.Migrate()
+}
