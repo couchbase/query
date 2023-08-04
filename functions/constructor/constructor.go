@@ -15,7 +15,7 @@ import (
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/functions"
 	"github.com/couchbase/query/functions/authorize"
-	"github.com/couchbase/query/functions/bridge"
+	functionsBridge "github.com/couchbase/query/functions/bridge"
 	"github.com/couchbase/query/functions/golang"
 	"github.com/couchbase/query/functions/inline"
 	"github.com/couchbase/query/functions/javascript"
@@ -25,7 +25,8 @@ import (
 	"github.com/couchbase/query/server/http/router"
 )
 
-func Init(router router.Router, threads int) {
+// jsevaluatorPath: path where jsevaluator binary is located
+func Init(router router.Router, threads int, jsevaluatorPath string) {
 	functionsBridge.NewFunctionName = newGlobalFunction
 	functionsBridge.NewInlineBody = inline.NewInlineBody
 	functionsBridge.NewGolangBody = golang.NewGolangBody
@@ -35,7 +36,7 @@ func Init(router router.Router, threads int) {
 	systemStorage.Init()
 	golang.Init()
 	inline.Init()
-	javascript.Init(router)
+	javascript.Init(router, jsevaluatorPath)
 }
 
 func newGlobalFunction(elem []string, namespace string, queryContext string) (functions.FunctionName, errors.Error) {

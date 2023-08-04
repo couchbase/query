@@ -461,7 +461,14 @@ func Start(site, pool, namespace string, setGlobals bool) *MockServer {
 	srv.SetAllowlist(curlAllowlist)
 
 	prepareds.PreparedsReprepareInit(ds, sys)
-	constructor.Init(nil, 6)
+
+	jsevalPath := ""
+	if path := os.Getenv("JSEVALUATOR_PATH"); path != "" {
+		jsevalPath = path
+	}
+
+	constructor.Init(nil, 6, jsevalPath)
+
 	srv.SetKeepAlive(1 << 10)
 
 	storage.Migrate()

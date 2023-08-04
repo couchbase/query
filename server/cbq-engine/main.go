@@ -454,7 +454,7 @@ func main() {
 
 	server.SetSettingsCallback(endpoint.SettingsCallback)
 
-	constructor.Init(endpoint.Router(), server.Servicers())
+	constructor.Init(endpoint.Router(), server.Servicers(), "")
 	tenant.Start(endpoint, *UUID, *REGULATOR_SETTINGS_FILE)
 
 	// Since TLS listener has already been started by NewServiceEndpoint

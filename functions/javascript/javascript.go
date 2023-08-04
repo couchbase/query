@@ -69,7 +69,7 @@ var tenantsLock sync.RWMutex
 
 // TODO TENANT cleanup tenant runners
 
-func Init(router router.Router) {
+func Init(router router.Router, jsevaluatorPath string) {
 	functions.FunctionsNewLanguage(functions.JAVASCRIPT, &javascript{})
 
 	// TODO for serverless the global engine is there to service couchbase provided global libraries
@@ -85,6 +85,11 @@ func Init(router router.Router) {
 		ScopeManagePermission:   "cluster.collection[%s].n1ql.udf_external!manage",
 		JsRestrictionsEnabled:   tenant.IsServerless(),
 		ProcessIsolationEnabled: true, // tenant.IsServerless(),
+	}
+
+	// set the path to the jsevaluator binary
+	if jsevaluatorPath != "" {
+		globalCfg.EvaluatorExecPath = jsevaluatorPath
 	}
 
 	configErr := defs.ConfigureGlobalConfig(globalCfg)

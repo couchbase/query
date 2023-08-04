@@ -29,8 +29,13 @@ export GO111MODULE=off
 export CGO_CFLAGS="-I$GOPATH/src/github.com/couchbase/eventing-ee/evaluator/worker/include -I$GOPATH/src/github.com/couchbase/sigar/include $CGO_FLAGS"
 export CGO_LDFLAGS="-L$GOPATH/lib $CGO_LDLAGS"
 export LD_LIBRARY_PATH=$GOPATH/lib:$LD_LIBRARY_PATH
-if [[ `uname` == "Darwin" ]] ; then
+if [[ `uname` == "Darwin" ]]
+then
   export DYLD_LIBRARY_PATH=${LD_LIBRARY_PATH}
+  export JSEVALUATOR_PATH="/Applications/Couchbase Server.app/Contents/Resources/couchbase-core/bin"
+elif [[ "Linux" = `uname` ]]
+then
+  export JSEVALUATOR_PATH="/opt/couchbase/bin"
 fi
 
 go clean -cache -modcache -testcache -i -r

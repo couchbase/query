@@ -28,12 +28,18 @@ func TestUDFs(t *testing.T) {
 	runStmt(qc, "CREATE PRIMARY INDEX ON customer")
 
 	runMatch("case_inline_udf_tests.json", false, true, qc, t)
-	runMatch("test.json", false, false, qc, t)
 
-	// Drop functions created in the tests
+	// Drop functions created in the inline UDF tests
 	runStmt(qc, "DROP FUNCTION inline1 IF EXISTS")
 	runStmt(qc, "DROP FUNCTION inline2 IF EXISTS")
 	runStmt(qc, "DROP FUNCTION inline3 IF EXISTS")
+
+	runMatch("case_n1ql_managed_js_udf_tests.json", false, true, qc, t)
+
+	// Drop functions created in the N1QL managed JS UDF tests
+	runStmt(qc, "DROP FUNCTION n1qlJS1 IF EXISTS")
+	runStmt(qc, "DROP FUNCTION n1qlJS2 IF EXISTS")
+	runStmt(qc, "DROP FUNCTION n1qlJS3 IF EXISTS")
 
 	runStmt(qc, "DELETE FROM customer WHERE test_id = \"udf\"")
 	runStmt(qc, "DROP PRIMARY INDEX ON customer")

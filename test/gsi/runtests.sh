@@ -41,8 +41,10 @@ do
     source ./exportval.sh $*
     cd $i
     if [[ `uname` == "Darwin" ]] ; then
+        export JSEVALUATOR_PATH="/Applications/Couchbase Server.app/Contents/Resources/couchbase-core/bin"
         go test -exec "env LD_LIBRARY_PATH=${LD_LIBRARY_PATH} DYLD_LIBRARY_PATH=${LD_LIBRARY_PATH}" $verbose -p 1 -tags enterprise ./...
     else
+        export JSEVALUATOR_PATH="/opt/couchbase/bin"
         go test $verbose -p 1 -tags enterprise ./...
     fi
     cd ../..

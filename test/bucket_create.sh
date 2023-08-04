@@ -45,6 +45,6 @@ do
   Id=${i}owner
   Name=OwnerOf${i}
   Password=${i}pass
-  curl --silent -X PUT $UsersSite$Id -d name=$Name -d roles=bucket_full_access[${i}],query_manage_global_functions,query_execute_global_functions -d password=$Password -u $Auth > /dev/null
+  curl --silent -X PUT $UsersSite$Id -d name=$Name -d roles=bucket_full_access[${i}],query_manage_global_functions,query_execute_global_functions,query_execute_global_external_functions,query_manage_global_external_functions -d password=$Password -u $Auth > /dev/null
 done
 

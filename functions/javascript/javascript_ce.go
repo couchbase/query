@@ -21,7 +21,7 @@ import (
 type javascriptBody struct {
 }
 
-func Init(router router.Router) {
+func Init(router router.Router, jsevaluatorPath string) {
 }
 
 func NewJavascriptBody(library, object, text string) (functions.FunctionBody, errors.Error) {
