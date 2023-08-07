@@ -1843,7 +1843,7 @@ mainLoop:
 				repeat--
 				for ; 0 < repeat && len(line) > pos; repeat-- {
 					pos++
-					if '\n' == line[pos] {
+					if len(line) > pos && '\n' == line[pos] {
 						pos--
 						break
 					}
@@ -1901,7 +1901,7 @@ mainLoop:
 				}
 				if 0 < pos && len(line) == pos {
 					pos--
-				} else if '\n' == line[pos] {
+				} else if len(line) > pos && '\n' == line[pos] {
 					pos = s
 				}
 			} else {
