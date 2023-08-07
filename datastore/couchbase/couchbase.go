@@ -671,6 +671,7 @@ func (s *store) GetRolesAll() ([]datastore.Role, errors.Error) {
 	for i, rd := range roleDescList {
 		roles[i].Name = rd.Role
 		roles[i].Target = rd.BucketName
+		roles[i].IsScope = rd.ScopeName != "" && rd.CollectionName == ""
 	}
 	return roles, nil
 }

@@ -32,11 +32,13 @@ type Role struct {
 // {"role":"admin","name":"Admin","desc":"Can manage ALL cluster features including security.","ce":true}
 // {"role":"query_select","bucket_name":"*","name":"Query Select","desc":"Can execute SELECT statement on bucket to retrieve data"}
 type RoleDescription struct {
-	Role       string
-	Name       string
-	Desc       string
-	Ce         bool
-	BucketName string `json:"bucket_name"`
+	Role           string
+	Name           string
+	Desc           string
+	Ce             bool
+	BucketName     string `json:"bucket_name"`
+	ScopeName      string `json:"scope_name"`
+	CollectionName string `json:"collection_name"`
 }
 
 // Return user-role data, as parsed JSON.

@@ -10,16 +10,83 @@ package semantics
 
 import (
 	"github.com/couchbase/query/algebra"
+	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 )
 
+type roleOp interface {
+	Roles() []string
+	Keyspaces() []*algebra.KeyspaceRef
+}
+
+const (
+	_NO_TARGET = 1 << iota
+	_KEYSPACE_TARGET
+	_SCOPE_TARGET
+)
+
+func validateRoles(op roleOp) errors.Error {
+	ds := datastore.GetDatastore()
+	roles, err := ds.GetRolesAll()
+	if err != nil {
+		return err
+	}
+
+	typ := 0
+	ks := op.Keyspaces()
+	if len(ks) == 0 {
+		typ = _NO_TARGET
+	}
+	for i := range ks {
+		p := algebra.ParsePath(ks[i].FullName())
+		if len(p) == 3 {
+			typ |= _SCOPE_TARGET
+		} else {
+			typ |= _KEYSPACE_TARGET
+		}
+	}
+
+outer:
+	for _, r := range auth.NormalizeRoleNames(op.Roles()) {
+		for i := range roles {
+			if roles[i].Name == r {
+				switch {
+				case roles[i].Target == "": // global role
+					if typ != _NO_TARGET {
+						return errors.NewRoleTakesNoKeyspaceError(r)
+					}
+				case roles[i].IsScope: // scope role
+					if typ != _SCOPE_TARGET {
+						return errors.NewRoleRequiresScopeError(r)
+					}
+				default: // keyspace role
+					if typ != _KEYSPACE_TARGET {
+						return errors.NewRoleRequiresKeyspaceError(r)
+					}
+				}
+				continue outer
+			}
+		}
+		return errors.NewRoleNotFoundError(r)
+	}
+	return nil
+}
+
 func (this *SemChecker) VisitGrantRole(stmt *algebra.GrantRole) (interface{}, error) {
+	err := validateRoles(stmt)
+	if err != nil {
+		return nil, err
+	}
 	return nil, stmt.MapExpressions(this)
 }
 
 func (this *SemChecker) VisitRevokeRole(stmt *algebra.RevokeRole) (interface{}, error) {
+	err := validateRoles(stmt)
+	if err != nil {
+		return nil, err
+	}
 	return nil, stmt.MapExpressions(this)
 }
 

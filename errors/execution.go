@@ -221,17 +221,30 @@ func NewScanVectorTooManyScannedBuckets(buckets []string) Error {
 // Error code 5200 is retired. Do not reuse.
 
 func NewUserNotFoundError(u string) Error {
-	return &err{level: EXCEPTION, ICode: E_USER_NOT_FOUND, IKey: "execution.user_not_found",
+	c := make(map[string]interface{})
+	c["user"] = u
+	return &err{level: EXCEPTION, ICode: E_USER_NOT_FOUND, IKey: "execution.user_not_found", cause: c,
 		InternalMsg: fmt.Sprintf("Unable to find user %s.", u), InternalCaller: CallerN(1)}
 }
 
 func NewRoleRequiresKeyspaceError(role string) Error {
-	return &err{level: EXCEPTION, ICode: E_ROLE_REQUIRES_KEYSPACE, IKey: "execution.role_requires_keyspace",
+	c := make(map[string]interface{})
+	c["role"] = role
+	return &err{level: EXCEPTION, ICode: E_ROLE_REQUIRES_KEYSPACE, IKey: "execution.role_requires_keyspace", cause: c,
 		InternalMsg: fmt.Sprintf("Role %s requires a keyspace.", role), InternalCaller: CallerN(1)}
 }
 
+func NewRoleRequiresScopeError(role string) Error {
+	c := make(map[string]interface{})
+	c["role"] = role
+	return &err{level: EXCEPTION, ICode: E_ROLE_REQUIRES_SCOPE, IKey: "execution.role_requires_scope", cause: c,
+		InternalMsg: fmt.Sprintf("Role %s requires a scope.", role), InternalCaller: CallerN(1)}
+}
+
 func NewRoleTakesNoKeyspaceError(role string) Error {
-	return &err{level: EXCEPTION, ICode: E_ROLE_TAKES_NO_KEYSPACE, IKey: "execution.role_takes_no_keyspace",
+	c := make(map[string]interface{})
+	c["role"] = role
+	return &err{level: EXCEPTION, ICode: E_ROLE_TAKES_NO_KEYSPACE, IKey: "execution.role_takes_no_keyspace", cause: c,
 		InternalMsg: fmt.Sprintf("Role %s does not take a keyspace.", role), InternalCaller: CallerN(1)}
 }
 

@@ -574,8 +574,9 @@ type User struct {
 }
 
 type Role struct {
-	Name   string
-	Target string
+	Name    string
+	Target  string
+	IsScope bool
 }
 
 var NO_STRINGS = make([]string, 0)
