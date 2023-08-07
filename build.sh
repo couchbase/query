@@ -362,16 +362,28 @@ fi
 echo cd server/cbq-engine
 cd server/cbq-engine
 ./build.sh $*
+if [ $? -ne 0 ]
+then
+  exit 1
+fi
 cd ../..
 
 echo cd shell/cbq
 cd shell/cbq
 ./build.sh $*
+if [ $? -ne 0 ]
+then
+  exit 1
+fi
 cd ../..
 
 echo cd tutorial
 cd tutorial
 ./build.sh $*
+if [ $? -ne 0 ]
+then
+  exit 1
+fi
 cd ..
 
 echo go install  $* ./...

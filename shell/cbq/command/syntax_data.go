@@ -365,13 +365,22 @@ var statement_syntax = map[string][][]string{
 	},
 	"with": [][]string{
 		[]string{"WITH", "with_list"},
+		[]string{"WITH", "RECURSIVE", "with_list"},
 	},
 	"with_list": [][]string{
 		[]string{"with_term"},
 		[]string{"with_list", "COMMA", "with_term"},
 	},
 	"with_term": [][]string{
-		[]string{"alias", "AS", "paren_expr"},
+		[]string{"alias", "AS", "paren_expr", "opt_cycle_clause", "opt_option_clause"},
+	},
+	"opt_option_clause": [][]string{
+		[]string{"%empty"},
+		[]string{"OPTIONS", "object"},
+	},
+	"opt_cycle_clause": [][]string{
+		[]string{"%empty"},
+		[]string{"CYCLE", "exprs", "RESTRICT"},
 	},
 	"opt_where": [][]string{
 		[]string{"%empty"},

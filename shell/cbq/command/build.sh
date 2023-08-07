@@ -65,7 +65,17 @@ END \
 }
 '
 
-bison -v -o /dev/null --report-file=/tmp/$$.bison ${BASEPATH}/parser/n1ql/n1ql.y
+bison -v -o /dev/null --report-file=/tmp/$$.bison ${BASEPATH}/parser/n1ql/n1ql.y 2> /tmp/$$.bison_out
+if [ $? -ne 0 -o -s /tmp/$$.bison_out ]
+then
+  rm -f /tmp/$$.bison
+  rm -f /tmp/$$.bison_out
+  rm -f ${FILE}
+  echo "Failed to generate syntax help data"
+  exit 1
+fi
+
+rm -f /tmp/$$.bison_out
 
 cat - << EOF > "${FILE}"
 //  Copyright 2023-Present Couchbase, Inc.
@@ -82,3 +92,10 @@ var statement_syntax = map[string][][]string{
 EOF
 sed -n '/^Grammar/,/^Terminals/ p' /tmp/$$.bison|grep -v "^[A-Z]"|sed 's/stmt/statement/g'|awk "${AC}" >> "${FILE}"
 rm -f /tmp/$$.bison
+gofmt -w ${FILE} > /dev/null
+if [ $? -ne 0 ]
+then
+  rm -f ${FILE}
+  echo "Failed to generate syntax help data"
+  exit 1
+fi
