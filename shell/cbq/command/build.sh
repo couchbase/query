@@ -92,7 +92,7 @@ var statement_syntax = map[string][][]string{
 EOF
 sed -n '/^Grammar/,/^Terminals/ p' /tmp/$$.bison|grep -v "^[A-Z]"|sed 's/stmt/statement/g'|awk "${AC}" >> "${FILE}"
 rm -f /tmp/$$.bison
-gofmt -w ${FILE} > /dev/null
+go fmt ${FILE} 2>/dev/null
 if [ $? -ne 0 ]
 then
   rm -f ${FILE}
