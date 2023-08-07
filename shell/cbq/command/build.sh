@@ -90,7 +90,7 @@ package command
 
 var statement_syntax = map[string][][]string{
 EOF
-sed -n '/^Grammar/,/^Terminals/ p' /tmp/$$.bison|grep -v "^[A-Z]"|sed 's/stmt/statement/g'|awk "${AC}" >> "${FILE}"
+sed -n '/^Grammar/,/^Terminals/ p' /tmp/$$.bison|grep -v "^[A-Z]"|sed 's/stmt/statement/g;s/ε/%empty/g'|awk "${AC}" >> "${FILE}"
 rm -f /tmp/$$.bison
 go fmt ${FILE} 2>/dev/null
 if [ $? -ne 0 ]
