@@ -49,7 +49,7 @@ func (this *SemChecker) VisitJoin(node *algebra.Join) (interface{}, error) {
 
 	if this.hasSemFlag(_SEM_WITH_RECURSIVE) && node.Outer() {
 		// LEFT, RIGHT,Outer JOIN not allowed as CTE can become infinite recursion
-		return nil, errors.NewRecurionUnsupportedError("OUTER JOIN", "may lead to potential infinite recursion")
+		return nil, errors.NewRecursionUnsupportedError("OUTER JOIN", "may lead to potential infinite recursion")
 	}
 
 	return nil, this.visitJoin(node.Left(), node.Right())
@@ -79,7 +79,7 @@ func (this *SemChecker) VisitIndexJoin(node *algebra.IndexJoin) (interface{}, er
 
 	if this.hasSemFlag(_SEM_WITH_RECURSIVE) && node.Outer() {
 		// // LEFT, RIGHT,Outer JOIN not allowed as CTE can become infinite recursion
-		return nil, errors.NewRecurionUnsupportedError("OUTER JOIN", "may lead to potential infinite recursion")
+		return nil, errors.NewRecursionUnsupportedError("OUTER JOIN", "may lead to potential infinite recursion")
 
 	}
 
@@ -109,7 +109,7 @@ func (this *SemChecker) VisitAnsiJoin(node *algebra.AnsiJoin) (r interface{}, er
 
 	if this.hasSemFlag(_SEM_WITH_RECURSIVE) && node.Outer() {
 		// // LEFT, RIGHT,Outer JOIN not allowed as CTE can become infinite recursion
-		return nil, errors.NewRecurionUnsupportedError("OUTER JOIN", "may lead to potential infinite recursion")
+		return nil, errors.NewRecursionUnsupportedError("OUTER JOIN", "may lead to potential infinite recursion")
 	}
 
 	return nil, err

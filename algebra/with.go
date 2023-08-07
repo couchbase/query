@@ -105,6 +105,10 @@ func (this *With) SetErrorContext(line int, column int) {
 	this.errorContext.Set(line, column)
 }
 
+func (this *With) GetErrorContext() (int, int) {
+	return this.errorContext.Get()
+}
+
 /*
 Representation as a N1QL string
 */

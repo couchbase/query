@@ -108,19 +108,19 @@ func (this *checkRecursion) VisitAnsiJoin(node *AnsiJoin) (interface{}, error) {
 }
 
 func (this *checkRecursion) VisitNest(node *Nest) (interface{}, error) {
-	return nil, errors.NewRecurionUnsupportedError("NEST", node.String())
+	return nil, errors.NewRecursionUnsupportedError("NEST", node.String())
 }
 
 func (this *checkRecursion) VisitIndexNest(node *IndexNest) (interface{}, error) {
-	return nil, errors.NewRecurionUnsupportedError("NEST", node.String())
+	return nil, errors.NewRecursionUnsupportedError("NEST", node.String())
 }
 
 func (this *checkRecursion) VisitAnsiNest(node *AnsiNest) (interface{}, error) {
-	return nil, errors.NewRecurionUnsupportedError("NEST", node.String())
+	return nil, errors.NewRecursionUnsupportedError("NEST", node.String())
 }
 
 func (this *checkRecursion) VisitUnnest(node *Unnest) (interface{}, error) {
-	return nil, errors.NewRecurionUnsupportedError("UNNEST", node.String())
+	return nil, errors.NewRecursionUnsupportedError("UNNEST", node.String())
 }
 
 func (this *checkRecursion) VisitUnion(node *Union) (interface{}, error) {

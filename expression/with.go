@@ -8,7 +8,9 @@
 
 package expression
 
-import "github.com/couchbase/query/value"
+import (
+	"github.com/couchbase/query/value"
+)
 
 type With interface {
 	Alias() string
@@ -24,6 +26,7 @@ type With interface {
 	SplitRecursive() error
 	ErrorContext() string
 	SetErrorContext(line int, column int)
+	GetErrorContext() (int, int)
 	String() string
 }
 

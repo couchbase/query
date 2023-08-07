@@ -1772,6 +1772,18 @@ alias EQ expr
 with:
 WITH with_list
 {
+    for _, with := range $2 {
+        l, c := with.GetErrorContext()
+        if with.Config()!=nil {
+            return yylex.(*lexer).FatalError(fmt.Sprintf("cannot have OPTIONS "+
+                "without RECURSIVE keyword as part of '%s'", with.Alias()), l, c)
+        }
+
+        if with.CycleFields()!=nil {
+            return yylex.(*lexer).FatalError(fmt.Sprintf("cannot have CYCLE "+
+                "without RECURSIVE keyword as part of '%s'", with.Alias()), l, c)
+        }
+    }
     $$ = algebra.NewWithClause(false, $2)
 }
 |

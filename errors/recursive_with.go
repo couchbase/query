@@ -34,7 +34,7 @@ func NewInvalidConfigOptions(option string) Error {
 		InternalMsg: fmt.Sprintf("Invalid config option %s", option), InternalCaller: CallerN(1)}
 }
 
-func NewRecurionUnsupportedError(clause string, cause string) Error {
+func NewRecursionUnsupportedError(clause string, cause string) Error {
 	return &err{level: EXCEPTION, ICode: E_RECURSION_UNSUPPORTED,
 		InternalMsg:    fmt.Sprintf("recursive_with_unsupported: %s", clause),
 		cause:          cause,
