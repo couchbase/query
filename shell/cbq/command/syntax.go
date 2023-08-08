@@ -67,11 +67,20 @@ func sqlHelp(terms ...string) bool {
 	if len(terms) == 0 {
 		terms = append(terms, "statements")
 	}
-	if len(terms) == 1 && remapTerm(terms[0]) == "expr" {
-		getRules(rules, "expr", -1, 0, false)
-	} else if len(terms) == 1 && remapTerm(terms[0]) == "statement" {
-		getRules(rules, "statement", -1, 0, false)
-	} else {
+	if len(terms) == 1 {
+		switch terms[0] {
+		case "expression":
+			getRules(rules, "expression", -1, 0, false)
+		case "statement":
+			getRules(rules, "statement", -1, 0, false)
+		default:
+			getRules(rules, terms[0], -1, 0, true)
+			if len(rules) == 0 {
+				getRules(rules, "["+terms[0]+"]", -1, 0, true)
+			}
+		}
+	}
+	if len(rules) == 0 {
 		for rule_key, rule := range statement_syntax {
 			for opt_num, opt := range rule {
 				if len(terms) > len(opt) || len(opt) == 1 {
@@ -79,13 +88,14 @@ func sqlHelp(terms ...string) bool {
 				}
 				for k := 0; k <= len(opt)-len(terms); k++ {
 					matched := 0
+					last := len(terms) - 1
 					for j := range terms {
-						rmt := remapTerm(terms[j])
-						if strings.ToUpper(opt[k+j]) == strings.ToUpper(terms[j]) ||
-							opt[k+j] == "opt_"+terms[j] ||
-							opt[k+j] == rmt ||
-							(j == len(terms)-1 && len(rmt) > 2 &&
-								(strings.HasPrefix(opt[k+j], rmt) || strings.HasPrefix(strings.ToLower(opt[k+j]), rmt))) {
+						trm := terms[j]
+						if opt[k+j] == trm ||
+							strings.ToUpper(opt[k+j]) == strings.ToUpper(trm) ||
+							opt[k+j] == "["+trm+"]" ||
+							(j == last && len(trm) > 2 && (strings.HasPrefix(strings.ToLower(opt[k+j]), trm) ||
+								strings.HasPrefix(strings.ToLower(opt[k+j]), "["+trm))) {
 
 							matched++
 						} else {
@@ -102,11 +112,6 @@ func sqlHelp(terms ...string) bool {
 					}
 				}
 			}
-		}
-	}
-	if len(rules) == 0 || len(terms) == 1 {
-		for _, term := range terms {
-			getRules(rules, remapTerm(term), -1, 1, true)
 		}
 	}
 	if len(rules) == 0 {
@@ -129,25 +134,6 @@ func sqlHelp(terms ...string) bool {
 		io.WriteString(W, "\n")
 	}
 	return true
-}
-
-func remapTerm(t string) string {
-	switch t {
-	case "expression":
-		t = "expr"
-	case "<expression>":
-		t = "expr"
-	case "<identifier>":
-		t = "identifier"
-	case "<identifier>i":
-		t = "IDENT_ICASE"
-	case "<namespace-identifer>":
-		t = "NAMESPACE_ID"
-	}
-	if len(t) > 2 && t[0] == '[' && t[len(t)-1] == ']' {
-		t = "opt_" + t[1:len(t)-1]
-	}
-	return t
 }
 
 func oneLevelOnly(rn string, option int) bool {
@@ -198,15 +184,8 @@ func printRuleOpt(o []string, indent bool, suppressEmpty bool) {
 	printed := false
 	for i := range o {
 		s := o[i]
-		if strings.HasPrefix(s, "opt_") {
-			s = "[" + s[4:] + "]"
-		} else if s == "%empty" {
-			if suppressEmpty {
-				continue
-			}
-			s = "<empty rule>"
-		} else {
-			s = mapRuleName(s)
+		if suppressEmpty && s == "<empty rule>" {
+			continue
 		}
 		if !printed && indent {
 			io.WriteString(W, "        ")
@@ -220,31 +199,11 @@ func printRuleOpt(o []string, indent bool, suppressEmpty bool) {
 	}
 }
 
-func mapRuleName(s string) string {
-	if s == "IDENT" {
-		return "<identifier>"
-	} else if s == "IDENT_ICASE" {
-		return "<identifier>i"
-	} else if s == "NAMESPACE_ID" {
-		return "<namespace-identifer>"
-	} else if s == "expr" {
-		return "<expression>"
-	}
-	return s
-}
-
 func printRule(rn string, options []int, indent bool) {
 	r, ok := statement_syntax[rn]
 	if !ok {
 		return
 	}
-	if strings.HasPrefix(rn, "opt_") {
-		rn = rn[4:]
-		if len(r) == 2 && len(r[0]) == 1 && len(r[1]) == 1 && r[0][0] == "%empty" && r[1][0] == rn {
-			return
-		}
-	}
-	rn = mapRuleName(rn)
 	if indent {
 		io.WriteString(W, "    ")
 		io.WriteString(W, rn)
