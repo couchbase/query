@@ -169,8 +169,8 @@
 /[cC][oO][mM][mM][iI][tT][tT][eE][dD]/       { yylex.logToken(yylex.Text(), "COMMITTED"); return COMMITTED }
 /[cC][oO][nN][nN][eE][cC][tT]/   { yylex.logToken(yylex.Text(), "CONNECT"); return CONNECT }
 /[cC][oO][nN][tT][iI][nN][uU][eE]/ { yylex.logToken(yylex.Text(), "CONTINUE"); return CONTINUE }
-/[cC][oO][rR][rR][eE][lL][aA][tT][eE][dD]/ { yylex.logToken(yylex.Text(), "CORRELATED"); return CORRELATED }
-/[cC][oO][vV][eE][rR]/           { yylex.logToken(yylex.Text(), "COVER"); return COVER }
+/[cC][oO][rR][rR][eE][lL][aA][tT][eE][dD]/ { yylex.logToken(yylex.Text(), "_CORRELATED"); return _CORRELATED }
+/[cC][oO][vV][eE][rR]/           { yylex.logToken(yylex.Text(), "_COVER"); return _COVER }
 /[cC][rR][eE][aA][tT][eE]/       { yylex.logToken(yylex.Text(), "CREATE"); return CREATE }
 /[cC][uU][rR][rR][eE][nN][tT]/   { yylex.logToken(yylex.Text(), "CURRENT"); return CURRENT }
 /[cC][yY][cC][lL][eE]/           { yylex.logToken(yylex.Text(), "CYCLE"); return CYCLE }

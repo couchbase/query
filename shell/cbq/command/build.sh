@@ -25,38 +25,64 @@ then
   exit 1
 fi
 
-if [ ! -f `which bison` ]
-then
-  echo "bison not found"
-  exit 1
-fi
-
 AC='
 BEGIN \
 {
-  active=0
-  count=0
   terms[0]=""
   delete terms[0]
+  error=0
+  lastStart=1
 }
-function fixTerm(t) \
+NF!=1 { next }
+length(terms)==0 \
 {
-  switch (t)
-  {
-    case "ε": return "<empty rule>"
-    case "%empty": return "<empty rule>"
-    case "statement_body": return "statements"
-    case "ident_or_default": return "<identifier>"
-    case "IDENT": return "<identifier>"
-    case "IDENT_ICASE": return "<identifier>i"
-    case "NAMESPACE_ID": return "<namespace-identifier>"
-    case "expr": return "expression"
-    case "OPTIM_HINTS": return "/*OPTIM_HINTS*/"
-    case "hints_input": return "OPTIM_HINTS"
-  }
-  gsub("stmt","statement",t)
-  if (index(t,"opt_")==1) t = "["substr(t,5)"]"
-  return t
+  terms[0]=fixTerm($NF)
+  getline
+  while (NF==0) if (getline!=1) { error=1; exit }
+  if ($NF!=":") { print "ERROR at token "NR" - \""$0"\" unexpected"; error=1; exit }
+  next
+}
+/\// \
+{
+  getline
+  while ($NF!="/") if (getline!=1) { error=1; exit }
+  next
+}
+/\{/ \
+{
+  getline
+  while ($NF!="}") if (getline!=1) { error=1; exit }
+  next
+}
+/%/ \
+{
+  getline
+  getline
+  next
+}
+/;/ \
+{
+  checkAndSkip()
+  if (terms[length(terms)-1]=="|") delete terms[length(terms)-1]
+  if (length(terms)>1&&!excludeRule(terms[0])) printRule(terms)
+  delete terms
+  lastStart=1
+  next
+}
+/\|/ \
+{
+  n=length(terms)
+  if (n==1||terms[n-1]=="|") next
+  if (checkAndSkip()==1) next
+  lastStart=n+1
+}
+{
+  terms[length(terms)]=fixTerm($NF)
+}
+END \
+{
+  if (error!=0) exit;
+  print "}"
 }
 function printRule(terms) \
 {
@@ -80,6 +106,23 @@ function printRule(terms) \
   }
   printf("},\n\t},\n")
 }
+function fixTerm(t) \
+{
+  switch (t)
+  {
+    case "stmt_body": return "statements"
+    case "ident_or_default": return "<identifier>"
+    case "IDENT": return "<identifier>"
+    case "IDENT_ICASE": return "<identifier>i"
+    case "NAMESPACE_ID": return "<namespace-identifier>"
+    case "expr": return "expression"
+    case "OPTIM_HINTS": return "/*OPTIM_HINTS*/"
+    case "hints_input": return "OPTIM_HINTS"
+  }
+  gsub("stmt","statement",t)
+  if (index(t,"opt_")==1) t = "["substr(t,5)"]"
+  return t
+}
 function excludeRule(r) \
 {
   switch (r)
@@ -89,60 +132,22 @@ function excludeRule(r) \
     case "<identifier>": return 1
     case "[trailer]": return 1
   }
-  if (index($2,"$")!=0||substr($2,1,1)=="_") return 1
+  if (index(r,"$")!=0||substr(r,1,1)=="_") return 1
   return 0
 }
-function skipRecord() \
+function checkAndSkip() \
 {
-  for (i=3;i<=NF;i++) if (substr($i,1,1)=="_"||$i=="%empty"||$i=="ε") return 1
+  drop=0
+  n=length(terms)
+  for (i=lastStart;i<n;i++) if (substr(terms[i],1,1)=="_") { drop=1; break }
+  if (drop==1)
+  {
+    for (i=lastStart;i<n;i++) delete terms[i]
+    return 1
+  }
   return 0
-}
-index($2,":")!=0 \
-{
-  gsub(":","",$2)
-  r=fixTerm($2)
-  if (excludeRule(r)==1) { active=0; next }
-  if (terms[0]!=r)
-  {
-    printRule(terms)
-    delete terms
-  }
-  active=1
-  terms[0] = r
-  if (skipRecord()==0)
-  {
-    for (i=3;i<=NF;i++) if (index($i,"$")==0) terms[length(terms)] = fixTerm($i)
-  }
-  next
-}
-$2=="|" \
-{
-  if (active!=1) next
-  if (skipRecord()==0)
-  {
-    if (length(terms)>1) terms[length(terms)] = "|"
-    for (i=3;i<=NF;i++) if (index($i,"$")==0) terms[length(terms)] = fixTerm($i)
-  }
-  next
-}
-END \
-{
-  printRule(terms)
-  print "}"
 }
 '
-
-bison -v -o /dev/null --report-file=/tmp/$$.bison ${BASEPATH}/parser/n1ql/n1ql.y 2> /tmp/$$.bison_out
-if [ $? -ne 0 -o -s /tmp/$$.bison_out ]
-then
-  rm -f /tmp/$$.bison
-  rm -f /tmp/$$.bison_out
-  rm -f ${FILE}
-  echo "Failed to generate syntax help data"
-  exit 1
-fi
-
-rm -f /tmp/$$.bison_out
 
 cat - << EOF > "${FILE}"
 //  Copyright 2023-Present Couchbase, Inc.
@@ -159,12 +164,16 @@ package command
 
 var statement_syntax = map[string][][]string{
 EOF
-sed -n '/^Grammar/,/^Terminals/ p' /tmp/$$.bison|grep -v "^[A-Z]"|sed 's/stmt/statement/g;s/ε/%empty/g'|awk "${AC}" >> "${FILE}"
-rm -f /tmp/$$.bison
+
+sed -n '/^%%/,$ p' ${BASEPATH}/parser/n1ql/n1ql.y \
+  | sed -e '/^%%/d;/^[*/}{[:space:]]/d;/^$/d;s/[[:space:]]*\([A-Za-z_][A-Za-z0-9_]*\)[[:space:]]*/\1\n/g' \
+  | sed -e '/^[^A-Za-z_]/s/\([[:punct:]]\)/\n\1\n/g' \
+  | awk "${AC}" >> "${FILE}"
+
 go fmt ${FILE} 2>/dev/null
 if [ $? -ne 0 ]
 then
   rm -f ${FILE}
-  echo "Failed to generate syntax help data"
+  echo "ERROR: Failed to generate syntax help data"
   exit 1
 fi

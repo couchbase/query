@@ -49,7 +49,6 @@ var statement_syntax = map[string][][]string{
 	},
 	"[name]": [][]string{
 		[]string{"<identifier>", "from_or_as"},
-		[]string{"<identifier>i", "from_or_as"},
 		[]string{"STR", "from_or_as"},
 	},
 	"from_or_as": [][]string{
@@ -259,7 +258,6 @@ var statement_syntax = map[string][][]string{
 	},
 	"keyspace_name": [][]string{
 		[]string{"<identifier>"},
-		[]string{"<identifier>i"},
 	},
 	"[use]": [][]string{
 		[]string{"USE", "use_options"},
@@ -848,7 +846,7 @@ var statement_syntax = map[string][][]string{
 		[]string{"MINUS", "expression"},
 		[]string{"case_expr"},
 		[]string{"collection_expr"},
-		[]string{"paren_expr", "COVER", "LPAREN", "expression", "RPAREN"},
+		[]string{"paren_expr"},
 	},
 	"b_expr": [][]string{
 		[]string{"c_expr"},
@@ -974,7 +972,6 @@ var statement_syntax = map[string][][]string{
 		[]string{"subquery_expr"},
 	},
 	"subquery_expr": [][]string{
-		[]string{"CORRELATED", "LPAREN", "fullselect", "RPAREN"},
 		[]string{"LPAREN", "fullselect", "RPAREN"},
 	},
 	"[window_clause]": [][]string{

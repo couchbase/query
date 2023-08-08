@@ -150,8 +150,8 @@ column int
 %token COMMITTED
 %token CONNECT
 %token CONTINUE
-%token CORRELATED
-%token COVER
+%token _CORRELATED
+%token _COVER
 %token CREATE
 %token CURRENT
 %token CYCLE
@@ -365,7 +365,7 @@ column int
 %left           STAR DIV MOD POW
 
 /* Unary operators */
-%right          COVER _INDEX_KEY _INDEX_CONDITION
+%right          _COVER _INDEX_KEY _INDEX_CONDITION
 %left           ALL
 %right          UMINUS
 %left           DOT LBRACKET RBRACKET
@@ -626,6 +626,7 @@ EXPLAIN stmt
 {
     $$ = algebra.NewExplain($2, yylex.(*lexer).Remainder($<tokOffset>1))
 }
+;
 
 explain_function:
 EXPLAIN FUNCTION func_name
@@ -669,7 +670,7 @@ ident_or_default from_or_as
     $$ = $1
 }
 |
-IDENT_ICASE from_or_as
+_invalid_prepared_identifier
 {
     return yylex.(*lexer).FatalError("Prepared identifier must be case sensitive", $<line>1, $<column>1)
 }
@@ -678,6 +679,10 @@ STR from_or_as
 {
     $$ = $1
 }
+;
+
+_invalid_prepared_identifier:
+IDENT_ICASE from_or_as
 ;
 
 from_or_as:
@@ -1539,10 +1544,14 @@ ident_or_default
   }
 }
 |
-IDENT_ICASE
+_invalid_keyspace_name
 {
     return yylex.(*lexer).FatalError("Keyspace term must be case sensitive", $<line>1, $<column>1)
 }
+;
+
+_invalid_keyspace_name:
+IDENT_ICASE
 ;
 
 opt_use:
@@ -4048,7 +4057,7 @@ collection_expr
 paren_expr
 |
 /* For covering indexes */
-COVER
+_COVER
 {
     if yylex.(*lexer).parsingStatement() {
         yylex.(*lexer).ErrorWithContext("syntax error", $<line>1, $<column>1)
@@ -4805,7 +4814,7 @@ subquery_expr
 ;
 
 subquery_expr:
-CORRELATED
+_CORRELATED
 {
     if yylex.(*lexer).parsingStatement() {
         yylex.(*lexer).ErrorWithContext("syntax error", $<line>1, $<column>1)
@@ -4816,7 +4825,7 @@ LPAREN fullselect RPAREN
     $$ = algebra.NewSubquery($4)
     err := $$.Select().CheckSetCorrelated()
     if err != nil {
-	yylex.(*lexer).FatalError(fmt.Sprintf("Unexpected error in handling of CORRELATED subquery %v", err), $<line>3, $<column>3)
+        yylex.(*lexer).FatalError(fmt.Sprintf("Unexpected error in handling of CORRELATED subquery %v", err), $<line>3, $<column>3)
     }
     $$.ExprBase().SetErrorContext($<line>3,$<column>3)
 }

@@ -42048,13 +42048,13 @@ OUTER0:
 			}
 		case 70:
 			{
-				yylex.logToken(yylex.Text(), "CORRELATED")
-				return CORRELATED
+				yylex.logToken(yylex.Text(), "_CORRELATED")
+				return _CORRELATED
 			}
 		case 71:
 			{
-				yylex.logToken(yylex.Text(), "COVER")
-				return COVER
+				yylex.logToken(yylex.Text(), "_COVER")
+				return _COVER
 			}
 		case 72:
 			{
