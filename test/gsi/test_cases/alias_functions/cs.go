@@ -9,8 +9,9 @@
 package alias_functions
 
 import (
-	"github.com/couchbase/query/test/gsi"
 	"testing"
+
+	"github.com/couchbase/query/test/gsi"
 )
 
 func start_cs() *gsi.MockServer {

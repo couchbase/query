@@ -14,7 +14,8 @@ import (
 )
 
 func start_cs() *gsi.MockServer {
-	return gsi.Start_cs(true)
+	// External JS UDF tests require an HTTP server since library operations are via REST calls
+	return gsi.Start_cs_http(true)
 }
 
 func runStmt(mockServer *gsi.MockServer, q string) *gsi.RunResult {

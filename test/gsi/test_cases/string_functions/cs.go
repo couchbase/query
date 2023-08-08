@@ -8,8 +8,9 @@
 package string_functions
 
 import (
-	"github.com/couchbase/query/test/gsi"
 	"testing"
+
+	"github.com/couchbase/query/test/gsi"
 )
 
 func runStmt(mockServer *gsi.MockServer, q string) *gsi.RunResult {

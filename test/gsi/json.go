@@ -13,6 +13,7 @@ import (
 	go_er "errors"
 	"fmt"
 	"io/ioutil"
+	go_http "net/http"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -40,6 +41,7 @@ import (
 	"github.com/couchbase/query/prepareds"
 	"github.com/couchbase/query/server"
 	"github.com/couchbase/query/server/http"
+	"github.com/couchbase/query/server/http/router"
 	"github.com/couchbase/query/timestamp"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
@@ -59,6 +61,7 @@ var Password = "password"
 var Auth_param = "Administrator:password"
 var Pool_CBS = "127.0.0.1:8091/"
 var FTS_CBS = "127.0.0.1:8094/"
+var Query_CBS = "127.0.0.1:8093"
 var FTS_API_PATH = "api/index/"
 var Namespace_CBS = "default"
 var Consistency_parameter = datastore.SCAN_PLUS
@@ -89,10 +92,15 @@ type MockQuery struct {
 
 type MockServer struct {
 	sync.RWMutex
-	prepDone  map[string]bool
-	txgroups  []string
-	server    *server.Server
-	acctstore accounting.AccountingStore
+	prepDone   map[string]bool
+	txgroups   []string
+	server     *server.Server
+	acctstore  accounting.AccountingStore
+	httpServer go_http.Server
+}
+
+func (this *MockServer) ShutdownHttpServer() {
+	this.httpServer.Close()
 }
 
 func SetConsistencyParam(consistency_parameter datastore.ScanConsistency) {
@@ -400,8 +408,10 @@ func run(mockServer *MockServer, queryParams map[string]interface{}, q, namespac
 /*
 Used to specify the N1QL nodes options using the method NewServer
 as defined in server/server.go.
+
+startHttpServer: Whether an HTTP Server must be created and started
 */
-func Start(site, pool, namespace string, setGlobals bool) *MockServer {
+func Start(site, pool, namespace string, setGlobals, startHttpServer bool) *MockServer {
 
 	nullSecurityConfig := &datastore.ConnectionSecurityConfig{}
 
@@ -467,7 +477,21 @@ func Start(site, pool, namespace string, setGlobals bool) *MockServer {
 		jsevalPath = path
 	}
 
-	constructor.Init(nil, 6, jsevalPath)
+	// create an HTTP server
+	if startHttpServer {
+		router := router.NewRouter()
+		httpSrv := &go_http.Server{
+			Handler:           router,
+			Addr:              Query_CBS,
+			ReadHeaderTimeout: 5 * time.Second,
+		}
+
+		constructor.Init(router, 6, jsevalPath)
+		go httpSrv.ListenAndServe()
+
+	} else {
+		constructor.Init(nil, 6, jsevalPath)
+	}
 
 	srv.SetKeepAlive(1 << 10)
 
@@ -1005,10 +1029,24 @@ func PrepareStmt(qc *MockServer, queryParams map[string]interface{}, namespace, 
 /*
 Method to pass in parameters for site, pool and
 namespace to Start method for Couchbase Server.
+
+Use Start_cs() if the test does not require an HTTP Server
 */
 
 func Start_cs(setGlobals bool) *MockServer {
-	ms := Start(Site_CBS, Auth_param+"@"+Pool_CBS, Namespace_CBS, setGlobals)
+	ms := Start(Site_CBS, Auth_param+"@"+Pool_CBS, Namespace_CBS, setGlobals, false)
+
+	return ms
+}
+
+/*
+Method to pass in parameters for site, pool and
+namespace to Start method for Couchbase Server.
+
+Use Start_cs_http() if the test requires an HTTP server to be started
+*/
+func Start_cs_http(setGlobals bool) *MockServer {
+	ms := Start(Site_CBS, Auth_param+"@"+Pool_CBS, Namespace_CBS, setGlobals, true)
 
 	return ms
 }
