@@ -14,6 +14,7 @@ import (
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	base "github.com/couchbase/query/plannerbase"
+	"github.com/couchbase/query/value"
 )
 
 // breaks expr on AND boundaries and classify into appropriate keyspaces
@@ -122,18 +123,38 @@ func (this *exprClassifier) VisitOr(expr *expression.Or) (interface{}, error) {
 
 	newExpr := false
 	orTerms := make(expression.Expressions, 0, len(or.Operands()))
+
+	posParams := this.context.PositionalArgs()
+	namedParams := this.context.NamedArgs()
+
 	for _, op := range or.Operands() {
 		skip := false
-		cop := op.Value()
+		var cop value.Value
+
+		// replace named/pos param thus eliminating unwanted span generation for cases like ($c=1)
+		if len(posParams) > 0 || len(namedParams) > 0 {
+			rop, err := base.ReplaceParameters(op, namedParams, posParams)
+			if err != nil {
+				return nil, err
+			}
+			cop = rop.Value()
+		} else {
+			cop = op.Value()
+		}
+
 		if op.HasExprFlag(expression.EXPR_VALUE_MISSING) || op.HasExprFlag(expression.EXPR_VALUE_NULL) {
 			skip = true
 		} else if cop != nil {
-			// TRUE subterm should have been handled above
-			if !cop.Truth() {
-				// FALSE subterm can be skipped
-				skip = true
+			// MB-58201: check for true subterm after replacing parameters
+			if cop.Truth() {
+				this.addConstant(expr)
+				return expression.TRUE_EXPR, nil
 			}
+
+			// FALSE subterm can be skipped
+			skip = true
 		}
+
 		if skip {
 			newExpr = true
 		} else {
