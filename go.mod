@@ -54,7 +54,6 @@ require (
 	github.com/couchbase/n1fty v0.0.0-00010101000000-000000000000
 	github.com/couchbase/query-ee v0.0.0-00010101000000-000000000000
 	github.com/couchbase/regulator v0.0.0-00010101000000-000000000000
-	github.com/couchbasedeps/go-curl v0.0.0-20190830233031-f0b2afc926ec
 	github.com/golang/snappy v0.0.4
 	github.com/kylelemons/godebug v1.1.0
 	github.com/mattn/go-runewidth v0.0.3

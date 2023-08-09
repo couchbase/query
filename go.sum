@@ -139,8 +139,6 @@ github.com/couchbase/tools-common/types v1.0.0 h1:C9MjHmTPcZyPo2Yp9Dt86WeZH+2XQg
 github.com/couchbase/tools-common/types v1.0.0/go.mod h1:r700V2xUuJqBGNG2aWbQYn5S0sJdqO3TLIa2AIQVaGU=
 github.com/couchbase/tools-common/utils v1.0.0 h1:6mWXqWWj7aM0Kp2LWpSKEu9pLAYm7il3gWdqpvxnJV4=
 github.com/couchbase/tools-common/utils v1.0.0/go.mod h1:i6cN5Z5hB9vQRLxe2j1v6Nu8bv+pKl9BFXjbQUHSah8=
-github.com/couchbasedeps/go-curl v0.0.0-20190830233031-f0b2afc926ec h1:mVbbrQChG/+citrbPl7gPumTN39U/6isDI7VzShrRIQ=
-github.com/couchbasedeps/go-curl v0.0.0-20190830233031-f0b2afc926ec/go.mod h1:ZLaSGBNRCwL1Kd8Ka/bJ3NspTmFcEeis2mr7vflJS7M=
 github.com/couchbaselabs/gocaves/client v0.0.0-20220223122017-22859b310bd2/go.mod h1:AVekAZwIY2stsJOMWLAS/0uA/+qdp7pjO8EHnl61QkY=
 github.com/couchbaselabs/gocaves/client v0.0.0-20230307083111-cc3960c624b1 h1:H7OK4q4WsDxqNIB/Ba8BQBXBHFilZnyItHrLr3qmsKA=
 github.com/couchbaselabs/gocaves/client v0.0.0-20230307083111-cc3960c624b1/go.mod h1:AVekAZwIY2stsJOMWLAS/0uA/+qdp7pjO8EHnl61QkY=
