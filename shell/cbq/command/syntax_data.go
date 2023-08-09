@@ -590,15 +590,19 @@ var statement_syntax = map[string][][]string{
 	},
 	"create_scope": [][]string{
 		[]string{"CREATE", "SCOPE", "named_scope_ref", "[if_not_exists]"},
+		[]string{"CREATE", "SCOPE", "IF", "NOT", "EXISTS", "named_scope_ref"},
 	},
 	"drop_scope": [][]string{
 		[]string{"DROP", "SCOPE", "named_scope_ref", "[if_exists]"},
+		[]string{"DROP", "SCOPE", "IF", "EXISTS", "named_scope_ref"},
 	},
 	"create_collection": [][]string{
 		[]string{"CREATE", "COLLECTION", "named_keyspace_ref", "[if_not_exists]", "[with_clause]"},
+		[]string{"CREATE", "COLLECTION", "IF", "NOT", "EXISTS", "named_keyspace_ref", "[with_clause]"},
 	},
 	"drop_collection": [][]string{
 		[]string{"DROP", "COLLECTION", "named_keyspace_ref", "[if_exists]"},
+		[]string{"DROP", "COLLECTION", "IF", "EXISTS", "named_keyspace_ref"},
 	},
 	"flush_collection": [][]string{
 		[]string{"flush_or_truncate", "COLLECTION", "named_keyspace_ref"},
@@ -608,11 +612,11 @@ var statement_syntax = map[string][][]string{
 		[]string{"TRUNCATE"},
 	},
 	"create_index": [][]string{
-		[]string{"CREATE", "PRIMARY", "INDEX", "[primary_name]", "[if_not_exists]", "ON", "named_keyspace_ref", "index_partition", "[index_using]", "[with_clause]"},
+		[]string{"CREATE", "PRIMARY", "INDEX", "[if_not_exists]", "ON", "named_keyspace_ref", "index_partition", "[index_using]", "[with_clause]"},
+		[]string{"CREATE", "PRIMARY", "INDEX", "index_name", "[if_not_exists]", "ON", "named_keyspace_ref", "index_partition", "[index_using]", "[with_clause]"},
+		[]string{"CREATE", "PRIMARY", "INDEX", "IF", "NOT", "EXISTS", "index_name", "ON", "named_keyspace_ref", "index_partition", "[index_using]", "[with_clause]"},
 		[]string{"CREATE", "INDEX", "index_name", "[if_not_exists]", "ON", "named_keyspace_ref", "LPAREN", "index_terms", "RPAREN", "index_partition", "index_where", "[index_using]", "[with_clause]"},
-	},
-	"[primary_name]": [][]string{
-		[]string{"index_name"},
+		[]string{"CREATE", "INDEX", "IF", "NOT", "EXISTS", "index_name", "ON", "named_keyspace_ref", "LPAREN", "index_terms", "RPAREN", "index_partition", "index_where", "[index_using]", "[with_clause]"},
 	},
 	"index_name": [][]string{
 		[]string{"<identifier>"},
@@ -683,9 +687,13 @@ var statement_syntax = map[string][][]string{
 		[]string{"INCLUDE", "MISSING"},
 	},
 	"drop_index": [][]string{
-		[]string{"DROP", "PRIMARY", "INDEX", "[primary_name]", "[if_exists]", "ON", "named_keyspace_ref", "[index_using]"},
+		[]string{"DROP", "PRIMARY", "INDEX", "[if_exists]", "ON", "named_keyspace_ref", "[index_using]"},
+		[]string{"DROP", "PRIMARY", "INDEX", "index_name", "[if_exists]", "ON", "named_keyspace_ref", "[index_using]"},
+		[]string{"DROP", "PRIMARY", "INDEX", "IF", "EXISTS", "index_name", "ON", "named_keyspace_ref", "[index_using]"},
 		[]string{"DROP", "INDEX", "simple_named_keyspace_ref", "DOT", "index_name", "[if_exists]", "[index_using]"},
+		[]string{"DROP", "INDEX", "IF", "EXISTS", "simple_named_keyspace_ref", "DOT", "index_name", "[index_using]"},
 		[]string{"DROP", "INDEX", "index_name", "[if_exists]", "ON", "named_keyspace_ref", "[index_using]"},
+		[]string{"DROP", "INDEX", "IF", "EXISTS", "index_name", "ON", "named_keyspace_ref", "[index_using]"},
 	},
 	"[if_exists]": [][]string{
 		[]string{"IF", "EXISTS"},
@@ -698,7 +706,7 @@ var statement_syntax = map[string][][]string{
 		[]string{"BUILD", "INDEX", "ON", "named_keyspace_ref", "LPAREN", "exprs", "RPAREN", "[index_using]"},
 	},
 	"create_function": [][]string{
-		[]string{"CREATE", "[replace]", "FUNCTION", "func_name", "LPAREN", "parm_list", "RPAREN", "[if_not_exists]", "func_body"},
+		[]string{"CREATE", "[replace]", "FUNCTION", "[if_not_exists]", "func_name", "LPAREN", "parm_list", "RPAREN", "[if_not_exists]", "func_body"},
 	},
 	"[replace]": [][]string{
 		[]string{"OR", "REPLACE"},
@@ -733,6 +741,7 @@ var statement_syntax = map[string][][]string{
 	},
 	"drop_function": [][]string{
 		[]string{"DROP", "FUNCTION", "func_name", "[if_exists]"},
+		[]string{"DROP", "FUNCTION", "IF", "EXISTS", "func_name"},
 	},
 	"execute_function": [][]string{
 		[]string{"EXECUTE", "FUNCTION", "func_name", "LPAREN", "[exprs]", "RPAREN"},

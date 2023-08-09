@@ -490,7 +490,7 @@ column int
 %type <mergeDelete>      merge_delete
 %type <mergeInsert>      merge_insert opt_merge_insert
 
-%type <s>                index_name opt_primary_name opt_index_name
+%type <s>                index_name opt_index_name
 %type <keyspaceRef>      simple_named_keyspace_ref named_keyspace_ref
 %type <scopeRef>         named_scope_ref
 %type <partitionTerm>    index_partition
@@ -996,7 +996,7 @@ opt_optim_hints:
 |
 OPTIM_HINTS
 {
-    $$ = parseOptimHints($1) 
+    $$ = parseOptimHints($1)
 }
 ;
 
@@ -2857,6 +2857,11 @@ CREATE SCOPE named_scope_ref opt_if_not_exists
 {
     $$ = algebra.NewCreateScope($3, $4)
 }
+|
+CREATE SCOPE IF NOT EXISTS named_scope_ref
+{
+    $$ = algebra.NewCreateScope($6, false)
+}
 ;
 
 /*************************************************
@@ -2869,6 +2874,11 @@ drop_scope:
 DROP SCOPE named_scope_ref opt_if_exists
 {
     $$ = algebra.NewDropScope($3, $4)
+}
+|
+DROP SCOPE IF EXISTS named_scope_ref
+{
+    $$ = algebra.NewDropScope($5, false)
 }
 ;
 
@@ -2883,6 +2893,11 @@ CREATE COLLECTION named_keyspace_ref opt_if_not_exists opt_with_clause
 {
     $$ = algebra.NewCreateCollection($3, $4, $5)
 }
+|
+CREATE COLLECTION IF NOT EXISTS named_keyspace_ref opt_with_clause
+{
+    $$ = algebra.NewCreateCollection($6, false, $7)
+}
 ;
 
 /*************************************************
@@ -2895,6 +2910,11 @@ drop_collection:
 DROP COLLECTION named_keyspace_ref opt_if_exists
 {
     $$ = algebra.NewDropCollection($3, $4)
+}
+|
+DROP COLLECTION IF EXISTS named_keyspace_ref
+{
+    $$ = algebra.NewDropCollection($5, false)
 }
 ;
 
@@ -2924,9 +2944,19 @@ TRUNCATE
  *************************************************/
 
 create_index:
-CREATE PRIMARY INDEX opt_primary_name opt_if_not_exists ON named_keyspace_ref index_partition opt_index_using opt_with_clause
+CREATE PRIMARY INDEX opt_if_not_exists ON named_keyspace_ref index_partition opt_index_using opt_with_clause
+{
+    $$ = algebra.NewCreatePrimaryIndex("#primary", $6, $7, $8, $9, $4)
+}
+|
+CREATE PRIMARY INDEX index_name opt_if_not_exists ON named_keyspace_ref index_partition opt_index_using opt_with_clause
 {
     $$ = algebra.NewCreatePrimaryIndex($4, $7, $8, $9, $10, $5)
+}
+|
+CREATE PRIMARY INDEX IF NOT EXISTS index_name ON named_keyspace_ref index_partition opt_index_using opt_with_clause
+{
+    $$ = algebra.NewCreatePrimaryIndex($7, $9, $10, $11, $12, false)
 }
 |
 CREATE INDEX index_name opt_if_not_exists
@@ -2934,15 +2964,12 @@ ON named_keyspace_ref LPAREN index_terms RPAREN index_partition index_where opt_
 {
     $$ = algebra.NewCreateIndex($3, $6, $8, $10, $11, $12, $13, $4)
 }
-;
-
-opt_primary_name:
-/* empty */
-{
-    $$ = "#primary"
-}
 |
-index_name
+CREATE INDEX IF NOT EXISTS index_name
+ON named_keyspace_ref LPAREN index_terms RPAREN index_partition index_where opt_index_using opt_with_clause
+{
+    $$ = algebra.NewCreateIndex($6, $8, $10, $12, $13, $14, $15, false)
+}
 ;
 
 index_name:
@@ -3193,9 +3220,19 @@ INCLUDE MISSING
  *************************************************/
 
 drop_index:
-DROP PRIMARY INDEX opt_primary_name opt_if_exists ON named_keyspace_ref opt_index_using
+DROP PRIMARY INDEX opt_if_exists ON named_keyspace_ref opt_index_using
+{
+    $$ = algebra.NewDropIndex($6, "#primary", $7, $4, true)
+}
+|
+DROP PRIMARY INDEX index_name opt_if_exists ON named_keyspace_ref opt_index_using
 {
     $$ = algebra.NewDropIndex($7, $4, $8, $5, true)
+}
+|
+DROP PRIMARY INDEX IF EXISTS index_name ON named_keyspace_ref opt_index_using
+{
+    $$ = algebra.NewDropIndex($8, $6, $9, false, true)
 }
 |
 DROP INDEX simple_named_keyspace_ref DOT index_name opt_if_exists opt_index_using
@@ -3203,9 +3240,19 @@ DROP INDEX simple_named_keyspace_ref DOT index_name opt_if_exists opt_index_usin
     $$ = algebra.NewDropIndex($3, $5, $7, $6, false)
 }
 |
+DROP INDEX IF EXISTS simple_named_keyspace_ref DOT index_name opt_index_using
+{
+    $$ = algebra.NewDropIndex($5, $7, $8, false, false)
+}
+|
 DROP INDEX index_name opt_if_exists ON named_keyspace_ref opt_index_using
 {
     $$ = algebra.NewDropIndex($6, $3, $7, $4, false)
+}
+|
+DROP INDEX IF EXISTS index_name ON named_keyspace_ref opt_index_using
+{
+    $$ = algebra.NewDropIndex($7, $5, $8, false, false)
 }
 ;
 
@@ -3259,28 +3306,30 @@ BUILD INDEX ON named_keyspace_ref LPAREN exprs RPAREN opt_index_using
  *************************************************/
 
 create_function:
-CREATE opt_replace FUNCTION func_name
+CREATE opt_replace FUNCTION opt_if_not_exists func_name
 {
-    if $4 != nil {
+    if $5 != nil {
         // push function query context
-        yylex.(*lexer).PushQueryContext($4.QueryContext())
+        yylex.(*lexer).PushQueryContext($5.QueryContext())
     }
 }
 LPAREN parm_list RPAREN opt_if_not_exists func_body
 {
-    if $4 != nil {
+    if $5 != nil {
         yylex.(*lexer).PopQueryContext()
     }
-    if $10 != nil {
-        err := $10.SetVarNames($7)
+    if $11 != nil {
+        err := $11.SetVarNames($8)
         if err != nil {
             yylex.Error(err.Error()+yylex.(*lexer).ErrorContext())
         }
     }
-    if $2.Value().Truth() && !$9 {
+    if $2.Value().Truth() && (!$10 || !$4) {
         return yylex.(*lexer).FatalError("syntax error - OR REPLACE and IF NOT EXISTS are mutually exclusive", $<line>2, $<column>2)
+    } else if !$10 && !$4 {
+        return yylex.(*lexer).FatalError("syntax error - specify IF NOT EXISTS only once", $<line>10, $<column>10)
     }
-    $$ = algebra.NewCreateFunction($4, $10, $2.Value().Truth(), $9)
+    $$ = algebra.NewCreateFunction($5, $11, $2.Value().Truth(), $10&&$4)
 }
 ;
 
@@ -3447,6 +3496,11 @@ drop_function:
 DROP FUNCTION func_name opt_if_exists
 {
     $$ = algebra.NewDropFunction($3, $4)
+}
+|
+DROP FUNCTION IF EXISTS func_name
+{
+    $$ = algebra.NewDropFunction($5, false)
 }
 ;
 
