@@ -274,8 +274,6 @@ function repo_setup {
 }
 
 function DevStandaloneSetup {
-    # curl fix match manifest
-    (cd ../../couchbasedeps/go-curl; checkout_if_necessary "" 20161221-couchbase)
 
     repo_setup
 
