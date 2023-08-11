@@ -556,11 +556,16 @@ func setSpecialSpan(rg *plan.Range2) {
 	}
 }
 
-func isSpecialSpan(sspans SargSpans, flag uint32) bool {
+func isSpecialSargSpan(sspans SargSpans, flag uint32) bool {
 	if tspans, ok := sspans.(*TermSpans); ok {
-		return len(tspans.spans) == 1 && len(tspans.spans[0].Ranges) == 1 && (tspans.spans[0].Ranges[0].Flags&flag) != 0
+		return isSpecialSpan(tspans.spans, flag)
 	}
 	return false
+}
+
+func isSpecialSpan(spans plan.Spans2, flag uint32) bool {
+	return len(spans) == 1 && len(spans[0].Ranges) == 1 && (spans[0].Ranges[0].Flags&flag) != 0
+
 }
 
 func ConvertSpans2ToSpan(spans2 plan.Spans2, total int) (plan.Spans, bool) {

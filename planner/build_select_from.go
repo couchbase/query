@@ -448,8 +448,10 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 		// cache results of indexscan3
 		op, ok := scan.(*plan.IndexScan3)
 		if ok && op.GetIndex().IsPrimary() {
-			this.maxParallelism = 1
-			op.SetCacheResult()
+			if isSpecialSpan(op.Spans(), (plan.RANGE_VALUED_SPAN | plan.RANGE_FULL_SPAN | plan.RANGE_WHOLE_SPAN)) {
+				this.maxParallelism = 1
+				op.SetCacheResult()
+			}
 		}
 	}
 

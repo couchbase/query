@@ -341,7 +341,7 @@ func getSargSpans(pred expression.Expression, sargKeys expression.Expressions, i
 					for j := i + 1; j < n; j++ {
 						os := sargSpans[j]
 						if os != nil && os.Size() > 0 && !os.Exact() &&
-							isSpecialSpan(os, plan.RANGE_VALUED_SPAN) {
+							isSpecialSargSpan(os, plan.RANGE_VALUED_SPAN) {
 							os = os.Copy()
 							os.SetExact(exactSpan)
 							sargSpans[j] = os

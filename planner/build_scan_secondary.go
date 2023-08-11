@@ -1115,7 +1115,7 @@ func (this *builder) getIndexFilters(entry *indexEntry, node *algebra.KeyspaceTe
 	baseKeyspace *base.BaseKeyspace, id expression.Expression) (err error) {
 
 	// special case, if the span is an empty span, no need to proceed
-	if isSpecialSpan(entry.spans, plan.RANGE_EMPTY_SPAN) {
+	if isSpecialSargSpan(entry.spans, plan.RANGE_EMPTY_SPAN) {
 		return nil
 	}
 
