@@ -235,7 +235,7 @@ func callback(kve metakv.KVEntry) error {
 		w.cond.L.Lock()
 		waitersMap[what] = w
 		mapLock.Unlock()
-		logging.Infof("Migration complete with no waiters for  %v", what)
+		logging.Infof("Migration complete with no waiters for %v", what)
 	}
 	return nil
 }
