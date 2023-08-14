@@ -367,7 +367,7 @@ func (this sliceValue) SliceTail(start int) (Value, bool) {
 		start = len(this) + start
 	}
 
-	if start >= 0 {
+	if start >= 0 && start < len(this) {
 		return sliceValue(this[start:]), true
 	}
 
