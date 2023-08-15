@@ -135,6 +135,7 @@ func (this *valueExchange) trackChildren(children int) {
 // it's the responsibility of the caller to know that no more readers or
 // writers are around
 func (this *valueExchange) reset() {
+	this.vLock.Lock()
 	this.stop = false
 	this.closed = false
 	for this.itemsCount > 0 {
@@ -154,10 +155,13 @@ func (this *valueExchange) reset() {
 	this.size = 0
 	// not maxSize, no yields
 	this.heartbeat = 0
+	this.vLock.Unlock()
 }
 
 // ditch the slices
 func (this *valueExchange) dispose() {
+
+	this.oLock.Lock()
 
 	// MB-28710 ditch values before pooling
 	for this.itemsCount > 0 {
@@ -179,17 +183,13 @@ func (this *valueExchange) dispose() {
 	}
 	this.items = nil
 
-	this.oLock.Lock()
 	// the slices might have grown with the appends, if the sizing was
 	// approximate, so anything which started with _LARGE_CHILD_POOL
 	// still goes back to the large pool, even if it has grown slightly
 	// ditto for the small pool
-	if this.children == nil {
-		this.oLock.Unlock()
-		return
-	} else if cap(this.children) >= _LARGE_CHILD_POOL {
+	if cap(this.children) >= _LARGE_CHILD_POOL {
 		largeChildPool.Put(this.children[0:0])
-	} else {
+	} else if this.children != nil {
 		smallChildPool.Put(this.children[0:0])
 	}
 	this.children = nil
