@@ -268,7 +268,7 @@
     ]
     },
     {
-       "statements":"select MILLIS_TO_STR(1.453485008e+12,\"2006-01-02\")",
+       "statements":"select MILLIS_TO_STR(1.453477808e+12,\"2006-01-02\")",
      "results": [
         {
             "$1": "2016-01-22"
@@ -768,7 +768,7 @@
     ]
    },
    {
-    "statements":"select MILLIS_TO_LOCAL(1.453485008e+12,'2006-01-02')",
+    "statements":"select MILLIS_TO_LOCAL(1.453477808e+12,'2006-01-02')",
     "results": [
         {
             "$1": "2016-01-22"
