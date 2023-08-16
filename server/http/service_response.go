@@ -920,6 +920,7 @@ func (this *httpRequest) writeControls(controls bool, prefix, indent string) boo
 	var newPrefix string
 	var e []byte
 	var err error
+	var bytes []byte
 
 	needComma := false
 	c := this.Controls()
@@ -1022,7 +1023,11 @@ func (this *httpRequest) writeControls(controls bool, prefix, indent string) boo
 	}
 
 	// Disabled features in n1ql_feat_ctrl bitset
-	bytes, err := json.MarshalIndent(util.DisabledFeatures(this.FeatureControls()), newPrefix[1:], indent)
+	if len(newPrefix) > 1 {
+		bytes, err = json.MarshalIndent(util.DisabledFeatures(this.FeatureControls()), newPrefix[1:], indent)
+	} else {
+		bytes, err = json.MarshalIndent(util.DisabledFeatures(this.FeatureControls()), newPrefix, indent)
+	}
 	if err != nil || !this.writeString(",") || !this.writer.printf("%s\"disabledFeatures\":", newPrefix) ||
 		!this.writer.writeBytes(bytes) {
 
