@@ -43,7 +43,6 @@ type migrationDescriptor struct {
 	When  time.Time `json:"when"`
 }
 
-var startTime = time.Now()
 var mapLock sync.Mutex
 var waitersMap map[string]*waiters
 
