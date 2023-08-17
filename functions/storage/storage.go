@@ -48,16 +48,17 @@ func Migrate() {
 
 	// or functions already migrated
 	if migration.IsComplete(_UDF_MIGRATION) {
-		logging.Infof("UDF migration already done")
+		logging.Infof("UDF migration: Already done")
 		migrating = _MIGRATED
 		return
 	}
 
 	countDownStarted = time.Now()
-	logging.Infof("Evaluating UDF migration")
+	logging.Infof("UDF migration: Evaluating migration state")
 
 	// check for outstanding migration
 	if migration.Resume(_UDF_MIGRATION) {
+		logging.Infof("UDF migration: Resuming migration")
 		go migrate()
 		return
 	}
@@ -88,10 +89,10 @@ func Migrate() {
 		// migration at the next step
 		// TODO find better policy
 		if migration.TryComplete(_UDF_MIGRATION) {
-			logging.Infof("UDF migration not needed on a new cluster")
+			logging.Infof("UDF migration: Not needed on a new cluster")
 			migrating = _MIGRATED
 		} else {
-			logging.Warnf("UDF migration: could not enable _system scope usage, please restart node")
+			logging.Warnf("UDF migration: Could not enable _system scope usage, please restart node")
 		}
 		return
 	}
@@ -99,12 +100,13 @@ func Migrate() {
 	// if all the buckets appear migrated attempt migration now
 	if bucketCount == newBucketCount {
 		if migration.Register(_UDF_MIGRATION) {
+			logging.Infof("UDF migration: Starting migration")
 			go migrate()
 		} else if migration.IsComplete(_UDF_MIGRATION) {
-
 			// another process picked it up in the interim
 			migrating = _MIGRATED
 		} else {
+			logging.Infof("UDF migration: Waiting for migration to complete")
 			migrating = _WAITING
 		}
 		return
@@ -120,7 +122,7 @@ func Migrate() {
 				migrating = _AWAITING_BUCKETS
 				checkMigrate()
 			} else {
-				logging.Infof("UDF migration grabbed by different node")
+				logging.Infof("UDF migration: Migration started on a different node")
 				migrating = _WAITING
 			}
 		case _AWAITING_BUCKETS:
@@ -154,7 +156,7 @@ func checkMigrate() {
 		if canMigrate {
 			migrate()
 		} else {
-			logging.Infof("UDF migration: detected %v buckets with system scope", bucketCount)
+			logging.Infof("UDF migration: Detected %v buckets with system scope", bucketCount)
 		}
 	}
 }
@@ -199,9 +201,11 @@ func MakeName(bytes []byte) (functions.FunctionName, error) {
 			return nil, go_errors.New("incomplete function name")
 		}
 		if UseSystemStorage() {
-			return systemStorage.NewScopeFunction(_unmarshalled.Namespace, _unmarshalled.Bucket, _unmarshalled.Scope, _unmarshalled.Name)
+			return systemStorage.NewScopeFunction(_unmarshalled.Namespace, _unmarshalled.Bucket, _unmarshalled.Scope,
+				_unmarshalled.Name)
 		} else {
-			return metaStorage.NewScopeFunction(_unmarshalled.Namespace, _unmarshalled.Bucket, _unmarshalled.Scope, _unmarshalled.Name)
+			return metaStorage.NewScopeFunction(_unmarshalled.Namespace, _unmarshalled.Bucket, _unmarshalled.Scope,
+				_unmarshalled.Name)
 		}
 	default:
 		return nil, fmt.Errorf("unknown name type %v", name_type.Type)
@@ -302,7 +306,7 @@ func migrate() {
 		time.Sleep(_GRACE - countDown)
 	}
 
-	logging.Infof("Starting scope UDFs migration")
+	logging.Infof("UDF migration: Starting scope UDFs migration")
 
 	// TODO it would be useful here to load the cache so that other requests don't hit the storage
 	// except that to be useful, this would have to be done on all query nodes, which requires
@@ -318,22 +322,22 @@ func migrate() {
 		if err == nil {
 			err1 := name.Save(body, true)
 			if err1 != nil {
-				logging.Warnf("migrating %v error %v writing body", parts, err1)
+				logging.Warnf("UDF migration: Migrating %v error %v writing body", parts, err1)
 			} else {
-				logging.Infof("migrated %v", parts)
+				logging.Infof("UDF migration: Migrated %v", parts)
 			}
 			name, err = metaStorage.NewScopeFunction(parts[0], parts[1], parts[2], parts[3])
 			err1 = name.Delete()
 			if err1 != nil {
-				logging.Warnf("migrating %v error %v deleting old entry", parts, err1)
+				logging.Warnf("UDF migration: Migrating %v error %v deleting old entry", parts, err1)
 			}
 		} else {
-			logging.Warnf("migrating %v error %v parsing name", parts, err)
+			logging.Warnf("UDF migration: Migrating %v error %v parsing name", parts, err)
 		}
 	})
 	migrating = _MIGRATED
 	migration.Complete(_UDF_MIGRATION)
-	logging.Infof("Completed scope UDFs migration")
+	logging.Infof("UDF migration: Completed scope UDFs migration")
 }
 
 func UseSystemStorage() bool {

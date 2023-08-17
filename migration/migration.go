@@ -43,6 +43,7 @@ type migrationDescriptor struct {
 	When  time.Time `json:"when"`
 }
 
+var startTime = time.Now()
 var mapLock sync.Mutex
 var waitersMap map[string]*waiters
 
@@ -73,9 +74,7 @@ func Start(what string) {
 	metakv.Set(_MIGRATION_PATH+what+_MIGRATION_STATE, setState(_STARTED), nil)
 }
 
-// to be called before determining if a migration is needed to restart a failed
-// migration if necessary
-// TODO currently we employ a simple grace period technique, find a better approach
+// to be called before determining if a migration is needed to restart a failed migration if necessary
 func Resume(what string) bool {
 	var in migrationDescriptor
 
@@ -84,53 +83,47 @@ func Resume(what string) bool {
 		return false
 	}
 	if json.Unmarshal(val, &in) != nil {
+		// something is corrupt with the entry; delete it to allow a new migration to start
+		if val != nil {
+			logging.Warnf("%v migration: Invalid migration data found. (%#v)", what, val)
+		}
+		metakv.Delete(_MIGRATION_PATH+what+_MIGRATION_STATE, rev)
 		return false
 	}
-	if in.State == _MIGRATED || time.Since(in.When) < _GRACE {
+	if in.State == _MIGRATED {
 		return false
 	}
 
-	// we are in migration, have been for too long, we need to take evasive action
-	if in.Node != "" {
-
-		// it was us
-		if in.Node == distributed.RemoteAccess().WhoAmI() {
-			if in.State == _STARTED {
-				return true
-			}
-
-			// since we hadn't started, just reset the state
-			metakv.Delete(_MIGRATION_PATH+what+_MIGRATION_STATE, rev)
-			return false
+	// previous migration was us
+	if in.Node == distributed.RemoteAccess().WhoAmI() {
+		// resume if within the grace period
+		if time.Since(in.When) < _GRACE {
+			return true
 		}
-
-		found := false
-		for _, n := range distributed.RemoteAccess().GetNodeNames() {
-			if in.Node == n {
-				found = true
-				break
-			}
-		}
-
-		// the node is there, but stuff isn't happening
-		if found {
-
-			// TODO is there a better strategy here?
-			// we cannot take evasive action because the node is still operating
-			// it either completes, or it'll have to restart to clear after itself
-			logging.Infof("Node %v is migrating %v, but not operating - please restart the node", in.Node, what)
-			return false
-		}
-
-	} else {
-		logging.Infof("A node outside of the cluster is running migration %v - attempting to correct", what)
+		// clean up to allow another attempt to start
+		metakv.Delete(_MIGRATION_PATH+what+_MIGRATION_STATE, rev)
+		return false
 	}
 
-	// if the node is not found but was migrating, we'll try to start migration
-	// immediately
-	// if it wasn't started, we'll reset the state
+	for _, n := range distributed.RemoteAccess().GetNodeNames() {
+		if in.Node == n {
+			if time.Since(in.When) < _GRACE {
+				// leave it for the other node to deal with
+				logging.Infof("%v migration: Node %v is running the migration", what, in.Node)
+			} else {
+				// we cannot take evasive action because the node is still operating
+				// it either completes, or it'll have to restart to clear after itself
+				logging.Infof("%v migration: Node %v is running the migration but is not operating - please restart the node",
+					what, in.Node)
+			}
+			return false
+		}
+	}
+	logging.Infof("%v migration: A node outside of the cluster migrating - attempting to correct", what)
+
+	// if the node is not found but was migrating, we'll try to start migration immediately
 	if in.State == _STARTED {
-		return metakv.Set(_MIGRATION_PATH+what+_MIGRATION_STATE, setState(in.State), rev) == nil
+		return metakv.Set(_MIGRATION_PATH+what+_MIGRATION_STATE, setState(_STARTED), rev) == nil
 	}
 
 	// if it hadn't started, reset the state and we'll likely pick up the tab
@@ -142,7 +135,7 @@ func Resume(what string) bool {
 func Complete(what string) {
 	err := metakv.Set(_MIGRATION_PATH+what+_MIGRATION_STATE, setState(_MIGRATED), nil)
 	if err != nil {
-		logging.Warnf("Migration of %v - cannot switch to completed, err %v: please restart node",
+		logging.Warnf("%v migration: Cannot switch to completed (err %v) - please restart node",
 			what, err)
 	}
 
@@ -221,7 +214,7 @@ func callback(kve metakv.KVEntry) error {
 	w := waitersMap[what]
 	if w != nil {
 		mapLock.Unlock()
-		logging.Infof("Migration releasing waiters for %v", what)
+		logging.Infof("%v migration: Releasing waiters", what)
 		w.cond.L.Lock()
 		w.released = true
 		w.cond.L.Unlock()
@@ -235,7 +228,7 @@ func callback(kve metakv.KVEntry) error {
 		w.cond.L.Lock()
 		waitersMap[what] = w
 		mapLock.Unlock()
-		logging.Infof("Migration complete with no waiters for %v", what)
+		logging.Infof("%v migration: Complete with no waiters", what)
 	}
 	return nil
 }
