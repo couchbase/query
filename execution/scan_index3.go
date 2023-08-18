@@ -30,8 +30,7 @@ type IndexScan3 struct {
 	children []Operator
 	keys     map[string]bool
 	pool     bool
-	results  value.AnnotatedValues
-	context  *Context
+	results  []*datastore.IndexEntry
 }
 
 func NewIndexScan3(plan *plan.IndexScan3, context *Context) *IndexScan3 {
@@ -84,39 +83,11 @@ func (this *IndexScan3) RunOnce(context *Context, parent value.Value) {
 
 		// use cached results if available
 		cacheResult := this.plan.HasCacheResult()
-		if cacheResult && this.results != nil {
-			for _, av := range this.results {
-				av.Track()
-				if context.UseRequestQuota() {
-					err := context.TrackValueSize(av.Size())
-					if err != nil {
-						context.Error(err)
-						av.Recycle()
-						return
-					}
-				}
-				if !this.sendItem(av) {
-					av.Recycle()
-					break
-				}
-			}
-			return
-		}
+		hasCache := cacheResult && this.results != nil
 
-		var results value.AnnotatedValues
-		if cacheResult {
-			var size int = _MAX_RESULT_CACHE_SIZE
-			cardinality := int(math.Ceil(this.plan.Cardinality()))
-			if cardinality > 0 && cardinality < size {
-				size = cardinality
-			}
-			results = make(value.AnnotatedValues, 0, size)
-			this.context = context
-			defer func() {
-				for _, av := range results {
-					av.Recycle()
-				}
-			}()
+		var results []*datastore.IndexEntry
+		if cacheResult && !hasCache {
+			results = make([]*datastore.IndexEntry, 0, _MAX_RESULT_CACHE_SIZE)
 		}
 
 		if this.plan.HasDeltaKeyspace() {
@@ -127,10 +98,12 @@ func (this *IndexScan3) RunOnce(context *Context, parent value.Value) {
 				this.Phase(), context, this.plan.AllCovers())
 		}
 
-		this.conn = datastore.NewIndexConnection(context)
-		this.conn.SetSkipNewKeys(this.plan.SkipNewKeys())
-		defer this.conn.Dispose()  // Dispose of the connection
-		defer this.conn.SendStop() // Notify index that I have stopped
+		if !hasCache {
+			this.conn = datastore.NewIndexConnection(context)
+			this.conn.SetSkipNewKeys(this.plan.SkipNewKeys())
+			defer this.conn.Dispose()  // Dispose of the connection
+			defer this.conn.SendStop() // Notify index that I have stopped
+		}
 
 		filter := this.plan.Filter()
 		if filter != nil {
@@ -158,7 +131,9 @@ func (this *IndexScan3) RunOnce(context *Context, parent value.Value) {
 			defer this.clearProbeBitFilters(context)
 		}
 
-		util.Fork(scanFork, scanDesc{this, context, parent})
+		if !hasCache {
+			util.Fork(scanFork, scanDesc{this, context, parent})
+		}
 
 		ok := true
 		var docs uint64 = 0
@@ -189,8 +164,19 @@ func (this *IndexScan3) RunOnce(context *Context, parent value.Value) {
 			scope_value = nil
 		}
 
+		cacheIndex := 0
 		for ok {
-			entry, cont := this.getItemEntry(this.conn)
+			var entry *datastore.IndexEntry
+			var cont bool
+			if hasCache {
+				if cacheIndex < len(this.results) {
+					entry = this.results[cacheIndex].Copy()
+					cacheIndex++
+				}
+				cont = true
+			} else {
+				entry, cont = this.getItemEntry(this.conn)
+			}
 			if cont {
 				if entry != nil {
 					this.addInDocs(1)
@@ -259,26 +245,16 @@ func (this *IndexScan3) RunOnce(context *Context, parent value.Value) {
 
 						av.SetBit(this.bit)
 
-						if cacheResult {
-							av.Track()
-							if context.UseRequestQuota() {
-								err := context.TrackValueSize(av.Size())
-								if err != nil {
-									context.Error(errors.NewMemoryQuotaExceededError())
-									av.Recycle()
-									return
-								}
-							}
+						if cacheResult && !hasCache {
 							if len(results) >= _MAX_RESULT_CACHE_SIZE {
 								if this.plan.IsUnderNL() {
-									context.Error(errors.NewNLInnerPrimaryDocsExceeded(this.plan.Term().Alias(), _MAX_RESULT_CACHE_SIZE))
+									context.Error(errors.NewNLInnerPrimaryDocsExceeded(alias, _MAX_RESULT_CACHE_SIZE))
 								} else {
-									context.Error(errors.NewSubqueryNumDocsExceeded(this.plan.Term().Alias(), _MAX_RESULT_CACHE_SIZE))
+									context.Error(errors.NewSubqueryNumDocsExceeded(alias, _MAX_RESULT_CACHE_SIZE))
 								}
-								av.Recycle()
 								return
 							}
-							results = append(results, av)
+							results = append(results, entry.Copy())
 						}
 
 						ok = this.sendItem(av)
@@ -295,7 +271,9 @@ func (this *IndexScan3) RunOnce(context *Context, parent value.Value) {
 				return
 			}
 		}
-		this.results, results = results, nil
+		if cacheResult && !hasCache {
+			this.results, results = results, nil
+		}
 	})
 }
 
@@ -450,13 +428,6 @@ func (this *IndexScan3) Done() {
 	this.baseDone()
 	this.keys, this.pool = this.deltaKeyspaceDone(this.keys, this.pool)
 	if this.plan.HasCacheResult() && this.results != nil {
-		context := this.context
-		for _, av := range this.results {
-			if context != nil && context.UseRequestQuota() {
-				context.ReleaseValueSize(av.Size())
-			}
-			av.Recycle()
-		}
 		this.results = nil
 	}
 }

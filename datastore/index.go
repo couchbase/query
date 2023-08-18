@@ -600,6 +600,22 @@ type IndexEntry struct {
 	PrimaryKey string
 }
 
+func (this *IndexEntry) Copy() *IndexEntry {
+	rv := &IndexEntry{
+		PrimaryKey: this.PrimaryKey,
+	}
+	if this.MetaData != nil {
+		rv.MetaData = this.MetaData.Copy()
+	}
+	rv.EntryKey = make(value.Values, len(this.EntryKey))
+	for i, key := range this.EntryKey {
+		if key != nil {
+			rv.EntryKey[i] = key.Copy()
+		}
+	}
+	return rv
+}
+
 // Statistics captures statistics for a range.
 // - it may return heuristics and/or outdated values.
 // - query shall not depend on the accuracy of this statistics.

@@ -1649,41 +1649,8 @@ func (this *builder) markCachedScans(ops ...plan.Operator) error {
 		case *plan.Fetch:
 			op.SetCacheResult()
 		case *plan.IndexScan3:
-			if op.Covering() {
-				// check for references to lefthand side and mark cache result
-				keyspaces := make(map[string]string, len(this.baseKeyspaces))
-				for _, baseKeyspace := range this.baseKeyspaces {
-					if baseKeyspace.PlanDone() {
-						keyspaces[baseKeyspace.Name()] = baseKeyspace.Keyspace()
-					}
-				}
-				ref := false
-			loop:
-				for _, span := range op.Spans() {
-					for _, rg := range span.Ranges {
-						var expr expression.Expression
-						if rg.Low != nil && rg.High != nil {
-							expr = expression.NewAnd(rg.Low, rg.High)
-						} else if rg.Low != nil {
-							expr = rg.Low
-						} else {
-							expr = rg.High
-						}
-						if expr != nil {
-							keyspaceRefs, err := expression.CountKeySpaces(expr, keyspaces)
-							if err != nil {
-								return err
-							}
-							if len(keyspaceRefs) > 0 {
-								ref = true
-								break loop
-							}
-						}
-					}
-				}
-				if !ref {
-					op.SetCacheResult()
-				}
+			if op.Covering() && isSpecialSpan(op.Spans(), (plan.RANGE_VALUED_SPAN|plan.RANGE_FULL_SPAN|plan.RANGE_WHOLE_SPAN)) {
+				op.SetCacheResult()
 			}
 		}
 	}

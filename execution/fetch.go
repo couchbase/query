@@ -10,7 +10,6 @@ package execution
 
 import (
 	"encoding/json"
-	"math"
 
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
@@ -100,15 +99,23 @@ func (this *Fetch) RunOnce(context *Context, parent value.Value) {
 		}
 
 		// maxParallelism is 1. Use cached values
+		alias := this.plan.Term().Alias()
 		for _, sv := range this.results {
-			var av value.AnnotatedValue
-			if this.deepCopy {
-				av = sv.CopyForUpdate().(value.AnnotatedValue)
-			} else {
-				av = sv.Copy().(value.AnnotatedValue)
+			key, hasKey := this.getDocumentKey(sv, context)
+			if !hasKey {
+				context.Error(errors.NewExecutionInternalError("Fetch: cached result value missing document key"))
+				sv.Recycle()
+				return
 			}
+			av := this.newEmptyDocumentWithKey(key, parent, context)
+			var fv value.AnnotatedValue
+			if this.deepCopy {
+				fv = sv.CopyForUpdate().(value.AnnotatedValue)
+			} else {
+				fv = sv.Copy().(value.AnnotatedValue)
+			}
+			av.SetField(alias, fv)
 
-			av.Track()
 			if context.UseRequestQuota() {
 				err := context.TrackValueSize(av.Size())
 				if err != nil {
@@ -133,12 +140,7 @@ func (this *Fetch) beforeItems(context *Context, parent value.Value) bool {
 	}
 	this.parentVal = parent
 	if this.plan.HasCacheResult() && this.results == nil {
-		var size int = _MAX_RESULT_CACHE_SIZE
-		cardinality := int(math.Ceil(this.plan.Cardinality()))
-		if cardinality > 0 && cardinality < size {
-			size = cardinality
-		}
-		this.results = make(value.AnnotatedValues, 0, size)
+		this.results = make(value.AnnotatedValues, 0, _MAX_RESULT_CACHE_SIZE)
 		this.context = context
 	}
 	return this.keyspace != nil
@@ -262,16 +264,21 @@ func (this *Fetch) flushBatch(context *Context) bool {
 			}
 
 			if cacheResult && !this.hasCache {
-				av.Track()
+				var sfv value.AnnotatedValue
+				if this.deepCopy {
+					sfv = value.NewAnnotatedValue(fv.CopyForUpdate())
+				} else {
+					sfv = value.NewAnnotatedValue(fv.Copy())
+				}
 				if context.UseRequestQuota() {
-					err := context.TrackValueSize(av.Size())
+					err := context.TrackValueSize(sfv.Size())
 					if err != nil {
 						context.Error(err)
-						av.Recycle()
+						sfv.Recycle()
 						return false
 					}
 				}
-				this.results = append(this.results, av)
+				this.results = append(this.results, sfv)
 			}
 
 			if !this.sendItem(av) {
@@ -315,12 +322,17 @@ func (this *Fetch) flushBatch(context *Context) bool {
 			}
 
 			if cacheResult && !this.hasCache {
-				av.Track()
+				var sfv value.AnnotatedValue
+				if this.deepCopy {
+					sfv = value.NewAnnotatedValue(fv.CopyForUpdate())
+				} else {
+					sfv = value.NewAnnotatedValue(fv.Copy())
+				}
 				if context.UseRequestQuota() {
-					err := context.TrackValueSize(av.Size())
+					err := context.TrackValueSize(sfv.Size())
 					if err != nil {
 						context.Error(err)
-						av.Recycle()
+						sfv.Recycle()
 						return false
 					}
 				}
@@ -330,10 +342,10 @@ func (this *Fetch) flushBatch(context *Context) bool {
 					} else {
 						context.Error(errors.NewSubqueryNumDocsExceeded(this.plan.Term().Alias(), _MAX_RESULT_CACHE_SIZE))
 					}
-					av.Recycle()
+					sfv.Recycle()
 					return false
 				}
-				this.results = append(this.results, av)
+				this.results = append(this.results, sfv)
 			}
 
 			if !this.sendItem(av) {

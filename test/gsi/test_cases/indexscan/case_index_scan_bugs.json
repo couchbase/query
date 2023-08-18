@@ -221,5 +221,128 @@
                 "c6": 531
             }
     ]
+    },
+    {
+	"testcase": "MB-58157 Part 1, non-covering parent query, non-covering subquery",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY u WITHIN p.`~subqueries` SATISFIES u.`correlated` = true AND ANY v WITHIN u.`plan` SATISFIES v.`#operator` = 'Fetch' AND v.`cache_result` = true END END"
+        },
+        "statements":"SELECT d.c2, (SELECT d1.c2 FROM orders d1 WHERE d1.c2 = d.c2) AS sub FROM orders d WHERE d.c2 < 400 AND d.test_id = 'idxfltr' ORDER BY d.c2",
+	"ordered": true,
+        "results": [
+            {
+                "c2": 11,
+                "sub": [
+                    {
+                        "c2": 11
+                    }
+                ]
+            },
+            {
+                "c2": 211,
+                "sub": [
+                    {
+                        "c2": 211
+                    }
+                ]
+            },
+            {
+                "c2": 311,
+                "sub": [
+                    {
+                        "c2": 311
+                    }
+                ]
+            }
+    ]
+    },
+    {
+	"testcase": "MB-58157 Part 2, covering parent query, non-covering subquery",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY u WITHIN p.`~subqueries` SATISFIES u.`correlated` = true AND ANY v WITHIN u.`plan` SATISFIES v.`#operator` = 'Fetch' AND v.`cache_result` = true END AND CONTAINS(u.`subquery`, 'cover ((`d`.`c2`))') END"
+        },
+        "statements":"SELECT d.c2, (SELECT d1.c2 FROM orders d1 WHERE d1.c2 = d.c2) AS sub FROM orders d WHERE d.c1 = 1 AND d.c2 < 400 AND d.test_id = 'idxfltr' ORDER BY d.c2",
+	"ordered": true,
+        "results": [
+            {
+                "c2": 11,
+                "sub": [
+                    {
+                        "c2": 11
+                    }
+                ]
+            },
+            {
+                "c2": 211,
+                "sub": [
+                    {
+                        "c2": 211
+                    }
+                ]
+            },
+            {
+                "c2": 311,
+                "sub": [
+                    {
+                        "c2": 311
+                    }
+                ]
+            }
+    ]
+    },
+    {
+	"testcase": "MB-58157 Part 3, covering parent query, covering subquery",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY u WITHIN p.`~subqueries` SATISFIES u.`correlated` = true AND ANY v WITHIN u.`plan` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`cache_result` = true AND v.`covers` IS NOT MISSING END AND CONTAINS(u.`subquery`, 'cover ((meta(`d`).`id`))') END"
+        },
+        "statements":"SELECT d.c2, (SELECT meta(d1).id FROM orders d1 WHERE CONCAT(meta(d1).id, '1') = CONCAT(meta(d).id, '1')) AS sub FROM orders d WHERE d.c1 = 1 AND d.c2 < 400 AND d.test_id = 'idxfltr' ORDER BY d.c2",
+	"ordered": true,
+        "results": [
+            {
+                "c2": 11,
+                "sub": [
+                    {
+                        "id": "ifltr001"
+                    }
+                ]
+            },
+            {
+                "c2": 211,
+                "sub": [
+                    {
+                        "id": "ifltr002"
+                    }
+                ]
+            },
+            {
+                "c2": 311,
+                "sub": [
+                    {
+                        "id": "ifltr003"
+                    }
+                ]
+            }
+    ]
     }
 ]

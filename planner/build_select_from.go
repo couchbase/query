@@ -413,8 +413,7 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 		if inCorrSubq && !this.hasBuilderFlag(BUILDER_JOIN_ON_PRIMARY) {
 			// if underlying scan uses Primary Index
 			// cache results
-			_, ok := scan.(*plan.PrimaryScan3)
-			if ok {
+			if _, ok := scan.(*plan.PrimaryScan3); ok {
 				this.maxParallelism = 1
 				fetch.SetCacheResult()
 			}
