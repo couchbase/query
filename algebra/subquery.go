@@ -198,6 +198,14 @@ func (this *Subquery) SetInFunction(hasVariables bool) {
 }
 
 func (this *Subquery) CoveredBy(keyspace string, exprs expression.Expressions, options expression.CoveredOptions) expression.Covered {
+	// Check if COVER_IN_SUBQUERY flag is set already
+	// To prevent erroneous unset of the flag - only set & later unset flag if not already set
+	set := options.InSubqueryTraversal()
+
+	if !set {
+		options.SetInSubqueryFlag()
+	}
+
 	rv := expression.CoveredSkip
 
 	// Only consider the subquery for the covering check
@@ -210,5 +218,10 @@ func (this *Subquery) CoveredBy(keyspace string, exprs expression.Expressions, o
 			}
 		}
 	}
+
+	if !set {
+		options.UnsetInSubqueryFlag()
+	}
+
 	return rv
 }

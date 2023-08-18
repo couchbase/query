@@ -89,6 +89,38 @@
                     }
                 ]
             }
-    ] 
+    ]
+    },
+    {
+        "testcase": "MB-58246: Outer query should be marked as covered.",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND ARRAY_LENGTH(v.covers) > 0 END"
+        },
+        "statements":"SELECT field1, ( SELECT * FROM [1,2,3] arr) AS sq FROM shellTest WHERE field1 IS NOT MISSING",
+        "results": [
+    ]
+    },
+    {
+        "testcase": "MB-58246: Outer query should not be marked as covered.",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.covers IS MISSING END"
+        },
+        "statements":"SELECT field1 FROM shellTest s LET var = ( SELECT s.field1, * FROM s s1 ) WHERE field1 IS NOT MISSING",
+        "results": [
+    ]
     }
 ]

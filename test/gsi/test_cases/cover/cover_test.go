@@ -105,10 +105,12 @@ func TestCover(t *testing.T) {
 
 	runStmt(qc, "CREATE INDEX ixCover22 ON customer(id)")
 	runStmt(qc, "CREATE PRIMARY INDEX ON customer")
+	runStmt(qc, "CREATE INDEX ixCover23 ON shellTest(field1)")
 
 	runMatch("case_cover8.json", false, true, qc, t)
 
 	runStmt(qc, "DELETE FROM customer WHERE test_id = \"cover\"")
 	runStmt(qc, "DROP INDEX customer.ixCover22")
 	runStmt(qc, "DROP PRIMARY INDEX ON customer")
+	runStmt(qc, "DROP INDEX shellTest.ixCover23")
 }
