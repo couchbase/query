@@ -751,6 +751,13 @@ func getLockedSequence(name string) (*sequence, errors.Error) {
 
 		seq.Lock()
 
+		// trigger refresh if needed
+		_, err := getSystemCollection(seq.name.Bucket())
+		if err != nil {
+			seq.Unlock()
+			return nil, errors.NewSequenceError(errors.E_SEQUENCE_NOT_ENABLED, seq.name.Bucket(), err)
+		}
+
 		s = sequences.Get(name, nil)
 		if s == nil {
 			// seq doesn't exist so unlocking not necessary
@@ -758,6 +765,10 @@ func getLockedSequence(name string) (*sequence, errors.Error) {
 		}
 
 		if seq.rev != cacheRevision {
+			if seq.validateVersion() {
+				seq.rev = cacheRevision
+				return seq, nil
+			}
 			seq.Unlock()
 			err := loadSequence(name)
 			if err != nil {
@@ -791,7 +802,7 @@ func (seq *sequence) load() errors.Error {
 		if !errors.IsNotFoundError("", errs[0]) && !errs[0].HasCause(errors.E_CB_BULK_GET) {
 			return errs[0]
 		}
-		return nil
+		return errors.NewSequenceError(errors.E_SEQUENCE_NOT_FOUND, seq.name.SimpleString())
 	}
 
 	av, ok := res[keys[0]]
@@ -871,6 +882,19 @@ func (seq *sequence) load() errors.Error {
 	return nil
 }
 
+func (seq *sequence) validateVersion() bool {
+	b, err := getSystemCollection(seq.name.Bucket())
+	if err != nil {
+		return false
+	}
+	res, err := b.SetSubDoc(seq.key, blockCmd[:2], datastore.MAJORITY_QUERY_CONTEXT)
+	if err != nil {
+		return false
+	}
+	iv := value.AsNumberValue(res[1].Value).Int64()
+	return seq.version == iv
+}
+
 // expected to be locked on entry
 func (seq *sequence) cacheBlock() (int64, errors.Error) {
 	v, err := seq.nextAvailableBlock(seq.cache == 0)
@@ -905,6 +929,9 @@ func (seq *sequence) nextAvailableBlock(getOnly bool) (int64, errors.Error) {
 	for {
 		res, err = b.SetSubDoc(seq.key, blockCmd[:n], datastore.MAJORITY_QUERY_CONTEXT)
 		if err != nil {
+			if err.Code() == errors.E_KEY_NOT_FOUND {
+				return 0, errors.NewSequenceError(errors.E_SEQUENCE_NOT_FOUND, seq.name.SimpleString())
+			}
 			return 0, err
 		}
 		if len(res) != n || res[1].Name != blockCmd[1].Name || res[n-1].Name != blockCmd[n-1].Name {
@@ -972,6 +999,9 @@ func (seq *sequence) cycleAndCache(newValue int64) (int64, errors.Error) {
 	res, err = b.SetSubDoc(seq.key, vals, datastore.MAJORITY_QUERY_CONTEXT)
 	if err != nil {
 		seq.Unlock()
+		if err.Code() == errors.E_KEY_NOT_FOUND {
+			return 0, errors.NewSequenceError(errors.E_SEQUENCE_NOT_FOUND, seq.name.SimpleString())
+		}
 		return 0, err
 	}
 	if len(res) < 1 || res[0].Name != vals[0].Name {

@@ -401,6 +401,9 @@ func (coll *collection) SetSubDoc(key string, elems value.Pairs, context datasto
 	}
 	mcr, e := coll.bucket.cbbucket.SetsSubDoc(key, ops, cc)
 	if e != nil {
+		if isNotFoundError(e) {
+			return nil, errors.NewKeyNotFoundError(key, "", nil)
+		}
 		return nil, errors.NewSubDocSetError(e)
 	}
 	return processSubDocResults(ops, mcr), nil

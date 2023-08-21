@@ -2638,6 +2638,9 @@ func (b *keyspace) SetSubDoc(key string, elems value.Pairs, context datastore.Qu
 	}
 	mcr, e := b.cbbucket.SetsSubDoc(key, ops, cc)
 	if e != nil {
+		if isNotFoundError(e) {
+			return nil, errors.NewKeyNotFoundError(key, "", nil)
+		}
 		return nil, errors.NewSubDocSetError(e)
 	}
 	return processSubDocResults(ops, mcr), nil
