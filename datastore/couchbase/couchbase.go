@@ -1568,7 +1568,7 @@ func newKeyspace(p *namespace, name string, version *uint64) (*keyspace, errors.
 	cbbucket, err := cbNamespace.GetBucket(name)
 
 	if err != nil {
-		logging.Infof("keyspace %s not found %v", name, err)
+		logging.Infof("Bucket %s not found: %v", name, err)
 		// connect and check if the bucket exists
 		if !cbNamespace.BucketExists(name) {
 			return nil, errors.NewCbKeyspaceNotFoundError(err, fullName(p.name, name))
@@ -1631,7 +1631,7 @@ func newKeyspace(p *namespace, name string, version *uint64) (*keyspace, errors.
 		return nil, errors.NewCbBucketClosedError(fullName(p.name, name))
 	} else {
 		go sequences.CleanupStaleSequences(p.name, name)
-		logging.Infof("Loaded Bucket %s", name)
+		logging.Infof("Loaded bucket %s", name)
 	}
 
 	return rv, nil
@@ -1646,7 +1646,7 @@ func (p *namespace) KeyspaceDeleteCallback(name string, err error) {
 
 	ks, ok := p.keyspaceCache[name]
 	if ok && ks.cbKeyspace != nil {
-		logging.Infof("Keyspace %v being deleted", name)
+		logging.Infof("Keyspace %v is being deleted", name)
 		cbKeyspace = ks.cbKeyspace
 		ks.cbKeyspace.Release(false)
 		delete(p.keyspaceCache, name)
@@ -1667,7 +1667,6 @@ func (p *namespace) KeyspaceDeleteCallback(name string, err error) {
 			// since it'll need to lock it when trying to delete from
 			// system collection
 			dropDictCacheEntries(cbKeyspace)
-			sequences.DropAllSequences(p.name, cbKeyspace.name, "")
 		}
 	}
 }

@@ -213,19 +213,19 @@ func (b *Bucket) RunBucketUpdater2(streamingFn StreamingFn, notify NotifyFn) boo
 			id := atomic.AddInt32(&updaterId, 1) & 0xffff
 			err := b.UpdateBucket2(id, streamingFn)
 			if err != nil {
-				if notify != nil {
-					name := b.GetName()
-					notify(name, err)
-
-					// MB-49772 get rid of the deleted bucket
-					p := b.pool
-					b.Close()
-					p.Lock()
-					p.BucketMap[name] = nil
-					delete(p.BucketMap, name)
-					p.Unlock()
-				}
 				logging.Errorf("[%p:%04x] Bucket updater exited: %v", b, id, err)
+			}
+			if notify != nil {
+				name := b.GetName()
+				notify(name, err)
+
+				// MB-49772 get rid of the deleted bucket
+				p := b.pool
+				b.Close()
+				p.Lock()
+				p.BucketMap[name] = nil
+				delete(p.BucketMap, name)
+				p.Unlock()
 			}
 		}()
 	}
@@ -290,16 +290,7 @@ func (b *Bucket) UpdateBucket2(id int32, streamingFn StreamingFn) error {
 		})
 		req, err := http.NewRequest("GET", streamUrl, nil)
 		if err != nil {
-			if isConnError(err) {
-				failures++
-				if failures < MAX_RETRY_COUNT {
-					logging.Infof("[%p:%04x] Bucket updater: %v (Retrying %v)", b, id, err, failures)
-					time.Sleep(time.Duration(failures) * STREAM_RETRY_PERIOD)
-				} else {
-					returnErr = errors.NewBucketUpdaterStreamingError(err)
-				}
-				continue
-			}
+			logging.Infof("[%p:%04x] Bucket updater: Error creating request: %v", b, id, err)
 			return errors.NewBucketUpdaterStreamingError(err)
 		}
 		req.Header.Set("User-Agent", USER_AGENT)
@@ -309,6 +300,7 @@ func (b *Bucket) UpdateBucket2(id int32, streamingFn StreamingFn) error {
 		err = maybeAddAuth(req, b.pool.client.ah)
 		b.RUnlock()
 		if err != nil {
+			logging.Infof("[%p:%04x] Bucket updater: Error setting request auth: %v", b, id, err)
 			return errors.NewBucketUpdaterAuthError(err)
 		}
 
@@ -325,16 +317,19 @@ func (b *Bucket) UpdateBucket2(id int32, streamingFn StreamingFn) error {
 				continue
 			}
 			return errors.NewBucketUpdaterStreamingError(err)
-		}
-
-		if res.StatusCode != 200 {
+		} else if res.StatusCode == http.StatusNotFound {
+			// bucket has been removed, shut down
+			logging.Infof("[%p:%04x] Bucket updater: Streaming endpoint not found. Exiting.", b, id)
+			return nil
+		} else if res.StatusCode != http.StatusOK {
 			bod, _ := ioutil.ReadAll(io.LimitReader(res.Body, 512))
-			logging.Errorf("[%p:%04x] Bucket updater: %v %s", b, id, res.StatusCode, bod)
+			logging.Errorf("[%p:%04x] Bucket updater: Status %v - %s", b, id, res.StatusCode, bod)
 			res.Body.Close()
 			returnErr = errors.NewBucketUpdaterFailedToConnectToHost(res.StatusCode, bod)
 			failures++
 			continue
 		}
+
 		b.Lock()
 		if b.updater != updater {
 			// another updater is running and we should exit cleanly

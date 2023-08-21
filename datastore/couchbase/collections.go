@@ -149,8 +149,8 @@ func (sc *scope) DropCollection(name string) errors.Error {
 	return nil
 }
 
-func (sc *scope) DropAllSequences() {
-	sequences.DropAllSequences(sc.bucket.namespace.name, sc.bucket.name, sc.id)
+func (sc *scope) DropAllSequences() errors.Error {
+	return sequences.DropAllSequences(sc.bucket.namespace.name, sc.bucket.name, sc.id)
 }
 
 type collection struct {
@@ -640,7 +640,7 @@ func refreshScopesAndCollections(mani *cb.Manifest, bucket *keyspace) (map[strin
 
 		// not here anymore
 		if scopes[n] == nil {
-			clearOldScope(bucket, oldScopes[n], false)
+			clearOldScope(bucket, oldScopes[n], false, true)
 		}
 	}
 
@@ -648,17 +648,18 @@ func refreshScopesAndCollections(mani *cb.Manifest, bucket *keyspace) (map[strin
 }
 
 func dropDictCacheEntries(bucket *keyspace) {
+	cleanUp := true
 	for n, s := range bucket.scopes {
 		bucket.scopes[n] = nil
-		clearOldScope(bucket, s, true)
+		cleanUp = clearOldScope(bucket, s, true, cleanUp)
 	}
 }
 
-func clearOldScope(bucket *keyspace, s *scope, isDropBucket bool) {
+func clearOldScope(bucket *keyspace, s *scope, isDropBucket bool, cleanUp bool) bool {
 
 	// MB-43070 only have one stat cleaner
 	if atomic.AddInt32(&s.cleaning, 1) != 1 {
-		return
+		return cleanUp
 	}
 	for n, val := range s.keyspaces {
 		if val != nil {
@@ -669,8 +670,13 @@ func clearOldScope(bucket *keyspace, s *scope, isDropBucket bool) {
 		}
 	}
 
-	s.DropAllSequences()
-	functionsStorage.DropScope(bucket.namespace.name, bucket.name, s.Name())
+	if cleanUp {
+		if err := s.DropAllSequences(); err == nil || err.Code() != errors.E_CB_KEYSPACE_NOT_FOUND {
+			functionsStorage.DropScope(bucket.namespace.name, bucket.name, s.Name())
+			return true
+		}
+	}
+	return false
 }
 
 func clearDictCacheEntries(bucket *keyspace) {
