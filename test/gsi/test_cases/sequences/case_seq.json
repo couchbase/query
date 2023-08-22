@@ -32,39 +32,39 @@
         "results": []
     },
     {
-       "statements": "SELECT NEXT VALUE FOR orders.seqs.seq1 sv, t FROM array_range(0,5) t",
+       "statements": "SELECT idx, NEXT VALUE FOR orders.seqs.seq1 sv FROM array_range(0,5) idx",
        "results": [
-            { "sv": 0, "t": 0 },
-            { "sv": 1, "t": 1 },
-            { "sv": 2, "t": 2 },
-            { "sv": 3, "t": 3 },
-            { "sv": 4, "t": 4 }
+            { "idx": 0, "sv": 0 },
+            { "idx": 1, "sv": 1 },
+            { "idx": 2, "sv": 2 },
+            { "idx": 3, "sv": 3 },
+            { "idx": 4, "sv": 4 }
         ]
     },
     {
-       "statements": "SELECT NEXT VALUE FOR orders.seqs.seq2 sv FROM array_range(0,5) t",
+       "statements": "SELECT idx, NEXT VALUE FOR orders.seqs.seq2 sv FROM array_range(0,5) idx",
        "results": [
-            { "sv": 0 },
-            { "sv": -1 },
-            { "sv": -2 },
-            { "sv": -3 },
-            { "sv": -4 }
+            { "idx": 0, "sv": 0 },
+            { "idx": 1, "sv": -1 },
+            { "idx": 2, "sv": -2 },
+            { "idx": 3, "sv": -3 },
+            { "idx": 4, "sv": -4 }
         ]
     },
     {
-       "statements": "SELECT NEXT VALUE FOR orders.seqs.seq3 sv FROM array_range(0,3) t",
+       "statements": "SELECT idx, NEXT VALUE FOR orders.seqs.seq3 sv FROM array_range(0,3) idx",
        "results": [
-            { "sv": 1000 },
-            { "sv": 1001 },
-            { "sv": 999 }
+            { "idx": 0, "sv": 1000 },
+            { "idx": 1, "sv": 1001 },
+            { "idx": 2, "sv": 999 }
         ]
     },
     {
-       "statements": "SELECT NEXT VALUE FOR orders.seqs.seq4 sv FROM array_range(0,5) t",
+       "statements": "SELECT idx, NEXT VALUE FOR orders.seqs.seq4 sv FROM array_range(0,5) idx",
        "results": [
-            { "sv": 2000 },
-            { "sv": 2001 },
-            { "sv": 2002 }
+            { "idx": 0, "sv": 2000 },
+            { "idx": 1, "sv": 2001 },
+            { "idx": 2, "sv": 2002 }
         ],
         "errorCode":5010
     },
@@ -89,9 +89,9 @@
     {
         "statements": "SELECT meta().id,* FROM orders WHERE test_id = 'seq'",
         "results": [
-            {"id":"50","orders":{"id":51,"test_id":"seq"}},
-            {"id":"52","orders":{"id":52,"test_id":"seq"}},
-            {"id":"53","orders":{"id":53,"test_id":"seq"}}
+            {"id":"5","orders":{"id":6,"test_id":"seq"}},
+            {"id":"7","orders":{"id":7,"test_id":"seq"}},
+            {"id":"8","orders":{"id":8,"test_id":"seq"}}
         ]
     },
     {
@@ -99,11 +99,11 @@
         "results": []
     },
     {
-        "statements": "SELECT *, y, NEXT VALUE FOR orders.seqs.seq1 nv1, NEXT VALUE FOR orders.seqs.seq1 nv2, x FROM array_range(0,3) t LET x = NEXT VALUE FOR orders.seqs.seq1 ,y = (SELECT PREV VALUE FOR orders.seqs.seq1 a, NEXT VALUE FOR orders.seqs.seq1 b FROM array_range(0, 2) tt, t for_correlation) ORDER BY t",
+        "statements": "SELECT *, y, NEXT VALUE FOR orders.seqs.seq1 nv1, NEXT VALUE FOR orders.seqs.seq1 nv2, x FROM array_range(0,3) idx LET x = NEXT VALUE FOR orders.seqs.seq1 ,y = (SELECT PREV VALUE FOR orders.seqs.seq1 pv, NEXT VALUE FOR orders.seqs.seq1 nv FROM array_range(0, 2) idx2, idx for_correlation) ORDER BY idx",
         "results": [
-            {"t":0,"y":[{"a":100,"b":101},{"a":101,"b":102}],"nv1":100,"nv2":100,"x":100},
-            {"t":1,"y":[{"a":103,"b":104},{"a":104,"b":105}],"nv1":103,"nv2":103,"x":103},
-            {"t":2,"y":[{"a":106,"b":107},{"a":107,"b":108}],"nv1":106,"nv2":106,"x":106}
+            {"idx":0,"y":[{"pv":100,"nv":101},{"pv":101,"nv":102}],"nv1":100,"nv2":100,"x":100},
+            {"idx":1,"y":[{"pv":103,"nv":104},{"pv":104,"nv":105}],"nv1":103,"nv2":103,"x":103},
+            {"idx":2,"y":[{"pv":106,"nv":107},{"pv":107,"nv":108}],"nv1":106,"nv2":106,"x":106}
         ]
     }
 ]
