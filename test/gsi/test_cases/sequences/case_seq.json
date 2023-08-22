@@ -105,5 +105,9 @@
             {"idx":1,"y":[{"pv":103,"nv":104},{"pv":104,"nv":105}],"nv1":103,"nv2":103,"x":103},
             {"idx":2,"y":[{"pv":106,"nv":107},{"pv":107,"nv":108}],"nv1":106,"nv2":106,"x":106}
         ]
+    },
+    {
+        "statements": "DELETE FROM orders WHERE test_id = 'seq'",
+        "results":[]
     }
 ]
