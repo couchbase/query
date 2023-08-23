@@ -1297,6 +1297,8 @@ func (p *namespace) keyspaceByName(name string) (*keyspace, errors.Error) {
 		// it is never unset - so it's safe to test cbKeyspace != nil
 		entry.cbKeyspace = k
 		p.lock.Unlock()
+		// once successfully loaded we can check if we need to clean-up after external actions
+		go sequences.CleanupStaleSequences(p.name, name)
 		return k, nil
 	}
 }
@@ -1630,7 +1632,6 @@ func newKeyspace(p *namespace, name string, version *uint64) (*keyspace, errors.
 	if !cbbucket.RunBucketUpdater2(p.KeyspaceUpdateCallback, p.KeyspaceDeleteCallback) {
 		return nil, errors.NewCbBucketClosedError(fullName(p.name, name))
 	} else {
-		go sequences.CleanupStaleSequences(p.name, name)
 		logging.Infof("Loaded bucket %s", name)
 	}
 
@@ -2794,39 +2795,49 @@ func (ks *keyspace) DefaultKeyspace() (datastore.Keyspace, errors.Error) {
 }
 
 func (ks *keyspace) ScopeIds() ([]string, errors.Error) {
+	ks.RLock()
 	ids := make([]string, len(ks.scopes))
 	ix := 0
 	for k := range ks.scopes {
 		ids[ix] = k
 		ix++
 	}
+	ks.RUnlock()
 	return ids, nil
 }
 
 func (ks *keyspace) ScopeNames() ([]string, errors.Error) {
+	ks.RLock()
 	ids := make([]string, len(ks.scopes))
 	ix := 0
 	for _, v := range ks.scopes {
 		ids[ix] = v.Name()
 		ix++
 	}
+	ks.RUnlock()
 	return ids, nil
 }
 
 func (ks *keyspace) ScopeById(id string) (datastore.Scope, errors.Error) {
+	ks.RLock()
 	scope := ks.scopes[id]
 	if scope == nil {
+		ks.RUnlock()
 		return nil, errors.NewCbScopeNotFoundError(nil, fullName(ks.namespace.name, ks.name, id))
 	}
+	ks.RUnlock()
 	return scope, nil
 }
 
 func (ks *keyspace) ScopeByName(name string) (datastore.Scope, errors.Error) {
+	ks.RLock()
 	for _, v := range ks.scopes {
 		if name == v.Name() {
+			ks.RUnlock()
 			return v, nil
 		}
 	}
+	ks.RUnlock()
 	return nil, errors.NewCbScopeNotFoundError(nil, fullName(ks.namespace.name, ks.name, name))
 }
 
