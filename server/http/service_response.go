@@ -605,7 +605,8 @@ func (this *httpRequest) writeErrors(prefix string, indent string) bool {
 			// only before calling writePrefix()
 			// but this is too cumbersome, having
 			// to check Execution errors as well.
-			if this.State() != server.FATAL {
+			// MB-58387: Set the status code of the response if it is unset
+			if this.State() != server.FATAL || this.httpCode() == 0 {
 				this.setHttpCode(mapErrorToHttpResponse(err, http.StatusOK))
 			}
 		}
