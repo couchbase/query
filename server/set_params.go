@@ -11,6 +11,7 @@ package server
 import (
 	"fmt"
 	"reflect"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -289,7 +290,9 @@ var _SETTERS = map[string]Setter{
 		return nil
 	},
 	NUM_CPUS: func(s *Server, o interface{}) errors.Error {
-		util.SetNumCPUs(int(getNumber(o)), tenant.IsServerless())
+		logging.Debuga(func() string {
+			return fmt.Sprintf("%s updated to %d.  Change will take place on restart.", NUM_CPUS, int(getNumber(o)))
+		})
 		return nil
 	},
 }
