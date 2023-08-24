@@ -410,7 +410,7 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 			}
 		}
 		fetch := plan.NewFetch(keyspace, node, names, cost, cardinality, size, frCost, this.hasBuilderFlag(BUILDER_NL_INNER))
-		if inCorrSubq && !this.hasBuilderFlag(BUILDER_JOIN_ON_PRIMARY) {
+		if inCorrSubq || this.hasBuilderFlag(BUILDER_JOIN_ON_PRIMARY) {
 			// if underlying scan uses Primary Index
 			// cache results
 			if _, ok := scan.(*plan.PrimaryScan3); ok {
@@ -442,11 +442,10 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 				this.addSubChildren(plan.NewFilter(filter, node.Alias(), cost, cardinality, size, frCost))
 			}
 		}
-	} else if this.countScan == nil && len(this.coveringScans) > 0 && inCorrSubq && !this.hasBuilderFlag(BUILDER_JOIN_ON_PRIMARY) {
+	} else if this.countScan == nil && len(this.coveringScans) > 0 && (inCorrSubq || this.hasBuilderFlag(BUILDER_JOIN_ON_PRIMARY)) {
 		// if we have a covering index scan on primary index
 		// cache results of indexscan3
-		op, ok := scan.(*plan.IndexScan3)
-		if ok && op.GetIndex().IsPrimary() {
+		if op, ok := scan.(*plan.IndexScan3); ok && op.Index().IsPrimary() {
 			if isSpecialSpan(op.Spans(), (plan.RANGE_VALUED_SPAN | plan.RANGE_FULL_SPAN | plan.RANGE_WHOLE_SPAN)) {
 				this.maxParallelism = 1
 				op.SetCacheResult()

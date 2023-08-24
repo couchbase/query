@@ -281,8 +281,6 @@ func (this *builder) buildAnsiJoinOp(node *algebra.AnsiJoin) (op plan.Operator, 
 			}
 
 			if primary != nil {
-				this.maxParallelism = 1
-
 				if useCBO {
 					cost, cardinality, size, frCost = primary.Cost(), primary.Cardinality(), primary.Size(), primary.FrCost()
 					if cost > 0.0 && cardinality > 0.0 && size > 0 && frCost > 0.0 {
@@ -618,8 +616,6 @@ func (this *builder) buildAnsiNestOp(node *algebra.AnsiNest) (op plan.Operator, 
 			}
 
 			if primary != nil {
-				this.maxParallelism = 1
-
 				if useCBO {
 					cost, cardinality, size, frCost = primary.Cost(), primary.Cardinality(), primary.Size(), primary.FrCost()
 					if cost > 0.0 && cardinality > 0.0 && size > 0 && frCost > 0.0 {
@@ -1526,10 +1522,6 @@ func (this *builder) buildInnerPrimaryScan(right *algebra.KeyspaceTerm,
 	}
 
 	if len(this.children) > 0 {
-		err = this.markCachedScans(this.children...)
-		if err != nil {
-			return nil, nil, nil, err
-		}
 		return plan.NewSequence(this.children...), newFilter, newOnclause, nil
 	}
 	return nil, nil, nil, errors.NewPlanInternalError(fmt.Sprintf("buildInnerPrimaryScan: no scan built for inner keyspace %s", right.Alias()))
@@ -1641,20 +1633,6 @@ func (this *builder) joinCoverTransformation(leftCoveringScans, rightCoveringSca
 	}
 
 	return
-}
-
-func (this *builder) markCachedScans(ops ...plan.Operator) error {
-	for i := len(ops) - 1; i >= 0; i-- {
-		switch op := ops[i].(type) {
-		case *plan.Fetch:
-			op.SetCacheResult()
-		case *plan.IndexScan3:
-			if op.Covering() && isSpecialSpan(op.Spans(), (plan.RANGE_VALUED_SPAN|plan.RANGE_FULL_SPAN|plan.RANGE_WHOLE_SPAN)) {
-				op.SetCacheResult()
-			}
-		}
-	}
-	return nil
 }
 
 func (this *builder) markPlanFlags(op plan.Operator, term algebra.SimpleFromTerm) error {
