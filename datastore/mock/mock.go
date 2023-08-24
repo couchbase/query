@@ -166,6 +166,10 @@ func (s *store) CreateSystemCBOStats(requestId string) errors.Error {
 	return nil
 }
 
+func (s *store) DropSystemCBOStats() errors.Error {
+	return nil
+}
+
 func (s *store) GetSystemCBOStats() (datastore.Keyspace, errors.Error) {
 	return nil, nil
 }

@@ -417,6 +417,7 @@ const (
 	E_CB_BUCKET_CLOSED                        ErrorCode = 12041
 	E_CB_SUBDOC_GET                           ErrorCode = 12042
 	E_CB_SUBDOC_SET                           ErrorCode = 12043
+	E_CB_DROP_SYSTEM_BUCKET                   ErrorCode = 12044
 	_RETIRED_13010                                      = 13010
 	_RETIRED_13011                                      = 13011
 	E_DATASTORE_CLUSTER                       ErrorCode = 13012

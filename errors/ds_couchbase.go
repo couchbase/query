@@ -187,6 +187,18 @@ func NewCbCreateSystemBucketError(s string, e error) Error {
 		cause: c, InternalMsg: "Error while creating system bucket " + s, InternalCaller: CallerN(1)}
 }
 
+func NewCbDropSystemBucketError(s string, e error) Error {
+	c := make(map[string]interface{})
+	if _, ok := e.(Error); ok {
+		c["error"] = e
+	} else if e != nil {
+		c["error"] = e.Error()
+	}
+	c["system_bucket"] = s
+	return &err{level: EXCEPTION, ICode: E_CB_DROP_SYSTEM_BUCKET, IKey: "datastore.couchbase.drop_system_bucket", ICause: e,
+		cause: c, InternalMsg: "Error while dropping system bucket " + s, InternalCaller: CallerN(1)}
+}
+
 func NewCbBucketCreateScopeError(s string, e error) Error {
 	c := make(map[string]interface{})
 	if _, ok := e.(Error); ok {

@@ -288,6 +288,14 @@ func (s *store) CreateSysPrimaryIndex(idxName, requestId string, indexer3 datast
 	return nil
 }
 
+func (s *store) DropSystemCBOStats() errors.Error {
+	err := cb.DropSystemBucket(&s.client, _N1QL_SYSTEM_BUCKET)
+	if err != nil {
+		return errors.NewCbDropSystemBucketError(_N1QL_SYSTEM_BUCKET, err)
+	}
+	return nil
+}
+
 func (s *store) GetSystemCBOStats() (datastore.Keyspace, errors.Error) {
 	return datastore.GetKeyspace("default", _N1QL_SYSTEM_BUCKET, _N1QL_SYSTEM_SCOPE, _N1QL_CBO_STATS)
 }

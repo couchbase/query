@@ -22,6 +22,10 @@ func (s *store) CreateSystemCBOStats(requestId string) errors.Error {
 	return nil
 }
 
+func (s *store) DropSystemCBOStats() errors.Error {
+	return nil
+}
+
 func (s *store) HasSystemCBOStats() (bool, errors.Error) {
 	return false, nil
 }
