@@ -353,6 +353,7 @@ const (
 	E_BUCKET_UPDATER_AUTH_ERROR               ErrorCode = 10303
 	E_BUCKET_UPDATER_CONNECTION_FAILED        ErrorCode = 10304
 	E_BUCKET_UPDATER_ERROR_MAPPING            ErrorCode = 10305
+	E_BUCKET_UPDATER_EP_NOT_FOUND             ErrorCode = 10306
 	E_ADVISOR_SESSION_NOT_FOUND               ErrorCode = 10500
 	E_ADVISOR_INVALID_ACTION                  ErrorCode = 10501
 	E_ADVISOR_ACTION_MISSING                  ErrorCode = 10502

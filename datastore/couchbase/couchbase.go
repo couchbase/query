@@ -1570,7 +1570,11 @@ func newKeyspace(p *namespace, name string, version *uint64) (*keyspace, errors.
 	cbbucket, err := cbNamespace.GetBucket(name)
 
 	if err != nil {
-		logging.Infof("Bucket %s not found: %v", name, err)
+		if !strings.Contains(err.Error(), "HTTP error 404") {
+			logging.Infof("Bucket %s not found: %v", name, err)
+		} else {
+			logging.Infof("Bucket %s not found", name)
+		}
 		// connect and check if the bucket exists
 		if !cbNamespace.BucketExists(name) {
 			return nil, errors.NewCbKeyspaceNotFoundError(err, fullName(p.name, name))
@@ -1632,7 +1636,7 @@ func newKeyspace(p *namespace, name string, version *uint64) (*keyspace, errors.
 	if !cbbucket.RunBucketUpdater2(p.KeyspaceUpdateCallback, p.KeyspaceDeleteCallback) {
 		return nil, errors.NewCbBucketClosedError(fullName(p.name, name))
 	} else {
-		logging.Infof("Loaded bucket %s", name)
+		logging.Infof("Loaded bucket %s (%s)", name, cbbucket.GetAbbreviatedUUID())
 	}
 
 	return rv, nil
@@ -1673,7 +1677,7 @@ func (p *namespace) KeyspaceDeleteCallback(name string, err error) {
 }
 
 // Called by primitives/couchbase if a configured keyspace is updated
-func (p *namespace) KeyspaceUpdateCallback(bucket *cb.Bucket) bool {
+func (p *namespace) KeyspaceUpdateCallback(bucket *cb.Bucket, msgPrefix string) bool {
 
 	ret := true
 	checkSysBucket := false
@@ -1686,11 +1690,9 @@ func (p *namespace) KeyspaceUpdateCallback(bucket *cb.Bucket) bool {
 		uid, _ := strconv.ParseUint(bucket.CollectionsManifestUid, 16, 64)
 		if ks.cbKeyspace.collectionsManifestUid != uid {
 			if ks.cbKeyspace.collectionsManifestUid == _INVALID_MANIFEST_UID {
-				logging.Infof("[%p] Bucket updater: received first manifest id %v for bucket %v",
-					ks.cbKeyspace.cbbucket, uid, bucket.Name)
+				logging.Infof("%s received first manifest id %v", msgPrefix, uid)
 			} else {
-				logging.Infof("[%p] Bucket updater: switching manifest id from %v to %v for bucket %v",
-					ks.cbKeyspace.cbbucket, ks.cbKeyspace.collectionsManifestUid, uid, bucket.Name)
+				logging.Infof("%s switching manifest id from %v to %v", msgPrefix, ks.cbKeyspace.collectionsManifestUid, uid)
 			}
 			ks.cbKeyspace.flags |= _NEEDS_MANIFEST
 			ks.cbKeyspace.newCollectionsManifestUid = uid
@@ -1718,7 +1720,7 @@ func (p *namespace) KeyspaceUpdateCallback(bucket *cb.Bucket) bool {
 
 		// the KV nodes list has changed, force a refresh on next use
 		if ks.cbKeyspace.cbbucket.ChangedVBServerMap(&bucket.VBSMJson) {
-			logging.Infof("[%p] Bucket updater: vbMap changed for bucket %v", ks.cbKeyspace.cbbucket, bucket.Name)
+			logging.Infof("%s vbMap changed", msgPrefix)
 			ks.cbKeyspace.flags |= _NEEDS_REFRESH
 
 			// bucket will be reloaded, we don't need an updater anymore
@@ -1730,7 +1732,7 @@ func (p *namespace) KeyspaceUpdateCallback(bucket *cb.Bucket) bool {
 		// also, for a new bucket, the expectation here is that it will come alive
 		// with all the capabilities correctly set, so that it won't be migrated
 		for cn, c := range missingCapabilities {
-			logging.Infof("Bucket %v migrating to %v", bucket.Name, cn)
+			logging.Infof("%s Starting migration to %v", msgPrefix, cn)
 			go datastore.ExecuteMigrators(bucket.Name, c)
 		}
 	} else {

@@ -431,6 +431,12 @@ func (b *Bucket) obsoleteNode(node string) bool {
 	return true
 }
 
+func (b *Bucket) GetAbbreviatedUUID() string {
+	b.RLock()
+	defer b.RUnlock()
+	return b.UUID[:4] + b.UUID[len(b.UUID)-4:]
+}
+
 func (b *Bucket) GetName() string {
 	b.RLock()
 	defer b.RUnlock()
