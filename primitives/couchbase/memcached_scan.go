@@ -475,6 +475,11 @@ func (this *seqScan) coordinator(b *Bucket, scanTimeout time.Duration) {
 
 	smap := b.VBServerMap()
 	vblist := smap.VBucketMap
+	if len(vblist) == 0 {
+		logging.Severef("Sequential scan coordinator: [%p] invalid VB map for bucket %v - no v-buckets", this, b.Name)
+		this.reportError(qerrors.NewSSError(qerrors.E_SS_FAILED))
+		return
+	}
 
 	numServers := len(smap.ServerList)
 	if numServers < 1 {
@@ -535,8 +540,8 @@ func (this *seqScan) coordinator(b *Bucket, scanTimeout time.Duration) {
 					}
 				}
 				if server >= numServers {
-					logging.Severef("Sequential scan coordinator: [%p] Invalid server: %d (max valid: %d)",
-						this, server, numServers-1)
+					logging.Severef("Sequential scan coordinator: [%p] Invalid server for VB (%d): %d (max valid: %d)",
+						this, vb, server, numServers-1)
 					this.reportError(qerrors.NewSSError(qerrors.E_SS_FAILED))
 					cancelAll()
 					return
@@ -592,8 +597,8 @@ func (this *seqScan) coordinator(b *Bucket, scanTimeout time.Duration) {
 						}
 					}
 					if server >= numServers {
-						logging.Severef("Sequential scan coordinator: [%p] Invalid server: %d (max valid: %d)",
-							this, server, numServers-1)
+						logging.Severef("Sequential scan coordinator: [%p] Invalid server for VB (%d): %d (max valid: %d)",
+							this, vb, server, numServers-1)
 						this.reportError(qerrors.NewSSError(qerrors.E_SS_FAILED))
 						cancelAll()
 						return
