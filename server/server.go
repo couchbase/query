@@ -211,6 +211,8 @@ func NewServer(store datastore.Datastore, sys datastore.Systemstore, config clus
 		settingsCallback: func(s string, v interface{}) {},
 	}
 
+	rv.unboundQueue.name = "unbound"
+	rv.plusQueue.name = "plus"
 	rv.SetServicers(servicers)
 	rv.SetPlusServicers(plusServicers)
 	newRunQueue("unbound", &rv.unboundQueue, requestsCap, false)
@@ -838,7 +840,7 @@ func newTxRunQueues(q *txRunQueues, nqueues, num int) {
 }
 
 func (this *runQueue) SetServicers(num int) {
-	if this.size >= 0 && (this.size-this.fullQueue)/_QUEUE_BUFFER_MULTIPLIER < int32(num) {
+	if this.size > 0 && (this.size-this.fullQueue)/_QUEUE_BUFFER_MULTIPLIER < int32(num) {
 		logging.Warnf("Number of servicers for %s queue set to more than initial limit", this.name)
 	}
 	this.servicers = num
