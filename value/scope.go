@@ -336,3 +336,11 @@ func (this *ScopeValue) recycle(lvl int32) {
 func (this *ScopeValue) RefCnt() int32 {
 	return this.refCnt
 }
+
+func (this *ScopeValue) Size() uint64 {
+	sz := this.Value.Size()
+	if this.parent != nil {
+		sz += this.parent.Size()
+	}
+	return sz
+}

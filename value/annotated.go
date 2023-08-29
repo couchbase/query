@@ -232,20 +232,22 @@ func (this *annotatedValue) Size() uint64 {
 		return this.cachedSize
 	}
 	sz := this.Value.Size() + uint64(unsafe.Sizeof(*this))
+	if this.original != nil {
+		sz += this.original.Size()
+	}
 	if this.id != nil {
 		if s, ok := this.id.(string); ok {
 			sz += uint64(len(s))
 		}
 	}
-	if !this.sharedAnnotations {
-		n := 1 << bits.Len64(uint64(len(this.attachments)))
-		sz += uint64(_INTERFACE_SIZE*n) + _MAP_SIZE
-		for k, v := range this.attachments {
-			sz += uint64(len(k))
-			sz += anySize(v)
-		}
+	// even though these may be shared, count them for each annotatedValue (prefer over to under counting quota)
+	n := 1 << bits.Len64(uint64(len(this.attachments)))
+	sz += uint64(_INTERFACE_SIZE*n) + _MAP_SIZE
+	for k, v := range this.attachments {
+		sz += uint64(len(k))
+		sz += anySize(v)
 	}
-	n := 1 << bits.Len64(uint64(len(this.meta)))
+	n = 1 << bits.Len64(uint64(len(this.meta)))
 	sz += uint64(_INTERFACE_SIZE*n) + _MAP_SIZE
 	for k, v := range this.meta {
 		sz += uint64(len(k))

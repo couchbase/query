@@ -217,13 +217,19 @@ func (this *Order) makeMinimal(item value.AnnotatedValue, context *Context) {
 	origAtt = nil
 	item.ResetCovers(nil)
 	item.ResetMeta()
-	item.ResetOriginal()
 	if useQuota {
-		sz -= item.RecalculateSize()
-		if sz != 0 {
-			context.ReleaseValueSize(sz)
+		asz := item.RecalculateSize()
+		if sz < asz {
+			// we could end up with growth if the evaluated term values are larger than the removed fields
+			if err := context.TrackValueSize(asz - sz); err != nil {
+				context.Error(err)
+				return
+			}
+		} else {
+			context.ReleaseValueSize(sz - asz)
 		}
 	}
+	item.ResetOriginal() // doesn't recycle the value so we do it after the accounting since the memory may remain in use
 }
 
 func (this *Order) lessThan(v1 value.AnnotatedValue, v2 value.AnnotatedValue) bool {

@@ -255,7 +255,7 @@ func (this *Fetch) flushBatch(context *Context) bool {
 			av.SetField(this.plan.Term().Alias(), fv)
 
 			if context.UseRequestQuota() {
-				err := context.TrackValueSize(av.Size())
+				err := context.TrackValueSize(av.RecalculateSize())
 				if err != nil {
 					context.Error(err)
 					av.Recycle()
@@ -313,7 +313,7 @@ func (this *Fetch) flushBatch(context *Context) bool {
 			av.SetField(this.plan.Term().Alias(), fv)
 
 			if context.UseRequestQuota() {
-				err := context.TrackValueSize(av.Size())
+				err := context.TrackValueSize(av.RecalculateSize())
 				if err != nil {
 					context.Error(err)
 					av.Recycle()
