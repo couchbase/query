@@ -235,6 +235,15 @@ func (this *SendInsert) flushBatch(context *Context) bool {
 	// If there is a RETURNING clause or the index used was #sequentialScan and we need to make the Halloween Problem checks
 	preserveMutations := (!fastDiscard || this.plan.SkipNewKeys())
 
+	if preserveMutations {
+		skipNewKeys := this.plan.SkipNewKeys()
+		for _, dp := range dpairs {
+			if skipNewKeys && !context.AddKeyToSkip(dp.Name) {
+				return false
+			}
+		}
+	}
+
 	iCount, dpairs, errs = this.keyspace.Insert(dpairs, &this.operatorCtx, preserveMutations)
 
 	// Update mutation count with number of inserted docs
@@ -250,37 +259,28 @@ func (this *SendInsert) flushBatch(context *Context) bool {
 		}
 	}
 
-	if preserveMutations {
-		skipNewKeys := this.plan.SkipNewKeys()
+	if !fastDiscard {
 		for _, dp := range dpairs {
-			if skipNewKeys && !context.AddKeyToSkip(dp.Name) {
-				return false
-			}
-
 			// Capture the inserted keys in case there is a RETURNING clause
-			if !fastDiscard {
-				dv := value.NewAnnotatedValue(dp.Value)
-				av := value.NewAnnotatedValue(make(map[string]interface{}, 1))
-				av.ShareAnnotations(dv)
-				av.SetField(this.plan.Alias(), dv)
+			dv := value.NewAnnotatedValue(dp.Value)
+			av := value.NewAnnotatedValue(make(map[string]interface{}, 1))
+			av.ShareAnnotations(dv)
+			av.SetField(this.plan.Alias(), dv)
 
-				if context.UseRequestQuota() {
-					err := context.TrackValueSize(av.Size())
-					if err != nil {
-						context.Error(err)
-						av.Recycle()
-						return false
-					}
-				}
-
-				if !this.sendItem(av) {
+			if context.UseRequestQuota() {
+				err := context.TrackValueSize(av.Size())
+				if err != nil {
+					context.Error(err)
+					av.Recycle()
 					return false
 				}
 			}
-		}
-	}
 
-	if fastDiscard {
+			if !this.sendItem(av) {
+				return false
+			}
+		}
+	} else {
 		for _, item := range this.batch {
 			// item not used past this point
 			item.Recycle()
