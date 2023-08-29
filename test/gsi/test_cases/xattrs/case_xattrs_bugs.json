@@ -13,5 +13,20 @@
         "statements":"SELECT t3.c2 FROM shellTest AS t1 JOIN (SELECT d.c2 FROM shellTest AS d WHERE d.c1 > 0 AND d.test_id = 'xattrs') AS t2 ON t1.c2 = t2.c2 JOIN shellTest t3 ON t2.c2 = META(t3).xattrs._sync.rev WHERE t1.c1 < 0 AND t3.c1 > 0 AND t1.test_id = 'xattrs' AND t3.test_id = 'xattrs'",
         "results": [
     ]
+    },
+    {
+        "testcase": "MB-57781, part 2, xattrs in ORDER BY",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'Fetch' AND v.`as` = 't1' AND ARRAY_LENGTH(v.`subpaths`) > 0 END"
+        },
+        "statements":"SELECT t2.c2 FROM shellTest AS t1 JOIN (SELECT d.c2 FROM shellTest AS d WHERE d.c1 > 0 AND d.test_id = 'xattrs') AS t2 ON t1.c2 = t2.c2 WHERE t1.c1 < 0 AND t1.test_id = 'xattrs' ORDER BY META(t1).xattrs._sync.rev",
+        "results": [
+    ]
     }
 ]
