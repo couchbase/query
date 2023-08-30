@@ -9,6 +9,7 @@
 package plannerbase
 
 import (
+	"sort"
 	"time"
 
 	"github.com/couchbase/query/algebra"
@@ -56,6 +57,7 @@ type BaseKeyspace struct {
 	bfSource      map[string]*BFSource
 	cardinality   float64
 	size          int64
+	projection    []string
 }
 
 func NewBaseKeyspace(name string, path *algebra.Path, node algebra.SimpleFromTerm, optBit int32) (*BaseKeyspace, time.Duration) {
@@ -274,6 +276,10 @@ func copyBaseKeyspaces(src map[string]*BaseKeyspace, copyFilter bool) map[string
 				joinFltrHints = append(joinFltrHints, hint)
 			}
 			dest[kspace.name].joinFltrHints = joinFltrHints
+		}
+		if len(kspace.projection) > 0 {
+			dest[kspace.name].projection = make([]string, len(kspace.projection))
+			copy(dest[kspace.name].projection, kspace.projection)
 		}
 		if copyFilter {
 			if len(kspace.filters) > 0 {
@@ -724,6 +730,23 @@ func (this *BaseKeyspace) CheckJoinFilterIndexes(ops []plan.Operator) {
 			}
 		}
 	}
+}
+
+func (this *BaseKeyspace) HasEarlyProjection() bool {
+	return len(this.projection) > 0
+}
+
+func (this *BaseKeyspace) SetEarlyProjection(names map[string]bool) {
+	this.projection = make([]string, 0, len(names))
+	for n, _ := range names {
+		this.projection = append(this.projection, n)
+	}
+	// sort for explain stability
+	sort.Strings(this.projection)
+}
+
+func (this *BaseKeyspace) EarlyProjection() []string {
+	return this.projection
 }
 
 func GetKeyspaceName(baseKeyspaces map[string]*BaseKeyspace, alias string) string {

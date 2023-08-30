@@ -1,0 +1,103 @@
+[
+    {
+	"testcase": "Early projection, with ORDER BY",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.`plan`.`~children` SATISFIES v.`#operator` = 'Fetch' AND v.`as` = 's' AND v.`early_projection` = [ \"c11\", \"c13\", \"c14\", \"type\" ] END"
+        },
+        "statements":"SELECT s.c11, s.c14 FROM shellTest s WHERE s.c11 IN [1, 2] AND s.type = \"left\" ORDER BY s.c13 DESC",
+        "results": [
+            {
+                "c11": 2,
+                "c14": 2000
+            },
+            {
+                "c11": 1,
+                "c14": 1000
+            }
+        ]
+    },
+    {
+	"testcase": "Early projection, with GROUP BY",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.`plan`.`~children` SATISFIES v.`#operator` = 'Fetch' AND v.`as` = 's' AND v.`early_projection` = [ \"c11\", \"c14\", \"type\" ] END"
+        },
+        "statements":"SELECT s.c11, COUNT(*) AS cnt FROM shellTest s WHERE s.c11 IN [1, 2] AND s.type = \"left\" GROUP BY s.c11, s.c14 ORDER BY s.c14 DESC",
+        "results": [
+            {
+                "c11": 2,
+                "cnt": 1
+            },
+            {
+                "c11": 1,
+                "cnt": 1
+            }
+        ]
+    },
+    {
+	"testcase": "Early projection, nested field reference",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.`plan`.`~children` SATISFIES v.`#operator` = 'Fetch' AND v.`as` = 's' AND v.`early_projection` = [ \"c11\", \"n1\", \"type\" ] END"
+        },
+        "statements":"SELECT s.c11, s.n1.b FROM shellTest s WHERE s.c11 IN [1, 2] AND type = \"left\" ORDER BY s.n1.a DESC",
+        "results": [
+            {
+                "c11": 2,
+                "b": 20
+            },
+            {
+                "c11": 1,
+                "b": 10
+            }
+        ]
+    },
+    {
+	"testcase": "Early projection, ANY clause on nested array",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.`plan`.`~children` SATISFIES v.`#operator` = 'Fetch' AND v.`as` = 's' AND v.`early_projection` = [ \"c11\", \"n1\", \"type\" ] END"
+        },
+        "statements":"SELECT s.c11, s.n1.arr FROM shellTest s WHERE s.c11 IN [1, 2] AND ANY v IN s.n1.arr SATISFIES v = 3 END AND type = \"left\" ORDER BY s.n1.a DESC",
+        "results": [
+            {
+                "c11": 2,
+                "arr": [
+                    2,
+                    3,
+                    4
+                ]
+            },
+            {
+                "c11": 1,
+                "arr": [
+                    1,
+                    2,
+                    3
+                ]
+            }
+        ]
+    }
+]
+

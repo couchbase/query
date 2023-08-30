@@ -23,6 +23,7 @@ type Fetch struct {
 	keyspace    datastore.Keyspace
 	term        *algebra.KeyspaceTerm
 	subPaths    []string
+	projection  []string
 	nested_loop bool
 	cacheResult bool
 }
@@ -71,6 +72,14 @@ func (this *Fetch) SetCacheResult() {
 	this.cacheResult = true
 }
 
+func (this *Fetch) EarlyProjection() []string {
+	return this.projection
+}
+
+func (this *Fetch) SetEarlyProjection(projection []string) {
+	this.projection = projection
+}
+
 func (this *Fetch) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
@@ -93,6 +102,9 @@ func (this *Fetch) MarshalBase(f func(map[string]interface{})) map[string]interf
 	}
 	if this.cacheResult {
 		r["cache_result"] = true
+	}
+	if len(this.projection) > 0 {
+		r["early_projection"] = this.projection
 	}
 
 	if optEstimate := marshalOptEstimate(&this.optEstimate); optEstimate != nil {
@@ -117,6 +129,7 @@ func (this *Fetch) UnmarshalJSON(body []byte) error {
 		UnderNL      bool                   `json:"nested_loop"`
 		OptEstimate  map[string]interface{} `json:"optimizer_estimates"`
 		SubPaths     []string               `json:"subpaths"`
+		Projection   []string               `json:"early_projection"`
 		ValidateKeys bool                   `json:"validate_keys"`
 		CacheResult  bool                   `json:"cache_result"`
 	}
@@ -127,6 +140,7 @@ func (this *Fetch) UnmarshalJSON(body []byte) error {
 	}
 
 	this.subPaths = _unmarshalled.SubPaths
+	this.projection = _unmarshalled.Projection
 
 	unmarshalOptEstimate(&this.optEstimate, _unmarshalled.OptEstimate)
 

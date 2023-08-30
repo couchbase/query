@@ -251,6 +251,27 @@ func (this *Projection) setAliases() {
 }
 
 /*
+Check whether early projection can be done on a keyspace alias
+*/
+func (this *Projection) CheckEarlyProjection(alias string) bool {
+	ident := expression.NewIdentifier(alias)
+	for _, term := range this.terms {
+		if term.star {
+			if term.self {
+				// unprefixed star
+				return false
+			} else if term.expr != nil && term.expr.DependsOn(ident) {
+				return false
+			}
+		} else if term.expr != nil && term.expr.EquivalentTo(ident) {
+			// projecting the entire keyspace
+			return false
+		}
+	}
+	return true
+}
+
+/*
 Marshal input into byte array.
 */
 func (this *Projection) MarshalJSON() ([]byte, error) {

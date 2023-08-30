@@ -30,6 +30,11 @@
                                 },
                                 {
                                     "#operator": "Fetch",
+                                    "early_projection": [
+                                      "name",
+                                      "statement",
+                                      "uses"
+                                    ],
                                     "keyspace": "prepareds"
                                 },
                                 {

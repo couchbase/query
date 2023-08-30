@@ -249,6 +249,9 @@
                         },
                         {
                             "#operator": "Fetch",
+                            "early_projection": [
+                              "id"
+                            ],
                             "keyspace": "game",
                             "namespace": "default"
                         },
@@ -382,6 +385,9 @@
                         },
                         {
                             "#operator": "Fetch",
+                            "early_projection": [
+                              "score"
+                            ],
                             "keyspace": "game",
                             "namespace": "default"
                         },
@@ -475,6 +481,9 @@
                 },
                 {
                     "#operator": "Fetch",
+                    "early_projection": [
+                      "score"
+                    ],
                     "keyspace": "game",
                     "namespace": "default"
                 },

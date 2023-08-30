@@ -32,6 +32,11 @@
                     },
                     {
                         "#operator": "Fetch",
+                        "early_projection": [
+                          "f1",
+                          "f2",
+                          "f3"
+                        ],
                         "keyspace": "shellTest",
                         "namespace": "default"
                     },
@@ -157,6 +162,10 @@
                     {
                         "#operator": "Fetch",
                         "as": "f1",
+                        "early_projection": [
+                          "f2",
+                          "f3"
+                        ],
                         "keyspace": "shellTest",
                         "namespace": "default"
                     },
@@ -439,6 +448,11 @@
                     {
                         "#operator": "Fetch",
                         "as": "d1",
+                        "early_projection": [
+                          "a",
+                          "k0",
+                          "k1"
+                        ],
                         "keyspace": "shellTest",
                         "namespace": "default"
                     },

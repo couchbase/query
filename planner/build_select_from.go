@@ -23,6 +23,8 @@ import (
 	"github.com/couchbase/query/value"
 )
 
+const _MAX_EARLY_PROJECTION = 15
+
 func (this *builder) visitFrom(node *algebra.Subselect, group *algebra.Group,
 	projection *algebra.Projection, indexPushDowns *indexPushDowns) error {
 
@@ -157,6 +159,10 @@ func (this *builder) visitFrom(node *algebra.Subselect, group *algebra.Group,
 		}
 
 		this.extractKeyspacePredicates(this.where, nil)
+		err = this.checkEarlyProjection(projection)
+		if err != nil {
+			return err
+		}
 
 		var ops, subOps []plan.Operator
 		var coveringOps []plan.CoveringOperator
@@ -419,6 +425,9 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 			}
 		}
 		this.addChildren(fetch)
+		if baseKeyspace.HasEarlyProjection() {
+			fetch.SetEarlyProjection(baseKeyspace.EarlyProjection())
+		}
 
 		// no need to separate out the filter if the query has a single keyspace
 		if len(this.baseKeyspaces) > 1 &&
@@ -1423,4 +1432,61 @@ func (this *builder) buildEarlyOffset(lastOp plan.Operator, useCBO bool) (
 	offsetOp := plan.NewOffset(this.offset, cost, cardinality, size, frCost)
 	this.addChildren(offsetOp)
 	return offsetOp, nil
+}
+
+func (this *builder) checkEarlyProjection(projection *algebra.Projection) error {
+	if this.cover == nil {
+		return nil
+	}
+	for _, keyspace := range this.baseKeyspaces {
+		if ksTerm, ok := keyspace.Node().(*algebra.KeyspaceTerm); ok {
+			// only KeyspaceTerm
+
+			xattrs, err := this.GetSubPaths(ksTerm, ksTerm.Alias())
+			if err != nil {
+				return err
+			}
+			if len(xattrs) > 0 {
+				// cannot mix early projection with subdoc api currently
+				continue
+			}
+
+			if projection.CheckEarlyProjection(ksTerm.Alias()) {
+				ident := expression.NewIdentifier(keyspace.Name())
+				names := make(map[string]bool)
+				keyspaceOnly := false
+				for _, expr := range this.node.Expressions() {
+					if expr.EquivalentTo(ident) {
+						keyspaceOnly = true
+						break
+					}
+					expr.FieldNames(ident, names)
+				}
+
+				if keyspaceOnly || len(names) == 0 || len(names) > _MAX_EARLY_PROJECTION {
+					continue
+				}
+
+				// make sure the projected fields can "cover" the query
+				coverExprs := make(expression.Expressions, 0, len(names)+1)
+				for n, _ := range names {
+					coverExprs = append(coverExprs, expression.NewField(ident, expression.NewFieldName(n, false)))
+				}
+				coverExprs = append(coverExprs, expression.NewField(expression.NewMeta(ident), expression.NewFieldName("id", false)))
+				cover := true
+				for _, expr := range this.cover.Expressions() {
+					if !expression.IsCovered(expr, keyspace.Name(), coverExprs, false) {
+						cover = false
+						break
+					}
+				}
+
+				if cover {
+					keyspace.SetEarlyProjection(names)
+				}
+			}
+		}
+	}
+
+	return nil
 }

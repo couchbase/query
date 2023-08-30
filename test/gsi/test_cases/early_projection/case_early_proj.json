@@ -1,0 +1,167 @@
+[
+    {
+	"testcase": "Simple early projection",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.`plan`.`~children` SATISFIES v.`#operator` = 'Fetch' AND v.`as` = 's' AND v.`early_projection` = [ \"c11\", \"c13\", \"c14\", \"type\" ] END"
+        },
+        "statements":"SELECT s.c11, s.c13, s.c14 FROM shellTest s WHERE s.c11 IN [1, 2] AND type = \"left\"",
+        "results": [
+            {
+                "c11": 1,
+                "c13": 100,
+                "c14": 1000
+            },
+            {
+                "c11": 2,
+                "c13": 200,
+                "c14": 2000
+            }
+        ]
+    },
+    {
+	"testcase": "Simple early projection, ANY clause",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.`plan`.`~children` SATISFIES v.`#operator` = 'Fetch' AND v.`as` = 's' AND v.`early_projection` = [ \"a11\", \"c11\", \"c13\", \"c14\", \"type\" ] END"
+        },
+        "statements":"SELECT s.c11, s.c13, s.c14 FROM shellTest s WHERE s.c11 IN [1, 2] AND ANY v IN a11 SATISFIES v = 3 END AND type = \"left\"",
+        "results": [
+            {
+                "c11": 1,
+                "c13": 100,
+                "c14": 1000
+            },
+            {
+                "c11": 2,
+                "c13": 200,
+                "c14": 2000
+            }
+        ]
+    },
+    {
+	"testcase": "Simple early projection, meta().id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.`plan`.`~children` SATISFIES v.`#operator` = 'Fetch' AND v.`as` = 's' AND v.`early_projection` = [ \"c11\", \"c13\", \"c14\", \"type\" ] END"
+        },
+        "statements":"SELECT s.c11, s.c13, s.c14, meta().id FROM shellTest s WHERE s.c11 IN [1, 2] AND type = \"left\"",
+        "results": [
+            {
+                "c11": 1,
+                "c13": 100,
+                "c14": 1000,
+                "id": "test11_early_proj"
+            },
+            {
+                "c11": 2,
+                "c13": 200,
+                "c14": 2000,
+                "id": "test12_early_proj"
+            }
+        ]
+    },
+    {
+	"testcase": "No early projection, star projection",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.`plan`.`~children` SATISFIES v.`#operator` = 'Fetch' AND v.`as` = 's' AND v.`early_projection` IS MISSING END"
+        },
+        "statements":"SELECT meta().id, * FROM shellTest s WHERE s.c11 = 0 AND type = \"left\"",
+        "results": [
+        ]
+    },
+    {
+	"testcase": "No early projection, whole keyspace reference",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.`plan`.`~children` SATISFIES v.`#operator` = 'Fetch' AND v.`as` = 's' AND v.`early_projection` IS MISSING END"
+        },
+        "statements":"SELECT meta().id, doc FROM shellTest s LET doc = s WHERE s.c11 = 0 AND type = \"left\"",
+        "results": [
+        ]
+    },
+    {
+	"testcase": "Simple early projection, join",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.`plan`.`~children` SATISFIES v.`#operator` = 'Fetch' AND v.`as` = 's' AND v.`early_projection` = [ \"c11\", \"c12\", \"c14\", \"type\" ] END AND ANY u WITHIN p.`plan`.`~children` SATISFIES u.`#operator` = 'Fetch' AND u.`as` = 't' AND u.`early_projection` = [ \"c21\", \"c22\", \"c23\", \"type\" ] END"
+        },
+        "statements":"SELECT s.c12, s.c14, t.c22, t.c23 FROM shellTest s JOIN shellTest t USE HASH(probe) ON s.c11 = t.c21 AND t.type = \"right\" WHERE s.c11 = 1 AND s.type = \"left\"",
+        "results": [
+            {
+                "c12": 10,
+                "c14": 1000,
+                "c22": 10,
+                "c23": 100
+            }
+        ]
+    },
+    {
+	"testcase": "Early projection, join, star reference on one side of join",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.`plan`.`~children` SATISFIES v.`#operator` = 'Fetch' AND v.`as` = 's' AND v.`early_projection` = [ \"c11\", \"c12\", \"c14\", \"type\" ] END AND ANY u WITHIN p.`plan`.`~children` SATISFIES u.`#operator` = 'Fetch' AND u.`as` = 't' AND u.`early_projection` IS MISSING END"
+        },
+        "statements":"SELECT s.c12, s.c14, t.* FROM shellTest s JOIN shellTest t USE HASH(probe) ON s.c11 = t.c21 AND t.type = \"right\" WHERE s.c11 = 1 AND s.type = \"left\"",
+        "results": [
+            {
+                "c12": 10,
+                "c14": 1000,
+                "a21": [
+                    1,
+                    10,
+                    20
+                ],
+                "a22": [
+                    1,
+                    2,
+                    3,
+                    4
+                ],
+                "c21": 1,
+                "c22": 10,
+                "c23": 100,
+                "c24": 1000,
+                "test_id": "early_proj",
+                "type": "right"
+            }
+        ]
+    }
+]
+
