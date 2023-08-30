@@ -249,7 +249,7 @@ func Start(site, pool, namespace string) *MockServer {
 
 	srv, err := server.NewServer(ds, sys, configstore, acctstore, namespace,
 		false, 10, 10, 4, 4, 0, 0, false, false, false, true,
-		server.ProfOff, false)
+		server.ProfOff, false, nil)
 	if err != nil {
 		logging.Errorf("%v", err.Error())
 		os.Exit(1)

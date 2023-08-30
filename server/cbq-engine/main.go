@@ -18,6 +18,7 @@ import (
 	"runtime"
 	"runtime/debug"
 	"runtime/pprof"
+	"sync"
 	"syscall"
 	"time"
 
@@ -45,6 +46,7 @@ import (
 	server_package "github.com/couchbase/query/server"
 	control "github.com/couchbase/query/server/control/couchbase"
 	"github.com/couchbase/query/server/http"
+	queryMetakv "github.com/couchbase/query/server/settings/couchbase"
 	stats "github.com/couchbase/query/system"
 	"github.com/couchbase/query/tenant"
 	"github.com/couchbase/query/util"
@@ -131,7 +133,6 @@ var NODE_QUOTA = flag.Uint64("node-quota", _DEF_NODE_QUOTA, "Soft memory limit p
 var USE_REPLICA = flag.String("use-replica", value.TRISTATE_NAMES[value.NONE], "Allow reading from replica vBuckets")
 var NODE_QUOTA_VAL_PERCENT = flag.Uint("node-quota-val-percent", _DEF_NODE_QUOTA_VAL_PERCENT,
 	"Percentage of node quota reserved for value memory (0-100)")
-var NUM_CPUS = flag.Int("num-cpus", 0, "Number of CPUs to use")
 
 // cpu and memory profiling flags
 var CPU_PROFILE = flag.String("cpuprofile", "", "write cpu profile to file")
@@ -174,6 +175,8 @@ func main() {
 	defer HideConsole(false)
 	flag.Parse()
 
+	initialCfg, num_cpus := waitForInitialSettings()
+
 	// many Init() depend on this
 	tenant.Init(*SERVERLESS)
 
@@ -184,7 +187,7 @@ func main() {
 	if !*ENTERPRISE {
 		util.SetMaxCPUs(_DEF_CE_MAXCPUS)
 	}
-	numProcs := util.SetNumCPUs(*NUM_CPUS, tenant.IsServerless())
+	numProcs := util.SetNumCPUs(num_cpus, tenant.IsServerless())
 
 	ffdc.Init()
 
@@ -355,7 +358,7 @@ func main() {
 	server, err := server_package.NewServer(datastore, sys, configstore, acctstore, *NAMESPACE,
 		*READONLY, *REQUEST_CAP*numProcs, *REQUEST_CAP*numProcs, *SERVICERS, *PLUS_SERVICERS,
 		*MAX_PARALLELISM, *TIMEOUT, *SIGNATURE, *METRICS, *ENTERPRISE,
-		*PRETTY, prof, ctrl)
+		*PRETTY, prof, ctrl, initialCfg)
 	if err != nil {
 		logging.Errorf("%v", err.Error())
 		os.Exit(1)
@@ -580,4 +583,28 @@ func setMemoryLimit(ml int64) {
 			return fmt.Sprintf("Soft memory limit: %s %v", logging.HumanReadableSize(ml, false), extra)
 		})
 	}
+}
+
+func waitForInitialSettings() (queryMetakv.Config, int) {
+	var cfg queryMetakv.Config
+	var wg sync.WaitGroup
+	num_cpus := 0
+
+	stop := make(chan struct{})
+	callb := func(arg queryMetakv.Config) {
+		cfg = arg
+		wg.Done()
+		close(stop)
+	}
+	wg.Add(1)
+	logging.Infof("Waiting for initial settings")
+	queryMetakv.SetupSettingsNotifier(callb, stop)
+	wg.Wait()
+	logging.Infof("Initial settings received")
+
+	if v, ok := cfg.Field("num-cpus"); ok {
+		num_cpus = int(value.AsNumberValue(v).Int64())
+	}
+
+	return cfg, num_cpus
 }

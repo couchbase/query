@@ -193,7 +193,7 @@ func NewServer(store datastore.Datastore, sys datastore.Systemstore, config clus
 	acctng accounting.AccountingStore, namespace string, readonly bool,
 	requestsCap, plusRequestsCap int, servicers, plusServicers, maxParallelism int,
 	timeout time.Duration, signature, metrics, enterprise, pretty bool,
-	srvprofile Profile, srvcontrols bool) (*Server, errors.Error) {
+	srvprofile Profile, srvcontrols bool, initialCfg queryMetakv.Config) (*Server, errors.Error) {
 	rv := &Server{
 		datastore:        store,
 		systemstore:      sys,
@@ -242,6 +242,9 @@ func NewServer(store datastore.Datastore, sys datastore.Systemstore, config clus
 		SetParamValuesForAll(cfg, rv)
 	}
 
+	if initialCfg != nil {
+		SetParamValuesForAll(initialCfg, rv)
+	}
 	queryMetakv.SetupSettingsNotifier(callb, make(chan struct{}))
 
 	// set namespaces in parser
