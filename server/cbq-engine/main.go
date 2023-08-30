@@ -184,10 +184,11 @@ func main() {
 	memory.Config(*NODE_QUOTA, *NODE_QUOTA_VAL_PERCENT, []int{*SERVICERS, *PLUS_SERVICERS})
 	tenant.Config(memory.Quota())
 
+	max_cpus := runtime.NumCPU()
 	if !*ENTERPRISE {
-		util.SetMaxCPUs(_DEF_CE_MAXCPUS)
+		max_cpus = _DEF_CE_MAXCPUS
 	}
-	numProcs := util.SetNumCPUs(num_cpus, tenant.IsServerless())
+	numProcs := util.SetNumCPUs(max_cpus, num_cpus, tenant.IsServerless())
 
 	ffdc.Init()
 

@@ -289,7 +289,7 @@ var _SETTERS = map[string]Setter{
 		return nil
 	},
 	NUM_CPUS: func(s *Server, o interface{}) errors.Error {
-		logging.Debuga(func() string {
+		logging.Infoa(func() string {
 			return fmt.Sprintf("%s updated to %d.  Change will take place on restart.", NUM_CPUS, int(getNumber(o)))
 		})
 		return nil

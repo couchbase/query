@@ -20,50 +20,34 @@ func NumCPU() int {
 	return runtime.GOMAXPROCS(0)
 }
 
-var maxCPUs int
-var warned bool
-
-func SetMaxCPUs(max int) {
-	maxCPUs = max
-}
-
-func SetNumCPUs(setting int, serverless bool) int {
-	explicit := false
-	numCPUs := runtime.NumCPU()
-	if setting > 0 && setting < numCPUs {
+func SetNumCPUs(max int, setting int, serverless bool) int {
+	if mproc := os.Getenv("GOQUERY_GOMAXPROCS"); mproc != "" {
+		if n, err := strconv.Atoi(mproc); err == nil {
+			if n < max && n > 0 {
+				max = n
+				logging.Infof("CPU limit: %d (GOQUERY_GOMAXPROCS)", n)
+			}
+		} else {
+			logging.Warnf("Invalid GOQUERY_GOMAXPROCS setting: %v", mproc)
+		}
+	} else if mproc := os.Getenv("GOMAXPROCS"); mproc != "" {
+		if n, err := strconv.Atoi(mproc); err == nil {
+			if n < max && n > 0 {
+				max = n
+				logging.Infof("CPU limit: %d (GOMAXPROCS)", max)
+			}
+		} else {
+			logging.Warnf("Invalid GOMAXPROCS setting: %v", mproc)
+		}
+	} else if serverless {
+		max = int(float64(max) * 0.8)
+	}
+	numCPUs := max
+	if setting > 0 && setting < max {
 		numCPUs = setting
-		explicit = true
 	}
-	if maxCPUs > 0 && numCPUs > maxCPUs {
-		numCPUs = maxCPUs
-	}
-	if !explicit {
-		if mproc := os.Getenv("GOQUERY_GOMAXPROCS"); mproc != "" {
-			if n, err := strconv.Atoi(mproc); err == nil {
-				if n < numCPUs && n > 0 {
-					numCPUs = n
-				}
-			} else if !warned {
-				logging.Warnf("Invalid GOQUERY_GOMAXPROCS setting: %v", mproc)
-				warned = true
-			}
-		} else if mproc := os.Getenv("GOMAXPROCS"); mproc != "" {
-			if n, err := strconv.Atoi(mproc); err == nil {
-				if n < numCPUs && n > 0 {
-					numCPUs = n
-				} else if serverless && n == numCPUs {
-					numCPUs = int(float64(n) * 0.8)
-				}
-			} else if !warned {
-				logging.Warnf("Invalid GOMAXPROCS setting: %v", mproc)
-				warned = true
-			}
-		} else if serverless {
-			numCPUs = int(float64(numCPUs) * 0.8)
-		}
-		if numCPUs < 1 {
-			numCPUs = 1
-		}
+	if numCPUs < 1 {
+		numCPUs = 1
 	}
 	runtime.GOMAXPROCS(numCPUs)
 	return NumCPU()
