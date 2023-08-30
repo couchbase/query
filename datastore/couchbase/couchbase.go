@@ -2874,7 +2874,7 @@ func (b *keyspace) IsBucket() bool {
 }
 
 func (ks *keyspace) StartKeyScan(context datastore.QueryContext, ranges []*datastore.SeqScanRange, offset int64,
-	limit int64, ordered bool, timeout time.Duration, pipelineSize int, serverless bool) (
+	limit int64, ordered bool, timeout time.Duration, pipelineSize int, serverless bool, skipKey func(string) bool) (
 	interface{}, errors.Error) {
 
 	r := make([]*cb.SeqScanRange, len(ranges))
@@ -2888,11 +2888,11 @@ func (ks *keyspace) StartKeyScan(context datastore.QueryContext, ranges []*datas
 		coll, ok := scope.keyspaces["_default"]
 		if ok {
 			return ks.cbbucket.StartKeyScan(context.RequestId(), context, coll.uid, "", "", r, offset, limit, ordered, timeout,
-				pipelineSize, serverless, context.UseReplica())
+				pipelineSize, serverless, context.UseReplica(), skipKey)
 		}
 	}
 	return ks.cbbucket.StartKeyScan(context.RequestId(), context, 0, "_default", "_default", r, offset, limit, ordered, timeout,
-		pipelineSize, serverless, context.UseReplica())
+		pipelineSize, serverless, context.UseReplica(), skipKey)
 }
 
 func (ks *keyspace) StopKeyScan(scan interface{}) (uint64, errors.Error) {

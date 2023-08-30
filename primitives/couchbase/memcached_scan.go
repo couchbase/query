@@ -55,7 +55,7 @@ const _SS_RETRY_DELAY = time.Millisecond * 100
 
 func (b *Bucket) StartKeyScan(requestId string, log logging.Log, collId uint32, scope string, collection string,
 	ranges []*SeqScanRange, offset int64, limit int64, ordered bool, timeout time.Duration, pipelineSize int,
-	serverless bool, useReplica bool) (interface{}, qerrors.Error) {
+	serverless bool, useReplica bool, skipKey func(string) bool) (interface{}, qerrors.Error) {
 
 	if log == nil {
 		log = logging.NULL_LOG
@@ -69,7 +69,7 @@ func (b *Bucket) StartKeyScan(requestId string, log logging.Log, collId uint32, 
 		}
 	}
 
-	scan := NewSeqScan(requestId, log, collId, ranges, offset, limit, ordered, pipelineSize, serverless, useReplica)
+	scan := NewSeqScan(requestId, log, collId, ranges, offset, limit, ordered, pipelineSize, serverless, useReplica, skipKey)
 
 	logging.Debuga(func() string { return scan.String() }, log)
 	go scan.coordinator(b, timeout)
@@ -292,10 +292,11 @@ type seqScan struct {
 	runits       uint64
 	sampleSize   int
 	useReplica   bool
+	skipKey      func(string) bool
 }
 
 func NewSeqScan(requestId string, log logging.Log, collId uint32, ranges []*SeqScanRange, offset int64, limit int64, ordered bool,
-	pipelineSize int, serverless bool, useReplica bool) *seqScan {
+	pipelineSize int, serverless bool, useReplica bool, skipKey func(string) bool) *seqScan {
 
 	scan := &seqScan{
 		requestId:    requestId,
@@ -308,6 +309,7 @@ func NewSeqScan(requestId string, log logging.Log, collId uint32, ranges []*SeqS
 		pipelineSize: pipelineSize,
 		serverless:   serverless,
 		useReplica:   useReplica,
+		skipKey:      skipKey,
 	}
 	scan.ch = make(chan interface{}, 1)
 	scan.abortch = make(chan bool, 1)
@@ -1140,6 +1142,9 @@ func (this *vbRangeScan) addKey(key []byte) bool {
 	var err error
 	if bytes.HasPrefix(key, []byte{'_', 't', 'x', 'n', ':'}) {
 		// exclude transaction binary documents
+		return true
+	}
+	if this.scan.skipKey != nil && this.scan.skipKey(string(key)) {
 		return true
 	}
 	if this.buffer == nil {

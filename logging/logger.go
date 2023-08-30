@@ -565,15 +565,16 @@ func filterDebug() bool {
 		return true
 	}
 
-	_, pathname, _, ok := runtime.Caller(2)
+	_, pathname, line, ok := runtime.Caller(2)
 	if !ok {
 		return false
 	}
+	pat := fmtpkg.Sprintf("%s:%d", pathname, line)
 	loggerMutex.RLock()
 	df := debugFilter
 	loggerMutex.RUnlock()
 	for _, p := range df {
-		if p.re.MatchString(pathname) {
+		if p.re.MatchString(pat) {
 			// first match applies
 			return !p.exclude
 		}
