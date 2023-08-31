@@ -777,7 +777,7 @@ func (this *aborted) checkCondition(c interface{}) errors.Error {
 }
 
 func (this *aborted) evaluate(request *BaseRequest, req *http.Request) bool {
-	return request.State() == ABORTED
+	return request.State() == ABEND
 }
 
 // 3- errors

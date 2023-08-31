@@ -68,10 +68,10 @@ func NewCbDMLError(e error, msg string, casMismatch bool, r value.Tristate, k st
 		c["keyspace"] = ks
 		c["document_key"] = k
 		r = value.FALSE
-		return &err{level: EXCEPTION, ICode: E_CB_DML, IKey: "datastore.couchbase.DML_error", ICause: ce, cause: c, retry: r,
+		return &err{level: ERROR, ICode: E_CB_DML, IKey: "datastore.couchbase.DML_error", ICause: ce, cause: c, retry: r,
 			InternalMsg: "DML Error, possible causes include CAS mismatch. " + msg, InternalCaller: CallerN(1)}
 	} else {
-		return &err{level: EXCEPTION, ICode: E_CB_DML, IKey: "datastore.couchbase.DML_error", ICause: e, cause: e, retry: r,
+		return &err{level: ERROR, ICode: E_CB_DML, IKey: "datastore.couchbase.DML_error", ICause: e, cause: e, retry: r,
 			InternalMsg: "DML Error, possible causes include concurrent modification. " + msg, InternalCaller: CallerN(1)}
 	}
 }
@@ -228,7 +228,7 @@ func NewCbDMLMCError(s string, k string, ks string) Error {
 	c["keyspace"] = ks
 	c["document_key"] = k
 	c["mc_status"] = s
-	return &err{level: EXCEPTION, ICode: E_DML_MC, IKey: "datastore.couchbase.mc_error",
+	return &err{level: ERROR, ICode: E_DML_MC, IKey: "datastore.couchbase.mc_error",
 		InternalMsg: "MC error " + s, cause: c, InternalCaller: CallerN(1)}
 }
 
@@ -245,7 +245,7 @@ func NewInsertError(e error, key string) Error {
 	c := make(map[string]interface{})
 	c["key"] = key
 	c["cause"] = e
-	return &err{level: EXCEPTION, ICode: E_DML_INSERT, IKey: "datastore.couchbase.insert.error",
+	return &err{level: ERROR, ICode: E_DML_INSERT, IKey: "datastore.couchbase.insert.error",
 		InternalMsg: "Error in INSERT of key: " + key, cause: c, InternalCaller: CallerN(1)}
 }
 
