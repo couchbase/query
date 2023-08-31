@@ -39,6 +39,10 @@ type Select struct {
 	setop         bool                  `json:"setop"`
 	recursiveWith bool                  `json:"recursive_with"`
 	correlation   map[string]uint32     `json:"correlation"`
+
+	// MB-58106: indicates whether WITH expressions should be considered in Cover Transformation
+	// Default value is true
+	includeWith bool `json:"includeWith`
 }
 
 /*
@@ -47,11 +51,12 @@ by assigning the input attributes to the fields of the struct.
 */
 func NewSelect(subresult Subresult, with *WithClause, order *Order, offset, limit expression.Expression) *Select {
 	rv := &Select{
-		subresult: subresult,
-		with:      with,
-		order:     order,
-		offset:    offset,
-		limit:     limit,
+		subresult:   subresult,
+		with:        with,
+		order:       order,
+		offset:      offset,
+		limit:       limit,
+		includeWith: true,
 	}
 
 	rv.stmt = rv
@@ -98,7 +103,11 @@ func (this *Select) MapExpressions(mapper expression.Mapper) (err error) {
 	}
 
 	if this.with != nil {
-		err = this.with.MapExpressions(mapper)
+		// MB-58106: Cover transformation should consider With expressions only if the CTE is evaluated downstream to the
+		// root Select that is being traversed
+		if _, ok := mapper.(*expression.Coverer); !ok || this.includeWith {
+			err = this.with.MapExpressions(mapper)
+		}
 	}
 
 	if this.order != nil {
@@ -408,6 +417,14 @@ func (this *Select) IsRecursiveWith() bool {
 
 func (this *Select) SetRecursiveWith(recursiveWith bool) {
 	this.recursiveWith = recursiveWith
+}
+
+func (this *Select) SetIncludeWith(incl bool) {
+	this.includeWith = incl
+}
+
+func (this *Select) IncludeWith() bool {
+	return this.includeWith
 }
 
 /*

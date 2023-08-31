@@ -34,6 +34,7 @@ func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 	prevRequirePrimaryKey := this.requirePrimaryKey
 	prevCollectQueryInfo := this.storeCollectQueryInfo()
 	prevPartialSortTermCount := this.partialSortTermCount
+	prevInclWith := stmt.IncludeWith()
 
 	defer func() {
 		this.node = prevNode
@@ -45,7 +46,11 @@ func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 		this.requirePrimaryKey = prevRequirePrimaryKey
 		this.restoreCollectQueryInfo(prevCollectQueryInfo)
 		this.partialSortTermCount = prevPartialSortTermCount
+		stmt.SetIncludeWith(prevInclWith)
 	}()
+
+	// Since this is the root Select being planned - disinclude its With expressions from cover transformation
+	stmt.SetIncludeWith(false)
 
 	if this.subquery && stmt.IsRecursiveWith() && !this.hasBuilderFlag(BUILDER_RECURSIVE_WITH) {
 		this.setBuilderFlag(BUILDER_RECURSIVE_WITH)
@@ -73,7 +78,6 @@ func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 	this.limit = stmtLimit
 	this.order = stmtOrder
 	this.partialSortTermCount = 0
-
 	this.extractPagination(this.order, this.offset, this.limit)
 
 	if stmtOrder != nil {
