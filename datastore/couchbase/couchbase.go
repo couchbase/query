@@ -1963,19 +1963,19 @@ func (k *keyspace) getRandomEntry(context datastore.QueryContext, scopeName, col
 		logging.Warnf("%v: empty random document key (processed) detected", k.name)
 		return "", nil, nil
 	}
-	doc := doFetch(key, k.fullName, resp, context)
+	doc := doFetch(key, k.fullName, resp, context, true)
 
 	return key, doc, nil
 }
 
 func (b *keyspace) Fetch(keys []string, fetchMap map[string]value.AnnotatedValue,
-	context datastore.QueryContext, subPaths []string) errors.Errors {
-	return b.fetch(b.fullName, b.QualifiedName(), "", "", keys, fetchMap, context, subPaths)
+	context datastore.QueryContext, subPaths []string, projection []string) errors.Errors {
+	return b.fetch(b.fullName, b.QualifiedName(), "", "", keys, fetchMap, context, subPaths, projection)
 }
 
 func (b *keyspace) fetch(fullName, qualifiedName, scopeName, collectionName string, keys []string,
 	fetchMap map[string]value.AnnotatedValue, context datastore.QueryContext, subPaths []string,
-	clientContext ...*memcached.ClientContext) errors.Errors {
+	projection []string, clientContext ...*memcached.ClientContext) errors.Errors {
 
 	if txContext, _ := context.GetTxContext().(*transactions.TranContext); txContext != nil {
 		collId, user := getCollectionId(clientContext...)
@@ -2029,7 +2029,7 @@ func (b *keyspace) fetch(fullName, qualifiedName, scopeName, collectionName stri
 
 	if fast {
 		if mcr != nil && err == nil {
-			fetchMap[keys[0]] = doFetch(keys[0], fullName, mcr, context)
+			fetchMap[keys[0]] = doFetch(keys[0], fullName, mcr, context, len(projection) > 0)
 		}
 
 	} else if l == 1 {
@@ -2045,7 +2045,7 @@ func (b *keyspace) fetch(fullName, qualifiedName, scopeName, collectionName stri
 			}
 		} else {
 			for k, v := range bulkResponse {
-				fetchMap[k] = doFetch(k, fullName, v, context)
+				fetchMap[k] = doFetch(k, fullName, v, context, len(projection) > 0)
 				i++
 			}
 			logging.Debugf("Requested keys %d Fetched %d keys ", l, i)
@@ -2055,10 +2055,13 @@ func (b *keyspace) fetch(fullName, qualifiedName, scopeName, collectionName stri
 	return nil
 }
 
-func doFetch(k string, fullName string, v *gomemcached.MCResponse, context datastore.QueryContext) value.AnnotatedValue {
+func doFetch(k string, fullName string, v *gomemcached.MCResponse, context datastore.QueryContext, avoidParsing bool,
+) value.AnnotatedValue {
+
 	var val value.AnnotatedValue
 	if v.DataType&gomemcached.DatatypeFlagCompressed == 0 {
-		val = value.NewAnnotatedValue(value.NewParsedValue(v.Body, (v.DataType&gomemcached.DatatypeFlagJSON != 0)))
+		val = value.NewAnnotatedValue(value.NewParsedValueWithOptions(v.Body, (v.DataType&gomemcached.DatatypeFlagJSON != 0),
+			avoidParsing || len(v.Body) > value.PARSED_THRESHOLD))
 	} else {
 		// Uncomment when needed
 		//context.Debugf("Compressed document: %v", k)
@@ -2068,7 +2071,8 @@ func doFetch(k string, fullName string, v *gomemcached.MCResponse, context datas
 			logging.Severef("Invalid compressed document received: %v - %v", err, v, context)
 			return nil
 		}
-		val = value.NewAnnotatedValue(value.NewParsedValue(raw, (v.DataType&gomemcached.DatatypeFlagJSON != 0)))
+		val = value.NewAnnotatedValue(value.NewParsedValueWithOptions(raw, (v.DataType&gomemcached.DatatypeFlagJSON != 0),
+			avoidParsing || len(raw) > value.PARSED_THRESHOLD))
 	}
 
 	var flags, expiration uint32

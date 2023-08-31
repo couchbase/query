@@ -233,7 +233,7 @@ func (this *IndexJoin) flushBatch(context *Context) bool {
 		this.joinTime += util.Since(timer)
 	}()
 
-	fetchOk := this.joinFetch(this.plan.Keyspace(), this.plan.SubPaths(), keyCount, pairMap, context)
+	fetchOk := this.joinFetch(this.plan.Keyspace(), this.plan.SubPaths(), nil, keyCount, pairMap, context)
 
 	this.validateKeys(pairMap)
 

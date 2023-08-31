@@ -71,7 +71,7 @@ func (this *joinBase) joinEnbatch(item value.AnnotatedJoinPair, b batcher, conte
 	return true
 }
 
-func (this *joinBase) joinFetch(keyspace datastore.Keyspace, subPaths []string, keyCount map[string]int,
+func (this *joinBase) joinFetch(keyspace datastore.Keyspace, subPaths []string, projection []string, keyCount map[string]int,
 	pairMap map[string]value.AnnotatedValue, context *Context) bool {
 
 	fetchKeys := _STRING_POOL.Get()
@@ -89,7 +89,7 @@ func (this *joinBase) joinFetch(keyspace datastore.Keyspace, subPaths []string, 
 	}
 
 	this.switchPhase(_SERVTIME)
-	errs := keyspace.Fetch(fetchKeys, pairMap, context, subPaths)
+	errs := keyspace.Fetch(fetchKeys, pairMap, context, subPaths, projection)
 	this.switchPhase(_EXECTIME)
 
 	fetchOk := true

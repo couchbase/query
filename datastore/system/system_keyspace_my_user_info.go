@@ -83,7 +83,7 @@ func (b *myUserInfoKeyspace) Indexers() ([]datastore.Indexer, errors.Error) {
 }
 
 func (b *myUserInfoKeyspace) Fetch(keys []string, keysMap map[string]value.AnnotatedValue,
-	context datastore.QueryContext, subPaths []string) (errs errors.Errors) {
+	context datastore.QueryContext, subPaths []string, projection []string) (errs errors.Errors) {
 	authUsers := context.Credentials().AuthenticatedUsers
 	approverFunc := func(id string) bool {
 		for _, v := range authUsers {

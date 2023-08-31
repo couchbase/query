@@ -355,10 +355,10 @@ func (coll *collection) GetRandomEntry(context datastore.QueryContext) (string, 
 }
 
 func (coll *collection) Fetch(keys []string, fetchMap map[string]value.AnnotatedValue, context datastore.QueryContext,
-	subPaths []string) errors.Errors {
+	subPaths []string, projection []string) errors.Errors {
 
 	return coll.bucket.fetch(coll.fullName, coll.QualifiedName(), coll.scope.id, coll.id,
-		keys, fetchMap, context, subPaths, &memcached.ClientContext{CollId: coll.uid, User: getUser(context)})
+		keys, fetchMap, context, subPaths, projection, &memcached.ClientContext{CollId: coll.uid, User: getUser(context)})
 }
 
 func (coll *collection) Insert(inserts value.Pairs, context datastore.QueryContext, preserveMutations bool) (int, value.Pairs, errors.Errors) {

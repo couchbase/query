@@ -173,7 +173,7 @@ func (this *Merge) processKeyMatch(item value.AnnotatedValue,
 
 	ok = true
 	bvs := make(map[string]value.AnnotatedValue, 1)
-	errs := this.plan.Keyspace().Fetch([]string{k}, bvs, context, nil)
+	errs := this.plan.Keyspace().Fetch([]string{k}, bvs, context, nil, nil)
 
 	this.switchPhase(_EXECTIME)
 

@@ -23,8 +23,8 @@ import (
 
 // we try to find a balance between the need to have a find state
 // and the cost of using it: for documents shorter than this, not
-// worth it!
-const _THRESHOLD = 2560
+// worth it! (unless we'll be extracting only a few fields)
+const PARSED_THRESHOLD = 2560
 const _NUM_PARSED_FIELDS = 32
 
 // A Value with delayed parsing.
@@ -60,7 +60,7 @@ func newParsedValue() *parsedValue {
 }
 
 func NewParsedValue(bytes []byte, isValidated bool) Value {
-	return NewParsedValueWithOptions(bytes, isValidated, len(bytes) > _THRESHOLD)
+	return NewParsedValueWithOptions(bytes, isValidated, len(bytes) > PARSED_THRESHOLD)
 }
 
 func NewParsedValueWithOptions(bytes []byte, isValidated, useState bool) Value {

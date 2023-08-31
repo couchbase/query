@@ -115,7 +115,7 @@ func (b *sequenceKeyspace) Indexers() ([]datastore.Indexer, errors.Error) {
 }
 
 func (b *sequenceKeyspace) Fetch(keys []string, keysMap map[string]value.AnnotatedValue,
-	context datastore.QueryContext, subPaths []string) (errs errors.Errors) {
+	context datastore.QueryContext, subPaths []string, projection []string) (errs errors.Errors) {
 
 	whoAmI := distributed.RemoteAccess().WhoAmI()
 	nodes := distributed.RemoteAccess().GetNodeNames()

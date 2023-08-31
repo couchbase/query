@@ -123,7 +123,7 @@ func TestFile(t *testing.T) {
 
 	freds := make(map[string]value.AnnotatedValue, 1)
 	key := "fred"
-	errs := keyspace.Fetch([]string{key}, freds, datastore.NULL_QUERY_CONTEXT, nil)
+	errs := keyspace.Fetch([]string{key}, freds, datastore.NULL_QUERY_CONTEXT, nil, nil)
 	if len(errs) > 0 || len(freds) == 0 {
 		t.Errorf("failed to fetch fred: %v", errs)
 	}

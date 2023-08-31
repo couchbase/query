@@ -67,7 +67,7 @@ func (b *dictionaryCacheKeyspace) Indexers() ([]datastore.Indexer, errors.Error)
 }
 
 func (b *dictionaryCacheKeyspace) Fetch(keys []string, keysMap map[string]value.AnnotatedValue,
-	context datastore.QueryContext, subPaths []string) (errs errors.Errors) {
+	context datastore.QueryContext, subPaths []string, projection []string) (errs errors.Errors) {
 
 	formData := map[string]interface{}{"duration_style": context.DurationStyle().String()}
 

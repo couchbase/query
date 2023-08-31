@@ -89,7 +89,7 @@ func (this *Nest) flushBatch(context *Context) bool {
 	defer _STRING_KEYCOUNT_POOL.Put(keyCount)
 	defer _STRING_ANNOTATED_POOL.Put(pairMap)
 
-	fetchOk := this.joinFetch(this.plan.Keyspace(), this.plan.SubPaths(), keyCount, pairMap, context)
+	fetchOk := this.joinFetch(this.plan.Keyspace(), this.plan.SubPaths(), nil, keyCount, pairMap, context)
 
 	this.validateKeys(pairMap)
 

@@ -477,7 +477,7 @@ func AlterSequence(path *algebra.Path, with value.Value) errors.Error {
 		res := make(map[string]value.AnnotatedValue, 1)
 		keys := make([]string, 1)
 		keys[0] = seq.key
-		errs := b.Fetch(keys, res, datastore.NULL_QUERY_CONTEXT, nil)
+		errs := b.Fetch(keys, res, datastore.NULL_QUERY_CONTEXT, nil, nil)
 		if errs != nil && len(errs) > 0 {
 			return errors.NewSequenceError(errors.E_SEQUENCE_ALTER, name, errs[0])
 		}
@@ -798,7 +798,7 @@ func (seq *sequence) load() errors.Error {
 	res := make(map[string]value.AnnotatedValue, 1)
 	keys := make([]string, 1)
 	keys[0] = seq.key
-	errs := b.Fetch(keys, res, datastore.NULL_QUERY_CONTEXT, nil)
+	errs := b.Fetch(keys, res, datastore.NULL_QUERY_CONTEXT, nil, nil)
 	if errs != nil && len(errs) > 0 {
 		if !errors.IsNotFoundError("", errs[0]) && !errs[0].HasCause(errors.E_CB_BULK_GET) {
 			return errs[0]
@@ -1296,7 +1296,7 @@ func FetchSequence(name string, cacheOnly bool) (value.AnnotatedValue, errors.Er
 		res := make(map[string]value.AnnotatedValue, 1)
 		keys := make([]string, 1)
 		keys[0] = getStorageKey(path)
-		errs := b.Fetch(keys, res, datastore.NULL_QUERY_CONTEXT, nil)
+		errs := b.Fetch(keys, res, datastore.NULL_QUERY_CONTEXT, nil, nil)
 		if errs != nil && len(errs) > 0 {
 			if !errors.IsNotFoundError("", errs[0]) && !errs[0].HasCause(errors.E_CB_BULK_GET) {
 				return nil, errs[0]

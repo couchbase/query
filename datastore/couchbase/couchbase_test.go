@@ -93,7 +93,7 @@ func TestServer(t *testing.T) {
 	}
 
 	pair := make(map[string]value.AnnotatedValue, 1)
-	errs := ks.Fetch([]string{"357", "aass_brewery"}, pair, datastore.NULL_QUERY_CONTEXT, nil)
+	errs := ks.Fetch([]string{"357", "aass_brewery"}, pair, datastore.NULL_QUERY_CONTEXT, nil, nil)
 	if len(errs) > 0 {
 		t.Fatalf(" Cannot fetch keys errors %v", errs)
 

@@ -140,7 +140,7 @@ func (b *keyspaceKeyspace) Indexers() ([]datastore.Indexer, errors.Error) {
 }
 
 func (b *keyspaceKeyspace) Fetch(keys []string, keysMap map[string]value.AnnotatedValue,
-	context datastore.QueryContext, subPaths []string) (errs errors.Errors) {
+	context datastore.QueryContext, subPaths []string, projection []string) (errs errors.Errors) {
 	var e errors.Error
 	var item value.AnnotatedValue
 
