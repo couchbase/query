@@ -413,7 +413,7 @@ func makeMockServer() *server.Server {
 	datastore.SetDatastore(store)
 	sys, err := system.NewDatastore(store, nil)
 	server, err := server.NewServer(store, sys, nil, nil, "default",
-		false, 10, 10, 4, 4, 0, 0, false, false, false, true, server.ProfOff, false)
+		false, 10, 10, 4, 4, 0, 0, false, false, false, true, server.ProfOff, false, nil)
 	if err != nil {
 		logging.Errorf(err.Error())
 		os.Exit(1)
