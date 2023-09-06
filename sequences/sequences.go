@@ -707,8 +707,9 @@ func NextSequenceValue(name string) (int64, errors.Error) {
 	}
 	if seq.remaining > 0 {
 		seq.remaining--
+		prev := seq.current
 		seq.current += seq.increment
-		return seq.checkCycle()
+		return seq.checkCycle(prev)
 	}
 
 	return seq.cacheBlock()
@@ -905,7 +906,7 @@ func (seq *sequence) cacheBlock() (int64, errors.Error) {
 	seq.current = v
 	seq.remaining = seq.cache - 1
 	// infinite recursion is prevented by min having to be smaller than max and cycling switching to the opposite end of the range
-	return seq.checkCycle()
+	return seq.checkCycle(v)
 }
 
 var blockCmd = value.Pairs{
@@ -954,10 +955,16 @@ func (seq *sequence) nextAvailableBlock(getOnly bool) (int64, errors.Error) {
 		rv--
 	}
 	rv = (rv * int64(seq.cache) * seq.increment) + seq.base
+	if !getOnly && !seq.cycle {
+		prev := ((rv - 1) * int64(seq.cache) * seq.increment) + seq.base
+		if (seq.increment < 0 && prev < rv) || (seq.increment > 0 && prev > rv) {
+			return 0, errors.NewSequenceError(errors.E_SEQUENCE_EXHAUSTED, seq.name.SimpleString())
+		}
+	}
 	return rv, nil
 }
 
-func (seq *sequence) checkCycle() (int64, errors.Error) {
+func (seq *sequence) checkCycle(prev int64) (int64, errors.Error) {
 	if seq.cycle {
 		if seq.increment < 0 && seq.current < seq.min {
 			return seq.cycleAndCache(seq.max)
@@ -965,7 +972,9 @@ func (seq *sequence) checkCycle() (int64, errors.Error) {
 			return seq.cycleAndCache(seq.min)
 		}
 	} else {
-		if (seq.increment < 0 && seq.current < seq.min) || (seq.increment > 0 && seq.current > seq.max) {
+		if (seq.increment < 0 && (seq.current < seq.min || prev < seq.current)) ||
+			(seq.increment > 0 && (seq.current > seq.max || prev > seq.current)) {
+
 			seq.Unlock()
 			return 0, errors.NewSequenceError(errors.E_SEQUENCE_EXHAUSTED, seq.name.SimpleString())
 		}
