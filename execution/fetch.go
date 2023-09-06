@@ -278,6 +278,15 @@ func (this *Fetch) flushBatch(context *Context) bool {
 						return false
 					}
 				}
+				if len(this.results) >= _MAX_RESULT_CACHE_SIZE {
+					if this.plan.IsUnderNL() {
+						context.Error(errors.NewNLInnerPrimaryDocsExceeded(this.plan.Term().Alias(), _MAX_RESULT_CACHE_SIZE))
+					} else {
+						context.Error(errors.NewSubqueryNumDocsExceeded(this.plan.Term().Alias(), _MAX_RESULT_CACHE_SIZE))
+					}
+					sfv.Recycle()
+					return false
+				}
 				this.results = append(this.results, sfv)
 			}
 
