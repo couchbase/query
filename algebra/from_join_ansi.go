@@ -237,7 +237,11 @@ func (this *AnsiJoin) SetPushable(pushable bool) {
 Returns whether contains correlation reference
 */
 func (this *AnsiJoin) IsCorrelated() bool {
-	return this.left.IsCorrelated() || this.right.IsCorrelated()
+	return joinCorrelated(this.left, this.right)
+}
+
+func (this *AnsiJoin) GetCorrelation() map[string]uint32 {
+	return getJoinCorrelation(this.left, this.right)
 }
 
 /*

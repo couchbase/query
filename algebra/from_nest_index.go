@@ -181,7 +181,11 @@ func (this *IndexNest) For() string {
 Returns whether contains correlation reference
 */
 func (this *IndexNest) IsCorrelated() bool {
-	return this.left.IsCorrelated() || this.right.IsCorrelated()
+	return this.left.IsCorrelated()
+}
+
+func (this *IndexNest) GetCorrelation() map[string]uint32 {
+	return this.left.GetCorrelation()
 }
 
 /*

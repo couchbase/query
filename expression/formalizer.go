@@ -41,10 +41,15 @@ type Formalizer struct {
 	identifiers *value.ScopeValue
 	aliases     *value.ScopeValue
 	flags       uint32
+	correlation map[string]uint32
 }
 
 func NewFormalizer(keyspace string, parent *Formalizer) *Formalizer {
-	return newFormalizer(keyspace, parent, false, false)
+	rv := newFormalizer(keyspace, parent, false, false)
+	if parent != nil && parent.InFunction() {
+		rv.flags |= FORM_IN_FUNCTION
+	}
+	return rv
 }
 
 func NewSelfFormalizer(keyspace string, parent *Formalizer) *Formalizer {
@@ -64,6 +69,7 @@ func NewFunctionFormalizer(keyspace string, parent *Formalizer) *Formalizer {
 func newFormalizer(keyspace string, parent *Formalizer, mapSelf, mapKeyspace bool) *Formalizer {
 	var pv, av value.Value
 	var withs map[string]bool
+	var correlation map[string]uint32
 
 	flags := uint32(0)
 	if parent != nil {
@@ -75,6 +81,12 @@ func newFormalizer(keyspace string, parent *Formalizer, mapSelf, mapKeyspace boo
 			withs = make(map[string]bool, len(parent.withs))
 			for k, v := range parent.withs {
 				withs[k] = v
+			}
+		}
+		if len(parent.correlation) > 0 {
+			correlation = make(map[string]uint32, len(parent.correlation))
+			for k, v := range parent.correlation {
+				correlation[k] = v
 			}
 		}
 	}
@@ -93,6 +105,7 @@ func newFormalizer(keyspace string, parent *Formalizer, mapSelf, mapKeyspace boo
 		identifiers: value.NewScopeValue(make(map[string]interface{}, 64), nil),
 		aliases:     value.NewScopeValue(make(map[string]interface{}), av),
 		flags:       flags,
+		correlation: correlation,
 	}
 
 	if !mapKeyspace && keyspace != "" {
@@ -244,6 +257,7 @@ func (this *Formalizer) VisitIdentifier(expr *Identifier) (interface{}, error) {
 		expr_term_flags := ident_flags & IDENT_IS_EXPR_TERM
 		subq_term_flags := ident_flags & IDENT_IS_SUBQ_TERM
 		correlated_flags := ident_flags & IDENT_IS_CORRELATED
+		lateral_flags := ident_flags & IDENT_IS_LATERAL_CORR
 		if !this.indexScope() || keyspace_flags == 0 || expr.IsKeyspaceAlias() {
 			this.identifiers.SetField(identifier, ident_val)
 			// for user specified keyspace alias (such as alias.c1)
@@ -266,15 +280,18 @@ func (this *Formalizer) VisitIdentifier(expr *Identifier) (interface{}, error) {
 			if subq_term_flags != 0 && !expr.IsSubqTermAlias() {
 				expr.SetSubqTermAlias(true)
 			}
-			if correlated_flags != 0 && !expr.IsCorrelated() {
+			if !expr.IsCorrelated() && (correlated_flags != 0 || this.CheckCorrelation(identifier)) {
 				expr.SetCorrelated(true)
+			}
+			if lateral_flags != 0 && !expr.IsLateralCorr() {
+				expr.SetLateralCorr(true)
 			}
 			return expr, nil
 		}
 	}
 
 	if this.keyspace == "" {
-		return nil, fmt.Errorf("Ambiguous reference to field '%v'%v.", identifier, expr.ErrorContext())
+		return nil, errors.NewAmbiguousReferenceError(identifier, expr.ErrorContext())
 	}
 
 	if this.mapKeyspace() {
@@ -383,18 +400,6 @@ func (this *Formalizer) PushBindings(bindings Bindings, push bool) (err error) {
 
 		// check for correlated reference in binding expr
 		correlated := this.CheckCorrelated()
-		if !correlated {
-			subqueries, er := ListSubqueries(Expressions{expr}, false)
-			if er != nil {
-				return er
-			}
-			for _, subq := range subqueries {
-				if subq.IsCorrelated() {
-					correlated = true
-					break
-				}
-			}
-		}
 
 		if ident_val, ok := allowed.Field(b.Variable()); ok {
 			ident_flags = uint32(ident_val.ActualForIndex().(int64))
@@ -407,7 +412,7 @@ func (this *Formalizer) PushBindings(bindings Bindings, push bool) (err error) {
 				if b.Expression() != nil {
 					errContext = b.Expression().ErrorContext()
 				}
-				err = fmt.Errorf("Duplicate variable %v%v already in scope.", b.Variable(), errContext)
+				err = errors.NewDuplicateVariableError(b.Variable(), errContext)
 				return
 			}
 		} else {
@@ -435,7 +440,7 @@ func (this *Formalizer) PushBindings(bindings Bindings, push bool) (err error) {
 					if b.Expression() != nil {
 						errContext = b.Expression().ErrorContext()
 					}
-					err = fmt.Errorf("Duplicate variable %v%v already in scope.", b.NameVariable(), errContext)
+					err = errors.NewDuplicateVariableError(b.NameVariable(), errContext)
 					return
 				}
 			} else {
@@ -606,20 +611,53 @@ func (this *Formalizer) RestoreWiths(withs map[string]bool) {
 	this.withs = withs
 }
 
+func (this *Formalizer) GetCorrelation() map[string]uint32 {
+	return this.correlation
+}
+
 func (this *Formalizer) CheckCorrelated() bool {
 	immediate := this.allowed.GetValue().Fields()
 
+	correlated := false
 	for id, id_val := range this.identifiers.Fields() {
 		if _, ok := immediate[id]; !ok {
+			id_flags := uint32(value.NewValue(id_val).ActualForIndex().(int64))
 			if this.WithAlias(id) {
-				id_flags := uint32(value.NewValue(id_val).ActualForIndex().(int64))
 				if (id_flags & IDENT_IS_CORRELATED) == 0 {
 					continue
 				}
+				// for a correlated WITH variable, the actual correlation would have
+				// already been added to this.correlation when the WITH expression
+				// is being checked (in PushBindings()), there is no need to add
+				// the WITH alias itself to this.correlation
+			} else {
+				if this.correlation == nil {
+					this.correlation = make(map[string]uint32)
+				}
+				this.correlation[id] |= id_flags
 			}
-			return true
+			correlated = true
 		}
 	}
 
-	return false
+	return correlated
+}
+
+func (this *Formalizer) CheckCorrelation(alias string) bool {
+	immediate := this.allowed.GetValue().Fields()
+	_, ok := immediate[alias]
+	return !ok
+}
+
+func (this *Formalizer) AddCorrelatedIdentifiers(correlation map[string]uint32) error {
+	for k, _ := range correlation {
+		if _, ok := this.identifiers.Field(k); !ok {
+			v, ok1 := this.allowed.Field(k)
+			if !ok1 {
+				return errors.NewFormalizerInternalError(fmt.Sprintf("correlation reference %s is not in allowed", k))
+			}
+			this.identifiers.SetField(k, v)
+		}
+	}
+	return nil
 }

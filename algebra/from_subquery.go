@@ -15,17 +15,18 @@ import (
 )
 
 type SubqueryTerm struct {
-	subquery *Select
-	as       string
-	joinHint JoinHint
-	property uint32
+	subquery    *Select
+	as          string
+	joinHint    JoinHint
+	property    uint32
+	correlation map[string]uint32
 }
 
 /*
 Constructor.
 */
 func NewSubqueryTerm(subquery *Select, as string, joinHint JoinHint) *SubqueryTerm {
-	return &SubqueryTerm{subquery, as, joinHint, 0}
+	return &SubqueryTerm{subquery, as, joinHint, 0, nil}
 }
 
 /*
@@ -90,6 +91,11 @@ func (this *SubqueryTerm) Formalize(parent *expression.Formalizer) (f *expressio
 	err = this.subquery.FormalizeSubquery(f1)
 	if err != nil {
 		return
+	}
+
+	if this.subquery.IsCorrelated() {
+		this.correlation = addSimpleTermCorrelation(this.correlation,
+			this.subquery.GetCorrelation(), this.IsAnsiJoinOp(), parent)
 	}
 
 	// for checking subquery we need a new formalizer, however, if this SubqueryTerm
@@ -216,6 +222,10 @@ Return whether correlated
 */
 func (this *SubqueryTerm) IsCorrelated() bool {
 	return this.subquery.IsCorrelated()
+}
+
+func (this *SubqueryTerm) GetCorrelation() map[string]uint32 {
+	return this.correlation
 }
 
 /*

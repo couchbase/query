@@ -169,7 +169,11 @@ func (this *Nest) Outer() bool {
 Returns whether contains correlation reference
 */
 func (this *Nest) IsCorrelated() bool {
-	return this.left.IsCorrelated() || this.right.IsCorrelated()
+	return this.left.IsCorrelated()
+}
+
+func (this *Nest) GetCorrelation() map[string]uint32 {
+	return this.left.GetCorrelation()
 }
 
 /*
