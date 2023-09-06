@@ -118,21 +118,21 @@ func GetKeyspaceTerm(term SimpleFromTerm) *KeyspaceTerm {
 	}
 }
 
-func addSimpleTermCorrelation(curCorrelation, newCorrelation map[string]uint32, join bool,
+func addSimpleTermCorrelation(newCorrelation, correlation map[string]uint32, join bool,
 	parent *expression.Formalizer) map[string]uint32 {
-	if curCorrelation == nil {
-		curCorrelation = make(map[string]uint32, len(newCorrelation))
+	if newCorrelation == nil {
+		newCorrelation = make(map[string]uint32, len(correlation))
 	}
-	for k, v := range newCorrelation {
+	for k, v := range correlation {
 		// differentiate lateral correlation with nested correlation
 		// if the correlation is lateral (with a previous keyspace)
 		// then this correlation should not be propagated up
 		if join && !parent.CheckCorrelation(k) {
 			v |= expression.IDENT_IS_LATERAL_CORR
 		}
-		curCorrelation[k] |= v
+		newCorrelation[k] |= v
 	}
-	return curCorrelation
+	return newCorrelation
 }
 
 func joinCorrelated(left, right FromTerm) bool {
