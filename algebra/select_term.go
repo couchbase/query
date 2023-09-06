@@ -108,6 +108,10 @@ func (this *SelectTerm) IsCorrelated() bool {
 	return this.query.IsCorrelated()
 }
 
+func (this *SelectTerm) GetCorrelation() map[string]uint32 {
+	return this.query.GetCorrelation()
+}
+
 /*
 Accessor.
 */

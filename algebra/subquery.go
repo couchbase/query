@@ -140,7 +140,19 @@ This method calls FormalizeSubquery to qualify all the children
 of the query, and returns an error if any.
 */
 func (this *Subquery) Formalize(parent *expression.Formalizer) error {
-	return this.query.FormalizeSubquery(parent)
+	err := this.query.FormalizeSubquery(parent)
+	if err != nil {
+		return err
+	}
+
+	// if the subquery is correlated, add the correlation reference to
+	// the parent formalizer such that any nested correlation can be detected
+	// at the next level
+	if this.query.IsCorrelated() {
+		err = parent.AddCorrelatedIdentifiers(this.query.GetCorrelation())
+	}
+
+	return err
 }
 
 /*
@@ -153,6 +165,10 @@ func (this *Subquery) Select() *Select {
 
 func (this *Subquery) IsCorrelated() bool {
 	return this.query.IsCorrelated()
+}
+
+func (this *Subquery) GetCorrelation() map[string]uint32 {
+	return this.query.GetCorrelation()
 }
 
 func (this *Subquery) SetInFunction(hasVariables bool) {

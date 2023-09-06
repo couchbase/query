@@ -48,3 +48,21 @@ func NewParseUnescapedEmbeddedQuoteError() Error {
 	return &err{level: EXCEPTION, ICode: E_PARSE_UNESCAPED_EMBEDDED_QUOTE, IKey: "parse.unescaped_embedded_quote",
 		InternalMsg: "unescaped embedded quote", InternalCaller: CallerN(1)}
 }
+
+func NewAmbiguousReferenceError(ident string, errorContext string) Error {
+	return &err{level: EXCEPTION, ICode: E_AMBIGUOUS_REFERENCE, IKey: "formalize.ambiguous_reference",
+		InternalMsg:    fmt.Sprintf("Ambiguous reference to field '%v'%v.", ident, errorContext),
+		InternalCaller: CallerN(1)}
+}
+
+func NewDuplicateVariableError(variable string, errorContext string) Error {
+	return &err{level: EXCEPTION, ICode: E_DUPLICATE_VARIABLE, IKey: "formalize.duplicate_variable",
+		InternalMsg:    fmt.Sprintf("Duplicate variable: %v%v already in scope.", variable, errorContext),
+		InternalCaller: CallerN(1)}
+}
+
+func NewFormalizerInternalError(msg string) Error {
+	return &err{level: EXCEPTION, ICode: E_FORMALIZER_INTERNAL, IKey: "formalize.internal_error",
+		InternalMsg:    fmt.Sprintf("Formalizer internal error: %s", msg),
+		InternalCaller: CallerN(1)}
+}

@@ -42,6 +42,7 @@ type Formalizer struct {
 	identifiers *value.ScopeValue
 	aliases     *value.ScopeValue
 	flags       uint32
+	correlation map[string]uint32
 }
 
 func NewFormalizer(keyspace string, parent *Formalizer) *Formalizer {
@@ -75,6 +76,7 @@ func NewFunctionFormalizer(keyspace string, hasVariable bool, parent *Formalizer
 func newFormalizer(keyspace string, parent *Formalizer, mapSelf, mapKeyspace bool) *Formalizer {
 	var pv, av value.Value
 	var withs map[string]bool
+	var correlation map[string]uint32
 
 	flags := uint32(0)
 	if parent != nil {
@@ -86,6 +88,12 @@ func newFormalizer(keyspace string, parent *Formalizer, mapSelf, mapKeyspace boo
 			withs = make(map[string]bool, len(parent.withs))
 			for k, v := range parent.withs {
 				withs[k] = v
+			}
+		}
+		if len(parent.correlation) > 0 {
+			correlation = make(map[string]uint32, len(parent.correlation))
+			for k, v := range parent.correlation {
+				correlation[k] = v
 			}
 		}
 	}
@@ -104,6 +112,7 @@ func newFormalizer(keyspace string, parent *Formalizer, mapSelf, mapKeyspace boo
 		identifiers: value.NewScopeValue(make(map[string]interface{}, 64), nil),
 		aliases:     value.NewScopeValue(make(map[string]interface{}), av),
 		flags:       flags,
+		correlation: correlation,
 	}
 
 	if !mapKeyspace && keyspace != "" {
@@ -258,6 +267,8 @@ func (this *Formalizer) VisitIdentifier(expr *Identifier) (interface{}, error) {
 		unnest_flags := ident_flags & IDENT_IS_UNNEST_ALIAS
 		expr_term_flags := ident_flags & IDENT_IS_EXPR_TERM
 		subq_term_flags := ident_flags & IDENT_IS_SUBQ_TERM
+		correlated_flags := ident_flags & IDENT_IS_CORRELATED
+		lateral_flags := ident_flags & IDENT_IS_LATERAL_CORR
 		if !this.indexScope() || keyspace_flags == 0 || expr.IsKeyspaceAlias() {
 			this.identifiers.SetField(identifier, ident_val)
 			// for user specified keyspace alias (such as alias.c1)
@@ -280,12 +291,18 @@ func (this *Formalizer) VisitIdentifier(expr *Identifier) (interface{}, error) {
 			if subq_term_flags != 0 && !expr.IsSubqTermAlias() {
 				expr.SetSubqTermAlias(true)
 			}
+			if !expr.IsCorrelated() && (correlated_flags != 0 || this.CheckCorrelation(identifier)) {
+				expr.SetCorrelated(true)
+			}
+			if lateral_flags != 0 && !expr.IsLateralCorr() {
+				expr.SetLateralCorr(true)
+			}
 			return expr, nil
 		}
 	}
 
 	if this.keyspace == "" {
-		return nil, fmt.Errorf("Ambiguous reference to field '%v'%v.", identifier, expr.ErrorContext())
+		return nil, errors.NewAmbiguousReferenceError(identifier, expr.ErrorContext())
 	}
 
 	if this.mapKeyspace() {
@@ -385,6 +402,16 @@ func (this *Formalizer) PushBindings(bindings Bindings, push bool) (err error) {
 	var expr Expression
 	var ident_flags uint32
 	for _, b := range bindings {
+		expr, err = this.Map(b.Expression())
+		if err != nil {
+			return
+		}
+
+		b.SetExpression(expr)
+
+		// check for correlated reference in binding expr
+		correlated := this.CheckCorrelated()
+
 		if ident_val, ok := allowed.Field(b.Variable()); ok {
 			ident_flags = uint32(ident_val.ActualForIndex().(int64))
 			tmp_flags1 := ident_flags & IDENT_IS_KEYSPACE
@@ -396,7 +423,7 @@ func (this *Formalizer) PushBindings(bindings Bindings, push bool) (err error) {
 				if b.Expression() != nil {
 					errContext = b.Expression().ErrorContext()
 				}
-				err = fmt.Errorf("Duplicate variable %v%v already in scope.", b.Variable(), errContext)
+				err = errors.NewDuplicateVariableError(b.Variable(), errContext)
 				return
 			}
 		} else {
@@ -406,6 +433,9 @@ func (this *Formalizer) PushBindings(bindings Bindings, push bool) (err error) {
 		ident_flags |= IDENT_IS_VARIABLE
 		if b.Static() {
 			ident_flags |= IDENT_IS_STATIC_VAR
+		}
+		if correlated {
+			ident_flags |= IDENT_IS_CORRELATED
 		}
 		ident_val := value.NewValue(ident_flags)
 		allowed.SetField(b.Variable(), ident_val)
@@ -421,7 +451,7 @@ func (this *Formalizer) PushBindings(bindings Bindings, push bool) (err error) {
 					if b.Expression() != nil {
 						errContext = b.Expression().ErrorContext()
 					}
-					err = fmt.Errorf("Duplicate variable %v%v already in scope.", b.NameVariable(), errContext)
+					err = errors.NewDuplicateVariableError(b.NameVariable(), errContext)
 					return
 				}
 			} else {
@@ -433,13 +463,6 @@ func (this *Formalizer) PushBindings(bindings Bindings, push bool) (err error) {
 			allowed.SetField(b.NameVariable(), ident_val)
 			aliases.SetField(b.NameVariable(), ident_val)
 		}
-
-		expr, err = this.Map(b.Expression())
-		if err != nil {
-			return
-		}
-
-		b.SetExpression(expr)
 	}
 
 	if push {
@@ -593,4 +616,55 @@ func (this *Formalizer) SaveWiths() map[string]bool {
 
 func (this *Formalizer) RestoreWiths(withs map[string]bool) {
 	this.withs = withs
+}
+
+func (this *Formalizer) GetCorrelation() map[string]uint32 {
+	return this.correlation
+}
+
+func (this *Formalizer) CheckCorrelated() bool {
+	immediate := this.allowed.GetValue().Fields()
+
+	correlated := false
+	for id, id_val := range this.identifiers.Fields() {
+		if _, ok := immediate[id]; !ok {
+			id_flags := uint32(value.NewValue(id_val).ActualForIndex().(int64))
+			if this.WithAlias(id) {
+				if (id_flags & IDENT_IS_CORRELATED) == 0 {
+					continue
+				}
+				// for a correlated WITH variable, the actual correlation would have
+				// already been added to this.correlation when the WITH expression
+				// is being checked (in PushBindings()), there is no need to add
+				// the WITH alias itself to this.correlation
+			} else {
+				if this.correlation == nil {
+					this.correlation = make(map[string]uint32)
+				}
+				this.correlation[id] |= id_flags
+			}
+			correlated = true
+		}
+	}
+
+	return correlated
+}
+
+func (this *Formalizer) CheckCorrelation(alias string) bool {
+	immediate := this.allowed.GetValue().Fields()
+	_, ok := immediate[alias]
+	return !ok
+}
+
+func (this *Formalizer) AddCorrelatedIdentifiers(correlation map[string]uint32) error {
+	for k, _ := range correlation {
+		if _, ok := this.identifiers.Field(k); !ok {
+			v, ok1 := this.allowed.Field(k)
+			if !ok1 {
+				return errors.NewFormalizerInternalError(fmt.Sprintf("correlation reference %s is not in allowed", k))
+			}
+			this.identifiers.SetField(k, v)
+		}
+	}
+	return nil
 }

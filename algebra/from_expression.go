@@ -23,6 +23,7 @@ type ExpressionTerm struct {
 	correlated   bool
 	joinHint     JoinHint
 	property     uint32
+	correlation  map[string]uint32
 }
 
 /*
@@ -30,7 +31,7 @@ Constructor.
 */
 func NewExpressionTerm(fromExpr expression.Expression, as string,
 	keyspaceTerm *KeyspaceTerm, isKeyspace bool, joinHint JoinHint) *ExpressionTerm {
-	return &ExpressionTerm{fromExpr, as, keyspaceTerm, isKeyspace, false, joinHint, 0}
+	return &ExpressionTerm{fromExpr, as, keyspaceTerm, isKeyspace, false, joinHint, 0, nil}
 }
 
 /*
@@ -154,15 +155,10 @@ func (this *ExpressionTerm) Formalize(parent *expression.Formalizer) (f *express
 	}
 
 	// Determine if this expression contains any correlated references
-	immediate := f1.Allowed().GetValue().Fields()
-	for ident, _ := range f1.Identifiers().Fields() {
-		if _, ok := immediate[ident]; !ok {
-			if f1.WithAlias(ident) {
-				continue
-			}
-			this.correlated = true
-			break
-		}
+	this.correlated = f1.CheckCorrelated()
+	if this.correlated {
+		this.correlation = addSimpleTermCorrelation(this.correlation, f1.GetCorrelation(),
+			this.IsAnsiJoinOp(), parent)
 	}
 
 	// for checking fromExpr we need a new formalizer, however, if this ExpressionTerm
@@ -228,6 +224,13 @@ func (this *ExpressionTerm) IsCorrelated() bool {
 		return this.keyspaceTerm.IsCorrelated()
 	}
 	return this.correlated
+}
+
+func (this *ExpressionTerm) GetCorrelation() map[string]uint32 {
+	if this.isKeyspace {
+		return this.keyspaceTerm.GetCorrelation()
+	}
+	return this.correlation
 }
 
 /*
