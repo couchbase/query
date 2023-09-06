@@ -1356,7 +1356,7 @@ func newKeyspace(p *namespace, name string, version *uint64) (*keyspace, errors.
 	cbbucket, err := cbNamespace.GetBucket(name)
 
 	if err != nil {
-		logging.Infof("Bucket %s not found: %v", name, err)
+		logging.Infof(" keyspace %s not found %v", name, err)
 		// primitives/couchbase caches the buckets
 		// to be sure no such bucket exists right now
 		// we trigger a refresh
@@ -1364,7 +1364,7 @@ func newKeyspace(p *namespace, name string, version *uint64) (*keyspace, errors.
 		cbNamespace = p.getPool()
 
 		// and then check one more time
-		logging.Infof("Retrying bucket %s", name)
+		logging.Infof(" Retrying bucket %s", name)
 		cbbucket, err = cbNamespace.GetBucket(name)
 		if err != nil {
 			// really no such bucket exists
@@ -1416,7 +1416,7 @@ func newKeyspace(p *namespace, name string, version *uint64) (*keyspace, errors.
 	if !cbbucket.RunBucketUpdater2(p.KeyspaceUpdateCallback, p.KeyspaceDeleteCallback) {
 		return nil, errors.NewCbBucketClosedError(fullName(p.name, name))
 	} else {
-		logging.Infof("Loaded bucket %s", name)
+		logging.Infof("Loaded Bucket %s", name)
 	}
 
 	return rv, nil
@@ -1431,7 +1431,7 @@ func (p *namespace) KeyspaceDeleteCallback(name string, err error) {
 
 	ks, ok := p.keyspaceCache[name]
 	if ok && ks.cbKeyspace != nil {
-		logging.Infof("Keyspace %v is being deleted", name)
+		logging.Infof("Keyspace %v being deleted", name)
 		cbKeyspace = ks.cbKeyspace
 		ks.cbKeyspace.Release(false)
 		delete(p.keyspaceCache, name)
