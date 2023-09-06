@@ -167,5 +167,33 @@
                 "cnt": 1
             }
     ]
+    },
+    {
+	"testcase": "MB-58150",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`index` = 'iorix2' AND v.`covers` IS NOT MISSING AND ARRAY_LENGTH(v.spans) = 2 AND v.`limit` IS NOT MISSING END"
+        },
+        "statements":"SELECT c1, c2, c4, c6 FROM orders WHERE test_id = \"idxfltr\" AND c1 = 1 AND ((c2 = 211 AND c4 = 221) OR (c2 = 511 AND c4 = 521)) LIMIT 2",
+        "results": [
+            {
+                "c1": 1,
+                "c2": 211,
+                "c4": 221,
+                "c6": 231
+            },
+            {
+                "c1": 1,
+                "c2": 511,
+                "c4": 521,
+                "c6": 531
+            }
+    ]
     }
 ]

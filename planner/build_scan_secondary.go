@@ -825,7 +825,7 @@ func (this *builder) sargIndexes(baseKeyspace *base.BaseKeyspace, underHash bool
 			if this.hasBuilderFlag(BUILDER_OR_SUBTERM) {
 				useFilters = false
 			} else {
-				useFilters = this.orSargUseFilters(pred.(*expression.Or), se)
+				useFilters = this.orSargUseFilters(pred.(*expression.Or), baseKeyspace, se)
 			}
 		} else {
 			for _, key := range se.keys {
@@ -1356,7 +1356,9 @@ func (this *builder) buildIndexFilters(entry *indexEntry, baseKeyspace *base.Bas
 	return
 }
 
-func (this *builder) orSargUseFilters(pred *expression.Or, entry *indexEntry) bool {
+func (this *builder) orSargUseFilters(pred *expression.Or, baseKeyspace *base.BaseKeyspace,
+	entry *indexEntry) bool {
+
 	skip := useSkipIndexKeys(entry.index, this.context.IndexApiVersion())
 	missing := indexHasLeadingKeyMissingValues(entry.index, this.context.FeatureControls())
 
@@ -1376,6 +1378,62 @@ func (this *builder) orSargUseFilters(pred *expression.Or, entry *indexEntry) bo
 			for j := 0; j < len(skeys); j++ {
 				if cskeys[j] != skeys[j] {
 					return false
+				}
+			}
+		}
+	}
+
+	nSargKeys := 0
+	for j := 0; j < len(skeys); j++ {
+		if skeys[j] {
+			nSargKeys++
+		}
+	}
+	if nSargKeys > 1 {
+		// if each OR subterm contains more than one sargable key, further check the
+		// individual filters to see
+		//    1. whether there are multiple OR-filters,
+		//    2. for each individual OR-filter, whether it can sarg multiple keys.
+		// if either is true, then we cannot use individual filters to sarg, otherwise
+		// we may end up with multiple spans for each index key, and combining
+		// multiple such spans will result in cross-muptiplication of the spans.
+		numOr := 0
+		for _, filter := range baseKeyspace.Filters() {
+			fltrExpr := filter.FltrExpr()
+			or, ok := fltrExpr.(*expression.Or)
+			if !ok {
+				continue
+			}
+			numOr++
+			if numOr > 1 {
+				return false
+			}
+			nsarg := 0
+			for i, key := range entry.sargKeys {
+				cmissing := missing
+				if i > 0 {
+					cmissing = true
+				}
+				cmin, _, _, _ := SargableFor(or, expression.Expressions{key},
+					cmissing, skip, this.context, this.aliases)
+				if cmin > 0 {
+					nsarg++
+					if nsarg > 1 {
+						// this is attepmting to diffrentiate between:
+						//   c1 = 1 AND (c2 = 2 OR c2 = 3)
+						// vs
+						//   (c1 = 1 AND c2 = 2) OR (c1 = 2 AND c2 = 3)
+						// we can allow using of individual filters for
+						// sarging of indexes in the first case but not
+						// in the second case
+						// this does leave
+						//   (c1 = 1 AND c2 = 2) OR (c1 = 1 AND c2 = 3)
+						// which is equivalent to the first one also not
+						// able to use individual filters tos sarg, since
+						// we don't detect actual duplicated filter in
+						// subarms of OR currently.
+						return false
+					}
 				}
 			}
 		}
