@@ -219,7 +219,9 @@ func (b *Bucket) RunBucketUpdater2(streamingFn StreamingFn, notify NotifyFn) boo
 					delete(p.BucketMap, name)
 					p.Unlock()
 				}
-				logging.Errorf("[%p] Bucket updater exited: %v", b, err)
+				if err.Code() != errors.E_BUCKET_UPDATER_EP_NOT_FOUND {
+					logging.Errorf("[%p] Bucket updater exited: %v", b, err)
+				}
 			}
 		}()
 	}
@@ -243,7 +245,7 @@ func (b *Bucket) replaceConnPools2(with []*connectionPool, bucketLocked bool) {
 	return
 }
 
-func (b *Bucket) UpdateBucket2(streamingFn StreamingFn) error {
+func (b *Bucket) UpdateBucket2(streamingFn StreamingFn) errors.Error {
 	var failures int
 	var returnErr error
 	var poolServices PoolServices
@@ -284,16 +286,7 @@ func (b *Bucket) UpdateBucket2(streamingFn StreamingFn) error {
 		})
 		req, err := http.NewRequest("GET", streamUrl, nil)
 		if err != nil {
-			if isConnError(err) {
-				failures++
-				if failures < MAX_RETRY_COUNT {
-					logging.Infof("[%p] Bucket updater: %v (Retrying %v)", b, err, failures)
-					time.Sleep(time.Duration(failures) * STREAM_RETRY_PERIOD)
-				} else {
-					returnErr = errors.NewBucketUpdaterStreamingError(err)
-				}
-				continue
-			}
+			logging.Infof("[%p] Bucket updater: Error creating request: %v", b, err)
 			return errors.NewBucketUpdaterStreamingError(err)
 		}
 
@@ -302,6 +295,7 @@ func (b *Bucket) UpdateBucket2(streamingFn StreamingFn) error {
 		err = maybeAddAuth(req, b.pool.client.ah)
 		b.RUnlock()
 		if err != nil {
+			logging.Infof("[%p] Bucket updater: Error setting request auth: %v", b, err)
 			return errors.NewBucketUpdaterAuthError(err)
 		}
 
@@ -318,16 +312,19 @@ func (b *Bucket) UpdateBucket2(streamingFn StreamingFn) error {
 				continue
 			}
 			return errors.NewBucketUpdaterStreamingError(err)
-		}
-
-		if res.StatusCode != 200 {
+		} else if res.StatusCode == http.StatusNotFound {
+			// bucket has been removed, shut down
+			logging.Infof("[%p] Bucket updater: Streaming endpoint not found. Exiting.", b)
+			return errors.NewBucketUpdaterEndpointNotFoundError()
+		} else if res.StatusCode != http.StatusOK {
 			bod, _ := ioutil.ReadAll(io.LimitReader(res.Body, 512))
-			logging.Errorf("[%p] Bucket updater: %v %s", b, res.StatusCode, bod)
+			logging.Errorf("[%p] Bucket updater: Status %v - %s", b, res.StatusCode, bod)
 			res.Body.Close()
 			returnErr = errors.NewBucketUpdaterFailedToConnectToHost(res.StatusCode, bod)
 			failures++
 			continue
 		}
+
 		b.Lock()
 		if b.updater != updater {
 			// another updater is running and we should exit cleanly

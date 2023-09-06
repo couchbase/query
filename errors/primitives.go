@@ -52,3 +52,8 @@ func NewBucketUpdaterMappingError(e error) Error {
 	return &err{level: EXCEPTION, ICode: E_BUCKET_UPDATER_ERROR_MAPPING, IKey: "primitives.updater.mapping", cause: c,
 		InternalMsg: fmt.Sprintf("Mapping error: %v", e), InternalCaller: CallerN(1)}
 }
+
+func NewBucketUpdaterEndpointNotFoundError() Error {
+	return &err{level: EXCEPTION, ICode: E_BUCKET_UPDATER_EP_NOT_FOUND, IKey: "primitives.updater.endpoint_not_found",
+		InternalMsg: "Streaming endpoint not found", InternalCaller: CallerN(1)}
+}
