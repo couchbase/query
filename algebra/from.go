@@ -62,6 +62,11 @@ type FromTerm interface {
 	   Contains correlation reference?
 	*/
 	IsCorrelated() bool
+
+	/*
+	   Get correlation references
+	*/
+	GetCorrelation() map[string]uint32
 }
 
 type SimpleFromTerm interface {
@@ -104,4 +109,52 @@ func GetKeyspaceTerm(term SimpleFromTerm) *KeyspaceTerm {
 	default:
 		return nil
 	}
+}
+
+func addSimpleTermCorrelation(newCorrelation, correlation map[string]uint32, join bool,
+	parent *expression.Formalizer) map[string]uint32 {
+	if newCorrelation == nil {
+		newCorrelation = make(map[string]uint32, len(correlation))
+	}
+	for k, v := range correlation {
+		// differentiate lateral correlation with nested correlation
+		// if the correlation is lateral (with a previous keyspace)
+		// then this correlation should not be propagated up
+		if join && !parent.CheckCorrelation(k) {
+			v |= expression.IDENT_IS_LATERAL_CORR
+		}
+		newCorrelation[k] |= v
+	}
+	return newCorrelation
+}
+
+func joinCorrelated(left, right FromTerm) bool {
+	if left.IsCorrelated() {
+		return true
+	}
+	if right.IsCorrelated() {
+		for _, v := range right.GetCorrelation() {
+			// skip lateral correlation
+			if (v & expression.IDENT_IS_LATERAL_CORR) == 0 {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func getJoinCorrelation(left, right FromTerm) map[string]uint32 {
+	leftCorrelation := left.GetCorrelation()
+	rightCorrelation := right.GetCorrelation()
+	correlation := make(map[string]uint32, len(leftCorrelation)+len(rightCorrelation))
+	for k, v := range leftCorrelation {
+		correlation[k] |= v
+	}
+	for k, v := range rightCorrelation {
+		// skip lateral correlation
+		if (v & expression.IDENT_IS_LATERAL_CORR) == 0 {
+			correlation[k] |= v
+		}
+	}
+	return correlation
 }

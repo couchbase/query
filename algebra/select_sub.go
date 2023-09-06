@@ -23,14 +23,15 @@ group and projection, map to the FromTerm, let clause, group by
 and select clause respectively.
 */
 type Subselect struct {
-	from       FromTerm              `json:"from"`
-	let        expression.Bindings   `json:"let"`
-	where      expression.Expression `json:"where"`
-	group      *Group                `json:"group"`
-	projection *Projection           `json:"projection"`
-	window     WindowTerms           `json:"window"`
-	optimHints *OptimHints           `json:"optimizer_hints"`
-	correlated bool                  `json:"correlated"`
+	from        FromTerm              `json:"from"`
+	let         expression.Bindings   `json:"let"`
+	where       expression.Expression `json:"where"`
+	group       *Group                `json:"group"`
+	projection  *Projection           `json:"projection"`
+	window      WindowTerms           `json:"window"`
+	optimHints  *OptimHints           `json:"optimizer_hints"`
+	correlated  bool                  `json:"correlated"`
+	correlation map[string]uint32     `json:"correlated_references"`
 }
 
 /*
@@ -117,9 +118,27 @@ func (this *Subselect) Formalize(parent *expression.Formalizer) (f *expression.F
 
 	// Determine if this is a correlated subquery
 	this.correlated = f.CheckCorrelated()
+	if this.correlated {
+		correlation := f.GetCorrelation()
+		if this.correlation == nil {
+			this.correlation = make(map[string]uint32, len(correlation))
+		}
+		for k, v := range correlation {
+			this.correlation[k] |= v
+		}
+	}
 
-	if !this.correlated && this.from != nil && this.from.IsCorrelated() {
-		this.correlated = true
+	if this.from != nil && this.from.IsCorrelated() {
+		correlation := this.from.GetCorrelation()
+		if this.correlation == nil {
+			this.correlation = make(map[string]uint32, len(correlation))
+		}
+		for k, v := range correlation {
+			if f.CheckCorrelation(k) {
+				this.correlated = true
+				this.correlation[k] |= v
+			}
+		}
 	}
 
 	return f, nil
@@ -294,6 +313,10 @@ func (this *Subselect) IsCorrelated() bool {
 
 func (this *Subselect) SetCorrelated() {
 	this.correlated = true
+}
+
+func (this *Subselect) GetCorrelation() map[string]uint32 {
+	return this.correlation
 }
 
 /*

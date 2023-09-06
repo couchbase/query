@@ -28,6 +28,7 @@ const (
 	IDENT_IS_SUBQ_TERM                // subquery term
 	IDENT_IS_STATIC_VAR               // top level variable (CTE, function parameter...)
 	IDENT_IS_CORRELATED               // binding expr has correlated references
+	IDENT_IS_LATERAL_CORR             // lateral correlation
 )
 
 /*
@@ -328,6 +329,18 @@ func (this *Identifier) SetCorrelated(correlated bool) {
 		this.identFlags |= IDENT_IS_CORRELATED
 	} else {
 		this.identFlags &^= IDENT_IS_CORRELATED
+	}
+}
+
+func (this *Identifier) IsLateralCorr() bool {
+	return (this.identFlags & IDENT_IS_LATERAL_CORR) != 0
+}
+
+func (this *Identifier) SetLateralCorr(lateral bool) {
+	if lateral {
+		this.identFlags |= IDENT_IS_LATERAL_CORR
+	} else {
+		this.identFlags &^= IDENT_IS_LATERAL_CORR
 	}
 }
 
