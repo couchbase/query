@@ -107,6 +107,7 @@ func init() {
 	gsiPatterns["enterprise"] = regexp.MustCompile("(.*) not supported in non-Enterprise Edition")
 	gsiPatterns["exists"] = regexp.MustCompile("Index (.*) already exists")
 	gsiPatterns["reason"] = regexp.MustCompile("(.*)( Reason: | Error=| Error: )(.*)")
+	gsiPatterns["tempfile"] = regexp.MustCompile("(.*) temp file size exceeded limit ([0-9]+), ([0-9]+)")
 }
 
 func NewError(e error, internalMsg string) Error {
@@ -121,10 +122,14 @@ func NewError(e error, internalMsg string) Error {
 	var c interface{}
 
 	// map GSI errors where possible to meaningful error codes
-	if strings.HasPrefix(internalMsg, "GSI ") || (e != nil && strings.HasPrefix(e.Error(), "GSI ")) {
+	isGsi, caller := GSICaller()
+	if isGsi {
 		errText := ""
 		if e != nil {
 			errText = strings.TrimSpace(e.Error())
+			if errText == internalMsg {
+				e = nil
+			}
 		} else {
 			errText = strings.TrimSpace(internalMsg)
 		}
@@ -136,8 +141,8 @@ func NewError(e error, internalMsg string) Error {
 		if res != nil {
 			return NewIndexAlreadyExistsError(string(res[1]))
 		}
-		m := make(map[string]interface{}, 2)
-		if len(internalMsg) > 4 {
+		m := make(map[string]interface{}, 5)
+		if strings.HasPrefix(internalMsg, "GSI ") {
 			m["source"] = internalMsg[4:]
 		}
 		if strings.Contains(errText, "Encountered transient error") {
@@ -145,9 +150,15 @@ func NewError(e error, internalMsg string) Error {
 			code = W_GSI_TRANSIENT
 			key = "indexing.transient_error"
 			level = WARNING
+		} else if res = gsiPatterns["tempfile"].FindSubmatch([]byte(errText)); res != nil {
+			m["request"] = strings.TrimSpace(string(res[1]))
+			m["limit"], _ = strconv.Atoi(string(res[2]))
+			m["size"], _ = strconv.Atoi(string(res[3]))
+			m["user_action"] = "Check queryTmpSpaceDir and queryTmpSpaceSize settings."
+			code = E_GSI_TEMP_FILE_SIZE
+			key = "indexing.temp_file_size"
 		} else {
-			res = gsiPatterns["reason"].FindSubmatch([]byte(errText))
-			if res != nil {
+			if res = gsiPatterns["reason"].FindSubmatch([]byte(errText)); res != nil {
 				m["error"] = strings.TrimSpace(string(res[1]))
 				m["reason"] = strings.TrimSpace(string(res[3]))
 			} else {
@@ -161,7 +172,7 @@ func NewError(e error, internalMsg string) Error {
 		}
 	}
 
-	return &err{level: level, ICode: code, IKey: key, ICause: e, InternalMsg: internalMsg, InternalCaller: CallerN(1), cause: c}
+	return &err{level: level, ICode: code, IKey: key, ICause: e, InternalMsg: internalMsg, InternalCaller: caller, cause: c}
 }
 
 func NewWarning(internalMsg string) Error {
@@ -405,12 +416,19 @@ func Caller() string {
 // Returns "FileName:LineNum" of the Nth caller on the call stack,
 // where level of 0 is the caller of CallerN.
 func CallerN(level int) string {
-	_, fname, lineno, ok := runtime.Caller(1 + level)
+	_, file, line, ok := runtime.Caller(1 + level)
 	if !ok {
 		return "unknown:0"
 	}
-	return fmt.Sprintf("%s:%d",
-		strings.Split(path.Base(fname), ".")[0], lineno)
+	return fmt.Sprintf("%s:%d", strings.Split(path.Base(file), ".")[0], line)
+}
+
+func GSICaller() (bool, string) {
+	_, file, line, ok := runtime.Caller(2)
+	if !ok {
+		return false, "unknown:0"
+	}
+	return strings.Index(file, "/indexing/secondary/") != -1, fmt.Sprintf("%s:%d", strings.Split(path.Base(file), ".")[0], line)
 }
 
 // In the future we should be able to check error codes or keys rather than matching error text, or even base it on error type but
