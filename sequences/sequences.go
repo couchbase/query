@@ -950,13 +950,13 @@ func (seq *sequence) nextAvailableBlock(getOnly bool) (int64, errors.Error) {
 		}
 		break
 	}
-	rv := value.AsNumberValue(res[n-1].Value).Int64()
+	block := value.AsNumberValue(res[n-1].Value).Int64()
 	if !getOnly {
-		rv--
+		block--
 	}
-	rv = (rv * int64(seq.cache) * seq.increment) + seq.base
+	rv := (block * int64(seq.cache) * seq.increment) + seq.base
 	if !getOnly && !seq.cycle {
-		prev := ((rv - 1) * int64(seq.cache) * seq.increment) + seq.base
+		prev := ((block - 1) * int64(seq.cache) * seq.increment) + seq.base
 		if (seq.increment < 0 && prev < rv) || (seq.increment > 0 && prev > rv) {
 			return 0, errors.NewSequenceError(errors.E_SEQUENCE_EXHAUSTED, seq.name.SimpleString())
 		}
