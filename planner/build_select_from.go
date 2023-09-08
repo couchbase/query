@@ -1436,11 +1436,29 @@ func (this *builder) buildEarlyOffset(lastOp plan.Operator, useCBO bool) (
 
 func (this *builder) checkEarlyProjection(projection *algebra.Projection) error {
 	if this.cover == nil {
+		// only for SELECT statements, and covering has not been turned off
 		return nil
 	}
 	for _, keyspace := range this.baseKeyspaces {
 		if ksTerm, ok := keyspace.Node().(*algebra.KeyspaceTerm); ok {
 			// only KeyspaceTerm
+
+			// Currently early projection is supported for:
+			//  - primary term, which includes:
+			//     - single keyspace query
+			//     - primary (first) term in legacy join/nest query
+			//     - primary (first) term in ANSI join/nest query
+			//  - ANSI JOIN term
+			//     - right-hand side of ANSI join
+			//
+			// Note that this excludes:
+			//  - right-hand side of legacy join/nest
+			//  - right-hand side of ANSI nest (full document required)
+			//  - right-hand side of unnest (not a keyspaceTerm, excluded above)
+
+			if !keyspace.IsPrimaryTerm() && !ksTerm.IsAnsiJoin() {
+				continue
+			}
 
 			xattrs, err := this.GetSubPaths(ksTerm, ksTerm.Alias())
 			if err != nil {
