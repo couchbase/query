@@ -73,6 +73,7 @@ type Error interface {
 	SetCause(cause interface{})
 	ContainsText(text string) bool
 	HasCause(ErrorCode) bool
+	HasICause(ErrorCode) bool
 	ExtractLineAndColumn(map[string]interface{})
 	AddErrorContext(ctx string)
 }
@@ -546,6 +547,24 @@ func (e *err) HasCause(code ErrorCode) bool {
 			c = nil
 		}
 	}
+	return false
+}
+
+func (e *err) HasICause(code ErrorCode) bool {
+	c := e.ICause
+
+	for c != nil {
+		switch icse := c.(type) {
+		case Error:
+			if icse.Code() == code {
+				return true
+			}
+			c = icse.GetICause()
+		default:
+			break
+		}
+	}
+
 	return false
 }
 

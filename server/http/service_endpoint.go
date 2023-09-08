@@ -12,12 +12,13 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-	"golang.org/x/net/http2"
 	"io/ioutil"
 	"net"
 	"net/http"
 	"strings"
 	"time"
+
+	"golang.org/x/net/http2"
 
 	gsi "github.com/couchbase/indexing/secondary/queryport/n1ql"
 
@@ -593,7 +594,7 @@ func (this *HttpEndpoint) doStats(request *httpRequest, srvr *server.Server) {
 
 	prepareds.RecordPreparedMetrics(request.Prepared(), request_time, service_time)
 	accounting.RecordMetrics(request_time, service_time, transaction_time, request.resultCount,
-		request.resultSize, request.GetErrorCount(), request.GetWarningCount(), request.Type(),
+		request.resultSize, request.GetErrorCount(), request.GetWarningCount(), request.Errors(), request.Type(),
 		prepared, (request.State() != server.COMPLETED),
 		int(request.PhaseOperator(execution.INDEX_SCAN)),
 		int(request.PhaseOperator(execution.PRIMARY_SCAN)),

@@ -62,10 +62,20 @@
 			"bucket"
 		]
 	},
+	"n1ql_bulk_get_errors": {
+		"type": "counter",
+		"help": "Count of errors due to bulk get operations",
+		"added":"7.5.0"
+	},
 	"n1ql_cancelled": {
 		"type": "counter",
 		"help": "Total number of cancelled requests.",
 		"added": "7.0.0"
+	},
+	"n1ql_cas_mismatch_errors": {
+		"type":"counter",
+		"help": "Count of CAS mismatch errors",
+		"added":"7.5.0"
 	},
 	"n1ql_deletes": {
 		"type": "counter",
@@ -249,6 +259,11 @@
 		"uiName": "Query Execution Time",
 		"notes": "In the Couchbase Server UI this metric is computed as an average, with a display name of \"Query Execution Time\" or n1ql_avg_svc_time. This metric was named query_service_time in versions before 7.0.0."
 	},
+	"n1ql_temp_space_errors": {
+		"type": "counter",
+		"help": "Count of temp space related errors",
+		"added":"7.5.0"
+	},
 	"n1ql_tenant_memory": {
 		"type": "gauge",
 		"added": "7.5.0",
@@ -286,6 +301,11 @@
 			"bucket"
 		]
 	},
+	"n1ql_timeouts":{
+		"type": "counter",
+		"help": "Count of request timeout errors",
+		"added":"7.5.0"
+	},
 	"n1ql_transaction_time": {
 		"type": "counter",
 		"help": "Total elapsed time of transactions so far.",
@@ -296,6 +316,11 @@
 		"type": "counter",
 		"help": "Total number of transactions.",
 		"added": "7.0.0"
+	},
+	"n1ql_unauthorized_users": {
+		"type":"counter",
+		"help":"Count of unauthorized access errors",
+		"added": "7.5.0"
 	},
 	"n1ql_unbounded": {
 		"type": "counter",
@@ -376,6 +401,11 @@
 			"bucket",
 			"for"
 		]
+	},
+	"n1ql_mem_quota_exceeded_errors": {
+		"type": "counter",
+		"help": "Count of memory quota exceeded errrors",
+		"added": "7.5.0"
 	},
 	"n1ql_meter_cu_total": {
 		"type": "counter",
