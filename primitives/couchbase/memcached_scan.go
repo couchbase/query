@@ -34,6 +34,7 @@ import (
 
 var _SS_MAX_CONCURRENT_VBSCANS_PER_SERVER = -1
 var initL sync.Mutex
+var scanNum uint64
 
 const _SS_SMALL_RESULT_SET = 100
 const _SS_MAX_DURATION = time.Minute * 10
@@ -273,6 +274,7 @@ func (this *rQueue) pop() *vbRangeScan {
  */
 
 type seqScan struct {
+	scanNum      uint64
 	requestId    string
 	log          logging.Log
 	ch           chan interface{}
@@ -299,6 +301,7 @@ func NewSeqScan(requestId string, log logging.Log, collId uint32, ranges []*SeqS
 	pipelineSize int, serverless bool, useReplica bool, skipKey func(string) bool) *seqScan {
 
 	scan := &seqScan{
+		scanNum:      atomic.AddUint64(&scanNum, 1),
 		requestId:    requestId,
 		log:          log,
 		collId:       collId,
@@ -331,6 +334,7 @@ func NewRandomScan(requestId string, log logging.Log, collId uint32, sampleSize 
 		sampleSize = _SS_MIN_SAMPLE_SIZE
 	}
 	scan := &seqScan{
+		scanNum:      atomic.AddUint64(&scanNum, 1),
 		requestId:    requestId,
 		log:          log,
 		collId:       collId,
@@ -347,7 +351,8 @@ func NewRandomScan(requestId string, log logging.Log, collId uint32, sampleSize 
 
 func (this *seqScan) String() string {
 	var b strings.Builder
-	b.WriteString(fmt.Sprintf("{%p", this))
+	b.WriteString(fmt.Sprintf("{0x%08x", this.scanNum))
+	b.WriteString(",requestId:")
 	b.WriteString(this.requestId)
 	b.WriteString(",collId:")
 	b.WriteString(fmt.Sprintf("%d", this.collId))
@@ -478,14 +483,14 @@ func (this *seqScan) coordinator(b *Bucket, scanTimeout time.Duration) {
 	smap := b.VBServerMap()
 	vblist := smap.VBucketMap
 	if len(vblist) == 0 {
-		logging.Severef("Sequential scan coordinator: [%p] invalid VB map for bucket %v - no v-buckets", this, b.Name)
+		logging.Severef("Sequential scan coordinator: [%08x] invalid VB map for bucket %v - no v-buckets", this.scanNum, b.Name)
 		this.reportError(qerrors.NewSSError(qerrors.E_SS_FAILED))
 		return
 	}
 
 	numServers := len(smap.ServerList)
 	if numServers < 1 {
-		logging.Severef("Sequential scan coordinator: [%p] invalid VB map for bucket %v - no server list", this, b.Name)
+		logging.Severef("Sequential scan coordinator: [%08x] invalid VB map for bucket %v - no server list", this.scanNum, b.Name)
 		this.reportError(qerrors.NewSSError(qerrors.E_SS_FAILED))
 		return
 	}
@@ -542,8 +547,8 @@ func (this *seqScan) coordinator(b *Bucket, scanTimeout time.Duration) {
 					}
 				}
 				if server >= numServers {
-					logging.Severef("Sequential scan coordinator: [%p] Invalid server for VB (%d): %d (max valid: %d)",
-						this, vb, server, numServers-1)
+					logging.Severef("Sequential scan coordinator: [%08x] Invalid server for VB (%d): %d (max valid: %d)",
+						this.scanNum, vb, server, numServers-1)
 					this.reportError(qerrors.NewSSError(qerrors.E_SS_FAILED))
 					cancelAll()
 					return
@@ -599,8 +604,8 @@ func (this *seqScan) coordinator(b *Bucket, scanTimeout time.Duration) {
 						}
 					}
 					if server >= numServers {
-						logging.Severef("Sequential scan coordinator: [%p] Invalid server for VB (%d): %d (max valid: %d)",
-							this, vb, server, numServers-1)
+						logging.Severef("Sequential scan coordinator: [%08x] Invalid server for VB (%d): %d (max valid: %d)",
+							this.scanNum, vb, server, numServers-1)
 						this.reportError(qerrors.NewSSError(qerrors.E_SS_FAILED))
 						cancelAll()
 						return
@@ -680,7 +685,7 @@ processing:
 					// forward results
 					// read the keys
 					if !vbscan.seek(start) {
-						logging.Debugf("BUG: scan seek failed", this.log)
+						logging.Debugf("BUG: [%08x] scan seek failed", this.scanNum, this.log)
 					}
 					for start < len(vbscan.keys) {
 						batch := len(vbscan.keys) - start
@@ -692,7 +697,8 @@ processing:
 							keys = append(keys, string(vbscan.current()))
 							if !vbscan.advance() {
 								if i+1 < batch {
-									logging.Debugf("BUG: fewer keys than thought: i: %v, #keys: %v", i+1, batch, this.log)
+									logging.Debugf("BUG: [%08x] fewer keys than thought: i: %v, #keys: %v",
+										this.scanNum, i+1, batch, this.log)
 								}
 								break
 							}
@@ -966,7 +972,7 @@ type vbRangeScan struct {
 }
 
 func (this *vbRangeScan) String() string {
-	return fmt.Sprintf("[%p,%p,%d]", this.scan, this, this.vbucket())
+	return fmt.Sprintf("[0x%08x,%p,%d]", this.scan.scanNum, this, this.vbucket())
 }
 
 func (this *vbRangeScan) startFrom() ([]byte, bool) {
@@ -1299,22 +1305,23 @@ func (this *vbRangeScan) runScan(conn *memcached.Client, node string) bool {
 		if this.sampleSize != 0 {
 			fetchLimit = uint32(this.sampleSize)
 			if this.sampleSize == math.MaxInt {
-				logging.Debugf("%s Creating random scan to sample all keys", this, this.scan.log)
+				logging.Debugf("%s creating random scan to sample all keys", this, this.scan.log)
 			} else {
-				logging.Debugf("%s Creating random scan with sample size %d and limit %d",
+				logging.Debugf("%s creating random scan with sample size %d and limit %d",
 					this, this.sampleSize, fetchLimit, this.scan.log)
 			}
 			response, err = conn.CreateRandomScan(this.vbucket(), this.scan.collId, this.sampleSize, false)
 		} else {
 			start, exclStart = this.startFrom()
 			end, exclEnd := this.endWith()
-			logging.Debugf("%s Creating scan from: %v (excl:%v)", this, start, exclStart, this.scan.log)
+			logging.Debugf("%s creating scan from: %v (excl:%v)", this, start, exclStart, this.scan.log)
 			response, err = conn.CreateRangeScan(this.vbucket(), this.scan.collId, start, exclStart, end, exclEnd, false)
 		}
 		if err != nil || len(response.Body) < 16 {
 			resp, ok := err.(*gomemcached.MCResponse)
 			if ok && resp.Status == gomemcached.KEY_ENOENT {
 				// success but no data
+				logging.Debugf("%s no data for scan: %v", this, resp)
 				this.kvOpsComplete = true
 				if this.keys != nil {
 					this.keys = this.keys[:0]
@@ -1354,7 +1361,7 @@ func (this *vbRangeScan) runScan(conn *memcached.Client, node string) bool {
 				}
 				this.reportError(qerrors.NewSSError(qerrors.E_SS_CREATE, err))
 			}
-			return false, ok // only retain the connection if a valid KV error response
+			return false, false // don't retain the connection for unhandled errors; the client may not be healthy
 		}
 		if this.scan.serverless {
 			ru, _ := response.ComputeUnits()
@@ -1543,6 +1550,8 @@ func (this *vbRangeScan) runScan(conn *memcached.Client, node string) bool {
 					i += int(l)
 				}
 				logging.Debugf("%s processed %v keys from response of %v bytes", this, num_keys, len(response.Body), this.scan.log)
+			} else {
+				logging.Debugf("%s response body is empty (0 bytes)", this, this.scan.log)
 			}
 			if this.state == _VBS_CANCELLED {
 				return cancelWorking()
