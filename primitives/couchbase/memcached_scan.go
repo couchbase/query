@@ -39,6 +39,7 @@ var scanNum uint64
 const _SS_SMALL_RESULT_SET = 100
 const _SS_MAX_DURATION = time.Minute * 10
 const _SS_MAX_KEYS_PER_REQUEST = uint32(10240) // try to avoid more than one scan per v-bucket
+const _SS_ORDERED_CACHE_LIMIT = uint32(102400) // when ordering cache this many keys divided by # v-buckets, per v-bucket
 const _SS_INIT_KEYS = 256
 const _SS_KEY_BUFFER = 10240
 const _SS_SPILL_BUFFER = 10240
@@ -493,6 +494,13 @@ func (this *seqScan) coordinator(b *Bucket, scanTimeout time.Duration) {
 		logging.Severef("Sequential scan coordinator: [%08x] invalid VB map for bucket %v - no server list", this.scanNum, b.Name)
 		this.reportError(qerrors.NewSSError(qerrors.E_SS_FAILED))
 		return
+	}
+
+	if this.ordered && this.fetchLimit > _SS_SMALL_RESULT_SET {
+		if uint32(len(vblist))*this.fetchLimit > _SS_ORDERED_CACHE_LIMIT {
+			this.fetchLimit = _SS_ORDERED_CACHE_LIMIT / uint32(len(vblist))
+			logging.Debugf("[%08x] fetchLimit reset to %v", this.scanNum, this.fetchLimit)
+		}
 	}
 
 	// initialise / resize worker pool if necessary
