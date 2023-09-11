@@ -246,22 +246,10 @@ func (this *Fetch) flushBatch(context *Context) bool {
 		}
 	}
 
-	var err errors.Error
-	projection := this.plan.EarlyProjection()
-
 	if l == 1 {
 		fv := fetchMap[fetchKeys[0]]
 		av := this.batch[0]
 		if fv != nil {
-
-			if len(projection) > 0 {
-				fv, err = this.earlyProjection(fv, fetchKeys[0], 1, projection, context)
-				if err != nil {
-					context.Error(err)
-					av.Recycle()
-					return false
-				}
-			}
 
 			fv.SetAttachment("smeta", av.GetAttachment("smeta"))
 			av.SetField(this.plan.Term().Alias(), fv)
@@ -321,14 +309,7 @@ func (this *Fetch) flushBatch(context *Context) bool {
 
 		fv := fetchMap[key]
 		if fv != nil {
-			if len(projection) > 0 {
-				fv, err = this.earlyProjection(fv, key, keyCount[key], projection, context)
-				if err != nil {
-					context.Error(err)
-					av.Recycle()
-					return false
-				}
-			} else if keyCount[key] > 1 {
+			if keyCount[key] > 1 {
 				if this.deepCopy {
 					fv = value.NewAnnotatedValue(fv.CopyForUpdate())
 				} else {
@@ -386,25 +367,6 @@ func (this *Fetch) flushBatch(context *Context) bool {
 	}
 
 	return fetchOk
-}
-
-func (this *Fetch) earlyProjection(fv value.AnnotatedValue, key string, keyCnt int, projection []string,
-	context *Context) (value.AnnotatedValue, errors.Error) {
-
-	av := this.newEmptyDocumentWithKey(key, this.parentVal, context)
-
-	for _, field := range projection {
-		if val, ok := fv.Field(field); ok {
-			av.SetField(field, val.CopyForUpdate())
-		}
-	}
-
-	if keyCnt == 1 {
-		// all-done with the orginal value
-		fv.Recycle()
-	}
-
-	return av, nil
 }
 
 func (this *Fetch) MarshalJSON() ([]byte, error) {

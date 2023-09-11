@@ -1996,8 +1996,13 @@ func (b *keyspace) fetch(fullName, qualifiedName, scopeName, collectionName stri
 	ls := len(subPaths)
 	fast := l == 1 && ls == 0
 	if fast {
-		mcr, err = b.cbbucket.GetsMC(keys[0], context.IsActive, context.GetReqDeadline(), context.KvTimeout(), context.UseReplica(),
-			clientContext...)
+		if len(projection) == 0 {
+			mcr, err = b.cbbucket.GetsMC(keys[0], context.IsActive, context.GetReqDeadline(), context.KvTimeout(),
+				context.UseReplica(), clientContext...)
+		} else {
+			mcr, err = b.cbbucket.GetsSubDoc(keys[0], context.GetReqDeadline(), context.KvTimeout(), projection,
+				append(clientContext, &memcached.ClientContext{DocumentSubDocPaths: true})...)
+		}
 	} else {
 		if ls > 0 && (subPaths[0] != "$document" && subPaths[0] != "$document.exptime") {
 			subPaths = append([]string{"$document"}, subPaths...)
@@ -2008,8 +2013,13 @@ func (b *keyspace) fetch(fullName, qualifiedName, scopeName, collectionName stri
 			mcr, err = b.cbbucket.GetsSubDoc(keys[0], context.GetReqDeadline(), context.KvTimeout(), subPaths, clientContext...)
 		} else {
 			// TODO TENANT handle refunds on transient failures
-			bulkResponse, err = b.cbbucket.GetBulk(keys, context.IsActive, context.GetReqDeadline(), context.KvTimeout(), subPaths,
-				context.UseReplica(), clientContext...)
+			if len(projection) > 0 && ls == 0 {
+				bulkResponse, err = b.cbbucket.GetBulk(keys, context.IsActive, context.GetReqDeadline(), context.KvTimeout(),
+					projection, context.UseReplica(), append(clientContext, &memcached.ClientContext{DocumentSubDocPaths: true})...)
+			} else {
+				bulkResponse, err = b.cbbucket.GetBulk(keys, context.IsActive, context.GetReqDeadline(), context.KvTimeout(),
+					subPaths, context.UseReplica(), clientContext...)
+			}
 			defer b.cbbucket.ReleaseGetBulkPools(bulkResponse)
 		}
 	}
@@ -2029,20 +2039,30 @@ func (b *keyspace) fetch(fullName, qualifiedName, scopeName, collectionName stri
 
 	if fast {
 		if mcr != nil && err == nil {
-			fetchMap[keys[0]] = doFetch(keys[0], fullName, mcr, context, len(projection) > 0)
+			if len(projection) == 0 {
+				fetchMap[keys[0]] = doFetch(keys[0], fullName, mcr, context, len(projection) > 0)
+			} else {
+				fetchMap[keys[0]] = getSubDocFetchResults(keys[0], fullName, mcr, projection, context)
+			}
 		}
 
 	} else if l == 1 {
 		if mcr != nil && err == nil {
-			fetchMap[keys[0]] = getSubDocFetchResults(keys[0], mcr, subPaths, noVirtualDocAttr, context)
+			fetchMap[keys[0]] = getSubDocXattrFetchResults(keys[0], fullName, mcr, subPaths, noVirtualDocAttr, context)
 		}
 	} else {
 		i := 0
 		if ls > 0 {
 			for k, v := range bulkResponse {
-				fetchMap[k] = getSubDocFetchResults(k, v, subPaths, noVirtualDocAttr, context)
+				fetchMap[k] = getSubDocXattrFetchResults(k, fullName, v, subPaths, noVirtualDocAttr, context)
 				i++
 			}
+		} else if len(projection) > 0 {
+			for k, v := range bulkResponse {
+				fetchMap[k] = getSubDocFetchResults(k, fullName, v, projection, context)
+				i++
+			}
+			logging.Debugf("(Sub-doc) Requested keys %d Fetched %d keys ", l, i)
 		} else {
 			for k, v := range bulkResponse {
 				fetchMap[k] = doFetch(k, fullName, v, context, len(projection) > 0)
@@ -2107,7 +2127,9 @@ func doFetch(k string, fullName string, v *gomemcached.MCResponse, context datas
 	return val
 }
 
-func getSubDocFetchResults(k string, v *gomemcached.MCResponse, subPaths []string, noVirtualDocAttr bool, context datastore.QueryContext) value.AnnotatedValue {
+func getSubDocXattrFetchResults(k string, fullName string, v *gomemcached.MCResponse, subPaths []string, noVirtualDocAttr bool,
+	context datastore.QueryContext) value.AnnotatedValue {
+
 	responseIter := 0
 	i := 0
 	xVal := map[string]interface{}{}
@@ -2167,7 +2189,6 @@ func getSubDocFetchResults(k string, v *gomemcached.MCResponse, subPaths []strin
 		exptime = uint32(value.NewValue(docMeta["exptime"]).(value.NumberValue).Int64())
 	} else if subPaths[0] == "$document.exptime" {
 		exptime = uint32(value.NewValue(xVal["$document.exptime"]).(value.NumberValue).Int64())
-
 	}
 
 	if noVirtualDocAttr {
@@ -2175,6 +2196,7 @@ func getSubDocFetchResults(k string, v *gomemcached.MCResponse, subPaths []strin
 	}
 
 	meta := val.NewMeta()
+	meta["keyspace"] = fullName
 	meta["cas"] = v.Cas
 	meta["type"] = meta_type
 	meta["flags"] = flags
@@ -2182,7 +2204,38 @@ func getSubDocFetchResults(k string, v *gomemcached.MCResponse, subPaths []strin
 	if len(xVal) > 0 {
 		meta["xattrs"] = xVal
 	}
+	val.SetId(k)
 
+	if tenant.IsServerless() {
+		ru, _ := v.ComputeUnits()
+		context.RecordKvRU(tenant.Unit(ru))
+	}
+
+	return val
+}
+func getSubDocFetchResults(k string, fullName string, v *gomemcached.MCResponse, projection []string,
+	context datastore.QueryContext) value.AnnotatedValue {
+
+	val := value.NewAnnotatedValue(value.NewNestedScopeValue(nil))
+	index := 0
+	for off := 0; off < len(v.Body)-6 && index < len(projection); index++ {
+		status := gomemcached.Status(binary.BigEndian.Uint16(v.Body[off:]))
+		off += 2
+		rawLen := int(binary.BigEndian.Uint32(v.Body[off:]))
+		off += 4
+		raw := v.Body[off : off+rawLen]
+		off += rawLen
+		if status != gomemcached.SUBDOC_PATH_NOT_FOUND && index < len(projection) {
+			val.SetField(projection[index], value.NewValue(raw))
+		}
+	}
+
+	meta := val.NewMeta()
+	meta["keyspace"] = fullName
+	meta["cas"] = v.Cas
+	meta["type"] = "json"
+	meta["flags"] = 0
+	meta["expiration"] = 0
 	val.SetId(k)
 
 	if tenant.IsServerless() {
