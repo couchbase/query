@@ -58,7 +58,7 @@ func NewAccountingStore() (accounting.AccountingStore, errors.Error) {
 	// skip the first one
 	rv.stats.ProcessCpuStats()
 	rv.stats.ProcessRSS()
-	rv.stats.GetTotalAndFreeMem(false)
+	rv.stats.GetTotalAndFreeMem()
 
 	rv.startTime = time.Now()
 
@@ -144,7 +144,7 @@ func (g *gometricsAccountingStore) Vitals(style util.DurationStyle) (map[string]
 		"request.prepared.percent":  prepPercent,
 	}
 	g.Lock()
-	_, rss, total, free, err := system.GetSystemStats(g.stats, false, true)
+	_, rss, total, free, _, err := system.GetSystemStats(g.stats, false, true)
 	if err == nil {
 		rv["process.rss"] = rss
 		rv["host.memory.total"] = total

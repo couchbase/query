@@ -139,6 +139,10 @@ func (this *PartSortOrder) processItem(item value.AnnotatedValue, context *Conte
 		}
 	}
 
+	if this.last != nil {
+		this.last.Recycle()
+	}
+	item.Track()
 	err := this.values.Append(item)
 	if err == nil {
 		this.last = item

@@ -16,7 +16,6 @@ package value
 import (
 	"fmt"
 	"io"
-	"math/bits"
 	"reflect"
 	"strings"
 	"time"
@@ -62,7 +61,6 @@ func TristateToString(tristate Tristate) string {
 }
 
 const (
-	_MAP_SIZE       = 24
 	_INTERFACE_SIZE = 16
 	_POINTER_SIZE   = 8
 )
@@ -492,6 +490,24 @@ func NewValue(val interface{}) Value {
 }
 
 /*
+Figures here derived from testing various maps.
+*/
+func mapBaseSize(l int) uint64 {
+	switch {
+	case l == 0:
+		return 24
+	case l <= 8:
+		return 336
+	case l <= 13:
+		return 912
+	case l <= 26:
+		return 1536
+	default:
+		return uint64(1024 + (l/26)*2048)
+	}
+}
+
+/*
 Used by some Value.Size() functions to obtain the size of elements.
 */
 func anySize(v interface{}) uint64 {
@@ -499,20 +515,18 @@ func anySize(v interface{}) uint64 {
 	case Value:
 		return v.Size()
 	case string:
-		return uint64(len(v))
+		return uint64(len(v) + _INTERFACE_SIZE)
 	case map[string]interface{}:
-		n := 1 << bits.Len64(uint64(len(v)))
-		s := uint64(_INTERFACE_SIZE*n) + _MAP_SIZE
+		s := mapBaseSize(len(v))
 		for k, vv := range v {
-			s += uint64(len(k))
+			s += anySize(k)
 			s += anySize(vv)
 		}
 		return s
 	case map[string]Value:
-		n := 1 << bits.Len64(uint64(len(v)))
-		s := uint64(_POINTER_SIZE*n) + _MAP_SIZE
+		s := mapBaseSize(len(v))
 		for k, vv := range v {
-			s += uint64(len(k))
+			s += anySize(k)
 			s += vv.Size()
 		}
 		return s

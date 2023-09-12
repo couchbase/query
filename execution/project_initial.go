@@ -334,6 +334,9 @@ func (this *InitialProject) processTerms(item value.AnnotatedValue, context *Con
 	} else {
 		pv.SetProjection(p, nil)
 	}
+	if this.plan.DiscardOriginal() {
+		pv.ResetOriginal()
+	}
 	if context.UseRequestQuota() {
 		iSz := item.Size()
 		pSz := pv.Size()
@@ -347,9 +350,6 @@ func (this *InitialProject) processTerms(item value.AnnotatedValue, context *Con
 		} else {
 			context.ReleaseValueSize(iSz - pSz)
 		}
-	}
-	if this.plan.DiscardOriginal() {
-		pv.ResetOriginal()
 	}
 	item.Recycle()
 	if !this.excludeAndSend(exclusions, pv, context) {

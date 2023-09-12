@@ -72,7 +72,7 @@ func getOriginalCachedValue(item value.AnnotatedValue, expr expression.Expressio
 			context.Error(errors.NewEvaluationError(err, "original cached value"))
 			return
 		}
-		item.SetAttachment(s, rv)
+		item.SetAttachment(s, rv.CopyForUpdate())
 	}
 	return
 }

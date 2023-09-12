@@ -14,18 +14,19 @@ import (
 //////////////////////////////////////////////////////////////
 
 // memTotal, memFree account for cgroups if they are supported. See systemStats.go.
-var cpuPercent uint64  // (holds a float64) [0,GOMAXPROCS]*100% percent CPU this Go runtime is using
-var cpuTime uint64     // cpuTime utime+stime
-var cpuLastTime uint64 // last collection time
-var rss uint64         // size in bytes of the memory-resident portion of this Go runtime
-var memTotal uint64    // total memory in bytes available to this Go runtime
-var memFree uint64     // free mem in bytes (EXCLUDING inactive OS kernel pages in bare node case)
+var cpuPercent uint64    // (holds a float64) [0,GOMAXPROCS]*100% percent CPU this Go runtime is using
+var cpuTime uint64       // cpuTime utime+stime
+var cpuLastTime uint64   // last collection time
+var rss uint64           // size in bytes of the memory-resident portion of this Go runtime
+var memTotal uint64      // total memory in bytes available to this Go runtime
+var memFree uint64       // free mem in bytes (EXCLUDING inactive OS kernel pages in bare node case)
+var memActualFree uint64 // free mem in bytes (INCLUDING inactive OS kernel pages in bare node case)
 
 var _MIN_DURATION = uint64(time.Second.Milliseconds())
 
-func GetSystemStats(stats *SystemStats, refresh, log bool) (cpu float64, rss, total, free uint64, err error) {
+func GetSystemStats(stats *SystemStats, refresh, log bool) (cpu float64, rss, total, free, act uint64, err error) {
 	if !refresh {
-		return getCpuPercent(), getRSS(), getMemTotal(), GetMemFree(), nil
+		return getCpuPercent(), getRSS(), getMemTotal(), GetMemFree(), GetMemActualFree(), nil
 	}
 
 	if stats == nil {
@@ -39,7 +40,7 @@ func GetSystemStats(stats *SystemStats, refresh, log bool) (cpu float64, rss, to
 
 	pid, total, now, err1 := stats.ProcessCpuStats()
 	if err1 != nil {
-		return getCpuPercent(), getRSS(), getMemTotal(), GetMemFree(), nil
+		return getCpuPercent(), getRSS(), getMemTotal(), GetMemFree(), GetMemActualFree(), nil
 	}
 	lastTotal, lastNow, cpuPercent := getCpuStats()
 	dur := now - lastNow
@@ -56,11 +57,12 @@ func GetSystemStats(stats *SystemStats, refresh, log bool) (cpu float64, rss, to
 	updateRSS(rss)
 
 	var cGroupValues bool
-	if total, free, cGroupValues, err = stats.GetTotalAndFreeMem(false); err != nil {
+	if total, free, act, cGroupValues, err = stats.GetTotalAndFreeMem(); err != nil {
 		return
 	}
 	updateMemTotal(total)
 	updateMemFree(free)
+	updateMemActualFree(act)
 
 	if log {
 		s := "system"
@@ -108,11 +110,15 @@ func getMemTotal() uint64 {
 	return atomic.LoadUint64(&memTotal)
 }
 
+func updateMemFree(mem uint64) {
+	atomic.StoreUint64(&memFree, mem)
+}
+
 var lastFreeRefresh util.Time
 var freeRefresher int32
 
-func updateMemFree(mem uint64) {
-	atomic.StoreUint64(&memFree, mem)
+func updateMemActualFree(mem uint64) {
+	atomic.StoreUint64(&memActualFree, mem)
 	lastFreeRefresh = util.Now()
 }
 
@@ -120,13 +126,17 @@ func GetMemFree() uint64 {
 	return atomic.LoadUint64(&memFree)
 }
 
-func GetMemFreePercent() float64 {
+func GetMemActualFree() uint64 {
+	return atomic.LoadUint64(&memActualFree)
+}
+
+func GetMemActualFreePercent() float64 {
 	var f uint64
 	if util.Now().Sub(lastFreeRefresh) > time.Second && atomic.AddInt32(&freeRefresher, 1) == 1 {
 		stats, err := NewSystemStats()
 		if err == nil {
-			if f, err = stats.SystemFreeMem(); err == nil {
-				updateMemFree(f)
+			if f, err = stats.SystemActualFreeMem(); err == nil {
+				updateMemActualFree(f)
 			} else {
 				f = 0
 			}
@@ -136,7 +146,7 @@ func GetMemFreePercent() float64 {
 	}
 	t := getMemTotal()
 	if f == 0 {
-		f = GetMemFree()
+		f = GetMemActualFree()
 	}
 	if t > 0 {
 		return float64(f) / float64(t)

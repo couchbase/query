@@ -12,7 +12,6 @@ import (
 	"bytes"
 	"encoding/xml"
 	"io"
-	"math/bits"
 	"sort"
 	"strconv"
 
@@ -656,12 +655,7 @@ func (this objectValue) ContainsMatchingToken(matcher MatchFunc, options Value) 
 }
 
 func (this objectValue) Size() uint64 {
-	n := 1 << bits.Len64(uint64(len(this)))
-	size := uint64(_INTERFACE_SIZE*n) + _MAP_SIZE
-	for e, v := range this {
-		size += anySize(v) + uint64(len(e))
-	}
-	return size
+	return anySize(map[string]interface{}(this))
 }
 
 func (this objectValue) unwrap() Value {

@@ -216,10 +216,10 @@ func (this *AnnotatedArray) Append(v AnnotatedValue) errors.Error {
 	if this.heapSize > 0 {
 		// Prune the item that does not need to enter the heap.
 		if len(this.mem) == this.heapSize && !this.less(v, this.mem[0]) {
-			// treat the discarded item as if spilled permanently to disk; likely quota accounting in func
 			if this.trackMemory != nil {
 				this.trackMemory(-int64(v.Size()))
 			}
+			v.Recycle()
 			return nil
 		}
 		heap.Push(this, v)
@@ -234,6 +234,7 @@ func (this *AnnotatedArray) Append(v AnnotatedValue) errors.Error {
 			if this.trackMemory != nil {
 				this.trackMemory(-int64(sz))
 			}
+			ov.Recycle()
 		}
 	} else {
 		this.mem = append(this.mem, v)
@@ -255,12 +256,12 @@ func (this *AnnotatedArray) spillToDisk() error {
 	if this.less != nil {
 		sort.Sort(this)
 	}
-	start := time.Now()
+	start := util.Now()
 	sf, err := util.CreateTemp(_SPILL_FILE_PATTERN, true)
 	if err != nil {
 		return errors.NewValueError(errors.E_VALUE_SPILL_CREATE, err)
 	}
-	logging.Debugf("[%p] spilling to %s (#:%v, sz:%v)", this, sf.Name(), len(this.mem), this.memSize)
+	logging.Debugf("[%p] spilling to %s (#:%v, sz:%v, compr:%v)", this, sf.Name(), len(this.mem), this.memSize, this.compress)
 	spf := &spillFile{f: sf, lessFn: this.less, compress: this.compress}
 	this.spill = append(this.spill, spf)
 	var writer writerFlusher
@@ -285,7 +286,7 @@ func (this *AnnotatedArray) spillToDisk() error {
 		this.mem[i] = nil
 	}
 	writer.Flush()
-	spf.sz, err = sf.Seek(0, os.SEEK_CUR)
+	spf.sz, err = sf.Seek(0, os.SEEK_END)
 	if err != nil {
 		this.Truncate(nil)
 		return errors.NewValueError(errors.E_VALUE_SPILL_SIZE, err)
@@ -296,8 +297,10 @@ func (this *AnnotatedArray) spillToDisk() error {
 		return errors.NewTempFileQuotaExceededError()
 	}
 
-	d := time.Now().Sub(start)
-	logging.Debugf("[%p] spill took: %v. memSize: %v", this, d, this.memSize)
+	logging.Debuga(func() string {
+		d := util.Since(start)
+		return fmt.Sprintf("[%p] spill took: %v memSize: %v spf.sz: %v", this, d, this.memSize, spf.sz)
+	})
 	this.mem = this.mem[:0]
 	return nil
 }

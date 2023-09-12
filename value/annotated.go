@@ -11,7 +11,6 @@ package value
 import (
 	"encoding/binary"
 	"io"
-	"math/bits"
 	"reflect"
 	"unsafe"
 
@@ -36,7 +35,7 @@ func init() {
 		return unsafe.Pointer(rv)
 	})
 	av := newAnnotatedValue()
-	av.noRecycle = true
+	av.flags |= _NO_RECYCLE
 	av.refCnt = 2 // should ensure it is copied and not directly modified by LET etc.
 	av.Value = NewValue(map[string]interface{}{})
 	EMPTY_ANNOTATED_OBJECT = av
@@ -51,9 +50,7 @@ func newAnnotatedValue() *annotatedValue {
 	rv.refCnt = 1
 	rv.seenCnt = 0
 	rv.bit = 0
-	rv.self = false
-	rv.noRecycle = false
-	rv.sharedAnnotations = false
+	rv.flags = 0
 	rv.cachedSize = 0
 	return rv
 }
@@ -130,23 +127,42 @@ func NewAnnotatedValue(val interface{}) AnnotatedValue {
 	}
 }
 
+const (
+	_SHARED_ANNOTATIONS = 1 << iota
+	_NO_RECYCLE
+	_SELF
+	_HAS_SELF_REF
+)
+
 type annotatedValue struct {
 	Value
-	attachments       map[string]interface{}
-	sharedAnnotations bool
-	meta              map[string]interface{}
-	covers            Value
-	bit               uint8
-	id                interface{}
-	refCnt            int32
-	seenCnt           int32
-	self              bool
-	original          Value
-	annotatedOrig     AnnotatedValue
-	noRecycle         bool
-	projectionOrder   []string // transient: no need to spill
-	cachedSize        uint64   // do not spill
-	hasSelfRef        bool
+	attachments     map[string]interface{}
+	meta            map[string]interface{}
+	covers          Value
+	original        Value
+	annotatedOrig   AnnotatedValue
+	projectionOrder []string // transient: no need to spill
+	refCnt          int32
+	seenCnt         int32
+	cachedSize      uint32 // do not spill
+	bit             uint8
+	flags           uint8
+}
+
+func (this *annotatedValue) sharedAnnotations() bool {
+	return this.flags&_SHARED_ANNOTATIONS != 0
+}
+
+func (this *annotatedValue) noRecycle() bool {
+	return this.flags&_NO_RECYCLE != 0
+}
+
+func (this *annotatedValue) self() bool {
+	return this.flags&_SELF != 0
+}
+
+func (this *annotatedValue) hasSelfRef() bool {
+	return this.flags&_HAS_SELF_REF != 0
 }
 
 func (this *annotatedValue) String() string {
@@ -171,7 +187,6 @@ func (this *annotatedValue) Copy() Value {
 	rv.updateSelfReferences(this)
 	copyAttachments(this.attachments, rv)
 	copyMeta(this.meta, rv)
-	rv.id = this.id
 	rv.bit = this.bit
 	if this.covers != nil {
 		rv.covers = this.covers.Copy()
@@ -186,7 +201,6 @@ func (this *annotatedValue) CopyForUpdate() Value {
 	rv.updateSelfReferences(this)
 	copyAttachments(this.attachments, rv)
 	copyMeta(this.meta, rv)
-	rv.id = this.id
 	rv.bit = this.bit
 	if this.covers != nil {
 		rv.covers = this.covers.CopyForUpdate()
@@ -195,7 +209,7 @@ func (this *annotatedValue) CopyForUpdate() Value {
 }
 
 func (this *annotatedValue) updateSelfReferences(orig *annotatedValue) {
-	if !orig.hasSelfRef {
+	if !orig.hasSelfRef() {
 		return
 	}
 	osr := (*annotatedValueSelfReference)(orig)
@@ -206,7 +220,7 @@ func (this *annotatedValue) updateSelfReferences(orig *annotatedValue) {
 			flds[k] = nsr
 		}
 	}
-	this.hasSelfRef = true
+	this.flags |= _HAS_SELF_REF
 }
 
 func (this *annotatedValue) SetField(field string, val interface{}) error {
@@ -214,7 +228,9 @@ func (this *annotatedValue) SetField(field string, val interface{}) error {
 	if val == this {
 		selfRef := (*annotatedValueSelfReference)(val.(*annotatedValue))
 		err = this.Value.SetField(field, selfRef)
-		this.hasSelfRef = this.hasSelfRef || (err == nil)
+		if err == nil {
+			this.flags |= _HAS_SELF_REF
+		}
 	} else {
 		err = this.Value.SetField(field, val)
 		if err == nil {
@@ -229,39 +245,26 @@ func (this *annotatedValue) SetField(field string, val interface{}) error {
 
 func (this *annotatedValue) Size() uint64 {
 	if this.cachedSize != 0 {
-		return this.cachedSize
+		return uint64(this.cachedSize)
 	}
 	sz := this.Value.Size() + uint64(unsafe.Sizeof(*this))
 	if this.original != nil {
 		sz += this.original.Size()
 	}
-	if this.id != nil {
-		if s, ok := this.id.(string); ok {
-			sz += uint64(len(s))
-		}
-	}
 	// even though these may be shared, count them for each annotatedValue (prefer over to under counting quota)
-	n := 1 << bits.Len64(uint64(len(this.attachments)))
-	sz += uint64(_INTERFACE_SIZE*n) + _MAP_SIZE
-	for k, v := range this.attachments {
-		sz += uint64(len(k))
-		sz += anySize(v)
+	if this.attachments != nil {
+		sz += anySize(this.attachments)
 	}
-	n = 1 << bits.Len64(uint64(len(this.meta)))
-	sz += uint64(_INTERFACE_SIZE*n) + _MAP_SIZE
-	for k, v := range this.meta {
-		sz += uint64(len(k))
-		sz += anySize(v)
+	if this.meta != nil {
+		sz += anySize(this.meta)
 	}
-	n = 1 << bits.Len64(uint64(len(this.projectionOrder)))
-	sz += uint64(_POINTER_SIZE * n)
-	for i := range this.projectionOrder {
-		sz += uint64(len(this.projectionOrder[i]))
+	if this.projectionOrder != nil {
+		sz += anySize(this.projectionOrder)
 	}
 	if this.covers != nil {
 		sz += this.covers.Size()
 	}
-	this.cachedSize = sz
+	this.cachedSize = uint32(sz)
 	return sz
 }
 
@@ -314,9 +317,8 @@ func (this *annotatedValue) NewMeta() map[string]interface{} {
 }
 
 func (this *annotatedValue) GetMeta() map[string]interface{} {
-	if this.id != nil && this.meta == nil {
+	if this.meta == nil {
 		this.meta = make(map[string]interface{}, _DEFAULT_ATTACHMENT_SIZE)
-		this.meta["id"] = this.id
 	}
 	return this.meta
 }
@@ -399,7 +401,7 @@ func (this *annotatedValue) CopyAnnotations(sv AnnotatedValue) {
 	tap := reflect.ValueOf(this.attachments).Pointer()
 
 	// get rid of previous attachments
-	if this.sharedAnnotations {
+	if this.sharedAnnotations() {
 
 		// if we are already sharing with the source no need to do anything
 		if amp == tmp && aap == tap {
@@ -410,7 +412,7 @@ func (this *annotatedValue) CopyAnnotations(sv AnnotatedValue) {
 	} else {
 
 		// if the source is already sharing with us no need to do anything
-		if av.sharedAnnotations && amp == tmp && aap == tap {
+		if av.sharedAnnotations() && amp == tmp && aap == tap {
 			return
 		}
 		for k := range this.attachments {
@@ -422,26 +424,24 @@ func (this *annotatedValue) CopyAnnotations(sv AnnotatedValue) {
 	}
 	copyAttachments(av.attachments, this)
 	copyMeta(av.meta, this)
-	this.id = av.id
 	if av.Covers() != nil {
 		this.covers = av.covers.Copy()
 	} else {
 		this.covers = nil
 	}
-	this.sharedAnnotations = false
+	this.flags &^= _SHARED_ANNOTATIONS
 }
 
 func (this *annotatedValue) ShareAnnotations(sv AnnotatedValue) {
 	av := sv.(*annotatedValue) // we don't have any other annotated value implementation
 	this.attachments = av.attachments
 	this.meta = av.meta
-	this.id = av.id
 	if av.Covers() != nil {
 		this.covers = av.covers
 	} else {
 		this.covers = nil
 	}
-	this.sharedAnnotations = true
+	this.flags |= _SHARED_ANNOTATIONS
 }
 
 func copyAttachments(source map[string]interface{}, dest *annotatedValue) {
@@ -477,22 +477,26 @@ func (this *annotatedValue) SetBit(b uint8) {
 }
 
 func (this *annotatedValue) Self() bool {
-	return this.self
+	return this.self()
 }
 
 func (this *annotatedValue) SetSelf(s bool) {
-	this.self = s
+	if s {
+		this.flags |= _SELF
+	} else {
+		this.flags &^= _SELF
+	}
 }
 
 func (this *annotatedValue) GetId() interface{} {
-	return this.id
+	if this.meta == nil {
+		return nil
+	}
+	return this.meta["id"]
 }
 
 func (this *annotatedValue) SetId(id interface{}) {
-	this.id = id
-	if this.meta != nil {
-		this.meta["id"] = id
-	}
+	this.NewMeta()["id"] = id
 }
 
 func (this *annotatedValue) SetProjection(proj Value, order []string) {
@@ -519,7 +523,7 @@ func (this *annotatedValue) Original() AnnotatedValue {
 	}
 
 	av := newAnnotatedValue()
-	av.noRecycle = true
+	av.flags |= _NO_RECYCLE
 	switch val := val.(type) {
 	case *annotatedValue:
 		av.Value = val.Value
@@ -549,7 +553,9 @@ func (this *annotatedValue) ResetOriginal() {
 		annotatedPool.Put(unsafe.Pointer(val))
 		this.annotatedOrig = nil
 	}
-	// don't recycle as may have untracked reference in a field
+	if this.original != nil {
+		this.original.Recycle()
+	}
 	this.original = nil
 }
 
@@ -566,7 +572,7 @@ func (this *annotatedValue) Seen() bool {
 }
 
 func (this *annotatedValue) Track() {
-	if !this.noRecycle {
+	if !this.noRecycle() {
 		atomic.AddInt32(&this.refCnt, 1)
 	}
 }
@@ -582,7 +588,7 @@ func (this *annotatedValue) RefCnt() int32 {
 func (this *annotatedValue) recycle(lvl int32) {
 
 	// don't change the refCnt if marked as not-recycleable
-	if this.noRecycle {
+	if this.noRecycle() {
 		return
 	}
 	// do no recycle if other scope values are using this value
@@ -603,7 +609,7 @@ func (this *annotatedValue) recycle(lvl int32) {
 		this.Value = nil
 	}
 	if this.covers != nil {
-		if !this.sharedAnnotations {
+		if !this.sharedAnnotations() {
 			this.covers.Recycle()
 		}
 		this.covers = nil
@@ -621,7 +627,7 @@ func (this *annotatedValue) recycle(lvl int32) {
 		this.original = nil
 	}
 
-	if this.sharedAnnotations {
+	if this.sharedAnnotations() {
 		this.attachments = nil
 		this.meta = nil
 	} else {
@@ -635,9 +641,8 @@ func (this *annotatedValue) recycle(lvl int32) {
 			delete(this.meta, k)
 		}
 	}
-	this.sharedAnnotations = false
+	this.flags = 0
 	this.projectionOrder = nil
-	this.id = nil
 	annotatedPool.Put(unsafe.Pointer(this))
 }
 
@@ -697,14 +702,6 @@ func (this *annotatedValue) WriteSpill(w io.Writer, buf []byte) error {
 		return err
 	}
 
-	err = writeSpillValue(w, this.id, buf)
-	if err != nil {
-		if free {
-			_SPILL_POOL.Put(buf)
-		}
-		return err
-	}
-
 	buf = buf[:4]
 	binary.BigEndian.PutUint32(buf, uint32(this.refCnt))
 	_, err = w.Write(buf)
@@ -717,12 +714,12 @@ func (this *annotatedValue) WriteSpill(w io.Writer, buf []byte) error {
 
 	buf = buf[:3]
 	buf[0] = this.bit
-	if this.self {
+	if this.self() {
 		buf[1] = 1
 	} else {
 		buf[1] = 0
 	}
-	if this.noRecycle {
+	if this.noRecycle() {
 		buf[2] = 1
 	} else {
 		buf[2] = 0
@@ -813,14 +810,6 @@ func (this *annotatedValue) ReadSpill(r io.Reader, buf []byte) error {
 		this.meta = nil
 	}
 
-	this.id, err = readSpillValue(r, buf)
-	if err != nil {
-		if free {
-			_SPILL_POOL.Put(buf)
-		}
-		return err
-	}
-
 	buf = buf[:4]
 	_, err = r.Read(buf)
 	if err != nil {
@@ -835,8 +824,14 @@ func (this *annotatedValue) ReadSpill(r io.Reader, buf []byte) error {
 	_, err = r.Read(buf)
 	if err == nil {
 		this.bit = buf[0]
-		this.self = (buf[1] == 1)
-		this.noRecycle = (buf[2] == 1)
+		this.flags |= _SELF
+		if buf[1] != 1 {
+			this.flags ^= _SELF
+		}
+		this.flags |= _NO_RECYCLE
+		if buf[2] != 1 {
+			this.flags ^= _NO_RECYCLE
+		}
 	}
 	if free {
 		_SPILL_POOL.Put(buf)

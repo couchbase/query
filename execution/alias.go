@@ -71,6 +71,7 @@ func (this *Alias) processItem(item value.AnnotatedValue, context *Context) bool
 	}
 	av.ShareAnnotations(item)
 	av.SetField(this.plan.Alias(), item)
+	item.Recycle() // tracked as a field now
 	if this.hasBuildBitFilter() && !this.buildBitFilters(av, &this.operatorCtx) {
 		av.Recycle()
 		return false

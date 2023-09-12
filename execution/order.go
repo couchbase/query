@@ -46,21 +46,16 @@ func NewOrder(plan *plan.Order, context *Context) *Order {
 	if plan.CanSpill() {
 		if context.UseRequestQuota() {
 			shouldSpill = func(c uint64, n uint64) bool {
-				t := 0.75
-				f := system.GetMemFreePercent()
-				switch {
-				case f <= 0.1:
-					t = 0.1
-				case f <= 0.2:
-					t = 0.2
-				case f <= 0.3:
-					t = 0.3
-				case f <= 0.4:
-					t = 0.4
-				case f <= 0.5:
-					t = 0.5
+				if (c + n) <= context.ProducerThrottleQuota() {
+					return false
 				}
-				return (c+n) > context.ProducerThrottleQuota() && context.CurrentQuotaUsage() > t
+				f := util.RoundPlaces(system.GetMemActualFreePercent(), 1)
+				if f < 0.1 {
+					f = 0.1
+				} else if f > 0.7 {
+					f = 0.7
+				}
+				return context.CurrentQuotaUsage() > f
 			}
 		} else {
 			maxSize := context.AvailableMemory()
@@ -216,6 +211,7 @@ func (this *Order) makeMinimal(item value.AnnotatedValue, context *Context) {
 	origAtt = nil
 	item.ResetCovers(nil)
 	item.ResetMeta()
+	item.ResetOriginal()
 	if useQuota {
 		asz := item.RecalculateSize()
 		if sz < asz {
@@ -228,7 +224,6 @@ func (this *Order) makeMinimal(item value.AnnotatedValue, context *Context) {
 			context.ReleaseValueSize(sz - asz)
 		}
 	}
-	item.ResetOriginal() // doesn't recycle the value so we do it after the accounting since the memory may remain in use
 }
 
 func (this *Order) lessThan(v1 value.AnnotatedValue, v2 value.AnnotatedValue) bool {

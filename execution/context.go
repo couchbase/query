@@ -899,7 +899,7 @@ func (this *Context) AvailableMemory() uint64 {
 	if this.memorySession != nil {
 		return this.memorySession.AvailableMemory()
 	}
-	return system.GetMemFree()
+	return system.GetMemActualFree()
 }
 
 // UDF memory storage

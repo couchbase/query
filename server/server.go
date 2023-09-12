@@ -1704,8 +1704,8 @@ func (this *Server) GCPercent() int {
 }
 
 func (this *Server) SetGCPercent(gcpercent int) error {
-	if gcpercent < 75 || gcpercent > 300 {
-		return fmt.Errorf("gcpercent (%v) outside permitted range (75-300)", gcpercent)
+	if gcpercent < 25 || gcpercent > 300 {
+		return fmt.Errorf("gcpercent (%v) outside permitted range (25-300)", gcpercent)
 	}
 	if this.gcpercent != gcpercent {
 		logging.Infof("Changing GC percent from %d to %d", this.gcpercent, gcpercent)
@@ -2024,7 +2024,7 @@ func (this *Server) ServicerUsage() int {
 
 func (this *Server) CpuUsage(refresh bool) float64 {
 	// get process cpu usage
-	cpu, _, _, _, _ := system.GetSystemStats(nil, refresh, false)
+	cpu, _, _, _, _, _ := system.GetSystemStats(nil, refresh, false)
 	if cpu == 0 {
 		// no data, calculate alternative approach
 		newUtime, newStime := util.CpuTimes()
@@ -2058,7 +2058,7 @@ func (this *Server) MemoryUsage(refresh bool) (uint64, uint64) {
 
 	// no node quota. caulculate Query engine memory quota as 50% system memory
 	// get system memory info
-	_, _, total, _, _ := system.GetSystemStats(nil, refresh, false)
+	_, _, total, _, _, _ := system.GetSystemStats(nil, refresh, false)
 	if total <= 0 {
 		return _DEF_MEMORY_USAGE, ms.LastGC
 	}

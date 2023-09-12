@@ -104,21 +104,21 @@ func (s *SystemStats) SystemTotalMem() (uint64, error) {
 	return uint64(mem.total), nil
 }
 
-// actual = true means include inactive OS Kernel pages in free memory computation
-// actual = false means exclude inactive OS Kernel pages in free memory computation
-// Return Values: (TotalMem, FreeMem, cGroupValues, error)
+// ActualFreeMem means include inactive OS Kernel pages in free memory computation
+// FreeMem means exclude inactive OS Kernel pages in free memory computation
+// Return Values: (TotalMem, FreeMem, ActualFreeMem, cGroupValues, error)
 // cGroupValues => true if the limits of the container are returned
 //
 //	=> false if the system limits are returned
-func (s *SystemStats) GetTotalAndFreeMem(actual bool) (uint64, uint64, bool, error) {
-	var sysTotal, sysFree uint64
+func (s *SystemStats) GetTotalAndFreeMem() (uint64, uint64, uint64, bool, error) {
+	var sysTotal, sysFree, sysActFree uint64
 	var cGroupTotal uint64
 	var err error
 
 	sysTotal, err = s.SystemTotalMem()
 	if err != nil {
 		logging.Debugf("SystemStats::GetTotalAndFreeMem Failed to get total memory, err: %v", err)
-		return 0, 0, false, err
+		return 0, 0, 0, false, err
 	}
 
 	cgroupInfo := s.GetControlGroupInfo()
@@ -127,23 +127,20 @@ func (s *SystemStats) GetTotalAndFreeMem(actual bool) (uint64, uint64, bool, err
 		cGroupCurr := cgroupInfo.MemoryCurrent
 		// cGroupTotal is with-in valid system limits
 		if cGroupTotal > 0 && cGroupTotal <= sysTotal {
-			return cGroupTotal, cGroupTotal - cGroupCurr, true, nil
+			return cGroupTotal, cGroupTotal - cGroupCurr, cGroupTotal - cGroupCurr, true, nil
 		}
 	}
-	if actual {
-		sysFree, err = s.SystemActualFreeMem()
-		if err != nil {
-			logging.Debugf("SystemStats::GetTotalAndFreeMem Failed to actual free memory, err: %v", err)
-			return 0, 0, false, err
-		}
-	} else {
-		sysFree, err = s.SystemFreeMem()
-		if err != nil {
-			logging.Debugf("SystemStats::GetTotalAndFreeMem Failed to free memory, err: %v", err)
-			return 0, 0, false, err
-		}
+	sysActFree, err = s.SystemActualFreeMem()
+	if err != nil {
+		logging.Debugf("SystemStats::GetTotalAndFreeMem Failed to get actual free memory, err: %v", err)
+		return 0, 0, 0, false, err
 	}
-	return sysTotal, sysFree, false, nil
+	sysFree, err = s.SystemFreeMem()
+	if err != nil {
+		logging.Debugf("SystemStats::GetTotalAndFreeMem Failed to get free memory, err: %v", err)
+		return 0, 0, 0, false, err
+	}
+	return sysTotal, sysFree, sysActFree, false, nil
 }
 
 // SigarCpuT type Go-wraps the sigar C library sigar_cpu_t type. CPU in use should sum Sys + User +

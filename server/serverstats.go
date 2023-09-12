@@ -10,6 +10,7 @@ package server
 
 import (
 	"runtime"
+	"runtime/debug"
 	"sync/atomic"
 	"time"
 
@@ -18,6 +19,7 @@ import (
 	"github.com/couchbase/query/ffdc"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/memory"
+	"github.com/couchbase/query/system"
 	"github.com/couchbase/query/tenant"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
@@ -28,6 +30,7 @@ const (
 	_LOG_INTRVL     = 10               // log interval 5min
 	_MOVING_WINDOW  = 30               // 15min, load factor moving average of 15min i.e 30 values
 	DEF_LOAD_FACTOR = 35               // default load factor above 30% so that at start no nodes will be added
+	_FREE_FLOOR     = 0.25             // system free memory percent (1.0=100%) below which we may free to the OS
 
 	_FFDC_MEM_THRESH = 80                                     // FFDC memory use threshold
 	_FFDC_MEM_RATE   = 20                                     // FFDC memory increase rate threshold
@@ -259,7 +262,11 @@ func (c *statsCollector) runCollectStats() {
 		util.ResyncTime()
 		if util.Now().UnixNano()-int64(lastGC) > int64(_STATS_INTRVL) {
 			logging.Debugf("Running GC")
-			runtime.GC()
+			if system.GetMemActualFreePercent() >= _FREE_FLOOR {
+				runtime.GC()
+			} else {
+				debug.FreeOSMemory()
+			}
 		}
 
 	}

@@ -114,6 +114,10 @@ func (this *OrderLimit) beforeItems(context *Context, parent value.Value) bool {
 func (this *OrderLimit) processItem(item value.AnnotatedValue, context *Context) bool {
 	this.numProcessedRows++
 	if this.ignoreInput {
+		if context.UseRequestQuota() {
+			context.ReleaseValueSize(item.Size())
+		}
+		item.Recycle()
 		return true
 	}
 	return this.Order.processItem(item, context)
