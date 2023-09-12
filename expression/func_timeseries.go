@@ -62,6 +62,7 @@ func (this *TimeSeries) Copy() Expression {
 	for f, v := range this.tsPaths {
 		rv.tsPaths[f] = v
 	}
+	rv.expr = rv
 	return rv
 }
 
