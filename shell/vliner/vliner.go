@@ -62,6 +62,7 @@ const (
 const (
 	_REPLAY_END = -1
 	_ASCII_NUL  = 0
+	_ASCII_BS   = '\b'
 	_ASCII_TAB  = 9
 	_ASCII_ESC  = 27
 	_ASCII_VT   = 11
@@ -788,6 +789,10 @@ func (s *State) Prompt(prompt string) (string, error) {
 	repeatSpecified := false
 mainLoop:
 	for 0 == done {
+		if 0 > pos {
+			pos = 0
+		}
+
 		// It is simpler when dealing with multiple display character runes to draw the entire input & calculate the cursor
 		// position every time
 		s.render(pos, cmdPrompt, line, []rune(nil))
@@ -1294,13 +1299,15 @@ mainLoop:
 				moved = s.isMultiLine(line)
 			case 's':
 				s.saveForUndo(line, pos, repeat, r)
-				l := repeat
-				if len(line) < pos+l {
-					l = len(line) - pos
+				if 0 < len(line) {
+					l := repeat
+					if len(line) < pos+l {
+						l = len(line) - pos
+					}
+					yank = append([]rune(nil), line[pos:pos+l]...)
+					copy(line[pos:], line[pos+l:])
+					line = line[:len(line)-l]
 				}
-				yank = append([]rune(nil), line[pos:pos+l]...)
-				copy(line[pos:], line[pos+l:])
-				line = line[:len(line)-l]
 				if !s.replayActive {
 					s.insertIntoInput('i')
 				}
@@ -1374,10 +1381,28 @@ mainLoop:
 					} else if '’' == sr {
 						sra = '‘'
 					}
-					for i, _ := range line {
-						if line[i] == sr || line[i] == sra {
-							line[i] = r
-							pos = i
+					if _ASCII_DEL == r || _ASCII_BS == r {
+						res := make([]rune, 0, len(line))
+						for i, _ := range line {
+							if line[i] != sr && line[i] != sra {
+								res = append(res, line[i])
+							} else {
+								pos = len(res)
+							}
+						}
+						line = res
+						if len(line) <= pos {
+							pos = len(line) - 1
+						}
+						if 0 > pos {
+							pos = 0
+						}
+					} else {
+						for i, _ := range line {
+							if line[i] == sr || line[i] == sra {
+								line[i] = r
+								pos = i
+							}
 						}
 					}
 					s.stopRecording()
