@@ -33,6 +33,7 @@ func init() {
 	av.noRecycle = true
 	av.refCnt = 2 // should ensure it is copied and not directly modified by LET etc.
 	av.Value = NewValue(map[string]interface{}{})
+	EMPTY_ANNOTATED_OBJECT = av
 }
 
 func newAnnotatedValue() *annotatedValue {
