@@ -975,6 +975,7 @@ func (seq *sequence) checkCycle(prev int64) (int64, errors.Error) {
 		if (seq.increment < 0 && (seq.current < seq.min || prev < seq.current)) ||
 			(seq.increment > 0 && (seq.current > seq.max || prev > seq.current)) {
 
+			seq.current = prev // undo the change that failed
 			seq.Unlock()
 			return 0, errors.NewSequenceError(errors.E_SEQUENCE_EXHAUSTED, seq.name.SimpleString())
 		}
