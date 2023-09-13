@@ -31,9 +31,8 @@ func NewConcat(operands ...Expression) Function {
 		}
 	}
 
-	rv := &Concat{
-		*NewFunctionBase("concat", operands...),
-	}
+	rv := &Concat{}
+	rv.Init("concat", operands...)
 
 	rv.expr = rv
 	return rv
@@ -114,9 +113,8 @@ func NewConcat2(operands ...Expression) Function {
 		}
 	}
 
-	rv := &Concat2{
-		*NewFunctionBase("concat2", operands...),
-	}
+	rv := &Concat2{}
+	rv.Init("concat2", operands...)
 
 	rv.expr = rv
 	return rv

@@ -27,12 +27,10 @@ type SequenceOperation struct {
 
 func NewSequenceNext(defs ...string) *SequenceOperation {
 	rv := &SequenceOperation{
-		*NewNullaryFunctionBase("next_sequence_value"),
-		true,
-		defs,
-		nil,
-		"",
+		next:     true,
+		defaults: defs,
 	}
+	rv.Init("next_sequence_value")
 	rv.expr = rv
 	rv.setVolatile()
 	return rv
@@ -40,12 +38,9 @@ func NewSequenceNext(defs ...string) *SequenceOperation {
 
 func NewSequencePrev(defs ...string) *SequenceOperation {
 	rv := &SequenceOperation{
-		*NewNullaryFunctionBase("prev_sequence_value"),
-		false,
-		defs,
-		nil,
-		"",
+		defaults: defs,
 	}
+	rv.Init("prev_sequence_value")
 	rv.expr = rv
 	rv.setVolatile()
 	return rv
@@ -153,12 +148,12 @@ func (this *SequenceOperation) Static() Expression {
 
 func (this *SequenceOperation) Copy() Expression {
 	rv := &SequenceOperation{
-		*NewNullaryFunctionBase(this.name),
-		this.next,
-		this.defaults,
-		this.elems,
-		this.fullName,
+		next:     this.next,
+		defaults: this.defaults,
+		elems:    this.elems,
+		fullName: this.fullName,
 	}
+	rv.Init(this.FunctionBase.name)
 	rv.expr = rv
 	rv.setVolatile()
 	return rv

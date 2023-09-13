@@ -22,9 +22,8 @@ type Div struct {
 }
 
 func NewDiv(first, second Expression) Function {
-	rv := &Div{
-		*NewBinaryFunctionBase("div", first, second),
-	}
+	rv := &Div{}
+	rv.Init("div", first, second)
 
 	rv.expr = rv
 	return rv

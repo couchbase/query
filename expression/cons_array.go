@@ -23,9 +23,8 @@ type ArrayConstruct struct {
 }
 
 func NewArrayConstruct(operands ...Expression) Function {
-	rv := &ArrayConstruct{
-		*NewFunctionBase("array", operands...),
-	}
+	rv := &ArrayConstruct{}
+	rv.Init("array", operands...)
 
 	rv.expr = rv
 	rv.Value() // Initialize value

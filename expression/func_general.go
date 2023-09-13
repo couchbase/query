@@ -23,9 +23,8 @@ type Len struct {
 }
 
 func NewLen(operand Expression) Function {
-	rv := &Len{
-		*NewUnaryFunctionBase("len", operand),
-	}
+	rv := &Len{}
+	rv.Init("len", operand)
 
 	rv.expr = rv
 	return rv

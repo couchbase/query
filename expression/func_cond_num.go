@@ -30,9 +30,8 @@ type IfInf struct {
 }
 
 func NewIfInf(operands ...Expression) Function {
-	rv := &IfInf{
-		*NewFunctionBase("ifinf", operands...),
-	}
+	rv := &IfInf{}
+	rv.Init("ifinf", operands...)
 
 	rv.setConditional()
 	rv.expr = rv
@@ -119,9 +118,8 @@ type IfNaN struct {
 }
 
 func NewIfNaN(operands ...Expression) Function {
-	rv := &IfNaN{
-		*NewFunctionBase("ifnan", operands...),
-	}
+	rv := &IfNaN{}
+	rv.Init("ifnan", operands...)
 
 	rv.setConditional()
 	rv.expr = rv
@@ -204,9 +202,8 @@ type IfNaNOrInf struct {
 }
 
 func NewIfNaNOrInf(operands ...Expression) Function {
-	rv := &IfNaNOrInf{
-		*NewFunctionBase("ifnanorinf", operands...),
-	}
+	rv := &IfNaNOrInf{}
+	rv.Init("ifnanorinf", operands...)
 
 	rv.setConditional()
 	rv.expr = rv
@@ -289,9 +286,8 @@ type NaNIf struct {
 }
 
 func NewNaNIf(first, second Expression) Function {
-	rv := &NaNIf{
-		*NewBinaryFunctionBase("nanif", first, second),
-	}
+	rv := &NaNIf{}
+	rv.Init("nanif", first, second)
 
 	rv.expr = rv
 	return rv
@@ -359,9 +355,8 @@ type NegInfIf struct {
 }
 
 func NewNegInfIf(first, second Expression) Function {
-	rv := &NegInfIf{
-		*NewBinaryFunctionBase("neginfif", first, second),
-	}
+	rv := &NegInfIf{}
+	rv.Init("neginfif", first, second)
 
 	rv.expr = rv
 	return rv
@@ -431,9 +426,8 @@ type PosInfIf struct {
 }
 
 func NewPosInfIf(first, second Expression) Function {
-	rv := &PosInfIf{
-		*NewBinaryFunctionBase("posinfif", first, second),
-	}
+	rv := &PosInfIf{}
+	rv.Init("posinfif", first, second)
 
 	rv.expr = rv
 	return rv

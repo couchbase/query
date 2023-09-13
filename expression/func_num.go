@@ -30,9 +30,8 @@ type Abs struct {
 }
 
 func NewAbs(operand Expression) Function {
-	rv := &Abs{
-		*NewUnaryFunctionBase("abs", operand),
-	}
+	rv := &Abs{}
+	rv.Init("abs", operand)
 
 	rv.expr = rv
 	return rv
@@ -92,9 +91,8 @@ type Acos struct {
 }
 
 func NewAcos(operand Expression) Function {
-	rv := &Acos{
-		*NewUnaryFunctionBase("acos", operand),
-	}
+	rv := &Acos{}
+	rv.Init("acos", operand)
 
 	rv.expr = rv
 	return rv
@@ -151,9 +149,8 @@ type Asin struct {
 }
 
 func NewAsin(operand Expression) Function {
-	rv := &Asin{
-		*NewUnaryFunctionBase("asin", operand),
-	}
+	rv := &Asin{}
+	rv.Init("asin", operand)
 
 	rv.expr = rv
 	return rv
@@ -210,9 +207,8 @@ type Atan struct {
 }
 
 func NewAtan(operand Expression) Function {
-	rv := &Atan{
-		*NewUnaryFunctionBase("atan", operand),
-	}
+	rv := &Atan{}
+	rv.Init("atan", operand)
 
 	rv.expr = rv
 	return rv
@@ -269,9 +265,8 @@ type Atan2 struct {
 }
 
 func NewAtan2(first, second Expression) Function {
-	rv := &Atan2{
-		*NewBinaryFunctionBase("atan2", first, second),
-	}
+	rv := &Atan2{}
+	rv.Init("atan2", first, second)
 
 	rv.expr = rv
 	return rv
@@ -336,9 +331,8 @@ type Ceil struct {
 }
 
 func NewCeil(operand Expression) Function {
-	rv := &Ceil{
-		*NewUnaryFunctionBase("ceil", operand),
-	}
+	rv := &Ceil{}
+	rv.Init("ceil", operand)
 
 	rv.expr = rv
 	return rv
@@ -396,9 +390,8 @@ type Cos struct {
 }
 
 func NewCos(operand Expression) Function {
-	rv := &Cos{
-		*NewUnaryFunctionBase("cos", operand),
-	}
+	rv := &Cos{}
+	rv.Init("cos", operand)
 
 	rv.expr = rv
 	return rv
@@ -455,9 +448,8 @@ type Degrees struct {
 }
 
 func NewDegrees(operand Expression) Function {
-	rv := &Degrees{
-		*NewUnaryFunctionBase("degrees", operand),
-	}
+	rv := &Degrees{}
+	rv.Init("degrees", operand)
 
 	rv.expr = rv
 	return rv
@@ -517,10 +509,8 @@ type E struct {
 var _E = NewE()
 
 func NewE() Function {
-	rv := &E{
-		*NewNullaryFunctionBase("e"),
-	}
-
+	rv := &E{}
+	rv.Init("e")
 	rv.expr = rv
 	return rv
 }
@@ -580,9 +570,8 @@ type Exp struct {
 }
 
 func NewExp(operand Expression) Function {
-	rv := &Exp{
-		*NewUnaryFunctionBase("exp", operand),
-	}
+	rv := &Exp{}
+	rv.Init("exp", operand)
 
 	rv.expr = rv
 	return rv
@@ -634,9 +623,8 @@ type Ln struct {
 }
 
 func NewLn(operand Expression) Function {
-	rv := &Ln{
-		*NewUnaryFunctionBase("ln", operand),
-	}
+	rv := &Ln{}
+	rv.Init("ln", operand)
 
 	rv.expr = rv
 	return rv
@@ -688,9 +676,8 @@ type Log struct {
 }
 
 func NewLog(operand Expression) Function {
-	rv := &Log{
-		*NewUnaryFunctionBase("log", operand),
-	}
+	rv := &Log{}
+	rv.Init("log", operand)
 
 	rv.expr = rv
 	return rv
@@ -743,9 +730,8 @@ type Floor struct {
 }
 
 func NewFloor(operand Expression) Function {
-	rv := &Floor{
-		*NewUnaryFunctionBase("floor", operand),
-	}
+	rv := &Floor{}
+	rv.Init("floor", operand)
 
 	rv.expr = rv
 	return rv
@@ -799,10 +785,8 @@ type NaN struct {
 var _NAN = NewNaN()
 
 func NewNaN() Function {
-	rv := &NaN{
-		*NewNullaryFunctionBase("nan"),
-	}
-
+	rv := &NaN{}
+	rv.Init("nan")
 	rv.expr = rv
 	return rv
 }
@@ -864,10 +848,8 @@ type NegInf struct {
 var _NEG_INF = NewNegInf()
 
 func NewNegInf() Function {
-	rv := &NegInf{
-		*NewNullaryFunctionBase("neginf"),
-	}
-
+	rv := &NegInf{}
+	rv.Init("neginf")
 	rv.expr = rv
 	return rv
 }
@@ -929,10 +911,8 @@ type PI struct {
 var _PI = NewPI()
 
 func NewPI() Function {
-	rv := &PI{
-		*NewNullaryFunctionBase("pi"),
-	}
-
+	rv := &PI{}
+	rv.Init("pi")
 	rv.expr = rv
 	return rv
 }
@@ -993,10 +973,8 @@ type PosInf struct {
 var _POS_INF = NewPosInf()
 
 func NewPosInf() Function {
-	rv := &PosInf{
-		*NewNullaryFunctionBase("posinf"),
-	}
-
+	rv := &PosInf{}
+	rv.Init("posinf")
 	rv.expr = rv
 	return rv
 }
@@ -1057,10 +1035,8 @@ type Power struct {
 }
 
 func NewPower(first, second Expression) Function {
-	rv := &Power{
-		*NewBinaryFunctionBase("power", first, second),
-		false,
-	}
+	rv := &Power{}
+	rv.Init("power", first, second)
 
 	rv.expr = rv
 	return rv
@@ -1130,9 +1106,8 @@ type Radians struct {
 }
 
 func NewRadians(operand Expression) Function {
-	rv := &Radians{
-		*NewUnaryFunctionBase("radians", operand),
-	}
+	rv := &Radians{}
+	rv.Init("radians", operand)
 
 	rv.expr = rv
 	return rv
@@ -1184,10 +1159,8 @@ type Random struct {
 }
 
 func NewRandom(operands ...Expression) Function {
-	rv := &Random{
-		*NewFunctionBase("random", operands...),
-		nil,
-	}
+	rv := &Random{}
+	rv.Init("random", operands...)
 
 	rv.setVolatile()
 	rv.expr = rv
@@ -1285,9 +1258,8 @@ type Round struct {
 }
 
 func NewRound(operands ...Expression) Function {
-	rv := &Round{
-		*NewFunctionBase("round", operands...),
-	}
+	rv := &Round{}
+	rv.Init("round", operands...)
 
 	rv.expr = rv
 	return rv
@@ -1375,9 +1347,8 @@ type RoundNearest struct {
 }
 
 func NewRoundNearest(operands ...Expression) Function {
-	rv := &RoundNearest{
-		*NewFunctionBase("round_nearest", operands...),
-	}
+	rv := &RoundNearest{}
+	rv.Init("round_nearest", operands...)
 
 	rv.expr = rv
 	return rv
@@ -1464,9 +1435,8 @@ type Sign struct {
 }
 
 func NewSign(operand Expression) Function {
-	rv := &Sign{
-		*NewUnaryFunctionBase("sign", operand),
-	}
+	rv := &Sign{}
+	rv.Init("sign", operand)
 
 	rv.expr = rv
 	return rv
@@ -1533,9 +1503,8 @@ type Sin struct {
 }
 
 func NewSin(operand Expression) Function {
-	rv := &Sin{
-		*NewUnaryFunctionBase("sin", operand),
-	}
+	rv := &Sin{}
+	rv.Init("sin", operand)
 
 	rv.expr = rv
 	return rv
@@ -1592,9 +1561,8 @@ type Sqrt struct {
 }
 
 func NewSqrt(operand Expression) Function {
-	rv := &Sqrt{
-		*NewUnaryFunctionBase("sqrt", operand),
-	}
+	rv := &Sqrt{}
+	rv.Init("sqrt", operand)
 
 	rv.expr = rv
 	return rv
@@ -1651,9 +1619,8 @@ type Tan struct {
 }
 
 func NewTan(operand Expression) Function {
-	rv := &Tan{
-		*NewUnaryFunctionBase("tan", operand),
-	}
+	rv := &Tan{}
+	rv.Init("tan", operand)
 
 	rv.expr = rv
 	return rv
@@ -1712,9 +1679,8 @@ type Trunc struct {
 }
 
 func NewTrunc(operands ...Expression) Function {
-	rv := &Trunc{
-		*NewFunctionBase("trunc", operands...),
-	}
+	rv := &Trunc{}
+	rv.Init("trunc", operands...)
 
 	rv.expr = rv
 	return rv

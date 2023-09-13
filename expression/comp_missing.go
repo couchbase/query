@@ -17,9 +17,8 @@ type IsMissing struct {
 }
 
 func NewIsMissing(operand Expression) Function {
-	rv := &IsMissing{
-		*NewUnaryFunctionBase("ismissing", operand),
-	}
+	rv := &IsMissing{}
+	rv.Init("ismissing", operand)
 
 	rv.expr = rv
 	return rv
@@ -87,9 +86,8 @@ type IsNotMissing struct {
 }
 
 func NewIsNotMissing(operand Expression) Function {
-	rv := &IsNotMissing{
-		*NewUnaryFunctionBase("isnotmissing", operand),
-	}
+	rv := &IsNotMissing{}
+	rv.Init("isnotmissing", operand)
 
 	rv.expr = rv
 	return rv

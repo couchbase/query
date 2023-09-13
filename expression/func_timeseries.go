@@ -34,7 +34,7 @@ var defTsPaths = []string{_TSDATA, _TSINTERVAL, _TSSTART, _TSEND}
 
 func NewTimeSeries(operands ...Expression) Function {
 	rv := &TimeSeries{}
-	rv.FunctionBase = *NewFunctionBase("_timeseries", operands...)
+	rv.Init("_timeseries", operands...)
 
 	// Get the ts paths from options
 	var options Expression
@@ -56,7 +56,7 @@ func (this *TimeSeries) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *TimeSeries) Copy() Expression {
 	rv := &TimeSeries{}
-	rv.FunctionBase = *NewFunctionBase("_timeseries", this.operands.Copy()...)
+	rv.Init("_timeseries", this.operands.Copy()...)
 	rv.BaseCopy(this)
 	rv.tsPaths = make(map[string]string, len(this.tsPaths))
 	for f, v := range this.tsPaths {

@@ -32,10 +32,8 @@ type RegexpContains struct {
 }
 
 func NewRegexpContains(first, second Expression) Function {
-	rv := &RegexpContains{
-		*NewBinaryFunctionBase("regexp_contains", first, second),
-		nil,
-	}
+	rv := &RegexpContains{}
+	rv.Init("regexp_contains", first, second)
 
 	rv.re, _ = precompileRegexp(second.Value(), false)
 	rv.expr = rv
@@ -126,12 +124,8 @@ type RegexpLike struct {
 }
 
 func NewRegexpLike(first, second Expression) Function {
-	rv := &RegexpLike{
-		*NewBinaryFunctionBase("regexp_like", first, second),
-		nil,
-		nil,
-		nil,
-	}
+	rv := &RegexpLike{}
+	rv.Init("regexp_like", first, second)
 
 	rv.re, _ = precompileRegexp(second.Value(), true)
 	rv.part, rv.err = precompileRegexp(second.Value(), false)
@@ -251,10 +245,8 @@ type RegexpPosition0 struct {
 }
 
 func NewRegexpPosition0(first, second Expression) Function {
-	rv := &RegexpPosition0{
-		*NewBinaryFunctionBase("regexp_position0", first, second),
-		nil,
-	}
+	rv := &RegexpPosition0{}
+	rv.Init("regexp_position0", first, second)
 
 	rv.re, _ = precompileRegexp(second.Value(), false)
 	rv.expr = rv
@@ -310,10 +302,8 @@ type RegexpPosition1 struct {
 }
 
 func NewRegexpPosition1(first, second Expression) Function {
-	rv := &RegexpPosition1{
-		*NewBinaryFunctionBase("regexp_position1", first, second),
-		nil,
-	}
+	rv := &RegexpPosition1{}
+	rv.Init("regexp_position1", first, second)
 
 	rv.re, _ = precompileRegexp(second.Value(), false)
 	rv.expr = rv
@@ -370,10 +360,8 @@ type RegexpReplace struct {
 }
 
 func NewRegexpReplace(operands ...Expression) Function {
-	rv := &RegexpReplace{
-		*NewFunctionBase("regexp_replace", operands...),
-		nil,
-	}
+	rv := &RegexpReplace{}
+	rv.Init("regexp_replace", operands...)
 
 	rv.re, _ = precompileRegexp(operands[1].Value(), false)
 	rv.expr = rv
@@ -555,10 +543,8 @@ type RegexpMatches struct {
 }
 
 func NewRegexpMatches(first, second Expression) Function {
-	rv := &RegexpMatches{
-		*NewBinaryFunctionBase("regexp_matches", first, second),
-		nil,
-	}
+	rv := &RegexpMatches{}
+	rv.Init("regexp_matches", first, second)
 
 	rv.re, _ = precompileRegexp(second.Value(), false)
 	rv.expr = rv
@@ -633,10 +619,8 @@ type RegexpSplit struct {
 }
 
 func NewRegexpSplit(first, second Expression) Function {
-	rv := &RegexpSplit{
-		*NewBinaryFunctionBase("regexp_split", first, second),
-		nil,
-	}
+	rv := &RegexpSplit{}
+	rv.Init("regexp_split", first, second)
 
 	rv.re, _ = precompileRegexp(second.Value(), false)
 	rv.expr = rv

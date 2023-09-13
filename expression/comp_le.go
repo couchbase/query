@@ -21,9 +21,8 @@ type LE struct {
 }
 
 func NewLE(first, second Expression) Function {
-	rv := &LE{
-		*NewBinaryFunctionBase("le", first, second),
-	}
+	rv := &LE{}
+	rv.Init("le", first, second)
 
 	rv.expr = rv
 	return rv

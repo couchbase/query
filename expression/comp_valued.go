@@ -17,9 +17,8 @@ type IsValued struct {
 }
 
 func NewIsValued(operand Expression) Function {
-	rv := &IsValued{
-		*NewUnaryFunctionBase("isvalued", operand),
-	}
+	rv := &IsValued{}
+	rv.Init("isvalued", operand)
 
 	rv.expr = rv
 	return rv
@@ -85,9 +84,8 @@ type IsNotValued struct {
 }
 
 func NewIsNotValued(operand Expression) Function {
-	rv := &IsNotValued{
-		*NewUnaryFunctionBase("isnotvalued", operand),
-	}
+	rv := &IsNotValued{}
+	rv.Init("isnotvalued", operand)
 
 	rv.expr = rv
 	return rv

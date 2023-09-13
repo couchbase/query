@@ -27,10 +27,8 @@ type Redact struct {
 }
 
 func NewRedact(operands ...Expression) Function {
-	rv := &Redact{
-		*NewFunctionBase("redact", operands...),
-		nil,
-	}
+	rv := &Redact{}
+	rv.Init("redact", operands...)
 
 	rv.expr = rv
 	return rv

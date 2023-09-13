@@ -34,9 +34,8 @@ type ToArray struct {
 }
 
 func NewToArray(operand Expression) Function {
-	rv := &ToArray{
-		*NewUnaryFunctionBase("to_array", operand),
-	}
+	rv := &ToArray{}
+	rv.Init("to_array", operand)
 
 	rv.expr = rv
 	return rv
@@ -94,9 +93,8 @@ type ToAtom struct {
 }
 
 func NewToAtom(operand Expression) Function {
-	rv := &ToAtom{
-		*NewUnaryFunctionBase("to_atom", operand),
-	}
+	rv := &ToAtom{}
+	rv.Init("to_atom", operand)
 
 	rv.expr = rv
 	return rv
@@ -175,9 +173,8 @@ type ToBoolean struct {
 }
 
 func NewToBoolean(operand Expression) Function {
-	rv := &ToBoolean{
-		*NewUnaryFunctionBase("to_boolean", operand),
-	}
+	rv := &ToBoolean{}
+	rv.Init("to_boolean", operand)
 
 	rv.expr = rv
 	return rv
@@ -245,9 +242,8 @@ type ToNumber struct {
 }
 
 func NewToNumber(operands ...Expression) Function {
-	rv := &ToNumber{
-		*NewFunctionBase("to_number", operands...),
-	}
+	rv := &ToNumber{}
+	rv.Init("to_number", operands...)
 
 	rv.expr = rv
 	return rv
@@ -358,9 +354,8 @@ type ToObject struct {
 }
 
 func NewToObject(operand Expression) Function {
-	rv := &ToObject{
-		*NewUnaryFunctionBase("to_object", operand),
-	}
+	rv := &ToObject{}
+	rv.Init("to_object", operand)
 
 	rv.expr = rv
 	return rv
@@ -417,9 +412,8 @@ type ToString struct {
 }
 
 func NewToString(operand Expression) Function {
-	rv := &ToString{
-		*NewUnaryFunctionBase("to_string", operand),
-	}
+	rv := &ToString{}
+	rv.Init("to_string", operand)
 
 	rv.expr = rv
 	return rv

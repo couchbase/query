@@ -29,9 +29,8 @@ type IfMissing struct {
 }
 
 func NewIfMissing(operands ...Expression) Function {
-	rv := &IfMissing{
-		*NewFunctionBase("ifmissing", operands...),
-	}
+	rv := &IfMissing{}
+	rv.Init("ifmissing", operands...)
 
 	rv.setConditional()
 	rv.expr = rv
@@ -106,9 +105,8 @@ type IfMissingOrNull struct {
 }
 
 func NewIfMissingOrNull(operands ...Expression) Function {
-	rv := &IfMissingOrNull{
-		*NewFunctionBase("ifmissingornull", operands...),
-	}
+	rv := &IfMissingOrNull{}
+	rv.Init("ifmissingornull", operands...)
 
 	rv.setConditional()
 	rv.expr = rv
@@ -181,9 +179,8 @@ type IfNull struct {
 }
 
 func NewIfNull(operands ...Expression) Function {
-	rv := &IfNull{
-		*NewFunctionBase("ifnull", operands...),
-	}
+	rv := &IfNull{}
+	rv.Init("ifnull", operands...)
 
 	rv.setConditional()
 	rv.expr = rv
@@ -255,9 +252,8 @@ type MissingIf struct {
 }
 
 func NewMissingIf(first, second Expression) Function {
-	rv := &MissingIf{
-		*NewBinaryFunctionBase("missingif", first, second),
-	}
+	rv := &MissingIf{}
+	rv.Init("missingif", first, second)
 
 	rv.setConditional()
 	rv.expr = rv
@@ -330,9 +326,8 @@ type NullIf struct {
 }
 
 func NewNullIf(first, second Expression) Function {
-	rv := &NullIf{
-		*NewBinaryFunctionBase("nullif", first, second),
-	}
+	rv := &NullIf{}
+	rv.Init("nullif", first, second)
 
 	rv.setConditional()
 	rv.expr = rv
@@ -409,9 +404,8 @@ type NVL struct {
 }
 
 func NewNVL(first, second Expression) Function {
-	rv := &NVL{
-		*NewBinaryFunctionBase("nvl", first, second),
-	}
+	rv := &NVL{}
+	rv.Init("nvl", first, second)
 
 	rv.setConditional()
 	rv.expr = rv
@@ -479,9 +473,8 @@ type NVL2 struct {
 }
 
 func NewNVL2(first, second, third Expression) Function {
-	rv := &NVL2{
-		*NewTernaryFunctionBase("nvl2", first, second, third),
-	}
+	rv := &NVL2{}
+	rv.Init("nvl2", first, second, third)
 
 	rv.setConditional()
 	rv.expr = rv
@@ -544,9 +537,8 @@ type Decode struct {
 }
 
 func NewDecode(operands ...Expression) Function {
-	rv := &Decode{
-		*NewFunctionBase("decode", operands...),
-	}
+	rv := &Decode{}
+	rv.Init("decode", operands...)
 
 	rv.setConditional()
 	rv.expr = rv

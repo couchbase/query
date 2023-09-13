@@ -21,9 +21,8 @@ type Sub struct {
 }
 
 func NewSub(first, second Expression) Function {
-	rv := &Sub{
-		*NewBinaryFunctionBase("sub", first, second),
-	}
+	rv := &Sub{}
+	rv.Init("sub", first, second)
 
 	rv.expr = rv
 	return rv

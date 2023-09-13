@@ -139,10 +139,10 @@ as a pointer to an AggregateBase struct.
 func NewAggregateBase(name string, operands expression.Expressions, flags uint32, filter expression.Expression,
 	wTerm *WindowTerm) *AggregateBase {
 	rv := &AggregateBase{
-		FunctionBase: *expression.NewFunctionBase(name, operands...),
-		text:         "",
-		flags:        flags,
+		text:  "",
+		flags: flags,
 	}
+	rv.Init(name, operands...)
 	rv.SetAggregateModifiers(flags, filter, wTerm)
 	return rv
 }

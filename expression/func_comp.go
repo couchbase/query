@@ -29,9 +29,8 @@ type Greatest struct {
 }
 
 func NewGreatest(operands ...Expression) Function {
-	rv := &Greatest{
-		*NewFunctionBase("greatest", operands...),
-	}
+	rv := &Greatest{}
+	rv.Init("greatest", operands...)
 
 	rv.expr = rv
 	return rv
@@ -98,9 +97,8 @@ type Least struct {
 }
 
 func NewLeast(operands ...Expression) Function {
-	rv := &Least{
-		*NewFunctionBase("least", operands...),
-	}
+	rv := &Least{}
+	rv.Init("least", operands...)
 
 	rv.expr = rv
 	return rv
@@ -168,9 +166,8 @@ type Successor struct {
 }
 
 func NewSuccessor(operand Expression) Function {
-	rv := &Successor{
-		*NewUnaryFunctionBase("successor", operand),
-	}
+	rv := &Successor{}
+	rv.Init("successor", operand)
 
 	rv.expr = rv
 	return rv

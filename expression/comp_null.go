@@ -17,9 +17,8 @@ type IsNull struct {
 }
 
 func NewIsNull(operand Expression) Function {
-	rv := &IsNull{
-		*NewUnaryFunctionBase("isnull", operand),
-	}
+	rv := &IsNull{}
+	rv.Init("isnull", operand)
 
 	rv.expr = rv
 	return rv
@@ -85,9 +84,8 @@ type IsNotNull struct {
 }
 
 func NewIsNotNull(operand Expression) Function {
-	rv := &IsNotNull{
-		*NewUnaryFunctionBase("isnotnull", operand),
-	}
+	rv := &IsNotNull{}
+	rv.Init("isnotnull", operand)
 
 	rv.expr = rv
 	return rv

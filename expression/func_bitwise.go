@@ -36,9 +36,8 @@ type BitAnd struct {
 }
 
 func NewBitAnd(operands ...Expression) Function {
-	rv := &BitAnd{
-		*NewFunctionBase("bitand", operands...),
-	}
+	rv := &BitAnd{}
+	rv.Init("bitand", operands...)
 
 	rv.expr = rv
 	return rv
@@ -119,9 +118,8 @@ type BitOr struct {
 }
 
 func NewBitOr(operands ...Expression) Function {
-	rv := &BitOr{
-		*NewFunctionBase("bitor", operands...),
-	}
+	rv := &BitOr{}
+	rv.Init("bitor", operands...)
 
 	rv.expr = rv
 	return rv
@@ -202,9 +200,8 @@ type BitXor struct {
 }
 
 func NewBitXor(operands ...Expression) Function {
-	rv := &BitXor{
-		*NewFunctionBase("bitxor", operands...),
-	}
+	rv := &BitXor{}
+	rv.Init("bitxor", operands...)
 
 	rv.expr = rv
 	return rv
@@ -285,9 +282,8 @@ type BitNot struct {
 }
 
 func NewBitNot(operand Expression) Function {
-	rv := &BitNot{
-		*NewUnaryFunctionBase("bitnot", operand),
-	}
+	rv := &BitNot{}
+	rv.Init("bitnot", operand)
 
 	rv.expr = rv
 	return rv
@@ -357,9 +353,8 @@ type BitShift struct {
 }
 
 func NewBitShift(operands ...Expression) Function {
-	rv := &BitShift{
-		*NewFunctionBase("bitshift", operands...),
-	}
+	rv := &BitShift{}
+	rv.Init("bitshift", operands...)
 
 	rv.expr = rv
 	return rv
@@ -469,9 +464,8 @@ type BitSet struct {
 }
 
 func NewBitSet(first, second Expression) Function {
-	rv := &BitSet{
-		*NewBinaryFunctionBase("bitset", first, second),
-	}
+	rv := &BitSet{}
+	rv.Init("bitset", first, second)
 
 	rv.expr = rv
 	return rv
@@ -520,9 +514,8 @@ type BitClear struct {
 }
 
 func NewBitClear(first, second Expression) Function {
-	rv := &BitClear{
-		*NewBinaryFunctionBase("bitclear", first, second),
-	}
+	rv := &BitClear{}
+	rv.Init("bitclear", first, second)
 
 	rv.expr = rv
 	return rv
@@ -571,9 +564,8 @@ type BitTest struct {
 }
 
 func NewBitTest(operands ...Expression) Function {
-	rv := &BitTest{
-		*NewFunctionBase("bittest", operands...),
-	}
+	rv := &BitTest{}
+	rv.Init("bittest", operands...)
 
 	rv.expr = rv
 	return rv

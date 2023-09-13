@@ -45,9 +45,9 @@ type UserDefinedFunction struct {
 
 func NewUserDefinedFunction(name functions.FunctionName, operands ...Expression) Function {
 	rv := &UserDefinedFunction{
-		*NewUserDefinedFunctionBase(name.Key(), operands...),
-		name,
+		name: name,
 	}
+	rv.Init(name.Key(), operands...)
 
 	rv.expr = rv
 	return rv

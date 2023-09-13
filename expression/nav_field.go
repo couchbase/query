@@ -27,9 +27,8 @@ type Field struct {
 }
 
 func NewField(first, second Expression) *Field {
-	rv := &Field{
-		BinaryFunctionBase: *NewBinaryFunctionBase("field", first, second),
-	}
+	rv := &Field{}
+	rv.Init("field", first, second)
 
 	switch second := second.(type) {
 	case *FieldName:

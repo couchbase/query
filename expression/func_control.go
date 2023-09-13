@@ -27,9 +27,8 @@ type Abort struct {
 }
 
 func NewAbort(operand Expression) Function {
-	rv := &Abort{
-		*NewUnaryFunctionBase("abort", operand),
-	}
+	rv := &Abort{}
+	rv.Init("abort", operand)
 	rv.setVolatile()
 
 	rv.expr = rv

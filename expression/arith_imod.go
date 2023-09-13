@@ -21,9 +21,8 @@ type IMod struct {
 }
 
 func NewIMod(first, second Expression) Function {
-	rv := &IMod{
-		*NewBinaryFunctionBase("imod", first, second),
-	}
+	rv := &IMod{}
+	rv.Init("imod", first, second)
 
 	rv.expr = rv
 	return rv

@@ -96,9 +96,8 @@ type Curl struct {
 }
 
 func NewCurl(operands ...Expression) Function {
-	rv := &Curl{
-		*NewFunctionBase("curl", operands...),
-	}
+	rv := &Curl{}
+	rv.Init("curl", operands...)
 
 	rv.setVolatile()
 	rv.expr = rv

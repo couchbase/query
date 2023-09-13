@@ -39,9 +39,8 @@ func NewLikePrefix(operands ...Expression) Function {
 	if len(operands) == 1 {
 		operands = append(operands, _DEFAULT_ESCAPE)
 	}
-	rv := &LikePrefix{
-		*NewBinaryFunctionBase("like_prefix", operands[0], operands[1]),
-	}
+	rv := &LikePrefix{}
+	rv.Init("like_prefix", operands[0], operands[1])
 
 	rv.expr = rv
 	return rv
@@ -112,9 +111,8 @@ func NewLikeStop(operands ...Expression) Function {
 	if len(operands) == 1 {
 		operands = append(operands, _DEFAULT_ESCAPE)
 	}
-	rv := &LikeStop{
-		*NewBinaryFunctionBase("like_stop", operands[0], operands[1]),
-	}
+	rv := &LikeStop{}
+	rv.Init("like_stop", operands[0], operands[1])
 
 	rv.expr = rv
 	return rv
@@ -196,9 +194,8 @@ func NewLikeSuffix(operands ...Expression) Function {
 	if len(operands) == 1 {
 		operands = append(operands, _DEFAULT_ESCAPE)
 	}
-	rv := &LikeSuffix{
-		*NewBinaryFunctionBase("like_suffix", operands[0], operands[1]),
-	}
+	rv := &LikeSuffix{}
+	rv.Init("like_suffix", operands[0], operands[1])
 
 	rv.expr = rv
 	return rv
@@ -271,9 +268,8 @@ type RegexpPrefix struct {
 }
 
 func NewRegexpPrefix(operand Expression) Function {
-	rv := &RegexpPrefix{
-		*NewUnaryFunctionBase("regexp_prefix", operand),
-	}
+	rv := &RegexpPrefix{}
+	rv.Init("regexp_prefix", operand)
 
 	rv.expr = rv
 	return rv
@@ -330,9 +326,8 @@ type RegexpStop struct {
 }
 
 func NewRegexpStop(operand Expression) Function {
-	rv := &RegexpStop{
-		*NewUnaryFunctionBase("regexp_stop", operand),
-	}
+	rv := &RegexpStop{}
+	rv.Init("regexp_stop", operand)
 
 	rv.expr = rv
 	return rv
@@ -400,9 +395,8 @@ type RegexpSuffix struct {
 }
 
 func NewRegexpSuffix(operand Expression) Function {
-	rv := &RegexpSuffix{
-		*NewUnaryFunctionBase("regexp_suffix", operand),
-	}
+	rv := &RegexpSuffix{}
+	rv.Init("regexp_suffix", operand)
 
 	rv.expr = rv
 	return rv

@@ -27,9 +27,8 @@ type IsArray struct {
 }
 
 func NewIsArray(operand Expression) Function {
-	rv := &IsArray{
-		*NewUnaryFunctionBase("is_array", operand),
-	}
+	rv := &IsArray{}
+	rv.Init("is_array", operand)
 
 	rv.expr = rv
 	return rv
@@ -96,9 +95,8 @@ type IsAtom struct {
 }
 
 func NewIsAtom(operand Expression) Function {
-	rv := &IsAtom{
-		*NewUnaryFunctionBase("is_atom", operand),
-	}
+	rv := &IsAtom{}
+	rv.Init("is_atom", operand)
 
 	rv.expr = rv
 	return rv
@@ -173,9 +171,8 @@ type IsBinary struct {
 }
 
 func NewIsBinary(operand Expression) Function {
-	rv := &IsBinary{
-		*NewUnaryFunctionBase("is_binary", operand),
-	}
+	rv := &IsBinary{}
+	rv.Init("is_binary", operand)
 
 	rv.expr = rv
 	return rv
@@ -241,9 +238,8 @@ type IsBoolean struct {
 }
 
 func NewIsBoolean(operand Expression) Function {
-	rv := &IsBoolean{
-		*NewUnaryFunctionBase("is_boolean", operand),
-	}
+	rv := &IsBoolean{}
+	rv.Init("is_boolean", operand)
 
 	rv.expr = rv
 	return rv
@@ -309,9 +305,8 @@ type IsNumber struct {
 }
 
 func NewIsNumber(operand Expression) Function {
-	rv := &IsNumber{
-		*NewUnaryFunctionBase("is_number", operand),
-	}
+	rv := &IsNumber{}
+	rv.Init("is_number", operand)
 
 	rv.expr = rv
 	return rv
@@ -377,9 +372,8 @@ type IsObject struct {
 }
 
 func NewIsObject(operand Expression) Function {
-	rv := &IsObject{
-		*NewUnaryFunctionBase("is_object", operand),
-	}
+	rv := &IsObject{}
+	rv.Init("is_object", operand)
 
 	rv.expr = rv
 	return rv
@@ -445,9 +439,8 @@ type IsString struct {
 }
 
 func NewIsString(operand Expression) Function {
-	rv := &IsString{
-		*NewUnaryFunctionBase("is_string", operand),
-	}
+	rv := &IsString{}
+	rv.Init("is_string", operand)
 
 	rv.expr = rv
 	return rv
@@ -513,9 +506,8 @@ type Type struct {
 }
 
 func NewType(operand Expression) Function {
-	rv := &Type{
-		*NewUnaryFunctionBase("type", operand),
-	}
+	rv := &Type{}
+	rv.Init("type", operand)
 
 	rv.expr = rv
 	return rv

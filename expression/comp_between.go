@@ -22,9 +22,8 @@ type Between struct {
 }
 
 func NewBetween(item, low, high Expression) Function {
-	rv := &Between{
-		*NewTernaryFunctionBase("between", item, low, high),
-	}
+	rv := &Between{}
+	rv.Init("between", item, low, high)
 
 	rv.expr = rv
 	return rv

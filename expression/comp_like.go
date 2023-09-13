@@ -44,12 +44,10 @@ func NewLike(operands ...Expression) Function {
 	if len(operands) < 3 {
 		operands = append(operands, DEFAULT_ESCAPE_EXPR)
 	}
-	rv := &Like{
-		*NewFunctionBase("like", operands...),
-		nil,
-		nil,
-		(operands[1].Static() != nil && operands[2].Static() != nil),
-	}
+	rv := &Like{}
+	rv.Init("like", operands...)
+	rv.canCacheRegex = (operands[1].Static() != nil && operands[2].Static() != nil)
+
 	p := operands[1].Value()
 	ev := operands[2].Value()
 	// only precompile if both pattern and escape are values at this point

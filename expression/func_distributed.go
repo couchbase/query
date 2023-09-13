@@ -30,10 +30,8 @@ type NodeName struct {
 }
 
 func NewNodeName() Function {
-	rv := &NodeName{
-		*NewNullaryFunctionBase("node_name"),
-	}
-
+	rv := &NodeName{}
+	rv.Init("node_name")
 	// technically there's the possibility that names change
 	// for nodes that start their lives as "127.0.0.1:8091"
 	// but that's a once in a lifetime event, and is going
@@ -94,9 +92,8 @@ type NodeUUID struct {
 }
 
 func NewNodeUUID(operand Expression) Function {
-	rv := &NodeUUID{
-		*NewUnaryFunctionBase("node_uuid", operand),
-	}
+	rv := &NodeUUID{}
+	rv.Init("node_uuid", operand)
 
 	rv.unsetVolatile()
 	rv.expr = rv

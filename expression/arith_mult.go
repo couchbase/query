@@ -21,9 +21,8 @@ type Mult struct {
 }
 
 func NewMult(operands ...Expression) Function {
-	rv := &Mult{
-		*NewCommutativeFunctionBase("mult", operands...),
-	}
+	rv := &Mult{}
+	rv.Init("mult", operands...)
 
 	rv.expr = rv
 	return rv

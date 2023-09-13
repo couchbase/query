@@ -128,11 +128,9 @@ type FunctionBase struct {
 	operands Expressions
 }
 
-func NewFunctionBase(name string, operands ...Expression) *FunctionBase {
-	return &FunctionBase{
-		name:     name,
-		operands: operands,
-	}
+func (this *FunctionBase) Init(name string, operands ...Expression) {
+	this.name = name
+	this.operands = operands
 }
 
 func (this *FunctionBase) Indexable() bool {
@@ -240,13 +238,6 @@ The method NewNullaryFunctionBase returns a pointer to a
 NullaryFunctionBase struct, initializing the name field to the
 input name.
 */
-func NewNullaryFunctionBase(name string) *NullaryFunctionBase {
-	return &NullaryFunctionBase{
-		FunctionBase{
-			name: name,
-		},
-	}
-}
 
 func (this *NullaryFunctionBase) Value() value.Value {
 	return nil
@@ -298,20 +289,6 @@ type UnaryFunctionBase struct {
 }
 
 /*
-The method NewUnaryFunctionBase returns a pointer to a
-UnaryFunctionBase struct, initializing the name and operand
-field to the input name and input operand expression.
-*/
-func NewUnaryFunctionBase(name string, operand Expression) *UnaryFunctionBase {
-	return &UnaryFunctionBase{
-		FunctionBase{
-			name:     name,
-			operands: Expressions{operand},
-		},
-	}
-}
-
-/*
 Minimum input arguments required is 1.
 */
 func (this *UnaryFunctionBase) MinArgs() int { return 1 }
@@ -334,20 +311,6 @@ is a struct that implements FunctionBase.
 */
 type BinaryFunctionBase struct {
 	FunctionBase
-}
-
-/*
-The method NewBinaryFunctionBase returns a pointer to a
-BinaryFunctionBase struct, initializing the name and operand
-field to the input name and both input operand expressions.
-*/
-func NewBinaryFunctionBase(name string, first, second Expression) *BinaryFunctionBase {
-	return &BinaryFunctionBase{
-		FunctionBase{
-			name:     name,
-			operands: Expressions{first, second},
-		},
-	}
 }
 
 /*
@@ -383,17 +346,6 @@ type CommutativeBinaryFunctionBase struct {
 	BinaryFunctionBase
 }
 
-/*
-Returns a pointer to a CommutativeBinaryFunctionBase
-that calls the NewBinaryFunctionBase method to set
-the name and the operands.
-*/
-func NewCommutativeBinaryFunctionBase(name string, first, second Expression) *CommutativeBinaryFunctionBase {
-	return &CommutativeBinaryFunctionBase{
-		BinaryFunctionBase: *NewBinaryFunctionBase(name, first, second),
-	}
-}
-
 func (this *CommutativeBinaryFunctionBase) EquivalentTo(other Expression) bool {
 	if this.valueEquivalentTo(other) {
 		return true
@@ -419,20 +371,6 @@ is a struct that implements FunctionBase.
 */
 type TernaryFunctionBase struct {
 	FunctionBase
-}
-
-/*
-The method NewTernaryFunctionBase returns a pointer to a
-TernaryFunctionBase struct, initializing the name and operand
-field to the input name and three input operand expressions.
-*/
-func NewTernaryFunctionBase(name string, first, second, third Expression) *TernaryFunctionBase {
-	return &TernaryFunctionBase{
-		FunctionBase{
-			name:     name,
-			operands: Expressions{first, second, third},
-		},
-	}
 }
 
 /*
@@ -473,20 +411,6 @@ that implements FunctionBase.
 */
 type CommutativeFunctionBase struct {
 	FunctionBase
-}
-
-/*
-Returns a pointer to a CommutativeFunctionBase
-that uses the FunctionBase struct to set
-the name and the operands.
-*/
-func NewCommutativeFunctionBase(name string, operands ...Expression) *CommutativeFunctionBase {
-	return &CommutativeFunctionBase{
-		FunctionBase{
-			name:     name,
-			operands: operands,
-		},
-	}
 }
 
 func (this *CommutativeFunctionBase) EquivalentTo(other Expression) bool {
@@ -548,19 +472,6 @@ func (this *CommutativeFunctionBase) MaxArgs() int { return math.MaxInt16 }
 
 type UserDefinedFunctionBase struct {
 	FunctionBase
-}
-
-/*
-The method NewUserDefinedFunctionBase returns a pointer to a
-UserDefinedFunctionBase struct, initializing the name
-*/
-func NewUserDefinedFunctionBase(name string, operands ...Expression) *UserDefinedFunctionBase {
-	return &UserDefinedFunctionBase{
-		FunctionBase{
-			name:     name,
-			operands: operands,
-		},
-	}
 }
 
 var _FOUND_POOL = util.NewBoolPool(64)

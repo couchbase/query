@@ -20,9 +20,8 @@ type Exists struct {
 }
 
 func NewExists(operand Expression) *Exists {
-	rv := &Exists{
-		*NewUnaryFunctionBase("exists", operand),
-	}
+	rv := &Exists{}
+	rv.Init("exists", operand)
 
 	rv.expr = rv
 	return rv

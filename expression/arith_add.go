@@ -21,9 +21,8 @@ type Add struct {
 }
 
 func NewAdd(operands ...Expression) Function {
-	rv := &Add{
-		*NewCommutativeFunctionBase("add", operands...),
-	}
+	rv := &Add{}
+	rv.Init("add", operands...)
 
 	rv.expr = rv
 	return rv

@@ -23,9 +23,8 @@ type RecursiveCte struct {
 }
 
 func NewRecursiveCte(operands ...Expression) Function {
-	rv := &RecursiveCte{
-		*NewFunctionBase("recursive_cte", operands...),
-	}
+	rv := &RecursiveCte{}
+	rv.Init("recursive_cte", operands...)
 
 	rv.setVolatile()
 	rv.expr = rv

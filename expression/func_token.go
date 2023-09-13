@@ -25,9 +25,8 @@ type ContainsToken struct {
 }
 
 func NewContainsToken(operands ...Expression) Function {
-	rv := &ContainsToken{
-		*NewFunctionBase("contains_token", operands...),
-	}
+	rv := &ContainsToken{}
+	rv.Init("contains_token", operands...)
 
 	rv.expr = rv
 	return rv
@@ -124,11 +123,8 @@ type ContainsTokenLike struct {
 }
 
 func NewContainsTokenLike(operands ...Expression) Function {
-	rv := &ContainsTokenLike{
-		*NewFunctionBase("contains_token_like", operands...),
-		nil,
-		nil,
-	}
+	rv := &ContainsTokenLike{}
+	rv.Init("contains_token_like", operands...)
 
 	rv.re, rv.part, _ = precompileLike(operands[1].Value(), '\\')
 	rv.expr = rv
@@ -248,12 +244,8 @@ type ContainsTokenRegexp struct {
 }
 
 func NewContainsTokenRegexp(operands ...Expression) Function {
-	rv := &ContainsTokenRegexp{
-		*NewFunctionBase("contains_token_regexp", operands...),
-		nil,
-		nil,
-		nil,
-	}
+	rv := &ContainsTokenRegexp{}
+	rv.Init("contains_token_regexp", operands...)
 
 	rv.re, _ = precompileRegexp(operands[1].Value(), true)
 	rv.part, rv.err = precompileRegexp(operands[1].Value(), false)
@@ -391,9 +383,8 @@ type Tokens struct {
 }
 
 func NewTokens(operands ...Expression) Function {
-	rv := &Tokens{
-		*NewFunctionBase("tokens", operands...),
-	}
+	rv := &Tokens{}
+	rv.Init("tokens", operands...)
 
 	rv.expr = rv
 	return rv

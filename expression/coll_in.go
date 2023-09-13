@@ -25,9 +25,8 @@ type In struct {
 }
 
 func NewIn(first, second Expression) Function {
-	rv := &In{
-		*NewBinaryFunctionBase("in", first, second),
-	}
+	rv := &In{}
+	rv.Init("in", first, second)
 
 	if secondArr, ok := second.(*ArrayConstruct); ok {
 		secondArr.SetExprFlag(EXPR_ARRAY_IS_SET)

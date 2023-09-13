@@ -21,9 +21,8 @@ type And struct {
 }
 
 func NewAnd(operands ...Expression) *And {
-	rv := &And{
-		*NewCommutativeFunctionBase("and", operands...),
-	}
+	rv := &And{}
+	rv.Init("and", operands...)
 
 	rv.expr = rv
 	return rv

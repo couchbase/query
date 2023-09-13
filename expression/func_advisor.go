@@ -52,9 +52,8 @@ type Advisor struct {
 }
 
 func NewAdvisor(operand Expression) Function {
-	rv := &Advisor{
-		*NewUnaryFunctionBase("advisor", operand),
-	}
+	rv := &Advisor{}
+	rv.Init("advisor", operand)
 
 	rv.expr = rv
 	rv.setVolatile()

@@ -21,9 +21,8 @@ type Neg struct {
 }
 
 func NewNeg(operand Expression) Function {
-	rv := &Neg{
-		*NewUnaryFunctionBase("neg", operand),
-	}
+	rv := &Neg{}
+	rv.Init("neg", operand)
 
 	rv.expr = rv
 	return rv

@@ -23,9 +23,8 @@ type Eq struct {
 }
 
 func NewEq(first, second Expression) Function {
-	rv := &Eq{
-		*NewCommutativeBinaryFunctionBase("eq", first, second),
-	}
+	rv := &Eq{}
+	rv.Init("eq", first, second)
 
 	rv.expr = rv
 	return rv

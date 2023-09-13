@@ -34,7 +34,7 @@ type Search struct {
 
 func NewSearch(operands ...expression.Expression) expression.Function {
 	rv := &Search{}
-	rv.FunctionBase = *expression.NewFunctionBase("search", operands...)
+	rv.Init("search", operands...)
 	rv.SetExpr(rv)
 	return rv
 }
@@ -237,7 +237,7 @@ type SearchMeta struct {
 
 func NewSearchMeta(operands ...expression.Expression) expression.Function {
 	rv := &SearchMeta{}
-	rv.FunctionBase = *expression.NewFunctionBase("search_meta", operands...)
+	rv.Init("search_meta", operands...)
 	rv.SetExpr(rv)
 	return rv
 }
@@ -361,7 +361,7 @@ type SearchScore struct {
 
 func NewSearchScore(operands ...expression.Expression) expression.Function {
 	rv := &SearchScore{}
-	rv.FunctionBase = *expression.NewFunctionBase("search_score", operands...)
+	rv.Init("search_score", operands...)
 
 	rv.SetExpr(rv)
 	return rv

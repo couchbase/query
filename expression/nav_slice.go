@@ -24,11 +24,8 @@ type Slice struct {
 }
 
 func NewSlice(operands ...Expression) Function {
-	rv := &Slice{
-		*NewFunctionBase("slice", operands...),
-		false,
-		false,
-	}
+	rv := &Slice{}
+	rv.Init("slice", operands...)
 
 	if len(operands) == 3 {
 		rv.start = true

@@ -21,9 +21,8 @@ type Not struct {
 }
 
 func NewNot(operand Expression) Function {
-	rv := &Not{
-		*NewUnaryFunctionBase("not", operand),
-	}
+	rv := &Not{}
+	rv.Init("not", operand)
 
 	rv.expr = rv
 	return rv

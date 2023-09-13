@@ -20,9 +20,8 @@ type Within struct {
 }
 
 func NewWithin(first, second Expression) Function {
-	rv := &Within{
-		*NewBinaryFunctionBase("within", first, second),
-	}
+	rv := &Within{}
+	rv.Init("within", first, second)
 
 	rv.expr = rv
 	return rv

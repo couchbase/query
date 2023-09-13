@@ -23,9 +23,8 @@ type InferValue struct {
 }
 
 func NewInferValue(operands ...Expression) Function {
-	rv := &InferValue{
-		*NewFunctionBase("infer_value", operands...),
-	}
+	rv := &InferValue{}
+	rv.Init("infer_value", operands...)
 
 	rv.expr = rv
 	return rv

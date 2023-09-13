@@ -22,9 +22,8 @@ type IDiv struct {
 }
 
 func NewIDiv(first, second Expression) Function {
-	rv := &IDiv{
-		*NewBinaryFunctionBase("idiv", first, second),
-	}
+	rv := &IDiv{}
+	rv.Init("idiv", first, second)
 
 	rv.expr = rv
 	return rv

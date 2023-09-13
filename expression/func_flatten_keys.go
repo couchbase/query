@@ -31,10 +31,8 @@ type FlattenKeys struct {
 }
 
 func NewFlattenKeys(operands ...Expression) Function {
-	rv := &FlattenKeys{
-		*NewFunctionBase("flatten_keys", operands...),
-		make([]uint32, len(operands)),
-	}
+	rv := &FlattenKeys{attributes: make([]uint32, len(operands))}
+	rv.Init("flatten_keys", operands...)
 
 	rv.expr = rv
 	return rv
@@ -83,10 +81,8 @@ func (this *FlattenKeys) Constructor() FunctionConstructor {
 }
 
 func (this *FlattenKeys) Copy() Expression {
-	rv := &FlattenKeys{
-		*NewFunctionBase("flatten_keys", CopyExpressions(this.Operands())...),
-		make([]uint32, len(this.attributes)),
-	}
+	rv := &FlattenKeys{attributes: make([]uint32, len(this.attributes))}
+	rv.Init("flatten_keys", CopyExpressions(this.Operands())...)
 	copy(rv.attributes, this.attributes)
 	rv.BaseCopy(this)
 	rv.SetExpr(rv)

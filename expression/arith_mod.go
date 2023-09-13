@@ -23,9 +23,8 @@ type Mod struct {
 }
 
 func NewMod(first, second Expression) Function {
-	rv := &Mod{
-		*NewBinaryFunctionBase("mod", first, second),
-	}
+	rv := &Mod{}
+	rv.Init("mod", first, second)
 
 	rv.expr = rv
 	return rv

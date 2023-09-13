@@ -25,9 +25,8 @@ type Element struct {
 }
 
 func NewElement(first, second Expression) *Element {
-	rv := &Element{
-		*NewBinaryFunctionBase("element", first, second),
-	}
+	rv := &Element{}
+	rv.Init("element", first, second)
 
 	rv.expr = rv
 	return rv
@@ -114,10 +113,8 @@ type RandomElement struct {
 }
 
 func NewRandomElement(first Expression) *RandomElement {
-	rv := &RandomElement{
-		*NewUnaryFunctionBase("random_element", first),
-		false,
-	}
+	rv := &RandomElement{}
+	rv.Init("random_element", first)
 
 	rv.expr = rv
 	return rv

@@ -27,9 +27,8 @@ type UnnestPosition struct {
 }
 
 func NewUnnestPosition(operand Expression) Function {
-	rv := &UnnestPosition{
-		*NewUnaryFunctionBase("unnest_position", operand),
-	}
+	rv := &UnnestPosition{}
+	rv.Init("unnest_position", operand)
 
 	rv.expr = rv
 	return rv

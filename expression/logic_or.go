@@ -21,9 +21,8 @@ type Or struct {
 }
 
 func NewOr(operands ...Expression) *Or {
-	rv := &Or{
-		*NewCommutativeFunctionBase("or", operands...),
-	}
+	rv := &Or{}
+	rv.Init("or", operands...)
 
 	rv.expr = rv
 	return rv

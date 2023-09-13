@@ -30,11 +30,8 @@ type Hashbytes struct {
 }
 
 func NewHashbytes(operands ...Expression) Function {
-	rv := &Hashbytes{
-		*NewFunctionBase("hashbytes", operands...),
-		nil,
-		0,
-	}
+	rv := &Hashbytes{}
+	rv.Init("hashbytes", operands...)
 
 	if len(operands) == 2 && operands[1].Type() == value.OBJECT {
 		if ps, ok := operands[1].Value().Field("polynomial"); ok {

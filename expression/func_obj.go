@@ -74,9 +74,8 @@ type ObjectAdd struct {
 }
 
 func NewObjectAdd(first, second, third Expression) Function {
-	rv := &ObjectAdd{
-		*NewTernaryFunctionBase("object_add", first, second, third),
-	}
+	rv := &ObjectAdd{}
+	rv.Init("object_add", first, second, third)
 
 	rv.expr = rv
 	return rv
@@ -169,9 +168,8 @@ type ObjectConcat struct {
 }
 
 func NewObjectConcat(operands ...Expression) Function {
-	rv := &ObjectConcat{
-		*NewFunctionBase("object_concat", operands...),
-	}
+	rv := &ObjectConcat{}
+	rv.Init("object_concat", operands...)
 
 	rv.expr = rv
 	return rv
@@ -254,9 +252,8 @@ type ObjectInnerPairs struct {
 }
 
 func NewObjectInnerPairs(operand Expression) Function {
-	rv := &ObjectInnerPairs{
-		*NewUnaryFunctionBase("object_innerpairs", operand),
-	}
+	rv := &ObjectInnerPairs{}
+	rv.Init("object_innerpairs", operand)
 
 	rv.expr = rv
 	return rv
@@ -327,9 +324,8 @@ type ObjectInnerValues struct {
 }
 
 func NewObjectInnerValues(operand Expression) Function {
-	rv := &ObjectInnerValues{
-		*NewUnaryFunctionBase("object_innervalues", operand),
-	}
+	rv := &ObjectInnerValues{}
+	rv.Init("object_innervalues", operand)
 
 	rv.expr = rv
 	return rv
@@ -404,9 +400,8 @@ type ObjectLength struct {
 }
 
 func NewObjectLength(operand Expression) Function {
-	rv := &ObjectLength{
-		*NewUnaryFunctionBase("object_length", operand),
-	}
+	rv := &ObjectLength{}
+	rv.Init("object_length", operand)
 
 	rv.expr = rv
 	return rv
@@ -460,9 +455,8 @@ type ObjectNames struct {
 }
 
 func NewObjectNames(operand Expression) Function {
-	rv := &ObjectNames{
-		*NewUnaryFunctionBase("object_names", operand),
-	}
+	rv := &ObjectNames{}
+	rv.Init("object_names", operand)
 
 	rv.expr = rv
 	return rv
@@ -521,10 +515,8 @@ type ObjectPaths struct {
 }
 
 func NewObjectPaths(operands ...Expression) Function {
-	rv := &ObjectPaths{
-		*NewFunctionBase("object_paths", operands...),
-		nil,
-	}
+	rv := &ObjectPaths{}
+	rv.Init("object_paths", operands...)
 
 	if 2 == len(operands) && operands[1].Type() == value.OBJECT {
 		rv.re = precompilePattern(operands[1].Value())
@@ -820,9 +812,8 @@ type ObjectPairs struct {
 }
 
 func NewObjectPairs(operands ...Expression) Function {
-	rv := &ObjectPairs{
-		*NewFunctionBase("object_pairs", operands...),
-	}
+	rv := &ObjectPairs{}
+	rv.Init("object_pairs", operands...)
 
 	rv.expr = rv
 	return rv
@@ -916,10 +907,8 @@ type ObjectPairsNested struct {
 }
 
 func NewObjectPairsNested(operands ...Expression) Function {
-	rv := &ObjectPairsNested{
-		*NewFunctionBase("object_pairs_nested", operands...),
-		nil,
-	}
+	rv := &ObjectPairsNested{}
+	rv.Init("object_pairs_nested", operands...)
 
 	if 2 == len(operands) && operands[1].Type() == value.OBJECT {
 		rv.re = precompilePattern(operands[1].Value())
@@ -1190,9 +1179,8 @@ type ObjectPut struct {
 }
 
 func NewObjectPut(first, second, third Expression) Function {
-	rv := &ObjectPut{
-		*NewTernaryFunctionBase("object_put", first, second, third),
-	}
+	rv := &ObjectPut{}
+	rv.Init("object_put", first, second, third)
 
 	rv.expr = rv
 	return rv
@@ -1278,9 +1266,8 @@ type ObjectRemove struct {
 }
 
 func NewObjectRemove(operands ...Expression) Function {
-	rv := &ObjectRemove{
-		*NewFunctionBase("object_remove", operands...),
-	}
+	rv := &ObjectRemove{}
+	rv.Init("object_remove", operands...)
 
 	rv.expr = rv
 	return rv
@@ -1368,9 +1355,8 @@ type ObjectRemoveFields struct {
 }
 
 func NewObjectRemoveFields(operands ...Expression) Function {
-	rv := &ObjectRemoveFields{
-		*NewFunctionBase("object_remove_fields", operands...),
-	}
+	rv := &ObjectRemoveFields{}
+	rv.Init("object_remove_fields", operands...)
 
 	rv.expr = rv
 	return rv
@@ -1500,9 +1486,8 @@ type ObjectRename struct {
 }
 
 func NewObjectRename(obj, old_name, new_name Expression) Function {
-	rv := &ObjectRename{
-		*NewTernaryFunctionBase("object_rename", obj, old_name, new_name),
-	}
+	rv := &ObjectRename{}
+	rv.Init("object_rename", obj, old_name, new_name)
 
 	rv.expr = rv
 	return rv
@@ -1575,9 +1560,8 @@ type ObjectReplace struct {
 }
 
 func NewObjectReplace(obj, old_val, new_val Expression) Function {
-	rv := &ObjectReplace{
-		*NewTernaryFunctionBase("object_replace", obj, old_val, new_val),
-	}
+	rv := &ObjectReplace{}
+	rv.Init("object_replace", obj, old_val, new_val)
 
 	rv.expr = rv
 	return rv
@@ -1657,9 +1641,8 @@ type ObjectUnwrap struct {
 }
 
 func NewObjectUnwrap(operand Expression) Function {
-	rv := &ObjectUnwrap{
-		*NewUnaryFunctionBase("object_unwrap", operand),
-	}
+	rv := &ObjectUnwrap{}
+	rv.Init("object_unwrap", operand)
 
 	rv.expr = rv
 	return rv
@@ -1726,9 +1709,8 @@ type ObjectValues struct {
 }
 
 func NewObjectValues(operand Expression) Function {
-	rv := &ObjectValues{
-		*NewUnaryFunctionBase("object_values", operand),
-	}
+	rv := &ObjectValues{}
+	rv.Init("object_values", operand)
 
 	rv.expr = rv
 	return rv
@@ -1833,10 +1815,8 @@ type ObjectExtract struct {
 }
 
 func NewObjectExtract(operands ...Expression) Function {
-	rv := &ObjectExtract{
-		*NewFunctionBase("object_extract", operands...),
-		nil,
-	}
+	rv := &ObjectExtract{}
+	rv.Init("object_extract", operands...)
 
 	if 2 == len(operands) && operands[1].Type() == value.OBJECT {
 		rv.re = precompilePattern(operands[1].Value())
@@ -1980,10 +1960,8 @@ type ObjectField struct {
 }
 
 func NewObjectField(first, second Expression) Function {
-	rv := &ObjectField{
-		*NewBinaryFunctionBase("object_field", first, second),
-		nil,
-	}
+	rv := &ObjectField{}
+	rv.Init("object_field", first, second)
 	rv.expr = rv
 	return rv
 }
@@ -2052,10 +2030,8 @@ type ObjectFilter struct {
 }
 
 func NewObjectFilter(operands ...Expression) Function {
-	rv := &ObjectFilter{
-		*NewFunctionBase("object_filter", operands...),
-		nil,
-	}
+	rv := &ObjectFilter{}
+	rv.Init("object_filter", operands...)
 
 	if 2 == len(operands) && operands[1].Type() == value.OBJECT {
 		rv.re = precompilePattern(operands[1].Value())
@@ -2706,9 +2682,8 @@ type ObjectTypes struct {
 }
 
 func NewObjectTypes(operand Expression) Function {
-	rv := &ObjectTypes{
-		*NewUnaryFunctionBase("object_types", operand),
-	}
+	rv := &ObjectTypes{}
+	rv.Init("object_types", operand)
 
 	rv.expr = rv
 	return rv
@@ -2751,9 +2726,8 @@ type ObjectTypesNested struct {
 }
 
 func NewObjectTypesNested(operand Expression) Function {
-	rv := &ObjectTypesNested{
-		*NewUnaryFunctionBase("object_types_nested", operand),
-	}
+	rv := &ObjectTypesNested{}
+	rv.Init("object_types_nested", operand)
 
 	rv.expr = rv
 	return rv
@@ -2816,9 +2790,8 @@ type ObjectConcat2 struct {
 }
 
 func NewObjectConcat2(operands ...Expression) Function {
-	rv := &ObjectConcat2{
-		*NewFunctionBase("object_concat2", operands...),
-	}
+	rv := &ObjectConcat2{}
+	rv.Init("object_concat2", operands...)
 
 	rv.expr = rv
 	return rv

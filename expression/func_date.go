@@ -42,10 +42,8 @@ type ClockMillis struct {
 var _CLOCK_MILLIS = NewClockMillis()
 
 func NewClockMillis() Function {
-	rv := &ClockMillis{
-		*NewNullaryFunctionBase("clock_millis"),
-	}
-
+	rv := &ClockMillis{}
+	rv.Init("clock_millis")
 	rv.setVolatile()
 	rv.expr = rv
 	return rv
@@ -81,9 +79,8 @@ type ClockStr struct {
 }
 
 func NewClockStr(operands ...Expression) Function {
-	rv := &ClockStr{
-		*NewFunctionBase("clock_str", operands...),
-	}
+	rv := &ClockStr{}
+	rv.Init("clock_str", operands...)
 
 	rv.setVolatile()
 	rv.expr = rv
@@ -143,9 +140,8 @@ type ClockTZ struct {
 }
 
 func NewClockTZ(operands ...Expression) Function {
-	rv := &ClockTZ{
-		*NewFunctionBase("clock_tz", operands...),
-	}
+	rv := &ClockTZ{}
+	rv.Init("clock_tz", operands...)
 
 	rv.setVolatile()
 	rv.expr = rv
@@ -238,9 +234,8 @@ type ClockUTC struct {
 }
 
 func NewClockUTC(operands ...Expression) Function {
-	rv := &ClockUTC{
-		*NewFunctionBase("clock_utc", operands...),
-	}
+	rv := &ClockUTC{}
+	rv.Init("clock_utc", operands...)
 
 	rv.setVolatile()
 	rv.expr = rv
@@ -304,9 +299,8 @@ type DateAddMillis struct {
 }
 
 func NewDateAddMillis(first, second, third Expression) Function {
-	rv := &DateAddMillis{
-		*NewTernaryFunctionBase("date_add_millis", first, second, third),
-	}
+	rv := &DateAddMillis{}
+	rv.Init("date_add_millis", first, second, third)
 
 	rv.expr = rv
 	return rv
@@ -400,9 +394,8 @@ type DateAddStr struct {
 }
 
 func NewDateAddStr(first, second, third Expression) Function {
-	rv := &DateAddStr{
-		*NewTernaryFunctionBase("date_add_str", first, second, third),
-	}
+	rv := &DateAddStr{}
+	rv.Init("date_add_str", first, second, third)
 
 	rv.expr = rv
 	return rv
@@ -504,9 +497,8 @@ type DateDiffMillis struct {
 }
 
 func NewDateDiffMillis(first, second, third Expression) Function {
-	rv := &DateDiffMillis{
-		*NewTernaryFunctionBase("date_diff_millis", first, second, third),
-	}
+	rv := &DateDiffMillis{}
+	rv.Init("date_diff_millis", first, second, third)
 
 	rv.expr = rv
 	return rv
@@ -599,9 +591,8 @@ type DateDiffStr struct {
 }
 
 func NewDateDiffStr(first, second, third Expression) Function {
-	rv := &DateDiffStr{
-		*NewTernaryFunctionBase("date_diff_str", first, second, third),
-	}
+	rv := &DateDiffStr{}
+	rv.Init("date_diff_str", first, second, third)
 
 	rv.expr = rv
 	return rv
@@ -697,9 +688,8 @@ type DateDiffAbsMillis struct {
 }
 
 func NewDateDiffAbsMillis(first, second, third Expression) Function {
-	rv := &DateDiffAbsMillis{
-		*NewTernaryFunctionBase("date_diff_abs_millis", first, second, third),
-	}
+	rv := &DateDiffAbsMillis{}
+	rv.Init("date_diff_abs_millis", first, second, third)
 
 	rv.expr = rv
 	return rv
@@ -791,9 +781,8 @@ type DateDiffAbsStr struct {
 }
 
 func NewDateDiffAbsStr(first, second, third Expression) Function {
-	rv := &DateDiffAbsStr{
-		*NewTernaryFunctionBase("date_diff_abs_str", first, second, third),
-	}
+	rv := &DateDiffAbsStr{}
+	rv.Init("date_diff_abs_str", first, second, third)
 
 	rv.expr = rv
 	return rv
@@ -888,9 +877,8 @@ type DateFormatStr struct {
 }
 
 func NewDateFormatStr(operands ...Expression) Function {
-	rv := &DateFormatStr{
-		*NewFunctionBase("date_format_str", operands...),
-	}
+	rv := &DateFormatStr{}
+	rv.Init("date_format_str", operands...)
 
 	rv.expr = rv
 	return rv
@@ -990,9 +978,8 @@ type DatePartMillis struct {
 }
 
 func NewDatePartMillis(operands ...Expression) Function {
-	rv := &DatePartMillis{
-		*NewFunctionBase("date_part_millis", operands...),
-	}
+	rv := &DatePartMillis{}
+	rv.Init("date_part_millis", operands...)
 
 	rv.expr = rv
 	return rv
@@ -1107,9 +1094,8 @@ type DatePartStr struct {
 }
 
 func NewDatePartStr(first, second Expression) Function {
-	rv := &DatePartStr{
-		*NewBinaryFunctionBase("date_part_str", first, second),
-	}
+	rv := &DatePartStr{}
+	rv.Init("date_part_str", first, second)
 
 	rv.expr = rv
 	return rv
@@ -1186,9 +1172,8 @@ type DateRangeStr struct {
 }
 
 func NewDateRangeStr(operands ...Expression) Function {
-	rv := &DateRangeStr{
-		*NewFunctionBase("date_range_str", operands...),
-	}
+	rv := &DateRangeStr{}
+	rv.Init("date_range_str", operands...)
 
 	rv.expr = rv
 	return rv
@@ -1404,9 +1389,8 @@ type DateRangeMillis struct {
 }
 
 func NewDateRangeMillis(operands ...Expression) Function {
-	rv := &DateRangeMillis{
-		*NewFunctionBase("date_range_millis", operands...),
-	}
+	rv := &DateRangeMillis{}
+	rv.Init("date_range_millis", operands...)
 
 	rv.expr = rv
 	return rv
@@ -1614,9 +1598,8 @@ type DateTruncMillis struct {
 }
 
 func NewDateTruncMillis(first, second Expression) Function {
-	rv := &DateTruncMillis{
-		*NewBinaryFunctionBase("date_trunc_millis", first, second),
-	}
+	rv := &DateTruncMillis{}
+	rv.Init("date_trunc_millis", first, second)
 
 	rv.expr = rv
 	return rv
@@ -1694,9 +1677,8 @@ type DateTruncStr struct {
 }
 
 func NewDateTruncStr(operands ...Expression) Function {
-	rv := &DateTruncStr{
-		*NewFunctionBase("date_trunc_str", operands...),
-	}
+	rv := &DateTruncStr{}
+	rv.Init("date_trunc_str", operands...)
 
 	rv.expr = rv
 	return rv
@@ -1795,9 +1777,8 @@ type MillisToStr struct {
 }
 
 func NewMillisToStr(operands ...Expression) Function {
-	rv := &MillisToStr{
-		*NewFunctionBase("millis_to_str", operands...),
-	}
+	rv := &MillisToStr{}
+	rv.Init("millis_to_str", operands...)
 
 	rv.expr = rv
 	return rv
@@ -1877,9 +1858,8 @@ type MillisToUTC struct {
 }
 
 func NewMillisToUTC(operands ...Expression) Function {
-	rv := &MillisToUTC{
-		*NewFunctionBase("millis_to_utc", operands...),
-	}
+	rv := &MillisToUTC{}
+	rv.Init("millis_to_utc", operands...)
 
 	rv.expr = rv
 	return rv
@@ -1961,9 +1941,8 @@ type MillisToZoneName struct {
 }
 
 func NewMillisToZoneName(operands ...Expression) Function {
-	rv := &MillisToZoneName{
-		*NewFunctionBase("millis_to_zone_name", operands...),
-	}
+	rv := &MillisToZoneName{}
+	rv.Init("millis_to_zone_name", operands...)
 
 	rv.expr = rv
 	return rv
@@ -2063,10 +2042,8 @@ type NowMillis struct {
 var _NOW_MILLIS = NewNowMillis()
 
 func NewNowMillis() Function {
-	rv := &NowMillis{
-		*NewNullaryFunctionBase("now_millis"),
-	}
-
+	rv := &NowMillis{}
+	rv.Init("now_millis")
 	rv.setVolatile()
 	rv.expr = rv
 	return rv
@@ -2105,9 +2082,8 @@ type NowStr struct {
 }
 
 func NewNowStr(operands ...Expression) Function {
-	rv := &NowStr{
-		*NewFunctionBase("now_str", operands...),
-	}
+	rv := &NowStr{}
+	rv.Init("now_str", operands...)
 
 	rv.setVolatile()
 	rv.expr = rv
@@ -2171,9 +2147,8 @@ type NowTZ struct {
 }
 
 func NewNowTZ(operands ...Expression) Function {
-	rv := &NowTZ{
-		*NewFunctionBase("now_tz", operands...),
-	}
+	rv := &NowTZ{}
+	rv.Init("now_tz", operands...)
 
 	rv.setVolatile()
 	rv.expr = rv
@@ -2267,9 +2242,8 @@ type NowUTC struct {
 }
 
 func NewNowUTC(operands ...Expression) Function {
-	rv := &NowUTC{
-		*NewFunctionBase("now_utc", operands...),
-	}
+	rv := &NowUTC{}
+	rv.Init("now_utc", operands...)
 
 	rv.setVolatile()
 	rv.expr = rv
@@ -2332,9 +2306,8 @@ type StrToMillis struct {
 }
 
 func NewStrToMillis(operands ...Expression) Function {
-	rv := &StrToMillis{
-		*NewFunctionBase("str_to_millis", operands...),
-	}
+	rv := &StrToMillis{}
+	rv.Init("str_to_millis", operands...)
 
 	rv.expr = rv
 	return rv
@@ -2403,9 +2376,8 @@ type StrToUTC struct {
 }
 
 func NewStrToUTC(operands ...Expression) Function {
-	rv := &StrToUTC{
-		*NewFunctionBase("str_to_utc", operands...),
-	}
+	rv := &StrToUTC{}
+	rv.Init("str_to_utc", operands...)
 
 	rv.expr = rv
 	return rv
@@ -2497,9 +2469,8 @@ type StrToZoneName struct {
 }
 
 func NewStrToZoneName(operands ...Expression) Function {
-	rv := &StrToZoneName{
-		*NewFunctionBase("str_to_zone_name", operands...),
-	}
+	rv := &StrToZoneName{}
+	rv.Init("str_to_zone_name", operands...)
 
 	rv.expr = rv
 	return rv
@@ -2621,9 +2592,8 @@ type DurationToStr struct {
 }
 
 func NewDurationToStr(operands ...Expression) Function {
-	rv := &DurationToStr{
-		*NewFunctionBase("duration_to_str", operands...),
-	}
+	rv := &DurationToStr{}
+	rv.Init("duration_to_str", operands...)
 
 	rv.expr = rv
 	return rv
@@ -2705,9 +2675,8 @@ type StrToDuration struct {
 }
 
 func NewStrToDuration(operands ...Expression) Function {
-	rv := &StrToDuration{
-		*NewFunctionBase("str_to_duration", operands...),
-	}
+	rv := &StrToDuration{}
+	rv.Init("str_to_duration", operands...)
 
 	rv.expr = rv
 	return rv
@@ -2786,9 +2755,8 @@ type WeekdayMillis struct {
 }
 
 func NewWeekdayMillis(operands ...Expression) Function {
-	rv := &WeekdayMillis{
-		*NewFunctionBase("weekday_millis", operands...),
-	}
+	rv := &WeekdayMillis{}
+	rv.Init("weekday_millis", operands...)
 
 	rv.expr = rv
 	return rv
@@ -2888,9 +2856,8 @@ type WeekdayStr struct {
 }
 
 func NewWeekdayStr(first Expression) Function {
-	rv := &WeekdayStr{
-		*NewUnaryFunctionBase("weekday_str", first),
-	}
+	rv := &WeekdayStr{}
+	rv.Init("weekday_str", first)
 
 	rv.expr = rv
 	return rv

@@ -32,9 +32,8 @@ type JSONDecode struct {
 }
 
 func NewJSONDecode(operand Expression) Function {
-	rv := &JSONDecode{
-		*NewUnaryFunctionBase("json_decode", operand),
-	}
+	rv := &JSONDecode{}
+	rv.Init("json_decode", operand)
 
 	rv.expr = rv
 	return rv
@@ -108,9 +107,8 @@ type JSONEncode struct {
 }
 
 func NewJSONEncode(operand Expression) Function {
-	rv := &JSONEncode{
-		*NewUnaryFunctionBase("json_encode", operand),
-	}
+	rv := &JSONEncode{}
+	rv.Init("json_encode", operand)
 
 	rv.expr = rv
 	return rv
@@ -166,9 +164,8 @@ type EncodedSize struct {
 }
 
 func NewEncodedSize(operand Expression) Function {
-	rv := &EncodedSize{
-		*NewUnaryFunctionBase("encoded_size", operand),
-	}
+	rv := &EncodedSize{}
+	rv.Init("encoded_size", operand)
 
 	rv.expr = rv
 	return rv
@@ -216,9 +213,8 @@ type Pairs struct {
 }
 
 func NewPairs(operand Expression) Function {
-	rv := &Pairs{
-		*NewUnaryFunctionBase("pairs", operand),
-	}
+	rv := &Pairs{}
+	rv.Init("pairs", operand)
 
 	rv.expr = rv
 	return rv
@@ -284,9 +280,8 @@ type PolyLength struct {
 }
 
 func NewPolyLength(operand Expression) Function {
-	rv := &PolyLength{
-		*NewUnaryFunctionBase("poly_length", operand),
-	}
+	rv := &PolyLength{}
+	rv.Init("poly_length", operand)
 
 	rv.expr = rv
 	return rv

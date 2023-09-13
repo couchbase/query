@@ -21,9 +21,8 @@ type LT struct {
 }
 
 func NewLT(first, second Expression) Function {
-	rv := &LT{
-		*NewBinaryFunctionBase("lt", first, second),
-	}
+	rv := &LT{}
+	rv.Init("lt", first, second)
 
 	rv.expr = rv
 	return rv

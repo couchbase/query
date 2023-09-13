@@ -27,9 +27,8 @@ type Contains struct {
 }
 
 func NewContains(first, second Expression) Function {
-	rv := &Contains{
-		*NewBinaryFunctionBase("contains", first, second),
-	}
+	rv := &Contains{}
+	rv.Init("contains", first, second)
 
 	rv.expr = rv
 	return rv
@@ -86,9 +85,8 @@ type Length struct {
 }
 
 func NewLength(operand Expression) Function {
-	rv := &Length{
-		*NewUnaryFunctionBase("length", operand),
-	}
+	rv := &Length{}
+	rv.Init("length", operand)
 	rv.expr = rv
 	return rv
 }
@@ -124,9 +122,8 @@ type MBLength struct {
 }
 
 func NewMBLength(operand Expression) Function {
-	rv := &MBLength{
-		*NewUnaryFunctionBase("mb_length", operand),
-	}
+	rv := &MBLength{}
+	rv.Init("mb_length", operand)
 	rv.expr = rv
 	return rv
 }
@@ -164,9 +161,8 @@ type Lower struct {
 }
 
 func NewLower(operand Expression) Function {
-	rv := &Lower{
-		*NewUnaryFunctionBase("lower", operand),
-	}
+	rv := &Lower{}
+	rv.Init("lower", operand)
 
 	rv.expr = rv
 	return rv
@@ -205,9 +201,8 @@ type LTrim struct {
 }
 
 func NewLTrim(operands ...Expression) Function {
-	rv := &LTrim{
-		*NewFunctionBase("ltrim", operands...),
-	}
+	rv := &LTrim{}
+	rv.Init("ltrim", operands...)
 
 	rv.expr = rv
 	return rv
@@ -269,9 +264,8 @@ type Position0 struct {
 }
 
 func NewPosition0(first, second Expression) Function {
-	rv := &Position0{
-		*NewBinaryFunctionBase("position0", first, second),
-	}
+	rv := &Position0{}
+	rv.Init("position0", first, second)
 
 	rv.expr = rv
 	return rv
@@ -308,9 +302,8 @@ type MBPosition0 struct {
 }
 
 func NewMBPosition0(first, second Expression) Function {
-	rv := &MBPosition0{
-		*NewBinaryFunctionBase("mb_position0", first, second),
-	}
+	rv := &MBPosition0{}
+	rv.Init("mb_position0", first, second)
 
 	rv.expr = rv
 	return rv
@@ -347,9 +340,8 @@ type Position1 struct {
 }
 
 func NewPosition1(first, second Expression) Function {
-	rv := &Position1{
-		*NewBinaryFunctionBase("position1", first, second),
-	}
+	rv := &Position1{}
+	rv.Init("position1", first, second)
 
 	rv.expr = rv
 	return rv
@@ -386,9 +378,8 @@ type MBPosition1 struct {
 }
 
 func NewMBPosition1(first, second Expression) Function {
-	rv := &MBPosition1{
-		*NewBinaryFunctionBase("mb_position1", first, second),
-	}
+	rv := &MBPosition1{}
+	rv.Init("mb_position1", first, second)
 
 	rv.expr = rv
 	return rv
@@ -442,9 +433,8 @@ type Repeat struct {
 }
 
 func NewRepeat(first, second Expression) Function {
-	rv := &Repeat{
-		*NewBinaryFunctionBase("repeat", first, second),
-	}
+	rv := &Repeat{}
+	rv.Init("repeat", first, second)
 
 	rv.expr = rv
 	return rv
@@ -499,9 +489,8 @@ type Replace struct {
 }
 
 func NewReplace(operands ...Expression) Function {
-	rv := &Replace{
-		*NewFunctionBase("replace", operands...),
-	}
+	rv := &Replace{}
+	rv.Init("replace", operands...)
 
 	rv.expr = rv
 	return rv
@@ -574,9 +563,8 @@ type Reverse struct {
 }
 
 func NewReverse(operand Expression) Function {
-	rv := &Reverse{
-		*NewUnaryFunctionBase("reverse", operand),
-	}
+	rv := &Reverse{}
+	rv.Init("reverse", operand)
 
 	rv.expr = rv
 	return rv
@@ -616,9 +604,8 @@ type RTrim struct {
 }
 
 func NewRTrim(operands ...Expression) Function {
-	rv := &RTrim{
-		*NewFunctionBase("rtrim", operands...),
-	}
+	rv := &RTrim{}
+	rv.Init("rtrim", operands...)
 
 	rv.expr = rv
 	return rv
@@ -678,9 +665,8 @@ type Split struct {
 }
 
 func NewSplit(operands ...Expression) Function {
-	rv := &Split{
-		*NewFunctionBase("split", operands...),
-	}
+	rv := &Split{}
+	rv.Init("split", operands...)
 
 	rv.expr = rv
 	return rv
@@ -750,9 +736,8 @@ type Substr0 struct {
 }
 
 func NewSubstr0(operands ...Expression) Function {
-	rv := &Substr0{
-		*NewFunctionBase("substr0", operands...),
-	}
+	rv := &Substr0{}
+	rv.Init("substr0", operands...)
 
 	rv.expr = rv
 	return rv
@@ -792,9 +777,8 @@ type MBSubstr0 struct {
 }
 
 func NewMBSubstr0(operands ...Expression) Function {
-	rv := &MBSubstr0{
-		*NewFunctionBase("mb_substr0", operands...),
-	}
+	rv := &MBSubstr0{}
+	rv.Init("mb_substr0", operands...)
 
 	rv.expr = rv
 	return rv
@@ -834,9 +818,8 @@ type Substr1 struct {
 }
 
 func NewSubstr1(operands ...Expression) Function {
-	rv := &Substr1{
-		*NewFunctionBase("substr1", operands...),
-	}
+	rv := &Substr1{}
+	rv.Init("substr1", operands...)
 
 	rv.expr = rv
 	return rv
@@ -876,9 +859,8 @@ type MBSubstr1 struct {
 }
 
 func NewMBSubstr1(operands ...Expression) Function {
-	rv := &MBSubstr1{
-		*NewFunctionBase("mb_substr1", operands...),
-	}
+	rv := &MBSubstr1{}
+	rv.Init("mb_substr1", operands...)
 
 	rv.expr = rv
 	return rv
@@ -997,9 +979,8 @@ type Suffixes struct {
 }
 
 func NewSuffixes(operand Expression) Function {
-	rv := &Suffixes{
-		*NewUnaryFunctionBase("suffixes", operand),
-	}
+	rv := &Suffixes{}
+	rv.Init("suffixes", operand)
 
 	rv.expr = rv
 	return rv
@@ -1044,9 +1025,8 @@ type Title struct {
 }
 
 func NewTitle(operand Expression) Function {
-	rv := &Title{
-		*NewUnaryFunctionBase("title", operand),
-	}
+	rv := &Title{}
+	rv.Init("title", operand)
 
 	rv.expr = rv
 	return rv
@@ -1086,9 +1066,8 @@ type Trim struct {
 }
 
 func NewTrim(operands ...Expression) Function {
-	rv := &Trim{
-		*NewFunctionBase("trim", operands...),
-	}
+	rv := &Trim{}
+	rv.Init("trim", operands...)
 
 	rv.expr = rv
 	return rv
@@ -1148,9 +1127,8 @@ type Upper struct {
 }
 
 func NewUpper(operand Expression) Function {
-	rv := &Upper{
-		*NewUnaryFunctionBase("upper", operand),
-	}
+	rv := &Upper{}
+	rv.Init("upper", operand)
 
 	rv.expr = rv
 	return rv
@@ -1189,9 +1167,8 @@ type Mask struct {
 }
 
 func NewMask(operands ...Expression) Function {
-	rv := &Mask{
-		*NewFunctionBase("mask", operands...),
-	}
+	rv := &Mask{}
+	rv.Init("mask", operands...)
 
 	rv.expr = rv
 	return rv
@@ -1426,9 +1403,8 @@ type LPad struct {
 }
 
 func NewLPad(operands ...Expression) Function {
-	rv := &LPad{
-		*NewFunctionBase("lpad", operands...),
-	}
+	rv := &LPad{}
+	rv.Init("lpad", operands...)
 
 	rv.expr = rv
 	return rv
@@ -1459,9 +1435,8 @@ type MBLPad struct {
 }
 
 func NewMBLPad(operands ...Expression) Function {
-	rv := &MBLPad{
-		*NewFunctionBase("mb_lpad", operands...),
-	}
+	rv := &MBLPad{}
+	rv.Init("mb_lpad", operands...)
 
 	rv.expr = rv
 	return rv
@@ -1492,9 +1467,8 @@ type RPad struct {
 }
 
 func NewRPad(operands ...Expression) Function {
-	rv := &RPad{
-		*NewFunctionBase("rpad", operands...),
-	}
+	rv := &RPad{}
+	rv.Init("rpad", operands...)
 
 	rv.expr = rv
 	return rv
@@ -1525,9 +1499,8 @@ type MBRPad struct {
 }
 
 func NewMBRPad(operands ...Expression) Function {
-	rv := &MBRPad{
-		*NewFunctionBase("mb_rpad", operands...),
-	}
+	rv := &MBRPad{}
+	rv.Init("mb_rpad", operands...)
 
 	rv.expr = rv
 	return rv
@@ -1558,9 +1531,8 @@ type Formalize struct {
 }
 
 func NewFormalize(operands ...Expression) Function {
-	rv := &Formalize{
-		*NewFunctionBase("formalize", operands...),
-	}
+	rv := &Formalize{}
+	rv.Init("formalize", operands...)
 
 	rv.expr = rv
 	return rv
@@ -1620,9 +1592,8 @@ type URLEncode struct {
 }
 
 func NewURLEncode(operand Expression) Function {
-	rv := &URLEncode{
-		*NewUnaryFunctionBase("urlencode", operand),
-	}
+	rv := &URLEncode{}
+	rv.Init("urlencode", operand)
 
 	rv.expr = rv
 	return rv
@@ -1661,9 +1632,8 @@ type URLDecode struct {
 }
 
 func NewURLDecode(operand Expression) Function {
-	rv := &URLDecode{
-		*NewUnaryFunctionBase("urlencode", operand),
-	}
+	rv := &URLDecode{}
+	rv.Init("urlencode", operand)
 
 	rv.expr = rv
 	return rv

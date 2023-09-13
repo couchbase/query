@@ -18,10 +18,8 @@ type IsDistinctFrom struct {
 }
 
 func NewIsDistinctFrom(first, second Expression) Function {
-	rv := &IsDistinctFrom{
-		*NewBinaryFunctionBase("isdistinctfrom", first, second),
-		false,
-	}
+	rv := &IsDistinctFrom{}
+	rv.Init("isdistinctfrom", first, second)
 	rv.expr = rv
 	return rv
 }
@@ -87,10 +85,8 @@ type IsNotDistinctFrom struct {
 }
 
 func NewIsNotDistinctFrom(first, second Expression) Function {
-	rv := &IsNotDistinctFrom{
-		*NewBinaryFunctionBase("isnotdistinctfrom", first, second),
-		false,
-	}
+	rv := &IsNotDistinctFrom{}
+	rv.Init("isnotdistinctfrom", first, second)
 
 	rv.expr = rv
 	return rv

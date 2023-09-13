@@ -32,9 +32,8 @@ type Base64Encode struct {
 }
 
 func NewBase64Encode(operand Expression) Function {
-	rv := &Base64Encode{
-		*NewUnaryFunctionBase("base64_encode", operand),
-	}
+	rv := &Base64Encode{}
+	rv.Init("base64_encode", operand)
 
 	rv.expr = rv
 	return rv
@@ -86,9 +85,8 @@ type Base64Decode struct {
 }
 
 func NewBase64Decode(operand Expression) Function {
-	rv := &Base64Decode{
-		*NewUnaryFunctionBase("base64_decode", operand),
-	}
+	rv := &Base64Decode{}
+	rv.Init("base64_decode", operand)
 
 	rv.expr = rv
 	return rv
@@ -144,9 +142,8 @@ type Meta struct {
 }
 
 func NewMeta(operands ...Expression) Function {
-	rv := &Meta{
-		*NewFunctionBase("meta", operands...),
-	}
+	rv := &Meta{}
+	rv.Init("meta", operands...)
 
 	if len(operands) > 0 {
 		if ident, ok := operands[0].(*Identifier); ok {
@@ -249,10 +246,8 @@ type Self struct {
 var SELF = NewSelf()
 
 func NewSelf() Function {
-	rv := &Self{
-		*NewNullaryFunctionBase("self"),
-	}
-
+	rv := &Self{}
+	rv.Init("self")
 	rv.expr = rv
 	return rv
 }
@@ -329,10 +324,8 @@ type Uuid struct {
 }
 
 func NewUuid() Function {
-	rv := &Uuid{
-		*NewNullaryFunctionBase("uuid"),
-	}
-
+	rv := &Uuid{}
+	rv.Init("uuid")
 	rv.setVolatile()
 	rv.expr = rv
 	return rv
@@ -384,10 +377,8 @@ type Version struct {
 }
 
 func NewVersion() Function {
-	rv := &Version{
-		*NewNullaryFunctionBase("version"),
-	}
-
+	rv := &Version{}
+	rv.Init("version")
 	rv.expr = rv
 	return rv
 }
@@ -442,10 +433,8 @@ type MinVersion struct {
 }
 
 func NewMinVersion() Function {
-	rv := &MinVersion{
-		*NewNullaryFunctionBase("min_version"),
-	}
-
+	rv := &MinVersion{}
+	rv.Init("min_version")
 	rv.expr = rv
 	return rv
 }
@@ -497,11 +486,9 @@ type CurrentUser struct {
 }
 
 func NewCurrentUser() Function {
-	rv := &CurrentUser{
-		*NewNullaryFunctionBase("current_user"),
-		false,
-	}
-
+	rv := &CurrentUser{}
+	rv.Init("current_user")
+	rv.operator = false
 	rv.expr = rv
 	return rv
 }
@@ -562,10 +549,8 @@ type CurrentUsers struct {
 }
 
 func NewCurrentUsers() Function {
-	rv := &CurrentUsers{
-		*NewNullaryFunctionBase("current_users"),
-	}
-
+	rv := &CurrentUsers{}
+	rv.Init("current_users")
 	rv.expr = rv
 	return rv
 }
@@ -618,10 +603,8 @@ type DsVersion struct {
 }
 
 func NewDsVersion() Function {
-	rv := &DsVersion{
-		*NewNullaryFunctionBase("ds_version"),
-	}
-
+	rv := &DsVersion{}
+	rv.Init("ds_version")
 	rv.expr = rv
 	return rv
 }

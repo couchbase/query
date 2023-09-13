@@ -31,9 +31,8 @@ type ArrayAppend struct {
 }
 
 func NewArrayAppend(operands ...Expression) Function {
-	rv := &ArrayAppend{
-		*NewFunctionBase("array_append", operands...),
-	}
+	rv := &ArrayAppend{}
+	rv.Init("array_append", operands...)
 
 	rv.expr = rv
 	return rv
@@ -112,9 +111,8 @@ type ArrayAvg struct {
 }
 
 func NewArrayAvg(operand Expression) Function {
-	rv := &ArrayAvg{
-		*NewUnaryFunctionBase("array_avg", operand),
-	}
+	rv := &ArrayAvg{}
+	rv.Init("array_avg", operand)
 
 	rv.expr = rv
 	return rv
@@ -189,9 +187,8 @@ type ArrayConcat struct {
 }
 
 func NewArrayConcat(operands ...Expression) Function {
-	rv := &ArrayConcat{
-		*NewFunctionBase("array_concat", operands...),
-	}
+	rv := &ArrayConcat{}
+	rv.Init("array_concat", operands...)
 
 	rv.expr = rv
 	return rv
@@ -266,9 +263,8 @@ type ArrayContains struct {
 }
 
 func NewArrayContains(first, second Expression) Function {
-	rv := &ArrayContains{
-		*NewBinaryFunctionBase("array_contains", first, second),
-	}
+	rv := &ArrayContains{}
+	rv.Init("array_contains", first, second)
 
 	rv.expr = rv
 	return rv
@@ -358,9 +354,8 @@ type ArrayContainsAny struct {
 }
 
 func NewArrayContainsAny(first, second Expression) Function {
-	rv := &ArrayContainsAny{
-		*NewBinaryFunctionBase("array_contains_any", first, second),
-	}
+	rv := &ArrayContainsAny{}
+	rv.Init("array_contains_any", first, second)
 
 	rv.expr = rv
 	return rv
@@ -464,9 +459,8 @@ type ArrayContainsAll struct {
 }
 
 func NewArrayContainsAll(first, second Expression) Function {
-	rv := &ArrayContainsAll{
-		*NewBinaryFunctionBase("array_contains_all", first, second),
-	}
+	rv := &ArrayContainsAll{}
+	rv.Init("array_contains_all", first, second)
 
 	rv.expr = rv
 	return rv
@@ -571,9 +565,8 @@ type ArrayCount struct {
 }
 
 func NewArrayCount(operand Expression) Function {
-	rv := &ArrayCount{
-		*NewUnaryFunctionBase("array_count", operand),
-	}
+	rv := &ArrayCount{}
+	rv.Init("array_count", operand)
 
 	rv.expr = rv
 	return rv
@@ -641,9 +634,8 @@ type ArrayDistinct struct {
 }
 
 func NewArrayDistinct(operand Expression) Function {
-	rv := &ArrayDistinct{
-		*NewUnaryFunctionBase("array_distinct", operand),
-	}
+	rv := &ArrayDistinct{}
+	rv.Init("array_distinct", operand)
 
 	rv.expr = rv
 	return rv
@@ -713,9 +705,8 @@ type ArrayFlatten struct {
 }
 
 func NewArrayFlatten(first, second Expression) Function {
-	rv := &ArrayFlatten{
-		*NewBinaryFunctionBase("array_flatten", first, second),
-	}
+	rv := &ArrayFlatten{}
+	rv.Init("array_flatten", first, second)
 
 	rv.expr = rv
 	return rv
@@ -806,9 +797,8 @@ type ArrayIfNull struct {
 }
 
 func NewArrayIfNull(operand Expression) Function {
-	rv := &ArrayIfNull{
-		*NewUnaryFunctionBase("array_ifnull", operand),
-	}
+	rv := &ArrayIfNull{}
+	rv.Init("array_ifnull", operand)
 
 	rv.expr = rv
 	return rv
@@ -873,9 +863,8 @@ type ArrayInsert struct {
 }
 
 func NewArrayInsert(operands ...Expression) Function {
-	rv := &ArrayInsert{
-		*NewFunctionBase("array_insert", operands...),
-	}
+	rv := &ArrayInsert{}
+	rv.Init("array_insert", operands...)
 
 	rv.expr = rv
 	return rv
@@ -1000,9 +989,8 @@ type ArrayIntersect struct {
 }
 
 func NewArrayIntersect(operands ...Expression) Function {
-	rv := &ArrayIntersect{
-		*NewFunctionBase("array_intersect", operands...),
-	}
+	rv := &ArrayIntersect{}
+	rv.Init("array_intersect", operands...)
 
 	rv.expr = rv
 	return rv
@@ -1113,9 +1101,8 @@ type ArrayLength struct {
 }
 
 func NewArrayLength(operand Expression) Function {
-	rv := &ArrayLength{
-		*NewUnaryFunctionBase("array_length", operand),
-	}
+	rv := &ArrayLength{}
+	rv.Init("array_length", operand)
 
 	rv.expr = rv
 	return rv
@@ -1174,9 +1161,8 @@ type ArrayMax struct {
 }
 
 func NewArrayMax(operand Expression) Function {
-	rv := &ArrayMax{
-		*NewUnaryFunctionBase("array_max", operand),
-	}
+	rv := &ArrayMax{}
+	rv.Init("array_max", operand)
 
 	rv.expr = rv
 	return rv
@@ -1244,9 +1230,8 @@ type ArrayMin struct {
 }
 
 func NewArrayMin(operand Expression) Function {
-	rv := &ArrayMin{
-		*NewUnaryFunctionBase("array_min", operand),
-	}
+	rv := &ArrayMin{}
+	rv.Init("array_min", operand)
 
 	rv.expr = rv
 	return rv
@@ -1315,9 +1300,8 @@ type ArrayPosition struct {
 }
 
 func NewArrayPosition(first, second Expression) Function {
-	rv := &ArrayPosition{
-		*NewBinaryFunctionBase("array_position", first, second),
-	}
+	rv := &ArrayPosition{}
+	rv.Init("array_position", first, second)
 
 	rv.expr = rv
 	return rv
@@ -1389,9 +1373,8 @@ type ArrayPrepend struct {
 }
 
 func NewArrayPrepend(operands ...Expression) Function {
-	rv := &ArrayPrepend{
-		*NewFunctionBase("array_prepend", operands...),
-	}
+	rv := &ArrayPrepend{}
+	rv.Init("array_prepend", operands...)
 
 	rv.expr = rv
 	return rv
@@ -1474,9 +1457,8 @@ type ArrayPut struct {
 }
 
 func NewArrayPut(operands ...Expression) Function {
-	rv := &ArrayPut{
-		*NewFunctionBase("array_put", operands...),
-	}
+	rv := &ArrayPut{}
+	rv.Init("array_put", operands...)
 
 	rv.expr = rv
 	return rv
@@ -1570,9 +1552,8 @@ type ArrayRange struct {
 }
 
 func NewArrayRange(operands ...Expression) Function {
-	rv := &ArrayRange{
-		*NewFunctionBase("array_range", operands...),
-	}
+	rv := &ArrayRange{}
+	rv.Init("array_range", operands...)
 
 	rv.expr = rv
 	return rv
@@ -1674,9 +1655,8 @@ type ArrayRemove struct {
 }
 
 func NewArrayRemove(operands ...Expression) Function {
-	rv := &ArrayRemove{
-		*NewFunctionBase("array_remove", operands...),
-	}
+	rv := &ArrayRemove{}
+	rv.Init("array_remove", operands...)
 
 	rv.expr = rv
 	return rv
@@ -1770,9 +1750,8 @@ type ArrayRepeat struct {
 }
 
 func NewArrayRepeat(first, second Expression) Function {
-	rv := &ArrayRepeat{
-		*NewBinaryFunctionBase("array_repeat", first, second),
-	}
+	rv := &ArrayRepeat{}
+	rv.Init("array_repeat", first, second)
 
 	rv.expr = rv
 	return rv
@@ -1851,9 +1830,8 @@ type ArrayReplace struct {
 }
 
 func NewArrayReplace(operands ...Expression) Function {
-	rv := &ArrayReplace{
-		*NewFunctionBase("array_replace", operands...),
-	}
+	rv := &ArrayReplace{}
+	rv.Init("array_replace", operands...)
 
 	rv.expr = rv
 	return rv
@@ -1954,9 +1932,8 @@ type ArrayReplaceEquivalent struct {
 }
 
 func NewArrayReplaceEquivalent(operands ...Expression) Function {
-	rv := &ArrayReplaceEquivalent{
-		*NewFunctionBase("array_replace_equivalent", operands...),
-	}
+	rv := &ArrayReplaceEquivalent{}
+	rv.Init("array_replace_equivalent", operands...)
 
 	rv.expr = rv
 	return rv
@@ -2062,9 +2039,8 @@ type ArrayReverse struct {
 }
 
 func NewArrayReverse(operand Expression) Function {
-	rv := &ArrayReverse{
-		*NewUnaryFunctionBase("array_reverse", operand),
-	}
+	rv := &ArrayReverse{}
+	rv.Init("array_reverse", operand)
 
 	rv.expr = rv
 	return rv
@@ -2130,9 +2106,8 @@ type ArraySort struct {
 }
 
 func NewArraySort(operand Expression) Function {
-	rv := &ArraySort{
-		*NewUnaryFunctionBase("array_sort", operand),
-	}
+	rv := &ArraySort{}
+	rv.Init("array_sort", operand)
 
 	rv.expr = rv
 	return rv
@@ -2193,10 +2168,8 @@ type ArrayStar struct {
 }
 
 func NewArrayStar(operand Expression) Function {
-	rv := &ArrayStar{
-		*NewUnaryFunctionBase("array_star", operand),
-		false,
-	}
+	rv := &ArrayStar{}
+	rv.Init("array_star", operand)
 
 	rv.expr = rv
 	return rv
@@ -2300,9 +2273,8 @@ type ArraySum struct {
 }
 
 func NewArraySum(operand Expression) Function {
-	rv := &ArraySum{
-		*NewUnaryFunctionBase("array_sum", operand),
-	}
+	rv := &ArraySum{}
+	rv.Init("array_sum", operand)
 
 	rv.expr = rv
 	return rv
@@ -2372,9 +2344,8 @@ type ArraySymdiff1 struct {
 }
 
 func NewArraySymdiff1(operands ...Expression) Function {
-	rv := &ArraySymdiff1{
-		*NewFunctionBase("array_symdiff1", operands...),
-	}
+	rv := &ArraySymdiff1{}
+	rv.Init("array_symdiff1", operands...)
 
 	rv.expr = rv
 	return rv
@@ -2469,9 +2440,8 @@ type ArraySymdiffn struct {
 }
 
 func NewArraySymdiffn(operands ...Expression) Function {
-	rv := &ArraySymdiffn{
-		*NewFunctionBase("array_symdiffn", operands...),
-	}
+	rv := &ArraySymdiffn{}
+	rv.Init("array_symdiffn", operands...)
 
 	rv.expr = rv
 	return rv
@@ -2564,9 +2534,8 @@ type ArrayUnion struct {
 }
 
 func NewArrayUnion(operands ...Expression) Function {
-	rv := &ArrayUnion{
-		*NewFunctionBase("array_union", operands...),
-	}
+	rv := &ArrayUnion{}
+	rv.Init("array_union", operands...)
 
 	rv.expr = rv
 	return rv
@@ -2655,9 +2624,8 @@ type ArraySwap struct {
 }
 
 func NewArraySwap(first, second, third Expression) Function {
-	rv := &ArraySwap{
-		*NewTernaryFunctionBase("array_swap", first, second, third),
-	}
+	rv := &ArraySwap{}
+	rv.Init("array_swap", first, second, third)
 
 	rv.expr = rv
 	return rv
@@ -2753,9 +2721,8 @@ type ArrayMove struct {
 }
 
 func NewArrayMove(first, second, third Expression) Function {
-	rv := &ArrayMove{
-		*NewTernaryFunctionBase("array_move", first, second, third),
-	}
+	rv := &ArrayMove{}
+	rv.Init("array_move", first, second, third)
 
 	rv.expr = rv
 	return rv
@@ -2864,9 +2831,8 @@ type ArrayExcept struct {
 }
 
 func NewArrayExcept(first, second Expression) Function {
-	rv := &ArrayExcept{
-		*NewBinaryFunctionBase("array_except", first, second),
-	}
+	rv := &ArrayExcept{}
+	rv.Init("array_except", first, second)
 
 	rv.expr = rv
 	return rv
@@ -2945,9 +2911,8 @@ type ArrayBinarySearch struct {
 }
 
 func NewArrayBinarySearch(first, second Expression) Function {
-	rv := &ArrayBinarySearch{
-		*NewBinaryFunctionBase("array_binary_search", first, second),
-	}
+	rv := &ArrayBinarySearch{}
+	rv.Init("array_binary_search", first, second)
 
 	rv.expr = rv
 	return rv
