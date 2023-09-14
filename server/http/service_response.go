@@ -114,6 +114,10 @@ func (this *httpRequest) setHttpCode(httpRespCode int) {
 }
 
 func (this *httpRequest) Failed(srvr *server.Server) {
+	if this.httpCode() == 0 && this.GetErrorCount() == 0 {
+		// we've called Failed, have not set a status and have no errors to set the status for us
+		this.setHttpCode(http.StatusInternalServerError)
+	}
 	prefix, indent := this.prettyStrings(srvr.Pretty(), false)
 	this.writeString("{\n")
 	this.writeRequestID(prefix)
@@ -350,13 +354,8 @@ func (this *httpRequest) writeErrors(prefix string, indent string) bool {
 			this.writeString(prefix)
 			this.writeString("\"errors\": [")
 
-			// MB-19307: please check the comments
-			// in mapErrortoHttpResponse().
-			// Ideally we should set the status code
-			// only before calling writePrefix()
-			// but this is too cumbersome, having
-			// to check Execution errors as well.
-			if this.State() != server.FATAL {
+			// MB-19307: please check the comments in mapErrortoHttpResponse().
+			if this.httpCode() == 0 {
 				this.setHttpCode(mapErrorToHttpResponse(err, http.StatusOK))
 			}
 		}
@@ -888,6 +887,9 @@ func (this *bufferedWriter) writeBytes(s []byte) bool {
 
 		// write response header and data buffered so far using request's response writer:
 		if this.header {
+			if this.req.httpCode() == 0 {
+				this.req.setHttpCode(http.StatusOK)
+			}
 			w.WriteHeader(this.req.httpCode())
 			this.header = false
 		}
@@ -917,6 +919,9 @@ func (this *bufferedWriter) printf(f string, args ...interface{}) bool {
 
 		// write response header and data buffered so far using request's response writer:
 		if this.header {
+			if this.req.httpCode() == 0 {
+				this.req.setHttpCode(http.StatusOK)
+			}
 			w.WriteHeader(this.req.httpCode())
 			this.header = false
 		}
@@ -956,6 +961,9 @@ func (this *bufferedWriter) timeFlush() {
 
 		// write response header and data buffered so far using request's response writer:
 		if this.header {
+			if this.req.httpCode() == 0 {
+				this.req.setHttpCode(http.StatusOK)
+			}
 			w.WriteHeader(this.req.httpCode())
 			this.header = false
 		}
@@ -982,6 +990,9 @@ func (this *bufferedWriter) sizeFlush() {
 
 		// write response header and data buffered so far using request's response writer:
 		if this.header {
+			if this.req.httpCode() == 0 {
+				this.req.setHttpCode(http.StatusOK)
+			}
 			w.WriteHeader(this.req.httpCode())
 			this.header = false
 		}
@@ -1023,6 +1034,9 @@ func (this *bufferedWriter) noMoreData() {
 		content_len := strconv.Itoa(len(this.buffer.Bytes()))
 		w.Header().Set("Content-Length", content_len)
 		// write response header and data buffered so far:
+		if this.req.httpCode() == 0 {
+			this.req.setHttpCode(http.StatusOK)
+		}
 		w.WriteHeader(this.req.httpCode())
 		this.header = false
 	}
