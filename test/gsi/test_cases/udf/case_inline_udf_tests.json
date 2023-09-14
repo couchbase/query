@@ -62,6 +62,27 @@
         ]
     },
     {
+        "description":"MB-58479: Inline UDF that has the same function executed multiple times in the query",
+        "statements": "SELECT inline2(33) AS i1, inline2(40) AS i2",
+        "results":[
+            {
+                "i1":  [
+                    {
+                        "custId": "customer12"
+                    },
+                    {
+                        "custId": "customer7"
+                    }
+                ],
+                "i2":  [
+                    {
+                        "custId": "customer8"
+                    }
+                ]
+            }
+        ]
+    },
+    {
         "description": "Check entries in system:functions",
         "statements": "SELECT meta().id FROM system:functions ORDER BY meta().id",
         "results": [

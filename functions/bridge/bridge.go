@@ -31,3 +31,8 @@ var NewGolangBody func(library, object string) (functions.FunctionBody, errors.E
 var NewJavascriptBody func(library, object, text string) (functions.FunctionBody, errors.Error) = func(library, object, text string) (functions.FunctionBody, errors.Error) {
 	return nil, nil
 }
+
+// Created to avoid circular references between functions and expression
+type InlineUdfContext interface {
+	GetAndSetInlineUdfExprs(udf string, expr expression.Expression, hasSubqueries bool) (expression.Expression, error)
+}

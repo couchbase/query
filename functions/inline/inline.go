@@ -16,7 +16,9 @@ import (
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/expression/parser"
 	"github.com/couchbase/query/functions"
+	functionsBridge "github.com/couchbase/query/functions/bridge"
 	"github.com/couchbase/query/value"
 )
 
@@ -24,9 +26,10 @@ type inline struct {
 }
 
 type inlineBody struct {
-	expr     expression.Expression
-	varNames []string
-	text     string
+	expr          expression.Expression
+	varNames      []string
+	text          string
+	hasSubqueries bool // if the inline function body contains subqueries
 }
 
 func Init() {
@@ -43,7 +46,12 @@ func (this *inline) FunctionStatements(name functions.FunctionName, body functio
 		return nil, errors.NewInternalFunctionError(goerrors.New("Wrong language being executed!"), name.Name())
 	}
 
-	expr := funcBody.expr
+	// Get the function body to safely use
+	expr, err := funcBody.getBodyExpr()
+	if err != nil {
+		return nil, errors.NewInternalFunctionError(err, name.Name())
+	}
+
 	var subqueries [](*algebra.Subquery)
 
 	if sq, ok := expr.(*algebra.Subquery); ok {
@@ -52,7 +60,7 @@ func (this *inline) FunctionStatements(name functions.FunctionName, body functio
 		sqs, err := expression.ListSubqueries(expression.Expressions{expr}, false)
 
 		if err != nil {
-			return nil, errors.NewInternalFunctionError(err, "")
+			return nil, errors.NewInternalFunctionError(err, name.Name())
 		}
 
 		for _, s := range sqs {
@@ -91,7 +99,21 @@ func (this *inline) Execute(name functions.FunctionName, body functions.Function
 			parent[funcBody.varNames[i]] = values[i]
 		}
 	}
-	val, err := funcBody.expr.Evaluate(value.NewValue(parent), context)
+
+	expr := funcBody.expr
+	if c, ok := context.(functionsBridge.InlineUdfContext); ok {
+		var err error
+
+		// Get the function body to safely use
+		// Generate and use a new AST expression object when the funcBody.expr contains subqueries
+		expr, err = c.GetAndSetInlineUdfExprs(name.Key(), funcBody.expr, funcBody.hasSubqueries)
+		if err != nil {
+			return nil, errors.NewInternalFunctionError(err, name.Name())
+		}
+	}
+
+	val, err := expr.Evaluate(value.NewValue(parent), context)
+
 	if err != nil {
 		return nil, errors.NewFunctionExecutionError("", name.Name(), err)
 	} else {
@@ -100,7 +122,7 @@ func (this *inline) Execute(name functions.FunctionName, body functions.Function
 }
 
 func NewInlineBody(expr expression.Expression, text string) (functions.FunctionBody, errors.Error) {
-	return &inlineBody{expr: expr, text: strings.TrimSuffix(text, ";")}, nil
+	return &inlineBody{expr: expr, text: strings.TrimSuffix(text, ";"), hasSubqueries: expression.ContainsSubquery(expr)}, nil
 }
 
 func (this *inlineBody) SetVarNames(vars []string) errors.Error {
@@ -218,4 +240,16 @@ func (this *inlineBody) Unload(name functions.FunctionName) {
 
 func (this *inlineBody) Expressions() expression.Expressions {
 	return expression.Expressions{this.expr}
+}
+
+// MB-58479: Since the Inline UDF's body is shared
+// Reparse the function body only when it contains subqueries
+// to prevent race conditions and concurrent reads/writes on the shared Expression object
+// If the function body has no subqueries it is safe to use the original shared Expression object
+func (this *inlineBody) getBodyExpr() (expression.Expression, error) {
+	if this.hasSubqueries {
+		return parser.Parse(this.expr.String())
+	}
+
+	return this.expr, nil
 }

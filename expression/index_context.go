@@ -186,3 +186,11 @@ func (this *IndexContext) InitUdfPlans() {
 func (this *IndexContext) InitUdfStmtExecTrees() {
 	// no op
 }
+
+func (this *IndexContext) InitInlineUdfExprs() {
+	// no op
+}
+
+func (this *IndexContext) IsPrepared() bool {
+	return false
+}

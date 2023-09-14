@@ -61,6 +61,8 @@ type Context interface {
 	PreserveProjectionOrder() bool
 	InitUdfPlans()
 	InitUdfStmtExecTrees()
+	InitInlineUdfExprs()
+	IsPrepared() bool
 }
 
 type ExecutionHandle interface {

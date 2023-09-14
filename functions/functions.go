@@ -413,22 +413,32 @@ func ExecuteFunction(name FunctionName, modifiers Modifier, values []value.Value
 		return nil, err
 	}
 
-	// Initialize the UDF execution tree cache and UDF query plan cache
-	// Only for Golang/ Javascript UDF execution
-	// We initialize here - so we dont unecessarily initialize these in the context
 	lang := entry.Lang()
 	if lang == JAVASCRIPT || lang == GOLANG {
+		// Initialize the UDF execution tree cache and UDF query plan cache
+		// Only for Golang/ Javascript UDF execution
+		// We initialize here - so we dont unecessarily initialize these in the context
 		context.InitUdfPlans()
 		context.InitUdfStmtExecTrees()
+	} else if lang == INLINE {
+		// Initialize if the function being executed in an INLINE function
+		// We initialize here - so we dont unecessarily initialize these in the context
+		context.InitInlineUdfExprs()
 	}
 
 	newContext := context
 	switchContext := body.SwitchContext()
 	readonly := (modifiers & READONLY) != 0
 
-	if switchContext == value.TRUE || (switchContext == value.NONE && (readonly != context.Readonly() || name.QueryContext() != context.QueryContext())) || context.PreserveProjectionOrder() {
-		var ok bool
+	// MB-58479: Switch to a new context when an Inline function is executed inside a prepared statement
+	// This prevents memory leaks in the prepared statement's subquery cache
+	// due to the recreation of the inline body's expression on execution
+	inlineSwitch := (lang == INLINE && context.IsPrepared())
 
+	if switchContext == value.TRUE || (switchContext == value.NONE && (readonly != context.Readonly() ||
+		name.QueryContext() != context.QueryContext())) || context.PreserveProjectionOrder() ||
+		inlineSwitch {
+		var ok bool
 		newContext, ok = context.NewQueryContext(name.QueryContext(), readonly).(Context)
 		if !ok {
 			return nil, errors.NewInternalFunctionError(fmt.Errorf("Invalid function context received"), name.Name())
