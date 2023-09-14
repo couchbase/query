@@ -678,13 +678,12 @@ func (this *Server) setupRequestContext(request Request) bool {
 		if err != nil {
 			if this.ShuttingDown() && !util.IsFeatureEnabled(util.GetN1qlFeatureControl(), util.N1QL_PARTIAL_GRACEFUL_SHUTDOWN) {
 				if this.ShutDown() {
-					request.Fail(errors.NewServiceShutDownError())
+					err = errors.NewServiceShutDownError()
 				} else {
-					request.Fail(errors.NewServiceShuttingDownError())
+					err = errors.NewServiceShuttingDownError()
 				}
-			} else {
-				request.Error(err)
 			}
+			request.Fail(err)
 			return false
 		}
 
@@ -745,7 +744,7 @@ func (this *Server) handlePlusRequest(request Request, queue *runQueue, transact
 	if request.TxId() != "" {
 		err := this.handlePreTxRequest(request, queue, transactionQueues)
 		if err != nil {
-			request.Error(err)
+			request.Fail(err)
 			request.Failed(this) // don't return
 		} else {
 			if !request.Alive() {
@@ -1099,7 +1098,7 @@ func (this *Server) serviceRequest(request Request) {
 		}
 
 		if err != nil {
-			request.Error(err)
+			request.Fail(err)
 			request.Failed(this)
 			return
 		}
@@ -1137,7 +1136,7 @@ func (this *Server) serviceRequest(request Request) {
 			if err = context.SetTransactionContext(request.Type(), request.TxImplicit(),
 				request.TxTimeout(), this.TxTimeout(), atrCollection, numAtrs,
 				request.TxData()); err != nil {
-				request.Error(err)
+				request.Fail(err)
 				request.Failed(this)
 				return
 			}
