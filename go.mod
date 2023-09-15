@@ -70,8 +70,8 @@ require (
 	github.com/aws/aws-sdk-go v1.44.299 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bits-and-blooms/bitset v1.2.2 // indirect
-	github.com/blevesearch/bleve-mapping-ui v0.5.1 // indirect
-	github.com/blevesearch/bleve/v2 v2.3.10-0.20230908225457-5aa6ad242ddb // indirect
+	github.com/blevesearch/bleve-mapping-ui v0.5.2 // indirect
+	github.com/blevesearch/bleve/v2 v2.3.10 // indirect
 	github.com/blevesearch/bleve_index_api v1.0.6 // indirect
 	github.com/blevesearch/geo v0.1.18 // indirect
 	github.com/blevesearch/go-porterstemmer v1.0.3 // indirect
@@ -82,6 +82,7 @@ require (
 	github.com/blevesearch/sear v0.1.0 // indirect
 	github.com/blevesearch/segment v0.9.1 // indirect
 	github.com/blevesearch/snowballstem v0.9.0 // indirect
+	github.com/blevesearch/stempel v0.2.0 // indirect
 	github.com/blevesearch/upsidedown_store_api v1.0.2 // indirect
 	github.com/blevesearch/vellum v1.0.10 // indirect
 	github.com/blevesearch/zapx/v11 v11.3.10 // indirect
