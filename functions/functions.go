@@ -392,7 +392,7 @@ func ExecuteFunction(name FunctionName, modifiers Modifier, values []value.Value
 		// note that since we reload the body outside of a cache lock (not to lock
 		// out the whole cache bucket), there might be some temporary pile up on
 		// storage
-		if name.CheckStorage() {
+		if entry.FunctionName.CheckStorage() {
 			var tag atomic.AlignedInt64
 
 			// reserve a change counter and load new body
