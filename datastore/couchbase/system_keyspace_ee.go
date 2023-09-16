@@ -361,7 +361,8 @@ func (s *store) CheckSystemCollection(bucketName, requestId string) errors.Error
 
 		// create primary index on system collection if not already exists
 		er = s.CreateSysPrimaryIndex(_BUCKET_SYSTEM_PRIM_INDEX, requestId, indexer3)
-		if er != nil {
+		if er != nil && er.Code() != errors.E_INDEX_ALREADY_EXISTS {
+			// ignore index already exist error
 			return er
 		}
 	}

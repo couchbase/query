@@ -1734,7 +1734,7 @@ func (p *namespace) KeyspaceUpdateCallback(bucket *cb.Bucket, msgPrefix string) 
 		// also, for a new bucket, the expectation here is that it will come alive
 		// with all the capabilities correctly set, so that it won't be migrated
 		for cn, c := range missingCapabilities {
-			logging.Infof("%s Starting migration to %v", msgPrefix, cn)
+			logging.Infof("%s Starting migration to %v for bucket %s", msgPrefix, cn, bucket.Name)
 			go datastore.ExecuteMigrators(bucket.Name, c)
 		}
 	} else {

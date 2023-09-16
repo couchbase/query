@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	go_errors "errors"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/couchbase/query/algebra"
@@ -37,6 +38,7 @@ const _UDF_MIGRATION = "UDF"
 const _GRACE = 30 * time.Second
 
 var migrating int = _NOT_MIGRATING
+var migratingLock sync.Mutex
 var countDownStarted time.Time
 
 func Migrate() {
@@ -115,21 +117,31 @@ func Migrate() {
 	datastore.RegisterMigrator(func(b string) {
 		// At least one bucket has the new _query collection
 		// decide if we are going to do the migration
+		migratingLock.Lock()
 		switch migrating {
 		case _NOT_MIGRATING:
 			// is it us?
-			if migration.Register(_UDF_MIGRATION) {
+			doMigrate := migration.Register(_UDF_MIGRATION)
+			if doMigrate {
 				migrating = _AWAITING_BUCKETS
-				checkMigrate()
 			} else {
 				logging.Infof("UDF migration: Migration started on a different node")
 				migrating = _WAITING
 			}
+			migratingLock.Unlock()
+			if doMigrate {
+				checkMigrate()
+			}
 		case _AWAITING_BUCKETS:
+			migratingLock.Unlock()
 			// it's us, one more bucket
 			checkMigrate()
 
 		case _WAITING:
+			migratingLock.Unlock()
+			return
+		default:
+			migratingLock.Unlock()
 			return
 		}
 	}, datastore.HAS_SYSTEM_COLLECTION)
@@ -154,6 +166,7 @@ func checkMigrate() {
 			}
 		})
 		if canMigrate {
+			logging.Infof("UDF migration: All buckets have system scope")
 			migrate()
 		} else {
 			logging.Infof("UDF migration: Detected %v buckets with system scope", bucketCount)
@@ -306,13 +319,24 @@ func migrate() {
 		time.Sleep(_GRACE - countDown)
 	}
 
+	// serialize migration if multiple buckets kicked off migration at the same time
+	migratingLock.Lock()
+	doMigrate := migrating == _AWAITING_BUCKETS
+	if doMigrate {
+		migrating = _MIGRATING
+	}
+	migratingLock.Unlock()
+	if !doMigrate {
+		logging.Infof("UDF migration: Migration performed by different thread")
+		return
+	}
+
 	logging.Infof("UDF migration: Starting scope UDFs migration")
 
 	// TODO it would be useful here to load the cache so that other requests don't hit the storage
 	// except that to be useful, this would have to be done on all query nodes, which requires
 	// synchronization
 
-	migrating = _MIGRATING
 	migration.Start(_UDF_MIGRATION)
 	metaStorage.ForeachBody(func(parts []string, body functions.FunctionBody) {
 		if len(parts) != 4 {
@@ -325,11 +349,16 @@ func migrate() {
 				logging.Warnf("UDF migration: Migrating %v error %v writing body", parts, err1)
 			} else {
 				logging.Infof("UDF migration: Migrated %v", parts)
-			}
-			name, err = metaStorage.NewScopeFunction(parts[0], parts[1], parts[2], parts[3])
-			err1 = name.Delete()
-			if err1 != nil {
-				logging.Warnf("UDF migration: Migrating %v error %v deleting old entry", parts, err1)
+
+				name, err1 = metaStorage.NewScopeFunction(parts[0], parts[1], parts[2], parts[3])
+				if err1 == nil {
+					err1 = name.Delete()
+					if err1 != nil {
+						logging.Warnf("UDF migration: Migrating %v error %v deleting old entry", parts, err1)
+					}
+				} else {
+					logging.Warnf("UDF migration: Migrating %v error %v generating metakv function for deleting old entry", parts, err1)
+				}
 			}
 		} else {
 			logging.Warnf("UDF migration: Migrating %v error %v parsing name", parts, err)
@@ -346,7 +375,12 @@ func UseSystemStorage() bool {
 	}
 
 	if migrating == _NOT_MIGRATING {
-		return false
+		migratingLock.Lock()
+		notMigrating := migrating == _NOT_MIGRATING
+		migratingLock.Unlock()
+		if notMigrating {
+			return false
+		}
 	}
 
 	migration.Await(_UDF_MIGRATION)
