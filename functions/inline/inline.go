@@ -17,6 +17,7 @@ import (
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/functions"
+	functionsBridge "github.com/couchbase/query/functions/bridge"
 	"github.com/couchbase/query/value"
 )
 
@@ -24,9 +25,10 @@ type inline struct {
 }
 
 type inlineBody struct {
-	expr     expression.Expression
-	varNames []string
-	text     string
+	expr          expression.Expression
+	varNames      []string
+	text          string
+	hasSubqueries bool // if the inline function body contains subqueries
 }
 
 func Init() {
@@ -57,7 +59,21 @@ func (this *inline) Execute(name functions.FunctionName, body functions.Function
 			parent[funcBody.varNames[i]] = values[i]
 		}
 	}
-	val, err := funcBody.expr.Evaluate(value.NewValue(parent), context)
+
+	expr := funcBody.expr
+	if c, ok := context.(functionsBridge.InlineUdfContext); ok {
+		var err error
+
+		// Get the function body to safely use
+		// Generate and use a new AST expression object when the funcBody.expr contains subqueries
+		expr, err = c.GetAndSetInlineUdfExprs(name.Key(), funcBody.expr, funcBody.hasSubqueries)
+		if err != nil {
+			return nil, errors.NewInternalFunctionError(err, name.Name())
+		}
+	}
+
+	val, err := expr.Evaluate(value.NewValue(parent), context)
+
 	if err != nil {
 		return nil, errors.NewFunctionExecutionError("", name.Name(), err)
 	} else {
@@ -66,7 +82,7 @@ func (this *inline) Execute(name functions.FunctionName, body functions.Function
 }
 
 func NewInlineBody(expr expression.Expression, text string) (functions.FunctionBody, errors.Error) {
-	return &inlineBody{expr: expr, text: strings.TrimSuffix(text, ";")}, nil
+	return &inlineBody{expr: expr, text: strings.TrimSuffix(text, ";"), hasSubqueries: expression.ContainsSubquery(expr)}, nil
 }
 
 func (this *inlineBody) SetVarNames(vars []string) errors.Error {

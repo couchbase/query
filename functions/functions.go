@@ -459,19 +459,33 @@ func ExecuteFunction(name FunctionName, modifiers Modifier, values []value.Value
 		return nil, err
 	}
 
+	lang := entry.Lang()
+
+	// Initialize if the function being executed in an INLINE function
+	// We initialize here - so we dont unecessarily initialize these in the context
+	if lang == INLINE {
+		context.InitInlineUdfExprs()
+	}
+
 	newContext := context
 	switchContext := body.SwitchContext()
 	readonly := (modifiers & READONLY) != 0
-	if switchContext == value.TRUE || (switchContext == value.NONE && (readonly != context.Readonly() || name.QueryContext() != context.QueryContext())) {
-		var ok bool
 
+	// MB-58479: Switch to a new context when an Inline function is executed inside a prepared statement
+	// This prevents memory leaks in the prepared statement's subquery cache
+	// due to the recreation of the inline body's expression on execution
+	inlineSwitch := (lang == INLINE && context.IsPrepared())
+
+	if switchContext == value.TRUE || (switchContext == value.NONE && (readonly != context.Readonly() ||
+		name.QueryContext() != context.QueryContext())) || inlineSwitch {
+		var ok bool
 		newContext, ok = context.NewQueryContext(name.QueryContext(), readonly).(Context)
 		if !ok {
 			return nil, errors.NewInternalFunctionError(fmt.Errorf("Invalid function context received"), name.Name())
 		}
 	}
 	start := time.Now()
-	val, err := languages[entry.Lang()].Execute(name, body, modifiers, values, newContext)
+	val, err := languages[lang].Execute(name, body, modifiers, values, newContext)
 
 	// update stats
 	serviceTime := time.Since(start)

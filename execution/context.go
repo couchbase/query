@@ -26,6 +26,7 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/expression/parser"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/logging/event"
 	"github.com/couchbase/query/plan"
@@ -209,6 +210,9 @@ type Context struct {
 	udfValueMap         *sync.Map
 	udfHandleMap        map[*executionHandle]bool
 	tracked             bool
+	// Key: unique identifier of the Inline UDF
+	// Value: Info on the function body of Inline UDFs executed in the query
+	inlineUdfExprs map[string]inlineUdfEntry
 }
 
 func NewContext(requestId string, datastore datastore.Datastore, systemstore datastore.Systemstore,
@@ -316,6 +320,7 @@ func (this *Context) NewQueryContext(queryContext string, readonly bool) interfa
 	rv := this.Copy()
 	rv.queryContext = queryContext
 	rv.readonly = readonly
+	rv.inlineUdfExprs = this.inlineUdfExprs
 	return rv
 }
 
@@ -1351,4 +1356,51 @@ func (this *Context) CacheLikeRegex(in *expression.Like, s string, re *regexp.Re
 	}
 	this.likeRegexMap[in].Orig = s
 	this.likeRegexMap[in].Re = re
+}
+
+type inlineUdfEntry struct {
+	localExpr    expression.Expression // the "local" expression object used only for this query's execution
+	originalExpr expression.Expression // the actual expression object of the inline UDF's body
+}
+
+func (this *Context) InitInlineUdfExprs() {
+	this.mutex.Lock()
+	if this.inlineUdfExprs == nil {
+		this.inlineUdfExprs = make(map[string]inlineUdfEntry)
+	}
+	this.mutex.Unlock()
+}
+
+// Returns the expression object that the Inline UDF execution should use
+// MB-58479: Since the Inline UDF's body is shared
+// Reparse the function body to generate a new "localExpr" when necessary
+// to prevent race conditions and concurrent reads/writes on a shared AST expression object
+// Function Parameters:
+// udf: should be a unique identifier of the Inline UDF
+// expr: the actual expression AST pointer of the inline UDF body
+// reparse: indicates if the expression should be parsed again to generate the localExpr
+func (this *Context) GetAndSetInlineUdfExprs(udf string, expr expression.Expression, reparse bool) (expression.Expression, error) {
+	this.mutex.Lock()
+	defer this.mutex.Unlock()
+	if this.inlineUdfExprs == nil {
+		this.inlineUdfExprs = make(map[string]inlineUdfEntry)
+	}
+	var rv expression.Expression
+	// MB-58479: If there is an entry in the map, check if the UDF body has changed from the cached originalExpr
+	// If it has - recreate the entry
+	if entry, ok := this.inlineUdfExprs[udf]; ok && entry.originalExpr == expr {
+		rv = entry.localExpr
+	} else {
+		if reparse {
+			ast, err := parser.Parse(expr.String())
+			if err != nil {
+				return nil, err
+			}
+			rv = ast
+		} else {
+			rv = expr
+		}
+		this.inlineUdfExprs[udf] = inlineUdfEntry{originalExpr: expr, localExpr: rv}
+	}
+	return rv, nil
 }
