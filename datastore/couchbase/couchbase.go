@@ -1753,6 +1753,8 @@ func (b *keyspace) GetIOStats(reset bool, all bool, prometheus bool, serverless 
 }
 
 func (b *keyspace) HasCapability(m datastore.Migration) bool {
+	b.Lock()
+	defer b.Unlock()
 	c, ok := migration2Capability[m]
 	if ok {
 		for _, o := range b.cbbucket.Capabilities {
