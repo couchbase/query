@@ -154,3 +154,10 @@ func (this *Subquery) Select() *Select {
 func (this *Subquery) IsCorrelated() bool {
 	return this.query.IsCorrelated()
 }
+
+func (this *Subquery) SetInFunction(hasVariables bool) {
+	this.query.inlineFunc = true
+	if hasVariables {
+		this.query.hasVariables = true
+	}
+}
