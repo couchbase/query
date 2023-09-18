@@ -1965,7 +1965,7 @@ func (k *keyspace) getRandomEntry(context datastore.QueryContext, scopeName, col
 		logging.Warnf("%v: empty random document key (processed) detected", k.name)
 		return "", nil, nil
 	}
-	doc := doFetch(key, k.fullName, resp, context, true)
+	doc := doFetch(key, k.fullName, resp, context)
 
 	return key, doc, nil
 }
@@ -2042,7 +2042,7 @@ func (b *keyspace) fetch(fullName, qualifiedName, scopeName, collectionName stri
 	if fast {
 		if mcr != nil && err == nil {
 			if len(projection) == 0 {
-				fetchMap[keys[0]] = doFetch(keys[0], fullName, mcr, context, len(projection) > 0)
+				fetchMap[keys[0]] = doFetch(keys[0], fullName, mcr, context)
 			} else {
 				fetchMap[keys[0]] = getSubDocFetchResults(keys[0], fullName, mcr, projection, context)
 			}
@@ -2067,7 +2067,7 @@ func (b *keyspace) fetch(fullName, qualifiedName, scopeName, collectionName stri
 			logging.Debugf("(Sub-doc) Requested keys %d Fetched %d keys ", l, i)
 		} else {
 			for k, v := range bulkResponse {
-				fetchMap[k] = doFetch(k, fullName, v, context, len(projection) > 0)
+				fetchMap[k] = doFetch(k, fullName, v, context)
 				i++
 			}
 			logging.Debugf("Requested keys %d Fetched %d keys ", l, i)
@@ -2077,13 +2077,11 @@ func (b *keyspace) fetch(fullName, qualifiedName, scopeName, collectionName stri
 	return nil
 }
 
-func doFetch(k string, fullName string, v *gomemcached.MCResponse, context datastore.QueryContext, avoidParsing bool,
-) value.AnnotatedValue {
+func doFetch(k string, fullName string, v *gomemcached.MCResponse, context datastore.QueryContext) value.AnnotatedValue {
 
 	var val value.AnnotatedValue
 	if v.DataType&gomemcached.DatatypeFlagCompressed == 0 {
-		val = value.NewAnnotatedValue(value.NewParsedValueWithOptions(v.Body, (v.DataType&gomemcached.DatatypeFlagJSON != 0),
-			avoidParsing || len(v.Body) > value.PARSED_THRESHOLD))
+		val = value.NewAnnotatedValue(value.NewParsedValue(v.Body, (v.DataType&gomemcached.DatatypeFlagJSON != 0)))
 	} else {
 		// Uncomment when needed
 		//context.Debugf("Compressed document: %v", k)
@@ -2093,8 +2091,7 @@ func doFetch(k string, fullName string, v *gomemcached.MCResponse, context datas
 			logging.Severef("Invalid compressed document received: %v - %v", err, v, context)
 			return nil
 		}
-		val = value.NewAnnotatedValue(value.NewParsedValueWithOptions(raw, (v.DataType&gomemcached.DatatypeFlagJSON != 0),
-			avoidParsing || len(raw) > value.PARSED_THRESHOLD))
+		val = value.NewAnnotatedValue(value.NewParsedValue(raw, (v.DataType&gomemcached.DatatypeFlagJSON != 0)))
 	}
 
 	var flags, expiration uint32
@@ -2215,6 +2212,7 @@ func getSubDocXattrFetchResults(k string, fullName string, v *gomemcached.MCResp
 
 	return val
 }
+
 func getSubDocFetchResults(k string, fullName string, v *gomemcached.MCResponse, projection []string,
 	context datastore.QueryContext) value.AnnotatedValue {
 

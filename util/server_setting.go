@@ -46,7 +46,8 @@ const (
 	N1QL_SEQ_SCAN                                     // 0x0000004000
 	N1QL_SPILL_TO_DISK                                // 0x0000008000
 	N1QL_PARTIAL_GRACEFUL_SHUTDOWN                    // 0x0000010000
-	N1QL_ALL_BITS                                     // Add anything above this. This needs to be last one
+	N1QL_USE_SUB_DOC                                  // 0x0000020000
+	N1QL_ALL_BITS                                     // This needs to be last (highest value) constant.
 )
 
 var N1Ql_Features = map[uint64]string{
@@ -68,6 +69,8 @@ var N1Ql_Features = map[uint64]string{
 	N1QL_SPILL_TO_DISK:         fmt.Sprintf("Spill To Disk (%#x)", N1QL_SPILL_TO_DISK),
 
 	N1QL_PARTIAL_GRACEFUL_SHUTDOWN: fmt.Sprintf("Partial graceful shutdown (%#x)", N1QL_PARTIAL_GRACEFUL_SHUTDOWN),
+
+	N1QL_USE_SUB_DOC: fmt.Sprintf("Use sub-document API (%#x)", N1QL_USE_SUB_DOC),
 }
 
 const DEF_N1QL_FEAT_CTRL = (N1QL_ENCODED_PLAN | N1QL_GOLANG_UDF | N1QL_CBO_NEW)

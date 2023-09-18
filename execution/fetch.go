@@ -233,8 +233,17 @@ func (this *Fetch) flushBatch(context *Context) bool {
 
 	this.switchPhase(_SERVTIME)
 
+	var err errors.Error
+	var errs errors.Errors
+	projection := this.plan.EarlyProjection()
+	useSubDoc := context.HasFeature(util.N1QL_USE_SUB_DOC)
+
 	// Fetch
-	errs := this.keyspace.Fetch(fetchKeys, fetchMap, &this.operatorCtx, this.plan.SubPaths(), this.plan.EarlyProjection())
+	if useSubDoc {
+		errs = this.keyspace.Fetch(fetchKeys, fetchMap, &this.operatorCtx, this.plan.SubPaths(), projection)
+	} else {
+		errs = this.keyspace.Fetch(fetchKeys, fetchMap, &this.operatorCtx, this.plan.SubPaths(), nil)
+	}
 
 	this.switchPhase(_EXECTIME)
 
@@ -250,6 +259,15 @@ func (this *Fetch) flushBatch(context *Context) bool {
 		fv := fetchMap[fetchKeys[0]]
 		av := this.batch[0]
 		if fv != nil {
+
+			if len(projection) > 0 && !useSubDoc {
+				fv, err = this.earlyProjection(fv, fetchKeys[0], 1, projection, context)
+				if err != nil {
+					context.Error(err)
+					av.Recycle()
+					return false
+				}
+			}
 
 			fv.SetAttachment("smeta", av.GetAttachment("smeta"))
 			av.SetField(this.plan.Term().Alias(), fv)
@@ -309,7 +327,14 @@ func (this *Fetch) flushBatch(context *Context) bool {
 
 		fv := fetchMap[key]
 		if fv != nil {
-			if keyCount[key] > 1 {
+			if len(projection) > 0 && !useSubDoc {
+				fv, err = this.earlyProjection(fv, key, keyCount[key], projection, context)
+				if err != nil {
+					context.Error(err)
+					av.Recycle()
+					return false
+				}
+			} else if keyCount[key] > 1 {
 				if this.deepCopy {
 					fv = value.NewAnnotatedValue(fv.CopyForUpdate())
 				} else {
@@ -367,6 +392,23 @@ func (this *Fetch) flushBatch(context *Context) bool {
 	}
 
 	return fetchOk
+}
+
+func (this *Fetch) earlyProjection(fv value.AnnotatedValue, key string, keyCnt int, projection []string, context *Context) (
+	value.AnnotatedValue, errors.Error) {
+
+	fields := fv.Fields() // forces parsing if a parsedValue
+	av := this.newEmptyDocumentWithKey(key, this.parentVal, context)
+	for _, field := range projection {
+		if val, ok := fields[field]; ok {
+			av.SetField(field, value.NewValue(val).CopyForUpdate())
+		}
+	}
+	if keyCnt == 1 {
+		// all-done with the orginal value
+		fv.Recycle()
+	}
+	return av, nil
 }
 
 func (this *Fetch) MarshalJSON() ([]byte, error) {

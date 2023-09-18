@@ -2249,3 +2249,7 @@ func (this *Context) GetAndSetInlineUdfExprs(udf string, expr expression.Express
 
 	return rv, nil
 }
+
+func (this *Context) HasFeature(feat uint64) bool {
+	return this.featureControls&feat != 0
+}

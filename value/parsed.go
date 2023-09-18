@@ -332,14 +332,10 @@ func (this *parsedValue) Field(field string) (Value, bool) {
 			}()
 		}
 
-		// Two operators can use the same value at the same time
-		// this is particularly the case for unnest, which scans
-		// an object looking for array elements.
-		// Since the state is, well, statefull, we'll only let the
-		// first served modify it, while the other will have to go
-		// the slow route
-		// For small documents manipulating the state is constly,
-		// so we do a scan anyway
+		// Two operators can use the same value at the same time this is particularly the case for unnest, which scans
+		// an object looking for array elements.  Since the state is, well, statefull, we'll only let the first served modify it,
+		// while the other will have to go the slow route.
+		// For small documents manipulating the state is costly, so we do a scan anyway
 		useState := this.useState && goahead == 1
 		if useState {
 			json.SetKeyState(&this.keyState, this.raw)
