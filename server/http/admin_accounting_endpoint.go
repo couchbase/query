@@ -1622,7 +1622,12 @@ func activeRequestWorkHorse(endpoint *HttpEndpoint, request server.Request, prof
 		if prof == server.ProfUnset {
 			prof = endpoint.server.Profile()
 		}
-		t := request.GetTimings()
+
+		timings := request.GetTimings()
+		t := request.GetFmtTimings()
+		if t == nil {
+			t, _ = json.Marshal(timings)
+		}
 
 		// TODO - check lifetime of entry
 		// by the time we marshal, is this still valid?
@@ -1630,7 +1635,7 @@ func activeRequestWorkHorse(endpoint *HttpEndpoint, request server.Request, prof
 			reqMap["timings"] = value.ApplyDurationStyleToValue(durStyle, func(s string) bool {
 				return strings.HasSuffix(s, "Time")
 			}, value.NewValue(t))
-			p = request.Output().FmtOptimizerEstimates(t)
+			p = request.Output().FmtOptimizerEstimates(timings)
 			if p != nil {
 				reqMap["optimizerEstimates"] = value.NewValue(p)
 			}
