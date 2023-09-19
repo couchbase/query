@@ -53,16 +53,6 @@ func (this systemRemoteStub) DoRemoteOps(nodes []string, endpoint string, comman
 	// nothing to see here
 }
 
-func (this *systemRemoteStub) PrepareAdminOp(node string, endpoint string, key string, warnFn func(warn errors.Error), creds Creds,
-	authToken string) (interface{}, errors.Error) {
-	return nil, nil
-}
-
-func (this *systemRemoteStub) ExecutePreparedAdminOp(op interface{}, command string, data string,
-	warnFn func(warn errors.Error), creds Creds, authToken string) ([]byte, errors.Error) {
-	return nil, nil
-}
-
 // returns the local node identity, as known to the cluster
 func (this systemRemoteStub) WhoAmI() string {
 

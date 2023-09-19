@@ -64,14 +64,6 @@ type SystemRemoteAccess interface {
 	// Update TLS or node-to-node encryption settings.
 	SetConnectionSecurityConfig(caFile, certFile string, encryptNodeToNodeComms bool)
 
-	// Prepare an opaque type that represents this admin endpoint and necessary authentication
-	PrepareAdminOp(node string, endpoint string, key string, warnFn func(warn errors.Error), creds Creds,
-		authToken string) (interface{}, errors.Error)
-
-	// Execute an operation against previously prepared admin endpoint
-	ExecutePreparedAdminOp(op interface{}, command string, data string, warnFn func(warn errors.Error), creds Creds,
-		authToken string) ([]byte, errors.Error)
-
 	// Retrieve a host's UUID
 	NodeUUID(string) string
 

@@ -136,11 +136,6 @@ func NewSystemNoBuckets() Error {
 		InternalCaller: CallerN(1)}
 }
 
-func NewInvalidPreparedAdminOp() Error {
-	return &err{level: EXCEPTION, ICode: E_INVALID_PREPARED_ADMIN_OP, IKey: "datastore.system.remote.invalid_prepared_op",
-		ICause: nil, InternalMsg: "System datastore : Invalid prepared admin operation", InternalCaller: CallerN(1)}
-}
-
 func NewSystemRemoteNodeNotFoundWarning(node string) Error {
 	c := make(map[string]interface{}, 1)
 	c["node"] = node

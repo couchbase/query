@@ -50,12 +50,6 @@ type commParameters struct {
 	useSecurePort bool
 }
 
-type preparedAdminOp struct {
-	endpoint string
-	user     string
-	password string
-}
-
 // Returns nil if SetConnectionSecurityConfig has never been called.
 func (this *systemRemoteHttp) getCommParams() *commParameters {
 	curCommParameters := atomic.LoadPointer(&(this.commParams))
@@ -467,37 +461,6 @@ func (this *systemRemoteHttp) DoRemoteOps(nodes []string, endpoint string, comma
 			}
 		}
 	}
-}
-
-func (this *systemRemoteHttp) PrepareAdminOp(node string, endpoint string, key string, warnFn func(warn errors.Error), creds distributed.Creds, authToken string) (interface{}, errors.Error) {
-
-	if key != "" {
-		endpoint = endpoint + "/" + key
-	}
-
-	cp := this.getCommParams()
-	queryNode, err := this.getQueryNode(node, "scan", endpoint)
-	if err != nil {
-		if warnFn != nil {
-			warnFn(err)
-		}
-		return nil, err
-	}
-
-	fullEndpoint, u, p := this.getFullEndpoint(queryNode, endpoint, creds, cp)
-
-	return &preparedAdminOp{fullEndpoint, u, p}, nil
-}
-
-func (this *systemRemoteHttp) ExecutePreparedAdminOp(op interface{}, command string, data string,
-	warnFn func(warn errors.Error), creds distributed.Creds, authToken string) ([]byte, errors.Error) {
-
-	pop, ok := op.(*preparedAdminOp)
-	if !ok {
-		return nil, errors.NewInvalidPreparedAdminOp()
-	}
-	cp := this.getCommParams()
-	return this.doRemoteEndpointOp(pop.endpoint, command, data, command, creds, authToken, cp, pop.user, pop.password)
 }
 
 // helper for the REST op

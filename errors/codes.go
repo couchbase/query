@@ -372,7 +372,7 @@ const (
 	W_SYSTEM_FILTERED_ROWS                    ErrorCode = 11011 // reused
 	E_SYSTEM_MALFORMED_KEY                    ErrorCode = 11012
 	E_SYSTEM_NO_BUCKETS                       ErrorCode = 11013
-	E_INVALID_PREPARED_ADMIN_OP               ErrorCode = 11014
+	_RETIRED_11014                            ErrorCode = 11014
 	W_SYSTEM_REMOTE_NODE_NOT_FOUND            ErrorCode = 11015
 	E_CB_CONNECTION                           ErrorCode = 12000
 	_RETIRED_12001                                      = 12001
