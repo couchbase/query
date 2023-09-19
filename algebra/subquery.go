@@ -190,6 +190,9 @@ func (this *Subquery) GetCorrelation() map[string]uint32 {
 	return this.query.GetCorrelation()
 }
 
-func (this *Subquery) SetInFunction() {
-	this.query.hasVariables = true
+func (this *Subquery) SetInFunction(hasVariables bool) {
+	this.query.inlineFunc = true
+	if hasVariables {
+		this.query.hasVariables = true
+	}
 }

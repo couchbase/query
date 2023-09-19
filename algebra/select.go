@@ -35,6 +35,7 @@ type Select struct {
 	limit         expression.Expression `json:"limit"`
 	correlated    bool                  `json:"correlated"`
 	hasVariables  bool                  `json:"hasVariables"` // not actually propagated
+	inlineFunc    bool                  `json:"inlineFunction"`
 	setop         bool                  `json:"setop"`
 	recursiveWith bool                  `json:"recursive_with"`
 	correlation   map[string]uint32     `json:"correlation"`
@@ -219,7 +220,10 @@ by clause call MapExpressions, for limit and offset call Accept.
 func (this *Select) FormalizeSubquery(parent *expression.Formalizer, isSubq bool) (err error) {
 	if parent != nil {
 		if parent.InFunction() {
-			this.hasVariables = true
+			this.inlineFunc = true
+			if parent.HasVariables() {
+				this.hasVariables = true
+			}
 		}
 
 		withs := parent.SaveWiths(isSubq)
@@ -362,6 +366,10 @@ func (this *Select) GetCorrelation() map[string]uint32 {
 
 func (this *Select) HasVariables() bool {
 	return this.hasVariables
+}
+
+func (this *Select) InInlineFunction() bool {
+	return this.inlineFunc
 }
 
 /*

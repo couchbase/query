@@ -23,7 +23,8 @@ const (
 	FORM_MAP_SELF        = 1 << iota // Map SELF to keyspace: used in sarging index
 	FORM_MAP_KEYSPACE                // Map keyspace to SELF: used in creating index
 	FORM_INDEX_SCOPE                 // formalizing index key or index condition
-	FORM_IN_FUNCTION                 // We are setting variables for function invocation
+	FORM_IN_FUNCTION                 // We are in function invocation
+	FORM_HAS_VARIABLES               // We are setting variables in functino invocation
 	FORM_CHK_CORRELATION             // Check correlation
 )
 
@@ -101,6 +102,9 @@ func NewFormalizer(keyspace string, parent *Formalizer) *Formalizer {
 		}
 		if parent.InFunction() {
 			rv.flags |= FORM_IN_FUNCTION
+			if parent.HasVariables() {
+				rv.flags |= FORM_HAS_VARIABLES
+			}
 		}
 	}
 	return rv
@@ -114,9 +118,12 @@ func NewKeyspaceFormalizer(keyspace string, parent *Formalizer) *Formalizer {
 	return newFormalizer(keyspace, parent, false, true)
 }
 
-func NewFunctionFormalizer(keyspace string, parent *Formalizer) *Formalizer {
+func NewFunctionFormalizer(keyspace string, hasVariable bool, parent *Formalizer) *Formalizer {
 	rv := newFormalizer(keyspace, parent, false, false)
 	rv.flags |= FORM_IN_FUNCTION
+	if hasVariable {
+		rv.flags |= FORM_HAS_VARIABLES
+	}
 	return rv
 }
 
@@ -186,6 +193,10 @@ func (this *Formalizer) mapKeyspace() bool {
 
 func (this *Formalizer) InFunction() bool {
 	return (this.flags & FORM_IN_FUNCTION) != 0
+}
+
+func (this *Formalizer) HasVariables() bool {
+	return (this.flags & FORM_HAS_VARIABLES) != 0
 }
 
 func (this *Formalizer) IsCheckCorrelation() bool {

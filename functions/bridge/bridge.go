@@ -34,6 +34,6 @@ var NewJavascriptBody func(library, object, text string) (functions.FunctionBody
 
 // Created to avoid circular references between functions and expression
 type InlineUdfContext interface {
-	GetAndSetInlineUdfExprs(udf string, expr expression.Expression, hasSubqueries bool,
-		proc func(expression.Expression) error) (expression.Expression, error)
+	GetAndSetInlineUdfExprs(udf string, expr expression.Expression, hasSubqueries, hasVariables bool,
+		proc func(expression.Expression, bool) error) (expression.Expression, error)
 }
