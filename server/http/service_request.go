@@ -57,6 +57,7 @@ type httpRequest struct {
 	elapsedTime            time.Duration
 	executionTime          time.Duration
 	transactionElapsedTime time.Duration
+	admissionWaitTime      time.Duration
 
 	stmtCnt  int
 	consCnt  int
@@ -882,6 +883,14 @@ func (this *httpRequest) TransactionRemainingTime() string {
 		}
 	}
 	return ""
+}
+
+func (this *httpRequest) SetAdmissionWaitTime(d time.Duration) {
+	this.admissionWaitTime = d
+}
+
+func (this *httpRequest) AdmissionWaitTime() time.Duration {
+	return this.admissionWaitTime
 }
 
 const ( // Request argument names

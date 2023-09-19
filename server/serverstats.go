@@ -79,6 +79,7 @@ type runningAverage struct {
 	total   uint64
 	samples []uint64
 	index   int
+	lastVal uint64
 }
 
 func newRunningAverage(samples int) *runningAverage {
@@ -103,6 +104,11 @@ func (this *runningAverage) record(v uint64) {
 	this.samples[i] = v
 	this.total += v
 	this.index++
+	this.lastVal = v
+}
+
+func (this *runningAverage) last() uint64 {
+	return this.lastVal
 }
 
 // Gather Cpu/Memory
@@ -143,6 +149,8 @@ func (c *statsCollector) runCollectStats() {
 		newStats["process.percore.cpupercent"] = c.server.CpuUsage(false)
 		newStats["process.memory.usage"], lastGC = c.server.MemoryUsage(false)
 		newStats["request.queued.count"] = c.server.QueuedRequests()
+		newStats["servicers.paused.count"] = c.server.ServicersPaused()
+		newStats["servicers.paused.total"] = c.server.ServicerPauses()
 		newStats["node.allocated.values"] = value.AllocatedValuesCount()
 		m := memory.AllocatedMemory()
 		if m > 0 {
@@ -211,9 +219,10 @@ func (c *statsCollector) runCollectStats() {
 			ffdc.Reset(ffdc.MemoryThreshold)
 		}
 
+		last := averageMemoryUsage.last()
 		averageMemoryUsage.record(mu)
 		delta := int64(mu) - int64(averageMemoryUsage.value())
-		if delta > _FFDC_MEM_RATE && averageMemoryUsage.count() > _SAMPLES_MIN {
+		if delta > _FFDC_MEM_RATE && averageMemoryUsage.count() > _SAMPLES_MIN && mu > last {
 			logging.Warnf("Memory growth rate threshold exceeded: %v%% > %v%%", delta, _FFDC_MEM_RATE)
 			if trigger {
 				ffdc.Capture(ffdc.MemoryRate)

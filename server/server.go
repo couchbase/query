@@ -135,6 +135,50 @@ const (
 	_SERVER_SHUTDOWN = 2
 )
 
+type gate struct {
+	counter        atomic.AlignedUint64
+	waiting        atomic.AlignedInt64
+	lock           sync.Mutex
+	cond           *sync.Cond
+	bypass         bool
+	sleepInterrupt chan bool
+}
+
+func (this *gate) init() {
+	this.cond = sync.NewCond(&this.lock)
+	this.sleepInterrupt = make(chan bool, 1)
+}
+
+func (this *gate) mustWait() bool {
+	return !this.bypass || this.waiting > 0
+}
+
+func (this *gate) wait() {
+	this.cond.L.Lock()
+	// Whenever a new waiter joins the queue, a new check should be made if the head of the queue can be released to run
+	select {
+	case this.sleepInterrupt <- true:
+	default:
+	}
+	atomic.AddUint64(&this.counter, 1)
+	atomic.AddInt64(&this.waiting, 1)
+	this.cond.Wait()
+	atomic.AddInt64(&this.waiting, -1)
+	this.cond.L.Unlock()
+}
+
+func (this *gate) releaseOne() {
+	this.cond.Signal()
+}
+
+func (this *gate) count() uint64 {
+	return atomic.LoadUint64(&this.counter)
+}
+
+func (this *gate) waiters() uint64 {
+	return uint64(atomic.LoadInt64(&this.waiting))
+}
+
 type Server struct {
 	// due to alignment issues on x86 platforms these atomic
 	// variables need to right at the beginning of the structure
@@ -177,6 +221,8 @@ type Server struct {
 	lastNow           time.Time
 	lastCpuPercent    float64
 	useReplica        value.Tristate
+	requestGate       gate
+	pausedCount       uint64
 }
 
 // Default and min Keep Alive Length
@@ -259,6 +305,11 @@ func NewServer(store datastore.Datastore, sys datastore.Systemstore, config clus
 	}
 	n1ql.SetNamespaces(nsm)
 	rv.StartStatsCollector()
+
+	rv.requestGate.init()
+	if tenant.IsServerless() {
+		go rv.admissions()
+	}
 
 	return rv, nil
 }
@@ -1054,6 +1105,74 @@ func (this *Server) QueuedRequests() int {
 	return this.unboundQueue.queuedRequests() + this.plusQueue.queuedRequests() + this.txQueueCount()
 }
 
+func (this *Server) ServicersPaused() uint64 {
+	return this.requestGate.waiters()
+}
+
+func (this *Server) ServicerPauses() uint64 {
+	return this.requestGate.count()
+}
+
+func (this *Server) admit(request Request, l logging.Log) {
+	if this.requestGate.mustWait() {
+		logging.Infof("Pausing request %v due to memory pressure.", request.Id())
+		start := time.Now()
+		this.requestGate.wait()
+		request.SetAdmissionWaitTime(time.Now().Sub(start))
+		logging.Infof("Resuming paused request %v after %v.", request.Id(),
+			util.FormatDuration(request.AdmissionWaitTime(), request.DurationStyle()))
+		l.Infof("Request was paused for %v", util.FormatDuration(request.AdmissionWaitTime(), request.DurationStyle()))
+	}
+}
+
+const (
+	_ADMISSION_CHECK_INTERVAL        = time.Millisecond * 1000
+	_ADMISSION_CHECK_INTERVAL_1      = time.Millisecond * 500
+	_ADMISSION_CHECK_INTERVAL_2      = time.Millisecond * 200
+	_ADMISSION_CHECK_INTERVAL_3      = time.Millisecond * 50
+	_ADMISSION_CHECK_GC_THRESHOLD    = time.Second * 2 // if usage is high and the GC hasn't run in this interval, run it
+	_ADMISSION_BYPASS_MEMORY_PERCENT = 80              // below this level we don't perfom gating
+	_ADMISSION_MEMORY_THRESHOLD_1    = 60              // after gating, if it drops below this level release an additional waiter
+	_ADMISSION_MEMORY_THRESHOLD_2    = 40              // after gating, if it drops below this level release an additional waiter
+	_ADMISSION_MEMORY_THRESHOLD_3    = 20              // after gating, if it drops below this level release an additional waiter
+)
+
+func (this *Server) admissions() {
+	timer := time.NewTimer(_ADMISSION_CHECK_INTERVAL)
+	timer.Stop()
+	for {
+		waitInterval := _ADMISSION_CHECK_INTERVAL
+		mu, lastGC := this.MemoryUsage(true)
+		this.requestGate.bypass = (mu < _ADMISSION_BYPASS_MEMORY_PERCENT)
+		w := this.requestGate.waiters()
+		if this.requestGate.bypass && w > 0 {
+			this.requestGate.releaseOne()
+			if mu < _ADMISSION_MEMORY_THRESHOLD_1 && w > 1 {
+				this.requestGate.releaseOne()
+				waitInterval = _ADMISSION_CHECK_INTERVAL_1
+			}
+			if mu < _ADMISSION_MEMORY_THRESHOLD_2 && w > 2 {
+				this.requestGate.releaseOne()
+				waitInterval = _ADMISSION_CHECK_INTERVAL_2
+			}
+			if mu < _ADMISSION_MEMORY_THRESHOLD_3 && w > 3 {
+				this.requestGate.releaseOne()
+				waitInterval = _ADMISSION_CHECK_INTERVAL_3
+			}
+		} else if !this.requestGate.bypass && util.Now().UnixNano()-int64(lastGC) > int64(_ADMISSION_CHECK_GC_THRESHOLD) {
+			runtime.GC()
+		}
+		timer.Reset(waitInterval)
+		select {
+		case <-this.requestGate.sleepInterrupt:
+		case <-timer.C:
+		}
+		if !timer.Stop() {
+			<-timer.C
+		}
+	}
+}
+
 func (this *Server) serviceRequest(request Request) {
 	defer func() {
 		err := recover()
@@ -1078,6 +1197,13 @@ func (this *Server) serviceRequest(request Request) {
 	}()
 
 	context := request.ExecutionContext()
+
+	if tenant.IsServerless() {
+		// If the system is under memory pressure we'll delay starting processing the request whilst holding the servicer in order
+		// to reduce concurrent load.  This effectively grants us "a dynamic number of servicers" without complex restructuring
+		this.admit(request, context)
+	}
+
 	context.Infof("Servicing request")
 	request.Servicing()
 

@@ -803,6 +803,12 @@ func (this *httpRequest) writeMetrics(metrics bool, prefix, indent string) bool 
 	}
 
 	buf := this.writer.buf()
+
+	if this.AdmissionWaitTime() > 0 {
+		fmt.Fprintf(buf, ",%s\"admissionWaitTime\": \"%s\"", newPrefix,
+			util.FormatDuration(this.AdmissionWaitTime(), this.DurationStyle()))
+	}
+
 	if this.UsedMemory() > 0 {
 		fmt.Fprintf(buf, ",%s\"usedMemory\": %d", newPrefix, this.UsedMemory())
 	}

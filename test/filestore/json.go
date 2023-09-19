@@ -133,6 +133,13 @@ func (this *MockQuery) LogLevel() logging.Level {
 	return logging.NONE
 }
 
+func (this *MockQuery) SetAdmissionWaitTime(d time.Duration) {
+}
+
+func (this *MockQuery) AdmissionWaitTime() time.Duration {
+	return 0
+}
+
 type MockResponse struct {
 	err       errors.Error
 	results   []interface{}

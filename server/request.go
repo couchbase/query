@@ -195,6 +195,9 @@ type Request interface {
 
 	DurationStyle() util.DurationStyle
 	SetDurationStyle(util.DurationStyle)
+
+	SetAdmissionWaitTime(time.Duration)
+	AdmissionWaitTime() time.Duration
 }
 
 type RequestID interface {
