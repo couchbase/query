@@ -965,7 +965,12 @@ func (this *Context) EvaluateSubquery(query *algebra.Select, parent value.Value)
 	if collect.opState == _DONE {
 		collect.opState = _COMPLETED
 	}
-	subExecTrees.set(query, sequence, collect)
+	// do not share subquery execution tree if subquery is inside inline udf, since we could
+	// potentially invoke the same udf at different places (e.g. if the udf is recursive)
+	// and thus should not share the execution tree
+	if !query.InInlineFunction() {
+		subExecTrees.set(query, sequence, collect)
+	}
 
 	if stashTracking && track > av.RefCnt() {
 		av.Restore(track)
@@ -1379,8 +1384,8 @@ func (this *Context) InitInlineUdfExprs() {
 // udf: should be a unique identifier of the Inline UDF
 // expr: the actual expression AST pointer of the inline UDF body
 // reparse: indicates if the expression should be parsed again to generate the localExpr
-func (this *Context) GetAndSetInlineUdfExprs(udf string, expr expression.Expression, reparse bool,
-	proc func(expression.Expression) error) (expression.Expression, error) {
+func (this *Context) GetAndSetInlineUdfExprs(udf string, expr expression.Expression, reparse, hasVariables bool,
+	proc func(expression.Expression, bool) error) (expression.Expression, error) {
 
 	this.mutex.Lock()
 	defer this.mutex.Unlock()
@@ -1401,7 +1406,7 @@ func (this *Context) GetAndSetInlineUdfExprs(udf string, expr expression.Express
 			}
 
 			if proc != nil {
-				err = proc(exp)
+				err = proc(exp, hasVariables)
 				if err != nil {
 					return nil, err
 				}

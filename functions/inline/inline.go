@@ -63,14 +63,11 @@ func (this *inline) Execute(name functions.FunctionName, body functions.Function
 	expr := funcBody.expr
 	if c, ok := context.(functionsBridge.InlineUdfContext); ok {
 		var err error
-		var proc func(expression.Expression) error
 
 		// Get the function body to safely use
 		// Generate and use a new AST expression object when the funcBody.expr contains subqueries
-		if len(funcBody.varNames) > 0 {
-			proc = markInlineSubqueries
-		}
-		expr, err = c.GetAndSetInlineUdfExprs(name.Key(), funcBody.expr, funcBody.hasSubqueries, proc)
+		expr, err = c.GetAndSetInlineUdfExprs(name.Key(), funcBody.expr, funcBody.hasSubqueries,
+			len(funcBody.varNames) > 0, markInlineSubqueries)
 		if err != nil {
 			return nil, errors.NewInternalFunctionError(err, name.Name())
 		}
@@ -108,7 +105,7 @@ func (this *inlineBody) SetVarNames(vars []string) errors.Error {
 		args := expression.NewSimpleBinding("args", c)
 		args.SetStatic(true)
 		bindings = expression.Bindings{args}
-		f = expression.NewFormalizer("", nil)
+		f = expression.NewFunctionFormalizer("", false, nil)
 	} else {
 		bindings = make(expression.Bindings, len(vars))
 		i := 0
@@ -117,7 +114,7 @@ func (this *inlineBody) SetVarNames(vars []string) errors.Error {
 			bindings[i].SetStatic(true)
 			i++
 		}
-		f = expression.NewFunctionFormalizer("", nil)
+		f = expression.NewFunctionFormalizer("", true, nil)
 	}
 
 	f.SetPermanentWiths(bindings)
@@ -191,13 +188,13 @@ func (this *inlineBody) Privileges() (*auth.Privileges, errors.Error) {
 	return privileges, nil
 }
 
-func markInlineSubqueries(expr expression.Expression) error {
+func markInlineSubqueries(expr expression.Expression, hasVariables bool) error {
 	subqs, err := expression.ListSubqueries(expression.Expressions{expr}, true)
 	if err != nil {
 		return err
 	}
 	for _, subq := range subqs {
-		subq.SetInFunction()
+		subq.SetInFunction(hasVariables)
 	}
 	return nil
 }
