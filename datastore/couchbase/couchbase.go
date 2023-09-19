@@ -922,7 +922,7 @@ func (p *namespace) VirtualKeyspaceByName(path []string) (datastore.Keyspace, er
 }
 
 func (p *namespace) keyspaceByName(name string) (*keyspace, errors.Error) {
-	var keyspace *keyspace
+	var keyspace, oldCbKeyspace *keyspace
 
 	// make sure that no one is deleting the keyspace as we check
 	p.lock.RLock()
@@ -1019,6 +1019,7 @@ func (p *namespace) keyspaceByName(name string) (*keyspace, errors.Error) {
 	p.lock.Lock()
 	version := p.version // used to detect pool refresh whilst we're busy here
 
+	refresh := false
 	entry = p.keyspaceCache[name]
 	if entry == nil {
 
@@ -1030,7 +1031,8 @@ func (p *namespace) keyspaceByName(name string) (*keyspace, errors.Error) {
 
 		// a keyspace that has been deleted or needs refreshing causes a
 		// version change
-		entry.cbKeyspace = nil
+		oldCbKeyspace = entry.cbKeyspace
+		refresh = true
 	}
 	entry.lastUse = util.Now()
 	p.lock.Unlock()
@@ -1040,7 +1042,7 @@ func (p *namespace) keyspaceByName(name string) (*keyspace, errors.Error) {
 	defer entry.Unlock()
 
 	// 3) check if somebody has done the job for us in the interim
-	if entry.cbKeyspace != nil {
+	if entry.cbKeyspace != nil && (!refresh || entry.cbKeyspace != oldCbKeyspace) {
 		return entry.cbKeyspace, nil
 	}
 
