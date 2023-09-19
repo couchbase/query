@@ -63,10 +63,14 @@ func (this *inline) Execute(name functions.FunctionName, body functions.Function
 	expr := funcBody.expr
 	if c, ok := context.(functionsBridge.InlineUdfContext); ok {
 		var err error
+		var proc func(expression.Expression) error
 
 		// Get the function body to safely use
 		// Generate and use a new AST expression object when the funcBody.expr contains subqueries
-		expr, err = c.GetAndSetInlineUdfExprs(name.Key(), funcBody.expr, funcBody.hasSubqueries)
+		if len(funcBody.varNames) > 0 {
+			proc = markInlineSubqueries
+		}
+		expr, err = c.GetAndSetInlineUdfExprs(name.Key(), funcBody.expr, funcBody.hasSubqueries, proc)
 		if err != nil {
 			return nil, errors.NewInternalFunctionError(err, name.Name())
 		}
@@ -185,4 +189,15 @@ func (this *inlineBody) Privileges() (*auth.Privileges, errors.Error) {
 	}
 
 	return privileges, nil
+}
+
+func markInlineSubqueries(expr expression.Expression) error {
+	subqs, err := expression.ListSubqueries(expression.Expressions{expr}, true)
+	if err != nil {
+		return err
+	}
+	for _, subq := range subqs {
+		subq.SetInFunction()
+	}
+	return nil
 }

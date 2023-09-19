@@ -1379,7 +1379,9 @@ func (this *Context) InitInlineUdfExprs() {
 // udf: should be a unique identifier of the Inline UDF
 // expr: the actual expression AST pointer of the inline UDF body
 // reparse: indicates if the expression should be parsed again to generate the localExpr
-func (this *Context) GetAndSetInlineUdfExprs(udf string, expr expression.Expression, reparse bool) (expression.Expression, error) {
+func (this *Context) GetAndSetInlineUdfExprs(udf string, expr expression.Expression, reparse bool,
+	proc func(expression.Expression) error) (expression.Expression, error) {
+
 	this.mutex.Lock()
 	defer this.mutex.Unlock()
 	if this.inlineUdfExprs == nil {
@@ -1392,11 +1394,20 @@ func (this *Context) GetAndSetInlineUdfExprs(udf string, expr expression.Express
 		rv = entry.localExpr
 	} else {
 		if reparse {
-			ast, err := parser.Parse(expr.String())
+			exp, err := parser.Parse(expr.String())
+
 			if err != nil {
 				return nil, err
 			}
-			rv = ast
+
+			if proc != nil {
+				err = proc(exp)
+				if err != nil {
+					return nil, err
+				}
+			}
+
+			rv = exp
 		} else {
 			rv = expr
 		}
