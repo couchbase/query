@@ -32,6 +32,8 @@ func TestUDFs(t *testing.T) {
 
 	runMatch("case_inline_udf_tests.json", false, true, qc, t)
 
+	runMatch("case_inline_udf_bugs.json", false, true, qc, t)
+
 	// Drop functions created in the inline UDF tests
 	runStmt(qc, "DROP FUNCTION inline1 IF EXISTS")
 	runStmt(qc, "DROP FUNCTION inline2 IF EXISTS")

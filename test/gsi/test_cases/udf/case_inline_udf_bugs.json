@@ -1,0 +1,42 @@
+[
+    {
+        "description": "MB-57903 - CREATE FUNCTION",
+        "statements": "CREATE FUNCTION Test_Func(data) LANGUAGE INLINE AS ( ( SELECT RAW (SELECT RAW data) ) )",
+        "results":[]
+    },
+    {
+        "description": "MB-57903 - SELECT",
+        "statements": "SELECT a, test FROM [1,2,3] a LET test = Test_Func(a)",
+        "results": [
+            {
+                "a": 1,
+                "test": [
+                    [
+                        1
+                    ]
+                ]
+            },
+            {
+                "a": 2,
+                "test": [
+                    [
+                        2
+                    ]
+                ]
+            },
+            {
+                "a": 3,
+                "test": [
+                    [
+                        3
+                    ]
+                ]
+            }
+        ]
+    },
+    {
+        "description": "MB-57903 - DROP FUNCTION",
+        "statements": "DROP FUNCTION Test_Func",
+        "results": []
+    }
+]

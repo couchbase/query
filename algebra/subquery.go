@@ -189,3 +189,7 @@ func (this *Subquery) IsCorrelated() bool {
 func (this *Subquery) GetCorrelation() map[string]uint32 {
 	return this.query.GetCorrelation()
 }
+
+func (this *Subquery) SetInFunction() {
+	this.query.hasVariables = true
+}
