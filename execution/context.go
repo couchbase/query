@@ -313,6 +313,11 @@ type Context struct {
 	// Key: unique identifier of the Inline UDF
 	// Value: Info on the function body of Inline UDFs executed in the query
 	inlineUdfExprs map[string]inlineUdfEntry
+
+	// queryMutex is a pointer and is meant to be shared when we share certain fields
+	// when calling NewQueryContext(). Since the fields are shared the mutex that protect
+	// them also needs to be shared
+	queryMutex *sync.RWMutex
 }
 
 func NewContext(requestId string, datastore datastore.Datastore, systemstore datastore.Systemstore,
@@ -360,6 +365,7 @@ func NewContext(requestId string, datastore datastore.Datastore, systemstore dat
 		udfStmtExecTrees: nil,
 		udfPlans:         nil,
 		durationStyle:    util.LEGACY,
+		queryMutex:       &sync.RWMutex{},
 	}
 
 	if rv.maxParallelism <= 0 || rv.maxParallelism > util.NumCPU() {
@@ -420,6 +426,7 @@ func (this *Context) Copy() *Context {
 		logLevel:            this.logLevel,
 		errorLimit:          this.errorLimit,
 		durationStyle:       this.durationStyle,
+		queryMutex:          &sync.RWMutex{},
 	}
 
 	if this.optimizer != nil {
@@ -440,6 +447,7 @@ func (this *Context) NewQueryContext(queryContext string, readonly bool) interfa
 	rv.udfPlans = this.contextUdfPlans()
 	rv.udfStmtExecTrees = this.contextUdfStmtExecTrees()
 	rv.inlineUdfExprs = this.inlineUdfExprs
+	rv.queryMutex = this.queryMutex
 	return rv
 }
 
@@ -1400,8 +1408,8 @@ func (this *Context) getSubExecTrees() *subqueryArrayMap {
 }
 
 func (this *Context) initSubExecTrees() *subqueryArrayMap {
-	this.mutex.Lock()
-	defer this.mutex.Unlock()
+	this.queryMutex.Lock()
+	defer this.queryMutex.Unlock()
 	if this.subExecTrees == nil {
 		this.subExecTrees = newSubqueryArrayMap()
 	}
@@ -1409,8 +1417,8 @@ func (this *Context) initSubExecTrees() *subqueryArrayMap {
 }
 
 func (this *Context) contextSubExecTrees() *subqueryArrayMap {
-	this.mutex.RLock()
-	defer this.mutex.RUnlock()
+	this.queryMutex.RLock()
+	defer this.queryMutex.RUnlock()
 	return this.subExecTrees
 }
 
@@ -2122,33 +2130,33 @@ type execTreeMapEntry struct {
 }
 
 func (this *Context) InitUdfStmtExecTrees() {
-	this.mutex.Lock()
+	this.queryMutex.Lock()
 	if this.udfStmtExecTrees == nil {
 		this.udfStmtExecTrees = newUdfExecTreeMap()
 	}
-	this.mutex.Unlock()
+	this.queryMutex.Unlock()
 
 }
 
 func (this *Context) contextUdfStmtExecTrees() *udfExecTreeMap {
-	this.mutex.RLock()
+	this.queryMutex.RLock()
 	rv := this.udfStmtExecTrees
-	this.mutex.RUnlock()
+	this.queryMutex.RUnlock()
 	return rv
 }
 
 func (this *Context) InitUdfPlans() {
-	this.mutex.Lock()
+	this.queryMutex.Lock()
 	if this.udfPlans == nil {
 		this.udfPlans = newUdfPlanMap()
 	}
-	this.mutex.Unlock()
+	this.queryMutex.Unlock()
 }
 
 func (this *Context) contextUdfPlans() *udfPlanMap {
-	this.mutex.RLock()
+	this.queryMutex.RLock()
 	rv := this.udfPlans
-	this.mutex.RUnlock()
+	this.queryMutex.RUnlock()
 	return rv
 }
 
@@ -2197,11 +2205,11 @@ type inlineUdfEntry struct {
 }
 
 func (this *Context) InitInlineUdfExprs() {
-	this.mutex.Lock()
+	this.queryMutex.Lock()
 	if this.inlineUdfExprs == nil {
 		this.inlineUdfExprs = make(map[string]inlineUdfEntry)
 	}
-	this.mutex.Unlock()
+	this.queryMutex.Unlock()
 }
 
 // Returns the expression object that the Inline UDF execution should use
@@ -2216,8 +2224,8 @@ func (this *Context) InitInlineUdfExprs() {
 func (this *Context) GetAndSetInlineUdfExprs(udf string, expr expression.Expression, reparse, hasVariables bool,
 	proc func(expression.Expression, bool) error) (expression.Expression, error) {
 
-	this.mutex.Lock()
-	defer this.mutex.Unlock()
+	this.queryMutex.Lock()
+	defer this.queryMutex.Unlock()
 
 	if this.inlineUdfExprs == nil {
 		this.inlineUdfExprs = make(map[string]inlineUdfEntry)
