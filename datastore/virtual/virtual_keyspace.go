@@ -262,7 +262,7 @@ func (this *virtualKeyspace) Indexers() ([]datastore.Indexer, errors.Error) {
 }
 
 func (this *virtualKeyspace) Fetch(keys []string, keysMap map[string]value.AnnotatedValue,
-	context datastore.QueryContext, subPath []string, projection []string) errors.Errors {
+	context datastore.QueryContext, subPath []string, projection []string, useSubDoc bool) errors.Errors {
 	return errors.Errors{errors.NewVirtualKSNotSupportedError(nil, "Fetch for virtual keyspace.")}
 }
 

@@ -89,7 +89,7 @@ func (b *activeRequestsKeyspace) Indexers() ([]datastore.Indexer, errors.Error) 
 }
 
 func (b *activeRequestsKeyspace) Fetch(keys []string, keysMap map[string]value.AnnotatedValue,
-	context datastore.QueryContext, subPaths []string, projection []string) (errs errors.Errors) {
+	context datastore.QueryContext, subPaths []string, projection []string, useSubDoc bool) (errs errors.Errors) {
 	var creds distributed.Creds
 
 	userName := credsFromContext(context)

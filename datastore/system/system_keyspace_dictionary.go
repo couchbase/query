@@ -69,7 +69,7 @@ func (b *dictionaryKeyspace) Indexers() ([]datastore.Indexer, errors.Error) {
 }
 
 func (b *dictionaryKeyspace) Fetch(keys []string, keysMap map[string]value.AnnotatedValue,
-	context datastore.QueryContext, subPaths []string, projection []string) (errs errors.Errors) {
+	context datastore.QueryContext, subPaths []string, projection []string, useSubDoc bool) (errs errors.Errors) {
 	for _, k := range keys {
 		itemMap, e := b.fetchOne(k)
 		if e != nil {

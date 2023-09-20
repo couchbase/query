@@ -17,7 +17,6 @@ package couchbase
 
 import (
 	"encoding/binary"
-	"encoding/json"
 	"fmt"
 	"io"
 	"math"
@@ -30,6 +29,7 @@ import (
 	"time"
 
 	"github.com/couchbase/cbauth"
+	json "github.com/couchbase/go_json"
 	"github.com/couchbase/gomemcached"
 	memcached "github.com/couchbase/gomemcached/client" // package name is memcached
 	gsi "github.com/couchbase/indexing/secondary/queryport/n1ql"
@@ -1967,19 +1967,19 @@ func (k *keyspace) getRandomEntry(context datastore.QueryContext, scopeName, col
 		logging.Warnf("%v: empty random document key (processed) detected", k.name)
 		return "", nil, nil
 	}
-	doc := doFetch(key, k.fullName, resp, context)
+	doc := doFetch(key, k.fullName, resp, context, nil)
 
 	return key, doc, nil
 }
 
 func (b *keyspace) Fetch(keys []string, fetchMap map[string]value.AnnotatedValue,
-	context datastore.QueryContext, subPaths []string, projection []string) errors.Errors {
-	return b.fetch(b.fullName, b.QualifiedName(), "", "", keys, fetchMap, context, subPaths, projection)
+	context datastore.QueryContext, subPaths []string, projection []string, useSubDoc bool) errors.Errors {
+	return b.fetch(b.fullName, b.QualifiedName(), "", "", keys, fetchMap, context, subPaths, projection, useSubDoc)
 }
 
 func (b *keyspace) fetch(fullName, qualifiedName, scopeName, collectionName string, keys []string,
 	fetchMap map[string]value.AnnotatedValue, context datastore.QueryContext, subPaths []string,
-	projection []string, clientContext ...*memcached.ClientContext) errors.Errors {
+	projection []string, useSubDoc bool, clientContext ...*memcached.ClientContext) errors.Errors {
 
 	if txContext, _ := context.GetTxContext().(*transactions.TranContext); txContext != nil {
 		collId, user := getCollectionId(clientContext...)
@@ -2000,7 +2000,7 @@ func (b *keyspace) fetch(fullName, qualifiedName, scopeName, collectionName stri
 	ls := len(subPaths)
 	fast := l == 1 && ls == 0
 	if fast {
-		if len(projection) == 0 {
+		if !useSubDoc {
 			mcr, err = b.cbbucket.GetsMC(keys[0], context.IsActive, context.GetReqDeadline(), context.KvTimeout(),
 				context.UseReplica(), clientContext...)
 		} else {
@@ -2017,7 +2017,7 @@ func (b *keyspace) fetch(fullName, qualifiedName, scopeName, collectionName stri
 			mcr, err = b.cbbucket.GetsSubDoc(keys[0], context.GetReqDeadline(), context.KvTimeout(), subPaths, clientContext...)
 		} else {
 			// TODO TENANT handle refunds on transient failures
-			if len(projection) > 0 && ls == 0 {
+			if useSubDoc && ls == 0 {
 				bulkResponse, err = b.cbbucket.GetBulk(keys, context.IsActive, context.GetReqDeadline(), context.KvTimeout(),
 					projection, context.UseReplica(), append(clientContext, &memcached.ClientContext{DocumentSubDocPaths: true})...)
 			} else {
@@ -2043,8 +2043,8 @@ func (b *keyspace) fetch(fullName, qualifiedName, scopeName, collectionName stri
 
 	if fast {
 		if mcr != nil && err == nil {
-			if len(projection) == 0 {
-				fetchMap[keys[0]] = doFetch(keys[0], fullName, mcr, context)
+			if !useSubDoc {
+				fetchMap[keys[0]] = doFetch(keys[0], fullName, mcr, context, projection)
 			} else {
 				fetchMap[keys[0]] = getSubDocFetchResults(keys[0], fullName, mcr, projection, context)
 			}
@@ -2061,7 +2061,7 @@ func (b *keyspace) fetch(fullName, qualifiedName, scopeName, collectionName stri
 				fetchMap[k] = getSubDocXattrFetchResults(k, fullName, v, subPaths, noVirtualDocAttr, context)
 				i++
 			}
-		} else if len(projection) > 0 {
+		} else if useSubDoc {
 			for k, v := range bulkResponse {
 				fetchMap[k] = getSubDocFetchResults(k, fullName, v, projection, context)
 				i++
@@ -2069,7 +2069,7 @@ func (b *keyspace) fetch(fullName, qualifiedName, scopeName, collectionName stri
 			logging.Debugf("(Sub-doc) Requested keys %d Fetched %d keys ", l, i)
 		} else {
 			for k, v := range bulkResponse {
-				fetchMap[k] = doFetch(k, fullName, v, context)
+				fetchMap[k] = doFetch(k, fullName, v, context, projection)
 				i++
 			}
 			logging.Debugf("Requested keys %d Fetched %d keys ", l, i)
@@ -2079,24 +2079,55 @@ func (b *keyspace) fetch(fullName, qualifiedName, scopeName, collectionName stri
 	return nil
 }
 
-func doFetch(k string, fullName string, v *gomemcached.MCResponse, context datastore.QueryContext) value.AnnotatedValue {
+func doFetch(k string, fullName string, v *gomemcached.MCResponse, context datastore.QueryContext,
+	projection []string) value.AnnotatedValue {
 
 	var val value.AnnotatedValue
+	var raw []byte
+	var flags, expiration uint32
+
 	if v.DataType&gomemcached.DatatypeFlagCompressed == 0 {
-		val = value.NewAnnotatedValue(value.NewParsedValue(v.Body, (v.DataType&gomemcached.DatatypeFlagJSON != 0)))
+		raw = v.Body
 	} else {
 		// Uncomment when needed
 		//context.Debugf("Compressed document: %v", k)
-		raw, err := snappy.Decode(nil, v.Body)
+		var err error
+		raw, err = snappy.Decode(nil, v.Body)
 		if err != nil {
 			context.Error(errors.NewInvalidCompressedValueError(err, v.Body))
 			logging.Severef("Invalid compressed document received: %v - %v", err, v, context)
 			return nil
 		}
-		val = value.NewAnnotatedValue(value.NewParsedValue(raw, (v.DataType&gomemcached.DatatypeFlagJSON != 0)))
 	}
-
-	var flags, expiration uint32
+	if len(projection) == 0 {
+		val = value.NewAnnotatedValue(value.NewParsedValue(raw, (v.DataType&gomemcached.DatatypeFlagJSON != 0)))
+	} else {
+		val = value.NewAnnotatedValue(value.NewNestedScopeValue(nil))
+		var scan json.ScanState
+		json.SetScanState(&scan, raw)
+		done := make([]bool, len(projection))
+	proj:
+		for found := 0; found < len(projection); {
+			k, e := scan.ScanKeys()
+			if e != nil || k == nil {
+				break
+			}
+			for i := 0; i < len(projection); i++ {
+				if projection[i] == util.ByteToString(k) {
+					v, e := scan.NextUnmarshaledValue()
+					if e != nil {
+						break proj
+					}
+					val.SetField(projection[i], value.NewValue(v))
+					done[i] = true
+					found++
+					break
+				}
+			}
+		}
+		scan.Release()
+		raw = nil
+	}
 
 	if len(v.Extras) >= 8 {
 		flags = binary.BigEndian.Uint32(v.Extras[0:4])

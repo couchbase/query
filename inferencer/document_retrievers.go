@@ -635,7 +635,7 @@ func (udr *UnifiedDocumentRetriever) GetNextDoc(context datastore.QueryContext) 
 		}
 
 		for udr.returned < len(udr.cache) {
-			errs := udr.ks.Fetch(udr.cache[udr.returned:udr.returned+1], udr.docs, context, nil, nil)
+			errs := udr.ks.Fetch(udr.cache[udr.returned:udr.returned+1], udr.docs, context, nil, nil, false)
 			if errs != nil {
 				return _EMPTY_KEY, nil, errs[0]
 			} else if len(udr.docs) != 0 {
@@ -768,7 +768,7 @@ func (udr *UnifiedDocumentRetriever) getNextRandomScan(context datastore.QueryCo
 				if udr.dedup != nil {
 					udr.dedup[udr.keys[0]] = true
 				}
-				errs := udr.ks.Fetch(udr.keys[:1], udr.docs, context, nil, nil)
+				errs := udr.ks.Fetch(udr.keys[:1], udr.docs, context, nil, nil, false)
 				if errs != nil {
 					return _EMPTY_KEY, nil, errs[0], false
 				} else if len(udr.docs) != 0 {
@@ -848,7 +848,7 @@ func (udr *UnifiedDocumentRetriever) getNextFullScan(context datastore.QueryCont
 	}
 
 	for len(udr.keys) > 0 {
-		errs := udr.ks.Fetch(udr.keys[0:1], udr.docs, context, nil, nil)
+		errs := udr.ks.Fetch(udr.keys[0:1], udr.docs, context, nil, nil, false)
 
 		if errs != nil {
 			return _EMPTY_KEY, nil, errs[0], false
@@ -1049,7 +1049,7 @@ next_index:
 		}
 
 		for len(udr.keys) > 0 {
-			errs := udr.ks.Fetch(udr.keys[0:1], udr.docs, context, nil, nil)
+			errs := udr.ks.Fetch(udr.keys[0:1], udr.docs, context, nil, nil, false)
 			if errs != nil {
 				return _EMPTY_KEY, nil, errs[0], false
 			} else if len(udr.docs) != 0 {

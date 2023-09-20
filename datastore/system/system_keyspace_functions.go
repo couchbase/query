@@ -107,7 +107,7 @@ func (b *functionsKeyspace) Indexers() ([]datastore.Indexer, errors.Error) {
 }
 
 func (b *functionsKeyspace) Fetch(keys []string, keysMap map[string]value.AnnotatedValue,
-	context datastore.QueryContext, subPaths []string, projection []string) (errs errors.Errors) {
+	context datastore.QueryContext, subPaths []string, projection []string, useSubDoc bool) (errs errors.Errors) {
 
 	internal, external := hasGlobalFunctionsAccess(context)
 	lastScope := ""

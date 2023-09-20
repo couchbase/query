@@ -87,7 +87,7 @@ func get2(name functions.FunctionName, systemCollection datastore.Keyspace) (val
 	fetchMap := _STRING_ANNOTATED_POOL.Get()
 	defer _STRING_ANNOTATED_POOL.Put(fetchMap)
 	key := parts2key(name.Path()...)
-	errs := systemCollection.Fetch([]string{key}, fetchMap, datastore.NULL_QUERY_CONTEXT, nil, nil)
+	errs := systemCollection.Fetch([]string{key}, fetchMap, datastore.NULL_QUERY_CONTEXT, nil, nil, false)
 	for _, err := range errs {
 		if err.IsFatal() {
 			return nil, errors.NewSystemCollectionError("Error fetching documents from system collection", err)
@@ -267,7 +267,7 @@ func (name *systemEntry) Load() (functions.FunctionBody, errors.Error) {
 	fetchMap := _STRING_ANNOTATED_POOL.Get()
 	defer _STRING_ANNOTATED_POOL.Put(fetchMap)
 	key := parts2key(name.Path()...)
-	errs := systemCollection.Fetch([]string{key}, fetchMap, datastore.NULL_QUERY_CONTEXT, nil, nil)
+	errs := systemCollection.Fetch([]string{key}, fetchMap, datastore.NULL_QUERY_CONTEXT, nil, nil, false)
 	for _, err := range errs {
 		if err.IsFatal() {
 			return nil, errors.NewSystemCollectionError("Error fetching documents from system collection", err)

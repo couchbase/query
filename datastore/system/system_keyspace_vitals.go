@@ -56,7 +56,7 @@ func (b *vitalsKeyspace) Indexers() ([]datastore.Indexer, errors.Error) {
 }
 
 func (b *vitalsKeyspace) Fetch(keys []string, keysMap map[string]value.AnnotatedValue,
-	context datastore.QueryContext, subPaths []string, projection []string) (errs errors.Errors) {
+	context datastore.QueryContext, subPaths []string, projection []string, useSubDoc bool) (errs errors.Errors) {
 
 	formData := map[string]interface{}{"duration_style": context.DurationStyle().String()}
 

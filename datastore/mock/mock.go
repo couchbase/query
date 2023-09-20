@@ -373,7 +373,7 @@ func (b *keyspace) Indexers() ([]datastore.Indexer, errors.Error) {
 }
 
 func (b *keyspace) Fetch(keys []string, keysMap map[string]value.AnnotatedValue,
-	context datastore.QueryContext, subPaths []string, projection []string) (errs errors.Errors) {
+	context datastore.QueryContext, subPaths []string, projection []string, useSubDoc bool) (errs errors.Errors) {
 
 	for _, k := range keys {
 		item, e := b.fetchOne(k)

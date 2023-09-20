@@ -112,7 +112,7 @@ func TestMock(t *testing.T) {
 
 	f := []string{"123"}
 	vs := make(map[string]value.AnnotatedValue, 1)
-	errs := b.Fetch(f, vs, datastore.NULL_QUERY_CONTEXT, nil, nil)
+	errs := b.Fetch(f, vs, datastore.NULL_QUERY_CONTEXT, nil, nil, false)
 	if errs != nil || len(vs) == 0 {
 		t.Fatalf("expected item 123")
 	}
@@ -135,14 +135,14 @@ func TestMock(t *testing.T) {
 
 	f = []string{"not-an-item"}
 	vs = make(map[string]value.AnnotatedValue, 1)
-	errs = b.Fetch(f, vs, datastore.NULL_QUERY_CONTEXT, nil, nil)
+	errs = b.Fetch(f, vs, datastore.NULL_QUERY_CONTEXT, nil, nil, false)
 	if errs == nil || len(vs) > 0 {
 		t.Fatalf("expected not-an-item")
 	}
 
 	f = []string{strconv.Itoa(DEFAULT_NUM_ITEMS)}
 	vs = make(map[string]value.AnnotatedValue, 1)
-	errs = b.Fetch(f, vs, datastore.NULL_QUERY_CONTEXT, nil, nil)
+	errs = b.Fetch(f, vs, datastore.NULL_QUERY_CONTEXT, nil, nil, false)
 	if errs == nil || len(vs) > 0 {
 		t.Fatalf("expected not-an-item")
 	}

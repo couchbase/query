@@ -294,7 +294,7 @@ func TestSystem(t *testing.T) {
 	vals := make(map[string]value.AnnotatedValue, 1)
 	key := "p0/b1"
 
-	errs := bb.Fetch([]string{key}, vals, datastore.NULL_QUERY_CONTEXT, nil, nil)
+	errs := bb.Fetch([]string{key}, vals, datastore.NULL_QUERY_CONTEXT, nil, nil, false)
 	if errs != nil {
 		t.Fatalf("errors in key fetch %v", errs)
 	}
@@ -306,7 +306,7 @@ func TestSystem(t *testing.T) {
 	// Fetch on the user_info keyspace - expect to find a value for this key:
 	vals = make(map[string]value.AnnotatedValue, 1)
 	key = "ivanivanov"
-	errs = ui.Fetch([]string{key}, vals, datastore.NULL_QUERY_CONTEXT, nil, nil)
+	errs = ui.Fetch([]string{key}, vals, datastore.NULL_QUERY_CONTEXT, nil, nil, false)
 	if errs != nil {
 		t.Fatalf("errors in key fetch %v", errs)
 	}
@@ -318,7 +318,7 @@ func TestSystem(t *testing.T) {
 	// Fetch on the indexes keyspace - expect to find a value for this key:
 	vals = make(map[string]value.AnnotatedValue, 1)
 	key = "p0/b1/#primary"
-	errs = ib.Fetch([]string{key}, vals, datastore.NULL_QUERY_CONTEXT, nil, nil)
+	errs = ib.Fetch([]string{key}, vals, datastore.NULL_QUERY_CONTEXT, nil, nil, false)
 	if errs != nil {
 		t.Fatalf("errors in key fetch %v", errs)
 	}
@@ -330,7 +330,7 @@ func TestSystem(t *testing.T) {
 	// Fetch on the keyspaces keyspace - expect to not find a value for this key:
 	vals = make(map[string]value.AnnotatedValue, 1)
 	key = "p0/b5"
-	errs = bb.Fetch([]string{key}, vals, datastore.NULL_QUERY_CONTEXT, nil, nil)
+	errs = bb.Fetch([]string{key}, vals, datastore.NULL_QUERY_CONTEXT, nil, nil, false)
 	if errs == nil {
 		t.Fatalf("Expected not found error for key fetch on %s", "p0/b5")
 	}

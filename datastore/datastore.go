@@ -237,8 +237,8 @@ type Keyspace interface {
 	Indexers() ([]Indexer, errors.Error)                                       // List of index providers
 
 	// Used by both SELECT and DML statements
-	Fetch(keys []string, keysMap map[string]value.AnnotatedValue,
-		context QueryContext, subPath []string, projection []string) errors.Errors // Bulk key-value fetch from this keyspace
+	Fetch(keys []string, keysMap map[string]value.AnnotatedValue, context QueryContext, subPath []string,
+		projection []string, useSubDoc bool) errors.Errors // Bulk key-value fetch from this keyspace
 
 	// Used by DML statements
 	// For insert and upsert, nil input keys are replaced with auto-generated keys

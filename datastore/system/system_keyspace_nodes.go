@@ -59,7 +59,7 @@ func (b *nodeKeyspace) Indexers() ([]datastore.Indexer, errors.Error) {
 }
 
 func (b *nodeKeyspace) Fetch(keys []string, keysMap map[string]value.AnnotatedValue,
-	context datastore.QueryContext, subPaths []string, projection []string) (errs errors.Errors) {
+	context datastore.QueryContext, subPaths []string, projection []string, useSubDoc bool) (errs errors.Errors) {
 	info := b.namespace.store.actualStore.Info()
 
 	for _, k := range keys {
