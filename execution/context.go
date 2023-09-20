@@ -1255,10 +1255,13 @@ func (this *opContext) EvaluateSubquery(query *algebra.Select, parent value.Valu
 	if collect.opState == _DONE {
 		collect.opState = _COMPLETED
 	}
-	// do not share subquery execution tree if subquery is inside inline udf, since we could
-	// potentially invoke the same udf at different places (e.g. if the udf is recursive)
-	// and thus should not share the execution tree
-	if !query.InInlineFunction() {
+
+	// If the subquery is inside an Inline UDF - since the UDF could have potentially
+	// been invoked in the same udf at different places (e.g. if the udf is recursive)
+	// call addAndAccrue() to minimize the number of execution trees stored for profiling
+	if query.InInlineFunction() {
+		subExecTrees.addAndAccrue(query, sequence, collect)
+	} else {
 		subExecTrees.set(query, sequence, collect)
 	}
 
@@ -1522,6 +1525,14 @@ func newSubqueryArrayMap() *subqueryArrayMap {
 }
 
 func (this *subqueryArrayMap) get(key *algebra.Select) (*Sequence, *Collect, bool) {
+	// do not share subquery execution tree if subquery is inside inline udf, since we could
+	// potentially invoke the same udf at different places (e.g. if the udf is recursive)
+	// and thus should not share the execution tree
+	// in this case keep the execution tree for profiling purposes only
+	if key.InInlineFunction() {
+		return nil, nil, false
+	}
+
 	this.mutex.Lock()
 	e, ok := this.entries[key]
 	if !ok || len(e) == 0 {
@@ -1550,6 +1561,33 @@ func (this *subqueryArrayMap) set(key *algebra.Select, sequence *Sequence, colle
 		e = append(e, subqueryEntry{sequence, collect})
 	}
 	this.entries[key] = e
+	this.mutex.Unlock()
+}
+
+// Adds the execution tree to the map if there is no existing entry for the subquery
+// If there already is an entry:
+// i.  accumulates timing information of the new tree into the existing tree
+// ii. Calls the Done() method on the tree - to clean up - returning the operators back to their Operator pools
+// So do NOT use the Sequence and Collect operators after this method is called
+// Useful when we do not want to re-use execution trees and
+// want to minimize the size of the context's subquery execution tree cache
+func (this *subqueryArrayMap) addAndAccrue(key *algebra.Select, sequence *Sequence, collect *Collect) {
+	this.mutex.Lock()
+	e := this.entries[key]
+
+	if len(e) == 0 {
+		// Do not call Done() on the first execution tree
+		// Since this is the tree in which all the timings will be accumulated into
+		e = []subqueryEntry{{sequence, collect}}
+		this.entries[key] = e
+	} else {
+		e[0].sequence.accrueTimes(sequence)
+
+		// Call Done() on Sequence
+		// Since this execution tree is not to be re-used - perform the cleanup early
+		sequence.Done()
+	}
+
 	this.mutex.Unlock()
 }
 
