@@ -347,6 +347,18 @@ func (this *GenCache) Names() []string {
 // both functions should return false if processing needs to stop
 func (this *GenCache) ForEach(nonBlocking func(string, interface{}) bool,
 	blocking func() bool) {
+
+	safeUnlock := -1
+	defer func() {
+		e := recover()
+		if e != nil {
+			if safeUnlock != -1 {
+				this.locks[safeUnlock].RUnlock()
+			}
+			panic(e)
+		}
+	}()
+
 	cont := true
 
 	for b := 0; b < this.numCaches; b++ {
@@ -391,7 +403,9 @@ func (this *GenCache) ForEach(nonBlocking func(string, interface{}) bool,
 
 				// perform the non blocking action
 				if nonBlocking != nil {
+					safeUnlock = b
 					cont = nonBlocking(elem.ID, elem.contents)
+					safeUnlock = -1
 				}
 			}
 
