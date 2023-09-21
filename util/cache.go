@@ -374,8 +374,8 @@ func (this *GenCache) ForEach(nonBlocking func(string, interface{}) bool,
 			if safeUnlock != -1 {
 				this.locks[safeUnlock].RUnlock()
 			}
+			panic(e)
 		}
-		panic(e)
 	}()
 	cont := true
 
