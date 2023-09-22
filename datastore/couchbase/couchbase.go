@@ -2000,9 +2000,10 @@ func (b *keyspace) fetch(fullName, qualifiedName, scopeName, collectionName stri
 	ls := len(subPaths)
 	fast := l == 1 && ls == 0
 	if fast {
-		if !useSubDoc {
+		if !useSubDoc || len(projection) == 0 {
 			mcr, err = b.cbbucket.GetsMC(keys[0], context.IsActive, context.GetReqDeadline(), context.KvTimeout(),
 				context.UseReplica(), clientContext...)
+			useSubDoc = false
 		} else {
 			mcr, err = b.cbbucket.GetsSubDoc(keys[0], context.GetReqDeadline(), context.KvTimeout(), projection,
 				append(clientContext, &memcached.ClientContext{DocumentSubDocPaths: true})...)
@@ -2017,12 +2018,13 @@ func (b *keyspace) fetch(fullName, qualifiedName, scopeName, collectionName stri
 			mcr, err = b.cbbucket.GetsSubDoc(keys[0], context.GetReqDeadline(), context.KvTimeout(), subPaths, clientContext...)
 		} else {
 			// TODO TENANT handle refunds on transient failures
-			if useSubDoc && ls == 0 {
+			if useSubDoc && ls == 0 && len(projection) > 0 {
 				bulkResponse, err = b.cbbucket.GetBulk(keys, context.IsActive, context.GetReqDeadline(), context.KvTimeout(),
 					projection, context.UseReplica(), append(clientContext, &memcached.ClientContext{DocumentSubDocPaths: true})...)
 			} else {
 				bulkResponse, err = b.cbbucket.GetBulk(keys, context.IsActive, context.GetReqDeadline(), context.KvTimeout(),
 					subPaths, context.UseReplica(), clientContext...)
+				useSubDoc = false
 			}
 			defer b.cbbucket.ReleaseGetBulkPools(bulkResponse)
 		}
@@ -2267,8 +2269,8 @@ func getSubDocFetchResults(k string, fullName string, v *gomemcached.MCResponse,
 	meta["keyspace"] = fullName
 	meta["cas"] = v.Cas
 	meta["type"] = "json"
-	meta["flags"] = 0
-	meta["expiration"] = 0
+	meta["flags"] = uint32(0)
+	meta["expiration"] = uint32(0)
 	val.SetId(k)
 
 	if tenant.IsServerless() {
