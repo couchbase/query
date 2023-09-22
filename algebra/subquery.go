@@ -177,3 +177,32 @@ func (this *Subquery) SetInFunction(hasVariables bool) {
 		this.query.hasVariables = true
 	}
 }
+
+func (this *Subquery) CoveredBy(keyspace string, exprs expression.Expressions, options expression.CoveredOptions) expression.Covered {
+	// Check if COVER_IN_SUBQUERY flag is set already
+	// To prevent erroneous unset of the flag - only set & later unset flag if not already set
+	set := options.InSubqueryTraversal()
+
+	if !set {
+		options.SetInSubqueryFlag()
+	}
+
+	rv := expression.CoveredSkip
+
+	// Only consider the subquery for the covering check
+	// if it is correlated with the keyspace
+	if this.IsCorrelated() {
+		correlated := this.query.GetCorrelation()
+		if c, ok := correlated[keyspace]; ok {
+			if c&expression.IDENT_IS_KEYSPACE > 0 {
+				rv = this.ExprBase().CoveredBy(keyspace, exprs, options)
+			}
+		}
+	}
+
+	if !set {
+		options.UnsetInSubqueryFlag()
+	}
+
+	return rv
+}

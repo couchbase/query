@@ -32,6 +32,8 @@ func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 	prevProjection := this.delayProjection
 	prevRequirePrimaryKey := this.requirePrimaryKey
 	prevCollectQueryInfo := this.storeCollectQueryInfo()
+	prevInclWith := stmt.IncludeWith()
+
 	defer func() {
 		this.node = prevNode
 		this.cover = prevCover
@@ -41,8 +43,10 @@ func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 		this.delayProjection = prevProjection
 		this.requirePrimaryKey = prevRequirePrimaryKey
 		this.restoreCollectQueryInfo(prevCollectQueryInfo)
-
+		stmt.SetIncludeWith(prevInclWith)
 	}()
+	// Since this is the root Select being planned - disinclude its With expressions from cover transformation
+	stmt.SetIncludeWith(false)
 
 	this.node = stmt
 	stmtOrder := stmt.Order()

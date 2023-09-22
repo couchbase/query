@@ -38,6 +38,10 @@ type Select struct {
 	inlineFunc   bool                  `json:"inlineFunction"`
 	setop        bool                  `json:"setop"`
 	correlation  map[string]uint32     `json:"correlation"`
+
+	// MB-58106: indicates whether WITH expressions should be considered in Cover Transformation
+	// Default value is true
+	includeWith bool `json:"includeWith`
 }
 
 /*
@@ -46,11 +50,12 @@ by assigning the input attributes to the fields of the struct.
 */
 func NewSelect(subresult Subresult, with expression.Bindings, order *Order, offset, limit expression.Expression) *Select {
 	rv := &Select{
-		subresult: subresult,
-		with:      with,
-		order:     order,
-		offset:    offset,
-		limit:     limit,
+		subresult:   subresult,
+		with:        with,
+		order:       order,
+		offset:      offset,
+		limit:       limit,
+		includeWith: true,
 	}
 
 	rv.stmt = rv
@@ -97,7 +102,11 @@ func (this *Select) MapExpressions(mapper expression.Mapper) (err error) {
 	}
 
 	if this.with != nil {
-		err = this.with.MapExpressions(mapper)
+		// MB-58106: Cover transformation should consider With expressions only if the CTE is evaluated downstream to the
+		// root Select that is being traversed
+		if _, ok := mapper.(*expression.Coverer); !ok || this.includeWith {
+			err = this.with.MapExpressions(mapper)
+		}
 	}
 
 	if this.order != nil {
@@ -404,6 +413,14 @@ func (this *Select) CheckSetCorrelated() {
 	// the AST nodes as correlated as well, to be safe
 	this.correlated = true
 	markCorrelated(this.subresult)
+}
+
+func (this *Select) SetIncludeWith(incl bool) {
+	this.includeWith = incl
+}
+
+func (this *Select) IncludeWith() bool {
+	return this.includeWith
 }
 
 /*

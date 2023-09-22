@@ -29,6 +29,7 @@ const (
 	COVER_BIND_EXPR
 	COVER_SATISFIES
 	COVER_IMPLICIT_ARRAYKEY
+	COVER_IN_SUBQUERY // Indicates if covering check is traversing down a subquery
 )
 
 const COVER_ARRAY_KEY_OPTIONS = (COVER_BIND_VAR | COVER_BIND_EXPR | COVER_SATISFIES)
@@ -103,6 +104,18 @@ func (this *CoveredOptions) setCoverImplicitArrayKey() {
 
 func (this *CoveredOptions) unsetCoverImplicitArrayKey() {
 	this.coverFlags &^= COVER_IMPLICIT_ARRAYKEY
+}
+
+func (this *CoveredOptions) SetInSubqueryFlag() {
+	this.coverFlags |= COVER_IN_SUBQUERY
+}
+
+func (this *CoveredOptions) UnsetInSubqueryFlag() {
+	this.coverFlags &^= COVER_IN_SUBQUERY
+}
+
+func (this *CoveredOptions) InSubqueryTraversal() bool {
+	return this.coverFlags&COVER_IN_SUBQUERY != 0
 }
 
 func chkArrayKeyCover(pred Expression, keyspace string, exprs Expressions, all *All,

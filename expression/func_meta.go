@@ -280,6 +280,14 @@ func (this *Self) Indexable() bool {
 }
 
 func (this *Self) CoveredBy(keyspace string, exprs Expressions, options CoveredOptions) Covered {
+	// MB-58246: if in the covering check of a subquery return CoveredSkip
+	// Because otherwise, if * is in the subquery
+	// outer queries can be mistakenly marked as non-covered
+	// Even when there is a covering index
+	if options.InSubqueryTraversal() {
+		return CoveredSkip
+	}
+
 	return CoveredFalse
 }
 

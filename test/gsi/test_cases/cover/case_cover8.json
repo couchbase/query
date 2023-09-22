@@ -1,0 +1,126 @@
+[
+    {
+        "testcase": "MB-58106: Outer query should be marked as covered. Even though outer query and CTE reference same keyspace alias",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND ARRAY_LENGTH(v.covers) > 0 END AND ARRAY_LENGTH(p.`~subqueries`) = 1 AND NOT CONTAINS(p.`~subqueries`[0].subquery, \"cover\");"
+        },
+        "statements":"WITH cte1 AS ( SELECT firstName FROM customer WHERE id = 1 ) SELECT id, cte1 FROM customer WHERE id IS NOT MISSING ORDER BY id",
+        "results": [
+            {
+                "id": 1,
+                "cte1": [
+                    {
+                        "firstName": "Cordula"
+                    }
+                ]
+            },
+            {
+                "id": 2,
+                "cte1": [
+                    {
+                        "firstName": "Cordula"
+                    }
+                ]
+            },
+            {
+                "id": 3,
+                "cte1": [
+                    {
+                        "firstName": "Cordula"
+                    }
+                ]
+            }
+    ]
+    },
+    {
+        "testcase": "MB-58106: Outer query should be marked as covered. The CTE within the subquery in the projection must return correct results.",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND ARRAY_LENGTH(v.covers) > 0 END"
+        },
+        "statements":"SELECT id, ( WITH cte2 AS ( SELECT k2.id FROM customer k2 WHERE k2.id = k1.id ) SELECT cte2 ) AS c2 FROM customer k1 WHERE id IS NOT MISSING ORDER BY id;",
+        "results": [
+            {
+                "id": 1,
+                "c2": [
+                    {
+                        "cte2": [
+                            {
+                                "id": 1
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "id": 2,
+                "c2": [
+                    {
+                        "cte2": [
+                            {
+                                "id": 2
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "id": 3,
+                "c2": [
+                    {
+                        "cte2": [
+                            {
+                                "id": 3
+                            }
+                        ]
+                    }
+                ]
+            }
+    ]
+    },
+    {
+        "testcase": "MB-58246: Outer query should be marked as covered.",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND ARRAY_LENGTH(v.covers) > 0 END"
+        },
+        "statements":"SELECT field1, ( SELECT * FROM [1,2,3] arr) AS sq FROM shellTest WHERE field1 IS NOT MISSING",
+        "results": [
+    ]
+    },
+    {
+        "testcase": "MB-58246: Outer query should not be marked as covered.",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.covers IS MISSING END"
+        },
+        "statements":"SELECT field1 FROM shellTest s LET var = ( SELECT s.field1, * FROM s s1 ) WHERE field1 IS NOT MISSING",
+        "results": [
+    ]
+    }
+]
