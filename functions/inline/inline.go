@@ -110,6 +110,11 @@ func (this *inline) Execute(name functions.FunctionName, body functions.Function
 			len(funcBody.varNames) > 0, markInlineSubqueries)
 		if err != nil {
 			return nil, errors.NewInternalFunctionError(err, name.Name())
+		} else if expr != funcBody.expr {
+			err = setVarNames(expr, funcBody.varNames)
+			if err != nil {
+				return nil, errors.NewInternalFunctionError(err, name.Name())
+			}
 		}
 	}
 
@@ -127,10 +132,13 @@ func NewInlineBody(expr expression.Expression, text string) (functions.FunctionB
 }
 
 func (this *inlineBody) SetVarNames(vars []string) errors.Error {
+	this.varNames = vars
+	return setVarNames(this.expr, vars)
+}
+
+func setVarNames(expr expression.Expression, vars []string) errors.Error {
 	var bindings expression.Bindings
 	var f *expression.Formalizer
-
-	this.varNames = vars
 
 	/* We do not have parameter values at this stage, so the binding is
 	   done only to identify variables as variables and not formalize them
@@ -159,7 +167,7 @@ func (this *inlineBody) SetVarNames(vars []string) errors.Error {
 
 	f.SetPermanentWiths(bindings)
 	f.PushBindings(bindings, true)
-	_, err := this.expr.Accept(f)
+	_, err := expr.Accept(f)
 	if err != nil {
 		return errors.NewInternalFunctionError(err, "")
 	}
