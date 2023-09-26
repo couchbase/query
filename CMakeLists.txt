@@ -88,4 +88,4 @@ GoModBuild (TARGET cbq PACKAGE github.com/couchbase/query/shell/cbq
   CGO_LIBRARY_DIRS "${CGO_LIBRARY_DIRS}"
   LDFLAGS "-X github.com/couchbase/query/shell/cbq/command.SHELL_VERSION=${PRODUCT_VERSION}")
 
-INSTALL (FILES etc/metrics_metadata.json DESTINATION "etc/couchbase/n1ql")
+AddMetricsMetadata (JSON etc/metrics_metadata.json COMPONENT n1ql)
