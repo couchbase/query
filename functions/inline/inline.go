@@ -66,8 +66,7 @@ func (this *inline) Execute(name functions.FunctionName, body functions.Function
 
 		// Get the function body to safely use
 		// Generate and use a new AST expression object when the funcBody.expr contains subqueries
-		expr, err = c.GetAndSetInlineUdfExprs(name.Key(), funcBody.expr, funcBody.hasSubqueries,
-			len(funcBody.varNames) > 0, markInlineSubqueries)
+		expr, err = c.GetAndSetInlineUdfExprs(name.Key(), funcBody.expr, funcBody.hasSubqueries, funcBody.varNames, setVarNames)
 		if err != nil {
 			return nil, errors.NewInternalFunctionError(err, name.Name())
 		}
@@ -87,10 +86,13 @@ func NewInlineBody(expr expression.Expression, text string) (functions.FunctionB
 }
 
 func (this *inlineBody) SetVarNames(vars []string) errors.Error {
+	this.varNames = vars
+	return setVarNames(this.expr, vars)
+}
+
+func setVarNames(expr expression.Expression, vars []string) errors.Error {
 	var bindings expression.Bindings
 	var f *expression.Formalizer
-
-	this.varNames = vars
 
 	/* We do not have parameter values at this stage, so the binding is
 	   done only to identify variables as variables and not formalize them
@@ -119,7 +121,7 @@ func (this *inlineBody) SetVarNames(vars []string) errors.Error {
 
 	f.SetPermanentWiths(bindings)
 	f.PushBindings(bindings, true)
-	_, err := this.expr.Accept(f)
+	_, err := expr.Accept(f)
 	if err != nil {
 		return errors.NewInternalFunctionError(err, "")
 	}
@@ -186,15 +188,4 @@ func (this *inlineBody) Privileges() (*auth.Privileges, errors.Error) {
 	}
 
 	return privileges, nil
-}
-
-func markInlineSubqueries(expr expression.Expression, hasVariables bool) error {
-	subqs, err := expression.ListSubqueries(expression.Expressions{expr}, true)
-	if err != nil {
-		return err
-	}
-	for _, subq := range subqs {
-		subq.SetInFunction(hasVariables)
-	}
-	return nil
 }
