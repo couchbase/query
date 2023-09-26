@@ -20,7 +20,6 @@ type Subquery interface {
 	Formalize(parent *Formalizer) error
 	IsCorrelated() bool
 	GetCorrelation() map[string]uint32
-	SetInFunction(hasVariables bool)
 }
 
 /*

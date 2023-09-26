@@ -2221,8 +2221,8 @@ func (this *Context) InitInlineUdfExprs() {
 // udf: should be a unique identifier of the Inline UDF
 // expr: the actual expression AST pointer of the inline UDF body
 // reparse: indicates if the expression should be parsed again to generate the localExpr
-func (this *Context) GetAndSetInlineUdfExprs(udf string, expr expression.Expression, reparse, hasVariables bool,
-	proc func(expression.Expression, bool) error) (expression.Expression, bool, error) {
+func (this *Context) GetAndSetInlineUdfExprs(udf string, expr expression.Expression, reparse bool,
+	varNames []string, proc func(expression.Expression, []string) errors.Error) (expression.Expression, error) {
 
 	this.queryMutex.Lock()
 	defer this.queryMutex.Unlock()
@@ -2232,7 +2232,6 @@ func (this *Context) GetAndSetInlineUdfExprs(udf string, expr expression.Express
 	}
 
 	var rv expression.Expression
-	var parsed bool
 
 	// MB-58479: If there is an entry in the map, check if the UDF body has changed from the cached originalExpr
 	// If it has - recreate the entry
@@ -2242,17 +2241,16 @@ func (this *Context) GetAndSetInlineUdfExprs(udf string, expr expression.Express
 		if reparse {
 			exp, err := parser.Parse(expr.String())
 			if err != nil {
-				return nil, false, err
+				return nil, err
 			}
 
 			if proc != nil {
-				err = proc(exp, hasVariables)
+				err = proc(exp, varNames)
 				if err != nil {
-					return nil, false, err
+					return nil, err
 				}
 			}
 
-			parsed = true
 			rv = exp
 		} else {
 			rv = expr
@@ -2261,7 +2259,7 @@ func (this *Context) GetAndSetInlineUdfExprs(udf string, expr expression.Express
 		this.inlineUdfExprs[udf] = inlineUdfEntry{originalExpr: expr, localExpr: rv}
 	}
 
-	return rv, parsed, nil
+	return rv, nil
 }
 
 func (this *Context) HasFeature(feat uint64) bool {
