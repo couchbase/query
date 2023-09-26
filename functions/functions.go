@@ -624,7 +624,7 @@ func (entry *FunctionEntry) loadPrivileges() errors.Error {
 
 	privs := auth.NewPrivileges()
 
-	// Find the privilege required to execute the function
+	// add the privilege required to execute the function first so that its Authorization check occurs first too
 	if entry.IsGlobal() {
 		if entry.IsExternal() {
 			privs.Add("", auth.PRIV_QUERY_EXECUTE_FUNCTIONS_EXTERNAL, auth.PRIV_PROPS_NONE)
@@ -639,12 +639,12 @@ func (entry *FunctionEntry) loadPrivileges() errors.Error {
 		}
 	}
 
-	if privs == nil {
-		entry.privs = privs
-	} else { // to add the privilege required to execute the function first, so that its Authorization check occurs first too
+	// then add the body privileges
+	if bodyPrivs != nil {
 		privs.AddAll(bodyPrivs)
-		entry.privs = privs
 	}
+
+	entry.privs = privs
 	return nil
 }
 
