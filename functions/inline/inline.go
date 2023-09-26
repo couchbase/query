@@ -103,14 +103,15 @@ func (this *inline) Execute(name functions.FunctionName, body functions.Function
 	expr := funcBody.expr
 	if c, ok := context.(functionsBridge.InlineUdfContext); ok {
 		var err error
+		var parsed bool
 
 		// Get the function body to safely use
 		// Generate and use a new AST expression object when the funcBody.expr contains subqueries
-		expr, err = c.GetAndSetInlineUdfExprs(name.Key(), funcBody.expr, funcBody.hasSubqueries,
+		expr, parsed, err = c.GetAndSetInlineUdfExprs(name.Key(), funcBody.expr, funcBody.hasSubqueries,
 			len(funcBody.varNames) > 0, markInlineSubqueries)
 		if err != nil {
 			return nil, errors.NewInternalFunctionError(err, name.Name())
-		} else if expr != funcBody.expr {
+		} else if parsed {
 			err = setVarNames(expr, funcBody.varNames)
 			if err != nil {
 				return nil, errors.NewInternalFunctionError(err, name.Name())
@@ -258,6 +259,9 @@ func (this *inlineBody) Expressions() expression.Expressions {
 func (this *inlineBody) getBodyExpr() (expression.Expression, error) {
 	if this.hasSubqueries {
 		expr, err := parser.Parse(this.expr.String())
+		if err == nil {
+			err = setVarNames(expr, this.varNames)
+		}
 		if err != nil {
 			return nil, err
 		}
