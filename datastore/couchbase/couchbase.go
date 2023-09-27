@@ -148,13 +148,13 @@ func init() {
 }
 
 // Pass Deployment Model to gsi+n1fty
-func SetServerless(serverless bool) {
-	if serverless {
+func SetDeploymentModel(deploymentModel string) {
+	if deploymentModel == datastore.DEPLOYMENT_MODEL_SERVERLESS {
 		cb.SetConnectionPoolParams(_SERVERLESS_CONN, _OVERFLOW_CONN)
 		cb.EnableAsynchronousCloser(true, _SERVERLESS_TIMEOUT)
 	}
-	gsi.SetDeploymentModel(serverless)
-	ftsclient.SetDeploymentModel(serverless)
+	gsi.SetDeploymentModel(deploymentModel)
+	ftsclient.SetDeploymentModel(deploymentModel)
 }
 
 // store is the root for the couchbase datastore

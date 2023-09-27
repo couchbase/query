@@ -18,9 +18,9 @@ import (
 	"github.com/couchbase/query/errors"
 )
 
-func SetServerless(uri string, serverless bool) {
+func SetDeploymentModel(uri, deploymentModel string) {
 	if strings.HasPrefix(uri, "http:") {
-		couchbase.SetServerless(serverless)
+		couchbase.SetDeploymentModel(deploymentModel)
 	}
 }
 

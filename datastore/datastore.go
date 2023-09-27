@@ -36,6 +36,7 @@ import (
 
 const SYSTEM_NAMESPACE = "#system"
 const SYSTEM_NAMESPACE_NAME = "system"
+const DEPLOYMENT_MODEL_SERVERLESS = "serverless"
 
 // Datastore represents a cluster or single-node server.
 type Datastore interface {

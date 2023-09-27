@@ -29,6 +29,7 @@ import (
 	acct_resolver "github.com/couchbase/query/accounting/resolver"
 	"github.com/couchbase/query/audit"
 	config_resolver "github.com/couchbase/query/clustering/resolver"
+	"github.com/couchbase/query/datastore"
 	datastore_package "github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/datastore/resolver"
 	"github.com/couchbase/query/datastore/system"
@@ -165,8 +166,11 @@ var INTERNAL_CLIENT_KEY = flag.String("clientKeyFile", "", "Internal communicati
 var DICTIONARY_CACHE_LIMIT = flag.Int("dictionary-cache-limit", _DEF_DICTIONARY_CACHE_LIMIT,
 	"maximum number of entries in dictionary cache")
 
-// Serverless
+var DEPLOYMENT_MODEL = flag.String("deploymentModel", "default", "Deployment Model: default, serverless, provisioned")
+
+// Serverless, remove after ns_server changes
 var SERVERLESS = flag.Bool("serverless", false, "Serverless mode")
+
 var REGULATOR_SETTINGS_FILE = flag.String("regulatorSettingsFile", "", "Regulator settings file")
 
 func main() {
@@ -178,7 +182,12 @@ func main() {
 	initialCfg, num_cpus := waitForInitialSettings()
 
 	// many Init() depend on this
-	tenant.Init(*SERVERLESS)
+	// remove this after ns_server changes
+	if *SERVERLESS {
+		*DEPLOYMENT_MODEL = datastore.DEPLOYMENT_MODEL_SERVERLESS
+	}
+
+	tenant.Init(*DEPLOYMENT_MODEL == datastore.DEPLOYMENT_MODEL_SERVERLESS)
 
 	memory.SetMemoryLimitFunction(setMemoryLimit)
 	memory.Config(*NODE_QUOTA, *NODE_QUOTA_VAL_PERCENT, []int{*SERVICERS, *PLUS_SERVICERS})
@@ -278,7 +287,7 @@ func main() {
 		logging.SetDebugFilter(filter)
 	}
 
-	resolver.SetServerless(*DATASTORE, *SERVERLESS)
+	resolver.SetDeploymentModel(*DATASTORE, *DEPLOYMENT_MODEL)
 	// default until settings adjust
 	util.SetTemp(os.TempDir(), 0)
 
