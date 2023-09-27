@@ -201,6 +201,10 @@ func doStats(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, a
 
 	switch req.Method {
 	case "GET":
+		err, _ := endpoint.verifyCredentialsFromRequest("system:stats", auth.PRIV_SYSTEM_READ, req, af)
+		if err != nil {
+			return nil, err
+		}
 		af.EventTypeId = audit.API_DO_NOT_AUDIT
 		stats := make(map[string]interface{})
 		for name, metric := range reg.Counters() {
@@ -247,6 +251,11 @@ func doStat(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af
 
 	switch req.Method {
 	case "GET":
+		err, _ := endpoint.verifyCredentialsFromRequest("system:stats", auth.PRIV_SYSTEM_READ, req, af)
+		if err != nil {
+			return nil, err
+		}
+
 		af.EventTypeId = audit.API_DO_NOT_AUDIT
 		if isLocal(name) {
 			return getLocalData(endpoint.server, name), nil
@@ -259,6 +268,10 @@ func doStat(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af
 			}
 		}
 	case "DELETE":
+		err, _ := endpoint.verifyCredentialsFromRequest("system:stats", auth.PRIV_SYSTEM_READ, req, af)
+		if err != nil {
+			return nil, err
+		}
 		return nil, reg.Unregister(name)
 	default:
 		return nil, errors.NewServiceErrorHttpMethod(req.Method)
@@ -334,6 +347,10 @@ func doVitals(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, 
 	af.EventTypeId = audit.API_ADMIN_VITALS
 	switch req.Method {
 	case "GET":
+		err, _ := endpoint.verifyCredentialsFromRequest("system:vitals", auth.PRIV_SYSTEM_READ, req, af)
+		if err != nil {
+			return nil, err
+		}
 		acctStore := endpoint.server.AccountingStore()
 		return acctStore.Vitals()
 	default:
