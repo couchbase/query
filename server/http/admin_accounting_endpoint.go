@@ -1623,21 +1623,18 @@ func activeRequestWorkHorse(endpoint *HttpEndpoint, request server.Request, prof
 			prof = endpoint.server.Profile()
 		}
 
-		timings := request.GetTimings()
-		t := request.GetFmtTimings()
-		if t == nil {
-			t, _ = json.Marshal(timings)
-		}
-
 		// TODO - check lifetime of entry
 		// by the time we marshal, is this still valid?
-		if (prof == server.ProfOn || prof == server.ProfBench) && t != nil {
-			reqMap["timings"] = value.ApplyDurationStyleToValue(durStyle, func(s string) bool {
-				return strings.HasSuffix(s, "Time")
-			}, value.NewValue(t))
-			p = request.Output().FmtOptimizerEstimates(timings)
-			if p != nil {
-				reqMap["optimizerEstimates"] = value.NewValue(p)
+		if prof == server.ProfOn || prof == server.ProfBench {
+			timings := request.GetTimings()
+			if timings != nil {
+				reqMap["timings"] = value.ApplyDurationStyleToValue(durStyle, func(s string) bool {
+					return strings.HasSuffix(s, "Time")
+				}, value.NewMarshalledValue(timings))
+				p = request.Output().FmtOptimizerEstimates(timings)
+				if p != nil {
+					reqMap["optimizerEstimates"] = value.NewValue(p)
+				}
 			}
 		}
 		cpuTime := request.CpuTime()

@@ -9,7 +9,6 @@
 package system
 
 import (
-	"encoding/json"
 	"strings"
 	"time"
 
@@ -265,14 +264,10 @@ func (b *activeRequestsKeyspace) Fetch(keys []string, keysMap map[string]value.A
 				meta["keyspace"] = b.fullName
 
 				timings := request.GetTimings()
-				t := request.GetFmtTimings()
-				if t == nil {
-					t, _ = json.Marshal(timings)
-				}
-				if t != nil {
+				if timings != nil {
 					meta["plan"] = value.ApplyDurationStyleToValue(context.DurationStyle(), func(s string) bool {
 						return strings.HasSuffix(s, "Time")
-					}, value.NewMarshalledValue(t))
+					}, value.NewMarshalledValue(timings))
 					optEstimates := request.Output().FmtOptimizerEstimates(timings)
 					if optEstimates != nil {
 						meta["optimizerEstimates"] = value.NewMarshalledValue(optEstimates)
