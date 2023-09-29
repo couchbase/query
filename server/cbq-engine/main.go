@@ -168,9 +168,6 @@ var DICTIONARY_CACHE_LIMIT = flag.Int("dictionary-cache-limit", _DEF_DICTIONARY_
 
 var DEPLOYMENT_MODEL = flag.String("deploymentModel", "default", "Deployment Model: default, serverless, provisioned")
 
-// Serverless, remove after ns_server changes
-var SERVERLESS = flag.Bool("serverless", false, "Serverless mode")
-
 var REGULATOR_SETTINGS_FILE = flag.String("regulatorSettingsFile", "", "Regulator settings file")
 
 func main() {
@@ -182,10 +179,6 @@ func main() {
 	initialCfg, num_cpus := waitForInitialSettings()
 
 	// many Init() depend on this
-	// remove this after ns_server changes
-	if *SERVERLESS {
-		*DEPLOYMENT_MODEL = datastore.DEPLOYMENT_MODEL_SERVERLESS
-	}
 
 	tenant.Init(*DEPLOYMENT_MODEL == datastore.DEPLOYMENT_MODEL_SERVERLESS)
 
