@@ -28,8 +28,6 @@ import (
 
 const (
 	_NOT_MIGRATING = iota
-	_AWAITING_BUCKETS
-	_WAITING
 	_MIGRATING
 	_MIGRATED
 )
@@ -58,16 +56,10 @@ func Migrate() {
 	countDownStarted = time.Now()
 	logging.Infof("UDF migration: Evaluating migration state")
 
-	// check for outstanding migration
-	if migration.Resume(_UDF_MIGRATION) {
-		logging.Infof("UDF migration: Resuming migration")
-		go migrate()
-		return
-	}
-
 	// no migration needed if the datastore doesn't support scanning buckets directly
 	ds, ok := datastore.GetDatastore().(datastore.Datastore2)
 	if !ok || ds == nil {
+		logging.Warnf("UDF migration: Migration not done - datastore does not support scanning buckets directly")
 		migrating = _MIGRATED
 		return
 	}
@@ -81,97 +73,28 @@ func Migrate() {
 		}
 	})
 
-	// or there are no buckets
-	if bucketCount == 0 {
-
-		// this is unlikely, but if we can't complete migration and
-		// other nodes haven't, in the immediate there's no issue
-		// as there's no scope UDFs to use anyway
-		// when a bucket is added, must restart the node to pick up
-		// migration at the next step
-		// TODO find better policy
-		if migration.TryComplete(_UDF_MIGRATION) {
-			logging.Infof("UDF migration: Not needed on a new cluster")
-			migrating = _MIGRATED
-		} else {
-			logging.Warnf("UDF migration: Could not enable _system scope usage, please restart node")
-		}
-		return
-	}
-
-	// if all the buckets appear migrated attempt migration now
+	// if all the buckets appear migrated attempt migration now (including when bucketCount == 0)
 	if bucketCount == newBucketCount {
-		if migration.Register(_UDF_MIGRATION) {
-			logging.Infof("UDF migration: Starting migration")
-			go migrate()
-		} else if migration.IsComplete(_UDF_MIGRATION) {
-			// another process picked it up in the interim
-			migrating = _MIGRATED
-		} else {
-			logging.Infof("UDF migration: Waiting for migration to complete")
-			migrating = _WAITING
-		}
+		go migrateAll()
+
 		return
 	}
 
 	datastore.RegisterMigrator(func(b string) {
 		// At least one bucket has the new _query collection
-		// decide if we are going to do the migration
 		migratingLock.Lock()
 		switch migrating {
 		case _NOT_MIGRATING:
-			// is it us?
-			doMigrate := migration.Register(_UDF_MIGRATION)
-			if doMigrate {
-				migrating = _AWAITING_BUCKETS
-			} else {
-				logging.Infof("UDF migration: Migration started on a different node")
-				migrating = _WAITING
-			}
+			migrating = _MIGRATING
+			fallthrough
+		case _MIGRATING:
 			migratingLock.Unlock()
-			if doMigrate {
-				checkMigrate()
-			}
-		case _AWAITING_BUCKETS:
-			migratingLock.Unlock()
-			// it's us, one more bucket
-			checkMigrate()
-
-		case _WAITING:
-			migratingLock.Unlock()
-			return
+			checkMigrateBucket(b)
 		default:
 			migratingLock.Unlock()
 			return
 		}
 	}, datastore.HAS_SYSTEM_COLLECTION)
-}
-
-func checkMigrate() {
-
-	// if we are here, we know we have an extended datastore
-	ds := datastore.GetDatastore().(datastore.Datastore2)
-	if ds != nil {
-		bucketCount := 0
-		canMigrate := true
-
-		// this is expensive, but buckets may be dropped and readded
-		// in between we initialize and when we check, so we cannot
-		// rely on maintaining bucket counts, and have to check all the buckets
-		ds.LoadAllBuckets(func(b datastore.ExtendedBucket) {
-			if !b.HasCapability(datastore.HAS_SYSTEM_COLLECTION) {
-				canMigrate = false
-			} else {
-				bucketCount++
-			}
-		})
-		if canMigrate {
-			logging.Infof("UDF migration: All buckets have system scope")
-			migrate()
-		} else {
-			logging.Infof("UDF migration: Detected %v buckets with system scope", bucketCount)
-		}
-	}
 }
 
 func MakeName(bytes []byte) (functions.FunctionName, error) {
@@ -311,7 +234,7 @@ func ExternalBucketArchive() bool {
 	return !UseSystemStorage()
 }
 
-func migrate() {
+func migrateAll() {
 
 	// TODO KV doesn't like being hammered straight away so wait for KV to prime before migrating
 	countDown := time.Since(countDownStarted)
@@ -319,34 +242,79 @@ func migrate() {
 		time.Sleep(_GRACE - countDown)
 	}
 
-	// serialize migration if multiple buckets kicked off migration at the same time
-	migratingLock.Lock()
-	doMigrate := migrating == _AWAITING_BUCKETS
-	if doMigrate {
-		migrating = _MIGRATING
+	logging.Infof("UDF migration: Start migration of all buckets")
+
+	migrating = _MIGRATING
+
+	// if we are here, we know we have an extended datastore
+	ds := datastore.GetDatastore().(datastore.Datastore2)
+	if ds != nil {
+		ds.LoadAllBuckets(func(b datastore.ExtendedBucket) {
+			if !b.HasCapability(datastore.HAS_SYSTEM_COLLECTION) {
+				logging.Infof("UDF migration: Bucket %s missing system collection capability", b.Name())
+			} else {
+				migrateBucket(b.Name())
+			}
+		})
+
+		if checkMigrationComplete() {
+			logging.Infof("UDF migration: End migration of all buckets")
+		} else {
+			logging.Errorf("UDF migration: Migration incomplete, please restart node")
+		}
+	} else {
+		logging.Errorf("UDF migration: Unexpected error - datastore not available")
 	}
-	migratingLock.Unlock()
-	if !doMigrate {
-		logging.Infof("UDF migration: Migration performed by different thread")
+}
+
+func checkMigrateBucket(name string) {
+
+	// is migration complete?
+	migratingLock.Lock()
+	if migrating == _MIGRATED {
+		migratingLock.Unlock()
+		return
+	} else if migration.IsComplete(_UDF_MIGRATION) {
+		migrating = _MIGRATED
+		migratingLock.Unlock()
 		return
 	}
+	migratingLock.Unlock()
 
-	logging.Infof("UDF migration: Starting scope UDFs migration")
+	// TODO KV doesn't like being hammered straight away so wait for KV to prime before migrating
+	countDown := time.Since(countDownStarted)
+	if countDown < _GRACE {
+		time.Sleep(_GRACE - countDown)
+	}
+
+	migrateBucket(name)
+
+	checkMigrationComplete()
+}
+
+func migrateBucket(name string) bool {
+
+	logging.Infof("UDF migration: Start UDF migration for bucket %s", name)
 
 	// TODO it would be useful here to load the cache so that other requests don't hit the storage
 	// except that to be useful, this would have to be done on all query nodes, which requires
 	// synchronization
 
-	migration.Start(_UDF_MIGRATION)
+	complete := true
 	metaStorage.ForeachBody(func(parts []string, body functions.FunctionBody) {
 		if len(parts) != 4 {
 			return
 		}
+		if parts[1] != name {
+			// not this bucket
+			return
+		}
+		success := false
 		name, err := systemStorage.NewScopeFunction(parts[0], parts[1], parts[2], parts[3])
 		if err == nil {
-			err1 := name.Save(body, true)
+			err1 := name.Save(body, false)
 			if err1 != nil {
-				logging.Warnf("UDF migration: Migrating %v error %v writing body", parts, err1)
+				logging.Errorf("UDF migration: Migrating %v error %v writing body", parts, err1)
 			} else {
 				logging.Infof("UDF migration: Migrated %v", parts)
 
@@ -354,19 +322,46 @@ func migrate() {
 				if err1 == nil {
 					err1 = name.Delete()
 					if err1 != nil {
-						logging.Warnf("UDF migration: Migrating %v error %v deleting old entry", parts, err1)
+						logging.Errorf("UDF migration: Migrating %v error %v deleting old entry", parts, err1)
+					} else {
+						logging.Infof("UDF migration: Deleted old entry for %v", parts)
+						success = true
 					}
 				} else {
-					logging.Warnf("UDF migration: Migrating %v error %v generating metakv function for deleting old entry", parts, err1)
+					logging.Errorf("UDF migration: Migrating %v error %v generating metakv function for deleting old entry", parts, err1)
 				}
 			}
 		} else {
-			logging.Warnf("UDF migration: Migrating %v error %v parsing name", parts, err)
+			logging.Errorf("UDF migration: Migrating %v error %v parsing name", parts, err)
+		}
+		if !success {
+			complete = false
 		}
 	})
-	migrating = _MIGRATED
-	migration.Complete(_UDF_MIGRATION)
-	logging.Infof("UDF migration: Completed scope UDFs migration")
+	logging.Infof("UDF migration: End UDF migration for bucket %s complete %t", name, complete)
+	return complete
+}
+
+func checkMigrationComplete() bool {
+	migratingLock.Lock()
+	defer migratingLock.Unlock()
+
+	if migrating == _MIGRATED {
+		return true
+	}
+
+	complete := true
+	metaStorage.ForeachBody(func(parts []string, body functions.FunctionBody) {
+		// still entries to be migrated
+		complete = false
+	})
+
+	if complete {
+		migration.Complete(_UDF_MIGRATION)
+		migrating = _MIGRATED
+	}
+
+	return complete
 }
 
 func UseSystemStorage() bool {

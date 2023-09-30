@@ -201,14 +201,25 @@ func callback(kve metakv.KVEntry) error {
 		return nil
 	}
 
+	what := path[len(_MIGRATION_PATH):]
+	what = what[:len(what)-len(_MIGRATION_STATE)]
+	newState := state(kve.Value)
+
+	logging.Infof("%v migration: Metakv callback - migration state changed to %v", what, newState)
+
 	// this is a good place to hook in a migration callback if we want
 	// to offer the option of reacting to changing migration states
 
 	if state(kve.Value) != _MIGRATED {
 		return nil
 	}
-	what := path[len(_MIGRATION_PATH):]
-	what = what[:len(what)-len(_MIGRATION_STATE)]
+
+	// call a separate go routine in case something happens in the call (wait on mutex/condition)
+	go callback1(what)
+	return nil
+}
+
+func callback1(what string) {
 	mapLock.Lock()
 	w := waitersMap[what]
 	if w != nil {
@@ -229,5 +240,4 @@ func callback(kve metakv.KVEntry) error {
 		mapLock.Unlock()
 		logging.Infof("%v migration: Complete with no waiters", what)
 	}
-	return nil
 }
