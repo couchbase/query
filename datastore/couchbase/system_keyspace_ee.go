@@ -285,7 +285,7 @@ func (s *store) CreateSysPrimaryIndex(idxName, requestId string, indexer3 datast
 		}
 	}
 
-	return nil
+	return er
 }
 
 func (s *store) DropSystemCBOStats() errors.Error {
@@ -339,7 +339,33 @@ func (s *store) getNumIndexNode() (int, errors.Errors) {
 func (s *store) CheckSystemCollection(bucketName, requestId string) errors.Error {
 	sysColl, err := s.GetSystemCollection(bucketName)
 	if err != nil {
-		return err
+		maxRetry := 8
+		interval := 250 * time.Millisecond
+		for i := 0; i < maxRetry; i++ {
+			switch err.Code() {
+			case errors.E_CB_KEYSPACE_NOT_FOUND, errors.E_CB_BUCKET_NOT_FOUND, errors.E_CB_SCOPE_NOT_FOUND:
+				// no-op, ignore these errors
+			default:
+				return err
+			}
+
+			time.Sleep(interval)
+			interval *= 2
+
+			sysColl, err = s.GetSystemCollection(bucketName)
+			if sysColl != nil || err == nil {
+				break
+			}
+		}
+		if err != nil {
+			return err
+		} else if sysColl == nil {
+			return errors.NewSystemCollectionError("System collection not available for bucket "+bucketName, nil)
+		}
+	}
+
+	if requestId == "" {
+		return nil
 	}
 
 	indexer, er := sysColl.Indexer(datastore.GSI)

@@ -30,6 +30,7 @@ const (
 	_NOT_MIGRATING = iota
 	_MIGRATING
 	_MIGRATED
+	_PART_MIGRATED
 )
 
 const _UDF_MIGRATION = "UDF"
@@ -79,6 +80,10 @@ func Migrate() {
 
 		return
 	}
+
+	migrationsLock.Lock()
+	migrations = make(map[string]*migrateBucket, bucketCount)
+	migrationsLock.Unlock()
 
 	datastore.RegisterMigrator(func(b string) {
 		// At least one bucket has the new _query collection
@@ -234,6 +239,15 @@ func ExternalBucketArchive() bool {
 	return !UseSystemStorage()
 }
 
+type migrateBucket struct {
+	sync.Mutex
+	name  string
+	state int
+}
+
+var migrations map[string]*migrateBucket
+var migrationsLock sync.Mutex
+
 func migrateAll() {
 
 	// TODO KV doesn't like being hammered straight away so wait for KV to prime before migrating
@@ -253,7 +267,9 @@ func migrateAll() {
 			if !b.HasCapability(datastore.HAS_SYSTEM_COLLECTION) {
 				logging.Infof("UDF migration: Bucket %s missing system collection capability", b.Name())
 			} else {
-				migrateBucket(b.Name())
+				checkSystemCollection(b.Name())
+
+				doMigrateBucket(b.Name())
 			}
 		})
 
@@ -281,18 +297,78 @@ func checkMigrateBucket(name string) {
 	}
 	migratingLock.Unlock()
 
+	// avoid parallel migration of each bucket on this query node
+	migrationsLock.Lock()
+	bucket, ok := migrations[name]
+	if !ok {
+		bucket = &migrateBucket{
+			name:  name,
+			state: _NOT_MIGRATING,
+		}
+		migrations[name] = bucket
+	}
+	migrationsLock.Unlock()
+
+	logging.Infof("UDF migration: Evaluating bucket (%s) migration state (%v)", name, bucket.state)
+
+	doSysColl := false
+	doMigrate := true
+	bucket.Lock()
+	if bucket.state == _NOT_MIGRATING {
+		bucket.state = _MIGRATING
+		doSysColl = true
+	} else if bucket.state == _PART_MIGRATED {
+		bucket.state = _MIGRATING
+	} else if bucket.state == _MIGRATING || bucket.state == _MIGRATED {
+		doMigrate = false
+	} else {
+		logging.Errorf("UDF migration: Unexpected bucket migration state %v", bucket.state)
+		bucket.Unlock()
+		return
+	}
+	bucket.Unlock()
+
+	if !doMigrate {
+		logging.Infof("UDF migration: Migration of bucket %s being performed by another thread", name)
+		return
+	}
+
+	if doSysColl {
+		checkSystemCollection(name)
+	}
+
 	// TODO KV doesn't like being hammered straight away so wait for KV to prime before migrating
 	countDown := time.Since(countDownStarted)
 	if countDown < _GRACE {
 		time.Sleep(_GRACE - countDown)
 	}
 
-	migrateBucket(name)
+	// if migration completed while we are waiting ...
+	migratingLock.Lock()
+	if migrating == _MIGRATED {
+		migratingLock.Unlock()
+		return
+	} else if migration.IsComplete(_UDF_MIGRATION) {
+		migrating = _MIGRATED
+		migratingLock.Unlock()
+		return
+	}
+	migratingLock.Unlock()
+
+	b := doMigrateBucket(name)
+
+	bucket.Lock()
+	if b {
+		bucket.state = _MIGRATED
+	} else {
+		bucket.state = _PART_MIGRATED
+	}
+	bucket.Unlock()
 
 	checkMigrationComplete()
 }
 
-func migrateBucket(name string) bool {
+func doMigrateBucket(name string) bool {
 
 	logging.Infof("UDF migration: Start UDF migration for bucket %s", name)
 
@@ -309,6 +385,8 @@ func migrateBucket(name string) bool {
 			// not this bucket
 			return
 		}
+		logging.Infof("UDF migration: Handling %v", parts)
+
 		success := false
 		name, err := systemStorage.NewScopeFunction(parts[0], parts[1], parts[2], parts[3])
 		if err == nil {
@@ -340,6 +418,21 @@ func migrateBucket(name string) bool {
 	})
 	logging.Infof("UDF migration: End UDF migration for bucket %s complete %t", name, complete)
 	return complete
+}
+
+func checkSystemCollection(name string) {
+	ds := datastore.GetDatastore()
+	if ds != nil {
+		// check existence of system collection, no need to create primary index
+		err := ds.CheckSystemCollection(name, "")
+		if err != nil {
+			logging.Errorf("UDF migration: Error during UDF migration for bucket %s, system collection does not exist - %v", name, err)
+		} else {
+			logging.Infof("UDF migration: System collection available (bucket %s)", name)
+		}
+	} else {
+		logging.Errorf("UDF migration: Unexpected error - datastore not available")
+	}
 }
 
 func checkMigrationComplete() bool {
