@@ -58,7 +58,7 @@ func (this *NLNest) PlanOp() plan.Operator {
 }
 
 func (this *NLNest) RunOnce(context *Context, parent value.Value) {
-	this.runConsumer(this, context, parent)
+	this.runConsumer(this, context, parent, nil)
 }
 
 func (this *NLNest) beforeItems(context *Context, parent value.Value) bool {

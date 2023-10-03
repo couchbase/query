@@ -63,8 +63,7 @@ func (this *Order) PlanOp() plan.Operator {
 }
 
 func (this *Order) RunOnce(context *Context, parent value.Value) {
-	defer this.releaseValues()
-	this.runConsumer(this, context, parent)
+	this.runConsumer(this, context, parent, this.releaseValues)
 }
 
 func (this *Order) processItem(item value.AnnotatedValue, context *Context) bool {
@@ -97,8 +96,8 @@ func (this *Order) beforeItems(context *Context, item value.Value) bool {
 }
 
 func (this *Order) afterItems(context *Context) {
-	defer this.releaseValues()
 	defer func() {
+		this.releaseValues()
 		this.terms = nil
 	}()
 
@@ -124,7 +123,9 @@ func (this *Order) afterItems(context *Context) {
 }
 
 func (this *Order) releaseValues() {
-	_ORDER_POOL.Put(this.values)
+	if this.values != nil {
+		_ORDER_POOL.Put(this.values)
+	}
 	this.values = nil
 }
 

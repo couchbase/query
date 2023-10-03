@@ -62,7 +62,7 @@ func (this *SendDelete) PlanOp() plan.Operator {
 }
 
 func (this *SendDelete) RunOnce(context *Context, parent value.Value) {
-	this.runConsumer(this, context, parent)
+	this.runConsumer(this, context, parent, nil)
 }
 
 func (this *SendDelete) processItem(item value.AnnotatedValue, context *Context) bool {

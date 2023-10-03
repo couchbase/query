@@ -506,6 +506,7 @@ func (this *base) SerializeOutput(op Operator, context *Context) {
 }
 
 // MB-38469 / go issue 18138 initial goroutine stack too small
+//
 //go:noinline
 func primeStack() {
 	const _STACK_BUF_SIZE = 512 // 128 multiples, tuned for likely stack usage!
@@ -876,7 +877,7 @@ type consumer interface {
 	readonly() bool
 }
 
-func (this *base) runConsumer(cons consumer, context *Context, parent value.Value) {
+func (this *base) runConsumer(cons consumer, context *Context, parent value.Value, cleanup func()) {
 	this.once.Do(func() {
 		defer context.Recover(this) // Recover from any panic
 		active := this.active()
@@ -889,6 +890,9 @@ func (this *base) runConsumer(cons consumer, context *Context, parent value.Valu
 			defer func() {
 				this.switchPhase(_NOTIME) // accrue current phase's time
 				if !ok {
+					if cleanup != nil {
+						cleanup()
+					}
 					this.notify()
 					this.close(context)
 				}
@@ -912,6 +916,9 @@ func (this *base) runConsumer(cons consumer, context *Context, parent value.Valu
 			}
 			if active {
 				this.batch = nil
+			}
+			if cleanup != nil {
+				cleanup()
 			}
 			this.notify()
 			this.switchPhase(_NOTIME)

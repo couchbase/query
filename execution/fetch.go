@@ -74,7 +74,7 @@ func (this *Fetch) PlanOp() plan.Operator {
 }
 
 func (this *Fetch) RunOnce(context *Context, parent value.Value) {
-	this.runConsumer(this, context, parent)
+	this.runConsumer(this, context, parent, nil)
 }
 
 func (this *Fetch) beforeItems(context *Context, parent value.Value) bool {
@@ -277,7 +277,7 @@ func (this *DummyFetch) PlanOp() plan.Operator {
 }
 
 func (this *DummyFetch) RunOnce(context *Context, parent value.Value) {
-	this.runConsumer(this, context, parent)
+	this.runConsumer(this, context, parent, nil)
 }
 
 func (this *DummyFetch) processItem(item value.AnnotatedValue, context *Context) bool {

@@ -55,7 +55,7 @@ func (this *Limit) PlanOp() plan.Operator {
 }
 
 func (this *Limit) RunOnce(context *Context, parent value.Value) {
-	this.runConsumer(this, context, parent)
+	this.runConsumer(this, context, parent, nil)
 }
 
 func (this *Limit) beforeItems(context *Context, parent value.Value) bool {

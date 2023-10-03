@@ -58,7 +58,7 @@ func (this *IndexJoin) PlanOp() plan.Operator {
 }
 
 func (this *IndexJoin) RunOnce(context *Context, parent value.Value) {
-	this.runConsumer(this, context, parent)
+	this.runConsumer(this, context, parent, nil)
 }
 
 func (this *IndexJoin) processItem(item value.AnnotatedValue, context *Context) bool {

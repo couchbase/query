@@ -65,7 +65,7 @@ func (this *NLJoin) PlanOp() plan.Operator {
 }
 
 func (this *NLJoin) RunOnce(context *Context, parent value.Value) {
-	this.runConsumer(this, context, parent)
+	this.runConsumer(this, context, parent, nil)
 }
 
 func (this *NLJoin) beforeItems(context *Context, parent value.Value) bool {

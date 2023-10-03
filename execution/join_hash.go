@@ -62,7 +62,7 @@ func (this *HashJoin) PlanOp() plan.Operator {
 }
 
 func (this *HashJoin) RunOnce(context *Context, parent value.Value) {
-	this.runConsumer(this, context, parent)
+	this.runConsumer(this, context, parent, nil)
 }
 
 func (this *HashJoin) beforeItems(context *Context, parent value.Value) bool {

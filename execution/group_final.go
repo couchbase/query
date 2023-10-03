@@ -52,7 +52,7 @@ func (this *FinalGroup) PlanOp() plan.Operator {
 }
 
 func (this *FinalGroup) RunOnce(context *Context, parent value.Value) {
-	this.runConsumer(this, context, parent)
+	this.runConsumer(this, context, parent, nil)
 }
 
 func (this *FinalGroup) processItem(item value.AnnotatedValue, context *Context) bool {

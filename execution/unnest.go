@@ -46,7 +46,7 @@ func (this *Unnest) PlanOp() plan.Operator {
 }
 
 func (this *Unnest) RunOnce(context *Context, parent value.Value) {
-	this.runConsumer(this, context, parent)
+	this.runConsumer(this, context, parent, nil)
 }
 
 func (this *Unnest) beforeItems(context *Context, parent value.Value) bool {
