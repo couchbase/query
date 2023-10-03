@@ -126,8 +126,7 @@ func (this *Order) PlanOp() plan.Operator {
 }
 
 func (this *Order) RunOnce(context *Context, parent value.Value) {
-	defer this.releaseValues()
-	this.runConsumer(this, context, parent)
+	this.runConsumer(this, context, parent, this.releaseValues)
 }
 
 func (this *Order) processItem(item value.AnnotatedValue, context *Context) bool {

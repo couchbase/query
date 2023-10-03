@@ -56,7 +56,7 @@ func (this *Except) PlanOp() plan.Operator {
 }
 
 func (this *Except) RunOnce(context *Context, parent value.Value) {
-	this.runConsumer(this, context, parent)
+	this.runConsumer(this, context, parent, nil)
 }
 
 func (this *Except) beforeItems(context *Context, parent value.Value) bool {
@@ -191,7 +191,7 @@ func (this *ExceptAll) PlanOp() plan.Operator {
 }
 
 func (this *ExceptAll) RunOnce(context *Context, parent value.Value) {
-	this.runConsumer(this, context, parent)
+	this.runConsumer(this, context, parent, nil)
 }
 
 func (this *ExceptAll) beforeItems(context *Context, parent value.Value) bool {

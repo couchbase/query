@@ -60,7 +60,7 @@ func (this *InitialProject) PlanOp() plan.Operator {
 }
 
 func (this *InitialProject) RunOnce(context *Context, parent value.Value) {
-	this.runConsumer(this, context, parent)
+	this.runConsumer(this, context, parent, nil)
 }
 
 func (this *InitialProject) beforeItems(context *Context, parent value.Value) bool {

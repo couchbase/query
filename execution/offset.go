@@ -55,7 +55,7 @@ func (this *Offset) PlanOp() plan.Operator {
 }
 
 func (this *Offset) RunOnce(context *Context, parent value.Value) {
-	this.runConsumer(this, context, parent)
+	this.runConsumer(this, context, parent, nil)
 }
 
 func (this *Offset) beforeItems(context *Context, parent value.Value) bool {

@@ -114,8 +114,7 @@ func (this *IntermediateGroup) PlanOp() plan.Operator {
 }
 
 func (this *IntermediateGroup) RunOnce(context *Context, parent value.Value) {
-	defer this.groups.Release()
-	this.runConsumer(this, context, parent)
+	this.runConsumer(this, context, parent, this.groups.Release)
 }
 
 func (this *IntermediateGroup) processItem(item value.AnnotatedValue, context *Context) bool {

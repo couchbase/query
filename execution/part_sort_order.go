@@ -71,8 +71,7 @@ func (this *PartSortOrder) PlanOp() plan.Operator {
 }
 
 func (this *PartSortOrder) RunOnce(context *Context, parent value.Value) {
-	defer this.releaseValues()
-	this.runConsumer(this, context, parent)
+	this.runConsumer(this, context, parent, this.releaseValues)
 }
 
 func (this *PartSortOrder) beforeItems(context *Context, parent value.Value) bool {

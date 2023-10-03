@@ -61,7 +61,7 @@ func (this *HashNest) PlanOp() plan.Operator {
 }
 
 func (this *HashNest) RunOnce(context *Context, parent value.Value) {
-	this.runConsumer(this, context, parent)
+	this.runConsumer(this, context, parent, nil)
 }
 
 func (this *HashNest) beforeItems(context *Context, parent value.Value) bool {

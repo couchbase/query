@@ -50,7 +50,7 @@ func (this *Nest) PlanOp() plan.Operator {
 }
 
 func (this *Nest) RunOnce(context *Context, parent value.Value) {
-	this.runConsumer(this, context, parent)
+	this.runConsumer(this, context, parent, nil)
 }
 
 func (this *Nest) processItem(item value.AnnotatedValue, context *Context) bool {

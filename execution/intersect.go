@@ -56,7 +56,7 @@ func (this *Intersect) PlanOp() plan.Operator {
 }
 
 func (this *Intersect) RunOnce(context *Context, parent value.Value) {
-	this.runConsumer(this, context, parent)
+	this.runConsumer(this, context, parent, nil)
 }
 
 func (this *Intersect) beforeItems(context *Context, parent value.Value) bool {
@@ -197,7 +197,7 @@ func (this *IntersectAll) PlanOp() plan.Operator {
 }
 
 func (this *IntersectAll) RunOnce(context *Context, parent value.Value) {
-	this.runConsumer(this, context, parent)
+	this.runConsumer(this, context, parent, nil)
 }
 
 func (this *IntersectAll) beforeItems(context *Context, parent value.Value) bool {

@@ -112,8 +112,7 @@ func (this *InitialGroup) PlanOp() plan.Operator {
 }
 
 func (this *InitialGroup) RunOnce(context *Context, parent value.Value) {
-	defer this.groups.Release()
-	this.runConsumer(this, context, parent)
+	this.runConsumer(this, context, parent, this.groups.Release)
 }
 
 func (this *InitialGroup) processItem(item value.AnnotatedValue, context *Context) bool {

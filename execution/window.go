@@ -963,8 +963,7 @@ func (this *windowFrame) excludeRow(cRow int64) bool {
 }
 
 func (this *WindowAggregate) RunOnce(context *Context, parent value.Value) {
-	defer this.releaseValues()
-	this.runConsumer(this, context, parent)
+	this.runConsumer(this, context, parent, this.releaseValues)
 }
 
 func (this *WindowAggregate) beforeItems(context *Context, parent value.Value) bool {
@@ -1208,6 +1207,8 @@ func (this *WindowAggregate) recycleValue(c int64) {
 }
 
 func (this *WindowAggregate) releaseValues() {
-	_WINDOW_POOL.Put(this.values)
+	if this.values != nil {
+		_WINDOW_POOL.Put(this.values)
+	}
 	this.values = nil
 }

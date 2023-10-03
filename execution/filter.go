@@ -60,7 +60,7 @@ func (this *Filter) PlanOp() plan.Operator {
 }
 
 func (this *Filter) RunOnce(context *Context, parent value.Value) {
-	this.runConsumer(this, context, parent)
+	this.runConsumer(this, context, parent, nil)
 }
 
 func (this *Filter) beforeItems(context *Context, parent value.Value) bool {
