@@ -357,9 +357,12 @@ func Suspend(bucket string, delay time.Duration, node string) {
 }
 
 func IsSuspended(bucket string) bool {
+	if !isServerless {
+		return false
+	}
 	throttleLock.Lock()
 	t, suspended := throttleTimes[bucket]
-	if suspended && util.Now().Sub(t) > time.Duration(0) {
+	if suspended && util.Now() > t {
 		suspended = false
 	}
 	throttleLock.Unlock()

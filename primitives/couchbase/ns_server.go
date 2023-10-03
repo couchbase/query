@@ -48,7 +48,7 @@ var PoolSize = 96
 
 // PoolOverflow is the number of overflow connections allowed in a
 // pool.
-var PoolOverflow = 16
+var PoolOverflow = 32
 
 // AsynchronousCloser turns on asynchronous closing for overflow connections
 var AsynchronousCloser = false
