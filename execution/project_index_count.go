@@ -48,7 +48,7 @@ func (this *IndexCountProject) PlanOp() plan.Operator {
 }
 
 func (this *IndexCountProject) RunOnce(context *Context, parent value.Value) {
-	this.runConsumer(this, context, parent)
+	this.runConsumer(this, context, parent, nil)
 }
 
 func (this *IndexCountProject) processItem(item value.AnnotatedValue, context *Context) bool {

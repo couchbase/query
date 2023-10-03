@@ -861,7 +861,7 @@ type consumer interface {
 	readonly() bool
 }
 
-func (this *base) runConsumer(cons consumer, context *Context, parent value.Value) {
+func (this *base) runConsumer(cons consumer, context *Context, parent value.Value, cleanup func()) {
 	this.once.Do(func() {
 		defer context.Recover(this) // Recover from any panic
 		active := this.active()
@@ -874,6 +874,9 @@ func (this *base) runConsumer(cons consumer, context *Context, parent value.Valu
 			defer func() {
 				this.switchPhase(_NOTIME) // accrue current phase's time
 				if !ok {
+					if cleanup != nil {
+						cleanup()
+					}
 					this.notify()
 					this.close(context)
 				}
@@ -897,6 +900,9 @@ func (this *base) runConsumer(cons consumer, context *Context, parent value.Valu
 			}
 			if active {
 				this.batch = nil
+			}
+			if cleanup != nil {
+				cleanup()
 			}
 			this.notify()
 			this.switchPhase(_NOTIME)

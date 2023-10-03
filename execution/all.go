@@ -56,7 +56,7 @@ func (this *All) PlanOp() plan.Operator {
 }
 
 func (this *All) RunOnce(context *Context, parent value.Value) {
-	this.runConsumer(this, context, parent)
+	this.runConsumer(this, context, parent, nil)
 }
 
 func (this *All) processItem(item value.AnnotatedValue, context *Context) bool {

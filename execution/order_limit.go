@@ -89,8 +89,7 @@ func (this *OrderLimit) PlanOp() plan.Operator {
 }
 
 func (this *OrderLimit) RunOnce(context *Context, parent value.Value) {
-	defer this.releaseValues()
-	this.runConsumer(this, context, parent)
+	this.runConsumer(this, context, parent, this.releaseValues)
 }
 
 func (this *OrderLimit) beforeItems(context *Context, parent value.Value) bool {
