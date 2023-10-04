@@ -59,6 +59,10 @@ func (this *QueryPlan) Subqueries() map[*algebra.Select]Operator {
 	return this.subqueries
 }
 
+func (this *QueryPlan) Verify(prepared *Prepared) bool {
+	return this.op.verify(prepared)
+}
+
 type Operators []Operator
 
 type Operator interface {

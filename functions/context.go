@@ -59,9 +59,6 @@ type Context interface {
 	PreserveProjectionOrder() bool
 	Park(func(bool))
 	Resume()
-	InitUdfPlans()
-	InitUdfStmtExecTrees()
-	InitInlineUdfExprs()
 	IsPrepared() bool
 }
 

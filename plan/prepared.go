@@ -42,12 +42,11 @@ type Prepared struct {
 	useCBO          bool
 	preparedTime    time.Time // time the plan was generated
 
-	indexScanKeyspaces              map[string]bool
-	indexers                        []idxVersion // for reprepare checking
-	keyspaces                       []ksVersion
-	subqueryPlans                   map[*algebra.Select]interface{}
-	subqueryPlansIndexScanKeyspaces map[*algebra.Select]interface{}
-	txPrepareds                     map[string]*Prepared
+	indexScanKeyspaces map[string]bool
+	indexers           []idxVersion // for reprepare checking
+	keyspaces          []ksVersion
+	subqueryPlans      *algebra.SubqueryPlans
+	txPrepareds        map[string]*Prepared
 	sync.RWMutex
 }
 
@@ -377,28 +376,42 @@ func (this *Prepared) MetadataCheck() bool {
 	return true
 }
 
+// verify prepared+subquery plans
 func (this *Prepared) Verify() bool {
-	return this.Operator.verify(this)
+	good := this.Operator.verify(this)
+	if good {
+		subqueryPlans := this.GetSubqueryPlans(false)
+		if subqueryPlans != nil {
+			// Verify subquery plans
+			verifyF := func(key *algebra.Select, options uint32, plan, isk interface{}) (bool, bool) {
+				var good, local bool
+				if qp, ok := plan.(*QueryPlan); ok {
+					good = qp.PlanOp().verify(this)
+				}
+				return good, local
+			}
+			good, _ = subqueryPlans.ForEach(nil, uint32(0), true, verifyF)
+		}
+	}
+	return good
 }
 
-// must be called with the prepared read locked
-func (this *Prepared) GetSubqueryPlan(key *algebra.Select) (interface{}, interface{}, bool) {
-	if this.subqueryPlans == nil {
-		return nil, nil, false
-	}
-	rv, ok := this.subqueryPlans[key]
-	irv, _ := this.subqueryPlansIndexScanKeyspaces[key]
-	return rv, irv, ok
-}
+// Subquery plans of prepared statement
+func (this *Prepared) GetSubqueryPlans(init bool) *algebra.SubqueryPlans {
+	this.RLock()
+	subqueryPlans := this.subqueryPlans
+	this.RUnlock()
 
-// must be called with the prepared write locked
-func (this *Prepared) SetSubqueryPlan(key *algebra.Select, value, iks interface{}) {
-	if this.subqueryPlans == nil {
-		this.subqueryPlans = make(map[*algebra.Select]interface{})
-		this.subqueryPlansIndexScanKeyspaces = make(map[*algebra.Select]interface{})
+	if subqueryPlans == nil && init {
+		this.Lock()
+		subqueryPlans = this.subqueryPlans
+		if subqueryPlans == nil {
+			subqueryPlans = algebra.NewSubqueryPlans()
+			this.subqueryPlans = subqueryPlans
+		}
+		this.Unlock()
 	}
-	this.subqueryPlans[key] = value
-	this.subqueryPlansIndexScanKeyspaces[key] = iks
+	return subqueryPlans
 }
 
 const (

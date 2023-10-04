@@ -47,6 +47,10 @@ func Init() {
 	}
 }
 
+func (this *golang) CheckAuthorize(name string, context functions.Context) bool {
+	return true
+}
+
 func (this *golang) FunctionStatements(name functions.FunctionName, body functions.FunctionBody, context functions.Context) (interface{}, errors.Error) {
 	return nil, errors.NewFunctionUnsupportedActionError("golang", "EXPLAIN FUNCTION")
 }

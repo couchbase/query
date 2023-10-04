@@ -82,6 +82,7 @@ type FunctionEntry struct {
 }
 
 type LanguageRunner interface {
+	CheckAuthorize(name string, context Context) bool
 	Execute(name FunctionName, body FunctionBody, modifiers Modifier, values []value.Value, context Context) (value.Value, errors.Error)
 	FunctionStatements(name FunctionName, body FunctionBody, context Context) (interface{}, errors.Error)
 }
@@ -250,14 +251,20 @@ func AddFunction(name FunctionName, body FunctionBody, replace bool) errors.Erro
 		}
 		key := name.Key()
 
+		function.tag = atomic.AlignedInt64(atomic.AddInt64(&functions.tag, 1))
+
 		// add it to the cache
 		added := true
 		functions.cache.Add(function, key, func(ce interface{}) util.Operation {
-
 			// remove any cached missing entry
 			_, ok := (ce.(*FunctionEntry)).FunctionBody.(*missing)
 			if ok {
 				return util.REPLACE
+			} else if replace {
+				e := ce.(*FunctionEntry)
+				if e.tag < function.tag || (function.tag < 0 && e.tag > 0) {
+					return util.REPLACE
+				}
 			}
 
 			// empty any existing N1QL managed javascript function cache entry
@@ -406,38 +413,22 @@ func ExecuteFunction(name FunctionName, modifiers Modifier, values []value.Value
 		return nil, err
 	}
 
-	// go and do the dirty deed
-	err = Authorize(entry.privs, context.Credentials())
-	if err != nil {
-		err = HandleDsAuthError(err, entry.privs, context.Credentials())
-		return nil, err
-	}
-
 	lang := entry.Lang()
-	if lang == JAVASCRIPT || lang == GOLANG {
-		// Initialize the UDF execution tree cache and UDF query plan cache
-		// Only for Golang/ Javascript UDF execution
-		// We initialize here - so we dont unecessarily initialize these in the context
-		context.InitUdfPlans()
-		context.InitUdfStmtExecTrees()
-	} else if lang == INLINE {
-		// Initialize if the function being executed in an INLINE function
-		// We initialize here - so we dont unecessarily initialize these in the context
-		context.InitInlineUdfExprs()
+	// go and do the dirty deed
+	if languages[lang].CheckAuthorize(name.Key(), context) {
+		err = Authorize(entry.privs, context.Credentials())
+		if err != nil {
+			err = HandleDsAuthError(err, entry.privs, context.Credentials())
+			return nil, err
+		}
 	}
 
 	newContext := context
 	switchContext := body.SwitchContext()
 	readonly := (modifiers & READONLY) != 0
 
-	// MB-58479: Switch to a new context when an Inline function is executed inside a prepared statement
-	// This prevents memory leaks in the prepared statement's subquery cache
-	// due to the recreation of the inline body's expression on execution
-	inlineSwitch := (lang == INLINE && context.IsPrepared())
-
 	if switchContext == value.TRUE || (switchContext == value.NONE && (readonly != context.Readonly() ||
-		name.QueryContext() != context.QueryContext())) || context.PreserveProjectionOrder() ||
-		inlineSwitch {
+		name.QueryContext() != context.QueryContext())) || context.PreserveProjectionOrder() {
 		var ok bool
 		newContext, ok = context.NewQueryContext(name.QueryContext(), readonly).(Context)
 		if !ok {
@@ -524,6 +515,7 @@ func getBodyAndEntry(name FunctionName) (FunctionBody, *FunctionEntry, errors.Er
 			}
 		}
 	} else {
+		var added bool
 		entry = ce.(*FunctionEntry)
 		body = entry.FunctionBody
 
@@ -557,7 +549,16 @@ func getBodyAndEntry(name FunctionName) (FunctionBody, *FunctionEntry, errors.Er
 						resetPrivs = true
 					}
 				})
-				if resetPrivs {
+				if ce == nil {
+					// Some one deleted but we have new body from disk create entry
+					entry = &FunctionEntry{FunctionName: name, FunctionBody: body}
+					err = entry.loadPrivileges()
+					if err == nil {
+						entry.tag = atomic.AlignedInt64(atomic.AddInt64(&functions.tag, 1))
+						entry = entry.add()
+					}
+					added = true
+				} else if resetPrivs {
 					e := ce.(*FunctionEntry)
 					err = e.loadPrivileges()
 
@@ -571,13 +572,15 @@ func getBodyAndEntry(name FunctionName) (FunctionBody, *FunctionEntry, errors.Er
 				ce = nil
 			}
 
-			if ce == nil {
-				entry = &FunctionEntry{FunctionName: name}
-				entry.tag = atomic.AlignedInt64(atomic.AddInt64(&functions.tag, 1))
-				body = nil
-			} else {
-				entry = ce.(*FunctionEntry)
-				body = entry.FunctionBody
+			if !added {
+				if ce == nil {
+					entry = &FunctionEntry{FunctionName: name}
+					entry.tag = atomic.AlignedInt64(atomic.AddInt64(&functions.tag, 1))
+					body = nil
+				} else {
+					entry = ce.(*FunctionEntry)
+					body = entry.FunctionBody
+				}
 			}
 		}
 	}
@@ -660,6 +663,10 @@ func (this *empty) FunctionStatements(name FunctionName, body FunctionBody, cont
 	return nil, errors.NewFunctionUnsupportedActionError("", "EXPLAIN FUNCTION")
 }
 
+func (this *empty) CheckAuthorize(name string, context Context) bool {
+	return true
+}
+
 // dummy language throwing errors, for caching missing entries
 type missing struct {
 }
@@ -713,4 +720,8 @@ func (this *missing) Unload(name FunctionName) {
 
 func (this *missing) FunctionStatements(name FunctionName, body FunctionBody, context Context) (interface{}, errors.Error) {
 	return nil, errors.NewMissingFunctionError(name.Name())
+}
+
+func (this *missing) CheckAuthorize(name string, context Context) bool {
+	return true
 }

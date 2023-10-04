@@ -179,18 +179,6 @@ func (this *IndexContext) Errorf(f string, args ...interface{})                 
 func (this *IndexContext) Severef(f string, args ...interface{})                   {}
 func (this *IndexContext) Fatalf(f string, args ...interface{})                    {}
 
-func (this *IndexContext) InitUdfPlans() {
-	// no op
-}
-
-func (this *IndexContext) InitUdfStmtExecTrees() {
-	// no op
-}
-
-func (this *IndexContext) InitInlineUdfExprs() {
-	// no op
-}
-
 func (this *IndexContext) IsPrepared() bool {
 	return false
 }

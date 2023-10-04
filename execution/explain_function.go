@@ -76,19 +76,21 @@ func (this *ExplainFunction) RunOnce(context *Context, parent value.Value) {
 			return
 		}
 
-		if stmts != nil {
-			if lang == functions.INLINE {
-
-				// if qs == nil , the inline function has no embedded query
-				if qs, ok := stmts.([](*algebra.Subquery)); ok {
-					this.plans, err = createSQPlans(qs, context)
-
-					if err != nil {
-						context.Error(err)
-						return
+		if lang == functions.INLINE {
+			// Inline function subquery plans already part the Context use them
+			subqPlans := context.GetSubqueryPlans(false)
+			if subqPlans != nil {
+				this.plans = make(map[string]*planEntry)
+				verifyF := func(key *algebra.Select, options uint32, splan, isk interface{}) (bool, bool) {
+					if qp, ok := splan.(*plan.QueryPlan); ok {
+						this.plans[key.String()] = &planEntry{qPlan: qp, optimHints: key.OptimHints(), uses: 1}
 					}
+					return true, false
 				}
-			} else if lang == functions.JAVASCRIPT {
+				subqPlans.ForEach(nil, uint32(0), true, verifyF)
+			}
+		} else if stmts != nil {
+			if lang == functions.JAVASCRIPT {
 				qs, _ := stmts.(map[string]interface{})
 				stmtStrings, ok := qs["embedded"].([]string)
 
@@ -104,7 +106,6 @@ func (this *ExplainFunction) RunOnce(context *Context, parent value.Value) {
 				if dl, ok := qs["dynamic"].([]uint); ok {
 					this.dynamicLineNos = dl
 				}
-
 			} else {
 				context.Error(errors.NewExplainFunctionError(nil, "Not supported for this function."))
 				return

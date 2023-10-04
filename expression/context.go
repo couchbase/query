@@ -59,9 +59,6 @@ type Context interface {
 	RecordJsCU(d time.Duration, m uint64)
 	IsAdmin() bool
 	PreserveProjectionOrder() bool
-	InitUdfPlans()
-	InitUdfStmtExecTrees()
-	InitInlineUdfExprs()
 	IsPrepared() bool
 }
 

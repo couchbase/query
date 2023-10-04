@@ -252,6 +252,10 @@ func getEvaluator(name functions.FunctionName) (*evaluatorDesc, errors.Error) {
 	return desc, nil
 }
 
+func (this *javascript) CheckAuthorize(name string, context functions.Context) bool {
+	return true
+}
+
 // Returns a map of:
 // Embedded: slice of strings. The Embedded query strings inside the JS UDF
 // Dynamic:  slice of uint. The line numbers of Dynamic N1QL queries inside the JS UDF
