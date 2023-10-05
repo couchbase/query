@@ -310,6 +310,8 @@ func getHexNumber(o interface{}) int64 {
 	switch o := o.(type) {
 	case int64:
 		return o
+	case uint64:
+		return int64(o)
 	case string:
 		if v, err := strconv.ParseInt(o, 0, 64); err == nil {
 			return v
@@ -512,14 +514,13 @@ func reportChangedValues(prev map[string]interface{}, current map[string]interfa
 				// log what features have changed in the new n1ql-feat-ctrl bitset
 				if k == N1QLFEATCTRL {
 					prevVal := uint64(0) // so on start-up all disabled features are logged
-					currVal, _ := strconv.ParseUint(v.(string)[2:], 16, 64)
+					currVal := uint64(getHexNumber(v))
 
 					if !same && !all {
-						prevVal, _ = strconv.ParseUint(p.(string)[2:], 16, 64)
+						prevVal = uint64(getHexNumber(p))
 					} else {
 						same = true
 					}
-
 					extra = util.DescribeChangedFeatures(prevVal, currVal)
 				} else if k == "completed-threshold" {
 					if p == nil {
@@ -569,7 +570,7 @@ func FillSettings(settings map[string]interface{}, srvr *Server) map[string]inte
 	settings[PRPLIMIT] = prepareds.PreparedsLimit()
 	settings[PRETTY] = srvr.Pretty()
 	settings[MAXINDEXAPI] = srvr.MaxIndexAPI()
-	settings[N1QLFEATCTRL] = fmt.Sprintf("0x%x", util.GetN1qlFeatureControl())
+	settings[N1QLFEATCTRL] = util.GetN1qlFeatureControl()
 	settings[TXTIMEOUT] = util.OutputDuration(srvr.TxTimeout())
 	settings = GetProfileAdmin(settings, srvr)
 	settings = GetControlsAdmin(settings, srvr)

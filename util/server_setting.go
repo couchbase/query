@@ -120,11 +120,12 @@ func DisabledFeatures(control uint64) []string {
 // Used for logging changes
 func DescribeChangedFeatures(prev uint64, new uint64) string {
 	if prev == new {
-		return "No Changes"
+		return " No Changes"
 	}
 
 	// there is a difference between the feature bitsets
 	changes := strings.Builder{}
+	changes.WriteString(fmt.Sprintf(" (0x%x)", new))
 	flags := make([]uint64, 0, len(N1Ql_Features))
 
 	for f := range N1Ql_Features {
