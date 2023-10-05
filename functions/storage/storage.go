@@ -381,45 +381,56 @@ func doMigrateBucket(name string) bool {
 	// synchronization
 
 	complete := true
-	metaStorage.ForeachBody(func(parts []string, body functions.FunctionBody) {
+	err1 := metaStorage.ForeachBody(func(parts []string, body functions.FunctionBody) errors.Error {
 		if len(parts) != 4 {
-			return
+			return nil
 		}
 		if parts[1] != name {
 			// not this bucket
-			return
+			return nil
 		}
 		logging.Infof("UDF migration: Handling %v", parts)
 
-		success := false
 		name, err := systemStorage.NewScopeFunction(parts[0], parts[1], parts[2], parts[3])
-		if err == nil {
-			err1 := name.Save(body, false)
-			if err1 != nil {
-				logging.Errorf("UDF migration: Migrating %v error %v writing body", parts, err1)
-			} else {
-				logging.Infof("UDF migration: Migrated %v", parts)
+		if err != nil {
+			logging.Errorf("UDF migration: Migrating %v error %v parsing name", parts, err)
+			return errors.NewMigrationError(_UDF_MIGRATION, "Error parsing name", parts, err)
+		}
 
-				name, err1 = metaStorage.NewScopeFunction(parts[0], parts[1], parts[2], parts[3])
-				if err1 == nil {
-					err1 = name.Delete()
-					if err1 != nil {
-						logging.Errorf("UDF migration: Migrating %v error %v deleting old entry", parts, err1)
-					} else {
-						logging.Infof("UDF migration: Deleted old entry for %v", parts)
-						success = true
-					}
-				} else {
-					logging.Errorf("UDF migration: Migrating %v error %v generating metakv function for deleting old entry", parts, err1)
-				}
+		err = name.Save(body, false)
+		if err != nil {
+			logging.Errorf("UDF migration: Migrating %v error %v writing body", parts, err)
+			// ignore duplicated function error but return all other errors
+			if err.Code() != errors.E_DUPLICATE_FUNCTION {
+				return errors.NewMigrationError(_UDF_MIGRATION, "Error writing body to system storage", parts, err)
 			}
 		} else {
-			logging.Errorf("UDF migration: Migrating %v error %v parsing name", parts, err)
+			logging.Infof("UDF migration: Added %v", parts)
 		}
-		if !success {
-			complete = false
+
+		name, err = metaStorage.NewScopeFunction(parts[0], parts[1], parts[2], parts[3])
+		if err != nil {
+			logging.Errorf("UDF migration: Migrating %v error %v generating metakv function name for deleting old entry", parts, err)
+			return errors.NewMigrationError(_UDF_MIGRATION, "Error generating metakv function name for deleting old entry", parts, err)
 		}
+
+		err = name.Delete()
+		if err != nil {
+			logging.Errorf("UDF migration: Migrating %v error %v deleting old entry", parts, err)
+			return errors.NewMigrationError(_UDF_MIGRATION, "Error deleting old entry", parts, err)
+		} else {
+			logging.Infof("UDF migration: Deleted old entry for %v", parts)
+		}
+
+		logging.Infof("UDF migration: Migrated %v", parts)
+
+		return nil
 	})
+	if err1 != nil {
+		logging.Errorf("UDF migration: Error during scan of old UDF definitions - %V", err1)
+		complete = false
+	}
+
 	logging.Infof("UDF migration: End UDF migration for bucket %s complete %t", name, complete)
 	return complete
 }
@@ -448,10 +459,24 @@ func checkMigrationComplete() bool {
 	}
 
 	complete := true
-	metaStorage.ForeachBody(func(parts []string, body functions.FunctionBody) {
-		// still entries to be migrated
-		complete = false
+	err1 := metaStorage.ForeachBody(func(parts []string, body functions.FunctionBody) errors.Error {
+		if len(parts) == 4 {
+			// still entries to be migrated
+			// return an error such that we don't need to continue the scan
+			complete = false
+			return errors.NewMigrationInternalError(_UDF_MIGRATION, "Entry found in metakv", nil, nil)
+		}
+		return nil
 	})
+	if err1 != nil {
+		switch err1.Code() {
+		case errors.E_MIGRATION_INTERNAL:
+			// no-op, ignore this error which indicates migration not complete
+		default:
+			logging.Errorf("UDF migration: Error during scan of metakv - %v", err1)
+			return false
+		}
+	}
 
 	if complete {
 		migration.Complete(_UDF_MIGRATION)

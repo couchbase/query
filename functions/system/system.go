@@ -317,7 +317,7 @@ func (name *systemEntry) Save(body functions.FunctionBody, replace bool) errors.
 	}
 
 	if len(errs) > 0 {
-		if c, ok := errs[0].Cause().(errors.Error); ok && c.Code() == errors.E_DUPLICATE_KEY {
+		if errs[0].HasCause(errors.E_DUPLICATE_KEY) {
 			return errors.NewDuplicateFunctionError(name.Name())
 		} else {
 			return errors.NewMetaKVError(name.Name(), errs[0])
