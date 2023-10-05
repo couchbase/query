@@ -516,6 +516,7 @@ const (
 	API_ADMIN_FFDC                       = 28731
 	API_ADMIN_STREAM_LOG                 = 28732
 	API_ADMIN_SEQUENCES                  = 28733
+	API_ADMIN_MIGRATION                  = 28737
 )
 
 func SubmitApiRequest(event *ApiAuditFields) {

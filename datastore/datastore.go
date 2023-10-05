@@ -359,9 +359,25 @@ const (
 )
 
 type Migrator func(string)
+type AbortFn func() (string, errors.Error)
 
 var migrators map[Migration][]Migrator
 var migratorsLock sync.RWMutex
+var abortFuncs map[Migration][]AbortFn
+
+func RegisterMigrationAbort(abort AbortFn, t Migration) {
+	migratorsLock.Lock()
+	if abortFuncs == nil {
+		abortFuncs = make(map[Migration][]AbortFn)
+	}
+	e := abortFuncs[t]
+	if e != nil {
+		abortFuncs[t] = append(e, abort)
+	} else {
+		abortFuncs[t] = append(make([]AbortFn, 0, 3), abort)
+	}
+	migratorsLock.Unlock()
+}
 
 func RegisterMigrator(f Migrator, t Migration) {
 	migratorsLock.Lock()
@@ -386,6 +402,29 @@ func ExecuteMigrators(b string, t Migration) {
 		}
 	}
 	migratorsLock.RUnlock()
+}
+
+func AbortMigration() (string, errors.Error) {
+	if len(abortFuncs) == 0 {
+		return "Migration abort: Nothing to abort.", nil
+	}
+	var b strings.Builder
+	var res string
+	var err errors.Error
+	migratorsLock.RLock()
+mig:
+	for _, funcs := range abortFuncs {
+		for i := range funcs {
+			res, err = funcs[i]()
+			if err != nil {
+				break mig
+			} else if res != "" {
+				b.WriteString(res)
+			}
+		}
+	}
+	migratorsLock.RUnlock()
+	return b.String(), err
 }
 
 // Globally accessible Datastore instance

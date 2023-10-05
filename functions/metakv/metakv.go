@@ -127,7 +127,7 @@ func Foreach(b string, f func(path string, v value.Value) error) error {
 	return metakv.IterateChildren(_FUNC_PATH, func(kve metakv.KVEntry) error {
 		path := kve.Path[len(_FUNC_PATH):]
 		parts := algebra.ParsePath(path)
-		if len(parts) == 4 && parts[1] == b {
+		if len(parts) == 4 && (parts[1] == b || b == "*") {
 			return f(path, value.NewValue(kve.Value))
 		}
 		return nil

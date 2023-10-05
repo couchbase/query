@@ -179,6 +179,9 @@ func (this *HttpEndpoint) registerAccountingHandlers() {
 	sequenceHandler := func(w http.ResponseWriter, req *http.Request) {
 		this.wrapAPI(w, req, doSequence)
 	}
+	migrationHandler := func(w http.ResponseWriter, req *http.Request) {
+		this.wrapAPI(w, req, doMigration)
+	}
 	routeMap := map[string]struct {
 		handler handlerFunc
 		methods []string
@@ -218,6 +221,7 @@ func (this *HttpEndpoint) registerAccountingHandlers() {
 		adminPrefix + "/log/stream/{file}": {handler: logHandler, methods: []string{"GET"}},
 		indexesPrefix + "/sequences":       {handler: sequenceIndexHandler, methods: []string{"GET"}},
 		sequencesPrefix + "/{name}":        {handler: sequenceHandler, methods: []string{"GET"}},
+		adminPrefix + "/migration":         {handler: migrationHandler, methods: []string{"DELETE"}},
 	}
 
 	for route, h := range routeMap {
@@ -2388,4 +2392,23 @@ func doSequence(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 	} else {
 		return nil, errors.NewServiceErrorHttpMethod(req.Method)
 	}
+}
+
+func doMigration(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
+	interface{}, errors.Error) {
+
+	af.EventTypeId = audit.API_ADMIN_MIGRATION
+	err, _ := endpoint.verifyCredentialsFromRequest("", auth.PRIV_ADMIN, req, af)
+	if err != nil {
+		return nil, err
+	}
+
+	if req.Method == "DELETE" {
+		res, err := datastore.AbortMigration()
+		if err != nil {
+			return textPlain(err.Error()), err
+		}
+		return textPlain(res), nil
+	}
+	return nil, errors.NewServiceErrorHttpMethod(req.Method)
 }

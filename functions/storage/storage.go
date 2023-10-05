@@ -12,11 +12,13 @@ import (
 	"encoding/json"
 	go_errors "errors"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/functions"
 	"github.com/couchbase/query/functions/metakv"
 	"github.com/couchbase/query/functions/system"
@@ -53,6 +55,8 @@ func Migrate() {
 		migrating = _MIGRATED
 		return
 	}
+
+	datastore.RegisterMigrationAbort(abortMigration, datastore.HAS_SYSTEM_COLLECTION)
 
 	countDownStarted = time.Now()
 	logging.Infof("UDF migration: Evaluating migration state")
@@ -476,4 +480,118 @@ func UseSystemStorage() bool {
 	// mark migrated for those migrations executed by another node
 	migrating = _MIGRATED
 	return true
+}
+
+func GetDDLFromDefinition(name string, defn value.Value) string {
+	var b strings.Builder
+	d, ok := defn.Field("definition")
+	if !ok {
+		return ""
+	}
+	l, ok := d.Field("#language")
+	if !ok {
+		return ""
+	}
+	b.WriteString("CREATE OR REPLACE FUNCTION ")
+	b.WriteString(name)
+	b.WriteRune('(')
+	if p, ok := d.Field("parameters"); ok {
+		for i := 0; ; i++ {
+			v, ok := p.Index(i)
+			if !ok {
+				break
+			}
+			if i > 0 {
+				b.WriteRune(',')
+			}
+			b.WriteString(v.ToString())
+		}
+	}
+	b.WriteString(") LANGUAGE ")
+	b.WriteString(l.ToString())
+	b.WriteString(" AS ")
+	switch l.ToString() {
+	case "inline":
+		t, ok := d.Field("text")
+		if !ok {
+			return ""
+		}
+		b.WriteString(t.ToString())
+	case "javascript":
+		t, ok := d.Field("text")
+		if !ok {
+			o, ok := d.Field("object")
+			if !ok {
+				return ""
+			}
+			lib, ok := d.Field("library")
+			if !ok {
+				return ""
+			}
+			b.WriteString(o.String())
+			b.WriteString(" AT ")
+			b.WriteString(lib.String())
+		} else {
+			b.WriteString(t.String())
+		}
+	case "golang":
+		o, ok := d.Field("object")
+		if !ok {
+			return ""
+		}
+		lib, ok := d.Field("library")
+		if !ok {
+			return ""
+		}
+		b.WriteString(o.String())
+		b.WriteString(" AT ")
+		b.WriteString(lib.String())
+	}
+	return b.String()
+}
+
+func abortMigration() (string, errors.Error) {
+
+	if migrating == _MIGRATED {
+		return "UDF migration: Already completed.\n", nil
+	}
+
+	logging.Severef("UDF migration: Aborting migration")
+
+	var res strings.Builder
+	first := true
+
+	metaStorage.Foreach("*", func(name string, v value.Value) error {
+		s := GetDDLFromDefinition(name, v)
+		if s != "" {
+			if first {
+				res.WriteString("UDF migration: The following were not migrated and should be recreated:\n\n")
+				first = false
+			}
+			res.WriteString(s)
+			res.WriteString(";\n")
+
+			parts := algebra.ParsePath(name)
+			name, err := metaStorage.NewScopeFunction(parts[0], parts[1], parts[2], parts[3])
+			if err == nil {
+				err = name.Delete()
+			}
+			if err != nil {
+				logging.Severef("UDF migration: Abort encountered error: %v cleaning up entry for %v", err, name)
+			}
+		}
+		return nil
+	})
+
+	if first {
+		res.WriteString("UDF migration: No functions needing migration found.\n")
+	} else {
+		res.WriteRune('\n')
+	}
+
+	migration.Complete(_UDF_MIGRATION)
+	migrating = _MIGRATED
+
+	res.WriteString("UDF migration: Aborted.\n")
+	return res.String(), nil
 }
