@@ -937,14 +937,24 @@ func (this *Context) EvaluateSubquery(query *algebra.Select, parent value.Value)
 
 	var sequence *Sequence
 	var collect *Collect
+	var ok bool
 
 	subExecTrees := this.getSubExecTrees()
 	ops, opc, opsFound := subExecTrees.get(query)
 	if opsFound {
 		sequence = ops
 		collect = opc
-		sequence.reopen(this)
-	} else {
+		ok = sequence.reopen(this)
+		if !ok {
+			logging.Warna(func() string { return fmt.Sprintf("Failed to reopen: %v", query.String()) })
+
+			// Since the tree cannot be re-opened - clean up the resources associated with it.
+			// Do not use ANY references to the cleaned up sequence, collect operators after this Done() call
+			// until the variables pointing to the cleanued up operators are re-assigned
+			sequence.Done()
+		}
+	}
+	if !ok {
 		pipeline, err := Build(subplan.(plan.Operator), this)
 		if err != nil {
 			// Generate our own error for this subquery, in addition to whatever the query above is doing.
