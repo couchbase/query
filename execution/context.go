@@ -1215,6 +1215,11 @@ func (this *opContext) EvaluateSubquery(query *algebra.Select, parent value.Valu
 		ok = sequence.reopen(this.Context)
 		if !ok {
 			logging.Warna(func() string { return fmt.Sprintf("Failed to reopen: %v", query.String()) })
+
+			// Since the tree cannot be re-opened - clean up the resources associated with it.
+			// Do not use ANY references to the cleaned up sequence, collect operators after this Done() call
+			// until the variables pointing to the cleanued up operators are re-assigned
+			sequence.Done()
 		}
 	}
 	if !ok {
