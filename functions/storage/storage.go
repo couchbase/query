@@ -36,11 +36,14 @@ const (
 )
 
 const _UDF_MIGRATION = "UDF"
-const _GRACE = 30 * time.Second
+const _GRACE_PERIOD = 30 * time.Second
+const _RETRY_TIME = 10 * time.Second
+const _MAX_RETRY = 5
 
 var migrating int = _NOT_MIGRATING
 var migratingLock sync.Mutex
 var countDownStarted time.Time
+var lastActivity time.Time
 
 func Migrate() {
 
@@ -59,6 +62,8 @@ func Migrate() {
 	datastore.RegisterMigrationAbort(abortMigration, datastore.HAS_SYSTEM_COLLECTION)
 
 	countDownStarted = time.Now()
+	lastActivity = time.Now()
+
 	logging.Infof("UDF migration: Evaluating migration state")
 
 	// no migration needed if the datastore doesn't support scanning buckets directly
@@ -104,6 +109,90 @@ func Migrate() {
 			return
 		}
 	}, datastore.HAS_SYSTEM_COLLECTION)
+
+	go retryMigration()
+}
+
+// this function is only used when migration is performed as individual buckets from registered
+// migrators; in case of migrateAll(), the retry logic is embedded in that function
+func retryMigration() {
+	// since migration won't start until _GRACE_PERIOD  has passed, we need to also skip
+	// _GRACE_PERIOD (plus some) before we start attempting retry
+	duration := _GRACE_PERIOD + _RETRY_TIME
+	countDown := time.Since(countDownStarted)
+	if countDown < duration {
+		time.Sleep(duration - countDown)
+	}
+
+	// make sure the migrations map has information on all relevant buckets
+	checkMigrations()
+
+	for i := 1; i <= _MAX_RETRY; i++ {
+		duration = time.Duration(i) * _RETRY_TIME
+		for {
+			// only initiate retry if there has been no activity for the duration
+			inactive := time.Since(lastActivity)
+			if inactive < duration {
+				time.Sleep(duration - inactive)
+			} else {
+				break
+			}
+		}
+
+		// migration complete?
+		migratingLock.Lock()
+		if migrating == _MIGRATED {
+			migratingLock.Unlock()
+			return
+		} else if migration.IsComplete(_UDF_MIGRATION) {
+			migrating = _MIGRATED
+			migratingLock.Unlock()
+			return
+		}
+		migratingLock.Unlock()
+
+		logging.Infof("UDF migration: Retry migration (%d of %d)", i, _MAX_RETRY)
+
+		// migrationsLock ensures that checkMigrateBucket() cannot proceed while we
+		// try migration here
+		migrationsLock.Lock()
+		for _, bucket := range migrations {
+			bucket.Lock()
+			// of all bucket states, only _MIGRATED should skip further migration
+			if bucket.state != _MIGRATED {
+				if bucket.state == _NOT_MIGRATING {
+					// make sure _system scope is available
+					err := checkSystemCollection(bucket.name)
+					if err != nil {
+						bucket.Unlock()
+						continue
+					}
+					bucket.state = _MIGRATING
+				}
+				// this is probably not the most efficient way to retry migration,
+				// since for each bucket we are going to scan metakv entries,
+				// however this does allow us to mark migration of individual bucket
+				// as _MIGRATED; also reuse the same code as regular migration.
+				if doMigrateBucket(bucket.name) {
+					bucket.state = _MIGRATED
+				} else {
+					bucket.state = _PART_MIGRATED
+				}
+			}
+			bucket.Unlock()
+		}
+		migrationsLock.Unlock()
+
+		if checkMigrationComplete() {
+			return
+		}
+
+		lastActivity = time.Now()
+	}
+
+	// if we get here, migration is not complete after maximum retry, log severe error
+	// this requires manual intervention
+	logging.Severef("UDF migration: Migration is not complete, please restart node")
 }
 
 func MakeName(bytes []byte) (functions.FunctionName, error) {
@@ -256,35 +345,48 @@ func migrateAll() {
 
 	// TODO KV doesn't like being hammered straight away so wait for KV to prime before migrating
 	countDown := time.Since(countDownStarted)
-	if countDown < _GRACE {
-		time.Sleep(_GRACE - countDown)
+	if countDown < _GRACE_PERIOD {
+		time.Sleep(_GRACE_PERIOD - countDown)
 	}
-
-	logging.Infof("UDF migration: Start migration of all buckets")
 
 	migrating = _MIGRATING
 
-	// if we are here, we know we have an extended datastore
-	ds := datastore.GetDatastore().(datastore.Datastore2)
-	if ds != nil {
-		ds.LoadAllBuckets(func(b datastore.ExtendedBucket) {
-			if !b.HasCapability(datastore.HAS_SYSTEM_COLLECTION) {
-				logging.Infof("UDF migration: Bucket %s missing system collection capability", b.Name())
-			} else {
-				checkSystemCollection(b.Name())
-
-				doMigrateBucket(b.Name())
-			}
-		})
-
-		if checkMigrationComplete() {
-			logging.Infof("UDF migration: End migration of all buckets")
+	for i := 0; i <= _MAX_RETRY; i++ {
+		if i == 0 {
+			logging.Infof("UDF migration: Start migration of all buckets")
 		} else {
-			logging.Errorf("UDF migration: Migration incomplete, please restart node")
+			// if we get here, migration is not complete, need to retry
+			time.Sleep(time.Duration(i) * _RETRY_TIME)
+			logging.Infof("UDF migration: Retry migration of all buckets (%d of %d)", i, _MAX_RETRY)
 		}
-	} else {
-		logging.Errorf("UDF migration: Unexpected error - datastore not available")
+
+		// if we are here, we know we have an extended datastore
+		ds := datastore.GetDatastore().(datastore.Datastore2)
+		if ds != nil {
+			ds.LoadAllBuckets(func(b datastore.ExtendedBucket) {
+				if !b.HasCapability(datastore.HAS_SYSTEM_COLLECTION) {
+					logging.Infof("UDF migration: Bucket %s missing system collection capability", b.Name())
+				} else {
+					err := checkSystemCollection(b.Name())
+					if err == nil {
+						doMigrateBucket(b.Name())
+					}
+				}
+			})
+
+			if checkMigrationComplete() {
+				logging.Infof("UDF migration: End migration of all buckets")
+				return
+			}
+		} else {
+			logging.Errorf("UDF migration: Unexpected error - datastore not available")
+			break
+		}
 	}
+
+	// if we get here, migration is not complete after maximum retry, log severe error
+	// this requires manual intervention
+	logging.Severef("UDF migration: Migration is not complete, please restart node")
 }
 
 func checkMigrateBucket(name string) {
@@ -338,13 +440,16 @@ func checkMigrateBucket(name string) {
 	}
 
 	if doSysColl {
-		checkSystemCollection(name)
+		err := checkSystemCollection(name)
+		if err != nil {
+			return
+		}
 	}
 
 	// TODO KV doesn't like being hammered straight away so wait for KV to prime before migrating
 	countDown := time.Since(countDownStarted)
-	if countDown < _GRACE {
-		time.Sleep(_GRACE - countDown)
+	if countDown < _GRACE_PERIOD {
+		time.Sleep(_GRACE_PERIOD - countDown)
 	}
 
 	// if migration completed while we are waiting ...
@@ -370,6 +475,8 @@ func checkMigrateBucket(name string) {
 	bucket.Unlock()
 
 	checkMigrationComplete()
+
+	lastActivity = time.Now()
 }
 
 func doMigrateBucket(name string) bool {
@@ -417,7 +524,10 @@ func doMigrateBucket(name string) bool {
 		err = name.Delete()
 		if err != nil {
 			logging.Errorf("UDF migration: Migrating %v error %v deleting old entry", parts, err)
-			return errors.NewMigrationError(_UDF_MIGRATION, "Error deleting old entry", parts, err)
+			// ignore missing function error but return ll other errors
+			if err.Code() != errors.E_MISSING_FUNCTION {
+				return errors.NewMigrationError(_UDF_MIGRATION, "Error deleting old entry", parts, err)
+			}
 		} else {
 			logging.Infof("UDF migration: Deleted old entry for %v", parts)
 		}
@@ -435,19 +545,22 @@ func doMigrateBucket(name string) bool {
 	return complete
 }
 
-func checkSystemCollection(name string) {
+func checkSystemCollection(name string) errors.Error {
 	ds := datastore.GetDatastore()
 	if ds != nil {
 		// check existence of system collection, no need to create primary index
 		err := ds.CheckSystemCollection(name, "")
 		if err != nil {
 			logging.Errorf("UDF migration: Error during UDF migration for bucket %s, system collection does not exist - %v", name, err)
+			return errors.NewMigrationError(_UDF_MIGRATION, fmt.Sprintf("Error during UDF migration for bucket %s - system collection does not exist", name), nil, err)
 		} else {
 			logging.Infof("UDF migration: System collection available (bucket %s)", name)
 		}
 	} else {
 		logging.Errorf("UDF migration: Unexpected error - datastore not available")
+		return errors.NewMigrationInternalError(_UDF_MIGRATION, "Unexpected error - datastore not available", nil, nil)
 	}
+	return nil
 }
 
 func checkMigrationComplete() bool {
@@ -484,6 +597,24 @@ func checkMigrationComplete() bool {
 	}
 
 	return complete
+}
+
+// if retrying migration, since we go from the migrations map, make sure all buckets are in the map
+func checkMigrations() {
+	metaStorage.ForeachBody(func(parts []string, body functions.FunctionBody) errors.Error {
+		if len(parts) == 4 {
+			bname := parts[1]
+			migrationsLock.Lock()
+			if _, ok := migrations[bname]; !ok {
+				migrations[bname] = &migrateBucket{
+					name:  bname,
+					state: _NOT_MIGRATING,
+				}
+			}
+			migrationsLock.Unlock()
+		}
+		return nil
+	})
 }
 
 func UseSystemStorage() bool {
