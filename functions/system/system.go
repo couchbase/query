@@ -28,7 +28,7 @@ func Init() {
 
 // datastore and function store actions
 func DropScope(namespace, bucket, scope string) {
-	scanSystemCollection(bucket, func(key string, systemCollection datastore.Keyspace) error {
+	scanSystemCollection(bucket, func(key string, systemCollection datastore.Keyspace) errors.Error {
 		s, fn := key2parts(key)
 
 		// skip entries that are not udfs or different scopes
@@ -42,7 +42,7 @@ func DropScope(namespace, bucket, scope string) {
 }
 
 func Foreach(b string, f func(path string, v value.Value) error) error {
-	return scanSystemCollection(b, func(key string, systemCollection datastore.Keyspace) error {
+	return scanSystemCollection(b, func(key string, systemCollection datastore.Keyspace) errors.Error {
 		s, fn := key2parts(key)
 
 		// skip entries that are not udfs
@@ -54,19 +54,27 @@ func Foreach(b string, f func(path string, v value.Value) error) error {
 		if err != nil {
 			return err
 		}
-		return f(algebra.PathFromParts(systemCollection.NamespaceId(), b, s, fn), val)
+		err1 := f(algebra.PathFromParts(systemCollection.NamespaceId(), b, s, fn), val)
+		if err1 != nil {
+			return errors.NewSystemCollectionError("Error calling processing function", err1)
+		}
+		return nil
 	})
 }
 
 func Scan(b string, f func(path string) error) error {
-	return scanSystemCollection(b, func(key string, systemCollection datastore.Keyspace) error {
+	return scanSystemCollection(b, func(key string, systemCollection datastore.Keyspace) errors.Error {
 		s, fn := key2parts(key)
 
 		// skip entries that are not udfs
 		if s == "" {
 			return nil
 		}
-		return f(algebra.PathFromParts(systemCollection.NamespaceId(), b, s, fn))
+		err := f(algebra.PathFromParts(systemCollection.NamespaceId(), b, s, fn))
+		if err != nil {
+			return errors.NewSystemCollectionError("Error calling processing function", err)
+		}
+		return nil
 	})
 }
 
@@ -83,7 +91,7 @@ func Get(path string) (value.Value, error) {
 	return get2(name, systemCollection)
 }
 
-func get2(name functions.FunctionName, systemCollection datastore.Keyspace) (value.Value, error) {
+func get2(name functions.FunctionName, systemCollection datastore.Keyspace) (value.Value, errors.Error) {
 	fetchMap := _STRING_ANNOTATED_POOL.Get()
 	defer _STRING_ANNOTATED_POOL.Put(fetchMap)
 	key := parts2key(name.Path()...)
@@ -110,7 +118,7 @@ func get2(name functions.FunctionName, systemCollection datastore.Keyspace) (val
 func Count(b string) (int64, error) {
 	var count int64
 
-	err := scanSystemCollection(b, func(key string, systemCollection datastore.Keyspace) error {
+	err := scanSystemCollection(b, func(key string, systemCollection datastore.Keyspace) errors.Error {
 		count++
 		return nil
 	})
@@ -156,7 +164,7 @@ func getPrimaryIndex(sysColl datastore.Keyspace) (datastore.PrimaryIndex3, error
 	return index3, nil
 }
 
-func scanSystemCollection(bucketName string, handler func(string, datastore.Keyspace) error) errors.Error {
+func scanSystemCollection(bucketName string, handler func(string, datastore.Keyspace) errors.Error) errors.Error {
 	systemCollection, err := getSystemCollection(bucketName, true)
 	if err != nil {
 		return err
@@ -176,7 +184,28 @@ func scanSystemCollection(bucketName string, handler func(string, datastore.Keys
 		return errors.NewSystemCollectionError("error generating requestId", err1)
 	}
 
-	go index3.ScanEntries3(requestId, nil, 0, 0, nil, nil, datastore.UNBOUNDED, nil, conn)
+	// generate span, which is equivalent to meta().id LIKE _PREFIX+"%"
+	spans := make(datastore.Spans2, 1)
+	ranges := make(datastore.Ranges2, 1)
+
+	// logic here comes from plannerbase/DNF.visitLike()
+	docKey := _PREFIX
+	low := docKey
+	high := []byte(docKey)
+	last := len(docKey) - 1
+	high[last]++
+
+	ranges[0] = &datastore.Range2{
+		Low:       value.NewValue(low),
+		High:      value.NewValue(string(high)),
+		Inclusion: datastore.LOW,
+	}
+	spans[0] = &datastore.Span2{
+		Ranges: ranges,
+	}
+
+	go index3.Scan3(requestId, spans, false, false, nil, 0, 0, nil, nil,
+		datastore.UNBOUNDED, nil, conn)
 
 	var item *datastore.IndexEntry
 	ok := true
@@ -185,9 +214,9 @@ func scanSystemCollection(bucketName string, handler func(string, datastore.Keys
 		item, ok = conn.Sender().GetEntry()
 		if ok {
 			if item != nil {
-				err1 = handler(item.PrimaryKey, systemCollection)
-				if err1 != nil {
-					return errors.NewSystemCollectionError("error calling handler", err1)
+				err = handler(item.PrimaryKey, systemCollection)
+				if err != nil {
+					return err
 				}
 			} else {
 				ok = false
