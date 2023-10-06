@@ -1,32 +1,32 @@
 [
     {
         "description": "Inline UDF with LANGUAGE INLINE syntax",
-        "statements": "CREATE FUNCTION inline1() LANGUAGE INLINE AS (ARRAY_LENGTH([1,2,3]))",
+        "statements": "CREATE FUNCTION UDF_UT_inline1() LANGUAGE INLINE AS (ARRAY_LENGTH([1,2,3]))",
         "results":[]
     },
     {
         "description": "Inline UDF with named function parameter and subquery body",
-        "statements": "CREATE FUNCTION inline2(age_param) {( SELECT custId FROM customer WHERE age = age_param ORDER BY custId)}",
+        "statements": "CREATE FUNCTION UDF_UT_inline2(age_param) {( SELECT custId FROM customer WHERE age = age_param ORDER BY custId)}",
         "results": []
     },
     {
         "description": "Inline UDF with variadic function parameter and subquery body",
-        "statements": "CREATE FUNCTION inline3(...) {( SELECT custId FROM customer WHERE age = args[0] AND test_id = \"udf\" ORDER BY custId )}",
+        "statements": "CREATE FUNCTION UDF_UT_inline3(...) {( SELECT custId FROM customer WHERE age = args[0] AND test_id = \"udf\" ORDER BY custId )}",
         "results": []
     },
     {
         "description": "Attempt to create a function that already exists - must return an error",
-        "statements": "CREATE FUNCTION inline1() { ( SELECT firstName FROM customers ) }",
-        "error": "Function 'inline1' already exists - cause: inline1"
+        "statements": "CREATE FUNCTION UDF_UT_inline1() { ( SELECT firstName FROM customers ) }",
+        "error": "Function 'UDF_UT_inline1' already exists - cause: UDF_UT_inline1"
     },
     {
         "description": "Attempt to create a function that already exists, but with an IF NOT EXISTS clause - must not return an error",
-        "statements": "CREATE FUNCTION inline1() IF NOT EXISTS { ( SELECT lastName FROM customers ) }",
+        "statements": "CREATE FUNCTION UDF_UT_inline1() IF NOT EXISTS { ( SELECT lastName FROM customers ) }",
         "results": []
     },
     {
-        "description": "Execute inline2",
-        "statements": "EXECUTE FUNCTION inline2(33)",
+        "description": "Execute UDF_UT_inline2",
+        "statements": "EXECUTE FUNCTION UDF_UT_inline2(33)",
         "results": [
             [
                 {
@@ -39,8 +39,8 @@
         ]
     },
     {
-        "description": "Execute inline3 with variadic arguments.",
-        "statements": "EXECUTE FUNCTION inline3(33)",
+        "description": "Execute UDF_UT_inline3 with variadic arguments.",
+        "statements": "EXECUTE FUNCTION UDF_UT_inline3(33)",
         "results": [
             [
                 {
@@ -54,7 +54,7 @@
     },
     {
         "description": "Inline UDF used in a scenario besides EXECUTE FUNCTION - as a part of projection",
-        "statements": "SELECT inline1() AS i",
+        "statements": "SELECT UDF_UT_inline1() AS i",
         "results": [
                 {
                     "i": 3
@@ -63,7 +63,7 @@
     },
     {
         "description":"MB-58479: Inline UDF that has the same function executed multiple times in the query",
-        "statements": "SELECT inline2(33) AS i1, inline2(40) AS i2",
+        "statements": "SELECT UDF_UT_inline2(33) AS i1, UDF_UT_inline2(40) AS i2",
         "results":[
             {
                 "i1":  [
@@ -84,16 +84,16 @@
     },
     {
         "description": "Check entries in system:functions",
-        "statements": "SELECT meta().id FROM system:functions ORDER BY meta().id",
+        "statements": "SELECT meta().id FROM system:functions WHERE meta().id LIKE 'default:UDF_UT_%' ORDER BY meta().id",
         "results": [
             {
-                "id": "default:inline1"
+                "id": "default:UDF_UT_inline1"
             },
             {
-                "id": "default:inline2"
+                "id": "default:UDF_UT_inline2"
             },
             {
-                "id": "default:inline3"
+                "id": "default:UDF_UT_inline3"
             }
         ]
     }

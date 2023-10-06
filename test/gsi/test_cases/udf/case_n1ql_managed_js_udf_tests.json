@@ -1,12 +1,12 @@
 [
     {
         "description": "Create a N1QL managed UDF with Embedded N1QL and Named Parameters",
-        "statements": "CREATE FUNCTION n1qlJS1(var1) LANGUAGE JAVASCRIPT AS \"function n1qlJS1(var1){ let var2 = 30; \n var query1 = SELECT custId FROM customer WHERE test_id = \\\"udf\\\" AND age >= $var1 AND age <= $var2; \nvar q1 = []; \nfor (const row1 of query1) { q1.push(row1);} \n return q1; }\"",
+        "statements": "CREATE FUNCTION UDF_UT_n1qlJS1(var1) LANGUAGE JAVASCRIPT AS \"function UDF_UT_n1qlJS1(var1){ let var2 = 30; \n var query1 = SELECT custId FROM customer WHERE test_id = \\\"udf\\\" AND age >= $var1 AND age <= $var2; \nvar q1 = []; \nfor (const row1 of query1) { q1.push(row1);} \n return q1; }\"",
         "results": []
     },
     {
-        "description": "Execute n1qlJS1",
-        "statements": "EXECUTE FUNCTION n1qlJS1(10)",
+        "description": "Execute UDF_UT_n1qlJS1",
+        "statements": "EXECUTE FUNCTION UDF_UT_n1qlJS1(10)",
         "results": [
             [ 
                 {
@@ -29,12 +29,12 @@
     },
     {
         "description": "CREATE A N1QL managed UDF with Dynamic N1QL with a DML query, RETURNING clause and Named Parameters",
-        "statements": "CREATE FUNCTION n1qlJS2() LANGUAGE JAVASCRIPT as \"function n1qlJS2(){var query1 = N1QL(\\\"UPDATE customer SET changeId = 1 WHERE test_id = 'udf' AND custId = $var1 RETURNING meta().id\\\", {var1: \\\"customer1\\\"}); var q1 = [];for (const row1 of query1) { q1.push(row1);} \n query1.close(); \n return q1;}\"",
+        "statements": "CREATE FUNCTION UDF_UT_n1qlJS2() LANGUAGE JAVASCRIPT as \"function UDF_UT_n1qlJS2(){var query1 = N1QL(\\\"UPDATE customer SET changeId = 1 WHERE test_id = 'udf' AND custId = $var1 RETURNING meta().id\\\", {var1: \\\"customer1\\\"}); var q1 = [];for (const row1 of query1) { q1.push(row1);} \n query1.close(); \n return q1;}\"",
         "results":[]
     },
     {
-        "description": "Execute n1qlJS2()",
-        "statements": "EXECUTE FUNCTION n1qlJS2()",
+        "description": "Execute UDF_UT_n1qlJS2()",
+        "statements": "EXECUTE FUNCTION UDF_UT_n1qlJS2()",
         "results":[
             [
                 {
@@ -45,12 +45,12 @@
     },
     {
         "description":"CREATE A N1QL managed UDF with Dynamic N1QL with a DML query and Positional Parameters",
-        "statements": "CREATE FUNCTION n1qlJS3() LANGUAGE JAVASCRIPT as \"function n1qlJS3(){var query1 = N1QL(\\\"UPDATE customer SET changeId = 1 WHERE test_id = 'udf' AND custId = $1\\\", [\\\"customer2\\\"]); return 'success'; }\"",
+        "statements": "CREATE FUNCTION UDF_UT_n1qlJS3() LANGUAGE JAVASCRIPT as \"function UDF_UT_n1qlJS3(){var query1 = N1QL(\\\"UPDATE customer SET changeId = 1 WHERE test_id = 'udf' AND custId = $1\\\", [\\\"customer2\\\"]); return 'success'; }\"",
         "results":[]
     },
     {
-        "description": "Execute n1qlJS3()",
-        "statements": "EXECUTE FUNCTION n1qlJS3()",
+        "description": "Execute UDF_UT_n1qlJS3()",
+        "statements": "EXECUTE FUNCTION UDF_UT_n1qlJS3()",
         "results": ["success"]
     },
     {
@@ -67,16 +67,16 @@
     },
     {
             "description":"Entries in system:functions",
-            "statements":"SELECT meta().id FROM system:functions",
+            "statements":"SELECT meta().id FROM system:functions WHERE meta().id LIKE 'default:UDF_UT_%'",
             "results": [
                 {
-                    "id": "default:n1qlJS1"
+                    "id": "default:UDF_UT_n1qlJS1"
                 },
                 {
-                    "id":"default:n1qlJS2"
+                    "id":"default:UDF_UT_n1qlJS2"
                 },
                 {
-                    "id":"default:n1qlJS3"
+                    "id":"default:UDF_UT_n1qlJS3"
                 }
             ]
     }

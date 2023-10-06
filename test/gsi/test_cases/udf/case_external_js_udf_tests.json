@@ -1,22 +1,22 @@
 [
     {
         "description": "Create an external JS UDF",
-        "statements": "CREATE FUNCTION externalJS1(var1) LANGUAGE JAVASCRIPT AS \"external1\" AT \"lib1\"",
+        "statements": "CREATE OR REPLACE FUNCTION UDF_UT_externalJS1(var1) LANGUAGE JAVASCRIPT AS \"external1\" AT \"lib1\"",
         "results":[]
     },
     {
         "description": "Create an external JS UDF",
-        "statements": "CREATE FUNCTION externalJS2(var1) LANGUAGE JAVASCRIPT AS \"external2\" AT \"lib1\"",
+        "statements": "CREATE OR REPLACE FUNCTION UDF_UT_externalJS2(var1) LANGUAGE JAVASCRIPT AS \"external2\" AT \"lib1\"",
         "results":[]
     },
     {
         "description": "Create an external JS UDF",
-        "statements": "CREATE FUNCTION externalJS3() LANGUAGE JAVASCRIPT AS \"external3\" AT \"lib1\"",
+        "statements": "CREATE OR REPLACE FUNCTION UDF_UT_externalJS3() LANGUAGE JAVASCRIPT AS \"external3\" AT \"lib1\"",
         "results":[]
     },
     {
         "description": "Execute externalJS2() - which is a function that executes another function inside",
-        "statements": "EXECUTE FUNCTION externalJS2(20)",
+        "statements": "EXECUTE FUNCTION UDF_UT_externalJS2(20)",
         "results":[
             [
                 [
@@ -32,7 +32,7 @@
     },
     {
          "description": "Execute externalJS3() - which is a function that performs a DML operation and then a SELECT subsequently on the same keyspace",
-         "statements": "EXECUTE FUNCTION externalJS3()",
+         "statements": "EXECUTE FUNCTION UDF_UT_externalJS3()",
          "results": [
             [
                 {
@@ -44,16 +44,16 @@
     },
     {
         "description": "Check entries in system:functions",
-        "statements": "SELECT meta().id FROM system:functions",
+        "statements": "SELECT meta().id FROM system:functions WHERE meta().id LIKE 'default:UDF_UT_%'",
         "results": [
             {
-                "id": "default:externalJS1"
+                "id": "default:UDF_UT_externalJS1"
             },
             {
-                "id": "default:externalJS2"
+                "id": "default:UDF_UT_externalJS2"
             },
             {
-                "id": "default:externalJS3"
+                "id": "default:UDF_UT_externalJS3"
             }
         ]
     }

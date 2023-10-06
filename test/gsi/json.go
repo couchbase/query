@@ -61,7 +61,7 @@ var Password = "password"
 var Auth_param = "Administrator:password"
 var Pool_CBS = "127.0.0.1:8091/"
 var FTS_CBS = "127.0.0.1:8094/"
-var Query_CBS = "127.0.0.1:8093"
+var Query_CBS = "127.0.0.1:6093" // so we can start a test instance with a listener
 var FTS_API_PATH = "api/index/"
 var Namespace_CBS = "default"
 var Consistency_parameter = datastore.SCAN_PLUS
@@ -679,16 +679,18 @@ func FtestCaseFile(fname string, prepared, explain bool, qc *MockServer, namespa
 			if errCodeExpected == int(rr.Err.Code()) {
 				continue
 			}
+			marshalledErr, _ := json.Marshal(rr.Err)
+			errStr := string(marshalledErr)
 
 			if errExpected == "" {
 				errstring = go_er.New(fmt.Sprintf("unexpected err: %v\nstatements: %v\n"+
-					"      file: %v\n     index: %v%s\n\n", rr.Err, statements, ffname, i, findIndex(b, i)))
+					"      file: %v\n     index: %v%s\n\n", errStr, statements, ffname, i, findIndex(b, i)))
 				return
 			}
 
 			if !rr.Err.ContainsText(errExpected) {
 				errstring = go_er.New(fmt.Sprintf("Mismatched error:\nexpected: %s\n  actual: %s\n"+
-					"      file: %v\n     index: %v%s\n\n", errExpected, rr.Err.Error(), ffname, i, findIndex(b, i)))
+					"      file: %v\n     index: %v%s\n\n", errExpected, errStr, ffname, i, findIndex(b, i)))
 				return
 			}
 
@@ -1074,7 +1076,12 @@ func RunMatch(filename string, prepared, explain bool, qc *MockServer, t *testin
 		stmt, errcs := FtestCaseFile(m, prepared, explain, qc, Namespace_CBS)
 
 		if errcs != nil {
-			t.Errorf("Error : %s", errcs.Error())
+			if e, ok := errcs.(errors.Error); ok {
+				b, _ := json.Marshal(e)
+				t.Errorf("Error: %s", string(b))
+			} else {
+				t.Errorf("Error: %s", errcs.Error())
+			}
 			return
 		}
 

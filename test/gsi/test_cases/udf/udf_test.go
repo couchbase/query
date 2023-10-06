@@ -9,6 +9,7 @@
 package udf
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
@@ -35,16 +36,16 @@ func TestUDFs(t *testing.T) {
 	runMatch("case_inline_udf_bugs.json", false, true, qc, t)
 
 	// Drop functions created in the inline UDF tests
-	runStmt(qc, "DROP FUNCTION inline1 IF EXISTS")
-	runStmt(qc, "DROP FUNCTION inline2 IF EXISTS")
-	runStmt(qc, "DROP FUNCTION inline3 IF EXISTS")
+	runStmt(qc, "DROP FUNCTION UDF_UT_inline1 IF EXISTS")
+	runStmt(qc, "DROP FUNCTION UDF_UT_inline2 IF EXISTS")
+	runStmt(qc, "DROP FUNCTION UDF_UT_inline3 IF EXISTS")
 
 	runMatch("case_n1ql_managed_js_udf_tests.json", false, true, qc, t)
 
 	// Drop functions created in the N1QL managed JS UDF tests
-	runStmt(qc, "DROP FUNCTION n1qlJS1 IF EXISTS")
-	runStmt(qc, "DROP FUNCTION n1qlJS2 IF EXISTS")
-	runStmt(qc, "DROP FUNCTION n1qlJS3 IF EXISTS")
+	runStmt(qc, "DROP FUNCTION UDF_UT_n1qlJS1 IF EXISTS")
+	runStmt(qc, "DROP FUNCTION UDF_UT_n1qlJS2 IF EXISTS")
+	runStmt(qc, "DROP FUNCTION UDF_UT_n1qlJS3 IF EXISTS")
 
 	// Run the external JS UDF tests
 	externalJSTest(qc, t)
@@ -76,7 +77,7 @@ func externalJSTest(qc *gsi.MockServer, t *testing.T) {
 
 		// Function that executes another function
 		function external2(var1) {
-			var query = N1QL("EXECUTE FUNCTION externalJS1("+var1+")");
+			var query = N1QL("EXECUTE FUNCTION UDF_UT_externalJS1("+var1+")");
 			var q = [];
 			for (const row of query) {
 				q.push(row);
@@ -110,10 +111,23 @@ func externalJSTest(qc *gsi.MockServer, t *testing.T) {
 	loadResp, loadErr := client.Do(loadReq)
 
 	if loadErr != nil || loadResp.StatusCode != http.StatusOK {
-		t.Log("udf_test.go: Error creating and loading functions into library")
+		t.Error("udf_test.go: Error creating and loading functions into library")
+		return
+	} else {
+		t.Logf("udf_test.go: External UDFs created: %v", url)
 	}
 
-	client.Do(loadReq)
+	resp, err := client.Get(url)
+	if err != nil || resp.StatusCode != http.StatusOK {
+		t.Error("udf_test.go: External UDF library could not be found")
+		return
+	} else {
+		d := json.NewDecoder(resp.Body)
+		m := make(map[string]interface{})
+		if d.Decode(&m) == nil {
+			t.Logf("udf_test.go: External UDF library: %v", m)
+		}
+	}
 
 	// run tests
 	runMatch("case_external_js_udf_tests.json", false, true, qc, t)
@@ -126,11 +140,9 @@ func externalJSTest(qc *gsi.MockServer, t *testing.T) {
 		t.Log("udf_test.go: Error deleting library")
 	}
 
-	client.Do(delReq)
-
 	// Drop functions created in external JS UDF tests
-	runStmt(qc, "DROP FUNCTION externalJS1 IF EXISTS")
-	runStmt(qc, "DROP FUNCTION externalJS2 IF EXISTS")
-	runStmt(qc, "DROP FUNCTION externalJS3 IF EXISTS")
+	runStmt(qc, "DROP FUNCTION UDF_UT_externalJS1 IF EXISTS")
+	runStmt(qc, "DROP FUNCTION UDF_UT_externalJS2 IF EXISTS")
+	runStmt(qc, "DROP FUNCTION UDF_UT_externalJS3 IF EXISTS")
 
 }

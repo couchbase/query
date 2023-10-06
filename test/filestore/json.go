@@ -439,15 +439,17 @@ func FtestCaseFile(fname string, qc *MockServer, namespace string) (fin_stmt str
 			if errCodeExpected == int(rr.Err.Code()) {
 				continue
 			}
+			marshalledErr, _ := json.Marshal(rr.Err)
+			errStr := string(marshalledErr)
 
 			if errExpected == "" {
 				errstring = go_er.New(fmt.Sprintf("unexpected err: %v\nstatements: %v\n"+
-					"      file: %v\n     index: %v%s\n\n", rr.Err, statements, ffname, i, findIndex(b, i)))
+					"      file: %v\n     index: %v%s\n\n", errStr, statements, ffname, i, findIndex(b, i)))
 				return
 			}
 			if !rr.Err.ContainsText(errExpected) {
 				errstring = go_er.New(fmt.Sprintf("Mismatched error:\nexpected: %s\n  actual: %s\n"+
-					"      file: %v\n     index: %v%s\n\n", errExpected, rr.Err.Error(), ffname, i, findIndex(b, i)))
+					"      file: %v\n     index: %v%s\n\n", errExpected, errStr, ffname, i, findIndex(b, i)))
 				return
 			}
 			continue
