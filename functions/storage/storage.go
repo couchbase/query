@@ -85,6 +85,8 @@ func Migrate() {
 
 	// if all the buckets appear migrated attempt migration now (including when bucketCount == 0)
 	if bucketCount == newBucketCount {
+		migrating = _MIGRATING
+
 		go migrateAll()
 
 		return
@@ -342,8 +344,6 @@ var migrations map[string]*migrateBucket
 var migrationsLock sync.Mutex
 
 func migrateAll() {
-
-	migrating = _MIGRATING
 
 	// TODO KV doesn't like being hammered straight away so wait for KV to prime before migrating
 	countDown := time.Since(countDownStarted)
