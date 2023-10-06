@@ -324,7 +324,11 @@ func (this *annotatedValue) GetMeta() map[string]interface{} {
 }
 
 func (this *annotatedValue) ResetMeta() {
+	k := this.GetId()
 	this.meta = nil
+	if k != nil {
+		this.SetId(k)
+	}
 }
 
 func (this *annotatedValue) Covers() Value {
@@ -436,11 +440,9 @@ func (this *annotatedValue) ShareAnnotations(sv AnnotatedValue) {
 	av := sv.(*annotatedValue) // we don't have any other annotated value implementation
 	this.attachments = av.attachments
 	this.meta = av.meta
-	if av.Covers() != nil {
-		this.covers = av.covers
-	} else {
-		this.covers = nil
-	}
+	this.covers = av.covers
+	// So we don't clean-up under the shared user, both "sides" must be marked as shared
+	av.flags |= _SHARED_ANNOTATIONS
 	this.flags |= _SHARED_ANNOTATIONS
 }
 
@@ -631,9 +633,11 @@ func (this *annotatedValue) recycle(lvl int32) {
 		this.attachments = nil
 		this.meta = nil
 	} else {
+		// We must not do this if this object's annotations have been shared - the shared user may still be using them - so
+		// whenever annotations are shared both sides are marked as such and this is avoided.  It does limit the cases when these
+		// maps will be pooled.
 
-		// pool the maps if they exist
-		// these are optimized as maps clear by golang
+		// pool the maps if they exist. These are optimized as map clear operations by golang.
 		for k := range this.attachments {
 			delete(this.attachments, k)
 		}
