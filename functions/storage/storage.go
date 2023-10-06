@@ -343,13 +343,13 @@ var migrationsLock sync.Mutex
 
 func migrateAll() {
 
+	migrating = _MIGRATING
+
 	// TODO KV doesn't like being hammered straight away so wait for KV to prime before migrating
 	countDown := time.Since(countDownStarted)
 	if countDown < _GRACE_PERIOD {
 		time.Sleep(_GRACE_PERIOD - countDown)
 	}
-
-	migrating = _MIGRATING
 
 	for i := 0; i <= _MAX_RETRY; i++ {
 		if i == 0 {
