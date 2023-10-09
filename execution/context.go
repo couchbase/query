@@ -1312,9 +1312,11 @@ func (this *Context) getSubqueryTimes() interface{} {
 					if i.sequence == nil {
 						continue
 					}
+					// Create ac opy of the first execution tree
+					// accumulate all timing information into this copy
+					// This handles the query executing & its execution plan being accessed concurrently from system:active_requests
 					if t == nil {
-						t = i.sequence.Copy()
-						continue
+						t = i.sequence.CustomizedCopy(true)
 					}
 					t.accrueTimes(i.sequence)
 				}

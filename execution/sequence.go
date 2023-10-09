@@ -71,11 +71,32 @@ func (this *Sequence) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *Sequence) Copy() Operator {
+	return this.CustomizedCopy(false)
+}
+
+// forTimingAccrual: set this for special handling when making a copy of the Operator
+// currently set during the accrual of execution trees for subquery timings
+func (this *Sequence) CustomizedCopy(forTimingAccrual bool) Operator {
 	rv := _SEQUENCE_OP_POOL.Get().(*Sequence)
 	children := _SEQUENCE_POOL.Get()
 
 	for _, child := range this.children {
-		children = append(children, child.Copy())
+
+		custom := false
+		var copy Operator
+
+		if forTimingAccrual {
+			if cOp, ok := child.(interface{ CustomizedCopy(bool) Operator }); ok {
+				copy = cOp.CustomizedCopy(forTimingAccrual)
+				custom = true
+			}
+		}
+
+		if !custom {
+			copy = child.Copy()
+		}
+
+		children = append(children, copy)
 	}
 
 	rv.plan = this.plan

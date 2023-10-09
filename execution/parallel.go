@@ -64,6 +64,30 @@ func (this *Parallel) Copy() Operator {
 	return rv
 }
 
+// forTimingAccrual: if set copies the "children" array as well.
+// currently set for the accrual of execution trees for subquery timings
+func (this *Parallel) CustomizedCopy(forTimingAccrual bool) Operator {
+	rv := this.Copy().(*Parallel)
+
+	if forTimingAccrual {
+		children := _PARALLEL_POOL.Get()[0:len(this.children)]
+		i := 0
+
+		for _, child := range this.children {
+			if cOp, ok := child.(interface{ CustomizedCopy(bool) Operator }); ok {
+				children[i] = cOp.CustomizedCopy(forTimingAccrual)
+			} else {
+				children[i] = child.Copy()
+			}
+			i++
+		}
+
+		rv.children = children
+	}
+
+	return rv
+}
+
 func (this *Parallel) PlanOp() plan.Operator {
 	return this.plan
 }
