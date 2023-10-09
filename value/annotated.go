@@ -1024,11 +1024,12 @@ func (this *annotatedValue) Original() AnnotatedValue {
 func (this *annotatedValue) ResetOriginal() {
 	if this.annotatedOrig != nil {
 		val := this.annotatedOrig.(*annotatedValue)
+		this.annotatedOrig = nil
+		val.Value = nil
 		val.covers = nil
 		val.attachments = nil
 		val.meta = nil
 		annotatedPool.Put(unsafe.Pointer(val))
-		this.annotatedOrig = nil
 	}
 	if this.original != nil {
 		this.original.Recycle()
@@ -1093,11 +1094,12 @@ func (this *annotatedValue) recycle(lvl int32) {
 	}
 	if this.annotatedOrig != nil {
 		val := this.annotatedOrig.(*annotatedValue)
+		this.annotatedOrig = nil
+		val.Value = nil
 		val.covers = nil
 		val.attachments = nil
 		val.meta = nil
 		annotatedPool.Put(unsafe.Pointer(val))
-		this.annotatedOrig = nil
 	}
 	if this.original != nil {
 		this.original.Recycle()
