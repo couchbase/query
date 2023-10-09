@@ -367,6 +367,8 @@ func (this *annotatedValue) ShareAnnotations(sv AnnotatedValue) {
 	} else {
 		this.covers = nil
 	}
+	// So we don't clean-up under the shared user, both "sides" must be marked as shared
+	av.sharedAnnotations = true
 	this.sharedAnnotations = true
 }
 
@@ -545,6 +547,9 @@ func (this *annotatedValue) recycle(lvl int32) {
 		this.attachments = nil
 		this.meta = nil
 	} else {
+		// We must not do this if this object's annotations have been shared - the shared user may still be using them - so
+		// whenever annotations are shared both sides are marked as such and this is avoided.  It does limit the cases when these
+		// maps will be pooled.
 
 		// pool the maps if they exist
 		// these are optimized as maps clear by golang
