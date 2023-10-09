@@ -1,7 +1,7 @@
 [
     {
         "testcase": "Merge with UPDATE and INSERT, UPDATE with WHERE clauses",
-        "statements":"MERGE INTO shellTest t USING (SELECT s1.* FROM shellTest s1 WHERE s1.c11 IS NOT NULL AND s1.type = \"source\") AS s ON t.c21 = s.c11 WHEN MATCHED THEN UPDATE set t.c23 = t.c22, t.c22 = s.c12 WHERE s.type = \"source\" AND t.type = \"target\" WHEN NOT MATCHED THEN INSERT (KEY REPLACE(meta(s).id, \"test1\", \"test2\"), VALUE {\"c21\": s.c11, \"c22\": s.c12 + s.c13, \"type\": \"target\", \"test_id\": s.test_id, \"inserted\": true})",
+        "statements":"MERGE INTO shellTest t USING (SELECT meta(s1).id AS metaid, s1.* FROM shellTest s1 WHERE s1.c11 IS NOT NULL AND s1.type = \"source\") AS s ON t.c21 = s.c11 WHEN MATCHED THEN UPDATE set t.c23 = t.c22, t.c22 = s.c12 WHERE s.type = \"source\" AND t.type = \"target\" WHEN NOT MATCHED THEN INSERT (KEY REPLACE(s.metaid, \"test1\", \"test2\"), VALUE {\"c21\": s.c11, \"c22\": s.c12 + s.c13, \"type\": \"target\", \"test_id\": s.test_id, \"inserted\": true})",
         "results": [
     ]
     },

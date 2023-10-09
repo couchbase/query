@@ -91,7 +91,7 @@
             ],
             "statement": "SELECT RAW p.`optimizer_hints` FROM $explan AS p"
         },
-        "statements":"MERGE /*+ INDEX(t st_target_idx) USE_HASH(s/PROBE) */ INTO shellTest t USING (SELECT s1.* FROM shellTest s1 WHERE s1.c11 IS NOT NULL AND s1.type = \"source\") AS s ON t.c21 = s.c11 WHEN MATCHED THEN UPDATE set t.c23 = t.c22, t.c22 = s.c12 WHERE s.type = \"source\" AND t.type = \"target\" WHEN NOT MATCHED THEN INSERT (KEY REPLACE(meta(s).id, \"test1\", \"test2\"), VALUE {\"c21\": s.c11, \"c22\": s.c12 + s.c13, \"type\": \"target\", \"test_id\": s.test_id, \"inserted\": true})",
+        "statements":"MERGE /*+ INDEX(t st_target_idx) USE_HASH(s/PROBE) */ INTO shellTest t USING (SELECT meta(s1).id AS metaid, s1.* FROM shellTest s1 WHERE s1.c11 IS NOT NULL AND s1.type = \"source\") AS s ON t.c21 = s.c11 WHEN MATCHED THEN UPDATE set t.c23 = t.c22, t.c22 = s.c12 WHERE s.type = \"source\" AND t.type = \"target\" WHEN NOT MATCHED THEN INSERT (KEY REPLACE(s.metaid, \"test1\", \"test2\"), VALUE {\"c21\": s.c11, \"c22\": s.c12 + s.c13, \"type\": \"target\", \"test_id\": s.test_id, \"inserted\": true})",
         "results": [
     ]
     },
@@ -192,7 +192,7 @@
             ],
             "statement": "SELECT RAW p.`optimizer_hints` FROM $explan AS p"
         },
-        "statements":"MERGE /*+ INDEX(t st_target_idx) USE_HASH(s/PROBE) */ INTO shellTest t USE INDEX(st_target_idx) USING (SELECT s1.* FROM shellTest s1 WHERE s1.c11 IS NOT NULL AND s1.type = \"source\") AS s USE HASH(probe) ON t.c21 = s.c11 WHEN MATCHED THEN UPDATE set t.c23 = t.c22, t.c22 = s.c12 WHERE s.type = \"source\" AND t.type = \"target\" WHEN NOT MATCHED THEN INSERT (KEY REPLACE(meta(s).id, \"test1\", \"test2\"), VALUE {\"c21\": s.c11, \"c22\": s.c12 + s.c13, \"type\": \"target\", \"test_id\": s.test_id, \"inserted\": true})",
+        "statements":"MERGE /*+ INDEX(t st_target_idx) USE_HASH(s/PROBE) */ INTO shellTest t USE INDEX(st_target_idx) USING (SELECT meta(s1).id AS metaid, s1.* FROM shellTest s1 WHERE s1.c11 IS NOT NULL AND s1.type = \"source\") AS s USE HASH(probe) ON t.c21 = s.c11 WHEN MATCHED THEN UPDATE set t.c23 = t.c22, t.c22 = s.c12 WHERE s.type = \"source\" AND t.type = \"target\" WHEN NOT MATCHED THEN INSERT (KEY REPLACE(s.metaid, \"test1\", \"test2\"), VALUE {\"c21\": s.c11, \"c22\": s.c12 + s.c13, \"type\": \"target\", \"test_id\": s.test_id, \"inserted\": true})",
         "results": [
     ]
     },
