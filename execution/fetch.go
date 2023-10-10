@@ -79,7 +79,7 @@ func (this *Fetch) RunOnce(context *Context, parent value.Value) {
 
 func (this *Fetch) beforeItems(context *Context, parent value.Value) bool {
 	if this.keyspace = this.plan.Keyspace(); this.keyspace == nil {
-		this.keyspace = getKeyspace(this.keyspace, this.plan.Term().FromExpression(), context)
+		this.keyspace = getKeyspace(this.keyspace, this.plan.Term().FromExpression(), &this.operatorCtx)
 	}
 	this.parent = parent
 	return this.keyspace != nil
@@ -165,7 +165,7 @@ func (this *Fetch) flushBatch(context *Context) bool {
 	this.switchPhase(_SERVTIME)
 
 	// Fetch
-	errs := this.keyspace.Fetch(fetchKeys, fetchMap, context, this.plan.SubPaths())
+	errs := this.keyspace.Fetch(fetchKeys, fetchMap, &this.operatorCtx, this.plan.SubPaths())
 
 	this.switchPhase(_EXECTIME)
 

@@ -59,7 +59,7 @@ func (this *Offset) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *Offset) beforeItems(context *Context, parent value.Value) bool {
-	val, e := this.plan.Expression().Evaluate(parent, context)
+	val, e := this.plan.Expression().Evaluate(parent, &this.operatorCtx)
 	if e != nil {
 		context.Error(errors.NewEvaluationError(e, "OFFSET"))
 		return false

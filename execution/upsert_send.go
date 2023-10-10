@@ -54,7 +54,7 @@ func (this *SendUpsert) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *SendUpsert) beforeItems(context *Context, parent value.Value) bool {
-	this.keyspace = getKeyspace(this.plan.Keyspace(), this.plan.Term().ExpressionTerm(), context)
+	this.keyspace = getKeyspace(this.plan.Keyspace(), this.plan.Term().ExpressionTerm(), &this.operatorCtx)
 	return this.keyspace != nil
 }
 
@@ -96,7 +96,7 @@ func (this *SendUpsert) flushBatch(context *Context) bool {
 
 		if keyExpr != nil {
 			// UPSERT ... SELECT
-			key, err = keyExpr.Evaluate(av, context)
+			key, err = keyExpr.Evaluate(av, &this.operatorCtx)
 			if err != nil {
 				context.Error(errors.NewEvaluationError(err,
 					fmt.Sprintf("UPSERT key for %v", av.GetValue())))
@@ -104,7 +104,7 @@ func (this *SendUpsert) flushBatch(context *Context) bool {
 			}
 
 			if valExpr != nil {
-				val, err = valExpr.Evaluate(av, context)
+				val, err = valExpr.Evaluate(av, &this.operatorCtx)
 				if err != nil {
 					context.Error(errors.NewEvaluationError(err,
 						fmt.Sprintf("UPSERT value for %v", av.GetValue())))
@@ -118,7 +118,7 @@ func (this *SendUpsert) flushBatch(context *Context) bool {
 				context.ReleaseValueSize(av.Size())
 			}
 			if optionsExpr != nil {
-				options, err = optionsExpr.Evaluate(av, context)
+				options, err = optionsExpr.Evaluate(av, &this.operatorCtx)
 				if err != nil {
 					context.Error(errors.NewEvaluationError(err,
 						fmt.Sprintf("UPSERT value for %v", av.GetValue())))
@@ -172,7 +172,7 @@ func (this *SendUpsert) flushBatch(context *Context) bool {
 
 	// Perform the actual UPSERT
 	var errs errors.Errors
-	dpairs, errs = this.keyspace.Upsert(dpairs, context)
+	dpairs, errs = this.keyspace.Upsert(dpairs, &this.operatorCtx)
 
 	this.switchPhase(_EXECTIME)
 

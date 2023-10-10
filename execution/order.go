@@ -24,10 +24,9 @@ type orderTerm struct {
 
 type Order struct {
 	base
-	plan    *plan.Order
-	values  value.AnnotatedValues
-	context *Context
-	terms   []orderTerm
+	plan   *plan.Order
+	values value.AnnotatedValues
+	terms  []orderTerm
 }
 
 const _ORDER_CAP = 1024
@@ -83,12 +82,11 @@ func (this *Order) processItem(item value.AnnotatedValue, context *Context) bool
 }
 
 func (this *Order) setupTerms(context *Context) {
-	this.context = context
 	this.terms = make([]orderTerm, len(this.plan.Terms()))
 	for i, term := range this.plan.Terms() {
 		this.terms[i].term = term.Expression().String()
-		this.terms[i].descending = term.Descending(this.context)
-		this.terms[i].nullsLast = term.NullsLast(this.context)
+		this.terms[i].descending = term.Descending(&this.operatorCtx)
+		this.terms[i].nullsLast = term.NullsLast(&this.operatorCtx)
 	}
 }
 
@@ -100,7 +98,6 @@ func (this *Order) beforeItems(context *Context, item value.Value) bool {
 func (this *Order) afterItems(context *Context) {
 	defer func() {
 		this.releaseValues()
-		this.context = nil
 		this.terms = nil
 	}()
 
@@ -150,7 +147,7 @@ func (this *Order) makeMinimal(item value.AnnotatedValue, context *Context) {
 		item.SetAttachment("aggregates", aggs)
 	}
 	for i, term := range this.plan.Terms() {
-		_, err := getOriginalCachedValue(item, term.Expression(), this.terms[i].term, this.context)
+		_, err := getOriginalCachedValue(item, term.Expression(), this.terms[i].term, &this.operatorCtx)
 		if err != nil {
 			for k, v := range origAtt {
 				item.SetAttachment(k, v)
@@ -186,12 +183,12 @@ func (this *Order) lessThan(v1 value.AnnotatedValue, v2 value.AnnotatedValue) bo
 	for i, term := range this.plan.Terms() {
 		s := this.terms[i].term
 
-		ev1, e = getOriginalCachedValue(v1, term.Expression(), s, this.context)
+		ev1, e = getOriginalCachedValue(v1, term.Expression(), s, &this.operatorCtx)
 		if e != nil {
 			return false
 		}
 
-		ev2, e = getOriginalCachedValue(v2, term.Expression(), s, this.context)
+		ev2, e = getOriginalCachedValue(v2, term.Expression(), s, &this.operatorCtx)
 		if e != nil {
 			return false
 		}

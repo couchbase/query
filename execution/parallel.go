@@ -42,7 +42,7 @@ func NewParallel(plan *plan.Parallel, context *Context, child Operator) *Paralle
 	// that and avoid needlessly allocating more
 	childBase := child.getBase()
 	if childBase.cap() > 1 {
-		newRedirectBase(&rv.base)
+		newRedirectBase(&rv.base, context)
 		childBase.exchangeMove(&rv.base)
 	} else {
 		newBase(&rv.base, context)

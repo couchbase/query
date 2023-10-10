@@ -71,7 +71,7 @@ func (this *Unset) processItem(item value.AnnotatedValue, context *Context) bool
 
 	var err error
 	for _, t := range this.plan.Node().Terms() {
-		clone, err = unsetPath(t, clone, item, context)
+		clone, err = unsetPath(t, clone, item, &this.operatorCtx)
 		if err != nil {
 			context.Error(errors.NewEvaluationError(err, "UNSET clause"))
 			return false
@@ -82,7 +82,7 @@ func (this *Unset) processItem(item value.AnnotatedValue, context *Context) bool
 	return this.sendItem(item)
 }
 
-func unsetPath(t *algebra.UnsetTerm, clone, item value.AnnotatedValue, context *Context) (
+func unsetPath(t *algebra.UnsetTerm, clone, item value.AnnotatedValue, context *opContext) (
 	value.AnnotatedValue, error) {
 	if t.UpdateFor() != nil {
 		return unsetFor(t, clone, item, context)
@@ -92,7 +92,7 @@ func unsetPath(t *algebra.UnsetTerm, clone, item value.AnnotatedValue, context *
 	return clone, nil
 }
 
-func unsetFor(t *algebra.UnsetTerm, clone, item value.AnnotatedValue, context *Context) (
+func unsetFor(t *algebra.UnsetTerm, clone, item value.AnnotatedValue, context *opContext) (
 	value.AnnotatedValue, error) {
 	var ivals []value.Value
 

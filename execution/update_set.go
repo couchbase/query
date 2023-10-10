@@ -77,7 +77,7 @@ func (this *Set) processItem(item value.AnnotatedValue, context *Context) bool {
 
 	var err error
 	for _, t := range this.plan.Node().Terms() {
-		clone, err = setPath(t, clone, item, context)
+		clone, err = setPath(t, clone, item, &this.operatorCtx)
 		if err != nil {
 			context.Error(errors.NewEvaluationError(err, "SET clause"))
 			return false
@@ -88,7 +88,7 @@ func (this *Set) processItem(item value.AnnotatedValue, context *Context) bool {
 	return this.sendItem(item)
 }
 
-func setPath(t *algebra.SetTerm, clone, item value.AnnotatedValue, context *Context) (
+func setPath(t *algebra.SetTerm, clone, item value.AnnotatedValue, context *opContext) (
 	value.AnnotatedValue, error) {
 
 	// make sure we don't used a possibly stale cached value
@@ -114,7 +114,7 @@ func setPath(t *algebra.SetTerm, clone, item value.AnnotatedValue, context *Cont
 	return clone, err
 }
 
-func setFor(t *algebra.SetTerm, clone, item value.AnnotatedValue, context *Context) (
+func setFor(t *algebra.SetTerm, clone, item value.AnnotatedValue, context *opContext) (
 	value.AnnotatedValue, error) {
 	ivals, mismatch, err := buildFor(t.UpdateFor(), item, context)
 	defer releaseValsFor(ivals)

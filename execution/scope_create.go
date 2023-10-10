@@ -27,7 +27,7 @@ func NewCreateScope(plan *plan.CreateScope, context *Context) *CreateScope {
 		plan: plan,
 	}
 
-	newRedirectBase(&rv.base)
+	newRedirectBase(&rv.base, context)
 	rv.output = rv
 	return rv
 }

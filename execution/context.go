@@ -159,6 +159,41 @@ const (
 	CONTEXT_IS_ADVISOR = 1 << iota // Advisor() function
 )
 
+// Per operator context
+type opContext struct {
+	base *base // base is named to make sure that it doesn't inherit anything from the base type
+	*Context
+}
+
+func (this *opContext) Park(stop func(bool)) {
+	this.base.setExternalStop(stop)
+	this.base.switchPhase(_CHANTIME)
+}
+func (this *opContext) Resume() {
+	this.base.setExternalStop(nil)
+	this.base.switchPhase(_EXECTIME)
+}
+
+func (this *opContext) IsActive() bool {
+	return this.base.opState == _RUNNING
+}
+
+func (this *opContext) Copy() *opContext {
+	return &opContext{this.base, this.Context.Copy()}
+}
+
+func (this *opContext) NewQueryContext(queryContext string, readonly bool) interface{} {
+	return &opContext{this.base, this.Context.NewQueryContext(queryContext, readonly).(*Context)}
+}
+
+func NewOpContext(context *Context) *opContext {
+	b := &base{}
+	newBase(b, context)
+	return &opContext{b, context}
+}
+
+// Per request context
+
 type Context struct {
 	inUseMemory         uint64
 	requestId           string
@@ -338,6 +373,10 @@ func (this *Context) NewQueryContext(queryContext string, readonly bool) interfa
 	rv.inlineUdfExprs = this.inlineUdfExprs
 	rv.queryMutex = this.queryMutex
 	return rv
+}
+
+func (this *Context) IsActive() bool {
+	return true
 }
 
 func (this *Context) QueryContext() string {
@@ -864,7 +903,7 @@ func (this *Context) TxExpired() bool {
 
 // subquery evaluation
 
-func (this *Context) EvaluateSubquery(query *algebra.Select, parent value.Value) (value.Value, error) {
+func (this *opContext) EvaluateSubquery(query *algebra.Select, parent value.Value) (value.Value, error) {
 	var qp *plan.QueryPlan
 	var subplan, subplanIsks interface{}
 	planFound := false
@@ -971,7 +1010,7 @@ func (this *Context) EvaluateSubquery(query *algebra.Select, parent value.Value)
 	if opsFound {
 		sequence = ops
 		collect = opc
-		ok = sequence.reopen(this)
+		ok = sequence.reopen(this.Context)
 		if !ok {
 			logging.Warna(func() string { return fmt.Sprintf("Failed to reopen: %v", query.String()) })
 
@@ -982,7 +1021,7 @@ func (this *Context) EvaluateSubquery(query *algebra.Select, parent value.Value)
 		}
 	}
 	if !ok {
-		pipeline, err := Build(subplan.(plan.Operator), this)
+		pipeline, err := Build(subplan.(plan.Operator), this.Context)
 		if err != nil {
 			// Generate our own error for this subquery, in addition to whatever the query above is doing.
 			err1 := errors.NewSubqueryBuildError(err)
@@ -991,18 +1030,28 @@ func (this *Context) EvaluateSubquery(query *algebra.Select, parent value.Value)
 		}
 
 		// Collect subquery results
-		collect = NewCollect(plan.NewCollect(), this)
-		sequence = NewSequence(plan.NewSequence(), this, pipeline, collect)
+		collect = NewCollect(plan.NewCollect(), this.Context)
+		sequence = NewSequence(plan.NewSequence(), this.Context, pipeline, collect)
 	}
 	var track int32
 	av, stashTracking := parent.(value.AnnotatedValue)
 	if stashTracking {
 		track = av.Stash()
 	}
-	sequence.RunOnce(this, parent)
+
+	this.Park(func(stop bool) {
+		if stop {
+			sequence.SendAction(_ACTION_STOP)
+		} else {
+			sequence.SendAction(_ACTION_PAUSE)
+		}
+	})
+
+	sequence.RunOnce(this.Context, parent)
 
 	// Await completion
 	collect.waitComplete()
+	this.Resume()
 
 	results := collect.ValuesOnce()
 

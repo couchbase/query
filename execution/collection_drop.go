@@ -27,7 +27,7 @@ func NewDropCollection(plan *plan.DropCollection, context *Context) *DropCollect
 		plan: plan,
 	}
 
-	newRedirectBase(&rv.base)
+	newRedirectBase(&rv.base, context)
 	rv.output = rv
 	return rv
 }

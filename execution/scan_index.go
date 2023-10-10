@@ -84,7 +84,7 @@ func (this *IndexScan) RunOnce(context *Context, parent value.Value) {
 		this.children = _INDEX_SCAN_POOL.Get()
 
 		for i, span := range spans {
-			scan := newSpanScan(this, span)
+			scan := newSpanScan(this, span, context)
 			scan.SetOutput(this.output)
 			scan.SetBit(this.bit)
 			this.children = append(this.children, scan)
@@ -148,14 +148,14 @@ type spanScan struct {
 	indexScan *IndexScan
 }
 
-func newSpanScan(parent *IndexScan, span *plan.Span) *spanScan {
+func newSpanScan(parent *IndexScan, span *plan.Span, context *Context) *spanScan {
 	rv := &spanScan{
 		plan:      parent.plan,
 		span:      span,
 		indexScan: parent,
 	}
 
-	newRedirectBase(&rv.base)
+	newRedirectBase(&rv.base, context)
 	rv.newStopChannel()
 	rv.parent = parent
 	rv.output = parent.output
@@ -274,7 +274,7 @@ func (this *spanScan) scan(context *Context, conn *datastore.IndexConnection, pa
 
 	// for nested-loop join we need to pass in values from left-hand-side (outer) of the join
 	// for span evaluation
-	dspan, empty, err := evalSpan(this.span, parent, context)
+	dspan, empty, err := evalSpan(this.span, parent, &this.operatorCtx)
 	if err != nil || empty {
 		if err != nil {
 			context.Error(errors.NewEvaluationError(err, "span"))
@@ -283,7 +283,7 @@ func (this *spanScan) scan(context *Context, conn *datastore.IndexConnection, pa
 		return
 	}
 
-	limit := evalLimitOffset(this.plan.Limit(), parent, math.MaxInt64, this.plan.Covering(), context)
+	limit := evalLimitOffset(this.plan.Limit(), parent, math.MaxInt64, this.plan.Covering(), &this.operatorCtx)
 
 	keyspaceTerm := this.plan.Term()
 	scanVector := context.ScanVectorSource().ScanVector(keyspaceTerm.Namespace(), keyspaceTerm.Path().Bucket())
@@ -291,7 +291,7 @@ func (this *spanScan) scan(context *Context, conn *datastore.IndexConnection, pa
 		context.ScanConsistency(), scanVector, conn)
 }
 
-func evalSpan(ps *plan.Span, parent value.Value, context *Context) (*datastore.Span, bool, error) {
+func evalSpan(ps *plan.Span, parent value.Value, context *opContext) (*datastore.Span, bool, error) {
 	var err error
 	var empty bool
 

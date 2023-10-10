@@ -100,7 +100,7 @@ func (this *InitialProject) processItem(item value.AnnotatedValue, context *Cont
 		}
 	} else if this.plan.Projection().Raw() {
 		// Raw projection of an expression
-		v, err := expr.Evaluate(item, context)
+		v, err := expr.Evaluate(item, &this.operatorCtx)
 		if err != nil {
 			context.Error(errors.NewEvaluationError(err, "projection"))
 			return false
@@ -155,7 +155,7 @@ func (this *InitialProject) processTerms(item value.AnnotatedValue, context *Con
 
 	for _, term := range this.plan.Terms() {
 		if term.Result().Alias() != "" {
-			v, err := term.Result().Expression().Evaluate(item, context)
+			v, err := term.Result().Expression().Evaluate(item, &this.operatorCtx)
 			if err != nil {
 				context.Error(errors.NewEvaluationError(err, "projection"))
 				return false
@@ -172,7 +172,7 @@ func (this *InitialProject) processTerms(item value.AnnotatedValue, context *Con
 			starval := item.GetValue()
 			if term.Result().Expression() != nil {
 				var err error
-				starval, err = term.Result().Expression().Evaluate(item, context)
+				starval, err = term.Result().Expression().Evaluate(item, &this.operatorCtx)
 				if err != nil {
 					context.Error(errors.NewEvaluationError(err, "projection"))
 					return false
