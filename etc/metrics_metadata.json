@@ -31,10 +31,20 @@
 		"help": "The total number of potentially auditable requests sent to the query engine.",
 		"added": "7.0.0"
 	},
+	"n1ql_bulk_get_errors": {
+		"type": "counter",
+		"help": "Count of errors due to bulk get operations",
+		"added":"7.2.3"
+	},
 	"n1ql_cancelled": {
 		"type": "counter",
 		"help": "Total number of cancelled requests.",
 		"added": "7.0.0"
+	},
+	"n1ql_cas_mismatch_errors": {
+		"type":"counter",
+		"help": "Count of CAS mismatch errors",
+		"added":"7.2.3"
 	},
 	"n1ql_deletes": {
 		"type": "counter",
@@ -171,6 +181,11 @@
 		"uiName" : "Query Execution Time",
 		"notes": "In the Couchbase Server UI this metric is computed as an average, with a display name of \"Query Execution Time\" or n1ql_avg_svc_time. This metric was named query_service_time in versions before 7.0.0."
 	},
+	"n1ql_timeouts":{
+		"type": "counter",
+		"help": "Count of request timeout errors",
+		"added":"7.2.3"
+	},
 	"n1ql_transaction_time": {
 		"type": "counter",
 		"help": "Total elapsed time of transactions so far.",
@@ -182,6 +197,11 @@
 		"help": "Total number of transactions.",
 		"added": "7.0.0"
 	},
+	"n1ql_unauthorized_users": {
+		"type":"counter",
+		"help":"Count of unauthorized access errors",
+		"added": "7.2.3"
+	},
 	"n1ql_unbounded": {
 		"type": "counter",
 		"help": "Total number of N1QL requests with not_bounded index consistency.",
@@ -191,6 +211,11 @@
 		"type": "counter",
 		"help": "Total number of UPDATE requests.",
 		"added": "7.0.0"
+	},
+	"n1ql_mem_quota_exceeded_errors": {
+		"type": "counter",
+		"help": "Count of memory quota exceeded errors",
+		"added": "7.2.3"
 	},
 	"n1ql_warnings": {
 		"type": "counter",

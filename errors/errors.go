@@ -54,6 +54,8 @@ type Error interface {
 	Object() map[string]interface{}
 	Retry() value.Tristate
 	Cause() interface{}
+	HasCause(ErrorCode) bool
+	HasICause(ErrorCode) bool
 	SetCause(cause interface{})
 	ContainsText(text string) bool
 }
@@ -352,4 +354,56 @@ func (e *err) ContainsText(text string) bool {
 			return false
 		}
 	}
+}
+
+func (e *err) HasCause(code ErrorCode) bool {
+	if e.Code() == code {
+		return true
+	}
+	c := e.Cause()
+	for c != nil {
+		switch cse := c.(type) {
+		case Error:
+			if cse.Code() == code {
+				return true
+			}
+			c = cse.Cause()
+		case map[string]interface{}:
+			cde, ok := cse["code"]
+			if ok {
+				switch cde := cde.(type) {
+				case int32:
+					if cde == int32(code) {
+						return true
+					}
+				case ErrorCode:
+					if cde == code {
+						return true
+					}
+				}
+			}
+			c, _ = cse["cause"]
+		default:
+			c = nil
+		}
+	}
+	return false
+}
+
+func (e *err) HasICause(code ErrorCode) bool {
+	c := e.ICause
+
+	for c != nil {
+		switch icse := c.(type) {
+		case Error:
+			if icse.Code() == code {
+				return true
+			}
+			c = icse.GetICause()
+		default:
+			break
+		}
+	}
+
+	return false
 }

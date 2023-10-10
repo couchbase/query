@@ -191,6 +191,14 @@ const (
 	AUDIT_ACTIONS
 	AUDIT_ACTIONS_FAILED
 
+	// user error metrics
+	TIMEOUTS
+	MEM_QUOTA_EXCEEDED_ERRORS
+	UNAUTHORIZED_USERS
+	BULK_GET_ERRORS
+	CAS_MISMATCH_ERRORS
+	TEMP_SPACE_ERRORS
+
 	// unknown is always the last and does not have a corresponding name or metric
 	UNKNOWN
 )
@@ -240,6 +248,13 @@ const (
 
 	REQUEST_RATE  = "request_rate"
 	REQUEST_TIMER = "request_timer"
+
+	// user error metrics
+	_TIMEOUTS                  = "timeouts"
+	_MEM_QUOTA_EXCEEDED_ERRORS = "mem_quota_exceeded_errors"
+	_UNAUTHORIZED_USERS        = "unauthorized_users"
+	_BULK_GET_ERRORS           = "bulk_get_errors"
+	_CAS_MISMATCH_ERRORS       = "cas_mismatch_errors"
 )
 
 // please keep in sync with the mnemonics
@@ -284,6 +299,12 @@ var metricNames = []string{
 	_AUDIT_REQUESTS_FILTERED,
 	_AUDIT_ACTIONS,
 	_AUDIT_ACTIONS_FAILED,
+
+	_TIMEOUTS,
+	_MEM_QUOTA_EXCEEDED_ERRORS,
+	_UNAUTHORIZED_USERS,
+	_BULK_GET_ERRORS,
+	_CAS_MISMATCH_ERRORS,
 }
 
 const (
@@ -305,6 +326,25 @@ var slowMetricsMap = map[time.Duration][]CounterId{
 	_DURATION_0MS:    {},
 }
 
+var errMetricsMap = map[errors.ErrorCode]CounterId{
+	// timeouts
+	errors.E_SERVICE_TIMEOUT:       TIMEOUTS,
+	errors.E_CB_INDEX_SCAN_TIMEOUT: TIMEOUTS,
+
+	// mem_quota_exceeded
+	errors.E_MEMORY_QUOTA_EXCEEDED:             MEM_QUOTA_EXCEEDED_ERRORS,
+	errors.E_TRANSACTION_MEMORY_QUOTA_EXCEEDED: MEM_QUOTA_EXCEEDED_ERRORS,
+
+	// unauthorized_users
+	errors.E_DATASTORE_AUTHORIZATION: UNAUTHORIZED_USERS,
+
+	// bulk_get_errors
+	errors.E_CB_BULK_GET: BULK_GET_ERRORS,
+
+	// cas_mismatch_errors
+	errors.E_CAS_MISMATCH: CAS_MISMATCH_ERRORS,
+}
+
 var acctstore AccountingStore
 var counters []Counter = make([]Counter, len(metricNames))
 var requestTimer Timer
@@ -323,7 +363,7 @@ func RegisterMetrics(acctStore AccountingStore) {
 // Record request metrics
 func RecordMetrics(request_time, service_time, transaction_time time.Duration,
 	result_count int, result_size int,
-	error_count int, warn_count int, stmt string, prepared bool,
+	error_count int, warn_count int, errs errors.Errors, stmt string, prepared bool,
 	cancelled bool, index_scans int, primary_scans int, scanConsistency string) {
 
 	if acctstore == nil {
@@ -378,10 +418,25 @@ func RecordMetrics(request_time, service_time, transaction_time time.Duration,
 		counters[durationMetric].Inc(1)
 	}
 
-	// record the type of request if 0 errors
 	if error_count == 0 {
+		// record the type of request if 0 errors
 		if t := requestType(stmt); t != UNKNOWN {
 			counters[t].Inc(1)
+		}
+	} else {
+		toInc := map[CounterId]bool{}
+		for errCode, mid := range errMetricsMap {
+			for _, err := range errs {
+				if _, pres := toInc[mid]; pres {
+					continue
+				}
+
+				if err.HasCause(errCode) || err.HasICause(errCode) {
+					// itself and cause path or icause path
+					toInc[mid] = true
+					counters[mid].Inc(1)
+				}
+			}
 		}
 	}
 }
