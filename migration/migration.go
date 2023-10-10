@@ -25,12 +25,14 @@ const _MIGRATION_PATH = "/query/migration/"
 const _MIGRATION_STATE = "/state"
 const (
 	_MIGRATED = "migrated"
+	_ABORTED  = "aborted"
 )
 
 type waiters struct {
 	lock     sync.Mutex
 	cond     *sync.Cond
 	released bool
+	success  bool
 }
 
 type migrationDescriptor struct {
@@ -53,14 +55,18 @@ func setState(state string) []byte {
 	return out
 }
 
-func state(val []byte) string {
+func getState(val []byte) string {
 	var in migrationDescriptor
 	json.Unmarshal(val, &in)
 	return in.State
 }
 
-func Complete(what string) {
-	err := metakv.Set(_MIGRATION_PATH+what+_MIGRATION_STATE, setState(_MIGRATED), nil)
+func Complete(what string, success bool) {
+	state := _MIGRATED
+	if !success {
+		state = _ABORTED
+	}
+	err := metakv.Set(_MIGRATION_PATH+what+_MIGRATION_STATE, setState(state), nil)
 	if err != nil {
 		logging.Warnf("%v migration: Cannot switch to completed (err %v) - please restart node",
 			what, err)
@@ -70,16 +76,30 @@ func Complete(what string) {
 }
 
 // determine if migration ca be skipped
-func IsComplete(what string) bool {
+func IsComplete(what string) (bool, bool) {
+	var state string
 	val, _, err := metakv.Get(_MIGRATION_PATH + what + _MIGRATION_STATE)
-	return err == nil && state(val) == _MIGRATED
+	if err == nil {
+		state = getState(val)
+		if state == _MIGRATED {
+			return true, true
+		} else if state == _ABORTED {
+			return true, false
+		}
+	}
+	return false, false
 }
 
 // checking for migration to complete and waiting is it hasn't
-func Await(what string) {
+func Await(what string) bool {
 	val, _, err := metakv.Get(_MIGRATION_PATH + what + _MIGRATION_STATE)
-	if err == nil && state(val) == _MIGRATED {
-		return
+	if err == nil {
+		state := getState(val)
+		if state == _MIGRATED {
+			return true
+		} else if state == _ABORTED {
+			return false
+		}
 	}
 
 	// no dice
@@ -90,12 +110,12 @@ func Await(what string) {
 		w.cond.L.Lock()
 		if w.released {
 			w.cond.L.Unlock()
-			return
+			return w.success
 		}
 		w.cond.Wait()
 
 		w.cond.L.Unlock()
-		return
+		return w.success
 	}
 
 	// add migration
@@ -108,6 +128,7 @@ func Await(what string) {
 
 	// wait leaves the lock locked on exit
 	w.cond.L.Unlock()
+	return w.success
 }
 
 // migration callback
@@ -120,23 +141,26 @@ func callback(kve metakv.KVEntry) error {
 
 	what := path[len(_MIGRATION_PATH):]
 	what = what[:len(what)-len(_MIGRATION_STATE)]
-	newState := state(kve.Value)
+	newState := getState(kve.Value)
 
 	logging.Infof("%v migration: Metakv callback - migration state changed to %v", what, newState)
 
 	// this is a good place to hook in a migration callback if we want
 	// to offer the option of reacting to changing migration states
 
-	if state(kve.Value) != _MIGRATED {
+	success := false
+	if newState == _MIGRATED {
+		success = true
+	} else if newState != _ABORTED {
 		return nil
 	}
 
 	// call a separate go routine in case something happens in the call (wait on mutex/condition)
-	go callback1(what)
+	go callback1(what, success)
 	return nil
 }
 
-func callback1(what string) {
+func callback1(what string, success bool) {
 	mapLock.Lock()
 	w := waitersMap[what]
 	if w != nil {
@@ -144,6 +168,7 @@ func callback1(what string) {
 		logging.Infof("%v migration: Releasing waiters", what)
 		w.cond.L.Lock()
 		w.released = true
+		w.success = success
 		w.cond.L.Unlock()
 		w.cond.Broadcast()
 	} else {

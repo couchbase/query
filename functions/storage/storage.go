@@ -28,11 +28,25 @@ import (
 	"github.com/couchbase/query/value"
 )
 
+// node migration state
+type nodeState int
+
 const (
-	_NOT_MIGRATING = iota
+	_NOT_MIGRATING = nodeState(iota)
 	_MIGRATING
 	_MIGRATED
-	_PART_MIGRATED
+	_ABORTING
+	_ABORTED
+)
+
+// bucket migration state
+type bucketState int
+
+const (
+	_BUCKET_NOT_MIGRATING = bucketState(iota)
+	_BUCKET_MIGRATING
+	_BUCKET_MIGRATED
+	_BUCKET_PART_MIGRATED
 )
 
 const _UDF_MIGRATION = "UDF"
@@ -40,7 +54,7 @@ const _GRACE_PERIOD = 30 * time.Second
 const _RETRY_TIME = 10 * time.Second
 const _MAX_RETRY = 5
 
-var migrating int = _NOT_MIGRATING
+var migrating nodeState = _NOT_MIGRATING
 var migratingLock sync.Mutex
 var countDownStarted time.Time
 var lastActivity time.Time
@@ -53,9 +67,8 @@ func Migrate() {
 	}
 
 	// or functions already migrated
-	if migration.IsComplete(_UDF_MIGRATION) {
+	if checkSetComplete() {
 		logging.Infof("UDF migration: Already done")
-		migrating = _MIGRATED
 		return
 	}
 
@@ -143,11 +156,10 @@ func retryMigration() {
 
 		// migration complete?
 		migratingLock.Lock()
-		if migrating == _MIGRATED {
+		if migrating == _MIGRATED || migrating == _ABORTED || migrating == _ABORTING {
 			migratingLock.Unlock()
 			return
-		} else if migration.IsComplete(_UDF_MIGRATION) {
-			migrating = _MIGRATED
+		} else if checkSetComplete() {
 			migratingLock.Unlock()
 			return
 		}
@@ -159,26 +171,33 @@ func retryMigration() {
 		// try migration here
 		migrationsLock.Lock()
 		for _, bucket := range migrations {
+			// quick check for abort without lock
+			if migrating == _ABORTING || migrating == _ABORTED {
+				migrationsLock.Unlock()
+				logging.Infof("UDF migration: Migration is aborting, skip further migration operations")
+				return
+			}
+
 			bucket.Lock()
-			// of all bucket states, only _MIGRATED should skip further migration
-			if bucket.state != _MIGRATED {
-				if bucket.state == _NOT_MIGRATING {
+			// of all bucket states, only _BUCKET_MIGRATED should skip further migration
+			if bucket.state != _BUCKET_MIGRATED {
+				if bucket.state == _BUCKET_NOT_MIGRATING {
 					// make sure _system scope is available
 					err := checkSystemCollection(bucket.name)
 					if err != nil {
 						bucket.Unlock()
 						continue
 					}
-					bucket.state = _MIGRATING
+					bucket.state = _BUCKET_MIGRATING
 				}
 				// this is probably not the most efficient way to retry migration,
 				// since for each bucket we are going to scan metakv entries,
 				// however this does allow us to mark migration of individual bucket
-				// as _MIGRATED; also reuse the same code as regular migration.
+				// as _BUCKET_MIGRATED; also reuse the same code as regular migration.
 				if doMigrateBucket(bucket.name) {
-					bucket.state = _MIGRATED
+					bucket.state = _BUCKET_MIGRATED
 				} else {
-					bucket.state = _PART_MIGRATED
+					bucket.state = _BUCKET_PART_MIGRATED
 				}
 			}
 			bucket.Unlock()
@@ -195,6 +214,19 @@ func retryMigration() {
 	// if we get here, migration is not complete after maximum retry, log severe error
 	// this requires manual intervention
 	logging.Severef("UDF migration: Migration is not complete, please restart node")
+}
+
+// migratingLock, if needed, should be obtained from the caller
+func checkSetComplete() bool {
+	complete, success := migration.IsComplete(_UDF_MIGRATION)
+	if complete {
+		if success {
+			migrating = _MIGRATED
+		} else {
+			migrating = _ABORTED
+		}
+	}
+	return complete
 }
 
 func MakeName(bytes []byte) (functions.FunctionName, error) {
@@ -337,7 +369,7 @@ func ExternalBucketArchive() bool {
 type migrateBucket struct {
 	sync.Mutex
 	name  string
-	state int
+	state bucketState
 }
 
 var migrations map[string]*migrateBucket
@@ -360,6 +392,17 @@ func migrateAll() {
 			logging.Infof("UDF migration: Retry migration of all buckets (%d of %d)", i, _MAX_RETRY)
 		}
 
+		// is migration complete?
+		migratingLock.Lock()
+		if migrating == _MIGRATED || migrating == _ABORTED || migrating == _ABORTING {
+			migratingLock.Unlock()
+			return
+		} else if checkSetComplete() {
+			migratingLock.Unlock()
+			return
+		}
+		migratingLock.Unlock()
+
 		// if we are here, we know we have an extended datastore
 		ds := datastore.GetDatastore().(datastore.Datastore2)
 		if ds != nil {
@@ -367,6 +410,12 @@ func migrateAll() {
 				if !b.HasCapability(datastore.HAS_SYSTEM_COLLECTION) {
 					logging.Infof("UDF migration: Bucket %s missing system collection capability", b.Name())
 				} else {
+					// quick check for abort without lock
+					if migrating == _ABORTING || migrating == _ABORTED {
+						logging.Infof("UDF migration: Migration is aborting, skip further migration operations")
+						return
+					}
+
 					err := checkSystemCollection(b.Name())
 					if err == nil {
 						doMigrateBucket(b.Name())
@@ -393,11 +442,10 @@ func checkMigrateBucket(name string) {
 
 	// is migration complete?
 	migratingLock.Lock()
-	if migrating == _MIGRATED {
+	if migrating == _MIGRATED || migrating == _ABORTED || migrating == _ABORTING {
 		migratingLock.Unlock()
 		return
-	} else if migration.IsComplete(_UDF_MIGRATION) {
-		migrating = _MIGRATED
+	} else if checkSetComplete() {
 		migratingLock.Unlock()
 		return
 	}
@@ -409,7 +457,7 @@ func checkMigrateBucket(name string) {
 	if !ok {
 		bucket = &migrateBucket{
 			name:  name,
-			state: _NOT_MIGRATING,
+			state: _BUCKET_NOT_MIGRATING,
 		}
 		migrations[name] = bucket
 	}
@@ -420,12 +468,12 @@ func checkMigrateBucket(name string) {
 	doSysColl := false
 	doMigrate := true
 	bucket.Lock()
-	if bucket.state == _NOT_MIGRATING {
-		bucket.state = _MIGRATING
+	if bucket.state == _BUCKET_NOT_MIGRATING {
+		bucket.state = _BUCKET_MIGRATING
 		doSysColl = true
-	} else if bucket.state == _PART_MIGRATED {
-		bucket.state = _MIGRATING
-	} else if bucket.state == _MIGRATING || bucket.state == _MIGRATED {
+	} else if bucket.state == _BUCKET_PART_MIGRATED {
+		bucket.state = _BUCKET_MIGRATING
+	} else if bucket.state == _BUCKET_MIGRATING || bucket.state == _BUCKET_MIGRATED {
 		doMigrate = false
 	} else {
 		logging.Errorf("UDF migration: Unexpected bucket migration state %v", bucket.state)
@@ -454,11 +502,10 @@ func checkMigrateBucket(name string) {
 
 	// if migration completed while we are waiting ...
 	migratingLock.Lock()
-	if migrating == _MIGRATED {
+	if migrating == _MIGRATED || migrating == _ABORTED || migrating == _ABORTING {
 		migratingLock.Unlock()
 		return
-	} else if migration.IsComplete(_UDF_MIGRATION) {
-		migrating = _MIGRATED
+	} else if checkSetComplete() {
 		migratingLock.Unlock()
 		return
 	}
@@ -468,9 +515,9 @@ func checkMigrateBucket(name string) {
 
 	bucket.Lock()
 	if b {
-		bucket.state = _MIGRATED
+		bucket.state = _BUCKET_MIGRATED
 	} else {
-		bucket.state = _PART_MIGRATED
+		bucket.state = _BUCKET_PART_MIGRATED
 	}
 	bucket.Unlock()
 
@@ -567,8 +614,10 @@ func checkMigrationComplete() bool {
 	migratingLock.Lock()
 	defer migratingLock.Unlock()
 
-	if migrating == _MIGRATED {
+	if migrating == _MIGRATED || migrating == _ABORTED {
 		return true
+	} else if migrating == _ABORTING {
+		return false
 	}
 
 	complete := true
@@ -592,7 +641,7 @@ func checkMigrationComplete() bool {
 	}
 
 	if complete {
-		migration.Complete(_UDF_MIGRATION)
+		migration.Complete(_UDF_MIGRATION, true)
 		migrating = _MIGRATED
 	}
 
@@ -608,7 +657,7 @@ func checkMigrations() {
 			if _, ok := migrations[bname]; !ok {
 				migrations[bname] = &migrateBucket{
 					name:  bname,
-					state: _NOT_MIGRATING,
+					state: _BUCKET_NOT_MIGRATING,
 				}
 			}
 			migrationsLock.Unlock()
@@ -618,7 +667,7 @@ func checkMigrations() {
 }
 
 func UseSystemStorage() bool {
-	if migrating == _MIGRATED || tenant.IsServerless() {
+	if migrating == _MIGRATED || migrating == _ABORTED || tenant.IsServerless() {
 		return true
 	}
 
@@ -631,10 +680,20 @@ func UseSystemStorage() bool {
 		}
 	}
 
-	migration.Await(_UDF_MIGRATION)
+	success := migration.Await(_UDF_MIGRATION)
 
 	// mark migrated for those migrations executed by another node
-	migrating = _MIGRATED
+	if migrating != _MIGRATED && migrating != _ABORTED {
+		migratingLock.Lock()
+		if migrating != _MIGRATED && migrating != _ABORTED {
+			if success {
+				migrating = _MIGRATED
+			} else {
+				migrating = _ABORTED
+			}
+		}
+		migratingLock.Unlock()
+	}
 	return true
 }
 
@@ -708,8 +767,19 @@ func GetDDLFromDefinition(name string, defn value.Value) string {
 
 func abortMigration() (string, errors.Error) {
 
+	var returnMsg string
+	migratingLock.Lock()
 	if migrating == _MIGRATED {
-		return "UDF migration: Already completed.\n", nil
+		returnMsg = "UDF migration: Already completed.\n"
+	} else if migrating == _ABORTED {
+		returnMsg = "UDF migration: Already aborted.\n"
+	} else {
+		migrating = _ABORTING
+	}
+	migratingLock.Unlock()
+
+	if returnMsg != "" {
+		return returnMsg, nil
 	}
 
 	logging.Severef("UDF migration: Aborting migration")
@@ -745,8 +815,8 @@ func abortMigration() (string, errors.Error) {
 		res.WriteRune('\n')
 	}
 
-	migration.Complete(_UDF_MIGRATION)
-	migrating = _MIGRATED
+	migration.Complete(_UDF_MIGRATION, false)
+	migrating = _ABORTED
 
 	res.WriteString("UDF migration: Aborted.\n")
 	return res.String(), nil
