@@ -30,10 +30,13 @@ type IndexScan3 struct {
 }
 
 func NewIndexScan3(plan *plan.IndexScan3, context *Context) *IndexScan3 {
-	rv := &IndexScan3{}
-	rv.plan = plan
+	rv := &IndexScan3{plan: plan}
 
 	newBase(&rv.base, context)
+	rv.phase = INDEX_SCAN
+	if p, ok := indexerPhase[plan.Index().Indexer().Name()]; ok {
+		rv.phase = p.index
+	}
 	rv.output = rv
 	return rv
 }
@@ -58,7 +61,7 @@ func (this *IndexScan3) RunOnce(context *Context, parent value.Value) {
 		defer context.Recover(&this.base) // Recover from any panic
 		active := this.active()
 		this.switchPhase(_EXECTIME)
-		this.setExecPhase(INDEX_SCAN, context)
+		this.setExecPhaseWithAgg(this.Phase(), context)
 		defer this.cleanup(context)
 		if !active {
 			return
@@ -69,7 +72,7 @@ func (this *IndexScan3) RunOnce(context *Context, parent value.Value) {
 				this.keys, this.pool = this.deltaKeyspaceDone(this.keys, this.pool)
 			}()
 			this.keys, this.pool = this.scanDeltaKeyspace(this.plan.Keyspace(), parent,
-				INDEX_SCAN, context, this.plan.AllCovers())
+				this.Phase(), context, this.plan.AllCovers())
 		}
 
 		this.conn = datastore.NewIndexConnection(context)
@@ -92,7 +95,7 @@ func (this *IndexScan3) RunOnce(context *Context, parent value.Value) {
 
 		var countDocs = func() {
 			if docs > 0 {
-				context.AddPhaseCount(INDEX_SCAN, docs)
+				context.AddPhaseCountWithAgg(this.Phase(), docs)
 			}
 		}
 		defer countDocs()
@@ -177,7 +180,7 @@ func (this *IndexScan3) RunOnce(context *Context, parent value.Value) {
 						ok = this.sendItem(av)
 						docs++
 						if docs > _PHASE_UPDATE_COUNT {
-							context.AddPhaseCount(INDEX_SCAN, docs)
+							context.AddPhaseCountWithAgg(this.Phase(), docs)
 							docs = 0
 						}
 					}

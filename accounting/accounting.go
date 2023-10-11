@@ -166,6 +166,10 @@ const (
 
 	INDEX_SCANS
 	PRIMARY_SCANS
+	INDEX_SCANS_GSI
+	PRIMARY_SCANS_GSI
+	INDEX_SCANS_FTS
+	PRIMARY_SCANS_FTS
 
 	INVALID_REQUESTS
 
@@ -219,8 +223,12 @@ const (
 
 	_TRANSACTIONS = "transactions"
 
-	_INDEX_SCANS   = "index_scans"
-	_PRIMARY_SCANS = "primary_scans"
+	_INDEX_SCANS       = "index_scans"
+	_PRIMARY_SCANS     = "primary_scans"
+	_INDEX_SCANS_GSI   = "index_scans_gsi"
+	_PRIMARY_SCANS_GSI = "primary_scans_gsi"
+	_INDEX_SCANS_FTS   = "index_scans_fts"
+	_PRIMARY_SCANS_FTS = "primary_scans_fts"
 
 	_INVALID_REQUESTS = "invalid_requests"
 
@@ -275,6 +283,10 @@ var metricNames = []string{
 
 	_INDEX_SCANS,
 	_PRIMARY_SCANS,
+	_INDEX_SCANS_GSI,
+	_PRIMARY_SCANS_GSI,
+	_INDEX_SCANS_FTS,
+	_PRIMARY_SCANS_FTS,
 
 	_INVALID_REQUESTS,
 
@@ -361,10 +373,10 @@ func RegisterMetrics(acctStore AccountingStore) {
 }
 
 // Record request metrics
-func RecordMetrics(request_time, service_time, transaction_time time.Duration,
-	result_count int, result_size int,
-	error_count int, warn_count int, errs errors.Errors, stmt string, prepared bool,
-	cancelled bool, index_scans int, primary_scans int, scanConsistency string) {
+func RecordMetrics(request_time, service_time, transaction_time time.Duration, result_count int, result_size int, error_count int,
+	warn_count int, errs errors.Errors, stmt string, prepared bool, cancelled bool, index_scans int, primary_scans int,
+	index_scans_gsi int, primary_scans_gsi int, index_scans_fts int, primary_scans_fts int,
+	scanConsistency string) {
 
 	if acctstore == nil {
 		return
@@ -385,6 +397,10 @@ func RecordMetrics(request_time, service_time, transaction_time time.Duration,
 
 	counters[INDEX_SCANS].Inc(int64(index_scans))
 	counters[PRIMARY_SCANS].Inc(int64(primary_scans))
+	counters[INDEX_SCANS_GSI].Inc(int64(index_scans_gsi))
+	counters[PRIMARY_SCANS_GSI].Inc(int64(primary_scans_gsi))
+	counters[INDEX_SCANS_FTS].Inc(int64(index_scans_fts))
+	counters[PRIMARY_SCANS_FTS].Inc(int64(primary_scans_fts))
 	counters[REQUEST_TIME].Inc(int64(request_time))
 	counters[SERVICE_TIME].Inc(int64(service_time))
 	counters[TRANSACTION_TIME].Inc(int64(transaction_time))

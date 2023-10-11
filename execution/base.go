@@ -123,6 +123,16 @@ const (
 	_ACTION_PAUSE
 )
 
+type phaseMap struct {
+	primary Phases
+	index   Phases
+}
+
+var indexerPhase = map[datastore.IndexType]phaseMap{
+	datastore.GSI: phaseMap{PRIMARY_SCAN_GSI, INDEX_SCAN_GSI},
+	datastore.FTS: phaseMap{PRIMARY_SCAN_FTS, INDEX_SCAN_FTS},
+}
+
 type base struct {
 	valueExchange
 	conn           *datastore.IndexConnection
@@ -142,7 +152,7 @@ type base struct {
 	timePhase      timePhases
 	startTime      util.Time
 	execPhase      Phases
-	phaseTimes     func(time.Duration)
+	phaseTimes     func(*Context, Phases, time.Duration)
 	execTime       time.Duration
 	chanTime       time.Duration
 	servTime       time.Duration
@@ -158,6 +168,7 @@ type base struct {
 	activeCond     sync.Cond
 	activeLock     sync.Mutex
 	opState        opState
+	phase          Phases
 }
 
 const _ITEM_CAP = 512
@@ -196,7 +207,7 @@ func newBase(dest *base, context *Context) {
 	*dest = base{}
 	newValueExchange(&dest.valueExchange, context.GetPipelineCap())
 	dest.execPhase = PHASES
-	dest.phaseTimes = func(t time.Duration) {}
+	dest.phaseTimes = emptyPhaseTimes
 	dest.activeCond.L = &dest.activeLock
 	dest.doSend = parallelSend
 	dest.closeConsumer = false
@@ -209,7 +220,7 @@ func newRedirectBase(dest *base) {
 	*dest = base{}
 	newValueExchange(&dest.valueExchange, 1)
 	dest.execPhase = PHASES
-	dest.phaseTimes = func(t time.Duration) {}
+	dest.phaseTimes = emptyPhaseTimes
 	dest.activeCond.L = &dest.activeLock
 	dest.doSend = parallelSend
 	dest.closeConsumer = false
@@ -225,7 +236,7 @@ func newSerializedBase(dest *base, context *Context) {
 	*dest = base{}
 	newValueExchange(&dest.valueExchange, 1)
 	dest.execPhase = PHASES
-	dest.phaseTimes = func(t time.Duration) {}
+	dest.phaseTimes = emptyPhaseTimes
 	dest.activeCond.L = &dest.activeLock
 	dest.doSend = parallelSend
 	dest.closeConsumer = false
@@ -255,6 +266,7 @@ func (this *base) copy(dest *base) {
 	dest.doSend = parallelSend
 	dest.closeConsumer = false
 	dest.quota = this.quota
+	dest.phase = this.phase
 }
 
 // reset the operator to an initial state
@@ -1096,7 +1108,7 @@ func (this *base) scanDeltaKeyspace(keyspace datastore.Keyspace, parent value.Va
 	var docs uint64
 	defer func() {
 		if docs > 0 {
-			context.AddPhaseCount(phase, docs)
+			context.AddPhaseCountWithAgg(phase, docs)
 		}
 	}()
 
@@ -1113,7 +1125,7 @@ func (this *base) scanDeltaKeyspace(keyspace datastore.Keyspace, parent value.Va
 					ok = this.sendItem(av)
 					docs++
 					if docs > _PHASE_UPDATE_COUNT {
-						context.AddPhaseCount(phase, docs)
+						context.AddPhaseCountWithAgg(phase, docs)
 						docs = 0
 					}
 				}
@@ -1439,24 +1451,49 @@ func (this *base) switchPhase(p timePhases) {
 	switch oldPhase {
 	case _EXECTIME:
 		this.addExecTime(d)
-		this.phaseTimes(d)
+		this.phaseTimes(nil, this.execPhase, d) // DVJH: TODO - needs a context. When MB-59002 is merged we'll have it
 	case _SERVTIME:
 		this.addServTime(d)
-		this.phaseTimes(d)
+		this.phaseTimes(nil, this.execPhase, d) // DVJH: TODO - needs a context. When MB-59002 is merged we'll have it
 	case _CHANTIME:
 		this.addChanTime(d)
 	}
 }
 
 // accrues operators and phase times
+// only to be called by non runConsumer operators
 func (this *base) setExecPhase(phase Phases, context *Context) {
 	context.AddPhaseOperator(phase)
 	this.addExecPhase(phase, context)
 }
 
+func (this *base) setExecPhaseWithAgg(phase Phases, context *Context) {
+	context.AddPhaseOperatorWithAgg(phase)
+	this.addExecPhaseWithAgg(phase, context)
+}
+
 // accrues phase times (useful where we don't want to count operators)
+// only to be called by non runConsumer operators
 func (this *base) addExecPhase(phase Phases, context *Context) {
-	this.phaseTimes = func(t time.Duration) { context.AddPhaseTime(phase, t) }
+	this.execPhase = phase
+	this.phaseTimes = activePhaseTimes
+}
+
+func (this *base) addExecPhaseWithAgg(phase Phases, context *Context) {
+	this.execPhase = phase
+	this.phaseTimes = activePhaseTimesWithAgg
+}
+
+// MB-55659 do not use anonymous functions with functional pointers, as they leak to the heap
+func emptyPhaseTimes(*Context, Phases, time.Duration) {
+}
+
+func activePhaseTimes(c *Context, p Phases, t time.Duration) {
+	c.AddPhaseTime(p, t)
+}
+
+func activePhaseTimesWithAgg(c *Context, p Phases, t time.Duration) {
+	c.AddPhaseTimeWithAgg(p, t)
 }
 
 // operator times and items accrual
@@ -1478,6 +1515,10 @@ func (this *base) addInDocs(d int64) {
 
 func (this *base) addOutDocs(d int64) {
 	go_atomic.AddInt64((*int64)(&this.outDocs), d)
+}
+
+func (this *base) Phase() Phases {
+	return this.phase
 }
 
 // profile marshaller

@@ -774,6 +774,23 @@ func (this *BaseRequest) AddPhaseCount(p execution.Phases, c uint64) {
 	atomic.AddUint64(&this.phaseStats[p].count, c)
 }
 
+func (this *BaseRequest) FmtPhaseCounts() map[string]interface{} {
+	var p map[string]interface{} = nil
+
+	// Use simple iteration rather than a range clause to avoid a spurious data race report. MB-20692
+	nr := len(this.phaseStats)
+	for i := 0; i < nr; i++ {
+		count := atomic.LoadUint64(&this.phaseStats[i].count)
+		if count > 0 {
+			if p == nil {
+				p = make(map[string]interface{}, execution.PHASES)
+			}
+			p[execution.Phases(i).String()] = count
+		}
+	}
+	return p
+}
+
 func (this *BaseRequest) AddPhaseOperator(p execution.Phases) {
 	atomic.AddUint64(&this.phaseStats[p].operators, 1)
 }
@@ -782,37 +799,16 @@ func (this *BaseRequest) PhaseOperator(p execution.Phases) uint64 {
 	return uint64(this.phaseStats[p].operators)
 }
 
-func (this *BaseRequest) FmtPhaseCounts() map[string]interface{} {
-	var p map[string]interface{} = nil
-
-	// Use simple iteration rather than a range clause to avoid a spurious
-	// data race report. MB-20692
-	nr := len(this.phaseStats)
-	for i := 0; i < nr; i++ {
-		count := atomic.LoadUint64(&this.phaseStats[i].count)
-		if count > 0 {
-			if p == nil {
-				p = make(map[string]interface{},
-					execution.PHASES)
-			}
-			p[execution.Phases(i).String()] = count
-		}
-	}
-	return p
-}
-
 func (this *BaseRequest) FmtPhaseOperators() map[string]interface{} {
 	var p map[string]interface{} = nil
 
-	// Use simple iteration rather than a range clause to avoid a spurious
-	// data race report. MB-20692
+	// Use simple iteration rather than a range clause to avoid a spurious data race report. MB-20692
 	nr := len(this.phaseStats)
 	for i := 0; i < nr; i++ {
 		operators := atomic.LoadUint64(&this.phaseStats[i].operators)
 		if operators > 0 {
 			if p == nil {
-				p = make(map[string]interface{},
-					execution.PHASES)
+				p = make(map[string]interface{}, execution.PHASES)
 			}
 			p[execution.Phases(i).String()] = operators
 		}
@@ -820,20 +816,20 @@ func (this *BaseRequest) FmtPhaseOperators() map[string]interface{} {
 	return p
 }
 
-func (this *BaseRequest) AddPhaseTime(phase execution.Phases, duration time.Duration) {
-	atomic.AddUint64(&(this.phaseStats[phase].duration), uint64(duration))
+func (this *BaseRequest) AddPhaseTime(p execution.Phases, duration time.Duration) {
+	atomic.AddUint64(&this.phaseStats[p].duration, uint64(duration))
 }
 
 func (this *BaseRequest) FmtPhaseTimes() map[string]interface{} {
 	var p map[string]interface{} = nil
 
+	// Use simple iteration rather than a range clause to avoid a spurious data race report. MB-20692
 	nr := len(this.phaseStats)
 	for i := 0; i < nr; i++ {
 		duration := atomic.LoadUint64(&this.phaseStats[i].duration)
 		if duration > 0 {
 			if p == nil {
-				p = make(map[string]interface{},
-					execution.PHASES)
+				p = make(map[string]interface{}, execution.PHASES)
 			}
 			p[execution.Phases(i).String()] = time.Duration(duration).String()
 		}
