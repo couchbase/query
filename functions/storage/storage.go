@@ -383,6 +383,17 @@ func migrateAll() {
 		time.Sleep(_GRACE_PERIOD - countDown)
 	}
 
+	// is migration complete?
+	migratingLock.Lock()
+	if migrating == _MIGRATED || migrating == _ABORTED || migrating == _ABORTING {
+		migratingLock.Unlock()
+		return
+	} else if checkSetComplete() {
+		migratingLock.Unlock()
+		return
+	}
+	migratingLock.Unlock()
+
 	for i := 0; i <= _MAX_RETRY; i++ {
 		if i == 0 {
 			logging.Infof("UDF migration: Start migration of all buckets")
@@ -390,18 +401,18 @@ func migrateAll() {
 			// if we get here, migration is not complete, need to retry
 			time.Sleep(time.Duration(i) * _RETRY_TIME)
 			logging.Infof("UDF migration: Retry migration of all buckets (%d of %d)", i, _MAX_RETRY)
-		}
 
-		// is migration complete?
-		migratingLock.Lock()
-		if migrating == _MIGRATED || migrating == _ABORTED || migrating == _ABORTING {
+			// is migration complete?
+			migratingLock.Lock()
+			if migrating == _MIGRATED || migrating == _ABORTED || migrating == _ABORTING {
+				migratingLock.Unlock()
+				return
+			} else if checkSetComplete() {
+				migratingLock.Unlock()
+				return
+			}
 			migratingLock.Unlock()
-			return
-		} else if checkSetComplete() {
-			migratingLock.Unlock()
-			return
 		}
-		migratingLock.Unlock()
 
 		// if we are here, we know we have an extended datastore
 		ds := datastore.GetDatastore().(datastore.Datastore2)
