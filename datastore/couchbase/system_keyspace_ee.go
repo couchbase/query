@@ -339,6 +339,22 @@ func (s *store) getNumIndexNode() (int, errors.Errors) {
 func (s *store) CheckSystemCollection(bucketName, requestId string) errors.Error {
 	sysColl, err := s.GetSystemCollection(bucketName)
 	if err != nil {
+		// make sure the bucket exists before we wait (e.g. index advisor)
+		switch err.Code() {
+		case errors.E_CB_KEYSPACE_NOT_FOUND, errors.E_CB_BUCKET_NOT_FOUND:
+			defaultPool, er := s.NamespaceByName("default")
+			if er != nil {
+				return er
+			}
+
+			_, er = defaultPool.BucketByName(bucketName)
+			if er != nil {
+				return er
+			}
+		default:
+			return err
+		}
+		// wait for system collection to show up
 		maxRetry := 8
 		interval := 250 * time.Millisecond
 		for i := 0; i < maxRetry; i++ {
