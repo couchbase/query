@@ -60,6 +60,7 @@ type cbPoolMap struct {
 }
 
 type cbPoolServices struct {
+	sync.RWMutex
 	name         string
 	lastUpdate   util.Time
 	rev          int
@@ -207,9 +208,11 @@ func (info *infoImpl) Topology() ([]string, []errors.Error) {
 
 	isReadLock, errs := info.refresh()
 	for _, p := range _POOLMAP.poolServices {
+		p.RLock()
 		for node, _ := range p.nodeServices {
 			nodes = append(nodes, node)
 		}
+		p.RUnlock()
 	}
 	if isReadLock {
 		_POOLMAP.RUnlock()
@@ -230,7 +233,9 @@ func (info *infoImpl) Services(node string) (map[string]interface{}, []errors.Er
 		}
 	}()
 	for _, p := range _POOLMAP.poolServices {
+		p.RLock()
 		n, ok := p.nodeServices[node]
+		p.RUnlock()
 		if ok {
 			return n.(map[string]interface{}), nil
 		}
@@ -331,10 +336,12 @@ func (info *infoImpl) refresh() (bool, []errors.Error) {
 			} else {
 
 				// just update the node statuses
+				poolEntry.Lock()
 				for _, n := range pool.Nodes {
 					m := poolEntry.nodeServices[fullhostName(n.Hostname)].(map[string]interface{})
 					m["status"] = n.Status
 				}
+				poolEntry.Unlock()
 			}
 		} else {
 			if err != nil {

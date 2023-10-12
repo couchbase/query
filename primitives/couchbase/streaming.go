@@ -282,7 +282,7 @@ func (b *Bucket) UpdateBucket2(msgPrefix string, streamingFn StreamingFn) errors
 			return errors.NewBucketUpdaterNoHealthyNodesFound()
 		}
 
-		streamUrl := fmt.Sprintf("%s/pools/default/bucketsStreaming/%s", b.pool.client.BaseURL, uriAdj(b.GetName()))
+		streamUrl := b.pool.client.BaseURL.JoinPath("/pools/default/bucketsStreaming/", uriAdj(b.GetName())).String()
 		logging.Infof("%s Streaming %s", msgPrefix, streamUrl)
 		logging.Debuga(func() string {
 			p := "<nil>"

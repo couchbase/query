@@ -1450,9 +1450,13 @@ func (p *Pool) BucketExists(name string) bool {
 // Release bucket connections when the pool is no longer in use
 func (p *Pool) Close() {
 
+	p.Lock()
+
 	// MB-36186 make the bucket map inaccessible
 	bucketMap := p.BucketMap
 	p.BucketMap = nil
+
+	p.Unlock()
 
 	// fine to loop through the buckets unlocked
 	// locking happens at the bucket level
