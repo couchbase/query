@@ -18,8 +18,8 @@ import (
 
 type Alias struct {
 	base
-	plan   *plan.Alias
-	parent value.Value
+	plan      *plan.Alias
+	parentVal value.Value
 }
 
 func NewAlias(plan *plan.Alias, context *Context) *Alias {
@@ -51,20 +51,13 @@ func (this *Alias) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *Alias) beforeItems(context *Context, parent value.Value) bool {
-	this.parent = parent
+	this.parentVal = parent
 	return true
 }
 
 func (this *Alias) processItem(item value.AnnotatedValue, context *Context) bool {
-	var av value.AnnotatedValue
-	if this.plan.Primary() {
-		// if this is an alias for a subquery as the primary term, may need
-		// to "inherit" values from parent, e.g. WITH clauses
-		cv := value.NewNestedScopeValue(this.parent)
-		av = value.NewAnnotatedValue(cv)
-	} else {
-		av = value.NewAnnotatedValue(make(map[string]interface{}, 1))
-	}
+	cv := value.NewNestedScopeValue(this.parentVal)
+	av := value.NewAnnotatedValue(cv)
 	av.ShareAnnotations(item)
 	av.SetField(this.plan.Alias(), item)
 
@@ -86,11 +79,11 @@ func (this *Alias) MarshalJSON() ([]byte, error) {
 
 func (this *Alias) reopen(context *Context) bool {
 	rv := this.baseReopen(context)
-	this.parent = nil
+	this.parentVal = nil
 	return rv
 }
 
 func (this *Alias) Done() {
 	this.baseDone()
-	this.parent = nil
+	this.parentVal = nil
 }
