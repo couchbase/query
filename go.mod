@@ -62,8 +62,8 @@ require (
 	github.com/peterh/liner v1.2.0
 	github.com/russross/blackfriday v1.5.2
 	github.com/samuel/go-zookeeper v0.0.0-20201211165307-7117e9ea2414
-	golang.org/x/crypto v0.11.0
-	golang.org/x/net v0.12.0
+	golang.org/x/crypto v0.14.0
+	golang.org/x/net v0.17.0
 	gopkg.in/couchbase/gocb.v1 v1.6.7
 	gopkg.in/couchbase/gocbcore.v7 v7.1.18 // indirect
 	gopkg.in/couchbaselabs/gocbconnstr.v1 v1.0.4 // indirect
