@@ -378,7 +378,7 @@ func (s *store) CheckSystemCollection(bucketName, requestId string) errors.Error
 		return errors.NewInvalidGSIIndexerError("Cannot get primary index on system collection")
 	}
 
-	_, er = indexer3.IndexByName(_BUCKET_SYSTEM_PRIM_INDEX)
+	sysIndex, er := indexer3.IndexByName(_BUCKET_SYSTEM_PRIM_INDEX)
 	if er != nil {
 		if er.Code() != errors.E_CB_INDEX_NOT_FOUND {
 			// only ignore index not found error
@@ -386,12 +386,45 @@ func (s *store) CheckSystemCollection(bucketName, requestId string) errors.Error
 		}
 
 		// create primary index on system collection if not already exists
+		// the create function waits for ONLINE state before it returns
 		er = s.CreateSysPrimaryIndex(_BUCKET_SYSTEM_PRIM_INDEX, requestId, indexer3)
 		if er != nil && er.Code() != errors.E_INDEX_ALREADY_EXISTS {
 			// ignore index already exist error
 			return er
 		}
+	} else {
+		// make sure the primary index is ONLINE
+		maxRetry := 10
+		interval := 250 * time.Millisecond
+		for i := 0; i < maxRetry; i++ {
+			state, _, er1 := sysIndex.State()
+			if er1 != nil {
+				return er1
+			}
+			if state == datastore.ONLINE {
+				break
+			} else if state == datastore.DEFERRED {
+				// build system index if it is deferred (e.g. just restored)
+				er = indexer3.BuildIndexes(requestId, sysIndex.Name())
+				if er != nil {
+					return er
+				}
+			}
+
+			time.Sleep(interval)
+			interval *= 2
+
+			er = indexer3.Refresh()
+			if er != nil {
+				return er
+			}
+
+			sysIndex, er = indexer3.IndexByName(_BUCKET_SYSTEM_PRIM_INDEX)
+			if er != nil {
+				return er
+			}
+		}
 	}
 
-	return nil
+	return er
 }
