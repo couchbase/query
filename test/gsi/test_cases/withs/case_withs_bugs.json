@@ -55,7 +55,7 @@
 	"testcase": "MB-57904",
         "statements": "select a, (WITH w1 AS (a) SELECT RAW w1) AS b  from [1,2,3] a",
         "results": [
-             {
+            {
                 "a": 1,
                 "b": [
                     1
@@ -72,6 +72,30 @@
                 "b": [
                     3
                 ]
+            }
+        ]
+    },
+    {
+	"testcase": "MB-59084",
+        "statements": "WITH a AS ([10,20,30]) SELECT l.c12, r.c21, r.a21 FROM shellTest l JOIN shellTest r ON l.c11 = r.c21 WHERE l.c11 > 1 AND r.c22 IN a AND l.type = \"left\" AND r.type = \"right\"",
+        "results": [
+            {
+                "a21": [
+                    2,
+                    3,
+                    30
+                ],
+                "c12": 20,
+                "c21": 2
+            },
+            {
+                "a21": [
+                    3,
+                    10,
+                    30
+                ],
+                "c12": 30,
+                "c21": 3
             }
         ]
     }
