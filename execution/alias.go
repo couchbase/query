@@ -60,15 +60,8 @@ func (this *Alias) beforeItems(context *Context, parent value.Value) bool {
 }
 
 func (this *Alias) processItem(item value.AnnotatedValue, context *Context) bool {
-	var av value.AnnotatedValue
-	if this.plan.Primary() {
-		// if this is an alias for a subquery as the primary term, may need
-		// to "inherit" values from parent, e.g. WITH clauses
-		cv := value.NewNestedScopeValue(this.parentVal)
-		av = value.NewAnnotatedValue(cv)
-	} else {
-		av = value.NewAnnotatedValue(make(map[string]interface{}, 1))
-	}
+	cv := value.NewNestedScopeValue(this.parentVal)
+	av := value.NewAnnotatedValue(cv)
 	av.ShareAnnotations(item)
 	av.SetField(this.plan.Alias(), item)
 	item.Recycle() // tracked as a field now

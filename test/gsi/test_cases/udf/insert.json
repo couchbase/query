@@ -43,5 +43,8 @@
    },
    {
      "statements": "INSERT INTO customer (KEY,VALUE) VALUES(\"15_udf\", {\"type\":\"customer\",\"firstName\":\"Burton\",\"lastName\":\"Caldes\",\"emailAddress\":\"bcaldese@youtu.be\",\"custId\":\"customer15\",\"age\": 65, \"test_id\":\"udf\"})"
+   },
+   {
+       "statements": "INSERT INTO shellTest (KEY,VALUE) VALUES(\"k001\", {\"c1\":1, \"c2\":2, \"c3\":3, \"test_id\":\"udf\"}), VALUES(\"k002\", {\"c1\":2, \"c2\":4, \"c3\":6, \"test_id\":\"udf\"})"
    }
  ]

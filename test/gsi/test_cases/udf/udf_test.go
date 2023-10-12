@@ -33,8 +33,6 @@ func TestUDFs(t *testing.T) {
 
 	runMatch("case_inline_udf_tests.json", false, true, qc, t)
 
-	runMatch("case_inline_udf_bugs.json", false, true, qc, t)
-
 	// Drop functions created in the inline UDF tests
 	runStmt(qc, "DROP FUNCTION UDF_UT_inline1 IF EXISTS")
 	runStmt(qc, "DROP FUNCTION UDF_UT_inline2 IF EXISTS")
@@ -50,8 +48,17 @@ func TestUDFs(t *testing.T) {
 	// Run the external JS UDF tests
 	externalJSTest(qc, t)
 
+	runStmt(qc, "CREATE INDEX idx1 ON shellTest(c1, c2, c3)")
+
+	runMatch("case_inline_udf_bugs.json", false, true, qc, t)
+
+	runStmt(qc, "DROP INDEX shellTest.idx1")
+
+	runStmt(qc, "CREATE PRIMARY INDEX ON shellTest")
 	runStmt(qc, "DELETE FROM customer WHERE test_id = \"udf\"")
+	runStmt(qc, "DELETE FROM shellTest WHERE test_id = \"udf\"")
 	runStmt(qc, "DROP PRIMARY INDEX ON customer")
+	runStmt(qc, "DROP PRIMARY INDEX ON shellTest")
 
 	qc.ShutdownHttpServer()
 }

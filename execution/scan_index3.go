@@ -145,10 +145,6 @@ func (this *IndexScan3) RunOnce(context *Context, parent value.Value) {
 		}
 		defer countDocs()
 
-		// for right hand side of nested-loop join we don't want to include parent values
-		// in the returned scope value
-		scope_value := parent
-
 		// at runtime treat Covers() and IndexKeys() the same way
 		covers := this.plan.AllCovers()
 		lcovers := len(covers)
@@ -160,8 +156,17 @@ func (this *IndexScan3) RunOnce(context *Context, parent value.Value) {
 			entryKeys = proj.EntryKeys
 		}
 
+		// for right hand side of nested-loop join we don't want to include values
+		// from the left hand side of the join in the returned scope value, however
+		// we do want to include the "original" parent value, i.e. correlation value,
+		// function arguments, WITH clause, etc.
+		scope_value := parent
 		if this.plan.IsUnderNL() {
-			scope_value = nil
+			if val, ok := scope_value.(value.AnnotatedValue); ok {
+				scope_value = val.GetParent()
+			} else {
+				scope_value = nil
+			}
 		}
 
 		cacheIndex := 0
