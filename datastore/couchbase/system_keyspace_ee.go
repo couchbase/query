@@ -351,6 +351,8 @@ func (s *store) CheckSystemCollection(bucketName, requestId string) errors.Error
 			if er != nil {
 				return er
 			}
+		case errors.E_CB_SCOPE_NOT_FOUND:
+			// no-op, ignore
 		default:
 			return err
 		}
