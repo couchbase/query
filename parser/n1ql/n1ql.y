@@ -3753,7 +3753,7 @@ expr DOT ident LPAREN opt_exprs RPAREN
     // so we have to deal with this ourselves
     name, err := functionsBridge.NewFunctionName(path, yylex.(*lexer).Namespace(), yylex.(*lexer).QueryContext())
     if err != nil {
-        yylex.Error(err.Error()+yylex.(*lexer).ErrorContext())
+		return yylex.(*lexer).FatalError(err.Error(), $<line>1, $<column>1)
     }
     f := expression.GetUserDefinedFunction(name, yylex.(*lexer).UdfCheck())
     if f != nil {
