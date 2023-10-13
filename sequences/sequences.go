@@ -48,6 +48,7 @@ const _SEQUENCE = "_sequence::"
 const _CACHE_REVISION_PATH = "/query/sequences_cache/"
 const _CACHE_REVISION = _CACHE_REVISION_PATH + "revision"
 const _DEFAULT_SEQUENCE_CACHE = 50
+const INTERNAL_OPT_INITIAL = "_initial"
 const OPT_START = "start"
 const OPT_RESTART = "restart"
 const _SEQUENCE_RESTART_DEFAULT = "restart_default"
@@ -60,7 +61,7 @@ const _WARN_CACHE_SIZE = 10
 const _SEQUENCES_ENABLED_CHECK_INTERVAL = time.Minute
 const _BATCH_SIZE = 512
 
-var _CREATE_SEQUENCE_OPTIONS = []string{OPT_START, OPT_CACHE, OPT_INCR, OPT_MIN, OPT_MAX, OPT_CYCLE}
+var _CREATE_SEQUENCE_OPTIONS = []string{OPT_START, OPT_CACHE, OPT_INCR, OPT_MIN, OPT_MAX, OPT_CYCLE, INTERNAL_OPT_INITIAL}
 var _ALTER_SEQUENCE_OPTIONS = []string{OPT_RESTART, OPT_CACHE, OPT_INCR, OPT_MIN, OPT_MAX, OPT_CYCLE}
 var sequences *util.GenCache
 var cacheRevision int32
@@ -187,6 +188,8 @@ func CreateSequence(path *algebra.Path, with value.Value) errors.Error {
 	var w errors.Error
 	start := int64(0)
 	startSet := false
+	initial := int64(0)
+	initialSet := false
 	cache := uint64(_DEFAULT_SEQUENCE_CACHE)
 	min := int64(math.MinInt64)
 	minSet := false
@@ -235,6 +238,9 @@ func CreateSequence(path *algebra.Path, with value.Value) errors.Error {
 					increment = num
 				case OPT_CYCLE:
 					cycle = tf
+				case INTERNAL_OPT_INITIAL:
+					initial = num
+					initialSet = true
 				}
 			}
 		}
@@ -251,6 +257,10 @@ func CreateSequence(path *algebra.Path, with value.Value) errors.Error {
 		if increment < 0 && maxSet {
 			start = max
 		}
+	}
+
+	if !initialSet {
+		initial = start
 	}
 
 	seq, err := getLockedSequence(name)
@@ -288,7 +298,7 @@ func CreateSequence(path *algebra.Path, with value.Value) errors.Error {
 	pairs := make([]value.Pair, 1)
 	pairs[0].Name = seq.key
 	m := make(map[string]value.Value)
-	m["initial"] = value.NewValue(fmt.Sprintf("%v", start)) // only used for ALTER ... RESTART with no value specified
+	m["initial"] = value.NewValue(fmt.Sprintf("%v", initial)) // only used for ALTER ... RESTART with no value specified
 	m["base"] = value.NewValue(fmt.Sprintf("%v", start))
 	m["cache"] = value.NewValue(fmt.Sprintf("%v", cache))
 	m["min"] = value.NewValue(fmt.Sprintf("%v", min))
@@ -1352,4 +1362,71 @@ func ListCachedSequences() []string {
 	}, nil)
 	listWalkMutex.Unlock()
 	return res
+}
+
+func BackupSequences(namespace string, bucket string, filter func(string) bool) ([]interface{}, errors.Error) {
+
+	b, err := getSystemCollection(bucket)
+	if err != nil {
+		return nil, err
+	}
+	conn, index3, err := getIndexConnection(b)
+	if err != nil {
+		return nil, err
+	}
+
+	prefix := namespace + ":" + bucket + "."
+
+	low := _SEQUENCE
+	requestId, _ := util.UUIDV4()
+	go index3.Scan3(requestId, getSpan(low), false, false, nil, 0, math.MaxInt64, nil, nil, datastore.UNBOUNDED, nil, conn)
+
+	var item *datastore.IndexEntry
+
+	target := make([]interface{}, 0, 16)
+	res := make(map[string]value.AnnotatedValue, 1)
+	keys := make([]string, 1)
+	for ok := true; ok; {
+		item, ok = conn.Sender().GetEntry()
+		if ok {
+			if item != nil {
+				name := prefix + strings.TrimPrefix(item.PrimaryKey, _SEQUENCE)
+				if filter == nil || filter(name) {
+					keys[0] = item.PrimaryKey
+					errs := b.Fetch(keys, res, datastore.NULL_QUERY_CONTEXT, nil, nil, false)
+					if errs != nil && len(errs) > 0 {
+						return nil, errs[0]
+					}
+					av, ok := res[keys[0]]
+					if ok {
+						m := make(map[string]interface{})
+						m["identity"] = name
+						v, _ := av.Field("cache")
+						m["cache"] = v.ToString()
+						v, _ = av.Field("min")
+						m["min"] = v.ToString()
+						v, _ = av.Field("max")
+						m["max"] = v.ToString()
+						v, _ = av.Field("increment")
+						m["increment"] = v.ToString()
+						v, _ = av.Field("cycle")
+						m["cycle"] = v.Truth()
+						v, _ = av.Field("initial")
+						m["initial"] = v.ToString()
+
+						start, _ := restartValue(av)
+						m["start"] = start
+
+						target = append(target, m)
+					}
+				}
+			} else {
+				ok = false
+			}
+		}
+	}
+	conn.Dispose()
+	conn.SendStop()
+
+	return target, nil
 }

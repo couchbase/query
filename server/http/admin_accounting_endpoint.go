@@ -66,7 +66,7 @@ const (
 	prometheusLow      = "/_prometheusMetrics"
 	prometheusHigh     = "/_prometheusMetricsHigh"
 	transactionsPrefix = adminPrefix + "/transactions"
-	fnBackupPrefix     = "/api/v1"
+	backupPrefix       = "/api/v1"
 	sequencesPrefix    = adminPrefix + "/sequences_cache"
 )
 
@@ -158,11 +158,11 @@ func (this *HttpEndpoint) registerAccountingHandlers() {
 	transactionsHandler := func(w http.ResponseWriter, req *http.Request) {
 		this.wrapAPI(w, req, doTransactions)
 	}
-	functionsGlobalBackupHandler := func(w http.ResponseWriter, req *http.Request) {
-		this.wrapAPI(w, req, doFunctionsGlobalBackup)
+	globalBackupHandler := func(w http.ResponseWriter, req *http.Request) {
+		this.wrapAPI(w, req, doGlobalBackup)
 	}
-	functionsBucketBackupHandler := func(w http.ResponseWriter, req *http.Request) {
-		this.wrapAPI(w, req, doFunctionsBucketBackup)
+	bucketBackupHandler := func(w http.ResponseWriter, req *http.Request) {
+		this.wrapAPI(w, req, doBucketBackup)
 	}
 	forceGCHandler := func(w http.ResponseWriter, req *http.Request) {
 		this.wrapAPI(w, req, doForceGC)
@@ -212,8 +212,8 @@ func (this *HttpEndpoint) registerAccountingHandlers() {
 		prometheusLow:                         {handler: prometheusLowHandler, methods: []string{"GET"}},
 		indexesPrefix + "/transactions":       {handler: transactionsIndexHandler, methods: []string{"GET"}},
 
-		fnBackupPrefix + "/backup":                 {handler: functionsGlobalBackupHandler, methods: []string{"GET", "POST"}},
-		fnBackupPrefix + "/bucket/{bucket}/backup": {handler: functionsBucketBackupHandler, methods: []string{"GET", "POST"}},
+		backupPrefix + "/backup":                 {handler: globalBackupHandler, methods: []string{"GET", "POST"}},
+		backupPrefix + "/bucket/{bucket}/backup": {handler: bucketBackupHandler, methods: []string{"GET", "POST"}},
 
 		adminPrefix + "/gc":                {handler: forceGCHandler, methods: []string{"GET", "POST"}},
 		adminPrefix + "/ffdc":              {handler: manualFFDCHandler, methods: []string{"POST"}},
@@ -976,10 +976,10 @@ func doTasks(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, a
 	}
 }
 
-func doFunctionsGlobalBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
+func doGlobalBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
 	interface{}, errors.Error) {
 
-	af.EventTypeId = audit.API_ADMIN_FUNCTIONS_BACKUP
+	af.EventTypeId = audit.API_ADMIN_BACKUP
 	switch req.Method {
 	case "GET":
 		err, _ := endpoint.verifyCredentialsFromRequest("", auth.PRIV_BACKUP_CLUSTER, req, af)
@@ -1002,7 +1002,7 @@ func doFunctionsGlobalBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req 
 		}
 
 		functionsStorage.Foreach("", snapshot)
-		return makeBackupHeader(data), nil
+		return makeBackupHeader(data, nil), nil
 
 	case "POST":
 		var iState json.IndexState
@@ -1011,7 +1011,7 @@ func doFunctionsGlobalBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req 
 		bytes, e := ioutil.ReadAll(req.Body)
 		defer req.Body.Close()
 		if e != nil {
-			return nil, errors.NewServiceErrorBadValue(go_errors.New("unable to read body of request"), "UDF restore body")
+			return nil, errors.NewServiceErrorBadValue(go_errors.New("unable to read body of request"), "restore body")
 		}
 
 		err, _ := endpoint.verifyCredentialsFromRequest("", auth.PRIV_BACKUP_CLUSTER, req, af)
@@ -1019,25 +1019,25 @@ func doFunctionsGlobalBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req 
 			return nil, err
 		}
 
-		data, e := checkBackupHeader(bytes)
+		fns, _, e := checkBackupHeader(bytes)
 		if e != nil {
-			return nil, errors.NewServiceErrorBadValue(e, "UDF restore body")
+			return nil, errors.NewServiceErrorBadValue(e, "restore body")
 		}
 
 		// if it's not an array, we'll try a single function
-		if data[0] != '[' {
-			err := doFunctionRestore(data, 2, "", nil, nil, nil)
+		if fns[0] != '[' {
+			err := doFunctionRestore(fns, 2, "", nil, nil, nil)
 			if err != nil {
 				return nil, err
 			}
 		}
 		index := 0
-		json.SetIndexState(&iState, data)
+		json.SetIndexState(&iState, fns)
 		for {
 			v, err := iState.FindIndex(index)
 			if err != nil {
 				iState.Release()
-				return nil, errors.NewServiceErrorBadValue(err, "UDF restore body")
+				return nil, errors.NewServiceErrorBadValue(err, "restore body")
 			}
 			if string(v) == "" {
 				break
@@ -1056,11 +1056,11 @@ func doFunctionsGlobalBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req 
 	return "", nil
 }
 
-func doFunctionsBucketBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
+func doBucketBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
 	interface{}, errors.Error) {
 
 	_, bucket := router.RequestValue(req, "bucket")
-	af.EventTypeId = audit.API_ADMIN_FUNCTIONS_BACKUP
+	af.EventTypeId = audit.API_ADMIN_BACKUP
 	switch req.Method {
 	case "GET":
 		err, _ := endpoint.verifyCredentialsFromRequest(bucket, auth.PRIV_BACKUP_BUCKET, req, af)
@@ -1076,21 +1076,25 @@ func doFunctionsBucketBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req 
 		if err != nil {
 			return nil, err
 		}
-		data := make([]interface{}, 0)
-
+		fns := make([]interface{}, 0)
 		// do not archive functions if the metadata is already stored in KV
-		if functionsStorage.ExternalBucketArchive() {
-			snapshot := func(name string, v value.Value) error {
-				path := algebra.ParsePath(name)
-				if len(path) == 4 && path[1] == bucket && filterEval(path, include, exclude) {
-					data = append(data, v)
-				}
-				return nil
+		snapshot := func(name string, v value.Value) error {
+			path := algebra.ParsePath(name)
+			if len(path) == 4 && path[1] == bucket && filterEval(path, include, exclude) {
+				fns = append(fns, v)
 			}
-
-			functionsStorage.Foreach(bucket, snapshot)
+			return nil
 		}
-		return makeBackupHeader(data), nil
+		functionsStorage.Foreach(bucket, snapshot)
+
+		seqs, err := sequences.BackupSequences("default", bucket, func(name string) bool {
+			path := algebra.ParsePath(name)
+			return filterEval(path, include, exclude)
+		})
+		if err != nil {
+			return nil, err
+		}
+		return makeBackupHeader(fns, seqs), nil
 
 	case "POST":
 		var iState json.IndexState
@@ -1099,16 +1103,16 @@ func doFunctionsBucketBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req 
 		bytes, e := ioutil.ReadAll(req.Body)
 		defer req.Body.Close()
 		if e != nil {
-			return nil, errors.NewServiceErrorBadValue(go_errors.New("unable to read body of request"), "UDF restore body")
+			return nil, errors.NewServiceErrorBadValue(go_errors.New("unable to read body of request"), "restore body")
 		}
 
 		err, _ := endpoint.verifyCredentialsFromRequest(bucket, auth.PRIV_BACKUP_BUCKET, req, af)
 		if err != nil {
 			return nil, err
 		}
-		data, e := checkBackupHeader(bytes)
+		fns, seqs, e := checkBackupHeader(bytes)
 		if e != nil {
-			return nil, errors.NewServiceErrorBadValue(e, "UDF restore body")
+			return nil, errors.NewServiceErrorBadValue(e, "restore body")
 		}
 
 		include, err := newFilter(req.FormValue("include"))
@@ -1119,41 +1123,63 @@ func doFunctionsBucketBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req 
 		if err != nil {
 			return nil, err
 		}
-		remap, err := newRemapper(req.FormValue("remap"))
+		remap, err := newRemapper(req.FormValue("remap"), "UDF")
 		if err != nil {
 			return nil, err
 		}
 
-		// do not restore UDFs if metadata is stored in KV
-		if functionsStorage.ExternalBucketArchive() {
-			// if it's not an array, we'll try a single function
-			if data[0] != '[' {
-				err := doFunctionRestore(data, 4, bucket, include, exclude, remap)
-				if err != nil {
-					return nil, err
-				}
-				return "", nil
+		// if it's not an array, we'll try a single function
+		if fns[0] != '[' {
+			err := doFunctionRestore(fns, 4, bucket, include, exclude, remap)
+			if err != nil {
+				return nil, err
 			}
-			index := 0
-			json.SetIndexState(&iState, data)
-			for {
-				v, err := iState.FindIndex(index)
-				if err != nil {
-					iState.Release()
-					return nil, errors.NewServiceErrorBadValue(err, "UDF restore body")
-				}
-				if string(v) == "" {
-					break
-				}
-				index++
-				err1 := doFunctionRestore(v, 4, bucket, include, exclude, remap)
-				if err1 != nil {
-					iState.Release()
-					return nil, err1
-				}
-			}
-			iState.Release()
+			return "", nil
 		}
+		index := 0
+		json.SetIndexState(&iState, fns)
+		for {
+			v, err := iState.FindIndex(index)
+			if err != nil {
+				iState.Release()
+				return nil, errors.NewServiceErrorBadValue(err, "restore body")
+			}
+			if string(v) == "" {
+				break
+			}
+			index++
+			err1 := doFunctionRestore(v, 4, bucket, include, exclude, remap)
+			if err1 != nil {
+				iState.Release()
+				return nil, err1
+			}
+		}
+		iState.Release()
+
+		remap, err = newRemapper(req.FormValue("remap"), "sequence")
+		if err != nil {
+			return nil, err
+		}
+		index = 0
+		json.SetIndexState(&iState, seqs)
+		for {
+			v, err := iState.FindIndex(index)
+			if err != nil {
+				iState.Release()
+				return nil, errors.NewServiceErrorBadValue(err, "restore body")
+			}
+			if string(v) == "" {
+				break
+			}
+			index++
+			err1 := doSequenceRestore(v, bucket, include, exclude, remap)
+			if err1 != nil {
+				iState.Release()
+				return nil, err1
+			}
+		}
+		iState.Release()
+
 	default:
 		return nil, errors.NewServiceErrorHttpMethod(req.Method)
 	}
@@ -1163,37 +1189,58 @@ func doFunctionsBucketBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req 
 const _MAGIC_KEY = "udfMagic"
 const _MAGIC = "4D6172636F2072756C6573"
 const _VERSION_KEY = "version"
-const _VERSION = "0x01"
+const _VERSION = "0x02"
+const _VERSION_MIN = 1
+const _VERSION_MAX = 2
 const _UDF_KEY = "udfs"
+const _SEQ_KEY = "seqs"
 
-func makeBackupHeader(v interface{}) interface{} {
-	data := make(map[string]interface{}, 3)
+func makeBackupHeader(v interface{}, s interface{}) interface{} {
+	data := make(map[string]interface{}, 4)
 	data[_MAGIC_KEY] = _MAGIC
 	data[_VERSION_KEY] = _VERSION
 	data[_UDF_KEY] = v
+	data[_SEQ_KEY] = s
 	return data
 }
 
-func checkBackupHeader(d []byte) ([]byte, errors.Error) {
+func checkBackupHeader(d []byte) ([]byte, []byte, errors.Error) {
 	var oState json.KeyState
 	json.SetKeyState(&oState, d)
 	magic, err := oState.FindKey(_MAGIC_KEY)
 	if err != nil || string(magic) != "\""+_MAGIC+"\"" {
 		oState.Release()
-		return nil, errors.NewServiceErrorBadValue(err, "UDF invalid magic")
+		return nil, nil, errors.NewServiceErrorBadValue(err, "restore: invalid magic")
 	}
 	version, err := oState.FindKey(_VERSION_KEY)
-	if err != nil || string(version) != "\""+_VERSION+"\"" {
+	var ver uint64
+	if err == nil {
+		trimmed := strings.Trim(string(version), "\"")
+		if !strings.HasPrefix(trimmed, "0x") || len(trimmed) <= 2 {
+			return nil, nil, errors.NewServiceErrorBadValue(nil, "restore: invalid version")
+		}
+		ver, err = strconv.ParseUint(trimmed[2:], 16, 64)
+	}
+	if err != nil || ver < _VERSION_MIN || ver > _VERSION_MAX {
 		oState.Release()
-		return nil, errors.NewServiceErrorBadValue(err, "UDF invalid version")
+		return nil, nil, errors.NewServiceErrorBadValue(err, "restore: invalid version")
 	}
 	udfs, err := oState.FindKey(_UDF_KEY)
 	if err != nil {
 		oState.Release()
-		return nil, errors.NewServiceErrorBadValue(err, "UDF missing UDF field")
+		return nil, nil, errors.NewServiceErrorBadValue(err, "restore: missing UDF field")
+	}
+	// only expect sequences for version 2+ backup images
+	var seqs []byte
+	if ver >= 2 {
+		seqs, err = oState.FindKey(_SEQ_KEY)
+		if err != nil {
+			oState.Release()
+			return nil, nil, errors.NewServiceErrorBadValue(err, "restore: missing sequences field")
+		}
 	}
 	oState.Release()
-	return udfs, nil
+	return udfs, seqs, nil
 }
 
 type matcher map[string]map[string]bool
@@ -1252,7 +1299,7 @@ func newFilter(p string) (matcher, errors.Error) {
 				s[elems[1]] = true
 			} else {
 				return nil, errors.NewServiceErrorBadValue(go_errors.New("filter includes duplicate entries"),
-					"UDF restore parameters")
+					"restore parameters")
 			}
 
 			// currently we ignore overlapping and duplicates
@@ -1297,7 +1344,7 @@ func filterEval(path []string, include, exclude matcher) bool {
 	return false
 }
 
-func newRemapper(p string) (remapper, errors.Error) {
+func newRemapper(p string, serv string) (remapper, errors.Error) {
 	if len(p) == 0 {
 		return nil, nil
 	}
@@ -1309,13 +1356,13 @@ func newRemapper(p string) (remapper, errors.Error) {
 	for _, entry := range paths {
 		rm := strings.Split(entry, ":")
 		if len(rm) != 2 {
-			return nil, errors.NewServiceErrorBadValue(go_errors.New("remapper is incomplete"), "UDF restore parameter")
+			return nil, errors.NewServiceErrorBadValue(go_errors.New("remapper is incomplete"), serv+" restore parameter")
 		}
 		inElems := parsePath(rm[0])
 		outElems := parsePath(rm[1])
 		if len(inElems) != len(outElems) || len(inElems) > 2 {
 			return nil, errors.NewServiceErrorBadValue(go_errors.New("remapper has mismatching or invalid entries"),
-				"UDF restore parameter")
+				serv+" restore parameter")
 		}
 		s, ok := m[inElems[0]]
 
@@ -1326,7 +1373,7 @@ func newRemapper(p string) (remapper, errors.Error) {
 				s[inElems[1]] = outElems
 			} else {
 				return nil, errors.NewServiceErrorBadValue(go_errors.New("filter includes duplicate entries"),
-					"UDF restore parameter")
+					serv+" restore parameter")
 			}
 
 			// currently we ignore overlapping and duplicates
@@ -1387,11 +1434,11 @@ func doFunctionRestore(v []byte, l int, b string, include, exclude matcher, rema
 	}
 	oState.Release()
 	if string(identity) == "" || string(definition) == "" {
-		return errors.NewServiceErrorBadValue(go_errors.New("missing function definition or body"), "UDF restore body")
+		return errors.NewServiceErrorBadValue(go_errors.New("missing function definition or body"), "UDF restore")
 	}
 	path, err1 := functionsResolver.MakePath(identity)
 	if err1 != nil {
-		return errors.NewServiceErrorBadValue(err1, "UDF restore body")
+		return errors.NewServiceErrorBadValue(err1, "UDF restore")
 	}
 
 	// we skip the entries that do no apply
@@ -1404,11 +1451,11 @@ func doFunctionRestore(v []byte, l int, b string, include, exclude matcher, rema
 
 		name, err1 := functionsBridge.NewFunctionName(path, path[0], "")
 		if err1 != nil {
-			return errors.NewServiceErrorBadValue(err1, "UDF restore body")
+			return errors.NewServiceErrorBadValue(err1, "UDF restore")
 		}
 		body, err1 := functionsResolver.MakeBody(name.Name(), definition)
 		if err1 != nil {
-			return errors.NewServiceErrorBadValue(err1, "UDF restore body")
+			return errors.NewServiceErrorBadValue(err1, "UDF restore")
 		}
 		return name.Save(body, true)
 	}
@@ -2411,4 +2458,108 @@ func doMigration(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Reques
 		return textPlain(res), nil
 	}
 	return nil, errors.NewServiceErrorHttpMethod(req.Method)
+}
+
+func doSequenceRestore(v []byte, b string, include, exclude matcher, remap remapper) errors.Error {
+	var oState json.KeyState
+	json.SetKeyState(&oState, v)
+	identity, err := oState.FindKey("identity")
+	if err != nil {
+		oState.Release()
+		return errors.NewServiceErrorBadValue(err, "sequence restore: missing identity")
+	}
+	bstart, err := oState.FindKey("start")
+	if err != nil {
+		oState.Release()
+		return errors.NewServiceErrorBadValue(err, "sequence restore: missing start")
+	}
+	binitial, err := oState.FindKey("initial")
+	if err != nil {
+		oState.Release()
+		return errors.NewServiceErrorBadValue(err, "sequence restore: missing initial")
+	}
+	bcache, err := oState.FindKey("cache")
+	if err != nil {
+		oState.Release()
+		return errors.NewServiceErrorBadValue(err, "sequence restore: missing cache")
+	}
+	bcycle, err := oState.FindKey("cycle")
+	if err != nil {
+		oState.Release()
+		return errors.NewServiceErrorBadValue(err, "sequence restore: missing cycle")
+	}
+	bincrement, err := oState.FindKey("increment")
+	if err != nil {
+		oState.Release()
+		return errors.NewServiceErrorBadValue(err, "sequence restore: missing increment")
+	}
+	bmax, err := oState.FindKey("max")
+	if err != nil {
+		oState.Release()
+		return errors.NewServiceErrorBadValue(err, "sequence restore: missing max")
+	}
+	bmin, err := oState.FindKey("min")
+	if err != nil {
+		oState.Release()
+		return errors.NewServiceErrorBadValue(err, "sequence restore: missing min")
+	}
+	oState.Release()
+	name := strings.Trim(string(identity), "\"")
+	if name == "" {
+		return errors.NewServiceErrorBadValue(err, "sequence restore: name invalid")
+	}
+	path := algebra.ParsePath(name)
+	start, err := strconv.ParseInt(strings.Trim(string(bstart), "\""), 10, 64)
+	if err != nil {
+		return errors.NewServiceErrorBadValue(err, "sequence restore: start invalid")
+	}
+	initial, err := strconv.ParseInt(strings.Trim(string(binitial), "\""), 10, 64)
+	if err != nil {
+		return errors.NewServiceErrorBadValue(err, "sequence restore: initial invalid")
+	}
+	cache, err := strconv.ParseUint(strings.Trim(string(bcache), "\""), 10, 64)
+	if err != nil {
+		return errors.NewServiceErrorBadValue(err, "sequence restore: cache invalid")
+	}
+	cycle, err := strconv.ParseBool(string(bcycle))
+	if err != nil {
+		return errors.NewServiceErrorBadValue(err, "sequence restore: cycle invalid")
+	}
+	increment, err := strconv.ParseInt(strings.Trim(string(bincrement), "\""), 10, 64)
+	if err != nil {
+		return errors.NewServiceErrorBadValue(err, "sequence restore: increment invalid")
+	}
+	max, err := strconv.ParseInt(strings.Trim(string(bmax), "\""), 10, 64)
+	if err != nil {
+		return errors.NewServiceErrorBadValue(err, "sequence restore: max invalid")
+	}
+	min, err := strconv.ParseInt(strings.Trim(string(bmin), "\""), 10, 64)
+	if err != nil {
+		return errors.NewServiceErrorBadValue(err, "sequence restore: min invalid")
+	}
+	if filterEval(path, include, exclude) {
+		remap.remap(b, path)
+		m := make(map[string]interface{}, 2)
+		m[sequences.OPT_CACHE] = cache
+		m[sequences.OPT_CYCLE] = cycle
+		m[sequences.OPT_START] = start
+		m[sequences.OPT_INCR] = increment
+		m[sequences.OPT_MAX] = max
+		m[sequences.OPT_MIN] = min
+		m[sequences.INTERNAL_OPT_INITIAL] = initial
+		with := value.NewValue(m)
+		p := algebra.NewPathFromElements(path)
+		err1 := sequences.CreateSequence(p, with)
+		if err1 != nil {
+			if err1.Code() == errors.E_SEQUENCE_ALREADY_EXISTS {
+				if sequences.DropSequence(p) == nil {
+					err1 = sequences.CreateSequence(p, with)
+				}
+			}
+			if err1 != nil {
+				return errors.NewServiceErrorBadValue(err1, "sequence restore")
+			}
+		}
+	}
+	return nil
 }
