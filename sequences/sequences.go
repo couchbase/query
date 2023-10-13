@@ -1104,26 +1104,26 @@ func CleanupStaleSequences(namespace string, bucket string) {
 	}
 
 	ns, err := store.NamespaceByName(namespace)
-	if err != nil {
-		logging.Debugf("%v:%v - ", namespace, bucket, err)
+	if err != nil || ns == nil {
+		logging.Debugf("%v:%v - %v", namespace, bucket, err)
 		return
 	}
 
 	b, err := ns.BucketByName(bucket)
-	if err != nil {
-		logging.Debugf("%v:%v - ", namespace, bucket, err)
+	if err != nil || b == nil {
+		logging.Debugf("%v:%v - %v", namespace, bucket, err)
 		return
 	}
 
 	sb, err := store.GetSystemCollection(bucket)
-	if err != nil {
-		logging.Debugf("%v:%v - ", namespace, bucket, err)
+	if err != nil || sb == nil {
+		logging.Debugf("%v:%v - %v", namespace, bucket, err)
 		return
 	}
 
 	conn, index3, err := getIndexConnection(sb)
-	if err != nil {
-		logging.Debugf("%v:%v - ", namespace, bucket, err)
+	if err != nil || conn == nil || index3 == nil {
+		logging.Debugf("%v:%v - %v", namespace, bucket, err)
 		return
 	}
 
