@@ -401,7 +401,7 @@ func (e *err) HasICause(code ErrorCode) bool {
 			}
 			c = icse.GetICause()
 		default:
-			break
+			c = nil
 		}
 	}
 
