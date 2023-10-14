@@ -115,65 +115,11 @@ func NewError(e error, internalMsg string) Error {
 	switch e := e.(type) {
 	case Error: // if given error is already an Error, just return it:
 		return e
+	default:
+		// MB-59122: Do not manipulate error code here, nor alter/enhance error content.
+		return &err{level: EXCEPTION, ICode: E_INTERNAL, IKey: "Internal Error", ICause: e, InternalMsg: internalMsg,
+			InternalCaller: CallerN(1)}
 	}
-
-	code := E_INTERNAL
-	key := "internal.error"
-	level := EXCEPTION
-	var c interface{}
-
-	// map GSI errors where possible to meaningful error codes
-	isGsi, caller := GSICaller()
-	if isGsi {
-		errText := ""
-		if e != nil {
-			errText = strings.TrimSpace(e.Error())
-			if errText == internalMsg {
-				e = nil
-			}
-		} else {
-			errText = strings.TrimSpace(internalMsg)
-		}
-		res := gsiPatterns["enterprise"].FindSubmatch([]byte(errText))
-		if res != nil {
-			return NewEnterpriseFeature(string(res[1]), "indexing.enterprise_only_feature")
-		}
-		res = gsiPatterns["exists"].FindSubmatch([]byte(errText))
-		if res != nil {
-			return NewIndexAlreadyExistsError(string(res[1]))
-		}
-		m := make(map[string]interface{}, 5)
-		if strings.HasPrefix(internalMsg, "GSI ") {
-			m["source"] = internalMsg[4:]
-		}
-		if strings.Contains(errText, "Encountered transient error") {
-			m["error"] = errText
-			code = W_GSI_TRANSIENT
-			key = "indexing.transient_error"
-			level = WARNING
-		} else if res = gsiPatterns["tempfile"].FindSubmatch([]byte(errText)); res != nil {
-			m["request"] = strings.TrimSpace(string(res[1]))
-			m["limit"], _ = strconv.Atoi(string(res[2]))
-			m["size"], _ = strconv.Atoi(string(res[3]))
-			m["user_action"] = "Check queryTmpSpaceDir and queryTmpSpaceSize settings."
-			code = E_GSI_TEMP_FILE_SIZE
-			key = "indexing.temp_file_size"
-		} else {
-			if res = gsiPatterns["reason"].FindSubmatch([]byte(errText)); res != nil {
-				m["error"] = strings.TrimSpace(string(res[1]))
-				m["reason"] = strings.TrimSpace(string(res[3]))
-			} else {
-				m["error"] = errText
-			}
-			code = E_GSI
-			key = "indexing.error"
-		}
-		if len(m) > 0 {
-			c = m
-		}
-	}
-
-	return &err{level: level, ICode: code, IKey: key, ICause: e, InternalMsg: internalMsg, InternalCaller: caller, cause: c}
 }
 
 func NewWarning(internalMsg string) Error {
@@ -422,14 +368,6 @@ func CallerN(level int) string {
 		return "unknown:0"
 	}
 	return fmt.Sprintf("%s:%d", strings.Split(path.Base(file), ".")[0], line)
-}
-
-func GSICaller() (bool, string) {
-	_, file, line, ok := runtime.Caller(2)
-	if !ok {
-		return false, "unknown:0"
-	}
-	return strings.Index(file, "/indexing/secondary/") != -1, fmt.Sprintf("%s:%d", strings.Split(path.Base(file), ".")[0], line)
 }
 
 // In the future we should be able to check error codes or keys rather than matching error text, or even base it on error type but

@@ -373,8 +373,7 @@ var errMetricsMap = map[errors.ErrorCode]CounterId{
 	errors.E_CAS_MISMATCH: CAS_MISMATCH_ERRORS,
 
 	// temp_space_errors
-	errors.E_GSI_TEMP_FILE_SIZE: TEMP_SPACE_ERRORS,
-	errors.E_TEMP_FILE_QUOTA:    TEMP_SPACE_ERRORS,
+	errors.E_TEMP_FILE_QUOTA: TEMP_SPACE_ERRORS,
 }
 
 var acctstore AccountingStore
