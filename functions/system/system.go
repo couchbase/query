@@ -83,7 +83,7 @@ func Get(path string) (value.Value, error) {
 	if len(parts) != 4 {
 		return nil, errors.NewInvalidFunctionNameError(path, fmt.Errorf("name has %v parts", len(parts)))
 	}
-	systemCollection, err := getSystemCollection(parts[1], false)
+	systemCollection, err := getSystemCollection(parts[1])
 	if err != nil {
 		return nil, err
 	}
@@ -125,25 +125,16 @@ func Count(b string) (int64, error) {
 	return count, err
 }
 
-func getSystemCollection(bucketName string, chkIndex bool) (datastore.Keyspace, errors.Error) {
+func getSystemCollection(bucketName string) (datastore.Keyspace, errors.Error) {
 	store := datastore.GetDatastore()
 	if store == nil {
 		return nil, errors.NewNoDatastoreError()
 	}
 
-	if chkIndex {
-		// makre sure system collection exists, and create primary index if not existing
-		requestId, _ := util.UUIDV4()
-		err := store.CheckSystemCollection(bucketName, requestId)
-		if err != nil {
-			return nil, err
-		}
-	}
-
 	return store.GetSystemCollection(bucketName)
 }
 
-func getPrimaryIndex(sysColl datastore.Keyspace) (datastore.PrimaryIndex3, errors.Error) {
+func getPrimaryIndex(sysColl datastore.Keyspace, bucketName string) (datastore.PrimaryIndex3, errors.Error) {
 	indexer, err := sysColl.Indexer(datastore.GSI)
 	if err != nil {
 		return nil, err
@@ -152,25 +143,60 @@ func getPrimaryIndex(sysColl datastore.Keyspace) (datastore.PrimaryIndex3, error
 	if !ok {
 		return nil, errors.NewInvalidGSIIndexerError("Cannot load from system collection")
 	}
+	var err1 errors.Error
 	index, err := indexer3.IndexByName("#primary")
-	if err != nil {
-		return nil, err
-	}
-	index3, ok := index.(datastore.PrimaryIndex3)
-	if !ok {
-		return nil, errors.NewInvalidGSIIndexError(index.Name())
+	if err == nil {
+		index3, ok := index.(datastore.PrimaryIndex3)
+		if !ok {
+			return nil, errors.NewInvalidGSIIndexError(index.Name())
+		}
+
+		state, _, err := index3.State()
+		if err == nil && state == datastore.ONLINE {
+			return index3, nil
+		} else {
+			err1 = err
+		}
+	} else {
+		err1 = err
 	}
 
-	return index3, nil
+	// if primary index is not available or not online, check the status in the backgroud
+	go func(bucketName string) {
+		store := datastore.GetDatastore()
+		if store != nil {
+			requestId, _ := util.UUIDV4()
+			store.CheckSystemCollection(bucketName, requestId)
+		}
+	}(bucketName)
+
+	// try sequential scan
+	indexer, err = sysColl.Indexer(datastore.SEQ_SCAN)
+	if err == nil {
+		index, err = indexer.IndexByName("#sequentialscan")
+		if err == nil {
+			index3, ok := index.(datastore.PrimaryIndex3)
+			if !ok {
+				return nil, errors.NewInvalidGSIIndexError(index.Name())
+			}
+			return index3, nil
+		} else if err1 == nil {
+			err1 = err
+		}
+	} else if err1 == nil {
+		err1 = err
+	}
+
+	return nil, errors.NewSystemCollectionError("Primary index is not available", err1)
 }
 
 func scanSystemCollection(bucketName string, handler func(string, datastore.Keyspace) errors.Error) errors.Error {
-	systemCollection, err := getSystemCollection(bucketName, true)
+	systemCollection, err := getSystemCollection(bucketName)
 	if err != nil {
 		return err
 	}
 
-	index3, err := getPrimaryIndex(systemCollection)
+	index3, err := getPrimaryIndex(systemCollection, bucketName)
 	if err != nil {
 		return err
 	}
@@ -289,7 +315,7 @@ func (name *systemEntry) Signature(object map[string]interface{}) {
 }
 
 func (name *systemEntry) Load() (functions.FunctionBody, errors.Error) {
-	systemCollection, err := getSystemCollection(name.path.Parts()[1], false)
+	systemCollection, err := getSystemCollection(name.path.Parts()[1])
 	if err != nil {
 		return nil, err
 	}
@@ -329,7 +355,7 @@ func (name *systemEntry) Save(body functions.FunctionBody, replace bool) errors.
 	if len(parts) != 4 {
 		return errors.NewInvalidFunctionNameError(name.Name(), fmt.Errorf("name has %v parts", len(parts)))
 	}
-	systemCollection, err := getSystemCollection(parts[1], false)
+	systemCollection, err := getSystemCollection(parts[1])
 	if err != nil {
 		return err
 	}
@@ -361,7 +387,7 @@ func (name *systemEntry) Delete() errors.Error {
 	if len(parts) != 4 {
 		return errors.NewInvalidFunctionNameError(name.Name(), fmt.Errorf("name has %v parts", len(parts)))
 	}
-	systemCollection, err := getSystemCollection(parts[1], false)
+	systemCollection, err := getSystemCollection(parts[1])
 	if err != nil {
 		return err
 	}
