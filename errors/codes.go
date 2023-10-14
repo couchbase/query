@@ -195,6 +195,9 @@ const (
 	E_PLAN_NO_PLACEHOLDER                     ErrorCode = 4323
 	E_NO_ANSI_JOIN                            ErrorCode = 4330
 	E_PARTITION_INDEX_NOT_SUPPORTED           ErrorCode = 4340
+	E_GSI                                     ErrorCode = 4350
+	W_GSI_TRANSIENT                           ErrorCode = 4360
+	E_GSI_TEMP_FILE_SIZE                      ErrorCode = 4370
 	E_ENCODED_PLAN_NOT_ALLOWED                ErrorCode = 4400
 	E_CBO                                     ErrorCode = 4600
 	E_INDEX_STAT                              ErrorCode = 4610
