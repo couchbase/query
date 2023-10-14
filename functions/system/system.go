@@ -144,18 +144,20 @@ func getPrimaryIndex(sysColl datastore.Keyspace, bucketName string) (datastore.P
 		return nil, errors.NewInvalidGSIIndexerError("Cannot load from system collection")
 	}
 	var err1 errors.Error
-	index, err := indexer3.IndexByName("#primary")
+	primaries, err := indexer3.PrimaryIndexes()
 	if err == nil {
-		index3, ok := index.(datastore.PrimaryIndex3)
-		if !ok {
-			return nil, errors.NewInvalidGSIIndexError(index.Name())
-		}
+		for _, index := range primaries {
+			index3, ok := index.(datastore.PrimaryIndex3)
+			if !ok {
+				return nil, errors.NewInvalidGSIIndexError(index.Name())
+			}
 
-		state, _, err := index3.State()
-		if err == nil && state == datastore.ONLINE {
-			return index3, nil
-		} else {
-			err1 = err
+			state, _, err := index3.State()
+			if err == nil && state == datastore.ONLINE {
+				return index3, nil
+			} else if err1 == nil {
+				err1 = err
+			}
 		}
 	} else {
 		err1 = err
@@ -173,13 +175,15 @@ func getPrimaryIndex(sysColl datastore.Keyspace, bucketName string) (datastore.P
 	// try sequential scan
 	indexer, err = sysColl.Indexer(datastore.SEQ_SCAN)
 	if err == nil {
-		index, err = indexer.IndexByName("#sequentialscan")
+		primaries, err = indexer.PrimaryIndexes()
 		if err == nil {
-			index3, ok := index.(datastore.PrimaryIndex3)
-			if !ok {
-				return nil, errors.NewInvalidGSIIndexError(index.Name())
+			for _, index := range primaries {
+				index3, ok := index.(datastore.PrimaryIndex3)
+				if !ok {
+					return nil, errors.NewInvalidGSIIndexError(index.Name())
+				}
+				return index3, nil
 			}
-			return index3, nil
 		} else if err1 == nil {
 			err1 = err
 		}
