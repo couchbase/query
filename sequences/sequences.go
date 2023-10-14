@@ -131,29 +131,37 @@ func getIndexConnection(keyspace datastore.Keyspace) (*datastore.IndexConnection
 	if err != nil {
 		return nil, nil, err
 	}
-	if len(primaries) == 0 {
-		indexer, err = keyspace.Indexer(datastore.SEQ_SCAN)
-		if err != nil {
-			return nil, nil, err
-		}
-		indexer3, ok = indexer.(datastore.Indexer3)
-		if !ok {
-			return nil, nil, errors.NewSequenceError(errors.E_SEQUENCE, fmt.Errorf("Cannot load from system collection"))
-		}
-		primaries, err = indexer3.PrimaryIndexes()
-		if err != nil {
-			return nil, nil, err
-		}
-		if len(primaries) == 0 {
-			return nil, nil, errors.NewSequenceError(errors.E_SEQUENCE, fmt.Errorf("Cannot load from system collection"))
+	for i := range primaries {
+		index3, ok := primaries[i].(datastore.PrimaryIndex3)
+		if ok {
+			state, _, err := index3.State()
+			if err == nil && state == datastore.ONLINE {
+				return datastore.NewIndexConnection(datastore.NULL_CONTEXT), index3, nil
+			}
 		}
 	}
-	index3, ok := primaries[0].(datastore.PrimaryIndex3)
+	indexer, err = keyspace.Indexer(datastore.SEQ_SCAN)
+	if err != nil {
+		return nil, nil, err
+	}
+	indexer3, ok = indexer.(datastore.Indexer3)
 	if !ok {
 		return nil, nil, errors.NewSequenceError(errors.E_SEQUENCE, fmt.Errorf("Cannot load from system collection"))
 	}
-	conn := datastore.NewIndexConnection(datastore.NULL_CONTEXT)
-	return conn, index3, nil
+	primaries, err = indexer3.PrimaryIndexes()
+	if err != nil {
+		return nil, nil, err
+	}
+	for i := range primaries {
+		index3, ok := primaries[i].(datastore.PrimaryIndex3)
+		if ok {
+			state, _, err := index3.State()
+			if err == nil && state == datastore.ONLINE {
+				return datastore.NewIndexConnection(datastore.NULL_CONTEXT), index3, nil
+			}
+		}
+	}
+	return nil, nil, errors.NewSequenceError(errors.E_SEQUENCE, fmt.Errorf("Cannot load from system collection"))
 }
 
 func getSpan(prefix string) datastore.Spans2 {
