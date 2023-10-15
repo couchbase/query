@@ -142,6 +142,15 @@ func retryMigration() {
 	// make sure the migrations map has information on all relevant buckets
 	checkMigrations()
 
+	// initial check of availability of system collection before retry of migration
+	migrationsLock.Lock()
+	for _, bucket := range migrations {
+		checkSystemCollection(bucket.name)
+	}
+	migrationsLock.Unlock()
+
+	lastActivity = time.Now()
+
 	for i := 1; i <= _MAX_RETRY; i++ {
 		duration = time.Duration(i) * _RETRY_TIME
 		for {
@@ -501,6 +510,7 @@ func checkMigrateBucket(name string) {
 	if doSysColl {
 		err := checkSystemCollection(name)
 		if err != nil {
+			lastActivity = time.Now()
 			return
 		}
 	}
