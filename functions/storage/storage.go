@@ -143,11 +143,36 @@ func retryMigration() {
 	checkMigrations()
 
 	// initial check of availability of system collection before retry of migration
+	logging.Infof("UDF migration: Checking availability of system collection on all buckets")
 	migrationsLock.Lock()
-	for _, bucket := range migrations {
-		checkSystemCollection(bucket.name)
+	done := false
+	for i := 1; i <= _MAX_RETRY; i++ {
+		done = true
+		for _, bucket := range migrations {
+			bucket.Lock()
+			if bucket.state == _BUCKET_NOT_MIGRATING {
+				err := checkSystemCollection(bucket.name)
+				if err != nil {
+					done = false
+				} else {
+					// so we don't keep calling checkSystemCollection()
+					bucket.state = _BUCKET_PART_MIGRATED
+				}
+				lastActivity = time.Now()
+			}
+			bucket.Unlock()
+		}
+		if done {
+			break
+		}
+		time.Sleep(time.Duration(i) * _RETRY_TIME)
 	}
 	migrationsLock.Unlock()
+	if done {
+		logging.Infof("UDF migration: Finished checking availability of system collection on all buckets")
+	} else {
+		logging.Errorf("UDF migration: System collections on all buckets are not all available")
+	}
 
 	lastActivity = time.Now()
 
@@ -510,6 +535,9 @@ func checkMigrateBucket(name string) {
 	if doSysColl {
 		err := checkSystemCollection(name)
 		if err != nil {
+			bucket.Lock()
+			bucket.state = _BUCKET_NOT_MIGRATING
+			bucket.Unlock()
 			lastActivity = time.Now()
 			return
 		}
@@ -619,8 +647,8 @@ func checkSystemCollection(name string) errors.Error {
 		// check existence of system collection, no need to create primary index
 		err := ds.CheckSystemCollection(name, "")
 		if err != nil {
-			logging.Errorf("UDF migration: Error during UDF migration for bucket %s, system collection does not exist - %v", name, err)
-			return errors.NewMigrationError(_UDF_MIGRATION, fmt.Sprintf("Error during UDF migration for bucket %s - system collection does not exist", name), nil, err)
+			logging.Errorf("UDF migration: Error during UDF migration for bucket %s, system collection unavailable - %v", name, err)
+			return errors.NewMigrationError(_UDF_MIGRATION, fmt.Sprintf("Error during UDF migration for bucket %s - system collection unavailable", name), nil, err)
 		} else {
 			logging.Infof("UDF migration: System collection available (bucket %s)", name)
 		}
