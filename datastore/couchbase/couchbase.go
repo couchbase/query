@@ -238,9 +238,10 @@ func (info *infoImpl) Services(node string) (map[string]interface{}, []errors.Er
 		if ok {
 			// Return a safely writeable copy of the information.  This is not a full value copy since the values themselves can
 			// typically be changed without issue, but the map can't.
-			ret := make(map[string]interface{}, len(n))
-			for n, v := range source {
-				ret[n] = n
+			m := n.(map[string]interface{})
+			ret := make(map[string]interface{}, len(m))
+			for k, v := range m {
+				ret[k] = v
 			}
 			p.RUnlock()
 			return ret, nil
