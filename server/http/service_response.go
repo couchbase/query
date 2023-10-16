@@ -130,8 +130,6 @@ func mapErrorToHttpResponse(err errors.Error, def int) int {
 		return http.StatusTooManyRequests
 	case errors.E_SERVICE_NO_CLIENT:
 		return http.StatusBadRequest
-	case errors.W_GSI_TRANSIENT:
-		return http.StatusOK
 	default:
 		return def
 	}

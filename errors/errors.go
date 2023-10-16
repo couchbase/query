@@ -35,6 +35,16 @@ const (
 	DEBUG
 )
 
+var levelNames = map[int]string{
+	EXCEPTION: "exception",
+	ERROR:     "error",
+	WARNING:   "warning",
+	NOTICE:    "notice",
+	INFO:      "info",
+	LOG:       "log",
+	DEBUG:     "debug",
+}
+
 type ErrorCode int32
 
 type Errors []Error
@@ -64,6 +74,7 @@ type Error interface {
 	SetTranslationKey(s string)
 	GetICause() error
 	Level() int
+	LevelString() string
 	IsFatal() bool
 	IsWarning() bool
 	OnceOnly() bool
@@ -117,12 +128,9 @@ func NewError(e error, internalMsg string) Error {
 		return e
 	}
 
-	code := E_INTERNAL
-	key := "internal.error"
-	level := EXCEPTION
-	var c interface{}
+	var cause interface{}
 
-	// map GSI errors where possible to meaningful error codes
+	// Provide meaningful additional information for where possible for GSI errors
 	isGsi, caller := GSICaller()
 	if isGsi {
 		errText := ""
@@ -134,46 +142,45 @@ func NewError(e error, internalMsg string) Error {
 		} else {
 			errText = strings.TrimSpace(internalMsg)
 		}
-		res := gsiPatterns["enterprise"].FindSubmatch([]byte(errText))
-		if res != nil {
-			return NewEnterpriseFeature(string(res[1]), "indexing.enterprise_only_feature")
-		}
-		res = gsiPatterns["exists"].FindSubmatch([]byte(errText))
-		if res != nil {
-			return NewIndexAlreadyExistsError(string(res[1]))
-		}
-		m := make(map[string]interface{}, 5)
-		if strings.HasPrefix(internalMsg, "GSI ") {
-			m["source"] = internalMsg[4:]
-		}
-		if strings.Contains(errText, "Encountered transient error") {
-			m["error"] = errText
-			code = W_GSI_TRANSIENT
-			key = "indexing.transient_error"
-			level = WARNING
-		} else if res = gsiPatterns["tempfile"].FindSubmatch([]byte(errText)); res != nil {
-			m["request"] = strings.TrimSpace(string(res[1]))
-			m["limit"], _ = strconv.Atoi(string(res[2]))
-			m["size"], _ = strconv.Atoi(string(res[3]))
-			m["user_action"] = "Check queryTmpSpaceDir and queryTmpSpaceSize settings."
-			code = E_GSI_TEMP_FILE_SIZE
-			key = "indexing.temp_file_size"
+		if res := gsiPatterns["enterprise"].FindSubmatch([]byte(errText)); res != nil {
+			cause = NewEnterpriseFeature(string(res[1]), "indexing.enterprise_only_feature")
+		} else if res = gsiPatterns["exists"].FindSubmatch([]byte(errText)); res != nil {
+			cause = NewIndexAlreadyExistsError(string(res[1]))
 		} else {
-			if res = gsiPatterns["reason"].FindSubmatch([]byte(errText)); res != nil {
-				m["error"] = strings.TrimSpace(string(res[1]))
-				m["reason"] = strings.TrimSpace(string(res[3]))
-			} else {
-				m["error"] = errText
+			code := E_GSI
+			key := "indexing.error"
+			level := EXCEPTION
+			m := make(map[string]interface{}, 5)
+			if strings.HasPrefix(internalMsg, "GSI ") {
+				m["source"] = internalMsg[4:]
 			}
-			code = E_GSI
-			key = "indexing.error"
-		}
-		if len(m) > 0 {
-			c = m
+			if strings.Contains(errText, "Encountered transient error") {
+				m["error"] = errText
+				code = W_GSI_TRANSIENT
+				key = "indexing.transient_error"
+				level = WARNING
+			} else if res = gsiPatterns["tempfile"].FindSubmatch([]byte(errText)); res != nil {
+				m["request"] = strings.TrimSpace(string(res[1]))
+				m["limit"], _ = strconv.Atoi(string(res[2]))
+				m["size"], _ = strconv.Atoi(string(res[3]))
+				m["user_action"] = "Check queryTmpSpaceDir and queryTmpSpaceSize settings."
+				code = E_GSI_TEMP_FILE_SIZE
+				key = "indexing.temp_file_size"
+			} else {
+				if res = gsiPatterns["reason"].FindSubmatch([]byte(errText)); res != nil {
+					m["error"] = strings.TrimSpace(string(res[1]))
+					m["reason"] = strings.TrimSpace(string(res[3]))
+				} else {
+					m["error"] = errText
+				}
+			}
+			cause = &err{level: level, ICode: code, IKey: key, ICause: e, InternalMsg: internalMsg, InternalCaller: caller,
+				cause: m}
 		}
 	}
 
-	return &err{level: level, ICode: code, IKey: key, ICause: e, InternalMsg: internalMsg, InternalCaller: caller, cause: c}
+	return &err{level: EXCEPTION, ICode: E_INTERNAL, IKey: "Internal Error", ICause: e, InternalMsg: internalMsg,
+		InternalCaller: caller, cause: cause}
 }
 
 func NewWarning(internalMsg string) Error {
@@ -237,6 +244,7 @@ func (e *err) Object() map[string]interface{} {
 		"key":     e.IKey,
 		"message": e.InternalMsg,
 		"caller":  e.InternalCaller,
+		"_level":  e.LevelString(),
 	}
 	if e.ICause != nil {
 		m["icause"] = e.ICause.Error()
@@ -339,6 +347,14 @@ func (e *err) UnmarshalJSON(body []byte) error {
 
 func (e *err) Level() int {
 	return e.level
+}
+
+func (e *err) LevelString() string {
+	s, ok := levelNames[e.level]
+	if !ok {
+		s = levelNames[EXCEPTION]
+	}
+	return s
 }
 
 func (e *err) IsFatal() bool {
