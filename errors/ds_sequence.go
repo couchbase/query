@@ -17,6 +17,7 @@ var _seq = map[ErrorCode][2]string{
 	E_SEQUENCE_CREATE:         {"create", "Create failed for sequence '%v'"},
 	E_SEQUENCE_ALTER:          {"alter", "Alter failed for sequence '%v'"},
 	E_SEQUENCE_DROP:           {"drop", "Drop failed for sequence '%v'"},
+	E_SEQUENCE_DROP_ALL:       {"drop_all", "Drop failed for sequences '%v'"},
 	E_SEQUENCE_INVALID_CACHE:  {"cache", "Invalid cache value %v"},
 	E_SEQUENCE_INVALID_RANGE:  {"range", "Invalid range %v"},
 	E_SEQUENCE_NOT_FOUND:      {"not_found", "Sequence '%v' not found"},

@@ -650,68 +650,47 @@ func loadSequence(name string) errors.Error {
 	return err
 }
 
-// As we latch items whilst walking the lists for clean-up, we need to do the walking serially
-var listWalkMutex sync.Mutex
-
 func DropAllSequences(namespace string, bucket string, scope string) errors.Error {
 
-	var err errors.Error
-
-	b, err := getSystemCollection(bucket)
-	if err != nil {
-		return err
-	}
-	conn, index3, err := getIndexConnection(b)
-	if err != nil {
-		return err
-	}
-
-	low := _SEQUENCE
-	if scope != "" {
-		low += scope + "."
-	}
-
-	requestId, _ := util.UUIDV4()
-	go index3.Scan3(requestId, getSpan(low), false, false, nil, 0, math.MaxInt64, nil, nil, datastore.UNBOUNDED, nil, conn)
-
-	var item *datastore.IndexEntry
 	var lastError errors.Error
 	pairs := make([]value.Pair, 0, _BATCH_SIZE)
 	errorCount := 0
-	for ok := true; ok; {
-		item, ok = conn.Sender().GetEntry()
-		if ok {
-			if item != nil {
-				pairs = append(pairs, value.Pair{Name: item.PrimaryKey})
-				if len(pairs) >= _BATCH_SIZE {
-					_, results, errs := b.Delete(pairs, datastore.MAJORITY_QUERY_CONTEXT, true)
-					for i := range results {
-						sequences.Delete(getCacheKey(namespace, bucket, results[i].Name), nil)
-					}
-					if errs != nil && len(errs) > 0 {
-						errorCount += len(errs)
-						lastError = errors.NewSequenceError(errors.E_SEQUENCE_DROP, low, errs[0])
-					}
-					pairs = pairs[:0]
-				}
-			} else {
-				ok = false
-			}
-		}
-	}
-	conn.Dispose()
-	conn.SendStop()
 
-	nextRevision()
-	if len(pairs) > 0 {
-		_, results, errs := b.Delete(pairs, datastore.MAJORITY_QUERY_CONTEXT, true)
-		for i := range results {
-			sequences.Delete(getCacheKey(namespace, bucket, results[i].Name), nil)
-		}
-		if errs != nil && len(errs) > 0 {
-			errorCount += len(errs)
-			lastError = errors.NewSequenceError(errors.E_SEQUENCE_DROP, low, errs[0])
-		}
+	prefix := _SEQUENCE
+	if scope != "" {
+		prefix += scope + "."
+	}
+	err := datastore.ScanSystemCollection(bucket, prefix, nil,
+		func(key string, systemCollection datastore.Keyspace) errors.Error {
+			pairs = append(pairs, value.Pair{Name: key})
+			if len(pairs) >= _BATCH_SIZE {
+				_, results, errs := systemCollection.Delete(pairs, datastore.MAJORITY_QUERY_CONTEXT, true)
+				for i := range results {
+					sequences.Delete(getCacheKey(namespace, bucket, results[i].Name), nil)
+				}
+				if errs != nil && len(errs) > 0 {
+					errorCount += len(errs)
+					lastError = errors.NewSequenceError(errors.E_SEQUENCE_DROP_ALL, bucket+"."+scope+".*", errs[0])
+				}
+				pairs = pairs[:0]
+			}
+			return nil
+		},
+		func(systemCollection datastore.Keyspace) errors.Error {
+			if len(pairs) > 0 {
+				_, results, errs := systemCollection.Delete(pairs, datastore.MAJORITY_QUERY_CONTEXT, true)
+				for i := range results {
+					sequences.Delete(getCacheKey(namespace, bucket, results[i].Name), nil)
+				}
+				if errs != nil && len(errs) > 0 {
+					errorCount += len(errs)
+					lastError = errors.NewSequenceError(errors.E_SEQUENCE_DROP_ALL, bucket+"."+scope+".*", errs[0])
+				}
+			}
+			return nil
+		})
+	if err != nil && lastError == nil {
+		lastError = err
 	}
 	logging.Debugf("%v:%v.%v %v", namespace, bucket, scope, errorCount)
 	return lastError
@@ -1112,88 +1091,8 @@ func getWithBoolOption(with value.Value, opt string, optional bool) (bool, bool,
 	return v.Truth(), true, nil
 }
 
-// Cleanup level sequences that have been orphaned by activity outside of the query service
-// If a scope is dropped whilst the bucket is loaded we clean-up immediately, if not this aims to take care of it
-func CleanupStaleSequences(namespace string, bucket string) {
-
-	store := datastore.GetDatastore()
-	if store == nil {
-		return
-	}
-
-	ns, err := store.NamespaceByName(namespace)
-	if err != nil || ns == nil {
-		logging.Debugf("%v:%v - %v", namespace, bucket, err)
-		return
-	}
-
-	b, err := ns.BucketByName(bucket)
-	if err != nil || b == nil {
-		logging.Debugf("%v:%v - %v", namespace, bucket, err)
-		return
-	}
-
-	sb, err := store.GetSystemCollection(bucket)
-	if err != nil || sb == nil {
-		logging.Debugf("%v:%v - %v", namespace, bucket, err)
-		return
-	}
-
-	conn, index3, err := getIndexConnection(sb)
-	if err != nil || conn == nil || index3 == nil {
-		logging.Debugf("%v:%v - %v", namespace, bucket, err)
-		return
-	}
-
-	requestId, _ := util.UUIDV4()
-	go index3.Scan3(requestId, getSpan(_SEQUENCE+namespace+":"+bucket), false, false, nil, 0, math.MaxInt64, nil, nil,
-		datastore.UNBOUNDED, nil, conn)
-
-	var item *datastore.IndexEntry
-	pairs := make([]value.Pair, 0, _BATCH_SIZE)
-	errorCount := 0
-	for ok := true; ok; {
-		item, ok = conn.Sender().GetEntry()
-		if ok {
-			if item != nil {
-				elements := algebra.ParsePath(strings.TrimPrefix(item.PrimaryKey, _SEQUENCE))
-				if len(elements) == 2 {
-					_, err := b.ScopeByName(elements[1])
-					if err != nil {
-						pairs = append(pairs, value.Pair{Name: item.PrimaryKey})
-						if len(pairs) >= _BATCH_SIZE {
-							_, results, errs := sb.Delete(pairs, datastore.NULL_QUERY_CONTEXT, true)
-							for i := range results {
-								sequences.Delete(getCacheKey(namespace, bucket, results[i].Name), nil)
-							}
-							if errs != nil && len(errs) > 0 {
-								errorCount += len(errs)
-								logging.Debugf("%v:%v - ", namespace, bucket, errs[0])
-							}
-							pairs = pairs[:0]
-						}
-					}
-				}
-			} else {
-				ok = false
-			}
-		}
-	}
-	conn.Dispose()
-	conn.SendStop()
-
-	if len(pairs) > 0 {
-		_, results, errs := sb.Delete(pairs, datastore.NULL_QUERY_CONTEXT, true)
-		for i := range results {
-			sequences.Delete(getCacheKey(namespace, bucket, results[i].Name), nil)
-		}
-		if errs != nil && len(errs) > 0 {
-			errorCount += len(errs)
-			logging.Debugf("%v:%v - ", namespace, bucket, errs[0])
-		}
-	}
-	logging.Debugf("%v:%v %v", namespace, bucket, errorCount)
-}
+// As we latch items whilst walking the lists for clean-up, we need to do the walking serially
+var listWalkMutex sync.Mutex
 
 // to support system keyspace
 func ListSequenceKeys(namespace string, bucket string, scope string, cachedOnly bool, limit int64) ([]string, errors.Error) {
@@ -1220,43 +1119,28 @@ func ListSequenceKeys(namespace string, bucket string, scope string, cachedOnly 
 		return res, nil
 	}
 
-	b, err := getSystemCollection(bucket)
-	if err != nil {
-		// not enabled for the bucket so skip
-		return nil, nil
-	}
-
-	if b.ScopeId() == scope {
-		return nil, err
-	}
-
-	conn, index3, err := getIndexConnection(b)
-	if err != nil {
-		return nil, err
-	}
-
-	low := _SEQUENCE
+	prefix := _SEQUENCE
 	if scope != "" {
-		low += scope + "."
+		prefix += scope + "."
 	}
-	requestId, _ := util.UUIDV4()
-	go index3.Scan3(requestId, getSpan(low), false, false, nil, 0, math.MaxInt64, nil, nil, datastore.UNBOUNDED, nil, conn)
 
-	var item *datastore.IndexEntry
-	for ok := true; ok && limit > 0; {
-		item, ok = conn.Sender().GetEntry()
-		if ok {
-			if item != nil {
-				res = append(res, getCacheKey(namespace, bucket, item.PrimaryKey))
-				limit--
-			} else {
-				ok = false
+	datastore.ScanSystemCollection(bucket, prefix,
+		func(systemCollection datastore.Keyspace) errors.Error {
+			if systemCollection.ScopeId() == scope {
+				// don't look for _system scope sequences
+				return errors.NewSequenceError(errors.E_SEQUENCE) // will just stop the scan
 			}
-		}
-	}
+			return nil
+		},
+		func(key string, systemCollection datastore.Keyspace) errors.Error {
+			if limit > 0 {
+				res = append(res, getCacheKey(namespace, bucket, key))
+				limit--
+				return nil
+			}
+			return errors.NewSequenceError(errors.E_SEQUENCE) // will just stop the scan
+		}, nil)
 
-	conn.Dispose()
-	conn.SendStop()
 	return res, nil
 }
 
@@ -1366,67 +1250,50 @@ func ListCachedSequences() []string {
 
 func BackupSequences(namespace string, bucket string, filter func(string) bool) ([]interface{}, errors.Error) {
 
-	b, err := getSystemCollection(bucket)
-	if err != nil {
-		return nil, err
-	}
-	conn, index3, err := getIndexConnection(b)
-	if err != nil {
-		return nil, err
-	}
-
-	prefix := namespace + ":" + bucket + "."
-
-	low := _SEQUENCE
-	requestId, _ := util.UUIDV4()
-	go index3.Scan3(requestId, getSpan(low), false, false, nil, 0, math.MaxInt64, nil, nil, datastore.UNBOUNDED, nil, conn)
-
-	var item *datastore.IndexEntry
-
 	target := make([]interface{}, 0, 16)
 	res := make(map[string]value.AnnotatedValue, 1)
 	keys := make([]string, 1)
-	for ok := true; ok; {
-		item, ok = conn.Sender().GetEntry()
-		if ok {
-			if item != nil {
-				name := prefix + strings.TrimPrefix(item.PrimaryKey, _SEQUENCE)
-				if filter == nil || filter(name) {
-					keys[0] = item.PrimaryKey
-					errs := b.Fetch(keys, res, datastore.NULL_QUERY_CONTEXT, nil, nil, false)
-					if errs != nil && len(errs) > 0 {
-						return nil, errs[0]
-					}
-					av, ok := res[keys[0]]
-					if ok {
-						m := make(map[string]interface{})
-						m["identity"] = name
-						v, _ := av.Field("cache")
-						m["cache"] = v.ToString()
-						v, _ = av.Field("min")
-						m["min"] = v.ToString()
-						v, _ = av.Field("max")
-						m["max"] = v.ToString()
-						v, _ = av.Field("increment")
-						m["increment"] = v.ToString()
-						v, _ = av.Field("cycle")
-						m["cycle"] = v.Truth()
-						v, _ = av.Field("initial")
-						m["initial"] = v.ToString()
 
-						start, _ := restartValue(av)
-						m["start"] = start
+	namePrefix := namespace + ":" + bucket + "."
 
-						target = append(target, m)
-					}
+	err := datastore.ScanSystemCollection(bucket, _SEQUENCE, nil,
+		func(key string, systemCollection datastore.Keyspace) errors.Error {
+			name := namePrefix + strings.TrimPrefix(key, _SEQUENCE)
+			if filter == nil || filter(name) {
+				keys[0] = key
+				errs := systemCollection.Fetch(keys, res, datastore.NULL_QUERY_CONTEXT, nil, nil, false)
+				if errs != nil && len(errs) > 0 {
+					return errs[0]
 				}
-			} else {
-				ok = false
-			}
-		}
-	}
-	conn.Dispose()
-	conn.SendStop()
+				av, ok := res[keys[0]]
+				if ok {
+					m := make(map[string]interface{})
+					m["identity"] = name
+					v, _ := av.Field("cache")
+					m["cache"] = v.ToString()
+					v, _ = av.Field("min")
+					m["min"] = v.ToString()
+					v, _ = av.Field("max")
+					m["max"] = v.ToString()
+					v, _ = av.Field("increment")
+					m["increment"] = v.ToString()
+					v, _ = av.Field("cycle")
+					m["cycle"] = v.Truth()
+					v, _ = av.Field("initial")
+					m["initial"] = v.ToString()
 
-	return target, nil
+					start, _ := restartValue(av)
+					m["start"] = start
+
+					target = append(target, m)
+				}
+			}
+			return nil
+		}, nil)
+
+	return target, err
+}
+
+func CleanupCacheEntry(namespace string, bucket string, key string) {
+	sequences.Delete(getCacheKey(namespace, bucket, key), nil)
 }

@@ -39,6 +39,7 @@ import (
 	"github.com/couchbase/query/datastore/couchbase/gcagent"
 	"github.com/couchbase/query/datastore/virtual"
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/functions"
 	"github.com/couchbase/query/logging"
 	cb "github.com/couchbase/query/primitives/couchbase"
 	"github.com/couchbase/query/sequences"
@@ -1317,7 +1318,7 @@ func (p *namespace) keyspaceByName(name string) (*keyspace, errors.Error) {
 		entry.cbKeyspace = k
 		p.lock.Unlock()
 		// once successfully loaded we can check if we need to clean-up after external actions
-		go sequences.CleanupStaleSequences(p.name, name)
+		go cleanupSystemCollection(p.name, name)
 		return k, nil
 	}
 }
@@ -3055,4 +3056,80 @@ func setMutateClientContext(context datastore.QueryContext, clientContext ...*me
 		}
 	}
 	return nil
+}
+
+// Cleanup entries in the system collection that have been orphaned by activity outside of the query service
+// If a scope is dropped whilst the bucket is loaded we clean-up immediately, if not this aims to take care of it
+
+const _BATCH_SIZE = 512
+
+func cleanupSystemCollection(namespace string, bucket string) {
+
+	processResult := func(key string) {
+		if strings.HasPrefix(key, "_sequence::") {
+			sequences.CleanupCacheEntry(namespace, bucket, key)
+		} else if strings.HasPrefix(key, "udf::") {
+			parts := strings.Split(key, "::")
+			functions.FunctionClear(bucket+"."+parts[1], nil)
+		} else if strings.HasPrefix(key, "cbo::") {
+			/* TODO: clean-up for CBO records */
+		}
+	}
+
+	pairs := make([]value.Pair, 0, _BATCH_SIZE)
+	errorCount := 0
+	deletedCount := 0
+
+	datastore.ScanSystemCollection(bucket, "", nil,
+		func(key string, systemCollection datastore.Keyspace) errors.Error {
+			logging.Debugf("Key: %v", key)
+			parts := strings.Split(key, "::")
+			if len(parts) == 2 && (parts[0] == "_sequence" || parts[0] == "cbo" || parts[0] == "udf") {
+				elements := strings.Split(parts[1], ".")
+				if len(elements) == 2 {
+					s, err := systemCollection.Scope().Bucket().ScopeByName(elements[0])
+					if err == nil && parts[0] == "cbo" {
+						coll := elements[1]
+						i := strings.Index(coll, "(")
+						if i != -1 {
+							coll = coll[:i]
+						}
+						_, err = s.KeyspaceByName(coll)
+					}
+					if err != nil {
+						logging.Infof("Deleting stale system collection key: %v", key)
+						pairs = append(pairs, value.Pair{Name: key})
+						if len(pairs) >= _BATCH_SIZE {
+							_, results, errs := systemCollection.Delete(pairs, datastore.NULL_QUERY_CONTEXT, true)
+							for i := range results {
+								processResult(results[i].Name)
+							}
+							if errs != nil && len(errs) > 0 {
+								errorCount += len(errs)
+								logging.Debugf("%v:%v - %v", namespace, bucket, errs[0])
+							}
+							deletedCount += len(pairs) - len(errs)
+							pairs = pairs[:0]
+						}
+					}
+				}
+			}
+			return nil
+		},
+		func(systemCollection datastore.Keyspace) errors.Error {
+			if len(pairs) > 0 {
+				_, results, errs := systemCollection.Delete(pairs, datastore.NULL_QUERY_CONTEXT, true)
+				for i := range results {
+					processResult(results[i].Name)
+				}
+				if errs != nil && len(errs) > 0 {
+					errorCount += len(errs)
+					logging.Debugf("%v:%v - %v", namespace, bucket, errs[0])
+				}
+				deletedCount += len(pairs) - len(errs)
+			}
+			return nil
+		})
+
+	logging.Debugf("%v:%v deleted: %v errors: %v", namespace, bucket, deletedCount, errorCount)
 }

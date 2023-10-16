@@ -533,4 +533,5 @@ const (
 	E_SEQUENCE_READ_ONLY_REQ                  ErrorCode = 19114
 	W_SEQUENCE_CACHE_SIZE                     ErrorCode = 19115
 	E_SEQUENCE_NAME_PARTS                     ErrorCode = 19116
+	E_SEQUENCE_DROP_ALL                       ErrorCode = 19117
 )

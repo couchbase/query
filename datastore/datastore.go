@@ -31,6 +31,7 @@ import (
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/tenant"
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
@@ -691,6 +692,151 @@ func HandleDsAuthError(err errors.Error, privs *auth.Privileges, creds *auth.Cre
 		}
 
 		return err
+	}
+
+	return nil
+}
+
+func getSystemCollection(bucketName string) (Keyspace, errors.Error) {
+	store := GetDatastore()
+	if store == nil {
+		return nil, errors.NewNoDatastoreError()
+	}
+	return store.GetSystemCollection(bucketName)
+}
+
+func getSystemCollectonIndexConnection(systemCollection Keyspace) (*IndexConnection, Index3, errors.Error) {
+	indexer, err := systemCollection.Indexer(GSI)
+	if err != nil {
+		return nil, nil, err
+	}
+	indexer3, ok := indexer.(Indexer3)
+	if !ok {
+		return nil, nil, errors.NewInvalidGSIIndexerError("Cannot load from system collection")
+	}
+	primaries, err := indexer3.PrimaryIndexes()
+	if err != nil {
+		return nil, nil, err
+	}
+	for i := range primaries {
+		index3, ok := primaries[i].(PrimaryIndex3)
+		if ok {
+			state, _, err := index3.State()
+			if err == nil && state == ONLINE {
+				return NewIndexConnection(NULL_CONTEXT), index3, nil
+			}
+		}
+	}
+
+	// if primary index is not available or not online, check the status in the background
+	go func(bucketName string) {
+		store := GetDatastore()
+		if store != nil {
+			requestId, _ := util.UUIDV4()
+			store.CheckSystemCollection(bucketName, requestId)
+		}
+	}(systemCollection.Scope().BucketId())
+
+	indexer, err = systemCollection.Indexer(SEQ_SCAN)
+	if err != nil {
+		return nil, nil, err
+	}
+	indexer3, ok = indexer.(Indexer3)
+	if !ok {
+		return nil, nil, errors.NewInvalidGSIIndexerError("Cannot load from system collection")
+	}
+	primaries, err = indexer3.PrimaryIndexes()
+	if err != nil {
+		return nil, nil, err
+	}
+	for i := range primaries {
+		index3, ok := primaries[i].(PrimaryIndex3)
+		if ok {
+			state, _, err := index3.State()
+			if err == nil && state == ONLINE {
+				return NewIndexConnection(NULL_CONTEXT), index3, nil
+			}
+		}
+	}
+	return nil, nil, errors.NewInvalidGSIIndexerError("Primary scan is not available")
+}
+
+func ScanSystemCollection(bucketName string, prefix string, preScan func(Keyspace) errors.Error,
+	handler func(string, Keyspace) errors.Error, postScan func(Keyspace) errors.Error) errors.Error {
+
+	systemCollection, err := getSystemCollection(bucketName)
+	if err != nil {
+		return err
+	}
+
+	conn, index3, err := getSystemCollectonIndexConnection(systemCollection)
+	if err != nil || conn == nil || index3 == nil {
+		return err
+	}
+	defer func() {
+		conn.Dispose()
+		conn.SendStop()
+	}()
+
+	requestId, err1 := util.UUIDV4()
+	if err1 != nil {
+		return errors.NewSystemCollectionError("error generating requestId", err1)
+	}
+
+	var spans Spans2
+
+	// generate span, which is equivalent to meta().id LIKE _PREFIX+"%"
+	spans = make(Spans2, 1)
+	ranges := make(Ranges2, 1)
+
+	low := prefix
+	high := []byte(low)
+	if len(high) > 0 {
+		high[len(high)-1]++
+	} else {
+		high = []byte{0xff}
+	}
+
+	ranges[0] = &Range2{
+		Low:       value.NewValue(low),
+		High:      value.NewValue(string(high)),
+		Inclusion: LOW,
+	}
+	spans[0] = &Span2{
+		Ranges: ranges,
+	}
+
+	if preScan != nil {
+		err := preScan(systemCollection)
+		if err != nil {
+			return err
+		}
+	}
+
+	go index3.Scan3(requestId, spans, false, false, nil, 0, 0, nil, nil, UNBOUNDED, nil, conn)
+
+	var item *IndexEntry
+	ok := true
+	for ok {
+		// logic from execution/base.getItemEntry()
+		item, ok = conn.Sender().GetEntry()
+		if ok {
+			if item != nil {
+				err = handler(item.PrimaryKey, systemCollection)
+				if err != nil {
+					return err
+				}
+			} else {
+				ok = false
+			}
+		}
+	}
+
+	if postScan != nil {
+		err := postScan(systemCollection)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

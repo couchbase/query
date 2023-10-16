@@ -18,9 +18,10 @@ import (
 	"github.com/couchbase/query/functions"
 	metaStorage "github.com/couchbase/query/functions/metakv"
 	"github.com/couchbase/query/functions/resolver"
-	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
+
+const _PREFIX = "udf::"
 
 // currently nothing to do
 func Init() {
@@ -28,7 +29,7 @@ func Init() {
 
 // datastore and function store actions
 func DropScope(namespace, bucket, scope string) {
-	scanSystemCollection(bucket, func(key string, systemCollection datastore.Keyspace) errors.Error {
+	datastore.ScanSystemCollection(bucket, _PREFIX, nil, func(key string, systemCollection datastore.Keyspace) errors.Error {
 		s, fn := key2parts(key)
 
 		// skip entries that are not udfs or different scopes
@@ -38,11 +39,11 @@ func DropScope(namespace, bucket, scope string) {
 			functions.FunctionClear(path, nil)
 		}
 		return nil
-	})
+	}, nil)
 }
 
 func Foreach(b string, f func(path string, v value.Value) error) error {
-	return scanSystemCollection(b, func(key string, systemCollection datastore.Keyspace) errors.Error {
+	return datastore.ScanSystemCollection(b, _PREFIX, nil, func(key string, systemCollection datastore.Keyspace) errors.Error {
 		s, fn := key2parts(key)
 
 		// skip entries that are not udfs
@@ -59,11 +60,11 @@ func Foreach(b string, f func(path string, v value.Value) error) error {
 			return errors.NewSystemCollectionError("Error calling processing function", err1)
 		}
 		return nil
-	})
+	}, nil)
 }
 
 func Scan(b string, f func(path string) error) error {
-	return scanSystemCollection(b, func(key string, systemCollection datastore.Keyspace) errors.Error {
+	return datastore.ScanSystemCollection(b, _PREFIX, nil, func(key string, systemCollection datastore.Keyspace) errors.Error {
 		s, fn := key2parts(key)
 
 		// skip entries that are not udfs
@@ -75,7 +76,7 @@ func Scan(b string, f func(path string) error) error {
 			return errors.NewSystemCollectionError("Error calling processing function", err)
 		}
 		return nil
-	})
+	}, nil)
 }
 
 func Get(path string) (value.Value, error) {
@@ -118,10 +119,10 @@ func get2(name functions.FunctionName, systemCollection datastore.Keyspace) (val
 func Count(b string) (int64, error) {
 	var count int64
 
-	err := scanSystemCollection(b, func(key string, systemCollection datastore.Keyspace) errors.Error {
+	err := datastore.ScanSystemCollection(b, _PREFIX, nil, func(key string, systemCollection datastore.Keyspace) errors.Error {
 		count++
 		return nil
-	})
+	}, nil)
 	return count, err
 }
 
@@ -133,131 +134,6 @@ func getSystemCollection(bucketName string) (datastore.Keyspace, errors.Error) {
 
 	return store.GetSystemCollection(bucketName)
 }
-
-func getPrimaryIndex(sysColl datastore.Keyspace, bucketName string) (datastore.PrimaryIndex3, errors.Error) {
-	indexer, err := sysColl.Indexer(datastore.GSI)
-	if err != nil {
-		return nil, err
-	}
-	indexer3, ok := indexer.(datastore.Indexer3)
-	if !ok {
-		return nil, errors.NewInvalidGSIIndexerError("Cannot load from system collection")
-	}
-	var err1 errors.Error
-	primaries, err := indexer3.PrimaryIndexes()
-	if err == nil {
-		for _, index := range primaries {
-			index3, ok := index.(datastore.PrimaryIndex3)
-			if !ok {
-				return nil, errors.NewInvalidGSIIndexError(index.Name())
-			}
-
-			state, _, err := index3.State()
-			if err == nil && state == datastore.ONLINE {
-				return index3, nil
-			} else if err1 == nil {
-				err1 = err
-			}
-		}
-	} else {
-		err1 = err
-	}
-
-	// if primary index is not available or not online, check the status in the backgroud
-	go func(bucketName string) {
-		store := datastore.GetDatastore()
-		if store != nil {
-			requestId, _ := util.UUIDV4()
-			store.CheckSystemCollection(bucketName, requestId)
-		}
-	}(bucketName)
-
-	// try sequential scan
-	indexer, err = sysColl.Indexer(datastore.SEQ_SCAN)
-	if err == nil {
-		primaries, err = indexer.PrimaryIndexes()
-		if err == nil {
-			for _, index := range primaries {
-				index3, ok := index.(datastore.PrimaryIndex3)
-				if !ok {
-					return nil, errors.NewInvalidGSIIndexError(index.Name())
-				}
-				return index3, nil
-			}
-		} else if err1 == nil {
-			err1 = err
-		}
-	} else if err1 == nil {
-		err1 = err
-	}
-
-	return nil, errors.NewSystemCollectionError("Primary index is not available", err1)
-}
-
-func scanSystemCollection(bucketName string, handler func(string, datastore.Keyspace) errors.Error) errors.Error {
-	systemCollection, err := getSystemCollection(bucketName)
-	if err != nil {
-		return err
-	}
-
-	index3, err := getPrimaryIndex(systemCollection, bucketName)
-	if err != nil {
-		return err
-	}
-
-	conn := datastore.NewIndexConnection(datastore.NULL_CONTEXT)
-	defer conn.Dispose()
-	defer conn.SendStop()
-
-	requestId, err1 := util.UUIDV4()
-	if err1 != nil {
-		return errors.NewSystemCollectionError("error generating requestId", err1)
-	}
-
-	// generate span, which is equivalent to meta().id LIKE _PREFIX+"%"
-	spans := make(datastore.Spans2, 1)
-	ranges := make(datastore.Ranges2, 1)
-
-	// logic here comes from plannerbase/DNF.visitLike()
-	docKey := _PREFIX
-	low := docKey
-	high := []byte(docKey)
-	last := len(docKey) - 1
-	high[last]++
-
-	ranges[0] = &datastore.Range2{
-		Low:       value.NewValue(low),
-		High:      value.NewValue(string(high)),
-		Inclusion: datastore.LOW,
-	}
-	spans[0] = &datastore.Span2{
-		Ranges: ranges,
-	}
-
-	go index3.Scan3(requestId, spans, false, false, nil, 0, 0, nil, nil,
-		datastore.UNBOUNDED, nil, conn)
-
-	var item *datastore.IndexEntry
-	ok := true
-	for ok {
-		// logic from execution/base.getItemEntry()
-		item, ok = conn.Sender().GetEntry()
-		if ok {
-			if item != nil {
-				err = handler(item.PrimaryKey, systemCollection)
-				if err != nil {
-					return err
-				}
-			} else {
-				ok = false
-			}
-		}
-	}
-
-	return nil
-}
-
-const _PREFIX = "udf::"
 
 func key2parts(key string) (string, string) {
 	if key[:len(_PREFIX)] != _PREFIX {
