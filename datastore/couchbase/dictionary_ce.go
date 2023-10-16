@@ -80,6 +80,10 @@ func chkSysBucket() {
 	// no-op
 }
 
+func getCBOKeyspace(key string) (string, bool) {
+	return "", false
+}
+
 type chkIndexDict struct {
 	// dummy struct
 }

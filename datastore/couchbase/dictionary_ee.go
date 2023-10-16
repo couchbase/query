@@ -119,6 +119,10 @@ func chkSysBucket() {
 	}
 }
 
+func getCBOKeyspace(key string) (string, bool) {
+	return dictionary.GetKeyspace(key)
+}
+
 const _GRACE_PERIOD = 2 * time.Second
 
 type chkIndexDict struct {

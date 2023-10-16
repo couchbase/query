@@ -3072,7 +3072,11 @@ func cleanupSystemCollection(namespace string, bucket string) {
 			parts := strings.Split(key, "::")
 			functions.FunctionClear(bucket+"."+parts[1], nil)
 		} else if strings.HasPrefix(key, "cbo::") {
-			/* TODO: clean-up for CBO records */
+			parts := strings.Split(key, "::")
+			keyspace, isKeyspace := getCBOKeyspace(parts[1])
+			if isKeyspace {
+				DropDictCacheEntry(keyspace, false)
+			}
 		}
 	}
 
@@ -3085,16 +3089,15 @@ func cleanupSystemCollection(namespace string, bucket string) {
 			logging.Debugf("Key: %v", key)
 			parts := strings.Split(key, "::")
 			if len(parts) == 2 && (parts[0] == "_sequence" || parts[0] == "cbo" || parts[0] == "udf") {
-				elements := strings.Split(parts[1], ".")
+				path := parts[1]
+				if parts[0] == "cbo" {
+					path, _ = getCBOKeyspace(parts[1])
+				}
+				elements := strings.Split(path, ".")
 				if len(elements) == 2 {
 					s, err := systemCollection.Scope().Bucket().ScopeByName(elements[0])
 					if err == nil && parts[0] == "cbo" {
-						coll := elements[1]
-						i := strings.Index(coll, "(")
-						if i != -1 {
-							coll = coll[:i]
-						}
-						_, err = s.KeyspaceByName(coll)
+						_, err = s.KeyspaceByName(elements[1])
 					}
 					if err != nil {
 						logging.Infof("Deleting stale system collection key: %v", key)
