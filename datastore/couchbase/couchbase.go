@@ -235,10 +235,17 @@ func (info *infoImpl) Services(node string) (map[string]interface{}, []errors.Er
 	for _, p := range _POOLMAP.poolServices {
 		p.RLock()
 		n, ok := p.nodeServices[node]
-		p.RUnlock()
 		if ok {
-			return n.(map[string]interface{}), nil
+			// Return a safely writeable copy of the information.  This is not a full value copy since the values themselves can
+			// typically be changed without issue, but the map can't.
+			ret := make(map[string]interface{}, len(n))
+			for n, v := range source {
+				ret[n] = n
+			}
+			p.RUnlock()
+			return ret, nil
 		}
+		p.RUnlock()
 	}
 	return map[string]interface{}{}, errs
 }
@@ -332,6 +339,7 @@ func (info *infoImpl) refresh() (bool, []errors.Error) {
 					nodeServices[fullhostName(n.Hostname)] = newServices
 				}
 				newPoolServices.nodeServices = nodeServices
+				newPoolServices.lastUpdate = util.Now()
 				_POOLMAP.poolServices[p.Name] = newPoolServices
 			} else {
 
@@ -341,6 +349,7 @@ func (info *infoImpl) refresh() (bool, []errors.Error) {
 					m := poolEntry.nodeServices[fullhostName(n.Hostname)].(map[string]interface{})
 					m["status"] = n.Status
 				}
+				poolEntry.lastUpdate = util.Now()
 				poolEntry.Unlock()
 			}
 		} else {
