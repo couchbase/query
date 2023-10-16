@@ -1451,10 +1451,10 @@ func (this *base) switchPhase(p timePhases) {
 	switch oldPhase {
 	case _EXECTIME:
 		this.addExecTime(d)
-		this.phaseTimes(nil, this.execPhase, d) // DVJH: TODO - needs a context. When MB-59002 is merged we'll have it
+		//this.phaseTimes(nil, this.execPhase, d) // DVJH: TODO - needs a context. When MB-59002 is merged we'll have it
 	case _SERVTIME:
 		this.addServTime(d)
-		this.phaseTimes(nil, this.execPhase, d) // DVJH: TODO - needs a context. When MB-59002 is merged we'll have it
+		//this.phaseTimes(nil, this.execPhase, d) // DVJH: TODO - needs a context. When MB-59002 is merged we'll have it
 	case _CHANTIME:
 		this.addChanTime(d)
 	}
