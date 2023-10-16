@@ -108,16 +108,38 @@ function printRule(terms) \
 }
 function fixTerm(t) \
 {
-  switch (t)
+  /* Cannot rely on switch statement being available... */
+  if (t=="stmt_body")
   {
-    case "stmt_body": return "statements"
-    case "ident_or_default": return "<identifier>"
-    case "IDENT": return "<identifier>"
-    case "IDENT_ICASE": return "<identifier>i"
-    case "NAMESPACE_ID": return "<namespace-identifier>"
-    case "expr": return "expression"
-    case "OPTIM_HINTS": return "/*OPTIM_HINTS*/"
-    case "hints_input": return "OPTIM_HINTS"
+    return "statements"
+  }
+  else if (t=="ident_or_default")
+  {
+    return "<identifier>"
+  }  
+  else if (t=="IDENT")
+  {
+    return "<identifier>"
+  }  
+  else if (t=="IDENT_ICASE")
+  {
+    return "<identifier>i"
+  }  
+  else if (t=="NAMESPACE_ID")
+  {
+    return "<namespace-identifier>"
+  }  
+  else if (t=="expr")
+  {
+    return "expression"
+  }  
+  else if (t=="OPTIM_HINTS")
+  {
+    return "/*OPTIM_HINTS*/"
+  }  
+  else if (t=="hints_input")
+  {
+    return "OPTIM_HINTS"
   }
   gsub("stmt","statement",t)
   if (index(t,"opt_")==1) t = "["substr(t,5)"]"
@@ -125,12 +147,9 @@ function fixTerm(t) \
 }
 function excludeRule(r) \
 {
-  switch (r)
+  if (r=="input"||r=="expr_input"||r=="<identifier>"||r=="[trailer]")
   {
-    case "input": return 1
-    case "expr_input": return 1
-    case "<identifier>": return 1
-    case "[trailer]": return 1
+    return 1
   }
   if (index(r,"$")!=0||substr(r,1,1)=="_") return 1
   return 0
