@@ -182,6 +182,7 @@ const (
 	E_EXECUTION_INTERNAL                      ErrorCode = 5002
 	E_EXECUTION_PARAMETER                     ErrorCode = 5003
 	E_PARSING                                 ErrorCode = 5004
+	E_EXECUTION_CURL                          ErrorCode = 5007
 	E_EVALUATION_ABORT                        ErrorCode = 5010
 	E_EVALUATION                              ErrorCode = 5011
 	E_EXPLAIN                                 ErrorCode = 5015

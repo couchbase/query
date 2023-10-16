@@ -76,7 +76,7 @@ type Systemstore interface {
 type AuditInfo struct {
 	AuditEnabled    bool
 	EventDisabled   map[uint32]bool
-	UserWhitelisted map[UserInfo]bool
+	UserAllowlisted map[UserInfo]bool
 	Uid             string
 }
 

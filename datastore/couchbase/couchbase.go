@@ -30,7 +30,7 @@ import (
 
 	"github.com/couchbase/cbauth"
 	"github.com/couchbase/gomemcached"
-	"github.com/couchbase/gomemcached/client" // package name is memcached
+	memcached "github.com/couchbase/gomemcached/client" // package name is memcached
 	gsi "github.com/couchbase/indexing/secondary/queryport/n1ql"
 	ftsclient "github.com/couchbase/n1fty"
 	"github.com/couchbase/query/auth"
@@ -428,7 +428,7 @@ func (s *store) AuditInfo() (*datastore.AuditInfo, errors.Error) {
 
 	ret := &datastore.AuditInfo{
 		EventDisabled:   events,
-		UserWhitelisted: users,
+		UserAllowlisted: users,
 		AuditEnabled:    auditSpec.AuditdEnabled,
 		Uid:             auditSpec.Uid,
 	}

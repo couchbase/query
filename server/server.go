@@ -155,7 +155,7 @@ type Server struct {
 	pretty            bool
 	srvprofile        Profile
 	srvcontrols       bool
-	whitelist         map[string]interface{}
+	allowlist         map[string]interface{}
 	autoPrepare       bool
 	memoryQuota       uint64
 	atrCollection     string
@@ -269,12 +269,12 @@ func (this *Server) Namespace() string {
 	return this.namespace
 }
 
-func (this *Server) SetWhitelist(val map[string]interface{}) {
-	this.whitelist = val
+func (this *Server) SetAllowlist(val map[string]interface{}) {
+	this.allowlist = val
 }
 
-func (this *Server) GetWhitelist() map[string]interface{} {
-	return this.whitelist
+func (this *Server) GetAllowlist() map[string]interface{} {
+	return this.allowlist
 }
 
 func (this *Server) ConfigurationStore() clustering.ConfigurationStore {
@@ -621,7 +621,7 @@ func (this *Server) setupRequestContext(request Request) bool {
 		request.NamedArgs(), request.PositionalArgs(), request.Credentials(), request.ScanConsistency(),
 		request.ScanVectorSource(), request.Output(), nil, request.IndexApiVersion(), request.FeatureControls(),
 		request.QueryContext(), request.UseFts(), request.UseCBO(), optimizer, request.KvTimeout(), request.Timeout())
-	context.SetWhitelist(this.whitelist)
+	context.SetAllowlist(this.allowlist)
 	context.SetDurability(request.DurabilityLevel(), request.DurabilityTimeout())
 	context.SetScanConsistency(request.ScanConsistency(), request.OriginalScanConsistency())
 	context.SetPreserveExpiry(request.PreserveExpiry())

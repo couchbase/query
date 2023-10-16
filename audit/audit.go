@@ -362,7 +362,7 @@ func auditWorker(auditor *standardAuditor, num int) {
 func stringifyauditInfo(entry datastore.AuditInfo) string {
 	str := fmt.Sprintf("AuditEnabled: %v ", entry.AuditEnabled)
 	str += fmt.Sprintf("EventDisabled: %v ", entry.EventDisabled)
-	str += fmt.Sprintf("UserWhitelisted: <ud>%v</ud> ", entry.UserWhitelisted)
+	str += fmt.Sprintf("UserAllowlisted: <ud>%v</ud> ", entry.UserAllowlisted)
 	str += fmt.Sprintf("Uid: <ud>%v</ud> ", entry.Uid)
 	return str
 }
@@ -634,7 +634,7 @@ func buildAuditEntries(eventTypeId uint32, event Auditable, auditInfo *datastore
 	auditableUsers := make([]datastore.UserInfo, 0, len(usernames))
 	for _, username := range usernames {
 		user := userInfoFromUsername(username)
-		if !auditInfo.UserWhitelisted[user] {
+		if !auditInfo.UserAllowlisted[user] {
 			auditableUsers = append(auditableUsers, user)
 		}
 	}
@@ -760,7 +760,7 @@ func buildApiRequestAuditEntries(eventTypeId uint32, event *ApiAuditFields, audi
 	auditableUsers := make([]datastore.UserInfo, 0, len(usernames))
 	for _, username := range usernames {
 		user := userInfoFromUsername(username)
-		if !auditInfo.UserWhitelisted[user] {
+		if !auditInfo.UserAllowlisted[user] {
 			auditableUsers = append(auditableUsers, user)
 		}
 	}

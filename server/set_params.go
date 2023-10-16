@@ -473,12 +473,12 @@ func SetParamValuesForAll(cfg queryMetakv.Config, srvr *Server) {
 			// QUERY PARAM
 			paramName, ok := queryMetakv.GLOBALPARAM[key]
 			if ok && paramName == "curl_whitelist" {
-				// Set the whitelist value to pass to context
-				srvr.SetWhitelist(val.(map[string]interface{}))
-				logging.Infof("New Value for curl allowedlist <ud>%v</ud>", val)
+				// Set the allowlist value to pass to context
+				srvr.SetAllowlist(val.(map[string]interface{}))
+				logging.Infof("New Value for curl allowed list <ud>%v</ud>", val)
 			} else if ok && paramName == "curl_allowedlist" {
-				srvr.SetWhitelist(val.(map[string]interface{}))
-				logging.Infof("New Value for curl allowedlist <ud>%v</ud>", val)
+				srvr.SetAllowlist(val.(map[string]interface{}))
+				logging.Infof("New Value for curl allowed list <ud>%v</ud>", val)
 			} else {
 				querySettings[key] = val
 			}

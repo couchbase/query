@@ -229,7 +229,7 @@ type Context struct {
 	httpRequest         *http.Request
 	authenticatedUsers  auth.AuthenticatedUsers
 	mutex               sync.RWMutex
-	whitelist           map[string]interface{}
+	allowlist           map[string]interface{}
 	inlistHashMap       map[*expression.In]*expression.InlistHash
 	inlistHashLock      sync.RWMutex
 	memoryQuota         uint64
@@ -351,7 +351,7 @@ func (this *Context) Copy() *Context {
 		preserveExpiry:      this.preserveExpiry,
 		flags:               this.flags,
 		reqTimeout:          this.reqTimeout,
-		whitelist:           this.whitelist,
+		allowlist:           this.allowlist,
 		udfValueMap:         this.udfValueMap,
 		recursionCount:      this.recursionCount,
 		queryMutex:          &sync.RWMutex{},
@@ -410,12 +410,12 @@ func (this *Context) SetPrepared(prepared *plan.Prepared) {
 	this.prepared = prepared
 }
 
-func (this *Context) SetWhitelist(val map[string]interface{}) {
-	this.whitelist = val
+func (this *Context) SetAllowlist(val map[string]interface{}) {
+	this.allowlist = val
 }
 
-func (this *Context) GetWhitelist() map[string]interface{} {
-	return this.whitelist
+func (this *Context) GetAllowlist() map[string]interface{} {
+	return this.allowlist
 }
 
 func (this *Context) Optimizer() planner.Optimizer {

@@ -16,7 +16,7 @@ import (
 
 	adt "github.com/couchbase/goutils/go-cbaudit"
 	"github.com/couchbase/query/accounting"
-	"github.com/couchbase/query/accounting/stub"
+	accounting_stub "github.com/couchbase/query/accounting/stub"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 )
@@ -192,7 +192,7 @@ func TestEventIdGeneration(t *testing.T) {
 		info: &datastore.AuditInfo{
 			AuditEnabled:    true,
 			EventDisabled:   make(map[uint32]bool),
-			UserWhitelisted: make(map[datastore.UserInfo]bool),
+			UserAllowlisted: make(map[datastore.UserInfo]bool),
 		},
 		metricRegStub: accounting_stub.MetricRegistryStub{},
 	}
@@ -234,7 +234,7 @@ func TestMultiUserRequest(t *testing.T) {
 		info: &datastore.AuditInfo{
 			AuditEnabled:    true,
 			EventDisabled:   make(map[uint32]bool),
-			UserWhitelisted: make(map[datastore.UserInfo]bool),
+			UserAllowlisted: make(map[datastore.UserInfo]bool),
 		},
 		metricRegStub: accounting_stub.MetricRegistryStub{},
 	}
@@ -268,7 +268,7 @@ func TestAuditDisabled(t *testing.T) {
 		info: &datastore.AuditInfo{
 			AuditEnabled:    false,
 			EventDisabled:   make(map[uint32]bool),
-			UserWhitelisted: make(map[datastore.UserInfo]bool),
+			UserAllowlisted: make(map[datastore.UserInfo]bool),
 		},
 		metricRegStub: accounting_stub.MetricRegistryStub{},
 	}
@@ -288,7 +288,7 @@ func TestDisabledEvents(t *testing.T) {
 		info: &datastore.AuditInfo{
 			AuditEnabled:    true,
 			EventDisabled:   map[uint32]bool{28678: true, 28679: true},
-			UserWhitelisted: make(map[datastore.UserInfo]bool),
+			UserAllowlisted: make(map[datastore.UserInfo]bool),
 		},
 		metricRegStub: accounting_stub.MetricRegistryStub{},
 	}
@@ -323,12 +323,12 @@ func TestDisabledEvents(t *testing.T) {
 	}
 }
 
-func TestWhitelistedUsers(t *testing.T) {
+func TestAllowlistedUsers(t *testing.T) {
 	mockAuditor := &mockAuditor{
 		info: &datastore.AuditInfo{
 			AuditEnabled:  true,
 			EventDisabled: make(map[uint32]bool),
-			UserWhitelisted: map[datastore.UserInfo]bool{
+			UserAllowlisted: map[datastore.UserInfo]bool{
 				datastore.UserInfo{Name: "nina", Domain: "local"}: true,
 				datastore.UserInfo{Name: "nick", Domain: "local"}: true,
 				datastore.UserInfo{Name: "neil", Domain: "local"}: true},

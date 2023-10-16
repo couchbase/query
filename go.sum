@@ -855,8 +855,6 @@ github.com/couchbase/moss v0.3.0/go.mod h1:9MaHIaRuy9pvLPUJxB8sh8OrLfyDczECVL37g
 github.com/couchbase/retriever v0.0.0-20150311081435-e3419088e4d3 h1:tVf2isyBCoxClXKJF6LrHlvxU6EEdzRx9pA6nnJivMA=
 github.com/couchbase/retriever v0.0.0-20150311081435-e3419088e4d3/go.mod h1:Lf6b4SPd9CX30fg/aEcV4l/f2xI4xSQn5IKGwE62TIY=
 github.com/couchbase/vellum v1.0.2/go.mod h1:FcwrEivFpNi24R3jLOs3n+fs5RnuQnQqCLBJ1uAg1W4=
-github.com/couchbasedeps/go-curl v0.0.0-20190830233031-f0b2afc926ec h1:mVbbrQChG/+citrbPl7gPumTN39U/6isDI7VzShrRIQ=
-github.com/couchbasedeps/go-curl v0.0.0-20190830233031-f0b2afc926ec/go.mod h1:ZLaSGBNRCwL1Kd8Ka/bJ3NspTmFcEeis2mr7vflJS7M=
 github.com/couchbaselabs/gocaves/client v0.0.0-20211209111208-6db33aa50187/go.mod h1:AVekAZwIY2stsJOMWLAS/0uA/+qdp7pjO8EHnl61QkY=
 github.com/couchbaselabs/gocaves/client v0.0.0-20230307083111-cc3960c624b1 h1:H7OK4q4WsDxqNIB/Ba8BQBXBHFilZnyItHrLr3qmsKA=
 github.com/couchbaselabs/gocaves/client v0.0.0-20230307083111-cc3960c624b1/go.mod h1:AVekAZwIY2stsJOMWLAS/0uA/+qdp7pjO8EHnl61QkY=

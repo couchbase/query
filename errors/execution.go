@@ -43,7 +43,7 @@ func NewEvaluationError(e error, termType string) Error {
 		return &err{level: EXCEPTION, ICode: E_EVALUATION, IKey: "execution.abort_error", ICause: e,
 			InternalMsg: fmt.Sprintf("Abort: %s.", e), InternalCaller: CallerN(1)}
 	} else if ee, ok := e.(Error); ok {
-		return &err{level: EXCEPTION, ICode: E_EVALUATION_ABORT, IKey: "execution.evaluation_error", cause: ee,
+		return &err{level: EXCEPTION, ICode: E_EVALUATION_ABORT, IKey: "execution.evaluation_error", ICause: ee, cause: ee,
 			InternalMsg: fmt.Sprintf("Error evaluating %s", termType), InternalCaller: CallerN(1)}
 	}
 	return &err{level: EXCEPTION, ICode: E_EVALUATION_ABORT, IKey: "execution.evaluation_error", ICause: e,
@@ -55,7 +55,7 @@ func NewEvaluationWithCauseError(e error, termType string) Error {
 		return &err{level: EXCEPTION, ICode: E_EVALUATION, IKey: "execution.abort_error", ICause: e,
 			InternalMsg: fmt.Sprintf("Abort: %s.", e), InternalCaller: CallerN(1)}
 	} else if ee, ok := e.(Error); ok {
-		return &err{level: EXCEPTION, ICode: E_EVALUATION_ABORT, IKey: "execution.evaluation_error", cause: ee,
+		return &err{level: EXCEPTION, ICode: E_EVALUATION_ABORT, IKey: "execution.evaluation_error", ICause: ee, cause: ee,
 			InternalMsg: fmt.Sprintf("Error evaluating %s", termType), InternalCaller: CallerN(1)}
 	}
 	var c map[string]interface{}
@@ -332,4 +332,11 @@ func NewNilEvaluateParamError(param string) Error {
 	return &err{level: EXCEPTION, ICode: E_NIL_EVALUATE_PARAM, IKey: "execution.evaluate.nil.param",
 		InternalMsg:    fmt.Sprintf("nil '%s' parameter for evaluation", param),
 		InternalCaller: CallerN(1)}
+}
+
+func NewCurlExecutionError(e error) Error {
+	c := make(map[string]interface{})
+	c["error"] = e
+	return &err{level: EXCEPTION, ICode: E_EXECUTION_CURL, IKey: "execution.curl",
+		InternalMsg: "Error executing CURL function", cause: c, InternalCaller: CallerN(1)}
 }

@@ -53,7 +53,6 @@ require (
 	github.com/couchbase/n1fty v0.0.0-00010101000000-000000000000
 	github.com/couchbase/query-ee v0.0.0-00010101000000-000000000000
 	github.com/couchbase/retriever v0.0.0-20150311081435-e3419088e4d3
-	github.com/couchbasedeps/go-curl v0.0.0-20190830233031-f0b2afc926ec
 	github.com/couchbaselabs/gocaves/client v0.0.0-20230307083111-cc3960c624b1 // indirect
 	github.com/gorilla/mux v1.8.0
 	github.com/mattn/go-runewidth v0.0.3

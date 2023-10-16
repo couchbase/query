@@ -65,7 +65,7 @@ type ExecutionHandle interface {
 
 type CurlContext interface {
 	Context
-	GetWhitelist() map[string]interface{}
+	GetAllowlist() map[string]interface{}
 	UrlCredentials(urlS string) *auth.Credentials
 	DatastoreURL() string
 }
