@@ -57,7 +57,7 @@ var _SKIP_IMPERSONATE bool = true //  don't send actual user names
 // cbPoolMap and cbPoolServices implement a local cache of the datastore's topology
 type cbPoolMap struct {
 	sync.RWMutex
-	poolServices map[string]cbPoolServices
+	poolServices map[string]*cbPoolServices
 }
 
 type cbPoolServices struct {
@@ -130,7 +130,7 @@ func init() {
 
 	// start the fetch workers for servicing the BulkGet operations
 	cb.InitBulkGet()
-	_POOLMAP.poolServices = make(map[string]cbPoolServices, 1)
+	_POOLMAP.poolServices = make(map[string]*cbPoolServices, 1)
 
 	// Enable sync replication (durability)
 	cb.EnableSyncReplication = true
@@ -288,7 +288,7 @@ func (info *infoImpl) refresh() (bool, []errors.Error) {
 					}
 				}
 
-				newPoolServices := cbPoolServices{name: p.Name, rev: poolServices.Rev}
+				newPoolServices := &cbPoolServices{name: p.Name, rev: poolServices.Rev}
 				nodeServices := make(map[string]interface{}, len(pool.Nodes))
 
 				// go through all the nodes in the pool
