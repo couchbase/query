@@ -17,7 +17,6 @@ import (
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/functions"
-	functionsBridge "github.com/couchbase/query/functions/bridge"
 	"github.com/couchbase/query/value"
 )
 
@@ -25,10 +24,9 @@ type inline struct {
 }
 
 type inlineBody struct {
-	expr          expression.Expression
-	varNames      []string
-	text          string
-	hasSubqueries bool // if the inline function body contains subqueries
+	expr     expression.Expression
+	varNames []string
+	text     string
 }
 
 func Init() {
@@ -59,21 +57,7 @@ func (this *inline) Execute(name functions.FunctionName, body functions.Function
 			parent[funcBody.varNames[i]] = values[i]
 		}
 	}
-
-	expr := funcBody.expr
-	if c, ok := context.(functionsBridge.InlineUdfContext); ok {
-		var err error
-
-		// Get the function body to safely use
-		// Generate and use a new AST expression object when the funcBody.expr contains subqueries
-		expr, err = c.GetAndSetInlineUdfExprs(name.Key(), funcBody.expr, funcBody.hasSubqueries, funcBody.varNames, setVarNames)
-		if err != nil {
-			return nil, errors.NewInternalFunctionError(err, name.Name())
-		}
-	}
-
-	val, err := expr.Evaluate(value.NewValue(parent), context)
-
+	val, err := funcBody.expr.Evaluate(value.NewValue(parent), context)
 	if err != nil {
 		return nil, errors.NewFunctionExecutionError("", name.Name(), err)
 	} else {
@@ -82,17 +66,14 @@ func (this *inline) Execute(name functions.FunctionName, body functions.Function
 }
 
 func NewInlineBody(expr expression.Expression, text string) (functions.FunctionBody, errors.Error) {
-	return &inlineBody{expr: expr, text: strings.TrimSuffix(text, ";"), hasSubqueries: expression.ContainsSubquery(expr)}, nil
+	return &inlineBody{expr: expr, text: strings.TrimSuffix(text, ";")}, nil
 }
 
 func (this *inlineBody) SetVarNames(vars []string) errors.Error {
-	this.varNames = vars
-	return setVarNames(this.expr, vars)
-}
-
-func setVarNames(expr expression.Expression, vars []string) errors.Error {
 	var bindings expression.Bindings
 	var f *expression.Formalizer
+
+	this.varNames = vars
 
 	/* We do not have parameter values at this stage, so the binding is
 	   done only to identify variables as variables and not formalize them
@@ -107,7 +88,7 @@ func setVarNames(expr expression.Expression, vars []string) errors.Error {
 		args := expression.NewSimpleBinding("args", c)
 		args.SetStatic(true)
 		bindings = expression.Bindings{args}
-		f = expression.NewFunctionFormalizer("", false, nil)
+		f = expression.NewFormalizer("", nil)
 	} else {
 		bindings = make(expression.Bindings, len(vars))
 		i := 0
@@ -116,12 +97,12 @@ func setVarNames(expr expression.Expression, vars []string) errors.Error {
 			bindings[i].SetStatic(true)
 			i++
 		}
-		f = expression.NewFunctionFormalizer("", true, nil)
+		f = expression.NewFunctionFormalizer("", nil)
 	}
 
 	f.SetPermanentWiths(bindings)
 	f.PushBindings(bindings, true)
-	_, err := expr.Accept(f)
+	_, err := this.expr.Accept(f)
 	if err != nil {
 		return errors.NewInternalFunctionError(err, "")
 	}

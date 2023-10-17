@@ -29,11 +29,8 @@ func init() {
 	util.NewLocklessPool(&annotatedPool, func() unsafe.Pointer {
 		return unsafe.Pointer(&annotatedValue{})
 	})
-	av := newAnnotatedValue()
-	av.noRecycle = true
-	av.refCnt = 2 // should ensure it is copied and not directly modified by LET etc.
-	av.Value = NewValue(map[string]interface{}{})
-	EMPTY_ANNOTATED_OBJECT = av
+	EMPTY_ANNOTATED_OBJECT = NewAnnotatedValue(map[string]interface{}{})
+	EMPTY_ANNOTATED_OBJECT.(*annotatedValue).noRecycle = true
 }
 
 func newAnnotatedValue() *annotatedValue {
@@ -477,9 +474,7 @@ func (this *annotatedValue) Seen() bool {
 }
 
 func (this *annotatedValue) Track() {
-	if !this.noRecycle {
-		atomic.AddInt32(&this.refCnt, 1)
-	}
+	atomic.AddInt32(&this.refCnt, 1)
 }
 
 func (this *annotatedValue) Recycle() {
@@ -492,14 +487,10 @@ func (this *annotatedValue) RefCnt() int32 {
 
 func (this *annotatedValue) recycle(lvl int32) {
 
-	// don't change the refCnt if marked as not-recycleable
-	if this.noRecycle {
-		return
-	}
 	// do no recycle if other scope values are using this value
 	// or if this is an original document hanging off a projecton
 	refcnt := atomic.AddInt32(&this.refCnt, lvl)
-	if refcnt > 0 {
+	if refcnt > 0 || this.noRecycle {
 		return
 	}
 	if refcnt < 0 {

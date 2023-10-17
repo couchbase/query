@@ -69,19 +69,6 @@ func (this *setOp) IsCorrelated() bool {
 	return this.first.IsCorrelated() || this.second.IsCorrelated()
 }
 
-func (this *setOp) GetCorrelation() map[string]uint32 {
-	firstCorrelation := this.first.GetCorrelation()
-	secondCorrelation := this.second.GetCorrelation()
-	correlation := make(map[string]uint32, len(firstCorrelation)+len(secondCorrelation))
-	for k, v := range firstCorrelation {
-		correlation[k] |= v
-	}
-	for k, v := range secondCorrelation {
-		correlation[k] |= v
-	}
-	return correlation
-}
-
 /*
 Applies mapper to the two subresults.
 */

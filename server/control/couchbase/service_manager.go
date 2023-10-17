@@ -45,15 +45,12 @@ type queryServer struct {
 type state struct {
 	rev      uint64
 	changeID string
-	servers  []*queryServer
-	eject    []*queryServer
-	progress float64
+	servers  []queryServer
+	eject    []queryServer
 }
 
 type waiter chan state
 type waiters map[waiter]struct{}
-
-const _WAIT_LIMIT = time.Second * 50
 
 func NewManager(uuid string) Manager {
 	var mgr *ServiceMgr
@@ -106,7 +103,7 @@ func (m *ServiceMgr) setInitialNodeList() {
 	topology := distributed.RemoteAccess().GetNodeNames()
 
 	info := make([]rune, 0, len(topology)*32)
-	nodeList := make([]*queryServer, 0)
+	nodeList := make([]queryServer, 0)
 	for _, nn := range topology {
 		ps := prepareOperation(nn, "ServiceMgr::setInitialNodeList")
 		uuid := distributed.RemoteAccess().NodeUUID(nn)
@@ -127,7 +124,7 @@ func (m *ServiceMgr) setInitialNodeList() {
 			}
 			i++
 		}
-		nodeList = append(nodeList, &queryServer{nn, service.NodeInfo{service.NodeID(uuid), service.Priority(0), ps}})
+		nodeList = append(nodeList, queryServer{nn, service.NodeInfo{service.NodeID(uuid), service.Priority(0), ps}})
 		info = append(info, []rune(uuid)...)
 		info = append(info, '[')
 		info = append(info, []rune(nn)...)
@@ -262,7 +259,7 @@ func (m *ServiceMgr) CancelTask(id string, rev service.Revision) error {
 	currentTask := fmt.Sprintf("shutdown/monitor/%s", m.changeID)
 	if currentTask == id {
 		if m.eject != nil {
-			servers := make([]*queryServer, 0, len(m.eject))
+			servers := make([]queryServer, 0, len(m.eject))
 			servers = append(servers, m.servers...)
 			timedOut := false
 			info := make([]rune, 0, len(m.eject)*33)
@@ -337,11 +334,11 @@ func (m *ServiceMgr) CancelTask(id string, rev service.Revision) error {
 	return service.ErrNotFound
 }
 
-func appendInOrder(list []*queryServer, item *queryServer) []*queryServer {
+func appendInOrder(list []queryServer, item queryServer) []queryServer {
 	for i := range list {
 		if list[i].nodeInfo.NodeID > item.nodeInfo.NodeID {
 			if i == 0 {
-				return append([]*queryServer{item}, list...)
+				return append([]queryServer{item}, list...)
 			}
 			return append(append(list[:i], item), list[i:]...)
 		}
@@ -394,7 +391,7 @@ func prepareOperation(host string, caller string) interface{} {
 	return ps
 }
 
-func checkPrepareOperations(servers []*queryServer, caller string) {
+func checkPrepareOperations(servers []queryServer, caller string) {
 	for i := range servers {
 		if servers[i].nodeInfo.Opaque == nil {
 			servers[i].nodeInfo.Opaque = prepareOperation(servers[i].host, caller)
@@ -417,47 +414,41 @@ func (m *ServiceMgr) PrepareTopologyChange(change service.TopologyChange) error 
 	}
 	logging.Logf(level, "Preparing for possible topology change")
 
-	done := util.WaitCount{}
 	// for each node we know about, cache its shutdown URL
 	info := make([]rune, 0, len(change.KeepNodes)*64)
-	servers := make([]*queryServer, 0)
+	servers := make([]queryServer, 0)
 	m.mu.Lock()
 	s := m.servers
 	m.mu.Unlock()
 	for _, n := range change.KeepNodes {
-		qs := &queryServer{}
-		qs.nodeInfo = service.NodeInfo{n.NodeInfo.NodeID, service.Priority(0), nil}
+		var ps interface{}
+		var host string
+		ps = nil
 		if m.thisHost != "" {
 			// see if we can reuse the prepared operation
 			// note: this means we may take less time here but are susceptible to stale data
 			for _, o := range s {
 				if o.nodeInfo.NodeID == n.NodeInfo.NodeID {
-					qs.host = o.host
-					qs.nodeInfo.Opaque = o.nodeInfo.Opaque
+					ps = o.nodeInfo.Opaque
+					host = o.host
 					break
 				}
 			}
-			if qs.nodeInfo.Opaque == nil {
-				done.Incr()
-				go func() {
-					qs.host = distributed.RemoteAccess().UUIDToHost(string(n.NodeInfo.NodeID))
-					if qs.host != "" {
-						qs.nodeInfo.Opaque = prepareOperation(qs.host, "ServiceMgr::PrepareTopologyChange")
-					} else {
-						logging.Warnf("ServiceMgr::PrepareTopologyChange: Unable to resolve host for node %v",
-							string(n.NodeInfo.NodeID))
-					}
-					done.Decr()
-				}()
+			if ps == nil {
+				host = distributed.RemoteAccess().UUIDToHost(string(n.NodeInfo.NodeID))
+				ps = prepareOperation(host, "ServiceMgr::PrepareTopologyChange")
 			}
 		}
-		servers = append(servers, qs)
+		servers = append(servers, queryServer{host, service.NodeInfo{n.NodeInfo.NodeID, service.Priority(0), ps}})
 		info = append(info, []rune(n.NodeInfo.NodeID)...)
+		info = append(info, '[')
+		info = append(info, []rune(host)...)
+		info = append(info, ']')
 		info = append(info, ' ')
 	}
 
 	// always keep a local list of servers that are no longer present; only the master will ever act upon this list
-	var eject []*queryServer
+	var eject []queryServer
 	for _, o := range s {
 		found := false
 		for _, n := range servers {
@@ -480,26 +471,18 @@ func (m *ServiceMgr) PrepareTopologyChange(change service.TopologyChange) error 
 			}
 		}
 		if !found {
-			qs := &queryServer{}
-			qs.nodeInfo = service.NodeInfo{e.NodeID, service.Priority(0), nil}
-			eject = append(eject, qs)
-			done.Incr()
-			go func() {
-				qs.host = distributed.RemoteAccess().UUIDToHost(string(e.NodeID))
-				if qs.host != "" {
-					qs.nodeInfo.Opaque = prepareOperation(qs.host, "ServiceMgr::PrepareTopologyChange")
-				} else {
-					logging.Warnf("ServiceMgr::PrepareTopologyChange: Unable to resolve host for node %v", string(e.NodeID))
-				}
-				done.Decr()
-			}()
+			var ps interface{}
+			var host string
+			ps = nil
+			host = distributed.RemoteAccess().UUIDToHost(string(e.NodeID))
+			if host != "" {
+				ps = prepareOperation(host, "ServiceMgr::PrepareTopologyChange")
+			} else {
+				logging.Warnf("ServiceMgr::PrepareTopologyChange: Unable to resolve host for node %v", string(e.NodeID))
+			}
+			eject = append(eject, queryServer{host, service.NodeInfo{e.NodeID, service.Priority(0), ps}})
 		}
 	}
-
-	if !done.Until(0, _WAIT_LIMIT) {
-		logging.Warnf("ServiceMgr::PrepareTopologyChange: not all preparations completed in time")
-	}
-
 	if len(eject) != 0 {
 		eject = eject[0:len(eject):len(eject)]
 	}
@@ -550,7 +533,7 @@ func (m *ServiceMgr) StartTopologyChange(change service.TopologyChange) error {
 	m.mu.Lock()
 	if m.eject != nil {
 		info := make([]rune, 0, len(m.eject)*33)
-		eject := make([]*queryServer, 0, len(m.eject))
+		eject := make([]queryServer, 0, len(m.eject))
 		done := util.WaitCount{}
 		mutex := &sync.Mutex{}
 		// in parallel in case some take time to reach

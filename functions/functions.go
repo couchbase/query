@@ -217,10 +217,6 @@ func AddFunction(name FunctionName, body FunctionBody, replace bool) errors.Erro
 	err := name.Save(body, replace)
 	if err == nil {
 		function := &FunctionEntry{FunctionName: name, FunctionBody: body}
-		err = function.loadPrivileges()
-		if err != nil {
-			return err
-		}
 		key := name.Key()
 
 		// add it to the cache
@@ -396,7 +392,7 @@ func ExecuteFunction(name FunctionName, modifiers Modifier, values []value.Value
 		// note that since we reload the body outside of a cache lock (not to lock
 		// out the whole cache bucket), there might be some temporary pile up on
 		// storage
-		if entry.FunctionName.CheckStorage() {
+		if name.CheckStorage() {
 			var tag atomic.AlignedInt64
 
 			// reserve a change counter and load new body
@@ -463,33 +459,19 @@ func ExecuteFunction(name FunctionName, modifiers Modifier, values []value.Value
 		return nil, err
 	}
 
-	lang := entry.Lang()
-
-	// Initialize if the function being executed in an INLINE function
-	// We initialize here - so we dont unecessarily initialize these in the context
-	if lang == INLINE {
-		context.InitInlineUdfExprs()
-	}
-
 	newContext := context
 	switchContext := body.SwitchContext()
 	readonly := (modifiers & READONLY) != 0
-
-	// MB-58479: Switch to a new context when an Inline function is executed inside a prepared statement
-	// This prevents memory leaks in the prepared statement's subquery cache
-	// due to the recreation of the inline body's expression on execution
-	inlineSwitch := (lang == INLINE && context.IsPrepared())
-
-	if switchContext == value.TRUE || (switchContext == value.NONE && (readonly != context.Readonly() ||
-		name.QueryContext() != context.QueryContext())) || inlineSwitch {
+	if switchContext == value.TRUE || (switchContext == value.NONE && (readonly != context.Readonly() || name.QueryContext() != context.QueryContext())) {
 		var ok bool
+
 		newContext, ok = context.NewQueryContext(name.QueryContext(), readonly).(Context)
 		if !ok {
 			return nil, errors.NewInternalFunctionError(fmt.Errorf("Invalid function context received"), name.Name())
 		}
 	}
 	start := time.Now()
-	val, err := languages[lang].Execute(name, body, modifiers, values, newContext)
+	val, err := languages[entry.Lang()].Execute(name, body, modifiers, values, newContext)
 
 	// update stats
 	serviceTime := time.Since(start)
@@ -533,14 +515,13 @@ func (entry *FunctionEntry) add() *FunctionEntry {
 }
 
 func (entry *FunctionEntry) loadPrivileges() errors.Error {
-	bodyPrivs, err := entry.FunctionBody.Privileges()
+	privs, err := entry.FunctionBody.Privileges()
 	if err != nil {
 		return err
 	}
-
-	privs := auth.NewPrivileges()
-
-	// add the privilege required to execute the function first so that its Authorization check occurs first too
+	if privs == nil {
+		privs = auth.NewPrivileges()
+	}
 	if entry.IsGlobal() {
 		if entry.IsExternal() {
 			privs.Add("", auth.PRIV_QUERY_EXECUTE_FUNCTIONS_EXTERNAL, auth.PRIV_PROPS_NONE)
@@ -554,12 +535,6 @@ func (entry *FunctionEntry) loadPrivileges() errors.Error {
 			privs.Add(entry.Key(), auth.PRIV_QUERY_EXECUTE_SCOPE_FUNCTIONS, auth.PRIV_PROPS_NONE)
 		}
 	}
-
-	// then add the body privileges
-	if bodyPrivs != nil {
-		privs.AddAll(bodyPrivs)
-	}
-
 	entry.privs = privs
 	return nil
 }

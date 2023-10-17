@@ -51,8 +51,6 @@ type Context interface {
 	Infer(value.Value, value.Value) (value.Value, error)
 	SetTracked(bool)
 	IsTracked() bool
-	InitInlineUdfExprs()
-	IsPrepared() bool
 }
 
 type CurlContext interface {

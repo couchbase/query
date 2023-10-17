@@ -35,9 +35,7 @@ type Select struct {
 	limit        expression.Expression `json:"limit"`
 	correlated   bool                  `json:"correlated"`
 	hasVariables bool                  `json:"hasVariables"` // not actually propagated
-	inlineFunc   bool                  `json:"inlineFunction"`
 	setop        bool                  `json:"setop"`
-	correlation  map[string]uint32     `json:"correlation"`
 }
 
 /*
@@ -218,10 +216,7 @@ by clause call MapExpressions, for limit and offset call Accept.
 */
 func (this *Select) FormalizeSubquery(parent *expression.Formalizer) (err error) {
 	if parent != nil && parent.InFunction() {
-		this.inlineFunc = true
-		if parent.HasVariables() {
-			this.hasVariables = true
-		}
+		this.hasVariables = true
 	}
 	if parent != nil && !this.setop {
 		withs := parent.SaveWiths()
@@ -246,9 +241,6 @@ func (this *Select) FormalizeSubquery(parent *expression.Formalizer) (err error)
 	}
 
 	this.correlated = this.subresult.IsCorrelated()
-	if this.correlated {
-		this.correlation = this.subresult.GetCorrelation()
-	}
 
 	if this.order != nil {
 		err = this.order.MapExpressions(f)
@@ -270,15 +262,14 @@ func (this *Select) FormalizeSubquery(parent *expression.Formalizer) (err error)
 			}
 		}
 
-		correlated := f.CheckCorrelated()
-		if correlated {
-			correlation := f.GetCorrelation()
-			this.correlated = correlated
-			if this.correlation == nil {
-				this.correlation = make(map[string]uint32, len(correlation))
-			}
-			for k, v := range correlation {
-				this.correlation[k] |= v
+		if !this.correlated {
+			// Determine if this is a correlated subquery
+			immediate := f.Allowed().GetValue().Fields()
+			for ident, _ := range f.Identifiers().Fields() {
+				if _, ok := immediate[ident]; !ok {
+					this.correlated = true
+					break
+				}
 			}
 		}
 	}
@@ -287,9 +278,11 @@ func (this *Select) FormalizeSubquery(parent *expression.Formalizer) (err error)
 		return err
 	}
 
-	prevIdentifiers := parent.Identifiers()
-	defer parent.SetIdentifiers(prevIdentifiers)
-	parent.SetIdentifiers(value.NewScopeValue(make(map[string]interface{}, 16), nil))
+	if !this.correlated {
+		prevIdentifiers := parent.Identifiers()
+		defer parent.SetIdentifiers(prevIdentifiers)
+		parent.SetIdentifiers(value.NewScopeValue(make(map[string]interface{}, 16), nil))
+	}
 
 	if this.limit != nil {
 		_, err = this.limit.Accept(parent)
@@ -305,15 +298,8 @@ func (this *Select) FormalizeSubquery(parent *expression.Formalizer) (err error)
 		}
 	}
 
-	fields := parent.Identifiers().Fields()
-	if len(fields) > 0 {
-		this.correlated = true
-		if this.correlation == nil {
-			this.correlation = make(map[string]uint32, len(fields))
-		}
-		for k, _ := range fields {
-			this.correlation[k] |= expression.IDENT_IS_UNKNOWN
-		}
+	if !this.correlated {
+		this.correlated = len(parent.Identifiers().Fields()) > 0
 	}
 
 	return err
@@ -362,16 +348,8 @@ func (this *Select) SetCorrelated() {
 	this.correlated = true
 }
 
-func (this *Select) GetCorrelation() map[string]uint32 {
-	return this.correlation
-}
-
 func (this *Select) HasVariables() bool {
 	return this.hasVariables
-}
-
-func (this *Select) InInlineFunction() bool {
-	return this.inlineFunc
 }
 
 /*
@@ -446,11 +424,6 @@ type Subresult interface {
 	   Checks if correlated subquery.
 	*/
 	IsCorrelated() bool
-
-	/*
-	   Get correlation
-	*/
-	GetCorrelation() map[string]uint32
 
 	/*
 	   Checks if projection is raw

@@ -165,11 +165,7 @@ func (this *Join) Outer() bool {
 Returns whether contains correlation reference
 */
 func (this *Join) IsCorrelated() bool {
-	return this.left.IsCorrelated()
-}
-
-func (this *Join) GetCorrelation() map[string]uint32 {
-	return this.left.GetCorrelation()
+	return this.left.IsCorrelated() || this.right.IsCorrelated()
 }
 
 /*
