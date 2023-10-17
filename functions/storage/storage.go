@@ -131,53 +131,44 @@ func Migrate() {
 // this function is only used when migration is performed as individual buckets from registered
 // migrators; in case of migrateAll(), the retry logic is embedded in that function
 func retryMigration() {
-	// since migration won't start until _GRACE_PERIOD  has passed, we need to also skip
-	// _GRACE_PERIOD (plus some) before we start attempting retry
-	duration := _GRACE_PERIOD + _RETRY_TIME
-	countDown := time.Since(countDownStarted)
-	if countDown < duration {
-		time.Sleep(duration - countDown)
-	}
 
-	// make sure the migrations map has information on all relevant buckets
-	checkMigrations()
+	// if we are here, we know we have an extended datastore
+	ds := datastore.GetDatastore().(datastore.Datastore2)
 
-	// initial check of availability of system collection before retry of migration
-	logging.Infof("UDF migration: Checking availability of system collection on all buckets")
-	migrationsLock.Lock()
-	done := false
-	for i := 1; i <= _MAX_RETRY; i++ {
-		done = true
-		for _, bucket := range migrations {
-			bucket.Lock()
-			if bucket.state == _BUCKET_NOT_MIGRATING {
-				err := checkSystemCollection(bucket.name)
-				if err != nil {
-					done = false
-				} else {
-					// so we don't keep calling checkSystemCollection()
-					bucket.state = _BUCKET_PART_MIGRATED
+	// wait until migration has started
+	// the node can be in mixed-clustered mode for undetermined time, do not proceed
+	// with retry of migration until migration has started
+	logging.Infof("UDF migration: Waiting on migration to start")
+	for {
+		time.Sleep(_GRACE_PERIOD)
+
+		started := false
+		ds.LoadAllBuckets(func(b datastore.ExtendedBucket) {
+			migrationsLock.Lock()
+			if bucket, ok := migrations[b.Name()]; ok {
+				bucket.Lock()
+				if bucket.state != _BUCKET_NOT_MIGRATING {
+					started = true
 				}
-				lastActivity = time.Now()
+				bucket.Unlock()
 			}
-			bucket.Unlock()
-		}
-		if done {
+			migrationsLock.Unlock()
+		})
+		if started {
 			break
 		}
-		time.Sleep(time.Duration(i) * _RETRY_TIME)
 	}
-	migrationsLock.Unlock()
-	if done {
-		logging.Infof("UDF migration: Finished checking availability of system collection on all buckets")
-	} else {
-		logging.Errorf("UDF migration: System collections on all buckets are not all available")
-	}
+
+	logging.Infof("UDF migration: Gathering migration information on all buckets")
+
+	// make sure the migrations map has information on all relevant buckets
+	// note this has to be done after migration has started (i.e. no further changes)
+	checkMigrations()
 
 	lastActivity = time.Now()
 
 	for i := 1; i <= _MAX_RETRY; i++ {
-		duration = time.Duration(i) * _RETRY_TIME
+		duration := time.Duration(i) * _RETRY_TIME
 		for {
 			// only initiate retry if there has been no activity for the duration
 			inactive := time.Since(lastActivity)
