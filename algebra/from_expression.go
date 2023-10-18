@@ -95,6 +95,9 @@ func (this *ExpressionTerm) String() string {
 		if this.as != "" {
 			s += " as `" + this.as + "`"
 		}
+		if jhs := this.joinHint.String(); len(jhs) > 0 {
+			s += " use " + jhs
+		}
 	}
 	return s
 }

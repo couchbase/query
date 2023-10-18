@@ -1,7 +1,7 @@
 [
     {
         "description": "MB-57903 - CREATE FUNCTION",
-        "statements": "CREATE FUNCTION Test_Func(data) LANGUAGE INLINE AS ( ( SELECT RAW (SELECT RAW data) ) )",
+        "statements": "CREATE OR REPLACE FUNCTION Test_Func(data) LANGUAGE INLINE AS ( ( SELECT RAW (SELECT RAW data) ) )",
         "results":[]
     },
     {
@@ -41,12 +41,12 @@
     },
     {
         "description": "MB-59084 - CREATE FUNCTION 1",
-        "statements": "CREATE FUNCTION Test_Func1(data) LANGUAGE INLINE AS ( ( SELECT l, r FROM shellTest l JOIN shellTest r ON l.c3 = r.c3 WHERE l.c1 > 0 AND r.c1 > 0 AND r.c2 = data ) )",
+        "statements": "CREATE OR REPLACE FUNCTION Test_Func1(data) LANGUAGE INLINE AS ( ( SELECT l, r FROM shellTest l JOIN shellTest r USE NL ON l.c3 = r.c3 WHERE l.c1 > 0 AND r.c1 > 0 AND r.c2 = data ) )",
         "results":[]
     },
     {
         "description": "MB-59084 - CREATE FUNCTION 2",
-        "statements": "CREATE FUNCTION Test_Func2(data) LANGUAGE INLINE AS ( ( SELECT l, r FROM shellTest l JOIN (SELECT s.* FROM shellTest s WHERE s.c1 > 0) AS r ON l.c3 = r.c3 WHERE l.c1 > 0 AND r.c1 > 0 AND r.c2 = data ) )",
+        "statements": "CREATE OR REPLACE FUNCTION Test_Func2(data) LANGUAGE INLINE AS ( ( SELECT l, r FROM shellTest l JOIN (SELECT s.* FROM shellTest s WHERE s.c1 > 0) AS r USE NL ON l.c3 = r.c3 WHERE l.c1 > 0 AND r.c1 > 0 AND r.c2 = data ) )",
         "results":[]
     },
     {

@@ -194,15 +194,22 @@ func (this *KeyspaceTerm) String() (s string) {
 	if this.validateKeys {
 		v = "validate "
 	}
-
 	if this.joinKeys != nil {
 		if this.IsIndexJoinNest() {
 			s += " on key " + v + this.joinKeys.String()
 		} else {
 			s += " on keys " + v + this.joinKeys.String()
 		}
-	} else if this.keys != nil {
-		s += " use keys " + v + this.keys.String()
+	} else {
+		useStr := this.joinHint.String()
+		if this.keys != nil {
+			useStr += " keys " + v + this.keys.String()
+		} else if len(this.indexes) > 0 {
+			useStr += " index (" + this.indexes.String() + ")"
+		}
+		if len(useStr) > 0 {
+			s += " use" + useStr
+		}
 	}
 
 	return s

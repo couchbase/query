@@ -72,7 +72,11 @@ func (this *SubqueryTerm) String() string {
 		s += "correlated "
 	}
 
-	return s + "(" + this.subquery.String() + ") as " + this.as
+	s += "(" + this.subquery.String() + ") as " + this.as
+	if js := this.joinHint.String(); len(js) > 0 {
+		s += " use" + js + " "
+	}
+	return s
 }
 
 /*
