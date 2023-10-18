@@ -62,7 +62,7 @@ func (this *ExpressionScan) RunOnce(context *Context, parent value.Value) {
 			if subq, ok := this.plan.FromExpr().(*algebra.Subquery); ok {
 				// if the subquery evaluation is caching result already, no need
 				// to cache result here
-				useCache = !useSubqCachedResult(subq.Select())
+				useCache = !useSubqCachedResult(subq.Select()) && !subq.Select().HasVariables()
 			} else {
 				useCache = true
 			}
