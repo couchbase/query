@@ -79,6 +79,7 @@ type FunctionEntry struct {
 }
 
 type LanguageRunner interface {
+	CheckAuthorize(name string, context Context) bool
 	Execute(name FunctionName, body FunctionBody, modifiers Modifier, values []value.Value, context Context) (value.Value, errors.Error)
 }
 
@@ -223,14 +224,20 @@ func AddFunction(name FunctionName, body FunctionBody, replace bool) errors.Erro
 		}
 		key := name.Key()
 
+		function.tag = atomic.AlignedInt64(atomic.AddInt64(&functions.tag, 1))
+
 		// add it to the cache
 		added := true
 		functions.cache.Add(function, key, func(ce interface{}) util.Operation {
-
 			// remove any cached missing entry
 			_, ok := (ce.(*FunctionEntry)).FunctionBody.(*missing)
 			if ok {
 				return util.REPLACE
+			} else if replace {
+				e := ce.(*FunctionEntry)
+				if e.tag < function.tag || (function.tag < 0 && e.tag > 0) {
+					return util.REPLACE
+				}
 			}
 
 			// this should never be happening, but if somebody pushed it in the cache
@@ -389,6 +396,7 @@ func ExecuteFunction(name FunctionName, modifiers Modifier, values []value.Value
 			}
 		}
 	} else {
+		var added bool
 		entry = ce.(*FunctionEntry)
 		body = entry.FunctionBody
 
@@ -419,7 +427,16 @@ func ExecuteFunction(name FunctionName, modifiers Modifier, values []value.Value
 						resetPrivs = true
 					}
 				})
-				if resetPrivs {
+				if ce == nil {
+					// Some one deleted but we have new body from disk create entry
+					entry = &FunctionEntry{FunctionName: name, FunctionBody: body}
+					err = entry.loadPrivileges()
+					if err == nil {
+						entry.tag = atomic.AlignedInt64(atomic.AddInt64(&functions.tag, 1))
+						entry = entry.add()
+					}
+					added = true
+				} else if resetPrivs {
 					e := ce.(*FunctionEntry)
 					err = e.loadPrivileges()
 
@@ -433,13 +450,15 @@ func ExecuteFunction(name FunctionName, modifiers Modifier, values []value.Value
 				ce = nil
 			}
 
-			if ce == nil {
-				entry = &FunctionEntry{FunctionName: name}
-				entry.tag = atomic.AlignedInt64(atomic.AddInt64(&functions.tag, 1))
-				body = nil
-			} else {
-				entry = ce.(*FunctionEntry)
-				body = entry.FunctionBody
+			if !added {
+				if ce == nil {
+					entry = &FunctionEntry{FunctionName: name}
+					entry.tag = atomic.AlignedInt64(atomic.AddInt64(&functions.tag, 1))
+					body = nil
+				} else {
+					entry = ce.(*FunctionEntry)
+					body = entry.FunctionBody
+				}
 			}
 		}
 	}
@@ -457,18 +476,13 @@ func ExecuteFunction(name FunctionName, modifiers Modifier, values []value.Value
 		body = entry.FunctionBody
 	}
 
-	// go and do the dirty deed
-	err = Authorize(entry.privs, context.Credentials())
-	if err != nil {
-		return nil, err
-	}
-
 	lang := entry.Lang()
-
-	// Initialize if the function being executed in an INLINE function
-	// We initialize here - so we dont unecessarily initialize these in the context
-	if lang == INLINE {
-		context.InitInlineUdfExprs()
+	// go and do the dirty deed
+	if languages[lang].CheckAuthorize(name.Key(), context) {
+		err = Authorize(entry.privs, context.Credentials())
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	newContext := context
@@ -572,6 +586,10 @@ func (this *empty) Execute(name FunctionName, body FunctionBody, modifiers Modif
 	return nil, errors.NewFunctionsNotSupported("")
 }
 
+func (this *empty) CheckAuthorize(name string, context Context) bool {
+	return true
+}
+
 // dummy language throwing errors, for caching missing entries
 type missing struct {
 }
@@ -610,4 +628,8 @@ func (this *missing) SetStorage(context Context, path []string) errors.Error {
 
 func (this *missing) Execute(name FunctionName, body FunctionBody, modifiers Modifier, values []value.Value, context Context) (value.Value, errors.Error) {
 	return nil, errors.NewMissingFunctionError(name.Name())
+}
+
+func (this *missing) CheckAuthorize(name string, context Context) bool {
+	return true
 }

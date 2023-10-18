@@ -9,6 +9,8 @@
 package algebra
 
 import (
+	"sync"
+
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/value"
 )
@@ -169,4 +171,140 @@ func (this *Subquery) IsCorrelated() bool {
 
 func (this *Subquery) GetCorrelation() map[string]uint32 {
 	return this.query.GetCorrelation()
+}
+
+// Hold Subquery Plans IN (UDF, prepare statements, context)
+
+type SubqueryPlans struct {
+	mutex    sync.RWMutex            // mutex
+	expr     expression.Expression   // Valid inside udf only
+	prepared interface{}             // only inline udf, this is dummy entry
+	plans    map[*Select]interface{} // map subquery plan
+	isks     map[*Select]interface{} // map of keyspaces inside the transction
+}
+
+func NewSubqueryPlans() *SubqueryPlans {
+	return &SubqueryPlans{
+		plans: make(map[*Select]interface{}),
+		isks:  make(map[*Select]interface{}),
+	}
+}
+
+func (this *SubqueryPlans) GetMutex() *sync.RWMutex {
+	return &this.mutex
+}
+
+func (this *SubqueryPlans) GetExpression(lock bool) expression.Expression {
+	if lock {
+		this.mutex.RLock()
+	}
+	expr := this.expr
+	if lock {
+		this.mutex.RUnlock()
+	}
+	return expr
+}
+
+func (this *SubqueryPlans) Get(key *Select, lock bool) (expression.Expression, interface{}, interface{}, bool) {
+	if lock {
+		this.mutex.RLock()
+	}
+
+	expr := this.expr
+	plan, ok := this.plans[key]
+	isk, _ := this.isks[key]
+
+	if lock {
+		this.mutex.RUnlock()
+	}
+
+	return expr, plan, isk, ok
+}
+
+func (this *SubqueryPlans) Set(key *Select, expr expression.Expression, plan, isk interface{}, lock bool) {
+	if lock {
+		this.mutex.Lock()
+	}
+
+	if plan != nil {
+		this.plans[key] = plan
+	}
+	if isk != nil {
+		this.isks[key] = isk
+	}
+	if expr != this.expr {
+		this.expr = expr
+	}
+
+	if lock {
+		this.mutex.Unlock()
+	}
+}
+
+// Used in the context of UDF, Dummy entry to detect MetadataVersion change of collections/indexes,
+// Allows auto plan generation if the metadata change vs leave the unoptimized plan for ever until UDF changed
+
+func (this *SubqueryPlans) GetPrepared(lock bool) (prepared interface{}) {
+	if lock {
+		this.mutex.RLock()
+		prepared = this.prepared
+		this.mutex.RUnlock()
+	} else {
+		prepared = this.prepared
+	}
+	return prepared
+}
+
+func (this *SubqueryPlans) SetPrepared(prepared interface{}, lock bool) {
+	if lock {
+		this.mutex.Lock()
+		this.prepared = prepared
+		this.mutex.Unlock()
+	} else {
+		this.prepared = prepared
+	}
+}
+
+// Copy the plans via refrence from UDF to the context.
+// This allows same plan/expression used repeated execution in the same statement.
+
+func (this *SubqueryPlans) Copy(dest *SubqueryPlans, lock bool) {
+	if lock {
+		this.mutex.RLock()
+	}
+
+	dest.mutex.Lock()
+	// don't copy this.expr
+	for key, plan := range this.plans {
+		dest.plans[key] = plan
+		dest.isks[key] = this.isks[key]
+	}
+
+	dest.mutex.Unlock()
+	if lock {
+		this.mutex.RUnlock()
+	}
+}
+
+// Validation of each subquery plans.
+
+func (this *SubqueryPlans) ForEach(expr expression.Expression, options uint32, lock bool,
+	verify func(key *Select, options uint32, plan, isk interface{}) (bool, bool)) (bool, bool) {
+
+	var good, trans bool
+	if lock {
+		this.mutex.RLock()
+		defer this.mutex.RUnlock()
+	}
+	if expr == this.expr {
+		good = true
+		for key, _ := range this.plans {
+			good1, trans1 := verify(key, options, this.plans[key], this.isks[key])
+			if !good1 {
+				return good1, false
+			}
+			trans = trans || trans1
+		}
+	}
+	return good, trans
 }

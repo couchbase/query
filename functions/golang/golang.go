@@ -47,6 +47,10 @@ func Init() {
 	}
 }
 
+func (this *golang) CheckAuthorize(name string, context functions.Context) bool {
+	return true
+}
+
 func (this *golang) Execute(name functions.FunctionName, body functions.FunctionBody, modifiers functions.Modifier, values []value.Value, context functions.Context) (value.Value, errors.Error) {
 	var args value.Value
 	var val interface{}

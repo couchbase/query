@@ -26,7 +26,6 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
-	"github.com/couchbase/query/expression/parser"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/logging/event"
 	"github.com/couchbase/query/plan"
@@ -216,7 +215,7 @@ type Context struct {
 	output              Output
 	prepared            *plan.Prepared
 	subExecTrees        *subqueryArrayMap
-	subplans            *subqueryMap
+	subqueryPlans       *algebra.SubqueryPlans
 	subresults          *subqueryMap
 	httpRequest         *http.Request
 	authenticatedUsers  auth.AuthenticatedUsers
@@ -245,9 +244,8 @@ type Context struct {
 	udfValueMap         *sync.Map
 	udfHandleMap        map[*executionHandle]bool
 	tracked             bool
-	// Key: unique identifier of the Inline UDF
-	// Value: Info on the function body of Inline UDFs executed in the query
-	inlineUdfExprs map[string]inlineUdfEntry
+	// Key: unique identifier of the Inline UDF, Value: Info on the function body of Inline UDFs executed in the query
+	inlineUdfEntries map[string]*inlineUdfEntry
 
 	// queryMutex is a pointer and is meant to be shared when we share certain fields
 	// when calling NewQueryContext(). Since the fields are shared the mutex that protect
@@ -280,7 +278,6 @@ func NewContext(requestId string, datastore datastore.Datastore, systemstore dat
 		consistency:      consistency,
 		scanVectorSource: scanVectorSource,
 		output:           output,
-		subplans:         nil,
 		subresults:       nil,
 		prepared:         prepared,
 		indexApiVersion:  indexApiVersion,
@@ -296,6 +293,9 @@ func NewContext(requestId string, datastore datastore.Datastore, systemstore dat
 		likeRegexMap:     nil,
 		reqTimeout:       reqTimeout,
 		udfValueMap:      &sync.Map{},
+		subqueryPlans:    algebra.NewSubqueryPlans(),
+		subExecTrees:     newSubqueryArrayMap(),
+		inlineUdfEntries: make(map[string]*inlineUdfEntry),
 		queryMutex:       &sync.RWMutex{},
 	}
 
@@ -347,7 +347,11 @@ func (this *Context) Copy() *Context {
 		whitelist:           this.whitelist,
 		udfValueMap:         this.udfValueMap,
 		recursionCount:      this.recursionCount,
-		queryMutex:          &sync.RWMutex{},
+		// suqbery/udf information should share the same info
+		inlineUdfEntries: this.inlineUdfEntries,
+		subExecTrees:     this.subExecTrees,
+		subqueryPlans:    this.subqueryPlans,
+		queryMutex:       this.queryMutex,
 	}
 
 	rv.SetDurability(this.DurabilityLevel(), this.DurabilityTimeout())
@@ -359,8 +363,6 @@ func (this *Context) NewQueryContext(queryContext string, readonly bool) interfa
 	rv := this.Copy()
 	rv.queryContext = queryContext
 	rv.readonly = readonly
-	rv.inlineUdfExprs = this.inlineUdfExprs
-	rv.queryMutex = this.queryMutex
 	return rv
 }
 
@@ -871,109 +873,246 @@ func (this *Context) TxExpired() bool {
 	return this.txContext != nil && this.txContext.TxExpired()
 }
 
+// Generate given Select subquery plan. At any given time one plan generation allowed. One per algebra Select.
+
+func (this *opContext) SubqueryPlan(node *algebra.Select, mutex *sync.RWMutex, deltaKeyspaces map[string]bool,
+	namedArgs map[string]value.Value, positionalArgs value.Values,
+	lock bool) (interface{}, interface{}, error) {
+	var prepContext planner.PrepareContext
+	var err1 errors.Error
+
+	if mutex != nil && lock {
+		mutex.Lock()
+	}
+	planner.NewPrepareContext(&prepContext, this.requestId, this.queryContext, namedArgs, positionalArgs,
+		this.indexApiVersion, this.featureControls, this.useFts, this.useCBO, this.optimizer,
+		deltaKeyspaces, this)
+	qp, subplanIsks, err := planner.Build(node, this.datastore, this.systemstore, this.namespace,
+		true, false, &prepContext)
+	if err != nil {
+		err1 = errors.NewSubqueryBuildError(err)
+		this.Error(err1)
+	}
+	if mutex != nil && lock {
+		mutex.Unlock()
+	}
+	return qp, subplanIsks, err1
+}
+
+// Generate all subqueries (even nested) plans. At any given time one plan generation allowed. One per algebra Select.
+// At present this is used in Inline UDF.
+
+func (this *opContext) SubqueryPlans(expr expression.Expression, subqPlans *algebra.SubqueryPlans,
+	deltaKeyspaces map[string]bool, namedArgs map[string]value.Value, positionalArgs value.Values, lock bool) (bool, error) {
+	subqueries, err := expression.ListSubqueries(expression.Expressions{expr}, true)
+	if err != nil {
+		err := errors.NewSubqueryBuildError(err)
+		this.Error(err)
+		return false, err
+	}
+	if len(subqueries) == 0 {
+		subqPlans.Set(nil, expr, nil, nil, lock)
+		return false, nil
+	}
+
+	mutex := subqPlans.GetMutex()
+
+	for _, sq := range subqueries {
+		if subq, ok := sq.(*algebra.Subquery); ok {
+			query := subq.Select()
+			plan, isk, err := this.SubqueryPlan(query, mutex, deltaKeyspaces, namedArgs, positionalArgs, false)
+			if err != nil {
+				return false, err
+			}
+			subqPlans.Set(query, expr, plan, isk, lock)
+		}
+	}
+	return true, nil
+}
+
+/*
+Setup Inline UDF plans.
+generate   -- true. Plans are generated and stored in UDF. Also Dummy prepared created so that Metadata check can be done.
+trans      -- true.  plan is part of transaction and delta table involved. Generate plan again and store in the context Subquery plans.
+Otherwise     copy Inline UDF subquery plans by reference into local context so that same plan will be re-used repeated execution.
+lock       -- indicate second argument require lock
+*/
+func (this *opContext) SetupSubqueryPlans(expr expression.Expression, subqPlans *algebra.SubqueryPlans, lock,
+	generate, trans bool) (err error) {
+	if generate {
+		var hasSubquery bool
+		hasSubquery, err = this.SubqueryPlans(expr, subqPlans, nil, nil, nil, lock)
+		if err == nil && hasSubquery {
+			subqPlans.SetPrepared(plan.NewPrepared(nil, nil, nil), lock)
+		}
+	} else if trans {
+		// last argument will be true because second argument is from context
+		_, err = this.SubqueryPlans(expr, this.GetSubqueryPlans(true), this.deltaKeyspaces, this.namedArgs, this.positionalArgs, true)
+	} else {
+		// lock is meant source (subqPlans). Destination this.... always do lock
+		subqPlans.Copy(this.GetSubqueryPlans(true), lock)
+	}
+	return err
+}
+
+/*
+Inline UDFs.
+Verify Metadata check (if any addition/drop index, scope/collections may trigger auto regenrate plan before first execution.
+Also decides paln is part of transaction and delta tabe involved.
+*/
+func (this *opContext) VerifySubqueryPlans(expr expression.Expression, subqPlans *algebra.SubqueryPlans, lock bool) (bool, bool) {
+	var prepared *plan.Prepared
+	prep := subqPlans.GetPrepared(lock)
+	if prep != nil {
+		prepared, _ = prep.(*plan.Prepared)
+		if prepared != nil && !prepared.MetadataCheck() {
+			return false, false
+		}
+	}
+
+	verifyF := func(key *algebra.Select, options uint32, splan, isk interface{}) (bool, bool) {
+		var good, local bool
+		if qp, ok := splan.(*plan.QueryPlan); ok {
+			good = qp.Verify(prepared)
+		}
+
+		if good && isk != nil {
+			for ks, _ := range isk.(map[string]bool) {
+				if _, ok := this.deltaKeyspaces[ks]; ok {
+					local = true
+					break
+				}
+			}
+		}
+		return good, local
+	}
+
+	return subqPlans.ForEach(expr, uint32(0), lock, verifyF)
+}
+
+type inlineUdfEntry struct {
+	expr     expression.Expression // UDF expression
+	varNames []string              // argument names
+}
+
+/*
+  Inline UDFs.
+  First execution in the statement gets upto expression and store as part of the context and resuse.
+  Any change UDF will not be reused. This gives consistent for each UDF execution.
+  If any drop of collection/index will raise error and new statement will detect those.
+*/
+
+func (this *Context) GetInlineUdf(udf string) (expression.Expression, []string, bool) {
+	this.queryMutex.RLock()
+	e, ok := this.inlineUdfEntries[udf]
+	this.queryMutex.RUnlock()
+	if ok {
+		return e.expr, e.varNames, ok
+	} else {
+		return nil, nil, false
+	}
+
+}
+
+func (this *Context) SetInlineUdf(udf string, expr expression.Expression, varNames []string) {
+	this.queryMutex.Lock()
+	this.inlineUdfEntries[udf] = &inlineUdfEntry{expr, varNames}
+	this.queryMutex.Unlock()
+}
+
 // subquery evaluation
 
 func (this *opContext) EvaluateSubquery(query *algebra.Select, parent value.Value) (value.Value, error) {
-	var qp *plan.QueryPlan
+
 	var subplan, subplanIsks interface{}
+	var err error
 	planFound := false
 
 	useCache := !query.IsCorrelated() && !query.HasVariables()
 	if useCache {
 		subresults := this.getSubresults()
-		subresult, _, ok := subresults.get(query)
+		subresult, ok := subresults.get(query)
 		if ok {
 			return subresult.(value.Value), nil
 		}
 	}
 
-	subplans := this.getSubplans()
-	subplan, subplanIsks, planFound = subplans.get(query)
+	subplans := this.GetSubqueryPlans(true)
+	_, subplan, subplanIsks, planFound = subplans.Get(query, true)
 
-	// MB-34749 make subquery plans a property of the prepared statement
 	if !planFound && this.IsPrepared() {
-		this.prepared.RLock()
-		subplan, subplanIsks, planFound = this.prepared.GetSubqueryPlan(query)
-		this.prepared.RUnlock()
-
+		// MB-34749 make subquery plans a property of the prepared statement
+		psubplans := this.prepared.GetSubqueryPlans(true)
+		_, subplan, subplanIsks, planFound = psubplans.Get(query, true)
 		if !planFound {
-			var err error
-
-			this.prepared.Lock()
-
+			mutex := psubplans.GetMutex()
+			mutex.Lock()
 			// check again, just in case somebody has done it while we were waiting
-			subplan, subplanIsks, planFound = this.prepared.GetSubqueryPlan(query)
-
+			_, subplan, subplanIsks, planFound = psubplans.Get(query, false)
 			if !planFound {
-
-				// MB-32140: do not replace named/positional arguments with its value for prepared statements
-				var prepContext planner.PrepareContext
-				planner.NewPrepareContext(&prepContext, this.requestId, this.queryContext, nil, nil,
-					this.indexApiVersion, this.featureControls, this.useFts, this.useCBO, this.optimizer,
-					nil, this)
-				qp, subplanIsks, err = planner.Build(query, this.datastore, this.systemstore, this.namespace,
-					true, false, &prepContext)
-
+				subplan, subplanIsks, err = this.SubqueryPlan(query, mutex, nil, nil, nil, false)
 				if err != nil {
-					this.prepared.Unlock()
-
-					// Generate our own error for this subquery, in addition to whatever the query above is doing.
-					err1 := errors.NewSubqueryBuildError(err)
-					this.Error(err1)
-					return nil, err1
+					mutex.Unlock()
+					return nil, err
 				}
-
-				subplan = qp.PlanOp()
-
-				// Cache plan
-				this.prepared.SetSubqueryPlan(query, subplan, subplanIsks)
 				planFound = true
+				psubplans.Set(query, nil, subplan, subplanIsks, false)
 			}
-			this.prepared.Unlock()
+			mutex.Unlock()
 		}
-
-		for ks, _ := range subplanIsks.(map[string]bool) {
-			if _, ok := this.deltaKeyspaces[ks]; ok {
-				planFound = false
-				break
+		if subplanIsks != nil {
+			for ks, _ := range subplanIsks.(map[string]bool) {
+				if _, ok := this.deltaKeyspaces[ks]; ok {
+					planFound = false
+					break
+				}
 			}
 		}
 	}
 
 	if !planFound {
-		var err error
-
-		var prepContext planner.PrepareContext
-		planner.NewPrepareContext(&prepContext, this.requestId, this.queryContext, this.namedArgs,
-			this.positionalArgs, this.indexApiVersion, this.featureControls, this.useFts, this.useCBO, this.optimizer,
-			this.deltaKeyspaces, this)
-		qp, subplanIsks, err = planner.Build(query, this.datastore, this.systemstore,
-			this.namespace, true, false, &prepContext)
-
-		if err != nil {
-			// Generate our own error for this subquery, in addition to whatever the query above is doing.
-			err1 := errors.NewSubqueryBuildError(err)
-			this.Error(err1)
-			return nil, err1
+		// adhoc + transaction plans. mutex needed to handle max_parallelism
+		_, subplan, subplanIsks, planFound = subplans.Get(query, true)
+		if !planFound {
+			mutex := subplans.GetMutex()
+			mutex.Lock()
+			// check again, just in case somebody has done it while we were waiting
+			_, subplan, subplanIsks, planFound = subplans.Get(query, false)
+			if !planFound {
+				subplan, subplanIsks, err = this.SubqueryPlan(query, mutex, this.deltaKeyspaces,
+					this.namedArgs, this.positionalArgs, false)
+				if err != nil {
+					mutex.Unlock()
+					return nil, err
+				}
+				subplans.Set(query, nil, subplan, subplanIsks, false)
+			}
+			mutex.Unlock()
 		}
-
-		subplan = qp.PlanOp()
-
-		// Cache plan
-		subplans.set(query, subplan, subplanIsks)
 	}
 
 	var sequence *Sequence
 	var collect *Collect
+	var ok bool
 
 	subExecTrees := this.getSubExecTrees()
 	ops, opc, opsFound := subExecTrees.get(query)
 	if opsFound {
 		sequence = ops
 		collect = opc
-		sequence.reopen(this.Context)
-	} else {
-		pipeline, err := Build(subplan.(plan.Operator), this.Context)
+		ok = sequence.reopen(this.Context)
+		if !ok {
+			logging.Warna(func() string { return fmt.Sprintf("Failed to reopen: %v", query.String()) })
+
+			// Since the tree cannot be re-opened - clean up the resources associated with it.
+			// Do not use ANY references to the cleaned up sequence, collect operators after this Done() call
+			// until the variables pointing to the cleanued up operators are re-assigned
+			sequence.Done()
+		}
+	}
+	if !ok {
+		qp := subplan.(*plan.QueryPlan)
+		pipeline, err := Build(qp.PlanOp(), this.Context)
 		if err != nil {
 			// Generate our own error for this subquery, in addition to whatever the query above is doing.
 			err1 := errors.NewSubqueryBuildError(err)
@@ -1011,12 +1150,7 @@ func (this *opContext) EvaluateSubquery(query *algebra.Select, parent value.Valu
 	if collect.opState == _DONE {
 		collect.opState = _COMPLETED
 	}
-	// do not share subquery execution tree if subquery is inside inline udf, since we could
-	// potentially invoke the same udf at different places (e.g. if the udf is recursive)
-	// and thus should not share the execution tree
-	if !query.InInlineFunction() {
-		subExecTrees.set(query, sequence, collect)
-	}
+	subExecTrees.set(query, sequence, collect)
 
 	if stashTracking && track > av.RefCnt() {
 		av.Restore(track)
@@ -1025,7 +1159,7 @@ func (this *opContext) EvaluateSubquery(query *algebra.Select, parent value.Valu
 	// Cache results
 	if useCache {
 		subresults := this.getSubresults()
-		subresults.set(query, results, nil)
+		subresults.set(query, results)
 	}
 
 	return results, nil
@@ -1117,27 +1251,22 @@ func (this *Context) contextSubExecTrees() *subqueryArrayMap {
 	return this.subExecTrees
 }
 
-func (this *Context) getSubplans() *subqueryMap {
-	subPlans := this.contextSubplans()
-	if subPlans != nil {
-		return subPlans
-	}
-	return this.initSubplans()
-}
+// Context Subquery Plans
+func (this *Context) GetSubqueryPlans(init bool) *algebra.SubqueryPlans {
+	this.queryMutex.RLock()
+	subqueryPlans := this.subqueryPlans
+	this.queryMutex.RUnlock()
 
-func (this *Context) initSubplans() *subqueryMap {
-	this.mutex.Lock()
-	defer this.mutex.Unlock()
-	if this.subplans == nil {
-		this.subplans = newSubqueryMap(true)
+	if subqueryPlans == nil && init {
+		this.queryMutex.Lock()
+		subqueryPlans = this.subqueryPlans
+		if subqueryPlans == nil {
+			subqueryPlans = algebra.NewSubqueryPlans()
+			this.subqueryPlans = subqueryPlans
+		}
+		this.queryMutex.Unlock()
 	}
-	return this.subplans
-}
-
-func (this *Context) contextSubplans() *subqueryMap {
-	this.mutex.RLock()
-	defer this.mutex.RUnlock()
-	return this.subplans
+	return subqueryPlans
 }
 
 func (this *Context) getSubresults() *subqueryMap {
@@ -1167,32 +1296,24 @@ func (this *Context) initSubresults() *subqueryMap {
 type subqueryMap struct {
 	mutex   sync.RWMutex
 	entries map[*algebra.Select]interface{}
-	isks    map[*algebra.Select]interface{}
 }
 
 func newSubqueryMap(plan bool) *subqueryMap {
 	rv := &subqueryMap{}
 	rv.entries = make(map[*algebra.Select]interface{})
-	if plan {
-		rv.isks = make(map[*algebra.Select]interface{})
-	}
 	return rv
 }
 
-func (this *subqueryMap) get(key *algebra.Select) (interface{}, interface{}, bool) {
+func (this *subqueryMap) get(key *algebra.Select) (interface{}, bool) {
 	this.mutex.RLock()
 	rv, ok := this.entries[key]
-	rv1, _ := this.isks[key]
 	this.mutex.RUnlock()
-	return rv, rv1, ok
+	return rv, ok
 }
 
-func (this *subqueryMap) set(key *algebra.Select, value, dks interface{}) {
+func (this *subqueryMap) set(key *algebra.Select, value interface{}) {
 	this.mutex.Lock()
 	this.entries[key] = value
-	if this.isks != nil {
-		this.isks[key] = dks
-	}
 	this.mutex.Unlock()
 }
 
@@ -1219,21 +1340,18 @@ func newSubqueryArrayMap() *subqueryArrayMap {
 func (this *subqueryArrayMap) get(key *algebra.Select) (*Sequence, *Collect, bool) {
 	this.mutex.Lock()
 	e, ok := this.entries[key]
-	if !ok || len(e) == 0 {
-		this.mutex.Unlock()
-		return nil, nil, false
+	if ok {
+		for i, l := range e {
+			// if we didn't manage to reopen the execution tree, the previous copies are there for profiling only
+			if l.collect.opState == _PAUSED || l.collect.opState == _COMPLETED {
+				this.entries[key] = append(e[:i], e[i+1:]...)
+				this.mutex.Unlock()
+				return l.sequence, l.collect, ok
+			}
+		}
 	}
-
-	l := e[len(e)-1]
-
-	// if we didn't manage to reopen the execution tree, the previous copies are there for profiling only
-	if l.collect.opState != _PAUSED && l.collect.opState != _COMPLETED {
-		this.mutex.Unlock()
-		return nil, nil, false
-	}
-	this.entries[key] = e[:len(e)-1]
 	this.mutex.Unlock()
-	return l.sequence, l.collect, ok
+	return nil, nil, false
 }
 
 func (this *subqueryArrayMap) set(key *algebra.Select, sequence *Sequence, collect *Collect) {
@@ -1403,60 +1521,4 @@ func (this *Context) CacheLikeRegex(in *expression.Like, s string, re *regexp.Re
 	}
 	this.likeRegexMap[in].Orig = s
 	this.likeRegexMap[in].Re = re
-}
-
-type inlineUdfEntry struct {
-	localExpr    expression.Expression // the "local" expression object used only for this query's execution
-	originalExpr expression.Expression // the actual expression object of the inline UDF's body
-}
-
-func (this *Context) InitInlineUdfExprs() {
-	this.queryMutex.Lock()
-	if this.inlineUdfExprs == nil {
-		this.inlineUdfExprs = make(map[string]inlineUdfEntry)
-	}
-	this.queryMutex.Unlock()
-}
-
-// Returns the expression object that the Inline UDF execution should use
-// MB-58479: Since the Inline UDF's body is shared
-// Reparse the function body to generate a new "localExpr" when necessary
-// to prevent race conditions and concurrent reads/writes on a shared AST expression object
-// Function Parameters:
-// udf: should be a unique identifier of the Inline UDF
-// expr: the actual expression AST pointer of the inline UDF body
-// reparse: indicates if the expression should be parsed again to generate the localExpr
-func (this *Context) GetAndSetInlineUdfExprs(udf string, expr expression.Expression, reparse bool,
-	varNames []string, proc func(expression.Expression, []string) errors.Error) (expression.Expression, error) {
-
-	this.queryMutex.Lock()
-	defer this.queryMutex.Unlock()
-
-	if this.inlineUdfExprs == nil {
-		this.inlineUdfExprs = make(map[string]inlineUdfEntry)
-	}
-	var rv expression.Expression
-	// MB-58479: If there is an entry in the map, check if the UDF body has changed from the cached originalExpr
-	// If it has - recreate the entry
-	if entry, ok := this.inlineUdfExprs[udf]; ok && entry.originalExpr == expr {
-		rv = entry.localExpr
-	} else {
-		if reparse {
-			exp, err := parser.Parse(expr.String())
-			if err != nil {
-				return nil, err
-			}
-			if proc != nil {
-				err = proc(exp, varNames)
-				if err != nil {
-					return nil, err
-				}
-			}
-			rv = exp
-		} else {
-			rv = expr
-		}
-		this.inlineUdfExprs[udf] = inlineUdfEntry{originalExpr: expr, localExpr: rv}
-	}
-	return rv, nil
 }
