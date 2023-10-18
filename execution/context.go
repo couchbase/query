@@ -1407,7 +1407,7 @@ func (this *opContext) EvaluateSubquery(query *algebra.Select, parent value.Valu
 }
 
 func useSubqCachedResult(query *algebra.Select) bool {
-	return !query.IsCorrelated() && !query.HasVariables()
+	return !query.IsCorrelated()
 }
 
 func (this *Context) DatastoreURL() string {

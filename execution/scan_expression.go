@@ -21,7 +21,7 @@ type ExpressionScan struct {
 	base
 	buildBitFilterBase
 	plan    *plan.ExpressionScan
-	results value.AnnotatedValues
+	results []interface{}
 	context *Context
 }
 
@@ -65,16 +65,39 @@ func (this *ExpressionScan) RunOnce(context *Context, parent value.Value) {
 			if subq, ok := this.plan.FromExpr().(*algebra.Subquery); ok {
 				// if the subquery evaluation is caching result already, no need
 				// to cache result here
-				useCache = !useSubqCachedResult(subq.Select()) && !subq.Select().HasVariables()
+				useCache = !useSubqCachedResult(subq.Select())
 			} else {
 				useCache = true
 			}
 		}
 
+		alias := this.plan.Alias()
+
+		var buildBitFltr bool
+		buildBitFilters := this.plan.GetBuildBitFilters()
+		if len(buildBitFilters) > 0 {
+			this.createLocalBuildFilters(buildBitFilters)
+			buildBitFltr = this.hasBuildBitFilter()
+			defer this.setBuildBitFilters(alias, context)
+		}
+
 		// use cached results if available
 		if useCache && this.results != nil {
-			for _, av := range this.results {
-				av.Track()
+			for _, act := range this.results {
+				actv := value.NewScopeValue(make(map[string]interface{}), parent)
+				actv.SetField(alias, act)
+				av := value.NewAnnotatedValue(actv)
+				av.SetId("")
+
+				if buildBitFltr && !this.buildBitFilters(av, &this.operatorCtx) {
+					return
+				}
+
+				if this.plan.IsUnderNL() {
+					// Reset Covers (inherited from parent) if under nested-loop join
+					av.ResetCovers(nil)
+				}
+
 				if context.UseRequestQuota() {
 					err := context.TrackValueSize(av.Size())
 					if err != nil {
@@ -95,16 +118,6 @@ func (this *ExpressionScan) RunOnce(context *Context, parent value.Value) {
 		if filter != nil {
 			filter.EnableInlistHash(&this.operatorCtx)
 			defer filter.ResetMemory(&this.operatorCtx)
-		}
-
-		alias := this.plan.Alias()
-
-		var buildBitFltr bool
-		buildBitFilters := this.plan.GetBuildBitFilters()
-		if len(buildBitFilters) > 0 {
-			this.createLocalBuildFilters(buildBitFilters)
-			buildBitFltr = this.hasBuildBitFilter()
-			defer this.setBuildBitFilters(alias, context)
 		}
 
 		ev, e := this.plan.FromExpr().Evaluate(parent, &this.operatorCtx)
@@ -130,26 +143,14 @@ func (this *ExpressionScan) RunOnce(context *Context, parent value.Value) {
 		}
 
 		acts := actuals.([]interface{})
-		var results value.AnnotatedValues
+		var results []interface{}
 		if useCache {
 			this.results = nil
-			results = make(value.AnnotatedValues, 0, len(acts))
-			defer func() {
-				if context != nil && context.UseRequestQuota() {
-					for _, val := range results {
-						context.ReleaseValueSize(val.Size())
-						val.Recycle()
-					}
-				} else {
-					for _, val := range results {
-						val.Recycle()
-					}
-				}
-			}()
+			results = make([]interface{}, 0, len(acts))
 		}
 		for _, act := range acts {
 			actv := value.NewScopeValue(make(map[string]interface{}), parent)
-			actv.SetField(this.plan.Alias(), act)
+			actv.SetField(alias, act)
 			av := value.NewAnnotatedValue(actv)
 			av.SetId("")
 
@@ -176,16 +177,7 @@ func (this *ExpressionScan) RunOnce(context *Context, parent value.Value) {
 			}
 
 			if useCache {
-				av.Track()
-				if context.UseRequestQuota() {
-					err := context.TrackValueSize(av.Size())
-					if err != nil {
-						context.Error(errors.NewMemoryQuotaExceededError())
-						av.Recycle()
-						return
-					}
-				}
-				results = append(results, av)
+				results = append(results, act)
 			}
 			if context.UseRequestQuota() {
 				err := context.TrackValueSize(av.Size())
@@ -206,17 +198,6 @@ func (this *ExpressionScan) RunOnce(context *Context, parent value.Value) {
 
 func (this *ExpressionScan) Done() {
 	this.baseDone()
-
-	if this.context != nil && this.context.UseRequestQuota() {
-		for _, val := range this.results {
-			this.context.ReleaseValueSize(val.Size())
-			val.Recycle()
-		}
-	} else {
-		for _, val := range this.results {
-			val.Recycle()
-		}
-	}
 	this.results = nil
 }
 

@@ -142,5 +142,57 @@
         "description": "MB-59084 - DROP FUNCTION 2",
         "statements": "DROP FUNCTION Test_Func2",
         "results": []
+    },
+    {
+        "description": "MB-59183 - CREATE FUNCTION",
+        "statements": "CREATE OR REPLACE FUNCTION Test_Func3(data) LANGUAGE INLINE AS ( ( SELECT l, r FROM shellTest l JOIN data AS r USE NL ON l.c3 = r.c3 WHERE l.c1 > 0 AND r.c1 > 0 ) )",
+        "results":[]
+    },
+    {
+        "description": "MB-59183 - SELECT",
+        "statements": "SELECT Test_Func3(t) FROM shellTest t WHERE t.c1 > 0",
+        "results": [
+            {
+                "$1": [
+                    {
+                        "l": {
+                            "c1": 1,
+                            "c2": 2,
+                            "c3": 3,
+                            "test_id": "udf"
+                        },
+                        "r": {
+                            "c1": 1,
+                            "c2": 2,
+                            "c3": 3,
+                            "test_id": "udf"
+                        }
+                    }
+                ]
+            },
+            {
+                "$1": [
+                    {
+                        "l": {
+                            "c1": 2,
+                            "c2": 4,
+                            "c3": 6,
+                            "test_id": "udf"
+                        },
+                        "r": {
+                            "c1": 2,
+                            "c2": 4,
+                            "c3": 6,
+                            "test_id": "udf"
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "description": "MB-59183 - DROP FUNCTION",
+        "statements": "DROP FUNCTION Test_Func3",
+        "results": []
     }
 ]

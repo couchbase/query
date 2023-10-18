@@ -32,6 +32,7 @@ const (
 	IDENT_IS_GROUP_AS                   // GROUP AS alias
 	IDENT_IS_WITH_ALIAS                 // CTE variable (WITH alias)
 	IDENT_IS_RECURSIVE_WITH             // Mark recursive withs
+	IDENT_IS_FUNC_VAR                   // inline function variable
 )
 
 /*
@@ -380,6 +381,18 @@ func (this *Identifier) SetRecursiveWith(with bool) {
 		this.identFlags &^= IDENT_IS_RECURSIVE_WITH
 	}
 
+}
+
+func (this *Identifier) IsFuncVariable() bool {
+	return (this.identFlags & IDENT_IS_FUNC_VAR) != 0
+}
+
+func (this *Identifier) SetFuncVariable(funcVar bool) {
+	if funcVar {
+		this.identFlags |= IDENT_IS_FUNC_VAR
+	} else {
+		this.identFlags &^= IDENT_IS_FUNC_VAR
+	}
 }
 
 func (this *Identifier) SetIdentFlags(aliases map[string]bool, flags uint32) {
