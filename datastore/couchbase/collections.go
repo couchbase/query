@@ -38,15 +38,9 @@ type scope struct {
 	authKey  string
 	bucket   *keyspace
 	cleaning int32
+	uid      string
 
 	keyspaces map[string]*collection // keyspaces by id
-}
-
-func NewScope(id string) *scope {
-	return &scope{
-		id:        id,
-		keyspaces: make(map[string]*collection),
-	}
 }
 
 func (sc *scope) AddKeyspace(coll *collection) {
@@ -65,6 +59,10 @@ func (sc *scope) Name() string {
 
 func (sc *scope) AuthKey() string {
 	return sc.authKey
+}
+
+func (sc *scope) Uid() string {
+	return sc.uid
 }
 
 func (sc *scope) BucketId() string {
@@ -150,7 +148,7 @@ func (sc *scope) DropCollection(name string) errors.Error {
 }
 
 func (sc *scope) DropAllSequences() errors.Error {
-	return sequences.DropAllSequences(sc.bucket.namespace.name, sc.bucket.name, sc.id)
+	return sequences.DropAllSequences(sc.bucket.namespace.name, sc.bucket.name, sc.id, sc.uid)
 }
 
 type collection struct {
@@ -351,7 +349,8 @@ func (coll *collection) loadIndexes() {
 }
 
 func (coll *collection) GetRandomEntry(context datastore.QueryContext) (string, value.Value, errors.Error) {
-	return coll.bucket.getRandomEntry(context, coll.scope.id, coll.id, &memcached.ClientContext{CollId: coll.uid, User: getUser(context)})
+	return coll.bucket.getRandomEntry(context, coll.scope.id, coll.id,
+		&memcached.ClientContext{CollId: coll.uid, User: getUser(context)})
 }
 
 func (coll *collection) Fetch(keys []string, fetchMap map[string]value.AnnotatedValue, context datastore.QueryContext,
@@ -361,22 +360,30 @@ func (coll *collection) Fetch(keys []string, fetchMap map[string]value.Annotated
 		projection, useSubDoc, &memcached.ClientContext{CollId: coll.uid, User: getUser(context)})
 }
 
-func (coll *collection) Insert(inserts value.Pairs, context datastore.QueryContext, preserveMutations bool) (int, value.Pairs, errors.Errors) {
+func (coll *collection) Insert(inserts value.Pairs, context datastore.QueryContext, preserveMutations bool) (int,
+	value.Pairs, errors.Errors) {
+
 	return coll.bucket.performOp(MOP_INSERT, coll.QualifiedName(), coll.scope.id, coll.id,
 		inserts, preserveMutations, context, &memcached.ClientContext{CollId: coll.uid, User: getUser(context)})
 }
 
-func (coll *collection) Update(updates value.Pairs, context datastore.QueryContext, preserveMutations bool) (int, value.Pairs, errors.Errors) {
+func (coll *collection) Update(updates value.Pairs, context datastore.QueryContext, preserveMutations bool) (int,
+	value.Pairs, errors.Errors) {
+
 	return coll.bucket.performOp(MOP_UPDATE, coll.QualifiedName(), coll.scope.id, coll.id,
 		updates, preserveMutations, context, &memcached.ClientContext{CollId: coll.uid, User: getUser(context)})
 }
 
-func (coll *collection) Upsert(upserts value.Pairs, context datastore.QueryContext, preserveMutations bool) (int, value.Pairs, errors.Errors) {
+func (coll *collection) Upsert(upserts value.Pairs, context datastore.QueryContext, preserveMutations bool) (int,
+	value.Pairs, errors.Errors) {
+
 	return coll.bucket.performOp(MOP_UPSERT, coll.QualifiedName(), coll.scope.id, coll.id,
 		upserts, preserveMutations, context, &memcached.ClientContext{CollId: coll.uid, User: getUser(context)})
 }
 
-func (coll *collection) Delete(deletes value.Pairs, context datastore.QueryContext, preserveMutations bool) (int, value.Pairs, errors.Errors) {
+func (coll *collection) Delete(deletes value.Pairs, context datastore.QueryContext, preserveMutations bool) (int,
+	value.Pairs, errors.Errors) {
+
 	return coll.bucket.performOp(MOP_DELETE, coll.QualifiedName(), coll.scope.id, coll.id,
 		deletes, preserveMutations, context, &memcached.ClientContext{CollId: coll.uid, User: getUser(context)})
 }
@@ -478,6 +485,7 @@ func buildScopesAndCollections(mani *cb.Manifest, bucket *keyspace) (map[string]
 			bucket:    bucket,
 			keyspaces: make(map[string]*collection, len(s.Collections)),
 			authKey:   bucket.name + ":" + s.Name,
+			uid:       fmt.Sprintf("%08x", s.Uid),
 		}
 		for _, c := range s.Collections {
 			coll := &collection{
@@ -539,6 +547,7 @@ func refreshScopesAndCollections(mani *cb.Manifest, bucket *keyspace) (map[strin
 			bucket:    bucket,
 			keyspaces: make(map[string]*collection, len(s.Collections)),
 			authKey:   bucket.name + ":" + s.Name,
+			uid:       fmt.Sprintf("%08x", s.Uid),
 		}
 
 		oldScope := oldScopes[s.Name]

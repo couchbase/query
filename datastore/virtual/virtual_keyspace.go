@@ -86,6 +86,7 @@ type virtualScope struct {
 	id       string
 	bucket   *virtualBucket
 	keyspace *virtualKeyspace
+	uid      string
 }
 
 func (sc *virtualScope) Id() string {
@@ -97,7 +98,7 @@ func (sc *virtualScope) Name() string {
 }
 
 func (sc *virtualScope) Uid() string {
-	return sc.id
+	return sc.uid
 }
 
 func (sc *virtualScope) AuthKey() string {

@@ -44,7 +44,7 @@ type sequence struct {
 }
 
 const _CACHE_LIMIT = 65536
-const _SEQUENCE = "_sequence::"
+const _SEQUENCE = "seq::"
 const _CACHE_REVISION_PATH = "/query/sequences_cache/"
 const _CACHE_REVISION = _CACHE_REVISION_PATH + "revision"
 const _DEFAULT_SEQUENCE_CACHE = 50
@@ -76,35 +76,48 @@ func init() {
 }
 
 func getStorageKey(path *algebra.Path) string {
-	return _SEQUENCE + path.Scope() + "." + path.Keyspace()
+	uid, _ := datastore.GetScopeUid(path.Namespace(), path.Bucket(), path.Scope())
+	return _SEQUENCE + uid + "::" + path.Scope() + "." + path.Keyspace()
 }
 
 func getCacheKey(namespace string, bucket string, key string) string {
-	return namespace + ":" + bucket + "." + strings.TrimPrefix(key, _SEQUENCE)
+	return namespace + ":" + bucket + "." + trimPrefixAndScopeUid(key)
 }
 
-func validateScope(path *algebra.Path) errors.Error {
+func trimPrefixAndScopeUid(key string) string {
+	if len(key) > len(_SEQUENCE)+10 && strings.HasPrefix(key, _SEQUENCE) {
+		key = key[len(_SEQUENCE)+10:]
+	}
+	return key
+}
+
+func validateScope(path *algebra.Path) (errors.Error, string) {
 	if path.Namespace() == datastore.SYSTEM_NAMESPACE {
-		return errors.NewDatastoreInvalidPathError("system namespace not permitted")
+		return errors.NewDatastoreInvalidPathError("system namespace not permitted"), ""
 	}
 
 	store := datastore.GetDatastore()
 	if store == nil {
-		return errors.NewNoDatastoreError()
+		return errors.NewNoDatastoreError(), ""
 	}
 
 	var ns datastore.Namespace
 	var b datastore.Bucket
 	var err errors.Error
+	var uid string
 
 	ns, err = store.NamespaceById(path.Namespace())
 	if err == nil {
 		b, err = ns.BucketByName(path.Bucket())
 		if err == nil {
-			_, err = b.ScopeByName(path.Scope())
+			var s datastore.Scope
+			s, err = b.ScopeByName(path.Scope())
+			if err == nil {
+				uid = s.Uid()
+			}
 		}
 	}
-	return err
+	return err, uid
 }
 
 func getSystemCollection(bucket string) (datastore.Keyspace, errors.Error) {
@@ -283,7 +296,7 @@ func CreateSequence(path *algebra.Path, with value.Value) errors.Error {
 		version:   0,
 	}
 
-	err = validateScope(path)
+	err, _ = validateScope(path)
 	if err != nil {
 		return errors.NewSequenceError(errors.E_SEQUENCE_CREATE, name, err)
 	}
@@ -482,7 +495,7 @@ func AlterSequence(path *algebra.Path, with value.Value) errors.Error {
 			errors.NewSequenceError(errors.E_SEQUENCE_INVALID_RANGE, fmt.Sprintf("%v to %v", min, max)))
 	}
 
-	err = validateScope(path)
+	err, _ = validateScope(path)
 	if err != nil {
 		return errors.NewSequenceError(errors.E_SEQUENCE_ALTER, name, err)
 	}
@@ -646,11 +659,14 @@ func loadSequence(name string) errors.Error {
 	}
 	seq.Lock()
 	err := seq.load()
+	if err != nil {
+		sequences.Delete(name, nil)
+	}
 	seq.Unlock()
 	return err
 }
 
-func DropAllSequences(namespace string, bucket string, scope string) errors.Error {
+func DropAllSequences(namespace string, bucket string, scope string, uid string) errors.Error {
 
 	var lastError errors.Error
 	pairs := make([]value.Pair, 0, _BATCH_SIZE)
@@ -658,7 +674,7 @@ func DropAllSequences(namespace string, bucket string, scope string) errors.Erro
 
 	prefix := _SEQUENCE
 	if scope != "" {
-		prefix += scope + "."
+		prefix += uid + "::" + scope + "."
 	}
 	err := datastore.ScanSystemCollection(bucket, prefix, nil,
 		func(key string, systemCollection datastore.Keyspace) errors.Error {
@@ -783,7 +799,7 @@ func getLockedSequence(name string) (*sequence, errors.Error) {
 
 // expect locked on entry
 func (seq *sequence) load() errors.Error {
-	err := validateScope(seq.name)
+	err, _ := validateScope(seq.name)
 	if err != nil {
 		return err // bubble scope-not-found up
 	}
@@ -1121,7 +1137,11 @@ func ListSequenceKeys(namespace string, bucket string, scope string, cachedOnly 
 
 	prefix := _SEQUENCE
 	if scope != "" {
-		prefix += scope + "."
+		path := algebra.NewPathFromElements([]string{namespace, bucket, scope})
+		err, uid := validateScope(path)
+		if err == nil {
+			prefix += uid + "::" + scope + "."
+		}
 	}
 
 	datastore.ScanSystemCollection(bucket, prefix,
@@ -1258,7 +1278,7 @@ func BackupSequences(namespace string, bucket string, filter func(string) bool) 
 
 	err := datastore.ScanSystemCollection(bucket, _SEQUENCE, nil,
 		func(key string, systemCollection datastore.Keyspace) errors.Error {
-			name := namePrefix + strings.TrimPrefix(key, _SEQUENCE)
+			name := namePrefix + trimPrefixAndScopeUid(key)
 			if filter == nil || filter(name) {
 				keys[0] = key
 				errs := systemCollection.Fetch(keys, res, datastore.NULL_QUERY_CONTEXT, nil, nil, false)

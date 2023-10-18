@@ -180,6 +180,7 @@ type Scope interface {
 	Id() string
 	Name() string
 	AuthKey() string // Key of the object to be used for authorization purposes
+	Uid() string
 
 	BucketId() string
 	Bucket() Bucket
@@ -533,6 +534,14 @@ func GetScope(parts ...string) (Scope, errors.Error) {
 	default:
 		return nil, errors.NewDatastoreInvalidScopePartsError(parts...)
 	}
+}
+
+func GetScopeUid(parts ...string) (string, errors.Error) {
+	scope, err := GetScope(parts...)
+	if err != nil {
+		return "00000000", err
+	}
+	return scope.Uid(), nil
 }
 
 func GetBucket(parts ...string) (Bucket, errors.Error) {

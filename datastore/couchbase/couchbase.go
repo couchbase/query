@@ -3088,19 +3088,22 @@ func cleanupSystemCollection(namespace string, bucket string) {
 		func(key string, systemCollection datastore.Keyspace) errors.Error {
 			logging.Debugf("Key: %v", key)
 			parts := strings.Split(key, "::")
-			if len(parts) == 2 && (parts[0] == "_sequence" || parts[0] == "cbo" || parts[0] == "udf") {
-				path := parts[1]
+			if len(parts) == 3 && (parts[0] == "_sequence" || parts[0] == "cbo" || parts[0] == "udf") {
+				path := parts[len(parts)-1]
 				if parts[0] == "cbo" {
-					path, _ = getCBOKeyspace(parts[1])
+					path, _ = getCBOKeyspace(path)
 				}
 				elements := strings.Split(path, ".")
 				if len(elements) == 2 {
 					s, err := systemCollection.Scope().Bucket().ScopeByName(elements[0])
+					if err == nil && s.Uid() != parts[1] {
+						err = errors.NewCbScopeNotFoundError(nil, s.Name()) // placeholder to trigger deletion
+					}
 					if err == nil && parts[0] == "cbo" {
 						_, err = s.KeyspaceByName(elements[1])
 					}
 					if err != nil {
-						logging.Infof("Deleting stale system collection key: %v", key)
+						logging.Infof("Deleting stale `%s` system collection key: %v", bucket, key)
 						pairs = append(pairs, value.Pair{Name: key})
 						if len(pairs) >= _BATCH_SIZE {
 							_, results, errs := systemCollection.Delete(pairs, datastore.NULL_QUERY_CONTEXT, true)

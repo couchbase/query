@@ -27,59 +27,62 @@ const _PREFIX = "udf::"
 func Init() {
 }
 
+func getPrefix(namespace string, bucket string, scope string) string {
+	uid, _ := datastore.GetScopeUid(namespace, bucket, scope)
+	return _PREFIX + uid + "::"
+}
+
 // datastore and function store actions
 func DropScope(namespace, bucket, scope string) {
-	datastore.ScanSystemCollection(bucket, _PREFIX, nil, func(key string, systemCollection datastore.Keyspace) errors.Error {
-		s, fn := key2parts(key)
-
-		// skip entries that are not udfs or different scopes
-		if scope == s {
+	datastore.ScanSystemCollection(bucket, getPrefix(namespace, bucket, scope), nil,
+		func(key string, systemCollection datastore.Keyspace) errors.Error {
+			s, fn := key2parts(key)
+			if s == "" {
+				return nil
+			}
 			path := algebra.PathFromParts(namespace, bucket, scope, fn)
 			delete2(systemCollection, key, path)
 			functions.FunctionClear(path, nil)
-		}
-		return nil
-	}, nil)
+			return nil
+		}, nil)
 }
 
 func Foreach(b string, f func(path string, v value.Value) error) error {
-	return datastore.ScanSystemCollection(b, _PREFIX, nil, func(key string, systemCollection datastore.Keyspace) errors.Error {
-		s, fn := key2parts(key)
-
-		// skip entries that are not udfs
-		if s == "" {
+	return datastore.ScanSystemCollection(b, _PREFIX, nil,
+		func(key string, systemCollection datastore.Keyspace) errors.Error {
+			s, fn := key2parts(key)
+			if s == "" {
+				return nil
+			}
+			name, err := NewScopeFunction(systemCollection.NamespaceId(), b, s, fn)
+			if err != nil {
+				return err
+			}
+			val, err := get2(name, systemCollection)
+			if err != nil {
+				return err
+			}
+			err1 := f(algebra.PathFromParts(systemCollection.NamespaceId(), b, s, fn), val)
+			if err1 != nil {
+				return errors.NewSystemCollectionError("Error calling processing function", err1)
+			}
 			return nil
-		}
-		name, err := NewScopeFunction(systemCollection.NamespaceId(), b, s, fn)
-		if err != nil {
-			return err
-		}
-		val, err := get2(name, systemCollection)
-		if err != nil {
-			return err
-		}
-		err1 := f(algebra.PathFromParts(systemCollection.NamespaceId(), b, s, fn), val)
-		if err1 != nil {
-			return errors.NewSystemCollectionError("Error calling processing function", err1)
-		}
-		return nil
-	}, nil)
+		}, nil)
 }
 
 func Scan(b string, f func(path string) error) error {
-	return datastore.ScanSystemCollection(b, _PREFIX, nil, func(key string, systemCollection datastore.Keyspace) errors.Error {
-		s, fn := key2parts(key)
-
-		// skip entries that are not udfs
-		if s == "" {
+	return datastore.ScanSystemCollection(b, _PREFIX, nil,
+		func(key string, systemCollection datastore.Keyspace) errors.Error {
+			s, fn := key2parts(key)
+			if s == "" {
+				return nil
+			}
+			err := f(algebra.PathFromParts(systemCollection.NamespaceId(), b, s, fn))
+			if err != nil {
+				return errors.NewSystemCollectionError("Error calling processing function", err)
+			}
 			return nil
-		}
-		err := f(algebra.PathFromParts(systemCollection.NamespaceId(), b, s, fn))
-		if err != nil {
-			return errors.NewSystemCollectionError("Error calling processing function", err)
-		}
-		return nil
-	}, nil)
+		}, nil)
 }
 
 func Get(path string) (value.Value, error) {
@@ -101,7 +104,13 @@ func Get(path string) (value.Value, error) {
 func get2(name functions.FunctionName, systemCollection datastore.Keyspace) (value.Value, errors.Error) {
 	fetchMap := _STRING_ANNOTATED_POOL.Get()
 	defer _STRING_ANNOTATED_POOL.Put(fetchMap)
-	key := parts2key(name.Path()...)
+
+	scope, err := systemCollection.Scope().Bucket().ScopeByName(name.Path()[2])
+	if err != nil {
+		return nil, err
+	}
+	key := parts2key(scope.Uid(), name.Path()...)
+
 	errs := systemCollection.Fetch([]string{key}, fetchMap, datastore.NULL_QUERY_CONTEXT, nil, nil, false)
 	for _, err := range errs {
 		if err.IsFatal() {
@@ -125,10 +134,11 @@ func get2(name functions.FunctionName, systemCollection datastore.Keyspace) (val
 func Count(b string) (int64, error) {
 	var count int64
 
-	err := datastore.ScanSystemCollection(b, _PREFIX, nil, func(key string, systemCollection datastore.Keyspace) errors.Error {
-		count++
-		return nil
-	}, nil)
+	err := datastore.ScanSystemCollection(b, _PREFIX, nil,
+		func(key string, systemCollection datastore.Keyspace) errors.Error {
+			count++
+			return nil
+		}, nil)
 	return count, err
 }
 
@@ -145,7 +155,7 @@ func key2parts(key string) (string, string) {
 	if key[:len(_PREFIX)] != _PREFIX {
 		return "", ""
 	}
-	key = key[len(_PREFIX):]
+	key = key[len(_PREFIX)+10:] // strip prefix and scope UID
 	dot := strings.IndexByte(key, '.')
 	if dot <= 1 {
 		return "", ""
@@ -153,8 +163,8 @@ func key2parts(key string) (string, string) {
 	return key[:dot], key[dot+1:]
 }
 
-func parts2key(parts ...string) string {
-	return _PREFIX + parts[2] + "." + parts[3]
+func parts2key(uid string, parts ...string) string {
+	return _PREFIX + uid + "::" + parts[2] + "." + parts[3]
 }
 
 type systemEntry struct {
@@ -207,7 +217,11 @@ func (name *systemEntry) Load() (functions.FunctionBody, errors.Error) {
 	}
 	fetchMap := _STRING_ANNOTATED_POOL.Get()
 	defer _STRING_ANNOTATED_POOL.Put(fetchMap)
-	key := parts2key(name.Path()...)
+	scope, err := systemCollection.Scope().Bucket().ScopeByName(name.Path()[2])
+	if err != nil {
+		return nil, err
+	}
+	key := parts2key(scope.Uid(), name.Path()...)
 	errs := systemCollection.Fetch([]string{key}, fetchMap, datastore.NULL_QUERY_CONTEXT, nil, nil, false)
 	for _, err := range errs {
 		if err.IsFatal() {
@@ -246,8 +260,13 @@ func (name *systemEntry) Save(body functions.FunctionBody, replace bool) errors.
 		return err
 	}
 
+	scope, err := systemCollection.Scope().Bucket().ScopeByName(name.Path()[2])
+	if err != nil {
+		return errors.NewSystemCollectionError("Error getting scope UID", err)
+	}
+
 	dpairs := make([]value.Pair, 1)
-	dpairs[0].Name = parts2key(parts...)
+	dpairs[0].Name = parts2key(scope.Uid(), parts...)
 	dpairs[0].Value = value.NewValue(entry)
 	var errs errors.Errors
 
@@ -277,7 +296,11 @@ func (name *systemEntry) Delete() errors.Error {
 	if err != nil {
 		return err
 	}
-	return delete2(systemCollection, parts2key(parts...), name.Name())
+	scope, err := systemCollection.Scope().Bucket().ScopeByName(name.Path()[2])
+	if err != nil {
+		return err
+	}
+	return delete2(systemCollection, parts2key(scope.Uid(), parts...), name.Name())
 }
 
 func delete2(systemCollection datastore.Keyspace, key string, name string) errors.Error {
