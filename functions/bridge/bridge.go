@@ -11,6 +11,7 @@ package functionsBridge
 // this package solely exists to avoid circular references between parse/n1ql, functions, expression, and functions/javascript
 
 import (
+	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/functions"
@@ -34,6 +35,8 @@ var NewJavascriptBody func(library, object string) (functions.FunctionBody, erro
 
 // Created to avoid circular references between functions and expression
 type InlineUdfContext interface {
-	GetAndSetInlineUdfExprs(udf string, expr expression.Expression, hasSubqueries bool, varNames []string,
-		proc func(expression.Expression, []string) errors.Error) (expression.Expression, error)
+	GetInlineUdf(udf string) (expression.Expression, []string, bool)
+	SetInlineUdf(udf string, expr expression.Expression, varNames []string)
+	SetupSubqueryPlans(expr expression.Expression, subqPlans *algebra.SubqueryPlans, lock, generate, trans bool) (err error)
+	VerifySubqueryPlans(expr expression.Expression, subqPlans *algebra.SubqueryPlans, lock bool) (bool, bool)
 }

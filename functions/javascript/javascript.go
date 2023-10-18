@@ -97,6 +97,10 @@ func Init(mux *mux.Router, t int) {
 	}
 }
 
+func (this *javascript) CheckAuthorize(name string, context functions.Context) bool {
+	return true
+}
+
 func (this *javascript) Execute(name functions.FunctionName, body functions.FunctionBody, modifiers functions.Modifier, values []value.Value, context functions.Context) (value.Value, errors.Error) {
 	var args []interface{}
 
