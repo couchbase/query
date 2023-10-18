@@ -163,8 +163,16 @@ func (this *KeyspaceTerm) String() (s string) {
 		} else {
 			s += " on keys " + this.joinKeys.String()
 		}
-	} else if this.keys != nil {
-		s += " use keys " + this.keys.String()
+	} else {
+		useStr := this.joinHint.String()
+		if this.keys != nil {
+			useStr += " keys " + this.keys.String()
+		} else if len(this.indexes) > 0 {
+			useStr += " index (" + this.indexes.String() + ")"
+		}
+		if len(useStr) > 0 {
+			s += " use" + useStr
+		}
 	}
 
 	return s
