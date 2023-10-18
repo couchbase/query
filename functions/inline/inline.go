@@ -11,11 +11,13 @@ package inline
 import (
 	goerrors "errors"
 	"strings"
+	"sync"
 
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/expression/parser"
 	"github.com/couchbase/query/functions"
 	functionsBridge "github.com/couchbase/query/functions/bridge"
 	"github.com/couchbase/query/value"
@@ -28,61 +30,62 @@ type inlineBody struct {
 	expr          expression.Expression
 	varNames      []string
 	text          string
-	hasSubqueries bool // if the inline function body contains subqueries
+	subqueryPlans *algebra.SubqueryPlans // subquery plans
+	mutex         sync.RWMutex           // mutex
 }
 
 func Init() {
 	functions.FunctionsNewLanguage(functions.INLINE, &inline{})
 }
 
-func (this *inline) Execute(name functions.FunctionName, body functions.FunctionBody, modifiers functions.Modifier, values []value.Value, context functions.Context) (value.Value, errors.Error) {
-	var parent map[string]interface{}
+func (this *inline) CheckAuthorize(name string, fcontext functions.Context) bool {
+	if context, contextOk := fcontext.(functionsBridge.InlineUdfContext); contextOk {
+		if _, _, ok := context.GetInlineUdf(name); ok {
+			return false
+		}
+	}
+	return true
+}
 
+func (this *inline) Execute(name functions.FunctionName, body functions.FunctionBody, modifiers functions.Modifier,
+	values []value.Value, context functions.Context) (value.Value, errors.Error) {
 	funcBody, ok := body.(*inlineBody)
-
 	if !ok {
 		return nil, errors.NewInternalFunctionError(goerrors.New("Wrong language being executed!"), name.Name())
 	}
 
-	if funcBody.varNames == nil {
-		args := make([]value.Value, len(values))
-		for i, _ := range values {
-			args[i] = value.NewValue(values[i])
+	// all subquery plans setup appropriate place
+	var val value.Value
+	expr, varNames, err := funcBody.GetPlans(name.Key(), context)
+	if err == nil {
+		var parent map[string]interface{}
+
+		if varNames == nil {
+			args := make([]value.Value, len(values))
+			for i, _ := range values {
+				args[i] = value.NewValue(values[i])
+			}
+			parent = map[string]interface{}{"args": args}
+		} else {
+			if len(values) != len(varNames) {
+				return nil, errors.NewArgumentsMismatchError(name.Name())
+			}
+			parent = make(map[string]interface{}, len(values))
+			for i, _ := range values {
+				parent[varNames[i]] = values[i]
+			}
 		}
-		parent = map[string]interface{}{"args": args}
-	} else {
-		if len(values) != len(funcBody.varNames) {
-			return nil, errors.NewArgumentsMismatchError(name.Name())
-		}
-		parent = make(map[string]interface{}, len(values))
-		for i, _ := range values {
-			parent[funcBody.varNames[i]] = values[i]
-		}
+
+		val, err = expr.Evaluate(value.NewValue(parent), context)
 	}
-
-	expr := funcBody.expr
-	if c, ok := context.(functionsBridge.InlineUdfContext); ok {
-		var err error
-
-		// Get the function body to safely use
-		// Generate and use a new AST expression object when the funcBody.expr contains subqueries
-		expr, err = c.GetAndSetInlineUdfExprs(name.Key(), funcBody.expr, funcBody.hasSubqueries, funcBody.varNames, setVarNames)
-		if err != nil {
-			return nil, errors.NewInternalFunctionError(err, name.Name())
-		}
-	}
-
-	val, err := expr.Evaluate(value.NewValue(parent), context)
-
 	if err != nil {
 		return nil, errors.NewFunctionExecutionError("", name.Name(), err)
-	} else {
-		return val, nil
 	}
+	return val, nil
 }
 
 func NewInlineBody(expr expression.Expression, text string) (functions.FunctionBody, errors.Error) {
-	return &inlineBody{expr: expr, text: strings.TrimSuffix(text, ";"), hasSubqueries: expression.ContainsSubquery(expr)}, nil
+	return &inlineBody{expr: expr, text: strings.TrimSuffix(text, ";")}, nil
 }
 
 func (this *inlineBody) SetVarNames(vars []string) errors.Error {
@@ -188,4 +191,81 @@ func (this *inlineBody) Privileges() (*auth.Privileges, errors.Error) {
 	}
 
 	return privileges, nil
+}
+
+// subquery plans of expression (even no subquery, palns will be empty).
+
+func (this *inlineBody) GetSubqueryPlans(lock bool) (expression.Expression, []string, *algebra.SubqueryPlans) {
+	if lock {
+		this.mutex.RLock()
+		defer this.mutex.RUnlock()
+	}
+	return this.expr, this.varNames, this.subqueryPlans
+}
+
+// Generate or Setup Plans UDF when expression changed. Copy into local context by refrence once per statement execution.
+
+func (this *inlineBody) GetPlans(udfName string, fcontext functions.Context) (expression.Expression, []string, error) {
+	context, contextOk := fcontext.(functionsBridge.InlineUdfContext)
+	if contextOk {
+		// If UDF name already part of the context use that expression/Plans.
+		// Avoids pick new udf body middle any change udf will not be picked up.
+		if expr, varNames, ok := context.GetInlineUdf(udfName); ok {
+			return expr, varNames, nil
+		}
+	} else {
+		return nil, nil, errors.NewInternalFunctionError(goerrors.New("Inlineudf Context"), udfName)
+	}
+
+	var good, trans bool
+	var err error
+	var expr expression.Expression
+
+	// Get UDF subquery plans
+	udfExpr, varNames, subqueryPlans := this.GetSubqueryPlans(true)
+	if subqueryPlans != nil {
+		expr = subqueryPlans.GetExpression(true)
+		// If already present verify it
+		good, trans = context.VerifySubqueryPlans(expr, subqueryPlans, true)
+	}
+	if subqueryPlans == nil || !good {
+		// If no plans or not valid
+		this.mutex.Lock()
+
+		expr, err = parser.Parse(udfExpr.String())
+		if err == nil {
+			err = setVarNames(expr, varNames)
+		}
+		if err != nil {
+			this.mutex.Unlock()
+			return nil, nil, err
+		}
+		//  Store new plan in UDF
+		subqueryPlans = algebra.NewSubqueryPlans()
+		err = context.SetupSubqueryPlans(expr, subqueryPlans, true, true, false)
+		if err != nil {
+			this.mutex.Unlock()
+			return nil, nil, err
+		}
+		this.subqueryPlans = subqueryPlans
+		this.mutex.Unlock()
+		// reverify so that we can handle in transaction context
+		_, trans = context.VerifySubqueryPlans(expr, subqueryPlans, true)
+	}
+	if trans {
+		// In transaction context regenerate algebra tree
+		expr, err = parser.Parse(udfExpr.String())
+		if err == nil {
+			err = setVarNames(expr, varNames)
+		}
+	}
+	if err == nil {
+		// Setup subquery plans for transaction or copy from UDF to context
+		err = context.SetupSubqueryPlans(expr, subqueryPlans, true, false, trans)
+	}
+	if err == nil {
+		// Store UDF information in the context
+		context.SetInlineUdf(udfName, expr, varNames)
+	}
+	return expr, varNames, err
 }
