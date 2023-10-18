@@ -20,7 +20,7 @@ import (
 type ExpressionScan struct {
 	base
 	plan    *plan.ExpressionScan
-	results value.AnnotatedValues
+	results []interface{}
 }
 
 func NewExpressionScan(plan *plan.ExpressionScan, context *Context) *ExpressionScan {
@@ -62,15 +62,27 @@ func (this *ExpressionScan) RunOnce(context *Context, parent value.Value) {
 			if subq, ok := this.plan.FromExpr().(*algebra.Subquery); ok {
 				// if the subquery evaluation is caching result already, no need
 				// to cache result here
-				useCache = !useSubqCachedResult(subq.Select()) && !subq.Select().HasVariables()
+				useCache = !useSubqCachedResult(subq.Select())
 			} else {
 				useCache = true
 			}
 		}
 
+		alias := this.plan.Alias()
+
 		// use cached results if available
 		if useCache && this.results != nil {
-			for _, av := range this.results {
+			for _, act := range this.results {
+				actv := value.NewScopeValue(make(map[string]interface{}), parent)
+				actv.SetField(alias, act)
+				av := value.NewAnnotatedValue(actv)
+				av.SetId("")
+
+				if this.plan.IsUnderNL() {
+					// Reset Covers (inherited from parent) if under nested-loop join
+					av.ResetCovers(nil)
+				}
+
 				if context.UseRequestQuota() && context.TrackValueSize(av.Size()) {
 					context.Error(errors.NewMemoryQuotaExceededError())
 					return
@@ -109,12 +121,14 @@ func (this *ExpressionScan) RunOnce(context *Context, parent value.Value) {
 		}
 
 		acts := actuals.([]interface{})
+		var results []interface{}
 		if useCache {
-			this.results = make(value.AnnotatedValues, 0, len(acts))
+			this.results = nil
+			results = make([]interface{}, 0, len(acts))
 		}
 		for _, act := range acts {
 			actv := value.NewScopeValue(make(map[string]interface{}), parent)
-			actv.SetField(this.plan.Alias(), act)
+			actv.SetField(alias, act)
 			av := value.NewAnnotatedValue(actv)
 			av.SetId("")
 
@@ -136,11 +150,7 @@ func (this *ExpressionScan) RunOnce(context *Context, parent value.Value) {
 			}
 
 			if useCache {
-				this.results = append(this.results, av)
-				if context.UseRequestQuota() && context.TrackValueSize(av.Size()) {
-					context.Error(errors.NewMemoryQuotaExceededError())
-					return
-				}
+				results = append(results, act)
 			}
 			if context.UseRequestQuota() && context.TrackValueSize(av.Size()) {
 				context.Error(errors.NewMemoryQuotaExceededError())
@@ -148,9 +158,14 @@ func (this *ExpressionScan) RunOnce(context *Context, parent value.Value) {
 			}
 			this.sendItem(av)
 		}
-
+		this.results, results = results, nil
 	})
 
+}
+
+func (this *ExpressionScan) Done() {
+	this.baseDone()
+	this.results = nil
 }
 
 func (this *ExpressionScan) MarshalJSON() ([]byte, error) {

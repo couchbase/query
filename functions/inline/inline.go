@@ -95,7 +95,6 @@ func (this *inlineBody) SetVarNames(vars []string) errors.Error {
 
 func setVarNames(expr expression.Expression, vars []string) errors.Error {
 	var bindings expression.Bindings
-	var f *expression.Formalizer
 
 	/* We do not have parameter values at this stage, so the binding is
 	   done only to identify variables as variables and not formalize them
@@ -110,20 +109,19 @@ func setVarNames(expr expression.Expression, vars []string) errors.Error {
 		args := expression.NewSimpleBinding("args", c)
 		args.SetStatic(true)
 		bindings = expression.Bindings{args}
-		f = expression.NewFunctionFormalizer("", false, nil)
 	} else {
 		bindings = make(expression.Bindings, len(vars))
 		i := 0
 		for v, _ := range vars {
 			bindings[i] = expression.NewSimpleBinding(vars[v], c)
 			bindings[i].SetStatic(true)
+			bindings[i].SetFuncVariable(true)
 			i++
 		}
-		f = expression.NewFunctionFormalizer("", true, nil)
 	}
 
-	f.SetPermanentWiths(bindings)
-	f.PushBindings(bindings, true)
+	f := expression.NewFunctionFormalizer("", nil)
+	f.SetFuncVariable(bindings)
 	_, err := expr.Accept(f)
 	if err != nil {
 		return errors.NewInternalFunctionError(err, "")

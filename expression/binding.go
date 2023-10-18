@@ -24,6 +24,7 @@ type Binding struct {
 	expr         Expression `json:"expr"`
 	descend      bool       `json:"desc"`
 	static       bool       `json:"static"`
+	funcVar      bool       `json:"function_variable"`
 }
 
 const (
@@ -35,11 +36,11 @@ const (
 type BindingVarOptions uint32
 
 func NewBinding(nameVariable, variable string, expr Expression, descend bool) *Binding {
-	return &Binding{nameVariable, variable, expr, descend, false}
+	return &Binding{nameVariable, variable, expr, descend, false, false}
 }
 
 func NewSimpleBinding(variable string, expr Expression) *Binding {
-	return &Binding{"", variable, expr, false, false}
+	return &Binding{"", variable, expr, false, false, false}
 }
 
 func (this *Binding) Copy() *Binding {
@@ -49,6 +50,7 @@ func (this *Binding) Copy() *Binding {
 		expr:         this.expr.Copy(),
 		descend:      this.descend,
 		static:       this.static,
+		funcVar:      this.funcVar,
 	}
 }
 
@@ -80,6 +82,14 @@ func (this *Binding) SetStatic(s bool) {
 	this.static = s
 }
 
+func (this *Binding) FuncVariable() bool {
+	return this.funcVar
+}
+
+func (this *Binding) SetFuncVariable(fv bool) {
+	this.funcVar = fv
+}
+
 func (this *Binding) MarshalJSON() ([]byte, error) {
 	r := make(map[string]interface{}, 4)
 	if this.nameVariable != "" {
@@ -92,6 +102,9 @@ func (this *Binding) MarshalJSON() ([]byte, error) {
 	}
 	if this.static {
 		r["static"] = this.static
+	}
+	if this.funcVar {
+		r["function_variable"] = this.funcVar
 	}
 
 	return json.Marshal(r)
@@ -286,6 +299,9 @@ func (this Bindings) Identifiers() Expressions {
 			if b.static {
 				id.SetStaticVariable(true)
 			}
+			if b.funcVar {
+				id.SetFuncVariable(true)
+			}
 			exprs = append(exprs, id)
 		}
 
@@ -293,6 +309,9 @@ func (this Bindings) Identifiers() Expressions {
 		id.SetBindingVariable(true)
 		if b.static {
 			id.SetStaticVariable(true)
+		}
+		if b.funcVar {
+			id.SetFuncVariable(true)
 		}
 		exprs = append(exprs, id)
 	}

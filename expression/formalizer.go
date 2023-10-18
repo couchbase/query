@@ -19,11 +19,10 @@ import (
 Bit flags for formalizer flags
 */
 const (
-	FORM_MAP_SELF      = 1 << iota // Map SELF to keyspace: used in sarging index
-	FORM_MAP_KEYSPACE              // Map keyspace to SELF: used in creating index
-	FORM_INDEX_SCOPE               // formalizing index key or index condition
-	FORM_IN_FUNCTION               // We are in function invocation
-	FORM_HAS_VARIABLES             // We are setting variables in functino invocation
+	FORM_MAP_SELF     = 1 << iota // Map SELF to keyspace: used in sarging index
+	FORM_MAP_KEYSPACE             // Map keyspace to SELF: used in creating index
+	FORM_INDEX_SCOPE              // formalizing index key or index condition
+	FORM_IN_FUNCTION              // We are in function invocation
 )
 
 const (
@@ -31,7 +30,7 @@ const (
 )
 
 type WithInfo struct {
-	permanent   bool
+	funcVar     bool // inline function variables
 	correlated  bool
 	correlation map[string]uint32
 }
@@ -43,15 +42,15 @@ func newWithInfo(correlated bool, correlation map[string]uint32) *WithInfo {
 	}
 }
 
-func newPermanentWithInfo() *WithInfo {
+func newFuncVarWithInfo() *WithInfo {
 	return &WithInfo{
-		permanent: true,
+		funcVar: true,
 	}
 }
 
 func (this *WithInfo) Copy() *WithInfo {
 	rv := &WithInfo{
-		permanent:  this.permanent,
+		funcVar:    this.funcVar,
 		correlated: this.correlated,
 	}
 	if this.correlated {
@@ -90,9 +89,6 @@ func NewFormalizer(keyspace string, parent *Formalizer) *Formalizer {
 	rv := newFormalizer(keyspace, parent, false, false)
 	if parent != nil && parent.InFunction() {
 		rv.flags |= FORM_IN_FUNCTION
-		if parent.HasVariables() {
-			rv.flags |= FORM_HAS_VARIABLES
-		}
 	}
 	return rv
 }
@@ -105,12 +101,9 @@ func NewKeyspaceFormalizer(keyspace string, parent *Formalizer) *Formalizer {
 	return newFormalizer(keyspace, parent, false, true)
 }
 
-func NewFunctionFormalizer(keyspace string, hasVariable bool, parent *Formalizer) *Formalizer {
+func NewFunctionFormalizer(keyspace string, parent *Formalizer) *Formalizer {
 	rv := newFormalizer(keyspace, parent, false, false)
 	rv.flags |= FORM_IN_FUNCTION
-	if hasVariable {
-		rv.flags |= FORM_HAS_VARIABLES
-	}
 	return rv
 }
 
@@ -174,10 +167,6 @@ func (this *Formalizer) mapKeyspace() bool {
 
 func (this *Formalizer) InFunction() bool {
 	return (this.flags & FORM_IN_FUNCTION) != 0
-}
-
-func (this *Formalizer) HasVariables() bool {
-	return (this.flags & FORM_HAS_VARIABLES) != 0
 }
 
 func (this *Formalizer) indexScope() bool {
@@ -311,6 +300,7 @@ func (this *Formalizer) VisitIdentifier(expr *Identifier) (interface{}, error) {
 		correlated_flags := ident_flags & IDENT_IS_CORRELATED
 		lateral_flags := ident_flags & IDENT_IS_LATERAL_CORR
 		with_flags := ident_flags & IDENT_IS_WITH_ALIAS
+		func_var_flags := ident_flags & IDENT_IS_FUNC_VAR
 		if !this.indexScope() || keyspace_flags == 0 || expr.IsKeyspaceAlias() {
 			this.identifiers.SetField(identifier, ident_val)
 			// for user specified keyspace alias (such as alias.c1)
@@ -340,27 +330,47 @@ func (this *Formalizer) VisitIdentifier(expr *Identifier) (interface{}, error) {
 				expr.SetLateralCorr(true)
 			}
 			if with_flags != 0 && !expr.IsWithAlias() {
-				expr.SetWithAlias(true)
+				if wi, ok := this.withs[identifier]; ok && !wi.funcVar {
+					expr.SetWithAlias(true)
+				}
+			}
+			if func_var_flags != 0 && !expr.IsFuncVariable() {
+				if wi, ok := this.withs[identifier]; ok && wi.funcVar {
+					expr.SetFuncVariable(true)
+				}
 			}
 			return expr, nil
 		}
 	}
 
 	if wi, ok := this.withs[identifier]; ok {
-		if wi.correlated {
-			err := this.AddCorrelatedIdentifiers(wi.correlation)
+		if wi.funcVar {
+			// add reference to a function argument as a "correlation" reference
+			correlation := map[string]uint32{
+				identifier: uint32(IDENT_IS_FUNC_VAR | IDENT_IS_CORRELATED),
+			}
+			err := this.AddCorrelatedIdentifiers(correlation)
 			if err != nil {
 				return nil, err
 			}
-			if this.correlation == nil {
-				this.correlation = make(map[string]uint32, len(wi.correlation))
+			expr.SetFuncVariable(true)
+			expr.SetStaticVariable(true) // function variables are considered "static"
+		} else {
+			if wi.correlated {
+				err := this.AddCorrelatedIdentifiers(wi.correlation)
+				if err != nil {
+					return nil, err
+				}
+				if this.correlation == nil {
+					this.correlation = make(map[string]uint32, len(wi.correlation))
+				}
+				for k, v := range wi.correlation {
+					this.correlation[k] = v
+				}
 			}
-			for k, v := range wi.correlation {
-				this.correlation[k] = v
-			}
+			expr.SetWithAlias(true)
+			expr.SetStaticVariable(true) // WITH variables are considered "static"
 		}
-		expr.SetWithAlias(true)
-		expr.SetStaticVariable(true) // WITH variables are considered "static"
 		return expr, nil
 	}
 
@@ -503,6 +513,9 @@ func (this *Formalizer) PushBindings(bindings Bindings, push bool) (err error) {
 		if b.Static() {
 			ident_flags |= IDENT_IS_STATIC_VAR
 		}
+		if b.FuncVariable() {
+			ident_flags |= IDENT_IS_FUNC_VAR
+		}
 		if correlated {
 			ident_flags |= IDENT_IS_CORRELATED
 		}
@@ -634,8 +647,12 @@ func (this *Formalizer) SetAllowedUnnestAlias(alias string) {
 // alias must be non-empty
 func (this *Formalizer) SetAllowedExprTermAlias(alias string) {
 	ident_flags := uint32(IDENT_IS_KEYSPACE | IDENT_IS_EXPR_TERM)
-	if _, ok := this.withs[alias]; ok {
-		ident_flags |= uint32(IDENT_IS_WITH_ALIAS)
+	if wi, ok := this.withs[alias]; ok {
+		if wi.funcVar {
+			ident_flags |= uint32(IDENT_IS_FUNC_VAR)
+		} else {
+			ident_flags |= uint32(IDENT_IS_WITH_ALIAS)
+		}
 	}
 	this.allowed.SetField(alias, value.NewValue(ident_flags))
 }
@@ -658,7 +675,7 @@ func (this *Formalizer) AllowedAlias(alias string, checkWith bool, curScope bool
 		return true
 	}
 	if checkWith {
-		// check WITH alias as well
+		// check WITH alias as well (and function variables)
 		if _, ok := this.withs[alias]; ok {
 			return true
 		}
@@ -673,8 +690,16 @@ func (this *Formalizer) HasAlias(alias string) bool {
 
 func (this *Formalizer) WithAlias(alias string) bool {
 	if this.withs != nil {
-		_, ok := this.withs[alias]
-		return ok
+		wi, ok := this.withs[alias]
+		return ok && !wi.funcVar
+	}
+	return false
+}
+
+func (this *Formalizer) FuncVariable(alias string) bool {
+	if this.withs != nil {
+		wi, ok := this.withs[alias]
+		return ok && wi.funcVar
 	}
 	return false
 }
@@ -721,12 +746,12 @@ func (this *Formalizer) ProcessWiths(withs Bindings) error {
 	return nil
 }
 
-func (this *Formalizer) SetPermanentWiths(withs Bindings) {
+func (this *Formalizer) SetFuncVariable(bindings Bindings) {
 	if this.withs == nil {
-		this.withs = make(map[string]*WithInfo, len(withs))
+		this.withs = make(map[string]*WithInfo, len(bindings))
 	}
-	for _, b := range withs {
-		this.withs[b.Variable()] = newPermanentWithInfo()
+	for _, b := range bindings {
+		this.withs[b.Variable()] = newFuncVarWithInfo()
 	}
 }
 
@@ -734,7 +759,7 @@ func (this *Formalizer) SaveWiths(isSubq bool) map[string]*WithInfo {
 	withs := this.withs
 	this.withs = make(map[string]*WithInfo, len(withs))
 	for k, v := range withs {
-		if isSubq || v.permanent {
+		if isSubq || v.funcVar {
 			this.withs[k] = v.Copy()
 		}
 	}
@@ -762,8 +787,13 @@ func (this *Formalizer) CheckCorrelated() bool {
 				}
 				// for a correlated WITH variable, the actual correlation would have
 				// already been added to this.correlation when the WITH expression
-				// is being checked (in PushBindings()), there is no need to add
+				// is being checked (in VisitIdentifier()), there is no need to add
 				// the WITH alias itself to this.correlation
+			} else if this.FuncVariable(id) {
+				if this.correlation == nil {
+					this.correlation = make(map[string]uint32)
+				}
+				this.correlation[id] |= id_flags | IDENT_IS_FUNC_VAR
 			} else {
 				if this.correlation == nil {
 					this.correlation = make(map[string]uint32)
@@ -784,11 +814,15 @@ func (this *Formalizer) CheckCorrelation(alias string) bool {
 }
 
 func (this *Formalizer) AddCorrelatedIdentifiers(correlation map[string]uint32) error {
-	for k, _ := range correlation {
+	for k, identFlags := range correlation {
 		if _, ok := this.identifiers.Field(k); !ok {
 			v, ok1 := this.allowed.Field(k)
 			if !ok1 {
-				return errors.NewFormalizerInternalError(fmt.Sprintf("correlation reference %s is not in allowed", k))
+				if this.FuncVariable(k) {
+					v = value.NewValue(uint32(IDENT_IS_FUNC_VAR | identFlags))
+				} else {
+					return errors.NewFormalizerInternalError(fmt.Sprintf("correlation reference %s is not in allowed", k))
+				}
 			}
 			this.identifiers.SetField(k, v)
 		}

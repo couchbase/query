@@ -121,7 +121,7 @@ func (this *ExpressionTerm) Formalize(parent *expression.Formalizer) (f *express
 		} else {
 			ks := this.keyspaceTerm.Keyspace()
 			ok := parent.HasAlias(ks)
-			this.isKeyspace = !ok && !parent.WithAlias(ks)
+			this.isKeyspace = !ok && !parent.WithAlias(ks) && !parent.FuncVariable(ks)
 		}
 	}
 

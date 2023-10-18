@@ -28,16 +28,15 @@ clause.
 type Select struct {
 	statementBase
 
-	subresult    Subresult             `json:"subresult"`
-	with         expression.Bindings   `json:"with"`
-	order        *Order                `json:"order"`
-	offset       expression.Expression `json:"offset"`
-	limit        expression.Expression `json:"limit"`
-	correlated   bool                  `json:"correlated"`
-	hasVariables bool                  `json:"hasVariables"` // not actually propagated
-	inlineFunc   bool                  `json:"inlineFunction"`
-	setop        bool                  `json:"setop"`
-	correlation  map[string]uint32     `json:"correlation"`
+	subresult   Subresult             `json:"subresult"`
+	with        expression.Bindings   `json:"with"`
+	order       *Order                `json:"order"`
+	offset      expression.Expression `json:"offset"`
+	limit       expression.Expression `json:"limit"`
+	correlated  bool                  `json:"correlated"`
+	inlineFunc  bool                  `json:"inlineFunction"`
+	setop       bool                  `json:"setop"`
+	correlation map[string]uint32     `json:"correlation"`
 
 	// MB-58106: indicates whether WITH expressions should be considered in Cover Transformation
 	// Default value is true
@@ -229,9 +228,6 @@ func (this *Select) FormalizeSubquery(parent *expression.Formalizer, isSubq bool
 	if parent != nil {
 		if parent.InFunction() {
 			this.inlineFunc = true
-			if parent.HasVariables() {
-				this.hasVariables = true
-			}
 		}
 
 		withs := parent.SaveWiths(isSubq)
@@ -370,10 +366,6 @@ func (this *Select) SetCorrelated() {
 
 func (this *Select) GetCorrelation() map[string]uint32 {
 	return this.correlation
-}
-
-func (this *Select) HasVariables() bool {
-	return this.hasVariables
 }
 
 func (this *Select) InInlineFunction() bool {
