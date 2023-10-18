@@ -83,7 +83,7 @@ This method calls FormalizeSubquery to qualify all the children
 of the query, and returns an error if any.
 */
 func (this *Select) Formalize() (err error) {
-	return this.FormalizeSubquery(expression.NewFormalizer("", nil))
+	return this.FormalizeSubquery(expression.NewFormalizer("", nil), this.setop)
 }
 
 /*
@@ -216,7 +216,7 @@ namely the subresult, order, limit and offset within a subquery.
 For the subresult of the subquery, call Formalize, for the order
 by clause call MapExpressions, for limit and offset call Accept.
 */
-func (this *Select) FormalizeSubquery(parent *expression.Formalizer) (err error) {
+func (this *Select) FormalizeSubquery(parent *expression.Formalizer, isSubq bool) (err error) {
 	if parent != nil && parent.InFunction() {
 		this.inlineFunc = true
 		if parent.HasVariables() {
@@ -224,7 +224,7 @@ func (this *Select) FormalizeSubquery(parent *expression.Formalizer) (err error)
 		}
 	}
 	if parent != nil && !this.setop {
-		withs := parent.SaveWiths()
+		withs := parent.SaveWiths(isSubq)
 		defer parent.RestoreWiths(withs)
 	}
 

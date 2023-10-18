@@ -142,7 +142,7 @@ This method calls FormalizeSubquery to qualify all the children
 of the query, and returns an error if any.
 */
 func (this *Subquery) Formalize(parent *expression.Formalizer) error {
-	err := this.query.FormalizeSubquery(parent)
+	err := this.query.FormalizeSubquery(parent, true)
 	if err != nil {
 		return err
 	}

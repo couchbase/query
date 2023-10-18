@@ -48,7 +48,7 @@ func (this *SelectTerm) Signature() value.Value {
 /*
  */
 func (this *SelectTerm) Formalize(parent *expression.Formalizer) (f *expression.Formalizer, err error) {
-	err = this.query.FormalizeSubquery(parent)
+	err = this.query.FormalizeSubquery(parent, this.query.setop)
 	if err != nil {
 		return nil, err
 	}
