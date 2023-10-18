@@ -57,3 +57,16 @@ func (this *Use) JoinHint() JoinHint {
 func (this *Use) SetJoinHint(joinHint JoinHint) {
 	this.joinHint = joinHint
 }
+
+func (this JoinHint) String() string {
+	s := ""
+	switch this {
+	case USE_HASH_BUILD:
+		s += " hash (build)"
+	case USE_HASH_PROBE:
+		s += " hash (probe)"
+	case USE_NL:
+		s += " nl"
+	}
+	return s
+}
