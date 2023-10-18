@@ -60,9 +60,9 @@ var (
 
 // Max request size from server (cant import because of cyclic dependency)
 const (
-	_MIN_RESPONSE_SIZE     = 512 * util.KiB
-	_DEFAULT_RESPONSE_SIZE = 20 * util.MiB
-	_MAX_RESPONSE_SIZE     = 64 * util.MiB
+	_MIN_RESPONSE_SIZE          = 512 * util.KiB
+	_DEFAULT_RESPONSE_SIZE      = 20 * util.MiB
+	_MAX_NO_QUOTA_RESPONSE_SIZE = 128 * util.MiB
 )
 
 // Path to certs
@@ -247,8 +247,21 @@ func handleCurl(url string, options map[string]interface{}, allowlist map[string
 		return nil, err
 	}
 
-	// For result-cap
+	availableQuota := uint64(_MAX_NO_QUOTA_RESPONSE_SIZE)
 	responseSize := uint64(_DEFAULT_RESPONSE_SIZE)
+
+	ctx, ok := context.(QuotaContext)
+	if !ok || !ctx.UseRequestQuota() {
+		ctx = nil
+	} else if ctx.GetMemoryQuota() != 0 {
+		availableQuota = uint64(float64(ctx.GetMemoryQuota()) * (1.0 - ctx.CurrentQuotaUsage()))
+		if availableQuota < _MIN_RESPONSE_SIZE {
+			availableQuota = _MIN_RESPONSE_SIZE
+		}
+		if responseSize > availableQuota {
+			responseSize = availableQuota
+		}
+	}
 
 	dataOp := false
 	stringData := ""
@@ -532,11 +545,13 @@ func handleCurl(url string, options map[string]interface{}, allowlist map[string
 			if rs < _MIN_RESPONSE_SIZE {
 				logging.Debugf("CURL (%v) result-cap %v set to %v", url, rs, _MIN_RESPONSE_SIZE)
 				rs = _MIN_RESPONSE_SIZE
-			} else if rs > _MAX_RESPONSE_SIZE {
-				logging.Debugf("CURL (%v) result-cap %v set to %v", url, rs, _MIN_RESPONSE_SIZE)
-				rs = _MAX_RESPONSE_SIZE
 			}
 			responseSize = uint64(rs)
+			// if there is a quota the remaining available memory enforces the upper limit
+			if responseSize > availableQuota {
+				logging.Debugf("CURL (%v) result-cap %v limited to %v", url, responseSize, availableQuota)
+				responseSize = availableQuota
+			}
 		default:
 			return nil, fmt.Errorf("CURL option %v is not supported.", k)
 
@@ -592,6 +607,13 @@ func handleCurl(url string, options map[string]interface{}, allowlist map[string
 			transport.TLSClientConfig.CipherSuites = cipherIds
 		}
 
+	}
+
+	if ctx != nil {
+		if ctx.TrackValueSize(responseSize) {
+			return nil, errors.NewMemoryQuotaExceededError()
+		}
+		defer ctx.ReleaseValueSize(responseSize)
 	}
 
 	// Send request

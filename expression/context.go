@@ -82,3 +82,11 @@ type LikeContext interface {
 	GetLikeRegex(in *Like, s string) *regexp.Regexp
 	CacheLikeRegex(in *Like, s string, re *regexp.Regexp)
 }
+
+type QuotaContext interface {
+	UseRequestQuota() bool
+	TrackValueSize(uint64) bool
+	ReleaseValueSize(uint64)
+	GetMemoryQuota() uint64
+	CurrentQuotaUsage() float64
+}

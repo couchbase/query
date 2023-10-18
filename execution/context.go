@@ -743,6 +743,14 @@ func (this *Context) ReleaseValueSize(size uint64) {
 	atomic.AddUint64(&this.inUseMemory, ^(size - 1))
 }
 
+func (this *Context) CurrentQuotaUsage() float64 {
+	if this.memoryQuota == 0 {
+		return 0.0
+	}
+	sz := atomic.LoadUint64(&this.inUseMemory)
+	return float64(sz) / float64(this.memoryQuota)
+}
+
 // UDF memory storage
 
 func (this *Context) StoreValue(key string, val interface{}) {
