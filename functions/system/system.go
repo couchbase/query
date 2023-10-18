@@ -50,7 +50,10 @@ func Foreach(b string, f func(path string, v value.Value) error) error {
 		if s == "" {
 			return nil
 		}
-		name, _ := NewScopeFunction(systemCollection.NamespaceId(), b, s, fn)
+		name, err := NewScopeFunction(systemCollection.NamespaceId(), b, s, fn)
+		if err != nil {
+			return err
+		}
 		val, err := get2(name, systemCollection)
 		if err != nil {
 			return err
@@ -88,7 +91,10 @@ func Get(path string) (value.Value, error) {
 	if err != nil {
 		return nil, err
 	}
-	name, _ := NewScopeFunction(parts[0], parts[1], parts[2], parts[3])
+	name, err := NewScopeFunction(parts[0], parts[1], parts[2], parts[3])
+	if err != nil {
+		return nil, err
+	}
 	return get2(name, systemCollection)
 }
 
