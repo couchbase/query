@@ -88,7 +88,7 @@ func (this *SubqueryTerm) Formalize(parent *expression.Formalizer) (f *expressio
 	}
 
 	f1 := expression.NewFormalizer("", parent)
-	err = this.subquery.FormalizeSubquery(f1)
+	err = this.subquery.FormalizeSubquery(f1, true)
 	if err != nil {
 		return
 	}

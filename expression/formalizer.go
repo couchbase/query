@@ -607,12 +607,12 @@ func (this *Formalizer) SetPermanentWiths(withs Bindings) {
 	}
 }
 
-func (this *Formalizer) SaveWiths() map[string]bool {
+func (this *Formalizer) SaveWiths(isSubq bool) map[string]bool {
 	withs := this.withs
 	this.withs = make(map[string]bool, len(withs))
-	for v, _ := range withs {
-		if withs[v] {
-			this.withs[v] = true
+	for k, v := range withs {
+		if isSubq || v {
+			this.withs[k] = v
 		}
 	}
 	return withs
