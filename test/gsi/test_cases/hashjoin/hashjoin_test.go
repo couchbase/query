@@ -80,6 +80,9 @@ func TestHashJoin(t *testing.T) {
 	// test HASH JOIN with bit filter
 	runMatch("case_hashjoin_bitfltr.json", false, true, qc, t)
 
+	// test HASH JOIN with correlation
+	runMatch("case_hashjoin_correlated.json", false, true, qc, t)
+
 	// run UPDATE STATISTICS statements
 	runStmt(qc, "UPDATE STATISTICS FOR customer INDEX(cust_lastName_firstName_customerId)")
 	runStmt(qc, "UPDATE STATISTICS FOR purchase INDEX(purch_customerId_purchaseId, purch_arrProduct_customerId)")

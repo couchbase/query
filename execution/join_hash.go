@@ -346,6 +346,14 @@ func (this *HashJoin) SendAction(action opAction) {
 	}
 }
 
+func (this *HashJoin) reopen(context *Context) bool {
+	rv := this.baseReopen(context)
+	if rv && this.child != nil {
+		rv = this.child.reopen(context)
+	}
+	return rv
+}
+
 func (this *HashJoin) Done() {
 	this.baseDone()
 	if this.child != nil {

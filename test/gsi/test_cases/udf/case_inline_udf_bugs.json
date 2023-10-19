@@ -194,5 +194,109 @@
         "description": "MB-59183 - DROP FUNCTION",
         "statements": "DROP FUNCTION Test_Func3",
         "results": []
+    },
+    {
+        "description": "MB-59082 - CREATE FUNCTION 1",
+        "statements": "CREATE OR REPLACE FUNCTION Test_Func4(data) LANGUAGE INLINE AS ( ( SELECT l, r FROM shellTest l JOIN (SELECT s.* FROM shellTest s WHERE s.c1 > 0) AS r USE HASH(BUILD) ON l.c3 = r.c3 WHERE l.c1 > 0 AND r.c1 > 0 AND r.c2 = data ) )",
+        "results":[]
+    },
+    {
+        "description": "MB-59082 - CREATE FUNCTION 2",
+        "statements": "CREATE OR REPLACE FUNCTION Test_Func5(data) LANGUAGE INLINE AS ( ( SELECT l, r FROM shellTest l JOIN (SELECT s.* FROM shellTest s WHERE s.c1 > 0 AND s.c2 = data) AS r USE HASH(BUILD) ON l.c3 = r.c3 WHERE l.c1 > 0 AND r.c1 > 0 ) )",
+        "results":[]
+    },
+    {
+        "description": "MB-59082 - SELECT 1",
+        "statements": "SELECT Test_Func4(t.c2) FROM shellTest t WHERE t.c1 > 0",
+        "results": [
+            {
+                "$1": [
+                    {
+                        "l": {
+                            "c1": 1,
+                            "c2": 2,
+                            "c3": 3,
+                            "test_id": "udf"
+                        },
+                        "r": {
+                            "c1": 1,
+                            "c2": 2,
+                            "c3": 3,
+                            "test_id": "udf"
+                        }
+                    }
+                ]
+            },
+            {
+                "$1": [
+                    {
+                        "l": {
+                            "c1": 2,
+                            "c2": 4,
+                            "c3": 6,
+                            "test_id": "udf"
+                        },
+                        "r": {
+                            "c1": 2,
+                            "c2": 4,
+                            "c3": 6,
+                            "test_id": "udf"
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "description": "MB-59082 - SELECT 2",
+        "statements": "SELECT Test_Func5(t.c2) FROM shellTest t WHERE t.c1 > 0",
+        "results": [
+            {
+                "$1": [
+                    {
+                        "l": {
+                            "c1": 1,
+                            "c2": 2,
+                            "c3": 3,
+                            "test_id": "udf"
+                        },
+                        "r": {
+                            "c1": 1,
+                            "c2": 2,
+                            "c3": 3,
+                            "test_id": "udf"
+                        }
+                    }
+                ]
+            },
+            {
+                "$1": [
+                    {
+                        "l": {
+                            "c1": 2,
+                            "c2": 4,
+                            "c3": 6,
+                            "test_id": "udf"
+                        },
+                        "r": {
+                            "c1": 2,
+                            "c2": 4,
+                            "c3": 6,
+                            "test_id": "udf"
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "description": "MB-59082 - DROP FUNCTION 1",
+        "statements": "DROP FUNCTION Test_Func4",
+        "results": []
+    },
+    {
+        "description": "MB-59082 - DROP FUNCTION 2",
+        "statements": "DROP FUNCTION Test_Func5",
+        "results": []
     }
 ]

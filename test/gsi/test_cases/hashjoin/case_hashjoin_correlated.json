@@ -1,0 +1,51 @@
+[
+    {
+        "testcase": "correlated subquery using hash join",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY s IN p.`~subqueries` SATISFIES s.`correlated` = true AND ANY v WITHIN s.plan.`~children` SATISFIES v.`#operator` = 'HashJoin' AND ANY u WITHIN v.`~child`.`~children` SATISFIES u.`#operator` = 'Filter' AND CONTAINS(u.`condition`, '`t`.`c12`') END END END"
+        },
+        "statements": "SELECT t.c11, (SELECT l.c11, r.c22 FROM shellTest l JOIN shellTest r USE HASH(build) ON l.c11 = r.c21 AND r.type = \"right\" AND r.c22 = t.c12 WHERE l.type = \"left\") AS sub FROM shellTest t WHERE t.c11 > 0 AND t.type = \"left\" ORDER BY t.c11",
+        "ordered": true,
+        "results": [
+            {
+                "c11": 1,
+                "sub": [
+                    {
+                        "c11": 1,
+                        "c22": 10
+                    }
+                ]
+            },
+            {
+                "c11": 2,
+                "sub": [
+                    {
+                        "c11": 2,
+                        "c22": 20
+                    }
+                ]
+            },
+            {
+                "c11": 3,
+                "sub": [
+                    {
+                        "c11": 3,
+                        "c22": 30
+                    }
+                ]
+            },
+            {
+                "c11": 4,
+                "sub": []
+            }
+    ]
+    }
+]
+

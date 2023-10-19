@@ -233,6 +233,14 @@ func (this *HashNest) SendAction(action opAction) {
 	}
 }
 
+func (this *HashNest) reopen(context *Context) bool {
+	rv := this.baseReopen(context)
+	if rv && this.child != nil {
+		rv = this.child.reopen(context)
+	}
+	return rv
+}
+
 func (this *HashNest) Done() {
 	this.baseDone()
 	if this.child != nil {
