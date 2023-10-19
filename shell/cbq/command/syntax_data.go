@@ -386,8 +386,8 @@ var statement_syntax = map[string][][]string{
 		[]string{"NULLS", "param_expr"},
 	},
 	"first_last": [][]string{
-		[]string{"FIRST"},
-		[]string{"LAST"},
+		[]string{"FIRST", "}"},
+		[]string{"LAST", "}"},
 	},
 	"limit": [][]string{
 		[]string{"LIMIT", "expression"},
@@ -1120,6 +1120,9 @@ var statement_syntax = map[string][][]string{
 		[]string{"seq_create_options", "seq_create_option"},
 	},
 	"seq_create_option": [][]string{
+		[]string{"sequence_with"},
+		[]string{"start_with"},
+		[]string{"increment_by"},
 		[]string{"maxvalue"},
 		[]string{"minvalue"},
 		[]string{"cycle"},
@@ -1138,6 +1141,8 @@ var statement_syntax = map[string][][]string{
 		[]string{"seq_alter_options", "seq_alter_option"},
 	},
 	"seq_alter_option": [][]string{
+		[]string{"restart_with"},
+		[]string{"increment_by"},
 		[]string{"maxvalue"},
 		[]string{"minvalue"},
 		[]string{"cycle"},
@@ -1150,7 +1155,8 @@ var statement_syntax = map[string][][]string{
 		[]string{"START", "WITH", "expression"},
 	},
 	"restart_with": [][]string{
-		[]string{"RESTART", "[with_clause]"},
+		[]string{"RESTART"},
+		[]string{"RESTART", "WITH", "expression"},
 	},
 	"increment_by": [][]string{
 		[]string{"INCREMENT", "BY", "expression"},

@@ -186,7 +186,7 @@ EOF
 
 sed -n '/^%%/,$ p' ${BASEPATH}/parser/n1ql/n1ql.y \
   | sed -e '/^%%/d;/^[*/}{[:space:]]/d;/^$/d;s/[[:space:]]*\([A-Za-z_][A-Za-z0-9_]*\)[[:space:]]*/\1\n/g' \
-  | sed -e '/^[^A-Za-z_]/s/\([[:punct:]]\)/\n\1\n/g' \
+  | sed -e '/^[^A-Za-z_]/s/\([:;|/*]\)/\n\1\n/g' \
   | awk "${AC}" >> "${FILE}"
 
 go fmt ${FILE} 2>/dev/null

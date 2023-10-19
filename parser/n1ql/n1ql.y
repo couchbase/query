@@ -5520,6 +5520,9 @@ CREATE SEQUENCE sequence_name_options seq_create_options
         if _, ok := m[v.name]; ok {
             return "duplicate option"
         }
+		if v.value == nil {
+			return "invalid option value"
+		}
         if v.name == sequences.OPT_CYCLE && v.value.Type() == value.BOOLEAN {
             m[v.name] = v.value.Truth()
             return ""
@@ -5619,6 +5622,9 @@ ALTER SEQUENCE sequence_full_name seq_alter_options
         if _, ok := m[v.name]; ok {
             return "duplicate option"
         }
+		if v.value == nil {
+			return "invalid option value"
+		}
         if v.name == sequences.OPT_CYCLE && v.value.Type() == value.BOOLEAN {
             m[v.name] = v.value.Truth()
             return ""
@@ -5676,20 +5682,25 @@ START WITH expr
 {
     v := $3.Value()
     if v == nil {
-        yylex.(*lexer).ErrorWithContext("Option value must be static", $<line>3, $<column>3)
+        return yylex.(*lexer).FatalError("Option value must be static", $<line>3, $<column>3)
     }
     $$ = &nameValueContext{sequences.OPT_START, v, $<line>1, $<column>1}
 }
 ;
 
 restart_with:
-RESTART opt_with_clause
+RESTART
 {
-    if $2 == nil {
-        $$ = &nameValueContext{sequences.OPT_RESTART, value.NULL_VALUE, $<line>1, $<column>1}
-    } else {
-        $$ = &nameValueContext{sequences.OPT_RESTART, $2, $<line>1, $<column>1}
+	$$ = &nameValueContext{sequences.OPT_RESTART, value.NULL_VALUE, $<line>1, $<column>1}
+}
+|
+RESTART WITH expr
+{
+    v := $3.Value()
+    if v == nil {
+        return yylex.(*lexer).FatalError("Option value must be static", $<line>3, $<column>3)
     }
+	$$ = &nameValueContext{sequences.OPT_RESTART, v, $<line>1, $<column>1}
 }
 ;
 
@@ -5698,7 +5709,7 @@ INCREMENT BY expr
 {
     v := $3.Value()
     if v == nil {
-        yylex.(*lexer).ErrorWithContext("Option value must be static", $<line>3, $<column>3)
+        return yylex.(*lexer).FatalError("Option value must be static", $<line>3, $<column>3)
     }
     $$ = &nameValueContext{sequences.OPT_INCR, v, $<line>1, $<column>1}
 }
@@ -5714,7 +5725,7 @@ MAXVALUE expr
 {
     v := $2.Value()
     if v == nil {
-        yylex.(*lexer).ErrorWithContext("Option value must be static", $<line>2, $<column>2)
+        return yylex.(*lexer).FatalError("Option value must be static", $<line>2, $<column>2)
     }
     $$ = &nameValueContext{sequences.OPT_MAX, v, $<line>1, $<column>1}
 }
@@ -5730,7 +5741,7 @@ MINVALUE expr
 {
     v := $2.Value()
     if v == nil {
-        yylex.(*lexer).ErrorWithContext("Option value must be static", $<line>2, $<column>2)
+        return yylex.(*lexer).FatalError("Option value must be static", $<line>2, $<column>2)
     }
     $$ = &nameValueContext{sequences.OPT_MIN, v, $<line>1, $<column>1}
 }
