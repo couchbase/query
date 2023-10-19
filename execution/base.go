@@ -418,7 +418,6 @@ func (this *base) baseReopen(context *Context) bool {
 		this.conn = nil
 	}
 
-	this.operatorCtx = opContext{this, context}
 	this.childrenLeft = 0
 	this.stopped = false
 	this.serialized = false

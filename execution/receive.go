@@ -74,5 +74,7 @@ func (this *Receive) reopen(context *Context) bool {
 
 func (this *Receive) SendAction(action opAction) {
 	this.baseSendAction(action)
-	this.notifyParent()
+	if action == _ACTION_STOP {
+		this.notifyParent()
+	}
 }

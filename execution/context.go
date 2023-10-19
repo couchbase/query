@@ -306,7 +306,6 @@ type Context struct {
 	logLevel            logging.Level
 	errorLimit          int
 	udfStmtExecTrees    *udfExecTreeMap // cache of execution trees of embedded N1QL statements in Javascript/Golang UDFs
-	udfPlans            *udfPlanMap     // cache of query plans of embedded N1QL statements in Javascript/Golang UDFs
 	durationStyle       util.DurationStyle
 
 	// Key: unique identifier of the Inline UDF, Value: Info on the function body of Inline UDFs executed in the query
@@ -361,8 +360,7 @@ func NewContext(requestId string, datastore datastore.Datastore, systemstore dat
 		keysToSkip:       &sync.Map{},
 		// These need to be done front. If context switch and allocated this will be lost.
 		subqueryPlans:    algebra.NewSubqueryPlans(),
-		udfStmtExecTrees: newUdfExecTreeMap(),
-		udfPlans:         newUdfPlanMap(),
+		udfStmtExecTrees: newUdfStmtExecTreeMap(),
 		subExecTrees:     newSubqueryArrayMap(),
 		inlineUdfEntries: make(map[string]*inlineUdfEntry),
 		durationStyle:    util.LEGACY,
@@ -429,7 +427,6 @@ func (this *Context) Copy() *Context {
 		durationStyle:       this.durationStyle,
 		// suqbery/udf information should share the same info
 		subExecTrees:     this.subExecTrees,
-		udfPlans:         this.udfPlans,
 		udfStmtExecTrees: this.udfStmtExecTrees,
 		inlineUdfEntries: this.inlineUdfEntries,
 		subqueryPlans:    this.subqueryPlans,
@@ -1469,19 +1466,11 @@ func (this *Context) getUdfStmtTimes() interface{} {
 		trees.mutex.RLock()
 		times := make([]interface{}, 0, len(trees.trees))
 
-		for q, t := range trees.trees {
-			query := decodeStatement(q)
-			for _, e := range t {
-				et, err := json.Marshal(e.root)
-				if err == nil {
-					prof := map[string]interface{}{"query": query, "executionTimings": value.NewValue(et)}
-
-					if e.usageMetadata != nil {
-						prof["usage"] = e.usageMetadata
-					}
-
-					times = append(times, prof)
-				}
+		for _, t := range trees.trees {
+			et, err := json.Marshal(t.root)
+			if err == nil {
+				prof := map[string]interface{}{"query": t.query, "udf": t.funcKey, "executionTimings": value.NewValue(et)}
+				times = append(times, prof)
 			}
 		}
 
@@ -1511,15 +1500,13 @@ func (this *Context) done() {
 		trees.mutex.RUnlock()
 	}
 
-	// clean up all cached exec trees
-	udfs := this.udfStmtExecTrees
+	// clean up all cached execution trees from JS UDF execution
+	udfs := this.contextUdfStmtExecTrees()
 	if udfs != nil {
 		udfs.mutex.RLock()
 
 		for _, t := range udfs.trees {
-			for _, e := range t {
-				e.root.Done()
-			}
+			t.root.Done()
 		}
 
 		udfs.mutex.RUnlock()
@@ -2065,191 +2052,42 @@ func (this *Context) ErrorCount() int {
 
 // Exec Tree Map
 // Key of this map is : (query_context + query statement)
+// Used for storing execution trees of N1QL queries inside JS UDFs for profiling purposes
 type udfExecTreeMap struct {
 	mutex sync.RWMutex
-	trees map[string][]execTreeMapEntry
-}
-
-func newUdfExecTreeMap() *udfExecTreeMap {
-	rv := &udfExecTreeMap{}
-	rv.trees = make(map[string][]execTreeMapEntry)
-	return rv
-}
-
-// Method to :
-//  1. Get an exec tree entry in the cache for a query
-//  2. Check if the tree was created by an invalid plan - by checking if it was created by the latest query plan for this statement
-//  3. Check if the tree can be re-opened
-//
-// If the tree entry is only for profiling, cannot be re-opened or was created by an earlier invalid plan
-// this entry remains in the cache solely for profiling purposes
-// If the tree can be re-opened and was created by a valid plan, remove the entry from the cache while it is in use
-func (this *udfExecTreeMap) getAndReopen(key string, context *Context) (execTreeMapEntry, bool) {
-	this.mutex.Lock()
-	defer this.mutex.Unlock()
-
-	t, ok := this.trees[key]
-
-	if !ok || len(t) == 0 {
-		return execTreeMapEntry{}, false
-	}
-
-	tree := t[len(t)-1]
-
-	// Check if the tree entry can be attempted to be re-used or if its only for profiling
-	if tree.profOnly {
-		return execTreeMapEntry{}, false
-	}
-
-	// Check if tree was created by the latest cached plan
-	planId, _ := context.udfPlans.getPlanId(key)
-	if tree.planId != planId {
-		tree.profOnly = true
-		return execTreeMapEntry{}, false
-	}
-
-	// Check state of the Collect/ Receive Operator
-	opState := tree.collRcv.getBase().opState
-	if opState != _PAUSED && opState != _COMPLETED && opState != _DORMANT {
-		tree.profOnly = true
-		return execTreeMapEntry{}, false
-	}
-
-	// Check if the exec tree can be re-opened
-	if !tree.root.reopen(context) {
-		logging.Warnf("Failed to reopen execution tree of query: %v", key)
-		tree.profOnly = true
-		return execTreeMapEntry{}, false
-	}
-
-	// remove the tree from the map when it is in use
-	this.trees[key] = t[:len(t)-1]
-
-	return tree, ok
-}
-
-func (this *udfExecTreeMap) set(key string, eTree execTreeMapEntry) {
-	this.mutex.Lock()
-	t := this.trees[key]
-
-	if t == nil {
-		t = []execTreeMapEntry{eTree}
-	} else {
-		t = append(t, eTree)
-	}
-
-	this.trees[key] = t
-	this.mutex.Unlock()
-}
-
-// UDF Plan Map
-// Key of this map is : (query_context + query statement)
-type udfPlanMap struct {
-	mutex sync.RWMutex
-	plans map[string]*planMapEntry
-
-	// Counter to give a unique id to each entry. Every time a plan is added to the cache this is incremented.
-	planIdCounter int
-}
-
-func newUdfPlanMap() *udfPlanMap {
-	rv := &udfPlanMap{}
-	rv.plans = make(map[string]*planMapEntry)
-	rv.planIdCounter = 0
-	return rv
-}
-
-func (this *udfPlanMap) getPlanId(key string) (int, bool) {
-	this.mutex.RLock()
-	rv, ok := this.plans[key]
-
-	var planId int
-
-	if ok {
-		planId = rv.planId
-	}
-
-	this.mutex.RUnlock()
-
-	return planId, ok
-}
-
-// Method to:
-// 1. Check if the query plan exists in the cache
-// 2. Check if the plan is still valid
-func (this *udfPlanMap) getAndValidate(key string) (*planMapEntry, bool) {
-	this.mutex.Lock()
-	defer this.mutex.Unlock()
-
-	rv, ok := this.plans[key]
-
-	var check bool
-
-	if ok {
-		prepared := rv.plan
-
-		// Check if the plan is still valid
-		if rv.populated {
-			check = prepared.MetadataCheck()
-		}
-
-		if !check {
-			check = prepared.Verify()
-			if check {
-				rv.populated = true
-			}
-		}
-
-		ok = check
-	}
-
-	if !ok {
-		return nil, ok
-	}
-
-	return rv, ok
-}
-
-func (this *udfPlanMap) set(key string, plan *planMapEntry) {
-	this.mutex.Lock()
-	this.planIdCounter++
-	plan.planId = this.planIdCounter
-	this.plans[key] = plan
-	this.mutex.Unlock()
-}
-
-// Plan Map Entry
-type planMapEntry struct {
-	plan       *plan.Prepared
-	isPrepared bool
-	stmt       *algebra.Statement
-	planId     int // unique id of this plan entry
-	populated  bool
+	trees []*execTreeMapEntry
 }
 
 // Execution Tree Map Entry
 type execTreeMapEntry struct {
-	root     Operator // Root Operator
-	collRcv  Operator // Collect or Receive Operator
-	planId   int      // PlanId of the plan that was used to create this exec tree
-	profOnly bool     // If this exec tree entry is only for profiling
+	root    Operator // Root Operator
+	collRcv Operator // Collect or Receive Operator
+	query   string   // query string
+	funcKey string   // full path of UDF query is executed in
+}
 
-	// Map to store usage metadata of the cached exec tree
-	// Key : fullName of the function
-	// Value : Number of times the function has used the exec tree entry
-	usageMetadata map[string]int
+func newUdfStmtExecTreeMap() *udfExecTreeMap {
+	rv := &udfExecTreeMap{}
+	rv.trees = make([]*execTreeMapEntry, 0)
+	return rv
+}
+
+func (this *udfExecTreeMap) set(funcKey string, query string, root Operator, collRcv Operator) {
+	this.mutex.Lock()
+	entry := &execTreeMapEntry{
+		funcKey: funcKey,
+		query:   query,
+		root:    root,
+		collRcv: collRcv,
+	}
+	this.trees = append(this.trees, entry)
+	this.mutex.Unlock()
+
 }
 
 func (this *Context) contextUdfStmtExecTrees() *udfExecTreeMap {
 	this.queryMutex.RLock()
 	rv := this.udfStmtExecTrees
-	this.queryMutex.RUnlock()
-	return rv
-}
-
-func (this *Context) contextUdfPlans() *udfPlanMap {
-	this.queryMutex.RLock()
-	rv := this.udfPlans
 	this.queryMutex.RUnlock()
 	return rv
 }
