@@ -1593,7 +1593,7 @@ func newKeyspace(p *namespace, name string, version *uint64) (*keyspace, errors.
 		if !strings.Contains(err.Error(), "HTTP error 404") {
 			logging.Infof("Bucket %s not found: %v", name, err)
 		} else {
-			logging.Infof("Bucket %s not found", name)
+			logging.Debugf("Bucket %s not found", name)
 		}
 		// connect and check if the bucket exists
 		if !cbNamespace.BucketExists(name) {
@@ -3066,7 +3066,7 @@ const _BATCH_SIZE = 512
 func cleanupSystemCollection(namespace string, bucket string) {
 
 	processResult := func(key string) {
-		if strings.HasPrefix(key, "_sequence::") {
+		if strings.HasPrefix(key, "seq::") {
 			sequences.CleanupCacheEntry(namespace, bucket, key)
 		} else if strings.HasPrefix(key, "udf::") {
 			parts := strings.Split(key, "::")
@@ -3088,7 +3088,7 @@ func cleanupSystemCollection(namespace string, bucket string) {
 		func(key string, systemCollection datastore.Keyspace) errors.Error {
 			logging.Debugf("Key: %v", key)
 			parts := strings.Split(key, "::")
-			if len(parts) == 3 && (parts[0] == "_sequence" || parts[0] == "cbo" || parts[0] == "udf") {
+			if len(parts) == 3 && (parts[0] == "seq" || parts[0] == "cbo" || parts[0] == "udf") {
 				path := parts[len(parts)-1]
 				if parts[0] == "cbo" {
 					path, _ = getCBOKeyspace(path)

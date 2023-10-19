@@ -668,6 +668,31 @@ func loadSequence(name string) errors.Error {
 
 func DropAllSequences(namespace string, bucket string, scope string, uid string) errors.Error {
 
+	var del string
+	keyPrefix := namespace + ":" + bucket
+	if scope != "" {
+		keyPrefix += "." + scope + "."
+	}
+
+	// clear the cache entries
+	listWalkMutex.Lock()
+	sequences.ForEach(
+		func(k string, s interface{}) bool {
+			if strings.HasPrefix(k, keyPrefix) {
+				del = k
+			} else {
+				del = ""
+			}
+			return true
+		},
+		func() bool {
+			if del != "" {
+				sequences.Delete(del, nil)
+			}
+			return true
+		})
+	listWalkMutex.Unlock()
+
 	var lastError errors.Error
 	pairs := make([]value.Pair, 0, _BATCH_SIZE)
 	errorCount := 0
@@ -705,6 +730,10 @@ func DropAllSequences(namespace string, bucket string, scope string, uid string)
 			}
 			return nil
 		})
+	if err != nil && err.Code() == errors.E_CB_KEYSPACE_NOT_FOUND {
+		logging.Debugf("%v:%v.%v %v", namespace, bucket, scope, err)
+		return nil
+	}
 	if err != nil && lastError == nil {
 		lastError = err
 	}
