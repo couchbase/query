@@ -132,7 +132,8 @@ func (this *Identifier) CoveredBy(keyspace string, exprs Expressions, options Co
 	// MB-25370 this only applies for keyspace terms, not variables!
 	if (this.IsKeyspaceAlias() && ((!this.CaseInsensitive() && this.identifier != keyspace) ||
 		(this.CaseInsensitive() && strings.ToLower(this.identifier) != strings.ToLower(keyspace)))) ||
-		this.IsWithAlias() || this.IsProjectionAlias() || (!options.hasCoverBindVar() && this.IsBindingVariable()) {
+		this.IsWithAlias() || this.IsFuncVariable() || this.IsProjectionAlias() ||
+		(!options.hasCoverBindVar() && this.IsBindingVariable()) {
 		return CoveredSkip
 	}
 
