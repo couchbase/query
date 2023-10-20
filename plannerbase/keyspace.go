@@ -150,6 +150,10 @@ func (this *BaseKeyspace) IsCommaJoin() bool {
 	return this.node != nil && this.node.IsCommaJoin()
 }
 
+func (this *BaseKeyspace) IsLateralJoin() bool {
+	return this.node != nil && this.node.IsLateralJoin()
+}
+
 func CopyBaseKeyspaces(src map[string]*BaseKeyspace) map[string]*BaseKeyspace {
 	return copyBaseKeyspaces(src, false)
 }

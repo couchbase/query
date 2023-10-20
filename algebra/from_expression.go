@@ -128,7 +128,14 @@ func (this *ExpressionTerm) Formalize(parent *expression.Formalizer) (f *express
 	if this.isKeyspace {
 		this.keyspaceTerm.SetProperty(this.property)
 		this.keyspaceTerm.SetJoinHint(this.joinHint)
-		return this.keyspaceTerm.Formalize(parent)
+
+		f, err = this.keyspaceTerm.Formalize(parent)
+
+		// inherit property and joinHint from this.keyspaceTerm such that if anything
+		// changed during formatlization the ExpressionTerm matches the KeyspaceTerm
+		this.property = this.keyspaceTerm.property
+		this.joinHint = this.keyspaceTerm.joinHint
+		return
 	}
 
 	var errContext string
@@ -181,6 +188,7 @@ func (this *ExpressionTerm) Formalize(parent *expression.Formalizer) (f *express
 		if this.correlated {
 			this.correlation = addSimpleTermCorrelation(this.correlation,
 				f1.GetCorrelation(), this.IsAnsiJoinOp(), parent)
+			checkLateralCorrelation(this)
 		}
 	}
 
@@ -314,6 +322,13 @@ func (this *ExpressionTerm) IsCommaJoin() bool {
 }
 
 /*
+Returns whether it's lateral join
+*/
+func (this *ExpressionTerm) IsLateralJoin() bool {
+	return (this.property & TERM_LATERAL_JOIN) != 0
+}
+
+/*
 Set the from Expression
 */
 func (this *ExpressionTerm) SetExpressionTerm(fromExpr expression.Expression) {
@@ -362,6 +377,14 @@ Set join property
 */
 func (this *ExpressionTerm) SetJoinProps(joinProps uint32) {
 	this.property |= joinProps
+}
+
+func (this *ExpressionTerm) SetLateralJoin() {
+	this.property |= TERM_LATERAL_JOIN
+}
+
+func (this *ExpressionTerm) UnsetLateralJoin() {
+	this.property &^= TERM_LATERAL_JOIN
 }
 
 /*
