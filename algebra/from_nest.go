@@ -114,8 +114,7 @@ func (this *Nest) Formalize(parent *expression.Formalizer) (f *expression.Formal
 		return nil, err
 	}
 
-	_, ok := f.Allowed().Field(alias)
-	if ok {
+	if ok := f.AllowedAlias(alias, true, false); ok {
 		var errContext string
 		if len(this.left.Expressions()) > 0 {
 			errContext = this.left.Expressions()[0].ErrorContext()

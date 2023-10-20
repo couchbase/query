@@ -322,12 +322,17 @@
                     "present": true
                 }
             ],
-            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY sub IN p.`~subqueries` SATISFIES CONTAINS(sub.subquery, \"correlated \") AND ANY v WITHIN sub.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`spans`[0].`range`[0].low = 'null' END END"
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY sub IN p.`~subqueries` SATISFIES CONTAINS(sub.subquery, \"correlated \") AND ANY v WITHIN sub.plan.`~child`.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`spans`[0].`range`[0].low = 'null' END END"
         },
-        "statements":"WITH cte1 AS (SELECT t1.a FROM [{\"a\":1}] AS t1), cte2 AS (SELECT t2.b FROM [{\"b\":1}] AS t2), cte3 AS ( SELECT * FROM (SELECT t1.*, t2.* FROM cte1 AS t1 JOIN cte2 AS t2 ON t1.a = t2.b) lhs JOIN shellTest AS c1 USE HASH(build) ON lhs.a = c1.c11 WHERE c1.type = \"left\" ) SELECT count(*) AS cnt FROM cte3",
+        "statements":"SELECT (WITH cte4 AS (SELECT u AS elem FROM c1 AS d UNNEST d.a11 AS u) SELECT RAW t4.elem FROM cte4 t4 JOIN shellTest t1 USE HASH(build) ON t1.c11 = t4.elem AND t1.type = \"left\") AS c34 FROM shellTest AS c1 WHERE c1.type = \"left\" AND c1.c11 = 1",
         "results": [
             {
-                "cnt": 1
+                "c34": [
+                    1,
+                    2,
+                    3,
+                    4
+                ]
             }
 	]
     },

@@ -99,8 +99,7 @@ func (this *IndexJoin) Formalize(parent *expression.Formalizer) (f *expression.F
 		return
 	}
 
-	_, ok := f.Allowed().Field(this.keyFor)
-	if !ok {
+	if ok := f.AllowedAlias(this.keyFor, false, true); !ok {
 		err = errors.NewUnknownForError("JOIN", this.keyFor, "semantics.join.unknown_for")
 		return nil, err
 	}
@@ -111,8 +110,7 @@ func (this *IndexJoin) Formalize(parent *expression.Formalizer) (f *expression.F
 		return nil, err
 	}
 
-	_, ok = f.Allowed().Field(alias)
-	if ok {
+	if ok := f.AllowedAlias(alias, true, false); ok {
 		err = errors.NewDuplicateAliasError("JOIN", alias, "semantics.join.duplicate_alias")
 		return nil, err
 	}

@@ -200,28 +200,20 @@ duplicate aliases.
 */
 func (this *KeyspaceTerm) Formalize(parent *expression.Formalizer) (f *expression.Formalizer, err error) {
 	var errString string
+	if this.IsAnsiJoin() {
+		errString = "JOIN"
+	} else if this.IsAnsiNest() {
+		errString = "NEST"
+	} else {
+		errString = "FROM"
+	}
 	keyspace := this.Alias()
 	if keyspace == "" {
-		if this.IsAnsiJoin() {
-			errString = "JOIN"
-		} else if this.IsAnsiNest() {
-			errString = "NEST"
-		} else {
-			errString = "FROM"
-		}
 		err = errors.NewNoTermNameError(errString, "semantics.keyspace.requires_name_or_alias")
 		return
 	}
 
-	_, ok := parent.Allowed().Field(keyspace)
-	if ok {
-		if this.IsAnsiJoin() {
-			errString = "JOIN"
-		} else if this.IsAnsiNest() {
-			errString = "NEST"
-		} else {
-			errString = "subquery"
-		}
+	if ok := parent.AllowedAlias(keyspace, true, false); ok {
 		var errContext string
 		if this.fromExpr != nil {
 			errContext = this.fromExpr.ErrorContext()

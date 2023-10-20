@@ -29,6 +29,7 @@ const (
 	IDENT_IS_STATIC_VAR               // top level variable (CTE, function parameter...)
 	IDENT_IS_CORRELATED               // binding expr has correlated references
 	IDENT_IS_LATERAL_CORR             // lateral correlation
+	IDENT_IS_WITH_ALIAS               // CTE variable (WITH alias)
 )
 
 /*
@@ -125,7 +126,7 @@ func (this *Identifier) EquivalentTo(other Expression) bool {
 func (this *Identifier) CoveredBy(keyspace string, exprs Expressions, options CoveredOptions) Covered {
 	// MB-25317, if this is not the right keyspace, ignore the expression altogether
 	// MB-25370 this only applies for keyspace terms, not variables!
-	if (this.IsKeyspaceAlias() && this.identifier != keyspace) ||
+	if (this.IsKeyspaceAlias() && this.identifier != keyspace) || this.IsWithAlias() ||
 		this.IsProjectionAlias() || (!options.hasCoverBindVar() && this.IsBindingVariable()) {
 		return CoveredSkip
 	}
@@ -341,6 +342,18 @@ func (this *Identifier) SetLateralCorr(lateral bool) {
 		this.identFlags |= IDENT_IS_LATERAL_CORR
 	} else {
 		this.identFlags &^= IDENT_IS_LATERAL_CORR
+	}
+}
+
+func (this *Identifier) IsWithAlias() bool {
+	return (this.identFlags & IDENT_IS_WITH_ALIAS) != 0
+}
+
+func (this *Identifier) SetWithAlias(with bool) {
+	if with {
+		this.identFlags |= IDENT_IS_WITH_ALIAS
+	} else {
+		this.identFlags &^= IDENT_IS_WITH_ALIAS
 	}
 }
 

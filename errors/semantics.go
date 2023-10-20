@@ -201,6 +201,11 @@ func NewDuplicateAliasError(termType string, alias string, iKey string) Error {
 		InternalMsg: fmt.Sprintf("Duplicate %s alias %s", termType, alias), InternalCaller: CallerN(1)}
 }
 
+func NewDuplicateWithAliasError(termType string, alias string, iKey string) Error {
+	return &err{level: EXCEPTION, ICode: E_DUPLICATE_WITH_ALIAS, IKey: iKey,
+		InternalMsg: fmt.Sprintf("Duplicate %s WITH alias %s", termType, alias), InternalCaller: CallerN(1)}
+}
+
 func NewUnknownForError(termType string, keyFor string, iKey string) Error {
 	return &err{level: EXCEPTION, ICode: E_UNKNOWN_FOR, IKey: iKey,
 		InternalMsg: fmt.Sprintf("Unknown %s for alias %s", termType, keyFor), InternalCaller: CallerN(1)}

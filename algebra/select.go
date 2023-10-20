@@ -226,30 +226,27 @@ For the subresult of the subquery, call Formalize, for the order
 by clause call MapExpressions, for limit and offset call Accept.
 */
 func (this *Select) FormalizeSubquery(parent *expression.Formalizer, isSubq bool) (err error) {
-	if parent != nil && parent.InFunction() {
-		this.inlineFunc = true
-		if parent.HasVariables() {
-			this.hasVariables = true
+	if parent != nil {
+		if parent.InFunction() {
+			this.inlineFunc = true
+			if parent.HasVariables() {
+				this.hasVariables = true
+			}
 		}
-	}
-	if parent != nil && !this.setop {
+
 		withs := parent.SaveWiths(isSubq)
 		defer parent.RestoreWiths(withs)
+
+		if this.with != nil {
+			err = parent.ProcessWiths(this.with)
+			if err != nil {
+				return err
+			}
+		}
 	}
 
 	var f *expression.Formalizer
-	if this.with != nil {
-		f = expression.NewFormalizer("", parent)
-		err = f.PushBindings(this.with, false)
-		if err != nil {
-			return err
-		}
-		f.SetWiths(this.with)
-	} else {
-		f = parent
-	}
-
-	f, err = this.subresult.Formalize(f)
+	f, err = this.subresult.Formalize(parent)
 	if err != nil {
 		return err
 	}

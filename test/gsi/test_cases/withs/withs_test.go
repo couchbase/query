@@ -40,6 +40,8 @@ func TestWiths(t *testing.T) {
 	runMatch("case_withs_bugs.json", false, true, qc, t)
 	runMatch("case_withs_bugs.json", true, true, qc, t)
 
+	runMatch("case_withs_bugs1.json", false, true, qc, t)
+
 	fmt.Println("Dropping indexes")
 	runStmt(qc, "DROP INDEX shellTest.st_idx1")
 	runStmt(qc, "DROP INDEX shellTest.st_idx2")

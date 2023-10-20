@@ -104,8 +104,7 @@ func (this *IndexNest) Formalize(parent *expression.Formalizer) (f *expression.F
 		return
 	}
 
-	_, ok := f.Allowed().Field(this.keyFor)
-	if !ok {
+	if ok := f.AllowedAlias(this.keyFor, false, true); !ok {
 		err = errors.NewUnknownForError("NEST", this.keyFor, "semantics.nest.unknown_for")
 		return nil, err
 	}
@@ -116,8 +115,7 @@ func (this *IndexNest) Formalize(parent *expression.Formalizer) (f *expression.F
 		return nil, err
 	}
 
-	_, ok = f.Allowed().Field(alias)
-	if ok {
+	if ok := f.AllowedAlias(alias, true, false); ok {
 		var errContext string
 		if len(this.left.Expressions()) > 0 {
 			errContext = this.left.Expressions()[0].ErrorContext()
