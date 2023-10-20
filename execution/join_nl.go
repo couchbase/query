@@ -298,7 +298,7 @@ func (this *NLJoin) reopen(context *Context) bool {
 	rv := this.baseReopen(context)
 	this.ansiFlags &^= ANSI_REOPEN_CHILD
 	if rv && this.child != nil {
-		this.child.reopen(context)
+		rv = this.child.reopen(context)
 	}
 	return rv
 }

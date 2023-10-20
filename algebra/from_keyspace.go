@@ -27,6 +27,7 @@ const (
 	TERM_INDEX_JOIN_NEST             // right-hand side of index join/nest
 	TERM_IN_CORR_SUBQ                // inside a correlated subquery
 	TERM_COMMA_JOIN                  // right-hand side of comma-separated join
+	TERM_LATERAL_JOIN                // lateral join
 )
 
 const TERM_JOIN_PROPS = (TERM_ANSI_JOIN | TERM_ANSI_NEST | TERM_PRIMARY_JOIN)
@@ -235,6 +236,7 @@ func (this *KeyspaceTerm) Formalize(parent *expression.Formalizer) (f *expressio
 		if this.correlated {
 			this.correlation = addSimpleTermCorrelation(this.correlation,
 				f1.GetCorrelation(), this.IsAnsiJoinOp(), parent)
+			checkLateralCorrelation(this)
 		}
 	}
 
@@ -445,6 +447,13 @@ func (this *KeyspaceTerm) IsInCorrSubq() bool {
 }
 
 /*
+Returns whether it's lateral join
+*/
+func (this *KeyspaceTerm) IsLateralJoin() bool {
+	return (this.property & TERM_LATERAL_JOIN) != 0
+}
+
+/*
 Set join keys
 */
 func (this *KeyspaceTerm) SetJoinKeys(keys expression.Expression) {
@@ -535,6 +544,17 @@ Set correlated subquery property
 */
 func (this *KeyspaceTerm) SetInCorrSubq() {
 	this.property |= TERM_IN_CORR_SUBQ
+}
+
+/*
+Set lateral join
+*/
+func (this *KeyspaceTerm) SetLateralJoin() {
+	this.property |= TERM_LATERAL_JOIN
+}
+
+func (this *KeyspaceTerm) UnsetLateralJoin() {
+	this.property &^= TERM_LATERAL_JOIN
 }
 
 /*
