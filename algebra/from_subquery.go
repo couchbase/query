@@ -100,6 +100,7 @@ func (this *SubqueryTerm) Formalize(parent *expression.Formalizer) (f *expressio
 	if this.subquery.IsCorrelated() {
 		this.correlation = addSimpleTermCorrelation(this.correlation,
 			this.subquery.GetCorrelation(), this.IsAnsiJoinOp(), parent)
+		checkLateralCorrelation(this)
 	}
 
 	// for checking subquery we need a new formalizer, however, if this SubqueryTerm
@@ -194,6 +195,13 @@ func (this *SubqueryTerm) IsCommaJoin() bool {
 }
 
 /*
+Returns whether it's lateral join
+*/
+func (this *SubqueryTerm) IsLateralJoin() bool {
+	return (this.property & TERM_LATERAL_JOIN) != 0
+}
+
+/*
 Set join hint
 */
 func (this *SubqueryTerm) SetJoinHint(joinHint JoinHint) {
@@ -246,4 +254,12 @@ Set join property
 */
 func (this *SubqueryTerm) SetJoinProps(joinProps uint32) {
 	this.property |= joinProps
+}
+
+func (this *SubqueryTerm) SetLateralJoin() {
+	this.property |= TERM_LATERAL_JOIN
+}
+
+func (this *SubqueryTerm) UnsetLateralJoin() {
+	this.property &^= TERM_LATERAL_JOIN
 }

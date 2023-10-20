@@ -159,7 +159,7 @@
     ]
     },
     {
-        "testcase": "Combination of USE KEYS and USE HASH hints, Hash Join not used due to subquery in USE KEYS. Explain",
+        "testcase": "Combination of USE KEYS and USE HASH hints, Hash Join not used due to correlated subquery in USE KEYS. Explain",
         "ignore": "index_id",
         "explain": {
             "disabled": false,
@@ -170,7 +170,7 @@
             ],
             "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'NestedLoopJoin' END"
         },
-        "statements":"SELECT c.firstName, c.lastName, c.customerId, p.purchaseId FROM customer c USE INDEX (cust_lastName_firstName_customerId) JOIN purchase p USE HASH(probe) KEYS (select raw meta().id from purchase where customerId in [\"customer33\", \"customer60\", \"customer631\"]) ON c.customerId = p.customerId WHERE c.lastName = \"Champlin\" ORDER BY p.purchaseId LIMIT 10",
+        "statements":"SELECT c.firstName, c.lastName, c.customerId, p.purchaseId FROM customer c USE INDEX (cust_lastName_firstName_customerId) JOIN purchase p USE HASH(probe) KEYS (select raw meta().id from purchase where customerId = c.customerId) ON p.purchaseId IS NOT MISSING WHERE c.lastName = \"Champlin\" ORDER BY p.purchaseId LIMIT 10",
         "ordered": true,
         "results": [
         {

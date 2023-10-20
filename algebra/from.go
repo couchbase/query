@@ -84,6 +84,9 @@ type SimpleFromTerm interface {
 	PreferNL() bool
 	UnsetJoinProps() uint32
 	SetJoinProps(joinProps uint32)
+	IsLateralJoin() bool
+	SetLateralJoin()
+	UnsetLateralJoin()
 }
 
 type JoinTerm interface {
@@ -157,4 +160,14 @@ func getJoinCorrelation(left, right FromTerm) map[string]uint32 {
 		}
 	}
 	return correlation
+}
+
+func checkLateralCorrelation(term SimpleFromTerm) {
+	for _, v := range term.GetCorrelation() {
+		if (v & expression.IDENT_IS_LATERAL_CORR) != 0 {
+			term.SetLateralJoin()
+			return
+		}
+	}
+	term.UnsetLateralJoin()
 }
