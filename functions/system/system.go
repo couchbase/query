@@ -314,7 +314,7 @@ func delete2(systemCollection datastore.Keyspace, key string, name string) error
 		return errors.NewMetaKVError(name, errs[0])
 	}
 	if mCount == 0 {
-		errors.NewMissingFunctionError(name)
+		return errors.NewMissingFunctionError(name)
 	}
 	return nil
 }

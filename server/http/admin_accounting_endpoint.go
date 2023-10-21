@@ -10,6 +10,7 @@ package http
 
 import (
 	"bytes"
+	"encoding/base64"
 	go_errors "errors"
 	"fmt"
 	"io"
@@ -50,6 +51,7 @@ import (
 	"github.com/couchbase/query/transactions"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
+	"github.com/golang/snappy"
 )
 
 const (
@@ -1002,7 +1004,7 @@ func doGlobalBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 		}
 
 		functionsStorage.Foreach("", snapshot)
-		return makeBackupHeader(data, nil), nil
+		return makeBackupHeader(data, nil, nil), nil
 
 	case "POST":
 		var iState json.IndexState
@@ -1019,7 +1021,7 @@ func doGlobalBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 			return nil, err
 		}
 
-		fns, _, e := checkBackupHeader(bytes)
+		fns, _, _, e := checkBackupHeader(bytes)
 		if e != nil {
 			return nil, errors.NewServiceErrorBadValue(e, "restore body")
 		}
@@ -1094,13 +1096,53 @@ func doBucketBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 		if err != nil {
 			return nil, err
 		}
-		return makeBackupHeader(fns, seqs), nil
+
+		keys := make([]string, 1)
+		res := make(map[string]value.AnnotatedValue, 1)
+		cbo := make([]interface{}, 0)
+		err = datastore.ScanSystemCollection(bucket, "cbo::", nil,
+			func(key string, systemCollection datastore.Keyspace) errors.Error {
+				// Exclude index records as they're bound to the index ID which will differ when restored. Furthermore, indices
+				// will be rebuilt following a restore rendering these stats obsolete.
+				if strings.Contains(key, "(index)") {
+					return nil
+				}
+				parts := strings.Split(key, "::")
+				path, _ := dictionary.GetCBOKeyspace(parts[len(parts)-1])
+				p := algebra.ParsePath(path)
+				if !filterEval(p, include, exclude) {
+					return nil
+				}
+				keys[0] = key
+				errs := systemCollection.Fetch(keys, res, datastore.NULL_QUERY_CONTEXT, nil, nil, false)
+				if errs != nil && len(errs) > 0 {
+					return errs[0]
+				}
+				av, ok := res[key]
+				if ok {
+					b, err := av.MarshalJSON()
+					if err == nil {
+						d := make(map[string]interface{})
+						d["key"] = key
+						sn := snappy.Encode(nil, b)
+						b64 := base64.StdEncoding.EncodeToString(sn)
+						d["value"] = b64
+						cbo = append(cbo, d)
+					}
+				}
+				return nil
+			}, nil)
+		if err != nil {
+			return nil, err
+		}
+
+		return makeBackupHeader(fns, seqs, cbo), nil
 
 	case "POST":
 		var iState json.IndexState
 
 		// http.BasicAuth eats the body, so verify credentials after getting the body.
-		bytes, e := ioutil.ReadAll(req.Body)
+		body, e := ioutil.ReadAll(req.Body)
 		defer req.Body.Close()
 		if e != nil {
 			return nil, errors.NewServiceErrorBadValue(go_errors.New("unable to read body of request"), "restore body")
@@ -1110,7 +1152,7 @@ func doBucketBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 		if err != nil {
 			return nil, err
 		}
-		fns, seqs, e := checkBackupHeader(bytes)
+		fns, seqs, cbo, e := checkBackupHeader(body)
 		if e != nil {
 			return nil, errors.NewServiceErrorBadValue(e, "restore body")
 		}
@@ -1156,29 +1198,93 @@ func doBucketBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 		}
 		iState.Release()
 
-		remap, err = newRemapper(req.FormValue("remap"), "sequence")
-		if err != nil {
-			return nil, err
-		}
-		index = 0
-		json.SetIndexState(&iState, seqs)
-		for {
-			v, err := iState.FindIndex(index)
+		if seqs != nil {
+			remap, err = newRemapper(req.FormValue("remap"), "sequence")
 			if err != nil {
-				iState.Release()
-				return nil, errors.NewServiceErrorBadValue(err, "restore body")
+				return nil, err
 			}
-			if string(v) == "" {
-				break
+			index = 0
+			json.SetIndexState(&iState, seqs)
+			for {
+				v, err := iState.FindIndex(index)
+				if err != nil {
+					iState.Release()
+					return nil, errors.NewServiceErrorBadValue(err, "restore sequence")
+				}
+				if string(v) == "" {
+					break
+				}
+				index++
+				err1 := doSequenceRestore(v, bucket, include, exclude, remap)
+				if err1 != nil {
+					iState.Release()
+					return nil, err1
+				}
 			}
-			index++
-			err1 := doSequenceRestore(v, bucket, include, exclude, remap)
-			if err1 != nil {
-				iState.Release()
-				return nil, err1
-			}
+			iState.Release()
 		}
-		iState.Release()
+
+		if cbo != nil {
+			remap, err = newRemapper(req.FormValue("remap"), "cbo")
+			if err != nil {
+				return nil, err
+			}
+			store := datastore.GetDatastore()
+			if store == nil {
+				return nil, errors.NewServiceErrorBadValue(errors.NewNoDatastoreError(), "restore cbo")
+			}
+			systemCollection, err := store.GetSystemCollection(bucket)
+			if err != nil {
+				return nil, errors.NewServiceErrorBadValue(err, "restore cbo")
+			}
+
+			// gather a list of target keyspaces
+			purge := make(map[string]bool)
+			index = 0
+			json.SetIndexState(&iState, cbo)
+			for {
+				v, err := iState.FindIndex(index)
+				if err != nil {
+					iState.Release()
+					return nil, errors.NewServiceErrorBadValue(err, "restore cbo")
+				}
+				if string(v) == "" {
+					break
+				}
+				index++
+				ks, ok := getCBORestoreKeyspace(v, bucket, include, exclude, remap)
+				if ok {
+					purge[ks] = true
+				}
+			}
+			iState.Release()
+
+			// ensure we've cleared existing stats
+			for k, _ := range purge {
+				dictionary.DropDictEntryAndAllCache(k, datastore.NULL_QUERY_CONTEXT)
+			}
+
+			// restore the stats
+			index = 0
+			json.SetIndexState(&iState, cbo)
+			for {
+				v, err := iState.FindIndex(index)
+				if err != nil {
+					iState.Release()
+					return nil, errors.NewServiceErrorBadValue(err, "restore cbo")
+				}
+				if string(v) == "" {
+					break
+				}
+				index++
+				err1 := doCBORestore(v, bucket, include, exclude, remap, systemCollection)
+				if err1 != nil {
+					iState.Release()
+					return nil, err1
+				}
+			}
+			iState.Release()
+		}
 
 	default:
 		return nil, errors.NewServiceErrorHttpMethod(req.Method)
@@ -1194,53 +1300,61 @@ const _VERSION_MIN = 1
 const _VERSION_MAX = 2
 const _UDF_KEY = "udfs"
 const _SEQ_KEY = "seqs"
+const _CBO_KEY = "cbo"
 
-func makeBackupHeader(v interface{}, s interface{}) interface{} {
+func makeBackupHeader(v interface{}, s interface{}, c interface{}) interface{} {
 	data := make(map[string]interface{}, 4)
 	data[_MAGIC_KEY] = _MAGIC
 	data[_VERSION_KEY] = _VERSION
 	data[_UDF_KEY] = v
 	data[_SEQ_KEY] = s
+	data[_CBO_KEY] = c
 	return data
 }
 
-func checkBackupHeader(d []byte) ([]byte, []byte, errors.Error) {
+func checkBackupHeader(d []byte) ([]byte, []byte, []byte, errors.Error) {
 	var oState json.KeyState
 	json.SetKeyState(&oState, d)
 	magic, err := oState.FindKey(_MAGIC_KEY)
 	if err != nil || string(magic) != "\""+_MAGIC+"\"" {
 		oState.Release()
-		return nil, nil, errors.NewServiceErrorBadValue(err, "restore: invalid magic")
+		return nil, nil, nil, errors.NewServiceErrorBadValue(err, "restore: invalid magic")
 	}
 	version, err := oState.FindKey(_VERSION_KEY)
 	var ver uint64
 	if err == nil {
 		trimmed := strings.Trim(string(version), "\"")
 		if !strings.HasPrefix(trimmed, "0x") || len(trimmed) <= 2 {
-			return nil, nil, errors.NewServiceErrorBadValue(nil, "restore: invalid version")
+			return nil, nil, nil, errors.NewServiceErrorBadValue(nil, "restore: invalid version")
 		}
 		ver, err = strconv.ParseUint(trimmed[2:], 16, 64)
 	}
 	if err != nil || ver < _VERSION_MIN || ver > _VERSION_MAX {
 		oState.Release()
-		return nil, nil, errors.NewServiceErrorBadValue(err, "restore: invalid version")
+		return nil, nil, nil, errors.NewServiceErrorBadValue(err, "restore: invalid version")
 	}
 	udfs, err := oState.FindKey(_UDF_KEY)
 	if err != nil {
 		oState.Release()
-		return nil, nil, errors.NewServiceErrorBadValue(err, "restore: missing UDF field")
+		return nil, nil, nil, errors.NewServiceErrorBadValue(err, "restore: missing UDF field")
 	}
-	// only expect sequences for version 2+ backup images
+	// only expect sequences & cbo for version 2+ backup images
 	var seqs []byte
+	var cbo []byte
 	if ver >= 2 {
 		seqs, err = oState.FindKey(_SEQ_KEY)
 		if err != nil {
 			oState.Release()
-			return nil, nil, errors.NewServiceErrorBadValue(err, "restore: missing sequences field")
+			return nil, nil, nil, errors.NewServiceErrorBadValue(err, "restore: missing sequences field")
+		}
+		cbo, err = oState.FindKey(_CBO_KEY)
+		if err != nil {
+			oState.Release()
+			return nil, nil, nil, errors.NewServiceErrorBadValue(err, "restore: missing cbo field")
 		}
 	}
 	oState.Release()
-	return udfs, seqs, nil
+	return udfs, seqs, cbo, nil
 }
 
 type matcher map[string]map[string]bool
@@ -2463,7 +2577,7 @@ func doMigration(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Reques
 func doSequenceRestore(v []byte, b string, include, exclude matcher, remap remapper) errors.Error {
 	var oState json.KeyState
 	json.SetKeyState(&oState, v)
-	identity, err := oState.FindKey("identity")
+	bidentity, err := oState.FindKey("identity")
 	if err != nil {
 		oState.Release()
 		return errors.NewServiceErrorBadValue(err, "sequence restore: missing identity")
@@ -2504,7 +2618,7 @@ func doSequenceRestore(v []byte, b string, include, exclude matcher, remap remap
 		return errors.NewServiceErrorBadValue(err, "sequence restore: missing min")
 	}
 	oState.Release()
-	name := strings.Trim(string(identity), "\"")
+	name := strings.Trim(string(bidentity), "\"")
 	if name == "" {
 		return errors.NewServiceErrorBadValue(err, "sequence restore: name invalid")
 	}
@@ -2552,7 +2666,7 @@ func doSequenceRestore(v []byte, b string, include, exclude matcher, remap remap
 		err1 := sequences.CreateSequence(p, with)
 		if err1 != nil {
 			if err1.Code() == errors.E_SEQUENCE_ALREADY_EXISTS {
-				if sequences.DropSequence(p) == nil {
+				if sequences.DropSequence(p, true) == nil {
 					err1 = sequences.CreateSequence(p, with)
 				}
 			}
@@ -2561,5 +2675,93 @@ func doSequenceRestore(v []byte, b string, include, exclude matcher, remap remap
 			}
 		}
 	}
+	return nil
+}
+
+func getCBORestoreKeyspace(v []byte, b string, include, exclude matcher, remap remapper) (string, bool) {
+	var oState json.KeyState
+	json.SetKeyState(&oState, v)
+	bkey, err := oState.FindKey("key")
+	if err != nil {
+		oState.Release()
+		return "", false
+	}
+	oState.Release()
+
+	key := strings.Trim(string(bkey), "\"")
+	if key == "" {
+		return "", false
+	}
+	parts := strings.Split(key, "::")
+	path, _ := dictionary.GetCBOKeyspace(parts[len(parts)-1])
+	fullPath := "default:" + b + "." + path
+	p := algebra.ParsePath(fullPath)
+	if !filterEval(p, include, exclude) {
+		return "", false
+	}
+	remap.remap(b, p)
+	return algebra.NewPathFromElements(p).SimpleString(), true
+}
+
+func doCBORestore(v []byte, b string, include, exclude matcher, remap remapper, systemCollection datastore.Keyspace) errors.Error {
+	var oState json.KeyState
+	json.SetKeyState(&oState, v)
+	bkey, err := oState.FindKey("key")
+	if err != nil {
+		oState.Release()
+		return errors.NewServiceErrorBadValue(err, "cbo restore: missing key")
+	}
+	bvalue, err := oState.FindKey("value")
+	if err != nil {
+		oState.Release()
+		return errors.NewServiceErrorBadValue(err, "cbo restore: missing value")
+	}
+	oState.Release()
+
+	key := strings.Trim(string(bkey), "\"")
+	if key == "" {
+		return errors.NewServiceErrorBadValue(err, "cbo restore: invalid key")
+	}
+	if len(bvalue) < 3 || bvalue[0] != '"' || bvalue[len(bvalue)-1] != '"' {
+		return errors.NewServiceErrorBadValue(err, "cbo restore: invalid value")
+	}
+
+	parts := strings.Split(key, "::")
+	if len(parts) != 3 {
+		return errors.NewServiceErrorBadValue(err, "cbo restore: invalid key")
+	}
+	path, _ := dictionary.GetCBOKeyspace(parts[len(parts)-1])
+	fullPath := "default:" + b + "." + path
+	p := algebra.ParsePath(fullPath)
+	if len(p) != 4 {
+		return errors.NewServiceErrorBadValue(err, "cbo restore: invalid key")
+	}
+	if !filterEval(p, include, exclude) {
+		return nil
+	}
+
+	remap.remap(b, p)
+	key = strings.Replace(key, path, p[2]+"."+p[3], 1)
+	uid, err := datastore.GetScopeUid(p[:3]...)
+	if err != nil {
+		return errors.NewServiceErrorBadValue(err, "cbo restore: error determining scope UID")
+	}
+	key = strings.Replace(key, parts[1], uid, 1)
+
+	data := make([]byte, base64.StdEncoding.DecodedLen(len(bvalue)-2))
+	n, err := base64.StdEncoding.Decode(data, []byte(bvalue[1:len(bvalue)-1]))
+	raw, cerr := snappy.Decode(nil, data[:n])
+	if cerr != nil {
+		return errors.NewServiceErrorBadValue(cerr, "cbo restore: error decoding value"+":"+string(bkey))
+	}
+
+	pairs := make([]value.Pair, 1)
+	pairs[0].Name = key
+	pairs[0].Value = value.NewValue(raw)
+	_, _, errs := systemCollection.Upsert(pairs, datastore.NULL_QUERY_CONTEXT, true)
+	if errs != nil && len(errs) > 0 {
+		return errs[0]
+	}
+
 	return nil
 }

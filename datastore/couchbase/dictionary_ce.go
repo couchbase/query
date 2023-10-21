@@ -80,7 +80,7 @@ func chkSysBucket() {
 	// no-op
 }
 
-func getCBOKeyspace(key string) (string, bool) {
+func GetCBOKeyspace(key string) (string, bool) {
 	return "", false
 }
 

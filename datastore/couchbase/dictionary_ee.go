@@ -119,7 +119,7 @@ func chkSysBucket() {
 	}
 }
 
-func getCBOKeyspace(key string) (string, bool) {
+func GetCBOKeyspace(key string) (string, bool) {
 	return dictionary.GetKeyspace(key)
 }
 

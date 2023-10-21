@@ -60,7 +60,7 @@ func (this *DropSequence) RunOnce(context *Context, parent value.Value) {
 		}
 
 		this.switchPhase(_SERVTIME)
-		err := sequences.DropSequence(this.plan.Node().Name())
+		err := sequences.DropSequence(this.plan.Node().Name(), false)
 		if err != nil {
 			if !errors.IsSequenceNotFoundError(err) || this.plan.Node().FailIfNotExists() {
 				if err.IsWarning() {

@@ -3073,7 +3073,7 @@ func cleanupSystemCollection(namespace string, bucket string) {
 			functions.FunctionClear(bucket+"."+parts[1], nil)
 		} else if strings.HasPrefix(key, "cbo::") {
 			parts := strings.Split(key, "::")
-			keyspace, isKeyspace := getCBOKeyspace(parts[1])
+			keyspace, isKeyspace := GetCBOKeyspace(parts[len(parts)-1])
 			if isKeyspace {
 				DropDictCacheEntry(keyspace, false)
 			}
@@ -3091,7 +3091,7 @@ func cleanupSystemCollection(namespace string, bucket string) {
 			if len(parts) == 3 && (parts[0] == "seq" || parts[0] == "cbo" || parts[0] == "udf") {
 				path := parts[len(parts)-1]
 				if parts[0] == "cbo" {
-					path, _ = getCBOKeyspace(path)
+					path, _ = GetCBOKeyspace(path)
 				}
 				elements := strings.Split(path, ".")
 				if len(elements) == 2 {

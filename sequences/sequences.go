@@ -333,7 +333,7 @@ func CreateSequence(path *algebra.Path, with value.Value) errors.Error {
 	return w
 }
 
-func DropSequence(path *algebra.Path) errors.Error {
+func DropSequence(path *algebra.Path, force bool) errors.Error {
 
 	if path.Scope() == "" {
 		return errors.NewSequenceError(errors.E_SEQUENCE_INVALID_NAME, path.SimpleString())
@@ -341,13 +341,15 @@ func DropSequence(path *algebra.Path) errors.Error {
 	name := path.SimpleString()
 
 	seq, err := getLockedSequence(name)
-	if err != nil {
+	if err != nil && !force {
 		return err
 	}
 
 	b, err := getSystemCollection(path.Bucket())
 	if err != nil {
-		seq.Unlock()
+		if seq != nil {
+			seq.Unlock()
+		}
 		return err
 	}
 
@@ -355,13 +357,19 @@ func DropSequence(path *algebra.Path) errors.Error {
 	pairs[0].Name = getStorageKey(path)
 	_, _, errs := b.Delete(pairs, datastore.MAJORITY_QUERY_CONTEXT, true)
 	if errs != nil && len(errs) > 0 {
+		if seq != nil {
+			seq.Unlock()
+		}
 		return errors.NewSequenceError(errors.E_SEQUENCE_DROP, name, errs[0])
 	}
-	sequences.Delete(name, nil)
-	sequences.Delete(name, func(s interface{}) {
-		seq := s.(*sequence)
-		seq.Unlock()
-	})
+	if seq == nil {
+		sequences.Delete(name, nil)
+	} else {
+		sequences.Delete(name, func(s interface{}) {
+			seq := s.(*sequence)
+			seq.Unlock()
+		})
+	}
 	nextRevision()
 
 	return nil
