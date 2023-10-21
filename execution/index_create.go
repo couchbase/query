@@ -101,11 +101,16 @@ func (this *CreateIndex) RunOnce(context *Context, parent value.Value) {
 			}
 
 			if err != nil {
-				if !errors.IsIndexExistsError(err) || this.plan.Node().FailIfExists() {
+				if errors.IsIndexExistsError(err) {
+					if this.plan.Node().FailIfExists() {
+						err = errors.NewIndexAlreadyExistsError(node.Name())
+					} else {
+						err = nil
+					}
+				}
+				if err != nil {
 					context.Error(err)
 					return
-				} else {
-					err = nil
 				}
 			}
 			if context.useCBO && (node.Using() == datastore.GSI || node.Using() == datastore.DEFAULT) && !deferred(node.With()) {
@@ -131,12 +136,17 @@ func (this *CreateIndex) RunOnce(context *Context, parent value.Value) {
 				idx, err = indexer2.CreateIndex2(context.RequestId(), node.Name(), node.SeekKeys(),
 					rangeKeys, node.Where(), node.With())
 				if err != nil {
-					if !errors.IsIndexExistsError(err) || this.plan.Node().FailIfExists() {
-						context.Error(err)
-					} else {
-						err = nil
+					if errors.IsIndexExistsError(err) {
+						if this.plan.Node().FailIfExists() {
+							err = errors.NewIndexAlreadyExistsError(node.Name())
+						} else {
+							err = nil
+						}
 					}
-					return
+					if err != nil {
+						context.Error(err)
+						return
+					}
 				}
 			} else {
 				if node.Keys().HasDescending() {
@@ -147,12 +157,17 @@ func (this *CreateIndex) RunOnce(context *Context, parent value.Value) {
 				idx, err = indexer.CreateIndex(context.RequestId(), node.Name(), node.SeekKeys(),
 					node.RangeKeys(), node.Where(), node.With())
 				if err != nil {
-					if !errors.IsIndexExistsError(err) || this.plan.Node().FailIfExists() {
-						context.Error(err)
-					} else {
-						err = nil
+					if errors.IsIndexExistsError(err) {
+						if this.plan.Node().FailIfExists() {
+							err = errors.NewIndexAlreadyExistsError(node.Name())
+						} else {
+							err = nil
+						}
 					}
-					return
+					if err != nil {
+						context.Error(err)
+						return
+					}
 				}
 			}
 		}

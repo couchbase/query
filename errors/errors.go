@@ -461,7 +461,7 @@ func IsNotFoundError(object string, e error) bool {
 }
 
 func IsIndexExistsError(e error) bool {
-	if err, ok := e.(Error); ok && err.Code() == E_INDEX_ALREADY_EXISTS {
+	if err, ok := e.(Error); ok && err.HasCause(E_INDEX_ALREADY_EXISTS) {
 		return true
 	}
 	return false

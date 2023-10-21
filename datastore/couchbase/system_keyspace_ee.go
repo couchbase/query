@@ -162,7 +162,7 @@ func (s *store) CreateSystemCBOStats(requestId string) errors.Error {
 
 	_, er = indexer3.IndexByName(_CBO_STATS_PRIMARY_INDEX)
 	if er != nil {
-		if er.Code() != errors.E_CB_INDEX_NOT_FOUND {
+		if !errors.IsIndexNotFoundError(er) {
 			// only ignore index not found error
 			return er
 		}
@@ -229,7 +229,7 @@ func (s *store) CreateSysPrimaryIndex(idxName, requestId string, indexer3 datast
 	}
 
 	_, er := indexer3.CreatePrimaryIndex3(requestId, idxName, nil, with)
-	if er != nil && er.Code() != errors.E_INDEX_ALREADY_EXISTS {
+	if er != nil && !errors.IsIndexExistsError(er) {
 		// if the create failed due to not enough indexer nodes, retry with
 		// less number of replica
 		for num_replica > 0 {
@@ -248,11 +248,11 @@ func (s *store) CreateSysPrimaryIndex(idxName, requestId string, indexer3 datast
 
 			// retry with less number of replica
 			_, er = indexer3.CreatePrimaryIndex3(requestId, idxName, nil, with)
-			if er == nil || er.Code() == errors.E_INDEX_ALREADY_EXISTS {
+			if er == nil || errors.IsIndexExistsError(er) {
 				break
 			}
 		}
-		if er != nil && er.Code() != errors.E_INDEX_ALREADY_EXISTS {
+		if er != nil && !errors.IsIndexExistsError(er) {
 			return er
 		}
 	}
@@ -280,7 +280,7 @@ func (s *store) CreateSysPrimaryIndex(idxName, requestId string, indexer3 datast
 			if state == datastore.ONLINE {
 				break
 			}
-		} else if er != nil && er.Code() != errors.E_CB_INDEX_NOT_FOUND {
+		} else if er != nil && !errors.IsIndexNotFoundError(er) {
 			return er
 		}
 	}
@@ -398,7 +398,7 @@ func (s *store) CheckSystemCollection(bucketName, requestId string) errors.Error
 
 	sysIndex, er := indexer3.IndexByName(_BUCKET_SYSTEM_PRIM_INDEX)
 	if er != nil {
-		if er.Code() != errors.E_CB_INDEX_NOT_FOUND {
+		if !errors.IsIndexNotFoundError(er) {
 			// only ignore index not found error
 			return er
 		}
@@ -406,7 +406,7 @@ func (s *store) CheckSystemCollection(bucketName, requestId string) errors.Error
 		// create primary index on system collection if not already exists
 		// the create function waits for ONLINE state before it returns
 		er = s.CreateSysPrimaryIndex(_BUCKET_SYSTEM_PRIM_INDEX, requestId, indexer3)
-		if er != nil && er.Code() != errors.E_INDEX_ALREADY_EXISTS {
+		if er != nil && !errors.IsIndexExistsError(er) {
 			// ignore index already exist error
 			return er
 		}
