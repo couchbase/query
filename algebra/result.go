@@ -154,6 +154,19 @@ func (this *Projection) String() string {
 		s += term.String()
 	}
 
+	if this.exclude != nil {
+		s += " exclude "
+		first := true
+		for _, c := range this.exclude {
+			if !first {
+				s += ","
+			} else {
+				first = false
+			}
+			s += c.String()
+		}
+	}
+
 	return s
 }
 
