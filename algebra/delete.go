@@ -89,7 +89,11 @@ func (this *Delete) Type() string {
 }
 
 func (this *Delete) String() string {
-	s := "delete from "
+	s := "delete "
+	if this.optimHints != nil {
+		s += this.optimHints.String() + " "
+	}
+	s += "from "
 	s += this.keyspace.Path().ProtectedString()
 	alias := this.keyspace.Alias()
 	if len(alias) > 0 {

@@ -284,7 +284,13 @@ func (this *Subselect) Privileges() (*auth.Privileges, errors.Error) {
 Representation as a N1QL string.
 */
 func (this *Subselect) String() string {
-	s := "select " + this.projection.String()
+	s := "select "
+
+	if this.optimHints != nil {
+		s += this.optimHints.String() + " "
+	}
+
+	s += this.projection.String()
 
 	if this.from != nil {
 		s += " from " + this.from.String()

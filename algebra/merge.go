@@ -332,7 +332,11 @@ func (this *Merge) Type() string {
 }
 
 func (this *Merge) String() string {
-	s := "merge into "
+	s := "merge "
+	if this.optimHints != nil {
+		s += this.optimHints.String() + " "
+	}
+	s += "into "
 	s += this.keyspace.Path().ProtectedString()
 	alias := this.keyspace.Alias()
 	if alias != "" {

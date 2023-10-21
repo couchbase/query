@@ -84,6 +84,9 @@ func (this *Update) Type() string {
 
 func (this *Update) String() string {
 	s := "update "
+	if this.optimHints != nil {
+		s += this.optimHints.String() + " "
+	}
 	s += this.keyspace.Path().ProtectedString()
 	alias := this.keyspace.Alias()
 	if len(alias) > 0 {
