@@ -146,7 +146,13 @@ func getRules(rules map[string][]int, rn string, option int, level int, nested b
 	}
 	r, ok := statement_syntax[rn]
 	if !ok {
-		return
+		if strings.HasPrefix(rn, "[") && strings.HasSuffix(rn, "]") {
+			rn = rn[1 : len(rn)-1]
+			r, ok = statement_syntax[rn]
+		}
+		if !ok {
+			return
+		}
 	}
 	if r, ok := rules[rn]; ok {
 		if option == -1 {
