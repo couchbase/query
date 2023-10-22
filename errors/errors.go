@@ -117,7 +117,7 @@ var gsiPatterns map[string]*regexp.Regexp
 func init() {
 	gsiPatterns = make(map[string]*regexp.Regexp)
 	gsiPatterns["enterprise"] = regexp.MustCompile("(.*) not supported in non-Enterprise Edition")
-	gsiPatterns["exists"] = regexp.MustCompile("Index (.*) already exists")
+	gsiPatterns["exist"] = regexp.MustCompile("Index(.*) already exist")
 	gsiPatterns["reason"] = regexp.MustCompile("(.*)( Reason: | Error=| Error: )(.*)")
 	gsiPatterns["tempfile"] = regexp.MustCompile("(.*) temp file size exceeded limit ([0-9]+), ([0-9]+)")
 }
@@ -144,7 +144,7 @@ func NewError(e error, internalMsg string) Error {
 		}
 		if res := gsiPatterns["enterprise"].FindSubmatch([]byte(errText)); res != nil {
 			cause = NewEnterpriseFeature(string(res[1]), "indexing.enterprise_only_feature")
-		} else if res = gsiPatterns["exists"].FindSubmatch([]byte(errText)); res != nil {
+		} else if res = gsiPatterns["exist"].FindSubmatch([]byte(errText)); res != nil {
 			cause = NewIndexAlreadyExistsError(string(res[1]))
 		} else {
 			code := E_GSI
@@ -451,7 +451,7 @@ func GSICaller() (bool, string) {
 // In the future we should be able to check error codes or keys rather than matching error text, or even base it on error type but
 // for now we can only check the text
 func IsExistsError(object string, e error) bool {
-	re := regexp.MustCompile(object + ".*already exists")
+	re := regexp.MustCompile(object + ".*already exist")
 	return re.Match([]byte(e.Error()))
 }
 
