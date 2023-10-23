@@ -25,6 +25,7 @@ import (
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/migration"
 	"github.com/couchbase/query/tenant"
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
@@ -221,6 +222,11 @@ func retryMigration() {
 				// as _BUCKET_MIGRATED; also reuse the same code as regular migration.
 				if doMigrateBucket(bucket.name) {
 					bucket.state = _BUCKET_MIGRATED
+					if !bucket.index {
+						// create primary index in the background
+						go createPrimaryIndex(bucket.name)
+						bucket.index = true
+					}
 				} else {
 					bucket.state = _BUCKET_PART_MIGRATED
 				}
@@ -395,6 +401,7 @@ type migrateBucket struct {
 	sync.Mutex
 	name  string
 	state bucketState
+	index bool
 }
 
 var migrations map[string]*migrateBucket
@@ -446,15 +453,19 @@ func migrateAll() {
 				if !b.HasCapability(datastore.HAS_SYSTEM_COLLECTION) {
 					logging.Infof("UDF migration: Bucket %s missing system collection capability", b.Name())
 				} else {
+					bucketName := b.Name()
+
 					// quick check for abort without lock
 					if migrating == _ABORTING || migrating == _ABORTED {
 						logging.Infof("UDF migration: Migration is aborting, skip further migration operations")
 						return
 					}
 
-					err := checkSystemCollection(b.Name())
+					err := checkSystemCollection(bucketName)
 					if err == nil {
-						doMigrateBucket(b.Name())
+						if doMigrateBucket(bucketName) {
+							go createPrimaryIndex(bucketName)
+						}
 					}
 				}
 			})
@@ -556,6 +567,11 @@ func checkMigrateBucket(name string) {
 	bucket.Lock()
 	if b {
 		bucket.state = _BUCKET_MIGRATED
+		if !bucket.index {
+			// create primary index in the background
+			go createPrimaryIndex(name)
+			bucket.index = true
+		}
 	} else {
 		bucket.state = _BUCKET_PART_MIGRATED
 	}
@@ -635,7 +651,9 @@ func doMigrateBucket(name string) bool {
 func checkSystemCollection(name string) errors.Error {
 	ds := datastore.GetDatastore()
 	if ds != nil {
-		// check existence of system collection, no need to create primary index
+		// make sure the system collection exist, but no need for primary index for migration
+		// to proceed; since index creation may take additonal time, we'll do that at the end
+		// of migration
 		err := ds.CheckSystemCollection(name, "")
 		if err != nil {
 			logging.Errorf("UDF migration: Error during UDF migration for bucket %s, system collection unavailable - %v", name, err)
@@ -648,6 +666,19 @@ func checkSystemCollection(name string) errors.Error {
 		return errors.NewMigrationInternalError(_UDF_MIGRATION, "Unexpected error - datastore not available", nil, nil)
 	}
 	return nil
+}
+
+func createPrimaryIndex(bucketName string) {
+	ds := datastore.GetDatastore()
+	if ds != nil {
+		requestId, _ := util.UUIDV4()
+		err := ds.CheckSystemCollection(bucketName, requestId)
+		if err == nil {
+			logging.Infof("UDF migration: Primary index on system collection available for bucket %s", bucketName)
+		} else if !errors.IsIndexExistsError(err) {
+			logging.Errorf("UDF migration: Error creating primary index on system collection for bucket %s - %v", bucketName, err)
+		}
+	}
 }
 
 func checkMigrationComplete() bool {
