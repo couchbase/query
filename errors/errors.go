@@ -390,6 +390,16 @@ func (e *err) Retry() Tristate {
 }
 
 func (e *err) Cause() interface{} {
+	if e.cause == nil {
+		return nil
+	}
+
+	switch t := e.cause.(type) {
+	case Error:
+		return t
+	case error: // prevent the cause from being marshalled to an empty object
+		return t.Error()
+	}
 	return e.cause
 }
 
