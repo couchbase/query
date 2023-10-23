@@ -108,7 +108,6 @@ function printRule(terms) \
 }
 function fixTerm(t) \
 {
-  /* Cannot rely on switch statement being available... */
   if (t=="stmt_body")
   {
     return "statements"
