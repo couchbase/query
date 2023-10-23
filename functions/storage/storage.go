@@ -60,6 +60,20 @@ var migratingLock sync.Mutex
 var countDownStarted time.Time
 var lastActivity time.Time
 
+type migrateBucket struct {
+	sync.Mutex
+	name  string
+	state bucketState
+	index bool
+}
+
+var migrations map[string]*migrateBucket
+var migrationsLock sync.Mutex
+
+var migrationStartLock sync.Mutex
+var migrationStartCond *sync.Cond
+var migrationStartWait bool
+
 func Migrate() {
 
 	// no migration needed if serverless
@@ -126,12 +140,10 @@ func Migrate() {
 		}
 	}, datastore.HAS_SYSTEM_COLLECTION)
 
-	go retryMigration()
+	go checkRetryMigration()
 }
 
-// this function is only used when migration is performed as individual buckets from registered
-// migrators; in case of migrateAll(), the retry logic is embedded in that function
-func retryMigration() {
+func checkRetryMigration() {
 
 	// if we are here, we know we have an extended datastore
 	ds := datastore.GetDatastore().(datastore.Datastore2)
@@ -140,25 +152,39 @@ func retryMigration() {
 	// the node can be in mixed-clustered mode for undetermined time, do not proceed
 	// with retry of migration until migration has started
 	logging.Infof("UDF migration: Waiting on migration to start")
-	for {
-		time.Sleep(_GRACE_PERIOD)
 
-		started := false
-		ds.LoadAllBuckets(func(b datastore.ExtendedBucket) {
-			migrationsLock.Lock()
-			if bucket, ok := migrations[b.Name()]; ok {
-				bucket.Lock()
-				if bucket.state != _BUCKET_NOT_MIGRATING {
-					started = true
-				}
-				bucket.Unlock()
+	started := false
+	ds.LoadAllBuckets(func(b datastore.ExtendedBucket) {
+		migrationsLock.Lock()
+		if bucket, ok := migrations[b.Name()]; ok {
+			bucket.Lock()
+			if bucket.state != _BUCKET_NOT_MIGRATING {
+				started = true
 			}
-			migrationsLock.Unlock()
-		})
-		if started {
-			break
+			bucket.Unlock()
 		}
+		migrationsLock.Unlock()
+	})
+	if !started {
+		migrationStartLock.Lock()
+		migrationStartCond = sync.NewCond(&migrationStartLock)
+		migrationStartWait = true
+		migrationStartCond.Wait()
+		migrationStartLock.Unlock()
 	}
+
+	// since migration waits for _GRACE_PERIOD before it starts, wait for _GRACE_PERIOD plus
+	// some before migration retry
+	duration := _GRACE_PERIOD + _RETRY_TIME
+	countDown := time.Since(countDownStarted)
+	if countDown < duration {
+		time.Sleep(duration - countDown)
+	}
+
+	retryMigration()
+}
+
+func retryMigration() {
 
 	logging.Infof("UDF migration: Gathering migration information on all buckets")
 
@@ -397,16 +423,6 @@ func ExternalBucketArchive() bool {
 	return !UseSystemStorage()
 }
 
-type migrateBucket struct {
-	sync.Mutex
-	name  string
-	state bucketState
-	index bool
-}
-
-var migrations map[string]*migrateBucket
-var migrationsLock sync.Mutex
-
 func migrateAll() {
 
 	// TODO KV doesn't like being hammered straight away so wait for KV to prime before migrating
@@ -426,63 +442,42 @@ func migrateAll() {
 	}
 	migratingLock.Unlock()
 
-	for i := 0; i <= _MAX_RETRY; i++ {
-		if i == 0 {
-			logging.Infof("UDF migration: Start migration of all buckets")
-		} else {
-			// if we get here, migration is not complete, need to retry
-			time.Sleep(time.Duration(i) * _RETRY_TIME)
-			logging.Infof("UDF migration: Retry migration of all buckets (%d of %d)", i, _MAX_RETRY)
+	logging.Infof("UDF migration: Start migration of all buckets")
 
-			// is migration complete?
-			migratingLock.Lock()
-			if migrating == _MIGRATED || migrating == _ABORTED || migrating == _ABORTING {
-				migratingLock.Unlock()
-				return
-			} else if checkSetComplete() {
-				migratingLock.Unlock()
-				return
-			}
-			migratingLock.Unlock()
-		}
+	// if we are here, we know we have an extended datastore
+	ds := datastore.GetDatastore().(datastore.Datastore2)
+	if ds != nil {
+		ds.LoadAllBuckets(func(b datastore.ExtendedBucket) {
+			if !b.HasCapability(datastore.HAS_SYSTEM_COLLECTION) {
+				logging.Infof("UDF migration: Bucket %s missing system collection capability", b.Name())
+			} else {
+				bucketName := b.Name()
 
-		// if we are here, we know we have an extended datastore
-		ds := datastore.GetDatastore().(datastore.Datastore2)
-		if ds != nil {
-			ds.LoadAllBuckets(func(b datastore.ExtendedBucket) {
-				if !b.HasCapability(datastore.HAS_SYSTEM_COLLECTION) {
-					logging.Infof("UDF migration: Bucket %s missing system collection capability", b.Name())
-				} else {
-					bucketName := b.Name()
+				// quick check for abort without lock
+				if migrating == _ABORTING || migrating == _ABORTED {
+					logging.Infof("UDF migration: Migration is aborting, skip further migration operations")
+					return
+				}
 
-					// quick check for abort without lock
-					if migrating == _ABORTING || migrating == _ABORTED {
-						logging.Infof("UDF migration: Migration is aborting, skip further migration operations")
-						return
-					}
-
-					err := checkSystemCollection(bucketName)
-					if err == nil {
-						if doMigrateBucket(bucketName) {
-							go createPrimaryIndex(bucketName)
-						}
+				err := checkSystemCollection(bucketName)
+				if err == nil {
+					if doMigrateBucket(bucketName) {
+						go createPrimaryIndex(bucketName)
 					}
 				}
-			})
-
-			if checkMigrationComplete() {
-				logging.Infof("UDF migration: End migration of all buckets")
-				return
 			}
-		} else {
-			logging.Errorf("UDF migration: Unexpected error - datastore not available")
-			break
+		})
+
+		if checkMigrationComplete() {
+			logging.Infof("UDF migration: End migration of all buckets")
+			return
 		}
+	} else {
+		logging.Errorf("UDF migration: Unexpected error - datastore not available")
+		return
 	}
 
-	// if we get here, migration is not complete after maximum retry, log severe error
-	// this requires manual intervention
-	logging.Severef("UDF migration: Migration is not complete, please restart node")
+	retryMigration()
 }
 
 func checkMigrateBucket(name string) {
@@ -532,6 +527,18 @@ func checkMigrateBucket(name string) {
 	if !doMigrate {
 		logging.Infof("UDF migration: Migration of bucket %s being performed by another thread", name)
 		return
+	} else if migrationStartWait {
+		needSignal := false
+		migrationStartLock.Lock()
+		if migrationStartWait && migrationStartCond != nil {
+			needSignal = true
+			migrationStartWait = false
+		}
+		migrationStartLock.Unlock()
+		if needSignal {
+			// there should be only a single waiter
+			migrationStartCond.Signal()
+		}
 	}
 
 	if doSysColl {
