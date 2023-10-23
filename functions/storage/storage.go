@@ -55,6 +55,8 @@ const _GRACE_PERIOD = 30 * time.Second
 const _RETRY_TIME = 10 * time.Second
 const _MAX_RETRY = 5
 
+const _N1QL_SYSTEM_BUCKET = "N1QL_SYSTEM_BUCKET"
+
 var migrating nodeState = _NOT_MIGRATING
 var migratingLock sync.Mutex
 var countDownStarted time.Time
@@ -105,9 +107,11 @@ func Migrate() {
 	bucketCount := 0
 	newBucketCount := 0
 	ds.LoadAllBuckets(func(b datastore.ExtendedBucket) {
-		bucketCount++
-		if b.HasCapability(datastore.HAS_SYSTEM_COLLECTION) {
-			newBucketCount++
+		if b.Name() != _N1QL_SYSTEM_BUCKET {
+			bucketCount++
+			if b.HasCapability(datastore.HAS_SYSTEM_COLLECTION) {
+				newBucketCount++
+			}
 		}
 	})
 
@@ -452,6 +456,9 @@ func migrateAll() {
 				logging.Infof("UDF migration: Bucket %s missing system collection capability", b.Name())
 			} else {
 				bucketName := b.Name()
+				if bucketName == _N1QL_SYSTEM_BUCKET {
+					return
+				}
 
 				// quick check for abort without lock
 				if migrating == _ABORTING || migrating == _ABORTED {
@@ -492,6 +499,10 @@ func checkMigrateBucket(name string) {
 		return
 	}
 	migratingLock.Unlock()
+
+	if name == _N1QL_SYSTEM_BUCKET {
+		return
+	}
 
 	// avoid parallel migration of each bucket on this query node
 	migrationsLock.Lock()
@@ -591,6 +602,10 @@ func checkMigrateBucket(name string) {
 
 func doMigrateBucket(name string) bool {
 
+	if name == _N1QL_SYSTEM_BUCKET {
+		return false
+	}
+
 	logging.Infof("UDF migration: Start UDF migration for bucket %s", name)
 
 	// TODO it would be useful here to load the cache so that other requests don't hit the storage
@@ -656,6 +671,10 @@ func doMigrateBucket(name string) bool {
 }
 
 func checkSystemCollection(name string) errors.Error {
+	if name == _N1QL_SYSTEM_BUCKET {
+		return nil
+	}
+
 	ds := datastore.GetDatastore()
 	if ds != nil {
 		// make sure the system collection exist, but no need for primary index for migration
@@ -701,16 +720,21 @@ func checkMigrationComplete() bool {
 	complete := true
 	err1 := metaStorage.ForeachBody(func(parts []string, body functions.FunctionBody) errors.Error {
 		if len(parts) == 4 {
+			if parts[1] == _N1QL_SYSTEM_BUCKET {
+				// ignore entries on N1QL_SYSTEM_BUCKET since that'll be dropped
+				return nil
+			}
+
 			// still entries to be migrated
 			// return an error such that we don't need to continue the scan
 			complete = false
-			return errors.NewMigrationInternalError(_UDF_MIGRATION, "Entry found in metakv", nil, nil)
+			return errors.NewMigrationError(_UDF_MIGRATION, "Entry found in metakv", nil, nil)
 		}
 		return nil
 	})
 	if err1 != nil {
 		switch err1.Code() {
-		case errors.E_MIGRATION_INTERNAL:
+		case errors.E_MIGRATION:
 			// no-op, ignore this error which indicates migration not complete
 		default:
 			logging.Errorf("UDF migration: Error during scan of metakv - %v", err1)
