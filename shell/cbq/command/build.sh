@@ -87,12 +87,14 @@ END \
 function printRule(terms) \
 {
   if (length(terms)<2||(length(terms)==2&&terms[0]=="["terms[1]"]")) return
-  printf("\t\"%s\": [][]string{\n\t\t[]string{",terms[0])
-  delete terms[0]
   comma=0
-  for (k in terms)
+  for (i=0;i<length(terms);i++)
   {
-    if (terms[k]=="|")
+    if (i==0)
+    {
+      printf("\t\"%s\": [][]string{\n\t\t[]string{",terms[0])
+    }
+    else if (terms[i]=="|")
     {
       printf("},\n\t\t[]string{")
       comma=0
@@ -100,7 +102,7 @@ function printRule(terms) \
     else
     {
       if (comma==1) printf(",")
-      printf("\"%s\"",terms[k])
+      printf("\"%s\"",terms[i])
       comma=1
     }
   }
