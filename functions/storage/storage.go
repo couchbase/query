@@ -179,11 +179,13 @@ func checkRetryMigration() {
 
 	// since migration waits for _GRACE_PERIOD before it starts, wait for _GRACE_PERIOD plus
 	// some before migration retry
-	duration := _GRACE_PERIOD + _RETRY_TIME
 	countDown := time.Since(countDownStarted)
-	if countDown < duration {
-		time.Sleep(duration - countDown)
+	if countDown < _GRACE_PERIOD {
+		time.Sleep(_GRACE_PERIOD - countDown)
 	}
+
+	// extra sleep to allow migration to proceed before initiating retry
+	time.Sleep(_RETRY_TIME)
 
 	retryMigration()
 }
