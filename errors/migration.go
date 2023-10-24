@@ -20,9 +20,9 @@ func NewMigrationError(what, msg string, elems []string, e error) Error {
 		c["bucket"] = elems[1]
 		c["scope"] = elems[2]
 		if what == "UDF" {
-			c["function"] = elems[4]
+			c["function"] = elems[3]
 		} else if what == "CBO_STATS" {
-			c["collection"] = elems[4]
+			c["collection"] = elems[3]
 		}
 		errString += " (" + elems[0] + ":" + elems[1] + "." + elems[2] + "." + elems[3] + ")"
 	}
@@ -41,9 +41,9 @@ func NewMigrationInternalError(what, msg string, elems []string, e error) Error 
 		c["bucket"] = elems[1]
 		c["scope"] = elems[2]
 		if what == "UDF" {
-			c["function"] = elems[4]
+			c["function"] = elems[3]
 		} else if what == "CBO_STATS" {
-			c["collection"] = elems[4]
+			c["collection"] = elems[3]
 		}
 		errString += " (" + elems[0] + ":" + elems[1] + "." + elems[2] + "." + elems[3] + ")"
 	}
