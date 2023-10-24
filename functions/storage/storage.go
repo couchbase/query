@@ -187,6 +187,17 @@ func checkRetryMigration() {
 	// extra sleep to allow migration to proceed before initiating retry
 	time.Sleep(_RETRY_TIME)
 
+	// migration complete?
+	migratingLock.Lock()
+	if migrating == _MIGRATED || migrating == _ABORTED || migrating == _ABORTING {
+		migratingLock.Unlock()
+		return
+	} else if checkSetComplete() {
+		migratingLock.Unlock()
+		return
+	}
+	migratingLock.Unlock()
+
 	retryMigration()
 }
 
@@ -757,6 +768,9 @@ func checkMigrations() {
 	metaStorage.ForeachBody(func(parts []string, body functions.FunctionBody) errors.Error {
 		if len(parts) == 4 {
 			bname := parts[1]
+			if bname == _N1QL_SYSTEM_BUCKET {
+				return nil
+			}
 			migrationsLock.Lock()
 			if _, ok := migrations[bname]; !ok {
 				migrations[bname] = &migrateBucket{
