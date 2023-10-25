@@ -95,6 +95,9 @@ func messageForDeniedPrivilege(pair auth.PrivilegePair) string {
 	case auth.PRIV_QUERY_USE_SEQUENCES:
 		privilege = "use sequences"
 		role = fmt.Sprintf("query_use_sequences on %s", keyspace)
+	case auth.PRIV_SEARCH_CREATE_INDEX, auth.PRIV_SEARCH_DROP_INDEX:
+		privilege = "manage fts indices"
+		role = fmt.Sprintf("fts_admin on %s", keyspace)
 	default:
 		privilege = "run this type of query"
 		role = "admin"

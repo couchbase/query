@@ -191,6 +191,11 @@ func NewCreateIndexSelf(msg, at string) Error {
 		InternalCaller: CallerN(1)}
 }
 
+func NewIndexNotAllowed(msg, at string) Error {
+	return &err{level: EXCEPTION, ICode: E_INDEX_NOT_ALLOWED, IKey: "semantics_index",
+		InternalMsg: fmt.Sprintf("%s%s is not allowed.", msg, at), InternalCaller: CallerN(1)}
+}
+
 func NewFirstTermJoinHintError(alias string) Error {
 	return &err{level: EXCEPTION, ICode: E_JOIN_HINT_FIRST_FROM_TERM, IKey: "semantics_joinhint_first_term",
 		InternalMsg:    fmt.Sprintf("Join hint (USE HASH or USE NL) cannot be specified on the first from term '%s'.", alias),

@@ -56,6 +56,8 @@ const (
 	PRIV_CLUSTER_ADMIN                          Privilege = 34 // User has cluster_admin auth
 	PRIV_QUERY_MANAGE_SEQUENCES                 Privilege = 35 // CREATE/ALTER/DROP sequences
 	PRIV_QUERY_USE_SEQUENCES                    Privilege = 36 // get/advance sequence values
+	PRIV_SEARCH_CREATE_INDEX                    Privilege = 37 // Ability to run FTS CREATE INDEX statements.
+	PRIV_SEARCH_DROP_INDEX                      Privilege = 38 // Ability to run FTS DROP INDEX statements.
 )
 
 type PrivilegePair struct {

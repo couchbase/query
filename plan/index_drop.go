@@ -72,6 +72,7 @@ func (this *DropIndex) MarshalBase(f func(map[string]interface{})) map[string]in
 	// invert so the default if not present is to fail if not exists
 	r["ifExists"] = !this.node.FailIfNotExists()
 	r["primaryOnly"] = this.node.PrimaryOnly()
+	r["vector"] = this.node.Vector()
 	return r
 }
 
@@ -87,6 +88,7 @@ func (this *DropIndex) UnmarshalJSON(body []byte) error {
 		IndexId     string              `json:"index_id"`
 		IfExists    bool                `json:"ifExists"`
 		PrimaryOnly bool                `json:"primaryOnly"`
+		Vector      bool                `json:"vector"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -99,7 +101,7 @@ func (this *DropIndex) UnmarshalJSON(body []byte) error {
 		_unmarshalled.Scope, _unmarshalled.Keyspace), "")
 	// invert IfExists to obtain FailIfNotExists
 	this.node = algebra.NewDropIndex(ksref, _unmarshalled.Name, _unmarshalled.Using, !_unmarshalled.IfExists,
-		_unmarshalled.PrimaryOnly)
+		_unmarshalled.PrimaryOnly, _unmarshalled.Vector)
 
 	// Build this.index.
 	keyspace, err := datastore.GetKeyspace(ksref.Path().Parts()...)

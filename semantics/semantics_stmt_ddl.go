@@ -16,11 +16,20 @@ import (
 )
 
 func (this *SemChecker) VisitCreatePrimaryIndex(stmt *algebra.CreatePrimaryIndex) (interface{}, error) {
+	if stmt.Using() == datastore.FTS {
+		return nil, errors.NewIndexNotAllowed("Primary index with USING FTS", "")
+	}
 	return nil, stmt.MapExpressions(this)
 }
 
 func (this *SemChecker) VisitCreateIndex(stmt *algebra.CreateIndex) (interface{}, error) {
 	gsi := stmt.Using() == datastore.GSI || stmt.Using() == datastore.DEFAULT
+	if gsi && stmt.Vector() {
+		return nil, errors.NewIndexNotAllowed("Vector index with USING GSI", "")
+	} else if !gsi && stmt.Partition() != nil {
+		return nil, errors.NewIndexNotAllowed("PARTITION BY USING FTS", "")
+	}
+
 	for _, expr := range stmt.Expressions() {
 		if !expr.Indexable() || expr.Value() != nil {
 			return nil, errors.NewCreateIndexNotIndexable(expr.String(), expr.ErrorContext())
@@ -32,7 +41,16 @@ func (this *SemChecker) VisitCreateIndex(stmt *algebra.CreateIndex) (interface{}
 		if _, ok := expr.(*expression.Self); ok {
 			return nil, errors.NewCreateIndexSelf(expr.String(), expr.ErrorContext())
 		}
-		if all, ok := expr.(*expression.All); ok && all.Flatten() {
+		all, ok := expr.(*expression.All)
+		if !gsi {
+			if term.HasAttribute(algebra.IK_MISSING | algebra.IK_ASC | algebra.IK_DESC) {
+				return nil, errors.NewIndexNotAllowed("Index attributes USING FTS", "")
+			} else if ok {
+				return nil, errors.NewIndexNotAllowed("Array Index USING FTS", "")
+			}
+		}
+
+		if ok && all.Flatten() {
 			if term.Attributes() != 0 {
 				return nil, errors.NewCreateIndexAttribute(expr.String(), expr.ErrorContext())
 			}
@@ -60,6 +78,10 @@ func (this *SemChecker) VisitCreateIndex(stmt *algebra.CreateIndex) (interface{}
 }
 
 func (this *SemChecker) VisitDropIndex(stmt *algebra.DropIndex) (interface{}, error) {
+	if stmt.Vector() && stmt.Using() != datastore.FTS {
+		return nil, errors.NewIndexNotAllowed("Vector index with USING GSI", "")
+	}
+
 	return nil, stmt.MapExpressions(this)
 }
 

@@ -105,6 +105,10 @@ func privilegeString(namespace, target, obj string, requested auth.Privilege) (s
 		permission = join5Strings("cluster.", obj, "[", target, "].n1ql.sequences!manage")
 	case auth.PRIV_QUERY_USE_SEQUENCES:
 		permission = join5Strings("cluster.", obj, "[", target, "].n1ql.sequences!execute")
+	case auth.PRIV_SEARCH_CREATE_INDEX:
+		permission = join5Strings("cluster.", obj, "[", target, "].fts!manage")
+	case auth.PRIV_SEARCH_DROP_INDEX:
+		permission = join5Strings("cluster.", obj, "[", target, "].fts!manage")
 	default:
 		return "", fmt.Errorf("Invalid Privileges")
 	}

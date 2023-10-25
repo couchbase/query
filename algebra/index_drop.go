@@ -31,19 +31,21 @@ type DropIndex struct {
 	using           datastore.IndexType `json:"using"`
 	failIfNotExists bool                `json:"failIfNotExists"`
 	primaryOnly     bool                `json:"primaryOnly"`
+	vector          bool                `json:"vector"`
 }
 
 /*
 The function NewDropIndex returns a pointer to the
 DropIndex struct with the input argument values as fields.
 */
-func NewDropIndex(keyspace *KeyspaceRef, name string, using datastore.IndexType, failIfNotExists bool, primary bool) *DropIndex {
+func NewDropIndex(keyspace *KeyspaceRef, name string, using datastore.IndexType, failIfNotExists, primary, vector bool) *DropIndex {
 	rv := &DropIndex{
 		keyspace:        keyspace,
 		name:            name,
 		using:           using,
 		failIfNotExists: failIfNotExists,
 		primaryOnly:     primary,
+		vector:          vector,
 	}
 
 	rv.stmt = rv
@@ -93,7 +95,11 @@ Returns all required privileges.
 func (this *DropIndex) Privileges() (*auth.Privileges, errors.Error) {
 	privs := auth.NewPrivileges()
 	fullName := this.keyspace.FullName()
-	privs.Add(fullName, auth.PRIV_QUERY_DROP_INDEX, auth.PRIV_PROPS_NONE)
+	if this.using == datastore.FTS {
+		privs.Add(fullName, auth.PRIV_SEARCH_DROP_INDEX, auth.PRIV_PROPS_NONE)
+	} else {
+		privs.Add(fullName, auth.PRIV_QUERY_DROP_INDEX, auth.PRIV_PROPS_NONE)
+	}
 	return privs, nil
 }
 
@@ -124,6 +130,10 @@ func (this *DropIndex) FailIfNotExists() bool {
 
 func (this *DropIndex) PrimaryOnly() bool {
 	return this.primaryOnly
+}
+
+func (this *DropIndex) Vector() bool {
+	return this.vector
 }
 
 /*

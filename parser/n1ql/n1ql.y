@@ -347,6 +347,7 @@ column int
 %token VALUE
 %token VALUED
 %token VALUES
+%token VECTOR
 %token VIA
 %token VIEW
 %token WHEN
@@ -475,6 +476,7 @@ column int
 %type <expr>             offset opt_offset
 %type <expr>             dir opt_dir
 %type <b>                opt_if_not_exists opt_if_exists
+%type <b>                opt_vector
 %type <statement>        stmt_body
 %type <statement>        stmt advise explain explain_function prepare execute select_stmt dml_stmt ddl_stmt
 %type <statement>        infer
@@ -2986,16 +2988,28 @@ CREATE PRIMARY INDEX IF NOT EXISTS index_name ON named_keyspace_ref index_partit
     $$ = algebra.NewCreatePrimaryIndex($7, $9, $10, $11, $12, false)
 }
 |
-CREATE INDEX index_name opt_if_not_exists
+CREATE opt_vector INDEX index_name opt_if_not_exists
 ON named_keyspace_ref LPAREN index_terms RPAREN index_partition index_where opt_index_using opt_with_clause
 {
-    $$ = algebra.NewCreateIndex($3, $6, $8, $10, $11, $12, $13, $4)
+    $$ = algebra.NewCreateIndex($4, $7, $9, $11, $12, $13, $14, $5, $2)
 }
 |
-CREATE INDEX IF NOT EXISTS index_name
+CREATE opt_vector INDEX IF NOT EXISTS index_name
 ON named_keyspace_ref LPAREN index_terms RPAREN index_partition index_where opt_index_using opt_with_clause
 {
-    $$ = algebra.NewCreateIndex($6, $8, $10, $12, $13, $14, $15, false)
+    $$ = algebra.NewCreateIndex($7, $9, $11, $13, $14, $15, $16, false, $2)
+}
+;
+
+opt_vector:
+/* empty */
+{
+    $$ = false
+}
+|
+VECTOR
+{
+    $$ = true
 }
 ;
 
@@ -3249,37 +3263,37 @@ INCLUDE MISSING
 drop_index:
 DROP PRIMARY INDEX opt_if_exists ON named_keyspace_ref opt_index_using
 {
-    $$ = algebra.NewDropIndex($6, "#primary", $7, $4, true)
+    $$ = algebra.NewDropIndex($6, "#primary", $7, $4, true, false)
 }
 |
 DROP PRIMARY INDEX index_name opt_if_exists ON named_keyspace_ref opt_index_using
 {
-    $$ = algebra.NewDropIndex($7, $4, $8, $5, true)
+    $$ = algebra.NewDropIndex($7, $4, $8, $5, true, false)
 }
 |
 DROP PRIMARY INDEX IF EXISTS index_name ON named_keyspace_ref opt_index_using
 {
-    $$ = algebra.NewDropIndex($8, $6, $9, false, true)
+    $$ = algebra.NewDropIndex($8, $6, $9, false, true, false)
 }
 |
-DROP INDEX simple_named_keyspace_ref DOT index_name opt_if_exists opt_index_using
+DROP opt_vector INDEX simple_named_keyspace_ref DOT index_name opt_if_exists opt_index_using
 {
-    $$ = algebra.NewDropIndex($3, $5, $7, $6, false)
+    $$ = algebra.NewDropIndex($4, $6, $8, $7, false,$2)
 }
 |
-DROP INDEX IF EXISTS simple_named_keyspace_ref DOT index_name opt_index_using
+DROP opt_vector INDEX IF EXISTS simple_named_keyspace_ref DOT index_name opt_index_using
 {
-    $$ = algebra.NewDropIndex($5, $7, $8, false, false)
+    $$ = algebra.NewDropIndex($6, $8, $9, false, false,$2)
 }
 |
-DROP INDEX index_name opt_if_exists ON named_keyspace_ref opt_index_using
+DROP opt_vector INDEX index_name opt_if_exists ON named_keyspace_ref opt_index_using
 {
-    $$ = algebra.NewDropIndex($6, $3, $7, $4, false)
+    $$ = algebra.NewDropIndex($7, $4, $8, $5, false,$2)
 }
 |
-DROP INDEX IF EXISTS index_name ON named_keyspace_ref opt_index_using
+DROP opt_vector INDEX IF EXISTS index_name ON named_keyspace_ref opt_index_using
 {
-    $$ = algebra.NewDropIndex($7, $5, $8, false, false)
+    $$ = algebra.NewDropIndex($8, $6, $9, false, false,$2)
 }
 ;
 

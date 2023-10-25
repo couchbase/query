@@ -616,8 +616,11 @@ var statement_syntax = map[string][][]string{
 		[]string{"CREATE", "PRIMARY", "INDEX", "[if_not_exists]", "ON", "named_keyspace_ref", "index_partition", "[index_using]", "[with_clause]"},
 		[]string{"CREATE", "PRIMARY", "INDEX", "index_name", "[if_not_exists]", "ON", "named_keyspace_ref", "index_partition", "[index_using]", "[with_clause]"},
 		[]string{"CREATE", "PRIMARY", "INDEX", "IF", "NOT", "EXISTS", "index_name", "ON", "named_keyspace_ref", "index_partition", "[index_using]", "[with_clause]"},
-		[]string{"CREATE", "INDEX", "index_name", "[if_not_exists]", "ON", "named_keyspace_ref", "LPAREN", "index_terms", "RPAREN", "index_partition", "index_where", "[index_using]", "[with_clause]"},
-		[]string{"CREATE", "INDEX", "IF", "NOT", "EXISTS", "index_name", "ON", "named_keyspace_ref", "LPAREN", "index_terms", "RPAREN", "index_partition", "index_where", "[index_using]", "[with_clause]"},
+		[]string{"CREATE", "[vector]", "INDEX", "index_name", "[if_not_exists]", "ON", "named_keyspace_ref", "LPAREN", "index_terms", "RPAREN", "index_partition", "index_where", "[index_using]", "[with_clause]"},
+		[]string{"CREATE", "[vector]", "INDEX", "IF", "NOT", "EXISTS", "index_name", "ON", "named_keyspace_ref", "LPAREN", "index_terms", "RPAREN", "index_partition", "index_where", "[index_using]", "[with_clause]"},
+	},
+	"[vector]": [][]string{
+		[]string{"VECTOR"},
 	},
 	"index_name": [][]string{
 		[]string{"<identifier>"},
@@ -691,10 +694,10 @@ var statement_syntax = map[string][][]string{
 		[]string{"DROP", "PRIMARY", "INDEX", "[if_exists]", "ON", "named_keyspace_ref", "[index_using]"},
 		[]string{"DROP", "PRIMARY", "INDEX", "index_name", "[if_exists]", "ON", "named_keyspace_ref", "[index_using]"},
 		[]string{"DROP", "PRIMARY", "INDEX", "IF", "EXISTS", "index_name", "ON", "named_keyspace_ref", "[index_using]"},
-		[]string{"DROP", "INDEX", "simple_named_keyspace_ref", "DOT", "index_name", "[if_exists]", "[index_using]"},
-		[]string{"DROP", "INDEX", "IF", "EXISTS", "simple_named_keyspace_ref", "DOT", "index_name", "[index_using]"},
-		[]string{"DROP", "INDEX", "index_name", "[if_exists]", "ON", "named_keyspace_ref", "[index_using]"},
-		[]string{"DROP", "INDEX", "IF", "EXISTS", "index_name", "ON", "named_keyspace_ref", "[index_using]"},
+		[]string{"DROP", "[vector]", "INDEX", "simple_named_keyspace_ref", "DOT", "index_name", "[if_exists]", "[index_using]"},
+		[]string{"DROP", "[vector]", "INDEX", "IF", "EXISTS", "simple_named_keyspace_ref", "DOT", "index_name", "[index_using]"},
+		[]string{"DROP", "[vector]", "INDEX", "index_name", "[if_exists]", "ON", "named_keyspace_ref", "[index_using]"},
+		[]string{"DROP", "[vector]", "INDEX", "IF", "EXISTS", "index_name", "ON", "named_keyspace_ref", "[index_using]"},
 	},
 	"[if_exists]": [][]string{
 		[]string{"IF", "EXISTS"},

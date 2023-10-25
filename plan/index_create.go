@@ -10,6 +10,7 @@ package plan
 
 import (
 	"encoding/json"
+
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
@@ -89,6 +90,7 @@ func (this *CreateIndex) MarshalBase(f func(map[string]interface{})) map[string]
 	}
 	// invert so the default if not present is to fail if exists
 	r["ifNotExists"] = !this.node.FailIfExists()
+	r["vector"] = this.node.Vector()
 
 	if f != nil {
 		f(r)
@@ -117,6 +119,7 @@ func (this *CreateIndex) UnmarshalJSON(body []byte) error {
 		Where       string          `json:"where"`
 		With        json.RawMessage `json:"with"`
 		IfNotExists bool            `json:"ifNotExists"`
+		Vector      bool            `json:"vector"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -187,7 +190,8 @@ func (this *CreateIndex) UnmarshalJSON(body []byte) error {
 
 	// invert IfNotExists to obtain FailIfExists
 	this.node = algebra.NewCreateIndex(_unmarshalled.Index, ksref,
-		keys, partition, where, _unmarshalled.Using, with, !_unmarshalled.IfNotExists)
+		keys, partition, where, _unmarshalled.Using, with, !_unmarshalled.IfNotExists,
+		_unmarshalled.Vector)
 	return nil
 }
 

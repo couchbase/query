@@ -42,6 +42,7 @@ type CreateIndex struct {
 	using        datastore.IndexType   `json:"using"`
 	with         value.Value           `json:"with"`
 	failIfExists bool                  `json:"failIfExists"`
+	vector       bool                  `json:"vector"`
 }
 
 /*
@@ -49,7 +50,7 @@ The function NewCreateIndex returns a pointer to the
 CreateIndex struct with the input argument values as fields.
 */
 func NewCreateIndex(name string, keyspace *KeyspaceRef, keys IndexKeyTerms, partition *IndexPartitionTerm,
-	where expression.Expression, using datastore.IndexType, with value.Value, failIfExists bool) *CreateIndex {
+	where expression.Expression, using datastore.IndexType, with value.Value, failIfExists, vector bool) *CreateIndex {
 	rv := &CreateIndex{
 		name:         name,
 		keyspace:     keyspace,
@@ -59,6 +60,7 @@ func NewCreateIndex(name string, keyspace *KeyspaceRef, keys IndexKeyTerms, part
 		using:        using,
 		with:         with,
 		failIfExists: failIfExists,
+		vector:       vector,
 	}
 
 	rv.stmt = rv
@@ -139,7 +141,11 @@ Returns all required privileges.
 func (this *CreateIndex) Privileges() (*auth.Privileges, errors.Error) {
 	privs := auth.NewPrivileges()
 	fullName := this.keyspace.FullName()
-	privs.Add(fullName, auth.PRIV_QUERY_CREATE_INDEX, auth.PRIV_PROPS_NONE)
+	if this.using == datastore.FTS {
+		privs.Add(fullName, auth.PRIV_SEARCH_CREATE_INDEX, auth.PRIV_PROPS_NONE)
+	} else {
+		privs.Add(fullName, auth.PRIV_QUERY_CREATE_INDEX, auth.PRIV_PROPS_NONE)
+	}
 
 	for _, expr := range this.Expressions() {
 		privs.AddAll(expr.Privileges())
@@ -198,6 +204,10 @@ func (this *CreateIndex) With() value.Value {
 
 func (this *CreateIndex) FailIfExists() bool {
 	return this.failIfExists
+}
+
+func (this *CreateIndex) Vector() bool {
+	return this.vector
 }
 
 func (this *CreateIndex) SeekKeys() expression.Expressions {

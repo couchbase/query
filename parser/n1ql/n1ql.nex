@@ -381,6 +381,7 @@
 /[vV][aA][lL][uU][eE]/         { lval.s = yylex.Text(); yylex.curOffset += 5; return VALUE }
 /[vV][aA][lL][uU][eE][dD]/     { lval.s = yylex.Text(); yylex.curOffset += 6; return VALUED }
 /[vV][aA][lL][uU][eE][sS]/     { lval.s = yylex.Text(); yylex.curOffset += 6; return VALUES }
+/[vV][eE][cC][tT][oO][rR]/     { lval.s = yylex.Text(); yylex.curOffset += 6; return VECTOR }
 /[vV][iI][aA]/                 { lval.s = yylex.Text(); yylex.curOffset += 3; return VIA }
 /[vV][iI][eE][wW]/             { lval.s = yylex.Text(); yylex.curOffset += 4; return VIEW }
 /[wW][hH][eE][nN]/             { lval.s = yylex.Text(); yylex.curOffset += 4; return WHEN }
