@@ -403,43 +403,111 @@ func stringifyAPIAR(entry n1qlAuditApiRequestEvent) string {
 	return str
 }
 
+// the ...INDEX... events are there for completeness as they are used internally and not currently audited
+const (
+	API_DO_NOT_AUDIT                     = 0
+	API_STMT_SELECT                      = 28672
+	API_STMT_EXPLAIN                     = 28673
+	API_STMT_PREPARE                     = 28674
+	API_STMT_INFER                       = 28675
+	API_STMT_INSERT                      = 28676
+	API_STMT_UPSERT                      = 28677
+	API_STMT_DELETE                      = 28678
+	API_STMT_UPDATE                      = 28679
+	API_STMT_MERGE                       = 28680
+	API_STMT_CREATE_INDEX                = 28681
+	API_STMT_DROP_INDEX                  = 28682
+	API_STMT_ALTER_INDEX                 = 28683
+	API_STMT_BUILD_INDEX                 = 28684
+	API_STMT_GRANT_ROLE                  = 28685
+	API_STMT_REVOKE_ROLE                 = 28686
+	API_STMT_CREATE_PRIMARY_INDEX        = 28688
+	API_ADMIN_STATS                      = 28689
+	API_ADMIN_VITALS                     = 28690
+	API_ADMIN_PREPAREDS                  = 28691
+	API_ADMIN_ACTIVE_REQUESTS            = 28692
+	API_ADMIN_INDEXES_PREPAREDS          = 28693
+	API_ADMIN_INDEXES_ACTIVE_REQUESTS    = 28694
+	API_ADMIN_INDEXES_COMPLETED_REQUESTS = 28695
+	API_ADMIN_PING                       = 28697
+	API_ADMIN_CONFIG                     = 28698
+	API_ADMIN_SSL_CERT                   = 28699
+	API_ADMIN_SETTINGS                   = 28700
+	API_ADMIN_CLUSTERS                   = 28701
+	API_ADMIN_COMPLETED_REQUESTS         = 28702
+	API_ADMIN_FUNCTIONS                  = 28704
+	API_ADMIN_INDEXES_FUNCTIONS          = 28705
+	API_STMT_CREATE_FUNCTION             = 28706
+	API_STMT_DROP_FUNCTION               = 28707
+	API_STMT_EXECUTE_FUNCTION            = 28708
+	API_ADMIN_TASKS                      = 28709
+	API_ADMIN_INDEXES_TASKS              = 28710
+	API_ADMIN_DICTIONARY                 = 28711
+	API_ADMIN_INDEXES_DICTIONARY         = 28712
+	API_STMT_CREATE_SCOPE                = 28713
+	API_STMT_DROP_SCOPE                  = 28714
+	API_STMT_CREATE_COLLECTION           = 28715
+	API_STMT_DROP_COLLECTION             = 28716
+	API_STMT_FLUSH_COLLECTION            = 28717
+	API_STMT_UPDATE_STATISTICS           = 28718
+	API_STMT_ADVISE                      = 28719
+	API_STMT_START_TRANSACTION           = 28720
+	API_STMT_COMMIT                      = 28721
+	API_STMT_ROLLBACK                    = 28722
+	API_STMT_ROLLBACK_SAVEPOINT          = 28723
+	API_STMT_SET_TRANSACTION_ISOLATION   = 28724
+	API_STMT_SAVEPOINT                   = 28725
+	API_ADMIN_TRANSACTIONS               = 28726
+	API_ADMIN_INDEXES_TRANSACTIONS       = 28727
+	API_ADMIN_BACKUP                     = 28728
+	API_ADMIN_SHUTDOWN                   = 28729
+	API_ADMIN_GC                         = 28730
+	API_ADMIN_FFDC                       = 28731
+	API_ADMIN_STREAM_LOG                 = 28732
+	API_ADMIN_SEQUENCES                  = 28733
+	API_STMT_CREATE_SEQUENCE             = 28734
+	API_STMT_ALTER_SEQUENCE              = 28735
+	API_STMT_DROP_SEQUENCE               = 28736
+	API_ADMIN_MIGRATION                  = 28737
+)
+
 // Event types are described in /query/etc/audit_descriptor.json
 var _EVENT_TYPE_MAP = map[string]uint32{
-	"SELECT":                    28672,
-	"EXPLAIN":                   28673,
-	"PREPARE":                   28674,
-	"INFER":                     28675,
-	"INSERT":                    28676,
-	"UPSERT":                    28677,
-	"DELETE":                    28678,
-	"UPDATE":                    28679,
-	"MERGE":                     28680,
-	"CREATE_INDEX":              28681,
-	"DROP_INDEX":                28682,
-	"ALTER_INDEX":               28683,
-	"BUILD_INDEX":               28684,
-	"GRANT_ROLE":                28685,
-	"REVOKE_ROLE":               28686,
-	"CREATE_PRIMARY_INDEX":      28688,
-	"CREATE_FUNCTION":           28706,
-	"DROP_FUNCTION":             28707,
-	"EXECUTE_FUNCTION":          28708,
-	"CREATE_SCOPE":              28713,
-	"DROP_SCOPE":                28714,
-	"CREATE_COLLECTION":         28715,
-	"DROP_COLLECTION":           28716,
-	"FLUSH_COLLECTION":          28717,
-	"UPDATE_STATISTICS":         28718,
-	"ADVISE":                    28719,
-	"START_TRANSACTION":         28720,
-	"COMMIT":                    28721,
-	"ROLLBACK":                  28722,
-	"ROLLBACK_SAVEPOINT":        28723,
-	"SET_TRANSACTION_ISOLATION": 28724,
-	"SAVEPOINT":                 28725,
-	"CREATE_SEQUENCE":           28734,
-	"ALTER_SEQUENCE":            28735,
-	"DROP_SEQUENCE":             28736,
+	"SELECT":                    API_STMT_SELECT,
+	"EXPLAIN":                   API_STMT_EXPLAIN,
+	"PREPARE":                   API_STMT_PREPARE,
+	"INFER":                     API_STMT_INFER,
+	"INSERT":                    API_STMT_INSERT,
+	"UPSERT":                    API_STMT_UPSERT,
+	"DELETE":                    API_STMT_DELETE,
+	"UPDATE":                    API_STMT_UPDATE,
+	"MERGE":                     API_STMT_MERGE,
+	"CREATE_INDEX":              API_STMT_CREATE_INDEX,
+	"DROP_INDEX":                API_STMT_DROP_INDEX,
+	"ALTER_INDEX":               API_STMT_ALTER_INDEX,
+	"BUILD_INDEX":               API_STMT_BUILD_INDEX,
+	"GRANT_ROLE":                API_STMT_GRANT_ROLE,
+	"REVOKE_ROLE":               API_STMT_REVOKE_ROLE,
+	"CREATE_PRIMARY_INDEX":      API_STMT_CREATE_PRIMARY_INDEX,
+	"CREATE_FUNCTION":           API_STMT_CREATE_FUNCTION,
+	"DROP_FUNCTION":             API_STMT_DROP_FUNCTION,
+	"EXECUTE_FUNCTION":          API_STMT_EXECUTE_FUNCTION,
+	"CREATE_SCOPE":              API_STMT_CREATE_SCOPE,
+	"DROP_SCOPE":                API_STMT_DROP_SCOPE,
+	"CREATE_COLLECTION":         API_STMT_CREATE_COLLECTION,
+	"DROP_COLLECTION":           API_STMT_DROP_COLLECTION,
+	"FLUSH_COLLECTION":          API_STMT_FLUSH_COLLECTION,
+	"UPDATE_STATISTICS":         API_STMT_UPDATE_STATISTICS,
+	"ADVISE":                    API_STMT_ADVISE,
+	"START_TRANSACTION":         API_STMT_START_TRANSACTION,
+	"COMMIT":                    API_STMT_COMMIT,
+	"ROLLBACK":                  API_STMT_ROLLBACK,
+	"ROLLBACK_SAVEPOINT":        API_STMT_ROLLBACK_SAVEPOINT,
+	"SET_TRANSACTION_ISOLATION": API_STMT_SET_TRANSACTION_ISOLATION,
+	"SAVEPOINT":                 API_STMT_SAVEPOINT,
+	"CREATE_SEQUENCE":           API_STMT_CREATE_SEQUENCE,
+	"ALTER_SEQUENCE":            API_STMT_ALTER_SEQUENCE,
+	"DROP_SEQUENCE":             API_STMT_DROP_SEQUENCE,
 }
 
 func Submit(event Auditable) {
@@ -485,39 +553,6 @@ func submitAuditEntries(entries []auditQueueEntry) {
 		_AUDITOR.submit(entry)
 	}
 }
-
-// the ...INDEX... events are there for completeness as they are used internally and not currently audited
-const (
-	API_DO_NOT_AUDIT                     = 0
-	API_ADMIN_STATS                      = 28689
-	API_ADMIN_VITALS                     = 28690
-	API_ADMIN_PREPAREDS                  = 28691
-	API_ADMIN_ACTIVE_REQUESTS            = 28692
-	API_ADMIN_INDEXES_PREPAREDS          = 28693
-	API_ADMIN_INDEXES_ACTIVE_REQUESTS    = 28694
-	API_ADMIN_INDEXES_COMPLETED_REQUESTS = 28695
-	API_ADMIN_PING                       = 28697
-	API_ADMIN_CONFIG                     = 28698
-	API_ADMIN_SSL_CERT                   = 28699
-	API_ADMIN_SETTINGS                   = 28700
-	API_ADMIN_CLUSTERS                   = 28701
-	API_ADMIN_COMPLETED_REQUESTS         = 28702
-	API_ADMIN_FUNCTIONS                  = 28704
-	API_ADMIN_INDEXES_FUNCTIONS          = 28705
-	API_ADMIN_TASKS                      = 28709
-	API_ADMIN_INDEXES_TASKS              = 28710
-	API_ADMIN_DICTIONARY                 = 28711
-	API_ADMIN_INDEXES_DICTIONARY         = 28712
-	API_ADMIN_TRANSACTIONS               = 28726
-	API_ADMIN_INDEXES_TRANSACTIONS       = 28727
-	API_ADMIN_BACKUP                     = 28728
-	API_ADMIN_SHUTDOWN                   = 28729
-	API_ADMIN_GC                         = 28730
-	API_ADMIN_FFDC                       = 28731
-	API_ADMIN_STREAM_LOG                 = 28732
-	API_ADMIN_SEQUENCES                  = 28733
-	API_ADMIN_MIGRATION                  = 28737
-)
 
 func SubmitApiRequest(event *ApiAuditFields) {
 	if _AUDITOR == nil {
