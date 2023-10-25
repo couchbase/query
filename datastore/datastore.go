@@ -363,70 +363,182 @@ const (
 type Migrator func(string)
 type AbortFn func() (string, errors.Error)
 
-var migrators map[Migration][]Migrator
-var migratorsLock sync.RWMutex
-var abortFuncs map[Migration][]AbortFn
+var migrationLock sync.RWMutex
 
-func RegisterMigrationAbort(abort AbortFn, t Migration) {
-	migratorsLock.Lock()
-	if abortFuncs == nil {
-		abortFuncs = make(map[Migration][]AbortFn)
-	}
-	e := abortFuncs[t]
-	if e != nil {
-		abortFuncs[t] = append(e, abort)
-	} else {
-		abortFuncs[t] = append(make([]AbortFn, 0, 3), abort)
-	}
-	migratorsLock.Unlock()
+var migrations map[Migration]*migrationType
+
+type migrationType struct {
+	mtype Migration
+	done  bool
+	elems map[string]*migrationElem
 }
 
-func RegisterMigrator(f Migrator, t Migration) {
-	migratorsLock.Lock()
-	if migrators == nil {
-		migrators = make(map[Migration][]Migrator)
+type migrationState int
+
+const (
+	_MIGRATION_UNKNOWN = migrationState(iota)
+	_MIGRATION_SUCCESS
+	_MIGRATION_ABORT
+)
+
+type migrationElem struct {
+	sync.RWMutex
+	name     string
+	state    migrationState
+	migrator Migrator
+	abort    AbortFn
+}
+
+func getMigrationElem(what string, t Migration, alloc bool) *migrationElem {
+	migrationLock.Lock()
+	if migrations == nil {
+		migrations = make(map[Migration]*migrationType)
 	}
-	e := migrators[t]
-	if e != nil {
-		migrators[t] = append(e, f)
-	} else {
-		migrators[t] = append(make([]Migrator, 0, 3), f)
+	mt := migrations[t]
+	if mt == nil && alloc {
+		mt = &migrationType{
+			mtype: t,
+			elems: make(map[string]*migrationElem, 4),
+		}
+		migrations[t] = mt
 	}
-	migratorsLock.Unlock()
+	var me *migrationElem
+	if mt != nil {
+		me = mt.elems[what]
+		if me == nil && alloc {
+			me = &migrationElem{
+				name:  what,
+				state: _MIGRATION_UNKNOWN,
+			}
+			mt.elems[what] = me
+		}
+	}
+	migrationLock.Unlock()
+	return me
+}
+
+func RegisterMigrationAbort(abort AbortFn, what string, t Migration) {
+	// getMigrationElem() will always return a valid element when alloc is true
+	me := getMigrationElem(what, t, true)
+	me.Lock()
+	me.abort = abort
+	me.Unlock()
+}
+
+func RegisterMigrator(f Migrator, what string, t Migration) {
+	// getMigrationElem() will always return a valid element when alloc is true
+	me := getMigrationElem(what, t, true)
+	me.Lock()
+	me.migrator = f
+	me.Unlock()
 }
 
 func ExecuteMigrators(b string, t Migration) {
-	migratorsLock.RLock()
-	s := migrators[t]
-	if s != nil {
-		for _, f := range s {
-			go f(b)
-		}
-	}
-	migratorsLock.RUnlock()
-}
-
-func AbortMigration() (string, errors.Error) {
-	if len(abortFuncs) == 0 {
-		return "Migration abort: Nothing to abort.", nil
-	}
-	var b strings.Builder
-	var res string
-	var err errors.Error
-	migratorsLock.RLock()
-mig:
-	for _, funcs := range abortFuncs {
-		for i := range funcs {
-			res, err = funcs[i]()
-			if err != nil {
-				break mig
-			} else if res != "" {
-				b.WriteString(res)
+	migrationLock.RLock()
+	mt := migrations[t]
+	if mt != nil {
+		for _, me := range mt.elems {
+			if me != nil {
+				me.RLock()
+				if me.migrator != nil {
+					go me.migrator(b)
+				}
+				me.RUnlock()
 			}
 		}
 	}
-	migratorsLock.RUnlock()
-	return b.String(), err
+	migrationLock.RUnlock()
+}
+
+func AbortMigration() (string, errors.Error) {
+	var b strings.Builder
+	var res string
+	var err errors.Error
+	found := false
+	migrationLock.RLock()
+mig:
+	for _, mt := range migrations {
+		if mt == nil {
+			continue
+		}
+		for _, me := range mt.elems {
+			if me != nil {
+				me.RLock()
+				if me.abort != nil {
+					found = true
+					res, err = me.abort()
+					if err == nil && res != "" {
+						b.WriteString(res)
+					}
+				}
+				me.RUnlock()
+				if err != nil {
+					break mig
+				}
+			}
+		}
+	}
+	migrationLock.RUnlock()
+	if found {
+		return b.String(), err
+	}
+	return "Migration abort: Nothing to abort.", nil
+}
+
+func MarkMigrationComplete(success bool, what string, t Migration) {
+	me := getMigrationElem(what, t, false)
+	if me != nil {
+		changed := false
+		me.Lock()
+		if !(me.state == _MIGRATION_SUCCESS || me.state == _MIGRATION_ABORT) {
+			if success {
+				me.state = _MIGRATION_SUCCESS
+			} else {
+				me.state = _MIGRATION_ABORT
+			}
+			changed = true
+		}
+		me.Unlock()
+		if changed {
+			checkMigrationDone(t)
+		}
+	}
+}
+
+func checkMigrationDone(t Migration) {
+	migrationLock.Lock()
+	mt := migrations[t]
+	if mt != nil && !mt.done {
+		done := true
+		for _, me := range mt.elems {
+			if me == nil {
+				continue
+			}
+			me.RLock()
+			if !(me.state == _MIGRATION_SUCCESS || me.state == _MIGRATION_ABORT) {
+				done = false
+			}
+			me.RUnlock()
+			if !done {
+				break
+			}
+		}
+		if done {
+			mt.done = true
+		}
+	}
+	migrationLock.Unlock()
+}
+
+func IsMigrationComplete(t Migration) bool {
+	complete := true
+	migrationLock.RLock()
+	mt := migrations[t]
+	if mt != nil {
+		complete = mt.done
+	}
+	migrationLock.RUnlock()
+	return complete
 }
 
 // Globally accessible Datastore instance

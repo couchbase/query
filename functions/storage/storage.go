@@ -89,7 +89,7 @@ func Migrate() {
 		return
 	}
 
-	datastore.RegisterMigrationAbort(abortMigration, datastore.HAS_SYSTEM_COLLECTION)
+	datastore.RegisterMigrationAbort(abortMigration, _UDF_MIGRATION, datastore.HAS_SYSTEM_COLLECTION)
 
 	countDownStarted = time.Now()
 	lastActivity = time.Now()
@@ -101,6 +101,7 @@ func Migrate() {
 	if !ok || ds == nil {
 		logging.Warnf("UDF migration: Migration not done - datastore does not support scanning buckets directly")
 		migrating = _MIGRATED
+		datastore.MarkMigrationComplete(true, _UDF_MIGRATION, datastore.HAS_SYSTEM_COLLECTION)
 		return
 	}
 
@@ -142,7 +143,7 @@ func Migrate() {
 			migratingLock.Unlock()
 			return
 		}
-	}, datastore.HAS_SYSTEM_COLLECTION)
+	}, _UDF_MIGRATION, datastore.HAS_SYSTEM_COLLECTION)
 
 	go checkRetryMigration()
 }
@@ -299,6 +300,7 @@ func checkSetComplete() bool {
 		} else {
 			migrating = _ABORTED
 		}
+		datastore.MarkMigrationComplete(success, _UDF_MIGRATION, datastore.HAS_SYSTEM_COLLECTION)
 	}
 	return complete
 }
@@ -758,6 +760,7 @@ func checkMigrationComplete() bool {
 	if complete {
 		migration.Complete(_UDF_MIGRATION, true)
 		migrating = _MIGRATED
+		datastore.MarkMigrationComplete(true, _UDF_MIGRATION, datastore.HAS_SYSTEM_COLLECTION)
 	}
 
 	return complete
@@ -802,6 +805,7 @@ func UseSystemStorage() bool {
 
 	// mark migrated for those migrations executed by another node
 	if migrating != _MIGRATED && migrating != _ABORTED {
+		changed := false
 		migratingLock.Lock()
 		if migrating != _MIGRATED && migrating != _ABORTED {
 			if success {
@@ -809,8 +813,12 @@ func UseSystemStorage() bool {
 			} else {
 				migrating = _ABORTED
 			}
+			changed = true
 		}
 		migratingLock.Unlock()
+		if changed {
+			datastore.MarkMigrationComplete(success, _UDF_MIGRATION, datastore.HAS_SYSTEM_COLLECTION)
+		}
 	}
 	return true
 }
@@ -935,6 +943,7 @@ func abortMigration() (string, errors.Error) {
 
 	migration.Complete(_UDF_MIGRATION, false)
 	migrating = _ABORTED
+	datastore.MarkMigrationComplete(false, _UDF_MIGRATION, datastore.HAS_SYSTEM_COLLECTION)
 
 	res.WriteString("UDF migration: Aborted.\n")
 	return res.String(), nil

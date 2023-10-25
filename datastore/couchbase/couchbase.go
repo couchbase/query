@@ -3065,6 +3065,10 @@ const _BATCH_SIZE = 512
 
 func cleanupSystemCollection(namespace string, bucket string) {
 
+	if !datastore.IsMigrationComplete(datastore.HAS_SYSTEM_COLLECTION) {
+		return
+	}
+
 	processResult := func(key string) {
 		if strings.HasPrefix(key, "seq::") {
 			sequences.CleanupCacheEntry(namespace, bucket, key)
