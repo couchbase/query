@@ -115,6 +115,10 @@ func Migrate() {
 		}
 	})
 
+	migrationsLock.Lock()
+	migrations = make(map[string]*migrateBucket, bucketCount)
+	migrationsLock.Unlock()
+
 	// if all the buckets appear migrated attempt migration now (including when bucketCount == 0)
 	if bucketCount == newBucketCount {
 		migrating = _MIGRATING
@@ -123,10 +127,6 @@ func Migrate() {
 
 		return
 	}
-
-	migrationsLock.Lock()
-	migrations = make(map[string]*migrateBucket, bucketCount)
-	migrationsLock.Unlock()
 
 	datastore.RegisterMigrator(func(b string) {
 		// At least one bucket has the new _query collection
