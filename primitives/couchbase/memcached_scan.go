@@ -621,11 +621,11 @@ func (this *seqScan) coordinator(b *Bucket, scanTimeout time.Duration) {
 					// first server that's in the list
 					for n := 0; n < len(vblist[vb]); n++ {
 						server = vblist[vb][n]
-						if server < numServers {
+						if server >= 0 && server < numServers {
 							break
 						}
 					}
-					if server >= numServers {
+					if server >= numServers || server < 0 {
 						logging.Severef("Sequential scan coordinator: [%08x] Invalid server for VB (%d): %d (max valid: %d)",
 							this.scanNum, vb, server, numServers-1)
 						this.reportError(qerrors.NewSSError(qerrors.E_SS_FAILED))
