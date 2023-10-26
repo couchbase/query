@@ -728,6 +728,23 @@ func createPrimaryIndex(ds datastore.Datastore, bucketName string) {
 	}
 }
 
+func migrationsComplete() bool {
+	complete := true
+	migrationsLock.Lock()
+	for _, bucket := range migrations {
+		bucket.Lock()
+		if bucket.state != _BUCKET_MIGRATED {
+			complete = false
+		}
+		bucket.Unlock()
+		if !complete {
+			break
+		}
+	}
+	migrationsLock.Unlock()
+	return complete
+}
+
 func checkMigrationComplete() bool {
 	migratingLock.Lock()
 	defer migratingLock.Unlock()
@@ -759,18 +776,20 @@ func checkMigrationComplete() bool {
 			// no-op, ignore this error which indicates migration not complete
 		default:
 			logging.Errorf("UDF migration: Error during scan of metakv - %v", err1)
-			return false
 		}
+		return false
 	}
 
-	if complete {
-		migration.Complete(_UDF_MIGRATION, true)
-		migrating = _MIGRATED
-		datastore.MarkMigrationComplete(true, _UDF_MIGRATION, datastore.HAS_SYSTEM_COLLECTION)
-		createPrimaryIndexes()
+	if !complete || !migrationsComplete() {
+		return false
 	}
 
-	return complete
+	migration.Complete(_UDF_MIGRATION, true)
+	migrating = _MIGRATED
+	datastore.MarkMigrationComplete(true, _UDF_MIGRATION, datastore.HAS_SYSTEM_COLLECTION)
+	createPrimaryIndexes()
+
+	return true
 }
 
 // if retrying migration, since we go from the migrations map, make sure all buckets are in the map
