@@ -1250,6 +1250,7 @@ func (p *namespace) keyspaceByName(name string) (*keyspace, errors.Error) {
 	p.lock.Lock()
 	version := p.version // used to detect pool refresh whilst we're busy here
 
+	runCleanup := false
 	refresh := false
 	entry = p.keyspaceCache[name]
 	if entry == nil {
@@ -1258,6 +1259,7 @@ func (p *namespace) keyspaceByName(name string) (*keyspace, errors.Error) {
 		// all previously prepared statements are still good
 		entry = &keyspaceEntry{}
 		p.keyspaceCache[name] = entry
+		runCleanup = true
 	} else if entry.cbKeyspace != nil && entry.cbKeyspace.flags&(_NEEDS_REFRESH|_DELETED) != 0 {
 
 		// a keyspace that has been deleted or needs refreshing causes a
@@ -1318,7 +1320,10 @@ func (p *namespace) keyspaceByName(name string) (*keyspace, errors.Error) {
 		entry.cbKeyspace = k
 		p.lock.Unlock()
 		// once successfully loaded we can check if we need to clean-up after external actions
-		go cleanupSystemCollection(p.name, name)
+		// this is only needed when loading a keyspace that wasn't previously loaded
+		if runCleanup {
+			go cleanupSystemCollection(p.name, name)
+		}
 		return k, nil
 	}
 }
