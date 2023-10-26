@@ -531,7 +531,7 @@ func checkMigrationDone(t Migration) {
 }
 
 func IsMigrationComplete(t Migration) bool {
-	complete := true
+	complete := false
 	migrationLock.RLock()
 	mt := migrations[t]
 	if mt != nil {
