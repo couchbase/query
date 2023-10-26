@@ -11,6 +11,11 @@
 package command
 
 var statement_syntax = map[string][][]string{
+	"permitted_identifiers": [][]string{
+		[]string{"<identifier>"},
+		[]string{"DEFAULT"},
+		[]string{"USER"},
+	},
 	"statements": [][]string{
 		[]string{"advise"},
 		[]string{"explain"},
@@ -49,7 +54,7 @@ var statement_syntax = map[string][][]string{
 		[]string{"FORCE"},
 	},
 	"[name]": [][]string{
-		[]string{"<identifier>", "from_or_as"},
+		[]string{"permitted_identifiers", "from_or_as"},
 		[]string{"STR", "from_or_as"},
 	},
 	"from_or_as": [][]string{
@@ -164,15 +169,15 @@ var statement_syntax = map[string][][]string{
 		[]string{"optim_hints", "optim_hint"},
 	},
 	"optim_hint": [][]string{
-		[]string{"<identifier>"},
-		[]string{"<identifier>", "LPAREN", "[hint_args]", "RPAREN"},
+		[]string{"permitted_identifiers"},
+		[]string{"permitted_identifiers", "LPAREN", "[hint_args]", "RPAREN"},
 		[]string{"INDEX", "LPAREN", "[hint_args]", "RPAREN"},
 	},
 	"hint_args": [][]string{
-		[]string{"<identifier>"},
-		[]string{"<identifier>", "DIV", "BUILD"},
-		[]string{"<identifier>", "DIV", "PROBE"},
-		[]string{"hint_args", "<identifier>"},
+		[]string{"permitted_identifiers"},
+		[]string{"permitted_identifiers", "DIV", "BUILD"},
+		[]string{"permitted_identifiers", "DIV", "PROBE"},
+		[]string{"hint_args", "permitted_identifiers"},
 	},
 	"projection": [][]string{
 		[]string{"[quantifier]", "projects", "[exclude]"},
@@ -204,7 +209,7 @@ var statement_syntax = map[string][][]string{
 		[]string{"AS", "alias"},
 	},
 	"alias": [][]string{
-		[]string{"<identifier>"},
+		[]string{"permitted_identifiers"},
 	},
 	"from": [][]string{
 		[]string{"FROM", "from_terms"},
@@ -218,12 +223,12 @@ var statement_syntax = map[string][][]string{
 		[]string{"simple_from_term"},
 		[]string{"from_term", "[join_type]", "JOIN", "simple_from_term", "on_keys"},
 		[]string{"from_term", "[join_type]", "JOIN", "LATERAL", "simple_from_term", "on_keys"},
-		[]string{"from_term", "[join_type]", "JOIN", "simple_from_term", "on_key", "FOR", "<identifier>"},
-		[]string{"from_term", "[join_type]", "JOIN", "LATERAL", "simple_from_term", "on_key", "FOR", "<identifier>"},
+		[]string{"from_term", "[join_type]", "JOIN", "simple_from_term", "on_key", "FOR", "permitted_identifiers"},
+		[]string{"from_term", "[join_type]", "JOIN", "LATERAL", "simple_from_term", "on_key", "FOR", "permitted_identifiers"},
 		[]string{"from_term", "[join_type]", "NEST", "simple_from_term", "on_keys"},
 		[]string{"from_term", "[join_type]", "NEST", "LATERAL", "simple_from_term", "on_keys"},
-		[]string{"from_term", "[join_type]", "NEST", "simple_from_term", "on_key", "FOR", "<identifier>"},
-		[]string{"from_term", "[join_type]", "NEST", "LATERAL", "simple_from_term", "on_key", "FOR", "<identifier>"},
+		[]string{"from_term", "[join_type]", "NEST", "simple_from_term", "on_key", "FOR", "permitted_identifiers"},
+		[]string{"from_term", "[join_type]", "NEST", "LATERAL", "simple_from_term", "on_key", "FOR", "permitted_identifiers"},
 		[]string{"from_term", "[join_type]", "unnest", "expression", "[as_alias]"},
 		[]string{"from_term", "[join_type]", "JOIN", "simple_from_term", "ON", "expression"},
 		[]string{"from_term", "[join_type]", "JOIN", "LATERAL", "simple_from_term", "ON", "expression"},
@@ -255,10 +260,10 @@ var statement_syntax = map[string][][]string{
 		[]string{"<namespace-identifier>", "COLON"},
 	},
 	"path_part": [][]string{
-		[]string{"<identifier>"},
+		[]string{"permitted_identifiers"},
 	},
 	"keyspace_name": [][]string{
-		[]string{"<identifier>"},
+		[]string{"permitted_identifiers"},
 	},
 	"[use]": [][]string{
 		[]string{"USE", "use_options"},
@@ -363,7 +368,7 @@ var statement_syntax = map[string][][]string{
 		[]string{"HAVING", "expression"},
 	},
 	"[group_as]": [][]string{
-		[]string{"GROUP", "AS", "<identifier>"},
+		[]string{"GROUP", "AS", "permitted_identifiers"},
 	},
 	"order_by": [][]string{
 		[]string{"ORDER", "BY", "sort_terms"},
@@ -503,7 +508,7 @@ var statement_syntax = map[string][][]string{
 		[]string{"variable", "COLON", "variable", "WITHIN", "expression"},
 	},
 	"variable": [][]string{
-		[]string{"<identifier>"},
+		[]string{"permitted_identifiers"},
 	},
 	"[when]": [][]string{
 		[]string{"WHEN", "expression"},
@@ -559,7 +564,7 @@ var statement_syntax = map[string][][]string{
 		[]string{"role_list", "COMMA", "role_name"},
 	},
 	"role_name": [][]string{
-		[]string{"<identifier>"},
+		[]string{"permitted_identifiers"},
 		[]string{"SELECT"},
 		[]string{"INSERT"},
 		[]string{"UPDATE"},
@@ -582,8 +587,8 @@ var statement_syntax = map[string][][]string{
 		[]string{"user_list", "COMMA", "user"},
 	},
 	"user": [][]string{
-		[]string{"<identifier>"},
-		[]string{"<identifier>", "COLON", "<identifier>"},
+		[]string{"permitted_identifiers"},
+		[]string{"permitted_identifiers", "COLON", "permitted_identifiers"},
 	},
 	"revoke_role": [][]string{
 		[]string{"REVOKE", "role_list", "FROM", "user_list"},
@@ -623,7 +628,7 @@ var statement_syntax = map[string][][]string{
 		[]string{"VECTOR"},
 	},
 	"index_name": [][]string{
-		[]string{"<identifier>"},
+		[]string{"permitted_identifiers"},
 	},
 	"[if_not_exists]": [][]string{
 		[]string{"IF", "NOT", "EXISTS"},
@@ -733,8 +738,8 @@ var statement_syntax = map[string][][]string{
 		[]string{"parameter_terms"},
 	},
 	"parameter_terms": [][]string{
-		[]string{"<identifier>"},
-		[]string{"parameter_terms", "COMMA", "<identifier>"},
+		[]string{"permitted_identifiers"},
+		[]string{"parameter_terms", "COMMA", "permitted_identifiers"},
 	},
 	"func_body": [][]string{
 		[]string{"LBRACE", "expression", "RBRACE"},
@@ -777,15 +782,15 @@ var statement_syntax = map[string][][]string{
 		[]string{"index_term_expr"},
 	},
 	"path": [][]string{
-		[]string{"<identifier>"},
-		[]string{"path", "DOT", "<identifier>"},
+		[]string{"permitted_identifiers"},
+		[]string{"path", "DOT", "permitted_identifiers"},
 		[]string{"path", "DOT", "ident_icase"},
 		[]string{"path", "DOT", "LBRACKET", "expression", "RBRACKET"},
 		[]string{"path", "DOT", "LBRACKET", "expression", "RBRACKET_ICASE"},
 		[]string{"path", "LBRACKET", "expression", "RBRACKET"},
 	},
 	"ident": [][]string{
-		[]string{"<identifier>"},
+		[]string{"permitted_identifiers"},
 	},
 	"ident_icase": [][]string{
 		[]string{"<identifier>i"},
@@ -852,7 +857,7 @@ var statement_syntax = map[string][][]string{
 		[]string{"literal"},
 		[]string{"sequence_expr"},
 		[]string{"construction_expr"},
-		[]string{"<identifier>"},
+		[]string{"permitted_identifiers"},
 		[]string{"<identifier>i"},
 		[]string{"SELF"},
 		[]string{"param_expr"},
@@ -864,8 +869,8 @@ var statement_syntax = map[string][][]string{
 	},
 	"b_expr": [][]string{
 		[]string{"c_expr"},
-		[]string{"b_expr", "DOT", "<identifier>", "LPAREN", "[exprs]", "RPAREN"},
-		[]string{"b_expr", "DOT", "<identifier>"},
+		[]string{"b_expr", "DOT", "permitted_identifiers", "LPAREN", "[exprs]", "RPAREN"},
+		[]string{"b_expr", "DOT", "permitted_identifiers"},
 		[]string{"b_expr", "DOT", "ident_icase"},
 		[]string{"b_expr", "DOT", "LBRACKET", "expression", "RBRACKET"},
 		[]string{"b_expr", "DOT", "LBRACKET", "expression", "RBRACKET_ICASE"},
@@ -996,13 +1001,13 @@ var statement_syntax = map[string][][]string{
 		[]string{"window_list", "COMMA", "window_term"},
 	},
 	"window_term": [][]string{
-		[]string{"<identifier>", "AS", "window_specification"},
+		[]string{"permitted_identifiers", "AS", "window_specification"},
 	},
 	"window_specification": [][]string{
 		[]string{"LPAREN", "[window_name]", "[window_partition]", "[order_by]", "[window_frame]", "RPAREN"},
 	},
 	"[window_name]": [][]string{
-		[]string{"<identifier>"},
+		[]string{"permitted_identifiers"},
 	},
 	"[window_partition]": [][]string{
 		[]string{"PARTITION", "BY", "exprs"},
@@ -1053,7 +1058,7 @@ var statement_syntax = map[string][][]string{
 		[]string{"window_function_details"},
 	},
 	"window_function_details": [][]string{
-		[]string{"OVER", "<identifier>"},
+		[]string{"OVER", "permitted_identifiers"},
 		[]string{"OVER", "window_specification"},
 	},
 	"start_transaction": [][]string{
@@ -1078,7 +1083,7 @@ var statement_syntax = map[string][][]string{
 		[]string{"TO", "SAVEPOINT", "savepoint_name"},
 	},
 	"savepoint_name": [][]string{
-		[]string{"<identifier>"},
+		[]string{"permitted_identifiers"},
 	},
 	"isolation_level": [][]string{
 		[]string{"ISOLATION", "LEVEL", "isolation_val"},
@@ -1096,7 +1101,7 @@ var statement_syntax = map[string][][]string{
 		[]string{"WITH", "expression"},
 	},
 	"sequence_object_name": [][]string{
-		[]string{"<identifier>"},
+		[]string{"permitted_identifiers"},
 	},
 	"sequence_full_name": [][]string{
 		[]string{"[namespace_name]", "sequence_object_name"},
@@ -1181,12 +1186,12 @@ var statement_syntax = map[string][][]string{
 		[]string{"CACHE", "expression"},
 	},
 	"sequence_next": [][]string{
-		[]string{"NEXTVAL", "FOR", "<identifier>"},
-		[]string{"NEXT", "VALUE", "FOR", "<identifier>"},
+		[]string{"NEXTVAL", "FOR", "permitted_identifiers"},
+		[]string{"NEXT", "VALUE", "FOR", "permitted_identifiers"},
 	},
 	"sequence_prev": [][]string{
-		[]string{"PREVVAL", "FOR", "<identifier>"},
-		[]string{"PREV", "VALUE", "FOR", "<identifier>"},
+		[]string{"PREVVAL", "FOR", "permitted_identifiers"},
+		[]string{"PREV", "VALUE", "FOR", "permitted_identifiers"},
 	},
 	"sequence_expr": [][]string{
 		[]string{"sequence_next"},

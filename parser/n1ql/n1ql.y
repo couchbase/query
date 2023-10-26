@@ -397,7 +397,7 @@ column int
 
 /* Types */
 %type <s>                STR
-%type <s>                IDENT IDENT_ICASE NAMESPACE_ID DEFAULT ident_or_default
+%type <s>                IDENT IDENT_ICASE NAMESPACE_ID DEFAULT USER permitted_identifiers
 %type <identifier>       ident ident_icase
 %type <s>                REPLACE
 %type <s>                NAMED_PARAM
@@ -590,10 +590,12 @@ hints_input
 }
 ;
 
-ident_or_default:
+permitted_identifiers:
 IDENT
 |
 DEFAULT
+|
+USER
 ;
 
 opt_trailer:
@@ -698,7 +700,7 @@ opt_name:
     $$ = ""
 }
 |
-ident_or_default from_or_as
+permitted_identifiers from_or_as
 {
     $$ = $1
 }
@@ -1059,12 +1061,12 @@ optim_hints optim_hint
 ;
 
 optim_hint:
-ident_or_default
+permitted_identifiers
 {
     $$ = algebra.NewOptimHint($1, nil)
 }
 |
-ident_or_default LPAREN opt_hint_args RPAREN
+permitted_identifiers LPAREN opt_hint_args RPAREN
 {
     $$ = algebra.NewOptimHint($1, $3)
 }
@@ -1088,22 +1090,22 @@ hint_args
 ;
 
 hint_args:
-ident_or_default
+permitted_identifiers
 {
     $$ = []string{$1}
 }
 |
-ident_or_default DIV BUILD
+permitted_identifiers DIV BUILD
 {
     $$ = []string{$1 + "/BUILD"}
 }
 |
-ident_or_default DIV PROBE
+permitted_identifiers DIV PROBE
 {
     $$ = []string{$1 + "/PROBE"}
 }
 |
-hint_args ident_or_default
+hint_args permitted_identifiers
 {
     $$ = append($1, $2)
 }
@@ -1230,7 +1232,7 @@ AS alias
 ;
 
 alias:
-ident_or_default
+permitted_identifiers
 ;
 
 
@@ -1318,7 +1320,7 @@ from_term opt_join_type JOIN LATERAL simple_from_term on_keys
       $5.Alias()),$<line>4,$<column>4)
 }
 |
-from_term opt_join_type JOIN simple_from_term on_key FOR ident_or_default
+from_term opt_join_type JOIN simple_from_term on_key FOR permitted_identifiers
 {
     ksterm := algebra.GetKeyspaceTerm($4)
     if ksterm == nil {
@@ -1331,7 +1333,7 @@ from_term opt_join_type JOIN simple_from_term on_key FOR ident_or_default
     $$ = algebra.NewIndexJoin($1, $2, ksterm, $7)
 }
 |
-from_term opt_join_type JOIN LATERAL simple_from_term on_key FOR ident_or_default
+from_term opt_join_type JOIN LATERAL simple_from_term on_key FOR permitted_identifiers
 {
     return yylex.(*lexer).FatalError(fmt.Sprintf("LATERAL cannot be specified in index join with ON KEY...FOR clause (%s)",
       $5.Alias()),$<line>4,$<column>4)
@@ -1355,7 +1357,7 @@ from_term opt_join_type NEST LATERAL simple_from_term on_keys
       $5.Alias()),$<line>4,$<column>4)
 }
 |
-from_term opt_join_type NEST simple_from_term on_key FOR ident_or_default
+from_term opt_join_type NEST simple_from_term on_key FOR permitted_identifiers
 {
     ksterm := algebra.GetKeyspaceTerm($4)
     if ksterm == nil {
@@ -1368,7 +1370,7 @@ from_term opt_join_type NEST simple_from_term on_key FOR ident_or_default
     $$ = algebra.NewIndexNest($1, $2, ksterm, $7)
 }
 |
-from_term opt_join_type NEST LATERAL simple_from_term on_key FOR ident_or_default
+from_term opt_join_type NEST LATERAL simple_from_term on_key FOR permitted_identifiers
 {
     return yylex.(*lexer).FatalError(fmt.Sprintf("LATERAL cannot be specified in index nest with ON KEY...FOR clause (%s)",
       $5.Alias()),$<line>4,$<column>4)
@@ -1565,11 +1567,11 @@ NAMESPACE_ID COLON
 ;
 
 path_part:
-ident_or_default
+permitted_identifiers
 ;
 
 keyspace_name:
-ident_or_default
+permitted_identifiers
 {
   $$ = strings.TrimSpace($1)
   if $$ != $1 || $$ == "" {
@@ -2002,7 +2004,7 @@ opt_group_as:
     $$ = nil
 }
 |
-GROUP AS ident_or_default
+GROUP AS permitted_identifiers
 {
     $$ = expression.NewIdentifier($3)
     $$.ExprBase().SetErrorContext($<line>3, $<column>3)
@@ -2533,7 +2535,7 @@ variable COLON variable WITHIN expr
 ;
 
 variable:
-ident_or_default
+permitted_identifiers
 ;
 
 opt_when:
@@ -2754,7 +2756,7 @@ role_list COMMA role_name
 ;
 
 role_name:
-ident_or_default
+permitted_identifiers
 {
     $$ = $1
 }
@@ -2846,12 +2848,12 @@ user_list COMMA user
 ;
 
 user:
-ident_or_default
+permitted_identifiers
 {
     $$ = $1
 }
 |
-ident_or_default COLON ident_or_default
+permitted_identifiers COLON permitted_identifiers
 {
     $$ = $1 + ":" + $3
 }
@@ -3014,7 +3016,7 @@ VECTOR
 ;
 
 index_name:
-ident_or_default
+permitted_identifiers
 ;
 
 opt_index_name:
@@ -3464,12 +3466,12 @@ parameter_terms
 ;
 
 parameter_terms:
-ident_or_default
+permitted_identifiers
 {
     $$ = []string{$1}
 }
 |
-parameter_terms COMMA ident_or_default
+parameter_terms COMMA permitted_identifiers
 {
     $$ = append($1, string($3))
 }
@@ -3665,13 +3667,13 @@ index_term_expr
  *************************************************/
 
 path:
-ident_or_default
+permitted_identifiers
 {
     $$ = expression.NewIdentifier($1)
     $$.ExprBase().SetErrorContext($<line>1,$<column>1)
 }
 |
-path DOT ident_or_default
+path DOT permitted_identifiers
 {
     fn := expression.NewFieldName($3, false)
     fn.ExprBase().SetErrorContext($<line>3,$<column>3)
@@ -3718,7 +3720,7 @@ path LBRACKET expr RBRACKET
  *************************************************/
 
 ident:
-ident_or_default
+permitted_identifiers
 {
     $$ = expression.NewIdentifier($1)
     $$.ExprBase().SetErrorContext($<line>1,$<column>1)
@@ -4177,7 +4179,7 @@ sequence_expr
 construction_expr
 |
 /* Identifier */
-ident_or_default
+permitted_identifiers
 {
     $$ = expression.NewIdentifier($1)
     $$.ExprBase().SetErrorContext($<line>1,$<column>1)
@@ -4261,7 +4263,7 @@ b_expr:
 c_expr
 |
 // relative path function call
-b_expr DOT ident_or_default LPAREN opt_exprs RPAREN
+b_expr DOT permitted_identifiers LPAREN opt_exprs RPAREN
 {
     var path []string
 
@@ -4301,7 +4303,7 @@ b_expr DOT ident_or_default LPAREN opt_exprs RPAREN
 }
 |
 /* Nested */
-b_expr DOT ident_or_default
+b_expr DOT permitted_identifiers
 {
     switch t := $1.(type) {
     case *expression.SequenceOperation:
@@ -5099,7 +5101,7 @@ window_list COMMA window_term
 ;
 
 window_term:
-ident_or_default AS window_specification
+permitted_identifiers AS window_specification
 {
     $$ = $3
     $$.SetAsWindowName($1)
@@ -5117,7 +5119,7 @@ opt_window_name:
 /* empty */
 { $$ = "" }
 |
-ident_or_default
+permitted_identifiers
 ;
 
 opt_window_partition:
@@ -5289,7 +5291,7 @@ window_function_details
 ;
 
 window_function_details:
-OVER ident_or_default
+OVER permitted_identifiers
 {
     $$ = algebra.NewWindowTerm($2,nil,nil, nil, true)
 }
@@ -5361,7 +5363,7 @@ TO SAVEPOINT savepoint_name
 ;
 
 savepoint_name:
-ident_or_default
+permitted_identifiers
 {
     $$ = $1
 }
@@ -5443,7 +5445,7 @@ namespace_name
 ;
 
 sequence_object_name:
-ident_or_default
+permitted_identifiers
 {
   $$ = strings.TrimSpace($1)
   if $$ != $1 || $$ == "" {
@@ -5790,24 +5792,24 @@ CACHE expr
 ;
 
 sequence_next:
-NEXTVAL FOR ident_or_default
+NEXTVAL FOR permitted_identifiers
 {
   $$ = $3
 }
 |
-NEXT VALUE FOR ident_or_default
+NEXT VALUE FOR permitted_identifiers
 {
   $$ = $4
 }
 ;
 
 sequence_prev:
-PREVVAL FOR ident_or_default
+PREVVAL FOR permitted_identifiers
 {
   $$ = $3
 }
 |
-PREV VALUE FOR ident_or_default
+PREV VALUE FOR permitted_identifiers
 {
   $$ = $4
 }
