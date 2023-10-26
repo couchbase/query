@@ -66,7 +66,6 @@ type migrateBucket struct {
 	sync.Mutex
 	name  string
 	state bucketState
-	index bool
 }
 
 var migrations map[string]*migrateBucket
@@ -138,7 +137,7 @@ func Migrate() {
 			fallthrough
 		case _MIGRATING:
 			migratingLock.Unlock()
-			checkMigrateBucket(b)
+			checkMigrateBucket(b, false)
 		default:
 			migratingLock.Unlock()
 			return
@@ -266,11 +265,6 @@ func retryMigration() {
 				// as _BUCKET_MIGRATED; also reuse the same code as regular migration.
 				if doMigrateBucket(bucket.name) {
 					bucket.state = _BUCKET_MIGRATED
-					if !bucket.index {
-						// create primary index in the background
-						go createPrimaryIndex(bucket.name)
-						bucket.index = true
-					}
 				} else {
 					bucket.state = _BUCKET_PART_MIGRATED
 				}
@@ -481,12 +475,7 @@ func migrateAll() {
 					return
 				}
 
-				err := checkSystemCollection(bucketName)
-				if err == nil {
-					if doMigrateBucket(bucketName) {
-						go createPrimaryIndex(bucketName)
-					}
-				}
+				checkMigrateBucket(bucketName, true)
 			}
 		})
 
@@ -502,7 +491,7 @@ func migrateAll() {
 	retryMigration()
 }
 
-func checkMigrateBucket(name string) {
+func checkMigrateBucket(name string, allBuckets bool) {
 
 	// is migration complete?
 	migratingLock.Lock()
@@ -535,6 +524,7 @@ func checkMigrateBucket(name string) {
 
 	doSysColl := false
 	doMigrate := true
+	migrated := false
 	bucket.Lock()
 	if bucket.state == _BUCKET_NOT_MIGRATING {
 		bucket.state = _BUCKET_MIGRATING
@@ -543,6 +533,7 @@ func checkMigrateBucket(name string) {
 		bucket.state = _BUCKET_MIGRATING
 	} else if bucket.state == _BUCKET_MIGRATING || bucket.state == _BUCKET_MIGRATED {
 		doMigrate = false
+		migrated = bucket.state == _BUCKET_MIGRATED
 	} else {
 		logging.Errorf("UDF migration: Unexpected bucket migration state %v", bucket.state)
 		bucket.Unlock()
@@ -551,9 +542,13 @@ func checkMigrateBucket(name string) {
 	bucket.Unlock()
 
 	if !doMigrate {
-		logging.Infof("UDF migration: Migration of bucket %s being performed by another thread", name)
+		if migrated {
+			logging.Infof("UDF migration: Migration of bucket %s already done", name)
+		} else {
+			logging.Infof("UDF migration: Migration of bucket %s being performed by another thread", name)
+		}
 		return
-	} else if migrationStartWait {
+	} else if !allBuckets && migrationStartWait {
 		needSignal := false
 		migrationStartLock.Lock()
 		if migrationStartWait && migrationStartCond != nil {
@@ -578,39 +573,38 @@ func checkMigrateBucket(name string) {
 		}
 	}
 
-	// TODO KV doesn't like being hammered straight away so wait for KV to prime before migrating
-	countDown := time.Since(countDownStarted)
-	if countDown < _GRACE_PERIOD {
-		time.Sleep(_GRACE_PERIOD - countDown)
-	}
+	if !allBuckets {
+		// TODO KV doesn't like being hammered straight away so wait for KV to prime before migrating
+		countDown := time.Since(countDownStarted)
+		if countDown < _GRACE_PERIOD {
+			time.Sleep(_GRACE_PERIOD - countDown)
+		}
 
-	// if migration completed while we are waiting ...
-	migratingLock.Lock()
-	if migrating == _MIGRATED || migrating == _ABORTED || migrating == _ABORTING {
+		// if migration completed while we are waiting ...
+		migratingLock.Lock()
+		if migrating == _MIGRATED || migrating == _ABORTED || migrating == _ABORTING {
+			migratingLock.Unlock()
+			return
+		} else if checkSetComplete() {
+			migratingLock.Unlock()
+			return
+		}
 		migratingLock.Unlock()
-		return
-	} else if checkSetComplete() {
-		migratingLock.Unlock()
-		return
 	}
-	migratingLock.Unlock()
 
 	b := doMigrateBucket(name)
 
 	bucket.Lock()
 	if b {
 		bucket.state = _BUCKET_MIGRATED
-		if !bucket.index {
-			// create primary index in the background
-			go createPrimaryIndex(name)
-			bucket.index = true
-		}
 	} else {
 		bucket.state = _BUCKET_PART_MIGRATED
 	}
 	bucket.Unlock()
 
-	checkMigrationComplete()
+	if !allBuckets {
+		checkMigrationComplete()
+	}
 
 	lastActivity = time.Now()
 }
@@ -709,16 +703,28 @@ func checkSystemCollection(name string) errors.Error {
 	return nil
 }
 
-func createPrimaryIndex(bucketName string) {
+func createPrimaryIndexes() {
+	if !datastore.IsMigrationComplete(datastore.HAS_SYSTEM_COLLECTION) {
+		// wait for both UDF and CBO stats migration to be complete
+		return
+	}
 	ds := datastore.GetDatastore()
 	if ds != nil {
-		requestId, _ := util.UUIDV4()
-		err := ds.CheckSystemCollection(bucketName, requestId)
-		if err == nil {
-			logging.Infof("UDF migration: Primary index on system collection available for bucket %s", bucketName)
-		} else if !errors.IsIndexExistsError(err) {
-			logging.Errorf("UDF migration: Error creating primary index on system collection for bucket %s - %v", bucketName, err)
+		migrationsLock.Lock()
+		for _, bucket := range migrations {
+			go createPrimaryIndex(ds, bucket.name)
 		}
+		migrationsLock.Unlock()
+	}
+}
+
+func createPrimaryIndex(ds datastore.Datastore, bucketName string) {
+	requestId, _ := util.UUIDV4()
+	err := ds.CheckSystemCollection(bucketName, requestId)
+	if err == nil {
+		logging.Infof("UDF migration: Primary index on system collection available for bucket %s", bucketName)
+	} else if !errors.IsIndexExistsError(err) {
+		logging.Errorf("UDF migration: Error creating primary index on system collection for bucket %s - %v", bucketName, err)
 	}
 }
 
@@ -761,6 +767,7 @@ func checkMigrationComplete() bool {
 		migration.Complete(_UDF_MIGRATION, true)
 		migrating = _MIGRATED
 		datastore.MarkMigrationComplete(true, _UDF_MIGRATION, datastore.HAS_SYSTEM_COLLECTION)
+		createPrimaryIndexes()
 	}
 
 	return complete
@@ -801,25 +808,8 @@ func UseSystemStorage() bool {
 		}
 	}
 
-	success := migration.Await(_UDF_MIGRATION)
+	migration.Await(_UDF_MIGRATION)
 
-	// mark migrated for those migrations executed by another node
-	if migrating != _MIGRATED && migrating != _ABORTED {
-		changed := false
-		migratingLock.Lock()
-		if migrating != _MIGRATED && migrating != _ABORTED {
-			if success {
-				migrating = _MIGRATED
-			} else {
-				migrating = _ABORTED
-			}
-			changed = true
-		}
-		migratingLock.Unlock()
-		if changed {
-			datastore.MarkMigrationComplete(success, _UDF_MIGRATION, datastore.HAS_SYSTEM_COLLECTION)
-		}
-	}
 	return true
 }
 
