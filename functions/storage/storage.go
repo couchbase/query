@@ -79,6 +79,7 @@ func Migrate() {
 
 	// no migration needed if serverless
 	if tenant.IsServerless() {
+		migrating = _MIGRATED
 		return
 	}
 
@@ -784,6 +785,7 @@ func checkMigrationComplete() bool {
 		return false
 	}
 
+	logging.Infof("UDF migration: Mark migration as complete")
 	migration.Complete(_UDF_MIGRATION, true)
 	migrating = _MIGRATED
 	datastore.MarkMigrationComplete(true, _UDF_MIGRATION, datastore.HAS_SYSTEM_COLLECTION)

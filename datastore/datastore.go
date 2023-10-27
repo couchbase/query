@@ -531,7 +531,9 @@ func checkMigrationDone(t Migration) {
 }
 
 func IsMigrationComplete(t Migration) bool {
-	complete := false
+	// if migration is not needed (e.g. alredy done previously), nothing will be allocated
+	// for migrations map; in this case assume migration is already complete
+	complete := true
 	migrationLock.RLock()
 	mt := migrations[t]
 	if mt != nil {
