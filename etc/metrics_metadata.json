@@ -8,7 +8,7 @@
 	"n1ql_allocated_values": {
 		"type": "counter",
 		"help": "The total number of values allocated in the query engine.",
-		"added": "7.5.0"
+		"added": "7.6.0"
 	},
 	"n1ql_at_plus": {
 		"type": "counter",
@@ -39,7 +39,7 @@
 		"type": "gauge",
 		"help": "The total number of reads on the bucket.",
 		"notes": "This is a metric specific to provisioned mode.",
-		"added": "7.5.0",
+		"added": "7.6.0",
 		"labels": [
 			"bucket"
 		]
@@ -48,7 +48,7 @@
 		"type": "gauge",
 		"help": "The total number of retries on the bucket.",
 		"notes": "This is a metric specific to provisioned mode.",
-		"added": "7.5.0",
+		"added": "7.6.0",
 		"labels": [
 			"bucket"
 		]
@@ -57,7 +57,7 @@
 		"type": "gauge",
 		"help": "The total number of writes on the bucket.",
 		"notes": "This is a metric specific to provisioned mode.",
-		"added": "7.5.0",
+		"added": "7.6.0",
 		"labels": [
 			"bucket"
 		]
@@ -65,7 +65,7 @@
 	"n1ql_bulk_get_errors": {
 		"type": "counter",
 		"help": "Count of errors due to bulk get operations",
-		"added":"7.5.0"
+		"added":"7.2.4"
 	},
 	"n1ql_cancelled": {
 		"type": "counter",
@@ -75,7 +75,7 @@
 	"n1ql_cas_mismatch_errors": {
 		"type":"counter",
 		"help": "Count of CAS mismatch errors",
-		"added":"7.5.0"
+		"added":"7.2.4"
 	},
 	"n1ql_deletes": {
 		"type": "counter",
@@ -97,19 +97,19 @@
 	"n1ql_index_scans_gsi": {
 		"type": "counter",
 		"help": "Total number of index scans performed by GSI.",
-		"added": "7.5.0",
+		"added": "7.2.4",
 		"notes": "This is a sub-division of n1ql_index_scans."
 	},
 	"n1ql_index_scans_fts": {
 		"type": "counter",
 		"help": "Total number of index scans performed by FTS.",
-		"added": "7.5.0",
+		"added": "7.2.4",
 		"notes": "This is a sub-division of n1ql_index_scans."
 	},
 	"n1ql_index_scans_seq": {
 		"type": "counter",
 		"help": "Total number of sequential scans.",
-		"added": "7.5.0",
+		"added": "7.6.0",
 		"notes": "This is a sub-division of n1ql_index_scans."
 	},
 	"n1ql_inserts": {
@@ -132,7 +132,7 @@
 	},
 	"n1ql_load_factor": {
 		"type": "gauge",
-		"added": "7.5.0",
+		"added": "7.6.0",
 		"help": "The total load factor of the query node.",
 		"notes": "The load factor is a value from 0 to 100. It is the maximum of 3 values. The Servicer Load, CPU Usage and Memory Usage. It is calculated every 30 seconds and reported as a moving average over the last 15 minutes."
 	},
@@ -143,7 +143,7 @@
 	},
 	"n1ql_node_memory": {
 		"type": "gauge",
-		"added": "7.5.0",
+		"added": "7.6.0",
 		"help": "The total size of in use memory in the query node.",
         "unit": "bytes"
 	},
@@ -160,19 +160,19 @@
 	"n1ql_primary_scans_gsi": {
 		"type": "counter",
 		"help": "Total number of primary scans performed by GSI.",
-		"added": "7.5.0",
+		"added": "7.2.4",
 		"notes": "This is a sub-division of n1ql_primary_scans."
 	},
 	"n1ql_primary_scans_fts": {
 		"type": "counter",
 		"help": "Total number of primary scans performed by FTS.",
-		"added": "7.5.0",
+		"added": "7.2.4",
 		"notes": "This is a sub-division of n1ql_primary_scans."
 	},
 	"n1ql_primary_scans_seq": {
 		"type": "counter",
 		"help": "Total number of primary sequential scans.",
-		"added": "7.5.0",
+		"added": "7.6.0",
 		"notes": "This is a sub-division of n1ql_primary_scans."
 	},
 	"n1ql_queued_requests": {
@@ -262,11 +262,11 @@
 	"n1ql_temp_space_errors": {
 		"type": "counter",
 		"help": "Count of temp space related errors",
-		"added":"7.5.0"
+		"added":"7.6.0"
 	},
 	"n1ql_tenant_memory": {
 		"type": "gauge",
-		"added": "7.5.0",
+		"added": "7.6.0",
 		"help": "The total size of in use tenant memory.",
 		"notes": "This is a metric specific to serverless.",
 		"labels": [
@@ -278,7 +278,7 @@
 		"type": "gauge",
 		"help": "The total number of reads on the tenant.",
 		"notes": "This is a metric specific to serverless.",
-		"added": "7.5.0",
+		"added": "7.6.0",
 		"labels": [
 			"bucket"
 		]
@@ -287,7 +287,7 @@
 		"type": "gauge",
 		"help": "The total number of retries on the tenant.",
 		"notes": "This is a metric specific to serverless.",
-		"added": "7.5.0",
+		"added": "7.6.0",
 		"labels": [
 			"bucket"
 		]
@@ -296,7 +296,7 @@
 		"type": "gauge",
 		"help": "The total number of writes on the tenant.",
 		"notes": "This is a metric specific to serverless.",
-		"added": "7.5.0",
+		"added": "7.6.0",
 		"labels": [
 			"bucket"
 		]
@@ -304,7 +304,7 @@
 	"n1ql_timeouts":{
 		"type": "counter",
 		"help": "Count of request timeout errors",
-		"added":"7.5.0"
+		"added":"7.2.4"
 	},
 	"n1ql_transaction_time": {
 		"type": "counter",
@@ -320,7 +320,7 @@
 	"n1ql_unauthorized_users": {
 		"type":"counter",
 		"help":"Count of unauthorized access errors",
-		"added": "7.5.0"
+		"added": "7.2.4"
 	},
 	"n1ql_unbounded": {
 		"type": "counter",
@@ -342,7 +342,7 @@
 	"n1ql_tenant_kv_throttle_count": {
 		"type": "gauge",
 		"help": "The total number of times KV has been throttled for queries on this tenant.",
-		"added": "7.5.0",
+		"added": "7.6.0",
 		"notes": "This is a metric specific to serverless.",
 		"labels": [
 			"bucket"
@@ -352,7 +352,7 @@
 		"type": "gauge",
 		"help": "The total amount of time KV has been throttled for queries on this tenant.",
 		"unit": "seconds",
-		"added": "7.5.0",
+		"added": "7.6.0",
 		"notes": "This is a metric specific to serverless.",
 		"labels": [
 			"bucket"
@@ -362,7 +362,7 @@
 		"type": "counter",
 		"help": "The total time spent throttling (in seconds).",
 		"unit": "seconds",
-		"added": "7.5.0",
+		"added": "7.6.0",
 		"notes": "This is a metric specific to serverless.",
 		"labels": [
 			"bucket",
@@ -373,7 +373,7 @@
 		"type": "counter",
 		"help": "The number of times Regulator instructed an operation to throttle.",
 		"unit": "seconds",
-		"added": "7.5.0",
+		"added": "7.6.0",
 		"notes": "This is a metric specific to serverless.",
 		"labels": [
 			"bucket",
@@ -384,7 +384,7 @@
 		"type": "counter",
 		"help": "The number of times Regulator instructed an operation to be rejected.",
 		"unit": "seconds",
-		"added": "7.5.0",
+		"added": "7.6.0",
 		"notes": "This is a metric specific to serverless.",
 		"labels": [
 			"bucket",
@@ -395,7 +395,7 @@
 		"type": "counter",
 		"help": "The number of distinct operations recorded with Regulator.",
 		"unit": "seconds",
-		"added": "7.5.0",
+		"added": "7.6.0",
 		"notes": "This is a metric specific to serverless.",
 		"labels": [
 			"bucket",
@@ -405,13 +405,13 @@
 	"n1ql_mem_quota_exceeded_errors": {
 		"type": "counter",
 		"help": "Count of memory quota exceeded errrors",
-		"added": "7.5.0"
+		"added": "7.2.4"
 	},
 	"n1ql_meter_cu_total": {
 		"type": "counter",
 		"help": "The number of Compute Units (CUs) recorded.",
 		"unit": "seconds",
-		"added": "7.5.0",
+		"added": "7.6.0",
 		"notes": "This is a metric specific to serverless.",
 		"labels": [
 			"bucket",
@@ -424,7 +424,7 @@
 		"type": "counter",
 		"help": "The number of Compute Units (CUs) refunded.",
 		"unit": "seconds",
-		"added": "7.5.0",
+		"added": "7.6.0",
 		"notes": "This is a metric specific to serverless.",
 		"labels": [
 			"bucket",
@@ -436,7 +436,7 @@
 		"type": "counter",
 		"help": "The number of distinct operations recording Compute Units (CUs) with Regulator.",
 		"unit": "seconds",
-		"added": "7.5.0",
+		"added": "7.6.0",
 		"notes": "This is a metric specific to serverless.",
 		"labels": [
 			"bucket",
@@ -449,7 +449,7 @@
 		"type": "counter",
 		"help": "The number of Write Units (WUs) refunded.",
 		"unit": "seconds",
-		"added": "7.5.0",
+		"added": "7.6.0",
 		"notes": "This is a metric specific to serverless.",
 		"labels": [
 			"bucket",
@@ -461,7 +461,7 @@
 		"type": "counter",
 		"help": "The number of Read Units (RUs) refunded.",
 		"unit": "seconds",
-		"added": "7.5.0",
+		"added": "7.6.0",
 		"notes": "This is a metric specific to serverless.",
 		"labels": [
 			"bucket",
@@ -473,7 +473,7 @@
 		"type": "gauge",
 		"help": "The time the service booted in fractional seconds since Unix epoch.",
 		"unit": "seconds",
-		"added": "7.5.0",
+		"added": "7.6.0",
 		"notes": "This is a metric specific to serverless."
 	}
 }
