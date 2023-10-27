@@ -33,7 +33,7 @@
   "n1ql_bulk_get_errors": {
     "type": "counter",
     "help": "Count of errors due to bulk get operations",
-    "added": "7.2.3"
+    "added": "7.2.4"
   },
   "n1ql_cancelled": {
     "type": "counter",
@@ -43,7 +43,7 @@
   "n1ql_cas_mismatch_errors": {
     "type": "counter",
     "help": "Count of CAS mismatch errors",
-    "added": "7.2.3"
+    "added": "7.2.4"
   },
   "n1ql_deletes": {
     "type": "counter",
@@ -62,16 +62,16 @@
     "help": "Total number of secondary index scans.",
     "added": "7.0.0"
   },
-  "n1ql_index_scans.GSI": {
+  "n1ql_index_scans_gsi": {
     "type": "counter",
     "help": "Total number of index scans performed by GSI.",
-    "added": "7.2.3",
+    "added": "7.2.4",
     "notes": "This is a sub-division of n1ql_index_scans."
   },
-  "n1ql_index_scans.FTS": {
+  "n1ql_index_scans_fts": {
     "type": "counter",
     "help": "Total number of index scans performed by FTS.",
-    "added": "7.2.3",
+    "added": "7.2.4",
     "notes": "This is a sub-division of n1ql_index_scans."
   },
   "n1ql_inserts": {
@@ -107,16 +107,16 @@
     "help": "Total number of primary index scans.",
     "added": "7.0.0"
   },
-  "n1ql_primary_scans.GSI": {
+  "n1ql_primary_scans_gsi": {
     "type": "counter",
     "help": "Total number of primary scans performed by GSI.",
-    "added": "7.2.3",
+    "added": "7.2.4",
     "notes": "This is a sub-division of n1ql_primary_scans."
   },
-  "n1ql_primary_scans.FTS": {
+  "n1ql_primary_scans_fts": {
     "type": "counter",
     "help": "Total number of primary scans performed by FTS.",
-    "added": "7.2.3",
+    "added": "7.2.4",
     "notes": "This is a sub-division of n1ql_primary_scans."
   },
   "n1ql_queued_requests": {
@@ -206,7 +206,7 @@
   "n1ql_timeouts": {
     "type": "counter",
     "help": "Count of request timeout errors",
-    "added": "7.2.3"
+    "added": "7.2.4"
   },
   "n1ql_transaction_time": {
     "type": "counter",
@@ -222,7 +222,7 @@
   "n1ql_unauthorized_users": {
     "type": "counter",
     "help": "Count of unauthorized access errors",
-    "added": "7.2.3"
+    "added": "7.2.4"
   },
   "n1ql_unbounded": {
     "type": "counter",
@@ -237,7 +237,7 @@
   "n1ql_mem_quota_exceeded_errors": {
     "type": "counter",
     "help": "Count of memory quota exceeded errors",
-    "added": "7.2.3"
+    "added": "7.2.4"
   },
   "n1ql_warnings": {
     "type": "counter",
