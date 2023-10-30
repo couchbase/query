@@ -549,7 +549,8 @@ func XattrsNames(exprs Expressions, alias string) (present bool, names []string)
 	if len(mNames) > 0 {
 		names = make([]string, 0, len(mNames))
 		for s, _ := range mNames {
-			if s == "$document" {
+			// "$document", "$document.exptime" both are not allowed at the same time and caller will raise error
+			if s == "$document" || s == "$document.exptime" {
 				names = append([]string{s}, names...)
 			} else {
 				names = append(names, s)
