@@ -2240,13 +2240,41 @@ func getSubDocXattrFetchResults(k string, fullName string, v *gomemcached.MCResp
 
 	if subPaths[0] == "$document" {
 		// Get flags and expiration from the $document virtual xattrs
-		docMeta := xVal["$document"].(map[string]interface{})
-
-		// Convert unmarshalled int64 values to uint32
-		flags = uint32(value.NewValue(docMeta["flags"]).(value.NumberValue).Int64())
-		exptime = uint32(value.NewValue(docMeta["exptime"]).(value.NumberValue).Int64())
+		x, ok := xVal["$document"]
+		if !ok {
+			logging.Warnf("[%s] Invalid XATTRs: $document not found", k)
+		} else {
+			docMeta, ok := x.(map[string]interface{})
+			if !ok {
+				logging.Warnf("[%s] Invalid XATTR $document: %T (%v)", k, x, x)
+			} else {
+				// Convert unmarshalled int64 values to uint32
+				v := value.NewValue(docMeta["flags"])
+				if v.Type() != value.NUMBER {
+					logging.Warnf("[%s] Invalid XATTR $document.flags: %v (%v)", k, v.Type(), v.String())
+				} else {
+					flags = uint32(value.AsNumberValue(v).Int64())
+				}
+				v = value.NewValue(docMeta["exptime"])
+				if v.Type() != value.NUMBER {
+					logging.Warnf("[%s] Invalid XATTR $document.exptime: %v (%v)", k, v.Type(), v.String())
+				} else {
+					exptime = uint32(value.AsNumberValue(v).Int64())
+				}
+			}
+		}
 	} else if subPaths[0] == "$document.exptime" {
-		exptime = uint32(value.NewValue(xVal["$document.exptime"]).(value.NumberValue).Int64())
+		x, ok := xVal["$document.exptime"]
+		if !ok {
+			logging.Warnf("[%s] Invalid XATTRs: $document.exptime not found", k)
+		} else {
+			v := value.NewValue(x)
+			if v.Type() != value.NUMBER {
+				logging.Warnf("[%s] Invalid XATTR $document.exptime: %v (%v)", k, v.Type(), v.String())
+			} else {
+				exptime = uint32(value.AsNumberValue(v).Int64())
+			}
+		}
 	}
 
 	if noVirtualDocAttr {
