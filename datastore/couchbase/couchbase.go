@@ -2033,8 +2033,8 @@ func (b *keyspace) fetch(fullName, qualifiedName, scopeName, collectionName stri
 				append(clientContext, &memcached.ClientContext{DocumentSubDocPaths: true})...)
 		}
 	} else {
-		if ls > 0 && (subPaths[0] != "$document" && subPaths[0] != "$document.exptime") {
-			subPaths = append([]string{"$document"}, subPaths...)
+		if ls > 0 && ls < 15 && (subPaths[0] != "$document" && subPaths[0] != "$document.exptime") {
+			subPaths = append([]string{"$document.exptime"}, subPaths...)
 			noVirtualDocAttr = true
 		}
 
@@ -2278,7 +2278,7 @@ func getSubDocXattrFetchResults(k string, fullName string, v *gomemcached.MCResp
 	}
 
 	if noVirtualDocAttr {
-		delete(xVal, "$document")
+		delete(xVal, "$document.exptime")
 	}
 
 	meta := val.NewMeta()
