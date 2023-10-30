@@ -79,6 +79,13 @@ func (this *internalOutput) Warning(wrn errors.Error) {
 	// empty
 }
 
+func (this *internalOutput) Errors() []errors.Error {
+	if this.err == nil {
+		return nil
+	}
+	return []errors.Error{this.err}
+}
+
 func (this *internalOutput) AddMutationCount(i uint64) {
 	atomic.AddUint64(&this.mutationCount, i)
 }

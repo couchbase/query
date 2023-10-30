@@ -161,6 +161,7 @@ type Output interface {
 	Fatal(err errors.Error)
 	Error(err errors.Error)
 	Warning(wrn errors.Error)
+	Errors() []errors.Error
 	AddMutationCount(uint64)
 	MutationCount() uint64
 	SortCount() uint64
@@ -843,6 +844,10 @@ func (this *Context) Fatal(err errors.Error) {
 
 func (this *Context) Warning(wrn errors.Error) {
 	this.output.Warning(wrn)
+}
+
+func (this *Context) GetErrors() []errors.Error {
+	return this.output.Errors()
 }
 
 // memory quota

@@ -9,6 +9,7 @@
 package datastore
 
 import (
+	"sync"
 	"time"
 
 	"github.com/couchbase/query/auth"
@@ -20,6 +21,7 @@ import (
 )
 
 var NULL_CONTEXT Context = &contextImpl{}
+var SYSTEM_CONTEXT Context = &systemContextImpl{}
 
 var NULL_QUERY_CONTEXT QueryContext = &queryContextImpl{}
 var MAJORITY_QUERY_CONTEXT QueryContext = &majorityQueryContextImpl{}
@@ -30,6 +32,7 @@ type Context interface {
 	Fatal(errors.Error)
 	Error(errors.Error)
 	Warning(errors.Error)
+	GetErrors() []errors.Error
 	GetReqDeadline() time.Time
 	TenantCtx() tenant.Context
 	SetFirstCreds(string)
@@ -60,6 +63,10 @@ func (ci *contextImpl) Error(err errors.Error) {
 }
 
 func (ci *contextImpl) Warning(err errors.Error) {
+}
+
+func (ci *contextImpl) GetErrors() []errors.Error {
+	return nil
 }
 
 func (ci *contextImpl) GetReqDeadline() time.Time {
@@ -99,6 +106,32 @@ func (ci *contextImpl) Credentials() *auth.Credentials {
 
 func (ci *contextImpl) SkipKey(key string) bool {
 	return false
+}
+
+type systemContextImpl struct {
+	contextImpl
+	sync.RWMutex
+
+	errors []errors.Error
+}
+
+func (sci *systemContextImpl) Fatal(err errors.Error) {
+	sci.Error(err)
+}
+
+func (sci *systemContextImpl) Error(err errors.Error) {
+	sci.Lock()
+	if err.Level() == errors.EXCEPTION {
+		sci.errors = append(sci.errors, err)
+	}
+	sci.Unlock()
+}
+
+func (sci *systemContextImpl) GetErrors() []errors.Error {
+	sci.RLock()
+	errs := sci.errors
+	sci.RUnlock()
+	return errs
 }
 
 // A subset of execution.Context that is useful at the datastore level.

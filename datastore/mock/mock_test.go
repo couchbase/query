@@ -224,6 +224,10 @@ func (this *testingContext) Fatal(fatal errors.Error) {
 	this.t.Logf("scan fatal: %v", fatal)
 }
 
+func (this *testingContext) GetErrors() []errors.Error {
+	return nil
+}
+
 func (this *testingContext) GetReqDeadline() time.Time {
 	return time.Time{}
 }

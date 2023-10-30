@@ -846,7 +846,7 @@ func getSystemCollectonIndexConnection(systemCollection Keyspace) (*IndexConnect
 		if ok {
 			state, _, err := index3.State()
 			if err == nil && state == ONLINE {
-				return NewIndexConnection(NULL_CONTEXT), index3, nil
+				return NewIndexConnection(SYSTEM_CONTEXT), index3, nil
 			}
 		}
 	}
@@ -877,7 +877,7 @@ func getSystemCollectonIndexConnection(systemCollection Keyspace) (*IndexConnect
 		if ok {
 			state, _, err := index3.State()
 			if err == nil && state == ONLINE {
-				return NewIndexConnection(NULL_CONTEXT), index3, nil
+				return NewIndexConnection(SYSTEM_CONTEXT), index3, nil
 			}
 		}
 	}
@@ -953,6 +953,11 @@ func ScanSystemCollection(bucketName string, prefix string, preScan func(Keyspac
 				ok = false
 			}
 		}
+	}
+
+	errs := conn.GetErrors()
+	if len(errs) > 0 {
+		return errs[0]
 	}
 
 	if postScan != nil {

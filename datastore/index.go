@@ -754,6 +754,15 @@ func (this *IndexConnection) Warning(wrn errors.Error) {
 	}
 }
 
+func (this *IndexConnection) GetErrors() []errors.Error {
+	if this.timeout {
+		return []errors.Error{errors.NewCbIndexScanTimeoutError(nil)}
+	} else if !this.sender.IsClosed() {
+		return this.context.GetErrors()
+	}
+	return nil
+}
+
 func (this *IndexConnection) GetReqDeadline() time.Time {
 	return this.context.GetReqDeadline()
 }

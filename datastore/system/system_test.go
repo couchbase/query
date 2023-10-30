@@ -68,6 +68,10 @@ func (ci *queryContextImpl) Fatal(fatal errors.Error) {
 	ci.t.Logf("scan fatal: %v", fatal)
 }
 
+func (ci *queryContextImpl) GetErrors() []errors.Error {
+	return nil
+}
+
 func (ci *queryContextImpl) DurabilityLevel() datastore.DurabilityLevel {
 	return datastore.DL_NONE
 }
