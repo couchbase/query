@@ -21,7 +21,6 @@ import (
 )
 
 var NULL_CONTEXT Context = &contextImpl{}
-var SYSTEM_CONTEXT Context = &systemContextImpl{}
 
 var NULL_QUERY_CONTEXT QueryContext = &queryContextImpl{}
 var MAJORITY_QUERY_CONTEXT QueryContext = &majorityQueryContextImpl{}
@@ -108,11 +107,16 @@ func (ci *contextImpl) SkipKey(key string) bool {
 	return false
 }
 
+// used for situations where errors need to be tracked
 type systemContextImpl struct {
 	contextImpl
 	sync.RWMutex
 
 	errors []errors.Error
+}
+
+func NewSystemContext() Context {
+	return &systemContextImpl{}
 }
 
 func (sci *systemContextImpl) Fatal(err errors.Error) {
@@ -121,7 +125,8 @@ func (sci *systemContextImpl) Fatal(err errors.Error) {
 
 func (sci *systemContextImpl) Error(err errors.Error) {
 	sci.Lock()
-	if err.Level() == errors.EXCEPTION {
+	switch err.Level() {
+	case errors.EXCEPTION, errors.ERROR:
 		sci.errors = append(sci.errors, err)
 	}
 	sci.Unlock()

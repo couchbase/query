@@ -846,7 +846,7 @@ func getSystemCollectonIndexConnection(systemCollection Keyspace) (*IndexConnect
 		if ok {
 			state, _, err := index3.State()
 			if err == nil && state == ONLINE {
-				return NewIndexConnection(SYSTEM_CONTEXT), index3, nil
+				return NewIndexConnection(NewSystemContext()), index3, nil
 			}
 		}
 	}
@@ -877,7 +877,7 @@ func getSystemCollectonIndexConnection(systemCollection Keyspace) (*IndexConnect
 		if ok {
 			state, _, err := index3.State()
 			if err == nil && state == ONLINE {
-				return NewIndexConnection(SYSTEM_CONTEXT), index3, nil
+				return NewIndexConnection(NewSystemContext()), index3, nil
 			}
 		}
 	}
