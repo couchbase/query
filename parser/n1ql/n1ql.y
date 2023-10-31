@@ -405,7 +405,7 @@ column int
 %type <n>                INT
 %type <n>                POSITIONAL_PARAM NEXT_PARAM
 %type <s>                OPTIM_HINTS
-%type <expr>             literal construction_expr execute_using object array
+%type <expr>             literal construction_expr opt_execute_using object array
 %type <expr>             param_expr
 %type <pair>             member
 %type <pairs>            members opt_members
@@ -432,7 +432,7 @@ column int
 %type <identifier>       function_name
 
 %type <functionName>     func_name long_func_name short_func_name
-%type <ss>               parm_list parameter_terms
+%type <ss>               opt_parm_list parameter_terms
 %type <functionBody>     func_body
 %type <expr>             opt_replace
 
@@ -507,7 +507,7 @@ column int
 %type <bindings>         update_dimension
 %type <dimensions>       update_dimensions
 %type <b>                opt_key opt_force
-%type <mergeActions>     merge_actions opt_merge_delete_insert
+%type <mergeActions>     opt_merge_actions opt_merge_delete_insert
 %type <mergeUpdate>      merge_update
 %type <mergeDelete>      merge_delete
 %type <mergeInsert>      merge_insert opt_merge_insert
@@ -515,9 +515,9 @@ column int
 %type <s>                index_name opt_index_name
 %type <keyspaceRef>      simple_named_keyspace_ref named_keyspace_ref
 %type <scopeRef>         named_scope_ref
-%type <partitionTerm>    index_partition
+%type <partitionTerm>    opt_index_partition
 %type <indexType>        index_using opt_index_using
-%type <expr>             index_term_expr index_where
+%type <expr>             index_term_expr opt_index_where
 %type <indexKeyTerm>     index_term flatten_keys_expr
 %type <indexKeyTerms>    index_terms flatten_keys_exprs opt_flatten_keys_exprs
 %type <expr>             expr_input all_expr
@@ -567,7 +567,7 @@ column int
 %type <expr>               sequence_expr
 
 %type <vpair>  start_with increment_by maxvalue minvalue cache cycle restart_with seq_alter_option seq_create_option sequence_with
-%type <vpairs> seq_alter_options seq_create_options
+%type <vpairs> seq_alter_options opt_seq_create_options
 
 %start input
 
@@ -733,7 +733,7 @@ AS
 ;
 
 execute:
-EXECUTE expr execute_using
+EXECUTE expr opt_execute_using
 {
     if id, ok := $2.(*expression.Identifier); ok {
         if id.CaseInsensitive() {
@@ -744,7 +744,7 @@ EXECUTE expr execute_using
 }
 ;
 
-execute_using:
+opt_execute_using:
 /* empty */
 {
     $$ = nil
@@ -2584,7 +2584,7 @@ path opt_update_for
  *************************************************/
 
 merge:
-MERGE opt_optim_hints INTO simple_keyspace_ref opt_use_merge USING simple_from_term ON opt_key expr merge_actions
+MERGE opt_optim_hints INTO simple_keyspace_ref opt_use_merge USING simple_from_term ON opt_key expr opt_merge_actions
 opt_limit opt_returning
 {
     switch other := $7.(type) {
@@ -2628,7 +2628,7 @@ key
 }
 ;
 
-merge_actions:
+opt_merge_actions:
 /* empty */
 {
     $$ = algebra.NewMergeActions(nil, nil, nil)
@@ -2975,29 +2975,29 @@ TRUNCATE
  *************************************************/
 
 create_index:
-CREATE PRIMARY INDEX opt_if_not_exists ON named_keyspace_ref index_partition opt_index_using opt_with_clause
+CREATE PRIMARY INDEX opt_if_not_exists ON named_keyspace_ref opt_index_partition opt_index_using opt_with_clause
 {
     $$ = algebra.NewCreatePrimaryIndex("#primary", $6, $7, $8, $9, $4)
 }
 |
-CREATE PRIMARY INDEX index_name opt_if_not_exists ON named_keyspace_ref index_partition opt_index_using opt_with_clause
+CREATE PRIMARY INDEX index_name opt_if_not_exists ON named_keyspace_ref opt_index_partition opt_index_using opt_with_clause
 {
     $$ = algebra.NewCreatePrimaryIndex($4, $7, $8, $9, $10, $5)
 }
 |
-CREATE PRIMARY INDEX IF NOT EXISTS index_name ON named_keyspace_ref index_partition opt_index_using opt_with_clause
+CREATE PRIMARY INDEX IF NOT EXISTS index_name ON named_keyspace_ref opt_index_partition opt_index_using opt_with_clause
 {
     $$ = algebra.NewCreatePrimaryIndex($7, $9, $10, $11, $12, false)
 }
 |
 CREATE opt_vector INDEX index_name opt_if_not_exists
-ON named_keyspace_ref LPAREN index_terms RPAREN index_partition index_where opt_index_using opt_with_clause
+ON named_keyspace_ref LPAREN index_terms RPAREN opt_index_partition opt_index_where opt_index_using opt_with_clause
 {
     $$ = algebra.NewCreateIndex($4, $7, $9, $11, $12, $13, $14, $5, $2)
 }
 |
 CREATE opt_vector INDEX IF NOT EXISTS index_name
-ON named_keyspace_ref LPAREN index_terms RPAREN index_partition index_where opt_index_using opt_with_clause
+ON named_keyspace_ref LPAREN index_terms RPAREN opt_index_partition opt_index_where opt_index_using opt_with_clause
 {
     $$ = algebra.NewCreateIndex($7, $9, $11, $13, $14, $15, $16, false, $2)
 }
@@ -3099,7 +3099,7 @@ path_part
 }
 ;
 
-index_partition:
+opt_index_partition:
 /* empty */
 {
     $$ = nil
@@ -3214,7 +3214,7 @@ opt_flatten_keys_exprs:
 flatten_keys_exprs
 ;
 
-index_where:
+opt_index_where:
 /* empty */
 {
     $$ = nil
@@ -3356,7 +3356,7 @@ CREATE opt_replace FUNCTION opt_if_not_exists func_name
         yylex.(*lexer).PushQueryContext($5.QueryContext())
     }
 }
-LPAREN parm_list RPAREN opt_if_not_exists func_body
+LPAREN opt_parm_list RPAREN opt_if_not_exists func_body
 {
     if $5 != nil {
         yylex.(*lexer).PopQueryContext()
@@ -3451,7 +3451,7 @@ namespace_term path_part DOT path_part DOT keyspace_name
 }
 ;
 
-parm_list:
+opt_parm_list:
 /* empty */
 {
     $$ = []string{}
@@ -5499,7 +5499,7 @@ alter_sequence
 ;
 
 create_sequence:
-CREATE SEQUENCE sequence_name_options seq_create_options
+CREATE SEQUENCE sequence_name_options opt_seq_create_options
 {
     failOnExists := true
     var name *algebra.Path
@@ -5593,13 +5593,13 @@ sequence_full_name
 }
 ;
 
-seq_create_options:
+opt_seq_create_options:
 /* empty */
 {
     $$ = nil
 }
 |
-seq_create_options seq_create_option
+opt_seq_create_options seq_create_option
 {
     $$ = append($1, $2)
 }

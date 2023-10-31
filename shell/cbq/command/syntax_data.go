@@ -62,9 +62,9 @@ var statement_syntax = map[string][][]string{
 		[]string{"AS"},
 	},
 	"execute": [][]string{
-		[]string{"EXECUTE", "expression", "execute_using"},
+		[]string{"EXECUTE", "expression", "[execute_using]"},
 	},
-	"execute_using": [][]string{
+	"[execute_using]": [][]string{
 		[]string{"USING", "construction_expr"},
 	},
 	"infer": [][]string{
@@ -524,12 +524,12 @@ var statement_syntax = map[string][][]string{
 		[]string{"path", "[update_for]"},
 	},
 	"merge": [][]string{
-		[]string{"MERGE", "[optim_hints]", "INTO", "simple_keyspace_ref", "[use_merge]", "USING", "simple_from_term", "ON", "[key]", "expression", "merge_actions", "[limit]", "[returning]"},
+		[]string{"MERGE", "[optim_hints]", "INTO", "simple_keyspace_ref", "[use_merge]", "USING", "simple_from_term", "ON", "[key]", "expression", "[merge_actions]", "[limit]", "[returning]"},
 	},
 	"[use_merge]": [][]string{
 		[]string{"[use]"},
 	},
-	"merge_actions": [][]string{
+	"[merge_actions]": [][]string{
 		[]string{"WHEN", "MATCHED", "THEN", "UPDATE", "merge_update", "[merge_delete_insert]"},
 		[]string{"WHEN", "MATCHED", "THEN", "DELETE", "merge_delete", "[merge_insert]"},
 		[]string{"WHEN", "NOT", "MATCHED", "THEN", "INSERT", "merge_insert"},
@@ -618,11 +618,11 @@ var statement_syntax = map[string][][]string{
 		[]string{"TRUNCATE"},
 	},
 	"create_index": [][]string{
-		[]string{"CREATE", "PRIMARY", "INDEX", "[if_not_exists]", "ON", "named_keyspace_ref", "index_partition", "[index_using]", "[with_clause]"},
-		[]string{"CREATE", "PRIMARY", "INDEX", "index_name", "[if_not_exists]", "ON", "named_keyspace_ref", "index_partition", "[index_using]", "[with_clause]"},
-		[]string{"CREATE", "PRIMARY", "INDEX", "IF", "NOT", "EXISTS", "index_name", "ON", "named_keyspace_ref", "index_partition", "[index_using]", "[with_clause]"},
-		[]string{"CREATE", "[vector]", "INDEX", "index_name", "[if_not_exists]", "ON", "named_keyspace_ref", "LPAREN", "index_terms", "RPAREN", "index_partition", "index_where", "[index_using]", "[with_clause]"},
-		[]string{"CREATE", "[vector]", "INDEX", "IF", "NOT", "EXISTS", "index_name", "ON", "named_keyspace_ref", "LPAREN", "index_terms", "RPAREN", "index_partition", "index_where", "[index_using]", "[with_clause]"},
+		[]string{"CREATE", "PRIMARY", "INDEX", "[if_not_exists]", "ON", "named_keyspace_ref", "[index_partition]", "[index_using]", "[with_clause]"},
+		[]string{"CREATE", "PRIMARY", "INDEX", "index_name", "[if_not_exists]", "ON", "named_keyspace_ref", "[index_partition]", "[index_using]", "[with_clause]"},
+		[]string{"CREATE", "PRIMARY", "INDEX", "IF", "NOT", "EXISTS", "index_name", "ON", "named_keyspace_ref", "[index_partition]", "[index_using]", "[with_clause]"},
+		[]string{"CREATE", "[vector]", "INDEX", "index_name", "[if_not_exists]", "ON", "named_keyspace_ref", "LPAREN", "index_terms", "RPAREN", "[index_partition]", "[index_where]", "[index_using]", "[with_clause]"},
+		[]string{"CREATE", "[vector]", "INDEX", "IF", "NOT", "EXISTS", "index_name", "ON", "named_keyspace_ref", "LPAREN", "index_terms", "RPAREN", "[index_partition]", "[index_where]", "[index_using]", "[with_clause]"},
 	},
 	"[vector]": [][]string{
 		[]string{"VECTOR"},
@@ -648,7 +648,7 @@ var statement_syntax = map[string][][]string{
 		[]string{"path_part", "DOT", "path_part"},
 		[]string{"path_part"},
 	},
-	"index_partition": [][]string{
+	"[index_partition]": [][]string{
 		[]string{"PARTITION", "BY", "HASH", "LPAREN", "exprs", "RPAREN"},
 	},
 	"index_using": [][]string{
@@ -683,7 +683,7 @@ var statement_syntax = map[string][][]string{
 		[]string{"flatten_keys_expr"},
 		[]string{"flatten_keys_exprs", "COMMA", "flatten_keys_expr"},
 	},
-	"index_where": [][]string{
+	"[index_where]": [][]string{
 		[]string{"WHERE", "expression"},
 	},
 	"[ikattr]": [][]string{
@@ -715,7 +715,7 @@ var statement_syntax = map[string][][]string{
 		[]string{"BUILD", "INDEX", "ON", "named_keyspace_ref", "LPAREN", "exprs", "RPAREN", "[index_using]"},
 	},
 	"create_function": [][]string{
-		[]string{"CREATE", "[replace]", "FUNCTION", "[if_not_exists]", "func_name", "LPAREN", "parm_list", "RPAREN", "[if_not_exists]", "func_body"},
+		[]string{"CREATE", "[replace]", "FUNCTION", "[if_not_exists]", "func_name", "LPAREN", "[parm_list]", "RPAREN", "[if_not_exists]", "func_body"},
 	},
 	"[replace]": [][]string{
 		[]string{"OR", "REPLACE"},
@@ -733,7 +733,7 @@ var statement_syntax = map[string][][]string{
 		[]string{"namespace_term", "keyspace_name"},
 		[]string{"namespace_term", "path_part", "DOT", "path_part", "DOT", "keyspace_name"},
 	},
-	"parm_list": [][]string{
+	"[parm_list]": [][]string{
 		[]string{"DOT", "DOT", "DOT"},
 		[]string{"parameter_terms"},
 	},
@@ -1114,7 +1114,7 @@ var statement_syntax = map[string][][]string{
 		[]string{"alter_sequence"},
 	},
 	"create_sequence": [][]string{
-		[]string{"CREATE", "SEQUENCE", "sequence_name_options", "seq_create_options"},
+		[]string{"CREATE", "SEQUENCE", "sequence_name_options", "[seq_create_options]"},
 	},
 	"sequence_name_options": [][]string{
 		[]string{"sequence_name_option"},
@@ -1124,8 +1124,8 @@ var statement_syntax = map[string][][]string{
 		[]string{"IF", "NOT", "EXISTS"},
 		[]string{"sequence_full_name"},
 	},
-	"seq_create_options": [][]string{
-		[]string{"seq_create_options", "seq_create_option"},
+	"[seq_create_options]": [][]string{
+		[]string{"[seq_create_options]", "seq_create_option"},
 	},
 	"seq_create_option": [][]string{
 		[]string{"sequence_with"},
