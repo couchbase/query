@@ -598,14 +598,14 @@ func checkMigrateBucket(name string, allBuckets bool) {
 	bucket.Lock()
 	if b {
 		bucket.state = _BUCKET_MIGRATED
+
+		if !allBuckets {
+			checkMigrationComplete()
+		}
 	} else {
 		bucket.state = _BUCKET_PART_MIGRATED
 	}
 	bucket.Unlock()
-
-	if !allBuckets {
-		checkMigrationComplete()
-	}
 
 	lastActivity = time.Now()
 }
@@ -617,10 +617,6 @@ func doMigrateBucket(name string) bool {
 	}
 
 	logging.Infof("UDF migration: Start UDF migration for bucket %s", name)
-
-	// TODO it would be useful here to load the cache so that other requests don't hit the storage
-	// except that to be useful, this would have to be done on all query nodes, which requires
-	// synchronization
 
 	complete := true
 	err1 := metaStorage.ForeachBody(func(parts []string, body functions.FunctionBody) errors.Error {
