@@ -201,6 +201,33 @@ func (s *store) HasSystemCBOStats() (bool, errors.Error) {
 }
 
 func (s *store) CreateSysPrimaryIndex(idxName, requestId string, indexer3 datastore.Indexer3) errors.Error {
+	var er errors.Error
+
+	// make sure index storage mode is set first
+	if gsiIndexer, ok := indexer3.(datastore.GsiIndexer); ok {
+		cfgSet := false
+		maxRetry := 8
+		interval := 250 * time.Millisecond
+		for i := 0; i < maxRetry; i++ {
+			cfg := gsiIndexer.GetGsiClientConfig()["indexer.settings.storage_mode"]
+			if cfgStr, ok := cfg.(string); ok && cfgStr != "" {
+				cfgSet = true
+				break
+			}
+
+			time.Sleep(interval)
+			interval *= 2
+
+			er = indexer3.Refresh()
+			if er != nil {
+				return er
+			}
+		}
+		if !cfgSet {
+			return errors.NewSystemCollectionError("Indexer storage mode not set", nil)
+		}
+	}
+
 	// if not serverless, get number of index nodes in the cluster, and create the primary index
 	// with replicas in the following fashion:
 	//    numIndexNode >= 4    ==> num_replica = 2
@@ -228,7 +255,7 @@ func (s *store) CreateSysPrimaryIndex(idxName, requestId string, indexer3 datast
 		}
 	}
 
-	_, er := indexer3.CreatePrimaryIndex3(requestId, idxName, nil, with)
+	_, er = indexer3.CreatePrimaryIndex3(requestId, idxName, nil, with)
 	if er != nil && !errors.IsIndexExistsError(er) {
 		// if the create failed due to not enough indexer nodes, retry with
 		// less number of replica
