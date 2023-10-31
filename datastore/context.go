@@ -20,8 +20,6 @@ import (
 	"github.com/couchbase/query/value"
 )
 
-var NULL_CONTEXT Context = &contextImpl{}
-
 var NULL_QUERY_CONTEXT QueryContext = &queryContextImpl{}
 var MAJORITY_QUERY_CONTEXT QueryContext = &majorityQueryContextImpl{}
 

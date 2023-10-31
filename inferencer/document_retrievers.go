@@ -791,7 +791,7 @@ func (udr *UnifiedDocumentRetriever) getNextRandomScan(context datastore.QueryCo
 func (udr *UnifiedDocumentRetriever) getNextFullScan(context datastore.QueryContext) (string, value.Value, errors.Error, bool) {
 	if len(udr.keys) == 0 {
 		if udr.iconn == nil {
-			udr.iconn = datastore.NewIndexConnection(datastore.NULL_CONTEXT)
+			udr.iconn = datastore.NewIndexConnection(datastore.NewSystemContext())
 			udr.iconn.SetSkipMetering(true)
 			proj := &datastore.IndexProjection{PrimaryKey: true}
 			go udr.ss.Scan3(udr.Name(), nil, false, false, proj, 0, int64(math.MaxInt64), nil, nil,
@@ -841,6 +841,9 @@ func (udr *UnifiedDocumentRetriever) getNextFullScan(context datastore.QueryCont
 				}
 				sel = int64(rand.Int()) % n
 			}
+		}
+		if errs := udr.iconn.GetErrors(); len(errs) > 0 {
+			return _EMPTY_KEY, nil, errs[0], false
 		}
 		udr.iconn.Dispose()
 		udr.iconn = nil
@@ -959,6 +962,9 @@ next_index:
 			for len(udr.keys) < udr.scanSampleSize {
 				entry, _ := udr.iconn.Sender().GetEntry()
 				if entry == nil {
+					if errs := udr.iconn.GetErrors(); len(errs) > 0 {
+						return _EMPTY_KEY, nil, errs[0], false
+					}
 					timeout := udr.iconn.Timeout()
 					udr.iconn.Dispose()
 					udr.iconn = nil
@@ -1033,6 +1039,9 @@ next_index:
 					for ; skip > 0; skip-- {
 						entry, _ := udr.iconn.Sender().GetEntry()
 						if entry == nil {
+							if errs := udr.iconn.GetErrors(); len(errs) > 0 {
+								return _EMPTY_KEY, nil, errs[0], false
+							}
 							timeout := udr.iconn.Timeout()
 							udr.iconn.Dispose()
 							udr.iconn = nil
@@ -1070,7 +1079,7 @@ next_index:
 }
 
 func (udr *UnifiedDocumentRetriever) restartScan(offset int64, context datastore.QueryContext) {
-	udr.iconn = datastore.NewIndexConnection(datastore.NULL_CONTEXT)
+	udr.iconn = datastore.NewIndexConnection(datastore.NewSystemContext())
 	udr.iconn.SetSkipMetering(true)
 	index := udr.indexes[udr.currentIndex].(datastore.Index3)
 	proj := &datastore.IndexProjection{PrimaryKey: true}

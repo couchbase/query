@@ -132,52 +132,6 @@ func getSystemCollection(bucket string) (datastore.Keyspace, errors.Error) {
 	return ks, err
 }
 
-func getIndexConnection(keyspace datastore.Keyspace) (*datastore.IndexConnection, datastore.Index3, errors.Error) {
-	indexer, err := keyspace.Indexer(datastore.GSI)
-	if err != nil {
-		return nil, nil, err
-	}
-	indexer3, ok := indexer.(datastore.Indexer3)
-	if !ok {
-		return nil, nil, errors.NewSequenceError(errors.E_SEQUENCE, fmt.Errorf("Cannot load from system collection"))
-	}
-	primaries, err := indexer3.PrimaryIndexes()
-	if err != nil {
-		return nil, nil, err
-	}
-	for i := range primaries {
-		index3, ok := primaries[i].(datastore.PrimaryIndex3)
-		if ok {
-			state, _, err := index3.State()
-			if err == nil && state == datastore.ONLINE {
-				return datastore.NewIndexConnection(datastore.NULL_CONTEXT), index3, nil
-			}
-		}
-	}
-	indexer, err = keyspace.Indexer(datastore.SEQ_SCAN)
-	if err != nil {
-		return nil, nil, err
-	}
-	indexer3, ok = indexer.(datastore.Indexer3)
-	if !ok {
-		return nil, nil, errors.NewSequenceError(errors.E_SEQUENCE, fmt.Errorf("Cannot load from system collection"))
-	}
-	primaries, err = indexer3.PrimaryIndexes()
-	if err != nil {
-		return nil, nil, err
-	}
-	for i := range primaries {
-		index3, ok := primaries[i].(datastore.PrimaryIndex3)
-		if ok {
-			state, _, err := index3.State()
-			if err == nil && state == datastore.ONLINE {
-				return datastore.NewIndexConnection(datastore.NULL_CONTEXT), index3, nil
-			}
-		}
-	}
-	return nil, nil, errors.NewSequenceError(errors.E_SEQUENCE, fmt.Errorf("Cannot load from system collection"))
-}
-
 func getSpan(prefix string) datastore.Spans2 {
 	next := []byte(prefix)
 	next[len(next)-1] = next[len(next)-1] + 1
