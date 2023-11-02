@@ -210,13 +210,6 @@ func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 		lastOp = limit
 	}
 
-	// Perform the delayed final projection now, after the ORDER BY
-	if this.delayProjection {
-
-		// TODO retire
-		children = maybeFinalProject(children)
-	}
-
 	qp.SetPlanOp(plan.NewSequence(children...))
 	return qp, nil
 }

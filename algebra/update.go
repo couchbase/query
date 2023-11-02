@@ -33,11 +33,12 @@ type Update struct {
 	returning    *Projection           `json:"returning"`
 	optimHints   *OptimHints           `json:"optimizer_hints"`
 	validateKeys bool                  `json:"validate_keys"`
+	let          expression.Bindings   `json:"let"`
 }
 
 func NewUpdate(keyspace *KeyspaceRef, keys expression.Expression, indexes IndexRefs,
 	set *Set, unset *Unset, where, limit expression.Expression, returning *Projection,
-	optimHints *OptimHints, validateKeys bool) *Update {
+	optimHints *OptimHints, validateKeys bool, let expression.Bindings) *Update {
 
 	rv := &Update{
 		keyspace:     keyspace,
@@ -50,6 +51,7 @@ func NewUpdate(keyspace *KeyspaceRef, keys expression.Expression, indexes IndexR
 		returning:    returning,
 		optimHints:   optimHints,
 		validateKeys: validateKeys,
+		let:          let,
 	}
 
 	rv.stmt = rv
@@ -101,6 +103,9 @@ func (this *Update) String() string {
 	}
 	if this.indexes != nil {
 		s += " use index(" + this.indexes.String() + ")"
+	}
+	if this.let != nil {
+		s += " let " + stringBindings(this.let)
 	}
 	if this.set != nil {
 		s += " set"
@@ -169,6 +174,13 @@ func (this *Update) MapExpressions(mapper expression.Mapper) (err error) {
 		}
 	}
 
+	if this.let != nil {
+		err = this.let.MapExpressions(mapper)
+		if err != nil {
+			return
+		}
+	}
+
 	if this.set != nil {
 		err = this.set.MapExpressions(mapper)
 		if err != nil {
@@ -210,6 +222,10 @@ Returns all contained Expressions.
 func (this *Update) Expressions() expression.Expressions {
 	exprs := make(expression.Expressions, 0, 16)
 
+	if this.let != nil {
+		exprs = append(exprs, this.let.Expressions()...)
+	}
+
 	if this.keys != nil {
 		exprs = append(exprs, this.keys)
 	}
@@ -242,6 +258,10 @@ func (this *Update) NonMutatedExpressions() expression.Expressions {
 
 	if this.keys != nil {
 		exprs = append(exprs, this.keys)
+	}
+
+	if this.let != nil {
+		exprs = append(exprs, this.let.Expressions()...)
 	}
 
 	if this.set != nil {
@@ -301,6 +321,13 @@ func (this *Update) Formalize() (err error) {
 
 	empty := expression.NewFormalizer("", nil)
 
+	if this.let != nil {
+		err = f.PushBindings(this.let, false)
+		if err != nil {
+			return
+		}
+	}
+
 	if this.keys != nil {
 		_, err = this.keys.Accept(empty)
 		if err != nil {
@@ -343,17 +370,10 @@ func (this *Update) Formalize() (err error) {
 	return
 }
 
-/*
-Returns the keyspace-ref for the UPDATE statement.
-*/
 func (this *Update) KeyspaceRef() *KeyspaceRef {
 	return this.keyspace
 }
 
-/*
-Returns the keys expression defined by the USE KEYS
-clause.
-*/
 func (this *Update) Keys() expression.Expression {
 	return this.keys
 }
@@ -362,56 +382,34 @@ func (this *Update) ValidateKeys() bool {
 	return this.validateKeys
 }
 
-/*
-Returns the indexes defined by the USE INDEX clause.
-*/
 func (this *Update) Indexes() IndexRefs {
 	return this.indexes
 }
 
-/*
-Returns the terms from the SET clause in an UPDATE
-statement.
-*/
+func (this *Update) Let() expression.Bindings {
+	return this.let
+}
+
 func (this *Update) Set() *Set {
 	return this.set
 }
 
-/*
-Returns the terms from the UNSET clause in an UPDATE
-statement.
-*/
 func (this *Update) Unset() *Unset {
 	return this.unset
 }
 
-/*
-Returns the WHERE clause expression in an UPDATE
-statement.
-*/
 func (this *Update) Where() expression.Expression {
 	return this.where
 }
 
-/*
-Returns the limit expression for the LIMIT
-clause in an UPDATE statement.
-*/
 func (this *Update) Limit() expression.Expression {
 	return this.limit
 }
 
-/*
-Returns the RETURNING clause projection for the
-UPDATE statement.
-*/
 func (this *Update) Returning() *Projection {
 	return this.returning
 }
 
-/*
-Optimier hints
-*/
 func (this *Update) OptimHints() *OptimHints {
 	return this.optimHints
 }

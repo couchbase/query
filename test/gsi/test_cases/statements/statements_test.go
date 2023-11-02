@@ -26,11 +26,13 @@ func TestStatements(t *testing.T) {
 	runMatch("insert.json", false, false, qc, t)
 
 	runStmt(qc, "CREATE INDEX index_custId ON customer(custId) WHERE test_id = \"delete_statement\"")
+	runStmt(qc, "CREATE INDEX index_custId ON customer(custId) WHERE test_id = \"update_statement\"")
 
 	runMatch("case_delete_tests.json", false, true, qc, t)
+	runMatch("case_update_tests.json", false, true, qc, t)
 
 	runStmt(qc, "CREATE PRIMARY INDEX ON customer")
-	runStmt(qc, "DELETE FROM customer WHERE test_id = \"delete_statement\"")
+	runStmt(qc, "DELETE FROM customer WHERE test_id IN [\"delete_statement\",\"update_statement\"]")
 
 	runStmt(qc, "DROP INDEX customer.index_custId")
 	runStmt(qc, "DROP PRIMARY INDEX ON customer")

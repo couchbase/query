@@ -37,7 +37,7 @@ func (this *builder) VisitDelete(stmt *algebra.Delete) (interface{}, error) {
 	mustFetch := stmt.Returning() != nil || this.context.DeltaKeyspaces() != nil
 	optimHints := stmt.OptimHints()
 	optimHints, err = this.beginMutate(keyspace, ksref, stmt.Keys(), stmt.Indexes(), stmt.Limit(), stmt.Offset(),
-		mustFetch, optimHints)
+		mustFetch, optimHints, stmt.Let())
 	if err != nil {
 		return nil, err
 	}
@@ -69,7 +69,7 @@ func (this *builder) VisitDelete(stmt *algebra.Delete) (interface{}, error) {
 	deleteSubChildren = append(deleteSubChildren, sd)
 
 	if stmt.Returning() != nil {
-		deleteSubChildren = this.buildDMLProject(stmt.Returning(), deleteSubChildren)
+		deleteSubChildren = this.buildDMLProject(stmt.Returning(), deleteSubChildren, true)
 	}
 
 	if stmt.Limit() != nil || stmt.Offset() != nil {

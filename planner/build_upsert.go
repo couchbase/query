@@ -77,7 +77,7 @@ func (this *builder) VisitUpsert(stmt *algebra.Upsert) (interface{}, error) {
 	subChildren = append(subChildren, upsert)
 
 	if stmt.Returning() != nil {
-		subChildren = this.buildDMLProject(stmt.Returning(), subChildren)
+		subChildren = this.buildDMLProject(stmt.Returning(), subChildren, true)
 	}
 
 	children = append(children, this.addParallel(subChildren...))

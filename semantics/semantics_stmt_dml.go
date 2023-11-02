@@ -107,6 +107,12 @@ func (this *SemChecker) VisitDelete(stmt *algebra.Delete) (r interface{}, err er
 		}
 	}
 
+	if stmt.Let() != nil {
+		if err = stmt.Let().MapExpressions(this); err != nil {
+			return nil, err
+		}
+	}
+
 	if stmt.Where() != nil {
 		this.setSemFlag(_SEM_WHERE)
 		_, err = this.Map(stmt.Where())
@@ -155,6 +161,12 @@ func (this *SemChecker) VisitUpdate(stmt *algebra.Update) (r interface{}, err er
 
 	if stmt.Unset() != nil {
 		if err = stmt.Unset().MapExpressions(this); err != nil {
+			return nil, err
+		}
+	}
+
+	if stmt.Let() != nil {
+		if err = stmt.Let().MapExpressions(this); err != nil {
 			return nil, err
 		}
 	}
@@ -234,6 +246,12 @@ func (this *SemChecker) VisitMerge(stmt *algebra.Merge) (r interface{}, err erro
 		_, err = this.Map(stmt.On())
 		this.unsetSemFlag(_SEM_ON)
 		if err != nil {
+			return nil, err
+		}
+	}
+
+	if stmt.Let() != nil {
+		if err = stmt.Let().MapExpressions(this); err != nil {
 			return nil, err
 		}
 	}

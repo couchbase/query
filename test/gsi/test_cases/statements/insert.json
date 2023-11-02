@@ -43,5 +43,11 @@
      },
      { 
         "statements":"INSERT INTO customer (KEY,VALUE) VALUES(\"15_delete_statement\", {\"type\":\"customer\",\"firstName\":\"Burton\",\"lastName\":\"Caldes\",\"emailAddress\":\"bcaldese@youtu.be\",\"custId\":\"customer15\",\"test_id\":\"delete_statement\"})" 
+     },
+     {
+        "statements":"INSERT INTO customer (KEY,VALUE) VALUES(\"1_update_statement\", {\"type\":\"customer\",\"firstName\":\"Couch\",\"lastName\":\"Base\",\"emailAddress\":\"couchbase@couchbase.com\",\"custId\":\"internal1\",\"test_id\":\"update_statement\"})" 
+     },
+     {
+        "statements":"INSERT INTO customer (KEY,VALUE) VALUES(\"2_update_statement\", {\"type\":\"customer\",\"firstName\":\"Ella\",\"lastName\":\"Cap\",\"emailAddress\":\"ellacap@couchbase.com\",\"custId\":\"internal2\",\"test_id\":\"update_statement\"})" 
      }
 ]

@@ -41,6 +41,7 @@ type Merge struct {
 	limit      expression.Expression `json:"limit"`
 	returning  *Projection           `json:"returning"`
 	optimHints *OptimHints           `json:"optimizer_hints"`
+	let        expression.Bindings   `json:"let"`
 }
 
 /*
@@ -50,7 +51,7 @@ of the struct.
 */
 func NewMerge(keyspace *KeyspaceRef, indexes IndexRefs, source *MergeSource,
 	isOnKey bool, on expression.Expression, actions *MergeActions,
-	limit expression.Expression, returning *Projection, optimHints *OptimHints) *Merge {
+	limit expression.Expression, returning *Projection, optimHints *OptimHints, let expression.Bindings) *Merge {
 	rv := &Merge{
 		keyspace:   keyspace,
 		indexes:    indexes,
@@ -61,6 +62,7 @@ func NewMerge(keyspace *KeyspaceRef, indexes IndexRefs, source *MergeSource,
 		limit:      limit,
 		returning:  returning,
 		optimHints: optimHints,
+		let:        let,
 	}
 
 	rv.stmt = rv
@@ -101,6 +103,13 @@ func (this *Merge) MapExpressions(mapper expression.Mapper) (err error) {
 		return
 	}
 
+	if this.let != nil {
+		err = this.let.MapExpressions(mapper)
+		if err != nil {
+			return
+		}
+	}
+
 	err = this.actions.MapExpressions(mapper)
 	if err != nil {
 		return
@@ -128,6 +137,9 @@ func (this *Merge) Expressions() expression.Expressions {
 
 	exprs = append(exprs, this.source.Expressions()...)
 	exprs = append(exprs, this.on)
+	if this.let != nil {
+		exprs = append(exprs, this.let.Expressions()...)
+	}
 	exprs = append(exprs, this.actions.Expressions()...)
 
 	if this.limit != nil {
@@ -146,6 +158,9 @@ func (this *Merge) NonMutatedExpressions() expression.Expressions {
 
 	exprs = append(exprs, this.source.Expressions()...)
 	exprs = append(exprs, this.on)
+	if this.let != nil {
+		exprs = append(exprs, this.let.Expressions()...)
+	}
 	exprs = append(exprs, this.actions.NonMutatedExpressions()...)
 
 	if this.limit != nil {
@@ -231,6 +246,16 @@ func (this *Merge) Formalize() (err error) {
 		return err
 	}
 
+	if this.let != nil {
+		err = f.PushBindings(this.let, false)
+		if err != nil {
+			return
+		}
+		for _, v := range this.let {
+			kf.SetAllowedAlias(v.Variable(), false)
+		}
+	}
+
 	// need to formalize separately for INSERT and
 	// UPDATE/DELETE since INSERT can only reference source
 	if this.actions.insert != nil {
@@ -268,61 +293,38 @@ func (this *Merge) Formalize() (err error) {
 	return
 }
 
-/*
-Returns the keyspace-ref for the merge statement.
-*/
 func (this *Merge) KeyspaceRef() *KeyspaceRef {
 	return this.keyspace
 }
 
-/*
-Returns the index hints for the merge statement.
-*/
 func (this *Merge) Indexes() IndexRefs {
 	return this.indexes
 }
 
-/*
-Returns the merge source for the merge statement.
-*/
 func (this *Merge) Source() *MergeSource {
 	return this.source
 }
 
-/*
-Returns the on expression for the on clause in
-the merge statement.
-*/
 func (this *Merge) On() expression.Expression {
 	return this.on
 }
 
-/*
-Returns whether the on clause is using 'on keys' syntax
-*/
 func (this *Merge) IsOnKey() bool {
 	return this.isOnKey
 }
 
-/*
-Returns the merge actions for the merge statement.
-*/
+func (this *Merge) Let() expression.Bindings {
+	return this.let
+}
+
 func (this *Merge) Actions() *MergeActions {
 	return this.actions
 }
 
-/*
-Returns the limit expression for the limit clause
-in the merge statement.
-*/
 func (this *Merge) Limit() expression.Expression {
 	return this.limit
 }
 
-/*
-Returns the returning clause projection for the
-merge statement.
-*/
 func (this *Merge) Returning() *Projection {
 	return this.returning
 }
@@ -352,6 +354,9 @@ func (this *Merge) String() string {
 		} else {
 			s += " on " + this.on.String()
 		}
+	}
+	if this.let != nil {
+		s += " let " + stringBindings(this.let)
 	}
 	if this.actions != nil {
 		if this.actions.update != nil {

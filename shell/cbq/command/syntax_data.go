@@ -467,14 +467,14 @@ var statement_syntax = map[string][][]string{
 		[]string{"UPSERT", "INTO", "keyspace_ref", "LPAREN", "key_val_options_expr_header", "RPAREN", "fullselect", "[returning]"},
 	},
 	"delete": [][]string{
-		[]string{"DELETE", "[optim_hints]", "FROM", "keyspace_ref", "[use_del_upd]", "[where]", "limit", "[offset]", "[returning]"},
-		[]string{"DELETE", "[optim_hints]", "FROM", "keyspace_ref", "[use_del_upd]", "[where]", "offset", "[limit]", "[returning]"},
-		[]string{"DELETE", "[optim_hints]", "FROM", "keyspace_ref", "[use_del_upd]", "[where]", "[returning]"},
+		[]string{"DELETE", "[optim_hints]", "FROM", "keyspace_ref", "[use_del_upd]", "[let]", "[where]", "limit", "[offset]", "[returning]"},
+		[]string{"DELETE", "[optim_hints]", "FROM", "keyspace_ref", "[use_del_upd]", "[let]", "[where]", "offset", "[limit]", "[returning]"},
+		[]string{"DELETE", "[optim_hints]", "FROM", "keyspace_ref", "[use_del_upd]", "[let]", "[where]", "[returning]"},
 	},
 	"update": [][]string{
-		[]string{"UPDATE", "[optim_hints]", "keyspace_ref", "[use_del_upd]", "set", "unset", "[where]", "[limit]", "[returning]"},
-		[]string{"UPDATE", "[optim_hints]", "keyspace_ref", "[use_del_upd]", "set", "[where]", "[limit]", "[returning]"},
-		[]string{"UPDATE", "[optim_hints]", "keyspace_ref", "[use_del_upd]", "unset", "[where]", "[limit]", "[returning]"},
+		[]string{"UPDATE", "[optim_hints]", "keyspace_ref", "[use_del_upd]", "[let]", "set", "unset", "[where]", "[limit]", "[returning]"},
+		[]string{"UPDATE", "[optim_hints]", "keyspace_ref", "[use_del_upd]", "[let]", "set", "[where]", "[limit]", "[returning]"},
+		[]string{"UPDATE", "[optim_hints]", "keyspace_ref", "[use_del_upd]", "[let]", "unset", "[where]", "[limit]", "[returning]"},
 	},
 	"set": [][]string{
 		[]string{"SET", "set_terms"},
@@ -524,7 +524,7 @@ var statement_syntax = map[string][][]string{
 		[]string{"path", "[update_for]"},
 	},
 	"merge": [][]string{
-		[]string{"MERGE", "[optim_hints]", "INTO", "simple_keyspace_ref", "[use_merge]", "USING", "simple_from_term", "ON", "[key]", "expression", "[merge_actions]", "[limit]", "[returning]"},
+		[]string{"MERGE", "[optim_hints]", "INTO", "simple_keyspace_ref", "[use_merge]", "USING", "simple_from_term", "ON", "[key]", "expression", "[let]", "[merge_actions]", "[limit]", "[returning]"},
 	},
 	"[use_merge]": [][]string{
 		[]string{"[use]"},

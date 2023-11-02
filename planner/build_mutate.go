@@ -18,7 +18,7 @@ import (
 
 func (this *builder) beginMutate(keyspace datastore.Keyspace, ksref *algebra.KeyspaceRef,
 	keys expression.Expression, indexes algebra.IndexRefs, limit expression.Expression, offset expression.Expression,
-	mustFetch bool, optimHints *algebra.OptimHints) (*algebra.OptimHints, error) {
+	mustFetch bool, optimHints *algebra.OptimHints, let expression.Bindings) (*algebra.OptimHints, error) {
 
 	ksref.SetDefaultNamespace(this.namespace)
 	var term *algebra.KeyspaceTerm
@@ -64,6 +64,15 @@ func (this *builder) beginMutate(keyspace datastore.Keyspace, ksref *algebra.Key
 
 	// Process where clause
 	if this.where != nil {
+		if let != nil {
+			inliner := expression.NewInliner(let.Mappings())
+			level := getMaxLevelOfLetBindings(let)
+			var err error
+			this.where, err = dereferenceLet(this.where.Copy(), inliner, level)
+			if err != nil {
+				return nil, err
+			}
+		}
 		var err error
 		this.where, err = this.getWhere(this.where)
 		if err == nil && this.where != nil {
@@ -136,6 +145,13 @@ func (this *builder) beginMutate(keyspace datastore.Keyspace, ksref *algebra.Key
 		this.addSubChildren(fetch)
 	}
 
+	if let != nil {
+		if this.useCBO {
+			cost, cardinality, size, frCost = getLetCost(this.lastOp)
+		}
+		letOp := plan.NewLet(let, cost, cardinality, size, frCost)
+		this.addSubChildren(letOp)
+	}
 	if this.where != nil {
 		if this.useCBO {
 			cost, cardinality, size, frCost = getFilterCost(this.lastOp, this.where,

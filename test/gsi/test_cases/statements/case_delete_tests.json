@@ -115,7 +115,25 @@
                 "custId": "customer10"
             }
         ]
+    },
+    {
+        "description":"DELETE operation with LET clause",
+        "comment": "Confirms use of document in LET binding and use of binding in the WHERE clause, correctly considered for index pushdown",
+        "statements":"DELETE FROM customer LET x = \"customer4\" WHERE custId = x AND test_id = \"delete_statement\" RETURNING custId",
+        "results": [
+            {
+                "custId": "customer4"
+            }
+        ]
+    },
+    {
+        "description":"DELETE operation with LET clause",
+        "comment": "Binding dependent on document not pushed down to index scan",
+        "statements":"DELETE FROM customer LET x = SUBSTR(custId,0,8)||\"6\" WHERE custId = x AND test_id = \"delete_statement\" RETURNING custId",
+        "results": [
+            {
+                "custId": "customer6"
+            }
+        ]
     }
 ]
-
- 

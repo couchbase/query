@@ -1,74 +1,87 @@
 [
-    {
-        "testcase": "Merge with UPDATE and INSERT, UPDATE with WHERE clauses",
-        "statements":"MERGE INTO shellTest t USING (SELECT meta(s1).id AS metaid, s1.* FROM shellTest s1 WHERE s1.c11 IS NOT NULL AND s1.type = \"source\") AS s ON t.c21 = s.c11 WHEN MATCHED THEN UPDATE set t.c23 = t.c22, t.c22 = s.c12 WHERE s.type = \"source\" AND t.type = \"target\" WHEN NOT MATCHED THEN INSERT (KEY REPLACE(s.metaid, \"test1\", \"test2\"), VALUE {\"c21\": s.c11, \"c22\": s.c12 + s.c13, \"type\": \"target\", \"test_id\": s.test_id, \"inserted\": true})",
-        "results": [
+  {
+    "testcase": "Merge with UPDATE and INSERT, UPDATE with WHERE clauses",
+    "statements": "MERGE INTO shellTest t USING (SELECT meta(s1).id AS metaid, s1.* FROM shellTest s1 WHERE s1.c11 IS NOT NULL AND s1.type = \"source\") AS s ON t.c21 = s.c11 WHEN MATCHED THEN UPDATE set t.c23 = t.c22, t.c22 = s.c12 WHERE s.type = \"source\" AND t.type = \"target\" WHEN NOT MATCHED THEN INSERT (KEY REPLACE(s.metaid, \"test1\", \"test2\"), VALUE {\"c21\": s.c11, \"c22\": s.c12 + s.c13, \"type\": \"target\", \"test_id\": s.test_id, \"inserted\": true})",
+    "results": []
+  },
+  {
+    "testcase": "Check result of previous MERGE statement",
+    "statements": "SELECT c21, c22, c23, inserted FROM shellTest WHERE type = \"target\" ORDER BY c21",
+    "ordered": true,
+    "results": [
+      {
+        "c21": 1,
+        "c22": 2,
+        "c23": 5
+      },
+      {
+        "c21": 2,
+        "c22": 10,
+        "inserted": true
+      },
+      {
+        "c21": 3,
+        "c22": 6,
+        "c23": 15
+      },
+      {
+        "c21": 4,
+        "c22": 20,
+        "inserted": true
+      },
+      {
+        "c21": 5,
+        "c22": 10,
+        "c23": 25
+      },
+      {
+        "c21": 6,
+        "c22": 30
+      }
     ]
-    },
-    {
-        "testcase": "Check result of previous MERGE statement",
-        "statements":"SELECT c21, c22, c23, inserted FROM shellTest WHERE type = \"target\" ORDER BY c21",
-        "ordered": true,
-        "results": [
-        {
-            "c21": 1,
-            "c22": 2,
-            "c23": 5
-        },
-        {
-            "c21": 2,
-            "c22": 10,
-            "inserted": true
-        },
-        {
-            "c21": 3,
-            "c22": 6,
-            "c23": 15
-        },
-        {
-            "c21": 4,
-            "c22": 20,
-            "inserted": true
-        },
-        {
-            "c21": 5,
-            "c22": 10,
-            "c23": 25
-        },
-        {
-            "c21": 6,
-            "c22": 30
-        }
+  },
+  {
+    "testcase": "MERGE statement to return data to previous state, including UPDATE and DELETE actions, both with WHERE clause",
+    "statements": "MERGE INTO shellTest t USING shellTest s ON t.c21 = s.c11 LET bind1 = meta(t).id, bind2 = \"target\", bind3 = t.c23 WHEN MATCHED THEN UPDATE set t.c22 = bind3 unset t.c23 WHERE t.type = bind2 AND t.c23 IS NOT MISSING WHEN MATCHED THEN DELETE WHERE t.type = bind2 AND t.inserted = true RETURNING bind1",
+    "results": [
+      {
+        "bind1": "test22_merge"
+      },
+      {
+        "bind1": "test24_merge"
+      },
+      {
+        "bind1": "test21_merge"
+      },
+      {
+        "bind1": "test23_merge"
+      },
+      {
+        "bind1": "test25_merge"
+      }
     ]
-    },
-    {
-        "testcase": "MERGE statement to return data to previous state, including UPDATE and DELETE actions, both with WHERE clause",
-        "statements":"MERGE INTO shellTest t USING shellTest s ON t.c21 = s.c11 WHEN MATCHED THEN UPDATE set t.c22 = t.c23 unset t.c23 WHERE t.type = \"target\" AND t.c23 IS NOT MISSING WHEN MATCHED THEN DELETE WHERE t.type = \"target\" AND t.inserted = true",
-        "results": [
+  },
+  {
+    "testcase": "Check result of previous MERGE statement",
+    "statements": "SELECT c21, c22, c23, inserted FROM shellTest WHERE type = \"target\" ORDER BY c21",
+    "ordered": true,
+    "results": [
+      {
+        "c21": 1,
+        "c22": 5
+      },
+      {
+        "c21": 3,
+        "c22": 15
+      },
+      {
+        "c21": 5,
+        "c22": 25
+      },
+      {
+        "c21": 6,
+        "c22": 30
+      }
     ]
-    },
-    {
-        "testcase": "Check result of previous MERGE statement",
-        "statements":"SELECT c21, c22, c23, inserted FROM shellTest WHERE type = \"target\" ORDER BY c21",
-        "ordered": true,
-        "results": [
-        {
-            "c21": 1,
-            "c22": 5
-        },
-        {
-            "c21": 3,
-            "c22": 15
-        },
-        {
-            "c21": 5,
-            "c22": 25
-        },
-        {
-            "c21": 6,
-            "c22": 30
-        }
-    ]
-    }
+  }
 ]
-

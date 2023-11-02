@@ -77,7 +77,7 @@ func (this *builder) VisitInsert(stmt *algebra.Insert) (interface{}, error) {
 	subChildren = append(subChildren, insert)
 
 	if stmt.Returning() != nil {
-		subChildren = this.buildDMLProject(stmt.Returning(), subChildren)
+		subChildren = this.buildDMLProject(stmt.Returning(), subChildren, true)
 	}
 
 	children = append(children, this.addParallel(subChildren...))

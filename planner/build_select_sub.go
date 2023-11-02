@@ -347,13 +347,6 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 			this.delayProjection = false
 		}
 
-		if !this.delayProjection {
-
-			// Perform the final projection if there is no subsequent ORDER BY
-			// TODO retire
-			this.subChildren = maybeFinalProject(this.subChildren)
-		}
-
 		// Parallelize the subChildren
 		this.addChildren(this.addSubchildrenParallel())
 

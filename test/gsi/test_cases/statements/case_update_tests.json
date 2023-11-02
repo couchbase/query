@@ -1,0 +1,37 @@
+[
+  {
+    "description": "UPDATE with LET part 1 (use of LET binding in SET clause)",
+    "explain": {
+      "disabled": false,
+      "results": [
+        {
+          "correct": true
+        }
+      ],
+      "statement": "SELECT true AS correct FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'Let' END"
+    },
+    "statements": "UPDATE customer LET orig = firstName SET firstName = UPPER(firstName), original = orig WHERE test_id = \"update_statement\" RETURNING orig, customer.firstName",
+    "results": [
+      {
+        "orig": "Ella",
+        "firstName": "ELLA"
+      },
+      {
+        "orig": "Couch",
+        "firstName": "COUCH"
+      }
+    ]
+  },
+  {
+    "description": "UPDATE with LET part 2 (use of LET binding in WHERE clause)",
+    "statements": "UPDATE customer LET orig = firstName SET lastName = UPPER(lastName) WHERE test_id = \"update_statement\" AND orig != original RETURNING customer.lastName",
+    "results": [
+      {
+        "lastName": "BASE"
+      },
+      {
+        "lastName": "CAP"
+      }
+    ]
+  }
+]

@@ -13,17 +13,9 @@ import (
 	"github.com/couchbase/query/plan"
 )
 
-// TODO retire
-func maybeFinalProject(children []plan.Operator) []plan.Operator {
+func (this *builder) buildDMLProject(projection *algebra.Projection, subChildren []plan.Operator,
+	discardOriginal bool) []plan.Operator {
 
-	// TODO test cluster capabilities
-	// if false {
-	//	children = append(children, plan.NewFinalProject())
-	// }
-	return children
-}
-
-func (this *builder) buildDMLProject(projection *algebra.Projection, subChildren []plan.Operator) []plan.Operator {
 	cost := OPT_COST_NOT_AVAIL
 	cardinality := OPT_CARD_NOT_AVAIL
 	size := OPT_SIZE_NOT_AVAIL
@@ -39,10 +31,8 @@ func (this *builder) buildDMLProject(projection *algebra.Projection, subChildren
 		}
 	}
 
-	subChildren = append(subChildren, plan.NewInitialProject(projection, cost, cardinality, size, frCost, true, nil, true))
-
-	// TODO retire
-	subChildren = maybeFinalProject(subChildren)
+	subChildren = append(subChildren, plan.NewInitialProject(projection, cost, cardinality, size, frCost, true, nil,
+		discardOriginal))
 
 	return subChildren
 }

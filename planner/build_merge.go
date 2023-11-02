@@ -189,6 +189,13 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 		targetSize = getKeyspaceSize(targetKeyspace.Keyspace())
 	}
 
+	if stmt.Let() != nil {
+		if this.useCBO {
+			cost, cardinality, size, frCost = getLetCost(this.lastOp)
+		}
+		this.addSubChildren(plan.NewLet(stmt.Let(), cost, cardinality, size, frCost))
+	}
+
 	actions := stmt.Actions()
 	var update, delete, insert plan.Operator
 	var updateFilter, deleteFilter, insertFilter expression.Expression
@@ -361,7 +368,7 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 	this.addSubChildren(merge)
 
 	if stmt.Returning() != nil {
-		this.subChildren = this.buildDMLProject(stmt.Returning(), this.subChildren)
+		this.subChildren = this.buildDMLProject(stmt.Returning(), this.subChildren, stmt.Let() == nil)
 	}
 
 	this.addChildren(this.addSubchildrenParallel())

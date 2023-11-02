@@ -2375,19 +2375,19 @@ UPSERT INTO keyspace_ref LPAREN key_val_options_expr_header RPAREN fullselect op
  *************************************************/
 
 delete:
-DELETE opt_optim_hints FROM keyspace_ref opt_use_del_upd opt_where limit opt_offset opt_returning /* LIMIT precedes OFFSET */
+DELETE opt_optim_hints FROM keyspace_ref opt_use_del_upd opt_let opt_where limit opt_offset opt_returning /* LIMIT before OFFSET */
 {
-  $$ = algebra.NewDelete($4, $5.Keys(), $5.Indexes(), $6, $7, $8, $9, $2, $5.ValidateKeys())
+  $$ = algebra.NewDelete($4, $5.Keys(), $5.Indexes(), $7, $8, $9, $10, $2, $5.ValidateKeys(), $6)
 }
 |
-DELETE opt_optim_hints FROM keyspace_ref opt_use_del_upd opt_where offset opt_limit opt_returning /* OFFSET precedes LIMIT */
+DELETE opt_optim_hints FROM keyspace_ref opt_use_del_upd opt_let opt_where offset opt_limit opt_returning /* OFFSET before LIMIT */
 {
-  $$ = algebra.NewDelete($4, $5.Keys(), $5.Indexes(), $6, $8, $7, $9, $2, $5.ValidateKeys())
+  $$ = algebra.NewDelete($4, $5.Keys(), $5.Indexes(), $7, $9, $8, $10, $2, $5.ValidateKeys(), $6)
 }
 |
-DELETE opt_optim_hints FROM keyspace_ref opt_use_del_upd opt_where opt_returning
+DELETE opt_optim_hints FROM keyspace_ref opt_use_del_upd opt_let opt_where opt_returning
 {
-  $$ = algebra.NewDelete($4, $5.Keys(), $5.Indexes(), $6, nil, nil, $7, $2, $5.ValidateKeys())
+  $$ = algebra.NewDelete($4, $5.Keys(), $5.Indexes(), $7, nil, nil, $8, $2, $5.ValidateKeys(), $6)
 }
 ;
 
@@ -2399,19 +2399,19 @@ DELETE opt_optim_hints FROM keyspace_ref opt_use_del_upd opt_where opt_returning
  *************************************************/
 
 update:
-UPDATE opt_optim_hints keyspace_ref opt_use_del_upd set unset opt_where opt_limit opt_returning
+UPDATE opt_optim_hints keyspace_ref opt_use_del_upd opt_let set unset opt_where opt_limit opt_returning
 {
-    $$ = algebra.NewUpdate($3, $4.Keys(), $4.Indexes(), $5, $6, $7, $8, $9, $2, $4.ValidateKeys())
+    $$ = algebra.NewUpdate($3, $4.Keys(), $4.Indexes(), $6, $7, $8, $9, $10, $2, $4.ValidateKeys(), $5)
 }
 |
-UPDATE opt_optim_hints keyspace_ref opt_use_del_upd set opt_where opt_limit opt_returning
+UPDATE opt_optim_hints keyspace_ref opt_use_del_upd opt_let set opt_where opt_limit opt_returning
 {
-    $$ = algebra.NewUpdate($3, $4.Keys(), $4.Indexes(), $5, nil, $6, $7, $8, $2, $4.ValidateKeys())
+    $$ = algebra.NewUpdate($3, $4.Keys(), $4.Indexes(), $6, nil, $7, $8, $9, $2, $4.ValidateKeys(), $5)
 }
 |
-UPDATE opt_optim_hints keyspace_ref opt_use_del_upd unset opt_where opt_limit opt_returning
+UPDATE opt_optim_hints keyspace_ref opt_use_del_upd opt_let unset opt_where opt_limit opt_returning
 {
-    $$ = algebra.NewUpdate($3, $4.Keys(), $4.Indexes(), nil, $5, $6, $7, $8, $2, $4.ValidateKeys())
+    $$ = algebra.NewUpdate($3, $4.Keys(), $4.Indexes(), nil, $6, $7, $8, $9, $2, $4.ValidateKeys(), $5)
 }
 ;
 
@@ -2584,19 +2584,19 @@ path opt_update_for
  *************************************************/
 
 merge:
-MERGE opt_optim_hints INTO simple_keyspace_ref opt_use_merge USING simple_from_term ON opt_key expr opt_merge_actions
+MERGE opt_optim_hints INTO simple_keyspace_ref opt_use_merge USING simple_from_term ON opt_key expr opt_let opt_merge_actions
 opt_limit opt_returning
 {
     switch other := $7.(type) {
     case *algebra.SubqueryTerm:
         source := algebra.NewMergeSourceSubquery(other)
-        $$ = algebra.NewMerge($4, $5.Indexes(), source, $9, $10, $11, $12, $13, $2)
+        $$ = algebra.NewMerge($4, $5.Indexes(), source, $9, $10, $12, $13, $14, $2, $11)
     case *algebra.ExpressionTerm:
         source := algebra.NewMergeSourceExpression(other)
-        $$ = algebra.NewMerge($4, $5.Indexes(), source, $9, $10, $11, $12, $13, $2)
+        $$ = algebra.NewMerge($4, $5.Indexes(), source, $9, $10, $12, $13, $14, $2, $11)
     case *algebra.KeyspaceTerm:
         source := algebra.NewMergeSourceFrom(other)
-        $$ = algebra.NewMerge($4, $5.Indexes(), source, $9, $10, $11, $12, $13, $2)
+        $$ = algebra.NewMerge($4, $5.Indexes(), source, $9, $10, $12, $13, $14, $2, $11)
     default:
         yylex.(*lexer).ErrorWithContext("MERGE source term is UNKNOWN", $<line>7, $<column>7)
     }

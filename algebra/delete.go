@@ -36,6 +36,7 @@ type Delete struct {
 	returning    *Projection           `json:"returning"`
 	optimHints   *OptimHints           `json:"optimizer_hints"`
 	validateKeys bool                  `json:"validate_keys"`
+	let          expression.Bindings   `json:"let"`
 }
 
 /*
@@ -43,8 +44,8 @@ The function NewDelete returns a pointer to the Delete
 struct by assigning the input attributes to the fields
 of the struct
 */
-func NewDelete(keyspace *KeyspaceRef, keys expression.Expression, indexes IndexRefs,
-	where, limit, offset expression.Expression, returning *Projection, optimHints *OptimHints, validateKeys bool) *Delete {
+func NewDelete(keyspace *KeyspaceRef, keys expression.Expression, indexes IndexRefs, where, limit, offset expression.Expression,
+	returning *Projection, optimHints *OptimHints, validateKeys bool, let expression.Bindings) *Delete {
 	rv := &Delete{
 		keyspace:     keyspace,
 		keys:         keys,
@@ -55,6 +56,7 @@ func NewDelete(keyspace *KeyspaceRef, keys expression.Expression, indexes IndexR
 		returning:    returning,
 		optimHints:   optimHints,
 		validateKeys: validateKeys,
+		let:          let,
 	}
 
 	rv.stmt = rv
@@ -110,6 +112,9 @@ func (this *Delete) String() string {
 		s += " use index(" + this.indexes.String() + ")"
 	}
 
+	if this.let != nil {
+		s += " let " + stringBindings(this.let)
+	}
 	if this.where != nil {
 		s += " where " + this.where.String()
 	}
@@ -133,6 +138,13 @@ func (this *Delete) MapExpressions(mapper expression.Mapper) (err error) {
 		this.keys, err = mapper.Map(this.keys)
 		if err != nil {
 			return err
+		}
+	}
+
+	if this.let != nil {
+		err = this.let.MapExpressions(mapper)
+		if err != nil {
+			return
 		}
 	}
 
@@ -172,6 +184,10 @@ func (this *Delete) Expressions() expression.Expressions {
 
 	if this.keys != nil {
 		exprs = append(exprs, this.keys)
+	}
+
+	if this.let != nil {
+		exprs = append(exprs, this.let.Expressions()...)
 	}
 
 	if this.where != nil {
@@ -228,8 +244,7 @@ func (this *Delete) Privileges() (*auth.Privileges, errors.Error) {
 }
 
 /*
-Fully qualify identifiers for each of the constituent clauses
-in the delete statement.
+Fully qualify identifiers for each of the constituent clauses in the delete statement.
 */
 func (this *Delete) Formalize() (err error) {
 	f, err := this.keyspace.Formalize()
@@ -240,6 +255,13 @@ func (this *Delete) Formalize() (err error) {
 	empty := expression.NewFormalizer("", nil)
 	if this.keys != nil {
 		_, err = this.keys.Accept(empty)
+		if err != nil {
+			return
+		}
+	}
+
+	if this.let != nil {
+		err = f.PushBindings(this.let, false)
 		if err != nil {
 			return
 		}
@@ -273,17 +295,10 @@ func (this *Delete) Formalize() (err error) {
 	return
 }
 
-/*
-Returns the keyspace-ref for the delete statement.
-*/
 func (this *Delete) KeyspaceRef() *KeyspaceRef {
 	return this.keyspace
 }
 
-/*
-Returns the use keys expression for the delete
-statement.
-*/
 func (this *Delete) Keys() expression.Expression {
 	return this.keys
 }
@@ -292,48 +307,30 @@ func (this *Delete) ValidateKeys() bool {
 	return this.validateKeys
 }
 
-/*
-Returns the indexes defined by the use index clause.
-*/
 func (this *Delete) Indexes() IndexRefs {
 	return this.indexes
 }
 
-/*
-Returns the expression for the where clause in the
-delete statement.
-*/
+func (this *Delete) Let() expression.Bindings {
+	return this.let
+}
+
 func (this *Delete) Where() expression.Expression {
 	return this.where
 }
 
-/*
-Returns the expression for the limit clause in the
-delete statement.
-*/
 func (this *Delete) Limit() expression.Expression {
 	return this.limit
 }
 
-/*
-Returns the expression for the Offset clause in the
-delete statement.
-*/
 func (this *Delete) Offset() expression.Expression {
 	return this.offset
 }
 
-/*
-Returns the returning clause projection for the
-delete statement.
-*/
 func (this *Delete) Returning() *Projection {
 	return this.returning
 }
 
-/*
-Optimier hints
-*/
 func (this *Delete) OptimHints() *OptimHints {
 	return this.optimHints
 }

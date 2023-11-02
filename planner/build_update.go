@@ -32,8 +32,8 @@ func (this *builder) VisitUpdate(stmt *algebra.Update) (interface{}, error) {
 	}
 
 	optimHints := stmt.OptimHints()
-	optimHints, err = this.beginMutate(keyspace, ksref, stmt.Keys(), stmt.Indexes(), stmt.Limit(), nil,
-		true, optimHints)
+	optimHints, err = this.beginMutate(keyspace, ksref, stmt.Keys(), stmt.Indexes(), stmt.Limit(), nil, true, optimHints,
+		stmt.Let())
 	if err != nil {
 		return nil, err
 	}
@@ -84,7 +84,7 @@ func (this *builder) VisitUpdate(stmt *algebra.Update) (interface{}, error) {
 		cost, cardinality, size, frCost, stmt.Returning() == nil))
 
 	if stmt.Returning() != nil {
-		updateSubChildren = this.buildDMLProject(stmt.Returning(), updateSubChildren)
+		updateSubChildren = this.buildDMLProject(stmt.Returning(), updateSubChildren, true)
 	}
 
 	if stmt.Limit() != nil {

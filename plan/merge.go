@@ -29,6 +29,7 @@ type Merge struct {
 	deleteFilter expression.Expression
 	insert       Operator
 	insertFilter expression.Expression
+	let          Operator
 }
 
 func NewMerge(keyspace datastore.Keyspace, ref *algebra.KeyspaceRef,
