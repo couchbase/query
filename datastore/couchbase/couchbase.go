@@ -1780,6 +1780,10 @@ func (b *keyspace) GetIOStats(reset bool, all bool, prometheus bool, serverless 
 	return b.cbbucket.GetIOStats(reset, all, prometheus, serverless)
 }
 
+func (b *keyspace) DurabilityPossible() bool {
+	return b.cbbucket.DurabilityPossible()
+}
+
 func (b *keyspace) HasCapability(m datastore.Migration) bool {
 	b.Lock()
 	defer b.Unlock()
