@@ -174,6 +174,7 @@ type ExtendedBucket interface {
 	Bucket
 	GetIOStats(bool, bool, bool, bool) map[string]interface{} // get an object containing IO stats for the bucket
 	HasCapability(Migration) bool
+	DurabilityPossible() bool
 }
 
 type Scope interface {

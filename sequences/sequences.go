@@ -276,7 +276,7 @@ func CreateSequence(path *algebra.Path, with value.Value) errors.Error {
 	m["version"] = value.NewValue(0)
 	pairs[0].Value = value.NewAnnotatedValue(value.NewValue(m))
 
-	_, _, errs := b.Insert(pairs, datastore.MAJORITY_QUERY_CONTEXT, true)
+	_, _, errs := b.Insert(pairs, datastore.GetDurableQueryContextFor(b), true)
 	if errs != nil && len(errs) > 0 {
 		return errors.NewSequenceError(errors.E_SEQUENCE_CREATE, name, errs[0])
 	}
@@ -309,7 +309,7 @@ func DropSequence(path *algebra.Path, force bool) errors.Error {
 
 	pairs := make([]value.Pair, 1)
 	pairs[0].Name = getStorageKey(path)
-	_, _, errs := b.Delete(pairs, datastore.MAJORITY_QUERY_CONTEXT, true)
+	_, _, errs := b.Delete(pairs, datastore.GetDurableQueryContextFor(b), true)
 	if errs != nil && len(errs) > 0 {
 		if seq != nil {
 			seq.Unlock()
@@ -534,7 +534,7 @@ func AlterSequence(path *algebra.Path, with value.Value) errors.Error {
 		pairs := make([]value.Pair, 1)
 		pairs[0].Name = keys[0]
 		pairs[0].Value = av
-		_, _, errs = b.Update(pairs, datastore.MAJORITY_QUERY_CONTEXT, true)
+		_, _, errs = b.Update(pairs, datastore.GetDurableQueryContextFor(b), true)
 		if errs != nil && len(errs) > 0 {
 			if errs[0].HasCause(errors.E_CAS_MISMATCH) || errs[0].ContainsText("SYNC_WRITE_IN_PROGRESS") {
 				continue
@@ -663,11 +663,16 @@ func DropAllSequences(namespace string, bucket string, scope string, uid string)
 	if scope != "" {
 		prefix += uid + "::" + scope + "."
 	}
-	err := datastore.ScanSystemCollection(bucket, prefix, nil,
+	var qcontext datastore.QueryContext
+	err := datastore.ScanSystemCollection(bucket, prefix,
+		func(systemCollection datastore.Keyspace) errors.Error {
+			qcontext = datastore.GetDurableQueryContextFor(systemCollection)
+			return nil
+		},
 		func(key string, systemCollection datastore.Keyspace) errors.Error {
 			pairs = append(pairs, value.Pair{Name: key})
 			if len(pairs) >= _BATCH_SIZE {
-				_, results, errs := systemCollection.Delete(pairs, datastore.MAJORITY_QUERY_CONTEXT, true)
+				_, results, errs := systemCollection.Delete(pairs, qcontext, true)
 				for i := range results {
 					sequences.Delete(getCacheKey(namespace, bucket, results[i].Name), nil)
 				}
@@ -681,7 +686,7 @@ func DropAllSequences(namespace string, bucket string, scope string, uid string)
 		},
 		func(systemCollection datastore.Keyspace) errors.Error {
 			if len(pairs) > 0 {
-				_, results, errs := systemCollection.Delete(pairs, datastore.MAJORITY_QUERY_CONTEXT, true)
+				_, results, errs := systemCollection.Delete(pairs, qcontext, true)
 				for i := range results {
 					sequences.Delete(getCacheKey(namespace, bucket, results[i].Name), nil)
 				}
@@ -892,7 +897,7 @@ func (seq *sequence) validateVersion() bool {
 	if err != nil {
 		return false
 	}
-	res, err := b.SetSubDoc(seq.key, blockCmd[:2], datastore.MAJORITY_QUERY_CONTEXT)
+	res, err := b.SetSubDoc(seq.key, blockCmd[:2], datastore.GetDurableQueryContextFor(b))
 	if err != nil {
 		return false
 	}
@@ -932,7 +937,7 @@ func (seq *sequence) nextAvailableBlock(getOnly bool) (int64, errors.Error) {
 		n++
 	}
 	for {
-		res, err = b.SetSubDoc(seq.key, blockCmd[:n], datastore.MAJORITY_QUERY_CONTEXT)
+		res, err = b.SetSubDoc(seq.key, blockCmd[:n], datastore.GetDurableQueryContextFor(b))
 		if err != nil {
 			if err.Code() == errors.E_KEY_NOT_FOUND {
 				return 0, errors.NewSequenceError(errors.E_SEQUENCE_NOT_FOUND, seq.name.SimpleString())
@@ -1010,7 +1015,7 @@ func (seq *sequence) cycleAndCache(newValue int64) (int64, errors.Error) {
 	vals := make(value.Pairs, 3)
 	copy(vals, cycleCmd)
 	vals[2].Value = value.NewValue(fmt.Sprintf("%v", seq.base))
-	res, err = b.SetSubDoc(seq.key, vals, datastore.MAJORITY_QUERY_CONTEXT)
+	res, err = b.SetSubDoc(seq.key, vals, datastore.GetDurableQueryContextFor(b))
 	if err != nil {
 		seq.Unlock()
 		if err.Code() == errors.E_KEY_NOT_FOUND {

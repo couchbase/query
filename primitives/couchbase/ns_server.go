@@ -306,6 +306,10 @@ const (
 	RANGE_SCAN = "rangeScan"
 )
 
+func (b *Bucket) DurabilityPossible() bool {
+	return b.Replicas == 0 || (b.Replicas > 0 && len(b.NodesJSON) > 1)
+}
+
 func (b *Bucket) HasCapability(cap string) bool {
 	for _, c := range b.Capabilities {
 		if c == cap {

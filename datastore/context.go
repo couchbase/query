@@ -286,3 +286,12 @@ type majorityQueryContextImpl struct {
 func (ci *majorityQueryContextImpl) DurabilityLevel() DurabilityLevel {
 	return DL_MAJORITY
 }
+
+func GetDurableQueryContextFor(b Keyspace) QueryContext {
+	if eb, ok := b.Scope().Bucket().(ExtendedBucket); ok {
+		if !eb.DurabilityPossible() {
+			return NULL_QUERY_CONTEXT
+		}
+	}
+	return MAJORITY_QUERY_CONTEXT
+}
