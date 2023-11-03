@@ -265,15 +265,17 @@ func (name *systemEntry) Save(body functions.FunctionBody, replace bool) errors.
 		return errors.NewSystemCollectionError("Error getting scope UID", err)
 	}
 
+	queryContext := datastore.GetDurableQueryContextFor(systemCollection)
+
 	dpairs := make([]value.Pair, 1)
 	dpairs[0].Name = parts2key(scope.Uid(), parts...)
 	dpairs[0].Value = value.NewValue(entry)
 	var errs errors.Errors
 
 	if replace {
-		_, _, errs = systemCollection.Upsert(dpairs, datastore.NULL_QUERY_CONTEXT, false)
+		_, _, errs = systemCollection.Upsert(dpairs, queryContext, false)
 	} else {
-		_, _, errs = systemCollection.Insert(dpairs, datastore.NULL_QUERY_CONTEXT, false)
+		_, _, errs = systemCollection.Insert(dpairs, queryContext, false)
 	}
 
 	if len(errs) > 0 {
@@ -309,7 +311,9 @@ func delete2(systemCollection datastore.Keyspace, key string, name string) error
 	var errs errors.Errors
 	var mCount int
 
-	mCount, _, errs = systemCollection.Delete(dpairs, datastore.NULL_QUERY_CONTEXT, false)
+	queryContext := datastore.GetDurableQueryContextFor(systemCollection)
+
+	mCount, _, errs = systemCollection.Delete(dpairs, queryContext, false)
 	if len(errs) > 0 {
 		return errors.NewMetaKVError(name, errs[0])
 	}
