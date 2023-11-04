@@ -53,8 +53,6 @@ type Context interface {
 	SetTracked(bool)
 	IsTracked() bool
 	IsPrepared() bool
-	Park(func(bool))
-	Resume()
 }
 
 type ExecutionHandle interface {
@@ -88,4 +86,10 @@ type QuotaContext interface {
 	ReleaseValueSize(uint64)
 	GetMemoryQuota() uint64
 	CurrentQuotaUsage() float64
+}
+
+type ParkableContext interface {
+	Context
+	Park(func(bool))
+	Resume()
 }
