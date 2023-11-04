@@ -349,7 +349,7 @@ func (this *Context) PrepareStatement(statement string, namedArgs map[string]val
 		prepContext.SetIsPrepare()
 		isPrepare = true
 	case *algebra.Advise:
-		st.SetContext(this)
+		st.SetContext(NewOpContext(this))
 	}
 
 	//  monitoring code TBD
