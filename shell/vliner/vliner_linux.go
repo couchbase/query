@@ -11,6 +11,7 @@
 package vliner
 
 import (
+	"os/exec"
 	"syscall"
 )
 
@@ -30,4 +31,8 @@ func invokeEditor(args []string, attr *syscall.ProcAttr) bool {
 		_, err = syscall.Wait4(pid, &ws, 0, nil)
 	}
 	return nil == err
+}
+
+func setupPipe(cmd string) *exec.Cmd {
+	return exec.Command("sh", "-c", cmd)
 }

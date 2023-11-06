@@ -101,6 +101,12 @@ func (this *Unset) ExecCommand(args []string) (errors.ErrorCode, string) {
 				}
 				HISTFILE = ".cbq_history"
 
+				//Print the path to histfile
+				err_code, err_str = printPath(HISTFILE)
+				if err_code != 0 {
+					return err_code, err_str
+				}
+
 			}
 
 			if vble == "batch" {
@@ -130,13 +136,6 @@ func (this *Unset) ExecCommand(args []string) (errors.ErrorCode, string) {
 				}
 				TERSE = false
 			}
-
-			//Print the path to histfile
-			err_code, err_str = printPath(HISTFILE)
-			if err_code != 0 {
-				return err_code, err_str
-			}
-
 		}
 	}
 	return 0, ""

@@ -128,3 +128,10 @@ func (s *State) SetMultiLineMode(mlmode bool) {
 		s.vi.SetMultiLineMode(mlmode)
 	}
 }
+
+func (s *State) SetCommandCallback(f func(...string) string) {
+	// not implemented for pliner
+	if s.viMode {
+		s.vi.SetCommandCallback(f)
+	}
+}

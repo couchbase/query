@@ -9,6 +9,7 @@
 package main
 
 import (
+	"fmt"
 	"io"
 	"os"
 	"strings"
@@ -196,6 +197,34 @@ func HandleInteractiveMode(prompt string) {
 		return
 	}
 	liner.SetMultiLineMode(!viModeSingleLineFlag)
+	liner.SetCommandCallback(func(args ...string) string {
+		var err_code errors.ErrorCode
+		var err_string string
+		command.PrintStr(command.W, "\n")
+		if len(args) > 1 && (args[0] == "set" || args[0] == "unset") && args[1] == "histfile" {
+			path := command.GetPath(homeDir, command.HISTFILE)
+			err_code, err_string = WriteHistoryToFile(liner, path)
+			if err_code != 0 {
+				s_err := command.HandleError(err_code, err_string)
+				command.PrintError(s_err)
+			}
+			liner.ClearHistory()
+			q := command.QUIET
+			command.QUIET = true
+			command.COMMAND_LIST["\\"+args[0]].ExecCommand(args[1:])
+			command.QUIET = q
+			err_code, err_string = LoadHistory(liner, homeDir)
+		} else if len(args) > 1 {
+			err_code, err_string = command.COMMAND_LIST["\\"+args[0]].ExecCommand(args[1:])
+		} else if len(args) == 1 {
+			err_code, err_string = command.COMMAND_LIST["\\"+args[0]].ExecCommand([]string{})
+		}
+		if err_code != 0 {
+			s_err := command.HandleError(err_code, err_string)
+			return fmt.Sprintf("[ERROR %v: %v]", err_code, s_err.Error())
+		}
+		return "[Success]"
+	})
 	defer liner.Close()
 
 	/* Load history from Home directory

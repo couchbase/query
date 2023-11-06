@@ -561,7 +561,7 @@ func VerifyHistPath(args string) (errors.ErrorCode, string) {
 
 	path := GetPath(homeDir, args)
 
-	_, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
+	_, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0600)
 	//If err then the value for histfile is invalid. Hence return an error.
 	//For this case, the HISTFILE will retain its original value.
 	if err != nil {

@@ -10,6 +10,7 @@ package vliner
 
 import (
 	"bufio"
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -123,6 +124,8 @@ type State struct {
 	promptLines     int
 	displayStartPos int
 	termLines       []termLine
+
+	commandCallback func(...string) string
 }
 
 type digraph struct {
@@ -720,6 +723,10 @@ func (s *State) SetMultiLineMode(mlmode bool) {
 	s.multiLine = mlmode
 }
 
+func (s *State) SetCommandCallback(f func(...string) string) {
+	s.commandCallback = f
+}
+
 // these persist across invocations in contrast to shell-vi-mode equivalents in order to help with repeated statement invocations
 var fact, fr rune
 var curHist int = -1
@@ -857,38 +864,265 @@ mainLoop:
 				}
 				moved = true
 				var m string
+				pipe := false
 				switch cmd[0] {
-				case 'r':
+				case 'h':
 					var n int
 					for n = 1; len(cmd) > n; n++ {
 						if 0 == classify(cmd[n]) {
 							break
 						}
 					}
+					if ("h" == string(cmd[:n]) || "help" == string(cmd[:n])) && s.commandCallback != nil {
+						help := []rune(strings.TrimSpace(string(cmd[n:])))
+						if 0 == len(help) {
+							m = s.commandCallback("syntax")
+						} else {
+							args := []string{"syntax"}
+							for 0 < len(help) {
+								for n = 0; len(help) > n; n++ {
+									if 0 == classify(help[n]) {
+										break
+									}
+								}
+								args = append(args, string(help[:n]))
+								help = []rune(strings.TrimSpace(string(help[n:])))
+							}
+							m = s.commandCallback(args...)
+						}
+					}
+					if m == "" {
+						m = fmt.Sprintf("[Invalid command: %s]", string(cmd))
+					}
+				case 's':
+					var n int
+					for n = 1; len(cmd) > n; n++ {
+						if 0 == classify(cmd[n]) {
+							break
+						}
+					}
+					if "set" == string(cmd[:n]) && s.commandCallback != nil {
+						set := []rune(strings.TrimSpace(string(cmd[n:])))
+						for n = 1; len(set) > n; n++ {
+							if 0 == classify(set[n]) {
+								break
+							}
+						}
+						if 0 == len(set) {
+							m = s.commandCallback("set")
+						} else if "hf" == string(set[:n]) || "histfile" == string(set[:n]) {
+							if len(set) == n {
+								m = s.commandCallback("unset", "histfile")
+							} else {
+								m = s.commandCallback("set", "histfile", strings.TrimSpace(string(set[n:])))
+							}
+						} else if "q" == string(set) || "quiet" == string(set) {
+							m = s.commandCallback("set", "quiet", "true")
+						} else if "noq" == string(set) || "noquiet" == string(set) {
+							m = s.commandCallback("unset", "quiet")
+						} else if "terse" == string(set) {
+							m = s.commandCallback("set", "terse", "true")
+						} else if "noterse" == string(set) {
+							m = s.commandCallback("unset", "terse")
+						} else if 0 < len(set) && '-' == set[0] {
+							for n = 1; len(set) > n; n++ {
+								if 0 == classify(set[n]) {
+									break
+								}
+							}
+							if len(set) > n {
+								m = s.commandCallback("set", string(set[:n]), strings.TrimSpace(string(set[n:])))
+							} else {
+								m = s.commandCallback("set", string(set))
+							}
+						}
+					}
+					if m == "" {
+						m = fmt.Sprintf("[Invalid command: %s]", string(cmd))
+					}
+				case 'u':
+					var n int
+					for n = 1; len(cmd) > n; n++ {
+						if 0 == classify(cmd[n]) {
+							break
+						}
+					}
+					if "unset" == string(cmd[:n]) && s.commandCallback != nil {
+						unset := []rune(strings.TrimSpace(string(cmd[n:])))
+						for n = 1; len(unset) > n; n++ {
+							if 0 == classify(unset[n]) {
+								break
+							}
+						}
+						if 0 == len(unset) {
+							m = s.commandCallback("unset")
+						} else if "hf" == string(unset[:n]) || "histfile" == string(unset[:n]) {
+							m = s.commandCallback("unset", "histfile")
+						} else if "q" == string(unset) || "quiet" == string(unset) {
+							m = s.commandCallback("unset", "quiet")
+						} else if "terse" == string(unset) {
+							m = s.commandCallback("unset", "terse")
+						} else if 0 < len(unset) && '-' == unset[0] {
+							for n = 1; len(unset) > n; n++ {
+								if 0 == classify(unset[n]) {
+									break
+								}
+							}
+							m = s.commandCallback("unset", string(unset[:n]))
+						}
+					}
+					if m == "" {
+						m = fmt.Sprintf("[Invalid command: %s]", string(cmd))
+					}
+				case 'e':
+					var n int
+					for n = 1; len(cmd) > n; n++ {
+						if 0 == classify(cmd[n]) || '!' == cmd[n] {
+							break
+						}
+					}
 					if len(cmd) <= n {
-						m = "[Missing filename]"
+						m = "[Missing command or filename]"
 						break
 					}
 					fileName := strings.TrimSpace(string(cmd[n:]))
-					if len(fileName) == 0 {
-						m = "[Missing filename]"
-					} else if "r" == string(cmd[:n]) || "read" == string(cmd[:n]) {
-						f, ferr := os.Open(fileName)
-						if nil != ferr {
-							m = fmt.Sprintf("[%s]", ferr.Error())
+					if 0 == len(fileName) {
+						m = "[Missing command or filename]"
+						break
+					}
+					if '!' == fileName[0] {
+						fileName = strings.TrimSpace(fileName[1:])
+						if 0 == len(fileName) {
+							m = "[Missing command]"
+							break
+						}
+						pipe = true
+					}
+					if "e" == string(cmd[:n]) || "edit" == string(cmd[:n]) {
+						if pipe {
+							p := setupPipe(fileName)
+							o, err := p.StdoutPipe()
+							if nil != err {
+								m = fmt.Sprintf("[Command failed: %s]", err.Error())
+								break
+							}
+							i, err := p.StdinPipe()
+							if nil != err {
+								m = fmt.Sprintf("[Command failed: %s]", err.Error())
+								break
+							}
+							err = p.Start()
+							if nil != err {
+								m = fmt.Sprintf("[Command failed: %s]", err.Error())
+								o.Close()
+								i.Close()
+								break
+							}
+							i.Write([]byte(string(line)))
+							i.Close()
+							var b bytes.Buffer
+							io.Copy(&b, o)
+							o.Close()
+							err = p.Wait()
+							if nil != err {
+								m = fmt.Sprintf("[Command failed: %s]", err.Error())
+								break
+							}
+							content := b.String()
+							line = []rune(content)
+							m = fmt.Sprintf("\"%s\" %vC", fileName, len(content))
 						} else {
+							f, ferr := os.Open(fileName)
+							if nil != ferr {
+								m = fmt.Sprintf("[%s]", ferr.Error())
+								break
+							}
 							reader := bufio.NewReader(f)
 							content, ferr := reader.ReadString(0)
 							if nil != ferr && io.EOF != ferr {
 								m = fmt.Sprintf(" [%s]", ferr.Error())
+								break
+							}
+							line = []rune(content)
+							f.Close()
+							m = fmt.Sprintf("\"%s\" %vC", fileName, len(content))
+						}
+					} else {
+						m = fmt.Sprintf("[Invalid command: %s/%s/%s]", string(cmd), string(cmd[:n]), fileName)
+					}
+				case 'r':
+					var n int
+					for n = 1; len(cmd) > n; n++ {
+						if 0 == classify(cmd[n]) || '!' == cmd[n] {
+							break
+						}
+					}
+					if len(cmd) <= n {
+						m = "[Missing command or filename]"
+						break
+					}
+					fileName := strings.TrimSpace(string(cmd[n:]))
+					if 0 == len(fileName) {
+						m = "[Missing command or filename]"
+						break
+					}
+					if '!' == fileName[0] {
+						fileName = strings.TrimSpace(fileName[1:])
+						if 0 == len(fileName) {
+							m = "[Missing command]"
+							break
+						}
+						pipe = true
+					}
+					if "r" == string(cmd[:n]) || "read" == string(cmd[:n]) {
+						if pipe {
+							p := setupPipe(fileName)
+							o, err := p.StdoutPipe()
+							if nil != err {
+								m = fmt.Sprintf("[Command failed: %s]", err.Error())
+								break
+							}
+							err = p.Start()
+							if nil != err {
+								m = fmt.Sprintf("[Command failed: %s]", err.Error())
+								o.Close()
+								break
+							}
+							var b bytes.Buffer
+							io.Copy(&b, o)
+							o.Close()
+							err = p.Wait()
+							if nil != err {
+								m = fmt.Sprintf("[Command failed: %s]", err.Error())
+								break
+							}
+							content := b.String()
+							if 0 == pos {
+								line = append([]rune(content), line...)
+							} else if len(line) > pos {
+								line = append(append(line[:pos], []rune(content)...), line[pos:]...)
 							} else {
-								if 0 == pos {
-									line = append([]rune(content), line...)
-								} else if len(line) > pos {
-									line = append(append(line[:pos], []rune(content)...), line[pos:]...)
-								} else {
-									line = append(line, []rune(content)...)
-								}
+								line = append(line, []rune(content)...)
+							}
+							m = fmt.Sprintf("\"%s\" %vC", fileName, len(content))
+						} else {
+							f, ferr := os.Open(fileName)
+							if nil != ferr {
+								m = fmt.Sprintf("[%s]", ferr.Error())
+								break
+							}
+							reader := bufio.NewReader(f)
+							content, ferr := reader.ReadString(0)
+							if nil != ferr && io.EOF != ferr {
+								m = fmt.Sprintf(" [%s]", ferr.Error())
+								break
+							}
+							if 0 == pos {
+								line = append([]rune(content), line...)
+							} else if len(line) > pos {
+								line = append(append(line[:pos], []rune(content)...), line[pos:]...)
+							} else {
+								line = append(line, []rune(content)...)
 							}
 							f.Close()
 							m = fmt.Sprintf("\"%s\" %vC", fileName, len(content))
@@ -899,7 +1133,7 @@ mainLoop:
 				case 'w':
 					var n int
 					for n = 1; len(cmd) > n; n++ {
-						if 0 == classify(cmd[n]) {
+						if 0 == classify(cmd[n]) || '!' == cmd[n] {
 							break
 						}
 					}
@@ -910,32 +1144,65 @@ mainLoop:
 						token = string(cmd[:n-1])
 					}
 					if len(cmd) <= n {
-						m = "[Missing filename]"
+						m = "[Missing command or filename]"
 						break
 					}
 					fileName := strings.TrimSpace(string(cmd[n:]))
-					if len(fileName) == 0 {
-						m = "[Missing filename]"
-					} else if "w" == token || "write" == token {
-						var f *os.File
-						var ferr error
-						if !force {
-							f, _ = os.Open(fileName)
-							if nil != f {
-								f.Close()
-								m = fmt.Sprintf("[File %s exists]", fileName)
-							}
+					if 0 == len(fileName) {
+						m = "[Missing command or filename]"
+					}
+					if '!' == fileName[0] {
+						fileName = strings.TrimSpace(fileName[1:])
+						if 0 == len(fileName) {
+							m = "[Missing command]"
+							break
 						}
-						if f == nil {
-							f, ferr = os.OpenFile(fileName, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0755)
-							if nil != ferr {
-								m = fmt.Sprintf("[%s]", ferr.Error())
-								f = nil
+						pipe = true
+					}
+
+					if "w" == token || "write" == token {
+						if pipe {
+							p := setupPipe(fileName)
+							i, err := p.StdinPipe()
+							if nil != err {
+								m = fmt.Sprintf("[Command failed: %s]", err.Error())
+								break
+							}
+							err = p.Start()
+							if nil != err {
+								m = fmt.Sprintf("[Command failed: %s]", err.Error())
+								i.Close()
+								break
+							}
+							i.Write([]byte(string(line)))
+							i.Close()
+							err = p.Wait()
+							if nil != err {
+								m = fmt.Sprintf("[Command failed: %s]", err.Error())
+								break
+							}
+						} else {
+							var f *os.File
+							var ferr error
+							if !force {
+								f, _ = os.Open(fileName)
+								if nil != f {
+									f.Close()
+									m = fmt.Sprintf("[File %s exists]", fileName)
+									break
+								}
+							}
+							if f == nil {
+								f, ferr = os.OpenFile(fileName, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0755)
+								if nil != ferr {
+									m = fmt.Sprintf("[%s]", ferr.Error())
+									break
+								}
 							}
 							f.WriteString(string(line))
 							f.Close()
-							m = fmt.Sprintf("\"%s\" %vC written", fileName, len(line))
 						}
+						m = fmt.Sprintf("\"%s\" %vC written", fileName, len(line))
 					} else {
 						m = fmt.Sprintf("[Invalid command: %s]", string(cmd))
 					}

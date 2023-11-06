@@ -79,7 +79,7 @@ func ReadHistoryFromFile(liner *liner.State, path string) (errors.ErrorCode, str
 	f, err := os.Open(path)
 	if err != nil {
 		if os.IsNotExist(err) {
-			f, err = os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
+			f, err = os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0600)
 			if err != nil {
 				return errors.E_SHELL_OPEN_FILE, err.Error()
 			}

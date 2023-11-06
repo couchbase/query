@@ -12,6 +12,7 @@ package vliner
 
 import (
 	"fmt"
+	"os/exec"
 	"syscall"
 	"unsafe"
 
@@ -247,4 +248,8 @@ func invokeEditor(args []string, attr *syscall.ProcAttr) bool {
 		_, err = syscall.WaitForSingleObject(syscall.Handle(handle), syscall.INFINITE)
 	}
 	return nil == err
+}
+
+func setupPipe(cmd string) *exec.Cmd {
+	return exec.Command("cmd.exe", "/c", cmd)
 }
