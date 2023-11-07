@@ -4257,6 +4257,12 @@ LPAREN expr RPAREN
 {
     $$ = expression.NewIndexCondition($4)
 }
+|
+CURRENT USER
+{
+    $$ = expression.NewCurrentUser()
+    $$.ExprBase().SetErrorContext($<line>1, $<column>1)
+}
 ;
 
 b_expr:

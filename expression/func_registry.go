@@ -401,6 +401,7 @@ var _FUNCTIONS = map[string]Function{
 	"self":          &Self{},
 	"uuid":          &Uuid{},
 	"version":       &Version{},
+	"current_user":  &CurrentUser{},
 	"current_users": &CurrentUsers{},
 	"ds_version":    &DsVersion{},
 

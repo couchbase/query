@@ -10,6 +10,7 @@ package expression
 
 import (
 	"encoding/base64"
+	"strings"
 
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/util"
@@ -482,6 +483,54 @@ func (this *MinVersion) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
 		return NewMinVersion()
 	}
+}
+
+///////////////////////////////////////////////////
+//
+// CurrentUser
+//
+///////////////////////////////////////////////////
+
+type CurrentUser struct {
+	NullaryFunctionBase
+}
+
+func NewCurrentUser() Function {
+	rv := &CurrentUser{
+		*NewNullaryFunctionBase("current_user"),
+	}
+
+	rv.expr = rv
+	return rv
+}
+
+func (this *CurrentUser) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *CurrentUser) Type() value.Type { return value.ARRAY }
+
+func (this *CurrentUser) Evaluate(item value.Value, context Context) (value.Value, error) {
+	if context == nil {
+		return nil, errors.NewNilEvaluateParamError("context")
+	}
+	authUsers := context.Credentials().AuthenticatedUsers
+	for _, user := range authUsers {
+		parts := strings.Split(user, ":")
+		return value.NewValue(parts[len(parts)-1]), nil
+	}
+	return value.NULL_VALUE, nil
+}
+
+func (this *CurrentUser) Static() Expression {
+	return this
+}
+
+/*
+Factory method pattern.
+*/
+func (this *CurrentUser) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function { return NewCurrentUser() }
 }
 
 ///////////////////////////////////////////////////

@@ -866,6 +866,7 @@ var statement_syntax = map[string][][]string{
 		[]string{"case_expr"},
 		[]string{"collection_expr"},
 		[]string{"paren_expr"},
+		[]string{"CURRENT", "USER"},
 	},
 	"b_expr": [][]string{
 		[]string{"c_expr"},
