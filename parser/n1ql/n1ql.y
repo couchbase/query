@@ -3769,7 +3769,7 @@ expr DOT ident LPAREN opt_exprs RPAREN
     // so we have to deal with this ourselves
     name, err := functionsBridge.NewFunctionName(path, yylex.(*lexer).Namespace(), yylex.(*lexer).QueryContext())
     if err != nil {
-		return yylex.(*lexer).FatalError(err.Error(), $<line>1, $<column>1)
+        return yylex.(*lexer).FatalError(err.Error(), $<line>1, $<column>1)
     }
     f := expression.GetUserDefinedFunction(name, yylex.(*lexer).UdfCheck())
     if f != nil {
@@ -5536,9 +5536,9 @@ CREATE SEQUENCE sequence_name_options opt_seq_create_options
         if _, ok := m[v.name]; ok {
             return "duplicate option"
         }
-		if v.value == nil {
-			return "invalid option value"
-		}
+        if v.value == nil {
+            return "invalid option value"
+        }
         if v.name == sequences.OPT_CYCLE && v.value.Type() == value.BOOLEAN {
             m[v.name] = v.value.Truth()
             return ""
@@ -5638,9 +5638,9 @@ ALTER SEQUENCE sequence_full_name seq_alter_options
         if _, ok := m[v.name]; ok {
             return "duplicate option"
         }
-		if v.value == nil {
-			return "invalid option value"
-		}
+        if v.value == nil {
+            return "invalid option value"
+        }
         if v.name == sequences.OPT_CYCLE && v.value.Type() == value.BOOLEAN {
             m[v.name] = v.value.Truth()
             return ""
@@ -5707,7 +5707,7 @@ START WITH expr
 restart_with:
 RESTART
 {
-	$$ = &nameValueContext{sequences.OPT_RESTART, value.NULL_VALUE, $<line>1, $<column>1}
+    $$ = &nameValueContext{sequences.OPT_RESTART, value.NULL_VALUE, $<line>1, $<column>1}
 }
 |
 RESTART WITH expr
@@ -5716,7 +5716,7 @@ RESTART WITH expr
     if v == nil {
         return yylex.(*lexer).FatalError("Option value must be static", $<line>3, $<column>3)
     }
-	$$ = &nameValueContext{sequences.OPT_RESTART, v, $<line>1, $<column>1}
+    $$ = &nameValueContext{sequences.OPT_RESTART, v, $<line>1, $<column>1}
 }
 ;
 
