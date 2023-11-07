@@ -39,7 +39,7 @@ func command_alias(line string, w io.Writer, interactive bool, liner *liner.Stat
 	val, ok := command.AliasCommand[commandkey]
 
 	if !ok {
-		return errors.E_SHELL_NO_SUCH_ALIAS, " : " + commandkey + "\n"
+		return errors.E_SHELL_NO_SUCH_ALIAS, " : " + commandkey + command.NEWLINE
 	}
 
 	// If outputting to a file, then add the statement to the file as well.
@@ -520,7 +520,7 @@ func readAndExec(liner *liner.State) (errors.ErrorCode, string) {
 
 			// Print the query along with printing the results, only if -q isnt specified.
 			if !command.QUIET {
-				io.WriteString(command.W, final_input+"\n")
+				io.WriteString(command.W, final_input+command.NEWLINE)
 			}
 
 			//Remove the ; before sending the query to execute
@@ -541,7 +541,7 @@ func readAndExec(liner *liner.State) (errors.ErrorCode, string) {
 			}
 
 			if command.FILE_RW_MODE == true {
-				io.WriteString(command.W, final_input+"\n")
+				io.WriteString(command.W, final_input+command.NEWLINE)
 			}
 
 			errCode, errStr := dispatch_command(final_input, command.W, false, liner)
@@ -559,7 +559,7 @@ func readAndExec(liner *liner.State) (errors.ErrorCode, string) {
 					os.Exit(1)
 				}
 			}
-			io.WriteString(command.W, "\n\n")
+			io.WriteString(command.W, command.NEWLINE+command.NEWLINE)
 
 			if adviseEnd {
 				break

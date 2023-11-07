@@ -30,7 +30,7 @@ func LoadHistory(liner *liner.State, dir string) (errors.ErrorCode, string) {
 		}
 		//Print path to histfile on startup.
 		if !command.QUIET {
-			io.WriteString(command.W, command.NewMessage(command.HISTORYMSG, path)+" \n")
+			io.WriteString(command.W, command.NewMessage(command.HISTORYMSG, path)+" "+command.NEWLINE)
 		}
 	}
 	return 0, ""

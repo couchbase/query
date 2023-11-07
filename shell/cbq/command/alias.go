@@ -52,7 +52,7 @@ func (this *Alias) ExecCommand(args []string) (errors.ErrorCode, string) {
 
 			for k, v := range AliasCommand {
 
-				tmp := fmt.Sprintf("%-14s %-14s\n", k, v)
+				tmp := fmt.Sprintf("%-14s %-14s"+NEWLINE, k, v)
 				_, werr := io.WriteString(W, tmp)
 				if werr != nil {
 					return errors.E_SHELL_WRITER_OUTPUT, werr.Error()
@@ -90,7 +90,7 @@ func (this *Alias) PrintHelp(desc bool) (errors.ErrorCode, string) {
 			return err_code, err_str
 		}
 	}
-	_, werr = io.WriteString(W, "\n")
+	_, werr = io.WriteString(W, NEWLINE)
 	if werr != nil {
 		return errors.E_SHELL_WRITER_OUTPUT, werr.Error()
 	}

@@ -149,7 +149,7 @@ func (this *Unset) PrintHelp(desc bool) (errors.ErrorCode, string) {
 			return err_code, err_str
 		}
 	}
-	_, werr = io.WriteString(W, "\n")
+	_, werr = io.WriteString(W, NEWLINE)
 	if werr != nil {
 		return errors.E_SHELL_WRITER_OUTPUT, werr.Error()
 	}

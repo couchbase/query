@@ -55,7 +55,7 @@ func (this *Syntax) PrintHelp(desc bool) (errors.ErrorCode, string) {
 			return err_code, err_str
 		}
 	}
-	_, werr = io.WriteString(W, "\n")
+	_, werr = io.WriteString(W, NEWLINE)
 	if werr != nil {
 		return errors.E_SHELL_WRITER_OUTPUT, werr.Error()
 	}
@@ -116,7 +116,7 @@ func sqlHelp(terms ...string) bool {
 	}
 	if len(rules) == 0 {
 		if len(terms) == 1 && strings.ToUpper(terms[0]) == terms[0] {
-			io.WriteString(W, "<literal text>\n")
+			io.WriteString(W, "<literal text>"+NEWLINE)
 			return true
 		} else {
 			return false
@@ -131,7 +131,7 @@ func sqlHelp(terms ...string) bool {
 			}
 		}
 		level++
-		io.WriteString(W, "\n")
+		io.WriteString(W, NEWLINE)
 	}
 	return true
 }
@@ -201,7 +201,7 @@ func printRuleOpt(o []string, indent bool, suppressEmpty bool) {
 		printed = true
 	}
 	if printed {
-		io.WriteString(W, "\n")
+		io.WriteString(W, NEWLINE)
 	}
 }
 
@@ -213,7 +213,7 @@ func printRule(rn string, options []int, indent bool) {
 	if indent {
 		io.WriteString(W, "    ")
 		io.WriteString(W, rn)
-		io.WriteString(W, "\n")
+		io.WriteString(W, NEWLINE)
 	}
 	if len(options) == 0 || options[0] == -1 {
 		for i := range r {

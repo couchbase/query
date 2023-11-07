@@ -73,28 +73,28 @@ func (this *Set) ExecCommand(args []string) (errors.ErrorCode, string) {
 					werr = printSET(name, fmt.Sprintf("%v", *value))
 				}
 			}
-			_, werr = io.WriteString(W, "\n")
+			_, werr = io.WriteString(W, NEWLINE)
 
 			//Named Parameters
 			_, werr = io.WriteString(W, NAMEDP)
 			for name, value := range NamedParam {
 				werr = printSET(name, fmt.Sprintf("%v", *value))
 			}
-			_, werr = io.WriteString(W, "\n")
+			_, werr = io.WriteString(W, NEWLINE)
 
 			//User Defined Session Parameters
 			_, werr = io.WriteString(W, USERDEFP)
 			for name, value := range UserDefSV {
 				werr = printSET(name, fmt.Sprintf("%v", *value))
 			}
-			_, werr = io.WriteString(W, "\n")
+			_, werr = io.WriteString(W, NEWLINE)
 
 			//Predefined Session Parameters
 			_, werr = io.WriteString(W, PREDEFP)
 			for name, value := range PreDefSV {
 				werr = printSET(name, fmt.Sprintf("%v", *value))
 			}
-			_, werr = io.WriteString(W, "\n")
+			_, werr = io.WriteString(W, NEWLINE)
 
 			if werr != nil {
 				return errors.E_SHELL_WRITER_OUTPUT, werr.Error()
@@ -122,7 +122,7 @@ func (this *Set) PrintHelp(desc bool) (errors.ErrorCode, string) {
 			return err_code, err_str
 		}
 	}
-	_, werr = io.WriteString(W, "\n")
+	_, werr = io.WriteString(W, NEWLINE)
 	if werr != nil {
 		return errors.E_SHELL_WRITER_OUTPUT, werr.Error()
 	}
@@ -130,9 +130,9 @@ func (this *Set) PrintHelp(desc bool) (errors.ErrorCode, string) {
 }
 
 func printSET(name, value string) (werr error) {
-	valuestr := NewMessage(PNAME, name) + "\n" + NewMessage(PVAL, value)
+	valuestr := NewMessage(PNAME, name) + NEWLINE + NewMessage(PVAL, value)
 	_, werr = io.WriteString(W, valuestr)
-	_, werr = io.WriteString(W, "\n\n")
+	_, werr = io.WriteString(W, NEWLINE+NEWLINE)
 	return
 }
 

@@ -92,7 +92,7 @@ func (this *Echo) ExecCommand(args []string) (errors.ErrorCode, string) {
 		}
 	}
 
-	_, werr = io.WriteString(W, "\n")
+	_, werr = io.WriteString(W, NEWLINE)
 	if werr != nil {
 		return errors.E_SHELL_WRITER_OUTPUT, werr.Error()
 	}
@@ -107,7 +107,7 @@ func (this *Echo) PrintHelp(desc bool) (errors.ErrorCode, string) {
 			return err_code, err_str
 		}
 	}
-	_, werr = io.WriteString(W, "\n")
+	_, werr = io.WriteString(W, NEWLINE)
 	if werr != nil {
 		return errors.E_SHELL_WRITER_OUTPUT, werr.Error()
 	}

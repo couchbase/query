@@ -32,6 +32,8 @@ var (
 		"batch":    Stack_Helper(),
 		"quiet":    Stack_Helper(),
 	}
+
+	NEWLINE string = "\n"
 )
 
 type Credential map[string]string
@@ -42,6 +44,10 @@ var DbN1ql n1ql.N1qlDB
 const USER_AGENT = "cbq-shell"
 
 func init() {
+
+	if runtime.GOOS == "windows" {
+		NEWLINE = "\r\n"
+	}
 
 	/* Populate the Predefined user variable map with default
 	   values.
@@ -569,7 +575,7 @@ func VerifyHistPath(args string) (errors.ErrorCode, string) {
 	} else {
 		HISTFILE = path
 		if !QUIET {
-			io.WriteString(W, NewMessage(HISTORYMSG, path)+" \n")
+			io.WriteString(W, NewMessage(HISTORYMSG, path)+" "+NEWLINE)
 		}
 	}
 	return 0, ""
@@ -755,7 +761,7 @@ func printPath(nval string) (errors.ErrorCode, string) {
 
 		path := GetPath(homeDir, nval)
 
-		io.WriteString(W, NewMessage(HISTORYMSG, path)+" \n")
+		io.WriteString(W, NewMessage(HISTORYMSG, path)+" "+NEWLINE)
 	}
 	return 0, ""
 

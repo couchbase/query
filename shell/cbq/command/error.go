@@ -11,6 +11,7 @@ package command
 import (
 	"fmt"
 	"io"
+	"runtime"
 
 	"github.com/couchbase/query/errors"
 )
@@ -23,6 +24,13 @@ The following variables are used to display the error
 */
 var reset = "\x1b[0m"
 var fgRed = "\x1b[31m"
+
+func init() {
+	if runtime.GOOS == "windows" {
+		reset = ""
+		fgRed = ""
+	}
+}
 
 // Methods that get and set display variables
 
