@@ -598,14 +598,14 @@ func checkMigrateBucket(name string, allBuckets bool) {
 	bucket.Lock()
 	if b {
 		bucket.state = _BUCKET_MIGRATED
-
-		if !allBuckets {
-			checkMigrationComplete()
-		}
 	} else {
 		bucket.state = _BUCKET_PART_MIGRATED
 	}
 	bucket.Unlock()
+
+	if b && !allBuckets {
+		checkMigrationComplete()
+	}
 
 	lastActivity = time.Now()
 }
