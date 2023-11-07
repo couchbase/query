@@ -76,13 +76,21 @@ func DescribeKeyspace(context datastore.QueryContext, conn *datastore.ValueConne
 		}
 
 		// Get the document
-		_, doc, err := retriever.GetNextDoc(context)
+		key, doc, err := retriever.GetNextDoc(context)
 		if err != nil {
 			return nil, err
 		}
 
 		if doc == nil { // all done, no more docs
 			break
+		}
+
+		if options != nil && (options.Flags&INCLUDE_KEY) != 0 {
+			if _, ok := doc.Field("~meta"); !ok {
+				m := make(map[string]interface{})
+				m["id"] = key
+				doc.SetField("~meta", value.NewValue(m))
+			}
 		}
 
 		if desc_debug {
@@ -268,6 +276,9 @@ func (di *DefaultInferencer) InferKeyspace(context datastore.QueryContext, ks da
 	if err != nil {
 		conn.Error(err)
 		return
+	}
+	if options.Flags == NO_FLAGS {
+		options.Flags |= INCLUDE_KEY
 	}
 
 	if docCount == 0 {

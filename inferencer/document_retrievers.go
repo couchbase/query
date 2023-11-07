@@ -59,6 +59,7 @@ const (
 	SAMPLE_ALLOW_EXTRA
 	FULL_SCAN
 	ALLOW_DUPS
+	INCLUDE_KEY
 )
 
 var flags_map = map[string]Flag{
@@ -82,6 +83,7 @@ var flags_map = map[string]Flag{
 	"sample_allow_extra":           SAMPLE_ALLOW_EXTRA,
 	"full_scan":                    FULL_SCAN,
 	"allow_dups":                   ALLOW_DUPS,
+	"include_key":                  INCLUDE_KEY,
 }
 
 type DocumentRetriever interface {
@@ -402,7 +404,8 @@ func MakeUnifiedDocumentRetriever(name string, context datastore.QueryContext, k
 							continue
 						}
 
-						// if the Index does not implement the PrimaryIndex3 interface - like system keyspace indexes - do not consider the index
+						// if the Index does not implement the PrimaryIndex3 interface - like system keyspace indexes - do not
+						// consider the index
 						if _, ok := index.(datastore.PrimaryIndex3); !ok {
 							continue
 						}
