@@ -23,17 +23,19 @@ type GrantRole struct {
 	roles     []string       `json:"roles"`
 	keyspaces []*KeyspaceRef `json:"keyspaces"`
 	users     []string       `json:"users"`
+	groups    bool           `json:"groups"`
 }
 
 /*
 The function NewGrantRole returns a pointer to the
 GrantRole struct with the input argument values as fields.
 */
-func NewGrantRole(roles []string, keyspaces []*KeyspaceRef, users []string) *GrantRole {
+func NewGrantRole(roles []string, keyspaces []*KeyspaceRef, users []string, groups bool) *GrantRole {
 	rv := &GrantRole{
 		roles:     roles,
 		keyspaces: keyspaces,
 		users:     users,
+		groups:    groups,
 	}
 
 	rv.stmt = rv
@@ -93,6 +95,10 @@ func (this *GrantRole) Privileges() (*auth.Privileges, errors.Error) {
 	return privs, nil
 }
 
+func (this *GrantRole) Groups() bool {
+	return this.groups
+}
+
 /*
 Returns the list of users to whom roles are being assigned.
 */
@@ -122,6 +128,7 @@ func (this *GrantRole) MarshalJSON() ([]byte, error) {
 	r["users"] = this.users
 	r["keyspaces"] = this.keyspaces
 	r["roles"] = this.roles
+	r["groups"] = this.groups
 
 	return json.Marshal(r)
 }

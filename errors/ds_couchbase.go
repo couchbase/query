@@ -151,6 +151,13 @@ func NewAuditStreamHandlerFailed(e error) Error {
 		InternalMsg: "Audit stream handler failed", InternalCaller: CallerN(1)}
 }
 
+func NewCbBucketExistsError(b string) Error {
+	c := make(map[string]interface{})
+	c["bucket"] = b
+	return &err{level: EXCEPTION, ICode: E_CB_BUCKET_NOT_FOUND, IKey: "datastore.couchbase.bucket_already_exists",
+		cause: c, InternalMsg: "Bucket '" + b + "' already exists.", InternalCaller: CallerN(1)}
+}
+
 func NewCbBucketNotFoundError(e error, msg string) Error {
 	c := make(map[string]interface{})
 	c["bucket"] = msg
@@ -333,9 +340,10 @@ func NewWithInvalidOptionError(opt string) Error {
 		InternalMsg: "Invalid option '" + opt + "'", InternalCaller: CallerN(1)}
 }
 
-func NewWithInvalidValueError(opt string) Error {
+func NewWithInvalidValueError(opt string, reason string) Error {
 	c := make(map[string]interface{})
 	c["option"] = opt
+	c["reason"] = reason
 	return &err{level: EXCEPTION, ICode: E_WITH_INVALID_TYPE, IKey: "datastore.with.invalid_value", cause: c,
 		InternalMsg: "Invalid value for '" + opt + "'", InternalCaller: CallerN(1)}
 }

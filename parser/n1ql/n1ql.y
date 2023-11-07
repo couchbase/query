@@ -6,6 +6,7 @@ import "math"
 import "strings"
 import "github.com/couchbase/clog"
 import "github.com/couchbase/query/algebra"
+import "github.com/couchbase/query/auth"
 import "github.com/couchbase/query/datastore"
 import "github.com/couchbase/query/errors"
 import "github.com/couchbase/query/expression"
@@ -21,7 +22,7 @@ func logDebugGrammar(format string, v ...interface{}) {
 
 type nameValueContext struct {
     name   string
-    value  value.Value
+    value  interface{}
     line   int
     column int
 }
@@ -305,6 +306,7 @@ column int
 %token REVOKE
 %token RIGHT
 %token ROLE
+%token ROLES
 %token ROLLBACK
 %token ROW
 %token ROWS
@@ -342,6 +344,7 @@ column int
 %token UPSERT
 %token USE
 %token USER
+%token USERS
 %token USING
 %token VALIDATE
 %token VALUE
@@ -397,7 +400,7 @@ column int
 
 /* Types */
 %type <s>                STR
-%type <s>                IDENT IDENT_ICASE NAMESPACE_ID DEFAULT USER permitted_identifiers
+%type <s>                IDENT IDENT_ICASE NAMESPACE_ID DEFAULT USER USERS permitted_identifiers
 %type <identifier>       ident ident_icase
 %type <s>                REPLACE
 %type <s>                NAMED_PARAM
@@ -488,7 +491,10 @@ column int
 %type <statement>        savepoint set_transaction_isolation
 %type <statement>        collection_stmt create_collection drop_collection flush_collection
 %type <statement>        role_stmt grant_role revoke_role
+%type <statement>        user_stmt create_user alter_user drop_user
+%type <statement>        group_stmt create_group alter_group drop_group
 %type <statement>        function_stmt create_function drop_function execute_function
+%type <statement>        bucket_stmt create_bucket alter_bucket drop_bucket
 
 %type <keyspaceRef>      keyspace_ref simple_keyspace_ref
 %type <pairs>            values values_list next_values
@@ -527,12 +533,12 @@ column int
 
 %type <inferenceType>    opt_infer_using
 
-%type <ss>               user_list
+%type <ss>               user_list groups
 %type <keyspaceRefs>     keyspace_scope_list
 %type <keyspaceRef>      keyspace_scope
-%type <ss>               role_list
-%type <s>                role_name
-%type <s>                user
+%type <ss>               role_list group_role_list
+%type <s>                role_name group_role_list_item
+%type <s>                user group_name
 
 %type <u32>              opt_ikattr ikattr
 %type <expr>             opt_order_nulls
@@ -554,7 +560,7 @@ column int
 %type <optimHintArr>        optim_hints optim_hint
 %type <ss>                  opt_hint_args hint_args
 
-%type <val>                with_clause opt_with_clause opt_option_clause
+%type <val>                with_clause opt_with_clause opt_option_clause opt_def_with_clause
 
 %type <exprs>              opt_exclude
 
@@ -568,6 +574,8 @@ column int
 
 %type <vpair>  start_with increment_by maxvalue minvalue cache cycle restart_with seq_alter_option seq_create_option sequence_with
 %type <vpairs> seq_alter_options opt_seq_create_options
+%type <vpair>  user_opt group_opt
+%type <vpairs> user_opts group_opts
 
 %start input
 
@@ -596,6 +604,8 @@ IDENT
 DEFAULT
 |
 USER
+|
+USERS
 ;
 
 opt_trailer:
@@ -630,6 +640,10 @@ ddl_stmt
 infer
 |
 update_statistics
+|
+user_stmt
+|
+group_stmt
 |
 role_stmt
 |
@@ -840,9 +854,27 @@ merge
 ddl_stmt:
 index_stmt
 |
+bucket_stmt
+|
 scope_stmt
 |
 collection_stmt
+;
+
+user_stmt:
+create_user
+|
+alter_user
+|
+drop_user
+;
+
+group_stmt:
+create_group
+|
+alter_group
+|
+drop_group
 ;
 
 role_stmt:
@@ -859,6 +891,14 @@ drop_index
 alter_index
 |
 build_index
+;
+
+bucket_stmt:
+create_bucket
+|
+alter_bucket
+|
+drop_bucket
 ;
 
 scope_stmt:
@@ -2727,19 +2767,315 @@ LPAREN key_val_options_expr_header RPAREN opt_where
 
 /*************************************************
  *
+ * USERS
+ *
+ *************************************************/
+
+create_user:
+CREATE USER user user_opts
+{
+    var password, name, groups value.Value
+    for _, v := range $4 {
+        switch v.name {
+        case "name":
+            if name != nil { return yylex.(*lexer).FatalError("User attributes may only be specified once.", v.line, v.column) }
+            name = value.NewValue(v.value.(string))
+        case "password":
+            if password != nil { return yylex.(*lexer).FatalError("User attributes may only be specified once.", v.line, v.column) }
+            password = value.NewValue(v.value.(string))
+        case "groups":
+            if groups != nil { return yylex.(*lexer).FatalError("User attributes may only be specified once.", v.line, v.column) }
+            sa := v.value.([]string)
+            va := make(value.Values, len(sa))
+            for i := range sa {
+                va[i] = value.NewValue(sa[i])
+            }
+            groups = value.NewValue(va)
+        }
+    }
+    $$ = algebra.NewCreateUser($3,password,name,groups)
+}
+;
+
+alter_user:
+ALTER USER user user_opts
+{
+    var password, name, groups value.Value
+    if len($4) == 0 {
+         return yylex.(*lexer).FatalError("Missing user attributes.", $<line>4, $<column>4)
+    }
+    for _, v := range $4 {
+        switch v.name {
+        case "name":
+            if name != nil { return yylex.(*lexer).FatalError("User attributes may only be specified once.", v.line, v.column) }
+            name = value.NewValue(v.value.(string))
+        case "password":
+            if password != nil { return yylex.(*lexer).FatalError("User attributes may only be specified once.", v.line, v.column) }
+            password = value.NewValue(v.value.(string))
+        case "groups":
+            if groups != nil { return yylex.(*lexer).FatalError("User attributes may only be specified once.", v.line, v.column) }
+            sa := v.value.([]string)
+            va := make(value.Values, len(sa))
+            for i := range sa {
+                va[i] = value.NewValue(sa[i])
+            }
+            groups = value.NewValue(va)
+        }
+    }
+    $$ = algebra.NewAlterUser($3,password,name,groups)
+}
+;
+
+drop_user:
+DROP USER user
+{
+    $$ = algebra.NewDropUser($3)
+}
+;
+
+user_opts:
+/* empty */
+{
+    $$ = nil
+}
+|
+user_opts user_opt
+{
+    $$ = append($1, $2)
+}
+;
+
+user_opt:
+PASSWORD STR
+{
+    $$ = &nameValueContext{"password", $2, $<line>1, $<column>1}
+}
+|
+WITH STR
+{
+    $$ = &nameValueContext{"name", $2, $<line>1, $<column>1}
+}
+|
+GROUPS groups
+{
+    var groups []string
+    // de-duplicate groups list
+    if len($2) > 0 {
+        groups = make([]string, 0, len($2))
+        for i := range $2 {
+            found := false
+            for j := range groups {
+                if $2[i] == groups[j] {
+                    found = true
+                    break
+                }
+            }
+            if !found {
+                groups = append(groups, $2[i])
+            }
+        }
+    }
+
+    $$ = &nameValueContext{"groups", groups, $<line>1, $<column>1}
+}
+;
+
+groups:
+permitted_identifiers
+{
+    $$ = append([]string(nil), $1)
+}
+|
+groups COMMA permitted_identifiers
+{
+    $$ = append($1, $3)
+}
+;
+
+/*************************************************
+ *
+ * GROUPS
+ *
+ *************************************************/
+
+create_group:
+CREATE GROUP group_name group_opts
+{
+    var desc, roles value.Value
+    for _, v := range $4 {
+        switch v.name {
+        case "desc":
+            if desc != nil { return yylex.(*lexer).FatalError("Group attributes may only be specified once.", v.line, v.column) }
+            desc = value.NewValue(v.value.(string))
+        case "roles":
+            if roles != nil { return yylex.(*lexer).FatalError("Group attributes may only be specified once.", v.line, v.column) }
+            sa := v.value.([]string)
+            va := make(value.Values, len(sa))
+            for i := range sa {
+                va[i] = value.NewValue(sa[i])
+            }
+            roles = value.NewValue(va)
+        }
+    }
+    $$ = algebra.NewCreateGroup($3,desc,roles)
+}
+;
+
+alter_group:
+ALTER GROUP group_name group_opts
+{
+    var desc, roles value.Value
+    for _, v := range $4 {
+        switch v.name {
+        case "desc":
+            if desc != nil { return yylex.(*lexer).FatalError("Group attributes may only be specified once.", v.line, v.column) }
+            desc = value.NewValue(v.value.(string))
+        case "roles":
+            if roles != nil { return yylex.(*lexer).FatalError("Group attributes may only be specified once.", v.line, v.column) }
+            sa := v.value.([]string)
+            va := make(value.Values, len(sa))
+            for i := range sa {
+                va[i] = value.NewValue(sa[i])
+            }
+            roles = value.NewValue(va)
+        }
+    }
+    $$ = algebra.NewAlterGroup($3,desc,roles)
+}
+;
+
+drop_group:
+DROP GROUP group_name
+{
+    $$ = algebra.NewDropGroup($3)
+}
+;
+
+group_name:
+permitted_identifiers
+;
+
+group_opts:
+/* empty */
+{
+    $$ = nil
+}
+|
+group_opts group_opt
+{
+    $$ = append($1, $2)
+}
+;
+
+group_opt:
+WITH STR
+{
+    $$ = &nameValueContext{"desc", $2, $<line>1, $<column>1}
+}
+|
+ROLES group_role_list
+{
+    var roles []string
+    // de-duplicate roles list
+    if len($2) > 0 {
+        roles = make([]string, 0, len($2))
+        for i := range $2 {
+            found := false
+            for j := range roles {
+                if $2[i] == roles[j] {
+                    found = true
+                    break
+                }
+            }
+            if !found {
+                roles = append(roles, $2[i])
+            }
+        }
+    }
+
+    $$ = &nameValueContext{"roles", roles, $<line>1, $<column>1}
+}
+|
+NO ROLES
+{
+    $$ = &nameValueContext{"roles", []string{}, $<line>1, $<column>1}
+}
+;
+
+group_role_list:
+group_role_list_item
+{
+    $$ = []string{ $1 }
+}
+|
+group_role_list COMMA group_role_list_item
+{
+    $$ = append($1, $3)
+}
+;
+
+group_role_list_item:
+role_name
+|
+role_name ON keyspace_scope
+{
+    fn := $3.FullName()
+    i := strings.Index(fn, ":")
+    if i != -1 {
+        // strip the namespace as endpoint doesn't accept it in the target information
+        fn = fn[i+1:]
+    }
+    $$ = auth.AliasToRole($1) + "[" + strings.ReplaceAll(fn, ".", ":") + "]"
+}
+;
+
+/*************************************************
+ *
  * GRANT ROLE
  *
  *************************************************/
 
+group_or_groups:
+GROUP
+|
+GROUPS
+;
+
+user_users:
+USER
+|
+USERS
+;
+
 grant_role:
 GRANT role_list TO user_list
 {
-    $$ = algebra.NewGrantRole($2, nil, $4)
+    $$ = algebra.NewGrantRole($2, nil, $4, false)
 }
 |
 GRANT role_list ON keyspace_scope_list TO user_list
 {
-    $$ = algebra.NewGrantRole($2, $4, $6)
+    $$ = algebra.NewGrantRole($2, $4, $6, false)
+}
+|
+GRANT role_list TO user_users user_list
+{
+    $$ = algebra.NewGrantRole($2, nil, $5, false)
+}
+|
+GRANT role_list ON keyspace_scope_list TO user_users user_list
+{
+    $$ = algebra.NewGrantRole($2, $4, $7, false)
+}
+|
+GRANT role_list TO group_or_groups groups
+{
+    $$ = algebra.NewGrantRole($2, nil, $5, true)
+}
+|
+GRANT role_list ON keyspace_scope_list TO group_or_groups groups
+{
+    $$ = algebra.NewGrantRole($2, $4, $7, true)
 }
 ;
 
@@ -2868,12 +3204,117 @@ permitted_identifiers COLON permitted_identifiers
 revoke_role:
 REVOKE role_list FROM user_list
 {
-    $$ = algebra.NewRevokeRole($2, nil, $4)
+    $$ = algebra.NewRevokeRole($2, nil, $4, false)
 }
 |
 REVOKE role_list ON keyspace_scope_list FROM user_list
 {
-    $$ = algebra.NewRevokeRole($2, $4, $6)
+    $$ = algebra.NewRevokeRole($2, $4, $6, false)
+}
+|
+REVOKE role_list FROM user_users user_list
+{
+    $$ = algebra.NewRevokeRole($2, nil, $5, false)
+}
+|
+REVOKE role_list ON keyspace_scope_list FROM user_users user_list
+{
+    $$ = algebra.NewRevokeRole($2, $4, $7, false)
+}
+|
+REVOKE role_list FROM group_or_groups groups
+{
+    $$ = algebra.NewRevokeRole($2, nil, $5, true)
+}
+|
+REVOKE role_list ON keyspace_scope_list FROM group_or_groups groups
+{
+    $$ = algebra.NewRevokeRole($2, $4, $7, true)
+}
+;
+
+/*************************************************
+ *
+ * CREATE BUCKET / DATABASE
+ *
+ *************************************************/
+
+opt_def_with_clause:
+opt_with_clause
+{
+    if $1 == nil {
+        $$ = value.NewValue(map[string]interface{}{})
+    } else {
+        $$ = $1
+    }
+}
+;
+
+create_bucket:
+CREATE BUCKET permitted_identifiers opt_if_not_exists opt_def_with_clause
+{
+    $$ = algebra.NewCreateBucket($3, $4, $5)
+}
+|
+CREATE BUCKET IF NOT EXISTS permitted_identifiers opt_def_with_clause
+{
+    $$ = algebra.NewCreateBucket($6, false, $7)
+}
+|
+CREATE DATABASE permitted_identifiers opt_if_not_exists opt_def_with_clause
+{
+    $$ = algebra.NewCreateBucket($3, $4, $5)
+}
+|
+CREATE DATABASE IF NOT EXISTS permitted_identifiers opt_def_with_clause
+{
+    $$ = algebra.NewCreateBucket($6, false, $7)
+}
+;
+
+/*************************************************
+ *
+ * ALTER BUCKET / DATABASE
+ *
+ *************************************************/
+
+alter_bucket:
+ALTER BUCKET permitted_identifiers with_clause
+{
+    $$ = algebra.NewAlterBucket($3, $4)
+}
+|
+ALTER DATABASE permitted_identifiers with_clause
+{
+    $$ = algebra.NewAlterBucket($3, $4)
+}
+;
+
+/*************************************************
+ *
+ * DROP BUCKET / DATABASE
+ *
+ *************************************************/
+
+drop_bucket:
+DROP BUCKET permitted_identifiers opt_if_exists
+{
+    $$ = algebra.NewDropBucket($3, $4)
+}
+|
+DROP BUCKET IF EXISTS permitted_identifiers
+{
+    $$ = algebra.NewDropBucket($5, false)
+}
+|
+DROP DATABASE permitted_identifiers opt_if_exists
+{
+    $$ = algebra.NewDropBucket($3, $4)
+}
+|
+DROP DATABASE IF EXISTS permitted_identifiers
+{
+    $$ = algebra.NewDropBucket($5, false)
 }
 ;
 
@@ -5530,9 +5971,12 @@ CREATE SEQUENCE sequence_name_options opt_seq_create_options
         if v.name == "with" {
             if len(m) != 0 {
                 return "WITH may not be used with other options"
-            } else if v.value.Type() == value.OBJECT {
-                m["with"] = v.value
-                return ""
+            } else if v.value != nil {
+                val := value.NewValue(v.value)
+                if val.Type() == value.OBJECT {
+                    m["with"] = val
+                    return ""
+                }
             }
         } else {
             if _, ok := m["with"]; ok {
@@ -5545,11 +5989,12 @@ CREATE SEQUENCE sequence_name_options opt_seq_create_options
         if v.value == nil {
             return "invalid option value"
         }
-        if v.name == sequences.OPT_CYCLE && v.value.Type() == value.BOOLEAN {
-            m[v.name] = v.value.Truth()
+        val := value.NewValue(v.value)
+        if v.name == sequences.OPT_CYCLE && val.Type() == value.BOOLEAN {
+            m[v.name] = val.Truth()
             return ""
-        } else if v.value.Type() == value.NUMBER {
-            if i, ok := value.IsIntValue(v.value); ok {
+        } else if val.Type() == value.NUMBER {
+            if i, ok := value.IsIntValue(val); ok {
                   m[v.name] = i
                   return ""
             }
@@ -5647,14 +6092,15 @@ ALTER SEQUENCE sequence_full_name seq_alter_options
         if v.value == nil {
             return "invalid option value"
         }
-        if v.name == sequences.OPT_CYCLE && v.value.Type() == value.BOOLEAN {
-            m[v.name] = v.value.Truth()
+        val := value.NewValue(v.value)
+        if v.name == sequences.OPT_CYCLE && val.Type() == value.BOOLEAN {
+            m[v.name] = val.Truth()
             return ""
-        } else if v.name == sequences.OPT_RESTART && v.value.Type() == value.NULL {
+        } else if v.name == sequences.OPT_RESTART && val.Type() == value.NULL {
             m[v.name] = true
             return ""
-        } else if v.value.Type() == value.NUMBER {
-            if i, ok := value.IsIntValue(v.value); ok {
+        } else if val.Type() == value.NUMBER {
+            if i, ok := value.IsIntValue(val); ok {
                   m[v.name] = i
                   return ""
             }

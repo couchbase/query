@@ -16,92 +16,113 @@ import (
 	"github.com/couchbase/query/auth"
 )
 
-func messageForDeniedPrivilege(pair auth.PrivilegePair) string {
+func messageForDeniedPrivilege(pair auth.PrivilegePair) (string, string) {
 	keyspace := pair.Target
 
 	privilege := ""
 	role := ""
+	base_role := ""
 	switch pair.Priv {
 	case auth.PRIV_READ:
 		privilege = "run data read queries"
-		role = fmt.Sprintf("data_reader on %s", keyspace)
+		base_role = "data_reader"
+		role = fmt.Sprintf("%s on %s", base_role, keyspace)
 	case auth.PRIV_WRITE:
 		privilege = "run data write queries"
-		role = fmt.Sprintf("data_reader_writer on %s", keyspace)
+		base_role = "data_reader_writer"
+		role = fmt.Sprintf("%s on %s", base_role, keyspace)
 	case auth.PRIV_UPSERT:
 		privilege = "run data upsert queries"
-		role = fmt.Sprintf("data_reader_writer on %s", keyspace)
+		base_role = "data_reader_writer"
+		role = fmt.Sprintf("%s on %s", base_role, keyspace)
 	case auth.PRIV_SYSTEM_READ:
 		privilege = "run queries accessing the system tables"
-		role = "query_system_catalog"
+		base_role = "query_system_catalog"
 	case auth.PRIV_SECURITY_WRITE:
 		privilege = "run queries updating user information"
-		role = "admin"
+		base_role = "admin"
 	case auth.PRIV_SECURITY_READ:
 		privilege = "run queries accessing user information"
-		role = "admin"
+		base_role = "admin"
 	case auth.PRIV_QUERY_SELECT:
-		privilege = fmt.Sprintf("run SELECT queries on %s", keyspace)
-		role = fmt.Sprintf("query_select on %s", keyspace)
+		privilege = fmt.Sprintf("%s on %s", base_role, keyspace)
+		base_role = "query_select"
+		role = fmt.Sprintf("%s on %s", base_role, keyspace)
 	case auth.PRIV_QUERY_UPDATE:
-		privilege = fmt.Sprintf("run UPDATE queries on %s", keyspace)
-		role = fmt.Sprintf("query_update on %s", keyspace)
+		privilege = fmt.Sprintf("%s on %s", base_role, keyspace)
+		base_role = "query_update"
+		role = fmt.Sprintf("%s on %s", base_role, keyspace)
 	case auth.PRIV_QUERY_INSERT:
-		privilege = fmt.Sprintf("run INSERT queries on %s", keyspace)
-		role = fmt.Sprintf("query_insert on %s", keyspace)
+		privilege = fmt.Sprintf("%s on %s", base_role, keyspace)
+		base_role = "query_insert"
+		role = fmt.Sprintf("%s on %s", base_role, keyspace)
 	case auth.PRIV_QUERY_DELETE:
-		privilege = fmt.Sprintf("run DELETE queries on %s", keyspace)
-		role = fmt.Sprintf("query_delete on %s", keyspace)
+		privilege = fmt.Sprintf("%s on %s", base_role, keyspace)
+		base_role = "query_delete"
+		role = fmt.Sprintf("%s on %s", base_role, keyspace)
 	case auth.PRIV_QUERY_BUILD_INDEX, auth.PRIV_QUERY_CREATE_INDEX,
 		auth.PRIV_QUERY_ALTER_INDEX, auth.PRIV_QUERY_DROP_INDEX, auth.PRIV_QUERY_LIST_INDEX:
 		privilege = "run index operations"
-		role = fmt.Sprintf("query_manage_index on %s", keyspace)
+		base_role = "query_manage_index"
+		role = fmt.Sprintf("%s on %s", base_role, keyspace)
 	case auth.PRIV_QUERY_EXTERNAL_ACCESS:
 		privilege = "run queries using the CURL() function"
-		role = "query_external_access"
+		base_role = "query_external_access"
 	case auth.PRIV_BACKUP_CLUSTER:
 		privilege = "backup cluster metadata"
-		role = "backup_admin"
+		base_role = "backup_admin"
 	case auth.PRIV_BACKUP_BUCKET:
 		privilege = "backup bucket metadata"
-		role = fmt.Sprintf("data_backup on %s", keyspace)
+		base_role = "data_backup"
+		role = fmt.Sprintf("%s on %s", base_role, keyspace)
 	case auth.PRIV_QUERY_MANAGE_FUNCTIONS:
 		privilege = "manage global functions"
-		role = "query_manage_global_functions"
+		base_role = "query_manage_global_functions"
 	case auth.PRIV_QUERY_EXECUTE_FUNCTIONS:
 		privilege = "execute global functions"
-		role = "query_execute_global_functions"
+		base_role = "query_execute_global_functions"
 	case auth.PRIV_QUERY_MANAGE_SCOPE_FUNCTIONS:
 		privilege = "manage scope functions"
-		role = fmt.Sprintf("query_manage_functions on %s", keyspace)
+		base_role = "query_manage_functions"
+		role = fmt.Sprintf("%s on %s", base_role, keyspace)
 	case auth.PRIV_QUERY_EXECUTE_SCOPE_FUNCTIONS:
 		privilege = "execute scope functions"
-		role = fmt.Sprintf("query_execute_functions on %s", keyspace)
+		base_role = "query_execute_functions"
+		role = fmt.Sprintf("%s on %s", base_role, keyspace)
 	case auth.PRIV_QUERY_MANAGE_FUNCTIONS_EXTERNAL:
 		privilege = "manage global external functions"
-		role = "query_manage_global_external_functions"
+		base_role = "query_manage_global_external_functions"
 	case auth.PRIV_QUERY_EXECUTE_FUNCTIONS_EXTERNAL:
 		privilege = "execute global external functions"
-		role = "query_execute_global_external_functions"
+		base_role = "query_execute_global_external_functions"
 	case auth.PRIV_QUERY_MANAGE_SCOPE_FUNCTIONS_EXTERNAL:
 		privilege = "manage scope external functions"
-		role = fmt.Sprintf("query_manage_external_functions on %s", keyspace)
+		base_role = "query_manage_external_functions"
+		role = fmt.Sprintf("%s on %s", base_role, keyspace)
 	case auth.PRIV_QUERY_EXECUTE_SCOPE_FUNCTIONS_EXTERNAL:
 		privilege = "execute scope external functions"
-		role = fmt.Sprintf("query_execute_external_functions on %s", keyspace)
+		base_role = "query_execute_external_functions"
+		role = fmt.Sprintf("%s on %s", base_role, keyspace)
 	case auth.PRIV_QUERY_MANAGE_SEQUENCES:
 		privilege = "manage sequences"
-		role = fmt.Sprintf("query_manage_sequences on %s", keyspace)
+		base_role = "query_manage_sequences"
+		role = fmt.Sprintf("%s on %s", base_role, keyspace)
 	case auth.PRIV_QUERY_USE_SEQUENCES:
 		privilege = "use sequences"
-		role = fmt.Sprintf("query_use_sequences on %s", keyspace)
+		base_role = "query_use_sequences"
+		role = fmt.Sprintf("%s on %s", base_role, keyspace)
 	case auth.PRIV_SEARCH_CREATE_INDEX, auth.PRIV_SEARCH_DROP_INDEX:
 		privilege = "manage fts indices"
-		role = fmt.Sprintf("fts_admin on %s", keyspace)
+		base_role = "fts_admin"
+		role = fmt.Sprintf("%s on %s", base_role, keyspace)
 	default:
 		privilege = "run this type of query"
-		role = "admin"
+		base_role = "admin"
+	}
+	if role == "" && base_role != "" {
+		role = base_role
 	}
 
-	return fmt.Sprintf("User does not have credentials to %s. Add role %s to allow the statement to run.", privilege, role)
+	return fmt.Sprintf("User does not have credentials to %s. Add role %s to allow the statement to run.", privilege, role),
+		base_role
 }

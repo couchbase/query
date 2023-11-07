@@ -405,6 +405,19 @@ func (this *scanIdxCol) VisitBuildIndexes(op *plan.BuildIndexes) (interface{}, e
 	return nil, nil
 }
 
+// Bucket DDL
+func (this *scanIdxCol) VisitCreateBucket(op *plan.CreateBucket) (interface{}, error) {
+	return nil, nil
+}
+
+func (this *scanIdxCol) VisitAlterBucket(op *plan.AlterBucket) (interface{}, error) {
+	return nil, nil
+}
+
+func (this *scanIdxCol) VisitDropBucket(op *plan.DropBucket) (interface{}, error) {
+	return nil, nil
+}
+
 // Scope and Collection DDL
 func (this *scanIdxCol) VisitCreateScope(op *plan.CreateScope) (interface{}, error) {
 	return nil, nil
@@ -423,6 +436,32 @@ func (this *scanIdxCol) VisitDropCollection(op *plan.DropCollection) (interface{
 }
 
 func (this *scanIdxCol) VisitFlushCollection(op *plan.FlushCollection) (interface{}, error) {
+	return nil, nil
+}
+
+// Users
+func (this *scanIdxCol) VisitCreateUser(op *plan.CreateUser) (interface{}, error) {
+	return nil, nil
+}
+
+func (this *scanIdxCol) VisitAlterUser(op *plan.AlterUser) (interface{}, error) {
+	return nil, nil
+}
+
+func (this *scanIdxCol) VisitDropUser(op *plan.DropUser) (interface{}, error) {
+	return nil, nil
+}
+
+// Groups
+func (this *scanIdxCol) VisitCreateGroup(op *plan.CreateGroup) (interface{}, error) {
+	return nil, nil
+}
+
+func (this *scanIdxCol) VisitAlterGroup(op *plan.AlterGroup) (interface{}, error) {
+	return nil, nil
+}
+
+func (this *scanIdxCol) VisitDropGroup(op *plan.DropGroup) (interface{}, error) {
 	return nil, nil
 }
 

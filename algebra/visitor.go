@@ -42,6 +42,23 @@ type Visitor interface {
 	VisitCreateCollection(stmt *CreateCollection) (interface{}, error)
 	VisitDropCollection(stmt *DropCollection) (interface{}, error)
 	VisitFlushCollection(stmt *FlushCollection) (interface{}, error)
+	VisitCreateBucket(stmt *CreateBucket) (interface{}, error)
+	VisitAlterBucket(stmt *AlterBucket) (interface{}, error)
+	VisitDropBucket(stmt *DropBucket) (interface{}, error)
+
+	/*
+		USER statements.
+	*/
+	VisitCreateUser(stmt *CreateUser) (interface{}, error)
+	VisitAlterUser(stmt *AlterUser) (interface{}, error)
+	VisitDropUser(stmt *DropUser) (interface{}, error)
+
+	/*
+		GROUP statements.
+	*/
+	VisitCreateGroup(stmt *CreateGroup) (interface{}, error)
+	VisitAlterGroup(stmt *AlterGroup) (interface{}, error)
+	VisitDropGroup(stmt *DropGroup) (interface{}, error)
 
 	/*
 	   Visitor for ROLES statements.

@@ -421,6 +421,7 @@ const (
 	API_STMT_BUILD_INDEX                 = 28684
 	API_STMT_GRANT_ROLE                  = 28685
 	API_STMT_REVOKE_ROLE                 = 28686
+	API_UNKNOWN                          = 28687
 	API_STMT_CREATE_PRIMARY_INDEX        = 28688
 	API_ADMIN_STATS                      = 28689
 	API_ADMIN_VITALS                     = 28690
@@ -469,6 +470,12 @@ const (
 	API_STMT_ALTER_SEQUENCE              = 28735
 	API_STMT_DROP_SEQUENCE               = 28736
 	API_ADMIN_MIGRATION                  = 28737
+	API_STMT_CREATE_USER                 = 28738
+	API_STMT_ALTER_USER                  = 28739
+	API_STMT_DROP_USER                   = 28740
+	API_STMT_CREATE_BUCKET               = 28741
+	API_STMT_ALTER_BUCKET                = 28742
+	API_STMT_DROP_BUCKET                 = 28743
 )
 
 // Event types are described in /query/etc/audit_descriptor.json
@@ -508,6 +515,12 @@ var _EVENT_TYPE_MAP = map[string]uint32{
 	"CREATE_SEQUENCE":           API_STMT_CREATE_SEQUENCE,
 	"ALTER_SEQUENCE":            API_STMT_ALTER_SEQUENCE,
 	"DROP_SEQUENCE":             API_STMT_DROP_SEQUENCE,
+	"CREATE_USER":               API_STMT_CREATE_USER,
+	"ALTER_USER":                API_STMT_ALTER_USER,
+	"DROP_USER":                 API_STMT_DROP_USER,
+	"CREATE_BUCKET":             API_STMT_CREATE_BUCKET,
+	"ALTER_BUCKET":              API_STMT_ALTER_BUCKET,
+	"DROP_BUCKET":               API_STMT_DROP_BUCKET,
 }
 
 func Submit(event Auditable) {
@@ -533,7 +546,7 @@ func Submit(event Auditable) {
 
 	// Handle unrecognized events.
 	if eventTypeId == 0 {
-		eventTypeId = 28687
+		eventTypeId = API_UNKNOWN
 	}
 
 	if eventIsDisabled(auditInfo, eventTypeId) {

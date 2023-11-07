@@ -340,6 +340,7 @@
 /[rR][eE][vV][oO][kK][eE]/     { lval.s = yylex.Text(); yylex.curOffset += 6; return REVOKE }
 /[rR][iI][gG][hH][tT]/         { lval.s = yylex.Text(); yylex.curOffset += 5; return RIGHT }
 /[rR][oO][lL][eE]/             { lval.s = yylex.Text(); yylex.curOffset += 4; return ROLE }
+/[rR][oO][lL][eE][sS]/         { lval.s = yylex.Text(); yylex.curOffset += 5; return ROLES }
 /[rR][oO][lL][lL][bB][aA][cC][kK]/ { lval.s = yylex.Text(); yylex.curOffset += 8; return ROLLBACK }
 /[rR][oO][wW]/                 { lval.s = yylex.Text(); yylex.curOffset += 3; return ROW }
 /[rR][oO][wW][sS]/             { lval.s = yylex.Text(); yylex.curOffset += 4; return ROWS }
@@ -376,6 +377,7 @@
 /[uU][pP][sS][eE][rR][tT]/     { lval.s = yylex.Text(); yylex.curOffset += 6; return UPSERT }
 /[uU][sS][eE]/                 { lval.s = yylex.Text(); yylex.curOffset += 3; return USE }
 /[uU][sS][eE][rR]/             { lval.s = yylex.Text(); yylex.curOffset += 4; return USER }
+/[uU][sS][eE][rR][sS]/         { lval.s = yylex.Text(); yylex.curOffset += 5; return USERS }
 /[uU][sS][iI][nN][gG]/         { lval.s = yylex.Text(); yylex.curOffset += 5; return USING }
 /[vV][aA][lL][iI][dD][aA][tT][eE]/ { lval.s = yylex.Text(); yylex.curOffset += 8; return VALIDATE }
 /[vV][aA][lL][uU][eE]/         { lval.s = yylex.Text(); yylex.curOffset += 5; return VALUE }

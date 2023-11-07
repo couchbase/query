@@ -12,6 +12,30 @@ import (
 	"github.com/couchbase/query/algebra"
 )
 
+func (this *Rewrite) VisitCreateUser(stmt *algebra.CreateUser) (interface{}, error) {
+	return stmt, stmt.MapExpressions(this)
+}
+
+func (this *Rewrite) VisitAlterUser(stmt *algebra.AlterUser) (interface{}, error) {
+	return stmt, stmt.MapExpressions(this)
+}
+
+func (this *Rewrite) VisitDropUser(stmt *algebra.DropUser) (interface{}, error) {
+	return stmt, stmt.MapExpressions(this)
+}
+
+func (this *Rewrite) VisitCreateGroup(stmt *algebra.CreateGroup) (interface{}, error) {
+	return stmt, stmt.MapExpressions(this)
+}
+
+func (this *Rewrite) VisitAlterGroup(stmt *algebra.AlterGroup) (interface{}, error) {
+	return stmt, stmt.MapExpressions(this)
+}
+
+func (this *Rewrite) VisitDropGroup(stmt *algebra.DropGroup) (interface{}, error) {
+	return stmt, stmt.MapExpressions(this)
+}
+
 func (this *Rewrite) VisitGrantRole(stmt *algebra.GrantRole) (interface{}, error) {
 	return stmt, stmt.MapExpressions(this)
 }

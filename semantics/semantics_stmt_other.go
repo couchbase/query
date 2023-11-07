@@ -9,6 +9,8 @@
 package semantics
 
 import (
+	"strings"
+
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
@@ -69,6 +71,107 @@ outer:
 		return errors.NewRoleNotFoundError(r)
 	}
 	return nil
+}
+
+func validateGroups(groups []string) errors.Error {
+	if len(groups) == 0 {
+		return nil
+	}
+	ds := datastore.GetDatastore()
+	val, err := ds.GroupInfo()
+	if err != nil {
+		return err
+	}
+	gm := make(map[string]bool)
+	for _, sg := range val.Actual().([]interface{}) {
+		if g, ok := sg.(map[string]interface{}); ok {
+			gm[g["id"].(string)] = true
+		}
+	}
+	for _, g := range groups {
+		if _, ok := gm[g]; !ok {
+			return errors.NewGroupNotFoundError(g)
+		}
+	}
+	return nil
+}
+
+func validateGroupRoles(roles []string) errors.Error {
+	if len(roles) == 0 {
+		return nil
+	}
+	ds := datastore.GetDatastore()
+	all, err := ds.GetRolesAll()
+	if err != nil {
+		return err
+	}
+
+	for _, r := range roles {
+		var parts []string
+		i := strings.IndexRune(r, '[')
+		if i != -1 {
+			q := r[i+1 : len(r)-1]
+			r = r[:i]
+			if q != "" {
+				parts = strings.Split(q, ":")
+			}
+		}
+		found := false
+		for i := range all {
+			if all[i].Name == r {
+				found = true
+				if all[i].Target == "" && len(parts) != 0 {
+					return errors.NewRoleTakesNoKeyspaceError(auth.RoleToAlias(r))
+				} else if all[i].IsScope && len(parts) != 2 {
+					return errors.NewRoleRequiresScopeError(auth.RoleToAlias(r))
+				} else if all[i].Target != "" && len(parts) == 0 {
+					return errors.NewRoleRequiresKeyspaceError(auth.RoleToAlias(r))
+				}
+				break
+			}
+		}
+		if !found {
+			return errors.NewRoleNotFoundError(auth.RoleToAlias(r))
+		}
+	}
+
+	return nil
+}
+
+func (this *SemChecker) VisitCreateUser(stmt *algebra.CreateUser) (interface{}, error) {
+	if g, ok := stmt.Groups(); ok {
+		return nil, validateGroups(g)
+	}
+	return nil, nil
+}
+
+func (this *SemChecker) VisitAlterUser(stmt *algebra.AlterUser) (interface{}, error) {
+	if g, ok := stmt.Groups(); ok {
+		return nil, validateGroups(g)
+	}
+	return nil, nil
+}
+
+func (this *SemChecker) VisitDropUser(stmt *algebra.DropUser) (interface{}, error) {
+	return nil, nil
+}
+
+func (this *SemChecker) VisitCreateGroup(stmt *algebra.CreateGroup) (interface{}, error) {
+	if r, ok := stmt.Roles(); ok {
+		return nil, validateGroupRoles(r)
+	}
+	return nil, nil
+}
+
+func (this *SemChecker) VisitAlterGroup(stmt *algebra.AlterGroup) (interface{}, error) {
+	if r, ok := stmt.Roles(); ok {
+		return nil, validateGroupRoles(r)
+	}
+	return nil, nil
+}
+
+func (this *SemChecker) VisitDropGroup(stmt *algebra.DropGroup) (interface{}, error) {
+	return nil, nil
 }
 
 func (this *SemChecker) VisitGrantRole(stmt *algebra.GrantRole) (interface{}, error) {

@@ -124,12 +124,27 @@ type Visitor interface {
 	VisitAlterIndex(op *AlterIndex) (interface{}, error)
 	VisitBuildIndexes(op *BuildIndexes) (interface{}, error)
 
+	// Buckets DDL
+	VisitCreateBucket(op *CreateBucket) (interface{}, error)
+	VisitAlterBucket(op *AlterBucket) (interface{}, error)
+	VisitDropBucket(op *DropBucket) (interface{}, error)
+
 	// Collections, Roles DDL
 	VisitCreateScope(op *CreateScope) (interface{}, error)
 	VisitDropScope(op *DropScope) (interface{}, error)
 	VisitCreateCollection(op *CreateCollection) (interface{}, error)
 	VisitDropCollection(op *DropCollection) (interface{}, error)
 	VisitFlushCollection(op *FlushCollection) (interface{}, error)
+
+	// Users
+	VisitCreateUser(op *CreateUser) (interface{}, error)
+	VisitAlterUser(op *AlterUser) (interface{}, error)
+	VisitDropUser(op *DropUser) (interface{}, error)
+
+	// Groups
+	VisitCreateGroup(op *CreateGroup) (interface{}, error)
+	VisitAlterGroup(op *AlterGroup) (interface{}, error)
+	VisitDropGroup(op *DropGroup) (interface{}, error)
 
 	// Roles
 	VisitGrantRole(op *GrantRole) (interface{}, error)

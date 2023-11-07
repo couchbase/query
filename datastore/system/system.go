@@ -45,6 +45,9 @@ const KEYSPACE_NAME_REQUESTS = "completed_requests"
 const KEYSPACE_NAME_ACTIVE = "active_requests"
 const KEYSPACE_NAME_USER_INFO = "user_info"
 const KEYSPACE_NAME_MY_USER_INFO = "my_user_info"
+const KEYSPACE_NAME_GROUP_INFO = "group_info"
+const KEYSPACE_NAME_BUCKET_INFO = "bucket_info"
+const KEYSPACE_NAME_DATABASE_INFO = "database_info"
 const KEYSPACE_NAME_NODES = "nodes"
 const KEYSPACE_NAME_APPLICABLE_ROLES = "applicable_roles"
 const KEYSPACE_NAME_TASKS_CACHE = "tasks_cache"
@@ -85,7 +88,7 @@ func (s *store) PrivilegesFromPath(fullname string, keyspace string, privilege a
 	// we still specify a target for backward compatibility and to avoid test failures
 	case auth.PRIV_QUERY_SELECT:
 		switch keyspace {
-		case KEYSPACE_NAME_USER_INFO, KEYSPACE_NAME_APPLICABLE_ROLES:
+		case KEYSPACE_NAME_USER_INFO, KEYSPACE_NAME_APPLICABLE_ROLES, KEYSPACE_NAME_GROUP_INFO:
 			privs.Add(fullname, auth.PRIV_SECURITY_READ, auth.PRIV_PROPS_NONE)
 
 		// may be open, depending whether admin REST endpoint is open
@@ -246,8 +249,52 @@ func (s *store) PutUserInfo(u *datastore.User) errors.Error {
 	return errors.NewOtherNotImplementedError(nil, "PutUserInfo")
 }
 
+func (s *store) DeleteUser(u *datastore.User) errors.Error {
+	return errors.NewOtherNotImplementedError(nil, "DeleteUser")
+}
+
+func (s *store) GetUserInfo(u *datastore.User) errors.Error {
+	return errors.NewOtherNotImplementedError(nil, "GetUserInfo")
+}
+
 func (s *store) GetRolesAll() ([]datastore.Role, errors.Error) {
 	return nil, errors.NewOtherNotImplementedError(nil, "GetRolesAll")
+}
+
+func (s *store) GetGroupInfo(*datastore.Group) errors.Error {
+	return errors.NewOtherNotImplementedError(nil, "GetGroupInfo")
+}
+
+func (s *store) PutGroupInfo(*datastore.Group) errors.Error {
+	return errors.NewOtherNotImplementedError(nil, "PutGroupInfo")
+}
+
+func (s *store) DeleteGroup(*datastore.Group) errors.Error {
+	return errors.NewOtherNotImplementedError(nil, "DeleteGroup")
+}
+
+func (s *store) GroupInfo() (value.Value, errors.Error) {
+	return s.actualStore.GroupInfo()
+}
+
+func (s *store) GetGroupInfoAll() ([]datastore.Group, errors.Error) {
+	return s.actualStore.GetGroupInfoAll()
+}
+
+func (s *store) CreateBucket(string, value.Value) errors.Error {
+	return errors.NewOtherNotImplementedError(nil, "CreateBucket")
+}
+
+func (s *store) AlterBucket(string, value.Value) errors.Error {
+	return errors.NewOtherNotImplementedError(nil, "AlterBucket")
+}
+
+func (s *store) DropBucket(string) errors.Error {
+	return errors.NewOtherNotImplementedError(nil, "DropBucket")
+}
+
+func (s *store) BucketInfo() (value.Value, errors.Error) {
+	return s.actualStore.BucketInfo()
 }
 
 func (s *store) CreateSystemCBOStats(requestId string) errors.Error {

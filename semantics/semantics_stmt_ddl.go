@@ -9,10 +9,14 @@
 package semantics
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/value"
 )
 
 func (this *SemChecker) VisitCreatePrimaryIndex(stmt *algebra.CreatePrimaryIndex) (interface{}, error) {
@@ -90,6 +94,126 @@ func (this *SemChecker) VisitAlterIndex(stmt *algebra.AlterIndex) (interface{}, 
 }
 
 func (this *SemChecker) VisitBuildIndexes(stmt *algebra.BuildIndexes) (interface{}, error) {
+	return nil, stmt.MapExpressions(this)
+}
+
+type bucketFieldDef struct {
+	typ      value.Type
+	canAlter bool
+	minValue interface{}
+	maxValue interface{}
+	values   []interface{}
+}
+
+var bucketFieldDefinitions = map[string]bucketFieldDef{
+	"name":                   {value.STRING, false, nil, nil, nil},
+	"bucketType":             {value.STRING, false, nil, nil, []interface{}{"couchbase", "ephemeral", "memcached"}},
+	"replicaIndex":           {value.NUMBER, false, 0, 1, []interface{}{0, 1}},
+	"conflictResolutionType": {value.STRING, false, nil, nil, []interface{}{"seqno", "lww"}},
+	"storageBackend":         {value.STRING, false, nil, nil, []interface{}{"couchstore", "magma"}},
+
+	"evictionPolicy": {value.STRING, true, nil, nil, []interface{}{
+		"valueOnly", "fullEviction", "noEviction", "nruEviction"}},
+	"durabilityMinLevel": {value.STRING, true, nil, nil, []interface{}{
+		"none", "majority", "majorityAndPersistActive", "persistToMajority"}},
+
+	"ramQuota":                                   {value.NUMBER, true, 100, nil, nil},
+	"threadsNumber":                              {value.NUMBER, true, 3, 8, []interface{}{3, 8}},
+	"replicaNumber":                              {value.NUMBER, true, 1, 3, []interface{}{1, 2, 3}},
+	"compressionMode":                            {value.STRING, true, nil, nil, []interface{}{"off", "passive", "active"}},
+	"maxTTL":                                     {value.NUMBER, true, 0, 2147483647, nil},
+	"flushEnabled":                               {value.NUMBER, true, 0, 1, []interface{}{0, 1}},
+	"magmaSeqTreeDataBlockSize":                  {value.NUMBER, true, 4096, 131072, nil},
+	"historyRetentionCollectionDefault":          {value.BOOLEAN, true, nil, nil, nil},
+	"historyRetentionBytes":                      {value.NUMBER, true, 2147483648, nil, nil},
+	"historyRetentionSeconds":                    {value.NUMBER, true, 0, nil, nil},
+	"autoCompactionDefined":                      {value.BOOLEAN, true, nil, nil, nil},
+	"parallelDBAndViewCompaction":                {value.BOOLEAN, true, nil, nil, nil},
+	"databaseFragmentationThreshold[percentage]": {value.NUMBER, true, 0, 100, nil},
+	"databaseFragmentationThreshold[size]":       {value.NUMBER, true, 1, nil, nil},
+	"viewFragmentationThreshold[percentage]":     {value.NUMBER, true, 0, 100, nil},
+	"viewFragmentationThreshold[size]":           {value.NUMBER, true, 1, nil, nil},
+	"purgeInterval":                              {value.NUMBER, true, 0.01, 60, nil},
+	"allowedTimePeriod[fromHour]":                {value.NUMBER, true, 0, 23, nil},
+	"allowedTimePeriod[fromMinute]":              {value.NUMBER, true, 0, 59, nil},
+	"allowedTimePeriod[toHour]":                  {value.NUMBER, true, 0, 23, nil},
+	"allowedTimePeriod[toMinute]":                {value.NUMBER, true, 0, 59, nil},
+	"allowedTimePeriod[abortOutside]":            {value.BOOLEAN, true, nil, nil, nil},
+}
+
+func validateBucketOptions(with value.Value, alter bool) errors.Error {
+	if with == nil || with.Type() != value.OBJECT {
+		return errors.NewSemanticsWithCauseError(fmt.Errorf("Must be a constant OBJECT"), "Invalid WITH clause value")
+	}
+	for k, i := range with.Fields() {
+		v := value.NewValue(i)
+		if def, ok := bucketFieldDefinitions[k]; ok {
+			if alter && !def.canAlter {
+				return errors.NewWithInvalidOptionError(k)
+			}
+			if v.Type() != def.typ {
+				s := fmt.Sprintf("%s expected", strings.ToLower(def.typ.String()))
+				s = strings.ToUpper(s[:1]) + s[1:]
+				return errors.NewWithInvalidValueError(k, s)
+			}
+			if def.typ == value.NUMBER {
+				if def.minValue != nil {
+					_, expectFloat := def.minValue.(float64)
+					if _, ok := value.IsIntValue(v); !ok && !expectFloat {
+						return errors.NewWithInvalidValueError(k, "Integer expected")
+					}
+					min := value.NewValue(def.minValue)
+					if v.Compare(min) == value.NEG_ONE_VALUE {
+						return errors.NewWithInvalidValueError(k, fmt.Sprintf("Value >= %v expected", def.minValue))
+					}
+				}
+				if def.maxValue != nil {
+					max := value.NewValue(def.maxValue)
+					if v.Compare(max) == value.ONE_VALUE {
+						return errors.NewWithInvalidValueError(k, fmt.Sprintf("Value <= %v expected", def.maxValue))
+					}
+				}
+			}
+			if def.values != nil {
+				found := false
+				for i := range def.values {
+					if value.NewValue(def.values[i]) == v {
+						found = true
+						break
+					}
+				}
+				if !found {
+					s := fmt.Sprintf("Value must be one of: %v", def.values[0])
+					for i := 1; i < len(def.values); i++ {
+						s += fmt.Sprintf(", %v", def.values[i])
+					}
+					return errors.NewWithInvalidValueError(k, s)
+				}
+			}
+		} else {
+			return errors.NewWithInvalidOptionError(k)
+		}
+	}
+	return nil
+}
+
+func (this *SemChecker) VisitCreateBucket(stmt *algebra.CreateBucket) (interface{}, error) {
+	err := validateBucketOptions(stmt.With(), false)
+	if err != nil {
+		return nil, err
+	}
+	return nil, stmt.MapExpressions(this)
+}
+
+func (this *SemChecker) VisitAlterBucket(stmt *algebra.AlterBucket) (interface{}, error) {
+	err := validateBucketOptions(stmt.With(), true)
+	if err != nil {
+		return nil, err
+	}
+	return nil, stmt.MapExpressions(this)
+}
+
+func (this *SemChecker) VisitDropBucket(stmt *algebra.DropBucket) (interface{}, error) {
 	return nil, stmt.MapExpressions(this)
 }
 

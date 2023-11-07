@@ -169,12 +169,56 @@ func (s *store) PutUserInfo(u *datastore.User) errors.Error {
 	return nil
 }
 
+func (s *store) DeleteUser(u *datastore.User) errors.Error {
+	return errors.NewOtherNotImplementedError(nil, "DeleteUser")
+}
+
+func (s *store) GetUserInfo(u *datastore.User) errors.Error {
+	return errors.NewOtherNotImplementedError(nil, "GetUserInfo")
+}
+
+func (s *store) GetGroupInfo(*datastore.Group) errors.Error {
+	return errors.NewOtherNotImplementedError(nil, "GetGroupInfo")
+}
+
+func (s *store) PutGroupInfo(*datastore.Group) errors.Error {
+	return errors.NewOtherNotImplementedError(nil, "PutGroupInfo")
+}
+
+func (s *store) DeleteGroup(*datastore.Group) errors.Error {
+	return errors.NewOtherNotImplementedError(nil, "DeleteGroup")
+}
+
+func (s *store) GroupInfo() (value.Value, errors.Error) {
+	return nil, errors.NewOtherNotImplementedError(nil, "GroupInfo")
+}
+
+func (s *store) GetGroupInfoAll() ([]datastore.Group, errors.Error) {
+	return nil, errors.NewOtherNotImplementedError(nil, "GetGroupInfoAll")
+}
+
 func (s *store) GetRolesAll() ([]datastore.Role, errors.Error) {
 	return []datastore.Role{
 		datastore.Role{Name: "cluster_admin"},
 		datastore.Role{Name: "replication_admin"},
 		datastore.Role{Name: "bucket_admin", Target: "*"},
 	}, nil
+}
+
+func (s *store) CreateBucket(string, value.Value) errors.Error {
+	return errors.NewOtherNotImplementedError(nil, "CreateBucket")
+}
+
+func (s *store) AlterBucket(string, value.Value) errors.Error {
+	return errors.NewOtherNotImplementedError(nil, "AlterBucket")
+}
+
+func (s *store) DropBucket(string) errors.Error {
+	return errors.NewOtherNotImplementedError(nil, "DropBucket")
+}
+
+func (s *store) BucketInfo() (value.Value, errors.Error) {
+	return nil, errors.NewOtherNotImplementedError(nil, "BucketInfo")
 }
 
 func (s *store) CreateSystemCBOStats(requestId string) errors.Error {

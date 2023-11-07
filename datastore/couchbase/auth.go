@@ -382,14 +382,14 @@ func cbAuthorize(s authSource, privileges *auth.Privileges, credentials *auth.Cr
 		return nil
 	}
 
-	msg := messageForDeniedPrivilege(deniedPrivileges[0])
+	msg, role := messageForDeniedPrivilege(deniedPrivileges[0])
 
 	var path []string
 	if deniedPrivileges[0].Target != "" {
 		path = algebra.ParsePath(deniedPrivileges[0].Target)
 	}
 
-	return errors.NewDatastoreInsufficientCredentials(msg, reason, path)
+	return errors.NewDatastoreInsufficientCredentials(msg, reason, path, role)
 }
 
 func cbPreAuthorize(privileges *auth.Privileges) {

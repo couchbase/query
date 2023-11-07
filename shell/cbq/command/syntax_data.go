@@ -15,6 +15,7 @@ var statement_syntax = map[string][][]string{
 		[]string{"<identifier>"},
 		[]string{"DEFAULT"},
 		[]string{"USER"},
+		[]string{"USERS"},
 	},
 	"statements": [][]string{
 		[]string{"advise"},
@@ -30,6 +31,8 @@ var statement_syntax = map[string][][]string{
 		[]string{"ddl_statement"},
 		[]string{"infer"},
 		[]string{"update_statistics"},
+		[]string{"user_statement"},
+		[]string{"group_statement"},
 		[]string{"role_statement"},
 		[]string{"function_statement"},
 		[]string{"transaction_statement"},
@@ -88,8 +91,19 @@ var statement_syntax = map[string][][]string{
 	},
 	"ddl_statement": [][]string{
 		[]string{"index_statement"},
+		[]string{"bucket_statement"},
 		[]string{"scope_statement"},
 		[]string{"collection_statement"},
+	},
+	"user_statement": [][]string{
+		[]string{"create_user"},
+		[]string{"alter_user"},
+		[]string{"drop_user"},
+	},
+	"group_statement": [][]string{
+		[]string{"create_group"},
+		[]string{"alter_group"},
+		[]string{"drop_group"},
 	},
 	"role_statement": [][]string{
 		[]string{"grant_role"},
@@ -100,6 +114,11 @@ var statement_syntax = map[string][][]string{
 		[]string{"drop_index"},
 		[]string{"alter_index"},
 		[]string{"build_index"},
+	},
+	"bucket_statement": [][]string{
+		[]string{"create_bucket"},
+		[]string{"alter_bucket"},
+		[]string{"drop_bucket"},
 	},
 	"scope_statement": [][]string{
 		[]string{"create_scope"},
@@ -555,9 +574,70 @@ var statement_syntax = map[string][][]string{
 		[]string{"key_val_options_expr", "[where]"},
 		[]string{"LPAREN", "key_val_options_expr_header", "RPAREN", "[where]"},
 	},
+	"create_user": [][]string{
+		[]string{"CREATE", "USER", "user", "user_opts"},
+	},
+	"alter_user": [][]string{
+		[]string{"ALTER", "USER", "user", "user_opts"},
+	},
+	"drop_user": [][]string{
+		[]string{"DROP", "USER", "user"},
+	},
+	"user_opts": [][]string{
+		[]string{"user_opts", "user_opt"},
+	},
+	"user_opt": [][]string{
+		[]string{"PASSWORD", "STR"},
+		[]string{"WITH", "STR"},
+		[]string{"GROUPS", "groups"},
+	},
+	"groups": [][]string{
+		[]string{"permitted_identifiers"},
+		[]string{"groups", "COMMA", "permitted_identifiers"},
+	},
+	"create_group": [][]string{
+		[]string{"CREATE", "GROUP", "group_name", "group_opts"},
+	},
+	"alter_group": [][]string{
+		[]string{"ALTER", "GROUP", "group_name", "group_opts"},
+	},
+	"drop_group": [][]string{
+		[]string{"DROP", "GROUP", "group_name"},
+	},
+	"group_name": [][]string{
+		[]string{"permitted_identifiers"},
+	},
+	"group_opts": [][]string{
+		[]string{"group_opts", "group_opt"},
+	},
+	"group_opt": [][]string{
+		[]string{"WITH", "STR"},
+		[]string{"ROLES", "group_role_list"},
+		[]string{"NO", "ROLES"},
+	},
+	"group_role_list": [][]string{
+		[]string{"group_role_list_item"},
+		[]string{"group_role_list", "COMMA", "group_role_list_item"},
+	},
+	"group_role_list_item": [][]string{
+		[]string{"role_name"},
+		[]string{"role_name", "ON", "keyspace_scope"},
+	},
+	"group_or_groups": [][]string{
+		[]string{"GROUP"},
+		[]string{"GROUPS"},
+	},
+	"user_users": [][]string{
+		[]string{"USER"},
+		[]string{"USERS"},
+	},
 	"grant_role": [][]string{
 		[]string{"GRANT", "role_list", "TO", "user_list"},
 		[]string{"GRANT", "role_list", "ON", "keyspace_scope_list", "TO", "user_list"},
+		[]string{"GRANT", "role_list", "TO", "user_users", "user_list"},
+		[]string{"GRANT", "role_list", "ON", "keyspace_scope_list", "TO", "user_users", "user_list"},
+		[]string{"GRANT", "role_list", "TO", "group_or_groups", "groups"},
+		[]string{"GRANT", "role_list", "ON", "keyspace_scope_list", "TO", "group_or_groups", "groups"},
 	},
 	"role_list": [][]string{
 		[]string{"role_name"},
@@ -593,6 +673,29 @@ var statement_syntax = map[string][][]string{
 	"revoke_role": [][]string{
 		[]string{"REVOKE", "role_list", "FROM", "user_list"},
 		[]string{"REVOKE", "role_list", "ON", "keyspace_scope_list", "FROM", "user_list"},
+		[]string{"REVOKE", "role_list", "FROM", "user_users", "user_list"},
+		[]string{"REVOKE", "role_list", "ON", "keyspace_scope_list", "FROM", "user_users", "user_list"},
+		[]string{"REVOKE", "role_list", "FROM", "group_or_groups", "groups"},
+		[]string{"REVOKE", "role_list", "ON", "keyspace_scope_list", "FROM", "group_or_groups", "groups"},
+	},
+	"[def_with_clause]": [][]string{
+		[]string{"[with_clause]"},
+	},
+	"create_bucket": [][]string{
+		[]string{"CREATE", "BUCKET", "permitted_identifiers", "[if_not_exists]", "[def_with_clause]"},
+		[]string{"CREATE", "BUCKET", "IF", "NOT", "EXISTS", "permitted_identifiers", "[def_with_clause]"},
+		[]string{"CREATE", "DATABASE", "permitted_identifiers", "[if_not_exists]", "[def_with_clause]"},
+		[]string{"CREATE", "DATABASE", "IF", "NOT", "EXISTS", "permitted_identifiers", "[def_with_clause]"},
+	},
+	"alter_bucket": [][]string{
+		[]string{"ALTER", "BUCKET", "permitted_identifiers", "with_clause"},
+		[]string{"ALTER", "DATABASE", "permitted_identifiers", "with_clause"},
+	},
+	"drop_bucket": [][]string{
+		[]string{"DROP", "BUCKET", "permitted_identifiers", "[if_exists]"},
+		[]string{"DROP", "BUCKET", "IF", "EXISTS", "permitted_identifiers"},
+		[]string{"DROP", "DATABASE", "permitted_identifiers", "[if_exists]"},
+		[]string{"DROP", "DATABASE", "IF", "EXISTS", "permitted_identifiers"},
 	},
 	"create_scope": [][]string{
 		[]string{"CREATE", "SCOPE", "named_scope_ref", "[if_not_exists]"},

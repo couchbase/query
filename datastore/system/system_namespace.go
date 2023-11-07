@@ -100,170 +100,182 @@ func (p *namespace) loadKeyspaces() (e errors.Error) {
 	if e != nil {
 		return e
 	}
-	p.keyspaces[sb.Name()] = sb
+	registerKeyspace(p, sb)
 
 	pb, e := newNamespacesKeyspace(p)
 	if e != nil {
 		return e
 	}
-	p.keyspaces[pb.Name()] = pb
+	registerKeyspace(p, pb)
 
 	bk, e := newBucketsKeyspace(p, p.store.actualStore, KEYSPACE_NAME_BUCKETS)
 	if e != nil {
 		return e
 	}
-	p.keyspaces[bk.Name()] = bk
+	registerKeyspace(p, bk)
 
 	sk, e := newScopesKeyspace(p, p.store.actualStore, KEYSPACE_NAME_SCOPES, true)
 	if e != nil {
 		return e
 	}
-	p.keyspaces[sk.Name()] = sk
+	registerKeyspace(p, sk)
 
 	ask, e := newScopesKeyspace(p, p.store, KEYSPACE_NAME_ALL_SCOPES, false)
 	if e != nil {
 		return e
 	}
-	p.keyspaces[ask.Name()] = ask
+	registerKeyspace(p, ask)
 
 	kk, e := newKeyspacesKeyspace(p, p.store.actualStore, KEYSPACE_NAME_KEYSPACES, true, false)
 	if e != nil {
 		return e
 	}
-	p.keyspaces[kk.Name()] = kk
+	registerKeyspace(p, kk)
 
 	akk, e := newKeyspacesKeyspace(p, p.store, KEYSPACE_NAME_ALL_KEYSPACES, false, false)
 	if e != nil {
 		return e
 	}
-	p.keyspaces[akk.Name()] = akk
+	registerKeyspace(p, akk)
 
 	kki, e := newKeyspacesKeyspace(p, p.store.actualStore, KEYSPACE_NAME_KEYSPACES_INFO, true, true)
 	if e != nil {
 		return e
 	}
-	p.keyspaces[kki.Name()] = kki
+	registerKeyspace(p, kki)
 
 	akki, e := newKeyspacesKeyspace(p, p.store, KEYSPACE_NAME_ALL_KEYSPACES_INFO, false, true)
 	if e != nil {
 		return e
 	}
-	p.keyspaces[akki.Name()] = akki
+	registerKeyspace(p, akki)
 
 	db, e := newDualKeyspace(p)
 	if e != nil {
 		return e
 	}
-	p.keyspaces[db.Name()] = db
+	registerKeyspace(p, db)
 
 	ib, e := newIndexesKeyspace(p, p.store.actualStore, KEYSPACE_NAME_INDEXES, true)
 	if e != nil {
 		return e
 	}
-	p.keyspaces[ib.Name()] = ib
+	registerKeyspace(p, ib)
 
 	aib, e := newIndexesKeyspace(p, p.store, KEYSPACE_NAME_ALL_INDEXES, false)
 	if e != nil {
 		return e
 	}
-	p.keyspaces[aib.Name()] = aib
+	registerKeyspace(p, aib)
 
 	preps, e := newPreparedsKeyspace(p)
 	if e != nil {
 		return e
 	}
-	p.keyspaces[preps.Name()] = preps
+	registerKeyspace(p, preps)
 
 	funcsCache, e := newFunctionsCacheKeyspace(p)
 	if e != nil {
 		return e
 	}
-	p.keyspaces[funcsCache.Name()] = funcsCache
+	registerKeyspace(p, funcsCache)
 
 	funcs, e := newFunctionsKeyspace(p)
 	if e != nil {
 		return e
 	}
-	p.keyspaces[funcs.Name()] = funcs
+	registerKeyspace(p, funcs)
 
 	dictCache, e := newDictionaryCacheKeyspace(p, KEYSPACE_NAME_DICTIONARY_CACHE)
 	if e != nil {
 		return e
 	}
-	p.keyspaces[dictCache.Name()] = dictCache
+	registerKeyspace(p, dictCache)
 
 	dict, e := newDictionaryKeyspace(p, KEYSPACE_NAME_DICTIONARY)
 	if e != nil {
 		return e
 	}
-	p.keyspaces[dict.Name()] = dict
+	registerKeyspace(p, dict)
 
 	tasksCache, e := newTasksCacheKeyspace(p)
 	if e != nil {
 		return e
 	}
 
-	p.keyspaces[tasksCache.Name()] = tasksCache
+	registerKeyspace(p, tasksCache)
 
 	reqs, e := newRequestsKeyspace(p)
 	if e != nil {
 		return e
 	}
-	p.keyspaces[reqs.Name()] = reqs
+	registerKeyspace(p, reqs)
 
 	actives, e := newActiveRequestsKeyspace(p)
 	if e != nil {
 		return e
 	}
-	p.keyspaces[actives.Name()] = actives
+	registerKeyspace(p, actives)
 
 	userInfo, e := newUserInfoKeyspace(p)
 	if e != nil {
 		return e
 	}
-	p.keyspaces[userInfo.Name()] = userInfo
+	registerKeyspace(p, userInfo)
 
 	myUserInfo, e := newMyUserInfoKeyspace(p)
 	if e != nil {
 		return e
 	}
-	p.keyspaces[myUserInfo.Name()] = myUserInfo
+	registerKeyspace(p, myUserInfo)
+
+	groupInfo, e := newGroupInfoKeyspace(p)
+	if e != nil {
+		return e
+	}
+	registerKeyspace(p, groupInfo)
+
+	bucketInfo, e := newBucketInfoKeyspace(p)
+	if e != nil {
+		return e
+	}
+	registerKeyspace(p, bucketInfo)
 
 	nodes, e := newNodesKeyspace(p)
 	if e != nil {
 		return e
 	}
-	p.keyspaces[nodes.Name()] = nodes
+	registerKeyspace(p, nodes)
 
 	applicableRoles, e := newApplicableRolesKeyspace(p)
 	if e != nil {
 		return e
 	}
-	p.keyspaces[applicableRoles.Name()] = applicableRoles
+	registerKeyspace(p, applicableRoles)
 
 	transactions, e := newTransactionsKeyspace(p)
 	if e != nil {
 		return e
 	}
-	p.keyspaces[transactions.Name()] = transactions
+	registerKeyspace(p, transactions)
 
 	vitals, e := newVitalsKeyspace(p)
 	if e != nil {
 		return e
 	}
-	p.keyspaces[vitals.Name()] = vitals
+	registerKeyspace(p, vitals)
 
 	qk, e := newSequencesKeyspace(p, p.store.actualStore, KEYSPACE_NAME_SEQUENCES, true)
 	if e != nil {
 		return e
 	}
-	p.keyspaces[qk.Name()] = qk
+	registerKeyspace(p, qk)
 
 	aqk, e := newSequencesKeyspace(p, p.store.actualStore, KEYSPACE_NAME_ALL_SEQUENCES, true)
 	if e != nil {
 		return e
 	}
-	p.keyspaces[aqk.Name()] = aqk
+	registerKeyspace(p, aqk)
 
 	return nil
 }

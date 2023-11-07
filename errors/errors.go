@@ -598,3 +598,15 @@ func NewTempFileQuotaExceededError() Error {
 	return &err{level: EXCEPTION, ICode: E_TEMP_FILE_QUOTA, IKey: "quota.temp_file.exceeded", InternalCaller: CallerN(1),
 		InternalMsg: "Temporary file quota exceeded"}
 }
+
+func getErrorForCause(e error) interface{} {
+	switch e := e.(type) {
+	case Error:
+		return e
+	case interface{ MarshalJSON() ([]byte, error) }:
+		return e
+	case error:
+		return e.Error()
+	}
+	return e
+}

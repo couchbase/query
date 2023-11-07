@@ -23,17 +23,19 @@ type RevokeRole struct {
 	roles     []string       `json:"roles"`
 	keyspaces []*KeyspaceRef `json:"keyspaces"`
 	users     []string       `json:"users"`
+	groups    bool           `json:"groups"`
 }
 
 /*
 The function NewRevokeRole returns a pointer to the
 RevokeRole struct with the input argument values as fields.
 */
-func NewRevokeRole(roles []string, keyspaces []*KeyspaceRef, users []string) *RevokeRole {
+func NewRevokeRole(roles []string, keyspaces []*KeyspaceRef, users []string, groups bool) *RevokeRole {
 	rv := &RevokeRole{
 		roles:     roles,
 		keyspaces: keyspaces,
 		users:     users,
+		groups:    groups,
 	}
 
 	rv.stmt = rv
@@ -93,6 +95,10 @@ func (this *RevokeRole) Privileges() (*auth.Privileges, errors.Error) {
 	return privs, nil
 }
 
+func (this *RevokeRole) Groups() bool {
+	return this.groups
+}
+
 /*
 Returns the list of users to whom roles are being assigned.
 */
@@ -122,6 +128,7 @@ func (this *RevokeRole) MarshalJSON() ([]byte, error) {
 	r["users"] = this.users
 	r["keyspaces"] = this.keyspaces
 	r["roles"] = this.roles
+	r["groups"] = this.groups
 
 	return json.Marshal(r)
 }

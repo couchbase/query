@@ -10,6 +10,7 @@ package errors
 
 import (
 	"fmt"
+	"strings"
 )
 
 // Execution errors - errors that are created in the execution package
@@ -220,11 +221,49 @@ func NewScanVectorTooManyScannedBuckets(buckets []string) Error {
 
 // Error code 5200 is retired. Do not reuse.
 
+func NewUserExistsError(u string) Error {
+	c := make(map[string]interface{})
+	c["user"] = u
+	return &err{level: EXCEPTION, ICode: E_USER_EXISTS, IKey: "execution.user_exists", cause: c,
+		InternalMsg: fmt.Sprintf("User %s already exists.", u), InternalCaller: CallerN(1)}
+}
+
 func NewUserNotFoundError(u string) Error {
 	c := make(map[string]interface{})
 	c["user"] = u
 	return &err{level: EXCEPTION, ICode: E_USER_NOT_FOUND, IKey: "execution.user_not_found", cause: c,
 		InternalMsg: fmt.Sprintf("Unable to find user %s.", u), InternalCaller: CallerN(1)}
+}
+
+func NewUserAttributeError(d string, a string, r string) Error {
+	c := make(map[string]interface{})
+	c["domain"] = d
+	c["attribute"] = a
+	c["reason"] = r
+	return &err{level: EXCEPTION, ICode: E_USER_ATTRIBUTE, IKey: "execution.user_attribute",
+		cause: c, InternalMsg: fmt.Sprintf("Attribute '%s' %s for %s users.", a, r, d), InternalCaller: CallerN(1)}
+}
+
+func NewGroupExistsError(g string) Error {
+	c := make(map[string]interface{})
+	c["group"] = g
+	return &err{level: EXCEPTION, ICode: E_GROUP_EXISTS, IKey: "execution.group_exists", cause: c,
+		InternalMsg: fmt.Sprintf("Group %s already exists.", g), InternalCaller: CallerN(1)}
+}
+
+func NewGroupNotFoundError(g string) Error {
+	c := make(map[string]interface{})
+	c["group"] = g
+	return &err{level: EXCEPTION, ICode: E_GROUP_NOT_FOUND, IKey: "execution.group_not_found", cause: c,
+		InternalMsg: fmt.Sprintf("Unable to find group %s.", g), InternalCaller: CallerN(1)}
+}
+
+func NewGroupAttributeError(a string, r string) Error {
+	c := make(map[string]interface{})
+	c["attribute"] = a
+	c["reason"] = r
+	return &err{level: EXCEPTION, ICode: E_GROUP_ATTRIBUTE, IKey: "execution.group_attribute",
+		cause: c, InternalMsg: fmt.Sprintf("Attribute '%s' %s for groups.", a, r), InternalCaller: CallerN(1)}
 }
 
 func NewRoleRequiresKeyspaceError(role string) Error {
@@ -268,31 +307,47 @@ func NewRoleNotFoundError(role string) Error {
 		InternalMsg: fmt.Sprintf("Role %s is not valid.", role), InternalCaller: CallerN(1)}
 }
 
-func NewRoleAlreadyPresent(user string, role string, bucket string) Error {
+func NewRoleAlreadyPresent(what string, id string, role string, target string) Error {
 	var msg string
-	if bucket == "" {
-		msg = fmt.Sprintf("User %s already has role %s.", user, role)
+	c := make(map[string]interface{})
+	c["role"] = role
+	c["id"] = id
+	c["what"] = strings.ToLower(what)
+	if target == "" {
+		msg = fmt.Sprintf("%s %s already has role %s.", what, id, role)
 	} else {
-		msg = fmt.Sprintf("User %s already has role %s(%s).", user, role, bucket)
+		msg = fmt.Sprintf("%s %s already has role %s on %s.", what, id, role, strings.ReplaceAll(target, ":", "."))
+		c["path"] = strings.Split("default:"+target, ":")
 	}
 	return &err{level: WARNING, ICode: W_ROLE_ALREADY_PRESENT, IKey: "execution.role_already_present",
-		InternalMsg: msg, InternalCaller: CallerN(1)}
+		InternalMsg: msg, InternalCaller: CallerN(1), cause: c}
 }
 
-func NewRoleNotPresent(user string, role string, bucket string) Error {
+func NewRoleNotPresent(what string, id string, role string, target string) Error {
 	var msg string
-	if bucket == "" {
-		msg = fmt.Sprintf("User %s did not have role %s.", user, role)
+	c := make(map[string]interface{})
+	c["role"] = role
+	c["id"] = id
+	c["what"] = strings.ToLower(what)
+	if target == "" {
+		msg = fmt.Sprintf("%s %s did not have role %s.", what, id, role)
 	} else {
-		msg = fmt.Sprintf("User %s did not have role %s(%s).", user, role, bucket)
+		msg = fmt.Sprintf("%s %s did not have role %s on %s.", what, id, role, strings.ReplaceAll(target, ":", "."))
+		c["path"] = strings.Split("default:"+target, ":")
 	}
 	return &err{level: WARNING, ICode: W_ROLE_NOT_PRESENT, IKey: "execution.role_not_present",
-		InternalMsg: msg, InternalCaller: CallerN(1)}
+		InternalMsg: msg, InternalCaller: CallerN(1), cause: c}
 }
 
 func NewUserWithNoRoles(user string) Error {
 	return &err{level: WARNING, ICode: W_USER_WITH_NO_ROLES, IKey: "execution.user_with_no_roles",
 		InternalMsg:    fmt.Sprintf("User %s has no roles. Connecting with this user may not be possible", user),
+		InternalCaller: CallerN(1)}
+}
+
+func NewGroupWithNoRoles(group string) Error {
+	return &err{level: WARNING, ICode: W_GROUP_WITH_NO_ROLES, IKey: "execution.group_with_no_roles",
+		InternalMsg:    fmt.Sprintf("Group %s has no roles.", group),
 		InternalCaller: CallerN(1)}
 }
 

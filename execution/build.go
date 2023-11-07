@@ -630,6 +630,36 @@ func (this *builder) VisitCreatePrimaryIndex(plan *plan.CreatePrimaryIndex) (int
 	return checkOp(NewCreatePrimaryIndex(plan, this.context), this.context)
 }
 
+// CreateUser
+func (this *builder) VisitCreateUser(plan *plan.CreateUser) (interface{}, error) {
+	return checkOp(NewCreateUser(plan, this.context), this.context)
+}
+
+// AlterUser
+func (this *builder) VisitAlterUser(plan *plan.AlterUser) (interface{}, error) {
+	return checkOp(NewAlterUser(plan, this.context), this.context)
+}
+
+// DropUser
+func (this *builder) VisitDropUser(plan *plan.DropUser) (interface{}, error) {
+	return checkOp(NewDropUser(plan, this.context), this.context)
+}
+
+// CreateGroup
+func (this *builder) VisitCreateGroup(plan *plan.CreateGroup) (interface{}, error) {
+	return checkOp(NewCreateGroup(plan, this.context), this.context)
+}
+
+// AlterGroup
+func (this *builder) VisitAlterGroup(plan *plan.AlterGroup) (interface{}, error) {
+	return checkOp(NewAlterGroup(plan, this.context), this.context)
+}
+
+// DropGroup
+func (this *builder) VisitDropGroup(plan *plan.DropGroup) (interface{}, error) {
+	return checkOp(NewDropGroup(plan, this.context), this.context)
+}
+
 // GrantRole
 func (this *builder) VisitGrantRole(plan *plan.GrantRole) (interface{}, error) {
 	return checkOp(NewGrantRole(plan, this.context), this.context)
@@ -683,6 +713,21 @@ func (this *builder) VisitDropCollection(plan *plan.DropCollection) (interface{}
 // FlushCollection
 func (this *builder) VisitFlushCollection(plan *plan.FlushCollection) (interface{}, error) {
 	return checkOp(NewFlushCollection(plan, this.context), this.context)
+}
+
+// CreateBucket
+func (this *builder) VisitCreateBucket(plan *plan.CreateBucket) (interface{}, error) {
+	return checkOp(NewCreateBucket(plan, this.context), this.context)
+}
+
+// AlterBucket
+func (this *builder) VisitAlterBucket(plan *plan.AlterBucket) (interface{}, error) {
+	return checkOp(NewAlterBucket(plan, this.context), this.context)
+}
+
+// DropBucket
+func (this *builder) VisitDropBucket(plan *plan.DropBucket) (interface{}, error) {
+	return checkOp(NewDropBucket(plan, this.context), this.context)
 }
 
 // Prepare

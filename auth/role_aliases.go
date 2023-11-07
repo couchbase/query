@@ -55,6 +55,15 @@ func RoleToAlias(role string) string {
 	return alias
 }
 
+func AliasToRole(alias string) string {
+	lc := strings.ToLower(alias)
+	role, found := _SHORT_TO_LONG[lc]
+	if !found {
+		return lc
+	}
+	return role
+}
+
 // Expecting parsed JSON, in a format like this:
 // { "domain":"local",
 //

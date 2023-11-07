@@ -24,6 +24,7 @@ type keyspaceBase struct {
 	namespace *namespace
 	name      string
 	fullName  string
+	aliases   []string
 }
 
 func (this *keyspaceBase) Namespace() datastore.Namespace {
@@ -50,6 +51,10 @@ func (this *keyspaceBase) AuthKey() string {
 
 func (this *keyspaceBase) Uid() string {
 	return this.name
+}
+
+func (this *keyspaceBase) Aliases() []string {
+	return this.aliases
 }
 
 func (this *keyspaceBase) CreateScope(name string) errors.Error {
@@ -110,10 +115,21 @@ func (this *keyspaceBase) Stats(context datastore.QueryContext, which []datastor
 	return res, err
 }
 
-func setKeyspaceBase(base *keyspaceBase, namespace *namespace, name string) {
+func setKeyspaceBase(base *keyspaceBase, namespace *namespace, names ...string) {
 	base.namespace = namespace
-	base.name = name
-	base.fullName = namespace.Name() + ":" + name
+	base.name = names[0]
+	base.aliases = names
+	base.fullName = namespace.Name() + ":" + base.name
+}
+
+func registerKeyspace(p *namespace, k datastore.Keyspace) {
+	if base, ok := k.(interface{ Aliases() []string }); ok {
+		for _, a := range base.Aliases() {
+			p.keyspaces[a] = k
+		}
+	} else {
+		p.keyspaces[k.Name()] = k
+	}
 }
 
 func (this *keyspaceBase) setNamespace(namespace *namespace) {

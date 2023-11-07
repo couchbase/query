@@ -54,7 +54,7 @@ type Datastore interface {
 	CredsString(*auth.Credentials) (string, string)             // Return name, domain from credentials in http request
 	GetUserUUID(*auth.Credentials) string                       // Returns user UUID for stats
 	GetUserBuckets(*auth.Credentials) []string                  // Returns buckets user has access to for serverless accounting
-	GetImpersonateBuckets(string, string) []string              // Returns buckets impersonated user has access to for serverless access
+	GetImpersonateBuckets(string, string) []string              // Buckets impersonated user has access to for serverless access
 	SetLogLevel(level logging.Level)                            // Set log level of in-process indexers
 	Inferencer(name InferenceType) (Inferencer, errors.Error)   // Schema inference provider by name, e.g. INF_DEFAULT
 	Inferencers() ([]Inferencer, errors.Error)                  // List of schema inference providers
@@ -63,6 +63,18 @@ type Datastore interface {
 	GetUserInfoAll() ([]User, errors.Error)                     // Get information about all the users.
 	PutUserInfo(u *User) errors.Error                           // Set information for a specific user.
 	GetRolesAll() ([]Role, errors.Error)                        // Get all roles that exist in the system.
+	DeleteUser(u *User) errors.Error                            // Delete a user
+	GetUserInfo(u *User) errors.Error                           // Get a single user's info
+	GetGroupInfo(g *Group) errors.Error
+	PutGroupInfo(g *Group) errors.Error
+	DeleteGroup(g *Group) errors.Error
+	GroupInfo() (value.Value, errors.Error)
+	GetGroupInfoAll() ([]Group, errors.Error)
+
+	CreateBucket(string, value.Value) errors.Error
+	AlterBucket(string, value.Value) errors.Error
+	DropBucket(string) errors.Error
+	BucketInfo() (value.Value, errors.Error)
 
 	AuditInfo() (*AuditInfo, errors.Error)
 	ProcessAuditUpdateStream(callb func(uid string) error) errors.Error
@@ -735,16 +747,24 @@ func IndexerQualifiedKeyspacePath(indexer Indexer) string {
 // possibility of connecting to other back ends, the query engine
 // uses its own representation.
 type User struct {
-	Name   string
-	Id     string
-	Domain string
-	Roles  []Role
+	Name     string
+	Id       string
+	Domain   string
+	Roles    []Role
+	Password string
+	Groups   []string
 }
 
 type Role struct {
 	Name    string
 	Target  string
 	IsScope bool
+}
+
+type Group struct {
+	Id    string
+	Desc  string
+	Roles []Role
 }
 
 var NO_STRINGS = make([]string, 0)

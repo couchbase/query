@@ -44,12 +44,21 @@ func NewDatastoreUnableToRetrieveRoles(e error) Error {
 		ICause: e, InternalMsg: "Unable to retrieve roles from server.", InternalCaller: CallerN(1), cause: c}
 }
 
-func NewDatastoreInsufficientCredentials(msg string, e error, path []string) Error {
-	c := make(map[string]interface{})
-	if e != nil {
-		c["error"] = e
+func NewDatastoreInsufficientCredentials(msg string, e error, path []string, role string) Error {
+	var c interface{}
+	if e != nil || len(path) > 0 || role != "" {
+		m := make(map[string]interface{})
+		if e != nil {
+			m["error"] = e
+		}
+		if len(path) > 0 {
+			m["path"] = path
+		}
+		if role != "" {
+			m["missing_role"] = role
+		}
+		c = m
 	}
-	c["path"] = path
 	return &err{level: EXCEPTION, ICode: E_DATASTORE_INSUFFICIENT_CREDENTIALS,
 		IKey:        "datastore.couchbase.insufficient_credentials",
 		InternalMsg: msg, InternalCaller: CallerN(1), cause: c}

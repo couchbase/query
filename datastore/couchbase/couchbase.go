@@ -582,7 +582,7 @@ func (s *store) StatUpdater() (datastore.StatUpdater, errors.Error) {
 func (s *store) AuditInfo() (*datastore.AuditInfo, errors.Error) {
 	auditSpec, err := s.client.GetAuditSpec()
 	if err != nil {
-		return nil, errors.NewSystemUnableToRetrieveError(err)
+		return nil, errors.NewSystemUnableToRetrieveError(err, "audit information")
 	}
 
 	users := make(map[datastore.UserInfo]bool, len(auditSpec.DisabledUsers))
@@ -632,7 +632,7 @@ type DefaultObject struct {
 func (s *store) UserInfo() (value.Value, errors.Error) {
 	data, err := s.client.GetUserRoles()
 	if err != nil {
-		return nil, errors.NewSystemUnableToRetrieveError(err)
+		return nil, errors.NewSystemUnableToRetrieveError(err, "user information")
 	}
 	return value.NewValue(data), nil
 }
@@ -640,7 +640,7 @@ func (s *store) UserInfo() (value.Value, errors.Error) {
 func (s *store) GetUserInfoAll() ([]datastore.User, errors.Error) {
 	sourceUsers, err := s.client.GetUserInfoAll()
 	if err != nil {
-		return nil, errors.NewSystemUnableToRetrieveError(err)
+		return nil, errors.NewSystemUnableToRetrieveError(err, "user information")
 	}
 	resultUsers := make([]datastore.User, len(sourceUsers))
 	for i, u := range sourceUsers {
@@ -675,10 +675,46 @@ func (s *store) PutUserInfo(u *datastore.User) errors.Error {
 			outputUser.Roles[i].BucketName = r.Target
 		}
 	}
+	outputUser.Password = u.Password
+	outputUser.Groups = u.Groups
 	err := s.client.PutUserInfo(&outputUser)
 	if err != nil {
-		return errors.NewSystemUnableToUpdateError(err)
+		return errors.NewSystemUnableToUpdateError(err, "user")
 	}
+	return nil
+}
+
+func (s *store) DeleteUser(u *datastore.User) errors.Error {
+	var outputUser cb.User
+	outputUser.Id = u.Id
+	outputUser.Domain = u.Domain
+	err := s.client.DeleteUser(&outputUser)
+	if err != nil {
+		return errors.NewSystemUnableToUpdateError(err, "user")
+	}
+	return nil
+}
+
+func (s *store) GetUserInfo(u *datastore.User) errors.Error {
+	var outputUser cb.User
+	outputUser.Id = u.Id
+	outputUser.Domain = u.Domain
+	err := s.client.GetUserInfo(&outputUser)
+	if err != nil {
+		return errors.NewSystemUnableToRetrieveError(err, "user information")
+	}
+	u.Id = outputUser.Id
+	u.Domain = outputUser.Domain
+	if len(outputUser.Roles) > 0 {
+		u.Roles = make([]datastore.Role, len(outputUser.Roles))
+		for i, v := range outputUser.Roles {
+			u.Roles[i].Name = v.Role
+			u.Roles[i].Target = v.BucketName
+			u.Roles[i].IsScope = v.ScopeName != "" && v.CollectionName == ""
+		}
+	}
+	u.Name = outputUser.Name
+	u.Groups = outputUser.Groups
 	return nil
 }
 
@@ -694,6 +730,145 @@ func (s *store) GetRolesAll() ([]datastore.Role, errors.Error) {
 		roles[i].IsScope = rd.ScopeName != "" && rd.CollectionName == ""
 	}
 	return roles, nil
+}
+
+func (s *store) GetGroupInfo(g *datastore.Group) errors.Error {
+	var outputGroup cb.Group
+	outputGroup.Id = g.Id
+	err := s.client.GetGroupInfo(&outputGroup)
+	if err != nil {
+		return errors.NewSystemUnableToRetrieveError(err, "group information")
+	}
+	g.Id = outputGroup.Id
+	g.Desc = outputGroup.Desc
+	if len(outputGroup.Roles) > 0 {
+		g.Roles = make([]datastore.Role, len(outputGroup.Roles))
+		for i := range outputGroup.Roles {
+			g.Roles[i].Name = outputGroup.Roles[i].Role
+			if outputGroup.Roles[i].BucketName != "" {
+				g.Roles[i].Target = outputGroup.Roles[i].BucketName
+				if outputGroup.Roles[i].ScopeName != "" && outputGroup.Roles[i].ScopeName != "*" {
+					g.Roles[i].Target += ":" + outputGroup.Roles[i].ScopeName
+					if outputGroup.Roles[i].CollectionName != "" && outputGroup.Roles[i].CollectionName != "*" {
+						g.Roles[i].Target += ":" + outputGroup.Roles[i].CollectionName
+					}
+				}
+			}
+		}
+	} else {
+		g.Roles = nil
+	}
+	return nil
+}
+
+func (s *store) PutGroupInfo(g *datastore.Group) errors.Error {
+	var outputGroup cb.Group
+	outputGroup.Id = g.Id
+	outputGroup.Desc = g.Desc
+	if len(g.Roles) > 0 {
+		outputGroup.Roles = make([]cb.Role, len(g.Roles))
+		for i := range g.Roles {
+			outputGroup.Roles[i].Role = g.Roles[i].Name
+			if len(g.Roles[i].Target) > 0 {
+				parts := strings.Split(g.Roles[i].Target, ":")
+				outputGroup.Roles[i].BucketName = parts[0]
+				if len(parts) > 1 {
+					outputGroup.Roles[i].ScopeName = parts[1]
+				}
+				if len(parts) > 2 {
+					outputGroup.Roles[i].CollectionName = parts[2]
+				}
+			}
+		}
+	}
+	err := s.client.PutGroupInfo(&outputGroup)
+	if err != nil {
+		return errors.NewSystemUnableToUpdateError(err, "group")
+	}
+	return nil
+}
+
+func (s *store) DeleteGroup(g *datastore.Group) errors.Error {
+	var outputGroup cb.Group
+	outputGroup.Id = g.Id
+	err := s.client.DeleteGroup(&outputGroup)
+	if err != nil {
+		return errors.NewSystemUnableToUpdateError(err, "group")
+	}
+	return nil
+}
+
+func (s *store) GroupInfo() (value.Value, errors.Error) {
+	sourceGroups, err := s.client.GroupInfo()
+	if err != nil {
+		return nil, errors.NewSystemUnableToRetrieveError(err, "group information")
+	}
+	return value.NewValue(sourceGroups), nil
+}
+
+func (s *store) GetGroupInfoAll() ([]datastore.Group, errors.Error) {
+	sourceGroups, err := s.client.GetGroupInfoAll()
+	if err != nil {
+		return nil, errors.NewSystemUnableToRetrieveError(err, "group information")
+	}
+	resultGroups := make([]datastore.Group, len(sourceGroups))
+	for i, g := range sourceGroups {
+		resultGroups[i].Id = g.Id
+		resultGroups[i].Desc = g.Desc
+		roles := make([]datastore.Role, len(g.Roles))
+		for j, r := range g.Roles {
+			roles[j].Name = r.Role
+			if r.CollectionName != "" && r.CollectionName != "*" {
+				roles[j].Target = r.BucketName + ":" + r.ScopeName + ":" + r.CollectionName
+			} else if r.ScopeName != "" && r.ScopeName != "*" {
+				roles[j].Target = r.BucketName + ":" + r.ScopeName
+			} else if r.BucketName != "" {
+				roles[j].Target = r.BucketName
+			}
+		}
+		resultGroups[i].Roles = roles
+	}
+	return resultGroups, nil
+}
+
+func (s *store) CreateBucket(name string, with value.Value) errors.Error {
+	withArg := with.CopyForUpdate().Actual().(map[string]interface{})
+	withArg["name"] = name
+	b, _ := json.Marshal(withArg)
+	var param map[string]interface{}
+	json.Unmarshal(b, &param)
+	err := s.client.CreateBucket(param)
+	if err != nil {
+		return errors.NewSystemUnableToUpdateError(err, "bucket")
+	}
+	return nil
+}
+
+func (s *store) AlterBucket(name string, with value.Value) errors.Error {
+	b, _ := json.Marshal(with)
+	var param map[string]interface{}
+	json.Unmarshal(b, &param)
+	err := s.client.AlterBucket(name, param)
+	if err != nil {
+		return errors.NewSystemUnableToUpdateError(err, "bucket")
+	}
+	return nil
+}
+
+func (s *store) DropBucket(name string) errors.Error {
+	err := s.client.DropBucket(name)
+	if err != nil {
+		return errors.NewSystemUnableToUpdateError(err, "bucket")
+	}
+	return nil
+}
+
+func (s *store) BucketInfo() (value.Value, errors.Error) {
+	sourceBuckets, err := s.client.BucketInfo()
+	if err != nil {
+		return nil, errors.NewSystemUnableToRetrieveError(err, "bucket information")
+	}
+	return value.NewValue(sourceBuckets), nil
 }
 
 func (s *store) SetClientConnectionSecurityConfig() (err error) {

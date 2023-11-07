@@ -246,6 +246,11 @@ const (
 	E_DYNAMIC_AUTH                            ErrorCode = 5201
 	E_TRANSACTIONAL_AUTH                      ErrorCode = 5202
 	E_USER_NOT_FOUND                          ErrorCode = 5210
+	E_USER_EXISTS                             ErrorCode = 5211
+	E_USER_ATTRIBUTE                          ErrorCode = 5212
+	E_GROUP_EXISTS                            ErrorCode = 5213
+	E_GROUP_NOT_FOUND                         ErrorCode = 5214
+	E_GROUP_ATTRIBUTE                         ErrorCode = 5215
 	E_ROLE_REQUIRES_KEYSPACE                  ErrorCode = 5220
 	E_ROLE_REQUIRES_SCOPE                     ErrorCode = 5221
 	E_ROLE_TAKES_NO_KEYSPACE                  ErrorCode = 5230
@@ -256,6 +261,7 @@ const (
 	W_ROLE_ALREADY_PRESENT                    ErrorCode = 5260
 	W_ROLE_NOT_PRESENT                        ErrorCode = 5270
 	W_USER_WITH_NO_ROLES                      ErrorCode = 5280
+	W_GROUP_WITH_NO_ROLES                     ErrorCode = 5281
 	_RETIRED_5290                                       = 5290
 	E_HASH_TABLE_PUT                          ErrorCode = 5300
 	E_HASH_TABLE_GET                          ErrorCode = 5310
@@ -422,6 +428,7 @@ const (
 	E_CB_SUBDOC_GET                           ErrorCode = 12042
 	E_CB_SUBDOC_SET                           ErrorCode = 12043
 	E_CB_DROP_SYSTEM_BUCKET                   ErrorCode = 12044
+	E_CB_BUCKET_EXISTS                        ErrorCode = 12045
 	_RETIRED_13010                                      = 13010
 	_RETIRED_13011                                      = 13011
 	E_DATASTORE_CLUSTER                       ErrorCode = 13012

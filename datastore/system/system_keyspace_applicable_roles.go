@@ -43,7 +43,7 @@ func (b *applicableRolesKeyspace) Name() string {
 func (b *applicableRolesKeyspace) Count(context datastore.QueryContext) (int64, errors.Error) {
 	users, err := datastore.GetDatastore().GetUserInfoAll()
 	if err != nil {
-		return 0, errors.NewSystemUnableToRetrieveError(err)
+		return 0, err
 	}
 
 	numFound := 0
@@ -202,7 +202,7 @@ func splitAppRolesKey(key string) (err errors.Error, id, roleName, target string
 func (pi *applicableRolesIndex) scanEntries(limit int64, conn *datastore.IndexConnection, compSpan compiledSpans) {
 	users, err := datastore.GetDatastore().GetUserInfoAll()
 	if err != nil {
-		conn.Error(errors.NewSystemUnableToRetrieveError(err))
+		conn.Error(err)
 		return
 	}
 

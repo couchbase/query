@@ -47,6 +47,7 @@ func (this *GrantRole) MarshalBase(f func(map[string]interface{})) map[string]in
 	r["roles"] = this.node.Roles()
 	r["keyspaces"] = this.node.Keyspaces()
 	r["users"] = this.node.Users()
+	r["groups"] = this.node.Groups()
 	if f != nil {
 		f(r)
 	}
@@ -59,6 +60,7 @@ func (this *GrantRole) UnmarshalJSON(body []byte) error {
 		Roles     []string               `json:"roles"`
 		Keyspaces []*algebra.KeyspaceRef `json:"keyspaces"`
 		Users     []string               `json:"users"`
+		Groups    bool                   `json:"groups"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -66,7 +68,7 @@ func (this *GrantRole) UnmarshalJSON(body []byte) error {
 		return err
 	}
 
-	this.node = algebra.NewGrantRole(_unmarshalled.Roles, _unmarshalled.Keyspaces, _unmarshalled.Users)
+	this.node = algebra.NewGrantRole(_unmarshalled.Roles, _unmarshalled.Keyspaces, _unmarshalled.Users, _unmarshalled.Groups)
 	return nil
 }
 

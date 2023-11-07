@@ -1083,11 +1083,11 @@ func getWithOption(with value.Value, opt string, optional bool) (int64, bool, er
 		if !found && optional {
 			return 0, false, nil
 		}
-		return 0, true, errors.NewWithInvalidValueError(opt)
+		return 0, true, errors.NewWithInvalidValueError(opt, "Integer expected")
 	}
 	i, ok := value.IsIntValue(v)
 	if !ok {
-		return 0, true, errors.NewWithInvalidValueError(opt)
+		return 0, true, errors.NewWithInvalidValueError(opt, "Integer expected")
 	}
 	return int64(i), true, nil
 }
@@ -1098,7 +1098,7 @@ func getWithBoolOption(with value.Value, opt string, optional bool) (bool, bool,
 		if !found && optional {
 			return false, false, nil
 		}
-		return false, true, errors.NewWithInvalidValueError(opt)
+		return false, true, errors.NewWithInvalidValueError(opt, "Boolean expected")
 	}
 	return v.Truth(), true, nil
 }

@@ -201,4 +201,19 @@ var _OPERATORS = map[string]Operator{
 	"CreateSequence": &CreateSequence{},
 	"AlterSequence":  &AlterSequence{},
 	"DropSequence":   &DropSequence{},
+
+	// Users
+	"CreateUser": &CreateUser{},
+	"AlterUser":  &AlterUser{},
+	"DropUser":   &DropUser{},
+
+	// Groups
+	"CreateGroup": &CreateGroup{},
+	"AlterGroup":  &AlterGroup{},
+	"DropGroup":   &DropGroup{},
+
+	// Buckets
+	"CreateBucket": &CreateBucket{},
+	"AlterBucket":  &AlterBucket{},
+	"DropBucket":   &DropBucket{},
 }

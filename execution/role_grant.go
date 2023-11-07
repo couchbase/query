@@ -173,14 +173,6 @@ func (this *GrantRole) RunOnce(context *Context, parent value.Value) {
 			return
 		}
 
-		// Get the current set of users (with their role information),
-		// and create a map of them by id.
-		userMap, err := getUserMap(context.datastore)
-		if err != nil {
-			context.Fatal(err)
-			return
-		}
-
 		// Create the set of new roles, in a form suitable for output.
 		roleList, err := getRoles(this.plan.Node())
 		if err != nil {
@@ -188,8 +180,7 @@ func (this *GrantRole) RunOnce(context *Context, parent value.Value) {
 			return
 		}
 
-		// Get the list of all valid roles, and verify that the roles to be
-		// granted are proper.
+		// Get the list of all valid roles, and verify that the roles to be granted are proper.
 		validRoles, err := context.datastore.GetRolesAll()
 		if err != nil {
 			context.Fatal(err)
@@ -201,41 +192,116 @@ func (this *GrantRole) RunOnce(context *Context, parent value.Value) {
 			return
 		}
 
-		// Since we only want to update each user once, even if the
-		// statement mentions the user multiple times, create a map
-		// of the input user ids in domain:user form.
-		updateUserIdMap := getUsersMap(this.plan.Node().Users())
+		if this.plan.Node().Groups() {
+			this.grantGroupRoles(context, roleList)
+		} else {
+			this.grantUserRoles(context, roleList)
+		}
+	})
+}
 
-		for userId, _ := range updateUserIdMap {
-			user := userMap[userId]
-			if user == nil {
-				context.Error(errors.NewUserNotFoundError(userId))
+func (this *GrantRole) grantUserRoles(context *Context, roleList []datastore.Role) {
+
+	userMap, err := getUserMap(context.datastore)
+	if err != nil {
+		context.Fatal(err)
+		return
+	}
+
+	// Since we only want to update each user once, even if the statement mentions the user multiple times, create a map
+	// of the input user ids in domain:user form.
+	updateUserIdMap := getUsersMap(this.plan.Node().Users())
+
+	for userId, _ := range updateUserIdMap {
+		user := userMap[userId]
+		if user == nil {
+			context.Error(errors.NewUserNotFoundError(userId))
+			continue
+		}
+		// Add to the user the roles they do not already have.
+		for _, newRole := range roleList {
+			alreadyHasRole := false
+			for _, existingRole := range user.Roles {
+				if newRole == existingRole {
+					alreadyHasRole = true
+					break
+				}
+			}
+			if alreadyHasRole {
+				context.Warning(errors.NewRoleAlreadyPresent("User", userId, auth.RoleToAlias(newRole.Name), newRole.Target))
 				continue
 			}
-			// Add to the user the roles they do not already have.
-			for _, newRole := range roleList {
-				alreadyHasRole := false
-				for _, existingRole := range user.Roles {
-					if newRole == existingRole {
-						alreadyHasRole = true
-						break
-					}
-				}
-				if alreadyHasRole {
-					// FIXME COLLECTIONS use full path
-					context.Warning(errors.NewRoleAlreadyPresent(userId, newRole.Name, newRole.Target))
-					continue
-				}
-				user.Roles = append(user.Roles, newRole)
-			}
-			// Update the user with their new roles on the backend.
-			err = context.datastore.PutUserInfo(user)
-			if err != nil {
-				context.Error(err)
-			}
+			user.Roles = append(user.Roles, newRole)
 		}
+		// Update the user with their new roles on the backend.
+		user.Password = string([]byte{0}) // we are not including the password
+		err = context.datastore.PutUserInfo(user)
+		if err != nil {
+			context.Error(err)
+		}
+	}
+}
 
-	})
+func getGroupMap(ds datastore.Datastore) (map[string]*datastore.Group, errors.Error) {
+	// Get the current set of groups (with their role information) and create a map of them by id.
+	currentGroups, err := ds.GetGroupInfoAll()
+	if err != nil {
+		return nil, err
+	}
+	groupMap := make(map[string]*datastore.Group, len(currentGroups))
+	for i, g := range currentGroups {
+		groupMap[g.Id] = &currentGroups[i]
+	}
+	return groupMap, nil
+}
+
+func getGroupsMap(groups []string) map[string]bool {
+	ret := make(map[string]bool, len(groups))
+	for _, v := range groups {
+		ret[v] = true
+	}
+	return ret
+}
+
+func (this *GrantRole) grantGroupRoles(context *Context, roleList []datastore.Role) {
+
+	groupMap, err := getGroupMap(context.datastore)
+	if err != nil {
+		context.Fatal(err)
+		return
+	}
+
+	// Since we only want to update each group once, even if the statement mentions the group multiple times, create a map
+	// of the input group ids
+	updateGroupIdMap := getGroupsMap(this.plan.Node().Users()) // Users() is actually the list of groups when Groups() is true
+
+	for groupId, _ := range updateGroupIdMap {
+		group := groupMap[groupId]
+		if group == nil {
+			context.Error(errors.NewGroupNotFoundError(groupId))
+			continue
+		}
+		// Add to the user the roles they do not already have.
+		for _, newRole := range roleList {
+			alreadyHasRole := false
+			for _, existingRole := range group.Roles {
+				if newRole == existingRole {
+					alreadyHasRole = true
+					break
+				}
+			}
+			if alreadyHasRole {
+				context.Warning(errors.NewRoleAlreadyPresent("Group", groupId, auth.RoleToAlias(newRole.Name), newRole.Target))
+				continue
+			}
+			group.Roles = append(group.Roles, newRole)
+		}
+		// Update the group with their new roles on the backend.
+		err = context.datastore.PutGroupInfo(group)
+		if err != nil {
+			context.Error(err)
+		}
+	}
 }
 
 func (this *GrantRole) MarshalJSON() ([]byte, error) {

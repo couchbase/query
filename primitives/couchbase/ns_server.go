@@ -822,8 +822,16 @@ func doOutputAPI(
 				case map[string]interface{}:
 					errField := errText["errors"]
 					if errField != nil {
-
-						// remove annoying 'map' prefix
+						if m, ok := errField.(map[string]interface{}); ok {
+							s := ""
+							for k, v := range m {
+								if s != "" {
+									s += "\n"
+								}
+								s += fmt.Sprintf("(%s) %v", k, v)
+							}
+							return fmt.Errorf(s)
+						}
 						return fmt.Errorf("%s", strings.TrimPrefix(fmt.Sprintf("%v", errField), "map"))
 					}
 				}
@@ -921,6 +929,10 @@ func (c *Client) parseDeleteURLResponseTerse(path string, params map[string]inte
 
 func (c *Client) parsePutURLResponse(path string, params map[string]interface{}, out interface{}) error {
 	return doPutAPI(c.BaseURL, path, params, c.ah, out, false)
+}
+
+func (c *Client) parsePutURLResponseTerse(path string, params map[string]interface{}, out interface{}) error {
+	return doPutAPI(c.BaseURL, path, params, c.ah, out, true)
 }
 
 type basicAuth struct {
