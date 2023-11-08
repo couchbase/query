@@ -19,6 +19,7 @@ type Subquery interface {
 
 	Formalize(parent *Formalizer) error
 	IsCorrelated() bool
+	GetCorrelation() map[string]uint32
 }
 
 /*
@@ -67,4 +68,19 @@ func ListSubqueries(exprs Expressions, descend bool) ([]Subquery, error) {
 	}
 
 	return lister.Subqueries(), nil
+}
+
+// Returns if the expression contains subqueries
+func ContainsSubquery(expr Expression) bool {
+	if _, ok := expr.(Subquery); ok {
+		return true
+	} else {
+		for _, expr := range expr.Children() {
+			if ContainsSubquery(expr) {
+				return true
+			}
+		}
+	}
+
+	return false
 }
