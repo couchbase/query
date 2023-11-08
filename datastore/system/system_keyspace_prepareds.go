@@ -119,6 +119,13 @@ func (b *preparedsKeyspace) Fetch(keys []string, keysMap map[string]value.Annota
 					m["keyspace"] = b.fullName
 					m["plan"] = doc["plan"]
 					m["txPlans"] = doc["txPlans"]
+
+					// Subquery plans
+					if _, ok := doc["subqueryPlans"]; ok {
+						m["subqueryPlans"] = doc["subqueryPlans"]
+						remoteValue.UnsetField("subqueryPlans")
+					}
+
 					remoteValue.UnsetField("plan")
 					remoteValue.UnsetField("txPlans")
 					remoteValue.SetId(key)
@@ -187,6 +194,13 @@ func (b *preparedsKeyspace) Fetch(keys []string, keysMap map[string]value.Annota
 					m["txPlans"] = txPlans
 				}
 				m["plan"] = value.NewMarshalledValue(entry.Prepared.Operator)
+
+				// Subquery plans
+				sqPlans := entry.Prepared.GetSubqueryPlansEntry()
+				if len(sqPlans) > 0 {
+					m["subqueryPlans"] = sqPlans
+				}
+
 				item.SetId(key)
 				keysMap[key] = item
 			})

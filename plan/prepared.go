@@ -529,3 +529,52 @@ func (this *Prepared) SetPreparedTime(time time.Time) {
 func (this *Prepared) PreparedTime() time.Time {
 	return this.preparedTime
 }
+
+// Generates subquery plan information for all subquery plans stored in the Prepared object
+// for its system:prepareds entry
+func (this *Prepared) GetSubqueryPlansEntry() map[string]interface{} {
+	subqueryPlans := this.GetSubqueryPlans(false)
+
+	if subqueryPlans != nil {
+		index := 1
+		rv := make(map[string]interface{}, 0)
+
+		// Iterate through the subquery plans and create the entry
+		verifyF := func(key *algebra.Select, options uint32, splan, isk interface{}) (bool, bool) {
+			var sqOperator Operator
+
+			if qp, ok := splan.(*QueryPlan); ok {
+				sqOperator = qp.PlanOp()
+			}
+
+			entryKey := "sq" + strconv.Itoa(index)
+			entry := map[string]interface{}{
+				"plan":     value.NewMarshalledValue(sqOperator),
+				"subquery": key.String(),
+			}
+
+			// process index scan keyspaces since value.Value creation not supported for map[string]bool type
+			if i, ok := isk.(map[string]bool); ok {
+				if len(i) > 0 {
+					isksEntry := make(map[string]interface{}, len(i))
+
+					for ks, v := range i {
+						isksEntry[ks] = v
+					}
+					entry["indexScanKeyspaces"] = isksEntry
+				}
+			}
+
+			rv[entryKey] = entry
+			index++
+
+			return true, false
+		}
+
+		subqueryPlans.ForEach(nil, uint32(0), true, verifyF)
+
+		return rv
+	}
+
+	return nil
+}

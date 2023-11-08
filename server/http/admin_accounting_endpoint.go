@@ -623,6 +623,12 @@ func preparedWorkHorse(entry *prepareds.CacheEntry, profiling bool, redact bool,
 		if len(txPlans) > 0 {
 			itemMap["txPlans"] = txPlans
 		}
+
+		// Subquery plans
+		sqPlans := entry.Prepared.GetSubqueryPlansEntry()
+		if len(sqPlans) > 0 {
+			itemMap["subqueryPlans"] = sqPlans
+		}
 	}
 
 	if !entry.Prepared.PreparedTime().IsZero() {
