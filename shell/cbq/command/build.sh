@@ -117,30 +117,42 @@ function fixTerm(t) \
   else if (t=="ident_or_default")
   {
     return "<identifier>"
-  }  
+  }
   else if (t=="IDENT")
   {
     return "<identifier>"
-  }  
+  }
   else if (t=="IDENT_ICASE")
   {
     return "<identifier>i"
-  }  
+  }
   else if (t=="NAMESPACE_ID")
   {
     return "<namespace-identifier>"
-  }  
+  }
   else if (t=="expr")
   {
     return "expression"
-  }  
+  }
   else if (t=="OPTIM_HINTS")
   {
     return "/*OPTIM_HINTS*/"
-  }  
+  }
   else if (t=="hints_input")
   {
     return "OPTIM_HINTS"
+  }
+  else if (t=="STR")
+  {
+    return "<quoted string>"
+  }
+  else if (t=="NUM")
+  {
+    return "<numeric literal>"
+  }
+  else if (t=="INT")
+  {
+    return "<integer literal>"
   }
   gsub("stmt","statement",t)
   if (index(t,"opt_")==1) t = "["substr(t,5)"]"

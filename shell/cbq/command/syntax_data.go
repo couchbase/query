@@ -58,7 +58,7 @@ var statement_syntax = map[string][][]string{
 	},
 	"[name]": [][]string{
 		[]string{"permitted_identifiers", "from_or_as"},
-		[]string{"STR", "from_or_as"},
+		[]string{"<quoted string>", "from_or_as"},
 	},
 	"from_or_as": [][]string{
 		[]string{"FROM"},
@@ -587,9 +587,10 @@ var statement_syntax = map[string][][]string{
 		[]string{"user_opts", "user_opt"},
 	},
 	"user_opt": [][]string{
-		[]string{"PASSWORD", "STR"},
-		[]string{"WITH", "STR"},
+		[]string{"PASSWORD", "<quoted string>"},
+		[]string{"WITH", "<quoted string>"},
 		[]string{"GROUPS", "groups"},
+		[]string{"GROUP", "permitted_identifiers"},
 	},
 	"groups": [][]string{
 		[]string{"permitted_identifiers"},
@@ -611,9 +612,10 @@ var statement_syntax = map[string][][]string{
 		[]string{"group_opts", "group_opt"},
 	},
 	"group_opt": [][]string{
-		[]string{"WITH", "STR"},
+		[]string{"WITH", "<quoted string>"},
 		[]string{"ROLES", "group_role_list"},
 		[]string{"NO", "ROLES"},
+		[]string{"ROLE", "group_role_list_item"},
 	},
 	"group_role_list": [][]string{
 		[]string{"group_role_list_item"},
@@ -847,9 +849,9 @@ var statement_syntax = map[string][][]string{
 	"func_body": [][]string{
 		[]string{"LBRACE", "expression", "RBRACE"},
 		[]string{"LANGUAGE", "INLINE", "AS", "expression"},
-		[]string{"LANGUAGE", "JAVASCRIPT", "AS", "STR"},
-		[]string{"LANGUAGE", "JAVASCRIPT", "AS", "STR", "AT", "STR"},
-		[]string{"LANGUAGE", "GOLANG", "AS", "STR", "AT", "STR"},
+		[]string{"LANGUAGE", "JAVASCRIPT", "AS", "<quoted string>"},
+		[]string{"LANGUAGE", "JAVASCRIPT", "AS", "<quoted string>", "AT", "<quoted string>"},
+		[]string{"LANGUAGE", "GOLANG", "AS", "<quoted string>", "AT", "<quoted string>"},
 	},
 	"drop_function": [][]string{
 		[]string{"DROP", "FUNCTION", "func_name", "[if_exists]"},
@@ -997,9 +999,9 @@ var statement_syntax = map[string][][]string{
 		[]string{"MISSING"},
 		[]string{"FALSE"},
 		[]string{"TRUE"},
-		[]string{"NUM"},
-		[]string{"INT"},
-		[]string{"STR"},
+		[]string{"<numeric literal>"},
+		[]string{"<integer literal>"},
+		[]string{"<quoted string>"},
 	},
 	"construction_expr": [][]string{
 		[]string{"object"},

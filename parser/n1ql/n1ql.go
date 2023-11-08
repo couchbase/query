@@ -215,6 +215,16 @@ func (this *lexer) Lex(lval *yySymType) int {
 }
 
 func (this *lexer) Remainder(offset int) string {
+	if offset < 0 {
+		if len(this.nex.stack) > 0 {
+			return this.nex.stack[len(this.nex.stack)-1].s
+		}
+		offset = this.nex.curOffset
+		if offset < 0 || offset >= len(this.text) {
+			return ""
+		}
+		return strings.TrimLeft(this.text[this.nex.curOffset:], " \t")
+	}
 	return strings.TrimLeft(this.text[offset:], " \t")
 }
 

@@ -2793,6 +2793,12 @@ CREATE USER user user_opts
             groups = value.NewValue(va)
         }
     }
+    if password == nil {
+        rem := yylex.(*lexer).Remainder(-1)
+        if rem == "" || rem == ";" {
+            return yylex.(*lexer).FatalError("Missing user attribute. PASSWORD required for local users.", $<line>4, $<column>4)
+        }
+    }
     $$ = algebra.NewCreateUser($3,password,name,groups)
 }
 ;
@@ -2802,7 +2808,10 @@ ALTER USER user user_opts
 {
     var password, name, groups value.Value
     if len($4) == 0 {
-         return yylex.(*lexer).FatalError("Missing user attributes.", $<line>4, $<column>4)
+        rem := yylex.(*lexer).Remainder(-1)
+        if rem == "" || rem == ";" {
+            return yylex.(*lexer).FatalError("Missing or invalid user attributes.", $<line>4, $<column>4)
+        }
     }
     for _, v := range $4 {
         switch v.name {
@@ -2848,6 +2857,9 @@ user_opts user_opt
 user_opt:
 PASSWORD STR
 {
+    if len($2) < 6 {
+        return yylex.(*lexer).FatalError("The password must be at least 6 characters long.", $<line>2, $<column>2)
+    }
     $$ = &nameValueContext{"password", $2, $<line>1, $<column>1}
 }
 |
@@ -2877,6 +2889,11 @@ GROUPS groups
     }
 
     $$ = &nameValueContext{"groups", groups, $<line>1, $<column>1}
+}
+|
+GROUP permitted_identifiers
+{
+    $$ = &nameValueContext{"groups", []string{$2}, $<line>1, $<column>1}
 }
 ;
 
@@ -2917,6 +2934,12 @@ CREATE GROUP group_name group_opts
             roles = value.NewValue(va)
         }
     }
+    if roles == nil {
+        rem := yylex.(*lexer).Remainder(-1)
+        if rem == "" || rem == ";" {
+            return yylex.(*lexer).FatalError("Missing group attribute. [NO] ROLES required for groups.", $<line>4, $<column>4)
+        }
+    }
     $$ = algebra.NewCreateGroup($3,desc,roles)
 }
 ;
@@ -2925,6 +2948,12 @@ alter_group:
 ALTER GROUP group_name group_opts
 {
     var desc, roles value.Value
+    if len($4) == 0 {
+        rem := yylex.(*lexer).Remainder(-1)
+        if rem == "" || rem == ";" {
+            return yylex.(*lexer).FatalError("Missing or invalid group attributes.", $<line>3, len(yylex.(*lexer).getText()))
+        }
+    }
     for _, v := range $4 {
         switch v.name {
         case "desc":
@@ -2999,6 +3028,11 @@ ROLES group_role_list
 NO ROLES
 {
     $$ = &nameValueContext{"roles", []string{}, $<line>1, $<column>1}
+}
+|
+ROLE group_role_list_item
+{
+    $$ = &nameValueContext{"roles", []string{$2}, $<line>1, $<column>1}
 }
 ;
 

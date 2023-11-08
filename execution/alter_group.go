@@ -78,18 +78,18 @@ func (this *AlterGroup) RunOnce(context *Context, parent value.Value) {
 				}
 			}
 			if g.Roles == nil {
-				context.Error(errors.NewGroupAttributeError("roles", "required"))
+				// default to empty roles list if we didn't get one back in the information and haven't specified a list
+				g.Roles = make([]datastore.Role, 0, 1)
+			}
+			if d, ok := this.plan.Node().Desc(); ok {
+				g.Desc = d
 			} else {
-				if d, ok := this.plan.Node().Desc(); ok {
-					g.Desc = d
-				} else {
-					g.Desc = string([]byte{0})
-				}
+				g.Desc = string([]byte{0})
+			}
 
-				err = context.datastore.PutGroupInfo(&g)
-				if err != nil {
-					context.Error(err)
-				}
+			err = context.datastore.PutGroupInfo(&g)
+			if err != nil {
+				context.Error(err)
 			}
 		}
 	})
