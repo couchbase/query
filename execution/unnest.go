@@ -52,13 +52,13 @@ func (this *Unnest) RunOnce(context *Context, parent value.Value) {
 func (this *Unnest) beforeItems(context *Context, parent value.Value) bool {
 	filter := this.plan.Filter()
 	if filter != nil {
-		filter.EnableInlistHash(context)
+		filter.EnableInlistHash(&this.operatorCtx)
 	}
 	return true
 }
 
 func (this *Unnest) processItem(item value.AnnotatedValue, context *Context) bool {
-	ev, err := this.plan.Term().Expression().Evaluate(item, context)
+	ev, err := this.plan.Term().Expression().Evaluate(item, &this.operatorCtx)
 	if err != nil {
 		context.Error(errors.NewEvaluationError(err, "UNNEST path"))
 		return false
@@ -104,7 +104,7 @@ func (this *Unnest) processItem(item value.AnnotatedValue, context *Context) boo
 
 		pass := true
 		if filter != nil {
-			result, err := filter.Evaluate(av, context)
+			result, err := filter.Evaluate(av, &this.operatorCtx)
 			if err != nil {
 				context.Error(errors.NewEvaluationError(err, "unnest filter"))
 				return false
@@ -141,7 +141,7 @@ func (this *Unnest) processItem(item value.AnnotatedValue, context *Context) boo
 func (this *Unnest) afterItems(context *Context) {
 	filter := this.plan.Filter()
 	if filter != nil {
-		filter.ResetMemory(context)
+		filter.ResetMemory(&this.operatorCtx)
 	}
 }
 

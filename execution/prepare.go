@@ -30,7 +30,7 @@ func NewPrepare(plan *plan.Prepare, context *Context, prepared value.Value) *Pre
 		prepared: prepared,
 	}
 
-	newRedirectBase(&rv.base)
+	newRedirectBase(&rv.base, context)
 	rv.output = rv
 	return rv
 }

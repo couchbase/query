@@ -75,7 +75,7 @@ func (this *SendInsert) processItem(item value.AnnotatedValue, context *Context)
 }
 
 func (this *SendInsert) beforeItems(context *Context, parent value.Value) bool {
-	this.keyspace = getKeyspace(this.plan.Keyspace(), this.plan.Term().ExpressionTerm(), context)
+	this.keyspace = getKeyspace(this.plan.Keyspace(), this.plan.Term().ExpressionTerm(), &this.operatorCtx)
 	if this.keyspace == nil {
 		return false
 	}
@@ -84,7 +84,7 @@ func (this *SendInsert) beforeItems(context *Context, parent value.Value) bool {
 		return true
 	}
 
-	limit, err := this.plan.Limit().Evaluate(parent, context)
+	limit, err := this.plan.Limit().Evaluate(parent, &this.operatorCtx)
 	if err != nil {
 		context.Error(errors.NewEvaluationError(err, "LIMIT clause"))
 		return false
@@ -135,7 +135,7 @@ func (this *SendInsert) flushBatch(context *Context) bool {
 
 		if keyExpr != nil {
 			// INSERT ... SELECT
-			key, err = keyExpr.Evaluate(av, context)
+			key, err = keyExpr.Evaluate(av, &this.operatorCtx)
 			if err != nil {
 				context.Error(errors.NewEvaluationError(err,
 					fmt.Sprintf("INSERT key for %v", av.GetValue())))
@@ -143,7 +143,7 @@ func (this *SendInsert) flushBatch(context *Context) bool {
 			}
 
 			if valExpr != nil {
-				val, err = valExpr.Evaluate(av, context)
+				val, err = valExpr.Evaluate(av, &this.operatorCtx)
 				if err != nil {
 					context.Error(errors.NewEvaluationError(err,
 						fmt.Sprintf("INSERT value for %v", av.GetValue())))
@@ -154,7 +154,7 @@ func (this *SendInsert) flushBatch(context *Context) bool {
 			}
 
 			if optionsExpr != nil {
-				options, err = optionsExpr.Evaluate(av, context)
+				options, err = optionsExpr.Evaluate(av, &this.operatorCtx)
 				if err != nil {
 					context.Error(errors.NewEvaluationError(err,
 						fmt.Sprintf("INSERT value for %v", av.GetValue())))
@@ -204,7 +204,7 @@ func (this *SendInsert) flushBatch(context *Context) bool {
 
 	// Perform the actual INSERT
 	var errs errors.Errors
-	dpairs, errs = this.keyspace.Insert(dpairs, context)
+	dpairs, errs = this.keyspace.Insert(dpairs, &this.operatorCtx)
 
 	this.switchPhase(_EXECTIME)
 

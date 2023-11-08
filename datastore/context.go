@@ -72,6 +72,7 @@ type QueryContext interface {
 	DurabilityLevel() DurabilityLevel
 	KvTimeout() time.Duration
 	PreserveExpiry() bool
+	IsActive() bool
 }
 
 type queryContextImpl struct {
@@ -124,4 +125,8 @@ func (ci *queryContextImpl) KvTimeout() time.Duration {
 
 func (ci *queryContextImpl) PreserveExpiry() bool {
 	return false
+}
+
+func (ci *queryContextImpl) IsActive() bool {
+	return true
 }

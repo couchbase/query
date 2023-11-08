@@ -53,6 +53,8 @@ type Context interface {
 	IsTracked() bool
 	InitInlineUdfExprs()
 	IsPrepared() bool
+	Park(func(bool))
+	Resume()
 }
 
 type CurlContext interface {

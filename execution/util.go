@@ -42,7 +42,9 @@ func copyOperator(op Operator) Operator {
 var _STRING_POOL = util.NewStringPool(_BATCH_SIZE)
 var _STRING_ANNOTATED_POOL = value.NewStringAnnotatedPool(_BATCH_SIZE)
 
-func getCachedValue(item value.AnnotatedValue, expr expression.Expression, s string, context *Context) (rv value.Value, err error) {
+func getCachedValue(item value.AnnotatedValue, expr expression.Expression, s string, context *opContext) (rv value.Value,
+	err error) {
+
 	sv1 := item.GetAttachment(s)
 	switch sv1 := sv1.(type) {
 	case value.Value:
@@ -59,7 +61,9 @@ func getCachedValue(item value.AnnotatedValue, expr expression.Expression, s str
 	return
 }
 
-func getOriginalCachedValue(item value.AnnotatedValue, expr expression.Expression, s string, context *Context) (rv value.Value, err error) {
+func getOriginalCachedValue(item value.AnnotatedValue, expr expression.Expression, s string, context *opContext) (rv value.Value,
+	err error) {
+
 	sv1 := item.GetAttachment(s)
 	switch sv1 := sv1.(type) {
 	case value.Value:

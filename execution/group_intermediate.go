@@ -61,7 +61,7 @@ func (this *IntermediateGroup) processItem(item value.AnnotatedValue, context *C
 	var gk string
 	if len(this.plan.Keys()) > 0 {
 		var e error
-		gk, e = groupKey(item, this.plan.Keys(), context)
+		gk, e = groupKey(item, this.plan.Keys(), &this.operatorCtx)
 		if e != nil {
 			context.Fatal(errors.NewEvaluationError(e, "GROUP key"))
 			item.Recycle()
@@ -102,7 +102,7 @@ func (this *IntermediateGroup) processItem(item value.AnnotatedValue, context *C
 
 	for _, agg := range this.plan.Aggregates() {
 		a := agg.String()
-		v, e := agg.CumulateIntermediate(part[a], cumulative[a], context)
+		v, e := agg.CumulateIntermediate(part[a], cumulative[a], &this.operatorCtx)
 		if e != nil {
 			context.Fatal(errors.NewGroupUpdateError(
 				e, "Error updating intermediate GROUP value."))

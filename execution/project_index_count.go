@@ -69,7 +69,7 @@ func (this *IndexCountProject) processItem(item value.AnnotatedValue, context *C
 			case *algebra.Count:
 				v = item.GetValue()
 			default:
-				v, err = term.Result().Expression().Evaluate(item, context)
+				v, err = term.Result().Expression().Evaluate(item, &this.operatorCtx)
 				if err != nil {
 					context.Error(errors.NewEvaluationError(err, "projection"))
 					return false

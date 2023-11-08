@@ -78,8 +78,8 @@ func (this *IndexScan3) RunOnce(context *Context, parent value.Value) {
 
 		filter := this.plan.Filter()
 		if filter != nil {
-			filter.EnableInlistHash(context)
-			defer filter.ResetMemory(context)
+			filter.EnableInlistHash(&this.operatorCtx)
+			defer filter.ResetMemory(&this.operatorCtx)
 		}
 
 		go func() {
@@ -150,7 +150,7 @@ func (this *IndexScan3) RunOnce(context *Context, parent value.Value) {
 							av.SetField(this.plan.Term().Alias(), av)
 
 							if filter != nil {
-								result, err := filter.Evaluate(av, context)
+								result, err := filter.Evaluate(av, &this.operatorCtx)
 								if err != nil {
 									context.Error(errors.NewEvaluationError(err, "filter"))
 									return
@@ -195,7 +195,7 @@ func (this *IndexScan3) scan(context *Context, conn *datastore.IndexConnection, 
 	// for span evaluation
 
 	groupAggs := plan.GroupAggs()
-	dspans, empty, err := evalSpan3(plan.Spans(), parent, plan.HasDynamicInSpan(), context)
+	dspans, empty, err := evalSpan3(plan.Spans(), parent, plan.HasDynamicInSpan(), &this.operatorCtx)
 
 	// empty span with Index aggregation is present and no group by requies produce default row.
 	// Therefore, do IndexScan
@@ -208,8 +208,8 @@ func (this *IndexScan3) scan(context *Context, conn *datastore.IndexConnection, 
 		return
 	}
 
-	offset := evalLimitOffset(this.plan.Offset(), parent, int64(0), this.plan.Covering(), context)
-	limit := evalLimitOffset(this.plan.Limit(), parent, math.MaxInt64, this.plan.Covering(), context)
+	offset := evalLimitOffset(this.plan.Offset(), parent, int64(0), this.plan.Covering(), &this.operatorCtx)
+	limit := evalLimitOffset(this.plan.Limit(), parent, math.MaxInt64, this.plan.Covering(), &this.operatorCtx)
 	scanVector := context.ScanVectorSource().ScanVector(plan.Term().Namespace(), plan.Term().Path().Bucket())
 
 	indexProjection, indexOrder, indexGroupAggs := planToScanMapping(plan.Index(), plan.Projection(),
@@ -220,7 +220,7 @@ func (this *IndexScan3) scan(context *Context, conn *datastore.IndexConnection, 
 		context.ScanConsistency(), scanVector, conn)
 }
 
-func evalSpan3(pspans plan.Spans2, parent value.Value, hasDynamicInSpan bool, context *Context) (
+func evalSpan3(pspans plan.Spans2, parent value.Value, hasDynamicInSpan bool, context *opContext) (
 	datastore.Spans2, bool, error) {
 	spans := pspans
 	if hasDynamicInSpan {

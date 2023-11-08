@@ -115,7 +115,7 @@ func (this *joinBase) joinFetch(keyspace datastore.Keyspace, keyCount map[string
 }
 
 func (this *joinBase) joinEntries(keyCount map[string]int, pairMap map[string]value.AnnotatedValue,
-	outer bool, onFilter expression.Expression, alias string, context *Context) bool {
+	outer bool, onFilter expression.Expression, alias string, context *opContext) bool {
 	for _, item := range this.joinBatch {
 		foundKeys := 0
 		if len(pairMap) > 0 {
@@ -195,7 +195,7 @@ func (this *joinBase) joinEntries(keyCount map[string]int, pairMap map[string]va
 }
 
 func (this *joinBase) nestEntries(keyCount map[string]int, pairMap map[string]value.AnnotatedValue,
-	outer bool, onFilter expression.Expression, alias string, context *Context) bool {
+	outer bool, onFilter expression.Expression, alias string, context *opContext) bool {
 	useQuota := context.UseRequestQuota()
 
 	for _, item := range this.joinBatch {

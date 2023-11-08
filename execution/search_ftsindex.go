@@ -185,17 +185,17 @@ func (this *IndexFtsSearch) planToSearchMapping(context *Context,
 	indexSearchInfo = &datastore.FTSSearchInfo{}
 
 	psearchInfo := this.plan.SearchInfo()
-	indexSearchInfo.Field, _, err = evalOne(psearchInfo.FieldName(), context, parent)
+	indexSearchInfo.Field, _, err = evalOne(psearchInfo.FieldName(), &this.operatorCtx, parent)
 	if err != nil {
 		return nil, err
 	}
 
-	indexSearchInfo.Query, _, err = evalOne(psearchInfo.Query(), context, parent)
+	indexSearchInfo.Query, _, err = evalOne(psearchInfo.Query(), &this.operatorCtx, parent)
 	if err != nil {
 		return nil, err
 	}
 
-	indexSearchInfo.Options, _, err = evalOne(psearchInfo.Options(), context, parent)
+	indexSearchInfo.Options, _, err = evalOne(psearchInfo.Options(), &this.operatorCtx, parent)
 	if err != nil {
 		return nil, err
 	}
@@ -211,8 +211,8 @@ func (this *IndexFtsSearch) planToSearchMapping(context *Context,
 			fmt.Sprintf("Search() function Options parameter must be object.")))
 	}
 
-	indexSearchInfo.Offset = evalLimitOffset(psearchInfo.Offset(), parent, int64(0), false, context)
-	indexSearchInfo.Limit = evalLimitOffset(psearchInfo.Limit(), parent, math.MaxInt64, false, context)
+	indexSearchInfo.Offset = evalLimitOffset(psearchInfo.Offset(), parent, int64(0), false, &this.operatorCtx)
+	indexSearchInfo.Limit = evalLimitOffset(psearchInfo.Limit(), parent, math.MaxInt64, false, &this.operatorCtx)
 	indexSearchInfo.Order = psearchInfo.Order()
 
 	return
@@ -236,7 +236,7 @@ func (this *IndexFtsSearch) Done() {
 }
 
 func SetSearchInfo(aliasMap map[string]string, item value.Value,
-	context *Context, exprs ...expression.Expression) error {
+	context *opContext, exprs ...expression.Expression) error {
 	var q, o value.Value
 	var err error
 
