@@ -622,6 +622,9 @@ func (this *Stringer) VisitFunction(expr Function) (interface{}, error) {
 	if fk, ok := expr.(*FlattenKeys); ok {
 		return this.visitFlattenKeys(fk)
 	}
+	if so, ok := expr.(*SequenceOperation); ok {
+		return this.visitSequenceOp(so)
+	}
 
 	var buf bytes.Buffer
 
@@ -754,6 +757,17 @@ func (this *Stringer) visitFlattenKeys(fk *FlattenKeys) (interface{}, error) {
 	}
 
 	buf.WriteString(")")
+	return buf.String(), nil
+}
+
+func (this *Stringer) visitSequenceOp(so *SequenceOperation) (interface{}, error) {
+	var buf bytes.Buffer
+	if so.next {
+		buf.WriteString("next value for ")
+	} else {
+		buf.WriteString("prev value for ")
+	}
+	buf.WriteString(so.FullName())
 	return buf.String(), nil
 }
 

@@ -1292,10 +1292,14 @@ var statement_syntax = map[string][][]string{
 		[]string{"CACHE", "expression"},
 	},
 	"sequence_next": [][]string{
+		[]string{"NEXTVAL", "FOR", "<namespace-identifier>", "COLON", "permitted_identifiers"},
+		[]string{"NEXT", "VALUE", "FOR", "<namespace-identifier>", "COLON", "permitted_identifiers"},
 		[]string{"NEXTVAL", "FOR", "permitted_identifiers"},
 		[]string{"NEXT", "VALUE", "FOR", "permitted_identifiers"},
 	},
 	"sequence_prev": [][]string{
+		[]string{"PREVVAL", "FOR", "<namespace-identifier>", "COLON", "permitted_identifiers"},
+		[]string{"PREV", "VALUE", "FOR", "<namespace-identifier>", "COLON", "permitted_identifiers"},
 		[]string{"PREVVAL", "FOR", "permitted_identifiers"},
 		[]string{"PREV", "VALUE", "FOR", "permitted_identifiers"},
 	},

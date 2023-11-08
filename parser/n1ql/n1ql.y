@@ -569,7 +569,8 @@ column int
 %type <keyspacePath>       sequence_full_name
 %type <vpairs>             sequence_name_options
 %type <vpair>              sequence_name_option
-%type <s>                  opt_namespace_name sequence_object_name sequence_next sequence_prev
+%type <s>                  opt_namespace_name sequence_object_name
+%type <ss>                 sequence_next sequence_prev
 %type <expr>               sequence_expr
 
 %type <vpair>  start_with increment_by maxvalue minvalue cache cycle restart_with seq_alter_option seq_create_option sequence_with
@@ -6278,39 +6279,64 @@ CACHE expr
 ;
 
 sequence_next:
+NEXTVAL FOR NAMESPACE_ID COLON permitted_identifiers
+{
+  $$ = []string{$3,$5}
+}
+|
+NEXT VALUE FOR NAMESPACE_ID COLON permitted_identifiers
+{
+  $$ = []string{$4,$6}
+}
+|
 NEXTVAL FOR permitted_identifiers
 {
-  $$ = $3
+  $$ = []string{"",$3}
 }
 |
 NEXT VALUE FOR permitted_identifiers
 {
-  $$ = $4
+  $$ = []string{"",$4}
 }
 ;
 
 sequence_prev:
+PREVVAL FOR NAMESPACE_ID COLON permitted_identifiers
+{
+  $$ = []string{$3,$5}
+}
+|
+PREV VALUE FOR NAMESPACE_ID COLON permitted_identifiers
+{
+  $$ = []string{$4,$6}
+}
+|
 PREVVAL FOR permitted_identifiers
 {
-  $$ = $3
+  $$ = []string{"",$3}
 }
 |
 PREV VALUE FOR permitted_identifiers
 {
-  $$ = $4
+  $$ = []string{"",$4}
 }
 ;
 
 sequence_expr:
 sequence_next
 {
-    defs := algebra.ParseQueryContext(yylex.(*lexer).QueryContext())
-    if defs[0] == "" {
-        defs[0] = "default"
+    var defs []string
+    if $1[0] == "" {
+        defs = algebra.ParseQueryContext(yylex.(*lexer).QueryContext())
+        if defs[0] == "" {
+            defs[0] = "default"
+        }
+    } else {
+        defs = $1[:1]
     }
     s := expression.NewSequenceNext(defs...)
     s.ExprBase().SetErrorContext($<line>1, $<column>1)
-    if !s.AddPart($1) {
+    if !s.AddPart($1[1]) {
         return yylex.(*lexer).FatalError("Invalid sequence name", $<line>1, $<column>1)
     }
     $$ = s
@@ -6318,13 +6344,18 @@ sequence_next
 |
 sequence_prev
 {
-    defs := algebra.ParseQueryContext(yylex.(*lexer).QueryContext())
-    if defs[0] == "" {
-        defs[0] = "default"
+    var defs []string
+    if $1[0] == "" {
+        defs = algebra.ParseQueryContext(yylex.(*lexer).QueryContext())
+        if defs[0] == "" {
+            defs[0] = "default"
+        }
+    } else {
+        defs = $1[:1]
     }
     s := expression.NewSequencePrev(defs...)
     s.ExprBase().SetErrorContext($<line>1, $<column>1)
-    if !s.AddPart($1) {
+    if !s.AddPart($1[1]) {
         return yylex.(*lexer).FatalError("Invalid sequence name", $<line>1, $<column>1)
     }
     $$ = s
