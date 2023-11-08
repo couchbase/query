@@ -53,8 +53,6 @@ type Context interface {
 	SetTracked(bool)
 	IsTracked() bool
 	IsPrepared() bool
-	Park(func(bool))
-	Resume()
 }
 
 type ExecutionHandle interface {
@@ -80,4 +78,10 @@ type LikeContext interface {
 	Context
 	GetLikeRegex(in *Like, s string) *regexp.Regexp
 	CacheLikeRegex(in *Like, s string, re *regexp.Regexp)
+}
+
+type ParkableContext interface {
+	Context
+	Park(func(bool))
+	Resume()
 }

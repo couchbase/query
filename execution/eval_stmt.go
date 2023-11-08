@@ -292,7 +292,7 @@ func (this *Context) PrepareStatement(statement string, namedArgs map[string]val
 		prepContext.SetNamedArgs(nil)
 		prepContext.SetPositionalArgs(nil)
 	case *algebra.Advise:
-		st.SetContext(this)
+		st.SetContext(NewOpContext(this))
 	}
 
 	//  monitoring code TBD
