@@ -490,7 +490,7 @@ func (this *builder) VisitExpressionTerm(node *algebra.ExpressionTerm) (interfac
 		}
 
 		this.addChildren(plan.NewExpressionScan(node.ExpressionTerm(), alias, node.IsCorrelated(),
-			filter, cost, cardinality, size, frCost))
+			node.HasVariables(), filter, cost, cardinality, size, frCost))
 	}
 
 	if !this.joinEnum() && !node.IsAnsiJoinOp() {

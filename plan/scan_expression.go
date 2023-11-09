@@ -18,19 +18,21 @@ import (
 type ExpressionScan struct {
 	readonly
 	optEstimate
-	fromExpr   expression.Expression
-	alias      string
-	correlated bool
-	filter     expression.Expression
+	fromExpr     expression.Expression
+	alias        string
+	correlated   bool
+	hasVariables bool
+	filter       expression.Expression
 }
 
-func NewExpressionScan(fromExpr expression.Expression, alias string, correlated bool,
+func NewExpressionScan(fromExpr expression.Expression, alias string, correlated, hasVariables bool,
 	filter expression.Expression, cost, cardinality float64, size int64, frCost float64) *ExpressionScan {
 	rv := &ExpressionScan{
-		fromExpr:   fromExpr,
-		alias:      alias,
-		correlated: correlated,
-		filter:     filter,
+		fromExpr:     fromExpr,
+		alias:        alias,
+		correlated:   correlated,
+		hasVariables: hasVariables,
+		filter:       filter,
 	}
 	setOptEstimate(&rv.optEstimate, cost, cardinality, size, frCost)
 	return rv
@@ -60,6 +62,10 @@ func (this *ExpressionScan) IsCorrelated() bool {
 	return this.correlated
 }
 
+func (this *ExpressionScan) HasVariables() bool {
+	return this.hasVariables
+}
+
 func (this *ExpressionScan) Filter() expression.Expression {
 	return this.filter
 }
@@ -79,6 +85,9 @@ func (this *ExpressionScan) MarshalBase(f func(map[string]interface{})) map[stri
 	if !this.correlated {
 		r["uncorrelated"] = !this.correlated
 	}
+	if !this.hasVariables {
+		r["not_in_function"] = !this.hasVariables
+	}
 	if this.filter != nil {
 		r["filter"] = expression.NewStringer().Visit(this.filter)
 	}
@@ -93,12 +102,13 @@ func (this *ExpressionScan) MarshalBase(f func(map[string]interface{})) map[stri
 
 func (this *ExpressionScan) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_            string                 `json:"#operator"`
-		FromExpr     string                 `json:"expr"`
-		Alias        string                 `json:"alias"`
-		UnCorrelated bool                   `json:"uncorrelated"`
-		Filter       string                 `json:"filter"`
-		OptEstimate  map[string]interface{} `json:"optimizer_estimates"`
+		_             string                 `json:"#operator"`
+		FromExpr      string                 `json:"expr"`
+		Alias         string                 `json:"alias"`
+		UnCorrelated  bool                   `json:"uncorrelated"`
+		NotInFunction bool                   `json:"not_in_function"`
+		Filter        string                 `json:"filter"`
+		OptEstimate   map[string]interface{} `json:"optimizer_estimates"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -116,6 +126,7 @@ func (this *ExpressionScan) UnmarshalJSON(body []byte) error {
 	// we set correlated to be true just to be safe, i.e., if
 	// no info in the plan, then assume correlated is true.
 	this.correlated = !_unmarshalled.UnCorrelated
+	this.hasVariables = !_unmarshalled.NotInFunction
 
 	if _unmarshalled.Filter != "" {
 		this.filter, err = parser.Parse(_unmarshalled.Filter)
