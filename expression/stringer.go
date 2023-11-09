@@ -773,6 +773,17 @@ func (this *Stringer) visitFlattenKeys(fk *FlattenKeys) (interface{}, error) {
 	return buf.String(), nil
 }
 
+func (this *Stringer) visitSequenceOp(so *SequenceOperation) (interface{}, error) {
+	var buf bytes.Buffer
+	if so.next {
+		buf.WriteString("next value for ")
+	} else {
+		buf.WriteString("prev value for ")
+	}
+	buf.WriteString(so.FullName())
+	return buf.String(), nil
+}
+
 type PathToString struct {
 	MapperBase
 
