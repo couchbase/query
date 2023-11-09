@@ -21,6 +21,7 @@ type ExpressionTerm struct {
 	keyspaceTerm *KeyspaceTerm
 	isKeyspace   bool
 	correlated   bool
+	hasVariables bool
 	joinHint     JoinHint
 	property     uint32
 	correlation  map[string]uint32
@@ -31,7 +32,7 @@ Constructor.
 */
 func NewExpressionTerm(fromExpr expression.Expression, as string,
 	keyspaceTerm *KeyspaceTerm, isKeyspace bool, joinHint JoinHint) *ExpressionTerm {
-	return &ExpressionTerm{fromExpr, as, keyspaceTerm, isKeyspace, false, joinHint, 0, nil}
+	return &ExpressionTerm{fromExpr, as, keyspaceTerm, isKeyspace, false, false, joinHint, 0, nil}
 }
 
 /*
@@ -172,6 +173,10 @@ func (this *ExpressionTerm) Formalize(parent *expression.Formalizer) (f *express
 		checkLateralCorrelation(this)
 	}
 
+	if parent != nil && parent.HasVariables() {
+		this.hasVariables = true
+	}
+
 	// for checking fromExpr we need a new formalizer, however, if this ExpressionTerm
 	// is under an ANSI join/nest operation we need to use the parent's formalizer
 	if this.IsAnsiJoinOp() {
@@ -243,6 +248,10 @@ func (this *ExpressionTerm) GetCorrelation() map[string]uint32 {
 		return this.keyspaceTerm.GetCorrelation()
 	}
 	return this.correlation
+}
+
+func (this *ExpressionTerm) HasVariables() bool {
+	return this.hasVariables
 }
 
 /*

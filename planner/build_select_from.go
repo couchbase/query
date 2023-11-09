@@ -435,8 +435,8 @@ func (this *builder) VisitSubqueryTerm(node *algebra.SubqueryTerm) (interface{},
 			// make an ExpressionScan with the subquery as expression
 			// also save the subquery plan such that it can be added later to "~subqueries"
 			exprScan := plan.NewExpressionScan(algebra.NewSubquery(subquery), alias,
-				subquery.IsCorrelated(), true, nil, selOp.Cost(),
-				selOp.Cardinality(), selOp.Size(), selOp.FrCost())
+				subquery.IsCorrelated(), subquery.HasVariables(), true, nil,
+				selOp.Cost(), selOp.Cardinality(), selOp.Size(), selOp.FrCost())
 			exprScan.SetSubqueryPlan(selOp)
 			this.addChildren(exprScan)
 		} else {
@@ -516,7 +516,7 @@ func (this *builder) VisitExpressionTerm(node *algebra.ExpressionTerm) (interfac
 		}
 
 		this.addChildren(plan.NewExpressionScan(node.ExpressionTerm(), alias, node.IsCorrelated(),
-			this.hasBuilderFlag(BUILDER_NL_INNER), filter, cost, cardinality, size, frCost))
+			node.HasVariables(), this.hasBuilderFlag(BUILDER_NL_INNER), filter, cost, cardinality, size, frCost))
 	}
 
 	if !this.joinEnum() && !node.IsAnsiJoinOp() {

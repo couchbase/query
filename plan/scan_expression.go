@@ -18,22 +18,24 @@ import (
 type ExpressionScan struct {
 	readonly
 	optEstimate
-	fromExpr    expression.Expression
-	alias       string
-	correlated  bool
-	nested_loop bool
-	filter      expression.Expression
-	subqPlan    Operator
+	fromExpr     expression.Expression
+	alias        string
+	correlated   bool
+	hasVariables bool
+	nested_loop  bool
+	filter       expression.Expression
+	subqPlan     Operator
 }
 
-func NewExpressionScan(fromExpr expression.Expression, alias string, correlated, nested_loop bool,
+func NewExpressionScan(fromExpr expression.Expression, alias string, correlated, hasVariables, nested_loop bool,
 	filter expression.Expression, cost, cardinality float64, size int64, frCost float64) *ExpressionScan {
 	rv := &ExpressionScan{
-		fromExpr:    fromExpr,
-		alias:       alias,
-		correlated:  correlated,
-		nested_loop: nested_loop,
-		filter:      filter,
+		fromExpr:     fromExpr,
+		alias:        alias,
+		correlated:   correlated,
+		hasVariables: hasVariables,
+		nested_loop:  nested_loop,
+		filter:       filter,
 	}
 	setOptEstimate(&rv.optEstimate, cost, cardinality, size, frCost)
 	return rv
@@ -61,6 +63,10 @@ func (this *ExpressionScan) Alias() string {
 
 func (this *ExpressionScan) IsCorrelated() bool {
 	return this.correlated
+}
+
+func (this *ExpressionScan) HasVariables() bool {
+	return this.hasVariables
 }
 
 func (this *ExpressionScan) IsUnderNL() bool {
@@ -98,6 +104,9 @@ func (this *ExpressionScan) MarshalBase(f func(map[string]interface{})) map[stri
 	if !this.correlated {
 		r["uncorrelated"] = !this.correlated
 	}
+	if !this.hasVariables {
+		r["not_in_function"] = !this.hasVariables
+	}
 	if this.nested_loop {
 		r["nested_loop"] = this.nested_loop
 	}
@@ -115,13 +124,14 @@ func (this *ExpressionScan) MarshalBase(f func(map[string]interface{})) map[stri
 
 func (this *ExpressionScan) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_            string                 `json:"#operator"`
-		FromExpr     string                 `json:"expr"`
-		Alias        string                 `json:"alias"`
-		UnCorrelated bool                   `json:"uncorrelated"`
-		NestedLoop   bool                   `json:"nested_loop"`
-		Filter       string                 `json:"filter"`
-		OptEstimate  map[string]interface{} `json:"optimizer_estimates"`
+		_             string                 `json:"#operator"`
+		FromExpr      string                 `json:"expr"`
+		Alias         string                 `json:"alias"`
+		UnCorrelated  bool                   `json:"uncorrelated"`
+		NotInFunction bool                   `json:"not_in_function"`
+		NestedLoop    bool                   `json:"nested_loop"`
+		Filter        string                 `json:"filter"`
+		OptEstimate   map[string]interface{} `json:"optimizer_estimates"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -139,6 +149,7 @@ func (this *ExpressionScan) UnmarshalJSON(body []byte) error {
 	// we set correlated to be true just to be safe, i.e., if
 	// no info in the plan, then assume correlated is true.
 	this.correlated = !_unmarshalled.UnCorrelated
+	this.hasVariables = !_unmarshalled.NotInFunction
 	this.nested_loop = _unmarshalled.NestedLoop
 
 	if _unmarshalled.Filter != "" {
