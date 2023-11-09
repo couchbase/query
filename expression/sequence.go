@@ -51,6 +51,14 @@ func NewSequencePrev(defs ...string) *SequenceOperation {
 	return rv
 }
 
+func (this *SequenceOperation) Operator() string {
+	if this.next {
+		return "next value for " + this.FullName()
+	} else {
+		return "prev value for " + this.FullName()
+	}
+}
+
 // Since the parser can't provide the full path in one go, this function is provided so it can be assembled from its components
 // This also validates the addition; no more than 3 components may be added.
 func (this *SequenceOperation) AddPart(s string) bool {

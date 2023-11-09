@@ -493,11 +493,13 @@ func (this *MinVersion) Constructor() FunctionConstructor {
 
 type CurrentUser struct {
 	NullaryFunctionBase
+	operator bool
 }
 
 func NewCurrentUser() Function {
 	rv := &CurrentUser{
 		*NewNullaryFunctionBase("current_user"),
+		false,
 	}
 
 	rv.expr = rv
@@ -524,6 +526,17 @@ func (this *CurrentUser) Evaluate(item value.Value, context Context) (value.Valu
 
 func (this *CurrentUser) Static() Expression {
 	return this
+}
+
+func (this *CurrentUser) SetOperator() {
+	this.operator = true
+}
+
+func (this *CurrentUser) Operator() string {
+	if this.operator {
+		return "current user"
+	}
+	return ""
 }
 
 /*

@@ -619,30 +619,43 @@ func (this *Stringer) VisitFunction(expr Function) (interface{}, error) {
 	if expr.Aggregate() {
 		return expr.String(), nil
 	}
-	if fk, ok := expr.(*FlattenKeys); ok {
-		return this.visitFlattenKeys(fk)
-	}
-	if so, ok := expr.(*SequenceOperation); ok {
-		return this.visitSequenceOp(so)
-	}
-
 	var buf bytes.Buffer
 
-	if uf, ok := expr.(UnaryFunction); ok && uf.Operator() != "" {
+	switch t := expr.(type) {
+	case *FlattenKeys:
+		return this.visitFlattenKeys(t)
+	case *SequenceOperation:
 		buf.WriteString("(")
-		buf.WriteString(this.Visit(uf.Operand()))
-		buf.WriteString(uf.Operator())
+		buf.WriteString(t.Operator())
 		buf.WriteString(")")
 		return buf.String(), nil
-	}
-
-	if bf, ok := expr.(BinaryFunction); ok && bf.Operator() != "" {
-		buf.WriteString("(")
-		buf.WriteString(this.Visit(bf.First()))
-		buf.WriteString(bf.Operator())
-		buf.WriteString(this.Visit(bf.Second()))
-		buf.WriteString(")")
-		return buf.String(), nil
+	case *CurrentUser:
+		op := t.Operator()
+		if op != "" {
+			buf.WriteString("(")
+			buf.WriteString(op)
+			buf.WriteString(")")
+			return buf.String(), nil
+		}
+	case UnaryFunction:
+		op := t.Operator()
+		if op != "" {
+			buf.WriteString("(")
+			buf.WriteString(this.Visit(t.Operand()))
+			buf.WriteString(op)
+			buf.WriteString(")")
+			return buf.String(), nil
+		}
+	case BinaryFunction:
+		op := t.Operator()
+		if op != "" {
+			buf.WriteString("(")
+			buf.WriteString(this.Visit(t.First()))
+			buf.WriteString(op)
+			buf.WriteString(this.Visit(t.Second()))
+			buf.WriteString(")")
+			return buf.String(), nil
+		}
 	}
 
 	buf.WriteString(expr.Name())
@@ -757,17 +770,6 @@ func (this *Stringer) visitFlattenKeys(fk *FlattenKeys) (interface{}, error) {
 	}
 
 	buf.WriteString(")")
-	return buf.String(), nil
-}
-
-func (this *Stringer) visitSequenceOp(so *SequenceOperation) (interface{}, error) {
-	var buf bytes.Buffer
-	if so.next {
-		buf.WriteString("next value for ")
-	} else {
-		buf.WriteString("prev value for ")
-	}
-	buf.WriteString(so.FullName())
 	return buf.String(), nil
 }
 

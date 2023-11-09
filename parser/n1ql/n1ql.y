@@ -4742,6 +4742,7 @@ LPAREN expr RPAREN
 CURRENT USER
 {
     $$ = expression.NewCurrentUser()
+    $$.(*expression.CurrentUser).SetOperator()
     $$.ExprBase().SetErrorContext($<line>1, $<column>1)
 }
 ;
