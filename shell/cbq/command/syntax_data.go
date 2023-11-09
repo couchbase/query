@@ -591,6 +591,7 @@ var statement_syntax = map[string][][]string{
 		[]string{"WITH", "<quoted string>"},
 		[]string{"GROUPS", "groups"},
 		[]string{"GROUP", "permitted_identifiers"},
+		[]string{"NO", "GROUPS"},
 	},
 	"groups": [][]string{
 		[]string{"permitted_identifiers"},

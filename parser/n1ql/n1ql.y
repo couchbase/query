@@ -2896,6 +2896,11 @@ GROUP permitted_identifiers
 {
     $$ = &nameValueContext{"groups", []string{$2}, $<line>1, $<column>1}
 }
+|
+NO GROUPS
+{
+    $$ = &nameValueContext{"groups", []string{}, $<line>1, $<column>1}
+}
 ;
 
 groups:
