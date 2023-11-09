@@ -59,7 +59,7 @@ IF (NOT CBQ_ONLY)
     LIST(PREPEND CGO_INCLUDE_DIRS "${NEWEVAL_INCLUDE_DIR}")
     LIST(APPEND _extra_deps jseval)
 
-    IF (CB_BUILD_FAISS)
+    IF (CB_USE_FAISS)
       LIST(APPEND _extra_deps faiss_c)
       SET(_gotags "${_gotags} vectors")
     ENDIF ()
