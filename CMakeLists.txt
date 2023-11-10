@@ -40,21 +40,14 @@ SET (GOVERSION SUPPORTED_NEWER)
 
 STRING(REGEX REPLACE "-[^-]*$" "-N1QL" QUERY_VERSION ${PRODUCT_VERSION})
 SET (LDFLAGS "-X github.com/couchbase/query/util.VERSION=${QUERY_VERSION}")
-IF (APPLE)
-  # On OS X 10.11 (El Capitan) upwards we can no longer use DYLD_LIBRARY_PATH to locate
-  # runtime dependencies. Instead add the location of libcurl etc to the actual
-  # binary itself.
-  SET (LDFLAGS " ${LDFLAGS} -extldflags '-Wl,-rpath,@executable_path/../lib'")
-ENDIF ()
 IF(WIN32)
     IF("${MSVC_VERSION}" LESS 1910)
         SET (LDFLAGS "${LDFLAGS} -linkmode internal")
     ENDIF()
 ENDIF()
 
-GET_FILENAME_COMPONENT (CURL_LIBRARY_DIR "${CURL_LIBRARIES}" DIRECTORY)
-SET(CGO_INCLUDE_DIRS "${CURL_INCLUDE_DIR};${sigar_SOURCE_DIR}/include")
-SET(CGO_LIBRARY_DIRS "${CURL_LIBRARY_DIR};${sigar_BINARY_DIR}/src")
+SET(CGO_INCLUDE_DIRS)
+SET(CGO_LIBRARY_DIRS)
 
 IF (NOT CBQ_ONLY)
   GoYacc (GOVERSION SUPPORTED_NEWER TARGET n1ql-yacc YFILE "${PROJECT_SOURCE_DIR}/parser/n1ql/n1ql.y")
@@ -64,20 +57,21 @@ IF (NOT CBQ_ONLY)
         HINTS ${NEWEVAL_DIR}/worker/include)
     LIST(PREPEND CGO_LIBRARY_DIRS "${evaluator_BINARY_DIR}")
     LIST(PREPEND CGO_INCLUDE_DIRS "${NEWEVAL_INCLUDE_DIR}")
+    LIST(APPEND _extra_deps jseval)
+
+    IF (CB_USE_FAISS)
+      LIST(APPEND _extra_deps faiss_c)
+      SET(_gotags "${_gotags} vectors")
+    ENDIF ()
   ENDIF (BUILD_ENTERPRISE)
 
   GoModBuild (TARGET cbq-engine PACKAGE github.com/couchbase/query/server/cbq-engine
-    DEPENDS n1ql-yacc proto-generated ${_extra_deps} INSTALL_PATH bin
+    DEPENDS n1ql-yacc sigar proto-generated ${_extra_deps} INSTALL_PATH bin
+    LDFLAGS "${LDFLAGS}"
     CGO_INCLUDE_DIRS "${CGO_INCLUDE_DIRS}"
     CGO_LIBRARY_DIRS "${CGO_LIBRARY_DIRS}"
-    LDFLAGS "${LDFLAGS}"
     GOVERSION ${GOVERSION}
-    GOTAGS ${_gotags})
-
-  ADD_DEPENDENCIES (cbq-engine sigar)
-  IF (BUILD_ENTERPRISE)
-    ADD_DEPENDENCIES (cbq-engine jseval)
-  ENDIF ()
+    GOTAGS "${_gotags}")
 
 ENDIF (NOT CBQ_ONLY)
 
