@@ -10,7 +10,6 @@ package command
 
 import (
 	"fmt"
-	"io"
 	"strings"
 
 	"github.com/couchbase/query/errors"
@@ -53,7 +52,7 @@ func (this *Alias) ExecCommand(args []string) (errors.ErrorCode, string) {
 			for k, v := range AliasCommand {
 
 				tmp := fmt.Sprintf("%-14s %-14s"+NEWLINE, k, v)
-				_, werr := io.WriteString(W, tmp)
+				_, werr := OUTPUT.WriteString(tmp)
 				if werr != nil {
 					return errors.E_SHELL_WRITER_OUTPUT, werr.Error()
 				}
@@ -83,14 +82,14 @@ func (this *Alias) ExecCommand(args []string) (errors.ErrorCode, string) {
 }
 
 func (this *Alias) PrintHelp(desc bool) (errors.ErrorCode, string) {
-	_, werr := io.WriteString(W, HALIAS)
+	_, werr := OUTPUT.WriteString(HALIAS)
 	if desc {
 		err_code, err_str := printDesc(this.Name())
 		if err_code != 0 {
 			return err_code, err_str
 		}
 	}
-	_, werr = io.WriteString(W, NEWLINE)
+	_, werr = OUTPUT.WriteString(NEWLINE)
 	if werr != nil {
 		return errors.E_SHELL_WRITER_OUTPUT, werr.Error()
 	}

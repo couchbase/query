@@ -30,7 +30,7 @@ func TestHelp(t *testing.T) {
 
 	var b bytes.Buffer
 	writetmp := bufio.NewWriter(&b)
-	SetWriter(writetmp)
+	SetOutput(writetmp, true)
 
 	args[0] = "\\dummy"
 	errCode, errStr := help.ExecCommand(args)

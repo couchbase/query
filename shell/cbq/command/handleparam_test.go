@@ -119,7 +119,7 @@ func TestSet(t *testing.T) {
 	//\Set without any args
 	var b bytes.Buffer
 	writetmp := bufio.NewWriter(&b)
-	SetWriter(writetmp)
+	SetOutput(writetmp, true)
 
 	errCode, errStr := set.ExecCommand([]string{})
 	writetmp.Flush()
@@ -232,7 +232,7 @@ func TestUnset(t *testing.T) {
 	//\Set without any args
 	var b bytes.Buffer
 	writetmp := bufio.NewWriter(&b)
-	SetWriter(writetmp)
+	SetOutput(writetmp, true)
 
 	errCode, errStr = set.ExecCommand([]string{})
 	writetmp.Flush()

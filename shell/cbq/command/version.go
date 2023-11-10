@@ -9,7 +9,6 @@
 package command
 
 import (
-	"io"
 	"runtime"
 
 	"github.com/couchbase/query/errors"
@@ -43,12 +42,12 @@ func (this *Version) ExecCommand(args []string) (errors.ErrorCode, string) {
 	if len(args) != 0 {
 		return errors.E_SHELL_TOO_MANY_ARGS, ""
 	} else {
-		_, werr := io.WriteString(W, NewMessage(GOVERSIONMSG, runtime.Version())+NEWLINE)
+		_, werr := OUTPUT.WriteString(NewMessage(GOVERSIONMSG, runtime.Version()) + NEWLINE)
 		if werr == nil {
-			_, werr = io.WriteString(W, NewMessage(VERSIONMSG, SHELL_VERSION)+NEWLINE)
+			_, werr = OUTPUT.WriteString(NewMessage(VERSIONMSG, SHELL_VERSION) + NEWLINE)
 		}
 		if werr == nil {
-			_, werr = io.WriteString(W, SERVERVERSIONMSG)
+			_, werr = OUTPUT.WriteString(SERVERVERSIONMSG)
 		}
 		if werr != nil {
 			return errors.E_SHELL_WRITER_OUTPUT, werr.Error()
@@ -58,14 +57,14 @@ func (this *Version) ExecCommand(args []string) (errors.ErrorCode, string) {
 }
 
 func (this *Version) PrintHelp(desc bool) (errors.ErrorCode, string) {
-	_, werr := io.WriteString(W, HVERSION)
+	_, werr := OUTPUT.WriteString(HVERSION)
 	if desc {
 		err_code, err_str := printDesc(this.Name())
 		if err_code != 0 {
 			return err_code, err_str
 		}
 	}
-	_, werr = io.WriteString(W, NEWLINE)
+	_, werr = OUTPUT.WriteString(NEWLINE)
 	if werr != nil {
 		return errors.E_SHELL_WRITER_OUTPUT, werr.Error()
 	}

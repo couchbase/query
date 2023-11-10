@@ -9,7 +9,6 @@
 package command
 
 import (
-	"io"
 	"strings"
 
 	"github.com/couchbase/godbc/n1ql"
@@ -68,9 +67,9 @@ func (this *Connect) ExecCommand(args []string) (errors.ErrorCode, string) {
 		// Connect to secure ports depending on -no-ssl-verify flag when cbq is started.
 		if strings.HasPrefix(strings.ToLower(SERVICE_URL), "https://") {
 			if SKIPVERIFY == false {
-				PrintStr(W, SSLVERIFY_FALSE)
+				OUTPUT.WriteString(SSLVERIFY_FALSE)
 			} else {
-				PrintStr(W, SSLVERIFY_TRUE)
+				OUTPUT.WriteString(SSLVERIFY_TRUE)
 			}
 		}
 		if pURL.Username != "" && pURL.Password != "" {
@@ -82,20 +81,20 @@ func (this *Connect) ExecCommand(args []string) (errors.ErrorCode, string) {
 		if err != nil {
 			return errors.E_SHELL_CONNECTION_REFUSED, err.Error()
 		}
-		io.WriteString(W, NewMessage(STARTUP, SERVICE_URL)+EXITMSG)
+		OUTPUT.WriteString(NewMessage(STARTUP, SERVICE_URL) + EXITMSG)
 	}
 	return 0, ""
 }
 
 func (this *Connect) PrintHelp(desc bool) (errors.ErrorCode, string) {
-	_, werr := io.WriteString(W, HCONNECT)
+	_, werr := OUTPUT.WriteString(HCONNECT)
 	if desc {
 		err_code, err_str := printDesc(this.Name())
 		if err_code != 0 {
 			return err_code, err_str
 		}
 	}
-	_, werr = io.WriteString(W, NEWLINE)
+	_, werr = OUTPUT.WriteString(NEWLINE)
 	if werr != nil {
 		return errors.E_SHELL_WRITER_OUTPUT, werr.Error()
 	}

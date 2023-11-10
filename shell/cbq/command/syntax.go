@@ -9,7 +9,6 @@
 package command
 
 import (
-	"io"
 	"strings"
 
 	"github.com/couchbase/query/errors"
@@ -39,7 +38,7 @@ func (this *Syntax) MaxArgs() int {
 
 func (this *Syntax) ExecCommand(args []string) (errors.ErrorCode, string) {
 	if !sqlHelp(args...) {
-		_, werr := io.WriteString(W, UNKNOWN_STATEMENT)
+		_, werr := OUTPUT.WriteString(UNKNOWN_STATEMENT)
 		if werr != nil {
 			return errors.E_SHELL_WRITER_OUTPUT, werr.Error()
 		}
@@ -48,14 +47,14 @@ func (this *Syntax) ExecCommand(args []string) (errors.ErrorCode, string) {
 }
 
 func (this *Syntax) PrintHelp(desc bool) (errors.ErrorCode, string) {
-	_, werr := io.WriteString(W, HSYNTAX)
+	_, werr := OUTPUT.WriteString(HSYNTAX)
 	if desc {
 		err_code, err_str := printDesc(this.Name())
 		if err_code != 0 {
 			return err_code, err_str
 		}
 	}
-	_, werr = io.WriteString(W, NEWLINE)
+	_, werr = OUTPUT.WriteString(NEWLINE)
 	if werr != nil {
 		return errors.E_SHELL_WRITER_OUTPUT, werr.Error()
 	}
@@ -116,7 +115,7 @@ func sqlHelp(terms ...string) bool {
 	}
 	if len(rules) == 0 {
 		if len(terms) == 1 && strings.ToUpper(terms[0]) == terms[0] {
-			io.WriteString(W, "<literal text>"+NEWLINE)
+			OUTPUT.WriteString("<literal text>" + NEWLINE)
 			return true
 		} else {
 			return false
@@ -131,7 +130,7 @@ func sqlHelp(terms ...string) bool {
 			}
 		}
 		level++
-		io.WriteString(W, NEWLINE)
+		OUTPUT.WriteString(NEWLINE)
 	}
 	return true
 }
@@ -194,14 +193,14 @@ func printRuleOpt(o []string, indent bool, suppressEmpty bool) {
 			continue
 		}
 		if !printed && indent {
-			io.WriteString(W, "        ")
+			OUTPUT.WriteString("        ")
 		}
-		io.WriteString(W, s)
-		io.WriteString(W, " ")
+		OUTPUT.WriteString(s)
+		OUTPUT.WriteString(" ")
 		printed = true
 	}
 	if printed {
-		io.WriteString(W, NEWLINE)
+		OUTPUT.WriteString(NEWLINE)
 	}
 }
 
@@ -211,9 +210,9 @@ func printRule(rn string, options []int, indent bool) {
 		return
 	}
 	if indent {
-		io.WriteString(W, "    ")
-		io.WriteString(W, rn)
-		io.WriteString(W, NEWLINE)
+		OUTPUT.WriteString("    ")
+		OUTPUT.WriteString(rn)
+		OUTPUT.WriteString(NEWLINE)
 	}
 	if len(options) == 0 || options[0] == -1 {
 		for i := range r {

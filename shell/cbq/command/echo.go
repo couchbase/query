@@ -9,7 +9,6 @@
 package command
 
 import (
-	"io"
 	"strings"
 
 	"github.com/couchbase/query/errors"
@@ -70,20 +69,20 @@ func (this *Echo) ExecCommand(args []string) (errors.ErrorCode, string) {
 				tmpstr = strings.Replace(fval, "\"", "", -1)
 
 				//Use the string value directly as output.
-				_, werr = io.WriteString(W, tmpstr)
-				_, werr = io.WriteString(W, " ")
+				_, werr = OUTPUT.WriteString(tmpstr)
+				_, werr = OUTPUT.WriteString(" ")
 
 			} else {
 				// If the value type is string then output it directly.
 				if v.Type() == value.STRING {
 					//Use the string value directly as output.
-					_, werr = io.WriteString(W, v.Actual().(string))
-					_, werr = io.WriteString(W, " ")
+					_, werr = OUTPUT.WriteString(v.Actual().(string))
+					_, werr = OUTPUT.WriteString(" ")
 
 				} else {
 					// Convert non string values to string and then output.
-					_, werr = io.WriteString(W, ValToStr(v))
-					_, werr = io.WriteString(W, " ")
+					_, werr = OUTPUT.WriteString(ValToStr(v))
+					_, werr = OUTPUT.WriteString(" ")
 
 				}
 
@@ -92,7 +91,7 @@ func (this *Echo) ExecCommand(args []string) (errors.ErrorCode, string) {
 		}
 	}
 
-	_, werr = io.WriteString(W, NEWLINE)
+	_, werr = OUTPUT.WriteString(NEWLINE)
 	if werr != nil {
 		return errors.E_SHELL_WRITER_OUTPUT, werr.Error()
 	}
@@ -100,14 +99,14 @@ func (this *Echo) ExecCommand(args []string) (errors.ErrorCode, string) {
 }
 
 func (this *Echo) PrintHelp(desc bool) (errors.ErrorCode, string) {
-	_, werr := io.WriteString(W, HECHO)
+	_, werr := OUTPUT.WriteString(HECHO)
 	if desc {
 		err_code, err_str := printDesc(this.Name())
 		if err_code != 0 {
 			return err_code, err_str
 		}
 	}
-	_, werr = io.WriteString(W, NEWLINE)
+	_, werr = OUTPUT.WriteString(NEWLINE)
 	if werr != nil {
 		return errors.E_SHELL_WRITER_OUTPUT, werr.Error()
 	}

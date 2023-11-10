@@ -27,7 +27,7 @@ func TestErrors(t *testing.T) {
 
 	var b bytes.Buffer
 	writetmp := bufio.NewWriter(&b)
-	SetWriter(writetmp)
+	SetOutput(writetmp, true)
 	PrintError(s_err)
 	writetmp.Flush()
 
@@ -37,7 +37,7 @@ func TestErrors(t *testing.T) {
 
 	b.Reset()
 	writetmp = bufio.NewWriter(&b)
-	SetWriter(writetmp)
+	SetOutput(writetmp, true)
 	PrintError(s_err)
 	writetmp.Flush()
 

@@ -54,7 +54,7 @@ func TestListAlias(t *testing.T) {
 
 	var b bytes.Buffer
 	writetmp := bufio.NewWriter(&b)
-	SetWriter(writetmp)
+	SetOutput(writetmp, true)
 
 	errCode, errStr := alias.ExecCommand(tmp)
 	writetmp.Flush()
@@ -112,7 +112,7 @@ func TestAliasErrors(t *testing.T) {
 
 	var b bytes.Buffer
 	writetmp := bufio.NewWriter(&b)
-	SetWriter(writetmp)
+	SetOutput(writetmp, true)
 
 	errCode, errStr = alias.ExecCommand(tmp)
 	writetmp.Flush()

@@ -9,7 +9,6 @@
 package command
 
 import (
-	"io"
 	"strings"
 
 	"github.com/couchbase/query/errors"
@@ -40,7 +39,7 @@ func (this *Help) ExecCommand(args []string) (errors.ErrorCode, string) {
 	/* Input Command : \HELP;
 	   Print Help information for all commands. */
 	if len(args) == 0 {
-		_, werr := io.WriteString(W, HELPMSG)
+		_, werr := OUTPUT.WriteString(HELPMSG)
 		if werr != nil {
 			return errors.E_SHELL_WRITER_OUTPUT, werr.Error()
 		}
@@ -83,14 +82,14 @@ func (this *Help) ExecCommand(args []string) (errors.ErrorCode, string) {
 }
 
 func (this *Help) PrintHelp(desc bool) (errors.ErrorCode, string) {
-	_, werr := io.WriteString(W, HHELP)
+	_, werr := OUTPUT.WriteString(HHELP)
 	if desc {
 		err_code, err_str := printDesc(this.Name())
 		if err_code != 0 {
 			return err_code, err_str
 		}
 	}
-	_, werr = io.WriteString(W, NEWLINE)
+	_, werr = OUTPUT.WriteString(NEWLINE)
 	if werr != nil {
 		return errors.E_SHELL_WRITER_OUTPUT, werr.Error()
 	}

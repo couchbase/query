@@ -9,8 +9,6 @@
 package command
 
 import (
-	"io"
-
 	"github.com/couchbase/query/errors"
 )
 
@@ -46,20 +44,20 @@ func (this *Disconnect) ExecCommand(args []string) (errors.ErrorCode, string) {
 
 	} else {
 		DISCONNECT = true
-		io.WriteString(W, NOCONNMSG)
+		OUTPUT.WriteString(NOCONNMSG)
 	}
 	return 0, ""
 }
 
 func (this *Disconnect) PrintHelp(desc bool) (errors.ErrorCode, string) {
-	_, werr := io.WriteString(W, HDISCONNECT)
+	_, werr := OUTPUT.WriteString(HDISCONNECT)
 	if desc {
 		err_code, err_str := printDesc(this.Name())
 		if err_code != 0 {
 			return err_code, err_str
 		}
 	}
-	_, werr = io.WriteString(W, NEWLINE)
+	_, werr = OUTPUT.WriteString(NEWLINE)
 	if werr != nil {
 		return errors.E_SHELL_WRITER_OUTPUT, werr.Error()
 	}

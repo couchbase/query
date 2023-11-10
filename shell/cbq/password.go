@@ -12,17 +12,16 @@ package main
 
 import (
 	"fmt"
-	"io"
 
 	"github.com/couchbase/query/shell/cbq/command"
-	"golang.org/x/crypto/ssh/terminal"
+	"golang.org/x/term"
 )
 
 func promptPassword(prompt string) ([]byte, error) {
 	s := fmt.Sprintln(prompt)
-	_, err := io.WriteString(command.W, s)
+	_, err := command.OUTPUT.WriteString(s)
 	if err != nil {
 		return nil, err
 	}
-	return terminal.ReadPassword(0)
+	return term.ReadPassword(0)
 }

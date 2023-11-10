@@ -10,7 +10,6 @@ package command
 
 import (
 	"encoding/json"
-	"io"
 
 	"github.com/couchbase/godbc/n1ql"
 	"github.com/couchbase/query/errors"
@@ -81,14 +80,14 @@ func (this *Push) ExecCommand(args []string) (errors.ErrorCode, string) {
 }
 
 func (this *Push) PrintHelp(desc bool) (errors.ErrorCode, string) {
-	_, werr := io.WriteString(W, HPUSH)
+	_, werr := OUTPUT.WriteString(HPUSH)
 	if desc {
 		err_code, err_str := printDesc(this.Name())
 		if err_code != 0 {
 			return err_code, err_str
 		}
 	}
-	_, werr = io.WriteString(W, NEWLINE)
+	_, werr = OUTPUT.WriteString(NEWLINE)
 	if werr != nil {
 		return errors.E_SHELL_WRITER_OUTPUT, werr.Error()
 	}

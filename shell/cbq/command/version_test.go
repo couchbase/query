@@ -36,7 +36,7 @@ func TestVersion(t *testing.T) {
 	var b bytes.Buffer
 	args = make([]string, 0)
 	writetmp := bufio.NewWriter(&b)
-	SetWriter(writetmp)
+	SetOutput(writetmp, true)
 
 	errCode, errStr = version.ExecCommand(args)
 	writetmp.Flush()

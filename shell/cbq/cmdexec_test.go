@@ -27,9 +27,9 @@ func execline(line string, t *testing.T) {
 
 	var b bytes.Buffer
 	w := bufio.NewWriter(&b)
-	command.SetWriter(w)
+	command.SetOutput(w, true)
 
-	errC, errS := dispatch_command(line, w, true, liner)
+	errC, errS := dispatch_command(line, true, liner)
 	w.Flush()
 	if errC != 0 {
 		t.Errorf("Error :: %v, %s", line, command.HandleError(errC, errS))
@@ -65,7 +65,7 @@ func execn1ql(line string, t *testing.T) bool {
 
 	var b bytes.Buffer
 	w := bufio.NewWriter(&b)
-	command.SetWriter(w)
+	command.SetOutput(w, true)
 
 	dBn1ql, err := n1ql.OpenExtended(Server, "test")
 	n1ql.SetUsernamePassword("Administrator", "password")
@@ -89,7 +89,7 @@ func execn1ql(line string, t *testing.T) bool {
 			return testconn
 		}
 
-		errC, errS := ExecN1QLStmt(line, dBn1ql, w)
+		errC, errS := ExecN1QLStmt(line, dBn1ql)
 		w.Flush()
 		if errC != 0 {
 			t.Errorf("Error executing statement : %v", line)
@@ -204,7 +204,7 @@ func execshell(line string, t *testing.T) {
 
 	var b bytes.Buffer
 	w := bufio.NewWriter(&b)
-	command.SetWriter(w)
+	command.SetOutput(w, true)
 
 	errC, errS := ExecShellCmd(line, liner)
 	w.Flush()

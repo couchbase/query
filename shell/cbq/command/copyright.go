@@ -9,8 +9,6 @@
 package command
 
 import (
-	"io"
-
 	"github.com/couchbase/query/errors"
 )
 
@@ -42,20 +40,20 @@ func (this *Copyright) ExecCommand(args []string) (errors.ErrorCode, string) {
 	if len(args) != 0 {
 		return errors.E_SHELL_TOO_MANY_ARGS, ""
 	} else {
-		io.WriteString(W, COPYRIGHTMSG)
+		OUTPUT.WriteString(COPYRIGHTMSG)
 	}
 	return 0, ""
 }
 
 func (this *Copyright) PrintHelp(desc bool) (errors.ErrorCode, string) {
-	_, werr := io.WriteString(W, HCOPYRIGHT)
+	_, werr := OUTPUT.WriteString(HCOPYRIGHT)
 	if desc {
 		err_code, err_str := printDesc(this.Name())
 		if err_code != 0 {
 			return err_code, err_str
 		}
 	}
-	_, werr = io.WriteString(W, "\n")
+	_, werr = OUTPUT.WriteString("\n")
 	if werr != nil {
 		return errors.E_SHELL_WRITER_OUTPUT, werr.Error()
 	}

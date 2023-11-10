@@ -20,6 +20,7 @@ import (
 
 	"github.com/couchbase/godbc/n1ql"
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/shell/pager"
 	"github.com/couchbase/query/value"
 )
 
@@ -83,41 +84,34 @@ func init() {
 		PrintError(s_err)
 	}
 
+	err_code, err_str = PushValue_Helper(false, PreDefSV, "pager", strconv.FormatBool(PAGER))
+	if err_code != 0 {
+		s_err := HandleError(err_code, err_str)
+		PrintError(s_err)
+	}
+
 }
 
-type tee struct {
-	w io.Writer
-	t bool
+func SetOutput(w io.Writer, cmd bool) {
+	if OUTPUT == nil {
+		OUTPUT = pager.NewPager()
+	}
+	OUTPUT.SetOutput(w, cmd)
 }
 
-func (this *tee) Write(b []byte) (n int, err error) {
-	n, err = this.w.Write(b)
-	if this.t && this.w != os.Stdout {
-		os.Stdout.Write(b)
+func AddOutput(w io.Writer, cmd bool) {
+	if OUTPUT == nil {
+		OUTPUT = pager.NewPager()
 	}
-	return
+	OUTPUT.AddOutput(w, cmd)
 }
 
-func SetWriter(Wt io.Writer) {
-	if W == nil {
-		W = &tee{}
+func SetPaging(on bool) {
+	if OUTPUT == nil {
+		OUTPUT = pager.NewPager()
+		OUTPUT.SetOutput(os.Stdout, false)
 	}
-	if W == Wt {
-		return
-	} else if _, ok := Wt.(*tee); ok {
-		W = Wt
-	} else {
-		t := W.(*tee)
-		t.w = Wt
-	}
-}
-
-func SetTee(on bool) {
-	if W == nil {
-		W = &tee{w: os.Stdout}
-	}
-	t := W.(*tee)
-	t.t = on
+	OUTPUT.SetPaging(on)
 }
 
 /*
@@ -544,6 +538,12 @@ func PushOrSet(args []string, pushvalue bool) (errors.ErrorCode, string) {
 			if errQ != nil {
 				return errors.E_SHELL_INVALID_INPUT_ARGUMENTS, ""
 			}
+		} else if vble == "pager" {
+			PAGER, errQ := strconv.ParseBool(args_str)
+			if errQ != nil {
+				return errors.E_SHELL_INVALID_INPUT_ARGUMENTS, ""
+			}
+			OUTPUT.SetPaging(PAGER)
 		}
 
 		err_code, err_str := PushValue_Helper(pushvalue, PreDefSV, vble, args_str)
@@ -575,7 +575,7 @@ func VerifyHistPath(args string) (errors.ErrorCode, string) {
 	} else {
 		HISTFILE = path
 		if !QUIET {
-			io.WriteString(W, NewMessage(HISTORYMSG, path)+" "+NEWLINE)
+			OUTPUT.WriteString(NewMessage(HISTORYMSG, path) + " " + NEWLINE)
 		}
 	}
 	return 0, ""
@@ -583,62 +583,48 @@ func VerifyHistPath(args string) (errors.ErrorCode, string) {
 
 func printDesc(cmdname string) (errors.ErrorCode, string) {
 
+	var err error
+
 	switch cmdname {
-
 	case ALIAS_CMD:
-		return PrintStr(W, DALIAS)
-
+		_, err = OUTPUT.WriteString(DALIAS)
 	case CONNECT_CMD:
-		return PrintStr(W, DCONNECT)
-
+		_, err = OUTPUT.WriteString(DCONNECT)
 	case COPYRIGHT_CMD:
-		return PrintStr(W, DCOPYRIGHT)
-
+		_, err = OUTPUT.WriteString(DCOPYRIGHT)
 	case DISCONNECT_CMD:
-		return PrintStr(W, DDISCONNECT)
-
+		_, err = OUTPUT.WriteString(DDISCONNECT)
 	case ECHO_CMD:
-		return PrintStr(W, DECHO)
-
+		_, err = OUTPUT.WriteString(DECHO)
 	case EXIT_CMD:
-		return PrintStr(W, DEXIT)
-
+		_, err = OUTPUT.WriteString(DEXIT)
 	case HELP_CMD:
-		return PrintStr(W, DHELP)
-
+		_, err = OUTPUT.WriteString(DHELP)
 	case POP_CMD:
-		return PrintStr(W, DPOP)
-
+		_, err = OUTPUT.WriteString(DPOP)
 	case PUSH_CMD:
-		return PrintStr(W, DPUSH)
-
+		_, err = OUTPUT.WriteString(DPUSH)
 	case SET_CMD:
-		return PrintStr(W, DSET)
-
+		_, err = OUTPUT.WriteString(DSET)
 	case SOURCE_CMD:
-		return PrintStr(W, DSOURCE)
-
+		_, err = OUTPUT.WriteString(DSOURCE)
 	case UNALIAS_CMD:
-		return PrintStr(W, DUNALIAS)
-
+		_, err = OUTPUT.WriteString(DUNALIAS)
 	case UNSET_CMD:
-		return PrintStr(W, DUNSET)
-
+		_, err = OUTPUT.WriteString(DUNSET)
 	case VERSION_CMD:
-		return PrintStr(W, DVERSION)
-
+		_, err = OUTPUT.WriteString(DVERSION)
 	case REDIRECT_CMD:
-		return PrintStr(W, DREDIRECT)
-
+		_, err = OUTPUT.WriteString(DREDIRECT)
 	case REFRESH_CLUSTER_MAP_CMD:
-		return PrintStr(W, DREFRESH_CLUSTERMAP)
-
+		_, err = OUTPUT.WriteString(DREFRESH_CLUSTERMAP)
 	case SYNTAX_CMD:
-		return PrintStr(W, DSYNTAX)
-
+		_, err = OUTPUT.WriteString(DSYNTAX)
 	default:
-		return PrintStr(W, DDEFAULT)
-
+		_, err = OUTPUT.WriteString(DDEFAULT)
+	}
+	if err != nil {
+		return errors.E_SHELL_WRITER_OUTPUT, err.Error()
 	}
 	return 0, ""
 
@@ -673,7 +659,7 @@ func GetHome() (homeDir string, err_code errors.ErrorCode, err_Str string) {
 	}
 
 	if homeDir == "" {
-		_, werr := io.WriteString(W, ERRHOME)
+		_, werr := OUTPUT.WriteString(ERRHOME)
 		if werr != nil {
 			return "", errors.E_SHELL_WRITER_OUTPUT, werr.Error()
 		}
@@ -761,19 +747,10 @@ func printPath(nval string) (errors.ErrorCode, string) {
 
 		path := GetPath(homeDir, nval)
 
-		io.WriteString(W, NewMessage(HISTORYMSG, path)+" "+NEWLINE)
+		OUTPUT.WriteString(NewMessage(HISTORYMSG, path) + " " + NEWLINE)
 	}
 	return 0, ""
 
-}
-
-// Use this method to writestring to output.
-func PrintStr(W io.Writer, val string) (errors.ErrorCode, string) {
-	_, werr := io.WriteString(W, val)
-	if werr != nil {
-		return errors.E_SHELL_WRITER_OUTPUT, werr.Error()
-	}
-	return 0, ""
 }
 
 type UrlRes struct {

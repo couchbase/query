@@ -31,7 +31,7 @@ const ADVISE_PREFIX = "ADVISE "
 const ADVISOR_PREFIX = "SELECT ADVISOR(["
 const ADVISOR_SUFFIX = "])"
 
-func command_alias(line string, w io.Writer, interactive bool, liner *liner.State) (errors.ErrorCode, string) {
+func command_alias(line string, interactive bool, liner *liner.State) (errors.ErrorCode, string) {
 	// This block handles aliases
 	commandkey := line[2:]
 	commandkey = strings.TrimSpace(commandkey)
@@ -42,18 +42,13 @@ func command_alias(line string, w io.Writer, interactive bool, liner *liner.Stat
 		return errors.E_SHELL_NO_SUCH_ALIAS, " : " + commandkey + command.NEWLINE
 	}
 
-	// If outputting to a file, then add the statement to the file as well.
-	if command.FILE_RW_MODE == true {
-		_, werr := io.WriteString(command.W, val+"\n")
-		if werr != nil {
-			return errors.E_SHELL_WRITER_OUTPUT, werr.Error()
-		}
+	_, werr := command.OUTPUT.WriteCommand(val)
+	if werr != nil {
+		return errors.E_SHELL_WRITER_OUTPUT, werr.Error()
 	}
 
-	err_code, err_str := dispatch_command(val, w, interactive, liner)
-	/* Error handling for Shell errors and errors recieved from
-	   godbc/n1ql.
-	*/
+	err_code, err_str := dispatch_command(val, interactive, liner)
+	// Error handling for Shell errors and errors recieved from godbc/n1ql.
 	if err_code != 0 {
 		return err_code, err_str
 	}
@@ -61,7 +56,7 @@ func command_alias(line string, w io.Writer, interactive bool, liner *liner.Stat
 
 }
 
-func command_shell(line string, w io.Writer, interactive bool, liner *liner.State) (errors.ErrorCode, string) {
+func command_shell(line string, interactive bool, liner *liner.State) (errors.ErrorCode, string) {
 	if len(strings.TrimSpace(line)) == 1 {
 		// A single \ (with whitespaces) is used to run the input statements
 		// in batch mode for AsterixDB. For such a case, we run the statements the
@@ -70,7 +65,7 @@ func command_shell(line string, w io.Writer, interactive bool, liner *liner.Stat
 
 		batch_run = true
 
-		err_code, err_str := dispatch_command(stringBuffer.String(), w, interactive, liner)
+		err_code, err_str := dispatch_command(stringBuffer.String(), interactive, liner)
 		stringBuffer.Reset()
 		if err_code != 0 {
 			return err_code, err_str
@@ -86,7 +81,7 @@ func command_shell(line string, w io.Writer, interactive bool, liner *liner.Stat
 	return 0, ""
 }
 
-func command_query(line string, w io.Writer, liner *liner.State) (errors.ErrorCode, string) {
+func command_query(line string, liner *liner.State) (errors.ErrorCode, string) {
 	var err error
 	//This block handles N1QL statements
 	// If connected to a query service then noQueryService == false.
@@ -131,7 +126,7 @@ func command_query(line string, w io.Writer, liner *liner.State) (errors.ErrorCo
 
 			retry := true
 			for {
-				err_code, err_str := ExecN1QLStmt(line, command.DbN1ql, w)
+				err_code, err_str := ExecN1QLStmt(line, command.DbN1ql)
 				if err_code != 0 {
 					// If the error is a connection error then refresh DbN1ql handle
 					// retry the query or not ? How many times ?
@@ -173,10 +168,9 @@ func command_query(line string, w io.Writer, liner *liner.State) (errors.ErrorCo
 This method is the handler that calls execution methods based on the input command
 or statement. It returns an error code and optionally a non empty error message.
 */
-func dispatch_command(line string, w io.Writer, interactive bool, liner *liner.State) (errors.ErrorCode, string) {
+func dispatch_command(line string, interactive bool, liner *liner.State) (errors.ErrorCode, string) {
 	command.REFRESH_URL = serverFlag
 	line = strings.TrimSpace(line)
-	command.SetWriter(w)
 
 	if interactive == false {
 		// Check if the line ends with a ;
@@ -210,21 +204,21 @@ func dispatch_command(line string, w io.Writer, interactive bool, liner *liner.S
 
 	if strings.HasPrefix(line, "\\\\") {
 		// handles aliases
-		errCode, errStr := command_alias(line, w, interactive, liner)
+		errCode, errStr := command_alias(line, interactive, liner)
 		if errCode != 0 {
 			return errCode, errStr
 		}
 
 	} else if strings.HasPrefix(line, "\\") {
 		// handles shell commands
-		errCode, errStr := command_shell(line, w, interactive, liner)
+		errCode, errStr := command_shell(line, interactive, liner)
 		if errCode != 0 {
 			return errCode, errStr
 		}
 
 	} else {
 		// handles input queries, both n1ql and asterix
-		errCode, errStr := command_query(line, w, liner)
+		errCode, errStr := command_query(line, liner)
 		if errCode != 0 {
 			return errCode, errStr
 		}
@@ -234,7 +228,7 @@ func dispatch_command(line string, w io.Writer, interactive bool, liner *liner.S
 	return 0, ""
 }
 
-func ExecN1QLStmt(line string, dBn1ql n1ql.N1qlDB, w io.Writer) (errors.ErrorCode, string) {
+func ExecN1QLStmt(line string, dBn1ql n1ql.N1qlDB) (errors.ErrorCode, string) {
 
 	// Add back the ; for queries to support fully qualified
 	// asterix queries along with N1QL queries.
@@ -244,12 +238,20 @@ func ExecN1QLStmt(line string, dBn1ql n1ql.N1qlDB, w io.Writer) (errors.ErrorCod
 	if rows != nil {
 		// We have output. That is what we want.
 
+		command.OUTPUT.Reset()
+
 		var werr error
 		if command.TERSE {
-			werr = terseOutput(w, rows)
+			werr = terseOutput(command.OUTPUT, rows)
 		} else {
-			_, werr = io.Copy(w, rows)
+			_, werr = io.Copy(command.OUTPUT, rows)
 		}
+		if werr == io.EOF {
+			werr = nil
+			rows.Close()
+		}
+
+		command.OUTPUT.Reset()
 
 		// For any captured write error
 		if werr != nil {
@@ -321,7 +323,7 @@ func ExecShellCmd(line string, liner *liner.State) (errors.ErrorCode, string) {
 		err_code, err_str := Cmd.ExecCommand(cmd_args[1:])
 		if err_code == errors.E_SHELL_CONNECTION_REFUSED {
 			if strings.TrimSpace(SERVICE_URL) == "" {
-				io.WriteString(command.W, command.NOCONNMSG)
+				command.OUTPUT.WriteString(command.NOCONNMSG)
 			} else {
 				err_str = err_str + "\n\n" + command.NewMessage(command.STARTUP, SERVICE_URL) + "\n"
 			}
@@ -401,12 +403,6 @@ func readAndExec(liner *liner.State) (errors.ErrorCode, string) {
 
 	// Final input command string to be executed
 	final_input := " "
-
-	// For redirect command
-	outputFile := os.Stdout
-	prevFile := ""
-	prevreset := command.Getreset()
-	prevfgRed := command.GetfgRed()
 
 	// Variables for -advise option processing
 	// If there is only 1 query in the file perform ADVISE
@@ -520,37 +516,23 @@ func readAndExec(liner *liner.State) (errors.ErrorCode, string) {
 
 			// Print the query along with printing the results, only if -q isnt specified.
 			if !command.QUIET {
-				io.WriteString(command.W, final_input+command.NEWLINE)
+				command.OUTPUT.EchoCommand(string(final_input))
 			}
 
 			//Remove the ; before sending the query to execute
 			final_input = strings.TrimSuffix(final_input, ";")
 
+			command.OUTPUT.WriteCommand(final_input)
+
 			// If outputting to a file, then add the statement to the file as well.
 
-			prevFile, outputFile = redirectTo(prevFile, prevreset, prevfgRed)
-
-			if outputFile == os.Stdout {
-				command.SetDispVal(prevreset, prevfgRed)
-				command.SetWriter(os.Stdout)
-			} else {
-				if outputFile != nil {
-					defer outputFile.Close()
-					command.SetWriter(io.Writer(outputFile))
-				}
-			}
-
-			if command.FILE_RW_MODE == true {
-				io.WriteString(command.W, final_input+command.NEWLINE)
-			}
-
-			errCode, errStr := dispatch_command(final_input, command.W, false, liner)
+			errCode, errStr := dispatch_command(final_input, false, liner)
 			if errCode != 0 {
 				s_err := command.HandleError(errCode, errStr)
 				command.PrintError(s_err)
 
 				if *errorExitFlag {
-					_, werr := io.WriteString(command.W, command.EXITONERR)
+					_, werr := command.OUTPUT.WriteString(command.EXITONERR)
 					if werr != nil {
 						command.PrintError(command.HandleError(errors.E_SHELL_WRITER_OUTPUT, werr.Error()))
 					}
@@ -559,7 +541,7 @@ func readAndExec(liner *liner.State) (errors.ErrorCode, string) {
 					os.Exit(1)
 				}
 			}
-			io.WriteString(command.W, command.NEWLINE+command.NEWLINE)
+			command.OUTPUT.WriteString(command.NEWLINE + command.NEWLINE)
 
 			if adviseEnd {
 				break
@@ -668,7 +650,10 @@ results:
 		if pretty && !res {
 			w.Write(_START)
 		}
-		w.Write(buf)
+		_, werr := w.Write(buf)
+		if werr == io.EOF {
+			return nil
+		}
 		res = true
 		buf = buf[:cap(buf)]
 		nr, err := rows.Read(buf)
@@ -727,7 +712,10 @@ status:
 		if err != nil {
 			return err
 		}
-		w.Write(b)
+		_, werr := w.Write(b)
+		if werr == io.EOF {
+			return nil
+		}
 		res = true
 	}
 	if res {

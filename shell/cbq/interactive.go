@@ -10,10 +10,8 @@ package main
 
 import (
 	"fmt"
-	"io"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/couchbase/godbc/n1ql"
 	"github.com/couchbase/query/errors"
@@ -41,26 +39,6 @@ var first = false
 
 var homeDir string
 
-// Handle output flag
-
-func handleOPModeFlag(outputFile **os.File, prevFile *string) {
-	// If an output flag is defined
-	var err error
-
-	if outputFlag != "" {
-		*prevFile = command.FILE_OUTPUT
-
-		*outputFile, err = os.OpenFile(command.FILE_OUTPUT, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
-		command.SetDispVal("", "")
-		if err != nil {
-			s_err := command.HandleError(errors.E_SHELL_OPEN_FILE, err.Error())
-			command.PrintError(s_err)
-		}
-
-		command.SetWriter(io.Writer(*outputFile))
-	}
-}
-
 // Handle input flag
 /*
    [MB-56912] : Handle advise flag
@@ -79,18 +57,16 @@ func handleIPModeFlag(liner **liner.State) {
 		}
 
 		// If outputting to a file, then add the statement to the file as well.
-		if command.FILE_RW_MODE == true {
-			_, werr := io.WriteString(command.W, input_command+"\n")
-			if werr != nil {
-				s_err := command.HandleError(errors.E_SHELL_WRITER_OUTPUT, werr.Error())
-				command.PrintError(s_err)
-			}
+		_, werr := command.OUTPUT.WriteCommand(input_command)
+		if werr != nil {
+			s_err := command.HandleError(errors.E_SHELL_WRITER_OUTPUT, werr.Error())
+			command.PrintError(s_err)
 		}
-		errCode, errStr := dispatch_command(input_command, command.W, false, *liner)
+		errCode, errStr := dispatch_command(input_command, false, *liner)
 		// If the previous run didnt error out and we are in batch mode, execute the statements.
 		if errCode == 0 {
 			if command.BATCH == "on" && !batch_run {
-				errCode, errStr = dispatch_command("\\", command.W, false, *liner)
+				errCode, errStr = dispatch_command("\\", false, *liner)
 			}
 		}
 
@@ -119,30 +95,28 @@ func handleScriptFlag(liner **liner.State) {
 		// Run all the commands
 		for i := 0; i < len(scriptFlag); i++ {
 			// If outputting to a file, then add the statement to the file as well.
-			if command.FILE_RW_MODE == true {
-				_, werr := io.WriteString(command.W, scriptFlag[i]+"\n")
-				if werr != nil {
-					s_err := command.HandleError(errors.E_SHELL_WRITER_OUTPUT, werr.Error())
-					command.PrintError(s_err)
-				}
+			_, werr := command.OUTPUT.WriteCommand(scriptFlag[i])
+			if werr != nil {
+				s_err := command.HandleError(errors.E_SHELL_WRITER_OUTPUT, werr.Error())
+				command.PrintError(s_err)
 			}
 
 			if !command.QUIET {
-				_, werr := io.WriteString(command.W, "\n "+scriptFlag[i]+"\n")
+				_, werr := command.OUTPUT.EchoCommand(scriptFlag[i])
 				if werr != nil {
 					s_err := command.HandleError(errors.E_SHELL_WRITER_OUTPUT, werr.Error())
 					command.PrintError(s_err)
 				}
 			}
 
-			err_code, err_str := dispatch_command(scriptFlag[i], command.W, false, *liner)
+			err_code, err_str := dispatch_command(scriptFlag[i], false, *liner)
 
 			if err_code != 0 {
 				s_err := command.HandleError(err_code, err_str)
 				command.PrintError(s_err)
 
 				if *errorExitFlag {
-					_, werr := io.WriteString(command.W, command.EXITONERR)
+					_, werr := command.OUTPUT.WriteString(command.EXITONERR)
 					if werr != nil {
 						s_err = command.HandleError(errors.E_SHELL_WRITER_OUTPUT, werr.Error())
 						command.PrintError(s_err)
@@ -171,16 +145,6 @@ This method is used to handle user interaction with the
 */
 func HandleInteractiveMode(prompt string) {
 
-	// Variables used for output to file
-
-	outputFile := os.Stdout
-	prevFile := ""
-	prevreset := command.Getreset()
-	prevfgRed := command.GetfgRed()
-
-	handleOPModeFlag(&outputFile, &prevFile)
-	defer outputFile.Close()
-
 	// Find the HOME environment variable using GetHome
 	var err_code = errors.E_OK
 	var err_str = ""
@@ -200,7 +164,7 @@ func HandleInteractiveMode(prompt string) {
 	liner.SetCommandCallback(func(args ...string) string {
 		var err_code errors.ErrorCode
 		var err_string string
-		command.PrintStr(command.W, "\n")
+		command.OUTPUT.WriteString(command.NEWLINE)
 		if len(args) > 1 && (args[0] == "set" || args[0] == "unset") && args[1] == "histfile" {
 			path := command.GetPath(homeDir, command.HISTFILE)
 			err_code, err_string = WriteHistoryToFile(liner, path)
@@ -266,18 +230,8 @@ func HandleInteractiveMode(prompt string) {
 			continue
 		}
 
-		// Redirect command
-		prevFile, outputFile = redirectTo(prevFile, prevreset, prevfgRed)
+		defer command.OUTPUT.Flush()
 
-		if outputFile == os.Stdout {
-			command.SetDispVal(prevreset, prevfgRed)
-			command.SetWriter(os.Stdout)
-		} else {
-			if outputFile != nil {
-				defer outputFile.Close()
-				command.SetWriter(io.Writer(outputFile))
-			}
-		}
 		/* Check for shell comments : -- and #. Add them to the history
 		   but do not send them to be parsed.
 		*/
@@ -316,14 +270,12 @@ func HandleInteractiveMode(prompt string) {
 					command.PrintError(s_err)
 				}
 				// If outputting to a file, then add the statement to the file as well.
-				if command.FILE_RW_MODE == true {
-					_, werr := io.WriteString(command.W, "\n"+inputString+"\n")
-					if werr != nil {
-						s_err := command.HandleError(errors.E_SHELL_WRITER_OUTPUT, werr.Error())
-						command.PrintError(s_err)
-					}
+				_, werr := command.OUTPUT.WriteCommand(inputString)
+				if werr != nil {
+					s_err := command.HandleError(errors.E_SHELL_WRITER_OUTPUT, werr.Error())
+					command.PrintError(s_err)
 				}
-				err_code, err_string = dispatch_command(inputString, command.W, true, liner)
+				err_code, err_string = dispatch_command(inputString, true, liner)
 				/* Error handling for Shell errors and errors recieved from
 				   godbc/n1ql.
 				*/
@@ -339,7 +291,7 @@ func HandleInteractiveMode(prompt string) {
 					if *errorExitFlag == true {
 						if first == false {
 							first = true
-							_, werr := io.WriteString(command.W, command.EXITONERR)
+							_, werr := command.OUTPUT.WriteString(command.EXITONERR)
 							if werr != nil {
 								s_err = command.HandleError(errors.E_SHELL_WRITER_OUTPUT, werr.Error())
 								command.PrintError(s_err)
@@ -386,34 +338,4 @@ If ^C is pressed then Abort the shell. This is
 func signalCatcher(liner *liner.State) {
 	liner.SetCtrlCAborts(false)
 
-}
-
-func redirectTo(prevFile, prevreset, prevfgRed string) (string, *os.File) {
-	var err error
-	var outputFile *os.File
-
-	if command.FILE_RW_MODE == true {
-		if prevFile != command.FILE_OUTPUT {
-			prevFile = command.FILE_OUTPUT
-			if command.FILE_APPEND_MODE {
-				outputFile, err = os.OpenFile(command.FILE_OUTPUT, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0600)
-			} else {
-				outputFile, err = os.OpenFile(command.FILE_OUTPUT, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
-			}
-
-			command.SetDispVal("", "")
-			if err != nil {
-				s_err := command.HandleError(errors.E_SHELL_OPEN_FILE, err.Error())
-				command.PrintError(s_err)
-				return prevFile, nil
-			} else if command.FILE_APPEND_MODE && !quietFlag {
-				io.WriteString(outputFile, "-- <"+time.Now().Format("2006-01-02T15:04:05.999Z07:00")+"> : opened in append mode\n")
-			}
-		}
-	} else {
-		command.SetDispVal(prevreset, prevfgRed)
-		prevFile = ""
-		outputFile = os.Stdout
-	}
-	return prevFile, outputFile
 }

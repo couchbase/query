@@ -9,8 +9,6 @@
 package command
 
 import (
-	"io"
-
 	"github.com/couchbase/query/errors"
 )
 
@@ -56,14 +54,14 @@ func (this *Refresh_cluster_map) ExecCommand(args []string) (errors.ErrorCode, s
 }
 
 func (this *Refresh_cluster_map) PrintHelp(desc bool) (errors.ErrorCode, string) {
-	_, werr := io.WriteString(W, HREFRESH_CLUSTERMAP)
+	_, werr := OUTPUT.WriteString(HREFRESH_CLUSTERMAP)
 	if desc {
 		err_code, err_str := printDesc(this.Name())
 		if err_code != 0 {
 			return err_code, err_str
 		}
 	}
-	_, werr = io.WriteString(W, NEWLINE)
+	_, werr = OUTPUT.WriteString(NEWLINE)
 	if werr != nil {
 		return errors.E_SHELL_WRITER_OUTPUT, werr.Error()
 	}

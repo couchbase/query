@@ -13,7 +13,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io"
 	"os"
 	"strconv"
 	"strings"
@@ -229,6 +228,14 @@ var prettyFlag = flag.Bool("pretty", true, command.UPRETTY)
 */
 
 var terseFlag = flag.Bool("terse", false, command.UTERSE)
+
+/*
+   Option        : -pager
+   Default value : false
+   Terse output
+*/
+
+var pagerFlag = flag.Bool("pager", false, command.UPAGER)
 
 /*
    Option        : -exit-on-error
@@ -487,7 +494,12 @@ var (
 func main() {
 
 	flag.Parse()
-	command.SetWriter(os.Stdout)
+
+	command.SetOutput(os.Stdout, false)
+	command.PAGER = *pagerFlag
+	command.COMMAND_LIST["\\set"].ExecCommand([]string{"pager", strconv.FormatBool(command.PAGER)})
+	command.OUTPUT.SetPaging(command.PAGER)
+
 	// Initialize Global buffer to store queries for batch mode.
 	stringBuffer.Write([]byte(""))
 
@@ -524,11 +536,7 @@ func main() {
 	}
 
 	if outputFlag != "" {
-		// Redirect all output to the given file.
-		// This is handled in the HandleInteractiveMode() method
-		// in interactive.go.
-		command.FILE_RW_MODE = true
-		command.FILE_OUTPUT = outputFlag
+		command.COMMAND_LIST["\\redirect"].ExecCommand([]string{outputFlag})
 	}
 
 	/* Handle options and what they should do */
@@ -655,7 +663,7 @@ func main() {
 		// Dont output the statement if we are running in single command
 		// mode.
 		if len(scriptFlag) == 0 && rootFile == "" && certFile == "" && keyFile == "" {
-			_, werr := io.WriteString(command.W, command.STARTUPCREDS)
+			_, werr := command.OUTPUT.WriteString(command.STARTUPCREDS)
 
 			if werr != nil {
 				s_err := command.HandleError(errors.E_SHELL_WRITER_OUTPUT, werr.Error())
@@ -717,9 +725,9 @@ func main() {
 
 	if https && certFile == "" && keyFile == "" {
 		if noSSLVerify == false {
-			command.PrintStr(command.W, command.SSLVERIFY_FALSE)
+			command.OUTPUT.WriteString(command.SSLVERIFY_FALSE)
 		} else {
-			command.PrintStr(command.W, command.SSLVERIFY_TRUE)
+			command.OUTPUT.WriteString(command.SSLVERIFY_TRUE)
 		}
 	}
 
@@ -773,7 +781,7 @@ func main() {
 		 */
 		if !quietFlag && pingerr == nil {
 			s := command.NewMessage(command.STARTUP, fmt.Sprintf("%v", SERVICE_URL)) + command.EXITMSG
-			_, werr := io.WriteString(command.W, s)
+			_, werr := command.OUTPUT.WriteString(s)
 			if werr != nil {
 				s_err := command.HandleError(errors.E_SHELL_WRITER_OUTPUT, werr.Error())
 				command.PrintError(s_err)

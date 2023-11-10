@@ -10,7 +10,7 @@ package command
 
 import (
 	"fmt"
-	"io"
+	"sort"
 	"strings"
 
 	"github.com/couchbase/query/errors"
@@ -57,10 +57,17 @@ func (this *Set) ExecCommand(args []string) (errors.ErrorCode, string) {
 			// Session Parameters : Pre-defined
 			// Named Paramters
 
+			names := make([]string, 0, 16)
 			//Query Parameters
 			var werr error
-			_, werr = io.WriteString(W, QUERYP)
-			for name, value := range QueryParam {
+			_, werr = OUTPUT.WriteString(QUERYP)
+			for name, _ := range QueryParam {
+				names = append(names, name)
+			}
+			sort.Strings(names)
+			for i := range names {
+				name := names[i]
+				value := QueryParam[name]
 				//Do not print the password when printing the credentials
 				if name == "creds" {
 					var users string
@@ -73,28 +80,49 @@ func (this *Set) ExecCommand(args []string) (errors.ErrorCode, string) {
 					werr = printSET(name, fmt.Sprintf("%v", *value))
 				}
 			}
-			_, werr = io.WriteString(W, NEWLINE)
+			OUTPUT.WriteString(NEWLINE)
 
 			//Named Parameters
-			_, werr = io.WriteString(W, NAMEDP)
-			for name, value := range NamedParam {
+			_, werr = OUTPUT.WriteString(NAMEDP)
+			names = names[:0]
+			for name, _ := range NamedParam {
+				names = append(names, name)
+			}
+			sort.Strings(names)
+			for i := range names {
+				name := names[i]
+				value := NamedParam[name]
 				werr = printSET(name, fmt.Sprintf("%v", *value))
 			}
-			_, werr = io.WriteString(W, NEWLINE)
+			OUTPUT.WriteString(NEWLINE)
 
 			//User Defined Session Parameters
-			_, werr = io.WriteString(W, USERDEFP)
-			for name, value := range UserDefSV {
+			_, werr = OUTPUT.WriteString(USERDEFP)
+			names = names[:0]
+			for name, _ := range UserDefSV {
+				names = append(names, name)
+			}
+			sort.Strings(names)
+			for i := range names {
+				name := names[i]
+				value := UserDefSV[name]
 				werr = printSET(name, fmt.Sprintf("%v", *value))
 			}
-			_, werr = io.WriteString(W, NEWLINE)
+			OUTPUT.WriteString(NEWLINE)
 
 			//Predefined Session Parameters
-			_, werr = io.WriteString(W, PREDEFP)
-			for name, value := range PreDefSV {
+			_, werr = OUTPUT.WriteString(PREDEFP)
+			names = names[:0]
+			for name, _ := range PreDefSV {
+				names = append(names, name)
+			}
+			sort.Strings(names)
+			for i := range names {
+				name := names[i]
+				value := PreDefSV[name]
 				werr = printSET(name, fmt.Sprintf("%v", *value))
 			}
-			_, werr = io.WriteString(W, NEWLINE)
+			OUTPUT.WriteString(NEWLINE)
 
 			if werr != nil {
 				return errors.E_SHELL_WRITER_OUTPUT, werr.Error()
@@ -115,14 +143,14 @@ func (this *Set) ExecCommand(args []string) (errors.ErrorCode, string) {
 }
 
 func (this *Set) PrintHelp(desc bool) (errors.ErrorCode, string) {
-	_, werr := io.WriteString(W, HSET)
+	_, werr := OUTPUT.WriteString(HSET)
 	if desc {
 		err_code, err_str := printDesc(this.Name())
 		if err_code != 0 {
 			return err_code, err_str
 		}
 	}
-	_, werr = io.WriteString(W, NEWLINE)
+	_, werr = OUTPUT.WriteString(NEWLINE)
 	if werr != nil {
 		return errors.E_SHELL_WRITER_OUTPUT, werr.Error()
 	}
@@ -131,8 +159,8 @@ func (this *Set) PrintHelp(desc bool) (errors.ErrorCode, string) {
 
 func printSET(name, value string) (werr error) {
 	valuestr := NewMessage(PNAME, name) + NEWLINE + NewMessage(PVAL, value)
-	_, werr = io.WriteString(W, valuestr)
-	_, werr = io.WriteString(W, NEWLINE+NEWLINE)
+	_, werr = OUTPUT.WriteString(valuestr)
+	_, werr = OUTPUT.WriteString(NEWLINE + NEWLINE)
 	return
 }
 

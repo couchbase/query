@@ -9,11 +9,11 @@
 package command
 
 import (
-	"io"
 	"math"
 	"sort"
 
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/shell/pager"
 )
 
 const (
@@ -57,10 +57,6 @@ var (
 	FILE_INPUT = ""
 	//True if reading commands from file
 	FILE_RD_MODE = false
-	//True if writing commands to file
-	FILE_RW_MODE = false
-	//File to redirect output to
-	FILE_OUTPUT = ""
 	//Total no. of commands
 	MAX_COMMANDS = len(COMMAND_LIST)
 	//File to store History in
@@ -73,10 +69,10 @@ var (
 	SKIPVERIFY = false
 	//Batch flag is used to send queries to the Asterix backend.
 	BATCH = "off"
-	//Output File open in append mode
-	FILE_APPEND_MODE = false
 	//Terse output
 	TERSE = false
+	//Paged output
+	PAGER = false
 )
 
 /* Value to store sorted list of keys for shell commands */
@@ -92,10 +88,7 @@ func init() {
 	sort.Strings(_SORTED_CMD_LIST)
 }
 
-/*
-Define a common writer to output the responses to.
-*/
-var W io.Writer
+var OUTPUT = pager.NewPager()
 
 /*
 Used to define aliases

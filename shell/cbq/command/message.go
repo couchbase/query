@@ -34,6 +34,7 @@ const (
 	USCRIPT        = " Single command mode. Execute input command and exit shell. \n\t For example : -script \"select * from system:keyspaces\""
 	UPRETTY        = " Pretty print the output."
 	UTERSE         = " Terse statement output."
+	UPAGER         = " Page statement output."
 	UEXIT          = " Exit shell after first error encountered."
 	UINPUT         = " File to load commands from. \n\t For example : -file temp.txt"
 	UOUTPUT        = " File to output commands and their results. \n\t For example : -output temp.txt"

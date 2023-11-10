@@ -9,7 +9,6 @@
 package command
 
 import (
-	"io"
 	"strconv"
 	"strings"
 
@@ -136,20 +135,30 @@ func (this *Unset) ExecCommand(args []string) (errors.ErrorCode, string) {
 				}
 				TERSE = false
 			}
+
+			if vble == "pager" {
+				err_code, err_str = PushValue_Helper(false, PreDefSV, "pager", strconv.FormatBool(false))
+				if err_code != 0 {
+					return err_code, err_str
+
+				}
+				PAGER = false
+				OUTPUT.SetPaging(PAGER)
+			}
 		}
 	}
 	return 0, ""
 }
 
 func (this *Unset) PrintHelp(desc bool) (errors.ErrorCode, string) {
-	_, werr := io.WriteString(W, HUNSET)
+	_, werr := OUTPUT.WriteString(HUNSET)
 	if desc {
 		err_code, err_str := printDesc(this.Name())
 		if err_code != 0 {
 			return err_code, err_str
 		}
 	}
-	_, werr = io.WriteString(W, NEWLINE)
+	_, werr = OUTPUT.WriteString(NEWLINE)
 	if werr != nil {
 		return errors.E_SHELL_WRITER_OUTPUT, werr.Error()
 	}

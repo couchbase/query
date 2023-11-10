@@ -10,7 +10,6 @@ package command
 
 import (
 	"fmt"
-	"io"
 	"runtime"
 
 	"github.com/couchbase/query/errors"
@@ -150,5 +149,5 @@ Function to print the error in Red.
 */
 func PrintError(s_err errors.Error) {
 	tmpstr := fmt.Sprintln(fgRed, "ERROR", s_err.Code(), ":", s_err, reset)
-	io.WriteString(W, tmpstr+"\n")
+	OUTPUT.WriteString(tmpstr + NEWLINE)
 }

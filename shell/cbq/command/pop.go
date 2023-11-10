@@ -10,7 +10,6 @@ package command
 
 import (
 	"encoding/json"
-	"io"
 	"strconv"
 	"strings"
 
@@ -157,7 +156,6 @@ func (this *Pop) ExecCommand(args []string) (errors.ErrorCode, string) {
 					err_code, err_str := PushValue_Helper(false, PreDefSV, "batch", "off")
 					if err_code != 0 {
 						return err_code, err_str
-
 					}
 					nval = "off"
 				}
@@ -178,7 +176,6 @@ func (this *Pop) ExecCommand(args []string) (errors.ErrorCode, string) {
 					err_code, err_str := PushValue_Helper(false, PreDefSV, "histfile", "\".cbq_history\"")
 					if err_code != 0 {
 						return err_code, err_str
-
 					}
 					nval = ".cbq_history"
 				}
@@ -203,7 +200,6 @@ func (this *Pop) ExecCommand(args []string) (errors.ErrorCode, string) {
 					err_code, err_str := PushValue_Helper(false, PreDefSV, "quiet", strconv.FormatBool(false))
 					if err_code != 0 {
 						return err_code, err_str
-
 					}
 					nval = strconv.FormatBool(false)
 				}
@@ -225,11 +221,28 @@ func (this *Pop) ExecCommand(args []string) (errors.ErrorCode, string) {
 					err_code, err_str := PushValue_Helper(false, PreDefSV, "terse", strconv.FormatBool(false))
 					if err_code != 0 {
 						return err_code, err_str
-
 					}
 					nval = strconv.FormatBool(false)
 				}
 				TERSE, _ = strconv.ParseBool(nval)
+			} else if vble == "pager" {
+				st_val, ok := PreDefSV["pager"]
+				if ok {
+					newval, err_code, err_str := st_val.Top()
+					if err_code != 0 {
+						return err_code, err_str
+					}
+					nval = ValToStr(newval)
+					nval = handleStrings(nval)
+				} else {
+					err_code, err_str := PushValue_Helper(false, PreDefSV, "pager", strconv.FormatBool(false))
+					if err_code != 0 {
+						return err_code, err_str
+					}
+					nval = strconv.FormatBool(false)
+				}
+				PAGER, _ = strconv.ParseBool(nval)
+				OUTPUT.SetPaging(PAGER)
 			}
 
 		}
@@ -238,14 +251,14 @@ func (this *Pop) ExecCommand(args []string) (errors.ErrorCode, string) {
 }
 
 func (this *Pop) PrintHelp(desc bool) (errors.ErrorCode, string) {
-	_, werr := io.WriteString(W, HPOP)
+	_, werr := OUTPUT.WriteString(HPOP)
 	if desc {
 		err_code, err_str := printDesc(this.Name())
 		if err_code != 0 {
 			return err_code, err_str
 		}
 	}
-	_, werr = io.WriteString(W, NEWLINE)
+	_, werr = OUTPUT.WriteString(NEWLINE)
 	if werr != nil {
 		return errors.E_SHELL_WRITER_OUTPUT, werr.Error()
 	}
