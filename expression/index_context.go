@@ -137,3 +137,11 @@ func (this *IndexContext) SetTracked(t bool) {
 func (this *IndexContext) IsTracked() bool {
 	return false
 }
+
+func (this *IndexContext) InitInlineUdfExprs() {
+	// no op
+}
+
+func (this *IndexContext) IsPrepared() bool {
+	return false
+}
