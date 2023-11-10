@@ -217,6 +217,10 @@ func AddFunction(name FunctionName, body FunctionBody, replace bool) errors.Erro
 	err := name.Save(body, replace)
 	if err == nil {
 		function := &FunctionEntry{FunctionName: name, FunctionBody: body}
+		err = function.loadPrivileges()
+		if err != nil {
+			return err
+		}
 		key := name.Key()
 
 		// add it to the cache
@@ -392,7 +396,7 @@ func ExecuteFunction(name FunctionName, modifiers Modifier, values []value.Value
 		// note that since we reload the body outside of a cache lock (not to lock
 		// out the whole cache bucket), there might be some temporary pile up on
 		// storage
-		if name.CheckStorage() {
+		if entry.FunctionName.CheckStorage() {
 			var tag atomic.AlignedInt64
 
 			// reserve a change counter and load new body
@@ -529,13 +533,14 @@ func (entry *FunctionEntry) add() *FunctionEntry {
 }
 
 func (entry *FunctionEntry) loadPrivileges() errors.Error {
-	privs, err := entry.FunctionBody.Privileges()
+	bodyPrivs, err := entry.FunctionBody.Privileges()
 	if err != nil {
 		return err
 	}
-	if privs == nil {
-		privs = auth.NewPrivileges()
-	}
+
+	privs := auth.NewPrivileges()
+
+	// add the privilege required to execute the function first so that its Authorization check occurs first too
 	if entry.IsGlobal() {
 		if entry.IsExternal() {
 			privs.Add("", auth.PRIV_QUERY_EXECUTE_FUNCTIONS_EXTERNAL, auth.PRIV_PROPS_NONE)
@@ -549,6 +554,12 @@ func (entry *FunctionEntry) loadPrivileges() errors.Error {
 			privs.Add(entry.Key(), auth.PRIV_QUERY_EXECUTE_SCOPE_FUNCTIONS, auth.PRIV_PROPS_NONE)
 		}
 	}
+
+	// then add the body privileges
+	if bodyPrivs != nil {
+		privs.AddAll(bodyPrivs)
+	}
+
 	entry.privs = privs
 	return nil
 }
