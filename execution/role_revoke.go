@@ -27,7 +27,7 @@ func NewRevokeRole(plan *plan.RevokeRole, context *Context) *RevokeRole {
 		plan: plan,
 	}
 
-	newRedirectBase(&rv.base)
+	newRedirectBase(&rv.base, context)
 	rv.output = rv
 	return rv
 }

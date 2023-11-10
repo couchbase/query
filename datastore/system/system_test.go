@@ -78,6 +78,10 @@ func (ci *queryContextImpl) PreserveExpiry() bool {
 	return false
 }
 
+func (ci *queryContextImpl) IsActive() bool {
+	return true
+}
+
 func TestSystem(t *testing.T) {
 	// Use mock to test system; 2 namespaces with 5 keyspaces per namespace
 	m, err := mock.NewDatastore("mock:namespaces=2,keyspaces=5,items=5000")

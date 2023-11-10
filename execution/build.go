@@ -67,7 +67,7 @@ func (this *builder) setAliasMap(keyspaceTerm *algebra.KeyspaceTerm) {
 	if !keyspaceTerm.IsSystem() {
 		path := keyspaceTerm.Path()
 		if path == nil {
-			path, _ = getKeyspacePath(keyspaceTerm.FromExpression(), this.context)
+			path, _ = getKeyspacePath(keyspaceTerm.FromExpression(), &opContext{nil, this.context})
 			if path != nil {
 				this.aliasMap[keyspaceTerm.Alias()] = path.ProtectedString()
 			}

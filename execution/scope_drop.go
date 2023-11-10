@@ -27,7 +27,7 @@ func NewDropScope(plan *plan.DropScope, context *Context) *DropScope {
 		plan: plan,
 	}
 
-	newRedirectBase(&rv.base)
+	newRedirectBase(&rv.base, context)
 	rv.output = rv
 	return rv
 }

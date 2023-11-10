@@ -26,7 +26,7 @@ func NewFlushCollection(plan *plan.FlushCollection, context *Context) *FlushColl
 		plan: plan,
 	}
 
-	newRedirectBase(&rv.base)
+	newRedirectBase(&rv.base, context)
 	rv.output = rv
 	return rv
 }

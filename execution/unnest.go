@@ -56,7 +56,7 @@ func (this *Unnest) RunOnce(context *Context, parent value.Value) {
 func (this *Unnest) beforeItems(context *Context, parent value.Value) bool {
 	filter := this.plan.Filter()
 	if filter != nil {
-		filter.EnableInlistHash(context)
+		filter.EnableInlistHash(&this.operatorCtx)
 	}
 	return true
 }
@@ -65,7 +65,7 @@ func (this *Unnest) processItem(item value.AnnotatedValue, context *Context) boo
 	if this.timeSeries {
 		return this.processTimeSeriesItem(item, context)
 	}
-	ev, err := this.plan.Term().Expression().Evaluate(item, context)
+	ev, err := this.plan.Term().Expression().Evaluate(item, &this.operatorCtx)
 	if err != nil {
 		context.Error(errors.NewEvaluationError(err, "UNNEST path"))
 		return false
@@ -110,7 +110,7 @@ func (this *Unnest) processItem(item value.AnnotatedValue, context *Context) boo
 
 		pass := true
 		if filter != nil {
-			result, err := filter.Evaluate(av, context)
+			result, err := filter.Evaluate(av, &this.operatorCtx)
 			if err != nil {
 				context.Error(errors.NewEvaluationError(err, "unnest filter"))
 				return false
@@ -157,11 +157,11 @@ func (this *Unnest) processTimeSeriesItem(item value.AnnotatedValue, context *Co
 		var err error
 		// Construct timeseries data once per document
 		if len(operands) > 1 {
-			_, tsKeep, tsRanges, tsProject, err = texpr.GetOptionFields(operands[1], item, context)
+			_, tsKeep, tsRanges, tsProject, err = texpr.GetOptionFields(operands[1], item, &this.operatorCtx)
 		}
 		if err == nil {
 			this.timeSeriesData, err = expression.NewTimeSeriesData(texpr.AliasName(), texpr.TsPaths(),
-				tsKeep, tsRanges, tsProject, context)
+				tsKeep, tsRanges, tsProject, &this.operatorCtx)
 		}
 		if err != nil {
 			context.Error(errors.NewEvaluationWithCauseError(err, "timeseries expression"))
@@ -170,7 +170,7 @@ func (this *Unnest) processTimeSeriesItem(item value.AnnotatedValue, context *Co
 	}
 
 	// Evaluate paths against document
-	rv, err := this.timeSeriesData.Evaluate(item, context)
+	rv, err := this.timeSeriesData.Evaluate(item, &this.operatorCtx)
 	defer this.timeSeriesData.ResetTsData()
 	if err != nil {
 		context.Error(errors.NewEvaluationWithCauseError(err, "timeseries expression"))
@@ -192,7 +192,7 @@ func (this *Unnest) processTimeSeriesItem(item value.AnnotatedValue, context *Co
 	if path, ok := this.timeSeriesData.TsDataExpr().(expression.Path); ok && !this.timeSeriesData.TsKeep() {
 		// strip of the tsdata path from original document
 		nitem = value.NewAnnotatedValue(item.Copy())
-		path.Unset(nitem, context)
+		path.Unset(nitem, &this.operatorCtx)
 	} else {
 		nitem = item
 	}
@@ -242,7 +242,7 @@ func (this *Unnest) processTimeSeriesItem(item value.AnnotatedValue, context *Co
 
 		pass := true
 		if filter != nil {
-			result, err := filter.Evaluate(av, context)
+			result, err := filter.Evaluate(av, &this.operatorCtx)
 			if err != nil {
 				context.Error(errors.NewEvaluationError(err, "unnest filter"))
 				return false
@@ -280,7 +280,7 @@ func (this *Unnest) processTimeSeriesItem(item value.AnnotatedValue, context *Co
 func (this *Unnest) afterItems(context *Context) {
 	filter := this.plan.Filter()
 	if filter != nil {
-		filter.ResetMemory(context)
+		filter.ResetMemory(&this.operatorCtx)
 	}
 }
 

@@ -27,7 +27,7 @@ func NewAlterIndex(plan *plan.AlterIndex, context *Context) *AlterIndex {
 		plan: plan,
 	}
 
-	newRedirectBase(&rv.base)
+	newRedirectBase(&rv.base, context)
 	rv.output = rv
 	return rv
 }

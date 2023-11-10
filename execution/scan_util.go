@@ -17,7 +17,7 @@ import (
 	"github.com/couchbase/query/value"
 )
 
-func evalOne(expr expression.Expression, context *Context, parent value.Value) (v value.Value, empty bool, e error) {
+func evalOne(expr expression.Expression, context *opContext, parent value.Value) (v value.Value, empty bool, e error) {
 	if expr != nil {
 		v, e = expr.Evaluate(parent, context)
 	}
@@ -33,7 +33,7 @@ func evalOne(expr expression.Expression, context *Context, parent value.Value) (
 	return
 }
 
-func eval(cx expression.Expressions, context *Context, parent value.Value) (value.Values, bool, error) {
+func eval(cx expression.Expressions, context *opContext, parent value.Value) (value.Values, bool, error) {
 	if cx == nil {
 		return nil, false, nil
 	}
@@ -60,7 +60,7 @@ func notifyConn(stopchannel datastore.StopChannel) {
 	}
 }
 
-func evalLimitOffset(expr expression.Expression, parent value.Value, defval int64, covering bool, context *Context) (val int64) {
+func evalLimitOffset(expr expression.Expression, parent value.Value, defval int64, covering bool, context *opContext) (val int64) {
 	if expr != nil {
 		val, e := expr.Evaluate(parent, context)
 		if e == nil && val.Type() == value.NUMBER {
@@ -71,7 +71,7 @@ func evalLimitOffset(expr expression.Expression, parent value.Value, defval int6
 	return defval
 }
 
-func getKeyspacePath(expr expression.Expression, context *Context) (*algebra.Path, error) {
+func getKeyspacePath(expr expression.Expression, context *opContext) (*algebra.Path, error) {
 	if expr == nil {
 		return nil, nil
 	}
@@ -83,7 +83,7 @@ func getKeyspacePath(expr expression.Expression, context *Context) (*algebra.Pat
 	return algebra.NewVariablePathWithContext(v.Actual().(string), context.Namespace(), context.queryContext)
 }
 
-func getKeyspace(keyspace datastore.Keyspace, expr expression.Expression, context *Context) datastore.Keyspace {
+func getKeyspace(keyspace datastore.Keyspace, expr expression.Expression, context *opContext) datastore.Keyspace {
 	if keyspace == nil {
 		path, err := getKeyspacePath(expr, context)
 		if err == nil && path != nil {

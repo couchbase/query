@@ -59,7 +59,7 @@ func (this *Limit) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *Limit) beforeItems(context *Context, parent value.Value) bool {
-	val, e := this.plan.Expression().Evaluate(parent, context)
+	val, e := this.plan.Expression().Evaluate(parent, &this.operatorCtx)
 	if e != nil {
 		context.Error(errors.NewEvaluationError(e, "LIMIT"))
 		return false

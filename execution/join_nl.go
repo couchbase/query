@@ -83,8 +83,8 @@ func (this *NLJoin) beforeItems(context *Context, parent value.Value) bool {
 				this.ansiFlags |= ANSI_ONCLAUSE_FALSE
 			}
 		} else {
-			onclause.EnableInlistHash(context)
-			SetSearchInfo(this.aliasMap, parent, context, onclause)
+			onclause.EnableInlistHash(&this.operatorCtx)
+			SetSearchInfo(this.aliasMap, parent, &this.operatorCtx, onclause)
 		}
 	} else {
 		// for comma-separated join, treat it as having a TRUE onclause
@@ -93,7 +93,7 @@ func (this *NLJoin) beforeItems(context *Context, parent value.Value) bool {
 
 	filter := this.plan.Filter()
 	if filter != nil {
-		filter.EnableInlistHash(context)
+		filter.EnableInlistHash(&this.operatorCtx)
 	}
 
 	return true
@@ -132,7 +132,7 @@ loop:
 				var joined value.AnnotatedValue
 				aliases := []string{this.plan.Alias()}
 				match, ok, joined = processAnsiExec(item, right_item, this.plan.Onclause(),
-					aliases, this.ansiFlags, context, "join")
+					aliases, this.ansiFlags, &this.operatorCtx, "join")
 				if ok && match {
 					matched = true
 					ok = this.checkSendItem(joined, func() uint64 {
@@ -180,17 +180,17 @@ func (this *NLJoin) afterItems(context *Context) {
 	if (this.ansiFlags & (ANSI_ONCLAUSE_TRUE | ANSI_ONCLAUSE_FALSE)) == 0 {
 		onclause := this.plan.Onclause()
 		if onclause != nil {
-			onclause.ResetMemory(context)
+			onclause.ResetMemory(&this.operatorCtx)
 		}
 	}
 	filter := this.plan.Filter()
 	if filter != nil {
-		filter.ResetMemory(context)
+		filter.ResetMemory(&this.operatorCtx)
 	}
 }
 
 func processAnsiExec(item value.AnnotatedValue, right_item value.AnnotatedValue,
-	onclause expression.Expression, aliases []string, ansiFlags uint32, context *Context, op string) (
+	onclause expression.Expression, aliases []string, ansiFlags uint32, context *opContext, op string) (
 	bool, bool, value.AnnotatedValue) {
 
 	var joined value.AnnotatedValue
@@ -248,7 +248,7 @@ func processAnsiExec(item value.AnnotatedValue, right_item value.AnnotatedValue,
 
 func (this *NLJoin) checkSendItem(av value.AnnotatedValue, quotaFunc func() uint64, recycle bool, filter expression.Expression, context *Context) bool {
 	if filter != nil {
-		result, err := filter.Evaluate(av, context)
+		result, err := filter.Evaluate(av, &this.operatorCtx)
 		if err != nil {
 			context.Error(errors.NewEvaluationError(err, "nested-loop join filter"))
 			if recycle {

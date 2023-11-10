@@ -82,11 +82,11 @@ func (this *ExpressionScan) RunOnce(context *Context, parent value.Value) {
 
 		filter := this.plan.Filter()
 		if filter != nil {
-			filter.EnableInlistHash(context)
-			defer filter.ResetMemory(context)
+			filter.EnableInlistHash(&this.operatorCtx)
+			defer filter.ResetMemory(&this.operatorCtx)
 		}
 
-		ev, e := this.plan.FromExpr().Evaluate(parent, context)
+		ev, e := this.plan.FromExpr().Evaluate(parent, &this.operatorCtx)
 		if e != nil {
 			context.Error(errors.NewEvaluationError(e, "ExpressionScan"))
 			return
@@ -119,7 +119,7 @@ func (this *ExpressionScan) RunOnce(context *Context, parent value.Value) {
 			av.SetId("")
 
 			if filter != nil {
-				result, err := filter.Evaluate(av, context)
+				result, err := filter.Evaluate(av, &this.operatorCtx)
 				if err != nil {
 					context.Error(errors.NewEvaluationError(err, "expression scan filter"))
 					return

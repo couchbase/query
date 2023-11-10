@@ -140,7 +140,9 @@ func (this *javascript) Execute(name functions.FunctionName, body functions.Func
 	if library == "" {
 		library = funcBody.library
 	}
+	context.Park(nil)
 	res, err := evaluator.Evaluate(library, funcBody.object, opts, args, functions.NewUdfContext(context, funcBody.prefix))
+	context.Resume()
 	if err.Err != nil {
 		return nil, funcBody.execError(err, funcName)
 	} else {

@@ -27,7 +27,7 @@ func NewDropFunction(plan *plan.DropFunction, context *Context) *DropFunction {
 		plan: plan,
 	}
 
-	newRedirectBase(&rv.base)
+	newRedirectBase(&rv.base, context)
 	rv.output = rv
 	return rv
 }
@@ -61,7 +61,7 @@ func (this *DropFunction) RunOnce(context *Context, parent value.Value) {
 
 		// Actually drop function
 		this.switchPhase(_SERVTIME)
-		err := functions.DeleteFunction(this.plan.Name(), context)
+		err := functions.DeleteFunction(this.plan.Name(), &this.operatorCtx)
 		this.switchPhase(_EXECTIME)
 		if err != nil {
 			if this.plan.FailIfNotExists() || err.Code() != errors.E_MISSING_FUNCTION {

@@ -25,7 +25,7 @@ func NewDiscard(plan *plan.Discard, context *Context) *Discard {
 		plan: plan,
 	}
 
-	newRedirectBase(&rv.base)
+	newRedirectBase(&rv.base, context)
 	rv.output = rv
 	return rv
 }

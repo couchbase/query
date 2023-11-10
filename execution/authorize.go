@@ -41,7 +41,7 @@ func NewAuthorize(plan *plan.Authorize, context *Context, child Operator, dynami
 	rv.plan = plan
 	rv.child = child
 	rv.dynamicAuthorize = dynamicAuthorize
-	newRedirectBase(&rv.base)
+	newRedirectBase(&rv.base, context)
 	rv.base.setInline()
 	rv.output = rv
 	return rv
@@ -170,7 +170,7 @@ func (this *Authorize) getPrivileges(privs *auth.Privileges, context *Context, i
 				expr, err := parser.Parse(pp.Target)
 				if err == nil {
 					var path *algebra.Path
-					path, err = getKeyspacePath(expr, context)
+					path, err = getKeyspacePath(expr, &this.operatorCtx)
 					if err == nil && path != nil {
 						rprivs, _ := algebra.PrivilegesFromPath(pp.Priv, path)
 						nprivs.AddAll(rprivs)
