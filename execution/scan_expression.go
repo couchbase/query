@@ -130,7 +130,7 @@ func (this *ExpressionScan) RunOnce(context *Context, parent value.Value) {
 			}
 
 			if useCache {
-				results = append(this.results, act)
+				results = append(results, act)
 			}
 			if context.UseRequestQuota() && context.TrackValueSize(av.Size()) {
 				context.Error(errors.NewMemoryQuotaExceededError())
