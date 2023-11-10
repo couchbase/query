@@ -79,22 +79,18 @@ func (this *AlterUser) RunOnce(context *Context, parent value.Value) {
 			} else {
 				u.Password = string([]byte{0})
 			}
-			if ok && u.Domain == "external" {
-				context.Error(errors.NewUserAttributeError(u.Domain, "password", "not supported"))
+			if g, ok := this.plan.Node().Groups(); ok {
+				u.Groups = g
+			}
+			if n, ok := this.plan.Node().Name(); ok {
+				u.Name = n
 			} else {
-				if g, ok := this.plan.Node().Groups(); ok {
-					u.Groups = g
-				}
-				if n, ok := this.plan.Node().Name(); ok {
-					u.Name = n
-				} else {
-					u.Name = string([]byte{0})
-				}
+				u.Name = string([]byte{0})
+			}
 
-				err := context.datastore.PutUserInfo(&u)
-				if err != nil {
-					context.Error(err)
-				}
+			err := context.datastore.PutUserInfo(&u)
+			if err != nil {
+				context.Error(err)
 			}
 		}
 	})

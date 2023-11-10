@@ -251,6 +251,7 @@ const (
 	E_GROUP_EXISTS                            ErrorCode = 5213
 	E_GROUP_NOT_FOUND                         ErrorCode = 5214
 	E_GROUP_ATTRIBUTE                         ErrorCode = 5215
+	E_MISSING_ATTRIBUTES                      ErrorCode = 5216
 	E_ROLE_REQUIRES_KEYSPACE                  ErrorCode = 5220
 	E_ROLE_REQUIRES_SCOPE                     ErrorCode = 5221
 	E_ROLE_TAKES_NO_KEYSPACE                  ErrorCode = 5230

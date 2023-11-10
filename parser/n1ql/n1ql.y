@@ -2794,12 +2794,6 @@ CREATE USER user user_opts
             groups = value.NewValue(va)
         }
     }
-    if password == nil {
-        rem := yylex.(*lexer).Remainder(-1)
-        if rem == "" || rem == ";" {
-            return yylex.(*lexer).FatalError("Missing user attribute. PASSWORD required for local users.", $<line>4, $<column>4)
-        }
-    }
     $$ = algebra.NewCreateUser($3,password,name,groups)
 }
 ;
@@ -2808,12 +2802,6 @@ alter_user:
 ALTER USER user user_opts
 {
     var password, name, groups value.Value
-    if len($4) == 0 {
-        rem := yylex.(*lexer).Remainder(-1)
-        if rem == "" || rem == ";" {
-            return yylex.(*lexer).FatalError("Missing or invalid user attributes.", $<line>4, $<column>4)
-        }
-    }
     for _, v := range $4 {
         switch v.name {
         case "name":
@@ -2940,12 +2928,6 @@ CREATE GROUP group_name group_opts
             roles = value.NewValue(va)
         }
     }
-    if roles == nil {
-        rem := yylex.(*lexer).Remainder(-1)
-        if rem == "" || rem == ";" {
-            return yylex.(*lexer).FatalError("Missing group attribute. [NO] ROLES required for groups.", $<line>4, $<column>4)
-        }
-    }
     $$ = algebra.NewCreateGroup($3,desc,roles)
 }
 ;
@@ -2954,12 +2936,6 @@ alter_group:
 ALTER GROUP group_name group_opts
 {
     var desc, roles value.Value
-    if len($4) == 0 {
-        rem := yylex.(*lexer).Remainder(-1)
-        if rem == "" || rem == ";" {
-            return yylex.(*lexer).FatalError("Missing or invalid group attributes.", $<line>3, len(yylex.(*lexer).getText()))
-        }
-    }
     for _, v := range $4 {
         switch v.name {
         case "desc":

@@ -139,15 +139,43 @@ func validateGroupRoles(roles []string) errors.Error {
 }
 
 func (this *SemChecker) VisitCreateUser(stmt *algebra.CreateUser) (interface{}, error) {
+	parts := strings.Split(stmt.User(), ":")
+	if len(parts) == 1 || parts[0] == "local" {
+		if _, ok := stmt.Password(); !ok {
+			return nil, errors.NewUserAttributeError("local", "password", "required")
+		}
+	} else if parts[0] == "external" {
+		if _, ok := stmt.Password(); ok {
+			return nil, errors.NewUserAttributeError("external", "password", "not supported")
+		}
+	}
 	if g, ok := stmt.Groups(); ok {
 		return nil, validateGroups(g)
+	} else {
+		_, p := stmt.Password()
+		_, n := stmt.Name()
+		if !p && !n {
+			return nil, errors.NewMissingAttributesError("user")
+		}
 	}
 	return nil, nil
 }
 
 func (this *SemChecker) VisitAlterUser(stmt *algebra.AlterUser) (interface{}, error) {
+	parts := strings.Split(stmt.User(), ":")
+	if len(parts) > 1 && parts[0] == "external" {
+		if _, ok := stmt.Password(); ok {
+			return nil, errors.NewUserAttributeError("external", "password", "not supported")
+		}
+	}
 	if g, ok := stmt.Groups(); ok {
 		return nil, validateGroups(g)
+	} else {
+		_, p := stmt.Password()
+		_, n := stmt.Name()
+		if !p && !n {
+			return nil, errors.NewMissingAttributesError("user")
+		}
 	}
 	return nil, nil
 }
@@ -159,6 +187,11 @@ func (this *SemChecker) VisitDropUser(stmt *algebra.DropUser) (interface{}, erro
 func (this *SemChecker) VisitCreateGroup(stmt *algebra.CreateGroup) (interface{}, error) {
 	if r, ok := stmt.Roles(); ok {
 		return nil, validateGroupRoles(r)
+	} else {
+		_, d := stmt.Desc()
+		if !d {
+			return nil, errors.NewMissingAttributesError("group")
+		}
 	}
 	return nil, nil
 }
@@ -166,6 +199,11 @@ func (this *SemChecker) VisitCreateGroup(stmt *algebra.CreateGroup) (interface{}
 func (this *SemChecker) VisitAlterGroup(stmt *algebra.AlterGroup) (interface{}, error) {
 	if r, ok := stmt.Roles(); ok {
 		return nil, validateGroupRoles(r)
+	} else {
+		_, d := stmt.Desc()
+		if !d {
+			return nil, errors.NewMissingAttributesError("group")
+		}
 	}
 	return nil, nil
 }

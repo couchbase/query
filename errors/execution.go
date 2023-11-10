@@ -266,6 +266,13 @@ func NewGroupAttributeError(a string, r string) Error {
 		cause: c, InternalMsg: fmt.Sprintf("Attribute '%s' %s for groups.", a, r), InternalCaller: CallerN(1)}
 }
 
+func NewMissingAttributesError(what string) Error {
+	c := make(map[string]interface{})
+	c["entity"] = what
+	return &err{level: EXCEPTION, ICode: E_MISSING_ATTRIBUTES, IKey: "execution.missing_attributes",
+		cause: c, InternalMsg: fmt.Sprintf("Missing attributes for %s.", what), InternalCaller: CallerN(1)}
+}
+
 func NewRoleRequiresKeyspaceError(role string) Error {
 	c := make(map[string]interface{})
 	c["role"] = role
