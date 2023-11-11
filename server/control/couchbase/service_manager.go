@@ -431,7 +431,7 @@ func (m *ServiceMgr) PrepareTopologyChange(change service.TopologyChange) error 
 			// see if we can reuse the prepared operation
 			// note: this means we may take less time here but are susceptible to stale data
 			for _, o := range s {
-				if o.nodeInfo.NodeID == n.NodeInfo.NodeID {
+				if o.nodeInfo.NodeID == qs.nodeInfo.NodeID {
 					qs.host = o.host
 					qs.nodeInfo.Opaque = o.nodeInfo.Opaque
 					break
@@ -440,7 +440,7 @@ func (m *ServiceMgr) PrepareTopologyChange(change service.TopologyChange) error 
 			if qs.nodeInfo.Opaque == nil {
 				done.Incr()
 				go func() {
-					qs.host = distributed.RemoteAccess().UUIDToHost(string(n.NodeInfo.NodeID))
+					qs.host = distributed.RemoteAccess().UUIDToHost(string(qs.nodeInfo.NodeID))
 					if qs.host != "" {
 						qs.nodeInfo.Opaque = prepareOperation(qs.host, "ServiceMgr::PrepareTopologyChange")
 					} else {
@@ -485,7 +485,7 @@ func (m *ServiceMgr) PrepareTopologyChange(change service.TopologyChange) error 
 			eject = append(eject, qs)
 			done.Incr()
 			go func() {
-				qs.host = distributed.RemoteAccess().UUIDToHost(string(e.NodeID))
+				qs.host = distributed.RemoteAccess().UUIDToHost(string(qs.nodeInfo.NodeID))
 				if qs.host != "" {
 					qs.nodeInfo.Opaque = prepareOperation(qs.host, "ServiceMgr::PrepareTopologyChange")
 				} else {
