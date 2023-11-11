@@ -269,32 +269,33 @@ func (m *ServiceMgr) CancelTask(id string, rev service.Revision) error {
 			done := util.WaitCount{}
 			mutex := &sync.Mutex{}
 			// in parallel in case some take time to reach
-			for _, e := range m.eject {
-				go func() {
-					if e.nodeInfo.Opaque == nil {
+			for ir := range m.eject {
+				go func(i int) {
+					if m.eject[i].nodeInfo.Opaque == nil {
 						// if we failed to prepare it before now, we could well be too late but try again anyway
-						e.nodeInfo.Opaque = prepareOperation(e.host, "ServiceMgr::CancelTask")
+						m.eject[i].nodeInfo.Opaque = prepareOperation(m.eject[i].host, "ServiceMgr::CancelTask")
 					}
-					_, err := distributed.RemoteAccess().ExecutePreparedAdminOp(e.nodeInfo.Opaque, "POST", data, nil,
+					_, err := distributed.RemoteAccess().ExecutePreparedAdminOp(m.eject[i].nodeInfo.Opaque, "POST", data, nil,
 						distributed.NO_CREDS, "")
 					if err == nil {
 						mutex.Lock()
 						if !timedOut {
-							e.nodeInfo.Priority = 0
-							servers = appendInOrder(servers, e)
-							info = append(info, []rune(e.nodeInfo.NodeID)...)
+							m.eject[i].nodeInfo.Priority = 0
+							servers = appendInOrder(servers, m.eject[i])
+							info = append(info, []rune(m.eject[i].nodeInfo.NodeID)...)
 							info = append(info, ' ')
 						}
 						mutex.Unlock()
 						logging.Debuga(func() string {
-							return fmt.Sprintf("ServiceMgr::CancelTask cancelled shutdown down on '%s'", string(e.nodeInfo.NodeID))
+							return fmt.Sprintf("ServiceMgr::CancelTask cancelled shutdown down on '%s'",
+								string(m.eject[i].nodeInfo.NodeID))
 						})
 					} else {
 						logging.Infof("ServiceMgr::CancelTask failed to cancel shutdown on '%s' (op:%v): %v",
-							string(e.nodeInfo.NodeID), e.nodeInfo.Opaque, err)
+							string(m.eject[i].nodeInfo.NodeID), m.eject[i].nodeInfo.Opaque, err)
 					}
 					done.Incr()
-				}()
+				}(ir)
 			}
 			// wait for completion
 			if !done.Until(int32(len(m.eject)), timeout) {
@@ -445,7 +446,7 @@ func (m *ServiceMgr) PrepareTopologyChange(change service.TopologyChange) error 
 						qs.nodeInfo.Opaque = prepareOperation(qs.host, "ServiceMgr::PrepareTopologyChange")
 					} else {
 						logging.Warnf("ServiceMgr::PrepareTopologyChange: Unable to resolve host for node %v",
-							string(n.NodeInfo.NodeID))
+							string(qs.nodeInfo.NodeID))
 					}
 					done.Decr()
 				}()
@@ -489,7 +490,8 @@ func (m *ServiceMgr) PrepareTopologyChange(change service.TopologyChange) error 
 				if qs.host != "" {
 					qs.nodeInfo.Opaque = prepareOperation(qs.host, "ServiceMgr::PrepareTopologyChange")
 				} else {
-					logging.Warnf("ServiceMgr::PrepareTopologyChange: Unable to resolve host for node %v", string(e.NodeID))
+					logging.Warnf("ServiceMgr::PrepareTopologyChange: Unable to resolve host for node %v",
+						string(qs.nodeInfo.NodeID))
 				}
 				done.Decr()
 			}()
