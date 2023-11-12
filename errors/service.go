@@ -213,6 +213,6 @@ func NewServiceNoClientError() Error {
 }
 
 func NewServiceInvalidValueError(value string, feature string, details string) Error {
-	return &err{level: EXCEPTION, ICode: E_SERVICE_READONLY, IKey: "service.io.request.invalid_value",
+	return &err{level: EXCEPTION, ICode: E_SERVICE_INVALID_VALUE, IKey: "service.io.request.invalid_value",
 		InternalMsg: fmt.Sprintf("%s = %s is invalid.%s", feature, value, details), InternalCaller: CallerN(1)}
 }
