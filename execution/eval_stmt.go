@@ -172,8 +172,15 @@ func (this *Context) newOutput(output *internalOutput) *internalOutput {
 	return output
 }
 
-func (this *Context) EvaluateStatement(statement string, namedArgs map[string]value.Value, positionalArgs value.Values,
+// If the opContext is not a dummy opContext this method stops the query executed by this method
+// when the calling operator stops
+func (this *opContext) ParkableEvaluateStatement(statement string, namedArgs map[string]value.Value, positionalArgs value.Values,
 	subquery, readonly bool, profileUdfExecTrees bool, funcKey string) (value.Value, uint64, error) {
+
+	if this.HandlesInActive() {
+		return nil, 0, errors.NewExecutionStatementStoppedError(statement)
+	}
+
 	newContext := this.Copy()
 	txContext := this.TxContext()
 	if txContext != nil {
@@ -202,11 +209,20 @@ func (this *Context) EvaluateStatement(statement string, namedArgs map[string]va
 	}
 	rv, mutations, err := newContext.ExecutePrepared(prepared, isPrepared, namedArgs, positionalArgs,
 		statement, profileUdfExecTrees, funcKey)
-	newErr := newContext.completeStatement(stmtType, err == nil, this)
+	newErr := newContext.completeStatement(stmtType, err == nil, this.Context)
 	if err == nil && newErr != nil {
 		err = newErr
 	}
 	return rv, mutations, err
+}
+
+func (this *Context) EvaluateStatement(statement string, namedArgs map[string]value.Value, positionalArgs value.Values,
+	subquery, readonly bool, profileUdfExecTrees bool, funcKey string) (value.Value, uint64, error) {
+
+	// create a dummy opContext
+	opContext := NewOpContext(this)
+	return opContext.ParkableEvaluateStatement(statement, namedArgs, positionalArgs, subquery, readonly, profileUdfExecTrees,
+		funcKey)
 }
 
 func (this *Context) completeStatement(stmtType string, success bool, baseContext *Context) errors.Error {
@@ -227,8 +243,15 @@ func (this *Context) completeStatement(stmtType string, success bool, baseContex
 	return nil
 }
 
-func (this *Context) OpenStatement(statement string, namedArgs map[string]value.Value, positionalArgs value.Values,
+// If the opContext is not a dummy opContext this method stops the handle created by this method
+// when the calling operator stops
+func (this *opContext) ParkableOpenStatement(statement string, namedArgs map[string]value.Value, positionalArgs value.Values,
 	subquery, readonly bool, profileUdfExecTrees bool, funcKey string) (functions.Handle, error) {
+
+	if this.HandlesInActive() {
+		return nil, errors.NewExecutionStatementStoppedError(statement)
+	}
+
 	newContext := this.Copy()
 	txContext := this.TxContext()
 	if txContext != nil {
@@ -255,8 +278,16 @@ func (this *Context) OpenStatement(statement string, namedArgs map[string]value.
 	if err != nil {
 		return nil, err
 	}
-	return newContext.OpenPrepared(this, stmtType, prepared, isPrepared, namedArgs, positionalArgs,
+	return newContext.OpenPrepared(this.Context, stmtType, prepared, isPrepared, namedArgs, positionalArgs,
 		statement, profileUdfExecTrees, funcKey)
+}
+
+func (this *Context) OpenStatement(statement string, namedArgs map[string]value.Value, positionalArgs value.Values,
+	subquery, readonly bool, profileUdfExecTrees bool, funcKey string) (functions.Handle, error) {
+
+	// create a dummy opContext
+	opContext := NewOpContext(this)
+	return opContext.ParkableOpenStatement(statement, namedArgs, positionalArgs, subquery, readonly, profileUdfExecTrees, funcKey)
 }
 
 func (this *Context) PrepareStatement(statement string, namedArgs map[string]value.Value, positionalArgs value.Values,
@@ -451,9 +482,16 @@ func (this *Context) handleUsing(stmt algebra.Statement, namedArgs map[string]va
 	return namedArgs, positionalArgs, nil
 }
 
-func (this *Context) ExecutePrepared(prepared *plan.Prepared, isPrepared bool,
+// If the opContext is not a dummy opContext this method stops the query executed by this method
+// when the calling operator stops
+func (this *opContext) ExecutePrepared(prepared *plan.Prepared, isPrepared bool,
 	namedArgs map[string]value.Value, positionalArgs value.Values, statement string, profileUdfExecTrees bool, funcKey string) (
 	value.Value, uint64, error) {
+
+	if this.HandlesInActive() {
+		return nil, 0, errors.NewExecutionStatementStoppedError(statement)
+	}
+
 	var outputBuf internalOutput
 	var results value.Value
 	output := this.newOutput(&outputBuf)
@@ -466,11 +504,20 @@ func (this *Context) ExecutePrepared(prepared *plan.Prepared, isPrepared bool,
 	this.namedArgs = namedArgs
 	this.positionalArgs = positionalArgs
 
+	// if the statement being executed here is:
+	// 1. Not inside a JS UDF i.e function key is empty
+	//    change the calling operator state to prevent the double accrual of timings
+	//    both the calling operator & the operators executing this query
+	// 2. Inside a JS UDF - i.e function key is not empty
+	//    do not change the calling operator's state here
+	//    the calling operator state must only be changed once the ENTIRE UDF finishes execution
+	changeCallerState := funcKey == ""
+
 	build := util.Now()
 
 	// Collect statements results
-	collect := NewCollect(plan.NewCollect(), this)
-	pipeline, used, err := Build2(prepared, this, collect)
+	collect := NewCollect(plan.NewCollect(), this.Context)
+	pipeline, used, err := Build2(prepared, this.Context, collect)
 	keep.AddPhaseTime(INSTANTIATE, util.Since(build))
 
 	if err != nil {
@@ -480,12 +527,23 @@ func (this *Context) ExecutePrepared(prepared *plan.Prepared, isPrepared bool,
 
 	exec := util.Now()
 	if used {
-		pipeline.RunOnce(this, nil)
+
+		this.Park(func(stop bool) {
+			if stop {
+				output.err = errors.NewExecutionStatementStoppedError(statement)
+				pipeline.SendAction(_ACTION_STOP)
+			} else {
+				pipeline.SendAction(_ACTION_PAUSE)
+			}
+		}, changeCallerState)
+
+		pipeline.RunOnce(this.Context, nil)
 
 		// Await completion
 		// If the root op implements a fork check - make a check. To avoid infinitely waiting
 		if pOp, ok := pipeline.(interface{ HasForkedChild() bool }); (ok && pOp.HasForkedChild()) || !ok {
 			collect.waitComplete()
+			this.Resume(changeCallerState) // TODO resume wrt double profiling time
 		}
 
 		results = collect.ValuesOnce()
@@ -499,11 +557,23 @@ func (this *Context) ExecutePrepared(prepared *plan.Prepared, isPrepared bool,
 		}
 
 	} else {
-		sequence := NewSequence(plan.NewSequence(), this, pipeline, collect)
-		sequence.RunOnce(this, nil)
+		sequence := NewSequence(plan.NewSequence(), this.Context, pipeline, collect)
+
+		this.Park(func(stop bool) {
+			if stop {
+				output.err = errors.NewExecutionStatementStoppedError(statement)
+				sequence.SendAction(_ACTION_STOP)
+			} else {
+				sequence.SendAction(_ACTION_PAUSE)
+			}
+		}, changeCallerState)
+
+		sequence.RunOnce(this.Context, nil)
 
 		// Await completion
 		collect.waitComplete()
+
+		this.Resume(changeCallerState)
 
 		results = collect.ValuesOnce()
 
@@ -521,25 +591,41 @@ func (this *Context) ExecutePrepared(prepared *plan.Prepared, isPrepared bool,
 	return results, output.mutationCount, output.err
 }
 
-func (this *Context) OpenPrepared(baseContext *Context, stmtType string, prepared *plan.Prepared, isPrepared bool,
+func (this *Context) ExecutePrepared(prepared *plan.Prepared, isPrepared bool,
+	namedArgs map[string]value.Value, positionalArgs value.Values, statement string, profileUdfExecTrees bool, funcKey string) (
+	value.Value, uint64, error) {
+
+	opContext := NewOpContext(this)
+	return opContext.ExecutePrepared(prepared, isPrepared, namedArgs, positionalArgs, statement, profileUdfExecTrees,
+		funcKey)
+}
+
+// If the opContext is not a dummy opContext this method stops the handle created by this method
+// when the calling operator stops
+func (this *opContext) OpenPrepared(baseContext *Context, stmtType string, prepared *plan.Prepared, isPrepared bool,
 	namedArgs map[string]value.Value, positionalArgs value.Values, statement string, profileUdfExecTrees bool, funcKey string) (functions.Handle, error) {
+
+	if this.HandlesInActive() {
+		return nil, errors.NewExecutionStatementStoppedError(statement)
+	}
+
 	handle := &executionHandle{}
 	handle.statement = statement
 	handle.udfKey = funcKey
-	handle.context = this
+	handle.opContext = this
 	handle.output = this.newOutput(&internalOutput{})
-	handle.context.output = handle.output
+	handle.opContext.output = handle.output
 
-	handle.context.SetIsPrepared(isPrepared)
-	handle.context.SetPrepared(prepared)
-	handle.context.namedArgs = namedArgs
-	handle.context.positionalArgs = positionalArgs
+	handle.opContext.SetIsPrepared(isPrepared)
+	handle.opContext.SetPrepared(prepared)
+	handle.opContext.namedArgs = namedArgs
+	handle.opContext.positionalArgs = positionalArgs
 
 	build := util.Now()
 
 	// Collect statements results
-	handle.input = NewReceive(plan.NewReceive(), handle.context)
-	pipeline, used, err := Build2(prepared, this, handle.input)
+	handle.input = NewReceive(plan.NewReceive(), handle.context())
+	pipeline, used, err := Build2(prepared, this.Context, handle.input)
 	this.output.AddPhaseTime(INSTANTIATE, util.Since(build))
 	if err != nil {
 		return nil, err
@@ -548,7 +634,7 @@ func (this *Context) OpenPrepared(baseContext *Context, stmtType string, prepare
 	if used {
 		handle.root = pipeline
 	} else {
-		handle.root = NewSequence(plan.NewSequence(), this, pipeline, handle.input)
+		handle.root = NewSequence(plan.NewSequence(), this.Context, pipeline, handle.input)
 	}
 
 	handle.stmtType = stmtType
@@ -563,8 +649,12 @@ func (this *Context) OpenPrepared(baseContext *Context, stmtType string, prepare
 	}
 	baseContext.udfHandleMap[handle] = handle.actualType != "SELECT"
 	baseContext.mutex.Unlock()
+
+	// add this active handle to the opContext
+	this.AddUdfHandle(handle)
+
 	handle.exec = util.Now()
-	handle.root.RunOnce(handle.context, nil)
+	handle.root.RunOnce(handle.context(), nil)
 	return handle, nil
 }
 
@@ -616,16 +706,32 @@ type executionHandle struct {
 	root        Operator
 	input       *Receive
 	baseContext *Context
-	context     *Context
 	stmtType    string
 	actualType  string
 	output      *internalOutput
 	stopped     int32
 	statement   string
 	udfKey      string
+
+	// the calling operator's opContext.
+	// opContext.Context is the the execution context used in the handle's query's execution
+	opContext *opContext
+}
+
+// returns the execution context used in the handle's query execution
+func (this *executionHandle) context() *Context {
+	return this.opContext.Context
 }
 
 func (this *executionHandle) Results() (interface{}, uint64, error) {
+
+	// if the calling operator has stopped - reject any interaction with any handle
+	// note: this action is possible only when the opContext is not a dummy opContext
+	if this.opContext.HandlesInActive() {
+		this.externalStop()
+		return nil, 0, this.output.err
+	}
+
 	if atomic.LoadInt32(&this.stopped) > 0 {
 		return nil, 0, nil
 	}
@@ -646,15 +752,19 @@ func (this *executionHandle) Results() (interface{}, uint64, error) {
 		}
 	}
 	if atomic.AddInt32(&this.stopped, 1) == 1 {
-		this.context.output.AddPhaseTime(RUN, util.Since(this.exec))
+		this.context().output.AddPhaseTime(RUN, util.Since(this.exec))
 		this.root.SendAction(_ACTION_STOP)
-		newErr := this.context.completeStatement(this.stmtType, this.output.err == nil, this.baseContext)
+		newErr := this.context().completeStatement(this.stmtType, this.output.err == nil, this.baseContext)
 		if this.output.err == nil && newErr != nil {
 			this.output.err = newErr
 		}
 
 		// Once execution is complete - add the exec tree to the cache
 		this.baseContext.udfStmtExecTrees.set(this.udfKey, this.statement, this.root, this.input)
+
+		// Delete the now stopped handle from the opContext
+		this.opContext.DeleteUdfHandle(this)
+
 		this.baseContext.mutex.Lock()
 		delete(this.baseContext.udfHandleMap, this)
 		this.baseContext.mutex.Unlock()
@@ -671,6 +781,14 @@ func (this *executionHandle) Mutations() uint64 {
 }
 
 func (this *executionHandle) Complete() (uint64, error) {
+
+	// if the calling operator has stopped - reject any interaction with any handle
+	// note: this action is possible only when the opContext is not a dummy opContext
+	if this.opContext.HandlesInActive() {
+		this.externalStop()
+		return 0, this.output.err
+	}
+
 	if atomic.LoadInt32(&this.stopped) > 0 {
 		return 0, nil
 	}
@@ -681,15 +799,19 @@ func (this *executionHandle) Complete() (uint64, error) {
 		}
 	}
 	if atomic.AddInt32(&this.stopped, 1) == 1 {
-		this.context.output.AddPhaseTime(RUN, util.Since(this.exec))
+		this.context().output.AddPhaseTime(RUN, util.Since(this.exec))
 		this.root.SendAction(_ACTION_STOP)
-		newErr := this.context.completeStatement(this.stmtType, this.output.err == nil, this.baseContext)
+		newErr := this.context().completeStatement(this.stmtType, this.output.err == nil, this.baseContext)
 		if this.output.err == nil && newErr != nil {
 			this.output.err = newErr
 		}
 
 		// Once execution is complete - add the exec tree to the cache
 		this.baseContext.udfStmtExecTrees.set(this.udfKey, this.statement, this.root, this.input)
+
+		// Delete the now stopped handle from the opContext
+		this.opContext.DeleteUdfHandle(this)
+
 		this.baseContext.mutex.Lock()
 		delete(this.baseContext.udfHandleMap, this)
 		this.baseContext.mutex.Unlock()
@@ -698,6 +820,14 @@ func (this *executionHandle) Complete() (uint64, error) {
 }
 
 func (this *executionHandle) NextDocument() (value.Value, error) {
+
+	// if the calling operator has stopped - reject any interaction with any handle
+	// note: this action is possible only when the opContext is not a dummy opContext
+	if this.opContext.HandlesInActive() {
+		this.externalStop()
+		return nil, this.output.err
+	}
+
 	if !this.output.abort && this.stopped == 0 {
 		item, _ := this.input.getItem()
 		if item != nil {
@@ -706,15 +836,19 @@ func (this *executionHandle) NextDocument() (value.Value, error) {
 	}
 
 	if atomic.AddInt32(&this.stopped, 1) == 1 {
-		this.context.output.AddPhaseTime(RUN, util.Since(this.exec))
+		this.context().output.AddPhaseTime(RUN, util.Since(this.exec))
 		this.root.SendAction(_ACTION_STOP)
-		newErr := this.context.completeStatement(this.stmtType, this.output.err == nil, this.baseContext)
+		newErr := this.context().completeStatement(this.stmtType, this.output.err == nil, this.baseContext)
 		if this.output.err == nil && newErr != nil {
 			this.output.err = newErr
 		}
 
 		// Once execution is complete - add the exec tree to the cache
 		this.baseContext.udfStmtExecTrees.set(this.udfKey, this.statement, this.root, this.input)
+
+		// Delete the now stopped handle from the opContext
+		this.opContext.DeleteUdfHandle(this)
+
 		this.baseContext.mutex.Lock()
 		delete(this.baseContext.udfHandleMap, this)
 		this.baseContext.mutex.Unlock()
@@ -724,15 +858,45 @@ func (this *executionHandle) NextDocument() (value.Value, error) {
 
 func (this *executionHandle) Cancel() {
 	if atomic.AddInt32(&this.stopped, 1) == 1 {
-		this.context.output.AddPhaseTime(RUN, util.Since(this.exec))
+		this.context().output.AddPhaseTime(RUN, util.Since(this.exec))
 		this.root.SendAction(_ACTION_STOP)
-		newErr := this.context.completeStatement(this.stmtType, this.output.err == nil, this.baseContext)
+		newErr := this.context().completeStatement(this.stmtType, this.output.err == nil, this.baseContext)
 		if this.output.err == nil && newErr != nil {
 			this.output.err = newErr
 		}
 
 		// Once execution is complete - add the exec tree to the cache
 		this.baseContext.udfStmtExecTrees.set(this.udfKey, this.statement, this.root, this.input)
+
+		// Delete the now stopped handle from the opContext
+		this.opContext.DeleteUdfHandle(this)
+
+		this.baseContext.mutex.Lock()
+		delete(this.baseContext.udfHandleMap, this)
+		this.baseContext.mutex.Unlock()
+	}
+}
+
+// Takes care of closing/ stopping the UDF handle
+// Stops the execution of the handle's query
+// adds the execution tree to the cache for profiling purposes
+func (this *executionHandle) externalStop() {
+	if atomic.AddInt32(&this.stopped, 1) == 1 {
+		this.context().output.AddPhaseTime(RUN, util.Since(this.exec))
+
+		// stop the execution of the handle's query
+		this.root.SendAction(_ACTION_STOP)
+		newErr := this.context().completeStatement(this.stmtType, this.output.err == nil, this.baseContext)
+
+		//  add the execution tree to the cache for profiling purposes
+		this.baseContext.udfStmtExecTrees.set(this.udfKey, this.statement, this.root, this.input)
+
+		if this.output.err == nil && newErr != nil {
+			this.output.err = newErr
+		} else {
+			this.output.err = errors.NewExecutionStatementStoppedError(this.statement)
+		}
+
 		this.baseContext.mutex.Lock()
 		delete(this.baseContext.udfHandleMap, this)
 		this.baseContext.mutex.Unlock()

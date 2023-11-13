@@ -83,8 +83,10 @@ type LikeContext interface {
 
 type ParkableContext interface {
 	Context
-	Park(func(bool))
-	Resume()
+	Park(stop func(bool), changeCallerState bool)
+	Resume(changeCallerState bool)
+	ParkableEvaluateStatement(statement string, namedArgs map[string]value.Value, positionalArgs value.Values, subquery, readonly bool, profileUdfExecTrees bool, funcKey string) (value.Value, uint64, error)
+	ParkableOpenStatement(statement string, namedArgs map[string]value.Value, positionalArgs value.Values, subquery, readonly bool, profileUdfExecTrees bool, funcKey string) (functions.Handle, error)
 }
 
 type QuotaContext interface {
