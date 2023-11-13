@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/couchbase/query/auth"
+	"github.com/couchbase/query/functions"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/value"
 )
@@ -63,15 +64,7 @@ func (this *IndexContext) EvaluateStatement(statement string, namedArgs map[stri
 	return nil, 0, nil
 }
 
-func (this *IndexContext) OpenStatement(statement string, namedArgs map[string]value.Value, positionalArgs value.Values, subquery, readonly bool, profileUdfExecTrees bool, funcKey string) (
-	interface {
-		Type() string
-		Mutations() uint64
-		Results() (interface{}, uint64, error)
-		Complete() (uint64, error)
-		NextDocument() (value.Value, error)
-		Cancel()
-	}, error) {
+func (this *IndexContext) OpenStatement(statement string, namedArgs map[string]value.Value, positionalArgs value.Values, subquery, readonly bool, profileUdfExecTrees bool, funcKey string) (functions.Handle, error) {
 	return nil, nil
 }
 

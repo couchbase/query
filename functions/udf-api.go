@@ -19,15 +19,17 @@ type UdfContext struct {
 	funcKey string // full name of UDF function
 }
 
+type Handle interface {
+	Type() string
+	Mutations() uint64
+	Results() (interface{}, uint64, error)
+	Complete() (uint64, error)
+	NextDocument() (value.Value, error)
+	Cancel()
+}
+
 type UdfHandle struct {
-	handle interface {
-		Type() string
-		Mutations() uint64
-		Results() (interface{}, uint64, error)
-		Complete() (uint64, error)
-		NextDocument() (value.Value, error)
-		Cancel()
-	}
+	handle Handle
 }
 
 func NewUdfContext(context Context, path string, funcKey string) *UdfContext {

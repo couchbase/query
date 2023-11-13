@@ -17,6 +17,7 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/functions"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/parser/n1ql"
 	"github.com/couchbase/query/plan"
@@ -227,14 +228,7 @@ func (this *Context) completeStatement(stmtType string, success bool, baseContex
 }
 
 func (this *Context) OpenStatement(statement string, namedArgs map[string]value.Value, positionalArgs value.Values,
-	subquery, readonly bool, profileUdfExecTrees bool, funcKey string) (interface {
-	Type() string
-	Mutations() uint64
-	Results() (interface{}, uint64, error)
-	Complete() (uint64, error)
-	NextDocument() (value.Value, error)
-	Cancel()
-}, error) {
+	subquery, readonly bool, profileUdfExecTrees bool, funcKey string) (functions.Handle, error) {
 	newContext := this.Copy()
 	txContext := this.TxContext()
 	if txContext != nil {
@@ -528,15 +522,7 @@ func (this *Context) ExecutePrepared(prepared *plan.Prepared, isPrepared bool,
 }
 
 func (this *Context) OpenPrepared(baseContext *Context, stmtType string, prepared *plan.Prepared, isPrepared bool,
-	namedArgs map[string]value.Value, positionalArgs value.Values, statement string, profileUdfExecTrees bool, funcKey string) (
-	interface {
-		Type() string
-		Mutations() uint64
-		Results() (interface{}, uint64, error)
-		Complete() (uint64, error)
-		NextDocument() (value.Value, error)
-		Cancel()
-	}, error) {
+	namedArgs map[string]value.Value, positionalArgs value.Values, statement string, profileUdfExecTrees bool, funcKey string) (functions.Handle, error) {
 	handle := &executionHandle{}
 	handle.statement = statement
 	handle.udfKey = funcKey
