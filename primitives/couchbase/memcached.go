@@ -443,14 +443,30 @@ type GatheredStats struct {
 
 func getStatsParallelFunc(fn func(key, val []byte), sn string, b *Bucket, offset int, which string,
 	ch chan<- GatheredStats) {
-	pool := b.getConnPool(offset)
 
-	conn, err := pool.Get()
+	var conn *memcached.Client
+	var err error
+	backOffRetries := b.backOffRetries()
+	for i := 0; i < backOffRetries; i++ {
+		pool := b.getConnPool(offset)
+		conn, err = pool.Get()
 
-	if err == nil {
-		conn.SetDeadline(getDeadline(time.Time{}, DefaultTimeout))
-		err = conn.StatsFunc(which, fn)
-		pool.Return(conn)
+		if err == nil {
+			conn.SetDeadline(getDeadline(noDeadline, DefaultTimeout))
+			err = conn.StatsFunc(which, fn)
+			if err == nil {
+				pool.Return(conn)
+			} else if isConnError(err) || isAddrNotAvailable(err) {
+				pool.Discard(conn)
+				backOff(i, backOffRetries, backOffDuration, true)
+				continue
+			} else if IsReadTimeOutError(err) {
+				pool.Discard(conn)
+			} else {
+				pool.Return(conn)
+			}
+			break
+		}
 	}
 	ch <- GatheredStats{Server: sn, Err: err}
 }
