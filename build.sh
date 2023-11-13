@@ -127,7 +127,7 @@ function get_repo {
         else
             url="https://${path}.git"
         fi
-        $GIT clone -b $mcommit $url $GOPATH/src/$path
+        $GIT clone $url $GOPATH/src/$path
     fi
     cd $GOPATH/src/$path
     checkout_if_necessary $subpath $mcommit $@
