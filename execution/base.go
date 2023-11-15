@@ -137,44 +137,47 @@ var indexerPhase = map[datastore.IndexType]phaseMap{
 
 type base struct {
 	valueExchange
-	externalStop  func(bool)
-	funcLock      sync.RWMutex
-	conn          *datastore.IndexConnection
-	stopChannel   stopChannel
-	quota         uint64
-	input         Operator
-	output        Operator
-	stop          OpSendAction
-	parent        Operator
-	once          util.Once
-	serializable  bool
-	serialized    bool
-	inline        bool
-	doSend        func(this *base, op Operator, item value.AnnotatedValue) bool
-	closeConsumer bool
-	batch         []value.AnnotatedValue
-	timePhase     timePhases
-	startTime     util.Time
-	execPhase     Phases
-	phaseTimes    func(*Context, Phases, time.Duration)
-	execTime      time.Duration
-	chanTime      time.Duration
-	servTime      time.Duration
-	inDocs        int64
-	outDocs       int64
-	phaseSwitches int64
-	stopped       bool
-	isRoot        bool
-	bit           uint8
-	operatorCtx   opContext
-	rootContext   *Context
-	childrenLeft  int32
-	activeCond    sync.Cond
-	activeLock    sync.Mutex
-	opState       opState
-	phase         Phases
-	inactiveFlag  bool
-	stash         Operator
+	externalStop    func(bool)
+	funcLock        sync.RWMutex
+	handleLock      sync.RWMutex
+	conn            *datastore.IndexConnection
+	stopChannel     stopChannel
+	quota           uint64
+	input           Operator
+	output          Operator
+	stop            OpSendAction
+	parent          Operator
+	once            util.Once
+	serializable    bool
+	serialized      bool
+	inline          bool
+	doSend          func(this *base, op Operator, item value.AnnotatedValue) bool
+	closeConsumer   bool
+	batch           []value.AnnotatedValue
+	timePhase       timePhases
+	startTime       util.Time
+	execPhase       Phases
+	phaseTimes      func(*Context, Phases, time.Duration)
+	execTime        time.Duration
+	chanTime        time.Duration
+	servTime        time.Duration
+	inDocs          int64
+	outDocs         int64
+	phaseSwitches   int64
+	stopped         bool
+	isRoot          bool
+	bit             uint8
+	operatorCtx     opContext
+	rootContext     *Context
+	childrenLeft    int32
+	activeCond      sync.Cond
+	activeLock      sync.Mutex
+	opState         opState
+	phase           Phases
+	inactiveFlag    bool
+	stash           Operator
+	handlesInActive bool                      // whether new handles can be created under this operator
+	handles         map[*executionHandle]bool // stores all the currently active handles created under this operator
 }
 
 const _ITEM_CAP = 512
@@ -418,6 +421,8 @@ func (this *base) baseReopen(context *Context) bool {
 		this.conn = nil
 	}
 
+	this.handlesInActive = false
+	this.handles = nil
 	this.childrenLeft = 0
 	this.stopped = false
 	this.serialized = false
@@ -597,6 +602,27 @@ func (this *base) setExternalStop(stop func(bool)) {
 	this.funcLock.Unlock()
 }
 
+func (this *base) addHandle(handle *executionHandle) {
+	this.handleLock.Lock()
+	if this.handles == nil {
+		this.handles = make(map[*executionHandle]bool)
+	}
+	this.handles[handle] = true
+	this.handleLock.Unlock()
+}
+
+func (this *base) deleteHandle(handle *executionHandle) {
+	this.handleLock.Lock()
+	if this.handles != nil {
+		delete(this.handles, handle)
+	}
+	this.handleLock.Unlock()
+}
+
+func (this *base) getHandlesInActive() bool {
+	return this.handlesInActive
+}
+
 func (this *base) isRunning() bool {
 	state := this.opState
 	return state == _RUNNING
@@ -668,6 +694,22 @@ func (this *base) baseSendAction(action opAction) bool {
 		this.externalStop(action == _ACTION_STOP)
 	}
 	this.funcLock.RUnlock()
+
+	if action == _ACTION_STOP {
+		this.handleLock.RLock()
+
+		// stop all the handles that are open
+		for handle := range this.handles {
+			handle.externalStop()
+			delete(this.handles, handle)
+		}
+		this.handleLock.RUnlock()
+
+		// set this flag to indicate that no further interaction must be allowed with these handles
+		// and that no new handles must be created under this operator
+		this.handlesInActive = true
+	}
+
 	return rv
 }
 

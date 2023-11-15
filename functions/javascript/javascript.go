@@ -446,9 +446,10 @@ func (this *javascript) Execute(name functions.FunctionName, body functions.Func
 		}
 
 	}
-	context.Park(nil)
+
+	context.Park(nil, true)
 	res, err = evaluator.evaluator.Evaluate(library, funcName, opts, args, functions.NewUdfContext(context, funcBody.prefix, name.Key()))
-	context.Resume()
+	context.Resume(true)
 
 	// deflate the pool if required
 	if evaluator.threads > _DEF_RUNNERS && evaluator.available >= _DEFLATE_THRESHOLD {

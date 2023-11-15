@@ -198,14 +198,37 @@ type opContext struct {
 	*Context
 }
 
-func (this *opContext) Park(stop func(bool)) {
+// changeCallerState: whether to change the state of the calling operator to prevent accrual of execution timings
+// in the calling operator and in the operators executing the subquery/ UDF
+// Set to true in most cases
+func (this *opContext) Park(stop func(bool), changeCallerState bool) {
 	this.base.setExternalStop(stop)
-	this.base.switchPhase(_CHANTIME)
+
+	if changeCallerState {
+		this.base.switchPhase(_CHANTIME)
+	}
 }
 
-func (this *opContext) Resume() {
+func (this *opContext) Resume(changeCallerState bool) {
 	this.base.setExternalStop(nil)
-	this.base.switchPhase(_EXECTIME)
+
+	if changeCallerState {
+		this.base.switchPhase(_EXECTIME)
+	}
+}
+
+// Add a handle created under this operator
+func (this *opContext) AddUdfHandle(handle *executionHandle) {
+	this.base.addHandle(handle)
+}
+
+func (this *opContext) DeleteUdfHandle(handle *executionHandle) {
+	this.base.deleteHandle(handle)
+}
+
+// Returns whether new handles can be created under this operator
+func (this *opContext) HandlesInActive() bool {
+	return this.base.getHandlesInActive()
 }
 
 func (this *opContext) IsActive() bool {
@@ -1374,12 +1397,12 @@ func (this *opContext) EvaluateSubquery(query *algebra.Select, parent value.Valu
 		} else {
 			sequence.SendAction(_ACTION_PAUSE)
 		}
-	})
+	}, true)
 	sequence.RunOnce(this.Context, parent)
 
 	// Await completion
 	collect.waitComplete()
-	this.Resume()
+	this.Resume(true)
 
 	results := collect.ValuesOnce()
 

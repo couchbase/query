@@ -14,6 +14,7 @@ import (
 
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/functions"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/value"
 )
@@ -44,14 +45,7 @@ type Context interface {
 	RetrieveValue(key string) interface{}
 	ReleaseValue(key string)
 	EvaluateStatement(statement string, namedArgs map[string]value.Value, positionalArgs value.Values, subquery, readonly bool, profileUdfExecTrees bool, funcKey string) (value.Value, uint64, error)
-	OpenStatement(statement string, namedArgs map[string]value.Value, positionalArgs value.Values, subquery, readonly bool, profileUdfExecTrees bool, funcKey string) (interface {
-		Type() string
-		Mutations() uint64
-		Results() (interface{}, uint64, error)
-		Complete() (uint64, error)
-		NextDocument() (value.Value, error)
-		Cancel()
-	}, error)
+	OpenStatement(statement string, namedArgs map[string]value.Value, positionalArgs value.Values, subquery, readonly bool, profileUdfExecTrees bool, funcKey string) (functions.Handle, error)
 	Parse(s string) (interface{}, error)
 	Infer(value.Value, value.Value) (value.Value, error)
 	SetTracked(bool)
@@ -89,8 +83,10 @@ type LikeContext interface {
 
 type ParkableContext interface {
 	Context
-	Park(func(bool))
-	Resume()
+	Park(stop func(bool), changeCallerState bool)
+	Resume(changeCallerState bool)
+	ParkableEvaluateStatement(statement string, namedArgs map[string]value.Value, positionalArgs value.Values, subquery, readonly bool, profileUdfExecTrees bool, funcKey string) (value.Value, uint64, error)
+	ParkableOpenStatement(statement string, namedArgs map[string]value.Value, positionalArgs value.Values, subquery, readonly bool, profileUdfExecTrees bool, funcKey string) (functions.Handle, error)
 }
 
 type QuotaContext interface {

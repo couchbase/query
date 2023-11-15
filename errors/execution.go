@@ -35,6 +35,13 @@ func NewExecutionKeyValidationSpaceError() Error {
 		InternalMsg: "Out of key validation space.", InternalCaller: CallerN(1)}
 }
 
+func NewExecutionStatementStoppedError(statement string) Error {
+	c := make(map[string]interface{})
+	c["statement"] = statement
+	return &err{level: EXCEPTION, ICode: E_EXECUTION_STATEMENT_STOPPED, IKey: "execution.stopped_error",
+		InternalMsg: "Execution of statement has been stopped.", InternalCaller: CallerN(1), cause: c}
+}
+
 func NewParsingError(e error, ctx string) Error {
 	return &err{level: EXCEPTION, ICode: E_PARSING, IKey: "execution.expression.parse.failed",
 		ICause:         e,

@@ -43,22 +43,17 @@ type Context interface {
 	RetrieveValue(key string) interface{}
 	ReleaseValue(key string)
 	EvaluateStatement(statement string, namedArgs map[string]value.Value, positionalArgs value.Values, subquery, readonly bool, profileUdfExecTrees bool, funcKey string) (value.Value, uint64, error)
-	OpenStatement(statement string, namedArgs map[string]value.Value, positionalArgs value.Values, subquery, readonly bool, profileUdfExecTrees bool, funcKey string) (interface {
-		Type() string
-		Mutations() uint64
-		Results() (interface{}, uint64, error)
-		Complete() (uint64, error)
-		NextDocument() (value.Value, error)
-		Cancel()
-	}, error)
+	OpenStatement(statement string, namedArgs map[string]value.Value, positionalArgs value.Values, subquery, readonly bool, profileUdfExecTrees bool, funcKey string) (Handle, error)
+	ParkableEvaluateStatement(statement string, namedArgs map[string]value.Value, positionalArgs value.Values, subquery, readonly bool, profileUdfExecTrees bool, funcKey string) (value.Value, uint64, error)
+	ParkableOpenStatement(statement string, namedArgs map[string]value.Value, positionalArgs value.Values, subquery, readonly bool, profileUdfExecTrees bool, funcKey string) (Handle, error)
 	Parse(s string) (interface{}, error)
 	Infer(value.Value, value.Value) (value.Value, error)
 	SetTracked(bool)
 	IsTracked() bool
 	RecordJsCU(d time.Duration, m uint64)
 	PreserveProjectionOrder() bool
-	Park(func(bool))
-	Resume()
+	Park(stop func(bool), changeCallerState bool)
+	Resume(changeCallerState bool)
 	IsPrepared() bool
 }
 

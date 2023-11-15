@@ -215,6 +215,7 @@ const (
 	E_TEMP_FILE_QUOTA                         ErrorCode = 5005
 	E_EXECUTION_KEY_VALIDATION                ErrorCode = 5006
 	E_EXECUTION_CURL                          ErrorCode = 5007
+	E_EXECUTION_STATEMENT_STOPPED             ErrorCode = 5008
 	E_EVALUATION_ABORT                        ErrorCode = 5010
 	E_EVALUATION                              ErrorCode = 5011
 	E_EXPLAIN                                 ErrorCode = 5015
