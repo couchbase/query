@@ -225,7 +225,7 @@ func (this *ClockTZ) Evaluate(item value.Value, context Context) (value.Value, e
 
 	// Get the timezone and the *Location.
 	timeZone := tz.ToString()
-	loc, err := time.LoadLocation(timeZone)
+	loc, err := loadLocation(timeZone)
 	if err != nil {
 		return value.NULL_VALUE, nil
 	}
@@ -954,7 +954,7 @@ func (this *DatePartMillis) Evaluate(item value.Value, context Context) (value.V
 
 		// Get the timezone and the *Location.
 		tz := timeZone.ToString()
-		loc, err := time.LoadLocation(tz)
+		loc, err := loadLocation(tz)
 		if err != nil {
 			return value.NULL_VALUE, nil
 		}
@@ -1856,7 +1856,7 @@ func (this *MillisToZoneName) Evaluate(item value.Value, context Context) (value
 
 	millis := ev.Actual().(float64)
 	tz := zv.ToString()
-	loc, err := time.LoadLocation(tz)
+	loc, err := loadLocation(tz)
 	if err != nil {
 		return value.NULL_VALUE, nil
 	}
@@ -2092,7 +2092,7 @@ func (this *NowTZ) Evaluate(item value.Value, context Context) (value.Value, err
 
 	// Get the timezone and the *Location.
 	timeZone := tz.ToString()
-	loc, err := time.LoadLocation(timeZone)
+	loc, err := loadLocation(timeZone)
 	if err != nil {
 		return value.NULL_VALUE, nil
 	}
@@ -2408,7 +2408,7 @@ func (this *StrToZoneName) Evaluate(item value.Value, context Context) (value.Va
 	str := first.ToString()
 
 	tz := second.ToString()
-	loc, err := time.LoadLocation(tz)
+	loc, err := loadLocation(tz)
 	if err != nil {
 		return value.NULL_VALUE, nil
 	}
@@ -2648,7 +2648,7 @@ func (this *WeekdayMillis) Evaluate(item value.Value, context Context) (value.Va
 		// Process the timezone component as it isnt nil
 		// Get the timezone and the *Location.
 		tz := timeZone.ToString()
-		loc, err := time.LoadLocation(tz)
+		loc, err := loadLocation(tz)
 		if err != nil {
 			return value.NULL_VALUE, nil
 		}
@@ -3343,7 +3343,7 @@ func strToTimeCommonFormat(s string, format string) (time.Time, error) {
 			}
 			i += j - 1
 			n += l
-		} else if i+2 < len(format) && format[i:i+3] == "TZD" {
+		} else if i+2 < len(format) && (format[i:i+3] == "TZD" || format[i:i+3] == "TZN" || format[i:i+3] == "TZF") {
 			var err error
 			n, zoneh, zonem, loc, err = gatherZone(s, n)
 			if err != nil {
@@ -3500,6 +3500,11 @@ func gatherZone(s string, n int) (int, int, int, *time.Location, error) {
 		f := strings.FieldsFunc(s[n:], nonIANATZDBRune)
 		loc, err = time.LoadLocation(f[0])
 		if err != nil {
+			if long, ok := shortToLong[f[0]]; ok {
+				loc, err = time.LoadLocation(long)
+			}
+		}
+		if err != nil {
 			err = fmt.Errorf("Invalid time zone in date string")
 		} else {
 			n += len(f[0])
@@ -3513,6 +3518,45 @@ func nonIANATZDBRune(r rune) bool {
 		return false
 	}
 	return true
+}
+
+// short zone monikers are not unique (e.g. CST = China Standard Time as well as (North American) Central Standard Time) so really
+// are best avoided
+// See: https://www.timeanddate.com/time/zones/
+//
+// https://www.iana.org/time-zones
+//
+// a lingering problem for us is that Go's time package produces the non-unique short form in common formatting
+var shortToLong = map[string]string{
+	"ACST": "Australia/Darwin",
+	"AEDT": "Australia/Sydney",
+	"AEST": "Australia/Sydney",
+	"AET":  "Australia/Sydney",
+	"AWDT": "Australia/Perth",
+	"AWST": "Australia/Perth",
+	"BST":  "Europe/London",
+	"CAT":  "Africa/Windhoek",
+	"CDT":  "CST6CDT",
+	"CEDT": "Europe/Paris",
+	"CEST": "Europe/Paris",
+	"CST":  "CST6CDT",
+	"EDT":  "EST5EDT",
+	"EEST": "Europe/Kiev",
+	"HMT":  "Europe/Helsinki",
+	"JST":  "Asia/Tokyo",
+	"KST":  "Asia/Seoul",
+	"MDT":  "MST7MDT",
+	"MEDT": "Europe/Paris",
+	"MEST": "Europe/Paris",
+	"MMT":  "Indian/Maldives",
+	"MST":  "MST7MDT",
+	"PDT":  "PST8PDT",
+	"PST":  "PST8PDT",
+	"SAST": "Africa/Johannesburg",
+	"SGT":  "Asia/Singapore",
+	"SMT":  "Asia/Singapore",
+	"WAT":  "Africa/Lagos",
+	"WEST": "Europe/Lisbon",
 }
 
 // Make sure YMD specification makes sense
@@ -3551,6 +3595,14 @@ func getLocation(h int, m int) *time.Location {
 	return time.FixedZone(fmt.Sprintf("%+03d%02d", h, m), h*60*60+m*60)
 }
 
+func loadLocation(tz string) (*time.Location, error) {
+	_, zoneh, zonem, loc, err := gatherZone(tz, 0)
+	if err == nil && loc == nil {
+		loc = getLocation(zoneh, zonem)
+	}
+	return loc, err
+}
+
 /*
 Parse the input string using the defined formats for Date and return the time value it represents, and error.
 Pick the first one that successfully parses preferring formats that exactly match the length over those with optional components.
@@ -3587,7 +3639,7 @@ func strToTimeforTrunc(s string) (time.Time, string, error) {
 	var err error
 	var f string
 	found := false
-	newloc, _ := time.LoadLocation("UTC")
+	newloc, _ := loadLocation("UTC")
 	// first pass try formats that match length before encountering the overhead of parsing all
 	for _, f = range _DATE_FORMATS {
 		if len(f) == len(s) {
@@ -3893,8 +3945,19 @@ func timeToStrPercentFormat(t time.Time, format string) string {
 				}
 				res = append(res, []rune(fmt.Sprintf("%+03d%02d", h, m))...)
 			case 'Z':
-				zone, _ := t.Zone()
-				res = append(res, []rune(zone)...)
+				zone, off := t.Zone()
+				if pad == noPad && off == 0 {
+					res = append(res, rune('Z'))
+				} else {
+					// Uses the ^ modifier to mean "prefer location name" (and not uppercase)
+					// In cases where the location has been constructed from an IANA zone name, the name will be reported
+					// e.g. "Europe/Berlin" instead of "CET"
+					if preferUpper {
+						res = append(res, []rune(t.Location().String())...)
+					} else {
+						res = append(res, []rune(zone)...)
+					}
+				}
 			case '%':
 				res = append(res, rune('%'))
 			default:
@@ -4004,6 +4067,14 @@ func timeToStrCommonFormat(t time.Time, format string) string {
 				}
 				res = append(res, []rune(fmt.Sprintf("%+03d:%02d", h, m))...)
 			}
+			i += 2
+		} else if i+2 < len(format) && format[i:i+3] == "TZN" {
+			zone, _ := t.Zone()
+			res = append(res, []rune(zone)...)
+			i += 2
+		} else if i+2 < len(format) && format[i:i+3] == "TZF" {
+			zone := t.Location().String()
+			res = append(res, []rune(zone)...)
 			i += 2
 		} else if format[i] == 's' {
 			n := 0
