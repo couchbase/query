@@ -3549,7 +3549,6 @@ var shortToLong = map[string]string{
 	"MEDT": "Europe/Paris",
 	"MEST": "Europe/Paris",
 	"MMT":  "Indian/Maldives",
-	"MST":  "MST7MDT",
 	"PDT":  "PST8PDT",
 	"PST":  "PST8PDT",
 	"SAST": "Africa/Johannesburg",
