@@ -229,26 +229,34 @@ func (this *inlineBody) GetPlans(udfName string, fcontext functions.Context) (ex
 	if subqueryPlans == nil || !good {
 		// If no plans or not valid
 		this.mutex.Lock()
-
-		expr, err = parser.Parse(udfExpr.String())
-		if err == nil {
-			err = setVarNames(expr, varNames)
-		}
-		if err != nil {
+		if this.subqueryPlans == nil || subqueryPlans == this.subqueryPlans {
+			expr, err = parser.Parse(udfExpr.String())
+			if err == nil {
+				err = setVarNames(expr, varNames)
+			}
+			if err != nil {
+				this.mutex.Unlock()
+				return nil, nil, err
+			}
+			//  Store new plan in UDF
+			subqueryPlans = algebra.NewSubqueryPlans()
+			err = context.SetupSubqueryPlans(expr, subqueryPlans, true, true, false)
+			if err != nil {
+				this.mutex.Unlock()
+				return nil, nil, err
+			}
+			// reverify so that we can handle in transaction context
+			// verify in lock so that metadata update will not be done in parallel
+			_, trans = context.VerifySubqueryPlans(expr, subqueryPlans, true)
+			this.subqueryPlans = subqueryPlans
 			this.mutex.Unlock()
-			return nil, nil, err
-		}
-		//  Store new plan in UDF
-		subqueryPlans = algebra.NewSubqueryPlans()
-		err = context.SetupSubqueryPlans(expr, subqueryPlans, true, true, false)
-		if err != nil {
+		} else {
+			subqueryPlans = this.subqueryPlans
+			expr = subqueryPlans.GetExpression(true)
 			this.mutex.Unlock()
-			return nil, nil, err
+			// reverify so that we can handle in transaction context
+			_, trans = context.VerifySubqueryPlans(expr, subqueryPlans, true)
 		}
-		this.subqueryPlans = subqueryPlans
-		this.mutex.Unlock()
-		// reverify so that we can handle in transaction context
-		_, trans = context.VerifySubqueryPlans(expr, subqueryPlans, true)
 	}
 	if trans {
 		// In transaction context regenerate algebra tree
