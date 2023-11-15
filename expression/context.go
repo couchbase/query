@@ -107,5 +107,5 @@ type ExecutePreparedContext interface {
 type SequenceContext interface {
 	Context
 	NextSequenceValue(name string) (int64, errors.Error)
-	CurrentSequenceValue(name string) (int64, errors.Error)
+	PrevSequenceValue(name string) (int64, errors.Error)
 }

@@ -41,6 +41,7 @@ type sequence struct {
 	remaining uint64 // remaining before next cache load
 	rev       int32  // cache revision when this was loaded
 	version   int64  // tracks alterations
+	accessed  bool   // if NEXT has been called for this sequence yet (since loading)
 }
 
 const _CACHE_LIMIT = 65536
@@ -714,6 +715,8 @@ func NextSequenceValue(name string) (int64, errors.Error) {
 	if err != nil {
 		return 0, err
 	}
+	seq.accessed = true
+
 	if seq.remaining > 0 {
 		seq.remaining--
 		prev := seq.current
@@ -725,10 +728,14 @@ func NextSequenceValue(name string) (int64, errors.Error) {
 }
 
 // Authority to access the sequence must be validated by the caller
-func CurrentSequenceValue(name string) (int64, errors.Error) {
+func PrevSequenceValue(name string) (int64, errors.Error) {
 	seq, err := getLockedSequence(name)
 	if err != nil {
 		return 0, err
+	}
+	if !seq.accessed {
+		seq.Unlock()
+		return 0, errors.NewSequenceError(errors.W_SEQUENCE_NO_PREV_VALUE)
 	}
 	if seq.remaining > 0 {
 		rv := seq.current

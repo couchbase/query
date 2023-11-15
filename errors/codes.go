@@ -536,4 +536,5 @@ const (
 	W_SEQUENCE_CACHE_SIZE                     ErrorCode = 19115
 	E_SEQUENCE_NAME_PARTS                     ErrorCode = 19116
 	E_SEQUENCE_DROP_ALL                       ErrorCode = 19117
+	W_SEQUENCE_NO_PREV_VALUE                  ErrorCode = 19118
 )
