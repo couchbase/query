@@ -196,6 +196,8 @@ type builder struct {
 	from                 algebra.FromTerm      // Used for index selection
 	where                expression.Expression // Used for index selection
 	filter               expression.Expression // for Filter operator
+	let                  expression.Bindings   // LET clause
+	letLevel             int                   // max level of LET bindings
 	setOpDistinct        bool                  // Used for SETOP Distinct to apply DISTINCT on projection
 	children             []plan.Operator
 	subChildren          []plan.Operator
@@ -253,6 +255,10 @@ func (this *builder) Copy() *builder {
 		// children, subChildren, coveringScan, coveredUnnests, countScan, orderScan, lastOp
 	}
 
+	if len(this.let) > 0 {
+		rv.let = this.let.Copy()
+		rv.letLevel = this.letLevel
+	}
 	if len(this.keyspaceNames) > 0 {
 		rv.keyspaceNames = make(map[string]string, len(this.keyspaceNames))
 		for k, v := range this.keyspaceNames {

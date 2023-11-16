@@ -196,7 +196,10 @@ func (this *builder) buildCoveringJoinScan(secondaries map[datastore.Index]*inde
 			expression.NewMeta(expression.NewIdentifier(alias)),
 			expression.NewFieldName("id", false))
 
-		exprs := this.cover.Expressions()
+		exprs, err := this.getExprsToCover()
+		if err != nil {
+			return nil, nil, nil, err
+		}
 
 	outer:
 		for index, entry := range secondaries {

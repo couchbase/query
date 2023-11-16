@@ -35,6 +35,7 @@ func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 	prevCollectQueryInfo := this.storeCollectQueryInfo()
 	prevPartialSortTermCount := this.partialSortTermCount
 	prevInclWith := stmt.IncludeWith()
+	prevAliases := this.aliases
 
 	defer func() {
 		this.node = prevNode
@@ -47,6 +48,7 @@ func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 		this.restoreCollectQueryInfo(prevCollectQueryInfo)
 		this.partialSortTermCount = prevPartialSortTermCount
 		stmt.SetIncludeWith(prevInclWith)
+		this.aliases = prevAliases
 	}()
 
 	// Since this is the root Select being planned - disinclude its With expressions from cover transformation
@@ -100,6 +102,7 @@ func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 
 	addFromSubqueries(qp, stmt.OptimHints(), subOp)
 
+	this.aliases = nil
 	with := stmt.With()
 	if with != nil {
 		cost := OPT_COST_NOT_AVAIL
@@ -110,6 +113,11 @@ func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 			cost, cardinality, size, frCost = getWithCost(subOp, with.Bindings())
 		}
 		subOp = plan.NewWith(with, subOp, cost, cardinality, size, frCost)
+
+		this.aliases = make(map[string]bool, len(with.Bindings()))
+		for _, w := range with.Bindings() {
+			this.aliases[w.Alias()] = true
+		}
 	}
 
 	// if we changed order then we must adjust the stmtOrder too so later operator creation matches

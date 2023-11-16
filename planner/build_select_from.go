@@ -248,7 +248,16 @@ func isValidXattrs(names []string) bool {
 }
 
 func (this *builder) collectAliases(node *algebra.Subselect) {
-	this.aliases = make(map[string]bool, len(this.baseKeyspaces))
+	if this.aliases == nil {
+		this.aliases = make(map[string]bool, len(this.baseKeyspaces)+len(node.Let()))
+	} else {
+		// make a copy since we are changing the map
+		aliases := this.aliases
+		this.aliases = make(map[string]bool, len(aliases)+len(this.baseKeyspaces)+len(node.Let()))
+		for k, v := range aliases {
+			this.aliases[k] = v
+		}
+	}
 	for a, _ := range this.baseKeyspaces {
 		this.aliases[a] = true
 	}
@@ -1490,8 +1499,14 @@ func (this *builder) checkEarlyProjection(projection *algebra.Projection) error 
 					coverExprs = append(coverExprs, expression.NewField(ident, expression.NewFieldName(n, false)))
 				}
 				coverExprs = append(coverExprs, expression.NewField(expression.NewMeta(ident), expression.NewFieldName("id", false)))
+
+				exprs, err := this.getExprsToCover()
+				if err != nil {
+					return err
+				}
+
 				cover := true
-				for _, expr := range this.cover.Expressions() {
+				for _, expr := range exprs {
 					if !expression.IsCovered(expr, keyspace.Name(), coverExprs, false) {
 						cover = false
 						break

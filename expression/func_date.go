@@ -3938,7 +3938,7 @@ func gatherZone(s string, n int) (int, int, int, *time.Location, error) {
 	var err error
 	var zoneh, zonem int
 	var loc *time.Location
-	if s[n] == 'Z' {
+	if n < len(s) && s[n] == 'Z' {
 		zoneh = 0
 		zonem = 0
 		loc = nil
@@ -3973,8 +3973,15 @@ func gatherZone(s string, n int) (int, int, int, *time.Location, error) {
 		loc = nil
 		n += 3
 	} else {
-		f := strings.FieldsFunc(s[n:], nonIANATZDBRune)
-		loc, err = time.LoadLocation(f[0])
+		var f []string
+		if n < len(s) {
+			f = strings.FieldsFunc(s[n:], nonIANATZDBRune)
+		}
+		if len(f) > 0 {
+			loc, err = time.LoadLocation(f[0])
+		} else {
+			loc, err = time.LoadLocation("")
+		}
 		if err != nil {
 			if long, ok := shortToLong[f[0]]; ok {
 				loc, err = time.LoadLocation(long)
@@ -3982,7 +3989,7 @@ func gatherZone(s string, n int) (int, int, int, *time.Location, error) {
 		}
 		if err != nil {
 			err = fmt.Errorf("Invalid time zone in date string")
-		} else {
+		} else if len(f) > 0 {
 			n += len(f[0])
 		}
 	}
