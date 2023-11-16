@@ -25,6 +25,8 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 	prevCover := this.cover
 	prevWhere := this.where
 	prevFilter := this.filter
+	prevLet := this.let
+	prevLetLevel := this.letLevel
 	prevCorrelated := this.correlated
 	prevCoveringScans := this.coveringScans
 	prevCoveredUnnests := this.coveredUnnests
@@ -43,6 +45,8 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 		this.cover = prevCover
 		this.where = prevWhere
 		this.filter = prevFilter
+		this.let = prevLet
+		this.letLevel = prevLetLevel
 		this.correlated = prevCorrelated
 		this.coveringScans = prevCoveringScans
 		this.coveredUnnests = prevCoveredUnnests
@@ -67,7 +71,6 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 	this.passthruBuilderFlags(prevBuilderFlags)
 	this.maxParallelism = 0
 	this.lastOp = nil
-	this.aliases = nil
 
 	this.projection = node.Projection()
 	this.resetIndexGroupAggs()
@@ -105,13 +108,19 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 	}
 
 	// Inline LET expressions for index selection
-	if node.Let() != nil && node.Where() != nil {
-		var err error
-		inliner := expression.NewInliner(node.Let().Mappings())
-		level := getMaxLevelOfLetBindings(node.Let())
-		this.where, err = dereferenceLet(node.Where().Copy(), inliner, level)
-		if err != nil {
-			return nil, err
+	this.let = nil
+	this.letLevel = 0
+	if node.Let() != nil {
+		this.let = node.Let()
+		this.letLevel = getMaxLevelOfLetBindings(this.let)
+		this.where = nil
+		if node.Where() != nil {
+			var err error
+			inliner := expression.NewInliner(this.let.Mappings())
+			this.where, err = dereferenceLet(node.Where().Copy(), inliner, this.letLevel)
+			if err != nil {
+				return nil, err
+			}
 		}
 	} else {
 		this.where = node.Where()

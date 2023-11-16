@@ -206,7 +206,16 @@ func isValidXattrs(names []string) bool {
 }
 
 func (this *builder) collectAliases(node *algebra.Subselect) {
-	this.aliases = make(map[string]bool, len(this.baseKeyspaces))
+	if this.aliases == nil {
+		this.aliases = make(map[string]bool, len(this.baseKeyspaces)+len(node.Let()))
+	} else {
+		// make a copy since we are changing the map
+		aliases := this.aliases
+		this.aliases = make(map[string]bool, len(aliases)+len(this.baseKeyspaces)+len(node.Let()))
+		for k, v := range aliases {
+			this.aliases[k] = v
+		}
+	}
 	for a, _ := range this.baseKeyspaces {
 		this.aliases[a] = true
 	}

@@ -14,6 +14,7 @@ Inliner is a mapper that inlines bindings, e.g. of a LET clause.
 type Inliner struct {
 	MapperBase
 	mappings map[string]Expression
+	modified bool
 }
 
 func NewInliner(mappings map[string]Expression) *Inliner {
@@ -28,8 +29,17 @@ func NewInliner(mappings map[string]Expression) *Inliner {
 func (this *Inliner) VisitIdentifier(id *Identifier) (interface{}, error) {
 	repl, ok := this.mappings[id.Identifier()]
 	if ok {
+		this.modified = true
 		return repl, nil
 	} else {
 		return id, nil
 	}
+}
+
+func (this *Inliner) IsModified() bool {
+	return this.modified
+}
+
+func (this *Inliner) Reset() {
+	this.modified = false
 }

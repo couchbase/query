@@ -195,5 +195,31 @@
                 "c6": 531
             }
     ]
+    },
+    {
+	"testcase": "MB-59642",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.`plan` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`covers` IS NOT MISSING AND ARRAY_LENGTH(v.`index_projection`.`entry_keys`) = 2 END"
+        },
+        "statements":"SELECT c FROM orders d UNNEST attr.colors AS c LET da = d.attr WHERE da.id = 1 AND da.colors IS NOT MISSING AND d.test_id = \"indexbugs\"",
+	"ordered": true,
+        "results": [
+            {
+                "c": "red"
+            },
+            {
+                "c": "blue"
+            },
+            {
+                "c": "green"
+            }
+    ]
     }
 ]

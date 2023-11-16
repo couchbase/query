@@ -33,6 +33,7 @@ func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 	prevRequirePrimaryKey := this.requirePrimaryKey
 	prevCollectQueryInfo := this.storeCollectQueryInfo()
 	prevInclWith := stmt.IncludeWith()
+	prevAliases := this.aliases
 
 	defer func() {
 		this.node = prevNode
@@ -44,6 +45,7 @@ func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 		this.requirePrimaryKey = prevRequirePrimaryKey
 		this.restoreCollectQueryInfo(prevCollectQueryInfo)
 		stmt.SetIncludeWith(prevInclWith)
+		this.aliases = prevAliases
 	}()
 	// Since this is the root Select being planned - disinclude its With expressions from cover transformation
 	stmt.SetIncludeWith(false)
@@ -91,6 +93,7 @@ func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 
 	addFromSubqueries(qp, stmt.OptimHints(), subOp)
 
+	this.aliases = nil
 	with := stmt.With()
 	if with != nil {
 		cost := OPT_COST_NOT_AVAIL
@@ -101,6 +104,11 @@ func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 			cost, cardinality, size, frCost = getWithCost(subOp, with)
 		}
 		subOp = plan.NewWith(with, subOp, cost, cardinality, size, frCost)
+
+		this.aliases = make(map[string]bool, len(with))
+		for _, w := range with {
+			this.aliases[w.Variable()] = true
+		}
 	}
 
 	if stmtOrder == nil && stmtOffset == nil && stmtLimit == nil {
