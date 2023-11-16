@@ -72,7 +72,6 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 	this.passthruBuilderFlags(prevBuilderFlags)
 	this.maxParallelism = 0
 	this.lastOp = nil
-	this.aliases = nil
 
 	this.projection = node.Projection()
 	this.resetIndexGroupAggs()
