@@ -136,7 +136,10 @@ func (this *SequenceOperation) Evaluate(item value.Value, context Context) (valu
 			av.SetAttachment("sequences", seqs)
 		}
 	} else {
-		num, err = ctx.CurrentSequenceValue(this.FullName())
+		num, err = ctx.PrevSequenceValue(this.FullName())
+		if err != nil && err.Code() == errors.W_SEQUENCE_NO_PREV_VALUE {
+			return value.MISSING_VALUE, err
+		}
 	}
 	if err != nil {
 		return nil, err

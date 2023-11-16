@@ -2149,13 +2149,13 @@ func (this *Context) NextSequenceValue(name string) (int64, errors.Error) {
 	return v, e
 }
 
-func (this *Context) CurrentSequenceValue(name string) (int64, errors.Error) {
+func (this *Context) PrevSequenceValue(name string) (int64, errors.Error) {
 	if this.txContext != nil && this.txContext.TxValid() == nil {
 		if v, ok := this.txContext.Sequence(name); ok {
 			return v, nil
 		}
 	}
-	v, e := sequences.CurrentSequenceValue(name)
+	v, e := sequences.PrevSequenceValue(name)
 	return v, e
 }
 

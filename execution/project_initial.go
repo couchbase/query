@@ -130,7 +130,10 @@ func (this *InitialProject) processItem(item value.AnnotatedValue, context *Cont
 		v, err := expr.Evaluate(item, &this.operatorCtx)
 		if err != nil {
 			context.Error(errors.NewEvaluationError(err, "projection"))
-			return false
+			e, ok := err.(errors.Error)
+			if v == nil || !ok || e.Level() != errors.WARNING {
+				return false
+			}
 		}
 		if av, ok := v.(value.AnnotatedValue); ok && av.Seen() {
 			av.Track()
@@ -203,7 +206,10 @@ func (this *InitialProject) processTerms(item value.AnnotatedValue, context *Con
 			v, err := term.Result().Expression().Evaluate(item, &this.operatorCtx)
 			if err != nil {
 				context.Error(errors.NewEvaluationError(err, "projection"))
-				return false
+				e, ok := err.(errors.Error)
+				if v == nil || !ok || e.Level() != errors.WARNING {
+					return false
+				}
 			}
 			if term.Result().Self() {
 				v = value.NewValue(v.Actual())
@@ -254,7 +260,10 @@ func (this *InitialProject) processTerms(item value.AnnotatedValue, context *Con
 				starval, err = term.Result().Expression().Evaluate(item, &this.operatorCtx)
 				if err != nil {
 					context.Error(errors.NewEvaluationError(err, "projection"))
-					return false
+					e, ok := err.(errors.Error)
+					if starval == nil || !ok || e.Level() != errors.WARNING {
+						return false
+					}
 				}
 			}
 			// remove bindings

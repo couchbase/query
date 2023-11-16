@@ -31,11 +31,13 @@ var _seq = map[ErrorCode][2]string{
 	E_SEQUENCE_READ_ONLY_REQ:  {"read_only", "Sequences cannot be used in read-only requests"},
 	W_SEQUENCE_CACHE_SIZE:     {"warn_cache_size", "Cache size (%v) below recommended minimum"},
 	E_SEQUENCE_NAME_PARTS:     {"name_parts", "Sequence name resolves to '%v' - check query_context?%v"},
+	W_SEQUENCE_NO_PREV_VALUE:  {"no_prev_value", "Sequence previous value cannot be accessed before next value generation."},
 }
 
 // non-exception levels
 var _seqLevel = map[ErrorCode]int{
-	W_SEQUENCE_CACHE_SIZE: WARNING,
+	W_SEQUENCE_CACHE_SIZE:    WARNING,
+	W_SEQUENCE_NO_PREV_VALUE: WARNING,
 }
 
 func NewSequenceError(code ErrorCode, args ...interface{}) Error {
