@@ -892,6 +892,10 @@ func ScanSystemCollection(bucketName string, prefix string, preScan func(Keyspac
 	if err != nil {
 		return err
 	}
+	if systemCollection == nil {
+		logging.Debugf("No system collection for '%s'.", bucketName)
+		return errors.NewSystemCollectionError(bucketName, nil)
+	}
 
 	conn, index3, err := getSystemCollectonIndexConnection(systemCollection)
 	if err != nil || conn == nil || index3 == nil {

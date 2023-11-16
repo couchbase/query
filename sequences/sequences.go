@@ -130,6 +130,9 @@ func getSystemCollection(bucket string) (datastore.Keyspace, errors.Error) {
 		return nil, errors.NewNoDatastoreError()
 	}
 	ks, err = store.GetSystemCollection(bucket)
+	if err == nil && ks == nil {
+		err = errors.NewSequenceError(errors.E_SEQUENCE_NOT_ENABLED, bucket, err)
+	}
 	return ks, err
 }
 
@@ -257,7 +260,7 @@ func CreateSequence(path *algebra.Path, with value.Value) errors.Error {
 	}
 	b, err := getSystemCollection(path.Bucket())
 	if err != nil {
-		return errors.NewSequenceError(errors.E_SEQUENCE_NOT_ENABLED, path.Bucket(), err)
+		return err
 	}
 	if b.ScopeId() == path.Scope() {
 		return errors.NewSequenceError(errors.E_SEQUENCE_INVALID_NAME, path.SimpleString())
@@ -421,7 +424,7 @@ func AlterSequence(path *algebra.Path, with value.Value) errors.Error {
 
 	seq, err := getLockedSequence(name)
 	if err != nil {
-		return errors.NewSequenceError(errors.E_SEQUENCE_ALTER, name, err)
+		return err
 	}
 	defer seq.Unlock()
 
@@ -464,7 +467,7 @@ func AlterSequence(path *algebra.Path, with value.Value) errors.Error {
 	}
 	b, err := getSystemCollection(path.Bucket())
 	if err != nil {
-		return errors.NewSequenceError(errors.E_SEQUENCE_NOT_ENABLED, path.Bucket(), err)
+		return err
 	}
 
 	for retry := 0; ; retry++ {
@@ -772,7 +775,7 @@ func getLockedSequence(name string) (*sequence, errors.Error) {
 		_, err := getSystemCollection(seq.name.Bucket())
 		if err != nil {
 			seq.Unlock()
-			return nil, errors.NewSequenceError(errors.E_SEQUENCE_NOT_ENABLED, seq.name.Bucket(), err)
+			return nil, err
 		}
 
 		s = sequences.Get(name, nil)
