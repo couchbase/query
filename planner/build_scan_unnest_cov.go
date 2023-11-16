@@ -52,8 +52,14 @@ func (this *builder) buildCoveringUnnestScan(node *algebra.KeyspaceTerm,
 	centry := coveringEntries[index]
 	implicitCover := len(centry.coveredUnnests) > 0
 
+	var exprs expression.Expressions
+	exprs, err = this.getExprsToCover()
+	if err != nil {
+		return
+	}
+
 	scan, sargLength, err = this.buildCreateCoveringScan(centry.idxEntry, node, id, pred,
-		this.cover.Expressions(), append(centry.idxEntry.keys, id), implicitCover,
+		exprs, append(centry.idxEntry.keys, id), implicitCover,
 		implicitCover, false, centry.covers, centry.filterCovers, nil)
 	if err != nil || scan == nil {
 		return
@@ -113,7 +119,11 @@ func (this *builder) buildOneCoveringUnnestScan(node *algebra.KeyspaceTerm,
 	coveringExprs = append(coveringExprs, unnestFilters...)
 
 	// Is the statement covered by this index?
-	exprs := this.cover.Expressions()
+	exprs, err := this.getExprsToCover()
+	if err != nil {
+		return nil, err
+	}
+
 	for _, expr := range exprs {
 		// skip unnest expressions.Use unnest expression pointer for exact expr match.
 		if _, ok := coveredExprs[expr]; ok {

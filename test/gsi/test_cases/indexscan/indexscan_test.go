@@ -168,12 +168,14 @@ func TestIndexScan(t *testing.T) {
 	runStmt(qc, "CREATE INDEX ioaix1 ON orders (ALL a1) WHERE test_id = \"parameters\"")
 	runStmt(qc, "CREATE INDEX iorix1 ON orders (c1, c2, c3) WHERE test_id = \"idxfltr\"")
 	runStmt(qc, "CREATE INDEX iorix2 ON orders (c1, c2, c4, c6) WHERE test_id = \"idxfltr\"")
+	runStmt(qc, "CREATE INDEX iorix3 ON orders (attr.id, attr) WHERE test_id = \"indexbugs\"")
 	runStmt(qc, "CREATE INDEX ishix1 ON shellTest (c1, c2)")
 	runStmt(qc, "CREATE INDEX ishix2 ON shellTest (c2, c1)")
 	runMatch("case_index_scan_bugs.json", false, true, qc, t)
 	runStmt(qc, "DROP INDEX orders.ioaix1")
 	runStmt(qc, "DROP INDEX orders.iorix1")
 	runStmt(qc, "DROP INDEX orders.iorix2")
+	runStmt(qc, "DROP INDEX orders.iorix3")
 	runStmt(qc, "DROP INDEX shellTest.ishix1")
 	runStmt(qc, "DROP INDEX shellTest.ishix2")
 
@@ -189,7 +191,7 @@ func TestIndexScan(t *testing.T) {
 	if rr.Err != nil {
 		t.Errorf("did not expect err %s", rr.Err.Error())
 	}
-	rr = runStmt(qc, "delete from orders where test_id IN [\"ua\", \"skipranges\", \"ordernulls\", \"parameters\", \"idxfltr\"]")
+	rr = runStmt(qc, "delete from orders where test_id IN [\"ua\", \"skipranges\", \"ordernulls\", \"parameters\", \"idxfltr\", \"indexbugs\"]")
 	if rr.Err != nil {
 		t.Errorf("did not expect err %s", rr.Err.Error())
 	}

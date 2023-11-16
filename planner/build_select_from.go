@@ -1490,8 +1490,14 @@ func (this *builder) checkEarlyProjection(projection *algebra.Projection) error 
 					coverExprs = append(coverExprs, expression.NewField(ident, expression.NewFieldName(n, false)))
 				}
 				coverExprs = append(coverExprs, expression.NewField(expression.NewMeta(ident), expression.NewFieldName("id", false)))
+
+				exprs, err := this.getExprsToCover()
+				if err != nil {
+					return err
+				}
+
 				cover := true
-				for _, expr := range this.cover.Expressions() {
+				for _, expr := range exprs {
 					if !expression.IsCovered(expr, keyspace.Name(), coverExprs, false) {
 						cover = false
 						break
