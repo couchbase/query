@@ -83,6 +83,7 @@ const (
 	E_ADMIN_ENCODING                          ErrorCode = 2030
 	E_ADMIN_UNKNOWN_SETTING                   ErrorCode = 2031
 	E_ADMIN_SETTING_TYPE                      ErrorCode = 2032
+	E_ADMIN_SETTING_MIN                       ErrorCode = 2033
 	E_ADMIN_GET_CLUSTER                       ErrorCode = 2040
 	E_ADMIN_ADD_CLUSTER                       ErrorCode = 2050
 	E_ADMIN_REMOVE_CLUSTER                    ErrorCode = 2060
@@ -103,6 +104,7 @@ const (
 	E_COMPLETED_BAD_MAX_SIZE                  ErrorCode = 2201
 	E_ADMIN_BAD_SERVICE_PORT                  ErrorCode = 2210
 	E_ADMIN_BODY                              ErrorCode = 2220
+	E_ADMIN_FFDC                              ErrorCode = 2230
 	E_PARSE_SYNTAX                            ErrorCode = 3000
 	E_ERROR_CONTEXT                           ErrorCode = 3005
 	E_PARSE_INVALID_ESCAPE_SEQUENCE           ErrorCode = 3006

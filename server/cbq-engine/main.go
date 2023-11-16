@@ -11,6 +11,8 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io"
+	"math"
 	"os"
 	"os/signal"
 	"runtime"
@@ -29,6 +31,7 @@ import (
 	datastore_package "github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/datastore/resolver"
 	"github.com/couchbase/query/datastore/system"
+	"github.com/couchbase/query/ffdc"
 	"github.com/couchbase/query/functions"
 	"github.com/couchbase/query/functions/constructor"
 	"github.com/couchbase/query/logging"
@@ -150,6 +153,9 @@ func main() {
 
 	runtime.GOMAXPROCS(util.MinInt(numCPUs, maxProcs))
 	numProcs := util.NumCPU()
+	server_package.SetMemLimitFunc(setMemoryLimit)
+	server_package.SetMemLimit(0)
+	ffdc.Init()
 
 	// Use the IPv4/IPv6 flags to setup listener bool value
 	// This is for external interfaces / listeners
@@ -382,6 +388,14 @@ func main() {
 	endpoint := http.NewServiceEndpoint(server, *STATIC_PATH, *METRICS,
 		*HTTP_ADDR, *HTTPS_ADDR, *CA_FILE, *CERT_FILE, *KEY_FILE)
 
+	ffdc.Set(ffdc.Completed, http.CaptureCompletedRequests)
+	ffdc.Set(ffdc.Active, func(w io.Writer) error {
+		return http.CaptureActiveRequests(endpoint, w)
+	})
+	ffdc.Set(ffdc.Vitals, func(w io.Writer) error {
+		return http.CaptureVitals(endpoint, w)
+	})
+
 	server.SetSettingsCallback(endpoint.SettingsCallback)
 
 	constructor.Init(endpoint.Mux(), server.Servicers())
@@ -442,7 +456,36 @@ func signalCatcher(server *server_package.Server, endpoint *http.HttpEndpoint) {
 		logging.Infof("Shutting down immediately")
 		os.Exit(0)
 	}
+	ffdc.Capture(ffdc.SigTerm)
 	// graceful shutdown on SIGTERM
 	server.InitiateShutdownAndWait()
 	os.Exit(0)
+}
+
+const _MIN_NODE_QUOTA = 1 * util.GiB
+
+func setMemoryLimit(ml uint64) uint64 {
+	var extra string
+	var oml int64
+
+	if os.Getenv("GOMEMLIMIT") != "" {
+		extra = "(GOMEMLIMIT)"
+		oml = -1
+		ml = uint64(debug.SetMemoryLimit(-1))
+	} else if ml > 0 {
+		extra = "(NODE QUOTA)"
+		if ml < _MIN_NODE_QUOTA {
+			ml = _MIN_NODE_QUOTA
+		}
+		oml = debug.SetMemoryLimit(int64(ml))
+	} else {
+		ml = uint64(math.MaxInt64)
+		oml = debug.SetMemoryLimit(int64(ml))
+	}
+	if uint64(oml) != ml {
+		logging.Infoa(func() string {
+			return fmt.Sprintf("Soft memory limit: %s %v", logging.HumanReadableSize(int64(ml), false), extra)
+		})
+	}
+	return ml
 }

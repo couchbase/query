@@ -68,6 +68,11 @@ func (g *gometricsAccountingStore) MetricReporter() accounting.MetricReporter {
 	return g.reporter
 }
 
+func (g *gometricsAccountingStore) CompletedRequests() int64 {
+	request_timer := g.registry.Timer(accounting.REQUEST_TIMER)
+	return request_timer.Count()
+}
+
 func (g *gometricsAccountingStore) Vitals() (interface{}, errors.Error) {
 	var mem runtime.MemStats
 

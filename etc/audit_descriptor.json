@@ -1828,6 +1828,56 @@
       "optional_fields" : {
         "request" : ""
       }
+    },
+    {
+      "id": 28730,
+      "name": "/admin/gc API request",
+      "description": "An HTTP request was made to run garbage collection",
+      "sync": false,
+      "enabled": false,
+      "filtering_permitted": true,
+      "mandatory_fields": {
+        "timestamp": "",
+        "real_userid": {
+          "domain": "",
+          "user": ""
+        },
+        "remote": {
+          "ip": "",
+          "port": 1
+        },
+        "httpMethod": "",
+        "httpResultCode": 1
+      },
+      "optional_fields": {
+        "errorCode": 1,
+        "errorMessage": ""
+      }
+    },
+    {
+      "id": 28731,
+      "name": "/admin/ffdc API request",
+      "description": "An HTTP request was made to run an FFDC collection",
+      "sync": false,
+      "enabled": false,
+      "filtering_permitted": true,
+      "mandatory_fields": {
+        "timestamp": "",
+        "real_userid": {
+          "domain": "",
+          "user": ""
+        },
+        "remote": {
+          "ip": "",
+          "port": 1
+        },
+        "httpMethod": "",
+        "httpResultCode": 1
+      },
+      "optional_fields": {
+        "errorCode": 1,
+        "errorMessage": ""
+      }
     }
   ]
 }

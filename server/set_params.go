@@ -172,6 +172,10 @@ var _SETTERS = map[string]Setter{
 		s.SetMemoryQuota(uint64(value))
 		return nil
 	},
+	NODEQUOTA: func(s *Server, o interface{}) errors.Error {
+		SetMemLimit(uint64(getNumber(o) * util.MiB))
+		return nil
+	},
 	USECBO: func(s *Server, o interface{}) errors.Error {
 		value, _ := o.(bool)
 		s.SetUseCBO(value)
@@ -307,11 +311,16 @@ func ProcessSettings(settings map[string]interface{}, srvr *Server) (err errors.
 		if found {
 			ok, cerr = check_it(value)
 		} else {
-			var min int
+			var min []int
 
 			min, found = CHECKERS_MIN[s]
 			if found {
-				ok, cerr = checkNumberMin(value, min)
+				ok, cerr = checkNumberMin(value, min[0], min[1])
+				if cerr != nil {
+					err := errors.NewAdminSettingTypeError(setting, value)
+					err.SetCause(cerr)
+					cerr = err
+				}
 			}
 		}
 		if found && ok {

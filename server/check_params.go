@@ -47,6 +47,7 @@ const (
 	FUNCLIMIT             = "functions-limit"
 	TASKLIMIT             = "tasks-limit"
 	MEMORYQUOTA           = "memory-quota"
+	NODEQUOTA             = "node-quota"
 	USECBO                = "use-cbo"
 	TXTIMEOUT             = "txtimeout"
 	ATRCOLLECTION         = "atrcollection"
@@ -92,17 +93,18 @@ var CHECKERS = map[string]Checker{
 	REQUESTERRORLIMIT:     checkNumber,
 }
 
-var CHECKERS_MIN = map[string]int{
-	KEEPALIVELENGTH: KEEP_ALIVE_MIN,
-	CMPPUSH:         2,
-	CMPPOP:          2,
-	SERVICERS:       0,
-	PLUSSERVICERS:   0,
-	PRPLIMIT:        2,
-	FUNCLIMIT:       2,
-	TASKLIMIT:       2,
-	MEMORYQUOTA:     0,
-	NUMATRS:         2,
+var CHECKERS_MIN = map[string][]int{
+	KEEPALIVELENGTH: {KEEP_ALIVE_MIN, KEEP_ALIVE_MIN},
+	CMPPUSH:         {2, 2},
+	CMPPOP:          {2, 2},
+	SERVICERS:       {0, 0},
+	PLUSSERVICERS:   {0, 0},
+	PRPLIMIT:        {2, 2},
+	FUNCLIMIT:       {2, 2},
+	TASKLIMIT:       {2, 2},
+	MEMORYQUOTA:     {0, 0},
+	NUMATRS:         {2, 2},
+	NODEQUOTA:       {1024, 0},
 }
 
 func checkBool(val interface{}) (bool, errors.Error) {
@@ -120,12 +122,18 @@ func checkNumber(val interface{}) (bool, errors.Error) {
 	return false, nil
 }
 
-func checkNumberMin(val interface{}, min int) (bool, errors.Error) {
+func checkNumberMin(val interface{}, min int, exception int) (bool, errors.Error) {
 	switch val := val.(type) {
 	case int64:
-		return val >= int64(min), nil
+		if val == int64(exception) || val >= int64(min) {
+			return true, nil
+		}
+		return false, errors.NewAdminSettingMinimumError(min)
 	case float64:
-		return val >= float64(min), nil
+		if val == float64(exception) || val >= float64(min) {
+			return true, nil
+		}
+		return false, errors.NewAdminSettingMinimumError(min)
 	}
 	return false, nil
 }
