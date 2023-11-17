@@ -439,7 +439,10 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 		}
 
 		// no need to separate out the filter if the query has a single keyspace
-		if len(this.baseKeyspaces) > 1 && !this.hasBuilderFlag(BUILDER_JOIN_ON_PRIMARY) {
+		// in case of result cache being used (primary scan on inner of nested-loop join
+		// or inside correlated subquery), the result cache is on the Fetch operator, and
+		// should not be affected by the Filter operator after the Fetch operator.
+		if len(this.baseKeyspaces) > 1 {
 
 			filter, _, err := this.getFilter(node.Alias(), false, nil)
 			if err != nil {

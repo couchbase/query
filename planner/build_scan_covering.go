@@ -410,9 +410,11 @@ func (this *builder) buildCreateCoveringScan(entry *indexEntry, node *algebra.Ke
 		arrayKey = nil
 	}
 	// generate filters for covering index scan
+	// do not generate filter in case of primary scan used on inner of nested-loop join or
+	// in correlated subquery (cache used in IndexScan3)
 	var filter expression.Expression
 	if indexGroupAggs == nil && (len(this.baseKeyspaces) > 1 || implicitAny) &&
-		!this.hasBuilderFlag(BUILDER_JOIN_ON_PRIMARY) {
+		!(index.IsPrimary() && (this.hasBuilderFlag(BUILDER_JOIN_ON_PRIMARY) || node.IsInCorrSubq())) {
 
 		var err error
 		var unnestAliases []string
