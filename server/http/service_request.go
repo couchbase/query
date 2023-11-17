@@ -88,7 +88,7 @@ func newHttpRequest(rv *httpRequest, resp http.ResponseWriter, req *http.Request
 		err = errors.NewServiceErrorHTTPMethod(req.Method)
 	}
 
-	err = contentNegotiation(resp, req)
+	rv.format, err = contentNegotiation(resp, req, UNDEFINED_FORMAT)
 
 	if err == nil {
 		const (
@@ -96,7 +96,6 @@ func newHttpRequest(rv *httpRequest, resp http.ResponseWriter, req *http.Request
 			JSON_CONTENT = "application/json"
 		)
 		content_type := util.HeaderGet(req.Header, "Content-Type")
-
 		if content_type == "" {
 			content_type = URL_CONTENT
 		}
@@ -133,7 +132,12 @@ func newHttpRequest(rv *httpRequest, resp http.ResponseWriter, req *http.Request
 	}
 
 	if err == nil {
+		format := rv.format
 		err = httpArgs.processParameters(rv)
+		if err == nil && format != rv.format {
+			// re-negoatiate the content type
+			rv.format, err = contentNegotiation(resp, req, rv.format)
+		}
 	}
 
 	// update the logger with the request Id once it is known
@@ -1197,35 +1201,95 @@ func getClientID(client_id string) (string, errors.Error) {
 	return client_id, nil
 }
 
-const acceptType = "application/json"
 const versionTag = "version="
 
-var version = acceptType + "; " + versionTag + util.VERSION
+var version = "; " + versionTag + util.VERSION
 
-func contentNegotiation(resp http.ResponseWriter, req *http.Request) errors.Error {
-	// set content type to current version
-	resp.Header().Set("Content-Type", version)
+var ver = make([]int, 3)
+var minVer = make([]int, 3)
+
+func init() {
+	v := util.VERSION
+	n := strings.Index(v, "-")
+	if n != -1 {
+		v = v[:n]
+	}
+	parts := strings.Split(v, ".")
+	for i := 0; i < len(parts) && i < 3; i++ {
+		ver[i], _ = strconv.Atoi(parts[i])
+	}
+	parts = strings.Split(util.MIN_VERSION, ".")
+	for i := 0; i < len(parts) && i < 3; i++ {
+		minVer[i], _ = strconv.Atoi(parts[i])
+	}
+}
+
+func contentNegotiation(resp http.ResponseWriter, req *http.Request, defaultFormat Format) (Format, errors.Error) {
+
 	desiredContent := util.HeaderGet(req.Header, "Accept")
+
 	// if no media type specified, default to current version
 	if desiredContent == "" || desiredContent == "*/*" {
-		return nil
+		if defaultFormat == UNDEFINED_FORMAT {
+			defaultFormat = JSON
+		}
+		resp.Header().Set("Content-Type", defaultFormat.Encoding()+version)
+		return defaultFormat, nil
 	}
-	// media type must be application/json at least
-	if !strings.HasPrefix(desiredContent, acceptType) {
-		return errors.NewServiceErrorMediaType(desiredContent)
-	}
+
+	contentType := desiredContent
 	versionIndex := strings.Index(desiredContent, versionTag)
+	if versionIndex != -1 {
+		n := strings.Index(contentType, ";")
+		if n != -1 {
+			contentType = strings.TrimSpace(contentType[:n])
+		}
+	}
+
+	format := UNDEFINED_FORMAT
+	switch contentType {
+	case XML.Encoding():
+		format = XML
+	case JSON.Encoding():
+		format = JSON
+	}
+
+	if format == UNDEFINED_FORMAT {
+		return UNDEFINED_FORMAT, errors.NewServiceErrorMediaType(desiredContent)
+	} else if defaultFormat != UNDEFINED_FORMAT && format != defaultFormat {
+		return format, errors.NewServiceErrorMediaType(defaultFormat.Encoding())
+	} else if defaultFormat == format {
+		return format, nil
+	}
+
+	resp.Header().Set("Content-Type", format.Encoding()+version)
+
 	// no version specified, default to current version
 	if versionIndex == -1 {
-		return nil
+		return format, nil
 	}
+
 	// check if requested version is supported
 	requestVersion := desiredContent[versionIndex+len(versionTag):]
-	if requestVersion >= util.MIN_VERSION && requestVersion <= util.VERSION {
-		resp.Header().Set("Content-Type", desiredContent)
-		return nil
+	parts := strings.Split(requestVersion, ".")
+	r := make([]int, 3)
+	for i := 0; i < 3 && i < len(parts); i++ {
+		r[i], _ = strconv.Atoi(parts[i])
 	}
-	return errors.NewServiceErrorMediaType(desiredContent)
+
+	for i := 0; i < 3; i++ {
+		if r[i] < minVer[i] {
+			return UNDEFINED_FORMAT, errors.NewServiceErrorMediaType(desiredContent)
+		}
+	}
+	for i := 0; i < 3; i++ {
+		if r[i] > ver[i] {
+			return UNDEFINED_FORMAT, errors.NewServiceErrorMediaType(desiredContent)
+		}
+	}
+
+	resp.Header().Set("Content-Type", desiredContent)
+	return format, nil
 }
 
 // httpRequestArgs is an interface for getting the arguments in a http request
@@ -2011,6 +2075,15 @@ func (f Format) String() string {
 		s = "UNDEFINED_FORMAT"
 	}
 	return s
+}
+
+func (f Format) Encoding() string {
+	switch f {
+	case XML:
+		return "application/xml"
+	default:
+		return "application/json"
+	}
 }
 
 type Compression int
