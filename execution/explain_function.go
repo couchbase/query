@@ -17,7 +17,6 @@ import (
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/functions"
 	"github.com/couchbase/query/plan"
-	"github.com/couchbase/query/planner"
 	"github.com/couchbase/query/value"
 )
 
@@ -25,9 +24,8 @@ type ExplainFunction struct {
 	base
 	plan *plan.ExplainFunction
 
-	// Map of plan information
-	// Key: query statement
-	plans map[string]*planEntry
+	// List of plan information
+	plans []planEntry
 
 	// line numbers of Dynamic N1QL queries inside a JS UDF
 	dynamicLineNos []uint
@@ -80,10 +78,9 @@ func (this *ExplainFunction) RunOnce(context *Context, parent value.Value) {
 			// Inline function subquery plans already part the Context use them
 			subqPlans := context.GetSubqueryPlans(false)
 			if subqPlans != nil {
-				this.plans = make(map[string]*planEntry)
 				verifyF := func(key *algebra.Select, options uint32, splan, isk interface{}) (bool, bool) {
 					if qp, ok := splan.(*plan.QueryPlan); ok {
-						this.plans[key.String()] = &planEntry{qPlan: qp, optimHints: key.OptimHints(), uses: 1}
+						this.plans = append(this.plans, planEntry{statement: key.String(), qPlan: qp, optimHints: key.OptimHints()})
 					}
 					return true, false
 				}
@@ -146,9 +143,9 @@ func (this *ExplainFunction) Done() {
 }
 
 type planEntry struct {
+	statement  string
 	qPlan      *plan.QueryPlan
 	optimHints *algebra.OptimHints
-	uses       int    // number of times the statement was seen in the function
 	extraInfo  string // optional extra info to return in the marshalled output
 }
 
@@ -163,11 +160,10 @@ func (this *ExplainFunction) marshalPlans() ([]byte, error) {
 	if len(this.plans) > 0 {
 		marshalledPlans := make([]map[string]interface{}, 0, len(this.plans))
 
-		for stmt, pe := range this.plans {
+		for _, pe := range this.plans {
 
 			query := map[string]interface{}{
-				"statement": stmt,
-				"uses":      pe.uses,
+				"statement": pe.statement,
 			}
 
 			if pe.qPlan != nil {
@@ -229,78 +225,34 @@ func (this *ExplainFunction) marshalPlans() ([]byte, error) {
 	return json.Marshal(r)
 }
 
-// Returns a list of subquery plans
-// Since Authorization check for Inline functions' inner subqueries is already done in FunctionStatements()
-// We do not perform another Authorize() check
-func createSQPlans(stmts []*algebra.Subquery, context *Context) (map[string]*planEntry, errors.Error) {
-	var prepContext planner.PrepareContext
-	plans := make(map[string]*planEntry, len(stmts))
-
-	planner.NewPrepareContext(&prepContext, context.requestId, context.queryContext, context.namedArgs,
-		context.positionalArgs, context.indexApiVersion, context.featureControls, context.useFts, context.useCBO,
-		context.optimizer, context.deltaKeyspaces, context, false)
-
-	for _, s := range stmts {
-
-		statement := s.Select().String()
-		entry, ok := plans[statement]
-
-		if !ok {
-
-			// Build the query plan
-			// Set ForceSQBuild = true - so that subquery plans are built as well
-			qp, _, err, _ := planner.Build(s.Select(), context.datastore, context.systemstore, context.namespace, true, false, true, &prepContext)
-
-			if err != nil {
-				return nil, errors.NewExplainFunctionError(err, fmt.Sprintf("Error building query plan for statement- %s", statement))
-			}
-
-			pe := planEntry{qPlan: qp, optimHints: s.Select().OptimHints(), uses: 1}
-			plans[statement] = &pe
-		} else {
-			// if a query is in the function > 1 times - do not regenerate its plan information
-			// just increment usage data
-			entry.uses++
-		}
-	}
-
-	return plans, nil
-}
-
 // Returns a list of plans given list of queries as strings
-func createStmtPlans(stmts []string, context *Context) (map[string]*planEntry, errors.Error) {
+func createStmtPlans(stmts []string, context *Context) ([]planEntry, errors.Error) {
 	ds := datastore.GetDatastore()
 	creds := context.Credentials()
-	plans := make(map[string]*planEntry, len(stmts))
+	plans := make([]planEntry, 0, len(stmts))
 
 	for _, s := range stmts {
-		entry, ok := plans[s]
+		// the values of the statement's named or positional arguments are not passed
+		// since js-evaluator cannot return said values when query requests for all statements inside a UDF
+		canExplain, ast, qp, err := context.ExplainStatement(s, nil, nil, false)
 
-		if !ok {
-			// the values of the statement's named or positional arguments are not passed
-			// since js-evaluator cannot return said values when query requests for all statements inside a UDF
-			canExplain, ast, qp, err := context.ExplainStatement(s, nil, nil, false)
+		if err != nil {
+			return nil, errors.NewExplainFunctionError(err, fmt.Sprintf("Error building query plan for statement- %s", s))
+		}
 
-			if err != nil {
-				return nil, errors.NewExplainFunctionError(err, fmt.Sprintf("Error building query plan for statement- %s", s))
+		pe := planEntry{statement: s}
+
+		// If the statement cannot be Explained
+		// But no error was generated
+		// Create an entry to be marshalled - instead of ignoring the statement
+		if !canExplain {
+
+			if ast != nil {
+				// Explain is disabled on some types of statements. Like  ADVISE, EXPLAIN, EXECUTE queries
+				pe.extraInfo = fmt.Sprintf("EXPLAIN is not supported on queries of type %s", ast.Type())
 			}
 
-			// If the statement cannot be Explained
-			// But no error was generated
-			// Create an entry to be marshalled - instead of ignoring the statement
-			if !canExplain {
-				pe := planEntry{uses: 1}
-
-				if ast != nil {
-					// Explain is disabled on - ADVISE, EXPLAIN, EXECUTE queries
-					pe.extraInfo = fmt.Sprintf("EXPLAIN is not supported on queries of type %s", ast.Type())
-				}
-
-				plans[s] = &pe
-				continue
-
-			}
-
+		} else {
 			privs, errP := ast.Privileges()
 			if errP != nil {
 				return nil, errP
@@ -313,14 +265,13 @@ func createStmtPlans(stmts []string, context *Context) (map[string]*planEntry, e
 				return nil, errA
 			}
 
-			pe := planEntry{qPlan: qp, optimHints: ast.OptimHints(), uses: 1}
-			plans[s] = &pe
+			pe.qPlan = qp
+			pe.optimHints = ast.OptimHints()
 
-		} else {
-			// if a query is in the function > 1 times - do not regenerate its plan information
-			// just increment usage data
-			entry.uses++
 		}
+
+		plans = append(plans, pe)
+
 	}
 
 	return plans, nil
