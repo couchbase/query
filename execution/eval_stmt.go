@@ -207,7 +207,7 @@ func (this *opContext) ParkableEvaluateStatement(statement string, namedArgs map
 	if err != nil {
 		return nil, 0, err
 	}
-	rv, mutations, err := newContext.ExecutePrepared(prepared, isPrepared, namedArgs, positionalArgs,
+	rv, mutations, err := newContext.ParkableExecutePrepared(prepared, isPrepared, namedArgs, positionalArgs,
 		statement, profileUdfExecTrees, funcKey)
 	newErr := newContext.completeStatement(stmtType, err == nil, this.Context)
 	if err == nil && newErr != nil {
@@ -484,7 +484,7 @@ func (this *Context) handleUsing(stmt algebra.Statement, namedArgs map[string]va
 
 // If the opContext is not a dummy opContext this method stops the query executed by this method
 // when the calling operator stops
-func (this *opContext) ExecutePrepared(prepared *plan.Prepared, isPrepared bool,
+func (this *opContext) ParkableExecutePrepared(prepared *plan.Prepared, isPrepared bool,
 	namedArgs map[string]value.Value, positionalArgs value.Values, statement string, profileUdfExecTrees bool, funcKey string) (
 	value.Value, uint64, error) {
 
@@ -1064,12 +1064,12 @@ func (this *internalOutput) GetErrorCount() int {
 	return this.output.GetErrorCount()
 }
 
-func (this *Context) PrepareStatementExt(statement string) (interface{}, error) {
+func (this *opContext) PrepareStatementExt(statement string) (interface{}, error) {
 	_, prepared, _, err := this.PrepareStatement(statement, nil, nil, false, true, false)
 	return prepared, err
 }
 
-func (this *Context) ExecutePreparedExt(prepared interface{}, namedArgs map[string]value.Value, positionalArgs value.Values) (value.Value, uint64, error) {
+func (this *opContext) ExecutePreparedExt(prepared interface{}, namedArgs map[string]value.Value, positionalArgs value.Values) (value.Value, uint64, error) {
 
 	orgPrepared, ok := prepared.(*plan.Prepared)
 
@@ -1077,7 +1077,7 @@ func (this *Context) ExecutePreparedExt(prepared interface{}, namedArgs map[stri
 		return nil, 0, errors.NewExecutionPanicError(nil, "casting prepared interface to plan.prepared failed")
 	}
 
-	return this.ExecutePrepared(orgPrepared, false, namedArgs, positionalArgs, "", false, "")
+	return this.ParkableExecutePrepared(orgPrepared, false, namedArgs, positionalArgs, orgPrepared.Text(), false, "")
 }
 
 // Returns the Query Plan for a given query statement

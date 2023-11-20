@@ -83,10 +83,10 @@ func (this *RecursiveCte) Evaluate(item value.Value, context Context) (value.Val
 		}
 	}
 
-	// executeContext inorder to use prepareStatements
-	pctx, ok := context.(ExecutePreparedContext)
+	// cast context to ParkableExecutePreparedContex inorder to use prepareStatements
+	pctx, ok := context.(ParkableExecutePreparedContext)
 	if !ok {
-		return nil, errors.NewEvaluationError(nil, "casting context to executecontext failed")
+		return nil, errors.NewEvaluationError(nil, "casting context to ParkableExecutePreparedContext failed")
 	}
 
 	// prepare anchorClause

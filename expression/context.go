@@ -97,7 +97,9 @@ type QuotaContext interface {
 	CurrentQuotaUsage() float64
 }
 
-type ExecutePreparedContext interface {
+// Created to avoid import cycles between plan and expression package
+type ParkableExecutePreparedContext interface {
+	ParkableContext
 	PrepareStatementExt(statement string) (interface{}, error)
 
 	// Only accepts non-prepared statements
