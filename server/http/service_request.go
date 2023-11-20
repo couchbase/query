@@ -88,7 +88,7 @@ func newHttpRequest(rv *httpRequest, resp http.ResponseWriter, req *http.Request
 		err = errors.NewServiceErrorHTTPMethod(req.Method)
 	}
 
-	rv.format, err = contentNegotiation(resp, req, UNDEFINED_FORMAT)
+	rv.format, err = contentNegotiation(resp, req, JSON, XML)
 
 	if err == nil {
 		const (
@@ -1224,72 +1224,68 @@ func init() {
 	}
 }
 
-func contentNegotiation(resp http.ResponseWriter, req *http.Request, defaultFormat Format) (Format, errors.Error) {
+func contentNegotiation(resp http.ResponseWriter, req *http.Request, responseFormats ...Format) (Format, errors.Error) {
 
 	desiredContent := util.HeaderGet(req.Header, "Accept")
 
+	if len(responseFormats) == 0 {
+		responseFormats = append(responseFormats, JSON)
+	}
+
 	// if no media type specified, default to current version
 	if desiredContent == "" || desiredContent == "*/*" {
-		if defaultFormat == UNDEFINED_FORMAT {
-			defaultFormat = JSON
+		resp.Header().Set("Content-Type", responseFormats[0].Encoding()+version)
+		return responseFormats[0], nil
+	}
+
+	// find first acceptable type for the response
+	accept := strings.Split(desiredContent, ",")
+	for i := range accept {
+		versionIndex := strings.Index(accept[i], ";")
+		if versionIndex == -1 {
+			versionIndex = len(accept[i])
 		}
-		resp.Header().Set("Content-Type", defaultFormat.Encoding()+version)
-		return defaultFormat, nil
-	}
-
-	contentType := desiredContent
-	versionIndex := strings.Index(desiredContent, versionTag)
-	if versionIndex != -1 {
-		n := strings.Index(contentType, ";")
-		if n != -1 {
-			contentType = strings.TrimSpace(contentType[:n])
+		enc := strings.TrimSpace(accept[i][:versionIndex])
+		if enc == "*/*" {
+			resp.Header().Set("Content-Type", responseFormats[0].Encoding()+version)
+			return responseFormats[0], nil
+		}
+		for _, f := range responseFormats {
+			if f.Encoding() == enc && (versionIndex >= len(accept[i]) || validateContentVersion(accept[i][versionIndex+1:])) {
+				resp.Header().Set("Content-Type", f.Encoding()+version)
+				return f, nil
+			}
 		}
 	}
+	return UNDEFINED_FORMAT, errors.NewServiceErrorMediaType(desiredContent)
+}
 
-	format := UNDEFINED_FORMAT
-	switch contentType {
-	case XML.Encoding():
-		format = XML
-	case JSON.Encoding():
-		format = JSON
+func validateContentVersion(version string) bool {
+	version = strings.TrimSpace(version)
+	if !strings.HasPrefix(version, versionTag) {
+		return false
 	}
-
-	if format == UNDEFINED_FORMAT {
-		return UNDEFINED_FORMAT, errors.NewServiceErrorMediaType(desiredContent)
-	} else if defaultFormat != UNDEFINED_FORMAT && format != defaultFormat {
-		return format, errors.NewServiceErrorMediaType(defaultFormat.Encoding())
-	} else if defaultFormat == format {
-		return format, nil
-	}
-
-	resp.Header().Set("Content-Type", format.Encoding()+version)
-
-	// no version specified, default to current version
-	if versionIndex == -1 {
-		return format, nil
-	}
-
-	// check if requested version is supported
-	requestVersion := desiredContent[versionIndex+len(versionTag):]
-	parts := strings.Split(requestVersion, ".")
+	parts := strings.Split(version[len(versionTag):], ".")
 	r := make([]int, 3)
 	for i := 0; i < 3 && i < len(parts); i++ {
-		r[i], _ = strconv.Atoi(parts[i])
+		r[i], _ = strconv.Atoi(strings.TrimSpace(parts[i]))
 	}
 
 	for i := 0; i < 3; i++ {
 		if r[i] < minVer[i] {
-			return UNDEFINED_FORMAT, errors.NewServiceErrorMediaType(desiredContent)
+			return false
+		} else if r[i] > ver[i] {
+			break
 		}
 	}
 	for i := 0; i < 3; i++ {
 		if r[i] > ver[i] {
-			return UNDEFINED_FORMAT, errors.NewServiceErrorMediaType(desiredContent)
+			return false
+		} else if r[i] < ver[i] {
+			break
 		}
 	}
-
-	resp.Header().Set("Content-Type", desiredContent)
-	return format, nil
+	return true
 }
 
 // httpRequestArgs is an interface for getting the arguments in a http request
