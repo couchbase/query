@@ -67,7 +67,7 @@ require (
 
 require (
 	github.com/RoaringBitmap/roaring v1.2.3 // indirect
-	github.com/aws/aws-sdk-go v1.44.299 // indirect
+	github.com/aws/aws-sdk-go v1.48.1 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bits-and-blooms/bitset v1.2.2 // indirect
 	github.com/blevesearch/bleve-mapping-ui v0.5.1 // indirect
@@ -135,7 +135,7 @@ require (
 	github.com/stretchr/testify v1.8.4 // indirect
 	github.com/youmark/pkcs8 v0.0.0-20201027041543-1326539a0a0a // indirect
 	go.etcd.io/bbolt v1.3.7 // indirect
-	golang.org/x/exp v0.0.0-20230711153332-06a737ee72cb // indirect
+	golang.org/x/exp v0.0.0-20231006140011-7918f672742d // indirect
 	golang.org/x/sys v0.13.0 // indirect
 	golang.org/x/term v0.13.0 // indirect
 	golang.org/x/text v0.13.0 // indirect
