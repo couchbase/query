@@ -834,22 +834,12 @@ func getSystemCollectonIndexConnection(systemCollection Keyspace) (*IndexConnect
 	if err != nil {
 		return nil, nil, err
 	}
-	indexer3, ok := indexer.(Indexer3)
-	if !ok {
-		return nil, nil, errors.NewInvalidGSIIndexerError("Cannot load from system collection")
-	}
-	primaries, err := indexer3.PrimaryIndexes()
+	index3, err := getPrimaryIndexFromIndexer(indexer)
 	if err != nil {
 		return nil, nil, err
 	}
-	for i := range primaries {
-		index3, ok := primaries[i].(PrimaryIndex3)
-		if ok {
-			state, _, err := index3.State()
-			if err == nil && state == ONLINE {
-				return NewIndexConnection(NewSystemContext()), index3, nil
-			}
-		}
+	if index3 != nil {
+		return NewIndexConnection(NewSystemContext()), index3, nil
 	}
 
 	// checks the status of or creates (if needed) the primary index
@@ -862,46 +852,63 @@ func getSystemCollectonIndexConnection(systemCollection Keyspace) (*IndexConnect
 		}
 		return err
 	}
+	go primaryFunc(systemCollection.Scope().BucketId())
 
 	indexer, err = systemCollection.Indexer(SEQ_SCAN)
-	if err != nil && err.Code() == errors.E_CB_INDEXER_NOT_IMPLEMENTED {
-		// bucket doesn't have SEQ_SCAN support so try to create the primary index synchronously
-		err = primaryFunc(systemCollection.Scope().BucketId())
+	if err == nil {
+		index3, err = getPrimaryIndexFromIndexer(indexer)
 		if err != nil {
 			return nil, nil, err
 		}
-		indexer, err = systemCollection.Indexer(GSI)
-		if err != nil {
-			return nil, nil, err
+		if index3 != nil {
+			return NewIndexConnection(NewSystemContext()), index3, nil
 		}
-	} else {
-		// check the status/create in the background
-		go primaryFunc(systemCollection.Scope().BucketId())
-
-		if err != nil {
-			logging.Debugf("%v", err)
-			return nil, nil, err
-		}
+	} else if err.Code() != errors.E_CB_INDEXER_NOT_IMPLEMENTED {
+		return nil, nil, err
 	}
 
-	indexer3, ok = indexer.(Indexer3)
-	if !ok {
-		return nil, nil, errors.NewInvalidGSIIndexerError("Cannot load from system collection")
-	}
-	primaries, err = indexer3.PrimaryIndexes()
+	// if not successful so far, e.g. if bucket doesn't have SEQ_SCAN support, or if SEQ_SCAN
+	// is disabled, try to wait for the creation of primary index (issued above) synchronously
+	err = primaryFunc(systemCollection.Scope().BucketId())
 	if err != nil {
 		return nil, nil, err
+	}
+	indexer, err = systemCollection.Indexer(GSI)
+	if err != nil {
+		return nil, nil, err
+	}
+	index3, err = getPrimaryIndexFromIndexer(indexer)
+	if err != nil {
+		return nil, nil, err
+	}
+	if index3 != nil {
+		return NewIndexConnection(NewSystemContext()), index3, nil
+	}
+	return nil, nil, errors.NewInvalidGSIIndexerError("Primary scan is not available")
+}
+
+func getPrimaryIndexFromIndexer(indexer Indexer) (PrimaryIndex3, errors.Error) {
+	indexer3, ok := indexer.(Indexer3)
+	if !ok {
+		return nil, errors.NewInvalidGSIIndexerError("Cannot load from system collection")
+	}
+	primaries, err := indexer3.PrimaryIndexes()
+	if err != nil {
+		return nil, err
 	}
 	for i := range primaries {
 		index3, ok := primaries[i].(PrimaryIndex3)
 		if ok {
 			state, _, err := index3.State()
-			if err == nil && state == ONLINE {
-				return NewIndexConnection(NewSystemContext()), index3, nil
+			if err != nil {
+				return nil, err
+			} else if state == ONLINE {
+				return index3, nil
 			}
 		}
 	}
-	return nil, nil, errors.NewInvalidGSIIndexerError("Primary scan is not available")
+
+	return nil, nil
 }
 
 func ScanSystemCollection(bucketName string, prefix string, preScan func(Keyspace) errors.Error,
