@@ -864,11 +864,7 @@ func getSystemCollectonIndexConnection(systemCollection Keyspace) (*IndexConnect
 	}
 
 	indexer, err = systemCollection.Indexer(SEQ_SCAN)
-	if err != nil {
-		logging.Debugf("%v", err)
-		if err.Code() != errors.E_CB_INDEXER_NOT_IMPLEMENTED {
-			return nil, nil, err
-		}
+	if err != nil && err.Code() == errors.E_CB_INDEXER_NOT_IMPLEMENTED {
 		// bucket doesn't have SEQ_SCAN support so try to create the primary index synchronously
 		err = primaryFunc(systemCollection.Scope().BucketId())
 		if err != nil {
@@ -881,6 +877,11 @@ func getSystemCollectonIndexConnection(systemCollection Keyspace) (*IndexConnect
 	} else {
 		// check the status/create in the background
 		go primaryFunc(systemCollection.Scope().BucketId())
+
+		if err != nil {
+			logging.Debugf("%v", err)
+			return nil, nil, err
+		}
 	}
 
 	indexer3, ok = indexer.(Indexer3)
