@@ -872,19 +872,37 @@ func getSystemCollectonIndexConnection(systemCollection Keyspace) (*IndexConnect
 		}
 	}
 
-	// if primary index is not available or not online, check the status in the background
-	go func(bucketName string) {
+	// checks the status of or creates (if needed) the primary index
+	primaryFunc := func(bucketName string) errors.Error {
+		var err errors.Error
 		store := GetDatastore()
 		if store != nil {
 			requestId, _ := util.UUIDV4()
-			store.CheckSystemCollection(bucketName, requestId)
+			err = store.CheckSystemCollection(bucketName, requestId)
 		}
-	}(systemCollection.Scope().BucketId())
+		return err
+	}
 
 	indexer, err = systemCollection.Indexer(SEQ_SCAN)
 	if err != nil {
-		return nil, nil, err
+		logging.Debugf("%v", err)
+		if err.Code() != errors.E_CB_INDEXER_NOT_IMPLEMENTED {
+			return nil, nil, err
+		}
+		// bucket doesn't have SEQ_SCAN support so try to create the primary index synchronously
+		err = primaryFunc(systemCollection.Scope().BucketId())
+		if err != nil {
+			return nil, nil, err
+		}
+		indexer, err = systemCollection.Indexer(GSI)
+		if err != nil {
+			return nil, nil, err
+		}
+	} else {
+		// check the status/create in the background
+		go primaryFunc(systemCollection.Scope().BucketId())
 	}
+
 	indexer3, ok = indexer.(Indexer3)
 	if !ok {
 		return nil, nil, errors.NewInvalidGSIIndexerError("Cannot load from system collection")
