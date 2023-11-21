@@ -1072,7 +1072,7 @@ opt_optim_hints:
 |
 OPTIM_HINTS
 {
-    $$ = parseOptimHints($1)
+    $$ = ParseOptimHints($1)
 }
 ;
 

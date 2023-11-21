@@ -708,7 +708,7 @@ func DropAllSequences(namespace string, bucket string, scope string, uid string)
 	if err != nil && lastError == nil {
 		lastError = err
 	}
-	logging.Debugf("%v:%v.%v %v", namespace, bucket, scope, errorCount)
+	logging.Debugf("%v:%v.%v %v - %v", namespace, bucket, scope, errorCount, lastError)
 	return lastError
 }
 

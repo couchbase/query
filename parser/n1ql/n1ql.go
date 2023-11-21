@@ -89,7 +89,7 @@ func ParseExpression(input string) (expression.Expression, error) {
 	}
 }
 
-func parseOptimHints(input string) *algebra.OptimHints {
+func ParseOptimHints(input string) *algebra.OptimHints {
 	input = strings.TrimSpace(input)
 	reader := strings.NewReader(input)
 	lex := newLexer(NewLexer(reader), nil)

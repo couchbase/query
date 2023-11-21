@@ -18,6 +18,7 @@ import (
 	"github.com/couchbase/query/functions"
 	metaStorage "github.com/couchbase/query/functions/metakv"
 	"github.com/couchbase/query/functions/resolver"
+	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/value"
 )
 
@@ -27,20 +28,17 @@ const _PREFIX = "udf::"
 func Init() {
 }
 
-func getPrefix(namespace string, bucket string, scope string) string {
-	uid, _ := datastore.GetScopeUid(namespace, bucket, scope)
-	return _PREFIX + uid + "::"
-}
-
 // datastore and function store actions
-func DropScope(namespace, bucket, scope string) {
-	datastore.ScanSystemCollection(bucket, getPrefix(namespace, bucket, scope), nil,
+func DropScope(namespace string, bucket string, scope string, uid string) {
+	logging.Debugf("%v:%v.%v (%v)", namespace, bucket, scope, uid)
+	datastore.ScanSystemCollection(bucket, _PREFIX+uid+"::"+scope, nil,
 		func(key string, systemCollection datastore.Keyspace) errors.Error {
 			s, fn := key2parts(key)
 			if s == "" {
 				return nil
 			}
 			path := algebra.PathFromParts(namespace, bucket, scope, fn)
+			logging.Debugf("%v", path)
 			delete2(systemCollection, key, path)
 			functions.FunctionClear(path, nil)
 			return nil

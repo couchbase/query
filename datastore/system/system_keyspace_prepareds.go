@@ -156,6 +156,9 @@ func (b *preparedsKeyspace) Fetch(keys []string, keysMap map[string]value.Annota
 				if entry.Prepared.EncodedPlan() != "" {
 					itemMap["encoded_plan"] = entry.Prepared.EncodedPlan()
 				}
+				if entry.Prepared.OptimHints() != nil {
+					itemMap["optimizer_hints"] = value.NewMarshalledValue(entry.Prepared.OptimHints())
+				}
 
 				isks := entry.Prepared.IndexScanKeyspaces()
 				if len(isks) > 0 {
