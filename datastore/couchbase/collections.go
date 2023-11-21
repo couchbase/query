@@ -685,7 +685,7 @@ func clearOldScope(bucket *keyspace, s *scope, isDropBucket bool, cleanUp bool) 
 
 	if cleanUp {
 		if err := s.DropAllSequences(); err == nil || err.Code() != errors.E_CB_KEYSPACE_NOT_FOUND {
-			functionsStorage.DropScope(bucket.namespace.name, bucket.name, s.Name())
+			functionsStorage.DropScope(bucket.namespace.name, bucket.name, s.Name(), s.Uid())
 			return true
 		}
 	}

@@ -393,9 +393,9 @@ func IsInternal(val interface{}) (bool, error) {
 	}
 }
 
-func DropScope(namespace, bucket, scope string) {
+func DropScope(namespace string, bucket string, scope string, uid string) {
 	if UseSystemStorage() {
-		systemStorage.DropScope(namespace, bucket, scope)
+		systemStorage.DropScope(namespace, bucket, scope, uid)
 	} else {
 		metaStorage.DropScope(namespace, bucket, scope)
 	}
