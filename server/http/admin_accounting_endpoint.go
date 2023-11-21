@@ -610,6 +610,9 @@ func preparedWorkHorse(entry *prepareds.CacheEntry, profiling bool, redact bool,
 	if entry.Prepared.EncodedPlan() != "" {
 		itemMap["encoded_plan"] = entry.Prepared.EncodedPlan()
 	}
+	if entry.Prepared.OptimHints() != nil {
+		itemMap["optimizer_hints"] = value.NewMarshalledValue(entry.Prepared.OptimHints())
+	}
 	isks := entry.Prepared.IndexScanKeyspaces()
 	if len(isks) > 0 {
 		itemMap["indexScanKeyspaces"] = isks
