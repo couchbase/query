@@ -38,6 +38,7 @@ type Prepared struct {
 	queryContext    string
 	useFts          bool
 	useCBO          bool
+	optimHints      *algebra.OptimHints
 
 	indexScanKeyspaces map[string]bool
 	indexers           []idxVersion // for reprepare checking
@@ -57,17 +58,20 @@ type ksVersion struct {
 	version uint64
 }
 
-func NewPrepared(operator Operator, signature value.Value, indexScanKeyspaces map[string]bool) *Prepared {
+func NewPrepared(operator Operator, signature value.Value, indexScanKeyspaces map[string]bool,
+	optimHints *algebra.OptimHints) *Prepared {
+
 	return &Prepared{
 		Operator:           operator,
 		signature:          signature,
+		optimHints:         optimHints,
 		indexScanKeyspaces: indexScanKeyspaces,
 	}
 }
 
 func NewPreparedFromEncodedPlan(prepared_stmt string) (*Prepared, []byte, int, errors.Error) {
 	r := 0
-	prepared := NewPrepared(nil, nil, nil)
+	prepared := NewPrepared(nil, nil, nil, nil)
 	decoded, err := base64.StdEncoding.DecodeString(prepared_stmt)
 	if err != nil {
 		return prepared, nil, r, errors.NewPreparedDecodingError(err)
@@ -128,7 +132,9 @@ func (this *Prepared) marshalInternal(r map[string]interface{}) {
 	if len(this.indexScanKeyspaces) > 0 {
 		r["indexScanKeyspaces"] = this.IndexScanKeyspaces()
 	}
-
+	if this.optimHints != nil {
+		r["optimizer_hints"] = this.optimHints
+	}
 }
 
 func (this *Prepared) UnmarshalJSON(body []byte) error {
@@ -152,6 +158,7 @@ func (this *Prepared) unmarshalInternal(body []byte) (int, error) {
 		UseCBO             bool                   `json:"useCBO"`
 		IndexScanKeyspaces map[string]interface{} `json:"indexScanKeyspaces"`
 		Version            int                    `json:"planVersion"`
+		OptimHints         json.RawMessage        `json:"optimizer_hints"`
 	}
 
 	var op_type struct {
@@ -188,6 +195,12 @@ func (this *Prepared) unmarshalInternal(body []byte) (int, error) {
 		this.indexScanKeyspaces = make(map[string]bool, len(_unmarshalled.IndexScanKeyspaces))
 		for ks, v := range _unmarshalled.IndexScanKeyspaces {
 			this.indexScanKeyspaces[ks] = v.(bool)
+		}
+	}
+	if len(_unmarshalled.OptimHints) > 0 {
+		this.optimHints, err = unmarshalOptimHints(_unmarshalled.OptimHints)
+		if err != nil {
+			return 0, err
 		}
 	}
 	this.Operator, err = MakeOperator(op_type.Operator, _unmarshalled.Operator)
@@ -299,6 +312,10 @@ func (this *Prepared) BuildEncodedPlan() (string, error) {
 
 func (this *Prepared) MismatchingEncodedPlan(encoded_plan string) bool {
 	return this.encoded_plan != encoded_plan
+}
+
+func (this *Prepared) OptimHints() *algebra.OptimHints {
+	return this.optimHints
 }
 
 func (this *Prepared) SetIndexScanKeyspaces(ik map[string]bool) {

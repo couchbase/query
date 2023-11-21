@@ -87,12 +87,33 @@ func NewOptimHints(hints []OptimHint, jsonStyle bool) *OptimHints {
 	}
 }
 
+func (this *OptimHints) Copy() *OptimHints {
+	rv := &OptimHints{
+		hints:     make([]OptimHint, len(this.hints)),
+		jsonStyle: this.jsonStyle,
+	}
+	for i := range this.hints {
+		rv.hints[i] = this.hints[i].Copy()
+	}
+	if len(this.subqTermHints) > 0 {
+		rv.subqTermHints = make([]*SubqOptimHints, len(this.subqTermHints))
+		for i := range this.subqTermHints {
+			rv.subqTermHints[i] = this.subqTermHints[i].Copy()
+		}
+	}
+	return rv
+}
+
 func (this *OptimHints) Hints() []OptimHint {
 	return this.hints
 }
 
 func (this *OptimHints) JSONStyle() bool {
 	return this.jsonStyle
+}
+
+func (this *OptimHints) SetJSONStyle() {
+	this.jsonStyle = true
 }
 
 func (this *OptimHints) AddHints(hints []OptimHint) {
@@ -120,6 +141,9 @@ func (this *OptimHints) String() string {
 				s += " "
 			}
 		} else {
+			if this.jsonStyle {
+				r = make(map[string]interface{}, len(this.hints))
+			}
 			found = true
 		}
 		if this.jsonStyle {
@@ -1246,6 +1270,16 @@ func NewSubqOptimHints(alias string, hints *OptimHints) *SubqOptimHints {
 		alias: alias,
 		hints: hints,
 	}
+}
+
+func (this *SubqOptimHints) Copy() *SubqOptimHints {
+	rv := &SubqOptimHints{
+		alias: this.alias,
+	}
+	if this.hints != nil {
+		rv.hints = this.hints.Copy()
+	}
+	return rv
 }
 
 func (this *SubqOptimHints) Alias() string {

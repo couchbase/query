@@ -22,5 +22,9 @@ func BuildPrepared(stmt algebra.Statement, datastore, systemstore datastore.Data
 	}
 
 	signature := stmt.Signature()
-	return plan.NewPrepared(qp.PlanOp(), signature, ik), nil
+	var optimHints *algebra.OptimHints
+	if stmt.OptimHints() != nil {
+		optimHints = stmt.OptimHints().Copy()
+	}
+	return plan.NewPrepared(qp.PlanOp(), signature, ik, optimHints), nil
 }
