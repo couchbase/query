@@ -12,7 +12,7 @@ package server
 
 import (
 	"fmt"
-	"runtime/exec"
+	"os/exec"
 )
 
 func getTotalMemory() int64 {
@@ -26,7 +26,7 @@ func getTotalMemory() int64 {
 		o.Close()
 		return int64(0)
 	}
-	var n int64
+	var i, n int
 	n, err = fmt.Fscan(o, &i)
 	if err != nil || n != 1 {
 		return int64(0)
