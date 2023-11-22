@@ -617,8 +617,21 @@ func SetParamValuesForAll(cfg queryMetakv.Config, srvr *Server) {
 			paramName, ok := queryMetakv.GLOBALPARAM[key]
 			if ok && (paramName == "curl_whitelist" || paramName == "curl_allowedlist") {
 				// Set the allowlist value to pass to context
-				al := value.NewValue(srvr.GetAllowlist())
+
+				// Create a new map just for comparison between new and existing values for this parameter
+				// This new map excludes the allowed and disallowed URL object fields
+				// this is because the value package cannot handle url.Url object type
+				serverAllowList := make(map[string]interface{}, len(srvr.GetAllowlist()))
+				for k, v := range srvr.GetAllowlist() {
+					if k == "allowed_transformed_urls" || k == "disallowed_transformed_urls" {
+						continue
+					}
+					serverAllowList[k] = v
+				}
+
+				al := value.NewValue(serverAllowList)
 				nal := value.NewValue(val)
+
 				if !al.Equals(nal).Truth() {
 					srvr.SetAllowlist(val.(map[string]interface{}))
 					logging.Infof("New Value for curl allowed list <ud>%v</ud>", val)
