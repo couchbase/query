@@ -4848,7 +4848,7 @@ function_name LPAREN STAR RPAREN opt_filter opt_window_function
 {
     fname := $1.Identifier()
     if strings.ToLower(fname) != "count" {
-        yylex.(*lexer).ErrorWithContext(fmt.Sprintf("Invalid aggregate function %s(*).", fname), $<line>1, $<column>1)
+        return yylex.(*lexer).FatalError(fmt.Sprintf("Invalid aggregate function %s(*).", fname), $<line>1, $<column>1)
     } else {
         agg, ok := algebra.GetAggregate(fname, false, ($5 != nil), ($6 != nil))
         if ok {
