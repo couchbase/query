@@ -655,7 +655,7 @@ func (this objectValue) ContainsMatchingToken(matcher MatchFunc, options Value) 
 }
 
 func (this objectValue) Size() uint64 {
-	return anySize(map[string]interface{}(this))
+	return AnySize(map[string]interface{}(this))
 }
 
 func (this objectValue) unwrap() Value {

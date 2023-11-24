@@ -510,7 +510,7 @@ func mapBaseSize(l int) uint64 {
 /*
 Used by some Value.Size() functions to obtain the size of elements.
 */
-func anySize(v interface{}) uint64 {
+func AnySize(v interface{}) uint64 {
 	switch v := v.(type) {
 	case Value:
 		return v.Size()
@@ -519,21 +519,21 @@ func anySize(v interface{}) uint64 {
 	case map[string]interface{}:
 		s := mapBaseSize(len(v))
 		for k, vv := range v {
-			s += anySize(k)
-			s += anySize(vv)
+			s += AnySize(k)
+			s += AnySize(vv)
 		}
 		return s
 	case map[string]Value:
 		s := mapBaseSize(len(v))
 		for k, vv := range v {
-			s += anySize(k)
+			s += AnySize(k)
 			s += vv.Size()
 		}
 		return s
 	case []interface{}:
 		s := uint64(_INTERFACE_SIZE * cap(v))
 		for i := range v {
-			s += anySize(v[i])
+			s += AnySize(v[i])
 		}
 		return s
 	case []Value:

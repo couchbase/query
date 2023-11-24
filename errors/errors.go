@@ -276,6 +276,8 @@ func processValue(v interface{}) interface{} {
 		return vt
 	case []string:
 		return vt
+	case uint64:
+		return vt
 	case int64:
 		return vt
 	case int:

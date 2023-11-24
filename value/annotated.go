@@ -254,13 +254,13 @@ func (this *annotatedValue) Size() uint64 {
 	}
 	// even though these may be shared, count them for each annotatedValue (prefer over to under counting quota)
 	if this.attachments != nil {
-		sz += anySize(this.attachments)
+		sz += AnySize(this.attachments)
 	}
 	if this.meta != nil {
-		sz += anySize(this.meta)
+		sz += AnySize(this.meta)
 	}
 	if this.projectionOrder != nil {
-		sz += anySize(this.projectionOrder)
+		sz += AnySize(this.projectionOrder)
 	}
 	if this.covers != nil {
 		sz += this.covers.Size()

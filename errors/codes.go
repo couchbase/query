@@ -226,6 +226,7 @@ const (
 	E_UNSUPPORTED_EXPRESSION                  ErrorCode = 5032
 	E_RANGE                                   ErrorCode = 5035
 	W_DIVIDE_BY_ZERO                          ErrorCode = 5036
+	E_SIZE                                    ErrorCode = 5037
 	E_DUPLICATE_FINAL_GROUP                   ErrorCode = 5040
 	E_INSERT_KEY                              ErrorCode = 5050
 	E_INSERT_VALUE                            ErrorCode = 5060

@@ -13,6 +13,7 @@ import (
 	"sort"
 
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
@@ -1634,6 +1635,23 @@ func (this *ArrayRange) Evaluate(item value.Value, context Context) (value.Value
 		return nil, errors.NewRangeError("ARRAY_RANGE()")
 	}
 
+	var n uint64
+	if start < end && step > 0.0 {
+		n = uint64(math.Abs((end - start) / step))
+	} else if start > end && step < 0.0 {
+		n = uint64(math.Abs((start - end) / step))
+	}
+	sz := value.AnySize(start) * n
+	var max uint64
+	if qc, ok := context.(QuotaContext); ok && qc.UseRequestQuota() {
+		max = uint64(float64(qc.MemoryQuota()) * (1.0 - qc.CurrentQuotaUsage()))
+	} else {
+		max = 20 * util.MiB
+	}
+	if max < sz {
+		return nil, errors.NewSizeError("ARRAY_RANGE()", sz/n, int(n), sz, max)
+	}
+
 	rv := make([]interface{}, 0, capacity)
 	for v := start; (step > 0.0 && v < end) || (step < 0.0 && v > end); v += step {
 		rv = append(rv, v)
@@ -1811,6 +1829,17 @@ func (this *ArrayRepeat) Evaluate(item value.Value, context Context) (value.Valu
 	n := int(sf)
 	if n > RANGE_LIMIT {
 		return nil, errors.NewRangeError("ARRAY_REPEAT()")
+	}
+
+	sz := value.AnySize(first) * uint64(n)
+	var max uint64
+	if qc, ok := context.(QuotaContext); ok && qc.UseRequestQuota() {
+		max = uint64(float64(qc.MemoryQuota()) * (1.0 - qc.CurrentQuotaUsage()))
+	} else {
+		max = 20 * util.MiB
+	}
+	if max < sz {
+		return nil, errors.NewSizeError("ARRAY_REPEAT()", sz/uint64(n), n, sz, max)
 	}
 
 	ra := make([]interface{}, n)

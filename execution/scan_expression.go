@@ -128,6 +128,15 @@ func (this *ExpressionScan) RunOnce(context *Context, parent value.Value) {
 		if ev == nil {
 			return
 		}
+		var freeSize uint64
+		if context.UseRequestQuota() {
+			freeSize = ev.Size()
+			err := context.TrackValueSize(freeSize)
+			if err != nil {
+				context.Error(errors.NewMemoryQuotaExceededError())
+				return
+			}
+		}
 
 		actuals := ev.Actual()
 		switch actuals.(type) {
@@ -180,7 +189,11 @@ func (this *ExpressionScan) RunOnce(context *Context, parent value.Value) {
 				results = append(results, act)
 			}
 			if context.UseRequestQuota() {
-				err := context.TrackValueSize(av.Size())
+				actSz := value.AnySize(act)
+				if !useCache {
+					freeSize -= actSz
+				}
+				err := context.TrackValueSize(av.Size() - actSz)
 				if err != nil {
 					context.Error(errors.NewMemoryQuotaExceededError())
 					av.Recycle()
@@ -191,6 +204,9 @@ func (this *ExpressionScan) RunOnce(context *Context, parent value.Value) {
 				av.Recycle()
 				return
 			}
+		}
+		if !useCache && freeSize > 0 && context.UseRequestQuota() {
+			context.ReleaseValueSize(freeSize)
 		}
 		this.results, results = results, nil
 	})
