@@ -2791,7 +2791,399 @@ func strToTimeExampleFormat(s string, format string) (time.Time, error) {
 
 // Use go's standard formatting (e.g. 2006-01-02 03:04:05.000)
 func strToTimeGoFormat(s string, format string) (time.Time, error) {
-	return time.ParseInLocation(format, s, time.Local)
+	// Go's formatting is inconsistent for our needs.  e.g. the specifier "MST" will parse "EST" and "EDT" but not "EST5EDT",
+	// despite this being an IANA zone name and "EDT" not being one.
+	// To avoid a performance penalty with the format, we implement our own Go format parser here so we can handle time zone parsing
+	// in a way that suits us.  (Conversion to another format would incur a performance penalty, hence avoiding it.)
+
+	var t time.Time
+	var century, year, month, yday, day, hour, minute, second, fraction, l, zoneh, zonem int
+	var loc *time.Location
+
+	century = -1
+	yearSeen := false
+	yday = -1
+	month = -1
+	day = -1
+	n := 0
+	i := 0
+	zoneh = -1
+	pm := false
+	h12 := false
+	for i = 0; i < len(format) && n < len(s); i++ {
+		if format[i] == ' ' {
+			// space matches any character
+			n++
+			continue
+		}
+		if i+7 <= len(format) && format[i:i+7] == "January" {
+			j := 0
+			for j = 1; j < 13; j++ {
+				m := time.Month(j).String()
+				if strings.HasPrefix(s[n:], m) {
+					month = j
+					n += len(m)
+					break
+				}
+			}
+			if j > 12 {
+				return t, fmt.Errorf("Invalid month in date string")
+			}
+			i += 6
+			continue
+		}
+		if i+6 <= len(format) && format[i:i+6] == "Monday" {
+			j := 0
+			for j = 0; j < 7; j++ {
+				w := time.Weekday(j).String()
+				if strings.HasPrefix(s[n:], w) {
+					// parse & validate but do nothing with it
+					n += len(w)
+					break
+				}
+			}
+			if j > 6 {
+				return t, fmt.Errorf("Invalid day of week in date string")
+			}
+			i += 5
+			continue
+		}
+		if i+4 <= len(format) && format[i:i+4] == "2006" {
+			year, l = gatherNumber(s[n:], 4, false)
+			if l != 4 || year < 0 {
+				return t, fmt.Errorf("Invalid year in date string")
+			}
+			century = year / 100
+			year = year % 100
+			n += l
+			i += 3
+			continue
+		}
+		if i+3 <= len(format) {
+			if format[i:i+3] == "MST" {
+				var err error
+				n, zoneh, zonem, loc, err = gatherZone(s, n, _FORMAT_NAME)
+				if err != nil {
+					return t, err
+				}
+				i += 2
+				continue
+			}
+			if format[i:i+3] == "Jan" {
+				j := 0
+				for j = 1; j < 13; j++ {
+					m := time.Month(j).String()[:3] // Jan, Feb, Mar ...
+					if strings.HasPrefix(s[n:], m) {
+						month = j
+						n += len(m)
+						break
+					}
+				}
+				if j > 12 {
+					return t, fmt.Errorf("Invalid month in date string")
+				}
+				i += 2
+				continue
+			}
+			if format[i:i+3] == "Mon" {
+				j := 0
+				for j = 0; j < 7; j++ {
+					w := time.Weekday(j).String()[:3] // Sun, Mon, Tue...
+					if strings.HasPrefix(s[n:], w) {
+						// parse & validate but do nothing with it
+						n += len(w)
+						break
+					}
+				}
+				if j > 6 {
+					return t, fmt.Errorf("Invalid day of week in date string")
+				}
+				i += 2
+				continue
+			}
+			if format[i:i+3] == "__2" {
+				yday, l = gatherNumber(s[n:], 3, true)
+				if l < 1 || l > 3 || yday < 1 || yday > 366 {
+					return t, fmt.Errorf("Invalid day of year in date string")
+				}
+				n += l
+				i += 2
+				continue
+			}
+			if format[i:i+3] == "002" {
+				yday, l = gatherNumber(s[n:], 3, true)
+				if l != 3 || yday < 1 || yday > 366 {
+					return t, fmt.Errorf("Invalid day of year in date string")
+				}
+				n += l
+				i += 2
+				continue
+			}
+		}
+		if i+2 <= len(format) {
+			switch format[i : i+2] {
+			case "01":
+				month, l = gatherNumber(s[n:], 2, true)
+				if l != 2 || month < 1 || month > 12 {
+					return t, fmt.Errorf("Invalid month in date string")
+				}
+				n += l
+				i++
+				continue
+			case "02":
+				day, l = gatherNumber(s[n:], 2, true)
+				if l != 2 || day < 1 || day > 31 {
+					return t, fmt.Errorf("Invalid day in date string")
+				}
+				n += l
+				i++
+				continue
+			case "_2":
+				day, l = gatherNumber(s[n:], 2, false)
+				if (l != 2 && l != 1) || day < 1 || day > 31 {
+					return t, fmt.Errorf("Invalid day in date string")
+				}
+				n += l
+				i++
+				continue
+			case "15":
+				hour, l = gatherNumber(s[n:], 2, false)
+				if (l != 2 && l != 1) || hour < 0 || hour > 23 {
+					return t, fmt.Errorf("Invalid hour in date string")
+				}
+				h12 = false
+				n += l
+				i++
+				continue
+			case "03":
+				hour, l = gatherNumber(s[n:], 2, true)
+				h12 = true
+				if l != 2 || hour < 1 || hour > 12 {
+					return t, fmt.Errorf("Invalid hour in date string")
+				}
+				n += l
+				i++
+				continue
+			case "PM":
+				if n+1 < len(s) && s[n] == 'P' {
+					pm = true
+				} else if n+1 < len(s) && s[n] == 'A' {
+					pm = false
+				} else {
+					return t, fmt.Errorf("Invalid 12-hour indicator date string")
+				}
+				n += 2
+				i++
+				continue
+			case "pm":
+				if n+1 < len(s) && s[n] == 'p' {
+					pm = true
+				} else if n+1 < len(s) && s[n] == 'a' {
+					pm = false
+				} else {
+					return t, fmt.Errorf("Invalid 12-hour indicator date string")
+				}
+				n += 2
+				i++
+				continue
+			case "04":
+				minute, l = gatherNumber(s[n:], 2, true)
+				if l != 2 || minute < 0 || minute > 59 {
+					return t, fmt.Errorf("Invalid minute in date string")
+				}
+				n += l
+				i++
+				continue
+			case "05":
+				second, l = gatherNumber(s[n:], 2, true)
+				if l != 2 || second < 0 || second > 59 {
+					return t, fmt.Errorf("Invalid second in date string")
+				}
+				n += l
+				i++
+				continue
+			case "06":
+				year, l = gatherNumber(s[n:], 2, true)
+				if l != 2 || year < 0 || year > 99 {
+					return t, fmt.Errorf("Invalid year in date string")
+				}
+				yearSeen = true
+				n += l
+				i++
+				continue
+			case ".0":
+				if s[n] != '.' {
+					return t, fmt.Errorf("Invalid fraction in date string")
+				}
+				n++
+				i++
+				j := 0
+				for ; i+j < len(format) && format[i] == format[i+j]; j++ {
+				}
+				i += j - 1
+				fraction, l = gatherNumber(s[n:], j, false)
+				if l == 0 || l != j {
+					return t, fmt.Errorf("Invalid fraction in date string")
+				}
+				n += l
+				if l > 9 {
+					l = 9
+				}
+				// convert to ns
+				fraction *= int(math.Pow10(9 - l))
+				continue
+			case ".9":
+				if s[n] != '.' {
+					return t, fmt.Errorf("Invalid fraction in date string")
+				}
+				n++
+				i++
+				j := 0
+				for ; i+j < len(format) && format[i] == format[i+j]; j++ {
+				}
+				i += j - 1
+				fraction, l = gatherNumber(s[n:], 9, true)
+				if l == 0 {
+					return t, fmt.Errorf("Invalid fraction in date string")
+				}
+				n += l
+				// convert to ns
+				fraction *= int(math.Pow10(9 - l))
+				continue
+			}
+		}
+		switch format[i] {
+		case '1':
+			month, l = gatherNumber(s[n:], 2, false)
+			if (l != 1 && l != 2) || month < 1 || month > 12 {
+				return t, fmt.Errorf("Invalid month in date string")
+			}
+			n += l
+			continue
+		case '2':
+			day, l = gatherNumber(s[n:], 2, false)
+			if (l != 1 && l != 2) || day < 1 || day > 31 {
+				return t, fmt.Errorf("Invalid day in date string")
+			}
+			n += l
+			continue
+		case '3':
+			hour, l = gatherNumber(s[n:], 2, false)
+			h12 = true
+			if (l != 1 && l != 2) || hour < 1 || hour > 12 {
+				return t, fmt.Errorf("Invalid hour in date string")
+			}
+			n += l
+			continue
+		case '4':
+			minute, l = gatherNumber(s[n:], 2, false)
+			if (l != 1 && l != 2) || minute < 0 || minute > 59 {
+				return t, fmt.Errorf("Invalid minute in date string")
+			}
+			n += l
+			continue
+		case '5':
+			second, l = gatherNumber(s[n:], 2, false)
+			if (l != 1 && l != 2) || second < 0 || second > 59 {
+				return t, fmt.Errorf("Invalid second in date string")
+			}
+			n += l
+			continue
+		}
+
+		if format[i] == 'Z' || format[i] == '-' {
+			var j int
+			var tzf uint32
+			if i+9 <= len(format) && format[i+1:i+9] == "07:00:00" {
+				tzf = _FORMAT_2COLON
+				j = 8
+			} else if i+7 <= len(format) && format[i+1:i+7] == "070000" {
+				tzf = _FORMAT_3PART
+				j = 6
+			} else if i+6 <= len(format) && format[i+1:i+6] == "07:00" {
+				tzf = _FORMAT_1COLON
+				j = 5
+			} else if i+5 <= len(format) && format[i+1:i+5] == "0700" {
+				tzf = _FORMAT_2PART
+				j = 4
+			} else if i+3 <= len(format) && format[i+1:i+3] == "07" {
+				tzf = _FORMAT_1PART
+				j = 2
+			}
+			if j > 0 {
+				if format[i] == 'Z' {
+					tzf |= _FORMAT_ALLOW_Z
+				}
+				var err error
+				n, zoneh, zonem, loc, err = gatherZone(s, n, tzf)
+				if err != nil {
+					return t, err
+				}
+				i += j
+				continue
+			}
+		}
+
+		if !unicode.IsPunct(rune(format[i])) && format[i] != 'T' {
+			return t, fmt.Errorf("Invalid format")
+		} else {
+			if format[i] != 'T' && format[i] != s[n] {
+				return t, fmt.Errorf("Failed to parse '%c' in date string (found '%c')", format[i], s[n])
+			}
+			n++
+		}
+	}
+
+	if i != len(format) || n != len(s) {
+		return t, fmt.Errorf("Failed to completely parse date string")
+	}
+
+	// only default the century based on the final parsed year value
+	if century == -1 && yearSeen {
+		if year >= 69 {
+			century = 19
+		} else {
+			century = 20
+		}
+	}
+	if century != -1 {
+		year = century*100 + year
+	}
+	if yday != -1 {
+		m, d := yearDay(year, yday)
+		if (month != -1 && month != m) || (day != -1 && d != day) {
+			return t, fmt.Errorf("Day of year does not match month & day")
+		}
+		month = m
+		day = d
+	}
+	if month == -1 {
+		month = int(time.January)
+	}
+	if day == -1 {
+		day = 1
+	}
+	err := validateMonthAndDay(year, month, day)
+	if err != nil {
+		return t, err
+	}
+
+	if h12 == true {
+		if pm == true {
+			if hour < 12 {
+				hour += 12
+			}
+		} else if hour == 12 {
+			hour = 0
+		}
+	}
+
+	if loc == nil {
+		loc = getLocation(zoneh, zonem)
+	}
+
+	t = time.Date(year, time.Month(month), day, hour, minute, second, fraction, loc)
+	return t, nil
 }
 
 const (
@@ -2883,6 +3275,7 @@ func strToTimePercentFormat(s string, format string) (time.Time, error) {
 				}
 			case 'D':
 				if n+len(DEFAULT_SHORT_DATE_FORMAT) <= len(s) {
+					// can use ParseInLocation since the format doesn't include zone information
 					pt, err := time.ParseInLocation(DEFAULT_SHORT_DATE_FORMAT, s[n:n+len(DEFAULT_SHORT_DATE_FORMAT)], time.Local)
 					if err != nil {
 						return t, err
@@ -2897,6 +3290,7 @@ func strToTimePercentFormat(s string, format string) (time.Time, error) {
 				}
 			case 'F':
 				if n+len(DEFAULT_FORMAT) <= len(s) {
+					// can use ParseInLocation since the format includes only numerical zone information
 					pt, err := time.ParseInLocation(DEFAULT_FORMAT, s[n:n+len(DEFAULT_FORMAT)], time.Local)
 					if err != nil {
 						return t, err
@@ -3135,7 +3529,7 @@ func strToTimePercentFormat(s string, format string) (time.Time, error) {
 				fallthrough
 			case 'z':
 				var err error
-				n, zoneh, zonem, loc, err = gatherZone(s, n)
+				n, zoneh, zonem, loc, err = gatherZone(s, n, _FORMAT_ALL)
 				if err != nil {
 					return t, err
 				}
@@ -3345,7 +3739,7 @@ func strToTimeCommonFormat(s string, format string) (time.Time, error) {
 			n += l
 		} else if i+2 < len(format) && (format[i:i+3] == "TZD" || format[i:i+3] == "TZN" || format[i:i+3] == "TZF") {
 			var err error
-			n, zoneh, zonem, loc, err = gatherZone(s, n)
+			n, zoneh, zonem, loc, err = gatherZone(s, n, _FORMAT_ALL)
 			if err != nil {
 				return t, err
 			}
@@ -3453,69 +3847,111 @@ func gatherNumber(s string, max int, countLeadingSpaces bool) (int, int) {
 	if i == 0 || leading {
 		return 0, 0
 	}
-	r, _ := strconv.Atoi(s[st:i])
+	en := i
+	if i > 9 && !countLeadingSpaces {
+		en = 9
+	}
+	r, _ := strconv.Atoi(s[st:en])
 	return r, i
 }
 
+const (
+	_FORMAT_2COLON = uint32(1) << iota
+	_FORMAT_1COLON
+	_FORMAT_3PART
+	_FORMAT_2PART
+	_FORMAT_1PART
+	_FORMAT_NAME
+	_FORMAT_ALLOW_Z
+)
+const _FORMAT_ALL = uint32(0xffffffff)
+
 // try parse ISO-8601 time zone formats, or load location by name
-func gatherZone(s string, n int) (int, int, int, *time.Location, error) {
+func gatherZone(s string, n int, allowedFormats uint32) (int, int, int, *time.Location, error) {
 	var err error
 	var zoneh, zonem int
 	var loc *time.Location
-	if n < len(s) && s[n] == 'Z' {
+	if allowedFormats&_FORMAT_ALLOW_Z != 0 && n < len(s) && s[n] == 'Z' {
 		zoneh = 0
 		zonem = 0
 		loc = nil
 		n++
-	} else if n+8 < len(s) && s[n+3] == ':' && s[n+6] == ':' && (s[n] == '+' || s[n] == '-') && // +00:00:00
+	} else if allowedFormats&_FORMAT_2COLON != 0 && n+8 < len(s) &&
+		s[n+3] == ':' && s[n+6] == ':' && (s[n] == '+' || s[n] == '-') && // +00:00:00
+
 		unicode.IsDigit(rune(s[n+1])) && unicode.IsDigit(rune(s[n+2])) &&
 		unicode.IsDigit(rune(s[n+4])) && unicode.IsDigit(rune(s[n+5])) &&
 		unicode.IsDigit(rune(s[n+7])) && unicode.IsDigit(rune(s[n+8])) {
 		zoneh, _ = strconv.Atoi(s[n : n+3])
 		zonem, _ = strconv.Atoi(s[n+4 : n+6])
+		s, _ := strconv.Atoi(s[n+7 : n+9])
+		if s < 0 || s > 59 {
+			err = fmt.Errorf("Invalid time zone in date string")
+		}
 		// seconds are ignored as aren't ISO-8601
 		loc = nil
 		n += 9
-	} else if n+5 < len(s) && s[n+3] == ':' && (s[n] == '+' || s[n] == '-') && // +00:00
+	} else if allowedFormats&_FORMAT_1COLON != 0 && n+5 < len(s) &&
+		s[n+3] == ':' && (s[n] == '+' || s[n] == '-') && // +00:00
+
 		unicode.IsDigit(rune(s[n+1])) && unicode.IsDigit(rune(s[n+2])) &&
 		unicode.IsDigit(rune(s[n+4])) && unicode.IsDigit(rune(s[n+5])) {
 		zoneh, _ = strconv.Atoi(s[n : n+3])
 		zonem, _ = strconv.Atoi(s[n+4 : n+6])
 		loc = nil
 		n += 6
-	} else if n+4 < len(s) && (s[n] == '+' || s[n] == '-') && // +0000
+	} else if allowedFormats&_FORMAT_3PART != 0 && n+6 < len(s) && (s[n] == '+' || s[n] == '-') && // +000000
+		unicode.IsDigit(rune(s[n+1])) && unicode.IsDigit(rune(s[n+2])) &&
+		unicode.IsDigit(rune(s[n+3])) && unicode.IsDigit(rune(s[n+4])) &&
+		unicode.IsDigit(rune(s[n+5])) && unicode.IsDigit(rune(s[n+6])) {
+
+		zoneh, _ = strconv.Atoi(s[n : n+3])
+		zonem, _ = strconv.Atoi(s[n+3 : n+5])
+		s, _ := strconv.Atoi(s[n+5 : n+7])
+		if s < 0 || s > 59 {
+			err = fmt.Errorf("Invalid time zone in date string")
+		}
+		// seconds are ingnored
+		loc = nil
+		n += 7
+	} else if allowedFormats&_FORMAT_2PART != 0 && n+4 < len(s) && (s[n] == '+' || s[n] == '-') && // +0000
 		unicode.IsDigit(rune(s[n+1])) && unicode.IsDigit(rune(s[n+2])) &&
 		unicode.IsDigit(rune(s[n+3])) && unicode.IsDigit(rune(s[n+4])) {
+
 		zoneh, _ = strconv.Atoi(s[n : n+3])
 		zonem, _ = strconv.Atoi(s[n+3 : n+5])
 		loc = nil
 		n += 5
-	} else if n+2 < len(s) && (s[n] == '+' || s[n] == '-') && // +00
+	} else if allowedFormats&_FORMAT_1PART != 0 && n+2 < len(s) && (s[n] == '+' || s[n] == '-') && // +00
 		unicode.IsDigit(rune(s[n+1])) && unicode.IsDigit(rune(s[n+2])) {
+
 		zoneh, _ = strconv.Atoi(s[n : n+3])
 		zonem = 0
 		loc = nil
 		n += 3
-	} else {
-		var f []string
+	} else if allowedFormats&_FORMAT_NAME != 0 {
+		var name string
+		l := 0
 		if n < len(s) {
-			f = strings.FieldsFunc(s[n:], nonIANATZDBRune)
-		}
-		if len(f) > 0 {
-			loc, err = time.LoadLocation(f[0])
-		} else {
-			loc, err = time.LoadLocation("")
-		}
-		if err != nil {
-			if long, ok := shortToLong[f[0]]; ok {
-				loc, err = time.LoadLocation(long)
+			f := strings.FieldsFunc(s[n:], nonIANATZDBRune)
+			if len(f) > 0 {
+				l = len(f[0])
+				// perform mapping before attempting to load so we can redirect (for example) EST to EST5EDT, the more commonly
+				// used zone (for our purposes).
+				if long, ok := shortToLong[f[0]]; ok {
+					name = long
+				} else {
+					name = f[0]
+				}
 			}
 		}
+		loc, err = time.LoadLocation(name)
 		if err != nil {
 			err = fmt.Errorf("Invalid time zone in date string")
-		} else if len(f) > 0 {
-			n += len(f[0])
 		}
+		n += l
+	} else {
+		err = fmt.Errorf("Invalid time zone in date string")
 	}
 	return n, zoneh, zonem, loc, err
 }
@@ -3549,6 +3985,7 @@ var shortToLong = map[string]string{
 	"CST":  "CST6CDT",
 	"EDT":  "EST5EDT",
 	"EEST": "Europe/Kiev",
+	"EST":  "EST5EDT",
 	"HMT":  "Europe/Helsinki",
 	"JST":  "Asia/Tokyo",
 	"KST":  "Asia/Seoul",
@@ -3556,6 +3993,7 @@ var shortToLong = map[string]string{
 	"MEDT": "Europe/Paris",
 	"MEST": "Europe/Paris",
 	"MMT":  "Indian/Maldives",
+	"MST":  "MST7MDT",
 	"PDT":  "PST8PDT",
 	"PST":  "PST8PDT",
 	"SAST": "Africa/Johannesburg",
@@ -3598,11 +4036,17 @@ func getLocation(h int, m int) *time.Location {
 	if h == -1 {
 		return time.Local
 	}
-	return time.FixedZone(fmt.Sprintf("%+03d%02d", h, m), h*60*60+m*60)
+	off := h * 60 * 60
+	if off >= 0 {
+		off += m * 60
+	} else {
+		off -= m * 60
+	}
+	return time.FixedZone(fmt.Sprintf("%+03d%02d", h, m), off)
 }
 
 func loadLocation(tz string) (*time.Location, error) {
-	_, zoneh, zonem, loc, err := gatherZone(tz, 0)
+	_, zoneh, zonem, loc, err := gatherZone(tz, 0, _FORMAT_ALL)
 	if err == nil && loc == nil {
 		loc = getLocation(zoneh, zonem)
 	}
@@ -3621,6 +4065,7 @@ func strToTimeTryAllDefaultFormats(s string) (time.Time, error) {
 	// first pass try formats that match length before encountering the overhead of parsing all
 	for _, f := range _DATE_FORMATS {
 		if len(f) == len(s) {
+			// can use ParseInLocation since the formats include only numerical zone information
 			t, err = time.ParseInLocation(f, s, time.Local)
 			if err == nil {
 				return t, nil
@@ -3630,6 +4075,7 @@ func strToTimeTryAllDefaultFormats(s string) (time.Time, error) {
 	// only check formats we've not checked above
 	for _, f := range _DATE_FORMATS {
 		if len(f) != len(s) {
+			// can use ParseInLocation since the format doesn't include zone information
 			t, err = time.ParseInLocation(f, s, time.Local)
 			if err == nil {
 				return t, nil
@@ -3707,6 +4153,7 @@ func strToTimeFormatClosest(s string, nearestFormat bool) (time.Time, string, er
 	// first pass try formats that match length before encountering the overhead of parsing all
 	for _, f := range _DATE_FORMATS {
 		if len(f) == len(s) {
+			// can use ParseInLocation since the formats include only numerical zone information
 			t, err = time.ParseInLocation(f, s, time.Local)
 			if err == nil {
 				return t, f, nil
@@ -3717,6 +4164,7 @@ func strToTimeFormatClosest(s string, nearestFormat bool) (time.Time, string, er
 	closest = math.MaxInt32
 	for _, f := range _DATE_FORMATS {
 		if len(f) != len(s) {
+			// can use ParseInLocation since the format doesn't include zone information
 			t, err = time.ParseInLocation(f, s, time.Local)
 			if err == nil {
 				if !nearestFormat {
@@ -4625,4 +5073,43 @@ func formatFromStr(str string) string {
 		}
 	}
 	return string(f)
+}
+
+// convert day of year (1-366) to month and day
+func yearDay(year int, yday int) (int, int) {
+	if yday <= 31 {
+		return 1, yday
+	} else if yday <= 59 {
+		return 2, yday - 31
+	} else if yday == 60 {
+		if isLeapYear(year) {
+			return 2, 29
+		}
+		return 3, 1
+	} else if isLeapYear(year) {
+		yday--
+	}
+	yday -= 59
+	switch {
+	case yday <= 31:
+		return 3, yday
+	case yday <= 31+30:
+		return 4, yday - 31
+	case yday <= 31+30+31:
+		return 5, yday - 31 - 30
+	case yday <= 31+30+31+30:
+		return 6, yday - 31 - 30 - 31
+	case yday <= 31+30+31+30+31:
+		return 7, yday - 31 - 30 - 31 - 30
+	case yday <= 31+30+31+30+31+31:
+		return 8, yday - 31 - 30 - 31 - 30 - 31
+	case yday <= 31+30+31+30+31+31+30:
+		return 9, yday - 31 - 30 - 31 - 30 - 31 - 31
+	case yday <= 31+30+31+30+31+31+30+31:
+		return 10, yday - 31 - 30 - 31 - 30 - 31 - 31 - 30
+	case yday <= 31+30+31+30+31+31+30+31+30:
+		return 11, yday - 31 - 30 - 31 - 30 - 31 - 31 - 30 - 31
+	default:
+		return 12, yday - 31 - 30 - 31 - 30 - 31 - 31 - 30 - 31 - 30
+	}
 }
