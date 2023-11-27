@@ -596,7 +596,7 @@ func (this *Context) ExecutePrepared(prepared *plan.Prepared, isPrepared bool,
 	value.Value, uint64, error) {
 
 	opContext := NewOpContext(this)
-	return opContext.ExecutePrepared(prepared, isPrepared, namedArgs, positionalArgs, statement, profileUdfExecTrees,
+	return opContext.ParkableExecutePrepared(prepared, isPrepared, namedArgs, positionalArgs, statement, profileUdfExecTrees,
 		funcKey)
 }
 

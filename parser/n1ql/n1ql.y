@@ -5247,11 +5247,11 @@ function_name LPAREN opt_exprs RPAREN opt_filter opt_nulls_treatment opt_window_
     if ok {
         if ($6 == algebra.AGGREGATE_RESPECTNULLS && !algebra.AggregateHasProperty(fname, algebra.AGGREGATE_WINDOW_RESPECTNULLS)) ||
            ($6 == algebra.AGGREGATE_IGNORENULLS && !algebra.AggregateHasProperty(fname, algebra.AGGREGATE_WINDOW_IGNORENULLS)) {
-            yylex.(*lexer).ErrorWithContext(fmt.Sprintf("RESPECT|IGNORE NULLS syntax is not valid for function %s.", fname),
-                                            $<line>6, $<column>6)
+            return yylex.(*lexer).FatalError(fmt.Sprintf("RESPECT|IGNORE NULLS syntax is not valid for function %s.", fname),
+                                             $<line>6, $<column>6)
         } else if ($5 != nil && !algebra.AggregateHasProperty(fname, algebra.AGGREGATE_ALLOWS_FILTER)) {
-            yylex.(*lexer).ErrorWithContext(fmt.Sprintf("FILTER clause syntax is not valid for function %s.", fname),
-                $<line>5, $<column>5)
+            return yylex.(*lexer).FatalError(fmt.Sprintf("FILTER clause syntax is not valid for function %s.", fname),
+                                             $<line>5, $<column>5)
         } else if len($3) < f.MinArgs() || len($3) > f.MaxArgs() {
             if f.MinArgs() == f.MaxArgs() {
                 return yylex.(*lexer).FatalError(fmt.Sprintf("Number of arguments to function %s must be %d.",
@@ -5303,7 +5303,7 @@ function_name LPAREN agg_quantifier expr RPAREN opt_filter opt_window_function
             a.SetAggregateModifiers($3, $6, $7)
         }
     } else {
-        yylex.(*lexer).ErrorWithContext(fmt.Sprintf("Invalid aggregate function %s.", fname), $<line>1, $<column>1)
+        return yylex.(*lexer).FatalError(fmt.Sprintf("Invalid aggregate function %s.", fname), $<line>1, $<column>1)
     }
 }
 |
@@ -5311,7 +5311,7 @@ function_name LPAREN STAR RPAREN opt_filter opt_window_function
 {
     fname := $1.Identifier()
     if strings.ToLower(fname) != "count" {
-        yylex.(*lexer).ErrorWithContext(fmt.Sprintf("Invalid aggregate function %s(*).", fname), $<line>1, $<column>1)
+        return yylex.(*lexer).FatalError(fmt.Sprintf("Invalid aggregate function %s(*).", fname), $<line>1, $<column>1)
     } else {
         agg, ok := algebra.GetAggregate(fname, false, ($5 != nil), ($6 != nil))
         if ok {
@@ -5320,7 +5320,7 @@ function_name LPAREN STAR RPAREN opt_filter opt_window_function
                 a.SetAggregateModifiers(uint32(0), $5, $6)
             }
         } else {
-            yylex.(*lexer).ErrorWithContext(fmt.Sprintf("Invalid aggregate function %s.", fname), $<line>1, $<column>1)
+            return yylex.(*lexer).FatalError(fmt.Sprintf("Invalid aggregate function %s.", fname), $<line>1, $<column>1)
         }
     }
 }
