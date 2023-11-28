@@ -80,10 +80,6 @@
                     ]
                 },
                 {
-                    "#operator": "Offset",
-                    "expr": "1"
-                },
-                {
                     "#operator": "Limit",
                     "expr": "1"
                 }

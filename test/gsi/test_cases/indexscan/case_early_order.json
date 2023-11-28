@@ -84,17 +84,7 @@
         "ordered": true,
         "results": [
             {
-                "purchaseId": "purchase8493",
-                "purchasedAt": "2014-05-06T15:52:43Z",
-                "type": "purchase"
-            },
-            {
-                "purchaseId": "purchase8402",
-                "purchasedAt": "2014-05-06T15:52:43Z",
-                "type": "purchase"
-            },
-            {
-                "purchaseId": "purchase8526",
+                "purchaseId": "purchase8253",
                 "purchasedAt": "2014-05-06T15:52:43Z",
                 "type": "purchase"
             },
@@ -104,7 +94,17 @@
                 "type": "purchase"
             },
             {
-                "purchaseId": "purchase8253",
+                "purchaseId": "purchase8526",
+                "purchasedAt": "2014-05-06T15:52:43Z",
+                "type": "purchase"
+            },
+            {
+                "purchaseId": "purchase8402",
+                "purchasedAt": "2014-05-06T15:52:43Z",
+                "type": "purchase"
+            },
+            {
+                "purchaseId": "purchase8090",
                 "purchasedAt": "2014-05-06T15:52:43Z",
                 "type": "purchase"
             }
@@ -168,17 +168,7 @@
         "ordered": true,
         "results": [
             {
-                "purchaseId": "purchase8493",
-                "purchasedAt": "2014-05-06T15:52:43Z",
-                "type": "purchase"
-            },
-            {
-                "purchaseId": "purchase8402",
-                "purchasedAt": "2014-05-06T15:52:43Z",
-                "type": "purchase"
-            },
-            {
-                "purchaseId": "purchase8526",
+                "purchaseId": "purchase8253",
                 "purchasedAt": "2014-05-06T15:52:43Z",
                 "type": "purchase"
             },
@@ -188,7 +178,17 @@
                 "type": "purchase"
             },
             {
-                "purchaseId": "purchase8253",
+                "purchaseId": "purchase8526",
+                "purchasedAt": "2014-05-06T15:52:43Z",
+                "type": "purchase"
+            },
+            {
+                "purchaseId": "purchase8402",
+                "purchasedAt": "2014-05-06T15:52:43Z",
+                "type": "purchase"
+            },
+            {
+                "purchaseId": "purchase8090",
                 "purchasedAt": "2014-05-06T15:52:43Z",
                 "type": "purchase"
             }
