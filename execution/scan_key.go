@@ -10,7 +10,6 @@ package execution
 
 import (
 	"encoding/json"
-	"fmt"
 
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
@@ -94,13 +93,13 @@ func (this *KeyScan) RunOnce(context *Context, parent value.Value) {
 		case []interface{}:
 			for _, key := range actuals {
 				k := value.NewValue(key).Actual()
-				if k, ok := k.(string); ok {
+				if ks, ok := k.(string); ok {
 					// Distinct keys
 					if this.keys != nil {
-						if _, ok1 := this.keys[k]; ok1 {
+						if _, ok1 := this.keys[ks]; ok1 {
 							continue
 						}
-						this.keys[k] = true
+						this.keys[ks] = true
 					}
 
 					av := this.newEmptyDocumentWithKey(key, parent, context)
@@ -108,7 +107,7 @@ func (this *KeyScan) RunOnce(context *Context, parent value.Value) {
 						break
 					}
 				} else {
-					context.Warning(errors.NewWarning(fmt.Sprintf("Document key must be string: %v", k)))
+					context.Warning(errors.NewInvalidDocumentKeyTypeWarning(k, value.NewValue(k).Type().String()))
 				}
 			}
 		case string:
@@ -117,7 +116,7 @@ func (this *KeyScan) RunOnce(context *Context, parent value.Value) {
 				break
 			}
 		default:
-			context.Warning(errors.NewWarning(fmt.Sprintf("Document key must be string: %v", actuals)))
+			context.Warning(errors.NewInvalidDocumentKeyTypeWarning(actuals, value.NewValue(actuals).Type().String()))
 		}
 	})
 }

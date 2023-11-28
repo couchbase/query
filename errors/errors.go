@@ -186,7 +186,7 @@ func NewError(e error, internalMsg string) Error {
 }
 
 func NewWarning(internalMsg string) Error {
-	return &err{level: WARNING, InternalMsg: internalMsg, InternalCaller: CallerN(1)}
+	return &err{level: WARNING, ICode: W_GENERIC, InternalMsg: internalMsg, InternalCaller: CallerN(1)}
 }
 
 func NewNotice(internalMsg string) Error {

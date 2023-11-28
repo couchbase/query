@@ -213,14 +213,12 @@ func processWith(context datastore.QueryContext, with value.Value) (*DescribeOpt
 						fs := strings.ToLower(f.(value.Value).ToString())
 						v, ok := flags_map[fs]
 						if !ok {
-							//TODO
-							return nil, errors.NewWarning(fmt.Sprintf("'flags' array element '%v' is invalid", fs))
+							return nil, errors.NewInvalidFlagWarning(fmt.Sprintf("%v", fs))
 						}
 						options.Flags |= v
 					}
 				} else {
-					// TODO
-					return nil, errors.NewWarning(fmt.Sprintf("'flags' must be a number, a string or an array not: %v", fv.Type()))
+					return nil, errors.NewInvalidFlagsWarning(fv.Type().String())
 				}
 				continue
 			}
@@ -243,6 +241,8 @@ func processWith(context datastore.QueryContext, with value.Value) (*DescribeOpt
 			options.InferTimeout = int32(v)
 		case "max_schema_MB":
 			options.MaxSchemaMB = int32(v)
+		case "flags":
+			options.Flags = Flag(v)
 		default:
 			return nil, errors.NewInferInvalidOption(fieldName)
 		}

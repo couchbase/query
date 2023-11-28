@@ -207,6 +207,8 @@ const (
 	_RETIRED_4903                                       = 4903
 	_RETIRED_4904                                       = 4904
 	_RETIRED_4905                                       = 4905
+	W_DOCUMENT_KEY_TYPE                       ErrorCode = 4998
+	W_GENERIC                                 ErrorCode = 4999
 	E_INTERNAL                                ErrorCode = 5000
 	E_EXECUTION_PANIC                         ErrorCode = 5001
 	E_EXECUTION_INTERNAL                      ErrorCode = 5002
@@ -335,6 +337,8 @@ const (
 	E_INFER_NO_RETRIEVERS                     ErrorCode = 7022
 	E_INFER_OPTIONS                           ErrorCode = 7023
 	E_INFER_NEXT_DOCUMENT                     ErrorCode = 7024
+	W_INFER_INVALID_FLAGS                     ErrorCode = 7025
+	W_INFER_INVALID_FLAG                      ErrorCode = 7026
 	E_MIGRATION                               ErrorCode = 7200
 	E_MIGRATION_INTERNAL                      ErrorCode = 7201
 	E_DATASTORE_AUTHORIZATION                 ErrorCode = 10000

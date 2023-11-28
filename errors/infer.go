@@ -181,6 +181,20 @@ func NewInferOptionsError() Error {
 func NewNextDocumentError(e error) Error {
 	c := make(map[string]interface{})
 	c["error"] = e
-	return &err{level: EXCEPTION, ICode: E_INFER_NEXT_DOCUMENT, IKey: "infer.next_document",
+	return &err{level: EXCEPTION, ICode: E_INFER_NEXT_DOCUMENT, IKey: "infer.next_document", cause: c,
 		InternalMsg: "NextDocument failed", InternalCaller: CallerN(1)}
+}
+
+func NewInvalidFlagsWarning(t string) Error {
+	c := make(map[string]interface{})
+	c["type"] = t
+	return &err{level: WARNING, ICode: W_INFER_INVALID_FLAGS, IKey: "infer.invalid_flags", cause: c,
+		InternalMsg: "'flags' must be a number, a string or an array not: " + t, InternalCaller: CallerN(1)}
+}
+
+func NewInvalidFlagWarning(e string) Error {
+	c := make(map[string]interface{})
+	c["element"] = e
+	return &err{level: WARNING, ICode: W_INFER_INVALID_FLAG, IKey: "infer.invalid_flag", cause: c,
+		InternalMsg: "'flags' array element '" + e + "' is invalid", InternalCaller: CallerN(1)}
 }

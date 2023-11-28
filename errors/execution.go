@@ -649,3 +649,11 @@ func NewAdviseInvalidResultsError() Error {
 	return &err{level: EXCEPTION, ICode: E_ADVISE_INVALID_RESULTS, IKey: "execution.advise.invalid_results",
 		InternalMsg: "Invalid advise results", InternalCaller: CallerN(1)}
 }
+
+func NewInvalidDocumentKeyTypeWarning(v interface{}, t string) Error {
+	c := make(map[string]interface{}, 2)
+	c["value"] = v
+	c["type"] = t
+	return &err{level: WARNING, ICode: W_DOCUMENT_KEY_TYPE, IKey: "execution.document_key.type", cause: c,
+		InternalMsg: fmt.Sprintf("Document key must be a string: %v", v), InternalCaller: CallerN(1)}
+}
