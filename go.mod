@@ -46,7 +46,7 @@ require (
 	github.com/couchbase/eventing-ee v0.0.0-00010101000000-000000000000
 	github.com/couchbase/go-couchbase v0.1.1
 	github.com/couchbase/go_json v0.0.0-20220330123059-4473a21887c8
-	github.com/couchbase/gocbcore/v10 v10.2.9
+	github.com/couchbase/gocbcore/v10 v10.2.10
 	github.com/couchbase/godbc v0.0.0-20210615212222-79da1b49cb4d
 	github.com/couchbase/gomemcached v0.2.2-0.20230407174933-7d7ce13da8cc
 	github.com/couchbase/goutils v0.1.2
