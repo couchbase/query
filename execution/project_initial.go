@@ -420,7 +420,7 @@ func (this *InitialProject) getExclusions(singlequalification bool, item value.A
 		exclusions, cache, err = expression.GetReferences(this.plan.Projection().Exclude(), item, &this.operatorCtx,
 			singlequalification)
 		if err != nil {
-			return nil, nil
+			return nil, err
 		}
 		if cache {
 			this.exclusions = exclusions
