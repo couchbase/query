@@ -198,6 +198,10 @@ outer:
 
 func (this *builder) bestCoveringIndex(useCBO bool, node *algebra.KeyspaceTerm,
 	coveringEntries map[datastore.Index]*coveringEntry, noArray bool) (index datastore.Index) {
+
+	hasGroupAggs := false
+	hasOrder := false
+
 	if useCBO {
 		for _, ce := range coveringEntries {
 			entry := ce.idxEntry
@@ -211,23 +215,200 @@ func (this *builder) bestCoveringIndex(useCBO bool, node *algebra.KeyspaceTerm,
 					entry.cardinality, entry.cost, entry.frCost, entry.size = card, cost, frCost, size
 				}
 			}
+			if entry.IsPushDownProperty(_PUSHDOWN_FULLGROUPAGGS | _PUSHDOWN_GROUPAGGS) {
+				hasGroupAggs = true
+			}
+			if entry.IsPushDownProperty(_PUSHDOWN_ORDER) {
+				hasOrder = true
+			}
 		}
 	}
 
 	var centry *coveringEntry
+	var i_cost, i_cardinality float64
+	var i_size int64
+	var i_pushdown PushDownProperties
 	if useCBO {
+		// if group/aggregate pushdown and/or order pushdown available, add the corresponding
+		// cost for group and/or order to the index cost for those indexes that do not have
+		// the appropriate pushdown before comparison
+		doGroupAggs := hasGroupAggs
+		doOrder := hasOrder
+		if doGroupAggs && this.group == nil {
+			doGroupAggs = false
+		}
+		if doOrder && this.order == nil {
+			doOrder = false
+		}
 		for _, ce := range coveringEntries {
 			// consider pushdown property before considering cost
 			if centry == nil {
 				centry = ce
-			} else {
-				c_pushdown := ce.idxEntry.PushDownProperty()
-				i_pushdown := centry.idxEntry.PushDownProperty()
-				if (c_pushdown > i_pushdown) ||
-					((c_pushdown == i_pushdown) &&
-						(ce.idxEntry.cost < centry.idxEntry.cost)) {
-					centry = ce
+				i_cost = ce.idxEntry.cost
+				i_cardinality = ce.idxEntry.cardinality
+				i_size = ce.idxEntry.size
+				i_pushdown = ce.idxEntry.PushDownProperty()
+				if doGroupAggs && !isPushDownProperty(i_pushdown, _PUSHDOWN_FULLGROUPAGGS) {
+					costInitial, _, costIntermediate, _, costFinal, _ :=
+						getGroupCosts(this.group, this.aggs, i_cost, i_cardinality,
+							i_size, this.keyspaceNames, this.maxParallelism)
+					if costInitial <= 0.0 || costIntermediate <= 0.0 || costFinal <= 0.0 {
+						doGroupAggs = false
+					} else {
+						i_cost += costInitial + costIntermediate + costFinal
+					}
 				}
+
+				if doOrder && !isPushDownProperty(i_pushdown, _PUSHDOWN_ORDER) {
+					scost, _, _, _ := getSortCost(i_size, len(this.order.Terms()),
+						i_cardinality, -1, -1)
+					if scost <= 0.0 {
+						doOrder = false
+					} else {
+						i_cost += scost
+					}
+				}
+
+				continue
+			}
+			// consider in order:
+			//   - cost
+			//   - cardinality
+			//   - sumKeys
+			//   - minKeys
+			c_cost := ce.idxEntry.cost
+			c_cardinality := ce.idxEntry.cardinality
+			c_size := ce.idxEntry.size
+			c_pushdown := ce.idxEntry.PushDownProperty()
+
+			if hasGroupAggs {
+				if doGroupAggs && !isPushDownProperty(c_pushdown, _PUSHDOWN_FULLGROUPAGGS) {
+					costInitial, _, costIntermediate, _, costFinal, _ :=
+						getGroupCosts(this.group, this.aggs, c_cost, c_cardinality,
+							c_size, this.keyspaceNames, this.maxParallelism)
+					if costInitial <= 0.0 || costIntermediate <= 0.0 || costFinal <= 0.0 {
+						doGroupAggs = false
+						// reset i_cost to original index cost
+						i_cost = centry.idxEntry.cost
+					} else {
+						c_cost += costInitial + costIntermediate + costFinal
+					}
+				}
+				if !doGroupAggs {
+					// if group cost is not available, use the index cost for
+					// comparison but treat full/partial groupaggs/order as the
+					// same (i.e. use index cost to determine the better one)
+					better, similar := comparePushDownProperties(c_pushdown, i_pushdown)
+					if better {
+						centry = ce
+						i_cost = c_cost
+						i_cardinality = c_cardinality
+						i_size = c_size
+						i_pushdown = c_pushdown
+						continue
+					} else if !similar {
+						continue
+					}
+				}
+			}
+
+			if hasOrder {
+				if doOrder && !isPushDownProperty(c_pushdown, _PUSHDOWN_ORDER) {
+					scost, _, _, _ := getSortCost(c_size, len(this.order.Terms()),
+						c_cardinality, -1, -1)
+					if scost <= 0.0 {
+						doOrder = false
+						// reset i_cost/c_cost to original index cost
+						i_cost = centry.idxEntry.cost
+						c_cost = ce.idxEntry.cost
+					} else {
+						c_cost += scost
+					}
+				}
+				if !doOrder {
+					// if sort cost is not available, use the index cost for
+					// comparison but treat full/partial groupaggs/order as the
+					// same (i.e. use index cost to determine the better one)
+					better, similar := comparePushDownProperties(c_pushdown, i_pushdown)
+					if better {
+						centry = ce
+						i_cost = c_cost
+						i_cardinality = c_cardinality
+						i_size = c_size
+						i_pushdown = c_pushdown
+						continue
+					} else if !similar {
+						continue
+					}
+				}
+			}
+
+			if c_cost != i_cost {
+				t_c_cost := c_cost
+				t_i_cost := i_cost
+				if c_pushdown != i_pushdown && ((hasGroupAggs && !doGroupAggs) || (hasOrder && !doOrder)) {
+					// if comparing two indexes with similar index pushdown
+					// properties but group/sort cost is not available, just
+					// add 10% additional cost to the existing index cost as
+					// an estimate of group/sort cost
+					if hasGroupAggs && !doGroupAggs {
+						t_c_pushdown := c_pushdown & (_PUSHDOWN_FULLGROUPAGGS | _PUSHDOWN_GROUPAGGS)
+						t_i_pushdown := i_pushdown & (_PUSHDOWN_FULLGROUPAGGS | _PUSHDOWN_GROUPAGGS)
+						if t_c_pushdown > t_i_pushdown {
+							t_i_cost += 0.1 * i_cost
+						} else if t_c_pushdown < t_i_pushdown {
+							t_c_cost += 0.1 * c_cost
+						}
+					}
+					if hasOrder && !doOrder {
+						t_c_pushdown := c_pushdown & (_PUSHDOWN_ORDER)
+						t_i_pushdown := i_pushdown & (_PUSHDOWN_ORDER)
+						if t_c_pushdown > t_i_pushdown {
+							t_i_cost += 0.1 * i_cost
+						} else if t_c_pushdown < t_i_pushdown {
+							t_c_cost += 0.1 * c_cost
+						}
+					}
+				}
+				if t_c_cost < t_i_cost {
+					centry = ce
+					i_cost = c_cost
+					i_cardinality = c_cardinality
+					i_size = c_size
+					i_pushdown = c_pushdown
+				}
+				continue
+			}
+			if c_cardinality != i_cardinality {
+				if c_cardinality < i_cardinality {
+					centry = ce
+					i_cost = c_cost
+					i_cardinality = c_cardinality
+					i_size = c_size
+					i_pushdown = c_pushdown
+				}
+				continue
+			}
+			c_sumKeys := ce.idxEntry.sumKeys
+			i_sumKeys := centry.idxEntry.sumKeys
+			if c_sumKeys != i_sumKeys {
+				if c_sumKeys > i_sumKeys {
+					centry = ce
+					i_cost = c_cost
+					i_cardinality = c_cardinality
+					i_size = c_size
+					i_pushdown = c_pushdown
+				}
+				continue
+			}
+			c_minKeys := ce.idxEntry.minKeys
+			i_minKeys := centry.idxEntry.minKeys
+			if c_minKeys > i_minKeys {
+				centry = ce
+				i_cost = c_cost
+				i_cardinality = c_cardinality
+				i_size = c_size
+				i_pushdown = c_pushdown
 			}
 		}
 		return centry.idxEntry.index
