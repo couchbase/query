@@ -2629,7 +2629,7 @@ func GetReferences(exs Expressions, item value.AnnotatedValue, context Context, 
 						}
 						references = append(references, reverseReference(ref))
 					} else {
-						return nil, false, errors.NewInvalidExpressionError(e.String(), nil)
+						return nil, false, errors.NewInvalidExpressionError(str, nil)
 					}
 				}
 			} else if v.Type() != value.MISSING && v.Type() != value.NULL {
