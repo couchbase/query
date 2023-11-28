@@ -241,6 +241,28 @@ func isPushDownProperty(pushDownProperty, property PushDownProperties) bool {
 	return (pushDownProperty & property) != 0
 }
 
+func comparePushDownProperties(prop1, prop2 PushDownProperties) (better, similar bool) {
+	ga1 := prop1&(_PUSHDOWN_FULLGROUPAGGS|_PUSHDOWN_GROUPAGGS) != 0
+	ga2 := prop2&(_PUSHDOWN_FULLGROUPAGGS|_PUSHDOWN_GROUPAGGS) != 0
+	if ga1 != ga2 {
+		return ga1, false
+	}
+
+	prop1 &^= (_PUSHDOWN_FULLGROUPAGGS | _PUSHDOWN_GROUPAGGS)
+	prop2 &^= (_PUSHDOWN_FULLGROUPAGGS | _PUSHDOWN_GROUPAGGS)
+
+	o1 := prop1&(_PUSHDOWN_ORDER|_PUSHDOWN_PARTIAL_ORDER) != 0
+	o2 := prop2&(_PUSHDOWN_ORDER|_PUSHDOWN_PARTIAL_ORDER) != 0
+	if o1 != o2 {
+		return o1, false
+	}
+
+	prop1 &^= (_PUSHDOWN_ORDER | _PUSHDOWN_PARTIAL_ORDER)
+	prop2 &^= (_PUSHDOWN_ORDER | _PUSHDOWN_PARTIAL_ORDER)
+
+	return prop1 > prop2, prop1 == prop2
+}
+
 type EqExpr struct {
 	expression.MapperBase
 	sargKyes expression.Expressions
