@@ -544,7 +544,8 @@ func doPrepared(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 				itemMap["encoded_plan"] = entry.Prepared.EncodedPlan()
 			}
 			if entry.Prepared.OptimHints() != nil {
-				itemMap["optimizer_hints"], _ = json.Marshal(entry.Prepared.OptimHints())
+				hints, _ := json.Marshal(entry.Prepared.OptimHints())
+				itemMap["optimizer_hints"] = value.NewParsedValue(hints, true)
 			}
 			isks := entry.Prepared.IndexScanKeyspaces()
 			if len(isks) > 0 {
@@ -611,7 +612,8 @@ func doPrepareds(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Reques
 				data[i]["encoded_plan"] = d.Prepared.EncodedPlan()
 			}
 			if d.Prepared.OptimHints() != nil {
-				data[i]["optimizer_hints"], _ = json.Marshal(d.Prepared.OptimHints())
+				hints, _ := json.Marshal(d.Prepared.OptimHints())
+				data[i]["optimizer_hints"] = value.NewParsedValue(hints, true)
 			}
 			isks := d.Prepared.IndexScanKeyspaces()
 			if len(isks) > 0 {
