@@ -15,6 +15,8 @@ var statement_syntax = map[string][][]string{
 		[]string{"<identifier>"},
 		[]string{"DEFAULT"},
 		[]string{"USER"},
+		[]string{"SEQUENCE"},
+		[]string{"VECTOR"},
 	},
 	"statements": [][]string{
 		[]string{"advise"},

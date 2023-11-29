@@ -397,7 +397,7 @@ column int
 
 /* Types */
 %type <s>                STR
-%type <s>                IDENT IDENT_ICASE NAMESPACE_ID DEFAULT USER permitted_identifiers
+%type <s>                IDENT IDENT_ICASE NAMESPACE_ID DEFAULT USER permitted_identifiers SEQUENCE VECTOR
 %type <identifier>       ident ident_icase
 %type <s>                REPLACE
 %type <s>                NAMED_PARAM
@@ -597,6 +597,10 @@ IDENT
 DEFAULT
 |
 USER
+|
+SEQUENCE
+|
+VECTOR
 ;
 
 opt_trailer:
