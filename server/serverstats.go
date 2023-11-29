@@ -21,13 +21,14 @@ import (
 // Cut-down basic monitor to trigger FFDC when runtime memory stats indicate high useage
 
 const (
-	_DEF_LIMIT       = 0.9
-	_STATS_INTRVL    = time.Second * 30
-	_SAMPLES_2_HOURS = int((time.Hour * 2) / _STATS_INTRVL)
-	_SAMPLES_MIN     = int((time.Minute * 5) / _STATS_INTRVL)
-	_FFDC_MEM_THRESH = 0.8
-	_FFDC_MEM_RATE   = 0.2
-	_LOG_INTRVL      = 4
+	_DEF_LIMIT        = 0.9
+	_STATS_INTRVL     = time.Second * 30
+	_SAMPLES_2_HOURS  = int((time.Hour * 2) / _STATS_INTRVL)
+	_SAMPLES_MIN      = int((time.Minute * 5) / _STATS_INTRVL)
+	_FFDC_MEM_THRESH  = 0.8
+	_FFDC_MEM_RATE    = 0.2
+	_LOG_INTRVL       = 4
+	_FFDC_RATE_THRESH = 0.333
 )
 
 var memLimit uint64
@@ -96,7 +97,7 @@ func (this *Server) monitor() {
 		last := averageMemoryUsage.last()
 		averageMemoryUsage.record(ms.HeapAlloc)
 		delta := int64(ms.HeapAlloc) - int64(last)
-		if delta > 0 && averageMemoryUsage.count() > _SAMPLES_MIN &&
+		if delta > 0 && averageMemoryUsage.count() > _SAMPLES_MIN && last > uint64(float64(memLimit)*_FFDC_RATE_THRESH) &&
 			delta > int64(float64(averageMemoryUsage.value())*_FFDC_MEM_RATE) {
 
 			logging.Warnf("Memory growth rate threshold exceeded: %v > %v", logging.HumanReadableSize(delta, true),
