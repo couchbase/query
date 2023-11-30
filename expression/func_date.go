@@ -2969,9 +2969,15 @@ func strToTimeGoFormat(s string, format string) (time.Time, error) {
 	h12 := false
 	sign := false
 	for i = 0; i < len(format) && n < len(s); i++ {
-		if format[i] == ' ' {
-			// space matches any character
-			n++
+		if format[i] == ' ' && s[n] == ' ' {
+			// space matches any number of spaces, and any number of consecutive spaces in the format is the same as a single space
+			for i < len(format) && format[i] == ' ' {
+				i++
+			}
+			i--
+			for n < len(s) && s[n] == ' ' {
+				n++
+			}
 			continue
 		}
 		if i+7 <= len(format) && format[i:i+7] == "January" {
@@ -3022,7 +3028,7 @@ func strToTimeGoFormat(s string, format string) (time.Time, error) {
 				var err error
 				n, zoneh, zonem, loc, err = gatherZone(s, n, _TZ_FORMAT_NAME)
 				if err != nil {
-					return t, err
+					return t, errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING, errorInfo(format, i, s, n, "time zone"))
 				}
 				i += 2
 				continue
@@ -3270,28 +3276,24 @@ func strToTimeGoFormat(s string, format string) (time.Time, error) {
 				tzf = _TZ_FORMAT_1PART
 				j = 2
 			}
-			if j > 0 {
+			if j > 0 || format[i] == 'Z' {
 				if format[i] == 'Z' {
 					tzf |= _TZ_FORMAT_ALLOW_Z
 				}
 				var err error
 				n, zoneh, zonem, loc, err = gatherZone(s, n, tzf)
 				if err != nil {
-					return t, err
+					return t, errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING, errorInfo(format, i, s, n, "time zone"))
 				}
 				i += j
 				continue
 			}
 		}
 
-		if !unicode.IsPunct(rune(format[i])) && format[i] != 'T' {
+		if format[i] != s[n] {
 			return t, errors.NewDateWarning(errors.W_DATE_INVALID_FORMAT, errorInfo(format, i, s, n, format[i]))
-		} else {
-			if format[i] != 'T' && format[i] != s[n] {
-				return t, errors.NewDateWarning(errors.W_DATE_INVALID_FORMAT, errorInfo(format, i, s, n, format[i]))
-			}
-			n++
 		}
+		n++
 	}
 
 	if i != len(format) || n != len(s) {
@@ -3747,7 +3749,7 @@ func strToTimePercentFormat(s string, format string) (time.Time, error) {
 				var err error
 				n, zoneh, zonem, loc, err = gatherZone(s, n, _TZ_FORMAT_ALL)
 				if err != nil {
-					return t, err
+					return t, errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING, errorInfo(format, i, s, n, "time zone"))
 				}
 			case 's':
 				var e time.Time
@@ -4230,7 +4232,7 @@ func strToTimeCommonFormat(s string, format string) (time.Time, error) {
 			var err error
 			n, zoneh, zonem, loc, err = gatherZone(s, n, _TZ_FORMAT_ALL)
 			if err != nil {
-				return t, err
+				return t, errors.NewDateWarning(errors.W_DATE_INVALID_DATE_STRING, errorInfo(format, i, s, n, "time zone"))
 			}
 			i += 2
 		} else if i+4 < len(format) && (format[i:i+5] == "MONTH" || format[i:i+5] == "Month" || format[i:i+5] == "month") {
@@ -4490,7 +4492,7 @@ func gatherZone(s string, n int, allowedFormats uint32) (int, int, int, *time.Lo
 		zoneh, _ = strconv.Atoi(s[n : n+3])
 		zonem, _ = strconv.Atoi(s[n+4 : n+6])
 		sec, _ := strconv.Atoi(s[n+7 : n+9])
-		if sec > 59 || zoneh > 14 || zoneh < -12 || zonem%15 != 0 {
+		if sec > 59 || zoneh > 14 || zoneh < -12 || zonem > 59 {
 			err = errors.NewDateWarning(errors.W_DATE_INVALID_TIMEZONE, s[n:])
 		}
 		// seconds are ignored as aren't ISO-8601
@@ -4503,7 +4505,7 @@ func gatherZone(s string, n int, allowedFormats uint32) (int, int, int, *time.Lo
 		unicode.IsDigit(rune(s[n+4])) && unicode.IsDigit(rune(s[n+5])) {
 		zoneh, _ = strconv.Atoi(s[n : n+3])
 		zonem, _ = strconv.Atoi(s[n+4 : n+6])
-		if zoneh > 14 || zoneh < -12 || zonem%15 != 0 || zonem > 59 {
+		if zoneh > 14 || zoneh < -12 || zonem > 59 {
 			err = errors.NewDateWarning(errors.W_DATE_INVALID_TIMEZONE, s[n:])
 		}
 		loc = nil
@@ -4516,7 +4518,7 @@ func gatherZone(s string, n int, allowedFormats uint32) (int, int, int, *time.Lo
 		zoneh, _ = strconv.Atoi(s[n : n+3])
 		zonem, _ = strconv.Atoi(s[n+3 : n+5])
 		sec, _ := strconv.Atoi(s[n+5 : n+7])
-		if sec > 59 || zoneh > 14 || zoneh < 12 || zonem%15 != 0 || zonem > 59 {
+		if sec > 59 || zoneh > 14 || zoneh < 12 || zonem > 59 {
 			err = errors.NewDateWarning(errors.W_DATE_INVALID_TIMEZONE, s[n:])
 		}
 		// seconds are ingnored
@@ -4528,7 +4530,7 @@ func gatherZone(s string, n int, allowedFormats uint32) (int, int, int, *time.Lo
 
 		zoneh, _ = strconv.Atoi(s[n : n+3])
 		zonem, _ = strconv.Atoi(s[n+3 : n+5])
-		if zoneh > 14 || zoneh < -12 || zonem%15 != 0 || zonem > 59 {
+		if zoneh > 14 || zoneh < -12 || zonem > 59 {
 			err = errors.NewDateWarning(errors.W_DATE_INVALID_TIMEZONE, s[n:])
 		}
 		loc = nil
@@ -4562,8 +4564,9 @@ func gatherZone(s string, n int, allowedFormats uint32) (int, int, int, *time.Lo
 		loc, err = time.LoadLocation(name)
 		if err != nil {
 			err = errors.NewDateWarning(errors.W_DATE_INVALID_TIMEZONE, name)
+		} else {
+			n += l
 		}
-		n += l
 	} else {
 		err = errors.NewDateWarning(errors.W_DATE_INVALID_TIMEZONE, s[n:])
 	}
@@ -5406,9 +5409,9 @@ func determineKnownFormat(s string) string {
 			} else if i <= 3 {
 				frac = ".999"
 			} else if i <= 6 {
-				frac = ".000000"
+				frac = ".999999"
 			} else if i <= 9 {
-				frac = ".000000000"
+				frac = ".999999999"
 			} else {
 				return ""
 			}
