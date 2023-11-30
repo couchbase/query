@@ -2811,9 +2811,15 @@ func strToTimeGoFormat(s string, format string) (time.Time, error) {
 	pm := false
 	h12 := false
 	for i = 0; i < len(format) && n < len(s); i++ {
-		if format[i] == ' ' {
-			// space matches any character
-			n++
+		if format[i] == ' ' && s[n] == ' ' {
+			// space matches any number of spaces, and any number of consecutive spaces in the format is the same as a single space
+			for i < len(format) && format[i] == ' ' {
+				i++
+			}
+			i--
+			for n < len(s) && s[n] == ' ' {
+				n++
+			}
 			continue
 		}
 		if i+7 <= len(format) && format[i:i+7] == "January" {
@@ -3124,14 +3130,10 @@ func strToTimeGoFormat(s string, format string) (time.Time, error) {
 			}
 		}
 
-		if !unicode.IsPunct(rune(format[i])) && format[i] != 'T' {
-			return t, fmt.Errorf("Invalid format")
-		} else {
-			if format[i] != 'T' && format[i] != s[n] {
-				return t, fmt.Errorf("Failed to parse '%c' in date string (found '%c')", format[i], s[n])
-			}
-			n++
+		if format[i] != s[n] {
+			return t, fmt.Errorf("Failed to parse '%c' in date string (found '%c')", format[i], s[n])
 		}
+		n++
 	}
 
 	if i != len(format) || n != len(s) {
@@ -3869,14 +3871,10 @@ const _FORMAT_ALL = uint32(0xffffffff)
 // try parse ISO-8601 time zone formats, or load location by name
 func gatherZone(s string, n int, allowedFormats uint32) (int, int, int, *time.Location, error) {
 	var err error
-	var zoneh, zonem int
+	var zoneh, zonem, sec int
 	var loc *time.Location
-	if allowedFormats&_FORMAT_ALLOW_Z != 0 && n < len(s) && s[n] == 'Z' {
-		zoneh = 0
-		zonem = 0
-		loc = nil
-		n++
-	} else if allowedFormats&_FORMAT_2COLON != 0 && n+8 < len(s) &&
+
+	if allowedFormats&_FORMAT_2COLON != 0 && n+8 < len(s) &&
 		s[n+3] == ':' && s[n+6] == ':' && (s[n] == '+' || s[n] == '-') && // +00:00:00
 
 		unicode.IsDigit(rune(s[n+1])) && unicode.IsDigit(rune(s[n+2])) &&
@@ -3884,12 +3882,7 @@ func gatherZone(s string, n int, allowedFormats uint32) (int, int, int, *time.Lo
 		unicode.IsDigit(rune(s[n+7])) && unicode.IsDigit(rune(s[n+8])) {
 		zoneh, _ = strconv.Atoi(s[n : n+3])
 		zonem, _ = strconv.Atoi(s[n+4 : n+6])
-		s, _ := strconv.Atoi(s[n+7 : n+9])
-		if s < 0 || s > 59 {
-			err = fmt.Errorf("Invalid time zone in date string")
-		}
-		// seconds are ignored as aren't ISO-8601
-		loc = nil
+		sec, _ = strconv.Atoi(s[n+7 : n+9]) // seconds are validated but ignored as aren't ISO-8601
 		n += 9
 	} else if allowedFormats&_FORMAT_1COLON != 0 && n+5 < len(s) &&
 		s[n+3] == ':' && (s[n] == '+' || s[n] == '-') && // +00:00
@@ -3898,7 +3891,6 @@ func gatherZone(s string, n int, allowedFormats uint32) (int, int, int, *time.Lo
 		unicode.IsDigit(rune(s[n+4])) && unicode.IsDigit(rune(s[n+5])) {
 		zoneh, _ = strconv.Atoi(s[n : n+3])
 		zonem, _ = strconv.Atoi(s[n+4 : n+6])
-		loc = nil
 		n += 6
 	} else if allowedFormats&_FORMAT_3PART != 0 && n+6 < len(s) && (s[n] == '+' || s[n] == '-') && // +000000
 		unicode.IsDigit(rune(s[n+1])) && unicode.IsDigit(rune(s[n+2])) &&
@@ -3907,12 +3899,7 @@ func gatherZone(s string, n int, allowedFormats uint32) (int, int, int, *time.Lo
 
 		zoneh, _ = strconv.Atoi(s[n : n+3])
 		zonem, _ = strconv.Atoi(s[n+3 : n+5])
-		s, _ := strconv.Atoi(s[n+5 : n+7])
-		if s < 0 || s > 59 {
-			err = fmt.Errorf("Invalid time zone in date string")
-		}
-		// seconds are ingnored
-		loc = nil
+		sec, _ = strconv.Atoi(s[n+5 : n+7]) // seconds are validated but ignored
 		n += 7
 	} else if allowedFormats&_FORMAT_2PART != 0 && n+4 < len(s) && (s[n] == '+' || s[n] == '-') && // +0000
 		unicode.IsDigit(rune(s[n+1])) && unicode.IsDigit(rune(s[n+2])) &&
@@ -3920,21 +3907,24 @@ func gatherZone(s string, n int, allowedFormats uint32) (int, int, int, *time.Lo
 
 		zoneh, _ = strconv.Atoi(s[n : n+3])
 		zonem, _ = strconv.Atoi(s[n+3 : n+5])
-		loc = nil
 		n += 5
 	} else if allowedFormats&_FORMAT_1PART != 0 && n+2 < len(s) && (s[n] == '+' || s[n] == '-') && // +00
 		unicode.IsDigit(rune(s[n+1])) && unicode.IsDigit(rune(s[n+2])) {
 
 		zoneh, _ = strconv.Atoi(s[n : n+3])
 		zonem = 0
-		loc = nil
 		n += 3
+	} else if allowedFormats&_FORMAT_ALLOW_Z != 0 && n < len(s) && s[n] == 'Z' {
+		zoneh = 0
+		zonem = 0
+		n++
 	} else if allowedFormats&_FORMAT_NAME != 0 {
 		var name string
 		l := 0
 		if n < len(s) {
 			f := strings.FieldsFunc(s[n:], nonIANATZDBRune)
 			if len(f) > 0 {
+				f[0] = strings.TrimRight(f[0], "+-/_")
 				l = len(f[0])
 				// perform mapping before attempting to load so we can redirect (for example) EST to EST5EDT, the more commonly
 				// used zone (for our purposes).
@@ -3945,12 +3935,32 @@ func gatherZone(s string, n int, allowedFormats uint32) (int, int, int, *time.Lo
 				}
 			}
 		}
-		loc, err = time.LoadLocation(name)
-		if err != nil {
-			err = fmt.Errorf("Invalid time zone in date string")
+		if len(name) > 4 && (name[3] == '+' || name[3] == '-') && name[:3] == "GMT" && unicode.IsDigit(rune(name[4])) {
+			e := 5
+			// any number of digits are allowed; gatherNumber parses at most 9 so directly process here
+			for e < len(name) && unicode.IsDigit(rune(name[e])) {
+				e++
+			}
+			zoneh, _ = strconv.Atoi(name[3:e])
+			zonem = 0
+			if zoneh > 23 || zoneh < -23 {
+				err = fmt.Errorf("Invalid time zone in date string")
+			} else {
+				loc = time.FixedZone(s[n:e], zoneh*60*60)
+				n += e
+			}
+		} else {
+			loc, err = time.LoadLocation(name)
+			if err != nil {
+				err = fmt.Errorf("Invalid time zone in date string")
+			} else {
+				n += l
+			}
 		}
-		n += l
 	} else {
+		err = fmt.Errorf("Invalid time zone in date string")
+	}
+	if err == nil && loc == nil && (sec > 59 || zoneh > 14 || zoneh < -12 || zonem > 59) {
 		err = fmt.Errorf("Invalid time zone in date string")
 	}
 	return n, zoneh, zonem, loc, err
@@ -4065,8 +4075,7 @@ func strToTimeTryAllDefaultFormats(s string) (time.Time, error) {
 	// first pass try formats that match length before encountering the overhead of parsing all
 	for _, f := range _DATE_FORMATS {
 		if len(f) == len(s) {
-			// can use ParseInLocation since the formats include only numerical zone information
-			t, err = time.ParseInLocation(f, s, time.Local)
+			t, err = strToTimeGoFormat(s, f)
 			if err == nil {
 				return t, nil
 			}
@@ -4075,8 +4084,7 @@ func strToTimeTryAllDefaultFormats(s string) (time.Time, error) {
 	// only check formats we've not checked above
 	for _, f := range _DATE_FORMATS {
 		if len(f) != len(s) {
-			// can use ParseInLocation since the format doesn't include zone information
-			t, err = time.ParseInLocation(f, s, time.Local)
+			t, err = strToTimeGoFormat(s, f)
 			if err == nil {
 				return t, nil
 			}
@@ -4091,12 +4099,11 @@ func strToTimeforTrunc(s string) (time.Time, string, error) {
 	var err error
 	var f string
 	found := false
-	newloc, _ := loadLocation("UTC")
 	// first pass try formats that match length before encountering the overhead of parsing all
 	for _, f = range _DATE_FORMATS {
 		if len(f) == len(s) {
 			// Check if the format has a timezone
-			t, err = time.ParseInLocation(f, s, newloc)
+			t, err = strToTimeGoFormat(s, f)
 			if err == nil {
 				found = true
 				break
@@ -4108,7 +4115,7 @@ func strToTimeforTrunc(s string) (time.Time, string, error) {
 		for _, f = range _DATE_FORMATS {
 			if len(f) != len(s) {
 				// Check if the format has a timezone
-				t, err = time.ParseInLocation(f, s, newloc)
+				t, err = strToTimeGoFormat(s, f)
 				if err == nil {
 					found = true
 					break
@@ -4124,6 +4131,9 @@ func strToTimeforTrunc(s string) (time.Time, string, error) {
 		spos := strings.LastIndexAny(s, "Z+-")
 		if pos > 0 && spos > 0 {
 			tz = s[spos:]
+		} else {
+			// was parsed as Local so convert to UTC
+			t = time.Date(t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second(), t.Nanosecond(), time.UTC)
 		}
 		return t, tz, nil
 	}
@@ -4153,8 +4163,7 @@ func strToTimeFormatClosest(s string, nearestFormat bool) (time.Time, string, er
 	// first pass try formats that match length before encountering the overhead of parsing all
 	for _, f := range _DATE_FORMATS {
 		if len(f) == len(s) {
-			// can use ParseInLocation since the formats include only numerical zone information
-			t, err = time.ParseInLocation(f, s, time.Local)
+			t, err = strToTimeGoFormat(s, f)
 			if err == nil {
 				return t, f, nil
 			}
@@ -4164,8 +4173,7 @@ func strToTimeFormatClosest(s string, nearestFormat bool) (time.Time, string, er
 	closest = math.MaxInt32
 	for _, f := range _DATE_FORMATS {
 		if len(f) != len(s) {
-			// can use ParseInLocation since the format doesn't include zone information
-			t, err = time.ParseInLocation(f, s, time.Local)
+			t, err = strToTimeGoFormat(s, f)
 			if err == nil {
 				if !nearestFormat {
 					return t, f, nil
