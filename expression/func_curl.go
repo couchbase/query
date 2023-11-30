@@ -234,14 +234,28 @@ func (this *Curl) Constructor() FunctionConstructor {
 	return NewCurl
 }
 
-func handleCurl(url string, options map[string]interface{}, allowlist map[string]interface{}, context Context) (
+func handleCurl(urlS string, options map[string]interface{}, allowlist map[string]interface{}, context Context) (
 	interface{}, error) {
+
+	// Convert URL string to net/url object that is valid to be used in CURL()
+	urlObj, err := CurlURLStringToObject(urlS)
+	if err != nil || urlObj == nil {
+		return nil, err
+	}
+
+	// Check if the input URL contains elements that are restricted by Couchbase
+	_, err = cbRestrictedURLCheck(urlObj)
+	if err != nil {
+		return nil, err
+	}
+
+	url := urlObj.String()
 
 	// Handle different cases
 
 	// initial check for curl_allowlist.json has been completed. The file exists.
 	// Now we need to access the contents of the file and check for validity.
-	err := allowlistCheck(allowlist, url)
+	err = allowlistCheck(allowlist, urlObj)
 	if err != nil {
 		return nil, err
 	}
@@ -691,23 +705,71 @@ func handleCurl(url string, options map[string]interface{}, allowlist map[string
 	return nil, nil
 }
 
-func allowlistCheck(list map[string]interface{}, urlP string) error {
+// Convert URL string to net/url object that is in a format supported by CURL()
+func CurlURLStringToObject(urlS string) (*url.URL, error) {
+
+	urlParsed, err := url.Parse(urlS)
+	if err != nil {
+		return nil, err
+	}
+
+	// Make preliminary checks of the parsed URL
+	// since the path can be appropriately parsed only if the url is in a particular format
+	// CURL() requires the protocol, host to be specified
+	// CURL() only supports http and https protocols
+	protocol := urlParsed.Scheme
+	if protocol != "http" && protocol != "https" {
+		return nil, fmt.Errorf("Unspecified or unsupported protocol scheme in request URL.")
+	}
+
+	if urlParsed.Host == "" {
+		return nil, fmt.Errorf("No host in request URL.")
+	}
+
+	// Perform relative resolution on the input URL
+	// Create a base URL object from an empty path
+	baseURL, err := url.Parse("")
+	if err != nil {
+		return nil, err
+	}
+
+	// Resolve the input url object against the base URL
+	// This will resolve references in the input URL
+	resolvedURL := baseURL.ResolveReference(urlParsed)
+
+	// Replace multiple adjacent forward slashes with a single forward slash
+	urlObj := resolvedURL.JoinPath()
+
+	return urlObj, nil
+
+}
+
+// Checks if the URL matches any URLs restricted by Couchbase
+func cbRestrictedURLCheck(url *url.URL) (bool, error) {
+
+	path := url.EscapedPath()
+
+	// Restrict access to the cluster's /diag/eval endpoint
+	// Restrict any URL where the path begins with /diag/eval
+	matched := hasPathPrefix(path, "/diag/eval")
+
+	if matched {
+		return true, fmt.Errorf("Access restricted - %v.", url.String())
+	}
+
+	return false, nil
+}
+
+// Check if URLs in allowlist and disallowedList contain the input URL
+func allowlistCheck(list map[string]interface{}, urlObj *url.URL) error {
 	// Structure is as follows
 	// {
 	//  "all_access":true/false,
-	//  "allowed_urls":[ list of urls ],
-	//  "disallowed_urls":[ list of urls ],
+	//  "allowed_urls":[ list of allowed URL strings ]
+	//  "allowed_transformed_urls":[ list of allowed net/url objects that are valid to be processed in CURL() ],
+	//  "disallowed_urls":[ list of disallowed URL strings ]
+	//  "disallowed_transformed_urls":[ list of disallowed net/url objects that are valid to be processed in CURL() ],
 	// }
-
-	urlParsed, err := url.Parse(urlP)
-	if err != nil {
-		return err
-	}
-
-	if strings.Contains(urlParsed.Path, "/diag/eval") {
-		return fmt.Errorf("Access restricted - %v.", urlP)
-
-	}
 
 	// allowlist passed through ns server is empty then no access
 	if len(list) == 0 {
@@ -734,38 +796,30 @@ func allowlistCheck(list map[string]interface{}, urlP string) error {
 	// ALLOWED AND DISALLOWED URLS
 
 	// If all_access false - Use only those entries that are valid.
-	// Restricted access based on fields allowed_urls and disallowed_urls
+	// Restricted access based on fields allowed_transformed_urls and disallowed_transformed_urls
 
-	if disallowedUrls, ok_dall := list["disallowed_urls"]; ok_dall {
-		dURL, ok := disallowedUrls.([]interface{})
+	if disallowedUrls, ok_dall := list["disallowed_transformed_urls"]; ok_dall {
+		dURL, ok := disallowedUrls.([]*url.URL)
 		if !ok {
 			return fmt.Errorf("Restrict access with disallowed urls")
 		}
 		if len(dURL) > 0 {
-			disallow, err := sliceContains(dURL, urlP)
-			if err == nil && disallow {
-				return fmt.Errorf("The endpoint " + urlP + " is not permitted")
-			} else {
-				if err != nil {
-					return err
-				}
+			disallow := matchUrl(urlObj, dURL)
+			if disallow {
+				return fmt.Errorf("The endpoint %s is not permitted", urlObj.String())
 			}
 		}
 	}
 
-	if allowedUrls, ok_all := list["allowed_urls"]; ok_all {
-		alURL, ok := allowedUrls.([]interface{})
+	if allowedUrls, ok_all := list["allowed_transformed_urls"]; ok_all {
+		alURL, ok := allowedUrls.([]*url.URL)
 		if !ok {
 			return fmt.Errorf("allowed_urls should be list of urls present in the allowedlists.")
 		}
 		if len(alURL) > 0 {
-			allow, err := sliceContains(alURL, urlP)
-			if err == nil && allow {
+			allow := matchUrl(urlObj, alURL)
+			if allow {
 				return nil
-			} else {
-				if err != nil {
-					return err
-				}
 			}
 		}
 	}
@@ -773,23 +827,41 @@ func allowlistCheck(list map[string]interface{}, urlP string) error {
 	// URL is not present in disallowed url and is not in allowed_urls.
 	// If it reaches here, then the url isnt in the allowed_urls or the prefix_urls, and is also
 	// not in the disallowed urls.
-	return fmt.Errorf("The end point " + urlP + " is not permitted.  List allowed end points in the configuration.")
+	return fmt.Errorf("The end point %s is not permitted.  List allowed end points in the configuration.", urlObj.String())
 
 }
 
-// Check if urls fields in allowlist contain the input url
-func sliceContains(field []interface{}, url string) (bool, error) {
-	for _, val := range field {
-		nVal, ok := val.(string)
-		if !ok {
-			return false, fmt.Errorf("Both allowed urls and disallowed urls should be list of url strings.")
+// Check if URL is allowed/disallowed as per the allowlist/ disallow list
+// Checks each element of the input URL with the URLs in the list
+func matchUrl(u *url.URL, list []*url.URL) bool {
+
+	inputUserInfo := u.User.String()
+
+	for _, l := range list {
+		if u.Scheme != l.Scheme {
+			continue
 		}
-		// Check if list of values is a prefix of input url
-		if strings.HasPrefix(url, nVal) {
-			return true, nil
+
+		if u.Host != l.Host {
+			continue
+		}
+
+		// Only in when the URL in the list has User Information - compare it with Input URL's user information
+		lUserInfo := l.User.String()
+		if lUserInfo != "" {
+			if inputUserInfo != lUserInfo {
+				continue
+			}
+		}
+
+		matched := hasPathPrefix(u.EscapedPath(), l.EscapedPath())
+
+		if matched {
+			return true
 		}
 	}
-	return false, nil
+
+	return false
 }
 
 // encodeData: if val is to be url encoded
@@ -981,4 +1053,35 @@ func isTimeoutError(err error) bool {
 	}
 
 	return false
+}
+
+// Helper function to determine if 'path' starts with a particular path 'prefix'
+func hasPathPrefix(path string, prefix string) bool {
+
+	// Initial prefix matching
+	if !strings.HasPrefix(path, prefix) {
+		return false
+	}
+
+	// If the 'prefix' path does not end with "/" then the initial prefix matching might not be sufficient
+	// The following check is to prevent the mistaken matching of cases like:
+	// path = "/testt" and prefix = "/test"
+	if !strings.HasSuffix(prefix, "/") {
+		n := len(prefix)
+
+		// It is an exact match
+		if len(path) == n {
+			return true
+		}
+
+		// if the next character after the matched prefix is a path separator / - it is a match
+		if path[n] == '/' {
+			return true
+		}
+
+		return false
+	}
+
+	return true
+
 }

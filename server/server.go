@@ -30,6 +30,7 @@ import (
 	"github.com/couchbase/query/distributed"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/execution"
+	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/ffdc"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/logging/event"
@@ -339,7 +340,67 @@ func (this *Server) Namespace() string {
 	return this.namespace
 }
 
+// Sets the Server Allowlist field for CURL()
+// Transforms the allowed/disallowed URL strings into valid URL objects
 func (this *Server) SetAllowlist(val map[string]interface{}) {
+	if v, ok := val["allowed_urls"]; ok {
+		aUrls, ok := v.([]interface{})
+		if !ok {
+			logging.Warnf("CURL allowed URLs list must be a list of strings.")
+		}
+
+		allowedUrlObjects := make([]*url.URL, 0, len(aUrls))
+		allowedUrlStrings := make([]interface{}, 0, len(aUrls))
+		for _, a := range aUrls {
+			if aUrl, ok := a.(string); !ok {
+				logging.Warnf("CURL allowed URLs list must be a list of strings.")
+			} else {
+
+				// Convert string URL to net/url object that is valid to be used in CURL()
+				u, err := expression.CurlURLStringToObject(aUrl)
+				if err != nil {
+					logging.Warnf("URL in CURL allowed URLs list: %s - not in valid format."+
+						" The URL must include a supported protocol, host and all other components of the URL.", aUrl)
+				} else {
+					allowedUrlObjects = append(allowedUrlObjects, u)
+					allowedUrlStrings = append(allowedUrlStrings, aUrl)
+				}
+			}
+		}
+
+		val["allowed_transformed_urls"] = allowedUrlObjects // list of allowed URL objects
+		val["allowed_urls"] = allowedUrlStrings             // list of the original allowed URL strings
+	}
+
+	if v, ok := val["disallowed_urls"]; ok {
+		dUrls, ok := v.([]interface{})
+		if !ok {
+			logging.Warnf("CURL disallowed URLs list must be a list of strings.")
+		}
+
+		disallowedUrlObjects := make([]*url.URL, 0, len(dUrls))
+		disallowedUrlStrings := make([]interface{}, 0, len(dUrls))
+
+		for _, d := range dUrls {
+			if dUrl, ok := d.(string); !ok {
+				logging.Warnf("CURL disallowed URLs list must be a list of strings.")
+			} else {
+
+				// Convert string URL to net/url object that is valid to be used in CURL()
+				u, err := expression.CurlURLStringToObject(dUrl)
+				if err != nil {
+					logging.Warnf("URL in CURL disallowed URLs list: %s - not in valid format."+
+						" The URL must include a supported protocol, host and all other components of the URL.", dUrl)
+				} else {
+					disallowedUrlObjects = append(disallowedUrlObjects, u)
+					disallowedUrlStrings = append(disallowedUrlStrings, dUrl)
+				}
+			}
+		}
+		val["disallowed_transformed_urls"] = disallowedUrlObjects // list of disallowed URL objects
+		val["disallowed_urls"] = disallowedUrlStrings             // list of the original disallowed URL strings
+	}
+
 	this.allowlist = val
 }
 
