@@ -3296,8 +3296,12 @@ func strToTimeGoFormat(s string, format string) (time.Time, error) {
 		n++
 	}
 
-	if i != len(format) || n != len(s) {
-		return t, errors.NewDateWarning(errors.W_DATE_PARSE_FAILED, errorInfo(format, i, s, n, format[i]))
+	if i != len(format) {
+		return t, errors.NewDateWarning(errors.W_DATE_PARSE_FAILED, errorInfo(format, i, s, n, rune(0x0)))
+	}
+
+	if n != len(s) {
+		return t, errors.NewDateWarning(errors.W_DATE_PARSE_FAILED, errorInfo(format, i, s, n, rune(0x3)))
 	}
 
 	// only default the century based on the final parsed year value
@@ -3382,6 +3386,8 @@ func errorInfo(format string, fpos int, input string, ipos int, extra ...interfa
 		case rune:
 			if ev == rune(0x3) {
 				info["expected"] = "<END>"
+			} else if ev == rune(0x0) {
+				info["expected"] = "<FURTHER INPUT>"
 			} else {
 				info["expected"] = fmt.Sprintf("%c", ev)
 			}
@@ -3934,7 +3940,7 @@ func strToTimePercentFormat(s string, format string) (time.Time, error) {
 	}
 
 	if i != len(format) {
-		return t, errors.NewDateWarning(errors.W_DATE_PARSE_FAILED, errorInfo(format, i, s, n, rune(format[i])))
+		return t, errors.NewDateWarning(errors.W_DATE_PARSE_FAILED, errorInfo(format, i, s, n, rune(0x0)))
 	}
 
 	if n != len(s) {
@@ -4323,11 +4329,11 @@ func strToTimeCommonFormat(s string, format string) (time.Time, error) {
 	}
 
 	if i != len(format) {
-		return t, errors.NewDateWarning(errors.W_DATE_PARSE_FAILED, errorInfo(format, i, "", -1))
+		return t, errors.NewDateWarning(errors.W_DATE_PARSE_FAILED, errorInfo(format, i, s, n, rune(0x0)))
 	}
 
 	if n != len(s) {
-		return t, errors.NewDateWarning(errors.W_DATE_PARSE_FAILED, errorInfo(format, -1, s, n))
+		return t, errors.NewDateWarning(errors.W_DATE_PARSE_FAILED, errorInfo(format, i, s, n, rune(0x3)))
 	}
 
 	// only default the century based on the final parsed year value
