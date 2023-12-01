@@ -1243,10 +1243,12 @@ func (this *BaseRequest) StopExecute() chan bool {
 
 func (this *BaseRequest) Stop(state State) {
 	this.SetState(state)
+	this.Lock()
 	stopOperator := this.stopOperator
 
 	// make sure that a stop can only be sent once (eg close OR timeout)
 	this.stopOperator = nil
+	this.Unlock()
 
 	// guard against the root operator not being set (eg fatal error)
 	if stopOperator != nil {
@@ -1292,7 +1294,7 @@ func (this *BaseRequest) CompleteRequest(requestTime, serviceTime, transaction_t
 		this.stopGate.Add(1)
 
 		// sending a stop is illegal after this point
-		this.stopOperator = nil
+		this.NotifyStop(nil)
 		this.done()
 		this.stopGate.Done()
 		this.timings = nil

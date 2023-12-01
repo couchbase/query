@@ -244,7 +244,7 @@ func handleCurl(urlS string, options map[string]interface{}, allowlist map[strin
 	}
 
 	// Check if the input URL contains elements that are restricted by Couchbase
-	_, err = cbRestrictedURLCheck(urlObj)
+	err = cbRestrictedURLCheck(urlObj)
 	if err != nil {
 		return nil, err
 	}
@@ -306,6 +306,28 @@ func handleCurl(urlS string, options map[string]interface{}, allowlist map[strin
 		return nil, nil
 	}
 
+	// Process the "get" and "request" options
+	method, err := getAndRequestOptionProcessing(options)
+	if err != nil {
+		if show_error == true {
+			return nil, err
+		}
+		return nil, nil
+	}
+
+	// whether the request was explicitly set to "GET" via the "get" or "request" option
+	getOptSet := false
+
+	if method == "" {
+		// request method not explicitly set
+		// Akin to curl - by default the request method is GET
+		// unless processing of data options decide otherwise
+		method = http.MethodGet
+	} else if method == http.MethodGet {
+		getOptSet = true
+	}
+
+	// Create the net/http client
 	dialer := &net.Dialer{
 		// connect-timeout
 		Timeout: _DEF_CONNECT_TIMEOUT,
@@ -339,13 +361,6 @@ func handleCurl(urlS string, options map[string]interface{}, allowlist map[strin
 	authOp := false
 	transport, _ := client.Transport.(*http.Transport)
 
-	// By default, unless options processing decide otherwise )
-	// the default request method is GET
-	method := http.MethodGet
-
-	// whether the request was explicitly set to "GET" via the "get" or "request" option
-	getOptSet := false
-
 	for k, val := range options {
 		// Only support valid options.
 		inputVal := value.NewValue(val)
@@ -353,39 +368,9 @@ func handleCurl(urlS string, options map[string]interface{}, allowlist map[strin
 		case "show_error", "show-error", "S":
 			break
 		case "get", "G":
-			if inputVal.Type() != value.BOOLEAN {
-				if show_error == true {
-					return nil, fmt.Errorf("Incorrect type for get option in CURL ")
-				} else {
-					return nil, nil
-				}
-			}
-			if inputVal.Truth() {
-				getOptSet = true
-				method = http.MethodGet
-			} else {
-				getOptSet = false
-				method = http.MethodPost
-			}
+			break
 		case "request", "X":
-			if inputVal.Type() != value.STRING {
-				return nil, fmt.Errorf("Incorrect type for request option in CURL. It should be a string. ")
-			}
-			requestVal := inputVal.ToString()
-			if requestVal != "GET" && requestVal != "POST" {
-				if show_error == true {
-					return nil, fmt.Errorf("CURL only supports GET and POST requests. ")
-				} else {
-					return nil, nil
-				}
-			}
-			if requestVal == "GET" {
-				getOptSet = true
-				method = http.MethodGet
-			} else {
-				getOptSet = false
-				method = http.MethodPost
-			}
+			break
 		case "data-urlencode":
 			stringDataUrlEnc, err = handleData(true, val, show_error)
 			if stringDataUrlEnc == "" {
@@ -574,7 +559,7 @@ func handleCurl(urlS string, options map[string]interface{}, allowlist map[strin
 	// Akin to curl
 	// If the data or data-urlencode options are set
 	// The default method is POST
-	// To make it a GET request, the method is to be explicitly set to GET via the "get" or "request" option
+	// Unless the request is explicitly made a GET request via the "get" or "request" options
 	if dataOp {
 		finalStrData := stringData
 		if stringDataUrlEnc != "" {
@@ -584,8 +569,10 @@ func handleCurl(urlS string, options map[string]interface{}, allowlist map[strin
 			finalStrData += stringDataUrlEnc
 		}
 		if getOptSet {
+			// GET requests have the data appended to the URL
 			url = url + "?" + finalStrData
 		} else {
+			// POST requests have the data sent in the request body
 			method = http.MethodPost
 			body = strings.NewReader(finalStrData)
 		}
@@ -745,7 +732,7 @@ func CurlURLStringToObject(urlS string) (*url.URL, error) {
 }
 
 // Checks if the URL matches any URLs restricted by Couchbase
-func cbRestrictedURLCheck(url *url.URL) (bool, error) {
+func cbRestrictedURLCheck(url *url.URL) error {
 
 	path := url.EscapedPath()
 
@@ -754,10 +741,10 @@ func cbRestrictedURLCheck(url *url.URL) (bool, error) {
 	matched := hasPathPrefix(path, "/diag/eval")
 
 	if matched {
-		return true, fmt.Errorf("Access restricted - %v.", url.String())
+		return fmt.Errorf("Access restricted - %v.", url.String())
 	}
 
-	return false, nil
+	return nil
 }
 
 // Check if URLs in allowlist and disallowedList contain the input URL
@@ -984,6 +971,62 @@ func cipherStringToIds(val string, cbDefault bool) ([]uint16, error) {
 
 		return tlsCfg.CipherSuites, nil
 	}
+}
+
+// Process the "get" and "request" options
+// returns "GET" if explicitly set to a GET request
+// returns "POST" if explicitly set to a POST request
+// returns an empty string "" if a request type is not explicitly set
+func getAndRequestOptionProcessing(options map[string]interface{}) (string, error) {
+
+	// Process 'get' option
+	getTrue := false
+
+	gVal, okG := options["get"]
+	if !okG {
+		gVal, okG = options["G"]
+	}
+
+	if okG {
+		val := value.NewValue(gVal)
+		if val.Type() != value.BOOLEAN {
+			return "", fmt.Errorf("Incorrect type for get option in CURL ")
+		}
+		if val.Truth() {
+			getTrue = true
+		}
+	}
+
+	if getTrue {
+		return http.MethodGet, nil
+	}
+
+	// Only if the 'get' option was not set or was set to False evaluate the 'request' option
+	rVal, okR := options["request"]
+	if !okR {
+		rVal, okR = options["X"]
+	}
+
+	method := ""
+
+	if okR {
+		val := value.NewValue(rVal)
+		if val.Type() != value.STRING {
+			return "", fmt.Errorf("Incorrect type for request option in CURL. It should be a string. ")
+		}
+
+		requestVal := val.ToString()
+		if requestVal == "GET" {
+			method = http.MethodGet
+		} else if requestVal == "POST" {
+			method = http.MethodPost
+		} else {
+			return "", fmt.Errorf("CURL only supports GET and POST requests. ")
+		}
+	}
+
+	return method, nil
+
 }
 
 // Process the "header" option
