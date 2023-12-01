@@ -852,7 +852,6 @@ func getSystemCollectonIndexConnection(systemCollection Keyspace) (*IndexConnect
 		}
 		return err
 	}
-	go primaryFunc(systemCollection.Scope().BucketId())
 
 	indexer, err = systemCollection.Indexer(SEQ_SCAN)
 	if err == nil {
@@ -861,6 +860,7 @@ func getSystemCollectonIndexConnection(systemCollection Keyspace) (*IndexConnect
 			return nil, nil, err
 		}
 		if index3 != nil {
+			go primaryFunc(systemCollection.Scope().BucketId())
 			return NewIndexConnection(NewSystemContext()), index3, nil
 		}
 	} else if err.Code() != errors.E_CB_INDEXER_NOT_IMPLEMENTED {
@@ -869,6 +869,7 @@ func getSystemCollectonIndexConnection(systemCollection Keyspace) (*IndexConnect
 
 	// if not successful so far, e.g. if bucket doesn't have SEQ_SCAN support, or if SEQ_SCAN
 	// is disabled, try to wait for the creation of primary index (issued above) synchronously
+	logging.Debugf("Creating primary index on system collection for bucket %s synchronously", systemCollection.Scope().BucketId())
 	err = primaryFunc(systemCollection.Scope().BucketId())
 	if err != nil {
 		return nil, nil, err
