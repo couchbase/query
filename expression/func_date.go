@@ -4482,14 +4482,11 @@ const _TZ_FORMAT_ALL = uint32(0xffffffff)
 // try parse ISO-8601 time zone formats, or load location by name
 func gatherZone(s string, n int, allowedFormats uint32) (int, int, int, *time.Location, error) {
 	var err error
-	var zoneh, zonem int
+	var zoneh, zonem, sec int
 	var loc *time.Location
-	if allowedFormats&_TZ_FORMAT_ALLOW_Z != 0 && n < len(s) && s[n] == 'Z' {
-		zoneh = 0
-		zonem = 0
-		loc = nil
-		n++
-	} else if allowedFormats&_TZ_FORMAT_2COLON != 0 && n+8 < len(s) &&
+
+	sn := n
+	if allowedFormats&_TZ_FORMAT_2COLON != 0 && n+8 < len(s) &&
 		s[n+3] == ':' && s[n+6] == ':' && (s[n] == '+' || s[n] == '-') && // +00:00:00
 
 		unicode.IsDigit(rune(s[n+1])) && unicode.IsDigit(rune(s[n+2])) &&
@@ -4497,12 +4494,7 @@ func gatherZone(s string, n int, allowedFormats uint32) (int, int, int, *time.Lo
 		unicode.IsDigit(rune(s[n+7])) && unicode.IsDigit(rune(s[n+8])) {
 		zoneh, _ = strconv.Atoi(s[n : n+3])
 		zonem, _ = strconv.Atoi(s[n+4 : n+6])
-		sec, _ := strconv.Atoi(s[n+7 : n+9])
-		if sec > 59 || zoneh > 14 || zoneh < -12 || zonem > 59 {
-			err = errors.NewDateWarning(errors.W_DATE_INVALID_TIMEZONE, s[n:])
-		}
-		// seconds are ignored as aren't ISO-8601
-		loc = nil
+		sec, _ = strconv.Atoi(s[n+7 : n+9]) // seconds are validated but ignored as aren't ISO-8601
 		n += 9
 	} else if allowedFormats&_TZ_FORMAT_1COLON != 0 && n+5 < len(s) &&
 		s[n+3] == ':' && (s[n] == '+' || s[n] == '-') && // +00:00
@@ -4511,10 +4503,6 @@ func gatherZone(s string, n int, allowedFormats uint32) (int, int, int, *time.Lo
 		unicode.IsDigit(rune(s[n+4])) && unicode.IsDigit(rune(s[n+5])) {
 		zoneh, _ = strconv.Atoi(s[n : n+3])
 		zonem, _ = strconv.Atoi(s[n+4 : n+6])
-		if zoneh > 14 || zoneh < -12 || zonem > 59 {
-			err = errors.NewDateWarning(errors.W_DATE_INVALID_TIMEZONE, s[n:])
-		}
-		loc = nil
 		n += 6
 	} else if allowedFormats&_TZ_FORMAT_3PART != 0 && n+6 < len(s) && (s[n] == '+' || s[n] == '-') && // +000000
 		unicode.IsDigit(rune(s[n+1])) && unicode.IsDigit(rune(s[n+2])) &&
@@ -4523,12 +4511,7 @@ func gatherZone(s string, n int, allowedFormats uint32) (int, int, int, *time.Lo
 
 		zoneh, _ = strconv.Atoi(s[n : n+3])
 		zonem, _ = strconv.Atoi(s[n+3 : n+5])
-		sec, _ := strconv.Atoi(s[n+5 : n+7])
-		if sec > 59 || zoneh > 14 || zoneh < 12 || zonem > 59 {
-			err = errors.NewDateWarning(errors.W_DATE_INVALID_TIMEZONE, s[n:])
-		}
-		// seconds are ingnored
-		loc = nil
+		sec, _ = strconv.Atoi(s[n+5 : n+7]) // seconds are validated but ignored
 		n += 7
 	} else if allowedFormats&_TZ_FORMAT_2PART != 0 && n+4 < len(s) && (s[n] == '+' || s[n] == '-') && // +0000
 		unicode.IsDigit(rune(s[n+1])) && unicode.IsDigit(rune(s[n+2])) &&
@@ -4536,27 +4519,24 @@ func gatherZone(s string, n int, allowedFormats uint32) (int, int, int, *time.Lo
 
 		zoneh, _ = strconv.Atoi(s[n : n+3])
 		zonem, _ = strconv.Atoi(s[n+3 : n+5])
-		if zoneh > 14 || zoneh < -12 || zonem > 59 {
-			err = errors.NewDateWarning(errors.W_DATE_INVALID_TIMEZONE, s[n:])
-		}
-		loc = nil
 		n += 5
 	} else if allowedFormats&_TZ_FORMAT_1PART != 0 && n+2 < len(s) && (s[n] == '+' || s[n] == '-') && // +00
 		unicode.IsDigit(rune(s[n+1])) && unicode.IsDigit(rune(s[n+2])) {
 
 		zoneh, _ = strconv.Atoi(s[n : n+3])
 		zonem = 0
-		if zoneh > 14 || zoneh < -12 || zonem > 59 {
-			err = errors.NewDateWarning(errors.W_DATE_INVALID_TIMEZONE, s[n:])
-		}
-		loc = nil
 		n += 3
+	} else if allowedFormats&_TZ_FORMAT_ALLOW_Z != 0 && n < len(s) && s[n] == 'Z' {
+		zoneh = 0
+		zonem = 0
+		n++
 	} else if allowedFormats&_TZ_FORMAT_NAME != 0 {
 		var name string
 		l := 0
 		if n < len(s) {
 			f := strings.FieldsFunc(s[n:], nonIANATZDBRune)
 			if len(f) > 0 {
+				f[0] = strings.TrimRight(f[0], "+-/_")
 				l = len(f[0])
 				// perform mapping before attempting to load so we can redirect (for example) EST to EST5EDT, the more commonly
 				// used zone (for our purposes).
@@ -4567,14 +4547,33 @@ func gatherZone(s string, n int, allowedFormats uint32) (int, int, int, *time.Lo
 				}
 			}
 		}
-		loc, err = time.LoadLocation(name)
-		if err != nil {
-			err = errors.NewDateWarning(errors.W_DATE_INVALID_TIMEZONE, name)
+		if len(name) > 4 && (name[3] == '+' || name[3] == '-') && name[:3] == "GMT" && unicode.IsDigit(rune(name[4])) {
+			e := 5
+			// any number of digits are allowed; gatherNumber parses at most 9 so directly process here
+			for e < len(name) && unicode.IsDigit(rune(name[e])) {
+				e++
+			}
+			zoneh, _ = strconv.Atoi(name[3:e])
+			zonem = 0
+			if zoneh > 23 || zoneh < -23 {
+				err = errors.NewDateWarning(errors.W_DATE_INVALID_TIMEZONE, name[:e])
+			} else {
+				loc = time.FixedZone(name[:e], zoneh*60*60)
+				n += e
+			}
 		} else {
-			n += l
+			loc, err = time.LoadLocation(name)
+			if err != nil {
+				err = errors.NewDateWarning(errors.W_DATE_INVALID_TIMEZONE, name)
+			} else {
+				n += l
+			}
 		}
 	} else {
 		err = errors.NewDateWarning(errors.W_DATE_INVALID_TIMEZONE, s[n:])
+	}
+	if err == nil && loc == nil && (sec > 59 || zoneh > 14 || zoneh < -12 || zonem > 59) {
+		err = errors.NewDateWarning(errors.W_DATE_INVALID_TIMEZONE, s[sn:])
 	}
 	return n, zoneh, zonem, loc, err
 }
