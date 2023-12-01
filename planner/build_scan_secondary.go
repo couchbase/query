@@ -12,6 +12,7 @@ import (
 	"fmt"
 
 	"github.com/couchbase/query/algebra"
+	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
@@ -191,6 +192,7 @@ func (this *builder) buildCreateSecondaryScan(indexes, flex map[datastore.Index]
 			if skipNewKeys {
 				this.mustSkipKeys = true
 			}
+			node.SetExtraPrivilege(auth.PRIV_QUERY_SEQ_SCAN)
 		}
 
 		scan = entry.spans.CreateScan(index, node, this.context.IndexApiVersion(), false, false,

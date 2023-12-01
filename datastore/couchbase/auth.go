@@ -109,6 +109,8 @@ func privilegeString(namespace, target, obj string, requested auth.Privilege) (s
 		permission = join5Strings("cluster.", obj, "[", target, "].fts!manage")
 	case auth.PRIV_SEARCH_DROP_INDEX:
 		permission = join5Strings("cluster.", obj, "[", target, "].fts!manage")
+	case auth.PRIV_QUERY_SEQ_SCAN:
+		permission = join5Strings("cluster.", obj, "[", target, "].n1ql.sequential_scan!execute")
 	default:
 		return "", fmt.Errorf("Invalid Privileges")
 	}
@@ -382,14 +384,14 @@ func cbAuthorize(s authSource, privileges *auth.Privileges, credentials *auth.Cr
 		return nil
 	}
 
-	msg := messageForDeniedPrivilege(deniedPrivileges[0])
+	msg, role, action := messageForDeniedPrivilege(deniedPrivileges[0])
 
 	var path []string
 	if deniedPrivileges[0].Target != "" {
 		path = algebra.ParsePath(deniedPrivileges[0].Target)
 	}
 
-	return errors.NewDatastoreInsufficientCredentials(msg, reason, path)
+	return errors.NewDatastoreInsufficientCredentials(msg, reason, path, role, action)
 }
 
 func cbPreAuthorize(privileges *auth.Privileges) {
