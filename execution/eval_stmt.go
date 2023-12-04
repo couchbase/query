@@ -612,6 +612,7 @@ func (this *opContext) OpenPrepared(baseContext *Context, stmtType string, prepa
 	handle := &executionHandle{}
 	handle.statement = statement
 	handle.udfKey = funcKey
+	handle.profileHandleTree = profileUdfExecTrees
 	handle.opContext = this
 	handle.output = this.newOutput(&internalOutput{})
 	handle.opContext.output = handle.output
@@ -713,6 +714,9 @@ type executionHandle struct {
 	statement   string
 	udfKey      string
 
+	// Whether to save the tree for request profiling. currently only implemented for UDFs
+	profileHandleTree bool
+
 	// the calling operator's opContext.
 	// opContext.Context is the the execution context used in the handle's query's execution
 	opContext *opContext
@@ -751,24 +755,10 @@ func (this *executionHandle) Results() (interface{}, uint64, error) {
 			break
 		}
 	}
-	if atomic.AddInt32(&this.stopped, 1) == 1 {
-		this.context().output.AddPhaseTime(RUN, util.Since(this.exec))
-		this.root.SendAction(_ACTION_STOP)
-		newErr := this.context().completeStatement(this.stmtType, this.output.err == nil, this.baseContext)
-		if this.output.err == nil && newErr != nil {
-			this.output.err = newErr
-		}
 
-		// Once execution is complete - add the exec tree to the cache
-		this.baseContext.udfStmtExecTrees.set(this.udfKey, this.statement, this.root, this.input)
+	// Close the handle
+	this.Cancel()
 
-		// Delete the now stopped handle from the opContext
-		this.opContext.DeleteUdfHandle(this)
-
-		this.baseContext.mutex.Lock()
-		delete(this.baseContext.udfHandleMap, this)
-		this.baseContext.mutex.Unlock()
-	}
 	return values, this.output.mutationCount, this.output.err
 }
 
@@ -798,24 +788,10 @@ func (this *executionHandle) Complete() (uint64, error) {
 			break
 		}
 	}
-	if atomic.AddInt32(&this.stopped, 1) == 1 {
-		this.context().output.AddPhaseTime(RUN, util.Since(this.exec))
-		this.root.SendAction(_ACTION_STOP)
-		newErr := this.context().completeStatement(this.stmtType, this.output.err == nil, this.baseContext)
-		if this.output.err == nil && newErr != nil {
-			this.output.err = newErr
-		}
 
-		// Once execution is complete - add the exec tree to the cache
-		this.baseContext.udfStmtExecTrees.set(this.udfKey, this.statement, this.root, this.input)
+	// Close the handle
+	this.Cancel()
 
-		// Delete the now stopped handle from the opContext
-		this.opContext.DeleteUdfHandle(this)
-
-		this.baseContext.mutex.Lock()
-		delete(this.baseContext.udfHandleMap, this)
-		this.baseContext.mutex.Unlock()
-	}
 	return this.output.mutationCount, this.output.err
 }
 
@@ -835,24 +811,9 @@ func (this *executionHandle) NextDocument() (value.Value, error) {
 		}
 	}
 
-	if atomic.AddInt32(&this.stopped, 1) == 1 {
-		this.context().output.AddPhaseTime(RUN, util.Since(this.exec))
-		this.root.SendAction(_ACTION_STOP)
-		newErr := this.context().completeStatement(this.stmtType, this.output.err == nil, this.baseContext)
-		if this.output.err == nil && newErr != nil {
-			this.output.err = newErr
-		}
+	// Close the handle
+	this.Cancel()
 
-		// Once execution is complete - add the exec tree to the cache
-		this.baseContext.udfStmtExecTrees.set(this.udfKey, this.statement, this.root, this.input)
-
-		// Delete the now stopped handle from the opContext
-		this.opContext.DeleteUdfHandle(this)
-
-		this.baseContext.mutex.Lock()
-		delete(this.baseContext.udfHandleMap, this)
-		this.baseContext.mutex.Unlock()
-	}
 	return nil, this.output.err
 }
 
@@ -866,7 +827,9 @@ func (this *executionHandle) Cancel() {
 		}
 
 		// Once execution is complete - add the exec tree to the cache
-		this.baseContext.udfStmtExecTrees.set(this.udfKey, this.statement, this.root, this.input)
+		if this.profileHandleTree {
+			this.baseContext.udfStmtExecTrees.set(this.udfKey, this.statement, this.root, this.input)
+		}
 
 		// Delete the now stopped handle from the opContext
 		this.opContext.DeleteUdfHandle(this)
@@ -889,7 +852,9 @@ func (this *executionHandle) externalStop() {
 		newErr := this.context().completeStatement(this.stmtType, this.output.err == nil, this.baseContext)
 
 		//  add the execution tree to the cache for profiling purposes
-		this.baseContext.udfStmtExecTrees.set(this.udfKey, this.statement, this.root, this.input)
+		if this.profileHandleTree {
+			this.baseContext.udfStmtExecTrees.set(this.udfKey, this.statement, this.root, this.input)
+		}
 
 		if this.output.err == nil && newErr != nil {
 			this.output.err = newErr
