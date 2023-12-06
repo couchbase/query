@@ -57,11 +57,14 @@ outer:
 					if typ != _NO_TARGET {
 						return errors.NewRoleTakesNoKeyspaceError(r)
 					}
-				case roles[i].IsScope: // scope role (not applicable to a keyspace)
-					if typ != _SCOPE_TARGET {
-						return errors.NewRoleRequiresScopeError(r)
+				case typ == _SCOPE_TARGET:
+					if !roles[i].IsScope {
+						return errors.NewRoleRequiresKeyspaceError(r)
 					}
-				default: // keyspace role; this may also be granted at the scope level on all keyspaces within
+				default: // keyspace (at least) required for this role
+					if typ == _NO_TARGET {
+						return errors.NewRoleRequiresKeyspaceError(r)
+					}
 				}
 				continue outer
 			}
