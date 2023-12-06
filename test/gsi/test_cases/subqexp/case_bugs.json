@@ -42,5 +42,21 @@
                 "month": 1
             }
         ]
+    },
+    {
+	"testcase": "MB-60011",
+        "statements": "SELECT (SELECT 1 AS one FROM shellTest AS d WHERE META(d).id = t.`to`) AS sub, t.`from`, t.`to`, META(t).id FROM shellTest t WHERE t.`from` = '2'",
+        "results": [
+            {
+                "sub": [
+                    {
+                        "one": 1
+                    }
+                ],
+                "from": "2",
+                "id": "22",
+                "to": "12"
+            }
+        ]
     }
 ]

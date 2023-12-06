@@ -119,7 +119,8 @@ func (this *builder) buildCreateSecondaryScan(indexes, flex map[datastore.Index]
 
 	for index, entry := range indexes {
 		// skip primary index with no sargable keys. Able to do PrimaryScan
-		if index.IsPrimary() && entry.minKeys == 0 {
+		// also skip primary index if inside correlated subquery
+		if index.IsPrimary() && (entry.minKeys == 0 || baseKeyspace.IsInCorrSubq()) {
 			continue
 		}
 		// If this is a join with primary key (meta().id), then it's

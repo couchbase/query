@@ -163,9 +163,7 @@ func (this *builder) buildPredicateScan(keyspace datastore.Keyspace, node *algeb
 
 	// do not consider primary index for ANSI JOIN or ANSI NEST
 	var primaryKey expression.Expressions
-
-	if !baseKeyspace.IsInCorrSubq() &&
-		(!node.IsAnsiJoinOp() || node.IsUnderHash() || node.IsSystem()) {
+	if !node.IsAnsiJoinOp() || node.IsUnderHash() || node.IsSystem() {
 		primaryKey = expression.Expressions{id}
 	}
 
