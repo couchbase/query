@@ -495,6 +495,11 @@ func (this *seqScan) coordinator(b *Bucket, scanTimeout time.Duration) {
 	}
 
 	smap := b.VBServerMap()
+	if smap == nil {
+		logging.Severef("Sequential scan coordinator: [%08x] No VB map for bucket %v", this.scanNum, b.Name)
+		this.reportError(qerrors.NewSSError(qerrors.E_SS_FAILED))
+		return
+	}
 	vblist := smap.VBucketMap
 	if len(vblist) == 0 {
 		logging.Severef("Sequential scan coordinator: [%08x] invalid VB map for bucket %v - no v-buckets", this.scanNum, b.Name)
