@@ -1497,7 +1497,7 @@ func (this *Context) getUdfStmtTimes() interface{} {
 		for _, t := range trees.trees {
 			et, err := json.Marshal(t.root)
 			if err == nil {
-				prof := map[string]interface{}{"query": t.query, "udf": t.funcKey, "executionTimings": value.NewValue(et)}
+				prof := map[string]interface{}{"statement": t.query, "function": t.funcKey, "executionTimings": value.NewValue(et)}
 				times = append(times, prof)
 			}
 		}

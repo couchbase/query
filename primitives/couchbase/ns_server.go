@@ -438,6 +438,10 @@ func (b *Bucket) obsoleteNode(node string) bool {
 func (b *Bucket) GetAbbreviatedUUID() string {
 	b.RLock()
 	defer b.RUnlock()
+	return b.getAbbreviatedUUID()
+}
+
+func (b *Bucket) getAbbreviatedUUID() string {
 	return b.UUID[:4] + b.UUID[len(b.UUID)-4:]
 }
 
@@ -1162,7 +1166,13 @@ func (b *Bucket) refresh(preserveConnections bool) error {
 
 	tmpb := &Bucket{}
 	err = pool.client.parseURLResponse(uri, tmpb)
+	if err == nil && len(tmpb.VBSMJson.VBucketMap) == 0 {
+		err = fmt.Errorf("Invalid URL (%v) response: empty vBucketMap", uri)
+	} else if err == nil && len(tmpb.VBSMJson.ServerList) == 0 {
+		err = fmt.Errorf("Invalid URL (%v) response: empty serverList", uri)
+	}
 	if err != nil {
+		logging.Severef("Failed to refresh bucket %v (%s): %v", b.Name, b.getAbbreviatedUUID(), err)
 		return err
 	}
 
@@ -1224,6 +1234,7 @@ func (b *Bucket) refresh(preserveConnections bool) error {
 	}
 	b.vBucketServerMap = unsafe.Pointer(&tmpb.VBSMJson)
 	b.nodeList = unsafe.Pointer(&tmpb.NodesJSON)
+	logging.Infof("Refreshed bucket %v (%s)", b.Name, b.getAbbreviatedUUID())
 
 	b.Unlock()
 	return nil

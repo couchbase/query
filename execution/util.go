@@ -9,8 +9,6 @@
 package execution
 
 import (
-	"strings"
-
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/util"
@@ -75,18 +73,4 @@ func getOriginalCachedValue(item value.AnnotatedValue, expr expression.Expressio
 		item.SetAttachment(s, rv.CopyForUpdate())
 	}
 	return
-}
-
-// Use ASCII character 30 as delimiter since it is rare to have said character in the query statement
-var _QUERY_STMT_ENCODING_DELIMITER = string([]byte{30})
-
-// Encodes the query statement string by prefixing the query context to it
-func encodeStatement(queryCtx string, statement string) string {
-	return queryCtx + _QUERY_STMT_ENCODING_DELIMITER + statement
-}
-
-// Returns only the query statement string from the encoded one
-func decodeStatement(encodedStmt string) string {
-	parts := strings.Split(encodedStmt, _QUERY_STMT_ENCODING_DELIMITER)
-	return strings.Join(parts[1:], _QUERY_STMT_ENCODING_DELIMITER)
 }

@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"math"
 
+	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/functions"
 	"github.com/couchbase/query/value"
 )
@@ -69,6 +70,17 @@ func (this *UserDefinedFunction) MinArgs() int { return 0 }
 func (this *UserDefinedFunction) MaxArgs() int { return math.MaxInt16 }
 
 func (this *UserDefinedFunction) Evaluate(item value.Value, context Context) (value.Value, error) {
+
+	if context == nil {
+		return nil, errors.NewNilEvaluateParamError("context")
+	}
+
+	parkableContext, ok := context.(ParkableContext)
+	if !ok {
+		return nil, errors.NewEvaluationError(fmt.Errorf("Casting context of type %T to ParkableContext failed.", context),
+			this.name.Key())
+	}
+
 	args := _ARGS_POOL.GetSized(len(this.operands))
 	defer _ARGS_POOL.Put(args)
 
@@ -80,7 +92,7 @@ func (this *UserDefinedFunction) Evaluate(item value.Value, context Context) (va
 		}
 	}
 
-	return functions.ExecuteFunction(this.name, functions.READONLY, args, context.(ParkableContext))
+	return functions.ExecuteFunction(this.name, functions.READONLY, args, parkableContext)
 }
 
 func (this *UserDefinedFunction) EvaluateForIndex(item value.Value, context Context) (value.Value, value.Values, error) {

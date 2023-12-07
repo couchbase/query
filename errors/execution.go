@@ -333,13 +333,6 @@ func NewRoleRequiresKeyspaceError(role string) Error {
 		InternalMsg: fmt.Sprintf("Role %s requires a keyspace.", role), InternalCaller: CallerN(1)}
 }
 
-func NewRoleRequiresScopeError(role string) Error {
-	c := make(map[string]interface{})
-	c["role"] = role
-	return &err{level: EXCEPTION, ICode: E_ROLE_REQUIRES_SCOPE, IKey: "execution.role_requires_scope", cause: c,
-		InternalMsg: fmt.Sprintf("Role %s requires a scope.", role), InternalCaller: CallerN(1)}
-}
-
 func NewRoleTakesNoKeyspaceError(role string) Error {
 	c := make(map[string]interface{})
 	c["role"] = role
