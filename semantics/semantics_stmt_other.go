@@ -125,8 +125,6 @@ func validateGroupRoles(roles []string) errors.Error {
 				found = true
 				if all[i].Target == "" && len(parts) != 0 {
 					return errors.NewRoleTakesNoKeyspaceError(auth.RoleToAlias(r))
-				} else if all[i].IsScope && len(parts) != 2 {
-					return errors.NewRoleRequiresScopeError(auth.RoleToAlias(r))
 				} else if all[i].Target != "" && len(parts) == 0 {
 					return errors.NewRoleRequiresKeyspaceError(auth.RoleToAlias(r))
 				}
