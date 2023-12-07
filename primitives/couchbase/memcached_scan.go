@@ -566,20 +566,25 @@ func (this *seqScan) coordinator(b *Bucket, scanTimeout time.Duration) {
 		for vb := 0; vb < len(vblist); vb++ {
 			server := 0
 			if len(vblist[vb]) > 0 {
-				// first server that's in the list
+				// first server (>=0) that's in the list
 				for n := 0; n < len(vblist[vb]); n++ {
 					server = vblist[vb][n]
-					if server < numServers {
+					if server >= 0 && server < numServers {
 						break
 					}
 				}
-				if server >= numServers {
+				if server >= numServers || server < 0 {
 					logging.Severef("Sequential scan coordinator: [%08x] Invalid server for VB (%d): %d (max valid: %d)",
 						this.scanNum, vb, server, numServers-1)
 					this.reportError(qerrors.NewSSError(qerrors.E_SS_FAILED))
 					cancelAll()
 					return
 				}
+			} else {
+				logging.Severef("Sequential scan coordinator: [%08x] No servers for VB (%d)", this.scanNum, vb)
+				this.reportError(qerrors.NewSSError(qerrors.E_SS_FAILED))
+				cancelAll()
+				return
 			}
 			vbs := &vbRangeScan{scan: this, b: b, vb: uint16(vb), queue: server, sampleSize: sampleSize, retries: _SS_RETRIES}
 			vbScans = append(vbScans, vbs)
@@ -623,7 +628,7 @@ func (this *seqScan) coordinator(b *Bucket, scanTimeout time.Duration) {
 			for vb := min; vb < max; vb++ {
 				server := 0
 				if len(vblist[vb]) > 0 {
-					// first server that's in the list
+					// first server (>=0) that's in the list
 					for n := 0; n < len(vblist[vb]); n++ {
 						server = vblist[vb][n]
 						if server >= 0 && server < numServers {
@@ -637,6 +642,11 @@ func (this *seqScan) coordinator(b *Bucket, scanTimeout time.Duration) {
 						cancelAll()
 						return
 					}
+				} else {
+					logging.Severef("Sequential scan coordinator: [%08x] No servers for VB (%d)", this.scanNum, vb)
+					this.reportError(qerrors.NewSSError(qerrors.E_SS_FAILED))
+					cancelAll()
+					return
 				}
 				vbs := &vbRangeScan{scan: this,
 					b:          b,
