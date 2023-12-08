@@ -44,13 +44,29 @@
         ]
     },
     {
-	"testcase": "MB-60011",
+	"testcase": "MB-60011, part 1, covering index scan on primary index",
         "statements": "SELECT (SELECT 1 AS one FROM shellTest AS d WHERE META(d).id = t.`to`) AS sub, t.`from`, t.`to`, META(t).id FROM shellTest t WHERE t.`from` = '2'",
         "results": [
             {
                 "sub": [
                     {
                         "one": 1
+                    }
+                ],
+                "from": "2",
+                "id": "22",
+                "to": "12"
+            }
+        ]
+    },
+    {
+	"testcase": "MB-60011, part 2, non-covering index scan on primary index",
+        "statements": "SELECT (SELECT d.id FROM shellTest AS d WHERE META(d).id = t.`to`) AS sub, t.`from`, t.`to`, META(t).id FROM shellTest t WHERE t.`from` = '2'",
+        "results": [
+            {
+                "sub": [
+                    {
+                        "id": "12"
                     }
                 ],
                 "from": "2",
