@@ -616,6 +616,7 @@ func (this *builder) minimalIndexes(sargables map[datastore.Index]*indexEntry, s
 		return nil
 	}
 
+	corrSubq := node.IsInCorrSubq()
 	for s, se := range sargables {
 		for t, te := range sargables {
 			if t == s {
@@ -628,7 +629,7 @@ func (this *builder) minimalIndexes(sargables map[datastore.Index]*indexEntry, s
 					continue
 				} else if s.Type() == datastore.SEQ_SCAN && se.nSargKeys == 0 {
 					continue
-				} else if node.IsInCorrSubq() {
+				} else if corrSubq {
 					// if inside correlated subquery, skip primary index with
 					// no sargable keys (primary scan)
 					if t.IsPrimary() && te.minKeys == 0 {
@@ -647,7 +648,7 @@ func (this *builder) minimalIndexes(sargables map[datastore.Index]*indexEntry, s
 					}
 				}
 			} else {
-				if narrowerOrEquivalent(se, te, shortest, node.IsInCorrSubq(), predFc) {
+				if narrowerOrEquivalent(se, te, shortest, corrSubq, predFc) {
 					delete(sargables, t)
 				}
 			}
