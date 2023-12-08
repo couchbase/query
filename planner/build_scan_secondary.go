@@ -136,9 +136,7 @@ func (this *builder) buildCreateSecondaryScan(indexes, flex map[datastore.Index]
 
 	for index, entry := range indexes {
 		// skip primary index with no sargable keys. Able to do PrimaryScan
-		// also skip primary index if inside correlated subquery
-		if index.IsPrimary() && (entry.minKeys == 0 ||
-			(baseKeyspace.IsInCorrSubq() && this.getDocCount(node.Alias()) > _MAX_PRIMARY_INDEX_CACHE_SIZE)) {
+		if index.IsPrimary() && entry.minKeys == 0 {
 			continue
 		}
 		// If this is a join with primary key (meta().id), then it's
@@ -627,7 +625,21 @@ func (this *builder) minimalIndexes(sargables map[datastore.Index]*indexEntry, s
 			if useCBO && shortest {
 				if t.Type() == datastore.SEQ_SCAN && te.nSargKeys == 0 {
 					delete(sargables, t)
-				} else if matchedLeadingKeys(se, te, predFc) {
+					continue
+				} else if s.Type() == datastore.SEQ_SCAN && se.nSargKeys == 0 {
+					continue
+				} else if node.IsInCorrSubq() {
+					// if inside correlated subquery, skip primary index with
+					// no sargable keys (primary scan)
+					if t.IsPrimary() && te.minKeys == 0 {
+						delete(sargables, t)
+						continue
+					} else if s.IsPrimary() && se.minKeys == 0 {
+						continue
+					}
+				}
+
+				if matchedLeadingKeys(se, te, predFc) {
 					seCost := se.scanCost()
 					teCost := te.scanCost()
 					if seCost < teCost || (seCost == teCost && se.cardinality < te.cardinality) {
@@ -635,7 +647,7 @@ func (this *builder) minimalIndexes(sargables map[datastore.Index]*indexEntry, s
 					}
 				}
 			} else {
-				if narrowerOrEquivalent(se, te, shortest, predFc) {
+				if narrowerOrEquivalent(se, te, shortest, node.IsInCorrSubq(), predFc) {
 					delete(sargables, t)
 				}
 			}
@@ -662,7 +674,7 @@ Is se narrower or equivalent to te.
 	true : purge te
 	false: keep both
 */
-func narrowerOrEquivalent(se, te *indexEntry, shortest bool, predFc map[string]value.Value) bool {
+func narrowerOrEquivalent(se, te *indexEntry, shortest, corrSubq bool, predFc map[string]value.Value) bool {
 
 	snk, snc := matchedKeysConditions(se, te, shortest, predFc)
 
@@ -769,12 +781,22 @@ func narrowerOrEquivalent(se, te *indexEntry, shortest bool, predFc map[string]v
 		return false
 	}
 
-	// favor primary index over missing-leading key index
+	// when neither index has sargable keys:
+	//   - if inside correlated subquery, skip primary index
+	//   - otherwise favor primary index over missing-leading key index
 	if te.nSargKeys == 0 && se.nSargKeys == 0 {
-		if se.index.IsPrimary() && te.cond == nil {
-			return true
-		} else if te.index.IsPrimary() && se.cond == nil {
-			return false
+		if se.index.IsPrimary() {
+			if corrSubq {
+				return false
+			} else if te.cond == nil {
+				return true
+			}
+		} else if te.index.IsPrimary() {
+			if corrSubq {
+				return true
+			} else if se.cond == nil {
+				return false
+			}
 		}
 	}
 
