@@ -248,6 +248,7 @@ const (
 	E_TRANSACTIONAL_AUTH                      ErrorCode = 5202
 	E_USER_NOT_FOUND                          ErrorCode = 5210
 	E_ROLE_REQUIRES_KEYSPACE                  ErrorCode = 5220
+	E_ROLE_INCORRECT_LEVEL                    ErrorCode = 5221
 	E_ROLE_TAKES_NO_KEYSPACE                  ErrorCode = 5230
 	E_NO_SUCH_KEYSPACE                        ErrorCode = 5240
 	E_NO_SUCH_SCOPE                           ErrorCode = 5241
