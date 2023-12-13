@@ -866,7 +866,10 @@ func doTask(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af
 		if err != nil {
 			return nil, err
 		}
-		scheduler.DeleteTask(name)
+		err = scheduler.DeleteTask(name)
+		if err != nil {
+			return nil, err
+		}
 		return true, nil
 	} else if req.Method == "GET" || req.Method == "POST" {
 		err, isInternal := endpoint.verifyCredentialsFromRequest("system:tasks_cache", auth.PRIV_SYSTEM_READ, req, af)

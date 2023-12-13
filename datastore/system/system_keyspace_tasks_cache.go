@@ -166,7 +166,15 @@ func (b *tasksCacheKeyspace) Delete(deletes value.Pairs, context datastore.Query
 
 		} else {
 			// local entry
-			scheduler.DeleteTask(localKey)
+			err := scheduler.DeleteTask(localKey)
+			if err != nil {
+				errs := errors.Errors{err}
+				if preserveMutations {
+					return len(deletes), deletes, errs
+				} else {
+					return len(deletes), nil, errs
+				}
+			}
 		}
 	}
 
