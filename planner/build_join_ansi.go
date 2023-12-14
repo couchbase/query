@@ -1495,7 +1495,9 @@ func (this *builder) buildInnerPrimaryScan(right *algebra.KeyspaceTerm,
 	baseKeyspace, _ := this.baseKeyspaces[right.Alias()]
 	filters := baseKeyspace.Filters()
 
+	nlinner := this.setNLInner()
 	_, err := right.Accept(this)
+	this.restoreNLInner(nlinner)
 	if err != nil {
 		return nil, nil, nil, err
 	}
