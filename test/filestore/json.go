@@ -263,7 +263,7 @@ func Start(site, pool, namespace string) *MockServer {
 	}
 	server.SetActives(http.NewActiveRequests(srv))
 	prepareds.PreparedsReprepareInit(ds, sys)
-	constructor.Init(nil, 6, "")
+	constructor.Init(nil, 6, "", "")
 
 	srv.SetKeepAlive(1 << 10)
 	srv.SetMaxIndexAPI(datastore.INDEX_API_MAX)
