@@ -65,6 +65,8 @@ func Build(stmt algebra.Statement, datastore, systemstore datastore.Datastore,
 			op = plan.NewSequence(op, plan.NewStream(op.Cost(), op.Cardinality(), op.Size(), op.FrCost(), serializable))
 		}
 
+		getSeqScanPrivs(op, privs)
+
 		// Always insert an Authorize operator, even if no privileges need to
 		// be verified.
 		//

@@ -33,7 +33,6 @@ type Update struct {
 	returning    *Projection           `json:"returning"`
 	optimHints   *OptimHints           `json:"optimizer_hints"`
 	validateKeys bool                  `json:"validate_keys"`
-	extraPrivs   *auth.Privileges      `json:"extra_privs"`
 }
 
 func NewUpdate(keyspace *KeyspaceRef, keys expression.Expression, indexes IndexRefs,
@@ -275,9 +274,6 @@ func (this *Update) Privileges() (*auth.Privileges, errors.Error) {
 	if this.returning != nil {
 		privs.Add(fullKeyspace, auth.PRIV_QUERY_SELECT, props)
 	}
-	if this.extraPrivs != nil {
-		privs.AddAll(this.extraPrivs)
-	}
 
 	exprs := this.Expressions()
 	subprivs, err := subqueryPrivileges(exprs)
@@ -291,10 +287,6 @@ func (this *Update) Privileges() (*auth.Privileges, errors.Error) {
 	}
 
 	return privs, nil
-}
-
-func (this *Update) SetExtraPrivs(ep *auth.Privileges) {
-	this.extraPrivs = ep
 }
 
 /*

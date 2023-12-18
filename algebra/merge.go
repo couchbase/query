@@ -41,7 +41,6 @@ type Merge struct {
 	limit      expression.Expression `json:"limit"`
 	returning  *Projection           `json:"returning"`
 	optimHints *OptimHints           `json:"optimizer_hints"`
-	extraPrivs *auth.Privileges      `json:"extra_privs"`
 }
 
 /*
@@ -169,9 +168,6 @@ func (this *Merge) Privileges() (*auth.Privileges, errors.Error) {
 	if this.returning != nil {
 		privs.Add(fullKeyspace, auth.PRIV_QUERY_SELECT, auth.PRIV_PROPS_NONE)
 	}
-	if this.extraPrivs != nil {
-		privs.AddAll(this.extraPrivs)
-	}
 
 	sp, err := this.source.Privileges()
 	if err != nil {
@@ -195,10 +191,6 @@ func (this *Merge) Privileges() (*auth.Privileges, errors.Error) {
 	}
 
 	return privs, nil
-}
-
-func (this *Merge) SetExtraPrivs(ep *auth.Privileges) {
-	this.extraPrivs = ep
 }
 
 /*

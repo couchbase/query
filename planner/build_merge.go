@@ -168,9 +168,6 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 		}
 	}
 
-	// source privs are reported directly, including any extras so only set the target extra privs here
-	stmt.SetExtraPrivs(right.ExtraPrivileges())
-
 	// there should only be a single match for each source document,
 	// otherwise MERGE will return an error on multiple update/delete
 	if this.useCBO && leftCard > 0.0 && joinCard > 0.0 && joinCard > leftCard {
