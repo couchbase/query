@@ -333,6 +333,13 @@ func NewRoleRequiresKeyspaceError(role string) Error {
 		InternalMsg: fmt.Sprintf("Role %s requires a keyspace.", role), InternalCaller: CallerN(1)}
 }
 
+func NewRoleIncorrectLevelError(role string, level string) Error {
+	c := make(map[string]interface{})
+	c["role"] = role
+	return &err{level: EXCEPTION, ICode: E_ROLE_INCORRECT_LEVEL, IKey: "execution:role_incorrect_level", cause: c,
+		InternalMsg: fmt.Sprintf("Role %s cannot be specified at the %s level.", role, level), InternalCaller: CallerN(1)}
+}
+
 func NewRoleTakesNoKeyspaceError(role string) Error {
 	c := make(map[string]interface{})
 	c["role"] = role

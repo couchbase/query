@@ -488,7 +488,8 @@ func (this *seqScan) doScanEntries(requestId string, ordered bool, offset, limit
 	}
 	atomic.StoreUint64(&this.lastScanCount, uint64(returned))
 
-	qctx.Infof("Sequential scan on %v returned %v keys", this.KeyspaceId(), returned)
+	qctx.Infof("Sequential scan on `%v`.`%v`.`%v` returned %v keys",
+		this.Indexer().BucketId(), this.Indexer().ScopeId(), this.KeyspaceId(), returned)
 }
 
 func (this *seqScan) IndexMetadata() map[string]interface{} {

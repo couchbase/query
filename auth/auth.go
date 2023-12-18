@@ -58,6 +58,7 @@ const (
 	PRIV_QUERY_USE_SEQUENCES                    Privilege = 36 // get/advance sequence values
 	PRIV_SEARCH_CREATE_INDEX                    Privilege = 37 // Ability to run FTS CREATE INDEX statements.
 	PRIV_SEARCH_DROP_INDEX                      Privilege = 38 // Ability to run FTS DROP INDEX statements.
+	PRIV_QUERY_SEQ_SCAN                         Privilege = 39 // Ability to use a sequential scan
 )
 
 type PrivilegePair struct {

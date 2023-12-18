@@ -68,6 +68,7 @@ func (this *builder) buildPrimaryScan(keyspace datastore.Keyspace, node *algebra
 			if skipNewKeys {
 				this.mustSkipKeys = true
 			}
+			node.SetExtraPrivilege(auth.PRIV_QUERY_SEQ_SCAN)
 		}
 
 		return plan.NewPrimaryScan3(primary3, keyspace, node, this.offset, this.limit,

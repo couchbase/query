@@ -12,6 +12,7 @@ import (
 	"fmt"
 
 	"github.com/couchbase/query/algebra"
+	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
@@ -191,6 +192,7 @@ func (this *builder) buildCreateSecondaryScan(indexes, flex map[datastore.Index]
 			if skipNewKeys {
 				this.mustSkipKeys = true
 			}
+			node.SetExtraPrivilege(auth.PRIV_QUERY_SEQ_SCAN)
 		}
 
 		scan = entry.spans.CreateScan(index, node, this.context.IndexApiVersion(), false, false,
@@ -616,6 +618,7 @@ func (this *builder) minimalIndexes(sargables map[datastore.Index]*indexEntry, s
 		return nil
 	}
 
+	corrSubq := node.IsInCorrSubq()
 	for s, se := range sargables {
 		for t, te := range sargables {
 			if t == s {
@@ -628,7 +631,7 @@ func (this *builder) minimalIndexes(sargables map[datastore.Index]*indexEntry, s
 					continue
 				} else if s.Type() == datastore.SEQ_SCAN && se.nSargKeys == 0 {
 					continue
-				} else if node.IsInCorrSubq() {
+				} else if corrSubq {
 					// if inside correlated subquery, skip primary index with
 					// no sargable keys (primary scan)
 					if t.IsPrimary() && te.minKeys == 0 {
@@ -647,7 +650,7 @@ func (this *builder) minimalIndexes(sargables map[datastore.Index]*indexEntry, s
 					}
 				}
 			} else {
-				if narrowerOrEquivalent(se, te, shortest, node.IsInCorrSubq(), predFc) {
+				if narrowerOrEquivalent(se, te, shortest, corrSubq, predFc) {
 					delete(sargables, t)
 				}
 			}

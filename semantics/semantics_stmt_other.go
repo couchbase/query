@@ -27,6 +27,7 @@ const (
 	_NO_TARGET = 1 << iota
 	_KEYSPACE_TARGET
 	_SCOPE_TARGET
+	_BUCKET_TARGET
 )
 
 func validateRoles(op roleOp) errors.Error {
@@ -43,7 +44,10 @@ func validateRoles(op roleOp) errors.Error {
 	}
 	for i := range ks {
 		p := algebra.ParsePath(ks[i].FullName())
-		if len(p) == 3 {
+
+		if len(p) == 2 {
+			typ |= _BUCKET_TARGET
+		} else if len(p) == 3 {
 			typ |= _SCOPE_TARGET
 		} else {
 			typ |= _KEYSPACE_TARGET
@@ -59,9 +63,9 @@ outer:
 					if typ != _NO_TARGET {
 						return errors.NewRoleTakesNoKeyspaceError(r)
 					}
-				case typ == _SCOPE_TARGET:
-					if !roles[i].IsScope {
-						return errors.NewRoleRequiresKeyspaceError(r)
+				case roles[i].IsScope: // role can be granted/revoked at the scope or bucket (all scopes in the bucket) level
+					if typ == _KEYSPACE_TARGET {
+						return errors.NewRoleIncorrectLevelError(r, "collection")
 					}
 				default: // keyspace (at least) required for this role
 					if typ == _NO_TARGET {

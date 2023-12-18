@@ -16,9 +16,10 @@ import (
 	"github.com/couchbase/query/auth"
 )
 
-func messageForDeniedPrivilege(pair auth.PrivilegePair) (string, string) {
+func messageForDeniedPrivilege(pair auth.PrivilegePair) (string, string, string) {
 	keyspace := pair.Target
 
+	action := ""
 	privilege := ""
 	role := ""
 	base_role := ""
@@ -115,6 +116,11 @@ func messageForDeniedPrivilege(pair auth.PrivilegePair) (string, string) {
 		privilege = "manage fts indices"
 		base_role = "fts_admin"
 		role = fmt.Sprintf("%s on %s", base_role, keyspace)
+	case auth.PRIV_QUERY_SEQ_SCAN:
+		privilege = "use sequential scans"
+		base_role = "query_use_sequential_scans"
+		role = fmt.Sprintf("%s on %s", base_role, keyspace)
+		action = "Run the index advisor and create an appropriate index, or check that your expected index is online."
 	default:
 		privilege = "run this type of query"
 		base_role = "admin"
@@ -124,5 +130,5 @@ func messageForDeniedPrivilege(pair auth.PrivilegePair) (string, string) {
 	}
 
 	return fmt.Sprintf("User does not have credentials to %s. Add role %s to allow the statement to run.", privilege, role),
-		base_role
+		base_role, action
 }

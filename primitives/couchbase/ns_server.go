@@ -1172,7 +1172,11 @@ func (b *Bucket) refresh(preserveConnections bool) error {
 		err = fmt.Errorf("Invalid URL (%v) response: empty serverList", uri)
 	}
 	if err != nil {
-		logging.Severef("Failed to refresh bucket %v (%s): %v", b.Name, b.getAbbreviatedUUID(), err)
+		if strings.Contains(err.Error(), "HTTP error 404") || strings.Contains(err.Error(), "Object Not Found") {
+			logging.Infof("Failed to refresh bucket %v (%s): %v", b.Name, b.getAbbreviatedUUID(), err)
+		} else {
+			logging.Severef("Failed to refresh bucket %v (%s): %v", b.Name, b.getAbbreviatedUUID(), err)
+		}
 		return err
 	}
 

@@ -44,9 +44,9 @@ func NewDatastoreUnableToRetrieveRoles(e error) Error {
 		ICause: e, InternalMsg: "Unable to retrieve roles from server.", InternalCaller: CallerN(1), cause: c}
 }
 
-func NewDatastoreInsufficientCredentials(msg string, e error, path []string, role string) Error {
+func NewDatastoreInsufficientCredentials(msg string, e error, path []string, role string, action string) Error {
 	var c interface{}
-	if e != nil || len(path) > 0 || role != "" {
+	if e != nil || len(path) > 0 || role != "" || action != "" {
 		m := make(map[string]interface{})
 		if e != nil {
 			m["error"] = e
@@ -56,6 +56,9 @@ func NewDatastoreInsufficientCredentials(msg string, e error, path []string, rol
 		}
 		if role != "" {
 			m["missing_role"] = role
+		}
+		if action != "" {
+			m["recommended_action"] = action
 		}
 		c = m
 	}
