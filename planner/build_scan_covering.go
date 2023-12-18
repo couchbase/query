@@ -10,6 +10,7 @@ package planner
 
 import (
 	"github.com/couchbase/query/algebra"
+	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
@@ -583,6 +584,7 @@ func (this *builder) buildCreateCoveringScan(entry *indexEntry, node *algebra.Ke
 		if skipNewKeys {
 			this.mustSkipKeys = true
 		}
+		node.SetExtraPrivilege(auth.PRIV_QUERY_SEQ_SCAN)
 	}
 
 	// build plan for IndexScan

@@ -113,7 +113,7 @@ func deriveNotNullFilter(keyspace datastore.Keyspace, baseKeyspace *base.BaseKey
 	context *PrepareContext, aliases map[string]bool, inclSeqScan bool) (error, time.Duration) {
 
 	// first gather leading index key from all indexes for this keyspace
-	indexes, err, duration := allIndexes(keyspace, nil, virtualIndexes, indexApiVersion, false, inclSeqScan)
+	indexes, err, duration := allIndexes(keyspace, nil, virtualIndexes, indexApiVersion, false, inclSeqScan, context.Credentials())
 	if nil != indexes {
 		defer _INDEX_POOL.Put(indexes)
 	}

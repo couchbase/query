@@ -120,6 +120,12 @@ func (this *collector) VisitKeyScan(plop *plan.KeyScan) (interface{}, error) {
 }
 
 func (this *collector) VisitExpressionScan(plop *plan.ExpressionScan) (interface{}, error) {
+	if plop.SubqueryPlan() != nil {
+		_, err := plop.SubqueryPlan().Accept(this)
+		if err != nil {
+			return nil, err
+		}
+	}
 	return nil, nil
 }
 
@@ -136,18 +142,40 @@ func (this *collector) VisitCountScan(plop *plan.CountScan) (interface{}, error)
 }
 
 func (this *collector) VisitDistinctScan(plop *plan.DistinctScan) (interface{}, error) {
+	_, err := plop.Scan().Accept(this)
+	if err != nil {
+		return nil, err
+	}
 	return nil, nil
 }
 
 func (this *collector) VisitUnionScan(plop *plan.UnionScan) (interface{}, error) {
+	for _, child := range plop.Scans() {
+		_, e := child.Accept(this)
+		if e != nil {
+			return nil, e
+		}
+	}
 	return nil, nil
 }
 
 func (this *collector) VisitIntersectScan(plop *plan.IntersectScan) (interface{}, error) {
+	for _, child := range plop.Scans() {
+		_, e := child.Accept(this)
+		if e != nil {
+			return nil, e
+		}
+	}
 	return nil, nil
 }
 
 func (this *collector) VisitOrderedIntersectScan(plop *plan.OrderedIntersectScan) (interface{}, error) {
+	for _, child := range plop.Scans() {
+		_, e := child.Accept(this)
+		if e != nil {
+			return nil, e
+		}
+	}
 	return nil, nil
 }
 
@@ -454,6 +482,10 @@ func (this *collector) VisitFlushCollection(plop *plan.FlushCollection) (interfa
 }
 
 func (this *collector) VisitPrepare(plop *plan.Prepare) (interface{}, error) {
+	_, err := plop.Plan().Accept(this)
+	if err != nil {
+		return nil, err
+	}
 	return nil, nil
 }
 

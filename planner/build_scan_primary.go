@@ -68,6 +68,7 @@ func (this *builder) buildPrimaryScan(keyspace datastore.Keyspace, node *algebra
 			if skipNewKeys {
 				this.mustSkipKeys = true
 			}
+			node.SetExtraPrivilege(auth.PRIV_QUERY_SEQ_SCAN)
 		}
 
 		return plan.NewPrimaryScan3(primary3, keyspace, node, this.offset, this.limit,
@@ -117,6 +118,8 @@ func buildPrimaryIndex(keyspace datastore.Keyspace, indexes []datastore.Index, n
 
 	for _, indexer := range indexers {
 		if !inclSeqScan && indexer.Name() == datastore.SEQ_SCAN {
+			continue
+		} else if indexer.Name() == datastore.SEQ_SCAN && !seqScanAuth(keyspace.QualifiedName(), credentials) {
 			continue
 		}
 		primaries, er := indexer.PrimaryIndexes()

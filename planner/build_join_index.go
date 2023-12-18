@@ -85,7 +85,7 @@ func (this *builder) buildJoinScan(keyspace datastore.Keyspace, node *algebra.Ke
 
 	formalizer := expression.NewSelfFormalizer(node.Alias(), nil)
 	allindexes, err, duration := allIndexes(keyspace, nil, nil, this.context.IndexApiVersion(), false,
-		util.IsFeatureEnabled(this.context.FeatureControls(), util.N1QL_SEQ_SCAN))
+		util.IsFeatureEnabled(this.context.FeatureControls(), util.N1QL_SEQ_SCAN), this.context.Credentials())
 	if nil != allindexes {
 		defer _INDEX_POOL.Put(allindexes)
 	}
