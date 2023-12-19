@@ -103,7 +103,6 @@ func (this *Authorize) RunOnce(context *Context, parent value.Value) {
 
 			err := ds.Authorize(privs, context.Credentials())
 			if err != nil {
-				err = datastore.HandleDsAuthError(err, privs, context.Credentials())
 				context.Fatal(err)
 				this.fail(context)
 				return

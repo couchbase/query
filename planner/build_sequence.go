@@ -27,7 +27,7 @@ func validateSequencePath(credentials *auth.Credentials, path *algebra.Path) err
 	}
 	_, err := datastore.GetScope(parts[0:3]...)
 	if err != nil {
-		err1 := datastore.CheckBucketAccess(credentials, err, parts, nil)
+		err1 := datastore.CheckBucketAccess(credentials, err, parts)
 		if err1 != nil {
 			err = err1
 		}

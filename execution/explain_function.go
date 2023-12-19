@@ -261,7 +261,6 @@ func createStmtPlans(stmts []string, context *Context) ([]planEntry, errors.Erro
 			// Verify the privileges needed for this individual query
 			errA := ds.Authorize(privs, creds)
 			if errA != nil {
-				errA = datastore.HandleDsAuthError(errA, privs, creds)
 				return nil, errA
 			}
 

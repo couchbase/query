@@ -138,7 +138,7 @@ func buildPrimaryIndex(keyspace datastore.Keyspace, indexes []datastore.Index, n
 
 	if primary == nil {
 
-		err := datastore.CheckBucketAccess(credentials, nil, node.Path().Parts(), nil)
+		err := datastore.CheckBucketAccess(credentials, nil, node.Path().Parts())
 
 		if err != nil {
 			return nil, err

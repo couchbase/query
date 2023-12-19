@@ -464,7 +464,7 @@ func (this *builder) getTermKeyspace(node *algebra.KeyspaceTerm) (datastore.Keys
 
 	if err != nil {
 		parts := path.Parts()
-		err2 := datastore.CheckBucketAccess(this.context.Credentials(), err, parts, nil)
+		err2 := datastore.CheckBucketAccess(this.context.Credentials(), err, parts)
 
 		if err2 != nil {
 			return keyspace, err2

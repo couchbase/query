@@ -18,6 +18,7 @@ import (
 	"github.com/couchbase/cbauth"
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/auth"
+	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/tenant"
@@ -384,14 +385,17 @@ func cbAuthorize(s authSource, privileges *auth.Privileges, credentials *auth.Cr
 		return nil
 	}
 
-	msg, role, action := messageForDeniedPrivilege(deniedPrivileges[0])
-
-	var path []string
 	if deniedPrivileges[0].Target != "" {
-		path = algebra.ParsePath(deniedPrivileges[0].Target)
+		// Return a generic authorization error if required
+		errM := maskAuthError(deniedPrivileges[0].Target, deniedPrivileges[0].Priv, credentials)
+		if errM != nil {
+			return errM
+		}
 	}
 
-	return errors.NewDatastoreInsufficientCredentials(msg, reason, path, role, action)
+	msg, role, action := messageForDeniedPrivilege(deniedPrivileges[0])
+
+	return errors.NewDatastoreInsufficientCredentials(msg, reason, deniedPrivileges[0].Target, role, action)
 }
 
 func cbPreAuthorize(privileges *auth.Privileges) {
@@ -410,4 +414,15 @@ func cbPreAuthorize(privileges *auth.Privileges) {
 			privileges.List[i].Ready = cbPrecompiled(p)
 		}
 	}
+}
+
+// Generates a generic Authorization failure error with code E_ACCESS_DENIED in serverless environments for non-admin users
+func maskAuthError(target string, priv auth.Privilege, creds *auth.Credentials) errors.Error {
+
+	// Do not return generic error since the target will be the full path of the function and not a keyspace name
+	if priv == auth.PRIV_QUERY_MANAGE_FUNCTIONS || priv == auth.PRIV_QUERY_MANAGE_FUNCTIONS_EXTERNAL {
+		return nil
+	}
+
+	return datastore.CheckBucketAccess(creds, nil, algebra.ParsePath(target))
 }
