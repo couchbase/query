@@ -315,8 +315,14 @@ func readSpillValue(r io.Reader, buf []byte) (interface{}, error) {
 	n, err = r.Read(buf)
 	if err == nil && n != len(buf) {
 		err = io.ErrUnexpectedEOF
+	} else if err == io.ErrUnexpectedEOF {
+		// compressed spill files may return ErrUnexpectedEOF here instead of just EOF, so handle this case
+		err = io.EOF
 	}
 	if err != nil {
+		if free {
+			_SPILL_POOL.Put(buf)
+		}
 		return nil, err
 	}
 	switch buf[0] {
