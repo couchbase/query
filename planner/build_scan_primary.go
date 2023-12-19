@@ -119,6 +119,8 @@ func buildPrimaryIndex(keyspace datastore.Keyspace, indexes []datastore.Index, n
 	for _, indexer := range indexers {
 		if !inclSeqScan && indexer.Name() == datastore.SEQ_SCAN {
 			continue
+		} else if indexer.Name() == datastore.SEQ_SCAN && !seqScanAuth(keyspace.QualifiedName(), credentials) {
+			continue
 		}
 		primaries, er := indexer.PrimaryIndexes()
 		if er != nil {
@@ -139,7 +141,7 @@ func buildPrimaryIndex(keyspace datastore.Keyspace, indexes []datastore.Index, n
 
 	if primary == nil {
 
-		err := datastore.CheckBucketAccess(credentials, nil, node.Path().Parts(), nil)
+		err := datastore.CheckBucketAccess(credentials, nil, node.Path().Parts())
 
 		if err != nil {
 			return nil, err

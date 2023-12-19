@@ -20,7 +20,7 @@ func getBucket(credentials *auth.Credentials, parts ...string) (datastore.Bucket
 	bucket, err := datastore.GetBucket(parts...)
 
 	if err != nil {
-		err1 := datastore.CheckBucketAccess(credentials, err, parts, nil)
+		err1 := datastore.CheckBucketAccess(credentials, err, parts)
 
 		if err1 != nil {
 			return bucket, err1

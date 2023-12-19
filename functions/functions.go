@@ -93,8 +93,6 @@ type functionCache struct {
 }
 
 var Authorize func(privileges *auth.Privileges, credentials *auth.Credentials) errors.Error
-var CheckBucketAccess func(credentials *auth.Credentials, e errors.Error, path []string, privs *auth.Privileges) errors.Error
-var HandleDsAuthError func(err errors.Error, privs *auth.Privileges, creds *auth.Credentials) errors.Error
 
 var languages = [_SIZER]LanguageRunner{&missing{}, &empty{}}
 var functions = &functionCache{}
@@ -418,7 +416,6 @@ func ExecuteFunction(name FunctionName, modifiers Modifier, values []value.Value
 	if languages[lang].CheckAuthorize(name.Key(), context) {
 		err = Authorize(entry.privs, context.Credentials())
 		if err != nil {
-			err = HandleDsAuthError(err, entry.privs, context.Credentials())
 			return nil, err
 		}
 	}
@@ -478,7 +475,6 @@ func FunctionStatements(name FunctionName, creds *auth.Credentials, context Cont
 	// Note: for Inline functions, this performs Authorization for the queries inside the function as well
 	err = Authorize(entry.privs, creds)
 	if err != nil {
-		err = HandleDsAuthError(err, entry.privs, creds)
 		return lang, nil, err
 	}
 

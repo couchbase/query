@@ -10,7 +10,6 @@ package planner
 
 import (
 	"github.com/couchbase/query/algebra"
-	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/plan"
 	base "github.com/couchbase/query/plannerbase"
 )
@@ -32,15 +31,13 @@ func (this *builder) VisitUpdate(stmt *algebra.Update) (interface{}, error) {
 		return nil, err
 	}
 
-	var extraPrivs *auth.Privileges
 	optimHints := stmt.OptimHints()
-	optimHints, extraPrivs, err = this.beginMutate(keyspace, ksref, stmt.Keys(), stmt.Indexes(), stmt.Limit(), nil,
-		true, optimHints, stmt.Let())
+	optimHints, err = this.beginMutate(keyspace, ksref, stmt.Keys(), stmt.Indexes(), stmt.Limit(), nil, true, optimHints,
+		stmt.Let())
 	if err != nil {
 		return nil, err
 	}
 	stmt.SetOptimHints(optimHints)
-	stmt.SetExtraPrivs(extraPrivs)
 
 	cost := OPT_COST_NOT_AVAIL
 	cardinality := OPT_CARD_NOT_AVAIL

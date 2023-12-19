@@ -472,6 +472,17 @@ func (this *Repeat) Evaluate(item value.Value, context Context) (value.Value, er
 		return nil, errors.NewRangeError("REPEAT()")
 	}
 
+	sz := uint64(len(first.ToString())) * uint64(ni)
+	var max uint64
+	if qc, ok := context.(QuotaContext); ok && qc.UseRequestQuota() {
+		max = uint64(float64(qc.MemoryQuota()) * (1.0 - qc.CurrentQuotaUsage()))
+	} else {
+		max = 20 * util.MiB
+	}
+	if max < sz {
+		return nil, errors.NewSizeError("REPEAT()", sz/uint64(ni), ni, sz, max)
+	}
+
 	rv := strings.Repeat(first.ToString(), ni)
 	return value.NewValue(rv), nil
 }

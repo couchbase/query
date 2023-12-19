@@ -10,7 +10,6 @@ package planner
 
 import (
 	"github.com/couchbase/query/algebra"
-	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/plan"
 	base "github.com/couchbase/query/plannerbase"
 )
@@ -35,16 +34,14 @@ func (this *builder) VisitDelete(stmt *algebra.Delete) (interface{}, error) {
 		return nil, err
 	}
 
-	var extraPrivs *auth.Privileges
 	mustFetch := stmt.Returning() != nil || this.context.DeltaKeyspaces() != nil
 	optimHints := stmt.OptimHints()
-	optimHints, extraPrivs, err = this.beginMutate(keyspace, ksref, stmt.Keys(), stmt.Indexes(), stmt.Limit(), stmt.Offset(),
+	optimHints, err = this.beginMutate(keyspace, ksref, stmt.Keys(), stmt.Indexes(), stmt.Limit(), stmt.Offset(),
 		mustFetch, optimHints, stmt.Let())
 	if err != nil {
 		return nil, err
 	}
 	stmt.SetOptimHints(optimHints)
-	stmt.SetExtraPrivs(extraPrivs)
 
 	subChildren := this.subChildren
 	deleteSubChildren := make([]plan.Operator, 0, 4)

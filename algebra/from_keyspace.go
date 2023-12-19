@@ -164,23 +164,6 @@ func (this *KeyspaceTerm) SetExtraPrivilege(priv auth.Privilege) {
 	this.extraPrivs = append(this.extraPrivs, priv)
 }
 
-func (this *KeyspaceTerm) ExtraPrivileges() *auth.Privileges {
-	var privs *auth.Privileges
-	if len(this.extraPrivs) > 0 {
-		privs = auth.NewPrivileges()
-		if this.path != nil {
-			for _, p := range this.extraPrivs {
-				privs.Add(this.path.SimpleString(), p, auth.PRIV_PROPS_NONE)
-			}
-		} else {
-			for _, p := range this.extraPrivs {
-				privs.Add(this.fromExpr.String(), p, auth.PRIV_PROPS_DYNAMIC_TARGET)
-			}
-		}
-	}
-	return privs
-}
-
 func PrivilegesFromPath(priv auth.Privilege, path *Path) (*auth.Privileges, errors.Error) {
 
 	privs := auth.NewPrivileges()

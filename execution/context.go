@@ -1373,6 +1373,11 @@ func (this *opContext) EvaluateSubquery(query *algebra.Select, parent value.Valu
 	}
 	if !ok {
 		qp := subplan.(*plan.QueryPlan)
+		// if any additional permissions need to be checked, check them now
+		authErr := qp.Authorize(this.Context.Credentials())
+		if authErr != nil {
+			return nil, authErr
+		}
 		pipeline, err := Build(qp.PlanOp(), this.Context)
 		if err != nil {
 			// Generate our own error for this subquery, in addition to whatever the query above is doing.

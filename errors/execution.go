@@ -169,6 +169,17 @@ func NewRangeError(termType string) Error {
 		InternalMsg: fmt.Sprintf("Out of range evaluating %s.", termType), InternalCaller: CallerN(1)}
 }
 
+func NewSizeError(termType string, elemSize uint64, nelem int, size uint64, limit uint64) Error {
+	c := make(map[string]interface{})
+	c["limit"] = limit
+	c["size"] = size
+	c["element_size"] = elemSize
+	c["element_count"] = nelem
+	c["term_type"] = termType
+	return &err{level: EXCEPTION, ICode: E_SIZE, IKey: "execution.size_error", cause: c,
+		InternalMsg: fmt.Sprintf("Size of %s result exceeds limit (%v > %v).", termType, size, limit), InternalCaller: CallerN(1)}
+}
+
 func NewDivideByZeroWarning() Error {
 	return &err{level: WARNING, ICode: W_DIVIDE_BY_ZERO, IKey: "execution.divide_by_zero",
 		InternalMsg: "Division by 0.", InternalCaller: CallerN(1)}

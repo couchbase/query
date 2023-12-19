@@ -49,10 +49,9 @@ func (this *spillFile) rewind() error {
 	if err != nil {
 		return errors.NewValueError(errors.E_VALUE_SPILL_READ, err)
 	}
+	this.reader = bufio.NewReaderSize(this.f, 64*util.KiB)
 	if this.compress {
-		this.reader, _ = zlib.NewReader(this.f)
-	} else {
-		this.reader = bufio.NewReaderSize(this.f, 64*util.KiB)
+		this.reader, _ = zlib.NewReader(this.reader)
 	}
 	err = this.nextValue()
 	if err != nil {

@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/couchbase/query/algebra"
+	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
@@ -50,9 +51,9 @@ func Build(stmt algebra.Statement, datastore, systemstore datastore.Datastore,
 	indexKeyspaces := builder.indexKeyspaceNames
 
 	if !subquery && !is_prepared {
-		privs, er := stmt.Privileges()
-		if er != nil {
-			return nil, nil, er, builder.subTimes
+		privs, err := stmt.Privileges()
+		if err != nil {
+			return nil, nil, err, builder.subTimes
 		}
 
 		if stream {
@@ -64,6 +65,8 @@ func Build(stmt algebra.Statement, datastore, systemstore datastore.Datastore,
 
 			op = plan.NewSequence(op, plan.NewStream(op.Cost(), op.Cardinality(), op.Size(), op.FrCost(), serializable))
 		}
+
+		getSeqScanPrivs(op, privs)
 
 		// Always insert an Authorize operator, even if no privileges need to
 		// be verified.
@@ -77,6 +80,14 @@ func Build(stmt algebra.Statement, datastore, systemstore datastore.Datastore,
 		// have privileges that need verification, meaning the Authorize
 		// operator would have been present in any case.
 		qp.SetPlanOp(plan.NewAuthorize(privs, op))
+	} else {
+		privs := auth.NewPrivileges()
+		getSeqScanPrivs(op, privs)
+		if len(privs.List) > 0 {
+			qp.SetExtraPrivs(privs)
+		} else {
+			qp.SetExtraPrivs(nil)
+		}
 	}
 
 	return qp, indexKeyspaces, nil, builder.subTimes
@@ -462,7 +473,7 @@ func (this *builder) getTermKeyspace(node *algebra.KeyspaceTerm) (datastore.Keys
 
 	if err != nil {
 		parts := path.Parts()
-		err2 := datastore.CheckBucketAccess(this.context.Credentials(), err, parts, nil)
+		err2 := datastore.CheckBucketAccess(this.context.Credentials(), err, parts)
 
 		if err2 != nil {
 			return keyspace, err2

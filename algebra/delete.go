@@ -37,7 +37,6 @@ type Delete struct {
 	optimHints   *OptimHints           `json:"optimizer_hints"`
 	validateKeys bool                  `json:"validate_keys"`
 	let          expression.Bindings   `json:"let"`
-	extraPrivs   *auth.Privileges      `json:"extra_privs"`
 }
 
 /*
@@ -230,9 +229,6 @@ func (this *Delete) Privileges() (*auth.Privileges, errors.Error) {
 			privs.Add(fullKeyspace, auth.PRIV_QUERY_SELECT, props)
 		}
 	}
-	if this.extraPrivs != nil {
-		privs.AddAll(this.extraPrivs)
-	}
 
 	exprs := this.Expressions()
 	for _, expr := range exprs {
@@ -245,10 +241,6 @@ func (this *Delete) Privileges() (*auth.Privileges, errors.Error) {
 	}
 	privs.AddAll(subprivs)
 	return privs, nil
-}
-
-func (this *Delete) SetExtraPrivs(ep *auth.Privileges) {
-	this.extraPrivs = ep
 }
 
 /*

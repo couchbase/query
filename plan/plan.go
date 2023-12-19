@@ -17,7 +17,9 @@ import (
 	"math"
 
 	"github.com/couchbase/query/algebra"
+	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/value"
 )
@@ -27,6 +29,7 @@ const REPREPARE_CHECK uint64 = math.MaxUint64
 type QueryPlan struct {
 	op         Operator
 	subqueries map[*algebra.Select]Operator
+	extraPrivs *auth.Privileges
 }
 
 func NewQueryPlan(op Operator) *QueryPlan {
@@ -61,6 +64,18 @@ func (this *QueryPlan) Subqueries() map[*algebra.Select]Operator {
 
 func (this *QueryPlan) Verify(prepared *Prepared) bool {
 	return this.op.verify(prepared)
+}
+
+func (this *QueryPlan) SetExtraPrivs(privs *auth.Privileges) {
+	this.extraPrivs = privs
+}
+
+func (this *QueryPlan) Authorize(creds *auth.Credentials) errors.Error {
+	if this.extraPrivs == nil || len(this.extraPrivs.List) == 0 {
+		return nil
+	}
+	ds := datastore.GetDatastore()
+	return ds.Authorize(this.extraPrivs, creds)
 }
 
 type Operators []Operator

@@ -37,7 +37,9 @@ import (
 
 const SYSTEM_NAMESPACE = "#system"
 const SYSTEM_NAMESPACE_NAME = "system"
+const DEPLOYMENT_MODEL_DEFAULT = "default"
 const DEPLOYMENT_MODEL_SERVERLESS = "serverless"
+const DEPLOYMENT_MODEL_PROVISIONED = "provisioned"
 
 // Datastore represents a cluster or single-node server.
 type Datastore interface {
@@ -769,11 +771,11 @@ type Group struct {
 
 var NO_STRINGS = make([]string, 0)
 
-// In serverless mode ,check if the bucket passed to the function is accessible to the user
-// If the bucket is not accessible, return generic "Access Denied" error
-// If the user is an Admin, then skip this check since Admin has access to all buckets
-// If the namespace is "#system" the generic error message is not to be returned - since system namespace is documented, the existing error messages are allowed for tenant users
-func CheckBucketAccess(credentials *auth.Credentials, e errors.Error, path []string, privs *auth.Privileges) errors.Error {
+// Generates a generic Authorization failure error with code E_ACCESS_DENIED in serverless environments for non-admin users
+// Checks if the user has access to the bucket in the path
+// Returns E_ACCESS_DENIED if the user does not have access to the bucket
+// If the target path is a system keyspace - do not return the generic error. As the system keyspaces are documented.
+func CheckBucketAccess(credentials *auth.Credentials, e errors.Error, path []string) errors.Error {
 
 	if tenant.IsServerless() && !IsAdmin(credentials) {
 
@@ -786,19 +788,8 @@ func CheckBucketAccess(credentials *auth.Credentials, e errors.Error, path []str
 		}
 
 		namespace := path[0]
-		if namespace == SYSTEM_NAMESPACE {
+		if namespace == SYSTEM_NAMESPACE || namespace == SYSTEM_NAMESPACE_NAME {
 			return nil
-		}
-
-		// if the query is to create a global inline/ external function, the generic error message isnt to be returned
-		if privs != nil {
-			if len(privs.List) == 1 {
-				priv := privs.List[0].Priv
-
-				if priv == auth.PRIV_QUERY_MANAGE_FUNCTIONS || priv == auth.PRIV_QUERY_MANAGE_FUNCTIONS_EXTERNAL {
-					return nil
-				}
-			}
 		}
 
 		// the buckets the user has access to
@@ -815,27 +806,6 @@ func CheckBucketAccess(credentials *auth.Credentials, e errors.Error, path []str
 		}
 
 		return errors.NewCbAccessDeniedError(bucket)
-	}
-
-	return nil
-}
-
-// In serverless, if the user does not have permissions on a bucket then a generic error message must be displayed
-// instead of the specific error message associated with E_DATASTORE_INSUFFICIENT_CREDENTIALS for security reasons
-func HandleDsAuthError(err errors.Error, privs *auth.Privileges, creds *auth.Credentials) errors.Error {
-	if err != nil {
-		if err.Code() == errors.E_DATASTORE_INSUFFICIENT_CREDENTIALS {
-			cause, _ := err.Cause().(map[string]interface{})
-			path, _ := cause["path"].([]string)
-
-			err1 := CheckBucketAccess(creds, err, path, privs)
-
-			if err1 != nil {
-				err = err1
-			}
-		}
-
-		return err
 	}
 
 	return nil
