@@ -224,6 +224,11 @@ func (this *annotatedValue) updateSelfReferences(orig *annotatedValue) {
 	this.flags |= _HAS_SELF_REF
 }
 
+func (this *annotatedValue) UnsetField(field string) error {
+	this.cachedSize = 0
+	return this.Value.UnsetField(field)
+}
+
 func (this *annotatedValue) SetField(field string, val interface{}) error {
 	var err error
 	if val == this {
@@ -241,6 +246,7 @@ func (this *annotatedValue) SetField(field string, val interface{}) error {
 			}
 		}
 	}
+	this.cachedSize = 0
 	return err
 }
 
