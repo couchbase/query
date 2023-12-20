@@ -21,7 +21,6 @@ import (
 	"github.com/couchbase/eventing-ee/evaluator/defs"
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/auth"
-	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/functions"
 	"github.com/couchbase/query/logging"
@@ -70,7 +69,7 @@ var tenantsLock sync.RWMutex
 
 // TODO TENANT cleanup tenant runners
 
-func Init(router router.Router, jsevaluatorPath string, deploymentModel string) {
+func Init(router router.Router, jsevaluatorPath string) {
 	functions.FunctionsNewLanguage(functions.JAVASCRIPT, &javascript{})
 
 	// TODO for serverless the global engine is there to service couchbase provided global libraries
@@ -86,8 +85,8 @@ func Init(router router.Router, jsevaluatorPath string, deploymentModel string) 
 		ScopeManagePermission:  "cluster.collection[%s].n1ql.udf_external!manage",
 
 		// Restrictions on JavaScript code in the function body
-		JsRestrictionsEnabled: deploymentModel == datastore.DEPLOYMENT_MODEL_SERVERLESS ||
-			deploymentModel == datastore.DEPLOYMENT_MODEL_PROVISIONED,
+		// should be enabled in all currently supported cluster deployment models
+		JsRestrictionsEnabled:   true,
 		ProcessIsolationEnabled: true, // tenant.IsServerless(),
 	}
 

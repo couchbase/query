@@ -26,7 +26,7 @@ import (
 )
 
 // jsevaluatorPath: path where jsevaluator binary is located
-func Init(router router.Router, threads int, jsevaluatorPath string, deploymentModel string) {
+func Init(router router.Router, threads int, jsevaluatorPath string) {
 	functionsBridge.NewFunctionName = newGlobalFunction
 	functionsBridge.NewInlineBody = inline.NewInlineBody
 	functionsBridge.NewGolangBody = golang.NewGolangBody
@@ -36,7 +36,7 @@ func Init(router router.Router, threads int, jsevaluatorPath string, deploymentM
 	systemStorage.Init()
 	golang.Init()
 	inline.Init()
-	javascript.Init(router, jsevaluatorPath, deploymentModel)
+	javascript.Init(router, jsevaluatorPath)
 }
 
 func newGlobalFunction(elem []string, namespace string, queryContext string) (functions.FunctionName, errors.Error) {
