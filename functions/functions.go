@@ -261,12 +261,13 @@ func AddFunction(name FunctionName, body FunctionBody, replace bool) errors.Erro
 			} else if replace {
 				e := ce.(*FunctionEntry)
 				if e.tag < function.tag || (function.tag < 0 && e.tag > 0) {
+
+					// empty any existing N1QL managed javascript function cache entry
+					e.FunctionBody.Unload(e.FunctionName)
+
 					return util.REPLACE
 				}
 			}
-
-			// empty any existing N1QL managed javascript function cache entry
-			(ce.(*FunctionEntry)).FunctionBody.Unload((ce.(*FunctionEntry)).FunctionName)
 
 			// this should never be happening, but if somebody pushed it in the cache
 			// in spite of us actually saving it, the cache can't be trusted!
