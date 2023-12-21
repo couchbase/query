@@ -10,18 +10,19 @@ package inferencer
 
 import (
 	"fmt"
+	"os"
+	"runtime/pprof"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/logging"
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
-
-	"os"
-	"runtime/pprof"
 )
 
 //
@@ -52,10 +53,10 @@ func DescribeKeyspace(context datastore.QueryContext, conn *datastore.ValueConne
 	var err errors.Error
 
 	if desc_debug {
-		fmt.Printf("Inferring keyspace...")
+		logging.Debugf("Inferring keyspace...", context)
 		f, err := os.Create("profile")
 		if err != nil {
-			fmt.Printf("Error creating profile: %s\n", err)
+			logging.Debugf("Error creating profile: %s", err, context)
 		}
 		pprof.StartCPUProfile(f)
 		defer pprof.StopCPUProfile()
@@ -86,7 +87,7 @@ func DescribeKeyspace(context datastore.QueryContext, conn *datastore.ValueConne
 		}
 
 		if desc_debug {
-			fmt.Printf("  got document, collection size: %d\n", len(collection))
+			logging.Debugf("got document, collection size: %d", len(collection), context)
 		}
 
 		// make a schema out of the JSON document
@@ -99,20 +100,22 @@ func DescribeKeyspace(context datastore.QueryContext, conn *datastore.ValueConne
 		// have we exceeded our timeout time?
 		if int32(time.Now().Sub(start)/time.Second) > options.InferTimeout {
 			if desc_debug {
-				fmt.Printf("  exceeded infer_timeout of %d seconds, finishing document inferencing\n", options.InferTimeout)
+				logging.Debugf("exceeded infer_timeout of %d seconds, finishing document inferencing", options.InferTimeout,
+					context)
 			}
 			err = errors.NewInferTimeout(options.InferTimeout)
 			break
 		}
 
 		if desc_debug {
-			fmt.Printf("Collection with %d schemas has size: %d\n", collection.Size(), collection.GetCollectionByteSize())
+			logging.Debugf("Collection with %d schemas has size: %d", collection.Size(), collection.GetCollectionByteSize(),
+				context)
 		}
 
 		// have we exceeded our max schema size?
 		if int32(collection.GetCollectionByteSize()/1000000) > options.MaxSchemaMB {
 			if desc_debug {
-				fmt.Printf("  exceeded max schema size of %d MB, finishing document inferencing\n", options.MaxSchemaMB)
+				logging.Debugf("exceeded max schema size of %d MB, finishing document inferencing", options.MaxSchemaMB, context)
 			}
 			err = errors.NewInferSizeLimit(options.MaxSchemaMB)
 			break
@@ -121,10 +124,10 @@ func DescribeKeyspace(context datastore.QueryContext, conn *datastore.ValueConne
 	}
 
 	if desc_debug {
-		fmt.Printf("Done with first pass\n")
+		logging.Debugf("Done with first pass", context)
 		for _, schemaArray := range collection {
 			for _, schema := range schemaArray {
-				fmt.Printf("Got schema: \n%v\n", schema.StringIndentNoValues(4))
+				logging.Debugf("Got schema: %v", schema.StringIndentNoValues(4), context)
 			}
 		}
 	}
@@ -140,9 +143,9 @@ func DescribeKeyspace(context datastore.QueryContext, conn *datastore.ValueConne
 	flavors := collection.GetFlavorsFromCollection(options.SimilarityMetric, options.NumSampleValues, options.DictionaryThreshold)
 
 	if desc_debug {
-		fmt.Printf("Done with second pass\n")
+		logging.Debugf("Done with second pass", context)
 		for _, flavor := range flavors {
-			fmt.Printf("Got flavor: \n%v\n", flavor.String())
+			logging.Debugf("Got flavor: %v", flavor.String(), context)
 		}
 	}
 
@@ -273,6 +276,30 @@ func (di *DefaultInferencer) InferKeyspace(context datastore.QueryContext, ks da
 	if docCount == 0 {
 		conn.Error(errors.NewInferNoDocuments())
 		return
+	}
+
+	if options.Flags&NO_RANDOM_SCAN == 0 {
+		// if sequential scans have been disabled, force exclusion of random scans
+		if c, ok := context.(interface{ HasFeature(uint64) bool }); ok {
+			if c.HasFeature(util.N1QL_SEQ_SCAN) { // if the feature bit is set this returns true and it means they're disabled
+				options.Flags |= NO_RANDOM_SCAN
+				logging.Debugf("Random scan excluded: feature controls", context)
+			}
+		}
+		if options.Flags&NO_RANDOM_SCAN == 0 {
+			// check if we have permission to run a random scan on this keyspace
+			pp := auth.PrivilegePair{
+				Target: ks.QualifiedName(),
+				Priv:   auth.PRIV_QUERY_SEQ_SCAN,
+			}
+			privs := auth.NewPrivileges()
+			privs.AddPair(pp)
+			ds := datastore.GetDatastore()
+			if ds.Authorize(privs, context.Credentials()) != nil {
+				options.Flags |= NO_RANDOM_SCAN
+				logging.Debugf("Random scan excluded: no privs", context)
+			}
+		}
 	}
 
 	retriever, err := MakeUnifiedDocumentRetriever("infer_"+context.RequestId(), context, ks, options.SampleSize, options.Flags)
