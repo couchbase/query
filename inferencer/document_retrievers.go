@@ -24,6 +24,7 @@ import (
 	"github.com/couchbase/query/plannerbase"
 	"github.com/couchbase/query/primitives/couchbase"
 	"github.com/couchbase/query/tenant"
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
@@ -216,9 +217,9 @@ func (udr *UnifiedDocumentRetriever) Reset() {
 	udr.cacheActive = udr.isFlagOn(CACHE_KEYS)
 	logging.Debuga(func() string {
 		if udr.cache == nil {
-			return fmt.Sprintf("reset without cache (active:%v)", udr.cacheActive)
+			return fmt.Sprintf("%s reset without cache (active:%v)", udr.name, udr.cacheActive)
 		} else {
-			return fmt.Sprintf("reset with cache (active:%v) of %v keys", udr.cacheActive, len(udr.cache))
+			return fmt.Sprintf("%s reset with cache (active:%v) of %v keys", udr.name, udr.cacheActive, len(udr.cache))
 		}
 	})
 }
@@ -234,12 +235,12 @@ func (udr *UnifiedDocumentRetriever) isFlagOff(what Flag) bool {
 // safety net to ensure we don't leak index connections or random scans
 func udrFinalizer(udr *UnifiedDocumentRetriever) {
 	if udr.iconn != nil {
-		logging.Warnf("Finalizer closing index connection.")
+		logging.Warnf("%s Finalizer closing index connection.", udr.name)
 		udr.iconn.Dispose()
 		udr.iconn = nil
 	}
 	if udr.rs != nil && udr.rs_scan != nil {
-		logging.Warnf("Finalizer closing random scan.")
+		logging.Warnf("%s Finalizer closing random scan.", udr.name)
 		udr.rs.StopKeyScan(udr.rs_scan)
 		udr.rs_scan = nil
 		udr.rs = nil
@@ -271,6 +272,16 @@ func MakeUnifiedDocumentRetriever(name string, context datastore.QueryContext, k
 	*UnifiedDocumentRetriever, errors.Error) {
 
 	var errs []errors.Error
+
+	if flags&NO_RANDOM_SCAN == 0 {
+		// if sequential scans have been disabled, force exclusion of random scans
+		if c, ok := context.(interface{ HasFeature(uint64) bool }); ok {
+			if c.HasFeature(util.N1QL_SEQ_SCAN) { // if the feature bit is set this returns true and it means they're disabled
+				flags |= NO_RANDOM_SCAN
+				logging.Debugf("Random scan excluded: feature controls", context)
+			}
+		}
+	}
 
 	udr := new(UnifiedDocumentRetriever)
 	runtime.SetFinalizer(udr, udrFinalizer)
@@ -351,7 +362,7 @@ func MakeUnifiedDocumentRetriever(name string, context datastore.QueryContext, k
 			errs = append(errs, errors.NewInferNoRandomScanProvider(ks.Name()))
 		}
 	} else {
-		logging.Debugf("flags exclude random scan")
+		logging.Debugf("flags exclude random scan", context)
 	}
 
 	if udr.isFlagOff(NO_RANDOM_ENTRY) {
