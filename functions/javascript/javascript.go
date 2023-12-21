@@ -18,7 +18,6 @@ import (
 	"sync/atomic"
 
 	"github.com/couchbase/eventing-ee/evaluator/defs"
-	"github.com/couchbase/eventing-ee/evaluator/n1ql_client"
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/functions"
@@ -61,20 +60,36 @@ func Init(mux *mux.Router, t int) {
 	} else if t > _MAX_SERVICERS {
 		t = _MAX_SERVICERS
 	}
-	engine := n1ql_client.SingleInstance
-	config := make(map[defs.Config]interface{})
-	config[defs.Threads] = t
-	config[defs.FeatureBitmask] = uint32(8)
-	config[defs.IsIpV6] = util.IPv6
-	config[defs.GlobalManagePermission] = "cluster.n1ql.udf_external!manage"
-	config[defs.ScopeManagePermission] = "cluster.collection[%s].n1ql.udf_external!manage"
-	config[defs.SysLogLevel] = 4
-	config[defs.SysLogCallback] = func(level, msg string, ctx interface{}) {
-		logging.Infof("jsevaluator: %s", msg)
-	}
-	threads = int32(t)
+	engine := defs.SingleInstance
 
-	err := engine.Configure(config)
+	globalCfg := defs.GlobalConfig{
+		GlobalManagePermission:  "cluster.n1ql.udf_external!manage",
+		ScopeManagePermission:   "cluster.collection[%s].n1ql.udf_external!manage",
+		JsRestrictionsEnabled:   true,
+		ProcessIsolationEnabled: true,
+	}
+
+	configErr := defs.ConfigureGlobalConfig(globalCfg)
+	if (configErr != defs.Error{}) {
+		logging.Infof("Global config error: %v", configErr)
+		return
+	}
+
+	engConfig := defs.StaticEngineConfig{
+		WorkerCount:    t,
+		FeatureBitmask: uint32(8),
+		IsIpV6:         util.IPv6,
+		SysLogCallback: func(level, ts string, msg string, ctx interface{}) {
+			logging.Infof("jsevaluator: %s", msg)
+		},
+	}
+
+	dynConfig := defs.DynamicEngineConfig{
+		LogLevel: 4,
+	}
+
+	threads = int32(t)
+	err := engine.Configure(engConfig, dynConfig)
 	if err.Err == nil {
 		if mux != nil {
 			handle := engine.UIHandler()
@@ -127,7 +142,11 @@ func (this *javascript) Execute(name functions.FunctionName, body functions.Func
 	if timeout == 0 || timeout > _MAX_TIMEOUT {
 		timeout = _MAX_TIMEOUT
 	}
-	opts := map[defs.Option]interface{}{defs.SideEffects: (modifiers & functions.READONLY) == 0, defs.Timeout: timeout}
+
+	opts := defs.Options{
+		SideEffects: (modifiers & functions.READONLY) == 0,
+		Timeout:     uint32(timeout),
+	}
 	runners := atomic.AddInt32(&threadCount, 1)
 	defer atomic.AddInt32(&threadCount, -1)
 	levels := context.IncRecursionCount(1)
