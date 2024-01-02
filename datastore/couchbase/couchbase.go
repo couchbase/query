@@ -442,10 +442,10 @@ func (s *store) LoadAllBuckets(f func(datastore.ExtendedBucket)) {
 	for _, n := range s.namespaceCache {
 		n.refresh()
 		for k, _ := range n.cbNamespace.BucketMap {
-			b, _ := n.KeyspaceByName(k)
-			eb, _ := b.(datastore.ExtendedBucket)
-			if eb != nil {
-				f(eb)
+			if b, err := n.KeyspaceByName(k); err == nil && b != nil {
+				if eb, ok := b.(datastore.ExtendedBucket); ok && eb != nil {
+					f(eb)
+				}
 			}
 		}
 	}

@@ -212,7 +212,12 @@ func (b *Bucket) RunBucketUpdater2(streamingFn StreamingFn, notify NotifyFn) boo
 		go func() {
 			id := atomic.AddInt32(&updaterId, 1) & 0xffff
 			name := b.GetName()
-			msgPrefix := fmt.Sprintf("[%p:%.4s:%s:%04x] Updater:", b, name+"____", b.GetAbbreviatedUUID(), id)
+			if len(name) > 8 {
+				name = name[0:4] + name[len(name)-4:]
+			} else {
+				name = name + "________"
+			}
+			msgPrefix := fmt.Sprintf("[%p:%.8s:%s:%04x] Updater:", b, name, b.GetAbbreviatedUUID(), id)
 			err := b.UpdateBucket2(msgPrefix, streamingFn)
 			if err != nil {
 				if notify != nil {
