@@ -1148,6 +1148,9 @@ func (b *Bucket) Refresh() error {
 	return b.refresh(true)
 }
 
+const _REFRESH_RETRIES = 5
+const _REFRESH_RETRY_INTERVAL = 100 * time.Millisecond
+
 func (b *Bucket) refresh(preserveConnections bool) error {
 	b.RLock()
 	pool := b.pool
@@ -1164,12 +1167,27 @@ func (b *Bucket) refresh(preserveConnections bool) error {
 		}
 	}
 
-	tmpb := &Bucket{}
-	err = pool.client.parseURLResponse(uri, tmpb)
-	if err == nil && len(tmpb.VBSMJson.VBucketMap) == 0 {
-		err = fmt.Errorf("Invalid URL (%v) response: empty vBucketMap", uri)
-	} else if err == nil && len(tmpb.VBSMJson.ServerList) == 0 {
-		err = fmt.Errorf("Invalid URL (%v) response: empty serverList", uri)
+	var tmpb *Bucket
+	retryInterval := time.Duration(0)
+	for i := _REFRESH_RETRIES; i > 0; i-- {
+		retry := false
+		tmpb = &Bucket{}
+		err = pool.client.parseURLResponse(uri, tmpb)
+		if err == nil && len(tmpb.VBSMJson.VBucketMap) == 0 {
+			err = fmt.Errorf("Invalid URL (%v) response: empty vBucketMap", uri)
+			retry = true
+		} else if err == nil && len(tmpb.VBSMJson.ServerList) == 0 {
+			err = fmt.Errorf("Invalid URL (%v) response: empty serverList", uri)
+			retry = true
+		}
+		if err == nil || !retry {
+			break
+		}
+		logging.Infof("Failed to refresh bucket %v (%s): %v (remaining retries: %v)", b.Name, b.getAbbreviatedUUID(), err, i-1)
+		if i > 0 {
+			retryInterval += _REFRESH_RETRY_INTERVAL
+			time.Sleep(retryInterval)
+		}
 	}
 	if err != nil {
 		if strings.Contains(err.Error(), "HTTP error 404") || strings.Contains(err.Error(), "Object Not Found") {

@@ -46,20 +46,20 @@ func messageForDeniedPrivilege(pair auth.PrivilegePair) (string, string, string)
 		privilege = "run queries accessing user information"
 		base_role = "admin"
 	case auth.PRIV_QUERY_SELECT:
-		privilege = fmt.Sprintf("%s on %s", base_role, keyspace)
 		base_role = "query_select"
+		privilege = fmt.Sprintf("%s on %s", base_role, keyspace)
 		role = fmt.Sprintf("%s on %s", base_role, keyspace)
 	case auth.PRIV_QUERY_UPDATE:
-		privilege = fmt.Sprintf("%s on %s", base_role, keyspace)
 		base_role = "query_update"
+		privilege = fmt.Sprintf("%s on %s", base_role, keyspace)
 		role = fmt.Sprintf("%s on %s", base_role, keyspace)
 	case auth.PRIV_QUERY_INSERT:
-		privilege = fmt.Sprintf("%s on %s", base_role, keyspace)
 		base_role = "query_insert"
+		privilege = fmt.Sprintf("%s on %s", base_role, keyspace)
 		role = fmt.Sprintf("%s on %s", base_role, keyspace)
 	case auth.PRIV_QUERY_DELETE:
-		privilege = fmt.Sprintf("%s on %s", base_role, keyspace)
 		base_role = "query_delete"
+		privilege = fmt.Sprintf("%s on %s", base_role, keyspace)
 		role = fmt.Sprintf("%s on %s", base_role, keyspace)
 	case auth.PRIV_QUERY_BUILD_INDEX, auth.PRIV_QUERY_CREATE_INDEX,
 		auth.PRIV_QUERY_ALTER_INDEX, auth.PRIV_QUERY_DROP_INDEX, auth.PRIV_QUERY_LIST_INDEX:
