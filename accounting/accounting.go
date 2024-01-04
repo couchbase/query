@@ -52,6 +52,7 @@ type Counter interface {
 type Gauge interface {
 	Metric
 	Value() int64 // The value of the Gauge
+	Update(int64) // Set the gauge's value
 }
 
 // Meter is a rate of change metric (queries per second, garbage collections per minute)
@@ -211,6 +212,10 @@ const (
 	UNKNOWN
 )
 
+const (
+	USED_MEMORY_HWM_ID CounterId = iota
+)
+
 // Define names for all the metrics we are interested in:
 const (
 	_REQUESTS  = "requests"
@@ -270,6 +275,9 @@ const (
 	_BULK_GET_ERRORS           = "bulk_get_errors"
 	_CAS_MISMATCH_ERRORS       = "cas_mismatch_errors"
 	_TEMP_SPACE_ERRORS         = "temp_space_errors"
+
+	// gauges
+	USED_MEMORY_HWM = "used_memory_hwm"
 )
 
 // please keep in sync with the mnemonics
@@ -329,6 +337,10 @@ var metricNames = []string{
 	_TEMP_SPACE_ERRORS,
 }
 
+var gaugeNames = []string{
+	USED_MEMORY_HWM,
+}
+
 const (
 	_DURATION_0MS    = 0 * time.Millisecond
 	_DURATION_250MS  = 250 * time.Millisecond
@@ -380,6 +392,7 @@ var errMetricsMap = map[errors.ErrorCode]CounterId{
 var acctstore AccountingStore
 var counters []Counter = make([]Counter, len(metricNames))
 var requestTimer Timer
+var gauges []Gauge = make([]Gauge, len(gaugeNames))
 
 // Use the given AccountingStore to create counters for all the metrics we are interested in:
 func RegisterMetrics(acctStore AccountingStore) {
@@ -390,16 +403,24 @@ func RegisterMetrics(acctStore AccountingStore) {
 	}
 
 	requestTimer = ms.Timer(REQUEST_TIMER)
+
+	for id, name := range gaugeNames {
+		gauges[id] = ms.Gauge(name)
+	}
 }
 
 // Record request metrics
 func RecordMetrics(request_time, service_time, transaction_time time.Duration, result_count int, result_size int, error_count int,
-	warn_count int, errs errors.Errors, stmt string, prepared bool, cancelled bool, index_scans int, primary_scans int, index_scans_gsi int,
-	primary_scans_gsi int, index_scans_fts int, primary_scans_fts int, index_scans_seq int, primary_scans_seq int,
-	scanConsistency string) {
+	warn_count int, errs errors.Errors, stmt string, prepared bool, cancelled bool, index_scans int, primary_scans int,
+	index_scans_gsi int, primary_scans_gsi int, index_scans_fts int, primary_scans_fts int, index_scans_seq int,
+	primary_scans_seq int, scanConsistency string, used_memory uint64) {
 
 	if acctstore == nil {
 		return
+	}
+
+	if uint64(gauges[USED_MEMORY_HWM_ID].Value()) < used_memory {
+		gauges[USED_MEMORY_HWM_ID].Update(int64(used_memory))
 	}
 
 	counters[REQUESTS].Inc(1)

@@ -90,6 +90,7 @@ func (CounterStub) Clear() {} // Nop
 // GaugeStub is a stub implementation of Gauge
 type GaugeStub struct{}
 
+func (GaugeStub) Update(int64) {}
 func (GaugeStub) Value() int64 { return 0 }
 
 // MeterStub is a stub implementation of Meter

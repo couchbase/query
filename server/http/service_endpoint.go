@@ -604,7 +604,7 @@ func (this *HttpEndpoint) doStats(request *httpRequest, srvr *server.Server) {
 		int(request.PhaseOperator(execution.PRIMARY_SCAN_FTS)),
 		int(request.PhaseOperator(execution.INDEX_SCAN_SEQ)),
 		int(request.PhaseOperator(execution.PRIMARY_SCAN_SEQ)),
-		string(request.ScanConsistency()))
+		string(request.ScanConsistency()), request.UsedMemory())
 
 	request.CompleteRequest(request_time, service_time, transaction_time, request.resultCount,
 		request.resultSize, request.GetErrorCount(), request.req, srvr,

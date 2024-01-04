@@ -92,6 +92,7 @@ func (g *gometricsAccountingStore) Vitals(style util.DurationStyle) (map[string]
 	runtime.ReadMemStats(&mem)
 	request_timer := g.registry.Timer(accounting.REQUEST_TIMER)
 	prepared := g.registry.Counter(accounting.PREPAREDS)
+	used_memory_hwm := g.registry.Gauge(accounting.USED_MEMORY_HWM)
 
 	now := time.Now()
 	newUtime, newStime := util.CpuTimes()
@@ -133,6 +134,7 @@ func (g *gometricsAccountingStore) Vitals(style util.DurationStyle) (map[string]
 		"cpu.sys.percent":           util.RoundPlaces(sPerc, 4),
 		"request.completed.count":   totCount,
 		"request.active.count":      int64(actCount),
+		"request.quota.used.hwm":    used_memory_hwm.Value(),
 		"request.per.sec.1min":      util.RoundPlaces(request_timer.Rate1(), 4),
 		"request.per.sec.5min":      util.RoundPlaces(request_timer.Rate5(), 4),
 		"request.per.sec.15min":     util.RoundPlaces(request_timer.Rate15(), 4),

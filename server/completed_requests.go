@@ -136,6 +136,7 @@ var qualTypeMap = map[string]func(interface{}) (qualifier, errors.Error){
 	"statement":    newStatement,
 	"plan":         newPlanElement,
 	"seqscan_keys": newSeqScanKeys,
+	"used_memory":  newUsedMemory,
 }
 
 // init completed requests
@@ -1590,4 +1591,53 @@ func (this *seqScanKeys) evaluate(request *BaseRequest, req *http.Request) bool 
 		return true
 	}
 	return false
+}
+
+// 15- used memory
+type usedMemory struct {
+	size uint64
+}
+
+func newUsedMemory(s interface{}) (qualifier, errors.Error) {
+	switch s := s.(type) {
+	case int:
+		if s >= 0 {
+			return &usedMemory{size: uint64(s)}, nil
+		}
+	case int64:
+		if s >= 0 {
+			return &usedMemory{size: uint64(s)}, nil
+		}
+	}
+	return nil, errors.NewCompletedQualifierInvalidArgument("used_memory", s)
+}
+
+func (this *usedMemory) name() string {
+	return "used_memory"
+}
+
+func (this *usedMemory) unique() bool {
+	return true
+}
+
+func (this *usedMemory) condition() interface{} {
+	return this.size
+}
+
+func (this *usedMemory) isCondition(c interface{}) bool {
+	switch c := c.(type) {
+	case int:
+		return uint64(c) == this.size
+	case int64:
+		return uint64(c) == this.size
+	}
+	return false
+}
+
+func (this *usedMemory) checkCondition(c interface{}) errors.Error {
+	return nil
+}
+
+func (this *usedMemory) evaluate(request *BaseRequest, req *http.Request) bool {
+	return request.UsedMemory() >= this.size
 }
