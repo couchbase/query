@@ -297,6 +297,7 @@ type Bucket struct {
 	commonSufix   string
 	ah            AuthHandler // auth handler
 	closed        bool
+	deleted       bool
 
 	updater io.ReadCloser
 }
@@ -305,6 +306,10 @@ type Bucket struct {
 const (
 	RANGE_SCAN = "rangeScan"
 )
+
+func (b *Bucket) SetDeleted() {
+	b.deleted = true
+}
 
 func (b *Bucket) DurabilityPossible() bool {
 	return b.Replicas == 0 || (b.Replicas > 0 && len(b.NodesJSON) > 1)
@@ -1460,6 +1465,10 @@ func (p *Pool) GetBucket(name string) (*Bucket, error) {
 	p.RUnlock()
 	if !ok {
 		return nil, &BucketNotFoundError{bucket: name}
+	}
+	if rv.deleted {
+		// "HTTP error 404" is so upper levels group this with other equivalent errors
+		return nil, fmt.Errorf("HTTP error 404 - bucket being deleted")
 	}
 	err := rv.Refresh()
 	if err != nil {
