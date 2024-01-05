@@ -2358,16 +2358,15 @@ func doFetch(k string, fullName string, v *gomemcached.MCResponse, context datas
 		flags = binary.BigEndian.Uint32(v.Extras[0:4])
 	}
 
-	meta := val.NewMeta()
-	meta["keyspace"] = fullName
-	meta["cas"] = v.Cas
+	val.SetMetaField(value.META_KEYSPACE, fullName)
+	val.SetMetaField(value.META_CAS, v.Cas)
 	if val.Type() == value.BINARY {
-		meta["type"] = "base64"
+		val.SetMetaField(value.META_TYPE, "base64")
 	} else {
-		meta["type"] = "json"
+		val.SetMetaField(value.META_TYPE, "json")
 	}
-	meta["flags"] = flags
-	meta["expiration"] = expiration
+	val.SetMetaField(value.META_FLAGS, flags)
+	val.SetMetaField(value.META_EXPIRATION, expiration)
 	val.SetId(k)
 
 	if tenant.IsServerless() {
@@ -2477,14 +2476,13 @@ func getSubDocXattrFetchResults(k string, fullName string, v *gomemcached.MCResp
 		delete(xVal, "$document.exptime")
 	}
 
-	meta := val.NewMeta()
-	meta["keyspace"] = fullName
-	meta["cas"] = v.Cas
-	meta["type"] = meta_type
-	meta["flags"] = flags
-	meta["expiration"] = exptime
+	val.SetMetaField(value.META_KEYSPACE, fullName)
+	val.SetMetaField(value.META_CAS, v.Cas)
+	val.SetMetaField(value.META_TYPE, meta_type)
+	val.SetMetaField(value.META_FLAGS, flags)
+	val.SetMetaField(value.META_EXPIRATION, exptime)
 	if len(xVal) > 0 {
-		meta["xattrs"] = xVal
+		val.SetMetaField(value.META_XATTRS, xVal)
 	}
 	val.SetId(k)
 
@@ -2513,12 +2511,11 @@ func getSubDocFetchResults(k string, fullName string, v *gomemcached.MCResponse,
 		}
 	}
 
-	meta := val.NewMeta()
-	meta["keyspace"] = fullName
-	meta["cas"] = v.Cas
-	meta["type"] = "json"
-	meta["flags"] = uint32(0)
-	meta["expiration"] = uint32(0)
+	val.SetMetaField(value.META_KEYSPACE, fullName)
+	val.SetMetaField(value.META_CAS, v.Cas)
+	val.SetMetaField(value.META_TYPE, "json")
+	val.SetMetaField(value.META_FLAGS, uint32(0))
+	val.SetMetaField(value.META_EXPIRATION, uint32(0))
 	val.SetId(k)
 
 	if tenant.IsServerless() {
@@ -2572,32 +2569,35 @@ func isEExistError(err error) bool {
 
 func getMeta(key string, val value.Value, must bool) (cas uint64, flags uint32, txnMeta interface{}, err error) {
 
-	var meta map[string]interface{}
 	var av value.AnnotatedValue
 	var ok bool
+	var mv interface{}
 
-	if av, ok = val.(value.AnnotatedValue); ok && av != nil {
-		meta = av.GetMeta()
+	if av, ok = val.(value.AnnotatedValue); !ok || av == nil {
+		if must {
+			return 0, 0, nil, fmt.Errorf("Invalid value type (%T) or nil value for key %v", val, key)
+		}
+		return cas, flags, txnMeta, nil
 	}
 
-	if _, ok = meta["cas"]; ok {
-		cas, ok = meta["cas"].(uint64)
+	if mv = av.GetMetaField(value.META_CAS); mv != nil {
+		cas, _ = mv.(uint64)
 	}
 
-	if must && !ok {
+	if must && mv == nil {
 		return 0, 0, nil, fmt.Errorf("Not valid Cas value for key %v", key)
 	}
 
-	if _, ok = meta["flags"]; ok {
-		flags, ok = meta["flags"].(uint32)
+	if mv = av.GetMetaField(value.META_FLAGS); mv != nil {
+		flags, _ = mv.(uint32)
 	}
 
-	if must && !ok {
+	if must && mv == nil {
 		return 0, 0, nil, fmt.Errorf("Not valid Flags value for key %v", key)
 	}
 
-	if _, ok = meta["txnMeta"]; ok {
-		txnMeta, _ = meta["txnMeta"].(interface{})
+	if mv = av.GetMetaField(value.META_TXNMETA); mv != nil {
+		txnMeta, _ = mv.(interface{})
 	}
 
 	return cas, flags, txnMeta, nil
@@ -2606,7 +2606,7 @@ func getMeta(key string, val value.Value, must bool) (cas uint64, flags uint32, 
 
 func SetMetaCas(val value.Value, cas uint64) bool {
 	if av, ok := val.(value.AnnotatedValue); ok && av != nil {
-		av.NewMeta()["cas"] = cas
+		av.SetMetaField(value.META_CAS, cas)
 		return true
 	}
 	return false

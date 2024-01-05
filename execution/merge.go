@@ -455,7 +455,7 @@ func (this *Merge) processAction(item value.AnnotatedValue, context *Context,
 						} else if context.TxContext() != nil {
 							// if inside transaction, save META information
 							// (tav represents target, set above)
-							item1 = this.newEmptyDocumentWithKeyMeta(key, tav.GetMeta(), nil, context)
+							item1 = this.newEmptyDocumentWithKeyMeta(key, tav, nil, context)
 							item1.SetField(alias, item1)
 							// Reset the META data on the original value to
 							// avoid "sharing"

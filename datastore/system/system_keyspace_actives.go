@@ -119,13 +119,13 @@ func (b *activeRequestsKeyspace) Fetch(keys []string, keysMap map[string]value.A
 					}
 					remoteValue := value.NewAnnotatedValue(doc)
 					remoteValue.SetField("node", node)
-					meta := remoteValue.NewMeta()
-					meta["keyspace"] = b.fullName
+					remoteValue.SetMetaField(value.META_KEYSPACE, b.fullName)
 					if ok {
-						meta["plan"] = value.ApplyDurationStyleToValue(context.DurationStyle(), value.NewValue(t))
+						remoteValue.SetMetaField(value.META_PLAN,
+							value.ApplyDurationStyleToValue(context.DurationStyle(), value.NewValue(t)))
 					}
 					if ook {
-						meta["optimizerEstimates"] = value.NewValue(o)
+						remoteValue.SetMetaField(value.META_OPT_ESTIMATES, value.NewValue(o))
 					}
 					remoteValue.SetId(key)
 					keysMap[key] = remoteValue
@@ -258,16 +258,16 @@ func (b *activeRequestsKeyspace) Fetch(keys []string, keysMap map[string]value.A
 					}
 				}
 
-				meta := item.NewMeta()
-				meta["keyspace"] = b.fullName
+				item.SetMetaField(value.META_KEYSPACE, b.fullName)
 
 				if !request.Sensitive() {
 					timings := request.GetTimings()
 					if timings != nil {
-						meta["plan"] = value.ApplyDurationStyleToValue(context.DurationStyle(), value.NewMarshalledValue(timings))
+						item.SetMetaField(value.META_PLAN, value.ApplyDurationStyleToValue(context.DurationStyle(),
+							value.NewMarshalledValue(timings)))
 						optEstimates := request.Output().FmtOptimizerEstimates(timings)
 						if optEstimates != nil {
-							meta["optimizerEstimates"] = value.NewValue(optEstimates)
+							item.SetMetaField(value.META_OPT_ESTIMATES, value.NewMarshalledValue(optEstimates))
 						}
 					}
 				}

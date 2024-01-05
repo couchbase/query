@@ -381,7 +381,7 @@ func (this *SearchMeta) getSmeta(keyspace *expression.Identifier, item value.Val
 
 	switch val := val.(type) {
 	case value.AnnotatedValue:
-		return value.NewValue(val.GetAttachment("smeta")), nil
+		return value.NewValue(val.GetAttachment(value.ATT_SMETA)), nil
 	default:
 		return value.NULL_VALUE, nil
 	}

@@ -214,6 +214,9 @@ func (this *ExpressionScan) RunOnce(context *Context, parent value.Value) {
 
 func (this *ExpressionScan) Done() {
 	this.baseDone()
+	for i := range this.results {
+		this.results[i] = nil
+	}
 	this.results = nil
 }
 

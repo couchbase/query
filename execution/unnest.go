@@ -103,7 +103,7 @@ func (this *Unnest) processItem(item value.AnnotatedValue, context *Context) boo
 		} else {
 			actv.SetValue(act)
 		}
-		actv.SetAttachment("unnest_position", idx)
+		actv.SetAttachment(value.ATT_UNNEST_POSITION, idx)
 
 		idx++
 		nextAct, isValidIndex := ev.Index(idx)
@@ -261,7 +261,7 @@ func (this *Unnest) processTimeSeriesItem(item value.AnnotatedValue, context *Co
 		} else {
 			actv.SetValue(act)
 		}
-		actv.SetAttachment("unnest_position", idx-1)
+		actv.SetAttachment(value.ATT_UNNEST_POSITION, idx-1)
 
 		nextAct, idx, isValidIndex = this.timeSeriesData.GetNextValue(idx)
 

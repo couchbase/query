@@ -257,7 +257,7 @@ func (b *indexKeyspace) fetchOne(key string, keysMap map[string]value.AnnotatedV
 			"state":        string(state),
 		})
 
-		doc.NewMeta()["keyspace"] = b.fullName
+		doc.SetMetaField(value.META_KEYSPACE, b.fullName)
 		doc.SetId(key)
 
 		partition := indexPartitionToString(index)
@@ -344,7 +344,7 @@ func (b *indexKeyspace) fetchOneCollection(key string, keysMap map[string]value.
 			"state":        string(state),
 		})
 
-		doc.NewMeta()["keyspace"] = b.fullName
+		doc.SetMetaField(value.META_KEYSPACE, b.fullName)
 		doc.SetId(key)
 
 		partition := indexPartitionToString(index)

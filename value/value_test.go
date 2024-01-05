@@ -164,11 +164,11 @@ func TestAttachments(t *testing.T) {
 	val := NewAnnotatedValue([]byte(`{"name":"marty","address":{"street":"sutton oaks"}}`))
 	val.SetId("doc1")
 
-	meta := val.GetMeta()
-	if meta == nil {
+	mv := val.GetMetaField(META_ID)
+	if mv == nil {
 		t.Errorf("metadata missing")
 	} else {
-		id := meta["id"].(string)
+		id := mv.(string)
 		if id != "doc1" {
 			t.Errorf("Expected id doc1, got %v", id)
 		}
@@ -850,7 +850,6 @@ func TestSpillingMap(t *testing.T) {
 	av := NewAnnotatedValue(s)
 	av.SetId("doc1")
 	av.SetField("selfref", av)
-	av.GetMeta() // ensures the meta map is created since we call GetMeta() when spilling (which'll create it if not done here)
 	themap.LoadOrStore(av.GetId().(string), av)
 	check[av.GetId().(string)] = re.ReplaceAllString(fmt.Sprintf("%#v", av), "(<address>)") // erase pointer address values
 	spillThreshold += av.Size()
@@ -861,7 +860,6 @@ func TestSpillingMap(t *testing.T) {
 	av = NewAnnotatedValue(s)
 	av.SetId("doc2")
 	av.SetField("selfref", av)
-	av.GetMeta()
 	themap.LoadOrStore(av.GetId().(string), av)
 	check[av.GetId().(string)] = re.ReplaceAllString(fmt.Sprintf("%#v", av), "(<address>)") // erase pointer address values
 	spillThreshold += av.Size()
@@ -872,7 +870,6 @@ func TestSpillingMap(t *testing.T) {
 	av = NewAnnotatedValue(s)
 	av.SetId("doc3")
 	av.SetField("selfref", av)
-	av.GetMeta()
 	themap.LoadOrStore(av.GetId().(string), av)
 	check[av.GetId().(string)] = re.ReplaceAllString(fmt.Sprintf("%#v", av), "(<address>)") // erase pointer address values
 
@@ -882,7 +879,6 @@ func TestSpillingMap(t *testing.T) {
 	av = NewAnnotatedValue(s)
 	av.SetId("doc4")
 	av.SetField("selfref", av)
-	av.GetMeta()
 	themap.LoadOrStore(av.GetId().(string), av)
 	check[av.GetId().(string)] = re.ReplaceAllString(fmt.Sprintf("%#v", av), "(<address>)") // erase pointer address values
 

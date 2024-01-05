@@ -144,7 +144,7 @@ func (this *IndexFtsSearch) RunOnce(context *Context, parent value.Value) {
 								}
 							}
 						}
-						av.SetAttachment("smeta", map[string]interface{}{outName: entry.MetaData})
+						av.SetAttachment(value.ATT_SMETA, map[string]interface{}{outName: entry.MetaData})
 						av.SetBit(this.bit)
 						ok = this.sendItem(av)
 						docs++

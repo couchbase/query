@@ -10,6 +10,7 @@ package value
 
 import (
 	"encoding/binary"
+	"fmt"
 	"io"
 	"reflect"
 	"unsafe"
@@ -17,6 +18,66 @@ import (
 	atomic "github.com/couchbase/go-couchbase/platform"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/util"
+)
+
+const (
+	META_ID int = 1 << iota
+	META_CAS
+	META_KEYSPACE
+	META_TYPE
+	META_FLAGS
+	META_EXPIRATION
+	META_XATTRS
+	META_TXNMETA
+	META_TXPLANS
+	META_SUBQUERY_PLANS
+	META_PLAN
+	META_OPT_ESTIMATES
+	META_DISTRIBUTIONS
+	META_BYSEQNO
+	META_REVSEQNO
+	META_LOCKTIME
+	META_NRU
+)
+
+var metaNames = map[int]string{
+	META_ID:             "id",
+	META_CAS:            "cas",
+	META_KEYSPACE:       "keyspace",
+	META_TYPE:           "type",
+	META_FLAGS:          "flags",
+	META_EXPIRATION:     "expiration",
+	META_XATTRS:         "xattrs",
+	META_TXNMETA:        "txnMeta",
+	META_TXPLANS:        "txPlans",
+	META_SUBQUERY_PLANS: "subqueryPlans",
+	META_PLAN:           "plan",
+	META_OPT_ESTIMATES:  "optimizerEstimates",
+	META_DISTRIBUTIONS:  "distributions",
+	META_BYSEQNO:        "byseqno",
+	META_REVSEQNO:       "revseqno",
+	META_LOCKTIME:       "locktime",
+	META_NRU:            "nru",
+}
+
+const (
+	ATT_UNNEST_POSITION int16 = iota
+	ATT_LIST
+	ATT_STARTPOS
+	ATT_SET
+	ATT_SUM
+	ATT_SMETA
+	ATT_AGGREGATES
+	ATT_COUNT
+	ATT_KEY
+	ATT_VALUE
+	ATT_OPTIONS
+	ATT_CLONE
+	ATT_WINDOW_ATTACHMENT
+	ATT_SEQUENCES
+	ATT_PROJECTION
+	ATT_CUSTOM_INDEX
+	ATT_PARENT
 )
 
 const _DEFAULT_ATTACHMENT_SIZE = 6
@@ -80,16 +141,17 @@ type AnnotatedValue interface {
 	GetValue() Value
 	GetParent() Value
 	SetParent(Value) Value
-	Attachments() map[string]interface{}
-	GetAttachment(key string) interface{}
-	SetAttachment(key string, val interface{})
-	RemoveAttachment(key string)
+	Attachments() map[int16]interface{}
+	GetAttachment(key int16) interface{}
+	SetAttachment(key int16, val interface{})
+	RemoveAttachment(key int16)
 	ResetAttachments()
 	GetId() interface{}
 	SetId(id interface{})
-	NewMeta() map[string]interface{}
-	GetMeta() map[string]interface{}
-	SetMeta(meta map[string]interface{})
+	GetMetaMap() map[string]interface{} // only intended for returning metadata in the Meta() expression function
+	CopyMeta(AnnotatedValue)
+	GetMetaField(id int) interface{}
+	SetMetaField(id int, v interface{})
 	ResetMeta()
 	Covers() Value
 	GetCover(key string) Value
@@ -137,10 +199,304 @@ const (
 	_HAS_SELF_REF
 )
 
+type metaData struct {
+	id            interface{}
+	xAttrs        interface{}
+	txnMeta       interface{}
+	txPlans       interface{}
+	sqPlans       interface{}
+	plan          interface{}
+	optEst        interface{}
+	distributions interface{}
+	keyspace      string
+	typ           string
+	cas           uint64
+	bySeqNo       uint64
+	revSeqNo      uint64
+	valid         int // bits for valid (set) fields
+	flags         uint32
+	expiration    uint32
+	lockTime      uint32
+	nru           byte
+}
+
+func (this *metaData) size() uint64 {
+	sz := uint64(unsafe.Sizeof(*this))
+	if this.valid&META_ID != 0 {
+		sz += AnySize(this.id)
+	}
+	if this.valid&META_KEYSPACE != 0 {
+		sz += AnySize(this.keyspace)
+	}
+	if this.valid&META_TYPE != 0 {
+		sz += AnySize(this.typ)
+	}
+	if this.valid&META_XATTRS != 0 {
+		sz += AnySize(this.xAttrs)
+	}
+	if this.valid&META_TXNMETA != 0 {
+		sz += AnySize(this.txnMeta)
+	}
+	if this.valid&META_TXPLANS != 0 {
+		sz += AnySize(this.txPlans)
+	}
+	if this.valid&META_SUBQUERY_PLANS != 0 {
+		sz += AnySize(this.sqPlans)
+	}
+	if this.valid&META_PLAN != 0 {
+		sz += AnySize(this.plan)
+	}
+	if this.valid&META_OPT_ESTIMATES != 0 {
+		sz += AnySize(this.optEst)
+	}
+	if this.valid&META_DISTRIBUTIONS != 0 {
+		sz += AnySize(this.distributions)
+	}
+	return sz
+}
+
+func (this *metaData) writeSpill(w io.Writer, buf []byte) error {
+	err := writeSpillValue(w, this.valid, buf)
+	if err != nil {
+		return err
+	}
+	if this.valid&META_ID != 0 {
+		err = writeSpillValue(w, this.id, buf)
+		if err != nil {
+			return err
+		}
+	}
+	if this.valid&META_CAS != 0 {
+		err = writeSpillValue(w, this.cas, buf)
+		if err != nil {
+			return err
+		}
+	}
+	if this.valid&META_KEYSPACE != 0 {
+		err = writeSpillValue(w, this.keyspace, buf)
+		if err != nil {
+			return err
+		}
+	}
+	if this.valid&META_TYPE != 0 {
+		err = writeSpillValue(w, this.typ, buf)
+		if err != nil {
+			return err
+		}
+	}
+	if this.valid&META_FLAGS != 0 {
+		err = writeSpillValue(w, this.flags, buf)
+		if err != nil {
+			return err
+		}
+	}
+	if this.valid&META_EXPIRATION != 0 {
+		err = writeSpillValue(w, this.expiration, buf)
+		if err != nil {
+			return err
+		}
+	}
+	if this.valid&META_XATTRS != 0 {
+		err = writeSpillValue(w, this.xAttrs, buf)
+		if err != nil {
+			return err
+		}
+	}
+	if this.valid&META_TXNMETA != 0 {
+		err = writeSpillValue(w, this.txnMeta, buf)
+		if err != nil {
+			return err
+		}
+	}
+	if this.valid&META_TXPLANS != 0 {
+		err = writeSpillValue(w, this.txPlans, buf)
+		if err != nil {
+			return err
+		}
+	}
+	if this.valid&META_SUBQUERY_PLANS != 0 {
+		err = writeSpillValue(w, this.sqPlans, buf)
+		if err != nil {
+			return err
+		}
+	}
+	if this.valid&META_PLAN != 0 {
+		err = writeSpillValue(w, this.plan, buf)
+		if err != nil {
+			return err
+		}
+	}
+	if this.valid&META_OPT_ESTIMATES != 0 {
+		err = writeSpillValue(w, this.optEst, buf)
+		if err != nil {
+			return err
+		}
+	}
+	if this.valid&META_DISTRIBUTIONS != 0 {
+		err = writeSpillValue(w, this.distributions, buf)
+		if err != nil {
+			return err
+		}
+	}
+	if this.valid&META_BYSEQNO != 0 {
+		err = writeSpillValue(w, this.bySeqNo, buf)
+		if err != nil {
+			return err
+		}
+	}
+	if this.valid&META_REVSEQNO != 0 {
+		err = writeSpillValue(w, this.revSeqNo, buf)
+		if err != nil {
+			return err
+		}
+	}
+	if this.valid&META_LOCKTIME != 0 {
+		err = writeSpillValue(w, this.lockTime, buf)
+		if err != nil {
+			return err
+		}
+	}
+	if this.valid&META_NRU != 0 {
+		err = writeSpillValue(w, this.nru, buf)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (this *metaData) readSpill(r io.Reader, buf []byte) error {
+	v, err := readSpillValue(r, buf)
+	if err != nil {
+		return err
+	}
+	this.valid = v.(int)
+	if this.valid&META_ID != 0 {
+		v, err = readSpillValue(r, buf)
+		if err != nil {
+			return err
+		}
+		this.id = v
+	}
+	if this.valid&META_CAS != 0 {
+		v, err = readSpillValue(r, buf)
+		if err != nil {
+			return err
+		}
+		this.cas = v.(uint64)
+	}
+	if this.valid&META_KEYSPACE != 0 {
+		v, err = readSpillValue(r, buf)
+		if err != nil {
+			return err
+		}
+		this.keyspace = v.(string)
+	}
+	if this.valid&META_TYPE != 0 {
+		v, err = readSpillValue(r, buf)
+		if err != nil {
+			return err
+		}
+		this.typ = v.(string)
+	}
+	if this.valid&META_FLAGS != 0 {
+		v, err = readSpillValue(r, buf)
+		if err != nil {
+			return err
+		}
+		this.flags = v.(uint32)
+	}
+	if this.valid&META_EXPIRATION != 0 {
+		v, err = readSpillValue(r, buf)
+		if err != nil {
+			return err
+		}
+		this.expiration = v.(uint32)
+	}
+	if this.valid&META_XATTRS != 0 {
+		v, err = readSpillValue(r, buf)
+		if err != nil {
+			return err
+		}
+		this.xAttrs = v
+	}
+	if this.valid&META_TXNMETA != 0 {
+		v, err = readSpillValue(r, buf)
+		if err != nil {
+			return err
+		}
+		this.txnMeta = v
+	}
+	if this.valid&META_TXPLANS != 0 {
+		v, err = readSpillValue(r, buf)
+		if err != nil {
+			return err
+		}
+		this.txPlans = v
+	}
+	if this.valid&META_SUBQUERY_PLANS != 0 {
+		v, err = readSpillValue(r, buf)
+		if err != nil {
+			return err
+		}
+		this.sqPlans = v
+	}
+	if this.valid&META_PLAN != 0 {
+		v, err = readSpillValue(r, buf)
+		if err != nil {
+			return err
+		}
+		this.plan = v
+	}
+	if this.valid&META_OPT_ESTIMATES != 0 {
+		v, err = readSpillValue(r, buf)
+		if err != nil {
+			return err
+		}
+		this.optEst = v
+	}
+	if this.valid&META_DISTRIBUTIONS != 0 {
+		v, err = readSpillValue(r, buf)
+		if err != nil {
+			return err
+		}
+		this.distributions = v
+	}
+	if this.valid&META_BYSEQNO != 0 {
+		v, err = readSpillValue(r, buf)
+		if err != nil {
+			return err
+		}
+		this.bySeqNo = v.(uint64)
+	}
+	if this.valid&META_REVSEQNO != 0 {
+		v, err = readSpillValue(r, buf)
+		if err != nil {
+			return err
+		}
+		this.revSeqNo = v.(uint64)
+	}
+	if this.valid&META_LOCKTIME != 0 {
+		v, err = readSpillValue(r, buf)
+		if err != nil {
+			return err
+		}
+		this.lockTime = v.(uint32)
+	}
+	if this.valid&META_NRU != 0 {
+		v, err = readSpillValue(r, buf)
+		if err != nil {
+			return err
+		}
+		this.nru = v.(byte)
+	}
+	return nil
+}
+
 type annotatedValue struct {
 	Value
-	attachments     map[string]interface{}
-	meta            map[string]interface{}
+	attachments     map[int16]interface{}
+	meta            *metaData
 	covers          Value
 	original        Value
 	annotatedOrig   AnnotatedValue
@@ -150,6 +506,26 @@ type annotatedValue struct {
 	cachedSize      uint32 // do not spill
 	bit             uint8
 	flags           uint8
+}
+
+const _DEF_META_SIZE = 17
+
+func (this *annotatedValue) GetMetaMap() map[string]interface{} {
+	if this.meta == nil {
+		return nil
+	}
+	out := make(map[string]interface{}, _DEF_META_SIZE)
+	for id := 1; id <= META_NRU; id <<= 1 {
+		if this.meta.valid&id == id {
+			v := this.GetMetaField(id)
+			if name, ok := metaNames[id]; ok {
+				out[name] = v
+			} else {
+				out[fmt.Sprintf("unknown:%v", id)] = v
+			}
+		}
+	}
+	return out
 }
 
 func (this *annotatedValue) sharedAnnotations() bool {
@@ -182,6 +558,12 @@ func (this *annotatedValue) WriteJSON(order []string, w io.Writer, prefix, inden
 
 func (this *annotatedValue) WriteXML(order []string, w io.Writer, prefix, indent string, fast bool) error {
 	return this.Value.WriteXML(order, w, prefix, indent, fast)
+}
+
+func (this *annotatedValue) CopyMeta(from AnnotatedValue) {
+	if fav, ok := from.(*annotatedValue); ok && fav != nil {
+		copyMeta(fav.meta, this)
+	}
 }
 
 func (this *annotatedValue) Copy() Value {
@@ -263,7 +645,7 @@ func (this *annotatedValue) Size() uint64 {
 		sz += AnySize(this.attachments)
 	}
 	if this.meta != nil {
-		sz += AnySize(this.meta)
+		sz += this.meta.size()
 	}
 	if this.projectionOrder != nil {
 		sz += AnySize(this.projectionOrder)
@@ -306,50 +688,120 @@ func (this *annotatedValue) ResetAttachments() {
 	this.attachments = nil
 }
 
-func (this *annotatedValue) Attachments() map[string]interface{} {
+func (this *annotatedValue) Attachments() map[int16]interface{} {
 	return this.attachments
 }
 
-func (this *annotatedValue) GetAttachment(key string) interface{} {
+func (this *annotatedValue) GetAttachment(key int16) interface{} {
 	if this.attachments != nil {
 		return this.attachments[key]
 	}
 	return nil
 }
 
-func (this *annotatedValue) SetAttachment(key string, val interface{}) {
+func (this *annotatedValue) SetAttachment(key int16, val interface{}) {
 	if this.attachments == nil {
-		this.attachments = make(map[string]interface{}, _DEFAULT_ATTACHMENT_SIZE)
+		this.attachments = make(map[int16]interface{}, _DEFAULT_ATTACHMENT_SIZE)
 	}
 	this.attachments[key] = val
 }
 
-func (this *annotatedValue) RemoveAttachment(key string) {
+func (this *annotatedValue) RemoveAttachment(key int16) {
 	if this.attachments != nil {
 		delete(this.attachments, key)
 	}
 }
 
-func (this *annotatedValue) NewMeta() map[string]interface{} {
+func (this *annotatedValue) GetMetaField(id int) interface{} {
 	if this.meta == nil {
-		this.meta = make(map[string]interface{}, _DEFAULT_ATTACHMENT_SIZE)
+		return nil
 	}
-	return this.meta
+	if this.meta.valid&id != id {
+		return nil
+	}
+	switch id {
+	case META_ID:
+		return this.meta.id
+	case META_CAS:
+		return this.meta.cas
+	case META_KEYSPACE:
+		return this.meta.keyspace
+	case META_TYPE:
+		return this.meta.typ
+	case META_FLAGS:
+		return this.meta.flags
+	case META_EXPIRATION:
+		return this.meta.expiration
+	case META_XATTRS:
+		return this.meta.xAttrs
+	case META_TXNMETA:
+		return this.meta.txnMeta
+	case META_TXPLANS:
+		return this.meta.txPlans
+	case META_SUBQUERY_PLANS:
+		return this.meta.sqPlans
+	case META_PLAN:
+		return this.meta.plan
+	case META_OPT_ESTIMATES:
+		return this.meta.optEst
+	case META_DISTRIBUTIONS:
+		return this.meta.distributions
+	case META_BYSEQNO:
+		return this.meta.bySeqNo
+	case META_REVSEQNO:
+		return this.meta.revSeqNo
+	case META_LOCKTIME:
+		return this.meta.lockTime
+	case META_NRU:
+		return this.meta.nru
+	default:
+		return nil
+	}
 }
 
-func (this *annotatedValue) GetMeta() map[string]interface{} {
+func (this *annotatedValue) SetMetaField(id int, v interface{}) {
 	if this.meta == nil {
-		this.meta = make(map[string]interface{}, _DEFAULT_ATTACHMENT_SIZE)
+		this.meta = &metaData{}
 	}
-	return this.meta
-}
-
-func (this *annotatedValue) SetMeta(meta map[string]interface{}) {
-	k := this.GetId()
-	this.meta = meta
-	if k != nil {
-		this.SetId(k)
+	switch id {
+	case META_ID:
+		this.meta.id = v
+	case META_CAS:
+		this.meta.cas, _ = v.(uint64)
+	case META_KEYSPACE:
+		this.meta.keyspace, _ = v.(string)
+	case META_TYPE:
+		this.meta.typ, _ = v.(string)
+	case META_FLAGS:
+		this.meta.flags, _ = v.(uint32)
+	case META_EXPIRATION:
+		this.meta.expiration, _ = v.(uint32)
+	case META_XATTRS:
+		this.meta.xAttrs = v
+	case META_TXNMETA:
+		this.meta.txnMeta = v
+	case META_TXPLANS:
+		this.meta.txPlans = v
+	case META_SUBQUERY_PLANS:
+		this.meta.sqPlans = v
+	case META_PLAN:
+		this.meta.plan = v
+	case META_OPT_ESTIMATES:
+		this.meta.optEst = v
+	case META_DISTRIBUTIONS:
+		this.meta.distributions = v
+	case META_BYSEQNO:
+		this.meta.bySeqNo, _ = v.(uint64)
+	case META_REVSEQNO:
+		this.meta.revSeqNo, _ = v.(uint64)
+	case META_LOCKTIME:
+		this.meta.lockTime, _ = v.(uint32)
+	case META_NRU:
+		this.meta.nru, _ = v.(byte)
+	default:
+		return
 	}
+	this.meta.valid |= id
 }
 
 func (this *annotatedValue) ResetMeta() {
@@ -428,8 +880,8 @@ func (this *annotatedValue) CopyAnnotations(sv AnnotatedValue) {
 		return
 	}
 
-	amp := reflect.ValueOf(av.meta).Pointer()
-	tmp := reflect.ValueOf(this.meta).Pointer()
+	amp := av.meta
+	tmp := this.meta
 	aap := reflect.ValueOf(av.attachments).Pointer()
 	tap := reflect.ValueOf(this.attachments).Pointer()
 
@@ -451,9 +903,7 @@ func (this *annotatedValue) CopyAnnotations(sv AnnotatedValue) {
 		for k := range this.attachments {
 			delete(this.attachments, k)
 		}
-		for k := range this.meta {
-			delete(this.meta, k)
-		}
+		this.meta = nil
 	}
 	copyAttachments(av.attachments, this)
 	copyMeta(av.meta, this)
@@ -475,28 +925,27 @@ func (this *annotatedValue) ShareAnnotations(sv AnnotatedValue) {
 	this.flags |= _SHARED_ANNOTATIONS
 }
 
-func copyAttachments(source map[string]interface{}, dest *annotatedValue) {
+func copyAttachments(source map[int16]interface{}, dest *annotatedValue) {
 	if len(source) == 0 {
 		return
 	}
 	if dest.attachments == nil {
-		dest.attachments = make(map[string]interface{}, len(source))
+		dest.attachments = make(map[int16]interface{}, len(source))
 	}
 	for k := range source {
 		dest.attachments[k] = source[k]
 	}
 }
 
-func copyMeta(source map[string]interface{}, dest *annotatedValue) {
-	if len(source) == 0 {
+func copyMeta(source *metaData, dest *annotatedValue) {
+	if source == nil {
+		dest.meta = nil
 		return
 	}
 	if dest.meta == nil {
-		dest.meta = make(map[string]interface{}, len(source))
+		dest.meta = &metaData{}
 	}
-	for k := range source {
-		dest.meta[k] = source[k]
-	}
+	*dest.meta = *source
 }
 
 func (this *annotatedValue) Bit() uint8 {
@@ -520,14 +969,11 @@ func (this *annotatedValue) SetSelf(s bool) {
 }
 
 func (this *annotatedValue) GetId() interface{} {
-	if this.meta == nil {
-		return nil
-	}
-	return this.meta["id"]
+	return this.GetMetaField(META_ID)
 }
 
 func (this *annotatedValue) SetId(id interface{}) {
-	this.NewMeta()["id"] = id
+	this.SetMetaField(META_ID, id)
 }
 
 func (this *annotatedValue) SetProjection(proj Value, order []string) {
@@ -560,12 +1006,12 @@ func (this *annotatedValue) Original() AnnotatedValue {
 		av.Value = val.Value
 		av.covers = this.covers
 		av.attachments = this.attachments
-		av.meta = this.meta
+		copyMeta(this.meta, av)
 	case *ScopeValue:
 		av.Value = val
 		av.covers = this.covers
 		av.attachments = this.attachments
-		av.meta = this.meta
+		copyMeta(this.meta, av)
 	case Value:
 		av.Value = val
 	default:
@@ -670,9 +1116,7 @@ func (this *annotatedValue) recycle(lvl int32) {
 		for k := range this.attachments {
 			delete(this.attachments, k)
 		}
-		for k := range this.meta {
-			delete(this.meta, k)
-		}
+		this.meta = nil
 	}
 	this.flags = 0
 	this.projectionOrder = nil
@@ -727,12 +1171,27 @@ func (this *annotatedValue) WriteSpill(w io.Writer, buf []byte) error {
 		return err
 	}
 
-	err = writeSpillValue(w, this.meta, buf)
+	buf = buf[:1]
+	if this.meta == nil {
+		buf[0] = 0
+	} else {
+		buf[0] = 1
+	}
+	_, err = w.Write(buf)
 	if err != nil {
 		if free {
 			_SPILL_POOL.Put(buf)
 		}
 		return err
+	}
+	if buf[0] != 0 {
+		err = this.meta.writeSpill(w, buf)
+		if err != nil {
+			if free {
+				_SPILL_POOL.Put(buf)
+			}
+			return err
+		}
 	}
 
 	buf = buf[:4]
@@ -825,22 +1284,28 @@ func (this *annotatedValue) ReadSpill(r io.Reader, buf []byte) error {
 		return err
 	}
 	if v != nil {
-		this.attachments = v.(map[string]interface{})
+		this.attachments = v.(map[int16]interface{})
 	} else {
 		this.attachments = nil
 	}
 
-	v, err = readSpillValue(r, buf)
+	buf = buf[:1]
+	_, err = r.Read(buf)
 	if err != nil {
 		if free {
 			_SPILL_POOL.Put(buf)
 		}
 		return err
 	}
-	if v != nil {
-		this.meta = v.(map[string]interface{})
-	} else {
-		this.meta = nil
+	if buf[0] != 0 {
+		this.meta = &metaData{}
+		err = this.meta.readSpill(r, buf)
+		if err != nil {
+			if free {
+				_SPILL_POOL.Put(buf)
+			}
+			return err
+		}
 	}
 
 	buf = buf[:4]
@@ -987,19 +1452,19 @@ func (this *annotatedValueSelfReference) SetParent(p Value) Value {
 	return (*annotatedValue)(this).SetParent(p)
 }
 
-func (this *annotatedValueSelfReference) Attachments() map[string]interface{} {
+func (this *annotatedValueSelfReference) Attachments() map[int16]interface{} {
 	return (*annotatedValue)(this).Attachments()
 }
 
-func (this *annotatedValueSelfReference) GetAttachment(key string) interface{} {
+func (this *annotatedValueSelfReference) GetAttachment(key int16) interface{} {
 	return (*annotatedValue)(this).GetAttachment(key)
 }
 
-func (this *annotatedValueSelfReference) SetAttachment(key string, val interface{}) {
+func (this *annotatedValueSelfReference) SetAttachment(key int16, val interface{}) {
 	(*annotatedValue)(this).SetAttachment(key, val)
 }
 
-func (this *annotatedValueSelfReference) RemoveAttachment(key string) {
+func (this *annotatedValueSelfReference) RemoveAttachment(key int16) {
 	(*annotatedValue)(this).RemoveAttachment(key)
 }
 
@@ -1015,16 +1480,16 @@ func (this *annotatedValueSelfReference) SetId(id interface{}) {
 	(*annotatedValue)(this).SetId(id)
 }
 
-func (this *annotatedValueSelfReference) NewMeta() map[string]interface{} {
-	return (*annotatedValue)(this).NewMeta()
+func (this *annotatedValueSelfReference) GetMetaMap() map[string]interface{} {
+	return (*annotatedValue)(this).GetMetaMap()
 }
 
-func (this *annotatedValueSelfReference) GetMeta() map[string]interface{} {
-	return (*annotatedValue)(this).GetMeta()
+func (this *annotatedValueSelfReference) GetMetaField(id int) interface{} {
+	return (*annotatedValue)(this).GetMetaField(id)
 }
 
-func (this *annotatedValueSelfReference) SetMeta(meta map[string]interface{}) {
-	(*annotatedValue)(this).SetMeta(meta)
+func (this *annotatedValueSelfReference) SetMetaField(id int, v interface{}) {
+	(*annotatedValue)(this).SetMetaField(id, v)
 }
 
 func (this *annotatedValueSelfReference) ResetMeta() {
@@ -1108,6 +1573,10 @@ func (this *annotatedValueSelfReference) WriteSpill(w io.Writer, buf []byte) err
 
 func (this *annotatedValueSelfReference) ReadSpill(r io.Reader, buf []byte) error {
 	return nil
+}
+
+func (this *annotatedValueSelfReference) CopyMeta(from AnnotatedValue) {
+	(*annotatedValue)(this).CopyMeta(from)
 }
 
 func (this *annotatedValueSelfReference) Copy() Value {

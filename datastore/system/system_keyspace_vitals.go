@@ -77,7 +77,7 @@ func (b *vitalsKeyspace) Fetch(keys []string, keysMap map[string]value.Annotated
 			}
 			remoteValue := value.NewAnnotatedValue(doc)
 			remoteValue.SetField("node", key)
-			remoteValue.NewMeta()["keyspace"] = b.fullName
+			remoteValue.SetMetaField(value.META_KEYSPACE, b.fullName)
 			remoteValue.SetId(key)
 			keysMap[key] = remoteValue
 		} else {
@@ -85,7 +85,7 @@ func (b *vitalsKeyspace) Fetch(keys []string, keysMap map[string]value.Annotated
 				func(doc map[string]interface{}) {
 					remoteValue := value.NewAnnotatedValue(doc)
 					remoteValue.SetField("node", key)
-					remoteValue.NewMeta()["keyspace"] = b.fullName
+					remoteValue.SetMetaField(value.META_KEYSPACE, b.fullName)
 					remoteValue.SetId(key)
 					keysMap[key] = remoteValue
 				},

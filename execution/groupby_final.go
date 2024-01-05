@@ -87,7 +87,7 @@ func (this *FinalGroup) processItem(item value.AnnotatedValue, context *Context)
 	}
 
 	// Compute final aggregates
-	aggregates := gv.GetAttachment("aggregates")
+	aggregates := gv.GetAttachment(value.ATT_AGGREGATES)
 	switch aggregates := aggregates.(type) {
 	case map[string]value.Value:
 		for _, agg := range this.plan.Aggregates() {
@@ -125,7 +125,7 @@ func (this *FinalGroup) afterItems(context *Context) {
 	if len(this.plan.Keys()) == 0 && groups_len == 0 {
 		av := value.NewAnnotatedValue(nil)
 		aggregates := make(map[string]value.Value, len(this.plan.Aggregates()))
-		av.SetAttachment("aggregates", aggregates)
+		av.SetAttachment(value.ATT_AGGREGATES, aggregates)
 		for _, agg := range this.plan.Aggregates() {
 			aggregates[agg.String()], _ = agg.Default(nil, &this.operatorCtx)
 		}

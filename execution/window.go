@@ -205,6 +205,7 @@ func (this *WindowAggregate) setupTerms(parent value.Value) bool {
 	// Setup the PBY terms info
 	wTerm := largestOrderAgg.WindowTerm()
 	this.pby = wTerm.PartitionBy()
+
 	if len(this.pby) > 0 {
 		this.pbyTerms = make([]string, len(this.pby))
 		this.pbyValues = make(value.Values, len(this.pby))
@@ -223,6 +224,7 @@ func (this *WindowAggregate) setupTerms(parent value.Value) bool {
 			this.obyDesc[i] = t.Descending(parent, &this.operatorCtx)
 		}
 	}
+
 	return true
 }
 
@@ -541,14 +543,14 @@ func (this *AggregateInfo) getWindowRow(cIndex int64, item value.AnnotatedValue,
 	// get WINDOW_ATTACHMENT or setup one
 
 	var val value.Value
-	v1 := item.GetAttachment(algebra.WINDOW_ATTACHMENT)
+	v1 := item.GetAttachment(value.ATT_WINDOW_ATTACHMENT)
 	if v1 != nil {
 		val = v1.(value.Value)
 	}
 
 	if v1 == nil || val == nil {
 		val = value.NewValue(map[string]interface{}{"part": value.ONE_VALUE, "nrows": value.NewValue(op.nItems)})
-		item.SetAttachment(algebra.WINDOW_ATTACHMENT, val)
+		item.SetAttachment(value.ATT_WINDOW_ATTACHMENT, val)
 	}
 
 	if this.hasFlags(_WINDOW_ROW_NUMBER) {
@@ -890,8 +892,8 @@ func (this *AggregateInfo) windowValidateValExpr(valExpr expression.Expression,
 // evalute aggregate ORDER BY terms
 func (this *AggregateInfo) evaluateObyValues(item value.AnnotatedValue, op *WindowAggregate) error {
 	if this.wTerm.OrderBy() != nil {
-		if err := evaluateWindowByValues(item, this.wTerm.OrderBy().Expressions(), this.obyValues,
-			op.obyTerms, &op.operatorCtx); err != nil {
+		err := evaluateWindowByValues(item, this.wTerm.OrderBy().Expressions(), this.obyValues, op.obyTerms, &op.operatorCtx)
+		if err != nil {
 			return err
 		}
 	}
@@ -1088,12 +1090,12 @@ func (this *WindowAggregate) evaluatePbyValues(item value.AnnotatedValue) bool {
 // Setup item for aggregation
 func (this *WindowAggregate) beforeWindowPartition(item value.AnnotatedValue) bool {
 
-	aggregates := item.GetAttachment("aggregates")
+	aggregates := item.GetAttachment(value.ATT_AGGREGATES)
 	switch aggregates := aggregates.(type) {
 	case map[string]value.Value:
 	default:
 		aggregates = make(map[string]value.Value, len(this.plan.Aggregates()))
-		item.SetAttachment("aggregates", aggregates)
+		item.SetAttachment(value.ATT_AGGREGATES, aggregates)
 	}
 
 	return true
@@ -1183,7 +1185,7 @@ func (this *WindowAggregate) processWindowAggregates(c int64, item value.Annotat
 		}
 
 		// set final value of aggregate
-		aggregates := item.GetAttachment("aggregates").(map[string]value.Value)
+		aggregates := item.GetAttachment(value.ATT_AGGREGATES).(map[string]value.Value)
 		aggregates[aInfo.id] = aInfo.val
 	}
 

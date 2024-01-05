@@ -114,8 +114,8 @@ func (this *NthValue) Default(item value.Value, context Context) (value.Value, e
 		this.direction = 1
 	}
 	av := value.NewAnnotatedValue(value.NULL_VALUE)
-	av.SetAttachment("list", value.NewList(this.nthItem))
-	av.SetAttachment("startpos", value.ZERO_VALUE)
+	av.SetAttachment(value.ATT_LIST, value.NewList(this.nthItem))
+	av.SetAttachment(value.ATT_STARTPOS, value.ZERO_VALUE)
 	return av, err
 }
 
@@ -189,7 +189,7 @@ func (this *NthValue) IsCumulateDone(cumulative value.Value, context Context) (b
 
 	values := list.Values()
 	av := cumulative.(value.AnnotatedValue)
-	av.SetAttachment("startpos", value.NewValue(len(values)))
+	av.SetAttachment(value.ATT_STARTPOS, value.NewValue(len(values)))
 
 	return len(values) == this.nthItem, nil
 }

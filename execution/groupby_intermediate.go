@@ -27,8 +27,8 @@ type IntermediateGroup struct {
 func NewIntermediateGroup(plan *plan.IntermediateGroup, context *Context) *IntermediateGroup {
 
 	merge := func(v1 value.AnnotatedValue, v2 value.AnnotatedValue) value.AnnotatedValue {
-		a1 := v1.GetAttachment("aggregates").(map[string]value.Value)
-		a2 := v2.GetAttachment("aggregates").(map[string]value.Value)
+		a1 := v1.GetAttachment(value.ATT_AGGREGATES).(map[string]value.Value)
+		a2 := v2.GetAttachment(value.ATT_AGGREGATES).(map[string]value.Value)
 		for _, agg := range plan.Aggregates() {
 			a := agg.String()
 			v, e := agg.CumulateIntermediate(a2[a], a1[a], nil)
@@ -112,7 +112,7 @@ func (this *IntermediateGroup) processItem(item value.AnnotatedValue, context *C
 		return true
 	}
 	// Cumulate aggregates
-	part, ok := item.GetAttachment("aggregates").(map[string]value.Value)
+	part, ok := item.GetAttachment(value.ATT_AGGREGATES).(map[string]value.Value)
 	if !ok {
 		context.Fatal(errors.NewInvalidValueError(
 			fmt.Sprintf("Invalid partial aggregates %v of type %T", part, part)))
@@ -124,7 +124,7 @@ func (this *IntermediateGroup) processItem(item value.AnnotatedValue, context *C
 		context.ReleaseValueSize(item.Size())
 	}
 
-	cumulative := gv.GetAttachment("aggregates").(map[string]value.Value)
+	cumulative := gv.GetAttachment(value.ATT_AGGREGATES).(map[string]value.Value)
 	if !ok {
 		context.Fatal(errors.NewInvalidValueError(
 			fmt.Sprintf("Invalid cumulative aggregates %v of type %T", cumulative, cumulative)))

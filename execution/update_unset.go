@@ -62,7 +62,7 @@ func (this *Unset) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *Unset) processItem(item value.AnnotatedValue, context *Context) bool {
-	clone, ok := item.GetAttachment("clone").(value.AnnotatedValue)
+	clone, ok := item.GetAttachment(value.ATT_CLONE).(value.AnnotatedValue)
 	if !ok {
 		context.Error(errors.NewInvalidValueError(
 			fmt.Sprintf("Invalid UPDATE clone of type %T.", clone)))
@@ -78,7 +78,7 @@ func (this *Unset) processItem(item value.AnnotatedValue, context *Context) bool
 		}
 	}
 
-	item.SetAttachment("clone", clone)
+	item.SetAttachment(value.ATT_CLONE, clone)
 	return this.sendItem(item)
 }
 

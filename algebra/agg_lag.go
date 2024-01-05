@@ -128,7 +128,7 @@ func (this *Lag) Default(item value.Value, context Context) (value.Value, error)
 		}
 	}
 
-	av.SetAttachment("list", value.NewList(this.nthItem))
+	av.SetAttachment(value.ATT_LIST, value.NewList(this.nthItem))
 	return av, nil
 }
 

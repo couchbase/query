@@ -52,7 +52,7 @@ func setAdd(item, cumulative value.Value, numeric bool) value.AnnotatedValue {
 
 	set = value.NewSet(_OBJECT_CAP, true, numeric)
 	set.Add(item)
-	av.SetAttachment("set", set)
+	av.SetAttachment(value.ATT_SET, set)
 	return av
 }
 
@@ -87,7 +87,7 @@ func cumulateSets(part, cumulative value.Value) (value.AnnotatedValue, error) {
 		return nil, fmt.Errorf("Invalid cumulative value, not an AnnotatedValue: %v", cumulative)
 	}
 
-	av.SetAttachment("set", bigger)
+	av.SetAttachment(value.ATT_SET, bigger)
 	return av, nil
 }
 
@@ -99,7 +99,7 @@ return.
 func getSet(item value.Value) (*value.Set, error) {
 	switch item := item.(type) {
 	case value.AnnotatedValue:
-		ps := item.GetAttachment("set")
+		ps := item.GetAttachment(value.ATT_SET)
 		switch ps := ps.(type) {
 		case *value.Set:
 			return ps, nil
@@ -131,7 +131,7 @@ func listAdd(item, comulative value.Value) value.AnnotatedValue {
 	}
 	list = value.NewList(_INITIAL_LIST_SIZE)
 	list.Add(item)
-	av.SetAttachment("list", list)
+	av.SetAttachment(value.ATT_LIST, list)
 	return av
 }
 
@@ -143,7 +143,7 @@ return.
 func getList(item value.Value) (*value.List, error) {
 	switch item := item.(type) {
 	case value.AnnotatedValue:
-		ps := item.GetAttachment("list")
+		ps := item.GetAttachment(value.ATT_LIST)
 		switch ps := ps.(type) {
 		case *value.List:
 			return ps, nil
@@ -274,7 +274,7 @@ func addStddevVariance(item, cumulative value.Value, distinct bool) (value.Value
 			cv = listAdd(item, cv)
 		}
 	} else {
-		cSum = cv.GetAttachment("sum").(value.NumberValue).Float64()
+		cSum = cv.GetAttachment(value.ATT_SUM).(value.NumberValue).Float64()
 		if distinct {
 			set, e := getSet(cv)
 			if e != nil {
@@ -290,7 +290,7 @@ func addStddevVariance(item, cumulative value.Value, distinct bool) (value.Value
 	}
 
 	cSum += item.(value.NumberValue).Float64()
-	cv.SetAttachment("sum", value.NewValue(cSum))
+	cv.SetAttachment(value.ATT_SUM, value.NewValue(cSum))
 	return cv, nil
 }
 
@@ -306,7 +306,7 @@ func cumulateStddevVariance(part, cumulative value.Value, distinct bool) (value.
 	}
 
 	cv, _ := cumulative.(value.AnnotatedValue)
-	cSum := cv.GetAttachment("sum").(value.NumberValue).Float64()
+	cSum := cv.GetAttachment(value.ATT_SUM).(value.NumberValue).Float64()
 
 	if distinct {
 		pSet, e := getSet(part)
@@ -334,11 +334,11 @@ func cumulateStddevVariance(part, cumulative value.Value, distinct bool) (value.
 		if e != nil {
 			return nil, e
 		}
-		cSum += part.(value.AnnotatedValue).GetAttachment("sum").(value.NumberValue).Float64()
+		cSum += part.(value.AnnotatedValue).GetAttachment(value.ATT_SUM).(value.NumberValue).Float64()
 		cList.Union(pList)
 	}
 
-	cv.SetAttachment("sum", value.NewValue(cSum))
+	cv.SetAttachment(value.ATT_SUM, value.NewValue(cSum))
 	return cumulative, nil
 }
 
@@ -377,7 +377,7 @@ func computeVariance(cumulative value.Value, distinct, samp bool, delta float64)
 		return value.ZERO_NUMBER, nil
 	}
 
-	sum := cumulative.(value.AnnotatedValue).GetAttachment("sum").(value.NumberValue).Float64()
+	sum := cumulative.(value.AnnotatedValue).GetAttachment(value.ATT_SUM).(value.NumberValue).Float64()
 	mean := float64(sum / count)
 	var variance float64
 
@@ -395,7 +395,7 @@ Return Window attachment
 func getWindowAttachment(item value.Value, name string) (value.Value, error) {
 	switch item := item.(type) {
 	case value.AnnotatedValue:
-		ps := item.GetAttachment(WINDOW_ATTACHMENT)
+		ps := item.GetAttachment(value.ATT_WINDOW_ATTACHMENT)
 		switch ps := ps.(type) {
 		case value.Value:
 			return ps, nil
@@ -423,7 +423,7 @@ func getNthValues(aggname string, cumpart value.Value, valfunc bool) (*value.Lis
 
 	switch item := cumpart.(type) {
 	case value.AnnotatedValue:
-		ps := item.GetAttachment("startpos")
+		ps := item.GetAttachment(value.ATT_STARTPOS)
 		switch ps := ps.(type) {
 		case value.NumberValue:
 			return list, int(ps.Int64()), nil

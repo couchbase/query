@@ -184,13 +184,13 @@ func (this *SendInsert) flushBatch(context *Context) bool {
 			}
 		} else {
 			// INSERT ... VALUES
-			key, ok = av.GetAttachment("key").(value.Value)
+			key, ok = av.GetAttachment(value.ATT_KEY).(value.Value)
 			if !ok {
 				context.Error(errors.NewInsertKeyError(av.GetValue()))
 				continue
 			}
 
-			val, ok = av.GetAttachment("value").(value.Value)
+			val, ok = av.GetAttachment(value.ATT_VALUE).(value.Value)
 			if !ok {
 				context.Error(errors.NewInsertValueError(av.GetValue()))
 				continue
@@ -199,7 +199,7 @@ func (this *SendInsert) flushBatch(context *Context) bool {
 				context.ReleaseValueSize(av.Size())
 			}
 
-			options, _ = av.GetAttachment("options").(value.Value)
+			options, _ = av.GetAttachment(value.ATT_OPTIONS).(value.Value)
 		}
 
 		dpair.Name, ok = key.Actual().(string)

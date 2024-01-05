@@ -113,7 +113,7 @@ func (b *myUserInfoKeyspace) Fetch(keys []string, keysMap map[string]value.Annot
 		}
 
 		item := value.NewAnnotatedValue(val)
-		item.NewMeta()["keyspace"] = b.fullName
+		item.SetMetaField(value.META_KEYSPACE, b.fullName)
 		item.SetId(k)
 
 		keysMap[k] = item

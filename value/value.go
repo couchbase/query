@@ -512,6 +512,8 @@ Used by some Value.Size() functions to obtain the size of elements.
 */
 func AnySize(v interface{}) uint64 {
 	switch v := v.(type) {
+	case nil:
+		return _INTERFACE_SIZE
 	case Value:
 		return v.Size()
 	case string:
@@ -520,6 +522,20 @@ func AnySize(v interface{}) uint64 {
 		s := mapBaseSize(len(v))
 		for k, vv := range v {
 			s += AnySize(k)
+			s += AnySize(vv)
+		}
+		return s
+	case map[int]interface{}:
+		s := mapBaseSize(len(v))
+		for _, vv := range v {
+			s += 8
+			s += AnySize(vv)
+		}
+		return s
+	case map[byte]interface{}:
+		s := mapBaseSize(len(v))
+		for _, vv := range v {
+			s += 1
 			s += AnySize(vv)
 		}
 		return s
@@ -533,7 +549,9 @@ func AnySize(v interface{}) uint64 {
 	case []interface{}:
 		s := uint64(_INTERFACE_SIZE * cap(v))
 		for i := range v {
-			s += AnySize(v[i])
+			if v[i] != nil {
+				s += AnySize(v[i])
+			}
 		}
 		return s
 	case []Value:

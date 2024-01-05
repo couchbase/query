@@ -83,7 +83,7 @@ func (this *Fetch) PlanOp() plan.Operator {
 
 func (this *Fetch) RunOnce(context *Context, parent value.Value) {
 	if !this.plan.HasCacheResult() || !this.hasCache {
-		this.runConsumer(this, context, parent, nil)
+		this.runConsumer(this, context, parent, func() { this.releaseBatch(context) })
 	} else {
 		defer context.Recover(&this.base) // Recover from any panic
 		active := this.active()
@@ -255,7 +255,7 @@ func (this *Fetch) flushBatch(context *Context) bool {
 		av := this.batch[0]
 		if fv != nil {
 
-			fv.SetAttachment("smeta", av.GetAttachment("smeta"))
+			fv.SetAttachment(value.ATT_SMETA, av.GetAttachment(value.ATT_SMETA))
 			av.SetField(this.plan.Term().Alias(), fv)
 
 			if context.UseRequestQuota() {
@@ -322,7 +322,9 @@ func (this *Fetch) flushBatch(context *Context) bool {
 			}
 			keyCount[key]--
 
-			fv.SetAttachment("smeta", av.GetAttachment("smeta"))
+			if sm := av.GetAttachment(value.ATT_SMETA); sm != nil {
+				fv.SetAttachment(value.ATT_SMETA, sm)
+			}
 			av.SetField(this.plan.Term().Alias(), fv)
 
 			if context.UseRequestQuota() {

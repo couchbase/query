@@ -65,7 +65,7 @@ func (b *dualKeyspace) Fetch(keys []string, keysMap map[string]value.AnnotatedVa
 		}
 
 		if item != nil {
-			item.NewMeta()["keyspace"] = b.fullName
+			item.SetMetaField(value.META_KEYSPACE, b.fullName)
 			item.SetId(k)
 		}
 

@@ -147,7 +147,7 @@ func (this *Countn) ComputeFinal(cumulative value.Value, context Context) (value
 		}
 
 		av := cumulative.(value.AnnotatedValue)
-		set := av.GetAttachment("set").(*value.Set)
+		set := av.GetAttachment(value.ATT_SET).(*value.Set)
 		return value.NewValue(set.Len()), nil
 	} else {
 		return cumulative, nil

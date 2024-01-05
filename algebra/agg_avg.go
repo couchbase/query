@@ -148,7 +148,7 @@ func (this *Avg) ComputeFinal(cumulative value.Value, context Context) (value.Va
 
 	if this.Distinct() {
 		av := cumulative.(value.AnnotatedValue)
-		set := av.GetAttachment("set").(*value.Set)
+		set := av.GetAttachment(value.ATT_SET).(*value.Set)
 		count = float64(set.Len())
 
 		for _, v := range set.Values() {

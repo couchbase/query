@@ -140,17 +140,17 @@ func (ap *AgentProvider) getTxAnnotatedValue(res *gocbcore.TransactionGetResult,
 		meta_type = "base64"
 	}
 
-	meta := av.NewMeta()
-	meta["keyspace"] = fullName
-	meta["cas"] = uint64(res.Cas)
-	meta["type"] = meta_type
-	meta["flags"] = uint32(0)
-	meta["expiration"] = uint32(0)
+	av.SetMetaField(value.META_KEYSPACE, fullName)
+	av.SetMetaField(value.META_CAS, uint64(res.Cas))
+	av.SetMetaField(value.META_TYPE, meta_type)
+	av.SetMetaField(value.META_FLAGS, uint32(0))
+	av.SetMetaField(value.META_EXPIRATION, uint32(0))
 	if res.Meta != nil {
-		meta["txnMeta"], err = json.Marshal(*res.Meta)
+		b, err := json.Marshal(*res.Meta)
 		if err != nil {
 			return nil, err
 		}
+		av.SetMetaField(value.META_TXNMETA, b)
 	}
 	av.SetId(key)
 	return av, nil

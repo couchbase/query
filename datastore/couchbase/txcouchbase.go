@@ -506,14 +506,13 @@ func (ks *keyspace) txFetch(fullName, qualifiedName, scopeName, collectionName, 
 
 		for k, mv := range mvs {
 			av := value.NewAnnotatedValue(mv.Val)
-			meta := av.NewMeta()
-			meta["keyspace"] = fullName
-			meta["cas"] = mv.Cas
-			meta["type"] = "json"
-			meta["flags"] = uint32(0)
-			meta["expiration"] = mv.Expiration
+			av.SetMetaField(value.META_KEYSPACE, fullName)
+			av.SetMetaField(value.META_CAS, mv.Cas)
+			av.SetMetaField(value.META_TYPE, "json")
+			av.SetMetaField(value.META_FLAGS, uint32(0))
+			av.SetMetaField(value.META_EXPIRATION, mv.Expiration)
 			if mv.TxnMeta != nil {
-				meta["txnMeta"] = mv.TxnMeta
+				av.SetMetaField(value.META_TXNMETA, mv.TxnMeta)
 			}
 			av.SetId(k)
 			fetchMap[k] = av

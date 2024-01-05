@@ -73,8 +73,8 @@ func (this *ValueScan) RunOnce(context *Context, parent value.Value) {
 			}
 
 			av := value.NewAnnotatedValue(nil)
-			av.SetAttachment("key", key)
-			av.SetAttachment("value", val)
+			av.SetAttachment(value.ATT_KEY, key)
+			av.SetAttachment(value.ATT_VALUE, val)
 
 			if pair.Options() != nil {
 				options, err := pair.Options().Evaluate(parent, &this.operatorCtx)
@@ -82,7 +82,7 @@ func (this *ValueScan) RunOnce(context *Context, parent value.Value) {
 					context.Error(errors.NewEvaluationError(err, "OPTIONS"))
 					return
 				}
-				av.SetAttachment("options", options)
+				av.SetAttachment(value.ATT_OPTIONS, options)
 			}
 
 			if context.UseRequestQuota() {

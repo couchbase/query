@@ -263,17 +263,14 @@ func (this *PartSortOrder) remainingTermsLessThan(v1 value.AnnotatedValue, v2 va
 	var c int
 	var e error
 
-	remTerms := this.plan.Terms()[this.partialSortTermCount:]
-	for i, term := range remTerms {
-		i += this.partialSortTermCount
-		s := this.terms[i].term
-
-		ev1, e = getOriginalCachedValue(v1, term.Expression(), s, &this.operatorCtx)
+	for i := this.partialSortTermCount; i < len(this.plan.Terms()); i++ {
+		term := this.plan.Terms()[i]
+		ev1, e = getOriginalCachedValue(v1, term.Expression(), this.terms[i].term, &this.operatorCtx)
 		if e != nil {
 			return false
 		}
 
-		ev2, e = getOriginalCachedValue(v2, term.Expression(), s, &this.operatorCtx)
+		ev2, e = getOriginalCachedValue(v2, term.Expression(), this.terms[i].term, &this.operatorCtx)
 		if e != nil {
 			return false
 		}
@@ -282,6 +279,7 @@ func (this *PartSortOrder) remainingTermsLessThan(v1 value.AnnotatedValue, v2 va
 			(!this.terms[i].descending && !this.terms[i].nullsLast) ||
 			((ev1.Type() <= value.NULL && ev2.Type() <= value.NULL) ||
 				(ev1.Type() > value.NULL && ev2.Type() > value.NULL)) {
+
 			c = ev1.Collate(ev2)
 		} else {
 			if ev1.Type() <= value.NULL && ev2.Type() > value.NULL {
@@ -309,14 +307,12 @@ func (this *PartSortOrder) samePartialSortValues(v1 value.AnnotatedValue, v2 val
 
 	for i := 0; i < this.partialSortTermCount; i++ {
 		term := this.plan.Terms()[i]
-		s := this.terms[i].term
-
-		ev1, e = getOriginalCachedValue(v1, term.Expression(), s, &this.operatorCtx)
+		ev1, e = getOriginalCachedValue(v1, term.Expression(), this.terms[i].term, &this.operatorCtx)
 		if e != nil {
 			return false
 		}
 
-		ev2, e = getOriginalCachedValue(v2, term.Expression(), s, &this.operatorCtx)
+		ev2, e = getOriginalCachedValue(v2, term.Expression(), this.terms[i].term, &this.operatorCtx)
 		if e != nil {
 			return false
 		}
@@ -325,6 +321,7 @@ func (this *PartSortOrder) samePartialSortValues(v1 value.AnnotatedValue, v2 val
 			(!this.terms[i].descending && !this.terms[i].nullsLast) ||
 			((ev1.Type() <= value.NULL && ev2.Type() <= value.NULL) ||
 				(ev1.Type() > value.NULL && ev2.Type() > value.NULL)) {
+
 			if ev1.Collate(ev2) != 0 {
 				return false
 			}

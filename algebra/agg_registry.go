@@ -86,11 +86,6 @@ const (
 )
 
 /*
-Attachment name that conatins window info
-*/
-const WINDOW_ATTACHMENT = "window_attachment"
-
-/*
 Aggregate registry
 */
 type AggregateRegistry struct {

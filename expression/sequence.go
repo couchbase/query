@@ -116,7 +116,7 @@ func (this *SequenceOperation) Evaluate(item value.Value, context Context) (valu
 	var seqs map[string]int64
 	av, _ := item.(value.AnnotatedValue)
 	if av != nil {
-		seqs, _ = av.GetAttachment("sequences").(map[string]int64)
+		seqs, _ = av.GetAttachment(value.ATT_SEQUENCES).(map[string]int64)
 		if seqs == nil {
 			seqs = make(map[string]int64)
 		}
@@ -128,7 +128,7 @@ func (this *SequenceOperation) Evaluate(item value.Value, context Context) (valu
 		num, err = ctx.NextSequenceValue(this.FullName())
 		if err == nil && av != nil {
 			seqs[this.FullName()] = num
-			av.SetAttachment("sequences", seqs)
+			av.SetAttachment(value.ATT_SEQUENCES, seqs)
 		}
 	} else {
 		num, err = ctx.PrevSequenceValue(this.FullName())

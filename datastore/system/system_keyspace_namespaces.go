@@ -70,7 +70,7 @@ func (b *namespaceKeyspace) Fetch(keys []string, keysMap map[string]value.Annota
 		}
 
 		if item != nil {
-			item.NewMeta()["keyspace"] = b.fullName
+			item.SetMetaField(value.META_KEYSPACE, b.fullName)
 			item.SetId(k)
 		}
 

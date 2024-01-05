@@ -146,11 +146,11 @@ func (this *Median) ComputeFinal(cumulative value.Value, context Context) (c val
 	av := cumulative.(value.AnnotatedValue)
 
 	if this.Distinct() {
-		medianSet := av.GetAttachment("set").(*value.Set)
+		medianSet := av.GetAttachment(value.ATT_SET).(*value.Set)
 		length = medianSet.Len()
 		vals = medianSet.Values()
 	} else {
-		medianList := av.GetAttachment("list").(*value.List)
+		medianList := av.GetAttachment(value.ATT_LIST).(*value.List)
 		length = medianList.Len()
 		vals = medianList.Values()
 	}

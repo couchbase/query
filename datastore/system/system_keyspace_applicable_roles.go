@@ -89,7 +89,7 @@ func (b *applicableRolesKeyspace) Fetch(keys []string, keysMap map[string]value.
 		}
 		val := value.NewValue(valMap)
 		item := value.NewAnnotatedValue(val)
-		item.NewMeta()["keyspace"] = b.fullName
+		item.SetMetaField(value.META_KEYSPACE, b.fullName)
 		item.SetId(key)
 
 		keysMap[key] = item

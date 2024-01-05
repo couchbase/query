@@ -265,21 +265,21 @@ func (this *IntersectScan) Done() {
 }
 
 func mergeSearchMeta(dest, src value.AnnotatedValue) {
-	srcMeta := src.GetAttachment("smeta")
+	srcMeta := src.GetAttachment(value.ATT_SMETA)
 	if srcMeta == nil {
 		return
 	}
 
-	destMeta := dest.GetAttachment("smeta")
+	destMeta := dest.GetAttachment(value.ATT_SMETA)
 	if destMeta == nil {
-		dest.SetAttachment("smeta", srcMeta)
+		dest.SetAttachment(value.ATT_SMETA, srcMeta)
 	} else {
 		s := srcMeta.(map[string]interface{})
 		d := destMeta.(map[string]interface{})
 		for n, v := range s {
 			d[n] = v
 		}
-		dest.SetAttachment("smeta", d)
+		dest.SetAttachment(value.ATT_SMETA, d)
 	}
 }
 

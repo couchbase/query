@@ -96,9 +96,8 @@ func (b *dictionaryCacheKeyspace) Fetch(keys []string, keysMap map[string]value.
 					}
 					remoteValue := value.NewAnnotatedValue(doc)
 					remoteValue.SetField("node", node)
-					meta := remoteValue.NewMeta()
-					meta["keyspace"] = b.fullName
-					meta["distributions"] = distributions
+					remoteValue.SetMetaField(value.META_KEYSPACE, b.fullName)
+					remoteValue.SetMetaField(value.META_DISTRIBUTIONS, distributions)
 					remoteValue.SetId(key)
 					keysMap[key] = remoteValue
 				},
@@ -132,9 +131,8 @@ func (b *dictionaryCacheKeyspace) Fetch(keys []string, keysMap map[string]value.
 				}
 
 				item := value.NewAnnotatedValue(itemMap)
-				meta := item.NewMeta()
-				meta["keyspace"] = b.fullName
-				meta["distributions"] = distributions
+				item.SetMetaField(value.META_KEYSPACE, b.fullName)
+				item.SetMetaField(value.META_DISTRIBUTIONS, distributions)
 				item.SetId(key)
 				keysMap[key] = item
 			})

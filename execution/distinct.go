@@ -61,7 +61,7 @@ func (this *Distinct) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *Distinct) processItem(item value.AnnotatedValue, context *Context) bool {
-	p := item.GetAttachment("projection")
+	p := item.GetAttachment(value.ATT_PROJECTION)
 	if p == nil {
 		p = item
 	}

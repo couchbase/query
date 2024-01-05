@@ -186,7 +186,7 @@ func (this *Order) releaseValues() {
 
 func (this *Order) resetCachedValues(av value.AnnotatedValue) {
 	for _, term := range this.terms {
-		av.RemoveAttachment(term.term)
+		av.RemoveAttachment(getAttachmentIndexFor(av, term.term))
 	}
 }
 
@@ -198,8 +198,8 @@ func (this *Order) makeMinimal(item value.AnnotatedValue, context *Context) {
 	}
 	origAtt := item.Attachments()
 	item.ResetAttachments()
-	if aggs, ok := origAtt["aggregates"]; ok && aggs != nil {
-		item.SetAttachment("aggregates", aggs)
+	if aggs, ok := origAtt[value.ATT_AGGREGATES]; ok && aggs != nil {
+		item.SetAttachment(value.ATT_AGGREGATES, aggs)
 	}
 	for i, term := range this.plan.Terms() {
 		_, err := getOriginalCachedValue(item, term.Expression(), this.terms[i].term, &this.operatorCtx)

@@ -93,8 +93,8 @@ Also it need honor RESPECT | IGNORE NULLS CLAUSE
 
 func (this *FirstValue) Default(item value.Value, context Context) (value.Value, error) {
 	av := value.NewAnnotatedValue(value.NULL_VALUE)
-	av.SetAttachment("list", value.NewList(this.nthItem))
-	av.SetAttachment("startpos", value.ZERO_VALUE)
+	av.SetAttachment(value.ATT_LIST, value.NewList(this.nthItem))
+	av.SetAttachment(value.ATT_STARTPOS, value.ZERO_VALUE)
 	return av, nil
 }
 
@@ -155,7 +155,7 @@ func (this *FirstValue) IsCumulateDone(cumulative value.Value, context Context) 
 
 	values := list.Values()
 	av := cumulative.(value.AnnotatedValue)
-	av.SetAttachment("startpos", value.NewValue(len(values)))
+	av.SetAttachment(value.ATT_STARTPOS, value.NewValue(len(values)))
 
 	return len(values) == this.nthItem, nil
 }

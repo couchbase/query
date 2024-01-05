@@ -56,7 +56,7 @@ func (this *UnnestPosition) Evaluate(item value.Value, context Context) (value.V
 		return value.NULL_VALUE, nil
 	}
 
-	upos := av.GetAttachment("unnest_position")
+	upos := av.GetAttachment(value.ATT_UNNEST_POSITION)
 	if upos == nil {
 		return value.NULL_VALUE, nil
 	}

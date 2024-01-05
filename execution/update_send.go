@@ -163,7 +163,7 @@ func (this *SendUpdate) flushBatch(context *Context) bool {
 		if context.UseRequestQuota() {
 			before = item.Size()
 		}
-		clone := item.GetAttachment("clone")
+		clone := item.GetAttachment(value.ATT_CLONE)
 		switch clone := clone.(type) {
 		case value.AnnotatedValue:
 			cv, ok := clone.Field(this.plan.Alias())
@@ -176,7 +176,7 @@ func (this *SendUpdate) flushBatch(context *Context) bool {
 			cav.CopyAnnotations(av)
 			pairs[i].Value = cav
 
-			if mv := clone.GetAttachment("options"); mv != nil {
+			if mv := clone.GetAttachment(value.ATT_OPTIONS); mv != nil {
 				options, _ = mv.(value.Value)
 			}
 
@@ -299,7 +299,7 @@ func adjustExpiration(options value.Value, copyOptions bool) value.Value {
 func setMetaExpiration(av value.AnnotatedValue, options value.Value, preserveExpiry bool) {
 	expiration, present := getExpiration(options)
 	if !preserveExpiry || present {
-		av.NewMeta()["expiration"] = expiration
+		av.SetMetaField(value.META_EXPIRATION, expiration)
 	}
 }
 

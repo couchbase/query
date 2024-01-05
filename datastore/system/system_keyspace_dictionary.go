@@ -95,9 +95,8 @@ func (b *dictionaryKeyspace) Fetch(keys []string, keysMap map[string]value.Annot
 				}
 			}
 			item = value.NewAnnotatedValue(value.NewValue(itemMap))
-			meta := item.NewMeta()
-			meta["keyspace"] = b.fullName
-			meta["distributions"] = distributions
+			item.SetMetaField(value.META_KEYSPACE, b.fullName)
+			item.SetMetaField(value.META_DISTRIBUTIONS, distributions)
 			item.SetId(k)
 		}
 		keysMap[k] = item

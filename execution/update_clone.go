@@ -62,13 +62,12 @@ func (this *Clone) processItem(item value.AnnotatedValue, context *Context) bool
 	clone := item.CopyForUpdate()
 	if av, ok := clone.(value.AnnotatedValue); ok && av != nil {
 		options := make(map[string]interface{})
-		mv := av.NewMeta()
-		mv["expiration"] = uint32(0)
-		options["xattrs"] = mv["xattrs"]
-		av.SetAttachment("options", value.NewValue(options))
+		av.SetMetaField(value.META_EXPIRATION, uint32(0))
+		options["xattrs"] = av.GetMetaField(value.META_XATTRS)
+		av.SetAttachment(value.ATT_OPTIONS, value.NewValue(options))
 	}
 
-	item.SetAttachment("clone", clone)
+	item.SetAttachment(value.ATT_CLONE, clone)
 	return this.sendItem(item)
 }
 

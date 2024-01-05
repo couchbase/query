@@ -194,7 +194,7 @@ func (this *Sum) computeDistinctFinal(cumulative value.Value, context Context) (
 	}
 
 	av := cumulative.(value.AnnotatedValue)
-	set := av.GetAttachment("set").(*value.Set)
+	set := av.GetAttachment(value.ATT_SET).(*value.Set)
 	if set.Len() == 0 {
 		return value.NULL_VALUE, nil
 	}

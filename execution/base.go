@@ -1316,13 +1316,14 @@ func (this *base) newEmptyDocumentWithKey(key interface{}, parent value.Value, c
 	return av
 }
 
-func (this *base) newEmptyDocumentWithKeyMeta(key, meta interface{}, parent value.Value, context *Context) value.AnnotatedValue {
+func (this *base) newEmptyDocumentWithKeyMeta(key interface{}, metaSource value.AnnotatedValue, parent value.Value,
+	context *Context) value.AnnotatedValue {
 
 	cv := value.NewNestedScopeValue(parent)
 	av := value.NewAnnotatedValue(cv)
-	if metamap, ok := meta.(map[string]interface{}); ok {
-		av.SetMeta(metamap)
-		if _, ok = metamap["id"]; !ok {
+	if metaSource != nil {
+		av.CopyMeta(metaSource)
+		if av.GetMetaField(value.META_ID) == nil {
 			av.SetId(key)
 		}
 	} else {
@@ -1333,7 +1334,7 @@ func (this *base) newEmptyDocumentWithKeyMeta(key, meta interface{}, parent valu
 
 func (this *base) setDocumentKey(key interface{}, item value.AnnotatedValue,
 	expiration uint32, context *Context) value.AnnotatedValue {
-	item.NewMeta()["expiration"] = expiration
+	item.SetMetaField(value.META_EXPIRATION, expiration)
 	item.SetId(key)
 	return item
 }
@@ -1357,15 +1358,17 @@ func (this *base) getDocumentKey(item value.AnnotatedValue, context *Context) (s
 	} else {
 
 		// slow path (to be deprecated)
-		meta := item.GetMeta()
-		if meta == nil {
-			context.Error(errors.NewInvalidValueError(
-				fmt.Sprintf("Value does not contain META: %v", item)))
-			return "", false
-		}
+		/*
+			meta := item.GetMeta()
+			if meta == nil {
+				context.Error(errors.NewInvalidValueError(
+					fmt.Sprintf("Value does not contain META: %v", item)))
+				return "", false
+			}
+		*/
 
-		key, ok := meta["id"]
-		if !ok {
+		key := item.GetMetaField(value.META_ID)
+		if key == nil {
 			context.Error(errors.NewInvalidValueError(
 				fmt.Sprintf("META does not contain ID: %v", item)))
 			return "", false

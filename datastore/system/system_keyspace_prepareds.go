@@ -115,14 +115,13 @@ func (b *preparedsKeyspace) Fetch(keys []string, keysMap map[string]value.Annota
 				func(doc map[string]interface{}) {
 					remoteValue := value.NewAnnotatedValue(doc)
 					remoteValue.SetField("node", node)
-					m := remoteValue.NewMeta()
-					m["keyspace"] = b.fullName
-					m["plan"] = doc["plan"]
-					m["txPlans"] = doc["txPlans"]
+					remoteValue.SetMetaField(value.META_KEYSPACE, b.fullName)
+					remoteValue.SetMetaField(value.META_PLAN, doc["plan"])
+					remoteValue.SetMetaField(value.META_TXPLANS, doc["txPlans"])
 
 					// Subquery plans
 					if _, ok := doc["subqueryPlans"]; ok {
-						m["subqueryPlans"] = doc["subqueryPlans"]
+						remoteValue.SetMetaField(value.META_SUBQUERY_PLANS, doc["subqueryPlans"])
 						remoteValue.UnsetField("subqueryPlans")
 					}
 
@@ -191,17 +190,16 @@ func (b *preparedsKeyspace) Fetch(keys []string, keysMap map[string]value.Annota
 					itemMap["maxServiceTime"] = context.FormatDuration(time.Duration(entry.MaxServiceTime))
 				}
 				item := value.NewAnnotatedValue(itemMap)
-				m := item.NewMeta()
-				m["keyspace"] = b.fullName
+				item.SetMetaField(value.META_KEYSPACE, b.fullName)
 				if len(txPrepareds) > 0 {
-					m["txPlans"] = txPlans
+					item.SetMetaField(value.META_TXPLANS, txPlans)
 				}
-				m["plan"] = value.NewMarshalledValue(entry.Prepared.Operator)
+				item.SetMetaField(value.META_PLAN, value.NewMarshalledValue(entry.Prepared.Operator))
 
 				// Subquery plans
 				sqPlans := entry.Prepared.GetSubqueryPlansEntry()
 				if len(sqPlans) > 0 {
-					m["subqueryPlans"] = sqPlans
+					item.SetMetaField(value.META_SUBQUERY_PLANS, sqPlans)
 				}
 
 				item.SetId(key)

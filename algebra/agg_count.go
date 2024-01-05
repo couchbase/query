@@ -68,7 +68,7 @@ func (this *Count) Evaluate(item value.Value, context expression.Context) (resul
 	// Full keyspace count is short-circuited
 	switch item := item.(type) {
 	case value.AnnotatedValue:
-		count := item.GetAttachment("count")
+		count := item.GetAttachment(value.ATT_COUNT)
 		if count != nil {
 			return value.NewValue(count), nil
 		}
@@ -168,7 +168,7 @@ func (this *Count) ComputeFinal(cumulative value.Value, context Context) (value.
 		}
 
 		av := cumulative.(value.AnnotatedValue)
-		set := av.GetAttachment("set").(*value.Set)
+		set := av.GetAttachment(value.ATT_SET).(*value.Set)
 		return value.NewValue(set.Len()), nil
 	} else {
 		return cumulative, nil

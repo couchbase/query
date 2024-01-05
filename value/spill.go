@@ -49,6 +49,10 @@ const (
 	_SPILL_TYPE_FLOAT64
 	_SPILL_TYPE_STRING // 0x9a
 	_SPILL_TYPE_JSON
+	_SPILL_TYPE_INT16_MAP
+	_SPILL_TYPE_INT16
+	_SPILL_TYPE_UINT16
+	_SPILL_TYPE_BYTE // 0x9f
 )
 
 const _SPILL_TYPED_NIL_INDICATOR = -1
@@ -66,6 +70,8 @@ func writeSpillValue(w io.Writer, v interface{}, buf []byte) error {
 		err = writeSpillVMap(w, v, buf)
 	case map[int]Value:
 		err = writeSpillIntVMap(w, v, buf)
+	case map[int16]interface{}:
+		err = writeSpillInt16Map(w, v, buf)
 	case []interface{}:
 		err = writeSpillSlice(w, v, buf)
 	case []string:
@@ -98,10 +104,20 @@ func writeSpillValue(w io.Writer, v interface{}, buf []byte) error {
 		if err == nil && v != nil {
 			_, err = w.Write(v)
 		}
-	case int:
-		buf = buf[:9]
-		buf[0] = _SPILL_TYPE_INT
-		binary.BigEndian.PutUint64(buf[1:], uint64(v))
+	case byte:
+		buf = buf[:2]
+		buf[0] = _SPILL_TYPE_BYTE
+		buf[1] = byte(v)
+		_, err = w.Write(buf)
+	case int16:
+		buf = buf[:3]
+		buf[0] = _SPILL_TYPE_INT16
+		binary.BigEndian.PutUint16(buf[1:], uint16(v))
+		_, err = w.Write(buf)
+	case uint16:
+		buf = buf[:3]
+		buf[0] = _SPILL_TYPE_UINT16
+		binary.BigEndian.PutUint16(buf[1:], uint16(v))
 		_, err = w.Write(buf)
 	case int32:
 		buf = buf[:5]
@@ -112,6 +128,11 @@ func writeSpillValue(w io.Writer, v interface{}, buf []byte) error {
 		buf = buf[:5]
 		buf[0] = _SPILL_TYPE_UINT32
 		binary.BigEndian.PutUint32(buf[1:], uint32(v))
+		_, err = w.Write(buf)
+	case int:
+		buf = buf[:9]
+		buf[0] = _SPILL_TYPE_INT
+		binary.BigEndian.PutUint64(buf[1:], uint64(v))
 		_, err = w.Write(buf)
 	case int64:
 		buf = buf[:9]
@@ -173,6 +194,28 @@ func writeSpillMap(w io.Writer, m map[string]interface{}, buf []byte) error {
 		l = _SPILL_TYPED_NIL_INDICATOR
 	}
 	err := writeSpillTypeAndLength(_SPILL_TYPE_MAP, l, w, buf)
+	if err != nil {
+		return err
+	}
+	for k, v := range m {
+		err = writeSpillValue(w, k, buf)
+		if err != nil {
+			return err
+		}
+		err = writeSpillValue(w, v, buf)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func writeSpillInt16Map(w io.Writer, m map[int16]interface{}, buf []byte) error {
+	l := len(m)
+	if m == nil {
+		l = _SPILL_TYPED_NIL_INDICATOR
+	}
+	err := writeSpillTypeAndLength(_SPILL_TYPE_INT16_MAP, l, w, buf)
 	if err != nil {
 		return err
 	}
@@ -364,6 +407,8 @@ func readSpillValue(r io.Reader, buf []byte) (interface{}, error) {
 		v, err = readSpillVMap(r, buf)
 	case _SPILL_TYPE_MAP_VALUE_INT:
 		v, err = readSpillIntVMap(r, buf)
+	case _SPILL_TYPE_INT16_MAP:
+		v, err = readSpillInt16Map(r, buf)
 	case _SPILL_TYPE_SLICE:
 		v, err = readSpillSlice(r, buf)
 	case _SPILL_TYPE_SLICE_STRING:
@@ -396,13 +441,27 @@ func readSpillValue(r io.Reader, buf []byte) (interface{}, error) {
 			}
 			v = b
 		}
-	case _SPILL_TYPE_INT:
-		buf = buf[:8]
+	case _SPILL_TYPE_BYTE:
+		buf = buf[:1]
 		n, err = r.Read(buf)
 		if err == nil && n != len(buf) {
 			err = io.ErrUnexpectedEOF
 		}
-		v = int(binary.BigEndian.Uint64(buf))
+		v = buf[0]
+	case _SPILL_TYPE_INT16:
+		buf = buf[:2]
+		n, err = r.Read(buf)
+		if err == nil && n != len(buf) {
+			err = io.ErrUnexpectedEOF
+		}
+		v = int16(binary.BigEndian.Uint16(buf))
+	case _SPILL_TYPE_UINT16:
+		buf = buf[:2]
+		n, err = r.Read(buf)
+		if err == nil && n != len(buf) {
+			err = io.ErrUnexpectedEOF
+		}
+		v = uint16(binary.BigEndian.Uint16(buf))
 	case _SPILL_TYPE_INT32:
 		buf = buf[:4]
 		n, err = r.Read(buf)
@@ -417,6 +476,13 @@ func readSpillValue(r io.Reader, buf []byte) (interface{}, error) {
 			err = io.ErrUnexpectedEOF
 		}
 		v = uint32(binary.BigEndian.Uint32(buf))
+	case _SPILL_TYPE_INT:
+		buf = buf[:8]
+		n, err = r.Read(buf)
+		if err == nil && n != len(buf) {
+			err = io.ErrUnexpectedEOF
+		}
+		v = int(binary.BigEndian.Uint64(buf))
 	case _SPILL_TYPE_INT64:
 		buf = buf[:8]
 		n, err = r.Read(buf)
@@ -573,6 +639,30 @@ func readSpillMap(r io.Reader, buf []byte) (map[string]interface{}, error) {
 			return nil, err
 		}
 		m[k.(string)] = v
+	}
+	return m, nil
+}
+
+func readSpillInt16Map(r io.Reader, buf []byte) (map[int16]interface{}, error) {
+	length, err := readSpillLength(r, buf)
+	if err != nil {
+		return nil, err
+	}
+	if length == _SPILL_TYPED_NIL_INDICATOR {
+		return (map[int16]interface{})(nil), nil
+	}
+	m := make(map[int16]interface{}, length)
+	var k, v interface{}
+	for i := 0; i < length; i++ {
+		k, err = readSpillValue(r, buf)
+		if err != nil {
+			return nil, err
+		}
+		v, err = readSpillValue(r, buf)
+		if err != nil {
+			return nil, err
+		}
+		m[k.(int16)] = v
 	}
 	return m, nil
 }

@@ -299,7 +299,7 @@ func (this *AggregateBase) evaluate(agg Aggregate, item value.Value,
 	}()
 
 	av := item.(value.AnnotatedValue)
-	aggregates := av.GetAttachment("aggregates")
+	aggregates := av.GetAttachment(value.ATT_AGGREGATES)
 	if aggregates != nil {
 		aggs := aggregates.(map[string]value.Value)
 		result = aggs[agg.String()]

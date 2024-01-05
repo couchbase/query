@@ -66,7 +66,7 @@ func (this *CountScan) RunOnce(context *Context, parent value.Value) {
 
 		cv := value.NewScopeValue(nil, parent)
 		av := value.NewAnnotatedValue(cv)
-		av.SetAttachment("count", value.NewValue(count))
+		av.SetAttachment(value.ATT_COUNT, value.NewValue(count))
 		if context.UseRequestQuota() {
 			err := context.TrackValueSize(av.Size())
 			if err != nil {

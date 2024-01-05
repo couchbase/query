@@ -93,12 +93,12 @@ func (this *groupBase) beforeSpill(av value.AnnotatedValue) {
 	if p := av.SetParent(nil); p != nil {
 		k := fmt.Sprintf("%p", p)
 		this.parents[k] = p
-		av.SetAttachment("~parent_key", k)
+		av.SetAttachment(value.ATT_PARENT, k)
 	}
 }
 
 func (this *groupBase) afterRead(av value.AnnotatedValue) {
-	if pk := av.GetAttachment("~parent_key"); pk != nil {
+	if pk := av.GetAttachment(value.ATT_PARENT); pk != nil {
 		if pks, ok := pk.(string); ok {
 			if p, ok := this.parents[pks]; ok {
 				av.SetParent(p)
@@ -108,7 +108,7 @@ func (this *groupBase) afterRead(av value.AnnotatedValue) {
 		} else {
 			logging.Debugf("[%p] parent key for %p is not a string: %T (%v)", this, av, pk, pk)
 		}
-		av.RemoveAttachment("~parent_key")
+		av.RemoveAttachment(value.ATT_PARENT)
 	}
 }
 
@@ -122,8 +122,8 @@ type InitialGroup struct {
 func NewInitialGroup(plan *plan.InitialGroup, context *Context) *InitialGroup {
 
 	merge := func(v1 value.AnnotatedValue, v2 value.AnnotatedValue) value.AnnotatedValue {
-		a1 := v1.GetAttachment("aggregates").(map[string]value.Value)
-		a2 := v2.GetAttachment("aggregates").(map[string]value.Value)
+		a1 := v1.GetAttachment(value.ATT_AGGREGATES).(map[string]value.Value)
+		a2 := v2.GetAttachment(value.ATT_AGGREGATES).(map[string]value.Value)
 		for _, agg := range plan.Aggregates() {
 			a := agg.String()
 			v, e := agg.CumulateIntermediate(a2[a], a1[a], nil)
@@ -201,7 +201,7 @@ func (this *InitialGroup) processItem(item value.AnnotatedValue, context *Contex
 		return false
 	} else if set {
 		aggregates := make(map[string]value.Value, len(this.plan.Aggregates()))
-		gv.SetAttachment("aggregates", aggregates)
+		gv.SetAttachment(value.ATT_AGGREGATES, aggregates)
 		for _, agg := range this.plan.Aggregates() {
 			aggregates[agg.String()], _ = agg.Default(nil, &this.operatorCtx)
 		}
@@ -211,7 +211,7 @@ func (this *InitialGroup) processItem(item value.AnnotatedValue, context *Contex
 	}
 
 	// Cumulate aggregates
-	aggregates, ok := gv.GetAttachment("aggregates").(map[string]value.Value)
+	aggregates, ok := gv.GetAttachment(value.ATT_AGGREGATES).(map[string]value.Value)
 	if !ok {
 		context.Fatal(errors.NewInvalidValueError(
 			fmt.Sprintf("Invalid aggregates %v of type %T", aggregates, aggregates)))

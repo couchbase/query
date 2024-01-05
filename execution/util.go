@@ -42,10 +42,39 @@ func copyOperator(op Operator) Operator {
 var _STRING_POOL = util.NewStringPool(_BATCH_SIZE)
 var _STRING_ANNOTATED_POOL = value.NewStringAnnotatedPool(_BATCH_SIZE)
 
+const _DEF_NUM_CUSTOM_ATT = 4
+
+func getAttachmentIndexFor(item value.AnnotatedValue, s string) int16 {
+	index := int16(-1)
+	custIndex := item.GetAttachment(value.ATT_CUSTOM_INDEX)
+	var arr []string
+	ok := false
+	if custIndex != nil {
+		if arr, ok = custIndex.([]string); ok {
+			for i := range arr {
+				if arr[i] == s {
+					index = int16(i + 1)
+					break
+				}
+			}
+		}
+	}
+	if index == -1 {
+		if arr == nil {
+			arr = make([]string, 0, _DEF_NUM_CUSTOM_ATT)
+		}
+		arr = append(arr, s)
+		index = int16(len(arr))
+		item.SetAttachment(value.ATT_CUSTOM_INDEX, arr)
+	}
+	return index + value.ATT_CUSTOM_INDEX
+}
+
 func getCachedValue(item value.AnnotatedValue, expr expression.Expression, s string, context *opContext) (
 	rv value.Value, err error) {
 
-	sv1 := item.GetAttachment(s)
+	i := getAttachmentIndexFor(item, s)
+	sv1 := item.GetAttachment(i)
 	switch sv1 := sv1.(type) {
 	case value.Value:
 		rv = sv1
@@ -56,7 +85,7 @@ func getCachedValue(item value.AnnotatedValue, expr expression.Expression, s str
 			return
 		}
 
-		item.SetAttachment(s, rv)
+		item.SetAttachment(i, rv)
 	}
 	return
 }
@@ -64,7 +93,8 @@ func getCachedValue(item value.AnnotatedValue, expr expression.Expression, s str
 func getOriginalCachedValue(item value.AnnotatedValue, expr expression.Expression, s string, context *opContext) (
 	rv value.Value, err error) {
 
-	sv1 := item.GetAttachment(s)
+	i := getAttachmentIndexFor(item, s)
+	sv1 := item.GetAttachment(i)
 	switch sv1 := sv1.(type) {
 	case value.Value:
 		rv = sv1
@@ -74,7 +104,7 @@ func getOriginalCachedValue(item value.AnnotatedValue, expr expression.Expressio
 			context.Error(errors.NewEvaluationError(err, "original cached value"))
 			return
 		}
-		item.SetAttachment(s, rv.CopyForUpdate())
+		item.SetAttachment(i, rv.CopyForUpdate())
 	}
 	return
 }

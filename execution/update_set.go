@@ -62,7 +62,7 @@ func (this *Set) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *Set) processItem(item value.AnnotatedValue, context *Context) bool {
-	atmt := item.GetAttachment("clone")
+	atmt := item.GetAttachment(value.ATT_CLONE)
 	if atmt == nil {
 		context.Error(errors.NewUpdateMissingClone())
 		return false
@@ -84,7 +84,7 @@ func (this *Set) processItem(item value.AnnotatedValue, context *Context) bool {
 		}
 	}
 
-	item.SetAttachment("clone", clone)
+	item.SetAttachment(value.ATT_CLONE, clone)
 	return this.sendItem(item)
 }
 
@@ -108,7 +108,7 @@ func setPath(t *algebra.SetTerm, clone, item value.AnnotatedValue, context *opCo
 	}
 
 	if t.Meta() != nil {
-		if opVal, ok := clone.GetAttachment("options").(value.Value); ok && opVal.Type() != value.MISSING {
+		if opVal, ok := clone.GetAttachment(value.ATT_OPTIONS).(value.Value); ok && opVal.Type() != value.MISSING {
 			t.Path().Set(opVal, v, context)
 		}
 	} else {
