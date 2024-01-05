@@ -130,6 +130,12 @@ func (b *indexKeyspace) Count(context datastore.QueryContext) (int64, errors.Err
 								canListIndexes(context, namespace.Datastore(), namespaceId, object.Id, scopeId))
 							keyspaceIds, _ := scope.KeyspaceIds()
 							for _, keyspaceId := range keyspaceIds {
+
+								// If required skip counting indexes on system collection i.e those that are prefixed with '_'
+								if b.skipSystem && keyspaceId[0] == '_' {
+									continue
+								}
+
 								keyspace, excp = scope.KeyspaceById(keyspaceId)
 								if excp == nil {
 
