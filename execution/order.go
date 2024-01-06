@@ -44,7 +44,7 @@ func NewOrder(plan *plan.Order, context *Context) *Order {
 	// here only setting function to test for spilling when quota is in effect
 	var shouldSpill func(uint64, uint64) bool
 	if plan.CanSpill() {
-		if context.UseRequestQuota() {
+		if context.UseRequestQuota() && context.MemoryQuota() > 0 {
 			shouldSpill = func(c uint64, n uint64) bool {
 				if (c + n) <= context.ProducerThrottleQuota() {
 					return false

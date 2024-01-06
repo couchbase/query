@@ -28,7 +28,7 @@ type IntermediateGroup struct {
 func NewIntermediateGroup(plan *plan.IntermediateGroup, context *Context) *IntermediateGroup {
 
 	var shouldSpill func(uint64, uint64) bool
-	if plan.CanSpill() && context.UseRequestQuota() {
+	if plan.CanSpill() && context.UseRequestQuota() && context.MemoryQuota() > 0 {
 		shouldSpill = func(c uint64, n uint64) bool {
 			return (c+n) > context.ProducerThrottleQuota() && context.CurrentQuotaUsage() > _GROUP_QUOTA_THRESHOLD
 		}
