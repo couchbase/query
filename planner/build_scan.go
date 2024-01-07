@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/couchbase/query/algebra"
-	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
@@ -112,8 +111,7 @@ func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.Keyspa
 	}
 	if len(baseKeyspace.IndexHints()) > 0 || this.context.UseFts() {
 		hints, err = allHints(keyspace, baseKeyspace.IndexHints(), virtualIndexes, this.context.IndexApiVersion(),
-			this.context.UseFts(), util.IsFeatureEnabled(this.context.FeatureControls(), util.N1QL_SEQ_SCAN),
-			this.context.Credentials())
+			this.context.UseFts(), util.IsFeatureEnabled(this.context.FeatureControls(), util.N1QL_SEQ_SCAN))
 		if nil != hints {
 			defer _INDEX_POOL.Put(hints)
 		} else if len(baseKeyspace.IndexHints()) > 0 {
@@ -227,7 +225,7 @@ func (this *builder) buildPredicateScan(keyspace datastore.Keyspace, node *algeb
 	}
 
 	others, err, duration := allIndexes(keyspace, hints, virtualIndexes, this.context.IndexApiVersion(), len(searchFns) > 0,
-		util.IsFeatureEnabled(this.context.FeatureControls(), util.N1QL_SEQ_SCAN), this.context.Credentials())
+		util.IsFeatureEnabled(this.context.FeatureControls(), util.N1QL_SEQ_SCAN))
 	if nil != others {
 		defer _INDEX_POOL.Put(others)
 	}
@@ -660,7 +658,7 @@ func poolAllocIndexSlice(indexes []datastore.Index) []datastore.Index {
 
 // all HINT indexes
 func allHints(keyspace datastore.Keyspace, hints []algebra.OptimHint, virtualIndexes []datastore.Index, indexApiVersion int,
-	useFts bool, inclSeqScan bool, creds *auth.Credentials) ([]datastore.Index, error) {
+	useFts bool, inclSeqScan bool) ([]datastore.Index, error) {
 
 	var indexes []datastore.Index
 	// check if HINT has FTS index refrence
@@ -683,8 +681,6 @@ func allHints(keyspace datastore.Keyspace, hints []algebra.OptimHint, virtualInd
 
 	for _, indexer := range indexers {
 		if !inclSeqScan && indexer.Name() == datastore.SEQ_SCAN {
-			continue
-		} else if indexer.Name() == datastore.SEQ_SCAN && !seqScanAuth(keyspace.QualifiedName(), creds) {
 			continue
 		}
 		indexerFts := false
@@ -815,7 +811,7 @@ inclFts indicates to include FTS index or not
 */
 
 func allIndexes(keyspace datastore.Keyspace, skip, virtualIndexes []datastore.Index, indexApiVersion int, inclFts bool,
-	inclSeqScan bool, creds *auth.Credentials) ([]datastore.Index, error, time.Duration) {
+	inclSeqScan bool) ([]datastore.Index, error, time.Duration) {
 
 	var indexes []datastore.Index
 
@@ -839,8 +835,6 @@ func allIndexes(keyspace datastore.Keyspace, skip, virtualIndexes []datastore.In
 		if !inclFts && indexer.Name() == datastore.FTS {
 			continue
 		} else if !inclSeqScan && indexer.Name() == datastore.SEQ_SCAN {
-			continue
-		} else if indexer.Name() == datastore.SEQ_SCAN && !seqScanAuth(keyspace.QualifiedName(), creds) {
 			continue
 		}
 
@@ -881,17 +875,6 @@ func checkSubset(pred, cond expression.Expression, context *PrepareContext) bool
 		}
 	}
 	return base.SubsetOf(pred, cond)
-}
-
-func seqScanAuth(path string, creds *auth.Credentials) bool {
-	pp := auth.PrivilegePair{
-		Target: path,
-		Priv:   auth.PRIV_QUERY_SEQ_SCAN,
-	}
-	privs := auth.NewPrivileges()
-	privs.AddPair(pp)
-	ds := datastore.GetDatastore()
-	return ds.Authorize(privs, creds) == nil
 }
 
 var _INDEX_POOL = datastore.NewIndexPool(256)
