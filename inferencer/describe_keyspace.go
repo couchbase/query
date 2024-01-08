@@ -16,7 +16,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
@@ -283,21 +282,7 @@ func (di *DefaultInferencer) InferKeyspace(context datastore.QueryContext, ks da
 		if c, ok := context.(interface{ HasFeature(uint64) bool }); ok {
 			if c.HasFeature(util.N1QL_SEQ_SCAN) { // if the feature bit is set this returns true and it means they're disabled
 				options.Flags |= NO_RANDOM_SCAN
-				logging.Debugf("Random scan excluded: feature controls", context)
-			}
-		}
-		if options.Flags&NO_RANDOM_SCAN == 0 {
-			// check if we have permission to run a random scan on this keyspace
-			pp := auth.PrivilegePair{
-				Target: ks.QualifiedName(),
-				Priv:   auth.PRIV_QUERY_SEQ_SCAN,
-			}
-			privs := auth.NewPrivileges()
-			privs.AddPair(pp)
-			ds := datastore.GetDatastore()
-			if ds.Authorize(privs, context.Credentials()) != nil {
-				options.Flags |= NO_RANDOM_SCAN
-				logging.Debugf("Random scan excluded: no privs", context)
+				logging.Debugf("Random scan excluded: feature controls exclude sequential scans", context)
 			}
 		}
 	}
