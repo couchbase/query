@@ -1624,7 +1624,7 @@ func (this *ArrayRange) Evaluate(item value.Value, context Context) (value.Value
 	}
 	sz := value.AnySize(start) * n
 	var max uint64
-	if qc, ok := context.(QuotaContext); ok && qc.UseRequestQuota() {
+	if qc, ok := context.(QuotaContext); ok && qc.UseRequestQuota() && qc.MemoryQuota() > 0 {
 		max = uint64(float64(qc.MemoryQuota()) * (1.0 - qc.CurrentQuotaUsage()))
 	} else {
 		max = 20 * util.MiB
@@ -1812,7 +1812,7 @@ func (this *ArrayRepeat) Evaluate(item value.Value, context Context) (value.Valu
 
 	sz := value.AnySize(first) * uint64(n)
 	var max uint64
-	if qc, ok := context.(QuotaContext); ok && qc.UseRequestQuota() {
+	if qc, ok := context.(QuotaContext); ok && qc.UseRequestQuota() && qc.MemoryQuota() > 0 {
 		max = uint64(float64(qc.MemoryQuota()) * (1.0 - qc.CurrentQuotaUsage()))
 	} else {
 		max = 20 * util.MiB

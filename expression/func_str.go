@@ -474,7 +474,7 @@ func (this *Repeat) Evaluate(item value.Value, context Context) (value.Value, er
 
 	sz := uint64(len(first.ToString())) * uint64(ni)
 	var max uint64
-	if qc, ok := context.(QuotaContext); ok && qc.UseRequestQuota() {
+	if qc, ok := context.(QuotaContext); ok && qc.UseRequestQuota() && qc.MemoryQuota() > 0 {
 		max = uint64(float64(qc.MemoryQuota()) * (1.0 - qc.CurrentQuotaUsage()))
 	} else {
 		max = 20 * util.MiB

@@ -1854,7 +1854,7 @@ func (p *namespace) KeyspaceDeleteCallback(name string, err error) {
 	if ok && ks.cbKeyspace != nil {
 		logging.Infof("Keyspace %v is being deleted", name)
 		cbKeyspace = ks.cbKeyspace
-		ks.cbKeyspace.Release(false)
+		ks.cbKeyspace.Release(true)
 		delete(p.keyspaceCache, name)
 
 		// keyspace has been deleted, force full auto reprepare check
@@ -2999,6 +2999,7 @@ func (b *keyspace) Release(bclose bool) {
 	agentProvider := b.agentProvider
 	b.agentProvider = nil
 	b.Unlock()
+	b.cbbucket.SetDeleted()
 	if bclose {
 		b.cbbucket.StopUpdater()
 		b.cbbucket.Close()
