@@ -12,6 +12,8 @@ import (
 	"encoding/json"
 
 	"github.com/couchbase/query/algebra"
+	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/parser/n1ql"
 	"github.com/couchbase/query/value"
 )
 
@@ -83,9 +85,14 @@ func (this *CreateUser) UnmarshalJSON(body []byte) error {
 		return err
 	}
 
-	var password, groups, name value.Value
+	var groups, name value.Value
+	var password expression.Expression
+
 	if _unmarshalled.PasswordSet {
-		password = value.NewValue(_unmarshalled.Password)
+		password, err = n1ql.ParseExpression(_unmarshalled.Password)
+		if err != nil {
+			return err
+		}
 	}
 	if _unmarshalled.NameSet {
 		name = value.NewValue(_unmarshalled.Name)

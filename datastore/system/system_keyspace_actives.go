@@ -170,7 +170,7 @@ func (b *activeRequestsKeyspace) Fetch(keys []string, keysMap map[string]value.A
 					item.SetField("clientContextID", cId)
 				}
 				if request.Statement() != "" {
-					item.SetField("statement", request.Statement())
+					item.SetField("statement", request.RedactedStatement())
 				}
 				if request.Type() != "" {
 					item.SetField("statementType", request.Type())
@@ -250,11 +250,11 @@ func (b *activeRequestsKeyspace) Fetch(keys []string, keysMap map[string]value.A
 					ctrl = (ctr == value.TRUE)
 				}
 				if ctrl {
-					na := request.NamedArgs()
+					na := request.RedactedNamedArgs()
 					if na != nil {
 						item.SetField("namedArgs", na)
 					}
-					pa := request.PositionalArgs()
+					pa := request.RedactedPositionalArgs()
 					if pa != nil {
 						item.SetField("positionalArgs", pa)
 					}
@@ -263,14 +263,16 @@ func (b *activeRequestsKeyspace) Fetch(keys []string, keysMap map[string]value.A
 				meta := item.NewMeta()
 				meta["keyspace"] = b.fullName
 
-				timings := request.GetTimings()
-				if timings != nil {
-					meta["plan"] = value.ApplyDurationStyleToValue(context.DurationStyle(), func(s string) bool {
-						return strings.HasSuffix(s, "Time")
-					}, value.NewMarshalledValue(timings))
-					optEstimates := request.Output().FmtOptimizerEstimates(timings)
-					if optEstimates != nil {
-						meta["optimizerEstimates"] = value.NewMarshalledValue(optEstimates)
+				if !request.Sensitive() {
+					timings := request.GetTimings()
+					if timings != nil {
+						meta["plan"] = value.ApplyDurationStyleToValue(context.DurationStyle(), func(s string) bool {
+							return strings.HasSuffix(s, "Time")
+						}, value.NewMarshalledValue(timings))
+						optEstimates := request.Output().FmtOptimizerEstimates(timings)
+						if optEstimates != nil {
+							meta["optimizerEstimates"] = value.NewMarshalledValue(optEstimates)
+						}
 					}
 				}
 

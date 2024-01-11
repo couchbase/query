@@ -578,6 +578,8 @@ column int
 %type <vpair>  user_opt group_opt
 %type <vpairs> user_opts group_opts
 
+%type <expr> param_or_str
+
 %start input
 
 %%
@@ -2779,7 +2781,8 @@ LPAREN key_val_options_expr_header RPAREN opt_where
 create_user:
 CREATE USER user user_opts
 {
-    var password, name, groups value.Value
+    var name, groups value.Value
+    var password expression.Expression
     for _, v := range $4 {
         switch v.name {
         case "name":
@@ -2787,7 +2790,7 @@ CREATE USER user user_opts
             name = value.NewValue(v.value.(string))
         case "password":
             if password != nil { return yylex.(*lexer).FatalError("User attributes may only be specified once.", v.line, v.column) }
-            password = value.NewValue(v.value.(string))
+            password = v.value.(expression.Expression)
         case "groups":
             if groups != nil { return yylex.(*lexer).FatalError("User attributes may only be specified once.", v.line, v.column) }
             sa := v.value.([]string)
@@ -2805,7 +2808,8 @@ CREATE USER user user_opts
 alter_user:
 ALTER USER user user_opts
 {
-    var password, name, groups value.Value
+    var name, groups value.Value
+    var password expression.Expression
     for _, v := range $4 {
         switch v.name {
         case "name":
@@ -2813,7 +2817,7 @@ ALTER USER user user_opts
             name = value.NewValue(v.value.(string))
         case "password":
             if password != nil { return yylex.(*lexer).FatalError("User attributes may only be specified once.", v.line, v.column) }
-            password = value.NewValue(v.value.(string))
+            password = v.value.(expression.Expression)
         case "groups":
             if groups != nil { return yylex.(*lexer).FatalError("User attributes may only be specified once.", v.line, v.column) }
             sa := v.value.([]string)
@@ -2847,12 +2851,24 @@ user_opts user_opt
 }
 ;
 
-user_opt:
-PASSWORD STR
+param_or_str:
+param_expr
 {
-    if len($2) < 6 {
-        return yylex.(*lexer).FatalError("The password must be at least 6 characters long.", $<line>2, $<column>2)
+    $$ = $1
+}
+|
+STR
+{
+    if len($1) < 6 {
+        return yylex.(*lexer).FatalError("The password must be at least 6 characters long.", $<line>1, $<column>1)
     }
+    $$ = expression.NewConstant(value.NewValue($1))
+}
+;
+
+user_opt:
+PASSWORD param_or_str
+{
     $$ = &nameValueContext{"password", $2, $<line>1, $<column>1}
 }
 |

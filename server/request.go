@@ -12,8 +12,11 @@ import (
 	"net/http"
 	"os"
 	"runtime"
+	"strings"
 	"sync"
 	"time"
+	"unicode"
+	"unicode/utf8"
 
 	atomic "github.com/couchbase/go-couchbase/platform"
 	"github.com/couchbase/query/auth"
@@ -198,6 +201,11 @@ type Request interface {
 
 	SetAdmissionWaitTime(time.Duration)
 	AdmissionWaitTime() time.Duration
+
+	Sensitive() bool
+	RedactedStatement() string
+	RedactedNamedArgs() map[string]value.Value
+	RedactedPositionalArgs() value.Values
 }
 
 type RequestID interface {
@@ -313,6 +321,7 @@ type BaseRequest struct {
 	id                   requestIDImpl
 	client_id            clientContextIDImpl
 	statement            string
+	redactedStatement    string
 	prepared             *plan.Prepared
 	reqType              string
 	isPrepare            bool
@@ -472,6 +481,86 @@ func (this *BaseRequest) Statement() string {
 	return this.statement
 }
 
+const _REDACT_TOKEN = "****"
+
+func (this *BaseRequest) RedactedStatement() string {
+	if len(this.statement) == 0 || !this.Sensitive() {
+		return this.statement
+	}
+	if len(this.redactedStatement) > 0 {
+		return this.redactedStatement
+	}
+
+	// attempt to redact literal strings coming after the keyword PASSWORD
+	var buf strings.Builder
+	buf.Grow(len(this.statement))
+
+	var n int
+	var r, pr rune
+	quote := utf8.RuneError
+	comment := utf8.RuneError
+	var escaped, redact bool
+
+	for i := 0; i < len(this.statement); i += n {
+		r, n = utf8.DecodeRuneInString(this.statement[i:])
+		if r == utf8.RuneError {
+			break
+		}
+		if escaped {
+			buf.WriteRune(r)
+			escaped = false
+		} else if comment != utf8.RuneError {
+			buf.WriteRune(r)
+			if (comment == '/' && r == '/' && pr == '*') || (comment == '-' && r == '\n') {
+				comment = utf8.RuneError
+			}
+			pr = r
+		} else if quote != utf8.RuneError {
+			if r == quote {
+				quote = utf8.RuneError
+				redact = false
+				buf.WriteRune(r)
+			} else if !redact {
+				buf.WriteRune(r)
+			}
+		} else if r == '"' || r == '\'' || r == '`' {
+			quote = r
+			buf.WriteRune(r)
+			if redact {
+				buf.WriteString(_REDACT_TOKEN)
+			}
+		} else if len(this.statement) > i+n &&
+			((r == '/' && this.statement[i+n] == '*') || (r == '-' && this.statement[i+n] == '-')) {
+
+			buf.WriteRune(r)
+			comment = r
+			pr = r
+		} else if i+8 < len(this.statement) && strings.ToLower(this.statement[i:i+8]) == "password" {
+			buf.WriteString(this.statement[i : i+8])
+			i += 7
+			redact = true
+		} else {
+			if redact && !unicode.IsSpace(r) {
+				redact = false
+			}
+			buf.WriteRune(r)
+		}
+	}
+	this.redactedStatement = buf.String()
+	return this.redactedStatement
+}
+
+func (this *BaseRequest) Sensitive() bool {
+	switch this.reqType {
+	case "CREATE_USER":
+		return true
+	case "ALTER_USER":
+		return true
+	default:
+		return false
+	}
+}
+
 func (this *BaseRequest) SetStatement(statement string) {
 	this.statement = statement
 }
@@ -492,12 +581,36 @@ func (this *BaseRequest) NamedArgs() map[string]value.Value {
 	return this.namedArgs
 }
 
+var _REDACTED_VALUE = value.NewValue(map[string]interface{}{"redacted": true})
+
+func (this *BaseRequest) RedactedNamedArgs() map[string]value.Value {
+	if !this.Sensitive() {
+		return this.namedArgs
+	}
+	rv := make(map[string]value.Value, len(this.namedArgs))
+	for k, _ := range this.namedArgs {
+		rv[k] = _REDACTED_VALUE
+	}
+	return rv
+}
+
 func (this *BaseRequest) SetNamedArgs(args map[string]value.Value) {
 	this.namedArgs = args
 }
 
 func (this *BaseRequest) PositionalArgs() value.Values {
 	return this.positionalArgs
+}
+
+func (this *BaseRequest) RedactedPositionalArgs() value.Values {
+	if !this.Sensitive() {
+		return this.positionalArgs
+	}
+	rv := make(value.Values, len(this.positionalArgs))
+	for i := range this.positionalArgs {
+		rv[i] = _REDACTED_VALUE
+	}
+	return rv
 }
 
 func (this *BaseRequest) SetPositionalArgs(args value.Values) {
@@ -1282,8 +1395,8 @@ func (this *BaseRequest) CompleteRequest(requestTime, serviceTime, transaction_t
 		this.timer.Stop()
 		this.timer = nil
 	}
-	LogRequest(requestTime, serviceTime, transaction_time, resultCount,
-		resultSize, errorCount, req, this, server, seqScanCount)
+
+	LogRequest(requestTime, serviceTime, transaction_time, resultCount, resultSize, errorCount, req, this, server, seqScanCount)
 
 	// Request Profiling - signal that request has completed and
 	// resources can be pooled / released as necessary
@@ -1310,7 +1423,7 @@ func (this *BaseRequest) done() {
 			buf := make([]byte, 1<<16)
 			n := runtime.Stack(buf, false)
 			s := string(buf[0:n])
-			stmt := "<ud>" + this.Statement() + "</ud>"
+			stmt := "<ud>" + this.RedactedStatement() + "</ud>"
 			qc := "<ud>" + this.QueryContext() + "</ud>"
 			logging.Severef("panic: %v ", err, this.ExecutionContext())
 			logging.Severef("request text: %v", stmt, this.ExecutionContext())
@@ -1387,7 +1500,7 @@ func (this *BaseRequest) EventUsers() []string {
 
 // For audit.Auditable interface.
 func (this *BaseRequest) EventNamedArgs() map[string]interface{} {
-	argsMap := this.NamedArgs()
+	argsMap := this.RedactedNamedArgs()
 	ret := make(map[string]interface{}, len(argsMap))
 	for name, argValue := range argsMap {
 		ret[name] = argValue.Actual()
@@ -1397,7 +1510,7 @@ func (this *BaseRequest) EventNamedArgs() map[string]interface{} {
 
 // For audit.Auditable interface.
 func (this *BaseRequest) EventPositionalArgs() []interface{} {
-	args := this.PositionalArgs()
+	args := this.RedactedPositionalArgs()
 	ret := make([]interface{}, len(args))
 	for i, v := range args {
 		ret[i] = v.Actual()

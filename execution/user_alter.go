@@ -75,7 +75,12 @@ func (this *AlterUser) RunOnce(context *Context, parent value.Value) {
 		} else {
 			p, ok := this.plan.Node().Password()
 			if ok {
-				u.Password = p
+				v, err := p.Evaluate(parent, &this.operatorCtx)
+				if err != nil {
+					context.Error(errors.NewEvaluationError(err, "password"))
+					return
+				}
+				u.Password = v.ToString()
 			} else {
 				u.Password = string([]byte{0})
 			}

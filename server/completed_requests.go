@@ -598,7 +598,7 @@ func LogRequest(request_time, service_time, transactionElapsedTime time.Duration
 			}
 		}
 	}
-	stmt := request.Statement()
+	stmt := request.RedactedStatement()
 	if stmt != "" {
 		re.Statement = stmt
 	}
@@ -616,30 +616,32 @@ func LogRequest(request_time, service_time, transactionElapsedTime time.Duration
 	re.PhaseTimes = request.RawPhaseTimes()
 	re.UsedMemory = request.UsedMemory()
 
-	// in order not to bloat service memory, we marshal the timings into a value
-	// at the expense of request execution time
-	timings := request.GetTimings()
-	maxPlanSize := RequestsMaxPlanSize()
-	if timings != nil {
-		parsed := request.GetFmtTimings()
-		if len(parsed) > 0 {
-			re.timings = parsed
-		} else if maxPlanSize == 0 {
-			re.timings = []byte("{\"WARNING\":\"Plan inclusion disabled.\"}")
-		} else {
-			v, err := json.Marshal(timings)
-			if len(v) > 0 && err == nil && len(v) <= maxPlanSize {
-				re.timings = v
-			} else if len(v) > maxPlanSize {
-				re.timings = []byte(fmt.Sprintf("{\"WARNING\":\"Plan (%v) exceeds maximum permitted (%v) size.\"}",
-					logging.HumanReadableSize(int64(len(v)), false), logging.HumanReadableSize(int64(maxPlanSize), false)))
+	if !request.Sensitive() {
+		// in order not to bloat service memory, we marshal the timings into a value
+		// at the expense of request execution time
+		timings := request.GetTimings()
+		maxPlanSize := RequestsMaxPlanSize()
+		if timings != nil {
+			parsed := request.GetFmtTimings()
+			if len(parsed) > 0 {
+				re.timings = parsed
+			} else if maxPlanSize == 0 {
+				re.timings = []byte("{\"WARNING\":\"Plan inclusion disabled.\"}")
+			} else {
+				v, err := json.Marshal(timings)
+				if len(v) > 0 && err == nil && len(v) <= maxPlanSize {
+					re.timings = v
+				} else if len(v) > maxPlanSize {
+					re.timings = []byte(fmt.Sprintf("{\"WARNING\":\"Plan (%v) exceeds maximum permitted (%v) size.\"}",
+						logging.HumanReadableSize(int64(len(v)), false), logging.HumanReadableSize(int64(maxPlanSize), false)))
+				}
 			}
-		}
-		estimates := request.GetFmtOptimizerEstimates()
-		if len(parsed) > 0 {
-			re.optEstimates = estimates
-		} else {
-			re.optEstimates = request.FmtOptimizerEstimates(timings)
+			estimates := request.GetFmtOptimizerEstimates()
+			if len(parsed) > 0 {
+				re.optEstimates = estimates
+			} else {
+				re.optEstimates = request.FmtOptimizerEstimates(timings)
+			}
 		}
 	}
 
@@ -651,8 +653,8 @@ func LogRequest(request_time, service_time, transactionElapsedTime time.Duration
 		ctrl = (ctr == value.TRUE)
 	}
 	if ctrl {
-		re.NamedArgs = request.NamedArgs()
-		re.PositionalArgs = request.PositionalArgs()
+		re.NamedArgs = request.RedactedNamedArgs()
+		re.PositionalArgs = request.RedactedPositionalArgs()
 		memoryQuota := request.MemoryQuota()
 		if memoryQuota != 0 {
 			re.MemoryQuota = memoryQuota

@@ -1734,7 +1734,7 @@ func activeRequestWorkHorse(endpoint *HttpEndpoint, request server.Request, prof
 		reqMap["clientContextID"] = cId
 	}
 	if request.Statement() != "" {
-		reqMap["statement"] = redacted(request.Statement(), redact)
+		reqMap["statement"] = redacted(request.RedactedStatement(), redact)
 	}
 	if request.Type() != "" {
 		reqMap["statementType"] = request.Type()
@@ -1802,7 +1802,7 @@ func activeRequestWorkHorse(endpoint *HttpEndpoint, request server.Request, prof
 
 		// TODO - check lifetime of entry
 		// by the time we marshal, is this still valid?
-		if prof == server.ProfOn || prof == server.ProfBench {
+		if (prof == server.ProfOn || prof == server.ProfBench) && !request.Sensitive() {
 			timings := request.GetTimings()
 			if timings != nil {
 				reqMap["timings"] = value.ApplyDurationStyleToValue(durStyle, func(s string) bool {
@@ -1827,11 +1827,11 @@ func activeRequestWorkHorse(endpoint *HttpEndpoint, request server.Request, prof
 			ctrl = (ctr == value.TRUE)
 		}
 		if ctrl {
-			na := request.NamedArgs()
+			na := request.RedactedNamedArgs()
 			if na != nil {
 				reqMap["namedArgs"] = interfaceRedacted(na, redact)
 			}
-			pa := request.PositionalArgs()
+			pa := request.RedactedPositionalArgs()
 			if pa != nil {
 				reqMap["positionalArgs"] = interfaceRedacted(pa, redact)
 			}

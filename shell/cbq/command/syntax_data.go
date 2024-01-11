@@ -588,8 +588,12 @@ var statement_syntax = map[string][][]string{
 	"user_opts": [][]string{
 		[]string{"user_opts", "user_opt"},
 	},
+	"param_or_str": [][]string{
+		[]string{"param_expr"},
+		[]string{"<quoted string>"},
+	},
 	"user_opt": [][]string{
-		[]string{"PASSWORD", "<quoted string>"},
+		[]string{"PASSWORD", "param_or_str"},
 		[]string{"WITH", "<quoted string>"},
 		[]string{"GROUPS", "groups"},
 		[]string{"GROUP", "permitted_identifiers"},

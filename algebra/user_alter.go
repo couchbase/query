@@ -20,22 +20,22 @@ import (
 type AlterUser struct {
 	statementBase
 
-	user         string   `json:"user"`
-	password_set bool     `json:"password_set"`
-	password     string   `json:"password"`
-	groups_set   bool     `json:"groups_set"`
-	groups       []string `json:"groups"`
-	name_set     bool     `json:"name_set"`
-	name         string   `json:"name"`
+	user         string                `json:"user"`
+	password_set bool                  `json:"password_set"`
+	password     expression.Expression `json:"password"`
+	groups_set   bool                  `json:"groups_set"`
+	groups       []string              `json:"groups"`
+	name_set     bool                  `json:"name_set"`
+	name         string                `json:"name"`
 }
 
-func NewAlterUser(user string, password value.Value, name value.Value, groups value.Value) *AlterUser {
+func NewAlterUser(user string, password expression.Expression, name value.Value, groups value.Value) *AlterUser {
 	rv := &AlterUser{
 		user: user,
 	}
 	if password != nil {
 		rv.password_set = true
-		rv.password = password.ToString()
+		rv.password = password
 	}
 	if name != nil {
 		rv.name_set = true
@@ -90,7 +90,7 @@ func (this *AlterUser) User() string {
 	return this.user
 }
 
-func (this *AlterUser) Password() (string, bool) {
+func (this *AlterUser) Password() (expression.Expression, bool) {
 	return this.password, this.password_set
 }
 
