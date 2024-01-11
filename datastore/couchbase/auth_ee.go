@@ -59,7 +59,7 @@ func messageForDeniedPrivilege(pair auth.PrivilegePair) (string, string, string)
 		role = fmt.Sprintf("%s on %s", base_role, keyspace)
 	case auth.PRIV_QUERY_DELETE:
 		base_role = "query_delete"
-		privilege = fmt.Sprintf("run DELETE on %s", keyspace)
+		privilege = fmt.Sprintf("run DELETE queries on %s", keyspace)
 		role = fmt.Sprintf("%s on %s", base_role, keyspace)
 	case auth.PRIV_QUERY_BUILD_INDEX, auth.PRIV_QUERY_CREATE_INDEX,
 		auth.PRIV_QUERY_ALTER_INDEX, auth.PRIV_QUERY_DROP_INDEX, auth.PRIV_QUERY_LIST_INDEX:
