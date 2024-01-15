@@ -56,7 +56,7 @@
     {
         "testcase":"allow only numeric values for options",
         "statements":" WITH RECURSIVE cte AS (SELECT 1 r UNION SELECT 2 r UNION SELECT cte.r+1 as r FROM cte) OPTIONS {\"abc\": \"SELECT 1\"} SELECT cte.* FROM cte;",
-        "error": "Execution internal error: Config Options must be Numeric, abc:string"
+        "error": "Execution internal error: Configuration options must be numeric ('abc' is string)"
     },
     {
         "testcase":"only valid options are \"levels\" and \"documents\"",
