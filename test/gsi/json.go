@@ -493,11 +493,11 @@ func Start(site, pool, namespace string, setGlobals, startHttpServer bool) *Mock
 			ReadHeaderTimeout: 5 * time.Second,
 		}
 
-		constructor.Init(router, 6, jsevalPath, "")
+		constructor.Init(router, 6, jsevalPath)
 		go httpSrv.ListenAndServe()
 
 	} else {
-		constructor.Init(nil, 6, jsevalPath, "")
+		constructor.Init(nil, 6, jsevalPath)
 	}
 
 	srv.SetKeepAlive(1 << 10)
