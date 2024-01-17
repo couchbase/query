@@ -301,6 +301,12 @@ func (b *Bucket) processOpError(vb uint32, lastError error, node string, desc *d
 			desc.errorString = "Retrying Memcached error (%v) FOR %v(vbid:%d, keys:<ud>%v</ud>)"
 			desc.backOffAttempts++
 			desc.retry = backOff(desc.backOffAttempts, desc.maxTries, backOffDuration, true)
+		case gomemcached.UNKNOWN_COLLECTION:
+			// Query may submit a request for a collection it knows about before all the KV's v-buckets know about it
+			// in this case Query is expected to handle the KV's response by retrying
+			desc.errorString = "Retrying Memcached error (%v) FOR %v(vbid:%d, keys:<ud>%v</ud>)"
+			desc.backOffAttempts++
+			desc.retry = backOff(desc.backOffAttempts, desc.maxTries, backOffDuration, true)
 		case gomemcached.SYNC_WRITE_IN_PROGRESS:
 			desc.backOffAttempts++
 			desc.retry = backOff(desc.backOffAttempts, desc.maxTries, backOffDuration, true)
@@ -416,10 +422,9 @@ func (b *Bucket) backOffRetries() int {
 // Do executes a function on a memcached connection to the node owning key "k"
 //
 // Note that this automatically handles transient errors by replaying
-// your function on a "not-my-vbucket" error, so don't assume
-// your command will only be executed once.
+// your function on a (for example) "not-my-vbucket" error, so don't assume your command will only be executed once.
 func (b *Bucket) do(k string, f func(mc *memcached.Client, vb uint16) error) (err error) {
-	return b.do2(k, f, true, false, 2*len(b.Nodes()))
+	return b.do2(k, f, true, false, b.backOffRetries())
 }
 
 func (b *Bucket) do2(k string, f func(mc *memcached.Client, vb uint16) error, deadline bool, useReplicas bool, backOffRetries int) (err error) {
