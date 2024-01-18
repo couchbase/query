@@ -1773,13 +1773,25 @@ func (this *builder) orGetIndexFilter(pred expression.Expression, keys expressio
 			// one of the OR subterms is "empty", i.e., true
 			return nil
 		}
-		// avoid adding redundant term
 		found := false
-		for i := 0; i < len(terms); i++ {
-			if base.SubsetOf(terms[i], term) {
-				terms[i] = term
-				found = true
-				break
+		if modified {
+			// avoid adding redundant term
+			for i := 0; i < len(terms); i++ {
+				// SubsetOf() could result in exponential number of comparisons if
+				// both term and terms[i] are AND expressions with many children
+				if _, ok := term.(*expression.And); ok {
+					if term.EquivalentTo(terms[i]) {
+						found = true
+					}
+				} else {
+					if base.SubsetOf(terms[i], term) {
+						terms[i] = term
+						found = true
+					}
+				}
+				if found {
+					break
+				}
 			}
 		}
 		if !found {
