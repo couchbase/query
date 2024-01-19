@@ -2137,7 +2137,6 @@ func doFetch(k string, fullName string, v *gomemcached.MCResponse, context datas
 		val = value.NewAnnotatedValue(value.NewNestedScopeValue(nil))
 		var scan json.ScanState
 		json.SetScanState(&scan, raw)
-		done := make([]bool, len(projection))
 	proj:
 		for found := 0; found < len(projection); {
 			k, e := scan.ScanKeys()
@@ -2151,7 +2150,6 @@ func doFetch(k string, fullName string, v *gomemcached.MCResponse, context datas
 						break proj
 					}
 					val.SetField(projection[i], value.NewValue(v))
-					done[i] = true
 					found++
 					break
 				}
