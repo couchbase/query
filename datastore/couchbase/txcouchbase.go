@@ -201,6 +201,7 @@ func (s *store) CommitTransaction(stmtAtomicity bool, context datastore.QueryCon
 	if err != nil {
 		if transaction != nil {
 			var wg sync.WaitGroup
+			wg.Add(1)
 			rerr := transaction.Rollback(func(resErr error) {
 				defer wg.Done()
 			})
