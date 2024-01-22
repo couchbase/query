@@ -2167,3 +2167,7 @@ func (this *Context) PrevSequenceValue(name string) (int64, errors.Error) {
 func (this *Context) HasFeature(feat uint64) bool {
 	return this.featureControls&feat != 0
 }
+
+func (this *Context) GetDsQueryContext() datastore.QueryContext {
+	return this
+}
