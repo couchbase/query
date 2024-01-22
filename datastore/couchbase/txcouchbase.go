@@ -223,8 +223,14 @@ func (s *store) CommitTransaction(stmtAtomicity bool, context datastore.QueryCon
 	logging.Tracea(func() string { return fmt.Sprintf("=====%v=====Commit end write (%v)========", txId, err) })
 	if err != nil {
 		if transaction != nil {
-			transaction.Rollback(func(resErr error) {
+			var wg sync.WaitGroup
+			wg.Add(1)
+			rerr := transaction.Rollback(func(resErr error) {
+				defer wg.Done()
 			})
+			if rerr == nil {
+				wg.Wait()
+			}
 			txMutations.SetTransaction(nil, nil)
 		}
 		e, c := gcagent.ErrorType(err, false)
