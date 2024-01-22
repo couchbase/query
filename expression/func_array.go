@@ -62,7 +62,10 @@ func (this *ArrayAppend) Evaluate(item value.Value, context Context) (value.Valu
 		} else if i == 0 && arg.Type() != value.ARRAY {
 			null = true
 		} else if i == 0 {
-			f = arg.Actual().([]interface{})
+			fa := arg.Actual().([]interface{})
+			// return a  new array, for recursive cte use-cases
+			f = make([]interface{}, len(fa), len(fa)+len(this.operands)-1)
+			copy(f, fa)
 		} else if !missing && !null {
 			f = append(f, arg)
 		}
@@ -212,6 +215,7 @@ func (this *ArrayConcat) Evaluate(item value.Value, context Context) (value.Valu
 	null := false
 	missing := false
 
+	var first []interface{}
 	for i, op := range this.operands {
 		arg, err := op.Evaluate(item, context)
 		if err != nil {
@@ -221,8 +225,14 @@ func (this *ArrayConcat) Evaluate(item value.Value, context Context) (value.Valu
 		} else if arg.Type() != value.ARRAY {
 			null = true
 		} else if i == 0 {
-			f = arg.Actual().([]interface{})
+			first = arg.Actual().([]interface{})
 		} else if !missing && !null {
+			act := arg.Actual().([]interface{})
+			if f == nil {
+				f = make([]interface{}, len(first), len(first)+len(act))
+				copy(f, first)
+			}
+
 			f = append(f, arg.Actual().([]interface{})...)
 		}
 	}
