@@ -89,6 +89,10 @@ func (this *With) RunOnce(context *Context, parent value.Value) {
 		withs := this.plan.Bindings()
 
 		for _, with := range withs.Bindings() {
+			if !this.isRunning() {
+				this.notify()
+				break
+			}
 			v, e := with.Expression().Evaluate(wv, &this.operatorCtx)
 			if e != nil {
 				context.Error(errors.NewEvaluationError(e, "WITH"))
@@ -150,6 +154,10 @@ func (this *With) RunOnce(context *Context, parent value.Value) {
 				}
 
 				for {
+					if !this.isRunning() {
+						this.notify()
+						break
+					}
 					if len(workRes) == 0 {
 						// naive exit
 						break
