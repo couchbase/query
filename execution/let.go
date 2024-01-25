@@ -61,6 +61,10 @@ func (this *Let) processItem(item value.AnnotatedValue, context *Context) bool {
 		item.Recycle()
 	}
 	for _, b := range this.plan.Bindings() {
+		if !this.isRunning() {
+			lv.Recycle()
+			return false
+		}
 		v, e := b.Expression().Evaluate(lv, &this.operatorCtx)
 		if e != nil {
 			context.Error(errors.NewEvaluationError(e, "LET"))

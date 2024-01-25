@@ -11,11 +11,15 @@ package http
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/couchbase/query/audit"
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/logging"
+	"github.com/couchbase/query/util"
 
 	adt "github.com/couchbase/goutils/go-cbaudit"
 )
@@ -30,7 +34,7 @@ type handlerFunc func(http.ResponseWriter, *http.Request)
 
 type textPlain string
 
-func (this *HttpEndpoint) wrapAPI(w http.ResponseWriter, req *http.Request, f apiFunc) {
+func (this *HttpEndpoint) wrapAPI(w http.ResponseWriter, req *http.Request, f apiFunc, log bool) {
 	auditFields := audit.ApiAuditFields{
 		GenericFields: adt.GetAuditBasicFields(req),
 		RemoteAddress: req.RemoteAddr,
@@ -38,7 +42,24 @@ func (this *HttpEndpoint) wrapAPI(w http.ResponseWriter, req *http.Request, f ap
 		LocalAddress:  req.Host,
 	}
 
-	obj, err := f(this, w, req, &auditFields)
+	var obj interface{}
+	var err errors.Error
+
+	if !log {
+		obj, err = f(this, w, req, &auditFields)
+	} else {
+		logging.Infof("%v %v request received.", req.URL.String(), req.Method)
+		start := time.Now()
+		obj, err = f(this, w, req, &auditFields)
+		dur := time.Now().Sub(start)
+		em := ""
+		if err != nil {
+			em = fmt.Sprintf(" Error: %v", err)
+		} else if obj == nil {
+			em = " No output."
+		}
+		logging.Infof("%v %v access completed in %v.%v", req.URL.String(), req.Method, util.OutputDuration(dur), em)
+	}
 	if err != nil {
 		status := writeError(w, err)
 
@@ -73,6 +94,7 @@ func (this *HttpEndpoint) wrapAPI(w http.ResponseWriter, req *http.Request, f ap
 		}
 		json_err = enc.Encode(obj)
 		if json_err != nil {
+			logging.Infof("Error writing output for %v: %v", req.URL.String(), json_err)
 			e := errors.NewAdminDecodingError(json_err)
 			status := writeError(w, e)
 

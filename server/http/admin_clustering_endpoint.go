@@ -36,31 +36,31 @@ const (
 
 func (this *HttpEndpoint) registerClusterHandlers() {
 	pingHandler := func(w http.ResponseWriter, req *http.Request) {
-		this.wrapAPI(w, req, doPing)
+		this.wrapAPI(w, req, doPing, false)
 	}
 	configHandler := func(w http.ResponseWriter, req *http.Request) {
-		this.wrapAPI(w, req, doConfig)
+		this.wrapAPI(w, req, doConfig, false)
 	}
 	sslCertHandler := func(w http.ResponseWriter, req *http.Request) {
-		this.wrapAPI(w, req, doSslCert)
+		this.wrapAPI(w, req, doSslCert, false)
 	}
 	clustersHandler := func(w http.ResponseWriter, req *http.Request) {
-		this.wrapAPI(w, req, doClusters)
+		this.wrapAPI(w, req, doClusters, false)
 	}
 	clusterHandler := func(w http.ResponseWriter, req *http.Request) {
-		this.wrapAPI(w, req, doCluster)
+		this.wrapAPI(w, req, doCluster, false)
 	}
 	nodesHandler := func(w http.ResponseWriter, req *http.Request) {
-		this.wrapAPI(w, req, doNodes)
+		this.wrapAPI(w, req, doNodes, false)
 	}
 	nodeHandler := func(w http.ResponseWriter, req *http.Request) {
-		this.wrapAPI(w, req, doNode)
+		this.wrapAPI(w, req, doNode, false)
 	}
 	settingsHandler := func(w http.ResponseWriter, req *http.Request) {
-		this.wrapAPI(w, req, doSettings)
+		this.wrapAPI(w, req, doSettings, false)
 	}
 	shutdownHandler := func(w http.ResponseWriter, req *http.Request) {
-		this.wrapAPI(w, req, doShutdown)
+		this.wrapAPI(w, req, doShutdown, false)
 	}
 	indexHandler := this.wrapHandlerFuncWithAdminAuth(pprof.Index)
 	profileHandler := this.wrapHandlerFuncWithAdminAuth(pprof.Profile)
