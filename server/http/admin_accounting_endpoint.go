@@ -80,109 +80,109 @@ func expvarsHandler(w http.ResponseWriter, req *http.Request) {
 
 func (this *HttpEndpoint) registerAccountingHandlers() {
 	statsHandler := func(w http.ResponseWriter, req *http.Request) {
-		this.wrapAPI(w, req, doStats)
+		this.wrapAPI(w, req, doStats, false)
 	}
 	statHandler := func(w http.ResponseWriter, req *http.Request) {
-		this.wrapAPI(w, req, doStat)
+		this.wrapAPI(w, req, doStat, false)
 	}
 	notFoundHandler := func(w http.ResponseWriter, req *http.Request) {
-		this.wrapAPI(w, req, doNotFound)
+		this.wrapAPI(w, req, doNotFound, false)
 	}
 	vitalsHandler := func(w http.ResponseWriter, req *http.Request) {
-		this.wrapAPI(w, req, doVitals)
+		this.wrapAPI(w, req, doVitals, false)
 	}
 	preparedHandler := func(w http.ResponseWriter, req *http.Request) {
-		this.wrapAPI(w, req, doPrepared)
+		this.wrapAPI(w, req, doPrepared, false)
 	}
 	preparedsHandler := func(w http.ResponseWriter, req *http.Request) {
-		this.wrapAPI(w, req, doPrepareds)
+		this.wrapAPI(w, req, doPrepareds, false)
 	}
 	requestsHandler := func(w http.ResponseWriter, req *http.Request) {
-		this.wrapAPI(w, req, doActiveRequests)
+		this.wrapAPI(w, req, doActiveRequests, false)
 	}
 	requestHandler := func(w http.ResponseWriter, req *http.Request) {
-		this.wrapAPI(w, req, doActiveRequest)
+		this.wrapAPI(w, req, doActiveRequest, false)
 	}
 	completedsHandler := func(w http.ResponseWriter, req *http.Request) {
-		this.wrapAPI(w, req, doCompletedRequests)
+		this.wrapAPI(w, req, doCompletedRequests, false)
 	}
 	completedHandler := func(w http.ResponseWriter, req *http.Request) {
-		this.wrapAPI(w, req, doCompletedRequest)
+		this.wrapAPI(w, req, doCompletedRequest, false)
 	}
 	preparedIndexHandler := func(w http.ResponseWriter, req *http.Request) {
-		this.wrapAPI(w, req, doPreparedIndex)
+		this.wrapAPI(w, req, doPreparedIndex, false)
 	}
 	requestIndexHandler := func(w http.ResponseWriter, req *http.Request) {
-		this.wrapAPI(w, req, doRequestIndex)
+		this.wrapAPI(w, req, doRequestIndex, false)
 	}
 	completedIndexHandler := func(w http.ResponseWriter, req *http.Request) {
-		this.wrapAPI(w, req, doCompletedIndex)
+		this.wrapAPI(w, req, doCompletedIndex, false)
 	}
 	functionsIndexHandler := func(w http.ResponseWriter, req *http.Request) {
-		this.wrapAPI(w, req, doFunctionsIndex)
+		this.wrapAPI(w, req, doFunctionsIndex, false)
 	}
 	functionHandler := func(w http.ResponseWriter, req *http.Request) {
-		this.wrapAPI(w, req, doFunction)
+		this.wrapAPI(w, req, doFunction, false)
 	}
 	functionsHandler := func(w http.ResponseWriter, req *http.Request) {
-		this.wrapAPI(w, req, doFunctions)
+		this.wrapAPI(w, req, doFunctions, false)
 	}
 	dictionaryIndexHandler := func(w http.ResponseWriter, req *http.Request) {
-		this.wrapAPI(w, req, doDictionaryIndex)
+		this.wrapAPI(w, req, doDictionaryIndex, false)
 	}
 	dictionaryEntryHandler := func(w http.ResponseWriter, req *http.Request) {
-		this.wrapAPI(w, req, doDictionaryEntry)
+		this.wrapAPI(w, req, doDictionaryEntry, false)
 	}
 	dictionaryHandler := func(w http.ResponseWriter, req *http.Request) {
-		this.wrapAPI(w, req, doDictionary)
+		this.wrapAPI(w, req, doDictionary, false)
 	}
 	tasksIndexHandler := func(w http.ResponseWriter, req *http.Request) {
-		this.wrapAPI(w, req, doTasksIndex)
+		this.wrapAPI(w, req, doTasksIndex, false)
 	}
 	taskHandler := func(w http.ResponseWriter, req *http.Request) {
-		this.wrapAPI(w, req, doTask)
+		this.wrapAPI(w, req, doTask, false)
 	}
 
 	tasksHandler := func(w http.ResponseWriter, req *http.Request) {
-		this.wrapAPI(w, req, doTasks)
+		this.wrapAPI(w, req, doTasks, false)
 	}
 
 	prometheusLowHandler := func(w http.ResponseWriter, req *http.Request) {
-		this.wrapAPI(w, req, doPrometheusLow)
+		this.wrapAPI(w, req, doPrometheusLow, false)
 	}
 
 	transactionsIndexHandler := func(w http.ResponseWriter, req *http.Request) {
-		this.wrapAPI(w, req, doTransactionsIndex)
+		this.wrapAPI(w, req, doTransactionsIndex, false)
 	}
 	transactionHandler := func(w http.ResponseWriter, req *http.Request) {
-		this.wrapAPI(w, req, doTransaction)
+		this.wrapAPI(w, req, doTransaction, false)
 	}
 	transactionsHandler := func(w http.ResponseWriter, req *http.Request) {
-		this.wrapAPI(w, req, doTransactions)
+		this.wrapAPI(w, req, doTransactions, false)
 	}
 	globalBackupHandler := func(w http.ResponseWriter, req *http.Request) {
-		this.wrapAPI(w, req, doGlobalBackup)
+		this.wrapAPI(w, req, doGlobalBackup, true)
 	}
 	bucketBackupHandler := func(w http.ResponseWriter, req *http.Request) {
-		this.wrapAPI(w, req, doBucketBackup)
+		this.wrapAPI(w, req, doBucketBackup, true)
 	}
 	forceGCHandler := func(w http.ResponseWriter, req *http.Request) {
-		this.wrapAPI(w, req, doForceGC)
+		this.wrapAPI(w, req, doForceGC, false)
 	}
 	manualFFDCHandler := func(w http.ResponseWriter, req *http.Request) {
-		this.wrapAPI(w, req, doManualFFDC)
+		this.wrapAPI(w, req, doManualFFDC, false)
 	}
 	logHandler := func(w http.ResponseWriter, req *http.Request) {
-		this.wrapAPI(w, req, doLog)
+		this.wrapAPI(w, req, doLog, false)
 	}
 	sequenceIndexHandler := func(w http.ResponseWriter, req *http.Request) {
-		this.wrapAPI(w, req, doSequenceIndex)
+		this.wrapAPI(w, req, doSequenceIndex, false)
 	}
 	sequenceHandler := func(w http.ResponseWriter, req *http.Request) {
-		this.wrapAPI(w, req, doSequence)
+		this.wrapAPI(w, req, doSequence, false)
 	}
 	migrationHandler := func(w http.ResponseWriter, req *http.Request) {
-		this.wrapAPI(w, req, doMigration)
+		this.wrapAPI(w, req, doMigration, false)
 	}
 	routeMap := map[string]struct {
 		handler handlerFunc
@@ -233,7 +233,7 @@ func (this *HttpEndpoint) registerAccountingHandlers() {
 	// prometheus is a special case, as it may be handled by the tenant code
 	if !tenant.IsServerless() {
 		prometheusHighHandler := func(w http.ResponseWriter, req *http.Request) {
-			this.wrapAPI(w, req, doEmpty)
+			this.wrapAPI(w, req, doEmpty, false)
 		}
 		this.router.Map(prometheusHigh, prometheusHighHandler, "GET")
 	}
