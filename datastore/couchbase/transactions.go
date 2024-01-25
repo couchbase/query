@@ -38,6 +38,13 @@ var MutateOpNames = map[MutateOp]string{
 	MOP_DELETE: "DELETE",
 }
 
+func (this MutateOp) String() string {
+	if str, ok := MutateOpNames[this]; ok {
+		return str
+	}
+	return MutateOpNames[MOP_NONE]
+}
+
 const (
 	MV_FLAGS_WRITE uint32 = 1 << iota
 )
@@ -61,6 +68,25 @@ type MutationValue struct {
 	memSize    int64
 }
 
+func (this *MutationValue) MarshalJSON() ([]byte, error) {
+	m := make(map[string]interface{})
+	m["op"] = this.Op.String()
+	m["kv_cas"] = this.KvCas
+	m["cas"] = this.Cas
+	m["expiration"] = this.Expiration
+	m["flags"] = this.Flags
+	if this.Val != nil {
+		m["value"] = this.Val
+	}
+	if this.TxnMeta != nil {
+		m["txn_meta"] = this.TxnMeta
+	}
+	if len(this.User) > 0 {
+		m["user"] = this.User
+	}
+	return json.Marshal(m)
+}
+
 type DeltaKeyspace struct {
 	ks             *keyspace
 	bucketName     string
@@ -68,6 +94,16 @@ type DeltaKeyspace struct {
 	collectionName string
 	collId         uint32
 	values         map[string]*MutationValue
+}
+
+func (this *DeltaKeyspace) MarshalJSON() ([]byte, error) {
+	m := make(map[string]interface{})
+	m["bucket"] = this.bucketName
+	m["scope"] = this.scopeName
+	m["collection"] = this.collectionName
+	m["coll_id"] = this.collId
+	m["values"] = this.values
+	return json.Marshal(m)
 }
 
 type TransactionLogValue struct {
@@ -84,11 +120,39 @@ type TransactionLogValue struct {
 	oldMemSize    int64
 }
 
+func (this *TransactionLogValue) MarshalJSON() ([]byte, error) {
+	m := make(map[string]interface{})
+	m["type"] = this.logType
+	m["key"] = this.key
+	m["op"] = this.oldOp.String()
+	m["kv_cas"] = this.oldKvCas
+	m["cas"] = this.oldCas
+	m["expiration"] = this.oldExpiration
+	m["flags"] = this.oldFlags
+	if this.oldVal != nil {
+		m["value"] = this.oldVal
+	}
+	if this.oldTxnMeta != nil {
+		m["txn_meta"] = this.oldTxnMeta
+	}
+	if len(this.oldUser) > 0 {
+		m["user"] = this.oldUser
+	}
+	return json.Marshal(m)
+}
+
 type TransactionLogValues []*TransactionLogValue
 
 type TransactionLog struct {
 	lastKeyspace string
 	logValues    TransactionLogValues
+}
+
+func (this *TransactionLog) MarshalJSON() ([]byte, error) {
+	m := make(map[string]interface{})
+	m["last_keyspace"] = this.lastKeyspace
+	m["values"] = this.logValues
+	return json.Marshal(m)
 }
 
 type TransactionMutations struct {
@@ -106,6 +170,19 @@ type TransactionMutations struct {
 	curLog           int
 	usedMemory       int64
 	memoryQuota      uint64
+}
+
+func (this *TransactionMutations) MarshalJSON() ([]byte, error) {
+	m := make(map[string]interface{})
+	m["deltatables"] = this.keyspaces
+	m["implicit"] = this.tranImplicit
+	if len(this.savepoints) > 0 {
+		m["savepoints"] = this.savepoints
+	}
+	if len(this.logs) > 0 {
+		m["tranlog"] = this.logs
+	}
+	return json.Marshal(m)
 }
 
 const (

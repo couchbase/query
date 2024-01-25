@@ -98,7 +98,7 @@ func (b *transactionsKeyspace) Fetch(keys []string, keysMap map[string]value.Ann
 			transactions.TransactionEntryDo(localKey, func(d interface{}) {
 				itemMap := map[string]interface{}{}
 				entry := d.(*transactions.TranContext)
-				entry.Content(itemMap)
+				entry.Content(itemMap, false)
 				if node != "" {
 					itemMap["node"] = node
 				}

@@ -324,7 +324,7 @@ func (this *TranContext) SetSequence(name string, val int64) {
 	this.sequences[name] = val
 }
 
-func (this *TranContext) Content(r map[string]interface{}) {
+func (this *TranContext) Content(r map[string]interface{}, includeMutations bool) {
 	r["id"] = this.txId
 	r["timeout"] = util.OutputDuration(this.txTimeout)
 	if this.kvTimeout > 0 {
@@ -363,6 +363,17 @@ func (this *TranContext) Content(r map[string]interface{}) {
 	if txMutations := this.TxMutations(); txMutations != nil {
 		if tranMemory, ok := txMutations.(datastore.TransactionMemory); ok {
 			usedMemory += tranMemory.TransactionUsedMemory()
+		}
+		if includeMutations {
+			// marshall & unmarshal to ensure only simple types are present in the output
+			b, err := json.Marshal(txMutations)
+			if err == nil {
+				m := make(map[string]interface{})
+				err = json.Unmarshal(b, &m)
+				if err == nil {
+					r["mutations"] = m
+				}
+			}
 		}
 	}
 

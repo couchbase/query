@@ -1618,7 +1618,7 @@ func doTransaction(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Requ
 		transactions.TransactionEntryDo(txId, func(d interface{}) {
 			entry := d.(*transactions.TranContext)
 			itemMap := map[string]interface{}{}
-			entry.Content(itemMap)
+			entry.Content(itemMap, true)
 			res = itemMap
 		})
 		return res, nil
@@ -1643,7 +1643,7 @@ func doTransactions(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 		snapshot := func(name string, d interface{}) bool {
 			tranContext := d.(*transactions.TranContext)
 			entry := map[string]interface{}{}
-			tranContext.Content(entry)
+			tranContext.Content(entry, false)
 			data = append(data, entry)
 			return true
 		}
