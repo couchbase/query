@@ -225,7 +225,6 @@ func (this *annotatedValue) updateSelfReferences(orig *annotatedValue) {
 }
 
 func (this *annotatedValue) UnsetField(field string) error {
-	this.cachedSize = 0
 	return this.Value.UnsetField(field)
 }
 
@@ -246,7 +245,6 @@ func (this *annotatedValue) SetField(field string, val interface{}) error {
 			}
 		}
 	}
-	this.cachedSize = 0
 	return err
 }
 
