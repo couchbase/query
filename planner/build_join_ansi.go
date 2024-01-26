@@ -945,10 +945,6 @@ func (this *builder) buildAnsiJoinScan(node *algebra.KeyspaceTerm, onclause, fil
 
 func (this *builder) buildHashJoin(node *algebra.AnsiJoin, filter expression.Expression, selec float64,
 	qPlan, subPlan []plan.Operator, coveringOps []plan.CoveringOperator) (*plan.HashJoin, bool, error) {
-	if this.hasBuilderFlag(BUILDER_RECURSIVE_WITH) {
-		return nil, false, nil
-	}
-
 	child, buildExprs, probeExprs, aliases, newOnclause, newFilter, buildRight, cost, cardinality, size, frCost, err := this.buildHashJoinOp(node.Right(), node.Left(), node.Outer(), node.Onclause(), filter, "join", qPlan, subPlan, coveringOps)
 	if err != nil || child == nil {
 		// cannot do hash join
@@ -968,10 +964,6 @@ func (this *builder) buildHashJoin(node *algebra.AnsiJoin, filter expression.Exp
 
 func (this *builder) buildHashNest(node *algebra.AnsiNest, filter expression.Expression, selec float64,
 	qPlan, subPlan []plan.Operator, coveringOps []plan.CoveringOperator) (*plan.HashNest, bool, error) {
-	if this.hasBuilderFlag(BUILDER_RECURSIVE_WITH) {
-		return nil, false, nil
-	}
-
 	child, buildExprs, probeExprs, aliases, newOnclause, newFilter, buildRight, cost, cardinality, size, frCost, err := this.buildHashJoinOp(node.Right(), node.Left(), node.Outer(), node.Onclause(), nil, "nest", qPlan, subPlan, coveringOps)
 	if err != nil || child == nil {
 		// cannot do hash nest

@@ -54,11 +54,6 @@ func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 	// Since this is the root Select being planned - disinclude its With expressions from cover transformation
 	stmt.SetIncludeWith(false)
 
-	if this.subquery && stmt.IsRecursiveWith() && !this.hasBuilderFlag(BUILDER_RECURSIVE_WITH) {
-		this.setBuilderFlag(BUILDER_RECURSIVE_WITH)
-		defer this.unsetBuilderFlag(BUILDER_RECURSIVE_WITH)
-	}
-
 	this.node = stmt
 	stmtOrder := stmt.Order()
 	stmtOffset, err := newOffsetLimitExpr(stmt.Offset(), true)
