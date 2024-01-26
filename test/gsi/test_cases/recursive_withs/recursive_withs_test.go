@@ -29,7 +29,7 @@ func TestRecursiveWiths(t *testing.T) {
 	runStmt(qc, " CREATE INDEX c_id ON `shellTest`._default.cycleTest(_from, _to);")
 
 	// queries
-	runMatch("case_employee_hierarchy.json", false, false, qc, t)
+	runMatch("case_employee_hierarchy.json", false, true, qc, t)
 	runMatch("case_cycle_clause", false, false, qc, t)
 	runMatch("case_semcheck.json", false, false, qc, t)
 	runMatch("case_with_options.json", false, false, qc, t)

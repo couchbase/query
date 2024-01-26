@@ -1,7 +1,51 @@
 [
     {
         "testcase": "level wise traversal on employee hierarchy",
-        "statements": "WITH RECURSIVE empHierar AS (SELECT e.name, 0 as lvl FROM `orders`._default.empSmall e WHERE e.reportsTo IS MISSING UNION SELECT e1.name, e1.reportsTo, manager.lvl+1 as lvl FROM empHierar manager JOIN `orders`._default.empSmall e1 ON manager.name=e1.reportsTo) SELECT empHierar.* FROM empHierar;",
+        "statements": "WITH RECURSIVE empHierar AS (SELECT e.name, 0 as lvl FROM `orders`._default.empSmall e WHERE e.reportsTo IS MISSING UNION SELECT e1.name, e1.reportsTo, manager.lvl+1 as lvl FROM empHierar manager JOIN `orders`._default.empSmall e1 ON manager.name=e1.reportsTo) SELECT empHierar.* FROM empHierar",
+        "results": [
+            {
+                "lvl": 0,
+                "name": "Dev"
+            },
+            {
+                "lvl": 1,
+                "name": "Eliot",
+                "reportsTo": "Dev"
+            },
+            {
+                "lvl": 2,
+                "name": "Andrew",
+                "reportsTo": "Eliot"
+            },
+            {
+                "lvl": 2,
+                "name": "Ron",
+                "reportsTo": "Eliot"
+            },
+            {
+                "lvl": 3,
+                "name": "Dan",
+                "reportsTo": "Andrew"
+            },
+            {
+                "lvl": 3,
+                "name": "Asya",
+                "reportsTo": "Ron"
+            }
+        ]
+    },
+    {
+        "testcase": "level wise traversal on employee hierarchy - with Hash Join",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY u IN p.`~subqueries` SATISFIES u.`correlated` = true AND ANY v WITHIN u.`plan`.`~children` SATISFIES v.`#operator` = \"HashJoin\" END END"
+        },
+        "statements": "WITH RECURSIVE empHierar AS (SELECT e.name, 0 as lvl FROM `orders`._default.empSmall e WHERE e.reportsTo IS MISSING UNION SELECT e1.name, e1.reportsTo, manager.lvl+1 as lvl FROM empHierar manager JOIN `orders`._default.empSmall e1 USE HASH(probe) ON manager.name=e1.reportsTo) SELECT empHierar.* FROM empHierar",
         "results": [
             {
                 "lvl": 0,
@@ -36,7 +80,7 @@
     },
     {
         "testcase": "per employee reports to list",
-        "statements":"SELECT e.name, e.reportsTo , (WITH RECURSIVE r AS (SELECT e1.name, e1.reportsTo, 1 as lvl FROM `orders`._default.empSmall e1 WHERE e1.reportsTo=e.name UNION SELECT e2.name, e2.reportsTo, r.lvl+1 as lvl FROM `orders`._default.empSmall e2 JOIN r ON r.name = e2.reportsTo) SELECT r.* FROM r) as reportsToList FROM `orders`._default.empSmall e;",
+        "statements":"SELECT e.name, e.reportsTo , (WITH RECURSIVE r AS (SELECT e1.name, e1.reportsTo, 1 as lvl FROM `orders`._default.empSmall e1 WHERE e1.reportsTo=e.name UNION SELECT e2.name, e2.reportsTo, r.lvl+1 as lvl FROM `orders`._default.empSmall e2 JOIN r ON r.name = e2.reportsTo) SELECT r.* FROM r) as reportsToList FROM `orders`._default.empSmall e",
         "results": [
             {
                 "name": "Dev",
