@@ -19,6 +19,7 @@ import (
 )
 
 const _MAX_RECUR_DEPTH = int64(100)
+const _MAX_IMPLICIT_DOCS = int64(10000)
 
 type With struct {
 	base
@@ -124,6 +125,11 @@ func (this *With) RunOnce(context *Context, parent value.Value) {
 				ilevel := int64(0)
 				idoc := int64(0)
 
+				implicitMaxDocs := int64(-1)
+				if config.document == -1 && !context.UseRequestQuota() {
+					implicitMaxDocs = _MAX_IMPLICIT_DOCS
+				}
+
 				// CYCLE CLAUSE
 				var cycleFields expression.Expressions
 				trackCycle := newwMap()
@@ -169,9 +175,13 @@ func (this *With) RunOnce(context *Context, parent value.Value) {
 						break
 					}
 
+					// exit on docs limit
 					if config.document > -1 && idoc > config.document {
-						// exit on docs limit
 						finalRes = finalRes[:config.document]
+						break
+					} else if implicitMaxDocs > -1 && idoc > implicitMaxDocs {
+						e = errors.NewRecursiveImplicitDocLimitError(with.Alias(), implicitMaxDocs)
+						finalRes = finalRes[:implicitMaxDocs]
 						break
 					}
 

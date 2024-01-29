@@ -164,6 +164,7 @@ const (
 	E_MORE_THAN_ONE_RECURSIVE_REF             ErrorCode = 3302
 	E_CONFIG_INVALID_OPTION                   ErrorCode = 3303
 	E_RECURSION_UNSUPPORTED                   ErrorCode = 3304
+	E_RECURSIVE_IMPLICIT_DOC_LIMIT            ErrorCode = 3305
 	E_PLAN                                    ErrorCode = 4000
 	E_REPREPARE                               ErrorCode = 4001
 	E_NO_TERM_NAME                            ErrorCode = 4010
