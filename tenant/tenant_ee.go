@@ -269,9 +269,13 @@ func recordUnits(ctx Context, d time.Duration, m uint64, units []regulator.Units
 
 func NeedRefund(ctx Context, errs []errors.Error, warns []errors.Error) bool {
 
+	if ctx == nil {
+		return false
+	}
+
 	// TODO extend
 	for _, e := range errs {
-		if e.Code() == errors.E_NODE_QUOTA_EXCEEDED {
+		if e != nil && e.Code() == errors.E_NODE_QUOTA_EXCEEDED {
 			return true
 		}
 	}

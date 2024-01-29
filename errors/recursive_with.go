@@ -18,7 +18,7 @@ func NewRecursiveWithSemanticError(cause string) Error {
 
 func NewMoreThanOneRecursiveRefError(ref string) Error {
 	return &err{level: EXCEPTION, ICode: E_MORE_THAN_ONE_RECURSIVE_REF,
-		InternalMsg:    fmt.Sprintf("recursive ref:%s must not appear more than once in the FROM clause", ref),
+		InternalMsg:    fmt.Sprintf("Recursive reference '%s' must not appear more than once in the FROM clause", ref),
 		InternalCaller: CallerN(2)}
 }
 
@@ -39,4 +39,14 @@ func NewRecursionUnsupportedError(clause string, cause string) Error {
 		InternalMsg:    fmt.Sprintf("recursive_with_unsupported: %s", clause),
 		cause:          cause,
 		InternalCaller: CallerN(1)}
+}
+
+func NewRecursiveImplicitDocLimitError(alias string, limit int64) Error {
+	c := make(map[string]interface{})
+	c["alias"] = alias
+	c["limit"] = limit
+	return &err{level: EXCEPTION, ICode: E_RECURSIVE_IMPLICIT_DOC_LIMIT, IKey: "recursive_with.implicit_docs_limit", cause: c,
+		InternalMsg: fmt.Sprintf(
+			"Recursive WITH '%s' limited to %v documents as no explicit document count limit or memory quota set",
+			alias, limit), InternalCaller: CallerN(1)}
 }

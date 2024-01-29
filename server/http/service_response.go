@@ -273,12 +273,14 @@ func (this *httpRequest) Execute(srvr *server.Server, context *execution.Context
 	this.Output().AddPhaseTime(execution.RUN, now.Sub(this.ExecTime()))
 	this.markTimeOfCompletion(now)
 
-	this.refunded = tenant.NeedRefund(context.TenantCtx(), this.Errors(), this.Warnings())
-	if this.refunded {
+	if context.TenantCtx() != nil {
+		this.refunded = tenant.NeedRefund(context.TenantCtx(), this.Errors(), this.Warnings())
+		if this.refunded {
 
-		// TODO wait for services requests to complete
-		// TODO write that we have refunded
-		tenant.RefundUnits(context.TenantCtx(), this.TenantUnits())
+			// TODO wait for services requests to complete
+			// TODO write that we have refunded
+			tenant.RefundUnits(context.TenantCtx(), this.TenantUnits())
+		}
 	}
 	state := this.State()
 	switch this.format {
