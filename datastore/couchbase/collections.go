@@ -635,7 +635,7 @@ func refreshScopesAndCollections(mani *cb.Manifest, bucket *keyspace) (map[strin
 			if atomic.AddInt32(&oldScope.cleaning, 1) == 1 {
 				for n, _ := range oldScope.keyspaces {
 					if scope.keyspaces[n] == nil {
-						DropDictionaryEntry(oldScope.keyspaces[n].QualifiedName(), false)
+						DropDictionaryEntry(oldScope.keyspaces[n].QualifiedName(), false, true)
 					}
 				}
 			}
@@ -677,7 +677,7 @@ func clearOldScope(bucket *keyspace, s *scope, isDropBucket bool, cleanUp bool) 
 	for n, val := range s.keyspaces {
 		if val != nil {
 			s.keyspaces[n] = nil
-			DropDictionaryEntry(val.QualifiedName(), isDropBucket)
+			DropDictionaryEntry(val.QualifiedName(), isDropBucket, true)
 			// invoke Release(..) on collection for any cleanup
 			val.Release(false)
 		}

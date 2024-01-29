@@ -128,7 +128,7 @@ func (b *dictionaryKeyspace) Delete(deletes value.Pairs, context datastore.Query
 
 		// if we are deleting a dictionary entry, we also must remove it
 		// from all the n1ql node caches
-		dictionary.DropDictEntryAndAllCache(name, context)
+		dictionary.DropDictEntryAndAllCache(name, context, true)
 	}
 
 	if preserveMutations {

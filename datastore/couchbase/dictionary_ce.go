@@ -60,11 +60,11 @@ func Foreach(bucketName string, context datastore.QueryContext, check func(conte
 	return nil
 }
 
-func DropDictionaryEntry(keyspace string, isDropBucket bool) {
+func DropDictionaryEntry(keyspace string, isDropBucket bool, locked bool) {
 	// no-op
 }
 
-func DropDictEntryAndAllCache(keyspace string, context interface{}) {
+func DropDictEntryAndAllCache(keyspace string, context interface{}, locked bool) {
 	// no-op
 }
 
