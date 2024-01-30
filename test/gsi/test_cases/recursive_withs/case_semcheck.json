@@ -37,7 +37,7 @@
     {
         "testcase": "don't allow more than one recursive refernce in recursive clause",
         "statements":"WITH RECURSIVE cte AS (SELECT 1 r UNION SELECT 2 r UNION  SELECT c.r+1 r FROM cte c , cte c1 WHERE c.r = c1.r+1 AND c.r<5) SELECT cte.* FROM cte;",
-        "error":"recursive ref:cte must not appear more than once in the FROM clause"
+        "error":"Recursive reference 'cte' must not appear more than once in the FROM clause"
     },
     {
         "testcase": "Don't allow LEFT/RIGHT/OUTER Joins as can lead to to potential infinite recursion",

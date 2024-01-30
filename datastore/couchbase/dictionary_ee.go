@@ -73,7 +73,7 @@ func Foreach(bucketName string, context datastore.QueryContext, check func(conte
 	return dictionary.Foreach(bucketName, context, check, proc)
 }
 
-func DropDictionaryEntry(keyspace string, isDropBucket bool) {
+func DropDictionaryEntry(keyspace string, isDropBucket bool, locked bool) {
 	if isSysBucket(keyspace) || dictionary.IsSysCBOStats(keyspace) {
 		dictionary.DropDictionaryCache()
 	} else {
@@ -84,16 +84,16 @@ func DropDictionaryEntry(keyspace string, isDropBucket bool) {
 			// of bucket drop and thus no need to remove entries from there
 			dictionary.DropDictCacheEntry(keyspace, false)
 		} else {
-			dictionary.DropDictionaryEntry(keyspace, sysStore)
+			dictionary.DropDictionaryEntry(keyspace, sysStore, locked)
 		}
 	}
 }
 
-func DropDictEntryAndAllCache(keyspace string, context interface{}) {
+func DropDictEntryAndAllCache(keyspace string, context interface{}, locked bool) {
 	if isSysBucket(keyspace) || dictionary.IsSysCBOStats(keyspace) {
 		dictionary.DropDictionaryCache()
 	} else {
-		dictionary.DropDictEntryAndAllCache(keyspace, dictionary.UseSystemStorage(), context)
+		dictionary.DropDictEntryAndAllCache(keyspace, dictionary.UseSystemStorage(), context, locked)
 	}
 }
 
