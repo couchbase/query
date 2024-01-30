@@ -472,6 +472,7 @@ var _FUNCTIONS = map[string]Function{
 	// General
 	"len":      &Len{},
 	"evaluate": &Evaluate{},
+	"finderr":  &Finderr{},
 
 	// Infer
 	"infer_value": &InferValue{},

@@ -628,31 +628,3 @@ func getErrorForCause(e error) interface{} {
 	}
 	return e
 }
-
-// returns errdata( error-> description, cause, action..)
-func DescribeError(c ErrorCode) (ErrData, bool) {
-	e, ok := errmap[c]
-	return e, ok
-}
-
-// return all errorname-code mapping , for errors with errorname having
-// the pattern searched for
-func SearchError(errnamepattern string, search bool) (map[string]int, bool) {
-	var matchingErrorNames map[string]int = make(map[string]int)
-
-	for errName, errCode := range errNameToCode {
-		if search {
-			if match, _ := regexp.MatchString(errnamepattern, errName); match {
-				matchingErrorNames[errName] = errCode
-			}
-		} else {
-			if errName == errnamepattern {
-				matchingErrorNames[errName] = errCode
-				return matchingErrorNames, true
-			}
-		}
-
-	}
-
-	return matchingErrorNames, len(matchingErrorNames) > 0
-}

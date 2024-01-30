@@ -128,8 +128,8 @@ func HandleError(err errors.ErrorCode, msg string) errors.Error {
 		return errors.NewShellErrorDriverQueryMethod(msg)
 	case errors.E_SHELL_WRITER_OUTPUT:
 		return errors.NewShellErrorWriterOutput(msg)
-	case errors.E_SHELL_UNBALANCED_PAREN:
-		return errors.NewShellErrorUnbalancedParen("")
+	case errors.E_SHELL_UNBALANCED_QUOTES:
+		return errors.NewShellErrorUnbalancedQuotes("")
 	case errors.E_SHELL_ROWS_CLOSE:
 		return errors.NewShellErrorRowsClose(msg)
 	case errors.E_SHELL_CMD_LINE_ARGS:

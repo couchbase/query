@@ -45,31 +45,31 @@ func NewExecutionStatementStoppedError(statement string) Error {
 func NewParsingError(e error, ctx string) Error {
 	return &err{level: EXCEPTION, ICode: E_PARSING, IKey: "execution.expression.parse.failed",
 		ICause:         e,
-		InternalMsg:    fmt.Sprintf("Expression parsing%s failed.", ctx),
+		InternalMsg:    fmt.Sprintf("'%s' is not a valid expression.", ctx),
 		InternalCaller: CallerN(1)}
 }
 
 func NewEvaluationError(e error, termType string) Error {
 	if _, ok := e.(*AbortError); ok {
-		return &err{level: EXCEPTION, ICode: E_EVALUATION, IKey: "execution.abort_error", ICause: e,
+		return &err{level: EXCEPTION, ICode: E_EVALUATION_ABORT, IKey: "execution.abort_error", ICause: e,
 			InternalMsg: fmt.Sprintf("Abort: %s.", e), InternalCaller: CallerN(1)}
 	} else if ee, ok := e.(Error); ok {
 		if ee.Level() == WARNING {
 			return ee
 		}
-		return &err{level: EXCEPTION, ICode: E_EVALUATION_ABORT, IKey: "execution.evaluation_error", cause: ee,
+		return &err{level: EXCEPTION, ICode: E_EVALUATION, IKey: "execution.evaluation_error", cause: ee,
 			InternalMsg: fmt.Sprintf("Error evaluating %s", termType), InternalCaller: CallerN(1)}
 	}
-	return &err{level: EXCEPTION, ICode: E_EVALUATION_ABORT, IKey: "execution.evaluation_error", ICause: e,
+	return &err{level: EXCEPTION, ICode: E_EVALUATION, IKey: "execution.evaluation_error", ICause: e,
 		InternalMsg: fmt.Sprintf("Error evaluating %s", termType), InternalCaller: CallerN(1)}
 }
 
 func NewEvaluationWithCauseError(e error, termType string) Error {
 	if _, ok := e.(*AbortError); ok {
-		return &err{level: EXCEPTION, ICode: E_EVALUATION, IKey: "execution.abort_error", ICause: e,
+		return &err{level: EXCEPTION, ICode: E_EVALUATION_ABORT, IKey: "execution.abort_error", ICause: e,
 			InternalMsg: fmt.Sprintf("Abort: %s.", e), InternalCaller: CallerN(1)}
 	} else if ee, ok := e.(Error); ok {
-		return &err{level: EXCEPTION, ICode: E_EVALUATION_ABORT, IKey: "execution.evaluation_error", cause: ee,
+		return &err{level: EXCEPTION, ICode: E_EVALUATION, IKey: "execution.evaluation_error", cause: ee,
 			InternalMsg: fmt.Sprintf("Error evaluating %s", termType), InternalCaller: CallerN(1)}
 	}
 	var c map[string]interface{}
@@ -77,7 +77,7 @@ func NewEvaluationWithCauseError(e error, termType string) Error {
 		c = make(map[string]interface{})
 		c["cause"] = e.Error()
 	}
-	return &err{level: EXCEPTION, ICode: E_EVALUATION_ABORT, IKey: "execution.evaluation_error", cause: c,
+	return &err{level: EXCEPTION, ICode: E_EVALUATION, IKey: "execution.evaluation_error", cause: c,
 		InternalMsg: fmt.Sprintf("Error evaluating %s", termType), InternalCaller: CallerN(1)}
 }
 

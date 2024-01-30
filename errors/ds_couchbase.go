@@ -154,7 +154,7 @@ func NewAuditStreamHandlerFailed(e error) Error {
 func NewCbBucketExistsError(b string) Error {
 	c := make(map[string]interface{})
 	c["bucket"] = b
-	return &err{level: EXCEPTION, ICode: E_CB_BUCKET_NOT_FOUND, IKey: "datastore.couchbase.bucket_already_exists",
+	return &err{level: EXCEPTION, ICode: E_CB_BUCKET_EXISTS, IKey: "datastore.couchbase.bucket_already_exists",
 		cause: c, InternalMsg: "Bucket '" + b + "' already exists.", InternalCaller: CallerN(1)}
 }
 

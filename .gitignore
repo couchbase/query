@@ -9,3 +9,4 @@ tutorial/tutorial
 parser/n1ql/y.go
 test/multistore/data
 value/example/example
+finderr/finderr

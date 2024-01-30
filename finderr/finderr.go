@@ -1,125 +1,161 @@
+//  Copyright 2024-Present Couchbase, Inc.
+//
+//  Use of this software is governed by the Business Source License included
+//  in the file licenses/BSL-Couchbase.txt.  As of the Change Date specified
+//  in that file, in accordance with the Business Source License, use of this
+//  software will be governed by the Apache License, Version 2.0, included in
+//  the file licenses/APL2.txt.
+
 package main
 
 import (
 	"fmt"
-	"log"
 	"os"
-	"os/exec"
 	"strconv"
 	"strings"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/finderr/platform"
 )
 
-func main() {
-	if len(os.Args) < 2 {
-		log.Fatal("expected usage->\n ./finderr [code] : get error related information\n" +
-			" ./finderr -s [pattern] : get all errornames that match the pattern")
-	}
+func title(t string) {
+	fmt.Printf("\n\033[1m%s\033[0m\n", t)
+}
 
-	// flag passed
-	if os.Args[1][0] == '-' {
-		flag := os.Args[1]
-		if flag == "--search" || flag == "-s" {
-			if len(os.Args) < 3 {
-				log.Fatal("--search flag: expects pattern as an arguemnt: -s [pattern]")
+func fitWidth(s string, width int) string {
+	n := 0
+	b := 0
+	p := 0
+	for i, r := range s {
+		if r == '\n' {
+			fmt.Printf(s[:i])
+			if i+1 < len(s) {
+				return s[i+1:]
 			}
-
-			errs, ok := errors.SearchError(strings.ToUpper(os.Args[2]), true)
-			if !ok {
-				fmt.Println("No matching errors!")
-				return
-			}
-
-			fmt.Printf("Name-\t\tCode\n")
-			for errname, errcode := range errs {
-				fmt.Printf("%v-\t%v\n", errname, errcode)
-			}
-		} else {
-			log.Fatal("invalid flag:\n supported flags:\n -s, --search [pattern]: lookup errornames similar to the pattern recieved")
+			return ""
 		}
-
-		return
-	}
-
-	// no flags passed
-	codestring := os.Args[1]
-	if codestring[0] == '-' {
-		log.Fatal("expected 2 arguments when using flags-> [flag] [flag- arg]")
-	}
-	code, cerr := strconv.Atoi(codestring)
-	if cerr != nil {
-		codes, ok := errors.SearchError(codestring, false)
-		if !ok {
-			log.Fatal("expected usage-> [code]-> doesn't represent a defined errorcode name")
+		p = i + utf8.RuneLen(r)
+		if unicode.IsSpace(r) {
+			b = p
 		}
-
-		for _, val := range codes {
-			code = val
+		n++
+		if n == width {
 			break
 		}
 	}
+	if p >= len(s) {
+		b = len(s)
+	} else if b == 0 {
+		b = p
+	}
+	fmt.Printf(s[:b])
+	if len(s) > b {
+		return s[b:]
+	}
+	return ""
+}
 
-	errData, ok := errors.DescribeError(errors.ErrorCode(code))
-	if !ok {
-		fmt.Println("Manual not updated for this error code [", code, "]:(")
+func printWidth(width int, margin int, what string) {
+	if margin < 0 {
+		what = fitWidth(what, width)
+		margin *= -1
+		fmt.Printf("\n")
+	}
+	for what != "" {
+		if margin > 0 {
+			fmt.Printf("%*s", margin, "")
+		}
+		what = fitWidth(what, width-margin)
+		fmt.Printf("\n")
+	}
+}
+
+func main() {
+	if len(os.Args) != 2 {
+		fmt.Printf("USAGE: %s <code-or-pattern>\n\n"+
+			"Display Couchbase Query service SQL++ related error information.\n\n"+
+			"<code-or-pattern>\n"+
+			"  If numeric, then the error number to display information for.\n"+
+			"  If non-numeric, then the pattern to match against error information.\n\n",
+			os.Args[0])
 		return
 	}
 
-	tempFile, err := os.CreateTemp("", "man")
+	width := platform.InitTerm()
+
+	var errData *errors.ErrData
+	code, err := strconv.Atoi(os.Args[1])
 	if err != nil {
-		log.Fatal("Error creating temporary file:", err)
-	}
-	defer os.Remove(tempFile.Name())
-	// temp file created
-
-	// create man page
-	tempFile.Write([]byte(`.TH man 8 "11 01 2023" "1.0" "finderr"`))
-	tempFile.Write([]byte("\n"))
-
-	tempFile.Write([]byte(".SH CODE\n"))
-	tempFile.Write([]byte(fmt.Sprintf("%v\n", errData.Code)))
-
-	tempFile.Write([]byte(".SH NAME\n"))
-	tempFile.Write([]byte(fmt.Sprintf("%v\n", errData.ErrorCode)))
-
-	tempFile.Write([]byte(".SH DESCRIPTION\n"))
-	tempFile.Write([]byte(fmt.Sprintf("%v\n", errData.Description)))
-
-	var s1 string
-	tempFile.Write([]byte(".SH CAUSE\n"))
-	if len(errData.Causes) == 0 {
-		tempFile.Write([]byte("None\n"))
-	} else {
-		for _, cause := range errData.Causes {
-			s1 = strings.Replace(cause, "\\", "\\\\", -1)
-			tempFile.Write([]byte(fmt.Sprintf("%v\n\n", s1)))
+		errs := errors.SearchErrors(os.Args[1])
+		if len(errs) == 0 {
+			fmt.Println("No matching errors.")
+			return
+		} else if len(errs) == 1 {
+			errData = errs[0]
+		} else {
+			title("Matching errors")
+			for i := range errs {
+				printWidth(width, -7, fmt.Sprintf("%6d %s", errs[i].Code, errs[i].Description))
+			}
+			fmt.Printf("\n")
+			return
 		}
-		tempFile.Write([]byte("\n"))
+	} else {
+		errData = errors.DescribeError(errors.ErrorCode(code))
+	}
+	if errData == nil {
+		fmt.Printf("Unable to find information for error code %d.\n", code)
+		return
 	}
 
-	tempFile.Write([]byte(".SH ACTIONS\n"))
-	if len(errData.Actions) == 0 {
-		tempFile.Write([]byte("None\n"))
+	margin := 4
+
+	title("CODE")
+	s := fmt.Sprintf("%v ", errData.Code)
+	if errData.IsWarning {
+		s += "(warning)"
 	} else {
-		for _, action := range errData.Actions {
-			s1 = strings.Replace(action, "\\", "\\\\", -1)
-			tempFile.Write([]byte(fmt.Sprintf("%v\n\n", s1)))
+		s += "(error)"
+	}
+	printWidth(width, margin, s)
+
+	title("DESCRIPTION")
+	printWidth(width, margin, fmt.Sprintf("%v", errData.Description))
+
+	if len(errData.Reason) > 0 {
+		title("REASON")
+		for i := range errData.Reason {
+			if i > 0 {
+				fmt.Printf("\n")
+			}
+			printWidth(width, margin, errData.Reason[i])
 		}
-		tempFile.Write([]byte("\n"))
 	}
 
-	tempFile.Write([]byte(".SH USER ERROR\n"))
-	if errData.IsUser {
-		tempFile.Write([]byte("Yes"))
-	} else {
-		tempFile.Write([]byte("No"))
+	if len(errData.Action) > 0 {
+		title("USER ACTION")
+		for i := range errData.Action {
+			if i > 0 {
+				fmt.Printf("\n")
+			}
+			printWidth(width, margin, errData.Action[i])
+		}
 	}
 
-	cmd := exec.Command("man", tempFile.Name())
-	cmd.Stdout = os.Stdout
-	err = cmd.Run()
-	if err != nil {
-		log.Fatal(err)
+	title("USER ERROR")
+	switch errData.IsUser {
+	case errors.YES:
+		printWidth(width, margin, "Yes")
+	case errors.MAYBE:
+		printWidth(width, margin, "Possibly")
+	default:
+		printWidth(width, margin, "No")
 	}
+
+	title("APPLIES TO")
+	printWidth(width, margin, strings.Join(errData.AppliesTo, ", "))
+
+	fmt.Printf("\n")
 }

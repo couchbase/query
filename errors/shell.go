@@ -31,7 +31,7 @@ const (
 	INVALID_PASSWORD_MSG   = "Invalid password "
 	INVALID_USERNAME_MSG   = "Invalid username. "
 	MISSING_CREDENTIAL_MSG = "Username missing in -credentials/-c option."
-	INVALID_CREDENTIAL_MSG = "Invalid format for credentials. Separate username and password by a :. "
+	INVALID_CREDENTIAL_MSG = "Invalid format for credentials. Separate username and password with a colon (':'). "
 
 	NO_SUCH_COMMAND_MSG = "Command does not exist."
 	NO_SUCH_PARAM_MSG   = "Parameter does not exist "
@@ -48,7 +48,7 @@ const (
 	JSON_UNMARSHAL_MSG          = ""
 	DRIVER_QUERY_MSG            = ""
 	WRITER_OUTPUT_MSG           = "Error with io Writer. "
-	UNBALANCED_PAREN_MSG        = "Unbalanced parenthesis in the input."
+	UNBALANCED_QUOTES_MSG       = "Unbalanced quotes in the input."
 	ROWS_CLOSE_MSG              = ""
 	CMD_LINE_ARG_MSG            = "Place input argument URL at the end, after input flags. "
 	INVALID_INPUT_ARGUMENTS_MSG = "Input Argument format is invalid."
@@ -202,8 +202,8 @@ func NewShellErrorWriterOutput(msg string) Error {
 	return &err{level: EXCEPTION, ICode: E_SHELL_WRITER_OUTPUT, IKey: "shell.write.to.writer.error", InternalMsg: WRITER_OUTPUT_MSG + msg, InternalCaller: CallerN(1)}
 }
 
-func NewShellErrorUnbalancedParen(msg string) Error {
-	return &err{level: EXCEPTION, ICode: E_SHELL_UNBALANCED_PAREN, IKey: "shell.unbalanced.parenthesis", InternalMsg: UNBALANCED_PAREN_MSG + msg, InternalCaller: CallerN(1)}
+func NewShellErrorUnbalancedQuotes(msg string) Error {
+	return &err{level: EXCEPTION, ICode: E_SHELL_UNBALANCED_QUOTES, IKey: "shell.unbalanced.quotes", InternalMsg: UNBALANCED_QUOTES_MSG + msg, InternalCaller: CallerN(1)}
 }
 
 func NewShellErrorRowsClose(msg string) Error {

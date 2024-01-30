@@ -62,7 +62,7 @@ func NewQueryContextError(w string) Error {
 		w = ": " + w
 	}
 	return &err{level: EXCEPTION, ICode: E_QUERY_CONTEXT, IKey: "datastore.generic.context_error",
-		InternalMsg: "Invalid query_context specified: " + w, InternalCaller: CallerN(1)}
+		InternalMsg: "Invalid query_context specified" + w, InternalCaller: CallerN(1)}
 }
 
 func NewBucketNoDefaultCollectionError(b string) Error {
