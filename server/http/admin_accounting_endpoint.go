@@ -1273,7 +1273,7 @@ func doBucketBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 
 			// ensure we've cleared existing stats
 			for k, _ := range purge {
-				dictionary.DropDictEntryAndAllCache(k, datastore.NULL_QUERY_CONTEXT)
+				dictionary.DropDictEntryAndAllCache(k, datastore.NULL_QUERY_CONTEXT, false)
 			}
 
 			// restore the stats
