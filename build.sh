@@ -290,9 +290,12 @@ function DevStandaloneSetup {
     ln -s "/Applications/Couchbase Server.app/Contents/Resources/couchbase-core/lib" $GOPATH/lib
     fi
     fi
-    if [[ ! -f ../eventing-ee/evaluator/impl/gen/parser/global_config_schema.go ]]
+    if [[ ! -f ../eventing-ee/evaluator/impl/gen/parser/dynamic_config_schema.go ]]
     then
-         (cd ../eventing-ee/evaluator/impl/gen/convertschema; go run generate.go  ../../parser/global_config_schema.json GlobalConfigSchema ../parser/global_config_schema.go)
+         (cd ../eventing-ee/evaluator/impl/gen/convertschema; go run generate.go  ../../parser/dynamic_config_schema.json DynamicConfigSchema ../parser/dynamic_config_schema.go)
+    fi
+    if [[ ! -f ../eventing-ee/evaluator/impl/v8wrapper/process_manager/gen/flatbuf/payload_generated.h ]]; then
+	    (cd ../eventing-ee/evaluator/impl/v8wrapper/process_manager/gen; flatc -c -o flatbuf ../flatbuf/payload.fbs; flatc -g -o . ../flatbuf/payload.fbs)
     fi
 }
 
