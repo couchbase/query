@@ -483,4 +483,18 @@ var _FUNCTIONS = map[string]Function{
 
 	"_timeseries":   &TimeSeries{},
 	"recursive_cte": &RecursiveCte{},
+
+	"isvector":                &IsVector{},
+	"knn":                     &Knn{},
+	"vector_dist":             &Knn{metric: DEF_DIST},
+	"euclidean_dist":          &Knn{metric: EUCLIDEAN},
+	"l2_dist":                 &Knn{metric: L2},
+	"cosine_sim_dist":         &Knn{metric: COSINE_SIM},
+	"dot_product_dist":        &Knn{metric: DOT_PRODUCT},
+	"ann":                     &Ann{},
+	"approx_vector_dist":      &Ann{metric: DEF_DIST},
+	"approx_euclidean_dist":   &Ann{metric: EUCLIDEAN},
+	"approx_l2_dist":          &Ann{metric: L2},
+	"approx_cosine_sim_dist":  &Ann{metric: COSINE_SIM},
+	"approx_dot_product_dist": &Ann{metric: DOT_PRODUCT},
 }

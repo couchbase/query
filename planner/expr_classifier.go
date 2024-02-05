@@ -514,7 +514,12 @@ func (this *exprClassifier) visitDefault(expr expression.Expression) (interface{
 		}
 
 		if len(keyspaces) == 1 {
-			baseKspace.AddFilter(filter)
+			if _, ok := dnfExpr.(*expression.Ann); ok {
+				filter.SetVectorFunc()
+				baseKspace.AddVectorFilter(filter)
+			} else {
+				baseKspace.AddFilter(filter)
+			}
 		} else {
 			baseKspace.AddJoinFilter(filter)
 			// if this is an OR join predicate, attempt to extract a new OR-predicate

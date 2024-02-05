@@ -14,6 +14,7 @@ import (
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
 )
@@ -75,23 +76,46 @@ func (this *CreateIndex) RunOnce(context *Context, parent value.Value) {
 		var ok5 bool
 		var indexer5 datastore.Indexer5
 
-		if indexer5, ok5 = indexer.(datastore.Indexer5); !ok5 {
-			indexer3, ok3 = indexer.(datastore.Indexer3)
+		var ok6 bool
+		var indexer6 datastore.Indexer6
+
+		if indexer6, ok6 = indexer.(datastore.Indexer6); !ok6 {
+			if indexer5, ok5 = indexer.(datastore.Indexer5); !ok5 {
+				indexer3, ok3 = indexer.(datastore.Indexer3)
+			}
+		}
+
+		var include expression.Expressions
+		if node.Include() != nil {
+			include = node.Include().Expressions()
+		}
+		isVector := node.Keys().HasVector() && (node.Using() == datastore.GSI || node.Using() == datastore.DEFAULT)
+
+		if !ok6 && isVector {
+			context.Error(errors.NewIndexerVersionError(datastore.INDEXER6_VERSION, "Index key has vector attribute"))
+			return
+		} else if !ok6 && include != nil {
+			context.Error(errors.NewIndexerVersionError(datastore.INDEXER6_VERSION, "Include clasue present"))
+			return
 		}
 
 		var idx datastore.Index
-
-		if ok3 || ok5 {
+		if ok3 || ok5 || ok6 {
 			var indexPartition *datastore.IndexPartition
 
 			if node.Partition() != nil {
 				indexPartition = &datastore.IndexPartition{Strategy: node.Partition().Strategy(),
-					Exprs: node.Partition().Exprs()}
+					Exprs: node.Partition().Expressions()}
 			}
 
 			rangeKeys := this.getRangeKeys(node.Keys())
 
-			if ok5 {
+			if ok6 {
+				conn, _ := datastore.NewSimpleIndexConnection(context)
+				idx, err = indexer6.CreateIndex6(context.RequestId(), node.Name(),
+					isVector && node.Vector(), rangeKeys,
+					indexPartition, node.Where(), node.With(), include, conn)
+			} else if ok5 {
 				conn, _ := datastore.NewSimpleIndexConnection(context)
 				idx, err = indexer5.CreateIndex5(context.RequestId(), node.Name(), rangeKeys,
 					indexPartition, node.Where(), node.With(), conn)
@@ -210,6 +234,9 @@ func (this *CreateIndex) getRangeKeys(terms algebra.IndexKeyTerms) datastore.Ind
 		}
 		if term.HasAttribute(algebra.IK_DESC) {
 			attrs |= datastore.IK_DESC
+		}
+		if term.HasAttribute(algebra.IK_VECTOR) {
+			attrs |= datastore.IK_VECTOR
 		}
 
 		rk := &datastore.IndexKey{Expr: term.Expression(), Attributes: attrs}

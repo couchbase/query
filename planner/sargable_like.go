@@ -13,7 +13,7 @@ import (
 )
 
 func (this *sargable) visitLike(pred expression.LikeFunction) (bool, error) {
-	return pred.First().EquivalentTo(this.key) ||
-			this.defaultSargable(pred),
+	return !this.vector && (pred.First().EquivalentTo(this.key) ||
+			this.defaultSargable(pred)),
 		nil
 }

@@ -9,12 +9,18 @@
 package planner
 
 import (
+	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
 	base "github.com/couchbase/query/plannerbase"
 )
 
 func (this *sarg) VisitAnd(pred *expression.And) (rv interface{}, err error) {
+	if this.isVector {
+		return nil, errors.NewPlanInternalError("sarg.VisitAnd: unexpected AND predicate for vector index key: " + pred.String())
+	}
+
 	if base.SubsetOf(pred, this.key) {
 		if expression.Equivalent(pred, this.key) {
 			return _EXACT_SELF_SPANS, nil
@@ -24,7 +30,7 @@ func (this *sarg) VisitAnd(pred *expression.And) (rv interface{}, err error) {
 
 	// MB-21720. Handle array index keys differently.
 	if isArray, _, _ := this.key.IsArrayIndexKey(); isArray {
-		return this.visitAndArrayKey(pred, this.key)
+		return this.visitAndArrayKey(pred, this.index, this.key)
 	}
 
 	var spans, s SargSpans
@@ -32,9 +38,9 @@ func (this *sarg) VisitAnd(pred *expression.And) (rv interface{}, err error) {
 	exactSpans := true
 
 	for _, op := range pred.Operands() {
-		s, exact, err = sargFor(op, this.key, this.isJoin, this.doSelec, this.baseKeyspace,
-			this.keyspaceNames, this.advisorValidate, this.isMissing, this.isArray,
-			this.aliases, this.context)
+		s, exact, err = sargFor(op, this.index, this.key, this.isJoin, this.doSelec,
+			this.baseKeyspace, this.keyspaceNames, this.advisorValidate, this.isMissing,
+			this.isArray, this.isVector, this.keyPos, this.aliases, this.context)
 		if err != nil {
 			return nil, err
 		}
@@ -70,13 +76,14 @@ func (this *sarg) VisitAnd(pred *expression.And) (rv interface{}, err error) {
 }
 
 // MB-21720. Handle array index keys differently.
-func (this *sarg) visitAndArrayKey(pred *expression.And, key expression.Expression) (SargSpans, error) {
+func (this *sarg) visitAndArrayKey(pred *expression.And, index datastore.Index, key expression.Expression) (SargSpans, error) {
+
 	keySpans := make([]SargSpans, 0, len(pred.Operands()))
 
 	for _, child := range pred.Operands() {
-		cspans, _, err := sargFor(child, key, this.isJoin, this.doSelec, this.baseKeyspace,
+		cspans, _, err := sargFor(child, index, key, this.isJoin, this.doSelec, this.baseKeyspace,
 			this.keyspaceNames, this.advisorValidate, this.isMissing, this.isArray,
-			this.aliases, this.context)
+			this.isVector, this.keyPos, this.aliases, this.context)
 		if err != nil {
 			return nil, err
 		}

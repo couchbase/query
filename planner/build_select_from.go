@@ -159,6 +159,16 @@ func (this *builder) visitFrom(node *algebra.Subselect, group *algebra.Group,
 			}
 		}
 
+		if len(this.vectors) > 0 {
+			// attach vector search function predicates to individual keyspaces
+			for _, v := range this.vectors {
+				_, err = this.processPredicate(v, false)
+				if err != nil {
+					return err
+				}
+			}
+		}
+
 		this.extractKeyspacePredicates(this.where, nil)
 		err = this.checkEarlyProjection(projection)
 		if err != nil {

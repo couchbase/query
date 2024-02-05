@@ -16,7 +16,7 @@ import (
 
 // Return the filterCovers for a query predicate and index keys. This
 // allows array indexes to cover ANY predicates.
-func CoversFor(pred, origPred expression.Expression, keys expression.Expressions,
+func CoversFor(pred, origPred expression.Expression, keys datastore.IndexKeys,
 	context *PrepareContext) (map[*expression.Cover]value.Value, error) {
 
 	var fv, ofv map[string]*expression.Cover
@@ -51,7 +51,7 @@ func CoversFor(pred, origPred expression.Expression, keys expression.Expressions
 
 }
 
-func coversFor(pred expression.Expression, keys expression.Expressions,
+func coversFor(pred expression.Expression, keys datastore.IndexKeys,
 	context *PrepareContext) (map[string]*expression.Cover, error) {
 
 	cov := &covers{keys, context}
@@ -66,7 +66,7 @@ func coversFor(pred expression.Expression, keys expression.Expressions,
 }
 
 type covers struct {
-	keys    expression.Expressions
+	keys    datastore.IndexKeys
 	context *PrepareContext
 }
 
@@ -111,9 +111,9 @@ func (this *covers) VisitSimpleCase(expr *expression.SimpleCase) (interface{}, e
 func (this *covers) VisitAny(expr *expression.Any) (interface{}, error) {
 
 	for i, k := range this.keys {
-		if all, ok := k.(*expression.All); ok {
-			keys := datastore.IndexKeys{&datastore.IndexKey{all, datastore.IK_NONE}}
-			if min, _, _, _ := SargableFor(expr, keys, (i != 0), true, nil, this.context, nil); min > 0 {
+		if _, ok := k.Expr.(*expression.All); ok {
+			keys := datastore.IndexKeys{k}
+			if min, _, _, _ := SargableFor(expr, nil, nil, keys, (i != 0), true, nil, this.context, nil); min > 0 {
 				return map[string]*expression.Cover{
 					expr.String(): expression.NewCover(expr),
 				}, nil

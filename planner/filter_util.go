@@ -54,6 +54,11 @@ func CombineFilters(baseKeyspace *base.BaseKeyspace, includeOnclause bool) error
 			}
 		}
 
+		// do not include vector function filter by default
+		if fl.IsVectorFunc() {
+			continue
+		}
+
 		if dnfPred == nil {
 			dnfPred = fltrExpr
 		} else {
@@ -284,7 +289,7 @@ func deriveNotNullFilter(keyspace datastore.Keyspace, baseKeyspace *base.BaseKey
 					// the "gsi" argument is for skip index keys; we don't need it
 					// here since we only consider the leading index key
 					keys := datastore.IndexKeys{&datastore.IndexKey{idxKeyDerive.keyExpr, datastore.IK_NONE}}
-					min, _, _, _ := SargableFor(term, keys, false, false, nil, context, aliases)
+					min, _, _, _ := SargableFor(term, nil, nil, keys, false, false, nil, context, aliases)
 					if min > 0 {
 						keyMap[val].derive = false
 						newFilters = AddDerivedFilter(term, keyspaceNames, origKeyspaceNames,

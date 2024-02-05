@@ -17,6 +17,10 @@ import (
 )
 
 func (this *sarg) VisitAnyEvery(pred *expression.AnyEvery) (interface{}, error) {
+	if this.isVector {
+		return nil, nil
+	}
+
 	var spans SargSpans
 	if pred.PropagatesNull() {
 		spans = _VALUED_SPANS
@@ -57,10 +61,10 @@ func (this *sarg) VisitAnyEvery(pred *expression.AnyEvery) (interface{}, error) 
 
 		variable := expression.NewIdentifier(bindings[0].Variable())
 		variable.SetBindingVariable(true)
-		return anySargFor(pred.Satisfies(), variable, nil, this.isJoin, this.doSelec,
+		return anySargFor(pred.Satisfies(), variable, nil, this.index, this.isJoin, this.doSelec,
 			this.baseKeyspace, this.keyspaceNames, variable.Alias(), selec, false,
-			this.advisorValidate, false, this.isMissing, this.aliases, arrayId,
-			this.context)
+			this.advisorValidate, false, this.isMissing, this.isVector,
+			this.keyPos, this.aliases, arrayId, this.context)
 	}
 
 	if !pred.Bindings().SubsetOf(array.Bindings()) {
@@ -77,8 +81,8 @@ func (this *sarg) VisitAnyEvery(pred *expression.AnyEvery) (interface{}, error) 
 	}
 
 	// Array Index key can have only single binding
-	return anySargFor(satisfies, array.ValueMapping(), array.When(), this.isJoin, this.doSelec,
-		this.baseKeyspace, this.keyspaceNames, array.Bindings()[0].Variable(), selec, false,
-		this.advisorValidate, all.IsDerivedFromFlatten(), this.isMissing, this.aliases,
-		arrayId, this.context)
+	return anySargFor(satisfies, array.ValueMapping(), array.When(), this.index, this.isJoin,
+		this.doSelec, this.baseKeyspace, this.keyspaceNames, array.Bindings()[0].Variable(),
+		selec, false, this.advisorValidate, all.IsDerivedFromFlatten(), this.isMissing,
+		this.isVector, this.keyPos, this.aliases, arrayId, this.context)
 }

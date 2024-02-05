@@ -18,10 +18,25 @@ import (
 
 func (this *SemChecker) VisitSelect(stmt *algebra.Select) (r interface{}, err error) {
 	prevStmtType := this.stmtType
+	prevObyVectorDist := this.hasSemFlag(_SEM_ORDERBY_VECTOR_DIST)
 	defer func() {
 		this.stmtType = prevStmtType
+		if !prevObyVectorDist {
+			this.unsetSemFlag(_SEM_ORDERBY_VECTOR_DIST)
+		}
 	}()
 	this.stmtType = stmt.Type()
+	if stmt.Order() != nil {
+		for _, term := range stmt.Order().Terms() {
+			switch term.Expression().(type) {
+			case *expression.Knn, *expression.Ann:
+				if !this.hasSemFlag(_SEM_ENTERPRISE) {
+					return nil, errors.NewEnterpriseFeature("Vector Search Function", "semantics.visit_select")
+				}
+				this.setSemFlag(_SEM_ORDERBY_VECTOR_DIST)
+			}
+		}
+	}
 
 	if r, err = stmt.Subresult().Accept(this); err != nil {
 		return r, err
@@ -68,6 +83,23 @@ func (this *SemChecker) VisitSelect(stmt *algebra.Select) (r interface{}, err er
 
 		if err = stmt.Order().MapExpressions(this); err != nil {
 			return nil, err
+		}
+		for _, term := range stmt.Order().Terms() {
+			switch term.Expression().(type) {
+			case *expression.Ann, *expression.Knn:
+				ce := term.DescendingExpr()
+				ne := term.NullsPosExpr()
+				if ce != nil && ce.Value() == nil {
+					return nil, errors.NewVectorOrderConst(term.String(), "collation (ASC/DESC)")
+				} else if ne != nil && ne.Value() == nil {
+					return nil, errors.NewVectorOrderConst(term.String(), "NULLS position (FIRST/LAST)")
+				}
+				if term.Descending(nil, nil) {
+					return nil, errors.NewVectorOrderOption(term.String(), "DESC")
+				} else if !term.NullsLast(nil, nil) {
+					return nil, errors.NewVectorOrderOption(term.String(), "NULLS FIRST")
+				}
+			}
 		}
 	}
 

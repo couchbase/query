@@ -22,6 +22,7 @@ const (
 	_SEM_ADVISOR_FUNC
 	_SEM_FROM
 	_SEM_WITH_RECURSIVE
+	_SEM_ORDERBY_VECTOR_DIST
 )
 
 type SemChecker struct {

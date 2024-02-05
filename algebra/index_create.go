@@ -37,6 +37,7 @@ type CreateIndex struct {
 	name         string                `json:"name"`
 	keyspace     *KeyspaceRef          `json:"keyspace"`
 	keys         IndexKeyTerms         `json:"keys"`
+	include      *IndexIncludeTerm     `json:"include"`
 	partition    *IndexPartitionTerm   `json:"partition"`
 	where        expression.Expression `json:"where"`
 	using        datastore.IndexType   `json:"using"`
@@ -49,12 +50,14 @@ type CreateIndex struct {
 The function NewCreateIndex returns a pointer to the
 CreateIndex struct with the input argument values as fields.
 */
-func NewCreateIndex(name string, keyspace *KeyspaceRef, keys IndexKeyTerms, partition *IndexPartitionTerm,
-	where expression.Expression, using datastore.IndexType, with value.Value, failIfExists, vector bool) *CreateIndex {
+func NewCreateIndex(name string, keyspace *KeyspaceRef, keys IndexKeyTerms, include *IndexIncludeTerm,
+	partition *IndexPartitionTerm, where expression.Expression, using datastore.IndexType, with value.Value,
+	failIfExists, vector bool) *CreateIndex {
 	rv := &CreateIndex{
 		name:         name,
 		keyspace:     keyspace,
 		keys:         keys,
+		include:      include,
 		partition:    partition,
 		where:        where,
 		using:        using,
@@ -101,6 +104,13 @@ func (this *CreateIndex) MapExpressions(mapper expression.Mapper) (err error) {
 		return
 	}
 
+	if this.include != nil {
+		err = this.include.MapExpressions(mapper)
+		if err != nil {
+			return
+		}
+	}
+
 	if this.partition != nil {
 		err = this.partition.MapExpressions(mapper)
 		if err != nil {
@@ -123,6 +133,10 @@ Return expr from the create index statement.
 */
 func (this *CreateIndex) Expressions() expression.Expressions {
 	exprs := this.keys.Expressions()
+
+	if this.include != nil && len(this.include.Expressions()) > 0 {
+		exprs = append(exprs, this.include.Expressions()...)
+	}
 
 	if this.partition != nil && len(this.partition.Expressions()) > 0 {
 		exprs = append(exprs, this.partition.Expressions()...)
@@ -172,6 +186,10 @@ Return keys from the create index statement.
 */
 func (this *CreateIndex) Keys() IndexKeyTerms {
 	return this.keys
+}
+
+func (this *CreateIndex) Include() *IndexIncludeTerm {
+	return this.include
 }
 
 /*
@@ -226,6 +244,9 @@ func (this *CreateIndex) MarshalJSON() ([]byte, error) {
 	r["keyspaceRef"] = this.keyspace
 	r["name"] = this.name
 	r["keys"] = this.keys
+	if this.include != nil {
+		r["include"] = this.include
+	}
 	if this.partition != nil {
 		r["partition"] = this.partition
 	}
@@ -266,6 +287,7 @@ const (
 	IK_ASC = 1 << iota
 	IK_DESC
 	IK_MISSING
+	IK_VECTOR
 	IK_NONE = 0
 )
 
@@ -308,6 +330,10 @@ func (this *IndexKeyTerm) String(pos int) string {
 		s += " DESC"
 	}
 
+	if this.HasAttribute(IK_VECTOR) {
+		s += " VECTOR"
+	}
+
 	return s
 }
 
@@ -338,6 +364,18 @@ func (this *IndexKeyTerm) HasAttribute(attr uint32) bool {
 	return (this.attributes & attr) != 0
 }
 
+func (this *IndexKeyTerm) HasDesc() bool {
+	return (this.attributes & IK_DESC) != 0
+}
+
+func (this *IndexKeyTerm) HasMissing() bool {
+	return (this.attributes & IK_MISSING) != 0
+}
+
+func (this *IndexKeyTerm) HasVector() bool {
+	return (this.attributes & IK_VECTOR) != 0
+}
+
 /*
 Return bool value representing Index Leading Missing
 */
@@ -352,6 +390,24 @@ func (this IndexKeyTerms) HasDescending() bool {
 	for _, term := range this {
 		if term.HasAttribute(IK_DESC) {
 			return true
+		}
+	}
+	return false
+}
+
+func (this IndexKeyTerms) HasVector() bool {
+	for _, term := range this {
+		if term.HasAttribute(IK_VECTOR) {
+			return true
+		}
+		all, ok := term.Expression().(*expression.All)
+		if ok && all.Flatten() {
+			fk := all.FlattenKeys()
+			for pos, _ := range fk.Operands() {
+				if fk.HasVector(pos) {
+					return true
+				}
+			}
 		}
 	}
 	return false
@@ -411,6 +467,44 @@ func (this IndexKeyTerms) String() string {
 	return s
 }
 
+type IndexIncludeTerm struct {
+	exprs expression.Expressions `json:"exprs"`
+}
+
+func NewIndexIncludeTerm(exprs expression.Expressions) *IndexIncludeTerm {
+	return &IndexIncludeTerm{
+		exprs: exprs,
+	}
+}
+
+func (this *IndexIncludeTerm) Expressions() expression.Expressions {
+	return this.exprs
+}
+
+func (this *IndexIncludeTerm) MapExpressions(mapper expression.Mapper) (err error) {
+	if len(this.exprs) > 0 {
+		err = this.exprs.MapExpressions(mapper)
+		if err != nil {
+			return
+		}
+	}
+	return
+}
+
+func (this *IndexIncludeTerm) String() (s string) {
+	if this != nil {
+		s += " INCLUDE("
+		for i, expr := range this.exprs {
+			if i > 0 {
+				s += ", "
+			}
+			s += expr.String()
+		}
+		s += ") "
+	}
+	return
+}
+
 /*
 Represents the Partition term in create index.
 */
@@ -442,13 +536,6 @@ Returns Partition Strategy
 */
 func (this *IndexPartitionTerm) Strategy() datastore.PartitionType {
 	return this.strategy
-}
-
-/*
-Returns Partition Exprs
-*/
-func (this *IndexPartitionTerm) Exprs() expression.Expressions {
-	return this.exprs
 }
 
 /*

@@ -66,6 +66,18 @@ func (this *builder) VisitCreateIndex(stmt *algebra.CreateIndex) (interface{}, e
 			return nil, errors.NewIndexerDescCollationError()
 		}
 	}
+	if stmt.Keys().HasVector() || stmt.Include() != nil {
+		if _, ok := indexer.(datastore.Indexer6); !ok {
+			var cause string
+			version := datastore.INDEXER6_VERSION
+			if stmt.Include() != nil {
+				cause = "Include clause present"
+			} else {
+				cause = "Index key has vector attribute"
+			}
+			return nil, errors.NewIndexerVersionError(version, cause)
+		}
+	}
 
 	if stmt.Partition() != nil {
 		if _, ok := indexer.(datastore.Indexer3); !ok {

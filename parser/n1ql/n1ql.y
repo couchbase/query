@@ -78,6 +78,7 @@ sortTerm         *algebra.SortTerm
 sortTerms        algebra.SortTerms
 indexKeyTerm     *algebra.IndexKeyTerm
 indexKeyTerms    algebra.IndexKeyTerms
+includeTerm     *algebra.IndexIncludeTerm
 partitionTerm   *algebra.IndexPartitionTerm
 groupTerm       *algebra.GroupTerm
 groupTerms       algebra.GroupTerms
@@ -521,6 +522,7 @@ column int
 %type <s>                index_name opt_index_name
 %type <keyspaceRef>      simple_named_keyspace_ref named_keyspace_ref
 %type <scopeRef>         named_scope_ref
+%type <includeTerm>      opt_index_include
 %type <partitionTerm>    opt_index_partition
 %type <indexType>        index_using opt_index_using
 %type <expr>             index_term_expr opt_index_where
@@ -3477,16 +3479,16 @@ CREATE PRIMARY INDEX IF NOT EXISTS index_name ON named_keyspace_ref opt_index_pa
     $$ = algebra.NewCreatePrimaryIndex($7, $9, $10, $11, $12, false)
 }
 |
-CREATE opt_vector INDEX index_name opt_if_not_exists
-ON named_keyspace_ref LPAREN index_terms RPAREN opt_index_partition opt_index_where opt_index_using opt_with_clause
+CREATE opt_vector INDEX index_name opt_if_not_exists ON named_keyspace_ref LPAREN index_terms RPAREN
+opt_index_include opt_index_partition opt_index_where opt_index_using opt_with_clause
 {
-    $$ = algebra.NewCreateIndex($4, $7, $9, $11, $12, $13, $14, $5, $2)
+    $$ = algebra.NewCreateIndex($4, $7, $9, $11, $12, $13, $14, $15, $5, $2)
 }
 |
-CREATE opt_vector INDEX IF NOT EXISTS index_name
-ON named_keyspace_ref LPAREN index_terms RPAREN opt_index_partition opt_index_where opt_index_using opt_with_clause
+CREATE opt_vector INDEX IF NOT EXISTS index_name ON named_keyspace_ref LPAREN index_terms RPAREN
+opt_index_include opt_index_partition opt_index_where opt_index_using opt_with_clause
 {
-    $$ = algebra.NewCreateIndex($7, $9, $11, $13, $14, $15, $16, false, $2)
+    $$ = algebra.NewCreateIndex($7, $9, $11, $13, $14, $15, $16, $17, false, $2)
 }
 ;
 
@@ -3595,6 +3597,18 @@ opt_index_partition:
 PARTITION BY HASH LPAREN exprs RPAREN
 {
     $$ = algebra.NewIndexPartitionTerm(datastore.HASH_PARTITION,$5)
+}
+;
+
+opt_index_include:
+/* empty */
+{
+    $$ = nil
+}
+|
+INCLUDE LPAREN exprs RPAREN
+{
+    $$ = algebra.NewIndexIncludeTerm($3)
 }
 ;
 
@@ -3738,6 +3752,9 @@ ASC
 DESC
 { $$ = algebra.IK_DESC }
 |
+VECTOR
+{ $$ = algebra.IK_VECTOR }
+|
 INCLUDE MISSING
 { $$ = algebra.IK_MISSING }
 ;
@@ -3805,14 +3822,14 @@ IF EXISTS
  *************************************************/
 
 alter_index:
-ALTER INDEX simple_named_keyspace_ref DOT index_name opt_index_using with_clause
+ALTER opt_vector INDEX simple_named_keyspace_ref DOT index_name opt_index_using with_clause
 {
-    $$ = algebra.NewAlterIndex($3, $5, $6, $7)
+    $$ = algebra.NewAlterIndex($4, $6, $7, $8)
 }
 |
-ALTER INDEX index_name ON named_keyspace_ref opt_index_using with_clause
+ALTER opt_vector INDEX index_name ON named_keyspace_ref opt_index_using with_clause
 {
-    $$ = algebra.NewAlterIndex($5, $3, $6, $7)
+    $$ = algebra.NewAlterIndex($6, $4, $7, $8)
 }
 ;
 

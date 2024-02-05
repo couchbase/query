@@ -40,13 +40,15 @@ func (this *UnionSpans) CreateScan(
 	indexGroupAggs *plan.IndexGroupAggregates, covers expression.Covers,
 	filterCovers map[*expression.Cover]value.Value, filter expression.Expression,
 	cost, cardinality float64, size int64, frCost float64,
-	baseKeyspace *base.BaseKeyspace, hasDeltaKeyspace, skipNewKeys, nested_loop bool) plan.SecondaryScan {
+	baseKeyspace *base.BaseKeyspace, hasDeltaKeyspace, skipNewKeys, nested_loop, setop bool,
+	indexKeyNames []string, indexPartitionSets plan.IndexPartitionSets) plan.SecondaryScan {
 
 	if len(this.spans) == 1 {
 		return this.spans[0].CreateScan(index, term, indexApiVersion, reverse, distinct,
 			overlap, array, offset, limit, projection, indexOrder, indexGroupAggs,
 			covers, filterCovers, filter, cost, cardinality, size, frCost,
-			baseKeyspace, hasDeltaKeyspace, skipNewKeys, nested_loop)
+			baseKeyspace, hasDeltaKeyspace, skipNewKeys, nested_loop, setop,
+			indexKeyNames, indexPartitionSets)
 	}
 
 	lim := offsetPlusLimit(offset, limit)
@@ -55,7 +57,7 @@ func (this *UnionSpans) CreateScan(
 		scans[i] = s.CreateScan(index, term, indexApiVersion, reverse, distinct,
 			overlap, array, nil, lim, projection, nil, indexGroupAggs,
 			covers, filterCovers, filter, cost, cardinality, size, frCost,
-			baseKeyspace, hasDeltaKeyspace, skipNewKeys, nested_loop)
+			baseKeyspace, hasDeltaKeyspace, skipNewKeys, nested_loop, true, nil, nil)
 	}
 
 	return plan.NewUnionScan(limit, offset, cost, cardinality, size, frCost, scans...)

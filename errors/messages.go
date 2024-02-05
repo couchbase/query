@@ -1685,6 +1685,20 @@ var errData = []ErrData{
 		},
 	},
 	{
+		Code:        E_SEMANTICS_INTERNAL, // 3101
+		symbol:      "E_SEMANTICS_INTERNAL",
+		Description: "Semantic error: «what»",
+		Reason: []string{
+			"An internal error occurred during semantics check for the query.",
+		},
+		Action: []string{
+			"Contact support.",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
 		Code:        E_JOIN_NEST_NO_JOIN_HINT, // 3110
 		symbol:      "E_JOIN_NEST_NO_JOIN_HINT",
 		Description: "«op» on «alias» cannot have join hint (USE HASH or USE NL)",
@@ -2215,6 +2229,141 @@ var errData = []ErrData{
 		},
 		Action: []string{
 			"Revise statement removing or modifying the invalid cycle clause expression.",
+		},
+		IsUser: YES,
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_VECTOR_SEMANTIC, // 3400
+		symbol:      "E_VECTOR_SEMANTIC",
+		Description: "Semantic error in query with vector search function: <<msg>>.",
+		Reason: []string{
+			"A vector search function cannot be used together with certain features of a query, e.g. GROUP BY clause or Window function.",
+		},
+		Action: []string{
+			"Revise the statement to remove the offending features of the query.",
+		},
+		IsUser: YES,
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_VECTOR_INDEX_ATTRIBUTE, // 3401
+		symbol:      "E_VECTOR_INDEX_ATTRIBUTE",
+		Description: "Invalid index attributes specified for index key <<key>> in CREATE INDEX statement.",
+		Reason: []string{
+			"Cannot mix index attribute VECTOR with <<attr>> for index key <<key>> in CREATE INDEX statement.",
+		},
+		Action: []string{
+			"Revise the statement to remove the offending index attribute.",
+		},
+		IsUser: YES,
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_VECTOR_INDEX_SINGLE_VECTOR, // 3402
+		symbol:      "E_VECTOR_INDEX_SINGLE_VECTOR",
+		Description: "Multiple VECTOR index key specified in CREATE INDEX statement for index <<name>>.",
+		Reason: []string{
+			"Only a single index key with VECTOR attribute is supported in CREATE INDEX statement.",
+		},
+		Action: []string{
+			"Revise the statement to include only a single index key with VECTOR attribute.",
+		},
+		IsUser: YES,
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_VECTOR_INDEX_SINGLE_KEY, // 3403
+		symbol:      "E_VECTOR_INDEX_SINGLE_KEY",
+		Description: "Multiple index keys specified in CREATE VECTOR INDEX statement for index <<name>>.",
+		Reason: []string{
+			"Only a single index key (with VECTOR attribute) is supported in CREATE VECTOR INDEX statement.",
+		},
+		Action: []string{
+			"Revise the statement to include only a single index key (with VECTOR attribute).",
+		},
+		IsUser: YES,
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_VECTOR_INDEX_NO_VECTOR, // 3404
+		symbol:      "E_VECTOR_INDEX_NO_VECTOR",
+		Description: "No index key with VECTOR attribute specified in CREATE VECTOR INDEX statement for index <<name>>.",
+		Reason: []string{
+			"An index key with VECTOR attribute must be included in CREATE VECTOR INDEX statement.",
+		},
+		Action: []string{
+			"Revise the statement to include an index key with VECTOR attribute.",
+		},
+		IsUser: YES,
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_VECTOR_FUNC_ORDER_CONST, // 3405
+		symbol:      "E_VECTOR_FUNC_ORDER_CONST",
+		Description: "Vector function (<<term>>) in ORDER BY clause must use a constant for <<option>>.",
+		Reason: []string{
+			"A vector function (<<term>>) in ORDER BY clause uses a non-constant for specifying <<option>>.",
+		},
+		Action: []string{
+			"Revise the statement to use a constant for the order option.",
+		},
+		IsUser: YES,
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_VECTOR_FUNC_ORDER_OPTION, // 3406
+		symbol:      "E_VECTOR_FUNC_ORDER_OPTION",
+		Description: "Vector function (<<term>>) in ORDER BY clause must use ASC and NULLS LAST.",
+		Reason: []string{
+			"A vector function (<<term>>) in ORDER BY clause uses an invalid option <<option>>.",
+		},
+		Action: []string{
+			"Revise the statement to use only ASC and NULLS LAST order options.",
+		},
+		IsUser: YES,
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_VECTOR_DISTINCT_ARRAY_KEY, // 3407
+		symbol:      "E_VECTOR_DISTINCT_ARRAY_KEY",
+		Description: "Cannot use DISTINCT in an array index key with VECTOR attribute in CREATE INDEX statement.",
+		Reason: []string{
+			"An array index key with VECTOR attribute is specified using DISTINCT in CREATE INDEX statement.",
+		},
+		Action: []string{
+			"Revise the statement to remove DISTINCT in array index key with VECTOR attribute.",
+		},
+		IsUser: YES,
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_VECTOR_CONSTANT_INDEX_KEY, // 3408
+		symbol:      "E_VECTOR_CONSTANT_INDEX_KEY",
+		Description: "Cannot use a constant construct (object or array) in an index key with VECTOR attribute in CREATE INDEX statement.",
+		Reason: []string{
+			"An index key (<<name>>) with VECTOR attribute is specified as an object construct or array construct in CREATE INDEX statement.",
+		},
+		Action: []string{
+			"Revise the statement to not use a constant construct in index key with VECTOR attribute.",
 		},
 		IsUser: YES,
 		AppliesTo: []string{
@@ -3935,6 +4084,51 @@ var errData = []ErrData{
 		},
 	},
 	{
+		Code:        E_INVALID_QUERY_VECTOR, // 5430
+		symbol:      "E_INVALID_QUERY_VECTOR",
+		Description: "Invalid parameter (query vector) specified for vector function: <<msg>>.",
+		Reason: []string{
+			"An invalid parameter (query vector) is specified for vector function: <<msg>>.",
+		},
+		Action: []string{
+			"Revise the vector function to use a proper parameter (query vector).",
+		},
+		IsUser: YES,
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_INVALID_PROBES, // 5431
+		symbol:      "E_INVALID_PROBES",
+		Description: "Invalid parameter (probes) specified for vector function: <<msg>>.",
+		Reason: []string{
+			"An invalid parameter (probes) is specified for vector function: <<msg>>.",
+		},
+		Action: []string{
+			"Revise the vector function to use a proper parameter (probes).",
+		},
+		IsUser: YES,
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_INVALID_ACTUAL_VECTOR, // 5432
+		symbol:      "E_INVALID_ACTUAL_VECTOR",
+		Description: "Invalid parameter (actual vector) specified for vector function: <<msg>>.",
+		Reason: []string{
+			"An invalid parameter (actual vector) is specified for vector function: <<msg>>.",
+		},
+		Action: []string{
+			"Revise the vector function to use a proper parameter (actual vector).",
+		},
+		IsUser: YES,
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
 		Code:        E_MEMORY_QUOTA_EXCEEDED, // 5500
 		symbol:      "E_MEMORY_QUOTA_EXCEEDED",
 		Description: "Request has exceeded memory quota.",
@@ -5051,6 +5245,51 @@ var errData = []ErrData{
 		},
 	},
 	{
+		Code:        E_VECTOR_FUNC_INVALID_METRIC, // 10510
+		symbol:      "E_VECTOR_FUNC_INVALID_METRIC",
+		Description: "Vector function <<name>> has invalid metric specification (<<metric>>).",
+		Reason: []string{
+			"An invalid metric specification (<<metric>>) is used in vector function <<name>>.",
+		},
+		Action: []string{
+			"Revise the vector function to use a supported metric specification.",
+		},
+		IsUser: YES,
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_IS_VECTOR_INVALID_DIMENSION, // 10511
+		symbol:      "E_IS_VECTOR_INVALID_DIMENSION",
+		Description: "IsVector() function has invalid dimension specification (<<dimension>>).",
+		Reason: []string{
+			"An invalid dimension specification (<<dimension>>) is used in IsVector() function.",
+		},
+		Action: []string{
+			"Revise the function parameter to use an integer for dimension specification.",
+		},
+		IsUser: YES,
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_IS_VECTOR_INVALID_ARG, // 10512
+		symbol:      "E_IS_VECTOR_INVALID_ARG",
+		Description: "IsVector() function has invalid argument (<<msg>>).",
+		Reason: []string{
+			"An invalid argument (<<msg>>) is used in IsVector() function.",
+		},
+		Action: []string{
+			"Revise the function parameter to use a supported argument.",
+		},
+		IsUser: YES,
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
 		Code:        E_SYSTEM_DATASTORE, // 11000
 		symbol:      "E_SYSTEM_DATASTORE",
 		Description: "System datastore error «details»",
@@ -5784,6 +6023,21 @@ var errData = []ErrData{
 		},
 		Action: []string{
 			"Review the statement and ensure bucket names are unique.",
+		},
+		IsUser: YES,
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_INDEXER_VERSION, // 12046
+		symbol:      "E_INDEXER_VERSION",
+		Description: "All indexer nodes must be version <<ver>> or later (<<cause>>).",
+		Reason: []string{
+			"An indexer with version lower than <<ver>> is found, cannot support '<<cause>>'.",
+		},
+		Action: []string{
+			"Upgrade all indexer nodes to be at least version <<ver>>.",
 		},
 		IsUser: YES,
 		AppliesTo: []string{

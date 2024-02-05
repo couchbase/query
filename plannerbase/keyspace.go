@@ -41,6 +41,7 @@ type BaseKeyspace struct {
 	keyspace      string
 	filters       Filters
 	joinfilters   Filters
+	vectorfilters Filters
 	dnfPred       expression.Expression
 	origPred      expression.Expression
 	onclause      expression.Expression
@@ -288,6 +289,9 @@ func copyBaseKeyspaces(src map[string]*BaseKeyspace, copyFilter bool) map[string
 			if len(kspace.joinfilters) > 0 {
 				dest[kspace.name].joinfilters = kspace.joinfilters.Copy()
 			}
+			if len(kspace.vectorfilters) > 0 {
+				dest[kspace.name].vectorfilters = kspace.vectorfilters.Copy()
+			}
 		}
 	}
 
@@ -316,6 +320,10 @@ func (this *BaseKeyspace) AddFilter(filter *Filter) {
 
 func (this *BaseKeyspace) AddJoinFilter(joinfilter *Filter) {
 	this.joinfilters = append(this.joinfilters, joinfilter)
+}
+
+func (this *BaseKeyspace) AddVectorFilter(vectorfilter *Filter) {
+	this.vectorfilters = append(this.vectorfilters, vectorfilter)
 }
 
 func (this *BaseKeyspace) AddFilters(filters Filters) {
@@ -747,6 +755,18 @@ func (this *BaseKeyspace) SetEarlyProjection(names map[string]bool) {
 
 func (this *BaseKeyspace) EarlyProjection() []string {
 	return this.projection
+}
+
+func (this *BaseKeyspace) GetVectorPred() expression.Expression {
+	var vpred expression.Expression
+	for _, fl := range this.vectorfilters {
+		if vpred == nil {
+			vpred = fl.fltrExpr
+		} else {
+			vpred = expression.NewAnd(vpred, fl.fltrExpr)
+		}
+	}
+	return vpred
 }
 
 func GetKeyspaceName(baseKeyspaces map[string]*BaseKeyspace, alias string) string {

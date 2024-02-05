@@ -77,6 +77,15 @@ func (this *multiSpansBase) HasStatic() bool {
 	return false
 }
 
+func (this *multiSpansBase) HasVector() bool {
+	for _, s := range this.spans {
+		if s.HasVector() {
+			return true
+		}
+	}
+	return false
+}
+
 func (this *multiSpansBase) EquivalenceRangeAt(pos int) (eq bool, expr expression.Expression) {
 	missing := false //To mark IS MISSING range
 

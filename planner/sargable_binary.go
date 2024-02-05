@@ -13,8 +13,8 @@ import (
 )
 
 func (this *sargable) visitBinary(pred expression.BinaryFunction) (bool, error) {
-	return pred.First().EquivalentTo(this.key) ||
+	return !this.vector && (pred.First().EquivalentTo(this.key) ||
 			pred.Second().EquivalentTo(this.key) ||
-			this.defaultSargable(pred),
+			this.defaultSargable(pred)),
 		nil
 }

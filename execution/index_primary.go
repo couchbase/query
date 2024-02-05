@@ -83,7 +83,7 @@ func (this *CreatePrimaryIndex) RunOnce(context *Context, parent value.Value) {
 
 			if node.Partition() != nil {
 				indexPartition = &datastore.IndexPartition{Strategy: node.Partition().Strategy(),
-					Exprs: node.Partition().Exprs()}
+					Exprs: node.Partition().Expressions()}
 			}
 
 			if ok5 {

@@ -13,7 +13,7 @@ import (
 )
 
 func (this *sargable) visitUnary(pred expression.UnaryFunction) (bool, error) {
-	return pred.Operand().EquivalentTo(this.key) ||
-			this.defaultSargable(pred),
+	return !this.vector && (pred.Operand().EquivalentTo(this.key) ||
+			this.defaultSargable(pred)),
 		nil
 }

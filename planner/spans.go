@@ -31,7 +31,8 @@ type SargSpans interface {
 		indexGroupAggs *plan.IndexGroupAggregates, covers expression.Covers,
 		filterCovers map[*expression.Cover]value.Value, filter expression.Expression,
 		cost, cardinality float64, size int64, frCost float64,
-		baseKeyspace *base.BaseKeyspace, hasDeltaKeyspace, skipNewKeys, nested_loop bool) plan.SecondaryScan
+		baseKeyspace *base.BaseKeyspace, hasDeltaKeyspace, skipNewKeys, nested_loop, setop bool,
+		indexKeyNames []string, indexPartitionSet plan.IndexPartitionSets) plan.SecondaryScan
 
 	Compose(prev SargSpans) SargSpans              // Apply to previous composite keys
 	ComposeTerm(next *TermSpans) SargSpans         // Apply next composite keys
@@ -42,6 +43,7 @@ type SargSpans interface {
 	ExactSpan1(nkeys int) bool                     // Are all spans exact - Api1
 	SetExact(exact bool)                           // Set exact on spans
 	HasStatic() bool                               // Has Static spans
+	HasVector() bool                               // Has span on vector index key
 	CanUseIndexOrder(allowMultipleSpans bool) bool // Can use index ORDER
 	CanHaveDuplicates(index datastore.Index, indexApiVersion int,
 		overlap, array bool) bool // Can have duplicates

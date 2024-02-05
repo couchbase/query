@@ -34,26 +34,29 @@ type IndexScan3 struct {
 	optEstimate
 	BuildBitFilterBase
 	ProbeBitFilterBase
-	index            datastore.Index3
-	indexer          datastore.Indexer
-	term             *algebra.KeyspaceTerm
-	keyspace         datastore.Keyspace
-	spans            Spans2
-	flags            uint32
-	groupAggs        *IndexGroupAggregates
-	projection       *IndexProjection
-	orderTerms       IndexKeyOrders
-	offset           expression.Expression
-	limit            expression.Expression
-	covers           expression.Covers
-	filterCovers     map[*expression.Cover]value.Value
-	filter           expression.Expression
-	earlyOrderExprs  expression.Expressions
-	implicitArrayKey *expression.All
-	hasDeltaKeyspace bool
-	fullCover        bool
-	skipNewKeys      bool
-	nested_loop      bool
+	index              datastore.Index3
+	indexer            datastore.Indexer
+	term               *algebra.KeyspaceTerm
+	keyspace           datastore.Keyspace
+	spans              Spans2
+	flags              uint32
+	groupAggs          *IndexGroupAggregates
+	projection         *IndexProjection
+	orderTerms         IndexKeyOrders
+	offset             expression.Expression
+	limit              expression.Expression
+	covers             expression.Covers
+	filterCovers       map[*expression.Cover]value.Value
+	filter             expression.Expression
+	earlyOrderExprs    expression.Expressions
+	implicitArrayKey   *expression.All
+	hasDeltaKeyspace   bool
+	fullCover          bool
+	skipNewKeys        bool
+	nested_loop        bool
+	indexVector        *IndexVector
+	indexKeyNames      []string
+	indexPartitionSets IndexPartitionSets
 }
 
 func NewIndexScan3(index datastore.Index3, term *algebra.KeyspaceTerm, spans Spans2,
@@ -62,7 +65,9 @@ func NewIndexScan3(index datastore.Index3, term *algebra.KeyspaceTerm, spans Spa
 	groupAggs *IndexGroupAggregates, covers expression.Covers,
 	filterCovers map[*expression.Cover]value.Value, filter expression.Expression,
 	cost, cardinality float64, size int64, frCost float64,
-	hasDeltaKeyspace, skipNewKeys, nested_loop bool) *IndexScan3 {
+	hasDeltaKeyspace, skipNewKeys, nested_loop bool, indexVector *IndexVector,
+	indexKeyNames []string, indexPartitionSets IndexPartitionSets) *IndexScan3 {
+
 	flags := uint32(0)
 	if reverse {
 		flags |= ISCAN_IS_REVERSE_SCAN
@@ -74,22 +79,25 @@ func NewIndexScan3(index datastore.Index3, term *algebra.KeyspaceTerm, spans Spa
 		flags |= ISCAN_HAS_DYNAMIC_IN_SPAN
 	}
 	rv := &IndexScan3{
-		index:            index,
-		indexer:          index.Indexer(),
-		term:             term,
-		spans:            spans,
-		flags:            flags,
-		groupAggs:        groupAggs,
-		projection:       projection,
-		orderTerms:       orderTerms,
-		offset:           offset,
-		limit:            limit,
-		covers:           covers,
-		filterCovers:     filterCovers,
-		filter:           filter,
-		hasDeltaKeyspace: hasDeltaKeyspace,
-		skipNewKeys:      skipNewKeys,
-		nested_loop:      nested_loop,
+		index:              index,
+		indexer:            index.Indexer(),
+		term:               term,
+		spans:              spans,
+		flags:              flags,
+		groupAggs:          groupAggs,
+		projection:         projection,
+		orderTerms:         orderTerms,
+		offset:             offset,
+		limit:              limit,
+		covers:             covers,
+		filterCovers:       filterCovers,
+		filter:             filter,
+		hasDeltaKeyspace:   hasDeltaKeyspace,
+		skipNewKeys:        skipNewKeys,
+		nested_loop:        nested_loop,
+		indexVector:        indexVector,
+		indexKeyNames:      indexKeyNames,
+		indexPartitionSets: indexPartitionSets,
 	}
 
 	if len(covers) > 0 {
@@ -376,6 +384,18 @@ func (this *IndexScan3) SkipNewKeys() bool {
 	return this.skipNewKeys
 }
 
+func (this *IndexScan3) IndexVector() *IndexVector {
+	return this.indexVector
+}
+
+func (this *IndexScan3) IndexKeyNames() []string {
+	return this.indexKeyNames
+}
+
+func (this *IndexScan3) IndexPartitionSets() IndexPartitionSets {
+	return this.indexPartitionSets
+}
+
 func (this *IndexScan3) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
@@ -485,6 +505,26 @@ func (this *IndexScan3) MarshalBase(f func(map[string]interface{})) map[string]i
 		r["index_partition_by"] = partition.Exprs.String()
 	}
 
+	if this.indexVector != nil {
+		r["index_vector"] = this.indexVector
+	}
+
+	if len(this.indexKeyNames) > 0 {
+		r["index_key_names"] = this.indexKeyNames
+	}
+
+	if len(this.indexPartitionSets) > 0 {
+		indexPartitionSets := make([][]interface{}, len(this.indexPartitionSets))
+		for i, indexPartSet := range this.indexPartitionSets {
+			partitionSet := make([]interface{}, len(indexPartSet.PartitionSet))
+			for j, partSet := range indexPartSet.PartitionSet {
+				partitionSet[j] = partSet.String()
+			}
+			indexPartitionSets[i] = partitionSet
+		}
+		r["index_partition_sets"] = indexPartitionSets
+	}
+
 	if f != nil {
 		f(r)
 	}
@@ -493,37 +533,40 @@ func (this *IndexScan3) MarshalBase(f func(map[string]interface{})) map[string]i
 
 func (this *IndexScan3) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_                string                 `json:"#operator"`
-		Index            string                 `json:"index"`
-		IndexId          string                 `json:"index_id"`
-		Namespace        string                 `json:"namespace"`
-		Bucket           string                 `json:"bucket"`
-		Scope            string                 `json:"scope"`
-		Keyspace         string                 `json:"keyspace"`
-		As               string                 `json:"as"`
-		Using            datastore.IndexType    `json:"using"`
-		Spans            Spans2                 `json:"spans"`
-		Reverse          bool                   `json:"reverse"`
-		Distinct         bool                   `json:"distinct"`
-		DynamicIn        bool                   `json:"has_dynamic_in"`
-		CacheResult      bool                   `json:"cache_result"`
-		UnderNL          bool                   `json:"nested_loop"`
-		GroupAggs        *IndexGroupAggregates  `json:"index_group_aggs"`
-		Projection       *IndexProjection       `json:"index_projection"`
-		OrderTerms       IndexKeyOrders         `json:"index_order"`
-		Offset           string                 `json:"offset"`
-		Limit            string                 `json:"limit"`
-		Covers           []string               `json:"covers"`
-		IndexKeys        []string               `json:"index_keys"`
-		FilterCovers     map[string]interface{} `json:"filter_covers"`
-		IndexConditions  map[string]interface{} `json:"index_conditions"`
-		Filter           string                 `json:"filter"`
-		OptEstimate      map[string]interface{} `json:"optimizer_estimates"`
-		HasDeltaKeyspace bool                   `json:"has_delta_keyspace"`
-		BuildBitFilters  []json.RawMessage      `json:"build_bit_filters"`
-		ProbeBitFilters  []json.RawMessage      `json:"probe_bit_filters"`
-		_                string                 `json:"index_partition_by"`
-		SkipNewKeys      bool                   `json:"skip_new_keys"`
+		_                  string                 `json:"#operator"`
+		Index              string                 `json:"index"`
+		IndexId            string                 `json:"index_id"`
+		Namespace          string                 `json:"namespace"`
+		Bucket             string                 `json:"bucket"`
+		Scope              string                 `json:"scope"`
+		Keyspace           string                 `json:"keyspace"`
+		As                 string                 `json:"as"`
+		Using              datastore.IndexType    `json:"using"`
+		Spans              Spans2                 `json:"spans"`
+		Reverse            bool                   `json:"reverse"`
+		Distinct           bool                   `json:"distinct"`
+		DynamicIn          bool                   `json:"has_dynamic_in"`
+		CacheResult        bool                   `json:"cache_result"`
+		UnderNL            bool                   `json:"nested_loop"`
+		GroupAggs          *IndexGroupAggregates  `json:"index_group_aggs"`
+		Projection         *IndexProjection       `json:"index_projection"`
+		OrderTerms         IndexKeyOrders         `json:"index_order"`
+		Offset             string                 `json:"offset"`
+		Limit              string                 `json:"limit"`
+		Covers             []string               `json:"covers"`
+		IndexKeys          []string               `json:"index_keys"`
+		FilterCovers       map[string]interface{} `json:"filter_covers"`
+		IndexConditions    map[string]interface{} `json:"index_conditions"`
+		Filter             string                 `json:"filter"`
+		OptEstimate        map[string]interface{} `json:"optimizer_estimates"`
+		HasDeltaKeyspace   bool                   `json:"has_delta_keyspace"`
+		BuildBitFilters    []json.RawMessage      `json:"build_bit_filters"`
+		ProbeBitFilters    []json.RawMessage      `json:"probe_bit_filters"`
+		_                  string                 `json:"index_partition_by"`
+		SkipNewKeys        bool                   `json:"skip_new_keys"`
+		IndexVector        json.RawMessage        `json:"index_vector"`
+		IndexKeyNames      []string               `json:"index_key_names"`
+		IndexPartitionSets [][]string             `json:"index_partition_sets"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -642,6 +685,31 @@ func (this *IndexScan3) UnmarshalJSON(body []byte) error {
 		err = this.unmarshalProbeBitFilters(_unmarshalled.ProbeBitFilters)
 		if err != nil {
 			return err
+		}
+	}
+
+	if len(_unmarshalled.IndexVector) > 0 {
+		this.indexVector = &IndexVector{}
+		err = this.indexVector.UnmarshalJSON(_unmarshalled.IndexVector)
+		if err != nil {
+			return err
+		}
+	}
+
+	this.indexKeyNames = _unmarshalled.IndexKeyNames
+
+	if len(_unmarshalled.IndexPartitionSets) > 0 {
+		this.indexPartitionSets = make(IndexPartitionSets, len(_unmarshalled.IndexPartitionSets))
+		for i, indexPartSet := range _unmarshalled.IndexPartitionSets {
+			partSetExprs := make(expression.Expressions, len(indexPartSet))
+			for j, partSet := range indexPartSet {
+				partSetExpr, err := parser.Parse(partSet)
+				if err != nil {
+					return err
+				}
+				partSetExprs[j] = partSetExpr
+			}
+			this.indexPartitionSets[i] = NewIndexPartitionSet(partSetExprs)
 		}
 	}
 

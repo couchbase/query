@@ -11,6 +11,7 @@ package planner
 import (
 	"fmt"
 
+	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
@@ -19,6 +20,10 @@ import (
 )
 
 func (this *sarg) VisitAny(pred *expression.Any) (interface{}, error) {
+	if this.isVector {
+		return nil, nil
+	}
+
 	var spans SargSpans
 	if pred.PropagatesNull() {
 		spans = _VALUED_SPANS
@@ -58,10 +63,10 @@ func (this *sarg) VisitAny(pred *expression.Any) (interface{}, error) {
 
 		variable := expression.NewIdentifier(bindings[0].Variable())
 		variable.SetBindingVariable(true)
-		return anySargFor(pred.Satisfies(), variable, nil, this.isJoin, this.doSelec,
-			this.baseKeyspace, this.keyspaceNames, variable.Alias(), selec, true,
-			this.advisorValidate, false, this.isMissing, this.aliases, arrayId,
-			this.context)
+		return anySargFor(pred.Satisfies(), variable, nil, this.index, this.isJoin,
+			this.doSelec, this.baseKeyspace, this.keyspaceNames, variable.Alias(), selec,
+			true, this.advisorValidate, false, this.isMissing, this.isVector,
+			this.keyPos, this.aliases, arrayId, this.context)
 	}
 
 	if !pred.Bindings().SubsetOf(array.Bindings()) {
@@ -78,19 +83,19 @@ func (this *sarg) VisitAny(pred *expression.Any) (interface{}, error) {
 	}
 
 	// Array Index key can have only single binding
-	return anySargFor(satisfies, array.ValueMapping(), array.When(), this.isJoin, this.doSelec,
-		this.baseKeyspace, this.keyspaceNames, array.Bindings()[0].Variable(), selec, true,
-		this.advisorValidate, all.IsDerivedFromFlatten(), this.isMissing, this.aliases,
-		arrayId, this.context)
+	return anySargFor(satisfies, array.ValueMapping(), array.When(), this.index, this.isJoin,
+		this.doSelec, this.baseKeyspace, this.keyspaceNames, array.Bindings()[0].Variable(),
+		selec, true, this.advisorValidate, all.IsDerivedFromFlatten(), this.isMissing,
+		this.isVector, this.keyPos, this.aliases, arrayId, this.context)
 }
 
-func anySargFor(pred, key, cond expression.Expression, isJoin, doSelec bool,
+func anySargFor(pred, key, cond expression.Expression, index datastore.Index, isJoin, doSelec bool,
 	baseKeyspace *base.BaseKeyspace, keyspaceNames map[string]string, alias string,
-	selec float64, any, advisorValidate, flatten, isMissing bool, aliases map[string]bool,
-	arrayId int, context *PrepareContext) (SargSpans, error) {
+	selec float64, any, advisorValidate, flatten, isMissing, isVector bool, keyPos int,
+	aliases map[string]bool, arrayId int, context *PrepareContext) (SargSpans, error) {
 
-	sp, _, err := sargFor(pred, key, isJoin, doSelec, baseKeyspace, keyspaceNames,
-		advisorValidate, isMissing, true, aliases, context)
+	sp, _, err := sargFor(pred, index, key, isJoin, doSelec, baseKeyspace, keyspaceNames,
+		advisorValidate, isMissing, true, isVector, keyPos, aliases, context)
 	if err != nil || sp == nil {
 		return sp, err
 	}

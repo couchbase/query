@@ -13,6 +13,7 @@ import (
 
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/value"
 )
 
@@ -68,6 +69,10 @@ func (this *SemChecker) visitAggregateFunction(agg algebra.Aggregate) (err error
 		return errors.NewEnterpriseFeature("Window function", "semantics.visit_aggregate_function")
 	}
 
+	if this.hasSemFlag(_SEM_ORDERBY_VECTOR_DIST) {
+		return errors.NewVectorFunctionError("Cannot use window functions with vector search function")
+	}
+
 	// Aggregate syntax has second argument check semantics
 	if algebra.AggregateHasProperty(agg.Name(), algebra.AGGREGATE_WINDOW_2ND_POSINT) && len(agg.Operands()) > 1 {
 		// second argument must be a constant or expression and must evaluate to a positive non zero integer
@@ -88,10 +93,21 @@ func (this *SemChecker) visitAggregateFunction(agg algebra.Aggregate) (err error
 	oby := wTerm.OrderBy()
 	windowFrame := wTerm.WindowFrame()
 
-	if oby != nil && algebra.AggregateHasProperty(agg.Name(), algebra.AGGREGATE_WINDOW_NOORDER) {
-		// Window function will not allow ORDER BY clause
-		return errors.NewWindowSemanticError(aggName, "ORDER BY clause ", "is not allowed.",
-			"semantics.visit_aggregate_function.oby")
+	if oby != nil {
+		if algebra.AggregateHasProperty(agg.Name(), algebra.AGGREGATE_WINDOW_NOORDER) {
+			// Window function will not allow ORDER BY clause
+			return errors.NewWindowSemanticError(aggName, "ORDER BY clause ", "is not allowed.",
+				"semantics.visit_aggregate_function.oby")
+		}
+
+		for _, term := range oby.Terms() {
+			switch term.Expression().(type) {
+			case *expression.Ann, *expression.Knn:
+				return errors.NewWindowSemanticError(aggName, "ORDER BY clause ",
+					"cannot use vector search functions", "semantics.visit_aggregate_function.oby")
+			}
+		}
+
 	}
 
 	// Validate the ORDER BY direction and NULLS position expressions
@@ -197,5 +213,4 @@ func (this *SemChecker) visitAggregateFunction(agg algebra.Aggregate) (err error
 	}
 
 	return nil
-
 }

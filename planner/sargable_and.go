@@ -15,15 +15,26 @@ import (
 )
 
 func (this *sargable) VisitAnd(pred *expression.And) (interface{}, error) {
-	if base.SubsetOf(pred, this.key) {
+	if !this.vector && base.SubsetOf(pred, this.key) {
 		return true, nil
 	}
 
-	keys := datastore.IndexKeys{&datastore.IndexKey{this.key, datastore.IK_NONE}}
+	attrs := datastore.IK_NONE
+	if this.vector {
+		attrs |= datastore.IK_VECTOR
+	}
+	keys := datastore.IndexKeys{&datastore.IndexKey{this.key, attrs}}
 	isArrays := []bool{this.array}
 	for _, child := range pred.Operands() {
-		if min, _, _, _ := SargableFor(child, keys, this.missing, this.gsi, isArrays,
-			this.context, this.aliases); min > 0 {
+		var min int
+		if this.vector {
+			min, _, _, _ = SargableFor(nil, child, this.index, keys, this.missing, this.gsi, isArrays,
+				this.context, this.aliases)
+		} else {
+			min, _, _, _ = SargableFor(child, nil, this.index, keys, this.missing, this.gsi, isArrays,
+				this.context, this.aliases)
+		}
+		if min > 0 {
 			return true, nil
 		}
 	}

@@ -60,14 +60,17 @@ func (this *IndexScan3) PlanOp() plan.Operator {
 }
 
 type scanDesc struct {
-	scan    *IndexScan3
-	context *Context
-	parent  value.Value
+	scan               *IndexScan3
+	context            *Context
+	parent             value.Value
+	indexVector        *datastore.IndexVector
+	inlineFilter       string
+	indexPartitionSets datastore.IndexPartitionSets
 }
 
 func scanFork(p interface{}) {
 	d := p.(scanDesc)
-	d.scan.scan(d.context, d.scan.conn, d.parent)
+	d.scan.scan(d.context, d.scan.conn, d.parent, d.indexVector, d.inlineFilter, d.indexPartitionSets)
 }
 
 func (this *IndexScan3) RunOnce(context *Context, parent value.Value) {
@@ -132,7 +135,41 @@ func (this *IndexScan3) RunOnce(context *Context, parent value.Value) {
 		}
 
 		if !hasCache {
-			util.Fork(scanFork, scanDesc{this, context, parent})
+			var er errors.Error
+			var indexVector *datastore.IndexVector
+			if this.plan.IndexVector() != nil {
+				index6, ok := this.plan.Index().(datastore.Index6)
+				if !ok {
+					context.Error(errors.NewExecutionInternalError("Vector index not Index6"))
+					return
+				}
+
+				planIndexVector := this.plan.IndexVector()
+				indexVector = &datastore.IndexVector{
+					IndexKeyPos: planIndexVector.IndexKeyPos,
+				}
+				er = getIndexVector(planIndexVector, indexVector, parent,
+					index6.VectorDimension(), &this.operatorCtx)
+				if er != nil {
+					context.Error(er)
+					return
+				}
+			}
+			var inlineFilter string
+			if filter != nil {
+				inlineFilter = filter.String()
+			}
+			var indexPartitionSets datastore.IndexPartitionSets
+			planIndexPartitionSets := this.plan.IndexPartitionSets()
+			if len(planIndexPartitionSets) > 0 {
+				indexPartitionSets, er = getIndexPartitionSets(planIndexPartitionSets,
+					parent, &this.operatorCtx)
+				if er != nil {
+					context.Error(er)
+					return
+				}
+			}
+			util.Fork(scanFork, scanDesc{this, context, parent, indexVector, inlineFilter, indexPartitionSets})
 		}
 
 		ok := true
@@ -282,10 +319,13 @@ func (this *IndexScan3) RunOnce(context *Context, parent value.Value) {
 	})
 }
 
-func (this *IndexScan3) scan(context *Context, conn *datastore.IndexConnection, parent value.Value) {
+func (this *IndexScan3) scan(context *Context, conn *datastore.IndexConnection, parent value.Value,
+	indexVector *datastore.IndexVector, inlineFilter string, indexPartitionSets datastore.IndexPartitionSets) {
+
 	defer context.Recover(nil) // Recover from any panic
 
 	plan := this.plan
+	index3 := plan.Index()
 
 	// for nested-loop join we need to pass in values from left-hand-side (outer) of the join
 	// for span evaluation
@@ -308,12 +348,19 @@ func (this *IndexScan3) scan(context *Context, conn *datastore.IndexConnection, 
 	limit := evalLimitOffset(this.plan.Limit(), parent, math.MaxInt64, this.plan.Covering(), &this.operatorCtx)
 	scanVector := context.ScanVectorSource().ScanVector(plan.Term().Namespace(), plan.Term().Path().Bucket())
 
-	indexProjection, indexOrder, indexGroupAggs := planToScanMapping(plan.Index(), plan.Projection(),
+	indexProjection, indexOrder, indexGroupAggs := planToScanMapping(index3, plan.Projection(),
 		plan.OrderTerms(), plan.GroupAggs(), plan.Covers())
 
-	plan.Index().Scan3(context.RequestId(), dspans, plan.Reverse(), plan.Distinct(),
-		indexProjection, offset, limit, indexGroupAggs, indexOrder,
-		context.ScanConsistency(), scanVector, conn)
+	if index6, ok := index3.(datastore.Index6); ok && indexVector != nil {
+		index6.Scan6(context.RequestId(), dspans, plan.Reverse(), plan.Distinct(),
+			indexProjection, offset, limit, indexGroupAggs, indexOrder,
+			this.plan.IndexKeyNames(), inlineFilter, indexVector, indexPartitionSets,
+			context.ScanConsistency(), scanVector, conn)
+	} else {
+		index3.Scan3(context.RequestId(), dspans, plan.Reverse(), plan.Distinct(),
+			indexProjection, offset, limit, indexGroupAggs, indexOrder,
+			context.ScanConsistency(), scanVector, conn)
+	}
 }
 
 func evalSpan3(pspans plan.Spans2, parent value.Value, hasDynamicInSpan bool, context *opContext) (

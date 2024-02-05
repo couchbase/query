@@ -9,10 +9,15 @@
 package planner
 
 import (
+	"fmt"
+
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/datastore/virtual"
+	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
+	base "github.com/couchbase/query/plannerbase"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
@@ -25,6 +30,11 @@ func useIndex2API(index datastore.Index, indexApiVersion int) bool {
 func useIndex3API(index datastore.Index, indexApiVersion int) bool {
 	_, ok := index.(datastore.Index3)
 	return ok && indexApiVersion >= datastore.INDEX_API_3
+}
+
+func useIndex6API(index datastore.Index, indexApiVersion int) bool {
+	_, ok := index.(datastore.Index6)
+	return ok && indexApiVersion >= datastore.INDEX_API_6
 }
 
 func useSkipIndexKeys(index datastore.Index, indexApiVersion int) bool {
@@ -127,14 +137,16 @@ func (this *builder) buildIndexProjection(entry *indexEntry, exprs expression.Ex
 		allKeys := true
 
 		if !entry.index.IsPrimary() {
-			for keyPos, indexKey := range entry.keys {
+			for keyPos, indexKey := range entry.idxKeys {
 				if _, ok := idxProj[keyPos]; ok {
+					indexProjection.EntryKeys = append(indexProjection.EntryKeys, keyPos)
+				} else if indexKey.HasAttribute(datastore.IK_VECTOR) {
 					indexProjection.EntryKeys = append(indexProjection.EntryKeys, keyPos)
 				} else {
 					curKey := false
 					for _, expr := range exprs {
-						if expr.DependsOn(indexKey) {
-							if id != nil && id.EquivalentTo(indexKey) {
+						if expr.DependsOn(indexKey.Expr) {
+							if id != nil && id.EquivalentTo(indexKey.Expr) {
 								indexProjection.PrimaryKey = true
 								primaryKey = true
 							} else {
@@ -219,4 +231,132 @@ func getIndexSize(index datastore.Index) int {
 		}
 	}
 	return size
+}
+
+func getIndexKeyNames(alias string, index datastore.Index, projection *plan.IndexProjection) ([]string, error) {
+	var keys datastore.IndexKeys
+	var err error
+	if !index.IsPrimary() {
+		keys = getIndexKeys(index)
+	}
+	indexKeyNames := make([]string, 0, len(keys)+1)
+
+	formalizer := expression.NewSelfFormalizer(alias, nil)
+
+	nextKey := -1
+	entryPos := -1
+	if projection != nil && len(projection.EntryKeys) > 0 {
+		entryPos = 0
+		nextKey = projection.EntryKeys[entryPos]
+	}
+	for i := 0; i < len(keys); i++ {
+		useKey := true
+		done := false
+		if entryPos >= 0 {
+			if i < nextKey {
+				// non-projected index key
+				useKey = false
+			} else if i == nextKey {
+				// projected index key
+				entryPos++
+				if entryPos >= len(projection.EntryKeys) {
+					done = true
+				} else {
+					nextKey = projection.EntryKeys[entryPos]
+				}
+			} else {
+				return nil, errors.NewPlanInternalError(fmt.Sprintf("getIndexKeyNames: unexpected nextKey position %d (i = %d)",
+					nextKey, i))
+			}
+		} // else all index keys are included (useKey remains true)
+
+		// vector index key is in the index projection but no need to include it
+		if useKey && keys[i].HasAttribute(datastore.IK_VECTOR) {
+			useKey = false
+		}
+
+		if useKey {
+			key := keys[i].Expr
+			formalizer.SetIndexScope()
+			key, err = formalizer.Map(key.Copy())
+			formalizer.ClearIndexScope()
+			if err != nil {
+				return nil, err
+			}
+			indexKeyNames = append(indexKeyNames, expression.NewIndexKey(key).String())
+		} else {
+			indexKeyNames = append(indexKeyNames, "")
+		}
+
+		if done {
+			break
+		}
+	}
+	if index.IsPrimary() || projection == nil || projection.PrimaryKey {
+		id := expression.NewField(expression.NewMeta(expression.NewIdentifier(alias)),
+			expression.NewFieldName("id", false))
+
+		indexKeyNames = append(indexKeyNames, expression.NewIndexKey(id).String())
+	}
+
+	return indexKeyNames, nil
+}
+
+func (this *builder) getIndexPartitionSets(partitionKeys expression.Expressions, node *algebra.KeyspaceTerm,
+	pred expression.Expression, baseKeyspace *base.BaseKeyspace) (plan.IndexPartitionSets, error) {
+
+	keyspace, err := this.getTermKeyspace(node)
+	if err != nil {
+		return nil, err
+	}
+
+	// use a virtual index with the partition keys passed in as index keys, such that we can
+	// try to generate index spans in order to determine whether each of the partition keys
+	// has equality (EQ, IN) predicates for purpose of partition elimination
+
+	index := virtual.NewVirtualIndex(keyspace, "partitionVirtualIndex", nil, partitionKeys, nil,
+		nil, false, false, datastore.INDEX_MODE_VIRTUAL, nil)
+
+	nkeys := len(partitionKeys)
+	keys := make(datastore.IndexKeys, 0, nkeys)
+	for _, k := range partitionKeys {
+		keys = append(keys, &datastore.IndexKey{k, datastore.IK_NONE})
+	}
+
+	min, max, sum, skeys := SargableFor(pred, nil, index, keys, true, true, nil, this.context, this.aliases)
+	if min < nkeys {
+		// not all partition keys sargable
+		return nil, nil
+	}
+
+	entry := newIndexEntry(index, keys, max, nil, min, max, sum, nil, nil, nil, false, skeys)
+
+	spans, exact, err := SargFor(pred, nil, entry, keys, false, nil, max, false, false,
+		baseKeyspace, this.keyspaceNames, false, this.aliases, this.context)
+	if err != nil || spans == nil || spans.Size() == 0 || !exact {
+		return nil, err
+	}
+
+	// TermSpans only, even in case of OR clause, it's only relevant if all keys are sargable
+	// in each arm of the OR, in which case we use the entire OR clause and generate TermSpans
+	// with multiple spans (instead of UnionSpans)
+	var indexPartitionSets plan.IndexPartitionSets
+	if tspans, ok := spans.(*TermSpans); ok {
+		indexPartitionSets = make(plan.IndexPartitionSets, len(tspans.spans))
+		for i, pspan := range tspans.spans {
+			if len(pspan.Ranges) != nkeys {
+				return nil, nil
+			}
+			indexPartitionSet := make(expression.Expressions, len(pspan.Ranges))
+			for j, rg := range pspan.Ranges {
+				if !rg.EqualRange() {
+					return nil, nil
+				}
+				indexPartitionSet[j] = rg.Low
+			}
+			indexPartitionSets[i] = plan.NewIndexPartitionSet(indexPartitionSet)
+		}
+	}
+
+	return indexPartitionSets, nil
 }

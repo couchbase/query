@@ -75,6 +75,22 @@ func (this *Order) Terms() SortTerms {
 }
 
 /*
+Gather vector search (Ann) expressions
+*/
+func (this *Order) Vectors() expression.Expressions {
+	var anns expression.Expressions
+	for _, term := range this.terms {
+		if _, ok := term.expr.(*expression.Ann); ok {
+			if anns == nil {
+				anns = make(expression.Expressions, 0, len(this.terms))
+			}
+			anns = append(anns, term.expr)
+		}
+	}
+	return anns
+}
+
+/*
 It represents multiple orderby terms.
 Type SortTerms is a slice of SortTerm.
 */
@@ -96,11 +112,30 @@ The function NewSortTerm returns a pointer to the SortTerm
 struct that has its fields set to the input arguments.
 */
 func NewSortTerm(expr, descending, nullsPos expression.Expression) *SortTerm {
-	return &SortTerm{
+	rv := &SortTerm{
 		expr:       expr,
 		descending: descending,
 		nullsPos:   nullsPos,
 	}
+	switch expr.(type) {
+	case *expression.Ann, *expression.Knn:
+		// Add NULLS LAST for ASC collation of Distance functions
+		if nullsPos == nil {
+			var collation string
+			if descending == nil {
+				collation = "asc"
+			} else {
+				dv := descending.Value()
+				if dv != nil && dv.Type() == value.STRING {
+					collation = strings.ToLower(dv.ToString())
+				}
+			}
+			if collation == "asc" {
+				rv.nullsPos = expression.NewConstant("LAST")
+			}
+		}
+	}
+	return rv
 }
 
 /*
@@ -300,6 +335,11 @@ func (this *SortTerm) NullsLast(item value.Value, context expression.Context) bo
 
 func (this *SortTerm) NullsPosExpr() expression.Expression {
 	return this.nullsPos
+}
+
+func (this *SortTerm) IsVectorTerm() bool {
+	_, ok := this.expr.(*expression.Ann)
+	return ok
 }
 
 /*

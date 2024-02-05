@@ -171,7 +171,7 @@ func (this *builder) buildJoinScan(keyspace datastore.Keyspace, node *algebra.Ke
 		}
 	}
 
-	sargables, _, _, err := this.sargableIndexes(indexes, pred, subset, primaryKey, formalizer, nil, false)
+	sargables, _, _, err := this.sargableIndexes(indexes, pred, subset, nil, primaryKey, formalizer, nil, false)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -201,9 +201,9 @@ func (this *builder) buildCoveringJoinScan(secondaries map[datastore.Index]*inde
 
 	outer:
 		for index, entry := range secondaries {
-			keys := entry.keys
+			keys := entry.idxKeys
 			if !index.IsPrimary() {
-				keys = append(keys, id)
+				keys = append(keys, &datastore.IndexKey{id, datastore.IK_NONE})
 			}
 
 			// Include covering expression from index WHERE clause
@@ -220,7 +220,7 @@ func (this *builder) buildCoveringJoinScan(secondaries map[datastore.Index]*inde
 
 			covers := make(expression.Covers, 0, len(keys))
 			for _, key := range keys {
-				covers = append(covers, expression.NewCover(key))
+				covers = append(covers, expression.NewCover(key.Expr))
 			}
 
 			return index, covers, filterCovers, nil

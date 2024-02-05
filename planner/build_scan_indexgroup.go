@@ -174,7 +174,7 @@ func (this *builder) indexAggregateRewrite() algebra.Aggregates {
 	return sortAggregatesMap(naggs)
 }
 
-func (this *builder) buildIndexGroupAggs(entry *indexEntry, indexKeys expression.Expressions,
+func (this *builder) buildIndexGroupAggs(entry *indexEntry, indexKeys datastore.IndexKeys,
 	unnest bool, indexProjection *plan.IndexProjection) (
 	*plan.IndexGroupAggregates, *plan.IndexProjection) {
 
@@ -228,7 +228,7 @@ func (this *builder) buildIndexGroupAggs(entry *indexEntry, indexKeys expression
 	return plan.NewIndexGroupAggregates("", indexGroup, indexAggs, dependsOnIndexKeys, partial, distinctDocid), idxProj
 }
 
-func (this *builder) buildIndexGroup(indexKeys expression.Expressions, indexProjection *plan.IndexProjection,
+func (this *builder) buildIndexGroup(indexKeys datastore.IndexKeys, indexProjection *plan.IndexProjection,
 	dependsOnIndexKeys []int, idNum, nKeys int) (plan.IndexGroupKeys, []int, int) {
 
 	groupKeys := this.group.By()
@@ -246,7 +246,7 @@ nextgroup:
 		}
 
 		for indexKeyPos, indexKey := range indexKeys {
-			if groupKey.EquivalentTo(indexKey) {
+			if groupKey.EquivalentTo(indexKey.Expr) {
 				if indexPosGroup[indexKeyPos] == nil {
 					dependsOnIndexKeys = checkAndAdd(dependsOnIndexKeys, indexKeyPos)
 					indexProjection.EntryKeys = checkAndAdd(indexProjection.EntryKeys, indexKeyPos)
@@ -263,7 +263,7 @@ nextgroup:
 
 		var idxExprGroup *plan.IndexGroupKey
 		for indexKeyPos, indexKey := range indexKeys {
-			if groupKey.DependsOn(indexKey) {
+			if groupKey.DependsOn(indexKey.Expr) {
 				if idxExprGroup == nil {
 					indexProjection.EntryKeys = checkAndAdd(indexProjection.EntryKeys, idNum)
 					idxExprGroup = plan.NewIndexGroupKey(idNum, -1, groupKey.Copy(), []int{indexKeyPos})
@@ -294,7 +294,7 @@ nextgroup:
 	return indexGroup, dependsOnIndexKeys, idNum
 }
 
-func (this *builder) buildIndexAggregates(indexKeys expression.Expressions, indexProjection *plan.IndexProjection,
+func (this *builder) buildIndexAggregates(indexKeys datastore.IndexKeys, indexProjection *plan.IndexProjection,
 	dependsOnIndexKeys []int, idNum, nKeys int) (plan.IndexAggregates, []int, int) {
 
 	naggs := this.indexAggregateRewrite()
@@ -322,7 +322,7 @@ nextagg:
 		}
 
 		for indexKeyPos, indexKey := range indexKeys {
-			if aggExpr.EquivalentTo(indexKey) {
+			if aggExpr.EquivalentTo(indexKey.Expr) {
 				dependsOnIndexKeys = checkAndAdd(dependsOnIndexKeys, indexKeyPos)
 				indexProjection.EntryKeys = checkAndAdd(indexProjection.EntryKeys, idNum)
 				exprId := indexKeyPos
@@ -338,7 +338,7 @@ nextagg:
 
 		var idxAgg *plan.IndexAggregate
 		for indexKeyPos, indexKey := range indexKeys {
-			if aggExpr.DependsOn(indexKey) {
+			if aggExpr.DependsOn(indexKey.Expr) {
 				if idxAgg == nil {
 					indexProjection.EntryKeys = checkAndAdd(indexProjection.EntryKeys, idNum)
 					idxAgg = plan.NewIndexAggregate(aggProprties.aggtype, idNum,

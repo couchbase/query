@@ -69,10 +69,18 @@ func (this *CreateIndex) MarshalBase(f func(map[string]interface{})) map[string]
 			q["desc"] = true
 		}
 
+		if term.HasAttribute(algebra.IK_VECTOR) {
+			q["vector"] = true
+		}
+
 		k[i] = q
 	}
 	r["keys"] = k
 	r["using"] = this.node.Using()
+
+	if this.node.Include() != nil {
+		r["include"] = this.node.Include().Expressions()
+	}
 
 	if this.node.Partition() != nil && this.node.Partition().Strategy() != datastore.NO_PARTITION {
 		q := make(map[string]interface{}, 2)
@@ -110,8 +118,10 @@ func (this *CreateIndex) UnmarshalJSON(body []byte) error {
 			Expr    string `json:"expr"`
 			Desc    bool   `json:"desc"`
 			Missing bool   `json:"missing"`
+			Vector  bool   `json:"vector"`
 		} `json:"keys"`
 		Using     datastore.IndexType `json:"using"`
+		Include   []string            `json:"include"`
 		Partition *struct {
 			Exprs    []string                `json:"exprs"`
 			Strategy datastore.PartitionType `json:"strategy"`
@@ -149,17 +159,42 @@ func (this *CreateIndex) UnmarshalJSON(body []byte) error {
 		if term.Missing {
 			attributes |= algebra.IK_MISSING
 		}
+		if term.Vector {
+			attributes |= algebra.IK_VECTOR
+		}
 
 		keys[i] = algebra.NewIndexKeyTerm(expr, attributes)
 	}
 
-	if keys.HasDescending() {
+	var include *algebra.IndexIncludeTerm
+	if len(_unmarshalled.Include) > 0 {
+		exprs := make(expression.Expressions, len(_unmarshalled.Include))
+		for i, p := range _unmarshalled.Include {
+			exprs[i], err = parser.Parse(p)
+			if err != nil {
+				return err
+			}
+		}
+		include = algebra.NewIndexIncludeTerm(exprs)
+	}
+
+	if keys.HasDescending() || keys.HasVector() || include != nil {
 		indexer, err1 := this.keyspace.Indexer(_unmarshalled.Using)
 		if err1 != nil {
 			return err1
 		}
-		if _, ok := indexer.(datastore.Indexer2); !ok {
-			return errors.NewIndexerDescCollationError()
+		if keys.HasDescending() {
+			if _, ok := indexer.(datastore.Indexer2); !ok {
+				return errors.NewIndexerDescCollationError()
+			}
+		}
+		if _, ok := indexer.(datastore.Indexer6); !ok {
+			if keys.HasVector() {
+				return errors.NewIndexerVersionError(datastore.INDEXER6_VERSION, "Index key has vector attribute")
+			}
+			if include != nil {
+				return errors.NewIndexerVersionError(datastore.INDEXER6_VERSION, "Include clause present")
+			}
 		}
 	}
 
@@ -190,7 +225,7 @@ func (this *CreateIndex) UnmarshalJSON(body []byte) error {
 
 	// invert IfNotExists to obtain FailIfExists
 	this.node = algebra.NewCreateIndex(_unmarshalled.Index, ksref,
-		keys, partition, where, _unmarshalled.Using, with, !_unmarshalled.IfNotExists,
+		keys, include, partition, where, _unmarshalled.Using, with, !_unmarshalled.IfNotExists,
 		_unmarshalled.Vector)
 	return nil
 }

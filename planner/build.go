@@ -235,6 +235,7 @@ type builder struct {
 	mustSkipKeys         bool
 	subTimes             map[string]time.Duration
 	arrayId              int
+	vectors              expression.Expressions
 }
 
 func (this *builder) Copy() *builder {
@@ -292,6 +293,10 @@ func (this *builder) Copy() *builder {
 	}
 
 	this.indexPushDowns.Copy(&rv.indexPushDowns)
+
+	if len(this.vectors) > 0 {
+		rv.vectors = this.vectors.Copy()
+	}
 
 	// no need to copy collectQueryInfo
 

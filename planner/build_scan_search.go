@@ -54,10 +54,11 @@ func (this *builder) buildSearchCovering(searchSargables []*indexEntry, node *al
 	entry := searchSargables[0]
 	alias := node.Alias()
 	sfn := entry.sargKeys[0].(*search.Search)
-	keys := make(expression.Expressions, 0, len(entry.keys)+3)
-	keys = append(keys, entry.keys...)
-	keys = append(keys, id, search.NewSearchScore(sfn.IndexMetaField()),
-		search.NewSearchMeta(sfn.IndexMetaField()))
+	keys := make(datastore.IndexKeys, 0, len(entry.idxKeys)+3)
+	keys = append(keys, entry.idxKeys...)
+	keys = append(keys, &datastore.IndexKey{id, datastore.IK_NONE},
+		&datastore.IndexKey{search.NewSearchScore(sfn.IndexMetaField()), datastore.IK_NONE},
+		&datastore.IndexKey{search.NewSearchMeta(sfn.IndexMetaField()), datastore.IK_NONE})
 
 	exprs, err := this.getExprsToCover()
 	if err != nil {
@@ -76,8 +77,8 @@ func (this *builder) buildSearchCovering(searchSargables []*indexEntry, node *al
 	}
 
 	covers := make(expression.Covers, 0, len(keys))
-	for _, expr := range keys {
-		covers = append(covers, expression.NewCover(expr))
+	for _, key := range keys {
+		covers = append(covers, expression.NewCover(key.Expr))
 	}
 
 	if this.group != nil {
