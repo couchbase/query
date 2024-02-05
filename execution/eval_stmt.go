@@ -72,8 +72,10 @@ func (this *internalOutput) Error(err errors.Error) {
 	}
 }
 
-func (this *internalOutput) SetErrors(err errors.Errors) {
-	// empty
+func (this *internalOutput) SetErrors(errs errors.Errors) {
+	for _, err := range errs {
+		this.Error(err)
+	}
 }
 
 func (this *internalOutput) Warning(wrn errors.Error) {
