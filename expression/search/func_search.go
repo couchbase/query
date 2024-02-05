@@ -22,6 +22,12 @@ import (
 //
 ///////////////////////////////////////////////////
 
+var ParseXattrs func(expression.Expression) ([]string, error)
+
+func RegisterParseXattrs(f func(expression.Expression) ([]string, error)) {
+	ParseXattrs = f
+}
+
 type SearchVerify interface {
 	Evaluate(item value.Value) (bool, errors.Error)
 }
@@ -64,6 +70,25 @@ func (this *Search) CoveredBy(keyspace string, exprs expression.Expressions,
 	}
 
 	return expression.CoveredFalse
+}
+
+func (this *Search) FieldNames(base expression.Expression, names map[string]bool) (present bool) {
+
+	xattrs := false
+
+	if expr, ok := base.(*expression.Field); ok {
+		if _, ok := expr.First().(*expression.Meta); ok {
+			if base.Alias() == "xattrs" {
+				this.addXattrsFields(names)
+				xattrs = true
+			}
+		}
+	}
+	if xattrs {
+		return xattrs
+	} else {
+		return this.ExpressionBase.FieldNames(base, names)
+	}
 }
 
 func (this *Search) Evaluate(item value.Value, context expression.Context) (value.Value, error) {
@@ -227,6 +252,22 @@ func (this *Search) ValidOperands() error {
 
 	_, _, err := this.getIndexNameAndOutName(this.Options())
 	return err
+}
+
+func (this *Search) addXattrsFields(names map[string]bool) {
+
+	if ParseXattrs == nil {
+		return
+	}
+
+	fields, err := ParseXattrs(this.Query())
+	if err != nil || fields == nil {
+		return
+	}
+
+	for _, fieldName := range fields {
+		names[fieldName] = true
+	}
 }
 
 type SearchMeta struct {
