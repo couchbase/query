@@ -166,7 +166,7 @@ func (b *Bucket) getVbConnection(vb uint32, desc *doDescriptor) (conn *memcached
 		} else {
 			desc.errorString = "Connection Error no pool %v : %v"
 		}
-	} else if isConnError(err) {
+	} else if isConnError(err) || isSeveredConnectionError(err) {
 		if backOff(desc.backOffAttempts, desc.maxTries, backOffDuration, true) {
 
 			// check for a new vbmap
@@ -224,6 +224,9 @@ func (b *Bucket) getVbConnection(vb uint32, desc *doDescriptor) (conn *memcached
 		if !desc.retry {
 			desc.errorString = "Connection Error %v : %v"
 		}
+	} else if isNoRouteError(err) || isHostChangedError(err) {
+		desc.retry = true
+		b.RefreshFully()
 	}
 	return nil, nil, err
 }
@@ -347,7 +350,10 @@ func (b *Bucket) processOpError(vb uint32, lastError error, node string, desc *d
 			} else {
 				desc.retry = false
 			}
-
+		} else if isSeveredConnectionError(lastError) {
+			// discard and retry immediately
+			desc.retry = true
+			desc.discard = true
 		}
 	} else if desc.amendReplica {
 
@@ -442,6 +448,7 @@ func (b *Bucket) do3(vb uint16, f func(mc *memcached.Client, vb uint16) error, d
 	for desc.attempts = 0; desc.attempts < desc.maxTries; desc.attempts++ {
 		conn, pool, err := b.getVbConnection(uint32(vb), desc)
 		if err != nil {
+			lastError = err
 			if desc.retry {
 				continue
 			}
@@ -529,6 +536,10 @@ func getStatsParallelFunc(fn func(key, val []byte), sn string, b *Bucket, offset
 				continue
 			} else if IsReadTimeOutError(err) {
 				pool.Discard(conn)
+			} else if isSeveredConnectionError(err) {
+				// discard and retry immediately
+				pool.Discard(conn)
+				continue
 			} else {
 				pool.Return(conn)
 			}
@@ -667,9 +678,6 @@ func isTimeoutError(err error) bool {
 
 // Errors that are not considered fatal for our fetch loop
 func isConnError(err error) bool {
-	if err == io.EOF {
-		return true
-	}
 	estr := err.Error()
 	return strings.Contains(estr, "broken pipe") ||
 		strings.Contains(estr, "connection reset") ||
@@ -677,9 +685,20 @@ func isConnError(err error) bool {
 		strings.Contains(estr, "connection pool is closed")
 }
 
+func isNoRouteError(err error) bool {
+	return strings.Contains(err.Error(), "no route to host")
+}
+
+func isHostChangedError(err error) bool {
+	return strings.Contains(err.Error(), "host address changed since pool was created")
+}
+
 func isOutOfBoundsError(err error) bool {
 	return err != nil && strings.Contains(err.Error(), "Out of Bounds error")
+}
 
+func isSeveredConnectionError(err error) bool {
+	return err == io.EOF
 }
 
 func isAddrNotAvailable(err error) bool {

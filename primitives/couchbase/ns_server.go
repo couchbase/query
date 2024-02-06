@@ -54,7 +54,7 @@ var PoolOverflow = 32
 var AsynchronousCloser = false
 
 // TCP KeepAlive enabled/disabled
-var TCPKeepalive = false
+var TCPKeepalive = true
 
 // Enable MutationToken
 var EnableMutationToken = false

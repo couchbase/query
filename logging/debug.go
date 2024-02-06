@@ -35,7 +35,7 @@ func DBGSTK(fmt string, args ...interface{}) {
 	}
 	var sb strings.Builder
 	pc := make([]uintptr, 8)
-	n := runtime.Callers(1, pc)
+	n := runtime.Callers(2, pc)
 	if n > 0 {
 		frames := runtime.CallersFrames(pc)
 		ok := true

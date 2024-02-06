@@ -12,6 +12,7 @@ package couchbase
 import (
 	"crypto/tls"
 	"errors"
+	"net"
 	"sync/atomic"
 	"time"
 
@@ -34,6 +35,7 @@ type GenericMcdAuthHandler interface {
 var TimeoutError = errors.New("timeout waiting to build connection")
 var errClosedPool = errors.New("the connection pool is closed")
 var errNoPool = errors.New("no connection pool")
+var errHostChanged = errors.New("host address changed since pool was created")
 
 // Default timeout for retrieving a connection from the pool.
 var ConnPoolTimeout = time.Hour * 24 * 30
@@ -48,7 +50,8 @@ var ConnPoolAvailWaitTime = time.Millisecond
 
 type connectionPool struct {
 	host        string
-	mkConn      func(host string, ah AuthHandler, tlsConfig *tls.Config, bucketName string) (*memcached.Client, error)
+	initialAddr string
+	mkConn      func(host string, ah AuthHandler, tlsConfig *tls.Config, bucketName string) (*memcached.Client, string, error)
 	auth        AuthHandler
 	connections chan *memcached.Client
 	createsem   chan bool
@@ -63,7 +66,9 @@ type connectionPool struct {
 	bucket      string
 }
 
-func newConnectionPool(host string, ah AuthHandler, closer bool, poolSize, poolOverflow int, tlsConfig *tls.Config, bucket string, encrypted bool) *connectionPool {
+func newConnectionPool(host string, ah AuthHandler, closer bool, poolSize, poolOverflow int, tlsConfig *tls.Config, bucket string,
+	encrypted bool) *connectionPool {
+
 	connSize := poolSize
 	if closer {
 		connSize += poolOverflow
@@ -95,7 +100,7 @@ var ConnPoolCallback func(host string, source string, start time.Time, err error
 
 // Use regular in-the-clear connection if tlsConfig is nil.
 // Use secure connection (TLS) if tlsConfig is set.
-func defaultMkConn(host string, ah AuthHandler, tlsConfig *tls.Config, bucketName string) (*memcached.Client, error) {
+func defaultMkConn(host string, ah AuthHandler, tlsConfig *tls.Config, bucketName string) (*memcached.Client, string, error) {
 	var features memcached.Features
 
 	var conn *memcached.Client
@@ -107,7 +112,14 @@ func defaultMkConn(host string, ah AuthHandler, tlsConfig *tls.Config, bucketNam
 	}
 
 	if err != nil {
-		return nil, err
+		return nil, "", err
+	}
+
+	var ip string
+	if c, ok := conn.Conn().(net.Conn); ok {
+		if a := c.RemoteAddr(); a != nil {
+			ip = a.String()
+		}
 	}
 
 	if DefaultTimeout > 0 {
@@ -166,7 +178,7 @@ func defaultMkConn(host string, ah AuthHandler, tlsConfig *tls.Config, bucketNam
 		res, err := conn.EnableFeatures(features)
 		if err != nil && isTimeoutError(err) {
 			conn.Close()
-			return nil, err
+			return nil, "", err
 		}
 
 		if err != nil || res.Status != gomemcached.SUCCESS {
@@ -178,14 +190,14 @@ func defaultMkConn(host string, ah AuthHandler, tlsConfig *tls.Config, bucketNam
 		err = gah.AuthenticateMemcachedConn(host, conn)
 		if err != nil {
 			conn.Close()
-			return nil, err
+			return nil, "", err
 		}
 
 		if DefaultTimeout > 0 {
 			conn.SetDeadline(noDeadline)
 		}
 
-		return conn, nil
+		return conn, ip, nil
 	}
 	name, pass, bucket := ah.GetCredentials()
 	if bucket == "" {
@@ -197,7 +209,7 @@ func defaultMkConn(host string, ah AuthHandler, tlsConfig *tls.Config, bucketNam
 		_, err = conn.Auth(name, pass)
 		if err != nil {
 			conn.Close()
-			return nil, err
+			return nil, "", err
 		}
 		// Select bucket (Required for cb_auth creds)
 		// Required when doing auth with _admin credentials
@@ -205,7 +217,7 @@ func defaultMkConn(host string, ah AuthHandler, tlsConfig *tls.Config, bucketNam
 			_, err = conn.SelectBucket(bucket)
 			if err != nil {
 				conn.Close()
-				return nil, err
+				return nil, "", err
 			}
 		}
 	}
@@ -214,7 +226,7 @@ func defaultMkConn(host string, ah AuthHandler, tlsConfig *tls.Config, bucketNam
 		conn.SetDeadline(noDeadline)
 	}
 
-	return conn, nil
+	return conn, ip, nil
 }
 
 func (cp *connectionPool) Close() (err error) {
@@ -297,11 +309,18 @@ func (cp *connectionPool) GetWithTimeout(d time.Duration) (rv *memcached.Client,
 			// Build a connection if we can't get a real one.
 			// This can potentially be an overflow connection, or
 			// a pooled connection.
-			rv, err := cp.mkConn(cp.host, cp.auth, cp.tlsConfig, cp.bucket)
+			rv, ip, err := cp.mkConn(cp.host, cp.auth, cp.tlsConfig, cp.bucket)
 			if err != nil {
 				// On error, release our create hold
 				<-cp.createsem
 			} else {
+				// Record IP on first connection then validate all others match
+				if cp.initialAddr == "" {
+					cp.initialAddr = ip
+				} else if cp.initialAddr != ip {
+					<-cp.createsem
+					return nil, errHostChanged
+				}
 				atomic.AddUint64(&cp.connCount, 1)
 				atomic.AddUint64(&cp.connOpen, 1)
 			}
