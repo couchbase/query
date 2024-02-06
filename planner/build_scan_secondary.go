@@ -358,7 +358,7 @@ func (this *builder) sargableIndexes(indexes []datastore.Index, pred, subset exp
 
 	for _, index := range indexes {
 		if index.Type() == datastore.FTS {
-			if this.hintIndexes {
+			if this.hintIndexes && flexPred != nil {
 				// FTS Flex index sargability
 				if flexRequest == nil {
 					flex = make(map[datastore.Index]*indexEntry, len(indexes))
