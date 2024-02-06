@@ -36,5 +36,5 @@ EOF
 fi
 echo goyacc n1ql.y
 goyacc n1ql.y
-echo go build
-go build
+echo go build $*
+go build $*

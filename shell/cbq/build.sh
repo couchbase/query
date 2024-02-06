@@ -29,5 +29,5 @@ then
     exit 1
   fi
 fi
-echo go build -ldflags "-X github.com/couchbase/query/shell/cbq/command.SHELL_VERSION=${PRODUCT_VERSION}"
-go build -ldflags "-X github.com/couchbase/query/shell/cbq/command.SHELL_VERSION=${PRODUCT_VERSION}"
+echo go build -ldflags "-X github.com/couchbase/query/shell/cbq/command.SHELL_VERSION=${PRODUCT_VERSION}" $*
+go build -ldflags "-X github.com/couchbase/query/shell/cbq/command.SHELL_VERSION=${PRODUCT_VERSION}" $*
