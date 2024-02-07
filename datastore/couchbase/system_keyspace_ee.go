@@ -283,6 +283,7 @@ func (s *store) CreateSysPrimaryIndex(idxName, requestId string, indexer3 datast
 			return er
 		}
 	}
+	existing := er != nil && errors.IsIndexExistsError(er)
 
 	var sysIndex datastore.Index
 	maxRetry := 8
@@ -307,7 +308,7 @@ func (s *store) CreateSysPrimaryIndex(idxName, requestId string, indexer3 datast
 			if state == datastore.ONLINE {
 				break
 			}
-		} else if er != nil && !errors.IsIndexNotFoundError(er) {
+		} else if er != nil && (existing || !errors.IsIndexNotFoundError(er)) {
 			return er
 		}
 	}
