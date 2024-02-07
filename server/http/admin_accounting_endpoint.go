@@ -1096,7 +1096,13 @@ func doBucketBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 			}
 			return nil
 		}
-		functionsStorage.Foreach(bucket, snapshot)
+		err1 := functionsStorage.Foreach(bucket, snapshot)
+		if err1 != nil {
+			if ue, ok := err1.(errors.Error); ok {
+				return nil, ue
+			}
+			return nil, errors.NewServiceErrorBadValue(err1, "UDF backup")
+		}
 
 		seqs, err := sequences.BackupSequences("default", bucket, func(name string) bool {
 			path := algebra.ParsePath(name)
