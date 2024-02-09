@@ -257,21 +257,21 @@ func (s *store) CreateSysPrimaryIndex(idxName, requestId string, indexer3 datast
 	}
 
 	var cont bool
-	createPrimaryIndex := func() (bool, errors.Error) {
+	createPrimaryIndex := func(n_replica int) (bool, errors.Error) {
 		_, err := indexer3.CreatePrimaryIndex3(requestId, idxName, nil, with)
 		if err != nil && !errors.IsIndexExistsError(err) {
 			// if the create failed due to not enough indexer nodes, retry with fewer replicas
-			for num_replica > 0 {
+			for n_replica > 0 {
 				// defined as ErrNotEnoughIndexers in indexing/secondary/common/const.go
 				if !err.ContainsText("not enough indexer nodes to create index with replica") {
 					return false, err
 				}
 
-				num_replica--
-				if num_replica == 0 {
+				n_replica--
+				if n_replica == 0 {
 					with = nil
 				} else {
-					replica["num_replica"] = num_replica
+					replica["num_replica"] = n_replica
 					with = value.NewValue(replica)
 				}
 
@@ -287,7 +287,7 @@ func (s *store) CreateSysPrimaryIndex(idxName, requestId string, indexer3 datast
 		}
 		return true, err
 	}
-	cont, er = createPrimaryIndex()
+	cont, er = createPrimaryIndex(num_replica)
 	if !cont {
 		return er
 	}
@@ -316,19 +316,22 @@ func (s *store) CreateSysPrimaryIndex(idxName, requestId string, indexer3 datast
 			if state == datastore.ONLINE {
 				break
 			}
-		} else if existing && errors.IsIndexNotFoundError(er) {
-			// if the initial creation attempted failed with "already exists" but now the index is not found, retry the creation
-			// it could still be waiting for that index to be reported by the indexer, so keep on retrying if it still fails with
-			// "already exists"
-			time.Sleep(time.Duration((rand.Int()%15)+1) * time.Millisecond) // try ensure no concurrent retries
-			cont, er = createPrimaryIndex()
-			if !cont || (er != nil && !errors.IsIndexExistsError(er)) {
+		} else if er != nil {
+			if !errors.IsIndexNotFoundError(er) {
 				return er
-			} else if er == nil {
-				existing = false
+			} else if existing {
+				// if the initial creation attempted failed with "already exists" but
+				// now the index is not found, retry the creation
+				// it could still be waiting for that index to be reported by the
+				// indexer, so keep on retrying if it still fails with "already exists"
+				time.Sleep(time.Duration((rand.Int()%15)+1) * time.Millisecond) // try ensure no concurrent retries
+				cont, er = createPrimaryIndex(num_replica)
+				if !cont || (er != nil && !errors.IsIndexExistsError(er)) {
+					return er
+				} else if er == nil {
+					existing = false
+				}
 			}
-		} else if er != nil && !errors.IsIndexNotFoundError(er) {
-			return er
 		}
 	}
 
