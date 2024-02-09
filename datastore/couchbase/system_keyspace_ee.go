@@ -14,6 +14,7 @@
 package couchbase
 
 import (
+	"math/rand"
 	"time"
 
 	"github.com/couchbase/query-ee/dictionary"
@@ -255,33 +256,40 @@ func (s *store) CreateSysPrimaryIndex(idxName, requestId string, indexer3 datast
 		}
 	}
 
-	_, er = indexer3.CreatePrimaryIndex3(requestId, idxName, nil, with)
-	if er != nil && !errors.IsIndexExistsError(er) {
-		// if the create failed due to not enough indexer nodes, retry with
-		// less number of replica
-		for num_replica > 0 {
-			// defined as ErrNotEnoughIndexers in indexing/secondary/common/const.go
-			if !er.ContainsText("not enough indexer nodes to create index with replica") {
-				return er
-			}
+	var cont bool
+	createPrimaryIndex := func() (bool, errors.Error) {
+		_, err := indexer3.CreatePrimaryIndex3(requestId, idxName, nil, with)
+		if err != nil && !errors.IsIndexExistsError(err) {
+			// if the create failed due to not enough indexer nodes, retry with fewer replicas
+			for num_replica > 0 {
+				// defined as ErrNotEnoughIndexers in indexing/secondary/common/const.go
+				if !err.ContainsText("not enough indexer nodes to create index with replica") {
+					return false, err
+				}
 
-			num_replica--
-			if num_replica == 0 {
-				with = nil
-			} else {
-				replica["num_replica"] = num_replica
-				with = value.NewValue(replica)
-			}
+				num_replica--
+				if num_replica == 0 {
+					with = nil
+				} else {
+					replica["num_replica"] = num_replica
+					with = value.NewValue(replica)
+				}
 
-			// retry with less number of replica
-			_, er = indexer3.CreatePrimaryIndex3(requestId, idxName, nil, with)
-			if er == nil || errors.IsIndexExistsError(er) {
-				break
+				// retry with fewer replicas
+				_, err = indexer3.CreatePrimaryIndex3(requestId, idxName, nil, with)
+				if err == nil || errors.IsIndexExistsError(err) {
+					break
+				}
+			}
+			if err != nil && !errors.IsIndexExistsError(err) {
+				return false, err
 			}
 		}
-		if er != nil && !errors.IsIndexExistsError(er) {
-			return er
-		}
+		return true, err
+	}
+	cont, er = createPrimaryIndex()
+	if !cont {
+		return er
 	}
 	existing := er != nil && errors.IsIndexExistsError(er)
 
@@ -308,7 +316,18 @@ func (s *store) CreateSysPrimaryIndex(idxName, requestId string, indexer3 datast
 			if state == datastore.ONLINE {
 				break
 			}
-		} else if er != nil && (existing || !errors.IsIndexNotFoundError(er)) {
+		} else if existing && errors.IsIndexNotFoundError(er) {
+			// if the initial creation attempted failed with "already exists" but now the index is not found, retry the creation
+			// it could still be waiting for that index to be reported by the indexer, so keep on retrying if it still fails with
+			// "already exists"
+			time.Sleep(time.Duration((rand.Int()%15)+1) * time.Millisecond) // try ensure no concurrent retries
+			cont, er = createPrimaryIndex()
+			if !cont || (er != nil && !errors.IsIndexExistsError(er)) {
+				return er
+			} else if er == nil {
+				existing = false
+			}
+		} else if er != nil && !errors.IsIndexNotFoundError(er) {
 			return er
 		}
 	}
