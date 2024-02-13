@@ -143,6 +143,21 @@ func (this *Merge) RunOnce(context *Context, parent value.Value) {
 			}
 		}
 
+		// process delayed deletes
+		if ok && delete != nil {
+			alias := this.plan.KeyspaceRef().Alias()
+			for key, val := range this.matched {
+				// true means deleted, false meas updated
+				if val {
+					item = this.newEmptyDocumentWithKey(key, nil, context)
+					item.SetField(alias, item)
+					// since the range of the map is not deterministic, ignore any
+					// potential error here such that all keys will be sent to DELETE
+					this.sendItemOp(delete.Input(), item)
+				}
+			}
+		}
+
 		// Close child input Channels, which will signal children
 		for _, input := range this.inputs {
 			input.close(context)
@@ -229,7 +244,6 @@ func (this *Merge) processAction(item value.AnnotatedValue, context *Context,
 	ok := true
 	if match {
 		// Perform UPDATE and/or DELETE
-		check := true
 		if update != nil {
 			matched := true
 			if this.plan.UpdateFilter() != nil {
@@ -238,7 +252,7 @@ func (this *Merge) processAction(item value.AnnotatedValue, context *Context,
 			}
 			if matched {
 				// make sure document is not updated multiple times
-				if this.matched[key] {
+				if _, ok1 := this.matched[key]; ok1 {
 					context.Error(errors.NewMergeMultiUpdateError(key))
 					return false
 				}
@@ -255,8 +269,7 @@ func (this *Merge) processAction(item value.AnnotatedValue, context *Context,
 						}
 					}
 				}
-				this.matched[key] = true
-				check = false
+				this.matched[key] = false
 				ok = this.sendItemOp(update.Input(), item1)
 			} else if delete == nil {
 				item.Recycle()
@@ -271,12 +284,14 @@ func (this *Merge) processAction(item value.AnnotatedValue, context *Context,
 				}
 				if matched {
 					// make sure document is not updated multiple times
-					if check && this.matched[key] {
+					if _, ok1 := this.matched[key]; ok1 {
 						context.Error(errors.NewMergeMultiUpdateError(key))
 						return false
 					}
+					// remember the key to be deleted, but the actual
+					// delete happens later
 					this.matched[key] = true
-					ok = this.sendItemOp(delete.Input(), item)
+					item.Recycle()
 				} else {
 					item.Recycle()
 				}
