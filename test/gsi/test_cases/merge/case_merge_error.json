@@ -102,12 +102,18 @@
     ]
     },
     {
-        "testcase": "MERGE statement to return data to previous state, expect error",
+        "testcase": "MERGE statement to attemp to return data to previous state, expect error",
         "statements":"MERGE INTO shellTest t USING shellTest s ON t.c21 = s.c11 WHEN MATCHED THEN DELETE WHERE t.type = \"target\" AND t.inserted = true",
         "error":"Multiple UPDATE/DELETE of the same document (document key 'test22_merge') in a MERGE statement"
     },
     {
-        "testcase": "Check result of previous MERGE statement, note newly inserted document successfully deleted despite error",
+        "testcase": "extra DELETE statement to return data to previous state",
+        "statements":"DELETE FROM shellTest t WHERE t.type = \"target\" AND t.inserted = true",
+        "results": [
+    ]
+    },
+    {
+        "testcase": "Check result of previous MERGE statement",
         "statements":"SELECT c21, c22, c23, inserted FROM shellTest WHERE type = \"target\" ORDER BY c21",
         "ordered": true,
         "results": [
