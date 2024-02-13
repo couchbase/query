@@ -82,6 +82,11 @@
 		"help": "Total number of DELETE operations.",
 		"added": "7.0.0"
 	},
+	"n1ql_engine_error_count": {
+		"type": "counter",
+		"help": "Total number of system-caused errors.",
+		"added": "8.0.0"
+	},
 	"n1ql_errors": {
 		"type": "counter",
 		"help": "The total number of N1QL errors returned so far.",
@@ -331,6 +336,11 @@
 		"type": "counter",
 		"help": "Total number of UPDATE requests.",
 		"added": "7.0.0"
+	},
+	"n1ql_user_error_count": {
+		"type": "counter",
+		"help": "Total number of user-caused errors.",
+		"added": "8.0.0"
 	},
 	"n1ql_warnings": {
 		"type": "counter",

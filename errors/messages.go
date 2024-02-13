@@ -138,9 +138,26 @@ func SearchErrors(pattern string) []*ErrData {
 		}
 	}
 	sort.Slice(res, func(i int, j int) bool {
-		return int(res[i].Code) < int(res[i].Code)
+		return int(res[i].Code) < int(res[j].Code)
 	})
 	return res
+}
+
+func checkErrorIsUser(c ErrorCode, isUser YesNoMaybe) bool {
+	edata := DescribeError(c)
+	if edata == nil || edata.IsUser != isUser {
+		return false
+	}
+
+	return true
+}
+
+func IsUserError(c ErrorCode) bool {
+	return checkErrorIsUser(c, YES)
+}
+
+func IsSystemError(c ErrorCode) bool {
+	return checkErrorIsUser(c, NO)
 }
 
 var errData = []ErrData{

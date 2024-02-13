@@ -208,6 +208,10 @@ const (
 	CAS_MISMATCH_ERRORS
 	TEMP_SPACE_ERRORS
 
+	// error count for sre alerts: https://issues.couchbase.com/browse/MB-58037
+	USER_ERROR_COUNT
+	SYSTEM_ERROR_COUNT
+
 	// unknown is always the last and does not have a corresponding name or metric
 	UNKNOWN
 )
@@ -276,6 +280,9 @@ const (
 	_CAS_MISMATCH_ERRORS       = "cas_mismatch_errors"
 	_TEMP_SPACE_ERRORS         = "temp_space_errors"
 
+	_USER_ERROR_COUNT   = "user_error_count"
+	_SYSTEM_ERROR_COUNT = "engine_error_count"
+
 	// gauges
 	USED_MEMORY_HWM = "used_memory_hwm"
 )
@@ -335,6 +342,9 @@ var metricNames = []string{
 	_BULK_GET_ERRORS,
 	_CAS_MISMATCH_ERRORS,
 	_TEMP_SPACE_ERRORS,
+
+	_USER_ERROR_COUNT,
+	_SYSTEM_ERROR_COUNT,
 }
 
 var gaugeNames = []string{
@@ -484,8 +494,8 @@ func RecordMetrics(request_time, service_time, transaction_time time.Duration, r
 		}
 	} else {
 		toInc := map[CounterId]bool{}
-		for errCode, mid := range errMetricsMap {
-			for _, err := range errs {
+		for _, err := range errs {
+			for errCode, mid := range errMetricsMap {
 				if _, pres := toInc[mid]; pres {
 					continue
 				}
@@ -495,6 +505,13 @@ func RecordMetrics(request_time, service_time, transaction_time time.Duration, r
 					toInc[mid] = true
 					counters[mid].Inc(1)
 				}
+			}
+
+			// is the error an user or system error
+			if errors.IsUserError(err.Code()) {
+				counters[USER_ERROR_COUNT].Inc(1)
+			} else if errors.IsSystemError(err.Code()) {
+				counters[SYSTEM_ERROR_COUNT].Inc(1)
 			}
 		}
 	}
