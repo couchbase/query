@@ -10,6 +10,7 @@ package search
 
 import (
 	"fmt"
+
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/value"
@@ -58,7 +59,7 @@ func (this *Search) CoveredBy(keyspace string, exprs expression.Expressions,
 
 	for _, expr := range exprs {
 		if this.EquivalentTo(expr) {
-			return expression.CoveredTrue
+			return expression.CoveredEquiv
 		}
 	}
 
@@ -261,7 +262,7 @@ func (this *SearchMeta) CoveredBy(keyspace string, exprs expression.Expressions,
 
 	for _, expr := range exprs {
 		if this.EquivalentTo(expr) {
-			return expression.CoveredTrue
+			return expression.CoveredEquiv
 		}
 	}
 
@@ -387,7 +388,7 @@ func (this *SearchScore) CoveredBy(keyspace string, exprs expression.Expressions
 
 	for _, expr := range exprs {
 		if this.EquivalentTo(expr) {
-			return expression.CoveredTrue
+			return expression.CoveredEquiv
 		}
 	}
 
