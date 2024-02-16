@@ -47,6 +47,7 @@ import (
 	"github.com/couchbase/query/sequences"
 	"github.com/couchbase/query/server"
 	"github.com/couchbase/query/server/http/router"
+	"github.com/couchbase/query/system"
 	"github.com/couchbase/query/tenant"
 	"github.com/couchbase/query/transactions"
 	"github.com/couchbase/query/util"
@@ -2334,6 +2335,7 @@ var localData = map[string]string{
 	"queued_requests":  "gauge",
 	"allocated_values": "counter",
 	"node_memory":      "gauge",
+	"node_rss":         "gauge",
 }
 
 func isLocal(metric string) bool {
@@ -2355,6 +2357,15 @@ func getLocalData(serv *server.Server, metric string) map[string]interface{} {
 		values["value"] = value.AllocatedValuesCount()
 	case "node_memory":
 		values["value"] = memory.AllocatedMemory()
+	case "node_rss":
+		if stats, err := system.NewSystemStats(); err == nil {
+			if _, rss, err := stats.ProcessRSS(); err == nil {
+				values["value"] = rss
+			} else {
+				values["value"] = 0
+			}
+			stats.Close()
+		}
 	}
 	return values
 }
@@ -2373,6 +2384,15 @@ func localValue(serv *server.Server, metric string) interface{} {
 		return value.AllocatedValuesCount()
 	case "node_memory":
 		return memory.AllocatedMemory()
+	case "node_rss":
+		var rss uint64
+		if stats, err := system.NewSystemStats(); err == nil {
+			if _, rss, err = stats.ProcessRSS(); err != nil {
+				rss = 0
+			}
+			stats.Close()
+		}
+		return rss
 	}
 	return nil
 }

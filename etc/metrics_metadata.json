@@ -150,7 +150,7 @@
 		"type": "gauge",
 		"added": "7.6.0",
 		"help": "The total size of in use memory in the query node.",
-        "unit": "bytes"
+		"unit": "bytes"
 	},
 	"n1ql_prepared": {
 		"type": "counter",
@@ -277,7 +277,7 @@
 		"labels": [
 			"bucket"
 		],
-        "unit": "bytes"
+		"unit": "bytes"
 	},
 	"n1ql_tenant_reads": {
 		"type": "gauge",
@@ -485,5 +485,11 @@
 		"unit": "seconds",
 		"added": "7.6.0",
 		"notes": "This is a metric specific to serverless."
+	},
+		"n1ql_node_rss": {
+		"type": "gauge",
+		"added": "7.6.1",
+		"help": "The resident set size (RSS) of the query node process.",
+		"unit": "bytes"
 	}
 }
