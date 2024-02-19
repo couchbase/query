@@ -213,6 +213,8 @@ func HandleInteractiveMode(prompt string) {
 	n1ql.SetTxTimeout(_TXTIMEOUT)
 	isTrunc := false
 	for {
+		command.OUTPUT.Reset(false)
+
 		line, err := liner.Prompt(fullPrompt)
 		if err != nil {
 			break

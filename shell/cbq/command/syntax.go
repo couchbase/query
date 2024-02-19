@@ -37,6 +37,11 @@ func (this *Syntax) MaxArgs() int {
 }
 
 func (this *Syntax) ExecCommand(args []string) (errors.ErrorCode, string) {
+	OUTPUT.Reset(true)
+	defer func() {
+		OUTPUT.Write([]byte{0x4})
+		OUTPUT.Reset(false)
+	}()
 	if !sqlHelp(args...) {
 		_, werr := OUTPUT.WriteString(UNKNOWN_STATEMENT)
 		if werr != nil {

@@ -10,6 +10,7 @@ package command
 
 import (
 	"fmt"
+	"io"
 	"sort"
 	"strings"
 
@@ -45,6 +46,13 @@ func (this *Set) ExecCommand(args []string) (errors.ErrorCode, string) {
 	   argument then throw error.
 	*/
 
+	processOutputError := func(err error) (errors.ErrorCode, string) {
+		if err == io.EOF {
+			return 0, ""
+		}
+		return errors.E_SHELL_WRITER_OUTPUT, err.Error()
+	}
+
 	if len(args) > this.MaxArgs() {
 		return errors.E_SHELL_TOO_MANY_ARGS, ""
 	} else if len(args) < this.MinArgs() {
@@ -61,6 +69,9 @@ func (this *Set) ExecCommand(args []string) (errors.ErrorCode, string) {
 			//Query Parameters
 			var werr error
 			_, werr = OUTPUT.WriteString(QUERYP)
+			if werr != nil {
+				return processOutputError(werr)
+			}
 			for name, _ := range QueryParam {
 				names = append(names, name)
 			}
@@ -79,11 +90,20 @@ func (this *Set) ExecCommand(args []string) (errors.ErrorCode, string) {
 				} else {
 					werr = printSET(name, fmt.Sprintf("%v", *value))
 				}
+				if werr != nil {
+					return processOutputError(werr)
+				}
 			}
-			OUTPUT.WriteString(NEWLINE)
+			_, werr = OUTPUT.WriteString(NEWLINE)
+			if werr != nil {
+				return processOutputError(werr)
+			}
 
 			//Named Parameters
 			_, werr = OUTPUT.WriteString(NAMEDP)
+			if werr != nil {
+				return processOutputError(werr)
+			}
 			names = names[:0]
 			for name, _ := range NamedParam {
 				names = append(names, name)
@@ -93,8 +113,14 @@ func (this *Set) ExecCommand(args []string) (errors.ErrorCode, string) {
 				name := names[i]
 				value := NamedParam[name]
 				werr = printSET(name, fmt.Sprintf("%v", *value))
+				if werr != nil {
+					return processOutputError(werr)
+				}
 			}
-			OUTPUT.WriteString(NEWLINE)
+			_, werr = OUTPUT.WriteString(NEWLINE)
+			if werr != nil {
+				return processOutputError(werr)
+			}
 
 			//User Defined Session Parameters
 			_, werr = OUTPUT.WriteString(USERDEFP)
@@ -107,8 +133,14 @@ func (this *Set) ExecCommand(args []string) (errors.ErrorCode, string) {
 				name := names[i]
 				value := UserDefSV[name]
 				werr = printSET(name, fmt.Sprintf("%v", *value))
+				if werr != nil {
+					return processOutputError(werr)
+				}
 			}
-			OUTPUT.WriteString(NEWLINE)
+			_, werr = OUTPUT.WriteString(NEWLINE)
+			if werr != nil {
+				return processOutputError(werr)
+			}
 
 			//Predefined Session Parameters
 			_, werr = OUTPUT.WriteString(PREDEFP)
@@ -121,13 +153,14 @@ func (this *Set) ExecCommand(args []string) (errors.ErrorCode, string) {
 				name := names[i]
 				value := PreDefSV[name]
 				werr = printSET(name, fmt.Sprintf("%v", *value))
+				if werr != nil {
+					return processOutputError(werr)
+				}
 			}
-			OUTPUT.WriteString(NEWLINE)
-
+			_, werr = OUTPUT.WriteString(NEWLINE)
 			if werr != nil {
-				return errors.E_SHELL_WRITER_OUTPUT, werr.Error()
+				return processOutputError(werr)
 			}
-
 		} else {
 			return errors.E_SHELL_TOO_FEW_ARGS, ""
 		}
@@ -157,11 +190,13 @@ func (this *Set) PrintHelp(desc bool) (errors.ErrorCode, string) {
 	return 0, ""
 }
 
-func printSET(name, value string) (werr error) {
+func printSET(name, value string) error {
 	valuestr := NewMessage(PNAME, name) + NEWLINE + NewMessage(PVAL, value)
-	_, werr = OUTPUT.WriteString(valuestr)
-	_, werr = OUTPUT.WriteString(NEWLINE + NEWLINE)
-	return
+	_, werr := OUTPUT.WriteString(valuestr)
+	if werr == nil {
+		_, werr = OUTPUT.WriteString(NEWLINE + NEWLINE)
+	}
+	return werr
 }
 
 func usernames(arrcreds string) []string {

@@ -238,7 +238,7 @@ func ExecN1QLStmt(line string, dBn1ql n1ql.N1qlDB) (errors.ErrorCode, string) {
 	if rows != nil {
 		// We have output. That is what we want.
 
-		command.OUTPUT.Reset()
+		command.OUTPUT.Reset(true)
 
 		var werr error
 		if command.TERSE {
@@ -251,7 +251,10 @@ func ExecN1QLStmt(line string, dBn1ql n1ql.N1qlDB) (errors.ErrorCode, string) {
 			rows.Close()
 		}
 
-		command.OUTPUT.Reset()
+		// if "skip to end" has been selected, write out the last page after all copying is complete
+		command.OUTPUT.Write([]byte{0x4})
+
+		command.OUTPUT.Reset(false)
 
 		// For any captured write error
 		if werr != nil {

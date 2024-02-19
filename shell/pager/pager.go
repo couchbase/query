@@ -13,7 +13,9 @@ import (
 	"io"
 	"os"
 	"runtime"
+	"unicode/utf8"
 
+	"github.com/mattn/go-runewidth"
 	"golang.org/x/term"
 )
 
@@ -23,14 +25,19 @@ type output struct {
 }
 
 type Pager struct {
-	w       []*output
-	height  int
-	width   int
-	line    int
-	col     int
-	paging  bool
-	skip    bool
-	newline string
+	w         []*output
+	height    int
+	width     int
+	line      int
+	col       int
+	paging    bool
+	skip      bool
+	newline   string
+	skipToEnd bool
+	lastPage  [][]byte
+	lpStart   int
+	lpNext    int
+	lpCont    bool
 }
 
 func NewPager() *Pager {
@@ -63,18 +70,30 @@ func (this *Pager) setSize() {
 	}
 }
 
-func (this *Pager) Reset() {
+func (this *Pager) Reset(skipToEnd bool) {
 	this.line = 0
 	this.col = 0
 	this.setSize()
 	this.skip = false
+	this.skipToEnd = skipToEnd
+	this.lastPage = nil
+	this.lpStart = 0
+	this.lpNext = 0
 }
 
 var msg = "-- (c)ontinue, (s)stop paging, (q)uit --"
-var clr = "\r                                        \r"
+var msgWithSkip = "-- (c)ontinue, (s)stop paging, s(k)ip to end, (q)uit --"
+var clr = "\r                                                       \r"
 
 func (this *Pager) Continue() bool {
-	os.Stdout.WriteString(msg)
+	if this.lastPage != nil {
+		return true
+	}
+	if this.skipToEnd {
+		os.Stdout.WriteString(msgWithSkip)
+	} else {
+		os.Stdout.WriteString(msg)
+	}
 
 	oldState, err := term.MakeRaw(int(os.Stdin.Fd()))
 	if err != nil {
@@ -102,6 +121,14 @@ cont:
 				fallthrough
 			case 'q':
 				rv = false
+				break cont
+			case 'K':
+				fallthrough
+			case 'k':
+				rv = true
+				this.lastPage = make([][]byte, this.height+2)
+				this.lpStart = 0
+				this.lpNext = 0
 				break cont
 			case '\r':
 				rv = true
@@ -156,6 +183,9 @@ func (this *Pager) WriteString(s string) (int, error) {
 }
 
 func (this *Pager) copyToOutput(buf []byte) (int, error) {
+	if this.lastPage != nil {
+		return this.recordForLP(buf)
+	}
 	for i := range this.w {
 		_, err := this.w[i].w.Write(buf)
 		if err != nil {
@@ -165,6 +195,19 @@ func (this *Pager) copyToOutput(buf []byte) (int, error) {
 	return len(buf), nil
 }
 
+const (
+	_UTF8_MARKER = 0xc0
+)
+
+func runeDisplaySize(r rune) int {
+	switch {
+	case r < 0x100: // generally safe
+		return 1
+	default:
+		return runewidth.RuneWidth(r)
+	}
+}
+
 func (this *Pager) Write(buf []byte) (int, error) {
 	if len(this.w) == 0 {
 		return 0, io.EOF
@@ -172,7 +215,8 @@ func (this *Pager) Write(buf []byte) (int, error) {
 	if !this.paging || this.skip || len(this.w) == 1 && this.w[0].w != os.Stdout {
 		return this.copyToOutput(buf)
 	}
-	for n := range buf {
+	start := 0
+	for n := 0; n < len(buf); n++ {
 		if this.skip {
 			sn, err := this.copyToOutput(buf[n:])
 			if err == nil {
@@ -180,13 +224,22 @@ func (this *Pager) Write(buf []byte) (int, error) {
 			}
 			return n, err
 		}
-		for i := range this.w {
-			_, err := this.w[i].w.Write(buf[n : n+1])
+		if buf[n] == 0x4 { // EOT
+			_, err := this.copyToOutput(buf[start:n])
 			if err != nil {
 				return 0, err
 			}
-		}
-		if buf[n] == '\n' {
+			err = this.writeLastPage()
+			if err != nil {
+				return 0, err
+			}
+			return n, nil
+		} else if buf[n] == '\n' {
+			_, err := this.copyToOutput(buf[start : n+1])
+			if err != nil {
+				return 0, err
+			}
+			start = n + 1
 			this.col = 0
 			this.line++
 			if this.line >= int(this.height) {
@@ -197,18 +250,44 @@ func (this *Pager) Write(buf []byte) (int, error) {
 				}
 			}
 		} else {
-			this.col++
-			if this.col == int(this.width) {
-				this.col = 0
-				this.line++
-				if this.line >= int(this.height) {
-					this.line = 0
-					if !this.Continue() {
-						return 0, io.EOF
+			if buf[n]&_UTF8_MARKER == _UTF8_MARKER {
+				r, sz := utf8.DecodeRune(buf[n:])
+				if r == utf8.RuneError && (sz == 1 || sz == 0) {
+					return 0, io.EOF
+				} else {
+					n += sz - 1
+					w := runeDisplaySize(r)
+					this.col += w
+				}
+			} else {
+				this.col++
+			}
+			if n+1 >= len(buf) || buf[n+1] != '\n' {
+				if this.col >= int(this.width) {
+					_, err := this.copyToOutput(buf[start : n+1])
+					if err != nil {
+						return 0, err
+					}
+					start = n + 1
+					this.col = 0
+					this.line++
+					if this.line >= int(this.height) {
+						this.line = 0
+						if !this.Continue() {
+							return 0, io.EOF
+						}
 					}
 				}
 			}
 		}
+	}
+	if start < len(buf) {
+		_, err := this.copyToOutput(buf[start:])
+		if err != nil {
+			return 0, err
+		}
+		this.col += len(buf[start:])
+		this.lpCont = true
 	}
 	return len(buf), nil
 }
@@ -233,4 +312,61 @@ func (this *Pager) Flush() {
 			s.Sync()
 		}
 	}
+}
+
+func (this *Pager) recordForLP(buf []byte) (int, error) {
+	if this.lpCont {
+		n := this.lpNext - 1
+		if n < 0 {
+			n = len(this.lastPage) - 1
+		}
+		this.lastPage[n] = append(this.lastPage[n], buf...)
+		this.lpCont = false
+		return len(buf), nil
+	}
+	// copy as the buffer given to us may be reused by the caller
+	if this.lastPage[this.lpNext] == nil || cap(this.lastPage[this.lpNext]) < len(buf) {
+		this.lastPage[this.lpNext] = make([]byte, len(buf))
+	}
+	this.lastPage[this.lpNext] = this.lastPage[this.lpNext][:len(buf)]
+	copy(this.lastPage[this.lpNext], buf)
+	this.lpNext++
+	if this.lpNext == len(this.lastPage) {
+		this.lpNext = 0
+	}
+	if this.lpNext == this.lpStart {
+		this.lpStart++
+		if this.lpStart == len(this.lastPage) {
+			this.lpStart = 0
+		}
+	}
+	return len(buf), nil
+}
+
+func (this *Pager) writeLastPage() error {
+	if this.lastPage != nil {
+		skipNL := 0
+		if !this.lpCont {
+			skipNL++
+		}
+		for i := range this.w {
+			_, err := this.w[i].w.Write([]byte("\n-- skip to end --\n")[skipNL:])
+			if err != nil {
+				return err
+			}
+			n := 0
+			for b := this.lpStart; b != this.lpNext; {
+				_, err := this.w[i].w.Write(this.lastPage[b])
+				if err != nil {
+					return err
+				}
+				b++
+				if b == len(this.lastPage) {
+					b = 0
+				}
+				n++
+			}
+		}
+	}
+	return nil
 }
