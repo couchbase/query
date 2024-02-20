@@ -247,6 +247,7 @@ func newHttpRequest(rv *httpRequest, resp http.ResponseWriter, req *http.Request
 	// end - temporary logging of requests
 	rv.jsonArgs = jsonArgs{}
 	rv.urlArgs = urlArgs{}
+	rv.Output().AddPhaseTime(execution.SETUP, time.Since(reqTime))
 }
 
 // For audit.Auditable interface.

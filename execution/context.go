@@ -89,6 +89,8 @@ const (
 	PLAN_INDEX_METADATA
 	REPREPARE
 	RUN
+	SETUP
+	QUEUED
 	PHASES // Sizer
 )
 
@@ -139,6 +141,8 @@ var _PHASE_NAMES = []string{
 	PLAN_INDEX_METADATA:    "plan.index.metadata",
 	REPREPARE:              "reprepare",
 	RUN:                    "run",
+	SETUP:                  "setup",
+	QUEUED:                 "queued",
 	PHASES:                 "unknown",
 }
 

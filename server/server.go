@@ -812,6 +812,7 @@ func (this *Server) setupRequestContext(request Request) bool {
 }
 
 func (this *Server) handleRequest(request Request, queue *runQueue) bool {
+	mark := util.Now()
 	if !queue.enqueue(request) {
 		ffdc.Capture(ffdc.RequestQueueFull)
 		request.Fail(errors.NewServiceErrorRequestQueueFull())
@@ -820,6 +821,7 @@ func (this *Server) handleRequest(request Request, queue *runQueue) bool {
 	} else {
 		ffdc.Reset(ffdc.RequestQueueFull)
 	}
+	request.Output().AddPhaseTime(execution.QUEUED, util.Since(mark))
 
 	if !request.Alive() {
 		request.Fail(errors.NewServiceNoClientError())
@@ -836,6 +838,7 @@ func (this *Server) handleRequest(request Request, queue *runQueue) bool {
 }
 
 func (this *Server) handlePlusRequest(request Request, queue *runQueue, transactionQueues *txRunQueues) bool {
+	mark := util.Now()
 	if !queue.enqueue(request) {
 		ffdc.Capture(ffdc.PlusQueueFull)
 		request.Fail(errors.NewServiceErrorRequestQueueFull())
@@ -844,6 +847,7 @@ func (this *Server) handlePlusRequest(request Request, queue *runQueue, transact
 	} else {
 		ffdc.Reset(ffdc.PlusQueueFull)
 	}
+	request.Output().AddPhaseTime(execution.QUEUED, util.Since(mark))
 
 	if !request.Alive() {
 		request.Fail(errors.NewServiceNoClientError())
@@ -854,7 +858,9 @@ func (this *Server) handlePlusRequest(request Request, queue *runQueue, transact
 
 	dequeue := true
 	if request.TxId() != "" {
+		mark := util.Now()
 		err := this.handlePreTxRequest(request, queue, transactionQueues)
+		request.Output().AddPhaseTime(execution.QUEUED, util.Since(mark))
 		if err != nil {
 			request.Fail(err)
 			request.Failed(this) // don't return
