@@ -903,6 +903,7 @@ func (this *Server) handlePreTxRequest(request Request, queue *runQueue, transac
 		}
 		txQueue.runCnt++
 		transactionQueues.queueCnt++
+		queue.dequeue()                                                       // release the servicer
 		txQueue.addRequest(request, &txQueue.mutex, &transactionQueues.mutex) // unlock done inside
 		return nil
 	}
