@@ -97,13 +97,14 @@ func (this *builder) buildAnsiJoinOp(node *algebra.AnsiJoin) (op plan.Operator, 
 		right = ksterm
 	}
 
-	useCBO := this.useCBO && this.keyspaceUseCBO(right.Alias())
+	alias := right.Alias()
+	useCBO := this.useCBO
 	joinEnum := this.joinEnum()
 
 	var leftBaseKeyspace *base.BaseKeyspace
 	var joinHint algebra.JoinHint
 	var preferHash, preferNL, inferJoinHint bool
-	baseKeyspace, _ := this.baseKeyspaces[right.Alias()]
+	baseKeyspace, _ := this.baseKeyspaces[alias]
 	if !joinEnum {
 		joinHint = baseKeyspace.JoinHint()
 		preferHash = algebra.PreferHash(joinHint)
@@ -128,7 +129,9 @@ func (this *builder) buildAnsiJoinOp(node *algebra.AnsiJoin) (op plan.Operator, 
 
 	switch right := right.(type) {
 	case *algebra.KeyspaceTerm:
-		err := this.processOnclause(right.Alias(), node.Onclause(), node.Outer(), node.Pushable())
+		useCBO = useCBO && this.keyspaceUseCBO(alias)
+
+		err := this.processOnclause(alias, node.Onclause(), node.Outer(), node.Pushable())
 		if err != nil {
 			return nil, err
 		}
@@ -139,7 +142,7 @@ func (this *builder) buildAnsiJoinOp(node *algebra.AnsiJoin) (op plan.Operator, 
 			baseKeyspace.Filters().ClearPlanFlags()
 		}
 
-		filter, selec, err := this.getFilter(right.Alias(), true, node.Onclause())
+		filter, selec, err := this.getFilter(alias, true, node.Onclause())
 		if err != nil {
 			return nil, err
 		}
@@ -253,8 +256,8 @@ func (this *builder) buildAnsiJoinOp(node *algebra.AnsiJoin) (op plan.Operator, 
 			}
 			if useCBO && (cost > 0.0) && (cardinality > 0.0) && (selec > 0.0) &&
 				(filter != nil) && (size > 0) && (frCost > 0.0) {
-				selec = this.adjustForIndexFilters(right.Alias(), origOnclause, selec)
-				cost, cardinality, size, frCost = getSimpleFilterCost(right.Alias(),
+				selec = this.adjustForIndexFilters(alias, origOnclause, selec)
+				cost, cardinality, size, frCost = getSimpleFilterCost(alias,
 					cost, cardinality, selec, size, frCost)
 			}
 			if nlIndexHintError {
@@ -290,7 +293,7 @@ func (this *builder) buildAnsiJoinOp(node *algebra.AnsiJoin) (op plan.Operator, 
 					}
 
 					if useCBO && (selec > 0.0) && (newFilter != nil) {
-						cost, cardinality, size, frCost = getSimpleFilterCost(right.Alias(),
+						cost, cardinality, size, frCost = getSimpleFilterCost(alias,
 							cost, cardinality, selec, size, frCost)
 					}
 				}
@@ -360,7 +363,7 @@ func (this *builder) buildAnsiJoinOp(node *algebra.AnsiJoin) (op plan.Operator, 
 		if err != nil {
 			return nil, err
 		}
-		subPaths, err := this.GetSubPaths(right, right.Alias())
+		subPaths, err := this.GetSubPaths(right, alias)
 		if err != nil {
 			return nil, err
 		}
@@ -370,7 +373,7 @@ func (this *builder) buildAnsiJoinOp(node *algebra.AnsiJoin) (op plan.Operator, 
 		size = OPT_SIZE_NOT_AVAIL
 		frCost = OPT_COST_NOT_AVAIL
 		if this.useCBO && this.keyspaceUseCBO(newKeyspaceTerm.Alias()) {
-			rightKeyspace := base.GetKeyspaceName(this.baseKeyspaces, right.Alias())
+			rightKeyspace := base.GetKeyspaceName(this.baseKeyspaces, alias)
 			cost, cardinality, size, frCost = getLookupJoinCost(this.lastOp, node.Outer(),
 				newKeyspaceTerm, rightKeyspace)
 		}
@@ -386,12 +389,12 @@ func (this *builder) buildAnsiJoinOp(node *algebra.AnsiJoin) (op plan.Operator, 
 		}
 		return plan.NewJoinFromAnsi(keyspace, newKeyspaceTerm, subPaths, node.Outer(), onFilter, cost, cardinality, size, frCost), nil
 	case *algebra.ExpressionTerm, *algebra.SubqueryTerm:
-		err := this.processOnclause(right.Alias(), node.Onclause(), node.Outer(), node.Pushable())
+		err := this.processOnclause(alias, node.Onclause(), node.Outer(), node.Pushable())
 		if err != nil {
 			return nil, err
 		}
 
-		filter, selec, err := this.getFilter(right.Alias(), true, node.Onclause())
+		filter, selec, err := this.getFilter(alias, true, node.Onclause())
 		if err != nil {
 			return nil, err
 		}
@@ -433,7 +436,7 @@ func (this *builder) buildAnsiJoinOp(node *algebra.AnsiJoin) (op plan.Operator, 
 
 		if useCBO && (cost > 0.0) && (cardinality > 0.0) && (selec > 0.0) && (filter != nil) &&
 			(size > 0) && (frCost > 0.0) {
-			cost, cardinality, size, frCost = getSimpleFilterCost(right.Alias(),
+			cost, cardinality, size, frCost = getSimpleFilterCost(alias,
 				cost, cardinality, selec, size, frCost)
 		}
 
@@ -450,13 +453,14 @@ func (this *builder) buildAnsiNestOp(node *algebra.AnsiNest) (op plan.Operator, 
 		right = ksterm
 	}
 
-	useCBO := this.useCBO && this.keyspaceUseCBO(right.Alias())
+	alias := right.Alias()
+	useCBO := this.useCBO
 	joinEnum := this.joinEnum()
 
 	var leftBaseKeyspace *base.BaseKeyspace
 	var joinHint algebra.JoinHint
 	var preferHash, preferNL, inferJoinHint bool
-	baseKeyspace, _ := this.baseKeyspaces[right.Alias()]
+	baseKeyspace, _ := this.baseKeyspaces[alias]
 	if !joinEnum {
 		joinHint = baseKeyspace.JoinHint()
 		preferHash = algebra.PreferHash(joinHint)
@@ -481,7 +485,9 @@ func (this *builder) buildAnsiNestOp(node *algebra.AnsiNest) (op plan.Operator, 
 
 	switch right := right.(type) {
 	case *algebra.KeyspaceTerm:
-		err := this.processOnclause(right.Alias(), node.Onclause(), node.Outer(), node.Pushable())
+		useCBO = useCBO && this.keyspaceUseCBO(alias)
+
+		err := this.processOnclause(alias, node.Onclause(), node.Outer(), node.Pushable())
 		if err != nil {
 			return nil, err
 		}
@@ -492,7 +498,7 @@ func (this *builder) buildAnsiNestOp(node *algebra.AnsiNest) (op plan.Operator, 
 			baseKeyspace.Filters().ClearPlanFlags()
 		}
 
-		filter, selec, err := this.getFilter(right.Alias(), true, node.Onclause())
+		filter, selec, err := this.getFilter(alias, true, node.Onclause())
 		if err != nil {
 			return nil, err
 		}
@@ -588,8 +594,8 @@ func (this *builder) buildAnsiNestOp(node *algebra.AnsiNest) (op plan.Operator, 
 			}
 			if useCBO && (cost > 0.0) && (cardinality > 0.0) && (selec > 0.0) &&
 				(filter != nil) && (size > 0) && (frCost > 0.0) {
-				selec = this.adjustForIndexFilters(right.Alias(), origOnclause, selec)
-				cost, cardinality, size, frCost = getSimpleFilterCost(right.Alias(),
+				selec = this.adjustForIndexFilters(alias, origOnclause, selec)
+				cost, cardinality, size, frCost = getSimpleFilterCost(alias,
 					cost, cardinality, selec, size, frCost)
 			}
 			if nlIndexHintError {
@@ -625,7 +631,7 @@ func (this *builder) buildAnsiNestOp(node *algebra.AnsiNest) (op plan.Operator, 
 					}
 
 					if useCBO && (selec > 0.0) && (newFilter != nil) {
-						cost, cardinality, size, frCost = getSimpleFilterCost(right.Alias(),
+						cost, cardinality, size, frCost = getSimpleFilterCost(alias,
 							cost, cardinality, selec, size, frCost)
 					}
 				}
@@ -683,7 +689,7 @@ func (this *builder) buildAnsiNestOp(node *algebra.AnsiNest) (op plan.Operator, 
 		if err != nil {
 			return nil, err
 		}
-		subPaths, err := this.GetSubPaths(right, right.Alias())
+		subPaths, err := this.GetSubPaths(right, alias)
 		if err != nil {
 			return nil, err
 		}
@@ -705,7 +711,7 @@ func (this *builder) buildAnsiNestOp(node *algebra.AnsiNest) (op plan.Operator, 
 		size = OPT_SIZE_NOT_AVAIL
 		frCost = OPT_COST_NOT_AVAIL
 		if this.useCBO && this.keyspaceUseCBO(newKeyspaceTerm.Alias()) {
-			rightKeyspace := base.GetKeyspaceName(this.baseKeyspaces, right.Alias())
+			rightKeyspace := base.GetKeyspaceName(this.baseKeyspaces, alias)
 			cost, cardinality, size, frCost = getLookupNestCost(this.lastOp, node.Outer(),
 				newKeyspaceTerm, rightKeyspace)
 		}
@@ -722,7 +728,7 @@ func (this *builder) buildAnsiNestOp(node *algebra.AnsiNest) (op plan.Operator, 
 		return plan.NewNestFromAnsi(keyspace, newKeyspaceTerm, subPaths, node.Outer(),
 			onFilter, cost, cardinality, size, frCost), nil
 	case *algebra.ExpressionTerm, *algebra.SubqueryTerm:
-		filter, selec, err := this.getFilter(right.Alias(), true, node.Onclause())
+		filter, selec, err := this.getFilter(alias, true, node.Onclause())
 		if err != nil {
 			return nil, err
 		}
@@ -764,7 +770,7 @@ func (this *builder) buildAnsiNestOp(node *algebra.AnsiNest) (op plan.Operator, 
 
 		if useCBO && (cost > 0.0) && (cardinality > 0.0) && (selec > 0.0) &&
 			(size > 0) && (frCost > 0.0) {
-			cost, cardinality, size, frCost = getSimpleFilterCost(right.Alias(),
+			cost, cardinality, size, frCost = getSimpleFilterCost(alias,
 				cost, cardinality, selec, size, frCost)
 		}
 
@@ -1000,6 +1006,9 @@ func (this *builder) buildHashJoinOp(right algebra.SimpleFromTerm, left algebra.
 		right = ksterm
 	}
 
+	alias := right.Alias()
+	useCBO := this.useCBO
+
 	switch right := right.(type) {
 	case *algebra.KeyspaceTerm:
 		// if USE HASH and USE KEYS are specified together, make sure the document key
@@ -1008,6 +1017,7 @@ func (this *builder) buildHashJoinOp(right algebra.SimpleFromTerm, left algebra.
 		if right.IsLateralJoin() {
 			return nil, nil, nil, nil, nil, nil, false, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, nil
 		}
+		useCBO = useCBO && this.keyspaceUseCBO(alias)
 		keyspace = ksterm.Keyspace()
 	case *algebra.ExpressionTerm:
 		// hash join cannot handle expression term with any LATERAL correlated references
@@ -1027,8 +1037,6 @@ func (this *builder) buildHashJoinOp(right algebra.SimpleFromTerm, left algebra.
 		return nil, nil, nil, nil, nil, nil, false, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, errors.NewPlanInternalError(fmt.Sprintf("buildHashJoinOp: unexpected right-hand side node type"))
 	}
 
-	alias := right.Alias()
-	useCBO := this.useCBO && this.keyspaceUseCBO(alias)
 	joinEnum := this.joinEnum()
 	autoJoinFilter := joinEnum && this.hasBuilderFlag(BUILDER_DO_JOIN_FILTER)
 	baseKeyspace, _ := this.baseKeyspaces[alias]
@@ -1483,8 +1491,9 @@ func (this *builder) buildInnerPrimaryScan(right *algebra.KeyspaceTerm,
 	this.offset = nil
 	this.lastOp = nil
 
-	useCBO := this.useCBO && this.keyspaceUseCBO(right.Alias())
-	baseKeyspace, _ := this.baseKeyspaces[right.Alias()]
+	alias := right.Alias()
+	useCBO := this.useCBO && this.keyspaceUseCBO(alias)
+	baseKeyspace, _ := this.baseKeyspaces[alias]
 	filters := baseKeyspace.Filters()
 
 	nlinner := this.setNLInner()
@@ -1518,7 +1527,7 @@ func (this *builder) buildInnerPrimaryScan(right *algebra.KeyspaceTerm,
 	if len(this.children) > 0 {
 		return plan.NewSequence(this.children...), newFilter, newOnclause, nil
 	}
-	return nil, nil, nil, errors.NewPlanInternalError(fmt.Sprintf("buildInnerPrimaryScan: no scan built for inner keyspace %s", right.Alias()))
+	return nil, nil, nil, errors.NewPlanInternalError(fmt.Sprintf("buildInnerPrimaryScan: no scan built for inner keyspace %s", alias))
 }
 
 func (this *builder) joinCoverTransformation(leftCoveringScans, rightCoveringScans []plan.CoveringOperator,
