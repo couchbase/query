@@ -134,7 +134,8 @@ func (b *activeRequestsKeyspace) Fetch(keys []string, keysMap map[string]value.A
 					keysMap[key] = remoteValue
 				},
 				func(warn errors.Error) {
-					if !warn.HasCause(errors.W_SYSTEM_REMOTE_NODE_NOT_FOUND) {
+					// ignore "not found" errors
+					if !warn.HasCause(errors.W_SYSTEM_REMOTE_NODE_NOT_FOUND) && !warn.ContainsText("object not found") {
 						context.Warning(warn)
 					}
 				},
