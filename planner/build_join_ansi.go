@@ -97,7 +97,7 @@ func (this *builder) buildAnsiJoinOp(node *algebra.AnsiJoin) (op plan.Operator, 
 		right = ksterm
 	}
 
-	useCBO := this.useCBO && this.keyspaceUseCBO(right.Alias())
+	useCBO := this.useCBO
 	joinEnum := this.joinEnum()
 
 	var leftBaseKeyspace *base.BaseKeyspace
@@ -128,6 +128,8 @@ func (this *builder) buildAnsiJoinOp(node *algebra.AnsiJoin) (op plan.Operator, 
 
 	switch right := right.(type) {
 	case *algebra.KeyspaceTerm:
+		useCBO = useCBO && this.keyspaceUseCBO(right.Alias())
+
 		err := this.processOnclause(right.Alias(), node.Onclause(), node.Outer(), node.Pushable())
 		if err != nil {
 			return nil, err
@@ -450,7 +452,7 @@ func (this *builder) buildAnsiNestOp(node *algebra.AnsiNest) (op plan.Operator, 
 		right = ksterm
 	}
 
-	useCBO := this.useCBO && this.keyspaceUseCBO(right.Alias())
+	useCBO := this.useCBO
 	joinEnum := this.joinEnum()
 
 	var leftBaseKeyspace *base.BaseKeyspace
@@ -481,6 +483,8 @@ func (this *builder) buildAnsiNestOp(node *algebra.AnsiNest) (op plan.Operator, 
 
 	switch right := right.(type) {
 	case *algebra.KeyspaceTerm:
+		useCBO = useCBO && this.keyspaceUseCBO(right.Alias())
+
 		err := this.processOnclause(right.Alias(), node.Onclause(), node.Outer(), node.Pushable())
 		if err != nil {
 			return nil, err
@@ -1000,6 +1004,9 @@ func (this *builder) buildHashJoinOp(right algebra.SimpleFromTerm, left algebra.
 		right = ksterm
 	}
 
+	alias := right.Alias()
+	useCBO := this.useCBO
+
 	switch right := right.(type) {
 	case *algebra.KeyspaceTerm:
 		// if USE HASH and USE KEYS are specified together, make sure the document key
@@ -1008,6 +1015,7 @@ func (this *builder) buildHashJoinOp(right algebra.SimpleFromTerm, left algebra.
 		if right.IsLateralJoin() {
 			return nil, nil, nil, nil, nil, nil, false, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, nil
 		}
+		useCBO = useCBO && this.keyspaceUseCBO(alias)
 		keyspace = ksterm.Keyspace()
 	case *algebra.ExpressionTerm:
 		// hash join cannot handle expression term with any LATERAL correlated references
@@ -1027,8 +1035,6 @@ func (this *builder) buildHashJoinOp(right algebra.SimpleFromTerm, left algebra.
 		return nil, nil, nil, nil, nil, nil, false, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, errors.NewPlanInternalError(fmt.Sprintf("buildHashJoinOp: unexpected right-hand side node type"))
 	}
 
-	alias := right.Alias()
-	useCBO := this.useCBO && this.keyspaceUseCBO(alias)
 	joinEnum := this.joinEnum()
 	autoJoinFilter := joinEnum && this.hasBuilderFlag(BUILDER_DO_JOIN_FILTER)
 	baseKeyspace, _ := this.baseKeyspaces[alias]
