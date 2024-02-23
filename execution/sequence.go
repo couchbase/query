@@ -176,8 +176,9 @@ func (this *Sequence) reopen(context *Context) bool {
 
 func (this *Sequence) Done() {
 	this.baseDone()
-	for c, child := range this.children {
-		this.children[c] = nil
+	for i := len(this.children) - 1; i >= 0; i-- {
+		child := this.children[i]
+		this.children[i] = nil
 		child.Done()
 	}
 	_SEQUENCE_POOL.Put(this.children)
