@@ -1132,6 +1132,7 @@ func (this *base) scanDeltaKeyspace(keyspace datastore.Keyspace, parent value.Va
 		entry, ok := this.getItemEntry(conn)
 		if ok {
 			if entry != nil {
+				this.addInDocs(1)
 				if entry.MetaData == nil {
 					av := this.newEmptyDocumentWithKey(entry.PrimaryKey, parent, context)
 					av.SetBit(this.bit)

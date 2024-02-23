@@ -220,10 +220,7 @@ func (this *spanScan) RunOnce(context *Context, parent value.Value) {
 			if cont {
 				if entry != nil {
 					if _, sok := this.indexScan.keys[entry.PrimaryKey]; !sok {
-
-						// current policy is to only count 'in' documents
-						// from operators, not kv
-						// add this.addInDocs(1) if this changes
+						this.addInDocs(1)
 
 						av := this.newEmptyDocumentWithKey(entry.PrimaryKey, scope_value, context)
 						covers := this.plan.Covers()
