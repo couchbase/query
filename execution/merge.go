@@ -24,8 +24,7 @@ type Merge struct {
 	update   Operator
 	delete   Operator
 	insert   Operator
-	updated  map[string]bool
-	deleted  map[string]interface{}
+	matched  map[string]bool
 	inserted map[string]bool
 	children []Operator
 	inputs   []*Channel
@@ -86,23 +85,16 @@ func (this *Merge) RunOnce(context *Context, parent value.Value) {
 
 		this.children = _MERGE_OPERATOR_POOL.Get()
 		this.inputs = _MERGE_CHANNEL_POOL.Get()
-		if update != nil {
-			this.updated = _MERGE_KEY_POOL.Get()
-		}
-		if delete != nil {
-			this.deleted = _MERGE_KEY_VALUE_POOL.Get()
+		if update != nil || delete != nil {
+			this.matched = _MERGE_KEY_POOL.Get()
 		}
 		if insert != nil {
 			this.inserted = _MERGE_KEY_POOL.Get()
 		}
 		defer func() {
-			if this.updated != nil {
-				_MERGE_KEY_POOL.Put(this.updated)
-				this.updated = nil
-			}
-			if this.deleted != nil {
-				_MERGE_KEY_VALUE_POOL.Put(this.deleted)
-				this.deleted = nil
+			if this.matched != nil {
+				_MERGE_KEY_POOL.Put(this.matched)
+				this.matched = nil
 			}
 			if this.inserted != nil {
 				_MERGE_KEY_POOL.Put(this.inserted)
@@ -148,23 +140,6 @@ func (this *Merge) RunOnce(context *Context, parent value.Value) {
 				ok = this.processKeyMatch(item, context, update, delete, insert)
 			} else {
 				ok = this.processAction(item, context, "", update, delete, insert)
-			}
-		}
-
-		// process delayed deletes
-		if ok && delete != nil {
-			alias := this.plan.KeyspaceRef().Alias()
-			inTx := context.TxContext() != nil
-			for key, val := range this.deleted {
-				if inTx {
-					item = this.newEmptyDocumentWithKeyMeta(key, val, nil, context)
-				} else {
-					item = this.newEmptyDocumentWithKey(key, nil, context)
-				}
-				item.SetField(alias, item)
-				// since the range of the map is not deterministic, ignore any
-				// potential error here such that all keys will be sent to DELETE
-				this.sendItemOp(delete.Input(), item)
 			}
 		}
 
@@ -254,6 +229,7 @@ func (this *Merge) processAction(item value.AnnotatedValue, context *Context,
 	ok := true
 	if match {
 		// Perform UPDATE and/or DELETE
+		check := true
 		if update != nil {
 			matched := true
 			if this.plan.UpdateFilter() != nil {
@@ -262,7 +238,7 @@ func (this *Merge) processAction(item value.AnnotatedValue, context *Context,
 			}
 			if matched {
 				// make sure document is not updated multiple times
-				if _, ok1 = this.deleted[key]; ok1 || this.updated[key] {
+				if this.matched[key] {
 					context.Error(errors.NewMergeMultiUpdateError(key))
 					return false
 				}
@@ -279,7 +255,8 @@ func (this *Merge) processAction(item value.AnnotatedValue, context *Context,
 						}
 					}
 				}
-				this.updated[key] = true
+				this.matched[key] = true
+				check = false
 				ok = this.sendItemOp(update.Input(), item1)
 			} else if delete == nil {
 				item.Recycle()
@@ -294,32 +271,12 @@ func (this *Merge) processAction(item value.AnnotatedValue, context *Context,
 				}
 				if matched {
 					// make sure document is not updated multiple times
-					if _, ok1 := this.deleted[key]; ok1 {
-						// in case of delete and the bit N1QL_MERGE_LEGACY
-						// is set, silently ignore multiple delete requests
-						if !context.HasFeature(util.N1QL_MERGE_LEGACY) {
-							context.Error(errors.NewMergeMultiUpdateError(key))
-							return false
-						}
-					} else if this.updated[key] {
+					if check && this.matched[key] {
 						context.Error(errors.NewMergeMultiUpdateError(key))
 						return false
-					} else {
-						// remember the key to be deleted, but the actual
-						// delete happens later
-						this.deleted[key] = nil
 					}
-					if context.TxContext() != nil {
-						// if inside transaction, save META information
-						// (tav represents target, set above)
-						// in case of (permitted) multiple delete, this will
-						// get the latest META data
-						// Reset the META data on the original value to
-						// avoid "sharing"
-						this.deleted[key] = tav.GetMeta()
-						tav.ResetMeta()
-					}
-					item.Recycle()
+					this.matched[key] = true
+					ok = this.sendItemOp(delete.Input(), item)
 				} else {
 					item.Recycle()
 				}
@@ -475,7 +432,6 @@ func (this *Merge) Done() {
 var _MERGE_OPERATOR_POOL = NewOperatorPool(3)
 var _MERGE_CHANNEL_POOL = NewChannelPool(3)
 var _MERGE_KEY_POOL = util.NewStringBoolPool(1024)
-var _MERGE_KEY_VALUE_POOL = util.NewStringInterfacePool(1024)
 
 // The sole purpose of this notifier is to interrupt a waiting exchange when an action halts before all items have been processed
 // It is separate from the Merge operator as an action stopping need not stop the operator itself
