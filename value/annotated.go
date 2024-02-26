@@ -88,7 +88,6 @@ type AnnotatedValue interface {
 	SetId(id interface{})
 	NewMeta() map[string]interface{}
 	GetMeta() map[string]interface{}
-	SetMeta(meta map[string]interface{})
 	ResetMeta()
 	Covers() Value
 	GetCover(key string) Value
@@ -330,14 +329,6 @@ func (this *annotatedValue) GetMeta() map[string]interface{} {
 		this.meta = make(map[string]interface{}, _DEFAULT_ATTACHMENT_SIZE)
 	}
 	return this.meta
-}
-
-func (this *annotatedValue) SetMeta(meta map[string]interface{}) {
-	k := this.GetId()
-	this.meta = meta
-	if k != nil {
-		this.SetId(k)
-	}
 }
 
 func (this *annotatedValue) ResetMeta() {
@@ -1005,10 +996,6 @@ func (this *annotatedValueSelfReference) NewMeta() map[string]interface{} {
 
 func (this *annotatedValueSelfReference) GetMeta() map[string]interface{} {
 	return (*annotatedValue)(this).GetMeta()
-}
-
-func (this *annotatedValueSelfReference) SetMeta(meta map[string]interface{}) {
-	(*annotatedValue)(this).SetMeta(meta)
 }
 
 func (this *annotatedValueSelfReference) ResetMeta() {
