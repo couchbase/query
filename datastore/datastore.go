@@ -248,6 +248,7 @@ type Keyspace interface {
 	Namespace() Namespace // Backpointer to namespace
 	ScopeId() string      // Id of the scope that contains this keyspace
 	Scope() Scope         // Backpointer to scope
+	MaxTTL() int64        // The maxTTL setting
 
 	Stats(context QueryContext, which []KeyspaceStats) ([]int64, errors.Error) // Collect multiple stats at once (eg Count, Size)
 

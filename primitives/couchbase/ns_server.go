@@ -1053,8 +1053,9 @@ type InputScope struct {
 	Collections []InputCollection
 }
 type InputCollection struct {
-	Name string
-	Uid  string
+	Name   string
+	Uid    string
+	MaxTTL int64 `json:"maxTTL"`
 }
 
 // Structures for storing collections information.
@@ -1068,8 +1069,9 @@ type Scope struct {
 	Collections map[string]*Collection // map by name
 }
 type Collection struct {
-	Name string
-	Uid  uint64
+	Name   string
+	Uid    uint64
+	MaxTTL int64
 }
 
 var _EMPTY_MANIFEST *Manifest = &Manifest{Uid: 0, Scopes: map[string]*Scope{}}
@@ -1102,7 +1104,7 @@ func parseCollectionsManifest(res *gomemcached.MCResponse) (*Manifest, error) {
 			if err != nil {
 				return nil, err
 			}
-			coll := &Collection{Uid: coll_uid, Name: icoll.Name}
+			coll := &Collection{Uid: coll_uid, Name: icoll.Name, MaxTTL: icoll.MaxTTL}
 			scope.Collections[icoll.Name] = coll
 		}
 	}

@@ -119,7 +119,7 @@ var bucketFieldDefinitions = map[string]bucketFieldDef{
 
 	"ramQuota":                                   {value.NUMBER, true, 100, nil, nil},
 	"threadsNumber":                              {value.NUMBER, true, 3, 8, []interface{}{3, 8}},
-	"replicaNumber":                              {value.NUMBER, true, 1, 3, []interface{}{1, 2, 3}},
+	"replicaNumber":                              {value.NUMBER, true, 0, 3, []interface{}{0, 1, 2, 3}},
 	"compressionMode":                            {value.STRING, true, nil, nil, []interface{}{"off", "passive", "active"}},
 	"maxTTL":                                     {value.NUMBER, true, 0, 2147483647, nil},
 	"flushEnabled":                               {value.NUMBER, true, 0, 1, []interface{}{0, 1}},
@@ -139,6 +139,7 @@ var bucketFieldDefinitions = map[string]bucketFieldDef{
 	"allowedTimePeriod[toHour]":                  {value.NUMBER, true, 0, 23, nil},
 	"allowedTimePeriod[toMinute]":                {value.NUMBER, true, 0, 59, nil},
 	"allowedTimePeriod[abortOutside]":            {value.BOOLEAN, true, nil, nil, nil},
+	"magmaFragmentationPercentage":               {value.NUMBER, true, 0, 100, nil},
 }
 
 func validateBucketOptions(with value.Value, alter bool) errors.Error {

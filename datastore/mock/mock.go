@@ -355,6 +355,10 @@ func (b *keyspace) Scope() datastore.Scope {
 	return nil
 }
 
+func (b *keyspace) MaxTTL() int64 {
+	return 0
+}
+
 func (b *keyspace) Id() string {
 	return b.Name()
 }

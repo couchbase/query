@@ -10,8 +10,12 @@ package expression
 
 import (
 	"encoding/json"
+	"fmt"
+	"strings"
 
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/sort"
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
@@ -232,4 +236,346 @@ func (this *Finderr) Constructor() FunctionConstructor {
 
 func (this *Finderr) Indexable() bool {
 	return false
+}
+
+// ExtractDDL
+
+const (
+	_BUCKET_INFO = 1 << iota
+	_SCOPE_INFO
+	_COLLECTION_INFO
+	_INDEX_INFO
+	_SEQUENCE_INFO
+)
+
+type ExtractDDL struct {
+	FunctionBase
+}
+
+func NewExtractDDL(operands ...Expression) Function {
+	rv := &ExtractDDL{}
+	rv.Init("extractddl", operands...)
+
+	rv.expr = rv
+	return rv
+}
+
+func (this *ExtractDDL) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *ExtractDDL) Type() value.Type { return value.ARRAY }
+
+// This relies entirely on the system catalogue permissions to enforce what can and can't be seen: if you could see it in a system
+// catalogue query, you can see it in the result of this function
+func (this *ExtractDDL) Evaluate(item value.Value, context Context) (value.Value, error) {
+	var filter value.Value
+	var with value.Value
+	var err error
+
+	if len(this.operands) > 0 {
+		filter, err = this.operands[0].Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		} else if filter.Type() == value.MISSING {
+			return value.MISSING_VALUE, nil
+		} else if filter.Type() == value.NULL {
+			filter = nil
+		} else if filter.Type() != value.STRING {
+			return value.NULL_VALUE, nil
+		}
+	}
+
+	if len(this.operands) > 1 {
+		with, err = this.operands[1].Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		} else if with.Type() == value.MISSING {
+			return value.MISSING_VALUE, nil
+		} else if with.Type() != value.OBJECT {
+			return value.NULL_VALUE, nil
+		}
+	} else {
+		with = value.NewValue(map[string]interface{}{})
+	}
+
+	res := make([]interface{}, 0, 32)
+	args := make(value.Values, 0, 1)
+
+	stmt := "SELECT DISTINCT RAW name FROM system:keyspaces WHERE `namespace` = 'default' AND `bucket` IS NOT VALUED "
+	if filter != nil && filter.ToString() != "" {
+		stmt += " AND name LIKE ?"
+		args = append(args, filter)
+	}
+	stmt += " ORDER BY name"
+	v, _, err := context.EvaluateStatement(stmt, nil, args, false, true, false, "")
+	if err != nil {
+		return value.MISSING_VALUE, err
+	}
+	buckets := v.Actual().([]interface{})
+	if len(buckets) == 0 {
+		return value.MISSING_VALUE, errors.NewWarning("No bucket(s) found or missing permissions.")
+	}
+
+	flags := _BUCKET_INFO | _SCOPE_INFO | _COLLECTION_INFO | _INDEX_INFO | _SEQUENCE_INFO
+	if f, ok := with.Field("flags"); ok {
+		if f.Type() == value.STRING {
+			f = value.NewValue([]interface{}{f})
+		}
+		if f.Type() == value.NUMBER {
+			flags = int(value.AsNumberValue(f).Int64())
+		} else if f.Type() == value.ARRAY {
+			act := f.Actual().([]interface{})
+			flags = 0
+			for i := range act {
+				switch t := act[i].(type) {
+				case value.Value:
+					switch t.ToString() {
+					case "bucket":
+						flags |= _BUCKET_INFO
+					case "scope":
+						flags |= _SCOPE_INFO
+					case "collection":
+						flags |= _COLLECTION_INFO
+					case "index":
+						flags |= _INDEX_INFO
+					case "sequence":
+						flags |= _SEQUENCE_INFO
+					default:
+						return value.MISSING_VALUE, errors.NewWarning(fmt.Sprintf("Invalid flag: %v", act[i]))
+					}
+				default:
+					return value.MISSING_VALUE, errors.NewWarning(fmt.Sprintf("Invalid flag: %v", act[i]))
+				}
+			}
+		} else {
+			return value.MISSING_VALUE, errors.NewWarning("Invalid flags.")
+		}
+	}
+	if flags&(_BUCKET_INFO|_SCOPE_INFO|_COLLECTION_INFO|_INDEX_INFO|_SEQUENCE_INFO) == 0 {
+		return value.NULL_VALUE, errors.NewWarning("Flags exclude all data.")
+	}
+
+	for i := range buckets {
+		var sb strings.Builder
+		bucket := buckets[i].(string)
+		posArg := value.Values{value.NewValue(bucket)}
+
+		if flags&_BUCKET_INFO != 0 {
+			stmt = "SELECT bucketType, storageBackend, quota.ram ramQuota, replicaNumber, replicaIndex, maxTTL, compressionMode, " +
+				"conflictResolutionType, evictionPolicy, threadsNumber, durabilityMinLevel, purgeInterval," +
+				"controllers.`flush` AS flushEnabled, magmaSeqTreeDataBlockSize, historyRetentionCollectionDefault," +
+				"historyRetentionBytes, historyRetentionSeconds, autoCompactionSettings.parallelDBAndViewCompaction," +
+				"autoCompactionSettings.databaseFragmentationThreshold.percentage AS " +
+				"`databaseFragmentationThreshold[percentage]`," +
+				"autoCompactionSettings.databaseFragmentationThreshold.size AS `databaseFragmentationThreshold[size]`," +
+				"autoCompactionSettings.viewFragmentationThreshold.percentage AS `viewFragmentationThreshold[percentage]`," +
+				"autoCompactionSettings.viewFragmentationThreshold.size AS `viewFragmentationThreshold[size]`," +
+				"autoCompactionSettings.allowedTimePeriod.fromHour AS `allowedTimePeriod[fromHour]`," +
+				"autoCompactionSettings.allowedTimePeriod.fromMinute AS `allowedTimePeriod[fromMinute]`," +
+				"autoCompactionSettings.allowedTimePeriod.toHour AS `allowedTimePeriod[toHour]`," +
+				"autoCompactionSettings.allowedTimePeriod.toMinute AS `allowedTimePeriod[toMinute]`," +
+				"autoCompactionSettings.allowedTimePeriod.abortOutside AS `allowedTimePeriod[abortOutside]`," +
+				"autoCompactionSettings.magmaFragmentationPercentage," +
+				"CASE WHEN type(autoCompactionSettings) = 'object' THEN TRUE ELSE MISSING END AS autoCompactionDefined" +
+				" FROM system:bucket_info USE KEYS[?]"
+			v, _, err = context.EvaluateStatement(stmt, nil, posArg, false, true, false, "")
+			if err != nil {
+				return value.MISSING_VALUE, err
+			}
+			s := "CREATE BUCKET `" + bucket + "`"
+			v, ok := v.Index(0)
+			if ok {
+				sb.Reset()
+				names := make([]string, 27)
+				for n, _ := range v.Fields() {
+					names = append(names, n)
+				}
+				sort.Strings(names)
+				for _, n := range names {
+					fv, ok := v.Field(n)
+					if !ok {
+						continue
+					}
+					// don't include default values
+					skip := false
+					switch n {
+					case "bucketType":
+						skip = fv.ToString() == "membase"
+					case "storageBackend":
+						skip = fv.ToString() == "couchstore"
+					case "evictionPolicy":
+						skip = fv.ToString() == "valueOnly"
+					case "replicaNumber":
+						skip = value.AsNumberValue(fv).Int64() == 1
+					case "compressionMode":
+						skip = fv.ToString() == "passive"
+					case "threadsNumber":
+						skip = value.AsNumberValue(fv).Int64() == 3
+					case "maxTTL", "historyRetentionBytes", "historyRetentionSeconds":
+						skip = value.AsNumberValue(fv).Int64() == 0
+					case "conflictResolutionType":
+						skip = fv.ToString() == "seqno"
+					case "durabilityMinLevel":
+						skip = fv.ToString() == "none"
+					case "magmaSeqTreeDataBlockSize":
+						skip = value.AsNumberValue(fv).Int64() == 4096
+					case "historyRetentionCollectionDefault":
+						skip = fv.Truth()
+					case "databaseFragmentationThreshold[percentage]", "databaseFragmentationThreshold[size]",
+						"viewFragmentationThreshold[percentage]", "viewFragmentationThreshold[size]":
+						skip = fv.ToString() == "undefined"
+					case "replicaIndex":
+						skip = fv.Type() != value.NUMBER || value.AsNumberValue(fv).Int64() == 0
+					}
+					if !skip {
+						sb.WriteRune('\'')
+						sb.WriteString(n)
+						sb.WriteString("':")
+						switch {
+						case n == "ramQuota":
+							sb.WriteString(value.NewValue(value.AsNumberValue(fv).Int64() / util.MiB).ToString())
+						case n == "replicaIndex":
+							if fv.Truth() {
+								sb.WriteRune('1')
+							} else {
+								sb.WriteRune('0')
+							}
+						case n == "flushEnabled":
+							sb.WriteRune('1')
+						case fv.Type() == value.STRING:
+							sb.WriteRune('\'')
+							sb.WriteString(fv.ToString())
+							sb.WriteRune('\'')
+						default:
+							sb.WriteString(fv.ToString())
+						}
+						sb.WriteRune(',')
+					}
+				}
+				if sb.Len() > 0 {
+					s += " WITH {" + sb.String()[:sb.Len()-1] + "}"
+				}
+			}
+			s += ";"
+			res = append(res, s)
+		}
+
+		if flags&(_SCOPE_INFO|_COLLECTION_INFO) != 0 {
+			stmt = "SELECT RAW name FROM system:scopes WHERE `bucket` = ? ORDER BY name"
+			v, _, err := context.EvaluateStatement(stmt, nil, posArg, false, true, false, "")
+			if err != nil {
+				return value.MISSING_VALUE, err
+			}
+			scopes := v.Actual().([]interface{})
+			for j := range scopes {
+				scope := scopes[j].(string)
+				sb.Reset()
+				if flags&_SCOPE_INFO != 0 {
+					sb.WriteString("CREATE SCOPE `")
+					sb.WriteString(bucket)
+					sb.WriteString("`.`")
+					sb.WriteString(scope)
+					sb.WriteString("`;")
+					res = append(res, sb.String())
+				}
+
+				if flags&_COLLECTION_INFO != 0 {
+					stmt = "SELECT name, maxTTL FROM system:keyspaces WHERE `bucket` = ? AND `scope` = ? ORDER BY name"
+					v, _, err := context.EvaluateStatement(stmt, nil, append(posArg, value.NewValue(scope)), false, true, false, "")
+					if err != nil {
+						return value.MISSING_VALUE, err
+					}
+					for k := 0; ; k++ {
+						cv, ok := v.Index(k)
+						if !ok {
+							break
+						}
+						name, ok := cv.Field("name")
+						if !ok {
+							return value.NULL_VALUE, nil
+						}
+
+						sb.Reset()
+						sb.WriteString("CREATE COLLECTION `")
+						sb.WriteString(bucket)
+						sb.WriteString("`.`")
+						sb.WriteString(scope)
+						sb.WriteString("`.`")
+						sb.WriteString(name.ToString())
+						if maxTTL, ok := cv.Field("maxTTL"); ok {
+							sb.WriteString(" WITH {'maxTTL':")
+							sb.WriteString(maxTTL.ToString())
+							sb.WriteRune('}')
+						}
+						sb.WriteRune(';')
+						res = append(res, sb.String())
+					}
+				}
+			}
+		}
+
+		if flags&_INDEX_INFO != 0 {
+			stmt = "SELECT RAW CONCAT('CREATE INDEX `', s.name, '` ON ', k, ks, p, w, ';')" +
+				" FROM system:indexes AS s" +
+				" LET bid = CONCAT('`',s.bucket_id, '`')," +
+				" sid = CONCAT('`', s.scope_id, '`')," +
+				" kid = CONCAT('`', s.keyspace_id, '`')," +
+				" k = NVL2(bid, CONCAT2('.', bid, sid, kid), kid)," +
+				" ks = CASE WHEN s.`is_primary` THEN '' ELSE '(' || CONCAT2(',',s.`index_key`) || ') ' END," +
+				" w = CASE WHEN s.`condition` IS VALUED THEN ' WHERE ' || REPLACE(s.`condition`, '\"','''') ELSE '' END," +
+				" p = CASE WHEN s.`partition` IS VALUED THEN ' PARTITION BY ' || s.`partition` ELSE '' END" +
+				" WHERE s.namespace_id = 'default'" +
+				" AND s.`using` = 'gsi'" +
+				" AND NVL(s.bucket_id,s.keyspace_id) = ?" +
+				" ORDER BY s.name"
+			v, _, err = context.EvaluateStatement(stmt, nil, posArg, false, true, false, "")
+			if err != nil {
+				return value.MISSING_VALUE, err
+			}
+			indices := v.Actual().([]interface{})
+			res = append(res, indices...)
+		}
+
+		if flags&_SEQUENCE_INFO != 0 {
+			// Generate such that the sequence continues from the current point.  Since we don't keep a history of alterations we
+			// couldn't ever replay an exact sequence values generated and this approach allows the generated DDL to function with
+			// the existing data (at least as well as the active sequence would).
+			stmt = "SELECT RAW 'CREATE SEQUENCE '||`path`" +
+				"||' START WITH '||TO_STRING(`value`.`~next_block`)" +
+				"||' CACHE '||TO_STRING(`cache`)" +
+				"||CASE WHEN `cycle` = false THEN ' NO CYCLE' ELSE ' CYCLE' END" +
+				"||' INCREMENT BY '||TO_STRING(`increment`)" +
+				"||CASE WHEN `min` != -9223372036854775808 THEN ' MINVALUE '||TO_STRING(`min`) ELSE '' END" +
+				"||CASE WHEN `max` != 9223372036854775807 THEN ' MAXVALUE '||TO_STRING(`max`) ELSE '' END" +
+				"||';'" +
+				" FROM system:all_sequences" +
+				" WHERE `bucket` = ?" +
+				" ORDER BY `path`"
+			v, _, err = context.EvaluateStatement(stmt, nil, posArg, false, true, false, "")
+			if err != nil {
+				return value.MISSING_VALUE, err
+			}
+			sequences := v.Actual().([]interface{})
+			res = append(res, sequences...)
+		}
+	}
+
+	return value.NewValue(res), nil
+}
+
+func (this *ExtractDDL) Constructor() FunctionConstructor {
+	return NewExtractDDL
+}
+
+func (this *ExtractDDL) Indexable() bool {
+	return false
+}
+
+func (this *ExtractDDL) MinArgs() int {
+	return 1
+}
+
+func (this *ExtractDDL) MaxArgs() int {
+	return 2
 }

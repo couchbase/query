@@ -171,6 +171,7 @@ type collection struct {
 	chkIndex         chkIndexDict
 	isDefault        bool
 	isBucket         bool
+	maxTTL           int64
 }
 
 func getUser(context datastore.QueryContext) string {
@@ -237,6 +238,10 @@ func (coll *collection) ScopeId() string {
 
 func (coll *collection) Scope() datastore.Scope {
 	return coll.scope
+}
+
+func (coll *collection) MaxTTL() int64 {
+	return coll.maxTTL
 }
 
 func (coll *collection) Stats(context datastore.QueryContext, which []datastore.KeyspaceStats) ([]int64, errors.Error) {
@@ -496,6 +501,7 @@ func buildScopesAndCollections(mani *cb.Manifest, bucket *keyspace) (map[string]
 				uid:       uint32(c.Uid),
 				uidString: strconv.FormatUint(c.Uid, 16),
 				scope:     scope,
+				maxTTL:    c.MaxTTL,
 			}
 			scope.keyspaces[c.Name] = coll
 			coll.bucket = bucket
@@ -519,6 +525,7 @@ func buildScopesAndCollections(mani *cb.Manifest, bucket *keyspace) (map[string]
 					bucket:    bucket,
 					isDefault: true,
 					isBucket:  true,
+					maxTTL:    c.MaxTTL,
 				}
 			} else {
 				coll.authKey = bucket.name + ":" + scope.id + ":" + coll.name

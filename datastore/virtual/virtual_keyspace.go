@@ -212,6 +212,10 @@ func (this *virtualKeyspace) Scope() datastore.Scope {
 	return this.scope
 }
 
+func (this *virtualKeyspace) MaxTTL() int64 {
+	return 0
+}
+
 func (this *virtualKeyspace) Stats(context datastore.QueryContext, which []datastore.KeyspaceStats) ([]int64, errors.Error) {
 	var err errors.Error
 

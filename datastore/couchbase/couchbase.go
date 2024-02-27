@@ -3126,6 +3126,10 @@ func (b *keyspace) ScopeId() string {
 	return ""
 }
 
+func (b *keyspace) MaxTTL() int64 {
+	return 0
+}
+
 func (ks *keyspace) DefaultKeyspace() (datastore.Keyspace, errors.Error) {
 	switch d := ks.defaultCollection.(type) {
 	case *collection:

@@ -470,9 +470,10 @@ var _FUNCTIONS = map[string]Function{
 	"advisor": &Advisor{},
 
 	// General
-	"len":      &Len{},
-	"evaluate": &Evaluate{},
-	"finderr":  &Finderr{},
+	"len":        &Len{},
+	"evaluate":   &Evaluate{},
+	"finderr":    &Finderr{},
+	"extractddl": &ExtractDDL{},
 
 	// Infer
 	"infer_value": &InferValue{},

@@ -41,6 +41,10 @@ func (this *keyspaceBase) ScopeId() string {
 	return ""
 }
 
+func (this *keyspaceBase) MaxTTL() int64 {
+	return 0
+}
+
 func (this *keyspaceBase) QualifiedName() string {
 	return this.fullName
 }

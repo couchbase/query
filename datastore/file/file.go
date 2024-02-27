@@ -489,6 +489,10 @@ func (b *keyspace) ScopeId() string {
 	return ""
 }
 
+func (b *keyspace) MaxTTL() int64 {
+	return 0
+}
+
 func (b *keyspace) MetadataVersion() uint64 {
 	return 0
 }

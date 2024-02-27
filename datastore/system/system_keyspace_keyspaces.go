@@ -254,6 +254,9 @@ func (b *keyspaceKeyspace) fetchOneCollection(ns, bn, sn, ks string, context dat
 						"scope":        scope.Name(),
 						"path":         path(namespace.Name(), bucket.Name(), scope.Name(), keyspace.Name()),
 					})
+					if keyspace.MaxTTL() != 0 {
+						doc.SetField("maxTTL", value.NewValue(keyspace.MaxTTL()))
+					}
 					if b.info {
 						res, err2 := keyspace.Stats(context, []datastore.KeyspaceStats{datastore.KEYSPACE_COUNT,
 							datastore.KEYSPACE_SIZE})
