@@ -59,6 +59,8 @@ const (
 	PRIV_SEARCH_CREATE_INDEX                    Privilege = 37 // Ability to run FTS CREATE INDEX statements.
 	PRIV_SEARCH_DROP_INDEX                      Privilege = 38 // Ability to run FTS DROP INDEX statements.
 	PRIV_QUERY_SEQ_SCAN                         Privilege = 39 // Ability to use a sequential scan
+	PRIV_SREAD                                  Privilege = 40 // Read from system scope
+	PRIV_SWRITE                                 Privilege = 41 // Write to system scope
 )
 
 type PrivilegePair struct {
@@ -117,6 +119,7 @@ func (this *Privileges) AddPair(pp PrivilegePair) {
 		}
 	}
 	this.List = append(this.List, pp)
+	this.addSystem(pp.Target, pp.Priv, pp.Props)
 }
 
 func (this *Privileges) Add(target string, priv Privilege, Props int) {
@@ -127,6 +130,76 @@ func (this *Privileges) Add(target string, priv Privilege, Props int) {
 		}
 	}
 	this.List = append(this.List, PrivilegePair{Target: target, Priv: priv, Props: Props})
+	this.addSystem(target, priv, Props)
+}
+
+// automatically add system collection read/write privileges as necessary
+func (this *Privileges) addSystem(target string, priv Privilege, Props int) {
+	if len(target) >= 0 &&
+		(priv == PRIV_QUERY_SELECT || priv == PRIV_QUERY_INSERT || priv == PRIV_QUERY_UPDATE || priv == PRIV_QUERY_DELETE) &&
+		priv != PRIV_SWRITE && priv != PRIV_SREAD {
+
+		if isInSystemScope(target) {
+			np := PRIV_SWRITE
+			if priv == PRIV_QUERY_SELECT {
+				np = PRIV_SREAD
+			}
+			for _, pair := range this.List {
+				if pair.Target == target && pair.Priv == np && pair.Props == Props {
+					// already present
+					return
+				}
+			}
+			this.List = append(this.List, PrivilegePair{Target: target, Priv: np, Props: Props})
+		}
+	}
+}
+
+// expects syntactically correct target specification
+func isInSystemScope(target string) bool {
+	part := 0
+	start := 0
+	end := 0
+	inBackTicks := false
+	for i, c := range target {
+		switch c {
+		case '`':
+			inBackTicks = !inBackTicks
+			if inBackTicks {
+				start = i + 1
+			} else {
+				end = i
+			}
+		case ':':
+			if inBackTicks {
+				continue
+			}
+			if end != i-1 {
+				end = i
+			}
+			start = i + 1
+		case '.':
+			if inBackTicks {
+				continue
+			}
+			part++
+			if part == 2 {
+				if end != i-1 {
+					end = i
+				}
+				scope := target[start:end]
+				return len(scope) > 0 && scope[0] == '_' && scope != "_default"
+			} else if i+1 >= len(target) || (target[i+1] != '_' && target[i+1] != '`') {
+				return false
+			}
+			start = i + 1
+		}
+	}
+	if part == 1 && start < len(target) {
+		scope := target[start:]
+		return len(scope) > 0 && scope[0] == '_' && scope != "_default"
+	}
+	return false
 }
 
 /*
