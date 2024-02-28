@@ -24,6 +24,14 @@ func messageForDeniedPrivilege(pair auth.PrivilegePair) (string, string, string)
 	role := ""
 	base_role := ""
 	switch pair.Priv {
+	case auth.PRIV_SREAD:
+		privilege = "run data read queries on collections in the system scope"
+		base_role = "bucket_full_access"
+		role = base_role
+	case auth.PRIV_SWRITE:
+		privilege = "run data write queries on collections in the system scope"
+		base_role = "bucket_full_access"
+		role = base_role
 	case auth.PRIV_READ:
 		privilege = "run data read queries"
 		base_role = "bucket_full_access"

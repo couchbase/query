@@ -27,6 +27,10 @@ import (
 func privilegeString(namespace, target, obj string, requested auth.Privilege) (string, error) {
 	var permission string
 	switch requested {
+	case auth.PRIV_SWRITE:
+		permission = join5Strings("cluster.", obj, "[", target, "].data.docs!swrite")
+	case auth.PRIV_SREAD:
+		permission = join5Strings("cluster.", obj, "[", target, "].data.docs!sread")
 	case auth.PRIV_WRITE:
 		permission = join5Strings("cluster.", obj, "[", target, "].data.docs!write")
 	case auth.PRIV_READ:
