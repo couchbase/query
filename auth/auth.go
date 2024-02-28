@@ -136,8 +136,7 @@ func (this *Privileges) Add(target string, priv Privilege, Props int) {
 // automatically add system collection read/write privileges as necessary
 func (this *Privileges) addSystem(target string, priv Privilege, Props int) {
 	if len(target) >= 0 &&
-		(priv == PRIV_QUERY_SELECT || priv == PRIV_QUERY_INSERT || priv == PRIV_QUERY_UPDATE || priv == PRIV_QUERY_DELETE) &&
-		priv != PRIV_SWRITE && priv != PRIV_SREAD {
+		(priv == PRIV_QUERY_SELECT || priv == PRIV_QUERY_INSERT || priv == PRIV_QUERY_UPDATE || priv == PRIV_QUERY_DELETE) {
 
 		if isInSystemScope(target) {
 			np := PRIV_SWRITE
