@@ -1323,7 +1323,7 @@ func (p *namespace) keyspaceByName(name string) (*keyspace, errors.Error) {
 		// this is only needed when loading a keyspace that wasn't previously loaded
 		// and migration has completed (which populates system collection)
 		if runCleanup && datastore.IsMigrationComplete(datastore.HAS_SYSTEM_COLLECTION) {
-			go cleanupSystemCollection(p.name, name)
+			go CleanupSystemCollection(p.name, name)
 		}
 		return k, nil
 	}
@@ -3102,7 +3102,7 @@ func setMutateClientContext(context datastore.QueryContext, clientContext ...*me
 
 const _BATCH_SIZE = 512
 
-func cleanupSystemCollection(namespace string, bucket string) {
+func CleanupSystemCollection(namespace string, bucket string) {
 
 	processResult := func(key string) {
 		if strings.HasPrefix(key, "seq::") {
