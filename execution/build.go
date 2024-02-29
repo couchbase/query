@@ -426,7 +426,7 @@ func (this *builder) VisitOrder(plan *plan.Order) (interface{}, error) {
 	} else if plan.LimitPushed() {
 		return checkOp(NewOrderLimit(plan, this.context), this.context)
 	} else {
-		return checkOp(NewOrder(plan, this.context), this.context)
+		return checkOp(NewOrder(plan, this.context, nil), this.context)
 	}
 }
 

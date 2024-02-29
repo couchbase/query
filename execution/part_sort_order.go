@@ -33,11 +33,16 @@ type PartSortOrder struct {
 func NewPartSortOrder(order *plan.Order, context *Context) *PartSortOrder {
 	var rv *PartSortOrder
 
+	pst := order.PartialSortTermCount()
+	if pst <= 0 || pst >= len(order.Terms()) {
+		panic("Invalid partial sort term count")
+	}
+
 	rv = &PartSortOrder{
-		Order:                NewOrder(order, context),
-		partialSortTermCount: order.PartialSortTermCount(),
+		partialSortTermCount: pst,
 		fallbackNum:          plan.OrderFallbackNum(),
 	}
+	rv.Order = NewOrder(order, context, rv.remainingTermsLessThan)
 
 	if order.Offset() != nil {
 		rv.offset = NewOffset(order.Offset(), context)
@@ -303,10 +308,8 @@ func (this *PartSortOrder) samePartialSortValues(v1 value.AnnotatedValue, v2 val
 	var ev1, ev2 value.Value
 	var e error
 
-	for i, term := range this.plan.Terms() {
-		if i == this.partialSortTermCount {
-			return true
-		}
+	for i := 0; i < this.partialSortTermCount; i++ {
+		term := this.plan.Terms()[i]
 		s := this.terms[i].term
 
 		ev1, e = getOriginalCachedValue(v1, term.Expression(), s, &this.operatorCtx)
@@ -331,5 +334,5 @@ func (this *PartSortOrder) samePartialSortValues(v1 value.AnnotatedValue, v2 val
 		}
 	}
 
-	return false
+	return true
 }

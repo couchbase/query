@@ -37,7 +37,7 @@ const _MIN_SIZE = 128 * util.MiB
 
 var _ORDER_POOL = value.NewAnnotatedPool(_ORDER_CAP)
 
-func NewOrder(plan *plan.Order, context *Context) *Order {
+func NewOrder(plan *plan.Order, context *Context, less func(value.AnnotatedValue, value.AnnotatedValue) bool) *Order {
 	rv := &Order{
 		plan: plan,
 	}
@@ -87,12 +87,15 @@ func NewOrder(plan *plan.Order, context *Context) *Order {
 			}
 		}
 	}
+	if less == nil {
+		less = rv.lessThan
+	}
 	rv.values = value.NewAnnotatedArray(
 		acquire,
 		func(p value.AnnotatedValues) { _ORDER_POOL.Put(p) },
 		shouldSpill,
 		trackMem,
-		rv.lessThan,
+		less,
 		!plan.ClipValues(),
 	)
 

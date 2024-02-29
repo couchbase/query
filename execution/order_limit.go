@@ -29,7 +29,7 @@ func NewOrderLimit(order *plan.Order, context *Context) *OrderLimit {
 	var rv *OrderLimit
 	if order.Offset() == nil {
 		rv = &OrderLimit{
-			Order:            NewOrder(order, context),
+			Order:            NewOrder(order, context, nil),
 			offset:           nil,
 			limit:            NewLimit(order.Limit(), context),
 			fallbackNum:      plan.OrderFallbackNum(),
@@ -38,7 +38,7 @@ func NewOrderLimit(order *plan.Order, context *Context) *OrderLimit {
 		}
 	} else {
 		rv = &OrderLimit{
-			Order:            NewOrder(order, context),
+			Order:            NewOrder(order, context, nil),
 			offset:           NewOffset(order.Offset(), context),
 			limit:            NewLimit(order.Limit(), context),
 			fallbackNum:      plan.OrderFallbackNum(),
