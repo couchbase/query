@@ -50,8 +50,9 @@ func (t *testT) Close() error {
 	return nil
 }
 
-func testMkConn(h string, ah AuthHandler, tlsConfig *tls.Config, bucketName string) (*memcached.Client, error) {
-	return memcached.Wrap(&testT{})
+func testMkConn(h string, ah AuthHandler, tlsConfig *tls.Config, bucketName string) (*memcached.Client, string, error) {
+	c, e := memcached.Wrap(&testT{})
+	return c, "", e
 }
 
 func TestConnPool(t *testing.T) {
@@ -295,8 +296,8 @@ func TestConnPoolWaitDoubleFailFull(t *testing.T) {
 		seenClients[sc] = true
 	}
 
-	cp.mkConn = func(h string, ah AuthHandler, tlsConfig *tls.Config, bucketName string) (*memcached.Client, error) {
-		return nil, io.EOF
+	cp.mkConn = func(h string, ah AuthHandler, tlsConfig *tls.Config, bucketName string) (*memcached.Client, string, error) {
+		return nil, "", io.EOF
 	}
 
 	// causes failure
