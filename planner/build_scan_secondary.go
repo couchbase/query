@@ -618,7 +618,9 @@ func narrowerOrEquivalent(se, te *indexEntry, shortest, corrSubq bool, predFc ma
 	if te.nSargKeys > 0 && te.nSargKeys == snk+snc && se.nSargKeys > snk && be == se {
 		// all te sargable keys are se sargable keys and part of se condition;
 		//  se have more different sragable keys
-
+		if te.cond != nil && (se.cond == nil || !base.SubsetOf(se.cond, te.cond)) {
+			return false
+		}
 		return true
 	}
 
