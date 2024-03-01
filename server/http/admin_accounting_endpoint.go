@@ -1305,6 +1305,9 @@ func doBucketBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 			iState.Release()
 		}
 
+		// after restoring cleanup any stale entries in the system collection
+		go dictionary.CleanupSystemCollection("default", bucket)
+
 	default:
 		return nil, errors.NewServiceErrorHttpMethod(req.Method)
 	}
@@ -2708,7 +2711,7 @@ func doSequenceRestore(v []byte, b string, include, exclude matcher, remap remap
 					err1 = sequences.CreateSequence(p, with)
 				}
 			}
-			if err1 != nil {
+			if err1 != nil && !err1.IsWarning() {
 				return errors.NewServiceErrorBadValue(err1, "sequence restore")
 			}
 		}

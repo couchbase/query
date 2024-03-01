@@ -42,6 +42,9 @@ const (
 	INDEX_API_MIN = INDEX_API_1
 	INDEX_API_MAX = INDEX_API_4
 )
+const (
+	INDEXER6_VERSION = "7.6.1"
+)
 
 type Indexer interface {
 	BucketId() string
@@ -208,6 +211,7 @@ const (
 	IK_NONE    IkAttributes = 0x00
 	IK_DESC                 = 0x01
 	IK_MISSING              = 0x01 << 1
+	IK_VECTOR               = 0x01 << 2
 )
 
 type Indexer2 interface {
@@ -477,6 +481,65 @@ type Indexer5 interface {
 ////////////////////////////////////////////////////////////////////////
 //
 // End of Index API5.
+//
+////////////////////////////////////////////////////////////////////////
+
+// //////////////////////////////////////////////////////////////////////
+//
+// # Index API6 introduced in 7.6.1 for Vector index
+//
+// //////////////////////////////////////////////////////////////////////
+type IndexDistanceType string
+
+const (
+	IX_DIST_L2          IndexDistanceType = "l2"
+	IX_DIST_EUCLIDEAN   IndexDistanceType = "euclidean"
+	IX_DIST_COSINE_SIM  IndexDistanceType = "cosine_sim"
+	IX_DIST_DOT_PRODUCT IndexDistanceType = "dot_product"
+)
+
+type IndexVector struct {
+	QueryVector  []float32 // query vector
+	IndexkeyPos  int       // vector key pos in index
+	Probes       int       // nprobes
+	ActualVector bool      // Use actual vector
+}
+
+type IndexPartitionSet struct {
+	ValueSet []value.Value
+}
+
+type IndexPartitionSets []*IndexPartitionSet
+
+type Indexer6 interface {
+	Indexer5
+
+	CreateIndex6(requestId, name string, isBhive bool, rangeKey IndexKeys, indexPartition *IndexPartition,
+		where expression.Expression, with value.Value, include expression.Expressions,
+		conn *IndexConnection) (Index, errors.Error)
+}
+
+type Index6 interface {
+	Index4
+
+	IsBhive() bool  // BHIVE  index
+	IsVector() bool // BHIVE  || one of attribute has Vector
+	VectorDistanceType() IndexDistanceType
+	VectorDimension() int
+	VectorProbes() int
+	Include() expression.Expressions
+
+	Scan6(requestId string, spans Spans2, reverse, distinctAfterProjection bool,
+		projection *IndexProjection, offset, limit int64,
+		groupAggs *IndexGroupAggregates, indexOrders IndexKeyOrders,
+		indexKeyNames []string, inlineFilter string,
+		indexVector *IndexVector, indexPartionSets IndexPartitionSets,
+		cons ScanConsistency, vector timestamp.Vector, conn *IndexConnection)
+}
+
+////////////////////////////////////////////////////////////////////////
+//
+// End of Index API6.
 //
 ////////////////////////////////////////////////////////////////////////
 
