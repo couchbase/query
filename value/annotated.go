@@ -131,6 +131,7 @@ type annotatedValue struct {
 	original          Value
 	annotatedOrig     AnnotatedValue
 	noRecycle         bool
+	hasSelfRef        bool
 }
 
 func (this *annotatedValue) String() string {
@@ -148,6 +149,7 @@ func (this *annotatedValue) WriteJSON(w io.Writer, prefix, indent string, fast b
 func (this *annotatedValue) Copy() Value {
 	rv := newAnnotatedValue()
 	rv.Value = this.Value.Copy()
+	rv.updateSelfReferences(this)
 	copyAttachments(this.attachments, rv)
 	copyMeta(this.meta, rv)
 	rv.id = this.id
@@ -162,6 +164,7 @@ func (this *annotatedValue) Copy() Value {
 func (this *annotatedValue) CopyForUpdate() Value {
 	rv := newAnnotatedValue()
 	rv.Value = this.Value.CopyForUpdate()
+	rv.updateSelfReferences(this)
 	copyAttachments(this.attachments, rv)
 	copyMeta(this.meta, rv)
 	rv.id = this.id
@@ -172,11 +175,27 @@ func (this *annotatedValue) CopyForUpdate() Value {
 	return rv
 }
 
+func (this *annotatedValue) updateSelfReferences(orig *annotatedValue) {
+	if !orig.hasSelfRef {
+		return
+	}
+	osr := (*annotatedValueSelfReference)(orig)
+	nsr := (*annotatedValueSelfReference)(this)
+	flds := this.Value.Fields()
+	for k, v := range flds {
+		if avsr, ok := v.(*annotatedValueSelfReference); ok && avsr == osr {
+			flds[k] = nsr
+		}
+	}
+	this.hasSelfRef = true
+}
+
 func (this *annotatedValue) SetField(field string, val interface{}) error {
 	var err error
 	if val == this {
 		selfRef := (*annotatedValueSelfReference)(val.(*annotatedValue))
 		err = this.Value.SetField(field, selfRef)
+		this.hasSelfRef = this.hasSelfRef || (err == nil)
 	} else {
 		err = this.Value.SetField(field, val)
 		if err == nil {
@@ -753,4 +772,12 @@ func (this *annotatedValueSelfReference) Original() AnnotatedValue {
 
 func (this *annotatedValueSelfReference) ResetOriginal() {
 	(*annotatedValue)(this).ResetOriginal()
+}
+
+func (this *annotatedValueSelfReference) Copy() Value {
+	return this
+}
+
+func (this *annotatedValueSelfReference) CopyForUpdate() Value {
+	return this
 }
