@@ -9,7 +9,6 @@
 package system
 
 import (
-	"strings"
 	"time"
 
 	"github.com/couchbase/query/datastore"
@@ -123,9 +122,7 @@ func (b *activeRequestsKeyspace) Fetch(keys []string, keysMap map[string]value.A
 					meta := remoteValue.NewMeta()
 					meta["keyspace"] = b.fullName
 					if ok {
-						meta["plan"] = value.ApplyDurationStyleToValue(context.DurationStyle(), func(s string) bool {
-							return strings.HasSuffix(s, "Time")
-						}, value.NewValue(t))
+						meta["plan"] = value.ApplyDurationStyleToValue(context.DurationStyle(), value.NewValue(t))
 					}
 					if ook {
 						meta["optimizerEstimates"] = value.NewValue(o)
@@ -265,12 +262,10 @@ func (b *activeRequestsKeyspace) Fetch(keys []string, keysMap map[string]value.A
 
 				timings := request.GetTimings()
 				if timings != nil {
-					meta["plan"] = value.ApplyDurationStyleToValue(context.DurationStyle(), func(s string) bool {
-						return strings.HasSuffix(s, "Time")
-					}, value.NewMarshalledValue(timings))
+					meta["plan"] = value.ApplyDurationStyleToValue(context.DurationStyle(), value.NewMarshalledValue(timings))
 					optEstimates := request.Output().FmtOptimizerEstimates(timings)
 					if optEstimates != nil {
-						meta["optimizerEstimates"] = value.NewMarshalledValue(optEstimates)
+						meta["optimizerEstimates"] = value.NewValue(optEstimates)
 					}
 				}
 

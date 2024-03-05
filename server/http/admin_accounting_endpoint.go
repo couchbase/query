@@ -1812,9 +1812,7 @@ func activeRequestWorkHorse(endpoint *HttpEndpoint, request server.Request, prof
 		if prof == server.ProfOn || prof == server.ProfBench {
 			timings := request.GetTimings()
 			if timings != nil {
-				reqMap["timings"] = value.ApplyDurationStyleToValue(durStyle, func(s string) bool {
-					return strings.HasSuffix(s, "Time")
-				}, value.NewMarshalledValue(timings))
+				reqMap["timings"] = value.ApplyDurationStyleToValue(durStyle, value.NewMarshalledValue(timings))
 				p = request.Output().FmtOptimizerEstimates(timings)
 				if p != nil {
 					reqMap["optimizerEstimates"] = value.NewValue(p)
@@ -2070,9 +2068,7 @@ func completedRequestWorkHorse(request *server.RequestLogEntry, profiling bool, 
 		}
 		timings := request.Timings()
 		if timings != nil {
-			reqMap["timings"] = value.ApplyDurationStyleToValue(durStyle, func(s string) bool {
-				return strings.HasSuffix(s, "Time")
-			}, value.NewValue(interfaceRedacted(timings, redact)))
+			reqMap["timings"] = interfaceRedacted(string(util.ApplyDurationStyle(durStyle, timings)), redact)
 		}
 		if request.CpuTime > time.Duration(0) {
 			reqMap["cpuTime"] = util.FormatDuration(request.CpuTime, durStyle)

@@ -9,6 +9,7 @@
 package util
 
 import (
+	"bytes"
 	"fmt"
 	"strconv"
 	"strings"
@@ -159,4 +160,44 @@ func ParseDurationStyle(str string, style DurationStyle) (time.Duration, error) 
 	default: // LEGACY + COMPATIBLE
 		return time.ParseDuration(str)
 	}
+}
+
+// Input is a byte buffer containing the JSON data.  Fields ending in "Time" are searched for and if the associated value is a
+// string that parses as the default duration style, it is replaced with the value formatted according to the input duration style.
+// It is assumed that the input data would have been formatted in the currently-in-effect duration style. If not and the requested
+// duration style matches the default no duration formatting takes place - which means there are possible cases when this is not
+// applied and a different duration style to that requested is returned.
+func ApplyDurationStyle(s DurationStyle, buf []byte) []byte {
+	if s == durationStyle || s == DEFAULT {
+		return buf
+	}
+	var output bytes.Buffer
+	for len(buf) > 0 {
+		index := bytes.Index(buf, []byte(`Time": "`))
+		if -1 == index {
+			if output.Len() == 0 {
+				return buf
+			}
+			break
+		}
+		output.Write(buf[:index+8])
+		buf = buf[index+8:]
+		index = bytes.IndexByte(buf, byte('"'))
+		if index == -1 || index == len(buf)-1 {
+			break
+		}
+		if buf[index+1] == ',' || buf[index+1] == '\n' {
+			d, e := ParseDuration(string(buf[:index]))
+			if e == nil {
+				s := FormatDuration(d, s)
+				output.WriteString(s)
+				buf = buf[index:]
+			}
+		}
+	}
+	if len(buf) > 0 {
+		output.Write(buf)
+	}
+
+	return output.Bytes()
 }

@@ -1438,21 +1438,16 @@ func (this *httpRequest) writeProfile(profile server.Profile, prefix, indent str
 	if p == server.ProfOn || p == server.ProfBench {
 		timings := this.GetTimings()
 		if timings != nil {
-			e, err = json.Marshal(timings)
-			if err != nil {
-				logging.Infof("Error writing executionTimings: %v", err)
+			if indent != "" {
+				e, err = json.MarshalIndent(timings, "\t", indent)
 			} else {
-				v := value.ApplyDurationStyleToValue(this.DurationStyle(), func(s string) bool {
-					return strings.HasSuffix(s, "Time")
-				}, value.NewValue(e))
-				if indent != "" {
-					e, err = json.MarshalIndent(v, "\t", indent)
-				} else {
-					e, err = json.Marshal(v)
-				}
-				if err != nil || !this.writer.printf(",%s\"executionTimings\": %s", newPrefix, e) {
-					logging.Infof("Error writing executionTimings: %v", err)
-				}
+				e, err = json.Marshal(timings)
+			}
+			if err == nil {
+				e = util.ApplyDurationStyle(this.DurationStyle(), e)
+			}
+			if err != nil || !this.writer.printf(",%s\"executionTimings\": %s", newPrefix, e) {
+				logging.Infof("Error writing executionTimings: %v", err)
 			}
 			this.SetFmtTimings(e)
 			optEstimates := this.FmtOptimizerEstimates(timings)
@@ -1476,7 +1471,6 @@ func (this *httpRequest) writeProfile(profile server.Profile, prefix, indent str
 }
 
 func (this *httpRequest) writeProfileXML(profile server.Profile, prefix string, indent string) bool {
-	var e []byte
 	var err error
 
 	p := this.Profile()
@@ -1557,38 +1551,30 @@ func (this *httpRequest) writeProfileXML(profile server.Profile, prefix string, 
 	if p == server.ProfOn || p == server.ProfBench {
 		timings := this.GetTimings()
 		if timings != nil {
-			e, err = json.Marshal(timings)
-			if err != nil {
+			if err != nil || !this.writeString(newPrefix) || !this.writeString("<executionTimings>") {
 				logging.Infof("Error writing executionTimings: %v", err)
 			} else {
-				m := make(map[string]interface{})
-				err = json.Unmarshal(e, &m)
-				if err != nil || !this.writeString(newPrefix) || !this.writeString("<executionTimings>") {
+				v := value.ApplyDurationStyleToValue(this.DurationStyle(), value.NewMarshalledValue(timings))
+				err = v.WriteXML(nil, this.writer.buf(), newValuePrefix, indent, false)
+				if err != nil || !this.writeString(newPrefix) || !this.writeString("</executionTimings>") {
 					logging.Infof("Error writing executionTimings: %v", err)
-				} else {
-					v := value.ApplyDurationStyleToValue(this.DurationStyle(), func(s string) bool {
-						return strings.HasSuffix(s, "Time")
-					}, value.NewValue(m))
-					err = v.WriteXML(nil, this.writer.buf(), newValuePrefix, indent, false)
-					if err != nil || !this.writeString(newPrefix) || !this.writeString("</executionTimings>") {
-						logging.Infof("Error writing executionTimings: %v", err)
-					}
 				}
-				this.SetFmtTimings(e)
-			}
-			optEstimates := this.FmtOptimizerEstimates(timings)
-			if optEstimates != nil {
-				if !this.writeString(newPrefix) || !this.writeString("<optimizerEstimates>") {
-					logging.Infof("Error writing optimizerEstimates: %v", err)
-				} else {
-					v := value.NewValue(optEstimates)
-					err = v.WriteXML(nil, this.writer.buf(), newValuePrefix, indent, false)
-					if err != nil || !this.writeString(newPrefix) || !this.writeString("</optimizerEstimates>") {
+				// we can't set the formatted timings as that's expecting JSON format and we've only got the value here
+				// addtion to completed requests will take care of JSON formatting the value
+				optEstimates := this.FmtOptimizerEstimates(timings)
+				if optEstimates != nil {
+					if !this.writeString(newPrefix) || !this.writeString("<optimizerEstimates>") {
 						logging.Infof("Error writing optimizerEstimates: %v", err)
+					} else {
+						v := value.NewValue(optEstimates)
+						err = v.WriteXML(nil, this.writer.buf(), newValuePrefix, indent, false)
+						if err != nil || !this.writeString(newPrefix) || !this.writeString("</optimizerEstimates>") {
+							logging.Infof("Error writing optimizerEstimates: %v", err)
+						}
 					}
 				}
+				this.SetFmtOptimizerEstimates(optEstimates)
 			}
-			this.SetFmtOptimizerEstimates(optEstimates)
 		}
 	}
 	if newPrefix != "" && !this.writeString(newPrefix[:len(prefix)+1]) {
