@@ -433,16 +433,15 @@ var _MERGE_OPERATOR_POOL = NewOperatorPool(3)
 var _MERGE_CHANNEL_POOL = NewChannelPool(3)
 var _MERGE_KEY_POOL = util.NewStringBoolPool(1024)
 
-// The sole purpose of this notifier is to interrupt a waiting exchange when an action halts before all items have been processed
-// It is separate from the Merge operator as an action stopping need not stop the operator itself
+// The purpose of this type is to accept a stop notification from an action and relay that to the merge by stopping the merge's
+// valueExchange.  This will wake it if it is waiting along with preventing further exchange actions, allowing the operator to end
+// cleanly.
 type actionStopNotifier struct {
 	exchange *valueExchange
 }
 
 func (this *actionStopNotifier) SendAction(action opAction) {
-	if this.exchange.isWaiting() {
-		this.exchange.sendStop()
-	}
+	this.exchange.sendStop()
 }
 
 func newActionStopNotifier(op Operator) *actionStopNotifier {
