@@ -14,6 +14,7 @@ import (
 	"math"
 
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
 )
@@ -59,24 +60,14 @@ func (this *Limit) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *Limit) beforeItems(context *Context, parent value.Value) bool {
-	val, e := this.plan.Expression().Evaluate(parent, &this.operatorCtx)
-	if e != nil {
-		context.Error(errors.NewEvaluationError(e, "LIMIT"))
+	lim, err := getLimit(this.plan.Expression(), parent, &this.operatorCtx)
+	if err != nil {
+		context.Error(err)
 		return false
 	}
 
-	actual := val.Actual()
-	switch actual := actual.(type) {
-	case float64:
-		if math.Trunc(actual) == actual {
-			this.limit = int64(actual)
-			return true
-		}
-	}
-
-	context.Error(errors.NewInvalidValueError(
-		fmt.Sprintf("Invalid LIMIT value %v.", actual)))
-	return false
+	this.limit = lim
+	return true
 }
 
 func (this *Limit) processItem(item value.AnnotatedValue, context *Context) bool {
@@ -101,4 +92,27 @@ func (this *Limit) MarshalJSON() ([]byte, error) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)
+}
+
+func getLimit(limit expression.Expression, parent value.Value, context *opContext) (int64, errors.Error) {
+	if limit == nil {
+		return -1, nil
+	}
+
+	val, err := limit.Evaluate(parent, context)
+	if err != nil {
+		return -1, errors.NewEvaluationError(err, "LIMIT clause")
+	}
+
+	l := val.ActualForIndex() // Exact number
+	switch l := l.(type) {
+	case int64:
+		return l, nil
+	case float64:
+		if math.Trunc(l) == l {
+			return int64(l), nil
+		}
+	}
+
+	return -1, errors.NewInvalidValueError(fmt.Sprintf("Invalid LIMIT %v of type %T.", l, l))
 }

@@ -378,6 +378,12 @@ func run(mockServer *MockServer, queryParams map[string]interface{}, q, namespac
 		}
 	}
 
+	if f, ok := queryParams["n1ql_feat_ctrl"]; ok {
+		if fc, ok := f.(float64); ok {
+			query.SetFeatureControls(uint64(fc))
+		}
+	}
+
 	if userArgs == nil {
 		query.SetCredentials(&_ALL_USERS)
 	} else {
@@ -1062,7 +1068,7 @@ func Start_cs_http(setGlobals bool) *MockServer {
 }
 
 func RunMatch(filename string, prepared, explain bool, qc *MockServer, t *testing.T) {
-	util.SetN1qlFeatureControl(util.GetN1qlFeatureControl() & ^util.N1QL_ENCODED_PLAN)
+
 	// Start the completed requests log - keep it small and busy
 
 	util.SetN1qlFeatureControl(util.GetN1qlFeatureControl() & ^util.N1QL_ENCODED_PLAN)

@@ -58,6 +58,7 @@ func TestMerge(t *testing.T) {
 
 	// test MERGE error cases
 	runMatch("case_merge_error.json", false, false, qc, t)
+	runMatch("case_merge_error_legacy.json", false, false, qc, t)
 
 	fmt.Println("Dropping indexes")
 	runStmt(qc, "DROP INDEX orders.o_productId")

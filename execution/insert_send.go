@@ -88,20 +88,13 @@ func (this *SendInsert) beforeItems(context *Context, parent value.Value) bool {
 		return true
 	}
 
-	limit, err := this.plan.Limit().Evaluate(parent, &this.operatorCtx)
+	lim, err := getLimit(this.plan.Limit(), parent, &this.operatorCtx)
 	if err != nil {
-		context.Error(errors.NewEvaluationError(err, "LIMIT clause"))
+		context.Error(err)
 		return false
 	}
 
-	switch l := limit.Actual().(type) {
-	case float64:
-		this.limit = int64(l)
-	default:
-		context.Error(errors.NewInvalidValueError(fmt.Sprintf("Invalid LIMIT %v of type %T.", l, l)))
-		return false
-	}
-
+	this.limit = lim
 	return true
 }
 

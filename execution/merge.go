@@ -14,6 +14,7 @@ import (
 
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/system"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
@@ -26,16 +27,84 @@ type Merge struct {
 	insert   Operator
 	matched  map[string]bool
 	inserted map[string]bool
+	updates  *value.AnnotatedArray
+	deletes  *value.AnnotatedArray
+	inserts  *value.AnnotatedArray
 	children []Operator
 	inputs   []*Channel
 }
 
 func NewMerge(plan *plan.Merge, context *Context, update, delete, insert Operator) *Merge {
+	var updates, deletes, inserts *value.AnnotatedArray
+
+	if !context.HasFeature(util.N1QL_MERGE_LEGACY) {
+		// for spilling to disk use the same functions/constants as used in Order operator
+		var shouldSpill func(uint64, uint64) bool
+		if plan.CanSpill() {
+			if context.UseRequestQuota() && context.MemoryQuota() > 0 {
+				shouldSpill = func(c uint64, n uint64) bool {
+					if (c + n) <= context.ProducerThrottleQuota() {
+						return false
+					}
+					f := util.RoundPlaces(system.GetMemActualFreePercent(), 1)
+					if f < 0.1 {
+						f = 0.1
+					} else if f > 0.7 {
+						f = 0.7
+					}
+					return context.CurrentQuotaUsage() > f
+				}
+			} else {
+				maxSize := context.AvailableMemory()
+				if maxSize > 0 {
+					maxSize = uint64(float64(maxSize) / float64(util.NumCPU()) * 0.2) // 20% of per CPU free memory
+				}
+				if maxSize < _MIN_SIZE {
+					maxSize = _MIN_SIZE
+				}
+				shouldSpill = func(c uint64, n uint64) bool {
+					return (c + n) > maxSize
+				}
+			}
+		}
+		acquire := func(size int) value.AnnotatedValues {
+			if size <= _ORDER_POOL.Size() {
+				return _ORDER_POOL.Get()
+			}
+			return make(value.AnnotatedValues, 0, size)
+		}
+		release := func(p value.AnnotatedValues) { _ORDER_POOL.Put(p) }
+		trackMem := func(size int64) {
+			if context.UseRequestQuota() {
+				if size < 0 {
+					context.ReleaseValueSize(uint64(-size))
+				} else {
+					if err := context.TrackValueSize(uint64(size)); err != nil {
+						context.Fatal(errors.NewMemoryQuotaExceededError())
+					}
+				}
+			}
+		}
+
+		if update != nil {
+			updates = value.NewAnnotatedArray(acquire, release, shouldSpill, trackMem, nil, true)
+		}
+		if delete != nil {
+			deletes = value.NewAnnotatedArray(acquire, release, shouldSpill, trackMem, nil, true)
+		}
+		if insert != nil {
+			inserts = value.NewAnnotatedArray(acquire, release, shouldSpill, trackMem, nil, true)
+		}
+	}
+
 	rv := &Merge{
-		plan:   plan,
-		update: update,
-		delete: delete,
-		insert: insert,
+		plan:    plan,
+		update:  update,
+		delete:  delete,
+		insert:  insert,
+		updates: updates,
+		deletes: deletes,
+		inserts: inserts,
 	}
 
 	newBase(&rv.base, context)
@@ -54,6 +123,15 @@ func (this *Merge) Copy() Operator {
 		update: copyOperator(this.update),
 		delete: copyOperator(this.delete),
 		insert: copyOperator(this.insert),
+	}
+	if this.updates != nil {
+		rv.updates = this.updates.Copy()
+	}
+	if this.deletes != nil {
+		rv.deletes = this.deletes.Copy()
+	}
+	if this.inserts != nil {
+		rv.inserts = this.inserts.Copy()
 	}
 	this.base.copy(&rv.base)
 	return rv
@@ -100,6 +178,15 @@ func (this *Merge) RunOnce(context *Context, parent value.Value) {
 				_MERGE_KEY_POOL.Put(this.inserted)
 				this.inserted = nil
 			}
+			if this.updates != nil {
+				this.updates.Release()
+			}
+			if this.deletes != nil {
+				this.deletes.Release()
+			}
+			if this.inserts != nil {
+				this.inserts.Release()
+			}
 		}()
 
 		if update != nil {
@@ -124,6 +211,14 @@ func (this *Merge) RunOnce(context *Context, parent value.Value) {
 			this.fork(child, context, parent)
 		}
 
+		limit, err := getLimit(this.plan.Limit(), parent, &this.operatorCtx)
+		if err != nil {
+			context.Error(err)
+			return
+		}
+
+		legacy := context.HasFeature(util.N1QL_MERGE_LEGACY)
+		hasLimit := limit >= 0
 		var item value.AnnotatedValue
 		ok := true
 
@@ -137,9 +232,70 @@ func (this *Merge) RunOnce(context *Context, parent value.Value) {
 				break
 			}
 			if this.plan.IsOnKey() {
-				ok = this.processKeyMatch(item, context, update, delete, insert)
+				ok = this.processKeyMatch(item, context, update, delete, insert, legacy, limit)
 			} else {
-				ok = this.processAction(item, context, "", update, delete, insert)
+				ok = this.processAction(item, context, "", update, delete, insert, legacy, limit)
+			}
+			// if LIMIT is specified, and we've accumulated enough documents for
+			// MERGE actions, no need to get additional input
+			if ok && hasLimit && !legacy {
+				updDone := true
+				if update != nil && this.updates != nil {
+					updDone = int64(this.updates.Length()) >= limit
+				}
+				delDone := true
+				if delete != nil && this.deletes != nil {
+					delDone = int64(this.deletes.Length()) >= limit
+				}
+				insDone := true
+				if insert != nil && this.inserts != nil {
+					insDone = int64(this.inserts.Length()) >= limit
+				}
+				if updDone && delDone && insDone {
+					break
+				}
+			}
+		}
+
+		// process delayed updates
+		if ok && this.updates != nil {
+			err = this.updates.Foreach(func(av value.AnnotatedValue) bool {
+				if this.ValueExchange().stoppedChildren() > 0 {
+					return false
+				}
+				return this.sendItemOp(update.Input(), av)
+			})
+			if err != nil {
+				context.Error(err)
+				ok = false
+			}
+		}
+
+		// process delayed deletes
+		if ok && this.deletes != nil {
+			err = this.deletes.Foreach(func(av value.AnnotatedValue) bool {
+				if this.ValueExchange().stoppedChildren() > 0 {
+					return false
+				}
+				return this.sendItemOp(delete.Input(), av)
+			})
+			if err != nil {
+				context.Error(err)
+				ok = false
+			}
+		}
+
+		// process delayed inserts
+		if ok && this.inserts != nil {
+			err = this.inserts.Foreach(func(av value.AnnotatedValue) bool {
+				if this.ValueExchange().stoppedChildren() > 0 {
+					return false
+				}
+				return this.sendItemOp(insert.Input(), av)
+			})
+			if err != nil {
+				context.Error(err)
+				ok = false
 			}
 		}
 
@@ -154,7 +310,7 @@ func (this *Merge) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *Merge) processKeyMatch(item value.AnnotatedValue,
-	context *Context, update, delete, insert Operator) bool {
+	context *Context, update, delete, insert Operator, legacy bool, limit int64) bool {
 	kv, e := this.plan.Key().Evaluate(item, &this.operatorCtx)
 	if e != nil {
 		context.Error(errors.NewEvaluationError(e, "MERGE key"))
@@ -192,19 +348,20 @@ func (this *Merge) processKeyMatch(item value.AnnotatedValue,
 		item.SetField(this.plan.KeyspaceRef().Alias(), bvs[k])
 	}
 
-	return this.processAction(item, context, k, update, delete, insert)
+	return this.processAction(item, context, k, update, delete, insert, legacy, limit)
 }
 
 func (this *Merge) processAction(item value.AnnotatedValue, context *Context,
-	insertKey string, update, delete, insert Operator) bool {
+	insertKey string, update, delete, insert Operator, legacy bool, limit int64) bool {
 
 	var tv value.Value
 	var tav value.AnnotatedValue
 	var key string
 	match := false
 	ok1 := true
+	alias := this.plan.KeyspaceRef().Alias()
 
-	tv, ok1 = item.Field(this.plan.KeyspaceRef().Alias())
+	tv, ok1 = item.Field(alias)
 	if ok1 {
 		tav, ok1 = tv.(value.AnnotatedValue)
 		if !ok1 {
@@ -219,7 +376,7 @@ func (this *Merge) processAction(item value.AnnotatedValue, context *Context,
 
 		// check whether the matched document was inserted as part of
 		// INSERT action of this MERGE statement, if so, treat it as unmatched
-		if insert == nil {
+		if insert == nil || !legacy {
 			match = true
 		} else if _, ok1 = this.inserted[key]; !ok1 {
 			match = true
@@ -229,7 +386,6 @@ func (this *Merge) processAction(item value.AnnotatedValue, context *Context,
 	ok := true
 	if match {
 		// Perform UPDATE and/or DELETE
-		check := true
 		if update != nil {
 			matched := true
 			if this.plan.UpdateFilter() != nil {
@@ -238,7 +394,7 @@ func (this *Merge) processAction(item value.AnnotatedValue, context *Context,
 			}
 			if matched {
 				// make sure document is not updated multiple times
-				if this.matched[key] {
+				if _, ok1 = this.matched[key]; ok1 {
 					context.Error(errors.NewMergeMultiUpdateError(key))
 					return false
 				}
@@ -256,8 +412,13 @@ func (this *Merge) processAction(item value.AnnotatedValue, context *Context,
 					}
 				}
 				this.matched[key] = true
-				check = false
-				ok = this.sendItemOp(update.Input(), item1)
+				if legacy {
+					ok = this.sendItemOp(update.Input(), item1)
+				} else if limit < 0 || int64(this.updates.Length()) < limit {
+					// add to items to be updated, actual update happens later
+
+					this.updates.Append(item1)
+				}
 			} else if delete == nil {
 				item.Recycle()
 			}
@@ -271,12 +432,49 @@ func (this *Merge) processAction(item value.AnnotatedValue, context *Context,
 				}
 				if matched {
 					// make sure document is not updated multiple times
-					if check && this.matched[key] {
-						context.Error(errors.NewMergeMultiUpdateError(key))
-						return false
+					ignore := false
+					if v, ok1 := this.matched[key]; ok1 {
+						// true --> update; false --> delete
+						if v {
+							context.Error(errors.NewMergeMultiUpdateError(key))
+							return false
+						} else if legacy {
+							ignore = true
+						} else {
+							// in case of delete and the bit N1QL_MERGE_LEGACY
+							// is set, silently ignore multiple delete requests
+							context.Error(errors.NewMergeMultiUpdateError(key))
+							return false
+						}
 					}
-					this.matched[key] = true
-					ok = this.sendItemOp(delete.Input(), item)
+
+					if !ignore {
+						var item1 value.AnnotatedValue
+						if !this.plan.FastDiscard() {
+							item1 = tav
+							item1.SetField(alias, item1)
+							item.UnsetField(alias)
+						} else if context.TxContext() != nil {
+							// if inside transaction, save META information
+							// (tav represents target, set above)
+							item1 = this.newEmptyDocumentWithKeyMeta(key, tav.GetMeta(), nil, context)
+							item1.SetField(alias, item1)
+							// Reset the META data on the original value to
+							// avoid "sharing"
+							tav.ResetMeta()
+						} else {
+							item1 = this.newEmptyDocumentWithKey(key, nil, context)
+							item1.SetField(alias, item1)
+						}
+						this.matched[key] = false
+						if legacy {
+							ok = this.sendItemOp(delete.Input(), item1)
+						} else if limit < 0 || int64(this.deletes.Length()) < limit {
+							// add to items to be deleted, actual delete happens later
+							this.deletes.Append(item1)
+						}
+						item.Recycle()
+					}
 				} else {
 					item.Recycle()
 				}
@@ -316,8 +514,13 @@ func (this *Merge) processAction(item value.AnnotatedValue, context *Context,
 					context.Error(errors.NewMergeMultiInsertError(key))
 					return false
 				}
-				ok = this.sendItemOp(insert.Input(), item)
 				this.inserted[key] = true
+				if legacy {
+					ok = this.sendItemOp(insert.Input(), item)
+				} else if limit < 0 || int64(this.inserts.Length()) < limit {
+					// add item to be inserted, actual insert happens later
+					this.inserts.Append(item)
+				}
 			} else {
 				item.Recycle()
 			}
@@ -390,12 +593,21 @@ func (this *Merge) SendAction(action opAction) {
 func (this *Merge) reopen(context *Context) bool {
 	rv := this.baseReopen(context)
 	if rv && this.update != nil {
+		if this.updates != nil {
+			this.updates.Release()
+		}
 		rv = this.update.reopen(context)
 	}
 	if rv && this.delete != nil {
+		if this.deletes != nil {
+			this.deletes.Release()
+		}
 		rv = this.delete.reopen(context)
 	}
 	if rv && this.insert != nil {
+		if this.inserts != nil {
+			this.inserts.Release()
+		}
 		rv = this.insert.reopen(context)
 	}
 	return rv

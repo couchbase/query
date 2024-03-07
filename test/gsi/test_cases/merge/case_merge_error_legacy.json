@@ -30,17 +30,19 @@
     },
     {
         "testcase": "Multiple UPDATE to the same target document",
+        "queryParams": {"n1ql_feat_ctrl": 524288},
         "statements":"MERGE INTO shellTest t USING shellTest s ON t.c21 = s.c11 WHEN MATCHED THEN UPDATE set t.c23 = t.c22, t.c22 = s.c12 WHERE s.type = \"source\" AND t.type = \"target\" WHEN NOT MATCHED THEN INSERT (KEY REPLACE(meta(s).id, \"test1\", \"test2\"), VALUE {\"c21\": s.c11, \"c22\": s.c12 + s.c13, \"type\": \"target\", \"test_id\": s.test_id, \"inserted\": true})",
         "error":"Multiple UPDATE/DELETE of the same document (document key 'test21_merge') in a MERGE statement"
     },
     {
-        "testcase": "Check result of previous MERGE statement",
+        "testcase": "Check result of previous MERGE statement, note partial UPDATE",
         "statements":"SELECT c21, c22, c23, inserted FROM shellTest WHERE type = \"target\" ORDER BY c21",
         "ordered": true,
         "results": [
         {
             "c21": 1,
-            "c22": 5
+            "c22": 2,
+            "c23": 5
         },
         {
             "c21": 3,
@@ -57,10 +59,10 @@
     ]
     },
     {
-        "testcase": "MERGE statement to return data to previous state",
+        "testcase": "MERGE statement to return data to previous state, expect error",
+        "queryParams": {"n1ql_feat_ctrl": 524288},
         "statements":"MERGE INTO shellTest t USING shellTest s ON t.c21 = s.c11 WHEN MATCHED THEN UPDATE set t.c22 = t.c23 unset t.c23 WHERE t.type = \"target\" AND t.c23 IS NOT MISSING WHEN MATCHED THEN DELETE WHERE t.type = \"target\" AND t.inserted = true",
-        "results": [
-    ]
+        "error":"Multiple UPDATE/DELETE of the same document (document key 'test21_merge') in a MERGE statement"
     },
     {
         "testcase": "Check result of previous MERGE statement, note only first document successfully updated",
@@ -93,17 +95,23 @@
     },
     {
         "testcase": "Multiple INSERT with the same document key",
+        "queryParams": {"n1ql_feat_ctrl": 524288},
         "statements":"MERGE INTO shellTest t USING shellTest s ON t.c21 = s.c11 WHEN MATCHED THEN UPDATE set t.c23 = t.c22, t.c22 = s.c12 + 1 WHERE s.type = \"source\" AND t.type = \"target\" WHEN NOT MATCHED THEN INSERT (KEY \"test22_merge\", VALUE {\"c21\": s.c11, \"c22\": s.c12 + s.c13, \"type\": \"target\", \"test_id\": s.test_id, \"inserted\": true})",
         "error":"Multiple INSERT of the same document (document key 'test22_merge') in a MERGE statement"
     },
     {
-        "testcase": "Check result of previous MERGE statement",
+        "testcase": "Check result of previous MERGE statement, note partial INSERT",
         "statements":"SELECT c21, c22, c23, inserted FROM shellTest WHERE type = \"target\" ORDER BY c21",
         "ordered": true,
         "results": [
         {
             "c21": 1,
             "c22": 5
+        },
+        {
+            "c21": 2,
+            "c22": 5,
+            "inserted": true
         },
         {
             "c21": 3,
@@ -120,13 +128,14 @@
     ]
     },
     {
-        "testcase": "MERGE statement to attempt to return data to previous state",
+        "testcase": "MERGE statement to return data to previous state",
+        "queryParams": {"n1ql_feat_ctrl": 524288},
         "statements":"MERGE INTO shellTest t USING shellTest s ON t.c21 = s.c11 WHEN MATCHED THEN DELETE WHERE t.type = \"target\" AND t.inserted = true",
         "results": [
     ]
     },
     {
-        "testcase": "Check result of previous MERGE statement",
+        "testcase": "Check result of previous MERGE statement, note newly inserted document successfully deleted despite error",
         "statements":"SELECT c21, c22, c23, inserted FROM shellTest WHERE type = \"target\" ORDER BY c21",
         "ordered": true,
         "results": [
@@ -153,31 +162,6 @@
         "statements":"UPDATE shellTest SET c11 = 1 WHERE c11 = 2 AND c12 = 2 AND type = \"source\"",
         "results": [
     ]
-    },
-    {
-        "testcase": "MERGE statement (with ON clause) with missing KEY specification",
-        "statements":"MERGE INTO shellTest t USING shellTest s ON t.c21 = s.c11 WHEN NOT MATCHED THEN INSERT {\"c21\": s.c11, \"c22\": s.c12 + s.c13, \"type\": \"target\", \"test_id\": s.test_id, \"inserted\": true}",
-        "error": "MERGE with ON clause must have document key specification in INSERT action."
-    },
-    {
-        "testcase": "MERGE statement (with ON KEY clause) with extra KEY specification",
-        "statements":"MERGE INTO shellTest t USING (select meta().id, c11, c12, c13, type, test_id from shellTest WHERE type = \"source\") s ON KEY REPLACE(s.id, \"test1\", \"test2\") WHEN NOT MATCHED THEN INSERT (KEY REPLACE(s.id, \"test1\", \"test2\"), VALUE {\"c21\": s.c11, \"c22\": s.c12 + s.c13, \"type\": \"target\", \"test_id\": s.test_id, \"inserted\": true})",
-        "error": "MERGE with ON KEY clause cannot have document key specification in INSERT action."
-    },
-    {
-        "testcase": "MERGE statement with USE KEY hint on target",
-        "statements":"MERGE INTO shellTest t USE KEYS [ \"test21_merge\", \"test22_merge\" ] USING shellTest s ON t.c21 = s.c11 WHEN NOT MATCHED THEN INSERT (KEY REPLACE(meta(s).id, \"test1\", \"test2\"), VALUE {\"c21\": s.c11, \"c22\": s.c12 + s.c13, \"type\": \"target\", \"test_id\": s.test_id, \"inserted\": true})",
-        "error": "Keyspace reference cannot have USE KEYS hint in MERGE statement (near line 1, column 24)"
-    },
-    {
-        "testcase": "MERGE statement (with ON KEY clause) with USE INDEX hint on target",
-        "statements":"MERGE INTO shellTest t USE INDEX(st_target_idx)  USING (select meta().id, c11, c12, c13, type, test_id from shellTest WHERE type = \"source\") s ON KEY REPLACE(s.id, \"test1\", \"test2\") WHEN NOT MATCHED THEN INSERT {\"c21\": s.c11, \"c22\": s.c12 + s.c13, \"type\": \"target\", \"test_id\": s.test_id, \"inserted\": true}",
-        "error": "MERGE with ON KEY clause cannot have USE INDEX hint specified on target."
-    },
-    {
-        "testcase": "MERGE statement (with ON KEY clause) with join hint on source",
-        "statements":"MERGE INTO shellTest t USING (select meta().id, c11, c12, c13, type, test_id from shellTest WHERE type = \"source\") s USE HASH(probe) ON KEY REPLACE(s.id, \"test1\", \"test2\") WHEN NOT MATCHED THEN INSERT {\"c21\": s.c11, \"c22\": s.c12 + s.c13, \"type\": \"target\", \"test_id\": s.test_id, \"inserted\": true}",
-        "error": "MERGE with ON KEY clause cannot have join hint specified on source."
     }
 ]
 
