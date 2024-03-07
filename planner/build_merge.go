@@ -14,6 +14,7 @@ import (
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
 	base "github.com/couchbase/query/plannerbase"
+	"github.com/couchbase/query/util"
 )
 
 func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
@@ -352,12 +353,15 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 		}
 	}
 
+	canSpill := util.IsFeatureEnabled(this.context.FeatureControls(), util.N1QL_SPILL_TO_DISK)
+
 	var mergeKey expression.Expression
 	if stmt.IsOnKey() {
 		mergeKey = stmt.On()
 	}
-	merge := plan.NewMerge(keyspace, ksref, mergeKey, update, updateFilter, delete, deleteFilter, insert, insertFilter, cost,
-		cardinality, size, frCost)
+	merge := plan.NewMerge(keyspace, ksref, mergeKey, canSpill, fastDiscard, stmt.Limit(),
+		update, updateFilter, delete, deleteFilter, insert, insertFilter,
+		cost, cardinality, size, frCost)
 	this.addSubChildren(merge)
 
 	if stmt.Returning() != nil {

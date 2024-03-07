@@ -11,7 +11,6 @@ package execution
 import (
 	"encoding/json"
 	"fmt"
-	"math"
 	"time"
 
 	"github.com/couchbase/query/datastore"
@@ -90,26 +89,14 @@ func (this *SendUpdate) beforeItems(context *Context, parent value.Value) bool {
 		return true
 	}
 
-	limit, err := this.plan.Limit().Evaluate(parent, &this.operatorCtx)
+	lim, err := getLimit(this.plan.Limit(), parent, &this.operatorCtx)
 	if err != nil {
-		context.Error(errors.NewEvaluationError(err, "LIMIT clause"))
+		context.Error(err)
 		return false
 	}
 
-	l := limit.ActualForIndex() // Exact number
-	switch l := l.(type) {
-	case int64:
-		this.limit = l
-		return true
-	case float64:
-		if math.Trunc(l) == l {
-			this.limit = int64(l)
-			return true
-		}
-	}
-
-	context.Error(errors.NewInvalidValueError(fmt.Sprintf("Invalid LIMIT %v of type %T.", l, l)))
-	return false
+	this.limit = lim
+	return true
 }
 
 func (this *SendUpdate) afterItems(context *Context) {

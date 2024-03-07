@@ -1314,6 +1314,21 @@ func (this *base) newEmptyDocumentWithKey(key interface{}, parent value.Value, c
 	return av
 }
 
+func (this *base) newEmptyDocumentWithKeyMeta(key, meta interface{}, parent value.Value, context *Context) value.AnnotatedValue {
+
+	cv := value.NewNestedScopeValue(parent)
+	av := value.NewAnnotatedValue(cv)
+	if metamap, ok := meta.(map[string]interface{}); ok {
+		av.SetMeta(metamap)
+		if _, ok = metamap["id"]; !ok {
+			av.SetId(key)
+		}
+	} else {
+		av.SetId(key)
+	}
+	return av
+}
+
 func (this *base) setDocumentKey(key interface{}, item value.AnnotatedValue,
 	expiration uint32, context *Context) value.AnnotatedValue {
 	item.NewMeta()["expiration"] = expiration

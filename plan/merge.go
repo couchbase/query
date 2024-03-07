@@ -23,6 +23,9 @@ type Merge struct {
 	keyspace     datastore.Keyspace
 	ref          *algebra.KeyspaceRef
 	key          expression.Expression
+	canSpill     bool
+	fastDiscard  bool
+	limit        expression.Expression
 	update       Operator
 	updateFilter expression.Expression
 	delete       Operator
@@ -31,15 +34,20 @@ type Merge struct {
 	insertFilter expression.Expression
 }
 
-func NewMerge(keyspace datastore.Keyspace, ref *algebra.KeyspaceRef,
-	key expression.Expression, update Operator, updateFilter expression.Expression,
+func NewMerge(keyspace datastore.Keyspace, ref *algebra.KeyspaceRef, key expression.Expression,
+	canSpill, fastDiscard bool, limit expression.Expression,
+	update Operator, updateFilter expression.Expression,
 	delete Operator, deleteFilter expression.Expression,
-	insert Operator, insertFilter expression.Expression, cost, cardinality float64,
-	size int64, frCost float64) *Merge {
+	insert Operator, insertFilter expression.Expression,
+	cost, cardinality float64, size int64, frCost float64) *Merge {
+
 	rv := &Merge{
 		keyspace:     keyspace,
 		ref:          ref,
 		key:          key,
+		canSpill:     canSpill,
+		fastDiscard:  fastDiscard,
+		limit:        limit,
 		update:       update,
 		updateFilter: updateFilter,
 		delete:       delete,
@@ -73,6 +81,18 @@ func (this *Merge) Key() expression.Expression {
 
 func (this *Merge) IsOnKey() bool {
 	return this.key != nil
+}
+
+func (this *Merge) CanSpill() bool {
+	return this.canSpill
+}
+
+func (this *Merge) FastDiscard() bool {
+	return this.fastDiscard
+}
+
+func (this *Merge) Limit() expression.Expression {
+	return this.limit
 }
 
 func (this *Merge) Update() Operator {
@@ -115,6 +135,18 @@ func (this *Merge) MarshalBase(f func(map[string]interface{})) map[string]interf
 		r["as"] = this.ref.As()
 	}
 
+	if this.canSpill {
+		r["can_spill"] = this.canSpill
+	}
+
+	if this.fastDiscard {
+		r["fast_discard"] = this.fastDiscard
+	}
+
+	if this.limit != nil {
+		r["limit"] = this.limit
+	}
+
 	if optEstimate := marshalOptEstimate(&this.optEstimate); optEstimate != nil {
 		r["optimizer_estimates"] = optEstimate
 	}
@@ -153,6 +185,9 @@ func (this *Merge) UnmarshalJSON(body []byte) error {
 		Keyspace     string                 `json:"keyspace"`
 		As           string                 `json:"as"`
 		Key          string                 `json:"key"`
+		CanSpill     bool                   `json:"can_spill"`
+		FastDiscard  bool                   `json:"fast_discard"`
+		Limit        string                 `json:"limit"`
 		Update       json.RawMessage        `json:"update"`
 		Delete       json.RawMessage        `json:"delete"`
 		Insert       json.RawMessage        `json:"insert"`
@@ -177,6 +212,16 @@ func (this *Merge) UnmarshalJSON(body []byte) error {
 
 	if _unmarshalled.Key != "" {
 		this.key, err = parser.Parse(_unmarshalled.Key)
+		if err != nil {
+			return err
+		}
+	}
+
+	this.canSpill = _unmarshalled.CanSpill
+	this.fastDiscard = _unmarshalled.FastDiscard
+
+	if _unmarshalled.Limit != "" {
+		this.limit, err = parser.Parse(_unmarshalled.Limit)
 		if err != nil {
 			return err
 		}
