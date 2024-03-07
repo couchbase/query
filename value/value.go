@@ -631,23 +631,26 @@ func getFullPrefix(prefix, indent string) string {
 	return "\n" + prefix + indent
 }
 
-func ApplyDurationStyleToValue(s util.DurationStyle, filter func(string) bool, v Value) Value {
-	if s == util.LEGACY {
+// This is analogous to util.ApplyDurationStyle but operates on the fields found in Value objects
+// The assumption remains that the value was produced with the currently-in-effect default duration style so if the request format
+// matches that, no action is necessary.  This can mean cases when a change to the duration style is not applied.
+func ApplyDurationStyleToValue(s util.DurationStyle, v Value) Value {
+	if s == util.DEFAULT || s == util.GetDurationStyle() {
 		return v
 	}
 	for k, f := range v.Fields() {
 		fv := NewValue(f)
-		if fv.Type() == STRING && (filter == nil || filter(k)) {
+		if fv.Type() == STRING && strings.HasSuffix(k, "Time") {
 			d, err := time.ParseDuration(fv.ToString())
 			if err == nil {
 				v.SetField(k, util.FormatDuration(d, s))
 			}
 		} else if fv.Type() == OBJECT {
-			ApplyDurationStyleToValue(s, filter, fv)
+			ApplyDurationStyleToValue(s, fv)
 		} else if fv.Type() == ARRAY {
 			av, ok := fv.Index(0)
 			for i := 1; ok; i++ {
-				ApplyDurationStyleToValue(s, filter, av)
+				ApplyDurationStyleToValue(s, av)
 				av, ok = fv.Index(i)
 			}
 		}
