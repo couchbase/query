@@ -346,7 +346,8 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 				size = this.lastOp.Size()
 				frCost = this.lastOp.FrCost()
 				if cost > 0.0 && cardinality > 0.0 && size > 0 && frCost > 0.0 {
-					cost, cardinality, size, frCost = getDistinctCost(projection.Terms(), cost, cardinality, size, frCost, this.keyspaceNames)
+					cost, cardinality, size, frCost = getDistinctCost(projection.Terms(), cost, cardinality, size, frCost,
+						this.keyspaceNames)
 				}
 			}
 			this.addSubChildren(plan.NewDistinct(cost, cardinality, size, frCost))

@@ -444,7 +444,9 @@ func (this *cbConfigStore) doNameState() (string, clustering.Mode, errors.Error)
 	return "", clustering.STARTING, err
 }
 
-func (this *cbConfigStore) checkPoolServices(pool *couchbase.Pool, poolServices *couchbase.PoolServices) (string, clustering.Mode, errors.Error) {
+func (this *cbConfigStore) checkPoolServices(pool *couchbase.Pool, poolServices *couchbase.PoolServices) (
+	string, clustering.Mode, errors.Error) {
+
 	if poolServices == nil {
 		return "", "", errors.NewAdminConnectionError(nil, this.poolName)
 	}

@@ -79,7 +79,8 @@ func (this *TermSpans) CreateScan(
 		if distScan {
 			scan := plan.NewIndexScan2(index2, term, this.spans, reverse, false, false, nil, nil,
 				projection, covers, filterCovers, hasDeltaKeyspace, nested_loop)
-			return plan.NewDistinctScan(limit, offset, scan, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL)
+			return plan.NewDistinctScan(limit, offset, scan, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL,
+				OPT_COST_NOT_AVAIL)
 		} else {
 			return plan.NewIndexScan2(index2, term, this.spans, reverse, distinct, false, offset, limit,
 				projection, covers, filterCovers, hasDeltaKeyspace, nested_loop)
@@ -96,8 +97,10 @@ func (this *TermSpans) CreateScan(
 		}
 
 		if distScan || (len(spans) > 1 && !exact) {
-			scan := plan.NewIndexScan(index, term, spans, distinct, limitOffset, covers, filterCovers, hasDeltaKeyspace, nested_loop)
-			return plan.NewDistinctScan(limit, offset, scan, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_CARD_NOT_AVAIL)
+			scan := plan.NewIndexScan(index, term, spans, distinct, limitOffset, covers, filterCovers, hasDeltaKeyspace,
+				nested_loop)
+			return plan.NewDistinctScan(limit, offset, scan, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL,
+				OPT_CARD_NOT_AVAIL)
 		} else {
 			return plan.NewIndexScan(index, term, spans, distinct, limitOffset, covers, filterCovers, hasDeltaKeyspace, nested_loop)
 		}

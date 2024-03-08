@@ -1193,10 +1193,10 @@ func (this *opContext) SubqueryPlans(expr expression.Expression, subqPlans *alge
 
 /*
 Setup Inline UDF plans.
-generate   -- true. Plans are generated and stored in UDF. Also Dummy prepared created so that Metadata check can be done.
-trans      -- true.  plan is part of transaction and delta table involved. Generate plan again and store in the context Subquery plans.
-Otherwise     copy Inline UDF subquery plans by reference into local context so that same plan will be re-used repeated execution.
-lock       -- indicate second argument require lock
+generate - true. Plans are generated and stored in UDF. Also Dummy prepared created so that Metadata check can be done.
+trans    - true.  plan is part of transaction and delta table involved. Generate plan again and store in the context Subquery plans.
+Otherwise    copy Inline UDF subquery plans by reference into local context so that same plan will be re-used repeated execution.
+lock     - indicate second argument require lock
 */
 func (this *opContext) SetupSubqueryPlans(expr expression.Expression, subqPlans *algebra.SubqueryPlans, lock,
 	generate, trans bool) (err error) {
@@ -1208,7 +1208,8 @@ func (this *opContext) SetupSubqueryPlans(expr expression.Expression, subqPlans 
 		}
 	} else if trans {
 		// last argument will be true because second argument is from context
-		_, err = this.SubqueryPlans(expr, this.GetSubqueryPlans(true), this.deltaKeyspaces, this.namedArgs, this.positionalArgs, true)
+		_, err = this.SubqueryPlans(expr, this.GetSubqueryPlans(true), this.deltaKeyspaces, this.namedArgs,
+			this.positionalArgs, true)
 	} else {
 		// lock is meant source (subqPlans). Destination this.... always do lock
 		subqPlans.Copy(this.GetSubqueryPlans(true), lock)

@@ -94,7 +94,9 @@ type IndexAggregate struct {
 	Distinct   bool
 }
 
-func NewIndexAggregate(op datastore.AggregateType, id, pos int, expr expression.Expression, distinct bool, depends []int) *IndexAggregate {
+func NewIndexAggregate(op datastore.AggregateType, id, pos int, expr expression.Expression, distinct bool,
+	depends []int) *IndexAggregate {
+
 	return &IndexAggregate{
 		Operation:  op,
 		EntryKeyId: id,

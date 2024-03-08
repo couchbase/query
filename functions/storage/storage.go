@@ -648,8 +648,10 @@ func doMigrateBucket(name string) bool {
 
 		name, err = metaStorage.NewScopeFunction(parts[0], parts[1], parts[2], parts[3])
 		if err != nil {
-			logging.Errorf("UDF migration: Migrating %v error %v generating metakv function name for deleting old entry", parts, err)
-			return errors.NewMigrationError(_UDF_MIGRATION, "Error generating metakv function name for deleting old entry", parts, err)
+			logging.Errorf("UDF migration: Migrating %v error %v generating metakv function name for deleting old entry",
+				parts, err)
+			return errors.NewMigrationError(_UDF_MIGRATION, "Error generating metakv function name for deleting old entry",
+				parts, err)
 		}
 
 		err = name.Delete()
@@ -689,7 +691,8 @@ func checkSystemCollection(name string) errors.Error {
 		err := ds.CheckSystemCollection(name, "")
 		if err != nil {
 			logging.Errorf("UDF migration: Error during UDF migration for bucket %s, system collection unavailable - %v", name, err)
-			return errors.NewMigrationError(_UDF_MIGRATION, fmt.Sprintf("Error during UDF migration for bucket %s - system collection unavailable", name), nil, err)
+			return errors.NewMigrationError(_UDF_MIGRATION,
+				fmt.Sprintf("Error during UDF migration for bucket %s - system collection unavailable", name), nil, err)
 		} else {
 			logging.Infof("UDF migration: System collection available (bucket %s)", name)
 		}

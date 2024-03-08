@@ -369,7 +369,8 @@ func processConfig(config value.Value) (*ConfigOptions, errors.Error) {
 
 		if fv.Type() != value.NUMBER {
 			// all options are numeric for now
-			return nil, errors.NewExecutionInternalError(fmt.Sprintf("Config Options must be Numeric, %v:%v", fieldName, fv.Type().String()))
+			return nil, errors.NewExecutionInternalError(fmt.Sprintf("Config Options must be Numeric, %v:%v", fieldName,
+				fv.Type().String()))
 		}
 
 		v, ok := fv.Actual().(float64)

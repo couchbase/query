@@ -147,7 +147,8 @@ func (this *builder) visitFrom(node *algebra.Subselect, group *algebra.Group,
 						if un.Alias() == alias {
 							for _, fl := range unnestKeyspace.Filters() {
 								if !fl.IsSelecDone() {
-									sel := getUnnestPredSelec(fl.FltrExpr(), alias, un.Expression(), keyspaceNames, this.advisorValidate(), this.context)
+									sel := getUnnestPredSelec(fl.FltrExpr(), alias, un.Expression(), keyspaceNames,
+										this.advisorValidate(), this.context)
 									fl.SetSelec(sel)
 									fl.SetSelecDone()
 								}
@@ -189,7 +190,8 @@ func (this *builder) visitFrom(node *algebra.Subselect, group *algebra.Group,
 			}
 
 			optimizer := this.context.Optimizer()
-			ops, subOps, coveringOps, filter, hasOrder, err = optimizer.OptimizeQueryBlock(this.Copy(), node.From(), limit, offset, order, distinct)
+			ops, subOps, coveringOps, filter, hasOrder, err = optimizer.OptimizeQueryBlock(this.Copy(), node.From(), limit,
+				offset, order, distinct)
 			if err != nil {
 				return err
 			}
@@ -270,7 +272,8 @@ func (this *builder) GetSubPaths(ksTerm *algebra.KeyspaceTerm, keyspace string) 
 	if this.node != nil {
 		_, names = expression.XattrsNames(this.node.Expressions(), keyspace)
 		if ok := isValidXattrs(names); !ok {
-			return nil, errors.NewPlanInternalError("Can only retrieve virtual xattr and user xattr or virtual xattr and system xattr")
+			return nil, errors.NewPlanInternalError("Can only retrieve virtual xattr and user xattr or virtual xattr and " +
+				"system xattr")
 		}
 		if len(names) == 0 {
 			var exprs expression.Expressions
@@ -462,7 +465,9 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 				this.addSubChildren(plan.NewFilter(filter, node.Alias(), cost, cardinality, size, frCost))
 			}
 		}
-	} else if this.countScan == nil && len(this.coveringScans) > 0 && (inCorrSubq || this.hasBuilderFlag(BUILDER_JOIN_ON_PRIMARY)) {
+	} else if this.countScan == nil && len(this.coveringScans) > 0 &&
+		(inCorrSubq || this.hasBuilderFlag(BUILDER_JOIN_ON_PRIMARY)) {
+
 		// if we have a covering index scan on primary index
 		// cache results of indexscan3
 		if op, ok := scan.(*plan.IndexScan3); ok && op.Index().IsPrimary() {
@@ -1501,7 +1506,8 @@ func (this *builder) checkEarlyProjection(projection *algebra.Projection) error 
 				for n, _ := range names {
 					coverExprs = append(coverExprs, expression.NewField(ident, expression.NewFieldName(n, false)))
 				}
-				coverExprs = append(coverExprs, expression.NewField(expression.NewMeta(ident), expression.NewFieldName("id", false)))
+				coverExprs = append(coverExprs, expression.NewField(expression.NewMeta(ident),
+					expression.NewFieldName("id", false)))
 
 				exprs, err := this.getExprsToCover()
 				if err != nil {

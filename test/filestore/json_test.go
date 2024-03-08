@@ -41,7 +41,8 @@ func TestRoleStatements(t *testing.T) {
 	pete := datastore.User{Name: "Peter Peterson", Id: "pete", Domain: "local",
 		Roles: []datastore.Role{datastore.Role{Name: "cluster_admin"}, datastore.Role{Name: "bucket_admin", Target: "contacts"}}}
 	sam := datastore.User{Name: "Sam Samson", Id: "sam", Domain: "local",
-		Roles: []datastore.Role{datastore.Role{Name: "replication_admin"}, datastore.Role{Name: "bucket_admin", Target: "products"}}}
+		Roles: []datastore.Role{datastore.Role{Name: "replication_admin"}, datastore.Role{Name: "bucket_admin",
+			Target: "products"}}}
 
 	ds := qc.dstore
 	ds.PutUserInfo(&pete)

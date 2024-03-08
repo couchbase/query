@@ -548,8 +548,8 @@ func (ks *keyspace) txFetch(fullName, qualifiedName, scopeName, collectionName, 
 	return nil
 }
 
-func (ks *keyspace) txPerformOp(op MutateOp, qualifiedName, scopeName, collectionName, user string,
-	collId uint32, pairs value.Pairs, preserveMutations bool, context datastore.QueryContext, txContext *transactions.TranContext) (
+func (ks *keyspace) txPerformOp(op MutateOp, qualifiedName, scopeName, collectionName, user string, collId uint32,
+	pairs value.Pairs, preserveMutations bool, context datastore.QueryContext, txContext *transactions.TranContext) (
 	mCount int, mPairs value.Pairs, errs errors.Errors) {
 
 	err := ks.txReady(txContext)
@@ -789,8 +789,9 @@ func initGocb(s *store) (err errors.Error) {
 	txConfig.CustomATRLocation.ScopeName, txConfig.CustomATRLocation.CollectionName,
 		txConfig.CustomATRLocation.Agent, _ = AtrCollectionAgentPovider(tranSettings.AtrCollection())
 
-	logging.Infof("Transaction Initialization: ExpirationTime: %v, CleanupWindow: %v, CleanupClientAttempts: %v, CleanupLostAttempts: %v",
-		txConfig.ExpirationTime, txConfig.CleanupWindow, txConfig.CleanupClientAttempts, txConfig.CleanupLostAttempts)
+	logging.Infof("Transaction Initialization: ExpirationTime: %v, CleanupWindow: %v, CleanupClientAttempts: %v, "+
+		"CleanupLostAttempts: %v", txConfig.ExpirationTime, txConfig.CleanupWindow, txConfig.CleanupClientAttempts,
+		txConfig.CleanupLostAttempts)
 
 	client, cerr := gcagent.NewClient(s.URL(),
 		caFile,

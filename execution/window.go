@@ -458,7 +458,9 @@ func (this *AggregateInfo) evaluate(op *WindowAggregate, wf *windowFrame, cItem 
 evaluate the Value aggregates
 */
 
-func (this *AggregateInfo) evaluateValueFuncs(op *WindowAggregate, wf *windowFrame, sItem, eItem, cItem int64) (empty bool, err error) {
+func (this *AggregateInfo) evaluateValueFuncs(op *WindowAggregate, wf *windowFrame, sItem, eItem, cItem int64) (
+	empty bool, err error) {
+
 	empty = false
 	// default aggregate value
 	this.val, err = this.agg.Default(op.values[cItem], &op.operatorCtx)
@@ -524,7 +526,8 @@ func (this *AggregateInfo) evaluateValueFuncs(op *WindowAggregate, wf *windowFra
 /*
 Setup Window input row aggregate for ranking
 */
-func (this *AggregateInfo) getWindowRow(cIndex int64, item value.AnnotatedValue, op *WindowAggregate) (value.AnnotatedValue, error) {
+func (this *AggregateInfo) getWindowRow(cIndex int64, item value.AnnotatedValue, op *WindowAggregate) (
+	value.AnnotatedValue, error) {
 
 	// these aggregates does not need any pre setup
 	if !this.hasFlags(_WINDOW_ROW_NUMBER | _WINDOW_DENSE_RANK | _WINDOW_PERCENT_RANK |
@@ -778,7 +781,9 @@ func (this *AggregateInfo) windowValuePeerPos(op *WindowAggregate, rangeVal valu
 calcuate duplicates befor and after current row. current row not included
 */
 
-func (this *AggregateInfo) windowOrderDuplicates(op *WindowAggregate, cIndex int64) (dupsPreceding, dupsFollowing int64, err error) {
+func (this *AggregateInfo) windowOrderDuplicates(op *WindowAggregate, cIndex int64) (
+	dupsPreceding, dupsFollowing int64, err error) {
+
 	dupsPreceding, err = this.windowOrderDuplicatesDirection(op, cIndex, -1)
 	if err == nil {
 		dupsFollowing, err = this.windowOrderDuplicatesDirection(op, cIndex, 1)
@@ -789,7 +794,8 @@ func (this *AggregateInfo) windowOrderDuplicates(op *WindowAggregate, cIndex int
 /*
 Duplicate calculations
 */
-func (this *AggregateInfo) windowOrderDuplicatesDirection(op *WindowAggregate, cIndex int64, direction int64) (dups int64, err error) {
+func (this *AggregateInfo) windowOrderDuplicatesDirection(op *WindowAggregate, cIndex int64, direction int64) (
+	dups int64, err error) {
 
 	oby := this.wTerm.OrderBy()
 	if oby == nil {
@@ -892,11 +898,14 @@ func (this *AggregateInfo) evaluateObyValues(item value.AnnotatedValue, op *Wind
 
 // Return item NewCollation form previous one or not
 
-func (this *AggregateInfo) isNewCollationValue(item value.AnnotatedValue, obyValues value.Values, op *WindowAggregate) (rv bool, err error) {
+func (this *AggregateInfo) isNewCollationValue(item value.AnnotatedValue, obyValues value.Values, op *WindowAggregate) (
+	rv bool, err error) {
+
 	if this.wTerm.OrderBy() == nil {
 		return false, nil
 	}
-	return isNewWindowValues(item, this.newCollationValue, this.wTerm.OrderBy().Expressions(), obyValues, op.obyTerms, &op.operatorCtx)
+	return isNewWindowValues(item, this.newCollationValue, this.wTerm.OrderBy().Expressions(), obyValues, op.obyTerms,
+		&op.operatorCtx)
 }
 
 // Sets up window frame

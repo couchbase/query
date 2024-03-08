@@ -120,7 +120,8 @@ func (b *Bucket) getConnectionToVBucket(vb uint32, desc *doDescriptor) (*memcach
 	}
 	for {
 		if desc.replica+1 > len(vbm.VBucketMap[vb]) {
-			return nil, nil, fmt.Errorf("primitives/couchbase: invalid vbmap entry for vb %v (len %v, replicas %v)", vb, len(vbm.VBucketMap[vb]), vbm.NumReplicas)
+			return nil, nil, fmt.Errorf("primitives/couchbase: invalid vbmap entry for vb %v (len %v, replicas %v)", vb,
+				len(vbm.VBucketMap[vb]), vbm.NumReplicas)
 		}
 		masterId := vbm.VBucketMap[vb][desc.replica]
 		if masterId < 0 {
@@ -427,7 +428,9 @@ func (b *Bucket) do(k string, f func(mc *memcached.Client, vb uint16) error) (er
 	return b.do2(k, f, true, false, b.backOffRetries())
 }
 
-func (b *Bucket) do2(k string, f func(mc *memcached.Client, vb uint16) error, deadline bool, useReplicas bool, backOffRetries int) (err error) {
+func (b *Bucket) do2(k string, f func(mc *memcached.Client, vb uint16) error, deadline bool, useReplicas bool,
+	backOffRetries int) (err error) {
+
 	vb := b.VBHash(k)
 
 	return b.do3(uint16(vb), f, deadline, useReplicas, backOffRetries)
@@ -932,7 +935,8 @@ func vbDoBulkGet(vbg *vbBulkGet) time.Duration {
 		// Workers cannot panic and die
 		recover()
 	}()
-	rv, delay, retries = vbg.b.doBulkGet(vbg.k, vbg.keys, vbg.active, vbg.reqDeadline, vbg.kvTimeout, vbg.ech, vbg.subPaths, vbg.useReplica, vbg.groupError, vbg.context...)
+	rv, delay, retries = vbg.b.doBulkGet(vbg.k, vbg.keys, vbg.active, vbg.reqDeadline, vbg.kvTimeout, vbg.ech, vbg.subPaths,
+		vbg.useReplica, vbg.groupError, vbg.context...)
 	if retries > 0 {
 		atomic.AddUint64(&vbg.b.retryCount, uint64(retries))
 	}
@@ -1056,7 +1060,9 @@ func errorCollector(ech <-chan error, eout chan<- error, eStatus *errorStatus) {
 // map array for each key.  Keys that were not found will not be included in
 // the map.
 
-func (b *Bucket) GetBulk(keys []string, active func() bool, reqDeadline time.Time, kvTimeout time.Duration, subPaths []string, useReplica bool, context ...*memcached.ClientContext) (map[string]*gomemcached.MCResponse, error) {
+func (b *Bucket) GetBulk(keys []string, active func() bool, reqDeadline time.Time, kvTimeout time.Duration, subPaths []string,
+	useReplica bool, context ...*memcached.ClientContext) (map[string]*gomemcached.MCResponse, error) {
+
 	return b.getBulk(keys, active, reqDeadline, kvTimeout, subPaths, useReplica, context...)
 }
 
@@ -1064,7 +1070,9 @@ func (b *Bucket) ReleaseGetBulkPools(rv map[string]*gomemcached.MCResponse) {
 	_STRING_MCRESPONSE_POOL.Put(rv)
 }
 
-func (b *Bucket) getBulk(keys []string, active func() bool, reqDeadline time.Time, kvTimeout time.Duration, subPaths []string, useReplica bool, context ...*memcached.ClientContext) (map[string]*gomemcached.MCResponse, error) {
+func (b *Bucket) getBulk(keys []string, active func() bool, reqDeadline time.Time, kvTimeout time.Duration, subPaths []string,
+	useReplica bool, context ...*memcached.ClientContext) (map[string]*gomemcached.MCResponse, error) {
+
 	kdm := _VB_STRING_POOL.Get()
 	defer _VB_STRING_POOL.Put(kdm)
 	for _, k := range keys {
@@ -1231,7 +1239,9 @@ func (b *Bucket) WriteWithCAS(k string, flags, exp int, v interface{},
 }
 
 // Extended CAS operation. These functions will return the mutation token, i.e vbuuid & guard
-func (b *Bucket) CasWithMeta(k string, flags int, exp int, cas uint64, v interface{}, context ...*memcached.ClientContext) (uint64, uint64, *MutationToken, error) {
+func (b *Bucket) CasWithMeta(k string, flags int, exp int, cas uint64, v interface{}, context ...*memcached.ClientContext) (
+	uint64, uint64, *MutationToken, error) {
+
 	return b.WriteCasWithMT(k, flags, exp, cas, v, 0, context...)
 }
 

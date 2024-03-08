@@ -1444,7 +1444,8 @@ func (this *BaseRequest) SetErrors(errs errors.Errors) {
 
 	// Append a single E_REQUEST_ERROR_LIMIT error
 	if this.errorLimit > 0 && ((this.errorCount + this.duplicateErrorCount) > this.errorLimit) {
-		this.errors = append(this.errors, errors.NewErrorLimit(this.errorLimit, this.errorCount, this.duplicateErrorCount, this.MutationCount()))
+		this.errors = append(this.errors, errors.NewErrorLimit(this.errorLimit, this.errorCount, this.duplicateErrorCount,
+			this.MutationCount()))
 		this.Unlock()
 		this.Stop(FATAL)
 	} else {

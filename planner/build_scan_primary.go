@@ -102,7 +102,8 @@ func buildPrimaryIndex(keyspace datastore.Keyspace, indexes []datastore.Index, n
 		if ok {
 			return
 		} else {
-			return nil, errors.NewPlanInternalError(fmt.Sprintf("buildPrimaryIndex: Unable to cast index %s to primary index", index.Name()))
+			return nil, errors.NewPlanInternalError(fmt.Sprintf("buildPrimaryIndex: Unable to cast index %s to primary index",
+				index.Name()))
 		}
 	}
 

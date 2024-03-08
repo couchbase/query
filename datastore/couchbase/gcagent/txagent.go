@@ -131,7 +131,9 @@ func (ap *AgentProvider) Deadline(d time.Time, n int) time.Time {
 
 // Create annotated value
 
-func (ap *AgentProvider) getTxAnnotatedValue(res *gocbcore.TransactionGetResult, key, fullName string) (av value.AnnotatedValue, err error) {
+func (ap *AgentProvider) getTxAnnotatedValue(res *gocbcore.TransactionGetResult, key, fullName string) (
+	av value.AnnotatedValue, err error) {
+
 	av = value.NewAnnotatedValue(value.NewParsedValue(res.Value, false))
 	meta_type := "json"
 	if av.Type() == value.BINARY {

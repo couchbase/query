@@ -212,7 +212,9 @@ func (b *preparedsKeyspace) Fetch(keys []string, keysMap map[string]value.Annota
 	return
 }
 
-func (b *preparedsKeyspace) Delete(deletes value.Pairs, context datastore.QueryContext, preserveMutations bool) (int, value.Pairs, errors.Errors) {
+func (b *preparedsKeyspace) Delete(deletes value.Pairs, context datastore.QueryContext, preserveMutations bool) (
+	int, value.Pairs, errors.Errors) {
+
 	var err errors.Error
 	var creds distributed.Creds
 	var tenantName string

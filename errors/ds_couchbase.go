@@ -38,13 +38,13 @@ func NewCbBucketClosedError(msg string) Error {
 }
 
 func NewCbPrimaryIndexNotFoundError(e error, msg string) Error {
-	return &err{level: EXCEPTION, ICode: E_CB_PRIMARY_INDEX_NOT_FOUND, IKey: "datastore.couchbase.primary_idx_not_found", ICause: e,
-		InternalMsg: "Primary Index not found " + msg, InternalCaller: CallerN(1)}
+	return &err{level: EXCEPTION, ICode: E_CB_PRIMARY_INDEX_NOT_FOUND, IKey: "datastore.couchbase.primary_idx_not_found",
+		ICause: e, InternalMsg: "Primary Index not found " + msg, InternalCaller: CallerN(1)}
 }
 
 func NewCbIndexerNotImplementedError(e error, msg string) Error {
-	return &err{level: EXCEPTION, ICode: E_CB_INDEXER_NOT_IMPLEMENTED, IKey: "datastore.couchbase.indexer_not_implemented", ICause: e,
-		InternalMsg: "Indexer not implemented " + msg, InternalCaller: CallerN(1)}
+	return &err{level: EXCEPTION, ICode: E_CB_INDEXER_NOT_IMPLEMENTED, IKey: "datastore.couchbase.indexer_not_implemented",
+		ICause: e, InternalMsg: "Indexer not implemented " + msg, InternalCaller: CallerN(1)}
 }
 
 func NewCbKeyspaceCountError(e error, msg string) Error {
@@ -90,8 +90,8 @@ func NewCbLoadIndexesError(e error, msg string) Error {
 }
 
 func NewCbBucketTypeNotSupportedError(e error, msg string) Error {
-	return &err{level: EXCEPTION, ICode: E_CB_BUCKET_TYPE_NOT_SUPPORTED, IKey: "datastore.couchbase.bucket_type_not_supported", ICause: e,
-		InternalMsg: "This bucket type is not supported " + msg, InternalCaller: CallerN(1)}
+	return &err{level: EXCEPTION, ICode: E_CB_BUCKET_TYPE_NOT_SUPPORTED, IKey: "datastore.couchbase.bucket_type_not_supported",
+		ICause: e, InternalMsg: "This bucket type is not supported " + msg, InternalCaller: CallerN(1)}
 }
 
 // Error code 12014 is retired. Do not reuse.
@@ -147,8 +147,8 @@ func NewUnableToInitCbAuthError(e error) Error {
 }
 
 func NewAuditStreamHandlerFailed(e error) Error {
-	return &err{level: EXCEPTION, ICode: E_AUDIT_STREAM_HANDLER_FAILED, IKey: "datastore.couchbase.audit_stream_failed event id", ICause: e,
-		InternalMsg: "Audit stream handler failed", InternalCaller: CallerN(1)}
+	return &err{level: EXCEPTION, ICode: E_AUDIT_STREAM_HANDLER_FAILED, IKey: "datastore.couchbase.audit_stream_failed event id",
+		ICause: e, InternalMsg: "Audit stream handler failed", InternalCaller: CallerN(1)}
 }
 
 func NewCbBucketNotFoundError(e error, msg string) Error {
@@ -171,8 +171,9 @@ func NewCbKeyspaceSizeError(e error, msg string) Error {
 }
 
 func NewCbSecurityConfigNotProvided(bucket string) Error {
-	return &err{level: EXCEPTION, ICode: E_CB_SECURITY_CONFIG_NOT_PROVIDED, IKey: "datastore.couchbase.security_config_not_provided",
-		InternalMsg: "Connection security config not provided. Unable to load bucket " + bucket, InternalCaller: CallerN(1), retry: TRUE}
+	return &err{level: EXCEPTION, ICode: E_CB_SECURITY_CONFIG_NOT_PROVIDED,
+		IKey: "datastore.couchbase.security_config_not_provided", InternalCaller: CallerN(1), retry: TRUE,
+		InternalMsg: "Connection security config not provided. Unable to load bucket " + bucket}
 }
 
 func NewCbCreateSystemBucketError(s string, e error) Error {

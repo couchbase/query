@@ -234,7 +234,9 @@ func (p *namespace) KeyspaceNames() ([]string, errors.Error) {
 	return p.keyspaceNames, nil
 }
 
-func (p *namespace) Objects(credentials *auth.Credentials, filter func(string) bool, preload bool) ([]datastore.Object, errors.Error) {
+func (p *namespace) Objects(credentials *auth.Credentials, filter func(string) bool, preload bool) (
+	[]datastore.Object, errors.Error) {
+
 	rv := make([]datastore.Object, len(p.keyspaceNames))
 	i := 0
 	for _, k := range p.keyspaceNames {
@@ -412,22 +414,30 @@ func genItem(i int, nitems int) (value.AnnotatedValue, errors.Error) {
 	return doc, nil
 }
 
-func (b *keyspace) Insert(inserts value.Pairs, context datastore.QueryContext, preserveMutations bool) (int, value.Pairs, errors.Errors) {
+func (b *keyspace) Insert(inserts value.Pairs, context datastore.QueryContext, preserveMutations bool) (
+	int, value.Pairs, errors.Errors) {
+
 	// FIXME
 	return 0, nil, errors.Errors{errors.NewOtherNotImplementedError(nil, "for Mock datastore")}
 }
 
-func (b *keyspace) Update(updates value.Pairs, context datastore.QueryContext, preserveMutations bool) (int, value.Pairs, errors.Errors) {
+func (b *keyspace) Update(updates value.Pairs, context datastore.QueryContext, preserveMutations bool) (
+	int, value.Pairs, errors.Errors) {
+
 	// FIXME
 	return 0, nil, errors.Errors{errors.NewOtherNotImplementedError(nil, "for Mock datastore")}
 }
 
-func (b *keyspace) Upsert(upserts value.Pairs, context datastore.QueryContext, preserveMutations bool) (int, value.Pairs, errors.Errors) {
+func (b *keyspace) Upsert(upserts value.Pairs, context datastore.QueryContext, preserveMutations bool) (
+	int, value.Pairs, errors.Errors) {
+
 	// FIXME
 	return 0, nil, errors.Errors{errors.NewOtherNotImplementedError(nil, "for Mock datastore")}
 }
 
-func (b *keyspace) Delete(deletes value.Pairs, context datastore.QueryContext, preserveMutations bool) (int, value.Pairs, errors.Errors) {
+func (b *keyspace) Delete(deletes value.Pairs, context datastore.QueryContext, preserveMutations bool) (
+	int, value.Pairs, errors.Errors) {
+
 	// FIXME
 	return 0, nil, errors.Errors{errors.NewOtherNotImplementedError(nil, "for Mock datastore")}
 }

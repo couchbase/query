@@ -94,7 +94,8 @@ func (this *builder) buildCreateSecondaryScan(indexes, flex map[datastore.Index]
 	if indexAll {
 		indexes = getIndexAllIndexes(indexes, baseKeyspace)
 		if len(indexes) < 2 {
-			return nil, 0, errors.NewPlanInternalError(fmt.Sprintf("buildCreateSecondaryScan: unexpected number of indexes (%d) for keyspace %s with INDEX_ALL hint", len(indexes), node.Alias()))
+			return nil, 0, errors.NewPlanInternalError(fmt.Sprintf("buildCreateSecondaryScan: unexpected number of indexes "+
+				"(%d) for keyspace %s with INDEX_ALL hint", len(indexes), node.Alias()))
 		}
 	} else {
 		indexes = this.minimalIndexes(indexes, true, pred, node)
@@ -974,7 +975,9 @@ func (this *builder) sargIndexes(baseKeyspace *base.BaseKeyspace, underHash bool
 
 		if se.HasFlag(IE_LEADINGMISSING) && (spans == nil || spans.Size() == 0) {
 			se.spans = _WHOLE_SPANS.Copy()
-			if pred == nil || (se.cond != nil && pred.EquivalentTo(se.cond)) || (se.origCond != nil && pred.EquivalentTo(se.origCond)) {
+			if pred == nil || (se.cond != nil && pred.EquivalentTo(se.cond)) ||
+				(se.origCond != nil && pred.EquivalentTo(se.origCond)) {
+
 				se.exactSpans = true
 			} else {
 				se.exactSpans = false
@@ -1096,7 +1099,9 @@ func overlapSpans(expr expression.Expression) bool {
 	return expr != nil && expr.MayOverlapSpans()
 }
 
-func (this *builder) eqJoinFilter(fl *base.Filter, alias string) (bool, expression.Expression, expression.Expression, *base.BaseKeyspace) {
+func (this *builder) eqJoinFilter(fl *base.Filter, alias string) (bool, expression.Expression, expression.Expression,
+	*base.BaseKeyspace) {
+
 	fltrExpr := fl.FltrExpr()
 	eqFltr, ok := fltrExpr.(*expression.Eq)
 	if !ok {
@@ -1551,7 +1556,8 @@ func (this *builder) buildIndexFilters(entry *indexEntry, baseKeyspace *base.Bas
 				if i < len(keys) {
 					covers = append(covers, expression.NewIndexKey(keys[i]))
 				} else {
-					return nil, nil, nil, nil, errors.NewPlanInternalError(fmt.Sprintf("buildIndexFilters: index projection key position %d beyond key length(%d)", i, len(keys)))
+					return nil, nil, nil, nil, errors.NewPlanInternalError(fmt.Sprintf("buildIndexFilters: index projection "+
+						"key position %d beyond key length(%d)", i, len(keys)))
 				}
 			}
 			covers = append(covers, expression.NewIndexKey(id))
@@ -1598,7 +1604,8 @@ func (this *builder) buildIndexFilters(entry *indexEntry, baseKeyspace *base.Bas
 				entry.frCost += frCost
 			} else {
 				useCBO = false
-				entry.cost, entry.cardinality, entry.frCost, entry.size = OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_COST_NOT_AVAIL, OPT_SIZE_NOT_AVAIL
+				entry.cost, entry.cardinality, entry.frCost, entry.size = OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL,
+					OPT_COST_NOT_AVAIL, OPT_SIZE_NOT_AVAIL
 			}
 		}
 	}

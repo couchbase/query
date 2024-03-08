@@ -33,7 +33,8 @@ func TestHashJoin(t *testing.T) {
 	runStmt(qc, "CREATE INDEX purch_customerId_purchaseId on purchase(customerId, purchaseId)")
 	runStmt(qc, "CREATE INDEX purch_purchaseId on purchase(purchaseId)")
 	runStmt(qc, "CREATE INDEX purch_customerId_metaid on purchase(customerId || \"_\" || test_id)")
-	runStmt(qc, "CREATE INDEX purch_arrProduct_customerId on purchase(DISTINCT ARRAY pd.product FOR pd IN lineItems END, customerId)")
+	runStmt(qc, "CREATE INDEX purch_arrProduct_customerId on purchase(DISTINCT ARRAY pd.product FOR pd IN lineItems END, "+
+		"customerId)")
 	runStmt(qc, "CREATE INDEX ord_customerId_ordersId on orders(customerId, orderId)")
 	runStmt(qc, "CREATE INDEX st_ix11 on shellTest(c11, DISTINCT a11) WHERE type = \"left\"")
 	runStmt(qc, "CREATE INDEX st_ix12 on shellTest(c21) WHERE type = \"right\"")

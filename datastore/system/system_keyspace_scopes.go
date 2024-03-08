@@ -77,7 +77,9 @@ func (b *scopeKeyspace) Count(context datastore.QueryContext) (int64, errors.Err
 							scope, _ := bucket.ScopeById(scopeId)
 							if scope != nil {
 
-								if includeDefaultKeyspace || canRead(context, namespace.Datastore(), namespaceId, object.Id, scopeId) {
+								if includeDefaultKeyspace ||
+									canRead(context, namespace.Datastore(), namespaceId, object.Id, scopeId) {
+
 									count++
 								} else {
 									context.Warning(errors.NewSystemFilteredRowsWarning("system:scopes"))
@@ -319,21 +321,25 @@ func (pi *scopeIndex) Scan(requestId string, span *datastore.Span, distinct bool
 								continue
 							}
 
-							includeDefaultKeyspace := canAccessAll || canRead(conn.QueryContext(), namespace.Datastore(), namespaceId, object.Id)
+							includeDefaultKeyspace := canAccessAll ||
+								canRead(conn.QueryContext(), namespace.Datastore(), namespaceId, object.Id)
 							scopeIds, _ := bucket.ScopeIds()
 							for _, scopeId := range scopeIds {
 								scope, _ := bucket.ScopeById(scopeId)
 								if scope != nil {
 									id := makeId(namespaceId, object.Id, scopeId)
 									if !pi.primary || spanEvaluator.evaluate(id) {
-										if !(includeDefaultKeyspace || canRead(conn.QueryContext(), namespace.Datastore(), namespaceId, object.Id, scopeId)) {
+										if !(includeDefaultKeyspace ||
+											canRead(conn.QueryContext(), namespace.Datastore(), namespaceId, object.Id, scopeId)) {
 											found := false
 											keyspaceIds, _ := scope.KeyspaceIds()
 											for _, keyspaceId := range keyspaceIds {
 												if pi.keyspace.skipSystem && keyspaceId[0] == '_' {
 													continue
 												}
-												if canRead(conn.QueryContext(), namespace.Datastore(), namespaceId, object.Id, scopeId, keyspaceId) {
+												if canRead(conn.QueryContext(), namespace.Datastore(), namespaceId, object.Id,
+													scopeId, keyspaceId) {
+
 													found = true
 													break
 												}
@@ -403,20 +409,25 @@ func (pi *scopeIndex) ScanEntries(requestId string, limit int64, cons datastore.
 						} else {
 							continue
 						}
-						includeDefaultKeyspace := canAccessAll || canRead(conn.QueryContext(), namespace.Datastore(), namespaceId, object.Id)
+						includeDefaultKeyspace := canAccessAll ||
+							canRead(conn.QueryContext(), namespace.Datastore(), namespaceId, object.Id)
 
 						scopeIds, _ := bucket.ScopeIds()
 						for _, scopeId := range scopeIds {
 							scope, _ := bucket.ScopeById(scopeId)
 							if scope != nil {
-								if !(includeDefaultKeyspace || canRead(conn.QueryContext(), namespace.Datastore(), namespaceId, object.Id, scopeId)) {
+								if !(includeDefaultKeyspace ||
+									canRead(conn.QueryContext(), namespace.Datastore(), namespaceId, object.Id, scopeId)) {
+
 									found := false
 									keyspaceIds, _ := scope.KeyspaceIds()
 									for _, keyspaceId := range keyspaceIds {
 										if pi.keyspace.skipSystem && keyspaceId[0] == '_' {
 											continue
 										}
-										if canRead(conn.QueryContext(), namespace.Datastore(), namespaceId, object.Id, scopeId, keyspaceId) {
+										if canRead(conn.QueryContext(), namespace.Datastore(), namespaceId, object.Id,
+											scopeId, keyspaceId) {
+
 											found = true
 											break
 										}

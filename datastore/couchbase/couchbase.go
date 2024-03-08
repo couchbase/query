@@ -1064,7 +1064,9 @@ func (p *namespace) KeyspaceNames() ([]string, errors.Error) {
 	return rv, nil
 }
 
-func (p *namespace) Objects(credentials *auth.Credentials, filter func(string) bool, preload bool) ([]datastore.Object, errors.Error) {
+func (p *namespace) Objects(credentials *auth.Credentials, filter func(string) bool, preload bool) (
+	[]datastore.Object, errors.Error) {
+
 	if len(credentials.CbauthCredentialsList) == 0 {
 		return nil, errors.NewDatastoreUnableToRetrieveBuckets(fmt.Errorf("empty credentials"))
 	}
@@ -1867,7 +1869,9 @@ func (b *keyspace) Stats(context datastore.QueryContext, which []datastore.Keysp
 	return b.stats(context, which)
 }
 
-func (b *keyspace) stats(context datastore.QueryContext, which []datastore.KeyspaceStats, clientContext ...*memcached.ClientContext) ([]int64, errors.Error) {
+func (b *keyspace) stats(context datastore.QueryContext, which []datastore.KeyspaceStats,
+	clientContext ...*memcached.ClientContext) ([]int64, errors.Error) {
+
 	cbWhich := make([]cb.BucketStats, len(which))
 	for i, f := range which {
 		cbWhich[i] = ds2cb[f]
@@ -1881,7 +1885,8 @@ func (b *keyspace) stats(context datastore.QueryContext, which []datastore.Keysp
 }
 
 func (b *keyspace) count(context datastore.QueryContext, clientContext ...*memcached.ClientContext) (int64, errors.Error) {
-	count, err := b.cbbucket.GetIntStats(b.needsTimeRefresh(_STATS_REFRESH_THRESHOLD), []cb.BucketStats{cb.StatCount}, clientContext...)
+	count, err := b.cbbucket.GetIntStats(b.needsTimeRefresh(_STATS_REFRESH_THRESHOLD), []cb.BucketStats{cb.StatCount},
+		clientContext...)
 	if err != nil {
 		b.checkRefresh(err)
 		return 0, errors.NewCbKeyspaceCountError(err, b.fullName)
@@ -1894,7 +1899,8 @@ func (b *keyspace) Size(context datastore.QueryContext) (int64, errors.Error) {
 }
 
 func (b *keyspace) size(context datastore.QueryContext, clientContext ...*memcached.ClientContext) (int64, errors.Error) {
-	size, err := b.cbbucket.GetIntStats(b.needsTimeRefresh(_STATS_REFRESH_THRESHOLD), []cb.BucketStats{cb.StatSize}, clientContext...)
+	size, err := b.cbbucket.GetIntStats(b.needsTimeRefresh(_STATS_REFRESH_THRESHOLD), []cb.BucketStats{cb.StatSize},
+		clientContext...)
 	if err != nil {
 		b.checkRefresh(err)
 		return 0, errors.NewCbKeyspaceSizeError(err, b.fullName)
@@ -2499,7 +2505,9 @@ func (b *keyspace) performOp(op MutateOp, qualifiedName, scopeName, collectionNa
 
 		return mCount, mPairs, errs
 
-	} else { // if the number of keys to be modified is greater than 1 and the number of allowed routines > 1 , run modification operations concurrently
+	} else {
+		// if the number of keys to be modified is greater than 1 and the number of allowed routines > 1 , run modification
+		// operations concurrently
 		p := &parallelInfo{
 			pairs:  pairs,
 			wg:     &sync.WaitGroup{},
@@ -2525,7 +2533,9 @@ func (b *keyspace) performOp(op MutateOp, qualifiedName, scopeName, collectionNa
 }
 
 // Performs mutation for a single key
-func (b *keyspace) singleMutationOp(kv value.Pair, op MutateOp, qualifiedName string, context datastore.QueryContext, clientContext ...*memcached.ClientContext) (mutationState, errors.Error) {
+func (b *keyspace) singleMutationOp(kv value.Pair, op MutateOp, qualifiedName string, context datastore.QueryContext,
+	clientContext ...*memcached.ClientContext) (mutationState, errors.Error) {
+
 	retry := errors.NONE
 	var err error
 	var keyError errors.Error
@@ -2678,7 +2688,8 @@ func (b *keyspace) singleMutationOp(kv value.Pair, op MutateOp, qualifiedName st
 }
 
 // Mutation worker
-func (b *keyspace) parallelMutationOp(op MutateOp, qualifiedName string, p *parallelInfo, preserveMutations bool, context datastore.QueryContext, clientCtx ...*memcached.ClientContext) {
+func (b *keyspace) parallelMutationOp(op MutateOp, qualifiedName string, p *parallelInfo, preserveMutations bool,
+	context datastore.QueryContext, clientCtx ...*memcached.ClientContext) {
 
 	defer func() {
 		r := recover()
@@ -2752,20 +2763,28 @@ func processIfMCError(retry errors.Tristate, err error, key string, keyspace str
 	return retry, err
 }
 
-func (b *keyspace) Insert(inserts value.Pairs, context datastore.QueryContext, preserveMutations bool) (int, value.Pairs, errors.Errors) {
+func (b *keyspace) Insert(inserts value.Pairs, context datastore.QueryContext, preserveMutations bool) (
+	int, value.Pairs, errors.Errors) {
+
 	return b.performOp(MOP_INSERT, b.QualifiedName(), "", "", inserts, preserveMutations, context)
 
 }
 
-func (b *keyspace) Update(updates value.Pairs, context datastore.QueryContext, preserveMutations bool) (int, value.Pairs, errors.Errors) {
+func (b *keyspace) Update(updates value.Pairs, context datastore.QueryContext, preserveMutations bool) (
+	int, value.Pairs, errors.Errors) {
+
 	return b.performOp(MOP_UPDATE, b.QualifiedName(), "", "", updates, preserveMutations, context)
 }
 
-func (b *keyspace) Upsert(upserts value.Pairs, context datastore.QueryContext, preserveMutations bool) (int, value.Pairs, errors.Errors) {
+func (b *keyspace) Upsert(upserts value.Pairs, context datastore.QueryContext, preserveMutations bool) (
+	int, value.Pairs, errors.Errors) {
+
 	return b.performOp(MOP_UPSERT, b.QualifiedName(), "", "", upserts, preserveMutations, context)
 }
 
-func (b *keyspace) Delete(deletes value.Pairs, context datastore.QueryContext, preserveMutations bool) (int, value.Pairs, errors.Errors) {
+func (b *keyspace) Delete(deletes value.Pairs, context datastore.QueryContext, preserveMutations bool) (
+	int, value.Pairs, errors.Errors) {
+
 	return b.performOp(MOP_DELETE, b.QualifiedName(), "", "", deletes, preserveMutations, context)
 }
 

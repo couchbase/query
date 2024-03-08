@@ -65,7 +65,8 @@ func (this *Intersect) beforeItems(context *Context, parent value.Value) bool {
 	}
 
 	// FIXME: should this be handled by the planner?
-	distinct := NewDistinct(plan.NewDistinct(plan.PLAN_COST_NOT_AVAIL, plan.PLAN_CARD_NOT_AVAIL, plan.PLAN_SIZE_NOT_AVAIL, plan.PLAN_COST_NOT_AVAIL), context, true)
+	distinct := NewDistinct(plan.NewDistinct(plan.PLAN_COST_NOT_AVAIL, plan.PLAN_CARD_NOT_AVAIL, plan.PLAN_SIZE_NOT_AVAIL,
+		plan.PLAN_COST_NOT_AVAIL), context, true)
 	sequence := NewSequence(plan.NewSequence(), context, this.second, distinct)
 	sequence.SetParent(this)
 	this.fork(sequence, context, parent)

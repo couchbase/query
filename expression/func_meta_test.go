@@ -21,7 +21,8 @@ import (
 // Define the pattern for UUIDs - RFC 4122, version 4
 var parseUUIDRegex = regexp.MustCompile(hexPattern)
 
-const hexPattern = `^(urn\:uuid\:)?[\{(\[]?([A-Fa-f0-9]{8})-?([A-Fa-f0-9]{4})-?([1-5][A-Fa-f0-9]{3})-?([A-Fa-f0-9]{4})-?([A-Fa-f0-9]{12})[\]\})]?$`
+const hexPattern = `^(urn\:uuid\:)?[\{(\[]?([A-Fa-f0-9]{8})-?([A-Fa-f0-9]{4})-?([1-5][A-Fa-f0-9]{3})-` +
+	`?([A-Fa-f0-9]{4})-?([A-Fa-f0-9]{12})[\]\})]?$`
 
 func TestNewBase64Decode(t *testing.T) {
 	inEx := NewConstant([]interface{}{1, 2, 3})

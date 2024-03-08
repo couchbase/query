@@ -374,7 +374,8 @@ func (this *systemRemoteHttp) GetRemoteDoc(node string, key string, endpoint str
 }
 
 // perform operation on key on the specified nodes for the specified endpoint
-func (this *systemRemoteHttp) DoRemoteOps(nodes []string, endpoint string, command string, key string, data string, warnFn func(warn errors.Error), creds distributed.Creds, authToken string) {
+func (this *systemRemoteHttp) DoRemoteOps(nodes []string, endpoint string, command string, key string, data string,
+	warnFn func(warn errors.Error), creds distributed.Creds, authToken string) {
 
 	// now that the local node name can change, use a consistent one across the scan
 	whoAmI := this.WhoAmI()

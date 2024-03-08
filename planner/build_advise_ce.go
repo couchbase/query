@@ -55,7 +55,8 @@ func (this *builder) initialIndexAdvisor(stmt algebra.Statement) {
 func (this *builder) extractKeyspacePredicates(where, on expression.Expression) {
 }
 
-func (this *builder) extractIndexJoin(index datastore.Index, keyspace datastore.Keyspace, node *algebra.KeyspaceTerm, cover bool, cost, cardinality float64) {
+func (this *builder) extractIndexJoin(index datastore.Index, keyspace datastore.Keyspace, node *algebra.KeyspaceTerm, cover bool,
+	cost, cardinality float64) {
 }
 
 func (this *builder) appendQueryInfo(scan plan.Operator, keyspace datastore.Keyspace, node *algebra.KeyspaceTerm, uncovered bool) {
@@ -81,7 +82,8 @@ func (this *builder) processadviseJF(alias string) {
 func (this *builder) extractPagination(order *algebra.Order, offset, limit expression.Expression) {
 }
 
-func (this *builder) extractLetGroupProjOrder(let expression.Bindings, group *algebra.Group, projection *algebra.Projection, order *algebra.Order, aggs algebra.Aggregates) {
+func (this *builder) extractLetGroupProjOrder(let expression.Bindings, group *algebra.Group, projection *algebra.Projection,
+	order *algebra.Order, aggs algebra.Aggregates) {
 }
 
 func (this *builder) storeCollectQueryInfo() *collectQueryInfo {

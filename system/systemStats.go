@@ -55,7 +55,8 @@ func (s *SystemStats) Close() {
 func (s *SystemStats) ProcessCpuStats() (C.sigar_pid_t, uint64, uint64, error) {
 	var cpu C.sigar_proc_cpu_t
 	if err := C.sigar_proc_cpu_get(s.handle, s.pid, &cpu); err != C.SIGAR_OK {
-		return C.sigar_pid_t(0), uint64(0), uint64(0), errors.New(fmt.Sprintf("Fail to get CPU.  Err=%v", C.sigar_strerror(s.handle, err)))
+		return C.sigar_pid_t(0), uint64(0), uint64(0), errors.New(fmt.Sprintf("Fail to get CPU.  Err=%v",
+			C.sigar_strerror(s.handle, err)))
 	}
 	return s.pid, uint64(cpu.user + cpu.sys), uint64(time.Now().UnixMilli()), nil
 }

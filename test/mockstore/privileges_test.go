@@ -94,9 +94,11 @@ func TestStatementPrivileges(t *testing.T) {
 		// statements with CURL()
 		//
 		testCase{id: "Simple Select", text: "select CURL('http://ip.jsontest.com') as res",
-			expectedPrivs: &auth.Privileges{List: []auth.PrivilegePair{auth.PrivilegePair{Target: "", Priv: auth.PRIV_QUERY_EXTERNAL_ACCESS}}}},
+			expectedPrivs: &auth.Privileges{List: []auth.PrivilegePair{auth.PrivilegePair{Target: "",
+				Priv: auth.PRIV_QUERY_EXTERNAL_ACCESS}}}},
 		testCase{id: "Select in FROM", text: "select * from CURL('http://ip.jsontest.com') res",
-			expectedPrivs: &auth.Privileges{List: []auth.PrivilegePair{auth.PrivilegePair{Target: "", Priv: auth.PRIV_QUERY_EXTERNAL_ACCESS}}}},
+			expectedPrivs: &auth.Privileges{List: []auth.PrivilegePair{auth.PrivilegePair{Target: "",
+				Priv: auth.PRIV_QUERY_EXTERNAL_ACCESS}}}},
 		testCase{id: "Select in LIMIT", text: "select * from testbucket limit CURL('http://ip.jsontest.com')",
 			expectedPrivs: &auth.Privileges{List: []auth.PrivilegePair{
 				auth.PrivilegePair{Target: "", Priv: auth.PRIV_QUERY_EXTERNAL_ACCESS},
@@ -118,7 +120,8 @@ func TestStatementPrivileges(t *testing.T) {
 				auth.PrivilegePair{Target: "testbucket", Priv: auth.PRIV_QUERY_SELECT},
 			}}},
 		testCase{id: "Update with Subselect",
-			text: "update default use keys 'mykey' SET myWebServiceEndpoint = (SELECT raw result FROM CURL('http://ip.jsontest.com') result )",
+			text: "update default use keys 'mykey' SET myWebServiceEndpoint = (SELECT raw result FROM " +
+				"CURL('http://ip.jsontest.com') result )",
 			expectedPrivs: &auth.Privileges{List: []auth.PrivilegePair{
 				auth.PrivilegePair{Target: "", Priv: auth.PRIV_QUERY_EXTERNAL_ACCESS},
 				auth.PrivilegePair{Target: "default", Priv: auth.PRIV_QUERY_UPDATE},

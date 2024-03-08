@@ -63,7 +63,9 @@ type connectionPool struct {
 	bucket      string
 }
 
-func newConnectionPool(host string, ah AuthHandler, closer bool, poolSize, poolOverflow int, tlsConfig *tls.Config, bucket string, encrypted bool) *connectionPool {
+func newConnectionPool(host string, ah AuthHandler, closer bool, poolSize, poolOverflow int, tlsConfig *tls.Config, bucket string,
+	encrypted bool) *connectionPool {
+
 	connSize := poolSize
 	if closer {
 		connSize += poolOverflow

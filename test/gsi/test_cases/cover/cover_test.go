@@ -44,7 +44,8 @@ func TestCover(t *testing.T) {
 	runStmt(qc, "DROP INDEX shellTest.ixCover7")
 
 	runStmt(qc, "CREATE INDEX ixCover8 on shellTest(ALL ARRAY v.fname FOR v IN Names END) WHERE type=\"doc\" AND owner=\"xyz\"")
-	runStmt(qc, "CREATE INDEX ixCover9 on shellTest((DISTINCT (ARRAY (DISTINCT (ARRAY (((v.country) || \".\") || c) FOR c IN (v.cities) END)) FOR v IN visited_places END)))")
+	runStmt(qc, "CREATE INDEX ixCover9 on shellTest((DISTINCT (ARRAY (DISTINCT (ARRAY (((v.country) || \".\") || c) FOR c IN "+
+		"(v.cities) END)) FOR v IN visited_places END)))")
 
 	runMatch("case_cover2.json", false, true, qc, t)
 
@@ -81,7 +82,8 @@ func TestCover(t *testing.T) {
 	runStmt(qc, "DROP INDEX shellTest.ixCover15")
 
 	runStmt(qc, "CREATE INDEX ixCover16 on shellTest(DISTINCT arr1, to_number(c1), c1)")
-	runStmt(qc, "CREATE INDEX ixCover20 on shellTest(ALL ARRAY item.n FOR item IN items WHEN item.type = \"al\" END) WHERE type = \"ll\"")
+	runStmt(qc, "CREATE INDEX ixCover20 on shellTest(ALL ARRAY item.n FOR item IN items WHEN item.type = \"al\" END) "+
+		"WHERE type = \"ll\"")
 	runStmt(qc, "CREATE INDEX ixCover21 on shellTest(l , n, v) WHERE type = \"rr\"")
 
 	runMatch("case_cover_bugs.json", false, true, qc, t)

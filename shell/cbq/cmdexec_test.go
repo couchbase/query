@@ -127,7 +127,8 @@ func TestExecN1QLStmt(t *testing.T) {
 		execn1ql(line, t)
 
 		//Insert data into shellTest
-		line = "insert into shellTest values (\"1\", {\"name\" : \"Mission Peak\" , \"distance\" : 6}), (\"2\", {\"name\" : \"Black Mountain\", \"Location\" : \"Santa Clara County\", \"distance\" : 17})"
+		line = "insert into shellTest values (\"1\", {\"name\" : \"Mission Peak\" , \"distance\" : 6}), (\"2\", {\"name\" : " +
+			"\"Black Mountain\", \"Location\" : \"Santa Clara County\", \"distance\" : 17})"
 		execn1ql(line, t)
 
 		//select from bucket where
@@ -135,7 +136,8 @@ func TestExecN1QLStmt(t *testing.T) {
 		execn1ql(line, t)
 
 		//upsert data
-		line = "upsert into shellTest values (\"1\", {\"name\" : \"Mission Peak\" , \"Location\" : \"Fremont\", \"distance\" : 6.5})"
+		line = "upsert into shellTest values (\"1\", {\"name\" : \"Mission Peak\" , \"Location\" : \"Fremont\", " +
+			"\"distance\" : 6.5})"
 		execn1ql(line, t)
 
 		//query using named and positional parameters

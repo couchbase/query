@@ -394,9 +394,9 @@ func RegisterMetrics(acctStore AccountingStore) {
 
 // Record request metrics
 func RecordMetrics(request_time, service_time, transaction_time time.Duration, result_count int, result_size int, error_count int,
-	warn_count int, errs errors.Errors, stmt string, prepared bool, cancelled bool, index_scans int, primary_scans int, index_scans_gsi int,
-	primary_scans_gsi int, index_scans_fts int, primary_scans_fts int, index_scans_seq int, primary_scans_seq int,
-	scanConsistency string) {
+	warn_count int, errs errors.Errors, stmt string, prepared bool, cancelled bool, index_scans int, primary_scans int,
+	index_scans_gsi int, primary_scans_gsi int, index_scans_fts int, primary_scans_fts int, index_scans_seq int,
+	primary_scans_seq int, scanConsistency string) {
 
 	if acctstore == nil {
 		return

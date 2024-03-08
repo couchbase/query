@@ -112,7 +112,9 @@ func (b *transactionsKeyspace) Fetch(keys []string, keysMap map[string]value.Ann
 	return
 }
 
-func (b *transactionsKeyspace) Delete(deletes value.Pairs, context datastore.QueryContext, preserveMutations bool) (int, value.Pairs, errors.Errors) {
+func (b *transactionsKeyspace) Delete(deletes value.Pairs, context datastore.QueryContext, preserveMutations bool) (
+	int, value.Pairs, errors.Errors) {
+
 	var err errors.Error
 
 	// now that the node name can change in flight, use a consistent one across deletes

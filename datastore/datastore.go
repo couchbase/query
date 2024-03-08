@@ -56,7 +56,7 @@ type Datastore interface {
 	CredsString(*auth.Credentials) (string, string)             // Return name, domain from credentials in http request
 	GetUserUUID(*auth.Credentials) string                       // Returns user UUID for stats
 	GetUserBuckets(*auth.Credentials) []string                  // Returns buckets user has access to for serverless accounting
-	GetImpersonateBuckets(string, string) []string              // Returns buckets impersonated user has access to for serverless access
+	GetImpersonateBuckets(string, string) []string              // Returns  buckets impersonated user has access to for serverless
 	SetLogLevel(level logging.Level)                            // Set log level of in-process indexers
 	Inferencer(name InferenceType) (Inferencer, errors.Error)   // Schema inference provider by name, e.g. INF_DEFAULT
 	Inferencers() ([]Inferencer, errors.Error)                  // List of schema inference providers
@@ -139,7 +139,8 @@ type Namespace interface {
 	BucketByName(name string) (Bucket, errors.Error) // Find a bucket in this namespace using the bucket's name
 
 	// All keyspaces and buckets visible to the user
-	Objects(credentials *auth.Credentials, filter func(string) bool, preload bool) ([]Object, errors.Error) // All first level namespace objects
+	// All first level namespace objects
+	Objects(credentials *auth.Credentials, filter func(string) bool, preload bool) ([]Object, errors.Error)
 }
 
 type Object struct {
@@ -237,10 +238,11 @@ type Keyspace interface {
 	Scope() Scope         // Backpointer to scope
 
 	Stats(context QueryContext, which []KeyspaceStats) ([]int64, errors.Error) // Collect multiple stats at once (eg Count, Size)
-	Count(context QueryContext) (int64, errors.Error)                          // count of all documents
-	Size(context QueryContext) (int64, errors.Error)                           // size of all documents
-	Indexer(name IndexType) (Indexer, errors.Error)                            // Indexer provider by name, e.g. VIEW or GSI; "" returns default Indexer
-	Indexers() ([]Indexer, errors.Error)                                       // List of index providers
+
+	Count(context QueryContext) (int64, errors.Error) // count of all documents
+	Size(context QueryContext) (int64, errors.Error)  // size of all documents
+	Indexer(name IndexType) (Indexer, errors.Error)   // Indexer provider by name, e.g. VIEW or GSI; "" returns default Indexer
+	Indexers() ([]Indexer, errors.Error)              // List of index providers
 
 	// Used by both SELECT and DML statements
 	Fetch(keys []string, keysMap map[string]value.AnnotatedValue, context QueryContext, subPath []string,

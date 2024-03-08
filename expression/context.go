@@ -44,8 +44,10 @@ type Context interface {
 	StoreValue(key string, val interface{})
 	RetrieveValue(key string) interface{}
 	ReleaseValue(key string)
-	EvaluateStatement(statement string, namedArgs map[string]value.Value, positionalArgs value.Values, subquery, readonly bool, profileUdfExecTrees bool, funcKey string) (value.Value, uint64, error)
-	OpenStatement(statement string, namedArgs map[string]value.Value, positionalArgs value.Values, subquery, readonly bool, profileUdfExecTrees bool, funcKey string) (functions.Handle, error)
+	EvaluateStatement(statement string, namedArgs map[string]value.Value, positionalArgs value.Values, subquery, readonly bool,
+		profileUdfExecTrees bool, funcKey string) (value.Value, uint64, error)
+	OpenStatement(statement string, namedArgs map[string]value.Value, positionalArgs value.Values, subquery, readonly bool,
+		profileUdfExecTrees bool, funcKey string) (functions.Handle, error)
 	Parse(s string) (interface{}, error)
 	Infer(value.Value, value.Value) (value.Value, error)
 	SetTracked(bool)
@@ -85,8 +87,10 @@ type ParkableContext interface {
 	Context
 	Park(stop func(bool), changeCallerState bool)
 	Resume(changeCallerState bool)
-	ParkableEvaluateStatement(statement string, namedArgs map[string]value.Value, positionalArgs value.Values, subquery, readonly bool, profileUdfExecTrees bool, funcKey string) (value.Value, uint64, error)
-	ParkableOpenStatement(statement string, namedArgs map[string]value.Value, positionalArgs value.Values, subquery, readonly bool, profileUdfExecTrees bool, funcKey string) (functions.Handle, error)
+	ParkableEvaluateStatement(statement string, namedArgs map[string]value.Value, positionalArgs value.Values, subquery bool,
+		readonly bool, profileUdfExecTrees bool, funcKey string) (value.Value, uint64, error)
+	ParkableOpenStatement(statement string, namedArgs map[string]value.Value, positionalArgs value.Values, subquery bool,
+		readonly bool, profileUdfExecTrees bool, funcKey string) (functions.Handle, error)
 }
 
 type QuotaContext interface {
@@ -103,7 +107,8 @@ type ParkableExecutePreparedContext interface {
 	PrepareStatementExt(statement string) (interface{}, error)
 
 	// Only accepts non-prepared statements
-	ExecutePreparedExt(prepared interface{}, namedArgs map[string]value.Value, positionalArgs value.Values) (value.Value, uint64, error)
+	ExecutePreparedExt(prepared interface{}, namedArgs map[string]value.Value, positionalArgs value.Values) (
+		value.Value, uint64, error)
 }
 
 type SequenceContext interface {

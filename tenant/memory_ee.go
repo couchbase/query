@@ -169,7 +169,8 @@ func (this *memorySession) Track(size uint64) (uint64, uint64, errors.Error) {
 
 		// TODO TENANT there is an opportunity here to give tenants different quotas
 		if perTenantQuota > 0 && inUse > perTenantQuota {
-			return top, allocated, errors.NewTenantQuotaExceededError(this.manager.tenant, this.context.User(), inUse, perTenantQuota)
+			return top, allocated, errors.NewTenantQuotaExceededError(this.manager.tenant, this.context.User(), inUse,
+				perTenantQuota)
 		}
 	}
 	return top, allocated, nil

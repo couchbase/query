@@ -265,7 +265,8 @@ func (this *builder) buildSubsetScan(keyspace datastore.Keyspace, node *algebra.
 
 	join := node.IsAnsiJoinOp()
 	hash := this.hasBuilderFlag(BUILDER_UNDER_HASH)
-	nlPrimaryScan := !util.IsFeatureEnabled(this.context.FeatureControls(), util.N1QL_NL_PRIMARYSCAN) || this.hasBuilderFlag(BUILDER_JOIN_ON_PRIMARY)
+	nlPrimaryScan := !util.IsFeatureEnabled(this.context.FeatureControls(), util.N1QL_NL_PRIMARYSCAN) ||
+		this.hasBuilderFlag(BUILDER_JOIN_ON_PRIMARY)
 	if join {
 		this.resetPushDowns()
 	}
@@ -782,7 +783,8 @@ func allHints(keyspace datastore.Keyspace, hints []algebra.OptimHint, virtualInd
 				if inIndex && inNoIndex {
 					// We should have removed any index from NO_INDEX/NO_INDEX_FTS
 					// hint that is also present in INDEX/INDEX_FTS hint.
-					return nil, errors.NewPlanInternalError(fmt.Sprintf("allHints: unexpected index %s in both INDEX/INDEX_FTS and NO_INDEX/NO_INDEX_FTS hints", idx.Name()))
+					return nil, errors.NewPlanInternalError(fmt.Sprintf("allHints: unexpected index %s in both INDEX/INDEX_FTS "+
+						"and NO_INDEX/NO_INDEX_FTS hints", idx.Name()))
 				} else if inIndex {
 					use = true
 				} else if !hasIndex && hasNoIndex && !inNoIndex {

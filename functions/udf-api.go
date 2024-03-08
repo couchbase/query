@@ -71,7 +71,9 @@ func (this *UdfContext) CompareValues(val1, val2 interface{}) (int, bool) {
 	return i, (!ok || res.Type() == value.NULL || res.Type() == value.MISSING)
 }
 
-func (this *UdfContext) ExecuteStatement(statement string, namedArgs map[string]interface{}, positionalArgs []interface{}) (interface{}, uint64, error) {
+func (this *UdfContext) ExecuteStatement(statement string, namedArgs map[string]interface{}, positionalArgs []interface{}) (
+	interface{}, uint64, error) {
+
 	var named map[string]value.Value
 	var positional []value.Value
 
@@ -90,7 +92,9 @@ func (this *UdfContext) ExecuteStatement(statement string, namedArgs map[string]
 	return this.context.ParkableEvaluateStatement(statement, named, positional, false, this.context.Readonly(), true, this.funcKey)
 }
 
-func (this *UdfContext) OpenStatement(statement string, namedArgs map[string]interface{}, positionalArgs []interface{}) (interface{}, error) {
+func (this *UdfContext) OpenStatement(statement string, namedArgs map[string]interface{}, positionalArgs []interface{}) (
+	interface{}, error) {
+
 	var named map[string]value.Value
 	var positional []value.Value
 
@@ -106,7 +110,8 @@ func (this *UdfContext) OpenStatement(statement string, namedArgs map[string]int
 			positional[i] = value.NewValue(v)
 		}
 	}
-	handle, err := this.context.ParkableOpenStatement(statement, named, positional, false, this.context.Readonly(), true, this.funcKey)
+	handle, err := this.context.ParkableOpenStatement(statement, named, positional, false, this.context.Readonly(), true,
+		this.funcKey)
 	if err != nil {
 		return nil, err
 	}

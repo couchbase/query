@@ -18,7 +18,8 @@ import (
 	"github.com/couchbase/query/inferencer"
 )
 
-var CLUSTER = flag.String("cluster", "http://Administrator:password@127.0.0.1:9091", "Cluster address (e.g., http://localhost:8091)")
+var CLUSTER = flag.String("cluster", "http://Administrator:password@127.0.0.1:9091",
+	"Cluster address (e.g., http://localhost:8091)")
 var BUCKET = flag.String("bucket", "beer-sample", "Bucket to test (e.g. beer-sample)")
 
 func main() {

@@ -122,7 +122,9 @@ func (b *dictionaryKeyspace) fetchOne(key string) (map[string]interface{}, error
 	return itemMap, nil
 }
 
-func (b *dictionaryKeyspace) Delete(deletes value.Pairs, context datastore.QueryContext, preserveMutations bool) (int, value.Pairs, errors.Errors) {
+func (b *dictionaryKeyspace) Delete(deletes value.Pairs, context datastore.QueryContext, preserveMutations bool) (
+	int, value.Pairs, errors.Errors) {
+
 	for _, pair := range deletes {
 		name := pair.Name
 

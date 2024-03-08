@@ -60,19 +60,27 @@ func (this *IndexContext) DatastoreVersion() string {
 	return "BOGUS_VERSION"
 }
 
-func (this *IndexContext) EvaluateStatement(statement string, namedArgs map[string]value.Value, positionalArgs value.Values, subquery, readonly bool, profileUdfExecTrees bool, funcKey string) (value.Value, uint64, error) {
+func (this *IndexContext) EvaluateStatement(statement string, namedArgs map[string]value.Value, positionalArgs value.Values,
+	subquery, readonly bool, profileUdfExecTrees bool, funcKey string) (value.Value, uint64, error) {
+
 	return nil, 0, nil
 }
 
-func (this *IndexContext) OpenStatement(statement string, namedArgs map[string]value.Value, positionalArgs value.Values, subquery, readonly bool, profileUdfExecTrees bool, funcKey string) (functions.Handle, error) {
+func (this *IndexContext) OpenStatement(statement string, namedArgs map[string]value.Value, positionalArgs value.Values,
+	subquery, readonly bool, profileUdfExecTrees bool, funcKey string) (functions.Handle, error) {
+
 	return nil, nil
 }
 
-func (this *IndexContext) ParkableEvaluateStatement(statement string, namedArgs map[string]value.Value, positionalArgs value.Values, subquery, readonly bool, profileUdfExecTrees bool, funcKey string) (value.Value, uint64, error) {
+func (this *IndexContext) ParkableEvaluateStatement(statement string, namedArgs map[string]value.Value,
+	positionalArgs value.Values, subquery, readonly bool, profileUdfExecTrees bool, funcKey string) (value.Value, uint64, error) {
+
 	return nil, 0, nil
 }
 
-func (this *IndexContext) ParkableOpenStatement(statement string, namedArgs map[string]value.Value, positionalArgs value.Values, subquery, readonly bool, profileUdfExecTrees bool, funcKey string) (functions.Handle, error) {
+func (this *IndexContext) ParkableOpenStatement(statement string, namedArgs map[string]value.Value, positionalArgs value.Values,
+	subquery, readonly bool, profileUdfExecTrees bool, funcKey string) (functions.Handle, error) {
+
 	return nil, nil
 }
 

@@ -105,7 +105,9 @@ func (this *CreatePrimaryIndex) RunOnce(context *Context, parent value.Value) {
 					context.Error(err)
 					return
 				}
-			} else if context.useCBO && (node.Using() == datastore.GSI || node.Using() == datastore.DEFAULT) && !deferred(node.With()) {
+			} else if context.useCBO && (node.Using() == datastore.GSI || node.Using() == datastore.DEFAULT) &&
+				!deferred(node.With()) {
+
 				err = updateStats([]string{node.Name()}, "create_primary_index", this.plan.Keyspace(), context)
 				if err != nil {
 					context.Error(err)

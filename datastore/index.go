@@ -49,17 +49,22 @@ const (
 type Indexer interface {
 	BucketId() string
 	ScopeId() string
-	KeyspaceId() string                                                                       // Id of the keyspace to which this indexer belongs
-	Name() IndexType                                                                          // Unique within a Keyspace.
-	IndexIds() ([]string, errors.Error)                                                       // Ids of the indexes defined on this keyspace
-	IndexNames() ([]string, errors.Error)                                                     // Names of the indexes defined on this keyspace
-	IndexById(id string) (Index, errors.Error)                                                // Find an index on this keyspace using the index's id
-	IndexByName(name string) (Index, errors.Error)                                            // Find an index on this keyspace using the index's name
-	PrimaryIndexes() ([]PrimaryIndex, errors.Error)                                           // Returns the server-recommended primary index
-	Indexes() ([]Index, errors.Error)                                                         // Returns all the indexes defined on this keyspace
-	CreatePrimaryIndex(requestId, name string, with value.Value) (PrimaryIndex, errors.Error) // Create or return a primary index on this keyspace
-	CreateIndex(requestId, name string, seekKey, rangeKey expression.Expressions,             // Create a secondary index on this keyspace
+	KeyspaceId() string                             // Id of the keyspace to which this indexer belongs
+	Name() IndexType                                // Unique within a Keyspace.
+	IndexIds() ([]string, errors.Error)             // Ids of the indexes defined on this keyspace
+	IndexNames() ([]string, errors.Error)           // Names of the indexes defined on this keyspace
+	IndexById(id string) (Index, errors.Error)      // Find an index on this keyspace using the index's id
+	IndexByName(name string) (Index, errors.Error)  // Find an index on this keyspace using the index's name
+	PrimaryIndexes() ([]PrimaryIndex, errors.Error) // Returns the server-recommended primary index
+	Indexes() ([]Index, errors.Error)               // Returns all the indexes defined on this keyspace
+
+	// Create or return a primary index on this keyspace
+	CreatePrimaryIndex(requestId, name string, with value.Value) (PrimaryIndex, errors.Error)
+
+	// Create a secondary index on this keyspace
+	CreateIndex(requestId, name string, seekKey, rangeKey expression.Expressions,
 		where expression.Expression, with value.Value) (Index, errors.Error)
+
 	BuildIndexes(requestId string, name ...string) errors.Error // Build indexes that were deferred at creation
 	Refresh() errors.Error                                      // Refresh list of indexes from metadata
 	MetadataVersion() uint64                                    // Meta data change counter

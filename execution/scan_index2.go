@@ -18,7 +18,8 @@ import (
 	"github.com/couchbase/query/value"
 )
 
-var _EMPTY_SPAN2 *datastore.Span2 = &datastore.Span2{nil, datastore.Ranges2{&datastore.Range2{value.NULL_VALUE, value.NULL_VALUE, 0}}}
+var _EMPTY_SPAN2 *datastore.Span2 = &datastore.Span2{nil, datastore.Ranges2{&datastore.Range2{value.NULL_VALUE,
+	value.NULL_VALUE, 0}}}
 
 type IndexScan2 struct {
 	base

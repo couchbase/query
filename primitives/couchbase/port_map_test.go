@@ -12,7 +12,10 @@ package couchbase
 import "testing"
 
 func TestSingleNode(t *testing.T) {
-	jsonInput := `{"rev":66,"nodesExt":[{"services":{"mgmt":8091,"mgmtSSL":18091,"indexAdmin":9100,"indexScan":9101,"indexHttp":9102,"indexStreamInit":9103,"indexStreamCatchup":9104,"indexStreamMaint":9105,"indexHttps":19102,"kv":11210,"kvSSL":11207,"capi":8092,"capiSSL":18092,"projector":9999,"n1ql":8093,"n1qlSSL":18093},"thisNode":true}],"clusterCapabilitiesVer":[1,0],"clusterCapabilities":{"n1ql":["enhancedPreparedStatements"]}}`
+	jsonInput := `{"rev":66,"nodesExt":[{"services":{"mgmt":8091,"mgmtSSL":18091,"indexAdmin":9100,"indexScan":9101,` +
+		`"indexHttp":9102,"indexStreamInit":9103,"indexStreamCatchup":9104,"indexStreamMaint":9105,"indexHttps":19102,` +
+		`"kv":11210,"kvSSL":11207,"capi":8092,"capiSSL":18092,"projector":9999,"n1ql":8093,"n1qlSSL":18093},"thisNode":true}],` +
+		`"clusterCapabilitiesVer":[1,0],"clusterCapabilities":{"n1ql":["enhancedPreparedStatements"]}}`
 
 	poolServices, err := ParsePoolServices(jsonInput)
 	if err != nil {
@@ -61,7 +64,13 @@ func TestSingleNode(t *testing.T) {
 }
 
 func TestMultiNode(t *testing.T) {
-	jsonInput := `{"rev":32,"nodesExt":[{"services":{"mgmt":8091,"mgmtSSL":18091,"fts":8094,"ftsSSL":18094,"indexAdmin":9100,"indexScan":9101,"indexHttp":9102,"indexStreamInit":9103,"indexStreamCatchup":9104,"indexStreamMaint":9105,"indexHttps":19102,"capiSSL":18092,"capi":8092,"kvSSL":11299,"projector":9999,"kv":11298,"moxi":11211},"hostname":"172.23.123.101"},{"services":{"mgmt":8091,"mgmtSSL":18091,"indexAdmin":9100,"indexScan":9101,"indexHttp":9102,"indexStreamInit":9103,"indexStreamCatchup":9104,"indexStreamMaint":9105,"indexHttps":19102,"capiSSL":18092,"capi":8092,"kvSSL":11207,"projector":9999,"kv":11210,"moxi":11211,"n1ql":8093,"n1qlSSL":18093},"thisNode":false,"hostname":"172.23.123.102"}]}`
+	jsonInput := `{"rev":32,"nodesExt":[{"services":{"mgmt":8091,"mgmtSSL":18091,"fts":8094,"ftsSSL":18094,"indexAdmin":9100,` +
+		`"indexScan":9101,"indexHttp":9102,"indexStreamInit":9103,"indexStreamCatchup":9104,"indexStreamMaint":9105,` +
+		`"indexHttps":19102,"capiSSL":18092,"capi":8092,"kvSSL":11299,"projector":9999,"kv":11298,"moxi":11211},` +
+		`"hostname":"172.23.123.101"},{"services":{"mgmt":8091,"mgmtSSL":18091,"indexAdmin":9100,"indexScan":9101,` +
+		`"indexHttp":9102,"indexStreamInit":9103,"indexStreamCatchup":9104,"indexStreamMaint":9105,"indexHttps":19102,` +
+		`"capiSSL":18092,"capi":8092,"kvSSL":11207,"projector":9999,"kv":11210,"moxi":11211,"n1ql":8093,"n1qlSSL":18093},` +
+		`"thisNode":false,"hostname":"172.23.123.102"}]}`
 
 	poolServices, err := ParsePoolServices(jsonInput)
 	if err != nil {
@@ -107,7 +116,13 @@ func TestMultiNode(t *testing.T) {
 }
 
 func TestIPv6Node(t *testing.T) {
-	jsonInput := `{"rev":32,"nodesExt":[{"services":{"mgmt":8091,"mgmtSSL":18091,"fts":8094,"ftsSSL":18094,"indexAdmin":9100,"indexScan":9101,"indexHttp":9102,"indexStreamInit":9103,"indexStreamCatchup":9104,"indexStreamMaint":9105,"indexHttps":19102,"capiSSL":18092,"capi":8092,"kvSSL":11299,"projector":9999,"kv":11298,"moxi":11211},"hostname":"DEAD::BEEF"},{"services":{"mgmt":8091,"mgmtSSL":18091,"indexAdmin":9100,"indexScan":9101,"indexHttp":9102,"indexStreamInit":9103,"indexStreamCatchup":9104,"indexStreamMaint":9105,"indexHttps":19102,"capiSSL":18092,"capi":8092,"kvSSL":11207,"projector":9999,"kv":11210,"moxi":11211,"n1ql":8093,"n1qlSSL":18093},"thisNode":false,"hostname":"FEED::DEED"}]}`
+	jsonInput := `{"rev":32,"nodesExt":[{"services":{"mgmt":8091,"mgmtSSL":18091,"fts":8094,"ftsSSL":18094,"indexAdmin":9100,` +
+		`"indexScan":9101,"indexHttp":9102,"indexStreamInit":9103,"indexStreamCatchup":9104,"indexStreamMaint":9105,` +
+		`"indexHttps":19102,"capiSSL":18092,"capi":8092,"kvSSL":11299,"projector":9999,"kv":11298,"moxi":11211},` +
+		`"hostname":"DEAD::BEEF"},{"services":{"mgmt":8091,"mgmtSSL":18091,"indexAdmin":9100,"indexScan":9101,` +
+		`"indexHttp":9102,"indexStreamInit":9103,"indexStreamCatchup":9104,"indexStreamMaint":9105,"indexHttps":19102,` +
+		`"capiSSL":18092,"capi":8092,"kvSSL":11207,"projector":9999,"kv":11210,"moxi":11211,"n1ql":8093,"n1qlSSL":18093},` +
+		`"thisNode":false,"hostname":"FEED::DEED"}]}`
 
 	poolServices, err := ParsePoolServices(jsonInput)
 	if err != nil {
@@ -146,7 +161,11 @@ func TestIPv6Node(t *testing.T) {
 }
 
 func TestMissingIPNodes(t *testing.T) {
-	jsonInput := `{"rev":73,"nodesExt":[{"services":{"mgmt":9000,"mgmtSSL":19000,"fts":9200,"ftsSSL":19200,"ftsGRPC":9201,"ftsGRPCSSL":19201,"kv":12000,"kvSSL":11998,"capi":9500,"capiSSL":19500,"projector":10000},"thisNode":false,"hostname":"192.168.212.71"},{"services":{"mgmt":9001,"mgmtSSL":19001,"kv":12002,"kvSSL":11994,"capi":9501,"capiSSL":19501,"projector":10001},"thisNode":false,"hostname":"192.168.212.72"}],"clusterCapabilitiesVer":[1,0],"clusterCapabilities":{"n1ql":["enhancedPreparedStatements"]}}`
+	jsonInput := `{"rev":73,"nodesExt":[{"services":{"mgmt":9000,"mgmtSSL":19000,"fts":9200,"ftsSSL":19200,"ftsGRPC":9201,` +
+		`"ftsGRPCSSL":19201,"kv":12000,"kvSSL":11998,"capi":9500,"capiSSL":19500,"projector":10000},"thisNode":false,` +
+		`"hostname":"192.168.212.71"},{"services":{"mgmt":9001,"mgmtSSL":19001,"kv":12002,"kvSSL":11994,"capi":9501,` +
+		`"capiSSL":19501,"projector":10001},"thisNode":false,"hostname":"192.168.212.72"}],"clusterCapabilitiesVer":[1,0],` +
+		`"clusterCapabilities":{"n1ql":["enhancedPreparedStatements"]}}`
 
 	poolServices, err := ParsePoolServices(jsonInput)
 	if err != nil {

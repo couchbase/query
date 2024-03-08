@@ -36,8 +36,8 @@ const (
 	N1QL_CBO                                          // 0x0000000010
 	N1QL_FLEXINDEX                                    // 0x0000000020
 	N1QL_CBO_NEW                                      // 0x0000000040
-	N1QL_PASSWORDLESS_BKT                             // 0x0000000080 [MB-39484]: N1QL_PASSWORDLESS_BKT is a retired feature bit. Must NOT be used.
-	N1QL_READ_FROM_REPLICA_OFF                        // 0x0000000100 N1QL_READ_FROM_REPLICA_OFF is a retired feature bit. Must NOT be used.
+	N1QL_PASSWORDLESS_BKT                             // 0x0000000080 MB-39484: N1QL_PASSWORDLESS_BKT retiredbit. Must NOT be used.
+	N1QL_READ_FROM_REPLICA_OFF                        // 0x0000000100 N1QL_READ_FROM_REPLICA_OFF retired. Must NOT be used.
 	N1QL_IMPLICIT_ARRAY_COVER                         // 0x0000000200
 	N1QL_JOIN_ENUMERATION                             // 0x0000000400
 	N1QL_INDEX_MISSING                                // 0x0000000800
@@ -59,7 +59,7 @@ var N1Ql_Features = map[uint64]string{
 	N1QL_GOLANG_UDF:            fmt.Sprintf("Golang UDFs (%#x)", N1QL_GOLANG_UDF),
 	N1QL_CBO:                   fmt.Sprintf("CBO (%#x)", N1QL_CBO),
 	N1QL_FLEXINDEX:             fmt.Sprintf("Flex Index (%#x)", N1QL_FLEXINDEX),
-	N1QL_CBO_NEW:               fmt.Sprintf("(Reserved for future use) (%#x)", N1QL_CBO_NEW), // To-Do : Change description when CBO New is supported
+	N1QL_CBO_NEW:               fmt.Sprintf("(Reserved for future use) (%#x)", N1QL_CBO_NEW), // TODO : Change desc when
 	N1QL_PASSWORDLESS_BKT:      fmt.Sprintf("Retired Feature Bit. Do not use. (%#x)", N1QL_PASSWORDLESS_BKT),
 	N1QL_READ_FROM_REPLICA_OFF: fmt.Sprintf("Retired Feature Bit. Do not use. (%#x)", N1QL_READ_FROM_REPLICA_OFF),
 	N1QL_IMPLICIT_ARRAY_COVER:  fmt.Sprintf("Implicit Covering Array Index (%#x)", N1QL_IMPLICIT_ARRAY_COVER),
@@ -147,7 +147,7 @@ func DescribeChangedFeatures(prev uint64, new uint64) string {
 		if old != (new & flag) { // the feature bit has changed
 			changes.WriteString(", ")
 			changes.WriteString(feat)
-			if old != 0 { // the feature bit was 1 i.e the feature used to be DISABLED .. hence in the new bitset it is now ENABLED
+			if old != 0 { // the feature bit was 1 i.e the feature used to be DISABLED hence in the new bitset it is now ENABLED
 				changes.WriteString(" enabled")
 			} else {
 				changes.WriteString(" disabled")

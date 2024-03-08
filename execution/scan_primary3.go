@@ -208,7 +208,9 @@ func (this *PrimaryScan3) scanEntries(context *Context, conn *datastore.IndexCon
 		context.ScanConsistency(), scanVector, conn)
 }
 
-func (this *PrimaryScan3) scanChunk(context *Context, conn *datastore.IndexConnection, limit int64, indexEntry *datastore.IndexEntry) {
+func (this *PrimaryScan3) scanChunk(context *Context, conn *datastore.IndexConnection, limit int64,
+	indexEntry *datastore.IndexEntry) {
+
 	defer context.Recover(nil) // Recover from any panic
 	ds := &datastore.Span{}
 	// do the scan starting from, but not including, the given index entry:

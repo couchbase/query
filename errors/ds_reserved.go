@@ -36,25 +36,29 @@ func partsToPath(parts ...string) string {
 func NewDatastoreInvalidBucketPartsError(parts ...string) Error {
 	path := partsToPath(parts...)
 	return &err{level: EXCEPTION, ICode: E_DATASTORE_INVALID_BUCKET_PARTS, IKey: "datastore.generic.path_error.bucket",
-		InternalMsg: "Bucket resolves to " + path + " - 2 path parts are expected: check query_context?", InternalCaller: CallerN(1)}
+		InternalMsg:    "Bucket resolves to " + path + " - 2 path parts are expected: check query_context?",
+		InternalCaller: CallerN(1)}
 }
 
 func NewDatastoreInvalidScopePartsError(parts ...string) Error {
 	path := partsToPath(parts...)
 	return &err{level: EXCEPTION, ICode: E_DATASTORE_INVALID_BUCKET_PARTS, IKey: "datastore.generic.path_error.scope",
-		InternalMsg: "Scope resolves to " + path + " - 3 path parts are expected.", InternalCaller: CallerN(1)}
+		InternalMsg:    "Scope resolves to " + path + " - 3 path parts are expected.",
+		InternalCaller: CallerN(1)}
 }
 
 func NewDatastoreInvalidCollectionPartsError(parts ...string) Error {
 	path := partsToPath(parts...)
 	return &err{level: EXCEPTION, ICode: E_DATASTORE_INVALID_BUCKET_PARTS, IKey: "datastore.generic.path_error.collection",
-		InternalMsg: "Collection resolves to " + path + " - 4 path parts are expected: check query_context?", InternalCaller: CallerN(1)}
+		InternalMsg:    "Collection resolves to " + path + " - 4 path parts are expected: check query_context?",
+		InternalCaller: CallerN(1)}
 }
 
 func NewDatastoreInvalidKeyspacePartsError(parts ...string) Error {
 	path := partsToPath(parts...)
 	return &err{level: EXCEPTION, ICode: E_DATASTORE_INVALID_BUCKET_PARTS, IKey: "datastore.generic.path_error.keyspace",
-		InternalMsg: "Keyspace resolves to " + path + " - only 2 or 4 parts are valid: check query_context?", InternalCaller: CallerN(1)}
+		InternalMsg:    "Keyspace resolves to " + path + " - only 2 or 4 parts are valid: check query_context?",
+		InternalCaller: CallerN(1)}
 }
 
 func NewQueryContextError(w string) Error {

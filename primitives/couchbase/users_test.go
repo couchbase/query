@@ -31,10 +31,12 @@ func TestGetRolesAll(t *testing.T) {
 
 	cases := make(map[string]RoleDescription, 2)
 	cases["admin"] = RoleDescription{Role: "admin", Name: "Full Admin",
-		Desc: "Can manage all cluster features (including security). This user can access the web console. This user can read and write all data.",
-		Ce:   true}
+		Desc: "Can manage all cluster features (including security). This user can access the web console. This user can read " +
+			"and write all data.",
+		Ce: true}
 	cases["query_select"] = RoleDescription{Role: "query_select", BucketName: "*", Name: "Query Select",
-		Desc: "Can execute a SELECT statement on a given bucket to retrieve data. This user can access the web console and can read data, but not write it."}
+		Desc: "Can execute a SELECT statement on a given bucket to retrieve data. This user can access the web console and can " +
+			"read data, but not write it."}
 	for roleName, expectedValue := range cases {
 		foundThisRole := false
 		for _, foundValue := range roles {
@@ -53,8 +55,9 @@ func TestGetRolesAll(t *testing.T) {
 }
 
 func TestUserUnmarshal(t *testing.T) {
-	text := `[{"id":"ivanivanov","name":"Ivan Ivanov","roles":[{"role":"cluster_admin"},{"bucket_name":"default","role":"bucket_admin"}]},
-			{"id":"petrpetrov","name":"Petr Petrov","roles":[{"role":"replication_admin"}]}]`
+	text := `[{"id":"ivanivanov","name":"Ivan Ivanov","roles":[{"role":"cluster_admin"},` +
+		`{"bucket_name":"default","role":"bucket_admin"}]},` +
+		`{"id":"petrpetrov","name":"Petr Petrov","roles":[{"role":"replication_admin"}]}]`
 	users := make([]User, 0)
 
 	err := json.Unmarshal([]byte(text), &users)

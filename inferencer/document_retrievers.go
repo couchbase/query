@@ -87,8 +87,9 @@ var flags_map = map[string]Flag{
 
 type DocumentRetriever interface {
 	GetNextDoc(context datastore.QueryContext) (string, value.Value, errors.Error) // returns nil for value when done
-	Reset()                                                                        // reset for reuse of cached results etc.
-	Close()                                                                        // final clean-up to ensure any index connection is closed/cleaned-up too
+
+	Reset() // reset for reuse of cached results etc.
+	Close() // final clean-up to ensure any index connection is closed/cleaned-up too
 }
 
 type indexArray []datastore.Index
@@ -413,7 +414,8 @@ func MakeUnifiedDocumentRetriever(name string, context datastore.QueryContext, k
 							continue
 						}
 
-						// if the Index does not implement the PrimaryIndex3 interface - like system keyspace indexes - do not consider the index
+						// if the Index does not implement the PrimaryIndex3 interface - like system keyspace indexes - do not
+						// consider the index
 						if _, ok := index.(datastore.PrimaryIndex3); !ok {
 							continue
 						}
@@ -1186,7 +1188,8 @@ func (kvrdr *KVRandomDocumentRetriever) GetNextDoc(context datastore.QueryContex
 	return _EMPTY_KEY, nil, nil
 }
 
-func MakeKVRandomDocumentRetriever(serverURL, bucket, bucketPass string, sampleSize int) (*KVRandomDocumentRetriever, errors.Error) {
+func MakeKVRandomDocumentRetriever(serverURL, bucket, bucketPass string, sampleSize int) (
+	*KVRandomDocumentRetriever, errors.Error) {
 
 	kvrdr := new(KVRandomDocumentRetriever)
 	kvrdr.docIdsSeen = make(map[string]bool)
