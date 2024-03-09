@@ -10,7 +10,9 @@ package execution
 
 import (
 	"encoding/json"
+	"sync"
 
+	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/sort"
 	"github.com/couchbase/query/value"
@@ -23,6 +25,7 @@ type orderTerm struct {
 }
 
 type Order struct {
+	sync.Mutex						// used to synchronise afterItems and releaseValues
 	base
 	plan   *plan.Order
 	values value.AnnotatedValues
@@ -67,6 +70,12 @@ func (this *Order) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *Order) processItem(item value.AnnotatedValue, context *Context) bool {
+	// this should be redundant as item should never be nil but including as a safety net; the expense of the additional
+	// condition isn't significant
+	if item == nil {
+		logging.Stackf(logging.ERROR, "[%p] nil value received", this)
+		return false
+	}
 	if len(this.values) == cap(this.values) {
 		values := make(value.AnnotatedValues, len(this.values), len(this.values)<<1)
 		copy(values, this.values)
@@ -96,9 +105,15 @@ func (this *Order) beforeItems(context *Context, item value.Value) bool {
 }
 
 func (this *Order) afterItems(context *Context) {
+	this.Lock()
 	defer func() {
-		this.releaseValues()
+		// clean-up whilst we hold the lock still
+		if this.values != nil {
+			_ORDER_POOL.Put(this.values)
+			this.values = nil
+		}
 		this.terms = nil
+		this.Unlock()
 	}()
 
 	// MB-25901 don't sort if we have been stopped
@@ -123,10 +138,12 @@ func (this *Order) afterItems(context *Context) {
 }
 
 func (this *Order) releaseValues() {
+	this.Lock()
 	if this.values != nil {
 		_ORDER_POOL.Put(this.values)
 	}
 	this.values = nil
+	this.Unlock()
 }
 
 func (this *Order) resetCachedValues(av value.AnnotatedValue) {
@@ -231,6 +248,14 @@ func (this *Order) MarshalJSON() ([]byte, error) {
 
 func (this *Order) reopen(context *Context) bool {
 	rv := this.baseReopen(context)
-	this.values = _ORDER_POOL.Get()
+	if rv {
+		this.Lock()
+		// confirm we're not prematurely re-using the operator somehow (but don't prevent continuted execution)
+		if this.values != nil {
+			logging.Stackf(logging.ERROR, "[%p] reopen with active values list [%p]", this, this.values)
+		}
+		this.values = _ORDER_POOL.Get()
+		this.Unlock()
+	}
 	return rv
 }
