@@ -19,6 +19,11 @@ import (
 	base "github.com/couchbase/query/plannerbase"
 )
 
+const (
+	_LARGE_OR_SUBTERMS        = 64
+	_LARGE_UNIONSCAN_CHILDREN = 16
+)
+
 func (this *builder) buildOrScan(node *algebra.KeyspaceTerm, baseKeyspace *base.BaseKeyspace,
 	id expression.Expression, pred *expression.Or, indexes []datastore.Index,
 	primaryKey expression.Expressions, formalizer *expression.Formalizer) (
@@ -33,8 +38,10 @@ func (this *builder) buildOrScan(node *algebra.KeyspaceTerm, baseKeyspace *base.
 		scan, sargLength, err = this.buildTermScan(node, baseKeyspace, id, indexes, primaryKey, formalizer)
 		if err == nil && scan != nil {
 			// covering scan or pushdown happens use the scan
+			// if OR expr has large number of subterms, instead of trying to use
+			// a UnionScan with larger number of children, just use the current scan
 			if len(this.coveringScans) > len(coveringScans) || this.countScan != nil ||
-				this.hasOrderOrOffsetOrLimit() {
+				this.hasOrderOrOffsetOrLimit() || len(pred.Operands()) > _LARGE_OR_SUBTERMS {
 				return scan, sargLength, nil
 			}
 		}
@@ -77,6 +84,11 @@ func (this *builder) buildOrScan(node *algebra.KeyspaceTerm, baseKeyspace *base.
 		if orErr != nil || orScan == nil || sargLength > orSargLength {
 			return scan, sargLength, nil
 		} else {
+			if sargLength == orSargLength {
+				if unionScan, ok := orScan.(*plan.UnionScan); ok && len(unionScan.Scans()) > _LARGE_UNIONSCAN_CHILDREN {
+					return scan, sargLength, nil
+				}
+			}
 			idx := scan.GetIndex()
 			orIdx := orScan.GetIndex()
 			if idx != nil && !idx.IsPrimary() && orIdx != nil {

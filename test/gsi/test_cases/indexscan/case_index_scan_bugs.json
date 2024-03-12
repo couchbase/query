@@ -221,5 +221,21 @@
                 "c": "green"
             }
     ]
+    },
+    {
+	"testcase": "MB-61014",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.`plan` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`covers` IS NOT MISSING AND v.`index` = 'ishix4' END"
+        },
+        "statements":"SELECT 1 FROM shellTest WHERE c5 = 10 AND c8 >= 11 AND c8 <= 20 AND c6 != 1 AND c7 NOT IN [1,2] AND c11 != 0",
+        "results": [
+    ]
     }
 ]
