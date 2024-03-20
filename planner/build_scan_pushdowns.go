@@ -426,7 +426,7 @@ func (this *builder) canPushDownMinMax(entry *indexEntry, op expression.Expressi
 	}
 
 	// get the index collation of the leading key
-	descCollation := indexKeyIsDescCollation(0, getIndexKeys(entry.index))
+	descCollation := indexKeyIsDescCollation(0, entry.idxKeys)
 	if max {
 		// MAX() can be pushdown when leading index key is DESC collation
 		return descCollation && entry.spans.CanUseIndexOrder(false)
@@ -503,7 +503,7 @@ func (this *builder) useIndexOrder(entry *indexEntry, keys expression.Expression
 		}
 	}
 
-	indexKeys := getIndexKeys(entry.index)
+	indexKeys := entry.idxKeys
 	i := 0
 	indexOrder := make(plan.IndexKeyOrders, 0, len(keys))
 	partSortTermCount := 0

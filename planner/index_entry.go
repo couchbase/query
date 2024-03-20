@@ -45,6 +45,8 @@ const (
 
 type indexEntry struct {
 	index                datastore.Index
+	idxKeys              datastore.IndexKeys
+	idxSargKeys          datastore.IndexKeys
 	keys                 expression.Expressions
 	sargKeys             expression.Expressions
 	partitionKeys        expression.Expressions
@@ -78,13 +80,12 @@ type indexEntry struct {
 	partialSortTermCount int
 }
 
-func newIndexEntry(index datastore.Index, keys, sargKeys, partitionKeys expression.Expressions,
-	minKeys, maxKeys, sumKeys int, cond, origCond expression.Expression, spans SargSpans,
-	exactSpans bool, skeys []bool) *indexEntry {
+func newIndexEntry(index datastore.Index, idxKeys datastore.IndexKeys, sargLength int,
+	partitionKeys expression.Expressions, minKeys, maxKeys, sumKeys int,
+	cond, origCond expression.Expression, spans SargSpans, exactSpans bool, skeys []bool) *indexEntry {
 	rv := &indexEntry{
 		index:            index,
-		keys:             keys,
-		sargKeys:         sargKeys,
+		idxKeys:          idxKeys,
 		partitionKeys:    partitionKeys,
 		minKeys:          minKeys,
 		maxKeys:          maxKeys,
@@ -104,6 +105,17 @@ func newIndexEntry(index datastore.Index, keys, sargKeys, partitionKeys expressi
 		flags:            IE_NONE,
 	}
 
+	rv.keys = make(expression.Expressions, 0, len(idxKeys))
+	for _, key := range idxKeys {
+		rv.keys = append(rv.keys, key.Expr)
+	}
+
+	if sargLength > len(idxKeys) || sargLength < 0 {
+		sargLength = len(idxKeys)
+	}
+	rv.idxSargKeys = rv.idxKeys[0:sargLength]
+	rv.sargKeys = rv.keys[0:sargLength]
+
 	rv.arrayKeyPos = -1
 	for _, b := range skeys {
 		if b {
@@ -122,8 +134,8 @@ func newIndexEntry(index datastore.Index, keys, sargKeys, partitionKeys expressi
 func (this *indexEntry) Copy() *indexEntry {
 	rv := &indexEntry{
 		index:            this.index,
+		idxKeys:          this.idxKeys.Copy(),
 		keys:             expression.CopyExpressions(this.keys),
-		sargKeys:         expression.CopyExpressions(this.sargKeys),
 		partitionKeys:    expression.CopyExpressions(this.partitionKeys),
 		arrayKeyPos:      this.arrayKeyPos,
 		minKeys:          this.minKeys,
@@ -145,6 +157,8 @@ func (this *indexEntry) Copy() *indexEntry {
 		nEqCond:          this.nEqCond,
 		flags:            this.flags,
 	}
+	rv.idxSargKeys = rv.idxKeys[0:len(this.idxSargKeys)]
+	rv.sargKeys = rv.keys[0:len(this.sargKeys)]
 	if this.arrayKey != nil {
 		rv.arrayKey, _ = expression.Copy(this.arrayKey).(*expression.All)
 	}

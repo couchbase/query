@@ -9,21 +9,23 @@
 package planner
 
 import (
+	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
 	base "github.com/couchbase/query/plannerbase"
 )
 
 func (this *sarg) VisitAnd(pred *expression.And) (rv interface{}, err error) {
-	if base.SubsetOf(pred, this.key) {
-		if expression.Equivalent(pred, this.key) {
+	key := this.key.Expr
+	if base.SubsetOf(pred, key) {
+		if expression.Equivalent(pred, key) {
 			return _EXACT_SELF_SPANS, nil
 		}
 		return _SELF_SPANS, nil
 	}
 
 	// MB-21720. Handle array index keys differently.
-	if isArray, _, _ := this.key.IsArrayIndexKey(); isArray {
+	if isArray, _, _ := key.IsArrayIndexKey(); isArray {
 		return this.visitAndArrayKey(pred, this.key)
 	}
 
@@ -70,7 +72,7 @@ func (this *sarg) VisitAnd(pred *expression.And) (rv interface{}, err error) {
 }
 
 // MB-21720. Handle array index keys differently.
-func (this *sarg) visitAndArrayKey(pred *expression.And, key expression.Expression) (SargSpans, error) {
+func (this *sarg) visitAndArrayKey(pred *expression.And, key *datastore.IndexKey) (SargSpans, error) {
 	keySpans := make([]SargSpans, 0, len(pred.Operands()))
 
 	for _, child := range pred.Operands() {

@@ -904,3 +904,11 @@ func (this *IndexKey) UnsetAttribute(attr IkAttributes) {
 func (this *IndexKey) HasAttribute(attr IkAttributes) bool {
 	return (this.Attributes & attr) != 0
 }
+
+func (this IndexKeys) Copy() IndexKeys {
+	rv := make(IndexKeys, len(this))
+	for i := range this {
+		rv[i] = &IndexKey{this[i].Expr.Copy(), this[i].Attributes}
+	}
+	return rv
+}

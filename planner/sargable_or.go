@@ -9,16 +9,17 @@
 package planner
 
 import (
+	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/expression"
 	base "github.com/couchbase/query/plannerbase"
 )
 
 func (this *sargable) VisitOr(pred *expression.Or) (interface{}, error) {
-	if base.SubsetOf(pred, this.key) {
+	if base.SubsetOf(pred, this.key.Expr) {
 		return true, nil
 	}
 
-	keys := expression.Expressions{this.key}
+	keys := datastore.IndexKeys{this.key}
 	isArrays := []bool{this.array}
 	for _, child := range pred.Operands() {
 		if min, _, _, _ := SargableFor(child, keys, this.missing, this.gsi, isArrays,

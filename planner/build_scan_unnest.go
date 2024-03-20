@@ -341,10 +341,12 @@ func (this *builder) matchUnnest(node *algebra.KeyspaceTerm, pred, subset expres
 		sargKey = unnestIdent
 	}
 
-	keys, isArrays := getUnnestSargKeys(entry.keys, sargKey)
-	origKeys := keys
+	keys, isArrays := getUnnestIndexSargKeys(entry.idxKeys, sargKey)
+	var origKeys expression.Expressions
 	if origSargKey != nil {
-		origKeys, _ = getUnnestSargKeys(entry.keys, origSargKey)
+		origKeys = getUnnestSargKeys(entry.keys, origSargKey)
+	} else {
+		origKeys = getUnnestSargKeys(entry.keys, sargKey)
 	}
 
 	skip := useSkipIndexKeys(entry.index, this.context.IndexApiVersion())
@@ -387,7 +389,7 @@ func (this *builder) matchUnnest(node *algebra.KeyspaceTerm, pred, subset expres
 		baseKeyspace.AddUnnestIndex(entry.index, unnest.Alias())
 	}
 
-	entry = newIndexEntry(entry.index, keys, keys[0:n], entry.partitionKeys, min, n, sum,
+	entry = newIndexEntry(entry.index, keys, n, entry.partitionKeys, min, n, sum,
 		entry.cond, entry.origCond, spans, exactSpans, skeys)
 	entry.setArrayKey(newArrayKey, 0)
 	entry.cardinality, entry.selectivity, entry.cost, entry.frCost, entry.size =
@@ -424,8 +426,33 @@ func (this *builder) matchUnnestScan(node *algebra.KeyspaceTerm, pred, subset ex
 	return entry, unnest, arrayKey, err
 }
 
-func getUnnestSargKeys(keys expression.Expressions, sargKey expression.Expression) (
-	rv expression.Expressions, isArrays []bool) {
+func getUnnestIndexSargKeys(keys datastore.IndexKeys, sargKey expression.Expression) (
+	rv datastore.IndexKeys, isArrays []bool) {
+
+	// replace the array index key with the "unnested" sargKey.
+	// (assumes the array index key is the first index key)
+	rv = make(datastore.IndexKeys, 0, len(keys))
+	if fks, ok := sargKey.(*expression.FlattenKeys); ok {
+		for i, op := range fks.Operands() {
+			attr := getFlattenKeyAttributes(fks, i)
+			rv = append(rv, &datastore.IndexKey{op, attr})
+		}
+	} else {
+		rv = append(rv, &datastore.IndexKey{sargKey, datastore.IK_NONE})
+	}
+	isArrays = make([]bool, len(rv))
+	for i := 0; i < len(rv); i++ {
+		isArrays[i] = true
+	}
+
+	if len(rv) < len(keys) {
+		rv = append(rv, keys[len(rv):]...)
+	}
+
+	return
+}
+
+func getUnnestSargKeys(keys expression.Expressions, sargKey expression.Expression) (rv expression.Expressions) {
 
 	// replace the array index key with the "unnested" sargKey.
 	// (assumes the array index key is the first index key)
@@ -434,10 +461,6 @@ func getUnnestSargKeys(keys expression.Expressions, sargKey expression.Expressio
 		rv = append(rv, fks.Operands()...)
 	} else {
 		rv = append(rv, sargKey)
-	}
-	isArrays = make([]bool, len(rv))
-	for i := 0; i < len(rv); i++ {
-		isArrays[i] = true
 	}
 
 	if len(rv) < len(keys) {

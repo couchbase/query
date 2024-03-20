@@ -393,7 +393,7 @@ func (this *builder) sargableIndexes(indexes []datastore.Index, pred, subset exp
 	sargables = make(map[datastore.Index]*indexEntry, len(indexes))
 	arrays = make(map[datastore.Index]*indexEntry, len(indexes))
 
-	var keys expression.Expressions
+	var keys datastore.IndexKeys
 	var entry *indexEntry
 	var flexRequest *datastore.FTSFlexRequest
 
@@ -424,7 +424,10 @@ func (this *builder) sargableIndexes(indexes []datastore.Index, pred, subset exp
 
 		if index.IsPrimary() {
 			if primaryKey != nil {
-				keys = primaryKey
+				keys = make(datastore.IndexKeys, 0, len(primaryKey))
+				for _, k := range primaryKey {
+					keys = append(keys, &datastore.IndexKey{k, datastore.IK_NONE})
+				}
 			} else {
 				continue
 			}
@@ -452,13 +455,12 @@ func (this *builder) sargableIndexes(indexes []datastore.Index, pred, subset exp
 				}
 			}
 
-			keys = expression.CopyExpressions(expression.GetFlattenKeys(rangeKeys))
+			keys = getIndexKeys(index)
 
-			for i, key := range keys {
-				if key, _, err = formalizeExpr(formalizer, key, false); err != nil {
+			for _, key := range keys {
+				if key.Expr, _, err = formalizeExpr(formalizer, key.Expr, false); err != nil {
 					return
 				}
-				keys[i] = key
 			}
 		}
 
@@ -483,7 +485,7 @@ func (this *builder) sargableIndexes(indexes []datastore.Index, pred, subset exp
 		}
 
 		if n > 0 || allKey != nil {
-			entry := newIndexEntry(index, keys, keys[0:n], partitionKeys, min, n, sum, cond, origCond, nil, exact, skeys)
+			entry := newIndexEntry(index, keys, n, partitionKeys, min, n, sum, cond, origCond, nil, exact, skeys)
 			if missing {
 				entry.SetFlags(IE_LEADINGMISSING, true)
 			}
@@ -957,7 +959,7 @@ func (this *builder) sargIndexes(baseKeyspace *base.BaseKeyspace, underHash bool
 			} else {
 				se.exactFilters = make(map[*base.Filter]bool, len(filters))
 			}
-			spans, exactSpans, err = SargForFilters(filters, se.keys, isMissing, nil,
+			spans, exactSpans, err = SargForFilters(filters, se.idxKeys, isMissing, nil,
 				se.maxKeys, underHash, useCBO, baseKeyspace, this.keyspaceNames,
 				advisorValidate, this.aliases, se.exactFilters, this.context)
 			if err == nil && (spans != nil || !isOrPred || !se.HasFlag(IE_LEADINGMISSING)) {
@@ -968,7 +970,7 @@ func (this *builder) sargIndexes(baseKeyspace *base.BaseKeyspace, underHash bool
 		}
 		if !validSpans {
 			useFilters = false
-			spans, exactSpans, err = SargFor(baseKeyspace.DnfPred(), se, se.keys,
+			spans, exactSpans, err = SargFor(baseKeyspace.DnfPred(), se, se.idxKeys,
 				isMissing, nil, se.maxKeys, orIsJoin, useCBO, baseKeyspace,
 				this.keyspaceNames, advisorValidate, this.aliases, this.context)
 		}
@@ -1355,7 +1357,7 @@ func (this *builder) getIndexFilters(entry *indexEntry, node *algebra.KeyspaceTe
 	}
 
 	if !isPushDownProperty(entry.pushDownProperty, _PUSHDOWN_EXACTSPANS) {
-		missing := indexHasLeadingKeyMissingValues(index, this.context.FeatureControls())
+		missing := entry.HasFlag(IE_LEADINGMISSING)
 		skip := useSkipIndexKeys(index, this.context.IndexApiVersion())
 		chkOr := isOrPred && !entry.HasFlag(IE_OR_USE_FILTERS)
 		chkUnnest := entry.HasFlag(IE_ARRAYINDEXKEY_SARGABLE) && len(entry.unnestAliases) > 0
@@ -1370,7 +1372,7 @@ func (this *builder) getIndexFilters(entry *indexEntry, node *algebra.KeyspaceTe
 			orig := false
 			subFltr := false
 			if chkOr || chkUnnest {
-				fltr := this.orGetIndexFilter(fltrExpr, entry.sargKeys, baseKeyspace, missing, skip)
+				fltr := this.orGetIndexFilter(fltrExpr, entry.idxSargKeys, baseKeyspace, missing, skip)
 				if fltr == nil {
 					extraFltr = true
 					continue
@@ -1651,13 +1653,13 @@ func (this *builder) orSargUseFilters(pred *expression.Or, baseKeyspace *base.Ba
 	entry *indexEntry) bool {
 
 	skip := useSkipIndexKeys(entry.index, this.context.IndexApiVersion())
-	missing := indexHasLeadingKeyMissingValues(entry.index, this.context.FeatureControls())
+	missing := entry.HasFlag(IE_LEADINGMISSING)
 
 	// if all subterms of OR gives the same set of sargable keys, use individual filters
 	var min, max int
 	var skeys []bool
 	for i, child := range pred.Operands() {
-		cmin, cmax, _, cskeys := SargableFor(child, entry.sargKeys, missing, skip, nil, this.context, this.aliases)
+		cmin, cmax, _, cskeys := SargableFor(child, entry.idxSargKeys, missing, skip, nil, this.context, this.aliases)
 		if i == 0 {
 			min = cmin
 			max = cmax
@@ -1700,12 +1702,12 @@ func (this *builder) orSargUseFilters(pred *expression.Or, baseKeyspace *base.Ba
 				return false
 			}
 			nsarg := 0
-			for i, key := range entry.sargKeys {
+			for i, key := range entry.idxSargKeys {
 				cmissing := missing
 				if i > 0 {
 					cmissing = true
 				}
-				cmin, _, _, _ := SargableFor(or, expression.Expressions{key},
+				cmin, _, _, _ := SargableFor(or, datastore.IndexKeys{key},
 					cmissing, skip, nil, this.context, this.aliases)
 				if cmin > 0 {
 					nsarg++
@@ -1733,7 +1735,7 @@ func (this *builder) orSargUseFilters(pred *expression.Or, baseKeyspace *base.Ba
 	return true
 }
 
-func (this *builder) orGetIndexFilter(pred expression.Expression, keys expression.Expressions,
+func (this *builder) orGetIndexFilter(pred expression.Expression, keys datastore.IndexKeys,
 	baseKeyspace *base.BaseKeyspace, missing, skip bool) expression.Expression {
 	var orOps expression.Expressions
 	if or, ok := pred.(*expression.Or); ok {
@@ -1755,7 +1757,7 @@ func (this *builder) orGetIndexFilter(pred expression.Expression, keys expressio
 		for _, op1 := range andOps {
 			add := true
 			for i, key := range keys {
-				min, _, _, _ := SargableFor(op1, expression.Expressions{key},
+				min, _, _, _ := SargableFor(op1, datastore.IndexKeys{key},
 					(missing || i > 0), skip, nil, this.context, this.aliases)
 				if min == 0 {
 					continue

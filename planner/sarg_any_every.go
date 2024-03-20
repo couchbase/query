@@ -21,16 +21,17 @@ func (this *sarg) VisitAnyEvery(pred *expression.AnyEvery) (interface{}, error) 
 		spans = _FULL_SPANS
 	}
 
-	if base.SubsetOf(pred, this.key) {
+	key := this.key.Expr
+	if base.SubsetOf(pred, key) {
 		return _SELF_SPANS, nil
 	}
 
 	sp := spans
-	if !pred.DependsOn(this.key) {
+	if !pred.DependsOn(key) {
 		sp = nil
 	}
 
-	all, ok := this.key.(*expression.All)
+	all, ok := key.(*expression.All)
 	if !ok {
 		return sp, nil
 	}
@@ -57,7 +58,7 @@ func (this *sarg) VisitAnyEvery(pred *expression.AnyEvery) (interface{}, error) 
 		return sp, nil
 	}
 
-	satisfies, err := getSatisfies(pred, this.key, array, this.aliases)
+	satisfies, err := getSatisfies(pred, key, array, this.aliases)
 	if err != nil {
 		return nil, err
 	}
@@ -70,5 +71,4 @@ func (this *sarg) VisitAnyEvery(pred *expression.AnyEvery) (interface{}, error) 
 	return anySargFor(satisfies, array.ValueMapping(), array.When(), this.isJoin, this.doSelec,
 		this.baseKeyspace, this.keyspaceNames, array.Bindings()[0].Variable(), selec, false,
 		this.advisorValidate, all.IsDerivedFromFlatten(), this.isMissing, this.aliases, this.context)
-
 }

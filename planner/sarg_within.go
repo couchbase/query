@@ -19,15 +19,16 @@ import (
 )
 
 func (this *sarg) VisitWithin(pred *expression.Within) (interface{}, error) {
-	if base.SubsetOf(pred, this.key) {
-		if expression.Equivalent(pred, this.key) {
+	key := this.key.Expr
+	if base.SubsetOf(pred, key) {
+		if expression.Equivalent(pred, key) {
 			return _EXACT_SELF_SPANS, nil
 		}
 		return _SELF_SPANS, nil
 	}
 
-	if !pred.First().EquivalentTo(this.key) {
-		if pred.DependsOn(this.key) {
+	if !pred.First().EquivalentTo(key) {
+		if pred.DependsOn(key) {
 			return _VALUED_SPANS, nil
 		} else {
 			return nil, nil
@@ -68,7 +69,7 @@ func (this *sarg) VisitWithin(pred *expression.Within) (interface{}, error) {
 
 		selec := OPT_SELEC_NOT_AVAIL
 		if this.doSelec {
-			selec = optDefInSelec(this.baseKeyspace.Keyspace(), this.key.String(), this.advisorValidate)
+			selec = optDefInSelec(this.baseKeyspace.Keyspace(), key.String(), this.advisorValidate)
 		}
 		expr := expression.NewConstant(val)
 		range2 := plan.NewRange2(expr, expr, datastore.BOTH, selec, OPT_SELEC_NOT_AVAIL, 0)

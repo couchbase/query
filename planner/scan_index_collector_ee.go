@@ -560,7 +560,7 @@ func getIndexKeyStringArray(index datastore.Index) (rv []string, desc []bool, lk
 			}
 		}
 	} else {
-		keys := index2.RangeKey()
+		keys := index.RangeKey()
 		rv = make([]string, len(keys))
 		desc = make([]bool, len(keys))
 		for i, kp := range keys {
