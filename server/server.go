@@ -101,8 +101,7 @@ const (
 )
 
 const (
-	_TX_QUEUE_SIZE           = 16
-	_QUEUE_BUFFER_MULTIPLIER = 2
+	_TX_QUEUE_SIZE = 16
 )
 
 type waitEntry struct {
@@ -939,9 +938,28 @@ func (this *Server) handlePostTxRequest(request Request, queue *runQueue, transa
 	return true
 }
 
+// _LAG_MULTIPLIER defines how many full queue cycles occur before wrapping the underlying array
+// this is needed to accomodate routines that may be suspended for extended periods (due to load) and therefore lag behind the
+// "current" queue
+// this buffer allows us to avoid concurrent operations on the same array entry due to thread scheduling
+// this applies only to non-transaction queues (currently 2 of)
+//
+// it also accomodates the small timing hole in dequeue() between reducing the queueCnt and actually releasing a slot
+// - the number of servicers should never be larger than the requests cap times the number of CPUs times _LAG_MULTIPLIER, but no
+//   checks are made to ensure this
+//
+// waitEntry is 24 bytes so even with 64 CPUs and a (default) queue length of 16384, a multiplier of 10 doesn't mean the space
+// required is significant relative to the overall service memory requirements (3.75 MiB) (per queue)
+
+const _LAG_MULTIPLIER = 10
+
 func newRunQueue(n string, q *runQueue, num int, txflag bool) {
 	q.name = n
-	q.size = int32(num + (q.servicers * _QUEUE_BUFFER_MULTIPLIER))
+	if txflag {
+		q.size = int32(num)
+	} else {
+		q.size = int32(num * _LAG_MULTIPLIER)
+	}
 	q.fullQueue = int32(num)
 	q.queue = make([]waitEntry, q.size)
 	if !txflag {
@@ -955,9 +973,6 @@ func newTxRunQueues(q *txRunQueues, nqueues, num int) {
 }
 
 func (this *runQueue) SetServicers(num int) {
-	if this.size > 0 && (this.size-this.fullQueue)/_QUEUE_BUFFER_MULTIPLIER < int32(num) {
-		logging.Warnf("Number of servicers for %s queue set to more than initial limit", this.name)
-	}
 	this.servicers = num
 }
 
@@ -1014,9 +1029,27 @@ func (this *runQueue) addRequest(request Request, txQueueMutex, txQueuesMutex *s
 	// get the next available entry
 	entry := int32(atomic.AddUint64(&this.tail, 1) % uint64(this.size))
 
+	var r Request
+	if atomic.LoadUint32(&this.queue[entry].state) == _WAIT_FULL {
+		// this is a safety-net and shouldn't happen unless a routine has been suspended mid queue operations for
+		// long enough for the queue to wrap around the underlying array.
+		r = this.queue[entry].request
+		atomic.StoreUint32(&this.queue[entry].state, _WAIT_EMPTY)
+	}
+
 	// set up the entry and the request
 	request.setSleep()
 	this.queue[entry].request = request
+
+	// if the safety-net was hit and we found a request, run it
+	// we do this after setting up the slot with our request to minimise the window for a concurrent release to interfere
+	// with the slot
+	if r != nil {
+		// we may temporarily have an additional servicer until the queue drains (normal decrement will resolve this)
+		atomic.AddInt32(&this.runCnt, 1)
+		r.release()
+		logging.Errorf("Found full slot (%v) when adding to queue. Releasing.", entry)
+	}
 
 	if txQueueMutex != nil {
 		txQueueMutex.Unlock()
@@ -1026,14 +1059,13 @@ func (this *runQueue) addRequest(request Request, txQueueMutex, txQueuesMutex *s
 		txQueuesMutex.Unlock()
 	}
 
-	// atomically set the state to full
-	// if we succeed, sleep
+	// atomically set the state to full and sleep if successful
 	if atomic.CompareAndSwapUint32(&this.queue[entry].state, _WAIT_EMPTY, _WAIT_FULL) {
 		request.sleep()
 	} else {
 		// if the waker got there first, continue
 		this.queue[entry].request = nil
-		this.queue[entry].state = _WAIT_EMPTY
+		atomic.StoreUint32(&this.queue[entry].state, _WAIT_EMPTY)
 		request.release()
 	}
 }
@@ -1055,12 +1087,17 @@ func (this *runQueue) releaseRequest(txQueueMutex, txQueuesMutex *sync.RWMutex) 
 	if !atomic.CompareAndSwapUint32(&this.queue[entry].state, _WAIT_EMPTY, _WAIT_GO) {
 		// nope, the waiter got there first, wake it up
 		request := this.queue[entry].request
-		this.queue[entry].state = _WAIT_EMPTY
 		this.queue[entry].request = nil
+		atomic.StoreUint32(&this.queue[entry].state, _WAIT_EMPTY)
 
-		// MB-57348 this should never happen, but defensively...
 		if request != nil {
 			request.release()
+		} else {
+			// this case indicates we have sufficient load that a routine was suspended for long enough for the queue to
+			// cycle its underlying array before it got to run
+			logging.Errorf("Releasing slot (%v) with nil request.", entry)
+			// since we didn't release a request we must relinquish our runCnt
+			atomic.AddInt32(&this.runCnt, -1)
 		}
 	}
 }
