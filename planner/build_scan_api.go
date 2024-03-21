@@ -31,6 +31,17 @@ func useSkipIndexKeys(index datastore.Index, indexApiVersion int) bool {
 	return useIndex3API(index, indexApiVersion) && (index.Type() == datastore.GSI || index.Type() == datastore.VIRTUAL)
 }
 
+func getFlattenKeyAttributes(fks *expression.FlattenKeys, pos int) (attr datastore.IkAttributes) {
+	attr = datastore.IK_NONE
+	if fks.HasDesc(pos) {
+		attr |= datastore.IK_DESC
+	}
+	if fks.HasMissing(pos) {
+		attr |= datastore.IK_MISSING
+	}
+	return
+}
+
 func getIndexKeys(index datastore.Index) (indexKeys datastore.IndexKeys) {
 	if index2, ok := index.(datastore.Index2); ok {
 		indexKeys = index2.RangeKey2()
@@ -47,14 +58,8 @@ func getIndexKeys(index datastore.Index) (indexKeys datastore.IndexKeys) {
 			for pos, fk := range fkeys.Operands() {
 				fkey := all.Copy().(*expression.All)
 				fkey.SetFlattenValueMapping(fk.Copy())
-				var attr datastore.IkAttributes
-				if fkeys.HasDesc(pos) {
-					attr |= datastore.IK_DESC
-				}
-				if fkeys.HasMissing(pos) {
-					attr |= datastore.IK_MISSING
-				}
-				flattenIndexKeys = append(flattenIndexKeys, &datastore.IndexKey{Expr: fkey, Attributes: attr})
+				attr := getFlattenKeyAttributes(fkeys, pos)
+				flattenIndexKeys = append(flattenIndexKeys, &datastore.IndexKey{fkey, attr})
 			}
 		} else {
 			flattenIndexKeys = append(flattenIndexKeys, ik)

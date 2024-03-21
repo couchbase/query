@@ -40,15 +40,16 @@ func (this *sarg) visitLike(pred expression.LikeFunction) (interface{}, error) {
 		}
 	}
 
-	if base.SubsetOf(pred, this.key) {
-		if expression.Equivalent(pred, this.key) {
+	key := this.key.Expr
+	if base.SubsetOf(pred, key) {
+		if expression.Equivalent(pred, key) {
 			return _EXACT_SELF_SPANS, nil
 		}
 		return _SELF_SPANS, nil
 	}
 
-	if !pred.First().EquivalentTo(this.key) {
-		if pred.DependsOn(this.key) {
+	if !pred.First().EquivalentTo(key) {
+		if pred.DependsOn(key) {
 			return _VALUED_SPANS, nil
 		} else {
 			return nil, nil
@@ -58,7 +59,7 @@ func (this *sarg) visitLike(pred expression.LikeFunction) (interface{}, error) {
 	if re == nil {
 		selec := OPT_SELEC_NOT_AVAIL
 		if this.doSelec {
-			selec = optDefLikeSelec(this.baseKeyspace.Keyspace(), this.key.String(), this.advisorValidate)
+			selec = optDefLikeSelec(this.baseKeyspace.Keyspace(), key.String(), this.advisorValidate)
 		}
 		return likeSpans(pred, selec), nil
 	}
@@ -91,7 +92,8 @@ func (this *sarg) visitLike(pred expression.LikeFunction) (interface{}, error) {
 }
 
 func likeSpans(pred expression.LikeFunction, selec float64) SargSpans {
-	range2 := plan.NewRange2(expression.EMPTY_STRING_EXPR, expression.EMPTY_ARRAY_EXPR, datastore.LOW, selec, OPT_SELEC_NOT_AVAIL, 0)
+	range2 := plan.NewRange2(expression.EMPTY_STRING_EXPR, expression.EMPTY_ARRAY_EXPR, datastore.LOW, selec,
+		OPT_SELEC_NOT_AVAIL, 0)
 	range2.SetFlag(plan.RANGE_DEFAULT_LIKE)
 
 	switch pred := pred.(type) {

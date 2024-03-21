@@ -317,8 +317,8 @@ func analyzeWorkload(profile, response_limit string, delta, query_count float64,
 }
 
 func getResults(sessionName string, context Context, newContext Context) (value.Value, error) {
-	query := "SELECT RAW results FROM system:tasks_cache WHERE class = \"" + _CLASS + "\" AND name = \"" + sessionName +
-		"\" AND ANY v IN results SATISFIES v <> {} END"
+	query := "SELECT RAW results FROM system:tasks_cache WHERE class = \"" + _CLASS + "\" AND name = \"" +
+		sessionName + "\" AND ANY v IN results SATISFIES v <> {} END"
 	if tenant.IsServerless() && !context.IsAdmin() {
 		query += queryContext(context)
 	}

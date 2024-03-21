@@ -192,7 +192,9 @@ func (this *Subquery) GetCorrelation() map[string]uint32 {
 	return this.query.GetCorrelation()
 }
 
-func (this *Subquery) CoveredBy(keyspace string, exprs expression.Expressions, options expression.CoveredOptions) expression.Covered {
+func (this *Subquery) CoveredBy(keyspace string, exprs expression.Expressions,
+	options expression.CoveredOptions) expression.Covered {
+
 	// Check if COVER_IN_SUBQUERY flag is set already
 	// To prevent erroneous unset of the flag - only set & later unset flag if not already set
 	set := options.InSubqueryTraversal()

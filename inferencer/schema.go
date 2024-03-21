@@ -1327,7 +1327,8 @@ func (s *Schema) StringWithFrequency(indent int, freqMap map[string]int64, paren
 
 		// for objects, need subtype
 		if field.Kind.Type == value.OBJECT {
-			buffer.WriteString(fmt.Sprintf(" %d fields %d docs\n", len(field.Kind.subtype.fields), field.Kind.subtype.matchingDocCount) +
+			buffer.WriteString(fmt.Sprintf(" %d fields %d docs\n", len(field.Kind.subtype.fields),
+				field.Kind.subtype.matchingDocCount) +
 				field.Kind.subtype.StringWithFrequency(indent+2, freqMap, parentName+field.Name+".", fieldFreq))
 		}
 
@@ -1441,7 +1442,8 @@ func UpdateSingleFieldFrequencies(field *Field, freqMap map[string]int64, parent
 		fieldFreq := freqMap[parentName+field.NameTypeOnly()]
 
 		if debug {
-			fmt.Printf("Updating field '%s' with freq %v matchingDocCount %d\n", parentName+field.NameTypeOnly(), fieldFreq, matchingDocCount)
+			fmt.Printf("Updating field '%s' with freq %v matchingDocCount %d\n", parentName+field.NameTypeOnly(), fieldFreq,
+				matchingDocCount)
 		}
 
 		field.numMatchingDocs = new(int64)
@@ -1790,7 +1792,8 @@ func (c SchemaCollection) GetFlavorsFromCollection(similarityMetric float32, num
 			// didn't find a close match, create a new collection
 			if !foundMatch {
 				//fmt.Println("  Creating new collection for above schema.")
-				//fmt.Printf("Making new collection for schema with %d fields and %d docs\n",schema.GetFieldCount(),schema.GetDocCount())
+				//fmt.Printf("Making new collection for schema with %d fields and %d docs\n",schema.GetFieldCount(),
+				//	schema.GetDocCount())
 				newCollection := make(SchemaCollection)
 				newCollection.AddSchema(schema, numSampleValues)
 				similarCollections = append(similarCollections, newCollection)
@@ -1917,7 +1920,9 @@ func setSingleFieldFrequency(field *Field, parentField string, fieldFreq map[str
 // a whole
 //
 
-func (c SchemaCollection) Union(parentField string, fieldFreq map[string]int64, numSampleValues int32) (*Schema, map[string]int64) {
+func (c SchemaCollection) Union(parentField string, fieldFreq map[string]int64, numSampleValues int32) (
+	*Schema, map[string]int64) {
+
 	if len(c) == 0 { // nothing here
 		return nil, nil
 	}
@@ -2099,7 +2104,8 @@ func mergeNewSchemaIntoUnion(union *Schema, schema *Schema, parentField string,
 			uField.Kind.subtype.matchingDocCount = origCount
 			sField.Kind.subtype.matchingDocCount = schema.matchingDocCount
 
-			uField.Kind.subtype, _ = mergeNewSchemaIntoUnion(uField.Kind.subtype, sField.Kind.subtype, parentField+uField.Name+".", fieldFreq, numSampleValues)
+			uField.Kind.subtype, _ = mergeNewSchemaIntoUnion(uField.Kind.subtype, sField.Kind.subtype, parentField+uField.Name+".",
+				fieldFreq, numSampleValues)
 
 			// update #docs who have this field
 			fieldFreq[parentField+uField.NameTypeOnly()] = origCount + schema.matchingDocCount // sum docCounts

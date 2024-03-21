@@ -127,8 +127,8 @@ func NewFunctionExecutionNestedError(levels int, name string) Error {
 
 func NewFunctionLibraryPathError(path string) Error {
 	return &err{level: EXCEPTION, ICode: E_LIBRARY_PATH_ERROR, IKey: "function.library.path.error",
-		InternalMsg:    fmt.Sprintf("Invalid javascript library path: %v. Use a root level path, the same path as the function scope, or a local path ('./library')", path),
-		InternalCaller: CallerN(1)}
+		InternalMsg: fmt.Sprintf("Invalid javascript library path: %v. Use a root level path, the same path as the "+
+			"function scope, or a local path ('./library')", path), InternalCaller: CallerN(1)}
 }
 
 func NewFunctionStatementsError(what string, name string, reason interface{}) Error {

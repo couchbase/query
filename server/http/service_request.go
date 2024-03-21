@@ -1045,7 +1045,9 @@ func (ia *initialArray) slice() []parmValue {
 	return ia.parms[0:ia.count]
 }
 
-func (ia *initialArray) add(name string, val interface{}, fn func(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error) {
+func (ia *initialArray) add(name string, val interface{}, fn func(rv *httpRequest, httpArgs httpRequestArgs, parm string,
+	val interface{}) errors.Error) {
+
 	ia.parms[ia.count].name = name
 	ia.parms[ia.count].val = val
 	ia.parms[ia.count].fn = fn
@@ -1061,7 +1063,9 @@ func (aa *argsArray) slice() []parmValue {
 	return aa.parms[0:aa.count]
 }
 
-func (aa *argsArray) add(name string, val interface{}, fn func(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error) {
+func (aa *argsArray) add(name string, val interface{}, fn func(rv *httpRequest, httpArgs httpRequestArgs, parm string,
+	val interface{}) errors.Error) {
+
 	aa.parms[aa.count].name = name
 	aa.parms[aa.count].val = val
 	aa.parms[aa.count].fn = fn
@@ -1336,7 +1340,8 @@ func newUrlArgs(req *http.Request, urlArgs *urlArgs) errors.Error {
 		if newArg[0] == '$' || newArg[0] == '@' {
 			delete(req.Form, arg)
 
-			// If there already exists an entry in named parameter map for the argument then the argument value has been set multiple times in the request using a different prefix - either @|$
+			// If there already exists an entry in named parameter map for the argument then the argument value has been set
+			// multiple times in the request using a different prefix - either @|$
 			_, ok := named[newArg[1:]]
 			if ok {
 				return errors.NewServiceErrorMultipleValues(arg)
@@ -1738,7 +1743,8 @@ func newJsonArgs(req *http.Request, p *jsonArgs) errors.Error {
 		}
 		if newArg[0] == '$' || newArg[0] == '@' {
 
-			// If there already exists an entry in named parameter map for the argument then the argument value has been set multiple times in the request
+			// If there already exists an entry in named parameter map for the argument then the argument value has been set
+			// multiple times in the request
 			_, ok := p.named[newArg[1:]]
 			if ok {
 				return errors.NewServiceErrorMultipleValues(newArg)

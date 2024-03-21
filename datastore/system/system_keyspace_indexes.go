@@ -47,7 +47,9 @@ func (b *indexKeyspace) Name() string {
 	return b.name
 }
 
-func handleKeyspace(keyspace datastore.Keyspace, warnF func(err errors.Error), includeResults bool, handleF func(id string), includeSeqScan bool) errors.Error {
+func handleKeyspace(keyspace datastore.Keyspace, warnF func(err errors.Error), includeResults bool, handleF func(id string),
+	includeSeqScan bool) errors.Error {
+
 	indexers, excp := keyspace.Indexers()
 	if excp == nil {
 		for _, indexer := range indexers {
@@ -126,8 +128,9 @@ func (b *indexKeyspace) Count(context datastore.QueryContext) (int64, errors.Err
 					for _, scopeId := range scopeIds {
 						scope, excp = bucket.ScopeById(scopeId)
 						if scope != nil {
-							includeScope := includeDefaultKeyspace || (canRead(context, namespace.Datastore(), namespaceId, object.Id, scopeId) &&
-								canListIndexes(context, namespace.Datastore(), namespaceId, object.Id, scopeId))
+							includeScope := includeDefaultKeyspace ||
+								(canRead(context, namespace.Datastore(), namespaceId, object.Id, scopeId) &&
+									canListIndexes(context, namespace.Datastore(), namespaceId, object.Id, scopeId))
 							keyspaceIds, _ := scope.KeyspaceIds()
 							for _, keyspaceId := range keyspaceIds {
 
@@ -139,8 +142,10 @@ func (b *indexKeyspace) Count(context datastore.QueryContext) (int64, errors.Err
 								keyspace, excp = scope.KeyspaceById(keyspaceId)
 								if excp == nil {
 
-									includeResults := includeScope || (canRead(context, namespace.Datastore(), namespaceId, object.Id, scopeId, keyspaceId) &&
-										canListIndexes(context, namespace.Datastore(), namespaceId, object.Id, scopeId, keyspaceId))
+									includeResults := includeScope ||
+										(canRead(context, namespace.Datastore(), namespaceId, object.Id, scopeId, keyspaceId) &&
+											canListIndexes(context, namespace.Datastore(), namespaceId, object.Id,
+												scopeId, keyspaceId))
 									excp = handleKeyspace(keyspace, func(err errors.Error) {
 										context.Warning(err)
 									}, includeResults, func(id string) {
@@ -373,7 +378,7 @@ func indexKeyToIndexKeyStringArray(index datastore.Index) (rv []string) {
 		for i, kp := range keys {
 			s := expression.NewStringer().Visit(kp.Expr)
 			if i == 0 && kp.HasAttribute(datastore.IK_MISSING) {
-				s += " MISSING"
+				s += " INCLUDE MISSING"
 			}
 			if kp.HasAttribute(datastore.IK_DESC) {
 				s += " DESC"
@@ -605,8 +610,9 @@ func (pi *indexIndex) scanEntries(requestId string, spanEvaluator compiledSpans,
 			}
 		loop:
 			for _, object := range objects {
-				includeDefaultKeyspace := canAccessAll || (canRead(conn.QueryContext(), namespace.Datastore(), namespaceId, object.Id) &&
-					canListIndexes(conn.QueryContext(), namespace.Datastore(), namespaceId, object.Id))
+				includeDefaultKeyspace := canAccessAll ||
+					(canRead(conn.QueryContext(), namespace.Datastore(), namespaceId, object.Id) &&
+						canListIndexes(conn.QueryContext(), namespace.Datastore(), namespaceId, object.Id))
 				if object.IsKeyspace && (len(spanEvaluator) == 0 || spanEvaluator.acceptMissing()) {
 					keyspace, excp := namespace.KeyspaceById(object.Id)
 					if excp == nil {
@@ -643,8 +649,9 @@ func (pi *indexIndex) scanEntries(requestId string, spanEvaluator compiledSpans,
 					for _, scopeId := range scopeIds {
 						scope, _ := bucket.ScopeById(scopeId)
 						if scope != nil {
-							includeScope := includeDefaultKeyspace || (canRead(conn.QueryContext(), namespace.Datastore(), namespaceId, object.Id, scopeId) &&
-								canListIndexes(conn.QueryContext(), namespace.Datastore(), namespaceId, object.Id, scopeId))
+							includeScope := includeDefaultKeyspace ||
+								(canRead(conn.QueryContext(), namespace.Datastore(), namespaceId, object.Id, scopeId) &&
+									canListIndexes(conn.QueryContext(), namespace.Datastore(), namespaceId, object.Id, scopeId))
 							keyspaceIds, _ := scope.KeyspaceIds()
 							for _, keyspaceId := range keyspaceIds {
 								if pi.keyspace.skipSystem && keyspaceId[0] == '_' {
@@ -654,8 +661,10 @@ func (pi *indexIndex) scanEntries(requestId string, spanEvaluator compiledSpans,
 								keyspace, excp := scope.KeyspaceById(keyspaceId)
 								if keyspace != nil {
 									keys := make(map[string]bool, 64)
-									includeResults := includeScope || (canRead(conn.QueryContext(), namespace.Datastore(), namespaceId, object.Id, scopeId, keyspaceId) &&
-										canListIndexes(conn.QueryContext(), namespace.Datastore(), namespaceId, object.Id, scopeId, keyspaceId))
+									includeResults := includeScope || (canRead(conn.QueryContext(), namespace.Datastore(),
+										namespaceId, object.Id, scopeId, keyspaceId) &&
+										canListIndexes(conn.QueryContext(), namespace.Datastore(), namespaceId, object.Id,
+											scopeId, keyspaceId))
 									excp = handleKeyspace(keyspace, func(err errors.Error) {
 										conn.Warning(err)
 									}, includeResults, func(id string) {

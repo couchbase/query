@@ -300,7 +300,9 @@ func (this *HashJoin) dropHashTable(context *Context) {
 	}
 }
 
-func (this *HashJoin) checkSendItem(av value.AnnotatedValue, quotaFunc func() uint64, recycle bool, filter expression.Expression, context *opContext) bool {
+func (this *HashJoin) checkSendItem(av value.AnnotatedValue, quotaFunc func() uint64, recycle bool, filter expression.Expression,
+	context *opContext) bool {
+
 	if filter != nil {
 		result, err := filter.Evaluate(av, context)
 		if err != nil {

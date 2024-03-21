@@ -169,7 +169,9 @@ type cbPrecompiled string
 
 // Try to get the privileges sought from the availableCredentials credentials.
 // Return the privileges that were not granted.
-func authAgainstCreds(as authSource, privsSought []auth.PrivilegePair, availableCredentials []cbauth.Creds) ([]auth.PrivilegePair, error) {
+func authAgainstCreds(as authSource, privsSought []auth.PrivilegePair, availableCredentials []cbauth.Creds) ([]auth.PrivilegePair,
+	error) {
+
 	var deniedPrivs []auth.PrivilegePair
 	for p, _ := range privsSought {
 		var res bool

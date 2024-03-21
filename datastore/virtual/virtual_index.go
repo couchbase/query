@@ -130,7 +130,9 @@ func (this *VirtualIndex) Scan(requestId string, span *datastore.Span, distinct 
 }
 
 // Implement CountIndex{} interface
-func (this *VirtualIndex) Count(span *datastore.Span, cons datastore.ScanConsistency, vector timestamp.Vector) (int64, errors.Error) {
+func (this *VirtualIndex) Count(span *datastore.Span, cons datastore.ScanConsistency, vector timestamp.Vector) (
+	int64, errors.Error) {
+
 	return 0, nil
 }
 
@@ -161,7 +163,9 @@ func (this *VirtualIndex) Scan2(requestId string, spans datastore.Spans2, revers
 }
 
 // Impelment CountIndex2 interface
-func (this *VirtualIndex) Count2(requestId string, spans datastore.Spans2, cons datastore.ScanConsistency, vector timestamp.Vector) (int64, errors.Error) {
+func (this *VirtualIndex) Count2(requestId string, spans datastore.Spans2, cons datastore.ScanConsistency,
+	vector timestamp.Vector) (int64, errors.Error) {
+
 	return 0, nil
 }
 
@@ -169,7 +173,9 @@ func (this *VirtualIndex) CanCountDistinct() bool {
 	return true
 }
 
-func (this *VirtualIndex) CountDistinct(requestId string, spans datastore.Spans2, cons datastore.ScanConsistency, vector timestamp.Vector) (int64, errors.Error) {
+func (this *VirtualIndex) CountDistinct(requestId string, spans datastore.Spans2, cons datastore.ScanConsistency,
+	vector timestamp.Vector) (int64, errors.Error) {
+
 	return 0, nil
 }
 

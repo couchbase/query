@@ -180,7 +180,9 @@ var _ALL_USERS = auth.Credentials{
 		"dummy": "dummy",
 	}, nil, nil, nil}
 
-func Run(mockServer *MockServer, p bool, q string, namedArgs map[string]value.Value, positionalArgs []value.Value, namespace string) *RunResult {
+func Run(mockServer *MockServer, p bool, q string, namedArgs map[string]value.Value, positionalArgs []value.Value,
+	namespace string) *RunResult {
+
 	var metrics value.Tristate
 	scanConfiguration := &scanConfigImpl{}
 

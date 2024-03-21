@@ -129,7 +129,9 @@ func (this *MockQuery) SetErrors(errs errors.Errors) {
 	}
 }
 
-func (this *MockQuery) Execute(srvr *server.Server, context *execution.Context, reqType string, signature value.Value, startTx bool) {
+func (this *MockQuery) Execute(srvr *server.Server, context *execution.Context, reqType string, signature value.Value,
+	startTx bool) {
+
 	select {
 	case <-this.Results():
 		this.Stop(server.COMPLETED)
@@ -644,7 +646,8 @@ func FtestCaseFile(fname string, prepared, explain bool, qc *MockServer, namespa
 		}
 
 		if explain {
-			if errstring = checkExplain(qc, queryParams, namespace, statements, c, ordered, namedArgs, positionalArgs, fname, i, b); errstring != nil {
+			errstring = checkExplain(qc, queryParams, namespace, statements, c, ordered, namedArgs, positionalArgs, fname, i, b)
+			if errstring != nil {
 				return
 			}
 		}
@@ -805,7 +808,8 @@ func FtestCaseFile(fname string, prepared, explain bool, qc *MockServer, namespa
 				if isAdvise, ok := isAdvise.(bool); ok && isAdvise {
 					resultsExpected := v.([]interface{})
 					for _, sub := range Subpath_advise {
-						okres := doResultsMatch(getAdviseResults(sub, rr.Results), getAdviseResults(sub, resultsExpected), ordered, statements, fname, i, b)
+						okres := doResultsMatch(getAdviseResults(sub, rr.Results), getAdviseResults(sub, resultsExpected), ordered,
+							statements, fname, i, b)
 						if okres != nil {
 							errstring = okres
 							return
@@ -838,7 +842,9 @@ func FtestCaseFile(fname string, prepared, explain bool, qc *MockServer, namespa
 Matches expected results with the results obtained by
 running the queries.
 */
-func doResultsMatch(resultsActual, resultsExpected []interface{}, ordered bool, stmt, fname string, i int, content []byte) (errstring error) {
+func doResultsMatch(resultsActual, resultsExpected []interface{}, ordered bool, stmt, fname string, i int,
+	content []byte) (errstring error) {
+
 	ffname, e := filepath.Abs(fname)
 	if e != nil {
 		ffname = fname
@@ -933,7 +939,9 @@ func findIndex(content []byte, index int) string {
 }
 
 func checkExplain(qc *MockServer, queryParams map[string]interface{}, namespace string, statement string, c map[string]interface{},
-	ordered bool, namedArgs map[string]value.Value, positionalArgs value.Values, fname string, i int, content []byte) (errstring error) {
+	ordered bool, namedArgs map[string]value.Value, positionalArgs value.Values, fname string, i int,
+	content []byte) (errstring error) {
+
 	var ev map[string]interface{}
 
 	e, ok := c["explain"]

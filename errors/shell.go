@@ -60,174 +60,214 @@ const (
 
 // Connection errors
 func NewShellErrorCannotConnect(msg string) Error {
-	return &err{level: EXCEPTION, ICode: E_SHELL_CONNECTION_REFUSED, IKey: "shell.connection.refused", InternalMsg: CONNECTION_REFUSED_MSG + msg, InternalCaller: CallerN(1)}
+	return &err{level: EXCEPTION, ICode: E_SHELL_CONNECTION_REFUSED, IKey: "shell.connection.refused",
+		InternalMsg: CONNECTION_REFUSED_MSG + msg, InternalCaller: CallerN(1)}
 }
 
 func NewShellErrorUnsupportedProtocol(msg string) Error {
-	return &err{level: EXCEPTION, ICode: E_SHELL_UNSUPPORTED_PROTOCOL, IKey: "shell.unsupported.protocol", InternalMsg: UNSUPPORTED_PROTOCOL_MSG + msg, InternalCaller: CallerN(1)}
+	return &err{level: EXCEPTION, ICode: E_SHELL_UNSUPPORTED_PROTOCOL, IKey: "shell.unsupported.protocol",
+		InternalMsg: UNSUPPORTED_PROTOCOL_MSG + msg, InternalCaller: CallerN(1)}
 }
 
 func NewShellErrorInvalidProtocol() Error {
-	return &err{level: EXCEPTION, ICode: E_SHELL_INVALID_PROTOCOL, IKey: "shell.invalid.protocol", InternalMsg: INVALID_PROTOCOL_MSG, InternalCaller: CallerN(1)}
+	return &err{level: EXCEPTION, ICode: E_SHELL_INVALID_PROTOCOL, IKey: "shell.invalid.protocol",
+		InternalMsg: INVALID_PROTOCOL_MSG, InternalCaller: CallerN(1)}
 }
 
 func NewShellErrorNoSuchHost(msg string) Error {
-	return &err{level: EXCEPTION, ICode: E_SHELL_NO_SUCH_HOST, IKey: "shell.no.such.host", InternalMsg: NO_SUCH_HOST_MSG + msg, InternalCaller: CallerN(1)}
+	return &err{level: EXCEPTION, ICode: E_SHELL_NO_SUCH_HOST, IKey: "shell.no.such.host",
+		InternalMsg: NO_SUCH_HOST_MSG + msg, InternalCaller: CallerN(1)}
 }
 
 func NewShellErrorNoHostInRequestUrl(msg string) Error {
-	return &err{level: EXCEPTION, ICode: E_SHELL_NO_HOST_IN_REQUEST_URL, IKey: "shell.no.host.in.request.url", InternalMsg: NO_HOST_IN_URL_MSG + msg, InternalCaller: CallerN(1)}
+	return &err{level: EXCEPTION, ICode: E_SHELL_NO_HOST_IN_REQUEST_URL, IKey: "shell.no.host.in.request.url",
+		InternalMsg: NO_HOST_IN_URL_MSG + msg, InternalCaller: CallerN(1)}
 }
 
 func NewShellErrorUnknownPorttcp(msg string) Error {
-	return &err{level: EXCEPTION, ICode: E_SHELL_UNKNOWN_PORT_TCP, IKey: "shell.unknown.port.tcp", InternalMsg: UNKNOWN_PORT_TCP_MSG + msg, InternalCaller: CallerN(1)}
+	return &err{level: EXCEPTION, ICode: E_SHELL_UNKNOWN_PORT_TCP, IKey: "shell.unknown.port.tcp",
+		InternalMsg: UNKNOWN_PORT_TCP_MSG + msg, InternalCaller: CallerN(1)}
 }
 
 func NewShellErrorNoRouteToHost(msg string) Error {
-	return &err{level: EXCEPTION, ICode: E_SHELL_NO_ROUTE_TO_HOST, IKey: "shell.no.route.to.host", InternalMsg: NO_ROUTE_TO_HOST_MSG + msg, InternalCaller: CallerN(1)}
+	return &err{level: EXCEPTION, ICode: E_SHELL_NO_ROUTE_TO_HOST, IKey: "shell.no.route.to.host",
+		InternalMsg: NO_ROUTE_TO_HOST_MSG + msg, InternalCaller: CallerN(1)}
 }
 
 func NewShellErrorUnreachableNetwork(msg string) Error {
-	return &err{level: EXCEPTION, ICode: E_SHELL_UNREACHABLE_NETWORK, IKey: "shell.unreachable.network", InternalMsg: UNREACHABLE_NETWORK_MSG + msg, InternalCaller: CallerN(1)}
+	return &err{level: EXCEPTION, ICode: E_SHELL_UNREACHABLE_NETWORK, IKey: "shell.unreachable.network",
+		InternalMsg: UNREACHABLE_NETWORK_MSG + msg, InternalCaller: CallerN(1)}
 }
 
 func NewShellErrorNoConnection(msg string) Error {
-	return &err{level: EXCEPTION, ICode: E_SHELL_NO_CONNECTION, IKey: "shell.not.connected.to.any.instance", InternalMsg: NO_CONNECTION_MSG + msg, InternalCaller: CallerN(1)}
+	return &err{level: EXCEPTION, ICode: E_SHELL_NO_CONNECTION, IKey: "shell.not.connected.to.any.instance",
+		InternalMsg: NO_CONNECTION_MSG + msg, InternalCaller: CallerN(1)}
 }
 
 func NewShellErrorDriverOpen(msg string) Error {
-	return &err{level: EXCEPTION, ICode: E_SHELL_DRIVER_OPEN, IKey: "shell.driver.Open.method.error", InternalMsg: DRIVER_OPEN_MSG + msg, InternalCaller: CallerN(1)}
+	return &err{level: EXCEPTION, ICode: E_SHELL_DRIVER_OPEN, IKey: "shell.driver.Open.method.error",
+		InternalMsg: DRIVER_OPEN_MSG + msg, InternalCaller: CallerN(1)}
 }
 
 func NewShellErrorInvalidURL(msg string) Error {
-	return &err{level: EXCEPTION, ICode: E_SHELL_INVALID_URL, IKey: "shell.Invalid.URL", InternalMsg: INVALID_URL_MSG + msg, InternalCaller: CallerN(1)}
+	return &err{level: EXCEPTION, ICode: E_SHELL_INVALID_URL, IKey: "shell.Invalid.URL",
+		InternalMsg: INVALID_URL_MSG + msg, InternalCaller: CallerN(1)}
 }
 
 // Read/Write/Update file errors
 func NewShellErrorReadFile(msg string) Error {
-	return &err{level: EXCEPTION, ICode: E_SHELL_READ_FILE, IKey: "shell.read.history", InternalMsg: READ_FILE_MSG + msg, InternalCaller: CallerN(1)}
+	return &err{level: EXCEPTION, ICode: E_SHELL_READ_FILE, IKey: "shell.read.history",
+		InternalMsg: READ_FILE_MSG + msg, InternalCaller: CallerN(1)}
 }
 
 func NewShellErrorWriteFile(msg string) Error {
-	return &err{level: EXCEPTION, ICode: E_SHELL_WRITE_FILE, IKey: "shell.write.history", InternalMsg: WRITE_FILE_MSG + msg, InternalCaller: CallerN(1)}
+	return &err{level: EXCEPTION, ICode: E_SHELL_WRITE_FILE, IKey: "shell.write.history",
+		InternalMsg: WRITE_FILE_MSG + msg, InternalCaller: CallerN(1)}
 }
 
 func NewShellErrorOpenFile(msg string) Error {
-	return &err{level: EXCEPTION, ICode: E_SHELL_OPEN_FILE, IKey: "shell.unable.to.open.file", InternalMsg: FILE_OPEN_MSG + msg, InternalCaller: CallerN(1)}
+	return &err{level: EXCEPTION, ICode: E_SHELL_OPEN_FILE, IKey: "shell.unable.to.open.file",
+		InternalMsg: FILE_OPEN_MSG + msg, InternalCaller: CallerN(1)}
 }
 
 func NewShellErrorCloseFile(msg string) Error {
-	return &err{level: EXCEPTION, ICode: E_SHELL_CLOSE_FILE, IKey: "shell.unable.to.open.file", InternalMsg: FILE_CLOSE_MSG + msg, InternalCaller: CallerN(1)}
+	return &err{level: EXCEPTION, ICode: E_SHELL_CLOSE_FILE, IKey: "shell.unable.to.open.file",
+		InternalMsg: FILE_CLOSE_MSG + msg, InternalCaller: CallerN(1)}
 }
 
 // Authentication Errors. Missing or invalid username/password.
 func NewShellErrorInvalidPassword(msg string) Error {
-	return &err{level: EXCEPTION, ICode: E_SHELL_INVALID_PASSWORD, IKey: "shell.invalid.password", InternalMsg: INVALID_PASSWORD_MSG + msg, InternalCaller: CallerN(1)}
+	return &err{level: EXCEPTION, ICode: E_SHELL_INVALID_PASSWORD, IKey: "shell.invalid.password",
+		InternalMsg: INVALID_PASSWORD_MSG + msg, InternalCaller: CallerN(1)}
 }
 
 func NewShellErrorInvalidUsername(msg string) Error {
-	return &err{level: EXCEPTION, ICode: E_SHELL_INVALID_USERNAME, IKey: "shell.invalid.username", InternalMsg: INVALID_USERNAME_MSG + msg, InternalCaller: CallerN(1)}
+	return &err{level: EXCEPTION, ICode: E_SHELL_INVALID_USERNAME, IKey: "shell.invalid.username",
+		InternalMsg: INVALID_USERNAME_MSG + msg, InternalCaller: CallerN(1)}
 }
 
 func NewShellErrorMissingCredential(msg string) Error {
-	return &err{level: EXCEPTION, ICode: E_SHELL_MISSING_CREDENTIAL, IKey: "shell.missing.credentials", InternalMsg: MISSING_CREDENTIAL_MSG + msg, InternalCaller: CallerN(1)}
+	return &err{level: EXCEPTION, ICode: E_SHELL_MISSING_CREDENTIAL, IKey: "shell.missing.credentials",
+		InternalMsg: MISSING_CREDENTIAL_MSG + msg, InternalCaller: CallerN(1)}
 
 }
 
 func NewShellErrorInvalidCredential(msg string) Error {
-	return &err{level: EXCEPTION, ICode: E_SHELL_INVALID_CREDENTIAL, IKey: "shell.invalid.credentials", InternalMsg: INVALID_CREDENTIAL_MSG + msg, InternalCaller: CallerN(1)}
+	return &err{level: EXCEPTION, ICode: E_SHELL_INVALID_CREDENTIAL, IKey: "shell.invalid.credentials",
+		InternalMsg: INVALID_CREDENTIAL_MSG + msg, InternalCaller: CallerN(1)}
 
 }
 
 // Command Errors
 func NewShellErrorNoSuchCommand(msg string) Error {
-	return &err{level: EXCEPTION, ICode: E_SHELL_NO_SUCH_COMMAND, IKey: "shell.no.such.command", InternalMsg: NO_SUCH_COMMAND_MSG + msg, InternalCaller: CallerN(1)}
+	return &err{level: EXCEPTION, ICode: E_SHELL_NO_SUCH_COMMAND, IKey: "shell.no.such.command",
+		InternalMsg: NO_SUCH_COMMAND_MSG + msg, InternalCaller: CallerN(1)}
 }
 
 func NewShellErrorNoSuchParam(msg string) Error {
-	return &err{level: EXCEPTION, ICode: E_SHELL_NO_SUCH_PARAM, IKey: "shell.no.such.param", InternalMsg: NO_SUCH_PARAM_MSG + msg, InternalCaller: CallerN(1)}
+	return &err{level: EXCEPTION, ICode: E_SHELL_NO_SUCH_PARAM, IKey: "shell.no.such.param",
+		InternalMsg: NO_SUCH_PARAM_MSG + msg, InternalCaller: CallerN(1)}
 }
 
 func NewShellErrorTooManyArgs(msg string) Error {
-	return &err{level: EXCEPTION, ICode: E_SHELL_TOO_MANY_ARGS, IKey: "shell.too.many.args", InternalMsg: TOO_MANY_ARGS_MSG + msg, InternalCaller: CallerN(1)}
+	return &err{level: EXCEPTION, ICode: E_SHELL_TOO_MANY_ARGS, IKey: "shell.too.many.args",
+		InternalMsg: TOO_MANY_ARGS_MSG + msg, InternalCaller: CallerN(1)}
 }
 
 func NewShellErrorTooFewArgs(msg string) Error {
-	return &err{level: EXCEPTION, ICode: E_SHELL_TOO_FEW_ARGS, IKey: "shell.too.few.args", InternalMsg: TOO_FEW_ARGS_MSG + msg, InternalCaller: CallerN(1)}
+	return &err{level: EXCEPTION, ICode: E_SHELL_TOO_FEW_ARGS, IKey: "shell.too.few.args",
+		InternalMsg: TOO_FEW_ARGS_MSG + msg, InternalCaller: CallerN(1)}
 }
 
 func NewShellErrorStackEmpty(msg string) Error {
-	return &err{level: EXCEPTION, ICode: E_SHELL_STACK_EMPTY, IKey: "shell.parameter.stack.empty", InternalMsg: STACK_EMPTY_MSG + msg, InternalCaller: CallerN(1)}
+	return &err{level: EXCEPTION, ICode: E_SHELL_STACK_EMPTY, IKey: "shell.parameter.stack.empty",
+		InternalMsg: STACK_EMPTY_MSG + msg, InternalCaller: CallerN(1)}
 
 }
 
 func NewShellErrorNoSuchAlias(msg string) Error {
-	return &err{level: EXCEPTION, ICode: E_SHELL_NO_SUCH_ALIAS, IKey: "shell.alias.does.not.exist", InternalMsg: NO_SUCH_ALIAS_MSG + msg, InternalCaller: CallerN(1)}
+	return &err{level: EXCEPTION, ICode: E_SHELL_NO_SUCH_ALIAS, IKey: "shell.alias.does.not.exist",
+		InternalMsg: NO_SUCH_ALIAS_MSG + msg, InternalCaller: CallerN(1)}
 
 }
 
 func NewShellErrorBatchMode(msg string) Error {
-	return &err{level: EXCEPTION, ICode: E_SHELL_BATCH_MODE, IKey: "batch.mode.incorrect.input", InternalMsg: BATCH_MODE_MSG + msg, InternalCaller: CallerN(1)}
+	return &err{level: EXCEPTION, ICode: E_SHELL_BATCH_MODE, IKey: "batch.mode.incorrect.input",
+		InternalMsg: BATCH_MODE_MSG + msg, InternalCaller: CallerN(1)}
 
 }
 
 func NewShellErrorStringWrite(msg string) Error {
-	return &err{level: EXCEPTION, ICode: E_SHELL_STRING_WRITE, IKey: "string.buffer.write.error", InternalMsg: STRING_WRITE_MSG + msg, InternalCaller: CallerN(1)}
+	return &err{level: EXCEPTION, ICode: E_SHELL_STRING_WRITE, IKey: "string.buffer.write.error",
+		InternalMsg: STRING_WRITE_MSG + msg, InternalCaller: CallerN(1)}
 
 }
 
 //Generic Errors
 
 func NewShellErrorOperationTimeout(msg string) Error {
-	return &err{level: EXCEPTION, ICode: E_SHELL_OPERATION_TIMEOUT, IKey: "shell.operation.timeout", InternalMsg: OPERATION_TIMEOUT_MSG + msg, InternalCaller: CallerN(1)}
+	return &err{level: EXCEPTION, ICode: E_SHELL_OPERATION_TIMEOUT, IKey: "shell.operation.timeout",
+		InternalMsg: OPERATION_TIMEOUT_MSG + msg, InternalCaller: CallerN(1)}
 }
 
 func NewShellErrorRowsScan(msg string) Error {
-	return &err{level: EXCEPTION, ICode: E_SHELL_ROWS_SCAN, IKey: "shell.rows.scan.error", InternalMsg: ROWS_SCAN_MSG + msg, InternalCaller: CallerN(1)}
+	return &err{level: EXCEPTION, ICode: E_SHELL_ROWS_SCAN, IKey: "shell.rows.scan.error",
+		InternalMsg: ROWS_SCAN_MSG + msg, InternalCaller: CallerN(1)}
 }
 
 func NewShellErrorJsonMarshal(msg string) Error {
-	return &err{level: EXCEPTION, ICode: E_SHELL_JSON_MARSHAL, IKey: "shell.json.marshal.error", InternalMsg: JSON_MARSHAL_MSG + msg, InternalCaller: CallerN(1)}
+	return &err{level: EXCEPTION, ICode: E_SHELL_JSON_MARSHAL, IKey: "shell.json.marshal.error",
+		InternalMsg: JSON_MARSHAL_MSG + msg, InternalCaller: CallerN(1)}
 }
 
 func NewShellErrorJsonUnmarshal(msg string) Error {
-	return &err{level: EXCEPTION, ICode: E_SHELL_JSON_UNMARSHAL, IKey: "shell.json.unmarshal.error", InternalMsg: JSON_UNMARSHAL_MSG + msg, InternalCaller: CallerN(1)}
+	return &err{level: EXCEPTION, ICode: E_SHELL_JSON_UNMARSHAL, IKey: "shell.json.unmarshal.error",
+		InternalMsg: JSON_UNMARSHAL_MSG + msg, InternalCaller: CallerN(1)}
 }
 
 func NewShellErrorDriverQueryMethod(msg string) Error {
-	return &err{level: EXCEPTION, ICode: E_SHELL_DRIVER_QUERY_METHOD, IKey: "shell.driver.query.method.error", InternalMsg: DRIVER_QUERY_MSG + msg, InternalCaller: CallerN(1)}
+	return &err{level: EXCEPTION, ICode: E_SHELL_DRIVER_QUERY_METHOD, IKey: "shell.driver.query.method.error",
+		InternalMsg: DRIVER_QUERY_MSG + msg, InternalCaller: CallerN(1)}
 }
 
 func NewShellErrorWriterOutput(msg string) Error {
-	return &err{level: EXCEPTION, ICode: E_SHELL_WRITER_OUTPUT, IKey: "shell.write.to.writer.error", InternalMsg: WRITER_OUTPUT_MSG + msg, InternalCaller: CallerN(1)}
+	return &err{level: EXCEPTION, ICode: E_SHELL_WRITER_OUTPUT, IKey: "shell.write.to.writer.error",
+		InternalMsg: WRITER_OUTPUT_MSG + msg, InternalCaller: CallerN(1)}
 }
 
 func NewShellErrorUnbalancedQuotes(msg string) Error {
-	return &err{level: EXCEPTION, ICode: E_SHELL_UNBALANCED_QUOTES, IKey: "shell.unbalanced.quotes", InternalMsg: UNBALANCED_QUOTES_MSG + msg, InternalCaller: CallerN(1)}
+	return &err{level: EXCEPTION, ICode: E_SHELL_UNBALANCED_QUOTES, IKey: "shell.unbalanced.quotes",
+		InternalMsg: UNBALANCED_QUOTES_MSG + msg, InternalCaller: CallerN(1)}
 }
 
 func NewShellErrorRowsClose(msg string) Error {
-	return &err{level: EXCEPTION, ICode: E_SHELL_ROWS_CLOSE, IKey: "shell.rows.close.error", InternalMsg: ROWS_CLOSE_MSG + msg, InternalCaller: CallerN(1)}
+	return &err{level: EXCEPTION, ICode: E_SHELL_ROWS_CLOSE, IKey: "shell.rows.close.error",
+		InternalMsg: ROWS_CLOSE_MSG + msg, InternalCaller: CallerN(1)}
 }
 
 func NewShellErrorCmdLineArgs(msg string) Error {
-	return &err{level: EXCEPTION, ICode: E_SHELL_CMD_LINE_ARGS, IKey: "shell.command.line.args", InternalMsg: CMD_LINE_ARG_MSG + msg, InternalCaller: CallerN(1)}
+	return &err{level: EXCEPTION, ICode: E_SHELL_CMD_LINE_ARGS, IKey: "shell.command.line.args",
+		InternalMsg: CMD_LINE_ARG_MSG + msg, InternalCaller: CallerN(1)}
 }
 
 func NewShellErrorInvalidInputArguments(msg string) Error {
-	return &err{level: EXCEPTION, ICode: E_SHELL_INVALID_INPUT_ARGUMENTS, IKey: "shell.invalid.input.arguments", InternalMsg: INVALID_INPUT_ARGUMENTS_MSG + msg, InternalCaller: CallerN(1)}
+	return &err{level: EXCEPTION, ICode: E_SHELL_INVALID_INPUT_ARGUMENTS, IKey: "shell.invalid.input.arguments",
+		InternalMsg: INVALID_INPUT_ARGUMENTS_MSG + msg, InternalCaller: CallerN(1)}
 }
 
 func NewShellErrorUnknownError(msg string) Error {
-	return &err{level: EXCEPTION, ICode: E_SHELL_UNKNOWN, IKey: "shell.internal.error.uncaptured", InternalMsg: UNKNOWN_ERROR_MSG + msg, InternalCaller: CallerN(1)}
+	return &err{level: EXCEPTION, ICode: E_SHELL_UNKNOWN, IKey: "shell.internal.error.uncaptured",
+		InternalMsg: UNKNOWN_ERROR_MSG + msg, InternalCaller: CallerN(1)}
 }
 
 func NewShellErrorOnRefresh(msg string) Error {
-	return &err{level: EXCEPTION, ICode: E_SHELL_ON_REFRESH, IKey: "shell.cluster.map.refresh.error", InternalMsg: ERROR_ON_REFRESH_MSG + msg, InternalCaller: CallerN(1)}
+	return &err{level: EXCEPTION, ICode: E_SHELL_ON_REFRESH, IKey: "shell.cluster.map.refresh.error",
+		InternalMsg: ERROR_ON_REFRESH_MSG + msg, InternalCaller: CallerN(1)}
 }
 
 func NewShellErrorInvalidArgument() Error {
-	return &err{level: EXCEPTION, ICode: E_SHELL_INVALID_ARGUMENT, IKey: "shell.invalid.argument", InternalMsg: INVALID_ARGUMENT_MSG, InternalCaller: CallerN(1)}
+	return &err{level: EXCEPTION, ICode: E_SHELL_INVALID_ARGUMENT, IKey: "shell.invalid.argument",
+		InternalMsg: INVALID_ARGUMENT_MSG, InternalCaller: CallerN(1)}
 }
 
 func NewShellErrorInitTerminal(c error) Error {

@@ -246,7 +246,9 @@ func processAnsiExec(item value.AnnotatedValue, right_item value.AnnotatedValue,
 	return match, true, joined
 }
 
-func (this *NLJoin) checkSendItem(av value.AnnotatedValue, quotaFunc func() uint64, recycle bool, filter expression.Expression, context *Context) bool {
+func (this *NLJoin) checkSendItem(av value.AnnotatedValue, quotaFunc func() uint64, recycle bool, filter expression.Expression,
+	context *Context) bool {
+
 	if filter != nil {
 		result, err := filter.Evaluate(av, &this.operatorCtx)
 		if err != nil {

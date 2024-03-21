@@ -102,7 +102,8 @@ func (this *NthValue) Default(item value.Value, context Context) (value.Value, e
 	if err == nil {
 		if nval == nil || nval.Type() != value.NUMBER || nval.(value.NumberValue).Float64() <= 0.0 ||
 			!value.IsInt(nval.(value.NumberValue).Float64()) {
-			err = fmt.Errorf("%s() second argument%s must evaluate to a positive integer.", this.Name(), this.Operands()[1].ErrorContext())
+			err = fmt.Errorf("%s() second argument%s must evaluate to a positive integer.", this.Name(),
+				this.Operands()[1].ErrorContext())
 		} else {
 			this.nthItem = int(nval.(value.NumberValue).Int64())
 		}

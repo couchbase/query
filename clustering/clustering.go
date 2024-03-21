@@ -59,7 +59,7 @@ type ConfigurationStore interface {
 	Id() string                                                       // Id of this ConfigurationStore
 	URL() string                                                      // URL to this ConfigurationStore
 	ClusterNames() ([]string, errors.Error)                           // Names of the Clusters in this ConfigurationStore
-	ClusterByName(name string) (Cluster, errors.Error)                // Find a Cluster in this ConfigurationStore using the Cluster's name
+	ClusterByName(name string) (Cluster, errors.Error)                // Find a Cluster by name in this ConfigurationStore
 	ConfigurationManager() ConfigurationManager                       // Get a ConfigurationManager for this ConfigurationStore
 	Authorize(map[string]string, []Privilege) errors.Error            // Do authorization returning an error if unsuccessful
 	WhoAmI() (string, errors.Error)                                   // The Id of the local node, if clustered
@@ -78,7 +78,7 @@ type Cluster interface {
 	Datastore() datastore.Datastore                        // The Datastore used by all Query Nodes in the cluster
 	AccountingStore() accounting.AccountingStore           // The AccountingStore used by all Query Nodes in the cluster
 	ConfigurationStore() ConfigurationStore                // The ConfigurationStore used by all Query Nodes in the cluster
-	Version() Version                                      // Logical version of the software that the QueryNodes in the cluster are running
+	Version() Version                                      // Logical version of the QueryNodes in the cluster
 	ClusterManager() ClusterManager                        // Get a ClusterManager for this Cluster
 	Capability(string) bool                                // Check if cluster possesses a certain capability
 	Settings() (map[string]interface{}, errors.Error)      // Get cluster wide settings

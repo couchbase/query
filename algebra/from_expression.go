@@ -190,7 +190,8 @@ func (this *ExpressionTerm) Formalize(parent *expression.Formalizer) (f *express
 			// for recursive with
 			// manually correlate so runtime expression scan will mark as correlated
 			// and we can update working value in every iteration
-			recursive_ref_corr := expression.IDENT_IS_CORRELATED | expression.IDENT_IS_WITH_ALIAS | expression.IDENT_IS_RECURSIVE_WITH
+			recursive_ref_corr := expression.IDENT_IS_CORRELATED | expression.IDENT_IS_WITH_ALIAS |
+				expression.IDENT_IS_RECURSIVE_WITH
 			this.correlation = addSimpleTermCorrelation(this.correlation,
 				map[string]uint32{ident: uint32(recursive_ref_corr)},
 				this.IsAnsiJoinOp(), parent)

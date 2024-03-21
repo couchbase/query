@@ -39,8 +39,8 @@ func (this *builder) buildPrimaryScan(keyspace datastore.Keyspace, node *algebra
 	var indexOrder plan.IndexKeyOrders
 
 	if this.order != nil {
-		keys := expression.Expressions{id}
-		entry := newIndexEntry(primary, keys, keys, nil, 1, 1, 1, nil, nil, _EXACT_VALUED_SPANS, exact, []bool{true})
+		keys := datastore.IndexKeys{&datastore.IndexKey{id, datastore.IK_NONE}}
+		entry := newIndexEntry(primary, keys, len(keys), nil, 1, 1, 1, nil, nil, _EXACT_VALUED_SPANS, exact, []bool{true})
 		ok := true
 		if ok, indexOrder, _ = this.useIndexOrder(entry, entry.keys); ok {
 			this.maxParallelism = 1
@@ -102,7 +102,8 @@ func buildPrimaryIndex(keyspace datastore.Keyspace, indexes []datastore.Index, n
 		if ok {
 			return
 		} else {
-			return nil, errors.NewPlanInternalError(fmt.Sprintf("buildPrimaryIndex: Unable to cast index %s to primary index", index.Name()))
+			return nil, errors.NewPlanInternalError(fmt.Sprintf("buildPrimaryIndex: Unable to cast index %s to primary index",
+				index.Name()))
 		}
 	}
 

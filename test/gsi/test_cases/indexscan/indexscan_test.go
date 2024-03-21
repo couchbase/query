@@ -94,10 +94,13 @@ func TestIndexScan(t *testing.T) {
 
 	// Create array indexes for unnest scan
 	runStmt(qc, "CREATE INDEX iax1 ON orders(ALL ARRAY v1 FOR v1 IN a1 END,c1,c2) WHERE test_id = \"ua\"")
-	runStmt(qc, "CREATE INDEX iax2 ON orders(ALL ARRAY (ALL ARRAY v2 FOR v2 IN v1 END) FOR v1 IN a2 END,c1,c2) WHERE test_id = \"ua\"")
+	runStmt(qc, "CREATE INDEX iax2 ON orders(ALL ARRAY (ALL ARRAY v2 FOR v2 IN v1 END) FOR v1 IN a2 END,c1,c2) "+
+		"WHERE test_id = \"ua\"")
 	runStmt(qc, "CREATE INDEX iax3 ON orders(ALL ARRAY v1.id FOR v1 IN a3 WHEN v1.type = \"n\" END,c1,c2) WHERE test_id = \"ua\"")
-	runStmt(qc, "CREATE INDEX iax4 ON orders(ALL ARRAY (ALL ARRAY v2.id FOR v2 IN v1.aa END)  FOR v1 IN a4 END,c1,c2) WHERE test_id = \"ua\"")
-	runStmt(qc, "CREATE INDEX iax5 ON orders(ALL ARRAY (ALL ARRAY [v2.id,v1, c1] FOR v2 IN v1.aa END)  FOR v1 IN a4 END,c1,c2) WHERE test_id = \"ua\"")
+	runStmt(qc, "CREATE INDEX iax4 ON orders(ALL ARRAY (ALL ARRAY v2.id FOR v2 IN v1.aa END)  FOR v1 IN a4 END,c1,c2) "+
+		"WHERE test_id = \"ua\"")
+	runStmt(qc, "CREATE INDEX iax5 ON orders(ALL ARRAY (ALL ARRAY [v2.id,v1, c1] FOR v2 IN v1.aa END)  FOR v1 IN a4 END,c1,c2) "+
+		"WHERE test_id = \"ua\"")
 	runStmt(qc, "CREATE INDEX iax6 ON orders(ALL ARRAY v1.val FOR v1 IN a3 WHEN v1.type = \"n\" END,c1,c2) WHERE test_id = \"ua\"")
 
 	runMatch("case_array_index_unnest_scan.json", false, true, qc, t)
@@ -146,7 +149,8 @@ func TestIndexScan(t *testing.T) {
 	// query named and positional parameters
 	runStmt(qc, "CREATE INDEX poix1 ON orders (c1, c2, c3, c4) WHERE test_id = \"parameters\"")
 	runStmt(qc, "CREATE INDEX poix2 ON orders (DISTINCT ARRAY v.id FOR v IN a3 END) WHERE test_id = \"parameters\"")
-	runStmt(qc, "CREATE INDEX poix3 ON orders (DISTINCT ARRAY v.id FOR v IN a4 WHEN v.name = \"abc\" END) WHERE test_id = \"parameters\"")
+	runStmt(qc, "CREATE INDEX poix3 ON orders (DISTINCT ARRAY v.id FOR v IN a4 WHEN v.name = \"abc\" END) "+
+		"WHERE test_id = \"parameters\"")
 	runStmt(qc, "CREATE INDEX poix4 ON orders (c1, c2, c3, c4) WHERE test_id LIKE \"parameter%\"")
 	runMatch("case_parameters.json", false, true, qc, t)
 	runStmt(qc, "DROP INDEX orders.poix1")
@@ -195,7 +199,8 @@ func TestIndexScan(t *testing.T) {
 	if rr.Err != nil {
 		t.Errorf("did not expect err %s", rr.Err.Error())
 	}
-	rr = runStmt(qc, "delete from orders where test_id IN [\"ua\", \"skipranges\", \"ordernulls\", \"parameters\", \"idxfltr\", \"indexbugs\"]")
+	rr = runStmt(qc, "delete from orders where test_id IN [\"ua\", \"skipranges\", \"ordernulls\", \"parameters\", \"idxfltr\", "+
+		"\"indexbugs\"]")
 	if rr.Err != nil {
 		t.Errorf("did not expect err %s", rr.Err.Error())
 	}

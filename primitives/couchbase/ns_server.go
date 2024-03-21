@@ -590,7 +590,8 @@ func (b *Bucket) CreateCollection(scope string, collection string, maxTTL int) e
 	client := pool.client
 	b.RUnlock()
 	args := map[string]interface{}{"name": collection, "maxTTL": maxTTL}
-	return client.parsePostURLResponseTerse("/pools/default/buckets/"+uriAdj(b.Name)+"/scopes/"+uriAdj(scope)+"/collections", args, nil)
+	return client.parsePostURLResponseTerse("/pools/default/buckets/"+uriAdj(b.Name)+"/scopes/"+uriAdj(scope)+"/collections",
+		args, nil)
 }
 
 func (b *Bucket) DropCollection(scope string, collection string) error {
@@ -598,7 +599,8 @@ func (b *Bucket) DropCollection(scope string, collection string) error {
 	pool := b.pool
 	client := pool.client
 	b.RUnlock()
-	return client.parseDeleteURLResponseTerse("/pools/default/buckets/"+uriAdj(b.Name)+"/scopes/"+uriAdj(scope)+"/collections/"+uriAdj(collection), nil, nil)
+	return client.parseDeleteURLResponseTerse("/pools/default/buckets/"+uriAdj(b.Name)+"/scopes/"+uriAdj(scope)+"/collections/"+
+		uriAdj(collection), nil, nil)
 }
 
 func (b *Bucket) FlushCollection(scope string, collection string) error {
@@ -765,15 +767,21 @@ func doHTTPRequest(req *http.Request) (*http.Response, error) {
 	return res, err
 }
 
-func doPutAPI(baseURL *url.URL, path string, params map[string]interface{}, authHandler AuthHandler, out interface{}, terse bool) error {
+func doPutAPI(baseURL *url.URL, path string, params map[string]interface{}, authHandler AuthHandler, out interface{},
+	terse bool) error {
+
 	return doOutputAPI("PUT", baseURL, path, params, authHandler, out, terse)
 }
 
-func doPostAPI(baseURL *url.URL, path string, params map[string]interface{}, authHandler AuthHandler, out interface{}, terse bool) error {
+func doPostAPI(baseURL *url.URL, path string, params map[string]interface{}, authHandler AuthHandler, out interface{},
+	terse bool) error {
+
 	return doOutputAPI("POST", baseURL, path, params, authHandler, out, terse)
 }
 
-func doDeleteAPI(baseURL *url.URL, path string, params map[string]interface{}, authHandler AuthHandler, out interface{}, terse bool) error {
+func doDeleteAPI(baseURL *url.URL, path string, params map[string]interface{}, authHandler AuthHandler, out interface{},
+	terse bool) error {
+
 	return doOutputAPI("DELETE", baseURL, path, params, authHandler, out, terse)
 }
 
@@ -1108,13 +1116,15 @@ func (b *Bucket) GetCollectionsManifest() (*Manifest, error) {
 	pools := b.getConnPools(true /* already locked */)
 	if len(pools) == 0 {
 		b.RUnlock()
-		return nil, fmt.Errorf("Unable to get connection to retrieve collections manifest: no connection pool. No collections access to bucket %s.", b.Name)
+		return nil, fmt.Errorf("Unable to get connection to retrieve collections manifest: no connection pool. No collections "+
+			"access to bucket %s.", b.Name)
 	}
 	pool := pools[0] // Any pool will do, so use the first one.
 	b.RUnlock()
 	client, err := pool.Get()
 	if err != nil {
-		return nil, fmt.Errorf("Unable to get connection to retrieve collections manifest: %v. No collections access to bucket %s.", err, b.Name)
+		return nil, fmt.Errorf("Unable to get connection to retrieve collections manifest: %v. No collections access to "+
+			"bucket %s.", err, b.Name)
 	}
 	dl, _ := getDeadline(noDeadline, _NO_TIMEOUT, DefaultTimeout)
 	client.SetDeadline(dl)

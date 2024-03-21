@@ -9,12 +9,13 @@
 package planner
 
 import (
+	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
 	base "github.com/couchbase/query/plannerbase"
 )
 
-func SargFor(pred expression.Expression, entry *indexEntry, keys expression.Expressions, isMissing bool,
+func SargFor(pred expression.Expression, entry *indexEntry, keys datastore.IndexKeys, isMissing bool,
 	isArrays []bool, max int, isJoin, doSelec bool, baseKeyspace *base.BaseKeyspace,
 	keyspaceNames map[string]string, advisorValidate bool, aliases map[string]bool,
 	context *PrepareContext) (SargSpans, bool, error) {
@@ -38,7 +39,7 @@ func SargFor(pred expression.Expression, entry *indexEntry, keys expression.Expr
 	return composeSargSpan(sargSpans, exactSpan)
 }
 
-func sargForOr(or *expression.Or, entry *indexEntry, keys expression.Expressions, isMissing bool,
+func sargForOr(or *expression.Or, entry *indexEntry, keys datastore.IndexKeys, isMissing bool,
 	isArrays []bool, max int, isJoin, doSelec bool, baseKeyspace *base.BaseKeyspace,
 	keyspaceNames map[string]string, advisorValidate bool, aliases map[string]bool,
 	context *PrepareContext) (SargSpans, bool, error) {
@@ -63,7 +64,11 @@ func sargForOr(or *expression.Or, entry *indexEntry, keys expression.Expressions
 			setFlag := false
 			if max1 < max {
 				// check for non-sargable key in predicate
-				exprs, _, err := indexCoverExpressions(entry, keys[:max1], c, nil, baseKeyspace.Name(), context)
+				keys1 := make(expression.Expressions, 0, max1)
+				for i := 0; i < max1; i++ {
+					keys1 = append(keys1, keys[i].Expr)
+				}
+				exprs, _, err := indexCoverExpressions(entry, keys1, c, nil, baseKeyspace.Name(), context)
 				if err != nil {
 					return nil, false, err
 				}
@@ -84,7 +89,7 @@ func sargForOr(or *expression.Or, entry *indexEntry, keys expression.Expressions
 	return rv.Streamline(), exact, nil
 }
 
-func sargFor(pred, key expression.Expression, isJoin, doSelec bool, baseKeyspace *base.BaseKeyspace,
+func sargFor(pred expression.Expression, key *datastore.IndexKey, isJoin, doSelec bool, baseKeyspace *base.BaseKeyspace,
 	keyspaceNames map[string]string, advisorValidate, isMissing, isArray bool, aliases map[string]bool,
 	context *PrepareContext) (SargSpans, bool, error) {
 
@@ -98,7 +103,7 @@ func sargFor(pred, key expression.Expression, isJoin, doSelec bool, baseKeyspace
 		exact := true
 		if s.constPred {
 			exact = false
-		} else if pred.DependsOn(key) {
+		} else if pred.DependsOn(key.Expr) {
 			exact = false
 		}
 		return nil, exact, nil
@@ -108,7 +113,7 @@ func sargFor(pred, key expression.Expression, isJoin, doSelec bool, baseKeyspace
 	return rs, rs.Exact(), nil
 }
 
-func SargForFilters(filters base.Filters, keys expression.Expressions, isMissing bool, isArrays []bool,
+func SargForFilters(filters base.Filters, keys datastore.IndexKeys, isMissing bool, isArrays []bool,
 	max int, underHash, doSelec bool, baseKeyspace *base.BaseKeyspace,
 	keyspaceNames map[string]string, advisorValidate bool, aliases map[string]bool,
 	exactFilters map[*base.Filter]bool, context *PrepareContext) (SargSpans, bool, error) {
@@ -155,9 +160,9 @@ func SargForFilters(filters base.Filters, keys expression.Expressions, isMissing
 		exactSpan = exactSpan && flExactSpan
 
 		for pos, sargKey := range sargKeys {
-			isArray, _, _ := sargKey.IsArrayIndexKey()
+			isArray, _, _ := sargKey.Expr.IsArrayIndexKey()
 			if flSargSpans[pos] == nil || flSargSpans[pos].Size() == 0 {
-				if exactSpan && !isArray && fl.FltrExpr().DependsOn(sargKey) {
+				if exactSpan && !isArray && fl.FltrExpr().DependsOn(sargKey.Expr) {
 					exactSpan = false
 				}
 				continue
@@ -276,7 +281,7 @@ func composeSargSpan(sargSpans []SargSpans, exactSpan bool) (SargSpans, bool, er
 /*
 Get sarg spans for index sarg keys.
 */
-func getSargSpans(pred expression.Expression, sargKeys expression.Expressions, isMissing bool,
+func getSargSpans(pred expression.Expression, sargKeys datastore.IndexKeys, isMissing bool,
 	isArrays []bool, isJoin, doSelec bool, baseKeyspace *base.BaseKeyspace,
 	keyspaceNames map[string]string, advisorValidate bool, aliases map[string]bool,
 	context *PrepareContext) ([]SargSpans, bool, error) {
@@ -358,7 +363,7 @@ func getSargSpans(pred expression.Expression, sargKeys expression.Expressions, i
 			// to be safe (since this may introduce false positives from index scan)
 			if s.constPred {
 				exactSpan = false
-			} else if pred.DependsOn(sargKeys[i]) {
+			} else if pred.DependsOn(sargKeys[i].Expr) {
 				exactSpan = false
 			}
 		}

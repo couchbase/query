@@ -454,7 +454,8 @@ func (this *Context) handleUsing(stmt algebra.Statement, namedArgs map[string]va
 	using := exec.Using()
 	if using != nil {
 		if namedArgs != nil || positionalArgs != nil {
-			return namedArgs, positionalArgs, errors.NewExecutionParameterError("cannot have both USING clause and request parameters")
+			return namedArgs, positionalArgs,
+				errors.NewExecutionParameterError("cannot have both USING clause and request parameters")
 		}
 		argsValue := using.Value()
 		if argsValue == nil {
@@ -605,7 +606,8 @@ func (this *Context) ExecutePrepared(prepared *plan.Prepared, isPrepared bool,
 // If the opContext is not a dummy opContext this method stops the handle created by this method
 // when the calling operator stops
 func (this *opContext) OpenPrepared(baseContext *Context, stmtType string, prepared *plan.Prepared, isPrepared bool,
-	namedArgs map[string]value.Value, positionalArgs value.Values, statement string, profileUdfExecTrees bool, funcKey string) (functions.Handle, error) {
+	namedArgs map[string]value.Value, positionalArgs value.Values, statement string, profileUdfExecTrees bool, funcKey string) (
+	functions.Handle, error) {
 
 	if this.HandlesInActive() {
 		return nil, errors.NewExecutionStatementStoppedError(statement)
@@ -1036,7 +1038,8 @@ func (this *opContext) PrepareStatementExt(statement string) (interface{}, error
 	return prepared, err
 }
 
-func (this *opContext) ExecutePreparedExt(prepared interface{}, namedArgs map[string]value.Value, positionalArgs value.Values) (value.Value, uint64, error) {
+func (this *opContext) ExecutePreparedExt(prepared interface{}, namedArgs map[string]value.Value, positionalArgs value.Values) (
+	value.Value, uint64, error) {
 
 	orgPrepared, ok := prepared.(*plan.Prepared)
 

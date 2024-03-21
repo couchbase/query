@@ -85,7 +85,8 @@ func indexScanCost(index datastore.Index, sargKeys expression.Expressions, reque
 		return unionSpansCost(index, sargKeys, requestId, spans, alias, advisorValidate, context)
 	}
 
-	return OPT_COST_NOT_AVAIL, OPT_SELEC_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, errors.NewPlanInternalError("indexScanCost: unexpected span type")
+	return OPT_COST_NOT_AVAIL, OPT_SELEC_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL,
+		errors.NewPlanInternalError("indexScanCost: unexpected span type")
 }
 
 func unionSpansCost(index datastore.Index, sargKeys expression.Expressions, requestId string,
@@ -163,7 +164,8 @@ func intersectSpansCost(index datastore.Index, sargKeys expression.Expressions, 
 		if span, ok := spanMap[ic]; ok {
 			newSpans = append(newSpans, span)
 		} else {
-			return OPT_COST_NOT_AVAIL, OPT_SELEC_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, errors.NewPlanInternalError("intersectSpansCost: map corrupted")
+			return OPT_COST_NOT_AVAIL, OPT_SELEC_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL,
+				errors.NewPlanInternalError("intersectSpansCost: map corrupted")
 		}
 	}
 	intersectSpan.spans = newSpans

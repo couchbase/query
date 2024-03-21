@@ -95,7 +95,9 @@ func (c *Client) ProcessStream(path string, callb func(interface{}) error, data 
 }
 
 // Based on code in http://src.couchbase.org/source/xref/trunk/goproj/src/github.com/couchbase/indexing/secondary/dcp/pools.go#309
-func (c *Client) processStream(baseURL *url.URL, path string, authHandler AuthHandler, callb func(interface{}) error, data interface{}) error {
+func (c *Client) processStream(baseURL *url.URL, path string, authHandler AuthHandler, callb func(interface{}) error,
+	data interface{}) error {
+
 	var requestUrl string
 
 	if q := strings.Index(path, "?"); q > 0 {

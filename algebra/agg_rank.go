@@ -18,7 +18,8 @@ import (
 /*
 This represents the Window RANK() function.
 It returns the rank of each row returned from a query with respect to the other rows, based on the values of order by CLAUSE.
-Rows with equal values for the ranking criteria receive the same rank.  The number of tied rows to the tied rank to calculate the next rank.
+Rows with equal values for the ranking criteria receive the same rank.  The number of tied rows to the tied rank to calculate
+the next rank.
 It starts with 1. The ranks may not be consecutive numbers.
 */
 type Rank struct {

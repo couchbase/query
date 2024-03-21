@@ -17,19 +17,19 @@ import (
 	"github.com/couchbase/query/functions"
 )
 
-var NewFunctionName func(elem []string, namespace string, queryContext string) (functions.FunctionName, errors.Error) = func(elem []string, namespace string, queryContext string) (functions.FunctionName, errors.Error) {
+var NewFunctionName = func(elem []string, namespace string, queryContext string) (functions.FunctionName, errors.Error) {
 	return functions.MockFunction(namespace, elem[len(elem)-1]), nil
 }
 
-var NewInlineBody func(expr expression.Expression, text string) (functions.FunctionBody, errors.Error) = func(expr expression.Expression, text string) (functions.FunctionBody, errors.Error) {
+var NewInlineBody = func(expr expression.Expression, text string) (functions.FunctionBody, errors.Error) {
 	return nil, nil
 }
 
-var NewGolangBody func(library, object string) (functions.FunctionBody, errors.Error) = func(library, object string) (functions.FunctionBody, errors.Error) {
+var NewGolangBody = func(library, object string) (functions.FunctionBody, errors.Error) {
 	return nil, nil
 }
 
-var NewJavascriptBody func(library, object, text string) (functions.FunctionBody, errors.Error) = func(library, object, text string) (functions.FunctionBody, errors.Error) {
+var NewJavascriptBody = func(library, object, text string) (functions.FunctionBody, errors.Error) {
 	return nil, nil
 }
 

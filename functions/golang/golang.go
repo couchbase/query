@@ -51,11 +51,15 @@ func (this *golang) CheckAuthorize(name string, context functions.Context) bool 
 	return true
 }
 
-func (this *golang) FunctionStatements(name functions.FunctionName, body functions.FunctionBody, context functions.Context) (interface{}, errors.Error) {
+func (this *golang) FunctionStatements(name functions.FunctionName, body functions.FunctionBody, context functions.Context) (
+	interface{}, errors.Error) {
+
 	return nil, errors.NewFunctionUnsupportedActionError("golang", "EXPLAIN FUNCTION")
 }
 
-func (this *golang) Execute(name functions.FunctionName, body functions.FunctionBody, modifiers functions.Modifier, values []value.Value, context functions.Context) (value.Value, errors.Error) {
+func (this *golang) Execute(name functions.FunctionName, body functions.FunctionBody, modifiers functions.Modifier,
+	values []value.Value, context functions.Context) (value.Value, errors.Error) {
+
 	var args value.Value
 	var val interface{}
 

@@ -75,7 +75,8 @@ func (this *CreateScope) UnmarshalJSON(body []byte) error {
 		return err
 	}
 
-	scpref := algebra.NewScopeRefFromPath(algebra.NewPathScope(_unmarshalled.Namespace, _unmarshalled.Bucket, _unmarshalled.Scope), "")
+	scpref := algebra.NewScopeRefFromPath(algebra.NewPathScope(_unmarshalled.Namespace, _unmarshalled.Bucket,
+		_unmarshalled.Scope), "")
 	this.bucket, err = datastore.GetBucket(_unmarshalled.Namespace, _unmarshalled.Bucket)
 	if err != nil {
 		return err

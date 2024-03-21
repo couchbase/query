@@ -9,12 +9,13 @@
 package planner
 
 import (
+	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/expression"
 	base "github.com/couchbase/query/plannerbase"
 )
 
 type sarg struct {
-	key             expression.Expression
+	key             *datastore.IndexKey
 	baseKeyspace    *base.BaseKeyspace
 	keyspaceNames   map[string]string
 	isJoin          bool
@@ -27,7 +28,7 @@ type sarg struct {
 	context         *PrepareContext
 }
 
-func newSarg(key expression.Expression, baseKeyspace *base.BaseKeyspace,
+func newSarg(key *datastore.IndexKey, baseKeyspace *base.BaseKeyspace,
 	keyspaceNames map[string]string, isJoin, doSelec, advisorValidate, isMissing, isArray bool,
 	aliases map[string]bool, context *PrepareContext) *sarg {
 	return &sarg{

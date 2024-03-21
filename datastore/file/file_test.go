@@ -164,7 +164,8 @@ func TestFile(t *testing.T) {
 
 	// delete all the freds
 
-	_, deleted, errs := keyspace.Delete([]value.Pair{value.Pair{Name: "fred2"}, value.Pair{Name: "fred3"}}, datastore.NULL_QUERY_CONTEXT, true)
+	_, deleted, errs := keyspace.Delete([]value.Pair{value.Pair{Name: "fred2"}, value.Pair{Name: "fred3"}},
+		datastore.NULL_QUERY_CONTEXT, true)
 	if len(errs) > 0 && len(deleted) != 2 {
 		fmt.Printf("Warning: Failed to delete. Error %v", errs)
 	}
@@ -181,7 +182,8 @@ func TestFile(t *testing.T) {
 	}
 
 	// some deletes should fail
-	_, deleted, errs = keyspace.Delete([]value.Pair{value.Pair{Name: "fred2"}, value.Pair{Name: "fred3"}}, datastore.NULL_QUERY_CONTEXT, true)
+	_, deleted, errs = keyspace.Delete([]value.Pair{value.Pair{Name: "fred2"}, value.Pair{Name: "fred3"}},
+		datastore.NULL_QUERY_CONTEXT, true)
 	if len(deleted) != 1 && deleted[0].Name != "fred2" {
 		t.Errorf("failed to delete fred2: %v, #deleted=%d", deleted, len(deleted))
 	}

@@ -271,8 +271,8 @@ func (this *builder) sargableSearchIndexes(indexes []datastore.Index, pred expre
 	searchSargables = make([]*indexEntry, 0, len(searchFns))
 	for _, s := range searchFns {
 		siname := s.IndexName()
-		keys := expression.Expressions{s.Copy()}
-		if !base.SubsetOf(pred, keys[0]) {
+		keys := datastore.IndexKeys{&datastore.IndexKey{s.Copy(), datastore.IK_NONE}}
+		if !base.SubsetOf(pred, keys[0].Expr) {
 			continue
 		}
 
@@ -307,7 +307,7 @@ func (this *builder) sargableSearchIndexes(indexes []datastore.Index, pred expre
 			if n > 0 {
 				//		exact = exact && !qprams
 				if entry == nil || n > en || size < esize {
-					entry = newIndexEntry(index, keys, keys, nil, 1, 1, 1,
+					entry = newIndexEntry(index, keys, len(keys), nil, 1, 1, 1,
 						cond, origCond, nil, exact, []bool{true})
 					esize = size
 					en = n
@@ -463,18 +463,18 @@ func (this *builder) sargableFlexSearchIndex(idx datastore.Index, flexRequest *d
 		return
 	}
 
-	keys := make(expression.Expressions, 0, len(resp.StaticSargKeys)+len(resp.DynamicSargKeys)+1)
-	keys = append(keys, search.NewSearch(keyspaceIdent, sqe, soe))
+	keys := make(datastore.IndexKeys, 0, len(resp.StaticSargKeys)+len(resp.DynamicSargKeys)+1)
+	keys = append(keys, &datastore.IndexKey{search.NewSearch(keyspaceIdent, sqe, soe), datastore.IK_NONE})
 	for _, expr := range resp.StaticSargKeys {
-		keys = append(keys, expr)
+		keys = append(keys, &datastore.IndexKey{expr, datastore.IK_NONE})
 	}
 	for _, expr := range resp.DynamicSargKeys {
-		keys = append(keys, expr)
+		keys = append(keys, &datastore.IndexKey{expr, datastore.IK_NONE})
 	}
 
 	pushDownProperty := this.flexIndexPushDownProperty(resp)
 
-	entry = newIndexEntry(index, keys, keys[0:1], nil,
+	entry = newIndexEntry(index, keys, 1, nil,
 		len(resp.StaticSargKeys),
 		len(resp.StaticSargKeys)+len(resp.DynamicSargKeys),
 		len(resp.StaticSargKeys)+len(resp.DynamicSargKeys),

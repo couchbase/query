@@ -9,11 +9,12 @@
 package planner
 
 import (
+	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/expression"
 	base "github.com/couchbase/query/plannerbase"
 )
 
-func SargableFor(pred expression.Expression, keys expression.Expressions, missing, gsi bool,
+func SargableFor(pred expression.Expression, keys datastore.IndexKeys, missing, gsi bool,
 	isArrays []bool, context *PrepareContext, aliases map[string]bool) (
 	min, max, sum int, skeys []bool) {
 
@@ -30,7 +31,7 @@ func SargableFor(pred expression.Expression, keys expression.Expressions, missin
 
 	for i := 0; i < len(keys); i++ {
 		// Terminate on statically-valued expression
-		if keys[i].Value() != nil {
+		if keys[i].Expr.Value() != nil {
 			return
 		}
 
@@ -65,7 +66,7 @@ func SargableFor(pred expression.Expression, keys expression.Expressions, missin
 	return
 }
 
-func sargableForOr(or *expression.Or, keys expression.Expressions, missing, gsi bool, isArrays []bool,
+func sargableForOr(or *expression.Or, keys datastore.IndexKeys, missing, gsi bool, isArrays []bool,
 	context *PrepareContext, aliases map[string]bool) (min, max, sum int, skeys []bool) {
 
 	skeys = make([]bool, len(keys))
@@ -96,7 +97,7 @@ func sargableForOr(or *expression.Or, keys expression.Expressions, missing, gsi 
 }
 
 type sargable struct {
-	key     expression.Expression
+	key     *datastore.IndexKey
 	missing bool
 	array   bool
 	gsi     bool
@@ -185,7 +186,7 @@ func (this *sargable) VisitLT(pred *expression.LT) (interface{}, error) {
 }
 
 func (this *sargable) VisitIsMissing(pred *expression.IsMissing) (interface{}, error) {
-	if this.missing && !this.array && pred.Operand().EquivalentTo(this.key) {
+	if this.missing && !this.array && pred.Operand().EquivalentTo(this.key.Expr) {
 		return true, nil
 	}
 
@@ -201,7 +202,7 @@ func (this *sargable) VisitIsNotNull(pred *expression.IsNotNull) (interface{}, e
 }
 
 func (this *sargable) VisitIsNotValued(pred *expression.IsNotValued) (interface{}, error) {
-	if this.missing && !this.array && pred.Operand().EquivalentTo(this.key) {
+	if this.missing && !this.array && pred.Operand().EquivalentTo(this.key.Expr) {
 		return true, nil
 	}
 	return this.visitDefault(pred)
@@ -309,7 +310,7 @@ func (this *sargable) visitDefault(pred expression.Expression) (bool, error) {
 }
 
 func (this *sargable) defaultSargable(pred expression.Expression) bool {
-	return base.SubsetOf(pred, this.key) ||
-		((pred.PropagatesMissing() || pred.PropagatesNull()) &&
-			pred.DependsOn(this.key))
+	key := this.key.Expr
+	return base.SubsetOf(pred, key) ||
+		((pred.PropagatesMissing() || pred.PropagatesNull()) && pred.DependsOn(key))
 }

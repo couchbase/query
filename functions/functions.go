@@ -83,7 +83,8 @@ type FunctionEntry struct {
 
 type LanguageRunner interface {
 	CheckAuthorize(name string, context Context) bool
-	Execute(name FunctionName, body FunctionBody, modifiers Modifier, values []value.Value, context Context) (value.Value, errors.Error)
+	Execute(name FunctionName, body FunctionBody, modifiers Modifier, values []value.Value, context Context) (
+		value.Value, errors.Error)
 	FunctionStatements(name FunctionName, body FunctionBody, context Context) (interface{}, errors.Error)
 }
 
@@ -652,7 +653,9 @@ func (entry *FunctionEntry) loadPrivileges() errors.Error {
 type empty struct {
 }
 
-func (this *empty) Execute(name FunctionName, body FunctionBody, modifiers Modifier, values []value.Value, context Context) (value.Value, errors.Error) {
+func (this *empty) Execute(name FunctionName, body FunctionBody, modifiers Modifier, values []value.Value, context Context) (
+	value.Value, errors.Error) {
+
 	return nil, errors.NewFunctionsNotSupported("")
 }
 
@@ -700,7 +703,9 @@ func (this *missing) SetStorage(context Context, path []string) errors.Error {
 	return nil
 }
 
-func (this *missing) Execute(name FunctionName, body FunctionBody, modifiers Modifier, values []value.Value, context Context) (value.Value, errors.Error) {
+func (this *missing) Execute(name FunctionName, body FunctionBody, modifiers Modifier, values []value.Value, context Context) (
+	value.Value, errors.Error) {
+
 	return nil, errors.NewMissingFunctionError(name.Name())
 }
 

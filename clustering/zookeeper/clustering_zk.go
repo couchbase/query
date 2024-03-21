@@ -312,14 +312,17 @@ func (z *zkCluster) AddQueryNode(n clustering.QueryNode) (clustering.QueryNode, 
 	}
 	// Check that query node has compatible backend connections:
 	if n.Standalone().Datastore().URL() != z.DatastoreURI {
-		return nil, errors.NewWarning(fmt.Sprintf("Failed to add Query Node %v: incompatible datastore with cluster %s", n, z.DatastoreURI))
+		return nil, errors.NewWarning(fmt.Sprintf("Failed to add Query Node %v: incompatible datastore with cluster %s",
+			n, z.DatastoreURI))
 	}
 	if n.Standalone().ConfigurationStore().URL() != z.ConfigstoreURI {
-		return nil, errors.NewWarning(fmt.Sprintf("Failed to add Query Node %v: incompatible configstore with cluster %s", n, z.ConfigstoreURI))
+		return nil, errors.NewWarning(fmt.Sprintf("Failed to add Query Node %v: incompatible configstore with cluster %s",
+			n, z.ConfigstoreURI))
 	}
 	// Check that query node is version compatible with the cluster:
 	if !z.Version().Compatible(n.Standalone().Version()) {
-		return nil, errors.NewWarning(fmt.Sprintf("Failed to add Query Node %v: not version compatible with cluster (%v)", n, z.Version()))
+		return nil, errors.NewWarning(fmt.Sprintf("Failed to add Query Node %v: not version compatible with cluster (%v)",
+			n, z.Version()))
 	}
 	qryNodeImpl, ok := n.(*zkQueryNodeConfig)
 	if !ok {

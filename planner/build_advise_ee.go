@@ -223,7 +223,7 @@ type collectQueryInfo struct {
 	idxCandidates       []datastore.Index
 	validatedIdxes      iaplan.IndexInfos
 	validatedCoverIdxes iaplan.IndexInfos
-	pushDownPropMap     map[string]PushDownProperties // key->"keyspace_alias_indexname_typeofIdx" e.g. "default:b.s.k_d_idx1_virtual"
+	pushDownPropMap     map[string]PushDownProperties // key->"keyspace_alias_idxName_typeofIdx" e.g. "default:b.s.k_d_idx1_virtual"
 	advisePhase         int
 }
 
@@ -308,7 +308,9 @@ func (this *builder) extractKeyspacePredicates(where, on expression.Expression) 
 	}
 }
 
-func (this *builder) extractIndexJoin(index datastore.Index, keyspace datastore.Keyspace, node *algebra.KeyspaceTerm, cover bool, cost, cardinality float64) {
+func (this *builder) extractIndexJoin(index datastore.Index, keyspace datastore.Keyspace, node *algebra.KeyspaceTerm, cover bool,
+	cost, cardinality float64) {
+
 	if this.indexAdvisor {
 		if index != nil {
 			info := extractInfo(index, node.Alias(), keyspace, false, this.advisePhase == _VALIDATE)
@@ -726,7 +728,8 @@ func extractExistAndDeferredIdxes(queryInfos map[expression.HasExpressions]*advi
 		for _, keyspaceInfo := range queryInfo.GetKeyspaceInfos() {
 			if _, ok := infoMap[keyspaceInfo.GetName()]; !ok {
 				//use nil value to mark one keyspace has been processed and no deferred indexes are found or errors occur.
-				infoMap[keyspaceInfo.GetName()] = getExistAndDeferredIndexes(keyspaceInfo.GetKeyspace(), keyspaceInfo.GetAlias(), indexApiVersion)
+				infoMap[keyspaceInfo.GetName()] = getExistAndDeferredIndexes(keyspaceInfo.GetKeyspace(), keyspaceInfo.GetAlias(),
+					indexApiVersion)
 			}
 		}
 	}

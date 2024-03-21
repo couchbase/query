@@ -245,7 +245,9 @@ func (this *TransactionMutations) LogSize() int {
 /* gocbcore-transaction
  */
 
-func (this *TransactionMutations) SetTransaction(transaction *gocbcore.Transaction, txnInternal *gocbcore.TransactionsManagerInternal) {
+func (this *TransactionMutations) SetTransaction(transaction *gocbcore.Transaction,
+	txnInternal *gocbcore.TransactionsManagerInternal) {
+
 	this.mutex.Lock()
 	defer this.mutex.Unlock()
 	this.transaction = transaction

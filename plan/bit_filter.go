@@ -168,7 +168,8 @@ func (this *BitFilterTerm) addBitFilterIndex(bfIndexExprs []*BitFilterIndex) ([]
 					found = true
 					break
 				} else {
-					return nil, errors.NewPlanInternalError(fmt.Sprintf("BitFilterTerm.addBitFilterIndex: bit filters for term %s (index %s) already exists", this.alias, bfIndex.indexName))
+					return nil, errors.NewPlanInternalError(fmt.Sprintf("BitFilterTerm.addBitFilterIndex: bit filters for term "+
+						"%s (index %s) already exists", this.alias, bfIndex.indexName))
 				}
 			}
 		}

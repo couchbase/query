@@ -92,7 +92,9 @@ func (this *HttpEndpoint) registerClusterHandlers() {
 
 }
 
-func (this *HttpEndpoint) wrapHandlerFuncWithAdminAuth(f func(http.ResponseWriter, *http.Request)) func(http.ResponseWriter, *http.Request) {
+func (this *HttpEndpoint) wrapHandlerFuncWithAdminAuth(f func(http.ResponseWriter, *http.Request)) func(http.ResponseWriter,
+	*http.Request) {
+
 	return func(writer http.ResponseWriter, request *http.Request) {
 		authErr := this.hasAdminAuth(request, profilePrivilege)
 		if authErr != nil {
@@ -178,7 +180,9 @@ var pingStatus = struct {
 	"OK",
 }
 
-func doPing(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
+func doPing(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
+	interface{}, errors.Error) {
+
 	af.EventTypeId = audit.API_ADMIN_PING
 	if endpoint.server.IsHealthy() {
 		return &pingStatus, nil
@@ -193,7 +197,9 @@ var localConfig struct {
 	myConfig clustering.QueryNode
 }
 
-func doConfig(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
+func doConfig(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
+	interface{}, errors.Error) {
+
 	af.EventTypeId = audit.API_ADMIN_CONFIG
 	var self clustering.QueryNode
 
@@ -236,7 +242,9 @@ func doConfig(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, 
 	return localConfig.myConfig, nil
 }
 
-func doClusters(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
+func doClusters(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
+	interface{}, errors.Error) {
+
 	af.EventTypeId = audit.API_ADMIN_CLUSTERS
 	cfgStore, cfgErr := endpoint.doConfigStore()
 	if cfgErr != nil {
@@ -258,7 +266,9 @@ func doClusters(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 	}
 }
 
-func doCluster(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
+func doCluster(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
+	interface{}, errors.Error) {
+
 	af.EventTypeId = audit.API_ADMIN_CLUSTERS
 	_, name := router.RequestValue(req, "cluster")
 	af.Cluster = name
@@ -281,7 +291,9 @@ func doCluster(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request,
 	}
 }
 
-func doNodes(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
+func doNodes(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
+	interface{}, errors.Error) {
+
 	af.EventTypeId = audit.API_ADMIN_CLUSTERS
 	_, name := router.RequestValue(req, "cluster")
 	af.Cluster = name
@@ -308,7 +320,9 @@ func doNodes(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, a
 	}
 }
 
-func doNode(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
+func doNode(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
+	interface{}, errors.Error) {
+
 	_, name := router.RequestValue(req, "cluster")
 	_, node := router.RequestValue(req, "node")
 
@@ -338,7 +352,9 @@ func doNode(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af
 // reload the ssl certificate. Only performed if the server is running https and
 // the request contains basic authorization credentials that can be successfully
 // authorized against the configuration store.
-func doSslCert(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
+func doSslCert(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
+	interface{}, errors.Error) {
+
 	af.EventTypeId = audit.API_ADMIN_SSL_CERT
 	if endpoint.httpsAddr == "" {
 		return nil, errors.NewAdminNotSSLEnabledError()
@@ -388,7 +404,9 @@ func doSslCert(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request,
 	return sslStatus, nil
 }
 
-func doSettings(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
+func doSettings(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
+	interface{}, errors.Error) {
+
 	af.EventTypeId = audit.API_ADMIN_SETTINGS
 
 	// Admin auth required
@@ -476,8 +494,8 @@ func getNodeFromRequest(req *http.Request) (clustering.QueryNode, errors.Error) 
 	return node, nil
 }
 
-func doShutdown(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{},
-	errors.Error) {
+func doShutdown(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
+	interface{}, errors.Error) {
 
 	af.EventTypeId = audit.API_ADMIN_SHUTDOWN
 

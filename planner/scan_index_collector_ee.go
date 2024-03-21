@@ -564,7 +564,9 @@ func formalizeIndexKeys(alias string, keys expression.Expressions) expression.Ex
 	return keys
 }
 
-func extractInfo(index datastore.Index, keyspaceAlias string, keyspace datastore.Keyspace, deferred, validatePhase bool) *iaplan.IndexInfo {
+func extractInfo(index datastore.Index, keyspaceAlias string, keyspace datastore.Keyspace, deferred,
+	validatePhase bool) *iaplan.IndexInfo {
+
 	if index == nil || (validatePhase && index.Type() != datastore.VIRTUAL) || index.Type() == datastore.SEQ_SCAN {
 		return nil
 	}
@@ -597,7 +599,7 @@ func getIndexKeyStringArray(index datastore.Index) (rv []string, desc []bool, lk
 			}
 		}
 	} else {
-		keys := index2.RangeKey()
+		keys := index.RangeKey()
 		rv = make([]string, len(keys))
 		desc = make([]bool, len(keys))
 		for i, kp := range keys {

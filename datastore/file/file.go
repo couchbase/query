@@ -348,7 +348,9 @@ func (p *namespace) KeyspaceNames() ([]string, errors.Error) {
 	return p.keyspaceNames, nil
 }
 
-func (p *namespace) Objects(credentials *auth.Credentials, filter func(string) bool, preload bool) ([]datastore.Object, errors.Error) {
+func (p *namespace) Objects(credentials *auth.Credentials, filter func(string) bool, preload bool) (
+	[]datastore.Object, errors.Error) {
+
 	rv := make([]datastore.Object, len(p.keyspaceNames))
 	i := 0
 	for _, k := range p.keyspaceNames {
@@ -665,19 +667,26 @@ func (b *keyspace) performOp(op int, kvPairs value.Pairs, preserveMutations bool
 
 }
 
-func (b *keyspace) Insert(inserts value.Pairs, context datastore.QueryContext, preserveMutations bool) (int, value.Pairs, errors.Errors) {
+func (b *keyspace) Insert(inserts value.Pairs, context datastore.QueryContext, preserveMutations bool) (
+	int, value.Pairs, errors.Errors) {
+
 	return b.performOp(INSERT, inserts, preserveMutations, context)
 }
 
-func (b *keyspace) Update(updates value.Pairs, context datastore.QueryContext, preserveMutations bool) (int, value.Pairs, errors.Errors) {
+func (b *keyspace) Update(updates value.Pairs, context datastore.QueryContext, preserveMutations bool) (
+	int, value.Pairs, errors.Errors) {
+
 	return b.performOp(UPDATE, updates, preserveMutations, context)
 }
 
-func (b *keyspace) Upsert(upserts value.Pairs, context datastore.QueryContext, preserveMutations bool) (int, value.Pairs, errors.Errors) {
+func (b *keyspace) Upsert(upserts value.Pairs, context datastore.QueryContext, preserveMutations bool) (
+	int, value.Pairs, errors.Errors) {
+
 	return b.performOp(UPSERT, upserts, preserveMutations, context)
 }
 
-func (b *keyspace) Delete(deletes value.Pairs, context datastore.QueryContext, preserveMutations bool) (int, value.Pairs, errors.Errors) {
+func (b *keyspace) Delete(deletes value.Pairs, context datastore.QueryContext, preserveMutations bool) (
+	int, value.Pairs, errors.Errors) {
 
 	var fileError []string
 	var deleted value.Pairs

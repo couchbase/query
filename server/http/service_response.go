@@ -225,7 +225,9 @@ func (this *httpRequest) Alive() bool {
 	}
 }
 
-func (this *httpRequest) Execute(srvr *server.Server, context *execution.Context, reqType string, signature value.Value, startTx bool) {
+func (this *httpRequest) Execute(srvr *server.Server, context *execution.Context, reqType string, signature value.Value,
+	startTx bool) {
+
 	this.prefix, this.indent = this.prettyStrings(srvr.Pretty(), false)
 
 	this.setHttpCode(http.StatusOK)

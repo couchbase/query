@@ -67,19 +67,27 @@ func (this *keyspaceBase) DropScope(name string) errors.Error {
 
 var _ERRS_SYSTEM_NOT_SUPPORTED = errors.Errors{errors.NewSystemNotSupportedError(nil, "")}
 
-func (b *keyspaceBase) Insert(inserts value.Pairs, context datastore.QueryContext, preserveMutations bool) (int, value.Pairs, errors.Errors) {
+func (b *keyspaceBase) Insert(inserts value.Pairs, context datastore.QueryContext, preserveMutations bool) (
+	int, value.Pairs, errors.Errors) {
+
 	return 0, nil, _ERRS_SYSTEM_NOT_SUPPORTED
 }
 
-func (b *keyspaceBase) Update(updates value.Pairs, context datastore.QueryContext, preserveMutations bool) (int, value.Pairs, errors.Errors) {
+func (b *keyspaceBase) Update(updates value.Pairs, context datastore.QueryContext, preserveMutations bool) (
+	int, value.Pairs, errors.Errors) {
+
 	return 0, nil, _ERRS_SYSTEM_NOT_SUPPORTED
 }
 
-func (b *keyspaceBase) Upsert(upserts value.Pairs, context datastore.QueryContext, preserveMutations bool) (int, value.Pairs, errors.Errors) {
+func (b *keyspaceBase) Upsert(upserts value.Pairs, context datastore.QueryContext, preserveMutations bool) (
+	int, value.Pairs, errors.Errors) {
+
 	return 0, nil, _ERRS_SYSTEM_NOT_SUPPORTED
 }
 
-func (b *keyspaceBase) Delete(deletes value.Pairs, context datastore.QueryContext, preserveMutations bool) (int, value.Pairs, errors.Errors) {
+func (b *keyspaceBase) Delete(deletes value.Pairs, context datastore.QueryContext, preserveMutations bool) (
+	int, value.Pairs, errors.Errors) {
+
 	return 0, nil, _ERRS_SYSTEM_NOT_SUPPORTED
 }
 
@@ -236,7 +244,8 @@ func compileSpan(span *datastore.Span) (compiledSpans, errors.Error) {
 	if err != nil {
 		return nil, err
 	}
-	spanEvaluator.high, spanEvaluator.evalHigh, isHighValued, err = compileRange(span.Range.High, span.Range.Inclusion, datastore.HIGH)
+	spanEvaluator.high, spanEvaluator.evalHigh, isHighValued, err = compileRange(span.Range.High, span.Range.Inclusion,
+		datastore.HIGH)
 	if err != nil {
 		return nil, err
 	}
@@ -343,7 +352,8 @@ func compileRange2(in value.Value, incl, side datastore.Inclusion) (string, func
 		}
 		fallthrough
 	default:
-		return "", nil, false, errors.NewSystemDatastoreError(nil, fmt.Sprintf("Invalid seek value %v of type %T.", val, t.String()))
+		return "", nil, false, errors.NewSystemDatastoreError(nil, fmt.Sprintf("Invalid seek value %v of type %T.", val,
+			t.String()))
 	}
 	retVal := val.(string)
 	op := (incl & side) > 0

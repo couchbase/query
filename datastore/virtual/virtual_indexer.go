@@ -134,6 +134,8 @@ func (this *VirtualIndexer) CreateIndex3(
 	return nil, errors.NewVirtualIdxerNotSupportedError(nil, "CREATE INDEX is not supported for virtual indexer3")
 }
 
-func (this *VirtualIndexer) CreatePrimaryIndex3(requestId, name string, indexPartition *datastore.IndexPartition, with value.Value) (datastore.PrimaryIndex, errors.Error) {
+func (this *VirtualIndexer) CreatePrimaryIndex3(requestId, name string, indexPartition *datastore.IndexPartition,
+	with value.Value) (datastore.PrimaryIndex, errors.Error) {
+
 	return nil, errors.NewVirtualIdxerNotSupportedError(nil, "CREATE PRIMARY INDEX is not supported for virtual indexer3")
 }

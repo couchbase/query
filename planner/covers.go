@@ -9,6 +9,7 @@
 package planner
 
 import (
+	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/value"
 )
@@ -111,8 +112,8 @@ func (this *covers) VisitAny(expr *expression.Any) (interface{}, error) {
 
 	for i, k := range this.keys {
 		if all, ok := k.(*expression.All); ok {
-			if min, _, _, _ := SargableFor(expr, expression.Expressions{all}, (i != 0),
-				true, nil, this.context, nil); min > 0 {
+			keys := datastore.IndexKeys{&datastore.IndexKey{all, datastore.IK_NONE}}
+			if min, _, _, _ := SargableFor(expr, keys, (i != 0), true, nil, this.context, nil); min > 0 {
 				return map[string]*expression.Cover{
 					expr.String(): expression.NewCover(expr),
 				}, nil

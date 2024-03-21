@@ -272,7 +272,9 @@ func (this *All) flattenKeys() *FlattenKeys {
 	return nil
 }
 
-func (this *All) SetFlattenValueMapping(fk Expression) *All {
+// this function modifies the All expression (and thus should work on a copy)
+// it replaces the Flatten_Keys() expression with one of its operands (fk)
+func (this *All) SetFlattenValueMapping(fk Expression) {
 	all := this
 	for {
 		switch array := all.Array().(type) {
@@ -281,16 +283,17 @@ func (this *All) SetFlattenValueMapping(fk Expression) *All {
 			case *All:
 				all = valMapping
 			case *FlattenKeys:
+				// reset parent All expression to replace FlattenKeys with fk array
 				all.array = NewArray(fk, array.Bindings(), array.When())
 				all.derived = true
 				this.flatten_keys = this.flattenKeys()
-				return this
+				return
 			default:
-				return nil
+				return
 			}
 		default:
-			return nil
+			return
 		}
 	}
-	return nil
+	return
 }

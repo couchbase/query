@@ -45,7 +45,8 @@ func getUserInfoList(s *store) ([]interface{}, errors.Error) {
 		return nil, err
 	}
 	// Expected data format:
-	//   [{"id":"ivanivanov","name":"Ivan Ivanov","roles":[{"role":"cluster_admin"},{"bucket_name":"default","role":"bucket_admin"}]},
+	//   [{"id":"ivanivanov","name":"Ivan Ivanov","roles":[{"role":"cluster_admin"},
+	//       {"bucket_name":"default","role":"bucket_admin"}]},
 	//    {"id":"petrpetrov","name":"Petr Petrov","roles":[{"role":"replication_admin"}]}]
 	data := val.Actual()
 	sliceOfUsers, ok := data.([]interface{})
@@ -184,7 +185,8 @@ func userInfoListToMap(sliceOfUsers []interface{}) (map[string]value.Value, erro
 		}
 		idAsString, ok := id.(string)
 		if !ok {
-			return nil, errors.NewInvalidValueError(fmt.Sprintf("Field id of unexpected type in user_info data at position %d: %v", i, u))
+			return nil, errors.NewInvalidValueError(fmt.Sprintf("Field id of unexpected type in user_info data at position %d: %v",
+				i, u))
 		}
 		domain, present := userAsMap["domain"]
 		if !present {

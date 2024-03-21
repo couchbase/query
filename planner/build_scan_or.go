@@ -288,7 +288,8 @@ func (this *builder) buildOrScanNoPushdowns(node *algebra.KeyspaceTerm, id expre
 				}
 			}
 		} else {
-			return nil, 0, false, errors.NewPlanInternalError(fmt.Sprintf("buildOrScanNoPushdowns: missing basekeyspace %s", node.Alias()))
+			return nil, 0, false, errors.NewPlanInternalError(fmt.Sprintf("buildOrScanNoPushdowns: missing basekeyspace %s",
+				node.Alias()))
 		}
 	}
 

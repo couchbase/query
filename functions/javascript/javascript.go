@@ -339,7 +339,9 @@ func (this *javascript) FunctionStatements(name functions.FunctionName, body fun
 	return rv, nil
 }
 
-func (this *javascript) Execute(name functions.FunctionName, body functions.FunctionBody, modifiers functions.Modifier, values []value.Value, context functions.Context) (value.Value, errors.Error) {
+func (this *javascript) Execute(name functions.FunctionName, body functions.FunctionBody, modifiers functions.Modifier,
+	values []value.Value, context functions.Context) (value.Value, errors.Error) {
+
 	var args []interface{}
 	var evaluator *evaluatorDesc
 
@@ -401,7 +403,8 @@ func (this *javascript) Execute(name functions.FunctionName, body functions.Func
 			if newThreads > 0 {
 				totThreads := atomic.AddInt32(&(*evaluator).threads, int32(newThreads))
 				atomic.AddInt32(&(*evaluator).available, int32(newThreads))
-				logging.Infof("Adding %v runners to evaluator %v: actual increment %v to %v", _DEF_RUNNERS, evaluator.name, newThreads, totThreads)
+				logging.Infof("Adding %v runners to evaluator %v: actual increment %v to %v", _DEF_RUNNERS, evaluator.name,
+					newThreads, totThreads)
 			} else {
 
 				switch {
@@ -451,7 +454,8 @@ func (this *javascript) Execute(name functions.FunctionName, body functions.Func
 	}
 
 	context.Park(nil, true)
-	res, err = evaluator.evaluator.Evaluate(library, funcName, opts, args, functions.NewUdfContext(context, funcBody.prefix, name.Key()))
+	res, err = evaluator.evaluator.Evaluate(library, funcName, opts, args, functions.NewUdfContext(context, funcBody.prefix,
+		name.Key()))
 	context.Resume(true)
 
 	// deflate the pool if required
@@ -460,7 +464,8 @@ func (this *javascript) Execute(name functions.FunctionName, body functions.Func
 			newThreads, _ := evaluator.engine.DeflatePoolBy(_DEF_RUNNERS)
 			totThreads := atomic.AddInt32(&(*evaluator).threads, -int32(newThreads))
 			atomic.AddInt32(&(*evaluator).available, -int32(newThreads))
-			logging.Infof("Dropping %v runners from evaluator %v: actual decrement %v to %v", _DEF_RUNNERS, evaluator.name, newThreads, totThreads)
+			logging.Infof("Dropping %v runners from evaluator %v: actual decrement %v to %v", _DEF_RUNNERS, evaluator.name,
+				newThreads, totThreads)
 		}
 		atomic.AddInt32(&(*evaluator).amending, -1)
 	}
@@ -545,7 +550,8 @@ func (this *javascriptBody) SetStorage(context functions.Context, path []string)
 			this.libName = this.library[2:]
 			this.prefix = storageContext
 			return nil
-		} else if !context.IsTracked() && strings.HasPrefix(this.library, storageContext+"/") && strings.IndexByte(this.library[len(storageContext)+1:], '/') < 0 {
+		} else if !context.IsTracked() && strings.HasPrefix(this.library, storageContext+"/") &&
+			strings.IndexByte(this.library[len(storageContext)+1:], '/') < 0 {
 
 			// for tenant scenarios, no nested path is allowed
 			// for scope functions, only the function scope is allowed

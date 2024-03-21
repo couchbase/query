@@ -121,7 +121,8 @@ func NewAdvisorProjOnly() Error {
 
 func NewAdvisorNoFrom() Error {
 	return &err{level: EXCEPTION, ICode: E_ADVISOR_NO_FROM, IKey: "semantics_advisor_function",
-		InternalMsg: fmt.Sprintf("FROM clause is not allowed when Advisor function is present in projection clause."), InternalCaller: CallerN(1)}
+		InternalMsg:    fmt.Sprintf("FROM clause is not allowed when Advisor function is present in projection clause."),
+		InternalCaller: CallerN(1)}
 }
 
 func NewMHDPOnlyFeature(what, iKey string) Error {
@@ -147,7 +148,8 @@ func NewUpdateStatInvalidIndexTypeError() Error {
 
 func NewUpdateStatIndexAllCollectionOnly() Error {
 	return &err{level: EXCEPTION, ICode: E_UPDATE_STAT_INDEX_ALL_COLLECTION_ONLY, IKey: "semantics_update_statistics",
-		InternalMsg: "INDEX ALL option for UPDATE STATISTICS (ANALYZE) can only be used for a collection.", InternalCaller: CallerN(1)}
+		InternalMsg:    "INDEX ALL option for UPDATE STATISTICS (ANALYZE) can only be used for a collection.",
+		InternalCaller: CallerN(1)}
 }
 
 func NewUpdateStatSelf(msg, at string) Error {

@@ -9,6 +9,7 @@
 package planner
 
 import (
+	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/expression"
 )
 
@@ -17,7 +18,8 @@ func (this *sargable) VisitAnyEvery(pred *expression.AnyEvery) (interface{}, err
 		return true, nil
 	}
 
-	all, ok := this.key.(*expression.All)
+	key := this.key.Expr
+	all, ok := key.(*expression.All)
 	if !ok {
 		return false, nil
 	}
@@ -41,7 +43,7 @@ func (this *sargable) VisitAnyEvery(pred *expression.AnyEvery) (interface{}, err
 		mapping = array.ValueMapping()
 
 		var err error
-		satisfies, err = getSatisfies(pred, this.key, array, this.aliases)
+		satisfies, err = getSatisfies(pred, key, array, this.aliases)
 		if err != nil {
 			return false, err
 		}
@@ -51,7 +53,7 @@ func (this *sargable) VisitAnyEvery(pred *expression.AnyEvery) (interface{}, err
 		}
 	}
 
-	mappings := expression.Expressions{mapping}
+	mappings := datastore.IndexKeys{&datastore.IndexKey{mapping, datastore.IK_NONE}}
 	min, _, _, _ := SargableFor(satisfies, mappings, this.missing, this.gsi, []bool{true}, this.context, this.aliases)
 	return min > 0, nil
 }

@@ -21,8 +21,10 @@ func MurmurHashSum128(data []byte) (h1, h2 uint64) {
 	length := len(data)
 
 	for len(data) >= 16 {
-		k1 = uint64(data[0]) | uint64(data[1])<<8 | uint64(data[2])<<16 | uint64(data[3])<<24 | uint64(data[4])<<32 | uint64(data[5])<<40 | uint64(data[6])<<48 | uint64(data[7])<<56
-		k2 = uint64(data[8]) | uint64(data[9])<<8 | uint64(data[10])<<16 | uint64(data[11])<<24 | uint64(data[12])<<32 | uint64(data[13])<<40 | uint64(data[14])<<48 | uint64(data[15])<<56
+		k1 = uint64(data[0]) | uint64(data[1])<<8 | uint64(data[2])<<16 | uint64(data[3])<<24 | uint64(data[4])<<32 |
+			uint64(data[5])<<40 | uint64(data[6])<<48 | uint64(data[7])<<56
+		k2 = uint64(data[8]) | uint64(data[9])<<8 | uint64(data[10])<<16 | uint64(data[11])<<24 | uint64(data[12])<<32 |
+			uint64(data[13])<<40 | uint64(data[14])<<48 | uint64(data[15])<<56
 		data = data[16:]
 
 		k1 *= c1_128

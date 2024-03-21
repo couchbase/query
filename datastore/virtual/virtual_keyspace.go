@@ -267,19 +267,27 @@ func (this *virtualKeyspace) Fetch(keys []string, keysMap map[string]value.Annot
 	return errors.Errors{errors.NewVirtualKSNotSupportedError(nil, "Fetch for virtual keyspace.")}
 }
 
-func (this *virtualKeyspace) Insert(inserts value.Pairs, context datastore.QueryContext, preserveMutations bool) (int, value.Pairs, errors.Errors) {
+func (this *virtualKeyspace) Insert(inserts value.Pairs, context datastore.QueryContext, preserveMutations bool) (
+	int, value.Pairs, errors.Errors) {
+
 	return 0, nil, errors.Errors{errors.NewVirtualKSNotSupportedError(nil, "Insert for virtual keyspace.")}
 }
 
-func (this *virtualKeyspace) Update(updates value.Pairs, context datastore.QueryContext, preserveMutations bool) (int, value.Pairs, errors.Errors) {
+func (this *virtualKeyspace) Update(updates value.Pairs, context datastore.QueryContext, preserveMutations bool) (
+	int, value.Pairs, errors.Errors) {
+
 	return 0, nil, errors.Errors{errors.NewVirtualKSNotSupportedError(nil, "Update for virtual keyspace.")}
 }
 
-func (this *virtualKeyspace) Upsert(upserts value.Pairs, context datastore.QueryContext, preserveMutations bool) (int, value.Pairs, errors.Errors) {
+func (this *virtualKeyspace) Upsert(upserts value.Pairs, context datastore.QueryContext, preserveMutations bool) (
+	int, value.Pairs, errors.Errors) {
+
 	return 0, nil, errors.Errors{errors.NewVirtualKSNotSupportedError(nil, "Upsert for virtual keyspace.")}
 }
 
-func (this *virtualKeyspace) Delete(deletes value.Pairs, context datastore.QueryContext, preserveMutations bool) (int, value.Pairs, errors.Errors) {
+func (this *virtualKeyspace) Delete(deletes value.Pairs, context datastore.QueryContext, preserveMutations bool) (
+	int, value.Pairs, errors.Errors) {
+
 	return 0, nil, errors.Errors{errors.NewVirtualKSNotSupportedError(nil, "Delete for virtual keyspace.")}
 }
 

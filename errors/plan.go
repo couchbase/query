@@ -44,19 +44,22 @@ func IsWrapPlanError(e error, code ErrorCode) bool {
 }
 
 func NewReprepareError(e error) Error {
-	return &err{level: EXCEPTION, ICode: E_REPREPARE, IKey: "reprepare_error", ICause: e, InternalMsg: "Reprepare error", InternalCaller: CallerN(1)}
+	return &err{level: EXCEPTION, ICode: E_REPREPARE, IKey: "reprepare_error", ICause: e, InternalMsg: "Reprepare error",
+		InternalCaller: CallerN(1)}
 }
 
 /* error numbers 4010, 4020, 4025 moved to semantics.go */
 
 func NewSubqueryMissingKeysError(keyspace string) Error {
 	return &err{level: EXCEPTION, ICode: E_SUBQUERY_MISSING_KEYS, IKey: "plan.build_select.subquery_missing_keys",
-		InternalMsg: fmt.Sprintf("FROM in correlated subquery must have USE KEYS clause: FROM %s.", keyspace), InternalCaller: CallerN(1)}
+		InternalMsg:    fmt.Sprintf("FROM in correlated subquery must have USE KEYS clause: FROM %s.", keyspace),
+		InternalCaller: CallerN(1)}
 }
 
 func NewSubqueryMissingIndexError(keyspace string) Error {
 	return &err{level: EXCEPTION, ICode: E_SUBQUERY_MISSING_INDEX, IKey: "plan.build_select.subquery_missing_index",
-		InternalMsg: fmt.Sprintf("No secondary index available for keyspace %s in correlated subquery.", keyspace), InternalCaller: CallerN(1)}
+		InternalMsg:    fmt.Sprintf("No secondary index available for keyspace %s in correlated subquery.", keyspace),
+		InternalCaller: CallerN(1)}
 }
 
 func NewNoSuchPreparedError(name string) Error {
@@ -74,7 +77,8 @@ func NewNoSuchPreparedWithContextError(name string, queryContext string) Error {
 
 func NewUnrecognizedPreparedError(e error) Error {
 	return &err{level: EXCEPTION, ICode: E_UNRECOGNIZED_PREPARED, IKey: "plan.build_prepared.unrecognized_prepared",
-		ICause: fmt.Errorf("JSON unmarshalling error: %v", e), InternalMsg: "Unrecognizable prepared statement", InternalCaller: CallerN(1)}
+		ICause: fmt.Errorf("JSON unmarshalling error: %v", e), InternalMsg: "Unrecognizable prepared statement",
+		InternalCaller: CallerN(1)}
 }
 
 func NewPreparedNameError(msg string) Error {
@@ -94,7 +98,8 @@ func NewPreparedEncodingMismatchError(name string) Error {
 
 func NewEncodingNameMismatchError(expected, found string) Error {
 	return &err{level: EXCEPTION, ICode: E_ENCODING_NAME_MISMATCH, IKey: "plan.build_prepared.name_not_in_encoded_plan",
-		InternalMsg: fmt.Sprintf("Mismatching name in encoded plan, expecting: %s, found: %s", expected, found), InternalCaller: CallerN(1)}
+		InternalMsg:    fmt.Sprintf("Mismatching name in encoded plan, expecting: %s, found: %s", expected, found),
+		InternalCaller: CallerN(1)}
 }
 
 func NewEncodingContextMismatchError(name, expected, found string) Error {
@@ -105,7 +110,8 @@ func NewEncodingContextMismatchError(name, expected, found string) Error {
 		found = "unset"
 	}
 	return &err{level: EXCEPTION, ICode: E_ENCODING_CONTEXT_MISMATCH, IKey: "plan.build_prepared.context_not_in_encoded_plan",
-		InternalMsg: fmt.Sprintf("Mismatching query_context in encoded plan, expecting: %s, found: %s", expected, found), InternalCaller: CallerN(1)}
+		InternalMsg:    fmt.Sprintf("Mismatching query_context in encoded plan, expecting: %s, found: %s", expected, found),
+		InternalCaller: CallerN(1)}
 }
 
 func NewPredefinedPreparedNameError(msg string) Error {
@@ -122,7 +128,8 @@ func NewNoIndexJoinError(alias, op string) Error {
 
 func NewNoPrimaryIndexError(alias string) Error {
 	return &err{level: EXCEPTION, ICode: E_NO_PRIMARY_INDEX, IKey: "plan.build_primary_index.no_index",
-		InternalMsg:    fmt.Sprintf("No index available on keyspace %s that matches your query. Use CREATE PRIMARY INDEX ON %s to create a primary index, or check that your expected index is online.", alias, alias),
+		InternalMsg: fmt.Sprintf("No index available on keyspace %s that matches your query. Use CREATE PRIMARY INDEX ON "+
+			"%s to create a primary index, or check that your expected index is online.", alias, alias),
 		InternalCaller: CallerN(1)}
 }
 

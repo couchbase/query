@@ -275,7 +275,8 @@ func auditSettingsWorker(auditor *standardAuditor, num int) {
 				return fmt.Errorf("Audit update handler function %d: Unable to get audit settings: %v", num, err)
 			}
 			if curUid != auditInfo.Uid {
-				logging.Infof("Audit update handler function %d: Got updated audit settings: %+v", num, stringifyauditInfo(*auditInfo))
+				logging.Infof("Audit update handler function %d: Got updated audit settings: %+v", num,
+					stringifyauditInfo(*auditInfo))
 				change := n1qlConfigurationChangeEvent{
 					Timestamp:  time.Now().Format("2006-01-02T15:04:05.000Z07:00"),
 					RealUserid: adt.RealUserId{Domain: "local", Username: "@cbq-engine"},
@@ -347,13 +348,15 @@ func auditWorker(auditor *standardAuditor, num int) {
 			err = auditor.auditService.WriteUsingNonPoolClient(client, entry.eventId, *entry.queryAuditRecord)
 			if err != nil {
 				accounting.UpdateCounter(accounting.AUDIT_ACTIONS_FAILED)
-				logging.Errorf("Audit worker %d: unable to send audit record %+v to audit daemon: %v", num, stringifyQueryAR(*entry.queryAuditRecord), err)
+				logging.Errorf("Audit worker %d: unable to send audit record %+v to audit daemon: %v", num,
+					stringifyQueryAR(*entry.queryAuditRecord), err)
 			}
 		} else {
 			err = auditor.auditService.WriteUsingNonPoolClient(client, entry.eventId, *entry.apiAuditRecord)
 			if err != nil {
 				accounting.UpdateCounter(accounting.AUDIT_ACTIONS_FAILED)
-				logging.Errorf("Audit worker %d: unable to send audit record %+v to audit daemon: %v", num, stringifyAPIAR(*entry.apiAuditRecord), err)
+				logging.Errorf("Audit worker %d: unable to send audit record %+v to audit daemon: %v", num,
+					stringifyAPIAR(*entry.apiAuditRecord), err)
 			}
 		}
 	}

@@ -278,7 +278,8 @@ func NewUnnestInvalidPosition(pos interface{}) Error {
 }
 
 func NewScanVectorTooManyScannedBuckets(buckets []string) Error {
-	return &err{level: EXCEPTION, ICode: E_SCAN_VECTOR_TOO_MANY_SCANNED_BUCKETS, IKey: "execution.scan_vector_too_many_scanned_vectors",
+	return &err{level: EXCEPTION, ICode: E_SCAN_VECTOR_TOO_MANY_SCANNED_BUCKETS,
+		IKey: "execution.scan_vector_too_many_scanned_vectors",
 		InternalMsg: fmt.Sprintf("The scan_vector parameter should not be used for queries accessing more than one keyspace. "+
 			"Use scan_vectors instead. Keyspaces: %v", buckets), InternalCaller: CallerN(1)}
 }
@@ -472,7 +473,8 @@ func NewSubqueryBuildError(e error) Error {
 }
 
 func NewIndexLeadingKeyMissingNotSupportedError() Error {
-	return &err{level: EXCEPTION, ICode: E_INDEX_LEADING_KEY_MISSING_NOT_SUPPORTED, IKey: "execution.indexing.leadingkey_missing_not_supported",
+	return &err{level: EXCEPTION, ICode: E_INDEX_LEADING_KEY_MISSING_NOT_SUPPORTED,
+		IKey:           "execution.indexing.leadingkey_missing_not_supported",
 		InternalMsg:    fmt.Sprintf("Indexing leading key MISSING values are not supported by indexer."),
 		InternalCaller: CallerN(1)}
 }
@@ -530,8 +532,9 @@ func NewNLInnerPrimaryDocsExceeded(alias string, limit int) Error {
 	c["keyspace_alias"] = alias
 	c["limit"] = limit
 	return &err{level: EXCEPTION, ICode: E_JOIN_ON_PRIMARY_DOCS_EXCEEDED, IKey: "execution.nljoin_inner_primary.docs_exceeded",
-		cause:          c,
-		InternalMsg:    fmt.Sprintf("Inner of nested-loop join (%s) cannot have more than %d documents without appropriate secondary index", alias, limit),
+		cause: c,
+		InternalMsg: fmt.Sprintf("Inner of nested-loop join (%s) cannot have more than %d documents without appropriate "+
+			"secondary index", alias, limit),
 		InternalCaller: CallerN(1)}
 }
 

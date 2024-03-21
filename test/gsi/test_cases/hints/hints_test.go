@@ -34,7 +34,8 @@ func TestHints(t *testing.T) {
 	runStmt(qc, "CREATE INDEX purch_purchaseId on purchase(purchaseId)")
 	runStmt(qc, "CREATE INDEX purch_customerId_metaid on purchase(customerId || \"_\" || test_id)")
 	runStmt(qc, "CREATE INDEX ord_customerId_ordersId on orders(customerId, orderId)")
-	runStmt(qc, "CREATE INDEX purch_arrProduct_customerId on purchase(DISTINCT ARRAY pd.product FOR pd IN lineItems END, customerId)")
+	runStmt(qc, "CREATE INDEX purch_arrProduct_customerId on purchase(DISTINCT ARRAY pd.product FOR pd IN lineItems END, "+
+		"customerId)")
 	runStmt(qc, "CREATE INDEX prod_reviewList_productId on product(DISTINCT reviewList, productId)")
 	runStmt(qc, "CREATE INDEX st_source_idx on shellTest(c11, c12)")
 	runStmt(qc, "CREATE INDEX st_target_idx on shellTest(c21, c22)")

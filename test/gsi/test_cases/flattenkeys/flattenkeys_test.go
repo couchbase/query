@@ -23,18 +23,30 @@ func TestFlattenkeys(t *testing.T) {
 	}
 
 	indexes := []string{
-		"CREATE INDEX %s ON %s(isbn, author DESC, DISTINCT ARRAY FLATTEN_KEYS(ch.num DESC, ch.name DESC, ch.description) FOR ch IN chapters END, year, name) WHERE type = 'book'",
-		"CREATE INDEX %s ON %s(isbn, author DESC, DISTINCT ARRAY (DISTINCT ARRAY FLATTEN_KEYS(pg.num DESC, pg.name DESC, ch.description) FOR pg IN ch.pages END) FOR ch IN chapters END, year, name) WHERE type = 'book'",
-		"CREATE INDEX %s ON %s(isbn, author DESC, DISTINCT ARRAY FLATTEN_KEYS(ch.name DESC, ch.description) FOR ch IN chapters WHEN ch.num = 1 END, year, name) WHERE type = 'book'",
-		"CREATE INDEX %s ON %s(isbn, author DESC, DISTINCT ARRAY (DISTINCT ARRAY FLATTEN_KEYS(pg.name DESC, ch.description) FOR pg IN ch.pages WHEN pg.num = 1 END) FOR ch IN chapters WHEN ch.num = 1 END, year, name) WHERE type = 'book'",
-		"CREATE INDEX %s ON %s(isbn, author DESC, DISTINCT ARRAY FLATTEN_KEYS(ch.num DESC, ch.name DESC, ch.description) FOR ch IN chapters END, year, name, chapters) WHERE type = 'book'",
-		"CREATE INDEX %s ON %s(isbn, author DESC, DISTINCT ARRAY (DISTINCT ARRAY FLATTEN_KEYS(pg.num DESC, pg.name DESC, ch.description) FOR pg IN ch.pages END) FOR ch IN chapters END, year, name, chapters) WHERE type = 'book'",
-		"CREATE INDEX %s ON %s(ALL ARRAY FLATTEN_KEYS(ch.num DESC, ch.name DESC, ch.description) FOR ch IN chapters END, isbn, author DESC, year, name) WHERE type = 'book'",
-		"CREATE INDEX %s ON %s(ALL ARRAY (ALL ARRAY FLATTEN_KEYS(pg.num DESC, pg.name DESC, ch.description) FOR pg IN ch.pages END) FOR ch IN chapters END, isbn, author DESC, year, name) WHERE type = 'book'",
-		"CREATE INDEX %s ON %s(ALL ARRAY FLATTEN_KEYS(ch.name DESC, ch.description) FOR ch IN chapters WHEN ch.num = 1 END, isbn, author DESC, year, name) WHERE type = 'book'",
-		"CREATE INDEX %s ON %s(ALL ARRAY (ALL ARRAY FLATTEN_KEYS(pg.name DESC, ch.description) FOR pg IN ch.pages WHEN pg.num = 1 END) FOR ch IN chapters WHEN ch.num = 1 END, isbn, author DESC, year, name) WHERE type = 'book'",
-		"CREATE INDEX %s ON %s(ALL ARRAY FLATTEN_KEYS(ch.num DESC, ch.name DESC, ch.description) FOR ch IN chapters END, isbn, author DESC, year, name, chapters) WHERE type = 'book'",
-		"CREATE INDEX %s ON %s(ALL ARRAY (ALL ARRAY FLATTEN_KEYS(pg.num DESC, pg.name DESC, ch.description) FOR pg IN ch.pages END) FOR ch IN chapters END, isbn, author DESC, year, name, chapters) WHERE type = 'book'",
+		"CREATE INDEX %s ON %s(isbn, author DESC, DISTINCT ARRAY FLATTEN_KEYS(ch.num DESC, ch.name DESC, ch.description) " +
+			"FOR ch IN chapters END, year, name) WHERE type = 'book'",
+		"CREATE INDEX %s ON %s(isbn, author DESC, DISTINCT ARRAY (DISTINCT ARRAY FLATTEN_KEYS(pg.num DESC, pg.name DESC, " +
+			"ch.description) FOR pg IN ch.pages END) FOR ch IN chapters END, year, name) WHERE type = 'book'",
+		"CREATE INDEX %s ON %s(isbn, author DESC, DISTINCT ARRAY FLATTEN_KEYS(ch.name DESC, ch.description) FOR ch IN chapters " +
+			"WHEN ch.num = 1 END, year, name) WHERE type = 'book'",
+		"CREATE INDEX %s ON %s(isbn, author DESC, DISTINCT ARRAY (DISTINCT ARRAY FLATTEN_KEYS(pg.name DESC, ch.description) FOR " +
+			"pg IN ch.pages WHEN pg.num = 1 END) FOR ch IN chapters WHEN ch.num = 1 END, year, name) WHERE type = 'book'",
+		"CREATE INDEX %s ON %s(isbn, author DESC, DISTINCT ARRAY FLATTEN_KEYS(ch.num DESC, ch.name DESC, ch.description) " +
+			"FOR ch IN chapters END, year, name, chapters) WHERE type = 'book'",
+		"CREATE INDEX %s ON %s(isbn, author DESC, DISTINCT ARRAY (DISTINCT ARRAY FLATTEN_KEYS(pg.num DESC, pg.name DESC, " +
+			"ch.description) FOR pg IN ch.pages END) FOR ch IN chapters END, year, name, chapters) WHERE type = 'book'",
+		"CREATE INDEX %s ON %s(ALL ARRAY FLATTEN_KEYS(ch.num DESC, ch.name DESC, ch.description) FOR ch IN chapters END, isbn, " +
+			"author DESC, year, name) WHERE type = 'book'",
+		"CREATE INDEX %s ON %s(ALL ARRAY (ALL ARRAY FLATTEN_KEYS(pg.num DESC, pg.name DESC, ch.description) FOR pg IN ch.pages " +
+			"END) FOR ch IN chapters END, isbn, author DESC, year, name) WHERE type = 'book'",
+		"CREATE INDEX %s ON %s(ALL ARRAY FLATTEN_KEYS(ch.name DESC, ch.description) FOR ch IN chapters WHEN ch.num = 1 END, " +
+			"isbn, author DESC, year, name) WHERE type = 'book'",
+		"CREATE INDEX %s ON %s(ALL ARRAY (ALL ARRAY FLATTEN_KEYS(pg.name DESC, ch.description) FOR pg IN ch.pages " +
+			"WHEN pg.num = 1 END) FOR ch IN chapters WHEN ch.num = 1 END, isbn, author DESC, year, name) WHERE type = 'book'",
+		"CREATE INDEX %s ON %s(ALL ARRAY FLATTEN_KEYS(ch.num DESC, ch.name DESC, ch.description) FOR ch IN chapters END, " +
+			"isbn, author DESC, year, name, chapters) WHERE type = 'book'",
+		"CREATE INDEX %s ON %s(ALL ARRAY (ALL ARRAY FLATTEN_KEYS(pg.num DESC, pg.name DESC, ch.description) FOR pg " +
+			"IN ch.pages END) FOR ch IN chapters END, isbn, author DESC, year, name, chapters) WHERE type = 'book'",
 	}
 	qc := start_cs()
 

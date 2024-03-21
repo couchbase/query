@@ -214,7 +214,9 @@ func (this *RecursiveCte) getExplain(anchorPlan interface{}, recursivePlan inter
 }
 
 // trim collection based on cycle detection
-func (this *RecursiveCte) checkCycle(hashTab map[string]bool, hashValMap map[string]interface{}, cycleFields Expressions, objects []interface{}, context Context) []interface{} {
+func (this *RecursiveCte) checkCycle(hashTab map[string]bool, hashValMap map[string]interface{}, cycleFields Expressions,
+	objects []interface{}, context Context) []interface{} {
+
 	noCycleObjects := []interface{}{}
 
 	for _, object := range objects {
@@ -238,7 +240,8 @@ func (this *RecursiveCte) checkCycle(hashTab map[string]bool, hashValMap map[str
 }
 
 // given a cycleFields:list of identifiers/field names, modifies hashval map for new values
-func (this *RecursiveCte) hashVal(item value.Value, hashValMap map[string]interface{}, cycleFields Expressions, context Context) error {
+func (this *RecursiveCte) hashVal(item value.Value, hashValMap map[string]interface{}, cycleFields Expressions,
+	context Context) error {
 
 	for pos, exp := range cycleFields {
 		fval, err := exp.Evaluate(item, context)

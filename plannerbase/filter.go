@@ -375,7 +375,8 @@ func MoveJoinFilters(keyspace string, baseKeyspace *BaseKeyspace) error {
 		if len(jfl.keyspaces) == 1 {
 			for ksName, _ := range jfl.keyspaces {
 				if baseKeyspace.name != ksName {
-					return errors.NewPlanInternalError(fmt.Sprintf("moveJoinFilters: keyspace mismatch: %s vs %s", baseKeyspace.name, ksName))
+					return errors.NewPlanInternalError(fmt.Sprintf("moveJoinFilters: keyspace mismatch: %s vs %s",
+						baseKeyspace.name, ksName))
 				}
 				break
 			}

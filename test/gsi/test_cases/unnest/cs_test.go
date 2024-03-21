@@ -29,7 +29,8 @@ func TestUnnestFunc(t *testing.T) {
 
 	runMatch("case_unnest.json", false, false, qc, t)
 
-	runStmt(qc, "CREATE INDEX ixa10 ON purchase(ALL ARRAY l.product FOR l IN lineItems END, customerId, purchaseId) WHERE test_id = 'unnest'")
+	runStmt(qc, "CREATE INDEX ixa10 ON purchase(ALL ARRAY l.product FOR l IN lineItems END, customerId, purchaseId) "+
+		"WHERE test_id = 'unnest'")
 
 	runMatch("case_unnest_filter.json", false, true, qc, t)
 

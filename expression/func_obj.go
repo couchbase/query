@@ -1052,7 +1052,8 @@ type pairFilter struct {
 	ignoreCase   bool
 }
 
-func (this *pairFilter) getPairsFromArray(pairs util.Pairs, prefix string, a []interface{}, basename string, nameOnly bool) util.Pairs {
+func (this *pairFilter) getPairsFromArray(pairs util.Pairs, prefix string, a []interface{}, basename string,
+	nameOnly bool) util.Pairs {
 
 	if this.index == true {
 		// composites are forced to false with index set, so no need to check them here
@@ -1118,7 +1119,8 @@ func addComposite(pairs util.Pairs, name string, val interface{}) util.Pairs {
 	return pairs
 }
 
-func (this *pairFilter) processPairValue(pairs util.Pairs, prefix string, val interface{}, basename string, nameOnly bool) util.Pairs {
+func (this *pairFilter) processPairValue(pairs util.Pairs, prefix string, val interface{}, basename string,
+	nameOnly bool) util.Pairs {
 
 	withAct, ok := val.(interface{ Actual() interface{} })
 	if ok {

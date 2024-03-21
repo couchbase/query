@@ -2222,7 +2222,8 @@ func procJoinFilterHints(fields map[string]interface{}, negative, avoid bool) (O
 	return NewJoinFilterHint(keyspace), false, ""
 }
 
-func newHints(val value.Value, procFunc func(map[string]interface{}, bool, bool) (OptimHint, bool, string), negative, avoid bool) ([]OptimHint, bool, string) {
+func newHints(val value.Value, procFunc func(map[string]interface{}, bool, bool) (OptimHint, bool, string), negative,
+	avoid bool) ([]OptimHint, bool, string) {
 
 	hints := make([]OptimHint, 0, 1)
 	actual := val.Actual()
