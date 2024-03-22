@@ -48,7 +48,7 @@ func SargableFor(pred expression.Expression, keys datastore.IndexKeys, missing, 
 			skeys[i] = true
 			sum++
 		} else {
-			if !gsi {
+			if !gsi || (i == 0 && !missing) {
 				return
 			}
 			skiped = true
