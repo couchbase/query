@@ -15,11 +15,11 @@ import (
 )
 
 func (this *sargable) VisitAnd(pred *expression.And) (interface{}, error) {
-	if base.SubsetOf(pred, this.key.Expr) {
+	if base.SubsetOf(pred, this.key) {
 		return true, nil
 	}
 
-	keys := datastore.IndexKeys{this.key}
+	keys := datastore.IndexKeys{&datastore.IndexKey{this.key, datastore.IK_NONE}}
 	isArrays := []bool{this.array}
 	for _, child := range pred.Operands() {
 		if min, _, _, _ := SargableFor(child, keys, this.missing, this.gsi, isArrays,

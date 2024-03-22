@@ -14,15 +14,14 @@ import (
 )
 
 func (this *sarg) VisitIsValued(pred *expression.IsValued) (interface{}, error) {
-	key := this.key.Expr
-	if base.SubsetOf(pred, key) {
-		if expression.Equivalent(pred, key) {
+	if base.SubsetOf(pred, this.key) {
+		if expression.Equivalent(pred, this.key) {
 			return _EXACT_SELF_SPANS, nil
 		}
 		return _SELF_SPANS, nil
 	}
 
-	if pred.Operand().EquivalentTo(key) {
+	if pred.Operand().EquivalentTo(this.key) {
 		return _EXACT_VALUED_SPANS, nil
 	}
 
@@ -33,7 +32,7 @@ func (this *sarg) VisitIsValued(pred *expression.IsValued) (interface{}, error) 
 		spans = _FULL_SPANS
 	}
 
-	if spans != nil && pred.Operand().DependsOn(key) {
+	if spans != nil && pred.Operand().DependsOn(this.key) {
 		return spans, nil
 	}
 
@@ -41,15 +40,14 @@ func (this *sarg) VisitIsValued(pred *expression.IsValued) (interface{}, error) 
 }
 
 func (this *sarg) VisitIsNotValued(pred *expression.IsNotValued) (interface{}, error) {
-	key := this.key.Expr
-	if base.SubsetOf(pred, key) {
-		if expression.Equivalent(pred, key) {
+	if base.SubsetOf(pred, this.key) {
+		if expression.Equivalent(pred, this.key) {
 			return _EXACT_SELF_SPANS, nil
 		}
 		return _SELF_SPANS, nil
 	}
 
-	if pred.Operand().EquivalentTo(key) && this.isMissing {
+	if pred.Operand().EquivalentTo(this.key) && this.isMissing {
 		// MB-38287
 		// For array index key requires whole scan because indexer doesn't have info.
 		if !this.isArray {
@@ -67,7 +65,7 @@ func (this *sarg) VisitIsNotValued(pred *expression.IsNotValued) (interface{}, e
 		spans = _FULL_SPANS
 	}
 
-	if spans != nil && pred.DependsOn(key) {
+	if spans != nil && pred.DependsOn(this.key) {
 		return spans, nil
 	}
 

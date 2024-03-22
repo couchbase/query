@@ -35,7 +35,7 @@ func SargableFor(pred expression.Expression, keys datastore.IndexKeys, missing, 
 			return
 		}
 
-		s := &sargable{keys[i], missing, (i < len(isArrays) && isArrays[i]), gsi, context, aliases}
+		s := &sargable{keys[i].Expr, missing, (i < len(isArrays) && isArrays[i]), gsi, context, aliases}
 
 		r, err := pred.Accept(s)
 
@@ -97,7 +97,7 @@ func sargableForOr(or *expression.Or, keys datastore.IndexKeys, missing, gsi boo
 }
 
 type sargable struct {
-	key     *datastore.IndexKey
+	key     expression.Expression
 	missing bool
 	array   bool
 	gsi     bool
@@ -186,7 +186,7 @@ func (this *sargable) VisitLT(pred *expression.LT) (interface{}, error) {
 }
 
 func (this *sargable) VisitIsMissing(pred *expression.IsMissing) (interface{}, error) {
-	if this.missing && !this.array && pred.Operand().EquivalentTo(this.key.Expr) {
+	if this.missing && !this.array && pred.Operand().EquivalentTo(this.key) {
 		return true, nil
 	}
 
@@ -202,7 +202,7 @@ func (this *sargable) VisitIsNotNull(pred *expression.IsNotNull) (interface{}, e
 }
 
 func (this *sargable) VisitIsNotValued(pred *expression.IsNotValued) (interface{}, error) {
-	if this.missing && !this.array && pred.Operand().EquivalentTo(this.key.Expr) {
+	if this.missing && !this.array && pred.Operand().EquivalentTo(this.key) {
 		return true, nil
 	}
 	return this.visitDefault(pred)
@@ -310,7 +310,6 @@ func (this *sargable) visitDefault(pred expression.Expression) (bool, error) {
 }
 
 func (this *sargable) defaultSargable(pred expression.Expression) bool {
-	key := this.key.Expr
-	return base.SubsetOf(pred, key) ||
-		((pred.PropagatesMissing() || pred.PropagatesNull()) && pred.DependsOn(key))
+	return base.SubsetOf(pred, this.key) ||
+		((pred.PropagatesMissing() || pred.PropagatesNull()) && pred.DependsOn(this.key))
 }

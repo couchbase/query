@@ -16,9 +16,8 @@ import (
 )
 
 func (this *sarg) VisitLT(pred *expression.LT) (interface{}, error) {
-	key := this.key.Expr
-	if base.SubsetOf(pred, key) {
-		if expression.Equivalent(pred, key) {
+	if base.SubsetOf(pred, this.key) {
+		if expression.Equivalent(pred, this.key) {
 			return _EXACT_SELF_SPANS, nil
 		}
 		return _SELF_SPANS, nil
@@ -29,7 +28,7 @@ func (this *sarg) VisitLT(pred *expression.LT) (interface{}, error) {
 
 	selec := this.getSelec(pred)
 
-	if pred.First().EquivalentTo(key) {
+	if pred.First().EquivalentTo(this.key) {
 		expr = this.getSarg(pred.Second())
 		range2.Low = expression.NULL_EXPR
 		range2.High = expr
@@ -38,12 +37,12 @@ func (this *sarg) VisitLT(pred *expression.LT) (interface{}, error) {
 		if pred.HasExprFlag(expression.EXPR_DERIVED_FROM_LIKE) {
 			range2.SetFlag(plan.RANGE_DERIVED_FROM_LIKE)
 		}
-	} else if pred.Second().EquivalentTo(key) {
+	} else if pred.Second().EquivalentTo(this.key) {
 		expr = this.getSarg(pred.First())
 		range2.Low = expr
 		range2.Selec1 = selec
 		range2.Selec2 = OPT_SELEC_NOT_AVAIL
-	} else if pred.DependsOn(key) {
+	} else if pred.DependsOn(this.key) {
 		return _VALUED_SPANS, nil
 	} else {
 		return nil, nil

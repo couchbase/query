@@ -1372,7 +1372,7 @@ func (this *builder) getIndexFilters(entry *indexEntry, node *algebra.KeyspaceTe
 			orig := false
 			subFltr := false
 			if chkOr || chkUnnest {
-				fltr := this.orGetIndexFilter(fltrExpr, entry.idxSargKeys, baseKeyspace, missing, skip)
+				fltr := this.orGetIndexFilter(fltrExpr, entry.sargKeys, baseKeyspace, missing, skip)
 				if fltr == nil {
 					extraFltr = true
 					continue
@@ -1735,7 +1735,7 @@ func (this *builder) orSargUseFilters(pred *expression.Or, baseKeyspace *base.Ba
 	return true
 }
 
-func (this *builder) orGetIndexFilter(pred expression.Expression, keys datastore.IndexKeys,
+func (this *builder) orGetIndexFilter(pred expression.Expression, keys expression.Expressions,
 	baseKeyspace *base.BaseKeyspace, missing, skip bool) expression.Expression {
 	var orOps expression.Expressions
 	if or, ok := pred.(*expression.Or); ok {
@@ -1757,7 +1757,7 @@ func (this *builder) orGetIndexFilter(pred expression.Expression, keys datastore
 		for _, op1 := range andOps {
 			add := true
 			for i, key := range keys {
-				min, _, _, _ := SargableFor(op1, datastore.IndexKeys{key},
+				min, _, _, _ := SargableFor(op1, datastore.IndexKeys{&datastore.IndexKey{key, datastore.IK_NONE}},
 					(missing || i > 0), skip, nil, this.context, this.aliases)
 				if min == 0 {
 					continue

@@ -89,7 +89,7 @@ func sargForOr(or *expression.Or, entry *indexEntry, keys datastore.IndexKeys, i
 	return rv.Streamline(), exact, nil
 }
 
-func sargFor(pred expression.Expression, key *datastore.IndexKey, isJoin, doSelec bool, baseKeyspace *base.BaseKeyspace,
+func sargFor(pred expression.Expression, key expression.Expression, isJoin, doSelec bool, baseKeyspace *base.BaseKeyspace,
 	keyspaceNames map[string]string, advisorValidate, isMissing, isArray bool, aliases map[string]bool,
 	context *PrepareContext) (SargSpans, bool, error) {
 
@@ -103,7 +103,7 @@ func sargFor(pred expression.Expression, key *datastore.IndexKey, isJoin, doSele
 		exact := true
 		if s.constPred {
 			exact = false
-		} else if pred.DependsOn(key.Expr) {
+		} else if pred.DependsOn(key) {
 			exact = false
 		}
 		return nil, exact, nil
@@ -300,7 +300,7 @@ func getSargSpans(pred expression.Expression, sargKeys datastore.IndexKeys, isMi
 
 	// Sarg composite indexes right to left
 	for i := n - 1; i >= 0; i-- {
-		s := newSarg(sargKeys[i], baseKeyspace, keyspaceNames, isJoin, doSelec,
+		s := newSarg(sargKeys[i].Expr, baseKeyspace, keyspaceNames, isJoin, doSelec,
 			advisorValidate, (isMissing || i > 0), (i < len(isArrays) && isArrays[i]),
 			aliases, context)
 		r, err := pred.Accept(s)
