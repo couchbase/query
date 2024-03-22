@@ -13,9 +13,8 @@ import (
 )
 
 func (this *sargable) visitBinary(pred expression.BinaryFunction) (bool, error) {
-	key := this.key.Expr
-	return pred.First().EquivalentTo(key) ||
-			pred.Second().EquivalentTo(key) ||
+	return pred.First().EquivalentTo(this.key) ||
+			pred.Second().EquivalentTo(this.key) ||
 			this.defaultSargable(pred),
 		nil
 }

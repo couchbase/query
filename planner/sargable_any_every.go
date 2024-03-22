@@ -18,8 +18,7 @@ func (this *sargable) VisitAnyEvery(pred *expression.AnyEvery) (interface{}, err
 		return true, nil
 	}
 
-	key := this.key.Expr
-	all, ok := key.(*expression.All)
+	all, ok := this.key.(*expression.All)
 	if !ok {
 		return false, nil
 	}
@@ -43,7 +42,7 @@ func (this *sargable) VisitAnyEvery(pred *expression.AnyEvery) (interface{}, err
 		mapping = array.ValueMapping()
 
 		var err error
-		satisfies, err = getSatisfies(pred, key, array, this.aliases)
+		satisfies, err = getSatisfies(pred, this.key, array, this.aliases)
 		if err != nil {
 			return false, err
 		}

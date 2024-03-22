@@ -14,15 +14,14 @@ import (
 )
 
 func (this *sarg) VisitIsNotMissing(pred *expression.IsNotMissing) (interface{}, error) {
-	key := this.key.Expr
-	if base.SubsetOf(pred, key) {
-		if expression.Equivalent(pred, key) {
+	if base.SubsetOf(pred, this.key) {
+		if expression.Equivalent(pred, this.key) {
 			return _EXACT_SELF_SPANS, nil
 		}
 		return _SELF_SPANS, nil
 	}
 
-	if pred.Operand().EquivalentTo(key) {
+	if pred.Operand().EquivalentTo(this.key) {
 		return _EXACT_FULL_SPANS, nil
 	}
 
@@ -30,15 +29,14 @@ func (this *sarg) VisitIsNotMissing(pred *expression.IsNotMissing) (interface{},
 }
 
 func (this *sarg) VisitIsMissing(pred *expression.IsMissing) (interface{}, error) {
-	key := this.key.Expr
-	if base.SubsetOf(pred, key) {
-		if expression.Equivalent(pred, key) {
+	if base.SubsetOf(pred, this.key) {
+		if expression.Equivalent(pred, this.key) {
 			return _EXACT_SELF_SPANS, nil
 		}
 		return _SELF_SPANS, nil
 	}
 
-	if pred.Operand().EquivalentTo(key) && this.isMissing {
+	if pred.Operand().EquivalentTo(this.key) && this.isMissing {
 		// MB-38287
 		// For array index key requires whole scan because indexer doesn't have info.
 		if !this.isArray {

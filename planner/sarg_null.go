@@ -14,15 +14,14 @@ import (
 )
 
 func (this *sarg) VisitIsNull(pred *expression.IsNull) (interface{}, error) {
-	key := this.key.Expr
-	if base.SubsetOf(pred, key) {
-		if expression.Equivalent(pred, key) {
+	if base.SubsetOf(pred, this.key) {
+		if expression.Equivalent(pred, this.key) {
 			return _EXACT_SELF_SPANS, nil
 		}
 		return _SELF_SPANS, nil
 	}
 
-	if pred.Operand().EquivalentTo(key) {
+	if pred.Operand().EquivalentTo(this.key) {
 		return _NULL_SPANS, nil
 	}
 
@@ -31,7 +30,7 @@ func (this *sarg) VisitIsNull(pred *expression.IsNull) (interface{}, error) {
 		spans = _FULL_SPANS
 	}
 
-	if spans != nil && pred.Operand().DependsOn(key) {
+	if spans != nil && pred.Operand().DependsOn(this.key) {
 		return spans, nil
 	}
 
@@ -39,15 +38,14 @@ func (this *sarg) VisitIsNull(pred *expression.IsNull) (interface{}, error) {
 }
 
 func (this *sarg) VisitIsNotNull(pred *expression.IsNotNull) (interface{}, error) {
-	key := this.key.Expr
-	if base.SubsetOf(pred, key) {
-		if expression.Equivalent(pred, key) {
+	if base.SubsetOf(pred, this.key) {
+		if expression.Equivalent(pred, this.key) {
 			return _EXACT_SELF_SPANS, nil
 		}
 		return _SELF_SPANS, nil
 	}
 
-	if pred.Operand().EquivalentTo(key) {
+	if pred.Operand().EquivalentTo(this.key) {
 		return _EXACT_VALUED_SPANS, nil
 	}
 
@@ -58,7 +56,7 @@ func (this *sarg) VisitIsNotNull(pred *expression.IsNotNull) (interface{}, error
 		spans = _FULL_SPANS
 	}
 
-	if spans != nil && pred.Operand().DependsOn(key) {
+	if spans != nil && pred.Operand().DependsOn(this.key) {
 		return spans, nil
 	}
 

@@ -9,7 +9,6 @@
 package planner
 
 import (
-	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
 	base "github.com/couchbase/query/plannerbase"
@@ -24,17 +23,16 @@ func (this *sarg) VisitAny(pred *expression.Any) (interface{}, error) {
 		spans = _FULL_SPANS
 	}
 
-	key := this.key.Expr
-	if base.SubsetOf(pred, key) {
+	if base.SubsetOf(pred, this.key) {
 		return _SELF_SPANS, nil
 	}
 
 	sp := spans
-	if !pred.DependsOn(key) {
+	if !pred.DependsOn(this.key) {
 		sp = nil
 	}
 
-	all, ok := key.(*expression.All)
+	all, ok := this.key.(*expression.All)
 	if !ok {
 		return sp, nil
 	}
@@ -61,7 +59,7 @@ func (this *sarg) VisitAny(pred *expression.Any) (interface{}, error) {
 		return sp, nil
 	}
 
-	satisfies, err := getSatisfies(pred, key, array, this.aliases)
+	satisfies, err := getSatisfies(pred, this.key, array, this.aliases)
 	if err != nil {
 		return nil, err
 	}
@@ -81,8 +79,8 @@ func anySargFor(pred, key, cond expression.Expression, isJoin, doSelec bool,
 	selec float64, any, advisorValidate, flatten, isMissing bool, aliases map[string]bool,
 	context *PrepareContext) (SargSpans, error) {
 
-	sp, _, err := sargFor(pred, &datastore.IndexKey{key, datastore.IK_NONE}, isJoin, doSelec,
-		baseKeyspace, keyspaceNames, advisorValidate, isMissing, true, aliases, context)
+	sp, _, err := sargFor(pred, key, isJoin, doSelec, baseKeyspace, keyspaceNames,
+		advisorValidate, isMissing, true, aliases, context)
 	if err != nil || sp == nil {
 		return sp, err
 	}

@@ -14,7 +14,7 @@ import (
 )
 
 func (this *sargable) VisitWithin(pred *expression.Within) (interface{}, error) {
-	return base.SubsetOf(pred.First(), this.key.Expr) ||
+	return base.SubsetOf(pred.First(), this.key) ||
 			this.defaultSargable(pred),
 		nil
 }

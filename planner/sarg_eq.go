@@ -16,9 +16,8 @@ import (
 )
 
 func (this *sarg) VisitEq(pred *expression.Eq) (interface{}, error) {
-	key := this.key.Expr
-	if base.SubsetOf(pred, key) {
-		if expression.Equivalent(pred, key) {
+	if base.SubsetOf(pred, this.key) {
+		if expression.Equivalent(pred, this.key) {
 			return _EXACT_SELF_SPANS, nil
 		}
 		return _SELF_SPANS, nil
@@ -26,11 +25,11 @@ func (this *sarg) VisitEq(pred *expression.Eq) (interface{}, error) {
 
 	var expr expression.Expression
 
-	if pred.First().EquivalentTo(key) {
+	if pred.First().EquivalentTo(this.key) {
 		expr = this.getSarg(pred.Second())
-	} else if pred.Second().EquivalentTo(key) {
+	} else if pred.Second().EquivalentTo(this.key) {
 		expr = this.getSarg(pred.First())
-	} else if pred.DependsOn(key) {
+	} else if pred.DependsOn(this.key) {
 		return _VALUED_SPANS, nil
 	} else {
 		return nil, nil

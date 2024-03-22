@@ -14,9 +14,8 @@ import (
 )
 
 func (this *sarg) visitDefault(pred expression.Expression) (SargSpans, error) {
-	key := this.key.Expr
-	if base.SubsetOf(pred, key) {
-		if expression.Equivalent(pred, key) {
+	if base.SubsetOf(pred, this.key) {
+		if expression.Equivalent(pred, this.key) {
 			return _EXACT_SELF_SPANS, nil
 		}
 		return _SELF_SPANS, nil
@@ -29,7 +28,7 @@ func (this *sarg) visitDefault(pred expression.Expression) (SargSpans, error) {
 		spans = _FULL_SPANS
 	}
 
-	if spans != nil && pred.DependsOn(key) {
+	if spans != nil && pred.DependsOn(this.key) {
 		return spans, nil
 	}
 
