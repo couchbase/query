@@ -98,7 +98,7 @@ func releaseUnnestPools(unnests, primaryUnnests []*algebra.Unnest) {
 	}
 }
 
-func (this *builder) buildUnnestScan(node *algebra.KeyspaceTerm, pred, subset expression.Expression,
+func (this *builder) buildUnnestScan(node *algebra.KeyspaceTerm, pred, subset, origPred expression.Expression,
 	unnests, primaryUnnests []*algebra.Unnest, unnestIndexes map[datastore.Index]*indexEntry,
 	hasDeltaKeyspace bool) (map[datastore.Index]*indexEntry, error) {
 
@@ -112,8 +112,8 @@ func (this *builder) buildUnnestScan(node *algebra.KeyspaceTerm, pred, subset ex
 	sargables := make(map[datastore.Index]*indexEntry, len(primaryUnnests))
 	for _, unnest := range primaryUnnests {
 		for index, idxEntry := range unnestIndexes {
-			entry, _, _, err := this.matchUnnestScan(node, pred, subset, unnest, idxEntry,
-				idxEntry.arrayKey, unnests, hasDeltaKeyspace)
+			entry, _, _, err := this.matchUnnestScan(node, pred, subset, origPred, unnest,
+				idxEntry, idxEntry.arrayKey, unnests, hasDeltaKeyspace)
 			if err != nil {
 				return nil, err
 			}
@@ -397,7 +397,7 @@ func (this *builder) matchUnnest(node *algebra.KeyspaceTerm, pred, subset expres
 	return entry, unnest, newArrayKey, nil
 }
 
-func (this *builder) matchUnnestScan(node *algebra.KeyspaceTerm, pred, subset expression.Expression,
+func (this *builder) matchUnnestScan(node *algebra.KeyspaceTerm, pred, subset, origPred expression.Expression,
 	unnest *algebra.Unnest, entry *indexEntry, arrayKey *expression.All, unnests []*algebra.Unnest,
 	hasDeltaKeyspace bool) (
 	*indexEntry, *algebra.Unnest, *expression.All, error) {
@@ -420,7 +420,7 @@ func (this *builder) matchUnnestScan(node *algebra.KeyspaceTerm, pred, subset ex
 
 	coverAliases := getUnnestAliases(entry.arrayKey, unnest)
 	entry.pushDownProperty = this.indexPushDownProperty(entry, entry.sargKeys,
-		unnestFilters, pred, node.Alias(), coverAliases, true, false,
+		unnestFilters, pred, origPred, node.Alias(), coverAliases, true, false,
 		(len(this.baseKeyspaces) == len(entry.unnestAliases)+1), false)
 
 	return entry, unnest, arrayKey, err

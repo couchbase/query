@@ -386,5 +386,21 @@
         "statements":"SELECT 1 FROM shellTest WHERE c5 = 10 AND c8 >= 11 AND c8 <= 20 AND c6 != 1 AND c7 NOT IN [1,2] AND c11 != 0",
         "results": [
     ]
+    },
+    {
+	"testcase": "MB-61266",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.`plan` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`covers` IS NOT MISSING AND v.`index` = 'ishix4' AND v.`limit` IS NOT MISSING AND v.`offset` IS NOT MISSING END"
+        },
+        "statements":"SELECT c8, c10 FROM shellTest WHERE c5 = 10 AND c6 != 1 AND c7 NOT IN [1,2] AND c11 != 0 OFFSET 10 LIMIT 5",
+        "results": [
+    ]
     }
 ]

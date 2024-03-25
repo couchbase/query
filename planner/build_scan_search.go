@@ -184,7 +184,7 @@ func (this *builder) searchPagination(searchSargables []*indexEntry, pred expres
 		return nil, nil, nil
 	} else if this.hasOffsetOrLimit() && (len(searchSargables) > 1 ||
 		!searchSargables[0].exactSpans || len(this.baseKeyspaces) != 1 ||
-		!this.checkExactSpans(searchSargables[0], pred, alias, nil, nil, false)) {
+		!this.checkExactSpans(searchSargables[0], pred, nil, alias, nil, nil, false)) {
 		this.resetOffsetLimit()
 	}
 

@@ -29,6 +29,7 @@ func (this *builder) buildSecondaryScan(indexes, arrayIndexes, flex map[datastor
 	searchSargables []*indexEntry) (scan plan.SecondaryScan, sargLength int, err error) {
 
 	pred := baseKeyspace.DnfPred()
+	origPred := baseKeyspace.OrigPred()
 	unnests, primaryUnnests, unnestIndexes := this.buildUnnestIndexes(node, this.from,
 		pred, arrayIndexes)
 	defer releaseUnnestPools(unnests, primaryUnnests)
@@ -57,7 +58,7 @@ func (this *builder) buildSecondaryScan(indexes, arrayIndexes, flex map[datastor
 
 	for idx, entry := range indexes {
 		entry.pushDownProperty = this.indexPushDownProperty(entry, entry.keys, nil,
-			pred, node.Alias(), nil, false, false, (len(this.baseKeyspaces) == 1),
+			pred, origPred, node.Alias(), nil, false, false, (len(this.baseKeyspaces) == 1),
 			implicitAnyCover(entry, true, this.context.FeatureControls()))
 
 		err = this.getIndexFilters(entry, node, baseKeyspace, id)
@@ -71,7 +72,7 @@ func (this *builder) buildSecondaryScan(indexes, arrayIndexes, flex map[datastor
 
 	if len(primaryUnnests) > 0 && len(unnests) > 0 && len(unnestIndexes) > 0 {
 		var unnestSargables map[datastore.Index]*indexEntry
-		unnestSargables, err = this.buildUnnestScan(node, pred, subset, unnests,
+		unnestSargables, err = this.buildUnnestScan(node, pred, subset, origPred, unnests,
 			primaryUnnests, unnestIndexes, hasDeltaKeyspace)
 		if err != nil {
 			return
