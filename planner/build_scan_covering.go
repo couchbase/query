@@ -46,7 +46,7 @@ func (this *builder) buildCovering(indexes, unnestIndexes, flex map[datastore.In
 	// GSI Unnest covering scan
 	if len(unnests) > 0 && len(unnestIndexes) > 0 {
 		scan, sargLength, err = this.buildCoveringUnnestScan(node, baseKeyspace.DnfPred(),
-			subset, id, unnestIndexes, unnests)
+			baseKeyspace.OrigPred(), subset, id, unnestIndexes, unnests)
 		if scan != nil || err != nil {
 			return
 		}
@@ -153,8 +153,8 @@ outer:
 			narrays++
 		}
 
-		entry.pushDownProperty = this.indexPushDownProperty(entry, keys, nil, pred, alias, nil,
-			false, true, (len(this.baseKeyspaces) == 1), implicitAny)
+		entry.pushDownProperty = this.indexPushDownProperty(entry, keys, nil, pred, origPred,
+			alias, nil, false, true, (len(this.baseKeyspaces) == 1), implicitAny)
 		coveringEntries[index] = &coveringEntry{idxEntry: entry, filterCovers: filterCovers,
 			implcitIndexProj: implcitIndexProj, implicitAny: implicitAny}
 	}

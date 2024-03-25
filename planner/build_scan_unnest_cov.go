@@ -18,7 +18,7 @@ import (
 )
 
 func (this *builder) buildCoveringUnnestScan(node *algebra.KeyspaceTerm,
-	pred, subset, id expression.Expression, unnestIndexes map[datastore.Index]*indexEntry,
+	pred, subset, origPred, id expression.Expression, unnestIndexes map[datastore.Index]*indexEntry,
 	unnests []*algebra.Unnest) (
 	scan plan.SecondaryScan, sargLength int, err error) {
 
@@ -33,8 +33,8 @@ func (this *builder) buildCoveringUnnestScan(node *algebra.KeyspaceTerm,
 
 	for index, entry := range unnestIndexes {
 		rv := &coveringEntry{idxEntry: entry, rootUnnest: unnests[0]}
-		rv.idxEntry, err = this.buildOneCoveringUnnestScan(node, pred, subset, id, rv,
-			rv.idxEntry.arrayKey, unnests)
+		rv.idxEntry, err = this.buildOneCoveringUnnestScan(node, pred, subset, origPred, id,
+			rv, rv.idxEntry.arrayKey, unnests)
 		if err != nil {
 			return nil, 0, err
 		}
@@ -73,12 +73,12 @@ func (this *builder) buildCoveringUnnestScan(node *algebra.KeyspaceTerm,
 }
 
 func (this *builder) buildOneCoveringUnnestScan(node *algebra.KeyspaceTerm,
-	pred, subset, id expression.Expression, centry *coveringEntry, indexArrayKey *expression.All,
-	unnests []*algebra.Unnest) (entry *indexEntry, err error) {
+	pred, subset, origPred, id expression.Expression, centry *coveringEntry,
+	indexArrayKey *expression.All, unnests []*algebra.Unnest) (entry *indexEntry, err error) {
 
 	// Sarg and populate spans
 	centry.idxEntry, centry.leafUnnest, indexArrayKey, err = this.matchUnnestScan(node, pred, subset,
-		centry.rootUnnest, centry.idxEntry, indexArrayKey, unnests, false)
+		origPred, centry.rootUnnest, centry.idxEntry, indexArrayKey, unnests, false)
 	if err != nil || centry.idxEntry == nil || centry.leafUnnest == nil || indexArrayKey == nil {
 		return nil, err
 	}
@@ -153,7 +153,7 @@ func (this *builder) buildOneCoveringUnnestScan(node *algebra.KeyspaceTerm,
 	allKeyspaces := !unnestExprInKeys && (len(this.baseKeyspaces) == len(entry.unnestAliases)+1)
 
 	entry.pushDownProperty = this.indexPushDownProperty(entry, keys, unnestFilters,
-		pred, node.Alias(), coverAliases, true, true, allKeyspaces, false)
+		pred, origPred, node.Alias(), coverAliases, true, true, allKeyspaces, false)
 	if len(coveredUnnests) > 0 {
 		entry.pushDownProperty |= _PUSHDOWN_COVERED_UNNEST
 	} else {

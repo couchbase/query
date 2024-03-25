@@ -19,13 +19,13 @@ import (
 )
 
 func (this *builder) indexPushDownProperty(entry *indexEntry, indexKeys,
-	unnestFiletrs expression.Expressions, pred expression.Expression,
+	unnestFiletrs expression.Expressions, pred, origPred expression.Expression,
 	alias string, unnestAliases []string, unnest, covering, allKeyspaces, implicitAny bool) (
 	pushDownProperty PushDownProperties) {
 
 	// Check all predicates are part of spans, exact and no false positives possible
 	exact := allKeyspaces && !this.hasBuilderFlag(BUILDER_HAS_EXTRA_FLTR) &&
-		this.checkExactSpans(entry, pred, alias, unnestAliases, unnestFiletrs, implicitAny)
+		this.checkExactSpans(entry, pred, origPred, alias, unnestAliases, unnestFiletrs, implicitAny)
 	if exact {
 		pushDownProperty |= _PUSHDOWN_EXACTSPANS
 	}
@@ -342,7 +342,7 @@ func (this *builder) indexGroupLeadingIndexKeysMatch(entry *indexEntry, indexKey
 	return (nGroupMatched == len(groupkeys)), nMatched
 }
 
-func (this *builder) checkExactSpans(entry *indexEntry, pred expression.Expression, alias string,
+func (this *builder) checkExactSpans(entry *indexEntry, pred, origPred expression.Expression, alias string,
 	unnestAliases []string, unnestFiletrs expression.Expressions, implicitAny bool) bool {
 	// spans are not exact
 	if !entry.exactSpans || hasUnknownsInSargableArrayKey(entry) || entry.HasFlag(IE_OR_NON_SARG_EXPR) {
@@ -367,7 +367,9 @@ func (this *builder) checkExactSpans(entry *indexEntry, pred expression.Expressi
 	}
 
 	if !expression.IsCovered(pred, alias, exprs, implicitAny) {
-		return false
+		if origPred == nil || !expression.IsCovered(origPred, alias, exprs, implicitAny) {
+			return false
+		}
 	}
 
 	for _, a := range unnestAliases {
