@@ -838,7 +838,7 @@ func (this *Server) handlePostTxRequest(request Request, queue *runQueue, transa
 
 const _LAG_MULTIPLIER = 10
 
-func newRunQueue(n string, q *runQueue, num int, txflag bool) {
+func newRunQueue(q *runQueue, num int, txflag bool) {
 	if txflag {
 		q.size = int32(num)
 	} else {
