@@ -66,12 +66,12 @@ require (
 )
 
 require (
-	github.com/RoaringBitmap/roaring v1.2.3 // indirect
+	github.com/RoaringBitmap/roaring v1.9.1 // indirect
 	github.com/aws/aws-sdk-go v1.48.1 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
-	github.com/bits-and-blooms/bitset v1.2.2 // indirect
+	github.com/bits-and-blooms/bitset v1.12.0 // indirect
 	github.com/blevesearch/bleve-mapping-ui v0.5.2 // indirect
-	github.com/blevesearch/bleve/v2 v2.4.0 // indirect
+	github.com/blevesearch/bleve/v2 v2.4.1-0.20240326163917-4fd8313c5485 // indirect
 	github.com/blevesearch/bleve_index_api v1.1.6 // indirect
 	github.com/blevesearch/geo v0.1.20 // indirect
 	github.com/blevesearch/go-faiss v1.0.13 // indirect
@@ -79,7 +79,7 @@ require (
 	github.com/blevesearch/goleveldb v1.0.1 // indirect
 	github.com/blevesearch/gtreap v0.1.1 // indirect
 	github.com/blevesearch/mmap-go v1.0.4 // indirect
-	github.com/blevesearch/scorch_segment_api/v2 v2.2.9 // indirect
+	github.com/blevesearch/scorch_segment_api/v2 v2.2.11 // indirect
 	github.com/blevesearch/sear v0.2.1 // indirect
 	github.com/blevesearch/segment v0.9.1 // indirect
 	github.com/blevesearch/snowballstem v0.9.0 // indirect
@@ -91,7 +91,7 @@ require (
 	github.com/blevesearch/zapx/v13 v13.3.10 // indirect
 	github.com/blevesearch/zapx/v14 v14.3.10 // indirect
 	github.com/blevesearch/zapx/v15 v15.3.13 // indirect
-	github.com/blevesearch/zapx/v16 v16.0.12 // indirect
+	github.com/blevesearch/zapx/v16 v16.0.13-0.20240326160805-2008e5aa2888 // indirect
 	github.com/buger/jsonparser v1.1.1 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/cloudfoundry/gosigar v1.3.4 // indirect
