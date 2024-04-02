@@ -82,8 +82,8 @@ func (this *OrderLimit) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *OrderLimit) beforeItems(context *Context, parent value.Value) bool {
+	// this.Order takes care of the phase operator
 	this.Order.setupTerms(context)
-	context.AddPhaseOperator(SORT)
 	this.numProcessedRows = 0
 	this.setupTerms(context)
 
@@ -136,7 +136,9 @@ func (this *OrderLimit) afterItems(context *Context) {
 		offset = this.offset.offset
 	}
 
+	sortCount := this.numProcessedRows
 	if offset < int64(this.values.Length()) {
+		this.numProcessedRows -= uint64(this.values.Length()) // this.Order will add to the phase count too
 		this.Order.afterItems(context)
 	} else {
 		this.Order.values.Truncate(
@@ -148,9 +150,8 @@ func (this *OrderLimit) afterItems(context *Context) {
 			})
 	}
 
-	// Set the sort count to the number of processed rows.
 	context.AddPhaseCount(SORT, this.numProcessedRows)
-	context.SetSortCount(this.numProcessedRows)
+	context.SetSortCount(sortCount)
 }
 
 func (this *OrderLimit) MarshalJSON() ([]byte, error) {
