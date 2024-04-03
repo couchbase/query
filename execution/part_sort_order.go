@@ -159,20 +159,15 @@ func (this *PartSortOrder) processItem(item value.AnnotatedValue, context *Conte
 }
 
 func (this *PartSortOrder) afterItems(context *Context) {
-	defer this.releaseValues()
-	defer func() {
-		this.terms = nil
-		context.SetSortCount(this.sortCount)
-		context.AddPhaseCount(SORT, this.numProcessedRows)
-	}()
 
-	if this.stopped {
-		return
-	}
-
-	if this.values.Length() > 0 {
+	if !this.stopped && this.values.Length() > 0 {
 		this.sortAndStream(context)
 	}
+
+	this.terms = nil
+	context.SetSortCount(this.sortCount)
+	context.AddPhaseCount(SORT, this.numProcessedRows)
+	this.releaseValues()
 }
 
 // called only once we've reached the point n the offset of returning items; caller handles prior to this

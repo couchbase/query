@@ -91,6 +91,7 @@ const (
 	RUN
 	SETUP
 	QUEUED
+	PIPELINE_PAUSED
 	PHASES // Sizer
 )
 
@@ -143,6 +144,7 @@ var _PHASE_NAMES = []string{
 	RUN:                    "run",
 	SETUP:                  "setup",
 	QUEUED:                 "queued",
+	PIPELINE_PAUSED:        "pausedPipeline",
 	PHASES:                 "unknown",
 }
 
@@ -345,6 +347,9 @@ type Context struct {
 	// when calling NewQueryContext(). Since the fields are shared the mutex that protect
 	// them also needs to be shared
 	queryMutex *sync.RWMutex
+
+	pauseWg    sync.WaitGroup
+	pauseStart int64
 }
 
 func NewContext(requestId string, datastore datastore.Datastore, systemstore datastore.Systemstore,
@@ -2192,4 +2197,31 @@ func (this *Context) HasFeature(feat uint64) bool {
 
 func (this *Context) GetDsQueryContext() datastore.QueryContext {
 	return this
+}
+
+func (this *Context) Pause(on bool) bool {
+	if on {
+		if atomic.LoadInt64(&this.pauseStart) != 0 {
+			return false
+		}
+		this.pauseWg.Add(1)
+		// don't need this to be atomic since worst case is one additional document it sent
+		atomic.StoreInt64(&this.pauseStart, int64(util.Now()))
+	} else {
+		if atomic.LoadInt64(&this.pauseStart) == 0 {
+			return false
+		}
+		start := atomic.SwapInt64(&this.pauseStart, 0)
+		this.pauseWg.Done()
+		this.AddPhaseTime(PIPELINE_PAUSED, util.Since(util.Time(start)))
+	}
+	return true
+}
+
+func (this *Context) checkPause(op *base) {
+	if atomic.LoadInt64(&this.pauseStart) != 0 {
+		phase := op.switchPhase(_PAUSETIME)
+		this.pauseWg.Wait()
+		op.switchPhase(phase)
+	}
 }

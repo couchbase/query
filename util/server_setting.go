@@ -29,27 +29,29 @@ func GetMaxIndexAPI() int {
 }
 
 const (
-	N1QL_GROUPAGG_PUSHDOWN         uint64 = 1 << iota // 0x0000000001
-	N1QL_HASH_JOIN                                    // 0x0000000002
-	N1QL_ENCODED_PLAN                                 // 0x0000000004
-	N1QL_GOLANG_UDF                                   // 0x0000000008
-	N1QL_CBO                                          // 0x0000000010
-	N1QL_FLEXINDEX                                    // 0x0000000020
-	N1QL_CBO_NEW                                      // 0x0000000040
-	N1QL_PASSWORDLESS_BKT                             // 0x0000000080 MB-39484: N1QL_PASSWORDLESS_BKT retiredbit. Must NOT be used.
-	N1QL_READ_FROM_REPLICA_OFF                        // 0x0000000100 N1QL_READ_FROM_REPLICA_OFF retired. Must NOT be used.
-	N1QL_IMPLICIT_ARRAY_COVER                         // 0x0000000200
-	N1QL_JOIN_ENUMERATION                             // 0x0000000400
-	N1QL_INDEX_MISSING                                // 0x0000000800
-	N1QL_NL_PRIMARYSCAN                               // 0x0000001000
-	N1QL_EARLY_ORDER                                  // 0x0000002000
-	N1QL_SEQ_SCAN                                     // 0x0000004000
-	N1QL_DISABLE_SPILL_TO_DISK                        // 0x0000008000
-	N1QL_PARTIAL_GRACEFUL_SHUTDOWN                    // 0x0000010000
-	N1QL_USE_SUB_DOC                                  // 0x0000020000
-	N1QL_RANDOM_SCAN                                  // 0x0000040000
-	N1QL_MERGE_LEGACY                                 // 0x0000080000
-	N1QL_DATE_WARNINGS                                // 0x0000100000
+	N1QL_GROUPAGG_PUSHDOWN         uint64 = 1 << iota // 0x000000000000000001
+	N1QL_HASH_JOIN                                    // 0x000000000000000002
+	N1QL_ENCODED_PLAN                                 // 0x000000000000000004
+	N1QL_GOLANG_UDF                                   // 0x000000000000000008
+	N1QL_CBO                                          // 0x000000000000000010
+	N1QL_FLEXINDEX                                    // 0x000000000000000020
+	N1QL_CBO_NEW                                      // 0x000000000000000040
+	N1QL_PASSWORDLESS_BKT                             // 0x000000000000000080 Retired.
+	N1QL_READ_FROM_REPLICA_OFF                        // 0x000000000000000100 Retired.
+	N1QL_IMPLICIT_ARRAY_COVER                         // 0x000000000000000200
+	N1QL_JOIN_ENUMERATION                             // 0x000000000000000400
+	N1QL_INDEX_MISSING                                // 0x000000000000000800
+	N1QL_NL_PRIMARYSCAN                               // 0x000000000000001000
+	N1QL_EARLY_ORDER                                  // 0x000000000000002000
+	N1QL_SEQ_SCAN                                     // 0x000000000000004000
+	N1QL_DISABLE_SPILL_TO_DISK                        // 0x000000000000008000
+	N1QL_PARTIAL_GRACEFUL_SHUTDOWN                    // 0x000000000000010000
+	N1QL_USE_SUB_DOC                                  // 0x000000000000020000
+	N1QL_RANDOM_SCAN                                  // 0x000000000000040000
+	N1QL_MERGE_LEGACY                                 // 0x000000000000080000
+	N1QL_DATE_WARNINGS                                // 0x000000000000100000
+	N1QL_USE_SYS_FREE_MEM                             // 0x000000000000200000
+	N1QL_ADMISSION_CONTROL                            // 0x000000000000400000
 	N1QL_ALL_BITS                                     // This needs to be last (highest value) constant.
 )
 
@@ -77,6 +79,9 @@ var N1Ql_Features = map[uint64]string{
 	N1QL_RANDOM_SCAN:   fmt.Sprintf("Random Scans (%#x)", N1QL_RANDOM_SCAN),
 	N1QL_MERGE_LEGACY:  fmt.Sprintf("Legacy MERGE behavior (%#x)", N1QL_MERGE_LEGACY),
 	N1QL_DATE_WARNINGS: fmt.Sprintf("Report date warnings (%#x)", N1QL_DATE_WARNINGS),
+
+	N1QL_USE_SYS_FREE_MEM:  fmt.Sprintf("Allow system free memory use (%#x)", N1QL_USE_SYS_FREE_MEM),
+	N1QL_ADMISSION_CONTROL: fmt.Sprintf("Admission control (%#x)", N1QL_ADMISSION_CONTROL),
 }
 
 const DEF_N1QL_FEAT_CTRL = (N1QL_ENCODED_PLAN | N1QL_GOLANG_UDF | N1QL_CBO_NEW)

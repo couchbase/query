@@ -32,7 +32,6 @@ const (
 	DEF_LOAD_FACTOR = 35               // default load factor above 30% so that at start no nodes will be added
 	_FREE_FLOOR     = 0.25             // system free memory percent (1.0=100%) below which we may free to the OS
 
-	_FFDC_MEM_THRESH = 80                                     // FFDC memory use threshold
 	_FFDC_MEM_RATE   = 20                                     // FFDC memory increase rate threshold
 	_SAMPLES_2_HOURS = int((time.Hour * 2) / _STATS_INTRVL)   // number of samples for determining average memory use
 	_SAMPLES_MIN     = int((time.Minute * 5) / _STATS_INTRVL) // minimum number of samples for average memory use
@@ -150,7 +149,7 @@ func (c *statsCollector) runCollectStats() {
 		newStats["load"] = c.server.Load()
 		newStats["process.service.usage"] = c.server.ServicerUsage()
 		newStats["process.percore.cpupercent"] = c.server.CpuUsage(false)
-		newStats["process.memory.usage"], lastGC = c.server.MemoryUsage(false)
+		newStats["process.memory.usage"], _, lastGC = c.server.MemoryUsage(false)
 		newStats["request.queued.count"] = c.server.QueuedRequests()
 		newStats["servicers.paused.count"] = c.server.ServicersPaused()
 		newStats["servicers.paused.total"] = c.server.ServicerPauses()
@@ -211,26 +210,14 @@ func (c *statsCollector) runCollectStats() {
 
 		newStats = oldStats
 
-		trigger := true
-		if mu >= _FFDC_MEM_THRESH {
-			logging.Warnf("Memory threshold exceeded: %v%% >= %v%%", mu, _FFDC_MEM_THRESH)
-			if trigger {
-				ffdc.Capture(ffdc.MemoryThreshold)
-				trigger = false
-			}
-		} else {
-			ffdc.Reset(ffdc.MemoryThreshold)
-		}
-
+		// attempt to capture sudden spikes in memory use that aren't necessarily pushing memory limits
+		// expect a lot of false positives here, but at least we _should_ have something when needed
 		last := averageMemoryUsage.last()
 		averageMemoryUsage.record(mu)
 		delta := int64(mu) - int64(averageMemoryUsage.value())
 		if delta > _FFDC_MEM_RATE && averageMemoryUsage.count() > _SAMPLES_MIN && mu > last {
 			logging.Warnf("Memory growth rate threshold exceeded: %v%% > %v%%", delta, _FFDC_MEM_RATE)
-			if trigger {
-				ffdc.Capture(ffdc.MemoryRate)
-				trigger = false
-			}
+			ffdc.Capture(ffdc.MemoryRate)
 		} else {
 			ffdc.Reset(ffdc.MemoryRate)
 		}

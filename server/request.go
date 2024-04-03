@@ -210,6 +210,8 @@ type Request interface {
 	RedactedPositionalArgs() value.Values
 
 	SessionMemory() uint64
+
+	Halt(err errors.Error)
 }
 
 type RequestID interface {
@@ -1379,6 +1381,9 @@ func (this *BaseRequest) StopExecute() chan bool {
 func (this *BaseRequest) Stop(state State) {
 	this.SetState(state)
 	this.Lock()
+	if this.executionContext != nil {
+		this.executionContext.Pause(false)
+	}
 	stopOperator := this.stopOperator
 
 	// make sure that a stop can only be sent once (eg close OR timeout)

@@ -18,6 +18,7 @@ import (
 	"runtime"
 	"runtime/debug"
 	"runtime/pprof"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -171,6 +172,10 @@ func (this *gate) releaseOne() {
 	this.cond.Signal()
 }
 
+func (this *gate) releaseAll() {
+	this.cond.Broadcast()
+}
+
 func (this *gate) count() uint64 {
 	return atomic.LoadUint64(&this.counter)
 }
@@ -222,7 +227,6 @@ type Server struct {
 	lastCpuPercent    float64
 	useReplica        value.Tristate
 	requestGate       gate
-	pausedCount       uint64
 }
 
 // Default and min Keep Alive Length
@@ -307,9 +311,7 @@ func NewServer(store datastore.Datastore, sys datastore.Systemstore, config clus
 	rv.StartStatsCollector()
 
 	rv.requestGate.init()
-	if tenant.IsServerless() {
-		go rv.admissions()
-	}
+	go rv.admissions()
 
 	return rv, nil
 }
@@ -1231,24 +1233,72 @@ func (this *Server) admit(request Request, l logging.Log) {
 }
 
 const (
-	_ADMISSION_CHECK_INTERVAL        = time.Millisecond * 1000
-	_ADMISSION_CHECK_INTERVAL_1      = time.Millisecond * 500
-	_ADMISSION_CHECK_INTERVAL_2      = time.Millisecond * 200
-	_ADMISSION_CHECK_INTERVAL_3      = time.Millisecond * 50
-	_ADMISSION_CHECK_GC_THRESHOLD    = time.Second * 2 // if usage is high and the GC hasn't run in this interval, run it
-	_ADMISSION_BYPASS_MEMORY_PERCENT = 80              // below this level we don't perfom gating
-	_ADMISSION_MEMORY_THRESHOLD_1    = 60              // after gating, if it drops below this level release an additional waiter
-	_ADMISSION_MEMORY_THRESHOLD_2    = 40              // after gating, if it drops below this level release an additional waiter
-	_ADMISSION_MEMORY_THRESHOLD_3    = 20              // after gating, if it drops below this level release an additional waiter
+	_ADMISSION_CHECK_TIME_UNIT  = time.Millisecond * 50 // how frequently the ticker fires; minimum resolution
+	_ADMISSION_CHECK_INTERVAL   = time.Second
+	_ADMISSION_CHECK_INTERVAL_1 = time.Millisecond * 500
+	_ADMISSION_CHECK_INTERVAL_2 = time.Millisecond * 200
+	_ADMISSION_CHECK_INTERVAL_3 = time.Millisecond * 50
+	_ADMISSION_CHECK_INTERVAL_4 = time.Millisecond * 100
+
+	_ADMISSION_CHECK_GC_THRESHOLD = time.Millisecond * 250 // if usage is high and the GC hasn't run in this interval, run it
+	_ADMISSION_MIN_FFDC_INTERVAL  = time.Second * 60       // minimum interval between FFDC runs for memory threshold
+
+	_ADMISSION_BYPASS_MEMORY_PERCENT = 80 // below this level we don't perfom gating
+	_ADMISSION_MEMORY_THRESHOLD_1    = 60 // after gating, if it drops below this level release an additional waiter
+	_ADMISSION_MEMORY_THRESHOLD_2    = 40 // after gating, if it drops below this level release an additional waiter
+	_ADMISSION_MEMORY_THRESHOLD_3    = 20 // after gating, if it drops below this level release an additional waiter
+	_ADMISSION_MIN_FREE_MEM_PERCENT  = 10 // active request control starts when we drop below this
+	_ADMISSION_MAX_RELEASE           = 5  // maximum number of paused requests to resume at a time
+
+	_ADMISSION_MSG_PREFIX = "RAC: "
 )
 
 func (this *Server) admissions() {
-	timer := time.NewTimer(_ADMISSION_CHECK_INTERVAL)
-	timer.Stop()
+	triggered := false
+	lastFFDC := int64(0)
+	ticker := time.NewTicker(_ADMISSION_CHECK_TIME_UNIT)
+	waitInterval := _ADMISSION_CHECK_INTERVAL
 	for {
-		waitInterval := _ADMISSION_CHECK_INTERVAL
-		mu, lastGC := this.MemoryUsage(true)
+		select {
+		case <-this.requestGate.sleepInterrupt:
+			waitInterval = 0
+		case <-ticker.C:
+			waitInterval -= _ADMISSION_CHECK_TIME_UNIT
+		}
+		if waitInterval > 0 {
+			continue
+		}
+		waitInterval = _ADMISSION_CHECK_INTERVAL
+		if !triggered && !util.IsFeatureEnabled(util.GetN1qlFeatureControl(), util.N1QL_ADMISSION_CONTROL) {
+			if !this.requestGate.bypass {
+				this.requestGate.bypass = true
+				this.requestGate.releaseAll()
+			}
+			continue
+		}
+		mu, mf, lastGC := this.MemoryUsage(true)
+		if triggered || mf < _ADMISSION_MIN_FREE_MEM_PERCENT {
+			this.requestGate.bypass = false
+			if !triggered {
+				logging.Errorf(_ADMISSION_MSG_PREFIX+"Free memory (%d%%) below limit", mf)
+				ffdc.Capture(ffdc.MemoryLimit)
+			}
+			triggered = this.controlActiveProcessing(mf)
+			waitInterval = _ADMISSION_CHECK_INTERVAL_4
+			continue
+		} else {
+			ffdc.Reset(ffdc.MemoryLimit)
+		}
 		this.requestGate.bypass = (mu < _ADMISSION_BYPASS_MEMORY_PERCENT)
+		if !this.requestGate.bypass {
+			ffdc.Capture(ffdc.MemoryThreshold)
+			lastFFDC = util.Now().UnixNano()
+		} else {
+			if lastFFDC > 0 && util.Now().UnixNano()-lastFFDC > int64(_ADMISSION_MIN_FFDC_INTERVAL) {
+				ffdc.Reset(ffdc.MemoryThreshold)
+				lastFFDC = 0
+			}
+		}
 		w := this.requestGate.waiters()
 		if this.requestGate.bypass && w > 0 {
 			this.requestGate.releaseOne()
@@ -1267,15 +1317,93 @@ func (this *Server) admissions() {
 		} else if !this.requestGate.bypass && util.Now().UnixNano()-int64(lastGC) > int64(_ADMISSION_CHECK_GC_THRESHOLD) {
 			runtime.GC()
 		}
-		timer.Reset(waitInterval)
-		select {
-		case <-this.requestGate.sleepInterrupt:
-		case <-timer.C:
+	}
+}
+
+// This is triggered when we drop below 10% free system memory.  New request processing has already been halted.  This will continue
+// to be called until there are no requests left to deal with.  The idea is to pause the pipelines for all active requests and
+// trigger a return of memory to the OS.  If this doesn't succeed in returning to above the threshold, then halt the largest memory
+// consuming request (this only works as intended for requests with a memory quota in effect).  If we have returned to above the
+// threshold, then release some requests - based on how far above the threshold we are.  One request for every 10%.  We'll wait
+// a further cycle (1/10th second) before attempting to release any more requests.  This is effectively to drip-feed the active
+// requests back in to the system in order to try avoid immediately returning to the condition that triggered this.  Only once all
+// the paused active requests have been released (+1/10th second cycle) and we have enough free memory (strictly our usage is below
+// 80% of permitted) will queued new requests begin to be released.  This sequence can cycle repeatedly.
+func (this *Server) controlActiveProcessing(perc uint64) bool {
+	defer func() {
+		err := recover()
+		if err != nil {
+			logging.Severef(_ADMISSION_MSG_PREFIX+"Active processing control failed: %v", err)
 		}
-		if !timer.Stop() {
-			<-timer.C
+	}()
+
+	var reqs []Request
+	paused := 0
+	ActiveRequestsForEach(func(id string, req Request) bool {
+		if req.State() == RUNNING {
+			if perc < _ADMISSION_MIN_FREE_MEM_PERCENT {
+				if ctx := req.ExecutionContext(); ctx != nil {
+					if ctx.Pause(true) {
+						paused++
+					}
+				}
+			}
+			reqs = append(reqs, req)
+		}
+		return true
+	}, nil)
+	if paused > 0 {
+		logging.Infof(_ADMISSION_MSG_PREFIX+"Request pipeline(s) paused: %d", paused)
+	}
+
+	if len(reqs) == 0 {
+		debug.FreeOSMemory()
+		return false
+	} else if len(reqs) > 1 {
+		sort.Slice(reqs, func(i int, j int) bool {
+			// This is not a strict order as UsedMemory() isn't guaranteed to be constant for the duration of the sort
+			umi := reqs[i].UsedMemory()
+			umj := reqs[j].UsedMemory()
+			if umi == umj {
+				return reqs[i].RequestTime().Before(reqs[j].RequestTime())
+			}
+			return umi < umj
+		})
+	}
+
+	rv := false
+	if perc < _ADMISSION_MIN_FREE_MEM_PERCENT {
+		if paused == 0 {
+			// stop the largest memory consumer
+			req := reqs[len(reqs)-1]
+			req.Halt(errors.NewNodeQuotaExceededError())
+			logging.Infof(_ADMISSION_MSG_PREFIX+"%v: halted.", req.Id())
+		}
+		rv = true
+		debug.FreeOSMemory()
+	} else {
+		// release requests depending on how much free memory we have
+		released := 0
+		for n := range reqs {
+			if perc >= _ADMISSION_MIN_FREE_MEM_PERCENT && released < _ADMISSION_MAX_RELEASE {
+				if ctx := reqs[n].ExecutionContext(); ctx != nil {
+					if ctx.Pause(false) {
+						perc -= _ADMISSION_MIN_FREE_MEM_PERCENT
+						released++
+					}
+				}
+			} else {
+				break
+			}
+		}
+		rv = released != 0
+		if !rv {
+			debug.FreeOSMemory()
+		} else {
+			logging.Infof(_ADMISSION_MSG_PREFIX+"Request pipeline(s) resumed: %d", released)
 		}
 	}
+	return rv
 }
 
 func (this *Server) serviceRequest(request Request) {
@@ -1303,11 +1431,9 @@ func (this *Server) serviceRequest(request Request) {
 
 	context := request.ExecutionContext()
 
-	if tenant.IsServerless() {
-		// If the system is under memory pressure we'll delay starting processing the request whilst holding the servicer in order
-		// to reduce concurrent load.  This effectively grants us "a dynamic number of servicers" without complex restructuring
-		this.admit(request, context)
-	}
+	// If the system is under memory pressure we'll delay starting processing the request whilst holding the servicer in order
+	// to reduce concurrent load.  This effectively grants us "a dynamic number of servicers" without complex restructuring
+	this.admit(request, context)
 
 	context.Infof("Servicing request")
 	request.Servicing()
@@ -2103,7 +2229,7 @@ func (this *Server) loadFactor(refresh bool) int {
 	// consider one request per servicer in queue is normal
 	servicers := util.MinInt(int(this.ServicerUsage()/_SERVICE_OVERHEAD_FACTOR), _SERVICE_PERCENT_LIMIT)
 	cpu := int(this.CpuUsage(refresh))
-	memory, _ := this.MemoryUsage(refresh)
+	memory, _, _ := this.MemoryUsage(refresh)
 	// max of all of them
 	return util.MaxInt(util.MaxInt(servicers, cpu), util.MinInt(int(memory), _MEMORY_PERCENT))
 
@@ -2146,37 +2272,41 @@ func (this *Server) CpuUsage(refresh bool) float64 {
 	return util.RoundPlaces(cpu/float64(util.NumCPU()), 2)
 }
 
-func (this *Server) MemoryUsage(refresh bool) (uint64, uint64) {
+func (this *Server) MemoryUsage(refresh bool) (uint64, uint64, uint64) {
 	// get go runtime memory stats
 	ms := this.MemoryStats(refresh)
 	mem_used := ms.HeapInuse + ms.HeapIdle - ms.HeapReleased + ms.GCSys
 	mem_quota := memory.NodeQuota() * util.MiB
+	mup := uint64(_DEF_MEMORY_USAGE)
+	musp := uint64(_DEF_MEMORY_USAGE)
 	if mem_quota > 0 {
-		return uint64((mem_used * 100) / mem_quota), ms.LastGC
-	}
-
-	// no node quota. caulculate Query engine memory quota as 50% system memory
-	// get system memory info
-	_, _, total, _, _, _ := system.GetSystemStats(nil, refresh, false)
-	if total <= 0 {
-		return _DEF_MEMORY_USAGE, ms.LastGC
-	}
-	quota := uint64(float64(total) * _MEMORY_QUOTA)
-	mup := uint64((mem_used * 100) / quota)
-
-	/*
-		// what happens 50% memory not aviable on the system??
-		avilable := quota - mem_used
-		if avilable > free {
-			// mup += uint64(((avilable - free) * 100) / quota)
+		mup = uint64((mem_used * 100) / mem_quota)
+		if !util.IsFeatureEnabled(util.GetN1qlFeatureControl(), util.N1QL_USE_SYS_FREE_MEM) {
+			// report remaining quota relative to process system memory use
+			sys := ms.HeapSys - ms.HeapReleased
+			if sys < mem_quota {
+				musp = ((mem_quota - sys) * 100) / mem_quota
+			}
+			return mup, musp, ms.LastGC
 		}
-	*/
-
-	if mup > _DEF_MEMORY_USAGE {
-		return uint64(mup), ms.LastGC
 	}
-	return _DEF_MEMORY_USAGE, ms.LastGC
 
+	// get system memory info
+	_, _, total, _, free, _ := system.GetSystemStats(nil, refresh, false)
+	if total > 0 {
+		if mem_quota == 0 {
+			// no node quota; use 50% of the system memory as the Query memory quota
+			quota := uint64(float64(total) * _MEMORY_QUOTA)
+			mup = uint64((mem_used * 100) / quota)
+			if mup < _DEF_MEMORY_USAGE {
+				mup = _DEF_MEMORY_USAGE
+			}
+		}
+		// report overall system free memory
+		musp = (free * 100) / total
+	}
+
+	return mup, musp, ms.LastGC
 }
 
 // extract go runtime stats

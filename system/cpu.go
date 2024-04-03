@@ -26,7 +26,7 @@ var _MIN_DURATION = uint64(time.Second.Milliseconds())
 
 func GetSystemStats(stats *SystemStats, refresh, log bool) (cpu float64, rss, total, free, act uint64, err error) {
 	if !refresh {
-		return getCpuPercent(), getRSS(), getMemTotal(), GetMemFree(), GetMemActualFree(), nil
+		return getCpuPercent(), getRSS(), GetMemTotal(), GetMemFree(), GetMemActualFree(), nil
 	}
 
 	if stats == nil {
@@ -40,7 +40,7 @@ func GetSystemStats(stats *SystemStats, refresh, log bool) (cpu float64, rss, to
 
 	pid, total, now, err1 := stats.ProcessCpuStats()
 	if err1 != nil {
-		return getCpuPercent(), getRSS(), getMemTotal(), GetMemFree(), GetMemActualFree(), nil
+		return getCpuPercent(), getRSS(), GetMemTotal(), GetMemFree(), GetMemActualFree(), nil
 	}
 	lastTotal, lastNow, cpuPercent := getCpuStats()
 	dur := now - lastNow
@@ -106,7 +106,7 @@ func updateMemTotal(mem uint64) {
 	atomic.StoreUint64(&memTotal, mem)
 }
 
-func getMemTotal() uint64 {
+func GetMemTotal() uint64 {
 	return atomic.LoadUint64(&memTotal)
 }
 
@@ -144,7 +144,7 @@ func GetMemActualFreePercent() float64 {
 		}
 		atomic.StoreInt32(&freeRefresher, 0)
 	}
-	t := getMemTotal()
+	t := GetMemTotal()
 	if f == 0 {
 		f = GetMemActualFree()
 	}

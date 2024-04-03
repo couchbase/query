@@ -103,6 +103,12 @@ func (this *MockQuery) Expire(state server.State, timeout time.Duration) {
 	close(this.response.done)
 }
 
+func (this *MockQuery) Halt(err errors.Error) {
+	this.response.err = err
+	close(this.response.done)
+	this.Stop(server.FATAL)
+}
+
 func (this *MockQuery) SetUp() {
 }
 

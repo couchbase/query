@@ -146,7 +146,7 @@ func (this *OrderLimit) afterItems(context *Context) {
 					}
 					av.Recycle()
 					offset--
-					return true
+					return !this.stopped
 				}
 			})
 			if err != nil {
@@ -170,6 +170,7 @@ func (this *OrderLimit) afterItems(context *Context) {
 	}
 	this.limit.afterItems(context)
 	this.releaseValues()
+	this.terms = nil
 }
 
 func (this *OrderLimit) MarshalJSON() ([]byte, error) {

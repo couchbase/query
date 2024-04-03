@@ -420,6 +420,7 @@ const (
 	Shutdown         = "SDN"
 	MemoryRate       = "MRE"
 	Manual           = "MAN"
+	MemoryLimit      = "SML"
 )
 
 var reasons = map[string]*reason{
@@ -462,6 +463,11 @@ var reasons = map[string]*reason{
 		event:   Manual,
 		actions: []string{Heap, MemStats, Active, Completed, Stacks, Vitals, Netstat},
 		msg:     "Manual invocation",
+	},
+	MemoryLimit: &reason{
+		event:   MemoryLimit,
+		actions: []string{Heap, MemStats, Active},
+		msg:     "Server memory limit",
 	},
 }
 

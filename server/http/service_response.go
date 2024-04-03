@@ -300,6 +300,12 @@ func (this *httpRequest) Expire(state server.State, timeout time.Duration) {
 	this.Stop(state)
 }
 
+func (this *httpRequest) Halt(err errors.Error) {
+	if this.State() == server.RUNNING {
+		this.Abort(err)
+	}
+}
+
 func (this *httpRequest) writePrefix(srvr *server.Server, signature value.Value, prefix, indent string) bool {
 	return this.writeString("{\n") &&
 		this.writeRequestID(prefix) &&
@@ -1799,7 +1805,7 @@ func (this *bufferedWriter) releaseInternal() {
 }
 
 func (this *bufferedWriter) writeBytes(s []byte) bool {
-	if this.closed {
+	if this.closed || this.buffer == nil {
 		return false
 	}
 	if len(s) == 0 {
@@ -1836,7 +1842,7 @@ func (this *bufferedWriter) writeBytes(s []byte) bool {
 }
 
 func (this *bufferedWriter) printf(f string, args ...interface{}) bool {
-	if this.closed {
+	if this.closed || this.buffer == nil {
 		return false
 	}
 
@@ -1872,6 +1878,9 @@ func (this *bufferedWriter) printf(f string, args ...interface{}) bool {
 // these are only used by Result() handling
 // fast write
 func (this *bufferedWriter) write(s string) bool {
+	if this.closed || this.buffer == nil {
+		return false
+	}
 	_, err := this.buffer.Write([]byte(s))
 	return err == nil
 }
@@ -1943,11 +1952,14 @@ func (this *bufferedWriter) sizeFlush() bool {
 
 // mark the current write position
 func (this *bufferedWriter) mark() int {
-	return this.buffer.Len()
+	if !this.closed && this.buffer != nil {
+		return this.buffer.Len()
+	}
+	return 0
 }
 
 func (this *bufferedWriter) truncate(mark int) {
-	if !this.closed {
+	if !this.closed && this.buffer != nil {
 		this.buffer.Truncate(mark)
 	}
 }

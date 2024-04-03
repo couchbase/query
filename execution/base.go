@@ -36,13 +36,15 @@ const (
 	_EXECTIME
 	_KERNTIME
 	_SERVTIME
+	_PAUSETIME
 )
 
 var _PHASENAMES = []string{
-	_NOTIME:   "",
-	_EXECTIME: "running",
-	_KERNTIME: "kernel",
-	_SERVTIME: "services",
+	_NOTIME:    "",
+	_EXECTIME:  "running",
+	_KERNTIME:  "kernel",
+	_SERVTIME:  "services",
+	_PAUSETIME: "paused",
 }
 
 type annotatedChannel chan value.AnnotatedValue
@@ -161,6 +163,7 @@ type base struct {
 	execTime        time.Duration
 	kernTime        time.Duration
 	servTime        time.Duration
+	pauseTime       time.Duration
 	inDocs          int64
 	outDocs         int64
 	phaseSwitches   int64
@@ -566,8 +569,7 @@ func opFork(p interface{}) {
 func (this *base) fork(op Operator, context *Context, parent value.Value) {
 	base := op.getBase()
 	if base.inline || base.serialized {
-		phase := this.timePhase
-		this.switchPhase(_NOTIME)
+		phase := this.switchPhase(_NOTIME)
 		op.RunOnce(context, parent)
 		this.switchPhase(phase)
 	} else {
@@ -770,8 +772,7 @@ func (this *base) connSendAction(conn *datastore.IndexConnection, action opActio
 			this.opState = _STOPPING
 		}
 		this.activeCond.L.Unlock()
-		phase := this.timePhase
-		this.switchPhase(_KERNTIME)
+		phase := this.switchPhase(_KERNTIME)
 		this.valueExchange.sendStop()
 		if conn != nil {
 			conn.SendStop()
@@ -783,6 +784,7 @@ func (this *base) connSendAction(conn *datastore.IndexConnection, action opActio
 }
 
 func (this *base) sendItem(item value.AnnotatedValue) bool {
+	this.operatorCtx.checkPause(this)
 	return this.sendItemOp(this.output, item)
 }
 
@@ -1521,9 +1523,9 @@ func (this *base) cleanup(context *Context) {
 // profiling
 
 // phase switching
-func (this *base) switchPhase(p timePhases) {
+func (this *base) switchPhase(p timePhases) timePhases {
 	if atomic.AddUint32(&this.phaseSwitching, 1) != 1 {
-		return
+		return this.timePhase
 	}
 	oldPhase := this.timePhase
 	this.timePhase = p
@@ -1531,7 +1533,7 @@ func (this *base) switchPhase(p timePhases) {
 	// not switching phases
 	if oldPhase == p {
 		atomic.StoreUint32(&this.phaseSwitching, 0)
-		return
+		return oldPhase
 	}
 	oldTime := this.startTime
 	this.startTime = util.Now()
@@ -1540,7 +1542,7 @@ func (this *base) switchPhase(p timePhases) {
 	// either way, no time to accrue as of yet
 	if oldPhase == _NOTIME {
 		atomic.StoreUint32(&this.phaseSwitching, 0)
-		return
+		return oldPhase
 	}
 
 	// keep track of phase switching
@@ -1558,8 +1560,12 @@ func (this *base) switchPhase(p timePhases) {
 	case _KERNTIME:
 		this.addKernTime(d)
 		this.operatorCtx.Context.recordWaitTime(d)
+	case _PAUSETIME:
+		this.addPauseTime(d)
+		this.operatorCtx.Context.recordWaitTime(d)
 	}
 	atomic.StoreUint32(&this.phaseSwitching, 0)
+	return oldPhase
 }
 
 // accrues operators and phase times
@@ -1611,6 +1617,10 @@ func (this *base) addServTime(t time.Duration) {
 	go_atomic.AddInt64((*int64)(&this.servTime), int64(t))
 }
 
+func (this *base) addPauseTime(t time.Duration) {
+	go_atomic.AddInt64((*int64)(&this.pauseTime), int64(t))
+}
+
 func (this *base) addInDocs(d int64) {
 	go_atomic.AddInt64((*int64)(&this.inDocs), d)
 }
@@ -1641,6 +1651,7 @@ func (this *base) marshalTimes(r map[string]interface{}) {
 	execTime := this.execTime
 	kernTime := this.kernTime
 	servTime := this.servTime
+	pauseTime := this.pauseTime
 	if this.timePhase != _NOTIME {
 		d = util.Since(this.startTime)
 		switch this.timePhase {
@@ -1650,6 +1661,8 @@ func (this *base) marshalTimes(r map[string]interface{}) {
 			servTime += d
 		case _KERNTIME:
 			kernTime += d
+		case _PAUSETIME:
+			pauseTime += d
 		}
 		stats["state"] = _PHASENAMES[this.timePhase]
 	}
@@ -1662,6 +1675,9 @@ func (this *base) marshalTimes(r map[string]interface{}) {
 	}
 	if servTime != 0 {
 		stats["servTime"] = util.OutputDuration(servTime)
+	}
+	if pauseTime != 0 {
+		stats["pauseTime"] = util.OutputDuration(pauseTime)
 	}
 
 	if this.valueExchange.beatYields > 0 {
@@ -1715,6 +1731,7 @@ func (this *base) accrueTime(copy *base) {
 	this.execTime += copy.execTime
 	this.kernTime += copy.kernTime
 	this.servTime += copy.servTime
+	this.pauseTime += copy.pauseTime
 }
 
 // 2- descend children: default for childless operators
