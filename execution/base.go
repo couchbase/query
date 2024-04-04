@@ -536,7 +536,7 @@ func (this *base) IsSerializable() bool {
 }
 
 func (this *base) IsParallel() bool {
-	return this.serializable
+	return !this.serializable
 }
 
 func (this *base) SerializeOutput(op Operator, context *Context) {
