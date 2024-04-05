@@ -286,8 +286,8 @@ func newKeyspacesKeyspace(p *namespace, store datastore.Datastore, name string, 
 	b.indexer = newSystemIndexer(b, primary)
 	setIndexBase(&primary.indexBase, b.indexer)
 
-	// add a secondary index on `bucket`
-	expr, err := parser.Parse("`bucket`")
+	// add a secondary index on `bucket_id`
+	expr, err := parser.Parse(`bucket_id`)
 
 	if err == nil {
 		key := expression.Expressions{expr}
