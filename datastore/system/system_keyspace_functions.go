@@ -310,16 +310,18 @@ func hasGlobalFunctionsAccess(context datastore.QueryContext) (bool, bool) {
 	privs1.Add("", auth.PRIV_QUERY_MANAGE_FUNCTIONS, auth.PRIV_PROPS_NONE)
 	privs2 := auth.NewPrivileges()
 	privs2.Add("", auth.PRIV_QUERY_EXECUTE_FUNCTIONS, auth.PRIV_PROPS_NONE)
-	err1 := datastore.GetDatastore().Authorize(privs1, context.Credentials())
-	err2 := datastore.GetDatastore().Authorize(privs2, context.Credentials())
+
+	// avoid logging an audit on authorization failures for an internal authorization action
+	err1 := datastore.GetDatastore().AuthorizeInternal(privs1, context.Credentials())
+	err2 := datastore.GetDatastore().AuthorizeInternal(privs2, context.Credentials())
 	internal := err1 == nil || err2 == nil
 
 	privs1 = auth.NewPrivileges()
 	privs1.Add("", auth.PRIV_QUERY_MANAGE_FUNCTIONS_EXTERNAL, auth.PRIV_PROPS_NONE)
 	privs2 = auth.NewPrivileges()
 	privs2.Add("", auth.PRIV_QUERY_EXECUTE_FUNCTIONS_EXTERNAL, auth.PRIV_PROPS_NONE)
-	err1 = datastore.GetDatastore().Authorize(privs1, context.Credentials())
-	err2 = datastore.GetDatastore().Authorize(privs2, context.Credentials())
+	err1 = datastore.GetDatastore().AuthorizeInternal(privs1, context.Credentials())
+	err2 = datastore.GetDatastore().AuthorizeInternal(privs2, context.Credentials())
 	external := err1 == nil || err2 == nil
 	return internal, external
 }
@@ -329,16 +331,18 @@ func hasScopeFunctionsAccess(path string, context datastore.QueryContext) (bool,
 	privs1.Add(path, auth.PRIV_QUERY_MANAGE_SCOPE_FUNCTIONS, auth.PRIV_PROPS_NONE)
 	privs2 := auth.NewPrivileges()
 	privs2.Add(path, auth.PRIV_QUERY_EXECUTE_SCOPE_FUNCTIONS, auth.PRIV_PROPS_NONE)
-	err1 := datastore.GetDatastore().Authorize(privs1, context.Credentials())
-	err2 := datastore.GetDatastore().Authorize(privs2, context.Credentials())
+
+	// avoid logging an audit on authorization failures for an internal authorization action
+	err1 := datastore.GetDatastore().AuthorizeInternal(privs1, context.Credentials())
+	err2 := datastore.GetDatastore().AuthorizeInternal(privs2, context.Credentials())
 	internal := err1 == nil || err2 == nil
 
 	privs1 = auth.NewPrivileges()
 	privs1.Add(path, auth.PRIV_QUERY_MANAGE_SCOPE_FUNCTIONS_EXTERNAL, auth.PRIV_PROPS_NONE)
 	privs2 = auth.NewPrivileges()
 	privs2.Add(path, auth.PRIV_QUERY_EXECUTE_SCOPE_FUNCTIONS_EXTERNAL, auth.PRIV_PROPS_NONE)
-	err1 = datastore.GetDatastore().Authorize(privs1, context.Credentials())
-	err2 = datastore.GetDatastore().Authorize(privs2, context.Credentials())
+	err1 = datastore.GetDatastore().AuthorizeInternal(privs1, context.Credentials())
+	err2 = datastore.GetDatastore().AuthorizeInternal(privs2, context.Credentials())
 	external := err1 == nil || err2 == nil
 	return internal, external
 }

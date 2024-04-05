@@ -122,10 +122,16 @@ func privilegeString(namespace, target, obj string, requested auth.Privilege) (s
 	return permission, nil
 }
 
-func doAuthByCreds(creds cbauth.Creds, permission string) (bool, error) {
+func doAuthByCreds(creds cbauth.Creds, permission string, isInternal bool) (bool, error) {
+	var authResult bool
 	var err error
 
-	authResult, err := creds.IsAllowed(permission)
+	if isInternal {
+		authResult, err = creds.IsAllowedInternal(permission)
+	} else {
+		authResult, err = creds.IsAllowed(permission)
+	}
+
 	if err != nil || authResult == false {
 		return false, err
 	}
@@ -169,8 +175,8 @@ type cbPrecompiled string
 
 // Try to get the privileges sought from the availableCredentials credentials.
 // Return the privileges that were not granted.
-func authAgainstCreds(as authSource, privsSought []auth.PrivilegePair, availableCredentials []cbauth.Creds) ([]auth.PrivilegePair,
-	error) {
+func authAgainstCreds(as authSource, privsSought []auth.PrivilegePair, availableCredentials []cbauth.Creds, isInternal bool) (
+	[]auth.PrivilegePair, error) {
 
 	var deniedPrivs []auth.PrivilegePair
 	for p, _ := range privsSought {
@@ -190,14 +196,14 @@ func authAgainstCreds(as authSource, privsSought []auth.PrivilegePair, available
 
 		precompiled, ok := privsSought[p].Ready.(cbPrecompiled)
 		if ok {
-			res, err = authAgainstCred(string(precompiled), availableCredentials)
+			res, err = authAgainstCred(string(precompiled), availableCredentials, isInternal)
 		} else {
 			var target string
 
 			namespace, keyspace, obj := namespaceKeyspaceTypeFromPrivPair(privsSought[p])
 			target, err = privilegeString(namespace, keyspace, obj, privilege)
 			if err == nil {
-				res, err = authAgainstCred(target, availableCredentials)
+				res, err = authAgainstCred(target, availableCredentials, isInternal)
 			}
 		}
 
@@ -213,12 +219,13 @@ func authAgainstCreds(as authSource, privsSought []auth.PrivilegePair, available
 	return deniedPrivs, nil
 }
 
-func authAgainstCred(cbTarget string, availableCredentials []cbauth.Creds) (bool, error) {
+func authAgainstCred(cbTarget string, availableCredentials []cbauth.Creds, isInternal bool) (bool, error) {
 	thisPrivGranted := false
 
 	// Check requested privilege against the list of credentials.
 	for _, creds := range availableCredentials {
-		authResult, err := doAuthByCreds(creds, cbTarget)
+
+		authResult, err := doAuthByCreds(creds, cbTarget, isInternal)
 
 		if err != nil {
 			return false, err
@@ -262,7 +269,7 @@ func isClientCertPresent(req *http.Request) bool {
 	return req != nil && req.TLS != nil && req.TLS.PeerCertificates != nil
 }
 
-func cbAuthorize(s authSource, privileges *auth.Privileges, credentials *auth.Credentials) errors.Error {
+func cbAuthorize(s authSource, privileges *auth.Privileges, credentials *auth.Credentials, isInternal bool) errors.Error {
 
 	var reason error
 
@@ -380,7 +387,7 @@ func cbAuthorize(s authSource, privileges *auth.Privileges, credentials *auth.Cr
 
 	// Check every requested privilege against the credentials list.
 	// if the authentication fails for any of the requested privileges return an error
-	deniedPrivileges, err := authAgainstCreds(s, privileges.List, credentials.CbauthCredentialsList)
+	deniedPrivileges, err := authAgainstCreds(s, privileges.List, credentials.CbauthCredentialsList, isInternal)
 
 	if err != nil {
 		return errors.NewDatastoreAuthorizationError(err)

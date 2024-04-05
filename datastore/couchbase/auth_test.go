@@ -72,6 +72,10 @@ func (a authUser) IsAllowed(permission string) (bool, error) {
 	return a.permissions[permission], nil
 }
 
+func (a authUser) IsAllowedInternal(permission string) (bool, error) {
+	return a.permissions[permission], nil
+}
+
 type testCase struct {
 	purpose       string
 	authSource    authSource
@@ -142,7 +146,7 @@ func TestSimpleSelect(t *testing.T) {
 
 func runCases(t *testing.T, cases []testCase) {
 	for _, c := range cases {
-		err := cbAuthorize(c.authSource, c.privs, c.creds)
+		err := cbAuthorize(c.authSource, c.privs, c.creds, false)
 		if c.shouldSucceed {
 			if err != nil {
 				t.Fatalf("Case %s should succeed, but it failed with error %v.", c.purpose, err)

@@ -47,7 +47,11 @@ func (b *scopeKeyspace) Count(context datastore.QueryContext) (int64, errors.Err
 
 	count := int64(0)
 	namespaceIds, excp := b.store.NamespaceIds()
-	canAccessAll := canAccessSystemTables(context)
+
+	// since CountScan is only allowed when the user can access system keyspaces
+	// do not consider the access check as an internal action
+	canAccessAll := canAccessSystemTables(context, false)
+
 	if excp == nil {
 		for _, namespaceId := range namespaceIds {
 			namespace, excp := b.store.NamespaceById(namespaceId)
@@ -293,7 +297,7 @@ func (pi *scopeIndex) Scan(requestId string, span *datastore.Span, distinct bool
 		var numProduced int64 = 0
 		namespaceIds, err := pi.keyspace.store.NamespaceIds()
 		if err == nil {
-			canAccessAll := canAccessSystemTables(conn.QueryContext())
+			canAccessAll := canAccessSystemTables(conn.QueryContext(), true)
 
 		loop:
 			for _, namespaceId := range namespaceIds {
@@ -379,7 +383,7 @@ func (pi *scopeIndex) ScanEntries(requestId string, limit int64, cons datastore.
 	var numProduced int64 = 0
 	namespaceIds, err := pi.keyspace.store.NamespaceIds()
 	if err == nil {
-		canAccessAll := canAccessSystemTables(conn.QueryContext())
+		canAccessAll := canAccessSystemTables(conn.QueryContext(), true)
 
 	loop:
 		for _, namespaceId := range namespaceIds {

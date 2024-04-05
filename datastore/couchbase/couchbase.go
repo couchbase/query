@@ -481,7 +481,17 @@ func (s *store) Authorize(privileges *auth.Privileges, credentials *auth.Credent
 		logging.Warnf("CbAuth not intialized")
 		return nil
 	}
-	return cbAuthorize(s, privileges, credentials)
+	return cbAuthorize(s, privileges, credentials, false)
+}
+
+func (s *store) AuthorizeInternal(privileges *auth.Privileges, credentials *auth.Credentials) errors.Error {
+	if s.CbAuthInit == false {
+		// cbauth is not initialized. Access to SASL protected buckets will be
+		// denied by the couchbase server
+		logging.Warnf("CbAuth not intialized")
+		return nil
+	}
+	return cbAuthorize(s, privileges, credentials, true)
 }
 
 func (s *store) AdminUser(node string) (string, string, error) {
