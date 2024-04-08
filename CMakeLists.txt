@@ -60,8 +60,8 @@ IF (NOT CBQ_ONLY)
     LIST(APPEND _extra_deps jseval)
 
     IF (CB_USE_FAISS)
-      LIST(APPEND _extra_deps faiss_c)
-      SET(_gotags "${_gotags} vectors")
+      LIST(APPEND _extra_deps Jemalloc::noprefix faiss_c)
+      SET(_gotags "${_gotags} jemalloc vectors")
     ENDIF ()
   ENDIF (BUILD_ENTERPRISE)
 
