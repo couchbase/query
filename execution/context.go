@@ -209,7 +209,7 @@ func (this *opContext) Park(stop func(bool), changeCallerState bool) {
 	this.base.setExternalStop(stop)
 
 	if changeCallerState {
-		this.base.switchPhase(_CHANTIME)
+		this.base.switchPhase(_KERNTIME)
 	}
 }
 

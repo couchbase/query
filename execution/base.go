@@ -34,14 +34,14 @@ type timePhases int
 const (
 	_NOTIME = timePhases(iota)
 	_EXECTIME
-	_CHANTIME
+	_KERNTIME
 	_SERVTIME
 )
 
 var _PHASENAMES = []string{
 	_NOTIME:   "",
 	_EXECTIME: "running",
-	_CHANTIME: "kernel",
+	_KERNTIME: "kernel",
 	_SERVTIME: "services",
 }
 
@@ -159,7 +159,7 @@ type base struct {
 	execPhase       Phases
 	phaseTimes      func(*Context, Phases, time.Duration)
 	execTime        time.Duration
-	chanTime        time.Duration
+	kernTime        time.Duration
 	servTime        time.Duration
 	inDocs          int64
 	outDocs         int64
@@ -768,7 +768,7 @@ func (this *base) connSendAction(conn *datastore.IndexConnection, action opActio
 		}
 		this.activeCond.L.Unlock()
 		phase := this.timePhase
-		this.switchPhase(_CHANTIME)
+		this.switchPhase(_KERNTIME)
 		this.valueExchange.sendStop()
 		if conn != nil {
 			conn.SendStop()
@@ -800,7 +800,7 @@ func (this *base) sendItemOp(op Operator, item value.AnnotatedValue) bool {
 
 // send data down a channel
 func parallelSend(this *base, op Operator, item value.AnnotatedValue) bool {
-	this.switchPhase(_CHANTIME)
+	this.switchPhase(_KERNTIME)
 	ok := this.valueExchange.sendItem(op.ValueExchange(), item, this.quota)
 	this.switchPhase(_EXECTIME)
 	return ok
@@ -814,7 +814,7 @@ func (this *base) getItemOp(op Operator) (value.AnnotatedValue, bool) {
 	if this.stopped {
 		return nil, false
 	}
-	this.switchPhase(_CHANTIME)
+	this.switchPhase(_KERNTIME)
 	val, ok := this.ValueExchange().getItem(op.ValueExchange())
 	this.switchPhase(_EXECTIME)
 	if !ok {
@@ -831,7 +831,7 @@ func (this *base) queuedItems() int {
 }
 
 func (this *base) getItemValue(channel value.ValueChannel) (value.Value, bool) {
-	this.switchPhase(_CHANTIME)
+	this.switchPhase(_KERNTIME)
 	defer this.switchPhase(_EXECTIME)
 
 	select {
@@ -881,7 +881,7 @@ func (this *base) getItemChildren() (value.AnnotatedValue, int, bool) {
 }
 
 func (this *base) getItemChildrenOp(op Operator) (value.AnnotatedValue, int, bool) {
-	this.switchPhase(_CHANTIME)
+	this.switchPhase(_KERNTIME)
 	val, child, ok := this.ValueExchange().getItemChildren(op.ValueExchange())
 	this.switchPhase(_EXECTIME)
 	if !ok {
@@ -892,7 +892,7 @@ func (this *base) getItemChildrenOp(op Operator) (value.AnnotatedValue, int, boo
 
 // wait for at least n children to complete
 func (this *base) childrenWait(n int) bool {
-	this.switchPhase(_CHANTIME)
+	this.switchPhase(_KERNTIME)
 	for n > 0 {
 
 		// no values are actually coming
@@ -913,7 +913,7 @@ func (this *base) childrenWait(n int) bool {
 
 // wait for at least n children to complete ignoring stop messages
 func (this *base) childrenWaitNoStop(ops ...Operator) {
-	this.switchPhase(_CHANTIME)
+	this.switchPhase(_KERNTIME)
 	for _, o := range ops {
 		b := o.getBase()
 		b.activeCond.L.Lock()
@@ -1131,7 +1131,7 @@ func (this *base) notifyParent1(parent Operator) {
 	if parent != nil && !parent.keepAlive(parent) {
 
 		// Block on parent
-		this.switchPhase(_CHANTIME)
+		this.switchPhase(_KERNTIME)
 		parent.ValueExchange().sendChild(int(this.bit))
 		this.switchPhase(_EXECTIME)
 	}
@@ -1543,8 +1543,8 @@ func (this *base) switchPhase(p timePhases) {
 	case _SERVTIME:
 		this.addServTime(d)
 		this.phaseTimes(this.operatorCtx.Context, this.execPhase, d)
-	case _CHANTIME:
-		this.addChanTime(d)
+	case _KERNTIME:
+		this.addKernTime(d)
 	}
 }
 
@@ -1589,8 +1589,8 @@ func (this *base) addExecTime(t time.Duration) {
 	go_atomic.AddInt64((*int64)(&this.execTime), int64(t))
 }
 
-func (this *base) addChanTime(t time.Duration) {
-	go_atomic.AddInt64((*int64)(&this.chanTime), int64(t))
+func (this *base) addKernTime(t time.Duration) {
+	go_atomic.AddInt64((*int64)(&this.kernTime), int64(t))
 }
 
 func (this *base) addServTime(t time.Duration) {
@@ -1625,7 +1625,7 @@ func (this *base) marshalTimes(r map[string]interface{}) {
 	}
 
 	execTime := this.execTime
-	chanTime := this.chanTime
+	kernTime := this.kernTime
 	servTime := this.servTime
 	if this.timePhase != _NOTIME {
 		d = util.Since(this.startTime)
@@ -1634,8 +1634,8 @@ func (this *base) marshalTimes(r map[string]interface{}) {
 			execTime += d
 		case _SERVTIME:
 			servTime += d
-		case _CHANTIME:
-			chanTime += d
+		case _KERNTIME:
+			kernTime += d
 		}
 		stats["state"] = _PHASENAMES[this.timePhase]
 	}
@@ -1643,8 +1643,8 @@ func (this *base) marshalTimes(r map[string]interface{}) {
 	if execTime != 0 {
 		stats["execTime"] = util.OutputDuration(execTime)
 	}
-	if chanTime != 0 {
-		stats["kernTime"] = util.OutputDuration(chanTime)
+	if kernTime != 0 {
+		stats["kernTime"] = util.OutputDuration(kernTime)
 	}
 	if servTime != 0 {
 		stats["servTime"] = util.OutputDuration(servTime)
@@ -1699,7 +1699,7 @@ func (this *base) accrueTime(copy *base) {
 	this.outDocs += copy.outDocs
 	this.phaseSwitches += copy.phaseSwitches
 	this.execTime += copy.execTime
-	this.chanTime += copy.chanTime
+	this.kernTime += copy.kernTime
 	this.servTime += copy.servTime
 }
 
