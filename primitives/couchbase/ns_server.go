@@ -589,7 +589,12 @@ func (b *Bucket) CreateCollection(scope string, collection string, maxTTL int) e
 	pool := b.pool
 	client := pool.client
 	b.RUnlock()
-	args := map[string]interface{}{"name": collection, "maxTTL": maxTTL}
+	var args map[string]interface{}
+	if maxTTL != 0 {
+		args = map[string]interface{}{"name": collection, "maxTTL": maxTTL}
+	} else {
+		args = map[string]interface{}{"name": collection}
+	}
 	return client.parsePostURLResponseTerse("/pools/default/buckets/"+uriAdj(b.Name)+"/scopes/"+uriAdj(scope)+"/collections",
 		args, nil)
 }

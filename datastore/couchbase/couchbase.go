@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"math/rand"
 	"net/http"
 	"net/url"
 	"os"
@@ -3371,4 +3372,294 @@ func CleanupSystemCollection(namespace string, bucket string) {
 		})
 
 	logging.Debugf("%v:%v deleted: %v errors: %v", namespace, bucket, deletedCount, errorCount)
+}
+
+const (
+	_BUCKET_SYSTEM_SCOPE      = "_system"
+	_BUCKET_SYSTEM_COLLECTION = "_query"
+	_BUCKET_SYSTEM_PRIM_INDEX = "#primary"
+)
+
+func (s *store) CreateSysPrimaryIndex(idxName, requestId string, indexer3 datastore.Indexer3) errors.Error {
+	var er errors.Error
+
+	// make sure index storage mode is set first
+	if gsiIndexer, ok := indexer3.(datastore.GsiIndexer); ok {
+		cfgSet := false
+		maxRetry := 8
+		interval := 250 * time.Millisecond
+		for i := 0; i < maxRetry; i++ {
+			cfg := gsiIndexer.GetGsiClientConfig()["indexer.settings.storage_mode"]
+			if cfgStr, ok := cfg.(string); ok && cfgStr != "" {
+				cfgSet = true
+				break
+			}
+
+			time.Sleep(interval)
+			interval *= 2
+
+			er = indexer3.Refresh()
+			if er != nil {
+				return er
+			}
+		}
+		if !cfgSet {
+			return errors.NewSystemCollectionError("Indexer storage mode not set", nil)
+		}
+	}
+
+	// if not serverless, get number of index nodes in the cluster, and create the primary index
+	// with replicas in the following fashion:
+	//    numIndexNode >= 4    ==> num_replica = 2
+	//    numIndexNode >  1    ==> num_replica = 1
+	//    numIndexNode == 1    ==> no replica
+	// for serverless, the number of replica is determined automatically
+	var with value.Value
+	var replica map[string]interface{}
+	num_replica := 0
+	if !tenant.IsServerless() {
+		numIndexNode, errs := s.getNumIndexNode()
+		if len(errs) > 0 {
+			return errs[0]
+		}
+
+		if numIndexNode >= 4 {
+			num_replica = 2
+		} else if numIndexNode > 1 {
+			num_replica = 1
+		}
+		if num_replica > 0 {
+			replica = make(map[string]interface{}, 1)
+			replica["num_replica"] = num_replica
+			with = value.NewValue(replica)
+		}
+	}
+
+	var cont bool
+	createPrimaryIndex := func(n_replica int) (bool, errors.Error) {
+		_, err := indexer3.CreatePrimaryIndex3(requestId, idxName, nil, with)
+		if err != nil && !errors.IsIndexExistsError(err) {
+			// if the create failed due to not enough indexer nodes, retry with fewer replicas
+			for n_replica > 0 {
+				// defined as ErrNotEnoughIndexers in indexing/secondary/common/const.go
+				if !err.ContainsText("not enough indexer nodes to create index with replica") {
+					return false, err
+				}
+
+				n_replica--
+				if n_replica == 0 {
+					with = nil
+				} else {
+					replica["num_replica"] = n_replica
+					with = value.NewValue(replica)
+				}
+
+				// retry with fewer replicas
+				_, err = indexer3.CreatePrimaryIndex3(requestId, idxName, nil, with)
+				if err == nil || errors.IsIndexExistsError(err) {
+					break
+				}
+			}
+			if err != nil && !errors.IsIndexExistsError(err) {
+				return false, err
+			}
+		}
+		return true, err
+	}
+	cont, er = createPrimaryIndex(num_replica)
+	if !cont {
+		return er
+	}
+	existing := er != nil && errors.IsIndexExistsError(er)
+
+	var sysIndex datastore.Index
+	maxRetry := 8
+	if idxName == _BUCKET_SYSTEM_PRIM_INDEX {
+		maxRetry = 10
+	}
+	interval := 250 * time.Millisecond
+	for i := 0; i < maxRetry; i++ {
+		time.Sleep(interval)
+		interval *= 2
+
+		er = indexer3.Refresh()
+		if er != nil {
+			return er
+		}
+		sysIndex, er = indexer3.IndexByName(idxName)
+		if sysIndex != nil {
+			state, _, err1 := sysIndex.State()
+			if err1 != nil {
+				return err1
+			}
+			if state == datastore.ONLINE {
+				break
+			}
+		} else if er != nil {
+			if !errors.IsIndexNotFoundError(er) {
+				return er
+			} else if existing {
+				// if the initial creation attempted failed with "already exists" but
+				// now the index is not found, retry the creation
+				// it could still be waiting for that index to be reported by the
+				// indexer, so keep on retrying if it still fails with "already exists"
+				time.Sleep(time.Duration((rand.Int()%15)+1) * time.Millisecond) // try ensure no concurrent retries
+				cont, er = createPrimaryIndex(num_replica)
+				if !cont || (er != nil && !errors.IsIndexExistsError(er)) {
+					return er
+				} else if er == nil {
+					existing = false
+				}
+			}
+		}
+	}
+
+	return er
+}
+
+func (s *store) GetSystemCollection(bucketName string) (datastore.Keyspace, errors.Error) {
+	return datastore.GetKeyspace("default", bucketName, _BUCKET_SYSTEM_SCOPE, _BUCKET_SYSTEM_COLLECTION)
+}
+
+func (s *store) getNumIndexNode() (int, errors.Errors) {
+	info := s.Info()
+	nodes, errs := info.Topology()
+	if len(errs) > 0 {
+		return 0, errs
+	}
+
+	numIndexNode := 0
+	for _, node := range nodes {
+		nodeServices, errs := info.Services(node)
+		if len(errs) > 0 {
+			return 0, errs
+		}
+		// the nodeServices should have an element named "services" which is
+		// an array of service names on that node, e.g. ["n1ql", "kv", "index"]
+		if services, ok := nodeServices["services"]; ok {
+			if serviceArr, ok := services.([]interface{}); ok {
+				for _, serv := range serviceArr {
+					if name, ok := serv.(string); ok {
+						if name == "index" {
+							numIndexNode++
+						}
+					}
+				}
+			}
+		}
+	}
+
+	return numIndexNode, nil
+}
+
+// check for existance of system collection, and create primary index if necessary
+func (s *store) CheckSystemCollection(bucketName, requestId string) errors.Error {
+	sysColl, err := s.GetSystemCollection(bucketName)
+	if err != nil {
+		// make sure the bucket exists before we wait (e.g. index advisor)
+		switch err.Code() {
+		case errors.E_CB_KEYSPACE_NOT_FOUND, errors.E_CB_BUCKET_NOT_FOUND:
+			defaultPool, er := s.NamespaceByName("default")
+			if er != nil {
+				return er
+			}
+
+			_, er = defaultPool.BucketByName(bucketName)
+			if er != nil {
+				return er
+			}
+		case errors.E_CB_SCOPE_NOT_FOUND:
+			// no-op, ignore
+		default:
+			return err
+		}
+		// wait for system collection to show up
+		maxRetry := 8
+		interval := 250 * time.Millisecond
+		for i := 0; i < maxRetry; i++ {
+			switch err.Code() {
+			case errors.E_CB_KEYSPACE_NOT_FOUND, errors.E_CB_BUCKET_NOT_FOUND, errors.E_CB_SCOPE_NOT_FOUND:
+				// no-op, ignore these errors
+			default:
+				return err
+			}
+
+			time.Sleep(interval)
+			interval *= 2
+
+			sysColl, err = s.GetSystemCollection(bucketName)
+			if sysColl != nil || err == nil {
+				break
+			}
+		}
+		if err != nil {
+			return err
+		} else if sysColl == nil {
+			return errors.NewSystemCollectionError("System collection not available for bucket "+bucketName, nil)
+		}
+	}
+
+	if requestId == "" {
+		return nil
+	}
+
+	indexer, er := sysColl.Indexer(datastore.GSI)
+	if er != nil {
+		return er
+	}
+
+	indexer3, ok := indexer.(datastore.Indexer3)
+	if !ok {
+		return errors.NewInvalidGSIIndexerError("Cannot get primary index on system collection")
+	}
+
+	sysIndex, er := indexer3.IndexByName(_BUCKET_SYSTEM_PRIM_INDEX)
+	if er != nil {
+		if !errors.IsIndexNotFoundError(er) {
+			// only ignore index not found error
+			return er
+		}
+
+		// create primary index on system collection if not already exists
+		// the create function waits for ONLINE state before it returns
+		er = s.CreateSysPrimaryIndex(_BUCKET_SYSTEM_PRIM_INDEX, requestId, indexer3)
+		if er != nil && !errors.IsIndexExistsError(er) {
+			// ignore index already exist error
+			return er
+		}
+	} else {
+		// make sure the primary index is ONLINE
+		maxRetry := 10
+		interval := 250 * time.Millisecond
+		for i := 0; i < maxRetry; i++ {
+			state, _, er1 := sysIndex.State()
+			if er1 != nil {
+				return er1
+			}
+			if state == datastore.ONLINE {
+				break
+			} else if state == datastore.DEFERRED {
+				// build system index if it is deferred (e.g. just restored)
+				er = indexer3.BuildIndexes(requestId, sysIndex.Name())
+				if er != nil {
+					return er
+				}
+			}
+
+			time.Sleep(interval)
+			interval *= 2
+
+			er = indexer3.Refresh()
+			if er != nil {
+				return er
+			}
+
+			sysIndex, er = indexer3.IndexByName(_BUCKET_SYSTEM_PRIM_INDEX)
+			if er != nil {
+				return er
+			}
+		}
+	}
+
+	return er
 }

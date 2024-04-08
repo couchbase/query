@@ -83,8 +83,8 @@ func (this *OrderLimit) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *OrderLimit) beforeItems(context *Context, parent value.Value) bool {
+	// this.Order takes care of the phase operator
 	this.Order.setupTerms(context)
-	context.AddPhaseOperator(SORT)
 	this.numProcessedRows = 0
 	this.setupTerms(context)
 
@@ -174,7 +174,6 @@ func (this *OrderLimit) afterItems(context *Context) {
 			})
 	}
 
-	// Set the sort count to the number of processed rows.
 	context.AddPhaseCount(SORT, this.numProcessedRows)
 	context.SetSortCount(this.numProcessedRows)
 }

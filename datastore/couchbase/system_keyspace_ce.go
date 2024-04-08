@@ -33,11 +33,3 @@ func (s *store) HasSystemCBOStats() (bool, errors.Error) {
 func (s *store) GetSystemCBOStats() (datastore.Keyspace, errors.Error) {
 	return nil, nil
 }
-
-func (s *store) GetSystemCollection(bucketName string) (datastore.Keyspace, errors.Error) {
-	return nil, nil
-}
-
-func (s *store) CheckSystemCollection(bucketName, requestId string) errors.Error {
-	return nil
-}
