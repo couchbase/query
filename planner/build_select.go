@@ -16,7 +16,6 @@ import (
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
 	base "github.com/couchbase/query/plannerbase"
-	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
@@ -188,9 +187,7 @@ func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 				}
 			}
 			offsetHandled = (this.partialSortTermCount > 0)
-			canSpill := util.IsFeatureEnabled(this.context.FeatureControls(), util.N1QL_SPILL_TO_DISK)
-			order := plan.NewOrder(stmtOrder, this.partialSortTermCount, offset, limit, cost, cardinality, size, frCost, true,
-				canSpill)
+			order := plan.NewOrder(stmtOrder, this.partialSortTermCount, offset, limit, cost, cardinality, size, frCost, true, true)
 			children = append(children, order)
 			lastOp = order
 		}

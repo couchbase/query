@@ -79,6 +79,7 @@ type AnnotatedValue interface {
 	SetValue(Value)
 	GetValue() Value
 	GetParent() Value
+	SetParent(Value) Value
 	Attachments() map[string]interface{}
 	GetAttachment(key string) interface{}
 	SetAttachment(key string, val interface{})
@@ -286,6 +287,13 @@ func (this *annotatedValue) GetValue() Value {
 func (this *annotatedValue) GetParent() Value {
 	if sc, ok := this.Value.(*ScopeValue); ok {
 		return sc.Parent()
+	}
+	return nil
+}
+
+func (this *annotatedValue) SetParent(p Value) Value {
+	if sc, ok := this.Value.(*ScopeValue); ok {
+		return sc.SetParent(p)
 	}
 	return nil
 }
@@ -969,6 +977,10 @@ func (this *annotatedValueSelfReference) GetValue() Value {
 
 func (this *annotatedValueSelfReference) GetParent() Value {
 	return (*annotatedValue)(this).GetParent()
+}
+
+func (this *annotatedValueSelfReference) SetParent(p Value) Value {
+	return (*annotatedValue)(this).SetParent(p)
 }
 
 func (this *annotatedValueSelfReference) Attachments() map[string]interface{} {

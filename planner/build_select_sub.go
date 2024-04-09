@@ -18,7 +18,6 @@ import (
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
 	base "github.com/couchbase/query/plannerbase"
-	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
@@ -463,7 +462,6 @@ func (this *builder) visitGroup(group *algebra.Group, aggs algebra.Aggregates) {
 			}
 		}
 		aggv := sortAggregatesSlice(aggs)
-		canSpill := util.IsFeatureEnabled(this.context.FeatureControls(), util.N1QL_SPILL_TO_DISK)
 
 		var allowedGroupAsFields []string
 		if group.GroupAs() != "" {
@@ -473,12 +471,12 @@ func (this *builder) visitGroup(group *algebra.Group, aggs algebra.Aggregates) {
 		}
 
 		this.addSubChildren(plan.NewInitialGroup(group.By(), aggv,
-			costInitial, cardinalityInitial, size, costInitial, canSpill, group.GroupAs(), allowedGroupAsFields))
+			costInitial, cardinalityInitial, size, costInitial, true, group.GroupAs(), allowedGroupAsFields))
 		this.addChildren(this.addSubchildrenParallel())
 		this.addChildren(plan.NewIntermediateGroup(group.By(), aggv,
-			costIntermediate, cardinalityIntermediate, size, costIntermediate, canSpill, group.GroupAs()))
+			costIntermediate, cardinalityIntermediate, size, costIntermediate, true, group.GroupAs()))
 		this.addChildren(plan.NewFinalGroup(group.By(), aggv,
-			costFinal, cardinalityFinal, size, costFinal, canSpill))
+			costFinal, cardinalityFinal, size, costFinal, true))
 	}
 
 	this.addLetAndPredicate(group.Letting(), group.Having())

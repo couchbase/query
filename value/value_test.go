@@ -839,7 +839,7 @@ func TestSpillingMap(t *testing.T) {
 	merge := func(a AnnotatedValue, b AnnotatedValue) AnnotatedValue {
 		return a
 	}
-	themap := NewAnnotatedMap(shouldSpill, trackMem, merge)
+	themap := NewAnnotatedMap(shouldSpill, trackMem, merge, nil, nil, false)
 	check := make(map[string]string, 4)
 
 	re := regexp.MustCompile("\\(0x[0-9a-f]+\\)")

@@ -15,58 +15,27 @@ import (
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/plan"
-	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
 type FinalGroup struct {
 	base
-	plan   *plan.FinalGroup
-	groups *value.AnnotatedMap
+	groupBase
+	plan *plan.FinalGroup
 }
 
 func NewFinalGroup(plan *plan.FinalGroup, context *Context) *FinalGroup {
 
-	var shouldSpill func(uint64, uint64) bool
-	if plan.CanSpill() && context.UseRequestQuota() && context.MemoryQuota() > 0 {
-		shouldSpill = func(c uint64, n uint64) bool {
-			return (c+n) > context.ProducerThrottleQuota() && context.CurrentQuotaUsage() > _GROUP_QUOTA_THRESHOLD
-		}
-	} else if plan.CanSpill() {
-		maxSize := context.AvailableMemory()
-		if maxSize > 0 {
-			maxSize = uint64(float64(maxSize) / float64(util.NumCPU()) * _GROUP_AVAILABLE_MEMORY_THRESHOLD)
-		}
-		if maxSize < _MIN_SIZE {
-			maxSize = _MIN_SIZE
-		}
-		shouldSpill = func(c uint64, n uint64) bool {
-			return (c + n) > maxSize
-		}
-	}
-
-	trackMem := func(size int64) {
-		if context.UseRequestQuota() {
-			if size < 0 {
-				context.ReleaseValueSize(uint64(-size))
-			} else {
-				if err := context.TrackValueSize(uint64(size)); err != nil {
-					context.Fatal(err)
-				}
-			}
-		}
-	}
 	merge := func(v1 value.AnnotatedValue, v2 value.AnnotatedValue) value.AnnotatedValue {
 		logging.Debugf("Invalid call to merge in FinalGroup")
 		return v1
 	}
 
 	rv := &FinalGroup{
-		plan:   plan,
-		groups: value.NewAnnotatedMap(shouldSpill, trackMem, merge),
+		plan: plan,
 	}
-
 	newBase(&rv.base, context)
+	newGroupBase(&rv.groupBase, context, plan.CanSpill(), merge)
 	rv.output = rv
 	return rv
 }
@@ -77,10 +46,10 @@ func (this *FinalGroup) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *FinalGroup) Copy() Operator {
 	rv := &FinalGroup{
-		plan:   this.plan,
-		groups: this.groups.Copy(),
+		plan: this.plan,
 	}
 	this.base.copy(&rv.base)
+	this.groupBase.copy(&rv.groupBase)
 	return rv
 }
 
@@ -89,7 +58,7 @@ func (this *FinalGroup) PlanOp() plan.Operator {
 }
 
 func (this *FinalGroup) RunOnce(context *Context, parent value.Value) {
-	this.runConsumer(this, context, parent, this.groups.Release)
+	this.runConsumer(this, context, parent, this.Release)
 }
 
 func (this *FinalGroup) processItem(item value.AnnotatedValue, context *Context) bool {
@@ -170,6 +139,7 @@ func (this *FinalGroup) afterItems(context *Context) {
 		}
 		this.sendItem(av)
 	}
+	this.Release()
 }
 
 func (this *FinalGroup) MarshalJSON() ([]byte, error) {
@@ -180,6 +150,6 @@ func (this *FinalGroup) MarshalJSON() ([]byte, error) {
 }
 
 func (this *FinalGroup) reopen(context *Context) bool {
-	this.groups.Release()
+	this.Release()
 	return this.baseReopen(context)
 }

@@ -10,7 +10,9 @@ package value
 
 import (
 	"bufio"
+	"compress/zlib"
 	"container/heap"
+	"fmt"
 	"io"
 	"os"
 	"sort"
@@ -31,20 +33,25 @@ type annotatedMapEntry struct {
 
 type mapSpillFile struct {
 	f       *os.File
-	reader  *bufio.Reader
+	reader  io.Reader
 	current *annotatedMapEntry
 	sz      int64
 
 	read time.Duration
+
+	compress bool
 }
 
-func (this *mapSpillFile) rewind(trackMemory func(int64)) error {
+func (this *mapSpillFile) rewind(trackMemory func(int64), afterRead func(AnnotatedValue)) error {
 	_, err := this.f.Seek(0, os.SEEK_SET)
 	if err != nil {
 		return errors.NewValueError(errors.E_VALUE_SPILL_READ, err)
 	}
 	this.reader = bufio.NewReaderSize(this.f, 64*util.KiB)
-	err = this.nextValue(trackMemory)
+	if this.compress {
+		this.reader, _ = zlib.NewReader(this.reader)
+	}
+	err = this.nextValue(trackMemory, afterRead)
 	if err != nil {
 		if _, ok := err.(errors.Error); ok {
 			return err
@@ -58,7 +65,7 @@ func (this *mapSpillFile) Read(b []byte) (int, error) {
 	return io.ReadFull(this.reader, b)
 }
 
-func (this *mapSpillFile) nextValue(trackMemory func(int64)) error {
+func (this *mapSpillFile) nextValue(trackMemory func(int64), afterRead func(AnnotatedValue)) error {
 	this.current = nil
 	s := time.Now()
 	k, err := readSpillValue(this, nil)
@@ -85,6 +92,9 @@ func (this *mapSpillFile) nextValue(trackMemory func(int64)) error {
 	av, ok := v.(AnnotatedValue)
 	if !ok {
 		return errors.NewValueError(errors.E_VALUE_INVALID)
+	}
+	if afterRead != nil {
+		afterRead(av)
 	}
 	this.current = &annotatedMapEntry{key: key, val: av}
 	if trackMemory != nil {
@@ -125,24 +135,34 @@ type AnnotatedMap struct {
 	shouldSpill func(uint64, uint64) bool
 	trackMemory func(int64)
 	merge       func(AnnotatedValue, AnnotatedValue) AnnotatedValue
+	beforeSpill func(AnnotatedValue)
+	afterRead   func(AnnotatedValue)
 
 	inMem   map[string]AnnotatedValue
 	memSize uint64
 	spill   mapSpillFileHeap
 
 	accumSpillTime time.Duration
+
+	compress bool
 }
 
 func NewAnnotatedMap(
 	shouldSpill func(uint64, uint64) bool,
 	trackMemory func(int64),
-	merge func(AnnotatedValue, AnnotatedValue) AnnotatedValue) *AnnotatedMap {
+	merge func(AnnotatedValue, AnnotatedValue) AnnotatedValue,
+	beforeSpill func(AnnotatedValue),
+	afterRead func(AnnotatedValue),
+	compressSpill bool) *AnnotatedMap {
 
 	rv := &AnnotatedMap{
 		shouldSpill: shouldSpill,
 		trackMemory: trackMemory,
 		merge:       merge,
+		beforeSpill: beforeSpill,
+		afterRead:   afterRead,
 		inMem:       make(map[string]AnnotatedValue, _INITIAL_MAP_SIZE),
+		compress:    compressSpill,
 	}
 
 	return rv
@@ -153,7 +173,10 @@ func (this *AnnotatedMap) Copy() *AnnotatedMap {
 		shouldSpill: this.shouldSpill,
 		trackMemory: this.trackMemory,
 		merge:       this.merge,
+		beforeSpill: this.beforeSpill,
+		afterRead:   this.afterRead,
 		inMem:       make(map[string]AnnotatedValue, _INITIAL_MAP_SIZE),
+		compress:    this.compress,
 	}
 	return rv
 }
@@ -213,12 +236,17 @@ func (this *AnnotatedMap) spillToDisk() errors.Error {
 		return nil
 	}
 	start := time.Now()
-	spill := &mapSpillFile{}
+	spill := &mapSpillFile{compress: this.compress}
 	spill.f, err = util.CreateTemp(_SPILL_FILE_PATTERN, true)
 	if err != nil {
 		return errors.NewValueError(errors.E_VALUE_SPILL_CREATE, err)
 	}
-	writer := bufio.NewWriter(spill.f)
+	var writer writerFlusher
+	if this.compress {
+		writer = zlib.NewWriter(spill.f)
+	} else {
+		writer = bufio.NewWriter(spill.f)
+	}
 	buf := _SPILL_POOL.Get()
 	imsz := this.memSize
 	// this is a notable compromise: to keep non-spilling perfomance we use a map but this must then be sorted in order
@@ -230,12 +258,20 @@ func (this *AnnotatedMap) spillToDisk() errors.Error {
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)
-	for _, k := range keys {
+	lastSize := int64(0)
+	spaceCheckInterval := int(len(keys) / 10)
+	if spaceCheckInterval < 1 {
+		spaceCheckInterval = 1
+	}
+	for n, k := range keys {
 		me := this.inMem[k]
 		err = writeSpillValue(writer, k, buf)
 		if err != nil {
 			_SPILL_POOL.Put(buf)
 			return errors.NewValueError(errors.E_VALUE_SPILL_WRITE, err)
+		}
+		if this.beforeSpill != nil {
+			this.beforeSpill(me)
 		}
 		err = writeSpillValue(writer, me, buf)
 		if err != nil {
@@ -248,6 +284,17 @@ func (this *AnnotatedMap) spillToDisk() errors.Error {
 		this.memSize -= (uint64(len(k)) + me.Size())
 		me.Recycle()
 		delete(this.inMem, k)
+
+		if n%spaceCheckInterval == 0 {
+			spill.sz, err = spill.f.Seek(0, os.SEEK_CUR)
+			if err != nil {
+				return errors.NewValueError(errors.E_VALUE_SPILL_SIZE, err)
+			}
+			if !util.UseTemp(spill.f.Name(), spill.sz-lastSize) {
+				return errors.NewTempFileQuotaExceededError()
+			}
+			lastSize = spill.sz
+		}
 	}
 	_SPILL_POOL.Put(buf)
 	writer.Flush()
@@ -255,13 +302,16 @@ func (this *AnnotatedMap) spillToDisk() errors.Error {
 	if err != nil {
 		return errors.NewValueError(errors.E_VALUE_SPILL_SIZE, err)
 	}
-	if !util.UseTemp(spill.f.Name(), spill.sz) {
+	if !util.UseTemp(spill.f.Name(), spill.sz-lastSize) {
 		return errors.NewTempFileQuotaExceededError()
 	}
 	this.spill = append(this.spill, spill)
 	d := time.Now().Sub(start)
 	this.accumSpillTime += d
-	logging.Debugf("[%p,%p] %v mem: %v -> temp: %v (%.3f x)", this, spill, d, imsz, spill.sz, float64(spill.sz)/float64(imsz))
+	logging.Debuga(func() string {
+		return fmt.Sprintf("[%p,%p] %v mem: %v -> temp: %v (%.3f %%)", this, spill, d, imsz, spill.sz,
+			float64(spill.sz)/float64(imsz)*100.0)
+	})
 	return nil
 }
 
@@ -270,7 +320,7 @@ func (this *AnnotatedMap) Foreach(f func(string, AnnotatedValue) bool) errors.Er
 	returned := 0
 	if this.spill != nil {
 		for i := range this.spill {
-			err := this.spill[i].rewind(this.trackMemory)
+			err := this.spill[i].rewind(this.trackMemory, this.afterRead)
 			if err != nil {
 				this.Unlock()
 				logging.Debugf("[%p] rewind failed on [%d] %s: %v", this, i, this.spill[i].f.Name(), err)
@@ -304,7 +354,7 @@ func (this *AnnotatedMap) Foreach(f func(string, AnnotatedValue) bool) errors.Er
 					this.Unlock()
 					return nil
 				}
-				err := this.spill[0].nextValue(this.trackMemory)
+				err := this.spill[0].nextValue(this.trackMemory, this.afterRead)
 				if err != io.EOF && err != nil {
 					this.Unlock()
 					return errors.NewValueError(errors.E_VALUE_SPILL_READ, err)
@@ -342,7 +392,7 @@ func (this *AnnotatedMap) Foreach(f func(string, AnnotatedValue) bool) errors.Er
 				}
 				delete(this.inMem, keys[n])
 				n++
-				err := this.spill[0].nextValue(this.trackMemory)
+				err := this.spill[0].nextValue(this.trackMemory, this.afterRead)
 				if err != io.EOF && err != nil {
 					this.Unlock()
 					return errors.NewValueError(errors.E_VALUE_SPILL_READ, err)
@@ -400,7 +450,7 @@ func (this *AnnotatedMap) mergeKeys() error {
 				b.current.val.Recycle() // because it will never flow out of this container
 			}
 			heap.Push(&this.spill, a)
-			err := b.nextValue(this.trackMemory)
+			err := b.nextValue(this.trackMemory, this.afterRead)
 			if err != nil && err != io.EOF {
 				return err
 			} else if err == io.EOF {

@@ -1396,8 +1396,7 @@ func (this *builder) buildEarlyOrder(iscan3 *plan.IndexScan3, useCBO bool) (plan
 		}
 	}
 
-	canSpill := util.IsFeatureEnabled(this.context.FeatureControls(), util.N1QL_SPILL_TO_DISK)
-	orderOp := plan.NewOrder(order, this.partialSortTermCount, offset, limit, cost, cardinality, size, frCost, true, canSpill)
+	orderOp := plan.NewOrder(order, this.partialSortTermCount, offset, limit, cost, cardinality, size, frCost, true, true)
 	orderOp.SetEarlyOrder()
 	this.addChildren(orderOp)
 	this.setBuilderFlag(BUILDER_HAS_EARLY_ORDER)

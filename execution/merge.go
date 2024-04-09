@@ -40,7 +40,7 @@ func NewMerge(plan *plan.Merge, context *Context, update, delete, insert Operato
 	if !context.HasFeature(util.N1QL_MERGE_LEGACY) {
 		// for spilling to disk use the same functions/constants as used in Order operator
 		var shouldSpill func(uint64, uint64) bool
-		if plan.CanSpill() {
+		if plan.CanSpill() && !context.HasFeature(util.N1QL_DISABLE_SPILL_TO_DISK) {
 			if context.UseRequestQuota() && context.MemoryQuota() > 0 {
 				shouldSpill = func(c uint64, n uint64) bool {
 					if (c + n) <= context.ProducerThrottleQuota() {
