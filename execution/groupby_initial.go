@@ -13,6 +13,7 @@ import (
 	"fmt"
 
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
@@ -23,34 +24,34 @@ const (
 	_GROUP_AVAILABLE_MEMORY_THRESHOLD = 0.15 // % per CPU free memory
 )
 
-// Grouping of input data.
-type InitialGroup struct {
-	base
-	plan   *plan.InitialGroup
-	groups *value.AnnotatedMap
+type groupBase struct {
+	groups  *value.AnnotatedMap
+	parents map[string]value.Value
 }
 
-func NewInitialGroup(plan *plan.InitialGroup, context *Context) *InitialGroup {
+func newGroupBase(this *groupBase, context *Context, canSpill bool,
+	merge func(v1 value.AnnotatedValue, v2 value.AnnotatedValue) value.AnnotatedValue) {
 
 	var shouldSpill func(uint64, uint64) bool
-	if plan.CanSpill() && context.UseRequestQuota() && context.MemoryQuota() > 0 {
-		shouldSpill = func(c uint64, n uint64) bool {
-			return (c+n) > context.ProducerThrottleQuota() && context.CurrentQuotaUsage() > _GROUP_QUOTA_THRESHOLD
-		}
-	} else if plan.CanSpill() {
-		maxSize := context.AvailableMemory()
-		if maxSize > 0 {
-			maxSize = uint64(float64(maxSize) / float64(util.NumCPU()) * _GROUP_AVAILABLE_MEMORY_THRESHOLD)
-		}
-		if maxSize < _MIN_SIZE {
-			maxSize = _MIN_SIZE
-		}
-		shouldSpill = func(c uint64, n uint64) bool {
-			return (c + n) > maxSize
+	if canSpill && !context.HasFeature(util.N1QL_DISABLE_SPILL_TO_DISK) {
+		if context.UseRequestQuota() && context.MemoryQuota() > 0 {
+			shouldSpill = func(c uint64, n uint64) bool {
+				return (c+n) > context.ProducerThrottleQuota() && context.CurrentQuotaUsage() > _GROUP_QUOTA_THRESHOLD
+			}
+		} else {
+			maxSize := context.AvailableMemory()
+			if maxSize > 0 {
+				maxSize = uint64(float64(maxSize) / float64(util.NumCPU()) * _GROUP_AVAILABLE_MEMORY_THRESHOLD)
+			}
+			if maxSize < _MIN_SIZE {
+				maxSize = _MIN_SIZE
+			}
+			shouldSpill = func(c uint64, n uint64) bool { return (c + n) > maxSize }
 		}
 	}
-	trackMem := func(size int64) {
-		if context.UseRequestQuota() {
+	var trackMem func(int64)
+	if context.UseRequestQuota() {
+		trackMem = func(size int64) {
 			if size < 0 {
 				context.ReleaseValueSize(uint64(-size))
 			} else {
@@ -60,6 +61,66 @@ func NewInitialGroup(plan *plan.InitialGroup, context *Context) *InitialGroup {
 			}
 		}
 	}
+
+	this.parents = make(map[string]value.Value)
+	this.groups = value.NewAnnotatedMap(shouldSpill, trackMem, merge, this.beforeSpill, this.afterRead, true)
+}
+
+func (this *groupBase) Release() {
+	logging.Debugf("[%p] len(this.parents)=%v", this, len(this.parents))
+	if this.parents != nil {
+		for k, _ := range this.parents {
+			delete(this.parents, k)
+		}
+	}
+	this.groups.Release()
+}
+
+// Deliberately doesn't track/release
+func (this *groupBase) copy(dest *groupBase) {
+	dest.groups = this.groups.Copy()
+	if this.parents == nil {
+		dest.parents = nil
+	} else {
+		dest.parents = make(map[string]value.Value, len(this.parents))
+		for k, v := range this.parents {
+			dest.parents[k] = v
+		}
+	}
+}
+
+func (this *groupBase) beforeSpill(av value.AnnotatedValue) {
+	if p := av.SetParent(nil); p != nil {
+		k := fmt.Sprintf("%p", p)
+		this.parents[k] = p
+		av.SetAttachment("~parent_key", k)
+	}
+}
+
+func (this *groupBase) afterRead(av value.AnnotatedValue) {
+	if pk := av.GetAttachment("~parent_key"); pk != nil {
+		if pks, ok := pk.(string); ok {
+			if p, ok := this.parents[pks]; ok {
+				av.SetParent(p)
+			} else {
+				logging.Debugf("[%p] parent key '%v' for %p not found", this, pks, av)
+			}
+		} else {
+			logging.Debugf("[%p] parent key for %p is not a string: %T (%v)", this, av, pk, pk)
+		}
+		av.RemoveAttachment("~parent_key")
+	}
+}
+
+// Grouping of input data.
+type InitialGroup struct {
+	base
+	groupBase
+	plan *plan.InitialGroup
+}
+
+func NewInitialGroup(plan *plan.InitialGroup, context *Context) *InitialGroup {
+
 	merge := func(v1 value.AnnotatedValue, v2 value.AnnotatedValue) value.AnnotatedValue {
 		a1 := v1.GetAttachment("aggregates").(map[string]value.Value)
 		a2 := v2.GetAttachment("aggregates").(map[string]value.Value)
@@ -86,10 +147,10 @@ func NewInitialGroup(plan *plan.InitialGroup, context *Context) *InitialGroup {
 	}
 
 	rv := &InitialGroup{
-		plan:   plan,
-		groups: value.NewAnnotatedMap(shouldSpill, trackMem, merge),
+		plan: plan,
 	}
 	newBase(&rv.base, context)
+	newGroupBase(&rv.groupBase, context, plan.CanSpill(), merge)
 	rv.output = rv
 	return rv
 }
@@ -100,10 +161,10 @@ func (this *InitialGroup) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *InitialGroup) Copy() Operator {
 	rv := &InitialGroup{
-		plan:   this.plan,
-		groups: this.groups.Copy(),
+		plan: this.plan,
 	}
 	this.base.copy(&rv.base)
+	this.groupBase.copy(&rv.groupBase)
 	return rv
 }
 
@@ -112,7 +173,7 @@ func (this *InitialGroup) PlanOp() plan.Operator {
 }
 
 func (this *InitialGroup) RunOnce(context *Context, parent value.Value) {
-	this.runConsumer(this, context, parent, this.groups.Release)
+	this.runConsumer(this, context, parent, this.Release)
 }
 
 func (this *InitialGroup) processItem(item value.AnnotatedValue, context *Context) bool {
@@ -225,7 +286,7 @@ func (this *InitialGroup) afterItems(context *Context) {
 	if err != nil {
 		context.Error(err)
 	}
-	this.groups.Release()
+	this.Release()
 }
 
 func (this *InitialGroup) MarshalJSON() ([]byte, error) {
@@ -236,6 +297,6 @@ func (this *InitialGroup) MarshalJSON() ([]byte, error) {
 }
 
 func (this *InitialGroup) reopen(context *Context) bool {
-	this.groups.Release()
+	this.Release()
 	return this.baseReopen(context)
 }

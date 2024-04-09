@@ -275,6 +275,16 @@ func (this *ScopeValue) ResetParent() {
 	}
 }
 
+// NOTE:
+// There is no tracking of the parent swapping here. This is intentional as this function is intended to be used only to
+// temporarily remove the parent which will later be restored when values are spilled to disk.  We do not want to have
+// a case where this is the last reference to the parent and recycling frees it when we'll want to reuse it again later.
+func (this *ScopeValue) SetParent(newParent Value) Value {
+	pp := this.parent
+	this.parent = newParent
+	return pp
+}
+
 /*
 Return the immediate map.
 */
