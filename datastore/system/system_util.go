@@ -426,7 +426,9 @@ func credsFromContext(context SystemContext) string {
 	creds := context.Credentials()
 	privs := auth.NewPrivileges()
 	privs.Add("", auth.PRIV_SYSTEM_READ, auth.PRIV_PROPS_NONE)
-	if datastore.GetDatastore().Authorize(privs, creds) == nil {
+
+	// Since this is an internal action to check if the user is an admin
+	if datastore.GetDatastore().AuthorizeInternal(privs, creds) == nil {
 
 		// it's an admin, no restrictions
 		userName = ""

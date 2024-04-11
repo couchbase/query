@@ -82,6 +82,11 @@ func (s *store) Authorize(priv *auth.Privileges, creds *auth.Credentials) errors
 	return nil
 }
 
+func (s *store) AuthorizeInternal(priv *auth.Privileges, creds *auth.Credentials) errors.Error {
+	creds.AuthenticatedUsers = []string{"dummy"}
+	return nil
+}
+
 func (s *store) AdminUser(node string) (string, string, error) {
 	return "", "", nil
 }

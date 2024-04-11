@@ -56,7 +56,12 @@ func (b *sequenceKeyspace) Count(context datastore.QueryContext) (int64, errors.
 	count := int64(0)
 	namespaceIds, err := b.store.NamespaceIds()
 	if err == nil {
-		canAccessAll := canAccessSystemTables(context)
+
+		// this access check is done to check if the user has system catalog permissions
+		// i.e if checking permissions on individual entities in the system keyspace can be avoided.
+		// thus consider this check an internal action.
+		canAccessAll := canAccessSystemTables(context, true)
+
 		includeOnDisk := b.Name() == KEYSPACE_NAME_ALL_SEQUENCES
 		for _, namespaceId := range namespaceIds {
 			namespace, err = b.store.NamespaceById(namespaceId)
@@ -260,11 +265,13 @@ func canListSequences(context datastore.QueryContext, ds datastore.Datastore, na
 	privs := auth.NewPrivileges()
 	privs.Add(path, auth.PRIV_QUERY_USE_SEQUENCES, auth.PRIV_PROPS_NONE)
 	creds := context.Credentials()
-	if ds.Authorize(privs, creds) == nil {
+
+	// avoid logging an audit on authorization failures for an internal authorization action
+	if ds.AuthorizeInternal(privs, creds) == nil {
 		return true
 	}
 	privs.List[0].Priv = auth.PRIV_QUERY_MANAGE_SEQUENCES
-	return (ds.Authorize(privs, creds) == nil)
+	return (ds.AuthorizeInternal(privs, creds) == nil)
 }
 
 func (pi *sequenceIndex) ScanEntries(requestId string, limit int64, cons datastore.ScanConsistency,
@@ -291,7 +298,7 @@ func (pi *sequenceIndex) doScanEntries(requestId string, filter func(string) boo
 	includeOnDisk := pi.keyspace.Name() == KEYSPACE_NAME_ALL_SEQUENCES
 	namespaceIds, err := pi.keyspace.store.NamespaceIds()
 	if err == nil {
-		canAccessAll := canAccessSystemTables(conn.QueryContext())
+		canAccessAll := canAccessSystemTables(conn.QueryContext(), true)
 		for _, namespaceId := range namespaceIds {
 			namespace, err := pi.keyspace.store.NamespaceById(namespaceId)
 			if err != nil {

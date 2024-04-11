@@ -89,7 +89,11 @@ func (b *indexKeyspace) Count(context datastore.QueryContext) (int64, errors.Err
 	count := int64(0)
 	namespaceIds, excp := b.store.NamespaceIds()
 	if excp == nil {
-		canAccessAll := canAccessSystemTables(context)
+
+		// this access check is done to check if the user has system catalog permissions
+		// i.e if checking permissions on individual entities in the system keyspace can be avoided.
+		// thus consider this check an internal action.
+		canAccessAll := canAccessSystemTables(context, true)
 
 		includeSeqScan := b.Name() == KEYSPACE_NAME_ALL_INDEXES
 	loop:
@@ -560,7 +564,9 @@ func canRead(context datastore.QueryContext, ds datastore.Datastore, elems ...st
 	} else {
 		privs.Add(path, auth.PRIV_QUERY_SELECT, auth.PRIV_PROPS_NONE)
 	}
-	err := datastore.GetDatastore().Authorize(privs, context.Credentials())
+
+	// avoid logging an audit on authorization failures for an internal authorization action
+	err := datastore.GetDatastore().AuthorizeInternal(privs, context.Credentials())
 	res := err == nil
 	return res
 }
@@ -575,7 +581,9 @@ func canListIndexes(context datastore.QueryContext, ds datastore.Datastore, elem
 	} else {
 		privs.Add(path, auth.PRIV_QUERY_LIST_INDEX, auth.PRIV_PROPS_NONE)
 	}
-	err := datastore.GetDatastore().Authorize(privs, context.Credentials())
+
+	// avoid logging an audit on authorization failures for an internal authorization action
+	err := datastore.GetDatastore().AuthorizeInternal(privs, context.Credentials())
 	res := err == nil
 	return res
 }
@@ -598,7 +606,7 @@ func (pi *indexIndex) scanEntries(requestId string, spanEvaluator compiledSpans,
 				return spanEvaluator.evaluate(name)
 			}
 		}
-		canAccessAll := canAccessSystemTables(conn.QueryContext())
+		canAccessAll := canAccessSystemTables(conn.QueryContext(), true)
 		for _, namespaceId := range namespaceIds {
 			namespace, err := pi.keyspace.store.NamespaceById(namespaceId)
 			if err != nil {

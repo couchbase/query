@@ -45,7 +45,11 @@ func (b *bucketKeyspace) Count(context datastore.QueryContext) (int64, errors.Er
 
 	count := int64(0)
 	namespaceIds, excp := b.store.NamespaceIds()
-	canAccessAll := canAccessSystemTables(context)
+
+	// since CountScan is only allowed when the user can access system keyspaces
+	// do not consider the access check as an internal action
+	canAccessAll := canAccessSystemTables(context, false)
+
 	if excp == nil {
 		for _, namespaceId := range namespaceIds {
 			namespace, excp := b.store.NamespaceById(namespaceId)

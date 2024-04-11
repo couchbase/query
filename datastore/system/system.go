@@ -183,6 +183,11 @@ func (s *store) Authorize(*auth.Privileges, *auth.Credentials) errors.Error {
 	return nil
 }
 
+func (s *store) AuthorizeInternal(*auth.Privileges, *auth.Credentials) errors.Error {
+	logging.Logf(logging.INFO, "System authorize internal action")
+	return nil
+}
+
 func (s *store) AdminUser(node string) (string, string, error) {
 	return "", "", nil
 }

@@ -43,10 +43,20 @@ func (b *keyspaceKeyspace) Name() string {
 	return b.name
 }
 
-func canAccessSystemTables(context datastore.QueryContext) bool {
+// Checks if the user has permissions to access system keyspaces
+// isInternal: whether the authorization check is for an internal action.
+func canAccessSystemTables(context datastore.QueryContext, isInternal bool) bool {
 	privs := auth.NewPrivileges()
 	privs.Add("", auth.PRIV_SYSTEM_READ, auth.PRIV_PROPS_NONE)
-	err := datastore.GetDatastore().Authorize(privs, context.Credentials())
+
+	var err errors.Error
+	if isInternal {
+		// avoid logging an audit on authorization failures for an internal authorization action
+		err = datastore.GetDatastore().AuthorizeInternal(privs, context.Credentials())
+	} else {
+		err = datastore.GetDatastore().Authorize(privs, context.Credentials())
+	}
+
 	res := err == nil
 	return res
 
@@ -58,7 +68,11 @@ func (b *keyspaceKeyspace) Count(context datastore.QueryContext) (int64, errors.
 
 	count := int64(0)
 	namespaceIds, excp := b.store.NamespaceIds()
-	canAccessAll := canAccessSystemTables(context)
+
+	// since CountScan is only allowed when the user can access system keyspaces
+	// do not consider the access check as an internal action
+	canAccessAll := canAccessSystemTables(context, false)
+
 	if excp == nil {
 		for _, namespaceId := range namespaceIds {
 			namespace, excp := b.store.NamespaceById(namespaceId)
@@ -431,7 +445,7 @@ func (pi *keyspaceIndex) scan(requestId string, spanEvaluator compiledSpans, lim
 	defer conn.Sender().Close()
 	namespaceIds, err := pi.keyspace.store.NamespaceIds()
 	if err == nil {
-		canAccessAll := canAccessSystemTables(conn.QueryContext())
+		canAccessAll := canAccessSystemTables(conn.QueryContext(), true)
 		if !pi.primary && len(spanEvaluator) > 0 && !spanEvaluator.acceptMissing() {
 			filter = func(name string) bool {
 				return spanEvaluator.evaluate(name)
@@ -540,7 +554,7 @@ func (pi *keyspaceIndex) ScanEntries(requestId string, limit int64, cons datasto
 	var numProduced int64 = 0
 	namespaceIds, err := pi.keyspace.store.NamespaceIds()
 	if err == nil {
-		canAccessAll := canAccessSystemTables(conn.QueryContext())
+		canAccessAll := canAccessSystemTables(conn.QueryContext(), true)
 
 	loop:
 		for _, namespaceId := range namespaceIds {

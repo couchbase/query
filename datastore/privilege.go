@@ -55,13 +55,16 @@ func DecodeName(encodedName string) (string, string) {
 	return "", ""
 }
 
+// Checks if the user is an Administrator but does NOT audit the authorization check.
 func IsAdmin(creds *auth.Credentials) bool {
 	ds := GetDatastore()
 	if ds != nil && creds != nil {
 
 		privs := auth.NewPrivileges()
 		privs.Add("", auth.PRIV_ADMIN, 0)
-		return ds.Authorize(privs, creds) == nil
+
+		// avoid logging an audit for an internal authorization action
+		return ds.AuthorizeInternal(privs, creds) == nil
 	}
 	return false
 }
