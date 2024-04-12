@@ -439,10 +439,10 @@ func (this *Merge) processAction(item value.AnnotatedValue, context *Context,
 							context.Error(errors.NewMergeMultiUpdateError(key))
 							return false
 						} else if legacy {
-							ignore = true
-						} else {
 							// in case of delete and the bit N1QL_MERGE_LEGACY
 							// is set, silently ignore multiple delete requests
+							ignore = true
+						} else {
 							context.Error(errors.NewMergeMultiUpdateError(key))
 							return false
 						}
@@ -451,9 +451,7 @@ func (this *Merge) processAction(item value.AnnotatedValue, context *Context,
 					if !ignore {
 						var item1 value.AnnotatedValue
 						if !this.plan.FastDiscard() {
-							item1 = tav
-							item1.SetField(alias, item1)
-							item.UnsetField(alias)
+							item1 = item
 						} else if context.TxContext() != nil {
 							// if inside transaction, save META information
 							// (tav represents target, set above)
@@ -462,9 +460,11 @@ func (this *Merge) processAction(item value.AnnotatedValue, context *Context,
 							// Reset the META data on the original value to
 							// avoid "sharing"
 							tav.ResetMeta()
+							item.Recycle()
 						} else {
 							item1 = this.newEmptyDocumentWithKey(key, nil, context)
 							item1.SetField(alias, item1)
+							item.Recycle()
 						}
 						this.matched[key] = false
 						if legacy {
@@ -473,7 +473,6 @@ func (this *Merge) processAction(item value.AnnotatedValue, context *Context,
 							// add to items to be deleted, actual delete happens later
 							this.deletes.Append(item1)
 						}
-						item.Recycle()
 					}
 				} else {
 					item.Recycle()

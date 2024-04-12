@@ -56,6 +56,9 @@ func TestMerge(t *testing.T) {
 	// test MERGE with legacy ON KEY clause
 	runMatch("case_merge_onkey.json", false, false, qc, t)
 
+	// test MERGE with RETURNING clause
+	runMatch("case_merge_returning.json", false, false, qc, t)
+
 	// test MERGE error cases
 	runMatch("case_merge_error.json", false, false, qc, t)
 	runMatch("case_merge_error_legacy.json", false, false, qc, t)

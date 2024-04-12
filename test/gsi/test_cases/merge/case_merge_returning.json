@@ -1,0 +1,120 @@
+[
+    {
+        "testcase": "Merge with UPDATE and INSERT, UPDATE with WHERE clauses",
+        "statements":"MERGE INTO shellTest t USING (SELECT meta(s1).id AS metaid, s1.* FROM shellTest s1 WHERE s1.c11 IS NOT NULL AND s1.type = \"source\") AS s ON t.c21 = s.c11 WHEN MATCHED THEN UPDATE set t.c23 = t.c22, t.c22 = s.c12 WHERE s.type = \"source\" AND t.type = \"target\" WHEN NOT MATCHED THEN INSERT (KEY REPLACE(s.metaid, \"test1\", \"test2\"), VALUE {\"c21\": s.c11, \"c22\": s.c12 + s.c13, \"type\": \"target\", \"test_id\": s.test_id, \"inserted\": true}) RETURNING t.c21, t.c22, t.c23, t.inserted, s.c12",
+        "results": [
+        {
+            "c21": 2,
+            "c22": 10,
+            "inserted": true
+        },
+        {
+            "c21": 4,
+            "c22": 20,
+            "inserted": true
+        },
+        {
+            "c21": 1,
+            "c22": 2,
+            "c23": 5,
+            "c12": 2
+        },
+        {
+            "c21": 3,
+            "c22": 6,
+            "c23": 15,
+            "c12": 6
+
+        },
+        {
+            "c21": 5,
+            "c22": 10,
+            "c23": 25,
+            "c12": 10
+        }
+    ]
+    },
+    {
+        "testcase": "MERGE statement to return data to previous state, including UPDATE and DELETE actions, both with WHERE clause",
+        "statements":"MERGE INTO shellTest t USING shellTest s ON t.c21 = s.c11 WHEN MATCHED THEN UPDATE set t.c22 = t.c23 unset t.c23 WHERE t.type = \"target\" AND t.c23 IS NOT MISSING WHEN MATCHED THEN DELETE WHERE t.type = \"target\" AND t.inserted = true RETURNING *",
+        "results": [
+        {
+            "s": {
+                "c11": 2,
+                "c12": 4,
+                "c13": 6,
+                "test_id": "merge",
+                "type": "source"
+            },
+            "t": {
+                "c21": 2,
+                "c22": 10,
+                "inserted": true,
+                "test_id": "merge",
+                "type": "target"
+            }
+        },
+        {
+            "s": {
+                "c11": 4,
+                "c12": 8,
+                "c13": 12,
+                "test_id": "merge",
+                "type": "source"
+            },
+            "t": {
+                "c21": 4,
+                "c22": 20,
+                "inserted": true,
+                "test_id": "merge",
+                "type": "target"
+            }
+        },
+        {
+            "s": {
+                "c11": 1,
+                "c12": 2,
+                "c13": 3,
+                "test_id": "merge",
+                "type": "source"
+            },
+            "t": {
+                "c21": 1,
+                "c22": 5,
+                "test_id": "merge",
+                "type": "target"
+            }
+        },
+        {
+            "s": {
+                "c11": 3,
+                "c12": 6,
+                "c13": 9,
+                "test_id": "merge",
+                "type": "source"
+            },
+            "t": {
+                "c21": 3,
+                "c22": 15,
+                "test_id": "merge",
+                "type": "target"
+            }
+        },
+        {
+            "s": {
+                "c11": 5,
+                "c12": 10,
+                "c13": 15,
+                "test_id": "merge",
+                "type": "source"
+            },
+            "t": {
+                "c21": 5,
+                "c22": 25,
+                "test_id": "merge",
+                "type": "target"
+            }
+        }
+    ]
+    }
+]
