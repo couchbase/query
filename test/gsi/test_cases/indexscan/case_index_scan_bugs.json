@@ -402,5 +402,22 @@
         "statements":"SELECT c8, c10 FROM shellTest WHERE c5 = 10 AND c6 != 1 AND c7 NOT IN [1,2] AND c11 != 0 OFFSET 10 LIMIT 5",
         "results": [
     ]
+    },
+    {
+	"testcase": "MB-61508",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE EVERY v WITHIN p.`plan`.`~children` SATISFIES (v.`#operator` IS MISSING OR v.`#operator` != 'IntersectScan') END"
+        },
+        "namedArgs": {"my_id": "myid"},
+        "statements":"SELECT * FROM shellTest WHERE id = $my_id AND type = 'type1'",
+        "results": [
+    ]
     }
 ]
