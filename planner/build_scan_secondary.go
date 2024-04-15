@@ -662,13 +662,24 @@ func narrowerOrEquivalent(se, te *indexEntry, shortest, corrSubq bool, predFc ma
 			return false
 		} else if te.nSargKeys == (snk+snc) && sePushDown == tePushDown && seKeyFlags == teKeyFlags {
 			if se.minKeys != te.minKeys {
-				// for two indexes with the same sargKeys, favor the one
-				// with more consecutive leading sargKeys
-				// e.g (c1, c4) vs (c1, c2, c4) with predicates on c1 and c4
-				return se.minKeys > te.minKeys
-			} else if se.maxKeys != te.maxKeys {
-				// favor the one with shorter sargKeys
-				return se.maxKeys < te.maxKeys
+				if se.minKeys != se.nSargKeys || te.minKeys != te.nSargKeys {
+					// for two indexes with the same sargKeys, favor the one
+					// with more consecutive leading sargKeys
+					// e.g (c1, c4) vs (c1, c2, c4) with predicates on c1 and c4
+					return se.minKeys > te.minKeys
+				} else if (se.minKeys + snc) != te.minKeys {
+					// also consider matched index conditions
+					return (se.minKeys + snc) > te.minKeys
+				}
+			}
+			if se.maxKeys != te.maxKeys {
+				if se.maxKeys != se.nSargKeys || te.maxKeys != te.nSargKeys {
+					// favor the one with shorter sargKeys
+					return se.maxKeys < te.maxKeys
+				} else if (se.maxKeys + snc) != te.maxKeys {
+					// also consider matched index conditions
+					return (se.maxKeys + snc) < te.maxKeys
+				}
 			}
 		}
 	}
