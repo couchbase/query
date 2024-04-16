@@ -247,6 +247,9 @@ func (pi *functionsIndex) RangeKey2() datastore.IndexKeys {
 		rangeKey := &datastore.IndexKey{
 			Expr: pi.idxKey[0],
 		}
+
+		// Set the IK_MISSING attribute as the index key can be missing in some entries in the system keyspace
+		// Example: MB-55993 - the field `identity`.`bucket` can be missing for some entries.
 		rangeKey.SetAttribute(datastore.IK_MISSING, true)
 		return datastore.IndexKeys{rangeKey}
 	}
