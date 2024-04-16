@@ -328,10 +328,15 @@ func handleCurl(urlS string, options map[string]interface{}, allowlist map[strin
 		getOptSet = true
 	}
 
+	connectTimeout := context.GetTimeout()
+	if connectTimeout == 0 {
+		connectTimeout = _DEF_CONNECT_TIMEOUT
+	}
+
 	// Create the net/http client
 	dialer := &net.Dialer{
 		// connect-timeout
-		Timeout: _DEF_CONNECT_TIMEOUT,
+		Timeout: connectTimeout,
 	}
 
 	client := &http.Client{
