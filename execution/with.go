@@ -297,6 +297,13 @@ func (this *With) recycleBindings() {
 	}
 	for _, v := range m {
 		if val, ok := v.(value.Value); ok {
+			// provide GC hint for array elements...
+			if val.Type() == value.ARRAY {
+				if arr, ok := val.Actual().([]interface{}); ok && arr != nil {
+					clear(arr)
+					arr = arr[0:0:0]
+				}
+			}
 			// double recycle here to account for SetField's tracking
 			val.Recycle()
 			val.Recycle()
