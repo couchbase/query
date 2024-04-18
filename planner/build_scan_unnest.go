@@ -366,8 +366,8 @@ func (this *builder) matchUnnest(node *algebra.KeyspaceTerm, pred, subset expres
 		return nil, nil, nil, nil
 	}
 
-	spans, exactSpans, err := SargFor(pred, entry, keys, missing, isArrays, n, false, useCBO,
-		baseKeyspace, this.keyspaceNames, advisorValidate, this.aliases, this.context)
+	spans, exactSpans, _, err := SargFor(pred, entry, keys, missing, isArrays, n, false, useCBO,
+		baseKeyspace, this.keyspaceNames, advisorValidate, this.aliases, 0, this.context)
 	if err != nil {
 		return nil, nil, nil, err
 	}

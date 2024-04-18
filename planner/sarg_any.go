@@ -50,9 +50,12 @@ func (this *sarg) VisitAny(pred *expression.Any) (interface{}, error) {
 
 		variable := expression.NewIdentifier(bindings[0].Variable())
 		variable.SetBindingVariable(true)
-		return anySargFor(pred.Satisfies(), variable, nil, this.isJoin, this.doSelec,
+		sp, aid, err := anySargFor(pred.Satisfies(), variable, nil, this.isJoin, this.doSelec,
 			this.baseKeyspace, this.keyspaceNames, variable.Alias(), selec, true,
-			this.advisorValidate, false, this.isMissing, this.aliases, this.context)
+			this.advisorValidate, false, this.isMissing, this.aliases, this.arrayId,
+			this.context)
+		this.arrayId = aid
+		return sp, err
 	}
 
 	if !pred.Bindings().SubsetOf(array.Bindings()) {
@@ -69,24 +72,39 @@ func (this *sarg) VisitAny(pred *expression.Any) (interface{}, error) {
 	}
 
 	// Array Index key can have only single binding
-	return anySargFor(satisfies, array.ValueMapping(), array.When(), this.isJoin, this.doSelec,
+	sp, aid, err := anySargFor(satisfies, array.ValueMapping(), array.When(), this.isJoin, this.doSelec,
 		this.baseKeyspace, this.keyspaceNames, array.Bindings()[0].Variable(), selec, true,
-		this.advisorValidate, all.IsDerivedFromFlatten(), this.isMissing, this.aliases, this.context)
+		this.advisorValidate, all.IsDerivedFromFlatten(), this.isMissing, this.aliases,
+		this.arrayId, this.context)
+	this.arrayId = aid
+	return sp, err
 }
 
 func anySargFor(pred, key, cond expression.Expression, isJoin, doSelec bool,
 	baseKeyspace *base.BaseKeyspace, keyspaceNames map[string]string, alias string,
 	selec float64, any, advisorValidate, flatten, isMissing bool, aliases map[string]bool,
-	context *PrepareContext) (SargSpans, error) {
+	arrayId int, context *PrepareContext) (SargSpans, int, error) {
 
-	sp, _, err := sargFor(pred, key, isJoin, doSelec, baseKeyspace, keyspaceNames,
-		advisorValidate, isMissing, true, aliases, context)
+	// this is an array predicate
+	// note for FLATTEN_KEYS since both the index key format and the ANY clause format
+	// should be the same for the expanded index keys, we should end up with the same
+	// arrayId for the same ANY/ANY AND EVERY clause when sarging different flattened
+	// array index keys
+	arrayId++
+
+	sp, _, aid, err := sargFor(pred, key, isJoin, doSelec, baseKeyspace, keyspaceNames,
+		advisorValidate, isMissing, true, aliases, arrayId, context)
 	if err != nil || sp == nil {
-		return sp, err
+		return sp, aid, err
 	}
 
 	if sp.HasStatic() {
 		sp = sp.Copy()
+	}
+
+	// set the arrayId if not already set (e.g. nested array key with nested ANY clause)
+	if arrayId == aid {
+		sp.SetArrayId(arrayId)
 	}
 
 	if tsp, ok := sp.(*TermSpans); ok {
@@ -109,7 +127,7 @@ func anySargFor(pred, key, cond expression.Expression, isJoin, doSelec bool,
 	}
 
 	if !sp.Exact() {
-		return sp, nil
+		return sp, aid, nil
 	}
 
 	exprs := expression.Expressions{key}
@@ -126,5 +144,5 @@ func anySargFor(pred, key, cond expression.Expression, isJoin, doSelec bool,
 		sp.SetExact(false)
 	}
 
-	return sp, nil
+	return sp, aid, nil
 }
