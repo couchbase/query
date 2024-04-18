@@ -207,6 +207,9 @@ const (
 	CAS_MISMATCH_ERRORS
 	TEMP_SPACE_ERRORS
 
+	CURL_CALLS
+	CURL_CALL_ERRORS
+
 	// unknown is always the last and does not have a corresponding name or metric
 	UNKNOWN
 )
@@ -270,6 +273,9 @@ const (
 	_BULK_GET_ERRORS           = "bulk_get_errors"
 	_CAS_MISMATCH_ERRORS       = "cas_mismatch_errors"
 	_TEMP_SPACE_ERRORS         = "temp_space_errors"
+
+	_CURL_CALLS       = "curl_calls"
+	_CURL_CALL_ERRORS = "curl_call_errors"
 )
 
 // please keep in sync with the mnemonics
@@ -327,6 +333,9 @@ var metricNames = []string{
 	_BULK_GET_ERRORS,
 	_CAS_MISMATCH_ERRORS,
 	_TEMP_SPACE_ERRORS,
+
+	_CURL_CALLS,
+	_CURL_CALL_ERRORS,
 }
 
 const (

@@ -476,10 +476,20 @@
 		"added": "7.6.0",
 		"notes": "This is a metric specific to serverless."
 	},
-		"n1ql_node_rss": {
+	"n1ql_node_rss": {
 		"type": "gauge",
 		"added": "7.6.1",
 		"help": "The resident set size (RSS) of the query node process.",
 		"unit": "bytes"
+	},
+	"n1ql_curl_calls": {
+		"type":"counter",
+		"added":"7.6.2",
+		"help": "The number of CURL() calls made by statements."
+	},
+	"n1ql_curl_call_errors": {
+		"type":"counter",
+		"added":"7.6.2",
+		"help": "The number of CURL() calls made by statements that failed (returned an error)."
 	}
 }

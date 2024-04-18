@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/couchbase/cbauth"
+	"github.com/couchbase/query/accounting"
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
@@ -183,10 +184,13 @@ func (this *Curl) DoEvaluate(context Context, arg1, arg2 value.Value) (value.Val
 		allowlist = _curlContext.GetAllowlist()
 	}
 
+	accounting.UpdateCounter(accounting.CURL_CALLS)
+
 	// Now you have the URL and the options with which to call curl.
 	result, err := handleCurl(curl_url, options, allowlist, context)
 
 	if err != nil {
+		accounting.UpdateCounter(accounting.CURL_CALL_ERRORS)
 		return value.NULL_VALUE, errors.NewCurlExecutionError(err)
 	}
 
