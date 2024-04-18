@@ -329,7 +329,7 @@ func handleCurl(urlS string, options map[string]interface{}, allowlist map[strin
 	}
 
 	connectTimeout := context.GetTimeout()
-	if connectTimeout == 0 {
+	if connectTimeout <= 0 {
 		connectTimeout = _DEF_CONNECT_TIMEOUT
 	}
 
