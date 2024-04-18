@@ -303,8 +303,8 @@ func newKeyspacesKeyspace(p *namespace, store datastore.Datastore, name string, 
 	b.indexer = newSystemIndexer(b, primary)
 	setIndexBase(&primary.indexBase, b.indexer)
 
-	// add a secondary index on `bucket_id`
-	expr, err := parser.Parse(`bucket_id`)
+	// add a secondary index on `bucket`
+	expr, err := parser.Parse("`bucket`")
 
 	if err == nil {
 		key := expression.Expressions{expr}
@@ -360,6 +360,9 @@ func (pi *keyspaceIndex) RangeKey2() datastore.IndexKeys {
 		rangeKey := &datastore.IndexKey{
 			Expr: pi.idxKey[0],
 		}
+
+		// Set the IK_MISSING attribute as the index key can be missing in some entries in the system keyspace
+		// Example: MB-55993 - the field `bucket` can be missing for some entries.
 		rangeKey.SetAttribute(datastore.IK_MISSING, true)
 		return datastore.IndexKeys{rangeKey}
 	}
@@ -502,7 +505,7 @@ func (pi *keyspaceIndex) scan(requestId string, spanEvaluator compiledSpans, lim
 						}
 						if object.IsBucket {
 							if !pi.primary && !spanEvaluator.evaluate(object.Id) {
-								continue loop
+								continue
 							}
 							scopeIds, _ := bucket.ScopeIds()
 							for _, scopeId := range scopeIds {

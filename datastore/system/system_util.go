@@ -308,6 +308,8 @@ func compileSpan2(spans datastore.Spans2) (compiledSpans, errors.Error) {
 				} else {
 					spanEvaluator.evalHigh = noop
 				}
+			} else if !isHighValued && !isLowValued && rng.Inclusion == datastore.HIGH { // for _NOT_VALUED_SPAN
+				spanEvaluator.isMissingTest = true
 			}
 			cSpans = append(cSpans, spanEvaluator)
 		}
@@ -351,12 +353,17 @@ func compileRange2(in value.Value, incl, side datastore.Inclusion) (string, func
 		// > null is a noop, < null should never occur and it's an error
 		if side == datastore.LOW {
 			return "", noop, false, nil
-		} else if side == datastore.HIGH && incl == 0 {
-			return "", nil, true, nil
+		} else if side == datastore.HIGH {
+
+			if incl == 0 {
+				return "", nil, true, nil
+			} else if incl == 2 || incl == 3 {
+				return "", fail, false, nil
+			}
 		}
 		fallthrough
 	default:
-		return "", nil, false, errors.NewSystemDatastoreError(nil, fmt.Sprintf("Invalid seek value %v of type %T.", val,
+		return "", nil, false, errors.NewSystemDatastoreError(nil, fmt.Sprintf("Invalid seek value %v of type %v.", val,
 			t.String()))
 	}
 	retVal := val.(string)
