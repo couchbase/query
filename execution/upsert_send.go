@@ -132,6 +132,8 @@ func (this *SendUpsert) flushBatch(context *Context) bool {
 			} else {
 				val = av
 			}
+			// copy values that will be updated (CAS) after DML operations as they may be shared references here
+			val = val.Copy()
 
 			if context.UseRequestQuota() {
 				context.ReleaseValueSize(av.Size())
