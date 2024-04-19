@@ -982,9 +982,9 @@ func (this *builder) sargIndexes(baseKeyspace *base.BaseKeyspace, underHash bool
 		}
 		if !validSpans {
 			useFilters = false
-			spans, exactSpans, err = SargFor(baseKeyspace.DnfPred(), se, se.idxKeys,
+			spans, exactSpans, _, err = SargFor(baseKeyspace.DnfPred(), se, se.idxKeys,
 				isMissing, nil, se.maxKeys, orIsJoin, useCBO, baseKeyspace,
-				this.keyspaceNames, advisorValidate, this.aliases, this.context)
+				this.keyspaceNames, advisorValidate, this.aliases, 0, this.context)
 		}
 
 		if se.HasFlag(IE_LEADINGMISSING) && (spans == nil || spans.Size() == 0) {
@@ -1774,9 +1774,9 @@ func (this *builder) orGetIndexFilter(pred expression.Expression, keys expressio
 				if min == 0 {
 					continue
 				}
-				rs, exact, err := sargFor(op1, key, false, false, baseKeyspace,
+				rs, exact, _, err := sargFor(op1, key, false, false, baseKeyspace,
 					this.keyspaceNames, this.advisorValidate(),
-					(missing || i > 0), false, this.aliases, this.context)
+					(missing || i > 0), false, this.aliases, 0, this.context)
 				if err == nil && rs != nil && exact {
 					add = false
 					break

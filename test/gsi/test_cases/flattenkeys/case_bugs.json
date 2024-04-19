@@ -1,0 +1,30 @@
+[
+    {
+        "testcase": "MB-61549, part 1",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                { "present": true }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IntersectScan' AND ARRAY_LENGTH(v.`scans`) = 2 AND ARRAY_LENGTH(v.`scans`[0].`scan`.`spans`[0].`range`) = 4 AND ARRAY_LENGTH(v.`scans`[1].`scan`.`spans`[0].`range`) = 4 AND (v.`scans`[0].`scan`.`spans`[0].`range`[2].`low` IS MISSING OR v.`scans`[1].`scan`.`spans`[0].`range`[2].`low` IS MISSING) END"
+        },
+       "statements": "SELECT META(d).id FROM shellTest WHERE ANY v1 IN contacts SATISFIES v1.type = 'mobile' AND v1.phone = '123-45-6789' END AND ANY v2 IN contacts SATISFIES v2.type = 'email' AND v2.id = 'abc@gmail.com' END AND c1 = 5 AND c2 > 10",
+       "results": [
+        ]
+    },
+    {
+        "testcase": "MB-61549, part 2, nested array key",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                { "present": true }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IntersectScan' AND ARRAY_LENGTH(v.`scans`) = 2 AND ARRAY_LENGTH(v.`scans`[0].`scan`.`spans`[0].`range`) = 4 AND ARRAY_LENGTH(v.`scans`[1].`scan`.`spans`[0].`range`) = 4 AND (v.`scans`[0].`scan`.`spans`[0].`range`[2].`low` IS MISSING OR v.`scans`[1].`scan`.`spans`[0].`range`[2].`low` IS MISSING) END"
+        },
+       "statements": "SELECT META(d).id FROM shellTest WHERE ANY v IN infos SATISFIES (ANY v1 IN v.contacts SATISFIES v1.type = 'mobile' AND v1.phone = '123-45-6789' END AND ANY v2 IN v.contacts SATISFIES v2.type = 'email' AND v2.id = 'abc@gmail.com' END) END AND c11 = 5 AND c12 > 10",
+       "results": [
+        ]
+    }
+]

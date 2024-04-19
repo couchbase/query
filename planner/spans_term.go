@@ -20,7 +20,8 @@ import (
 )
 
 type TermSpans struct {
-	spans plan.Spans2
+	spans   plan.Spans2
+	arrayId int
 }
 
 func NewTermSpans(spans ...*plan.Span2) *TermSpans {
@@ -119,12 +120,20 @@ func (this *TermSpans) Constrain(other SargSpans) SargSpans {
 	return other.Copy().ConstrainTerm(this)
 }
 
-func (this *TermSpans) ConstrainTerm(spans *TermSpans) SargSpans {
-	return constrainSpans(this.spans, spans.spans)
+func (this *TermSpans) ConstrainTerm(other *TermSpans) SargSpans {
+	rv := constrainSpans(this.spans, other.spans)
+	return rv.inheritArrayId(this, other)
 }
 
 func (this *TermSpans) Streamline() SargSpans {
-	return streamline(this.spans)
+	rv := streamline(this.spans)
+	if this.arrayId != 0 {
+		if rv.spans.HasStatic() {
+			rv = rv.Copy().(*TermSpans)
+		}
+		rv.arrayId = this.arrayId
+	}
+	return rv
 }
 
 func (this *TermSpans) Exact() bool {
@@ -236,10 +245,21 @@ func (this *TermSpans) Size() int {
 
 func (this *TermSpans) Copy() SargSpans {
 	rv := &TermSpans{
-		spans: this.spans.Copy(),
+		spans:   this.spans.Copy(),
+		arrayId: this.arrayId,
 	}
 
 	return rv
+}
+
+func (this *TermSpans) SetArrayId(id int) {
+	if this.arrayId == 0 {
+		this.arrayId = id
+	}
+}
+
+func (this *TermSpans) ArrayId() int {
+	return this.arrayId
 }
 
 func (this *TermSpans) Spans() plan.Spans2 {
@@ -260,9 +280,55 @@ func (this *TermSpans) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
-func composeTerms(rs, ns *TermSpans) SargSpans {
+func (this *TermSpans) inheritArrayId(ts1, ts2 *TermSpans) *TermSpans {
+	newArrayId := 0
+	if ts1.arrayId != 0 && ts2.arrayId != 0 {
+		if ts1.arrayId == ts2.arrayId {
+			newArrayId = ts1.arrayId
+		} else {
+			// it's an error condition (unexpected), ignore arrayId
+			newArrayId = -1
+		}
+	} else if ts1.arrayId != 0 {
+		newArrayId = ts1.arrayId
+	} else if ts2.arrayId != 0 {
+		newArrayId = ts2.arrayId
+	}
+	if newArrayId != 0 && newArrayId != this.arrayId {
+		rv := this
+		if this.spans.HasStatic() {
+			rv = this.Copy().(*TermSpans)
+		}
+		rv.arrayId = newArrayId
+		return rv
+	}
+	return this
+}
+
+func composeTerms(rs, ns *TermSpans) *TermSpans {
 	// Cross product of prev and next spans
 	sp := make(plan.Spans2, 0, len(rs.spans)*len(ns.spans))
+
+	// if we have multiple array predicate, do not try to combine spans from different array preds
+	if rs.arrayId > 0 && ns.arrayId > 0 && rs.arrayId != ns.arrayId {
+		ns = ns.Copy().(*TermSpans)
+		for _, next := range ns.spans {
+			if next.Empty() {
+				continue
+			}
+			// Note this assumes that the array index keys are always next to each other,
+			// i.e. FLATTEN_KEYS, thus the array index key from ns is always at Ranges[0].
+			// Make Ranges[0] look like a _WHOLE_SPAN
+			rg := next.Ranges[0]
+			next.Ranges[0] = _WHOLE_SPAN.Ranges[0].Copy()
+			if rg.Selec1 >= 0.0 || rg.Selec2 >= 0.0 {
+				next.Ranges[0].Selec1 = 1.0
+				next.Ranges[0].Selec2 = -1.0
+			}
+		}
+		// reset arrayId since we replaced the span for array index key with _WHOLE_SPAN
+		ns.arrayId = 0
+	}
 
 	for _, prev := range rs.spans {
 		if prev.Empty() {
@@ -285,10 +351,11 @@ func composeTerms(rs, ns *TermSpans) SargSpans {
 		}
 	}
 
-	return NewTermSpans(sp...)
+	rv := NewTermSpans(sp...)
+	return rv.inheritArrayId(rs, ns)
 }
 
-func constrainSpans(spans1, spans2 plan.Spans2) SargSpans {
+func constrainSpans(spans1, spans2 plan.Spans2) *TermSpans {
 	if len(spans2) > 1 && len(spans1) <= 1 {
 		spans1, spans2 = spans2.Copy(), spans1
 	}
@@ -486,7 +553,7 @@ func constrainEmptySpan(span1, span2 *plan.Span2) bool {
 	return false
 }
 
-func streamline(cspans plan.Spans2) SargSpans {
+func streamline(cspans plan.Spans2) *TermSpans {
 	switch len(cspans) {
 	case 0:
 		return _EMPTY_SPANS
