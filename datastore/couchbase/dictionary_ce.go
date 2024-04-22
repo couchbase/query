@@ -16,6 +16,7 @@ package couchbase
 import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
+	functionsStorage "github.com/couchbase/query/functions/storage"
 )
 
 // dictionary cache entries
@@ -94,4 +95,8 @@ type chkIndexDict struct {
 
 func checkIndexCache(keyspace string, indexer datastore.Indexer, dict *chkIndexDict) errors.Error {
 	return nil
+}
+
+func SupportedBackupVersion() int {
+	return functionStorage.SupportedBackupVersion()
 }

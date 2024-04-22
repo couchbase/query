@@ -41,6 +41,12 @@ const DEPLOYMENT_MODEL_DEFAULT = "default"
 const DEPLOYMENT_MODEL_SERVERLESS = "serverless"
 const DEPLOYMENT_MODEL_PROVISIONED = "provisioned"
 
+const (
+	BACKUP_NOT_POSSIBLE    = -1
+	CURRENT_BACKUP_VERSION = 0
+	BACKUP_VERSION_1       = 1
+)
+
 // Datastore represents a cluster or single-node server.
 type Datastore interface {
 	Id() string                                                 // Id of this datastore

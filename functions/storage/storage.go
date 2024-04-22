@@ -433,8 +433,17 @@ func Scan(bucket string, f func(path string) error) error {
 	}
 }
 
-func ExternalBucketArchive() bool {
-	return !UseSystemStorage()
+func SupportedBackupVersion() int {
+	if migrating == _MIGRATED || migrating == _ABORTED || tenant.IsServerless() {
+		return datastore.CURRENT_BACKUP_VERSION
+	}
+	migratingLock.Lock()
+	notMigrating := migrating == _NOT_MIGRATING
+	migratingLock.Unlock()
+	if notMigrating {
+		return datastore.BACKUP_VERSION_1
+	}
+	return datastore.BACKUP_NOT_POSSIBLE
 }
 
 func migrateAll() {

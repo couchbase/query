@@ -322,6 +322,7 @@ const (
 	E_INFER_NEXT_DOCUMENT                     ErrorCode = 7024
 	E_MIGRATION                               ErrorCode = 7200
 	E_MIGRATION_INTERNAL                      ErrorCode = 7201
+	E_BACKUP_NOT_POSSIBLE                     ErrorCode = 7300
 	E_DATASTORE_AUTHORIZATION                 ErrorCode = 10000
 	E_FTS_MISSING_PORT_ERR                    ErrorCode = 10003
 	E_NODE_INFO_ACCESS_ERR                    ErrorCode = 10004

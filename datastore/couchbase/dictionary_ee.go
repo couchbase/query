@@ -21,6 +21,7 @@ import (
 	"github.com/couchbase/query-ee/dictionary"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
+	functionStorage "github.com/couchbase/query/functions/storage"
 	"github.com/couchbase/query/util"
 )
 
@@ -168,4 +169,25 @@ func checkIndexCache(keyspace string, indexer datastore.Indexer, dict *chkIndexD
 	defer dict.chkDone()
 
 	return dictionary.CheckIndexes(keyspace, indexer)
+}
+
+func SupportedBackupVersion() int {
+	v1 := functionStorage.SupportedBackupVersion()
+	if v1 == datastore.BACKUP_NOT_POSSIBLE {
+		return v1
+	}
+	v2 := dictionary.SupportedBackupVersion()
+	if v2 == datastore.BACKUP_NOT_POSSIBLE {
+		return v2
+	}
+	if v1 == datastore.CURRENT_BACKUP_VERSION && v2 == datastore.CURRENT_BACKUP_VERSION {
+		return datastore.CURRENT_BACKUP_VERSION
+	} else if v1 == datastore.CURRENT_BACKUP_VERSION || v2 == datastore.CURRENT_BACKUP_VERSION {
+		// if one is reporting a specific version and the other CURRENT, then there was a migration issue and we should not
+		// allow backups to proceed
+		return datastore.BACKUP_NOT_POSSIBLE
+	} else if v1 < v2 {
+		return v1
+	}
+	return v2
 }
