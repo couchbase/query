@@ -234,6 +234,7 @@ type builder struct {
 	skipKeyspace         string
 	mustSkipKeys         bool
 	subTimes             map[string]time.Duration
+	arrayId              int
 }
 
 func (this *builder) Copy() *builder {
@@ -261,6 +262,7 @@ func (this *builder) Copy() *builder {
 		useCBO:               this.useCBO,
 		hintIndexes:          this.hintIndexes,
 		partialSortTermCount: this.partialSortTermCount,
+		arrayId:              this.arrayId,
 		// the following fields are setup during planning process and thus not copied:
 		// children, subChildren, coveringScan, coveredUnnests, countScan, orderScan, lastOp
 	}

@@ -9,6 +9,9 @@
 package planner
 
 import (
+	"fmt"
+
+	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	base "github.com/couchbase/query/plannerbase"
 )
@@ -35,6 +38,12 @@ func (this *sarg) VisitAnyEvery(pred *expression.AnyEvery) (interface{}, error) 
 		return sp, nil
 	}
 
+	arrayId := pred.ArrayId()
+	if arrayId <= 0 {
+		return nil, errors.NewPlanInternalError(fmt.Sprintf("sarg.VisitAnyEvery: unexpected array id (%d) for ANY AND EVERY expression %v",
+			arrayId, pred))
+	}
+
 	selec := this.getSelec(pred)
 
 	array, ok := all.Array().(*expression.Array)
@@ -48,12 +57,10 @@ func (this *sarg) VisitAnyEvery(pred *expression.AnyEvery) (interface{}, error) 
 
 		variable := expression.NewIdentifier(bindings[0].Variable())
 		variable.SetBindingVariable(true)
-		sp, aid, err := anySargFor(pred.Satisfies(), variable, nil, this.isJoin, this.doSelec,
+		return anySargFor(pred.Satisfies(), variable, nil, this.isJoin, this.doSelec,
 			this.baseKeyspace, this.keyspaceNames, variable.Alias(), selec, false,
-			this.advisorValidate, false, this.isMissing, this.aliases, this.arrayId,
+			this.advisorValidate, false, this.isMissing, this.aliases, arrayId,
 			this.context)
-		this.arrayId = aid
-		return sp, err
 	}
 
 	if !pred.Bindings().SubsetOf(array.Bindings()) {
@@ -70,10 +77,8 @@ func (this *sarg) VisitAnyEvery(pred *expression.AnyEvery) (interface{}, error) 
 	}
 
 	// Array Index key can have only single binding
-	sp, aid, err := anySargFor(satisfies, array.ValueMapping(), array.When(), this.isJoin, this.doSelec,
+	return anySargFor(satisfies, array.ValueMapping(), array.When(), this.isJoin, this.doSelec,
 		this.baseKeyspace, this.keyspaceNames, array.Bindings()[0].Variable(), selec, false,
 		this.advisorValidate, all.IsDerivedFromFlatten(), this.isMissing, this.aliases,
-		this.arrayId, this.context)
-	this.arrayId = aid
-	return sp, err
+		arrayId, this.context)
 }
