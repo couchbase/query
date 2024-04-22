@@ -132,6 +132,8 @@ func getSystemCollection(bucket string) (datastore.Keyspace, errors.Error) {
 	ks, err = store.GetSystemCollection(bucket)
 	if err == nil && ks == nil {
 		err = errors.NewSequenceError(errors.E_SEQUENCE_NOT_ENABLED, bucket, err)
+	} else if err != nil && err.Code() == errors.E_CB_SCOPE_NOT_FOUND {
+		err = errors.NewSequenceError(errors.E_SEQUENCE_NOT_ENABLED, bucket, nil)
 	}
 	return ks, err
 }
