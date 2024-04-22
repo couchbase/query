@@ -9,6 +9,9 @@
 package planner
 
 import (
+	"fmt"
+
+	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
 	base "github.com/couchbase/query/plannerbase"
@@ -37,6 +40,11 @@ func (this *sarg) VisitAny(pred *expression.Any) (interface{}, error) {
 		return sp, nil
 	}
 
+	arrayId := pred.ArrayId()
+	if arrayId <= 0 {
+		return nil, errors.NewPlanInternalError(fmt.Sprintf("sarg.VisitAny: unexpected array id (%d) for ANY expression %v", arrayId, pred))
+	}
+
 	selec := this.getSelec(pred)
 
 	array, ok := all.Array().(*expression.Array)
@@ -52,7 +60,8 @@ func (this *sarg) VisitAny(pred *expression.Any) (interface{}, error) {
 		variable.SetBindingVariable(true)
 		return anySargFor(pred.Satisfies(), variable, nil, this.isJoin, this.doSelec,
 			this.baseKeyspace, this.keyspaceNames, variable.Alias(), selec, true,
-			this.advisorValidate, false, this.isMissing, this.aliases, this.context)
+			this.advisorValidate, false, this.isMissing, this.aliases, arrayId,
+			this.context)
 	}
 
 	if !pred.Bindings().SubsetOf(array.Bindings()) {
@@ -71,13 +80,14 @@ func (this *sarg) VisitAny(pred *expression.Any) (interface{}, error) {
 	// Array Index key can have only single binding
 	return anySargFor(satisfies, array.ValueMapping(), array.When(), this.isJoin, this.doSelec,
 		this.baseKeyspace, this.keyspaceNames, array.Bindings()[0].Variable(), selec, true,
-		this.advisorValidate, all.IsDerivedFromFlatten(), this.isMissing, this.aliases, this.context)
+		this.advisorValidate, all.IsDerivedFromFlatten(), this.isMissing, this.aliases,
+		arrayId, this.context)
 }
 
 func anySargFor(pred, key, cond expression.Expression, isJoin, doSelec bool,
 	baseKeyspace *base.BaseKeyspace, keyspaceNames map[string]string, alias string,
 	selec float64, any, advisorValidate, flatten, isMissing bool, aliases map[string]bool,
-	context *PrepareContext) (SargSpans, error) {
+	arrayId int, context *PrepareContext) (SargSpans, error) {
 
 	sp, _, err := sargFor(pred, key, isJoin, doSelec, baseKeyspace, keyspaceNames,
 		advisorValidate, isMissing, aliases, context)
@@ -88,6 +98,11 @@ func anySargFor(pred, key, cond expression.Expression, isJoin, doSelec bool,
 	if sp.HasStatic() {
 		sp = sp.Copy()
 	}
+
+	// set the arrayId
+	// if the arrayId is already set (e.g. nested array key with nested ANY clause)
+	// then the call here is a no-op (will not overwrite existing arrayId)
+	sp.SetArrayId(arrayId)
 
 	if tsp, ok := sp.(*TermSpans); ok {
 		spans := tsp.Spans()

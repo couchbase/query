@@ -102,7 +102,8 @@ func (this *Every) FilterExpressionCovers(covers map[Expression]value.Value) map
 }
 
 func (this *Every) Copy() Expression {
-	rv := NewEvery(this.bindings.Copy(), Copy(this.satisfies))
+	rv := NewEvery(this.bindings.Copy(), Copy(this.satisfies)).(*Every)
+	rv.arrayId = this.arrayId
 	rv.BaseCopy(this)
 	return rv
 }

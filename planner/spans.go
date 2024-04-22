@@ -50,6 +50,8 @@ type SargSpans interface {
 	CanProduceUnknowns(pos int) bool                                   // Index key pos can produce MISSING or NULL
 	Size() int                                                         // Total number of spans
 	Copy() SargSpans                                                   // Deep copy
+	SetArrayId(id int)
+	ArrayId() int
 }
 
 func CopySpans(spans SargSpans) SargSpans {

@@ -93,6 +93,29 @@ func (this *multiSpansBase) EquivalenceRangeAt(pos int) (eq bool, expr expressio
 	return (expr != nil || missing), expr
 }
 
+func (this *multiSpansBase) SetArrayId(id int) {
+	for _, span := range this.spans {
+		span.SetArrayId(id)
+	}
+}
+
+func (this *multiSpansBase) ArrayId() int {
+	arrayId := 0
+	for _, span := range this.spans {
+		childId := span.ArrayId()
+		if childId > 0 {
+			if arrayId == 0 {
+				arrayId = childId
+			} else if arrayId != childId {
+				return -1 // signal different arrayId found
+			}
+		} else if childId < 0 {
+			return childId
+		}
+	}
+	return arrayId
+}
+
 func dedupSpans(spans []SargSpans) []SargSpans {
 	if len(spans) <= 1 {
 		return spans

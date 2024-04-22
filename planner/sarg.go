@@ -127,6 +127,7 @@ func SargForFilters(filters base.Filters, keys expression.Expressions, isMissing
 			}
 		}
 
+		fltrExpr := fl.FltrExpr()
 		isJoin := fl.IsJoin() && !underHash
 		flSargSpans, flExactSpan, err := getSargSpans(fl.FltrExpr(), sargKeys, isMissings, isJoin,
 			doSelec, baseKeyspace, keyspaceNames, advisorValidate, aliases, context)
@@ -152,7 +153,7 @@ func SargForFilters(filters base.Filters, keys expression.Expressions, isMissing
 		for pos, sargKey := range sargKeys {
 			isArray, _, _ := sargKey.IsArrayIndexKey()
 			if flSargSpans[pos] == nil || flSargSpans[pos].Size() == 0 {
-				if exactSpan && !isArray && fl.FltrExpr().DependsOn(sargKey) {
+				if exactSpan && !isArray && fltrExpr.DependsOn(sargKey) {
 					exactSpan = false
 				}
 				continue
