@@ -272,7 +272,7 @@ func (this *With) reopen(context *Context) bool {
 	if rv && this.child != nil {
 		rv = this.child.reopen(context)
 	}
-	this.recycleBindings()
+	this.recycleBindings(false) // field values may still be referenced so don't recycle them
 	return rv
 }
 
@@ -283,30 +283,31 @@ func (this *With) Done() {
 		this.child = nil
 		child.Done()
 	}
-	this.recycleBindings()
+	this.recycleBindings(true)
 }
 
-func (this *With) recycleBindings() {
+func (this *With) recycleBindings(clearArray bool) {
 	if this.wv == nil {
 		return
 	}
 
 	m := this.wv.Fields()
-	if m == nil {
-		return
-	}
-	for _, v := range m {
-		if val, ok := v.(value.Value); ok {
-			// provide GC hint for array elements...
-			if val.Type() == value.ARRAY {
-				if arr, ok := val.Actual().([]interface{}); ok && arr != nil {
-					clear(arr)
-					arr = arr[0:0:0]
+	if m != nil {
+		for _, v := range m {
+			if val, ok := v.(value.Value); ok {
+				// When possible provide GC hint for array elements...
+				if clearArray == true && val.Type() == value.ARRAY {
+					// NOTE: this affects the underlying type so references to the value are all affected too so we must be sure
+					// we're done with it before doing this
+					if arr, ok := val.Actual().([]interface{}); ok && arr != nil {
+						clear(arr)
+						arr = arr[0:0:0]
+					}
 				}
+				// double recycle here to account for SetField's tracking
+				val.Recycle()
+				val.Recycle()
 			}
-			// double recycle here to account for SetField's tracking
-			val.Recycle()
-			val.Recycle()
 		}
 	}
 	this.wv.Recycle()

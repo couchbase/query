@@ -532,6 +532,12 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm,
 func (this *builder) processPredicate(pred expression.Expression, isOnclause bool) (
 	expression.Expression, error) {
 
+	var err error
+	this.arrayId, err = expression.AssignArrayId(pred, this.arrayId)
+	if err != nil {
+		return nil, err
+	}
+
 	return ClassifyExpr(pred, this.baseKeyspaces, this.keyspaceNames, isOnclause, this.useCBO,
 		this.advisorValidate(), this.context)
 }

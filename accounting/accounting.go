@@ -208,6 +208,9 @@ const (
 	CAS_MISMATCH_ERRORS
 	TEMP_SPACE_ERRORS
 
+	CURL_CALLS
+	CURL_CALL_ERRORS
+
 	// error count for sre alerts: https://issues.couchbase.com/browse/MB-58037
 	USER_ERROR_COUNT
 	SYSTEM_ERROR_COUNT
@@ -280,6 +283,9 @@ const (
 	_CAS_MISMATCH_ERRORS       = "cas_mismatch_errors"
 	_TEMP_SPACE_ERRORS         = "temp_space_errors"
 
+	_CURL_CALLS       = "curl_calls"
+	_CURL_CALL_ERRORS = "curl_call_errors"
+
 	_USER_ERROR_COUNT   = "user_error_count"
 	_SYSTEM_ERROR_COUNT = "engine_error_count"
 
@@ -342,6 +348,9 @@ var metricNames = []string{
 	_BULK_GET_ERRORS,
 	_CAS_MISMATCH_ERRORS,
 	_TEMP_SPACE_ERRORS,
+
+	_CURL_CALLS,
+	_CURL_CALL_ERRORS,
 
 	_USER_ERROR_COUNT,
 	_SYSTEM_ERROR_COUNT,

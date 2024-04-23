@@ -18,33 +18,31 @@ import (
 func SargFor(pred expression.Expression, entry *indexEntry, keys datastore.IndexKeys, isMissing bool,
 	isArrays []bool, max int, isJoin, doSelec bool, baseKeyspace *base.BaseKeyspace,
 	keyspaceNames map[string]string, advisorValidate bool, aliases map[string]bool,
-	arrayId int, context *PrepareContext) (SargSpans, bool, int, error) {
+	context *PrepareContext) (SargSpans, bool, error) {
 
 	// Optimize top-level OR predicate
 	if or, ok := pred.(*expression.Or); ok {
 		return sargForOr(or, entry, keys, isMissing, isArrays, max, isJoin, doSelec, baseKeyspace, keyspaceNames,
-			advisorValidate, aliases, arrayId, context)
+			advisorValidate, aliases, context)
 	}
 
 	sargKeys := keys[0:max]
 
 	// Get sarg spans for index sarg keys. The sarg spans are
 	// truncated when they exceed the limit.
-	sargSpans, exactSpan, aid, err := getSargSpans(pred, sargKeys, isMissing, isArrays, isJoin, doSelec,
-		baseKeyspace, keyspaceNames, advisorValidate, aliases, arrayId, context)
-	arrayId = aid
+	sargSpans, exactSpan, err := getSargSpans(pred, sargKeys, isMissing, isArrays, isJoin, doSelec,
+		baseKeyspace, keyspaceNames, advisorValidate, aliases, context)
 	if sargSpans == nil || err != nil {
-		return nil, exactSpan, arrayId, err
+		return nil, exactSpan, err
 	}
 
-	sp, ex, err := composeSargSpan(sargSpans, exactSpan)
-	return sp, ex, arrayId, err
+	return composeSargSpan(sargSpans, exactSpan)
 }
 
 func sargForOr(or *expression.Or, entry *indexEntry, keys datastore.IndexKeys, isMissing bool,
 	isArrays []bool, max int, isJoin, doSelec bool, baseKeyspace *base.BaseKeyspace,
 	keyspaceNames map[string]string, advisorValidate bool, aliases map[string]bool,
-	arrayId int, context *PrepareContext) (SargSpans, bool, int, error) {
+	context *PrepareContext) (SargSpans, bool, error) {
 
 	exact := true
 	spans := make([]SargSpans, len(or.Operands()))
@@ -53,11 +51,10 @@ func sargForOr(or *expression.Or, entry *indexEntry, keys datastore.IndexKeys, i
 		if max1 == 0 {
 			max1 = 1
 		}
-		s, ex, aid, err := SargFor(c, entry, keys, isMissing, isArrays, max1, isJoin, doSelec,
-			baseKeyspace, keyspaceNames, advisorValidate, aliases, arrayId, context)
-		arrayId = aid
+		s, ex, err := SargFor(c, entry, keys, isMissing, isArrays, max1, isJoin, doSelec,
+			baseKeyspace, keyspaceNames, advisorValidate, aliases, context)
 		if err != nil {
-			return nil, false, arrayId, err
+			return nil, false, err
 		}
 
 		spans[i] = s
@@ -73,7 +70,7 @@ func sargForOr(or *expression.Or, entry *indexEntry, keys datastore.IndexKeys, i
 				}
 				exprs, _, err := indexCoverExpressions(entry, keys1, c, nil, baseKeyspace.Name(), context)
 				if err != nil {
-					return nil, false, arrayId, err
+					return nil, false, err
 				}
 				implicitAny := implicitAnyCover(entry, true, context.FeatureControls())
 				if !expression.IsCovered(c, baseKeyspace.Name(), exprs, implicitAny) {
@@ -89,19 +86,19 @@ func sargForOr(or *expression.Or, entry *indexEntry, keys datastore.IndexKeys, i
 	}
 
 	var rv SargSpans = NewUnionSpans(spans...)
-	return rv.Streamline(), exact, arrayId, nil
+	return rv.Streamline(), exact, nil
 }
 
 func sargFor(pred expression.Expression, key expression.Expression, isJoin, doSelec bool, baseKeyspace *base.BaseKeyspace,
 	keyspaceNames map[string]string, advisorValidate, isMissing, isArray bool, aliases map[string]bool,
-	arrayId int, context *PrepareContext) (SargSpans, bool, int, error) {
+	context *PrepareContext) (SargSpans, bool, error) {
 
 	s := newSarg(key, baseKeyspace, keyspaceNames, isJoin, doSelec, advisorValidate, isMissing, isArray,
-		aliases, arrayId, context)
+		aliases, context)
 
 	r, err := pred.Accept(s)
 	if err != nil {
-		return nil, false, arrayId, err
+		return nil, false, err
 	}
 	if r == nil {
 		exact := true
@@ -110,11 +107,11 @@ func sargFor(pred expression.Expression, key expression.Expression, isJoin, doSe
 		} else if pred.DependsOn(key) {
 			exact = false
 		}
-		return nil, exact, arrayId, nil
+		return nil, exact, nil
 	}
 
 	rs := r.(SargSpans)
-	return rs, rs.Exact(), s.arrayId, nil
+	return rs, rs.Exact(), nil
 }
 
 func SargForFilters(filters base.Filters, keys datastore.IndexKeys, isMissing bool, isArrays []bool,
@@ -125,7 +122,6 @@ func SargForFilters(filters base.Filters, keys datastore.IndexKeys, isMissing bo
 	sargSpans := make([]SargSpans, max)
 	exactSpan := true
 	arrayKeySpans := make(map[int][]SargSpans)
-	arrayId := 0
 
 	sargKeys := keys[0:max]
 
@@ -143,13 +139,12 @@ func SargForFilters(filters base.Filters, keys datastore.IndexKeys, isMissing bo
 
 		fltrExpr := fl.FltrExpr()
 		isJoin := fl.IsJoin() && !underHash
-		flSargSpans, flExactSpan, nextId, err := getSargSpans(fltrExpr, sargKeys, isMissing,
+		flSargSpans, flExactSpan, err := getSargSpans(fltrExpr, sargKeys, isMissing,
 			isArrays, isJoin, doSelec, baseKeyspace, keyspaceNames, advisorValidate,
-			aliases, arrayId, context)
+			aliases, context)
 		if err != nil {
 			return nil, flExactSpan, err
 		}
-		arrayId = nextId
 
 		if flExactSpan && exactFilters != nil {
 			valid := false
@@ -291,7 +286,7 @@ Get sarg spans for index sarg keys.
 func getSargSpans(pred expression.Expression, sargKeys datastore.IndexKeys, isMissing bool,
 	isArrays []bool, isJoin, doSelec bool, baseKeyspace *base.BaseKeyspace,
 	keyspaceNames map[string]string, advisorValidate bool, aliases map[string]bool,
-	arrayId int, context *PrepareContext) ([]SargSpans, bool, int, error) {
+	context *PrepareContext) ([]SargSpans, bool, error) {
 
 	// is the predicate simple?
 	simple := true
@@ -304,21 +299,15 @@ func getSargSpans(pred expression.Expression, sargKeys datastore.IndexKeys, isMi
 
 	exactSpan := true
 	sargSpans := make([]SargSpans, n)
-	nextId := arrayId
 
 	// Sarg composite indexes right to left
 	for i := n - 1; i >= 0; i-- {
-		// the same (input) arrayId is used for all index keys
 		s := newSarg(sargKeys[i].Expr, baseKeyspace, keyspaceNames, isJoin, doSelec,
 			advisorValidate, (isMissing || i > 0), (i < len(isArrays) && isArrays[i]),
-			aliases, arrayId, context)
+			aliases, context)
 		r, err := pred.Accept(s)
 		if err != nil {
-			return nil, false, nextId, err
-		}
-
-		if s.arrayId > nextId {
-			nextId = s.arrayId
+			return nil, false, err
 		}
 
 		if r != nil {
@@ -339,7 +328,7 @@ func getSargSpans(pred expression.Expression, sargKeys datastore.IndexKeys, isMi
 				for j := n - 1; j >= 0; j-- {
 					sargSpans[j] = _EMPTY_SPANS
 				}
-				return sargSpans, true, nextId, nil
+				return sargSpans, true, nil
 			}
 
 			if simple {
@@ -382,7 +371,7 @@ func getSargSpans(pred expression.Expression, sargKeys datastore.IndexKeys, isMi
 		}
 	}
 
-	return sargSpans, exactSpan, nextId, nil
+	return sargSpans, exactSpan, nil
 }
 
 // this function is called for subterms of an OR clause, it assumes the original OR expression

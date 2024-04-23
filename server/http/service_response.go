@@ -230,7 +230,6 @@ func (this *httpRequest) Execute(srvr *server.Server, context *execution.Context
 
 	this.prefix, this.indent = this.prettyStrings(srvr.Pretty(), false)
 
-	this.setHttpCode(http.StatusOK)
 	switch this.format {
 	case XML:
 		this.writePrefixXML(srvr, signature, this.prefix, this.indent)

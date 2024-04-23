@@ -29,6 +29,7 @@ type collPredBase struct {
 	ExpressionBase
 	bindings  Bindings
 	satisfies Expression
+	arrayId   int
 }
 
 func (this *collPredBase) PropagatesMissing() bool {
@@ -186,6 +187,14 @@ func (this *collPredBase) Bindings() Bindings {
 
 func (this *collPredBase) Satisfies() Expression {
 	return this.satisfies
+}
+
+func (this *collPredBase) ArrayId() int {
+	return this.arrayId
+}
+
+func (this *collPredBase) SetArrayId(arrayId int) {
+	this.arrayId = arrayId
 }
 
 var _VARS_POOL = util.NewStringInterfacePool(8)

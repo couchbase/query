@@ -131,7 +131,8 @@ func (this *Any) FilterExpressionCovers(covers map[Expression]value.Value) map[E
 }
 
 func (this *Any) Copy() Expression {
-	rv := NewAny(this.bindings.Copy(), Copy(this.satisfies))
+	rv := NewAny(this.bindings.Copy(), Copy(this.satisfies)).(*Any)
+	rv.arrayId = this.arrayId
 	rv.BaseCopy(this)
 	return rv
 }
