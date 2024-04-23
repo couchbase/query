@@ -129,7 +129,7 @@ func SargForFilters(filters base.Filters, keys expression.Expressions, isMissing
 
 		fltrExpr := fl.FltrExpr()
 		isJoin := fl.IsJoin() && !underHash
-		flSargSpans, flExactSpan, err := getSargSpans(fl.FltrExpr(), sargKeys, isMissings, isJoin,
+		flSargSpans, flExactSpan, err := getSargSpans(fltrExpr, sargKeys, isMissings, isJoin,
 			doSelec, baseKeyspace, keyspaceNames, advisorValidate, aliases, context)
 		if err != nil {
 			return nil, flExactSpan, err
