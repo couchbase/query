@@ -1018,6 +1018,13 @@ func checkExplain(qc *MockServer, queryParams map[string]interface{}, namespace 
 }
 
 func PrepareStmt(qc *MockServer, queryParams map[string]interface{}, namespace, statement string) (*plan.Prepared, errors.Error) {
+
+	feat_ctrl := util.GetN1qlFeatureControl()
+	if !util.IsFeatureEnabled(feat_ctrl, util.N1QL_ENCODED_PLAN) {
+		util.SetN1qlFeatureControl(feat_ctrl & ^util.N1QL_ENCODED_PLAN)
+		defer util.SetN1qlFeatureControl(feat_ctrl)
+	}
+
 	var queryContext string
 	if s, ok := queryParams["query_context"]; ok {
 		queryContext, _ = s.(string)
@@ -1077,9 +1084,6 @@ func Start_cs_http(setGlobals bool) *MockServer {
 
 func RunMatch(filename string, prepared, explain bool, qc *MockServer, t *testing.T) {
 
-	// Start the completed requests log - keep it small and busy
-
-	util.SetN1qlFeatureControl(util.GetN1qlFeatureControl() & ^util.N1QL_ENCODED_PLAN)
 	matches, err := filepath.Glob(filename)
 	if err != nil {
 		t.Errorf("glob failed: %v", err)
