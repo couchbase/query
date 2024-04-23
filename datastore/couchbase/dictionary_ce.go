@@ -98,5 +98,5 @@ func checkIndexCache(keyspace string, indexer datastore.Indexer, dict *chkIndexD
 }
 
 func SupportedBackupVersion() int {
-	return functionStorage.SupportedBackupVersion()
+	return functionsStorage.SupportedBackupVersion()
 }
