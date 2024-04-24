@@ -217,3 +217,10 @@ func NewServiceInvalidValueError(value string, feature string, details string) E
 	return &err{level: EXCEPTION, ICode: E_SERVICE_INVALID_VALUE, IKey: "service.io.request.invalid_value",
 		InternalMsg: fmt.Sprintf("%s = %s is invalid.%s", feature, value, details), InternalCaller: CallerN(1)}
 }
+
+func NewBackupNotPossible() Error {
+	c := make(map[string]interface{})
+	c["possible_reasons"] = []string{"Migration active."}
+	return &err{level: EXCEPTION, ICode: E_BACKUP_NOT_POSSIBLE, IKey: "service.backup_not_possible", cause: c,
+		InternalMsg: "Backup not possible currently.", InternalCaller: CallerN(1)}
+}

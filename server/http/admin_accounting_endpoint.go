@@ -1008,6 +1008,12 @@ func doGlobalBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 		}
 		data := make([]interface{}, 0, numFunctions)
 
+		// this check doesn't force waiting if the migration is active
+		version := dictionary.SupportedBackupVersion()
+		if version == datastore.BACKUP_NOT_POSSIBLE {
+			return nil, errors.NewServiceErrorBadValue(errors.NewBackupNotPossible(), "Metadata backup")
+		}
+
 		snapshot := func(name string, v value.Value) error {
 			path := algebra.ParsePath(name)
 			if len(path) == 2 {
@@ -1017,6 +1023,11 @@ func doGlobalBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 		}
 
 		functionsStorage.Foreach("", snapshot)
+
+		if version == datastore.BACKUP_VERSION_1 {
+			// even though global functions aren't changed between v1 & v2, write a v1 header when v1 is indicated
+			return makeBackupHeaderV1(data), nil
+		}
 		return makeBackupHeader(data, nil, nil), nil
 
 	case "POST":
@@ -1076,6 +1087,7 @@ func doBucketBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 
 	_, bucket := router.RequestValue(req, "bucket")
 	af.EventTypeId = audit.API_ADMIN_BACKUP
+
 	switch req.Method {
 	case "GET":
 		err, _ := endpoint.verifyCredentialsFromRequest(bucket, auth.PRIV_BACKUP_BUCKET, req, af)
@@ -1090,6 +1102,11 @@ func doBucketBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 		exclude, err := newFilter(req.FormValue("exclude"))
 		if err != nil {
 			return nil, err
+		}
+		// this check doesn't force waiting if the migration is active
+		version := dictionary.SupportedBackupVersion()
+		if version == datastore.BACKUP_NOT_POSSIBLE {
+			return nil, errors.NewServiceErrorBadValue(errors.NewBackupNotPossible(), "Metadata backup")
 		}
 		fns := make([]interface{}, 0)
 		// do not archive functions if the metadata is already stored in KV
@@ -1106,6 +1123,10 @@ func doBucketBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 				return nil, ue
 			}
 			return nil, errors.NewServiceErrorBadValue(err1, "UDF backup")
+		}
+
+		if version == datastore.BACKUP_VERSION_1 {
+			return makeBackupHeaderV1(fns), nil
 		}
 
 		seqs, err := sequences.BackupSequences("default", bucket, func(name string) bool {
@@ -1318,6 +1339,7 @@ const _MAGIC_KEY = "udfMagic"
 const _MAGIC = "4D6172636F2072756C6573"
 const _VERSION_KEY = "version"
 const _VERSION = "0x02"
+const _VERSION_1 = "0x01"
 const _VERSION_MIN = 1
 const _VERSION_MAX = 2
 const _UDF_KEY = "udfs"
@@ -1331,6 +1353,14 @@ func makeBackupHeader(v interface{}, s interface{}, c interface{}) interface{} {
 	data[_UDF_KEY] = v
 	data[_SEQ_KEY] = s
 	data[_CBO_KEY] = c
+	return data
+}
+
+func makeBackupHeaderV1(v interface{}) interface{} {
+	data := make(map[string]interface{}, 4)
+	data[_MAGIC_KEY] = _MAGIC
+	data[_VERSION_KEY] = _VERSION_1
+	data[_UDF_KEY] = v
 	return data
 }
 
