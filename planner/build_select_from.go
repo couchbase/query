@@ -1502,9 +1502,23 @@ func (this *builder) checkEarlyProjection(projection *algebra.Projection) error 
 
 				// make sure the projected fields can "cover" the query
 				coverExprs := make(expression.Expressions, 0, len(names)+1)
-				for n, _ := range names {
+
+				// disable early projection when:
+				// 1. field is caseinsensitive : eg. `key`i
+				// 2. top-level field in a nested-field is case-sensentive: eg. `key`i.`key2`
+				skipEarlyProjection := false
+				for n, caseinsensitive := range names {
+					if caseinsensitive {
+						skipEarlyProjection = true
+						break
+					}
 					coverExprs = append(coverExprs, expression.NewField(ident, expression.NewFieldName(n, false)))
 				}
+
+				if skipEarlyProjection {
+					continue
+				}
+
 				coverExprs = append(coverExprs, expression.NewField(expression.NewMeta(ident),
 					expression.NewFieldName("id", false)))
 

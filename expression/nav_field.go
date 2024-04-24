@@ -328,7 +328,7 @@ func (this *Field) FieldNames(base Expression, names map[string]bool) (present b
 		second := this.Second().Value()
 		if second != nil {
 			if sv, ok := second.Actual().(string); ok {
-				names[sv] = true
+				names[sv] = this.caseInsensitive
 			}
 		}
 		return true
