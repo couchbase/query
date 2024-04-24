@@ -3453,10 +3453,15 @@ func (s *store) CreateSysPrimaryIndex(idxName, requestId string, indexer3 datast
 	createPrimaryIndex := func(n_replica int) (bool, errors.Error) {
 		_, err := indexer3.CreatePrimaryIndex3(requestId, idxName, nil, with)
 		if err != nil && !errors.IsIndexExistsError(err) {
+			if n_replica > 0 && err.HasCause(errors.E_ENTERPRISE_FEATURE) && err.ContainsText("Index Replica not supported") {
+				n_replica = 1   // this will remove replicas from the repeat attempt below
+				err = nil       // skip initial error check in the loop below
+				num_replica = 0 // don't attempt to use replicas in the future
+			}
 			// if the create failed due to not enough indexer nodes, retry with fewer replicas
 			for n_replica > 0 {
 				// defined as ErrNotEnoughIndexers in indexing/secondary/common/const.go
-				if !err.ContainsText("not enough indexer nodes to create index with replica") {
+				if err != nil && !err.ContainsText("not enough indexer nodes to create index with replica") {
 					return false, err
 				}
 
