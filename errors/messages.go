@@ -4519,6 +4519,20 @@ var errData = []ErrData{
 		},
 	},
 	{
+		Code:        E_BACKUP_NOT_POSSIBLE, // 7300
+		symbol:      "E_BACKUP_NOT_POSSIBLE",
+		Description: "Metadata backup not possible.",
+		Reason: []string{
+			"A backup has been attempted whilst metadata migration is underway.",
+		},
+		Action: []string{
+			"Wait for the migration to complete before attempting to backup the Query node(s).",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
 		Code:        E_DATASTORE_AUTHORIZATION, // 10000
 		symbol:      "E_DATASTORE_AUTHORIZATION",
 		Description: "Unable to authorize user.",
