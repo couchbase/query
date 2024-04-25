@@ -1008,7 +1008,7 @@ func doGlobalBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 		// this check doesn't force waiting if the migration is active
 		version := dictionary.SupportedBackupVersion()
 		if version == datastore.BACKUP_NOT_POSSIBLE {
-			return nil, errors.NewServiceErrorBadValue(errors.NewBackupNotPossible(), "Metadata backup")
+			return nil, errors.NewBackupNotPossible()
 		}
 
 		snapshot := func(name string, v value.Value) error {
@@ -1103,7 +1103,7 @@ func doBucketBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 		// this check doesn't force waiting if the migration is active
 		version := dictionary.SupportedBackupVersion()
 		if version == datastore.BACKUP_NOT_POSSIBLE {
-			return nil, errors.NewServiceErrorBadValue(errors.NewBackupNotPossible(), "Metadata backup")
+			return nil, errors.NewBackupNotPossible()
 		}
 		fns := make([]interface{}, 0)
 		// do not archive functions if the metadata is already stored in KV
