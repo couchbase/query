@@ -120,10 +120,18 @@ func (this *DistinctScan) processKey(item value.AnnotatedValue,
 
 	key, ok := this.getDocumentKey(item, context)
 	if !ok {
+		if context.UseRequestQuota() {
+			context.ReleaseValueSize(item.Size())
+		}
+		item.Recycle()
 		return false
 	}
 
 	if _, ok = this.keys[key]; ok {
+		if context.UseRequestQuota() {
+			context.ReleaseValueSize(item.Size())
+		}
+		item.Recycle()
 		return true
 	}
 
@@ -131,10 +139,18 @@ func (this *DistinctScan) processKey(item value.AnnotatedValue,
 
 	length := int64(len(this.keys))
 	if offset > 0 && length <= offset {
+		if context.UseRequestQuota() {
+			context.ReleaseValueSize(item.Size())
+		}
+		item.Recycle()
 		return true
 	}
 
 	if limit > 0 && length > (limit+offset) {
+		if context.UseRequestQuota() {
+			context.ReleaseValueSize(item.Size())
+		}
+		item.Recycle()
 		return false
 	}
 
