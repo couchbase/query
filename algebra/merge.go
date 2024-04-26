@@ -287,6 +287,10 @@ func (this *Merge) Formalize() (err error) {
 	}
 
 	if this.returning != nil {
+		// for the RETURNING clause, we assume any unqualified references is for the
+		// target keyspace (previous behavior), but also allow qualified references to
+		// the source keyspace.
+		f.SetKeyspace(this.keyspace.Alias())
 		_, err = this.returning.Formalize(f)
 	}
 
