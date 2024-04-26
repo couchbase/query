@@ -85,6 +85,9 @@ func (this *Except) beforeItems(context *Context, parent value.Value) bool {
 
 func (this *Except) processItem(item value.AnnotatedValue, context *Context) bool {
 	if this.set.Has(item) {
+		if context.UseRequestQuota() {
+			context.ReleaseValueSize(item.Size())
+		}
 		item.Recycle()
 		return true
 	}
@@ -221,6 +224,9 @@ func (this *ExceptAll) beforeItems(context *Context, parent value.Value) bool {
 func (this *ExceptAll) processItem(item value.AnnotatedValue, context *Context) bool {
 	if this.mset.Has(item) {
 		this.mset.Remove(item.(value.Value))
+		if context.UseRequestQuota() {
+			context.ReleaseValueSize(item.Size())
+		}
 		item.Recycle()
 		return true
 	}

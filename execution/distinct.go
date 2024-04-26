@@ -70,6 +70,9 @@ func (this *Distinct) processItem(item value.AnnotatedValue, context *Context) b
 		this.set.Put(p.(value.Value), item)
 		return this.collect || this.sendItem(item)
 	} else {
+		if context.UseRequestQuota() {
+			context.ReleaseValueSize(item.Size())
+		}
 		item.Recycle()
 	}
 	return true

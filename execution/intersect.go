@@ -91,6 +91,9 @@ func (this *Intersect) beforeItems(context *Context, parent value.Value) bool {
 
 func (this *Intersect) processItem(item value.AnnotatedValue, context *Context) bool {
 	if !this.set.Has(item) {
+		if context.UseRequestQuota() {
+			context.ReleaseValueSize(item.Size())
+		}
 		item.Recycle()
 		return true
 	}
@@ -232,6 +235,9 @@ func (this *IntersectAll) beforeItems(context *Context, parent value.Value) bool
 
 func (this *IntersectAll) processItem(item value.AnnotatedValue, context *Context) bool {
 	if !this.mset.Has(item) {
+		if context.UseRequestQuota() {
+			context.ReleaseValueSize(item.Size())
+		}
 		item.Recycle()
 		return true
 	}
