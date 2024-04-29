@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/sort"
@@ -44,10 +45,58 @@ func (this *Len) Evaluate(item value.Value, context Context) (value.Value, error
 	if err != nil {
 		return nil, err
 	}
+	return evaluateLength(arg, false)
+}
+
+func (this *Len) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return NewLen(operands[0])
+	}
+}
+
+// Multi-byte aware variant
+
+type MBLen struct {
+	UnaryFunctionBase
+}
+
+func NewMBLen(operand Expression) Function {
+	rv := &MBLen{
+		*NewUnaryFunctionBase("mb_len", operand),
+	}
+
+	rv.expr = rv
+	return rv
+}
+
+func (this *MBLen) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *MBLen) Type() value.Type { return value.NUMBER }
+
+func (this *MBLen) Evaluate(item value.Value, context Context) (value.Value, error) {
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+	return evaluateLength(arg, true)
+}
+
+func (this *MBLen) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return NewMBLen(operands[0])
+	}
+}
+
+func evaluateLength(arg value.Value, runes bool) (value.Value, error) {
 	switch arg.Type() {
 	case value.MISSING:
 		return value.MISSING_VALUE, nil
 	case value.STRING:
+		if runes {
+			return value.NewValue(utf8.RuneCountInString(arg.ToString())), nil
+		}
 		return value.NewValue(arg.Size()), nil
 	case value.OBJECT:
 		oa := arg.Actual().(map[string]interface{})
@@ -63,12 +112,6 @@ func (this *Len) Evaluate(item value.Value, context Context) (value.Value, error
 		return value.NewValue(len(arg.ToString())), nil
 	}
 	return value.NULL_VALUE, nil
-}
-
-func (this *Len) Constructor() FunctionConstructor {
-	return func(operands ...Expression) Function {
-		return NewLen(operands[0])
-	}
 }
 
 // Evaluate

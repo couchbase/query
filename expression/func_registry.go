@@ -471,6 +471,7 @@ var _FUNCTIONS = map[string]Function{
 
 	// General
 	"len":        &Len{},
+	"mb_len":     &MBLen{},
 	"evaluate":   &Evaluate{},
 	"finderr":    &Finderr{},
 	"extractddl": &ExtractDDL{},
