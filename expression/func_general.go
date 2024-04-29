@@ -61,10 +61,8 @@ type MBLen struct {
 }
 
 func NewMBLen(operand Expression) Function {
-	rv := &MBLen{
-		*NewUnaryFunctionBase("mb_len", operand),
-	}
-
+	rv := &MBLen{}
+	rv.Init("mb_len", operand)
 	rv.expr = rv
 	return rv
 }
