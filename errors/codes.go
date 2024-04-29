@@ -166,6 +166,8 @@ const (
 	E_CONFIG_INVALID_OPTION                   ErrorCode = 3303
 	E_RECURSION_UNSUPPORTED                   ErrorCode = 3304
 	E_RECURSIVE_IMPLICIT_DOC_LIMIT            ErrorCode = 3305
+	E_RECURSIVE_IMPLICIT_DEPTH_LIMIT          ErrorCode = 3306
+	E_CYCLE_FIELDS_VALIDATION_FAILED          ErrorCode = 3307
 	E_PLAN                                    ErrorCode = 4000
 	E_REPREPARE                               ErrorCode = 4001
 	E_NO_TERM_NAME                            ErrorCode = 4010
