@@ -83,9 +83,9 @@ func (this *OrderLimit) RunOnce(context *Context, parent value.Value) {
 
 func (this *OrderLimit) beforeItems(context *Context, parent value.Value) bool {
 	// this.Order takes care of the phase operator
-	this.Order.setupTerms(context)
+	this.Order.setupTerms(parent, context)
 	this.numProcessedRows = 0
-	this.setupTerms(context)
+	this.setupTerms(parent, context)
 
 	heapSize := 0
 	if this.offset != nil {

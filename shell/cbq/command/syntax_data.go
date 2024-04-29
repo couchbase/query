@@ -384,6 +384,7 @@ var statement_syntax = map[string][][]string{
 	},
 	"dir": [][]string{
 		[]string{"param_expr"},
+		[]string{"ident"},
 		[]string{"ASC"},
 		[]string{"DESC"},
 	},
@@ -391,6 +392,7 @@ var statement_syntax = map[string][][]string{
 		[]string{"NULLS", "FIRST"},
 		[]string{"NULLS", "LAST"},
 		[]string{"NULLS", "param_expr"},
+		[]string{"NULLS", "ident"},
 	},
 	"first_last": [][]string{
 		[]string{"FIRST", "}"},

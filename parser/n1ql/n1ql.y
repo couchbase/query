@@ -2073,6 +2073,11 @@ param_expr
     $$ = $1
 }
 |
+ident
+{
+    $$ = $1
+}
+|
 ASC
 {
     $$ = expression.NewConstant(value.NewValue("asc"))
@@ -2101,6 +2106,11 @@ NULLS LAST
 }
 |
 NULLS param_expr
+{
+    $$ = $2
+}
+|
+NULLS ident
 {
     $$ = $2
 }

@@ -11,6 +11,7 @@ package semantics
 import (
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/expression"
 )
 
 func (this *SemChecker) VisitSelect(stmt *algebra.Select) (r interface{}, err error) {
@@ -45,6 +46,13 @@ func (this *SemChecker) VisitSelect(stmt *algebra.Select) (r interface{}, err er
 		if this.hasSemFlag(_SEM_WITH_RECURSIVE) {
 			return nil, errors.NewRecursiveWithSemanticError("Order not allowed")
 		}
+
+		// Validate the ORDER BY direction and NULLS position expressions
+		err = validateOrderBySemantics(stmt.Order())
+		if err != nil {
+			return nil, err
+		}
+
 		if err = stmt.Order().MapExpressions(this); err != nil {
 			return nil, err
 		}
@@ -255,4 +263,69 @@ func (this *SemChecker) VisitMerge(stmt *algebra.Merge) (r interface{}, err erro
 	}
 
 	return nil, stmt.MapExpressions(this)
+}
+
+// Validate the semantics of the ORDER BY direction and NULLS position
+func validateOrderBySemantics(order *algebra.Order) error {
+
+	for _, s := range order.Terms() {
+
+		desc := s.DescendingExpr()
+		if desc != nil {
+			// ORDER BY direction must be a static expression
+			if desc.Static() == nil {
+				return errors.NewOrderByValidationError("ORDER BY direction", desc.String())
+			}
+
+			// ORDER BY direction can only be a constant or named, positional, function parameters
+			switch d := desc.(type) {
+			case *expression.Constant:
+				break
+			case expression.NamedParameter:
+				break
+			case expression.PositionalParameter:
+				break
+			case *expression.Identifier:
+				{
+					// If the ORDER BY direction is an identifier it must be a function variable.
+					if !d.IsFuncVariable() {
+						return errors.NewOrderByValidationError("ORDER BY direction", d.String())
+					}
+					break
+				}
+			default:
+				return errors.NewOrderByValidationError("ORDER BY direction", d.String())
+			}
+		}
+
+		nullsPos := s.NullsPosExpr()
+		if nullsPos != nil {
+
+			// NULLS position must be a static expression
+			if nullsPos.Static() == nil {
+				return errors.NewOrderByValidationError("NULLS position", nullsPos.String())
+			}
+
+			// NULLS position can only be a constant or named, positional, function parameters
+			switch n := nullsPos.(type) {
+			case *expression.Constant:
+				break
+			case expression.NamedParameter:
+				break
+			case expression.PositionalParameter:
+				break
+			case *expression.Identifier:
+				{
+					// If the NULLS position is an identifier it must be a function variable
+					if !n.IsFuncVariable() {
+						return errors.NewOrderByValidationError("NULLS position", n.String())
+					}
+					break
+				}
+			default:
+				return errors.NewOrderByValidationError("NULLS position", n.String())
+			}
+		}
+	}
+	return nil
 }

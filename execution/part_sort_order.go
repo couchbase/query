@@ -75,7 +75,7 @@ func (this *PartSortOrder) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *PartSortOrder) beforeItems(context *Context, parent value.Value) bool {
-	this.Order.setupTerms(context)
+	this.Order.setupTerms(parent, context)
 	context.AddPhaseOperator(SORT)
 	if this.offset != nil && !this.offset.beforeItems(context, parent) {
 		return false
@@ -166,7 +166,6 @@ func (this *PartSortOrder) afterItems(context *Context) {
 	}
 
 	if this.values.Length() > 0 {
-		this.setupTerms(context)
 		this.sortAndStream(context)
 	}
 }

@@ -159,6 +159,7 @@ const (
 	E_CREATE_INDEX_SELF_NOTALLOWED            ErrorCode = 3285
 	E_INDEX_NOT_ALLOWED                       ErrorCode = 3286
 	E_JOIN_HINT_FIRST_FROM_TERM               ErrorCode = 3290
+	E_ORDER_BY_VALIDATION_FAIL                ErrorCode = 3291
 	E_RECURSIVE_WITH_SEMANTIC                 ErrorCode = 3300
 	E_ANCHOR_RECURSIVE_REF                    ErrorCode = 3301
 	E_MORE_THAN_ONE_RECURSIVE_REF             ErrorCode = 3302

@@ -214,12 +214,12 @@ func (this *builder) searchPagination(searchSargables []*indexEntry, pred expres
 					scorefn.IndexMetaField()) {
 					index := entry.index.(datastore.FTSIndex)
 					collation := " ASC"
-					if orderTerm.Descending(nil) {
+					if orderTerm.Descending(nil, nil) {
 						collation = " DESC"
-						if orderTerm.NullsLast(nil) {
+						if orderTerm.NullsLast(nil, nil) {
 							collation += " NULLS FIRST"
 						}
-					} else if orderTerm.NullsLast(nil) {
+					} else if orderTerm.NullsLast(nil, nil) {
 						collation += " NULLS LAST"
 					}
 
@@ -397,8 +397,8 @@ func (this *builder) buildFTSFlexRequest(alias string, pred expression.Expressio
 			}
 
 			var nullsPos uint32
-			d := term.Descending(nil)
-			nl := term.NullsLast(nil)
+			d := term.Descending(nil, nil)
+			nl := term.NullsLast(nil, nil)
 			if !d && nl {
 				nullsPos = datastore.ORDER_NULLS_LAST
 			} else if d && nl {
