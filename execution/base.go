@@ -535,8 +535,10 @@ func (this *base) IsSerializable() bool {
 	return this.serializable
 }
 
+// IsParallel has meaning independent of IsSerializable
 func (this *base) IsParallel() bool {
-	return !this.serializable
+	// by default operators are not parallel; those that are override this
+	return false
 }
 
 func (this *base) SerializeOutput(op Operator, context *Context) {
