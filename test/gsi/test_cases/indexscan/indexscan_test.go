@@ -103,6 +103,7 @@ func TestIndexScan(t *testing.T) {
 	runStmt(qc, "CREATE INDEX iax6 ON orders(ALL ARRAY v1.val FOR v1 IN a3 WHEN v1.type = \"n\" END,c1,c2) WHERE test_id = \"ua\"")
 
 	runMatch("case_array_index_unnest_scan.json", false, true, qc, t)
+	runMatch("case_array_index_unnest_scan2.json", false, true, qc, t)
 
 	runStmt(qc, "DROP INDEX orders.iax1")
 	runStmt(qc, "DROP INDEX orders.iax2")

@@ -265,16 +265,16 @@ func (this *builder) matchUnnest(node *algebra.KeyspaceTerm, pred, subset expres
 		var origBinding *expression.Binding
 		when := array.When()
 		arrayMapping := array.ValueMapping()
-		alias := expression.NewIdentifier(unnest.As())
+		alias := expression.NewIdentifier(unnest.Alias())
 		alias.SetUnnestAlias(true)
 
-		if unnest.As() != binding.Variable() {
+		if unnest.Alias() != binding.Variable() {
 			nakey, naok := arrayMapping.(*expression.All)
 			for naok {
 				if a, aok := nakey.Array().(*expression.Array); aok {
 					// disallow if unnest alias is nested binding variable in the array index
 					if len(a.Bindings()) != 1 ||
-						unnest.As() == a.Bindings()[0].Variable() {
+						unnest.Alias() == a.Bindings()[0].Variable() {
 						return nil, nil, nil, nil
 					}
 					nakey, naok = a.ValueMapping().(*expression.All)
@@ -284,7 +284,7 @@ func (this *builder) matchUnnest(node *algebra.KeyspaceTerm, pred, subset expres
 			}
 
 			origBinding = binding
-			binding = expression.NewSimpleBinding(unnest.As(), unnest.Expression())
+			binding = expression.NewSimpleBinding(unnest.Alias(), unnest.Expression())
 			renamer := expression.NewRenamer(array.Bindings(), expression.Bindings{binding})
 			if when != nil {
 				when, err = renamer.Map(when.Copy())
@@ -328,7 +328,7 @@ func (this *builder) matchUnnest(node *algebra.KeyspaceTerm, pred, subset expres
 
 		sargKey = arrayMapping
 		if origBinding != nil {
-			if unnest.As() != origBinding.Variable() {
+			if unnest.Alias() != origBinding.Variable() {
 				// remember the original mapping before binding variable replacement
 				origSargKey = array.ValueMapping()
 			}
@@ -336,10 +336,10 @@ func (this *builder) matchUnnest(node *algebra.KeyspaceTerm, pred, subset expres
 			newArrayKey = expression.NewAll(expression.NewArray(arrayMapping,
 				expression.Bindings{binding}, when), arrayKey.Distinct())
 		}
-	} else if unnest.As() == "" || !unnest.Expression().EquivalentTo(arrayKey.Array()) {
+	} else if unnest.Alias() == "" || !unnest.Expression().EquivalentTo(arrayKey.Array()) {
 		return nil, nil, nil, nil
 	} else {
-		unnestIdent := expression.NewIdentifier(unnest.As())
+		unnestIdent := expression.NewIdentifier(unnest.Alias())
 		unnestIdent.SetUnnestAlias(true)
 		sargKey = unnestIdent
 	}

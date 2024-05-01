@@ -1,0 +1,237 @@
+[
+    {
+        "comments":"With sequential scans idx2 is no longer chosen",
+        "disabled":true,
+        "testcase": "MB-28720",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`index` = 'idx2' END"
+        },
+        "statements":"SELECT META(d).id AS id FROM shellTest AS d  UNNEST  OBJECT_PAIRS(META(d).id) AS op WHERE [op.name, META(d).id] > [1,10]",
+        "ordered": true,
+        "results": [
+    ]
+    },
+    {
+        "testcase": "MB-30970",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'UnionScan' AND ANY v1 WITHIN v.scans SATISFIES v1.`#operator` LIKE 'IndexScan%' AND v1.`index` = 'iax1' END AND ANY v2 WITHIN v.scans SATISFIES v2.`#operator` LIKE 'IndexScan%' AND v2.`index` = 'iax2' END END"
+        },
+        "statements":"SELECT 1 AS a FROM shellTest AS d UNNEST d.a1 WHERE a1.x = 10 OR a1.y = 20",
+        "ordered": true,
+        "results": [
+    ]
+    },
+    {
+        "testcase": "MB-30292",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`index` = 'ix22' END"
+        },
+        "statements":"SELECT [op.name,op.val,a1] FROM shellTest AS d UNNEST d.a1 UNNEST a1 AS op WHERE [op.name,op.val,a1] = [\"type2\", \"bla\",\"xxx\"]",
+        "ordered": true,
+        "results": [
+    ]
+    },
+    {
+        "testcase": "MB-38105",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`index` = 'idx11' AND ARRAY_LENGTH(v.spans) = 2 AND v.spans[0].`range`[0].inclusion = 0 AND v.spans[1].`range`[0].inclusion = 0 END"
+        },
+        "statements":"SELECT 1 FROM shellTest AS d UNNEST d.a1  WHERE d.c1 != 10 AND d.c1 = a1.u1",
+        "ordered": true,
+        "results": [
+    ]
+    },
+    {
+        "testcase": "MB-46641",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "cnt": 0
+                }
+            ],
+            "statement": "SELECT COUNT(1) AS cnt FROM (SELECT 1 FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IntersectScan' END) AS present"
+        },
+        "statements":"SELECT * FROM shellTest AS d UNNEST d.arr WHERE d.type = 'doc' AND arr > 10",
+        "ordered": true,
+        "results": [
+    ]
+    },
+    {
+        "testcase": "MB-51410",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`index_order` IS MISSING END"
+        },
+        "statements":"SELECT arr10.x, d.c1 FROM shellTest AS d USE INDEX (ix101) UNNEST d.arr10 WHERE arr10.x > 0 ORDER BY arr10.x",
+        "ordered": true,
+        "results": [
+            {
+                "x": 1
+            },
+            {
+                "x": 1
+            },
+            {
+                "x": 1
+            },
+            {
+                "x": 2
+            }
+        ]
+    },
+    {
+        "testcase": "MB-55849",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`index` = 'ix102' END"
+        },
+        "statements":"SELECT d.a, u FROM shellTest AS d UNNEST ARRAY_CONCAT(d.a, d.b) AS u",
+        "ordered": true,
+        "results": [
+        ]
+    },
+    {
+        "testcase": "MB-56775, part 1, project (unnested) array, not covered",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`index` = 'ix101' AND v.`covers` IS MISSING END"
+        },
+        "statements":"SELECT d.arr10, arr10.x FROM shellTest AS d UNNEST d.arr10 WHERE arr10.x > 1",
+        "results": [
+            {
+                "arr10": [
+                    {
+                        "x": 1
+                    },
+                    {
+                        "x": 2
+                    },
+                    {
+                        "x": 1
+                    },
+                    {
+                        "x": 1
+                    }
+                ],
+                "x": 2
+            }
+        ]
+    },
+    {
+        "testcase": "MB-56775, part 2, not project (unnested) array, covered",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`index` = 'ix101' AND v.`covers` IS NOT MISSING END"
+        },
+        "statements":"SELECT meta(d).id, arr10.x FROM shellTest AS d UNNEST d.arr10 WHERE arr10.x > 1",
+        "results": [
+            {
+                "id": "test101_unnest",
+                "x": 2
+            }
+        ]
+    },
+    {
+        "testcase": "MB-61707, part 1",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`index` = 'ix111' AND v.`covers` IS NOT MISSING END"
+        },
+        "statements":"SELECT f1 FROM shellTest AS d UNNEST d.f1 WHERE f1 = 1",
+        "results": [
+        ]
+    },
+    {
+        "testcase": "MB-61707, part 2",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`index` = 'ix112' AND v.`covers` IS NOT MISSING END"
+        },
+        "statements":"SELECT arr FROM shellTest AS d UNNEST d.f2 UNNEST f2.arr WHERE arr IN [10, 20]",
+        "results": [
+        ]
+    },
+    {
+        "testcase": "MB-61707, part 3",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`index` = 'ix113' AND v.`covers` IS NOT MISSING END"
+        },
+        "statements":"SELECT f3.id FROM shellTest AS d UNNEST d.f3 WHERE f3.id = 10",
+        "results": [
+        ]
+    }
+]
+

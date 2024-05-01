@@ -28,11 +28,13 @@ func TestUnnestFunc(t *testing.T) {
 	runStmt(qc, "CREATE PRIMARY INDEX ON purchase")
 
 	runMatch("case_unnest.json", false, false, qc, t)
+	runMatch("case_unnest2.json", false, false, qc, t)
 
 	runStmt(qc, "CREATE INDEX ixa10 ON purchase(ALL ARRAY l.product FOR l IN lineItems END, customerId, purchaseId) "+
 		"WHERE test_id = 'unnest'")
 
 	runMatch("case_unnest_filter.json", false, true, qc, t)
+	runMatch("case_unnest_filter2.json", false, true, qc, t)
 
 	runStmt(qc, "DROP INDEX purchase.ixa10")
 
@@ -45,8 +47,12 @@ func TestUnnestFunc(t *testing.T) {
 	runStmt(qc, "CREATE INDEX ix12 ON shellTest(DISTINCT arr) WHERE type = \"doc\"")
 	runStmt(qc, "CREATE INDEX ix101 ON shellTest(ALL ARRAY u.x FOR u IN arr10 END)")
 	runStmt(qc, "CREATE INDEX ix102 ON shellTest(ARRAY_CONCAT(a, b))")
+	runStmt(qc, "CREATE INDEX ix111 ON shellTest(ALL f1)")
+	runStmt(qc, "CREATE INDEX ix112 ON shellTest(ALL ARRAY (ALL v2.arr) FOR v2 IN f2 END)")
+	runStmt(qc, "CREATE INDEX ix113 ON shellTest(ALL ARRAY v.id FOR v IN f3 END)")
 
 	runMatch("case_unnest_scan_bugs.json", false, true, qc, t)
+	runMatch("case_unnest_scan_bugs2.json", false, true, qc, t)
 
 	runStmt(qc, "DROP INDEX shellTest.idx2")
 	runStmt(qc, "DROP INDEX shellTest.iax1")
@@ -57,6 +63,9 @@ func TestUnnestFunc(t *testing.T) {
 	runStmt(qc, "DROP INDEX shellTest.ix12")
 	runStmt(qc, "DROP INDEX shellTest.ix101")
 	runStmt(qc, "DROP INDEX shellTest.ix102")
+	runStmt(qc, "DROP INDEX shellTest.ix111")
+	runStmt(qc, "DROP INDEX shellTest.ix112")
+	runStmt(qc, "DROP INDEX shellTest.ix113")
 
 	runStmt(qc, "CREATE PRIMARY INDEX ON shellTest")
 

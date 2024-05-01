@@ -107,6 +107,34 @@
         ]
     },
     {
+        "testcase": "Skiped composite keys Range pushdown to indexer. Unnest Scan. Explain - part 2",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IndexScan3' AND ARRAY_LENGTH(v.spans) = 1 AND ARRAY_LENGTH(v.spans[0].`range`) = 5 END"
+        },
+        "statements":"SELECT a3.id FROM orders AS o UNNEST o.a3 WHERE o.test_id = \"skipranges\" AND a3.id > 11 AND o.c0 = 1 AND o.c3 = 1000",
+        "results": [
+            {
+                "id": 12
+            },
+            {
+                "id": 13
+            },
+            {
+                "id": 14
+            },
+            {
+                "id": 15
+            }
+        ]
+    },
+    {
         "testcase": "Smallest index selection. Explain",
         "ignore": "index_id",
         "explain": {
