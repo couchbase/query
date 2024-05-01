@@ -93,8 +93,8 @@ func TestIndexScan(t *testing.T) {
 	runStmt(qc, "DROP INDEX product.tokenindex2")
 
 	// Create array indexes for unnest scan
-	runStmt(qc, "CREATE INDEX iax1 ON orders(ALL ARRAY v1 FOR v1 IN a1 END,c1,c2) WHERE test_id = \"ua\"")
-	runStmt(qc, "CREATE INDEX iax2 ON orders(ALL ARRAY (ALL ARRAY v2 FOR v2 IN v1 END) FOR v1 IN a2 END,c1,c2) WHERE test_id = \"ua\"")
+	runStmt(qc, "CREATE INDEX iax1 ON orders(ALL a1,c1,c2) WHERE test_id = \"ua\"")
+	runStmt(qc, "CREATE INDEX iax2 ON orders(ALL ARRAY (ALL v1) FOR v1 IN a2 END,c1,c2) WHERE test_id = \"ua\"")
 	runStmt(qc, "CREATE INDEX iax3 ON orders(ALL ARRAY v1.id FOR v1 IN a3 WHEN v1.type = \"n\" END,c1,c2) WHERE test_id = \"ua\"")
 	runStmt(qc, "CREATE INDEX iax4 ON orders(ALL ARRAY (ALL ARRAY v2.id FOR v2 IN v1.aa END)  FOR v1 IN a4 END,c1,c2) WHERE test_id = \"ua\"")
 	runStmt(qc, "CREATE INDEX iax5 ON orders(ALL ARRAY (ALL ARRAY [v2.id,v1, c1] FOR v2 IN v1.aa END)  FOR v1 IN a4 END,c1,c2) WHERE test_id = \"ua\"")
