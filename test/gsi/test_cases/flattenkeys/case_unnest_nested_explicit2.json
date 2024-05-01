@@ -1,0 +1,56 @@
+[
+    {
+       "testcase": "Flatten Array index with UNNEST clause. Explicit, Cover. Explain",
+       "queryParams": {"query_context": "orders._default"},
+       "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {"present":true}
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`covers` IS NOT MISSING AND v.spans[0].`range`[0].`low` IS NOT MISSING AND v.`index` = 'ixf10uen' END"
+        },
+       "statements": "SELECT DISTINCT META(f).id, chapters.description FROM flattenkeys AS f UNNEST f.chapters UNNEST chapters.pages WHERE f.type = 'book' AND pages.num = 1 AND pages.name = 'page 1' AND f.isbn = 1 AND f.year = 2020",
+       "results": [
+          {
+            "description": "chapter 1 description",
+            "id": "book1"
+          },
+          {
+            "description": "chapter 2 description",
+            "id": "book1"
+          },
+          {
+            "description": "chapter 3 description",
+            "id": "book1"
+          }
+        ]
+     },
+     {
+       "testcase": "Flatten Array index with UNNEST clause. Explicit, Additional predicate, Cover. Explain",
+       "queryParams": {"query_context": "orders._default"},
+       "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {"present":true}
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`covers` IS NOT MISSING AND v.spans[0].`range`[0].`low` IS NOT MISSING AND v.`index` = 'ixf10uen' END"
+        },
+       "statements": "SELECT DISTINCT META(f).id, chapters.description FROM flattenkeys AS f UNNEST f.chapters UNNEST chapters.pages WHERE f.type = 'book' AND pages.num = 1 AND pages.name = 'page 1' AND pages.xyz IS MISSING AND f.isbn = 1 AND f.year = 2020",
+       "results": [
+          {
+            "description": "chapter 1 description",
+            "id": "book1"
+          },
+          {
+            "description": "chapter 2 description",
+            "id": "book1"
+          },
+          {
+            "description": "chapter 3 description",
+            "id": "book1"
+          }
+        ]
+    }
+]

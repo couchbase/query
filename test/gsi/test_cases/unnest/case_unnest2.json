@@ -1,0 +1,495 @@
+[
+    {
+        "statements": "SELECT * FROM purchase as p UNNEST p.lineItems where p.test_id = \"unnest\" ORDER BY lineItems, p limit 2",
+        "results": [
+        {
+            "lineItems": {
+                "count": 1,
+                "product": "product0"
+            },
+            "p": {
+                "customerId": "customer402",
+                "lineItems": [
+                    {
+                        "count": 1,
+                        "product": "product0"
+                    },
+                    {
+                        "count": 5,
+                        "product": "product699"
+                    },
+                    {
+                        "count": 5,
+                        "product": "product750"
+                    },
+                    {
+                        "count": 1,
+                        "product": "product566"
+                    },
+                    {
+                        "count": 3,
+                        "product": "product794"
+                    }
+                ],
+                "purchaseId": "purchase2171",
+                "purchasedAt": "2013-08-09T15:52:35Z",
+                "test_id": "unnest",
+                "type": "purchase"
+            }
+        },
+        {
+            "lineItems": {
+                "count": 1,
+                "product": "product0"
+            },
+            "p": {
+                "customerId": "customer428",
+                "lineItems": [
+                    {
+                        "count": 4,
+                        "product": "product157"
+                    },
+                    {
+                        "count": 1,
+                        "product": "product416"
+                    },
+                    {
+                        "count": 1,
+                        "product": "product0"
+                    }
+                ],
+                "purchaseId": "purchase7821",
+                "purchasedAt": "2013-11-07T15:52:42Z",
+                "test_id": "unnest",
+                "type": "purchase"
+            }
+      }
+    ]
+    },
+    {
+        "statements": "SELECT * FROM purchase AS p UNNEST p.lineItems WHERE lineItems.count > 2 AND p.test_id = \"unnest\" ORDER BY lineItems, p limit 5", 
+    "results": [
+        {
+            "lineItems": {
+                "count": 3,
+                "product": "product0"
+            },
+            "p": {
+                "customerId": "customer130",
+                "lineItems": [
+                    {
+                        "count": 3,
+                        "product": "product0"
+                    },
+                    {
+                        "count": 3,
+                        "product": "product606"
+                    },
+                    {
+                        "count": 4,
+                        "product": "product327"
+                    },
+                    {
+                        "count": 1,
+                        "product": "product467"
+                    },
+                    {
+                        "count": 5,
+                        "product": "product521"
+                    }
+                ],
+                "purchaseId": "purchase3437",
+                "purchasedAt": "2013-08-09T15:52:37Z",
+                "test_id": "unnest",
+                "type": "purchase"
+            }
+        },
+        {
+            "lineItems": {
+                "count": 3,
+                "product": "product0"
+            },
+            "p": {
+                "customerId": "customer368",
+                "lineItems": [
+                    {
+                        "count": 3,
+                        "product": "product123"
+                    },
+                    {
+                        "count": 4,
+                        "product": "product97"
+                    },
+                    {
+                        "count": 5,
+                        "product": "product755"
+                    },
+                    {
+                        "count": 3,
+                        "product": "product0"
+                    },
+                    {
+                        "count": 2,
+                        "product": "product168"
+                    }
+                ],
+                "purchaseId": "purchase6809",
+                "purchasedAt": "2013-09-08T15:52:41Z",
+                "test_id": "unnest",
+                "type": "purchase"
+            }
+        },
+        {
+            "lineItems": {
+                "count": 3,
+                "product": "product0"
+            },
+            "p": {
+                "customerId": "customer562",
+                "lineItems": [
+                    {
+                        "count": 5,
+                        "product": "product899"
+                    },
+                    {
+                        "count": 1,
+                        "product": "product693"
+                    },
+                    {
+                        "count": 3,
+                        "product": "product0"
+                    }
+                ],
+                "purchaseId": "purchase7310",
+                "purchasedAt": "2013-07-10T15:52:41Z",
+                "test_id": "unnest",
+                "type": "purchase"
+            }
+        },
+        {
+            "lineItems": {
+                "count": 3,
+                "product": "product0"
+            },
+            "p": {
+                "customerId": "customer631",
+                "lineItems": [
+                    {
+                        "count": 5,
+                        "product": "product893"
+                    },
+                    {
+                        "count": 5,
+                        "product": "product618"
+                    },
+                    {
+                        "count": 3,
+                        "product": "product0"
+                    },
+                    {
+                        "count": 4,
+                        "product": "product807"
+                    },
+                    {
+                        "count": 3,
+                        "product": "product867"
+                    }
+                ],
+                "purchaseId": "purchase993",
+                "purchasedAt": "2013-10-08T15:52:34Z",
+                "test_id": "unnest",
+                "type": "purchase"
+            }
+        },
+        {
+            "lineItems": {
+                "count": 3,
+                "product": "product0"
+            },
+            "p": {
+                "customerId": "customer823",
+                "lineItems": [
+                    {
+                        "count": 2,
+                        "product": "product325"
+                    },
+                    {
+                        "count": 3,
+                        "product": "product0"
+                    },
+                    {
+                        "count": 3,
+                        "product": "product757"
+                    },
+                    {
+                        "count": 3,
+                        "product": "product637"
+                    }
+                ],
+                "purchaseId": "purchase3286",
+                "purchasedAt": "2013-10-08T15:52:37Z",
+                "test_id": "unnest",
+                "type": "purchase"
+            }
+        }
+    ]
+    },
+    {
+        "statements": "SELECT lineItems AS child FROM purchase AS p UNNEST p.lineItems WHERE lineItems.product = \"product0\" AND p.test_id = \"unnest\" ORDER BY lineItems limit 10",
+     "results": [
+        {
+            "child": {
+                "count": 1,
+                "product": "product0"
+            }
+        },
+        {
+            "child": {
+                "count": 1,
+                "product": "product0"
+            }
+        },
+        {
+            "child": {
+                "count": 1,
+                "product": "product0"
+            }
+        },
+        {
+            "child": {
+                "count": 1,
+                "product": "product0"
+            }
+        },
+        {
+            "child": {
+                "count": 2,
+                "product": "product0"
+            }
+        },
+        {
+            "child": {
+                "count": 2,
+                "product": "product0"
+            }
+        },
+        {
+            "child": {
+                "count": 2,
+                "product": "product0"
+            }
+        },
+        {
+            "child": {
+                "count": 2,
+                "product": "product0"
+            }
+        },
+        {
+            "child": {
+                "count": 3,
+                "product": "product0"
+            }
+        },
+        {
+            "child": {
+                "count": 3,
+                "product": "product0"
+            }
+        }
+    ]
+    },
+    {
+        "statements": "SELECT p.purchaseId FROM purchase AS p UNNEST p.lineItems[0:2] AS child WHERE child.product = \"product73\" AND p.test_id = \"unnest\" ORDER BY p.purchaseId limit 5",
+        "results": [
+        {
+            "purchaseId": "purchase1015"
+        },
+        {
+            "purchaseId": "purchase2272"
+        },
+        {
+            "purchaseId": "purchase2547"
+        },
+        {
+            "purchaseId": "purchase3461"
+        },
+        {
+            "purchaseId": "purchase4831"
+        }
+    ]
+    },
+    {
+        "statements": "SELECT p.* FROM purchase AS p UNNEST p.lineItems WHERE lineItems.product = \"product73\" AND lineItems.count = 1 AND p.test_id = \"unnest\" ORDER BY lineItems, p",
+     "results": [
+        {
+            "customerId": "customer134",
+            "lineItems": [
+                {
+                    "count": 1,
+                    "product": "product73"
+                },
+                {
+                    "count": 5,
+                    "product": "product36"
+                },
+                {
+                    "count": 4,
+                    "product": "product350"
+                },
+                {
+                    "count": 2,
+                    "product": "product787"
+                }
+            ],
+            "purchaseId": "purchase3461",
+            "purchasedAt": "2014-01-06T15:52:37Z",
+            "test_id": "unnest",
+            "type": "purchase"
+        },
+        {
+            "customerId": "customer326",
+            "lineItems": [
+                {
+                    "count": 2,
+                    "product": "product602"
+                },
+                {
+                    "count": 5,
+                    "product": "product215"
+                },
+                {
+                    "count": 1,
+                    "product": "product398"
+                },
+                {
+                    "count": 1,
+                    "product": "product73"
+                },
+                {
+                    "count": 1,
+                    "product": "product487"
+                }
+            ],
+            "purchaseId": "purchase4683",
+            "purchasedAt": "2014-04-06T15:52:39Z",
+            "test_id": "unnest",
+            "type": "purchase"
+        },
+        {
+            "customerId": "customer337",
+            "lineItems": [
+                {
+                    "count": 1,
+                    "product": "product73"
+                },
+                {
+                    "count": 2,
+                    "product": "product392"
+                },
+                {
+                    "count": 4,
+                    "product": "product862"
+                },
+                {
+                    "count": 1,
+                    "product": "product619"
+                }
+            ],
+            "purchaseId": "purchase2547",
+            "purchasedAt": "2013-06-10T15:52:36Z",
+            "test_id": "unnest",
+            "type": "purchase"
+        },
+        {
+            "customerId": "customer437",
+            "lineItems": [
+                {
+                    "count": 1,
+                    "product": "product73"
+                },
+                {
+                    "count": 5,
+                    "product": "product499"
+                },
+                {
+                    "count": 1,
+                    "product": "product633"
+                },
+                {
+                    "count": 4,
+                    "product": "product183"
+                }
+            ],
+            "purchaseId": "purchase534",
+            "purchasedAt": "2014-01-06T15:52:33Z",
+            "test_id": "unnest",
+            "type": "purchase"
+        },
+        {
+            "customerId": "customer511",
+            "lineItems": [
+                {
+                    "count": 1,
+                    "product": "product73"
+                },
+                {
+                    "count": 4,
+                    "product": "product853"
+                }
+            ],
+            "purchaseId": "purchase4831",
+            "purchasedAt": "2014-04-06T15:52:39Z",
+            "test_id": "unnest",
+            "type": "purchase"
+        },
+        {
+            "customerId": "customer555",
+            "lineItems": [
+                {
+                    "count": 1,
+                    "product": "product73"
+                }
+            ],
+            "purchaseId": "purchase1920",
+            "purchasedAt": "2013-08-09T15:52:35Z",
+            "test_id": "unnest",
+            "type": "purchase"
+        },
+        {
+            "customerId": "customer567",
+            "lineItems": [
+                {
+                    "count": 2,
+                    "product": "product811"
+                },
+                {
+                    "count": 5,
+                    "product": "product276"
+                },
+                {
+                    "count": 1,
+                    "product": "product73"
+                }
+            ],
+            "purchaseId": "purchase9560",
+            "purchasedAt": "2013-07-10T15:52:44Z",
+            "test_id": "unnest",
+            "type": "purchase"
+        },
+        {
+            "customerId": "customer867",
+            "lineItems": [
+                {
+                    "count": 1,
+                    "product": "product73"
+                }
+            ],
+            "purchaseId": "purchase4858",
+            "purchasedAt": "2014-01-06T15:52:39Z",
+            "test_id": "unnest",
+            "type": "purchase"
+        }
+     ]
+   }
+]

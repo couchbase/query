@@ -56,16 +56,20 @@ func TestFlattenkeys(t *testing.T) {
 	run_test("case_any_nested_explicit.json", "ixf10en", "orders._default.flattenkeys", indexes[pos], qc, t)
 	pos++
 	run_test("case_unnest.json", "ixf10u", "orders._default.flattenkeys", indexes[pos], qc, t)
+	run_test("case_unnest2.json", "ixf10u", "orders._default.flattenkeys", indexes[pos], qc, t)
 	pos++
 	run_test("case_unnest_nested.json", "ixf10un", "orders._default.flattenkeys", indexes[pos], qc, t)
+	run_test("case_unnest_nested2.json", "ixf10un", "orders._default.flattenkeys", indexes[pos], qc, t)
 	pos++
 	run_test("case_unnest_when.json", "ixf10uw", "orders._default.flattenkeys", indexes[pos], qc, t)
 	pos++
 	run_test("case_unnest_nested_when.json", "ixf10uwn", "orders._default.flattenkeys", indexes[pos], qc, t)
 	pos++
 	run_test("case_unnest_explicit.json", "ixf10ue", "orders._default.flattenkeys", indexes[pos], qc, t)
+	run_test("case_unnest_explicit2.json", "ixf10ue", "orders._default.flattenkeys", indexes[pos], qc, t)
 	pos++
 	run_test("case_unnest_nested_explicit.json", "ixf10uen", "orders._default.flattenkeys", indexes[pos], qc, t)
+	run_test("case_unnest_nested_explicit2.json", "ixf10uen", "orders._default.flattenkeys", indexes[pos], qc, t)
 
 	runStmt(qc, "CREATE INDEX ix1 ON shellTest(c1, DISTINCT ARRAY FLATTEN_KEYS(v1.type,v1.phone) FOR v1 IN contacts END, c2)")
 	runStmt(qc, "CREATE INDEX ix2 ON shellTest(c11, DISTINCT ARRAY(DISTINCT ARRAY FLATTEN_KEYS(v1.type,v1.phone) FOR v1 IN v.contacts END) FOR v IN infos END, c12)")

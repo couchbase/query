@@ -179,7 +179,7 @@ func coveredUnnestBindings(key expression.Expression, allDistinct bool,
 			key = array.ValueMapping()
 		} else {
 			if !ok {
-				bindings[unnest.As()] = all.Array()
+				bindings[unnest.Alias()] = all.Array()
 			}
 
 			break
@@ -202,7 +202,7 @@ func (this *builder) coveringExpressions(node *algebra.KeyspaceTerm, entry *inde
 
 	for _, uns := range unnests {
 		unnestExpr := uns.Expression()
-		bindingExpr, ok := bindings[uns.As()]
+		bindingExpr, ok := bindings[uns.Alias()]
 		if ok && unnestExpr.EquivalentTo(bindingExpr) {
 			coveredUnnests[uns] = true
 			coveredExprs[unnestExpr] = true

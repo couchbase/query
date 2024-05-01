@@ -1,0 +1,187 @@
+[
+    {
+       "testcase": "Flatten Array index with UNNEST clause. Cover. Explain",
+       "queryParams": {"query_context": "orders._default"},
+       "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {"present":true}
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`covers` IS NOT MISSING AND v.spans[0].`range`[0].`low` IS NOT MISSING AND v.`index` = 'ixf10un' END"
+        },
+       "statements": "SELECT DISTINCT META(f).id, chapters.description FROM flattenkeys AS f UNNEST f.chapters UNNEST chapters.pages WHERE f.type = 'book' AND pages.num = 1 AND pages.name = 'page 1' AND f.isbn = 1 AND f.year = 2020",
+       "results": [
+          {
+            "description": "chapter 1 description",
+            "id": "book1"
+          },
+          {
+            "description": "chapter 2 description",
+            "id": "book1"
+          },
+          {
+            "description": "chapter 3 description",
+            "id": "book1"
+          }
+        ]
+    },
+    {
+       "testcase": "Flatten Array index with UNNEST clause, LIKE. Cover. Explain",
+       "queryParams": {"query_context": "orders._default"},
+       "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {"present":true}
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`covers` IS NOT MISSING AND ARRAY_LENGTH(v.`spans`) = 2 AND v.index_projection.entry_keys = [0,1,2,3,5] AND v.`index` = 'ixf10un' END"
+        },
+       "statements": "SELECT DISTINCT META(f).id, chapters.description FROM flattenkeys AS f UNNEST f.chapters UNNEST chapters.pages WHERE f.type = 'book' AND pages.num IN [1,2] AND pages.name LIKE 'page %' AND f.isbn = 1 AND f.year = 2020",
+       "results": [
+          {
+            "description": "chapter 3 description",
+            "id": "book1"
+          },
+          {
+            "description": "chapter 2 description",
+            "id": "book1"
+          },
+          {
+            "description": "chapter 1 description",
+            "id": "book1"
+          }
+        ]
+    },
+    {
+       "testcase": "Flatten Array index with UNNEST clause, OR. Cover. Explain",
+       "queryParams": {"query_context": "orders._default"},
+       "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {"present":true}
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`covers` IS NOT MISSING AND ARRAY_LENGTH(v.`spans`) = 2 AND v.index_projection.entry_keys = [0,2,3,5] AND v.`index` = 'ixf10un' END"
+        },
+       "statements": "SELECT DISTINCT META(f).id, chapters.description FROM flattenkeys AS f UNNEST f.chapters UNNEST chapters.pages WHERE f.type = 'book' AND (pages.num = 1 OR pages.num = 2) AND f.isbn = 1 AND f.year = 2020",
+       "results": [
+          {
+            "description": "chapter 3 description",
+            "id": "book1"
+          },
+          {
+            "description": "chapter 2 description",
+            "id": "book1"
+          },
+          {
+            "description": "chapter 1 description",
+            "id": "book1"
+          }
+        ]
+    },
+    {
+       "testcase": "Flatten Array index with UNNEST clause, AND, OR. Cover. Explain",
+       "queryParams": {"query_context": "orders._default"},
+       "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {"present":true}
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`covers` IS NOT MISSING AND ARRAY_LENGTH(v.`spans`) = 2 AND v.index_projection.entry_keys = [0,1,2,3,5] AND v.`index` = 'ixf10un' END"
+        },
+       "statements": "SELECT DISTINCT META(f).id, chapters.description FROM flattenkeys AS f UNNEST f.chapters UNNEST chapters.pages WHERE f.type = 'book' AND pages.num >= 1 AND (pages.name = 'page 1' OR pages.name = 'page 2') AND f.isbn = 1 AND f.year = 2020",
+       "results": [
+          {
+            "description": "chapter 3 description",
+            "id": "book1"
+          },
+          {
+            "description": "chapter 2 description",
+            "id": "book1"
+          },
+          {
+            "description": "chapter 1 description",
+            "id": "book1"
+          }
+        ]
+    },
+    {
+       "testcase": "Flatten Array index with UNNEST clause (addittional predicate). No Cover. Explain",
+       "queryParams": {"query_context": "orders._default"},
+       "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {"present":true}
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`covers` IS MISSING AND v.spans[0].`range`[0].`low` IS NOT MISSING AND v.`index` = 'ixf10un' END"
+        },
+       "statements": "SELECT DISTINCT META(f).id, chapters.description FROM flattenkeys AS f UNNEST f.chapters UNNEST chapters.pages WHERE f.type = 'book' AND pages.num = 1 AND LOWER(pages.name) = 'page 1' AND pages.xyz IS MISSING AND f.isbn = 1 AND f.year = 2020",
+       "results": [
+          {
+            "description": "chapter 1 description",
+            "id": "book1"
+          },
+          {
+            "description": "chapter 2 description",
+            "id": "book1"
+          },
+          {
+            "description": "chapter 3 description",
+            "id": "book1"
+          }
+        ]
+    },
+    {
+       "testcase": "Flatten Array index with UNNEST clause. Index Aggregation. ORDER, OFFSET, LIMIT, Cover. Explain",
+       "queryParams": {"query_context": "orders._default"},
+       "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {"present":true}
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`covers` IS NOT MISSING AND v.spans[0].`range`[0].`low` IS NOT MISSING AND v.index_group_aggs IS NOT MISSING AND v.`limit` IS NOT MISSING AND v.`offset` IS NOT MISSING AND v.`index` = 'ixf10un' END"
+        },
+       "statements": "SELECT pages.num, COUNT(1) AS cnt, COUNT(DISTINCT pages.name) AS dcnt FROM flattenkeys AS f UNNEST f.chapters UNNEST chapters.pages WHERE f.type = 'book' AND pages.num >= 1 AND f.isbn >= 1 GROUP BY pages.num ORDER BY pages.num DESC LIMIT 3 OFFSET 1",
+       "ordered": true,
+       "results": [
+           {
+             "cnt": 9,
+             "dcnt": 1,
+             "num": 2
+           },
+           {
+             "cnt": 9,
+             "dcnt": 1,
+             "num": 1
+           }
+        ]
+    },
+    {
+       "testcase": "Flatten Array index with UNNEST clause. No Index ORDER. Explain",
+       "queryParams": {"query_context": "orders._default"},
+       "ignore": "index_id",
+       "ordered": true,
+        "explain": {
+            "disabled": false,
+            "results": [
+                {"present":true}
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`covers` IS NOT MISSING AND v.spans[0].`range`[0].`low` IS NOT MISSING AND v.index_order IS MISSING AND v.`index` = 'ixf10un' END"
+        },
+       "statements": "SELECT DISTINCT pages.num, META(f).id FROM flattenkeys AS f UNNEST f.chapters UNNEST chapters.pages WHERE f.type = 'book' AND pages.num >= 1 AND f.isbn <= 1 ORDER BY pages.num DESC, f.isbn LIMIT 3 OFFSET 1",
+       "results": [
+         {
+           "id": "book1",
+           "num": 2
+         },
+         {
+           "id": "book1",
+           "num": 1
+         }
+        ]
+    }
+]

@@ -1,0 +1,40 @@
+[
+    {
+       "testcase": "Flatten Array index with UNNEST clause. Explicit, Cover. Explain",
+       "queryParams": {"query_context": "orders._default"},
+       "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {"present":true}
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`covers` IS NOT MISSING AND v.spans[0].`range`[0].`low` IS NOT MISSING AND NOT CONTAINS(v.`filter`, '`chapters`.`num`') AND v.`index` = 'ixf10ue' END"
+        },
+       "statements": "SELECT META(f).id, chapters.description FROM flattenkeys AS f UNNEST f.chapters WHERE f.type = 'book' AND chapters.num = 1 AND chapters.name = 'chapter 1' AND f.isbn = 1 AND f.year = 2020",
+       "results": [
+          {
+            "description": "chapter 1 description",
+            "id": "book1"
+          }
+        ]
+     },
+     {
+       "testcase": "Flatten Array index with UNNEST clause. Explicit, Additional predicate, Cover. Explain",
+       "queryParams": {"query_context": "orders._default"},
+       "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {"present":true}
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`covers` IS NOT MISSING AND v.spans[0].`range`[0].`low` IS NOT MISSING AND NOT CONTAINS(v.`filter`, '`chapters`.`num`') AND v.`index` = 'ixf10ue' END"
+        },
+       "statements": "SELECT META(f).id, chapters.description FROM flattenkeys AS f UNNEST f.chapters WHERE f.type = 'book' AND chapters.num = 1 AND chapters.name = 'chapter 1' AND chapters.xyz IS MISSING AND f.isbn = 1 AND f.year = 2020",
+       "results": [
+          {
+            "description": "chapter 1 description",
+            "id": "book1"
+          }
+        ]
+    }
+]
