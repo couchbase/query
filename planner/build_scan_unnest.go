@@ -271,13 +271,16 @@ func (this *builder) matchUnnest(node *algebra.KeyspaceTerm, pred, subset expres
 		if unnest.As() != binding.Variable() {
 			nakey, naok := arrayMapping.(*expression.All)
 			for naok {
-				a, aok := nakey.Array().(*expression.Array)
-				// disallow if unnest alias is nested binding variable in the array index
-				if !aok || len(a.Bindings()) != 1 ||
-					unnest.As() == a.Bindings()[0].Variable() {
-					return nil, nil, nil, nil
+				if a, aok := nakey.Array().(*expression.Array); aok {
+					// disallow if unnest alias is nested binding variable in the array index
+					if len(a.Bindings()) != 1 ||
+						unnest.As() == a.Bindings()[0].Variable() {
+						return nil, nil, nil, nil
+					}
+					nakey, naok = a.ValueMapping().(*expression.All)
+				} else {
+					naok = false
 				}
-				nakey, naok = a.ValueMapping().(*expression.All)
 			}
 
 			origBinding = binding
