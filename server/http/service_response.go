@@ -1045,6 +1045,7 @@ func (this *bufferedWriter) noMoreData() {
 	io.Copy(w, this.buffer)
 	// no more data in the response => return buffer to pool:
 	this.buffer_pool.PutBuffer(this.buffer)
+	this.buffer = nil
 	r.Body.Close()
 	this.closed = true
 }
