@@ -52,7 +52,7 @@ func (bp *syncPoolBufPool) GetBuffer() *bytes.Buffer {
 }
 
 func (bp *syncPoolBufPool) PutBuffer(b *bytes.Buffer) {
-	if b.Len() < bp.max_size {
+	if b.Cap() < bp.max_size {
 		b.Reset()
 		bp.pool.Put(b)
 	}

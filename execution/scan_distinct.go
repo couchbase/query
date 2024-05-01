@@ -131,6 +131,7 @@ func (this *DistinctScan) processKey(item value.AnnotatedValue,
 		if context.UseRequestQuota() {
 			context.ReleaseValueSize(item.Size())
 		}
+		item.Recycle()
 		return true
 	}
 

@@ -46,7 +46,7 @@ func TestEarlyProjection(t *testing.T) {
 
 	// delete all rows from keyspaces used
 	runStmt(qc, "DELETE FROM shellTest")
-
+	runStmt(qc, "DELETE FROM product")
 	// drop primary indexes
 	runStmt(qc, "DROP PRIMARY INDEX ON shellTest")
 }

@@ -98,6 +98,24 @@
                 ]
             }
         ]
+    },
+    {
+    "testcase": "Disable early projection on case-insensitive fields",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true as present FROM $explan p WHERE ANY v in p.`plan`.`~children` SATISFIES v.`#operator`=\"Fetch\" AND v.early_projection IS MISSING END AND ANY v in p.`plan`.`~children` SATISFIES v.`#operator`=\"HashJoin\"  AND ANY w  in v.`~child`.`~children` SATISFIES w.`#operator`=\"Fetch\" AND w.`early_projection`=[\"level1\"] END END"
+        },
+        "statements":"SELECT d1.`level1`.`leveL2`i.`level3` as l1 , d2.`level1`i.`leveL2`i.`level3` as l2   FROM `product` d1 , `product` d2 WHERE d1.`level1`.`level2`.`level3`=d2.`level1`.`level2`.`level3`;",
+        "results": [
+            {
+                "l1": true,
+                "l2": true
+            }
+        ]
     }
 ]
-

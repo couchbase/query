@@ -87,7 +87,7 @@ func (this *Renamer) VisitAll(expr *All) (interface{}, error) {
 			}
 		}
 	}
-	return expr, expr.array.MapChildren(this)
+	return expr, expr.MapChildren(this)
 }
 
 func (this *Renamer) VisitAny(expr *Any) (interface{}, error) {

@@ -1949,6 +1949,7 @@ func (this *bufferedWriter) noMoreData() {
 
 	this.copyWithTimeout(w, this.buffer)
 	this.buffer_pool.PutBuffer(this.buffer)
+	this.buffer = nil
 	r.Body.Close()
 	this.closed = true
 }
