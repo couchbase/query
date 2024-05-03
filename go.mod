@@ -71,7 +71,7 @@ require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bits-and-blooms/bitset v1.12.0 // indirect
 	github.com/blevesearch/bleve-mapping-ui v0.5.2 // indirect
-	github.com/blevesearch/bleve/v2 v2.4.1-0.20240501155128-9a4c565ef8bf // indirect
+	github.com/blevesearch/bleve/v2 v2.4.1-0.20240503220319-1a19544cd875 // indirect
 	github.com/blevesearch/bleve_index_api v1.1.6 // indirect
 	github.com/blevesearch/geo v0.1.20 // indirect
 	github.com/blevesearch/go-faiss v1.0.15 // indirect
