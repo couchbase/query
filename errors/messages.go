@@ -2085,6 +2085,21 @@ var errData = []ErrData{
 		},
 	},
 	{
+		Code:        E_ORDER_BY_VALIDATION_FAIL, // 3291
+		symbol:      "E_ORDER_BY_VALIDATION_FAIL",
+		Description: "«what» «expression» is not a valid constant, named, positional or function parameter.",
+		Reason: []string{
+			"The ORDER BY direction or NULLS position was not a valid constant, named, positional or function parameter.",
+		},
+		Action: []string{
+			"Revise the ORDER BY direction or NULLS position to be a valid constant, named, positional or function parameter.",
+		},
+		IsUser: YES,
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
 		Code:        E_RECURSIVE_WITH_SEMANTIC, // 3300
 		symbol:      "E_RECURSIVE_WITH_SEMANTIC",
 		Description: "recursive_with semantics: «cause»",
