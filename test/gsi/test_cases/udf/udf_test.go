@@ -54,11 +54,23 @@ func TestUDFs(t *testing.T) {
 
 	runStmt(qc, "DROP INDEX shellTest.idx1")
 
+	runStmt(qc, "CREATE INDEX idx2 ON product(rating)")
+	runMatch("case_inline_udf_order_by.json", false, true, qc, t)
+	runStmt(qc, "DROP INDEX idx2 ON product")
+	runStmt(qc, "DROP FUNCTION UDF_UT_OrderBy_inline1 IF EXISTS")
+	runStmt(qc, "DROP FUNCTION UDF_UT_OrderBy_inline2 IF EXISTS")
+	runStmt(qc, "DROP FUNCTION UDF_UT_OrderBy_inline3 IF EXISTS")
+	runStmt(qc, "DROP FUNCTION UDF_UT_OrderBy_inline4 IF EXISTS")
+	runStmt(qc, "DROP FUNCTION UDF_UT_OrderBy_inline5 IF EXISTS")
+
 	runStmt(qc, "CREATE PRIMARY INDEX ON shellTest")
+	runStmt(qc, "CREATE PRIMARY INDEX ON product")
 	runStmt(qc, "DELETE FROM customer WHERE test_id = \"udf\"")
 	runStmt(qc, "DELETE FROM shellTest WHERE test_id = \"udf\"")
+	runStmt(qc, "DELETE FROM product WHERE test_id = \"udf\"")
 	runStmt(qc, "DROP PRIMARY INDEX ON customer")
 	runStmt(qc, "DROP PRIMARY INDEX ON shellTest")
+	runStmt(qc, "DROP PRIMARY INDEX ON product")
 
 	qc.ShutdownHttpServer()
 }

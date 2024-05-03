@@ -511,9 +511,13 @@ func (this *builder) useIndexOrder(entry *indexEntry, keys expression.Expression
 	partSortTermCount := 0
 outer:
 	for _, orderTerm := range this.order.Terms() {
-		// sort order or nulls order are parameters, then we can't use index order
-		if (orderTerm.DescendingExpr() != nil && orderTerm.DescendingExpr().Indexable() == false) ||
-			(orderTerm.NullsPosExpr() != nil && orderTerm.NullsPosExpr().Indexable() == false) {
+
+		// if sort order or nulls order are named/positional parameters or function parameters i.e non constants
+		// then we can't use index order
+		if (orderTerm.DescendingExpr() != nil &&
+			(orderTerm.DescendingExpr().Indexable() == false || orderTerm.DescendingExpr().Value() == nil)) ||
+			(orderTerm.NullsPosExpr() != nil &&
+				(orderTerm.NullsPosExpr().Indexable() == false || orderTerm.NullsPosExpr().Value() == nil)) {
 			return false, indexOrder, partSortTermCount
 		}
 
@@ -534,8 +538,8 @@ outer:
 			return false, indexOrder, partSortTermCount
 		}
 
-		d := orderTerm.Descending(nil)
-		nl := orderTerm.NullsLast(nil)
+		d := orderTerm.Descending(nil, nil)
+		nl := orderTerm.NullsLast(nil, nil)
 		naturalOrder := false
 		if d && nl {
 			naturalOrder = true

@@ -32,6 +32,7 @@ type WindowAggregate struct {
 	oby          algebra.SortTerms
 	pbyTerms     []string
 	obyTerms     []string
+	obyDesc      []bool
 	cItem        int64
 	nItems       int64
 	aggs         []*AggregateInfo
@@ -216,8 +217,10 @@ func (this *WindowAggregate) setupTerms(parent value.Value) bool {
 	if wTerm.OrderBy() != nil {
 		this.oby = wTerm.OrderBy().Terms()
 		this.obyTerms = make([]string, len(this.oby))
-		for i, expr := range this.oby.Expressions() {
-			this.obyTerms[i] = expr.String()
+		this.obyDesc = make([]bool, len(this.oby))
+		for i, t := range this.oby {
+			this.obyTerms[i] = t.Expression().String()
+			this.obyDesc[i] = t.Descending(parent, &this.operatorCtx)
 		}
 	}
 	return true
@@ -683,7 +686,7 @@ func (this *AggregateInfo) windowValuePos(op *WindowAggregate, val value.Value, 
 	collation := int64(1)
 	if this.wTerm.WindowFrame().RangeWindowFrame() {
 		pos = cIndex
-		if op.oby[0].Descending(&op.operatorCtx) {
+		if d := op.obyDesc[0]; d {
 			collation = int64(-1)
 		}
 

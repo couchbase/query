@@ -142,18 +142,53 @@ func (this *SortTerm) String() string {
 	s := expression.NewStringer().Visit(this.expr)
 
 	d := false
-	if this.Descending(nil) {
-		s += " DESC"
-		d = true
-	}
-	if this.NullsLast(nil) {
-		if !d {
-			s += " NULLS LAST"
+	dDynamic := false
+
+	if dExpr := this.descending; dExpr != nil {
+		// since we only accept constant, named/positional parameters, function parameters as ORDER BY direction
+		// if the Value() is not nil, then it is a Constant and the direction can be evaluated at this stage.
+		if dExpr.Value() != nil {
+			if this.Descending(nil, nil) {
+				s += " DESC"
+				d = true
+			}
+		} else {
+			s += " " + dExpr.String()
+			dDynamic = true
 		}
-	} else if d {
-		s += " NULLS FIRST"
 	}
 
+	if nExpr := this.nullsPos; nExpr != nil {
+		// since we only accept constant, named/positional parameters, function parameters as nulls position
+		// if the Value() is not nil, then it is a Constant and the nulls position can be evaluated at this stage.
+		if nExpr.Value() != nil {
+			nEval := this.NullsLast(nil, nil)
+
+			// if the ORDER BY direction is a constant, the direction is known.
+			// if the Nulls position is also a constant, only write the nulls position in the string if it is not
+			// the default position for the direction.
+			// i.e if descending direction NULLS LAST is already implied
+			// and if ascending direction NULLS FIRST is already implied
+			if !dDynamic {
+				if nEval {
+					if !d {
+						s += " NULLS LAST"
+					}
+				} else if d {
+					s += " NULLS FIRST"
+				}
+			} else {
+				if nEval {
+					s += " NULLS LAST"
+				} else {
+					s += " NULLS FIRST"
+				}
+			}
+		} else {
+			s += " NULLS " + nExpr.String()
+		}
+
+	}
 	return s
 }
 
@@ -167,13 +202,16 @@ func (this *SortTerm) Expression() expression.Expression {
 
 /*
 Return bool value representing ASC or DESC sort order.
+Returns the default sort order if expression evaluation fails.
 */
-func (this *SortTerm) Descending(context expression.Context) bool {
+func (this *SortTerm) Descending(item value.Value, context expression.Context) bool {
 	if this.descending == nil {
 		// optional expression missing so return default order
 		return false
 	}
-	r, err := this.descending.Evaluate(nil, context)
+
+	r, err := this.descending.Evaluate(item, context)
+
 	if err == nil {
 		if r.Type() != value.STRING {
 			if context != nil {
@@ -203,6 +241,8 @@ func (this *SortTerm) Descending(context expression.Context) bool {
 			}
 		}
 	}
+
+	// return default sort order if evaluation fails
 	return false
 }
 
@@ -210,12 +250,18 @@ func (this *SortTerm) DescendingExpr() expression.Expression {
 	return this.descending
 }
 
-func (this *SortTerm) NullsLast(context expression.Context) bool {
+/*
+Return bool value representing NULLS LAST or NULLS FIRST nulls position.
+Returns the default NULLS position based on the term's sort order if the expression evaluation fails.
+*/
+func (this *SortTerm) NullsLast(item value.Value, context expression.Context) bool {
 	if this.nullsPos == nil {
 		// optional expression missing so return default nulls position based on order
-		return this.Descending(context)
+		return this.Descending(item, context)
 	}
-	r, err := this.nullsPos.Evaluate(nil, context)
+
+	r, err := this.nullsPos.Evaluate(item, context)
+
 	if err == nil {
 		if r.Type() != value.STRING {
 			if context != nil {
@@ -225,7 +271,7 @@ func (this *SortTerm) NullsLast(context expression.Context) bool {
 						fmt.Sprintf("nulls sorted position: Invalid value %v", r)))
 				}
 			}
-			return this.Descending(context)
+			return this.Descending(item, context)
 		} else if s, ok := r.Actual().(string); ok {
 			if strings.ToLower(s) == "last" {
 				return true
@@ -247,8 +293,9 @@ func (this *SortTerm) NullsLast(context expression.Context) bool {
 			}
 		}
 	}
+
 	// if we failed to evaluate, use the default nulls position based on order
-	return this.Descending(context)
+	return this.Descending(item, context)
 }
 
 func (this *SortTerm) NullsPosExpr() expression.Expression {
@@ -257,12 +304,28 @@ func (this *SortTerm) NullsPosExpr() expression.Expression {
 
 /*
 Map Expressions for all sort terms in the receiver.
+Maps sort term, sort direction and nulls position.
 */
 func (this SortTerms) MapExpressions(mapper expression.Mapper) (err error) {
 	for _, term := range this {
 		term.expr, err = mapper.Map(term.expr)
+
 		if err != nil {
 			return
+		}
+
+		if term.descending != nil {
+			term.descending, err = mapper.Map(term.descending)
+			if err != nil {
+				return
+			}
+		}
+
+		if term.nullsPos != nil {
+			term.nullsPos, err = mapper.Map(term.nullsPos)
+			if err != nil {
+				return
+			}
 		}
 	}
 

@@ -102,7 +102,6 @@ func NewOrder(plan *plan.Order, context *Context, less func(value.AnnotatedValue
 	newBase(&rv.base, context)
 	rv.execPhase = SORT
 	rv.output = rv
-	rv.setupTerms(context)
 	return rv
 }
 
@@ -138,19 +137,19 @@ func (this *Order) processItem(item value.AnnotatedValue, context *Context) bool
 	return err == nil
 }
 
-func (this *Order) setupTerms(context *Context) {
+func (this *Order) setupTerms(item value.Value, context *Context) {
 	if this.terms == nil {
 		this.terms = make([]orderTerm, len(this.plan.Terms()))
 		for i, term := range this.plan.Terms() {
 			this.terms[i].term = term.Expression().String()
-			this.terms[i].descending = term.Descending(&this.operatorCtx)
-			this.terms[i].nullsLast = term.NullsLast(&this.operatorCtx)
+			this.terms[i].descending = term.Descending(item, &this.operatorCtx)
+			this.terms[i].nullsLast = term.NullsLast(item, &this.operatorCtx)
 		}
 	}
 }
 
 func (this *Order) beforeItems(context *Context, item value.Value) bool {
-	this.setupTerms(context)
+	this.setupTerms(item, context)
 	return true
 }
 

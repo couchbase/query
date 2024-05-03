@@ -94,6 +94,14 @@ func (this *SemChecker) visitAggregateFunction(agg algebra.Aggregate) (err error
 			"semantics.visit_aggregate_function.oby")
 	}
 
+	// Validate the ORDER BY direction and NULLS position expressions
+	if oby != nil {
+		err = validateOrderBySemantics(oby)
+		if err != nil {
+			return err
+		}
+	}
+
 	// pby, oby, window frame clauses can be absent
 	if oby == nil || windowFrame == nil {
 		if windowFrame != nil {

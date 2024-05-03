@@ -204,6 +204,12 @@ func NewFirstTermJoinHintError(alias string) Error {
 		InternalCaller: CallerN(1)}
 }
 
+func NewOrderByValidationError(what string, expr string) Error {
+	return &err{level: EXCEPTION, ICode: E_ORDER_BY_VALIDATION_FAIL, IKey: "semantics_order_by_validation",
+		InternalMsg: fmt.Sprintf("%s '%s' is not a valid constant, named, positional or function parameter.",
+			what, expr), InternalCaller: CallerN(1)}
+}
+
 /*
 ---- BEGIN MOVED error numbers ----
 

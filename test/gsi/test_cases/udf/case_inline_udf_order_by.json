@@ -1,0 +1,107 @@
+[
+    {
+        "description": "Inline UDF with ORDER BY clause and function parameters as the ORDER BY direction and NULLS position",
+        "statements": "CREATE FUNCTION UDF_UT_OrderBy_inline1(dir, nullsPosition) {( SELECT id, rating FROM product WHERE rating IS NOT MISSING ORDER BY rating dir NULLS nullsPosition)}",
+        "results": []
+    },
+    {
+        "description": "Execute UDF_UT_inline1",
+        "statements": "EXECUTE FUNCTION UDF_UT_OrderBy_inline1(\"desc\", \"first\")",
+        "results": [
+            [
+                {
+                    "id": 1,
+                    "rating": null
+                },
+                {
+                    "id": 2,
+                    "rating": 10
+                },
+                {
+                    "id": 3,
+                    "rating": 1
+                }
+            ]
+        ]
+    },
+    {
+        "description": "Execute UDF_UT_inline1",
+        "statements": "EXECUTE FUNCTION UDF_UT_OrderBy_inline1(\"asc\", \"last\")",
+        "results": [
+            [
+                {
+                    "id": 3,
+                    "rating": 1
+                },
+                {
+                    "id": 2,
+                    "rating": 10
+                },
+                {
+                    "id": 1,
+                    "rating": null
+                }
+            ]
+        ]
+    },
+    {
+        "description": "Inline UDF with ORDER BY clause and function parameters as the ORDER BY direction",
+        "statements": "CREATE FUNCTION UDF_UT_OrderBy_inline2(dir) {( SELECT id, rating FROM product WHERE rating IS NOT MISSING ORDER BY rating dir NULLS FIRST)}",
+        "results": []
+    },
+    {
+        "description": "Execute UDF_UT_inline2",
+        "statements": "EXECUTE FUNCTION UDF_UT_OrderBy_inline2(\"desc\")",
+        "results": [
+            [
+                {
+                    "id": 1,
+                    "rating": null
+                },
+                {
+                    "id": 2,
+                    "rating": 10
+                },
+                {
+                    "id": 3,
+                    "rating": 1
+                }
+            ]
+        ]
+    },
+    {
+        "description": "Inline UDF with ORDER BY clause and function parameters as the NULLS position",
+        "statements": "CREATE FUNCTION UDF_UT_OrderBy_inline3(nullsPosition) {( SELECT id, rating FROM product WHERE rating IS NOT MISSING ORDER BY rating NULLS nullsPosition)}",
+        "results": []
+    },
+    {
+        "description": "Execute UDF_UT_inline3",
+        "statements": "EXECUTE FUNCTION UDF_UT_OrderBy_inline3(\"last\")",
+        "results": [
+            [
+                {
+                    "id": 3,
+                    "rating": 1
+                },
+                {
+                    "id": 2,
+                    "rating": 10
+                },
+                {
+                    "id": 1,
+                    "rating": null
+                }
+            ]
+        ]
+    },
+    {
+        "description": "Inline UDF with ORDER BY clause and ORDER BY direction that references a CTE variable. Function creation should fail.",
+        "statements": "CREATE FUNCTION UDF_UT_OrderBy_inline4() {( WITH cte1 AS ( \"asc\" ) SELECT id, rating FROM product WHERE rating IS NOT MISSING ORDER BY rating cte1)}",
+        "error": "ORDER BY direction '`cte1`' is not a valid constant, named, positional or function parameter."
+    },
+    {
+        "description":"Inline UDF with ORDER BY clause and ORDER BY direction that references a field name. Function creation should fail.",
+        "statements": "CREATE FUNCTION UDF_UT_OrderBy_inline5() {( SELECT id, rating FROM product WHERE rating IS NOT MISSING ORDER BY rating color )}",
+        "error": "ORDER BY direction '(`product`.`color`)' is not a valid constant, named, positional or function parameter."
+    }
+]

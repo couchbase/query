@@ -46,5 +46,14 @@
    },
    {
        "statements": "INSERT INTO shellTest (KEY,VALUE) VALUES(\"k001\", {\"c1\":1, \"c2\":2, \"c3\":3, \"test_id\":\"udf\"}), VALUES(\"k002\", {\"c1\":2, \"c2\":4, \"c3\":6, \"test_id\":\"udf\"})"
+   },
+   {
+    "statements": "INSERT INTO product (KEY, VALUE) VALUES(\"product_udf1\", { \"id\" : 1, \"name\" : \"AC3 Phone\", \"brand\" : \"ACME\", \"type\" : \"phone\", \"price\" : 200, \"rating\" : null,\"warranty_years\" : 5, \"test_id\":\"udf\"})"
+   },
+   {
+    "statements": "INSERT INTO product (KEY, VALUE) VALUES(\"product_udf3\", { \"id\" : 2, \"name\" : \"AC3 Series Charger\", \"type\" : \"charger\", \"price\" : 19, \"rating\" : 10,\"warranty_years\" : 3, \"test_id\":\"udf\"})"
+   },
+   {
+    "statements": "INSERT INTO product (KEY, VALUE) VALUES(\"product_udf4\", { \"id\" : 3, \"name\" : \"AC3 Case Green\", \"type\" : \"case\", \"color\" : \"green\", \"price\" : 8, \"rating\" : 1,\"warranty_years\" : 1, \"test_id\":\"udf\"})"
    }
  ]
