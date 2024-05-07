@@ -42,7 +42,7 @@ func optFilterSelectivity(filter *base.Filter, advisorValidate bool, context *Pr
 
 func optExprSelec(keyspaces map[string]string, pred expression.Expression, advisorValidate bool,
 	context *PrepareContext) (float64, float64) {
-	sel, arrSel, _ := optutil.ExprSelec(keyspaces, pred, advisorValidate, context)
+	sel, arrSel, _ := optutil.ExprSelec(keyspaces, pred, advisorValidate, 0, context)
 	return sel, arrSel
 }
 
