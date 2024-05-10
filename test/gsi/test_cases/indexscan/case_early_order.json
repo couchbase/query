@@ -373,7 +373,7 @@
                     "present": true
                 }
             ],
-            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY o WITHIN p.plan.`~children` SATISFIES o.`#operator` = 'Order' AND o.`limit` IS NOT MISSING AND NOT CONTAINS(o.`sort_terms`[0].`expr`, \"_index_key\") END"
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IndexScan3' AND ARRAY_LENGTH(v.`index_keys`) > 0 END AND ANY o WITHIN p.plan.`~children` SATISFIES o.`#operator` = 'Order' AND o.`limit` IS MISSING AND CONTAINS(o.`sort_terms`[0].`expr`, \"_index_key\") END"
         },
         "statements":"SELECT type, purchasedAt, purchaseId AS pid FROM purchase WHERE test_id = \"arrayIndex\" AND customerId like \"customer1%\" AND ARRAY_LENGTH(lineItems) > 1 ORDER BY pid, purchasedAt desc OFFSET 10 LIMIT 5",
         "ordered": true,
