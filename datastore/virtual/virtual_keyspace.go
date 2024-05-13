@@ -304,3 +304,7 @@ func (this *virtualKeyspace) Flush() errors.Error {
 func (this *virtualKeyspace) IsBucket() bool {
 	return len(this.path) == 2
 }
+
+func (this *virtualKeyspace) IsSystemCollection() bool {
+	return false
+}

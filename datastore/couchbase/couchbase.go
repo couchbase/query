@@ -2889,6 +2889,7 @@ func (b *keyspace) refreshGSIIndexer(url string, poolName string) {
 		// We know the connSecConfig is present, because we checked when the keyspace was created.
 		b.gsiIndexer.SetConnectionSecurityConfig(b.namespace.store.connSecConfig)
 	} else {
+		b.gsiIndexer = nil
 		logging.Errorf(" Error while refreshing GSI indexer - %v", err)
 	}
 }
@@ -2931,6 +2932,7 @@ func (b *keyspace) loadIndexes() {
 
 	b.gsiIndexer, qerr = gsi.NewGSIIndexer(p.store.URL(), p.Name(), b.name, store.connSecConfig)
 	if qerr != nil {
+		b.gsiIndexer = nil
 		logging.Warnf("Error loading GSI indexes for keyspace %s. Error %v", b.name, qerr)
 	} else {
 		b.gsiIndexer.SetConnectionSecurityConfig(store.connSecConfig)
@@ -3050,6 +3052,10 @@ func (ks *keyspace) Flush() errors.Error {
 
 func (b *keyspace) IsBucket() bool {
 	return true
+}
+
+func (b *keyspace) IsSystemCollection() bool {
+	return false
 }
 
 func (ks *keyspace) StartKeyScan(context datastore.QueryContext, ranges []*datastore.SeqScanRange, offset int64,
@@ -3218,7 +3224,16 @@ const (
 func (s *store) CreateSysPrimaryIndex(idxName, requestId string, indexer3 datastore.Indexer3) errors.Error {
 	var er errors.Error
 
-	// make sure index storage mode is set first
+	// make sure there is an index service first
+	numIndexNodes, errs := s.getNumIndexNodes()
+	if len(errs) > 0 {
+		return errs[0]
+	}
+	if numIndexNodes == 0 {
+		return errors.NewNoIndexServiceError()
+	}
+
+	// next make sure index storage mode is set
 	if gsiIndexer, ok := indexer3.(datastore.GsiIndexer); ok {
 		cfgSet := false
 		maxRetry := 8
@@ -3243,24 +3258,19 @@ func (s *store) CreateSysPrimaryIndex(idxName, requestId string, indexer3 datast
 		}
 	}
 
-	// if not serverless, get number of index nodes in the cluster, and create the primary index
+	// if not serverless, using the number of index nodes in the cluster create the primary index
 	// with replicas in the following fashion:
-	//    numIndexNode >= 4    ==> num_replica = 2
-	//    numIndexNode >  1    ==> num_replica = 1
-	//    numIndexNode == 1    ==> no replica
-	// for serverless, the number of replica is determined automatically
+	//    numIndexNodes >= 4    ==> num_replica = 2
+	//    numIndexNodes >  1    ==> num_replica = 1
+	//    numIndexNodes == 1    ==> no replicas
+	// for serverless, the number of replicas is determined automatically
 	var with value.Value
 	var replica map[string]interface{}
 	num_replica := 0
 	if !tenant.IsServerless() {
-		numIndexNode, errs := s.getNumIndexNode()
-		if len(errs) > 0 {
-			return errs[0]
-		}
-
-		if numIndexNode >= 4 {
+		if numIndexNodes >= 4 {
 			num_replica = 2
-		} else if numIndexNode > 1 {
+		} else if numIndexNodes > 1 {
 			num_replica = 1
 		}
 		if num_replica > 0 {
@@ -3361,14 +3371,14 @@ func (s *store) GetSystemCollection(bucketName string) (datastore.Keyspace, erro
 	return datastore.GetKeyspace("default", bucketName, _BUCKET_SYSTEM_SCOPE, _BUCKET_SYSTEM_COLLECTION)
 }
 
-func (s *store) getNumIndexNode() (int, errors.Errors) {
+func (s *store) getNumIndexNodes() (int, errors.Errors) {
 	info := s.Info()
 	nodes, errs := info.Topology()
 	if len(errs) > 0 {
 		return 0, errs
 	}
 
-	numIndexNode := 0
+	numIndexNodes := 0
 	for _, node := range nodes {
 		nodeServices, errs := info.Services(node)
 		if len(errs) > 0 {
@@ -3381,7 +3391,7 @@ func (s *store) getNumIndexNode() (int, errors.Errors) {
 				for _, serv := range serviceArr {
 					if name, ok := serv.(string); ok {
 						if name == "index" {
-							numIndexNode++
+							numIndexNodes++
 						}
 					}
 				}
@@ -3389,7 +3399,7 @@ func (s *store) getNumIndexNode() (int, errors.Errors) {
 		}
 	}
 
-	return numIndexNode, nil
+	return numIndexNodes, nil
 }
 
 // check for existance of system collection, and create primary index if necessary

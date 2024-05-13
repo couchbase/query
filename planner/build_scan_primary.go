@@ -23,8 +23,7 @@ import (
 func (this *builder) buildPrimaryScan(keyspace datastore.Keyspace, node *algebra.KeyspaceTerm,
 	indexes []datastore.Index, id expression.Expression, force, exact, hasDeltaKeyspace bool) (
 	plan.Operator, error) {
-	primary, err := buildPrimaryIndex(keyspace, indexes, node, force, this.context.Credentials(),
-		util.IsFeatureEnabled(this.context.FeatureControls(), util.N1QL_SEQ_SCAN))
+	primary, err := buildPrimaryIndex(keyspace, indexes, node, force, this.context)
 	if primary == nil || err != nil {
 		return nil, err
 	}
@@ -86,8 +85,10 @@ func (this *builder) buildPrimaryScan(keyspace datastore.Keyspace, node *algebra
 }
 
 func buildPrimaryIndex(keyspace datastore.Keyspace, indexes []datastore.Index, node *algebra.KeyspaceTerm, force bool,
-	credentials *auth.Credentials, inclSeqScan bool) (primary datastore.PrimaryIndex, err error) {
+	context *PrepareContext) (primary datastore.PrimaryIndex, err error) {
 
+	credentials := context.Credentials()
+	inclSeqScan := keyspace.IsSystemCollection() || util.IsFeatureEnabled(context.FeatureControls(), util.N1QL_SEQ_SCAN)
 	ok := false
 
 	// Prefer hints

@@ -76,15 +76,19 @@ func (this *seqScanIndexer) IndexById(id string) (datastore.Index, qe.Error) {
 	return this.IndexByName(id)
 }
 
+func (this *seqScanIndexer) enabled() bool {
+	return this.keyspace.IsSystemCollection() || util.IsFeatureEnabled(util.GetN1qlFeatureControl(), util.N1QL_SEQ_SCAN)
+}
+
 func (this *seqScanIndexer) IndexByName(name string) (datastore.Index, qe.Error) {
-	if util.IsFeatureEnabled(util.GetN1qlFeatureControl(), util.N1QL_SEQ_SCAN) && name == _RS_ID {
+	if this.enabled() && name == _RS_ID {
 		return this.primary[0].(datastore.Index), nil
 	}
 	return nil, qe.NewSSError(qe.E_SS_IDX_NOT_FOUND)
 }
 
 func (this *seqScanIndexer) IndexNames() ([]string, qe.Error) {
-	if !util.IsFeatureEnabled(util.GetN1qlFeatureControl(), util.N1QL_SEQ_SCAN) {
+	if !this.enabled() {
 		return nil, nil
 	}
 	return []string{_RS_ID}, nil
@@ -95,14 +99,14 @@ func (this *seqScanIndexer) IndexIds() ([]string, qe.Error) {
 }
 
 func (this *seqScanIndexer) PrimaryIndexes() ([]datastore.PrimaryIndex, qe.Error) {
-	if !util.IsFeatureEnabled(util.GetN1qlFeatureControl(), util.N1QL_SEQ_SCAN) {
+	if !this.enabled() {
 		return nil, nil
 	}
 	return this.primary, nil
 }
 
 func (this *seqScanIndexer) Indexes() ([]datastore.Index, qe.Error) {
-	if !util.IsFeatureEnabled(util.GetN1qlFeatureControl(), util.N1QL_SEQ_SCAN) {
+	if !this.enabled() {
 		return nil, nil
 	}
 	rv := make([]datastore.Index, 0, 1)

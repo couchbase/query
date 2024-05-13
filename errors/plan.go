@@ -26,10 +26,14 @@ func NewPlanError(e error, msg string) Error {
 
 // for situations where we want to maintain previous error code of 4000 but a proper enclosed error
 func NewWrapPlanError(e error) Error {
-	if er, ok := e.(Error); ok && er.Code() == E_PLAN {
-		return er
+	var c interface{}
+	if er, ok := e.(Error); ok {
+		if er.Code() == E_PLAN {
+			return er
+		}
+		c = er.Cause()
 	}
-	return &err{level: EXCEPTION, ICode: E_PLAN, IKey: "plan_error", ICause: e, InternalCaller: CallerN(1)}
+	return &err{level: EXCEPTION, ICode: E_PLAN, IKey: "plan_error", ICause: e, cause: c, InternalCaller: CallerN(1)}
 }
 
 func IsWrapPlanError(e error, code ErrorCode) bool {
@@ -127,10 +131,17 @@ func NewNoIndexJoinError(alias, op string) Error {
 /* error number 4110 moved to semantics.go */
 
 func NewNoPrimaryIndexError(alias string) Error {
+	c := make(map[string]interface{})
+	c["user_action"] = "Verify the Index service is present and running."
 	return &err{level: EXCEPTION, ICode: E_NO_PRIMARY_INDEX, IKey: "plan.build_primary_index.no_index",
 		InternalMsg: fmt.Sprintf("No index available on keyspace %s that matches your query. Use CREATE PRIMARY INDEX ON "+
 			"%s to create a primary index, or check that your expected index is online.", alias, alias),
-		InternalCaller: CallerN(1)}
+		cause: c, InternalCaller: CallerN(1)}
+}
+
+func NewNoIndexServiceError() Error {
+	return &err{level: EXCEPTION, ICode: E_NO_INDEX_SERVICE, IKey: "plan.build_primary_index.no_index_service",
+		InternalMsg: "Index service not available.", InternalCaller: CallerN(1)}
 }
 
 func NewPrimaryIndexOfflineError(name string) Error {

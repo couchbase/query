@@ -186,6 +186,7 @@ const (
 	E_PREDEFINED_PREPARED_NAME                ErrorCode = 4092
 	E_NO_INDEX_JOIN                           ErrorCode = 4100
 	E_USE_KEYS_USE_INDEXES                    ErrorCode = 4110
+	E_NO_INDEX_SERVICE                        ErrorCode = 4115
 	E_NO_PRIMARY_INDEX                        ErrorCode = 4120
 	E_PRIMARY_INDEX_OFFLINE                   ErrorCode = 4125
 	E_LIST_SUBQUERIES                         ErrorCode = 4130

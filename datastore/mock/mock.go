@@ -470,6 +470,10 @@ func (b *keyspace) IsBucket() bool {
 	return true
 }
 
+func (b *keyspace) IsSystemCollection() bool {
+	return false
+}
+
 type mockIndexer struct {
 	keyspace *keyspace
 	indexes  map[string]datastore.Index
