@@ -186,7 +186,7 @@ func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 					frCost = OPT_COST_NOT_AVAIL
 				}
 			}
-			offsetHandled = (this.partialSortTermCount > 0)
+			offsetHandled = offset != nil
 			order := plan.NewOrder(stmtOrder, this.partialSortTermCount, offset, limit, cost, cardinality, size, frCost, true, true)
 			children = append(children, order)
 			lastOp = order
