@@ -214,8 +214,7 @@ func (this *builder) buildOrScanNoPushdowns(node *algebra.KeyspaceTerm, id expre
 
 		var extraExpr expression.Expression
 		baseKeyspaces := base.CopyBaseKeyspaces(this.baseKeyspaces)
-		extraExpr, err = ClassifyExpr(op, baseKeyspaces, this.keyspaceNames, join, this.useCBO,
-			this.advisorValidate(), this.context)
+		extraExpr, err = this.processPredicateBase(op, baseKeyspaces, join)
 		if err != nil {
 			return nil, 0, false, err
 		}
