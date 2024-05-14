@@ -77,8 +77,7 @@ outer:
 	}
 
 	baseKeyspaces := base.CopyBaseKeyspaces(this.baseKeyspaces)
-	_, err = ClassifyExpr(newPred, baseKeyspaces, this.keyspaceNames, false, this.useCBO,
-		this.advisorValidate(), this.context)
+	_, err = this.processPredicateBase(newPred, baseKeyspaces, false)
 	if err != nil {
 		return nil, 0, err
 	}
