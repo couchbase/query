@@ -469,7 +469,6 @@ func (this *builder) collectPredicates(baseKeyspace *base.BaseKeyspace, keyspace
 	}
 
 	if pred != nil {
-		advisorValidate := this.advisorValidate()
 		//This is for collecting predicates from build_scan when predicates is disjunction.
 		if or, ok := pred.(*expression.Or); ok {
 			orTerms, _ := expression.FlattenOr(or)
@@ -480,9 +479,7 @@ func (this *builder) collectPredicates(baseKeyspace *base.BaseKeyspace, keyspace
 		outer:
 			for _, op := range orTerms.Operands() {
 				baseKeyspacesCopy := base.CopyBaseKeyspaces(this.baseKeyspaces)
-
-				_, err := ClassifyExpr(op, baseKeyspacesCopy, this.keyspaceNames,
-					ansijoin, this.useCBO, advisorValidate, this.context)
+				_, err := this.processPredicateBase(op, baseKeyspacesCopy, ansijoin)
 				if err != nil {
 					continue outer
 				}
@@ -503,8 +500,7 @@ func (this *builder) collectPredicates(baseKeyspace *base.BaseKeyspace, keyspace
 		} else {
 			//This is for collecting predicates for build_join_index.
 			baseKeyspacesCopy := base.CopyBaseKeyspaces(this.baseKeyspaces)
-			_, err := ClassifyExpr(pred, baseKeyspacesCopy, this.keyspaceNames,
-				false, this.useCBO, advisorValidate, this.context)
+			_, err := this.processPredicateBase(pred, baseKeyspacesCopy, false)
 			if err != nil {
 				return err
 			}

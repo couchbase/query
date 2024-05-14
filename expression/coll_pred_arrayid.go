@@ -50,8 +50,10 @@ func (this *assignArrayId) VisitEvery(pred *Every) (interface{}, error) {
 }
 
 func (this *assignArrayId) visitCollPredBase(predBase *collPredBase) (err error) {
-	this.arrayId++
-	predBase.arrayId = this.arrayId
-	this.arrayId, err = AssignArrayId(predBase.satisfies, this.arrayId)
+	if predBase.arrayId == 0 {
+		this.arrayId++
+		predBase.arrayId = this.arrayId
+		this.arrayId, err = AssignArrayId(predBase.satisfies, this.arrayId)
+	}
 	return
 }
