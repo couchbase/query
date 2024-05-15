@@ -42,6 +42,7 @@ const KEYSPACE_NAME_FUNCTIONS = "functions"
 const KEYSPACE_NAME_DICTIONARY_CACHE = "dictionary_cache"
 const KEYSPACE_NAME_DICTIONARY = "dictionary"
 const KEYSPACE_NAME_REQUESTS = "completed_requests"
+const KEYSPACE_NAME_REQUESTS_HISTORY = "completed_requests_history"
 const KEYSPACE_NAME_ACTIVE = "active_requests"
 const KEYSPACE_NAME_USER_INFO = "user_info"
 const KEYSPACE_NAME_MY_USER_INFO = "my_user_info"
@@ -69,7 +70,7 @@ func (s *store) PrivilegesFromPath(fullname string, keyspace string, privilege a
 
 		// currently these keyspaces require system read for delete if on prem
 		// and open (but limited to the user) for elixir
-		case KEYSPACE_NAME_ACTIVE, KEYSPACE_NAME_REQUESTS, KEYSPACE_NAME_PREPAREDS:
+		case KEYSPACE_NAME_ACTIVE, KEYSPACE_NAME_REQUESTS, KEYSPACE_NAME_PREPAREDS, KEYSPACE_NAME_REQUESTS_HISTORY:
 			if !tenant.IsServerless() {
 				privs.Add("", auth.PRIV_SYSTEM_READ, auth.PRIV_PROPS_NONE)
 			}
@@ -115,7 +116,7 @@ func (s *store) PrivilegesFromPath(fullname string, keyspace string, privilege a
 
 		// currently these keyspaces require system read for select if on prem
 		// and open (but limited to the user) for elixir
-		case KEYSPACE_NAME_ACTIVE, KEYSPACE_NAME_REQUESTS, KEYSPACE_NAME_PREPAREDS:
+		case KEYSPACE_NAME_ACTIVE, KEYSPACE_NAME_REQUESTS, KEYSPACE_NAME_PREPAREDS, KEYSPACE_NAME_REQUESTS_HISTORY:
 			if !tenant.IsServerless() {
 				privs.Add("", auth.PRIV_SYSTEM_READ, auth.PRIV_PROPS_NONE)
 			}

@@ -144,6 +144,13 @@ func (this *HttpEndpoint) registerAccountingHandlers() {
 		this.wrapAPI(w, req, doTask, false)
 	}
 
+	completedHistoryHandler := func(w http.ResponseWriter, req *http.Request) {
+		this.wrapAPI(w, req, doCompletedRequestHistory, false)
+	}
+	completedsHistoryIndexHandler := func(w http.ResponseWriter, req *http.Request) {
+		this.wrapAPI(w, req, doCompletedHistoryIndex, false)
+	}
+
 	tasksHandler := func(w http.ResponseWriter, req *http.Request) {
 		this.wrapAPI(w, req, doTasks, false)
 	}
@@ -214,6 +221,9 @@ func (this *HttpEndpoint) registerAccountingHandlers() {
 		indexesPrefix + "/tasks_cache":        {handler: tasksIndexHandler, methods: []string{"GET"}},
 		prometheusLow:                         {handler: prometheusLowHandler, methods: []string{"GET"}},
 		indexesPrefix + "/transactions":       {handler: transactionsIndexHandler, methods: []string{"GET"}},
+
+		completedsPrefix + "_history/{request}":       {handler: completedHistoryHandler, methods: []string{"GET"}},
+		indexesPrefix + "/completed_requests_history": {handler: completedsHistoryIndexHandler, methods: []string{"GET"}},
 
 		backupPrefix + "/backup":                 {handler: globalBackupHandler, methods: []string{"GET", "POST"}},
 		backupPrefix + "/bucket/{bucket}/backup": {handler: bucketBackupHandler, methods: []string{"GET", "POST"}},
@@ -601,7 +611,7 @@ func preparedWorkHorse(entry *prepareds.CacheEntry, profiling bool, redact bool,
 	itemMap := map[string]interface{}{
 		"name":            entry.Prepared.Name(),
 		"uses":            entry.Uses,
-		"statement":       redacted(entry.Prepared.Text(), redact),
+		"statement":       util.Redacted(entry.Prepared.Text(), redact),
 		"indexApiVersion": entry.Prepared.IndexApiVersion(),
 		"featureControls": entry.Prepared.FeatureControls(),
 	}
@@ -1771,7 +1781,7 @@ func activeRequestWorkHorse(endpoint *HttpEndpoint, request server.Request, prof
 		reqMap["clientContextID"] = cId
 	}
 	if request.Statement() != "" {
-		reqMap["statement"] = redacted(request.Statement(), redact)
+		reqMap["statement"] = util.Redacted(request.Statement(), redact)
 	}
 	if request.Type() != "" {
 		reqMap["statementType"] = request.Type()
@@ -1864,11 +1874,11 @@ func activeRequestWorkHorse(endpoint *HttpEndpoint, request server.Request, prof
 		if ctrl {
 			na := request.NamedArgs()
 			if na != nil {
-				reqMap["namedArgs"] = interfaceRedacted(na, redact)
+				reqMap["namedArgs"] = util.InterfaceRedacted(na, redact)
 			}
 			pa := request.PositionalArgs()
 			if pa != nil {
-				reqMap["positionalArgs"] = interfaceRedacted(pa, redact)
+				reqMap["positionalArgs"] = util.InterfaceRedacted(pa, redact)
 			}
 			memoryQuota := request.MemoryQuota()
 			if memoryQuota != 0 {
@@ -1878,7 +1888,7 @@ func activeRequestWorkHorse(endpoint *HttpEndpoint, request server.Request, prof
 	}
 	credsString := datastore.CredsString(request.Credentials())
 	if credsString != "" {
-		reqMap["users"] = redacted(credsString, redact)
+		reqMap["users"] = util.Redacted(credsString, redact)
 	}
 	remoteAddr := request.RemoteAddr()
 	if remoteAddr != "" {
@@ -2008,128 +2018,9 @@ func processCompletedRequest(requestId string, userName string, profiling bool, 
 		if userName != "" && userName != request.Users {
 			return
 		}
-		res = completedRequestWorkHorse(request, profiling, redact, durStyle)
+		res = request.Format(profiling, redact, durStyle)
 	})
 	return res
-}
-
-func completedRequestWorkHorse(request *server.RequestLogEntry, profiling bool, redact bool,
-	durStyle util.DurationStyle) interface{} {
-
-	reqMap := map[string]interface{}{
-		"requestId": request.RequestId,
-	}
-	if request.ClientId != "" {
-		reqMap["clientContextID"] = request.ClientId
-	}
-	reqMap["state"] = request.State
-	reqMap["scanConsistency"] = request.ScanConsistency
-	if request.UseFts {
-		reqMap["useFts"] = request.UseFts
-	}
-	if request.UseCBO {
-		reqMap["useCBO"] = request.UseCBO
-	}
-	if request.UseReplica == value.TRUE {
-		reqMap["useReplica"] = value.TristateToString(request.UseReplica)
-	}
-	reqMap["n1qlFeatCtrl"] = request.FeatureControls
-	if request.QueryContext != "" {
-		reqMap["queryContext"] = request.QueryContext
-	}
-	if request.Statement != "" {
-		reqMap["statement"] = redacted(request.Statement, redact)
-	}
-	if request.StatementType != "" {
-		reqMap["statementType"] = request.StatementType
-	}
-	if request.PreparedName != "" {
-		reqMap["preparedName"] = request.PreparedName
-		reqMap["preparedText"] = redacted(request.PreparedText, redact)
-	}
-	if request.TxId != "" {
-		reqMap["txid"] = request.TxId
-	}
-	reqMap["requestTime"] = request.Time.Format(expression.DEFAULT_FORMAT)
-	reqMap["elapsedTime"] = util.FormatDuration(request.ElapsedTime, durStyle)
-	reqMap["serviceTime"] = util.FormatDuration(request.ServiceTime, durStyle)
-	if request.TransactionElapsedTime > 0 {
-		reqMap["transactionElapsedTime"] = util.FormatDuration(request.TransactionElapsedTime, durStyle)
-	}
-	if request.TransactionRemainingTime > 0 {
-		reqMap["transactionRemainingTime"] = util.FormatDuration(request.TransactionRemainingTime, durStyle)
-	}
-	reqMap["resultCount"] = request.ResultCount
-	reqMap["resultSize"] = request.ResultSize
-	reqMap["errorCount"] = request.ErrorCount
-	if request.Mutations != 0 {
-		reqMap["mutations"] = request.Mutations
-	}
-	if request.PhaseCounts != nil {
-		reqMap["phaseCounts"] = request.PhaseCounts
-	}
-	if request.PhaseOperators != nil {
-		reqMap["phaseOperators"] = request.PhaseOperators
-	}
-	if request.PhaseTimes != nil {
-		m := make(map[string]interface{}, len(request.PhaseTimes))
-		for k, v := range request.PhaseTimes {
-			if d, ok := v.(time.Duration); ok {
-				m[k] = util.FormatDuration(d, durStyle)
-			} else {
-				m[k] = v
-			}
-		}
-		reqMap["phaseTimes"] = m
-	}
-	if request.UsedMemory != 0 {
-		reqMap["usedMemory"] = request.UsedMemory
-	}
-	if request.Tag != "" {
-		reqMap["~tag"] = request.Tag
-	}
-
-	if profiling {
-		if request.NamedArgs != nil {
-			reqMap["namedArgs"] = interfaceRedacted(request.NamedArgs, redact)
-		}
-		if request.PositionalArgs != nil {
-			reqMap["positionalArgs"] = interfaceRedacted(request.PositionalArgs, redact)
-		}
-		timings := request.Timings()
-		if timings != nil {
-			reqMap["timings"] = interfaceRedacted(string(util.ApplyDurationStyle(durStyle, timings)), redact)
-		}
-		if request.CpuTime > time.Duration(0) {
-			reqMap["cpuTime"] = util.FormatDuration(request.CpuTime, durStyle)
-		}
-		optEstimates := request.OptEstimates()
-		if optEstimates != nil {
-			reqMap["optimizerEstimates"] = value.NewValue(interfaceRedacted(optEstimates, redact))
-		}
-		if request.Errors != nil {
-			reqMap["errors"] = request.Errors
-		}
-		if request.MemoryQuota != 0 {
-			reqMap["memoryQuota"] = request.MemoryQuota
-		}
-	}
-	if request.Users != "" {
-		reqMap["users"] = redacted(request.Users, redact)
-	}
-	if request.RemoteAddr != "" {
-		reqMap["remoteAddr"] = request.RemoteAddr
-	}
-	if request.UserAgent != "" {
-		reqMap["userAgent"] = request.UserAgent
-	}
-	if request.ThrottleTime > time.Duration(0) {
-		reqMap["throttleTime"] = util.FormatDuration(request.ThrottleTime, durStyle)
-	}
-	if request.Qualifier != "" {
-		reqMap["~qualifier"] = request.Qualifier
-	}
-	return reqMap
 }
 
 func doCompletedRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
@@ -2148,7 +2039,7 @@ func doCompletedRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *htt
 	durStyle, _ := util.IsDurationStyle(req.FormValue("duration_style"))
 	redact := doRedact(req)
 	server.RequestsForeach(func(requestId string, request *server.RequestLogEntry) bool {
-		r := completedRequestWorkHorse(request, profiling, redact, durStyle)
+		r := request.Format(profiling, redact, durStyle)
 		requests = append(requests, r)
 		return true
 	}, nil)
@@ -2168,7 +2059,7 @@ func CaptureCompletedRequests(w io.Writer) error {
 			_, err = w.Write([]byte{','})
 		}
 		if err == nil {
-			r := completedRequestWorkHorse(request, true, true, util.GetDurationStyle())
+			r := request.Format(true, true, util.GetDurationStyle())
 			err = json.MarshalNoEscapeToBuffer(r, &buf)
 			if err == nil {
 				_, err = buf.WriteTo(w)
@@ -2182,24 +2073,6 @@ func CaptureCompletedRequests(w io.Writer) error {
 		_, err = w.Write([]byte{']', '\n'})
 	}
 	return err
-}
-
-func redacted(in string, redact bool) string {
-	if redact {
-		return "<ud>" + in + "</ud>"
-	}
-	return in
-}
-
-func interfaceRedacted(in interface{}, redact bool) interface{} {
-	if redact {
-		out := make([]interface{}, 0, 3)
-		out = append(out, "<ud>")
-		out = append(out, in)
-		out = append(out, "</ud>")
-		return out
-	}
-	return in
 }
 
 func doPreparedIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
@@ -2828,4 +2701,90 @@ func doCBORestore(v []byte, b string, include, exclude matcher, remap remapper, 
 	}
 
 	return nil
+}
+
+func doCompletedRequestHistory(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
+	interface{}, errors.Error) {
+
+	_, requestId := router.RequestValue(req, "request")
+
+	af.EventTypeId = audit.API_ADMIN_COMPLETED_REQUESTS
+	af.Request = requestId
+
+	if req.Method == "GET" {
+		err, isInternal := endpoint.verifyCredentialsFromRequest("system:completed_requests_history", auth.PRIV_SYSTEM_READ, req,
+			af)
+		if err != nil {
+			return nil, err
+		}
+		if isInternal {
+			// Do not audit internal requests. They are an internal API used
+			// only for queries to system:completed_requests, and would cause too
+			// many log messages to be generated.
+			af.EventTypeId = audit.API_DO_NOT_AUDIT
+		}
+		userName, err := endpoint.getImpersonate(req)
+		if err != nil {
+			return nil, err
+		}
+
+		i := strings.LastIndexByte(requestId, '-')
+		if i == -1 {
+			return nil, errors.NewServiceErrorBadValue(nil, "history request id")
+		}
+		fileNum, e := strconv.ParseUint(requestId[:i], 10, 64)
+		if e != nil {
+			return nil, errors.NewServiceErrorBadValue(e, "history request id")
+		}
+		recNum, e := strconv.ParseUint(requestId[i+1:], 10, 64)
+		if e != nil {
+			return nil, errors.NewServiceErrorBadValue(e, "history request id")
+		}
+		var rv interface{}
+		e = server.RequestsFileStreamRead(fileNum, recNum, 1, userName, func(m map[string]interface{}) bool {
+			m["~file"] = fileNum
+			rv = m
+			return true
+		})
+		if e != nil && e != io.EOF {
+			return nil, errors.NewServiceErrorBadValue(e, "history request")
+		}
+		return rv, nil
+	} else {
+		return nil, errors.NewServiceErrorHttpMethod(req.Method)
+	}
+}
+
+func doCompletedHistoryIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
+	interface{}, errors.Error) {
+
+	af.EventTypeId = audit.API_DO_NOT_AUDIT
+	err, _ := endpoint.verifyCredentialsFromRequest("system:completed_requests_history", auth.PRIV_SYSTEM_READ, req, af)
+	if err != nil {
+		return nil, err
+	}
+	userName, err := endpoint.getImpersonate(req)
+	if err != nil {
+		return nil, err
+	}
+	info := server.RequestsFileStreamFileInfo()
+	if len(info) == 0 {
+		return []string{}, nil
+	}
+	completed := make([]string, 0, len(info)/2)
+
+	if userName == "" {
+		for i := 0; i < len(info); i += 2 {
+			completed = append(completed, fmt.Sprintf("%d-%d", info[i], info[i+1]))
+		}
+	} else {
+		for i := 0; i < len(info); i += 2 {
+			n := 0
+			server.RequestsFileStreamRead(info[i], 0, 0, userName, func(m map[string]interface{}) bool { n++; return true })
+			if n > 0 {
+				completed = append(completed, fmt.Sprintf("%d-%d", info[i], n))
+			}
+		}
+	}
+	return completed, nil
 }

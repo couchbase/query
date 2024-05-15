@@ -129,6 +129,11 @@ var _SETTERS = map[string]Setter{
 		RequestsSetMaxPlanSize(int(value))
 		return nil
 	},
+	CMPSTREAM: func(s *Server, o interface{}) errors.Error {
+		value := getNumber(o)
+		RequestsSetFileStreamSize(int64(value))
+		return nil
+	},
 	PRPLIMIT: func(s *Server, o interface{}) errors.Error {
 		value := getNumber(o)
 		prepareds.PreparedsSetLimit(int(value))
@@ -567,6 +572,7 @@ func FillSettings(settings map[string]interface{}, srvr *Server) map[string]inte
 	settings[CMPLIMIT] = RequestsLimit()
 	settings[CMPOBJECT] = RequestsGetQualifiers()
 	settings[CMPMAXPLANSIZE] = RequestsMaxPlanSize()
+	settings[CMPSTREAM] = RequestsFileStreamSize()
 	settings[PRPLIMIT] = prepareds.PreparedsLimit()
 	settings[PRETTY] = srvr.Pretty()
 	settings[MAXINDEXAPI] = srvr.MaxIndexAPI()

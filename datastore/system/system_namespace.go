@@ -213,6 +213,12 @@ func (p *namespace) loadKeyspaces() (e errors.Error) {
 	}
 	p.keyspaces[reqs.Name()] = reqs
 
+	reqsHist, e := newRequestsHistoryKeyspace(p)
+	if e != nil {
+		return e
+	}
+	p.keyspaces[reqsHist.Name()] = reqsHist
+
 	actives, e := newActiveRequestsKeyspace(p)
 	if e != nil {
 		return e
