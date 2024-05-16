@@ -315,6 +315,18 @@ func (this *AnnotatedArray) Foreach(f func(AnnotatedValue) bool) errors.Error {
 	this.iterator.memIndex = 0
 
 	if this.less != nil {
+		if this.heapSize > 0 && len(this.spill) == 0 {
+			// this sort should have minimal work as it is sorting in heap order
+			// the heap isn't in perfect order so we have to sort it first
+			sort.Sort(this)
+			// heap order is the reverse of what we want (max-heap) so iterate backwards
+			for i := len(this.mem) - 1; i >= 0; i-- {
+				if !f(this.mem[i]) {
+					return nil
+				}
+			}
+			return nil
+		}
 		this.heapSize = 0
 		sort.Sort(this)
 

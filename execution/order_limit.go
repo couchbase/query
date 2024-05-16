@@ -11,6 +11,7 @@ package execution
 import (
 	"encoding/json"
 
+	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
 )
@@ -129,17 +130,41 @@ func (this *OrderLimit) afterItems(context *Context) {
 			this.offset.afterItems(context)
 		}
 		this.limit.afterItems(context)
+		this.releaseValues()
+		this.terms = nil
 	}()
+
+	if this.stopped {
+		return
+	}
 
 	offset := int64(0)
 	if this.offset != nil {
 		offset = this.offset.offset
 	}
-
 	sortCount := this.numProcessedRows
 	if offset < int64(this.values.Length()) {
-		this.numProcessedRows -= uint64(this.values.Length()) // this.Order will add to the phase count too
-		this.Order.afterItems(context)
+		earlyOrder := this.plan.IsEarlyOrder()
+		useRequestQuota := context.UseRequestQuota()
+		err := this.values.Foreach(func(av value.AnnotatedValue) bool {
+			if offset == 0 {
+				if earlyOrder {
+					this.resetCachedValues(av)
+				}
+				return this.sendItem(av)
+			} else {
+				if useRequestQuota {
+					context.ReleaseValueSize(av.Size())
+				}
+				av.Recycle()
+				offset--
+				return true
+			}
+		})
+		if err != nil {
+			context.Error(err)
+		}
+		logging.Debuga(func() string { return this.values.Stats() })
 	} else {
 		this.Order.values.Truncate(
 			func(v value.AnnotatedValue) {
