@@ -2192,6 +2192,36 @@ var errData = []ErrData{
 		},
 	},
 	{
+		Code:        E_RECURSIVE_IMPLICIT_DEPTH_LIMIT, // 3306
+		symbol:      "E_RECURSIVE_IMPLICIT_DEPTH_LIMIT",
+		Description: "Recursive WITH «alias» stopped at «depth» level as no explicit level limit or memory quota set",
+		Reason: []string{
+			"The request without a memory quota set contained a recursive common table expression without an explicit level limit exceeded the implicit limit and was stopped.",
+		},
+		Action: []string{
+			"Review the statement and its control of the recursion.\nUse a memory quota to guard against runaway recursion or specify an explicit level limit for the common table expression.",
+		},
+		IsUser: YES,
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_CYCLE_FIELDS_VALIDATION_FAILED, // 3307
+		symbol:      "E_CYCLE_FIELDS_VALIDATION_FAILED",
+		Description: "Cycle fields validation failed for with term: «alias»",
+		Reason: []string{
+			"The expression specified in the cycle clause is not an identifier or path term.",
+		},
+		Action: []string{
+			"Revise statement removing or modifying the invalid cycle clause expression.",
+		},
+		IsUser: YES,
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
 		Code:        E_PLAN, // 4000
 		symbol:      "E_PLAN",
 		Description: "A planning error occurred.",
