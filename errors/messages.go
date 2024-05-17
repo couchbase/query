@@ -2466,6 +2466,21 @@ var errData = []ErrData{
 		},
 	},
 	{
+		Code:        E_NO_INDEX_SERVICE, // 4115
+		symbol:      "E_NO_INDEX_SERVICE",
+		Description: "Index service not available.",
+		Reason: []string{
+			"No active Index service nodes were found in this cluster.",
+		},
+		Action: []string{
+			"Ensure the Index service is defined and operational in the cluster before attempting index operations.",
+		},
+		IsUser: YES,
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
 		Code:        E_NO_PRIMARY_INDEX, // 4120
 		symbol:      "E_NO_PRIMARY_INDEX",
 		Description: "No index available on keyspace «keyspace» that matches your query. Use CREATE PRIMARY INDEX ON «keyspace» to create a primary index, or check that your expected index is online.",
