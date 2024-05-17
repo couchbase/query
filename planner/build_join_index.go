@@ -17,7 +17,6 @@ import (
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
 	base "github.com/couchbase/query/plannerbase"
-	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
@@ -84,8 +83,7 @@ func (this *builder) buildJoinScan(keyspace datastore.Keyspace, node *algebra.Ke
 	datastore.Index, expression.Covers, map[*expression.Cover]value.Value, error) {
 
 	formalizer := expression.NewSelfFormalizer(node.Alias(), nil)
-	allindexes, err, duration := allIndexes(keyspace, nil, nil, this.context.IndexApiVersion(), false,
-		util.IsFeatureEnabled(this.context.FeatureControls(), util.N1QL_SEQ_SCAN))
+	allindexes, err, duration := allIndexes(keyspace, nil, nil, false, this.context)
 	if nil != allindexes {
 		defer _INDEX_POOL.Put(allindexes)
 	}

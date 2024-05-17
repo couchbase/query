@@ -747,6 +747,10 @@ func (b *keyspace) IsBucket() bool {
 	return true
 }
 
+func (b *keyspace) IsSystemCollection() bool {
+	return false
+}
+
 func (b *keyspace) path() string {
 	return filepath.Join(b.namespace.path(), b.name)
 }

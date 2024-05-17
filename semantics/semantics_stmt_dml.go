@@ -9,6 +9,8 @@
 package semantics
 
 import (
+	"fmt"
+
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
@@ -35,6 +37,17 @@ func (this *SemChecker) VisitSelect(stmt *algebra.Select) (r interface{}, err er
 			if err != nil {
 				return nil, err
 			}
+
+			for _, binding := range stmt.With().Bindings() {
+				if cyc := binding.CycleFields(); cyc != nil {
+					var err error
+					err = validateCycleFields(cyc)
+					if err != nil {
+						return nil, errors.NewCycleFieldsValidationFailedError(err, binding.Alias())
+					}
+				}
+			}
+
 		} else {
 			if err = stmt.With().MapExpressions(this); err != nil {
 				return nil, err
@@ -343,6 +356,21 @@ func validateOrderBySemantics(order *algebra.Order) error {
 			default:
 				return errors.NewOrderByValidationError("NULLS position", n.String())
 			}
+		}
+	}
+	return nil
+}
+
+// only alow identifier/field expression as cycle expression
+func validateCycleFields(cycle expression.Expressions) error {
+
+	for _, cycleFieldExpr := range cycle {
+		switch c := cycleFieldExpr.(type) {
+		case *expression.Identifier, *expression.Field:
+			continue
+		default:
+			return fmt.Errorf("invalid cycle field expression term: %s only "+
+				"identifier/path expressions are allowed", c)
 		}
 	}
 	return nil

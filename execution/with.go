@@ -119,7 +119,6 @@ func (this *With) RunOnce(context *Context, parent value.Value) {
 
 				// UNION: don't allow duplicates
 				trackUnion := newwMap()
-				isUnion := with.IsUnion()
 
 				// track config options
 				ilevel := int64(0)
@@ -130,13 +129,13 @@ func (this *With) RunOnce(context *Context, parent value.Value) {
 					implicitMaxDocs = _MAX_IMPLICIT_DOCS
 				}
 
-				// CYCLE CLAUSE
-				var cycleFields expression.Expressions
-				trackCycle := newwMap()
-
-				if cycleFields = with.CycleFields(); cycleFields != nil {
-					cycleFields = validateCycleFields(cycleFields)
+				implicitMaxDepth := int64(-1)
+				if config.level == -1 && !context.UseRequestQuota() {
+					implicitMaxDepth = _MAX_RECUR_DEPTH
 				}
+
+				// CYCLE CLAUSE
+				trackCycle := newwMap()
 
 				finalRes := []interface{}{}
 				workRes, ok := v.Actual().([]interface{})
@@ -149,14 +148,15 @@ func (this *With) RunOnce(context *Context, parent value.Value) {
 					break
 				}
 
-				// cycle detection for anchor
-				if cycleFields != nil {
-					workRes = cycleRestrict(workRes, cycleFields, trackCycle, context)
-				}
+				// dedup+cycle detection for anchor
+				workRes, e = dedupAndCycleRestrict(workRes, with.CycleFields(), with.IsUnion(), trackCycle, trackUnion, context)
+				if e != nil {
+					context.Error(errors.NewEvaluationError(e, "WITH"))
+					this.notify()
 
-				// track duplicates for anchor
-				if isUnion {
-					workRes = removeDuplicates(workRes, trackUnion)
+					// MB-31605 have to start the child for the output and stop
+					// operators to be set properly by sequences
+					break
 				}
 
 				for {
@@ -169,9 +169,13 @@ func (this *With) RunOnce(context *Context, parent value.Value) {
 						break
 					}
 
-					if ilevel > config.level {
+					if config.level > -1 && ilevel > config.level {
 						// exit on level limit
-						context.Infof("Reached %v recursion depth", ilevel)
+						break
+					} else if implicitMaxDepth > -1 && ilevel > implicitMaxDepth {
+						// set to finalRes
+						wv.SetField(with.Alias(), value.NewValue(finalRes))
+						context.Warning(errors.NewRecursiveImplicitDepthLimitError(with.Alias(), implicitMaxDepth))
 						break
 					}
 
@@ -180,8 +184,10 @@ func (this *With) RunOnce(context *Context, parent value.Value) {
 						finalRes = finalRes[:config.document]
 						break
 					} else if implicitMaxDocs > -1 && idoc > implicitMaxDocs {
-						e = errors.NewRecursiveImplicitDocLimitError(with.Alias(), implicitMaxDocs)
 						finalRes = finalRes[:implicitMaxDocs]
+						// set to finalRes
+						wv.SetField(with.Alias(), value.NewValue(finalRes))
+						context.Warning(errors.NewRecursiveImplicitDocLimitError(with.Alias(), implicitMaxDocs))
 						break
 					}
 
@@ -200,24 +206,25 @@ func (this *With) RunOnce(context *Context, parent value.Value) {
 
 					// create workRes
 					workRes, ok = v.Actual().([]interface{})
+					orgLen := len(workRes)
 					if !ok {
 						e = errors.NewExecutionInternalError("couldn't convert recursive result to array")
 						break
 					}
 
-					// cycle detection for anchor
-					if cycleFields != nil {
-						workRes = cycleRestrict(workRes, cycleFields, trackCycle, context)
+					workRes, e = dedupAndCycleRestrict(workRes, with.CycleFields(), with.IsUnion(), trackCycle, trackUnion, context)
+					if e != nil {
+						break
+					}
+
+					if len(workRes) < orgLen {
+						v = value.NewValue(workRes)
 					}
 
 					// update alias
 					e = wv.SetField(with.Alias(), v)
 					if e != nil {
 						break
-					}
-
-					if isUnion {
-						workRes = removeDuplicates(workRes, trackUnion)
 					}
 				}
 
@@ -315,22 +322,11 @@ func (this *With) recycleBindings(clearArray bool) {
 }
 
 type wMap struct {
-	m map[interface{}]interface{}
+	m map[string]interface{}
 }
 
 func newwMap() *wMap {
-	return &wMap{m: make(map[interface{}]interface{})}
-}
-
-func (this *wMap) put(key, value interface{}) {
-	b, _ := json.Marshal(key)
-	this.m[string(b)] = value
-}
-
-func (this *wMap) get(key interface{}) (value interface{}, pres bool) {
-	b, _ := json.Marshal(key)
-	value, pres = this.m[string(b)]
-	return
+	return &wMap{m: make(map[string]interface{})}
 }
 
 func (this *wMap) clear() {
@@ -340,19 +336,6 @@ func (this *wMap) clear() {
 	this.m = nil
 }
 
-func removeDuplicates(list []interface{}, set *wMap) []interface{} {
-	newList := []interface{}{}
-	for _, v := range list {
-		if _, pres := set.get(v); !pres {
-			//add as not seen before
-			newList = append(newList, v)
-			set.put(v, true)
-		}
-	}
-
-	return newList
-}
-
 type ConfigOptions struct {
 	level    int64 // exit on level N
 	document int64 // exit on accumulating N docs
@@ -360,7 +343,7 @@ type ConfigOptions struct {
 
 func processConfig(config value.Value) (*ConfigOptions, errors.Error) {
 	configOptions := ConfigOptions{
-		level:    _MAX_RECUR_DEPTH,
+		level:    -1,
 		document: -1,
 	}
 
@@ -398,23 +381,6 @@ func processConfig(config value.Value) (*ConfigOptions, errors.Error) {
 	return &configOptions, nil
 }
 
-func validateCycleFields(cycle expression.Expressions) expression.Expressions {
-
-	validateCycleFields := expression.Expressions{}
-	for _, cycleFieldExpr := range cycle {
-
-		switch c := cycleFieldExpr.(type) {
-		case *expression.Identifier:
-			validateCycleFields = append(validateCycleFields, c)
-		case *expression.Field:
-			// allow nested fieldnames
-			validateCycleFields = append(validateCycleFields, c)
-		}
-	}
-
-	return validateCycleFields
-}
-
 func hopVal(item value.Value, cycleFields expression.Expressions, context *Context) (map[string]interface{}, error) {
 	val := map[string]interface{}{}
 	for _, exp := range cycleFields {
@@ -432,22 +398,56 @@ func hopVal(item value.Value, cycleFields expression.Expressions, context *Conte
 	return val, nil
 }
 
-func cycleRestrict(items []interface{}, cycleFields expression.Expressions, trackCycle *wMap, context *Context) []interface{} {
-	result := []interface{}{}
+func dedupAndCycleRestrict(items []interface{}, cycleFields expression.Expressions, isUnion bool,
+	trackCycle *wMap, trackSet *wMap, context *Context) ([]interface{}, errors.Error) {
+	if !isUnion && cycleFields == nil {
+		return items, nil
+	}
+
+	newItemListEnd := 0
 
 	for _, item := range items {
-		hv, err := hopVal(value.NewValue(item), cycleFields, context)
-		if err != nil {
-			//skip item for cycle detection
-			continue
-		} else {
-			if _, pres := trackCycle.get(hv); !pres {
-				// if not present add
-				result = append(result, item)
-				trackCycle.put(hv, true)
+		keep := true
+		if isUnion {
+			b, _ := json.Marshal(item)
+			if _, pres := trackSet.m[string(b)]; pres {
+				keep = false
+			} else {
+				trackSet.m[string(b)] = true
 			}
+		}
+
+		if cycleFields != nil {
+			v := value.NewValue(item)
+			hv, err := hopVal(v, cycleFields, context)
+			if err != nil {
+				// keep = false
+				return nil, errors.NewExecutionInternalError(fmt.Sprintf("failed to create encoded value from "+
+					"cycle fields provided for item: %v", item))
+			}
+
+			if keep {
+				b, _ := json.Marshal(hv)
+				if _, pres := trackCycle.m[string(b)]; pres {
+					keep = false
+				} else {
+					trackCycle.m[string(b)] = true
+				}
+			}
+		}
+
+		if keep {
+			items[newItemListEnd] = item
+			newItemListEnd++
+		} else {
+			discardv := value.NewValue(item)
+			if context.UseRequestQuota() {
+				context.ReleaseValueSize(discardv.Size())
+			}
+			// This is objectValue so, recycle doesn't do anything
+			discardv.Recycle()
 		}
 	}
 
-	return result
+	return items[:newItemListEnd:newItemListEnd], nil
 }

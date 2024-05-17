@@ -109,11 +109,11 @@ func newIdxKeyDerive(keyExpr expression.Expression) *idxKeyDerive {
 // derive IS NOT NULL filters for a keyspace based on join filters in the
 // WHERE clause as well as ON-clause of inner joins
 func deriveNotNullFilter(keyspace datastore.Keyspace, baseKeyspace *base.BaseKeyspace, useCBO bool,
-	indexApiVersion int, virtualIndexes []datastore.Index, advisorValidate bool,
-	context *PrepareContext, aliases map[string]bool, inclSeqScan bool) (error, time.Duration) {
+	virtualIndexes []datastore.Index, advisorValidate bool,
+	context *PrepareContext, aliases map[string]bool) (error, time.Duration) {
 
 	// first gather leading index key from all indexes for this keyspace
-	indexes, err, duration := allIndexes(keyspace, nil, virtualIndexes, indexApiVersion, false, inclSeqScan)
+	indexes, err, duration := allIndexes(keyspace, nil, virtualIndexes, false, context)
 	if nil != indexes {
 		defer _INDEX_POOL.Put(indexes)
 	}

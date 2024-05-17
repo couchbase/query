@@ -292,6 +292,8 @@ type Keyspace interface {
 	Flush() errors.Error // For flush collection
 	IsBucket() bool
 	Release(close bool) // Release any resources held by this object
+
+	IsSystemCollection() bool
 }
 
 // sequential scan
@@ -833,16 +835,17 @@ func getSystemCollection(bucketName string) (Keyspace, errors.Error) {
 }
 
 func getSystemCollectonIndexConnection(systemCollection Keyspace) (*IndexConnection, Index3, errors.Error) {
-	indexer, err := systemCollection.Indexer(GSI)
-	if err != nil {
+	indexerGSI, err := systemCollection.Indexer(GSI)
+	if err == nil {
+		index3, err := getPrimaryIndexFromIndexer(indexerGSI)
+		if err != nil {
+			return nil, nil, err
+		}
+		if index3 != nil {
+			return NewIndexConnection(NewSystemContext()), index3, nil
+		}
+	} else if err.Code() != errors.E_CB_INDEXER_NOT_IMPLEMENTED {
 		return nil, nil, err
-	}
-	index3, err := getPrimaryIndexFromIndexer(indexer)
-	if err != nil {
-		return nil, nil, err
-	}
-	if index3 != nil {
-		return NewIndexConnection(NewSystemContext()), index3, nil
 	}
 
 	// checks the status of or creates (if needed) the primary index
@@ -856,9 +859,9 @@ func getSystemCollectonIndexConnection(systemCollection Keyspace) (*IndexConnect
 		return err
 	}
 
-	indexer, err = systemCollection.Indexer(SEQ_SCAN)
+	indexerSEQ, err := systemCollection.Indexer(SEQ_SCAN)
 	if err == nil {
-		index3, err = getPrimaryIndexFromIndexer(indexer)
+		index3, err := getPrimaryIndexFromIndexer(indexerSEQ)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -877,11 +880,11 @@ func getSystemCollectonIndexConnection(systemCollection Keyspace) (*IndexConnect
 	if err != nil {
 		return nil, nil, err
 	}
-	indexer, err = systemCollection.Indexer(GSI)
+	indexer, err := systemCollection.Indexer(GSI)
 	if err != nil {
 		return nil, nil, err
 	}
-	index3, err = getPrimaryIndexFromIndexer(indexer)
+	index3, err := getPrimaryIndexFromIndexer(indexer)
 	if err != nil {
 		return nil, nil, err
 	}

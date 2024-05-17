@@ -141,7 +141,7 @@ func (this *OrderLimit) afterItems(context *Context) {
 	if this.offset != nil {
 		offset = this.offset.offset
 	}
-
+	sortCount := this.numProcessedRows
 	if offset < int64(this.values.Length()) {
 		earlyOrder := this.plan.IsEarlyOrder()
 		useRequestQuota := context.UseRequestQuota()
@@ -175,7 +175,7 @@ func (this *OrderLimit) afterItems(context *Context) {
 	}
 
 	context.AddPhaseCount(SORT, this.numProcessedRows)
-	context.SetSortCount(this.numProcessedRows)
+	context.SetSortCount(sortCount)
 }
 
 func (this *OrderLimit) MarshalJSON() ([]byte, error) {

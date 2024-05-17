@@ -34,5 +34,10 @@
                 "lvl": 4
             }
         ]
+    },
+    {
+        "testcase":"invalid cycle field",
+        "statements":"WITH RECURSIVE cyc AS ( SELECT 0 as _from, 1 as _to, 0 as lvl UNION SELECT next._from, next._to, c.lvl+1 as lvl FROM `shellTest`._default.cycleTest next JOIN cyc c ON c._to = next._from) CYCLE _from, _to, 1+1 RESTRICT SELECT cyc.* FROM cyc;",
+        "error":"Cycle fields validation failed for with term: cyc - cause: invalid cycle field expression term: (1 + 1) only identifier/path expressions are allowed"
     }
 ]

@@ -103,6 +103,10 @@ func (this *keyspaceBase) IsBucket() bool {
 	return true
 }
 
+func (this *keyspaceBase) IsSystemCollection() bool {
+	return false
+}
+
 func (this *keyspaceBase) Stats(context datastore.QueryContext, which []datastore.KeyspaceStats) ([]int64, errors.Error) {
 	var err errors.Error
 

@@ -172,6 +172,7 @@ type collection struct {
 	isDefault        bool
 	isBucket         bool
 	maxTTL           int64
+	isSystem         bool
 }
 
 func getUser(context datastore.QueryContext) string {
@@ -330,6 +331,7 @@ func (coll *collection) loadIndexes() {
 	connSecConfig := store.connSecConfig
 	coll.gsiIndexer, qerr = gsi.NewGSIIndexer2(store.URL(), namespace.name, coll.bucket.name, coll.scope.id, coll.id, connSecConfig)
 	if qerr != nil {
+		coll.gsiIndexer = nil
 		logging.Warnf("Error loading GSI indexes for keyspace %s. Error %v", coll.id, qerr)
 	} else {
 		coll.gsiIndexer.SetConnectionSecurityConfig(connSecConfig)
@@ -450,6 +452,10 @@ func (coll *collection) IsBucket() bool {
 	return coll.isBucket
 }
 
+func (coll *collection) IsSystemCollection() bool {
+	return coll.isSystem
+}
+
 func (coll *collection) StartKeyScan(context datastore.QueryContext, ranges []*datastore.SeqScanRange,
 	offset int64, limit int64, ordered bool, timeout time.Duration, pipelineSize int, serverless bool,
 	skipKey func(string) bool) (
@@ -529,6 +535,7 @@ func buildScopesAndCollections(mani *cb.Manifest, bucket *keyspace) (map[string]
 				}
 			} else {
 				coll.authKey = bucket.name + ":" + scope.id + ":" + coll.name
+				coll.isSystem = scope.id == _BUCKET_SYSTEM_SCOPE && coll.id == _BUCKET_SYSTEM_COLLECTION
 			}
 		}
 		scopes[s.Name] = scope
@@ -631,6 +638,7 @@ func refreshScopesAndCollections(mani *cb.Manifest, bucket *keyspace) (map[strin
 				}
 			} else {
 				coll.authKey = bucket.name + ":" + scope.id + ":" + coll.name
+				coll.isSystem = scope.id == _BUCKET_SYSTEM_SCOPE && coll.id == _BUCKET_SYSTEM_COLLECTION
 			}
 		}
 		scopes[s.Name] = scope

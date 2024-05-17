@@ -166,6 +166,8 @@ const (
 	E_CONFIG_INVALID_OPTION                      ErrorCode = 3303
 	E_RECURSION_UNSUPPORTED                      ErrorCode = 3304
 	E_RECURSIVE_IMPLICIT_DOC_LIMIT               ErrorCode = 3305
+	E_RECURSIVE_IMPLICIT_DEPTH_LIMIT             ErrorCode = 3306
+	E_CYCLE_FIELDS_VALIDATION_FAILED             ErrorCode = 3307
 	E_PLAN                                       ErrorCode = 4000
 	E_REPREPARE                                  ErrorCode = 4001
 	E_NO_TERM_NAME                               ErrorCode = 4010
@@ -186,6 +188,7 @@ const (
 	E_PREDEFINED_PREPARED_NAME                   ErrorCode = 4092
 	E_NO_INDEX_JOIN                              ErrorCode = 4100
 	E_USE_KEYS_USE_INDEXES                       ErrorCode = 4110
+	E_NO_INDEX_SERVICE                           ErrorCode = 4115
 	E_NO_PRIMARY_INDEX                           ErrorCode = 4120
 	E_PRIMARY_INDEX_OFFLINE                      ErrorCode = 4125
 	E_LIST_SUBQUERIES                            ErrorCode = 4130
@@ -220,8 +223,8 @@ const (
 	E_EXECUTION_KEY_VALIDATION                   ErrorCode = 5006
 	E_EXECUTION_CURL                             ErrorCode = 5007
 	E_EXECUTION_STATEMENT_STOPPED                ErrorCode = 5008
-	E_EVALUATION                                 ErrorCode = 5010
-	E_EVALUATION_ABORT                           ErrorCode = 5011
+	E_EVALUATION_ABORT                           ErrorCode = 5010
+	E_EVALUATION                                 ErrorCode = 5011
 	E_EXPLAIN                                    ErrorCode = 5015
 	E_EXPLAIN_FUNCTION                           ErrorCode = 5017
 	E_GROUP_UPDATE                               ErrorCode = 5020
