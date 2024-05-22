@@ -18,7 +18,7 @@ import (
 	"github.com/couchbase/query/value"
 )
 
-func (this *builder) indexPushDownProperty(entry *indexEntry, indexKeys,
+func (this *builder) indexPushDownProperty(entry *indexEntry, keys,
 	unnestFiletrs expression.Expressions, pred, origPred expression.Expression,
 	alias string, unnestAliases []string, unnest, covering, allKeyspaces, implicitAny bool) (
 	pushDownProperty PushDownProperties) {
@@ -32,15 +32,21 @@ func (this *builder) indexPushDownProperty(entry *indexEntry, indexKeys,
 
 	// Covering index check for other pushdowns
 	if covering && exact {
-		pushDownProperty |= this.indexCoveringPushDownProperty(entry, indexKeys, alias,
+		pushDownProperty |= this.indexCoveringPushDownProperty(entry, keys, alias,
 			unnestAliases, unnest, implicitAny, pushDownProperty)
 	}
+
+	vector := entry.HasFlag(IE_VECTOR_KEY_SARGABLE)
+	idxKeys := entry.idxKeys
 
 	// Check Query Order By matches with index key order.
 	exactLimitOffset := exact
 	if this.order != nil {
 		if this.group == nil || isPushDownProperty(pushDownProperty, _PUSHDOWN_FULLGROUPAGGS) {
-			ok, _, partSortCount := this.useIndexOrder(entry, entry.idxKeys)
+			if exact && vector {
+				idxKeys, _ = replaceVectorKey(idxKeys, entry)
+			}
+			ok, _, partSortCount := this.useIndexOrder(entry, idxKeys)
 			logging.Debugf("indexPushDownProperty: ok: %v, count: %v", ok, partSortCount)
 			if ok {
 				pushDownProperty |= _PUSHDOWN_ORDER
@@ -68,6 +74,33 @@ func (this *builder) indexPushDownProperty(entry *indexEntry, indexKeys,
 
 		if this.limit != nil && exactLimitOffset {
 			pushDownProperty |= _PUSHDOWN_LIMIT
+		} else if vector {
+			// if determined above that ORDER can be pushed down but LIMIT cannot,
+			// need to unset ORDER pushdown
+			order := isPushDownProperty(pushDownProperty, _PUSHDOWN_ORDER)
+			partOrder := isPushDownProperty(pushDownProperty, _PUSHDOWN_PARTIAL_ORDER)
+			if order || partOrder {
+				if order {
+					pushDownProperty &^= _PUSHDOWN_ORDER
+				}
+				for i := 0; i < len(idxKeys); i++ {
+					if _, ok := idxKeys[i].Expr.(*expression.Ann); ok || idxKeys[i].HasAttribute(datastore.IK_VECTOR) {
+						// vector key
+						if order {
+							if i > 0 {
+								pushDownProperty |= _PUSHDOWN_PARTIAL_ORDER
+								entry.partialSortTermCount = i
+							}
+						} else {
+							entry.partialSortTermCount = i
+							if i == 0 {
+								pushDownProperty &^= _PUSHDOWN_PARTIAL_ORDER
+							}
+						}
+						break
+					}
+				}
+			}
 		}
 
 		// OFFSET Pushdown is possible when
@@ -488,7 +521,10 @@ func (this *builder) useIndexOrder(entry *indexEntry, keys datastore.IndexKeys) 
 
 	logging.Debugf("useIndexOrder: entry: %v, order: %v", entry, this.order.Terms())
 
-	if entry.HasFlag(IE_VECTOR_KEY_SARGABLE) {
+	vector := entry.HasFlag(IE_VECTOR_KEY_SARGABLE)
+	if vector && entry.IsPushDownProperty(_PUSHDOWN_ORDER) {
+		// for vector index key, only do key replacement if we've previously determined that
+		// order can be pushed down, otherwise key replacement needs to be performed by caller
 		var err error
 		keys, err = replaceVectorKey(keys, entry)
 		if err != nil {
@@ -517,6 +553,12 @@ func (this *builder) useIndexOrder(entry *indexEntry, keys datastore.IndexKeys) 
 	i := 0
 	indexOrder := make(plan.IndexKeyOrders, 0, len(keys))
 	partSortTermCount := 0
+	vectorOrder := false
+	if vector {
+		if _, ok := entry.spans.(*TermSpans); ok {
+			vectorOrder = true
+		}
+	}
 outer:
 	for _, orderTerm := range this.order.Terms() {
 
@@ -563,6 +605,24 @@ outer:
 				(orderTerm.Expression().EquivalentTo(keys[i].Expr) ||
 					(projalias && expression.Equivalent(projexpr, keys[i].Expr))) {
 				// orderTerm matched with index key
+				if vector {
+					if _, ok := keys[i].Expr.(*expression.Ann); ok {
+						// vector key
+						if !vectorOrder {
+							return false, indexOrder, partSortTermCount
+						}
+						// once we pass the vector key, no need to check for
+						// eq range anymore
+						vectorOrder = false
+					} else if vectorOrder {
+						// non-vector key
+						// can only push order for vector key if all previous
+						// keys are EQ only
+						if eq, _ := entry.spans.EquivalenceRangeAt(i); !eq {
+							vectorOrder = false
+						}
+					}
+				}
 				indexOrder = append(indexOrder, plan.NewIndexKeyOrders(i, d))
 				i++
 				partSortTermCount++
