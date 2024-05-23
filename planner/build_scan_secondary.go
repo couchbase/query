@@ -1283,8 +1283,15 @@ func (this *builder) getIndexFilters(entry *indexEntry, node *algebra.KeyspaceTe
 
 	// skip array index keys
 	arrayKey := entry.HasFlag(IE_ARRAYINDEXKEY)
-	coverExprs := make(expression.Expressions, 0, len(entry.idxKeys)+1)
-	for _, key := range entry.idxKeys {
+	idxKeys := entry.idxKeys
+	if entry.HasFlag(IE_VECTOR_KEY_SARGABLE) && !entry.IsPushDownProperty(_PUSHDOWN_ORDER) {
+		idxKeys, err = replaceVectorKey(idxKeys, entry)
+		if err != nil {
+			return
+		}
+	}
+	coverExprs := make(expression.Expressions, 0, len(idxKeys)+1)
+	for _, key := range idxKeys {
 		if isArray, _, _ := key.Expr.IsArrayIndexKey(); !isArray && !key.HasAttribute(datastore.IK_VECTOR) {
 			coverExprs = append(coverExprs, key.Expr)
 		}
@@ -1564,12 +1571,18 @@ func (this *builder) buildIndexFilters(entry *indexEntry, baseKeyspace *base.Bas
 			joinFilters = baseKeyspace.GetAllJoinFilterExprs(entry.index)
 		}
 	}
-	if !hasVector && entry.HasFlag(IE_HAS_EARLY_ORDER) {
+	if entry.HasFlag(IE_HAS_EARLY_ORDER) {
 		sortExprs = entry.orderExprs
 	}
 
+	keys := entry.idxKeys
+	if hasVector && entry.HasFlag(IE_HAS_EARLY_ORDER) {
+		keys, err = replaceVectorKey(keys, entry)
+		if err != nil {
+			return nil, nil, nil, nil, err
+		}
+	}
 	if len(indexFilters) > 0 || len(joinFilters) > 0 || len(sortExprs) > 0 {
-		keys := entry.idxKeys
 		allFilters := indexFilters
 		if len(joinFilters) > 0 {
 			allFilters = append(allFilters, joinFilters...)
