@@ -369,7 +369,7 @@ func FtestCaseFile(fname string, qc *MockServer, namespace string) (fin_stmt str
 					errActual, errMatch, ffname, i, findIndex(b, i)))
 				return
 			}
-			doResultsMatch(resultsActual, resultsMatch, fname, i, b)
+			doResultsMatch(resultsActual, resultsMatch, fname, i, b, matchStatements)
 		}
 
 		v, ok = c["error"]
@@ -457,7 +457,7 @@ func FtestCaseFile(fname string, qc *MockServer, namespace string) (fin_stmt str
 		v, ok = c["results"]
 		if ok {
 			resultsExpected := v.([]interface{})
-			okres := doResultsMatch(resultsActual, resultsExpected, fname, i, b)
+			okres := doResultsMatch(resultsActual, resultsExpected, fname, i, b, statements)
 			if okres != nil {
 				errstring = okres
 				return
@@ -471,19 +471,23 @@ func FtestCaseFile(fname string, qc *MockServer, namespace string) (fin_stmt str
 Matches expected results with the results obtained by
 running the queries.
 */
-func doResultsMatch(resultsActual, resultsExpected []interface{}, fname string, i int, content []byte) (errstring error) {
+func doResultsMatch(resultsActual, resultsExpected []interface{}, fname string, i int, content []byte, s string) (errstring error) {
+	ffname, e := filepath.Abs(fname)
+	if e != nil {
+		ffname = fname
+	}
 	if len(resultsActual) != len(resultsExpected) {
 		errstring = go_er.New(fmt.Sprintf("results len don't match, %v vs %v\n  actual: %v\nexpected: %v\n"+
-			" for case file: %v, index: %v%s",
+			" (%v) for case file: %v, index: %v%s",
 			len(resultsActual), len(resultsExpected),
-			resultsActual, resultsExpected, fname, i, findIndex(content, i)))
+			resultsActual, resultsExpected, s, ffname, i, findIndex(content, i)))
 		return
 	}
 
 	if !reflect.DeepEqual(resultsActual, resultsExpected) {
 		errstring = go_er.New(fmt.Sprintf("results don't match\n  actual: %#v\nexpected: %#v\n"+
-			" for case file: %v, index: %v%s",
-			resultsActual, resultsExpected, fname, i, findIndex(content, i)))
+			" (%v) for case file: %v, index: %v%s",
+			resultsActual, resultsExpected, s, ffname, i, findIndex(content, i)))
 		return
 	}
 	return nil

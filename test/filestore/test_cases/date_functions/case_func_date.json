@@ -266,7 +266,7 @@
     ]
     },
     {
-       "statements":"select MILLIS_TO_STR(1.453485008e+12,\"2006-01-02\")",
+       "statements":"select MILLIS_TO_STR(1.453477808e+12,\"2006-01-02\")",
      "results": [
         {
             "$1": "2016-01-22"
@@ -274,7 +274,8 @@
     ]
     },
     {
-       "statements":"select STR_TO_MILLIS('2015-01-01T16:00:00-08:00'),STR_TO_MILLIS('2015/01/01 16:00:00-08:00','YYYY MM DD hh:mm:ssTZD'),STR_TO_MILLIS('2015/01/01T16:00:00-08:00','%Y/%m/%dT%T%z'),STR_TO_MILLIS('4pm on 1st JaN 15 in America/Los_Angeles','%-I%P on %-d%f %^b %y in %z'),STR_TO_MILLIS('00:00:00','%I:%M:%S'),STR_TO_MILLIS('00:00:00+0000','%H:%M:%S%z')",
+       "comment":"Time-only tests need to include time zone for consistent results",
+       "statements":"select STR_TO_MILLIS('2015-01-01T16:00:00-08:00'),STR_TO_MILLIS('2015/01/01 16:00:00-08:00','YYYY MM DD hh:mm:ssTZD'),STR_TO_MILLIS('2015/01/01T16:00:00-08:00','%Y/%m/%dT%T%z'),STR_TO_MILLIS('4pm on 1st JaN 15 in America/Los_Angeles','%-I%P on %-d%f %^b %y in %z'),STR_TO_MILLIS('00:00:00','%I:%M:%S'),STR_TO_MILLIS('00:00:00+0000','%H:%M:%S%z'),STR_TO_MILLIS('00:00:00+0000','HH24:MI:SSTZD'),STR_TO_MILLIS('Monday 12 pm, 1 MAR Z','Day HH12 pm, DD MON TZD'),STR_TO_MILLIS('4pm 1 JAN 15 America/Los_Angeles','HH12am DD MON YY TZD')",
        "results": [
         {
             "$1": 1420156800000,
@@ -282,7 +283,10 @@
             "$3": 1420156800000,
             "$4": 1420156800000,
             "$5": null,
-            "$6": -62167219200000
+            "$6": -62167219200000,
+            "$7": -62167219200000,
+            "$8": -62161992000000,
+            "$9": 1420156800000
         }
     ]
     },
@@ -665,7 +669,7 @@
             "a": null
         },
         {
-            "a": "2012/01/02"
+            "a": "2012/01/02 00:00:00Z"
         },
         {
             "a": "2016-09-26T11:33:16.209-07:00"
@@ -674,6 +678,15 @@
    },
    {
      "description":"date not in correct format gives null",
+     "statements":"select DATE_PART_STR(\"02/01/2012\",\"month\") as a",
+     "results": [
+        {
+            "a": null
+        }
+     ]
+   },
+   {
+     "description":"date in common format parses",
      "statements":"select DATE_PART_STR(`shipped-on`,\"month\") as a from orders where test_id = \"datefunc\" order by a",
      "results": [
         {},
@@ -681,7 +694,7 @@
             "a": null
         },
         {
-            "a": null
+            "a": 1
         },
         {
             "a": 9
@@ -1092,7 +1105,7 @@
     ]
    },
    {
-    "statements":"select MILLIS_TO_LOCAL(1.453485008e+12,'2006-01-02')",
+    "statements":"select MILLIS_TO_LOCAL(1.453477808e+12,'2006-01-02')",
     "results": [
         {
             "$1": "2016-01-22"
@@ -1139,7 +1152,7 @@
             "a": null
         },
         {
-            "a": null
+            "a": "2012/01/02 00:00:00Z"
         },
         {
             "a": "2016-09-26T18:33:16.209Z"
@@ -1155,12 +1168,12 @@
             "a": null
         },
         {
-            "$1": null,
-            "a": null
-        },
-        {
             "$1": "2016-09-26T18:33:16.209Z",
             "a": 11
+        },
+        {
+            "$1": "2012/01/02 00:00:00Z",
+            "a": 16
         }
     ]
    },

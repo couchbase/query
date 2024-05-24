@@ -688,18 +688,22 @@ Matches expected results with the results obtained by
 running the queries.
 */
 func doResultsMatch(resultsActual, resultsExpected []interface{}, ordered bool, stmt, fname string, i int, content []byte) (errstring error) {
+	ffname, e := filepath.Abs(fname)
+	if e != nil {
+		ffname = fname
+	}
 	if len(resultsActual) != len(resultsExpected) {
 		return go_er.New(fmt.Sprintf("results len don't match, %v vs %v\n  actual: %v\nexpected: %v\n"+
-			" (%v)for case file: %v, index: %v%s",
+			" (%v) for case file: %v, index: %v%s",
 			len(resultsActual), len(resultsExpected),
-			resultsActual, resultsExpected, stmt, fname, i, findIndex(content, i)))
+			resultsActual, resultsExpected, stmt, ffname, i, findIndex(content, i)))
 	}
 
 	if ordered {
 		if !reflect.DeepEqual(resultsActual, resultsExpected) {
 			return go_er.New(fmt.Sprintf("results don't match\n  actual: %#v\nexpected: %#v\n"+
 				" (%v) for case file: %v, index: %v%s",
-				resultsActual, resultsExpected, stmt, fname, i, findIndex(content, i)))
+				resultsActual, resultsExpected, stmt, ffname, i, findIndex(content, i)))
 		}
 	} else {
 	nextresult:
@@ -712,7 +716,7 @@ func doResultsMatch(resultsActual, resultsExpected []interface{}, ordered bool, 
 			}
 			return go_er.New(fmt.Sprintf("results don't match: %#v is not present in : %#v"+
 				", (%v) for case file: %v, index: %v%s",
-				re, resultsActual, stmt, fname, i, findIndex(content, i)))
+				re, resultsActual, stmt, ffname, i, findIndex(content, i)))
 		}
 
 	}
