@@ -315,5 +315,22 @@
         "query": "SELECT COUNT(s.c1) AS num FROM shellTest AS s UNNEST a1 AS us WHERE us.type = 'x1'"
       }
     ]
+  },
+  {
+    "testcase": "MB-62059",
+    "statements": "advise SELECT * FROM shellTest WHERE ANY i IN [1,2] SATISFIES i = id END",
+    "advise": true,
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": {
+            "recommended_indexes": "No secondary index recommendation at this time, primary index may apply."
+          }
+        },
+        "query": "SELECT * FROM shellTest WHERE ANY i IN [1,2] SATISFIES i = id END"
+      }
+    ]
   }
 ]
