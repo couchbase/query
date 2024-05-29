@@ -304,5 +304,22 @@
         "query": "select d.c3 from shellTest AS d UNNEST d.a1 AS a UNNEST OBJECT_VALUES(a.o) AS b WHERE d.c2 BETWEEN 10 AND 20 AND d.c1 = 10 AND a.x = 20 AND b.y < 30"
       }
     ]
+  },
+  {
+    "testcase": "MB-62059",
+    "statements": "advise SELECT * FROM shellTest WHERE ANY i IN [1,2] SATISFIES i = id END",
+    "advise": true,
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": {
+            "recommended_indexes": "No secondary index recommendation at this time, primary index may apply."
+          }
+        },
+        "query": "SELECT * FROM shellTest WHERE ANY i IN [1,2] SATISFIES i = id END"
+      }
+    ]
   }
 ]
