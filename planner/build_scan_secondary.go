@@ -529,7 +529,7 @@ func (this *builder) minimalIndexes(sargables map[datastore.Index]*indexEntry, s
 		predFc = pred.FilterCovers(predFc)
 	}
 
-	if useCBO {
+	if useCBO && shortest {
 		advisorValidate := this.advisorValidate()
 		for _, se := range sargables {
 			if se.cost <= 0.0 {
@@ -587,6 +587,19 @@ func (this *builder) minimalIndexes(sargables map[datastore.Index]*indexEntry, s
 	}
 
 	if shortest && len(sargables) > 1 {
+		if !useCBO && this.useCBO && this.keyspaceUseCBO(node.Alias()) {
+			// reset useCBO
+			// it is possible that useCBO is set to false above due to cost not available
+			// for one of the indexes, however if that index is eliminated by other
+			// criteria already then we may be able to turn useCBO back on again
+			useCBO = true
+			for _, se := range sargables {
+				if se.cost <= 0.0 || se.cardinality <= 0.0 || se.size <= 0 || se.frCost <= 0.0 {
+					useCBO = false
+					break
+				}
+			}
+		}
 		if useCBO {
 			sargables = this.chooseIntersectScan(sargables, node)
 		} else {
