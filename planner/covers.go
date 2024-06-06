@@ -332,7 +332,7 @@ func (this *covers) VisitPositionalParameter(expr expression.PositionalParameter
 
 // Cover
 func (this *covers) VisitCover(expr *expression.Cover) (interface{}, error) {
-	return nil, nil
+	return expr.Covered().Accept(this)
 }
 
 // All

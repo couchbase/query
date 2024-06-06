@@ -386,6 +386,37 @@
                 "c21": 1
             }
 	]
+    },
+    {
+        "testcase": "MB-62157",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.`~subqueries`[0].plan SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`index_order` IS NOT MISSING AND v.`covers` IS NOT MISSING END"
+        },
+        "statements":"SELECT t.id, t.c21 FROM [ 1, 3 ] AS d JOIN (SELECT meta().id, c21 FROM shellTest WHERE type = \"right\" AND c21 IS VALUED AND ANY k IN a21 SATISFIES k = d END ORDER BY c21 LIMIT 10) AS t ON true ORDER BY t.c21 DESC LIMIT 10",
+        "results": [
+            {
+                "id": "test25_ansijoin",
+                "c21": 3
+            },
+            {
+                "id": "test24_ansijoin",
+                "c21": 3
+            },
+            {
+                "id": "test22_ansijoin",
+                "c21": 2
+            },
+            {
+                "id": "test21_ansijoin",
+                "c21": 1
+            }
+        ]
     }
 ]
 
