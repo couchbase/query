@@ -35,7 +35,9 @@ func Build(stmt algebra.Statement, datastore, systemstore datastore.Datastore,
 	// subquery plan is currently only for explain, explain_function and advise
 	// TODO: to be expanded to all statements, plus prepareds
 	// forceSQBuild argument  forces subquery plans to be built
-	if forceSQBuild || stmt.Type() == "EXPLAIN" || stmt.Type() == "EXPLAIN_FUNCTION" || stmt.Type() == "ADVISE" {
+	if stmt.Type() == "EXPLAIN" || stmt.Type() == "EXPLAIN_FUNCTION" || stmt.Type() == "ADVISE" {
+		builder.setBuilderFlag(BUILDER_PLAN_SUBQUERY | BUILDER_NO_EXECUTE)
+	} else if forceSQBuild {
 		builder.setBuilderFlag(BUILDER_PLAN_SUBQUERY)
 	}
 
@@ -187,10 +189,12 @@ const (
 	BUILDER_OFFSET_PUSHDOWN // OFFSET is pushed down to index
 	BUILDER_UNDER_HASH
 	BUILDER_ORDER_MODIFIED
+	BUILDER_SUBQTERM_UNDER_JOIN
+	BUILDER_NO_EXECUTE
 )
 
 const BUILDER_PRESERVED_FLAGS = (BUILDER_PLAN_HAS_ORDER | BUILDER_HAS_EARLY_ORDER | BUILDER_ORDER_MODIFIED)
-const BUILDER_PASSTHRU_FLAGS = (BUILDER_PLAN_SUBQUERY | BUILDER_JOIN_ENUM)
+const BUILDER_PASSTHRU_FLAGS = (BUILDER_PLAN_SUBQUERY | BUILDER_JOIN_ENUM | BUILDER_SUBQTERM_UNDER_JOIN | BUILDER_NO_EXECUTE)
 
 type builder struct {
 	indexPushDowns
@@ -236,6 +240,7 @@ type builder struct {
 	subTimes             map[string]time.Duration
 	arrayId              int
 	vectors              expression.Expressions
+	subqCoveringInfo     map[*algebra.Subselect]CoveringSubqInfo
 }
 
 func (this *builder) Copy() *builder {
@@ -266,6 +271,7 @@ func (this *builder) Copy() *builder {
 		arrayId:              this.arrayId,
 		// the following fields are setup during planning process and thus not copied:
 		// children, subChildren, coveringScan, coveredUnnests, countScan, orderScan, lastOp
+		// subqCoveringInfo
 	}
 
 	if len(this.let) > 0 {
@@ -413,6 +419,24 @@ func (this *builder) restoreNLInner(nlInner bool) {
 	}
 }
 
+func (this *builder) subqUnderJoin() bool {
+	return (this.builderFlags & BUILDER_SUBQTERM_UNDER_JOIN) != 0
+}
+
+func (this *builder) setSubqUnderJoin() bool {
+	subqUnderJoin := this.hasBuilderFlag(BUILDER_SUBQTERM_UNDER_JOIN)
+	if !subqUnderJoin {
+		this.setBuilderFlag(BUILDER_SUBQTERM_UNDER_JOIN)
+	}
+	return subqUnderJoin
+}
+
+func (this *builder) restoreSubqUnderJoin(subqUnderJoin bool) {
+	if !subqUnderJoin {
+		this.unsetBuilderFlag(BUILDER_SUBQTERM_UNDER_JOIN)
+	}
+}
+
 func (this *builder) hasBuilderFlag(flag uint32) bool {
 	return (this.builderFlags & flag) != 0
 }
@@ -554,4 +578,39 @@ func (this *builder) recordSubTime(what string, duration time.Duration) {
 		duration += existing
 	}
 	this.subTimes[what] = duration
+}
+
+type coveringSubqInfo struct {
+	ops           []plan.Operator
+	coveringScans []plan.CoveringOperator
+}
+
+func (this *coveringSubqInfo) Operators() []plan.Operator {
+	return this.ops
+}
+
+func (this *coveringSubqInfo) AddOperator(op plan.Operator) {
+	this.ops = append(this.ops, op)
+}
+
+func (this *coveringSubqInfo) CoveringScans() []plan.CoveringOperator {
+	return this.coveringScans
+}
+
+func (this *builder) addSubqCoveringInfo(node *algebra.Subselect, op plan.Operator) error {
+	if this.subqCoveringInfo == nil {
+		this.subqCoveringInfo = make(map[*algebra.Subselect]CoveringSubqInfo, len(this.baseKeyspaces))
+	}
+	if info, ok := this.subqCoveringInfo[node]; ok {
+		if len(this.coveringScans) != len(info.CoveringScans()) {
+			return errors.NewPlanInternalError("addSubqCoveringInfo: incompatible coveringScans")
+		}
+		this.subqCoveringInfo[node].AddOperator(op)
+	} else {
+		this.subqCoveringInfo[node] = &coveringSubqInfo{
+			ops:           []plan.Operator{op},
+			coveringScans: this.coveringScans,
+		}
+	}
+	return nil
 }

@@ -58,6 +58,10 @@ type Builder interface {
 	MarkJoinFilterHints(children, subChildren []plan.Operator) error
 	CheckBitFilters(qPlan, subPlan []plan.Operator)
 	CheckJoinFilterHints(qPlan, subPlan []plan.Operator) (hintError bool, err error)
+	DoCoveringTransformation(ops []plan.Operator, covers []plan.CoveringOperator) error
+	RemoveFromSubqueries(ops ...plan.Operator)
+	NoExecute() bool
+	SubqCoveringInfo() map[*algebra.Subselect]CoveringSubqInfo
 }
 
 func (this *builder) GetBaseKeyspaces() map[string]*base.BaseKeyspace {
@@ -409,4 +413,322 @@ func (this *builder) CheckBitFilters(qPlan, subPlan []plan.Operator) {
 		checkProbeBFAliases(probeAliases, false, subPlan...)
 		checkProbeBFAliases(probeAliases, false, qPlan...)
 	}
+}
+
+// perform covering transformation for the final plan
+func (this *builder) DoCoveringTransformation(ops []plan.Operator, covers []plan.CoveringOperator) error {
+	for _, op := range ops {
+		err := this.opCoveringTransformation(op, covers)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (this *builder) opCoveringTransformation(op plan.Operator, covers []plan.CoveringOperator) error {
+	switch op := op.(type) {
+	case *plan.NLJoin:
+		newExprs, err := coverExprs(expression.Expressions{op.Onclause(), op.Filter()}, covers)
+		if err != nil {
+			return err
+		}
+		op.SetOnclause(newExprs[0])
+		op.SetFilter(newExprs[1])
+		// expect child to be a sequence
+		if seq, ok := op.Child().(*plan.Sequence); ok {
+			err = coverIndexSpans(seq.Children(), covers)
+			if err != nil {
+				return err
+			}
+		}
+	case *plan.NLNest:
+		newExprs, err := coverExprs(expression.Expressions{op.Onclause(), op.Filter()}, covers)
+		if err != nil {
+			return err
+		}
+		op.SetOnclause(newExprs[0])
+		op.SetFilter(newExprs[1])
+		// expect child to be a sequence
+		if seq, ok := op.Child().(*plan.Sequence); ok {
+			err = coverIndexSpans(seq.Children(), covers)
+			if err != nil {
+				return err
+			}
+		}
+	case *plan.HashJoin:
+		buildExprs := op.BuildExprs()
+		probeExprs := op.ProbeExprs()
+		buildLen := len(buildExprs)
+		probeLen := len(probeExprs)
+		exprs := make(expression.Expressions, 0, (2 + buildLen + probeLen))
+		exprs = append(exprs, op.Onclause(), op.Filter())
+		exprs = append(exprs, buildExprs...)
+		exprs = append(exprs, probeExprs...)
+		newExprs, err := coverExprs(exprs, covers)
+		if err != nil {
+			return err
+		}
+		op.SetOnclause(newExprs[0])
+		op.SetFilter(newExprs[1])
+		op.SetBuildExprs(newExprs[2:(2 + buildLen)])
+		op.SetProbeExprs(newExprs[(2 + buildLen):(2 + buildLen + probeLen)])
+		err = this.opCoveringTransformation(op.Child(), covers)
+		if err != nil {
+			return err
+		}
+	case *plan.HashNest:
+		buildExprs := op.BuildExprs()
+		probeExprs := op.ProbeExprs()
+		buildLen := len(buildExprs)
+		probeLen := len(probeExprs)
+		exprs := make(expression.Expressions, 0, (2 + buildLen + probeLen))
+		exprs = append(exprs, op.Onclause(), op.Filter())
+		exprs = append(exprs, buildExprs...)
+		exprs = append(exprs, probeExprs...)
+		newExprs, err := coverExprs(exprs, covers)
+		if err != nil {
+			return err
+		}
+		op.SetOnclause(newExprs[0])
+		op.SetFilter(newExprs[1])
+		op.SetBuildExprs(newExprs[2:(2 + buildLen)])
+		op.SetProbeExprs(newExprs[(2 + buildLen):(2 + buildLen + probeLen)])
+		err = this.opCoveringTransformation(op.Child(), covers)
+		if err != nil {
+			return err
+		}
+	case *plan.Join:
+		term := op.Term()
+		newExprs, err := coverExprs(expression.Expressions{term.JoinKeys(), op.OnFilter()}, covers)
+		if err != nil {
+			return err
+		}
+		term.SetJoinKeys(newExprs[0])
+		op.SetOnFilter(newExprs[1])
+	case *plan.Nest:
+		term := op.Term()
+		newExprs, err := coverExprs(expression.Expressions{term.JoinKeys(), op.OnFilter()}, covers)
+		if err != nil {
+			return err
+		}
+		term.SetJoinKeys(newExprs[0])
+		op.SetOnFilter(newExprs[1])
+	case *plan.Unnest:
+		term := op.Term()
+		for _, cop := range covers {
+			coverer := expression.NewCoverer(cop.Covers(), cop.FilterCovers())
+			var anyRenamer *expression.AnyRenamer
+			if arrayKey := cop.ImplicitArrayKey(); arrayKey != nil {
+				anyRenamer = expression.NewAnyRenamer(arrayKey)
+			}
+			if anyRenamer != nil {
+				err := term.MapExpression(anyRenamer)
+				if err != nil {
+					return err
+				}
+			}
+			err := term.MapExpression(coverer)
+			if err != nil {
+				return err
+			}
+		}
+		if op.Filter() != nil {
+			newExprs, err := coverExprs(expression.Expressions{op.Filter()}, covers)
+			if err != nil {
+				return err
+			}
+			op.SetFilter(newExprs[0])
+		}
+	case *plan.ExpressionScan:
+		newExprs, err := coverExprs(expression.Expressions{op.FromExpr(), op.Filter()}, covers)
+		if err != nil {
+			return err
+		}
+		op.SetFromExpr(newExprs[0])
+		op.SetFilter(newExprs[1])
+	case *plan.Sequence:
+		return this.DoCoveringTransformation(op.Children(), covers)
+	case *plan.Parallel:
+		return this.opCoveringTransformation(op.Child(), covers)
+	case *plan.Filter:
+		newExprs, err := coverExprs(expression.Expressions{op.Condition()}, covers)
+		if err != nil {
+			return err
+		}
+		op.SetCondition(newExprs[0])
+	case *plan.Let:
+		bindings := op.Bindings()
+		for _, cop := range covers {
+			coverer := expression.NewCoverer(cop.Covers(), cop.FilterCovers())
+			var anyRenamer *expression.AnyRenamer
+			if arrayKey := cop.ImplicitArrayKey(); arrayKey != nil {
+				anyRenamer = expression.NewAnyRenamer(arrayKey)
+			}
+			if anyRenamer != nil {
+				err := bindings.MapExpressions(anyRenamer)
+				if err != nil {
+					return err
+				}
+			}
+			err := bindings.MapExpressions(coverer)
+			if err != nil {
+				return err
+			}
+		}
+	case *plan.InitialProject:
+		terms := op.Terms()
+		for _, cop := range covers {
+			coverer := expression.NewCoverer(cop.Covers(), cop.FilterCovers())
+			var anyRenamer *expression.AnyRenamer
+			if arrayKey := cop.ImplicitArrayKey(); arrayKey != nil {
+				anyRenamer = expression.NewAnyRenamer(arrayKey)
+			}
+			for i := range terms {
+				resTerm := terms[i].Result()
+				if anyRenamer != nil {
+					err := resTerm.MapExpression(anyRenamer)
+					if err != nil {
+						return err
+					}
+				}
+				err := resTerm.MapExpression(coverer)
+				if err != nil {
+					return err
+				}
+			}
+		}
+	case *plan.Order:
+		terms := op.Terms()
+		for _, cop := range covers {
+			coverer := expression.NewCoverer(cop.Covers(), cop.FilterCovers())
+			var anyRenamer *expression.AnyRenamer
+			if arrayKey := cop.ImplicitArrayKey(); arrayKey != nil {
+				anyRenamer = expression.NewAnyRenamer(arrayKey)
+			}
+			if anyRenamer != nil {
+				err := terms.MapExpressions(anyRenamer)
+				if err != nil {
+					return err
+				}
+			}
+			err := terms.MapExpressions(coverer)
+			if err != nil {
+				return err
+			}
+		}
+	case *plan.InitialGroup:
+		newKeys, err := coverExprs(op.Keys(), covers)
+		if err != nil {
+			return err
+		}
+		op.SetKeys(newKeys)
+	case *plan.IntermediateGroup:
+		newKeys, err := coverExprs(op.Keys(), covers)
+		if err != nil {
+			return err
+		}
+		op.SetKeys(newKeys)
+	case *plan.FinalGroup:
+		newKeys, err := coverExprs(op.Keys(), covers)
+		if err != nil {
+			return err
+		}
+		op.SetKeys(newKeys)
+
+		// case *plan.Limit, *plan.Offset:
+	}
+	return nil
+}
+
+func coverExprs(exprs expression.Expressions, covers []plan.CoveringOperator) (expression.Expressions, error) {
+	if len(exprs) == 0 {
+		return exprs, nil
+	}
+
+	var err error
+	newExprs := exprs.Copy()
+	for _, cop := range covers {
+		coverer := expression.NewCoverer(cop.Covers(), cop.FilterCovers())
+		var anyRenamer *expression.AnyRenamer
+		if arrayKey := cop.ImplicitArrayKey(); arrayKey != nil {
+			anyRenamer = expression.NewAnyRenamer(arrayKey)
+		}
+
+		for i := 0; i < len(newExprs); i++ {
+			if newExprs[i] != nil {
+				if anyRenamer != nil {
+					newExprs[i], err = anyRenamer.Map(newExprs[i])
+					if err != nil {
+						return nil, err
+					}
+				}
+				newExprs[i], err = coverer.Map(newExprs[i])
+				if err != nil {
+					return nil, err
+				}
+			}
+		}
+	}
+
+	return newExprs, nil
+}
+
+func coverIndexSpans(ops []plan.Operator, covers []plan.CoveringOperator) error {
+	var err error
+	for _, cop := range covers {
+		coverer := expression.NewCoverer(cop.Covers(), cop.FilterCovers())
+
+		for _, op := range ops {
+			if secondary, ok := op.(plan.SecondaryScan); ok {
+				err = secondary.CoverJoinSpanExpressions(coverer, cop.ImplicitArrayKey())
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
+// check for any SubqueryTerm that falls under inner of nested-loop join, in which case we build an
+// ExpressionScan on top of the subquery; need to remove from subqCoveringInfo
+func (this *builder) RemoveFromSubqueries(ops ...plan.Operator) {
+	for _, op := range ops {
+		switch op := op.(type) {
+		case *plan.ExpressionScan:
+			if subq, ok := op.FromExpr().(*algebra.Subquery); ok {
+				for _, sub := range subq.Select().Subselects() {
+					delete(this.subqCoveringInfo, sub)
+				}
+			}
+		case *plan.Parallel:
+			this.RemoveFromSubqueries(op.Child())
+		case *plan.Sequence:
+			this.RemoveFromSubqueries(op.Children()...)
+		case *plan.NLJoin:
+			this.RemoveFromSubqueries(op.Child())
+		case *plan.NLNest:
+			this.RemoveFromSubqueries(op.Child())
+		case *plan.HashJoin:
+			this.RemoveFromSubqueries(op.Child())
+		case *plan.HashNest:
+			this.RemoveFromSubqueries(op.Child())
+		}
+	}
+}
+
+func (this *builder) NoExecute() bool {
+	return this.hasBuilderFlag(BUILDER_NO_EXECUTE)
+}
+
+func (this *builder) SubqCoveringInfo() map[*algebra.Subselect]CoveringSubqInfo {
+	return this.subqCoveringInfo
+}
+
+type CoveringSubqInfo interface {
+	Operators() []plan.Operator
+	AddOperator(op plan.Operator)
+	CoveringScans() []plan.CoveringOperator
 }

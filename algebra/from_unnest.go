@@ -46,6 +46,10 @@ func (this *Unnest) MapExpressions(mapper expression.Mapper) (err error) {
 		return
 	}
 
+	return this.MapExpression(mapper)
+}
+
+func (this *Unnest) MapExpression(mapper expression.Mapper) (err error) {
 	this.expr, err = mapper.Map(this.expr)
 	return
 }
