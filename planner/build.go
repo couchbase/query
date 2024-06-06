@@ -227,7 +227,7 @@ type builder struct {
 	keyspaceNames        map[string]string
 	indexKeyspaceNames   map[string]bool       // keyspace names that use indexscan (excludes non from caluse subqueries)
 	pushableOnclause     expression.Expression // combined ON-clause from all inner joins
-	builderFlags         uint32
+	builderFlags         uint64
 	indexAdvisor         bool
 	useCBO               bool
 	hintIndexes          bool
@@ -437,24 +437,24 @@ func (this *builder) restoreSubqUnderJoin(subqUnderJoin bool) {
 	}
 }
 
-func (this *builder) hasBuilderFlag(flag uint32) bool {
+func (this *builder) hasBuilderFlag(flag uint64) bool {
 	return (this.builderFlags & flag) != 0
 }
 
-func (this *builder) setBuilderFlag(flag uint32) {
+func (this *builder) setBuilderFlag(flag uint64) {
 	this.builderFlags |= flag
 }
 
-func (this *builder) unsetBuilderFlag(flag uint32) {
+func (this *builder) unsetBuilderFlag(flag uint64) {
 	this.builderFlags &^= flag
 }
 
-func (this *builder) resetBuilderFlags(prevBuilderFlags uint32) {
+func (this *builder) resetBuilderFlags(prevBuilderFlags uint64) {
 	preservedFlags := (this.builderFlags & BUILDER_PRESERVED_FLAGS)
 	this.builderFlags = prevBuilderFlags | preservedFlags
 }
 
-func (this *builder) passthruBuilderFlags(prevBuilderFlags uint32) {
+func (this *builder) passthruBuilderFlags(prevBuilderFlags uint64) {
 	this.builderFlags = (prevBuilderFlags & BUILDER_PASSTHRU_FLAGS)
 }
 
