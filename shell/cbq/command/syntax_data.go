@@ -67,7 +67,7 @@ var statement_syntax = map[string][][]string{
 		[]string{"AS"},
 	},
 	"execute": [][]string{
-		[]string{"EXECUTE", "expression", "[execute_using]"},
+		[]string{"EXECUTE", "expression /* the prepared name */", "[execute_using]"},
 	},
 	"[execute_using]": [][]string{
 		[]string{"USING", "construction_expr"},
@@ -209,7 +209,7 @@ var statement_syntax = map[string][][]string{
 		[]string{"DISTINCT"},
 	},
 	"[exclude]": [][]string{
-		[]string{"EXCLUDE", "exprs"},
+		[]string{"EXCLUDE", "exprs /* list of aliases */"},
 	},
 	"raw": [][]string{
 		[]string{"RAW"},
@@ -414,8 +414,8 @@ var statement_syntax = map[string][][]string{
 		[]string{"NULLS", "ident"},
 	},
 	"first_last": [][]string{
-		[]string{"FIRST", "}"},
-		[]string{"LAST", "}"},
+		[]string{"FIRST"},
+		[]string{"LAST"},
 	},
 	"limit": [][]string{
 		[]string{"LIMIT", "expression"},
@@ -1305,16 +1305,16 @@ var statement_syntax = map[string][][]string{
 		[]string{"CACHE", "expression"},
 	},
 	"sequence_next": [][]string{
-		[]string{"NEXTVAL", "FOR", "<namespace-identifier>", "COLON", "permitted_identifiers"},
-		[]string{"NEXT", "VALUE", "FOR", "<namespace-identifier>", "COLON", "permitted_identifiers"},
-		[]string{"NEXTVAL", "FOR", "permitted_identifiers"},
-		[]string{"NEXT", "VALUE", "FOR", "permitted_identifiers"},
+		[]string{"NEXTVAL", "FOR", "<namespace-identifier>", "COLON", "permitted_identifiers /* sequence name */"},
+		[]string{"NEXT", "VALUE", "FOR", "<namespace-identifier>", "COLON", "permitted_identifiers /* sequence name */"},
+		[]string{"NEXTVAL", "FOR", "permitted_identifiers /* sequence name */"},
+		[]string{"NEXT", "VALUE", "FOR", "permitted_identifiers /* sequence name */"},
 	},
 	"sequence_prev": [][]string{
-		[]string{"PREVVAL", "FOR", "<namespace-identifier>", "COLON", "permitted_identifiers"},
-		[]string{"PREV", "VALUE", "FOR", "<namespace-identifier>", "COLON", "permitted_identifiers"},
-		[]string{"PREVVAL", "FOR", "permitted_identifiers"},
-		[]string{"PREV", "VALUE", "FOR", "permitted_identifiers"},
+		[]string{"PREVVAL", "FOR", "<namespace-identifier>", "COLON", "permitted_identifiers /* sequence name */"},
+		[]string{"PREV", "VALUE", "FOR", "<namespace-identifier>", "COLON", "permitted_identifiers /* sequence name */"},
+		[]string{"PREVVAL", "FOR", "permitted_identifiers /* sequence name */"},
+		[]string{"PREV", "VALUE", "FOR", "permitted_identifiers /* sequence name */"},
 	},
 	"sequence_expr": [][]string{
 		[]string{"sequence_next"},

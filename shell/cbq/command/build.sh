@@ -54,6 +54,23 @@ length(terms)==0 \
   while ($NF!="}") if (getline!=1) { error=1; exit }
   next
 }
+/£/ \
+{
+  getline
+  if ($NF!="syn")
+  {
+    while ($NF!="£") if (getline!=1) { error=1; exit }
+  }
+  else
+  {
+    getline
+    tok=" /*"
+    while ($NF!="£") { if (substr($NF,0,1)!="-") tok=tok" "; tok=tok$NF; if (getline!=1) { error=1; exit } }
+    tok=tok" */"
+    terms[length(terms)-1]=terms[length(terms)-1]tok
+  }
+  next
+}
 /%/ \
 {
   getline
@@ -199,7 +216,7 @@ EOF
 
 sed -n '/^%%/,$ p' ${BASEPATH}/parser/n1ql/n1ql.y \
   | sed -e '/^%%/d;/^[*/}{[:space:]]/d;/^$/d;s/[[:space:]]*\([A-Za-z_][A-Za-z0-9_]*\)[[:space:]]*/\1\n/g' \
-  | sed -e '/^[^A-Za-z_]/s/\([:;|/*]\)/\n\1\n/g' \
+  | sed -e '/^[^A-Za-z_]/s/\/\*/£\n/;/^[^A-Za-z_]/s/\*\//£\n/;/^[^A-Za-z_]/s/\([:;|/*]\)/\1\n/g' \
   | awk "${AC}" >> "${FILE}"
 
 go fmt ${FILE} 2>/dev/null

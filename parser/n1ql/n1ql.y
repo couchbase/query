@@ -756,7 +756,7 @@ AS
 ;
 
 execute:
-EXECUTE expr opt_execute_using
+EXECUTE expr /* syn the prepared name */ opt_execute_using
 {
     if id, ok := $2.(*expression.Identifier); ok {
         if id.CaseInsensitive() {
@@ -1195,7 +1195,7 @@ opt_exclude:
     $$ = nil
 }
 |
-EXCLUDE exprs
+EXCLUDE exprs /* syn list of aliases */
 {
     $$ = $2
 }
@@ -2161,9 +2161,15 @@ NULLS ident
 ;
 
 first_last:
-FIRST { $$ = false }
+FIRST
+{
+    $$ = false
+}
 |
-LAST { $$ = true }
+LAST
+{
+    $$ = true
+}
 ;
 
 /*************************************************
@@ -6308,44 +6314,44 @@ CACHE expr
 ;
 
 sequence_next:
-NEXTVAL FOR NAMESPACE_ID COLON permitted_identifiers
+NEXTVAL FOR NAMESPACE_ID COLON permitted_identifiers /* syn sequence name */
 {
   $$ = []string{$3,$5}
 }
 |
-NEXT VALUE FOR NAMESPACE_ID COLON permitted_identifiers
+NEXT VALUE FOR NAMESPACE_ID COLON permitted_identifiers /* syn sequence name */
 {
   $$ = []string{$4,$6}
 }
 |
-NEXTVAL FOR permitted_identifiers
+NEXTVAL FOR permitted_identifiers /* syn sequence name */
 {
   $$ = []string{"",$3}
 }
 |
-NEXT VALUE FOR permitted_identifiers
+NEXT VALUE FOR permitted_identifiers /* syn sequence name */
 {
   $$ = []string{"",$4}
 }
 ;
 
 sequence_prev:
-PREVVAL FOR NAMESPACE_ID COLON permitted_identifiers
+PREVVAL FOR NAMESPACE_ID COLON permitted_identifiers /* syn sequence name */
 {
   $$ = []string{$3,$5}
 }
 |
-PREV VALUE FOR NAMESPACE_ID COLON permitted_identifiers
+PREV VALUE FOR NAMESPACE_ID COLON permitted_identifiers /* syn sequence name */
 {
   $$ = []string{$4,$6}
 }
 |
-PREVVAL FOR permitted_identifiers
+PREVVAL FOR permitted_identifiers /* syn sequence name */
 {
   $$ = []string{"",$3}
 }
 |
-PREV VALUE FOR permitted_identifiers
+PREV VALUE FOR permitted_identifiers /* syn sequence name */
 {
   $$ = []string{"",$4}
 }

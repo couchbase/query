@@ -9,6 +9,7 @@
 package command
 
 import (
+	"regexp"
 	"strings"
 
 	"github.com/couchbase/query/errors"
@@ -85,34 +86,28 @@ func sqlHelp(terms ...string) bool {
 		}
 	}
 	if len(rules) == 0 {
+		// lazy matching - terms in order anywhere in the rule and with any intermediate terms
+		// join but quoting the meta characters too to form the expression
+		var ts strings.Builder
+		for i := range terms {
+			ts.WriteString(regexp.QuoteMeta(strings.ToUpper(terms[i])))
+			if i < len(terms)-1 {
+				ts.WriteString(".*")
+			}
+		}
+		re := regexp.MustCompile(ts.String())
 		for rule_key, rule := range statement_syntax {
 			for opt_num, opt := range rule {
 				if len(terms) > len(opt) || len(opt) == 1 {
 					continue
 				}
-				for k := 0; k <= len(opt)-len(terms); k++ {
-					matched := 0
-					last := len(terms) - 1
-					for j := range terms {
-						trm := terms[j]
-						if opt[k+j] == trm ||
-							strings.ToUpper(opt[k+j]) == strings.ToUpper(trm) ||
-							opt[k+j] == "["+trm+"]" ||
-							(j == last && len(trm) > 2 && (strings.HasPrefix(strings.ToLower(opt[k+j]), trm) ||
-								strings.HasPrefix(strings.ToLower(opt[k+j]), "["+trm))) {
-
-							matched++
-						} else {
-							break
-						}
-					}
-					if matched == len(terms) {
-						if k == 0 {
-							getRules(rules, rule_key, opt_num, 0, true)
-						} else {
-							getRules(rules, rule_key, opt_num, 0, false)
-						}
-						break
+				loc := re.FindStringIndex(strings.ToUpper(strings.Join(opt, "")))
+				if len(loc) > 0 {
+					// if it matched at the start of the rule then get the nested rules too
+					if loc[0] == 0 {
+						getRules(rules, rule_key, opt_num, 0, true)
+					} else {
+						getRules(rules, rule_key, opt_num, 0, false)
 					}
 				}
 			}
@@ -152,6 +147,9 @@ func getRules(rules map[string][]int, rn string, option int, level int, nested b
 	if !ok {
 		if strings.HasPrefix(rn, "[") && strings.HasSuffix(rn, "]") {
 			rn = rn[1 : len(rn)-1]
+			r, ok = statement_syntax[rn]
+		} else if i := strings.IndexRune(rn, ' '); i != -1 {
+			rn = rn[:i]
 			r, ok = statement_syntax[rn]
 		}
 		if !ok {
