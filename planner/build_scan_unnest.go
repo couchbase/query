@@ -440,7 +440,7 @@ func getUnnestIndexSargKeys(keys datastore.IndexKeys, sargKey expression.Express
 	rv = make(datastore.IndexKeys, 0, len(keys))
 	if fks, ok := sargKey.(*expression.FlattenKeys); ok {
 		for i, op := range fks.Operands() {
-			attr := getFlattenKeyAttributes(fks, i)
+			attr := datastore.GetFlattenKeyAttributes(fks, i)
 			rv = append(rv, &datastore.IndexKey{op, attr})
 		}
 	} else {

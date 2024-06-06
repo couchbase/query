@@ -41,44 +41,6 @@ func useSkipIndexKeys(index datastore.Index, indexApiVersion int) bool {
 	return useIndex3API(index, indexApiVersion) && (index.Type() == datastore.GSI || index.Type() == datastore.VIRTUAL)
 }
 
-func getFlattenKeyAttributes(fks *expression.FlattenKeys, pos int) (attr datastore.IkAttributes) {
-	attr = datastore.IK_NONE
-	if fks.HasDesc(pos) {
-		attr |= datastore.IK_DESC
-	}
-	if fks.HasMissing(pos) {
-		attr |= datastore.IK_MISSING
-	}
-	return
-}
-
-func getIndexKeys(index datastore.Index) (indexKeys datastore.IndexKeys) {
-	if index2, ok := index.(datastore.Index2); ok {
-		indexKeys = index2.RangeKey2()
-	} else {
-		for _, e := range index.RangeKey() {
-			indexKeys = append(indexKeys, &datastore.IndexKey{Expr: e, Attributes: datastore.IK_NONE})
-		}
-	}
-
-	flattenIndexKeys := make(datastore.IndexKeys, 0, len(indexKeys))
-	for _, ik := range indexKeys {
-		if all, ok := ik.Expr.(*expression.All); ok && all.Flatten() {
-			fkeys := all.FlattenKeys()
-			for pos, fk := range fkeys.Operands() {
-				fkey := all.Copy().(*expression.All)
-				fkey.SetFlattenValueMapping(fk.Copy())
-				attr := getFlattenKeyAttributes(fkeys, pos)
-				flattenIndexKeys = append(flattenIndexKeys, &datastore.IndexKey{fkey, attr})
-			}
-		} else {
-			flattenIndexKeys = append(flattenIndexKeys, ik)
-		}
-	}
-
-	return flattenIndexKeys
-}
-
 func indexHasDesc(index datastore.Index) bool {
 	if index2, ok := index.(datastore.Index2); ok {
 		for _, key := range index2.RangeKey2() {
@@ -104,7 +66,7 @@ func indexHasLeadingKeyMissingValues(index datastore.Index, controls uint64) boo
 	}
 
 	if util.IsFeatureEnabled(controls, util.N1QL_INDEX_MISSING) {
-		keys := getIndexKeys(index)
+		keys := datastore.GetIndexKeys(index)
 		return len(keys) > 0 && keys[0].HasAttribute(datastore.IK_MISSING)
 	}
 
@@ -237,7 +199,7 @@ func getIndexKeyNames(alias string, index datastore.Index, projection *plan.Inde
 	var keys datastore.IndexKeys
 	var err error
 	if !index.IsPrimary() {
-		keys = getIndexKeys(index)
+		keys = datastore.GetIndexKeys(index)
 	}
 	indexKeyNames := make([]string, 0, len(keys)+1)
 

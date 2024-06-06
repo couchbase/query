@@ -471,7 +471,7 @@ func (this *builder) sargableIndexes(indexes []datastore.Index, pred, subset, vp
 				}
 			}
 
-			keys = getIndexKeys(index)
+			keys = datastore.GetIndexKeys(index)
 
 			for i, key := range keys {
 				if key.Expr, _, err = formalizeExpr(formalizer, key.Expr, false); err != nil {

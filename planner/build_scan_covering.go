@@ -904,7 +904,7 @@ func replaceFlattenKeys(keys datastore.IndexKeys, entry *indexEntry) (rv datasto
 	rv = append(rv, keys[0:pos]...)
 	flattenKeys := all.FlattenKeys()
 	for i, op := range flattenKeys.Operands() {
-		rv = append(rv, &datastore.IndexKey{op, getFlattenKeyAttributes(flattenKeys, i)})
+		rv = append(rv, &datastore.IndexKey{op, datastore.GetFlattenKeyAttributes(flattenKeys, i)})
 	}
 	rv = append(rv, keys[pos+all.FlattenSize():]...)
 	return rv
