@@ -162,42 +162,39 @@ func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 	}
 
 	offsetHandled := false
-	if stmtOrder != nil && !this.hasBuilderFlag(BUILDER_PLAN_HAS_ORDER) {
-		if this.hasBuilderFlag(BUILDER_HAS_EARLY_ORDER) {
-			offsetHandled = (this.partialSortTermCount > 0)
-		} else if this.order == nil || this.partialSortTermCount > 0 {
+	if stmtOrder != nil && !this.hasBuilderFlag(BUILDER_PLAN_HAS_ORDER|BUILDER_HAS_EARLY_ORDER) &&
+		(this.order == nil || this.partialSortTermCount > 0) {
 
-			var limit *plan.Limit
-			var offset *plan.Offset
-			if stmtLimit != nil {
-				// the limit/offset operator that's embedded inside sort operator does not need cost
-				// since only the corresponding expression is saved in the plan
-				limit = plan.NewLimit(stmtLimit, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL)
-				if stmtOffset != nil && this.offset == nil {
-					offset = plan.NewOffset(stmtOffset, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL,
-						OPT_COST_NOT_AVAIL)
-				}
+		var limit *plan.Limit
+		var offset *plan.Offset
+		if stmtLimit != nil {
+			// the limit/offset operator that's embedded inside sort operator does not need cost
+			// since only the corresponding expression is saved in the plan
+			limit = plan.NewLimit(stmtLimit, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL)
+			if stmtOffset != nil && this.offset == nil {
+				offset = plan.NewOffset(stmtOffset, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL,
+					OPT_COST_NOT_AVAIL)
 			}
-			if this.useCBO && (cost > 0.0) && (cardinality > 0.0) && (size > 0) && (frCost > 0.0) {
-				scost, scardinality, ssize, sfrCost := getSortCost(size,
-					len(stmtOrder.Terms()), cardinality, nlimit, noffset)
-				if scost > 0.0 && scardinality > 0.0 && ssize > 0 && sfrCost > 0.0 {
-					cost += scost
-					cardinality = scardinality
-					size = ssize
-					frCost += sfrCost
-				} else {
-					cost = OPT_COST_NOT_AVAIL
-					cardinality = OPT_CARD_NOT_AVAIL
-					size = OPT_SIZE_NOT_AVAIL
-					frCost = OPT_COST_NOT_AVAIL
-				}
-			}
-			offsetHandled = offset != nil
-			order := plan.NewOrder(stmtOrder, this.partialSortTermCount, offset, limit, cost, cardinality, size, frCost, true, true)
-			children = append(children, order)
-			lastOp = order
 		}
+		if this.useCBO && (cost > 0.0) && (cardinality > 0.0) && (size > 0) && (frCost > 0.0) {
+			scost, scardinality, ssize, sfrCost := getSortCost(size,
+				len(stmtOrder.Terms()), cardinality, nlimit, noffset)
+			if scost > 0.0 && scardinality > 0.0 && ssize > 0 && sfrCost > 0.0 {
+				cost += scost
+				cardinality = scardinality
+				size = ssize
+				frCost += sfrCost
+			} else {
+				cost = OPT_COST_NOT_AVAIL
+				cardinality = OPT_CARD_NOT_AVAIL
+				size = OPT_SIZE_NOT_AVAIL
+				frCost = OPT_COST_NOT_AVAIL
+			}
+		}
+		offsetHandled = offset != nil
+		order := plan.NewOrder(stmtOrder, this.partialSortTermCount, offset, limit, cost, cardinality, size, frCost, true, true)
+		children = append(children, order)
+		lastOp = order
 	}
 
 	if stmtOffset != nil && this.offset == nil && !offsetHandled {

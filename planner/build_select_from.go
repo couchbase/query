@@ -1423,7 +1423,7 @@ func (this *builder) buildEarlyOrder(iscan3 *plan.IndexScan3, useCBO bool) (plan
 
 	this.maxParallelism = 1
 
-	if iscan3.HasEarlyOffset() && this.partialSortTermCount == 0 && offset == nil {
+	if iscan3.HasEarlyOffset() && offset == nil {
 		offsetOp, err := this.buildEarlyOffset(orderOp, useCBO)
 		this.resetLimit()
 		return offsetOp, err
