@@ -117,6 +117,15 @@ func TestAnsiJoin(t *testing.T) {
 	// run with CBO
 	runMatch("case_ansijoin_cbo.json", false, true, qc, t)
 
+	// extra index
+	runStmt(qc, "CREATE INDEX st_ix27 on shellTest(META().id)")
+
+	// run with CBO
+	runMatch("case_ansijoin_cbo2.json", false, true, qc, t)
+
+	// drop extra index
+	runStmt(qc, "DROP INDEX shellTest.st_ix27")
+
 	// DELETE optimizer statistics
 	runStmt(qc, "UPDATE STATISTICS FOR shellTest DELETE ALL")
 

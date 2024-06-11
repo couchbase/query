@@ -1,0 +1,63 @@
+[
+    {
+        "testcase": "MB-62274",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true,
+                    "cost": true,
+                    "cardinality": true
+                }
+            ],
+            "statement": "SELECT true AS present, p.cost IS NOT MISSING AS cost, p.cardinality IS NOT MISSING AS cardinality FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'Join' AND v.`as` = 'l' AND v.`on_filter` IS MISSING END"
+        },
+        "queryParams": {"use_cbo": true},
+        "statements":"SELECT l.*, r.* FROM shellTest r LEFT JOIN shellTest l USE NL ON META(l).id = CASE WHEN r.c21 IS VALUED THEN REPLACE(meta(r).id, \"test2\", \"test1\") ELSE NULL END WHERE r.type = \"right\" AND r.c21 IN [1,5]",
+        "results": [
+            {
+                "a11": [
+                    1,
+                    2,
+                    3,
+                    4
+                ],
+                "c11": 1,
+                "c12": 10,
+                "a21": [
+                    1,
+                    10,
+                    20
+                ],
+                "a22": [
+                    1,
+                    2,
+                    3,
+                    4
+                ],
+                "c21": 1,
+                "c22": 10,
+                "test_id": "ansijoin",
+                "type": "right"
+            },
+            {
+                "a21": [
+                    5,
+                    15,
+                    25
+                ],
+                "a22": [
+                    1,
+                    2,
+                    3,
+                    4
+                ],
+                "c21": 5,
+                "c22": 50,
+                "test_id": "ansijoin",
+                "type": "right"
+            }
+	]
+    }
+]
+
