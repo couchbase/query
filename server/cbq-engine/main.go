@@ -448,7 +448,7 @@ func main() {
 
 	// Create http endpoint (but don't start it yet)
 	endpoint := http.NewServiceEndpoint(server, *STATIC_PATH, *METRICS,
-		*HTTP_ADDR, *HTTPS_ADDR, *CA_FILE, *CERT_FILE, *KEY_FILE)
+		*HTTP_ADDR, *HTTPS_ADDR, *CA_FILE, *CERT_FILE, *KEY_FILE, *INTERNAL_CLIENT_CERT, *INTERNAL_CLIENT_KEY)
 
 	ffdc.Set(ffdc.Completed, http.CaptureCompletedRequests)
 	ffdc.Set(ffdc.Active, func(w io.Writer) error {

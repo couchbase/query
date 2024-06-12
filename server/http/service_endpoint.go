@@ -79,7 +79,8 @@ func init() {
 }
 
 func NewServiceEndpoint(srv *server.Server, staticPath string, metrics bool,
-	httpAddr, httpsAddr, caFile, certFile, keyFile string) *HttpEndpoint {
+	httpAddr, httpsAddr, caFile, certFile, keyFile,
+	internalClientCertFile, internalClientKeyFile string) *HttpEndpoint {
 	rv := &HttpEndpoint{
 		server:    srv,
 		metrics:   metrics,
@@ -99,6 +100,9 @@ func NewServiceEndpoint(srv *server.Server, staticPath string, metrics bool,
 	rv.connSecConfig.CertFile = certFile
 	rv.connSecConfig.KeyFile = keyFile
 	rv.connSecConfig.CAFile = caFile
+
+	rv.connSecConfig.InternalClientCertFile = internalClientCertFile
+	rv.connSecConfig.InternalClientKeyFile = internalClientKeyFile
 
 	server.SetActives(rv.actives)
 	server.SetOptions(rv.options)
@@ -560,6 +564,23 @@ func (this *HttpEndpoint) SetupSSL() error {
 
 		}
 
+		// MB-52102: Internal client certificate authentication is only required if:
+		// i. Node to Node encryption is enabled i.e set to "Strict" or "All"
+		// ii. Client certificate authentication is Mandatory
+
+		// Check if the internal client cert, key or passphrase has changed
+		if (configChange & cbauth.CFG_CHANGE_CLIENT_CERTS_TLSCONFIG) != 0 {
+			logging.Infof("Internal client configuration, certificate or passphrase has been modified.")
+
+			newTLSConfig, err := cbauth.GetTLSConfig()
+			if err != nil {
+				logging.Errorf("Unable to retrieve internal client configuration: %v", err)
+				return errors.NewAdminEndpointError(err, "Unable to retrieve internal client configuration.")
+			}
+			this.connSecConfig.TLSConfig.ClientPrivateKeyPassphrase = newTLSConfig.ClientPrivateKeyPassphrase
+			settingsUpdated = true
+		}
+
 		if settingsUpdated {
 			ds := datastore.GetDatastore()
 			if ds == nil {
@@ -573,8 +594,14 @@ func (this *HttpEndpoint) SetupSSL() error {
 			} else {
 				sds.SetConnectionSecurityConfig(&(this.connSecConfig))
 			}
+
 			distributed.RemoteAccess().SetConnectionSecurityConfig(this.connSecConfig.CAFile, this.connSecConfig.CertFile,
-				this.connSecConfig.ClusterEncryptionConfig.EncryptData)
+				this.connSecConfig.ClusterEncryptionConfig.EncryptData,
+				// check if client certificate authentication is mandatory
+				this.connSecConfig.TLSConfig.ClientAuthType == tls.RequireAndVerifyClientCert,
+				this.connSecConfig.InternalClientCertFile,
+				this.connSecConfig.InternalClientKeyFile,
+				this.connSecConfig.TLSConfig.ClientPrivateKeyPassphrase)
 		}
 		return nil
 	})

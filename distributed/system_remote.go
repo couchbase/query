@@ -62,7 +62,8 @@ type SystemRemoteAccess interface {
 	Settings(settings map[string]interface{}) errors.Error
 
 	// Update TLS or node-to-node encryption settings.
-	SetConnectionSecurityConfig(caFile, certFile string, encryptNodeToNodeComms bool)
+	SetConnectionSecurityConfig(caFile string, certFile string, encryptNodeToNodeComms bool, clientCertAuthMandatory bool,
+		internalClientCertFile string, internalClientKeyFile string, internalClientPrivateKeyPassphrase []byte)
 
 	// Retrieve a host's UUID
 	NodeUUID(string) string

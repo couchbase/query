@@ -16,6 +16,7 @@ package.
 package couchbase
 
 import (
+	"crypto/tls"
 	"encoding/binary"
 	"fmt"
 	"io"
@@ -893,13 +894,21 @@ func (s *store) SetClientConnectionSecurityConfig() (err error) {
 			s.connSecConfig.CertFile,
 			s.connSecConfig.KeyFile,
 			s.connSecConfig.ClusterEncryptionConfig.DisableNonSSLPorts,
-			s.connSecConfig.TLSConfig.PrivateKeyPassphrase)
+			s.connSecConfig.TLSConfig.PrivateKeyPassphrase,
+			s.connSecConfig.TLSConfig.ClientAuthType == tls.RequireAndVerifyClientCert,
+			s.connSecConfig.InternalClientCertFile,
+			s.connSecConfig.InternalClientKeyFile,
+			s.connSecConfig.TLSConfig.ClientPrivateKeyPassphrase)
 
 		if err == nil && s.gcClient != nil {
 			err = s.gcClient.InitTLS(s.connSecConfig.CAFile,
 				s.connSecConfig.CertFile,
 				s.connSecConfig.KeyFile,
-				s.connSecConfig.TLSConfig.PrivateKeyPassphrase)
+				s.connSecConfig.TLSConfig.PrivateKeyPassphrase,
+				s.connSecConfig.TLSConfig.ClientAuthType == tls.RequireAndVerifyClientCert,
+				s.connSecConfig.InternalClientCertFile,
+				s.connSecConfig.InternalClientKeyFile,
+				s.connSecConfig.TLSConfig.ClientPrivateKeyPassphrase)
 		}
 		if err != nil {
 			if len(s.connSecConfig.CAFile) > 0 {

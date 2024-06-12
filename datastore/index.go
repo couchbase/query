@@ -80,6 +80,8 @@ type ConnectionSecurityConfig struct {
 	CAFile                  string
 	CertFile                string
 	KeyFile                 string
+	InternalClientCertFile  string
+	InternalClientKeyFile   string
 }
 
 type IndexConfig interface {

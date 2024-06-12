@@ -68,23 +68,27 @@ func (auth *MemcachedAuthProvider) SupportsTLS() bool {
 }
 
 func (auth *MemcachedAuthProvider) Certificate(req gocbcore.AuthCertRequest) (*tls.Certificate, error) {
-	return nil, nil
-	// At present when we act as client we use Credentials, not certificates.
-	// return auth.c.certs, nil
+	// If the internal client certificate has been set, use it for client authentication.
+	auth.c.mutex.RLock()
+	defer auth.c.mutex.RUnlock()
+	return auth.c.internalClientCert, nil
 }
 
 // Call this method with a TLS certificate file name to make communication
 type Client struct {
-	config         *gocbcore.AgentConfig
-	transactions   *gocbcore.TransactionsManager
-	rootCAs        *x509.CertPool
-	mutex          sync.RWMutex
-	atrLocations   map[string]gocbcore.TransactionLostATRLocation
-	certs          *tls.Certificate
-	agentProviders map[string]*AgentProvider
+	config             *gocbcore.AgentConfig
+	transactions       *gocbcore.TransactionsManager
+	rootCAs            *x509.CertPool
+	mutex              sync.RWMutex
+	atrLocations       map[string]gocbcore.TransactionLostATRLocation
+	certs              *tls.Certificate
+	agentProviders     map[string]*AgentProvider
+	internalClientCert *tls.Certificate
 }
 
-func NewClient(url string, caFile, certFile, keyFile string, passphrase []byte) (rv *Client, err error) {
+func NewClient(url string, caFile, certFile, keyFile string, passphrase []byte, encryptNodeToNodeComms bool,
+	clientCertAuthMandatory bool, internalClientFile, internalClientKey string, internalClientPassphrase []byte) (
+	rv *Client, err error) {
 	rv = &Client{}
 
 	// network=default use internal (vs  alternative) addresses
@@ -95,8 +99,9 @@ func NewClient(url string, caFile, certFile, keyFile string, passphrase []byte) 
 		return nil, err
 	}
 
-	if certFile != "" || caFile != "" || keyFile != "" {
-		if err = rv.InitTLS(caFile, certFile, keyFile, passphrase); err != nil {
+	if certFile != "" || caFile != "" || keyFile != "" || internalClientFile != "" || internalClientKey != "" {
+		if err = rv.InitTLS(caFile, certFile, keyFile, passphrase, clientCertAuthMandatory,
+			internalClientFile, internalClientKey, internalClientPassphrase); err != nil {
 			return nil, err
 		}
 	}
@@ -222,6 +227,7 @@ func (c *Client) Close() {
 	c.transactions = nil
 	c.mutex.Lock()
 	c.rootCAs = nil
+	c.internalClientCert = nil
 	for n, ap := range c.agentProviders {
 		delete(c.agentProviders, n)
 		for s, atrl := range c.atrLocations {
@@ -235,7 +241,8 @@ func (c *Client) Close() {
 }
 
 // with the KV engine encrypted.
-func (c *Client) InitTLS(caFile, certFile, keyFile string, passphrase []byte) error {
+func (c *Client) InitTLS(caFile, certFile, keyFile string, passphrase []byte, clientCertAuthMandatory bool,
+	internalClientCertFile, internalClientKeyFile string, internalClientPrivateKeyPassphrase []byte) error {
 	certs, err := ntls.LoadX509KeyPair(certFile, keyFile, passphrase)
 	if err != nil {
 		logging.Errorf("Transaction client certificates refresh failed: %v", err)
@@ -254,10 +261,26 @@ func (c *Client) InitTLS(caFile, certFile, keyFile string, passphrase []byte) er
 
 	CA_Pool := x509.NewCertPool()
 	CA_Pool.AppendCertsFromPEM(serverCert)
+
+	// MB-52102: Include the internal client cert if n2n encryption is enabled and client certificate authentication is mandatory.
+	var internalClientCert tls.Certificate
+	if clientCertAuthMandatory {
+		internalClientCert, err = ntls.LoadX509KeyPair(internalClientCertFile, internalClientKeyFile,
+			internalClientPrivateKeyPassphrase)
+		if err != nil {
+			logging.Errorf("Transaction client internal client certificate refresh failed: %v", err)
+			return err
+		}
+	}
+
 	c.mutex.Lock()
 	// Set values for certs and passphrase
 	c.certs = &certs
 	c.rootCAs = CA_Pool
+
+	if clientCertAuthMandatory {
+		c.internalClientCert = &internalClientCert
+	}
 	c.mutex.Unlock()
 	logging.Infof("Transaction client certificates have been refreshed")
 	return nil
@@ -267,6 +290,7 @@ func (c *Client) ClearTLS() {
 	c.mutex.Lock()
 	c.rootCAs = nil
 	c.certs = nil
+	c.internalClientCert = nil
 	c.mutex.Unlock()
 	logging.Infof("Transaction client certificates have been reset")
 }

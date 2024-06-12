@@ -994,7 +994,9 @@ func ConnectWithAuth(baseU string, ah AuthHandler, userAgent string) (c Client, 
 // with the KV engine encrypted.
 //
 // This method should be called immediately after a Connect*() method.
-func (c *Client) InitTLS(caFile, certFile, keyfile string, disableNonSSLPorts bool, passphrase []byte) error {
+func (c *Client) InitTLS(caFile, certFile, keyfile string, disableNonSSLPorts bool, passphrase []byte,
+	clientCertAuthMandatory bool, internalClientCertFile string, internalClientKeyFile string,
+	internalClientPrivateKeyPassphrase []byte) error {
 	// Set the values for certs
 	SetCaFile(caFile)
 	SetCertFile(certFile)
@@ -1011,6 +1013,19 @@ func (c *Client) InitTLS(caFile, certFile, keyfile string, disableNonSSLPorts bo
 	CA_Pool := x509.NewCertPool()
 	CA_Pool.AppendCertsFromPEM(serverCert)
 	c.tlsConfig = &tls.Config{RootCAs: CA_Pool}
+
+	// MB-52102: Include the internal client cert if n2n encryption is enabled and client certificate authentication is mandatory.
+	if clientCertAuthMandatory {
+		internalClientCert, err := ntls.LoadX509KeyPair(internalClientCertFile, internalClientKeyFile,
+			internalClientPrivateKeyPassphrase)
+		if err != nil {
+			logging.Errorf("Internal client certificate refresh failed during initialization of Couchbase server client: %v", err)
+			return err
+		}
+
+		c.tlsConfig.Certificates = []tls.Certificate{internalClientCert}
+	}
+
 	c.disableNonSSLPorts = disableNonSSLPorts
 	return nil
 }

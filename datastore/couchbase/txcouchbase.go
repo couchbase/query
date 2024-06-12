@@ -9,6 +9,7 @@
 package couchbase
 
 import (
+	"crypto/tls"
 	"encoding/json"
 	gerrors "errors"
 	"fmt"
@@ -761,6 +762,9 @@ func initGocb(s *store) (err errors.Error) {
 	var caFile string
 	var keyFile string
 	var passphrase []byte
+	var internalClientCertFile string
+	var internalClientKeyFile string
+	var internalClientPassphrase []byte
 
 	if s.connSecConfig != nil &&
 		s.connSecConfig.ClusterEncryptionConfig.EncryptData {
@@ -768,6 +772,15 @@ func initGocb(s *store) (err errors.Error) {
 		caFile = s.connSecConfig.CAFile
 		keyFile = s.connSecConfig.KeyFile
 		passphrase = s.connSecConfig.TLSConfig.PrivateKeyPassphrase
+
+		// MB-52102: Include the internal client cert if n2n encryption is enabled and
+		// client certificate authentication is mandatory.
+		if s.connSecConfig.TLSConfig.ClientAuthType == tls.RequireAndVerifyClientCert {
+			internalClientCertFile = s.connSecConfig.InternalClientCertFile
+			internalClientKeyFile = s.connSecConfig.InternalClientKeyFile
+			internalClientPassphrase = s.connSecConfig.TLSConfig.ClientPrivateKeyPassphrase
+		}
+
 	}
 
 	tranSettings := datastore.GetTransactionSettings()
@@ -796,7 +809,12 @@ func initGocb(s *store) (err errors.Error) {
 		caFile,
 		certFile,
 		keyFile,
-		passphrase)
+		passphrase,
+		s.connSecConfig.ClusterEncryptionConfig.EncryptData,
+		s.connSecConfig.TLSConfig.ClientAuthType == tls.RequireAndVerifyClientCert,
+		internalClientCertFile,
+		internalClientKeyFile,
+		internalClientPassphrase)
 	s.nslock.Lock()
 	defer s.nslock.Unlock()
 

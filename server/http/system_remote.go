@@ -28,6 +28,7 @@ import (
 	"unsafe"
 
 	"github.com/couchbase/cbauth"
+	ntls "github.com/couchbase/goutils/tls"
 	"github.com/couchbase/query/clustering"
 	"github.com/couchbase/query/distributed"
 	"github.com/couchbase/query/errors"
@@ -62,7 +63,10 @@ func (this *systemRemoteHttp) setCommParams(cp *commParameters) {
 	atomic.StorePointer(&(this.commParams), curCommParameters)
 }
 
-func (this *systemRemoteHttp) SetConnectionSecurityConfig(caFile, certFile string, encryptNodeToNodeComms bool) {
+func (this *systemRemoteHttp) SetConnectionSecurityConfig(caFile string, certFile string, encryptNodeToNodeComms bool,
+	clientCertAuthMandatory bool, internalClientCertFile string, internalClientKeyFile string,
+	internalClientPrivateKeyPassphrase []byte) {
+
 	var cp *commParameters
 	if !encryptNodeToNodeComms {
 		cp = &commParameters{
@@ -84,6 +88,20 @@ func (this *systemRemoteHttp) SetConnectionSecurityConfig(caFile, certFile strin
 		caPool := x509.NewCertPool()
 		caPool.AppendCertsFromPEM(serverCert)
 		tlsConfig := &tls.Config{RootCAs: caPool}
+
+		// MB-52102: Include the internal client cert if n2n encryption is enabled
+		// and client certificate authentication is mandatory.
+		if clientCertAuthMandatory {
+			internalTlSCert, err := ntls.LoadX509KeyPair(internalClientCertFile, internalClientKeyFile,
+				internalClientPrivateKeyPassphrase)
+			if err != nil {
+				logging.Errorf("SystemRemoteHttp.SetCommunictionSecurityConfig: internal client certificate refresh failed: %v",
+					err)
+				return
+			}
+
+			tlsConfig.Certificates = []tls.Certificate{internalTlSCert}
+		}
 
 		cp = &commParameters{
 			client: &http.Client{
