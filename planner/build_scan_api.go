@@ -60,6 +60,25 @@ func indexHasDesc(index datastore.Index) bool {
 	return false
 }
 
+func indexHasVector(index datastore.Index) bool {
+	if index2, ok := index.(datastore.Index2); ok {
+		for _, key := range index2.RangeKey2() {
+			if all, ok := key.Expr.(*expression.All); ok && all.Flatten() {
+				fks := all.FlattenKeys()
+				for i := 0; i < all.FlattenSize(); i++ {
+					if fks.HasVector(i) {
+						return true
+					}
+				}
+			} else if key.HasAttribute(datastore.IK_VECTOR) {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
 func indexHasLeadingKeyMissingValues(index datastore.Index, controls uint64) bool {
 	if index.IsPrimary() {
 		return true

@@ -486,6 +486,9 @@ func (this *builder) canPushDownProjectionDistinct(entry *indexEntry, projection
 			return false
 		}
 	}
+	if indexHasVector(entry.index) {
+		return false
+	}
 
 	hash := _STRING_BOOL_POOL.Get()
 	defer _STRING_BOOL_POOL.Put(hash)
