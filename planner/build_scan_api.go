@@ -122,7 +122,9 @@ func (this *builder) buildIndexProjection(entry *indexEntry, exprs expression.Ex
 				if _, ok := idxProj[keyPos]; ok {
 					indexProjection.EntryKeys = append(indexProjection.EntryKeys, keyPos)
 				} else if indexKey.HasAttribute(datastore.IK_VECTOR) {
-					indexProjection.EntryKeys = append(indexProjection.EntryKeys, keyPos)
+					if entry.HasFlag(IE_VECTOR_KEY_SARGABLE) {
+						indexProjection.EntryKeys = append(indexProjection.EntryKeys, keyPos)
+					}
 				} else {
 					curKey := false
 					for _, expr := range exprs {
