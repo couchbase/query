@@ -790,11 +790,11 @@ func indexCoverExpressions(entry *indexEntry, keys datastore.IndexKeys,
 
 	exprs := make(expression.Expressions, 0, len(keys))
 	for _, key := range keys {
-		if vector && key.HasAttribute(datastore.IK_VECTOR) {
+		if key.HasAttribute(datastore.IK_VECTOR) {
 			// only put any covered Ann expression; do not put the index key here since
 			// that may cover other expressions involving the same field/expression
 			// incorrectly
-			if ann != nil {
+			if vector && ann != nil {
 				exprs = append(exprs, ann)
 			}
 		} else if _, ok := key.Expr.(*expression.All); ok && flatten {
