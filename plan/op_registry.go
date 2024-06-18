@@ -102,8 +102,6 @@ var _OPERATORS = map[string]Operator{
 	// Project
 	"InitialProject": &InitialProject{},
 
-	// TODO retire
-	"FinalProject":      &FinalProject{},
 	"IndexCountProject": &IndexCountProject{},
 
 	// Distinct

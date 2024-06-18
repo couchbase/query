@@ -201,6 +201,12 @@ func (b *activeRequestsKeyspace) Fetch(keys []string, keysMap map[string]value.A
 				if request.CpuTime() > time.Duration(0) {
 					item.SetField("cpuTime", context.FormatDuration(request.CpuTime()))
 				}
+				if request.IoTime() > time.Duration(0) {
+					item.SetField("ioTime", context.FormatDuration(request.IoTime()))
+				}
+				if request.WaitTime() > time.Duration(0) {
+					item.SetField("waitTime", context.FormatDuration(request.WaitTime()))
+				}
 				p := request.Output().FmtPhaseCounts()
 				if p != nil {
 					item.SetField("phaseCounts", p)
@@ -216,6 +222,10 @@ func (b *activeRequestsKeyspace) Fetch(keys []string, keysMap map[string]value.A
 				usedMemory := request.UsedMemory()
 				if usedMemory != 0 {
 					item.SetField("usedMemory", usedMemory)
+				}
+				sessionMemory := request.SessionMemory()
+				if sessionMemory != 0 {
+					item.SetField("sessionMemory", sessionMemory)
 				}
 
 				if request.Prepared() != nil {

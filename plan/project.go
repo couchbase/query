@@ -218,42 +218,6 @@ func (this *InitialProject) UnmarshalJSON(body []byte) error {
 	return nil
 }
 
-// Final projection operator is left for backwards compatibility with older versions
-// (just in case prepared plans on mixed versions clusters come in from older engines)
-// TODO It will be retired after mad hatter goes out of support
-type FinalProject struct {
-	legacy
-}
-
-func NewFinalProject() *FinalProject {
-	return &FinalProject{}
-}
-
-func (this *FinalProject) Accept(visitor Visitor) (interface{}, error) {
-	return visitor.VisitFinalProject(this)
-}
-
-func (this *FinalProject) New() Operator {
-	return &FinalProject{}
-}
-
-func (this *FinalProject) MarshalJSON() ([]byte, error) {
-	return json.Marshal(this.MarshalBase(nil))
-}
-
-func (this *FinalProject) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "FinalProject"}
-	if f != nil {
-		f(r)
-	}
-	return r
-}
-
-func (this *FinalProject) UnmarshalJSON([]byte) error {
-	// NOP: FinalProject has no data structure
-	return nil
-}
-
 type IndexCountProject struct {
 	legacy
 	projection *algebra.Projection

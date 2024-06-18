@@ -58,6 +58,8 @@ type RequestLogEntry struct {
 	TransactionRemainingTime time.Duration
 	ThrottleTime             time.Duration
 	CpuTime                  time.Duration
+	IoTime                   time.Duration
+	WaitTime                 time.Duration
 	QueryContext             string
 	Statement                string
 	StatementType            string
@@ -92,6 +94,8 @@ type RequestLogEntry struct {
 	Tag                      string
 	Tenant                   string
 	Qualifier                string
+	SessionMemory            uint64
+	Analysis                 []interface{}
 }
 
 type qualifier interface {
@@ -583,6 +587,7 @@ func LogRequest(request_time, service_time, transactionElapsedTime time.Duration
 		QueryContext:    request.QueryContext(),
 		TxId:            request.TxId(),
 		Tenant:          tenant.Bucket(request.TenantCtx()),
+		SessionMemory:   request.SessionMemory(),
 	}
 	errs := request.Errors()
 	re.Errors = make([]map[string]interface{}, 0, len(errs))
@@ -616,12 +621,14 @@ func LogRequest(request_time, service_time, transactionElapsedTime time.Duration
 	re.PhaseTimes = request.RawPhaseTimes()
 	re.UsedMemory = request.UsedMemory()
 
+	var start execution.Operator
 	if !request.Sensitive() {
 		// in order not to bloat service memory, we marshal the timings into a value
 		// at the expense of request execution time
 		timings := request.GetTimings()
 		maxPlanSize := RequestsMaxPlanSize()
 		if timings != nil {
+			start = timings
 			parsed := request.GetFmtTimings()
 			if len(parsed) > 0 {
 				re.timings = parsed
@@ -677,8 +684,13 @@ func LogRequest(request_time, service_time, transactionElapsedTime time.Duration
 	}
 	re.ThrottleTime = request.ThrottleTime()
 	re.CpuTime = request.CpuTime()
+	re.IoTime = request.IoTime()
+	re.WaitTime = request.WaitTime()
 	if qualifier != "" {
 		re.Qualifier = qualifier
+	}
+	if start != nil {
+		re.Analysis, _ = execution.AnalyseExecution(start)
 	}
 
 	requestLog.cache.Add(re, id, nil)

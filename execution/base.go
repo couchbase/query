@@ -1548,8 +1548,10 @@ func (this *base) switchPhase(p timePhases) {
 	case _SERVTIME:
 		this.addServTime(d)
 		this.phaseTimes(this.operatorCtx.Context, this.execPhase, d)
+		this.operatorCtx.Context.recordIoTime(d)
 	case _KERNTIME:
 		this.addKernTime(d)
+		this.operatorCtx.Context.recordWaitTime(d)
 	}
 }
 

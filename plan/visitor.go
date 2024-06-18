@@ -64,8 +64,6 @@ type Visitor interface {
 	// Project
 	VisitInitialProject(op *InitialProject) (interface{}, error)
 
-	// TODO retire
-	VisitFinalProject(op *FinalProject) (interface{}, error)
 	VisitIndexCountProject(op *IndexCountProject) (interface{}, error)
 
 	// Distinct

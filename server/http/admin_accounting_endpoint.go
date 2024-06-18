@@ -1833,6 +1833,10 @@ func activeRequestWorkHorse(endpoint *HttpEndpoint, request server.Request, prof
 	if usedMemory != 0 {
 		reqMap["usedMemory"] = usedMemory
 	}
+	sessionMemory := request.SessionMemory()
+	if usedMemory != 0 {
+		reqMap["sessionMemory"] = sessionMemory
+	}
 	if profiling {
 
 		prof := request.Profile()
@@ -1855,6 +1859,14 @@ func activeRequestWorkHorse(endpoint *HttpEndpoint, request server.Request, prof
 		cpuTime := request.CpuTime()
 		if cpuTime > time.Duration(0) {
 			reqMap["cpuTime"] = util.FormatDuration(cpuTime, durStyle)
+		}
+		ioTime := request.IoTime()
+		if ioTime > time.Duration(0) {
+			reqMap["ioTime"] = util.FormatDuration(ioTime, durStyle)
+		}
+		waitTime := request.WaitTime()
+		if waitTime > time.Duration(0) {
+			reqMap["waitTime"] = util.FormatDuration(waitTime, durStyle)
 		}
 
 		var ctrl bool
@@ -2088,6 +2100,9 @@ func completedRequestWorkHorse(request *server.RequestLogEntry, profiling bool, 
 	if request.UsedMemory != 0 {
 		reqMap["usedMemory"] = request.UsedMemory
 	}
+	if request.SessionMemory != 0 {
+		reqMap["sessionMemory"] = request.SessionMemory
+	}
 	if request.Tag != "" {
 		reqMap["~tag"] = request.Tag
 	}
@@ -2105,6 +2120,12 @@ func completedRequestWorkHorse(request *server.RequestLogEntry, profiling bool, 
 		}
 		if request.CpuTime > time.Duration(0) {
 			reqMap["cpuTime"] = util.FormatDuration(request.CpuTime, durStyle)
+		}
+		if request.IoTime > time.Duration(0) {
+			reqMap["ioTime"] = util.FormatDuration(request.IoTime, durStyle)
+		}
+		if request.WaitTime > time.Duration(0) {
+			reqMap["waitTime"] = util.FormatDuration(request.WaitTime, durStyle)
 		}
 		optEstimates := request.OptEstimates()
 		if optEstimates != nil {
@@ -2131,6 +2152,9 @@ func completedRequestWorkHorse(request *server.RequestLogEntry, profiling bool, 
 	}
 	if request.Qualifier != "" {
 		reqMap["~qualifier"] = request.Qualifier
+	}
+	if len(request.Analysis) > 0 {
+		reqMap["~analysis"] = request.Analysis
 	}
 	return reqMap
 }

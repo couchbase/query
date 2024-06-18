@@ -161,6 +161,14 @@ func (this *internalOutput) AddCpuTime(d time.Duration) {
 	this.output.AddCpuTime(d)
 }
 
+func (this *internalOutput) AddIoTime(d time.Duration) {
+	this.output.AddIoTime(d)
+}
+
+func (this *internalOutput) AddWaitTime(d time.Duration) {
+	this.output.AddWaitTime(d)
+}
+
 func (this *internalOutput) Loga(l logging.Level, f func() string) {
 	this.output.Loga(l, f)
 }

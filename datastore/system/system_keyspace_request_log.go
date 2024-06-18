@@ -193,6 +193,12 @@ func (b *requestLogKeyspace) Fetch(keys []string, keysMap map[string]value.Annot
 				if entry.CpuTime > time.Duration(0) {
 					item.SetField("cpuTime", context.FormatDuration(entry.CpuTime))
 				}
+				if entry.IoTime > time.Duration(0) {
+					item.SetField("ioTime", context.FormatDuration(entry.IoTime))
+				}
+				if entry.WaitTime > time.Duration(0) {
+					item.SetField("waitTime", context.FormatDuration(entry.WaitTime))
+				}
 				if entry.PreparedName != "" {
 					item.SetField("preparedName", entry.PreparedName)
 					item.SetField("preparedText", entry.PreparedText)
@@ -220,6 +226,9 @@ func (b *requestLogKeyspace) Fetch(keys []string, keysMap map[string]value.Annot
 				}
 				if entry.UsedMemory != 0 {
 					item.SetField("usedMemory", entry.UsedMemory)
+				}
+				if entry.SessionMemory != 0 {
+					item.SetField("sessionMemory", entry.SessionMemory)
 				}
 				if entry.PositionalArgs != nil {
 					item.SetField("positionalArgs", entry.PositionalArgs)
@@ -251,6 +260,9 @@ func (b *requestLogKeyspace) Fetch(keys []string, keysMap map[string]value.Annot
 				}
 				if entry.Qualifier != "" {
 					item.SetField("~qualifier", entry.Qualifier)
+				}
+				if len(entry.Analysis) != 0 {
+					item.SetField("~analysis", entry.Analysis)
 				}
 
 				item.SetMetaField(value.META_KEYSPACE, b.fullName)

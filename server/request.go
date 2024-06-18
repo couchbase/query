@@ -187,6 +187,8 @@ type Request interface {
 	SortProjection() bool
 	ThrottleTime() time.Duration
 	CpuTime() time.Duration
+	IoTime() time.Duration
+	WaitTime() time.Duration
 	SetThrottleTime(d time.Duration)
 	Alive() bool
 	Loga(logging.Level, func() string)
@@ -206,6 +208,8 @@ type Request interface {
 	RedactedStatement() string
 	RedactedNamedArgs() map[string]value.Value
 	RedactedPositionalArgs() value.Values
+
+	SessionMemory() uint64
 }
 
 type RequestID interface {
@@ -314,6 +318,8 @@ type BaseRequest struct {
 	mutationCount atomic.AlignedUint64
 	sortCount     atomic.AlignedUint64
 	cpuTime       atomic.AlignedUint64
+	ioTime        atomic.AlignedUint64
+	waitTime      atomic.AlignedUint64
 	phaseStats    [execution.PHASES]phaseStat
 	tenantUnits   tenant.Services
 
@@ -1069,6 +1075,22 @@ func (this *BaseRequest) CpuTime() time.Duration {
 	return time.Duration(this.cpuTime)
 }
 
+func (this *BaseRequest) AddIoTime(duration time.Duration) {
+	atomic.AddUint64(&(this.ioTime), uint64(duration))
+}
+
+func (this *BaseRequest) IoTime() time.Duration {
+	return time.Duration(this.ioTime)
+}
+
+func (this *BaseRequest) AddWaitTime(duration time.Duration) {
+	atomic.AddUint64(&(this.waitTime), uint64(duration))
+}
+
+func (this *BaseRequest) WaitTime() time.Duration {
+	return time.Duration(this.waitTime)
+}
+
 func (this *BaseRequest) TrackMemory(size uint64) {
 	util.TestAndSetUint64(&this.usedMemory, size,
 		func(old, new uint64) bool { return old < new }, 1)
@@ -1574,4 +1596,11 @@ func (this *BaseRequest) DurationStyle() util.DurationStyle {
 
 func (this *BaseRequest) SetDurationStyle(style util.DurationStyle) {
 	this.durationStyle = style
+}
+
+func (this *BaseRequest) SessionMemory() uint64 {
+	if this.executionContext != nil {
+		return this.executionContext.SessionMemory()
+	}
+	return 0
 }

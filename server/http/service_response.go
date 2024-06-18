@@ -817,6 +817,10 @@ func (this *httpRequest) writeMetrics(metrics bool, prefix, indent string) bool 
 		fmt.Fprintf(buf, ",%s\"usedMemory\": %d", newPrefix, this.UsedMemory())
 	}
 
+	if this.SessionMemory() > 0 {
+		fmt.Fprintf(buf, ",%s\"sessionMemory\": %d", newPrefix, this.SessionMemory())
+	}
+
 	if this.MutationCount() > 0 {
 		fmt.Fprintf(buf, ",%s\"mutationCount\": %d", newPrefix, this.MutationCount())
 	}
@@ -1429,6 +1433,16 @@ func (this *httpRequest) writeProfile(profile server.Profile, prefix, indent str
 
 			logging.Infof("Error writing request CPU time")
 		}
+		if this.IoTime() > time.Duration(0) &&
+			!this.writer.printf("%s\"ioTime\": \"%s\",", newPrefix, util.FormatDuration(this.IoTime(), this.DurationStyle())) {
+
+			logging.Infof("Error writing request IO time")
+		}
+		if this.WaitTime() > time.Duration(0) &&
+			!this.writer.printf("%s\"waitTime\": \"%s\",", newPrefix, util.FormatDuration(this.WaitTime(), this.DurationStyle())) {
+
+			logging.Infof("Error writing request WAIT time")
+		}
 		if !this.writer.printf("%s\"requestTime\": \"%s\"", newPrefix, this.RequestTime().Format(expression.DEFAULT_FORMAT)) {
 			logging.Infof("Error writing request time")
 		}
@@ -1466,6 +1480,17 @@ func (this *httpRequest) writeProfile(profile server.Profile, prefix, indent str
 				}
 			}
 			this.SetFmtOptimizerEstimates(optEstimates)
+			analysis, err := execution.AnalyseExecution(timings)
+			if err == nil && len(analysis) > 0 {
+				if indent != "" {
+					e, err = json.MarshalIndent(analysis, "\t", indent)
+				} else {
+					e, err = json.Marshal(analysis)
+				}
+				if err != nil || !this.writer.printf(",%s\"~analysis\": %s", newPrefix, e) {
+					logging.Infof("Error writing execution analysis: %v", err)
+				}
+			}
 		}
 	}
 	if prefix != "" && !(this.writeString("\n") && this.writeString(prefix)) {

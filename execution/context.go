@@ -179,6 +179,8 @@ type Output interface {
 	RawPhaseTimes() map[string]interface{}
 	FmtOptimizerEstimates(op Operator) map[string]interface{}
 	AddCpuTime(duration time.Duration)
+	AddIoTime(duration time.Duration)
+	AddWaitTime(duration time.Duration)
 	AddTenantUnits(s tenant.Service, cu tenant.Unit)
 	TrackMemory(size uint64)
 	SetTransactionStartTime(t time.Time)
@@ -933,6 +935,13 @@ func (this *Context) AvailableMemory() uint64 {
 	return system.GetMemActualFree()
 }
 
+func (this *Context) SessionMemory() uint64 {
+	if this.memorySession != nil && memory.Quota() > 0 {
+		return this.memorySession.Allocated()
+	}
+	return 0
+}
+
 // UDF memory storage
 
 func (this *Context) StoreValue(key string, val interface{}) {
@@ -1089,6 +1098,14 @@ func (this *Context) AtrCollection() (string, int) {
 
 func (this *Context) TxExpired() bool {
 	return this.txContext != nil && this.txContext.TxExpired()
+}
+
+func (this *Context) recordIoTime(d time.Duration) {
+	this.output.AddIoTime(d)
+}
+
+func (this *Context) recordWaitTime(d time.Duration) {
+	this.output.AddWaitTime(d)
 }
 
 // Serverless management

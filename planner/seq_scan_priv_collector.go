@@ -275,10 +275,6 @@ func (this *collector) VisitInitialProject(plop *plan.InitialProject) (interface
 	return nil, nil
 }
 
-func (this *collector) VisitFinalProject(plop *plan.FinalProject) (interface{}, error) {
-	return nil, nil
-}
-
 func (this *collector) VisitIndexCountProject(plop *plan.IndexCountProject) (interface{}, error) {
 	return nil, nil
 }

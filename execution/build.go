@@ -335,12 +335,6 @@ func (this *builder) VisitInitialProject(plan *plan.InitialProject) (interface{}
 	return checkOp(NewInitialProject(plan, this.context), this.context)
 }
 
-// TODO retire
-func (this *builder) VisitFinalProject(plan *plan.FinalProject) (interface{}, error) {
-	// skip operator
-	return NewNoop(), nil
-}
-
 func (this *builder) VisitIndexCountProject(plan *plan.IndexCountProject) (interface{}, error) {
 	return checkOp(NewIndexCountProject(plan, this.context), this.context)
 }
