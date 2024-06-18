@@ -136,7 +136,6 @@ type AnnotatedValue interface {
 	Value
 	Stash() int32
 	Restore(lvl int32)
-	Seen() bool
 	SetValue(Value)
 	GetValue() Value
 	GetParent() Value
@@ -1045,10 +1044,6 @@ func (this *annotatedValue) Restore(lvl int32) {
 	atomic.StoreInt32(&this.refCnt, lvl)
 }
 
-func (this *annotatedValue) Seen() bool {
-	return atomic.AddInt32(&this.seenCnt, 1) > 1
-}
-
 func (this *annotatedValue) Track() {
 	if !this.noRecycle() {
 		atomic.AddInt32(&this.refCnt, 1)
@@ -1420,10 +1415,6 @@ func (this *annotatedValueSelfReference) Stash() int32 {
 
 func (this *annotatedValueSelfReference) Restore(lvl int32) {
 	(*annotatedValue)(this).Restore(lvl)
-}
-
-func (this *annotatedValueSelfReference) Seen() bool {
-	return (*annotatedValue)(this).Seen()
 }
 
 func (this *annotatedValueSelfReference) Track() {

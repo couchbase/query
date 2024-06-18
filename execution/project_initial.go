@@ -135,7 +135,7 @@ func (this *InitialProject) processItem(item value.AnnotatedValue, context *Cont
 				return false
 			}
 		}
-		if av, ok := v.(value.AnnotatedValue); ok && av.Seen() {
+		if av, ok := v.(value.AnnotatedValue); ok {
 			av.Track()
 		}
 
