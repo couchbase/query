@@ -258,7 +258,9 @@ func addFromSubqueries(qp *plan.QueryPlan, optimHints *algebra.OptimHints, ops .
 					// now appears in "~subqueries" section it'll have its own
 					// optimizer hints, and thus no longer need to be included
 					// in the parent query's optimizer hints
-					removeSubqueryTermHints(optimHints, op.Alias())
+					if optimHints != nil {
+						optimHints.RemoveSubqTermHints(op.Alias())
+					}
 					// nested SubqueryTerm?
 					addFromSubqueries(qp, subSelect.OptimHints(), o)
 				}
