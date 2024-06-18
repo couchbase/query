@@ -572,13 +572,19 @@ func (this *HttpEndpoint) SetupSSL() error {
 		if (configChange & cbauth.CFG_CHANGE_CLIENT_CERTS_TLSCONFIG) != 0 {
 			logging.Infof("Internal client configuration, certificate or passphrase has been modified.")
 
-			newTLSConfig, err := cbauth.GetTLSConfig()
-			if err != nil {
-				logging.Errorf("Unable to retrieve internal client configuration: %v", err)
-				return errors.NewAdminEndpointError(err, "Unable to retrieve internal client configuration.")
+			// There is no way for ns_server to pass certificates to a standalone Query server i.e Query service running
+			// outside the cluster
+			if this.connSecConfig.InternalClientCertFile == "" || this.connSecConfig.InternalClientKeyFile == "" {
+				logging.Errorf("Internal client certificate has not been passed.")
+			} else {
+				newTLSConfig, err := cbauth.GetTLSConfig()
+				if err != nil {
+					logging.Errorf("Unable to retrieve internal client configuration: %v", err)
+					return errors.NewAdminEndpointError(err, "Unable to retrieve internal client configuration.")
+				}
+				this.connSecConfig.TLSConfig.ClientPrivateKeyPassphrase = newTLSConfig.ClientPrivateKeyPassphrase
+				settingsUpdated = true
 			}
-			this.connSecConfig.TLSConfig.ClientPrivateKeyPassphrase = newTLSConfig.ClientPrivateKeyPassphrase
-			settingsUpdated = true
 		}
 
 		if settingsUpdated {
