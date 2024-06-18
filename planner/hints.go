@@ -702,15 +702,3 @@ func (this *builder) gatherSubqueryTermHints() []*algebra.SubqOptimHints {
 	}
 	return subqTermHints
 }
-
-func removeSubqueryTermHints(optimHints *algebra.OptimHints, alias string) {
-	if optimHints != nil {
-		subqTermHints := optimHints.SubqTermHints()
-		for i, subqTermHint := range subqTermHints {
-			if subqTermHint != nil && subqTermHint.Alias() == alias {
-				subqTermHints[i] = nil
-				break
-			}
-		}
-	}
-}

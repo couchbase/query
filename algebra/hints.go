@@ -170,6 +170,23 @@ func (this *OptimHints) AddSubqTermHints(subqTermHints []*SubqOptimHints) {
 	this.subqTermHints = append(this.subqTermHints, subqTermHints...)
 }
 
+func (this *OptimHints) RemoveSubqTermHints(alias string) {
+	nextSlot := 0
+	for i, subqTermHint := range this.subqTermHints {
+		if subqTermHint == nil {
+			continue
+		} else if subqTermHint.alias != alias {
+			if i != nextSlot {
+				this.subqTermHints[nextSlot] = subqTermHint
+			}
+			nextSlot++
+		}
+	}
+	if nextSlot < len(this.subqTermHints) {
+		this.subqTermHints = this.subqTermHints[:nextSlot]
+	}
+}
+
 func (this *OptimHints) String() string {
 	var s string
 	var r map[string]interface{}
