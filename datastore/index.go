@@ -535,6 +535,7 @@ type Index6 interface {
 	VectorDistanceType() IndexDistanceType
 	VectorDimension() int
 	VectorProbes() int
+	VectorDescription() string
 	Include() expression.Expressions
 
 	Scan6(requestId string, spans Spans2, reverse, distinctAfterProjection bool,
