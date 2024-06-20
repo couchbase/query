@@ -16,20 +16,37 @@ import (
 	"github.com/couchbase/query/value"
 )
 
+type VectorMetric string
+
 const (
-	EUCLIDEAN   = "EUCLIDEAN"
-	L2          = "L2"
-	COSINE_SIM  = "COSINE_SIM"
-	DOT_PRODUCT = "DOT_PRODUCT"
-	DEF_DIST    = "DEF_DIST"
+	EUCLIDEAN   VectorMetric = "euclidean"
+	L2          VectorMetric = "l2"
+	COSINE_SIM  VectorMetric = "cosine_sim"
+	DOT_PRODUCT VectorMetric = "dot_product"
+	DEF_DIST    VectorMetric = "def_dist"
+	EMPTY_DIST  VectorMetric = ""
 )
+
+func GetVectorMetric(arg string) (metric VectorMetric) {
+	switch strings.ToLower(arg) {
+	case "euclidean":
+		metric = EUCLIDEAN
+	case "l2":
+		metric = L2
+	case "cosine_sim":
+		metric = COSINE_SIM
+	case "dot_product":
+		metric = DOT_PRODUCT
+	}
+	return
+}
 
 type Knn struct {
 	FunctionBase
-	metric string
+	metric VectorMetric
 }
 
-func NewKnn(metric string, operands Expressions) Function {
+func NewKnn(metric VectorMetric, operands Expressions) Function {
 	var name string
 	switch metric {
 	case EUCLIDEAN:
@@ -42,23 +59,23 @@ func NewKnn(metric string, operands Expressions) Function {
 		name = "dot_product_dist"
 	case DEF_DIST:
 		name = "vector_dist"
-	case "":
+	case EMPTY_DIST:
 		name = "knn"
 	default:
 		name = "knn"
 	}
 
-	if metric == "" || metric == DEF_DIST {
+	if metric == EMPTY_DIST || metric == DEF_DIST {
 		// get metric (3rd argument)
 		// MinArgs()/MaxArgs() ensures len(operands) == 3
 		ev := operands[2].Value()
 		if ev != nil && ev.Type() == value.STRING {
-			metric = ev.ToString()
+			metric = GetVectorMetric(ev.ToString())
 		}
 	}
 
 	rv := &Knn{
-		metric: strings.ToUpper(metric),
+		metric: metric,
 	}
 	rv.Init(name, operands...)
 	rv.expr = rv
@@ -82,7 +99,7 @@ func (this *Knn) PropagatesNull() bool { return false }
 func (this *Knn) Indexable() bool      { return false }
 func (this *Knn) Type() value.Type     { return value.NUMBER }
 func (this *Knn) MinArgs() int {
-	if this.metric == "" || this.metric == DEF_DIST {
+	if this.metric == EMPTY_DIST || this.metric == DEF_DIST {
 		return 3
 	}
 	return 2
@@ -103,10 +120,10 @@ func (this *Knn) ValidOperands() error {
 	case EUCLIDEAN, L2, COSINE_SIM, DOT_PRODUCT:
 		return nil
 	}
-	return errors.NewVectorFuncInvalidMetric(this.name, this.metric)
+	return errors.NewVectorFuncInvalidMetric(this.name, string(this.metric))
 }
 
-func (this *Knn) Metric() string {
+func (this *Knn) Metric() VectorMetric {
 	return this.metric
 }
 
@@ -118,7 +135,7 @@ func (this *Knn) Evaluate(item value.Value, context Context) (value.Value, error
 	return vectorDistance(this.metric, this.operands, item, context)
 }
 
-func vectorDistance(metric string, operands Expressions, item value.Value, context Context) (value.Value, error) {
+func vectorDistance(metric VectorMetric, operands Expressions, item value.Value, context Context) (value.Value, error) {
 	var queryVec value.Value
 	vec, err := operands[0].Evaluate(item, context)
 	if err == nil {
@@ -177,10 +194,10 @@ func vectorDistance(metric string, operands Expressions, item value.Value, conte
 
 type Ann struct {
 	FunctionBase
-	metric string
+	metric VectorMetric
 }
 
-func NewAnn(metric string, operands Expressions) Function {
+func NewAnn(metric VectorMetric, operands Expressions) Function {
 	var name string
 	switch metric {
 	case EUCLIDEAN:
@@ -193,24 +210,24 @@ func NewAnn(metric string, operands Expressions) Function {
 		name = "approx_dot_product_dist"
 	case DEF_DIST:
 		name = "approx_vector_dist"
-	case "":
+	case EMPTY_DIST:
 		name = "ann"
 	default:
 		name = "ann"
 	}
 
-	if metric == "" || metric == DEF_DIST {
+	if metric == EMPTY_DIST || metric == DEF_DIST {
 		// get metric (3rd argument)
 		// MinArgs() ensures len(operands) >= 3
 		if ev := operands[2].Value(); ev != nil {
 			if ev.Type() == value.STRING {
-				metric = ev.ToString()
+				metric = GetVectorMetric(ev.ToString())
 			}
 		}
 	}
 
 	rv := &Ann{
-		metric: strings.ToUpper(metric),
+		metric: metric,
 	}
 	rv.Init(name, operands...)
 	rv.expr = rv
@@ -234,7 +251,7 @@ func (this *Ann) PropagatesNull() bool { return false }
 func (this *Ann) Indexable() bool      { return false }
 func (this *Ann) Type() value.Type     { return value.NUMBER }
 func (this *Ann) MinArgs() int {
-	if this.metric == "" || this.metric == DEF_DIST {
+	if this.metric == EMPTY_DIST || this.metric == DEF_DIST {
 		return 3
 	}
 	return 2
@@ -255,10 +272,10 @@ func (this *Ann) ValidOperands() error {
 	case EUCLIDEAN, L2, COSINE_SIM, DOT_PRODUCT:
 		return nil
 	}
-	return errors.NewVectorFuncInvalidMetric(this.name, this.metric)
+	return errors.NewVectorFuncInvalidMetric(this.name, string(this.metric))
 }
 
-func (this *Ann) Metric() string {
+func (this *Ann) Metric() VectorMetric {
 	return this.metric
 }
 

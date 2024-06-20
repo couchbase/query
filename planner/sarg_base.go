@@ -9,8 +9,6 @@
 package planner
 
 import (
-	"strings"
-
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/expression"
 	base "github.com/couchbase/query/plannerbase"
@@ -263,7 +261,7 @@ func (this *sarg) VisitFunction(pred expression.Function) (interface{}, error) {
 			if index6, ok := this.index.(datastore.Index6); ok {
 				fld := pred.Operands()[0]
 				if fld.EquivalentTo(this.key) &&
-					string(index6.VectorDistanceType()) == strings.ToLower(pred.Metric()) {
+					index6.VectorDistanceType() == datastore.GetVectorDistanceType(pred.Metric()) {
 					rv := _WHOLE_SPANS.Copy().(*TermSpans)
 					rv.ann = pred
 					rv.annPos = this.keyPos

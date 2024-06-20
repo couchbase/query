@@ -1046,3 +1046,17 @@ func GetIndexKeys(index Index) (indexKeys IndexKeys) {
 
 	return flattenIndexKeys
 }
+
+func GetVectorDistanceType(metric expression.VectorMetric) (distanceType IndexDistanceType) {
+	switch metric {
+	case expression.EUCLIDEAN:
+		distanceType = IX_DIST_EUCLIDEAN
+	case expression.L2:
+		distanceType = IX_DIST_L2
+	case expression.COSINE_SIM:
+		distanceType = IX_DIST_COSINE_SIM
+	case expression.DOT_PRODUCT:
+		distanceType = IX_DIST_DOT_PRODUCT
+	}
+	return
+}
