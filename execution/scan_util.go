@@ -120,11 +120,42 @@ func getIndexVector(planIndexVector *plan.IndexVector, indexVector *datastore.In
 
 	queryVector := make([]float32, len(qvArr))
 	for i, v := range qvArr {
-		val := value.NewValue(v)
-		if val.Type() != value.NUMBER {
-			return errors.NewInvalidQueryVector(fmt.Sprintf("array element (%v) not a number", val))
+		var vf float64
+		switch val := v.(type) {
+		case int:
+			vf = float64(val)
+		case int64:
+			vf = float64(val)
+		case int32:
+			vf = float64(val)
+		case int16:
+			vf = float64(val)
+		case int8:
+			vf = float64(val)
+		case uint:
+			vf = float64(val)
+		case uint64:
+			vf = float64(val)
+		case uint32:
+			vf = float64(val)
+		case uint16:
+			vf = float64(val)
+		case uint8:
+			vf = float64(val)
+		case uintptr:
+			vf = float64(val)
+		case float32:
+			vf = float64(val)
+		case float64:
+			vf = val
+		case value.Value:
+			if val.Type() != value.NUMBER {
+				return errors.NewInvalidQueryVector(fmt.Sprintf("array element (%v) not a number", val))
+			}
+			vf = value.AsNumberValue(val).Float64()
+		default:
+			return errors.NewInvalidQueryVector(fmt.Sprintf("array element (%v of type %T) not a valid type", val, val))
 		}
-		vf := value.AsNumberValue(val).Float64()
 		if vf < -math.MaxFloat32 || vf > math.MaxFloat32 {
 			return errors.NewInvalidQueryVector(fmt.Sprintf("array element (%v) not a float32", vf))
 		}
