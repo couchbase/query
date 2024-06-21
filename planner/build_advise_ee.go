@@ -126,6 +126,12 @@ func generateIdxAdvice(queryInfos map[expression.HasExpressions]*advisor.QueryIn
 		nonCoverIdxes.SetQueryContext(queryContext)
 	}
 	recIndexes = append(recIndexes, nonCoverIdxes...)
+	nvector := 0
+	for _, info := range nonCoverIdxes {
+		if info.HasVectorInfo() {
+			nvector++
+		}
+	}
 
 	for _, v := range queryInfos {
 		if !v.IsKeyspaceFound() {
@@ -158,7 +164,9 @@ func generateIdxAdvice(queryInfos map[expression.HasExpressions]*advisor.QueryIn
 			}
 		}
 
-		if len(v.GetUncoverIndexes()) > 0 {
+		// in case of vector index already suggested above, do not include additional
+		// indexes (without vector index key)
+		if len(v.GetUncoverIndexes()) > 0 && nvector == 0 {
 			v.GetUncoverIndexes().SetQueryContext(queryContext)
 			for _, uci := range v.GetUncoverIndexes() {
 				if uci.IsFound(nonCoverIdxes, false) {

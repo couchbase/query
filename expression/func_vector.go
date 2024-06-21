@@ -127,6 +127,10 @@ func (this *Knn) Metric() VectorMetric {
 	return this.metric
 }
 
+func (this *Knn) Field() Expression {
+	return this.operands[0]
+}
+
 func (this *Knn) QueryVector() Expression {
 	return this.operands[1]
 }
@@ -277,6 +281,10 @@ func (this *Ann) ValidOperands() error {
 
 func (this *Ann) Metric() VectorMetric {
 	return this.metric
+}
+
+func (this *Ann) Field() Expression {
+	return this.operands[0]
 }
 
 func (this *Ann) QueryVector() Expression {
