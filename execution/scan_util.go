@@ -120,10 +120,7 @@ func getIndexVector(planIndexVector *plan.IndexVector, indexVector *datastore.In
 
 	queryVector := make([]float32, len(qvArr))
 	for i, v := range qvArr {
-		val, ok := v.(value.Value)
-		if !ok {
-			return errors.NewInvalidQueryVector(fmt.Sprintf("array element (%v of type %T) not a value", v, v))
-		}
+		val := value.NewValue(v)
 		if val.Type() != value.NUMBER {
 			return errors.NewInvalidQueryVector(fmt.Sprintf("array element (%v) not a number", val))
 		}
