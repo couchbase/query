@@ -138,10 +138,15 @@ func generateIdxAdvice(queryInfos map[expression.HasExpressions]*advisor.QueryIn
 			cntKeyspaceNotFound += 1
 			continue
 		}
+		checkVector := v.HasVector()
+		hasVector := false
 		cIndexes := v.GetCurIndexes()
 		if len(cIndexes) > 0 {
 			curIdxMap := make(map[string]iaplan.IndexInfos, len(cIndexes))
 			for _, cIdx := range cIndexes {
+				if checkVector && cIdx.HasVectorInfo() {
+					hasVector = true
+				}
 				idxName := cIdx.GetIndexName()
 				if infos, ok := curIdxMap[idxName]; ok {
 					found := false
@@ -164,9 +169,9 @@ func generateIdxAdvice(queryInfos map[expression.HasExpressions]*advisor.QueryIn
 			}
 		}
 
-		// in case of vector index already suggested above, do not include additional
-		// indexes (without vector index key)
-		if len(v.GetUncoverIndexes()) > 0 && nvector == 0 {
+		// if a query references a vector term, and vector index is already suggested above, or
+		// vector index already exists, do not advise additional indexes without vector index key
+		if len(v.GetUncoverIndexes()) > 0 && nvector == 0 && !hasVector {
 			v.GetUncoverIndexes().SetQueryContext(queryContext)
 			for _, uci := range v.GetUncoverIndexes() {
 				if uci.IsFound(nonCoverIdxes, false) {
