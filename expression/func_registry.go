@@ -497,4 +497,8 @@ var _FUNCTIONS = map[string]Function{
 	"approx_l2_dist":          &Ann{metric: L2},
 	"approx_cosine_sim_dist":  &Ann{metric: COSINE_SIM},
 	"approx_dot_product_dist": &Ann{metric: DOT_PRODUCT},
+	"decode_vector":           &DecodeVector{},
+	"vector_decode":           &DecodeVector{},
+	"encode_vector":           &EncodeVector{},
+	"vector_encode":           &EncodeVector{},
 }

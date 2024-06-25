@@ -9,6 +9,9 @@
 package expression
 
 import (
+	"bytes"
+	"encoding/base64"
+	"encoding/binary"
 	"math"
 	"strings"
 
@@ -26,6 +29,8 @@ const (
 	DEF_DIST    VectorMetric = "def_dist"
 	EMPTY_DIST  VectorMetric = ""
 )
+
+const FLOAT32_SIZE = 4
 
 func GetVectorMetric(arg string) (metric VectorMetric) {
 	switch strings.ToLower(arg) {
@@ -428,4 +433,143 @@ func (this *IsVector) Evaluate(item value.Value, context Context) (value.Value, 
 		}
 	}
 
+}
+
+///////////////////////////////////////////////////
+//
+// DecodeVector
+//
+///////////////////////////////////////////////////
+
+type DecodeVector struct {
+	UnaryFunctionBase
+}
+
+func NewDecodeVector(operand Expression) Function {
+	rv := &DecodeVector{}
+	rv.Init("decode_vector", operand)
+
+	rv.expr = rv
+	return rv
+}
+
+/*
+Visitor pattern.
+*/
+func (this *DecodeVector) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *DecodeVector) Type() value.Type { return value.ARRAY }
+
+func (this *DecodeVector) Evaluate(item value.Value, context Context) (value.Value, error) {
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if arg.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else if arg.Type() != value.STRING {
+		return value.NULL_VALUE, nil
+	}
+
+	// We first decode the encoded string into a byte array.
+	// The array is expected to be divisible by FLOAT32_SIZE because each float32
+	// should occupy 4 bytes
+	decodedString, err := base64.StdEncoding.DecodeString(arg.ToString())
+	if err != nil || len(decodedString)%FLOAT32_SIZE != 0 {
+		return value.NULL_VALUE, nil
+	}
+
+	dims := int(len(decodedString) / FLOAT32_SIZE)
+	decodedVector := make([]interface{}, dims)
+
+	// We iterate through the array 4 bytes at a time and convert each of
+	// them to a float32 value by reading them in a little endian notation
+	offset := 0
+	for i := 0; i < dims; i++ {
+		bytes := decodedString[offset : offset+FLOAT32_SIZE]
+		decodedVector[i] = float64(math.Float32frombits(binary.LittleEndian.Uint32(bytes)))
+		offset += FLOAT32_SIZE
+	}
+	return value.NewValue(decodedVector), nil
+}
+
+/*
+Factory method pattern.
+*/
+func (this *DecodeVector) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return NewDecodeVector(operands[0])
+	}
+}
+
+///////////////////////////////////////////////////
+//
+// EncodeVector
+//
+///////////////////////////////////////////////////
+
+type EncodeVector struct {
+	UnaryFunctionBase
+}
+
+func NewEncodeVector(operand Expression) Function {
+	rv := &EncodeVector{}
+	rv.Init("encode_vector", operand)
+
+	rv.expr = rv
+	return rv
+}
+
+/*
+Visitor pattern.
+*/
+func (this *EncodeVector) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *EncodeVector) Type() value.Type { return value.STRING }
+
+func (this *EncodeVector) Evaluate(item value.Value, context Context) (value.Value, error) {
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if arg.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else if arg.Type() != value.ARRAY {
+		return value.NULL_VALUE, nil
+	}
+
+	buf := new(bytes.Buffer)
+	for i := 0; ; i++ {
+		v, ok := arg.Index(i)
+		if !ok {
+			break
+		} else {
+			if v.Type() != value.NUMBER {
+				return value.NULL_VALUE, nil
+			}
+			f := value.AsNumberValue(v).Float64()
+			if f < -math.MaxFloat32 || f > math.MaxFloat32 {
+				return value.NULL_VALUE, nil
+			}
+			// Convert each float64 to float32 since we're working with 32-bit floating points.
+			if err := binary.Write(buf, binary.LittleEndian, float32(f)); err != nil {
+				return value.NULL_VALUE, nil
+			}
+		}
+	}
+
+	// Encode the byte slice to Base64.
+	str := base64.StdEncoding.EncodeToString(buf.Bytes())
+	return value.NewValue(str), nil
+}
+
+/*
+Factory method pattern.
+*/
+func (this *EncodeVector) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return NewEncodeVector(operands[0])
+	}
 }
