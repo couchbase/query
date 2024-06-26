@@ -432,6 +432,12 @@ func NewValue(val interface{}) Value {
 		return val
 	case int64:
 		return intValue(val)
+	case float32:
+		if IsInt(float64(val)) {
+			return intValue(int64(val))
+		} else {
+			return floatValue(float64(val))
+		}
 	case float64:
 		if IsInt(val) {
 			return intValue(int64(val))
