@@ -23,11 +23,10 @@ var _EMPTY_SPAN2 *datastore.Span2 = &datastore.Span2{nil, datastore.Ranges2{&dat
 
 type IndexScan2 struct {
 	base
-	conn     *datastore.IndexConnection
-	plan     *plan.IndexScan2
-	children []Operator
-	keys     map[string]bool
-	pool     bool
+	conn *datastore.IndexConnection
+	plan *plan.IndexScan2
+	keys map[string]bool
+	pool bool
 }
 
 func NewIndexScan2(plan *plan.IndexScan2, context *Context) *IndexScan2 {

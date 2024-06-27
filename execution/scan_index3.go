@@ -25,12 +25,11 @@ type IndexScan3 struct {
 	base
 	buildBitFilterBase
 	probeBitFilterBase
-	conn     *datastore.IndexConnection
-	plan     *plan.IndexScan3
-	children []Operator
-	keys     map[string]bool
-	pool     bool
-	results  []*datastore.IndexEntry
+	conn    *datastore.IndexConnection
+	plan    *plan.IndexScan3
+	keys    map[string]bool
+	pool    bool
+	results []*datastore.IndexEntry
 }
 
 func NewIndexScan3(plan *plan.IndexScan3, context *Context) *IndexScan3 {
