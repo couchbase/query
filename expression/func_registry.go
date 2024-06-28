@@ -469,7 +469,8 @@ var _FUNCTIONS = map[string]Function{
 	"advisor": &Advisor{},
 
 	// General
-	"len": &Len{},
+	"len":     &Len{},
+	"finderr": &Finderr{},
 
 	// Infer
 	"infer_value": &InferValue{},

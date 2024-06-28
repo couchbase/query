@@ -2641,7 +2641,7 @@ func GetReferences(exs Expressions, item value.AnnotatedValue, context Context, 
 					exp, err := context.Parse(str)
 					if err != nil {
 						if strings.Index(err.Error(), "syntax error") != -1 {
-							err = errors.NewParsingError(err, " "+str)
+							err = errors.NewParsingError(err, str)
 						}
 						return nil, false, err
 					}

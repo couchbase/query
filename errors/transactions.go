@@ -36,7 +36,7 @@ func NewMemoryAllocationError(msg string) Error {
 }
 
 func NewTranCENotsupported() Error {
-	return &err{level: EXCEPTION, ICode: E_TRANCE_NOTSUPPORTED, IKey: "transaction.ce.not_supported",
+	return &err{level: EXCEPTION, ICode: E_TRAN_CE_NOTSUPPORTED, IKey: "transaction.ce.not_supported",
 		InternalMsg:    fmt.Sprintf("Transactions are not supported in Community Edition"),
 		InternalCaller: CallerN(1)}
 }

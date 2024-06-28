@@ -82,4 +82,10 @@ GoModBuild (TARGET cbq PACKAGE github.com/couchbase/query/shell/cbq
   CGO_LIBRARY_DIRS "${CGO_LIBRARY_DIRS}"
   LDFLAGS "-X github.com/couchbase/query/shell/cbq/command.SHELL_VERSION=${PRODUCT_VERSION}")
 
+GoModBuild (TARGET finderr PACKAGE github.com/couchbase/query/finderr
+  INSTALL_PATH bin
+  GOVERSION ${GOVERSION}
+  CGO_INCLUDE_DIRS "${CGO_INCLUDE_DIRS}"
+  CGO_LIBRARY_DIRS "${CGO_LIBRARY_DIRS}")
+
 AddMetricsMetadata (JSON etc/metrics_metadata.json COMPONENT n1ql)

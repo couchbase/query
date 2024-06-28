@@ -132,7 +132,7 @@ func (this *SemChecker) visitAggregateFunction(agg algebra.Aggregate) (err error
 			 * UNBOUNDED FOLLOWING is not allowed in start
 			 * UNBOUNDED PRECEDING is not allowed in end
 			 */
-			return errors.NewWindowSemanticError(aggName, "invlaid window frame.", "",
+			return errors.NewWindowSemanticError(aggName, "invalid window frame.", "",
 				"semantics.visit_aggregate_function.windowframe")
 		}
 
@@ -147,12 +147,12 @@ func (this *SemChecker) visitAggregateFunction(agg algebra.Aggregate) (err error
 			 *       As a start point, CURRENT ROW then end point cannot be value_expr PRECEDING.
 			 *       As a end point point, CURRENT ROW then start point cannot be value_expr FOLLOWING..
 			 */
-			return errors.NewWindowSemanticError(aggName, "invlaid window frame.", "",
+			return errors.NewWindowSemanticError(aggName, "invalid window frame.", "",
 				"semantics.visit_aggregate_function.windowframe")
 		}
 	} else if wfes[0].HasModifier(algebra.WINDOW_FRAME_UNBOUNDED_FOLLOWING | algebra.WINDOW_FRAME_VALUE_FOLLOWING) {
 		// UNBOUNDED FOLLOWING, value_expr FOLLOWING allowed only in BETWEEN clause
-		return errors.NewWindowSemanticError(aggName, "invlaid frame.", "", "semantics.visit_aggregate_function.windowframe")
+		return errors.NewWindowSemanticError(aggName, "invalid frame.", "", "semantics.visit_aggregate_function.windowframe")
 	}
 
 	for _, wfe := range wfes {

@@ -307,7 +307,7 @@ func ExecShellCmd(line string, liner *liner.State) (errors.ErrorCode, string) {
 			line = r.Replace(line)
 
 		} else {
-			return errors.E_SHELL_UNBALANCED_PAREN, ""
+			return errors.E_SHELL_UNBALANCED_QUOTES, ""
 		}
 
 	}
