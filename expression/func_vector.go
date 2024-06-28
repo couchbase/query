@@ -442,12 +442,12 @@ func (this *IsVector) Evaluate(item value.Value, context Context) (value.Value, 
 ///////////////////////////////////////////////////
 
 type DecodeVector struct {
-	UnaryFunctionBase
+	FunctionBase
 }
 
-func NewDecodeVector(operand Expression) Function {
+func NewDecodeVector(operands ...Expression) Function {
 	rv := &DecodeVector{}
-	rv.Init("decode_vector", operand)
+	rv.Init("decode_vector", operands...)
 
 	rv.expr = rv
 	return rv
@@ -461,21 +461,51 @@ func (this *DecodeVector) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *DecodeVector) Type() value.Type { return value.ARRAY }
+func (this *DecodeVector) MinArgs() int     { return 1 }
+func (this *DecodeVector) MaxArgs() int     { return 2 }
 
 func (this *DecodeVector) Evaluate(item value.Value, context Context) (value.Value, error) {
-	arg, err := this.operands[0].Evaluate(item, context)
-	if err != nil {
-		return nil, err
-	} else if arg.Type() == value.MISSING {
+	var decodeStr string
+	var byteOrder binary.ByteOrder
+	byteOrder = binary.BigEndian
+	null := false
+	missing := false
+
+	for i, op := range this.operands {
+		arg, err := op.Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		} else if arg.Type() == value.MISSING {
+			missing = true
+		} else if arg.Type() == value.NULL {
+			null = true
+		} else if !null && !missing {
+			if i == 0 {
+				if arg.Type() != value.STRING {
+					null = true
+				} else {
+					decodeStr = arg.ToString()
+				}
+			} else {
+				if arg.Type() != value.BOOLEAN {
+					null = true
+				} else if !arg.Truth() {
+					byteOrder = binary.LittleEndian
+				}
+			}
+		}
+	}
+
+	if missing {
 		return value.MISSING_VALUE, nil
-	} else if arg.Type() != value.STRING {
+	} else if null {
 		return value.NULL_VALUE, nil
 	}
 
 	// We first decode the encoded string into a byte array.
 	// The array is expected to be divisible by FLOAT32_SIZE because each float32
 	// should occupy 4 bytes
-	decodedString, err := base64.StdEncoding.DecodeString(arg.ToString())
+	decodedString, err := base64.StdEncoding.DecodeString(decodeStr)
 	if err != nil || len(decodedString)%FLOAT32_SIZE != 0 {
 		return value.NULL_VALUE, nil
 	}
@@ -483,14 +513,14 @@ func (this *DecodeVector) Evaluate(item value.Value, context Context) (value.Val
 	dims := int(len(decodedString) / FLOAT32_SIZE)
 	decodedVector := make([]interface{}, dims)
 
+	offset := 0
 	// We iterate through the array 4 bytes at a time and convert each of
 	// them to a float32 value by reading them in a little endian notation
-	offset := 0
 	for i := 0; i < dims; i++ {
-		bytes := decodedString[offset : offset+FLOAT32_SIZE]
-		decodedVector[i] = float64(math.Float32frombits(binary.LittleEndian.Uint32(bytes)))
+		decodedVector[i] = math.Float32frombits(byteOrder.Uint32(decodedString[offset : offset+FLOAT32_SIZE]))
 		offset += FLOAT32_SIZE
 	}
+
 	return value.NewValue(decodedVector), nil
 }
 
@@ -499,7 +529,7 @@ Factory method pattern.
 */
 func (this *DecodeVector) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
-		return NewDecodeVector(operands[0])
+		return NewDecodeVector(operands...)
 	}
 }
 
@@ -510,12 +540,12 @@ func (this *DecodeVector) Constructor() FunctionConstructor {
 ///////////////////////////////////////////////////
 
 type EncodeVector struct {
-	UnaryFunctionBase
+	FunctionBase
 }
 
-func NewEncodeVector(operand Expression) Function {
+func NewEncodeVector(operands ...Expression) Function {
 	rv := &EncodeVector{}
-	rv.Init("encode_vector", operand)
+	rv.Init("encode_vector", operands...)
 
 	rv.expr = rv
 	return rv
@@ -529,20 +559,50 @@ func (this *EncodeVector) Accept(visitor Visitor) (interface{}, error) {
 }
 
 func (this *EncodeVector) Type() value.Type { return value.STRING }
+func (this *EncodeVector) MinArgs() int     { return 1 }
+func (this *EncodeVector) MaxArgs() int     { return 2 }
 
 func (this *EncodeVector) Evaluate(item value.Value, context Context) (value.Value, error) {
-	arg, err := this.operands[0].Evaluate(item, context)
-	if err != nil {
-		return nil, err
-	} else if arg.Type() == value.MISSING {
+	var vec value.Value
+	var byteOrder binary.ByteOrder
+	byteOrder = binary.BigEndian
+	null := false
+	missing := false
+
+	for i, op := range this.operands {
+		arg, err := op.Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		} else if arg.Type() == value.MISSING {
+			missing = true
+		} else if arg.Type() == value.NULL {
+			null = true
+		} else if !null && !missing {
+			if i == 0 {
+				if arg.Type() != value.ARRAY {
+					null = true
+				} else {
+					vec = arg
+				}
+			} else {
+				if arg.Type() != value.BOOLEAN {
+					null = true
+				} else if !arg.Truth() {
+					byteOrder = binary.LittleEndian
+				}
+			}
+		}
+	}
+
+	if missing {
 		return value.MISSING_VALUE, nil
-	} else if arg.Type() != value.ARRAY {
+	} else if null {
 		return value.NULL_VALUE, nil
 	}
 
 	buf := new(bytes.Buffer)
 	for i := 0; ; i++ {
-		v, ok := arg.Index(i)
+		v, ok := vec.Index(i)
 		if !ok {
 			break
 		} else {
@@ -554,7 +614,7 @@ func (this *EncodeVector) Evaluate(item value.Value, context Context) (value.Val
 				return value.NULL_VALUE, nil
 			}
 			// Convert each float64 to float32 since we're working with 32-bit floating points.
-			if err := binary.Write(buf, binary.LittleEndian, float32(f)); err != nil {
+			if err := binary.Write(buf, byteOrder, float32(f)); err != nil {
 				return value.NULL_VALUE, nil
 			}
 		}
@@ -570,6 +630,6 @@ Factory method pattern.
 */
 func (this *EncodeVector) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
-		return NewEncodeVector(operands[0])
+		return NewEncodeVector(operands...)
 	}
 }
