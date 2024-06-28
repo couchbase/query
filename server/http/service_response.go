@@ -248,8 +248,10 @@ func (this *httpRequest) Execute(srvr *server.Server, context *execution.Context
 		// No need to wait for writer
 	case <-this.StopExecute():
 
-		// wait for operator before continuing
-		this.writer.getInternal()
+		if this.State() != server.ABEND {
+			// wait for operator before continuing
+			this.writer.getInternal()
+		}
 	case <-this.req.Context().Done():
 		this.Stop(server.CLOSED)
 

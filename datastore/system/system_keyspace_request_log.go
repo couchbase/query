@@ -9,8 +9,6 @@
 package system
 
 import (
-	"time"
-
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/distributed"
 	"github.com/couchbase/query/errors"
@@ -142,138 +140,23 @@ func (b *requestLogKeyspace) Fetch(keys []string, keysMap map[string]value.Annot
 				if userName != "" && !checkCompleted(entry, userName) {
 					return
 				}
-				item := value.NewAnnotatedValue(map[string]interface{}{
-					"requestId":       localKey,
-					"state":           entry.State,
-					"elapsedTime":     context.FormatDuration(entry.ElapsedTime),
-					"serviceTime":     context.FormatDuration(entry.ServiceTime),
-					"resultCount":     entry.ResultCount,
-					"resultSize":      entry.ResultSize,
-					"errorCount":      entry.ErrorCount,
-					"requestTime":     entry.Time.Format(expression.DEFAULT_FORMAT),
-					"scanConsistency": entry.ScanConsistency,
-					"n1qlFeatCtrl":    entry.FeatureControls,
-				})
-				if node != "" {
-					item.SetField("node", node)
+				doc := entry.Format(true, false, context.DurationStyle()).(map[string]interface{})
+				doc["requestId"] = localKey
+				t, ok := doc["timings"]
+				if ok {
+					delete(doc, "timings")
 				}
-				if entry.ClientId != "" {
-					item.SetField("clientContextID", entry.ClientId)
+				o, ook := doc["optimizerEstimates"]
+				if ook {
+					delete(doc, "optimizerEstimates")
 				}
-				if entry.Statement != "" {
-					item.SetField("statement", entry.Statement)
-				}
-				if entry.StatementType != "" {
-					item.SetField("statementType", entry.StatementType)
-				}
-				if entry.QueryContext != "" {
-					item.SetField("queryContext", entry.QueryContext)
-				}
-				if entry.UseFts {
-					item.SetField("useFts", entry.UseFts)
-				}
-				if entry.UseCBO {
-					item.SetField("useCBO", entry.UseCBO)
-				}
-				if entry.UseReplica == value.TRUE {
-					item.SetField("useReplica", value.TristateToString(entry.UseReplica))
-				}
-				if entry.TxId != "" {
-					item.SetField("txid", entry.TxId)
-				}
-				if entry.TransactionElapsedTime > 0 {
-					item.SetField("transactionElapsedTime", context.FormatDuration(entry.TransactionElapsedTime))
-				}
-				if entry.TransactionRemainingTime > 0 {
-					item.SetField("transactionRemainingTime", context.FormatDuration(entry.TransactionRemainingTime))
-				}
-				if entry.ThrottleTime > time.Duration(0) {
-					item.SetField("throttleTime", context.FormatDuration(entry.ThrottleTime))
-				}
-				if entry.CpuTime > time.Duration(0) {
-					item.SetField("cpuTime", context.FormatDuration(entry.CpuTime))
-				}
-				if entry.IoTime > time.Duration(0) {
-					item.SetField("ioTime", context.FormatDuration(entry.IoTime))
-				}
-				if entry.WaitTime > time.Duration(0) {
-					item.SetField("waitTime", context.FormatDuration(entry.WaitTime))
-				}
-				if entry.PreparedName != "" {
-					item.SetField("preparedName", entry.PreparedName)
-					item.SetField("preparedText", entry.PreparedText)
-				}
-				if entry.Mutations != 0 {
-					item.SetField("mutations", entry.Mutations)
-				}
-				if entry.PhaseTimes != nil {
-					// adjust durations to current format
-					m := make(map[string]interface{}, len(entry.PhaseTimes))
-					for k, v := range entry.PhaseTimes {
-						if d, ok := v.(time.Duration); ok {
-							m[k] = context.FormatDuration(d)
-						} else {
-							m[k] = v
-						}
-					}
-					item.SetField("phaseTimes", m)
-				}
-				if entry.PhaseCounts != nil {
-					item.SetField("phaseCounts", entry.PhaseCounts)
-				}
-				if entry.PhaseOperators != nil {
-					item.SetField("phaseOperators", entry.PhaseOperators)
-				}
-				if entry.UsedMemory != 0 {
-					item.SetField("usedMemory", entry.UsedMemory)
-				}
-				if entry.SessionMemory != 0 {
-					item.SetField("sessionMemory", entry.SessionMemory)
-				}
-				if entry.PositionalArgs != nil {
-					item.SetField("positionalArgs", entry.PositionalArgs)
-				}
-				if entry.NamedArgs != nil {
-					item.SetField("namedArgs", entry.NamedArgs)
-				}
-				if entry.Users != "" {
-					item.SetField("users", entry.Users)
-				}
-				if entry.RemoteAddr != "" {
-					item.SetField("remoteAddr", entry.RemoteAddr)
-				}
-				if entry.UserAgent != "" {
-					item.SetField("userAgent", entry.UserAgent)
-				}
-				if entry.Tag != "" {
-					item.SetField("~tag", entry.Tag)
-				}
-				if entry.MemoryQuota != 0 {
-					item.SetField("memoryQuota", entry.MemoryQuota)
-				}
-				if entry.Errors != nil {
-					errors := make([]value.Value, len(entry.Errors))
-					for i, e := range entry.Errors {
-						errors[i] = value.NewValue(e)
-					}
-					item.SetField("errors", errors)
-				}
-				if entry.Qualifier != "" {
-					item.SetField("~qualifier", entry.Qualifier)
-				}
-				if len(entry.Analysis) != 0 {
-					item.SetField("~analysis", entry.Analysis)
-				}
-
+				item := value.NewAnnotatedValue(doc)
 				item.SetMetaField(value.META_KEYSPACE, b.fullName)
-				timings := entry.Timings()
-				if timings != nil {
-					item.SetMetaField(value.META_PLAN,
-						value.ApplyDurationStyleToValue(context.DurationStyle(), value.NewValue(timings)))
+				if ok {
+					item.SetMetaField(value.META_PLAN, value.NewValue(t))
 				}
-				optEstimates := entry.OptEstimates()
-				if optEstimates != nil {
-					item.SetMetaField(value.META_OPT_ESTIMATES, value.NewValue(optEstimates))
+				if ook {
+					item.SetMetaField(value.META_OPT_ESTIMATES, value.NewValue(o))
 				}
 				item.SetId(key)
 				keysMap[key] = item

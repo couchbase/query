@@ -168,6 +168,7 @@ func (g *gometricsAccountingStore) Vitals(style util.DurationStyle) (map[string]
 		rv[n] = v
 	}
 	ffdc.Stats("ffdc.", rv, false)
+	server.RequestsFileStreamStats(rv)
 	g.Unlock()
 	return rv, nil
 }

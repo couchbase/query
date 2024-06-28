@@ -32,7 +32,6 @@ import (
 	"github.com/couchbase/query/execution"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/logging"
-	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/tenant"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
@@ -63,7 +62,6 @@ type RequestLogEntry struct {
 	QueryContext             string
 	Statement                string
 	StatementType            string
-	Plan                     *plan.Prepared
 	State                    string
 	ScanConsistency          string
 	TxId                     string
@@ -121,6 +119,7 @@ type RequestLog struct {
 	cache            *util.GenCache
 	handlers         map[string]*handler
 	maximumPlanSize  int
+	stream           requestLogStream
 }
 
 var requestLog = &RequestLog{}
@@ -695,7 +694,7 @@ func LogRequest(request_time, service_time, transactionElapsedTime time.Duration
 
 	requestLog.cache.Add(re, id, nil)
 	for _, h := range requestLog.handlers {
-		go h.handlerFunc(re)
+		h.handlerFunc(re) // Deliberately synchronous to limit the number of routines spawned
 	}
 }
 
@@ -705,6 +704,128 @@ func (this *RequestLogEntry) Timings() []byte {
 
 func (this *RequestLogEntry) OptEstimates() map[string]interface{} {
 	return this.optEstimates
+}
+
+func (request *RequestLogEntry) Format(profiling bool, redact bool, durStyle util.DurationStyle) interface{} {
+	reqMap := map[string]interface{}{
+		"requestId": request.RequestId,
+	}
+	if request.ClientId != "" {
+		reqMap["clientContextID"] = request.ClientId
+	}
+	reqMap["state"] = request.State
+	reqMap["scanConsistency"] = request.ScanConsistency
+	if request.UseFts {
+		reqMap["useFts"] = request.UseFts
+	}
+	if request.UseCBO {
+		reqMap["useCBO"] = request.UseCBO
+	}
+	if request.UseReplica == value.TRUE {
+		reqMap["useReplica"] = value.TristateToString(request.UseReplica)
+	}
+	reqMap["n1qlFeatCtrl"] = request.FeatureControls
+	if request.QueryContext != "" {
+		reqMap["queryContext"] = request.QueryContext
+	}
+	if request.Statement != "" {
+		reqMap["statement"] = util.Redacted(request.Statement, redact)
+	}
+	if request.StatementType != "" {
+		reqMap["statementType"] = request.StatementType
+	}
+	if request.PreparedName != "" {
+		reqMap["preparedName"] = request.PreparedName
+		reqMap["preparedText"] = util.Redacted(request.PreparedText, redact)
+	}
+	if request.TxId != "" {
+		reqMap["txid"] = request.TxId
+	}
+	reqMap["requestTime"] = request.Time.Format(expression.DEFAULT_FORMAT)
+	reqMap["elapsedTime"] = util.FormatDuration(request.ElapsedTime, durStyle)
+	reqMap["serviceTime"] = util.FormatDuration(request.ServiceTime, durStyle)
+	if request.TransactionElapsedTime > 0 {
+		reqMap["transactionElapsedTime"] = util.FormatDuration(request.TransactionElapsedTime, durStyle)
+	}
+	if request.TransactionRemainingTime > 0 {
+		reqMap["transactionRemainingTime"] = util.FormatDuration(request.TransactionRemainingTime, durStyle)
+	}
+	reqMap["resultCount"] = request.ResultCount
+	reqMap["resultSize"] = request.ResultSize
+	reqMap["errorCount"] = request.ErrorCount
+	if request.Mutations != 0 {
+		reqMap["mutations"] = request.Mutations
+	}
+	if request.PhaseCounts != nil {
+		reqMap["phaseCounts"] = request.PhaseCounts
+	}
+	if request.PhaseOperators != nil {
+		reqMap["phaseOperators"] = request.PhaseOperators
+	}
+	if request.PhaseTimes != nil {
+		m := make(map[string]interface{}, len(request.PhaseTimes))
+		for k, v := range request.PhaseTimes {
+			if d, ok := v.(time.Duration); ok {
+				m[k] = util.FormatDuration(d, durStyle)
+			} else {
+				m[k] = v
+			}
+		}
+		reqMap["phaseTimes"] = m
+	}
+	if request.UsedMemory != 0 {
+		reqMap["usedMemory"] = request.UsedMemory
+	}
+	if request.Tag != "" {
+		reqMap["~tag"] = request.Tag
+	}
+
+	if profiling {
+		if request.NamedArgs != nil {
+			reqMap["namedArgs"] = util.InterfaceRedacted(request.NamedArgs, redact)
+		}
+		if request.PositionalArgs != nil {
+			reqMap["positionalArgs"] = util.InterfaceRedacted(request.PositionalArgs, redact)
+		}
+		timings := request.Timings()
+		if timings != nil {
+			reqMap["timings"] = util.InterfaceRedacted(string(util.ApplyDurationStyle(durStyle, timings)), redact)
+		}
+		if request.CpuTime > time.Duration(0) {
+			reqMap["cpuTime"] = util.FormatDuration(request.CpuTime, durStyle)
+		}
+		optEstimates := request.OptEstimates()
+		if optEstimates != nil {
+			reqMap["optimizerEstimates"] = value.NewValue(util.InterfaceRedacted(optEstimates, redact))
+		}
+		if request.Errors != nil {
+			// value.NewValue needs to understand the type
+			errs := make([]interface{}, len(request.Errors))
+			for i := range request.Errors {
+				errs[i] = request.Errors[i]
+			}
+			reqMap["errors"] = errs
+		}
+		if request.MemoryQuota != 0 {
+			reqMap["memoryQuota"] = request.MemoryQuota
+		}
+	}
+	if request.Users != "" {
+		reqMap["users"] = util.Redacted(request.Users, redact)
+	}
+	if request.RemoteAddr != "" {
+		reqMap["remoteAddr"] = request.RemoteAddr
+	}
+	if request.UserAgent != "" {
+		reqMap["userAgent"] = request.UserAgent
+	}
+	if request.ThrottleTime > time.Duration(0) {
+		reqMap["throttleTime"] = util.FormatDuration(request.ThrottleTime, durStyle)
+	}
+	if request.Qualifier != "" {
+		reqMap["~qualifier"] = request.Qualifier
+	}
+	return reqMap
 }
 
 // request qualifiers

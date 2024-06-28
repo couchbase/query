@@ -171,14 +171,6 @@ func (this Unsettable) Error() string {
 }
 
 /*
-The _MARSHAL_ERROR constant represents an error string that is output
-when there is an unexpected marshal error on valid data. Marshal
-returns the JSON encoding of any input interface. It is used while
-implementing the method MarshalJSON
-*/
-const _MARSHAL_ERROR = "Unexpected marshal error on valid data."
-
-/*
 A channel of Value objects
 */
 type ValueChannel chan Value
@@ -432,6 +424,12 @@ func NewValue(val interface{}) Value {
 		return val
 	case int64:
 		return intValue(val)
+	case float32:
+		if IsInt(float64(val)) {
+			return intValue(int64(val))
+		} else {
+			return floatValue(float64(val))
+		}
 	case float64:
 		if IsInt(val) {
 			return intValue(int64(val))
