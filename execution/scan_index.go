@@ -163,7 +163,11 @@ func newSpanScan(parent *IndexScan, span *plan.Span, context *Context) *spanScan
 }
 
 func (this *spanScan) Accept(visitor Visitor) (interface{}, error) {
-	panic(fmt.Sprintf("Internal operator spanScan visited by %v.", visitor))
+	// we can expect to be visited by post-execution analysis
+	if _, ok := visitor.(*execAnalyser); !ok {
+		panic(fmt.Sprintf("Internal operator spanScan visited by %T.", visitor))
+	}
+	return nil, nil
 }
 
 func (this *spanScan) Copy() Operator {
