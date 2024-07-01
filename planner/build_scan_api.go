@@ -97,7 +97,7 @@ func (this *builder) buildIndexProjection(entry *indexEntry, exprs expression.Ex
 
 	var size int
 	if entry != nil {
-		size = len(entry.keys)
+		size = len(entry.keys) + len(entry.includes)
 		primary = primary || entry.index.IsPrimary()
 	}
 
@@ -141,6 +141,18 @@ func (this *builder) buildIndexProjection(entry *indexEntry, exprs expression.Ex
 					}
 					allKeys = allKeys && curKey
 				}
+			}
+			for i, include := range entry.includes {
+				curKey := false
+				keyPos := i + len(entry.idxKeys)
+				for _, expr := range exprs {
+					if expr.DependsOn(include) {
+						indexProjection.EntryKeys = append(indexProjection.EntryKeys, keyPos)
+						curKey = true
+					}
+					break
+				}
+				allKeys = allKeys && curKey
 			}
 		}
 
@@ -218,11 +230,13 @@ func getIndexSize(index datastore.Index) int {
 
 func getIndexKeyNames(alias string, index datastore.Index, projection *plan.IndexProjection) ([]string, error) {
 	var keys datastore.IndexKeys
+	var includes expression.Expressions
 	var err error
 	if !index.IsPrimary() {
 		keys = datastore.GetIndexKeys(index)
+		includes = datastore.GetIndexIncludes(index)
 	}
-	indexKeyNames := make([]string, 0, len(keys)+1)
+	indexKeyNames := make([]string, 0, len(keys)+len(includes)+1)
 
 	formalizer := expression.NewSelfFormalizer(alias, nil)
 
@@ -232,7 +246,7 @@ func getIndexKeyNames(alias string, index datastore.Index, projection *plan.Inde
 		entryPos = 0
 		nextKey = projection.EntryKeys[entryPos]
 	}
-	for i := 0; i < len(keys); i++ {
+	for i := 0; i < len(keys)+len(includes); i++ {
 		useKey := true
 		done := false
 		if entryPos >= 0 {
@@ -259,7 +273,12 @@ func getIndexKeyNames(alias string, index datastore.Index, projection *plan.Inde
 		}
 
 		if useKey {
-			key := keys[i].Expr
+			var key expression.Expression
+			if i < len(keys) {
+				key = keys[i].Expr
+			} else {
+				key = includes[i-len(keys)]
+			}
 			formalizer.SetIndexScope()
 			key, err = formalizer.Map(key.Copy())
 			formalizer.ClearIndexScope()
@@ -312,7 +331,7 @@ func (this *builder) getIndexPartitionSets(partitionKeys expression.Expressions,
 		return nil, nil
 	}
 
-	entry := newIndexEntry(index, keys, max, nil, min, max, sum, nil, nil, nil, false, skeys)
+	entry := newIndexEntry(index, keys, nil, max, nil, min, max, sum, nil, nil, nil, false, skeys)
 
 	spans, exact, err := SargFor(pred, nil, entry, keys, false, nil, max, false, false,
 		baseKeyspace, this.keyspaceNames, false, this.aliases, this.context)

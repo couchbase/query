@@ -189,7 +189,7 @@ func (this *builder) buildIndexGroupAggs(entry *indexEntry, indexKeys datastore.
 	size := len(this.group.By()) + len(this.aggs)
 	idxProj := plan.NewIndexProjection(size, false)
 	dependsOnIndexKeys := make([]int, 0, len(indexKeys))
-	idNum := len(indexKeys)
+	idNum := len(indexKeys) + len(entry.includes)
 	nKeys := len(entry.keys)
 	if entry.index.IsPrimary() {
 		nKeys = 1

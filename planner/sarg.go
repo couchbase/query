@@ -68,7 +68,8 @@ func sargForOr(or *expression.Or, vpred expression.Expression, entry *indexEntry
 			setFlag := false
 			if max1 < max {
 				// check for non-sargable key in predicate
-				exprs, _, err := indexCoverExpressions(entry, keys[:max1], c, nil, baseKeyspace.Name(), context)
+				exprs, _, err := indexCoverExpressions(entry, keys[:max1], false, c, nil,
+					baseKeyspace.Name(), context)
 				if err != nil {
 					return nil, false, err
 				}

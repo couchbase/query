@@ -123,7 +123,8 @@ outer:
 		}
 
 		// Include filter covers
-		coveringExprs, filterCovers, err := indexCoverExpressions(entry, idxKeys, pred, origPred, alias, this.context)
+		coveringExprs, filterCovers, err := indexCoverExpressions(entry, idxKeys, true, pred,
+			origPred, alias, this.context)
 		if err != nil {
 			return nil, 0, err
 		}
@@ -761,7 +762,7 @@ func mapFilterCovers(fc map[expression.Expression]value.Value, fullCover bool) m
 	return rv
 }
 
-func indexCoverExpressions(entry *indexEntry, keys datastore.IndexKeys,
+func indexCoverExpressions(entry *indexEntry, keys datastore.IndexKeys, inclInclude bool,
 	pred, origPred expression.Expression, keyspace string, context *PrepareContext) (
 	expression.Expressions, map[*expression.Cover]value.Value, error) {
 
@@ -788,7 +789,11 @@ func indexCoverExpressions(entry *indexEntry, keys datastore.IndexKeys,
 		}
 	}
 
-	exprs := make(expression.Expressions, 0, len(keys))
+	size := len(keys)
+	if inclInclude {
+		size += len(entry.includes)
+	}
+	exprs := make(expression.Expressions, 0, size)
 	for _, key := range keys {
 		if key.HasAttribute(datastore.IK_VECTOR) {
 			// only put any covered Ann expression; do not put the index key here since
@@ -802,6 +807,9 @@ func indexCoverExpressions(entry *indexEntry, keys datastore.IndexKeys,
 		} else {
 			exprs = append(exprs, key.Expr)
 		}
+	}
+	if inclInclude && len(entry.includes) > 0 {
+		exprs = append(exprs, entry.includes...)
 	}
 
 	if entry.cond != nil {

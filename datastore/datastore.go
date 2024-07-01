@@ -1047,6 +1047,13 @@ func GetIndexKeys(index Index) (indexKeys IndexKeys) {
 	return flattenIndexKeys
 }
 
+func GetIndexIncludes(index Index) (includes expression.Expressions) {
+	if index6, ok := index.(Index6); ok {
+		includes = index6.Include()
+	}
+	return
+}
+
 func GetVectorDistanceType(metric expression.VectorMetric) (distanceType IndexDistanceType) {
 	switch metric {
 	case expression.EUCLIDEAN:

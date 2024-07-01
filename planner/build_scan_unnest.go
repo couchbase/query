@@ -395,7 +395,7 @@ func (this *builder) matchUnnest(node *algebra.KeyspaceTerm, pred, subset expres
 		baseKeyspace.AddUnnestIndex(entry.index, unnest.Alias())
 	}
 
-	entry = newIndexEntry(entry.index, keys, n, entry.partitionKeys, min, n, sum,
+	entry = newIndexEntry(entry.index, keys, entry.includes, n, entry.partitionKeys, min, n, sum,
 		entry.cond, entry.origCond, spans, exactSpans, skeys)
 	entry.setArrayKey(newArrayKey, 0)
 	entry.cardinality, entry.selectivity, entry.cost, entry.frCost, entry.size =

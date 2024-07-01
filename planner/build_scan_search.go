@@ -65,7 +65,7 @@ func (this *builder) buildSearchCovering(searchSargables []*indexEntry, node *al
 		return nil, 0, err
 	}
 
-	coveringExprs, filterCovers, err := indexCoverExpressions(entry, keys, pred, pred, alias, this.context)
+	coveringExprs, filterCovers, err := indexCoverExpressions(entry, keys, false, pred, pred, alias, this.context)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -308,7 +308,7 @@ func (this *builder) sargableSearchIndexes(indexes []datastore.Index, pred expre
 			if n > 0 {
 				//		exact = exact && !qprams
 				if entry == nil || n > en || size < esize {
-					entry = newIndexEntry(index, keys, len(keys), nil, 1, 1, 1,
+					entry = newIndexEntry(index, keys, nil, len(keys), nil, 1, 1, 1,
 						cond, origCond, nil, exact, []bool{true})
 					esize = size
 					en = n
@@ -475,7 +475,7 @@ func (this *builder) sargableFlexSearchIndex(idx datastore.Index, flexRequest *d
 
 	pushDownProperty := this.flexIndexPushDownProperty(resp)
 
-	entry = newIndexEntry(index, keys, 1, nil,
+	entry = newIndexEntry(index, keys, nil, 1, nil,
 		len(resp.StaticSargKeys),
 		len(resp.StaticSargKeys)+len(resp.DynamicSargKeys),
 		len(resp.StaticSargKeys)+len(resp.DynamicSargKeys),

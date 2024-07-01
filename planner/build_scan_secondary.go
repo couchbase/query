@@ -433,6 +433,7 @@ func (this *builder) sargableIndexes(indexes []datastore.Index, pred, subset, vp
 			continue
 		}
 
+		var includes expression.Expressions
 		var cond, origCond expression.Expression
 		var allKey *expression.All
 		var apos int
@@ -481,6 +482,13 @@ func (this *builder) sargableIndexes(indexes []datastore.Index, pred, subset, vp
 					vpos = i
 				}
 			}
+
+			includes = datastore.GetIndexIncludes(index)
+			for i, _ := range includes {
+				if includes[i], _, err = formalizeExpr(formalizer, includes[i], false); err != nil {
+					return
+				}
+			}
 		}
 
 		var partitionKeys expression.Expressions
@@ -504,7 +512,8 @@ func (this *builder) sargableIndexes(indexes []datastore.Index, pred, subset, vp
 		}
 
 		if n > 0 || allKey != nil {
-			entry := newIndexEntry(index, keys, n, partitionKeys, min, n, sum, cond, origCond, nil, exact, skeys)
+			entry := newIndexEntry(index, keys, includes, n, partitionKeys, min, n, sum,
+				cond, origCond, nil, exact, skeys)
 			if missing {
 				entry.SetFlags(IE_LEADINGMISSING, true)
 			}
@@ -1297,17 +1306,21 @@ func (this *builder) getIndexFilters(entry *indexEntry, node *algebra.KeyspaceTe
 	// skip array index keys
 	arrayKey := entry.HasFlag(IE_ARRAYINDEXKEY)
 	idxKeys := entry.idxKeys
+	includes := entry.includes
 	if entry.HasFlag(IE_VECTOR_KEY_SARGABLE) && !entry.IsPushDownProperty(_PUSHDOWN_ORDER) {
 		idxKeys, err = replaceVectorKey(idxKeys, entry)
 		if err != nil {
 			return
 		}
 	}
-	coverExprs := make(expression.Expressions, 0, len(idxKeys)+1)
+	coverExprs := make(expression.Expressions, 0, len(idxKeys)+len(includes)+1)
 	for _, key := range idxKeys {
 		if isArray, _, _ := key.Expr.IsArrayIndexKey(); !isArray && !key.HasAttribute(datastore.IK_VECTOR) {
 			coverExprs = append(coverExprs, key.Expr)
 		}
+	}
+	if len(includes) > 0 {
+		coverExprs = append(coverExprs, includes...)
 	}
 	if !index.IsPrimary() && id != nil {
 		coverExprs = append(coverExprs, id)
@@ -1589,6 +1602,7 @@ func (this *builder) buildIndexFilters(entry *indexEntry, baseKeyspace *base.Bas
 	}
 
 	keys := entry.idxKeys
+	includes := entry.includes
 	if hasVector && entry.HasFlag(IE_HAS_EARLY_ORDER) {
 		keys, err = replaceVectorKey(keys, entry)
 		if err != nil {
@@ -1611,6 +1625,8 @@ func (this *builder) buildIndexFilters(entry *indexEntry, baseKeyspace *base.Bas
 					if !keys[i].HasAttribute(datastore.IK_VECTOR) {
 						covers = append(covers, expression.NewIndexKey(keys[i].Expr))
 					}
+				} else if i < len(keys)+len(includes) {
+					covers = append(covers, expression.NewIndexKey(includes[i-len(keys)]))
 				} else {
 					return nil, nil, nil, nil, errors.NewPlanInternalError(fmt.Sprintf("buildIndexFilters: index projection "+
 						"key position %d beyond key length(%d)", i, len(keys)))
@@ -1618,11 +1634,14 @@ func (this *builder) buildIndexFilters(entry *indexEntry, baseKeyspace *base.Bas
 			}
 			covers = append(covers, expression.NewIndexKey(id))
 		} else {
-			covers = make(expression.Covers, 0, len(keys))
+			covers = make(expression.Covers, 0, len(keys)+len(includes))
 			for _, key := range keys {
 				if !key.HasAttribute(datastore.IK_VECTOR) {
 					covers = append(covers, expression.NewIndexKey(key.Expr))
 				}
+			}
+			for _, include := range includes {
+				covers = append(covers, expression.NewIndexKey(include))
 			}
 			if !entry.index.IsPrimary() {
 				covers = append(covers, expression.NewIndexKey(id))
