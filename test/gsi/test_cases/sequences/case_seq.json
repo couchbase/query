@@ -89,9 +89,9 @@
     {
         "statements": "SELECT meta().id,* FROM orders WHERE test_id = 'seq'",
         "results": [
-            {"id":"5","orders":{"id":6,"test_id":"seq"}},
-            {"id":"7","orders":{"id":7,"test_id":"seq"}},
-            {"id":"8","orders":{"id":8,"test_id":"seq"}}
+            {"id":"5","orders":{"id":5,"test_id":"seq"}},
+            {"id":"6","orders":{"id":6,"test_id":"seq"}},
+            {"id":"7","orders":{"id":7,"test_id":"seq"}}
         ]
     },
     {
