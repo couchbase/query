@@ -191,8 +191,10 @@ func vectorDistance(metric VectorMetric, operands Expressions, item value.Value,
 		}
 	}
 	switch metric {
-	case EUCLIDEAN, L2:
+	case EUCLIDEAN:
 		return value.NewValue(math.Sqrt(dist)), nil
+	case L2:
+		return value.NewValue(dist), nil
 	case DOT_PRODUCT:
 		return value.NewValue(dist), nil
 	case COSINE_SIM:
