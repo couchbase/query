@@ -59,14 +59,21 @@ func (this *ValueScan) RunOnce(context *Context, parent value.Value) {
 
 		pairs := this.plan.Values()
 
+		if parent == nil {
+			// use an empty parent to link the evaluation of the scan elements. This is particularly necessary for sequences as
+			// generated values are cached as an attachment in the parent and are therefore shared as expected
+			parent = value.EMPTY_ANNOTATED_OBJECT.CopyForUpdate()
+		}
 		for _, pair := range pairs {
-			key, err := pair.Key().Evaluate(parent, &this.operatorCtx)
+			// use a new parent copy to link the elements of each values pairing.
+			link := parent.CopyForUpdate()
+			key, err := pair.Key().Evaluate(link, &this.operatorCtx)
 			if err != nil {
 				context.Error(errors.NewEvaluationError(err, "KEY"))
 				return
 			}
 
-			val, err := pair.Value().Evaluate(parent, &this.operatorCtx)
+			val, err := pair.Value().Evaluate(link, &this.operatorCtx)
 			if err != nil {
 				context.Error(errors.NewEvaluationError(err, "VALUES"))
 				return
@@ -77,7 +84,7 @@ func (this *ValueScan) RunOnce(context *Context, parent value.Value) {
 			av.SetAttachment(value.ATT_VALUE, val)
 
 			if pair.Options() != nil {
-				options, err := pair.Options().Evaluate(parent, &this.operatorCtx)
+				options, err := pair.Options().Evaluate(link, &this.operatorCtx)
 				if err != nil {
 					context.Error(errors.NewEvaluationError(err, "OPTIONS"))
 					return
