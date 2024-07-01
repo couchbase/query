@@ -1364,6 +1364,8 @@ func (this *httpRequest) writeProfile(profile server.Profile, prefix, indent str
 	var newPrefix string
 	var e []byte
 	var err error
+	var analysis []interface{}
+	var timings execution.Operator
 
 	needComma := false
 	p := this.Profile()
@@ -1380,83 +1382,85 @@ func (this *httpRequest) writeProfile(profile server.Profile, prefix, indent str
 	if !this.writeString(",\n") || !this.writeString(prefix) || !this.writeString("\"profile\": {") {
 		return false
 	}
-	if p != server.ProfOff {
-		phaseTimes := this.RawPhaseTimes()
-		if phaseTimes != nil {
-			for k, v := range phaseTimes {
-				phaseTimes[k] = util.FormatDuration(v.(time.Duration), this.DurationStyle())
-			}
-			if indent != "" {
-				e, err = json.MarshalIndent(phaseTimes, "\t", indent)
-			} else {
-				e, err = json.Marshal(phaseTimes)
-			}
-			if err != nil || !this.writer.printf("%s\"phaseTimes\": %s", newPrefix, e) {
-				logging.Infof("Error writing phaseTimes: %v", err)
-			}
-			needComma = true
+	timings = this.GetTimings()
+	if timings != nil {
+		analysis, err = execution.AnalyseExecution(timings)
+		if err != nil {
+			analysis = nil
 		}
-		phaseCounts := this.FmtPhaseCounts()
-		if phaseCounts != nil {
-			if needComma && !this.writeString(",") {
-				return false
-			}
-			if indent != "" {
-				e, err = json.MarshalIndent(phaseCounts, "\t", indent)
-			} else {
-				e, err = json.Marshal(phaseCounts)
-			}
-			if err != nil || !this.writer.printf("%s\"phaseCounts\": %s", newPrefix, e) {
-				logging.Infof("Error writing phaseCounts: %v", err)
-			}
-			needComma = true
+	}
+	phaseTimes := this.RawPhaseTimes()
+	if phaseTimes != nil {
+		for k, v := range phaseTimes {
+			phaseTimes[k] = util.FormatDuration(v.(time.Duration), this.DurationStyle())
 		}
-		phaseOperators := this.FmtPhaseOperators()
-		if phaseOperators != nil {
-			if needComma && !this.writeString(",") {
-				return false
-			}
-			if indent != "" {
-				e, err = json.MarshalIndent(phaseOperators, "\t", indent)
-			} else {
-				e, err = json.Marshal(phaseOperators)
-			}
-			if err != nil || !this.writer.printf("%s\"phaseOperators\": %s", newPrefix, e) {
-				logging.Infof("Error writing phaseOperators: %v", err)
-			}
-			needComma = true
+		if indent != "" {
+			e, err = json.MarshalIndent(phaseTimes, "\t", indent)
+		} else {
+			e, err = json.Marshal(phaseTimes)
 		}
-
-		if needComma && !this.writeString(",") {
-			return false
-		}
-		if this.CpuTime() > time.Duration(0) &&
-			!this.writer.printf("%s\"cpuTime\": \"%s\",", newPrefix, util.FormatDuration(this.CpuTime(), this.DurationStyle())) {
-
-			logging.Infof("Error writing request CPU time")
-		}
-		if this.IoTime() > time.Duration(0) &&
-			!this.writer.printf("%s\"ioTime\": \"%s\",", newPrefix, util.FormatDuration(this.IoTime(), this.DurationStyle())) {
-
-			logging.Infof("Error writing request IO time")
-		}
-		if this.WaitTime() > time.Duration(0) &&
-			!this.writer.printf("%s\"waitTime\": \"%s\",", newPrefix, util.FormatDuration(this.WaitTime(), this.DurationStyle())) {
-
-			logging.Infof("Error writing request WAIT time")
-		}
-		if !this.writer.printf("%s\"requestTime\": \"%s\"", newPrefix, this.RequestTime().Format(expression.DEFAULT_FORMAT)) {
-			logging.Infof("Error writing request time")
-		}
-		if !this.writer.printf(",%s\"servicingHost\": \"%s\"", newPrefix,
-			tenant.EncodeNodeName(distributed.RemoteAccess().WhoAmI())) {
-
-			logging.Infof("Error writing servicing host")
+		if err != nil || !this.writer.printf("%s\"phaseTimes\": %s", newPrefix, e) {
+			logging.Infof("Error writing phaseTimes: %v", err)
 		}
 		needComma = true
 	}
+	phaseCounts := this.FmtPhaseCounts()
+	if phaseCounts != nil {
+		if needComma && !this.writeString(",") {
+			return false
+		}
+		if indent != "" {
+			e, err = json.MarshalIndent(phaseCounts, "\t", indent)
+		} else {
+			e, err = json.Marshal(phaseCounts)
+		}
+		if err != nil || !this.writer.printf("%s\"phaseCounts\": %s", newPrefix, e) {
+			logging.Infof("Error writing phaseCounts: %v", err)
+		}
+		needComma = true
+	}
+	phaseOperators := this.FmtPhaseOperators()
+	if phaseOperators != nil {
+		if needComma && !this.writeString(",") {
+			return false
+		}
+		if indent != "" {
+			e, err = json.MarshalIndent(phaseOperators, "\t", indent)
+		} else {
+			e, err = json.Marshal(phaseOperators)
+		}
+		if err != nil || !this.writer.printf("%s\"phaseOperators\": %s", newPrefix, e) {
+			logging.Infof("Error writing phaseOperators: %v", err)
+		}
+		needComma = true
+	}
+	if needComma && !this.writeString(",") {
+		return false
+	}
+	if !this.writer.printf("%s\"requestTime\": \"%s\"", newPrefix, this.RequestTime().Format(expression.DEFAULT_FORMAT)) {
+		logging.Infof("Error writing request time")
+	}
+	if !this.writer.printf(",%s\"servicingHost\": \"%s\"", newPrefix,
+		tenant.EncodeNodeName(distributed.RemoteAccess().WhoAmI())) {
+
+		logging.Infof("Error writing servicing host")
+	}
+	if this.CpuTime() > time.Duration(0) &&
+		!this.writer.printf(",%s\"cpuTime\": \"%s\"", newPrefix, util.FormatDuration(this.CpuTime(), this.DurationStyle())) {
+
+		logging.Infof("Error writing request CPU time")
+	}
+	if this.IoTime() > time.Duration(0) &&
+		!this.writer.printf(",%s\"ioTime\": \"%s\"", newPrefix, util.FormatDuration(this.IoTime(), this.DurationStyle())) {
+
+		logging.Infof("Error writing request IO time")
+	}
+	if this.WaitTime() > time.Duration(0) &&
+		!this.writer.printf(",%s\"waitTime\": \"%s\"", newPrefix, util.FormatDuration(this.WaitTime(), this.DurationStyle())) {
+
+		logging.Infof("Error writing request WAIT time")
+	}
 	if p == server.ProfOn || p == server.ProfBench {
-		timings := this.GetTimings()
 		if timings != nil {
 			if indent != "" {
 				e, err = json.MarshalIndent(timings, "\t", indent)
@@ -1482,17 +1486,16 @@ func (this *httpRequest) writeProfile(profile server.Profile, prefix, indent str
 				}
 			}
 			this.SetFmtOptimizerEstimates(optEstimates)
-			analysis, err := execution.AnalyseExecution(timings)
-			if err == nil && len(analysis) > 0 {
-				if indent != "" {
-					e, err = json.MarshalIndent(analysis, "\t", indent)
-				} else {
-					e, err = json.Marshal(analysis)
-				}
-				if err != nil || !this.writer.printf(",%s\"~analysis\": %s", newPrefix, e) {
-					logging.Infof("Error writing execution analysis: %v", err)
-				}
-			}
+		}
+	}
+	if len(analysis) > 0 {
+		if indent != "" {
+			e, err = json.MarshalIndent(analysis, "\t", indent)
+		} else {
+			e, err = json.Marshal(analysis)
+		}
+		if err != nil || !this.writer.printf(",%s\"~analysis\": %s", newPrefix, e) {
+			logging.Infof("Error writing execution analysis: %v", err)
 		}
 	}
 	if prefix != "" && !(this.writeString("\n") && this.writeString(prefix)) {

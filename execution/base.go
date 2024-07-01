@@ -178,6 +178,7 @@ type base struct {
 	stash           Operator
 	handlesInActive bool                      // whether new handles can be created under this operator
 	handles         map[*executionHandle]bool // stores all the currently active handles created under this operator
+	phaseSwitching  uint32                    // for serialising phase switching
 }
 
 const _ITEM_CAP = 512
@@ -1521,11 +1522,15 @@ func (this *base) cleanup(context *Context) {
 
 // phase switching
 func (this *base) switchPhase(p timePhases) {
+	if atomic.AddUint32(&this.phaseSwitching, 1) != 1 {
+		return
+	}
 	oldPhase := this.timePhase
 	this.timePhase = p
 
 	// not switching phases
 	if oldPhase == p {
+		atomic.StoreUint32(&this.phaseSwitching, 0)
 		return
 	}
 	oldTime := this.startTime
@@ -1534,6 +1539,7 @@ func (this *base) switchPhase(p timePhases) {
 	// starting or restarting after a stop
 	// either way, no time to accrue as of yet
 	if oldPhase == _NOTIME {
+		atomic.StoreUint32(&this.phaseSwitching, 0)
 		return
 	}
 
@@ -1553,6 +1559,7 @@ func (this *base) switchPhase(p timePhases) {
 		this.addKernTime(d)
 		this.operatorCtx.Context.recordWaitTime(d)
 	}
+	atomic.StoreUint32(&this.phaseSwitching, 0)
 }
 
 // accrues operators and phase times

@@ -682,14 +682,14 @@ func LogRequest(request_time, service_time, transactionElapsedTime time.Duration
 		re.Tag = tag
 	}
 	re.ThrottleTime = request.ThrottleTime()
+	if start != nil {
+		re.Analysis, _ = execution.AnalyseExecution(start)
+	}
 	re.CpuTime = request.CpuTime()
 	re.IoTime = request.IoTime()
 	re.WaitTime = request.WaitTime()
 	if qualifier != "" {
 		re.Qualifier = qualifier
-	}
-	if start != nil {
-		re.Analysis, _ = execution.AnalyseExecution(start)
 	}
 
 	requestLog.cache.Add(re, id, nil)
@@ -776,6 +776,9 @@ func (request *RequestLogEntry) Format(profiling bool, redact bool, durStyle uti
 	if request.UsedMemory != 0 {
 		reqMap["usedMemory"] = request.UsedMemory
 	}
+	if request.SessionMemory != 0 {
+		reqMap["sessionMemory"] = request.SessionMemory
+	}
 	if request.Tag != "" {
 		reqMap["~tag"] = request.Tag
 	}
@@ -793,6 +796,12 @@ func (request *RequestLogEntry) Format(profiling bool, redact bool, durStyle uti
 		}
 		if request.CpuTime > time.Duration(0) {
 			reqMap["cpuTime"] = util.FormatDuration(request.CpuTime, durStyle)
+		}
+		if request.IoTime > time.Duration(0) {
+			reqMap["ioTime"] = util.FormatDuration(request.IoTime, durStyle)
+		}
+		if request.WaitTime > time.Duration(0) {
+			reqMap["waitTime"] = util.FormatDuration(request.WaitTime, durStyle)
 		}
 		optEstimates := request.OptEstimates()
 		if optEstimates != nil {
@@ -824,6 +833,9 @@ func (request *RequestLogEntry) Format(profiling bool, redact bool, durStyle uti
 	}
 	if request.Qualifier != "" {
 		reqMap["~qualifier"] = request.Qualifier
+	}
+	if len(request.Analysis) > 0 {
+		reqMap["~analysis"] = request.Analysis
 	}
 	return reqMap
 }

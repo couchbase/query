@@ -14,11 +14,12 @@ import (
 )
 
 const (
-	_LARGE_COUNT    = 10000
-	_WT_THRESHOLD   = 10
-	_IO_THRESHOLD   = 2
-	_AUTH_THRESHOLD = time.Second
-	_IS_THRESHOLD   = 0.9
+	_LARGE_COUNT            = 10000
+	_WT_THRESHOLD           = 10
+	_IO_THRESHOLD           = 2
+	_AUTH_THRESHOLD         = time.Second
+	_IS_THRESHOLD           = 0.9
+	_MIN_TIME_FOR_REPORTING = time.Second
 )
 
 func AnalyseExecution(start Operator) ([]interface{}, error) {
@@ -29,13 +30,13 @@ func AnalyseExecution(start Operator) ([]interface{}, error) {
 		return nil, err
 	}
 
-	if a.ioTime > a.cpuTime*_IO_THRESHOLD {
+	if a.ioTime > a.cpuTime*_IO_THRESHOLD && a.ioTime > _MIN_TIME_FOR_REPORTING {
 		a.add("High IO time")
 	}
-	if a.waitTime > (a.cpuTime+a.ioTime)*_WT_THRESHOLD {
+	if a.waitTime > (a.cpuTime+a.ioTime)*_WT_THRESHOLD && a.waitTime > _MIN_TIME_FOR_REPORTING {
 		a.add("High wait time")
 	}
-	if a.indexScanTime > time.Duration(float64(a.ioTime)*_IS_THRESHOLD) {
+	if a.indexScanTime > time.Duration(float64(a.ioTime)*_IS_THRESHOLD) && a.indexScanTime > _MIN_TIME_FOR_REPORTING {
 		a.add("High index scan time")
 	}
 
@@ -71,6 +72,8 @@ func (this *execAnalyser) add(s string) {
 }
 
 func (this *execAnalyser) record(op *base) {
+	// force accumulation of time
+	op.switchPhase(_NOTIME)
 	this.cpuTime += op.execTime
 	this.ioTime += op.servTime
 	this.waitTime += op.kernTime
