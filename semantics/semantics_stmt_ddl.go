@@ -58,7 +58,7 @@ func (this *SemChecker) VisitCreateIndex(stmt *algebra.CreateIndex) (interface{}
 			if term.HasAttribute(algebra.IK_MISSING) {
 				return nil, errors.NewVectorIndexAttrError("INCLUDE MISSING", indexKey)
 			}
-			if term.HasAttribute(algebra.IK_MISSING) {
+			if term.HasAttribute(algebra.IK_DESC) {
 				return nil, errors.NewVectorIndexAttrError("DESC", indexKey)
 			}
 			if ok && all.Distinct() {

@@ -87,6 +87,8 @@ func (this *SemChecker) VisitSelect(stmt *algebra.Select) (r interface{}, err er
 		for _, term := range stmt.Order().Terms() {
 			switch term.Expression().(type) {
 			case *expression.Ann, *expression.Knn:
+				var metric expression.VectorMetric
+
 				ce := term.DescendingExpr()
 				ne := term.NullsPosExpr()
 				if ce != nil && ce.Value() == nil {
@@ -94,7 +96,18 @@ func (this *SemChecker) VisitSelect(stmt *algebra.Select) (r interface{}, err er
 				} else if ne != nil && ne.Value() == nil {
 					return nil, errors.NewVectorOrderConst(term.String(), "NULLS position (FIRST/LAST)")
 				}
-				if term.Descending(nil, nil) {
+				if te, ok := term.Expression().(*expression.Ann); ok {
+					metric = te.Metric()
+				} else if te, ok := term.Expression().(*expression.Knn); ok {
+					metric = te.Metric()
+				}
+				if metric == expression.DOT_PRODUCT {
+					if !term.Descending(nil, nil) {
+						return nil, errors.NewVectorOrderOption(term.String(), "ASC")
+					} else if !term.NullsLast(nil, nil) {
+						return nil, errors.NewVectorOrderOption(term.String(), "NULLS LAST")
+					}
+				} else if term.Descending(nil, nil) {
 					return nil, errors.NewVectorOrderOption(term.String(), "DESC")
 				} else if !term.NullsLast(nil, nil) {
 					return nil, errors.NewVectorOrderOption(term.String(), "NULLS FIRST")
