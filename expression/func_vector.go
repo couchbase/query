@@ -196,7 +196,7 @@ func vectorDistance(metric VectorMetric, operands Expressions, item value.Value,
 	case L2:
 		return value.NewValue(dist), nil
 	case DOT_PRODUCT:
-		return value.NewValue(dist), nil
+		return value.NewValue(-dist), nil
 	case COSINE_SIM:
 		return value.NewValue(1.0 - (dist / (math.Sqrt(sdf) * math.Sqrt(sqf)))), nil
 	}
