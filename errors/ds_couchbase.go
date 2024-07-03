@@ -362,3 +362,8 @@ func NewSubDocSetError(e error) Error {
 	return &err{level: EXCEPTION, ICode: E_CB_SUBDOC_SET, IKey: "datastore.subdoc.set", cause: c,
 		InternalMsg: "Sub-doc set operation failed", InternalCaller: CallerN(1)}
 }
+
+func NewIndexerVersionError(ver, cause string) Error {
+	return &err{level: EXCEPTION, ICode: E_INDEXER_VERSION, IKey: "datastore.indexer.version", cause: cause,
+		InternalMsg: "All indexer nodes must be version '" + ver + "' or later.", InternalCaller: CallerN(1)}
+}

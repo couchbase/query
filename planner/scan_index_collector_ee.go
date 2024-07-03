@@ -11,6 +11,8 @@
 package planner
 
 import (
+	"fmt"
+
 	"github.com/couchbase/query-ee/indexadvisor/iaplan"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/expression"
@@ -546,7 +548,9 @@ func extractInfo(index datastore.Index, keyspaceAlias string, keyspace datastore
 	return info
 }
 
-func getIndexKeyStringArray(index datastore.Index) (rv []string, desc []bool, lkmissing bool) {
+func getIndexKeyStringArray(index datastore.Index) (rv []string, desc []bool, lkmissing bool,
+	vectorPos int, vectorInfo *iaplan.VectorInfo) {
+	vectorPos = -1
 	stringer := expression.NewStringer()
 	if index2, ok2 := index.(datastore.Index2); ok2 {
 		keys := index2.RangeKey2()
@@ -557,6 +561,15 @@ func getIndexKeyStringArray(index datastore.Index) (rv []string, desc []bool, lk
 			desc[i] = kp.HasAttribute(datastore.IK_DESC)
 			if i == 0 {
 				lkmissing = kp.HasAttribute(datastore.IK_MISSING)
+			}
+			if vectorPos < 0 && kp.HasAttribute(datastore.IK_VECTOR) {
+				vectorPos = i
+				if index6, ok6 := index.(datastore.Index6); ok6 {
+					dimension := fmt.Sprintf("%d", index6.VectorDimension())
+					similarity := string(index6.VectorDistanceType())
+					description := index6.VectorDescription()
+					vectorInfo = iaplan.NewVectorInfo(dimension, similarity, description)
+				}
 			}
 		}
 	} else {

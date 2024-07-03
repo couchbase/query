@@ -10,6 +10,7 @@ package planner
 
 import (
 	"github.com/couchbase/query/algebra"
+	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/value"
 )
@@ -25,4 +26,5 @@ type coveringEntry struct {
 	coveredUnnests   map[*algebra.Unnest]bool
 	implicitAny      bool
 	implcitIndexProj map[int]bool
+	indexKeys        datastore.IndexKeys
 }

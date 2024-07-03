@@ -32,6 +32,7 @@ const (
 	FLTR_SAV_INDEX_SPAN                // saved IN_INDEX_SPAN flag
 	FLTR_HAS_ADJ_BIT_SELEC             // has adjusted bit-filter selectivity
 	FLTR_NOT_PUSHABLE                  // ON-clause filter that is not pushable
+	FLTR_IS_VECTOR_FUNC                // vector search function (ANN)
 )
 
 const TEMP_PLAN_FLAGS = (FLTR_IN_INDEX_SPAN | FLTR_IN_HASH_JOIN)
@@ -223,6 +224,14 @@ func (this *Filter) SetNotPushable() {
 
 func (this *Filter) NotPushable() bool {
 	return (this.fltrFlags & FLTR_NOT_PUSHABLE) != 0
+}
+
+func (this *Filter) SetVectorFunc() {
+	this.fltrFlags |= FLTR_IS_VECTOR_FUNC
+}
+
+func (this *Filter) IsVectorFunc() bool {
+	return (this.fltrFlags & FLTR_IS_VECTOR_FUNC) != 0
 }
 
 func (this *Filter) FltrExpr() expression.Expression {

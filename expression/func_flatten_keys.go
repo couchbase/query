@@ -22,6 +22,7 @@ const (
 	IK_ASC = 1 << iota
 	IK_DESC
 	IK_MISSING
+	IK_VECTOR
 	IK_NONE = 0
 )
 
@@ -115,8 +116,13 @@ func (this *FlattenKeys) HasAttribute(pos int, attr uint32) bool {
 func (this *FlattenKeys) HasDesc(pos int) bool {
 	return (this.GetAttribute(pos) & IK_DESC) != 0
 }
+
 func (this *FlattenKeys) HasMissing(pos int) bool {
 	return (this.GetAttribute(pos) & IK_MISSING) != 0
+}
+
+func (this *FlattenKeys) HasVector(pos int) bool {
+	return (this.GetAttribute(pos) & IK_VECTOR) != 0
 }
 
 func (this *FlattenKeys) AttributeString(pos int) string {
@@ -126,6 +132,9 @@ func (this *FlattenKeys) AttributeString(pos int) string {
 	}
 	if this.HasDesc(pos) {
 		s += " DESC"
+	}
+	if this.HasVector(pos) {
+		s += " VECTOR"
 	}
 	return s
 }

@@ -39,11 +39,12 @@ const (
 	INDEX_API_2   = 2
 	INDEX_API_3   = 3
 	INDEX_API_4   = 4
+	INDEX_API_6   = 6
 	INDEX_API_MIN = INDEX_API_1
-	INDEX_API_MAX = INDEX_API_4
+	INDEX_API_MAX = INDEX_API_6
 )
 const (
-	INDEXER6_VERSION = "7.6.1"
+	INDEXER6_VERSION = "8.0.0"
 )
 
 type Indexer interface {
@@ -491,27 +492,31 @@ type Indexer5 interface {
 
 // //////////////////////////////////////////////////////////////////////
 //
-// # Index API6 introduced in 7.6.1 for Vector index
+// # Index API6 introduced in 8.0.0 for Vector index
 //
 // //////////////////////////////////////////////////////////////////////
 type IndexDistanceType string
 
 const (
-	IX_DIST_L2          IndexDistanceType = "l2"
-	IX_DIST_EUCLIDEAN   IndexDistanceType = "euclidean"
-	IX_DIST_COSINE_SIM  IndexDistanceType = "cosine_sim"
-	IX_DIST_DOT_PRODUCT IndexDistanceType = "dot_product"
+	IX_DIST_L2_SQUARED        IndexDistanceType = "l2_squared"
+	IX_DIST_EUCLIDEAN_SQUARED IndexDistanceType = "euclidean_squared" // same as l2_squared
+	IX_DIST_COSINE            IndexDistanceType = "cosine"            // 1 - cosine_sim
+	IX_DIST_DOT               IndexDistanceType = "dot"               // negate dot_product
+	IX_DIST_L2                IndexDistanceType = "l2"
+	IX_DIST_EUCLIDEAN         IndexDistanceType = "euclidean"
+	IX_DIST_COSINE_SIM        IndexDistanceType = "cosine_sim"
+	IX_DIST_DOT_PRODUCT       IndexDistanceType = "dot_product"
 )
 
 type IndexVector struct {
 	QueryVector  []float32 // query vector
-	IndexkeyPos  int       // vector key pos in index
+	IndexKeyPos  int       // vector key pos in index
 	Probes       int       // nprobes
 	ActualVector bool      // Use actual vector
 }
 
 type IndexPartitionSet struct {
-	ValueSet []value.Value
+	ValueSet value.Values
 }
 
 type IndexPartitionSets []*IndexPartitionSet
@@ -532,6 +537,7 @@ type Index6 interface {
 	VectorDistanceType() IndexDistanceType
 	VectorDimension() int
 	VectorProbes() int
+	VectorDescription() string
 	Include() expression.Expressions
 
 	Scan6(requestId string, spans Spans2, reverse, distinctAfterProjection bool,

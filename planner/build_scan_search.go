@@ -54,17 +54,18 @@ func (this *builder) buildSearchCovering(searchSargables []*indexEntry, node *al
 	entry := searchSargables[0]
 	alias := node.Alias()
 	sfn := entry.sargKeys[0].(*search.Search)
-	keys := make(expression.Expressions, 0, len(entry.keys)+3)
-	keys = append(keys, entry.keys...)
-	keys = append(keys, id, search.NewSearchScore(sfn.IndexMetaField()),
-		search.NewSearchMeta(sfn.IndexMetaField()))
+	keys := make(datastore.IndexKeys, 0, len(entry.idxKeys)+3)
+	keys = append(keys, entry.idxKeys...)
+	keys = append(keys, &datastore.IndexKey{id, datastore.IK_NONE},
+		&datastore.IndexKey{search.NewSearchScore(sfn.IndexMetaField()), datastore.IK_NONE},
+		&datastore.IndexKey{search.NewSearchMeta(sfn.IndexMetaField()), datastore.IK_NONE})
 
 	exprs, err := this.getExprsToCover()
 	if err != nil {
 		return nil, 0, err
 	}
 
-	coveringExprs, filterCovers, err := indexCoverExpressions(entry, keys, pred, pred, alias, this.context)
+	coveringExprs, filterCovers, err := indexCoverExpressions(entry, keys, false, pred, pred, alias, this.context)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -76,8 +77,8 @@ func (this *builder) buildSearchCovering(searchSargables []*indexEntry, node *al
 	}
 
 	covers := make(expression.Covers, 0, len(keys))
-	for _, expr := range keys {
-		covers = append(covers, expression.NewCover(expr))
+	for _, key := range keys {
+		covers = append(covers, expression.NewCover(key.Expr))
 	}
 
 	if this.group != nil {
@@ -307,7 +308,7 @@ func (this *builder) sargableSearchIndexes(indexes []datastore.Index, pred expre
 			if n > 0 {
 				//		exact = exact && !qprams
 				if entry == nil || n > en || size < esize {
-					entry = newIndexEntry(index, keys, len(keys), nil, 1, 1, 1,
+					entry = newIndexEntry(index, keys, nil, len(keys), nil, 1, 1, 1,
 						cond, origCond, nil, exact, []bool{true})
 					esize = size
 					en = n
@@ -474,7 +475,7 @@ func (this *builder) sargableFlexSearchIndex(idx datastore.Index, flexRequest *d
 
 	pushDownProperty := this.flexIndexPushDownProperty(resp)
 
-	entry = newIndexEntry(index, keys, 1, nil,
+	entry = newIndexEntry(index, keys, nil, 1, nil,
 		len(resp.StaticSargKeys),
 		len(resp.StaticSargKeys)+len(resp.DynamicSargKeys),
 		len(resp.StaticSargKeys)+len(resp.DynamicSargKeys),

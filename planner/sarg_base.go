@@ -9,6 +9,7 @@
 package planner
 
 import (
+	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/expression"
 	base "github.com/couchbase/query/plannerbase"
 )
@@ -23,13 +24,16 @@ type sarg struct {
 	constPred       bool
 	isMissing       bool
 	isArray         bool
+	isVector        bool
+	index           datastore.Index
+	keyPos          int
 	aliases         map[string]bool
 	context         *PrepareContext
 }
 
-func newSarg(key expression.Expression, baseKeyspace *base.BaseKeyspace,
-	keyspaceNames map[string]string, isJoin, doSelec, advisorValidate, isMissing, isArray bool,
-	aliases map[string]bool, context *PrepareContext) *sarg {
+func newSarg(key expression.Expression, index datastore.Index, baseKeyspace *base.BaseKeyspace,
+	keyspaceNames map[string]string, isJoin, doSelec, advisorValidate, isMissing, isArray, isVector bool,
+	keyPos int, aliases map[string]bool, context *PrepareContext) *sarg {
 	return &sarg{
 		key:             key,
 		baseKeyspace:    baseKeyspace,
@@ -39,6 +43,9 @@ func newSarg(key expression.Expression, baseKeyspace *base.BaseKeyspace,
 		advisorValidate: advisorValidate,
 		isMissing:       isMissing,
 		isArray:         isArray,
+		isVector:        isVector,
+		index:           index,
+		keyPos:          keyPos,
 		aliases:         aliases,
 		context:         context,
 	}
@@ -249,6 +256,20 @@ func (this *sarg) VisitFunction(pred expression.Function) (interface{}, error) {
 	switch pred := pred.(type) {
 	case *expression.RegexpLike:
 		return this.visitLike(pred)
+	case *expression.Ann:
+		if this.isVector {
+			if index6, ok := this.index.(datastore.Index6); ok {
+				fld := pred.Field()
+				if fld.EquivalentTo(this.key) &&
+					index6.VectorDistanceType() == datastore.GetVectorDistanceType(pred.Metric()) {
+					rv := _WHOLE_SPANS.Copy().(*TermSpans)
+					rv.ann = pred
+					rv.annPos = this.keyPos
+					return rv, nil
+				}
+			}
+		}
+		return nil, nil
 	}
 
 	return this.visitDefault(pred)

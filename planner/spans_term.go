@@ -22,6 +22,8 @@ import (
 type TermSpans struct {
 	spans   plan.Spans2
 	arrayId int
+	annPos  int
+	ann     *expression.Ann
 }
 
 func NewTermSpans(spans ...*plan.Span2) *TermSpans {
@@ -39,16 +41,26 @@ func (this *TermSpans) CreateScan(
 	indexGroupAggs *plan.IndexGroupAggregates, covers expression.Covers,
 	filterCovers map[*expression.Cover]value.Value, filter expression.Expression,
 	cost, cardinality float64, size int64, frCost float64,
-	baseKeyspace *base.BaseKeyspace, hasDeltaKeyspace, skipNewKeys, nested_loop bool) plan.SecondaryScan {
+	baseKeyspace *base.BaseKeyspace, hasDeltaKeyspace, skipNewKeys, nested_loop, setop bool,
+	indexKeyNames []string, indexPartitionSets plan.IndexPartitionSets) plan.SecondaryScan {
 
 	distScan := this.CanHaveDuplicates(index, indexApiVersion, overlap, array)
 
 	if index3, ok := index.(datastore.Index3); ok && useIndex3API(index, indexApiVersion) {
+		var indexVector *plan.IndexVector
+		if _, ok = index.(datastore.Index6); ok && useIndex6API(index, indexApiVersion) && !setop && this.ann != nil {
+			indexVector = plan.NewIndexVector(this.ann.QueryVector(), this.annPos,
+				this.ann.Nprobes(), this.ann.ActualVector())
+		} else {
+			indexKeyNames = nil
+			indexPartitionSets = nil
+		}
 		dynamicIn := this.spans.HasDynamicIn()
 		if distScan && indexGroupAggs == nil {
 			scan := plan.NewIndexScan3(index3, term, this.spans, reverse, false, dynamicIn, nil, nil,
 				projection, indexOrder, indexGroupAggs, covers, filterCovers, filter,
-				cost, cardinality, size, frCost, hasDeltaKeyspace, skipNewKeys, nested_loop)
+				cost, cardinality, size, frCost, hasDeltaKeyspace, skipNewKeys, nested_loop,
+				indexVector, indexKeyNames, indexPartitionSets)
 
 			if cost > 0.0 && cardinality > 0.0 {
 				distCost, distCard, distFrCost := getDistinctScanCost(index,
@@ -68,7 +80,8 @@ func (this *TermSpans) CreateScan(
 		} else {
 			return plan.NewIndexScan3(index3, term, this.spans, reverse, distinct, dynamicIn, offset, limit,
 				projection, indexOrder, indexGroupAggs, covers, filterCovers, filter,
-				cost, cardinality, size, frCost, hasDeltaKeyspace, skipNewKeys, nested_loop)
+				cost, cardinality, size, frCost, hasDeltaKeyspace, skipNewKeys, nested_loop,
+				indexVector, indexKeyNames, indexPartitionSets)
 		}
 
 	} else if index2, ok := index.(datastore.Index2); ok && useIndex2API(index, indexApiVersion) {
@@ -122,16 +135,18 @@ func (this *TermSpans) Constrain(other SargSpans) SargSpans {
 
 func (this *TermSpans) ConstrainTerm(other *TermSpans) SargSpans {
 	rv := constrainSpans(this.spans, other.spans)
-	return rv.inheritArrayId(this, other)
+	return rv.inheritTermInfo(this, other)
 }
 
 func (this *TermSpans) Streamline() SargSpans {
 	rv := streamline(this.spans)
-	if this.arrayId != 0 {
+	if this.arrayId != 0 || this.ann != nil {
 		if rv.spans.HasStatic() {
 			rv = rv.Copy().(*TermSpans)
 		}
 		rv.arrayId = this.arrayId
+		rv.ann = this.ann
+		rv.annPos = this.annPos
 	}
 	return rv
 }
@@ -159,6 +174,10 @@ func (this *TermSpans) ExactSpan1(nkeys int) bool {
 
 func (this *TermSpans) HasStatic() bool {
 	return this.spans.HasStatic()
+}
+
+func (this *TermSpans) HasVector() bool {
+	return this.ann != nil
 }
 
 func (this *TermSpans) SetExact(exact bool) {
@@ -249,6 +268,11 @@ func (this *TermSpans) Copy() SargSpans {
 		arrayId: this.arrayId,
 	}
 
+	if this.ann != nil {
+		rv.ann = this.ann.Copy().(*expression.Ann)
+		rv.annPos = this.annPos
+	}
+
 	return rv
 }
 
@@ -280,7 +304,7 @@ func (this *TermSpans) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
-func (this *TermSpans) inheritArrayId(ts1, ts2 *TermSpans) *TermSpans {
+func (this *TermSpans) inheritTermInfo(ts1, ts2 *TermSpans) *TermSpans {
 	newArrayId := 0
 	if ts1.arrayId != 0 && ts2.arrayId != 0 {
 		if ts1.arrayId == ts2.arrayId {
@@ -294,12 +318,34 @@ func (this *TermSpans) inheritArrayId(ts1, ts2 *TermSpans) *TermSpans {
 	} else if ts2.arrayId != 0 {
 		newArrayId = ts2.arrayId
 	}
-	if newArrayId != 0 && newArrayId != this.arrayId {
+
+	var ann *expression.Ann
+	var annPos int
+	if ts1.ann != nil && ts2.ann != nil {
+		if ts1.ann.EquivalentTo(ts2.ann) && ts1.annPos == ts2.annPos {
+			ann = ts1.ann
+			annPos = ts1.annPos
+		} // else it's an error condition (unexpected), ignore ann
+	} else if ts1.ann != nil {
+		ann = ts1.ann
+		annPos = ts1.annPos
+	} else if ts2.ann != nil {
+		ann = ts2.ann
+		annPos = ts2.annPos
+	}
+
+	if (newArrayId != 0 && newArrayId != this.arrayId) || ann != nil {
 		rv := this
 		if this.spans.HasStatic() {
 			rv = this.Copy().(*TermSpans)
 		}
-		rv.arrayId = newArrayId
+		if newArrayId != 0 && newArrayId != this.arrayId {
+			rv.arrayId = newArrayId
+		}
+		if ann != nil {
+			rv.ann = ann
+			rv.annPos = annPos
+		}
 		return rv
 	}
 	return this
@@ -352,7 +398,7 @@ func composeTerms(rs, ns *TermSpans) *TermSpans {
 	}
 
 	rv := NewTermSpans(sp...)
-	return rv.inheritArrayId(rs, ns)
+	return rv.inheritTermInfo(rs, ns)
 }
 
 func constrainSpans(spans1, spans2 plan.Spans2) *TermSpans {
@@ -556,10 +602,10 @@ func constrainEmptySpan(span1, span2 *plan.Span2) bool {
 func streamline(cspans plan.Spans2) *TermSpans {
 	switch len(cspans) {
 	case 0:
-		return _EMPTY_SPANS
+		return _EMPTY_SPANS.Copy().(*TermSpans)
 	case 1:
 		if cspans[0].Empty() {
-			return _EMPTY_SPANS
+			return _EMPTY_SPANS.Copy().(*TermSpans)
 		}
 		checkSpecialSpan(cspans[0])
 		return NewTermSpans(cspans...)
@@ -579,7 +625,7 @@ func streamline(cspans plan.Spans2) *TermSpans {
 	}
 
 	if len(spans) == 0 {
-		return _EMPTY_SPANS
+		return _EMPTY_SPANS.Copy().(*TermSpans)
 	}
 
 	for _, span := range spans {

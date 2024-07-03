@@ -479,4 +479,18 @@ var _FUNCTIONS = map[string]Function{
 
 	"_timeseries":   &TimeSeries{},
 	"recursive_cte": &RecursiveCte{},
+
+	"isvector":               &IsVector{},
+	"knn":                    &Knn{},
+	"vector_distance":        &Knn{},
+	"ann":                    &Ann{},
+	"approx_vector_distance": &Ann{},
+	"decode_vector":          &DecodeVector{},
+	"vector_decode":          &DecodeVector{},
+	"encode_vector":          &EncodeVector{},
+	"vector_encode":          &EncodeVector{},
+	"normalize_vector":       &NormalizeVector{},
+	"normalise_vector":       &NormalizeVector{},
+	"vector_normalize":       &NormalizeVector{},
+	"vector_normalise":       &NormalizeVector{},
 }

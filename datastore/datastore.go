@@ -29,6 +29,7 @@ import (
 
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/tenant"
 	"github.com/couchbase/query/util"
@@ -984,4 +985,63 @@ func ScanSystemCollection(bucketName string, prefix string, preScan func(Keyspac
 	}
 
 	return nil
+}
+
+func GetFlattenKeyAttributes(fks *expression.FlattenKeys, pos int) (attr IkAttributes) {
+	attr = IK_NONE
+	if fks.HasDesc(pos) {
+		attr |= IK_DESC
+	}
+	if fks.HasMissing(pos) {
+		attr |= IK_MISSING
+	}
+	return
+}
+
+func GetIndexKeys(index Index) (indexKeys IndexKeys) {
+	if index2, ok := index.(Index2); ok {
+		indexKeys = index2.RangeKey2()
+	} else {
+		for _, e := range index.RangeKey() {
+			indexKeys = append(indexKeys, &IndexKey{Expr: e, Attributes: IK_NONE})
+		}
+	}
+
+	flattenIndexKeys := make(IndexKeys, 0, len(indexKeys))
+	for _, ik := range indexKeys {
+		if all, ok := ik.Expr.(*expression.All); ok && all.Flatten() {
+			fkeys := all.FlattenKeys()
+			for pos, fk := range fkeys.Operands() {
+				fkey := all.Copy().(*expression.All)
+				fkey.SetFlattenValueMapping(fk.Copy())
+				attr := GetFlattenKeyAttributes(fkeys, pos)
+				flattenIndexKeys = append(flattenIndexKeys, &IndexKey{fkey, attr})
+			}
+		} else {
+			flattenIndexKeys = append(flattenIndexKeys, ik)
+		}
+	}
+
+	return flattenIndexKeys
+}
+
+func GetIndexIncludes(index Index) (includes expression.Expressions) {
+	if index6, ok := index.(Index6); ok {
+		includes = index6.Include()
+	}
+	return
+}
+
+func GetVectorDistanceType(metric expression.VectorMetric) (distanceType IndexDistanceType) {
+	switch metric {
+	case expression.EUCLIDEAN_SQUARED:
+		distanceType = IX_DIST_EUCLIDEAN_SQUARED
+	case expression.L2_SQUARED:
+		distanceType = IX_DIST_L2_SQUARED
+	case expression.COSINE:
+		distanceType = IX_DIST_COSINE
+	case expression.DOT:
+		distanceType = IX_DIST_DOT
+	}
+	return
 }

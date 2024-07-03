@@ -128,6 +128,7 @@ const (
 	E_FORMALIZER_INTERNAL                        ErrorCode = 3082
 	E_PARSE_INVALID_INPUT                        ErrorCode = 3083
 	E_SEMANTICS                                  ErrorCode = 3100
+	E_SEMANTICS_INTERNAL                         ErrorCode = 3101
 	E_JOIN_NEST_NO_JOIN_HINT                     ErrorCode = 3110
 	E_JOIN_NEST_NO_USE_KEYS                      ErrorCode = 3120
 	E_JOIN_NEST_NO_USE_INDEX                     ErrorCode = 3130
@@ -168,6 +169,15 @@ const (
 	E_RECURSIVE_IMPLICIT_DOC_LIMIT               ErrorCode = 3305
 	E_RECURSIVE_IMPLICIT_DEPTH_LIMIT             ErrorCode = 3306
 	E_CYCLE_FIELDS_VALIDATION_FAILED             ErrorCode = 3307
+	E_VECTOR_SEMANTIC                            ErrorCode = 3400
+	E_VECTOR_INDEX_ATTRIBUTE                     ErrorCode = 3401
+	E_VECTOR_INDEX_SINGLE_VECTOR                 ErrorCode = 3402
+	E_VECTOR_INDEX_SINGLE_KEY                    ErrorCode = 3403
+	E_VECTOR_INDEX_NO_VECTOR                     ErrorCode = 3404
+	E_VECTOR_FUNC_ORDER_CONST                    ErrorCode = 3405
+	E_VECTOR_FUNC_ORDER_OPTION                   ErrorCode = 3406
+	E_VECTOR_DISTINCT_ARRAY_KEY                  ErrorCode = 3407
+	E_VECTOR_CONSTANT_INDEX_KEY                  ErrorCode = 3408
 	E_PLAN                                       ErrorCode = 4000
 	E_REPREPARE                                  ErrorCode = 4001
 	E_NO_TERM_NAME                               ErrorCode = 4010
@@ -281,6 +291,9 @@ const (
 	E_INDEX_UPD_STATS                            ErrorCode = 5415
 	E_TIME_PARSE                                 ErrorCode = 5416
 	E_JOIN_ON_PRIMARY_DOCS_EXCEEDED              ErrorCode = 5420
+	E_INVALID_QUERY_VECTOR                       ErrorCode = 5430
+	E_INVALID_PROBES                             ErrorCode = 5431
+	E_INVALID_ACTUAL_VECTOR                      ErrorCode = 5432
 	E_MEMORY_QUOTA_EXCEEDED                      ErrorCode = 5500
 	E_NIL_EVALUATE_PARAM                         ErrorCode = 5501
 	E_BUCKET_ACTION                              ErrorCode = 5502
@@ -370,6 +383,9 @@ const (
 	E_ADVISOR_INVALID_ACTION                     ErrorCode = 10501
 	E_ADVISOR_ACTION_MISSING                     ErrorCode = 10502
 	E_ADVISOR_INVALID_ARGS                       ErrorCode = 10503
+	E_VECTOR_FUNC_INVALID_METRIC                 ErrorCode = 10510
+	E_IS_VECTOR_INVALID_DIMENSION                ErrorCode = 10511
+	E_IS_VECTOR_INVALID_ARG                      ErrorCode = 10512
 	E_SYSTEM_DATASTORE                           ErrorCode = 11000
 	E_SYSTEM_KEYSPACE_NOT_FOUND                  ErrorCode = 11002
 	E_SYSTEM_NOT_IMPLEMENTED                     ErrorCode = 11003
@@ -430,6 +446,7 @@ const (
 	E_CB_SUBDOC_GET                              ErrorCode = 12042
 	E_CB_SUBDOC_SET                              ErrorCode = 12043
 	E_CB_DROP_SYSTEM_BUCKET                      ErrorCode = 12044
+	E_INDEXER_VERSION                            ErrorCode = 12046
 	_RETIRED_13010                                         = 13010
 	_RETIRED_13011                                         = 13011
 	E_DATASTORE_CLUSTER                          ErrorCode = 13012

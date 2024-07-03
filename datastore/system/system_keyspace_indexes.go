@@ -282,6 +282,10 @@ func (b *indexKeyspace) fetchOne(key string, keysMap map[string]value.AnnotatedV
 			doc.SetField("metadata", processStats(datastoreObjectToJSONSafe(ixm.IndexMetadata()).(map[string]interface{})))
 		}
 
+		if ixw, ok := index.(interface{ With() map[string]interface{} }); ok {
+			doc.SetField("with", datastoreObjectToJSONSafe(ixw.With()).(map[string]interface{}))
+		}
+
 		keysMap[key] = doc
 	}
 
@@ -369,6 +373,10 @@ func (b *indexKeyspace) fetchOneCollection(key string, keysMap map[string]value.
 			doc.SetField("metadata", processStats(datastoreObjectToJSONSafe(ixm.IndexMetadata()).(map[string]interface{})))
 		}
 
+		if ixw, ok := index.(interface{ With() map[string]interface{} }); ok {
+			doc.SetField("with", datastoreObjectToJSONSafe(ixw.With()).(map[string]interface{}))
+		}
+
 		keysMap[key] = doc
 	}
 
@@ -386,6 +394,10 @@ func indexKeyToIndexKeyStringArray(index datastore.Index) (rv []string) {
 			}
 			if kp.HasAttribute(datastore.IK_DESC) {
 				s += " DESC"
+			}
+
+			if kp.HasAttribute(datastore.IK_VECTOR) {
+				s += " VECTOR"
 			}
 			rv[i] = s
 		}

@@ -59,8 +59,8 @@ func (this *builder) buildCoveringUnnestScan(node *algebra.KeyspaceTerm,
 	}
 
 	scan, sargLength, err = this.buildCreateCoveringScan(centry.idxEntry, node, id, pred,
-		exprs, append(centry.idxEntry.keys, id), implicitCover,
-		implicitCover, false, centry.covers, centry.filterCovers, nil)
+		exprs, append(centry.idxEntry.idxKeys, &datastore.IndexKey{id, datastore.IK_NONE}),
+		implicitCover, implicitCover, false, centry.covers, centry.filterCovers, nil)
 	if err != nil || scan == nil {
 		return
 	}

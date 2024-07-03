@@ -24,9 +24,7 @@ func (this *SemChecker) VisitCreatePrimaryIndex(stmt *algebra.CreatePrimaryIndex
 
 func (this *SemChecker) VisitCreateIndex(stmt *algebra.CreateIndex) (interface{}, error) {
 	gsi := stmt.Using() == datastore.GSI || stmt.Using() == datastore.DEFAULT
-	if gsi && stmt.Vector() {
-		return nil, errors.NewIndexNotAllowed("Vector index with USING GSI", "")
-	} else if !gsi && stmt.Partition() != nil {
+	if !gsi && stmt.Partition() != nil {
 		return nil, errors.NewIndexNotAllowed("PARTITION BY USING FTS", "")
 	}
 
@@ -36,6 +34,8 @@ func (this *SemChecker) VisitCreateIndex(stmt *algebra.CreateIndex) (interface{}
 		}
 	}
 
+	nvectors := 0
+	nkeys := 0
 	for i, term := range stmt.Keys() {
 		expr := term.Expression()
 		if _, ok := expr.(*expression.Self); ok {
@@ -43,10 +43,22 @@ func (this *SemChecker) VisitCreateIndex(stmt *algebra.CreateIndex) (interface{}
 		}
 		all, ok := expr.(*expression.All)
 		if !gsi {
-			if term.HasAttribute(algebra.IK_MISSING | algebra.IK_ASC | algebra.IK_DESC) {
+			if term.HasAttribute(algebra.IK_MISSING | algebra.IK_ASC | algebra.IK_DESC | algebra.IK_VECTOR) {
 				return nil, errors.NewIndexNotAllowed("Index attributes USING FTS", "")
 			} else if ok {
 				return nil, errors.NewIndexNotAllowed("Array Index USING FTS", "")
+			}
+		} else if term.HasAttribute(algebra.IK_VECTOR) {
+			nvectors++
+			indexKey := expr.String()
+			if term.HasAttribute(algebra.IK_MISSING) {
+				return nil, errors.NewVectorIndexAttrError("INCLUDE MISSING", indexKey)
+			}
+			if term.HasAttribute(algebra.IK_DESC) {
+				return nil, errors.NewVectorIndexAttrError("DESC", indexKey)
+			}
+			if ok && all.Distinct() {
+				return nil, errors.NewVectorDistinctArrayKey()
 			}
 		}
 
@@ -57,16 +69,61 @@ func (this *SemChecker) VisitCreateIndex(stmt *algebra.CreateIndex) (interface{}
 
 			fk := all.FlattenKeys()
 			for pos, fke := range fk.Operands() {
+				nkeys++
 				if !fke.Indexable() || fke.Value() != nil {
 					return nil, errors.NewCreateIndexNotIndexable(fke.String(), fke.ErrorContext())
 				}
 				if fk.HasMissing(pos) && (i > 0 || pos > 0 || !gsi) {
 					return nil, errors.NewCreateIndexAttributeMissing(fke.String(), fke.ErrorContext())
 				}
+				if fk.HasVector(pos) {
+					nvectors++
+					indexKey := fk.String()
+					if all.Distinct() {
+						return nil, errors.NewVectorDistinctArrayKey()
+					}
+					if fk.HasMissing(pos) {
+						return nil, errors.NewVectorIndexAttrError("INCLUDE MISSING", indexKey)
+					}
+					if fk.HasDesc(pos) {
+						return nil, errors.NewVectorIndexAttrError("DESC", indexKey)
+					}
+					switch fke.(type) {
+					case *expression.ObjectConstruct, *expression.ArrayConstruct:
+						return nil, errors.NewVectorConstantIndexKey(fke.String())
+					}
+				}
 			}
+		} else {
+			nkeys++
+			if term.HasAttribute(algebra.IK_VECTOR) {
+				nexpr := expr
+				if ok {
+					if array, ok1 := all.Array().(*expression.Array); ok1 {
+						nexpr = array.ValueMapping()
+					}
+				}
+				switch nexpr.(type) {
+				case *expression.ObjectConstruct, *expression.ArrayConstruct:
+					return nil, errors.NewVectorConstantIndexKey(nexpr.String())
+				}
+			}
+
 		}
 		if term.HasAttribute(algebra.IK_MISSING) && (i > 0 || !gsi) {
 			return nil, errors.NewCreateIndexAttributeMissing(expr.String(), expr.ErrorContext())
+		}
+		if nvectors > 1 {
+			return nil, errors.NewVectorIndexSingleVector(stmt.Name())
+		}
+	}
+
+	if gsi && stmt.Vector() {
+		if nkeys > 1 {
+			return nil, errors.NewVectorIndexSingleKey(stmt.Name())
+		}
+		if nvectors == 0 {
+			return nil, errors.NewVectorIndexNoVector(stmt.Name())
 		}
 	}
 
@@ -78,10 +135,6 @@ func (this *SemChecker) VisitCreateIndex(stmt *algebra.CreateIndex) (interface{}
 }
 
 func (this *SemChecker) VisitDropIndex(stmt *algebra.DropIndex) (interface{}, error) {
-	if stmt.Vector() && stmt.Using() != datastore.FTS {
-		return nil, errors.NewIndexNotAllowed("Vector index with USING GSI", "")
-	}
-
 	return nil, stmt.MapExpressions(this)
 }
 

@@ -14,7 +14,9 @@ import (
 )
 
 func (this *sargable) VisitAny(pred *expression.Any) (interface{}, error) {
-	if this.defaultSargable(pred) {
+	if this.vector {
+		return false, nil
+	} else if this.defaultSargable(pred) {
 		return true, nil
 	}
 
@@ -53,7 +55,8 @@ func (this *sargable) VisitAny(pred *expression.Any) (interface{}, error) {
 	}
 
 	mappings := datastore.IndexKeys{&datastore.IndexKey{mapping, datastore.IK_NONE}}
-	min, _, _, _ := SargableFor(satisfies, mappings, this.missing, this.gsi, []bool{true}, this.context, this.aliases)
+	min, _, _, _ := SargableFor(satisfies, nil, this.index, mappings, this.missing, this.gsi, []bool{true},
+		this.context, this.aliases)
 	return min > 0, nil
 }
 

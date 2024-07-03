@@ -41,6 +41,7 @@ const (
 	IE_OR_USE_FILTERS
 	IE_OR_NON_SARG_EXPR
 	IE_LIMIT_OFFSET_COST
+	IE_VECTOR_KEY_SARGABLE
 )
 
 type indexEntry struct {
@@ -50,6 +51,7 @@ type indexEntry struct {
 	keys                 expression.Expressions
 	sargKeys             expression.Expressions
 	partitionKeys        expression.Expressions
+	includes             expression.Expressions
 	arrayKey             *expression.All
 	arrayKeyPos          int
 	minKeys              int
@@ -80,12 +82,13 @@ type indexEntry struct {
 	partialSortTermCount int
 }
 
-func newIndexEntry(index datastore.Index, idxKeys datastore.IndexKeys, sargLength int,
-	partitionKeys expression.Expressions, minKeys, maxKeys, sumKeys int,
+func newIndexEntry(index datastore.Index, idxKeys datastore.IndexKeys, includes expression.Expressions,
+	sargLength int, partitionKeys expression.Expressions, minKeys, maxKeys, sumKeys int,
 	cond, origCond expression.Expression, spans SargSpans, exactSpans bool, skeys []bool) *indexEntry {
 	rv := &indexEntry{
 		index:            index,
 		idxKeys:          idxKeys,
+		includes:         includes,
 		partitionKeys:    partitionKeys,
 		minKeys:          minKeys,
 		maxKeys:          maxKeys,

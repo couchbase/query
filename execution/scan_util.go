@@ -9,10 +9,14 @@
 package execution
 
 import (
+	"fmt"
+	"math"
+
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
@@ -95,6 +99,115 @@ func getKeyspace(keyspace datastore.Keyspace, expr expression.Expression, contex
 		}
 	}
 	return keyspace
+}
+
+func getIndexVector(planIndexVector *plan.IndexVector, indexVector *datastore.IndexVector, parent value.Value,
+	dimension int, context *opContext) errors.Error {
+
+	qvVal, err := planIndexVector.QueryVector.Evaluate(parent, context)
+	if err != nil {
+		return errors.NewEvaluationError(err, "index vector parameter: query vector")
+	}
+
+	qvAct := qvVal.Actual()
+	qvArr, ok := qvAct.([]interface{})
+	if !ok {
+		return errors.NewInvalidQueryVector("not an array")
+	} else if len(qvArr) != dimension {
+		return errors.NewInvalidQueryVector(fmt.Sprintf("number of dimension (%d) does not match index vector dimension (%d)",
+			len(qvArr), dimension))
+	}
+
+	queryVector := make([]float32, len(qvArr))
+	for i, v := range qvArr {
+		var vf float64
+		switch val := v.(type) {
+		case int:
+			vf = float64(val)
+		case int64:
+			vf = float64(val)
+		case int32:
+			vf = float64(val)
+		case int16:
+			vf = float64(val)
+		case int8:
+			vf = float64(val)
+		case uint:
+			vf = float64(val)
+		case uint64:
+			vf = float64(val)
+		case uint32:
+			vf = float64(val)
+		case uint16:
+			vf = float64(val)
+		case uint8:
+			vf = float64(val)
+		case uintptr:
+			vf = float64(val)
+		case float32:
+			vf = float64(val)
+		case float64:
+			vf = val
+		case value.Value:
+			if val.Type() != value.NUMBER {
+				return errors.NewInvalidQueryVector(fmt.Sprintf("array element (%v) not a number", val))
+			}
+			vf = value.AsNumberValue(val).Float64()
+		default:
+			return errors.NewInvalidQueryVector(fmt.Sprintf("array element (%v of type %T) not a valid type", val, val))
+		}
+		if vf < -math.MaxFloat32 || vf > math.MaxFloat32 {
+			return errors.NewInvalidQueryVector(fmt.Sprintf("array element (%v) not a float32", vf))
+		}
+
+		queryVector[i] = float32(vf)
+	}
+	indexVector.QueryVector = queryVector
+
+	if planIndexVector.Probes != nil {
+		probesVal, err := planIndexVector.Probes.Evaluate(parent, context)
+		if err != nil {
+			return errors.NewEvaluationError(err, "index vector parameter: probes")
+		}
+		probes, ok := value.IsIntValue(probesVal)
+		if !ok {
+			return errors.NewInvalidProbes("not an integer")
+		}
+		indexVector.Probes = int(probes)
+	}
+
+	if planIndexVector.ActualVector != nil {
+		avVal, err := planIndexVector.ActualVector.Evaluate(parent, context)
+		if err != nil {
+			return errors.NewEvaluationError(err, "index vector parameter: actual vector")
+		}
+		if avVal.Type() != value.BOOLEAN {
+			return errors.NewInvalidActualVector("not a boolean")
+		}
+		avAct := avVal.Actual().(bool)
+		indexVector.ActualVector = avAct
+	}
+
+	return nil
+}
+
+func getIndexPartitionSets(planIndexPartitionSets plan.IndexPartitionSets, parent value.Value,
+	context *opContext) (datastore.IndexPartitionSets, errors.Error) {
+
+	indexPartitionSets := make(datastore.IndexPartitionSets, len(planIndexPartitionSets))
+	for i, planPartitionSet := range planIndexPartitionSets {
+		partitionSet := make(value.Values, len(planPartitionSet.PartitionSet))
+		for j, partitionExpr := range planPartitionSet.PartitionSet {
+			psVal, err := partitionExpr.Evaluate(parent, context)
+			if err != nil {
+				return nil, errors.NewEvaluationError(err, "index partition set")
+			}
+			partitionSet[j] = psVal
+		}
+		indexPartitionSets[i] = &datastore.IndexPartitionSet{partitionSet}
+	}
+
+	return indexPartitionSets, nil
 }
 
 var _INDEX_SCAN_POOL = NewOperatorPool(16)

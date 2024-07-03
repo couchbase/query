@@ -12,6 +12,7 @@ import (
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
 	base "github.com/couchbase/query/plannerbase"
@@ -105,15 +106,25 @@ outer:
 			continue
 		}
 
+		idxKeys := entry.idxKeys
 		keys := entry.keys
 
 		// Matches execution.spanScan.RunOnce()
 		if !index.IsPrimary() {
+			idxKeys = append(idxKeys, &datastore.IndexKey{id, datastore.IK_NONE})
 			keys = append(keys, id)
 		}
 
+		if entry.HasFlag(IE_VECTOR_KEY_SARGABLE) {
+			idxKeys, err = replaceVectorKey(idxKeys, entry)
+			if err != nil {
+				return nil, 0, err
+			}
+		}
+
 		// Include filter covers
-		coveringExprs, filterCovers, err := indexCoverExpressions(entry, keys, pred, origPred, alias, this.context)
+		coveringExprs, filterCovers, err := indexCoverExpressions(entry, idxKeys, true, pred,
+			origPred, alias, this.context)
 		if err != nil {
 			return nil, 0, err
 		}
@@ -146,7 +157,8 @@ outer:
 				}
 			}
 
-			implcitIndexProj = implicitIndexKeysProj(implicitIndexKeys(entry), mapAnys)
+			idxKeys = replaceFlattenKeys(idxKeys, entry)
+			implcitIndexProj = implicitIndexKeysProj(idxKeys, mapAnys)
 		}
 
 		if entry.arrayKey != nil {
@@ -155,8 +167,13 @@ outer:
 
 		entry.pushDownProperty = this.indexPushDownProperty(entry, keys, nil, pred, origPred,
 			alias, nil, false, true, (len(this.baseKeyspaces) == 1), implicitAny)
-		coveringEntries[index] = &coveringEntry{idxEntry: entry, filterCovers: filterCovers,
-			implcitIndexProj: implcitIndexProj, implicitAny: implicitAny}
+		coveringEntries[index] = &coveringEntry{
+			idxEntry:         entry,
+			filterCovers:     filterCovers,
+			implcitIndexProj: implcitIndexProj,
+			implicitAny:      implicitAny,
+			indexKeys:        idxKeys,
+		}
 	}
 
 	// No covering index available
@@ -166,22 +183,16 @@ outer:
 
 	index := this.bestCoveringIndex(useCBO, node, coveringEntries, (narrays < len(coveringEntries)))
 	coveringEntry := coveringEntries[index]
-	keys := coveringEntry.idxEntry.keys
+	keys := coveringEntry.indexKeys
 	var implcitIndexProj map[int]bool
 	if coveringEntry.implicitAny {
-		keys = implicitIndexKeys(coveringEntry.idxEntry)
 		implcitIndexProj = coveringEntry.implcitIndexProj
-	}
-
-	// Matches execution.spanScan.RunOnce()
-	if !index.IsPrimary() {
-		keys = append(keys, id)
 	}
 
 	// Include covering expression from index keys
 	covers := make(expression.Covers, 0, len(keys))
 	for _, key := range keys {
-		covers = append(covers, expression.NewCover(key))
+		covers = append(covers, expression.NewCover(key.Expr))
 	}
 
 	return this.buildCreateCoveringScan(coveringEntry.idxEntry, node, id, pred, exprs, keys, false,
@@ -496,7 +507,8 @@ couter:
 }
 
 func (this *builder) buildCreateCoveringScan(entry *indexEntry, node *algebra.KeyspaceTerm,
-	id, pred expression.Expression, exprs, keys expression.Expressions, unnestScan, arrayIndex, implicitAny bool,
+	id, pred expression.Expression, exprs expression.Expressions, keys datastore.IndexKeys,
+	unnestScan, arrayIndex, implicitAny bool,
 	covers expression.Covers, filterCovers map[*expression.Cover]value.Value,
 	idxProj map[int]bool) (plan.SecondaryScan, int, error) {
 
@@ -578,6 +590,20 @@ func (this *builder) buildCreateCoveringScan(entry *indexEntry, node *algebra.Ke
 		}
 	}
 
+	var indexKeyNames []string
+	var indexPartitionSets plan.IndexPartitionSets
+	if index6, ok := entry.index.(datastore.Index6); ok && index6.IsBhive() && entry.HasFlag(IE_VECTOR_KEY_SARGABLE) {
+		var err error
+		indexKeyNames, err = getIndexKeyNames(node.Alias(), index, indexProjection)
+		if err != nil {
+			return nil, 0, err
+		}
+		indexPartitionSets, err = this.getIndexPartitionSets(entry.partitionKeys, node, pred, baseKeyspace)
+		if err != nil {
+			return nil, 0, err
+		}
+	}
+
 	skipNewKeys := false
 	if index.Type() == datastore.SEQ_SCAN {
 		skipNewKeys = this.skipKeyspace != "" && baseKeyspace.Keyspace() == this.skipKeyspace
@@ -592,7 +618,7 @@ func (this *builder) buildCreateCoveringScan(entry *indexEntry, node *algebra.Ke
 		overlapSpans(pred), array, this.offset, this.limit, indexProjection, indexKeyOrders,
 		indexGroupAggs, covers, filterCovers, filter, entry.cost, entry.cardinality,
 		entry.size, entry.frCost, baseKeyspace, hasDeltaKeyspace, skipNewKeys,
-		this.hasBuilderFlag(BUILDER_NL_INNER))
+		this.hasBuilderFlag(BUILDER_NL_INNER), false, indexKeyNames, indexPartitionSets)
 	if scan != nil {
 		scan.SetImplicitArrayKey(arrayKey)
 		if entry.index.Type() != datastore.SYSTEM {
@@ -605,7 +631,7 @@ func (this *builder) buildCreateCoveringScan(entry *indexEntry, node *algebra.Ke
 }
 
 func (this *builder) checkResetPaginations(entry *indexEntry,
-	keys expression.Expressions) (indexKeyOrders plan.IndexKeyOrders) {
+	keys datastore.IndexKeys) (indexKeyOrders plan.IndexKeyOrders) {
 
 	// check order pushdown and reset
 	if this.order != nil {
@@ -676,7 +702,7 @@ func (this *builder) buildCoveringPushdDownIndexScan2(entry *indexEntry, node *a
 	scan := entry.spans.CreateScan(entry.index, node, this.context.IndexApiVersion(), false, false, overlapSpans(pred),
 		array, nil, expression.ONE_EXPR, indexProjection, indexKeyOrders, nil, covers, filterCovers, nil,
 		OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, baseKeyspace,
-		false, false, this.hasBuilderFlag(BUILDER_NL_INNER))
+		false, false, this.hasBuilderFlag(BUILDER_NL_INNER), false, nil, nil)
 	if scan != nil {
 		if entry.index.Type() != datastore.SYSTEM {
 			this.collectIndexKeyspaceNames(baseKeyspace.Keyspace())
@@ -736,26 +762,56 @@ func mapFilterCovers(fc map[expression.Expression]value.Value, fullCover bool) m
 	return rv
 }
 
-func unFlattenKeys(keys expression.Expressions, arrayKey *expression.All) expression.Expressions {
-	if arrayKey == nil || !arrayKey.Flatten() {
-		return keys
-	}
-	rv := make(expression.Expressions, 0, len(keys))
-	for _, k := range keys {
-		if _, ok := k.(*expression.All); !ok {
-			rv = append(rv, k)
-		}
-	}
-	return append(rv, arrayKey)
-}
-
-func indexCoverExpressions(entry *indexEntry, keys expression.Expressions,
+func indexCoverExpressions(entry *indexEntry, keys datastore.IndexKeys, inclInclude bool,
 	pred, origPred expression.Expression, keyspace string, context *PrepareContext) (
 	expression.Expressions, map[*expression.Cover]value.Value, error) {
 
 	var filterCovers map[*expression.Cover]value.Value
-	exprs := make(expression.Expressions, 0, len(keys))
-	exprs = append(exprs, unFlattenKeys(keys, entry.arrayKey)...)
+	flatten := entry.arrayKey != nil && entry.arrayKey.Flatten()
+	vector := entry.HasFlag(IE_VECTOR_KEY_SARGABLE)
+
+	var ann *expression.Ann
+	if vector {
+		if tspans, ok := entry.spans.(*TermSpans); ok {
+			ann = tspans.ann
+		}
+		if ann == nil {
+			return nil, nil, errors.NewPlanInternalError("indexCoverExpressions: vector search predicate not available")
+		}
+
+		actualVector := ann.ActualVector()
+		if actualVector != nil {
+			actVectorVal := actualVector.Value()
+			if actVectorVal == nil || (actVectorVal.Type() == value.BOOLEAN && actVectorVal.Truth()) {
+				// if ActualVector is specified but unknown, or it's true, cannot cover
+				ann = nil
+			}
+		}
+	}
+
+	size := len(keys)
+	if inclInclude {
+		size += len(entry.includes)
+	}
+	exprs := make(expression.Expressions, 0, size)
+	for _, key := range keys {
+		if key.HasAttribute(datastore.IK_VECTOR) {
+			// only put any covered Ann expression; do not put the index key here since
+			// that may cover other expressions involving the same field/expression
+			// incorrectly
+			if vector && ann != nil {
+				exprs = append(exprs, ann)
+			}
+		} else if _, ok := key.Expr.(*expression.All); ok && flatten {
+			exprs = append(exprs, entry.arrayKey)
+		} else {
+			exprs = append(exprs, key.Expr)
+		}
+	}
+	if inclInclude && len(entry.includes) > 0 {
+		exprs = append(exprs, entry.includes...)
+	}
+
 	if entry.cond != nil {
 		fc := make(map[expression.Expression]value.Value, 2)
 		fc = entry.cond.FilterExpressionCovers(fc)
@@ -846,26 +902,28 @@ func implicitFilterCovers(expr expression.Expression) map[*expression.Cover]valu
 	return mapFilterCovers(fc, true)
 }
 
-func implicitIndexKeys(entry *indexEntry) (rv expression.Expressions) {
-	keys := entry.keys
+func replaceFlattenKeys(keys datastore.IndexKeys, entry *indexEntry) (rv datastore.IndexKeys) {
 	all := entry.arrayKey
 	pos := entry.arrayKeyPos
 	if all == nil || !all.Flatten() {
 		return keys
 	}
-	rv = make(expression.Expressions, 0, len(keys))
+	rv = make(datastore.IndexKeys, 0, len(keys))
 	rv = append(rv, keys[0:pos]...)
-	rv = append(rv, all.FlattenKeys().Operands()...)
+	flattenKeys := all.FlattenKeys()
+	for i, op := range flattenKeys.Operands() {
+		rv = append(rv, &datastore.IndexKey{op, datastore.GetFlattenKeyAttributes(flattenKeys, i)})
+	}
 	rv = append(rv, keys[pos+all.FlattenSize():]...)
 	return rv
 }
 
-func implicitIndexKeysProj(keys expression.Expressions,
+func implicitIndexKeysProj(keys datastore.IndexKeys,
 	anys map[expression.Expression]expression.Expression) (rv map[int]bool) {
 	rv = make(map[int]bool, len(keys))
 	for keyPos, indexKey := range keys {
 		for _, expr := range anys {
-			if expr.DependsOn(indexKey) {
+			if expr.DependsOn(indexKey.Expr) {
 				rv[keyPos] = true
 				break
 			}
@@ -907,6 +965,36 @@ outer:
 		return false
 	}
 	return true
+}
+
+func replaceVectorKey(keys datastore.IndexKeys, entry *indexEntry) (datastore.IndexKeys, error) {
+	var ann *expression.Ann
+	if tspans, ok := entry.spans.(*TermSpans); ok {
+		ann = tspans.ann
+	}
+	if ann == nil {
+		return keys, errors.NewPlanInternalError("replaceVectorKey: vector search predicate not available")
+	}
+
+	actualVector := ann.ActualVector()
+	if actualVector != nil {
+		actVectorVal := actualVector.Value()
+		if actVectorVal == nil || (actVectorVal.Type() == value.BOOLEAN && actVectorVal.Truth()) {
+			// if ActualVector is specified but unknown, or it's true, cannot cover
+			return keys, nil
+		}
+	}
+
+	newKeys := make(datastore.IndexKeys, len(keys))
+	for i := range keys {
+		if keys[i].HasAttribute(datastore.IK_VECTOR) {
+			newKeys[i] = &datastore.IndexKey{ann, (keys[i].Attributes ^ datastore.IK_VECTOR)}
+		} else {
+			newKeys[i] = keys[i]
+		}
+	}
+
+	return newKeys, nil
 }
 
 var _FILTER_COVERS_POOL = value.NewStringValuePool(32)

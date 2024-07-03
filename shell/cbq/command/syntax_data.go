@@ -625,8 +625,8 @@ var statement_syntax = map[string][][]string{
 		[]string{"CREATE", "PRIMARY", "INDEX", "[if_not_exists]", "ON", "named_keyspace_ref", "[index_partition]", "[index_using]", "[with_clause]"},
 		[]string{"CREATE", "PRIMARY", "INDEX", "index_name", "[if_not_exists]", "ON", "named_keyspace_ref", "[index_partition]", "[index_using]", "[with_clause]"},
 		[]string{"CREATE", "PRIMARY", "INDEX", "IF", "NOT", "EXISTS", "index_name", "ON", "named_keyspace_ref", "[index_partition]", "[index_using]", "[with_clause]"},
-		[]string{"CREATE", "[vector]", "INDEX", "index_name", "[if_not_exists]", "ON", "named_keyspace_ref", "LPAREN", "index_terms", "RPAREN", "[index_partition]", "[index_where]", "[index_using]", "[with_clause]"},
-		[]string{"CREATE", "[vector]", "INDEX", "IF", "NOT", "EXISTS", "index_name", "ON", "named_keyspace_ref", "LPAREN", "index_terms", "RPAREN", "[index_partition]", "[index_where]", "[index_using]", "[with_clause]"},
+		[]string{"CREATE", "[vector]", "INDEX", "index_name", "[if_not_exists]", "ON", "named_keyspace_ref", "LPAREN", "index_terms", "RPAREN", "[index_include]", "[index_partition]", "[index_where]", "[index_using]", "[with_clause]"},
+		[]string{"CREATE", "[vector]", "INDEX", "IF", "NOT", "EXISTS", "index_name", "ON", "named_keyspace_ref", "LPAREN", "index_terms", "RPAREN", "[index_include]", "[index_partition]", "[index_where]", "[index_using]", "[with_clause]"},
 	},
 	"[vector]": [][]string{
 		[]string{"VECTOR"},
@@ -654,6 +654,9 @@ var statement_syntax = map[string][][]string{
 	},
 	"[index_partition]": [][]string{
 		[]string{"PARTITION", "BY", "HASH", "LPAREN", "exprs", "RPAREN"},
+	},
+	"[index_include]": [][]string{
+		[]string{"INCLUDE", "LPAREN", "exprs", "RPAREN"},
 	},
 	"index_using": [][]string{
 		[]string{"USING", "VIEW"},
@@ -697,6 +700,7 @@ var statement_syntax = map[string][][]string{
 	"ikattr": [][]string{
 		[]string{"ASC"},
 		[]string{"DESC"},
+		[]string{"VECTOR"},
 		[]string{"INCLUDE", "MISSING"},
 	},
 	"drop_index": [][]string{
@@ -712,8 +716,8 @@ var statement_syntax = map[string][][]string{
 		[]string{"IF", "EXISTS"},
 	},
 	"alter_index": [][]string{
-		[]string{"ALTER", "INDEX", "simple_named_keyspace_ref", "DOT", "index_name", "[index_using]", "with_clause"},
-		[]string{"ALTER", "INDEX", "index_name", "ON", "named_keyspace_ref", "[index_using]", "with_clause"},
+		[]string{"ALTER", "[vector]", "INDEX", "simple_named_keyspace_ref", "DOT", "index_name", "[index_using]", "with_clause"},
+		[]string{"ALTER", "[vector]", "INDEX", "index_name", "ON", "named_keyspace_ref", "[index_using]", "with_clause"},
 	},
 	"build_index": [][]string{
 		[]string{"BUILD", "INDEX", "ON", "named_keyspace_ref", "LPAREN", "exprs", "RPAREN", "[index_using]"},

@@ -361,7 +361,12 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm,
 		}
 	}
 
-	sargables, arrays, flex, err := this.sargableIndexes(indexes, pred, subset, primaryKey,
+	var vpred expression.Expression
+	if !this.hasBuilderFlag(BUILDER_NL_INNER) {
+		vpred = baseKeyspace.GetVectorPred()
+	}
+
+	sargables, arrays, flex, err := this.sargableIndexes(indexes, pred, subset, vpred, primaryKey,
 		formalizer, ubs, this.hasBuilderFlag(BUILDER_NL_INNER))
 	if err != nil {
 		return nil, 0, err
@@ -385,7 +390,7 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm,
 	if this.hasBuilderFlag(BUILDER_CHK_INDEX_ORDER) {
 		// only consider indexes that satisfy ordering
 		for i, e := range sargables {
-			ok, _, _ := this.useIndexOrder(e, e.keys)
+			ok, _, _ := this.useIndexOrder(e, e.idxKeys)
 			if !ok {
 				delete(sargables, i)
 			}

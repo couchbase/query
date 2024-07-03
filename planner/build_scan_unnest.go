@@ -352,9 +352,12 @@ func (this *builder) matchUnnest(node *algebra.KeyspaceTerm, pred, subset expres
 		origKeys = getUnnestSargKeys(entry.keys, sargKey)
 	}
 
+	// no need to check for BUILDER_NL_INNER flag since unnest scan is not considered in that case
+	vpred := baseKeyspace.GetVectorPred()
+
 	skip := useSkipIndexKeys(entry.index, this.context.IndexApiVersion())
 	missing := entry.HasFlag(IE_LEADINGMISSING)
-	min, max, sum, skeys := SargableFor(pred, keys, missing, skip, isArrays, this.context, this.aliases)
+	min, max, sum, skeys := SargableFor(pred, vpred, entry.index, keys, missing, skip, isArrays, this.context, this.aliases)
 
 	n := min
 	if skip && (n > 0 || missing) {
@@ -369,7 +372,7 @@ func (this *builder) matchUnnest(node *algebra.KeyspaceTerm, pred, subset expres
 		return nil, nil, nil, nil
 	}
 
-	spans, exactSpans, err := SargFor(pred, entry, keys, missing, isArrays, n, false, useCBO,
+	spans, exactSpans, err := SargFor(pred, vpred, entry, keys, missing, isArrays, n, false, useCBO,
 		baseKeyspace, this.keyspaceNames, advisorValidate, this.aliases, this.context)
 	if err != nil {
 		return nil, nil, nil, err
@@ -392,7 +395,7 @@ func (this *builder) matchUnnest(node *algebra.KeyspaceTerm, pred, subset expres
 		baseKeyspace.AddUnnestIndex(entry.index, unnest.Alias())
 	}
 
-	entry = newIndexEntry(entry.index, keys, n, entry.partitionKeys, min, n, sum,
+	entry = newIndexEntry(entry.index, keys, entry.includes, n, entry.partitionKeys, min, n, sum,
 		entry.cond, entry.origCond, spans, exactSpans, skeys)
 	entry.setArrayKey(newArrayKey, 0)
 	entry.cardinality, entry.selectivity, entry.cost, entry.frCost, entry.size =
@@ -437,7 +440,7 @@ func getUnnestIndexSargKeys(keys datastore.IndexKeys, sargKey expression.Express
 	rv = make(datastore.IndexKeys, 0, len(keys))
 	if fks, ok := sargKey.(*expression.FlattenKeys); ok {
 		for i, op := range fks.Operands() {
-			attr := getFlattenKeyAttributes(fks, i)
+			attr := datastore.GetFlattenKeyAttributes(fks, i)
 			rv = append(rv, &datastore.IndexKey{op, attr})
 		}
 	} else {

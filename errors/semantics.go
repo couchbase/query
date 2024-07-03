@@ -40,6 +40,11 @@ func NewSemanticsWithCauseError(e error, msg string) Error {
 	}
 }
 
+func NewSemanticsInternalError(what string) Error {
+	return &err{level: EXCEPTION, ICode: E_SEMANTICS_INTERNAL, IKey: "semantics.internal_error",
+		InternalMsg: fmt.Sprintf("Internal semantics error: %v", what), InternalCaller: CallerN(1)}
+}
+
 func NewJoinNestNoJoinHintError(op string, alias string, iKey string) Error {
 	return &err{level: EXCEPTION, ICode: E_JOIN_NEST_NO_JOIN_HINT, IKey: iKey,
 		InternalMsg:    fmt.Sprintf("%s on %s cannot have join hint (USE HASH or USE NL).", op, alias),
@@ -208,6 +213,62 @@ func NewOrderByValidationError(what string, expr string) Error {
 	return &err{level: EXCEPTION, ICode: E_ORDER_BY_VALIDATION_FAIL, IKey: "semantics_order_by_validation",
 		InternalMsg: fmt.Sprintf("%s '%s' is not a valid constant, named, positional or function parameter.",
 			what, expr), InternalCaller: CallerN(1)}
+}
+
+func NewVectorFunctionError(msg string) Error {
+	return &err{level: EXCEPTION, ICode: E_VECTOR_SEMANTIC, IKey: "semantics_vector_function",
+		InternalMsg:    msg,
+		InternalCaller: CallerN(1)}
+}
+
+func NewVectorIndexAttrError(key, attr string) Error {
+	return &err{level: EXCEPTION, ICode: E_VECTOR_INDEX_ATTRIBUTE, IKey: "semantics_vector_index_attribute",
+		InternalMsg:    fmt.Sprintf("Cannot mix index attribute VECTOR with %s for index key %s", attr, key),
+		InternalCaller: CallerN(1)}
+}
+
+func NewVectorIndexSingleVector(name string) Error {
+	return &err{level: EXCEPTION, ICode: E_VECTOR_INDEX_SINGLE_VECTOR, IKey: "semantics_vector_index_key",
+		InternalMsg:    fmt.Sprintf("Cannot have more than one vector index key for index %s", name),
+		InternalCaller: CallerN(1)}
+}
+
+func NewVectorIndexSingleKey(name string) Error {
+	return &err{level: EXCEPTION, ICode: E_VECTOR_INDEX_SINGLE_KEY, IKey: "semantics_vector_index_key",
+		InternalMsg:    fmt.Sprintf("Cannot have more than one index key for VECTOR index %s", name),
+		InternalCaller: CallerN(1)}
+}
+
+func NewVectorIndexNoVector(name string) Error {
+	return &err{level: EXCEPTION, ICode: E_VECTOR_INDEX_NO_VECTOR, IKey: "semantics_vector_index_key",
+		InternalMsg:    fmt.Sprintf("VECTOR index %s is created with no vector index key", name),
+		InternalCaller: CallerN(1)}
+}
+
+func NewVectorOrderConst(term, option string) Error {
+	return &err{level: EXCEPTION, ICode: E_VECTOR_FUNC_ORDER_CONST, IKey: "semantics_orderby_vector_func",
+		InternalMsg:    fmt.Sprintf("Vector function (%s) in ORDER BY clause must use a constant for %s", term, option),
+		InternalCaller: CallerN(1)}
+}
+
+func NewVectorOrderOption(term, option string) Error {
+	return &err{level: EXCEPTION, ICode: E_VECTOR_FUNC_ORDER_OPTION, IKey: "semantics_orderby_vector_func",
+		InternalMsg:    fmt.Sprintf("Invalid option (%s) for vector function (%s) in ORDER BY clause", option, term),
+		InternalCaller: CallerN(1)}
+}
+
+func NewVectorDistinctArrayKey() Error {
+	return &err{level: EXCEPTION, ICode: E_VECTOR_DISTINCT_ARRAY_KEY,
+		IKey:           "semantics_distinct_array_key",
+		InternalMsg:    "Cannot have DISTINCT array index key for VECTOR expression",
+		InternalCaller: CallerN(1)}
+}
+
+func NewVectorConstantIndexKey(name string) Error {
+	return &err{level: EXCEPTION, ICode: E_VECTOR_CONSTANT_INDEX_KEY,
+		IKey:           "semantics_constant_index__key",
+		InternalMsg:    fmt.Sprintf("Vector expression '%s' cannot use a constant construct (object of array)", name),
+		InternalCaller: CallerN(1)}
 }
 
 /*

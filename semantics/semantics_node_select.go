@@ -51,6 +51,9 @@ func (this *SemChecker) VisitSubselect(node *algebra.Subselect) (r interface{}, 
 		if this.hasSemFlag(_SEM_WITH_RECURSIVE) {
 			return nil, errors.NewRecursiveWithSemanticError("Grouping is not allowed")
 		}
+		if this.hasSemFlag(_SEM_ORDERBY_VECTOR_DIST) {
+			return nil, errors.NewVectorFunctionError("Cannot use GROUP BY clause with vector search function")
+		}
 		if err = node.Group().MapExpressions(this); err != nil {
 			return nil, err
 		}

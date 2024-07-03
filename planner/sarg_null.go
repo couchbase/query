@@ -14,7 +14,9 @@ import (
 )
 
 func (this *sarg) VisitIsNull(pred *expression.IsNull) (interface{}, error) {
-	if base.SubsetOf(pred, this.key) {
+	if this.isVector {
+		return nil, nil
+	} else if base.SubsetOf(pred, this.key) {
 		if expression.Equivalent(pred, this.key) {
 			return _EXACT_SELF_SPANS, nil
 		}
@@ -38,7 +40,9 @@ func (this *sarg) VisitIsNull(pred *expression.IsNull) (interface{}, error) {
 }
 
 func (this *sarg) VisitIsNotNull(pred *expression.IsNotNull) (interface{}, error) {
-	if base.SubsetOf(pred, this.key) {
+	if this.isVector {
+		return nil, nil
+	} else if base.SubsetOf(pred, this.key) {
 		if expression.Equivalent(pred, this.key) {
 			return _EXACT_SELF_SPANS, nil
 		}

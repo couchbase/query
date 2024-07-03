@@ -14,17 +14,18 @@ import (
 	base "github.com/couchbase/query/plannerbase"
 )
 
-func SargableFor(pred expression.Expression, keys datastore.IndexKeys, missing, gsi bool,
-	isArrays []bool, context *PrepareContext, aliases map[string]bool) (
+func SargableFor(pred, vpred expression.Expression, index datastore.Index, keys datastore.IndexKeys,
+	missing, gsi bool, isArrays []bool, context *PrepareContext, aliases map[string]bool) (
 	min, max, sum int, skeys []bool) {
 
 	skeys = make([]bool, len(keys))
-	if pred == nil {
+
+	if pred == nil && vpred == nil {
 		return
 	}
 
 	if or, ok := pred.(*expression.Or); ok {
-		return sargableForOr(or, keys, missing, gsi, isArrays, context, aliases)
+		return sargableForOr(or, vpred, index, keys, missing, gsi, isArrays, context, aliases)
 	}
 
 	skiped := false
@@ -35,9 +36,25 @@ func SargableFor(pred expression.Expression, keys datastore.IndexKeys, missing, 
 			return
 		}
 
-		s := &sargable{keys[i].Expr, missing, (i < len(isArrays) && isArrays[i]), gsi, context, aliases}
+		vector := keys[i].HasAttribute(datastore.IK_VECTOR)
 
-		r, err := pred.Accept(s)
+		spred := pred
+		if vector {
+			spred = vpred
+		}
+		if spred == nil {
+			if !gsi || (i == 0 && !missing) {
+				return
+			}
+			missing = true
+			skiped = true
+			continue
+		}
+
+		s := &sargable{keys[i].Expr, missing, (i < len(isArrays) && isArrays[i]), gsi, vector,
+			index, context, aliases}
+
+		r, err := spred.Accept(s)
 
 		if err != nil {
 			return
@@ -66,14 +83,14 @@ func SargableFor(pred expression.Expression, keys datastore.IndexKeys, missing, 
 	return
 }
 
-func sargableForOr(or *expression.Or, keys datastore.IndexKeys, missing, gsi bool, isArrays []bool,
-	context *PrepareContext, aliases map[string]bool) (min, max, sum int, skeys []bool) {
+func sargableForOr(or *expression.Or, vpred expression.Expression, index datastore.Index, keys datastore.IndexKeys,
+	missing, gsi bool, isArrays []bool, context *PrepareContext, aliases map[string]bool) (min, max, sum int, skeys []bool) {
 
 	skeys = make([]bool, len(keys))
 
 	// OR should have already been flattened with DNF transformation
 	for _, c := range or.Operands() {
-		cmin, cmax, csum, cskeys := SargableFor(c, keys, missing, gsi, isArrays, context, aliases)
+		cmin, cmax, csum, cskeys := SargableFor(c, vpred, index, keys, missing, gsi, isArrays, context, aliases)
 		if (cmin == 0 && !missing) || cmax == 0 || csum < cmin {
 			return 0, 0, 0, skeys
 		}
@@ -101,6 +118,8 @@ type sargable struct {
 	missing bool
 	array   bool
 	gsi     bool
+	vector  bool
+	index   datastore.Index
 	context *PrepareContext
 	aliases map[string]bool
 }
@@ -275,6 +294,17 @@ func (this *sargable) VisitFunction(pred expression.Function) (interface{}, erro
 	switch pred := pred.(type) {
 	case *expression.RegexpLike:
 		return this.visitLike(pred)
+	case *expression.Ann:
+		if this.vector {
+			if index6, ok := this.index.(datastore.Index6); ok {
+				fld := pred.Field()
+				if fld.EquivalentTo(this.key) &&
+					index6.VectorDistanceType() == datastore.GetVectorDistanceType(pred.Metric()) {
+					return true, nil
+				}
+			}
+		}
+		return false, nil
 	}
 
 	return this.visitDefault(pred)
@@ -310,6 +340,6 @@ func (this *sargable) visitDefault(pred expression.Expression) (bool, error) {
 }
 
 func (this *sargable) defaultSargable(pred expression.Expression) bool {
-	return base.SubsetOf(pred, this.key) ||
-		((pred.PropagatesMissing() || pred.PropagatesNull()) && pred.DependsOn(this.key))
+	return !this.vector && (base.SubsetOf(pred, this.key) ||
+		((pred.PropagatesMissing() || pred.PropagatesNull()) && pred.DependsOn(this.key)))
 }
