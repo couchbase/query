@@ -501,4 +501,8 @@ var _FUNCTIONS = map[string]Function{
 	"vector_decode":           &DecodeVector{},
 	"encode_vector":           &EncodeVector{},
 	"vector_encode":           &EncodeVector{},
+	"normalize_vector":        &NormalizeVector{},
+	"normalise_vector":        &NormalizeVector{},
+	"vector_normalize":        &NormalizeVector{},
+	"vector_normalise":        &NormalizeVector{},
 }

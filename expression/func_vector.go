@@ -437,12 +437,6 @@ func (this *IsVector) Evaluate(item value.Value, context Context) (value.Value, 
 
 }
 
-///////////////////////////////////////////////////
-//
-// DecodeVector
-//
-///////////////////////////////////////////////////
-
 type DecodeVector struct {
 	FunctionBase
 }
@@ -455,9 +449,6 @@ func NewDecodeVector(operands ...Expression) Function {
 	return rv
 }
 
-/*
-Visitor pattern.
-*/
 func (this *DecodeVector) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
@@ -526,20 +517,11 @@ func (this *DecodeVector) Evaluate(item value.Value, context Context) (value.Val
 	return value.NewValue(decodedVector), nil
 }
 
-/*
-Factory method pattern.
-*/
 func (this *DecodeVector) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
 		return NewDecodeVector(operands...)
 	}
 }
-
-///////////////////////////////////////////////////
-//
-// EncodeVector
-//
-///////////////////////////////////////////////////
 
 type EncodeVector struct {
 	FunctionBase
@@ -553,9 +535,6 @@ func NewEncodeVector(operands ...Expression) Function {
 	return rv
 }
 
-/*
-Visitor pattern.
-*/
 func (this *EncodeVector) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
@@ -627,11 +606,67 @@ func (this *EncodeVector) Evaluate(item value.Value, context Context) (value.Val
 	return value.NewValue(str), nil
 }
 
-/*
-Factory method pattern.
-*/
 func (this *EncodeVector) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
 		return NewEncodeVector(operands...)
+	}
+}
+
+type NormalizeVector struct {
+	UnaryFunctionBase
+}
+
+func NewNormalizeVector(operands Expression) Function {
+	rv := &NormalizeVector{}
+	rv.Init("normalize_vector", operands)
+
+	rv.expr = rv
+	return rv
+}
+
+func (this *NormalizeVector) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *NormalizeVector) Type() value.Type { return value.ARRAY }
+func (this *NormalizeVector) Indexable() bool  { return false }
+
+func (this *NormalizeVector) Evaluate(item value.Value, context Context) (value.Value, error) {
+	vec, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if vec.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else if vec.Type() != value.ARRAY {
+		return value.NULL_VALUE, nil
+	}
+	fvec := make([]interface{}, 0, 32)
+	var svf float64
+	for i := 0; ; i++ {
+		vv, vOk := vec.Index(i)
+		if !vOk {
+			break
+		}
+		if vv.Type() != value.NUMBER {
+			return value.NULL_VALUE, nil
+		}
+		vf := value.AsNumberValue(vv).Float64()
+		if vf < -math.MaxFloat32 || vf > math.MaxFloat32 {
+			return value.NULL_VALUE, nil
+		}
+		fvec = append(fvec, vf)
+		svf += vf * vf
+	}
+	svf = math.Sqrt(svf)
+
+	for i, vf := range fvec {
+		fvec[i] = vf.(float64) / svf
+	}
+	return value.NewValue(fvec), nil
+}
+
+func (this *NormalizeVector) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return NewNormalizeVector(operands[0])
 	}
 }
