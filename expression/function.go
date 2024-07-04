@@ -128,6 +128,11 @@ type FunctionBase struct {
 	operands Expressions
 }
 
+func (this *FunctionBase) Init(name string, operands ...Expression) {
+	this.name = name
+	this.operands = operands
+}
+
 func NewFunctionBase(name string, operands ...Expression) *FunctionBase {
 	return &FunctionBase{
 		name:     name,
