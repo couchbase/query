@@ -802,6 +802,14 @@ func (this *annotatedValue) SetMetaField(id int, v interface{}) {
 	}
 	this.meta.valid |= id
 }
+func (this *annotatedValue) SetMetaField(id int, v interface{}) {
+	if name, ok := metaNames[id]; ok {
+		if this.meta == nil {
+			this.meta = make(map[string]interface{}, _DEFAULT_ATTACHMENT_SIZE)
+		}
+		this.meta[name] = v
+	}
+}
 
 func (this *annotatedValue) ResetMeta() {
 	k := this.GetId()
@@ -1479,6 +1487,10 @@ func (this *annotatedValueSelfReference) GetMetaMap() map[string]interface{} {
 
 func (this *annotatedValueSelfReference) GetMetaField(id int) interface{} {
 	return (*annotatedValue)(this).GetMetaField(id)
+}
+
+func (this *annotatedValueSelfReference) SetMetaField(id int, v interface{}) {
+	(*annotatedValue)(this).SetMetaField(id, v)
 }
 
 func (this *annotatedValueSelfReference) SetMetaField(id int, v interface{}) {
