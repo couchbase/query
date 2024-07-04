@@ -388,10 +388,12 @@ func (this *annotatedValue) SetMeta(meta map[string]interface{}) {
 	}
 }
 func (this *annotatedValue) SetMetaField(id int, v interface{}) {
-	if this.meta == nil {
-		this.meta = make(map[string]interface{}, _DEFAULT_ATTACHMENT_SIZE)
+	if name, ok := metaNames[id]; ok {
+		if this.meta == nil {
+			this.meta = make(map[string]interface{}, _DEFAULT_ATTACHMENT_SIZE)
+		}
+		this.meta[name] = v
 	}
-	this.meta[metaNames[id]] = v
 }
 
 func (this *annotatedValue) ResetMeta() {
