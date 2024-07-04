@@ -176,8 +176,7 @@ func NewError(e error, internalMsg string) Error {
 					m["error"] = errText
 				}
 			}
-			cause = &err{level: level, ICode: code, IKey: key, ICause: e, InternalMsg: internalMsg, InternalCaller: caller,
-				cause: m}
+			cause = &err{level: level, ICode: code, IKey: key, InternalMsg: "GSI error", InternalCaller: caller, cause: m}
 		}
 	}
 
