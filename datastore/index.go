@@ -44,7 +44,7 @@ const (
 	INDEX_API_MAX = INDEX_API_6
 )
 const (
-	INDEXER6_VERSION = "8.0.0"
+	INDEXER6_VERSION = "7.7.0"
 )
 
 type Indexer interface {
@@ -494,7 +494,7 @@ type Indexer5 interface {
 
 // //////////////////////////////////////////////////////////////////////
 //
-// # Index API6 introduced in 8.0.0 for Vector index
+// # Index API6 introduced in 7.7.0 for Vector index
 //
 // //////////////////////////////////////////////////////////////////////
 type IndexDistanceType string
