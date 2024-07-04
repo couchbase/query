@@ -19,6 +19,46 @@ import (
 	"github.com/couchbase/query/util"
 )
 
+const (
+	META_ID int = 1 << iota
+	META_CAS
+	META_KEYSPACE
+	META_TYPE
+	META_FLAGS
+	META_EXPIRATION
+	META_XATTRS
+	META_TXNMETA
+	META_TXPLANS
+	META_SUBQUERY_PLANS
+	META_PLAN
+	META_OPT_ESTIMATES
+	META_DISTRIBUTIONS
+	META_BYSEQNO
+	META_REVSEQNO
+	META_LOCKTIME
+	META_NRU
+)
+
+var metaNames = map[int]string{
+	META_ID:             "id",
+	META_CAS:            "cas",
+	META_KEYSPACE:       "keyspace",
+	META_TYPE:           "type",
+	META_FLAGS:          "flags",
+	META_EXPIRATION:     "expiration",
+	META_XATTRS:         "xattrs",
+	META_TXNMETA:        "txnMeta",
+	META_TXPLANS:        "txPlans",
+	META_SUBQUERY_PLANS: "subqueryPlans",
+	META_PLAN:           "plan",
+	META_OPT_ESTIMATES:  "optimizerEstimates",
+	META_DISTRIBUTIONS:  "distributions",
+	META_BYSEQNO:        "byseqno",
+	META_REVSEQNO:       "revseqno",
+	META_LOCKTIME:       "locktime",
+	META_NRU:            "nru",
+}
+
 const _DEFAULT_ATTACHMENT_SIZE = 6
 
 type AnnotatedValues []AnnotatedValue
@@ -89,6 +129,7 @@ type AnnotatedValue interface {
 	NewMeta() map[string]interface{}
 	GetMeta() map[string]interface{}
 	SetMeta(meta map[string]interface{})
+	SetMetaField(id int, v interface{})
 	ResetMeta()
 	Covers() Value
 	GetCover(key string) Value
@@ -345,6 +386,12 @@ func (this *annotatedValue) SetMeta(meta map[string]interface{}) {
 	if k != nil {
 		this.SetId(k)
 	}
+}
+func (this *annotatedValue) SetMetaField(id int, v interface{}) {
+	if this.meta == nil {
+		this.meta = make(map[string]interface{}, _DEFAULT_ATTACHMENT_SIZE)
+	}
+	this.meta[metaNames[id]] = v
 }
 
 func (this *annotatedValue) ResetMeta() {
@@ -1012,6 +1059,10 @@ func (this *annotatedValueSelfReference) GetMeta() map[string]interface{} {
 
 func (this *annotatedValueSelfReference) SetMeta(meta map[string]interface{}) {
 	(*annotatedValue)(this).SetMeta(meta)
+}
+
+func (this *annotatedValueSelfReference) SetMetaField(id int, v interface{}) {
+	(*annotatedValue)(this).SetMetaField(id, v)
 }
 
 func (this *annotatedValueSelfReference) ResetMeta() {
