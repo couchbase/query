@@ -1016,6 +1016,9 @@ func (this *builder) sargIndexes(baseKeyspace *base.BaseKeyspace, underHash bool
 				}
 			}
 		}
+		if useFilters && vpred != nil && len(baseKeyspace.Filters()) == 0 {
+			useFilters = false
+		}
 		isMissing := se.HasFlag(IE_LEADINGMISSING)
 		validSpans := false
 		if useFilters {
