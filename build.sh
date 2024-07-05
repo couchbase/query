@@ -233,7 +233,7 @@ function repo_by_gomod {
 function repo_setup {
     repo_by_gomod go.mod query "" $cbranch $rbranch $defbranch
     repo_by_gomod go.mod query-ee "" $cbranch $rbranch $defbranch
-    repo_by_gomod go.mod indexing "" $cbranch $rbranch $defbranch
+    repo_by_gomod go.mod indexing "" $cbranch $defbranch $defbranch
     repo_by_gomod go.mod go-couchbase "" $cbranch $rbranch $defbranch
     repo_by_gomod go.mod gomemcached "" $cbranch $rbranch $defbranch
     repo_by_gomod go.mod cbauth "" $cbranch $rbranch $defbranch
