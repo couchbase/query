@@ -733,6 +733,19 @@ var curHist int = -1
 var searchForwards bool = true
 var search []rune
 
+// this is a map of aliases for well-known variables that can be set with ":set <alias>" (which will implicitly set <alias> to true
+// - except "histfile") and unset with ":set no<alias>" (if desired; can still be unset with ":unset <alias>")
+// the map's key is the alias and value is the full variable name
+// entries with key==value are present to allow for the "no<alias>" lookup without excluding other variables starting with "no"
+var varAliases = map[string]string{
+	"histfile": "histfile",
+	"hf":       "histfile",
+	"quiet":    "quiet",
+	"q":        "quiet",
+	"terse":    "terse",
+	"pager":    "pager",
+}
+
 func (s *State) Prompt(prompt string) (string, error) {
 	if s.pipeIn {
 		if nil != s.r {
@@ -908,33 +921,39 @@ mainLoop:
 								break
 							}
 						}
-						if 0 == len(set) {
+						tokens := stringTokens(set)
+						if 0 == len(tokens) {
 							m = s.commandCallback("set")
-						} else if "hf" == string(set[:n]) || "histfile" == string(set[:n]) {
-							if len(set) == n {
-								m = s.commandCallback("unset", "histfile")
-							} else {
-								m = s.commandCallback("set", "histfile", strings.TrimSpace(string(set[n:])))
-							}
-						} else if "q" == string(set) || "quiet" == string(set) {
-							m = s.commandCallback("set", "quiet", "true")
-						} else if "noq" == string(set) || "noquiet" == string(set) {
-							m = s.commandCallback("unset", "quiet")
-						} else if "terse" == string(set) {
-							m = s.commandCallback("set", "terse", "true")
-						} else if "noterse" == string(set) {
-							m = s.commandCallback("unset", "terse")
-						} else if 0 < len(set) && '-' == set[0] {
-							for n = 1; len(set) > n; n++ {
-								if 0 == classify(set[n]) {
-									break
+						} else if 0 < len(tokens) {
+							var ccmd string
+							var cvar string
+							if 2 < len(tokens[0]) && strings.HasPrefix(tokens[0], "no") {
+								var ok bool
+								cvar, ok = varAliases[tokens[0][2:]]
+								if ok {
+									ccmd = "unset"
 								}
 							}
-							if len(set) > n {
-								m = s.commandCallback("set", string(set[:n]), strings.TrimSpace(string(set[n:])))
-							} else {
-								m = s.commandCallback("set", string(set))
+							if ccmd == "" {
+								var ok bool
+								cvar, ok = varAliases[tokens[0]]
+								if !ok {
+									cvar = tokens[0]
+								}
+								ccmd = "set"
 							}
+							if cvar == "histfile" && ccmd == "set" && 1 == len(tokens) {
+								ccmd = "unset"
+							}
+							if 1 == len(tokens) && ccmd == "set" {
+								tokens = append(tokens, "true")
+							}
+							if 1 < len(tokens) {
+								tokens = append([]string{ccmd, cvar}, tokens[1:]...)
+							} else {
+								tokens = []string{ccmd, cvar}
+							}
+							m = s.commandCallback(tokens...)
 						}
 					}
 					if m == "" {
@@ -956,22 +975,20 @@ mainLoop:
 						}
 						if 0 == len(unset) {
 							m = s.commandCallback("unset")
-						} else if "hf" == string(unset[:n]) || "histfile" == string(unset[:n]) {
-							m = s.commandCallback("unset", "histfile")
-						} else if "q" == string(unset) || "quiet" == string(unset) {
-							m = s.commandCallback("unset", "quiet")
-						} else if "terse" == string(unset) {
-							m = s.commandCallback("unset", "terse")
-						} else if 0 < len(unset) && '-' == unset[0] {
-							for n = 1; len(unset) > n; n++ {
+						} else {
+							for n = 0; len(unset) > n; n++ {
 								if 0 == classify(unset[n]) {
 									break
 								}
 							}
-							m = s.commandCallback("unset", string(unset[:n]))
+							cvar, ok := varAliases[string(unset[:n])]
+							if ok {
+								m = s.commandCallback("unset", cvar)
+							} else {
+								m = s.commandCallback("unset", string(unset[:n]))
+							}
 						}
-					}
-					if m == "" {
+					} else {
 						m = fmt.Sprintf("[Invalid command: %s]", string(cmd))
 					}
 				case 'e':
@@ -3721,4 +3738,33 @@ func (s *State) writeTruncMarker() {
 
 func (s *State) alert() {
 	fmt.Printf("%c", _ASCII_BEL)
+}
+
+func stringTokens(input []rune) []string {
+	var tokens []string
+	var tok []rune
+	quote := rune(0)
+	for n := 0; len(input) > n; n++ {
+		if '\\' == input[n] {
+			if len(input) > n+1 {
+				tok = append(tok, input[n+1])
+				n++
+			}
+		} else if quote == input[n] {
+			quote = rune(0)
+		} else if '"' == input[n] || '\'' == input[n] {
+			quote = input[n]
+		} else if rune(0) == quote && 0 == classify(input[n]) {
+			if 0 < len(tok) {
+				tokens = append(tokens, string(tok))
+				tok = tok[:0]
+			}
+		} else {
+			tok = append(tok, input[n])
+		}
+	}
+	if len(tok) > 0 {
+		tokens = append(tokens, string(tok))
+	}
+	return tokens
 }
