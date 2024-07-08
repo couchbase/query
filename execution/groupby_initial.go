@@ -293,14 +293,16 @@ func (this *InitialGroup) processItem(item value.AnnotatedValue, context *Contex
 }
 
 func (this *InitialGroup) afterItems(context *Context) {
-	err := this.groups.Foreach(func(key string, av value.AnnotatedValue) bool {
-		if !this.sendItem(av) {
-			return false
+	if !this.stopped {
+		err := this.groups.Foreach(func(key string, av value.AnnotatedValue) bool {
+			if !this.sendItem(av) {
+				return false
+			}
+			return true
+		})
+		if err != nil {
+			context.Error(err)
 		}
-		return true
-	})
-	if err != nil {
-		context.Error(err)
 	}
 	this.Release()
 }
@@ -315,4 +317,12 @@ func (this *InitialGroup) MarshalJSON() ([]byte, error) {
 func (this *InitialGroup) reopen(context *Context) bool {
 	this.Release()
 	return this.baseReopen(context)
+}
+
+func (this *InitialGroup) SendAction(action opAction) {
+	this.baseSendAction(action)
+
+	if action == _ACTION_STOP && this.groups != nil {
+		this.groups.Stop()
+	}
 }

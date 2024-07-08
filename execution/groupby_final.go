@@ -109,35 +109,36 @@ func (this *FinalGroup) processItem(item value.AnnotatedValue, context *Context)
 }
 
 func (this *FinalGroup) afterItems(context *Context) {
-	groups_len := 0
-	err := this.groups.Foreach(func(key string, av value.AnnotatedValue) bool {
-		groups_len++
-		if !this.sendItem(av) {
-			return false
-		}
-		return true
-	})
-	if err != nil {
-		context.Error(err)
-		return
-	}
-	// Mo matching inputs, so send default values
-	if len(this.plan.Keys()) == 0 && groups_len == 0 {
-		av := value.NewAnnotatedValue(nil)
-		aggregates := make(map[string]value.Value, len(this.plan.Aggregates()))
-		av.SetAttachment(value.ATT_AGGREGATES, aggregates)
-		for _, agg := range this.plan.Aggregates() {
-			aggregates[agg.String()], _ = agg.Default(nil, &this.operatorCtx)
-		}
-
-		if context.UseRequestQuota() {
-			if err := context.TrackValueSize(av.Size()); err != nil {
-				context.Error(err)
-				av.Recycle()
-				return
+	if !this.stopped {
+		groups_len := 0
+		err := this.groups.Foreach(func(key string, av value.AnnotatedValue) bool {
+			groups_len++
+			if !this.sendItem(av) {
+				return false
 			}
+			return true
+		})
+		if err != nil {
+			context.Error(err)
+		} else if len(this.plan.Keys()) == 0 && groups_len == 0 && !this.stopped {
+			// Mo matching inputs, so send default values
+			av := value.NewAnnotatedValue(nil)
+			aggregates := make(map[string]value.Value, len(this.plan.Aggregates()))
+			av.SetAttachment(value.ATT_AGGREGATES, aggregates)
+			for _, agg := range this.plan.Aggregates() {
+				aggregates[agg.String()], _ = agg.Default(nil, &this.operatorCtx)
+			}
+
+			if context.UseRequestQuota() {
+				if err := context.TrackValueSize(av.Size()); err != nil {
+					context.Error(err)
+					av.Recycle()
+					this.Release()
+					return
+				}
+			}
+			this.sendItem(av)
 		}
-		this.sendItem(av)
 	}
 	this.Release()
 }

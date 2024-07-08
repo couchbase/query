@@ -125,57 +125,51 @@ func (this *OrderLimit) processItem(item value.AnnotatedValue, context *Context)
 }
 
 func (this *OrderLimit) afterItems(context *Context) {
-	defer func() {
+	if !this.stopped {
+		offset := int64(0)
 		if this.offset != nil {
-			this.offset.afterItems(context)
+			offset = this.offset.offset
 		}
-		this.limit.afterItems(context)
-		this.releaseValues()
-		this.terms = nil
-	}()
-
-	if this.stopped {
-		return
-	}
-	offset := int64(0)
-	if this.offset != nil {
-		offset = this.offset.offset
-	}
-	sortCount := this.numProcessedRows
-	if offset < int64(this.values.Length()) {
-		earlyOrder := this.plan.IsEarlyOrder()
-		useRequestQuota := context.UseRequestQuota()
-		err := this.values.Foreach(func(av value.AnnotatedValue) bool {
-			if offset == 0 {
-				if earlyOrder {
-					this.resetCachedValues(av)
+		sortCount := this.numProcessedRows
+		if offset < int64(this.values.Length()) {
+			earlyOrder := this.plan.IsEarlyOrder()
+			useRequestQuota := context.UseRequestQuota()
+			err := this.values.Foreach(func(av value.AnnotatedValue) bool {
+				if offset == 0 {
+					if earlyOrder {
+						this.resetCachedValues(av)
+					}
+					return this.sendItem(av)
+				} else {
+					if useRequestQuota {
+						context.ReleaseValueSize(av.Size())
+					}
+					av.Recycle()
+					offset--
+					return true
 				}
-				return this.sendItem(av)
-			} else {
-				if useRequestQuota {
-					context.ReleaseValueSize(av.Size())
-				}
-				av.Recycle()
-				offset--
-				return true
-			}
-		})
-		if err != nil {
-			context.Error(err)
-		}
-		logging.Debuga(func() string { return this.values.Stats() })
-	} else {
-		this.Order.values.Truncate(
-			func(v value.AnnotatedValue) {
-				if context.UseRequestQuota() {
-					context.ReleaseValueSize(v.Size())
-				}
-				v.Recycle()
 			})
+			if err != nil {
+				context.Error(err)
+			}
+			logging.Debuga(func() string { return this.values.Stats() })
+		} else {
+			this.Order.values.Truncate(
+				func(v value.AnnotatedValue) {
+					if context.UseRequestQuota() {
+						context.ReleaseValueSize(v.Size())
+					}
+					v.Recycle()
+				})
+		}
+		context.AddPhaseCount(SORT, this.numProcessedRows)
+		context.SetSortCount(sortCount)
 	}
-
-	context.AddPhaseCount(SORT, this.numProcessedRows)
-	context.SetSortCount(sortCount)
+	if this.offset != nil {
+		this.offset.afterItems(context)
+	}
+	this.limit.afterItems(context)
+	this.releaseValues()
 }
 
 func (this *OrderLimit) MarshalJSON() ([]byte, error) {

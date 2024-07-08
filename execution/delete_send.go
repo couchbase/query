@@ -127,7 +127,7 @@ func (this *SendDelete) flushBatch(context *Context) bool {
 		}()
 	}
 
-	if len(this.batch) == 0 || !this.isRunning() {
+	if len(this.batch) == 0 || !this.isRunning() || this.stopped {
 		return true
 	}
 

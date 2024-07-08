@@ -116,6 +116,13 @@ func (this *mapSpillFile) release() {
 	this.current = nil
 }
 
+func (this *mapSpillFile) close() {
+	if this.f != nil {
+		util.ReleaseTemp(this.f.Name(), this.sz)
+		this.f.Close()
+	}
+}
+
 type mapSpillFileHeap []*mapSpillFile
 
 func (this *mapSpillFileHeap) Len() int { return len(*this) }
@@ -488,6 +495,13 @@ func (this *AnnotatedMap) Release() {
 		}
 	}
 	this.memSize = 0
+}
+
+func (this *AnnotatedMap) Stop() {
+	s := this.spill
+	for _, sf := range s {
+		sf.close()
+	}
 }
 
 // Returns if the size to be added would result in spilling

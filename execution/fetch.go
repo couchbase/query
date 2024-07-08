@@ -188,7 +188,7 @@ func (this *Fetch) flushBatch(context *Context) bool {
 	}
 
 	l := len(this.batch)
-	if l == 0 || !this.isRunning() {
+	if l == 0 || !this.isRunning() || this.stopped {
 		return true
 	}
 

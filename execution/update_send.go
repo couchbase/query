@@ -124,7 +124,7 @@ func (this *SendUpdate) flushBatch(context *Context) bool {
 		}()
 	}
 
-	if len(this.batch) == 0 || !this.isRunning() {
+	if len(this.batch) == 0 || !this.isRunning() || this.stopped {
 		return true
 	}
 
@@ -137,6 +137,9 @@ func (this *SendUpdate) flushBatch(context *Context) bool {
 	}
 
 	for i, item := range this.batch {
+		if this.stopped {
+			return false
+		}
 		uv, ok := item.Field(this.plan.Alias())
 		if !ok {
 			context.Error(errors.NewUpdateAliasMissingError(this.plan.Alias()))

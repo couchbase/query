@@ -495,3 +495,10 @@ func (this *AnnotatedArray) Stats() string {
 	s = fmt.Sprintf("[R:%v,W:%v]", tr, tw) + s
 	return s
 }
+
+func (this *AnnotatedArray) Stop() {
+	s := this.spill
+	for _, sf := range s {
+		sf.f.Close()
+	}
+}

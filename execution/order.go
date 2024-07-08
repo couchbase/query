@@ -166,33 +166,28 @@ func (this *Order) beforeItems(context *Context, item value.Value) bool {
 }
 
 func (this *Order) afterItems(context *Context) {
-	defer this.releaseValues()
-	defer func() {
-		this.terms = nil
-	}()
-
 	// MB-25901 don't sort if we have been stopped
-	if this.stopped {
-		return
-	}
+	if !this.stopped {
+		context.SetSortCount(uint64(this.values.Length()))
+		context.AddPhaseCount(SORT, uint64(this.values.Length()))
 
-	context.SetSortCount(uint64(this.values.Length()))
-	context.AddPhaseCount(SORT, uint64(this.values.Length()))
-
-	earlyOrder := this.plan.IsEarlyOrder()
-	err := this.values.Foreach(func(av value.AnnotatedValue) bool {
-		if earlyOrder {
-			this.resetCachedValues(av)
+		earlyOrder := this.plan.IsEarlyOrder()
+		err := this.values.Foreach(func(av value.AnnotatedValue) bool {
+			if earlyOrder {
+				this.resetCachedValues(av)
+			}
+			return this.sendItem(av)
+		})
+		if err != nil {
+			context.Error(err)
 		}
-		return this.sendItem(av)
-	})
-	if err != nil {
-		context.Error(err)
+		logging.Debuga(func() string { return this.values.Stats() })
 	}
-	logging.Debuga(func() string { return this.values.Stats() })
+	this.releaseValues()
 }
 
 func (this *Order) releaseValues() {
+	this.terms = nil
 	this.values.Release()
 }
 
@@ -294,4 +289,12 @@ func (this *Order) reopen(context *Context) bool {
 	rv := this.baseReopen(context)
 	this.spilled = false
 	return rv
+}
+
+func (this *Order) SendAction(action opAction) {
+	this.baseSendAction(action)
+
+	if action == _ACTION_STOP && this.values != nil {
+		this.values.Stop()
+	}
 }

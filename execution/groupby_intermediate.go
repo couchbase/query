@@ -172,14 +172,16 @@ func (this *IntermediateGroup) processItem(item value.AnnotatedValue, context *C
 }
 
 func (this *IntermediateGroup) afterItems(context *Context) {
-	err := this.groups.Foreach(func(key string, av value.AnnotatedValue) bool {
-		if !this.sendItem(av) {
-			return false
+	if !this.stopped {
+		err := this.groups.Foreach(func(key string, av value.AnnotatedValue) bool {
+			if !this.sendItem(av) {
+				return false
+			}
+			return true
+		})
+		if err != nil {
+			context.Error(err)
 		}
-		return true
-	})
-	if err != nil {
-		context.Error(err)
 	}
 	this.Release()
 }

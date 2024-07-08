@@ -88,7 +88,7 @@ func (this *SendUpsert) flushBatch(context *Context) bool {
 		}()
 	}
 
-	if len(this.batch) == 0 || !this.isRunning() {
+	if len(this.batch) == 0 || !this.isRunning() || this.stopped {
 		return true
 	}
 
@@ -108,6 +108,9 @@ func (this *SendUpsert) flushBatch(context *Context) bool {
 	i := 0
 
 	for _, av := range this.batch {
+		if this.stopped {
+			return false
+		}
 		copyOptions = true
 		dpairs = dpairs[0 : i+1]
 		dpair := &dpairs[i]
