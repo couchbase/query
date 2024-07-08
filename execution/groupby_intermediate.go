@@ -157,6 +157,7 @@ func (this *IntermediateGroup) processItem(item value.AnnotatedValue, context *C
 		act2, _ := groupAsv2.Actual().([]interface{})
 		act := append(act2, act1...)
 		gv.SetField(this.plan.GroupAs(), value.NewValue(act))
+		gv.AdjustSize(int64(groupAsv1.Size())) // account for the increased size without recalculating
 
 		err = this.groups.AdjustSize(groupAsv1.Size()) // account for added field
 		if err != nil {

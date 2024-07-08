@@ -272,6 +272,7 @@ func (this *InitialGroup) processItem(item value.AnnotatedValue, context *Contex
 		groupAsVal := value.NewValue(groupAs)
 		act = append(act, groupAsVal)
 		gv.SetField(this.plan.GroupAs(), value.NewValue(act))
+		gv.AdjustSize(int64(groupAsVal.Size())) // account for the increased size without recalculating
 
 		err := this.groups.AdjustSize(groupAsVal.Size()) // account for added field
 		if err != nil {

@@ -256,6 +256,9 @@ func (this *AnnotatedArray) spillToDisk() error {
 		sort.Sort(this)
 	}
 	start := util.Now()
+	if len(this.spill) > _MAX_SPILL_FILES {
+		return errors.NewValueError(errors.E_VALUE_SPILL_MAX_FILES)
+	}
 	sf, err := util.CreateTemp(_SPILL_FILE_PATTERN, true)
 	if err != nil {
 		return errors.NewValueError(errors.E_VALUE_SPILL_CREATE, err)

@@ -4306,6 +4306,21 @@ var errData = []ErrData{
 		},
 	},
 	{
+		Code:        E_VALUE_SPILL_MAX_FILES, // 5707
+		symbol:      "E_VALUE_SPILL_MAX_FILES",
+		Description: "Too many spill files",
+		Reason: []string{
+			"The operation is attempting to use more files for temporarily spilling data to disk than is permitted.",
+		},
+		Action: []string{
+			"Increase your request memory quota.",
+			"Contact support.",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
 		Code:        E_SCHEDULER, // 6001
 		symbol:      "E_SCHEDULER",
 		Description: "The scheduler encountered an error in generating uuid for the task entry",

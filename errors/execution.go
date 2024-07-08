@@ -614,13 +614,14 @@ func NewMissingKeysWarning(count int, ks string, keys ...interface{}) Error {
 }
 
 var _ve = map[ErrorCode][2]string{
-	E_VALUE_RECONSTRUCT:  {"reconstruct", "Failed to reconstruct value"},
-	E_VALUE_INVALID:      {"invalid", "Invalid reconstructed value"},
-	E_VALUE_SPILL_CREATE: {"spill.create", "Failed to create spill file"},
-	E_VALUE_SPILL_READ:   {"spill.read", "Failed to read from spill file"},
-	E_VALUE_SPILL_WRITE:  {"spill.write", "Failed to write to spill file"},
-	E_VALUE_SPILL_SIZE:   {"spill.size", "Failed to determine spill file size"},
-	E_VALUE_SPILL_SEEK:   {"spill.seek", "Failed to seek in spill file"},
+	E_VALUE_RECONSTRUCT:     {"reconstruct", "Failed to reconstruct value"},
+	E_VALUE_INVALID:         {"invalid", "Invalid reconstructed value"},
+	E_VALUE_SPILL_CREATE:    {"spill.create", "Failed to create spill file"},
+	E_VALUE_SPILL_READ:      {"spill.read", "Failed to read from spill file"},
+	E_VALUE_SPILL_WRITE:     {"spill.write", "Failed to write to spill file"},
+	E_VALUE_SPILL_SIZE:      {"spill.size", "Failed to determine spill file size"},
+	E_VALUE_SPILL_SEEK:      {"spill.seek", "Failed to seek in spill file"},
+	E_VALUE_SPILL_MAX_FILES: {"spill.max_files", "Too many spill files"},
 }
 
 func NewValueError(code ErrorCode, args ...interface{}) Error {

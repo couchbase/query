@@ -25,6 +25,7 @@ import (
 )
 
 const _INITIAL_MAP_SIZE = 1024
+const _MAX_SPILL_FILES = 500
 
 type annotatedMapEntry struct {
 	key string
@@ -236,6 +237,9 @@ func (this *AnnotatedMap) spillToDisk() errors.Error {
 		return nil
 	}
 	start := time.Now()
+	if len(this.spill) >= _MAX_SPILL_FILES {
+		return errors.NewValueError(errors.E_VALUE_SPILL_MAX_FILES)
+	}
 	spill := &mapSpillFile{compress: this.compress}
 	spill.f, err = util.CreateTemp(_SPILL_FILE_PATTERN, true)
 	if err != nil {
@@ -309,7 +313,7 @@ func (this *AnnotatedMap) spillToDisk() errors.Error {
 	d := time.Now().Sub(start)
 	this.accumSpillTime += d
 	logging.Debuga(func() string {
-		return fmt.Sprintf("[%p,%p] %v mem: %v -> temp: %v (%.3f %%)", this, spill, d, imsz, spill.sz,
+		return fmt.Sprintf("[%p,%p] %v mem: %v (now: %v) -> temp: %v (%.3f %%)", this, spill, d, imsz, this.memSize, spill.sz,
 			float64(spill.sz)/float64(imsz)*100.0)
 	})
 	return nil

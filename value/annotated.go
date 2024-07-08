@@ -169,6 +169,7 @@ type AnnotatedValue interface {
 	RefCnt() int32
 	ResetOriginal()
 	RecalculateSize() uint64
+	AdjustSize(int64)
 }
 
 func NewAnnotatedValue(val interface{}) AnnotatedValue {
@@ -659,6 +660,11 @@ func (this *annotatedValue) Size() uint64 {
 func (this *annotatedValue) RecalculateSize() uint64 {
 	this.cachedSize = 0
 	return this.Size()
+}
+
+// Allows for size adjustment without recalculation.  This is necessary for performance in some situations (like GROUP AS)
+func (this *annotatedValue) AdjustSize(adj int64) {
+	this.cachedSize = uint32(int64(this.Size()) + adj)
 }
 
 func (this *annotatedValue) SetValue(v Value) {
@@ -1346,6 +1352,9 @@ func (this *annotatedValueSelfReference) Size() uint64 {
 
 func (this *annotatedValueSelfReference) RecalculateSize() uint64 {
 	return 0
+}
+
+func (this *annotatedValueSelfReference) AdjustSize(int64) {
 }
 
 func (this *annotatedValueSelfReference) String() string {

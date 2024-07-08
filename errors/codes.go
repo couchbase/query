@@ -325,6 +325,7 @@ const (
 	E_VALUE_SPILL_WRITE                          ErrorCode = 5704
 	E_VALUE_SPILL_SIZE                           ErrorCode = 5705
 	E_VALUE_SPILL_SEEK                           ErrorCode = 5706
+	E_VALUE_SPILL_MAX_FILES                      ErrorCode = 5707
 	E_SCHEDULER                                  ErrorCode = 6001
 	E_DUPLICATE_TASK                             ErrorCode = 6002
 	E_TASK_RUNNING                               ErrorCode = 6003
