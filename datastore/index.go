@@ -504,10 +504,6 @@ const (
 	IX_DIST_EUCLIDEAN_SQUARED IndexDistanceType = "euclidean_squared" // same as l2_squared
 	IX_DIST_COSINE            IndexDistanceType = "cosine"            // 1 - cosine_sim
 	IX_DIST_DOT               IndexDistanceType = "dot"               // negate dot_product
-	IX_DIST_L2                IndexDistanceType = "l2"
-	IX_DIST_EUCLIDEAN         IndexDistanceType = "euclidean"
-	IX_DIST_COSINE_SIM        IndexDistanceType = "cosine_sim"
-	IX_DIST_DOT_PRODUCT       IndexDistanceType = "dot_product"
 )
 
 type IndexVector struct {
