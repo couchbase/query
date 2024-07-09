@@ -79,7 +79,7 @@ func (s *store) PrivilegesFromPath(fullname string, keyspace string, privilege a
 			}
 
 		// currently these keyspaces require system read for delete
-		case KEYSPACE_NAME_FUNCTIONS_CACHE, KEYSPACE_NAME_DICTIONARY_CACHE:
+		case KEYSPACE_NAME_FUNCTIONS_CACHE, KEYSPACE_NAME_DICTIONARY_CACHE, KEYSPACE_NAME_TASKS_CACHE:
 			privs.Add("", auth.PRIV_SYSTEM_READ, auth.PRIV_PROPS_NONE)
 
 			// for all other keyspaces, we rely on the implementation do deny access
