@@ -263,7 +263,7 @@ func (this *sarg) VisitFunction(pred expression.Function) (interface{}, error) {
 				if fld.EquivalentTo(this.key) &&
 					index6.VectorDistanceType() == datastore.GetVectorDistanceType(pred.Metric()) {
 					rv := _WHOLE_SPANS.Copy().(*TermSpans)
-					rv.ann = pred
+					rv.ann = pred.ReplaceVectorMetric()
 					rv.annPos = this.keyPos
 					return rv, nil
 				}

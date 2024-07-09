@@ -28,6 +28,7 @@ const (
 	L2_SQUARED        VectorMetric = "l2_squared" // same as euclidean_squared
 	COSINE            VectorMetric = "cosine"     // 1 - cosine_sim
 	DOT               VectorMetric = "dot"        // negate of dot_product
+	EMPTY_METRIC      VectorMetric = ""
 )
 
 const FLOAT32_SIZE = 4
@@ -46,6 +47,8 @@ func GetVectorMetric(arg string) (metric VectorMetric) {
 		metric = COSINE
 	case "dot":
 		metric = DOT
+	default:
+		metric = EMPTY_METRIC
 	}
 	return
 }
@@ -243,7 +246,7 @@ func (this *Ann) Constructor() FunctionConstructor {
 
 func (this *Ann) ValidOperands() error {
 	switch this.metric {
-	case EUCLIDEAN_SQUARED, L2_SQUARED, COSINE, DOT:
+	case EUCLIDEAN, EUCLIDEAN_SQUARED, L2, L2_SQUARED, COSINE, DOT:
 		return nil
 	}
 	return errors.NewVectorFuncInvalidMetric(this.name, string(this.metric))
@@ -277,6 +280,55 @@ func (this *Ann) ActualVector() Expression {
 
 func (this *Ann) Evaluate(item value.Value, context Context) (value.Value, error) {
 	return vectorDistance(this.metric, this.operands, item, context)
+}
+
+func (this *Ann) CoveredBy(keyspace string, exprs Expressions, options CoveredOptions) Covered {
+	if !this.Field().DependsOn(NewConstant(keyspace)) {
+		return CoveredSkip
+	}
+	for _, expr := range exprs {
+		if ann, ok := expr.(*Ann); ok {
+			if this.EquivalentTo(ann) {
+				return CoveredEquiv
+			} else if ann.HasExprFlag(EXPR_ORDER_BY) {
+				// allow Ann expression in the ORDER BY clause to be covered
+				// if the Ann uses EUDLIDEAN/L2 as metric
+				switch this.metric {
+				case EUCLIDEAN, L2:
+					newAnn := this.ReplaceVectorMetric()
+					if newAnn.EquivalentTo(ann) {
+						return CoveredTrue
+					}
+				}
+			}
+		}
+	}
+	return CoveredFalse
+}
+
+func (this *Ann) ReplaceVectorMetric() *Ann {
+	if this == nil {
+		return this
+	}
+	newMetric := EMPTY_METRIC
+	metric := this.metric
+	switch metric {
+	case EUCLIDEAN:
+		newMetric = EUCLIDEAN_SQUARED
+	case L2:
+		newMetric = L2_SQUARED
+	default:
+		return this
+	}
+	operands := this.operands.Copy()
+	operands[2] = NewConstant(newMetric)
+	rv := &Ann{
+		metric: newMetric,
+	}
+	rv.Init("approx_vector_distance", operands...)
+	rv.SetExprFlag(EXPR_ANN_MOD_METRIC)
+	rv.expr = rv
+	return rv
 }
 
 type IsVector struct {
