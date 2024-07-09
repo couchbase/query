@@ -1034,9 +1034,9 @@ func GetIndexIncludes(index Index) (includes expression.Expressions) {
 
 func GetVectorDistanceType(metric expression.VectorMetric) (distanceType IndexDistanceType) {
 	switch metric {
-	case expression.EUCLIDEAN_SQUARED:
+	case expression.EUCLIDEAN, expression.EUCLIDEAN_SQUARED:
 		distanceType = IX_DIST_EUCLIDEAN_SQUARED
-	case expression.L2_SQUARED:
+	case expression.L2, expression.L2_SQUARED:
 		distanceType = IX_DIST_L2_SQUARED
 	case expression.COSINE:
 		distanceType = IX_DIST_COSINE

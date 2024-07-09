@@ -117,6 +117,7 @@ func NewSortTerm(expr, descending, nullsPos expression.Expression) *SortTerm {
 		descending: descending,
 		nullsPos:   nullsPos,
 	}
+	expr.SetExprFlag(expression.EXPR_ORDER_BY)
 	switch expr.(type) {
 	case *expression.Ann, *expression.Knn:
 		// Add NULLS LAST for ASC collation of Distance functions
