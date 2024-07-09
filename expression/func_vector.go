@@ -180,6 +180,9 @@ func vectorDistance(metric VectorMetric, operands Expressions, item value.Value,
 	case DOT:
 		return value.NewValue(-dist), nil
 	case COSINE:
+		if sdf == float64(0) || sqf == float64(0) {
+			return value.NULL_VALUE, nil
+		}
 		return value.NewValue(1.0 - (dist / (math.Sqrt(sdf) * math.Sqrt(sqf)))), nil
 	}
 	return value.NULL_VALUE, nil
@@ -604,6 +607,9 @@ func (this *NormalizeVector) Evaluate(item value.Value, context Context) (value.
 		svf += vf * vf
 	}
 	svf = math.Sqrt(svf)
+	if svf == float64(0) {
+		return value.NULL_VALUE, nil
+	}
 
 	for i, vf := range fvec {
 		fvec[i] = vf.(float64) / svf
