@@ -30,6 +30,7 @@ import (
 	"github.com/couchbase/query/execution"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/logging/resolver"
+	"github.com/couchbase/query/memory"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/prepareds"
 	"github.com/couchbase/query/server"
@@ -138,6 +139,10 @@ func newHttpRequest(rv *httpRequest, resp http.ResponseWriter, req *http.Request
 			// re-negoatiate the content type
 			rv.format, err = contentNegotiation(resp, req, rv.format)
 		}
+	}
+
+	if server.AwrCB.Active() && rv.MemoryQuota() == 0 && memory.NodeQuota() == 0 {
+		rv.SetMemoryQuota(util.GiB * util.GiB) // force memory accounting but impose no practical limit
 	}
 
 	// update the logger with the request Id once it is known

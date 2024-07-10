@@ -1597,6 +1597,9 @@ func (p *Pool) GetBucket(name string) (*Bucket, error) {
 }
 
 func (p *Pool) BucketExists(name string) bool {
+	if p.client == nil {
+		return false
+	}
 	buckets := []Bucket{}
 	err := p.client.parseURLResponse(p.BucketURL["uri"], &buckets)
 	if err != nil {

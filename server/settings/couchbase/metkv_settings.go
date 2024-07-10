@@ -47,7 +47,7 @@ func Subscribe(callb metakv.Callback, path string, cancelCh chan struct{}) {
 			if r > 0 {
 				logging.Errorf("ERROR: metakv notifier failed (%v)..Retrying %v", err, r)
 			}
-			// cancelCh is the cancel channel to return contril back to metakv.
+			// cancelCh is the cancel channel to return control back to metakv.
 			err = metakv.RunObserveChildren(path, callb, cancelCh)
 			if err != nil {
 				logging.Infof("New susbscription %s done:%v", path, err)

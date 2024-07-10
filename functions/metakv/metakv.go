@@ -38,7 +38,7 @@ func Init() {
 
 	// if we got some non 200 status from ns_server
 	// remote cache invalidation won't work!
-	if err != metakv.ErrRevMismatch {
+	if err != nil && err != metakv.ErrRevMismatch {
 		logging.Infof("Unable to initialize functions cache monitor %v", errors.NewMetaKVChangeCounterError(err))
 	}
 

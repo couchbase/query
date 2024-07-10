@@ -1538,6 +1538,37 @@ var errData = []ErrData{
 		},
 	},
 	{
+		Code:        E_AWR_START, // 2500
+		symbol:      "E_AWR_START",
+		Description: "Failed to start workload reporting",
+		Reason: []string{
+			"An error occurred when starting request capture for workload reporting.",
+		},
+		Action: []string{
+			"Review the error and correct any configuration issues.",
+		},
+		IsUser: YES,
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_AWR_SETTING, // 2501
+		symbol:      "E_AWR_SETTING",
+		Description: "Invalid value «value» for setting «setting»",
+		Reason: []string{
+			"The value provided for the setting is invalid.",
+		},
+		Action: []string{
+			"Review the configuration and correct the value.",
+			"Note that the only permitted namespace is \"default\".",
+		},
+		IsUser: YES,
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
 		Code:        E_PARSE_SYNTAX, // 3000
 		symbol:      "E_PARSE_SYNTAX",
 		Description: "Indicates a syntax error occurred during statement parsing.",

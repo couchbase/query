@@ -150,6 +150,7 @@ var _FUNCTIONS = map[string]Function{
 	"weekday_str":          &WeekdayStr{},
 
 	// String
+	"compress":     &Compress{},
 	"contains":     &Contains{},
 	"formalise":    &Formalize{},
 	"formalize":    &Formalize{},
@@ -189,6 +190,7 @@ var _FUNCTIONS = map[string]Function{
 	"suffixes":     &Suffixes{},
 	"title":        &Title{},
 	"trim":         &Trim{},
+	"uncompress":   &Uncompress{},
 	"upper":        &Upper{},
 	"urldecode":    &URLDecode{},
 	"urlencode":    &URLEncode{},

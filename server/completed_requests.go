@@ -94,6 +94,7 @@ type RequestLogEntry struct {
 	Qualifier                string
 	SessionMemory            uint64
 	Analysis                 []interface{}
+	SqlID                    string
 }
 
 type qualifier interface {
@@ -526,6 +527,9 @@ func LogRequest(request_time, service_time, transactionElapsedTime time.Duration
 	request.serviceDuration = service_time
 	request.totalDuration = request_time
 	request.seqScanKeys = seq_scan_keys
+
+	sqlID := AwrCB.recordWorkload(request)
+
 	requestLog.RLock()
 	defer requestLog.RUnlock()
 
@@ -587,6 +591,7 @@ func LogRequest(request_time, service_time, transactionElapsedTime time.Duration
 		TxId:            request.TxId(),
 		Tenant:          tenant.Bucket(request.TenantCtx()),
 		SessionMemory:   request.SessionMemory(),
+		SqlID:           sqlID,
 	}
 	errs := request.Errors()
 	re.Errors = make([]map[string]interface{}, 0, len(errs))
@@ -709,6 +714,9 @@ func (this *RequestLogEntry) OptEstimates() map[string]interface{} {
 func (request *RequestLogEntry) Format(profiling bool, redact bool, durStyle util.DurationStyle) interface{} {
 	reqMap := map[string]interface{}{
 		"requestId": request.RequestId,
+	}
+	if request.SqlID != "" {
+		reqMap["sqlID"] = request.SqlID
 	}
 	if request.ClientId != "" {
 		reqMap["clientContextID"] = request.ClientId

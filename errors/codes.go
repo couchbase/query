@@ -117,6 +117,8 @@ const (
 	E_ADMIN_BODY                                 ErrorCode = 2220
 	E_ADMIN_FFDC                                 ErrorCode = 2230
 	E_ADMIN_LOG                                  ErrorCode = 2240
+	E_AWR_START                                  ErrorCode = 2500
+	E_AWR_SETTING                                ErrorCode = 2501
 	E_PARSE_SYNTAX                               ErrorCode = 3000
 	E_ERROR_CONTEXT                              ErrorCode = 3005
 	E_PARSE_INVALID_ESCAPE_SEQUENCE              ErrorCode = 3006

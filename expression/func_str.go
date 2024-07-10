@@ -9,6 +9,10 @@
 package expression
 
 import (
+	"bytes"
+	"compress/zlib"
+	"encoding/base64"
+	"io"
 	"math"
 	"net/url"
 	"regexp"
@@ -1676,6 +1680,96 @@ func (this *URLDecode) Evaluate(item value.Value, context Context) (value.Value,
 func (this *URLDecode) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
 		return NewURLDecode(operands[0])
+	}
+}
+
+// COMPRESS(expr)  Compress and return a base64 encoded string
+
+type Compress struct {
+	UnaryFunctionBase
+}
+
+func NewCompress(operand Expression) Function {
+	rv := &Compress{}
+	rv.Init("compress", operand)
+	rv.expr = rv
+	return rv
+}
+
+func (this *Compress) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+func (this *Compress) Type() value.Type { return value.STRING }
+
+func (this *Compress) Evaluate(item value.Value, context Context) (value.Value, error) {
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if arg.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else if arg.Type() != value.STRING {
+		return value.NULL_VALUE, nil
+	}
+	var b bytes.Buffer
+	e := base64.NewEncoder(base64.StdEncoding, &b)
+	w := zlib.NewWriter(e)
+	w.Write([]byte(arg.ToString()))
+	w.Close()
+	e.Close()
+	return value.NewValue(b.String()), nil
+}
+
+func (this *Compress) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return NewCompress(operands[0])
+	}
+}
+
+// UNCOMPRESS(expr)  Returns a string from a base64 encoded compressed string
+
+type Uncompress struct {
+	UnaryFunctionBase
+}
+
+func NewUncompress(operand Expression) Function {
+	rv := &Uncompress{}
+	rv.Init("uncompress", operand)
+	rv.expr = rv
+	return rv
+}
+
+func (this *Uncompress) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *Uncompress) Type() value.Type { return value.STRING }
+
+func (this *Uncompress) Evaluate(item value.Value, context Context) (value.Value, error) {
+	arg, err := this.operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	} else if arg.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else if arg.Type() != value.STRING {
+		return value.NULL_VALUE, nil
+	}
+	b := bytes.NewBufferString(arg.ToString())
+	e := base64.NewDecoder(base64.StdEncoding, b)
+	w, err := zlib.NewReader(e)
+	if err != nil {
+		// if it isn't compressed text, just return the raw text
+		return value.NewValue(arg.ToString()), nil
+	}
+	text, err := io.ReadAll(w)
+	if err != nil {
+		return value.NULL_VALUE, nil
+	}
+	return value.NewValue(string(text)), nil
+}
+
+func (this *Uncompress) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return NewUncompress(operands[0])
 	}
 }
 

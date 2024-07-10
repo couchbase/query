@@ -299,6 +299,14 @@ var _SETTERS = map[string]Setter{
 		})
 		return nil
 	},
+	AWR: func(s *Server, o interface{}) errors.Error {
+		m := o.(map[string]interface{})
+		err := AwrCB.SetConfig(m, false)
+		if err != nil {
+			return errors.NewServiceErrorBadValue(err, "settings")
+		}
+		return nil
+	},
 }
 
 func getNumber(o interface{}) float64 {
@@ -404,6 +412,9 @@ func ProcessSettings(settings map[string]interface{}, srvr *Server) (err errors.
 			serr := set_it(srvr, value)
 			if serr != nil {
 				logging.Infof("Could not change query Configuration %v to %v: %v", s, value, serr)
+				if err == nil {
+					err = serr
+				}
 			}
 		} else {
 			if !found {
@@ -599,6 +610,7 @@ func FillSettings(settings map[string]interface{}, srvr *Server) map[string]inte
 	settings[USEREPLICA] = srvr.UseReplicaToString()
 	settings[NUM_CPUS] = util.NumCPU()
 	settings[DURATIONSTYLE] = util.GetDurationStyle().String()
+	settings[AWR] = AwrCB.Config()
 	return settings
 }
 
