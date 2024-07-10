@@ -37,6 +37,10 @@ func (this *Explain) New() Operator {
 	return &Explain{}
 }
 
+func (this *Explain) Plan() Operator {
+	return this.qp.op
+}
+
 func (this *Explain) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
