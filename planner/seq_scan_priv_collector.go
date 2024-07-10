@@ -490,6 +490,10 @@ func (this *collector) VisitPrepare(plop *plan.Prepare) (interface{}, error) {
 }
 
 func (this *collector) VisitExplain(plop *plan.Explain) (interface{}, error) {
+	op := plop.Plan()
+	if op != nil {
+		return op.Accept(this)
+	}
 	return nil, nil
 }
 
