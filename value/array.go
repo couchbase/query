@@ -48,8 +48,8 @@ func (this sliceValue) WriteSpill(w io.Writer, buf []byte) error {
 	return err
 }
 
-func (this sliceValue) ReadSpill(r io.Reader, buf []byte) error {
-	v, err := readSpillValue(r, buf)
+func (this sliceValue) ReadSpill(trackMem func(int64) error, r io.Reader, buf []byte) error {
+	v, err := readSpillValue(trackMem, r, buf)
 	if err == nil && v != nil {
 		this = sliceValue(v.([]interface{}))
 	} else {
@@ -507,8 +507,8 @@ func (this *listValue) WriteSpill(w io.Writer, buf []byte) error {
 	return err
 }
 
-func (this *listValue) ReadSpill(r io.Reader, buf []byte) error {
-	v, err := readSpillValue(r, buf)
+func (this *listValue) ReadSpill(trackMem func(int64) error, r io.Reader, buf []byte) error {
+	v, err := readSpillValue(trackMem, r, buf)
 	if err == nil && v != nil {
 		this.slice = sliceValue(v.([]interface{}))
 	} else {

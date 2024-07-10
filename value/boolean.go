@@ -93,8 +93,8 @@ func (this boolValue) WriteSpill(w io.Writer, buf []byte) error {
 	return err
 }
 
-func (this boolValue) ReadSpill(r io.Reader, buf []byte) error {
-	v, err := readSpillValue(r, buf)
+func (this boolValue) ReadSpill(trackMem func(int64) error, r io.Reader, buf []byte) error {
+	v, err := readSpillValue(trackMem, r, buf)
 	if err == nil && v != nil {
 		this = boolValue(v.(bool))
 	} else {

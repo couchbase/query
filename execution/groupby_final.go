@@ -13,29 +13,23 @@ import (
 	"fmt"
 
 	"github.com/couchbase/query/errors"
-	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
 )
 
 type FinalGroup struct {
 	base
-	groupBase
-	plan *plan.FinalGroup
+	plan   *plan.FinalGroup
+	groups map[string]value.AnnotatedValue
 }
 
 func NewFinalGroup(plan *plan.FinalGroup, context *Context) *FinalGroup {
-
-	merge := func(v1 value.AnnotatedValue, v2 value.AnnotatedValue) value.AnnotatedValue {
-		logging.Debugf("Invalid call to merge in FinalGroup")
-		return v1
-	}
-
 	rv := &FinalGroup{
-		plan: plan,
+		plan:   plan,
+		groups: make(map[string]value.AnnotatedValue),
 	}
+
 	newBase(&rv.base, context)
-	newGroupBase(&rv.groupBase, context, plan.CanSpill(), merge)
 	rv.output = rv
 	return rv
 }
@@ -46,10 +40,10 @@ func (this *FinalGroup) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *FinalGroup) Copy() Operator {
 	rv := &FinalGroup{
-		plan: this.plan,
+		plan:   this.plan,
+		groups: make(map[string]value.AnnotatedValue),
 	}
 	this.base.copy(&rv.base)
-	this.groupBase.copy(&rv.groupBase)
 	return rv
 }
 
@@ -75,16 +69,15 @@ func (this *FinalGroup) processItem(item value.AnnotatedValue, context *Context)
 	}
 
 	// Get or seed the group value
-	gv, set, err := this.groups.LoadOrStore(gk, item)
-	if err != nil {
-		context.Fatal(errors.NewEvaluationError(err, "GROUP key"))
-		item.Recycle()
-		return false
-	} else if !set {
+	gv := this.groups[gk]
+	if gv != nil {
 		context.Fatal(errors.NewDuplicateFinalGroupError())
 		item.Recycle()
 		return false
 	}
+
+	gv = item
+	this.groups[gk] = gv
 
 	// Compute final aggregates
 	aggregates := gv.GetAttachment(value.ATT_AGGREGATES)
@@ -100,6 +93,7 @@ func (this *FinalGroup) processItem(item value.AnnotatedValue, context *Context)
 
 			aggregates[agg.String()] = v
 		}
+
 		return true
 	default:
 		context.Fatal(errors.NewInvalidValueError(fmt.Sprintf("Invalid or missing aggregates of type %T.", aggregates)))
@@ -110,18 +104,14 @@ func (this *FinalGroup) processItem(item value.AnnotatedValue, context *Context)
 
 func (this *FinalGroup) afterItems(context *Context) {
 	if !this.stopped {
-		groups_len := 0
-		err := this.groups.Foreach(func(key string, av value.AnnotatedValue) bool {
-			groups_len++
+		for _, av := range this.groups {
 			if !this.sendItem(av) {
-				return false
+				return
 			}
-			return true
-		})
-		if err != nil {
-			context.Error(err)
-		} else if len(this.plan.Keys()) == 0 && groups_len == 0 && !this.stopped {
-			// Mo matching inputs, so send default values
+		}
+
+		// Mo matching inputs, so send default values
+		if len(this.plan.Keys()) == 0 && len(this.groups) == 0 && !this.stopped {
 			av := value.NewAnnotatedValue(nil)
 			aggregates := make(map[string]value.Value, len(this.plan.Aggregates()))
 			av.SetAttachment(value.ATT_AGGREGATES, aggregates)
@@ -133,14 +123,12 @@ func (this *FinalGroup) afterItems(context *Context) {
 				if err := context.TrackValueSize(av.Size()); err != nil {
 					context.Error(err)
 					av.Recycle()
-					this.Release()
-					return
 				}
+			} else {
+				this.sendItem(av)
 			}
-			this.sendItem(av)
 		}
 	}
-	this.Release()
 }
 
 func (this *FinalGroup) MarshalJSON() ([]byte, error) {
@@ -152,5 +140,18 @@ func (this *FinalGroup) MarshalJSON() ([]byte, error) {
 
 func (this *FinalGroup) reopen(context *Context) bool {
 	this.Release()
-	return this.baseReopen(context)
+	rv := this.baseReopen(context)
+	if rv {
+		this.groups = make(map[string]value.AnnotatedValue)
+	}
+	return rv
+}
+
+func (this *FinalGroup) Release() {
+	if this.groups != nil {
+		for k, _ := range this.groups {
+			delete(this.groups, k)
+		}
+		this.groups = nil
+	}
 }

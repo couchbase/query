@@ -12,160 +12,25 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/couchbase/query/accounting"
 	"github.com/couchbase/query/errors"
-	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/plan"
-	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
-
-const (
-	_GROUP_QUOTA_THRESHOLD            = 0.75 // % quota usage
-	_GROUP_AVAILABLE_MEMORY_THRESHOLD = 0.15 // % per CPU free memory
-)
-
-type groupBase struct {
-	groups  *value.AnnotatedMap
-	parents map[string]value.Value
-	spilled bool
-}
-
-func newGroupBase(this *groupBase, context *Context, canSpill bool,
-	merge func(v1 value.AnnotatedValue, v2 value.AnnotatedValue) value.AnnotatedValue) {
-
-	var shouldSpill func(uint64, uint64) bool
-	if canSpill && !context.HasFeature(util.N1QL_DISABLE_SPILL_TO_DISK) {
-		if context.UseRequestQuota() && context.MemoryQuota() > 0 {
-			shouldSpill = func(c uint64, n uint64) bool {
-				ret := (c+n) > context.ProducerThrottleQuota() && context.CurrentQuotaUsage() > _GROUP_QUOTA_THRESHOLD
-				if ret && !this.spilled {
-					this.spilled = true
-					accounting.UpdateCounter(accounting.SPILLS_GROUP)
-				}
-				return ret
-			}
-		} else {
-			maxSize := context.AvailableMemory()
-			if maxSize > 0 {
-				maxSize = uint64(float64(maxSize) / float64(util.NumCPU()) * _GROUP_AVAILABLE_MEMORY_THRESHOLD)
-			}
-			if maxSize < _MIN_SIZE {
-				maxSize = _MIN_SIZE
-			}
-			shouldSpill = func(c uint64, n uint64) bool {
-				ret := (c + n) > maxSize
-				if ret && !this.spilled {
-					this.spilled = true
-					accounting.UpdateCounter(accounting.SPILLS_GROUP)
-				}
-				return ret
-			}
-		}
-	}
-	var trackMem func(int64)
-	if context.UseRequestQuota() {
-		trackMem = func(size int64) {
-			if size < 0 {
-				context.ReleaseValueSize(uint64(-size))
-			} else {
-				if err := context.TrackValueSize(uint64(size)); err != nil {
-					context.Fatal(errors.NewMemoryQuotaExceededError())
-				}
-			}
-		}
-	}
-
-	this.parents = make(map[string]value.Value)
-	this.groups = value.NewAnnotatedMap(shouldSpill, trackMem, merge, this.beforeSpill, this.afterRead, true)
-}
-
-func (this *groupBase) Release() {
-	logging.Debugf("[%p] len(this.parents)=%v", this, len(this.parents))
-	if this.parents != nil {
-		for k, _ := range this.parents {
-			delete(this.parents, k)
-		}
-	}
-	this.groups.Release()
-	this.spilled = false
-}
-
-// Deliberately doesn't track/release
-func (this *groupBase) copy(dest *groupBase) {
-	dest.groups = this.groups.Copy()
-	if this.parents == nil {
-		dest.parents = nil
-	} else {
-		dest.parents = make(map[string]value.Value, len(this.parents))
-		for k, v := range this.parents {
-			dest.parents[k] = v
-		}
-	}
-}
-
-func (this *groupBase) beforeSpill(av value.AnnotatedValue) {
-	if p := av.SetParent(nil); p != nil {
-		k := fmt.Sprintf("%p", p)
-		this.parents[k] = p
-		av.SetAttachment(value.ATT_PARENT, k)
-	}
-}
-
-func (this *groupBase) afterRead(av value.AnnotatedValue) {
-	if pk := av.GetAttachment(value.ATT_PARENT); pk != nil {
-		if pks, ok := pk.(string); ok {
-			if p, ok := this.parents[pks]; ok {
-				av.SetParent(p)
-			} else {
-				logging.Debugf("[%p] parent key '%v' for %p not found", this, pks, av)
-			}
-		} else {
-			logging.Debugf("[%p] parent key for %p is not a string: %T (%v)", this, av, pk, pk)
-		}
-		av.RemoveAttachment(value.ATT_PARENT)
-	}
-}
 
 // Grouping of input data.
 type InitialGroup struct {
 	base
-	groupBase
-	plan *plan.InitialGroup
+	plan   *plan.InitialGroup
+	groups map[string]value.AnnotatedValue
 }
 
 func NewInitialGroup(plan *plan.InitialGroup, context *Context) *InitialGroup {
-
-	merge := func(v1 value.AnnotatedValue, v2 value.AnnotatedValue) value.AnnotatedValue {
-		a1 := v1.GetAttachment(value.ATT_AGGREGATES).(map[string]value.Value)
-		a2 := v2.GetAttachment(value.ATT_AGGREGATES).(map[string]value.Value)
-		for _, agg := range plan.Aggregates() {
-			a := agg.String()
-			v, e := agg.CumulateIntermediate(a2[a], a1[a], nil)
-			if e != nil {
-				return nil
-			}
-			a1[a] = v
-		}
-
-		// If the Group As clause is present, merge the values of the Group As field in the entries as well
-		if plan.GroupAs() != "" {
-			groupAsv1, _ := v1.Field(plan.GroupAs())
-			groupAsv2, _ := v2.Field(plan.GroupAs())
-
-			act1, _ := groupAsv1.Actual().([]interface{})
-			act2, _ := groupAsv2.Actual().([]interface{})
-			act := append(act1, act2...)
-			v1.SetField(plan.GroupAs(), act)
-		}
-		return v1
-	}
-
 	rv := &InitialGroup{
-		plan: plan,
+		plan:   plan,
+		groups: make(map[string]value.AnnotatedValue),
 	}
+
 	newBase(&rv.base, context)
-	newGroupBase(&rv.groupBase, context, plan.CanSpill(), merge)
 	rv.output = rv
 	return rv
 }
@@ -176,10 +41,10 @@ func (this *InitialGroup) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *InitialGroup) Copy() Operator {
 	rv := &InitialGroup{
-		plan: this.plan,
+		plan:   this.plan,
+		groups: make(map[string]value.AnnotatedValue),
 	}
 	this.base.copy(&rv.base)
-	this.groupBase.copy(&rv.groupBase)
 	return rv
 }
 
@@ -204,17 +69,14 @@ func (this *InitialGroup) processItem(item value.AnnotatedValue, context *Contex
 		}
 	}
 
-	// Get or seed the group value
 	recycle := false
-	handleQuota := int64(0)
+	releaseSize := uint64(0)
 
-	gv, set, err := this.groups.LoadOrStore(gk, item)
-
-	if err != nil {
-		context.Fatal(errors.NewEvaluationError(err, "GROUP key"))
-		item.Recycle()
-		return false
-	} else if set {
+	// Get or seed the group value
+	gv := this.groups[gk]
+	if gv == nil {
+		gv = item
+		this.groups[gk] = gv
 		aggregates := make(map[string]value.Value, len(this.plan.Aggregates()))
 		gv.SetAttachment(value.ATT_AGGREGATES, aggregates)
 		for _, agg := range this.plan.Aggregates() {
@@ -222,7 +84,7 @@ func (this *InitialGroup) processItem(item value.AnnotatedValue, context *Contex
 		}
 	} else {
 		if context.UseRequestQuota() {
-			handleQuota = -int64(item.Size())
+			releaseSize = item.Size()
 		}
 		recycle = true
 	}
@@ -230,8 +92,7 @@ func (this *InitialGroup) processItem(item value.AnnotatedValue, context *Contex
 	// Cumulate aggregates
 	aggregates, ok := gv.GetAttachment(value.ATT_AGGREGATES).(map[string]value.Value)
 	if !ok {
-		context.Fatal(errors.NewInvalidValueError(
-			fmt.Sprintf("Invalid aggregates %v of type %T", aggregates, aggregates)))
+		context.Fatal(errors.NewInvalidValueError(fmt.Sprintf("Invalid aggregates %v of type %T", aggregates, aggregates)))
 		item.Recycle()
 		return false
 	}
@@ -243,7 +104,6 @@ func (this *InitialGroup) processItem(item value.AnnotatedValue, context *Contex
 			item.Recycle()
 			return false
 		}
-
 		aggregates[agg.String()] = v
 	}
 
@@ -274,35 +134,18 @@ func (this *InitialGroup) processItem(item value.AnnotatedValue, context *Contex
 		groupAsVal := value.NewValue(groupAs)
 		act = append(act, groupAsVal)
 		gv.SetField(this.plan.GroupAs(), value.NewValue(act))
-		// transfer the size over to the grouping value
-		gv.AdjustSize(int64(groupAsVal.Size())) // account for the increased size without recalculating
-		if handleQuota != 0 {
-			// since we transferred the size, we want to transfer the quota too
-			handleQuota += int64(groupAsVal.Size())
-		} else if context.UseRequestQuota() {
-			// Within the payload the item is counted as the payload container and as an element in the array but has before this
-			// point only been included once in the quota.  Add it another time here so if we spill and we therfore release the
-			// entire thing, the quota isn't incorrectly adjusted.
-			handleQuota = int64(groupAsVal.Size())
+		if releaseSize > 0 {
+			// don't release the quota associated with the item since it has been included in the payload
+			if releaseSize > groupAsVal.Size() {
+				releaseSize -= groupAsVal.Size()
+			} else {
+				releaseSize = 0
+			}
 		}
-
-		err := this.groups.AdjustSize(groupAsVal.Size()) // account for added field
-		if err != nil {
-			context.Fatal(err)
-			return false
-		}
-
 	}
 
-	if handleQuota < 0 {
-		handleQuota *= -1
-		context.ReleaseValueSize(uint64(handleQuota))
-	} else if handleQuota > 0 {
-		err := context.TrackValueSize(uint64(handleQuota))
-		if err != nil {
-			context.Fatal(err)
-			return false
-		}
+	if releaseSize > 0 {
+		context.ReleaseValueSize(releaseSize)
 	}
 	if recycle {
 		item.Recycle()
@@ -313,17 +156,12 @@ func (this *InitialGroup) processItem(item value.AnnotatedValue, context *Contex
 
 func (this *InitialGroup) afterItems(context *Context) {
 	if !this.stopped {
-		err := this.groups.Foreach(func(key string, av value.AnnotatedValue) bool {
+		for _, av := range this.groups {
 			if !this.sendItem(av) {
-				return false
+				return
 			}
-			return true
-		})
-		if err != nil {
-			context.Error(err)
 		}
 	}
-	this.Release()
 }
 
 func (this *InitialGroup) MarshalJSON() ([]byte, error) {
@@ -335,13 +173,18 @@ func (this *InitialGroup) MarshalJSON() ([]byte, error) {
 
 func (this *InitialGroup) reopen(context *Context) bool {
 	this.Release()
-	return this.baseReopen(context)
+	rv := this.baseReopen(context)
+	if rv {
+		this.groups = make(map[string]value.AnnotatedValue)
+	}
+	return rv
 }
 
-func (this *InitialGroup) SendAction(action opAction) {
-	this.baseSendAction(action)
-
-	if action == _ACTION_STOP && this.groups != nil {
-		this.groups.Stop()
+func (this *InitialGroup) Release() {
+	if this.groups != nil {
+		for k, _ := range this.groups {
+			delete(this.groups, k)
+		}
+		this.groups = nil
 	}
 }

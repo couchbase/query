@@ -54,8 +54,8 @@ func (this *marshalledValue) WriteSpill(w io.Writer, buf []byte) error {
 	return this.unwrap().WriteSpill(w, buf)
 }
 
-func (this *marshalledValue) ReadSpill(r io.Reader, buf []byte) error {
-	return this.unwrap().ReadSpill(r, buf)
+func (this *marshalledValue) ReadSpill(trackMem func(int64) error, r io.Reader, buf []byte) error {
+	return this.unwrap().ReadSpill(trackMem, r, buf)
 }
 
 func (this *marshalledValue) Type() Type {

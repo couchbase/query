@@ -516,11 +516,5 @@
 		"type": "counter",
 		"help": "Number of order by operations that have spilled to disk.",
 		"added": "8.0.0"
-	},
-	"n1ql_spills_group": {
-		"type": "counter",
-		"help": "Number of group by operations that have spilled to disk.",
-		"added": "8.0.0",
-		"notes": "Group by operations have multiple phases each of which is counted separately if spilled."
 	}
 }

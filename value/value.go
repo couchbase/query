@@ -401,7 +401,7 @@ type Value interface {
 	unwrap() Value
 
 	WriteSpill(io.Writer, []byte) error
-	ReadSpill(io.Reader, []byte) error
+	ReadSpill(func(int64) error, io.Reader, []byte) error
 }
 
 var _CONVERSIONS = []reflect.Type{

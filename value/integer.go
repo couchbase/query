@@ -68,8 +68,8 @@ func (this intValue) WriteSpill(w io.Writer, buf []byte) error {
 	return err
 }
 
-func (this intValue) ReadSpill(r io.Reader, buf []byte) error {
-	v, err := readSpillValue(r, buf)
+func (this intValue) ReadSpill(trackMem func(int64) error, r io.Reader, buf []byte) error {
+	v, err := readSpillValue(trackMem, r, buf)
 	if err == nil && v != nil {
 		this = intValue(v.(int64))
 	} else {

@@ -345,8 +345,8 @@ func (this objectValue) WriteSpill(w io.Writer, buf []byte) error {
 	return err
 }
 
-func (this objectValue) ReadSpill(r io.Reader, buf []byte) error {
-	v, err := readSpillValue(r, buf)
+func (this objectValue) ReadSpill(trackMem func(int64) error, r io.Reader, buf []byte) error {
+	v, err := readSpillValue(trackMem, r, buf)
 	if err == nil && v != nil {
 		this = objectValue(v.(map[string]interface{}))
 	} else {

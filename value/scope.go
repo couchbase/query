@@ -126,7 +126,7 @@ func (this *ScopeValue) WriteSpill(w io.Writer, buf []byte) error {
 	return err
 }
 
-func (this *ScopeValue) ReadSpill(r io.Reader, buf []byte) error {
+func (this *ScopeValue) ReadSpill(trackMem func(int64) error, r io.Reader, buf []byte) error {
 	free := false
 	if buf == nil {
 		buf = _SPILL_POOL.Get()
@@ -138,14 +138,14 @@ func (this *ScopeValue) ReadSpill(r io.Reader, buf []byte) error {
 		this.nested = (buf[0] != 0)
 		this.refCnt = int32(binary.BigEndian.Uint32(buf[1:]))
 		var v interface{}
-		v, err = readSpillValue(r, buf)
+		v, err = readSpillValue(trackMem, r, buf)
 		if err == nil && v != nil {
 			this.Value = v.(Value)
 		} else {
 			this.Value = nil
 		}
 		if err == nil {
-			v, err = readSpillValue(r, buf)
+			v, err = readSpillValue(trackMem, r, buf)
 			if err == nil && v != nil {
 				this.parent = v.(Value)
 			} else {

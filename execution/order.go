@@ -88,16 +88,18 @@ func NewOrder(plan *plan.Order, context *Context, less func(value.AnnotatedValue
 		}
 		return make(value.AnnotatedValues, 0, size)
 	}
-	trackMem := func(size int64) {
+	trackMem := func(size int64) error {
 		if context.UseRequestQuota() {
 			if size < 0 {
 				context.ReleaseValueSize(uint64(-size))
 			} else {
 				if err := context.TrackValueSize(uint64(size)); err != nil {
 					context.Fatal(errors.NewMemoryQuotaExceededError())
+					return err
 				}
 			}
 		}
+		return nil
 	}
 	if less == nil {
 		less = rv.lessThan

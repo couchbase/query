@@ -195,58 +195,58 @@ func (this *parsedValue) WriteSpill(w io.Writer, buf []byte) error {
 	return err
 }
 
-func (this *parsedValue) ReadSpill(r io.Reader, buf []byte) error {
+func (this *parsedValue) ReadSpill(trackMem func(int64) error, r io.Reader, buf []byte) error {
 	*this = parsedValue{}
-	v, err := readSpillValue(r, buf)
+	v, err := readSpillValue(trackMem, r, buf)
 	if err != nil {
 		return err
 	} else if v != nil {
 		this.raw = v.([]byte)
 	}
 
-	v, err = readSpillValue(r, buf)
+	v, err = readSpillValue(nil, r, buf) // not part of the size
 	if err != nil {
 		return err
 	} else if v != nil {
 		this.len = v.(uint64)
 	}
 
-	v, err = readSpillValue(r, buf)
+	v, err = readSpillValue(nil, r, buf) // not part of the size
 	if err != nil {
 		return err
 	} else if v != nil {
 		this.parsedType = Type(v.(int))
 	}
 
-	v, err = readSpillValue(r, buf)
+	v, err = readSpillValue(trackMem, r, buf)
 	if err != nil {
 		return err
 	} else if v != nil {
 		this.parsed = v.(Value)
 	}
 
-	v, err = readSpillValue(r, buf)
+	v, err = readSpillValue(nil, r, buf) // not part of the size
 	if err != nil {
 		return err
 	} else if v != nil {
 		this.fields = v.(map[string]Value)
 	}
 
-	v, err = readSpillValue(r, buf)
+	v, err = readSpillValue(trackMem, r, buf)
 	if err != nil {
 		return err
 	} else if v != nil {
 		this.elements = v.(map[int]Value)
 	}
 
-	v, err = readSpillValue(r, buf)
+	v, err = readSpillValue(nil, r, buf) // not part of the size
 	if err != nil {
 		return err
 	} else if v != nil {
 		this.useState = v.(bool)
 	}
 
-	v, err = readSpillValue(r, buf)
+	v, err = readSpillValue(nil, r, buf) // not part of the size
 	if err != nil {
 		return err
 	} else if v != nil {

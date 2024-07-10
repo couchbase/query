@@ -74,16 +74,18 @@ func NewMerge(plan *plan.Merge, context *Context, update, delete, insert Operato
 			return make(value.AnnotatedValues, 0, size)
 		}
 		release := func(p value.AnnotatedValues) { _ORDER_POOL.Put(p) }
-		trackMem := func(size int64) {
+		trackMem := func(size int64) error {
 			if context.UseRequestQuota() {
 				if size < 0 {
 					context.ReleaseValueSize(uint64(-size))
 				} else {
 					if err := context.TrackValueSize(uint64(size)); err != nil {
 						context.Fatal(errors.NewMemoryQuotaExceededError())
+						return err
 					}
 				}
 			}
+			return nil
 		}
 
 		if update != nil {

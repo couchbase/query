@@ -24,6 +24,7 @@ import (
 )
 
 const _SPILL_FILE_PATTERN = "av_spill_*"
+const _MAX_SPILL_FILES = 500
 
 type writerFlusher interface {
 	io.Writer
@@ -44,7 +45,7 @@ type spillFile struct {
 	compress bool
 }
 
-func (this *spillFile) rewind() error {
+func (this *spillFile) rewind(trackMem func(int64) error) error {
 	_, err := this.f.Seek(0, os.SEEK_SET)
 	if err != nil {
 		return errors.NewValueError(errors.E_VALUE_SPILL_READ, err)
@@ -53,7 +54,7 @@ func (this *spillFile) rewind() error {
 	if this.compress {
 		this.reader, _ = zlib.NewReader(this.reader)
 	}
-	err = this.nextValue()
+	err = this.nextValue(trackMem)
 	if err != nil {
 		if _, ok := err.(errors.Error); ok {
 			return err
@@ -67,10 +68,10 @@ func (this *spillFile) Read(b []byte) (int, error) {
 	return io.ReadFull(this.reader, b)
 }
 
-func (this *spillFile) nextValue() error {
+func (this *spillFile) nextValue(trackMem func(int64) error) error {
 	this.current = nil
 	s := time.Now()
-	v, err := readSpillValue(this, nil)
+	v, err := readSpillValue(trackMem, this, nil)
 	this.read += time.Now().Sub(s)
 	if err != nil {
 		if err == io.EOF {
@@ -122,7 +123,7 @@ type AnnotatedArray struct {
 	release     func(AnnotatedValues)
 	less        func(AnnotatedValue, AnnotatedValue) bool
 	shouldSpill func(uint64, uint64) bool
-	trackMemory func(int64)
+	trackMemory func(int64) error
 
 	mem      AnnotatedValues
 	heapSize int
@@ -137,7 +138,7 @@ type AnnotatedArray struct {
 
 func NewAnnotatedArray(acquire func(int) AnnotatedValues, release func(AnnotatedValues),
 	shouldSpill func(uint64, uint64) bool,
-	trackMemory func(int64),
+	trackMemory func(int64) error,
 	less func(AnnotatedValue, AnnotatedValue) bool,
 	compressSpill bool) *AnnotatedArray {
 
@@ -216,7 +217,11 @@ func (this *AnnotatedArray) Append(v AnnotatedValue) errors.Error {
 		// Prune the item that does not need to enter the heap.
 		if len(this.mem) == this.heapSize && !this.less(v, this.mem[0]) {
 			if this.trackMemory != nil {
-				this.trackMemory(-int64(v.Size()))
+				err := this.trackMemory(-int64(v.Size()))
+				if err != nil {
+					v.Recycle()
+					return errors.NewValueError(errors.E_VALUE_SPILL_WRITE, err)
+				}
 			}
 			v.Recycle()
 			return nil
@@ -231,7 +236,10 @@ func (this *AnnotatedArray) Append(v AnnotatedValue) errors.Error {
 			}
 			this.length--
 			if this.trackMemory != nil {
-				this.trackMemory(-int64(sz))
+				err := this.trackMemory(-int64(sz))
+				if err != nil {
+					return errors.NewValueError(errors.E_VALUE_SPILL_WRITE, err)
+				}
 			}
 			ov.Recycle()
 		}
@@ -259,7 +267,7 @@ func (this *AnnotatedArray) spillToDisk() error {
 	if len(this.spill) > _MAX_SPILL_FILES {
 		return errors.NewValueError(errors.E_VALUE_SPILL_MAX_FILES)
 	}
-	sf, err := util.CreateTemp(_SPILL_FILE_PATTERN, true)
+	sf, err := util.CreateTemp(_SPILL_FILE_PATTERN, logging.LogLevel() != logging.DEBUG)
 	if err != nil {
 		return errors.NewValueError(errors.E_VALUE_SPILL_CREATE, err)
 	}
@@ -281,7 +289,10 @@ func (this *AnnotatedArray) spillToDisk() error {
 		}
 		sz := v.Size()
 		if this.trackMemory != nil {
-			this.trackMemory(-int64(sz))
+			err := this.trackMemory(-int64(sz))
+			if err != nil {
+				return err
+			}
 		}
 		this.memSize -= sz
 		this.mem[i].Recycle()
@@ -334,13 +345,10 @@ func (this *AnnotatedArray) Foreach(f func(AnnotatedValue) bool) errors.Error {
 		sort.Sort(this)
 
 		for i := range this.spill {
-			err := this.spill[i].rewind()
+			err := this.spill[i].rewind(this.trackMemory)
 			if err != nil {
 				logging.Debugf("[%p] rewind failed on [%d] %s: %v", this, i, this.spill[i].f.Name(), err)
 				return errors.NewValueError(errors.E_VALUE_SPILL_READ, err)
-			}
-			if this.trackMemory != nil {
-				this.trackMemory(int64(this.spill[i].current.Size()))
 			}
 		}
 		heap.Init(&this.spill)
@@ -377,7 +385,7 @@ func (this *AnnotatedArray) nextUnsorted() (AnnotatedValue, errors.Error, bool) 
 			this.iterator.memIndex++
 			return rv, nil, false
 		}
-		err := this.spill[this.iterator.fileIndex].nextValue()
+		err := this.spill[this.iterator.fileIndex].nextValue(this.trackMemory)
 		if err == io.EOF {
 			this.iterator.fileIndex++
 			if this.iterator.fileIndex == len(this.spill) {
@@ -390,9 +398,6 @@ func (this *AnnotatedArray) nextUnsorted() (AnnotatedValue, errors.Error, bool) 
 				return nil, nil, true
 			}
 			return nil, errors.NewValueError(errors.E_VALUE_SPILL_READ, err), false
-		}
-		if this.trackMemory != nil {
-			this.trackMemory(int64(this.spill[this.iterator.fileIndex].current.Size()))
 		}
 		return this.spill[this.iterator.fileIndex].current, nil, false
 	}
@@ -414,12 +419,9 @@ func (this *AnnotatedArray) nextSorted() (AnnotatedValue, errors.Error, bool) {
 		return nil, nil, true
 	}
 	rv := smallest.current
-	err := smallest.nextValue()
+	err := smallest.nextValue(this.trackMemory)
 	if err != io.EOF && err != nil {
 		return nil, errors.NewValueError(errors.E_VALUE_SPILL_READ, err), false
-	}
-	if this.trackMemory != nil && smallest.current != nil {
-		this.trackMemory(int64(smallest.current.Size()))
 	}
 	heap.Fix(&this.spill, 0)
 	return rv, nil, false

@@ -169,7 +169,6 @@ type AnnotatedValue interface {
 	RefCnt() int32
 	ResetOriginal()
 	RecalculateSize() uint64
-	AdjustSize(int64)
 }
 
 func NewAnnotatedValue(val interface{}) AnnotatedValue {
@@ -365,126 +364,126 @@ func (this *metaData) writeSpill(w io.Writer, buf []byte) error {
 	return nil
 }
 
-func (this *metaData) readSpill(r io.Reader, buf []byte) error {
-	v, err := readSpillValue(r, buf)
+func (this *metaData) readSpill(trackMem func(int64) error, r io.Reader, buf []byte) error {
+	v, err := readSpillValue(nil, r, buf) // the mask isn't part of the value so don't track size
 	if err != nil {
 		return err
 	}
 	this.valid = v.(int)
 	if this.valid&META_ID != 0 {
-		v, err = readSpillValue(r, buf)
+		v, err = readSpillValue(trackMem, r, buf)
 		if err != nil {
 			return err
 		}
 		this.id = v
 	}
 	if this.valid&META_CAS != 0 {
-		v, err = readSpillValue(r, buf)
+		v, err = readSpillValue(nil, r, buf)
 		if err != nil {
 			return err
 		}
 		this.cas = v.(uint64)
 	}
 	if this.valid&META_KEYSPACE != 0 {
-		v, err = readSpillValue(r, buf)
+		v, err = readSpillValue(trackMem, r, buf)
 		if err != nil {
 			return err
 		}
 		this.keyspace = v.(string)
 	}
 	if this.valid&META_TYPE != 0 {
-		v, err = readSpillValue(r, buf)
+		v, err = readSpillValue(trackMem, r, buf)
 		if err != nil {
 			return err
 		}
 		this.typ = v.(string)
 	}
 	if this.valid&META_FLAGS != 0 {
-		v, err = readSpillValue(r, buf)
+		v, err = readSpillValue(nil, r, buf)
 		if err != nil {
 			return err
 		}
 		this.flags = v.(uint32)
 	}
 	if this.valid&META_EXPIRATION != 0 {
-		v, err = readSpillValue(r, buf)
+		v, err = readSpillValue(nil, r, buf)
 		if err != nil {
 			return err
 		}
 		this.expiration = v.(uint32)
 	}
 	if this.valid&META_XATTRS != 0 {
-		v, err = readSpillValue(r, buf)
+		v, err = readSpillValue(trackMem, r, buf)
 		if err != nil {
 			return err
 		}
 		this.xAttrs = v
 	}
 	if this.valid&META_TXNMETA != 0 {
-		v, err = readSpillValue(r, buf)
+		v, err = readSpillValue(trackMem, r, buf)
 		if err != nil {
 			return err
 		}
 		this.txnMeta = v
 	}
 	if this.valid&META_TXPLANS != 0 {
-		v, err = readSpillValue(r, buf)
+		v, err = readSpillValue(trackMem, r, buf)
 		if err != nil {
 			return err
 		}
 		this.txPlans = v
 	}
 	if this.valid&META_SUBQUERY_PLANS != 0 {
-		v, err = readSpillValue(r, buf)
+		v, err = readSpillValue(trackMem, r, buf)
 		if err != nil {
 			return err
 		}
 		this.sqPlans = v
 	}
 	if this.valid&META_PLAN != 0 {
-		v, err = readSpillValue(r, buf)
+		v, err = readSpillValue(trackMem, r, buf)
 		if err != nil {
 			return err
 		}
 		this.plan = v
 	}
 	if this.valid&META_OPT_ESTIMATES != 0 {
-		v, err = readSpillValue(r, buf)
+		v, err = readSpillValue(trackMem, r, buf)
 		if err != nil {
 			return err
 		}
 		this.optEst = v
 	}
 	if this.valid&META_DISTRIBUTIONS != 0 {
-		v, err = readSpillValue(r, buf)
+		v, err = readSpillValue(trackMem, r, buf)
 		if err != nil {
 			return err
 		}
 		this.distributions = v
 	}
 	if this.valid&META_BYSEQNO != 0 {
-		v, err = readSpillValue(r, buf)
+		v, err = readSpillValue(nil, r, buf)
 		if err != nil {
 			return err
 		}
 		this.bySeqNo = v.(uint64)
 	}
 	if this.valid&META_REVSEQNO != 0 {
-		v, err = readSpillValue(r, buf)
+		v, err = readSpillValue(nil, r, buf)
 		if err != nil {
 			return err
 		}
 		this.revSeqNo = v.(uint64)
 	}
 	if this.valid&META_LOCKTIME != 0 {
-		v, err = readSpillValue(r, buf)
+		v, err = readSpillValue(nil, r, buf)
 		if err != nil {
 			return err
 		}
 		this.lockTime = v.(uint32)
 	}
 	if this.valid&META_NRU != 0 {
-		v, err = readSpillValue(r, buf)
+		v, err = readSpillValue(nil, r, buf)
 		if err != nil {
 			return err
 		}
@@ -663,11 +662,6 @@ func (this *annotatedValue) Size() uint64 {
 func (this *annotatedValue) RecalculateSize() uint64 {
 	this.cachedSize = 0
 	return this.Size()
-}
-
-// Allows for size adjustment without recalculation.  This is necessary for performance in some situations (like GROUP AS)
-func (this *annotatedValue) AdjustSize(adj int64) {
-	this.cachedSize = uint32(int64(this.Size()) + adj)
 }
 
 func (this *annotatedValue) SetValue(v Value) {
@@ -1229,15 +1223,29 @@ func (this *annotatedValue) WriteSpill(w io.Writer, buf []byte) error {
 	return err
 }
 
-func (this *annotatedValue) ReadSpill(r io.Reader, buf []byte) error {
+func (this *annotatedValue) ReadSpill(trackMemActual func(int64) error, r io.Reader, buf []byte) error {
 	free := false
 	if buf == nil {
 		buf = _SPILL_POOL.Get()
 		free = true
 	}
+	// update the cached size as we go so that when Size() is used to release memory, a matching value (equalling the sum of
+	// all the individually recorded additions) is used.
+	var trackMem func(int64) error
+	if trackMemActual != nil {
+		trackMem = func(n int64) error {
+			this.cachedSize += uint32(n)
+			return trackMemActual(n)
+		}
+	}
 	var err error
+	if trackMem != nil {
+		if err = trackMem(int64(unsafe.Sizeof(*this))); err != nil {
+			return err
+		}
+	}
 	var v interface{}
-	v, err = readSpillValue(r, buf)
+	v, err = readSpillValue(trackMem, r, buf)
 	if err != nil {
 		if free {
 			_SPILL_POOL.Put(buf)
@@ -1247,16 +1255,25 @@ func (this *annotatedValue) ReadSpill(r io.Reader, buf []byte) error {
 	if v != nil {
 		this.Value = v.(Value)
 		// restore any self references
-		for k, v := range this.Value.Fields() {
-			if _, ok := v.(*annotatedValueSelfReference); ok {
-				this.SetField(k, this)
+		restoreSelfRef := true
+		if p, ok := this.Value.(*parsedValue); ok {
+			if len(p.raw) > 0 {
+				// we can't have any self references so no need to force unwrapping
+				restoreSelfRef = false
+			}
+		}
+		if restoreSelfRef {
+			for k, v := range this.Value.Fields() {
+				if _, ok := v.(*annotatedValueSelfReference); ok {
+					this.SetField(k, this)
+				}
 			}
 		}
 	} else {
 		this.Value = nil
 	}
 
-	v, err = readSpillValue(r, buf)
+	v, err = readSpillValue(trackMem, r, buf)
 	if err != nil {
 		if free {
 			_SPILL_POOL.Put(buf)
@@ -1269,7 +1286,7 @@ func (this *annotatedValue) ReadSpill(r io.Reader, buf []byte) error {
 		this.original = nil
 	}
 
-	v, err = readSpillValue(r, buf)
+	v, err = readSpillValue(trackMem, r, buf)
 	if err != nil {
 		if free {
 			_SPILL_POOL.Put(buf)
@@ -1282,7 +1299,7 @@ func (this *annotatedValue) ReadSpill(r io.Reader, buf []byte) error {
 		this.covers = nil
 	}
 
-	v, err = readSpillValue(r, buf)
+	v, err = readSpillValue(trackMem, r, buf)
 	if err != nil {
 		if free {
 			_SPILL_POOL.Put(buf)
@@ -1305,7 +1322,13 @@ func (this *annotatedValue) ReadSpill(r io.Reader, buf []byte) error {
 	}
 	if buf[0] != 0 {
 		this.meta = &metaData{}
-		err = this.meta.readSpill(r, buf)
+		if trackMem != nil {
+			err = trackMem(int64(unsafe.Sizeof(*this.meta)))
+			if err != nil {
+				return err
+			}
+		}
+		err = this.meta.readSpill(trackMem, r, buf)
 		if err != nil {
 			if free {
 				_SPILL_POOL.Put(buf)
@@ -1337,6 +1360,7 @@ func (this *annotatedValue) ReadSpill(r io.Reader, buf []byte) error {
 			this.flags ^= _NO_RECYCLE
 		}
 	}
+
 	if free {
 		_SPILL_POOL.Put(buf)
 	}
@@ -1355,9 +1379,6 @@ func (this *annotatedValueSelfReference) Size() uint64 {
 
 func (this *annotatedValueSelfReference) RecalculateSize() uint64 {
 	return 0
-}
-
-func (this *annotatedValueSelfReference) AdjustSize(int64) {
 }
 
 func (this *annotatedValueSelfReference) String() string {
@@ -1576,7 +1597,7 @@ func (this *annotatedValueSelfReference) WriteSpill(w io.Writer, buf []byte) err
 	return err
 }
 
-func (this *annotatedValueSelfReference) ReadSpill(r io.Reader, buf []byte) error {
+func (this *annotatedValueSelfReference) ReadSpill(trackMem func(int64) error, r io.Reader, buf []byte) error {
 	return nil
 }
 

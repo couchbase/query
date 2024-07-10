@@ -90,8 +90,8 @@ func (this stringValue) WriteSpill(w io.Writer, buf []byte) error {
 	return err
 }
 
-func (this stringValue) ReadSpill(r io.Reader, buf []byte) error {
-	v, err := readSpillValue(r, buf)
+func (this stringValue) ReadSpill(trackMem func(int64) error, r io.Reader, buf []byte) error {
+	v, err := readSpillValue(trackMem, r, buf)
 	if err == nil && v != nil {
 		this = stringValue(v.(string))
 	} else {

@@ -345,10 +345,11 @@ func writeSpillVSlice(typ byte, w io.Writer, s []Value, buf []byte) error {
 	return nil
 }
 
-func readSpillValue(r io.Reader, buf []byte) (interface{}, error) {
+func readSpillValue(trackMem func(int64) error, r io.Reader, buf []byte) (interface{}, error) {
 	var err error
 	var v interface{}
 	var n int
+	var track int64
 	free := false
 	if buf == nil {
 		buf = _SPILL_POOL.Get()
@@ -372,53 +373,53 @@ func readSpillValue(r io.Reader, buf []byte) (interface{}, error) {
 	// cases for value types
 	case _SPILL_TYPE_VALUE_MISSING:
 		val := NewMissingValue()
-		err = val.ReadSpill(r, buf)
+		err = val.ReadSpill(trackMem, r, buf)
 		v = val
 	case _SPILL_TYPE_VALUE_NULL:
 		val := NewNullValue()
-		err = val.ReadSpill(r, buf)
+		err = val.ReadSpill(trackMem, r, buf)
 		v = val
 	case _SPILL_TYPE_VALUE_LIST:
 		val := &listValue{}
-		err = val.ReadSpill(r, buf)
+		err = val.ReadSpill(trackMem, r, buf)
 		v = val
 	case _SPILL_TYPE_VALUE_ANNOTATED:
 		val := newAnnotatedValue()
-		err = val.ReadSpill(r, buf)
+		err = val.ReadSpill(trackMem, r, buf)
 		v = val
 	case _SPILL_TYPE_VALUE_SCOPE:
 		val := NewScopeValue(nil, nil)
-		err = val.ReadSpill(r, buf)
+		err = val.ReadSpill(trackMem, r, buf)
 		v = val
 	case _SPILL_TYPE_VALUE_PARSED:
 		val := &parsedValue{}
-		err = val.ReadSpill(r, buf)
+		err = val.ReadSpill(trackMem, r, buf)
 		v = val
 	case _SPILL_TYPE_VALUE:
 		var val interface{}
-		val, err = readSpillValue(r, buf)
+		val, err = readSpillValue(trackMem, r, buf)
 		if err == nil {
 			v = NewValue(val)
 		}
 	// fundamental types
 	case _SPILL_TYPE_MAP:
-		v, err = readSpillMap(r, buf)
+		v, err = readSpillMap(trackMem, r, buf)
 	case _SPILL_TYPE_MAP_VALUE:
-		v, err = readSpillVMap(r, buf)
+		v, err = readSpillVMap(trackMem, r, buf)
 	case _SPILL_TYPE_MAP_VALUE_INT:
-		v, err = readSpillIntVMap(r, buf)
+		v, err = readSpillIntVMap(trackMem, r, buf)
 	case _SPILL_TYPE_INT16_MAP:
-		v, err = readSpillInt16Map(r, buf)
+		v, err = readSpillInt16Map(trackMem, r, buf)
 	case _SPILL_TYPE_SLICE:
-		v, err = readSpillSlice(r, buf)
+		v, err = readSpillSlice(trackMem, r, buf)
 	case _SPILL_TYPE_SLICE_STRING:
-		v, err = readSpillSSlice(r, buf)
+		v, err = readSpillSSlice(trackMem, r, buf)
 	case _SPILL_TYPE_SLICE_ANNOTATED:
-		v, err = readSpillAVSlice(r, buf)
+		v, err = readSpillAVSlice(trackMem, r, buf)
 	case _SPILL_TYPE_SLICE_VALUE:
-		v, err = readSpillVSlice(r, buf)
+		v, err = readSpillVSlice(trackMem, r, buf)
 	case _SPILL_TYPE_SLICE_VALUES:
-		v, err = readSpillVSlice(r, buf)
+		v, err = readSpillVSlice(trackMem, r, buf)
 		v = Values(v.([]Value))
 	case _SPILL_TYPE_VALUE_ANNOTATED_SELFREF:
 		v = (*annotatedValueSelfReference)(nil)
@@ -431,9 +432,16 @@ func readSpillValue(r io.Reader, buf []byte) (interface{}, error) {
 			err = io.ErrUnexpectedEOF
 		}
 		v = (buf[0] != 0)
+		track = 1
 	case _SPILL_TYPE_BYTES:
 		length, err := readSpillLength(r, buf)
 		if err == nil && length != _SPILL_TYPED_NIL_INDICATOR {
+			// check before allocating
+			if trackMem != nil {
+				if err := trackMem(int64(length)); err != nil {
+					return nil, err
+				}
+			}
 			b := make([]byte, length)
 			n, err = r.Read(b)
 			if err == nil && n != length {
@@ -448,6 +456,7 @@ func readSpillValue(r io.Reader, buf []byte) (interface{}, error) {
 			err = io.ErrUnexpectedEOF
 		}
 		v = buf[0]
+		track = 1
 	case _SPILL_TYPE_INT16:
 		buf = buf[:2]
 		n, err = r.Read(buf)
@@ -455,6 +464,7 @@ func readSpillValue(r io.Reader, buf []byte) (interface{}, error) {
 			err = io.ErrUnexpectedEOF
 		}
 		v = int16(binary.BigEndian.Uint16(buf))
+		track = 2
 	case _SPILL_TYPE_UINT16:
 		buf = buf[:2]
 		n, err = r.Read(buf)
@@ -462,6 +472,7 @@ func readSpillValue(r io.Reader, buf []byte) (interface{}, error) {
 			err = io.ErrUnexpectedEOF
 		}
 		v = uint16(binary.BigEndian.Uint16(buf))
+		track = 2
 	case _SPILL_TYPE_INT32:
 		buf = buf[:4]
 		n, err = r.Read(buf)
@@ -469,6 +480,7 @@ func readSpillValue(r io.Reader, buf []byte) (interface{}, error) {
 			err = io.ErrUnexpectedEOF
 		}
 		v = int32(binary.BigEndian.Uint32(buf))
+		track = 4
 	case _SPILL_TYPE_UINT32:
 		buf = buf[:4]
 		n, err = r.Read(buf)
@@ -476,6 +488,7 @@ func readSpillValue(r io.Reader, buf []byte) (interface{}, error) {
 			err = io.ErrUnexpectedEOF
 		}
 		v = uint32(binary.BigEndian.Uint32(buf))
+		track = 4
 	case _SPILL_TYPE_INT:
 		buf = buf[:8]
 		n, err = r.Read(buf)
@@ -483,6 +496,7 @@ func readSpillValue(r io.Reader, buf []byte) (interface{}, error) {
 			err = io.ErrUnexpectedEOF
 		}
 		v = int(binary.BigEndian.Uint64(buf))
+		track = 8
 	case _SPILL_TYPE_INT64:
 		buf = buf[:8]
 		n, err = r.Read(buf)
@@ -490,6 +504,7 @@ func readSpillValue(r io.Reader, buf []byte) (interface{}, error) {
 			err = io.ErrUnexpectedEOF
 		}
 		v = int64(binary.BigEndian.Uint64(buf))
+		track = 8
 	case _SPILL_TYPE_UINT64:
 		buf = buf[:8]
 		n, err = r.Read(buf)
@@ -497,6 +512,7 @@ func readSpillValue(r io.Reader, buf []byte) (interface{}, error) {
 			err = io.ErrUnexpectedEOF
 		}
 		v = uint64(binary.BigEndian.Uint64(buf))
+		track = 8
 	case _SPILL_TYPE_FLOAT32:
 		buf = buf[:4]
 		n, err = r.Read(buf)
@@ -531,6 +547,7 @@ func readSpillValue(r io.Reader, buf []byte) (interface{}, error) {
 					v = float32(f)
 				}
 			}
+			track = 4
 		}
 	case _SPILL_TYPE_FLOAT64:
 		buf = buf[:4]
@@ -562,6 +579,7 @@ func readSpillValue(r io.Reader, buf []byte) (interface{}, error) {
 					}
 				}
 			}
+			track = 8
 		}
 	case _SPILL_TYPE_STRING:
 		buf = buf[:4]
@@ -571,6 +589,12 @@ func readSpillValue(r io.Reader, buf []byte) (interface{}, error) {
 				err = io.ErrUnexpectedEOF
 			} else {
 				length := uint32(binary.BigEndian.Uint32(buf))
+				// check before allocating
+				if trackMem != nil {
+					if err := trackMem(int64(length + _INTERFACE_SIZE)); err != nil {
+						return nil, err
+					}
+				}
 				sb := make([]byte, length)
 				_, err = r.Read(sb)
 				if err == nil {
@@ -595,6 +619,7 @@ func readSpillValue(r io.Reader, buf []byte) (interface{}, error) {
 						err = json.Unmarshal(jb, &v)
 					}
 				}
+				track = int64(AnySize(v))
 			}
 		}
 	default:
@@ -602,6 +627,11 @@ func readSpillValue(r io.Reader, buf []byte) (interface{}, error) {
 	}
 	if free {
 		_SPILL_POOL.Put(buf)
+	}
+	if err == nil && trackMem != nil && track != 0 {
+		if err := trackMem(track); err != nil {
+			return nil, err
+		}
 	}
 	return v, err
 }
@@ -619,7 +649,7 @@ func readSpillLength(r io.Reader, buf []byte) (int, error) {
 	return length, err
 }
 
-func readSpillMap(r io.Reader, buf []byte) (map[string]interface{}, error) {
+func readSpillMap(trackMem func(int64) error, r io.Reader, buf []byte) (map[string]interface{}, error) {
 	length, err := readSpillLength(r, buf)
 	if err != nil {
 		return nil, err
@@ -627,14 +657,19 @@ func readSpillMap(r io.Reader, buf []byte) (map[string]interface{}, error) {
 	if length == _SPILL_TYPED_NIL_INDICATOR {
 		return (map[string]interface{})(nil), nil
 	}
+	if trackMem != nil {
+		if err := trackMem(int64(mapBaseSize(length))); err != nil {
+			return nil, err
+		}
+	}
 	m := make(map[string]interface{}, length)
 	var k, v interface{}
 	for i := 0; i < length; i++ {
-		k, err = readSpillValue(r, buf)
+		k, err = readSpillValue(trackMem, r, buf)
 		if err != nil {
 			return nil, err
 		}
-		v, err = readSpillValue(r, buf)
+		v, err = readSpillValue(trackMem, r, buf)
 		if err != nil {
 			return nil, err
 		}
@@ -643,7 +678,7 @@ func readSpillMap(r io.Reader, buf []byte) (map[string]interface{}, error) {
 	return m, nil
 }
 
-func readSpillInt16Map(r io.Reader, buf []byte) (map[int16]interface{}, error) {
+func readSpillInt16Map(trackMem func(int64) error, r io.Reader, buf []byte) (map[int16]interface{}, error) {
 	length, err := readSpillLength(r, buf)
 	if err != nil {
 		return nil, err
@@ -651,14 +686,19 @@ func readSpillInt16Map(r io.Reader, buf []byte) (map[int16]interface{}, error) {
 	if length == _SPILL_TYPED_NIL_INDICATOR {
 		return (map[int16]interface{})(nil), nil
 	}
+	if trackMem != nil {
+		if err := trackMem(int64(mapBaseSize(length))); err != nil {
+			return nil, err
+		}
+	}
 	m := make(map[int16]interface{}, length)
 	var k, v interface{}
 	for i := 0; i < length; i++ {
-		k, err = readSpillValue(r, buf)
+		k, err = readSpillValue(trackMem, r, buf)
 		if err != nil {
 			return nil, err
 		}
-		v, err = readSpillValue(r, buf)
+		v, err = readSpillValue(trackMem, r, buf)
 		if err != nil {
 			return nil, err
 		}
@@ -667,7 +707,7 @@ func readSpillInt16Map(r io.Reader, buf []byte) (map[int16]interface{}, error) {
 	return m, nil
 }
 
-func readSpillVMap(r io.Reader, buf []byte) (map[string]Value, error) {
+func readSpillVMap(trackMem func(int64) error, r io.Reader, buf []byte) (map[string]Value, error) {
 	length, err := readSpillLength(r, buf)
 	if err != nil {
 		return nil, err
@@ -675,14 +715,19 @@ func readSpillVMap(r io.Reader, buf []byte) (map[string]Value, error) {
 	if length == _SPILL_TYPED_NIL_INDICATOR {
 		return (map[string]Value)(nil), nil
 	}
+	if trackMem != nil {
+		if err := trackMem(int64(mapBaseSize(length))); err != nil {
+			return nil, err
+		}
+	}
 	m := make(map[string]Value)
 	var k, v interface{}
 	for i := 0; i < length; i++ {
-		k, err = readSpillValue(r, buf)
+		k, err = readSpillValue(trackMem, r, buf)
 		if err != nil {
 			return nil, err
 		}
-		v, err = readSpillValue(r, buf)
+		v, err = readSpillValue(trackMem, r, buf)
 		if err != nil {
 			return nil, err
 		}
@@ -691,7 +736,7 @@ func readSpillVMap(r io.Reader, buf []byte) (map[string]Value, error) {
 	return m, nil
 }
 
-func readSpillIntVMap(r io.Reader, buf []byte) (map[int]Value, error) {
+func readSpillIntVMap(trackMem func(int64) error, r io.Reader, buf []byte) (map[int]Value, error) {
 	length, err := readSpillLength(r, buf)
 	if err != nil {
 		return nil, err
@@ -699,14 +744,19 @@ func readSpillIntVMap(r io.Reader, buf []byte) (map[int]Value, error) {
 	if length == _SPILL_TYPED_NIL_INDICATOR {
 		return (map[int]Value)(nil), nil
 	}
+	if trackMem != nil {
+		if err := trackMem(int64(mapBaseSize(length))); err != nil {
+			return nil, err
+		}
+	}
 	m := make(map[int]Value)
 	var k, v interface{}
 	for i := 0; i < length; i++ {
-		k, err = readSpillValue(r, buf)
+		k, err = readSpillValue(trackMem, r, buf)
 		if err != nil {
 			return nil, err
 		}
-		v, err = readSpillValue(r, buf)
+		v, err = readSpillValue(trackMem, r, buf)
 		if err != nil {
 			return nil, err
 		}
@@ -715,7 +765,7 @@ func readSpillIntVMap(r io.Reader, buf []byte) (map[int]Value, error) {
 	return m, nil
 }
 
-func readSpillSlice(r io.Reader, buf []byte) ([]interface{}, error) {
+func readSpillSlice(trackMem func(int64) error, r io.Reader, buf []byte) ([]interface{}, error) {
 	length, err := readSpillLength(r, buf)
 	if err != nil {
 		return nil, err
@@ -723,9 +773,14 @@ func readSpillSlice(r io.Reader, buf []byte) ([]interface{}, error) {
 	if length == _SPILL_TYPED_NIL_INDICATOR {
 		return ([]interface{})(nil), nil
 	}
+	if trackMem != nil {
+		if err := trackMem(int64(_INTERFACE_SIZE * length)); err != nil {
+			return nil, err
+		}
+	}
 	s := make([]interface{}, length)
 	for i := 0; i < length; i++ {
-		s[i], err = readSpillValue(r, buf)
+		s[i], err = readSpillValue(trackMem, r, buf)
 		if err != nil {
 			return nil, err
 		}
@@ -733,7 +788,7 @@ func readSpillSlice(r io.Reader, buf []byte) ([]interface{}, error) {
 	return s, nil
 }
 
-func readSpillSSlice(r io.Reader, buf []byte) ([]string, error) {
+func readSpillSSlice(trackMem func(int64) error, r io.Reader, buf []byte) ([]string, error) {
 	length, err := readSpillLength(r, buf)
 	if err != nil {
 		return nil, err
@@ -741,10 +796,15 @@ func readSpillSSlice(r io.Reader, buf []byte) ([]string, error) {
 	if length == _SPILL_TYPED_NIL_INDICATOR {
 		return ([]string)(nil), nil
 	}
+	if trackMem != nil {
+		if err := trackMem(int64(_INTERFACE_SIZE * length)); err != nil {
+			return nil, err
+		}
+	}
 	s := make([]string, length)
 	var v interface{}
 	for i := 0; i < length; i++ {
-		v, err = readSpillValue(r, buf)
+		v, err = readSpillValue(trackMem, r, buf)
 		if err != nil {
 			return nil, err
 		}
@@ -753,7 +813,7 @@ func readSpillSSlice(r io.Reader, buf []byte) ([]string, error) {
 	return s, nil
 }
 
-func readSpillVSlice(r io.Reader, buf []byte) ([]Value, error) {
+func readSpillVSlice(trackMem func(int64) error, r io.Reader, buf []byte) ([]Value, error) {
 	length, err := readSpillLength(r, buf)
 	if err != nil {
 		return nil, err
@@ -761,10 +821,15 @@ func readSpillVSlice(r io.Reader, buf []byte) ([]Value, error) {
 	if length == _SPILL_TYPED_NIL_INDICATOR {
 		return ([]Value)(nil), nil
 	}
+	if trackMem != nil {
+		if err := trackMem(int64(_INTERFACE_SIZE * length)); err != nil {
+			return nil, err
+		}
+	}
 	s := make([]Value, length)
 	var v interface{}
 	for i := 0; i < length; i++ {
-		v, err = readSpillValue(r, buf)
+		v, err = readSpillValue(trackMem, r, buf)
 		if err != nil {
 			return nil, err
 		}
@@ -773,7 +838,7 @@ func readSpillVSlice(r io.Reader, buf []byte) ([]Value, error) {
 	return s, nil
 }
 
-func readSpillAVSlice(r io.Reader, buf []byte) ([]AnnotatedValue, error) {
+func readSpillAVSlice(trackMem func(int64) error, r io.Reader, buf []byte) ([]AnnotatedValue, error) {
 	length, err := readSpillLength(r, buf)
 	if err != nil {
 		return nil, err
@@ -781,10 +846,15 @@ func readSpillAVSlice(r io.Reader, buf []byte) ([]AnnotatedValue, error) {
 	if length == _SPILL_TYPED_NIL_INDICATOR {
 		return ([]AnnotatedValue)(nil), nil
 	}
+	if trackMem != nil {
+		if err := trackMem(int64(_INTERFACE_SIZE * length)); err != nil {
+			return nil, err
+		}
+	}
 	s := make([]AnnotatedValue, length)
 	var v interface{}
 	for i := 0; i < length; i++ {
-		v, err = readSpillValue(r, buf)
+		v, err = readSpillValue(trackMem, r, buf)
 		if err != nil {
 			return nil, err
 		}

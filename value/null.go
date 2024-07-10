@@ -71,7 +71,7 @@ func (this nullValue) WriteSpill(w io.Writer, buf []byte) error {
 	return err
 }
 
-func (this nullValue) ReadSpill(w io.Reader, buf []byte) error {
+func (this nullValue) ReadSpill(trackMem func(int64) error, w io.Reader, buf []byte) error {
 	return nil
 }
 

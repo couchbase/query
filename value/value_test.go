@@ -698,6 +698,7 @@ func TestValueSpilling(t *testing.T) {
 	av := NewAnnotatedValue([]byte(`{"name":"marty","address":{"street":"sutton oaks"}}`))
 	av.SetId("doc1")
 	av.SetField("selfref", av)
+	av.Size()
 	list = append(list, &pair{"AnnotatedValue", av})
 
 	f, err = os.CreateTemp("", "value_test-*")
@@ -724,10 +725,15 @@ func TestValueSpilling(t *testing.T) {
 
 	re := regexp.MustCompile("\\(0x[0-9a-f]+\\)")
 	for _, p := range list {
-		v, err := readSpillValue(f, nil)
+		v, err := readSpillValue(nil, f, nil)
 		if err != nil {
 			t.Errorf("Failed to read '%v' from spill file: %v", p.name, err)
 			return
+		}
+		if v != nil {
+			if val, ok := v.(Value); ok {
+				val.Size()
+			}
 		}
 		bts := fmt.Sprintf("%T: %#v", p.value, p.value)
 		bts = re.ReplaceAllString(bts, "(<address>)") // erase pointer address values
@@ -766,8 +772,9 @@ func TestSpillingArray(t *testing.T) {
 		return c > spillThreshold
 	}
 	acquire := func(size int) AnnotatedValues { return make(AnnotatedValues, 0, size) }
-	trackMem := func(sz int64) {
+	trackMem := func(sz int64) error {
 		tracking -= sz
+		return nil
 	}
 	lessThan := func(v1 AnnotatedValue, v2 AnnotatedValue) bool {
 		m1 := v1.GetValue().Actual().(map[string]interface{})
@@ -813,94 +820,6 @@ func TestSpillingArray(t *testing.T) {
 			return false
 		}
 		checkIndex++
-		return true
-	})
-	if err != nil {
-		t.Errorf("Error: %v", err)
-	}
-
-	if tracking != 0 {
-		t.Errorf("memory accounting error, found %v (should be 0)", tracking)
-	}
-
-}
-
-func TestSpillingMap(t *testing.T) {
-
-	tracking := int64(0)
-	spillThreshold := uint64(0)
-
-	shouldSpill := func(c uint64, n uint64) bool {
-		return c > spillThreshold
-	}
-	trackMem := func(sz int64) {
-		tracking -= sz
-	}
-	merge := func(a AnnotatedValue, b AnnotatedValue) AnnotatedValue {
-		return a
-	}
-	themap := NewAnnotatedMap(shouldSpill, trackMem, merge, nil, nil, false)
-	check := make(map[string]string, 4)
-
-	re := regexp.MustCompile("\\(0x[0-9a-f]+\\)")
-
-	s := NewScopeValue(make(map[string]interface{}), nil)
-	s.SetField("name", "Martu")
-	s.SetField("surname", "McFly")
-	av := NewAnnotatedValue(s)
-	av.SetId("doc1")
-	av.SetField("selfref", av)
-	themap.LoadOrStore(av.GetId().(string), av)
-	check[av.GetId().(string)] = re.ReplaceAllString(fmt.Sprintf("%#v", av), "(<address>)") // erase pointer address values
-	spillThreshold += av.Size()
-
-	s = NewScopeValue(make(map[string]interface{}), nil)
-	s.SetField("name", "Emmett")
-	s.SetField("surname", "Brown")
-	av = NewAnnotatedValue(s)
-	av.SetId("doc2")
-	av.SetField("selfref", av)
-	themap.LoadOrStore(av.GetId().(string), av)
-	check[av.GetId().(string)] = re.ReplaceAllString(fmt.Sprintf("%#v", av), "(<address>)") // erase pointer address values
-	spillThreshold += av.Size()
-
-	s = NewScopeValue(make(map[string]interface{}), nil)
-	s.SetField("name", "Loraine")
-	s.SetField("surname", "Baines")
-	av = NewAnnotatedValue(s)
-	av.SetId("doc3")
-	av.SetField("selfref", av)
-	themap.LoadOrStore(av.GetId().(string), av)
-	check[av.GetId().(string)] = re.ReplaceAllString(fmt.Sprintf("%#v", av), "(<address>)") // erase pointer address values
-
-	s = NewScopeValue(make(map[string]interface{}), nil)
-	s.SetField("name", "George")
-	s.SetField("surname", "McFly")
-	av = NewAnnotatedValue(s)
-	av.SetId("doc4")
-	av.SetField("selfref", av)
-	themap.LoadOrStore(av.GetId().(string), av)
-	check[av.GetId().(string)] = re.ReplaceAllString(fmt.Sprintf("%#v", av), "(<address>)") // erase pointer address values
-
-	// values will have to swap in and out of memory for the foreach to complete on all values
-	err := themap.Foreach(func(key string, av AnnotatedValue) bool {
-		if key != av.GetId().(string) {
-			t.Errorf("incorrect key '%v' for value '%#v' in map ", key, av)
-		}
-		lookfor := re.ReplaceAllString(fmt.Sprintf("%#v", av), "(<address>)") // erase pointer address values
-		ck, ok := check[key]
-		if !ok {
-			t.Errorf("Invalid key: %v (not found in check-map)", key)
-			return true
-		}
-		if ck != lookfor {
-			ck = strings.ReplaceAll(ck, ",", ",\n")
-			lookfor = strings.ReplaceAll(lookfor, ",", ",\n")
-
-			d := diffpkg.Diff(lookfor, ck)
-
-			t.Errorf("incorrect value in map:\n%s\n", d)
-		}
 		return true
 	})
 	if err != nil {

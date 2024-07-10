@@ -74,7 +74,7 @@ func (this missingValue) WriteSpill(w io.Writer, buf []byte) error {
 	return err
 }
 
-func (this missingValue) ReadSpill(r io.Reader, buf []byte) error {
+func (this missingValue) ReadSpill(trackMem func(int64) error, r io.Reader, buf []byte) error {
 	return nil
 }
 
