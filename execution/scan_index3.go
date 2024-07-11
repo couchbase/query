@@ -134,6 +134,8 @@ func (this *IndexScan3) RunOnce(context *Context, parent value.Value) {
 			defer this.clearProbeBitFilters(context)
 		}
 
+		var squareRoot bool
+		vectorPos := -1
 		if !hasCache {
 			var er errors.Error
 			var indexVector *datastore.IndexVector
@@ -154,6 +156,8 @@ func (this *IndexScan3) RunOnce(context *Context, parent value.Value) {
 					context.Error(er)
 					return
 				}
+				squareRoot = planIndexVector.SquareRoot
+				vectorPos = planIndexVector.IndexKeyPos
 			}
 			var inlineFilter string
 			if filter != nil {
@@ -238,7 +242,22 @@ func (this *IndexScan3) RunOnce(context *Context, parent value.Value) {
 									}
 
 									if i < lcovers {
-										av.SetCover(covers[i].Text(), ek)
+										if squareRoot && i == vectorPos {
+											var dv value.Value
+											if ek.Type() == value.NUMBER {
+												ef := value.AsNumberValue(ek).Float64()
+												if ef >= 0.0 {
+													dv = value.NewValue(math.Sqrt(ef))
+												} else {
+													dv = value.NULL_VALUE
+												}
+											} else {
+												dv = value.NULL_VALUE
+											}
+											av.SetCover(covers[i].Text(), dv)
+										} else {
+											av.SetCover(covers[i].Text(), ek)
+										}
 									}
 								}
 							}

@@ -20,14 +20,17 @@ type IndexVector struct {
 	IndexKeyPos  int
 	Probes       expression.Expression
 	ActualVector expression.Expression
+	SquareRoot   bool
 }
 
-func NewIndexVector(queryVector expression.Expression, indexKeyPos int, probes, actualVector expression.Expression) *IndexVector {
+func NewIndexVector(queryVector expression.Expression, indexKeyPos int,
+	probes, actualVector expression.Expression, squareRoot bool) *IndexVector {
 	return &IndexVector{
 		QueryVector:  queryVector,
 		IndexKeyPos:  indexKeyPos,
 		Probes:       probes,
 		ActualVector: actualVector,
+		SquareRoot:   squareRoot,
 	}
 }
 
@@ -75,6 +78,9 @@ func (this *IndexVector) MarshalBase(f func(map[string]interface{})) map[string]
 	if this.ActualVector != nil {
 		rv["actual_vector"] = this.ActualVector
 	}
+	if this.SquareRoot {
+		rv["square_root"] = this.SquareRoot
+	}
 	return rv
 }
 
@@ -84,6 +90,7 @@ func (this *IndexVector) UnmarshalJSON(body []byte) error {
 		IndexKeyPos  int    `json:"index_key_pos"`
 		Probes       string `json:"probes"`
 		ActualVector string `json:"actual_vector"`
+		SquareRoot   bool   `json:"square_root"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -92,6 +99,7 @@ func (this *IndexVector) UnmarshalJSON(body []byte) error {
 	}
 
 	this.IndexKeyPos = _unmarshalled.IndexKeyPos
+	this.SquareRoot = _unmarshalled.SquareRoot
 
 	if _unmarshalled.QueryVector != "" {
 		this.QueryVector, err = parser.Parse(_unmarshalled.QueryVector)
