@@ -530,6 +530,13 @@ func AnySize(v interface{}) uint64 {
 			s += AnySize(vv)
 		}
 		return s
+	case map[int16]interface{}:
+		s := mapBaseSize(len(v))
+		for _, vv := range v {
+			s += 2
+			s += AnySize(vv)
+		}
+		return s
 	case map[byte]interface{}:
 		s := mapBaseSize(len(v))
 		for _, vv := range v {
@@ -570,6 +577,8 @@ func AnySize(v interface{}) uint64 {
 			s += v[i].Size()
 		}
 		return s
+	case []byte:
+		return uint64(len(v))
 	case int32:
 		return 4
 	case uint32:
