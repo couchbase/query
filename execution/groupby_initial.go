@@ -206,7 +206,7 @@ func (this *InitialGroup) processItem(item value.AnnotatedValue, context *Contex
 
 	// Get or seed the group value
 	recycle := false
-	handleQuota := false
+	handleQuota := int64(0)
 
 	gv, set, err := this.groups.LoadOrStore(gk, item)
 
@@ -221,7 +221,9 @@ func (this *InitialGroup) processItem(item value.AnnotatedValue, context *Contex
 			aggregates[agg.String()], _ = agg.Default(nil, &this.operatorCtx)
 		}
 	} else {
-		handleQuota = context.UseRequestQuota()
+		if context.UseRequestQuota() {
+			handleQuota = -int64(item.Size())
+		}
 		recycle = true
 	}
 
@@ -272,7 +274,17 @@ func (this *InitialGroup) processItem(item value.AnnotatedValue, context *Contex
 		groupAsVal := value.NewValue(groupAs)
 		act = append(act, groupAsVal)
 		gv.SetField(this.plan.GroupAs(), value.NewValue(act))
+		// transfer the size over to the grouping value
 		gv.AdjustSize(int64(groupAsVal.Size())) // account for the increased size without recalculating
+		if handleQuota != 0 {
+			// since we transferred the size, we want to transfer the quota too
+			handleQuota += int64(groupAsVal.Size())
+		} else {
+			// Within the payload the item is counted as the payload container and as an element in the array but has before this
+			// point only been included once in the quota.  Add it another time here so if we spill and we therfore release the
+			// entire thing, the quota isn't incorrectly adjusted.
+			handleQuota = int64(groupAsVal.Size())
+		}
 
 		err := this.groups.AdjustSize(groupAsVal.Size()) // account for added field
 		if err != nil {
@@ -282,8 +294,15 @@ func (this *InitialGroup) processItem(item value.AnnotatedValue, context *Contex
 
 	}
 
-	if handleQuota {
-		context.ReleaseValueSize(item.Size())
+	if handleQuota < 0 {
+		handleQuota *= -1
+		context.ReleaseValueSize(uint64(handleQuota))
+	} else if handleQuota > 0 {
+		err := context.TrackValueSize(uint64(handleQuota))
+		if err != nil {
+			context.Fatal(err)
+			return false
+		}
 	}
 	if recycle {
 		item.Recycle()

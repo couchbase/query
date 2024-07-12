@@ -158,6 +158,8 @@ func (this *IntermediateGroup) processItem(item value.AnnotatedValue, context *C
 		act := append(act2, act1...)
 		gv.SetField(this.plan.GroupAs(), value.NewValue(act))
 		gv.AdjustSize(int64(groupAsv1.Size())) // account for the increased size without recalculating
+		// we do not need to be concerned with quota here since the necessary adjustments took place in the initial grouping
+		// and we are simply transferring the size of the other array over to this array
 
 		err = this.groups.AdjustSize(groupAsv1.Size()) // account for added field
 		if err != nil {
