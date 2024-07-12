@@ -6,12 +6,11 @@
 //  software will be governed by the Apache License, Version 2.0, included in
 //  the file licenses/APL2.txt.
 
-//go:build !solaris
-
 package main
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/couchbase/query/shell/cbq/command"
 	"golang.org/x/term"
@@ -22,6 +21,9 @@ func promptPassword(prompt string) ([]byte, error) {
 	_, err := command.OUTPUT.WriteString(s)
 	if err != nil {
 		return nil, err
+	}
+	if !term.IsTerminal(1) {
+		os.Stderr.Write([]byte(s))
 	}
 	return term.ReadPassword(0)
 }
