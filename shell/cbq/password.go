@@ -22,8 +22,8 @@ func promptPassword(prompt string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	if !term.IsTerminal(1) {
+	if !term.IsTerminal(int(os.Stdout.Fd())) {
 		os.Stderr.Write([]byte(s))
 	}
-	return term.ReadPassword(0)
+	return term.ReadPassword(int(os.Stdin.Fd()))
 }
