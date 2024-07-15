@@ -279,7 +279,7 @@ func (this *InitialGroup) processItem(item value.AnnotatedValue, context *Contex
 		if handleQuota != 0 {
 			// since we transferred the size, we want to transfer the quota too
 			handleQuota += int64(groupAsVal.Size())
-		} else {
+		} else if context.UseRequestQuota() {
 			// Within the payload the item is counted as the payload container and as an element in the array but has before this
 			// point only been included once in the quota.  Add it another time here so if we spill and we therfore release the
 			// entire thing, the quota isn't incorrectly adjusted.
