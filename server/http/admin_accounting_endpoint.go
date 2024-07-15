@@ -460,7 +460,7 @@ func (endpoint *HttpEndpoint) getCredentialsFromRequest(ds datastore.Datastore, 
 	creds := auth.NewCredentials()
 	user, pass, ok := req.BasicAuth()
 	if ok {
-		creds.Users[user] = pass
+		creds.Set(user, pass)
 		if endpoint.internalUser == user {
 			isInternal = true
 		}
@@ -511,11 +511,7 @@ func (endpoint *HttpEndpoint) verifyCredentialsFromRequest(api string, priv auth
 	}
 
 	if af != nil {
-		users := make([]string, 0, len(creds.Users))
-		for user := range creds.Users {
-			users = append(users, user)
-		}
-		af.Users = users
+		af.Users = creds.Users()
 	}
 
 	privs := auth.NewPrivileges()

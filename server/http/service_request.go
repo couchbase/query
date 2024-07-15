@@ -167,7 +167,7 @@ func newHttpRequest(rv *httpRequest, resp http.ResponseWriter, req *http.Request
 		// get credentials even in case of error - for auditing and logging
 
 		// Creds check
-		creds, err1 = getCredentials(httpArgs)
+		creds, err1 = httpArgs.getCredentials()
 
 		if err1 == nil {
 			creds.HttpRequest = req
@@ -1152,37 +1152,6 @@ func getScanConfiguration(txId string, rv *scanConfigImpl, a httpRequestArgs, na
 	return nil
 }
 
-func getCredentials(a httpRequestArgs) (*auth.Credentials, errors.Error) {
-	// Cred_data retrieves credentials from either the URL parameters or from the body of the JSON request.
-	cred_data, err := a.getCredentials()
-	if err != nil {
-		return nil, err
-	}
-
-	// Credentials can come from the cred_data, from the Basic authorization field
-	// in  the request, both, or neither. If from both, the credentials are combined.
-	// If neither, this function should return nil, nil.
-	var creds = &auth.Credentials{}
-
-	if len(cred_data) > 0 {
-		// Credentials are in request parameters:
-		for _, cred := range cred_data {
-			user, user_ok := cred["user"]
-			pass, pass_ok := cred["pass"]
-			if user_ok && pass_ok {
-				if creds.Users == nil {
-					creds.Users = make(map[string]string, 0)
-				}
-				creds.Users[user] = pass
-			} else {
-				return nil, errors.NewServiceErrorMissingValue("user or pass")
-			}
-		}
-	}
-
-	return creds, nil
-}
-
 const MAX_CLIENTID = 64
 
 // Ensure that client context id is no more than 64 characters.
@@ -1306,7 +1275,7 @@ type httpRequestArgs interface {
 	getPreparedName(field string, v interface{}) (string, errors.Error)
 	getNamedArgs() map[string]value.Value
 	getPositionalArgs(parm string, val interface{}) (value.Values, errors.Error)
-	getCredentials() ([]map[string]string, errors.Error)
+	getCredentials() (*auth.Credentials, errors.Error)
 	getScanVector() (timestamp.Vector, errors.Error)
 	getScanVectors() (map[string]timestamp.Vector, errors.Error)
 	getTxData(parm string, val interface{}) ([]byte, errors.Error)
@@ -1644,17 +1613,28 @@ func (this *urlArgs) getTristateVal(field string, v interface{}) (value.Tristate
 	return tristate_value, nil
 }
 
-func (this *urlArgs) getCredentials() ([]map[string]string, errors.Error) {
-	var creds_data []map[string]string
-
+func (this *urlArgs) getCredentials() (*auth.Credentials, errors.Error) {
+	creds := auth.NewCredentials()
 	creds_field, err := this.formValue(_CREDS)
 	if err == nil && creds_field != "" {
+		var creds_data []map[string]string
 		e := json.Unmarshal([]byte(creds_field), &creds_data)
 		if e != nil {
 			err = errors.NewServiceErrorBadValue(go_errors.New("unable to parse creds"), CREDS)
+		} else {
+			for i := range creds_data {
+				u, uok := creds_data[i]["user"]
+				p, pok := creds_data[i]["pass"]
+				if uok && pok {
+					creds.Set(u, p)
+				} else {
+					err = errors.NewServiceErrorMissingValue("user or pass") // differs from jsonArgs; backward compatibility
+					break
+				}
+			}
 		}
 	}
-	return creds_data, err
+	return creds, err
 }
 
 func (this *urlArgs) getPreparedName(field string, v interface{}) (string, errors.Error) {
@@ -1833,36 +1813,42 @@ func (this *jsonArgs) getTxData(parm string, val interface{}) (txData []byte, er
 	return nil, errors.NewServiceErrorBadValue(err1, TXDATA)
 }
 
-func (this *jsonArgs) getCredentials() ([]map[string]string, errors.Error) {
+func (this *jsonArgs) getCredentials() (*auth.Credentials, errors.Error) {
+	creds := auth.NewCredentials()
+
 	creds_field := this.direct[_CREDS]
 	if creds_field == nil {
-		return nil, nil
+		return creds, nil
 	}
 
 	creds_items, arr_ok := creds_field.([]interface{})
-	if arr_ok {
-		creds_data := make([]map[string]string, len(creds_items))
-		for i, item := range creds_items {
-			map_item, map_ok := item.(map[string]interface{})
-			if map_ok {
-				map_new := make(map[string]string, len(map_item))
-				for k, v := range map_item {
-					vs, v_ok := v.(string)
-					if v_ok {
-						map_new[k] = vs
-					} else {
-						return nil, errors.NewServiceErrorTypeMismatch(CREDS,
-							"array of { user, pass }")
-					}
-				}
-				creds_data[i] = map_new
+	if !arr_ok {
+		return nil, errors.NewServiceErrorTypeMismatch(CREDS, "array of { user, pass }")
+	}
+
+	var u string
+	var p string
+	for i := range creds_items {
+		map_item, map_ok := creds_items[i].(map[string]interface{})
+		if map_ok {
+			v, uok := map_item["user"]
+			if uok {
+				u, uok = v.(string)
+			}
+			v, pok := map_item["pass"]
+			if pok {
+				p, pok = v.(string)
+			}
+			if uok && pok {
+				creds.Set(u, p)
 			} else {
 				return nil, errors.NewServiceErrorTypeMismatch(CREDS, "array of { user, pass }")
 			}
+		} else {
+			return nil, errors.NewServiceErrorTypeMismatch(CREDS, "array of { user, pass }")
 		}
-		return creds_data, nil
 	}
-	return nil, errors.NewServiceErrorTypeMismatch(CREDS, "array of { user, pass }")
+	return creds, nil
 }
 
 func (this *jsonArgs) getScanVectors() (map[string]timestamp.Vector, errors.Error) {

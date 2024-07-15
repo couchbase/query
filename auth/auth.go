@@ -203,21 +203,85 @@ func isInSystemScope(target string) bool {
 
 /*
 Type Credentials maps users to passwords.
+
+As we mainly have a single user & password, we keep these as literals in the structure.  When we have additional users, we allocate
+and populate the "extraUsers" array.  The advantage to keeping the single user case outside of the array is a reduction of one heap
+allocation (and therefore one object for the GC to tidy up) whilst not costing us anything in space.  This approach is more space
+efficient than a map too without costing us anything noticeable in terms of performance.
 */
 
-type Users map[string]string
-
 type Credentials struct {
-	Users                 Users
+	user                  string
+	password              string
+	extraUsers            []string
 	HttpRequest           *http.Request
 	AuthenticatedUsers    AuthenticatedUsers
 	CbauthCredentialsList []cbauth.Creds
 }
 
-func NewCredentials() *Credentials {
+func NewCredentials(args ...string) *Credentials {
 	rv := &Credentials{}
-	rv.Users = make(Users, 0)
+	if len(args) > 0 && len(args)%2 == 0 {
+		rv.user = args[0]
+		rv.password = args[1]
+		if len(args) >= 2 {
+			// strictly we should be calling Set for each to de-duplicate but this is only used for the tests
+			rv.extraUsers = make([]string, len(args)-2)
+			copy(rv.extraUsers, args[2:])
+		}
+	}
 	return rv
+}
+
+func (this *Credentials) Set(u string, p string) {
+	if u == this.user || this.user == "" {
+		this.user = u
+		this.password = p
+		return
+	}
+	for i := 0; i < len(this.extraUsers); i += 2 {
+		if this.extraUsers[i] == u {
+			this.extraUsers[i+1] = p
+			return
+		}
+	}
+	if this.extraUsers == nil {
+		this.extraUsers = make([]string, 0, 2)
+	}
+	this.extraUsers = append(append(this.extraUsers, u), p)
+}
+
+func (this *Credentials) Password(u string) string {
+	if u == this.user {
+		return this.password
+	}
+	for i := 0; i < len(this.extraUsers); i += 2 {
+		if this.extraUsers[i] == u {
+			return this.extraUsers[i+1]
+		}
+	}
+	return ""
+}
+
+func (this *Credentials) Users() []string {
+	u := make([]string, 0, (len(this.extraUsers)/2)+1)
+	if this.user != "" {
+		u = append(u, this.user)
+	}
+	for i := 0; i < len(this.extraUsers); i += 2 {
+		u = append(u, this.extraUsers[i])
+	}
+	return u
+}
+
+func (this *Credentials) UsersAndPasswords() []string {
+	if this.extraUsers == nil {
+		if this.user == "" {
+			return nil
+		}
+		return []string{this.user, this.password}
+	}
+	return append([]string{this.user, this.password}, this.extraUsers...)
 }
 
 /*

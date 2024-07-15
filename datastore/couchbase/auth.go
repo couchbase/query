@@ -278,10 +278,6 @@ func cbAuthorize(s authSource, privileges *auth.Privileges, credentials *auth.Cr
 		var authenticatedUsers auth.AuthenticatedUsers
 		var credentialsList []cbauth.Creds
 
-		// Create credentials - list and authenticated users to use for auth calls
-		if credentials.Users == nil {
-			credentials.Users = make(map[string]string, 0)
-		}
 		// Query allows 4 kinds of authorization methods -
 		// 		 1. Basic Auth
 		//		 2. Auth Header/Token
@@ -342,7 +338,10 @@ func cbAuthorize(s authSource, privileges *auth.Privileges, credentials *auth.Cr
 		// request could be nil - in which case we handle credentials only
 
 		if len(credentialsList) == 0 {
-			for username, password := range credentials.Users {
+			up := credentials.UsersAndPasswords()
+			for i := 0; i < len(up); i += 2 {
+				username := up[i]
+				password := up[i+1]
 				var un string
 				userCreds := strings.Split(username, ":")
 				if len(userCreds) == 1 {

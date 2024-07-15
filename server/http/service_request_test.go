@@ -423,10 +423,7 @@ func makeMockServer() *server.Server {
 	return server
 }
 
-var _ALL_USERS = auth.Credentials{
-	map[string]string{
-		"dummy": "dummy",
-	}, nil, nil, nil}
+var _ALL_USERS = auth.NewCredentials("dummy", "dummy")
 
 func (this *testServer) testHandler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -435,7 +432,7 @@ func (this *testServer) testHandler() http.Handler {
 		if this.query_request.State() == server.FATAL {
 			return
 		}
-		this.query_request.SetCredentials(&_ALL_USERS)
+		this.query_request.SetCredentials(_ALL_USERS)
 		this.query_server.ServiceRequest(this.query_request)
 	})
 }

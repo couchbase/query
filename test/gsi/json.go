@@ -274,15 +274,14 @@ func (this *MockServer) saveTxId(group int, reqType string, res []interface{}) {
 	}
 }
 
-var _ALL_USERS = auth.Credentials{
-	map[string]string{
-		"customerowner":  "customerpass",
-		"ordersowner":    "orderspass",
-		"productowner":   "productpass",
-		"purchaseowner":  "purchasepass",
-		"reviewowner":    "reviewpass",
-		"shellTestowner": "shellTestpass",
-	}, nil, nil, nil}
+var _ALL_USERS = auth.NewCredentials(
+	"customerowner", "customerpass",
+	"ordersowner", "orderspass",
+	"productowner", "productpass",
+	"purchaseowner", "purchasepass",
+	"reviewowner", "reviewpass",
+	"shellTestowner", "shellTestpass",
+)
 
 /*
 This method is used to execute the N1QL query represented by
@@ -387,14 +386,11 @@ func run(mockServer *MockServer, queryParams map[string]interface{}, q, namespac
 	}
 
 	if userArgs == nil {
-		query.SetCredentials(&_ALL_USERS)
+		query.SetCredentials(_ALL_USERS)
 	} else {
-		users := auth.NewCredentials()
-		for k, v := range _ALL_USERS.Users {
-			users.Users[k] = v
-		}
+		users := auth.NewCredentials(_ALL_USERS.UsersAndPasswords()...)
 		for k, v := range userArgs {
-			users.Users[k] = v
+			users.Set(k, v)
 		}
 		query.SetCredentials(users)
 	}

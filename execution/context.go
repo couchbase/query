@@ -652,7 +652,7 @@ func (this *Context) UrlCredentials(urlS string) *auth.Credentials {
 
 	authenticator := cbauth.Default
 	u, p, _ := authenticator.GetHTTPServiceAuth(urlS)
-	return &auth.Credentials{map[string]string{u: p}, nil, nil, nil}
+	return auth.NewCredentials(u, p)
 }
 
 /*

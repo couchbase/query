@@ -77,10 +77,7 @@ func AdminCreds(node string) (*auth.Credentials, error) {
 	if err != nil {
 		return nil, err
 	}
-	creds := &auth.Credentials{}
-	users := map[string]string{u: p}
-	creds.Users = users
-	return creds, nil
+	return auth.NewCredentials(u, p), nil
 }
 
 func GetUserUUID(creds *auth.Credentials) string {
