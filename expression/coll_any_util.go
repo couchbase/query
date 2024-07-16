@@ -219,6 +219,11 @@ func (this *gatherAny) VisitSubquery(expr Subquery) (interface{}, error) {
 	return nil, nil
 }
 
+// InferUnderParenthesis
+func (this *gatherAny) VisitParenInfer(expr ParenInfer) (interface{}, error) {
+	return this.visit(expr)
+}
+
 // NamedParameter
 func (this *gatherAny) VisitNamedParameter(expr NamedParameter) (interface{}, error) {
 	return nil, nil

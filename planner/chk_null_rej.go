@@ -373,6 +373,11 @@ func (this *chkNullRej) VisitSubquery(pred expression.Subquery) (interface{}, er
 	return false, nil
 }
 
+// InferUnderParenthesis
+func (this *chkNullRej) VisitParenInfer(pred expression.ParenInfer) (interface{}, error) {
+	return false, nil
+}
+
 // NamedParameter
 func (this *chkNullRej) VisitNamedParameter(pred expression.NamedParameter) (interface{}, error) {
 	return false, nil

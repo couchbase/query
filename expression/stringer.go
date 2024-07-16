@@ -689,6 +689,13 @@ func (this *Stringer) VisitSubquery(expr Subquery) (interface{}, error) {
 	return buf.String(), nil
 }
 
+// InferUnderParenthesis
+func (this *Stringer) VisitParenInfer(expr ParenInfer) (interface{}, error) {
+	var buf bytes.Buffer
+	buf.WriteString(expr.String())
+	return buf.String(), nil
+}
+
 // NamedParameter
 func (this *Stringer) VisitNamedParameter(expr NamedParameter) (interface{}, error) {
 	return "$" + expr.Name(), nil

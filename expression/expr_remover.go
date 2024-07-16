@@ -264,6 +264,11 @@ func (this *exprRemover) VisitSubquery(pred Subquery) (interface{}, error) {
 	return this.visitDefault(pred)
 }
 
+// InferUnderParenthesis
+func (this *exprRemover) VisitParenInfer(pred ParenInfer) (interface{}, error) {
+	return this.visitDefault(pred)
+}
+
 // NamedParameter
 func (this *exprRemover) VisitNamedParameter(pred NamedParameter) (interface{}, error) {
 	return this.visitDefault(pred)

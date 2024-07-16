@@ -359,6 +359,11 @@ func (this *exprClassifier) VisitSubquery(pred expression.Subquery) (interface{}
 	return this.visitDefault(pred)
 }
 
+// InferUnderParenthesis
+func (this *exprClassifier) VisitParenInfer(pred expression.ParenInfer) (interface{}, error) {
+	return this.visitDefault(pred)
+}
+
 // NamedParameter
 func (this *exprClassifier) VisitNamedParameter(pred expression.NamedParameter) (interface{}, error) {
 	return this.visitDefault(pred)

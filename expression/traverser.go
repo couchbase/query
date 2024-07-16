@@ -237,6 +237,11 @@ func (this *TraverserBase) VisitSubquery(expr Subquery) (interface{}, error) {
 	return nil, this.TraverseList(expr.Children())
 }
 
+// InferUnderParenthesis
+func (this *TraverserBase) VisitParenInfer(expr ParenInfer) (interface{}, error) {
+	return nil, this.TraverseList(expr.Children())
+}
+
 // Parameters
 
 func (this *TraverserBase) VisitNamedParameter(expr NamedParameter) (interface{}, error) {

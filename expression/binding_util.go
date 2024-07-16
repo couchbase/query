@@ -248,6 +248,11 @@ func (this *exprBindings) VisitSubquery(expr Subquery) (interface{}, error) {
 	return nil, nil
 }
 
+// InferUnderParenthesis
+func (this *exprBindings) VisitParenInfer(expr ParenInfer) (interface{}, error) {
+	return nil, nil
+}
+
 // NamedParameter
 func (this *exprBindings) VisitNamedParameter(expr NamedParameter) (interface{}, error) {
 	return nil, nil

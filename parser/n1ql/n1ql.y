@@ -5550,6 +5550,11 @@ subquery_expr
 {
     $$ = $1
 }
+|
+LPAREN infer RPAREN
+{
+    $$ = algebra.NewParenInfer($2)
+}
 ;
 
 subquery_expr:

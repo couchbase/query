@@ -238,6 +238,11 @@ func (this *MapperBase) VisitSubquery(expr Subquery) (interface{}, error) {
 	return this.visit(expr)
 }
 
+// InferUnderParenthesis
+func (this *MapperBase) VisitParenInfer(expr ParenInfer) (interface{}, error) {
+	return this.visit(expr)
+}
+
 // Parameters
 
 func (this *MapperBase) VisitNamedParameter(expr NamedParameter) (interface{}, error) {

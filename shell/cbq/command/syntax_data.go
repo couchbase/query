@@ -1108,6 +1108,7 @@ var statement_syntax = map[string][][]string{
 		[]string{"LPAREN", "expression", "RPAREN"},
 		[]string{"LPAREN", "all_expr", "RPAREN"},
 		[]string{"subquery_expr"},
+		[]string{"LPAREN", "infer", "RPAREN"},
 	},
 	"subquery_expr": [][]string{
 		[]string{"LPAREN", "fullselect", "RPAREN"},

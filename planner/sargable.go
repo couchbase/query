@@ -315,6 +315,11 @@ func (this *sargable) VisitSubquery(pred expression.Subquery) (interface{}, erro
 	return this.visitDefault(pred)
 }
 
+// InferUnderParenthesis
+func (this *sargable) VisitParenInfer(pred expression.ParenInfer) (interface{}, error) {
+	return this.visitDefault(pred)
+}
+
 // NamedParameter
 func (this *sargable) VisitNamedParameter(pred expression.NamedParameter) (interface{}, error) {
 	return this.visitDefault(pred)

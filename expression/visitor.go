@@ -123,6 +123,11 @@ type Visitor interface {
 	VisitSubquery(expr Subquery) (interface{}, error)
 
 	/*
+		InferUnderParenthesis
+	*/
+	VisitParenInfer(expr ParenInfer) (interface{}, error)
+
+	/*
 	   Parameters. There are 2 types, named and positional.
 	   It allows passing of parameters into the query using
 	   position or name.

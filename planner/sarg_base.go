@@ -280,6 +280,11 @@ func (this *sarg) VisitSubquery(pred expression.Subquery) (interface{}, error) {
 	return this.visitDefault(pred)
 }
 
+// InferUnderParenthesis
+func (this *sarg) VisitParenInfer(pred expression.ParenInfer) (interface{}, error) {
+	return this.visitDefault(pred)
+}
+
 // NamedParameter
 func (this *sarg) VisitNamedParameter(pred expression.NamedParameter) (interface{}, error) {
 	this.constPred = true

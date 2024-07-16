@@ -92,6 +92,10 @@ func (this *IndexContext) Infer(value.Value, value.Value) (value.Value, error) {
 	return nil, nil
 }
 
+func (this *IndexContext) InferKeyspace(ks interface{}, with value.Value) (value.Value, error) {
+	return nil, nil
+}
+
 func (this *IndexContext) Readonly() bool {
 	return true
 }

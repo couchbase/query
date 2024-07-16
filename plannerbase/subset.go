@@ -188,6 +188,11 @@ func (this *subset) VisitSubquery(expr expression.Subquery) (interface{}, error)
 	return this.visitDefault(expr)
 }
 
+// InferUnderParenthesis
+func (this *subset) VisitParenInfer(expr expression.ParenInfer) (interface{}, error) {
+	return this.visitDefault(expr)
+}
+
 // NamedParameter
 func (this *subset) VisitNamedParameter(expr expression.NamedParameter) (interface{}, error) {
 	return this.visitDefault(expr)

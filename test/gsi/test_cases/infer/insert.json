@@ -1,0 +1,5 @@
+[
+    {
+      "statements": "INSERT INTO shellTest ( KEY, VALUE ) VALUES (\"pet_shop\", {\"dogs\": [{\"breed\": \"Labrador Retriever\", \"size\": \"Large\", \"origin\": \"Canada\"},{\"breed\": \"Beagle\", \"size\": \"Medium\", \"origin\": \"United Kingdom\"},{\"breed\": \"Chihuahua\", \"size\": \"Small\", \"origin\": \"Mexico\"}],\"cats\": [{\"breed\": \"Persian\", \"size\": \"Medium\", \"origin\": \"Iran\"},{\"breed\": \"Siamese\", \"size\": \"Medium\", \"origin\": \"Thailand\"},{\"breed\": \"Maine Coon\", \"size\": \"Large\", \"origin\": \"United States\"}],\"birds\": [{\"breed\": \"Parakeet\", \"size\": \"Small\", \"origin\": \"Australia\"},{\"breed\": \"Cockatiel\", \"size\": \"Small\", \"origin\": \"Australia\"},{\"breed\": \"Macaw\", \"size\": \"Large\", \"origin\": \"South America\"}]})"
+    }
+]

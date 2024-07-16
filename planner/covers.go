@@ -320,6 +320,11 @@ func (this *covers) VisitSubquery(expr expression.Subquery) (interface{}, error)
 	return nil, nil
 }
 
+// InferUnderParenthesis
+func (this *covers) VisitParenInfer(expr expression.ParenInfer) (interface{}, error) {
+	return nil, nil
+}
+
 // NamedParameter
 func (this *covers) VisitNamedParameter(expr expression.NamedParameter) (interface{}, error) {
 	return nil, nil

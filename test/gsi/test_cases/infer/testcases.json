@@ -1,0 +1,37 @@
+[
+    {
+        "testcase": "select from the result of infer keyspace",
+        "statements": "SELECT t.`#docs` FROM (INFER KEYSPACE shellTest) t",
+        "results": [
+            {
+                "#docs": 1
+            }
+        ]
+    },
+    {
+        "testcase": "parenthesis infer expression in projection",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true FROM `explain` p WHERE ANY v IN p.`plan`.`~children` SATISFIES v.`#operator`=\"Parallel\" AND ANY x IN v.`~child`.`~children` SATISFIES x.`#operator`=\"InitialProject\" AND ANY y IN x.`result_terms` SATISFIES y.expr=\"INFER KEYSPACE default:shellTest\" END  END END "
+        },
+        "statements":"SELECT (INFER KEYSPACE shellTest)"
+    },
+    {
+        "testcase":"find top level properties",
+        "statements": "SELECT ARRAY v.name FOR v in OBJECT_PAIRS(t.properties) END as `schema` FROM (INFER {\"a\":{\"b\":1}, \"c\":2, \"d\":3}) t",
+        "results": [
+            {
+                "schema": [
+                    "a",
+                    "c",
+                    "d"
+                ]
+            }
+        ]
+    }
+]

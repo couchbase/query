@@ -1033,6 +1033,34 @@ func (this *Context) Infer(v value.Value, with value.Value) (value.Value, error)
 	return value.NULL_VALUE, nil
 }
 
+func (this *Context) InferKeyspace(ks interface{}, with value.Value) (value.Value, error) {
+
+	var path *algebra.Path
+	if ksref, ok := ks.(*algebra.KeyspaceRef); ok {
+		path = ksref.Path()
+	} else {
+		return nil, errors.NewExecutionInternalError(fmt.Sprintf("Incorrect type assertion for variable ks:"+
+			" Expected *algebra.KeyspaceRef got %T", ks))
+	}
+
+	keyspace, err := datastore.GetKeyspace(path.Parts()...)
+	if err != nil {
+		return nil, err
+	}
+	conn := datastore.NewValueConnection(this)
+	infer, err := this.Datastore().Inferencer(datastore.INF_DEFAULT)
+
+	infer.InferKeyspace(this, keyspace, with, conn)
+
+	item, ok := <-conn.ValueChannel()
+	if item != nil && ok {
+		val := item.(value.Value)
+		return val, nil
+	}
+
+	return value.NULL_VALUE, nil
+}
+
 func (this *internalOutput) GetErrorLimit() int {
 	return this.output.GetErrorLimit()
 }

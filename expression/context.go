@@ -50,6 +50,7 @@ type Context interface {
 		profileUdfExecTrees bool, funcKey string) (functions.Handle, error)
 	Parse(s string) (interface{}, error)
 	Infer(value.Value, value.Value) (value.Value, error)
+	InferKeyspace(ks interface{}, with value.Value) (value.Value, error)
 	SetTracked(bool)
 	IsTracked() bool
 	RecordJsCU(d time.Duration, m uint64)
