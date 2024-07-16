@@ -1054,16 +1054,14 @@ func GetIndexIncludes(index Index) (includes expression.Expressions) {
 	return
 }
 
-func GetVectorDistanceType(metric expression.VectorMetric) (distanceType IndexDistanceType) {
+func CompatibleMetric(distanceType IndexDistanceType, metric expression.VectorMetric) bool {
 	switch metric {
-	case expression.EUCLIDEAN, expression.EUCLIDEAN_SQUARED:
-		distanceType = IX_DIST_EUCLIDEAN_SQUARED
-	case expression.L2, expression.L2_SQUARED:
-		distanceType = IX_DIST_L2_SQUARED
+	case expression.EUCLIDEAN, expression.EUCLIDEAN_SQUARED, expression.L2, expression.L2_SQUARED:
+		return distanceType == IX_DIST_EUCLIDEAN_SQUARED || distanceType == IX_DIST_L2_SQUARED
 	case expression.COSINE:
-		distanceType = IX_DIST_COSINE
+		return distanceType == IX_DIST_COSINE
 	case expression.DOT:
-		distanceType = IX_DIST_DOT
+		return distanceType == IX_DIST_DOT
 	}
-	return
+	return false
 }

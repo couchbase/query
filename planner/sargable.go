@@ -299,7 +299,7 @@ func (this *sargable) VisitFunction(pred expression.Function) (interface{}, erro
 			if index6, ok := this.index.(datastore.Index6); ok {
 				fld := pred.Field()
 				if fld.EquivalentTo(this.key) &&
-					index6.VectorDistanceType() == datastore.GetVectorDistanceType(pred.Metric()) {
+					datastore.CompatibleMetric(index6.VectorDistanceType(), pred.Metric()) {
 					return true, nil
 				}
 			}

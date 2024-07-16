@@ -261,7 +261,7 @@ func (this *sarg) VisitFunction(pred expression.Function) (interface{}, error) {
 			if index6, ok := this.index.(datastore.Index6); ok {
 				fld := pred.Field()
 				if fld.EquivalentTo(this.key) &&
-					index6.VectorDistanceType() == datastore.GetVectorDistanceType(pred.Metric()) {
+					datastore.CompatibleMetric(index6.VectorDistanceType(), pred.Metric()) {
 					rv := _WHOLE_SPANS.Copy().(*TermSpans)
 					rv.ann = pred
 					rv.annPos = this.keyPos
