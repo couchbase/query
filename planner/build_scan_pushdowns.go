@@ -77,30 +77,16 @@ func (this *builder) indexPushDownProperty(entry *indexEntry, keys,
 		} else if vector {
 			// if determined above that ORDER can be pushed down but LIMIT cannot,
 			// need to unset ORDER pushdown
-			order := isPushDownProperty(pushDownProperty, _PUSHDOWN_ORDER)
-			partOrder := isPushDownProperty(pushDownProperty, _PUSHDOWN_PARTIAL_ORDER)
-			if order || partOrder {
-				if order {
-					pushDownProperty &^= _PUSHDOWN_ORDER
-				}
-				for i := 0; i < len(idxKeys); i++ {
-					if _, ok := idxKeys[i].Expr.(*expression.Ann); ok || idxKeys[i].HasAttribute(datastore.IK_VECTOR) {
-						// vector key
-						if order {
-							if i > 0 {
-								pushDownProperty |= _PUSHDOWN_PARTIAL_ORDER
-								entry.partialSortTermCount = i
-							}
-						} else {
-							entry.partialSortTermCount = i
-							if i == 0 {
-								pushDownProperty &^= _PUSHDOWN_PARTIAL_ORDER
-							}
-						}
-						break
-					}
-				}
+			entry.SetFlags(IE_VECTOR_KEY_SKIP_ORDER, true)
+			if isPushDownProperty(pushDownProperty, _PUSHDOWN_ORDER) {
+				pushDownProperty &^= _PUSHDOWN_ORDER
 			}
+			_, _, partSortCount := this.useIndexOrder(entry, idxKeys)
+			if partSortCount > 0 {
+				pushDownProperty |= _PUSHDOWN_PARTIAL_ORDER
+				entry.partialSortTermCount = partSortCount
+			}
+			entry.UnsetFlags(IE_VECTOR_KEY_SKIP_ORDER)
 		}
 
 		// OFFSET Pushdown is possible when
@@ -557,7 +543,7 @@ func (this *builder) useIndexOrder(entry *indexEntry, keys datastore.IndexKeys) 
 	indexOrder := make(plan.IndexKeyOrders, 0, len(keys))
 	partSortTermCount := 0
 	vectorOrder := false
-	if vector {
+	if vector && !entry.HasFlag(IE_VECTOR_KEY_SKIP_ORDER) {
 		if _, ok := entry.spans.(*TermSpans); ok {
 			vectorOrder = true
 		}
