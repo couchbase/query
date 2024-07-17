@@ -595,21 +595,9 @@ outer:
 					(projalias && expression.Equivalent(projexpr, keys[i].Expr))) {
 				// orderTerm matched with index key
 				if vector {
-					if _, ok := keys[i].Expr.(*expression.Ann); ok {
-						// vector key
-						if !vectorOrder {
-							return false, indexOrder, partSortTermCount
-						}
-						// once we pass the vector key, no need to check for
-						// eq range anymore
-						vectorOrder = false
-					} else if vectorOrder {
-						// non-vector key
-						// can only push order for vector key if all previous
-						// keys are EQ only
-						if eq, _ := entry.spans.EquivalenceRangeAt(i); !eq {
-							vectorOrder = false
-						}
+					// check whether vector index key can have order
+					if _, ok := keys[i].Expr.(*expression.Ann); ok && !vectorOrder {
+						return false, indexOrder, partSortTermCount
 					}
 				}
 				indexOrder = append(indexOrder, plan.NewIndexKeyOrders(i, d))
