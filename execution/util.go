@@ -70,41 +70,44 @@ func getAttachmentIndexFor(item value.AnnotatedValue, s string) int16 {
 	return index + value.ATT_CUSTOM_INDEX
 }
 
-func getCachedValue(item value.AnnotatedValue, expr expression.Expression, s string, context *opContext) (
-	rv value.Value, err error) {
-
+func getCachedValue(item value.AnnotatedValue, expr expression.Expression, s string, context *opContext) (value.Value, error) {
+	if item == nil {
+		return nil, errors.NewEvaluationError(nil, "cached value")
+	}
 	i := getAttachmentIndexFor(item, s)
 	sv1 := item.GetAttachment(i)
 	switch sv1 := sv1.(type) {
 	case value.Value:
-		rv = sv1
+		return sv1, nil
 	default:
-		rv, err = expr.Evaluate(item, context)
+		rv, err := expr.Evaluate(item, context)
 		if err != nil {
 			context.Error(errors.NewEvaluationError(err, "cached value"))
-			return
+			return nil, err
 		}
-
 		item.SetAttachment(i, rv)
+		return rv, nil
 	}
-	return
 }
 
 func getOriginalCachedValue(item value.AnnotatedValue, expr expression.Expression, s string, context *opContext) (
-	rv value.Value, err error) {
+	value.Value, error) {
 
+	if item == nil {
+		return nil, errors.NewEvaluationError(nil, "original cached value")
+	}
 	i := getAttachmentIndexFor(item, s)
 	sv1 := item.GetAttachment(i)
 	switch sv1 := sv1.(type) {
 	case value.Value:
-		rv = sv1
+		return sv1, nil
 	default:
-		rv, err = expr.Evaluate(item.Original(), context)
+		rv, err := expr.Evaluate(item.Original(), context)
 		if err != nil {
 			context.Error(errors.NewEvaluationError(err, "original cached value"))
-			return
+			return nil, err
 		}
 		item.SetAttachment(i, rv.CopyForUpdate())
+		return rv, nil
 	}
-	return
 }
