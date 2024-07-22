@@ -163,8 +163,8 @@ func (this *ScopeValue) Copy() Value {
 	rv := newScopeValue(false)
 	rv.Value = this.Value.Copy()
 	rv.parent = this.parent
-	if this.parent != nil {
-		this.parent.Track()
+	if p := this.parent; p != nil {
+		p.Track()
 	}
 
 	// counterintuitive but nested values copies share fields,
@@ -176,9 +176,9 @@ func (this *ScopeValue) Copy() Value {
 func (this *ScopeValue) CopyForUpdate() Value {
 	rv := newScopeValue(this.nested)
 	rv.Value = this.Value.CopyForUpdate()
-	if this.parent != nil {
-		rv.parent = this.parent.Copy()
-		this.parent.Track()
+	if p := this.parent; p != nil {
+		rv.parent = p.Copy()
+		p.Track()
 	}
 	rv.nested = this.nested
 	if this.nested {
@@ -223,31 +223,31 @@ func (this *ScopeValue) Field(field string) (Value, bool) {
 		return result, true
 	}
 
-	if this.parent != nil {
-		return this.parent.Field(field)
+	if p := this.parent; p != nil {
+		return p.Field(field)
 	}
 
 	return missingField(field), false
 }
 
 func (this *ScopeValue) Fields() map[string]interface{} {
-	if this.parent == nil {
+	if parent := this.parent; parent == nil {
 		return this.Value.Fields()
+	} else {
+		p := parent.Fields()
+		v := this.Value.Fields()
+		rv := make(map[string]interface{}, len(p)+len(v))
+
+		for pf, pv := range p {
+			rv[pf] = pv
+		}
+
+		for vf, vv := range v {
+			rv[vf] = vv
+		}
+
+		return rv
 	}
-
-	p := this.parent.Fields()
-	v := this.Value.Fields()
-	rv := make(map[string]interface{}, len(p)+len(v))
-
-	for pf, pv := range p {
-		rv[pf] = pv
-	}
-
-	for vf, vv := range v {
-		rv[vf] = vv
-	}
-
-	return rv
 }
 
 func (this *ScopeValue) FieldNames(buffer []string) []string {
@@ -269,9 +269,9 @@ func (this *ScopeValue) Parent() Value {
 }
 
 func (this *ScopeValue) ResetParent() {
-	if this.parent != nil {
-		this.parent.Recycle()
+	if p := this.parent; p != nil {
 		this.parent = nil
+		p.Recycle()
 	}
 }
 
@@ -314,9 +314,9 @@ func (this *ScopeValue) recycle(lvl int32) {
 		logging.Infof("scope value already recycled")
 		return
 	}
-	if this.parent != nil {
-		this.parent.Recycle()
+	if p := this.parent; p != nil {
 		this.parent = nil
+		p.Recycle()
 	}
 	if this.nested {
 		fields := this.Value.(objectValue)
@@ -349,8 +349,8 @@ func (this *ScopeValue) RefCnt() int32 {
 
 func (this *ScopeValue) Size() uint64 {
 	sz := this.Value.Size()
-	if this.parent != nil {
-		sz += this.parent.Size()
+	if p := this.parent; p != nil {
+		sz += p.Size()
 	}
 	return sz
 }
