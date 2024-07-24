@@ -86,7 +86,6 @@ func (this *builder) indexPushDownProperty(entry *indexEntry, keys,
 				pushDownProperty |= _PUSHDOWN_PARTIAL_ORDER
 				entry.partialSortTermCount = partSortCount
 			}
-			entry.UnsetFlags(IE_VECTOR_KEY_SKIP_ORDER)
 		}
 
 		// OFFSET Pushdown is possible when
