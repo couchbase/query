@@ -121,26 +121,48 @@ func (this *builder) buildIndexProjection(entry *indexEntry, exprs expression.Ex
 			for keyPos, indexKey := range entry.idxKeys {
 				if _, ok := idxProj[keyPos]; ok {
 					indexProjection.EntryKeys = append(indexProjection.EntryKeys, keyPos)
-				} else if indexKey.HasAttribute(datastore.IK_VECTOR) {
-					if entry.HasFlag(IE_VECTOR_KEY_SARGABLE) {
-						indexProjection.EntryKeys = append(indexProjection.EntryKeys, keyPos)
-					}
-				} else {
-					curKey := false
-					for _, expr := range exprs {
-						if expr.DependsOn(indexKey.Expr) {
-							if id != nil && id.EquivalentTo(indexKey.Expr) {
-								indexProjection.PrimaryKey = true
-								primaryKey = true
-							} else {
-								indexProjection.EntryKeys = append(indexProjection.EntryKeys, keyPos)
-								curKey = true
-							}
-							break
-						}
-					}
-					allKeys = allKeys && curKey
+					continue
 				}
+
+				curKey := false
+				vector := false
+				var ann *expression.Ann
+				if indexKey.HasAttribute(datastore.IK_VECTOR) && entry.HasFlag(IE_VECTOR_KEY_SARGABLE) {
+					vector = true
+					if tspans, ok := entry.spans.(*TermSpans); ok {
+						ann = tspans.ann
+					} else {
+						// not expected, add to index projection to be safe
+						indexProjection.EntryKeys = append(indexProjection.EntryKeys, keyPos)
+						continue
+					}
+				}
+				for _, expr := range exprs {
+					depends := false
+					if vector {
+						depends = expr.EquivalentTo(ann)
+					} else {
+						depends = expr.DependsOn(indexKey.Expr)
+					}
+					if depends {
+						if id != nil && id.EquivalentTo(indexKey.Expr) {
+							indexProjection.PrimaryKey = true
+							primaryKey = true
+						} else if !vector ||
+							!entry.IsPushDownProperty(_PUSHDOWN_ORDER) ||
+							!expr.HasExprFlag(expression.EXPR_ORDER_BY) {
+							// if vector key, need to include it if:
+							//  - order is not pushed down to indexer
+							//    (need vector distance for sorting)
+							//  - expr is not in the ORDER BY clause
+							//    (e.g. in projection list)
+							indexProjection.EntryKeys = append(indexProjection.EntryKeys, keyPos)
+							curKey = true
+						}
+						break
+					}
+				}
+				allKeys = allKeys && curKey
 			}
 			for i, include := range entry.includes {
 				curKey := false
