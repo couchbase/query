@@ -194,9 +194,14 @@ func (this *InitialProject) UnmarshalJSON(body []byte) error {
 	results := projection.Terms()
 	project_terms := make(ProjectTerms, len(results))
 
+	this.starTermCount = 0
 	for i, res := range results {
 		project_terms[i] = &ProjectTerm{
 			result: res,
+		}
+
+		if res.Star() {
+			this.starTermCount++
 		}
 	}
 
