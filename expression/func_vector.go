@@ -12,6 +12,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/binary"
+	"fmt"
 	"math"
 	"strings"
 
@@ -53,9 +54,14 @@ func GetVectorMetric(arg string) (metric VectorMetric) {
 	return
 }
 
+const (
+	_VECTOR_QVEC_CHECKED = 1 << iota
+)
+
 type Knn struct {
 	FunctionBase
 	metric VectorMetric
+	flags  uint32
 }
 
 func NewKnn(operands Expressions) Function {
@@ -78,6 +84,7 @@ func NewKnn(operands Expressions) Function {
 func (this *Knn) Copy() Expression {
 	rv := &Knn{
 		metric: this.metric,
+		flags:  this.flags,
 	}
 	rv.Init(this.name, this.operands.Copy()...)
 	rv.expr = rv
@@ -107,15 +114,24 @@ func (this *Knn) Constructor() FunctionConstructor {
 }
 
 func (this *Knn) ValidOperands() error {
-	field := this.operands[0]
-	if field.Static() != nil {
-		return errors.NewVectorFuncInvalidField(this.name, field.Static().String())
+	field := this.operands[0].Static()
+	if field != nil {
+		return errors.NewVectorFuncInvalidField(this.name, field.String())
 	}
 	switch this.metric {
 	case EUCLIDEAN, EUCLIDEAN_SQUARED, L2, L2_SQUARED, COSINE, DOT:
-		return nil
+		// no-op
+	default:
+		return errors.NewVectorFuncInvalidMetric(this.name, string(this.metric))
 	}
-	return errors.NewVectorFuncInvalidMetric(this.name, string(this.metric))
+	qVec := this.operands[1].Value()
+	if qVec != nil {
+		if valid, errStr := validVector(qVec, 0); !valid {
+			return errors.NewInvalidQueryVector(errStr)
+		}
+		this.flags |= _VECTOR_QVEC_CHECKED
+	}
+	return nil
 }
 
 func (this *Knn) Metric() VectorMetric {
@@ -131,10 +147,10 @@ func (this *Knn) QueryVector() Expression {
 }
 
 func (this *Knn) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return vectorDistance(this.metric, this.operands, item, context)
+	return vectorDistance(this.metric, this.operands, (this.flags&_VECTOR_QVEC_CHECKED) == 0, item, context)
 }
 
-func vectorDistance(metric VectorMetric, operands Expressions, item value.Value, context Context) (value.Value, error) {
+func vectorDistance(metric VectorMetric, operands Expressions, checkQVec bool, item value.Value, context Context) (value.Value, error) {
 	var queryVec value.Value
 	vec, err := operands[0].Evaluate(item, context)
 	if err == nil {
@@ -143,10 +159,18 @@ func vectorDistance(metric VectorMetric, operands Expressions, item value.Value,
 	if err != nil {
 		return nil, err
 	}
-	if vec.Type() == value.MISSING || queryVec.Type() == value.MISSING {
+	if vec.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil
+	} else if vec.Type() != value.ARRAY {
+		return value.NULL_VALUE, nil
 	}
-	if vec.Type() != value.ARRAY || queryVec.Type() != value.ARRAY {
+	if checkQVec {
+		if valid, errStr := validVector(queryVec, 0); !valid {
+			return nil, errors.NewInvalidQueryVector(errStr)
+		}
+	} else if queryVec.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else if queryVec.Type() != value.ARRAY {
 		return value.NULL_VALUE, nil
 	}
 
@@ -199,6 +223,7 @@ func vectorDistance(metric VectorMetric, operands Expressions, item value.Value,
 type Ann struct {
 	FunctionBase
 	metric VectorMetric
+	flags  uint32
 }
 
 func NewAnn(operands Expressions) Function {
@@ -222,6 +247,7 @@ func NewAnn(operands Expressions) Function {
 func (this *Ann) Copy() Expression {
 	rv := &Ann{
 		metric: this.metric,
+		flags:  this.flags,
 	}
 	rv.Init(this.name, this.operands.Copy()...)
 	rv.expr = rv
@@ -251,15 +277,24 @@ func (this *Ann) Constructor() FunctionConstructor {
 }
 
 func (this *Ann) ValidOperands() error {
-	field := this.operands[0]
-	if field.Static() != nil {
-		return errors.NewVectorFuncInvalidField(this.name, field.Static().String())
+	field := this.operands[0].Static()
+	if field != nil {
+		return errors.NewVectorFuncInvalidField(this.name, field.String())
 	}
 	switch this.metric {
 	case EUCLIDEAN, EUCLIDEAN_SQUARED, L2, L2_SQUARED, COSINE, DOT:
-		return nil
+		// no-op
+	default:
+		return errors.NewVectorFuncInvalidMetric(this.name, string(this.metric))
 	}
-	return errors.NewVectorFuncInvalidMetric(this.name, string(this.metric))
+	qVec := this.operands[1].Value()
+	if qVec != nil {
+		if valid, errStr := validVector(qVec, 0); !valid {
+			return errors.NewInvalidQueryVector(errStr)
+		}
+		this.flags |= _VECTOR_QVEC_CHECKED
+	}
+	return nil
 }
 
 func (this *Ann) Metric() VectorMetric {
@@ -293,7 +328,7 @@ func (this *Ann) NeedSquareRoot() bool {
 }
 
 func (this *Ann) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return vectorDistance(this.metric, this.operands, item, context)
+	return vectorDistance(this.metric, this.operands, (this.flags&_VECTOR_QVEC_CHECKED) == 0, item, context)
 }
 
 type IsVector struct {
@@ -380,28 +415,42 @@ func (this *IsVector) Evaluate(item value.Value, context Context) (value.Value, 
 			return nil, err
 		}
 	}
+	if valid, _ := validVector(vec, this.dimension); valid {
+		return value.TRUE_VALUE, nil
+	}
+	return value.FALSE_VALUE, nil
+}
 
+func validVector(vec value.Value, dimension int) (bool, string) {
+	if vec == nil {
+		return false, "nil value used for vector"
+	} else if vec.Type() != value.ARRAY {
+		return false, "not an array"
+	}
 	for i := 0; ; i++ {
 		v, ok := vec.Index(i)
 		if !ok {
-			if i == this.dimension {
-				return value.TRUE_VALUE, nil
-			} else {
-				return value.FALSE_VALUE, nil
+			if dimension > 0 {
+				if i == dimension {
+					return true, ""
+				} else {
+					return false, fmt.Sprintf("number of dimension (%d) does not match dimension specified (%d)", i, dimension)
+				}
 			}
-		} else if i >= this.dimension {
-			return value.FALSE_VALUE, nil
+			break
+		} else if dimension > 0 && i >= dimension {
+			return false, fmt.Sprintf("number of dimension (%d) does not match dimension specified (%d)", i, dimension)
 		} else {
 			if v.Type() != value.NUMBER {
-				return value.FALSE_VALUE, nil
+				return false, fmt.Sprintf("array element (%v) not a number", v)
 			}
 			vf := value.AsNumberValue(v).Float64()
 			if vf < -math.MaxFloat32 || vf > math.MaxFloat32 {
-				return value.FALSE_VALUE, nil
+				return false, fmt.Sprintf("array element (%v) not a float32", vf)
 			}
 		}
 	}
-
+	return true, ""
 }
 
 type DecodeVector struct {
