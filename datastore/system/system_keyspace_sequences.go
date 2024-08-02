@@ -153,6 +153,7 @@ func (b *sequenceKeyspace) Fetch(keys []string, keysMap map[string]value.Annotat
 				av.SetField("value", val)
 			}
 			av.SetId(key)
+			av.SetMetaField(value.META_KEYSPACE, b.fullName)
 			keysMap[key] = av
 		}
 	}
