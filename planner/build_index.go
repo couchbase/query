@@ -13,7 +13,6 @@ import (
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
-	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/util"
 )
@@ -83,12 +82,6 @@ func (this *builder) VisitCreateIndex(stmt *algebra.CreateIndex) (interface{}, e
 		if _, ok := indexer.(datastore.Indexer3); !ok {
 			return nil, errors.NewPartitionIndexNotSupportedError()
 		}
-	}
-
-	// Make sure you dont have multiple xattrs
-	_, names := expression.XattrsNames(stmt.Expressions(), "")
-	if ok := isValidXattrs(names); !ok {
-		return nil, errors.NewPlanInternalError("Only a single user or system xattribute can be indexed.")
 	}
 
 	return plan.NewQueryPlan(plan.NewCreateIndex(keyspace, stmt)), nil

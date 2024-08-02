@@ -236,6 +236,7 @@ type builder struct {
 	subTimes             map[string]time.Duration
 	arrayId              int
 	vectors              expression.Expressions
+	initialProjection    *algebra.Projection
 }
 
 func (this *builder) Copy() *builder {
@@ -264,6 +265,7 @@ func (this *builder) Copy() *builder {
 		hintIndexes:          this.hintIndexes,
 		partialSortTermCount: this.partialSortTermCount,
 		arrayId:              this.arrayId,
+		initialProjection:    this.initialProjection,
 		// the following fields are setup during planning process and thus not copied:
 		// children, subChildren, coveringScan, coveredUnnests, countScan, orderScan, lastOp
 	}

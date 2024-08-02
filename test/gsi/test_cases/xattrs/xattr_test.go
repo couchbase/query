@@ -40,10 +40,16 @@ func TestXattrs(t *testing.T) {
 	// Test non covering index
 	runMatch("case_xattrs.json", false, false, qc, t)
 
+	runStmt(qc, "create index idx2 on product(meta().xattrs.a1, meta().xattrs.b1, meta().xattrs.c1, meta().xattrs.d1,"+
+		" meta().xattrs.e1, meta().xattrs.f1, meta().xattrs.g1, meta().xattrs.h1 ,meta().xattrs.i1, meta().xattrs.j1,"+
+		" meta().xattrs.k1, meta().xattrs.l1, meta().xattrs.m1, meta().xattrs.n1, meta().xattrs.o1, meta().xattrs.p1)"+
+		" where test_id = 'xattrs'")
+
 	// Test bug fixes
 	runMatch("case_xattrs_bugs.json", false, true, qc, t)
 
 	runStmt(qc, "drop index shellTest.idx1")
+	runStmt(qc, "drop index idx2 on product")
 
 	rr := runStmt(qc, "delete from product where test_id = \"xattrs\"")
 	if rr.Err != nil {
