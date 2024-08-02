@@ -10,7 +10,6 @@ package planner
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/auth"
@@ -24,9 +23,14 @@ import (
 )
 
 const _MAX_EARLY_PROJECTION = 15
+const _MAX_XATTRS = 15
 
 func (this *builder) visitFrom(node *algebra.Subselect, group *algebra.Group,
 	projection *algebra.Projection, indexPushDowns *indexPushDowns) error {
+	prevInitialProjection := this.initialProjection
+	defer func() {
+		this.initialProjection = prevInitialProjection
+	}()
 
 	count, err := this.fastCount(node)
 	if err != nil {
@@ -170,10 +174,7 @@ func (this *builder) visitFrom(node *algebra.Subselect, group *algebra.Group,
 		}
 
 		this.extractKeyspacePredicates(this.where, nil)
-		err = this.checkEarlyProjection(projection)
-		if err != nil {
-			return err
-		}
+		this.initialProjection = projection
 
 		var ops, subOps []plan.Operator
 		var coveringOps []plan.CoveringOperator
@@ -252,11 +253,7 @@ func (this *builder) visitFrom(node *algebra.Subselect, group *algebra.Group,
 }
 
 func isValidXattrs(names []string) bool {
-	if len(names) > 2 {
-		return false
-	}
-	return len(names) <= 1 || (strings.HasPrefix(names[0], "$") && !strings.HasPrefix(names[1], "$")) ||
-		(!strings.HasPrefix(names[0], "$") && strings.HasPrefix(names[1], "$"))
+	return len(names) <= _MAX_XATTRS
 }
 
 func (this *builder) collectAliases(node *algebra.Subselect) {
@@ -282,8 +279,8 @@ func (this *builder) GetSubPaths(ksTerm *algebra.KeyspaceTerm, keyspace string) 
 	if this.node != nil {
 		_, names = expression.XattrsNames(this.node.Expressions(), keyspace)
 		if ok := isValidXattrs(names); !ok {
-			return nil, errors.NewPlanInternalError("Can only retrieve virtual xattr and user xattr or virtual xattr and " +
-				"system xattr")
+			return nil, errors.NewPlanInternalError(fmt.Sprintf("Can only retrieve up to %v"+
+				" xattrpaths per request", _MAX_XATTRS))
 		}
 		if len(names) == 0 {
 			var exprs expression.Expressions
@@ -368,6 +365,10 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 	}
 
 	if len(this.coveringScans) == 0 && this.countScan == nil {
+		err := this.checkEarlyProjection(this.initialProjection)
+		if err != nil {
+			return nil, err
+		}
 		names, err := this.GetSubPaths(node, node.Alias())
 		if err != nil {
 			return nil, err

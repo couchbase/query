@@ -4,6 +4,7 @@
         "ordered":false,
         "results": [
         {},
+        {},
         {
             "_sync": {
                 "id": 231,
@@ -33,6 +34,7 @@
         "results": [
         {},
         {},
+        {},
         {
             "userAttr": [
                 "Product 1",
@@ -45,6 +47,9 @@
         "statements":"SELECT META().xattrs.`$document`.deleted from product where test_id='xattrs'",
         "ordered":false,
         "results": [
+        {
+            "deleted": false
+        },
         {
             "deleted": false
         },
@@ -81,6 +86,9 @@
             "deleted": false
         },
         {
+            "deleted": false
+        },
+        {
             "deleted": false,
             "userAttr": [
                 "Product 1",
@@ -95,6 +103,7 @@
         "results": [
         {},
         {},
+        {},
         {}
     ]
     },
@@ -102,6 +111,9 @@
         "statements":"SELECT META().xattrs.`_sync`.name,META().xattrs.`_sync`.id, name as product_name, price from product where test_id='xattrs' ",
         "ordered":false,
         "results": [
+        {
+            "product_name": "Fotodiox Thermo Lens Cup with Stainless Steel Insulated Tumbler, Coffee and Refreshment Mug, 1:1 Nikon Lens imitation Thermo Cup (Modeling 24-70mm F2.8G Lens), 16oz"
+        },
         {
             "product_name": "Fotodiox Thermo Lens Cup with Stainless Steel Insulated Tumbler, Coffee and Refreshment Mug, 1:1 Nikon Lens imitation Thermo Cup (Modeling 24-70mm F2.8G Lens), 16oz"
         },
@@ -121,6 +133,9 @@
         "results": [
         {
             "id": "product100_xattrs"
+        },
+        {
+            "id": "product100_xattrs_dup"
         },
         {
             "id": "product10_xattrs",

@@ -28,5 +28,75 @@
         "statements":"SELECT t2.c2 FROM shellTest AS t1 JOIN (SELECT d.c2 FROM shellTest AS d WHERE d.c1 > 0 AND d.test_id = 'xattrs') AS t2 ON t1.c2 = t2.c2 WHERE t1.c1 < 0 AND t1.test_id = 'xattrs' ORDER BY META(t1).xattrs._sync.rev",
         "results": [
     ]
+    },
+    {
+        "testcase": "MB-62793 allow looking upto 15 xattrs at a time",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v IN p.plan.`~children` SATISFIES v.`#operator`=\"Fetch\" AND ARRAY_LENGTH(v.subpaths)=15 END"
+        },
+        "statements":"SELECT meta().xattrs.a, meta().xattrs.b, meta().xattrs.c, meta().xattrs.d, meta().xattrs.e, meta().xattrs.f, meta().xattrs.g,meta().xattrs.h,meta().xattrs.i, meta().xattrs.j, meta().xattrs.k, meta().xattrs.l, meta().xattrs.m, meta().xattrs.n, meta().xattrs.o  FROM product where meta().id = 'product100_xattrs'",
+        "results": [
+            {
+                "a": 1,
+                "b": 1,
+                "c": 1,
+                "d": 1,
+                "e": 1,
+                "f": 1,
+                "g": 1,
+                "h": 1,
+                "i": 1,
+                "j": 1,
+                "k": 1,
+                "l": 1,
+                "m": 1,
+                "n": 1,
+                "o": 1
+            }
+        ]
+    },
+    {
+        "testcase": "MB-62793 disallow statements looking up more than 15 xattrs",
+        "statements": "SELECT meta().xattrs.a, meta().xattrs.b, meta().xattrs.c, meta().xattrs.d, meta().xattrs.e, meta().xattrs.f, meta().xattrs.g, meta().xattrs.h,meta().xattrs.i, meta().xattrs.j, meta().xattrs.k, meta().xattrs.l, meta().xattrs.m, meta().xattrs.n, meta().xattrs.o, meta().xattrs.p  FROM product where meta().id = 'product100_xattrs'",
+        "error": "Plan error: Can only retrieve upto 15 xattrpaths per request"
+    },
+    {
+        "testcase": "MB-62793 allow creating index on more than 15 xattrs",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true as present FROM $explan p WHERE ANY v IN p.plan.`~children` SATISFIES v.`#operator`=\"IndexScan3\" AND ARRAY_LENGTH(v.covers)=17 END;"
+        },
+        "statements": "SELECT meta().xattrs.a1 , meta().xattrs.b1, meta().xattrs.c1, meta().xattrs.d1, meta().xattrs.e1, meta().xattrs.f1, meta().xattrs.g1, meta().xattrs.h1, meta().xattrs.i1, meta().xattrs.j1, meta().xattrs.k1, meta().xattrs.l1, meta().xattrs.m1, meta().xattrs.n1, meta().xattrs.o1, meta().xattrs.p1 FROM product WHERE test_id=\"xattrs\" AND meta().xattrs.a1 IS VALUED AND meta().xattrs.b1 IS VALUED AND meta().xattrs.c1 IS VALUED AND  meta().xattrs.d1 IS VALUED AND meta().xattrs.e1 IS VALUED AND meta().xattrs.f1 IS VALUED AND meta().xattrs.g1 IS VALUED AND meta().xattrs.h1 IS VALUED AND meta().xattrs.i1 IS VALUED AND meta().xattrs.j1 IS VALUED AND meta().xattrs.k1 IS VALUED AND meta().xattrs.l1 IS VALUED AND meta().xattrs.m1 IS VALUED AND meta().xattrs.n1 IS VALUED AND meta().xattrs.o1 IS VALUED AND meta().xattrs.p1 IS VALUED;",
+        "results":[
+            {
+                "a1": 1,
+                "b1": 1,
+                "c1": 1,
+                "d1": 1,
+                "e1": 1,
+                "f1": 1,
+                "g1": 1,
+                "h1": 1,
+                "i1": 1,
+                "j1": 1,
+                "k1": 1,
+                "l1": 1,
+                "m1": 1,
+                "n1": 1,
+                "o1": 1,
+                "p1": 1
+            }
+        ]
     }
 ]

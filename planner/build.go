@@ -241,6 +241,7 @@ type builder struct {
 	arrayId              int
 	vectors              expression.Expressions
 	subqCoveringInfo     map[*algebra.Subselect]CoveringSubqInfo
+	initialProjection    *algebra.Projection
 }
 
 func (this *builder) Copy() *builder {
@@ -269,6 +270,7 @@ func (this *builder) Copy() *builder {
 		hintIndexes:          this.hintIndexes,
 		partialSortTermCount: this.partialSortTermCount,
 		arrayId:              this.arrayId,
+		initialProjection:    this.initialProjection,
 		// the following fields are setup during planning process and thus not copied:
 		// children, subChildren, coveringScan, coveredUnnests, countScan, orderScan, lastOp
 		// subqCoveringInfo
