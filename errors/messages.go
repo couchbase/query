@@ -4940,7 +4940,22 @@ var errData = []ErrData{
 		},
 	},
 	{
-		Code:        E_IS_VECTOR_INVALID_DIMENSION, // 10511
+		Code:        E_VECTOR_FUNC_INVALID_FIELD, // 10511
+		symbol:      "E_VECTOR_FUNC_INVALID_FIELD",
+		Description: "Vector function <<name>> has invalid field specification (<<field>>).",
+		Reason: []string{
+			"An invalid field specification (<<field>>) is used in vector function <<name>>.",
+		},
+		Action: []string{
+			"Revise the vector function to use a valid field specification.",
+		},
+		IsUser: YES,
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_IS_VECTOR_INVALID_DIMENSION, // 10512
 		symbol:      "E_IS_VECTOR_INVALID_DIMENSION",
 		Description: "IsVector() function has invalid dimension specification (<<dimension>>).",
 		Reason: []string{
@@ -4955,7 +4970,7 @@ var errData = []ErrData{
 		},
 	},
 	{
-		Code:        E_IS_VECTOR_INVALID_ARG, // 10512
+		Code:        E_IS_VECTOR_INVALID_ARG, // 10513
 		symbol:      "E_IS_VECTOR_INVALID_ARG",
 		Description: "IsVector() function has invalid argument (<<msg>>).",
 		Reason: []string{
