@@ -201,6 +201,12 @@ func NewVectorFuncInvalidMetric(name, metric string) Error {
 		InternalCaller: CallerN(1)}
 }
 
+func NewVectorFuncInvalidField(name, field string) Error {
+	return &err{level: EXCEPTION, ICode: E_VECTOR_FUNC_INVALID_METRIC, IKey: "function.vector.invalid_field",
+		InternalMsg:    fmt.Sprintf("Vector distance function (%s) has invalid field specification ('%s')", name, field),
+		InternalCaller: CallerN(1)}
+}
+
 func NewIsVectorInvalidDimension(dimension string) Error {
 	return &err{level: EXCEPTION, ICode: E_IS_VECTOR_INVALID_DIMENSION, IKey: "function.is_vector.invalid_dimension",
 		InternalMsg:    fmt.Sprintf("IsVector() function has invalid dimension: %v", dimension),

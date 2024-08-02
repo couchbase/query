@@ -107,6 +107,10 @@ func (this *Knn) Constructor() FunctionConstructor {
 }
 
 func (this *Knn) ValidOperands() error {
+	field := this.operands[0]
+	if field.Static() != nil {
+		return errors.NewVectorFuncInvalidField(this.name, field.Static().String())
+	}
 	switch this.metric {
 	case EUCLIDEAN, EUCLIDEAN_SQUARED, L2, L2_SQUARED, COSINE, DOT:
 		return nil
@@ -247,6 +251,10 @@ func (this *Ann) Constructor() FunctionConstructor {
 }
 
 func (this *Ann) ValidOperands() error {
+	field := this.operands[0]
+	if field.Static() != nil {
+		return errors.NewVectorFuncInvalidField(this.name, field.Static().String())
+	}
 	switch this.metric {
 	case EUCLIDEAN, EUCLIDEAN_SQUARED, L2, L2_SQUARED, COSINE, DOT:
 		return nil

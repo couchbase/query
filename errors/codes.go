@@ -405,8 +405,9 @@ const (
 	E_ADVISOR_ACTION_MISSING                     ErrorCode = 10502
 	E_ADVISOR_INVALID_ARGS                       ErrorCode = 10503
 	E_VECTOR_FUNC_INVALID_METRIC                 ErrorCode = 10510
-	E_IS_VECTOR_INVALID_DIMENSION                ErrorCode = 10511
-	E_IS_VECTOR_INVALID_ARG                      ErrorCode = 10512
+	E_VECTOR_FUNC_INVALID_FIELD                  ErrorCode = 10511
+	E_IS_VECTOR_INVALID_DIMENSION                ErrorCode = 10512
+	E_IS_VECTOR_INVALID_ARG                      ErrorCode = 10513
 	E_SYSTEM_DATASTORE                           ErrorCode = 11000
 	E_SYSTEM_KEYSPACE_NOT_FOUND                  ErrorCode = 11002
 	E_SYSTEM_NOT_IMPLEMENTED                     ErrorCode = 11003
