@@ -147,7 +147,12 @@ func (this *Knn) QueryVector() Expression {
 }
 
 func (this *Knn) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return vectorDistance(this.metric, this.operands, (this.flags&_VECTOR_QVEC_CHECKED) == 0, item, context)
+	if (this.flags & _VECTOR_QVEC_CHECKED) == 0 {
+		rv, err := vectorDistance(this.metric, this.operands, true, item, context)
+		this.flags |= _VECTOR_QVEC_CHECKED
+		return rv, err
+	}
+	return vectorDistance(this.metric, this.operands, false, item, context)
 }
 
 func vectorDistance(metric VectorMetric, operands Expressions, checkQVec bool, item value.Value, context Context) (value.Value, error) {
@@ -328,7 +333,12 @@ func (this *Ann) NeedSquareRoot() bool {
 }
 
 func (this *Ann) Evaluate(item value.Value, context Context) (value.Value, error) {
-	return vectorDistance(this.metric, this.operands, (this.flags&_VECTOR_QVEC_CHECKED) == 0, item, context)
+	if (this.flags & _VECTOR_QVEC_CHECKED) == 0 {
+		rv, err := vectorDistance(this.metric, this.operands, true, item, context)
+		this.flags |= _VECTOR_QVEC_CHECKED
+		return rv, err
+	}
+	return vectorDistance(this.metric, this.operands, false, item, context)
 }
 
 type IsVector struct {
