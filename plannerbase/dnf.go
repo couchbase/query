@@ -398,6 +398,15 @@ func (this *DNF) visitLike(expr expression.LikeFunction) (interface{}, error) {
 	return and, nil
 }
 
+// no need to do DNF transformation for CASE expressions
+func (this *DNF) VisitSearchedCase(expr *expression.SearchedCase) (interface{}, error) {
+	return expr, nil
+}
+
+func (this *DNF) VisitSimpleCase(expr *expression.SimpleCase) (interface{}, error) {
+	return expr, nil
+}
+
 const _MAX_DNF_COMPLEXITY = 1024
 
 var _EXPRESSIONS_POOL = expression.NewExpressionsPool(_MAX_DNF_COMPLEXITY)
