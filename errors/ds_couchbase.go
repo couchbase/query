@@ -327,9 +327,16 @@ func NewInsertError(e error, key string) Error {
 }
 
 func NewBucketActionError(e interface{}, attempts int) Error {
-	c := make(map[string]interface{})
+	var c map[string]interface{}
+	if em, ok := e.(map[string]interface{}); ok {
+		c = em
+	} else {
+		c = make(map[string]interface{})
+		c["cause"] = e
+	}
+
 	c["attempts"] = attempts
-	c["cause"] = e
+
 	return &err{level: EXCEPTION, ICode: E_BUCKET_ACTION, IKey: "datastore.couchbase.bucket.action",
 		InternalMsg: fmt.Sprintf("Unable to complete action after %v attempts", attempts), cause: c, InternalCaller: CallerN(1)}
 }

@@ -495,16 +495,35 @@ func (b *Bucket) do3(vb uint16, f func(mc *memcached.Client, vb uint16) error, d
 	}
 
 	if resp, ok := lastError.(*gomemcached.MCResponse); ok {
-		var err string
+		var err interface{}
 
 		if gomemcached.IsTenantLimit(resp) {
 			err = gomemcached.StatusDesc[resp.Status]
 		} else {
+
+			// The status of the memcached response
 			err = gomemcached.StatusNames[resp.Status]
 			if err == "" {
 				err = fmt.Sprintf("KV status %v", resp.Status)
 			}
+
+			// Add the memcached error response
+			if len(resp.Body) > 0 {
+				var r map[string]interface{}
+				if json.Unmarshal(resp.Body, &r) == nil {
+					if e, ok := r["error"]; ok {
+						if em, ok := e.(map[string]interface{}); ok {
+							// Add the status of the memcached response
+							// This status is necessary for further processing in some cases.
+							// For example: DML/ mutation operations check if the memcached error is a KEY_ENOENT error
+							em["error"] = err
+							err = em
+						}
+					}
+				}
+			}
 		}
+
 		return qerrors.NewBucketActionError(err, desc.attempts)
 	} else {
 		return qerrors.NewBucketActionError(lastError, desc.attempts)
