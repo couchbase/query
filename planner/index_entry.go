@@ -41,6 +41,7 @@ const (
 	IE_OR_USE_FILTERS
 	IE_OR_NON_SARG_EXPR
 	IE_LIMIT_OFFSET_COST
+	IE_SEARCH_KNN
 )
 
 type indexEntry struct {

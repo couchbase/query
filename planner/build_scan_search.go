@@ -13,6 +13,7 @@ import (
 
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/expression/parser"
 	"github.com/couchbase/query/expression/search"
@@ -279,7 +280,7 @@ func (this *builder) sargableSearchIndexes(indexes []datastore.Index, pred expre
 		var mappings interface{}
 		var n, en int
 		var size, esize int64
-		var exact bool
+		var exact, hasKnn, knn bool
 		var entry *indexEntry
 
 		//qprams := s.Query().Value() == nil || (s.Options() != nil && s.Options().Value() == nil)
@@ -299,7 +300,10 @@ func (this *builder) sargableSearchIndexes(indexes []datastore.Index, pred expre
 				continue
 			}
 
-			n, size, exact, mappings, err = index.Sargable(s.FieldName(), s.Query(), s.Options(), mappings)
+			n, size, exact, knn, mappings, err = index.Sargable(s.FieldName(), s.Query(), s.Options(), mappings)
+			if knn && !hasKnn {
+				hasKnn = true
+			}
 			if err != nil {
 				return nil, err
 			}
@@ -311,12 +315,17 @@ func (this *builder) sargableSearchIndexes(indexes []datastore.Index, pred expre
 						cond, origCond, nil, exact, []bool{true})
 					esize = size
 					en = n
+					if knn {
+						entry.SetFlags(IE_SEARCH_KNN, true)
+					}
 				}
 			}
 		}
 
 		if entry != nil {
 			searchSargables = append(searchSargables, entry)
+		} else if !this.hintIndexes && hasKnn {
+			return nil, errors.NewKnnNoSearchIndex()
 		}
 	}
 

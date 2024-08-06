@@ -215,4 +215,10 @@ func NewPlanNoPlaceholderError() Error {
 		InternalMsg: "Placeholder is not allowed in keyspace", InternalCaller: CallerN(1)}
 }
 
+func NewKnnNoSearchIndex() Error {
+	return &err{level: EXCEPTION, ICode: E_NO_KNN_SEARCH_INDEX, IKey: "plan.search.knn",
+		InternalMsg:    fmt.Sprintf("Search() function using KNN and no search index"),
+		InternalCaller: CallerN(1)}
+}
+
 // error numbers 4901, 4902, 4903, 4904 and 4905 are retired, and cannot be reused
