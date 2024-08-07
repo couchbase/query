@@ -90,9 +90,25 @@ func (this *HttpEndpoint) wrapAPI(w http.ResponseWriter, req *http.Request, f ap
 		enc := json.NewEncoder(buf)
 		enc.SetEscapeHTML(false)
 		if pretty {
-			enc.SetIndent("", "\t")
+			enc.SetIndent("", "  ")
 		}
-		json_err = enc.Encode(obj)
+		// avoid producing a single over-long line which may be difficult to process
+		// this deliberately targets only []interface{} so only select endpoint responses are adjusted
+		if a, ok := obj.([]interface{}); ok && !pretty && len(a) > 1 {
+			buf.WriteString("[\n")
+			for i := range a {
+				if i > 0 {
+					buf.WriteRune(',')
+				}
+				json_err = enc.Encode(a[i])
+				if json_err != nil {
+					break
+				}
+			}
+			buf.WriteString("]\n")
+		} else {
+			json_err = enc.Encode(obj)
+		}
 		if json_err != nil {
 			logging.Infof("Error writing output for %v: %v", req.URL.String(), json_err)
 			e := errors.NewAdminDecodingError(json_err)
