@@ -134,6 +134,43 @@ func Foreach(b string, f func(path string, v value.Value) error) error {
 	})
 }
 
+func ForeachBodyEntry(f func(parts []string, entry map[string]interface{}) errors.Error) errors.Error {
+	var _unmarshalled struct {
+		Identity   json.RawMessage `json:"identity"`
+		Definition json.RawMessage `json:"definition"`
+	}
+
+	err1 := metakv.IterateChildren(_FUNC_PATH, func(kve metakv.KVEntry) error {
+		path := kve.Path[len(_FUNC_PATH):]
+		parts := algebra.ParsePath(path)
+		if len(parts) == 4 {
+
+			// unmarshal signature and body
+			err := json.Unmarshal(kve.Value, &_unmarshalled)
+			if err != nil {
+				logging.Infof("processing %v error %v unmarshalling entry", parts, err)
+				name := parts[0] + ":" + parts[1] + "." + parts[2] + "." + parts[3]
+				return errors.NewFunctionEncodingError("decode", name, err)
+			}
+
+			entry, err := resolver.MakeBodyEntry(path, _unmarshalled.Definition)
+			if err != nil {
+				logging.Infof("processing %v error %v constructing function body entry", parts, err)
+				return err
+			}
+			err = f(parts, entry)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	if err1 != nil {
+		return errors.NewMetaKVError("Error during scanning of function definitions", err1)
+	}
+	return nil
+}
+
 func ForeachBody(f func(parts []string, b functions.FunctionBody) errors.Error) errors.Error {
 	var _unmarshalled struct {
 		Identity   json.RawMessage `json:"identity"`
@@ -319,8 +356,11 @@ func (name *metaEntry) Save(body functions.FunctionBody, replace bool) errors.Er
 	body.Body(definition)
 	entry["identity"] = identity
 	entry["definition"] = definition
-	bytes, err := json.Marshal(entry)
+	return name.SaveBodyEntry(entry, replace)
+}
 
+func (name *metaEntry) SaveBodyEntry(entry map[string]interface{}, replace bool) errors.Error {
+	bytes, err := json.Marshal(entry)
 	if err != nil {
 		return errors.NewFunctionEncodingError("encode", name.Name(), err)
 	}
