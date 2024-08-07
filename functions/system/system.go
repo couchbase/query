@@ -248,7 +248,10 @@ func (name *systemEntry) Load() (functions.FunctionBody, errors.Error) {
 func (name *systemEntry) Save(body functions.FunctionBody, replace bool) errors.Error {
 	entry := make(map[string]interface{})
 	body.Body(entry)
+	return name.SaveBodyEntry(entry, replace)
+}
 
+func (name *systemEntry) SaveBodyEntry(entry map[string]interface{}, replace bool) errors.Error {
 	parts := name.path.Parts()
 	if len(parts) != 4 {
 		return errors.NewInvalidFunctionNameError(name.Name(), fmt.Errorf("name has %v parts", len(parts)))

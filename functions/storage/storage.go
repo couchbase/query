@@ -628,7 +628,7 @@ func doMigrateBucket(name string) bool {
 	logging.Infof("UDF migration: Start UDF migration for bucket %s", name)
 
 	complete := true
-	err1 := metaStorage.ForeachBody(func(parts []string, body functions.FunctionBody) errors.Error {
+	err1 := metaStorage.ForeachBodyEntry(func(parts []string, entry map[string]interface{}) errors.Error {
 		if len(parts) != 4 {
 			return nil
 		}
@@ -644,7 +644,7 @@ func doMigrateBucket(name string) bool {
 			return errors.NewMigrationError(_UDF_MIGRATION, "Error parsing name", parts, err)
 		}
 
-		err = name.Save(body, false)
+		err = name.SaveBodyEntry(entry, false)
 		if err != nil {
 			logging.Errorf("UDF migration: Migrating %v error %v writing body", parts, err)
 			// ignore duplicated function error but return all other errors

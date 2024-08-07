@@ -50,6 +50,7 @@ type FunctionName interface {
 	Signature(object map[string]interface{})
 	Load() (FunctionBody, errors.Error)
 	Save(body FunctionBody, replace bool) errors.Error
+	SaveBodyEntry(entry map[string]interface{}, replace bool) errors.Error
 	Delete() errors.Error
 	CheckStorage() bool
 	ResetStorage()
@@ -223,6 +224,10 @@ func (name *MockName) Load() (FunctionBody, errors.Error) {
 }
 
 func (name *MockName) Save(body FunctionBody, replace bool) errors.Error {
+	return nil
+}
+
+func (name *MockName) SaveBodyEntry(entry map[string]interface{}, replace bool) errors.Error {
 	return nil
 }
 
