@@ -2863,6 +2863,20 @@ var errData = []ErrData{
 		},
 	},
 	{
+		Code:        E_NO_KNN_SEARCH_INDEX, // 4380
+		symbol:      "E_NO_KNN_SEARCH_INDEX",
+		Description: "Search() function with KNN has no search index",
+		Reason: []string{
+			"Query uses Search() as predicate with KNN, but there is no matching FTS index",
+		},
+		Action: []string{
+			"Create appropriate FTS index",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
 		Code:        E_ENCODED_PLAN_NOT_ALLOWED, // 4400
 		symbol:      "E_ENCODED_PLAN_NOT_ALLOWED",
 		Description: "Encoded plan use is not allowed in serverless mode.",

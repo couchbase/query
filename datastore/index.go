@@ -581,7 +581,7 @@ type FTSIndex interface {
 
 	// For given field/query Index is qualified, exact=true when no false positives
 	Sargable(field string, query, options expression.Expression, mappings interface{}) (nkeys int,
-		size int64, exact bool, omappings interface{}, err errors.Error)
+		size int64, exact, knn bool, omappings interface{}, err errors.Error)
 
 	// Pageable is allowed
 	Pageable(order []string, offset, limit int64, query, options expression.Expression) bool
@@ -658,6 +658,8 @@ type FTSFlexResponse struct {
 	DynamicSargKeys map[string]expression.Expression // dynamic sargable key paths
 	RespFlags       uint32                           // Response Flags
 	NumIndexedKeys  uint32                           // number of indexed keys
+	ContainsKNN     bool                             // Contains KNN
+
 }
 
 ////////////////////////////////////////////////////////////////////////
