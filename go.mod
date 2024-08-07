@@ -41,7 +41,7 @@ replace github.com/couchbase/query-ee => ../query-ee
 replace github.com/couchbase/regulator => ../regulator
 
 require (
-	github.com/couchbase/cbauth v0.1.10
+	github.com/couchbase/cbauth v0.1.12
 	github.com/couchbase/clog v0.1.0
 	github.com/couchbase/eventing-ee v0.0.0-00010101000000-000000000000
 	github.com/couchbase/go-couchbase v0.1.1
@@ -82,7 +82,7 @@ require (
 	github.com/blevesearch/gtreap v0.1.1 // indirect
 	github.com/blevesearch/mmap-go v1.0.4 // indirect
 	github.com/blevesearch/scorch_segment_api/v2 v2.2.15 // indirect
-	github.com/blevesearch/sear v0.2.6 // indirect
+	github.com/blevesearch/sear v0.2.8 // indirect
 	github.com/blevesearch/segment v0.9.1 // indirect
 	github.com/blevesearch/snowballstem v0.9.0 // indirect
 	github.com/blevesearch/stempel v0.2.0 // indirect
