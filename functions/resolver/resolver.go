@@ -68,6 +68,89 @@ func MakePath(bytes []byte) ([]string, errors.Error) {
 }
 
 func MakeBody(name string, bytes []byte) (functions.FunctionBody, errors.Error) {
+	entry, er := MakeBodyEntry(name, bytes)
+	if er != nil {
+		return nil, er
+	}
+	var err error
+	language, ok := entry["#language"].(string)
+	if !ok {
+		return nil, errors.NewFunctionEncodingError("decode body", "unknown",
+			fmt.Errorf("language is not string"))
+	}
+	switch language {
+	case "inline":
+		var expr expression.Expression
+		expression := entry["expression"].(string)
+		if expression != "" {
+			expr, err = parser.Parse(expression)
+			if err != nil {
+				return nil, errors.NewFunctionEncodingError("decode body", name, err)
+			}
+		} else {
+			return nil, errors.NewFunctionEncodingError("decode body", name, go_errors.New("expression is missing"))
+		}
+		text := entry["text"].(string)
+		if len(text) == 0 {
+			text = expr.String()
+		}
+		body, newErr := inline.NewInlineBody(expr, text)
+		if body != nil {
+			newErr = body.SetVarNames(entry["parameters"].([]string))
+		}
+		return body, newErr
+
+	case "golang":
+		object := entry["object"].(string)
+		library := entry["library"].(string)
+		if object == "" || library == "" {
+			return nil, errors.NewFunctionEncodingError("decode body", name, go_errors.New("object is missing"))
+		}
+		body, newErr := golang.NewGolangBody(library, object)
+		if body != nil {
+			newErr = body.SetVarNames(entry["parameters"].([]string))
+		}
+		return body, newErr
+
+	case "javascript":
+
+		// Check if the function body is a valid combination of library, object and text
+		// This is to ensure that the function body is valid to be considered as either Internal JS or External JS function
+		var text, object, library, prefix, libName string
+		if t, ok := entry["text"].(string); ok {
+			text = t
+		}
+		if o, ok := entry["object"].(string); ok {
+			object = o
+		}
+		if l, ok := entry["library"].(string); ok {
+			library = l
+		}
+		if p, ok := entry["prefix"].(string); ok {
+			prefix = p
+		}
+		if n, ok := entry["libName"].(string); ok {
+			libName = n
+		}
+		if !(text == "" && object != "" && library != "") &&
+			!(text != "" && object == "" && library == "") {
+
+			return nil, errors.NewFunctionEncodingError("decode body", name, go_errors.New("invalid function definition"))
+		}
+		body, newErr := javascript.NewJavascriptBodyWithDetails(library, object, prefix, libName, text)
+		if body != nil {
+			newErr = body.SetVarNames(entry["parameters"].([]string))
+		}
+		return body, newErr
+
+	default:
+		return nil, errors.NewFunctionEncodingError("decode body", "unknown",
+			fmt.Errorf("unknown language %v", language))
+	}
+}
+
+// the "entry" returned here is the same format as what's returned from the "Body()" function
+func MakeBodyEntry(name string, bytes []byte) (map[string]interface{}, errors.Error) {
 	var language_type struct {
 		Language string `json:"#language"`
 	}
@@ -79,7 +162,6 @@ func MakeBody(name string, bytes []byte) (functions.FunctionBody, errors.Error) 
 	switch language_type.Language {
 	case "inline":
 
-		var expr expression.Expression
 		var _unmarshalled struct {
 			_          string   `json:"#language"`
 			Parameters []string `json:"parameters"`
@@ -90,22 +172,13 @@ func MakeBody(name string, bytes []byte) (functions.FunctionBody, errors.Error) 
 		if err != nil {
 			return nil, errors.NewFunctionEncodingError("decode body", name, err)
 		}
-		if _unmarshalled.Expression != "" {
-			expr, err = parser.Parse(_unmarshalled.Expression)
-			if err != nil {
-				return nil, errors.NewFunctionEncodingError("decode body", name, err)
-			}
-		} else {
-			return nil, errors.NewFunctionEncodingError("decode body", name, go_errors.New("expression is missing"))
+		entry := map[string]interface{}{
+			"#language":  "inline",
+			"expression": _unmarshalled.Expression,
+			"parameters": _unmarshalled.Parameters,
+			"text":       _unmarshalled.Text,
 		}
-		if len(_unmarshalled.Text) == 0 {
-			_unmarshalled.Text = expr.String()
-		}
-		body, newErr := inline.NewInlineBody(expr, _unmarshalled.Text)
-		if body != nil {
-			newErr = body.SetVarNames(_unmarshalled.Parameters)
-		}
-		return body, newErr
+		return entry, nil
 
 	case "golang":
 
@@ -119,14 +192,13 @@ func MakeBody(name string, bytes []byte) (functions.FunctionBody, errors.Error) 
 		if err != nil {
 			return nil, errors.NewFunctionEncodingError("decode body", name, err)
 		}
-		if _unmarshalled.Object == "" || _unmarshalled.Library == "" {
-			return nil, errors.NewFunctionEncodingError("decode body", name, go_errors.New("object is missing"))
+		entry := map[string]interface{}{
+			"#language":  "golang",
+			"library":    _unmarshalled.Library,
+			"object":     _unmarshalled.Object,
+			"parameters": _unmarshalled.Parameters,
 		}
-		body, newErr := golang.NewGolangBody(_unmarshalled.Library, _unmarshalled.Object)
-		if body != nil {
-			newErr = body.SetVarNames(_unmarshalled.Parameters)
-		}
-		return body, newErr
+		return entry, nil
 
 	case "javascript":
 
@@ -143,20 +215,26 @@ func MakeBody(name string, bytes []byte) (functions.FunctionBody, errors.Error) 
 		if err != nil {
 			return nil, errors.NewFunctionEncodingError("decode body", name, err)
 		}
-
-		// Check if the function body is a valid combination of library, object and text
-		// This is to ensure that the function body is valid to be considered as either Internal JS or External JS function
-		if !(_unmarshalled.Text == "" && _unmarshalled.Object != "" && _unmarshalled.Library != "") &&
-			!(_unmarshalled.Text != "" && _unmarshalled.Object == "" && _unmarshalled.Library == "") {
-
-			return nil, errors.NewFunctionEncodingError("decode body", name, go_errors.New("invalid function definition"))
+		entry := map[string]interface{}{
+			"#language":  "javascript",
+			"parameters": _unmarshalled.Parameters,
 		}
-		body, newErr := javascript.NewJavascriptBodyWithDetails(_unmarshalled.Library, _unmarshalled.Object,
-			_unmarshalled.Prefix, _unmarshalled.Name, _unmarshalled.Text)
-		if body != nil {
-			newErr = body.SetVarNames(_unmarshalled.Parameters)
+		if _unmarshalled.Text != "" {
+			entry["text"] = _unmarshalled.Text
 		}
-		return body, newErr
+		if _unmarshalled.Library != "" {
+			entry["library"] = _unmarshalled.Library
+		}
+		if _unmarshalled.Object != "" {
+			entry["object"] = _unmarshalled.Object
+		}
+		if _unmarshalled.Prefix != "" {
+			entry["prefix"] = _unmarshalled.Prefix
+		}
+		if _unmarshalled.Name != "" {
+			entry["libName"] = _unmarshalled.Name
+		}
+		return entry, nil
 
 	default:
 		return nil, errors.NewFunctionEncodingError("decode body", "unknown",
