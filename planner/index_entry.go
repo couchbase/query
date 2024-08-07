@@ -43,6 +43,7 @@ const (
 	IE_LIMIT_OFFSET_COST
 	IE_VECTOR_KEY_SARGABLE
 	IE_VECTOR_KEY_SKIP_ORDER
+	IE_SEARCH_KNN
 )
 
 type indexEntry struct {

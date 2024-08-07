@@ -274,6 +274,9 @@ func (this *builder) buildCreateSecondaryScan(indexes, flex map[datastore.Index]
 
 	for _, entry := range searchSargables {
 		sfn := entry.sargKeys[0].(*search.Search)
+		if entry.HasFlag(IE_SEARCH_KNN) {
+			indexAll = true
+		}
 		sOrders := searchOrders
 		if entry != orderEntry {
 			sOrders = nil

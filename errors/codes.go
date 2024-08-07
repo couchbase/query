@@ -214,6 +214,7 @@ const (
 	E_GSI                                        ErrorCode = 4350
 	W_GSI_TRANSIENT                              ErrorCode = 4360
 	E_GSI_TEMP_FILE_SIZE                         ErrorCode = 4370
+	E_NO_KNN_SEARCH_INDEX                        ErrorCode = 4380
 	E_ENCODED_PLAN_NOT_ALLOWED                   ErrorCode = 4400
 	E_CBO                                        ErrorCode = 4600
 	E_INDEX_STAT                                 ErrorCode = 4610
