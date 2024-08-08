@@ -875,6 +875,12 @@ func collectAggregates(aggs, windowAggs map[string]algebra.Aggregate, exprs ...e
 				return
 			}
 
+			// if the aggregate is "generated" from rewrite for index aggregation
+			// pushdown, (i.e. not part of the original query), skip the aggregate
+			if agg.HasFlags(algebra.AGGREGATE_REWRITE_INDEX_AGGS) {
+				continue
+			}
+
 			if wTerm == nil {
 				if nAggs != len(aggs) {
 					return fmt.Errorf("Nested aggregates are not allowed%v.", expr.ErrorContext())

@@ -62,10 +62,14 @@ func aggToIndexAgg(agg algebra.Aggregate) *indexGroupAggProperties {
 func indexPartialAggregateCount2SumRewrite(agg algebra.Aggregate, c *expression.Cover) algebra.Aggregate {
 	switch agg.(type) {
 	case *algebra.Count, *algebra.Countn:
+		var sum *algebra.Sum
 		if agg.Operands()[0] == nil {
-			return algebra.NewSum(expression.Expressions{c}, uint32(0), nil, nil)
+			sum = algebra.NewSum(expression.Expressions{c}, uint32(0), nil, nil).(*algebra.Sum)
+		} else {
+			sum = algebra.NewSum(agg.Operands(), uint32(0), nil, nil).(*algebra.Sum)
 		}
-		return algebra.NewSum(agg.Operands(), uint32(0), nil, nil)
+		sum.SetRewriteIndexAggs()
+		return sum
 	}
 	return agg
 }

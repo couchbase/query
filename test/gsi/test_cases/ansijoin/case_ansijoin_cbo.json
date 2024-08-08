@@ -112,6 +112,32 @@
                 "c22": 10
             }
 	]
+    },
+    {
+        "testcase": "MB-63024",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY i WITHIN p.`~subqueries` SATISFIES i.`#operator` LIKE 'IndexScan%' AND i.`index` = 'st_ix24' AND i.`index_group_aggs` IS NOT MISSING END"
+        },
+        "queryParams": {"use_cbo": true},
+        "statements":"SELECT l.c11, l.c12, r.c22, r.cnt FROM shellTest AS l LEFT JOIN ( SELECT s.c22, COUNT(1) AS cnt FROM shellTest AS s WHERE s.c21 IN [2,4] AND s.type = \"right\" GROUP BY s.c22) AS r USE NL ON l.c12 = r.c22 WHERE l.c11 IN [1,2] AND l.type = \"left\"",
+        "results": [
+            {
+                "c11": 1,
+                "c12": 10
+            },
+            {
+                "c11": 2,
+                "c12": 20,
+                "c22": 20,
+                "cnt": 1
+            }
+	]
     }
 ]
 
