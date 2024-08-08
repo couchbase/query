@@ -1264,6 +1264,7 @@ func (b *Bucket) refresh(preserveConnections bool) error {
 	}
 	b.vBucketServerMap = unsafe.Pointer(&tmpb.VBSMJson)
 	b.nodeList = unsafe.Pointer(&tmpb.NodesJSON)
+	b.Capabilities = tmpb.Capabilities // MB-63078 Ensure capabilities are up-to-date too as we can refresh based on them
 	logging.Infof("Refreshed bucket %v (%s)", b.Name, b.getAbbreviatedUUID())
 
 	b.Unlock()
