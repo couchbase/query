@@ -14,7 +14,6 @@
 package http
 
 import (
-	"bytes"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
@@ -463,24 +462,14 @@ func (this *systemRemoteHttp) ExecutePreparedAdminOp(op interface{}, command str
 	return this.doRemoteEndpointOp(pop.endpoint, command, data, command, creds, authToken, cp, pop.user, pop.password)
 }
 
+// a bit wasteful of memory but safest approach to ensure all fields are properly escaped/encoded
 func credsAsJSON(creds distributed.Creds) string {
-	buf := new(bytes.Buffer)
-	buf.WriteString("[")
-	var num = 0
+	ca := make([]interface{}, 0, len(creds))
 	for k, v := range creds {
-		if num > 0 {
-			buf.WriteString(",")
-		}
-		buf.WriteString("{")
-		buf.WriteString("\"user\":\"")
-		buf.WriteString(k)
-		buf.WriteString("\",\"pass\":\"")
-		buf.WriteString(v)
-		buf.WriteString("\"}")
-		num++
+		ca = append(ca, map[string]interface{}{"user": k, "pass": v})
 	}
-	buf.WriteString("]")
-	return buf.String()
+	b, _ := json.Marshal(ca)
+	return string(b)
 }
 
 // helper for the REST op
@@ -506,7 +495,7 @@ func (this *systemRemoteHttp) getFullEndpoint(node clustering.QueryNode, endpoin
 	}
 	numCredentials := len(creds)
 	if numCredentials > 0 {
-		fullEndpoint += "?creds=" + credsAsJSON(creds)
+		fullEndpoint += "?creds=" + url.PathEscape(credsAsJSON(creds))
 	}
 	// Here, I'm leveraging the fact that the node name is the host:port of the mgmt
 	// endpoint associated with the node. This is the same hostport pair that allows us
