@@ -245,6 +245,44 @@ type VBucketServerMap struct {
 	sync.Mutex
 }
 
+func (this VBucketServerMap) MarshalJSON() ([]byte, error) {
+	m := make(map[string]interface{})
+	m["HashAlgorithm"] = this.HashAlgorithm
+	m["NumReplicas"] = this.NumReplicas
+	m["ServerList"] = this.ServerList
+	m["DownNodes"] = this.DownNodes
+	var b strings.Builder
+	var last []int
+	lasti := -1
+	for i := range this.VBucketMap {
+		if !sameSlice(last, this.VBucketMap[i]) {
+			if lasti != i-1 {
+				b.WriteString(fmt.Sprintf("...(%d times)", i-lasti))
+			}
+			b.WriteString(fmt.Sprintf(",%v", this.VBucketMap[i]))
+			last = this.VBucketMap[i]
+			lasti = i
+		}
+	}
+	if lasti != len(this.VBucketMap)-1 {
+		b.WriteString(fmt.Sprintf("...(%d times)", len(this.VBucketMap)-lasti))
+	}
+	m["VBucketMap"] = b.String()[1:]
+	return json.Marshal(m)
+}
+
+func sameSlice(a []int, b []int) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
+}
+
 // Bucket is the primary entry point for most data operations.
 // Bucket is a locked data structure. All access to its fields should be done using read or write locking,
 // as appropriate.
@@ -259,6 +297,7 @@ type Bucket struct {
 	retryCount             uint64
 	kvThrottleCount        uint64
 	kvThrottleDuration     uint64
+	refreshes              uint64
 	AuthType               string             `json:"authType"`
 	Capabilities           []string           `json:"bucketCapabilities"`
 	CapabilitiesVersion    string             `json:"bucketCapabilitiesVer"`
@@ -1293,6 +1332,7 @@ func (b *Bucket) refresh(preserveConnections bool) error {
 	}
 	b.vBucketServerMap = unsafe.Pointer(&tmpb.VBSMJson)
 	b.nodeList = unsafe.Pointer(&tmpb.NodesJSON)
+	b.refreshes++
 	logging.Infof("Refreshed bucket %v (%s)", b.Name, b.getAbbreviatedUUID())
 
 	b.Unlock()
@@ -1425,6 +1465,41 @@ func (b *Bucket) StopUpdater() {
 		b.updater = nil
 	}
 	b.Unlock()
+}
+
+func (b *Bucket) MarshalJSON() ([]byte, error) {
+	m := make(map[string]interface{})
+	m["readCount"] = b.readCount
+	m["writeCount"] = b.writeCount
+	m["retryCount"] = b.retryCount
+	m["kvThrottleCount"] = b.kvThrottleCount
+	m["kvThrottleDuration"] = b.kvThrottleDuration
+	m["refreshes"] = b.refreshes
+	m["AuthType"] = b.AuthType
+	m["Capabilities"] = b.Capabilities
+	m["CapabilitiesVersion"] = b.CapabilitiesVersion
+	m["CollectionsManifestUid"] = b.CollectionsManifestUid
+	m["Type"] = b.Type
+	m["Name"] = b.Name
+	m["NodeLocator"] = b.NodeLocator
+	m["Quota"] = b.Quota
+	m["Replicas"] = b.Replicas
+	m["URI"] = b.URI
+	m["StreamingURI"] = b.StreamingURI
+	m["LocalRandomKeyURI"] = b.LocalRandomKeyURI
+	m["UUID"] = b.UUID
+	m["ConflictResolutionType"] = b.ConflictResolutionType
+	m["DDocs"] = b.DDocs
+	m["BasicStats"] = b.BasicStats
+	m["Controllers"] = b.Controllers
+	m["VBSMJson"] = b.VBSMJson
+	m["NodesJSON"] = b.NodesJSON
+	m["Version"] = b.Version
+	m["tempServers"] = b.tempServers
+	m["commonSufix"] = b.commonSufix
+	m["closed"] = b.closed
+	m["deleted"] = b.deleted
+	return json.Marshal(m)
 }
 
 func (b *Bucket) GetIOStats(reset bool, all bool, prometheus bool, serverless bool) map[string]interface{} {

@@ -414,18 +414,45 @@ func doNotFound(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 }
 
 func doVitals(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
-	interface{}, errors.Error) {
+	rv interface{}, err errors.Error) {
 
+	defer func() {
+		e := recover()
+		if e != nil {
+			rv = map[string]interface{}{"failed": "Changing structure forced command termination"}
+			err = errors.NewServiceErrorBadValue(go_errors.New(fmt.Sprintf("%v", e)), "vitals")
+		}
+	}()
+
+	v := req.FormValue("debug")
+	dbg, _ := strconv.ParseBool(v)
 	af.EventTypeId = audit.API_ADMIN_VITALS
 	switch req.Method {
 	case "GET":
-		err, _ := endpoint.verifyCredentialsFromRequest("system:vitals", auth.PRIV_SYSTEM_READ, req, af)
+		err, _ = endpoint.verifyCredentialsFromRequest("system:vitals", auth.PRIV_SYSTEM_READ, req, af)
 		if err != nil {
 			return nil, err
 		}
 		acctStore := endpoint.server.AccountingStore()
 		durStyle, _ := util.IsDurationStyle(req.FormValue("duration_style"))
-		return acctStore.Vitals(durStyle)
+		rvm, err := acctStore.Vitals(durStyle)
+		if dbg && err == nil {
+			store := datastore.GetDatastore()
+			if store != nil {
+				if ds2, ok := store.(datastore.Datastore2); ok {
+					debug := make(map[string]interface{})
+					ds2.ForeachBucket(func(b datastore.ExtendedBucket) {
+						debug[b.Name()] = b
+					})
+					rvm["debug"] = debug
+				} else {
+					rvm["debug"] = "No Datastore2 interface"
+				}
+			} else {
+				rvm["debug"] = "Failed to get datastore."
+			}
+		}
+		return rvm, err
 	default:
 		return nil, errors.NewServiceErrorHttpMethod(req.Method)
 	}

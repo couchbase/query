@@ -1973,6 +1973,10 @@ func (p *namespace) KeyspaceUpdateCallback(bucket *cb.Bucket, msgPrefix string) 
 	return ret
 }
 
+func (b *keyspace) MarshalJSON() ([]byte, error) {
+	return json.Marshal(b.cbbucket)
+}
+
 func (b *keyspace) GetIOStats(reset bool, all bool, prometheus bool, serverless bool) map[string]interface{} {
 	return b.cbbucket.GetIOStats(reset, all, prometheus, serverless)
 }
