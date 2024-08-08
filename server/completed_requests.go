@@ -649,13 +649,24 @@ func LogRequest(request_time, service_time, transactionElapsedTime time.Duration
 		ctrl = (ctr == value.TRUE)
 	}
 	if ctrl {
-		re.NamedArgs = request.NamedArgs()
-		re.PositionalArgs = request.PositionalArgs()
 		memoryQuota := request.MemoryQuota()
 		if memoryQuota != 0 {
 			re.MemoryQuota = memoryQuota
 		}
 	}
+
+	// MB-63043
+	prependDollar := func(namedArgs map[string]value.Value) map[string]value.Value {
+		prependedNamedArgs := make(map[string]value.Value, len(namedArgs))
+
+		for k, v := range namedArgs {
+			prependedNamedArgs["$"+k] = v
+		}
+
+		return prependedNamedArgs
+	}
+	re.NamedArgs = prependDollar(request.NamedArgs())
+	re.PositionalArgs = request.PositionalArgs()
 
 	re.Users = datastore.CredsString(request.Credentials())
 	re.RemoteAddr = request.RemoteAddr()
