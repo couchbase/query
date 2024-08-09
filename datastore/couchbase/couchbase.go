@@ -1977,8 +1977,8 @@ func (b *keyspace) MarshalJSON() ([]byte, error) {
 	return json.Marshal(b.cbbucket)
 }
 
-func (b *keyspace) GetIOStats(reset bool, all bool, prometheus bool, serverless bool) map[string]interface{} {
-	return b.cbbucket.GetIOStats(reset, all, prometheus, serverless)
+func (b *keyspace) GetIOStats(reset bool, all bool, prometheus bool, serverless bool, times bool) map[string]interface{} {
+	return b.cbbucket.GetIOStats(reset, all, prometheus, serverless, times)
 }
 
 func (b *keyspace) DurabilityPossible() bool {

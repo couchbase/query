@@ -298,6 +298,10 @@ type Bucket struct {
 	kvThrottleCount        uint64
 	kvThrottleDuration     uint64
 	refreshes              uint64
+	vbcTime                uint64
+	doTime                 uint64
+	opTime                 uint64
+	bulkTime               uint64
 	AuthType               string             `json:"authType"`
 	Capabilities           []string           `json:"bucketCapabilities"`
 	CapabilitiesVersion    string             `json:"bucketCapabilitiesVer"`
@@ -1503,12 +1507,16 @@ func (b *Bucket) MarshalJSON() ([]byte, error) {
 	return json.Marshal(m)
 }
 
-func (b *Bucket) GetIOStats(reset bool, all bool, prometheus bool, serverless bool) map[string]interface{} {
+func (b *Bucket) GetIOStats(reset bool, all bool, prometheus bool, serverless bool, times bool) map[string]interface{} {
 	var readCount uint64
 	var writeCount uint64
 	var retryCount uint64
 	var kvThrottleCount uint64
 	var kvThrottleDuration uint64
+	var vbcTime uint64
+	var doTime uint64
+	var opTime uint64
+	var bulkTime uint64
 	var rv map[string]interface{}
 
 	if reset {
@@ -1517,12 +1525,22 @@ func (b *Bucket) GetIOStats(reset bool, all bool, prometheus bool, serverless bo
 		retryCount = atomic.SwapUint64(&b.retryCount, uint64(0))
 		kvThrottleCount = atomic.SwapUint64(&b.kvThrottleCount, uint64(0))
 		kvThrottleDuration = atomic.SwapUint64(&b.kvThrottleDuration, uint64(0))
+		vbcTime = atomic.SwapUint64(&b.vbcTime, uint64(0))
+		doTime = atomic.SwapUint64(&b.doTime, uint64(0))
+		opTime = atomic.SwapUint64(&b.opTime, uint64(0))
+		bulkTime = atomic.SwapUint64(&b.bulkTime, uint64(0))
 	} else {
 		readCount = atomic.LoadUint64(&b.readCount)
 		writeCount = atomic.LoadUint64(&b.writeCount)
 		retryCount = atomic.LoadUint64(&b.retryCount)
 		kvThrottleCount = atomic.LoadUint64(&b.kvThrottleCount)
 		kvThrottleDuration = atomic.LoadUint64(&b.kvThrottleDuration)
+		if times {
+			vbcTime = atomic.LoadUint64(&b.vbcTime)
+			doTime = atomic.LoadUint64(&b.doTime)
+			opTime = atomic.LoadUint64(&b.opTime)
+			bulkTime = atomic.LoadUint64(&b.bulkTime)
+		}
 	}
 	if readCount != 0 || all {
 		if rv == nil {
@@ -1563,6 +1581,17 @@ func (b *Bucket) GetIOStats(reset bool, all bool, prometheus bool, serverless bo
 				rv["kvThrottleTime"] = time.Duration(kvThrottleDuration).String()
 			}
 		}
+	}
+	if times {
+		if rv == nil {
+			rv = make(map[string]interface{})
+		}
+		t := make(map[string]interface{})
+		t["cn"] = vbcTime
+		t["do"] = doTime
+		t["op"] = opTime
+		t["bg"] = bulkTime
+		rv["times"] = t
 	}
 	return rv
 }

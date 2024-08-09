@@ -142,6 +142,7 @@ func (b *Bucket) getConnectionToVBucket(vb uint32, desc *doDescriptor) (*memcach
 
 // first part of the retry loop: get a connection and handle errors
 func (b *Bucket) getVbConnection(vb uint32, desc *doDescriptor) (conn *memcached.Client, pool *connectionPool, err error) {
+	mark := util.Now()
 	desc.errorString = ""
 
 	// if we had a NMVB and have successfully identified the pool for the correct node, use it
@@ -158,6 +159,7 @@ func (b *Bucket) getVbConnection(vb uint32, desc *doDescriptor) (conn *memcached
 	}
 	desc.retry = false
 	if err == nil {
+		atomic.AddUint64(&b.vbcTime, uint64(util.Since(mark)))
 		return conn, pool, nil
 	} else if err == errNoPool {
 		if backOff(desc.backOffAttempts, desc.maxTries, backOffDuration, true) {
@@ -229,6 +231,7 @@ func (b *Bucket) getVbConnection(vb uint32, desc *doDescriptor) (conn *memcached
 		desc.retry = true
 		b.RefreshFully()
 	}
+	atomic.AddUint64(&b.vbcTime, uint64(util.Since(mark)))
 	return nil, nil, err
 }
 
@@ -268,7 +271,7 @@ func (b *Bucket) processOpError(vb uint32, lastError error, node string, desc *d
 				desc.retry = true
 				desc.pool = newPool
 				desc.discard = b.obsoleteNode(node)
-				return
+				break
 			}
 
 			// if it didn't work out, refresh and retry until we get a new vbmap
@@ -318,6 +321,9 @@ func (b *Bucket) processOpError(vb uint32, lastError error, node string, desc *d
 			desc.backOffAttempts++
 			desc.retry = backOff(desc.backOffAttempts, desc.maxTries, backOffDuration, true)
 		}
+		if logging.LogLevel() == logging.DEBUG {
+			logging.Debugf("[%p:%s:%s:%d] %s retry:%v", b, b.Name, b.getAbbreviatedUUID(), vb, resp.Status.String(), desc.retry)
+		}
 	} else if lastError != nil {
 		if isOutOfBoundsError(lastError) {
 
@@ -356,11 +362,17 @@ func (b *Bucket) processOpError(vb uint32, lastError error, node string, desc *d
 			desc.retry = true
 			desc.discard = true
 		}
+		if logging.LogLevel() == logging.DEBUG {
+			logging.Debugf("[%p:%s:%s:%d] %v retry:%v", b, b.Name, b.getAbbreviatedUUID(), vb, lastError, desc.retry)
+		}
 	} else if desc.amendReplica {
 
 		// if we successfully used a replica, mark the node down, so that until the next refresh
 		// we start from the same place
 		b.VBServerMap().MarkDown(vb, desc.replica)
+		if logging.LogLevel() == logging.DEBUG {
+			logging.Debugf("[%p:%s:%s:%d] replica:%v", b, b.Name, b.getAbbreviatedUUID(), vb, desc.replica)
+		}
 	}
 }
 
@@ -439,7 +451,10 @@ func (b *Bucket) do2(k string, f func(mc *memcached.Client, vb uint16) error, de
 
 	vb := b.VBHash(k)
 
-	return b.do3(uint16(vb), f, deadline, useReplicas, backOffRetries)
+	mark := util.Now()
+	err = b.do3(uint16(vb), f, deadline, useReplicas, backOffRetries)
+	atomic.AddUint64(&b.doTime, uint64(util.Since(mark)))
+	return err
 }
 
 func (b *Bucket) do3(vb uint16, f func(mc *memcached.Client, vb uint16) error, deadline bool, useReplicas bool,
@@ -801,14 +816,14 @@ func (b *Bucket) doBulkGet(vb uint16, keys []string, active func() bool, reqDead
 	rv := _STRING_MCRESPONSE_POOL.Get()
 	done := false
 	bname := b.Name
-	retries := 0
+	retries := -1
 	desc := &doDescriptor{useReplicas: useReplica, version: b.Version, maxTries: b.backOffRetries()}
 	var lastError error
 	for ; desc.attempts < maxBulkRetries && !done && !eStatus.errStatus; desc.attempts++ {
+		retries++
 		if !active() {
 			return rv, desc.delay, retries
 		}
-		retries++
 
 		// This stack frame exists to ensure we can clean up
 		// connection at a reasonable time.
@@ -846,7 +861,9 @@ func (b *Bucket) doBulkGet(vb uint16, keys []string, active func() bool, reqDead
 			if desc.replica > 0 {
 				conn.SetReplica(true)
 			}
+			mark := util.Now()
 			err = conn.GetBulk(vb, keys, rv, subPaths, context...)
+			atomic.AddUint64(&b.bulkTime, uint64(util.Since(mark)))
 
 			defer func() {
 				if desc.discard {
@@ -1241,6 +1258,7 @@ func (b *Bucket) WriteWithCAS(k string, flags, exp int, v interface{},
 				context = append(context, &memcached.ClientContext{Compressed: true})
 			}
 		}
+		mark := util.Now()
 		if opt&AddOnly != 0 {
 			res, err = memcached.UnwrapMemcachedError(
 				mc.Add(vb, k, flags, exp, data, context...))
@@ -1258,6 +1276,7 @@ func (b *Bucket) WriteWithCAS(k string, flags, exp int, v interface{},
 		} else {
 			res, err = mc.Set(vb, k, flags, exp, data, context...)
 		}
+		atomic.AddUint64(&b.opTime, uint64(util.Since(mark)))
 
 		if err == nil {
 			cas = res.Cas
@@ -1269,6 +1288,7 @@ func (b *Bucket) WriteWithCAS(k string, flags, exp int, v interface{},
 	if err == nil && (opt&(Persist|Indexable) != 0) {
 		err = b.WaitForPersistence(k, cas, data == nil)
 	}
+	atomic.AddUint64(&b.writeCount, 1)
 	if res != nil {
 		_, wu = res.ComputeUnits()
 	}
@@ -1308,7 +1328,9 @@ func (b *Bucket) WriteCasWithMT(k string, flags, exp int, cas uint64, v interfac
 				context = append(context, &memcached.ClientContext{Compressed: true})
 			}
 		}
+		mark := util.Now()
 		res, err = mc.SetCas(vb, k, flags, exp, cas, data, context...)
+		atomic.AddUint64(&b.opTime, uint64(util.Since(mark)))
 		return err
 	})
 
@@ -1370,12 +1392,16 @@ func (b *Bucket) GetCollectionCID(scope string, collection string, reqDeadline t
 			return err
 		}
 		mc.SetDeadline(dl)
+		mark := util.Now()
 		_, err1 = mc.SelectBucket(b.Name)
+		atomic.AddUint64(&b.opTime, uint64(util.Since(mark)))
 		if err1 != nil {
 			return err1
 		}
 
+		mark = util.Now()
 		response, err1 = mc.CollectionsGetCID(scope, collection)
+		atomic.AddUint64(&b.opTime, uint64(util.Since(mark)))
 		if err1 != nil {
 			return err1
 		}
@@ -1414,7 +1440,9 @@ func (b *Bucket) GetsMC(key string, active func() bool, reqDeadline time.Time, k
 			return err
 		}
 		mc.SetDeadline(dl)
+		mark := util.Now()
 		response, err1 = mc.Get(vb, key, context...)
+		atomic.AddUint64(&b.opTime, uint64(util.Since(mark)))
 		if err1 != nil {
 			return err1
 		}
@@ -1444,7 +1472,9 @@ func (b *Bucket) GetsSubDoc(key string, reqDeadline time.Time, kvTimeout time.Du
 			return err
 		}
 		mc.SetDeadline(dl)
+		mark := util.Now()
 		response, err1 = mc.GetSubdoc(vb, key, paths, context...)
+		atomic.AddUint64(&b.opTime, uint64(util.Since(mark)))
 		return err1
 	}, false, false, b.backOffRetries())
 	return response, err
@@ -1464,7 +1494,9 @@ func (b *Bucket) SetsSubDoc(key string, ops []memcached.SubDocOp, context ...*me
 
 	err1 = b.do2(key, func(mc *memcached.Client, vb uint16) error {
 		mc.SetDeadline(noDeadline)
+		mark := util.Now()
 		response, err = mc.SetSubdoc(vb, key, ops, context...)
+		atomic.AddUint64(&b.opTime, uint64(util.Since(mark)))
 		return err
 	}, false, false, b.backOffRetries())
 	if err == nil && err1 != nil {
@@ -1520,7 +1552,9 @@ func (b *Bucket) GetRandomDoc(context ...*memcached.ClientContext) (*gomemcached
 	}
 
 	// get a randomm document from the connection
+	mark := util.Now()
 	doc, err := conn.GetRandomDoc(context...)
+	atomic.AddUint64(&b.opTime, uint64(util.Since(mark)))
 
 	// need to return the connection to the pool
 	pool.Return(conn)
@@ -1536,7 +1570,9 @@ func (b *Bucket) Delete(k string, context ...*memcached.ClientContext) (uint64, 
 func (b *Bucket) casNext(k string, exp int, state *memcached.CASState) bool {
 	keepGoing := false
 	state.Err = b.do(k, func(mc *memcached.Client, vb uint16) error {
+		mark := util.Now()
 		keepGoing = mc.CASNext(vb, k, exp, state)
+		atomic.AddUint64(&b.opTime, uint64(util.Since(mark)))
 		return state.Err
 	})
 	return keepGoing && state.Err == nil
@@ -1579,7 +1615,9 @@ func (b *Bucket) update(k string, exp int, callback UpdateFunc) (newCas uint64, 
 // Observe observes the current state of a document.
 func (b *Bucket) Observe(k string) (result memcached.ObserveResult, err error) {
 	err = b.do(k, func(mc *memcached.Client, vb uint16) error {
+		mark := util.Now()
 		result, err = mc.Observe(vb, k)
+		atomic.AddUint64(&b.opTime, uint64(util.Since(mark)))
 		return err
 	})
 	return
