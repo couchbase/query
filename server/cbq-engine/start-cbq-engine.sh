@@ -6,12 +6,12 @@
 # will be governed by the Apache License, Version 2.0, included in the file
 # licenses/APL2.txt.
 
-export NS_SERVER_CBAUTH_URL="http://localhost:8091/_cbauth"
+export NS_SERVER_CBAUTH_URL="http://127.0.0.1:8091/_cbauth"
 export NS_SERVER_CBAUTH_USER="Administrator"
 export NS_SERVER_CBAUTH_PWD="password"
 export NS_SERVER_CBAUTH_RPC_URL="http://127.0.0.1:8091/cbauth-demo"
 
-export CBAUTH_REVRPC_URL="http://Administrator:password@localhost:8091/n1ql"
+export CBAUTH_REVRPC_URL="http://Administrator:password@127.0.0.1:8091/n1ql"
 export LD_LIBRARY_PATH=${GOPATH}/lib:${LD_LIBRARY_PATH}
 export DYLD_LIBRARY_PATH=$LD_LIBRARY_PATH
 
