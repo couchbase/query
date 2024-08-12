@@ -419,5 +419,21 @@
         "statements":"SELECT * FROM shellTest WHERE id = $my_id AND type = 'type1'",
         "results": [
     ]
+    },
+    {
+	"testcase": "MB-63057",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE EVERY v WITHIN p.`plan`.`~children` SATISFIES (v.`#operator` IS MISSING OR v.`#operator` != 'IntersectScan') END AND ANY u WITHIN p.`plan`.`~children` SATISFIES u.`#operator` LIKE 'IndexScan%' and u.`index` = 'iorix5' END"
+        },
+        "statements":"SELECT * FROM orders WHERE _type = 'doc' AND status > 'published'",
+        "results": [
+    ]
     }
 ]
