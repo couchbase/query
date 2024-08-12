@@ -44,6 +44,7 @@ const (
 	IE_SEARCH_KNN
 	IE_VECTOR_KEY_SARGABLE
 	IE_VECTOR_KEY_SKIP_ORDER
+	IE_NONEQ_COND
 )
 
 type indexEntry struct {
@@ -75,6 +76,7 @@ type indexEntry struct {
 	searchOrders         []string
 	condFc               map[string]value.Value
 	nEqCond              int
+	nCondKeys            int
 	numIndexedKeys       uint32
 	flags                uint32
 	unnestAliases        []string
@@ -129,9 +131,17 @@ func newIndexEntry(index datastore.Index, idxKeys datastore.IndexKeys, includes 
 	}
 
 	if rv.cond != nil {
+		var other int
 		fc := make(map[string]value.Value, 4)
-		rv.condFc = rv.cond.FilterCovers(fc)
-		rv.nEqCond = countEqCond(rv.cond, rv.sargKeys, rv.skeys)
+		cond := rv.cond
+		if rv.origCond != nil {
+			cond = rv.origCond
+		}
+		rv.condFc = cond.FilterCovers(fc)
+		rv.nEqCond, rv.nCondKeys, other = countEqCond(cond, rv.sargKeys, rv.skeys)
+		if other > 0 {
+			rv.flags |= IE_NONEQ_COND
+		}
 	}
 	return rv
 }
@@ -160,6 +170,7 @@ func (this *indexEntry) Copy() *indexEntry {
 		fetchCost:        this.fetchCost,
 		condFc:           this.condFc,
 		nEqCond:          this.nEqCond,
+		nCondKeys:        this.nCondKeys,
 		flags:            this.flags,
 	}
 	rv.idxSargKeys = rv.idxKeys[0:len(this.idxSargKeys)]
@@ -286,32 +297,48 @@ type EqExpr struct {
 	expression.MapperBase
 	sargKyes expression.Expressions
 	skeys    []bool
-	ncount   int
+	nCond    int
+	nKeys    int
+	nOther   int
 }
 
 // Number Equality predicate in index Condition that not part of index keys
 
-func countEqCond(cond expression.Expression, sargKyes expression.Expressions, skeys []bool) int {
+func countEqCond(cond expression.Expression, sargKyes expression.Expressions, skeys []bool) (int, int, int) {
 	rv := &EqExpr{sargKyes: sargKyes, skeys: skeys}
 	rv.SetMapFunc(func(expr expression.Expression) (expression.Expression, error) {
-		if e, ok := expr.(*expression.Eq); ok {
+		switch e := expr.(type) {
+		case *expression.Eq:
 			for i, sk := range rv.sargKyes {
 				if rv.skeys[i] &&
 					(expression.Equivalent(sk, e.First()) ||
 						expression.Equivalent(sk, e.Second())) {
+					rv.nKeys++
 					return expr, nil
 				}
 			}
-			rv.ncount++
+			rv.nCond++
+			return expr, nil
+		case *expression.In:
+			for i, sk := range rv.sargKyes {
+				if rv.skeys[i] && expression.Equivalent(sk, e.First()) {
+					rv.nKeys++
+					return expr, nil
+				}
+			}
+			return expr, nil
+		case *expression.And:
+			return expr, expr.MapChildren(rv)
+		default:
+			rv.nOther++
 			return expr, nil
 		}
-		return expr, expr.MapChildren(rv)
 	})
 
 	rv.SetMapper(rv)
 
 	if _, err := rv.Map(cond); err != nil {
-		return 0
+		return 0, 0, 0
 	}
-	return rv.ncount
+	return rv.nCond, rv.nKeys, rv.nOther
 }
