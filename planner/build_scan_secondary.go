@@ -1288,7 +1288,10 @@ func (this *builder) getIndexFilters(entry *indexEntry, node *algebra.KeyspaceTe
 	if util.IsFeatureEnabled(this.context.FeatureControls(), util.N1QL_EARLY_ORDER) && !arrayKey &&
 		this.order != nil && this.limit != nil &&
 		!this.hasBuilderFlag(BUILDER_ORDER_DEPENDS_ON_LET) &&
-		!entry.IsPushDownProperty(_PUSHDOWN_ORDER|_PUSHDOWN_LIMIT|_PUSHDOWN_OFFSET) {
+		!entry.IsPushDownProperty(_PUSHDOWN_ORDER|_PUSHDOWN_LIMIT|_PUSHDOWN_OFFSET) &&
+		// Do not allow early order when the FROM clause has an UNNEST
+		(!baseKeyspace.IsUnnest() && !baseKeyspace.HasUnnest()) {
+
 		nlimit := int64(-1)
 		noffset := int64(-1)
 		limit := this.limit
