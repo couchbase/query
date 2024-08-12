@@ -432,12 +432,12 @@ func (b *Bucket) UpdateBucket2(msgPrefix string, streamingFn StreamingFn) errors
 				}
 				if b.ah != nil {
 					newcps[i] = newConnectionPool(hostport,
-						b.ah, false, PoolSize, PoolOverflow, b.pool.client.tlsConfig, b.Name, encrypted)
+						b.ah, AsynchronousCloser, PoolSize, PoolOverflow, b.pool.client.tlsConfig, b.Name, encrypted)
 
 				} else {
 					newcps[i] = newConnectionPool(hostport,
 						b.authHandler(true /* bucket already locked */),
-						false, PoolSize, PoolOverflow, b.pool.client.tlsConfig, b.Name, encrypted)
+						AsynchronousCloser, PoolSize, PoolOverflow, b.pool.client.tlsConfig, b.Name, encrypted)
 				}
 			}
 
