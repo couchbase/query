@@ -1,8 +1,10 @@
 module github.com/couchbase/query
 
-go 1.21
+go 1.21.8
 
 replace golang.org/x/text => golang.org/x/text v0.4.0
+
+replace github.com/couchbase/bhive => ../bhive
 
 replace github.com/couchbase/cbauth => ../cbauth
 
@@ -105,6 +107,7 @@ require (
 	github.com/couchbase/gocbcore/v9 v9.1.8 // indirect
 	github.com/couchbase/gometa v0.0.0-20220803182802-05cb6b2e299f // indirect
 	github.com/couchbase/hebrew v0.0.0-00010101000000-000000000000 // indirect
+	github.com/couchbase/logstats v1.0.0 // indirect
 	github.com/couchbase/moss v0.3.0 // indirect
 	github.com/couchbase/tools-common/cloud v1.0.0 // indirect
 	github.com/couchbase/tools-common/core v1.0.0 // indirect
@@ -136,8 +139,8 @@ require (
 	github.com/prometheus/procfs v0.8.0 // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475 // indirect
 	github.com/santhosh-tekuri/jsonschema v1.2.4 // indirect
-	github.com/stretchr/objx v0.5.0 // indirect
-	github.com/stretchr/testify v1.8.4 // indirect
+	github.com/stretchr/objx v0.5.2 // indirect
+	github.com/stretchr/testify v1.9.0 // indirect
 	github.com/youmark/pkcs8 v0.0.0-20201027041543-1326539a0a0a // indirect
 	go.etcd.io/bbolt v1.3.7 // indirect
 	golang.org/x/exp v0.0.0-20231006140011-7918f672742d // indirect
