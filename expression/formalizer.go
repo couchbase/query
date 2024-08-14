@@ -921,6 +921,8 @@ func (this *Formalizer) AddCorrelatedIdentifiers(correlation map[string]uint32) 
 					v = value.NewValue(uint32(IDENT_IS_CORRELATED | identFlags))
 				} else if this.FuncVariable(k) {
 					v = value.NewValue(uint32(IDENT_IS_FUNC_VAR | identFlags))
+				} else if this.WithAlias(k) {
+					v = value.NewValue(uint32(IDENT_IS_WITH_ALIAS | identFlags))
 				} else {
 					return errors.NewFormalizerInternalError(fmt.Sprintf("correlation reference %s is not in allowed", k))
 				}
