@@ -563,9 +563,10 @@ func clearOldScope(bucket *keyspace, s *scope) {
 	if atomic.AddInt32(&s.cleaning, 1) != 1 {
 		return
 	}
+	// do not modify s.keyspaces since it may be concurrently used by other callers of refreshScopesAndCollections whilst
+	// this clean-up is still taking place
 	for n, val := range s.keyspaces {
 		if val != nil {
-			s.keyspaces[n] = nil
 			DropDictionaryEntry(val.QualifiedName())
 			// invoke Release(..) on collection for any cleanup
 			val.Release(false)
