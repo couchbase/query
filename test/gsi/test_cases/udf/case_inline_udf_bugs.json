@@ -298,5 +298,29 @@
         "description": "MB-59082 - DROP FUNCTION 2",
         "statements": "DROP FUNCTION Test_Func5",
         "results": []
+    },
+    {
+        "description": "MB-63147 - CREATE FUNCTION",
+        "statements": "CREATE OR REPLACE FUNCTION Test_CTE_Corr(data) LANGUAGE INLINE AS ( ( WITH CTE_1 AS ( SELECT 1 AS CTE_1_Value ) , CTE_2 AS ( SELECT c.*, data FROM CTE_1 c ) SELECT * FROM CTE_2 ) )",
+        "results":[]
+    },
+    {
+        "description": "MB-63147 - EXECUTE FUNCTION",
+        "statements": "EXECUTE FUNCTION Test_CTE_Corr(123)",
+        "results": [
+            [
+                {
+                    "CTE_2": {
+                        "CTE_1_Value": 1,
+                        "data": 123
+                    }
+                }
+            ]
+        ]
+    },
+    {
+        "description": "MB-63147 - DROP FUNCTION",
+        "statements": "DROP FUNCTION Test_CTE_Corr",
+        "results": []
     }
 ]
