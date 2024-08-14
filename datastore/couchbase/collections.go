@@ -684,7 +684,7 @@ func clearOldScope(bucket *keyspace, s *scope, isDropBucket bool, cleanUp bool) 
 	}
 	// do not modify s.keyspaces since it may be concurrently used by other callers of refreshScopesAndCollections whilst
 	// this clean-up is still taking place
-	for n, val := range s.keyspaces {
+	for _, val := range s.keyspaces {
 		if val != nil {
 			DropDictionaryEntry(val.QualifiedName(), isDropBucket, true)
 			// invoke Release(..) on collection for any cleanup
