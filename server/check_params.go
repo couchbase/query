@@ -285,11 +285,7 @@ func checkDurationStyle(val interface{}) (bool, errors.Error) {
 }
 
 func checkAWR(val interface{}) (bool, errors.Error) {
-	object, ok := val.(map[string]interface{})
-	if !ok {
-		return false, errors.NewAdminSettingTypeError(AWR, object)
-	}
-	err := AwrCB.SetConfig(object, true)
+	err := AwrCB.SetConfig(val, true)
 	if err != nil {
 		return false, err
 	}

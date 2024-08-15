@@ -13,8 +13,10 @@ import (
 	"compress/zlib"
 	"crypto/md5"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"io"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -167,84 +169,103 @@ func (this *awrCB) isQuiescent() bool {
 	return atomic.LoadUint32(&this.state) == _AWR_QUIESCENT
 }
 
-func (this *awrCB) SetConfig(cfg map[string]interface{}, dryRun bool) errors.Error {
+func (this *awrCB) SetConfig(i interface{}, dryRun bool) errors.Error {
+
+	cfg, ok := i.(map[string]interface{})
+	if !ok {
+		if s, ok := i.(string); ok {
+			s = strings.TrimSpace(s)
+			if len(s) > 0 {
+				if err := json.Unmarshal([]byte(s), &cfg); err != nil {
+					return errors.NewAWRError(errors.E_AWR_CONFIG, err)
+				}
+			}
+		} else {
+			return errors.NewAWRError(errors.E_AWR_CONFIG, fmt.Errorf("Invalid type ('%T') for configuration.", i))
+		}
+	}
 
 	start := this.enabled
 	save := this.config
 	target := this.config
 
-	for k, v := range cfg {
-		if va, ok := v.(value.Value); ok {
-			v = va.Actual()
-			if f, ok := v.(float64); ok && value.IsInt(f) {
-				v = int64(f)
-			}
-		}
-		switch k {
-		case "node": // allow but ignore
-			continue
-		case "threshold":
-			if _, ok := v.(string); ok {
-				if ok, _ := checkDuration(v); !ok {
-					return errors.NewAdminSettingTypeError(k, v)
+	if len(cfg) == 0 {
+		start = false
+		target = awrConfig{}
+	} else {
+		for k, v := range cfg {
+			if va, ok := v.(value.Value); ok {
+				v = va.Actual()
+				if f, ok := v.(float64); ok && value.IsInt(f) {
+					v = int64(f)
 				}
-				target.setThreshold(getDuration(v))
-			} else if n, ok := v.(int64); ok {
-				target.setThreshold(time.Duration(n) * time.Millisecond)
-			} else {
-				return errors.NewAdminSettingTypeError(k, v)
 			}
-		case "interval":
-			if _, ok := v.(string); ok {
-				if ok, _ := checkDuration(v); !ok {
-					return errors.NewAdminSettingTypeError(k, v)
-				}
-				target.setInterval(getDuration(v))
-			} else if n, ok := v.(int64); ok {
-				target.setInterval(time.Duration(n) * time.Millisecond)
-			} else {
-				return errors.NewAdminSettingTypeError(k, v)
-			}
-		case "queue_len":
-			if n, ok := v.(int64); ok {
-				target.setQueueLen(int(n))
-			} else {
-				return errors.NewAdminSettingTypeError(k, v)
-			}
-		case "num_statements":
-			if n, ok := v.(int64); ok {
-				target.setNumStmts(int(n))
-			} else {
-				return errors.NewAdminSettingTypeError(k, v)
-			}
-		case "enabled":
-			if enabled, ok := v.(bool); ok {
-				start = enabled
-			} else {
-				return errors.NewAdminSettingTypeError(k, v)
-			}
-		case "location":
-			if ks, ok := v.(string); ok {
-				if ks != "" {
-					parts := algebra.ParsePath(ks)
-					if parts[0] != "default" && parts[0] != "" {
-						return errors.NewAWRError(errors.E_AWR_SETTING, ks, "location", fmt.Errorf("Invalid namespace"))
-					} else if len(parts) != 2 && len(parts) != 4 {
-						return errors.NewAWRError(errors.E_AWR_SETTING, ks, "location",
-							fmt.Errorf("Invalid path (must resolve to 2 or 4 parts)"))
-					} else if parts[0] == "" {
-						parts[0] = "default"
+			switch k {
+			case "node": // allow but ignore
+				continue
+			case "threshold":
+				if _, ok := v.(string); ok {
+					if ok, _ := checkDuration(v); !ok {
+						return errors.NewAdminSettingTypeError(k, v)
 					}
-					path := algebra.NewPathFromElements(parts)
-					target.setLocation(path.ProtectedString())
+					target.setThreshold(getDuration(v))
+				} else if n, ok := v.(int64); ok {
+					target.setThreshold(time.Duration(n) * time.Millisecond)
 				} else {
-					target.setLocation("")
+					return errors.NewAdminSettingTypeError(k, v)
 				}
-			} else {
-				return errors.NewAdminSettingTypeError(k, v)
+			case "interval":
+				if _, ok := v.(string); ok {
+					if ok, _ := checkDuration(v); !ok {
+						return errors.NewAdminSettingTypeError(k, v)
+					}
+					target.setInterval(getDuration(v))
+				} else if n, ok := v.(int64); ok {
+					target.setInterval(time.Duration(n) * time.Millisecond)
+				} else {
+					return errors.NewAdminSettingTypeError(k, v)
+				}
+			case "queue_len":
+				if n, ok := v.(int64); ok {
+					target.setQueueLen(int(n))
+				} else {
+					return errors.NewAdminSettingTypeError(k, v)
+				}
+			case "num_statements":
+				if n, ok := v.(int64); ok {
+					target.setNumStmts(int(n))
+				} else {
+					return errors.NewAdminSettingTypeError(k, v)
+				}
+			case "enabled":
+				if enabled, ok := v.(bool); ok {
+					start = enabled
+				} else {
+					return errors.NewAdminSettingTypeError(k, v)
+				}
+			case "location":
+				if ks, ok := v.(string); ok {
+					if ks != "" {
+						parts := algebra.ParsePath(ks)
+						if parts[0] != "default" && parts[0] != "" {
+							return errors.NewAWRError(errors.E_AWR_SETTING, ks, "location", fmt.Errorf("Invalid namespace"))
+						} else if len(parts) != 2 && len(parts) != 4 {
+							return errors.NewAWRError(errors.E_AWR_SETTING, ks, "location",
+								fmt.Errorf("Invalid path (must resolve to 2 or 4 parts)"))
+						} else if parts[0] == "" {
+							parts[0] = "default"
+						}
+						path := algebra.NewPathFromElements(parts)
+						target.setLocation(path.ProtectedString())
+					} else {
+						target.setLocation("")
+					}
+				} else {
+					return errors.NewAdminSettingTypeError(k, v)
+				}
+			default:
+				return errors.NewAdminUnknownSettingError(k)
 			}
-		default:
-			return errors.NewAdminUnknownSettingError(k)
 		}
 	}
 	if dryRun {

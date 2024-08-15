@@ -1569,6 +1569,22 @@ var errData = []ErrData{
 		},
 	},
 	{
+		Code:        E_AWR_CONFIG, // 2502
+		symbol:      "E_AWR_CONFIG",
+		Description: "Error processing configuration",
+		Reason: []string{
+			"The value provided for AWR configuration is invalid.",
+		},
+		Action: []string{
+			"Review the configuration and correct the value.",
+			"The value must be a valid object or a string encoding a valid JSON object.",
+		},
+		IsUser: YES,
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
 		Code:        E_PARSE_SYNTAX, // 3000
 		symbol:      "E_PARSE_SYNTAX",
 		Description: "Indicates a syntax error occurred during statement parsing.",

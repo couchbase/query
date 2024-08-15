@@ -300,8 +300,7 @@ var _SETTERS = map[string]Setter{
 		return nil
 	},
 	AWR: func(s *Server, o interface{}) errors.Error {
-		m := o.(map[string]interface{})
-		err := AwrCB.SetConfig(m, false)
+		err := AwrCB.SetConfig(o, false)
 		if err != nil {
 			return errors.NewServiceErrorBadValue(err, "settings")
 		}
