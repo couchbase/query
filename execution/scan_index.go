@@ -56,6 +56,10 @@ func (this *IndexScan) PlanOp() plan.Operator {
 	return this.plan
 }
 
+func (this *IndexScan) Children() []Operator {
+	return this.children
+}
+
 func (this *IndexScan) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
 		defer context.Recover(&this.base) // Recover from any panic

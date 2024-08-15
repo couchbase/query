@@ -57,6 +57,10 @@ func (this *UnionAll) PlanOp() plan.Operator {
 	return this.plan
 }
 
+func (this *UnionAll) Children() []Operator {
+	return this.children
+}
+
 func (this *UnionAll) IsParallel() bool {
 	return true
 }

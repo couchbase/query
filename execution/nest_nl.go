@@ -57,6 +57,10 @@ func (this *NLNest) PlanOp() plan.Operator {
 	return this.plan
 }
 
+func (this *NLNest) Child() Operator {
+	return this.child
+}
+
 func (this *NLNest) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent, nil)
 }

@@ -52,6 +52,10 @@ func (this *DistinctScan) PlanOp() plan.Operator {
 	return this.plan
 }
 
+func (this *DistinctScan) Scan() Operator {
+	return this.scan
+}
+
 func (this *DistinctScan) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
 		defer context.Recover(&this.base) // Recover from any panic

@@ -55,6 +55,10 @@ func (this *Except) PlanOp() plan.Operator {
 	return this.plan
 }
 
+func (this *Except) Children() []Operator {
+	return []Operator{this.first, this.second}
+}
+
 func (this *Except) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent, nil)
 }
@@ -192,6 +196,10 @@ func (this *ExceptAll) Copy() Operator {
 
 func (this *ExceptAll) PlanOp() plan.Operator {
 	return this.plan
+}
+
+func (this *ExceptAll) Children() []Operator {
+	return []Operator{this.first, this.second}
 }
 
 func (this *ExceptAll) RunOnce(context *Context, parent value.Value) {

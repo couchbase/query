@@ -92,6 +92,14 @@ func (this *Parallel) PlanOp() plan.Operator {
 	return this.plan
 }
 
+func (this *Parallel) Children() []Operator {
+	if len(this.children) == 1 {
+		return []Operator{this.child}
+	} else {
+		return this.children
+	}
+}
+
 func (this *Parallel) IsParallel() bool {
 	return true
 }

@@ -54,6 +54,10 @@ func (this *With) PlanOp() plan.Operator {
 	return this.plan
 }
 
+func (this *With) Child() Operator {
+	return this.child
+}
+
 func (this *With) IsParallel() bool {
 	return this.child.IsParallel()
 }

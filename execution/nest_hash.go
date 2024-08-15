@@ -60,6 +60,10 @@ func (this *HashNest) PlanOp() plan.Operator {
 	return this.plan
 }
 
+func (this *HashNest) Child() Operator {
+	return this.child
+}
+
 func (this *HashNest) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent, nil)
 }

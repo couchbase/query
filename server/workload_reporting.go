@@ -15,7 +15,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -27,6 +26,7 @@ import (
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/execution"
 	"github.com/couchbase/query/logging"
+	planshape "github.com/couchbase/query/planshape/encode"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
@@ -44,6 +44,7 @@ const (
 	_AWR_DEF_THRESHOLD      = time.Second
 	_AWR_QUIESCENT          = uint32(0)
 	_AWR_ACTIVE             = uint32(1)
+	_AWR_MAX_PLAN           = 512
 )
 
 var AwrCB awrCB
@@ -367,8 +368,9 @@ func (this *awrCB) newSet() (map[string]*awrUniqueStmt, time.Time) {
 // We can't hold/use the BaseRequest itself since it is pooled and we want to free it and its resources without delay
 type awrData struct {
 	sqlID       string // MD5 sum of the request text; calculated for this but also included in completed_requests
-	text        string // request text (see recordWorkload & the compressed field)
+	text        string // request text (may be compressed)
 	qc          string // query context
+	plan        []byte // execution plan outline
 	totalTime   uint64
 	usedMemory  uint64
 	cpuTime     uint64
@@ -376,11 +378,9 @@ type awrData struct {
 	resultCount uint64
 	resultSize  uint64
 	errorCount  uint64
-	compressed  bool // if the text is compressed or not
 }
 
-func newAwrData(sqlID string, text string, br *BaseRequest) *awrData {
-	compressed := false
+func newAwrData(sqlID string, text string, br *BaseRequest, plan []byte) *awrData {
 	if len(text) > _AWR_COMPRESS_THRESHOLD {
 		if len(text) > _AWR_MAX_TEXT {
 			text = text[:_AWR_MAX_TEXT] + "…"
@@ -392,13 +392,12 @@ func newAwrData(sqlID string, text string, br *BaseRequest) *awrData {
 		w.Close()
 		e.Close()
 		text = b.String()
-		compressed = true
 	}
 	rv := &awrData{
 		sqlID:       sqlID,
 		text:        text,
-		compressed:  compressed,
 		qc:          br.queryContext,
+		plan:        plan,
 		totalTime:   uint64(br.totalDuration),
 		usedMemory:  uint64(br.usedMemory),
 		cpuTime:     uint64(br.cpuTime),
@@ -412,7 +411,7 @@ func newAwrData(sqlID string, text string, br *BaseRequest) *awrData {
 
 func (this *awrCB) recordWorkload(br *BaseRequest) string {
 
-	if !this.enabled || this.isQuiescent() || br.totalDuration < this.activeConfig.Threshold() {
+	if !this.enabled || this.isQuiescent() || br.totalDuration < this.activeConfig.Threshold() || br.Sensitive() {
 		return ""
 	}
 
@@ -430,6 +429,7 @@ func (this *awrCB) recordWorkload(br *BaseRequest) string {
 			text = br.prepared.Signature().ToString()
 		}
 	}
+
 	if len(text) == 0 {
 		// no identifiable statement
 		atomic.AddInt64(&this.statementDataOmissions, 1)
@@ -437,12 +437,14 @@ func (this *awrCB) recordWorkload(br *BaseRequest) string {
 	}
 
 	h := md5.New()
-	io.WriteString(h, text)
-	io.WriteString(h, br.queryContext) // include the queryContext to differentiate statements
+	h.Write([]byte(text))
+	if len(br.queryContext) > 0 {
+		h.Write([]byte(br.queryContext)) // include the queryContext to differentiate statements
+	}
 	sqlID := fmt.Sprintf("%x", h.Sum(nil))
 
 	select {
-	case this.queue <- newAwrData(sqlID, text, br):
+	case this.queue <- newAwrData(sqlID, text, br, planshape.Encode(br.GetTimings(), _AWR_MAX_PLAN)):
 		return sqlID
 	default:
 		atomic.AddInt64(&this.queueFullOmissions, 1)
@@ -456,14 +458,19 @@ type awrStat struct {
 	max   uint64
 }
 
-func (this *awrStat) record(val uint64) {
+func (this *awrStat) record(val uint64) (bool, bool) {
+	min := false
+	max := false
 	this.total += val
 	if this.min == 0 || this.min > val {
 		this.min = val
+		min = true
 	}
 	if this.max < val {
 		this.max = val
+		max = true
 	}
+	return min, max
 }
 
 func (this *awrStat) appendTo(a *[]interface{}) {
@@ -499,15 +506,16 @@ const (
 const _CURR_STATS_VERSION = 1
 
 type awrUniqueStmt struct {
-	compressed bool
-	text       string
-	qc         string
-	count      uint64
-	elems      [_STAT_SIZE_MARKER]awrStat
+	text    string
+	qc      string
+	minPlan []byte
+	maxPlan []byte
+	count   uint64
+	elems   [_STAT_SIZE_MARKER]awrStat
 }
 
-func (this *awrUniqueStmt) record(elem awrStatID, val uint64) {
-	this.elems[elem].record(val)
+func (this *awrUniqueStmt) record(elem awrStatID, val uint64) (bool, bool) {
+	return this.elems[elem].record(val)
 }
 
 func (this *awrUniqueStmt) stats() []interface{} {
@@ -526,7 +534,7 @@ func (this *awrCB) processData(data *awrData) {
 			this.maxStmtOmissions++
 			return
 		}
-		stmt = &awrUniqueStmt{text: data.text, compressed: data.compressed, qc: data.qc}
+		stmt = &awrUniqueStmt{text: data.text, qc: data.qc}
 		this.current[data.sqlID] = stmt
 	}
 	stmt.count++
@@ -536,7 +544,13 @@ func (this *awrCB) processData(data *awrData) {
 	stmt.record(_STAT_RES_COUNT, data.resultCount)
 	stmt.record(_STAT_RES_SIZE, data.resultSize)
 	stmt.record(_STAT_ERR_COUNT, data.errorCount)
-	stmt.record(_STAT_RUN_TIME, uint64(data.phaseStats[execution.RUN].duration))
+	ismin, ismax := stmt.record(_STAT_RUN_TIME, uint64(data.phaseStats[execution.RUN].duration))
+	if ismin {
+		stmt.minPlan = data.plan
+	}
+	if ismax {
+		stmt.maxPlan = data.plan
+	}
 	stmt.record(_STAT_FETCH_TIME, uint64(data.phaseStats[execution.FETCH].duration))
 	stmt.record(_STAT_PRI_SCAN_TIME, uint64(data.phaseStats[execution.PRIMARY_SCAN_GSI].duration))
 	stmt.record(_STAT_SEQ_SCAN_TIME, uint64(data.phaseStats[execution.PRIMARY_SCAN_SEQ].duration+
@@ -672,6 +686,7 @@ func (this *awrCB) reporter() {
 				o["txt"] = v.text
 				o["qc"] = v.qc
 				o["cnt"] = v.count
+				o["pln"] = append(append([]interface{}(nil), v.minPlan), v.maxPlan) // automatically base64 encoded
 				o["sts"] = v.stats()
 				tot += v.count
 

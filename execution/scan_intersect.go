@@ -60,6 +60,10 @@ func (this *IntersectScan) PlanOp() plan.Operator {
 	return this.plan
 }
 
+func (this *IntersectScan) Scans() []Operator {
+	return this.scans
+}
+
 func (this *IntersectScan) RunOnce(context *Context, parent value.Value) {
 	this.once.Do(func() {
 		defer context.Recover(&this.base) // Recover from any panic

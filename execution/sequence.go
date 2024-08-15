@@ -110,6 +110,10 @@ func (this *Sequence) PlanOp() plan.Operator {
 	return this.plan
 }
 
+func (this *Sequence) Children() []Operator {
+	return this.children
+}
+
 func (this *Sequence) IsParallel() bool {
 	return this.isParallel
 }

@@ -61,6 +61,10 @@ func (this *HashJoin) PlanOp() plan.Operator {
 	return this.plan
 }
 
+func (this *HashJoin) Child() Operator {
+	return this.child
+}
+
 func (this *HashJoin) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent, nil)
 }

@@ -63,6 +63,10 @@ func (this *NLJoin) PlanOp() plan.Operator {
 	return this.plan
 }
 
+func (this *NLJoin) Child() Operator {
+	return this.child
+}
+
 func (this *NLJoin) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent, nil)
 }
