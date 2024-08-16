@@ -415,6 +415,10 @@ func (this *BaseKeyspace) GetUnnests() map[string]string {
 	return this.unnests
 }
 
+func (this *BaseKeyspace) HasUnnest() bool {
+	return len(this.unnests) > 0
+}
+
 // if an UNNEST SCAN is used, this.unnestIndexes is a map that points to
 // the UNNEST aliases for the UNNEST SCAN. In case of multiple levels of
 // UNNEST with a nested array index key, the array of UNNEST aliases is
