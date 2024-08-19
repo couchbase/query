@@ -534,10 +534,12 @@ func (this *builder) processPredicate(pred expression.Expression, isOnclause boo
 func (this *builder) processPredicateBase(pred expression.Expression,
 	baseKeyspaces map[string]*base.BaseKeyspace, isOnclause bool) (expression.Expression, error) {
 
-	var err error
-	this.arrayId, err = expression.AssignArrayId(pred, this.arrayId)
-	if err != nil {
-		return nil, err
+	if !isOnclause {
+		var err error
+		this.arrayId, err = expression.AssignArrayId(pred, this.arrayId)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return ClassifyExpr(pred, baseKeyspaces, this.keyspaceNames, isOnclause, this.useCBO,
