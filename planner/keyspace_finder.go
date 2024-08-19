@@ -26,11 +26,13 @@ type keyspaceFinder struct {
 	pushableOnclause expression.Expression
 	unnestDepends    map[string]*expression.Identifier
 	metadataDuration time.Duration
+	arrayId          int
 }
 
-func newKeyspaceFinder(baseKeyspaces map[string]*base.BaseKeyspace, primary string) *keyspaceFinder {
+func newKeyspaceFinder(baseKeyspaces map[string]*base.BaseKeyspace, primary string, arrayId int) *keyspaceFinder {
 	rv := &keyspaceFinder{
 		baseKeyspaces: baseKeyspaces,
+		arrayId:       arrayId,
 	}
 	rv.keyspaceMap = make(map[string]string, len(baseKeyspaces))
 	rv.unnestDepends = make(map[string]*expression.Identifier, len(baseKeyspaces))
@@ -133,9 +135,16 @@ func (this *keyspaceFinder) VisitIndexJoin(node *algebra.IndexJoin) (interface{}
 func (this *keyspaceFinder) VisitAnsiJoin(node *algebra.AnsiJoin) (interface{}, error) {
 	err := this.visitJoin(node.Left(), node.Right(), node.Outer())
 
+	onclause := node.Onclause()
+
+	this.arrayId, err = expression.AssignArrayId(onclause, this.arrayId)
+	if err != nil {
+		return nil, err
+	}
+
 	// if this is inner join, gather ON-clause
 	if !node.Outer() {
-		node.SetPushable(this.addOnclause(node.Onclause()))
+		node.SetPushable(this.addOnclause(onclause))
 	}
 
 	return nil, err
@@ -152,9 +161,16 @@ func (this *keyspaceFinder) VisitIndexNest(node *algebra.IndexNest) (interface{}
 func (this *keyspaceFinder) VisitAnsiNest(node *algebra.AnsiNest) (interface{}, error) {
 	err := this.visitJoin(node.Left(), node.Right(), node.Outer())
 
+	onclause := node.Onclause()
+
+	this.arrayId, err = expression.AssignArrayId(onclause, this.arrayId)
+	if err != nil {
+		return nil, err
+	}
+
 	// if this is inner nest, gather ON-clause
 	if !node.Outer() {
-		node.SetPushable(this.addOnclause(node.Onclause()))
+		node.SetPushable(this.addOnclause(onclause))
 	}
 
 	return nil, err

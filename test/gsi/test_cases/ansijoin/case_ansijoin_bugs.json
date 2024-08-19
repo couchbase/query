@@ -563,6 +563,36 @@
         "statements":"SELECT m.* FROM shellTest AS m JOIN [{\"peroid\":{\"endDateTime\":\"2019-10-31T05:37:00.059Z\",\"startDateTime\":\"2019-10-01T05:37:00.059Z\"}}] p USE NL ON DATE_DIFF_STR(m.peroid.startDateTime, p.peroid.startDateTime, 'millisecond') = 0",
         "results": [
         ]
+    },
+    {
+        "testcase": "MB-63163",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`index` = 'st_ix21' END"
+        },
+        "statements":"SELECT l.c11, r.c21 FROM shellTest l LEFT JOIN shellTest r ON r.type = \"right\" AND l.c11 = r.c21 AND ANY v IN r.a21 SATISFIES v IN [1,2] END WHERE l.type = \"left\" AND l.c11 <= 3",
+        "results": [
+            {
+                "c11": 1,
+                "c21": 1
+            },
+            {
+                "c11": 2,
+                "c21": 2
+            },
+            {
+                "c11": 2,
+                "c21": 2
+            },
+            {
+                "c11": 3
+            }
+        ]
     }
 ]
 
