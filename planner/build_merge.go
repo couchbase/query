@@ -47,14 +47,22 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 		outer = true
 	}
 
-	if !stmt.IsOnKey() && !outer {
-		// setup usable predicate from ON-clause for source scan
-		_, err = this.processPredicate(stmt.On(), true)
+	onclause := stmt.On()
+	if !stmt.IsOnKey() {
+		if !outer {
+			// setup usable predicate from ON-clause for source scan
+			_, err = this.processPredicate(onclause, true)
+			if err != nil {
+				return nil, err
+			}
+
+			this.pushableOnclause = onclause
+		}
+
+		this.arrayId, err = expression.AssignArrayId(onclause, this.arrayId)
 		if err != nil {
 			return nil, err
 		}
-
-		this.pushableOnclause = stmt.On()
 	}
 
 	this.initialIndexAdvisor(stmt)
@@ -143,7 +151,7 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 		// use ANSI JOIN to handle the ON-clause
 		right.SetAnsiJoin()
 
-		ansiJoin := algebra.NewAnsiJoin(left, outer, right, stmt.On())
+		ansiJoin := algebra.NewAnsiJoin(left, outer, right, onclause)
 		ansiJoin.SetPushable(outer == false)
 		join, err := this.buildAnsiJoin(ansiJoin)
 		if err != nil {
@@ -311,7 +319,7 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 
 		var keyExpr expression.Expression
 		if stmt.IsOnKey() {
-			keyExpr = stmt.On()
+			keyExpr = onclause
 		} else {
 			keyExpr = act.Key()
 		}
@@ -354,7 +362,7 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 
 	var mergeKey expression.Expression
 	if stmt.IsOnKey() {
-		mergeKey = stmt.On()
+		mergeKey = onclause
 	}
 	merge := plan.NewMerge(keyspace, ksref, mergeKey, true, fastDiscard, stmt.Limit(),
 		update, updateFilter, delete, deleteFilter, insert, insertFilter,
