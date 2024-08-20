@@ -55,6 +55,7 @@ const (
 	N1QL_NO_DATE_WARNINGS                        // 0x0000100000
 	N1QL_USE_SYS_FREE_MEM                        // 0x0000200000
 	N1QL_ADMISSION_CONTROL                       // 0x0000400000
+	N1QL_IGNORE_IDXR_META                        // 0x0000800000
 )
 
 // Care should be taken that the descriptions accept "disabled" being appended when the bit is set (and "enabled" when not).
@@ -81,6 +82,7 @@ var _N1QL_Features = map[uint64]string{
 	N1QL_NO_DATE_WARNINGS:     "Date warning suppression",
 	N1QL_USE_SYS_FREE_MEM:     "Allow system free memory use",
 	N1QL_ADMISSION_CONTROL:    "Admission control",
+	N1QL_IGNORE_IDXR_META:     "Ignore indexer metadata changes for prepared statements",
 }
 
 const DEF_N1QL_FEAT_CTRL = (N1QL_ENCODED_PLAN | N1QL_GOLANG_UDF | N1QL_CBO_NEW)

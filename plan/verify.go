@@ -44,11 +44,12 @@ func verifyIndex(index datastore.Index, indexer datastore.Indexer, keyspace data
 
 	// amend prepared statement version so that next time we avoid checks
 	if prepared != nil {
-		prepared.addIndexer(indexer)
+		rv := prepared.addIndexer(indexer)
 		if keyspace != nil {
-			_, rv := verifyKeyspace(keyspace, prepared)
-			return rv
+			_, rv2 := verifyKeyspace(keyspace, prepared)
+			return rv && rv2
 		}
+		return rv
 	}
 	return true
 }

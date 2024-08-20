@@ -272,6 +272,15 @@ func NewUpdateMissingClone() Error {
 		InternalMsg: "Missing UPDATE clone.", InternalCaller: CallerN(1)}
 }
 
+// restricted field updates in system keyspace
+func NewUpdateInvalidField(key string, field string) Error {
+	c := make(map[string]interface{})
+	c["key"] = key
+	c["field"] = field
+	return &err{level: EXCEPTION, ICode: E_UPDATE_INVALID_FIELD, IKey: "execution.update_invalid_field",
+		InternalMsg: "Invalid field update.", cause: c, InternalCaller: CallerN(1)}
+}
+
 func NewUnnestInvalidPosition(pos interface{}) Error {
 	return &err{level: EXCEPTION, ICode: E_UNNEST_INVALID_POSITION, IKey: "execution.unnest_invalid_position",
 		InternalMsg: fmt.Sprintf("Invalid UNNEST position of type %T.", pos), InternalCaller: CallerN(1)}

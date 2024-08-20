@@ -588,7 +588,7 @@ func (prepareds *preparedCache) getPrepared(preparedName string, queryContext st
 		// without blocking the whole prepared cacheline
 		// locking will occur at adding time: both requests will insert,
 		// the last wins
-		if !good && !metaCheck {
+		if (!good || prepared.PreparedTime().IsZero()) && !metaCheck {
 			prepared, err = reprepare(prepared, nil, phaseTime, log)
 			if err == nil {
 				err = AddPrepared(prepared)
@@ -802,6 +802,10 @@ func reprepare(prepared *plan.Prepared, deltaKeyspaces map[string]bool, phaseTim
 	_, err = pl.BuildEncodedPlan()
 	if err != nil {
 		return nil, errors.NewReprepareError(err)
+	}
+
+	if !util.IsFeatureEnabled(util.GetN1qlFeatureControl(), util.N1QL_IGNORE_IDXR_META) {
+		pl.Verify() // this adds the indexers so we can immediately detect future changes
 	}
 	return pl, nil
 }

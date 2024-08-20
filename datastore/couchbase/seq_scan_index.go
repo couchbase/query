@@ -46,7 +46,16 @@ func newSeqScanIndexer(keyspace datastore.Keyspace) datastore.Indexer {
 }
 
 func (this *seqScanIndexer) MetadataVersion() uint64 {
-	return 1
+	if util.IsFeatureEnabled(util.GetN1qlFeatureControl(), util.N1QL_IGNORE_IDXR_META) {
+		return 0
+	}
+	// return the associated GSI indexer's (if there is one) metadata version so that if an index is created prepared
+	// statements using this indexer will be reprepared and may then take advantage of indices
+	gsi, err := this.keyspace.Indexer(datastore.GSI)
+	if err != nil {
+		return 0
+	}
+	return gsi.MetadataVersion()
 }
 
 func (this *seqScanIndexer) SetConnectionSecurityConfig(conSecConfig *datastore.ConnectionSecurityConfig) {
@@ -73,7 +82,10 @@ func (this *seqScanIndexer) Name() datastore.IndexType {
 }
 
 func (this *seqScanIndexer) IndexById(id string) (datastore.Index, qe.Error) {
-	return this.IndexByName(id)
+	if this.enabled() && id == this.primary[0].Id() {
+		return this.primary[0].(datastore.Index), nil
+	}
+	return nil, qe.NewSSError(qe.E_SS_IDX_NOT_FOUND)
 }
 
 func (this *seqScanIndexer) enabled() bool {
@@ -95,7 +107,10 @@ func (this *seqScanIndexer) IndexNames() ([]string, qe.Error) {
 }
 
 func (this *seqScanIndexer) IndexIds() ([]string, qe.Error) {
-	return this.IndexNames()
+	if !this.enabled() {
+		return nil, nil
+	}
+	return []string{this.primary[0].Id()}, nil
 }
 
 func (this *seqScanIndexer) PrimaryIndexes() ([]datastore.PrimaryIndex, qe.Error) {
@@ -169,7 +184,11 @@ func (this *seqScan) KeyspaceId() string {
 }
 
 func (this *seqScan) Id() string {
-	return _RS_ID
+	v := this.indexer.MetadataVersion()
+	if v == 0 {
+		return _RS_ID
+	}
+	return fmt.Sprintf("%v_%x", _RS_ID, v)
 }
 
 func (this *seqScan) Name() string {

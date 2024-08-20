@@ -272,6 +272,7 @@ const (
 	E_UPDATE_ALIAS_MISSING                       ErrorCode = 5100
 	E_UPDATE_ALIAS_METADATA                      ErrorCode = 5110
 	E_UPDATE_MISSING_CLONE                       ErrorCode = 5120
+	E_UPDATE_INVALID_FIELD                       ErrorCode = 5130
 	E_UNNEST_INVALID_POSITION                    ErrorCode = 5180
 	E_SCAN_VECTOR_TOO_MANY_SCANNED_BUCKETS       ErrorCode = 5190
 	_RETIRED_5200                                          = 5200
