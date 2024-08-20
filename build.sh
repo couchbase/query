@@ -158,11 +158,12 @@ function get_path_subpath_commit {
     shift
 
     subpath=`echo $ipath|awk -F/ '{print $NF}'`
-    tools=`echo $ipath|awk -F/ '{print $(NF-1)}'`
+    tools=`echo $ipath|awk -F/ '{print $(NF-2)}'`
     if [[ $tools == "tools-common" ]]; then
-        tag=`echo $ipath|awk -F/ '{print $NF}'`
+        tag=`echo $ipath|awk -F/ '{print $(NF-1)}'`
+        gpath=`echo $ipath|awk -F/ '{print  $1 "/" $2 "/" $3}'`
         ver=$tag/$vers
-        get_repo "$ipath" "$ver" "" "$ver" $ver
+        get_repo "$gpath" "$ver" "" "$ver" $ver
         return
     fi
 
@@ -259,7 +260,7 @@ function repo_setup {
     repo_by_gomod ../n1fty/go.mod blevesearch/sear "" $defbranch
     repo_by_gomod ../n1fty/go.mod blevesearch/bleve_index_api "" $defbranch
     repo_by_gomod ../n1fty/go.mod blevesearch/scorch_segment_api "v2" $defbranch
-    repo_by_gomod ../n1fty/go.mod go.etcd.io/bbolt "" $defbranch
+#    repo_by_gomod ../n1fty/go.mod go.etcd.io/bbolt "" $defbranch
     repo_by_gomod go.mod gocbcore "v10" $defbranch
     repo_by_gomod go.mod gocbcore "v9" $defbranch
     repo_by_gomod go.mod x/net "" `go version |  awk -F'[. ]' '{print "release-branch." $3 "." $4}'` $defbranch
@@ -269,7 +270,7 @@ function repo_setup {
     repo_by_gomod go.mod procfs
     repo_by_gomod go.mod client_golang
     repo_by_gomod go.mod golang_protobuf_extensions
-    repo_by_gomod go.mod aws-sdk-go
+    repo_by_gomod go.mod aws-sdk-go-v2
     repo_by_gomod ../cbft/go.mod tools-common/cloud
 }
 
