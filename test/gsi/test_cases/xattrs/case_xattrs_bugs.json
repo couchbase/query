@@ -64,7 +64,7 @@
     {
         "testcase": "MB-62793 disallow statements looking up more than 15 xattrs",
         "statements": "SELECT meta().xattrs.a, meta().xattrs.b, meta().xattrs.c, meta().xattrs.d, meta().xattrs.e, meta().xattrs.f, meta().xattrs.g, meta().xattrs.h,meta().xattrs.i, meta().xattrs.j, meta().xattrs.k, meta().xattrs.l, meta().xattrs.m, meta().xattrs.n, meta().xattrs.o, meta().xattrs.p  FROM product where meta().id = 'product100_xattrs'",
-        "error": "Plan error: Can only retrieve upto 15 xattrpaths per request"
+        "error": "Plan error: Can only retrieve up to 15 xattrpaths per request"
     },
     {
         "testcase": "MB-62793 allow creating index on more than 15 xattrs",
