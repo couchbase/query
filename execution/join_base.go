@@ -89,7 +89,7 @@ func (this *joinBase) joinFetch(keyspace datastore.Keyspace, subPaths []string, 
 	}
 
 	this.switchPhase(_SERVTIME)
-	errs := keyspace.Fetch(fetchKeys, pairMap, context, subPaths, projection, context.HasFeature(util.N1QL_USE_SUB_DOC))
+	errs := keyspace.Fetch(fetchKeys, pairMap, context, subPaths, projection, !context.IsFeatureEnabled(util.N1QL_FULL_GET))
 	this.switchPhase(_EXECTIME)
 
 	fetchOk := true

@@ -33,7 +33,7 @@ func newGroupBase(this *groupBase, context *Context, canSpill bool,
 	merge func(v1 value.AnnotatedValue, v2 value.AnnotatedValue) value.AnnotatedValue) {
 
 	var shouldSpill func(uint64, uint64) bool
-	if canSpill && !context.HasFeature(util.N1QL_DISABLE_SPILL_TO_DISK) {
+	if canSpill && context.IsFeatureEnabled(util.N1QL_SPILL_TO_DISK) {
 		if context.UseRequestQuota() && context.MemoryQuota() > 0 {
 			shouldSpill = func(c uint64, n uint64) bool {
 				return (c+n) > context.ProducerThrottleQuota() && context.CurrentQuotaUsage() > _GROUP_QUOTA_THRESHOLD

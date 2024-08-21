@@ -787,7 +787,7 @@ func (this *Server) setupRequestContext(request Request) bool {
 		}
 
 		if err != nil {
-			if this.ShuttingDown() && !util.IsFeatureEnabled(util.GetN1qlFeatureControl(), util.N1QL_PARTIAL_GRACEFUL_SHUTDOWN) {
+			if this.ShuttingDown() && !util.IsFeatureEnabled(util.GetN1qlFeatureControl(), util.N1QL_PART_GRACEFUL) {
 				if this.ShutDown() {
 					err = errors.NewServiceShutDownError()
 				} else {
@@ -1833,7 +1833,7 @@ func (this *Server) InitiateShutdown(timeout time.Duration, reason string) {
 	this.Lock()
 	if this.shutdown == _SERVER_RUNNING {
 		this.shutdown = _REQUESTED
-		if util.IsFeatureEnabled(util.GetN1qlFeatureControl(), util.N1QL_PARTIAL_GRACEFUL_SHUTDOWN) {
+		if util.IsFeatureEnabled(util.GetN1qlFeatureControl(), util.N1QL_PART_GRACEFUL) {
 			this.shutdownStart = time.Now()
 			what = "Partial graceful"
 		} else {

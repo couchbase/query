@@ -28,53 +28,53 @@ func GetMaxIndexAPI() int {
 	return int(atomic.LoadInt64(&MaxIndexApi))
 }
 
+// Note:
+// Feature bits always indicate DISABLING the feature so constants should be named for the default operation which may mean giving
+// a negative name here.  (If posible avoid negative naming and label the alternative.)
 const (
-	N1QL_GROUPAGG_PUSHDOWN         uint64 = 1 << iota // 0x0000000001
-	N1QL_HASH_JOIN                                    // 0x0000000002
-	N1QL_ENCODED_PLAN                                 // 0x0000000004
-	N1QL_GOLANG_UDF                                   // 0x0000000008
-	N1QL_CBO                                          // 0x0000000010
-	N1QL_FLEXINDEX                                    // 0x0000000020
-	N1QL_CBO_NEW                                      // 0x0000000040
-	N1QL_PASSWORDLESS_BKT                             // 0x0000000080 MB-39484: N1QL_PASSWORDLESS_BKT retiredbit. Must NOT be used.
-	N1QL_READ_FROM_REPLICA_OFF                        // 0x0000000100 N1QL_READ_FROM_REPLICA_OFF retired. Must NOT be used.
-	N1QL_IMPLICIT_ARRAY_COVER                         // 0x0000000200
-	N1QL_JOIN_ENUMERATION                             // 0x0000000400
-	N1QL_INDEX_MISSING                                // 0x0000000800
-	N1QL_NL_PRIMARYSCAN                               // 0x0000001000
-	N1QL_EARLY_ORDER                                  // 0x0000002000
-	N1QL_SEQ_SCAN                                     // 0x0000004000
-	N1QL_DISABLE_SPILL_TO_DISK                        // 0x0000008000
-	N1QL_PARTIAL_GRACEFUL_SHUTDOWN                    // 0x0000010000
-	N1QL_USE_SUB_DOC                                  // 0x0000020000
-	N1QL_RANDOM_SCAN                                  // 0x0000040000
-	N1QL_MERGE_LEGACY                                 // 0x0000080000
-	N1QL_ALL_BITS                                     // This needs to be last (highest value) constant.
+	N1QL_GROUPAGG_PUSHDOWN    uint64 = 1 << iota // 0x0000000001
+	N1QL_HASH_JOIN                               // 0x0000000002
+	N1QL_ENCODED_PLAN                            // 0x0000000004
+	N1QL_GOLANG_UDF                              // 0x0000000008
+	N1QL_CBO                                     // 0x0000000010
+	N1QL_FLEXINDEX                               // 0x0000000020
+	N1QL_CBO_NEW                                 // 0x0000000040
+	_RETIRED_DONT_USE_1                          // 0x0000000080 N1QL_PASSWORDLESS_BKT (MB-39484)
+	_RETIRED_DONT_USE_2                          // 0x0000000100 N1QL_READ_FROM_REPLICA_OFF
+	N1QL_IMPLICIT_ARRAY_COVER                    // 0x0000000200
+	N1QL_JOIN_ENUMERATION                        // 0x0000000400
+	N1QL_INDEX_MISSING                           // 0x0000000800
+	N1QL_NL_PRIMARYSCAN                          // 0x0000001000
+	N1QL_EARLY_ORDER                             // 0x0000002000
+	N1QL_SEQ_SCAN                                // 0x0000004000
+	N1QL_SPILL_TO_DISK                           // 0x0000008000
+	N1QL_PART_GRACEFUL                           // 0x0000010000
+	N1QL_FULL_GET                                // 0x0000020000 controls use of sub-doc API
+	N1QL_RANDOM_SCAN                             // 0x0000040000
+	N1QL_NEW_MERGE                               // 0x0000080000
 )
 
-var N1Ql_Features = map[uint64]string{
-	N1QL_GROUPAGG_PUSHDOWN:     fmt.Sprintf("Index Grouping and Aggregate Pushdown (%#x)", N1QL_GROUPAGG_PUSHDOWN),
-	N1QL_HASH_JOIN:             fmt.Sprintf("Hash Join (%#x)", N1QL_HASH_JOIN),
-	N1QL_ENCODED_PLAN:          fmt.Sprintf("Encoded Plans (%#x)", N1QL_ENCODED_PLAN),
-	N1QL_GOLANG_UDF:            fmt.Sprintf("Golang UDFs (%#x)", N1QL_GOLANG_UDF),
-	N1QL_CBO:                   fmt.Sprintf("CBO (%#x)", N1QL_CBO),
-	N1QL_FLEXINDEX:             fmt.Sprintf("Flex Index (%#x)", N1QL_FLEXINDEX),
-	N1QL_CBO_NEW:               fmt.Sprintf("(Reserved for future use) (%#x)", N1QL_CBO_NEW), // TODO : Change desc when
-	N1QL_PASSWORDLESS_BKT:      fmt.Sprintf("Retired Feature Bit. Do not use. (%#x)", N1QL_PASSWORDLESS_BKT),
-	N1QL_READ_FROM_REPLICA_OFF: fmt.Sprintf("Retired Feature Bit. Do not use. (%#x)", N1QL_READ_FROM_REPLICA_OFF),
-	N1QL_IMPLICIT_ARRAY_COVER:  fmt.Sprintf("Implicit Covering Array Index (%#x)", N1QL_IMPLICIT_ARRAY_COVER),
-	N1QL_JOIN_ENUMERATION:      fmt.Sprintf("Join Enumeration (%#x)", N1QL_JOIN_ENUMERATION),
-	N1QL_INDEX_MISSING:         fmt.Sprintf("Leading Index Key INCLUDE MISSING entries(%#x)", N1QL_INDEX_MISSING),
-	N1QL_NL_PRIMARYSCAN:        fmt.Sprintf("Prevent Primary Scan on Inner Side of Nested Loop Join (%#x)", N1QL_NL_PRIMARYSCAN),
-	N1QL_EARLY_ORDER:           fmt.Sprintf("Early Order (%#x)", N1QL_EARLY_ORDER),
-	N1QL_SEQ_SCAN:              fmt.Sprintf("Sequential Scans (%#x)", N1QL_SEQ_SCAN),
-	N1QL_DISABLE_SPILL_TO_DISK: fmt.Sprintf("Disable spill To Disk (%#x)", N1QL_DISABLE_SPILL_TO_DISK),
-
-	N1QL_PARTIAL_GRACEFUL_SHUTDOWN: fmt.Sprintf("Partial graceful shutdown (%#x)", N1QL_PARTIAL_GRACEFUL_SHUTDOWN),
-
-	N1QL_USE_SUB_DOC:  fmt.Sprintf("Use sub-document API (%#x)", N1QL_USE_SUB_DOC),
-	N1QL_RANDOM_SCAN:  fmt.Sprintf("Random Scans (%#x)", N1QL_RANDOM_SCAN),
-	N1QL_MERGE_LEGACY: fmt.Sprintf("Legacy MERGE behavior (%#x)", N1QL_MERGE_LEGACY),
+// Care should be taken that the descriptions accept "disabled" being appended when the bit is set (and "enabled" when not).
+// Don't include retired values - they will just be ignored when describing the feature controls setting.
+var _N1QL_Features = map[uint64]string{
+	N1QL_GROUPAGG_PUSHDOWN:    "Index grouping and aggregate pushdown",
+	N1QL_HASH_JOIN:            "Hash join",
+	N1QL_ENCODED_PLAN:         "Encoded plans",
+	N1QL_GOLANG_UDF:           "Golang UDFs",
+	N1QL_CBO:                  "CBO",
+	N1QL_FLEXINDEX:            "Flex index",
+	N1QL_CBO_NEW:              "(Reserved for future use)",
+	N1QL_IMPLICIT_ARRAY_COVER: "Implicit covering array index",
+	N1QL_JOIN_ENUMERATION:     "Join enumeration",
+	N1QL_INDEX_MISSING:        "Include MISSING entries in leading index key",
+	N1QL_NL_PRIMARYSCAN:       "Prevent primary scan on inner side of nested loop join",
+	N1QL_EARLY_ORDER:          "Early order",
+	N1QL_SEQ_SCAN:             "Sequential scans",
+	N1QL_SPILL_TO_DISK:        "Spill to disk",
+	N1QL_PART_GRACEFUL:        "Partial graceful shutdown",
+	N1QL_FULL_GET:             "Only fetch full documents",
+	N1QL_RANDOM_SCAN:          "Random scans",
+	N1QL_NEW_MERGE:            "New MERGE",
 }
 
 const DEF_N1QL_FEAT_CTRL = (N1QL_ENCODED_PLAN | N1QL_GOLANG_UDF | N1QL_CBO_NEW)
@@ -111,11 +111,12 @@ func SetUseCBO(useCBO bool) {
 func DisabledFeatures(control uint64) []string {
 	disabled := make([]string, 0)
 
-	for flag, feat := range N1Ql_Features {
+	for flag, feat := range _N1QL_Features {
 		if (control & flag) != 0 { // feature is disabled
-			disabled = append(disabled, feat)
+			disabled = append(disabled, fmt.Sprintf("%s (%#x)", feat, flag))
 		}
 	}
+	sort.Strings(disabled)
 
 	return disabled
 }
@@ -129,10 +130,10 @@ func DescribeChangedFeatures(prev uint64, new uint64) string {
 
 	// there is a difference between the feature bitsets
 	changes := strings.Builder{}
-	changes.WriteString(fmt.Sprintf(" (0x%x)", new))
-	flags := make([]uint64, 0, len(N1Ql_Features))
+	changes.WriteString(fmt.Sprintf(" (%#x)", new))
+	flags := make([]uint64, 0, len(_N1QL_Features))
 
-	for f := range N1Ql_Features {
+	for f := range _N1QL_Features {
 		flags = append(flags, f)
 	}
 
@@ -141,16 +142,15 @@ func DescribeChangedFeatures(prev uint64, new uint64) string {
 	})
 
 	for _, flag := range flags {
-		feat := N1Ql_Features[flag]
+		feat := _N1QL_Features[flag]
 		old := prev & flag
 
 		if old != (new & flag) { // the feature bit has changed
-			changes.WriteString(", ")
-			changes.WriteString(feat)
+			changes.WriteString(fmt.Sprintf(", %s (%#x) ", feat, flag))
 			if old != 0 { // the feature bit was 1 i.e the feature used to be DISABLED hence in the new bitset it is now ENABLED
-				changes.WriteString(" enabled")
+				changes.WriteString("enabled")
 			} else {
-				changes.WriteString(" disabled")
+				changes.WriteString("disabled")
 			}
 		}
 	}
