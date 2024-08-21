@@ -5956,9 +5956,9 @@ func invalidArgInfo(arg int, v value.Value) map[string]interface{} {
 func setWarning(context Context, other ...interface{}) (value.Value, errors.Error) {
 	if c, ok := context.(interface {
 		Warning(errors.Error)
-		HasFeature(uint64) bool
+		IsFeatureEnabled(uint64) bool
 	}); ok && len(other) > 0 {
-		if !c.HasFeature(util.N1QL_DATE_WARNINGS) {
+		if c.IsFeatureEnabled(util.N1QL_NO_DATE_WARNINGS) {
 			return value.NULL_VALUE, nil
 		}
 		switch o := other[0].(type) {

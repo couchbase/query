@@ -52,7 +52,7 @@ const (
 	N1QL_FULL_GET                                // 0x0000020000 controls use of sub-doc API
 	N1QL_RANDOM_SCAN                             // 0x0000040000
 	N1QL_NEW_MERGE                               // 0x0000080000
-	N1QL_DATE_WARNINGS                           // 0x0000100000
+	N1QL_NO_DATE_WARNINGS                        // 0x0000100000
 	N1QL_USE_SYS_FREE_MEM                        // 0x0000200000
 	N1QL_ADMISSION_CONTROL                       // 0x0000400000
 )
@@ -78,7 +78,7 @@ var _N1QL_Features = map[uint64]string{
 	N1QL_FULL_GET:             "Only fetch full documents",
 	N1QL_RANDOM_SCAN:          "Random scans",
 	N1QL_NEW_MERGE:            "New MERGE",
-	N1QL_DATE_WARNINGS:        "Report date warnings",
+	N1QL_NO_DATE_WARNINGS:     "Date warning suppression",
 	N1QL_USE_SYS_FREE_MEM:     "Allow system free memory use",
 	N1QL_ADMISSION_CONTROL:    "Admission control",
 }
