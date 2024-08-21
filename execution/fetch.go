@@ -235,7 +235,7 @@ func (this *Fetch) flushBatch(context *Context) bool {
 
 	var errs errors.Errors
 	projection := this.plan.EarlyProjection()
-	useSubDoc := context.HasFeature(util.N1QL_USE_SUB_DOC)
+	useSubDoc := !context.IsFeatureEnabled(util.N1QL_FULL_GET)
 
 	// Fetch
 	errs = this.keyspace.Fetch(fetchKeys, fetchMap, &this.operatorCtx, this.plan.SubPaths(), projection, useSubDoc)
