@@ -37,10 +37,10 @@ type Merge struct {
 func NewMerge(plan *plan.Merge, context *Context, update, delete, insert Operator) *Merge {
 	var updates, deletes, inserts *value.AnnotatedArray
 
-	if !context.HasFeature(util.N1QL_MERGE_LEGACY) {
+	if context.IsFeatureEnabled(util.N1QL_NEW_MERGE) {
 		// for spilling to disk use the same functions/constants as used in Order operator
 		var shouldSpill func(uint64, uint64) bool
-		if plan.CanSpill() && !context.HasFeature(util.N1QL_DISABLE_SPILL_TO_DISK) {
+		if plan.CanSpill() && context.IsFeatureEnabled(util.N1QL_SPILL_TO_DISK) {
 			if context.UseRequestQuota() && context.MemoryQuota() > 0 {
 				shouldSpill = func(c uint64, n uint64) bool {
 					if (c + n) <= context.ProducerThrottleQuota() {
@@ -219,7 +219,7 @@ func (this *Merge) RunOnce(context *Context, parent value.Value) {
 			return
 		}
 
-		legacy := context.HasFeature(util.N1QL_MERGE_LEGACY)
+		legacy := !context.IsFeatureEnabled(util.N1QL_NEW_MERGE)
 		hasLimit := limit >= 0
 		var item value.AnnotatedValue
 		ok := true

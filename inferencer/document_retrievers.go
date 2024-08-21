@@ -276,8 +276,8 @@ func MakeUnifiedDocumentRetriever(name string, context datastore.QueryContext, k
 
 	if flags&NO_RANDOM_SCAN == 0 {
 		// if random scans have been disabled...
-		if c, ok := context.(interface{ HasFeature(uint64) bool }); ok {
-			if c.HasFeature(util.N1QL_RANDOM_SCAN) { // if the feature bit is set this returns true and it means they're disabled
+		if c, ok := context.(interface{ IsFeatureEnabled(uint64) bool }); ok {
+			if !c.IsFeatureEnabled(util.N1QL_RANDOM_SCAN) {
 				flags |= NO_RANDOM_SCAN
 				logging.Debugf("Random scan excluded: feature controls", context)
 			}

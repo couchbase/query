@@ -1,4 +1,4 @@
-module github.com/couchbase/query
+MODULE GIthub.com/couchbase/query
 
 go 1.21.8
 
@@ -51,7 +51,7 @@ require (
 	github.com/couchbase/go-couchbase v0.1.1
 	github.com/couchbase/go_json v0.0.0-20220330123059-4473a21887c8
 	github.com/couchbase/gocb/v2 v2.5.4
-	github.com/couchbase/gocbcore/v10 v10.2.10
+	github.com/couchbase/gocbcore/v10 v10.5.1
 	github.com/couchbase/godbc v0.0.0-20210615212222-79da1b49cb4d
 	github.com/couchbase/gomemcached v0.2.2-0.20230407174933-7d7ce13da8cc
 	github.com/couchbase/goutils v0.1.2
@@ -133,7 +133,7 @@ require (
 	github.com/golang/geo v0.0.0-20210211234256-740aa86cb551 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/google/flatbuffers v22.11.23+incompatible // indirect
-	github.com/google/uuid v1.5.0 // indirect
+	github.com/google/uuid v1.6.0 // indirect
 	github.com/gorilla/mux v1.8.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.1 // indirect

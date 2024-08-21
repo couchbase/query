@@ -290,8 +290,8 @@ func (di *DefaultInferencer) InferKeyspace(context datastore.QueryContext, ks da
 
 	if options.Flags&NO_RANDOM_SCAN == 0 {
 		// if sequential scans have been disabled, force exclusion of random scans
-		if c, ok := context.(interface{ HasFeature(uint64) bool }); ok {
-			if c.HasFeature(util.N1QL_SEQ_SCAN) { // if the feature bit is set this returns true and it means they're disabled
+		if c, ok := context.(interface{ IsFeatureEnabled(uint64) bool }); ok {
+			if !c.IsFeatureEnabled(util.N1QL_SEQ_SCAN) {
 				options.Flags |= NO_RANDOM_SCAN
 				logging.Debugf("Random scan excluded: feature controls exclude sequential scans", context)
 			}
