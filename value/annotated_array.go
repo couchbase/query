@@ -314,6 +314,17 @@ func (this *AnnotatedArray) Foreach(f func(AnnotatedValue) bool) errors.Error {
 	this.iterator.fileIndex = 0
 	this.iterator.memIndex = 0
 
+	for i := range this.spill {
+		err := this.spill[i].rewind()
+		if err != nil {
+			logging.Debugf("[%p] rewind failed on [%d] %s: %v", this, i, this.spill[i].f.Name(), err)
+			return errors.NewValueError(errors.E_VALUE_SPILL_READ, err)
+		}
+		if this.trackMemory != nil {
+			this.trackMemory(int64(this.spill[i].current.Size()))
+		}
+	}
+
 	if this.less != nil {
 		if this.heapSize > 0 && len(this.spill) == 0 {
 			// this sort should have minimal work as it is sorting in heap order
@@ -330,16 +341,6 @@ func (this *AnnotatedArray) Foreach(f func(AnnotatedValue) bool) errors.Error {
 		this.heapSize = 0
 		sort.Sort(this)
 
-		for i := range this.spill {
-			err := this.spill[i].rewind()
-			if err != nil {
-				logging.Debugf("[%p] rewind failed on [%d] %s: %v", this, i, this.spill[i].f.Name(), err)
-				return errors.NewValueError(errors.E_VALUE_SPILL_READ, err)
-			}
-			if this.trackMemory != nil {
-				this.trackMemory(int64(this.spill[i].current.Size()))
-			}
-		}
 		heap.Init(&this.spill)
 
 		for {
