@@ -6926,6 +6926,23 @@ var errData = []ErrData{
 		},
 	},
 	{
+		Code:        E_TRANSACTION_XATTRS, // 17023
+		symbol:      "E_TRANSACTION_XATTRS",
+		Description: "XATTRs not permitted in a transaction",
+		Reason: []string{
+			"Document XATTRs may not be used in a transaction.",
+		},
+		Action: []string{
+			"Confirm OPTIONS for INSERT/UPSERT do not specify XATTRs.",
+			"Remove XATTRs from the statement and re-submit.",
+			"Submit the statement outside of a transaction.",
+		},
+		IsUser: YES,
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
 		Code:        E_GC_AGENT, // 17096
 		symbol:      "E_GC_AGENT",
 		Description: "GC agent error",

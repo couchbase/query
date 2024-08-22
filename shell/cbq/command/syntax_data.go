@@ -545,6 +545,7 @@ var statement_syntax = map[string][][]string{
 	},
 	"unset_term": [][]string{
 		[]string{"path", "[update_for]"},
+		[]string{"function_meta_expr", "DOT", "path"},
 	},
 	"merge": [][]string{
 		[]string{"MERGE", "[optim_hints]", "INTO", "simple_keyspace_ref", "[use_merge]", "USING", "simple_from_term", "ON", "[key]", "expression", "[let]", "[merge_actions]", "[limit]", "[returning]"},

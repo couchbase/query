@@ -111,7 +111,7 @@ func (this *Update) String() string {
 		s += " set"
 		for _, v := range this.set.Terms() {
 			if v.meta != nil {
-				s += " " + v.meta.String()
+				s += " " + v.meta.String() + "." + strings.TrimPrefix(strings.TrimSuffix(v.path.String(), ")"), "(")
 			} else {
 				s += " " + strings.TrimPrefix(strings.TrimSuffix(v.path.String(), ")"), "(")
 			}
@@ -134,7 +134,11 @@ func (this *Update) String() string {
 	if this.unset != nil {
 		s += " unset"
 		for _, v := range this.unset.Terms() {
-			s += " " + strings.TrimPrefix(strings.TrimSuffix(v.path.String(), ")"), "(")
+			if v.meta != nil {
+				s += " " + v.meta.String() + "." + strings.TrimPrefix(strings.TrimSuffix(v.path.String(), ")"), "(")
+			} else {
+				s += " " + strings.TrimPrefix(strings.TrimSuffix(v.path.String(), ")"), "(")
+			}
 			if v.updateFor != nil {
 				s += " for "
 				for _, b := range v.updateFor.Bindings() {

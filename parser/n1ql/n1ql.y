@@ -2508,7 +2508,7 @@ path EQ expr opt_update_for
 function_meta_expr DOT path EQ expr
 {
     $$ = nil
-    if $1 != nil && algebra.IsValidMetaMutatePath($3){
+    if $1 != nil && algebra.IsValidMetaMutatePath($3, false) {
          $$ = algebra.NewSetTerm($3, $5, nil, $1)
     } else if $1 != nil {
          return yylex.(*lexer).FatalError(fmt.Sprintf("SET clause has invalid path %s", $3.String()), $<line>3, $<column>3)
@@ -2637,7 +2637,17 @@ unset_terms COMMA unset_term
 unset_term:
 path opt_update_for
 {
-    $$ = algebra.NewUnsetTerm($1, $2)
+    $$ = algebra.NewUnsetTerm($1, $2, nil)
+}
+|
+function_meta_expr DOT path 
+{
+    $$ = nil
+    if $1 != nil && algebra.IsValidMetaMutatePath($3, true) {
+         $$ = algebra.NewUnsetTerm($3, nil, $1)
+    } else if $1 != nil {
+         return yylex.(*lexer).FatalError(fmt.Sprintf("UNSET clause has invalid path %s", $3.String()), $<line>3, $<column>3)
+    }
 }
 ;
 

@@ -14,6 +14,7 @@ import (
 
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
@@ -88,7 +89,33 @@ func unsetPath(t *algebra.UnsetTerm, clone, item value.AnnotatedValue, context *
 		return unsetFor(t, clone, item, context)
 	}
 
-	t.Path().Unset(clone, context)
+	if t.Meta() != nil {
+		if opVal, ok := clone.GetAttachment(value.ATT_OPTIONS).(value.Value); ok && opVal.Type() != value.MISSING {
+			if f, ok := t.Path().(*expression.Field); ok {
+				switch f.First().(type) {
+				case *expression.Identifier: // top-level field
+					del := false
+					if xattrs, err := f.First().Evaluate(opVal, context); err == nil {
+						if _, ok := xattrs.Field(f.Alias()); ok {
+							// indicate deletion if it previously existed
+							del = true
+						}
+					}
+					if del {
+						t.Path().Set(opVal, nil, context)
+					} else {
+						t.Path().Unset(opVal, context)
+					}
+				default: // nested field
+					t.Path().Unset(opVal, context)
+				}
+			} else {
+				t.Path().Unset(opVal, context)
+			}
+		}
+	} else {
+		t.Path().Unset(clone, context)
+	}
 	return clone, nil
 }
 

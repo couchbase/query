@@ -214,3 +214,9 @@ func NewGCAgentError(e error, op string) Error {
 	return &err{level: EXCEPTION, ICode: E_GC_AGENT, IKey: "transaction.gcagent",
 		InternalMsg: "GC agent error", InternalCaller: CallerN(1), cause: c}
 }
+
+func NewTransactionXattrsError() Error {
+	return &err{level: EXCEPTION, ICode: E_TRANSACTION_XATTRS, IKey: "transaction.xattrs", InternalCaller: CallerN(1),
+		InternalMsg: "Mutation of XATTRs not permitted in a transaction",
+	}
+}

@@ -11,6 +11,7 @@ package planner
 import (
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
 	base "github.com/couchbase/query/plannerbase"
@@ -137,6 +138,9 @@ func (this *builder) beginMutate(keyspace datastore.Keyspace, ksref *algebra.Key
 					size = OPT_SIZE_NOT_AVAIL
 					frCost = OPT_COST_NOT_AVAIL
 				}
+			}
+			if len(names) > 0 && this.context.DeltaKeyspaces() != nil {
+				return nil, errors.NewTransactionXattrsError()
 			}
 			fetch = plan.NewFetch(keyspace, term, names, cost, cardinality, size, frCost, this.hasBuilderFlag(BUILDER_NL_INNER))
 		} else {

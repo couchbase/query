@@ -546,6 +546,7 @@ const (
 	E_TRANSACTION_STAGING                        ErrorCode = 17020
 	E_TRANSACTION_QUEUE_FULL                     ErrorCode = 17021
 	W_POST_COMMIT_TRANSACTION                    ErrorCode = 17022
+	E_TRANSACTION_XATTRS                         ErrorCode = 17023
 	E_GC_AGENT                                   ErrorCode = 17096
 	E_TRAN_CE_NOTSUPPORTED                       ErrorCode = 17097
 	E_MEMORY_ALLOCATION                          ErrorCode = 17098

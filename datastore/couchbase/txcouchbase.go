@@ -592,6 +592,12 @@ func (ks *keyspace) txPerformOp(op MutateOp, qualifiedName, scopeName, collectio
 		var exptime int
 		var dataSize int64
 
+		if op != MOP_DELETE {
+			if hasExpirationOrXattrs(kv.Options) {
+				return 0, nil, append(errs, errors.NewTransactionXattrsError())
+			}
+		}
+
 		key := kv.Name
 		val := kv.Value
 		nop := op

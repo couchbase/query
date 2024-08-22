@@ -82,6 +82,7 @@ func UnmarshalUnsetTerm(body []byte) (*algebra.UnsetTerm, error) {
 	var _unmarshalled struct {
 		Path string          `json:"path"`
 		For  json.RawMessage `json:"path_for"`
+		Meta string          `json:"meta"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -108,7 +109,15 @@ func UnmarshalUnsetTerm(body []byte) (*algebra.UnsetTerm, error) {
 		}
 	}
 
-	return algebra.NewUnsetTerm(path, updateFor), nil
+	var metaExpr expression.Expression
+	if _unmarshalled.Meta != "" {
+		metaExpr, err = parser.Parse(_unmarshalled.Meta)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return algebra.NewUnsetTerm(path, updateFor, metaExpr), nil
 }
 
 /*
@@ -118,6 +127,7 @@ func UnmarshalUnsetTerms(body []byte) (algebra.UnsetTerms, error) {
 	var _unmarshalled []struct {
 		Path string          `json:"path"`
 		For  json.RawMessage `json:"path_for"`
+		Meta string          `json:"meta"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -146,7 +156,15 @@ func UnmarshalUnsetTerms(body []byte) (algebra.UnsetTerms, error) {
 			}
 		}
 
-		terms[i] = algebra.NewUnsetTerm(path, updateFor)
+		var metaExpr expression.Expression
+		if term.Meta != "" {
+			metaExpr, err = parser.Parse(term.Meta)
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		terms[i] = algebra.NewUnsetTerm(path, updateFor, metaExpr)
 	}
 
 	return terms, nil
