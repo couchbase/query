@@ -1,4 +1,4 @@
-MODULE GIthub.com/couchbase/query
+module github.com/couchbase/query
 
 go 1.21.8
 
