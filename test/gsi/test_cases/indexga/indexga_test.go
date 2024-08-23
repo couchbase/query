@@ -46,6 +46,7 @@ func run_test(qc *gsi.MockServer, t *testing.T, prepare bool) {
 		"case_indexga_unionscan.json",
 		"case_indexga_intersectscan.json",
 		"case_indexga_bugs.json",
+		"case_indexga_bugs_primary.json",
 	}
 	indexes := []string{
 		"CREATE PRIMARY INDEX oprimary ON orders",
@@ -97,6 +98,10 @@ func run_test(qc *gsi.MockServer, t *testing.T, prepare bool) {
 
 	// misc bugs
 	primary, testcases = buildtestcase(cases, indexes, 6, 12, 13)
+	run_testcase(primary, prepare, qc, t, testcases)
+
+	// misc bugs with primary index
+	primary, testcases = buildtestcase(cases, indexes, 7, 0, 1)
 	run_testcase(primary, prepare, qc, t, testcases)
 }
 
