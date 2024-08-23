@@ -74,5 +74,15 @@
                 "to": "12"
             }
         ]
+    },
+    {
+	"testcase": "MB-63274",
+        "statements": "SELECT u.qty, COUNT(1) AS cnt FROM (SELECT ARRAY {'qty': v.qty} FOR v IN orderlines WHEN v.price > 2.0 END AS quantities FROM orders AS t WHERE test_id = 'subqexp' AND META().id LIKE 'subqexp_%' ) AS d UNNEST d.quantities AS u GROUP BY u.qty UNION SELECT u.qty, COUNT(1) AS cnt FROM (SELECT ARRAY {'qty': v.qty} FOR v IN orderlines WHEN v.price > 2.0 END AS quantities FROM orders AS t WHERE test_id = 'subqexp' AND META().id LIKE 'subqexp_%' ) AS d UNNEST d.quantities AS u GROUP BY u.qty",
+        "results": [
+            {
+                "qty": 1,
+                "cnt": 4
+            }
+        ]
     }
 ]
