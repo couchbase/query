@@ -35,6 +35,7 @@ func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 	prevPartialSortTermCount := this.partialSortTermCount
 	prevInclWith := stmt.IncludeWith()
 	prevAliases := this.aliases
+	prevSetOpDistinct := this.setOpDistinct
 
 	defer func() {
 		this.node = prevNode
@@ -48,6 +49,7 @@ func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 		this.partialSortTermCount = prevPartialSortTermCount
 		stmt.SetIncludeWith(prevInclWith)
 		this.aliases = prevAliases
+		this.setOpDistinct = prevSetOpDistinct
 	}()
 
 	// Since this is the root Select being planned - disinclude its With expressions from cover transformation
@@ -75,6 +77,12 @@ func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 	this.order = stmtOrder
 	this.partialSortTermCount = 0
 	this.extractPagination(this.order, this.offset, this.limit)
+
+	// for a Select that is not an immediate child of set operations (e.g. a FROM clause subquery)
+	// do not add Distinct operator
+	if !stmt.IsUnderSetOp() {
+		this.setOpDistinct = false
+	}
 
 	if stmtOrder != nil {
 		// If there is an ORDER BY, delay the final projection
