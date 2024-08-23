@@ -249,7 +249,8 @@ func (this *annotatedValue) Size() uint64 {
 	if this.cachedSize != 0 {
 		return uint64(this.cachedSize)
 	}
-	sz := this.Value.Size() + uint64(unsafe.Sizeof(*this))
+	sz := uint64(unsafe.Sizeof(*this))
+	sz += this.Value.Size() // panic on nil Value
 	if this.original != nil {
 		sz += this.original.Size()
 	}
