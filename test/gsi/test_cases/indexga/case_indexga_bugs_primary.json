@@ -1,0 +1,30 @@
+[
+    {
+        "testcase": "MB-63267",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'PrimaryScan%' AND v.`limit` IS MISSING END"
+        },
+        "statements": "SELECT type, count(1) AS cnt FROM orders GROUP BY type LIMIT 3",
+        "results": [
+            {
+                "type": "bugs",
+                "cnt": 4
+            },
+            {
+                "type": "mix",
+                "cnt": 7
+            },
+            {
+                "type": "numeric",
+                "cnt": 40
+            }
+        ]
+    }
+]

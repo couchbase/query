@@ -242,6 +242,7 @@ func (this *builder) buildSubsetScan(keyspace datastore.Keyspace, node *algebra.
 	order := this.order
 	offset := this.offset
 	limit := this.limit
+	group := this.group
 
 	pred := baseKeyspace.DnfPred()
 	if join && baseKeyspace.OnclauseOnly() {
@@ -268,6 +269,7 @@ func (this *builder) buildSubsetScan(keyspace datastore.Keyspace, node *algebra.
 	if !join || hash || node.IsSystem() {
 		// No secondary scan, try primary scan. restore order there is predicate no need to restore others
 		this.order = order
+		this.group = group
 		exact := false
 		hasDeltaKeyspace := this.context.HasDeltaKeyspace(baseKeyspace.Keyspace())
 		if pred == nil && !hash && !hasDeltaKeyspace {
