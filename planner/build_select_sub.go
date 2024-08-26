@@ -78,6 +78,8 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 	this.projection = node.Projection()
 	this.resetIndexGroupAggs()
 
+	var err error
+
 	if this.cover == nil {
 		this.cover = node
 	}
@@ -91,16 +93,31 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 	if this.order != nil {
 		this.setBuilderFlag(BUILDER_HAS_ORDER)
 
+		sortExprs := this.order.Expressions()
+
+		hasLetVariable := false
 		if node.Let() != nil {
-			identifiers := node.Let().Identifiers()
 			// check whether ORDER expressions depends on LET bindings
 			depends := false
-		outer:
-			for _, term := range this.order.Expressions() {
-				for _, id := range identifiers {
-					if term.DependsOn(id) {
+			for i, term := range sortExprs {
+				for _, let := range node.Let() {
+					variable := let.Variable()
+					nameVar := let.NameVariable()
+					letExpr := let.Expression()
+					if !depends && (term.DependsOn(expression.NewIdentifier(variable)) ||
+						(nameVar != "" && term.DependsOn(expression.NewIdentifier(nameVar)))) {
 						depends = true
-						break outer
+					}
+					// check whether the sort expression is a LET variable
+					// if so, replace with the LET binding expression
+					// (note it only checks for an identifier itself, not if
+					// an identifier is embedded in the sort expression)
+					if id, ok := term.(*expression.Identifier); ok {
+						if id.Identifier() == variable ||
+							(nameVar != "" && id.Identifier() == nameVar) {
+							sortExprs[i] = letExpr
+							hasLetVariable = true
+						}
 					}
 				}
 			}
@@ -109,10 +126,26 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 			}
 		}
 
-		this.vectors = this.order.Vectors()
+		hasVector := this.order.HasVectorTerm()
+		hasProjAlias := this.order.HasProjectionAlias()
+		if hasVector || hasProjAlias || hasLetVariable {
+			if hasProjAlias {
+				sortExprs, _, err = algebra.ReplaceProjectionAlias(sortExprs, node.Projection())
+				if err != nil {
+					return nil, err
+				}
+			}
+			anns := make(expression.Expressions, 0, len(sortExprs))
+			for _, term := range sortExprs {
+				if _, ok := term.(*expression.Ann); ok {
+					anns = append(anns, term)
+				}
+			}
+			if len(anns) > 0 {
+				this.vectors = anns
+			}
+		}
 	}
-
-	var err error
 
 	// Inline LET expressions for index selection
 	this.let = nil

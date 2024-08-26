@@ -74,20 +74,22 @@ func (this *Order) Terms() SortTerms {
 	return this.terms
 }
 
-/*
-Gather vector search (Ann) expressions
-*/
-func (this *Order) Vectors() expression.Expressions {
-	var anns expression.Expressions
+func (this *Order) HasVectorTerm() bool {
 	for _, term := range this.terms {
-		if _, ok := term.expr.(*expression.Ann); ok {
-			if anns == nil {
-				anns = make(expression.Expressions, 0, len(this.terms))
-			}
-			anns = append(anns, term.expr)
+		if term.IsVectorTerm() {
+			return true
 		}
 	}
-	return anns
+	return false
+}
+
+func (this *Order) HasProjectionAlias() bool {
+	for _, term := range this.terms {
+		if term.IsProjectionAlias() {
+			return true
+		}
+	}
+	return false
 }
 
 /*
@@ -341,6 +343,15 @@ func (this *SortTerm) NullsPosExpr() expression.Expression {
 func (this *SortTerm) IsVectorTerm() bool {
 	_, ok := this.expr.(*expression.Ann)
 	return ok
+}
+
+func (this *SortTerm) IsProjectionAlias() bool {
+	// only returns true when the sort term is just a projection alias (identifier),
+	// it does not check whether an identifier is embedded in the sort expression
+	if ident, ok := this.expr.(*expression.Identifier); ok {
+		return ident.IsProjectionAlias()
+	}
+	return false
 }
 
 /*
