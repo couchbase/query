@@ -158,6 +158,16 @@ func (this *MockQuery) Failed(srvr *server.Server) {
 	this.Stop(server.FATAL)
 }
 
+func (this *MockQuery) CompletedNaturalRequest(srvr *server.Server) {
+	this.response.generatedStmt = this.Statement()
+	close(this.response.done)
+	this.Stop(server.COMPLETED)
+}
+
+func (this *MockQuery) IncrementStatementCount() {
+	// NOTHING TO DO
+}
+
 func (this *MockQuery) Expire(state server.State, timeout time.Duration) {
 	defer this.Stop(state)
 
@@ -209,11 +219,12 @@ func (this *MockQuery) AdmissionWaitTime() time.Duration {
 }
 
 type MockResponse struct {
-	err       errors.Error
-	results   []interface{}
-	warnings  []errors.Error
-	done      chan bool
-	sortCount int
+	err           errors.Error
+	results       []interface{}
+	generatedStmt string
+	warnings      []errors.Error
+	done          chan bool
+	sortCount     int
 }
 
 func (this *MockResponse) NoMoreResults() {

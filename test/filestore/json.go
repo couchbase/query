@@ -80,6 +80,16 @@ func (this *MockQuery) Fail(err errors.Error) {
 	close(this.response.done)
 }
 
+func (this *MockQuery) CompletedNaturalRequest(srvr *server.Server) {
+	this.response.generatedStmt = this.Statement()
+	close(this.response.done)
+	this.Stop(server.COMPLETED)
+}
+
+func (this *MockQuery) IncrementStatementCount() {
+	// NOTHING TO DO
+}
+
 func (this *MockQuery) Execute(srvr *server.Server, context *execution.Context, reqType string, signature value.Value, dummy bool) {
 	select {
 	case <-this.Results():
@@ -149,11 +159,12 @@ func (this *MockQuery) AdmissionWaitTime() time.Duration {
 }
 
 type MockResponse struct {
-	err       errors.Error
-	results   []interface{}
-	warnings  []errors.Error
-	done      chan bool
-	sortCount int
+	err           errors.Error
+	results       []interface{}
+	generatedStmt string
+	warnings      []errors.Error
+	done          chan bool
+	sortCount     int
 }
 
 func (this *MockResponse) NoMoreResults() {

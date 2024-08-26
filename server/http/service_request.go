@@ -31,6 +31,7 @@ import (
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/logging/resolver"
 	"github.com/couchbase/query/memory"
+	"github.com/couchbase/query/natural"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/prepareds"
 	"github.com/couchbase/query/server"
@@ -157,7 +158,7 @@ func newHttpRequest(rv *httpRequest, resp http.ResponseWriter, req *http.Request
 	}
 
 	if err == nil {
-		if rv.stmtCnt == 0 {
+		if rv.stmtCnt == 0 && rv.Natural() == "" {
 			err = errors.NewServiceErrorMissingValue("statement or prepared")
 		} else if rv.stmtCnt > 1 {
 			err = errors.NewServiceErrorMultipleValues("statement and prepared")
@@ -268,8 +269,12 @@ func (this *httpRequest) EventNodeName() string {
 func handleStatement(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
 	statement, err := httpArgs.getStringVal(parm, val)
 	if err == nil {
-		rv.SetStatement(statement)
-		rv.stmtCnt++
+		if rv.Natural() != "" {
+			return errors.NewServiceErrorMultipleValues("natural and statement")
+		} else {
+			rv.SetStatement(statement)
+			rv.IncrementStatementCount()
+		}
 	}
 	return err
 }
@@ -285,6 +290,11 @@ func handlePrepared(rv *httpRequest, httpArgs httpRequestArgs, parm string, val 
 	if log == nil {
 		log = logging.NULL_LOG
 	}
+
+	if rv.Natural() != "" {
+		return errors.NewServiceErrorMultipleValues("natural and prepared")
+	}
+
 	prepared_name, prepared, err := getPrepared(httpArgs, rv.QueryContext(), parm, val, &phaseTime, log)
 
 	// MB-18841 (encoded_plan processing affects latency)
@@ -326,7 +336,7 @@ func handlePrepared(rv *httpRequest, httpArgs httpRequestArgs, parm string, val 
 			rv.Output().AddPhaseTime(execution.REPREPARE, phaseTime)
 		}
 		rv.SetPrepared(prepared)
-		rv.stmtCnt++
+		rv.IncrementStatementCount()
 	}
 	return err
 }
@@ -903,6 +913,10 @@ func (this *httpRequest) AdmissionWaitTime() time.Duration {
 	return this.admissionWaitTime
 }
 
+func (this *httpRequest) IncrementStatementCount() {
+	this.stmtCnt++
+}
+
 const ( // Request argument names
 	MAX_PARALLELISM    = "max_parallelism"
 	SCAN_CAP           = "scan_cap"
@@ -953,6 +967,10 @@ const ( // Request argument names
 	LOGLEVEL           = "loglevel"
 	USE_REPLICA        = "use_replica"
 	DURATION_STYLE     = "duration_style"
+	NATURAL            = "natural"
+	NATURAL_CRED       = "natural_cred"
+	NATURAL_ORGID      = "natural_orgid"
+	NATURAL_CONTEXT    = "natural_context"
 )
 
 type argHandler struct {
@@ -1011,6 +1029,12 @@ var _PARAMETERS = map[string]*argHandler{
 	LOGLEVEL:        {handleLogLevel, false},
 	USE_REPLICA:     {handleUseReplica, false},
 	DURATION_STYLE:  {handleDurationStyle, false},
+
+	// accept query written in Natural Language
+	NATURAL:         {handleNatural, false},
+	NATURAL_CRED:    {handleNaturalCred, false},
+	NATURAL_ORGID:   {handleNaturalOrgId, false},
+	NATURAL_CONTEXT: {handleNaturalContext, false},
 }
 
 // common storage for the httpArgs implementations
@@ -2380,6 +2404,48 @@ func handleDurationStyle(rv *httpRequest, httpArgs httpRequestArgs, parm string,
 	if err == nil {
 		if style, ok := util.IsDurationStyle(styleStr); ok {
 			rv.SetDurationStyle(style)
+		}
+	}
+	return err
+}
+
+func handleNatural(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+	natural, err := httpArgs.getStringVal(parm, val)
+	if err == nil {
+		if rv.Prepared() != nil {
+			return errors.NewServiceErrorMultipleValues("prepared and natural")
+		}
+
+		if rv.Statement() != "" {
+			return errors.NewServiceErrorMultipleValues("statement and natural")
+		}
+		rv.SetNatural(natural)
+	}
+	return err
+}
+
+func handleNaturalCred(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+	naturalCred, err := httpArgs.getStringVal(parm, val)
+	if err == nil {
+		rv.SetNaturalCred(naturalCred)
+	}
+	return err
+}
+
+func handleNaturalOrgId(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+	naturalOrgId, err := httpArgs.getStringVal(parm, val)
+	if err == nil {
+		rv.SetNaturalOrganizationId(naturalOrgId)
+	}
+	return err
+}
+
+func handleNaturalContext(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+	naturalContext, err := httpArgs.getStringVal(parm, val)
+	if err == nil {
+		err = natural.ValidateNaturalContext(naturalContext)
+		if err == nil {
+			rv.SetNaturalContext(naturalContext)
 		}
 	}
 	return err

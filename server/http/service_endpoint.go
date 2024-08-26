@@ -528,7 +528,6 @@ func (this *HttpEndpoint) UpdateNodeToNodeEncryptionLevel() {
 }
 
 func (this *HttpEndpoint) SetupSSL() error {
-
 	err := cbauth.RegisterConfigRefreshCallback(func(configChange uint64) error {
 		// Both flags could be set here.
 		settingsUpdated := false

@@ -14,6 +14,7 @@ import (
 	"encoding/json"
 	"encoding/xml"
 	"fmt"
+	"html"
 	"io"
 	"net"
 	"net/http"
@@ -163,6 +164,60 @@ func (this *httpRequest) Failed(srvr *server.Server) {
 	this.Stop(server.FATAL)
 }
 
+func (this *httpRequest) CompletedNaturalRequest(srvr *server.Server) {
+	this.SetState(server.COMPLETED)
+	switch this.format {
+	case XML:
+		this.completedNaturalRequestXML(srvr)
+	default:
+		this.completedNaturalRequestJSON(srvr)
+	}
+	this.writer.noMoreData()
+	this.Stop(server.COMPLETED)
+}
+
+func (this *httpRequest) completedNaturalRequestXML(srvr *server.Server) {
+	prefix, indent := this.prettyStrings(srvr.Pretty(), false)
+	this.writeString("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<query>")
+	this.writeRequestIDXML(prefix)
+	this.writeClientContextIDXML(prefix)
+	this.writeErrorsXML(prefix, indent)
+	this.writeWarningsXML(prefix, indent)
+	this.writeStateXML(this.State(), prefix)
+	this.writeGeneratedStatementXML(prefix, indent)
+
+	this.markTimeOfCompletion(time.Now())
+
+	this.writeMetricsXML(srvr.Metrics(), prefix, indent)
+
+	this.writeServerlessXML(srvr.Metrics(), prefix, indent)
+	this.writeProfileXML(srvr.Profile(), prefix, indent)
+	this.writeControlsXML(srvr.Controls(), prefix, indent)
+	this.writeLogXML(prefix, indent)
+	this.writeString("\n</query>")
+}
+
+func (this *httpRequest) completedNaturalRequestJSON(srvr *server.Server) {
+	prefix, indent := this.prettyStrings(srvr.Pretty(), false)
+	this.writeString("{\n")
+	this.writeRequestID(prefix)
+	this.writeClientContextID(prefix)
+	this.writeErrors(prefix, indent)
+	this.writeWarnings(prefix, indent)
+	this.writeState(this.State(), prefix)
+	this.writeGeneratedStatement(prefix, indent)
+
+	this.markTimeOfCompletion(time.Now())
+
+	this.writeMetrics(srvr.Metrics(), prefix, indent)
+
+	this.writeServerless(srvr.Metrics(), prefix, indent)
+	this.writeProfile(srvr.Profile(), prefix, indent)
+	this.writeControls(srvr.Controls(), prefix, indent)
+	this.writeLog(prefix, indent)
+	this.writeString("\n}\n")
+}
+
 func (this *httpRequest) failedJSON(srvr *server.Server) {
 	prefix, indent := this.prettyStrings(srvr.Pretty(), false)
 	this.writeString("{\n")
@@ -247,7 +302,6 @@ func (this *httpRequest) Execute(srvr *server.Server, context *execution.Context
 
 		// No need to wait for writer
 	case <-this.StopExecute():
-
 		if this.State() != server.ABEND {
 			// wait for operator before continuing
 			this.writer.getInternal()
@@ -311,6 +365,7 @@ func (this *httpRequest) writePrefix(srvr *server.Server, signature value.Value,
 		this.writeRequestID(prefix) &&
 		this.writeClientContextID(prefix) &&
 		this.writePrepared(prefix, indent) &&
+		this.writeGeneratedStatement(prefix, indent) &&
 		this.writeSignature(srvr.Signature(), signature, prefix, indent) &&
 		this.writeString(",\n") &&
 		this.writeString(prefix) &&
@@ -322,6 +377,7 @@ func (this *httpRequest) writePrefixXML(srvr *server.Server, signature value.Val
 		this.writeRequestIDXML(prefix) &&
 		this.writeClientContextIDXML(prefix) &&
 		this.writePreparedXML(prefix, indent) &&
+		this.writeGeneratedStatementXML(prefix, indent) &&
 		this.writeSignatureXML(srvr.Signature(), signature, prefix, indent) &&
 		this.writeString("\n") &&
 		this.writeString(prefix) &&
@@ -422,6 +478,35 @@ func (this *httpRequest) writeSignatureXML(server_flag bool, signature value.Val
 		!this.writeValue(signature, newPrefix, indent, true) ||
 		(newPrefix != "" && !this.writeString(newPrefix[:len(prefix)+1])) ||
 		this.writeString("</signature>")
+}
+
+func (this *httpRequest) writeGeneratedStatement(prefix, indent string) bool {
+	if this.Natural() == "" {
+		return true
+	}
+
+	e, err := json.Marshal(this.Statement())
+
+	if err != nil || !(this.writeString(",\n") && this.writeString(prefix) &&
+		this.writeString("\"generated_statement\": ") && this.writeString(string(e))) {
+		logging.Infof("Error writing generated statement: %v", err)
+		return false
+	}
+	return true
+}
+
+func (this *httpRequest) writeGeneratedStatementXML(prefix, indent string) bool {
+	if this.Natural() == "" {
+		return true
+	}
+	if prefix != "" {
+		if !this.writeString("\n") || !this.writeString(prefix) {
+			return false
+		}
+	}
+
+	return this.writeString("<generated_statement>") && this.writeString(html.EscapeString(this.Statement())) &&
+		this.writeString("</generated_statement>")
 }
 
 func (this *httpRequest) prettyStrings(serverPretty, result bool) (string, string) {

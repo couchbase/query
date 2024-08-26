@@ -36,6 +36,7 @@ import (
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/logging/event"
 	"github.com/couchbase/query/memory"
+	"github.com/couchbase/query/natural"
 	"github.com/couchbase/query/parser/n1ql"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/planner"
@@ -736,8 +737,104 @@ func (this *Server) IsHealthy() bool {
 	return !this.unboundQueue.isFull() && !this.plusQueue.isFull()
 }
 
-func (this *Server) ServiceRequest(request Request) bool {
+func processNaturalReqArgs(request Request) (nlcontext, nlCred, nlOrgId string, err errors.Error) {
+	if nlcontext = request.NaturalContext(); nlcontext == "" {
+		err = errors.NewNaturalLanguageRequestError(errors.E_NL_MISSING_NL_PARAM, "\"natural_context\"")
+		return
+	}
+
+	if nlCred = request.NaturalCred(); nlCred == "" {
+		err = errors.NewNaturalLanguageRequestError(errors.E_NL_MISSING_NL_PARAM, "\"natural_cred\"")
+		return
+	}
+
+	if nlOrgId = request.NaturalOrganizationId(); nlOrgId == "" {
+		err = errors.NewNaturalLanguageRequestError(errors.E_NL_MISSING_NL_PARAM, "\"natural_orgid\"")
+		return
+	}
+
+	return
+}
+
+func (this *Server) serviceNaturalRequest(request Request) (bool, bool) {
+	var nlcontext string
+	var nlCred string
+	var nlOrgId string
+	var namespace, bucket, scope string
+	var inferKeyspaceNames []string
+	var err errors.Error
+
+	nlquery := request.Natural()
+	if nlquery == "" {
+		return false, true
+	}
+
+	if !util.IsFeatureEnabled(util.GetN1qlFeatureControl(), util.N1QL_NATURAL_LANG_REQ) {
+		request.Fail(errors.NewNaturalLanguageRequestError(errors.E_NL_REQ_FEAT_DISABLED))
+		request.Failed(this)
+		return true, false
+	}
+
+	nlcontext, nlCred, nlOrgId, err = processNaturalReqArgs(request)
+	if err != nil {
+		request.Fail(err)
+		request.Failed(this)
+		return true, false
+	}
+
+	namespace, bucket, scope, inferKeyspaceNames = natural.ParseNaturalLanguageContext(nlcontext)
+	if namespace != "" && namespace[0] == '`' {
+		namespace = namespace[1 : len(namespace)-1]
+	} else {
+		namespace = "default"
+	}
+
+	if bucket[0] == '`' {
+		bucket = bucket[1 : len(bucket)-1]
+	}
+
+	if scope[0] == '`' {
+		scope = scope[1 : len(scope)-1]
+	}
+	request.SetNamespace(namespace)
+
 	if !this.setupRequestContext(request) {
+		request.Failed(this)
+		return true, false
+	}
+
+	var sqlStmt, queryContext string
+	var nlstmt algebra.Statement
+	nlstmt, sqlStmt, queryContext, err = natural.ProcessRequest(nlCred, nlOrgId,
+		nlquery, namespace, bucket, scope, inferKeyspaceNames, request.ExecutionContext(),
+		request.Output().AddPhaseTime)
+
+	if err != nil {
+		request.Fail(err)
+		request.Failed(this)
+		return true, false
+	}
+
+	request.SetStatement(sqlStmt)
+	request.SetQueryContext(queryContext)
+	request.IncrementStatementCount()
+	request.SetNaturalStatement(nlstmt)
+
+	if nlstmt.Type() != "SELECT" {
+		request.CompletedNaturalRequest(this)
+		return true, false
+	}
+
+	return false, false
+}
+
+func (this *Server) ServiceRequest(request Request) bool {
+
+	stop, needSetup := this.serviceNaturalRequest(request)
+
+	if stop {
+		return true // so that StatusServiceUnavailable will not return
+	} else if needSetup && !this.setupRequestContext(request) {
 		request.Failed(this)
 		return true // so that StatusServiceUnavailable will not return
 	}
@@ -746,7 +843,12 @@ func (this *Server) ServiceRequest(request Request) bool {
 }
 
 func (this *Server) PlusServiceRequest(request Request) bool {
-	if !this.setupRequestContext(request) {
+
+	stop, needSetup := this.serviceNaturalRequest(request)
+
+	if stop {
+		return true // so that StatusServiceUnavailable will not return
+	} else if needSetup && !this.setupRequestContext(request) {
 		request.Failed(this)
 		return true // so that StatusServiceUnavailable will not return
 	}
@@ -1625,11 +1727,18 @@ func (this *Server) getPrepared(request Request, context *execution.Context) (*p
 	}
 
 	if prepared == nil {
-		parse := util.Now()
-		stmt, err := n1ql.ParseStatement2(request.Statement(), context.Namespace(), request.QueryContext(), context)
-		request.Output().AddPhaseTime(execution.PARSE, util.Now().Sub(parse))
-		if err != nil {
-			return nil, errors.NewParseSyntaxError(err, "")
+
+		var stmt algebra.Statement
+		var err error
+		if nlstmt := request.NaturalStatement(); nlstmt != nil {
+			stmt = nlstmt
+		} else {
+			parse := util.Now()
+			stmt, err = n1ql.ParseStatement2(request.Statement(), context.Namespace(), request.QueryContext(), context)
+			request.Output().AddPhaseTime(execution.PARSE, util.Now().Sub(parse))
+			if err != nil {
+				return nil, errors.NewParseSyntaxError(err, "")
+			}
 		}
 
 		isPrepare := false

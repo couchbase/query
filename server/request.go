@@ -19,6 +19,7 @@ import (
 	"unicode/utf8"
 
 	atomic "github.com/couchbase/go-couchbase/platform"
+	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
@@ -66,6 +67,17 @@ type Request interface {
 	SetClientID(id string)
 	Statement() string
 	SetStatement(statement string)
+	IncrementStatementCount()
+	Natural() string
+	SetNatural(natural string)
+	SetNaturalContext(s string)
+	NaturalContext() string
+	SetNaturalCred(cred string)
+	NaturalCred() string
+	SetNaturalOrganizationId(orgId string)
+	NaturalOrganizationId() string
+	SetNaturalStatement(algebra.Statement)
+	NaturalStatement() algebra.Statement
 	Prepared() *plan.Prepared
 	SetPrepared(prepared *plan.Prepared)
 	Type() string
@@ -157,6 +169,7 @@ type Request interface {
 	Output() execution.Output
 	Servicing()
 	Fail(err errors.Error)
+	CompletedNaturalRequest(srvr *Server)
 	Error(err errors.Error)
 	Execute(server *Server, context *execution.Context, reqType string, signature value.Value, startTx bool)
 	NotifyStop(stop execution.Operator)
@@ -404,6 +417,11 @@ type BaseRequest struct {
 	logLevel             logging.Level
 	durationStyle        util.DurationStyle
 	seqScanKeys          int64
+	natural              string
+	naturalCred          string
+	naturalOrgId         string
+	naturalContext       string
+	nlStatement          algebra.Statement
 }
 
 type requestIDImpl struct {
@@ -1608,4 +1626,44 @@ func (this *BaseRequest) SessionMemory() uint64 {
 		return this.executionContext.SessionMemory()
 	}
 	return 0
+}
+
+func (this *BaseRequest) SetNatural(natural string) {
+	this.natural = natural
+}
+
+func (this *BaseRequest) Natural() string {
+	return this.natural
+}
+
+func (this *BaseRequest) SetNaturalCred(cred string) {
+	this.naturalCred = cred
+}
+
+func (this *BaseRequest) NaturalCred() string {
+	return this.naturalCred
+}
+
+func (this *BaseRequest) SetNaturalOrganizationId(orgId string) {
+	this.naturalOrgId = orgId
+}
+
+func (this *BaseRequest) NaturalOrganizationId() string {
+	return this.naturalOrgId
+}
+
+func (this *BaseRequest) SetNaturalContext(naturalContext string) {
+	this.naturalContext = naturalContext
+}
+
+func (this *BaseRequest) NaturalContext() string {
+	return this.naturalContext
+}
+
+func (this *BaseRequest) SetNaturalStatement(nlstmt algebra.Statement) {
+	this.nlStatement = nlstmt
+}
+
+func (this *BaseRequest) NaturalStatement() algebra.Statement {
+	return this.nlStatement
 }

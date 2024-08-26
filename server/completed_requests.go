@@ -95,6 +95,7 @@ type RequestLogEntry struct {
 	SessionMemory            uint64
 	Analysis                 []interface{}
 	SqlID                    string
+	NaturalLanguage          string
 }
 
 type qualifier interface {
@@ -690,6 +691,10 @@ func LogRequest(request_time, service_time, transactionElapsedTime time.Duration
 		re.UserAgent = userAgent
 	}
 
+	if natural := request.Natural(); natural != "" {
+		re.NaturalLanguage = natural
+	}
+
 	clientId := request.ClientID().String()
 	if clientId != "" {
 		re.ClientId = clientId
@@ -746,6 +751,9 @@ func (request *RequestLogEntry) Format(profiling bool, redact bool, durStyle uti
 	reqMap["n1qlFeatCtrl"] = request.FeatureControls
 	if request.QueryContext != "" {
 		reqMap["queryContext"] = request.QueryContext
+	}
+	if request.NaturalLanguage != "" {
+		reqMap["naturalLanguagePrompt"] = util.Redacted(request.NaturalLanguage, redact)
 	}
 	if request.Statement != "" {
 		reqMap["statement"] = util.Redacted(request.Statement, redact)

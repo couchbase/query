@@ -7489,6 +7489,281 @@ var errData = []ErrData{
 		},
 	},
 	{
+		Code:        E_NL_CREATE_SESSIONS_REQ, // 19200,
+		symbol:      "E_NL_CREATE_SESSIONS_REQ",
+		Description: "Failed to create a new request to «sessions url»",
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_NL_SEND_SESSIONS_REQ, // 19201
+		symbol:      "E_NL_SEND_SESSIONS_REQ",
+		Description: "Failed to send the request to «sessions api» to get JWT",
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_NL_SESSIONS_AUTH, // 19202
+		symbol:      "E_NL_SESSIONS_AUTH",
+		Description: "Sessions API Authorization failed: \"natural_cred\" «natural_cred» is not authorized",
+		IsUser:      YES,
+		Action: []string{
+			"Create a Couchbase cloud account",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_NL_SESSIONS_RESP_READ, // 19203
+		symbol:      "E_NL_SESSIONS_RESP_READ",
+		Description: "Error reading the response from «sessions api»",
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_NL_SESSIONS_RESP_UNMARSHAL, // 19204
+		symbol:      "E_NL_SESSIONS_RESP_UNMARSHAL",
+		Description: "Unmarshalling response from «sessions api» failed: ",
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_NL_SESSIONS_PARSE_EXPIRE_TIME, // 19205
+		symbol:      "E_NL_SESSIONS_PARSE_EXPIRE_TIME",
+		Description: "Error parsing \"expiresAt\": «expiresAt»",
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_NL_PROMPT_SCHEMA_MARSHAL, // 19206
+		symbol:      "E_NL_PROMPT_SCHEMA_MARSHAL",
+		Description: "Error marshalling schema information for prompt:",
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_NL_CHATCOMPLETIONS_PROMPT_MARSHAL, // 19207
+		symbol:      "E_NL_CHATCOMPLETIONS_PROMPT_MARSHAL",
+		Description: "Error marshalling prompt for chat completions API request",
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_NL_SEND_CHATCOMPLETIONS_REQ, // 19208
+		symbol:      "E_NL_SEND_CHATCOMPLETIONS_REQ",
+		Description: "Couldn't send chat completions request to «chat completions api»",
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_NL_CHATCOMPLETIONS_REQ_FAILED, // 19209
+		symbol:      "E_NL_CHATCOMPLETIONS_REQ_FAILED",
+		Description: "Chat completions request failed with status «http-status-code»",
+		IsUser:      YES,
+		Reason: []string{
+			"Status 429: Rate limited. The natural language processing facilities are limiting the number of requests.",
+			"Status 404: Unauthorized. Authorization for natural language processing failed.",
+		},
+		Action: []string{
+			"Status 429: Retry later.",
+			"Status 404: Verify the credentials in the \"natural_cred\" parameter.",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_NL_CHATCOMPLETIONS_READ_RESP_STREAM, // 19210
+		symbol:      "E_NL_CHATCOMPLETIONS_READ_RESP_STREAM",
+		Description: "Error reading response stream from chat completion API «url»",
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_NL_CHATCOMPLETIONS_RESP_UNMARSHAL, // 19211
+		symbol:      "E_NL_CHATCOMPLETIONS_RESP_UNMARSHAL",
+		Description: "Error unmarshalling chat completions response",
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_NL_ERR_CHATCOMPLETIONS_RESP, // 19212
+		symbol:      "E_NL_ERR_CHATCOMPLETIONS_RESP",
+		Description: "LLM error: «err»",
+		IsUser:      MAYBE,
+		Reason: []string{
+			"\"natural\" parameter doesn't prompt for a SELECT query.",
+			"\"natural\" parameter is not a valid prompt.",
+		},
+		Action: []string{
+			"Try rewording your request.",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_NL_PROMPT_COLLNAMES, // 19213
+		symbol:      "E_NL_PROMPT_COLLNAMES",
+		Description: "Couldn't get keyspace names in «namespace:bucket.scope» for the prompt",
+		IsUser:      MAYBE,
+		Reason: []string{
+			"Failed to load namespace, bucket or scope from the datastore",
+		},
+		Action: []string{
+			"Ensure the validity of the information passed in the \"natural_context\" parameter.",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_NL_MISSING_NL_PARAM, // 19214
+		symbol:      "E_NL_MISSING_NL_PARAM",
+		Description: "Natural Language request expects «param» request parameter to be set",
+		IsUser:      YES,
+		Reason: []string{
+			"\"natural_cred\", \"natural_context\" and \"natural_orgid\" parameters are required when sending a request " +
+				"using the \"natural\" parameter",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_NL_PARSE_GENERATED_STMT, // 19215
+		symbol:      "E_NL_PARSE_GENERATED_STMT",
+		Description: "Error parsing generated statement: «generated_statement»",
+		IsUser:      MAYBE,
+		Reason: []string{
+			"Syntax error in generated statement.",
+		},
+		Action: []string{
+			"Examine the \"generated_stmt\" field in the response, adjust and re-submit as a direct statement execution request.",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:   E_NL_CONTEXT, // 19216
+		symbol: "E_NL_CONTEXT",
+		Description: "Invalid format for \"natural_context\" request parameter: " +
+			"argument doesn't resemble [«namespace»:]«bucket».«scope»[.[«up_to_4_collections»]]",
+		IsUser: YES,
+		Reason: []string{
+			"The required format is <<bucket>>.<<scope>> or <<bucket>>.<<scope>>.[<<list of up to 4 collections>>>].",
+		},
+		Action: []string{
+			"Revise the \"natural_context\" parameter.",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_NL_PROMPT_INFER, // 19217
+		symbol:      "E_NL_PROMPT_INFER",
+		Description: "Schema inferring failed for keyspace «keyspace»",
+		IsUser:      YES,
+		Reason: []string{
+			"A collection passed in the \"natural_context\" doesn't exist in the cluster.",
+		},
+		Action: []string{
+			"Ensure all collections passed in the \"natural_context\" exist.",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_NL_ORG_NOT_FOUND, // 19218
+		symbol:      "E_NL_ORG_NOT_FOUND",
+		Description: "Organization: «organization» not found",
+		IsUser:      YES,
+		Reason: []string{
+			"The organisation specified in the \"natural_orgid\" parameter was not found by the chat completions API.",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:   E_NL_ORG_UNAUTH, // 19219
+		symbol: "E_NL_ORG_UNAUTH",
+		Description: "Access to organisation «organization» is not authorized." +
+			" Or collison in JWT refresh due to an external client",
+		IsUser: MAYBE,
+		Reason: []string{
+			"Organisation exists but the \"natural_creds\" credentials lack permission to access it.",
+			"Concurrent JWT refresh by external clients.",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_NL_CREATE_CHATCOMPLETIONS_REQ, // 19220
+		symbol:      "E_NL_CREATE_CHATCOMPLETIONS_REQ",
+		Description: "Failed to create a new request to «chat completions api»",
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_NL_TOO_MANY_WAITERS, // 19221
+		symbol:      "E_NL_TOO_MANY_WAITERS",
+		Description: "Too many waiters, dropping the request",
+		Reason: []string{
+			"natural language requests are throttled as there are no more free slots in the waiting queue",
+		},
+		Action: []string{
+			"retry after sometime",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_NL_TIMEOUT, // 19222
+		symbol:      "E_NL_TIMEOUT",
+		Description: "Timed out waiting to be processed.",
+		Reason: []string{
+			"natural language request timedout waiting to be processed",
+		},
+		Action: []string{
+			"retry after sometime",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_NL_REQ_FEAT_DISABLED, // 19223
+		symbol:      "E_NL_REQ_FEAT_DISABLED",
+		Description: "Natural language request processing is disabled.",
+		Reason: []string{
+			"The processing of natural language requests has been disabled.",
+		},
+		Action: []string{
+			"Enable natural language request processing before submitting a natural language request.",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
 		Code:        E_AUS_NOT_SUPPORTED, // 20000
 		Description: "Auto Update Statistics is not supported in Community Edition. It is an enterprise level feature.",
 		Reason: []string{

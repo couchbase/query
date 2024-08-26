@@ -81,6 +81,13 @@ const (
 	// Expression layer
 	ADVISOR
 
+	//  Natural Language request
+	NLPARSE
+	GETJWT
+	INFERSCHEMA
+	CHATCOMPLETIONSREQ
+	NLWAIT
+
 	// Server layer
 	INSTANTIATE
 	PARSE
@@ -134,6 +141,12 @@ var _PHASE_NAMES = []string{
 	PRIMARY_SCAN_SEQ: "primaryScan.Seq",
 
 	ADVISOR: "advisor",
+
+	NLPARSE:            "nlparse",
+	GETJWT:             "getjwt",
+	INFERSCHEMA:        "inferschema",
+	CHATCOMPLETIONSREQ: "chatcompletionsrequest",
+	NLWAIT:             "nlwait",
 
 	INSTANTIATE:            "instantiate",
 	PARSE:                  "parse",
