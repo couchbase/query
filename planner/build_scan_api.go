@@ -334,6 +334,10 @@ func (this *builder) getIndexPartitionSets(partitionKeys expression.Expressions,
 		return nil, err
 	}
 
+	if pred == nil || len(partitionKeys) == 0 {
+		return nil, nil
+	}
+
 	// use a virtual index with the partition keys passed in as index keys, such that we can
 	// try to generate index spans in order to determine whether each of the partition keys
 	// has equality (EQ, IN) predicates for purpose of partition elimination
@@ -358,7 +362,8 @@ func (this *builder) getIndexPartitionSets(partitionKeys expression.Expressions,
 	spans, exact, err := SargFor(pred, nil, entry, keys, false, nil, max, false, false,
 		baseKeyspace, this.keyspaceNames, false, this.aliases, this.context)
 	if err != nil || spans == nil || spans.Size() == 0 || !exact {
-		return nil, err
+		// ignore error here, no partition elimination in that case
+		return nil, nil
 	}
 
 	// TermSpans only, even in case of OR clause, it's only relevant if all keys are sargable
