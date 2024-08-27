@@ -302,6 +302,10 @@ func cbAuthorize(s authSource, privileges *auth.Privileges, credentials *auth.Cr
 		//		2. If cert not present then we need to use other methods
 		//		   (partially done by auth web creds)
 
+		// AuthWebCreds also handles authentication for on-behalf-of requests.
+		// Authenticates the user acting on behalf of.
+		// Returns a credentials object corresponding to the user the request is on-behalf-of.
+
 		req := credentials.HttpRequest
 		if req != nil {
 			creds, err := s.authWebCreds(req)
