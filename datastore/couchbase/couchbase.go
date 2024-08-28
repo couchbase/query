@@ -523,7 +523,8 @@ func (s *store) GetUserBuckets(creds *auth.Credentials) []string {
 	if creds == nil || len(creds.CbauthCredentialsList) == 0 {
 		return []string{}
 	}
-	res, _ := cbauth.GetUserBuckets(creds.CbauthCredentialsList[0].User())
+	res, _ := creds.CbauthCredentialsList[0].GetBuckets()
+
 	return res
 }
 
@@ -1266,7 +1267,7 @@ func (p *namespace) Objects(credentials *auth.Credentials, filter func(string) b
 		return nil, errors.NewDatastoreUnableToRetrieveBuckets(fmt.Errorf("empty credentials"))
 	}
 
-	b, err := cbauth.GetUserBuckets(credentials.CbauthCredentialsList[0].User())
+	b, err := credentials.CbauthCredentialsList[0].GetBuckets()
 	if err != nil {
 		return nil, errors.NewDatastoreUnableToRetrieveBuckets(err)
 	}
