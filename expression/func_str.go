@@ -10,6 +10,7 @@ package expression
 
 import (
 	"bytes"
+	"compress/gzip"
 	"compress/zlib"
 	"encoding/base64"
 	"io"
@@ -1757,8 +1758,14 @@ func (this *Uncompress) Evaluate(item value.Value, context Context) (value.Value
 	e := base64.NewDecoder(base64.StdEncoding, b)
 	w, err := zlib.NewReader(e)
 	if err != nil {
-		// if it isn't compressed text, just return the raw text
-		return value.NewValue(arg.ToString()), nil
+		// need to reset the stream before trying an alternative format
+		b = bytes.NewBufferString(arg.ToString())
+		e = base64.NewDecoder(base64.StdEncoding, b)
+		w, err = gzip.NewReader(e)
+		if err != nil {
+			// if it isn't compressed text, just return the raw text
+			return value.NewValue(arg.ToString()), nil
+		}
 	}
 	text, err := io.ReadAll(w)
 	if err != nil {
