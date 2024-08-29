@@ -1,149 +1,227 @@
 [
-    {
-        "statements":"SELECT META().xattrs.`_sync` from product where test_id='xattrs'",
-        "ordered":false,
-        "results": [
-        {},
-        {},
-        {
-            "_sync": {
-                "id": 231,
-                "name": "Information about products"
-            }
-        },
-        {}
-    ]
-    },
-    {
-        "statements":"select meta().xattrs.`_sync`, meta().xattrs.`$document`.deleted, product is null as DELETED from product use keys ['product0_xattrs']",
-        "ordered":false,
-        "results": [
-        {
-            "DELETED": true,
-            "_sync": {
-                "id": 23,
-                "name": "Information about products"
-            },
-            "deleted": true
+  {
+    "statements": "SELECT META().xattrs.`_sync` from product where test_id='xattrs'",
+    "ordered": false,
+    "results": [
+      {},
+      {},
+      {
+        "_sync": {
+          "id": 231,
+          "name": "Information about products"
         }
+      },
+      {}
     ]
-    },
-    {
-        "statements":"SELECT META().xattrs.`userAttr` from product where test_id='xattrs'",
-        "ordered":false,
-        "results": [
-        {},
-        {},
-        {},
-        {
-            "userAttr": [
-                "Product 1",
-                "Product 10"
-            ]
+  },
+  {
+    "statements": "select meta().xattrs.`_sync`, meta().xattrs.`$document`.deleted, product is null as DELETED from product use keys ['product0_xattrs']",
+    "ordered": false,
+    "results": [
+      {
+        "DELETED": true,
+        "_sync": {
+          "id": 23,
+          "name": "Information about products"
+        },
+        "deleted": true
+      }
+    ]
+  },
+  {
+    "statements": "SELECT META().xattrs.`userAttr` from product where test_id='xattrs'",
+    "ordered": false,
+    "results": [
+      {},
+      {},
+      {},
+      {
+        "userAttr": [
+          "Product 1",
+          "Product 10"
+        ]
+      }
+    ]
+  },
+  {
+    "statements": "SELECT META().xattrs.`$document`.deleted from product where test_id='xattrs'",
+    "ordered": false,
+    "results": [
+      {
+        "deleted": false
+      },
+      {
+        "deleted": false
+      },
+      {
+        "deleted": false
+      },
+      {
+        "deleted": false
+      }
+    ]
+  },
+  {
+    "statements": "SELECT META().xattrs.`_sync` from product use keys [\"product0_xattrs\",\"product1_xattrs\"]",
+    "ordered": false,
+    "results": [
+      {
+        "_sync": {
+          "id": 23,
+          "name": "Information about products"
         }
+      },
+      {}
     ]
-    },
-    {
-        "statements":"SELECT META().xattrs.`$document`.deleted from product where test_id='xattrs'",
-        "ordered":false,
-        "results": [
-        {
-            "deleted": false
+  },
+  {
+    "statements": "SELECT META().xattrs.`$document`.deleted, META().xattrs.`userAttr` from product where test_id='xattrs'",
+    "ordered": false,
+    "results": [
+      {
+        "deleted": false
+      },
+      {
+        "deleted": false
+      },
+      {
+        "deleted": false
+      },
+      {
+        "deleted": false,
+        "userAttr": [
+          "Product 1",
+          "Product 10"
+        ]
+      }
+    ]
+  },
+  {
+    "statements": "select META().xattrs from product where test_id='xattrs'",
+    "ordered": false,
+    "results": [
+      {},
+      {},
+      {},
+      {}
+    ]
+  },
+  {
+    "statements": "SELECT META().xattrs.`_sync`.name,META().xattrs.`_sync`.id, name as product_name, price from product where test_id='xattrs' ",
+    "ordered": false,
+    "results": [
+      {
+        "product_name": "Fotodiox Thermo Lens Cup with Stainless Steel Insulated Tumbler, Coffee and Refreshment Mug, 1:1 Nikon Lens imitation Thermo Cup (Modeling 24-70mm F2.8G Lens), 16oz"
+      },
+      {
+        "product_name": "Fotodiox Thermo Lens Cup with Stainless Steel Insulated Tumbler, Coffee and Refreshment Mug, 1:1 Nikon Lens imitation Thermo Cup (Modeling 24-70mm F2.8G Lens), 16oz"
+      },
+      {
+        "id": 231,
+        "name": "Information about products",
+        "product_name": "Briggs & Riley Luggage Executive Clamshell Backpack"
+      },
+      {
+        "product_name": "Briggs & Riley 15.4 Inch Slim Rolling Briefcase"
+      }
+    ]
+  },
+  {
+    "statements": "update product SET new_val = meta().xattrs.`_sync`.name where test_id='xattrs' returning meta().id,new_val",
+    "ordered": false,
+    "results": [
+      {
+        "id": "product100_xattrs"
+      },
+      {
+        "id": "product100_xattrs_dup"
+      },
+      {
+        "id": "product10_xattrs",
+        "new_val": "Information about products"
+      },
+      {
+        "id": "product1_xattrs"
+      }
+    ]
+  },
+  {
+    "statements": "INSERT INTO shellTest VALUES('xattr_mutation_0',{'main':'inserted'},{'xattrs':{'test':'simple'}})",
+    "results": []
+  },
+  {
+    "statements": "SELECT s, meta().xattrs.test FROM shellTest s USE KEYS['xattr_mutation_0']",
+    "results": [
+      {
+        "s": {
+          "main": "inserted"
         },
-        {
-            "deleted": false
+        "test": "simple"
+      }
+    ]
+  },
+  {
+    "statements": "UPSERT INTO shellTest VALUES('xattr_mutation_0',{'main':'upserted'},{'xattrs':{'test':{'composite':true}}})",
+    "results": []
+  },
+  {
+    "statements": "SELECT s, meta().xattrs.test FROM shellTest s USE KEYS['xattr_mutation_0']",
+    "results": [
+      {
+        "s": {
+          "main": "upserted"
         },
-        {
-            "deleted": false
-        },
-        {
-            "deleted": false
+        "test": {
+          "composite": true
         }
+      }
     ]
-
-    },
-    {
-        "statements":"SELECT META().xattrs.`_sync` from product use keys [\"product0_xattrs\",\"product1_xattrs\"]",
-        "ordered":false,
-        "results": [
-        {
-            "_sync": {
-                "id": 23,
-                "name": "Information about products"
-            }
+  },
+  {
+    "statements": "UPDATE shellTest USE KEYS ['xattr_mutation_0'] SET main = 'updated', meta().xattrs.test.second = true, meta().xattrs.test2 = 'simple' UNSET meta().xattrs.test.composite",
+    "results": []
+  },
+  {
+    "statements": "SELECT s, meta().xattrs.test, meta().xattrs.test2 FROM shellTest s USE KEYS['xattr_mutation_0']",
+    "results": [
+      {
+        "s": {
+          "main": "updated"
         },
-        {}
+        "test": {
+          "second": true
+        },
+        "test2": "simple"
+      }
     ]
-    },
-    {
-        "statements":"SELECT META().xattrs.`$document`.deleted, META().xattrs.`userAttr` from product where test_id='xattrs'",
-        "ordered":false,
-        "results": [
-        {
-            "deleted": false
+  },
+  {
+    "statements": "UPDATE shellTest USE KEYS ['xattr_mutation_0'] SET main = 'updated again' UNSET meta().xattrs.test",
+    "results": []
+  },
+  {
+    "statements": "SELECT s, meta().xattrs.test, meta().xattrs.test2 FROM shellTest s USE KEYS['xattr_mutation_0']",
+    "results": [
+      {
+        "s": {
+          "main": "updated again"
         },
-        {
-            "deleted": false
-        },
-        {
-            "deleted": false
-        },
-        {
-            "deleted": false,
-            "userAttr": [
-                "Product 1",
-                "Product 10"
-            ]
+        "test2": "simple"
+      }
+    ]
+  },
+  {
+    "statements": "UPDATE shellTest USE KEYS ['xattr_mutation_0'] SET main = 'updated another time', meta().xattrs.test2 = MISSING",
+    "results": []
+  },
+  {
+    "statements": "SELECT s, meta().xattrs.test, meta().xattrs.test2 FROM shellTest s USE KEYS['xattr_mutation_0']",
+    "results": [
+      {
+        "s": {
+          "main": "updated another time"
         }
+      }
     ]
-    },
-    {
-        "statements":"select META().xattrs from product where test_id='xattrs'",
-        "ordered":false,
-        "results": [
-        {},
-        {},
-        {},
-        {}
-    ]
-    },
-    {
-        "statements":"SELECT META().xattrs.`_sync`.name,META().xattrs.`_sync`.id, name as product_name, price from product where test_id='xattrs' ",
-        "ordered":false,
-        "results": [
-        {
-            "product_name": "Fotodiox Thermo Lens Cup with Stainless Steel Insulated Tumbler, Coffee and Refreshment Mug, 1:1 Nikon Lens imitation Thermo Cup (Modeling 24-70mm F2.8G Lens), 16oz"
-        },
-        {
-            "product_name": "Fotodiox Thermo Lens Cup with Stainless Steel Insulated Tumbler, Coffee and Refreshment Mug, 1:1 Nikon Lens imitation Thermo Cup (Modeling 24-70mm F2.8G Lens), 16oz"
-        },
-        {
-            "id": 231,
-            "name": "Information about products",
-            "product_name": "Briggs & Riley Luggage Executive Clamshell Backpack"
-        },
-        {
-            "product_name": "Briggs & Riley 15.4 Inch Slim Rolling Briefcase"
-        }
-    ]
-    },
-    {
-        "statements":"update product SET new_val = meta().xattrs.`_sync`.name where test_id='xattrs' returning meta().id,new_val",
-        "ordered":false,
-        "results": [
-        {
-            "id": "product100_xattrs"
-        },
-        {
-            "id": "product100_xattrs_dup"
-        },
-        {
-            "id": "product10_xattrs",
-            "new_val": "Information about products"
-        },
-        {
-            "id": "product1_xattrs"
-        }
-    ]
-    }
+  }
 ]
