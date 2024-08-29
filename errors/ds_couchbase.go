@@ -376,3 +376,9 @@ func NewSubDocSetError(e error) Error {
 	return &err{level: EXCEPTION, ICode: E_CB_SUBDOC_SET, IKey: "datastore.subdoc.set", cause: c,
 		InternalMsg: "Sub-doc set operation failed", InternalCaller: CallerN(1)}
 }
+
+func NewSysCollectionPrimaryIndexError(bucketName string) Error {
+	return &err{level: EXCEPTION, ICode: E_CB_SYS_COLLECTION_PRIMARY_INDEX, IKey: "datastore.syscollection.primary_index",
+		InternalMsg:    "Primary index on system collection not available for bucket " + bucketName,
+		InternalCaller: CallerN(1)}
+}
