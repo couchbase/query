@@ -3697,12 +3697,14 @@ func (s *store) CheckSystemCollection(bucketName, requestId string) errors.Error
 		// make sure the primary index is ONLINE
 		maxRetry := 10
 		interval := 250 * time.Millisecond
+		done := false
 		for i := 0; i < maxRetry; i++ {
 			state, _, er1 := sysIndex.State()
 			if er1 != nil {
 				return er1
 			}
 			if state == datastore.ONLINE {
+				done = true
 				break
 			} else if state == datastore.DEFERRED {
 				// build system index if it is deferred (e.g. just restored)
@@ -3725,7 +3727,10 @@ func (s *store) CheckSystemCollection(bucketName, requestId string) errors.Error
 				return er
 			}
 		}
+		if !done {
+			return errors.NewSysCollectionPrimaryIndexError(bucketName)
+		}
 	}
 
-	return er
+	return nil
 }

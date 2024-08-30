@@ -401,3 +401,9 @@ func NewIndexerVersionError(ver, cause string) Error {
 	return &err{level: EXCEPTION, ICode: E_INDEXER_VERSION, IKey: "datastore.indexer.version", cause: cause,
 		InternalMsg: "All indexer nodes must be version '" + ver + "' or later.", InternalCaller: CallerN(1)}
 }
+
+func NewSysCollectionPrimaryIndexError(bucketName string) Error {
+	return &err{level: EXCEPTION, ICode: E_CB_SYS_COLLECTION_PRIMARY_INDEX, IKey: "datastore.syscollection.primary_index",
+		InternalMsg:    "Primary index on system collection not available for bucket " + bucketName,
+		InternalCaller: CallerN(1)}
+}
