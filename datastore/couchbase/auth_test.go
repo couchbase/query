@@ -76,6 +76,10 @@ func (a authUser) IsAllowedInternal(permission string) (bool, error) {
 	return a.permissions[permission], nil
 }
 
+func (a authUser) GetBuckets() ([]string, error) {
+	return []string{"testbucket"}, nil
+}
+
 type testCase struct {
 	purpose       string
 	authSource    authSource

@@ -1699,16 +1699,16 @@ func (this *base) marshalTimes(r map[string]interface{}) {
 	if this.isRoot {
 		var versions []interface{}
 
-		if this.rootContext != nil {
-			if !this.rootContext.PlanPreparedTime().IsZero() {
-				r["#planPreparedTime"] = this.rootContext.PlanPreparedTime().Format(util.DEFAULT_FORMAT)
+		if rc := this.rootContext; rc != nil {
+			if !rc.PlanPreparedTime().IsZero() {
+				r["#planPreparedTime"] = rc.PlanPreparedTime().Format(util.DEFAULT_FORMAT)
 			}
-			subqueryTimes := this.rootContext.getSubqueryTimes()
+			subqueryTimes := rc.getSubqueryTimes()
 			if subqueryTimes != nil {
 				r["~subqueries"] = subqueryTimes
 			}
 
-			udfTimes := this.rootContext.getUdfStmtTimes()
+			udfTimes := rc.getUdfStmtTimes()
 
 			if udfTimes != nil {
 				r["~udfStatements"] = udfTimes
