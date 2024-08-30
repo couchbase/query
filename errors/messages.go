@@ -5739,6 +5739,21 @@ var errData = []ErrData{
 		},
 	},
 	{
+		Code:        E_CB_SYS_COLLECTION_PRIMARY_INDEX, // 12047
+		symbol:      "E_CB_SYS_COLLECTION_PRIMARY_INDEX",
+		Description: "Primary index on system collection not available for bucket «bucket»",
+		Reason: []string{
+			"Primary index on system collection for bucket <<bucket>> is taking longer than expected to be created.",
+		},
+		Action: []string{
+			"Retry action.",
+			"Contact support.",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
 		Code:        E_DATASTORE_CLUSTER, // 13012
 		symbol:      "E_DATASTORE_CLUSTER",
 		Description: "Error retrieving cluster «what»",

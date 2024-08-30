@@ -64,8 +64,9 @@ var lastActivity time.Time
 
 type migrateBucket struct {
 	sync.Mutex
-	name  string
-	state bucketState
+	name    string
+	state   bucketState
+	primary bool
 }
 
 var migrations map[string]*migrateBucket
@@ -721,7 +722,16 @@ func createPrimaryIndexes() {
 	if ds != nil {
 		migrationsLock.Lock()
 		for _, bucket := range migrations {
-			go createPrimaryIndex(ds, bucket.name)
+			create := false
+			bucket.Lock()
+			if !bucket.primary {
+				bucket.primary = true
+				create = true
+			}
+			bucket.Unlock()
+			if create {
+				go createPrimaryIndex(ds, bucket.name)
+			}
 		}
 		migrationsLock.Unlock()
 	}
