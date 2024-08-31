@@ -2636,10 +2636,21 @@ func getExpiration(options value.Value) (exptime int, present bool) {
 	return
 }
 
-func getXattrs(options value.Value) map[string]interface{} {
+func getMutatableXattrs(options value.Value) map[string]interface{} {
 	if options != nil && options.Type() == value.OBJECT {
 		if v, ok := options.Field("xattrs"); ok && v.Type() == value.OBJECT {
-			return v.Actual().(map[string]interface{})
+			// extract and return non-virtual xattrs only
+			var rv map[string]interface{}
+			m := v.Actual().(map[string]interface{})
+			for k, v := range m {
+				if k[0] != '$' {
+					if rv == nil {
+						rv = make(map[string]interface{})
+					}
+					rv[k] = v
+				}
+			}
+			return rv
 		}
 	}
 	return nil
@@ -2780,7 +2791,7 @@ func (b *keyspace) singleMutationOp(kv value.Pair, op MutateOp, qualifiedName st
 		}
 		val = kv.Value.ActualForIndex()
 		exptime, present = getExpiration(kv.Options)
-		xattrs = getXattrs(kv.Options)
+		xattrs = getMutatableXattrs(kv.Options)
 	}
 
 	switch op {

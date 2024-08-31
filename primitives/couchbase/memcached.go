@@ -1305,7 +1305,9 @@ func (b *Bucket) WriteWithCAS(k string, flags, exp int, v interface{}, xattrs ma
 				res, err = mc.Append(vb, k, data, context...)
 			} else {
 				res, err = memcached.UnwrapMemcachedError(mc.SetSubdoc(vb, k, ops, false, exp, 0, context...))
-				if err != nil && res.Status == gomemcached.SUBDOC_BAD_MULTI {
+				if err == nil && res.Status == gomemcached.SUBDOC_BAD_MULTI {
+					err = processSubdocMultiError(ops, res)
+				} else if err != nil {
 					err = processSubdocMultiError(ops, err)
 				}
 			}
@@ -1316,7 +1318,9 @@ func (b *Bucket) WriteWithCAS(k string, flags, exp int, v interface{}, xattrs ma
 				res, err = mc.Set(vb, k, flags, exp, data, context...)
 			} else {
 				res, err = memcached.UnwrapMemcachedError(mc.SetSubdoc(vb, k, ops, false, exp, cas, context...))
-				if err != nil && res.Status == gomemcached.SUBDOC_BAD_MULTI {
+				if err == nil && res.Status == gomemcached.SUBDOC_BAD_MULTI {
+					err = processSubdocMultiError(ops, res)
+				} else if err != nil {
 					err = processSubdocMultiError(ops, err)
 				}
 			}
@@ -1397,7 +1401,9 @@ func (b *Bucket) WriteCasWithMT(k string, flags, exp int, cas uint64, v interfac
 			mark := util.Now()
 			res, err = mc.SetSubdoc(vb, k, ops, false, exp, cas, context...)
 			atomic.AddUint64(&b.opTime, uint64(util.Since(mark)))
-			if err != nil {
+			if err == nil && res.Status == gomemcached.SUBDOC_BAD_MULTI {
+				err = processSubdocMultiError(ops, res)
+			} else if err != nil {
 				err = processSubdocMultiError(ops, err)
 			}
 		}
@@ -1571,7 +1577,9 @@ func (b *Bucket) SetsSubDoc(key string, ops []memcached.SubDocOp, context ...*me
 		mark := util.Now()
 		response, err = mc.SetSubdoc(vb, key, ops, false, 0, 0, context...)
 		atomic.AddUint64(&b.opTime, uint64(util.Since(mark)))
-		if err != nil {
+		if err == nil && response.Status == gomemcached.SUBDOC_BAD_MULTI {
+			err = processSubdocMultiError(ops, response)
+		} else if err != nil {
 			err = processSubdocMultiError(ops, err)
 		}
 		return err
