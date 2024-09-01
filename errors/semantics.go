@@ -267,7 +267,7 @@ func NewVectorDistinctArrayKey() Error {
 func NewVectorConstantIndexKey(name string) Error {
 	return &err{level: EXCEPTION, ICode: E_VECTOR_CONSTANT_INDEX_KEY,
 		IKey:           "semantics_constant_index__key",
-		InternalMsg:    fmt.Sprintf("Vector expression '%s' cannot use a constant construct (object of array)", name),
+		InternalMsg:    fmt.Sprintf("Vector expression '%s' cannot use a constant construct (object or array)", name),
 		InternalCaller: CallerN(1)}
 }
 
