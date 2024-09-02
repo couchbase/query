@@ -27,9 +27,9 @@ has a parent Value.
 */
 type ScopeValue struct {
 	Value
-	nested bool
-	refCnt int32
 	parent Value
+	refCnt int32
+	nested bool
 }
 
 var scopePool util.LocklessPool
@@ -161,14 +161,22 @@ func (this *ScopeValue) ReadSpill(trackMem func(int64) error, r io.Reader, buf [
 
 func (this *ScopeValue) Copy() Value {
 	rv := newScopeValue(false)
-	rv.Value = this.Value.Copy()
+	if this.Value != nil {
+		switch v := this.Value.(type) {
+		case copiedObjectValue:
+			// already know not to recycle contents
+		case objectValue:
+			// replace with a copied object value so we know not to recycle the contents as they're now shared
+			this.Value = copiedObjectValue{objectValue: v}
+		default:
+		}
+		rv.Value = this.Value.Copy()
+	}
 	rv.parent = this.parent
 	if p := this.parent; p != nil {
 		p.Track()
 	}
 
-	// counterintuitive but nested values copies share fields,
-	// hence they don't recycle
 	rv.nested = false
 	return rv
 }
@@ -319,21 +327,26 @@ func (this *ScopeValue) recycle(lvl int32) {
 		p.Recycle()
 	}
 	if this.nested {
-		fields := this.Value.(objectValue)
-		for _, v := range fields {
-			switch v := v.(type) {
-			case *ScopeValue:
-				v.recycle(-2)
-			case *annotatedValue:
-				v.recycle(-2)
+		// we must respect that the content type may be restricting recycling
+		var fields objectValue
+		switch v := this.Value.(type) {
+		case copiedObjectValue:
+			fields = v.objectValue
+		case objectValue:
+			fields = v
+			// do this here to avoid calling recycle on values where it is a no-op
+			for _, v := range fields {
+				switch v := v.(type) {
+				case *ScopeValue:
+					v.recycle(-2)
+				case *annotatedValue:
+					v.recycle(-2)
+				}
 			}
 		}
 
 		// pool the map
-		// this is optimized as a map clear by golang
-		for k := range fields {
-			delete(fields, k)
-		}
+		clear(fields)
 		this.Value = fields
 		nestedPool.Put(unsafe.Pointer(this))
 	} else {

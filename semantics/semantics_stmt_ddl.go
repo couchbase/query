@@ -64,6 +64,10 @@ func (this *SemChecker) VisitCreateIndex(stmt *algebra.CreateIndex) (interface{}
 			if ok && all.Distinct() {
 				return nil, errors.NewVectorDistinctArrayKey()
 			}
+			switch expr.(type) {
+			case *expression.ObjectConstruct, *expression.ArrayConstruct:
+				return nil, errors.NewVectorConstantIndexKey(expr.String())
+			}
 		}
 
 		if ok && all.Flatten() {
@@ -81,36 +85,13 @@ func (this *SemChecker) VisitCreateIndex(stmt *algebra.CreateIndex) (interface{}
 					return nil, errors.NewCreateIndexAttributeMissing(fke.String(), fke.ErrorContext())
 				}
 				if fk.HasVector(pos) {
-					nvectors++
-					indexKey := fk.String()
-					if all.Distinct() {
-						return nil, errors.NewVectorDistinctArrayKey()
-					}
-					if fk.HasMissing(pos) {
-						return nil, errors.NewVectorIndexAttrError("INCLUDE MISSING", indexKey)
-					}
-					if fk.HasDesc(pos) {
-						return nil, errors.NewVectorIndexAttrError("DESC", indexKey)
-					}
-					switch fke.(type) {
-					case *expression.ObjectConstruct, *expression.ArrayConstruct:
-						return nil, errors.NewVectorConstantIndexKey(fke.String())
-					}
+					return nil, errors.NewIndexNotAllowed("Array Index with FLATTEN_KEYS using Vector Index Key", fke.String())
 				}
 			}
 		} else {
 			nkeys++
-			if term.HasAttribute(algebra.IK_VECTOR) {
-				nexpr := expr
-				if ok {
-					if array, ok1 := all.Array().(*expression.Array); ok1 {
-						nexpr = array.ValueMapping()
-					}
-				}
-				switch nexpr.(type) {
-				case *expression.ObjectConstruct, *expression.ArrayConstruct:
-					return nil, errors.NewVectorConstantIndexKey(nexpr.String())
-				}
+			if term.HasAttribute(algebra.IK_VECTOR) && ok {
+				return nil, errors.NewIndexNotAllowed("Array Index using Vector Index Key", expr.String())
 			}
 
 		}
