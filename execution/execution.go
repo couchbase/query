@@ -15,6 +15,9 @@ package execution
 import (
 	"encoding/json"
 
+	"github.com/couchbase/query/auth"
+	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
 )
@@ -68,4 +71,26 @@ type Operator interface {
 	accrueTime(b *base)
 
 	stashOutput()
+}
+
+func hasSystemXattrs(options value.Value) bool {
+	if options != nil && options.Type() == value.OBJECT {
+		if v, ok := options.Field("xattrs"); ok && v.Type() == value.OBJECT {
+			for k, _ := range v.Fields() {
+				if k[0] == '_' {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
+func authForSysXattrs(ks datastore.Keyspace, context *Context) errors.Error {
+	if ds := datastore.GetDatastore(); ds != nil {
+		privs := auth.NewPrivileges()
+		privs.Add(ks.QualifiedName(), auth.PRIV_XATTRS_WRITE, auth.PRIV_PROPS_NONE)
+		return ds.Authorize(privs, context.Credentials())
+	}
+	return nil
 }

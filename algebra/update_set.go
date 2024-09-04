@@ -60,6 +60,15 @@ func (this *Set) NonMutatedExpressions() expression.Expressions {
 	return exprs
 }
 
+func (this *Set) HasSystemXattrs() bool {
+	for _, term := range this.terms {
+		if term.HasSystemXattrs() {
+			return true
+		}
+	}
+	return false
+}
+
 /*
 Fully qualify identifiers for each term in the set terms.
 */
@@ -201,6 +210,13 @@ func (this *SetTerm) NonMutatedExpressions() expression.Expressions {
 	}
 
 	return exprs
+}
+
+func (this *SetTerm) HasSystemXattrs() bool {
+	if this.meta != nil {
+		return expression.HasSystemXattrs(this.path.(expression.Expression))
+	}
+	return false
 }
 
 /*

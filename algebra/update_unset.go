@@ -51,6 +51,15 @@ func (this *Unset) Expressions() expression.Expressions {
 	return exprs
 }
 
+func (this *Unset) HasSystemXattrs() bool {
+	for _, term := range this.terms {
+		if term.HasSystemXattrs() {
+			return true
+		}
+	}
+	return false
+}
+
 /*
 Fully qualify identifiers for each term in the Unset terms.
 */
@@ -129,6 +138,13 @@ func (this *UnsetTerm) Expressions() expression.Expressions {
 		exprs = append(exprs, this.meta)
 	}
 	return exprs
+}
+
+func (this *UnsetTerm) HasSystemXattrs() bool {
+	if this.meta != nil {
+		return expression.HasSystemXattrs(this.path.(expression.Expression))
+	}
+	return false
 }
 
 /*

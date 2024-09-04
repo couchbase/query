@@ -297,6 +297,9 @@ func (this *Update) Privileges() (*auth.Privileges, errors.Error) {
 	privs.Add(fullKeyspace, auth.PRIV_QUERY_UPDATE, props)
 	if this.returning != nil {
 		privs.Add(fullKeyspace, auth.PRIV_QUERY_SELECT, props)
+		if this.returning.HasSystemXattrs() {
+			privs.Add(fullKeyspace, auth.PRIV_XATTRS, props)
+		}
 	}
 
 	exprs := this.Expressions()
@@ -305,6 +308,10 @@ func (this *Update) Privileges() (*auth.Privileges, errors.Error) {
 		return nil, err
 	}
 	privs.AddAll(subprivs)
+
+	if (this.set != nil && this.set.HasSystemXattrs()) || (this.unset != nil && this.unset.HasSystemXattrs()) {
+		privs.Add(fullKeyspace, auth.PRIV_XATTRS_WRITE, props)
+	}
 
 	for _, expr := range exprs {
 		privs.AddAll(expr.Privileges())

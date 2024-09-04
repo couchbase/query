@@ -2641,8 +2641,7 @@ func getMutatableXattrs(options value.Value) map[string]interface{} {
 		if v, ok := options.Field("xattrs"); ok && v.Type() == value.OBJECT {
 			// extract and return non-virtual xattrs only
 			var rv map[string]interface{}
-			m := v.Actual().(map[string]interface{})
-			for k, v := range m {
+			for k, v := range v.Fields() {
 				if k[0] != '$' {
 					if rv == nil {
 						rv = make(map[string]interface{})
