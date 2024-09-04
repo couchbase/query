@@ -7432,4 +7432,78 @@ var errData = []ErrData{
 			"Server",
 		},
 	},
+	{
+		Code:        E_AUS_NOT_SUPPORTED, // 20000
+		Description: "Auto Update Statistics is not supported in Community Edition. It is an enterprise level feature.",
+		Reason: []string{
+			"An Auto Update Statistics related operation was attempted on a Community Edition Couchbase cluster.",
+		},
+		Action: []string{
+			"Consult the documentation for the feature you are trying to use.",
+		},
+		AppliesTo: []string{
+			"Community Edition",
+		},
+	},
+	{
+		Code:        E_AUS_NOT_INITIALIZED, // 20001,
+		Description: "Auto Update Statistics is not initialized for the node. It is only available on clusters migrated to a supported version.",
+		Reason: []string{
+			"An Auto Update Statistics related operation was attempted on a cluster that is not fully migrated to a version that supports it.",
+		},
+		Action: []string{
+			"Migrate the Couchbase cluster to a version that supports Auto Update Statistics.",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_AUS_STORAGE, // 20002,
+		Description: "Error accessing Auto Update Statistics information from storage.",
+		Action: []string{
+			"Retry the operation again. Or contact support.",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_AUS_INVALID_DOCUMENT_SCHEMA, // 20003
+		Description: "Invalid schema detected in the Auto Update Statistics settings document.",
+		Reason: []string{
+			"The schema validation check failed when an attempt was made to INSERT/UPSERT/UPDATE a document in system:aus or system:aus_settings.",
+		},
+		Action: []string{
+			"Consult the documentation on the valid schema for Auto Update Statistics settings documents.",
+		},
+		IsUser: YES,
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_AUS_SETTINGS_ENCODING, // 20004,
+		Description: "Error «action» Automatic Update Statistics settings document.",
+		Action: []string{
+			"Retry the operation again. Or contact support.",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_AUS_STORAGE_INVALID_KEY, // 20005,
+		Description: "Invalid document key «key» for Auto Update Statistics document",
+		Reason: []string{
+			"An invalid document key was detected when an operation or SQL++ statement was run against system:aus or system:aus_settings.",
+		},
+		Action: []string{
+			"Consult the documentation on the valid document key format for Auto Update Statistics settings documents.",
+		},
+		IsUser: YES,
+		AppliesTo: []string{
+			"Server",
+		},
+	},
 }

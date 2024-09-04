@@ -590,4 +590,10 @@ const (
 	E_SEQUENCE_NAME_PARTS                        ErrorCode = 19116
 	E_SEQUENCE_DROP_ALL                          ErrorCode = 19117
 	W_SEQUENCE_NO_PREV_VALUE                     ErrorCode = 19118
+	E_AUS_NOT_SUPPORTED                          ErrorCode = 20000
+	E_AUS_NOT_INITIALIZED                        ErrorCode = 20001
+	E_AUS_STORAGE                                ErrorCode = 20002
+	E_AUS_INVALID_DOCUMENT_SCHEMA                ErrorCode = 20003
+	E_AUS_SETTINGS_ENCODING                      ErrorCode = 20004
+	E_AUS_STORAGE_INVALID_KEY                    ErrorCode = 20005
 )

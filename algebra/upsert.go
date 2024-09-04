@@ -10,6 +10,7 @@ package algebra
 
 import (
 	"github.com/couchbase/query/auth"
+	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/value"
@@ -189,9 +190,20 @@ func (this *Upsert) Privileges() (*auth.Privileges, errors.Error) {
 	privs := auth.NewPrivileges()
 	props := this.keyspace.PrivilegeProps()
 	fullKeyspace := this.keyspace.FullName()
-	privs.Add(fullKeyspace, auth.PRIV_QUERY_INSERT, props)
-	privs.Add(fullKeyspace, auth.PRIV_QUERY_UPDATE, props)
+	isSystem := this.keyspace.IsSystem()
+
+	if isSystem {
+		datastore.GetSystemstore().PrivilegesFromPath(fullKeyspace, this.keyspace.Keyspace(), auth.PRIV_QUERY_INSERT, privs)
+		datastore.GetSystemstore().PrivilegesFromPath(fullKeyspace, this.keyspace.Keyspace(), auth.PRIV_QUERY_UPDATE, privs)
+	} else {
+		privs.Add(fullKeyspace, auth.PRIV_QUERY_INSERT, props)
+		privs.Add(fullKeyspace, auth.PRIV_QUERY_UPDATE, props)
+	}
+
 	if this.returning != nil {
+		if isSystem {
+			datastore.GetSystemstore().PrivilegesFromPath(fullKeyspace, this.keyspace.Keyspace(), auth.PRIV_QUERY_SELECT, privs)
+		}
 		privs.Add(fullKeyspace, auth.PRIV_QUERY_SELECT, props)
 	}
 

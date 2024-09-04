@@ -56,6 +56,8 @@ const KEYSPACE_NAME_TRANSACTIONS = "transactions"
 const KEYSPACE_NAME_VITALS = "vitals"
 const KEYSPACE_NAME_SEQUENCES = "sequences"
 const KEYSPACE_NAME_ALL_SEQUENCES = "all_sequences"
+const KEYSPACE_NAME_AUS = "aus"
+const KEYSPACE_NAME_AUS_SETTINGS = "aus_settings"
 
 // TODO, sync with fetch timeout
 const scanTimeout = 30 * time.Second
@@ -81,6 +83,9 @@ func (s *store) PrivilegesFromPath(fullname string, keyspace string, privilege a
 		// currently these keyspaces require system read for delete
 		case KEYSPACE_NAME_FUNCTIONS_CACHE, KEYSPACE_NAME_DICTIONARY_CACHE, KEYSPACE_NAME_TASKS_CACHE:
 			privs.Add("", auth.PRIV_SYSTEM_READ, auth.PRIV_PROPS_NONE)
+
+		case KEYSPACE_NAME_AUS_SETTINGS:
+			privs.Add("", auth.PRIV_ADMIN, auth.PRIV_PROPS_NONE)
 
 			// for all other keyspaces, we rely on the implementation do deny access
 		}
@@ -124,9 +129,24 @@ func (s *store) PrivilegesFromPath(fullname string, keyspace string, privilege a
 				privs.Add("", auth.PRIV_SYSTEM_READ, auth.PRIV_PROPS_NONE)
 			}
 
+		case KEYSPACE_NAME_AUS, KEYSPACE_NAME_AUS_SETTINGS:
+			privs.Add("", auth.PRIV_ADMIN, auth.PRIV_PROPS_NONE)
+
 		// system read for everything else
 		default:
 			privs.Add(fullname, auth.PRIV_SYSTEM_READ, auth.PRIV_PROPS_NONE)
+		}
+
+	case auth.PRIV_QUERY_UPDATE:
+		switch keyspace {
+		case KEYSPACE_NAME_AUS, KEYSPACE_NAME_AUS_SETTINGS:
+			privs.Add("", auth.PRIV_ADMIN, auth.PRIV_PROPS_NONE)
+		}
+
+	case auth.PRIV_QUERY_INSERT, auth.PRIV_UPSERT:
+		switch keyspace {
+		case KEYSPACE_NAME_AUS_SETTINGS:
+			privs.Add("", auth.PRIV_ADMIN, auth.PRIV_PROPS_NONE)
 		}
 
 		// for every other privilege, the keyspaces internally deny access

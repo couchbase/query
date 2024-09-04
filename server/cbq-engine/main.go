@@ -28,6 +28,7 @@ import (
 	"github.com/couchbase/query/accounting"
 	acct_resolver "github.com/couchbase/query/accounting/resolver"
 	"github.com/couchbase/query/audit"
+	"github.com/couchbase/query/aus"
 	config_resolver "github.com/couchbase/query/clustering/resolver"
 	"github.com/couchbase/query/datastore"
 	datastore_package "github.com/couchbase/query/datastore"
@@ -490,6 +491,9 @@ func main() {
 	// migrations (functions storage and CBO stats) last
 	storage.Migrate()
 	server_package.MigrateDictionary()
+
+	// Initialize configurations for AUS
+	aus.InitAus(server)
 
 	signalCatcher(server, endpoint)
 }

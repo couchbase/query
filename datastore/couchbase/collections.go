@@ -20,6 +20,7 @@ import (
 	memcached "github.com/couchbase/gomemcached/client" // package name is memcached
 	gsi "github.com/couchbase/indexing/secondary/queryport/n1ql"
 	ftsclient "github.com/couchbase/n1fty"
+	"github.com/couchbase/query/aus"
 	cb "github.com/couchbase/query/primitives/couchbase"
 
 	"github.com/couchbase/query/datastore"
@@ -648,9 +649,11 @@ func refreshScopesAndCollections(mani *cb.Manifest, bucket *keyspace) (map[strin
 
 			// MB-43070 only have one stat cleaner
 			if atomic.AddInt32(&oldScope.cleaning, 1) == 1 {
-				for n, _ := range oldScope.keyspaces {
+				for n, c := range oldScope.keyspaces {
 					if scope.keyspaces[n] == nil {
 						DropDictionaryEntry(oldScope.keyspaces[n].QualifiedName(), false, true)
+						aus.DropCollection(bucket.namespace.name, bucket.name, oldScope.Name(), oldScope.Uid(),
+							c.Name(), c.Uid())
 					}
 				}
 			}
@@ -702,6 +705,7 @@ func clearOldScope(bucket *keyspace, s *scope, isDropBucket bool, cleanUp bool) 
 	if cleanUp {
 		if err := s.DropAllSequences(); err == nil || err.Code() != errors.E_CB_KEYSPACE_NOT_FOUND {
 			functionsStorage.DropScope(bucket.namespace.name, bucket.name, s.Name(), s.Uid())
+			aus.DropScope(bucket.namespace.name, bucket.name, s.Name(), s.Uid())
 			return true
 		}
 	}

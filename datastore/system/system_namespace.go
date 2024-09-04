@@ -285,6 +285,18 @@ func (p *namespace) loadKeyspaces() (e errors.Error) {
 	}
 	registerKeyspace(p, aqk)
 
+	ausK, e := newAusKeyspace(p)
+	if e != nil {
+		return e
+	}
+	registerKeyspace(p, ausK)
+
+	ausSK, e := newAusSettingsKeyspace(p)
+	if e != nil {
+		return e
+	}
+	registerKeyspace(p, ausSK)
+
 	return nil
 }
 

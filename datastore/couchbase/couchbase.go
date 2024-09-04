@@ -3389,6 +3389,8 @@ func CleanupSystemCollection(namespace string, bucket string) {
 		func(key string, systemCollection datastore.Keyspace) errors.Error {
 			logging.Debugf("Key: %v", key)
 			parts := strings.Split(key, "::")
+			toDelete := false
+
 			if len(parts) == 3 && (parts[0] == "seq" || parts[0] == "cbo" || parts[0] == "udf") {
 				path := parts[len(parts)-1]
 				if parts[0] == "cbo" {
@@ -3404,21 +3406,49 @@ func CleanupSystemCollection(namespace string, bucket string) {
 						_, err = s.KeyspaceByName(elements[1])
 					}
 					if err != nil {
-						logging.Infof("Deleting stale `%s` system collection key: %v", bucket, key)
-						pairs = append(pairs, value.Pair{Name: key})
-						if len(pairs) >= _BATCH_SIZE {
-							_, results, errs := systemCollection.Delete(pairs, datastore.NULL_QUERY_CONTEXT, true)
-							for i := range results {
-								processResult(results[i].Name)
-							}
-							if errs != nil && len(errs) > 0 {
-								errorCount += len(errs)
-								logging.Debugf("%v:%v - %v", namespace, bucket, errs[0])
-							}
-							deletedCount += len(pairs) - len(errs)
-							pairs = pairs[:0]
+						toDelete = true
+					}
+				}
+			} else if len(parts) > 2 && parts[0] == "aus" {
+				// Refer to aus/aus_ee.go for AUS settings document key formats.
+				path := parts[len(parts)-1]
+				elements := strings.Split(path, ".")
+
+				// Check if key is for a valid scope level AUS setting doc
+				if len(parts) == 3 && len(elements) == 1 {
+					s, err := systemCollection.Scope().Bucket().ScopeByName(elements[0])
+					if err != nil || (err == nil && s.Uid() != parts[1]) {
+						toDelete = true
+					}
+				} else if len(parts) == 4 && len(elements) == 2 { // Check if key is for a valid collection level AUS setting doc
+					s, err := systemCollection.Scope().Bucket().ScopeByName(elements[0])
+					if err != nil || (err == nil && s.Uid() != parts[1]) {
+						toDelete = true
+					}
+
+					if !toDelete {
+						c, err := s.KeyspaceByName(elements[1])
+						if err != nil || (err == nil && c.Uid() != parts[2]) {
+							toDelete = true
 						}
 					}
+				}
+			}
+
+			if toDelete {
+				logging.Infof("Deleting stale `%s` system collection key: %v", bucket, key)
+				pairs = append(pairs, value.Pair{Name: key})
+				if len(pairs) >= _BATCH_SIZE {
+					_, results, errs := systemCollection.Delete(pairs, datastore.NULL_QUERY_CONTEXT, true)
+					for i := range results {
+						processResult(results[i].Name)
+					}
+					if errs != nil && len(errs) > 0 {
+						errorCount += len(errs)
+						logging.Debugf("%v:%v - %v", namespace, bucket, errs[0])
+					}
+					deletedCount += len(pairs) - len(errs)
+					pairs = pairs[:0]
 				}
 			}
 			return nil

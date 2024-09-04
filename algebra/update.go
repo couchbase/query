@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/couchbase/query/auth"
+	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/value"
@@ -294,9 +295,21 @@ func (this *Update) Privileges() (*auth.Privileges, errors.Error) {
 	privs := auth.NewPrivileges()
 	fullKeyspace := this.keyspace.FullName()
 	props := this.keyspace.PrivilegeProps()
-	privs.Add(fullKeyspace, auth.PRIV_QUERY_UPDATE, props)
+	isSystem := this.keyspace.IsSystem()
+
+	if isSystem {
+		datastore.GetSystemstore().PrivilegesFromPath(fullKeyspace, this.keyspace.Keyspace(), auth.PRIV_QUERY_UPDATE, privs)
+	} else {
+		privs.Add(fullKeyspace, auth.PRIV_QUERY_UPDATE, props)
+	}
+
 	if this.returning != nil {
-		privs.Add(fullKeyspace, auth.PRIV_QUERY_SELECT, props)
+		if isSystem {
+			datastore.GetSystemstore().PrivilegesFromPath(fullKeyspace, this.keyspace.Keyspace(), auth.PRIV_QUERY_SELECT, privs)
+		} else {
+			privs.Add(fullKeyspace, auth.PRIV_QUERY_SELECT, props)
+		}
+
 		if this.returning.HasSystemXattrs() {
 			privs.Add(fullKeyspace, auth.PRIV_XATTRS, props)
 		}
