@@ -74,7 +74,7 @@ func (this *builder) indexPushDownProperty(entry *indexEntry, keys,
 
 		if this.limit != nil && exactLimitOffset {
 			pushDownProperty |= _PUSHDOWN_LIMIT
-		} else if vector {
+		} else if vector && this.order != nil {
 			// if determined above that ORDER can be pushed down but LIMIT cannot,
 			// need to unset ORDER pushdown
 			entry.SetFlags(IE_VECTOR_KEY_SKIP_ORDER, true)
