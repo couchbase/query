@@ -23,14 +23,15 @@ const (
 )
 
 type RandomEntryProvider interface {
-	GetRandomEntry(context QueryContext) (string, value.Value, errors.Error)
+	GetRandomEntry(xattrs bool, context QueryContext) (string, value.Value, errors.Error)
 }
 
 type RandomScanProvider interface {
-	StartRandomScan(context QueryContext, sampleSize int, timeout time.Duration, pipelineSize int, serverless bool) (
-		interface{}, errors.Error)
-	StopKeyScan(scan interface{}) (uint64, errors.Error)
+	StartRandomScan(context QueryContext, sampleSize int, timeout time.Duration, pipelineSize int, serverless bool, xattrs bool,
+		withDocs bool) (interface{}, errors.Error)
+	StopScan(scan interface{}) (uint64, errors.Error)
 	FetchKeys(scan interface{}, timeout time.Duration) ([]string, errors.Error, bool)
+	FetchDocs(scan interface{}, timeout time.Duration) ([]value.AnnotatedValue, errors.Error, bool)
 }
 
 type Inferencer interface {

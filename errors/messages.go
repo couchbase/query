@@ -6647,6 +6647,17 @@ var errData = []ErrData{
 		},
 	},
 	{
+		Code:        E_SS_BAD_RESPONSE, // 16065
+		symbol:      "E_SS_BAD_RESPONSE",
+		Description: "Invalid scan response received",
+		Action: []string{
+			"Contact support.",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
 		Code:        E_TRAN_DATASTORE_NOT_SUPPORTED, // 17001
 		symbol:      "E_TRAN_DATASTORE_NOT_SUPPORTED",
 		Description: "Transactions are not supported on «type» store",

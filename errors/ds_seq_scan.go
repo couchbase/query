@@ -28,6 +28,7 @@ var _ss = map[ErrorCode][2]string{
 	E_SS_WORKER_ABORT:       {"worker_abort", "A fatal error occurred in scan processing"},
 	E_SS_SPILL:              {"spill", "Operation failed on scan spill file"},
 	E_SS_VALIDATE:           {"validate_key", "Failed to validate document key"},
+	E_SS_BAD_RESPONSE:       {"bad_response", "Invalid scan response received"},
 }
 
 func NewSSError(code ErrorCode, args ...interface{}) Error {

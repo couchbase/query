@@ -475,7 +475,7 @@ func (this *seqScan) doScanEntries(requestId string, ordered bool, offset, limit
 
 	if ss != nil {
 		var ru uint64
-		ru, err = scanner.StopKeyScan(ss)
+		ru, err = scanner.StopScan(ss)
 		if err != nil {
 			conn.Error(qe.NewSSError(qe.E_SS_FAILED, err))
 		}

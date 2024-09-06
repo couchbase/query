@@ -356,8 +356,8 @@ func (coll *collection) loadIndexes() {
 	coll.checked = true
 }
 
-func (coll *collection) GetRandomEntry(context datastore.QueryContext) (string, value.Value, errors.Error) {
-	return coll.bucket.getRandomEntry(context, coll.scope.id, coll.id,
+func (coll *collection) GetRandomEntry(xattrs bool, context datastore.QueryContext) (string, value.Value, errors.Error) {
+	return coll.bucket.getRandomEntry(context, coll.scope.id, coll.id, xattrs,
 		&memcached.ClientContext{CollId: coll.uid, User: getUser(context)})
 }
 
@@ -472,19 +472,23 @@ func (coll *collection) StartKeyScan(context datastore.QueryContext, ranges []*d
 		pipelineSize, serverless, context.UseReplica(), skipKey)
 }
 
-func (coll *collection) StopKeyScan(scan interface{}) (uint64, errors.Error) {
-	return coll.bucket.cbbucket.StopKeyScan(scan)
+func (coll *collection) StopScan(scan interface{}) (uint64, errors.Error) {
+	return coll.bucket.cbbucket.StopScan(scan)
 }
 
 func (coll *collection) FetchKeys(scan interface{}, timeout time.Duration) ([]string, errors.Error, bool) {
 	return coll.bucket.cbbucket.FetchKeys(scan, timeout)
 }
 
+func (coll *collection) FetchDocs(scan interface{}, timeout time.Duration) ([]value.AnnotatedValue, errors.Error, bool) {
+	return coll.bucket.cbbucket.FetchDocs(scan, timeout)
+}
+
 func (coll *collection) StartRandomScan(context datastore.QueryContext, sampleSize int, timeout time.Duration,
-	pipelineSize int, serverless bool) (interface{}, errors.Error) {
+	pipelineSize int, serverless bool, xattrs bool, withDocs bool) (interface{}, errors.Error) {
 
 	return coll.bucket.cbbucket.StartRandomScan(context.RequestId(), context, coll.uid, "", "", sampleSize, timeout, pipelineSize,
-		serverless, context.UseReplica())
+		serverless, context.UseReplica(), xattrs, withDocs)
 }
 
 func buildScopesAndCollections(mani *cb.Manifest, bucket *keyspace) (map[string]*scope, datastore.Keyspace) {

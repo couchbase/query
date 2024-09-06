@@ -367,7 +367,7 @@ func (this *SeqScanRange) String() string {
 type SeqScanner interface {
 	StartKeyScan(context QueryContext, ranges []*SeqScanRange, offset int64, limit int64, ordered bool, timeout time.Duration,
 		pipelineSize int, serverless bool, skipKey func(string) bool) (interface{}, errors.Error)
-	StopKeyScan(interface{}) (uint64, errors.Error)
+	StopScan(interface{}) (uint64, errors.Error)
 	FetchKeys(interface{}, time.Duration) ([]string, errors.Error, bool)
 }
 

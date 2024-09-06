@@ -525,6 +525,7 @@ const (
 	E_SS_FAILED                                  ErrorCode = 16062
 	E_SS_SPILL                                   ErrorCode = 16063
 	E_SS_VALIDATE                                ErrorCode = 16064
+	E_SS_BAD_RESPONSE                            ErrorCode = 16065
 	E_TRAN_DATASTORE_NOT_SUPPORTED               ErrorCode = 17001
 	E_TRAN_STATEMENT_NOT_SUPPORTED               ErrorCode = 17002
 	E_TRAN_FUNCTION_NOT_SUPPORTED                ErrorCode = 17003

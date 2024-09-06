@@ -2177,13 +2177,13 @@ func key(k []byte, clientContext ...*memcached.ClientContext) []byte {
 // the KV store.
 //
 
-func (k *keyspace) GetRandomEntry(context datastore.QueryContext) (string, value.Value, errors.Error) {
-	return k.getRandomEntry(context, "", "")
+func (k *keyspace) GetRandomEntry(xattrs bool, context datastore.QueryContext) (string, value.Value, errors.Error) {
+	return k.getRandomEntry(context, "", "", xattrs)
 }
 
 func (k *keyspace) getRandomEntry(context datastore.QueryContext, scopeName, collectionName string,
-	clientContext ...*memcached.ClientContext) (string, value.Value, errors.Error) {
-	resp, err := k.cbbucket.GetRandomDoc(clientContext...)
+	xattrs bool, clientContext ...*memcached.ClientContext) (string, value.Value, errors.Error) {
+	resp, err := k.cbbucket.GetRandomDoc(xattrs, clientContext...)
 
 	if err != nil {
 		k.checkRefresh(err)
@@ -2203,7 +2203,7 @@ func (k *keyspace) getRandomEntry(context datastore.QueryContext, scopeName, col
 		logging.Warnf("%v: empty random document key (processed) detected", k.name)
 		return "", nil, nil
 	}
-	doc := doFetch(key, k.fullName, resp, context, nil)
+	doc := doFetch(key, k.fullName, resp, context, nil, xattrs)
 
 	return key, doc, nil
 }
@@ -2282,7 +2282,7 @@ func (b *keyspace) fetch(fullName, qualifiedName, scopeName, collectionName stri
 	if fast {
 		if mcr != nil && err == nil {
 			if !useSubDoc {
-				fetchMap[keys[0]] = doFetch(keys[0], fullName, mcr, context, projection)
+				fetchMap[keys[0]] = doFetch(keys[0], fullName, mcr, context, projection, false)
 			} else {
 				fetchMap[keys[0]] = getSubDocFetchResults(keys[0], fullName, mcr, projection, context)
 			}
@@ -2307,7 +2307,7 @@ func (b *keyspace) fetch(fullName, qualifiedName, scopeName, collectionName stri
 			logging.Debugf("(Sub-doc) Requested keys %d Fetched %d keys ", l, i)
 		} else {
 			for k, v := range bulkResponse {
-				fetchMap[k] = doFetch(k, fullName, v, context, projection)
+				fetchMap[k] = doFetch(k, fullName, v, context, projection, false)
 				i++
 			}
 			logging.Debugf("Requested keys %d Fetched %d keys ", l, i)
@@ -2318,11 +2318,12 @@ func (b *keyspace) fetch(fullName, qualifiedName, scopeName, collectionName stri
 }
 
 func doFetch(k string, fullName string, v *gomemcached.MCResponse, context datastore.QueryContext,
-	projection []string) value.AnnotatedValue {
+	projection []string, xattrs bool) value.AnnotatedValue {
 
 	var val value.AnnotatedValue
 	var raw []byte
 	var flags, expiration uint32
+	var xattrVal value.Value
 
 	if v.DataType&gomemcached.DatatypeFlagCompressed == 0 {
 		raw = v.Body
@@ -2335,6 +2336,13 @@ func doFetch(k string, fullName string, v *gomemcached.MCResponse, context datas
 			context.Error(errors.NewInvalidCompressedValueError(err, v.Body))
 			logging.Severef("Invalid compressed document received: %v - %v", err, v, context)
 			return nil
+		}
+	}
+	if xattrs && raw[0] != '{' {
+		var ok bool
+		raw, xattrVal, ok = cb.ExtractXattrs(raw)
+		if !ok {
+			logging.Warnf("[%s] Invalid XATTRs", k)
 		}
 	}
 	if len(projection) == 0 {
@@ -2381,6 +2389,9 @@ func doFetch(k string, fullName string, v *gomemcached.MCResponse, context datas
 	}
 	val.SetMetaField(value.META_FLAGS, flags)
 	val.SetMetaField(value.META_EXPIRATION, expiration)
+	if xattrVal != nil {
+		val.SetMetaField(value.META_XATTRS, xattrVal)
+	}
 	val.SetId(k)
 
 	if tenant.IsServerless() {
@@ -3317,23 +3328,27 @@ func (ks *keyspace) StartKeyScan(context datastore.QueryContext, ranges []*datas
 		pipelineSize, serverless, context.UseReplica(), skipKey)
 }
 
-func (ks *keyspace) StopKeyScan(scan interface{}) (uint64, errors.Error) {
-	return ks.cbbucket.StopKeyScan(scan)
+func (ks *keyspace) StopScan(scan interface{}) (uint64, errors.Error) {
+	return ks.cbbucket.StopScan(scan)
 }
 
 func (ks *keyspace) FetchKeys(scan interface{}, timeout time.Duration) ([]string, errors.Error, bool) {
 	return ks.cbbucket.FetchKeys(scan, timeout)
 }
 
+func (ks *keyspace) FetchDocs(scan interface{}, timeout time.Duration) ([]value.AnnotatedValue, errors.Error, bool) {
+	return ks.cbbucket.FetchDocs(scan, timeout)
+}
+
 func (ks *keyspace) StartRandomScan(context datastore.QueryContext, sampleSize int, timeout time.Duration,
-	pipelineSize int, serverless bool) (interface{}, errors.Error) {
+	pipelineSize int, serverless bool, xattrs bool, withDocs bool) (interface{}, errors.Error) {
 
 	if cid, ok := ks.getDefaultCid(); ok {
 		return ks.cbbucket.StartRandomScan(context.RequestId(), context, cid, "", "", sampleSize, timeout, pipelineSize,
-			serverless, context.UseReplica())
+			serverless, context.UseReplica(), xattrs, withDocs)
 	}
 	return ks.cbbucket.StartRandomScan(context.RequestId(), context, 0, "_default", "_default", sampleSize, timeout, pipelineSize,
-		serverless, context.UseReplica())
+		serverless, context.UseReplica(), xattrs, withDocs)
 }
 
 func getCollectionId(clientContext ...*memcached.ClientContext) (collectionId uint32, user string) {
