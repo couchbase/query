@@ -424,9 +424,19 @@ func (this sliceValue) Successor() Value {
 }
 
 func (this sliceValue) Track() {
+	for _, v := range this {
+		if val, ok := v.(Value); ok {
+			val.Track()
+		}
+	}
 }
 
 func (this sliceValue) Recycle() {
+	for _, v := range this {
+		if val, ok := v.(Value); ok {
+			val.Recycle()
+		}
+	}
 }
 
 func (this sliceValue) Tokens(set *Set, options Value) *Set {
