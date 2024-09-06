@@ -289,9 +289,9 @@ func copyBaseKeyspaces(src map[string]*BaseKeyspace, copyFilter bool) map[string
 			if len(kspace.joinfilters) > 0 {
 				dest[kspace.name].joinfilters = kspace.joinfilters.Copy()
 			}
-			if len(kspace.vectorfilters) > 0 {
-				dest[kspace.name].vectorfilters = kspace.vectorfilters.Copy()
-			}
+		}
+		if len(kspace.vectorfilters) > 0 {
+			dest[kspace.name].vectorfilters = kspace.vectorfilters.Copy()
 		}
 	}
 
