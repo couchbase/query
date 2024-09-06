@@ -58,6 +58,7 @@ type Builder interface {
 	MarkJoinFilterHints(children, subChildren []plan.Operator) error
 	CheckBitFilters(qPlan, subPlan []plan.Operator)
 	CheckJoinFilterHints(qPlan, subPlan []plan.Operator) (hintError bool, err error)
+	AdvisorRecommend() bool
 }
 
 func (this *builder) GetBaseKeyspaces() map[string]*base.BaseKeyspace {

@@ -144,8 +144,13 @@ func generateIdxAdvice(queryInfos map[expression.HasExpressions]*advisor.QueryIn
 		if len(cIndexes) > 0 {
 			curIdxMap := make(map[string]iaplan.IndexInfos, len(cIndexes))
 			for _, cIdx := range cIndexes {
-				if checkVector && cIdx.HasVectorInfo() {
-					hasVector = true
+				if checkVector {
+					if cIdx.HasVectorInfo() {
+						hasVector = true
+					} else {
+						// do not show "OPTIMAL COVERING INDEX"
+						cIdx.UnsetIdxStatusCovering()
+					}
 				}
 				idxName := cIdx.GetIndexName()
 				if infos, ok := curIdxMap[idxName]; ok {
@@ -175,6 +180,9 @@ func generateIdxAdvice(queryInfos map[expression.HasExpressions]*advisor.QueryIn
 			v.GetUncoverIndexes().SetQueryContext(queryContext)
 			for _, uci := range v.GetUncoverIndexes() {
 				if uci.IsFound(nonCoverIdxes, false) {
+					continue
+				}
+				if checkVector && !uci.HasVectorInfo() {
 					continue
 				}
 				duplicate := false
@@ -468,13 +476,14 @@ func (this *builder) collectPredicates(baseKeyspace *base.BaseKeyspace, keyspace
 		this.collectUnnests(node)
 	}
 
+	hasVector := len(baseKeyspace.VectorFilters()) > 0
 	if pred == nil {
 		//This is for collecting predicates from build_scan when predicate is not disjunction.
 		if _, ok := baseKeyspace.DnfPred().(*expression.Or); !ok {
 			p := advisor.NewKeyspaceInfo(keyspace, node,
 				getFilterInfos(baseKeyspace.Filters(), this.context),
 				getFilterInfos(baseKeyspace.JoinFilters(), this.context),
-				baseKeyspace.Onclause(), baseKeyspace.DnfPred(), false, nil)
+				baseKeyspace.Onclause(), baseKeyspace.DnfPred(), false, hasVector, nil)
 			this.keyspaceInfos = append(this.keyspaceInfos, p)
 		} else {
 			pred = baseKeyspace.DnfPred()
@@ -507,7 +516,7 @@ func (this *builder) collectPredicates(baseKeyspace *base.BaseKeyspace, keyspace
 				p := advisor.NewKeyspaceInfo(keyspace, node,
 					getFilterInfos(bk.Filters(), this.context),
 					getFilterInfos(bk.JoinFilters(), this.context),
-					baseKeyspace.Onclause(), op, true, predConjunc)
+					baseKeyspace.Onclause(), op, true, hasVector, predConjunc)
 				this.keyspaceInfos = append(this.keyspaceInfos, p)
 			}
 		} else {
@@ -521,7 +530,7 @@ func (this *builder) collectPredicates(baseKeyspace *base.BaseKeyspace, keyspace
 			p := advisor.NewKeyspaceInfo(keyspace, node,
 				getFilterInfos(baseKeyspaceCopy.Filters(), this.context),
 				getFilterInfos(baseKeyspaceCopy.JoinFilters(), this.context),
-				baseKeyspace.Onclause(), pred, false, nil)
+				baseKeyspace.Onclause(), pred, false, hasVector, nil)
 			this.keyspaceInfos = append(this.keyspaceInfos, p)
 		}
 	}
@@ -639,6 +648,10 @@ func (this *builder) getIdxCandidates() []datastore.Index {
 
 func (this *builder) advisorValidate() bool {
 	return this.indexAdvisor && this.advisePhase == _VALIDATE
+}
+
+func (this *builder) AdvisorRecommend() bool {
+	return this.indexAdvisor && this.advisePhase == _RECOMMEND
 }
 
 // collect identfiers for the unnests used

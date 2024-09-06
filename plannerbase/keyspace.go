@@ -314,6 +314,10 @@ func (this *BaseKeyspace) JoinFilters() Filters {
 	return this.joinfilters
 }
 
+func (this *BaseKeyspace) VectorFilters() Filters {
+	return this.vectorfilters
+}
+
 func (this *BaseKeyspace) AddFilter(filter *Filter) {
 	this.filters = append(this.filters, filter)
 }
