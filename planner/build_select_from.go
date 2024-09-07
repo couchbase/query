@@ -1232,7 +1232,7 @@ func (this *builder) getIndexFilter(index datastore.Index, alias string, sargSpa
 		}
 	}
 
-	if filter != nil && (len(covers) > 0 || len(filterCovers) > 0) {
+	if filter != nil && (len(covers) > 0 || len(filterCovers) > 0) && !this.AdvisorRecommend() {
 		coverer := expression.NewCoverer(covers, filterCovers)
 		filter, err = expression.RenameAnyExpr(filter, arrayKey)
 		if err == nil {
@@ -1377,16 +1377,21 @@ func (this *builder) buildEarlyOrder(iscan3 *plan.IndexScan3, useCBO bool) (plan
 		useCBO = false
 	}
 
-	// make a copy of this.order and change expressions to _index_key exprs
-	coverer := expression.NewCoverer(iscan3.IndexKeys(), iscan3.IndexConditions())
-	newTerms := make(algebra.SortTerms, len(this.order.Terms()))
-	for i, term := range this.order.Terms() {
-		newExpr, err := coverer.Map(earlyOrderExprs[i].Copy())
-		if err != nil {
-			return nil, err
+	var newTerms algebra.SortTerms
+	if this.AdvisorRecommend() {
+		newTerms = this.order.Terms().Copy()
+	} else {
+		// make a copy of this.order and change expressions to _index_key exprs
+		coverer := expression.NewCoverer(iscan3.IndexKeys(), iscan3.IndexConditions())
+		newTerms = make(algebra.SortTerms, len(this.order.Terms()))
+		for i, term := range this.order.Terms() {
+			newExpr, err := coverer.Map(earlyOrderExprs[i].Copy())
+			if err != nil {
+				return nil, err
+			}
+			newTerm := algebra.NewSortTerm(newExpr, term.DescendingExpr(), term.NullsPosExpr())
+			newTerms[i] = newTerm
 		}
-		newTerm := algebra.NewSortTerm(newExpr, term.DescendingExpr(), term.NullsPosExpr())
-		newTerms[i] = newTerm
 	}
 	order := algebra.NewOrder(newTerms)
 	// no need for any cost information for Limit/Offset inside Order

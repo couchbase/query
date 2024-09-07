@@ -62,6 +62,7 @@ type Builder interface {
 	RemoveFromSubqueries(ops ...plan.Operator)
 	NoExecute() bool
 	SubqCoveringInfo() map[*algebra.Subselect]CoveringSubqInfo
+	AdvisorRecommend() bool
 }
 
 func (this *builder) GetBaseKeyspaces() map[string]*base.BaseKeyspace {

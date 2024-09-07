@@ -544,6 +544,10 @@ func (this *builder) renameAnyExpression(arrayKey *expression.All, filter, where
 func (this *builder) coverExpression(coverer *expression.Coverer, filter, where, joinKeys expression.Expression) (
 	expression.Expression, expression.Expression, expression.Expression, error) {
 
+	if this.AdvisorRecommend() {
+		return filter, where, joinKeys, nil
+	}
+
 	var err error
 	filter, err = coverer.CoverExpr(filter)
 	if err == nil {
@@ -556,6 +560,10 @@ func (this *builder) coverExpression(coverer *expression.Coverer, filter, where,
 }
 
 func (this *builder) coverExpressions() (err error) {
+	if this.AdvisorRecommend() {
+		return nil
+	}
+
 	for _, op := range this.coveringScans {
 		if arrayKey := op.ImplicitArrayKey(); arrayKey != nil {
 			anyRenamer := expression.NewAnyRenamer(arrayKey)

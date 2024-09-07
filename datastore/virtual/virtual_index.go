@@ -9,6 +9,8 @@
 package virtual
 
 import (
+	"strconv"
+
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
@@ -25,6 +27,8 @@ type VirtualIndex struct {
 	indexKeys    expression.Expressions
 	desc         []bool
 	lkMissing    bool
+	vectorPos    int
+	vectorDesc   map[string]interface{}
 	partnExpr    expression.Expressions //partition key expressions
 	storageMode  datastore.IndexStorageMode
 	storageStats []map[datastore.IndexStatType]value.Value
@@ -32,16 +36,19 @@ type VirtualIndex struct {
 
 func NewVirtualIndex(keyspace datastore.Keyspace, name string, condition expression.Expression,
 	indexKeys expression.Expressions, desc []bool, partnExpr expression.Expressions, isPrimary, lkMissing bool,
-	sm datastore.IndexStorageMode, storageStats []map[datastore.IndexStatType]value.Value) datastore.Index {
+	vectorPos int, vectorDesc map[string]interface{}, sm datastore.IndexStorageMode,
+	storageStats []map[datastore.IndexStatType]value.Value) datastore.Index {
 	rv := &VirtualIndex{
-		keyspace:  keyspace,
-		name:      name,
-		primary:   isPrimary,
-		condition: expression.Copy(condition),
-		indexKeys: expression.CopyExpressions(indexKeys),
-		desc:      desc,
-		lkMissing: lkMissing,
-		partnExpr: expression.CopyExpressions(partnExpr),
+		keyspace:   keyspace,
+		name:       name,
+		primary:    isPrimary,
+		condition:  expression.Copy(condition),
+		indexKeys:  expression.CopyExpressions(indexKeys),
+		desc:       desc,
+		lkMissing:  lkMissing,
+		partnExpr:  expression.CopyExpressions(partnExpr),
+		vectorPos:  vectorPos,
+		vectorDesc: vectorDesc,
 	}
 
 	if sm != "" {
@@ -150,6 +157,9 @@ func (this *VirtualIndex) RangeKey2() datastore.IndexKeys {
 			if i == 0 && this.lkMissing {
 				rangeKey.SetAttribute(datastore.IK_MISSING, true)
 			}
+			if i == this.vectorPos {
+				rangeKey.SetAttribute(datastore.IK_VECTOR, true)
+			}
 			rangeKeys = append(rangeKeys, rangeKey)
 		}
 		return rangeKeys
@@ -239,6 +249,67 @@ func (this *VirtualIndex) StorageStatistics(requestid string) ([]map[datastore.I
 		return nil, errors.NewVirtualIdxNotSupportedError(nil, "Storage Statistics")
 	}
 	return this.storageStats, nil
+}
+
+//Implement Index6 interface
+
+func (this *VirtualIndex) IsBhive() bool {
+	return false // for now
+}
+
+func (this *VirtualIndex) IsVector() bool {
+	return this.vectorPos >= 0 && this.vectorDesc != nil
+}
+
+func (this *VirtualIndex) VectorDistanceType() datastore.IndexDistanceType {
+	if this.vectorDesc != nil {
+		if sim, ok := this.vectorDesc["similarity"]; ok {
+			if similarity, ok := sim.(string); ok {
+				return datastore.GetVectorDistanceType(expression.GetVectorMetric(similarity))
+			}
+		}
+	}
+	return ""
+}
+
+func (this *VirtualIndex) VectorDimension() int {
+	if this.vectorDesc != nil {
+		if dim, ok := this.vectorDesc["dimension"]; ok {
+			if dimension, ok := dim.(string); ok {
+				if dimInt, err := strconv.Atoi(dimension); err == nil {
+					return dimInt
+				}
+			}
+		}
+	}
+	return -1
+}
+
+func (this *VirtualIndex) VectorProbes() int {
+	return -1
+}
+
+func (this *VirtualIndex) VectorDescription() string {
+	if this.vectorDesc != nil {
+		if desc, ok := this.vectorDesc["description"]; ok {
+			if description, ok := desc.(string); ok {
+				return description
+			}
+		}
+	}
+	return ""
+}
+
+func (this *VirtualIndex) Include() expression.Expressions {
+	return nil
+}
+
+func (this *VirtualIndex) Scan6(requestId string, spans datastore.Spans2, reverse, distinctAfterProjection bool,
+	projection *datastore.IndexProjection, offset, limit int64, groupAggs *datastore.IndexGroupAggregates,
+	indexOrders datastore.IndexKeyOrders, indexKeyNames []string, inlineFilter string,
+	indexVector *datastore.IndexVector, indexPartionSets datastore.IndexPartitionSets,
+	cons datastore.ScanConsistency, vector timestamp.Vector, conn *datastore.IndexConnection) {
+
 }
 
 func (this *VirtualIndex) isCBOEnabledMode() bool {

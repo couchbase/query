@@ -1673,7 +1673,7 @@ func (this *builder) buildIndexFilters(entry *indexEntry, baseKeyspace *base.Bas
 		} else {
 			filter = expression.NewAnd(indexFilters.Copy()...)
 		}
-		if len(covers) > 0 || len(filterCovers) > 0 {
+		if (len(covers) > 0 || len(filterCovers) > 0) && !this.AdvisorRecommend() {
 			// no array index keys so can Map directly
 			coverer := expression.NewCoverer(covers, filterCovers)
 			filter, err = coverer.Map(filter)

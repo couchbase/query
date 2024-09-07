@@ -1325,7 +1325,7 @@ func (this *builder) buildHashJoinOp(right algebra.SimpleFromTerm, left algebra.
 		this.lastOp = this.children[len(this.children)-1]
 	}
 
-	if !outer && !isNest {
+	if !outer && !isNest && !this.AdvisorRecommend() {
 		var auto, found bool
 		if joinEnum {
 			auto = autoJoinFilter
@@ -1406,7 +1406,7 @@ func (this *builder) buildAnsiJoinSimpleFromTerm(node algebra.SimpleFromTerm, on
 				newOnclause = onclause.Copy()
 			}
 
-			if newOnclause != nil || fromExpr != nil {
+			if (newOnclause != nil || fromExpr != nil) && !this.AdvisorRecommend() {
 				for _, op := range this.coveringScans {
 					coverer := expression.NewCoverer(op.Covers(), op.FilterCovers())
 					if arrayKey := op.ImplicitArrayKey(); arrayKey != nil {
@@ -1559,7 +1559,7 @@ func (this *builder) joinCoverTransformation(leftCoveringScans, rightCoveringSca
 	leftExprs, rightExprs expression.Expressions, nl bool) (
 	newFilter, newOnclause, newPrimaryJoinKeys expression.Expression, err error) {
 
-	if len(leftCoveringScans) == 0 && len(rightCoveringScans) == 0 {
+	if this.AdvisorRecommend() || (len(leftCoveringScans) == 0 && len(rightCoveringScans) == 0) {
 		newFilter, newOnclause, newPrimaryJoinKeys = filter, onclause, primaryJoinKeys
 		return
 	}
@@ -1867,7 +1867,7 @@ func (this *builder) getOnclauseFilter(filters base.Filters) (expression.Express
 	} else {
 		filter = expression.NewAnd(terms...)
 	}
-	if this.joinEnum() {
+	if this.joinEnum() || this.AdvisorRecommend() {
 		return filter, nil
 	}
 	if len(this.coveringScans) > 0 {

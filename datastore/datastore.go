@@ -1066,3 +1066,17 @@ func CompatibleMetric(distanceType IndexDistanceType, metric expression.VectorMe
 	}
 	return false
 }
+
+func GetVectorDistanceType(metric expression.VectorMetric) IndexDistanceType {
+	switch metric {
+	case expression.EUCLIDEAN, expression.EUCLIDEAN_SQUARED:
+		return IX_DIST_EUCLIDEAN_SQUARED
+	case expression.L2, expression.L2_SQUARED:
+		return IX_DIST_L2_SQUARED
+	case expression.COSINE:
+		return IX_DIST_COSINE
+	case expression.DOT:
+		return IX_DIST_DOT
+	}
+	return ""
+}

@@ -149,7 +149,7 @@ Representation as a N1QL string.
 func (this *Group) String() string {
 	s := ""
 
-	if this.by != nil {
+	if len(this.by) > 0 {
 		s += " group by "
 
 		for i, b := range this.by {
