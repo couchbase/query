@@ -169,12 +169,12 @@ func (this *IndexScan3) RunOnce(context *Context, parent value.Value) {
 									continue
 								}
 							}
-							if context.UseRequestQuota() && context.TrackValueSize(av.Size()) {
-								context.Error(errors.NewMemoryQuotaExceededError())
-								av.Recycle()
-								ok = false
-								break
-							}
+						}
+						if context.UseRequestQuota() && context.TrackValueSize(av.Size()) {
+							context.Error(errors.NewMemoryQuotaExceededError())
+							av.Recycle()
+							ok = false
+							break
 						}
 
 						av.SetBit(this.bit)
