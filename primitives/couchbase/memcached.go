@@ -1563,7 +1563,7 @@ func (b *Bucket) getRandomConnection() (*memcached.Client, *connectionPool, erro
 // Get a random document from a bucket. Since the bucket may be distributed
 // across nodes, we must first select a random connection, and then use the
 // Client.GetRandomDoc() call to get a random document from that node.
-func (b *Bucket) GetRandomDoc(context ...*memcached.ClientContext) (*gomemcached.MCResponse, error) {
+func (b *Bucket) GetRandomDoc(xattrs bool, context ...*memcached.ClientContext) (*gomemcached.MCResponse, error) {
 
 	// get a connection from the pool
 	conn, pool, err := b.getRandomConnection()
@@ -1582,6 +1582,13 @@ func (b *Bucket) GetRandomDoc(context ...*memcached.ClientContext) (*gomemcached
 		if err != nil {
 			return nil, err
 		}
+	}
+
+	if len(context) == 0 {
+		context = append(context, &memcached.ClientContext{})
+	}
+	if xattrs {
+		context[0].IncludeXATTRs = xattrs
 	}
 
 	// get a randomm document from the connection

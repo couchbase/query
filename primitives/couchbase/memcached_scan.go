@@ -13,6 +13,8 @@ import (
 	"bytes"
 	"container/heap"
 	"container/list"
+	"encoding/binary"
+	"encoding/json"
 	"fmt"
 	"io"
 	"math"
@@ -30,6 +32,8 @@ import (
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/sort"
 	"github.com/couchbase/query/util"
+	"github.com/couchbase/query/value"
+	"github.com/golang/snappy"
 )
 
 var _SS_MAX_CONCURRENT_VBSCANS_PER_SERVER = -1
@@ -53,6 +57,9 @@ const _SS_RETRY_DELAY = time.Millisecond * 100
 const _SS_KV_CPU_MULTIPLIER = 3.0
 const _SS_WORKER_IDLE_SPIN = 1000
 const _SS_WORKER_IDLE_SLEEP = 10 * time.Millisecond / _SS_WORKER_IDLE_SPIN
+const _SS_MAX_DOCS_PER_REQUEST = uint32(512)
+const _SS_DOC_BUFFER = 2 * util.MiB        // times 1024 v-buckets is 2 GiB per complete scan
+const _SS_MAX_CACHED_SIZE = 100 * util.MiB // 100 GiB total temp space per scan
 
 /*
  * Bucket functions for driving and consuming a scan.
@@ -83,7 +90,7 @@ func (b *Bucket) StartKeyScan(requestId string, log logging.Log, collId uint32, 
 }
 
 func (b *Bucket) StartRandomScan(requestId string, log logging.Log, collId uint32, scope string, collection string,
-	sampleSize int, timeout time.Duration, pipelineSize int, serverless bool, useReplica bool) (
+	sampleSize int, timeout time.Duration, pipelineSize int, serverless bool, useReplica bool, xattrs bool, withDocs bool) (
 	interface{}, qerrors.Error) {
 
 	if log == nil {
@@ -98,7 +105,7 @@ func (b *Bucket) StartRandomScan(requestId string, log logging.Log, collId uint3
 		}
 	}
 
-	scan := NewRandomScan(requestId, log, collId, sampleSize, pipelineSize, serverless, useReplica)
+	scan := NewRandomScan(requestId, log, collId, sampleSize, pipelineSize, serverless, useReplica, xattrs, withDocs)
 
 	logging.Debuga(func() string { return scan.String() }, log)
 	go scan.coordinator(b, timeout)
@@ -106,7 +113,7 @@ func (b *Bucket) StartRandomScan(requestId string, log logging.Log, collId uint3
 	return scan, nil
 }
 
-func (b *Bucket) StopKeyScan(scan interface{}) (uint64, qerrors.Error) {
+func (b *Bucket) StopScan(scan interface{}) (uint64, qerrors.Error) {
 	ss, ok := scan.(*seqScan)
 	if !ok {
 		return 0, qerrors.NewSSError(qerrors.E_SS_INVALID, "stop")
@@ -145,6 +152,7 @@ func (b *Bucket) FetchKeys(scan interface{}, timeout time.Duration) ([]string, q
 				keys = i
 			case qerrors.Error:
 				err = i
+			case nil:
 			default:
 				panic(fmt.Sprintf("Invalid type on scan channel: %T", i))
 			}
@@ -156,6 +164,50 @@ func (b *Bucket) FetchKeys(scan interface{}, timeout time.Duration) ([]string, q
 	}
 
 	return keys, err, timedout
+}
+
+func (b *Bucket) FetchDocs(scan interface{}, timeout time.Duration) ([]value.AnnotatedValue, qerrors.Error, bool) {
+	var docs []value.AnnotatedValue
+	var err qerrors.Error
+	var timedout bool
+
+	ss, ok := scan.(*seqScan)
+	if !ok {
+		return nil, qerrors.NewSSError(qerrors.E_SS_INVALID, "fetch"), false
+	}
+	if err == nil {
+		if ss.inactive {
+			select {
+			case i := <-ss.ch:
+				if e, ok := i.(qerrors.Error); ok {
+					return nil, e, false
+				}
+			default:
+			}
+			return nil, qerrors.NewSSError(qerrors.E_SS_INACTIVE, "fetch"), false
+		}
+		to := time.NewTimer(timeout)
+		select {
+		case <-to.C:
+			timedout = true
+		case i := <-ss.ch:
+			switch i := i.(type) {
+			case []value.AnnotatedValue:
+				docs = i
+			case qerrors.Error:
+				err = i
+			case nil:
+			default:
+				panic(fmt.Sprintf("Invalid type on scan channel: %T", i))
+			}
+		}
+		if !timedout && !to.Stop() {
+			<-to.C
+		}
+		to = nil
+	}
+
+	return docs, err, timedout
 }
 
 /*
@@ -225,9 +277,9 @@ func (this *SeqScanRange) isSingleKey() bool {
 type rQueue struct {
 	sync.Mutex
 	ready     *list.List
+	cond      sync.Cond
 	cancelled bool
 	timedout  bool
-	cond      sync.Cond
 }
 
 func (this *rQueue) init() {
@@ -278,27 +330,29 @@ func (this *rQueue) pop() *vbRangeScan {
  */
 
 type seqScan struct {
-	scanNum      uint64
-	requestId    string
 	log          logging.Log
 	ch           chan interface{}
 	abortch      chan bool
-	inactive     bool
-	timedout     bool
-	collId       uint32
+	requestId    string
+	scanNum      uint64
 	ranges       []*SeqScanRange
-	ordered      bool
 	limit        int64
 	offset       int64
+	runits       uint64
+	sampleSize   int
 	pipelineSize int
 	deadline     time.Time
 	readyQueue   rQueue
-	fetchLimit   uint32
-	serverless   bool
-	runits       uint64
-	sampleSize   int
-	useReplica   bool
 	skipKey      func(string) bool
+	collId       uint32
+	fetchLimit   uint32
+	ordered      bool
+	serverless   bool
+	useReplica   bool
+	xattrs       bool
+	inactive     bool
+	timedout     bool
+	withDocs     bool
 }
 
 func NewSeqScan(requestId string, log logging.Log, collId uint32, ranges []*SeqScanRange, offset int64, limit int64, ordered bool,
@@ -332,7 +386,7 @@ func NewSeqScan(requestId string, log logging.Log, collId uint32, ranges []*SeqS
 }
 
 func NewRandomScan(requestId string, log logging.Log, collId uint32, sampleSize int, pipelineSize int, serverless bool,
-	useReplica bool) *seqScan {
+	useReplica bool, xattrs bool, withDocs bool) *seqScan {
 
 	if sampleSize <= _SS_MIN_SAMPLE_SIZE {
 		sampleSize = _SS_MIN_SAMPLE_SIZE
@@ -346,6 +400,8 @@ func NewRandomScan(requestId string, log logging.Log, collId uint32, sampleSize 
 		pipelineSize: pipelineSize,
 		serverless:   serverless,
 		useReplica:   useReplica,
+		xattrs:       xattrs,
+		withDocs:     withDocs,
 	}
 	scan.ch = make(chan interface{}, 1)
 	scan.abortch = make(chan bool, 1)
@@ -372,6 +428,10 @@ func (this *seqScan) String() string {
 	b.WriteString(fmt.Sprintf("%v", this.pipelineSize))
 	b.WriteString(",fetchLimit:")
 	b.WriteString(fmt.Sprintf("%v", this.fetchLimit))
+	b.WriteString(",useReplica:")
+	b.WriteString(fmt.Sprintf("%v", this.useReplica))
+	b.WriteString(",xattrs:")
+	b.WriteString(fmt.Sprintf("%v", this.xattrs))
 	b.WriteString(",ranges:[")
 	for i, r := range this.ranges {
 		if i != 0 {
@@ -420,7 +480,7 @@ func (this *seqScan) reportError(err qerrors.Error) bool {
 	return rv
 }
 
-func (this *seqScan) reportResults(data []string) bool {
+func (this *seqScan) reportResults(data interface{}) bool {
 	rv := false
 	if !this.inactive && !this.timedout {
 		select {
@@ -496,20 +556,22 @@ func (this *seqScan) coordinator(b *Bucket, scanTimeout time.Duration) {
 
 	smap := b.VBServerMap()
 	if smap == nil {
-		logging.Severef("Sequential scan coordinator: [%08x] No VB map for bucket %v", this.scanNum, b.Name)
+		logging.Severef("Sequential scan coordinator: [%v,%08x] No VB map for bucket %v", this.requestId, this.scanNum, b.Name)
 		this.reportError(qerrors.NewSSError(qerrors.E_SS_FAILED))
 		return
 	}
 	vblist := smap.VBucketMap
 	if len(vblist) == 0 {
-		logging.Severef("Sequential scan coordinator: [%08x] invalid VB map for bucket %v - no v-buckets", this.scanNum, b.Name)
+		logging.Severef("Sequential scan coordinator: [%v,%08x] invalid VB map for bucket %v - no v-buckets", this.requestId,
+			this.scanNum, b.Name)
 		this.reportError(qerrors.NewSSError(qerrors.E_SS_FAILED))
 		return
 	}
 
 	numServers := len(smap.ServerList)
 	if numServers < 1 {
-		logging.Severef("Sequential scan coordinator: [%08x] invalid VB map for bucket %v - no server list", this.scanNum, b.Name)
+		logging.Severef("Sequential scan coordinator: [%v,%08x] invalid VB map for bucket %v - no server list", this.requestId,
+			this.scanNum, b.Name)
 		this.reportError(qerrors.NewSSError(qerrors.E_SS_FAILED))
 		return
 	}
@@ -574,14 +636,14 @@ func (this *seqScan) coordinator(b *Bucket, scanTimeout time.Duration) {
 					}
 				}
 				if server >= numServers || server < 0 {
-					logging.Severef("Sequential scan coordinator: [%08x] Invalid server for VB (%d): %d (max valid: %d)",
-						this.scanNum, vb, server, numServers-1)
+					logging.Severef("Sequential scan coordinator: [%v,%08x] Invalid server for VB (%d): %d (max valid: %d)",
+						this.requestId, this.scanNum, vb, server, numServers-1)
 					this.reportError(qerrors.NewSSError(qerrors.E_SS_FAILED))
 					cancelAll()
 					return
 				}
 			} else {
-				logging.Severef("Sequential scan coordinator: [%08x] No servers for VB (%d)", this.scanNum, vb)
+				logging.Severef("Sequential scan coordinator: [%v,%08x] No servers for VB (%d)", this.requestId, this.scanNum, vb)
 				this.reportError(qerrors.NewSSError(qerrors.E_SS_FAILED))
 				cancelAll()
 				return
@@ -636,14 +698,15 @@ func (this *seqScan) coordinator(b *Bucket, scanTimeout time.Duration) {
 						}
 					}
 					if server >= numServers || server < 0 {
-						logging.Severef("Sequential scan coordinator: [%08x] Invalid server for VB (%d): %d (max valid: %d)",
-							this.scanNum, vb, server, numServers-1)
+						logging.Severef("Sequential scan coordinator: [%v,%08x] Invalid server for VB (%d): %d (max valid: %d)",
+							this.requestId, this.scanNum, vb, server, numServers-1)
 						this.reportError(qerrors.NewSSError(qerrors.E_SS_FAILED))
 						cancelAll()
 						return
 					}
 				} else {
-					logging.Severef("Sequential scan coordinator: [%08x] No servers for VB (%d)", this.scanNum, vb)
+					logging.Severef("Sequential scan coordinator: [%v,%08x] No servers for VB (%d)",
+						this.requestId, this.scanNum, vb)
 					this.reportError(qerrors.NewSSError(qerrors.E_SS_FAILED))
 					cancelAll()
 					return
@@ -726,29 +789,97 @@ processing:
 					if !vbscan.seek(start) {
 						logging.Debugf("BUG: [%08x] scan seek failed", this.scanNum, this.log)
 					}
-					for start < len(vbscan.keys) {
-						batch := len(vbscan.keys) - start
-						if batch > this.pipelineSize {
-							batch = this.pipelineSize
-						}
-						keys := make([]string, 0, batch)
-						for i := 0; i < batch; i++ {
-							keys = append(keys, string(vbscan.current()))
-							if !vbscan.advance() {
-								if i+1 < batch {
-									logging.Debugf("BUG: [%08x] fewer keys than thought: i: %v, #keys: %v",
-										this.scanNum, i+1, batch, this.log)
-								}
-								break
+					if !this.withDocs {
+						for start < len(vbscan.keys) {
+							batch := len(vbscan.keys) - start
+							if batch > this.pipelineSize {
+								batch = this.pipelineSize
 							}
+							keys := make([]string, 0, batch)
+							for i := 0; i < batch; i++ {
+								keys = append(keys, string(vbscan.current()))
+								if !vbscan.advance() {
+									if i+1 < batch {
+										logging.Debugf("BUG: [%08x] fewer keys than thought: i: %v, #keys: %v",
+											this.scanNum, i+1, batch, this.log)
+									}
+									break
+								}
+							}
+							if !this.reportResults(keys) {
+								cancelAll()
+								this.reportError(qerrors.NewSSError(qerrors.E_SS_TIMEOUT))
+								return
+							}
+							returnCount += int64(len(keys))
+							start += batch
 						}
-						if !this.reportResults(keys) {
-							cancelAll()
-							this.reportError(qerrors.NewSSError(qerrors.E_SS_TIMEOUT))
-							return
+					} else {
+						for start < len(vbscan.keys) {
+							batch := len(vbscan.keys) - start
+							if batch > this.pipelineSize {
+								batch = this.pipelineSize
+							}
+							docs := make([]value.AnnotatedValue, 0, batch)
+							for i := 0; i < batch; i++ {
+								cur := vbscan.current()
+								n := binary.BigEndian.Uint16(cur) + 2
+								key := cur[2:n]
+								meta := cur[n : n+25]
+								n += 25
+								doc := cur[n:]
+								if meta[24]&gomemcached.DatatypeFlagCompressed != 0 {
+									var err error
+									doc, err = snappy.Decode(nil, doc)
+									if err != nil {
+										this.reportError(qerrors.NewInvalidCompressedValueError(err, cur[n:]))
+										logging.Severef("Sequential scan coordinator: [%v,%08x] Invalid compressed document "+
+											"received: %v - %v", this.requestId, this.scanNum, err, cur[n:], this.log)
+										cancelAll()
+										return
+									}
+								}
+								var xattrVal value.Value
+								if this.xattrs && doc[0] != '{' {
+									var ok bool
+									doc, xattrVal, ok = ExtractXattrs(doc)
+									if !ok {
+										logging.Warnf("Sequential scan coordinator: [%v,%08x] Invalid XATTRs for key: %v",
+											this.requestId, this.scanNum, key)
+									}
+								}
+								pv := value.NewParsedValue(doc, (meta[24]&gomemcached.DatatypeFlagJSON != 0))
+								av := value.NewAnnotatedValue(pv)
+								av.SetMetaField(value.META_KEYSPACE, b.Name)
+								av.SetMetaField(value.META_CAS, binary.BigEndian.Uint64(meta[16:]))
+								if av.Type() == value.BINARY {
+									av.SetMetaField(value.META_TYPE, "base64")
+								} else {
+									av.SetMetaField(value.META_TYPE, "json")
+								}
+								av.SetMetaField(value.META_FLAGS, binary.BigEndian.Uint32(meta))
+								av.SetMetaField(value.META_EXPIRATION, binary.BigEndian.Uint32(meta[4:]))
+								if xattrVal != nil {
+									av.SetMetaField(value.META_XATTRS, xattrVal)
+								}
+								av.SetId(string(key))
+								docs = append(docs, av)
+								if !vbscan.advance() {
+									if i+1 < batch {
+										logging.Debugf("BUG: [%08x] fewer docs than thought: i: %v, #keys: %v",
+											this.scanNum, i+1, batch, this.log)
+									}
+									break
+								}
+							}
+							if !this.reportResults(docs) {
+								cancelAll()
+								this.reportError(qerrors.NewSSError(qerrors.E_SS_TIMEOUT))
+								return
+							}
+							returnCount += int64(len(docs))
+							start += batch
 						}
-						returnCount += int64(len(keys))
-						start += batch
 					}
 					err := vbscan.truncate()
 					if err != nil {
@@ -927,7 +1058,7 @@ processing:
 
 	if !this.inactive && !this.timedout {
 		// send final end of data indicator
-		if !this.reportResults([]string(nil)) {
+		if !this.reportResults(nil) {
 			this.reportError(qerrors.NewSSError(qerrors.E_SS_TIMEOUT))
 		}
 	}
@@ -1058,6 +1189,7 @@ func (this *vbRangeScan) release() {
 	this.spill = nil
 	this.reader = nil
 	this.keys = nil
+	this.buffer = nil
 	this.currentKey = 0
 }
 
@@ -1245,9 +1377,79 @@ func (this *vbRangeScan) addKey(key []byte) bool {
 	return true
 }
 
+func (this *vbRangeScan) addDocument(key []byte, doc []byte, meta []byte) bool {
+	var err error
+	if bytes.HasPrefix(key, []byte("_txn:")) {
+		// exclude transaction binary documents
+		return true
+	}
+	if this.buffer == nil {
+		this.buffer = make([]byte, 0, _SS_DOC_BUFFER)
+	}
+	length := uint32(len(key) + 2 + len(doc) + len(meta))
+	if this.offset+length >= uint32(cap(this.buffer)) && this.spill == nil {
+		this.spill, err = util.CreateTemp(_SS_SPILL_FILE_PATTERN, true)
+		if err != nil {
+			this.reportError(qerrors.NewSSError(qerrors.E_SS_SPILL, err))
+			return false
+		}
+	}
+	if this.keys == nil {
+		this.keys = make([]uint32, 0, _SS_INIT_KEYS)
+	}
+	if this.offset < uint32(cap(this.buffer)) && this.offset+length >= uint32(cap(this.buffer)) {
+		// flush the buffer to spill file
+		_, err = this.spill.Write(this.buffer)
+		if err != nil {
+			this.reportError(qerrors.NewSSError(qerrors.E_SS_SPILL, err))
+			return false
+		}
+		this.buffer = this.buffer[:0]
+	}
+	this.offset += length
+	if this.offset >= uint32(cap(this.buffer)) {
+		if !util.UseTemp(this.spill.Name(), int64(len(key))) {
+			this.reportError(qerrors.NewTempFileQuotaExceededError())
+			return false
+		}
+		err = binary.Write(this.spill, binary.BigEndian, uint16(len(key)))
+		if err == nil {
+			_, err = this.spill.Write(key)
+		}
+		if err == nil {
+			_, err = this.spill.Write(meta)
+		}
+		if err == nil {
+			_, err = this.spill.Write(doc)
+		}
+		if err != nil {
+			this.reportError(qerrors.NewSSError(qerrors.E_SS_SPILL, err))
+			return false
+		}
+	} else {
+		n := len(this.buffer)
+		this.buffer = this.buffer[:n+2]
+		binary.BigEndian.PutUint16(this.buffer[n:], uint16(len(key)))
+		this.buffer = append(this.buffer, key...)
+		this.buffer = append(this.buffer, meta...)
+		this.buffer = append(this.buffer, doc...)
+	}
+	if len(this.keys) == cap(this.keys) {
+		nw := make([]uint32, len(this.keys), cap(this.keys)*2)
+		copy(nw, this.keys)
+		this.keys = nw
+	}
+	this.keys = append(this.keys, this.offset)
+	return true
+}
+
 func (this *vbRangeScan) setupRetry() {
 	this.delayUntil = util.Now().Add(_SS_RETRY_DELAY + (time.Duration(_SS_RETRIES-this.retries) * _SS_RETRY_DELAY))
 	this.retries--
+}
+
+func (this *vbRangeScan) size() uint32 {
+	return this.offset
 }
 
 /*
@@ -1349,6 +1551,7 @@ func (this *vbRangeScan) runScan(conn *memcached.Client, node string) bool {
 	}
 
 	createScan := func() (bool, bool) {
+		cc := &memcached.ClientContext{CollId: this.scan.collId, IncludeXATTRs: this.scan.xattrs}
 		if this.sampleSize != 0 {
 			fetchLimit = uint32(this.sampleSize)
 			if this.sampleSize == math.MaxInt {
@@ -1357,12 +1560,12 @@ func (this *vbRangeScan) runScan(conn *memcached.Client, node string) bool {
 				logging.Debugf("%s creating random scan with sample size %d and limit %d",
 					this, this.sampleSize, fetchLimit, this.scan.log)
 			}
-			response, err = conn.CreateRandomScan(this.vbucket(), this.scan.collId, this.sampleSize, false)
+			response, err = conn.CreateRandomScan(this.vbucket(), this.sampleSize, this.scan.withDocs, cc)
 		} else {
 			start, exclStart = this.startFrom()
 			end, exclEnd := this.endWith()
 			logging.Debugf("%s creating scan from: %v (excl:%v)", this, start, exclStart, this.scan.log)
-			response, err = conn.CreateRangeScan(this.vbucket(), this.scan.collId, start, exclStart, end, exclEnd, false)
+			response, err = conn.CreateRangeScan(this.vbucket(), start, exclStart, end, exclEnd, false, cc)
 		}
 		if err != nil || len(response.Body) < 16 {
 			resp, ok := err.(*gomemcached.MCResponse)
@@ -1567,36 +1770,100 @@ func (this *vbRangeScan) runScan(conn *memcached.Client, node string) bool {
 				return cancelWorking()
 			}
 
-			lastStart := 0
-			lastEnd := 0
 			if len(response.Body) > 0 {
-				num_keys := 0
-				var l, p uint32
-				for i := 0; i < len(response.Body) && this.state == _VBS_WORKING && len(this.keys) < int(fetchLimit); {
-					// read a length... leb128 format (use 32-bits even though length will likely never be this large)
-					l = uint32(0)
-					for shift := 0; i < len(response.Body); {
-						p = uint32(response.Body[i])
-						i++
-						l |= (p & uint32(0x7f)) << shift
-						if p&uint32(0x80) == 0 {
-							break
+				if !this.scan.withDocs {
+					num_keys := 0
+					var l, p uint32
+					for i := 0; i < len(response.Body) && this.state == _VBS_WORKING && len(this.keys) < int(fetchLimit); {
+						// read a length... leb128 format (use 32-bits even though length will likely never be this large)
+						l = uint32(0)
+						for shift := 0; i < len(response.Body); {
+							p = uint32(response.Body[i])
+							i++
+							l |= (p & uint32(0x7f)) << shift
+							if p&uint32(0x80) == 0 {
+								break
+							}
+							shift += 7
 						}
-						shift += 7
+						if i+int(l) > len(response.Body) {
+							logging.Debuga(func() string {
+								return fmt.Sprintf("%s invalid body - %v > %v", this, l, len(response.Body)-i)
+							}, this.scan.log)
+							this.reportError(qerrors.NewSSError(qerrors.E_SS_BAD_RESPONSE, fmt.Errorf("i:%v l:%v len:%v",
+								i, l, len(response.Body))))
+							return cancelWorking()
+						}
+						if !this.addKey(response.Body[i : i+int(l)]) {
+							// addKey will have reported the error already
+							return cancelWorking()
+						}
+						num_keys++
+						i += int(l)
 					}
-					if i+int(l) > len(response.Body) {
-						l = uint32(len(response.Body) - int(i))
+					logging.Debugf("%s processed %v keys from response of %v bytes", this, num_keys, len(response.Body),
+						this.scan.log)
+				} else {
+					num_docs := 0
+					var l, p uint32
+					for i := 0; i < len(response.Body) && this.state == _VBS_WORKING && len(this.keys) < int(fetchLimit); {
+						meta := i
+						i += 25
+						// read a length... leb128 format (use 32-bits even though length will likely never be this large)
+						l = uint32(0)
+						for shift := 0; i < len(response.Body); {
+							p = uint32(response.Body[i])
+							i++
+							l |= (p & uint32(0x7f)) << shift
+							if p&uint32(0x80) == 0 {
+								break
+							}
+							shift += 7
+						}
+						if i+int(l) > len(response.Body) {
+							logging.Debuga(func() string {
+								return fmt.Sprintf("%s invalid body - %v > %v", this, l, len(response.Body)-i)
+							}, this.scan.log)
+							this.reportError(qerrors.NewSSError(qerrors.E_SS_BAD_RESPONSE, fmt.Errorf("i:%v l:%v len:%v",
+								i, l, len(response.Body))))
+							return cancelWorking()
+						}
+						ks := i
+						ke := i + int(l)
+						i += int(l)
+
+						// read a length... leb128 format (use 32-bits even though length will likely never be this large)
+						l = uint32(0)
+						for shift := 0; i < len(response.Body); {
+							p = uint32(response.Body[i])
+							i++
+							l |= (p & uint32(0x7f)) << shift
+							if p&uint32(0x80) == 0 {
+								break
+							}
+							shift += 7
+						}
+						if i+int(l) > len(response.Body) {
+							logging.Debuga(func() string {
+								return fmt.Sprintf("%s invalid body - %v > %v", this, l, len(response.Body)-i)
+							}, this.scan.log)
+							this.reportError(qerrors.NewSSError(qerrors.E_SS_BAD_RESPONSE, fmt.Errorf("i:%v l:%v len:%v",
+								i, l, len(response.Body))))
+							return cancelWorking()
+						}
+
+						if !this.addDocument(response.Body[ks:ke], response.Body[i:i+int(l)], response.Body[meta:meta+25]) {
+							// addKey will have reported the error already
+							return cancelWorking()
+						}
+						num_docs++
+						i += int(l)
 					}
-					lastStart = i
-					lastEnd = i + int(l)
-					if !this.addKey(response.Body[lastStart:lastEnd]) {
-						// addKey will have reported the error already
-						return cancelWorking()
-					}
-					num_keys++
-					i += int(l)
+					logging.Debuga(func() string {
+						return fmt.Sprintf("%s processed %v documents from response of %v bytes",
+							this, num_docs, len(response.Body))
+					}, this.scan.log)
 				}
-				logging.Debugf("%s processed %v keys from response of %v bytes", this, num_keys, len(response.Body), this.scan.log)
 			} else {
 				logging.Debugf("%s response body is empty (0 bytes)", this, this.scan.log)
 			}
@@ -1604,13 +1871,17 @@ func (this *vbRangeScan) runScan(conn *memcached.Client, node string) bool {
 				return cancelWorking()
 			}
 
-			if response.Status == gomemcached.RANGE_SCAN_MORE &&
-				(this.sampleSize != 0 || (int(fetchLimit) > len(this.keys) && len(this.keys) < _SS_MIN_SCAN_SIZE)) {
+			if response.Status == gomemcached.RANGE_SCAN_MORE && (this.sampleSize != 0 ||
+				(int(fetchLimit) > len(this.keys) && len(this.keys) < _SS_MIN_SCAN_SIZE && this.size() < _SS_MAX_CACHED_SIZE)) {
 				break // issue another continue
 			}
 			if len(response.Body) == 0 ||
 				response.Status == gomemcached.RANGE_SCAN_MORE ||
 				response.Status == gomemcached.RANGE_SCAN_COMPLETE {
+
+				logging.Debuga(func() string {
+					return fmt.Sprintf("%s end status: %v, size: %v", this, response.Status, this.size())
+				}, this.scan.log)
 
 				keepConn := true
 				if response.Status != gomemcached.RANGE_SCAN_MORE || this.sampleSize != 0 {
@@ -1726,7 +1997,12 @@ func (cqueue *rswCancelQueue) runWorker() {
 						b = cr[i].b
 						replica = false
 						vbucket = cr[i].vbucket
-						desc := &doDescriptor{useReplicas: true, version: b.Version, maxTries: b.backOffRetries(), retry: true}
+						desc := &doDescriptor{
+							useReplicas: true,
+							version:     b.Version,
+							maxTries:    b.backOffRetries(),
+							retry:       true,
+						}
 						for desc.attempts = 0; desc.attempts < desc.maxTries; {
 							conn, pool, err = b.getVbConnection(uint32(vbucket), desc)
 							if err != nil {
@@ -1749,7 +2025,6 @@ func (cqueue *rswCancelQueue) runWorker() {
 					// always reset the deadline for each new piece of work
 					dl, _ := getDeadline(noDeadline, _NO_TIMEOUT, DefaultTimeout)
 					conn.SetDeadline(dl)
-					// TODO: batch by bucket, if/when protcol changes to support batch cancellations
 					_, err := conn.CancelRangeScan(cr[i].vbucket, cr[i].uuid, 0)
 					if err != nil {
 						resp, ok := err.(*gomemcached.MCResponse)
@@ -2083,4 +2358,40 @@ func uuidAsString(uuid []byte) string {
 		}
 	}
 	return sb.String()
+}
+
+func getXattrValLen(raw []byte) int {
+	for i := 0; i < len(raw); i++ {
+		if raw[i] == 0 {
+			return i
+		}
+	}
+	return len(raw)
+}
+
+func ExtractXattrs(raw []byte) ([]byte, value.Value, bool) {
+	lx := int(binary.BigEndian.Uint32(raw)) + 4
+	m := map[string]interface{}{}
+	for i := 8; i < lx; { // start after lx and the first length field
+		var name string
+		var val interface{}
+		name = string(raw[i : i+getXattrValLen(raw[i:])])
+		if name == "" {
+			return raw[lx:], nil, false
+		}
+		i += len(name) + 1
+		v := raw[i : i+getXattrValLen(raw[i:])]
+		if len(v) == 0 {
+			return raw[lx:], nil, false
+		}
+		if err := json.Unmarshal(v, &val); err != nil {
+			return raw[lx:], nil, false
+		}
+		i += len(v) + 5 // skip the next length field too
+		m[name] = val
+	}
+	if len(m) == 0 {
+		return raw[lx:], nil, true
+	}
+	return raw[lx:], value.NewValue(m), true
 }

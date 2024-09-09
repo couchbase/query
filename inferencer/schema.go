@@ -894,12 +894,27 @@ func NewSchemaFromValue(val value.Value) *Schema {
 		schema.bareValue = nil
 		v1 := val.Actual()
 		elements := v1.(map[string]interface{})
-		schema.fields = make([]Field, len(elements))
-		idx := 0
+		schema.fields = make([]Field, 0, len(elements))
 		for name, v2 := range elements {
 			//fmt.Printf("  Got field2: %s, value: %s\n",name, value.NewValue(v2))
-			schema.fields[idx] = NewField(name, value.NewValue(v2))
-			idx++
+			schema.fields = append(schema.fields, NewField(name, value.NewValue(v2)))
+		}
+
+		if av, ok := val.(value.AnnotatedValue); ok {
+			if m := av.GetMeta(); m != nil {
+				if x := m["xattrs"]; x != nil {
+					// low probability of a conflict with an existing document field
+					// nevertheless generate a unique name if necessary
+					name := "xattr"
+					for i := 0; ; i++ {
+						if _, ok := elements[name]; !ok {
+							break
+						}
+						name = fmt.Sprintf("xattrs:%d", i)
+					}
+					schema.fields = append(schema.fields, NewField(name, value.NewValue(x)))
+				}
+			}
 		}
 
 		sort.Sort(schema.fields)
