@@ -605,7 +605,19 @@ func (this *builder) minimalIndexes(sargables map[datastore.Index]*indexEntry, s
 	pred expression.Expression, node *algebra.KeyspaceTerm) map[datastore.Index]*indexEntry {
 
 	alias := node.Alias()
+	baseKeyspace, _ := this.baseKeyspaces[node.Alias()]
 	useCBO := this.useCBO && this.keyspaceUseCBO(node.Alias())
+
+	if useCBO && len(baseKeyspace.VectorFilters()) > 0 {
+		// for now, do not use CBO for consideration of vector index for covering
+		// since we don't yet have proper costing for vector index scan
+		for _, entry := range sargables {
+			if entry.HasFlag(IE_VECTOR_KEY_SARGABLE) {
+				useCBO = false
+				break
+			}
+		}
+	}
 
 	var predFc map[string]value.Value
 	if pred != nil {
@@ -616,7 +628,6 @@ func (this *builder) minimalIndexes(sargables map[datastore.Index]*indexEntry, s
 
 	if useCBO {
 		advisorValidate := this.advisorValidate()
-		baseKeyspace, _ := this.baseKeyspaces[node.Alias()]
 		keyspace := baseKeyspace.Keyspace()
 		for _, se := range sargables {
 			if se.cost <= 0.0 {

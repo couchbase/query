@@ -90,6 +90,17 @@ func (this *builder) buildCoveringScan(idxs map[datastore.Index]*indexEntry,
 	origPred := baseKeyspace.OrigPred()
 	useCBO := this.useCBO && this.keyspaceUseCBO(alias)
 
+	if useCBO && len(baseKeyspace.VectorFilters()) > 0 {
+		// for now, do not use CBO for consideration of vector index for covering
+		// since we don't yet have proper costing for vector index scan
+		for _, entry := range indexes {
+			if entry.HasFlag(IE_VECTOR_KEY_SARGABLE) {
+				useCBO = false
+				break
+			}
+		}
+	}
+
 	exprs, err := this.getExprsToCover()
 	if err != nil {
 		return nil, 0, err
