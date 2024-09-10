@@ -140,14 +140,14 @@ func (this *IndexScan2) RunOnce(context *Context, parent value.Value) {
 
 							av.SetField(this.plan.Term().Alias(), av)
 
-							if context.UseRequestQuota() {
-								err := context.TrackValueSize(av.Size())
-								if err != nil {
-									context.Error(err)
-									av.Recycle()
-									ok = false
-									break
-								}
+						}
+						if context.UseRequestQuota() {
+							err := context.TrackValueSize(av.Size())
+							if err != nil {
+								context.Error(err)
+								av.Recycle()
+								ok = false
+								break
 							}
 						}
 
