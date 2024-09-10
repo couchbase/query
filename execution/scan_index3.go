@@ -293,14 +293,14 @@ func (this *IndexScan3) RunOnce(context *Context, parent value.Value) {
 									continue
 								}
 							}
-							if context.UseRequestQuota() {
-								err := context.TrackValueSize(av.Size())
-								if err != nil {
-									context.Error(err)
-									av.Recycle()
-									ok = false
-									break
-								}
+						}
+						if context.UseRequestQuota() {
+							err := context.TrackValueSize(av.Size())
+							if err != nil {
+								context.Error(err)
+								av.Recycle()
+								ok = false
+								break
 							}
 						}
 
