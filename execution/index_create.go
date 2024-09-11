@@ -137,7 +137,7 @@ func (this *CreateIndex) RunOnce(context *Context, parent value.Value) {
 					return
 				}
 			} else if context.useCBO && (node.Using() == datastore.GSI || node.Using() == datastore.DEFAULT) &&
-				!deferred(node.With()) {
+				!deferred(node.With()) && !isVector {
 
 				err = updateStats([]string{node.Name()}, "create_index", this.plan.Keyspace(), context)
 				if err != nil {
