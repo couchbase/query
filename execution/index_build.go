@@ -97,6 +97,9 @@ func (this *BuildIndexes) RunOnce(context *Context, parent value.Value) {
 				context.Error(err1)
 				continue
 			}
+			if index6, ok := index.(datastore.Index6); ok && index6.IsVector() {
+				continue
+			}
 			if state != datastore.ONLINE {
 				idxNames = append(idxNames, name)
 			}
