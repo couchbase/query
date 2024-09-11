@@ -63,9 +63,20 @@ func (this *Clone) processItem(item value.AnnotatedValue, context *Context) bool
 	if av, ok := clone.(value.AnnotatedValue); ok && av != nil {
 		options := make(map[string]interface{})
 		mv := av.NewMeta()
-		mv["expiration"] = uint32(0)
-		options["xattrs"] = mv["xattrs"]
+		var xattrs interface{}
+		if fv, ok := av.Field(this.plan.Alias()); ok {
+			if fav, ok := fv.(value.AnnotatedValue); ok {
+				if m := fav.GetMeta(); m != nil {
+					xattrs = m["xattrs"]
+				}
+			}
+		}
+		if xattrs == nil {
+			xattrs = mv["xattrs"]
+		}
+		options["xattrs"] = xattrs
 		av.SetAttachment("options", value.NewValue(options))
+		mv["expiration"] = uint32(0)
 	}
 
 	item.SetAttachment("clone", clone)

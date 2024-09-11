@@ -55,7 +55,6 @@
             "deleted": false
         }
     ]
-
     },
     {
         "statements":"SELECT META().xattrs.`_sync` from product use keys [\"product0_xattrs\",\"product1_xattrs\"]",
@@ -130,5 +129,84 @@
             "id": "product1_xattrs"
         }
     ]
-    }
+    },
+  {
+    "statements": "INSERT INTO shellTest VALUES('xattr_mutation_0',{'main':'inserted'},{'xattrs':{'test':'simple'}})",
+    "results": []
+  },
+  {
+    "statements": "SELECT s, meta().xattrs.test FROM shellTest s USE KEYS['xattr_mutation_0']",
+    "results": [
+      {
+        "s": {
+          "main": "inserted"
+        },
+        "test": "simple"
+      }
+    ]
+  },
+  {
+    "statements": "UPSERT INTO shellTest VALUES('xattr_mutation_0',{'main':'upserted'},{'xattrs':{'test':{'composite':true}}})",
+    "results": []
+  },
+  {
+    "statements": "SELECT s, meta().xattrs.test FROM shellTest s USE KEYS['xattr_mutation_0']",
+    "results": [
+      {
+        "s": {
+          "main": "upserted"
+        },
+        "test": {
+          "composite": true
+        }
+      }
+    ]
+  },
+  {
+    "statements": "UPDATE shellTest USE KEYS ['xattr_mutation_0'] SET main = 'updated', meta().xattrs.test.second = true, meta().xattrs.test2 = 'simple' UNSET meta().xattrs.test.composite",
+    "results": []
+  },
+  {
+    "statements": "SELECT s, meta().xattrs.test, meta().xattrs.test2 FROM shellTest s USE KEYS['xattr_mutation_0']",
+    "results": [
+      {
+        "s": {
+          "main": "updated"
+        },
+        "test": {
+          "second": true
+        },
+        "test2": "simple"
+      }
+    ]
+  },
+  {
+    "statements": "UPDATE shellTest USE KEYS ['xattr_mutation_0'] SET main = 'updated again' UNSET meta().xattrs.test",
+    "results": []
+  },
+  {
+    "statements": "SELECT s, meta().xattrs.test, meta().xattrs.test2 FROM shellTest s USE KEYS['xattr_mutation_0']",
+    "results": [
+      {
+        "s": {
+          "main": "updated again"
+        },
+        "test2": "simple"
+      }
+    ]
+  },
+  {
+    "statements": "UPDATE shellTest USE KEYS ['xattr_mutation_0'] SET main = 'updated another time', meta().xattrs.test2 = MISSING",
+    "results": []
+  },
+  {
+    "statements": "SELECT s, meta().xattrs.test, meta().xattrs.test2 FROM shellTest s USE KEYS['xattr_mutation_0']",
+    "results": [
+      {
+        "s": {
+          "main": "updated another time"
+        }
+      }
+    ]
+  }
 ]

@@ -61,6 +61,7 @@ const (
 	PRIV_QUERY_SEQ_SCAN                         Privilege = 39 // Ability to use a sequential scan
 	PRIV_SREAD                                  Privilege = 40 // Read from system scope
 	PRIV_SWRITE                                 Privilege = 41 // Write to system scope
+	PRIV_XATTRS_WRITE                           Privilege = 42 // Ability to write system xattrs
 )
 
 type PrivilegePair struct {

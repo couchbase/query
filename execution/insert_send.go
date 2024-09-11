@@ -11,6 +11,7 @@ package execution
 import (
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
@@ -29,11 +30,12 @@ func init() {
 
 type SendInsert struct {
 	base
-	plan        *plan.SendInsert
-	keyspace    datastore.Keyspace
-	limit       int64
-	skipNewKeys bool
-	batchSize   int
+	plan            *plan.SendInsert
+	keyspace        datastore.Keyspace
+	limit           int64
+	skipNewKeys     bool
+	batchSize       int
+	sysXattrChecked time.Duration
 }
 
 func NewSendInsert(plan *plan.SendInsert, context *Context) *SendInsert {
@@ -79,6 +81,7 @@ func (this *SendInsert) processItem(item value.AnnotatedValue, context *Context)
 }
 
 func (this *SendInsert) beforeItems(context *Context, parent value.Value) bool {
+	this.sysXattrChecked = 0
 	this.keyspace = getKeyspace(this.plan.Keyspace(), this.plan.Term().ExpressionTerm(), &this.operatorCtx)
 	if this.keyspace == nil {
 		return false
@@ -213,6 +216,19 @@ func (this *SendInsert) flushBatch(context *Context) bool {
 			continue
 		}
 
+		if this.sysXattrChecked == 0 && hasSystemXattrs(options) {
+			this.switchPhase(_SERVTIME)
+			mark := util.Now()
+			if err := authForSysXattrs(this.keyspace, context); err != nil {
+				context.Fatal(err)
+				this.switchPhase(_EXECTIME)
+				this.fail(context)
+				return false
+			}
+			this.sysXattrChecked = util.Since(mark)
+			this.switchPhase(_EXECTIME)
+		}
+
 		dpair.Options = adjustExpiration(options, copyOptions)
 		expiration, _ := getExpiration(dpair.Options)
 		dpair.Value = this.setDocumentKey(dpair.Name, value.NewAnnotatedValue(val), expiration, context)
@@ -293,6 +309,13 @@ func (this *SendInsert) MarshalJSON() ([]byte, error) {
 	r := this.plan.MarshalBase(func(r map[string]interface{}) {
 		this.marshalTimes(r)
 	})
+	if this.sysXattrChecked != 0 {
+		if s, ok := r["#stats"]; ok {
+			if sm, ok := s.(map[string]interface{}); ok {
+				sm["sysXattrAuthTime"] = util.OutputDuration(this.sysXattrChecked)
+			}
+		}
+	}
 	return json.Marshal(r)
 }
 

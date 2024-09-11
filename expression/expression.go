@@ -16,6 +16,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/value"
@@ -361,4 +362,22 @@ func GetFlattenKeys(keys Expressions) Expressions {
 		}
 	}
 	return keys
+}
+
+func HasSystemXattrs(expr Expression) bool {
+	for {
+		if f, ok := expr.(*Field); ok {
+			switch t := f.First().(type) {
+			case *Identifier:
+				return t.Alias() == "xattrs" && strings.HasPrefix(f.Alias(), "_")
+			case *Field:
+				if _, ok := t.First().(*Meta); ok {
+					return t.Alias() == "xattrs" && strings.HasPrefix(f.Alias(), "_")
+				}
+				expr = t
+			}
+		} else {
+			return false
+		}
+	}
 }

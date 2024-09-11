@@ -11,18 +11,21 @@ package execution
 import (
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
 type SendUpsert struct {
 	base
-	plan      *plan.SendUpsert
-	keyspace  datastore.Keyspace
-	batchSize int
+	plan            *plan.SendUpsert
+	keyspace        datastore.Keyspace
+	batchSize       int
+	sysXattrChecked time.Duration
 }
 
 func NewSendUpsert(plan *plan.SendUpsert, context *Context) *SendUpsert {
@@ -56,6 +59,7 @@ func (this *SendUpsert) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *SendUpsert) beforeItems(context *Context, parent value.Value) bool {
+	this.sysXattrChecked = 0
 	this.keyspace = getKeyspace(this.plan.Keyspace(), this.plan.Term().ExpressionTerm(), &this.operatorCtx)
 	return this.keyspace != nil
 }
@@ -188,6 +192,19 @@ func (this *SendUpsert) flushBatch(context *Context) bool {
 			continue
 		}
 
+		if this.sysXattrChecked == 0 && hasSystemXattrs(options) {
+			this.switchPhase(_SERVTIME)
+			mark := util.Now()
+			if err := authForSysXattrs(this.keyspace, context); err != nil {
+				context.Fatal(err)
+				this.switchPhase(_EXECTIME)
+				this.fail(context)
+				return false
+			}
+			this.sysXattrChecked = util.Since(mark)
+			this.switchPhase(_EXECTIME)
+		}
+
 		dpair.Options = adjustExpiration(options, copyOptions)
 		expiration, _ := getExpiration(dpair.Options)
 		// UPSERT can preserve expiration, but we can't get old value without read for RETURNING clause.
@@ -259,6 +276,13 @@ func (this *SendUpsert) MarshalJSON() ([]byte, error) {
 	r := this.plan.MarshalBase(func(r map[string]interface{}) {
 		this.marshalTimes(r)
 	})
+	if this.sysXattrChecked != 0 {
+		if s, ok := r["#stats"]; ok {
+			if sm, ok := s.(map[string]interface{}); ok {
+				sm["sysXattrAuthTime"] = util.OutputDuration(this.sysXattrChecked)
+			}
+		}
+	}
 	return json.Marshal(r)
 }
 

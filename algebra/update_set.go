@@ -60,6 +60,15 @@ func (this *Set) NonMutatedExpressions() expression.Expressions {
 	return exprs
 }
 
+func (this *Set) HasSystemXattrs() bool {
+	for _, term := range this.terms {
+		if term.HasSystemXattrs() {
+			return true
+		}
+	}
+	return false
+}
+
 /*
 Fully qualify identifiers for each term in the set terms.
 */
@@ -96,13 +105,42 @@ func NewSetTerm(path expression.Path, value expression.Expression, updateFor *Up
 	return &SetTerm{meta, path, value, updateFor}
 }
 
-var _MUTATE_META_PATHS = []string{"expiration"}
+var _MUTATE_META_PATHS = map[string][]bool{ // bools indicate if a nested field is expected and if it can be unset
+	"expiration": []bool{false, false},
+	"xattrs":     []bool{true, true},
+}
 
-func IsValidMetaMutatePath(path expression.Expression) bool {
-	if alias, path, err := expression.PathString(path); err == nil && path == "" {
-		for _, s := range _MUTATE_META_PATHS {
-			if s == alias {
-				return true
+func IsValidMetaMutatePath(path expression.Expression, unset bool) bool {
+	switch p := path.(type) {
+	case *expression.Identifier:
+		if p.CaseInsensitive() == true {
+			return false
+		}
+		if w, ok := _MUTATE_META_PATHS[p.Alias()]; ok && w[0] == false && (!unset || w[1] == true) {
+			return true
+		}
+	case *expression.Field:
+		if p.CaseInsensitive() == true {
+			return false
+		}
+		e := p.First()
+		for {
+			switch t := e.(type) {
+			case *expression.Identifier:
+				if t.CaseInsensitive() == true {
+					return false
+				}
+				if w, ok := _MUTATE_META_PATHS[t.Alias()]; ok && w[0] == true && (!unset || w[1] == true) {
+					return true
+				}
+				return false
+			case *expression.Field:
+				if t.CaseInsensitive() == true {
+					return false
+				}
+				e = t.First()
+			default:
+				return false
 			}
 		}
 	}
@@ -144,7 +182,17 @@ Returns all contained Expressions.
 */
 func (this *SetTerm) Expressions() expression.Expressions {
 	exprs := make(expression.Expressions, 0, 8)
-	exprs = append(exprs, this.path, this.value)
+	if this.meta == nil {
+		exprs = append(exprs, this.path, this.value)
+	} else {
+		if f, ok := this.path.(*expression.Field); ok {
+			f = f.Copy().(*expression.Field)
+			f.AssignTo(this.meta)
+			exprs = append(exprs, f, this.value)
+		} else {
+			exprs = append(exprs, this.path, this.value)
+		}
+	}
 
 	if this.updateFor != nil {
 		exprs = append(exprs, this.updateFor.Expressions()...)
@@ -162,6 +210,13 @@ func (this *SetTerm) NonMutatedExpressions() expression.Expressions {
 	}
 
 	return exprs
+}
+
+func (this *SetTerm) HasSystemXattrs() bool {
+	if this.meta != nil {
+		return expression.HasSystemXattrs(this.path.(expression.Expression))
+	}
+	return false
 }
 
 /*
@@ -188,7 +243,7 @@ func (this *SetTerm) Formalize(f *expression.Formalizer) (err error) {
 	}
 
 	if this.meta != nil {
-		// if meta is present don't formalize the path
+		// if meta is present don't formalize the path else we'll end up with a keyspace reference between meta and its fields
 		this.meta, err = f.Map(this.meta)
 		if err != nil {
 			return err

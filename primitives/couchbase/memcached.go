@@ -1189,15 +1189,15 @@ var ErrKeyExists = errors.New("key exists")
 // a delete.) If `Raw` is not given, `v` will be marshaled as JSON
 // before being written. It must be JSON-marshalable and it must not
 // be nil.
-func (b *Bucket) Write(k string, flags, exp int, v interface{},
+func (b *Bucket) Write(k string, flags, exp int, v interface{}, xattrs map[string]interface{},
 	opt WriteOptions, context ...*memcached.ClientContext) (wu uint64, err error) {
 
-	_, wu, err = b.WriteWithCAS(k, flags, exp, v, opt, context...)
+	_, wu, err = b.WriteWithCAS(k, flags, exp, v, xattrs, opt, context...)
 
 	return wu, err
 }
 
-func (b *Bucket) WriteWithCAS(k string, flags, exp int, v interface{},
+func (b *Bucket) WriteWithCAS(k string, flags, exp int, v interface{}, xattrs map[string]interface{},
 	opt WriteOptions, context ...*memcached.ClientContext) (cas uint64, wu uint64, err error) {
 
 	var data []byte
@@ -1210,6 +1210,7 @@ func (b *Bucket) WriteWithCAS(k string, flags, exp int, v interface{},
 		data = v.([]byte)
 	}
 
+	var ops []memcached.SubDocOp
 	var res *gomemcached.MCResponse
 	var compressed bool
 	err = b.do(k, func(mc *memcached.Client, vb uint16) error {
@@ -1222,22 +1223,71 @@ func (b *Bucket) WriteWithCAS(k string, flags, exp int, v interface{},
 				context = append(context, &memcached.ClientContext{Compressed: true})
 			}
 		}
+		if len(xattrs) > 0 && data != nil {
+			ops = make([]memcached.SubDocOp, len(xattrs)+1)
+			n := 0
+			for k, v := range xattrs {
+				var data []byte
+				if v != nil {
+					data, err = json.Marshal(v)
+					if err != nil {
+						return err
+					}
+				}
+				ops[n].Value = data
+				ops[n].Xattr = true
+				ops[n].Path = k
+				n++
+			}
+			ops[n].Value = data
+		}
 		if opt&AddOnly != 0 {
-			res, err = memcached.UnwrapMemcachedError(
-				mc.Add(vb, k, flags, exp, data, context...))
+			if len(xattrs) == 0 {
+				res, err = memcached.UnwrapMemcachedError(mc.Add(vb, k, flags, exp, data, context...))
+			} else {
+				res, err = memcached.UnwrapMemcachedError(mc.SetSubdoc(vb, k, ops, true, exp, 0, context...))
+			}
 			if err == nil && res.Status != gomemcached.SUCCESS {
 				if res.Status == gomemcached.KEY_EEXISTS {
 					err = ErrKeyExists
+				} else if res.Status == gomemcached.SUBDOC_BAD_MULTI {
+					err = processSubdocMultiError(ops, res)
 				} else {
 					err = res
 				}
+			} else if err != nil {
+				if r, ok := err.(*gomemcached.MCResponse); ok {
+					if r.Status == gomemcached.KEY_EEXISTS {
+						err = ErrKeyExists
+					} else if r.Status == gomemcached.SUBDOC_BAD_MULTI {
+						err = processSubdocMultiError(ops, r)
+					}
+				}
 			}
 		} else if opt&Append != 0 {
-			res, err = mc.Append(vb, k, data, context...)
+			if len(xattrs) == 0 {
+				res, err = mc.Append(vb, k, data, context...)
+			} else {
+				res, err = memcached.UnwrapMemcachedError(mc.SetSubdoc(vb, k, ops, false, exp, 0, context...))
+				if err == nil && res.Status == gomemcached.SUBDOC_BAD_MULTI {
+					err = processSubdocMultiError(ops, res)
+				} else if err != nil {
+					err = processSubdocMultiError(ops, err)
+				}
+			}
 		} else if data == nil {
 			res, err = mc.Del(vb, k, context...)
 		} else {
-			res, err = mc.Set(vb, k, flags, exp, data, context...)
+			if len(xattrs) == 0 {
+				res, err = mc.Set(vb, k, flags, exp, data, context...)
+			} else {
+				res, err = memcached.UnwrapMemcachedError(mc.SetSubdoc(vb, k, ops, false, exp, cas, context...))
+				if err == nil && res.Status == gomemcached.SUBDOC_BAD_MULTI {
+					err = processSubdocMultiError(ops, res)
+				} else if err != nil {
+					err = processSubdocMultiError(ops, err)
+				}
+			}
 		}
 
 		if err == nil {
@@ -1258,13 +1308,13 @@ func (b *Bucket) WriteWithCAS(k string, flags, exp int, v interface{},
 }
 
 // Extended CAS operation. These functions will return the mutation token, i.e vbuuid & guard
-func (b *Bucket) CasWithMeta(k string, flags int, exp int, cas uint64, v interface{}, context ...*memcached.ClientContext) (
-	uint64, uint64, *MutationToken, error) {
+func (b *Bucket) CasWithMeta(k string, flags int, exp int, cas uint64, v interface{}, xattrs map[string]interface{},
+	context ...*memcached.ClientContext) (uint64, uint64, *MutationToken, error) {
 
-	return b.WriteCasWithMT(k, flags, exp, cas, v, 0, context...)
+	return b.WriteCasWithMT(k, flags, exp, cas, v, xattrs, 0, context...)
 }
 
-func (b *Bucket) WriteCasWithMT(k string, flags, exp int, cas uint64, v interface{},
+func (b *Bucket) WriteCasWithMT(k string, flags, exp int, cas uint64, v interface{}, xattrs map[string]interface{},
 	opt WriteOptions, context ...*memcached.ClientContext) (newCas uint64, wu uint64, mt *MutationToken, err error) {
 
 	var data []byte
@@ -1289,7 +1339,32 @@ func (b *Bucket) WriteCasWithMT(k string, flags, exp int, cas uint64, v interfac
 				context = append(context, &memcached.ClientContext{Compressed: true})
 			}
 		}
-		res, err = mc.SetCas(vb, k, flags, exp, cas, data, context...)
+		if xattrs == nil {
+			res, err = mc.SetCas(vb, k, flags, exp, cas, data, context...)
+		} else {
+			ops := make([]memcached.SubDocOp, len(xattrs)+1)
+			n := 0
+			for k, v := range xattrs {
+				var data []byte
+				if v != nil {
+					data, err = json.Marshal(v)
+					if err != nil {
+						return err
+					}
+				}
+				ops[n].Value = data
+				ops[n].Xattr = true
+				ops[n].Path = k
+				n++
+			}
+			ops[n].Value = data
+			res, err = mc.SetSubdoc(vb, k, ops, false, exp, cas, context...)
+			if err == nil && res.Status == gomemcached.SUBDOC_BAD_MULTI {
+				err = processSubdocMultiError(ops, res)
+			} else if err != nil {
+				err = processSubdocMultiError(ops, err)
+			}
+		}
 		return err
 	})
 
@@ -1318,14 +1393,18 @@ func (b *Bucket) WriteCasWithMT(k string, flags, exp int, cas uint64, v interfac
 }
 
 // Set a value in this bucket.
-func (b *Bucket) SetWithCAS(k string, exp int, v interface{}, context ...*memcached.ClientContext) (uint64, uint64, error) {
-	return b.WriteWithCAS(k, 0, exp, v, 0, context...)
+func (b *Bucket) SetWithCAS(k string, exp int, v interface{}, xattrs map[string]interface{},
+	context ...*memcached.ClientContext) (uint64, uint64, error) {
+
+	return b.WriteWithCAS(k, 0, exp, v, xattrs, 0, context...)
 }
 
 // Add adds a value to this bucket; like Set except that nothing
 // happens if the key exists. Return the CAS value.
-func (b *Bucket) AddWithCAS(k string, exp int, v interface{}, context ...*memcached.ClientContext) (bool, uint64, uint64, error) {
-	cas, wu, err := b.WriteWithCAS(k, 0, exp, v, AddOnly, context...)
+func (b *Bucket) AddWithCAS(k string, exp int, v interface{}, xattrs map[string]interface{},
+	context ...*memcached.ClientContext) (bool, uint64, uint64, error) {
+
+	cas, wu, err := b.WriteWithCAS(k, 0, exp, v, xattrs, AddOnly, context...)
 	if ee, ok := err.(qerrors.Error); ok {
 		if ee.ContainsText(ErrKeyExists.Error()) {
 			return false, 0, wu, nil
@@ -1445,7 +1524,12 @@ func (b *Bucket) SetsSubDoc(key string, ops []memcached.SubDocOp, context ...*me
 
 	err1 = b.do2(key, func(mc *memcached.Client, vb uint16) error {
 		mc.SetDeadline(noDeadline)
-		response, err = mc.SetSubdoc(vb, key, ops, context...)
+		response, err = mc.SetSubdoc(vb, key, ops, false, 0, 0, context...)
+		if err == nil && response.Status == gomemcached.SUBDOC_BAD_MULTI {
+			err = processSubdocMultiError(ops, response)
+		} else if err != nil {
+			err = processSubdocMultiError(ops, err)
+		}
 		return err
 	}, false, false, b.backOffRetries())
 	if err == nil && err1 != nil {
@@ -1510,7 +1594,7 @@ func (b *Bucket) GetRandomDoc(context ...*memcached.ClientContext) (*gomemcached
 
 // Delete a key from this bucket.
 func (b *Bucket) Delete(k string, context ...*memcached.ClientContext) (uint64, error) {
-	return b.Write(k, 0, 0, nil, Raw, context...)
+	return b.Write(k, 0, 0, nil, nil, Raw, context...)
 }
 
 // Wrapper around memcached.CASNext()
@@ -1642,3 +1726,37 @@ func (this *vbStringPool) Put(s map[uint16][]string) {
 }
 
 var _VB_STRING_POOL = newVBStringPool(16, _STRING_POOL)
+
+func processSubdocMultiError(ops []memcached.SubDocOp, err interface{}) error {
+	if err == nil {
+		return nil
+	}
+	res, ok := err.(*gomemcached.MCResponse)
+	if !ok || res.Status != gomemcached.SUBDOC_BAD_MULTI {
+		return error(res)
+	}
+	// we need to examine the body for the error details
+	m := make(map[string]interface{}, 7)
+	for i := 0; i < len(res.Body); i += 3 {
+		status := gomemcached.Status(binary.BigEndian.Uint16(res.Body[i+1:]))
+		em := gomemcached.StatusNames[status]
+		if em == "" {
+			em = fmt.Sprintf("KV status %v", status)
+		}
+		var name string
+		if int(res.Body[i]) < len(ops) {
+			if ops[res.Body[i]].Xattr {
+				name = fmt.Sprintf("xattrs.%s", ops[res.Body[i]].Path)
+			} else {
+				name = fmt.Sprintf("%s", ops[res.Body[i]].Path)
+			}
+		} else {
+			name = fmt.Sprintf("%d", res.Body[i])
+		}
+		m[name] = em
+	}
+	if len(m) == 0 {
+		return error(res)
+	}
+	return qerrors.NewSubDocSetError(m)
+}

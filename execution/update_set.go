@@ -14,6 +14,7 @@ import (
 
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
@@ -88,8 +89,7 @@ func (this *Set) processItem(item value.AnnotatedValue, context *Context) bool {
 	return this.sendItem(item)
 }
 
-func setPath(t *algebra.SetTerm, clone, item value.AnnotatedValue, context *opContext) (
-	value.AnnotatedValue, error) {
+func setPath(t *algebra.SetTerm, clone, item value.AnnotatedValue, context *opContext) (value.AnnotatedValue, error) {
 
 	// make sure we don't used a possibly stale cached value
 	t.Value().ResetValue()
@@ -109,7 +109,22 @@ func setPath(t *algebra.SetTerm, clone, item value.AnnotatedValue, context *opCo
 
 	if t.Meta() != nil {
 		if opVal, ok := clone.GetAttachment("options").(value.Value); ok && opVal.Type() != value.MISSING {
-			t.Path().Set(opVal, v, context)
+			if v.Type() == value.MISSING {
+				if f, ok := t.Path().(*expression.Field); ok && f.First().Alias() == "xattrs" {
+					// convert MISSING to nil so it is processed as a deletion of the top-level xattr
+					v = nil
+				}
+			}
+			if !t.Path().Set(opVal, v, context) {
+				// if we're trying to set an xattr and none were retrieved previously, we'll need to create the empty value first
+				if f, ok := t.Path().(*expression.Field); ok && f.First().Alias() == "xattrs" {
+					if xattrs, ok := opVal.Field("xattrs"); ok && xattrs == nil || xattrs.Type() == value.NULL {
+						opVal.SetField("xattrs", value.NewValue(map[string]interface{}{}))
+						// try again
+						t.Path().Set(opVal, v, context)
+					}
+				}
+			}
 		}
 	} else {
 		t.Path().Set(clone, v, context)
@@ -118,8 +133,7 @@ func setPath(t *algebra.SetTerm, clone, item value.AnnotatedValue, context *opCo
 	return clone, err
 }
 
-func setFor(t *algebra.SetTerm, clone, item value.AnnotatedValue, context *opContext) (
-	value.AnnotatedValue, error) {
+func setFor(t *algebra.SetTerm, clone, item value.AnnotatedValue, context *opContext) (value.AnnotatedValue, error) {
 	ivals, mismatch, err := buildFor(t.UpdateFor(), item, context)
 	defer releaseValsFor(ivals)
 	if err != nil {

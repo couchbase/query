@@ -51,6 +51,15 @@ func (this *Unset) Expressions() expression.Expressions {
 	return exprs
 }
 
+func (this *Unset) HasSystemXattrs() bool {
+	for _, term := range this.terms {
+		if term.HasSystemXattrs() {
+			return true
+		}
+	}
+	return false
+}
+
 /*
 Fully qualify identifiers for each term in the Unset terms.
 */
@@ -76,12 +85,13 @@ func (this *Unset) Terms() UnsetTerms {
 type UnsetTerms []*UnsetTerm
 
 type UnsetTerm struct {
-	path      expression.Path `json:"path"`
-	updateFor *UpdateFor      `json:"path_for"`
+	path      expression.Path       `json:"path"`
+	updateFor *UpdateFor            `json:"path_for"`
+	meta      expression.Expression `json:"meta"`
 }
 
-func NewUnsetTerm(path expression.Path, updateFor *UpdateFor) *UnsetTerm {
-	return &UnsetTerm{path, updateFor}
+func NewUnsetTerm(path expression.Path, updateFor *UpdateFor, meta expression.Expression) *UnsetTerm {
+	return &UnsetTerm{path, updateFor, meta}
 }
 
 /*
@@ -108,13 +118,33 @@ Returns all contained Expressions.
 */
 func (this *UnsetTerm) Expressions() expression.Expressions {
 	exprs := make(expression.Expressions, 0, 8)
-	exprs = append(exprs, this.path)
+	if this.meta == nil {
+		exprs = append(exprs, this.path)
+	} else {
+		if f, ok := this.path.(*expression.Field); ok {
+			f = f.Copy().(*expression.Field)
+			f.AssignTo(this.meta)
+			exprs = append(exprs, f)
+		} else {
+			exprs = append(exprs, this.path)
+		}
+	}
 
 	if this.updateFor != nil {
 		exprs = append(exprs, this.updateFor.Expressions()...)
 	}
 
+	if this.meta != nil {
+		exprs = append(exprs, this.meta)
+	}
 	return exprs
+}
+
+func (this *UnsetTerm) HasSystemXattrs() bool {
+	if this.meta != nil {
+		return expression.HasSystemXattrs(this.path.(expression.Expression))
+	}
+	return false
 }
 
 /*
@@ -139,13 +169,19 @@ func (this *UnsetTerm) Formalize(f *expression.Formalizer) (err error) {
 			}
 		}
 	}
-
-	path, err := f.Map(this.path)
-	if err != nil {
-		return err
+	if this.meta != nil {
+		// if meta is present don't formalize the path
+		this.meta, err = f.Map(this.meta)
+		if err != nil {
+			return err
+		}
+	} else {
+		path, err := f.Map(this.path)
+		if err != nil {
+			return err
+		}
+		this.path = path.(expression.Path)
 	}
-
-	this.path = path.(expression.Path)
 	return
 }
 
@@ -161,6 +197,10 @@ Returns the update-for clause in the UNSET clause.
 */
 func (this *UnsetTerm) UpdateFor() *UpdateFor {
 	return this.updateFor
+}
+
+func (this *UnsetTerm) Meta() expression.Expression {
+	return this.meta
 }
 
 /*

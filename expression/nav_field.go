@@ -412,6 +412,16 @@ func (this *Field) Copy() Expression {
 	return rv
 }
 
+func (this *Field) AssignTo(parent Expression) {
+	switch t := this.First().(type) {
+	case *Identifier:
+		f := NewField(parent, NewFieldName(t.Alias(), t.caseInsensitive))
+		this.operands[0] = f
+	case *Field:
+		t.AssignTo(parent)
+	}
+}
+
 /*
 FieldName represents the Field. It implements Constant and has a field
 name as string. This class overrides the Alias() method so that the

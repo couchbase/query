@@ -370,9 +370,22 @@ func NewSubDocGetError(e error) Error {
 		InternalMsg: "Sub-doc get operation failed", InternalCaller: CallerN(1)}
 }
 
-func NewSubDocSetError(e error) Error {
-	c := make(map[string]interface{})
-	c["error"] = e.Error()
+func NewSubDocSetError(e interface{}) Error {
+	var c interface{}
+	switch e := e.(type) {
+	case Error:
+		c = e
+	case error:
+		c := make(map[string]interface{})
+		c["error"] = e.Error()
+	case map[string]interface{}:
+		c = e
+	default:
+		if e != nil {
+			c := make(map[string]interface{})
+			c["cause"] = fmt.Sprintf("%v", e)
+		}
+	}
 	return &err{level: EXCEPTION, ICode: E_CB_SUBDOC_SET, IKey: "datastore.subdoc.set", cause: c,
 		InternalMsg: "Sub-doc set operation failed", InternalCaller: CallerN(1)}
 }

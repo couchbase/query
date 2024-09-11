@@ -132,6 +132,15 @@ func (this *Projection) Expressions() expression.Expressions {
 	return exprs
 }
 
+func (this *Projection) HasSystemXattrs() bool {
+	for _, term := range this.terms {
+		if expression.HasSystemXattrs(term.expr) {
+			return true
+		}
+	}
+	return false
+}
+
 /*
 Representation as a N1QL string.
 */

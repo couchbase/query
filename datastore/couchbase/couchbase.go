@@ -2448,6 +2448,38 @@ func getExpiration(options value.Value) (exptime int, present bool) {
 	return
 }
 
+func getMutatableXattrs(options value.Value) map[string]interface{} {
+	if options != nil && options.Type() == value.OBJECT {
+		if v, ok := options.Field("xattrs"); ok && v.Type() == value.OBJECT {
+			return v.Actual().(map[string]interface{})
+			// extract and return non-virtual xattrs only
+			var rv map[string]interface{}
+			for k, v := range v.Fields() {
+				if k[0] != '$' {
+					if rv == nil {
+						rv = make(map[string]interface{})
+					}
+					rv[k] = v
+				}
+			}
+			return rv
+		}
+	}
+	return nil
+}
+
+func hasExpirationOrXattrs(options value.Value) bool {
+	if options != nil && options.Type() == value.OBJECT {
+		if v, ok := options.Field("expiration"); ok && v.Type() == value.NUMBER {
+			return true
+		}
+		if v, ok := options.Field("xattrs"); ok && v.Type() == value.OBJECT {
+			return true
+		}
+	}
+	return false
+}
+
 // Struct with info passed to the mutation workers
 type parallelInfo struct {
 	sync.Mutex
@@ -2556,6 +2588,7 @@ func (b *keyspace) singleMutationOp(kv value.Pair, op MutateOp, qualifiedName st
 	var exptime int
 	var present bool
 	var cas, newCas uint64
+	var xattrs map[string]interface{}
 	casMismatch := false
 
 	// operator has been terminated
@@ -2570,6 +2603,7 @@ func (b *keyspace) singleMutationOp(kv value.Pair, op MutateOp, qualifiedName st
 		}
 		val = kv.Value.ActualForIndex()
 		exptime, present = getExpiration(kv.Options)
+		xattrs = getMutatableXattrs(kv.Options)
 	}
 
 	switch op {
@@ -2578,7 +2612,7 @@ func (b *keyspace) singleMutationOp(kv value.Pair, op MutateOp, qualifiedName st
 		var added bool
 
 		// add the key to the backend
-		added, cas, wu, err = b.cbbucket.AddWithCAS(key, exptime, val, clientContext...)
+		added, cas, wu, err = b.cbbucket.AddWithCAS(key, exptime, val, xattrs, clientContext...)
 
 		context.RecordKvWU(tenant.Unit(wu))
 		b.checkRefresh(err)
@@ -2618,7 +2652,7 @@ func (b *keyspace) singleMutationOp(kv value.Pair, op MutateOp, qualifiedName st
 		} else {
 			logging.Debugf("Before %s: key {<ud>%v</ud>} CAS %v flags <ud>%v</ud> value <ud>%v</ud> for Keyspace <ud>%s</ud>.",
 				MutateOpNames[op], key, cas, flags, val, qualifiedName)
-			newCas, wu, _, err = b.cbbucket.CasWithMeta(key, int(flags), exptime, cas, val, clientContext...)
+			newCas, wu, _, err = b.cbbucket.CasWithMeta(key, int(flags), exptime, cas, val, xattrs, clientContext...)
 
 			context.RecordKvWU(tenant.Unit(wu))
 			if err == nil {
@@ -2638,7 +2672,7 @@ func (b *keyspace) singleMutationOp(kv value.Pair, op MutateOp, qualifiedName st
 				retry = errors.TRUE
 			}
 		} else {
-			newCas, wu, err = b.cbbucket.SetWithCAS(key, exptime, val, clientContext...)
+			newCas, wu, err = b.cbbucket.SetWithCAS(key, exptime, val, xattrs, clientContext...)
 
 			context.RecordKvWU(tenant.Unit(wu))
 			b.checkRefresh(err)

@@ -106,7 +106,7 @@ func (this *Update) String() string {
 		s += " set"
 		for _, v := range this.set.Terms() {
 			if v.meta != nil {
-				s += " " + v.meta.String()
+				s += " " + v.meta.String() + "." + strings.TrimPrefix(strings.TrimSuffix(v.path.String(), ")"), "(")
 			} else {
 				s += " " + strings.TrimPrefix(strings.TrimSuffix(v.path.String(), ")"), "(")
 			}
@@ -129,7 +129,11 @@ func (this *Update) String() string {
 	if this.unset != nil {
 		s += " unset"
 		for _, v := range this.unset.Terms() {
-			s += " " + strings.TrimPrefix(strings.TrimSuffix(v.path.String(), ")"), "(")
+			if v.meta != nil {
+				s += " " + v.meta.String() + "." + strings.TrimPrefix(strings.TrimSuffix(v.path.String(), ")"), "(")
+			} else {
+				s += " " + strings.TrimPrefix(strings.TrimSuffix(v.path.String(), ")"), "(")
+			}
 			if v.updateFor != nil {
 				s += " for "
 				for _, b := range v.updateFor.Bindings() {
@@ -273,6 +277,9 @@ func (this *Update) Privileges() (*auth.Privileges, errors.Error) {
 	privs.Add(fullKeyspace, auth.PRIV_QUERY_UPDATE, props)
 	if this.returning != nil {
 		privs.Add(fullKeyspace, auth.PRIV_QUERY_SELECT, props)
+		if this.returning.HasSystemXattrs() {
+			privs.Add(fullKeyspace, auth.PRIV_XATTRS, props)
+		}
 	}
 
 	exprs := this.Expressions()
@@ -281,6 +288,10 @@ func (this *Update) Privileges() (*auth.Privileges, errors.Error) {
 		return nil, err
 	}
 	privs.AddAll(subprivs)
+
+	if (this.set != nil && this.set.HasSystemXattrs()) || (this.unset != nil && this.unset.HasSystemXattrs()) {
+		privs.Add(fullKeyspace, auth.PRIV_XATTRS_WRITE, props)
+	}
 
 	for _, expr := range exprs {
 		privs.AddAll(expr.Privileges())
