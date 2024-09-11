@@ -9,6 +9,7 @@
 package decode
 
 import (
+	"encoding/binary"
 	"io"
 
 	"github.com/couchbase/query/logging"
@@ -16,7 +17,12 @@ import (
 )
 
 func Decode(i io.Reader, o io.StringWriter) bool {
-	buf := make([]byte, 1)
+	buf := make([]byte, 2)
+	n, err := i.Read(buf)
+	if err != nil || n != 2 || binary.BigEndian.Uint16(buf) != planshape.MAGIC {
+		return false
+	}
+	buf = buf[:1]
 	for {
 		n, err := i.Read(buf)
 		if err != nil || n == 0 {

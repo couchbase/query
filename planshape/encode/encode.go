@@ -9,6 +9,8 @@
 package encode
 
 import (
+	"encoding/binary"
+
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/execution"
 	"github.com/couchbase/query/plan"
@@ -16,10 +18,11 @@ import (
 )
 
 func Encode(start execution.Operator, max int) []byte {
-	if start == nil || max < 1 {
+	if start == nil || max < 3 {
 		return nil
 	}
-	ps := &planShape{make([]byte, 0, max)}
+	ps := &planShape{make([]byte, 2, max)}
+	binary.BigEndian.PutUint16(ps.o, planshape.MAGIC)
 	start.Accept(ps)
 	return ps.o
 }

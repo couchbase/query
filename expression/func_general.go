@@ -9,15 +9,12 @@
 package expression
 
 import (
-	"bytes"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"strings"
 	"unicode/utf8"
 
 	"github.com/couchbase/query/errors"
-	planshape "github.com/couchbase/query/planshape/decode"
 	"github.com/couchbase/query/sort"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
@@ -622,53 +619,4 @@ func (this *ExtractDDL) MinArgs() int {
 
 func (this *ExtractDDL) MaxArgs() int {
 	return 2
-}
-
-// Decode plan shape
-
-type PSDecode struct {
-	UnaryFunctionBase
-}
-
-func NewPSDecode(operand Expression) Function {
-	rv := &PSDecode{}
-	rv.Init("psdecode", operand)
-
-	rv.expr = rv
-	return rv
-}
-
-func (this *PSDecode) Accept(visitor Visitor) (interface{}, error) {
-	return visitor.VisitFunction(this)
-}
-
-func (this *PSDecode) Type() value.Type { return value.OBJECT }
-
-func (this *PSDecode) Evaluate(item value.Value, context Context) (value.Value, error) {
-	arg, err := this.operands[0].Evaluate(item, context)
-	if err != nil {
-		return nil, err
-	} else if arg.Type() == value.MISSING {
-		return value.MISSING_VALUE, nil
-	} else if arg.Type() != value.STRING {
-		return value.NULL_VALUE, nil
-	}
-
-	b := bytes.NewBufferString(arg.ToString())
-	d := base64.NewDecoder(base64.StdEncoding, b)
-	sb := &strings.Builder{}
-	if !planshape.Decode(d, sb) {
-		return value.NULL_VALUE, nil
-	}
-	return value.NewValue(sb.String()), nil
-}
-
-func (this *PSDecode) Constructor() FunctionConstructor {
-	return func(operands ...Expression) Function {
-		return NewPSDecode(operands[0])
-	}
-}
-
-func (this *PSDecode) Indexable() bool {
-	return false
 }

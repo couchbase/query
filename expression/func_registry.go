@@ -472,7 +472,6 @@ var _FUNCTIONS = map[string]Function{
 	"advisor": &Advisor{},
 
 	// General
-	"psdecode":   &PSDecode{},
 	"evaluate":   &Evaluate{},
 	"extractddl": &ExtractDDL{},
 	"finderr":    &Finderr{},

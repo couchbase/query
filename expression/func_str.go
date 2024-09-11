@@ -21,6 +21,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/couchbase/query/errors"
+	planshape "github.com/couchbase/query/planshape/decode"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
@@ -1755,14 +1756,20 @@ func (this *Uncompress) Evaluate(item value.Value, context Context) (value.Value
 		return value.NULL_VALUE, nil
 	}
 	b := bytes.NewBufferString(arg.ToString())
-	e := base64.NewDecoder(base64.StdEncoding, b)
-	w, err := zlib.NewReader(e)
+	d := base64.NewDecoder(base64.StdEncoding, b)
+	w, err := zlib.NewReader(d)
 	if err != nil {
 		// need to reset the stream before trying an alternative format
 		b = bytes.NewBufferString(arg.ToString())
-		e = base64.NewDecoder(base64.StdEncoding, b)
-		w, err = gzip.NewReader(e)
+		d = base64.NewDecoder(base64.StdEncoding, b)
+		w, err = gzip.NewReader(d)
 		if err != nil {
+			b = bytes.NewBufferString(arg.ToString())
+			d = base64.NewDecoder(base64.StdEncoding, b)
+			sb := &strings.Builder{}
+			if planshape.Decode(d, sb) {
+				return value.NewValue(sb.String()), nil
+			}
 			// if it isn't compressed text, just return the raw text
 			return value.NewValue(arg.ToString()), nil
 		}

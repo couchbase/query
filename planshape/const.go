@@ -8,6 +8,8 @@
 
 package planshape
 
+const MAGIC = 0xd0d3 // PS with high bits set to be invalid UTF-8
+
 const (
 	NUL = byte(iota)
 	PRIMARYSCAN
