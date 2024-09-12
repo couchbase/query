@@ -197,9 +197,6 @@ func (this *awrCB) SetConfig(i interface{}, dryRun bool) errors.Error {
 		for k, v := range cfg {
 			if va, ok := v.(value.Value); ok {
 				v = va.Actual()
-				if f, ok := v.(float64); ok && value.IsInt(f) {
-					v = int64(f)
-				}
 			}
 			if f, ok := v.(float64); ok && value.IsInt(f) {
 				v = int64(f)
