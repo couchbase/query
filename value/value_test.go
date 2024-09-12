@@ -841,8 +841,9 @@ func TestSpillingUnsortedArray(t *testing.T) {
 		return c > spillThreshold
 	}
 	acquire := func(size int) AnnotatedValues { return make(AnnotatedValues, 0, size) }
-	trackMem := func(sz int64) {
+	trackMem := func(sz int64) error {
 		tracking -= sz
+		return nil
 	}
 	array := NewAnnotatedArray(acquire, nil, shouldSpill, trackMem, nil, false)
 	check := make(map[string]bool, 4)
