@@ -201,6 +201,9 @@ func (this *awrCB) SetConfig(i interface{}, dryRun bool) errors.Error {
 					v = int64(f)
 				}
 			}
+			if f, ok := v.(float64); ok && value.IsInt(f) {
+				v = int64(f)
+			}
 			switch k {
 			case "node": // allow but ignore
 				continue
