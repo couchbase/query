@@ -677,6 +677,9 @@ func doMigrateBucket(name string) bool {
 
 		logging.Infof("UDF migration: Migrated %v", parts)
 
+		// drop any functions cache entry if loaded
+		functions.DropAllCacheEntries(name)
+
 		return nil
 	})
 	if err1 != nil {
