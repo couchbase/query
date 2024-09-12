@@ -328,6 +328,23 @@ func DeleteFunction(name FunctionName, context Context) errors.Error {
 	return err
 }
 
+// drop cache entries only, including local and remote cache
+func DropAllCacheEntries(name FunctionName) {
+	key := name.Name()
+	// drops entry from local functions cache
+	functions.cache.Delete(key, func(ce interface{}) {
+		ce.(*FunctionEntry).Unload(ce.(*FunctionEntry).FunctionName)
+	})
+
+	// drops remote function cache entries
+	distributed.RemoteAccess().DoRemoteOps([]string{}, "functions_cache", "DELETE", key, "",
+		func(warn errors.Error) {
+			if warn != nil {
+				logging.Warnf("failed to delete remote function cache entry for %s: %v", key, warn)
+			}
+		}, distributed.NO_CREDS, "")
+}
+
 func GetPrivilege(name FunctionName, body FunctionBody) auth.Privilege {
 	var priv auth.Privilege
 
