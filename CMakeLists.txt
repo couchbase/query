@@ -76,11 +76,13 @@ IF (NOT CBQ_ONLY)
 ENDIF (NOT CBQ_ONLY)
 
 GoModBuild (TARGET cbq PACKAGE github.com/couchbase/query/shell/cbq
-  INSTALL_PATH bin ADD_TO_TOOLS
+  INSTALL_PATH bin
   GOVERSION ${GOVERSION}
   CGO_INCLUDE_DIRS "${CGO_INCLUDE_DIRS}"
   CGO_LIBRARY_DIRS "${CGO_LIBRARY_DIRS}"
   LDFLAGS "-X github.com/couchbase/query/shell/cbq/command.SHELL_VERSION=${PRODUCT_VERSION}")
+
+AddToStandalonePackage(TARGETS cbq PACKAGES admin_tools dev_tools)
 
 GoModBuild (TARGET finderr PACKAGE github.com/couchbase/query/finderr
   INSTALL_PATH bin

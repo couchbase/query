@@ -45,7 +45,7 @@ type spillFile struct {
 	compress bool
 }
 
-func (this *spillFile) rewind(trackMem func(int64) error) error {
+func (this *spillFile) rewind() error {
 	_, err := this.f.Seek(0, os.SEEK_SET)
 	if err != nil {
 		return errors.NewValueError(errors.E_VALUE_SPILL_READ, err)
@@ -54,13 +54,7 @@ func (this *spillFile) rewind(trackMem func(int64) error) error {
 	if this.compress {
 		this.reader, _ = zlib.NewReader(this.reader)
 	}
-	err = this.nextValue(trackMem)
-	if err != nil {
-		if _, ok := err.(errors.Error); ok {
-			return err
-		}
-		return errors.NewValueError(errors.E_VALUE_SPILL_READ, err)
-	}
+	this.current = nil
 	return nil
 }
 
@@ -329,10 +323,17 @@ func (this *AnnotatedArray) Foreach(f func(AnnotatedValue) bool) errors.Error {
 	this.iterator.memIndex = 0
 
 	for i := range this.spill {
-		err := this.spill[i].rewind(this.trackMemory)
+		err := this.spill[i].rewind()
 		if err != nil {
 			logging.Debugf("[%p] rewind failed on [%d] %s: %v", this, i, this.spill[i].f.Name(), err)
 			return errors.NewValueError(errors.E_VALUE_SPILL_READ, err)
+		}
+		if this.less != nil {
+			err = this.spill[i].nextValue(this.trackMemory)
+			if err != nil {
+				logging.Debugf("[%p] initial read failed on [%d] %s: %v", this, i, this.spill[i].f.Name(), err)
+				return errors.NewValueError(errors.E_VALUE_SPILL_READ, err)
+			}
 		}
 	}
 
@@ -399,6 +400,10 @@ func (this *AnnotatedArray) nextUnsorted() (AnnotatedValue, errors.Error, bool) 
 				return nil, nil, true
 			}
 			return nil, errors.NewValueError(errors.E_VALUE_SPILL_READ, err), false
+		}
+		if this.spill[this.iterator.fileIndex].current == nil {
+			logging.Debugf("[%p] nil value for [%d] %s", this, this.iterator.fileIndex,
+				this.spill[this.iterator.fileIndex].f.Name())
 		}
 		return this.spill[this.iterator.fileIndex].current, nil, false
 	}
