@@ -3059,6 +3059,21 @@ func (b *keyspace) IsSystemCollection() bool {
 	return false
 }
 
+func (ks *keyspace) getDefaultCid() (uint32, bool) {
+	var cid uint32
+	var ok bool
+	ks.RLock()
+	scope, ok := ks.scopes["_default"]
+	if ok {
+		coll, ok := scope.keyspaces["_default"]
+		if ok {
+			cid, ok = coll.uid, true
+		}
+	}
+	ks.RUnlock()
+	return cid, ok
+}
+
 func (ks *keyspace) StartKeyScan(context datastore.QueryContext, ranges []*datastore.SeqScanRange, offset int64,
 	limit int64, ordered bool, timeout time.Duration, pipelineSize int, serverless bool, skipKey func(string) bool) (
 	interface{}, errors.Error) {
@@ -3069,13 +3084,9 @@ func (ks *keyspace) StartKeyScan(context datastore.QueryContext, ranges []*datas
 		r[i].Init(ranges[i].Start, ranges[i].ExcludeStart, ranges[i].End, ranges[i].ExcludeEnd)
 	}
 
-	scope, ok := ks.scopes["_default"]
-	if ok {
-		coll, ok := scope.keyspaces["_default"]
-		if ok {
-			return ks.cbbucket.StartKeyScan(context.RequestId(), context, coll.uid, "", "", r, offset, limit, ordered, timeout,
-				pipelineSize, serverless, context.UseReplica(), skipKey)
-		}
+	if cid, ok := ks.getDefaultCid(); ok {
+		return ks.cbbucket.StartKeyScan(context.RequestId(), context, cid, "", "", r, offset, limit, ordered, timeout,
+			pipelineSize, serverless, context.UseReplica(), skipKey)
 	}
 	return ks.cbbucket.StartKeyScan(context.RequestId(), context, 0, "_default", "_default", r, offset, limit, ordered, timeout,
 		pipelineSize, serverless, context.UseReplica(), skipKey)
@@ -3092,13 +3103,9 @@ func (ks *keyspace) FetchKeys(scan interface{}, timeout time.Duration) ([]string
 func (ks *keyspace) StartRandomScan(context datastore.QueryContext, sampleSize int, timeout time.Duration,
 	pipelineSize int, serverless bool) (interface{}, errors.Error) {
 
-	scope, ok := ks.scopes["_default"]
-	if ok {
-		coll, ok := scope.keyspaces["_default"]
-		if ok {
-			return ks.cbbucket.StartRandomScan(context.RequestId(), context, coll.uid, "", "", sampleSize, timeout, pipelineSize,
-				serverless, context.UseReplica())
-		}
+	if cid, ok := ks.getDefaultCid(); ok {
+		return ks.cbbucket.StartRandomScan(context.RequestId(), context, cid, "", "", sampleSize, timeout, pipelineSize,
+			serverless, context.UseReplica())
 	}
 	return ks.cbbucket.StartRandomScan(context.RequestId(), context, 0, "_default", "_default", sampleSize, timeout, pipelineSize,
 		serverless, context.UseReplica())
