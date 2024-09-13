@@ -342,7 +342,7 @@ func main() {
 		*PREPARED_LIMIT = _DEF_PREPARED_LIMIT
 	}
 	prepareds.PreparedsInit(*PREPARED_LIMIT)
-	functions.FunctionsInit(*FUNCTIONS_LIMIT)
+	functions.FunctionsInit(*FUNCTIONS_LIMIT, storage.UseSystemStorage)
 	scheduler.SchedulerSetLimit(*TASKS_LIMIT)
 
 	if *DICTIONARY_CACHE_LIMIT <= 0 {

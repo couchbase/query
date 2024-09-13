@@ -200,6 +200,16 @@ func (name *systemEntry) QueryContext() string {
 	return name.path.QueryContext()
 }
 
+func (name *systemEntry) GetSystemEntry() functions.FunctionName {
+	return nil
+}
+
+func (name *systemEntry) SetSystemEntry(systemEntry functions.FunctionName) {
+}
+
+func (name *systemEntry) SetUseSystem() {
+}
+
 func (name *systemEntry) Signature(object map[string]interface{}) {
 	object["namespace"] = name.path.Namespace()
 	object["bucket"] = name.path.Bucket()
@@ -330,6 +340,10 @@ func (name *systemEntry) CheckStorage() bool {
 
 func (name *systemEntry) ResetStorage() {
 	name.changeCounter = metaStorage.ChangeCounter()
+}
+
+func (name *systemEntry) InheritStorage(changeCnter int32) {
+	name.changeCounter = changeCnter
 }
 
 var _STRING_ANNOTATED_POOL = value.NewStringAnnotatedPool(1)

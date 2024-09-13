@@ -98,13 +98,20 @@ func (this *InitialGroup) processItem(item value.AnnotatedValue, context *Contex
 	}
 
 	for _, agg := range this.plan.Aggregates() {
-		v, e := agg.CumulateInitial(item, aggregates[agg.String()], &this.operatorCtx)
+		a := agg.String()
+		pv := aggregates[a]
+		v, e := agg.CumulateInitial(item, pv, &this.operatorCtx)
 		if e != nil {
 			context.Fatal(errors.NewGroupUpdateError(e, "Error updating initial GROUP value."))
 			item.Recycle()
 			return false
 		}
-		aggregates[agg.String()] = v
+		if v.Equals(pv) != value.TRUE_VALUE {
+			// maintain a reference count for each aggregate as appropriate
+			v.Track()
+			pv.Recycle()
+		}
+		aggregates[a] = v
 	}
 
 	// Update the Group Key's entry in the Map with the Group As field in the item

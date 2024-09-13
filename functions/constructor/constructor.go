@@ -64,7 +64,16 @@ func newGlobalFunction(elem []string, namespace string, queryContext string) (fu
 		if storage.UseSystemStorage() {
 			return systemStorage.NewScopeFunction(ns, elem[1], elem[2], elem[3])
 		} else {
-			return metaStorage.NewScopeFunction(ns, elem[1], elem[2], elem[3])
+			rv, err := metaStorage.NewScopeFunction(ns, elem[1], elem[2], elem[3])
+			if err == nil {
+				// make a systemEntry as well to be used as redirect after migration
+				var sysEntry functions.FunctionName
+				sysEntry, err = systemStorage.NewScopeFunction(ns, elem[1], elem[2], elem[3])
+				if err == nil {
+					rv.SetSystemEntry(sysEntry)
+				}
+			}
+			return rv, err
 		}
 	default:
 		return nil, errors.NewInvalidFunctionNameError(elem[len(elem)-1], fmt.Errorf("invalid function path"))

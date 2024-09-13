@@ -592,9 +592,19 @@ func (this objectValue) Successor() Value {
 }
 
 func (this objectValue) Track() {
+	for _, v := range this {
+		if val, ok := v.(Value); ok {
+			val.Track()
+		}
+	}
 }
 
 func (this objectValue) Recycle() {
+	for _, v := range this {
+		if val, ok := v.(Value); ok {
+			val.Recycle()
+		}
+	}
 }
 
 func (this objectValue) Tokens(set *Set, options Value) *Set {

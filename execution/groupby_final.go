@@ -84,14 +84,18 @@ func (this *FinalGroup) processItem(item value.AnnotatedValue, context *Context)
 	switch aggregates := aggregates.(type) {
 	case map[string]value.Value:
 		for _, agg := range this.plan.Aggregates() {
-			v, e := agg.ComputeFinal(aggregates[agg.String()], &this.operatorCtx)
+			a := agg.String()
+			pv := aggregates[a]
+			v, e := agg.ComputeFinal(pv, &this.operatorCtx)
 			if e != nil {
 				context.Fatal(errors.NewGroupUpdateError(e, "Error updating final GROUP value."))
 				item.Recycle()
 				return false
 			}
-
-			aggregates[agg.String()] = v
+			if v.Equals(pv) != value.TRUE_VALUE {
+				pv.Recycle()
+			}
+			aggregates[a] = v
 		}
 
 		return true

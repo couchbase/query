@@ -99,10 +99,14 @@ func (this *IntermediateGroup) processItem(item value.AnnotatedValue, context *C
 
 	for _, agg := range this.plan.Aggregates() {
 		a := agg.String()
-		v, e := agg.CumulateIntermediate(part[a], cumulative[a], &this.operatorCtx)
+		pv := cumulative[a]
+		v, e := agg.CumulateIntermediate(part[a], pv, &this.operatorCtx)
 		if e != nil {
 			context.Fatal(errors.NewGroupUpdateError(e, "Error updating intermediate GROUP value."))
 			return false
+		}
+		if v.Equals(pv) != value.TRUE_VALUE {
+			pv.Recycle()
 		}
 		cumulative[a] = v
 	}

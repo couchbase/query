@@ -265,6 +265,8 @@ func Count(b string) (int64, error) {
 type metaEntry struct {
 	path          algebra.Path
 	changeCounter int32
+	useSystem     bool
+	systemEntry   functions.FunctionName // redirected entry after migration
 }
 
 func NewGlobalFunction(namespace string, name string) (functions.FunctionName, errors.Error) {
@@ -307,6 +309,21 @@ func (name *metaEntry) QueryContext() string {
 	return name.path.QueryContext()
 }
 
+func (name *metaEntry) GetSystemEntry() functions.FunctionName {
+	return name.systemEntry
+}
+
+func (name *metaEntry) SetSystemEntry(systemEntry functions.FunctionName) {
+	name.systemEntry = systemEntry
+}
+
+func (name *metaEntry) SetUseSystem() {
+	if !name.useSystem && name.systemEntry != nil {
+		name.useSystem = true
+		name.systemEntry.InheritStorage(name.changeCounter)
+	}
+}
+
 func (name *metaEntry) Signature(object map[string]interface{}) {
 	if name.path.IsCollection() {
 		object["namespace"] = name.path.Namespace()
@@ -322,6 +339,10 @@ func (name *metaEntry) Signature(object map[string]interface{}) {
 }
 
 func (name *metaEntry) Load() (functions.FunctionBody, errors.Error) {
+	if name.useSystem {
+		return name.systemEntry.Load()
+	}
+
 	var _unmarshalled struct {
 		Identity   json.RawMessage `json:"identity"`
 		Definition json.RawMessage `json:"definition"`
@@ -336,7 +357,7 @@ func (name *metaEntry) Load() (functions.FunctionBody, errors.Error) {
 	} else if err != nil {
 		return nil, errors.NewMetaKVError(name.Name(), err)
 	}
-	name.changeCounter = changeCounter
+	name.ResetStorage()
 
 	// unmarshal signature and body
 	err = json.Unmarshal(val, &_unmarshalled)
@@ -349,6 +370,10 @@ func (name *metaEntry) Load() (functions.FunctionBody, errors.Error) {
 }
 
 func (name *metaEntry) Save(body functions.FunctionBody, replace bool) errors.Error {
+	if name.useSystem {
+		return name.systemEntry.Save(body, replace)
+	}
+
 	entry := make(map[string]interface{}, 2)
 	identity := make(map[string]interface{})
 	definition := make(map[string]interface{})
@@ -360,6 +385,10 @@ func (name *metaEntry) Save(body functions.FunctionBody, replace bool) errors.Er
 }
 
 func (name *metaEntry) SaveBodyEntry(entry map[string]interface{}, replace bool) errors.Error {
+	if name.useSystem {
+		return name.systemEntry.SaveBodyEntry(entry, replace)
+	}
+
 	bytes, err := json.Marshal(entry)
 	if err != nil {
 		return errors.NewFunctionEncodingError("encode", name.Name(), err)
@@ -376,11 +405,15 @@ func (name *metaEntry) SaveBodyEntry(entry map[string]interface{}, replace bool)
 		return errors.NewMetaKVError(name.Name(), err)
 	}
 	setChange()
-	name.changeCounter = changeCounter
+	name.ResetStorage()
 	return nil
 }
 
 func (name *metaEntry) Delete() errors.Error {
+	if name.useSystem {
+		return name.systemEntry.Delete()
+	}
+
 	// Delete() does not currently throw an error on missing key, so load first
 	val, _, err := metakv.Get(_FUNC_PATH + name.Key())
 
@@ -398,14 +431,27 @@ func (name *metaEntry) Delete() errors.Error {
 		return errors.NewMetaKVError(name.Name(), err)
 	}
 	setChange()
-	name.changeCounter = changeCounter
+	name.ResetStorage()
 	return nil
 }
 
 func (name *metaEntry) CheckStorage() bool {
+	if name.useSystem {
+		return name.systemEntry.CheckStorage()
+	}
+
 	return name.changeCounter != changeCounter
 }
 
 func (name *metaEntry) ResetStorage() {
+	if name.useSystem {
+		name.systemEntry.ResetStorage()
+		return
+	}
+
 	name.changeCounter = changeCounter
+}
+
+func (name *metaEntry) InheritStorage(changeCnter int32) {
+	name.changeCounter = changeCnter
 }
