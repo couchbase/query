@@ -344,8 +344,18 @@ func MakeName(bytes []byte) (functions.FunctionName, error) {
 			return systemStorage.NewScopeFunction(_unmarshalled.Namespace, _unmarshalled.Bucket, _unmarshalled.Scope,
 				_unmarshalled.Name)
 		} else {
-			return metaStorage.NewScopeFunction(_unmarshalled.Namespace, _unmarshalled.Bucket, _unmarshalled.Scope,
+			rv, err := metaStorage.NewScopeFunction(_unmarshalled.Namespace, _unmarshalled.Bucket, _unmarshalled.Scope,
 				_unmarshalled.Name)
+			if err == nil {
+				// make a systemEntry as well to be used as redirect after migration
+				var sysEntry functions.FunctionName
+				sysEntry, err = systemStorage.NewScopeFunction(_unmarshalled.Namespace, _unmarshalled.Bucket,
+					_unmarshalled.Scope, _unmarshalled.Name)
+				if err == nil {
+					rv.SetSystemEntry(sysEntry)
+				}
+			}
+			return rv, err
 		}
 	default:
 		return nil, fmt.Errorf("unknown name type %v", name_type.Type)

@@ -486,7 +486,7 @@ func (this *DecodeVector) MaxArgs() int     { return 2 }
 func (this *DecodeVector) Evaluate(item value.Value, context Context) (value.Value, error) {
 	var decodeStr string
 	var byteOrder binary.ByteOrder
-	byteOrder = binary.BigEndian
+	byteOrder = binary.LittleEndian
 	null := false
 	missing := false
 
@@ -508,8 +508,8 @@ func (this *DecodeVector) Evaluate(item value.Value, context Context) (value.Val
 			} else {
 				if arg.Type() != value.BOOLEAN {
 					null = true
-				} else if !arg.Truth() {
-					byteOrder = binary.LittleEndian
+				} else if arg.Truth() {
+					byteOrder = binary.BigEndian
 				}
 			}
 		}
@@ -572,7 +572,7 @@ func (this *EncodeVector) MaxArgs() int     { return 2 }
 func (this *EncodeVector) Evaluate(item value.Value, context Context) (value.Value, error) {
 	var vec value.Value
 	var byteOrder binary.ByteOrder
-	byteOrder = binary.BigEndian
+	byteOrder = binary.LittleEndian
 	null := false
 	missing := false
 
@@ -594,8 +594,8 @@ func (this *EncodeVector) Evaluate(item value.Value, context Context) (value.Val
 			} else {
 				if arg.Type() != value.BOOLEAN {
 					null = true
-				} else if !arg.Truth() {
-					byteOrder = binary.LittleEndian
+				} else if arg.Truth() {
+					byteOrder = binary.BigEndian
 				}
 			}
 		}
