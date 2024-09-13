@@ -466,7 +466,7 @@ func Start(site, pool, namespace string, setGlobals, startHttpServer bool) *Mock
 	prepareds.PreparedsInit(1024)
 
 	// Start the UDF cache
-	functions.FunctionsInit(1024)
+	functions.FunctionsInit(1024, storage.UseSystemStorage)
 
 	// Start the completed requests log - keep it small and busy
 	server.RequestsInit(0, 8, 10)

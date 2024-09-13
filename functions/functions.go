@@ -54,6 +54,10 @@ type FunctionName interface {
 	Delete() errors.Error
 	CheckStorage() bool
 	ResetStorage()
+	InheritStorage(changeCounter int32)
+	GetSystemEntry() FunctionName
+	SetSystemEntry(systemEntry FunctionName)
+	SetUseSystem()
 }
 
 type FunctionBody interface {
@@ -98,11 +102,13 @@ var Authorize func(privileges *auth.Privileges, credentials *auth.Credentials) e
 
 var languages = [_SIZER]LanguageRunner{&missing{}, &empty{}}
 var functions = &functionCache{}
+var storageCheck func() bool
 
 // init functions cache
-func FunctionsInit(limit int) {
+func FunctionsInit(limit int, storageCheckFunc func() bool) {
 	functions.cache = util.NewGenCache(_LIMIT)
 	functions.cache.SetLimit(limit)
+	storageCheck = storageCheckFunc
 }
 
 func FunctionsSetLimit(limit int) {
@@ -213,6 +219,19 @@ func (name *MockName) QueryContext() string {
 	return name.namespace + ":"
 }
 
+func (name *MockName) GetSystemEntry() FunctionName {
+	return nil
+}
+
+func (name *MockName) SetSystemEntry(systemEntry FunctionName) {
+}
+
+func (name *MockName) SetUseSystem() {
+}
+
+func (name *MockName) InheritStorage(changeCounter int32) {
+}
+
 func (name *MockName) Signature(object map[string]interface{}) {
 	object["name"] = name.name
 	object["namespace"] = name.namespace
@@ -242,8 +261,21 @@ func (name *MockName) CheckStorage() bool {
 func (name *MockName) ResetStorage() {
 }
 
+func getFunctionName(name FunctionName) FunctionName {
+	if !name.IsGlobal() && storageCheck != nil && storageCheck() {
+		sysEntry := name.GetSystemEntry()
+		if sysEntry != nil {
+			name.SetUseSystem()
+			return sysEntry
+		}
+	}
+	return name
+}
+
 // function primitives
 func AddFunction(name FunctionName, body FunctionBody, replace bool) errors.Error {
+
+	name = getFunctionName(name)
 
 	// add the function
 	err := name.Save(body, replace)
@@ -300,6 +332,8 @@ func AddFunction(name FunctionName, body FunctionBody, replace bool) errors.Erro
 }
 
 func DeleteFunction(name FunctionName, context Context) errors.Error {
+	name = getFunctionName(name)
+
 	f, err := checkDelete(name, context)
 	if err != nil {
 		return err
@@ -366,6 +400,8 @@ func GetPrivilege(name FunctionName, body FunctionBody) auth.Privilege {
 
 func preLoad(name FunctionName) *FunctionEntry {
 	var err errors.Error
+
+	name = getFunctionName(name)
 
 	//is the entry in the cache?
 	key := name.Key()
@@ -515,6 +551,8 @@ func getBodyAndEntry(name FunctionName) (FunctionBody, *FunctionEntry, errors.Er
 
 	// we copy the body pointer to allow cache entry changes after we load
 	var body FunctionBody
+
+	name = getFunctionName(name)
 
 	// get the body from the cache
 	key := name.Key()
