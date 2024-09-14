@@ -374,7 +374,14 @@ func HasSystemXattrs(expr Expression) bool {
 				if _, ok := t.First().(*Meta); ok {
 					return t.Alias() == "xattrs" && strings.HasPrefix(f.Alias(), "_")
 				}
+				// fail-safe against circular links (which shouldn't occur)
+				if expr == t {
+					return false
+				}
 				expr = t
+			default:
+				// if it is anything else, e.g. a Meta object, we can't be referencing an element of the xattrs member
+				return false
 			}
 		} else {
 			return false
