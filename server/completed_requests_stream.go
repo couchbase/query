@@ -65,6 +65,7 @@ const (
 	_MAX_IDLE_2                     = time.Minute * 60 // idle stream files closed after this interval
 	_STREAM_MAGIC                   = 0x4352534D       // "CRSM"
 	_MAX_CACHE                      = 5                // maximum number of cached files (materialised) for reading
+	_RLS_TIMEOUT                    = time.Second * 10 // maximum time to wait writing to the stop channel
 )
 
 type requestStreamFile struct {
@@ -197,13 +198,27 @@ type requestLogStream struct {
 	fileNum      uint64 // last known/generated file number
 }
 
-func (this *requestLogStream) stopCapture() {
+func (this *requestLogStream) String() string {
+	return fmt.Sprintf("{active:%v,stop:%d,configSize:%v,files:%p,streamFiles:%d}",
+		this.active, len(this.stop), this.configSize, this.files, len(this.streamFiles))
+}
+
+func (this *requestLogStream) stopCapture() bool {
 	this.Lock()
-	if this.active == 0 {
+	if this.active == 0 || this.stop == nil {
 		logging.Infof(_MSG_PREFIX + "Not active.")
+		this.Unlock()
+		return false
 	}
 	atomic.StoreUint64(&this.active, 0)
-	this.stop <- true
+	select {
+	case this.stop <- true:
+	case <-time.After(_RLS_TIMEOUT):
+		logging.Errorf(_MSG_PREFIX+"Timeout writing to stop channel. %v", this.String())
+		logging.DumpAllStacks(logging.DEBUG, "")
+		this.Unlock()
+		return false
+	}
 	this.filesLock.Lock()
 	for i := range this.streamFiles {
 		if file := this.streamFiles[i]; file != nil {
@@ -221,7 +236,9 @@ func (this *requestLogStream) stopCapture() {
 	this.stop = nil
 	this.streamFiles = nil
 	this.configSize = 0
+	logging.Debugf("Stopped: %v", this)
 	this.Unlock()
+	return true
 }
 
 func (this *requestLogStream) startCapture(newSize uint64) bool {
@@ -234,7 +251,7 @@ func (this *requestLogStream) startCapture(newSize uint64) bool {
 	this.configSize = newSize
 	this.loadFiles()
 	this.stop = make(chan bool, 1)
-	go this.sweeperProc(this.stop)
+	go this.spaceManagementProc(this.stop)
 	this.streamFiles = make([]*requestStreamFile, _ACTIVE_FILES)
 	for i := range this.streamFiles {
 		this.streamFiles[i] = &requestStreamFile{index: uint64(i)}
@@ -242,6 +259,7 @@ func (this *requestLogStream) startCapture(newSize uint64) bool {
 	this.streamCount = 0
 	this.streamErrors = 0
 	atomic.StoreUint64(&this.active, 1)
+	logging.Debugf("Started: %v", this)
 	this.Unlock()
 	return true
 }
@@ -374,11 +392,12 @@ func (this *requestLogStream) archive(file *requestStreamFile, lockFilesList boo
 }
 
 // background routine handling space management
-func (this *requestLogStream) sweeperProc(stop chan bool) {
+func (this *requestLogStream) spaceManagementProc(stop chan bool) {
+	logging.Infof(_MSG_PREFIX+"[%p] Space management started.", stop)
 	defer func() {
 		e := recover()
 		if e != nil {
-			logging.Stackf(logging.WARN, _MSG_PREFIX+"Panic in sweeper: %v", e)
+			logging.Stackf(logging.WARN, _MSG_PREFIX+"Panic in space management: %v", e)
 			var ok bool
 			select {
 			case _, ok = <-stop: // detect a closed channel
@@ -387,7 +406,7 @@ func (this *requestLogStream) sweeperProc(stop chan bool) {
 				ok = true
 			}
 			if ok {
-				go this.sweeperProc(stop) // restart after a panic
+				go this.spaceManagementProc(stop) // restart after a panic
 			}
 		}
 	}()
@@ -485,12 +504,12 @@ func (this *requestLogStream) sweeperProc(stop chan bool) {
 				}
 				this.filesLock.Unlock()
 				if released > 0 {
-					logging.Infof(_MSG_PREFIX+"Sweeper freed %v", ffdc.Human(released))
+					logging.Infof(_MSG_PREFIX+"Space management freed %v", ffdc.Human(released))
 				}
 			}
 		}
 	}
-	logging.Debugf("Sweeper stopped")
+	logging.Infof(_MSG_PREFIX+"[%p] Space management stopped.", stop)
 }
 
 // reading
@@ -778,9 +797,11 @@ func RequestsFileStreamSize() uint64 {
 
 func RequestsSetFileStreamSize(size int64) {
 	if size <= 0 {
-		requestLog.stream.stopCapture()
+		if requestLog.stream.stopCapture() {
+			logging.Infof(_MSG_PREFIX+"Stopped. (count: %v errors: %v)", requestLog.stream.streamCount,
+				requestLog.stream.streamErrors)
+		}
 		RequestsRemoveHandler("stream")
-		logging.Infof(_MSG_PREFIX+"Stopped. (count: %v errors: %v)", requestLog.stream.streamCount, requestLog.stream.streamErrors)
 	} else {
 		// size is in MiB
 		if requestLog.stream.startCapture(uint64(size * util.MiB)) {
