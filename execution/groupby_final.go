@@ -127,10 +127,10 @@ func (this *FinalGroup) afterItems(context *Context) {
 				if err := context.TrackValueSize(av.Size()); err != nil {
 					context.Error(err)
 					av.Recycle()
+					return
 				}
-			} else {
-				this.sendItem(av)
 			}
+			this.sendItem(av)
 		}
 	}
 }

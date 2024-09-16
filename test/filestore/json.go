@@ -38,6 +38,7 @@ import (
 	"github.com/couchbase/query/server"
 	"github.com/couchbase/query/server/http"
 	"github.com/couchbase/query/timestamp"
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 	diffpkg "github.com/kylelemons/godebug/diff"
 )
@@ -212,6 +213,7 @@ func Run(mockServer *MockServer, p bool, q string, namedArgs map[string]value.Va
 	query.SetPretty(pretty)
 	query.SetScanConfiguration(scanConfiguration)
 	query.SetCredentials(_ALL_USERS)
+	query.SetMemoryQuota(util.GiB * 256) // on but no practical limit; to catch "underflow" problems
 
 	defer mockServer.doStats(query)
 

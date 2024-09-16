@@ -339,6 +339,7 @@ func run(mockServer *MockServer, queryParams map[string]interface{}, q, namespac
 	query.SetScanConfiguration(consistency)
 	query.SetUseCBO(false)
 	mockServer.server.SetAllowlist(curlAllowlist)
+	query.SetMemoryQuota(util.GiB * 256) // on but no practical limit; to catch "underflow" problems
 
 	var gv int
 	if txGroup, txOk := queryParams["txgroup"]; txOk {
