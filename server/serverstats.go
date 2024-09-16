@@ -32,7 +32,7 @@ const (
 	DEF_LOAD_FACTOR = 35               // default load factor above 30% so that at start no nodes will be added
 	_FREE_FLOOR     = 0.25             // system free memory percent (1.0=100%) below which we may free to the OS
 
-	_FFDC_MEM_RATE   = 20                                     // FFDC memory increase rate threshold
+	_FFDC_MEM_RATE   = 30                                     // FFDC memory increase rate threshold
 	_SAMPLES_2_HOURS = int((time.Hour * 2) / _STATS_INTRVL)   // number of samples for determining average memory use
 	_SAMPLES_MIN     = int((time.Minute * 5) / _STATS_INTRVL) // minimum number of samples for average memory use
 )

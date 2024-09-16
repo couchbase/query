@@ -31,9 +31,10 @@ import (
 
 // First Failure Data Capture (FFDC)
 
-const _FFDC_OCCURENCE_LIMIT = 10
+const _OCCURENCE_LIMIT = 30
 const FFDC_MIN_INTERVAL = time.Second * 10
 const _MAX_CAPTURE_WAIT_TIME = time.Second * 10
+const _CPU_PROFILE_TIME = time.Second * 10
 
 const (
 	Heap      = "heap"
@@ -43,6 +44,7 @@ const (
 	Active    = "areq"
 	Netstat   = "nets"
 	Vitals    = "vita"
+	CPU       = "prof"
 )
 
 const fileNamePrefix = "query_ffdc"
@@ -114,6 +116,17 @@ var operations = map[string]func(io.Writer) error{
 	},
 }
 
+var asyncOperations = map[string]func(io.Writer) error{
+	CPU: func(w io.Writer) error {
+		if err := pprof.StartCPUProfile(w); err != nil {
+			return err
+		}
+		time.Sleep(_CPU_PROFILE_TIME)
+		pprof.StopCPUProfile()
+		return nil
+	},
+}
+
 func runCommand(w io.Writer, path string, options string) error {
 	var cmd *exec.Cmd
 	if options != "" {
@@ -165,17 +178,55 @@ func (this *occurrence) capture(event string, what string) {
 	if err == nil {
 		this.files = append(this.files, name)
 		zip := gzip.NewWriter(f)
-		err = operations[what](zip) // if it panics it is because there is a problem with the event definition
-		zip.Close()
-		f.Sync()
-		f.Close()
-		if err != nil {
-			logging.Errorf("FFDC: Error capturing '%v' to %v: %v", what, name, err)
+		if op, ok := asyncOperations[what]; ok {
+			go func() {
+				err = op(zip)
+				zip.Close()
+				f.Sync()
+				f.Close()
+				if err != nil {
+					logging.Errorf("FFDC: Error capturing '%v' to %v: %v", what, name, err)
+				} else {
+					logging.Infof("FFDC: Captured: %v", path.Base(name))
+				}
+			}()
+			logging.Infof("FFDC: Started capture of: %v", path.Base(name))
 		} else {
-			logging.Infof("FFDC: Captured: %v", path.Base(name))
+			err = operations[what](zip) // if it panics it is because there is a problem with the event definition
+			zip.Close()
+			f.Sync()
+			f.Close()
+			if err != nil {
+				logging.Errorf("FFDC: Error capturing '%v' to %v: %v", what, name, err)
+			} else {
+				logging.Infof("FFDC: Captured: %v", path.Base(name))
+			}
 		}
 	} else {
 		logging.Errorf("FFDC: failed to create '%v' dump file: %v - %v", what, name, err)
+	}
+}
+
+func (this *occurrence) cleanup(inaccessibleOnly bool) {
+	for i := 0; i < len(this.files); {
+		if inaccessibleOnly {
+			if _, err := os.Stat(path.Join(GetPath(), this.files[i])); err != nil {
+				logging.Infof("FFDC: dump has been removed: %v", this.files[i])
+				if i+1 < len(this.files) {
+					copy(this.files[i:], this.files[i+1:])
+				}
+				this.files = this.files[:len(this.files)-1]
+			} else {
+				i++
+			}
+		} else {
+			logging.Infof("FFDC: removing dump: %v", this.files[i])
+			os.Remove(path.Join(GetPath(), this.files[i]))
+			i++
+		}
+	}
+	if !inaccessibleOnly {
+		this.files = nil
 	}
 }
 
@@ -202,9 +253,7 @@ func (this *reason) shouldCapture() *occurrence {
 		}
 	}
 	this.totalCount++
-	if len(this.occurrences) >= _FFDC_OCCURENCE_LIMIT {
-		this.cleanup()
-	}
+	this.cleanup()
 	occ := &occurrence{when: now, ts: now.Format("2006-01-02-150405.000")}
 	this.occurrences = append(this.occurrences, occ)
 	return occ
@@ -243,19 +292,9 @@ func (this *reason) reset() {
 }
 
 func (this *reason) cleanup() {
-	// remove references to inaccessible files
 	for i := 0; i < len(this.occurrences); {
-		for j := 0; j < len(this.occurrences[i].files); {
-			if _, err := os.Stat(path.Join(GetPath(), this.occurrences[i].files[j])); err != nil {
-				logging.Infof("FFDC: dump has been removed: %v", this.occurrences[i].files[j])
-				if j+1 < len(this.occurrences[i].files) {
-					copy(this.occurrences[i].files[j:], this.occurrences[i].files[j+1:])
-				}
-				this.occurrences[i].files = this.occurrences[i].files[:len(this.occurrences[i].files)-1]
-			} else {
-				j++
-			}
-		}
+		// remove references to inaccessible files
+		this.occurrences[i].cleanup(true)
 		if len(this.occurrences[i].files) == 0 {
 			if i+1 < len(this.occurrences) {
 				copy(this.occurrences[i:], this.occurrences[i+1:])
@@ -265,19 +304,17 @@ func (this *reason) cleanup() {
 			i++
 		}
 	}
-	if len(this.occurrences) < _FFDC_OCCURENCE_LIMIT {
+	if len(this.occurrences) < _OCCURENCE_LIMIT {
 		return
 	}
-	// drop from the middle
-	n := _FFDC_OCCURENCE_LIMIT / 2
+	n := _OCCURENCE_LIMIT / 2
+	if time.Now().AddDate(0, -1, 0).After(this.occurrences[0].when) {
+		n = 0
+	}
 	occ := this.occurrences[n]
 	copy(this.occurrences[n:], this.occurrences[n+1:])
 	this.occurrences = this.occurrences[:len(this.occurrences)-1]
-	for i := range occ.files {
-		logging.Infof("FFDC: removing dump: %v", occ.files[i])
-		os.Remove(path.Join(GetPath(), occ.files[i]))
-	}
-	occ.files = nil
+	occ.cleanup(false)
 }
 
 func (this *reason) getOccurence(ts string) *occurrence {
@@ -461,7 +498,7 @@ var reasons = map[string]*reason{
 	},
 	Manual: &reason{
 		event:   Manual,
-		actions: []string{Heap, MemStats, Active, Completed, Stacks, Vitals, Netstat},
+		actions: []string{Heap, MemStats, Active, Completed, Stacks, Vitals, Netstat, CPU},
 		msg:     "Manual invocation",
 	},
 	MemoryLimit: &reason{
