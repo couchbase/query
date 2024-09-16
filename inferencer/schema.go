@@ -905,7 +905,7 @@ func NewSchemaFromValue(val value.Value) *Schema {
 				if x := m["xattrs"]; x != nil {
 					// low probability of a conflict with an existing document field
 					// nevertheless generate a unique name if necessary
-					name := "xattr"
+					name := "xattrs"
 					for i := 0; ; i++ {
 						if _, ok := elements[name]; !ok {
 							break
