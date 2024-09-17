@@ -1867,7 +1867,6 @@ func (this *vbRangeScan) runScan(conn *memcached.Client, node string) bool {
 						return fmt.Sprintf("%s processed %v documents from response of %v bytes",
 							this, num_docs, len(response.Body))
 					}, this.scan.log)
-
 				}
 			} else {
 				logging.Debugf("%s response body is empty (0 bytes)", this, this.scan.log)
@@ -2002,7 +2001,12 @@ func (cqueue *rswCancelQueue) runWorker() {
 						b = cr[i].b
 						replica = false
 						vbucket = cr[i].vbucket
-						desc := &doDescriptor{useReplicas: true, version: b.Version, maxTries: b.backOffRetries(), retry: true}
+						desc := &doDescriptor{
+							useReplicas: true,
+							version:     b.Version,
+							maxTries:    b.backOffRetries(),
+							retry:       true,
+						}
 						for desc.attempts = 0; desc.attempts < desc.maxTries; {
 							conn, pool, err = b.getVbConnection(uint32(vbucket), desc)
 							if err != nil {

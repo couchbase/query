@@ -918,7 +918,6 @@ func NewSchemaFromValue(val value.Value) *Schema {
 		sort.Sort(schema.fields)
 
 		// it is also possible to have a bare string, boolean, number, or array
-
 	} else {
 		bareField := NewField("bare", val)
 		schema.bareValue = &bareField
