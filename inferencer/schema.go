@@ -892,12 +892,12 @@ func NewSchemaFromValue(val value.Value) *Schema {
 	// the normal case is objects comprised of fields
 	if val.Type() == value.OBJECT {
 		schema.bareValue = nil
-		v1 := val.Actual()
-		elements := v1.(map[string]interface{})
-		schema.fields = make([]Field, 0, len(elements))
-		for name, v2 := range elements {
-			//fmt.Printf("  Got field2: %s, value: %s\n",name, value.NewValue(v2))
-			schema.fields = append(schema.fields, NewField(name, value.NewValue(v2)))
+		elements := val.Fields()
+		if len(elements) > 0 {
+			schema.fields = make([]Field, 0, len(elements))
+			for name, v2 := range elements {
+				schema.fields = append(schema.fields, NewField(name, value.NewValue(v2)))
+			}
 		}
 
 		if av, ok := val.(value.AnnotatedValue); ok {

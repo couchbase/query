@@ -824,7 +824,7 @@ processing:
 							for i := 0; i < batch; i++ {
 								cur := vbscan.current()
 								n := binary.BigEndian.Uint16(cur) + 2
-								key := cur[2:n]
+								key := string(cur[2:n]) // string cast ensures duplication
 								meta := cur[n : n+25]
 								n += 25
 								doc := cur[n:]
@@ -839,6 +839,10 @@ processing:
 										return
 									}
 								}
+								// copy the content of the vbscan buffer
+								ndoc := make([]byte, len(doc))
+								copy(ndoc, doc)
+								doc = ndoc
 								var xattrVal value.Value
 								if this.xattrs && doc[0] != '{' {
 									var ok bool
@@ -862,7 +866,7 @@ processing:
 								if xattrVal != nil {
 									av.SetMetaField(value.META_XATTRS, xattrVal)
 								}
-								av.SetId(string(key))
+								av.SetId(key)
 								docs = append(docs, av)
 								if !vbscan.advance() {
 									if i+1 < batch {
