@@ -93,6 +93,7 @@ func NewParsedValueWithOptions(bytes []byte, isValidated, useState bool) Value {
 	rv.len = uint64(len(bytes))
 	rv.parsedType = parsedType
 	rv.useState = useState
+
 	return rv
 }
 
