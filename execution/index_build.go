@@ -83,6 +83,11 @@ func (this *BuildIndexes) RunOnce(context *Context, parent value.Value) {
 		}
 
 		idxNames := make([]string, 0, len(names))
+
+		var updateStatsNames []string
+		if context.useCBO && (node.Using() == datastore.GSI || node.Using() == datastore.DEFAULT) {
+			updateStatsNames = make([]string, 0, len(names))
+		}
 		var index datastore.Index
 		for _, name := range names {
 			index, err = indexer.IndexByName(name)
@@ -97,11 +102,13 @@ func (this *BuildIndexes) RunOnce(context *Context, parent value.Value) {
 				context.Error(err1)
 				continue
 			}
-			if index6, ok := index.(datastore.Index6); ok && index6.IsVector() {
-				continue
-			}
 			if state != datastore.ONLINE {
 				idxNames = append(idxNames, name)
+				if updateStatsNames != nil {
+					if index6, ok := index.(datastore.Index6); !ok || !index6.IsVector() {
+						updateStatsNames = append(updateStatsNames, name)
+					}
+				}
 			}
 		}
 
@@ -115,8 +122,8 @@ func (this *BuildIndexes) RunOnce(context *Context, parent value.Value) {
 			return
 		}
 
-		if context.useCBO && (node.Using() == datastore.GSI || node.Using() == datastore.DEFAULT) {
-			err = updateStats(idxNames, "build_index", this.plan.Keyspace(), context)
+		if len(updateStatsNames) > 0 {
+			err = updateStats(updateStatsNames, "build_index", this.plan.Keyspace(), context)
 			if err != nil {
 				context.Error(err)
 				return
