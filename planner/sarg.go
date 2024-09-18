@@ -14,6 +14,7 @@ import (
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
 	base "github.com/couchbase/query/plannerbase"
+	"github.com/couchbase/query/value"
 )
 
 func SargFor(pred, vpred expression.Expression, entry *indexEntry, keys datastore.IndexKeys,
@@ -229,17 +230,27 @@ func composeSargSpan(sargSpans []SargSpans, exactSpan bool) (SargSpans, bool, er
 	// Truncate sarg spans when they exceed the limit
 	size := 1
 	n := 0
-	tooMany := -1
+	vectorPos := -1
 	for i, spans := range sargSpans {
 		sz := 1
 		if spans != nil {
 			sz = spans.Size()
+			if spans.HasVector() {
+				vectorPos = i
+			}
 		}
 
 		if sz == 0 ||
 			(sz > 1 && size >= 1 && sz*size > plan.FULL_SPAN_FANOUT) {
 			exactSpan = false
-			tooMany = i
+			if vectorPos < 0 {
+				for j := i + 1; j < len(sargSpans); j++ {
+					spans = sargSpans[j]
+					if spans != nil && spans.HasVector() {
+						vectorPos = j
+					}
+				}
+			}
 			break
 		}
 
@@ -248,29 +259,42 @@ func composeSargSpan(sargSpans []SargSpans, exactSpan bool) (SargSpans, bool, er
 	}
 
 	var ns SargSpans
-	if n == 0 && tooMany == 0 {
+	if n == 0 && vectorPos < 0 {
 		// too many spans on the first index key
 		ns = _WHOLE_SPANS.Copy()
 		ns.SetExact(false)
 		return ns, ns.Exact(), nil
 	}
 
+	start := n - 1
+	if vectorPos >= 0 && vectorPos > start {
+		start = vectorPos
+	}
 	// Sarg composite indexes right to left
-	for i := n - 1; i >= 0; i-- {
+	for i := start; i >= 0; i-- {
 		rs := sargSpans[i]
 
 		if rs == nil {
 			rs = _WHOLE_SPANS.Copy()
 		}
-		if rs.Size() == 0 { // Reset
-			ns = nil
-			continue
+		if rs.Size() == 0 {
+			if vectorPos < 0 || i > vectorPos {
+				// Reset
+				ns = nil
+				continue
+			} else {
+				rs = _WHOLE_SPANS.Copy()
+				rs.SetExact(false)
+			}
 		}
 
 		// Start
 		if ns == nil {
 			ns = rs
 			continue
+		} else if i > n-1 && rs.Size() > 1 {
+			// try to get a span that's min/max of existing spans
+			rs = convertSpans(rs)
 		}
 
 		ns = ns.Copy()
@@ -423,4 +447,83 @@ func hasConstSubExpr(pred expression.Expression, keyspaceNames map[string]string
 	}
 
 	return false
+}
+
+// given a list of multiple spans return a single span with min/max for low/high if possible
+func convertSpans(rs SargSpans) SargSpans {
+	wholeSpans := true
+	if ts, ok := rs.(*TermSpans); ok {
+		wholeSpans = false
+		var low, high value.Value
+		var inclusion datastore.Inclusion
+		for i, sp := range ts.spans {
+			if len(sp.Ranges) != 1 {
+				wholeSpans = true
+				break
+			}
+			rg := sp.Ranges[0]
+			var clow, chigh value.Value
+			var cinclusion datastore.Inclusion
+			if rg.Low != nil {
+				clow = rg.Low.Value()
+				if clow == nil {
+					wholeSpans = true
+					break
+				} else if low != nil && (low.Type() != clow.Type()) &&
+					(clow.Type() == value.NULL || clow.Type() == value.MISSING) {
+					wholeSpans = true
+					break
+				}
+			}
+			if rg.High != nil {
+				chigh = rg.High.Value()
+				if chigh == nil {
+					wholeSpans = true
+					break
+				} else if high != nil && (high.Type() != chigh.Type()) &&
+					(chigh.Type() == value.NULL || chigh.Type() == value.MISSING) {
+					wholeSpans = true
+					break
+				}
+			}
+			cinclusion = rg.Inclusion
+			if i == 0 {
+				low = clow
+				high = chigh
+				inclusion = cinclusion
+			} else {
+				if low != nil {
+					if clow == nil {
+						wholeSpans = true
+						break
+					} else if low.Collate(clow) > 0 {
+						low = clow
+						inclusion = (inclusion &^ datastore.LOW) | (cinclusion | datastore.LOW)
+					}
+				}
+				if high != nil {
+					if chigh == nil || high.Collate(chigh) < 0 {
+						high = chigh
+						inclusion = (inclusion &^ datastore.HIGH) | (cinclusion | datastore.HIGH)
+					}
+				}
+			}
+		}
+
+		if !wholeSpans {
+			var lowExpr, highExpr expression.Expression
+			if low != nil {
+				lowExpr = expression.NewConstant(low)
+			}
+			if high != nil {
+				highExpr = expression.NewConstant(high)
+			}
+			rg := plan.NewRange2(lowExpr, highExpr, inclusion, OPT_SELEC_NOT_AVAIL, OPT_SELEC_NOT_AVAIL, 0)
+			sp := plan.NewSpan2(nil, plan.Ranges2{rg}, false)
+			return NewTermSpans(sp)
+		}
+	}
+	rv := _WHOLE_SPANS.Copy()
+	rv.SetExact(false)
+	return rv
 }
