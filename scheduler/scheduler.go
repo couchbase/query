@@ -27,6 +27,14 @@ const (
 	CANCELLED State = "cancelled"
 )
 
+type CacheName int
+
+const (
+	ALL_TASKS_CACHE = CacheName(iota)
+	SCHEDULED_TASKS_CACHE
+	COMPLETED_TASKS_CACHE
+)
+
 type TaskFunc func(Context, interface{}) (interface{}, []errors.Error)
 
 type TaskEntry struct {
@@ -85,13 +93,20 @@ func NameTasks() []string {
 	return append(res, comp...)
 }
 
-func TasksForeach(nonBlocking func(string, *TaskEntry) bool,
-	blocking func() bool) {
+func TasksForeach(nonBlocking func(string, *TaskEntry) bool, blocking func() bool, cacheName CacheName) {
 	dummyF := func(id string, r interface{}) bool {
 		return nonBlocking(id, r.(*TaskEntry))
 	}
-	scheduler.scheduled.ForEach(dummyF, blocking)
-	scheduler.completed.ForEach(dummyF, blocking)
+
+	all := cacheName == ALL_TASKS_CACHE
+
+	if all || cacheName == SCHEDULED_TASKS_CACHE {
+		scheduler.scheduled.ForEach(dummyF, blocking)
+	}
+
+	if all || cacheName == COMPLETED_TASKS_CACHE {
+		scheduler.completed.ForEach(dummyF, blocking)
+	}
 }
 
 func TaskDo(key string, f func(*TaskEntry)) {

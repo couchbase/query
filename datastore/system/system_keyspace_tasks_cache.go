@@ -304,7 +304,7 @@ func (pi *tasksCacheIndex) Scan(requestId string, span *datastore.Span, distinct
 					return true
 				}, func() bool {
 					return sendSystemKey(conn, entry)
-				})
+				}, scheduler.ALL_TASKS_CACHE)
 			} else {
 				nodes := []string{decodeNodeName(spanEvaluator.key(idx))}
 				distributed.RemoteAccess().GetRemoteKeys(nodes, "tasks_cache", func(id string) bool {
@@ -336,7 +336,7 @@ func (pi *tasksCacheIndex) Scan(requestId string, span *datastore.Span, distinct
 							return true
 						}, func() bool {
 							return sendSystemKey(conn, entry)
-						})
+						}, scheduler.ALL_TASKS_CACHE)
 					} else {
 						eligibleNodes = append(eligibleNodes, node)
 					}
@@ -373,7 +373,7 @@ func (pi *tasksCacheIndex) ScanEntries(requestId string, limit int64, cons datas
 		return true
 	}, func() bool {
 		return sendSystemKey(conn, entry)
-	})
+	}, scheduler.ALL_TASKS_CACHE)
 	distributed.RemoteAccess().GetRemoteKeys([]string{}, "tasks_cache", func(id string) bool {
 		indexEntry := datastore.IndexEntry{PrimaryKey: id}
 		return sendSystemKey(conn, &indexEntry)

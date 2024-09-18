@@ -7517,4 +7517,27 @@ var errData = []ErrData{
 			"Server",
 		},
 	},
+	{
+		Code:        E_AUS_SCHEDULING, // 20006
+		Description: "Error during scheduling the Auto Update Statistics task.",
+		Reason: []string{
+			"An error occurred during scheduling the Auto Update Statistics task.",
+		},
+		Action: []string{
+			"Contact support.",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_AUS_TASK, // 20007,
+		Description: "Error during «operation» of Auto Update Statistics task.",
+		Action: []string{
+			"Contact support.",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
 }

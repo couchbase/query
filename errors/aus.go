@@ -8,7 +8,10 @@
 
 package errors
 
-import "fmt"
+import (
+	"fmt"
+	"time"
+)
 
 func getSchemaHelp(setting string) string {
 	var help string
@@ -16,7 +19,7 @@ func getSchemaHelp(setting string) string {
 	case "change_percentage":
 		help = "Integer between 0 and 100."
 	case "schedule.start_time", "schedule.end_time":
-		help = "Valid timestamp in HH:MM:SS format."
+		help = "Valid timestamp in HH:MM format."
 	case "schedule.timezone":
 		help = "UTC or IANA timezone."
 	case "schedule.days":
@@ -60,7 +63,7 @@ func NewAusStorageAccessError(cause error) Error {
 }
 
 func NewAusDocInvalidSettingsValue(setting string, value interface{}) Error {
-	c := make(map[string]interface{})
+	c := make(map[string]interface{}, 2)
 	c["cause"] = fmt.Sprintf("Invalid value '%v' (%T) for setting '%s'", value, value, setting)
 
 	if help := getSchemaHelp(setting); help != "" {
@@ -73,7 +76,7 @@ func NewAusDocInvalidSettingsValue(setting string, value interface{}) Error {
 }
 
 func NewAusDocMissingSetting(setting string, defaultVal interface{}) Error {
-	c := make(map[string]interface{})
+	c := make(map[string]interface{}, 3)
 	c["cause"] = fmt.Sprintf("Setting '%s' cannot be missing in the Auto Update Statistics settings document.", setting)
 
 	if help := getSchemaHelp(setting); help != "" {
@@ -118,6 +121,33 @@ func NewAusDocEncodingError(isEncode bool, cause error) Error {
 
 func NewAusStorageInvalidKey(key string, cause error) Error {
 	return &err{level: EXCEPTION, ICode: E_AUS_STORAGE_INVALID_KEY, IKey: "aus.storage.invalid_key",
-		InternalMsg: fmt.Sprintf("Invalid document key '%s' for Auto Update Statistics document", key), cause: cause,
+		InternalMsg: fmt.Sprintf("Invalid document key '%s' for Auto Update Statistics document.", key), cause: cause,
+		InternalCaller: CallerN(1)}
+}
+
+func NewAusSchedulingError(startTime time.Time, endTime time.Time, cause error) Error {
+	c := make(map[string]interface{}, 3)
+	if cause != nil {
+		c["cause"] = cause
+	}
+	c["start_time"] = startTime.String()
+	c["end_time"] = endTime.String()
+
+	return &err{level: EXCEPTION, ICode: E_AUS_SCHEDULING, IKey: "aus.scheduling_error", cause: c,
+		InternalMsg: "Error during scheduling the Auto Update Statistics task.", InternalCaller: CallerN(1)}
+}
+
+func NewAusTaskError(operation string, cause error) Error {
+	return &err{level: EXCEPTION, ICode: E_AUS_TASK, IKey: "aus.task_execution_error",
+		InternalMsg: fmt.Sprintf("Error during %s of Auto Update Statistics task.", operation), ICause: cause,
+		InternalCaller: CallerN(1)}
+}
+
+func NewAusTaskInvalidInfoError(operation string, param string, val interface{}) Error {
+	c := make(map[string]interface{}, 1)
+	c["cause"] = fmt.Sprintf("Invalid task initialization information '%v' for parameter '%s' received.", val, param)
+
+	return &err{level: EXCEPTION, ICode: E_AUS_TASK, IKey: "aus.task_execution_error",
+		InternalMsg: fmt.Sprintf("Error during %s of Auto Update Statistics task.", operation), cause: c,
 		InternalCaller: CallerN(1)}
 }

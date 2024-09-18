@@ -12,18 +12,28 @@ package aus
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/couchbase/cbauth/metakv"
+	"github.com/couchbase/query-ee/optimizer"
 	"github.com/couchbase/query/algebra"
+	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/distributed"
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/execution"
 	"github.com/couchbase/query/logging"
+	"github.com/couchbase/query/memory"
 	"github.com/couchbase/query/migration"
+	"github.com/couchbase/query/scheduler"
 	"github.com/couchbase/query/server"
 	"github.com/couchbase/query/tenant"
+	"github.com/couchbase/query/timestamp"
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
@@ -40,10 +50,25 @@ var daysOfWeek map[string]time.Weekday
 var _STRING_ANNOTATED_POOL *value.StringAnnotatedPool
 
 type ausConfig struct {
-	sync.Mutex
+	sync.RWMutex
 	server      *server.Server
 	settings    ausGlobalSettings
 	initialized bool
+
+	// version indicates the version of schedule/enablement changes
+	// The version is only changed/incremented when a new global setting is received
+	// and the previous setting and new setting differ in enablement or schedule
+	version int64
+
+	// Stores information about the current task.
+	// Is set/re-set when the AUS task begins. It is not re-set upon task completion.
+	// This means that this will store "old" running task info, till it is re-set on the next run.
+	// But this is okay because the only purpose of this field is:
+	// When a new global setting is received with a new schedule, any scheduled tasks must be cancelled but any running task
+	// must be allowed to complete. The new schedule must be used to schedule the next AUS task run.
+	// However, the next task run must not overlap with the window of the current run.
+	// This field will be used to make this check.
+	currentWindow taskInfo
 }
 
 type ausGlobalSettings struct {
@@ -51,7 +76,6 @@ type ausGlobalSettings struct {
 	allBuckets       bool
 	changePercentage int
 	schedule         ausSchedule
-	version          int64
 }
 
 type ausSchedule struct {
@@ -61,10 +85,50 @@ type ausSchedule struct {
 	days      []bool
 }
 
+type taskInfo struct {
+	startTime time.Time
+	endTime   time.Time
+
+	// Denotes the version of the global settings that was used to schedule this task.
+	// This field should be used to perform an equality check against the current global configuration's version
+	// before performing any task related operations like [re]scheduling, task execution, etc.
+	// If the equality check, it means that a new configuration with a different enablement/schedule was received.
+	// Performing this check before any AUS operations is to prevent the progression of operations configured from older settings.
+	// Since operations configured from the latest setting must prevail.
+	version int64
+}
+
 func (this *ausConfig) setInitialized(init bool) {
 	this.Lock()
 	this.initialized = init
 	this.Unlock()
+}
+
+func (this *ausConfig) setCurrentWindow(lock bool, start time.Time, end time.Time, version int64) {
+	if lock {
+		this.Lock()
+		defer this.Unlock()
+	}
+
+	this.currentWindow.startTime = start
+	this.currentWindow.endTime = end
+	this.currentWindow.version = version
+}
+
+func (this ausSchedule) equals(sched ausSchedule) bool {
+	if len(this.days) != len(sched.days) {
+		return false
+	}
+
+	for i, d := range this.days {
+		if sched.days[i] != d {
+			return false
+		}
+	}
+
+	return this.startTime.Equal(sched.startTime) &&
+		this.endTime.Equal(sched.endTime) &&
+		this.timezone.String() == sched.timezone.String()
 }
 
 // Performs basic initialization of AUS configuration
@@ -114,23 +178,93 @@ func startupAus() {
 
 func callback(kve metakv.KVEntry) error {
 	ausCfg.Lock()
-	defer ausCfg.Unlock()
-
 	logging.Infof(AUS_LOG_PREFIX + "New global settings received.")
 
 	var v map[string]interface{}
 	err := json.Unmarshal(kve.Value, &v)
 	if err != nil {
+		ausCfg.Unlock()
 		logging.Errorf(AUS_LOG_PREFIX+"Error unmarshalling new global settings: %v", err)
 		return nil
 	}
 
 	if newSettings, err, _ := setAusHelper(v, false); err != nil {
+		ausCfg.Unlock()
 		logging.Errorf(AUS_LOG_PREFIX+"Error during global settings retrieval: %v", err)
 		return nil
 	} else {
+
+		prev := ausCfg.settings
 		ausCfg.settings = newSettings
+
+		var version int64
+		var reschedule bool // whether a new AUS task should be scheduled
+		var cancelOld bool  // whether any scheduled AUS tasks should be deleted
+
+		if prev.enable {
+			if !newSettings.enable {
+				// If AUS enablement changes from enabled to disabled
+				cancelOld = true
+			} else if !prev.schedule.equals(newSettings.schedule) {
+				// If AUS remains enabled but the schedule has changed
+				reschedule = true
+				cancelOld = true
+			}
+		} else if !prev.enable && newSettings.enable {
+			// If AUS enablement changes from disabled to enabled
+			reschedule = true
+		}
+
+		// Only if there is a change in the enablement/schedule increment the version of the configuration
+		if reschedule || cancelOld {
+			ausCfg.version++
+		}
+
+		version = ausCfg.version
+		ausCfg.Unlock()
+
+		logging.Infof(AUS_LOG_PREFIX+"Global settings are now: %v with internal version: %v.", v, version)
+
+		if cancelOld {
+			// Delete all scheduled AUS tasks. But let running tasks complete execution.
+			if err == nil {
+
+				var taskId string
+				scheduler.TasksForeach(func(name string, task *scheduler.TaskEntry) bool {
+					taskId = ""
+					if task.Class == "auto_update_statistics" && task.State == scheduler.SCHEDULED {
+						taskId = task.Id
+					}
+					return true
+
+				}, func() bool {
+					if taskId != "" {
+						execErr := scheduler.DeleteTask(taskId)
+						if execErr != nil {
+							logging.Errorf(AUS_LOG_PREFIX+"Error deleting old scheduled task with id %v: %v", taskId, execErr)
+						}
+					}
+					return true
+				}, scheduler.SCHEDULED_TASKS_CACHE)
+			}
+			if err != nil {
+				logging.Errorf(AUS_LOG_PREFIX+"Error during global settings retrieval: %v", err)
+			}
+		}
+
+		// Schedule next task with the new schedule
+		if reschedule {
+			versionChange, err := ausCfg.schedule(true, true, version, true, true)
+			if versionChange {
+				logging.Infof(AUS_LOG_PREFIX+"Newer global settings with higher internal version received. New task configured"+
+					" from global settings with internal version %v not scheduled.", version)
+			}
+			if err != nil {
+				logging.Errorf(AUS_LOG_PREFIX+"Error scheduling next task run: %v", err)
+			}
+		}
 	}
+
 	return nil
 }
 
@@ -365,7 +499,7 @@ func validateTime(val interface{}) (time.Time, bool) {
 	}
 
 	if t, ok := val.(string); ok {
-		tp, err := time.Parse(time.TimeOnly, t)
+		tp, err := time.Parse("15:04", t)
 		if err != nil {
 			return time.Time{}, false
 		}
@@ -807,4 +941,444 @@ func DropCollection(namespace string, bucket string, scope string, scopeUid stri
 			}
 			return nil
 		}, nil)
+}
+
+// Scheduling related functions
+
+// Finds the next AUS window and schedules the task. Returns whether a version change occurred and an error.
+// Parameters:
+// checkVersion - whether an equality check of the provided version and the current global config version must be performed
+// checkToday - If today should be considered when finding the next window
+// newSchedule - Whether this is the first task scheduled when a new schedule is received
+func (this *ausConfig) schedule(lock bool, checkVersion bool, version int64, checkToday bool, newSchedule bool) (
+	bool, errors.Error) {
+	if lock {
+		this.RLock()
+		defer this.RUnlock()
+	}
+
+	if checkVersion {
+		// If the configuration version is different from the version with which the task is to be scheduled
+		// that means a new configuration was received. Do not re-schedule.
+		if version != this.version {
+			return true, nil
+		}
+	}
+
+	var windowStart time.Time
+	var windowEnd time.Time
+	// To check that the next run with the new schedule does not overlap with the window of the existing running task
+	if newSchedule {
+		windowStart = this.currentWindow.startTime
+		windowEnd = this.currentWindow.endTime
+	}
+
+	start, end, err := this.settings.schedule.findNextWindow(checkToday, newSchedule, windowStart, windowEnd)
+	if err != nil {
+		return false, err
+	}
+
+	task := taskInfo{startTime: start, endTime: end, version: version}
+	err = scheduleTask(task)
+	if err != nil {
+		return false, err
+	}
+
+	logging.Infof(AUS_LOG_PREFIX+"New task scheduled between %v and %v using configuration version %v.", start, end,
+		this.version)
+
+	return false, nil
+}
+
+// Returns the next scheduled AUS window i.e start and end time of the next window
+// overlapCheck: Check if the start time of today's potential schedule is within the provided window
+// windowStart: start time of the window to check for overlap
+// windowEnd: end time of the window to check for overlap
+func (this *ausSchedule) findNextWindow(checkToday bool, overlapCheck bool, windowStart time.Time, windowEnd time.Time) (
+	time.Time, time.Time, errors.Error) {
+
+	// Get the current time in the required timezone
+	now := time.Now().In(this.timezone)
+
+	start := this.startTime
+	end := this.endTime
+
+	// check if the next run is Today
+	if checkToday && this.days[now.Weekday()] {
+
+		// if the current time is before the start time of the schedule, then this could be the next run.
+		if now.Hour() < start.Hour() || (now.Hour() == start.Hour()) && (now.Minute() <= start.Minute()) {
+
+			nextStart := time.Date(now.Year(), now.Month(), now.Day(), start.Hour(),
+				start.Minute(), 0, 0, this.timezone)
+
+			today := true
+
+			// Perform the overlap check. Check if the start time of today's potential schedule is within the provided window
+			if overlapCheck && !windowStart.IsZero() && !windowEnd.IsZero() {
+				// If the next run is during the provided window
+				if !nextStart.Before(windowStart) && !nextStart.After(windowEnd) {
+					today = false
+				}
+			}
+
+			if today {
+				return nextStart,
+					time.Date(now.Year(), now.Month(), now.Day(), end.Hour(),
+						end.Minute(), 0, 0, this.timezone), nil
+			}
+		}
+	}
+
+	// Iterate through the days to see when the nearest next run is
+	d := (int(now.Weekday()) + 1) % len(this.days)
+	for i := 0; i < len(this.days); i++ {
+		if this.days[d] {
+			// This is the next run
+			numDaysBetween := i + 1
+			return time.Date(now.Year(), now.Month(), now.Day(),
+					start.Hour(), start.Minute(), 0, 0, this.timezone).AddDate(0, 0, numDaysBetween),
+				time.Date(now.Year(), now.Month(), now.Day(),
+					end.Hour(), end.Minute(), 0, 0, this.timezone).AddDate(0, 0, numDaysBetween), nil
+		}
+
+		d++
+		if d == len(this.days) {
+			d = 0
+		}
+	}
+
+	// This should never happen since only allow valid schedules are allowed to be configured
+	return time.Time{}, time.Time{}, errors.NewAusSchedulingError(time.Time{}, time.Time{}, nil)
+}
+
+func scheduleTask(task taskInfo) errors.Error {
+	// Create the session name
+	session, err := util.UUIDV4()
+	if err != nil {
+		return errors.NewAusSchedulingError(task.startTime, task.endTime, err)
+	}
+
+	context, err := newContext()
+	if err != nil {
+		return errors.NewAusSchedulingError(task.startTime, task.endTime, err)
+	}
+
+	parms := make(map[string]interface{}, 1)
+	parms["task"] = task
+
+	after := task.startTime.Sub(time.Now())
+	err = scheduler.ScheduleTask(session, "auto_update_statistics", "", after, execTask, stopTask, parms, "", context)
+	if err != nil {
+		return errors.NewAusSchedulingError(task.startTime, task.endTime, err)
+	}
+
+	return nil
+}
+
+func execTask(context scheduler.Context, parms interface{}) (interface{}, []errors.Error) {
+
+	if params, okP := parms.(map[string]interface{}); okP {
+		var task taskInfo
+		if v, ok := params["task"]; ok {
+			if task, ok = v.(taskInfo); !ok {
+				return nil, []errors.Error{errors.NewAusTaskInvalidInfoError("execution", "task", v)}
+			}
+		} else {
+			return nil, []errors.Error{errors.NewAusTaskInvalidInfoError("execution", "task", nil)}
+		}
+
+		// If the configuration version is different from the version with which the task was scheduled
+		// that means a new configuration was received. Do not execute the task.
+		ausCfg.Lock()
+		if task.version != ausCfg.version {
+			ausCfg.Unlock()
+			return "Newer version of settings detected. This task was scheduled from older settings. Task not executed.", nil
+		}
+
+		// Set the current task window information
+		ausCfg.setCurrentWindow(false, task.startTime, task.endTime, task.version)
+		ausCfg.Unlock()
+
+		// Dummy task execution for now
+		rv := fmt.Sprintf("Task scheduled between %v and %v has completed execution.", task.startTime, task.endTime)
+
+		// Schedule the next task run. Do not consider "today" in the determination of the window of the next run.
+		versionChange, err := ausCfg.schedule(true, true, task.version, false, false)
+		if versionChange {
+			return rv, nil
+		}
+
+		if err != nil {
+			return rv, []errors.Error{errors.NewAusTaskError("rescheduling", err)}
+		}
+
+	} else {
+		return nil, []errors.Error{errors.NewAusTaskInvalidInfoError("execution", "param", parms)}
+	}
+
+	return nil, nil
+
+}
+
+func stopTask(context scheduler.Context, parms interface{}) (interface{}, []errors.Error) {
+
+	if params, okP := parms.(map[string]interface{}); okP {
+		var task taskInfo
+		if v, ok := params["task"]; ok {
+			if task, ok = v.(taskInfo); !ok {
+				return nil, []errors.Error{errors.NewAusTaskInvalidInfoError("execution", "task", v)}
+			}
+		} else {
+			return nil, []errors.Error{errors.NewAusTaskInvalidInfoError("execution", "task", nil)}
+		}
+
+		rv := fmt.Sprintf("Task scheduled between %v and %v has been stopped.", task.startTime, task.endTime)
+
+		// Schedule the next task run. Do not consider "today" in the determination of the window of the next run
+		versionChange, err := ausCfg.schedule(true, true, task.version, false, false)
+		if versionChange {
+			return rv, nil
+		}
+
+		if err != nil {
+			return rv, []errors.Error{errors.NewAusTaskError("rescheduling", err)}
+		}
+
+	} else {
+		return nil, []errors.Error{errors.NewAusTaskInvalidInfoError("execution", "param", parms)}
+	}
+
+	return nil, nil
+
+}
+
+// Execution related functions
+
+func newContext() (*execution.Context, errors.Error) {
+
+	// Get admin credentials for this node
+	creds, err := getNodeAdminCreds()
+	if err != nil {
+		return nil, err
+	}
+
+	qServer := ausCfg.server
+	ctx := execution.NewContext("aus_request", qServer.Datastore(), qServer.Systemstore(), "default", false,
+		qServer.MaxParallelism(), qServer.ScanCap(), qServer.PipelineCap(), qServer.PipelineBatch(), nil, nil,
+		creds, datastore.NOT_SET, &ZeroScanVectorSource{}, newAusOutput("aus_request"), nil, qServer.MaxIndexAPI(),
+		util.GetN1qlFeatureControl(), "", util.IsFeatureEnabled(util.GetN1qlFeatureControl(), util.N1QL_FLEXINDEX),
+		util.IsFeatureEnabled(util.GetN1qlFeatureControl(), util.N1QL_CBO), optimizer.NewOptimizer(), datastore.DEF_KVTIMEOUT,
+		qServer.Timeout())
+
+	if qServer.MemoryQuota() > 0 {
+		ctx.SetMemoryQuota(qServer.MemoryQuota())
+		ctx.SetMemorySession(memory.Register())
+	}
+
+	return ctx, nil
+}
+
+func getNodeAdminCreds() (*auth.Credentials, errors.Error) {
+	node, err := getNodeName()
+	if err != nil {
+		return nil, err
+	}
+
+	creds, err1 := datastore.AdminCreds(node)
+	if err1 != nil {
+		return nil, errors.NewNoAdminPrivilegeError(err)
+	}
+
+	return creds, err
+}
+
+func getNodeName() (string, errors.Error) {
+	node := distributed.RemoteAccess().WhoAmI()
+	if node == "" {
+		// This can only happen for nodes running outside of the cluster
+		return "", errors.NewNoAdminPrivilegeError(fmt.Errorf("cannot establish node name"))
+	}
+
+	return node, nil
+}
+
+// scanVectorEntries implements timestamp.Vector
+type scanVectorEntries struct {
+	entries []timestamp.Entry
+}
+
+func (this *scanVectorEntries) Entries() []timestamp.Entry {
+	return this.entries
+}
+
+// implements timestamp.ScanVectorSource interface
+type ZeroScanVectorSource struct {
+	empty scanVectorEntries
+}
+
+func (this *ZeroScanVectorSource) ScanVector(namespace_id string, keyspace_name string) timestamp.Vector {
+	// Always return a vector of 0 entries.
+	return &this.empty
+}
+
+func (this *ZeroScanVectorSource) Type() int32 {
+	return timestamp.NO_VECTORS
+}
+
+// context.Output implementation for executions in AUS related operations
+type ausOutput struct {
+	id            string
+	err           errors.Error
+	mutationCount uint64
+}
+
+func newAusOutput(id string) *ausOutput {
+	return &ausOutput{
+		id: id,
+	}
+}
+
+func (this *ausOutput) SetUp() {
+}
+
+func (this *ausOutput) Result(item value.AnnotatedValue) bool {
+	return (this.err == nil)
+}
+
+func (this *ausOutput) CloseResults() {
+}
+
+func (this *ausOutput) Abort(err errors.Error) {
+	if this.err == nil {
+		this.err = err
+	}
+}
+
+func (this *ausOutput) Fatal(err errors.Error) {
+	if this.err == nil {
+		this.err = err
+	}
+}
+
+func (this *ausOutput) Error(err errors.Error) {
+	if this.err == nil {
+		this.err = err
+	}
+}
+
+func (this *ausOutput) SetErrors(errs errors.Errors) {
+	for _, err := range errs {
+		this.Error(err)
+	}
+}
+
+func (this *ausOutput) Warning(wrn errors.Error) {
+}
+
+func (this *ausOutput) Errors() []errors.Error {
+	if this.err == nil {
+		return nil
+	}
+	return []errors.Error{this.err}
+}
+
+func (this *ausOutput) AddMutationCount(i uint64) {
+	atomic.AddUint64(&this.mutationCount, i)
+}
+
+func (this *ausOutput) MutationCount() uint64 {
+	return atomic.LoadUint64(&this.mutationCount)
+}
+
+func (this *ausOutput) SetSortCount(i uint64) {
+	// do nothing
+}
+
+func (this *ausOutput) SortCount() uint64 {
+	return uint64(0)
+}
+
+func (this *ausOutput) AddPhaseCount(p execution.Phases, c uint64) {
+	// do nothing
+}
+
+func (this *ausOutput) AddPhaseOperator(p execution.Phases) {
+	// do nothing
+}
+
+func (this *ausOutput) PhaseOperator(p execution.Phases) uint64 {
+	return uint64(0)
+}
+
+func (this *ausOutput) FmtPhaseCounts() map[string]interface{} {
+	// do nothing
+	return nil
+}
+
+func (this *ausOutput) FmtPhaseOperators() map[string]interface{} {
+	// do nothing
+	return nil
+}
+
+func (this *ausOutput) AddPhaseTime(phase execution.Phases, duration time.Duration) {
+	// do nothing
+}
+
+func (this *ausOutput) FmtPhaseTimes(s util.DurationStyle) map[string]interface{} {
+	// do nothing
+	return nil
+}
+
+func (this *ausOutput) RawPhaseTimes() map[string]interface{} {
+	return nil
+}
+
+func (this *ausOutput) FmtOptimizerEstimates(op execution.Operator) map[string]interface{} {
+	// do nothing
+	return nil
+}
+
+func (this *ausOutput) TrackMemory(size uint64) {
+	// do nothing
+}
+
+func (this *ausOutput) SetTransactionStartTime(t time.Time) {
+	// do nothing
+}
+
+func (this *ausOutput) AddTenantUnits(s tenant.Service, ru tenant.Unit) {
+	// do nothing
+}
+
+func (this *ausOutput) AddCpuTime(d time.Duration) {
+	// do nothing
+}
+
+func (this *ausOutput) AddIoTime(d time.Duration) {
+	// do nothing
+}
+
+func (this *ausOutput) AddWaitTime(d time.Duration) {
+	// do nothing
+}
+
+func (this *ausOutput) Loga(l logging.Level, f func() string) {
+	// do nothing
+}
+
+func (this *ausOutput) LogLevel() logging.Level {
+	return logging.INFO
+}
+
+func (this *ausOutput) GetErrorLimit() int {
+	return 1
+}
+
+func (this *ausOutput) GetErrorCount() int {
+	if this.err == nil {
+		return 0
+	}
+
+	return 1
 }

@@ -1016,7 +1016,7 @@ func doTasks(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, a
 			return true
 		}
 
-		scheduler.TasksForeach(snapshot, nil)
+		scheduler.TasksForeach(snapshot, nil, scheduler.ALL_TASKS_CACHE)
 		return data, nil
 
 	default:

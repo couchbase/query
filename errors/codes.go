@@ -597,4 +597,6 @@ const (
 	E_AUS_INVALID_DOCUMENT_SCHEMA                ErrorCode = 20003
 	E_AUS_SETTINGS_ENCODING                      ErrorCode = 20004
 	E_AUS_STORAGE_INVALID_KEY                    ErrorCode = 20005
+	E_AUS_SCHEDULING                             ErrorCode = 20006
+	E_AUS_TASK                                   ErrorCode = 20007
 )
