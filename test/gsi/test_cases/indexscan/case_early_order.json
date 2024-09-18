@@ -84,17 +84,7 @@
         "ordered": true,
         "results": [
             {
-                "purchaseId": "purchase8253",
-                "purchasedAt": "2014-05-06T15:52:43Z",
-                "type": "purchase"
-            },
-            {
-                "purchaseId": "purchase8551",
-                "purchasedAt": "2014-05-06T15:52:43Z",
-                "type": "purchase"
-            },
-            {
-                "purchaseId": "purchase8526",
+                "purchaseId": "purchase8493",
                 "purchasedAt": "2014-05-06T15:52:43Z",
                 "type": "purchase"
             },
@@ -104,7 +94,54 @@
                 "type": "purchase"
             },
             {
-                "purchaseId": "purchase8090",
+                "purchaseId": "purchase8526",
+                "purchasedAt": "2014-05-06T15:52:43Z",
+                "type": "purchase"
+            },
+            {
+                "purchaseId": "purchase8551",
+                "purchasedAt": "2014-05-06T15:52:43Z",
+                "type": "purchase"
+            },
+            {
+                "purchaseId": "purchase8253",
+                "purchasedAt": "2014-05-06T15:52:43Z",
+                "type": "purchase"
+            }
+        ]
+    },
+    {
+        "testcase": "Same as above, but add 1 to OFFSET. Explain",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IndexScan3' AND ARRAY_LENGTH(v.`index_keys`) > 0 END AND ANY o WITHIN p.plan.`~children` SATISFIES o.`#operator` = 'Order' AND o.`limit` IS NOT MISSING AND CONTAINS(o.`sort_terms`[0].`expr`, \"_index_key\") END"
+        },
+        "statements":"SELECT type, purchasedAt, purchaseId FROM purchase WHERE test_id = \"arrayIndex\" AND customerId like \"customer1%\" ORDER BY purchasedAt desc OFFSET 11 LIMIT 4",
+        "ordered": true,
+        "results": [
+            {
+                "purchaseId": "purchase8402",
+                "purchasedAt": "2014-05-06T15:52:43Z",
+                "type": "purchase"
+            },
+            {
+                "purchaseId": "purchase8526",
+                "purchasedAt": "2014-05-06T15:52:43Z",
+                "type": "purchase"
+            },
+            {
+                "purchaseId": "purchase8551",
+                "purchasedAt": "2014-05-06T15:52:43Z",
+                "type": "purchase"
+            },
+            {
+                "purchaseId": "purchase8253",
                 "purchasedAt": "2014-05-06T15:52:43Z",
                 "type": "purchase"
             }
@@ -168,17 +205,7 @@
         "ordered": true,
         "results": [
             {
-                "purchaseId": "purchase8253",
-                "purchasedAt": "2014-05-06T15:52:43Z",
-                "type": "purchase"
-            },
-            {
-                "purchaseId": "purchase8551",
-                "purchasedAt": "2014-05-06T15:52:43Z",
-                "type": "purchase"
-            },
-            {
-                "purchaseId": "purchase8526",
+                "purchaseId": "purchase8493",
                 "purchasedAt": "2014-05-06T15:52:43Z",
                 "type": "purchase"
             },
@@ -188,7 +215,54 @@
                 "type": "purchase"
             },
             {
-                "purchaseId": "purchase8090",
+                "purchaseId": "purchase8526",
+                "purchasedAt": "2014-05-06T15:52:43Z",
+                "type": "purchase"
+            },
+            {
+                "purchaseId": "purchase8551",
+                "purchasedAt": "2014-05-06T15:52:43Z",
+                "type": "purchase"
+            },
+            {
+                "purchaseId": "purchase8253",
+                "purchasedAt": "2014-05-06T15:52:43Z",
+                "type": "purchase"
+            }
+        ]
+    },
+    {
+        "testcase": "Same as above, but add 1 to OFFSET. Explain",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IndexScan3' AND ARRAY_LENGTH(v.`index_keys`) > 0 END AND ANY o WITHIN p.plan.`~children` SATISFIES o.`#operator` = 'Order' AND o.`limit` IS NOT MISSING AND CONTAINS(o.`sort_terms`[0].`expr`, \"_index_key\") END"
+        },
+        "statements":"SELECT type, purchasedAt, purchaseId FROM purchase WHERE test_id = \"arrayIndex\" AND customerId like \"customer1%\" ORDER BY purchasedAt desc, test_id OFFSET 11 LIMIT 4",
+        "ordered": true,
+        "results": [
+            {
+                "purchaseId": "purchase8402",
+                "purchasedAt": "2014-05-06T15:52:43Z",
+                "type": "purchase"
+            },
+            {
+                "purchaseId": "purchase8526",
+                "purchasedAt": "2014-05-06T15:52:43Z",
+                "type": "purchase"
+            },
+            {
+                "purchaseId": "purchase8551",
+                "purchasedAt": "2014-05-06T15:52:43Z",
+                "type": "purchase"
+            },
+            {
+                "purchaseId": "purchase8253",
                 "purchasedAt": "2014-05-06T15:52:43Z",
                 "type": "purchase"
             }
