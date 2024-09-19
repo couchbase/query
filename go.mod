@@ -72,22 +72,32 @@ require (
 )
 
 require (
-	github.com/Azure/azure-sdk-for-go/sdk/storage/azblob v1.2.1 // indirect
 	github.com/RoaringBitmap/roaring v1.9.3 // indirect
-	github.com/aws/aws-sdk-go v1.48.1 // indirect
+	github.com/aws/aws-sdk-go-v2 v1.30.3 // indirect
+	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.5.4 // indirect
+	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.15.15 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/configsources v1.2.10 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.5.10 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/v4a v1.2.10 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.10.4 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/checksum v1.2.10 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.10.10 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.16.10 // indirect
+	github.com/aws/aws-sdk-go-v2/service/s3 v1.48.1 // indirect
+	github.com/aws/smithy-go v1.20.3 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bits-and-blooms/bitset v1.12.0 // indirect
 	github.com/blevesearch/bleve-mapping-ui v0.5.2 // indirect
-	github.com/blevesearch/bleve/v2 v2.4.3-0.20240904145907-d0435fa262a4 // indirect
-	github.com/blevesearch/bleve_index_api v1.1.11 // indirect
+	github.com/blevesearch/bleve/v2 v2.4.3-0.20240919165813-931690cdb922 // indirect
+	github.com/blevesearch/bleve_index_api v1.1.12 // indirect
 	github.com/blevesearch/geo v0.1.20 // indirect
-	github.com/blevesearch/go-faiss v1.0.21 // indirect
+	github.com/blevesearch/go-faiss v1.0.22-0.20240919162919-05a9ee21155a // indirect
 	github.com/blevesearch/go-porterstemmer v1.0.3 // indirect
 	github.com/blevesearch/goleveldb v1.0.1 // indirect
 	github.com/blevesearch/gtreap v0.1.1 // indirect
 	github.com/blevesearch/mmap-go v1.0.4 // indirect
-	github.com/blevesearch/scorch_segment_api/v2 v2.2.15 // indirect
-	github.com/blevesearch/sear v0.2.8 // indirect
+	github.com/blevesearch/scorch_segment_api/v2 v2.2.16 // indirect
+	github.com/blevesearch/sear v0.2.9 // indirect
 	github.com/blevesearch/segment v0.9.1 // indirect
 	github.com/blevesearch/snowballstem v0.9.0 // indirect
 	github.com/blevesearch/stempel v0.2.0 // indirect
@@ -98,7 +108,7 @@ require (
 	github.com/blevesearch/zapx/v13 v13.3.10 // indirect
 	github.com/blevesearch/zapx/v14 v14.3.10 // indirect
 	github.com/blevesearch/zapx/v15 v15.3.13 // indirect
-	github.com/blevesearch/zapx/v16 v16.1.6-0.20240904144721-dbcb3c000a29 // indirect
+	github.com/blevesearch/zapx/v16 v16.1.6-0.20240919163431-f2ee7670abd9 // indirect
 	github.com/buger/jsonparser v1.1.1 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/cloudfoundry/gosigar v1.3.4 // indirect
@@ -112,15 +122,13 @@ require (
 	github.com/couchbase/hebrew v0.0.0-00010101000000-000000000000 // indirect
 	github.com/couchbase/logstats v1.0.0 // indirect
 	github.com/couchbase/moss v0.3.0 // indirect
-	github.com/couchbase/tools-common/cloud v1.0.0 // indirect
-	github.com/couchbase/tools-common/core v1.0.0 // indirect
+	github.com/couchbase/tools-common/cloud/v5 v5.0.3 // indirect
 	github.com/couchbase/tools-common/fs v1.0.2 // indirect
-	github.com/couchbase/tools-common/functional v1.1.1 // indirect
 	github.com/couchbase/tools-common/strings v1.0.0 // indirect
-	github.com/couchbase/tools-common/sync v1.0.0 // indirect
+	github.com/couchbase/tools-common/sync/v2 v2.0.0 // indirect
 	github.com/couchbase/tools-common/testing v1.0.1 // indirect
 	github.com/couchbase/tools-common/types v1.1.4 // indirect
-	github.com/couchbase/tools-common/utils v1.0.0 // indirect
+	github.com/couchbase/tools-common/utils/v3 v3.0.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/elazarl/go-bindata-assetfs v1.0.1 // indirect
 	github.com/golang/geo v0.0.0-20210211234256-740aa86cb551 // indirect
@@ -128,7 +136,6 @@ require (
 	github.com/google/flatbuffers v22.11.23+incompatible // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/gorilla/mux v1.8.0 // indirect
-	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.1 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
@@ -148,7 +155,6 @@ require (
 	github.com/youmark/pkcs8 v0.0.0-20201027041543-1326539a0a0a // indirect
 	go.etcd.io/bbolt v1.3.7 // indirect
 	golang.org/x/exp v0.0.0-20231226003508-02704c960a9b // indirect
-	golang.org/x/sync v0.5.0 // indirect
 	golang.org/x/text v0.17.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240102182953-50ed04b92917 // indirect
