@@ -332,5 +332,77 @@
         "query": "SELECT * FROM shellTest WHERE ANY i IN [1,2] SATISFIES i = id END"
       }
     ]
+  },
+  {
+    "testcase": "MB-63577 part-1 disjunction with 1st predicate as a function call and IS MISSING as 2nd predicate on the same key",
+    "statements":"ADVISE SELECT meta().id FROM shellTest WHERE type = \"right\" AND  (REGEXP_CONTAINS (c21, \"^[0-9;]*$\") OR  c21 IS MISSING)",
+    "advise": true,
+    "results": [
+      {
+          "#operator": "Advise",
+          "advice": {
+              "#operator": "IndexAdvice",
+              "adviseinfo": {
+                  "recommended_indexes": {
+                      "covering_indexes": [
+                          {
+                              "index_statement": "CREATE INDEX adv_type_c21 ON `shellTest`(`type`,`c21`)",
+                              "keyspace_alias": "shellTest"
+                          }
+                      ]
+                  }
+              }
+          },
+          "query": "SELECT meta().id FROM shellTest WHERE type = \"right\" AND  (REGEXP_CONTAINS (c21, \"^[0-9;]*$\") OR  c21 IS MISSING);"
+      }
+    ]
+  },
+  {
+    "testcase":"MB-63577 part-2 disjunction with 1st predicate as a function call, 2nd as predicate IS MISSING, 3rd as IS NULL on the same key",
+    "statements":"ADVISE SELECT meta().id FROM shellTest WHERE type = \"right\" AND  (REGEXP_CONTAINS (c21, \"^[0-9;]*$\") OR  c21 IS MISSING OR c21 IS NULL)",
+    "advise": true,
+    "results": [
+      {
+          "#operator": "Advise",
+          "advice": {
+              "#operator": "IndexAdvice",
+              "adviseinfo": {
+                  "recommended_indexes": {
+                      "covering_indexes": [
+                          {
+                              "index_statement": "CREATE INDEX adv_type_c21 ON `shellTest`(`type`,`c21`)",
+                              "keyspace_alias": "shellTest"
+                          }
+                      ]
+                  }
+              }
+          },
+          "query": "SELECT meta().id FROM shellTest WHERE type = \"right\" AND (REGEXP_CONTAINS (c21, \"^[0-9;]*$\") OR c21 IS NULL OR c21 IS MISSING);"
+      }
+    ]
+  },
+  {
+    "testcase":"MB-63577 part-3 disjunction with 1st predicate as a function call, 2nd as IS NULL, 3rd as IS MISSING on the same key",
+    "statements":"ADVISE SELECT meta().id FROM shellTest WHERE type = \"right\" AND (REGEXP_CONTAINS (c21, \"^[0-9;]*$\") OR c21 IS NULL OR c21 IS MISSING)",
+    "advise": true,
+    "results": [
+      {
+          "#operator": "Advise",
+          "advice": {
+              "#operator": "IndexAdvice",
+              "adviseinfo": {
+                  "recommended_indexes": {
+                      "covering_indexes": [
+                          {
+                              "index_statement": "CREATE INDEX adv_type_c21 ON `shellTest`(`type`,`c21`)",
+                              "keyspace_alias": "shellTest"
+                          }
+                      ]
+                  }
+              }
+          },
+          "query": "SELECT meta().id FROM shellTest WHERE type = \"right\" AND (REGEXP_CONTAINS (c21, \"^[0-9;]*$\") OR c21 IS NULL OR c21 IS MISSING);"
+      }
+    ]
   }
 ]
