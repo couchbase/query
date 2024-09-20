@@ -1390,9 +1390,32 @@ func (this *builder) getIndexFilters(entry *indexEntry, node *algebra.KeyspaceTe
 		skip := useSkipIndexKeys(index, this.context.IndexApiVersion())
 		chkOr := isOrPred && !entry.HasFlag(IE_OR_USE_FILTERS)
 		chkUnnest := entry.HasFlag(IE_ARRAYINDEXKEY_SARGABLE) && len(entry.unnestAliases) > 0
+	filterloop:
 		for _, fl := range filters {
-			if (fl.IsUnnest() && !chkUnnest) || fl.HasSubq() {
+			if fl.HasSubq() {
 				continue
+			} else if fl.IsUnnest() {
+				if !chkUnnest {
+					continue
+				}
+				// in case there are multiple unnests, make sure the filter is for
+				// the unnest alias that this unnest scan is for
+				for ks, _ := range fl.Keyspaces() {
+					if ks == alias {
+						// allow reference to primary keyspace
+						continue
+					}
+					found := false
+					for _, un := range entry.unnestAliases {
+						if ks == un {
+							found = true
+							break
+						}
+					}
+					if !found {
+						continue filterloop
+					}
+				}
 			}
 			fltrExpr := fl.FltrExpr()
 			derived := false

@@ -232,6 +232,38 @@
         "statements":"SELECT f3.id FROM shellTest AS d UNNEST d.f3 WHERE f3.id = 10",
         "results": [
         ]
+    },
+    {
+        "testcase": "MB-63593",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`index` = 'ix113' AND v.`filter` IS MISSING END"
+        },
+        "statements":"SELECT r0.x, r1.id FROM shellTest AS d UNNEST d.f3 AS r0 UNNEST d.f3 AS r1 WHERE r1.id = 1 AND r0.x < 20",
+        "results": [
+            {
+                "x": 10,
+                "id": 1
+            },
+            {
+                "x": 10,
+                "id": 1
+            },
+            {
+                "x": 10,
+                "id": 1
+            },
+            {
+                "x": 10,
+                "id": 1
+            }
+        ]
     }
 ]
 
