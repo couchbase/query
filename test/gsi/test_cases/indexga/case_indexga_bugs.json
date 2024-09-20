@@ -93,5 +93,27 @@
 	"namedArgs": {"c3": 15},
         "results": [
         ]
+    },
+    {
+        "testcase": "MB-63578 (optimizer hints not followed)",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`index_group_aggs` IS MISSING END"
+        },
+        "statements": "SELECT SUM(c10) AS sum FROM orders USE INDEX (ixga201) WHERE (test_id = 'indexga' AND type = 'bugs') AND c10 > 0 GROUP BY c10",
+        "results": [
+            {
+                "sum": 2
+            },
+            {
+                "sum": 4
+            }
+        ]
     }
 ]

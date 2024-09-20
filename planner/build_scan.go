@@ -239,10 +239,7 @@ func (this *builder) buildSubsetScan(keyspace datastore.Keyspace, node *algebra.
 	if join {
 		this.resetPushDowns()
 	}
-	order := this.order
-	offset := this.offset
-	limit := this.limit
-	group := this.group
+	indexPushDowns := this.storeIndexPushDowns()
 
 	pred := baseKeyspace.DnfPred()
 	if join && baseKeyspace.OnclauseOnly() {
@@ -266,21 +263,38 @@ func (this *builder) buildSubsetScan(keyspace datastore.Keyspace, node *algebra.
 		return secondary, nil, err
 	}
 
-	if !join || hash || node.IsSystem() {
-		// No secondary scan, try primary scan. restore order there is predicate no need to restore others
-		this.order = order
-		this.group = group
-		exact := false
-		hasDeltaKeyspace := this.context.HasDeltaKeyspace(baseKeyspace.Keyspace())
-		if pred == nil && !hash && !hasDeltaKeyspace {
-			this.offset = offset
-			this.limit = limit
-			exact = true
+	// No secondary scan, restore index pushdowns
+	// this is necessary in case we consider primary scan below, or if we need to go
+	// through this function again (in case optimizer hints specified and hints not followed)
+	this.restoreIndexPushDowns(indexPushDowns, true)
+
+	doPrimary := !join || hash || node.IsSystem()
+	if doPrimary && this.hintIndexes {
+		found := false
+		for _, idx := range indexes {
+			if idx.IsPrimary() {
+				found = true
+				break
+			}
 		}
+		// if considering indexes in optimizer hints, and there is no primary indexes
+		// specified, no need to consider primary scan
+		if !found {
+			doPrimary = false
+		}
+	}
+	if doPrimary {
+		hasDeltaKeyspace := this.context.HasDeltaKeyspace(baseKeyspace.Keyspace())
+		exact := pred == nil && !hash && !hasDeltaKeyspace
 		primary, err = this.buildPrimaryScan(keyspace, node, indexes, id, force, exact, hasDeltaKeyspace)
-		if this.hasBuilderFlag(BUILDER_CHK_INDEX_ORDER) && order != nil && this.order == nil {
+		if this.hasBuilderFlag(BUILDER_CHK_INDEX_ORDER) && this.order == nil {
 			// building ORDER plan during join enumeration and primary scan does not have order
-			return nil, nil, nil
+			primary = nil
+		}
+		if primary == nil && this.hintIndexes {
+			// in case anything changed during primary scan consideration, restore
+			// index pushdowns again for next consideration (with remaining indexes)
+			this.restoreIndexPushDowns(indexPushDowns, true)
 		}
 	}
 	return nil, primary, err
