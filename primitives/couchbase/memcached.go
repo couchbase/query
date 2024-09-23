@@ -782,14 +782,14 @@ func (b *Bucket) doBulkGet(vb uint16, keys []string, active func() bool, reqDead
 	rv := _STRING_MCRESPONSE_POOL.Get()
 	done := false
 	bname := b.Name
-	retries := 0
+	retries := -1
 	desc := &doDescriptor{useReplicas: useReplica, version: b.Version, maxTries: b.backOffRetries()}
 	var lastError error
 	for ; desc.attempts < maxBulkRetries && !done && !eStatus.errStatus; desc.attempts++ {
+		retries++
 		if !active() {
 			return rv, desc.delay, retries
 		}
-		retries++
 
 		// This stack frame exists to ensure we can clean up
 		// connection at a reasonable time.
