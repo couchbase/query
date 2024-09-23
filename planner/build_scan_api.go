@@ -290,7 +290,7 @@ func getIndexKeyNames(alias string, index datastore.Index, projection *plan.Inde
 		} // else all index keys are included (useKey remains true)
 
 		// vector index key is in the index projection but no need to include it
-		if useKey && keys[i].HasAttribute(datastore.IK_VECTOR) {
+		if useKey && i < len(keys) && keys[i].HasAttribute(datastore.IK_VECTOR) {
 			useKey = false
 		}
 
