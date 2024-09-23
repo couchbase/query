@@ -2462,7 +2462,6 @@ func getExpiration(options value.Value) (exptime int, present bool) {
 func getMutatableXattrs(options value.Value) map[string]interface{} {
 	if options != nil && options.Type() == value.OBJECT {
 		if v, ok := options.Field("xattrs"); ok && v.Type() == value.OBJECT {
-			return v.Actual().(map[string]interface{})
 			// extract and return non-virtual xattrs only
 			var rv map[string]interface{}
 			for k, v := range v.Fields() {
