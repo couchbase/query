@@ -60,7 +60,11 @@ func NewPartialAggCoverer(covers []*expression.Cover, aggs algebra.Aggregates) *
 						agg1 := agg.Copy().(algebra.Aggregate)
 						rv.matchCover = c
 						err := agg1.MapChildren(rv)
-						return indexPartialAggregateCount2SumRewrite(agg1, c), err
+						if err == nil {
+							agg1 = indexPartialAggregateCount2SumRewrite(agg1, c)
+							agg1.AddFlags(algebra.AGGREGATE_REWRITE_INDEX_AGGS)
+						}
+						return agg1, err
 					}
 				}
 			}
