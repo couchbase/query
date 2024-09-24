@@ -93,7 +93,7 @@ function checkout_if_necessary {
       ($GIT pull 2>/dev/null 1>/dev/null)  # no need to report status
       res=`$cmd1 2>&1`
     fi
-    if [[ ! $res =~ "is now at" ]]
+    if [[ ! $res =~ "is now at" && ! $res =~ "Switched to a new branch" ]]
     then
       report="${report}${D} -> ${cmd1}:\n${res}\n"
     else
