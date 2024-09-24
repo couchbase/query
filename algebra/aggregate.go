@@ -62,6 +62,11 @@ type Aggregate interface {
 	Flags() uint32
 
 	/*
+	   Adds new flags to aggregate
+	*/
+	AddFlags(flag uint32)
+
+	/*
 	   Checks Any of the flags are set.
 	*/
 	HasFlags(flag uint32) bool

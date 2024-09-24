@@ -169,6 +169,34 @@
                 "c11": 3
             }
         ]
+    },
+    {
+        "testcase": "MB-63647",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'NestedLoopJoin' AND v.`alias` = 'r' END AND ANY u WITHIN p.`~subqueries` SATISFIES u.`#operator` LIKE 'IndexScan%' AND u.`index_group_aggs`.`partial` = true END"
+        },
+        "queryParams": {"use_cbo": true},
+        "statements":"SELECT l.c11, r.c22 FROM shellTest l JOIN (SELECT c22, MAX(c21) AS c21 FROM shellTest WHERE type = \"right\" and c21 > 0 GROUP BY c22) AS r USE NL ON l.c11 = r.c21 AND l.c12 = r.c22 WHERE l.type = \"left\" AND r.c21 > 0",
+        "results": [
+            {
+                "c11": 1,
+                "c22": 10
+            },
+            {
+                "c11": 2,
+                "c22": 20
+            },
+            {
+                "c11": 3,
+                "c22": 30
+            }
+        ]
     }
 ]
 

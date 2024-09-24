@@ -211,7 +211,3 @@ func (this *Sum) computeDistinctFinal(cumulative value.Value, context Context) (
 
 	return sum, nil
 }
-
-func (this *Sum) SetRewriteIndexAggs() {
-	this.AddFlags(AGGREGATE_REWRITE_INDEX_AGGS)
-}
