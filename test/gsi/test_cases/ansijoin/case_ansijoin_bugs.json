@@ -480,7 +480,7 @@
                     "present": true
                 }
             ],
-            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'NestedLoopJoin' AND v.`alias` = 'e' END AND ANY u WITHIN p.plan.`~children` SATISFIES u.`#operator` LIKE 'IndexScan%' AND u.`filter` IS MISSING END"
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'NestedLoopJoin' AND v.`alias` = 'e' END"
         },
         "statements":"SELECT meta(p).id FROM product p JOIN [{\"date\": \"2013-05-11T15:52:18Z\"}] e USE HASH(build) ON DATE_DIFF_STR(p.dateAdded, e.date, 'second') = 1 WHERE p.productId IS VALUED",
         "results": [
@@ -534,7 +534,7 @@
                     "present": true
                 }
             ],
-            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'NestedLoopJoin' AND v.`alias` = 'e' END AND ANY u WITHIN p.plan.`~children` SATISFIES u.`#operator` LIKE 'IndexScan%' AND u.`filter` IS MISSING END"
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'NestedLoopJoin' AND v.`alias` = 'e' END"
         },
         "statements":"SELECT meta(p).id FROM product p JOIN [{\"date\": \"2013-05-11T15:52:18Z\"}] e USE NL ON DATE_DIFF_STR(p.dateAdded, e.date, 'second') = 1 WHERE p.productId IS VALUED",
         "results": [
@@ -577,6 +577,21 @@
             {
                 "id": "product895_ansijoin"
             }
+        ]
+    },
+    {
+        "testcase": "MB-63673, part 3",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`index` = 'st_ix27' AND v.`filter` IS MISSING END"
+        },
+        "statements":"SELECT m.* FROM shellTest AS m JOIN [{\"peroid\":{\"endDateTime\":\"2019-10-31T05:37:00.059Z\",\"startDateTime\":\"2019-10-01T05:37:00.059Z\"}}] p USE NL ON DATE_DIFF_STR(m.peroid.startDateTime, p.peroid.startDateTime, 'millisecond') = 0",
+        "results": [
         ]
     }
 ]
