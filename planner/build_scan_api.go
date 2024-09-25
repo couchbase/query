@@ -171,8 +171,8 @@ func (this *builder) buildIndexProjection(entry *indexEntry, exprs expression.Ex
 					if expr.DependsOn(include) {
 						indexProjection.EntryKeys = append(indexProjection.EntryKeys, keyPos)
 						curKey = true
+						break
 					}
-					break
 				}
 				allKeys = allKeys && curKey
 			}

@@ -148,7 +148,7 @@ func SargForFilters(filters base.Filters, vpred expression.Expression, entry *in
 
 		fltrExpr := fl.FltrExpr()
 		isJoin := fl.IsJoin() && !underHash
-		flSargSpans, flExactSpan, err := getSargSpans(fl.FltrExpr(), vpred, entry, sargKeys,
+		flSargSpans, flExactSpan, err := getSargSpans(fltrExpr, vpred, entry, sargKeys,
 			isMissing, isArrays, isJoin, doSelec, baseKeyspace, keyspaceNames,
 			advisorValidate, aliases, context)
 		if err != nil {
@@ -157,8 +157,12 @@ func SargForFilters(filters base.Filters, vpred expression.Expression, entry *in
 
 		if flExactSpan && exactFilters != nil {
 			valid := false
-			for _, rs := range flSargSpans {
+			for pos, rs := range flSargSpans {
 				if rs != nil && rs.Size() > 0 {
+					// don't consider the index span for vector index key
+					if pos < len(sargKeys) && sargKeys[pos].HasAttribute(datastore.IK_VECTOR) {
+						continue
+					}
 					valid = true
 					break
 				}
