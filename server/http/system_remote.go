@@ -504,7 +504,12 @@ func (this *systemRemoteHttp) getFullEndpoint(node clustering.QueryNode, endpoin
 		fullEndpoint = node.ClusterEndpoint() + "/" + endpoint
 	}
 	if creds != "" {
-		fullEndpoint += "?impersonate=" + string(creds)
+		if strings.IndexRune(fullEndpoint, '?') == -1 {
+			fullEndpoint += "?"
+		} else {
+			fullEndpoint += "&"
+		}
+		fullEndpoint += "impersonate=" + string(creds)
 	}
 
 	// Here, I'm leveraging the fact that the node name is the host:port of the mgmt
