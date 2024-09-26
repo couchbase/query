@@ -133,6 +133,7 @@ func SargForFilters(filters base.Filters, vpred expression.Expression, entry *in
 	arrayKeySpans := make(map[int][]SargSpans)
 
 	sargKeys := keys[0:max]
+	hasVector := entry.HasFlag(IE_VECTOR_KEY_SARGABLE)
 
 	for _, fl := range filters {
 		if fl.IsOnclause() {
@@ -158,11 +159,9 @@ func SargForFilters(filters base.Filters, vpred expression.Expression, entry *in
 		if flExactSpan && exactFilters != nil {
 			valid := false
 			for pos, rs := range flSargSpans {
-				if rs != nil && rs.Size() > 0 {
+				if rs != nil && rs.Size() > 0 &&
 					// don't consider the index span for vector index key
-					if pos < len(sargKeys) && sargKeys[pos].HasAttribute(datastore.IK_VECTOR) {
-						continue
-					}
+					(!hasVector || !(pos < len(sargKeys) && sargKeys[pos].HasAttribute(datastore.IK_VECTOR))) {
 					valid = true
 					break
 				}

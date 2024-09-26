@@ -199,10 +199,18 @@ outer:
 		implcitIndexProj = coveringEntry.implcitIndexProj
 	}
 
+	var includes expression.Expressions
+	if index6, ok := index.(datastore.Index6); ok {
+		includes = index6.Include()
+	}
+
 	// Include covering expression from index keys
-	covers := make(expression.Covers, 0, len(keys))
+	covers := make(expression.Covers, 0, len(keys)+len(includes))
 	for _, key := range keys {
 		covers = append(covers, expression.NewCover(key.Expr))
+	}
+	for _, include := range includes {
+		covers = append(covers, expression.NewCover(include))
 	}
 
 	return this.buildCreateCoveringScan(coveringEntry.idxEntry, node, id, pred, exprs, keys, false,
@@ -604,7 +612,7 @@ func (this *builder) buildCreateCoveringScan(entry *indexEntry, node *algebra.Ke
 	var indexPartitionSets plan.IndexPartitionSets
 	if index6, ok := entry.index.(datastore.Index6); ok && index6.IsBhive() && entry.HasFlag(IE_VECTOR_KEY_SARGABLE) {
 		var err error
-		indexKeyNames, err = getIndexKeyNames(node.Alias(), index, indexProjection)
+		indexKeyNames, err = getIndexKeyNames(node.Alias(), index, indexProjection, true)
 		if err != nil {
 			return nil, 0, err
 		}
