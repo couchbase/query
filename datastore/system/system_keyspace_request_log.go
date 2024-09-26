@@ -233,7 +233,7 @@ func newRequestsKeyspace(p *namespace) (*requestLogKeyspace, errors.Error) {
 	setKeyspaceBase(&b.keyspaceBase, p, KEYSPACE_NAME_REQUESTS)
 
 	primary := &requestLogIndex{
-		name:     "#primary",
+		name:     PRIMARY_INDEX_NAME,
 		keyspace: b,
 		primary:  true,
 	}

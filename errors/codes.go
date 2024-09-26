@@ -120,6 +120,7 @@ const (
 	E_AWR_START                                  ErrorCode = 2500
 	E_AWR_SETTING                                ErrorCode = 2501
 	E_AWR_CONFIG                                 ErrorCode = 2502
+	E_AWR_DISTRIB                                ErrorCode = 2503
 	E_PARSE_SYNTAX                               ErrorCode = 3000
 	E_ERROR_CONTEXT                              ErrorCode = 3005
 	E_PARSE_INVALID_ESCAPE_SEQUENCE              ErrorCode = 3006

@@ -237,7 +237,7 @@ func newRequestsHistoryKeyspace(p *namespace) (*requestLogHistoryKeyspace, error
 	setKeyspaceBase(&b.keyspaceBase, p, KEYSPACE_NAME_REQUESTS_HISTORY)
 
 	primary := &requestLogHistoryIndex{
-		name:     "#primary",
+		name:     PRIMARY_INDEX_NAME,
 		keyspace: b,
 		primary:  true,
 	}

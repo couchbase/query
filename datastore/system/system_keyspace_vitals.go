@@ -105,7 +105,7 @@ func newVitalsKeyspace(p *namespace) (*vitalsKeyspace, errors.Error) {
 	b := new(vitalsKeyspace)
 	setKeyspaceBase(&b.keyspaceBase, p, KEYSPACE_NAME_VITALS)
 
-	primary := &vitalsIndex{name: "#primary", keyspace: b}
+	primary := &vitalsIndex{name: PRIMARY_INDEX_NAME, keyspace: b}
 	b.si = newSystemIndexer(b, primary)
 	setIndexBase(&primary.indexBase, b.si)
 

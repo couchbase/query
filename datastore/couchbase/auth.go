@@ -41,6 +41,8 @@ func privilegeString(namespace, target, obj string, requested auth.Privilege) (s
 		fallthrough
 	case auth.PRIV_SYSTEM_READ:
 		permission = "cluster.n1ql.meta!read"
+	case auth.PRIV_SYSTEM_WRITE:
+		permission = "cluster.n1ql.meta!manage"
 	case auth.PRIV_SECURITY_READ:
 		permission = "cluster.admin.security!read"
 	case auth.PRIV_SECURITY_WRITE:

@@ -168,7 +168,7 @@ func newTransactionsKeyspace(p *namespace) (*transactionsKeyspace, errors.Error)
 	setKeyspaceBase(&b.keyspaceBase, p, KEYSPACE_NAME_TRANSACTIONS)
 
 	primary := &transactionsIndex{
-		name:     "#primary",
+		name:     PRIMARY_INDEX_NAME,
 		keyspace: b,
 		primary:  true,
 	}

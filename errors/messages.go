@@ -841,7 +841,7 @@ var errData = []ErrData{
 			"The value supplied for «feature» was not of the expected type.",
 		},
 		Action: []string{
-			"Correct the value and resubmit the request.",
+			"Correct the value and re-submit the request.",
 		},
 		IsUser: YES,
 		AppliesTo: []string{
@@ -1256,7 +1256,7 @@ var errData = []ErrData{
 			"The value provided for the noted setting was not of the correct type.",
 		},
 		Action: []string{
-			"Correct the value and resubmit the request.",
+			"Correct the value and re-submit the request.",
 		},
 		IsUser: YES,
 		AppliesTo: []string{
@@ -1555,7 +1555,7 @@ var errData = []ErrData{
 	{
 		Code:        E_AWR_SETTING, // 2501
 		symbol:      "E_AWR_SETTING",
-		Description: "Invalid value «value» for setting «setting»",
+		Description: "Invalid value «value» for workload setting «setting»",
 		Reason: []string{
 			"The value provided for the setting is invalid.",
 		},
@@ -1571,7 +1571,7 @@ var errData = []ErrData{
 	{
 		Code:        E_AWR_CONFIG, // 2502
 		symbol:      "E_AWR_CONFIG",
-		Description: "Error processing configuration",
+		Description: "Error processing workload configuration",
 		Reason: []string{
 			"The value provided for AWR configuration is invalid.",
 		},
@@ -1580,6 +1580,20 @@ var errData = []ErrData{
 			"The value must be a valid object or a string encoding a valid JSON object.",
 		},
 		IsUser: YES,
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_AWR_DISTRIB, // 2503
+		symbol:      "E_AWR_DISTRIB",
+		Description: "Error distributing workload settings",
+		Reason: []string{
+			"An error occurred distributing the workload settings to other Query nodes.",
+		},
+		Action: []string{
+			"Contact support.",
+		},
 		AppliesTo: []string{
 			"Server",
 		},

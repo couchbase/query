@@ -1844,7 +1844,13 @@ func newKeyspace(p *namespace, name string, version *uint64) (*keyspace, errors.
 		rv.scopes, rv.defaultCollection = buildScopesAndCollections(mani, rv)
 		logging.Infof("Loaded manifest for bucket %v id %v", name, mani.Uid)
 	} else {
-		logging.Infof("Unable to retrieve collections info for bucket %s: %v", name, err)
+		level := logging.INFO
+		// if we're a bit early and the data service is still starting up we may key a KEY_NOENT result here
+		// don't write this to the log so that we don't cause any alarm
+		if strings.Contains(err.Error(), "status=KEY_ENOENT, opcode=0x89") {
+			level = logging.DEBUG
+		}
+		logging.Logf(level, "Unable to retrieve collections info for bucket %s: %v", name, err)
 		// set collectionsManifestUid to _INVALID_MANIFEST_UID such that if collection becomes
 		// available (e.g. after legacy node is removed from cluster during rolling upgrade)
 		// it'll trigger a refresh of collection manifest
@@ -1914,7 +1920,7 @@ func (p *namespace) KeyspaceUpdateCallback(bucket *cb.Bucket, msgPrefix string) 
 		uid, _ := strconv.ParseUint(bucket.CollectionsManifestUid, 16, 64)
 		if ks.cbKeyspace.collectionsManifestUid != uid {
 			if ks.cbKeyspace.collectionsManifestUid == _INVALID_MANIFEST_UID {
-				logging.Infof("%s received first manifest id %v", msgPrefix, uid)
+				logging.Infof("%s received manifest id %v", msgPrefix, uid)
 			} else {
 				logging.Infof("%s switching manifest id from %v to %v", msgPrefix, ks.cbKeyspace.collectionsManifestUid, uid)
 			}
@@ -3496,7 +3502,7 @@ func CleanupSystemCollection(namespace string, bucket string) {
 const (
 	_BUCKET_SYSTEM_SCOPE      = "_system"
 	_BUCKET_SYSTEM_COLLECTION = "_query"
-	_BUCKET_SYSTEM_PRIM_INDEX = "#primary"
+	_BUCKET_SYSTEM_PRIM_INDEX = PRIMARY_INDEX
 )
 
 func (s *store) CreateSysPrimaryIndex(idxName, requestId string, indexer3 datastore.Indexer3) errors.Error {

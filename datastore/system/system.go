@@ -58,6 +58,9 @@ const KEYSPACE_NAME_SEQUENCES = "sequences"
 const KEYSPACE_NAME_ALL_SEQUENCES = "all_sequences"
 const KEYSPACE_NAME_AUS = "aus"
 const KEYSPACE_NAME_AUS_SETTINGS = "aus_settings"
+const KEYSPACE_NAME_AWR = "awr"
+
+const PRIMARY_INDEX_NAME = "#primary"
 
 // TODO, sync with fetch timeout
 const scanTimeout = 30 * time.Second
@@ -73,8 +76,7 @@ func (s *store) PrivilegesFromPath(fullname string, keyspace string, privilege a
 	case auth.PRIV_QUERY_DELETE:
 		switch keyspace {
 
-		// currently these keyspaces require system read for delete if on prem
-		// and open (but limited to the user) for elixir
+		// currently these keyspaces require system read for delete if on prem and open (but limited to the user) for elixir
 		case KEYSPACE_NAME_ACTIVE, KEYSPACE_NAME_REQUESTS, KEYSPACE_NAME_PREPAREDS, KEYSPACE_NAME_REQUESTS_HISTORY:
 			if !tenant.IsServerless() {
 				privs.Add("", auth.PRIV_SYSTEM_READ, auth.PRIV_PROPS_NONE)
@@ -106,8 +108,7 @@ func (s *store) PrivilegesFromPath(fullname string, keyspace string, privilege a
 		case KEYSPACE_NAME_NAMESPACES:
 		case KEYSPACE_NAME_DUAL:
 
-		// these keyspaces filter results according to user privileges
-		// no further privilegs required
+		// these keyspaces filter results according to user privileges; no further privilegs required
 		case KEYSPACE_NAME_KEYSPACES:
 		case KEYSPACE_NAME_ALL_KEYSPACES:
 		case KEYSPACE_NAME_KEYSPACES_INFO:
@@ -122,8 +123,7 @@ func (s *store) PrivilegesFromPath(fullname string, keyspace string, privilege a
 		case KEYSPACE_NAME_SEQUENCES:
 		case KEYSPACE_NAME_ALL_SEQUENCES:
 
-		// currently these keyspaces require system read for select if on prem
-		// and open (but limited to the user) for elixir
+		// currently these keyspaces require system read for select if on prem and open (but limited to the user) for elixir
 		case KEYSPACE_NAME_ACTIVE, KEYSPACE_NAME_REQUESTS, KEYSPACE_NAME_PREPAREDS, KEYSPACE_NAME_REQUESTS_HISTORY:
 			if !tenant.IsServerless() {
 				privs.Add("", auth.PRIV_SYSTEM_READ, auth.PRIV_PROPS_NONE)
@@ -140,7 +140,9 @@ func (s *store) PrivilegesFromPath(fullname string, keyspace string, privilege a
 	case auth.PRIV_QUERY_UPDATE:
 		switch keyspace {
 		case KEYSPACE_NAME_AUS, KEYSPACE_NAME_AUS_SETTINGS:
-			privs.Add("", auth.PRIV_ADMIN, auth.PRIV_PROPS_NONE)
+			privs.Add("", auth.PRIV_SYSTEM_WRITE, auth.PRIV_PROPS_NONE)
+		case KEYSPACE_NAME_AWR:
+			privs.Add("", auth.PRIV_SYSTEM_WRITE, auth.PRIV_PROPS_NONE)
 		}
 
 	case auth.PRIV_QUERY_INSERT, auth.PRIV_UPSERT:
@@ -150,8 +152,7 @@ func (s *store) PrivilegesFromPath(fullname string, keyspace string, privilege a
 		}
 
 		// for every other privilege, the keyspaces internally deny access
-		// should this change, this method needs to be used in the algebra package
-		// for the privileges of any new DML / DDL involved
+		// should this change, this method needs to be used in the algebra package for the privileges of any new DML / DDL involved
 	}
 }
 
@@ -409,7 +410,7 @@ func newSystemIndexer(keyspace datastore.Keyspace, primary datastore.PrimaryInde
 	return &systemIndexer{
 		keyspace: keyspace,
 		primary:  primary,
-		indexes:  map[string]datastore.Index{"#primary": primary},
+		indexes:  map[string]datastore.Index{PRIMARY_INDEX_NAME: primary},
 	}
 }
 

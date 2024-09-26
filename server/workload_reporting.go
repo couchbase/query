@@ -20,6 +20,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/couchbase/cbauth/metakv"
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/distributed"
@@ -45,7 +46,44 @@ const (
 	_AWR_QUIESCENT          = uint32(0)
 	_AWR_ACTIVE             = uint32(1)
 	_AWR_MAX_PLAN           = 512
+	_AWR_READY_WAIT_INTRVL  = time.Second
 )
+
+func InitAWR() {
+	thisNode := ""
+	process := func(val []byte) {
+		var m map[string]interface{}
+		if err := json.Unmarshal(val, &m); err == nil {
+			if n, ok := m["node"]; ok && n != thisNode {
+				if err = AwrCB.SetConfig(m, false); err != nil {
+					logging.Errorf(_AWR_MSG+"Failed to update configuration: %v", err)
+				}
+			}
+		} else {
+			logging.Errorf(_AWR_MSG+"Failed to update configuration: %v", err)
+		}
+	}
+	val, _, err := metakv.Get(_AWR_MKV_CONFIG)
+	if err != nil {
+		// save initial config if not already there
+		err := metakv.Add(_AWR_MKV_CONFIG, AwrCB.distribConfig())
+		if err != nil && err != metakv.ErrRevMismatch {
+			logging.Errorf(_AWR_MSG+"Unable to initialize monitor: %v", err)
+		}
+	} else {
+		// make sure we process initial settings immediately
+		process(val)
+	}
+	// after the initial settings, we'll only process updates from other nodes
+	thisNode = distributed.RemoteAccess().WhoAmI()
+	// monitor entry
+	go metakv.RunObserveChildren(_AWR_PATH, func(kve metakv.KVEntry) error {
+		if kve.Path == _AWR_MKV_CONFIG {
+			process(kve.Value)
+		}
+		return nil
+	}, make(chan struct{}))
+}
 
 var AwrCB awrCB
 
@@ -125,6 +163,39 @@ func (this *awrConfig) setInterval(v time.Duration) {
 	this.interval = v
 }
 
+func (this *awrConfig) getStorageCollection() (datastore.Keyspace, error) {
+	if this.location == "" {
+		return nil, errors.NewAWRError(errors.E_AWR_SETTING, "", "location")
+	}
+	parts := algebra.ParsePath(this.location)
+	var ks datastore.Keyspace
+	var err error
+	if parts[0] != "default" && parts[0] != "" {
+		return nil, errors.NewAWRError(errors.E_AWR_SETTING, this.location, "location", fmt.Errorf("Invalid namespace."))
+	}
+	for {
+		ks, err = datastore.GetKeyspace(parts...)
+		if err == nil {
+			return ks, nil
+		}
+		if e, ok := err.(errors.Error); !ok {
+			break
+		} else if e.Code() == errors.E_CB_SCOPE_NOT_FOUND {
+			// get the system collection for the bucket; once it shows up we know the test for the user's collection is valid
+			// (this is typically necessary only at process start-up)
+			ds := datastore.GetDatastore()
+			_, sce := ds.GetSystemCollection(parts[1])
+			if sce == nil {
+				break // the error is real
+			}
+		} else if e.Code() != errors.E_DATASTORE_NOT_SET { // datastore must be available else we retry
+			break
+		}
+		time.Sleep(_AWR_READY_WAIT_INTRVL)
+	}
+	return nil, err
+}
+
 type awrCB struct {
 	sync.Mutex
 
@@ -170,7 +241,7 @@ func (this *awrCB) isQuiescent() bool {
 	return atomic.LoadUint32(&this.state) == _AWR_QUIESCENT
 }
 
-func (this *awrCB) SetConfig(i interface{}, dryRun bool) errors.Error {
+func (this *awrCB) SetConfig(i interface{}, distribute bool) errors.Error {
 
 	cfg, ok := i.(map[string]interface{})
 	if !ok {
@@ -269,9 +340,6 @@ func (this *awrCB) SetConfig(i interface{}, dryRun bool) errors.Error {
 			}
 		}
 	}
-	if dryRun {
-		return nil
-	}
 	if target.sameAs(&this.config) && this.enabled == start {
 		return nil
 	}
@@ -293,7 +361,32 @@ func (this *awrCB) SetConfig(i interface{}, dryRun bool) errors.Error {
 		this.Stop()
 	}
 
+	if distribute {
+		dcfg := this.distribConfig()
+		err1 := metakv.Set(_AWR_MKV_CONFIG, dcfg, nil)
+		if err1 != nil && err1.Error() == "Not found" {
+			err1 = metakv.Add(_AWR_MKV_CONFIG, dcfg)
+		}
+		if err1 != nil {
+			logging.Errorf(_AWR_MSG+"Failed to distribute configuration: %v", err1)
+			if err == nil {
+				err = errors.NewAWRError(errors.E_AWR_DISTRIB, err1)
+			}
+		}
+	}
+
 	return err
+}
+
+func (this *awrCB) distribConfig() []byte {
+	m := this.Config()
+	m["node"] = distributed.RemoteAccess().WhoAmI()
+	b, err := json.Marshal(m)
+	if err != nil {
+		logging.Errorf(_AWR_MSG+"Failed to marshal configuration: %v", err)
+		return nil
+	}
+	return b
 }
 
 func (this *awrCB) Start() error {
@@ -621,7 +714,11 @@ func (this *awrCB) reporter() {
 	this.Lock()
 	this.Unlock()
 
-	ks, err := getStorageCollection(this.activeConfig.Location())
+	// will block for process start-up if necessary
+	ks, err := this.activeConfig.getStorageCollection()
+	if err != nil {
+		logging.Debugf("[%p] %v", this, err)
+	}
 	this.setQuiescent(ks == nil || err != nil)
 
 	pqf := this.queueFullOmissions
@@ -638,10 +735,12 @@ func (this *awrCB) reporter() {
 			this.workerDone.Wait() // wait for worker
 		}
 
-		ks, err := getStorageCollection(this.activeConfig.Location())
+		ks, err := this.activeConfig.getStorageCollection()
 		if ks == nil || err != nil {
 			if err != nil {
-				logging.Errorf(_AWR_MSG+"Keyspace '%s' not found: %v", this.activeConfig.Location(), err)
+				if !stopProcessing {
+					logging.Errorf(_AWR_MSG+"Keyspace '%s' not found: %v", this.activeConfig.Location(), err)
+				}
 			} else {
 				logging.Errorf(_AWR_MSG+"Keyspace '%s' not found.", this.activeConfig.Location())
 			}
@@ -715,22 +814,4 @@ func (this *awrCB) reporter() {
 		}
 	}
 	logging.Debugf("[%p] complete", this)
-}
-
-func getStorageCollection(keyspace string) (datastore.Keyspace, error) {
-	if keyspace == "" {
-		return nil, errors.NewAWRError(errors.E_AWR_SETTING, "", "location")
-	}
-	parts := algebra.ParsePath(keyspace)
-	var ks datastore.Keyspace
-	var err error
-	if parts[0] != "default" && parts[0] != "" {
-		err = errors.NewAWRError(errors.E_AWR_SETTING, keyspace, "location", fmt.Errorf("Invalid namespace."))
-	} else {
-		ks, err = datastore.GetKeyspace(parts...)
-	}
-	if err != nil {
-		return nil, err
-	}
-	return ks, nil
 }

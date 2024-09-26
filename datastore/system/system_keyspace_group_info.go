@@ -106,7 +106,7 @@ func newGroupInfoKeyspace(p *namespace) (*groupInfoKeyspace, errors.Error) {
 	b := new(groupInfoKeyspace)
 	setKeyspaceBase(&b.keyspaceBase, p, KEYSPACE_NAME_GROUP_INFO)
 
-	primary := &groupInfoIndex{name: "#primary", keyspace: b}
+	primary := &groupInfoIndex{name: PRIMARY_INDEX_NAME, keyspace: b}
 	b.indexer = newSystemIndexer(b, primary)
 	setIndexBase(&primary.indexBase, b.indexer)
 

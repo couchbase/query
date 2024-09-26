@@ -447,7 +447,7 @@ func newIndexesKeyspace(p *namespace, store datastore.Datastore, name string, sk
 	b.skipSystem = skipSystem
 	setKeyspaceBase(&b.keyspaceBase, p, name)
 
-	primary := &indexIndex{name: "#primary", keyspace: b, primary: true}
+	primary := &indexIndex{name: PRIMARY_INDEX_NAME, keyspace: b, primary: true}
 	b.indexer = newSystemIndexer(b, primary)
 	setIndexBase(&primary.indexBase, b.indexer)
 

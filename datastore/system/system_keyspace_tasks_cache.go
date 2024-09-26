@@ -191,7 +191,7 @@ func newTasksCacheKeyspace(p *namespace) (*tasksCacheKeyspace, errors.Error) {
 	setKeyspaceBase(&b.keyspaceBase, p, KEYSPACE_NAME_TASKS_CACHE)
 
 	primary := &tasksCacheIndex{
-		name:     "#primary",
+		name:     PRIMARY_INDEX_NAME,
 		keyspace: b,
 		primary:  true,
 	}

@@ -1074,8 +1074,12 @@ func doGlobalBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 		if version == datastore.BACKUP_VERSION_1 {
 			// even though global functions aren't changed between v1 & v2, write a v1 header when v1 is indicated
 			return makeBackupHeaderV1(data), nil
+		} else if version == datastore.BACKUP_VERSION_2 {
+			// write a v2 header when v2 is indicated
+			return makeBackupHeaderV2(data, nil, nil), nil
 		}
-		return makeBackupHeader(data, nil, nil), nil
+		awr := server.AwrCB.Config()
+		return makeBackupHeader(data, nil, nil, awr), nil
 
 	case "POST":
 		var iState json.IndexState
@@ -1092,7 +1096,7 @@ func doGlobalBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 			return nil, err
 		}
 
-		fns, _, _, e := checkBackupHeader(bytes)
+		fns, _, _, awr, e := checkBackupHeader(bytes)
 		if e != nil {
 			return nil, errors.NewServiceErrorBadValue(e, "restore body")
 		}
@@ -1121,6 +1125,17 @@ func doGlobalBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 				iState.Release()
 				return nil, err1
 			}
+		}
+
+		var m map[string]interface{}
+		err1 := json.Unmarshal(awr, &m)
+		if err1 != nil {
+			return nil, errors.NewServiceErrorBadValue(err1, "restore AWR")
+		}
+		// Note: the "keyspace" is not remapped and has to be updated manually
+		err1 = server.AwrCB.SetConfig(m, true)
+		if err1 != nil {
+			return nil, errors.NewServiceErrorBadValue(err1, "restore AWR")
 		}
 		iState.Release()
 	default:
@@ -1223,7 +1238,10 @@ func doBucketBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 			return nil, err
 		}
 
-		return makeBackupHeader(fns, seqs, cbo), nil
+		if version == datastore.BACKUP_VERSION_2 {
+			return makeBackupHeaderV2(fns, seqs, cbo), nil
+		}
+		return makeBackupHeader(fns, seqs, cbo, nil), nil
 
 	case "POST":
 		var iState json.IndexState
@@ -1239,7 +1257,7 @@ func doBucketBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 		if err != nil {
 			return nil, err
 		}
-		fns, seqs, cbo, e := checkBackupHeader(body)
+		fns, seqs, cbo, _, e := checkBackupHeader(body)
 		if e != nil {
 			return nil, errors.NewServiceErrorBadValue(e, "restore body")
 		}
@@ -1385,18 +1403,31 @@ func doBucketBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 const _MAGIC_KEY = "udfMagic"
 const _MAGIC = "4D6172636F2072756C6573"
 const _VERSION_KEY = "version"
-const _VERSION = "0x02"
+const _VERSION = "0x03"
 const _VERSION_1 = "0x01"
+const _VERSION_2 = "0x02"
 const _VERSION_MIN = 1
-const _VERSION_MAX = 2
+const _VERSION_MAX = 3
 const _UDF_KEY = "udfs"
 const _SEQ_KEY = "seqs"
 const _CBO_KEY = "cbo"
+const _AWR_KEY = "awr"
 
-func makeBackupHeader(v interface{}, s interface{}, c interface{}) interface{} {
+func makeBackupHeader(v interface{}, s interface{}, c interface{}, a interface{}) interface{} {
 	data := make(map[string]interface{}, 4)
 	data[_MAGIC_KEY] = _MAGIC
 	data[_VERSION_KEY] = _VERSION
+	data[_UDF_KEY] = v
+	data[_SEQ_KEY] = s
+	data[_CBO_KEY] = c
+	data[_AWR_KEY] = a
+	return data
+}
+
+func makeBackupHeaderV2(v interface{}, s interface{}, c interface{}) interface{} {
+	data := make(map[string]interface{}, 4)
+	data[_MAGIC_KEY] = _MAGIC
+	data[_VERSION_KEY] = _VERSION_2
 	data[_UDF_KEY] = v
 	data[_SEQ_KEY] = s
 	data[_CBO_KEY] = c
@@ -1411,31 +1442,31 @@ func makeBackupHeaderV1(v interface{}) interface{} {
 	return data
 }
 
-func checkBackupHeader(d []byte) ([]byte, []byte, []byte, errors.Error) {
+func checkBackupHeader(d []byte) ([]byte, []byte, []byte, []byte, errors.Error) {
 	var oState json.KeyState
 	json.SetKeyState(&oState, d)
 	magic, err := oState.FindKey(_MAGIC_KEY)
 	if err != nil || string(magic) != "\""+_MAGIC+"\"" {
 		oState.Release()
-		return nil, nil, nil, errors.NewServiceErrorBadValue(err, "restore: invalid magic")
+		return nil, nil, nil, nil, errors.NewServiceErrorBadValue(err, "restore: invalid magic")
 	}
 	version, err := oState.FindKey(_VERSION_KEY)
 	var ver uint64
 	if err == nil {
 		trimmed := strings.Trim(string(version), "\"")
 		if !strings.HasPrefix(trimmed, "0x") || len(trimmed) <= 2 {
-			return nil, nil, nil, errors.NewServiceErrorBadValue(nil, "restore: invalid version")
+			return nil, nil, nil, nil, errors.NewServiceErrorBadValue(nil, "restore: invalid version")
 		}
 		ver, err = strconv.ParseUint(trimmed[2:], 16, 64)
 	}
 	if err != nil || ver < _VERSION_MIN || ver > _VERSION_MAX {
 		oState.Release()
-		return nil, nil, nil, errors.NewServiceErrorBadValue(err, "restore: invalid version")
+		return nil, nil, nil, nil, errors.NewServiceErrorBadValue(err, "restore: invalid version")
 	}
 	udfs, err := oState.FindKey(_UDF_KEY)
 	if err != nil {
 		oState.Release()
-		return nil, nil, nil, errors.NewServiceErrorBadValue(err, "restore: missing UDF field")
+		return nil, nil, nil, nil, errors.NewServiceErrorBadValue(err, "restore: missing UDF field")
 	}
 	// only expect sequences & cbo for version 2+ backup images
 	var seqs []byte
@@ -1444,16 +1475,24 @@ func checkBackupHeader(d []byte) ([]byte, []byte, []byte, errors.Error) {
 		seqs, err = oState.FindKey(_SEQ_KEY)
 		if err != nil {
 			oState.Release()
-			return nil, nil, nil, errors.NewServiceErrorBadValue(err, "restore: missing sequences field")
+			return nil, nil, nil, nil, errors.NewServiceErrorBadValue(err, "restore: missing sequences field")
 		}
 		cbo, err = oState.FindKey(_CBO_KEY)
 		if err != nil {
 			oState.Release()
-			return nil, nil, nil, errors.NewServiceErrorBadValue(err, "restore: missing cbo field")
+			return nil, nil, nil, nil, errors.NewServiceErrorBadValue(err, "restore: missing cbo field")
+		}
+	}
+	var awr []byte
+	if ver >= 3 {
+		awr, err = oState.FindKey(_AWR_KEY)
+		if err != nil {
+			oState.Release()
+			return nil, nil, nil, nil, errors.NewServiceErrorBadValue(err, "restore: missing awr field")
 		}
 	}
 	oState.Release()
-	return udfs, seqs, cbo, nil
+	return udfs, seqs, cbo, awr, nil
 }
 
 type matcher map[string]map[string]bool

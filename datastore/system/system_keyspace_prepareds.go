@@ -284,7 +284,7 @@ func newPreparedsKeyspace(p *namespace) (*preparedsKeyspace, errors.Error) {
 	setKeyspaceBase(&b.keyspaceBase, p, KEYSPACE_NAME_PREPAREDS)
 
 	primary := &preparedsIndex{
-		name:     "#primary",
+		name:     PRIMARY_INDEX_NAME,
 		keyspace: b,
 		primary:  true,
 	}

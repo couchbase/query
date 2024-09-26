@@ -30,7 +30,7 @@ func newAusKeyspace(p *namespace) (*ausKeyspace, errors.Error) {
 	setKeyspaceBase(&b.keyspaceBase, p, KEYSPACE_NAME_AUS)
 
 	// create a virtual primary index
-	primary := &ausIndex{name: "#primary", keyspace: b}
+	primary := &ausIndex{name: PRIMARY_INDEX_NAME, keyspace: b}
 
 	// create the indexer for the system keyspace
 	b.indexer = newSystemIndexer(b, primary)

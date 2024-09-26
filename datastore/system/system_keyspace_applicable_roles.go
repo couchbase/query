@@ -101,7 +101,7 @@ func newApplicableRolesKeyspace(p *namespace) (*applicableRolesKeyspace, errors.
 	b := new(applicableRolesKeyspace)
 	setKeyspaceBase(&b.keyspaceBase, p, KEYSPACE_NAME_APPLICABLE_ROLES)
 
-	primary := &applicableRolesIndex{name: "#primary", keyspace: b}
+	primary := &applicableRolesIndex{name: PRIMARY_INDEX_NAME, keyspace: b}
 	b.indexer = newSystemIndexer(b, primary)
 	setIndexBase(&primary.indexBase, b.indexer)
 

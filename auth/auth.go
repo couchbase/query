@@ -62,6 +62,7 @@ const (
 	PRIV_SREAD                                  Privilege = 40 // Read from system scope
 	PRIV_SWRITE                                 Privilege = 41 // Write to system scope
 	PRIV_XATTRS_WRITE                           Privilege = 42 // Ability to write system xattrs
+	PRIV_SYSTEM_WRITE                           Privilege = 43 // Write access to system namespace
 )
 
 type PrivilegePair struct {

@@ -46,6 +46,7 @@ const (
 	BACKUP_NOT_POSSIBLE    = -1
 	CURRENT_BACKUP_VERSION = 0
 	BACKUP_VERSION_1       = 1
+	BACKUP_VERSION_2       = 2
 )
 
 // Datastore represents a cluster or single-node server.

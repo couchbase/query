@@ -107,7 +107,7 @@ func newUserInfoKeyspace(p *namespace) (*userInfoKeyspace, errors.Error) {
 	b := new(userInfoKeyspace)
 	setKeyspaceBase(&b.keyspaceBase, p, KEYSPACE_NAME_USER_INFO)
 
-	primary := &userInfoIndex{name: "#primary", keyspace: b}
+	primary := &userInfoIndex{name: PRIMARY_INDEX_NAME, keyspace: b}
 	b.indexer = newSystemIndexer(b, primary)
 	setIndexBase(&primary.indexBase, b.indexer)
 

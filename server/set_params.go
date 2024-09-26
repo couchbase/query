@@ -299,13 +299,6 @@ var _SETTERS = map[string]Setter{
 		})
 		return nil
 	},
-	AWR: func(s *Server, o interface{}) errors.Error {
-		err := AwrCB.SetConfig(o, false)
-		if err != nil {
-			return errors.NewServiceErrorBadValue(err, "settings")
-		}
-		return nil
-	},
 }
 
 func getNumber(o interface{}) float64 {
@@ -609,7 +602,6 @@ func FillSettings(settings map[string]interface{}, srvr *Server) map[string]inte
 	settings[USEREPLICA] = srvr.UseReplicaToString()
 	settings[NUM_CPUS] = util.NumCPU()
 	settings[DURATIONSTYLE] = util.GetDurationStyle().String()
-	settings[AWR] = AwrCB.Config()
 	return settings
 }
 

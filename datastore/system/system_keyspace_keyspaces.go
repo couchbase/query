@@ -299,7 +299,7 @@ func newKeyspacesKeyspace(p *namespace, store datastore.Datastore, name string, 
 	b.info = info
 	setKeyspaceBase(&b.keyspaceBase, p, name)
 
-	primary := &keyspaceIndex{name: "#primary", keyspace: b, primary: true}
+	primary := &keyspaceIndex{name: PRIMARY_INDEX_NAME, keyspace: b, primary: true}
 	b.indexer = newSystemIndexer(b, primary)
 	setIndexBase(&primary.indexBase, b.indexer)
 

@@ -96,7 +96,7 @@ func newNodesKeyspace(p *namespace) (*nodeKeyspace, errors.Error) {
 	b := new(nodeKeyspace)
 	setKeyspaceBase(&b.keyspaceBase, p, KEYSPACE_NAME_NODES)
 
-	primary := &nodeIndex{name: "#primary", keyspace: b}
+	primary := &nodeIndex{name: PRIMARY_INDEX_NAME, keyspace: b}
 	b.si = newSystemIndexer(b, primary)
 	setIndexBase(&primary.indexBase, b.si)
 

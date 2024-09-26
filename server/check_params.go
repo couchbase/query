@@ -66,7 +66,6 @@ const (
 	USEREPLICA            = "use-replica"
 	NUM_CPUS              = "num-cpus"
 	DURATIONSTYLE         = "duration-style"
-	AWR                   = "activity-workload-reporting"
 )
 
 type Checker func(interface{}) (bool, errors.Error)
@@ -107,7 +106,6 @@ var CHECKERS = map[string]Checker{
 	USEREPLICA:            checkTristateString,
 	NODEQUOTAVALPERCENT:   checkPercent,
 	DURATIONSTYLE:         checkDurationStyle,
-	AWR:                   checkAWR,
 }
 
 var CHECKERS_MIN = map[string]int{
@@ -282,12 +280,4 @@ func checkDurationStyle(val interface{}) (bool, errors.Error) {
 		ok = false
 	}
 	return ok, nil
-}
-
-func checkAWR(val interface{}) (bool, errors.Error) {
-	err := AwrCB.SetConfig(val, true)
-	if err != nil {
-		return false, err
-	}
-	return true, nil
 }

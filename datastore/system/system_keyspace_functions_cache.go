@@ -168,7 +168,7 @@ func newFunctionsCacheKeyspace(p *namespace) (*functionsCacheKeyspace, errors.Er
 	setKeyspaceBase(&b.keyspaceBase, p, KEYSPACE_NAME_FUNCTIONS_CACHE)
 
 	primary := &functionsCacheIndex{
-		name:     "#primary",
+		name:     PRIMARY_INDEX_NAME,
 		keyspace: b,
 		primary:  true,
 	}

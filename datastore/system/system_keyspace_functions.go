@@ -187,7 +187,7 @@ func newFunctionsKeyspace(p *namespace) (*functionsKeyspace, errors.Error) {
 	b := new(functionsKeyspace)
 	setKeyspaceBase(&b.keyspaceBase, p, KEYSPACE_NAME_FUNCTIONS)
 
-	primary := &functionsIndex{name: "#primary", keyspace: b, primary: true}
+	primary := &functionsIndex{name: PRIMARY_INDEX_NAME, keyspace: b, primary: true}
 	b.indexer = newSystemIndexer(b, primary)
 	setIndexBase(&primary.indexBase, b.indexer)
 

@@ -297,6 +297,12 @@ func (p *namespace) loadKeyspaces() (e errors.Error) {
 	}
 	registerKeyspace(p, ausSK)
 
+	awr, e := newAWRKeyspace(p)
+	if e != nil {
+		return e
+	}
+	registerKeyspace(p, awr)
+
 	return nil
 }
 

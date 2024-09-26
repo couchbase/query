@@ -143,7 +143,7 @@ func newDictionaryKeyspace(p *namespace, name string) (*dictionaryKeyspace, erro
 	b := new(dictionaryKeyspace)
 	setKeyspaceBase(&b.keyspaceBase, p, name)
 
-	primary := &dictionaryIndex{name: "#primary", keyspace: b, primary: true}
+	primary := &dictionaryIndex{name: PRIMARY_INDEX_NAME, keyspace: b, primary: true}
 	b.indexer = newSystemIndexer(b, primary)
 	setIndexBase(&primary.indexBase, b.indexer)
 

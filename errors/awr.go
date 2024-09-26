@@ -14,8 +14,9 @@ import (
 
 var _awr = map[ErrorCode][2]string{
 	E_AWR_START:   {"start", "Failed to start workload reporting"},
-	E_AWR_SETTING: {"setting", "Invalid value '%s' for setting '%s'"},
-	E_AWR_CONFIG:  {"config", "Error processing configuration"},
+	E_AWR_SETTING: {"setting", "Invalid value '%s' for workload setting '%s'"},
+	E_AWR_CONFIG:  {"config", "Error processing workload configuration"},
+	E_AWR_DISTRIB: {"distribution", "Error distributing workload settings"},
 }
 
 func NewAWRError(code ErrorCode, args ...interface{}) Error {

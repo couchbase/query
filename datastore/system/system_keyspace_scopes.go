@@ -185,7 +185,7 @@ func newScopesKeyspace(p *namespace, store datastore.Datastore, name string, ski
 	b.skipSystem = skipSystem
 	setKeyspaceBase(&b.keyspaceBase, p, name)
 
-	primary := &scopeIndex{name: "#primary", keyspace: b, primary: true}
+	primary := &scopeIndex{name: PRIMARY_INDEX_NAME, keyspace: b, primary: true}
 	b.indexer = newSystemIndexer(b, primary)
 	setIndexBase(&primary.indexBase, b.indexer)
 

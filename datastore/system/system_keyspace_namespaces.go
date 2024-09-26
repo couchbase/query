@@ -97,7 +97,7 @@ func newNamespacesKeyspace(p *namespace) (*namespaceKeyspace, errors.Error) {
 	b := new(namespaceKeyspace)
 	setKeyspaceBase(&b.keyspaceBase, p, KEYSPACE_NAME_NAMESPACES)
 
-	primary := &namespaceIndex{name: "#primary", keyspace: b}
+	primary := &namespaceIndex{name: PRIMARY_INDEX_NAME, keyspace: b}
 	b.indexer = newSystemIndexer(b, primary)
 	setIndexBase(&primary.indexBase, b.indexer)
 

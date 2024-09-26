@@ -47,6 +47,9 @@ func messageForDeniedPrivilege(pair auth.PrivilegePair) (string, string, string)
 	case auth.PRIV_SYSTEM_READ:
 		privilege = "run queries accessing the system tables"
 		base_role = "query_system_catalog"
+	case auth.PRIV_SYSTEM_WRITE:
+		privilege = "run UPDATE queries on system tables"
+		base_role = "query_manage_system_catalog"
 	case auth.PRIV_SECURITY_WRITE:
 		privilege = "run queries updating user information"
 		base_role = "admin"

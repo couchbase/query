@@ -181,7 +181,7 @@ func newDictionaryCacheKeyspace(p *namespace, name string) (*dictionaryCacheKeys
 	setKeyspaceBase(&b.keyspaceBase, p, name)
 
 	primary := &dictionaryCacheIndex{
-		name:     "#primary",
+		name:     PRIMARY_INDEX_NAME,
 		keyspace: b,
 		primary:  true,
 	}

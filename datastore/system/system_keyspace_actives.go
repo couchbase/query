@@ -362,7 +362,7 @@ func newActiveRequestsKeyspace(p *namespace) (*activeRequestsKeyspace, errors.Er
 	setKeyspaceBase(&b.keyspaceBase, p, KEYSPACE_NAME_ACTIVE)
 
 	primary := &activeRequestsIndex{
-		name:     "#primary",
+		name:     PRIMARY_INDEX_NAME,
 		keyspace: b,
 		primary:  true,
 	}

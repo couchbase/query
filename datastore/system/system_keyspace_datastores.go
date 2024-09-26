@@ -89,7 +89,7 @@ func newStoresKeyspace(p *namespace) (*storeKeyspace, errors.Error) {
 	b := new(storeKeyspace)
 	setKeyspaceBase(&b.keyspaceBase, p, KEYSPACE_NAME_DATASTORES)
 
-	primary := &storeIndex{name: "#primary", keyspace: b}
+	primary := &storeIndex{name: PRIMARY_INDEX_NAME, keyspace: b}
 	b.si = newSystemIndexer(b, primary)
 	setIndexBase(&primary.indexBase, b.si)
 

@@ -83,7 +83,7 @@ func newDualKeyspace(p *namespace) (*dualKeyspace, errors.Error) {
 	b := new(dualKeyspace)
 	setKeyspaceBase(&b.keyspaceBase, p, KEYSPACE_NAME_DUAL)
 
-	primary := &dualIndex{name: "#primary", keyspace: b}
+	primary := &dualIndex{name: PRIMARY_INDEX_NAME, keyspace: b}
 	b.di = newSystemIndexer(b, primary)
 	setIndexBase(&primary.indexBase, b.di)
 

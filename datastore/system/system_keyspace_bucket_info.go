@@ -106,7 +106,7 @@ func newBucketInfoKeyspace(p *namespace) (*bucketInfoKeyspace, errors.Error) {
 	b := new(bucketInfoKeyspace)
 	setKeyspaceBase(&b.keyspaceBase, p, KEYSPACE_NAME_BUCKET_INFO, KEYSPACE_NAME_DATABASE_INFO)
 
-	primary := &bucketInfoIndex{name: "#primary", keyspace: b}
+	primary := &bucketInfoIndex{name: PRIMARY_INDEX_NAME, keyspace: b}
 	b.indexer = newSystemIndexer(b, primary)
 	setIndexBase(&primary.indexBase, b.indexer)
 
