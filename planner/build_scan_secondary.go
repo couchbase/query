@@ -190,7 +190,7 @@ func (this *builder) buildCreateSecondaryScan(indexes, flex map[datastore.Index]
 		var indexKeyNames []string
 		var indexPartitionSets plan.IndexPartitionSets
 		if index6, ok := entry.index.(datastore.Index6); ok && index6.IsBhive() && entry.HasFlag(IE_VECTOR_KEY_SARGABLE) {
-			indexKeyNames, err = getIndexKeyNames(node.Alias(), index, idxProj)
+			indexKeyNames, err = getIndexKeyNames(node.Alias(), index, idxProj, false)
 			if err != nil {
 				return nil, 0, err
 			}

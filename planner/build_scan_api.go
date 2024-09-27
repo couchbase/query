@@ -250,7 +250,7 @@ func getIndexSize(index datastore.Index) int {
 	return size
 }
 
-func getIndexKeyNames(alias string, index datastore.Index, projection *plan.IndexProjection) ([]string, error) {
+func getIndexKeyNames(alias string, index datastore.Index, projection *plan.IndexProjection, cover bool) ([]string, error) {
 	var keys datastore.IndexKeys
 	var includes expression.Expressions
 	var err error
@@ -296,6 +296,7 @@ func getIndexKeyNames(alias string, index datastore.Index, projection *plan.Inde
 
 		if useKey {
 			var key expression.Expression
+			var keyExpr expression.Expression
 			if i < len(keys) {
 				key = keys[i].Expr
 			} else {
@@ -307,7 +308,12 @@ func getIndexKeyNames(alias string, index datastore.Index, projection *plan.Inde
 			if err != nil {
 				return nil, err
 			}
-			indexKeyNames = append(indexKeyNames, expression.NewIndexKey(key).String())
+			if cover {
+				keyExpr = expression.NewCover(key)
+			} else {
+				keyExpr = expression.NewIndexKey(key)
+			}
+			indexKeyNames = append(indexKeyNames, keyExpr.String())
 		} else {
 			indexKeyNames = append(indexKeyNames, "")
 		}
