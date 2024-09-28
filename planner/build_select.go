@@ -104,6 +104,13 @@ func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 
 	addFromSubqueries(qp, stmt.OptimHints(), subOp)
 
+	if !this.subquery && this.hasBuilderFlag(BUILDER_NO_EXECUTE) && len(this.subqCoveringInfo) > 0 {
+		err = this.coverFromSubqueries(subOp)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	this.aliases = nil
 	with := stmt.With()
 	if with != nil {
@@ -338,6 +345,54 @@ func addFromSubqueries(qp *plan.QueryPlan, optimHints *algebra.OptimHints, ops .
 			addFromSubqueries(qp, optimHints, op.Child())
 		case *plan.HashNest:
 			addFromSubqueries(qp, optimHints, op.Child())
+		case *plan.UnionAll:
+			addFromSubqueries(qp, optimHints, op.Children()...)
+		case *plan.IntersectAll:
+			addFromSubqueries(qp, optimHints, op.First(), op.Second())
+		case *plan.ExceptAll:
+			addFromSubqueries(qp, optimHints, op.First(), op.Second())
 		}
 	}
+}
+
+// check for any SubqueryTerm that falls under inner of nested-loop join, in which case we build an
+// ExpressionScan on top of the subquery; need to perform cover transformation
+func (this *builder) coverFromSubqueries(ops ...plan.Operator) (err error) {
+	for _, op := range ops {
+		switch op := op.(type) {
+		case *plan.ExpressionScan:
+			if subq, ok := op.FromExpr().(*algebra.Subquery); ok {
+				for _, sub := range subq.Select().Subselects() {
+					if info, ok := this.subqCoveringInfo[sub]; ok {
+						err = this.DoCoveringTransformation(info.Operators(), info.CoveringScans())
+						if err != nil {
+							return err
+						}
+					}
+				}
+			}
+		case *plan.Parallel:
+			err = this.coverFromSubqueries(op.Child())
+		case *plan.Sequence:
+			err = this.coverFromSubqueries(op.Children()...)
+		case *plan.NLJoin:
+			err = this.coverFromSubqueries(op.Child())
+		case *plan.NLNest:
+			err = this.coverFromSubqueries(op.Child())
+		case *plan.HashJoin:
+			err = this.coverFromSubqueries(op.Child())
+		case *plan.HashNest:
+			err = this.coverFromSubqueries(op.Child())
+		case *plan.UnionAll:
+			err = this.coverFromSubqueries(op.Children()...)
+		case *plan.IntersectAll:
+			err = this.coverFromSubqueries(op.First(), op.Second())
+		case *plan.ExceptAll:
+			err = this.coverFromSubqueries(op.First(), op.Second())
+		}
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }

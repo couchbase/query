@@ -280,7 +280,8 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 		return nil, err
 	}
 
-	if len(this.coveringScans) > 0 {
+	doCoverTransform := (!this.subquery || (!this.joinEnum() && !this.subqUnderJoin()))
+	if len(this.coveringScans) > 0 && doCoverTransform {
 		err = this.coverExpressions()
 		if err != nil {
 			return nil, err
@@ -376,7 +377,16 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 	}
 
 	// Serialize the top-level children
-	return plan.NewSequence(this.children...), nil
+	op := plan.NewSequence(this.children...)
+
+	if len(this.coveringScans) > 0 && !doCoverTransform {
+		err = this.addSubqCoveringInfo(node, op)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return op, nil
 }
 
 func (this *builder) addLetAndPredicate(let expression.Bindings, pred expression.Expression) {
