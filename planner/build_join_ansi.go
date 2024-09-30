@@ -1391,7 +1391,7 @@ func (this *builder) buildAnsiJoinSimpleFromTerm(node algebra.SimpleFromTerm, on
 		filters.ClearIndexFlag()
 	}
 
-	if !this.joinEnum() && !this.subqUnderJoin() {
+	if !this.SkipCoverTransform() {
 		// perform covering transformation
 		if len(this.coveringScans) > 0 {
 			var exprTerm *algebra.ExpressionTerm
