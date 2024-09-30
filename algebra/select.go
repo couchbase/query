@@ -419,6 +419,10 @@ func (this *Select) IncludeWith() bool {
 	return this.includeWith
 }
 
+func (this *Select) Subselects() []*Subselect {
+	return this.subresult.Subselects()
+}
+
 /*
 The Subresult interface represents the intermediate result of a
 select statement. It inherits from Node.
@@ -484,6 +488,11 @@ type Subresult interface {
 	   Returns the optimizer hints
 	*/
 	OptimHints() *OptimHints
+
+	/*
+	   Returns all Subselects
+	*/
+	Subselects() []*Subselect
 }
 
 /*

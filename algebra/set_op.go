@@ -189,6 +189,10 @@ func (this *setOp) OptimHints() *OptimHints {
 	return nil
 }
 
+func (this *setOp) Subselects() []*Subselect {
+	return append(this.first.Subselects(), this.second.Subselects()...)
+}
+
 /*
 Represents the result of the UNION set operation. Type
 unionSubresult inherits from setOp.

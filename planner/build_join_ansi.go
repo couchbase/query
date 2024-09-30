@@ -940,7 +940,7 @@ func (this *builder) buildAnsiJoinScan(node *algebra.KeyspaceTerm, onclause, fil
 		// plan is chosen); just set newFilter, no need to set newOnclause (will keep
 		// the original onclause if newOnclause is not set).
 		newFilter = filter
-	} else {
+	} else if !this.subqUnderJoin() {
 		newFilter, newOnclause, primaryJoinKeys, err = this.joinCoverTransformation(coveringScans,
 			this.coveringScans, filter, onclause, primaryJoinKeys, nil, nil, true)
 		if err != nil {
@@ -1270,12 +1270,14 @@ func (this *builder) buildHashJoinOp(right algebra.SimpleFromTerm, left algebra.
 				OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, nil
 		}
 
-		// perform cover transformation of leftExprs and rightExprs and onclause
-		newFilter, newOnclause, _, err = this.joinCoverTransformation(coveringScans,
-			this.coveringScans, filter, onclause, nil, leftExprs, rightExprs, false)
-		if err != nil {
-			return nil, nil, nil, nil, nil, nil, false,
-				OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, nil
+		if !this.subqUnderJoin() {
+			// perform cover transformation of leftExprs and rightExprs and onclause
+			newFilter, newOnclause, _, err = this.joinCoverTransformation(coveringScans,
+				this.coveringScans, filter, onclause, nil, leftExprs, rightExprs, false)
+			if err != nil {
+				return nil, nil, nil, nil, nil, nil, false,
+					OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, nil
+			}
 		}
 	}
 
@@ -1389,7 +1391,7 @@ func (this *builder) buildAnsiJoinSimpleFromTerm(node algebra.SimpleFromTerm, on
 		filters.ClearIndexFlag()
 	}
 
-	if !this.joinEnum() {
+	if !this.joinEnum() && !this.subqUnderJoin() {
 		// perform covering transformation
 		if len(this.coveringScans) > 0 {
 			var exprTerm *algebra.ExpressionTerm
@@ -1539,7 +1541,7 @@ func (this *builder) buildInnerPrimaryScan(right *algebra.KeyspaceTerm,
 	}
 
 	var newFilter, newOnclause expression.Expression
-	if !this.joinEnum() {
+	if !this.joinEnum() && !this.subqUnderJoin() {
 		newFilter, newOnclause, _, err = this.joinCoverTransformation(coveringScans,
 			this.coveringScans, filter, onclause, nil, nil, nil, true)
 		if err != nil {

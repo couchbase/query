@@ -395,6 +395,10 @@ func (this *Subselect) AddSubqueryTermHints(subqTermHints []*SubqOptimHints) {
 	}
 }
 
+func (this *Subselect) Subselects() []*Subselect {
+	return []*Subselect{this}
+}
+
 /*
 Representation as a N1QL string.
 */

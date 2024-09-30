@@ -521,9 +521,19 @@ func (this *builder) VisitSubqueryTerm(node *algebra.SubqueryTerm) (interface{},
 	} else {
 		sa := this.subquery
 		this.subquery = true
+		var subqUnderJoin bool
+		if this.hasBuilderFlag(BUILDER_NL_INNER) {
+			// here we assume that if SubqueryTerm is on right-hand side of a join,
+			// we will use hash join if available, i.e. we can perform cover
+			// transformation in hash join directly
+			subqUnderJoin = this.setSubqUnderJoin()
+		}
 		subquery := node.Subquery()
 		qp, err := subquery.Accept(this)
 		this.subquery = sa
+		if this.hasBuilderFlag(BUILDER_NL_INNER) {
+			this.restoreSubqUnderJoin(subqUnderJoin)
+		}
 		if err != nil {
 			this.processadviseJF(alias)
 			return nil, err
