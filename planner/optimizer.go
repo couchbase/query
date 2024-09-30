@@ -62,6 +62,7 @@ type Builder interface {
 	RemoveFromSubqueries(ops ...plan.Operator)
 	NoExecute() bool
 	SubqCoveringInfo() map[*algebra.Subselect]CoveringSubqInfo
+	SkipCoverTransform() bool
 }
 
 func (this *builder) GetBaseKeyspaces() map[string]*base.BaseKeyspace {
@@ -429,7 +430,7 @@ func (this *builder) DoCoveringTransformation(ops []plan.Operator, covers []plan
 func (this *builder) opCoveringTransformation(op plan.Operator, covers []plan.CoveringOperator) error {
 	switch op := op.(type) {
 	case *plan.NLJoin:
-		newExprs, err := coverExprs(expression.Expressions{op.Onclause(), op.Filter()}, covers)
+		newExprs, err := doCoverExprs(expression.Expressions{op.Onclause(), op.Filter()}, covers)
 		if err != nil {
 			return err
 		}
@@ -443,7 +444,7 @@ func (this *builder) opCoveringTransformation(op plan.Operator, covers []plan.Co
 			}
 		}
 	case *plan.NLNest:
-		newExprs, err := coverExprs(expression.Expressions{op.Onclause(), op.Filter()}, covers)
+		newExprs, err := doCoverExprs(expression.Expressions{op.Onclause(), op.Filter()}, covers)
 		if err != nil {
 			return err
 		}
@@ -465,7 +466,7 @@ func (this *builder) opCoveringTransformation(op plan.Operator, covers []plan.Co
 		exprs = append(exprs, op.Onclause(), op.Filter())
 		exprs = append(exprs, buildExprs...)
 		exprs = append(exprs, probeExprs...)
-		newExprs, err := coverExprs(exprs, covers)
+		newExprs, err := doCoverExprs(exprs, covers)
 		if err != nil {
 			return err
 		}
@@ -486,7 +487,7 @@ func (this *builder) opCoveringTransformation(op plan.Operator, covers []plan.Co
 		exprs = append(exprs, op.Onclause(), op.Filter())
 		exprs = append(exprs, buildExprs...)
 		exprs = append(exprs, probeExprs...)
-		newExprs, err := coverExprs(exprs, covers)
+		newExprs, err := doCoverExprs(exprs, covers)
 		if err != nil {
 			return err
 		}
@@ -500,7 +501,7 @@ func (this *builder) opCoveringTransformation(op plan.Operator, covers []plan.Co
 		}
 	case *plan.Join:
 		term := op.Term()
-		newExprs, err := coverExprs(expression.Expressions{term.JoinKeys(), op.OnFilter()}, covers)
+		newExprs, err := doCoverExprs(expression.Expressions{term.JoinKeys(), op.OnFilter()}, covers)
 		if err != nil {
 			return err
 		}
@@ -508,7 +509,7 @@ func (this *builder) opCoveringTransformation(op plan.Operator, covers []plan.Co
 		op.SetOnFilter(newExprs[1])
 	case *plan.Nest:
 		term := op.Term()
-		newExprs, err := coverExprs(expression.Expressions{term.JoinKeys(), op.OnFilter()}, covers)
+		newExprs, err := doCoverExprs(expression.Expressions{term.JoinKeys(), op.OnFilter()}, covers)
 		if err != nil {
 			return err
 		}
@@ -534,14 +535,14 @@ func (this *builder) opCoveringTransformation(op plan.Operator, covers []plan.Co
 			}
 		}
 		if op.Filter() != nil {
-			newExprs, err := coverExprs(expression.Expressions{op.Filter()}, covers)
+			newExprs, err := doCoverExprs(expression.Expressions{op.Filter()}, covers)
 			if err != nil {
 				return err
 			}
 			op.SetFilter(newExprs[0])
 		}
 	case *plan.ExpressionScan:
-		newExprs, err := coverExprs(expression.Expressions{op.FromExpr(), op.Filter()}, covers)
+		newExprs, err := doCoverExprs(expression.Expressions{op.FromExpr(), op.Filter()}, covers)
 		if err != nil {
 			return err
 		}
@@ -552,7 +553,7 @@ func (this *builder) opCoveringTransformation(op plan.Operator, covers []plan.Co
 	case *plan.Parallel:
 		return this.opCoveringTransformation(op.Child(), covers)
 	case *plan.Filter:
-		newExprs, err := coverExprs(expression.Expressions{op.Condition()}, covers)
+		newExprs, err := doCoverExprs(expression.Expressions{op.Condition()}, covers)
 		if err != nil {
 			return err
 		}
@@ -618,19 +619,19 @@ func (this *builder) opCoveringTransformation(op plan.Operator, covers []plan.Co
 			}
 		}
 	case *plan.InitialGroup:
-		newKeys, err := coverExprs(op.Keys(), covers)
+		newKeys, err := doCoverExprs(op.Keys(), covers)
 		if err != nil {
 			return err
 		}
 		op.SetKeys(newKeys)
 	case *plan.IntermediateGroup:
-		newKeys, err := coverExprs(op.Keys(), covers)
+		newKeys, err := doCoverExprs(op.Keys(), covers)
 		if err != nil {
 			return err
 		}
 		op.SetKeys(newKeys)
 	case *plan.FinalGroup:
-		newKeys, err := coverExprs(op.Keys(), covers)
+		newKeys, err := doCoverExprs(op.Keys(), covers)
 		if err != nil {
 			return err
 		}
@@ -641,7 +642,7 @@ func (this *builder) opCoveringTransformation(op plan.Operator, covers []plan.Co
 	return nil
 }
 
-func coverExprs(exprs expression.Expressions, covers []plan.CoveringOperator) (expression.Expressions, error) {
+func doCoverExprs(exprs expression.Expressions, covers []plan.CoveringOperator) (expression.Expressions, error) {
 	if len(exprs) == 0 {
 		return exprs, nil
 	}
@@ -698,7 +699,7 @@ func (this *builder) RemoveFromSubqueries(ops ...plan.Operator) {
 	for _, op := range ops {
 		switch op := op.(type) {
 		case *plan.ExpressionScan:
-			if subq, ok := op.FromExpr().(*algebra.Subquery); ok {
+			if subq, ok := op.FromExpr().(*algebra.Subquery); ok && op.SubqueryPlan() != nil {
 				for _, sub := range subq.Select().Subselects() {
 					delete(this.subqCoveringInfo, sub)
 				}
@@ -727,8 +728,12 @@ func (this *builder) SubqCoveringInfo() map[*algebra.Subselect]CoveringSubqInfo 
 	return this.subqCoveringInfo
 }
 
+func (this *builder) SkipCoverTransform() bool {
+	return this.joinEnum() || this.subqUnderJoin() || this.advisorRecommend()
+}
+
 type CoveringSubqInfo interface {
-	Operators() []plan.Operator
-	AddOperator(op plan.Operator)
+	SubqTermPlans() []*subqTermPlan
+	AddSubqTermPlan(subPlan *subqTermPlan)
 	CoveringScans() []plan.CoveringOperator
 }

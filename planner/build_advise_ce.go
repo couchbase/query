@@ -103,3 +103,7 @@ func (this *builder) getIdxCandidates() []datastore.Index {
 func (this *builder) advisorValidate() bool {
 	return false
 }
+
+func (this *builder) advisorRecommend() bool {
+	return false
+}

@@ -628,6 +628,10 @@ func (this *builder) advisorValidate() bool {
 	return this.indexAdvisor && this.advisePhase == _VALIDATE
 }
 
+func (this *builder) advisorRecommend() bool {
+	return this.indexAdvisor && this.advisePhase == _RECOMMEND
+}
+
 // collect identfiers for the unnests used
 
 func collectUnnestsIdentifiers(unnests []*algebra.Unnest) (rv []map[string]expression.Expression) {

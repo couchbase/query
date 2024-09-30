@@ -280,7 +280,7 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 		return nil, err
 	}
 
-	doCoverTransform := (!this.subquery || (!this.joinEnum() && !this.subqUnderJoin()))
+	doCoverTransform := (!this.subquery || !this.SkipCoverTransform())
 	if len(this.coveringScans) > 0 && doCoverTransform {
 		err = this.coverExpressions()
 		if err != nil {

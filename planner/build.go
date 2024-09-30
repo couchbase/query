@@ -575,17 +575,39 @@ func (this *builder) recordSubTime(what string, duration time.Duration) {
 	this.subTimes[what] = duration
 }
 
+const (
+	_SUBQPLAN_JOIN_ENUM = 1 << iota
+	_SUBQPLAN_UNDER_JOIN
+)
+
+type subqTermPlan struct {
+	op    plan.Operator
+	flags int32
+}
+
+func (this *subqTermPlan) Operator() plan.Operator {
+	return this.op
+}
+
+func (this *subqTermPlan) IsJoinEnum() bool {
+	return (this.flags & _SUBQPLAN_JOIN_ENUM) != 0
+}
+
+func (this *subqTermPlan) IsUnderJoin() bool {
+	return (this.flags & _SUBQPLAN_UNDER_JOIN) != 0
+}
+
 type coveringSubqInfo struct {
-	ops           []plan.Operator
+	subqTermPlans []*subqTermPlan
 	coveringScans []plan.CoveringOperator
 }
 
-func (this *coveringSubqInfo) Operators() []plan.Operator {
-	return this.ops
+func (this *coveringSubqInfo) SubqTermPlans() []*subqTermPlan {
+	return this.subqTermPlans
 }
 
-func (this *coveringSubqInfo) AddOperator(op plan.Operator) {
-	this.ops = append(this.ops, op)
+func (this *coveringSubqInfo) AddSubqTermPlan(subqPlan *subqTermPlan) {
+	this.subqTermPlans = append(this.subqTermPlans, subqPlan)
 }
 
 func (this *coveringSubqInfo) CoveringScans() []plan.CoveringOperator {
@@ -593,19 +615,39 @@ func (this *coveringSubqInfo) CoveringScans() []plan.CoveringOperator {
 }
 
 func (this *builder) addSubqCoveringInfo(node *algebra.Subselect, op plan.Operator) error {
+	if this.advisorRecommend() {
+		// no need to do cover transformation
+		return nil
+	}
+
 	if this.subqCoveringInfo == nil {
 		this.subqCoveringInfo = make(map[*algebra.Subselect]CoveringSubqInfo, len(this.baseKeyspaces))
+	}
+
+	flags := int32(0)
+	if this.subqUnderJoin() {
+		if !this.NoExecute() {
+			// no need to do cover transformation, wait till runtime
+			return nil
+		}
+		flags |= _SUBQPLAN_UNDER_JOIN
+	} else if this.joinEnum() {
+		// only set JOIN_ENUM flag if UNDER_JOIN is not on (follow UNDER_JOIN first)
+		flags |= _SUBQPLAN_JOIN_ENUM
+	}
+	subqTermPlan := &subqTermPlan{
+		op:    op,
+		flags: flags,
 	}
 	if info, ok := this.subqCoveringInfo[node]; ok {
 		if len(this.coveringScans) != len(info.CoveringScans()) {
 			return errors.NewPlanInternalError("addSubqCoveringInfo: incompatible coveringScans")
 		}
-		this.subqCoveringInfo[node].AddOperator(op)
 	} else {
 		this.subqCoveringInfo[node] = &coveringSubqInfo{
-			ops:           []plan.Operator{op},
 			coveringScans: this.coveringScans,
 		}
 	}
+	this.subqCoveringInfo[node].AddSubqTermPlan(subqTermPlan)
 	return nil
 }
