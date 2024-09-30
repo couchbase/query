@@ -371,7 +371,7 @@ func (this *builder) checkExactSpans(entry *indexEntry, pred, origPred expressio
 	}
 
 	// check for non sargable key is in predicate
-	exprs, _, err := indexCoverExpressions(entry, entry.idxSargKeys, false, pred, nil, alias, this.context)
+	exprs, _, err := indexCoverExpressions(entry, entry.idxSargKeys, true, pred, nil, alias, this.context)
 	if err != nil {
 		return false
 	}
