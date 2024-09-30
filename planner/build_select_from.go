@@ -1232,7 +1232,8 @@ func (this *builder) getIndexFilter(index datastore.Index, alias string, sargSpa
 		}
 	}
 
-	if filter != nil && (len(covers) > 0 || len(filterCovers) > 0) && !this.AdvisorRecommend() {
+	// OK to always do cover transformation since 'filter' should be a copy
+	if filter != nil && (len(covers) > 0 || len(filterCovers) > 0) {
 		coverer := expression.NewCoverer(covers, filterCovers)
 		filter, err = expression.RenameAnyExpr(filter, arrayKey)
 		if err == nil {
@@ -1378,7 +1379,7 @@ func (this *builder) buildEarlyOrder(iscan3 *plan.IndexScan3, useCBO bool) (plan
 	}
 
 	var newTerms algebra.SortTerms
-	if this.AdvisorRecommend() {
+	if this.SkipCoverTransform() {
 		newTerms = this.order.Terms().Copy()
 	} else {
 		// make a copy of this.order and change expressions to _index_key exprs
