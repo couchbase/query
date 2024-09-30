@@ -650,7 +650,7 @@ func (this *builder) advisorValidate() bool {
 	return this.indexAdvisor && this.advisePhase == _VALIDATE
 }
 
-func (this *builder) AdvisorRecommend() bool {
+func (this *builder) advisorRecommend() bool {
 	return this.indexAdvisor && this.advisePhase == _RECOMMEND
 }
 

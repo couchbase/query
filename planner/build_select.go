@@ -361,12 +361,18 @@ func (this *builder) coverFromSubqueries(ops ...plan.Operator) (err error) {
 	for _, op := range ops {
 		switch op := op.(type) {
 		case *plan.ExpressionScan:
-			if subq, ok := op.FromExpr().(*algebra.Subquery); ok {
+			if subq, ok := op.FromExpr().(*algebra.Subquery); ok && op.SubqueryPlan() != nil {
 				for _, sub := range subq.Select().Subselects() {
 					if info, ok := this.subqCoveringInfo[sub]; ok {
-						err = this.DoCoveringTransformation(info.Operators(), info.CoveringScans())
-						if err != nil {
-							return err
+						for _, subqTermPlan := range info.SubqTermPlans() {
+							if !subqTermPlan.IsUnderJoin() {
+								continue
+							}
+							err = this.DoCoveringTransformation([]plan.Operator{subqTermPlan.Operator()},
+								info.CoveringScans())
+							if err != nil {
+								return err
+							}
 						}
 					}
 				}

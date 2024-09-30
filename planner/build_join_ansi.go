@@ -940,7 +940,7 @@ func (this *builder) buildAnsiJoinScan(node *algebra.KeyspaceTerm, onclause, fil
 		// plan is chosen); just set newFilter, no need to set newOnclause (will keep
 		// the original onclause if newOnclause is not set).
 		newFilter = filter
-	} else if !this.subqUnderJoin() {
+	} else if !this.SkipCoverTransform() {
 		newFilter, newOnclause, primaryJoinKeys, err = this.joinCoverTransformation(coveringScans,
 			this.coveringScans, filter, onclause, primaryJoinKeys, nil, nil, true)
 		if err != nil {
@@ -1270,7 +1270,7 @@ func (this *builder) buildHashJoinOp(right algebra.SimpleFromTerm, left algebra.
 				OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, nil
 		}
 
-		if !this.subqUnderJoin() {
+		if !this.SkipCoverTransform() {
 			// perform cover transformation of leftExprs and rightExprs and onclause
 			newFilter, newOnclause, _, err = this.joinCoverTransformation(coveringScans,
 				this.coveringScans, filter, onclause, nil, leftExprs, rightExprs, false)
@@ -1327,7 +1327,7 @@ func (this *builder) buildHashJoinOp(right algebra.SimpleFromTerm, left algebra.
 		this.lastOp = this.children[len(this.children)-1]
 	}
 
-	if !outer && !isNest && !this.AdvisorRecommend() {
+	if !outer && !isNest {
 		var auto, found bool
 		if joinEnum {
 			auto = autoJoinFilter
@@ -1391,7 +1391,7 @@ func (this *builder) buildAnsiJoinSimpleFromTerm(node algebra.SimpleFromTerm, on
 		filters.ClearIndexFlag()
 	}
 
-	if !this.joinEnum() && !this.subqUnderJoin() {
+	if !this.SkipCoverTransform() {
 		// perform covering transformation
 		if len(this.coveringScans) > 0 {
 			var exprTerm *algebra.ExpressionTerm
@@ -1408,7 +1408,7 @@ func (this *builder) buildAnsiJoinSimpleFromTerm(node algebra.SimpleFromTerm, on
 				newOnclause = onclause.Copy()
 			}
 
-			if (newOnclause != nil || fromExpr != nil) && !this.AdvisorRecommend() {
+			if newOnclause != nil || fromExpr != nil {
 				for _, op := range this.coveringScans {
 					coverer := expression.NewCoverer(op.Covers(), op.FilterCovers())
 					if arrayKey := op.ImplicitArrayKey(); arrayKey != nil {
@@ -1541,7 +1541,7 @@ func (this *builder) buildInnerPrimaryScan(right *algebra.KeyspaceTerm,
 	}
 
 	var newFilter, newOnclause expression.Expression
-	if !this.joinEnum() && !this.subqUnderJoin() {
+	if !this.SkipCoverTransform() {
 		newFilter, newOnclause, _, err = this.joinCoverTransformation(coveringScans,
 			this.coveringScans, filter, onclause, nil, nil, nil, true)
 		if err != nil {
@@ -1561,7 +1561,7 @@ func (this *builder) joinCoverTransformation(leftCoveringScans, rightCoveringSca
 	leftExprs, rightExprs expression.Expressions, nl bool) (
 	newFilter, newOnclause, newPrimaryJoinKeys expression.Expression, err error) {
 
-	if this.AdvisorRecommend() || (len(leftCoveringScans) == 0 && len(rightCoveringScans) == 0) {
+	if len(leftCoveringScans) == 0 && len(rightCoveringScans) == 0 {
 		newFilter, newOnclause, newPrimaryJoinKeys = filter, onclause, primaryJoinKeys
 		return
 	}
@@ -1869,7 +1869,7 @@ func (this *builder) getOnclauseFilter(filters base.Filters) (expression.Express
 	} else {
 		filter = expression.NewAnd(terms...)
 	}
-	if this.joinEnum() || this.AdvisorRecommend() {
+	if this.SkipCoverTransform() {
 		return filter, nil
 	}
 	if len(this.coveringScans) > 0 {

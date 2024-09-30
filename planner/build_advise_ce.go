@@ -104,6 +104,6 @@ func (this *builder) advisorValidate() bool {
 	return false
 }
 
-func (this *builder) AdvisorRecommend() bool {
+func (this *builder) advisorRecommend() bool {
 	return false
 }
