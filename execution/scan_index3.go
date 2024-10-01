@@ -136,6 +136,7 @@ func (this *IndexScan3) RunOnce(context *Context, parent value.Value) {
 
 		var squareRoot bool
 		vectorPos := -1
+		fltrPushed := false
 		if !hasCache {
 			var er errors.Error
 			var indexVector *datastore.IndexVector
@@ -162,6 +163,7 @@ func (this *IndexScan3) RunOnce(context *Context, parent value.Value) {
 			var inlineFilter string
 			if filter != nil {
 				inlineFilter = filter.String()
+				fltrPushed = true
 			}
 			var indexPartitionSets datastore.IndexPartitionSets
 			planIndexPartitionSets := this.plan.IndexPartitionSets()
@@ -270,7 +272,9 @@ func (this *IndexScan3) RunOnce(context *Context, parent value.Value) {
 
 							av.SetField(alias, av)
 
-							if filter != nil {
+							// for vector index 'filter' is pushed to the indexer
+							// as 'inlineFilter' (see above)
+							if filter != nil && !fltrPushed {
 								result, err := filter.Evaluate(av, &this.operatorCtx)
 								if err != nil {
 									context.Error(errors.NewEvaluationError(err, "filter"))
