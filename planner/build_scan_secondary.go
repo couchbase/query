@@ -1458,7 +1458,7 @@ func (this *builder) getIndexFilters(entry *indexEntry, node *algebra.KeyspaceTe
 		}
 	}
 
-	if !isPushDownProperty(entry.pushDownProperty, _PUSHDOWN_EXACTSPANS) {
+	if !isPushDownProperty(entry.pushDownProperty, _PUSHDOWN_EXACTSPANS) || len(includes) > 0 {
 		missing := entry.HasFlag(IE_LEADINGMISSING)
 		skip := useSkipIndexKeys(index, this.context.IndexApiVersion())
 		chkOr := isOrPred && !entry.HasFlag(IE_OR_USE_FILTERS)
