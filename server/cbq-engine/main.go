@@ -308,6 +308,10 @@ func main() {
 		os.Exit(1)
 	}
 
+	/*
+	 * Do not adjust cluster settings after the server has been created.
+	 * if cluster setting callback already processed, the command-line setting overrides
+	 */
 	server, err := server_package.NewServer(datastore, sys, configstore, acctstore, *NAMESPACE,
 		*READONLY, *REQUEST_CAP*numProcs, *REQUEST_CAP*numProcs, *SERVICERS, *PLUS_SERVICERS,
 		*MAX_PARALLELISM, *TIMEOUT, *SIGNATURE, *METRICS, *ENTERPRISE,
@@ -320,69 +324,39 @@ func main() {
 	datastore_package.SetSystemstore(server.Systemstore())
 	prepareds.PreparedsReprepareInit(datastore, sys)
 
+	// only non cluster-setting options
 	server.SetCpuProfile(*CPU_PROFILE)
 	server.SetKeepAlive(*KEEP_ALIVE_LENGTH)
 	server.SetMemProfile(*MEM_PROFILE)
-	server.SetScanCap(*SCAN_CAP)
-	server.SetPipelineCap(*PIPELINE_CAP)
-	server.SetPipelineBatch(*PIPELINE_BATCH)
 	server.SetRequestSizeCap(*REQUEST_SIZE_CAP)
-	server.SetScanCap(*SCAN_CAP)
 	server.SetMaxIndexAPI(*MAX_INDEX_API)
 	server.SetAutoPrepare(*AUTO_PREPARE)
-	server.SetTxTimeout(*TXTIMEOUT)
-	if *ENTERPRISE {
-		util.SetN1qlFeatureControl(*N1QL_FEAT_CTRL)
-		util.SetUseCBO(util.DEF_USE_CBO)
-	} else {
-		util.SetN1qlFeatureControl(*N1QL_FEAT_CTRL | util.CE_N1QL_FEAT_CTRL)
-		util.SetUseCBO(util.CE_USE_CBO)
-	}
-	server.SetMemoryQuota(*MEMORY_QUOTA)
 	server.SetGCPercent(*_GOGC_PERCENT)
 	server.SetRequestErrorLimit(*REQUEST_ERROR_LIMIT)
 	configstore.SetOptions(server, *HTTP_ADDR, *HTTPS_ADDR, (*HTTP_ADDR == _DEF_HTTP && *HTTPS_ADDR == _DEF_HTTPS))
 
 	audit.StartAuditService(*DATASTORE, server.Servicers()+server.PlusServicers())
 
-	ll := logging.LogLevel().String() // extract first
+	// report any non cluster-setting options
 	logging.Infoa(func() string {
 		return fmt.Sprintf("cbq-engine started"+
 			" version=%v"+
 			" datastore=%v"+
 			" max-concurrency=%v"+
-			" loglevel=%v"+
 			" servicers=%v"+
 			" plus-servicers=%v"+
-			" scan-cap=%v"+
-			" pipeline-cap=%v"+
-			" pipeline-batch=%v"+
 			" request-cap=%v"+
 			" request-size-cap=%v"+
 			" max-index-api=%v"+
-			" max-parallelism=%v"+
-			" n1ql-feat-ctrl=%v"+
-			" use-cbo=%v"+
-			" timeout=%v"+
-			" txtimeout=%v"+
 			" gc-percent=%v",
 			util.VERSION,
 			*DATASTORE,
 			numProcs,
-			ll,
 			server.Servicers(),
 			server.PlusServicers(),
-			server.ScanCap(),
-			server.PipelineCap(),
-			server.PipelineBatch(),
 			*REQUEST_CAP,
 			server.RequestSizeCap(),
 			server.MaxIndexAPI(),
-			server.MaxParallelism(),
-			util.GetN1qlFeatureControl(),
-			util.GetUseCBO(),
-			server.Timeout(),
-			server.TxTimeout(),
 			*_GOGC_PERCENT,
 		)
 	})
