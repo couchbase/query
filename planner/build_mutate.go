@@ -66,12 +66,15 @@ func (this *builder) beginMutate(keyspace datastore.Keyspace, ksref *algebra.Key
 	// Process where clause
 	if this.where != nil {
 		if let != nil {
-			inliner := expression.NewInliner(let.Mappings())
+			inliner := expression.NewInliner(let.Copy().Mappings())
 			level := getMaxLevelOfLetBindings(let)
 			var err error
 			this.where, err = dereferenceLet(this.where.Copy(), inliner, level)
 			if err != nil {
 				return nil, err
+			}
+			if inliner.IsModified() {
+				this.setBuilderFlag(BUILDER_WHERE_DEPENDS_ON_LET)
 			}
 		}
 		var err error
