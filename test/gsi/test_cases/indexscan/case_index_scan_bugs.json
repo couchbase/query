@@ -254,5 +254,30 @@
         "statements":"SELECT * FROM shellTest WHERE id = $my_id AND type = 'type1'",
         "results": [
     ]
+    },
+    {
+	"testcase": "MB-63773",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.`~subqueries` SATISFIES ANY u WITHIN v.`plan`.`~children` SATISFIES u.`#operator` = 'Let' AND ANY w IN u.`bindings` SATISFIES w.`var` = 'startMillis' AND CONTAINS(w.`expr`, 'sutc') END END END"
+        },
+        "statements":"SELECT sutc, eutc, details FROM orders AS d USE KEYS \"ibug002\" LET s = FIRST v.`start` FOR v IN d.date END, e = FIRST v.`end` FOR v IN d.date END, sutc = MILLIS_TO_UTC(STR_TO_MILLIS(s||\" \"|| \"America/New_York\",\"%D %T.%N %Z\"),\"%D %TZ\"), eutc = MILLIS_TO_UTC(STR_TO_MILLIS(e||\" \"|| \"America/New_York\",\"%D %T.%N %Z\"),\"%D %TZ\"), details = ( SELECT ts FROM d.logs AS l LET ts = (SELECT t.* FROM l.timestamps t LET vv = t.`value`/10, startMillis = STR_TO_MILLIS(sutc) - 10 * 60 * 1000, endMillis = STR_TO_MILLIS(eutc) + 10 * 60 * 1000 WHERE STR_TO_MILLIS(t.timeStamp) BETWEEN startMillis and endMillis ) )",
+        "results": [
+            {
+                "sutc": "2023-08-18 16:30:00Z",
+                "eutc": "2023-08-28 15:19:00Z",
+                "details": [
+                    {
+                        "ts": []
+                    }
+                ]
+            }
+    ]
     }
 ]

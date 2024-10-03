@@ -116,10 +116,13 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 		this.where = nil
 		if node.Where() != nil {
 			var err error
-			inliner := expression.NewInliner(this.let.Mappings())
+			inliner := expression.NewInliner(this.let.Copy().Mappings())
 			this.where, err = dereferenceLet(node.Where().Copy(), inliner, this.letLevel)
 			if err != nil {
 				return nil, err
+			}
+			if inliner.IsModified() {
+				this.setBuilderFlag(BUILDER_WHERE_DEPENDS_ON_LET)
 			}
 		}
 	} else {
