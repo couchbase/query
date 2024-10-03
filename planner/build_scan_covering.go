@@ -86,6 +86,7 @@ func (this *builder) buildCoveringScan(idxs map[datastore.Index]*indexEntry,
 	}
 
 	alias := node.Alias()
+	exprs := this.getExprsToCover()
 	pred := baseKeyspace.DnfPred()
 	origPred := baseKeyspace.OrigPred()
 	useCBO := this.useCBO && this.keyspaceUseCBO(alias)
@@ -101,11 +102,6 @@ func (this *builder) buildCoveringScan(idxs map[datastore.Index]*indexEntry,
 		}
 	}
 
-	exprs, err := this.getExprsToCover()
-	if err != nil {
-		return nil, 0, err
-	}
-
 	narrays := 0
 	coveringEntries := _COVERING_ENTRY_POOL.Get()
 	defer _COVERING_ENTRY_POOL.Put(coveringEntries)
@@ -118,6 +114,7 @@ outer:
 
 		idxKeys := entry.idxKeys
 		keys := entry.keys
+		var err error
 
 		// Matches execution.spanScan.RunOnce()
 		if !index.IsPrimary() {
@@ -731,28 +728,15 @@ func (this *builder) buildCoveringPushdDownIndexScan2(entry *indexEntry, node *a
 	return scan
 }
 
-func (this *builder) getExprsToCover() (expression.Expressions, error) {
+func (this *builder) getExprsToCover() expression.Expressions {
 	exprs := this.cover.Expressions()
-	if len(this.let) == 0 {
-		return exprs, nil
+	if this.where == nil || !this.hasBuilderFlag(BUILDER_WHERE_DEPENDS_ON_LET) {
+		return exprs
 	}
-	newExprs := make(expression.Expressions, 0, len(exprs))
-	inliner := expression.NewInliner(this.let.Mappings())
-	for _, expr := range exprs {
-		newExpr, err := dereferenceLet(expr.Copy(), inliner, this.letLevel)
-		if err != nil {
-			return nil, err
-		}
-		// only when expr is actually modified use newExpr; this is in case we need
-		// exact expr pointer match in some situations (e.g. unnest covering of flattenkeys)
-		if inliner.IsModified() {
-			newExprs = append(newExprs, newExpr)
-			inliner.Reset()
-		} else {
-			newExprs = append(newExprs, expr)
-		}
-	}
-	return newExprs, nil
+	newExprs := make(expression.Expressions, 0, len(exprs)+1)
+	newExprs = append(newExprs, exprs...)
+	newExprs = append(newExprs, this.where)
+	return newExprs
 }
 
 func mapFilterCovers(fc map[expression.Expression]value.Value, fullCover bool) map[*expression.Cover]value.Value {

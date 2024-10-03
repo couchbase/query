@@ -54,17 +54,13 @@ func (this *builder) buildSearchCovering(searchSargables []*indexEntry, node *al
 	pred := baseKeyspace.DnfPred()
 	entry := searchSargables[0]
 	alias := node.Alias()
+	exprs := this.getExprsToCover()
 	sfn := entry.sargKeys[0].(*search.Search)
 	keys := make(datastore.IndexKeys, 0, len(entry.idxKeys)+3)
 	keys = append(keys, entry.idxKeys...)
 	keys = append(keys, &datastore.IndexKey{id, datastore.IK_NONE},
 		&datastore.IndexKey{search.NewSearchScore(sfn.IndexMetaField()), datastore.IK_NONE},
 		&datastore.IndexKey{search.NewSearchMeta(sfn.IndexMetaField()), datastore.IK_NONE})
-
-	exprs, err := this.getExprsToCover()
-	if err != nil {
-		return nil, 0, err
-	}
 
 	coveringExprs, filterCovers, err := indexCoverExpressions(entry, keys, false, pred, pred, alias, this.context)
 	if err != nil {
@@ -116,12 +112,7 @@ func (this *builder) buildFlexSearchCovering(flex map[datastore.Index]*indexEntr
 	alias := node.Alias()
 	coveringExprs := expression.Expressions{pred, id}
 
-	exprs, err := this.getExprsToCover()
-	if err != nil {
-		return nil, 0, err
-	}
-
-	for _, expr := range exprs {
+	for _, expr := range this.getExprsToCover() {
 		if !expression.IsCovered(expr, alias, coveringExprs, false) {
 			return nil, 0, nil
 		}
