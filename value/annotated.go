@@ -76,8 +76,8 @@ const (
 	ATT_WINDOW_ATTACHMENT
 	ATT_SEQUENCES
 	ATT_PROJECTION
-	ATT_CUSTOM_INDEX
 	ATT_PARENT
+	ATT_CUSTOM_INDEX // must be last
 )
 
 const _DEFAULT_ATTACHMENT_SIZE = 6
@@ -681,7 +681,7 @@ func (this *annotatedValue) GetParent() Value {
 
 func (this *annotatedValue) SetParent(p Value) Value {
 	if sc, ok := this.Value.(*ScopeValue); ok {
-		return sc.SetParent(p)
+		return sc.ResetParent(p)
 	}
 	return nil
 }

@@ -276,21 +276,16 @@ func (this *ScopeValue) Parent() Value {
 	return this.parent
 }
 
-func (this *ScopeValue) ResetParent() {
-	if p := this.parent; p != nil {
-		this.parent = nil
+func (this *ScopeValue) ResetParent(newParent Value) Value {
+	var p Value
+	p, this.parent = this.parent, newParent
+	if this.parent != nil {
+		this.parent.Track()
+	}
+	if p != nil {
 		p.Recycle()
 	}
-}
-
-// NOTE:
-// There is no tracking of the parent swapping here. This is intentional as this function is intended to be used only to
-// temporarily remove the parent which will later be restored when values are spilled to disk.  We do not want to have
-// a case where this is the last reference to the parent and recycling frees it when we'll want to reuse it again later.
-func (this *ScopeValue) SetParent(newParent Value) Value {
-	pp := this.parent
-	this.parent = newParent
-	return pp
+	return p
 }
 
 /*
@@ -361,9 +356,7 @@ func (this *ScopeValue) RefCnt() int32 {
 }
 
 func (this *ScopeValue) Size() uint64 {
-	sz := this.Value.Size()
-	if p := this.parent; p != nil {
-		sz += p.Size()
-	}
-	return sz
+	// parent values are a possibly unique case in that they can be large but are often shared a lot so counting more than once
+	// really bloats the quota figures, so we don't count them at all
+	return this.Value.Size()
 }
