@@ -102,6 +102,8 @@ func SetupSettingsNotifier(callb func(Config), cancelCh chan struct{}) {
 			if lastConfig == nil || !newConfig.Equals(lastConfig).Truth() {
 				logging.Infof("New settings received: %s", util.ByteToString(kve.Value))
 				callb(newConfig)
+			} else {
+				logging.Debugf("New settings same as old: %v", util.ByteToString(kve.Value))
 			}
 			lastConfig = newConfig
 		}
