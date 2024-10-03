@@ -297,7 +297,7 @@ func (this *Identifier) IsUnnestAlias() bool {
 
 func (this *Identifier) SetUnnestAlias(unnestAlias bool) {
 	if unnestAlias {
-		this.identFlags |= IDENT_IS_UNNEST_ALIAS
+		this.identFlags |= (IDENT_IS_UNNEST_ALIAS | IDENT_IS_KEYSPACE)
 	} else {
 		this.identFlags &^= IDENT_IS_UNNEST_ALIAS
 	}
