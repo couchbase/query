@@ -155,7 +155,8 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 		this.letLevel = getMaxLevelOfLetBindings(this.let)
 		this.where = nil
 		if node.Where() != nil {
-			inliner := expression.NewInliner(this.let.Copy().Mappings())
+			inliner := expression.NewInliner(this.let.Copy().MappingsNoSubq())
+			inliner.SetSkipSubq()
 			this.where, err = dereferenceLet(node.Where().Copy(), inliner, this.letLevel)
 			if err != nil {
 				return nil, err

@@ -375,6 +375,19 @@ func (this Bindings) Mappings() map[string]Expression {
 	return mappings
 }
 
+func (this Bindings) MappingsNoSubq() map[string]Expression {
+	mappings := make(map[string]Expression, len(this))
+
+	for _, b := range this {
+		subqs, err := ListSubqueries(Expressions{b.expr}, true)
+		if err == nil && len(subqs) == 0 {
+			mappings[b.variable] = b.expr
+		}
+	}
+
+	return mappings
+}
+
 func (this Bindings) Copy() Bindings {
 	copies := make(Bindings, len(this))
 	for i, b := range this {

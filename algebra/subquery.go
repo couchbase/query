@@ -109,6 +109,9 @@ func (this *Subquery) Children() expression.Expressions {
 Map inner query's Expressions.
 */
 func (this *Subquery) MapChildren(mapper expression.Mapper) error {
+	if mapper.SkipSubq() {
+		return nil
+	}
 	return this.query.MapExpressions(mapper)
 }
 

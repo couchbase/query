@@ -15,13 +15,15 @@ type Mapper interface {
 	Visitor
 
 	Map(expr Expression) (Expression, error)
+	SkipSubq() bool
 }
 
 type MapFunc func(expr Expression) (Expression, error)
 
 type MapperBase struct {
-	mapper  Mapper
-	mapFunc MapFunc
+	mapper   Mapper
+	mapFunc  MapFunc
+	skipSubq bool
 }
 
 func (this *MapperBase) Map(expr Expression) (Expression, error) {
@@ -274,4 +276,16 @@ func (this *MapperBase) SetMapFunc(f MapFunc) {
 	if this.mapFunc == nil {
 		this.mapFunc = f
 	}
+}
+
+func (this *MapperBase) SkipSubq() bool {
+	return this.skipSubq
+}
+
+func (this *MapperBase) SetSkipSubq() {
+	this.skipSubq = true
+}
+
+func (this *MapperBase) UnsetSkipSubq() {
+	this.skipSubq = false
 }
