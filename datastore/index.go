@@ -533,6 +533,9 @@ type Index6 interface {
 	VectorDistanceType() IndexDistanceType
 	VectorDimension() int
 	VectorProbes() int
+	NumberOfCentroids() int
+	NumberOfPartitions() int
+	MaxHeapSize() int // offset+limit Indexer allowed (configurable via indexer config).
 	VectorDescription() string
 	Include() expression.Expressions
 
