@@ -87,7 +87,7 @@ func (s *store) PrivilegesFromPath(fullname string, keyspace string, privilege a
 			privs.Add("", auth.PRIV_SYSTEM_READ, auth.PRIV_PROPS_NONE)
 
 		case KEYSPACE_NAME_AUS_SETTINGS:
-			privs.Add("", auth.PRIV_ADMIN, auth.PRIV_PROPS_NONE)
+			privs.Add("", auth.PRIV_SYSTEM_WRITE, auth.PRIV_PROPS_NONE)
 
 			// for all other keyspaces, we rely on the implementation do deny access
 		}
@@ -148,7 +148,7 @@ func (s *store) PrivilegesFromPath(fullname string, keyspace string, privilege a
 	case auth.PRIV_QUERY_INSERT, auth.PRIV_UPSERT:
 		switch keyspace {
 		case KEYSPACE_NAME_AUS_SETTINGS:
-			privs.Add("", auth.PRIV_ADMIN, auth.PRIV_PROPS_NONE)
+			privs.Add("", auth.PRIV_SYSTEM_WRITE, auth.PRIV_PROPS_NONE)
 		}
 
 		// for every other privilege, the keyspaces internally deny access

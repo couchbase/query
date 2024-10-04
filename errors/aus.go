@@ -134,12 +134,12 @@ func NewAusSchedulingError(startTime time.Time, endTime time.Time, cause error) 
 	c["end_time"] = endTime.String()
 
 	return &err{level: EXCEPTION, ICode: E_AUS_SCHEDULING, IKey: "aus.scheduling_error", cause: c,
-		InternalMsg: "Error during scheduling the Auto Update Statistics task.", InternalCaller: CallerN(1)}
+		InternalMsg: "Error scheduling the Auto Update Statistics task.", InternalCaller: CallerN(1)}
 }
 
 func NewAusTaskError(operation string, cause error) Error {
 	return &err{level: EXCEPTION, ICode: E_AUS_TASK, IKey: "aus.task_execution_error",
-		InternalMsg: fmt.Sprintf("Error during %s of Auto Update Statistics task.", operation), ICause: cause,
+		InternalMsg: fmt.Sprintf("Error during %s of the Auto Update Statistics task.", operation), ICause: cause,
 		InternalCaller: CallerN(1)}
 }
 
@@ -149,5 +149,24 @@ func NewAusTaskInvalidInfoError(operation string, param string, val interface{})
 
 	return &err{level: EXCEPTION, ICode: E_AUS_TASK, IKey: "aus.task_execution_error",
 		InternalMsg: fmt.Sprintf("Error during %s of Auto Update Statistics task.", operation), cause: c,
+		InternalCaller: CallerN(1)}
+}
+
+func NewAusEvaluationStageError(keyspace string, cause error) Error {
+	return &err{level: EXCEPTION, ICode: E_AUS_EVALUATION_PHASE, IKey: "aus.task_execution_error",
+		InternalMsg: fmt.Sprintf("Auto Update Statistics task's Evaluation phase for keyspace %s encountered an error.",
+			keyspace),
+		ICause: cause, InternalCaller: CallerN(1)}
+}
+
+func NewAusUpdateStageError(keyspace string, cause error) Error {
+	return &err{level: EXCEPTION, ICode: E_AUS_UPDATE_PHASE, IKey: "aus.task_execution_error",
+		InternalMsg: fmt.Sprintf("Auto Update Statistics task's Update phase for keyspace %s encountered an error.", keyspace),
+		ICause:      cause, InternalCaller: CallerN(1)}
+}
+
+func NewAusTaskNotStartedError() Error {
+	return &err{level: EXCEPTION, ICode: E_AUS_TASK_NOT_STARTED, IKey: "aus_task_not_started",
+		InternalMsg:    "The Auto Update Statistics task was not started due to existing load on the node.",
 		InternalCaller: CallerN(1)}
 }

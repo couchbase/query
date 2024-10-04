@@ -118,6 +118,43 @@ type Histogram struct {
 	ovrflow    OverflowBins
 	internal   bool
 	updated    time.Time
+
+	// A list of index information for all indexes that the "key" depends on.
+	indexInfo IndexInfo
+}
+
+type IndexInfo []IndexStats
+
+type IndexStats struct {
+	id        string
+	name      string
+	mutations float64
+	items     float64
+}
+
+func NewIndexStats(indexId string, indexName string, mutations float64, items float64) IndexStats {
+	return IndexStats{
+		id:        indexId,
+		name:      indexName,
+		mutations: mutations,
+		items:     items,
+	}
+}
+
+func (this *IndexStats) IndexId() string {
+	return this.id
+}
+
+func (this *IndexStats) IndexName() string {
+	return this.name
+}
+
+func (this *IndexStats) Mutations() float64 {
+	return this.mutations
+}
+
+func (this *IndexStats) Items() float64 {
+	return this.items
 }
 
 type ArrayInfo struct {
@@ -137,7 +174,7 @@ func NewArrayInfo(avgArrayLen, missingArr, emptyArr float64) *ArrayInfo {
 func (this *Histogram) SetHistogram(version int32, keyspace string, key expression.Expression,
 	docCount, sampleSize int64, resolution float64,
 	fdistincts, avgArrayLen, missingArr, emptyArr float64,
-	distrib DistBins, ovrflow OverflowBins, updated time.Time) {
+	distrib DistBins, ovrflow OverflowBins, updated time.Time, indexInfo IndexInfo) {
 	this.version = version
 	this.keyspace = keyspace
 	this.key = key
@@ -152,6 +189,8 @@ func (this *Histogram) SetHistogram(version int32, keyspace string, key expressi
 	if avgArrayLen > 0.0 || missingArr > 0.0 || emptyArr > 0.0 {
 		this.arrayInfo = NewArrayInfo(avgArrayLen, missingArr, emptyArr)
 	}
+
+	this.indexInfo = indexInfo
 
 	return
 }
@@ -206,6 +245,10 @@ func (this *Histogram) IsInternal() bool {
 
 func (this *Histogram) ArrayInfo() *ArrayInfo {
 	return this.arrayInfo
+}
+
+func (this *Histogram) IndexInfo() IndexInfo {
+	return this.indexInfo
 }
 
 func (this *ArrayInfo) AvgArrayLen() float64 {

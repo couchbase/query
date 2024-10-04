@@ -7585,4 +7585,37 @@ var errData = []ErrData{
 			"Server",
 		},
 	},
+	{
+		Code:        E_AUS_EVALUATION_PHASE, // 20008,
+		Description: "Auto Update Statistics task's Evaluation phase for «keyspace» encountered an error.",
+		Action: []string{
+			"Observe if the error occurs again in future runs of the Auto Update Statistics task. If it occurs frequently, contact support.",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_AUS_UPDATE_PHASE, // 20009,
+		Description: "Auto Update Statistics task's Update phase for «keyspace» encountered an error.",
+		Action: []string{
+			"Observe if the error occurs again in future runs of the Auto Update Statistics task. If it occurs frequently, contact support.",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_AUS_TASK_NOT_STARTED, // 20010,
+		Description: "The Auto Update Statistics task was not started due to existing load on the node.",
+		Reason: []string{
+			"The Auto Update Statistics task was not started as the load factor of the Query node was too high to handle the additional workload of the task.",
+		},
+		Action: []string{
+			"Observe if the error occurs again in future runs of the Auto Update Statistics task. If it occurs frequently, the set schedule for Auto Update Statistics might not be suitable for the workload. Approach revising the schedule. Or contact support.",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
 }

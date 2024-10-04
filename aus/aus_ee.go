@@ -13,12 +13,15 @@ package aus
 import (
 	"encoding/json"
 	"fmt"
+	"math/rand"
+	"runtime"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	"github.com/couchbase/cbauth/metakv"
+	"github.com/couchbase/query-ee/aus"
 	"github.com/couchbase/query-ee/optimizer"
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/auth"
@@ -26,6 +29,7 @@ import (
 	"github.com/couchbase/query/distributed"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/execution"
+	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/memory"
 	"github.com/couchbase/query/migration"
@@ -41,6 +45,10 @@ const (
 	_AUS_PATH                    = "/query/auto_update_statistics/"
 	_AUS_GLOBAL_SETTINGS_PATH    = _AUS_PATH + "global_settings"
 	_AUS_SETTINGS_BUCKET_DOC_KEY = AUS_DOC_PREFIX + "bucket"
+
+	_MAX_RETRY       = 10
+	_RETRY_INTERVAL  = 30 * time.Second
+	_MAX_LOAD_FACTOR = 65
 )
 
 var ausCfg ausConfig
@@ -48,6 +56,8 @@ var daysOfWeek map[string]time.Weekday
 
 // since we fetch documents from _system._query 1 at a time
 var _STRING_ANNOTATED_POOL *value.StringAnnotatedPool
+
+var defaultKeyspaceSettings = keyspaceSettings{enable: value.NONE, changePercentage: -1}
 
 type ausConfig struct {
 	sync.RWMutex
@@ -115,7 +125,7 @@ func (this *ausConfig) setCurrentWindow(lock bool, start time.Time, end time.Tim
 	this.currentWindow.version = version
 }
 
-func (this ausSchedule) equals(sched ausSchedule) bool {
+func (this *ausSchedule) equals(sched *ausSchedule) bool {
 	if len(this.days) != len(sched.days) {
 		return false
 	}
@@ -205,7 +215,7 @@ func callback(kve metakv.KVEntry) error {
 			if !newSettings.enable {
 				// If AUS enablement changes from enabled to disabled
 				cancelOld = true
-			} else if !prev.schedule.equals(newSettings.schedule) {
+			} else if !prev.schedule.equals(&newSettings.schedule) {
 				// If AUS remains enabled but the schedule has changed
 				reschedule = true
 				cancelOld = true
@@ -418,7 +428,7 @@ func setAusHelper(settings interface{}, distribute bool) (obj ausGlobalSettings,
 			case "change_percentage":
 				if cp, ok := v.(int64); !ok {
 					return obj, errors.NewAusDocInvalidSettingsValue(k, v), nil
-				} else if cp <= 0 || cp > 100 {
+				} else if cp < 0 || cp > 100 {
 					return obj, errors.NewAusDocInvalidSettingsValue(k, cp), nil
 				} else {
 					obj.changePercentage = int(cp)
@@ -678,8 +688,12 @@ func FetchAusSettings(path string) (value.Value, errors.Errors) {
 		return nil, errors.Errors{errors.NewAusStorageInvalidKey(path, nil)}
 	}
 
+	return fetchSystemCollection(parts[1], key)
+}
+
+func fetchSystemCollection(bucketName string, key string) (value.Value, errors.Errors) {
 	// Get system collection
-	systemCollection, err := getSystemCollection(parts[1])
+	systemCollection, err := getSystemCollection(bucketName)
 	if err != nil {
 		return nil, errors.Errors{err}
 	}
@@ -729,7 +743,7 @@ func MutateAusSettings(op MutateOp, pair value.Pair, queryContext datastore.Quer
 	switch op {
 	case MOP_INSERT, MOP_UPSERT, MOP_UPDATE:
 		{
-			err = validateAusSettingDoc(pair.Value)
+			_, err = validateAusSettingDoc(pair.Value)
 			if err != nil {
 				return 0, nil, errors.Errors{err}
 			}
@@ -848,12 +862,22 @@ func path2key(path string) (string, []string, errors.Error) {
 		if err != nil {
 			return "", nil, errors.NewAusStorageInvalidKey(path, err)
 		}
-		return AUS_DOC_PREFIX + scope.Uid() + "::" + collection.Uid() + "::" + parts[2] + "." + parts[3], parts, nil
+		return ausSettingsCollectionKey(scope.Uid(), parts[2], collection.Uid(), parts[3]), parts, nil
 	} else {
 		// create a scope document
-		return AUS_DOC_PREFIX + scope.Uid() + "::" + parts[2], parts, nil
+		return ausSettingsScopeKey(scope.Uid(), parts[2]), parts, nil
 	}
 
+}
+
+// Returns document id of a scope level document in system:aus_settings
+func ausSettingsScopeKey(scopeUid string, scopeName string) string {
+	return AUS_DOC_PREFIX + scopeUid + "::" + scopeName
+}
+
+// Returns document id of a collection level document in system:aus_settings
+func ausSettingsCollectionKey(scopeUid string, scopeName string, collectionUid string, collectionName string) string {
+	return AUS_DOC_PREFIX + scopeUid + "::" + collectionUid + "::" + scopeName + "." + collectionName
 }
 
 // Get the _system._query collection for a bucket
@@ -867,7 +891,9 @@ func getSystemCollection(bucket string) (datastore.Keyspace, errors.Error) {
 }
 
 // Validate the schema of a bucket/scope/collection level document
-func validateAusSettingDoc(doc value.Value) errors.Error {
+func validateAusSettingDoc(doc value.Value) (keyspaceSettings, errors.Error) {
+
+	settings := defaultKeyspaceSettings
 
 	// Check if there are any disallowed fields or invalid field values
 	for k, v := range doc.Fields() {
@@ -882,21 +908,31 @@ func validateAusSettingDoc(doc value.Value) errors.Error {
 
 		switch k {
 		case "enable":
-			if _, ok := v.(bool); !ok {
-				return errors.NewAusDocInvalidSettingsValue(k, v)
+			if e, ok := v.(bool); !ok {
+				return defaultKeyspaceSettings, errors.NewAusDocInvalidSettingsValue(k, v)
+			} else {
+				settings.enable = value.ToTristate(e)
 			}
 		case "change_percentage":
 			if cp, ok := v.(int64); !ok {
-				return errors.NewAusDocInvalidSettingsValue(k, v)
-			} else if cp <= 0 || cp > 100 {
-				return errors.NewAusDocInvalidSettingsValue(k, v)
+				return defaultKeyspaceSettings, errors.NewAusDocInvalidSettingsValue(k, v)
+			} else if cp < 0 || cp > 100 {
+				return defaultKeyspaceSettings, errors.NewAusDocInvalidSettingsValue(k, v)
+			} else {
+				settings.changePercentage = int(cp)
 			}
 		default:
-			return errors.NewAusDocUnknownSetting(k)
+			return defaultKeyspaceSettings, errors.NewAusDocUnknownSetting(k)
 		}
 	}
 
-	return nil
+	return settings, nil
+}
+
+// Represents the keyspace i.e bucket/scope/collection level setting stored in system:aus_settings
+type keyspaceSettings struct {
+	enable           value.Tristate
+	changePercentage int
 }
 
 // Cleans up scope level AUS documents
@@ -1059,7 +1095,7 @@ func scheduleTask(task taskInfo) errors.Error {
 		return errors.NewAusSchedulingError(task.startTime, task.endTime, err)
 	}
 
-	context, err := newContext()
+	context, err := newContext(newAusOutput())
 	if err != nil {
 		return errors.NewAusSchedulingError(task.startTime, task.endTime, err)
 	}
@@ -1088,6 +1124,26 @@ func execTask(context scheduler.Context, parms interface{}) (interface{}, []erro
 			return nil, []errors.Error{errors.NewAusTaskInvalidInfoError("execution", "task", nil)}
 		}
 
+		defer func() {
+			r := recover()
+			if r != nil {
+				buf := make([]byte, 1<<16)
+				n := runtime.Stack(buf, false)
+				s := string(buf[0:n])
+				logging.Severef(AUS_DOC_PREFIX+"Panic in task execution: %v\n%v", r, s)
+			}
+
+			// End the AUS Evaluation Task
+			// Schedule the next task run. Do not consider "today" in the determination of the window of the next run.
+			_, err := ausCfg.schedule(true, true, task.version, false, false)
+
+			if err != nil {
+				logging.Errorf(AUS_DOC_PREFIX+"Error re-scheduling task: %v", err)
+			}
+		}()
+
+		logging.Infof(AUS_LOG_PREFIX+"Execution of the task scheduled between %v and %v started.", task.startTime, task.endTime)
+
 		// If the configuration version is different from the version with which the task was scheduled
 		// that means a new configuration was received. Do not execute the task.
 		ausCfg.Lock()
@@ -1098,26 +1154,337 @@ func execTask(context scheduler.Context, parms interface{}) (interface{}, []erro
 
 		// Set the current task window information
 		ausCfg.setCurrentWindow(false, task.startTime, task.endTime, task.version)
+
+		// Get the global information before starting execution. These values will be used for the course of this task run.
+		// This is so that consistent global settings are used during a task's entirety in the case changes to the global settings
+		// occur during the task execution.
+		globalChangePercentage := ausCfg.settings.changePercentage
+		allBuckets := ausCfg.settings.allBuckets
 		ausCfg.Unlock()
 
-		// Dummy task execution for now
-		rv := fmt.Sprintf("Task scheduled between %v and %v has completed execution.", task.startTime, task.endTime)
+		var errs errors.Errors
 
-		// Schedule the next task run. Do not consider "today" in the determination of the window of the next run.
-		versionChange, err := ausCfg.schedule(true, true, task.version, false, false)
-		if versionChange {
-			return rv, nil
+		// Fuzzy Start
+		// Do not start task if the Load Factor of the query node is too high.
+		for retry := 0; retry < _MAX_RETRY; retry++ {
+			if ausCfg.server.LoadFactor() <= _MAX_LOAD_FACTOR {
+				break
+			} else if retry == _MAX_RETRY-1 {
+				// Exit on the last retry if the load factor is still beyond the threshold. Do not wastefully perform the sleep.
+				logging.Errorf(AUS_DOC_PREFIX + "Task not started due to existing load on the node.")
+				return nil, append(errs, errors.NewAusTaskNotStartedError())
+			} else {
+				time.Sleep(_RETRY_INTERVAL)
+			}
 		}
 
-		if err != nil {
-			return rv, []errors.Error{errors.NewAusTaskError("rescheduling", err)}
+		var keyspacesEvaluated []interface{}
+		var keyspacesUpdated []interface{}
+
+		// Start the AUS Evaluation Task
+		ds, ok := datastore.GetDatastore().(datastore.Datastore2)
+		if !ok || ds == nil {
+			// This should not ideally happen as migration should have completed.
+			errs = append(errs, errors.NewAusNotInitialized())
+		} else {
+
+			// Keep a list of buckets to do randomized selection against
+			var buckets []datastore.ExtendedBucket
+
+			if allBuckets {
+				ds.LoadAllBuckets(func(b datastore.ExtendedBucket) {
+					buckets = append(buckets, b)
+				})
+			} else {
+				ds.ForeachBucket(func(b datastore.ExtendedBucket) {
+					buckets = append(buckets, b)
+				})
+			}
+
+			// Attempt to prevent starvation.
+			// By iterating through the list of buckets/ scopes/ collections starting at a random index, we attempt to prevent
+			// always performing AUS on the first keyspaces in the list. As keyspaces at the end of the list will routinely be
+			// starved of evaluation/update in the case of timeout/cancellations.
+
+			// Iterate through the buckets list. Generate the random start index.
+			gen := rand.New(rand.NewSource(time.Now().Unix()))
+			b := gen.Int() % len(buckets)
+			for i := 0; i < len(buckets); i++ {
+				bucket := buckets[b]
+				b++
+				if b == len(buckets) {
+					b = 0
+				}
+
+				scopeIds, err := bucket.ScopeIds()
+				if err != nil || len(scopeIds) == 0 {
+					continue
+				}
+
+				systemCollection, err := getSystemCollection(bucket.Name())
+				if err != nil {
+					errs = append(errs, err)
+					continue
+				}
+
+				var bucketSettingRetreived bool
+				bucketSetting := defaultKeyspaceSettings
+
+				// Iterate through the scopes list. Generate the random start index.
+				s := gen.Int() % len(scopeIds)
+				for j := 0; j < len(scopeIds); j++ {
+
+					scope, err := bucket.ScopeById(scopeIds[s])
+					if err != nil {
+						continue
+					}
+
+					s++
+					if s == len(scopeIds) {
+						s = 0
+					}
+
+					collectionIds, err := scope.KeyspaceIds()
+					if err != nil || len(collectionIds) == 0 {
+						continue
+					}
+
+					var scopeSettingRetreived bool
+					scopeSetting := defaultKeyspaceSettings
+
+					// Iterate through the collections list. Generate the random start index.
+					c := gen.Int() % len(collectionIds)
+					for k := 0; k < len(collectionIds); k++ {
+
+						coll, err := scope.KeyspaceById(collectionIds[c])
+						if err != nil {
+							continue
+						}
+
+						c++
+						if c == len(collectionIds) {
+							c = 0
+						}
+
+						// Check if any other node is performing AUS on the collection by attempting to INSERT a unique
+						// coordination document for the keyspace.
+						dpairs := make([]value.Pair, 1)
+						dpairs[0].Name = AUS_COORDINATION_DOC_PREFIX + coll.QualifiedName()
+						dpairs[0].Value = value.EMPTY_ANNOTATED_OBJECT
+
+						// The expiration of the coordination document should be the end time of this scheduled AUS task window.
+						dpairs[0].Options = value.NewValue(map[string]interface{}{
+							"expiration": task.endTime.Unix()})
+
+						_, _, iErrs := systemCollection.Insert(dpairs, datastore.NULL_QUERY_CONTEXT, false)
+
+						// if INSERT fails with a "duplicate key" error, then another node has performed AUS on it.
+						if len(iErrs) > 0 {
+							if !iErrs[0].HasCause(errors.E_DUPLICATE_KEY) {
+								errs = append(errs, errors.NewAusTaskError("coordination", errs[0]))
+								logging.Errorf(AUS_DOC_PREFIX + fmt.Sprintf(
+									"Error inserting the coordination document for keyspace %s: %v", coll.QualifiedName(),
+									iErrs[0]))
+							}
+							continue
+						}
+
+						// Get the bucket level setting
+						if !bucketSettingRetreived {
+							val, errsF := fetchSystemCollection(bucket.Name(), _AUS_SETTINGS_BUCKET_DOC_KEY)
+							if len(errsF) > 0 {
+								logging.Errorf(AUS_DOC_PREFIX + fmt.Sprintf(
+									"Error fetching settings document for bucket %v: %v", bucket.Name(), errsF))
+								errs = append(errs, errsF[0])
+								continue
+							} else if val != nil {
+								setting, err := validateAusSettingDoc(val)
+								if err != nil {
+									logging.Errorf(AUS_DOC_PREFIX + fmt.Sprintf(
+										"Invalid settings document for bucket %v: %v", bucket.Name(), err))
+									errs = append(errs, err)
+									continue
+								}
+								bucketSetting = setting
+							}
+							bucketSettingRetreived = true
+						}
+
+						if bucketSetting.enable == value.FALSE {
+							continue
+						}
+
+						// Get scope level setting
+						if !scopeSettingRetreived {
+							val, errsS := fetchSystemCollection(bucket.Name(),
+								ausSettingsScopeKey(scope.Uid(), scope.Name()))
+							if len(errsS) > 0 {
+								logging.Errorf(AUS_DOC_PREFIX + fmt.Sprintf(
+									"Error fetching settings document for scope %v: %v", algebra.PathFromParts("default",
+										bucket.Name(), scope.Name()), errsS))
+								errs = append(errs, errsS[0])
+								continue
+							} else if val != nil {
+								setting, err := validateAusSettingDoc(val)
+								if err != nil {
+									logging.Errorf(AUS_DOC_PREFIX + fmt.Sprintf(
+										"Invalid settings document for scope %v: %v", algebra.PathFromParts("default",
+											bucket.Name(), scope.Name()), err))
+									errs = append(errs, err)
+									continue
+								}
+								scopeSetting = setting
+							}
+							scopeSettingRetreived = true
+						}
+
+						if scopeSetting.enable == value.FALSE {
+							continue
+						}
+
+						// Get collection level setting
+						collSetting := defaultKeyspaceSettings
+						val, errsC := fetchSystemCollection(bucket.Name(),
+							ausSettingsCollectionKey(scope.Uid(), scope.Name(), coll.Name(), coll.Uid()))
+						if len(errsC) > 0 {
+							logging.Errorf(AUS_DOC_PREFIX + fmt.Sprintf(
+								"Error fetching settings document for collection %v: %v", coll.QualifiedName(), errsC))
+							errs = append(errs, errsC[0])
+							continue
+						} else if val != nil {
+							setting, err := validateAusSettingDoc(val)
+							if err != nil {
+								logging.Errorf(AUS_DOC_PREFIX + fmt.Sprintf(
+									"Invalid settings document for collection %v: %v", coll.QualifiedName(), err))
+								errs = append(errs, err)
+								continue
+							}
+							collSetting = setting
+						}
+
+						if collSetting.enable == value.FALSE {
+							continue
+						}
+
+						// Get the "change percentage" at which to evaluate this keyspace
+						change := globalChangePercentage
+
+						if collSetting.changePercentage >= 0 {
+							change = collSetting.changePercentage
+						} else if scopeSetting.changePercentage >= 0 {
+							change = scopeSetting.changePercentage
+						} else if bucketSetting.changePercentage >= 0 {
+							change = bucketSetting.changePercentage
+						}
+
+						keyspacesEvaluated = append(keyspacesEvaluated, coll.QualifiedName())
+
+						// Evaluation Phase
+						exprs, customUpdStats, err := aus.Evaluation(coll, change)
+						if err != nil {
+							errs = append(errs, errors.NewAusEvaluationStageError(coll.QualifiedName(), err))
+							logging.Errorf(AUS_LOG_PREFIX+
+								"Auto Update Statistics task's Evaluation phase for keyspace %s encountered an error: %v",
+								coll.QualifiedName(), err)
+							continue
+						}
+
+						if len(exprs) > 0 || len(customUpdStats) > 0 {
+							keyspacesUpdated = append(keyspacesUpdated, coll.QualifiedName())
+						}
+
+						// Update Phase
+
+						// Perform the statistics update for all index expressions that require default UPDATE STATISTICS options
+						if len(exprs) > 0 {
+							output := newAusOutput()
+							err := output.executeUpdateStatistics(coll, exprs, nil)
+
+							if err != nil {
+								logging.Errorf(AUS_LOG_PREFIX+
+									"Auto Update Statistics task's Update phase for keyspace %s encountered an error: %v",
+									coll.QualifiedName(), err)
+
+								errs = append(errs, errors.NewAusUpdateStageError(coll.QualifiedName(), err))
+							}
+
+							if output.err != nil {
+								errs = append(errs, errors.NewAusUpdateStageError(coll.QualifiedName(), output.err))
+								logging.Errorf(AUS_LOG_PREFIX+
+									"Auto Update Statistics task's Update phase for keyspace %s encountered an error: %v",
+									coll.QualifiedName(), output.err)
+							}
+						}
+
+						// Perform the statistics update for all index expressions that require customized UPDATE STATISTICS options
+						if len(customUpdStats) > 0 {
+							for i, _ := range customUpdStats {
+								cExprs := customUpdStats[i].Expressions()
+
+								with := value.NewValue(map[string]interface{}{
+									"sample_size": customUpdStats[i].SampleSize(),
+									"resolution":  customUpdStats[i].Resolution(),
+								})
+
+								output := newAusOutput()
+								err := output.executeUpdateStatistics(coll, cExprs, with)
+
+								if err != nil {
+									logging.Errorf(AUS_LOG_PREFIX+
+										"Auto Update Statistics task's Update phase for keyspace %s encountered an error: %v",
+										coll.QualifiedName(), err)
+
+									errs = append(errs, errors.NewAusUpdateStageError(coll.QualifiedName(), err))
+								}
+
+								if output.err != nil {
+									logging.Errorf(AUS_LOG_PREFIX+
+										"Auto Update Statistics task's Update phase for keyspace %s encountered an error: %v",
+										coll.QualifiedName(), output.err)
+									errs = append(errs, errors.NewAusUpdateStageError(coll.QualifiedName(), output.err))
+								}
+							}
+						}
+					}
+
+				}
+
+			}
 		}
+
+		// Persist task history in the log
+		logging.Infof(AUS_LOG_PREFIX + fmt.Sprintf(
+			"Configurations of task: start_time: %v end_time: %v change_percentage: %v all_buckets: %v internal version: %v",
+			task.startTime, task.endTime, globalChangePercentage, allBuckets, task.version))
+		logging.Infof(AUS_LOG_PREFIX + fmt.Sprintf("Keyspaces Evaluated: %v", keyspacesEvaluated))
+		logging.Infof(AUS_LOG_PREFIX + fmt.Sprintf("Keyspaces qualified for Update Phase: %v", keyspacesUpdated))
+
+		// Cache task history in system:tasks_cache
+		taskRv := make(map[string]interface{}, 3)
+		taskRv["Configuration"] = map[string]interface{}{
+			"start_time":        task.startTime.String(),
+			"end_time":          task.endTime.String(),
+			"internal_version":  task.version,
+			"change_percentage": globalChangePercentage,
+			"all_buckets":       allBuckets,
+		}
+
+		if len(keyspacesEvaluated) > 0 {
+			taskRv["keyspaces_evaluated"] = keyspacesEvaluated
+		}
+
+		if len(keyspacesUpdated) > 0 {
+			taskRv["keyspaces_updated"] = keyspacesUpdated
+		}
+
+		logging.Infof(AUS_LOG_PREFIX+"Execution of the task scheduled between %v and %v has completed.", task.startTime,
+			task.endTime)
+
+		return taskRv, errs
 
 	} else {
 		return nil, []errors.Error{errors.NewAusTaskInvalidInfoError("execution", "param", parms)}
 	}
-
-	return nil, nil
 
 }
 
@@ -1155,7 +1522,7 @@ func stopTask(context scheduler.Context, parms interface{}) (interface{}, []erro
 
 // Execution related functions
 
-func newContext() (*execution.Context, errors.Error) {
+func newContext(output *ausOutput) (*execution.Context, errors.Error) {
 
 	// Get admin credentials for this node
 	creds, err := getNodeAdminCreds()
@@ -1166,7 +1533,7 @@ func newContext() (*execution.Context, errors.Error) {
 	qServer := ausCfg.server
 	ctx := execution.NewContext("aus_request", qServer.Datastore(), qServer.Systemstore(), "default", false,
 		qServer.MaxParallelism(), qServer.ScanCap(), qServer.PipelineCap(), qServer.PipelineBatch(), nil, nil,
-		creds, datastore.NOT_SET, &ZeroScanVectorSource{}, newAusOutput("aus_request"), nil, qServer.MaxIndexAPI(),
+		creds, datastore.NOT_SET, &ZeroScanVectorSource{}, output, nil, qServer.MaxIndexAPI(),
 		util.GetN1qlFeatureControl(), "", util.IsFeatureEnabled(util.GetN1qlFeatureControl(), util.N1QL_FLEXINDEX),
 		util.IsFeatureEnabled(util.GetN1qlFeatureControl(), util.N1QL_CBO), optimizer.NewOptimizer(), datastore.DEF_KVTIMEOUT,
 		qServer.Timeout())
@@ -1228,15 +1595,13 @@ func (this *ZeroScanVectorSource) Type() int32 {
 
 // context.Output implementation for executions in AUS related operations
 type ausOutput struct {
-	id            string
 	err           errors.Error
 	mutationCount uint64
+	activeUpdStat *datastore.ValueConnection
 }
 
-func newAusOutput(id string) *ausOutput {
-	return &ausOutput{
-		id: id,
-	}
+func newAusOutput() *ausOutput {
+	return &ausOutput{}
 }
 
 func (this *ausOutput) SetUp() {
@@ -1252,18 +1617,21 @@ func (this *ausOutput) CloseResults() {
 func (this *ausOutput) Abort(err errors.Error) {
 	if this.err == nil {
 		this.err = err
+		this.stopActiveUpdStat()
 	}
 }
 
 func (this *ausOutput) Fatal(err errors.Error) {
 	if this.err == nil {
 		this.err = err
+		this.stopActiveUpdStat()
 	}
 }
 
 func (this *ausOutput) Error(err errors.Error) {
 	if this.err == nil {
 		this.err = err
+		this.stopActiveUpdStat()
 	}
 }
 
@@ -1381,4 +1749,32 @@ func (this *ausOutput) GetErrorCount() int {
 	}
 
 	return 1
+}
+
+func (this *ausOutput) stopActiveUpdStat() {
+	if this.activeUpdStat != nil {
+		select {
+		case this.activeUpdStat.StopChannel() <- false:
+		default:
+		}
+	}
+}
+
+func (this *ausOutput) executeUpdateStatistics(collection datastore.Keyspace, terms expression.Expressions,
+	options value.Value) errors.Error {
+	context, err := newContext(this)
+	if err != nil {
+		return err
+	}
+
+	opContext := execution.NewOpContext(context)
+	updStat, err := ausCfg.server.Datastore().StatUpdater()
+	if err != nil {
+		return err
+	}
+
+	this.activeUpdStat = datastore.NewValueConnection(opContext)
+	updStat.UpdateStatistics(collection, nil, terms, options, this.activeUpdStat, opContext, false)
+	this.stopActiveUpdStat()
+	return nil
 }

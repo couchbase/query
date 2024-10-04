@@ -602,4 +602,7 @@ const (
 	E_AUS_STORAGE_INVALID_KEY                    ErrorCode = 20005
 	E_AUS_SCHEDULING                             ErrorCode = 20006
 	E_AUS_TASK                                   ErrorCode = 20007
+	E_AUS_EVALUATION_PHASE                       ErrorCode = 20008
+	E_AUS_UPDATE_PHASE                           ErrorCode = 20009
+	E_AUS_TASK_NOT_STARTED                       ErrorCode = 20010
 )
