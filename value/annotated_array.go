@@ -24,6 +24,7 @@ import (
 )
 
 const _SPILL_FILE_PATTERN = "av_spill_*"
+const _MAX_PARENTS = 2000
 
 type writerFlusher interface {
 	io.Writer
@@ -61,7 +62,7 @@ func (this *spillFile) Read(b []byte) (int, error) {
 	return io.ReadFull(this.reader, b)
 }
 
-func (this *spillFile) nextValue() error {
+func (this *spillFile) nextValue(valFunc func(av AnnotatedValue) bool) error {
 	this.current = nil
 	s := time.Now()
 	v, err := readSpillValue(this, nil)
@@ -74,6 +75,9 @@ func (this *spillFile) nextValue() error {
 	}
 	av, ok := v.(AnnotatedValue)
 	if !ok {
+		return errors.NewValueError(errors.E_VALUE_INVALID)
+	}
+	if valFunc != nil && !valFunc(av) {
 		return errors.NewValueError(errors.E_VALUE_INVALID)
 	}
 	av.Track()
@@ -127,6 +131,15 @@ type AnnotatedArray struct {
 	iterator iterInfo
 
 	compress bool
+
+	// we keep all the parent values in memory as they're typically shared between multiple items and as spilling multiple times
+	// leads to excessive space & processing requirements.  Note however that this does mean that in a scenario where the parent is
+	// (largely) unique and is significantly larger than the items, spilling will have a negligible positive impact on actual
+	// memory use. (See ScopeValue.Size - we don't include parents in quota.)
+	parentsMap map[string]Value
+	valFunc    func(av AnnotatedValue) bool
+
+	valIn uint64
 }
 
 func NewAnnotatedArray(acquire func(int) AnnotatedValues, release func(AnnotatedValues),
@@ -141,7 +154,22 @@ func NewAnnotatedArray(acquire func(int) AnnotatedValues, release func(Annotated
 		less:        less,
 		shouldSpill: shouldSpill,
 		trackMemory: trackMemory,
-		compress:    compressSpill,
+		compress:    compressSpill && logging.LogLevel() != logging.DEBUG,
+		parentsMap:  make(map[string]Value),
+	}
+	rv.valFunc = func(av AnnotatedValue) bool {
+		p := av.GetAttachment("~parent")
+		if p == nil {
+			return true
+		}
+		av.RemoveAttachment("~parent")
+		if parent, ok := rv.parentsMap[p.(string)]; ok {
+			av.SetParent(parent)
+			return true
+		} else {
+			logging.Debugf("[%p] Unknown parent value: %v", rv, p)
+			return false
+		}
 	}
 	return rv
 }
@@ -154,6 +182,21 @@ func (this *AnnotatedArray) Copy() *AnnotatedArray {
 		shouldSpill: this.shouldSpill,
 		trackMemory: this.trackMemory,
 		compress:    this.compress,
+		parentsMap:  make(map[string]Value),
+	}
+	rv.valFunc = func(av AnnotatedValue) bool {
+		p := av.GetAttachment("~parent")
+		if p == nil {
+			return true
+		}
+		av.RemoveAttachment("~parent")
+		if parent, ok := rv.parentsMap[p.(string)]; ok {
+			av.SetParent(parent)
+			return true
+		} else {
+			logging.Debugf("[%p] Unknown parent value: %v", rv, p)
+			return false
+		}
 	}
 	return rv
 }
@@ -197,6 +240,7 @@ func (this *AnnotatedArray) Append(v AnnotatedValue) errors.Error {
 			}
 		}
 	}
+	this.valIn++
 	if len(this.mem) == cap(this.mem) {
 		nm := this.acquire(len(this.mem) << 1)
 		nm = nm[:len(this.mem)]
@@ -264,6 +308,22 @@ func (this *AnnotatedArray) spillToDisk() error {
 		writer = bufio.NewWriter(sf)
 	}
 	for i, v := range this.mem {
+		vv := v.GetValue()
+		if sv, ok := vv.(*ScopeValue); ok {
+			parent := sv.Parent()
+			ps := fmt.Sprintf("%p", parent)
+			_, ok := this.parentsMap[ps]
+			if !ok && len(this.parentsMap) < _MAX_PARENTS {
+				parent.Track()
+				this.parentsMap[ps] = parent
+				ok = true
+			}
+			if ok {
+				// avoid spilling the parent; spill the map key only
+				sv.ResetParent(nil)
+				v.SetAttachment("~parent", ps)
+			}
+		}
 		s := time.Now()
 		err := v.WriteSpill(writer, nil)
 		spf.write += time.Now().Sub(s)
@@ -315,7 +375,7 @@ func (this *AnnotatedArray) Foreach(f func(AnnotatedValue) bool) errors.Error {
 			return errors.NewValueError(errors.E_VALUE_SPILL_READ, err)
 		}
 		if this.less != nil {
-			err = this.spill[i].nextValue()
+			err = this.spill[i].nextValue(this.valFunc)
 			if err != nil {
 				logging.Debugf("[%p] initial read failed on [%d] %s: %v", this, i, this.spill[i].f.Name(), err)
 				return errors.NewValueError(errors.E_VALUE_SPILL_READ, err)
@@ -364,7 +424,7 @@ func (this *AnnotatedArray) nextUnsorted() (AnnotatedValue, errors.Error, bool) 
 			this.iterator.memIndex++
 			return rv, nil, false
 		}
-		err := this.spill[this.iterator.fileIndex].nextValue()
+		err := this.spill[this.iterator.fileIndex].nextValue(this.valFunc)
 		if err == io.EOF {
 			this.iterator.fileIndex++
 			if this.iterator.fileIndex == len(this.spill) {
@@ -404,7 +464,7 @@ func (this *AnnotatedArray) nextSorted() (AnnotatedValue, errors.Error, bool) {
 		return nil, nil, true
 	}
 	rv := smallest.current
-	err := smallest.nextValue()
+	err := smallest.nextValue(this.valFunc)
 	if err != io.EOF && err != nil {
 		return nil, errors.NewValueError(errors.E_VALUE_SPILL_READ, err), false
 	}
@@ -454,6 +514,10 @@ func (this *AnnotatedArray) Pop() interface{} {
 }
 
 func (this *AnnotatedArray) Truncate(onDiscard func(AnnotatedValue)) {
+	for k, p := range this.parentsMap {
+		p.Recycle()
+		delete(this.parentsMap, k)
+	}
 	for i := range this.spill {
 		if this.spill[i].f != nil {
 			util.ReleaseTemp(this.spill[i].f.Name(), this.spill[i].sz)
@@ -482,6 +546,6 @@ func (this *AnnotatedArray) Stats() string {
 		tr += sf.read
 		tw += sf.write
 	}
-	s = fmt.Sprintf("[R:%v,W:%v]", tr, tw) + s
+	s = fmt.Sprintf("[%p,vals:%v,R:%v,W:%v,#parents:%d]", this, this.valIn, tr, tw, len(this.parentsMap)) + s
 	return s
 }

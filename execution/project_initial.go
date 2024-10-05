@@ -92,7 +92,7 @@ func (this *InitialProject) processItem(item value.AnnotatedValue, context *Cont
 			item.SetSelf(true)
 			// remove WITH bindings
 			if sv, ok := item.GetValue().(*value.ScopeValue); ok {
-				sv.ResetParent()
+				sv.ResetParent(nil)
 			}
 			// remove LET bindings
 			if len(this.plan.BindingNames()) > 0 {
