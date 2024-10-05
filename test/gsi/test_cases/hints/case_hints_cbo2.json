@@ -1,0 +1,21 @@
+[
+    {
+        "testcase": "MB-63702",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.`optimizer_hints`.`~from_clause_subqueries` SATISFIES v.`optimizer_hints`.`hints_followed` IS NOT MISSING END"
+        },
+        "queryParams": {"use_cbo": true},
+        "statements":"SELECT MIN(f1.c13+f2.c23) AS x FROM ( SELECT d1.c10, d1.c11, d1.c13 FROM shellTest AS d1 USE INDEX(st_ix30) WHERE d1.c10 = 0 AND d1.c14 != \"XX\" AND d1.c11 = 1 AND d1.c13 = 3 AND d1.c16 != d1.c15 ) AS f1 JOIN ( SELECT d2.c20, d2.c21, d2.c23 FROM shellTest AS d2 USE INDEX(st_ix31) WHERE d2.c20 = 0 AND d2.c24 != \"XX\" AND d2.c21 = 2 AND d2.c23 = 6 AND d2.c26 != d2.c25 ) AS f2 ON f1.c11 = f2.c20 WHERE f1.c11 != f2.c21",
+        "results": [
+            {
+                "x": null
+            }
+        ]
+    }
+]

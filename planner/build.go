@@ -642,6 +642,13 @@ func (this *builder) addSubqCoveringInfo(node *algebra.Subselect, op plan.Operat
 	} else if this.joinEnum() {
 		// only set JOIN_ENUM flag if UNDER_JOIN is not on (follow UNDER_JOIN first)
 		flags |= _SUBQPLAN_JOIN_ENUM
+
+		// if it is not UNDER_JOIN, then we got here when planning a SubqueryTerm during
+		// join enumeration, in which case we need to mark keyspace hints (index and join hints)
+		err := this.MarkKeyspaceHints()
+		if err != nil {
+			return err
+		}
 	}
 	subqTermPlan := &subqTermPlan{
 		op:    op,

@@ -26,6 +26,8 @@ func (this *builder) buildAnsiJoin(node *algebra.AnsiJoin) (op plan.Operator, er
 		return nil, err
 	}
 
+	// no need to check this.subqUnderJoin() here since for a SubqueryTerm on right-hand side of a
+	// join, if hash join is available we would have used hash join without considering nested-loop join
 	if !this.joinEnum() {
 		if node.Right().HasInferJoinHint() {
 			if leftTerm, ok := node.Left().(algebra.SimpleFromTerm); ok {
@@ -61,6 +63,8 @@ func (this *builder) buildAnsiNest(node *algebra.AnsiNest) (op plan.Operator, er
 		return nil, err
 	}
 
+	// no need to check this.subqUnderJoin() here since for a SubqueryTerm on right-hand side of a
+	// join, if hash join is available we would have used hash join without considering nested-loop join
 	if !this.joinEnum() {
 		if node.Right().HasInferJoinHint() {
 			if leftTerm, ok := node.Left().(algebra.SimpleFromTerm); ok {

@@ -587,6 +587,19 @@ func (this *HintIndex) formatJSON() map[string]interface{} {
 	return r
 }
 
+func (this *HintIndex) equivalentDerivedHint(keyspace string, indexes []string) bool {
+	if !this.derived || this.keyspace != keyspace || len(this.indexes) != len(indexes) {
+		return false
+	}
+	// assume the same order of indexes
+	for i := 0; i < len(indexes); i++ {
+		if this.indexes[i] != indexes[i] {
+			return false
+		}
+	}
+	return true
+}
+
 type HintFTSIndex struct {
 	keyspace string
 	indexes  []string
@@ -695,6 +708,19 @@ func (this *HintFTSIndex) formatJSON() map[string]interface{} {
 		r["indexes"] = indexes
 	}
 	return r
+}
+
+func (this *HintFTSIndex) equivalentDerivedHint(keyspace string, indexes []string) bool {
+	if !this.derived || this.keyspace != keyspace || len(this.indexes) != len(indexes) {
+		return false
+	}
+	// assume the same order of indexes
+	for i := 0; i < len(indexes); i++ {
+		if this.indexes[i] != indexes[i] {
+			return false
+		}
+	}
+	return true
 }
 
 type HintNoIndex struct {
@@ -1155,6 +1181,10 @@ func (this *HintNL) formatJSON() map[string]interface{} {
 	return r
 }
 
+func (this *HintNL) equivalentDerivedHint(keyspace string) bool {
+	return this.derived && this.keyspace == keyspace
+}
+
 type HashOption int32
 
 const (
@@ -1270,6 +1300,10 @@ func (this *HintHash) formatJSON() map[string]interface{} {
 		r["option"] = "PROBE"
 	}
 	return r
+}
+
+func (this *HintHash) equivalentDerivedHint(keyspace string, option HashOption) bool {
+	return this.derived && this.keyspace == keyspace && this.option == option
 }
 
 type HintNoNL struct {
@@ -2375,9 +2409,52 @@ func (this *SubqOptimHints) Alias() string {
 	return this.alias
 }
 
+func (this *SubqOptimHints) OptimHints() *OptimHints {
+	return this.hints
+}
+
 func (this *SubqOptimHints) MarshalJSON() ([]byte, error) {
 	r := make(map[string]interface{}, 2)
 	r["alias"] = this.alias
 	r["optimizer_hints"] = this.hints
 	return json.Marshal(r)
+}
+
+// in the few GetDerived<name>Hint functions below, if an equivalent hint is found, we need to return
+// the original hint pointer in the derivedHints array
+
+func GetDerivedIndexHint(derivedHints []OptimHint, keyspace string, indexes []string) (OptimHint, bool) {
+	for _, hint := range derivedHints {
+		if indexHint, ok := hint.(*HintIndex); ok && indexHint.equivalentDerivedHint(keyspace, indexes) {
+			return hint, true
+		}
+	}
+	return NewDerivedIndexHint(keyspace, indexes), false
+}
+
+func GetDerivedFTSIndexHint(derivedHints []OptimHint, keyspace string, indexes []string) (OptimHint, bool) {
+	for _, hint := range derivedHints {
+		if indexHint, ok := hint.(*HintFTSIndex); ok && indexHint.equivalentDerivedHint(keyspace, indexes) {
+			return hint, true
+		}
+	}
+	return NewDerivedFTSIndexHint(keyspace, indexes), false
+}
+
+func GetDerivedNLHint(derivedHints []OptimHint, keyspace string) (OptimHint, bool) {
+	for _, hint := range derivedHints {
+		if nlHint, ok := hint.(*HintNL); ok && nlHint.equivalentDerivedHint(keyspace) {
+			return hint, true
+		}
+	}
+	return NewDerivedNLHint(keyspace), false
+}
+
+func GetDerivedHashHint(derivedHints []OptimHint, keyspace string, option HashOption) (OptimHint, bool) {
+	for _, hint := range derivedHints {
+		if hashHint, ok := hint.(*HintHash); ok && hashHint.equivalentDerivedHint(keyspace, option) {
+			return hint, true
+		}
+	}
+	return NewDerivedHashHint(keyspace, option), false
 }
