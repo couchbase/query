@@ -58,6 +58,25 @@
                 "type": "right"
             }
 	]
+    },
+    {
+        "testcase": "MB-63702",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND ARRAY_LENGTH(v.`covers`) > 0 END AND ANY u WITHIN p.`~subqueries` SATISFIES u.`#operator` LIKE 'IndexScan%' AND ARRAY_LENGTH(u.`covers`) > 0 END"
+        },
+        "queryParams": {"use_cbo": true},
+        "statements":"SELECT MIN(f1.c13+f2.c23) AS x FROM ( SELECT d1.c10, d1.c11, d1.c13 FROM shellTest AS d1 WHERE d1.c10 = 0 AND d1.c14 != \"XX\" AND d1.c11 = 1 AND d1.c13 = 3 AND d1.c16 != d1.c15 ) AS f1 JOIN ( SELECT d2.c20, d2.c21, d2.c23 FROM shellTest AS d2 WHERE d2.c20 = 0 AND d2.c24 != \"XX\" AND d2.c21 = 2 AND d2.c23 = 6 AND d2.c26 != d2.c25 ) AS f2 ON f1.c11 = f2.c20 WHERE f1.c11 != f2.c21",
+        "results": [
+            {
+                "x": null
+            }
+        ]
     }
 ]
 

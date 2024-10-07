@@ -62,6 +62,8 @@ func (this *builder) selectScan(keyspace datastore.Keyspace, node *algebra.Keysp
 		return nil, err
 	}
 
+	// no need to check this.subqUnderJoin() here since for a SubqueryTerm on right-hand side of a
+	// join, if hash join is available we would have used hash join without considering nested-loop join
 	if !this.joinEnum() && !node.IsAnsiJoinOp() {
 		if !node.HasTransferJoinHint() {
 			baseKeyspace, _ := this.baseKeyspaces[alias]

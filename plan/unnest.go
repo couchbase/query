@@ -56,6 +56,10 @@ func (this *Unnest) Filter() expression.Expression {
 	return this.filter
 }
 
+func (this *Unnest) SetFilter(filter expression.Expression) {
+	this.filter = filter
+}
+
 func (this *Unnest) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }

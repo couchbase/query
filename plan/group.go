@@ -54,6 +54,10 @@ func (this *InitialGroup) Keys() expression.Expressions {
 	return this.keys
 }
 
+func (this *InitialGroup) SetKeys(keys expression.Expressions) {
+	this.keys = keys
+}
+
 func (this *InitialGroup) Aggregates() algebra.Aggregates {
 	return this.aggregates
 }
@@ -182,6 +186,10 @@ func (this *IntermediateGroup) Keys() expression.Expressions {
 	return this.keys
 }
 
+func (this *IntermediateGroup) SetKeys(keys expression.Expressions) {
+	this.keys = keys
+}
+
 func (this *IntermediateGroup) Aggregates() algebra.Aggregates {
 	return this.aggregates
 }
@@ -297,6 +305,10 @@ func (this *FinalGroup) New() Operator {
 
 func (this *FinalGroup) Keys() expression.Expressions {
 	return this.keys
+}
+
+func (this *FinalGroup) SetKeys(keys expression.Expressions) {
+	this.keys = keys
 }
 
 func (this *FinalGroup) Aggregates() algebra.Aggregates {

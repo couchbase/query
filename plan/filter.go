@@ -44,6 +44,10 @@ func (this *Filter) Condition() expression.Expression {
 	return this.cond
 }
 
+func (this *Filter) SetCondition(cond expression.Expression) {
+	this.cond = cond
+}
+
 func (this *Filter) Alias() string {
 	return this.alias
 }

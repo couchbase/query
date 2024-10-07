@@ -35,7 +35,9 @@ func Build(stmt algebra.Statement, datastore, systemstore datastore.Datastore,
 	// subquery plan is currently only for explain, explain_function and advise
 	// TODO: to be expanded to all statements, plus prepareds
 	// forceSQBuild argument  forces subquery plans to be built
-	if forceSQBuild || stmt.Type() == "EXPLAIN" || stmt.Type() == "EXPLAIN_FUNCTION" || stmt.Type() == "ADVISE" {
+	if stmt.Type() == "EXPLAIN" || stmt.Type() == "EXPLAIN_FUNCTION" || stmt.Type() == "ADVISE" {
+		builder.setBuilderFlag(BUILDER_PLAN_SUBQUERY | BUILDER_NO_EXECUTE)
+	} else if forceSQBuild {
 		builder.setBuilderFlag(BUILDER_PLAN_SUBQUERY)
 	}
 
@@ -187,11 +189,13 @@ const (
 	BUILDER_OFFSET_PUSHDOWN // OFFSET is pushed down to index
 	BUILDER_UNDER_HASH
 	BUILDER_ORDER_MODIFIED
+	BUILDER_SUBQTERM_UNDER_JOIN
+	BUILDER_NO_EXECUTE
 	BUILDER_WHERE_DEPENDS_ON_LET
 )
 
 const BUILDER_PRESERVED_FLAGS = (BUILDER_PLAN_HAS_ORDER | BUILDER_HAS_EARLY_ORDER | BUILDER_ORDER_MODIFIED)
-const BUILDER_PASSTHRU_FLAGS = (BUILDER_PLAN_SUBQUERY | BUILDER_JOIN_ENUM)
+const BUILDER_PASSTHRU_FLAGS = (BUILDER_PLAN_SUBQUERY | BUILDER_JOIN_ENUM | BUILDER_SUBQTERM_UNDER_JOIN | BUILDER_NO_EXECUTE)
 
 type builder struct {
 	indexPushDowns
@@ -224,7 +228,7 @@ type builder struct {
 	keyspaceNames        map[string]string
 	indexKeyspaceNames   map[string]bool       // keyspace names that use indexscan (excludes non from caluse subqueries)
 	pushableOnclause     expression.Expression // combined ON-clause from all inner joins
-	builderFlags         uint32
+	builderFlags         uint64
 	indexAdvisor         bool
 	useCBO               bool
 	hintIndexes          bool
@@ -236,6 +240,7 @@ type builder struct {
 	mustSkipKeys         bool
 	subTimes             map[string]time.Duration
 	arrayId              int
+	subqCoveringInfo     map[*algebra.Subselect]CoveringSubqInfo
 }
 
 func (this *builder) Copy() *builder {
@@ -266,6 +271,7 @@ func (this *builder) Copy() *builder {
 		arrayId:              this.arrayId,
 		// the following fields are setup during planning process and thus not copied:
 		// children, subChildren, coveringScan, coveredUnnests, countScan, orderScan, lastOp
+		// subqCoveringInfo
 	}
 
 	if len(this.let) > 0 {
@@ -409,24 +415,42 @@ func (this *builder) restoreNLInner(nlInner bool) {
 	}
 }
 
-func (this *builder) hasBuilderFlag(flag uint32) bool {
+func (this *builder) subqUnderJoin() bool {
+	return (this.builderFlags & BUILDER_SUBQTERM_UNDER_JOIN) != 0
+}
+
+func (this *builder) setSubqUnderJoin() bool {
+	subqUnderJoin := this.hasBuilderFlag(BUILDER_SUBQTERM_UNDER_JOIN)
+	if !subqUnderJoin {
+		this.setBuilderFlag(BUILDER_SUBQTERM_UNDER_JOIN)
+	}
+	return subqUnderJoin
+}
+
+func (this *builder) restoreSubqUnderJoin(subqUnderJoin bool) {
+	if !subqUnderJoin {
+		this.unsetBuilderFlag(BUILDER_SUBQTERM_UNDER_JOIN)
+	}
+}
+
+func (this *builder) hasBuilderFlag(flag uint64) bool {
 	return (this.builderFlags & flag) != 0
 }
 
-func (this *builder) setBuilderFlag(flag uint32) {
+func (this *builder) setBuilderFlag(flag uint64) {
 	this.builderFlags |= flag
 }
 
-func (this *builder) unsetBuilderFlag(flag uint32) {
+func (this *builder) unsetBuilderFlag(flag uint64) {
 	this.builderFlags &^= flag
 }
 
-func (this *builder) resetBuilderFlags(prevBuilderFlags uint32) {
+func (this *builder) resetBuilderFlags(prevBuilderFlags uint64) {
 	preservedFlags := (this.builderFlags & BUILDER_PRESERVED_FLAGS)
 	this.builderFlags = prevBuilderFlags | preservedFlags
 }
 
-func (this *builder) passthruBuilderFlags(prevBuilderFlags uint32) {
+func (this *builder) passthruBuilderFlags(prevBuilderFlags uint64) {
 	this.builderFlags = (prevBuilderFlags & BUILDER_PASSTHRU_FLAGS)
 }
 
@@ -550,4 +574,88 @@ func (this *builder) recordSubTime(what string, duration time.Duration) {
 		duration += existing
 	}
 	this.subTimes[what] = duration
+}
+
+const (
+	_SUBQPLAN_JOIN_ENUM = 1 << iota
+	_SUBQPLAN_UNDER_JOIN
+)
+
+type subqTermPlan struct {
+	op    plan.Operator
+	flags int32
+}
+
+func (this *subqTermPlan) Operator() plan.Operator {
+	return this.op
+}
+
+func (this *subqTermPlan) IsJoinEnum() bool {
+	return (this.flags & _SUBQPLAN_JOIN_ENUM) != 0
+}
+
+func (this *subqTermPlan) IsUnderJoin() bool {
+	return (this.flags & _SUBQPLAN_UNDER_JOIN) != 0
+}
+
+type coveringSubqInfo struct {
+	subqTermPlans []*subqTermPlan
+	coveringScans []plan.CoveringOperator
+}
+
+func (this *coveringSubqInfo) SubqTermPlans() []*subqTermPlan {
+	return this.subqTermPlans
+}
+
+func (this *coveringSubqInfo) AddSubqTermPlan(subqPlan *subqTermPlan) {
+	this.subqTermPlans = append(this.subqTermPlans, subqPlan)
+}
+
+func (this *coveringSubqInfo) CoveringScans() []plan.CoveringOperator {
+	return this.coveringScans
+}
+
+func (this *builder) addSubqCoveringInfo(node *algebra.Subselect, op plan.Operator) error {
+	if this.advisorRecommend() {
+		// no need to do cover transformation
+		return nil
+	}
+
+	if this.subqCoveringInfo == nil {
+		this.subqCoveringInfo = make(map[*algebra.Subselect]CoveringSubqInfo, len(this.baseKeyspaces))
+	}
+
+	flags := int32(0)
+	if this.subqUnderJoin() {
+		if !this.NoExecute() {
+			// no need to do cover transformation, wait till runtime
+			return nil
+		}
+		flags |= _SUBQPLAN_UNDER_JOIN
+	} else if this.joinEnum() {
+		// only set JOIN_ENUM flag if UNDER_JOIN is not on (follow UNDER_JOIN first)
+		flags |= _SUBQPLAN_JOIN_ENUM
+
+		// if it is not UNDER_JOIN, then we got here when planning a SubqueryTerm during
+		// join enumeration, in which case we need to mark keyspace hints (index and join hints)
+		err := this.MarkKeyspaceHints()
+		if err != nil {
+			return err
+		}
+	}
+	subqTermPlan := &subqTermPlan{
+		op:    op,
+		flags: flags,
+	}
+	if info, ok := this.subqCoveringInfo[node]; ok {
+		if len(this.coveringScans) != len(info.CoveringScans()) {
+			return errors.NewPlanInternalError("addSubqCoveringInfo: incompatible coveringScans")
+		}
+	} else {
+		this.subqCoveringInfo[node] = &coveringSubqInfo{
+			coveringScans: this.coveringScans,
+		}
+	}
+	this.subqCoveringInfo[node].AddSubqTermPlan(subqTermPlan)
+	return nil
 }

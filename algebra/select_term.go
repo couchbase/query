@@ -122,3 +122,7 @@ func (this *SelectTerm) Select() *Select {
 func (this *SelectTerm) OptimHints() *OptimHints {
 	return this.query.OptimHints()
 }
+
+func (this *SelectTerm) Subselects() []*Subselect {
+	return this.query.Subselects()
+}

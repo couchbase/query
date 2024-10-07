@@ -509,9 +509,19 @@ func (this *builder) VisitSubqueryTerm(node *algebra.SubqueryTerm) (interface{},
 	} else {
 		sa := this.subquery
 		this.subquery = true
+		var subqUnderJoin bool
+		if this.hasBuilderFlag(BUILDER_NL_INNER) {
+			// here we assume that if SubqueryTerm is on right-hand side of a join,
+			// we will use hash join if available, i.e. we can perform cover
+			// transformation in hash join directly
+			subqUnderJoin = this.setSubqUnderJoin()
+		}
 		subquery := node.Subquery()
 		qp, err := subquery.Accept(this)
 		this.subquery = sa
+		if this.hasBuilderFlag(BUILDER_NL_INNER) {
+			this.restoreSubqUnderJoin(subqUnderJoin)
+		}
 		if err != nil {
 			this.processadviseJF(alias)
 			return nil, err
@@ -1210,6 +1220,7 @@ func (this *builder) getIndexFilter(index datastore.Index, alias string, sargSpa
 		}
 	}
 
+	// OK to always do cover transformation since 'filter' should be a copy
 	if filter != nil && (len(covers) > 0 || len(filterCovers) > 0) {
 		coverer := expression.NewCoverer(covers, filterCovers)
 		filter, err = expression.RenameAnyExpr(filter, arrayKey)
@@ -1355,16 +1366,21 @@ func (this *builder) buildEarlyOrder(iscan3 *plan.IndexScan3, useCBO bool) (plan
 		useCBO = false
 	}
 
-	// make a copy of this.order and change expressions to _index_key exprs
-	coverer := expression.NewCoverer(iscan3.IndexKeys(), iscan3.IndexConditions())
-	newTerms := make(algebra.SortTerms, len(this.order.Terms()))
-	for i, term := range this.order.Terms() {
-		newExpr, err := coverer.Map(earlyOrderExprs[i].Copy())
-		if err != nil {
-			return nil, err
+	var newTerms algebra.SortTerms
+	if this.SkipCoverTransform() {
+		newTerms = this.order.Terms().Copy()
+	} else {
+		// make a copy of this.order and change expressions to _index_key exprs
+		coverer := expression.NewCoverer(iscan3.IndexKeys(), iscan3.IndexConditions())
+		newTerms = make(algebra.SortTerms, len(this.order.Terms()))
+		for i, term := range this.order.Terms() {
+			newExpr, err := coverer.Map(earlyOrderExprs[i].Copy())
+			if err != nil {
+				return nil, err
+			}
+			newTerm := algebra.NewSortTerm(newExpr, term.DescendingExpr(), term.NullsPosExpr())
+			newTerms[i] = newTerm
 		}
-		newTerm := algebra.NewSortTerm(newExpr, term.DescendingExpr(), term.NullsPosExpr())
-		newTerms[i] = newTerm
 	}
 	order := algebra.NewOrder(newTerms)
 	// no need for any cost information for Limit/Offset inside Order

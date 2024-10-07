@@ -22,6 +22,16 @@ import (
 // derive new OptimHints based on USE INDEX and USE NL/USE HASH specified in the query
 func deriveOptimHints(baseKeyspaces map[string]*base.BaseKeyspace, optimHints *algebra.OptimHints) *algebra.OptimHints {
 	var newHints []algebra.OptimHint
+	var derivedHints []algebra.OptimHint
+
+	if optimHints != nil {
+		derivedHints = make([]algebra.OptimHint, 0, len(optimHints.Hints()))
+		for _, hint := range optimHints.Hints() {
+			if hint.Derived() {
+				derivedHints = append(derivedHints, hint)
+			}
+		}
+	}
 
 	for alias, baseKeyspace := range baseKeyspaces {
 		node := baseKeyspace.Node()
@@ -31,20 +41,24 @@ func deriveOptimHints(baseKeyspaces map[string]*base.BaseKeyspace, optimHints *a
 			continue
 		}
 
+		var newHint algebra.OptimHint
+		var found bool
+
 		joinHint := node.JoinHint()
 		if joinHint != algebra.JOIN_HINT_NONE {
-			var newHint algebra.OptimHint
 			switch joinHint {
 			case algebra.USE_HASH_BUILD:
-				newHint = algebra.NewDerivedHashHint(alias, algebra.HASH_OPTION_BUILD)
+				newHint, found = algebra.GetDerivedHashHint(derivedHints, alias, algebra.HASH_OPTION_BUILD)
 			case algebra.USE_HASH_PROBE:
-				newHint = algebra.NewDerivedHashHint(alias, algebra.HASH_OPTION_PROBE)
+				newHint, found = algebra.GetDerivedHashHint(derivedHints, alias, algebra.HASH_OPTION_PROBE)
 			case algebra.USE_NL:
-				newHint = algebra.NewDerivedNLHint(alias)
+				newHint, found = algebra.GetDerivedNLHint(derivedHints, alias)
 			}
 			if newHint != nil {
 				baseKeyspace.AddJoinHint(newHint)
-				newHints = append(newHints, newHint)
+				if !found {
+					newHints = append(newHints, newHint)
+				}
 			}
 		}
 
@@ -70,22 +84,28 @@ func deriveOptimHints(baseKeyspaces map[string]*base.BaseKeyspace, optimHints *a
 					}
 				}
 				if gsi {
-					newHint := algebra.NewDerivedIndexHint(alias, gsiIndexes)
-					baseKeyspace.AddIndexHint(newHint)
-					newHints = append(newHints, newHint)
+					newHint, found = algebra.GetDerivedIndexHint(derivedHints, alias, gsiIndexes)
+					if newHint != nil {
+						baseKeyspace.AddIndexHint(newHint)
+						if !found {
+							newHints = append(newHints, newHint)
+						}
+					}
 				}
 				if fts {
-					newHint := algebra.NewDerivedFTSIndexHint(alias, ftsIndexes)
-					baseKeyspace.AddIndexHint(newHint)
-					newHints = append(newHints, newHint)
+					newHint, found = algebra.GetDerivedFTSIndexHint(derivedHints, alias, ftsIndexes)
+					if newHint != nil {
+						baseKeyspace.AddIndexHint(newHint)
+						if !found {
+							newHints = append(newHints, newHint)
+						}
+					}
 				}
 			}
 		}
 	}
 
-	// if a subquery (inside SubqueryTerm) is processed multiple times, e.g. during
-	// join enumeration, do not add the same set of derived hints multiple times
-	if len(newHints) > 0 && (optimHints == nil || !hasDerivedHint(optimHints.Hints())) {
+	if len(newHints) > 0 {
 		if optimHints == nil {
 			optimHints = algebra.NewOptimHints(nil, false)
 		}
