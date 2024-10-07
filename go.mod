@@ -48,7 +48,7 @@ require (
 	github.com/couchbase/eventing-ee v0.0.0-00010101000000-000000000000
 	github.com/couchbase/go-couchbase v0.1.1
 	github.com/couchbase/go_json v0.0.0-20220330123059-4473a21887c8
-	github.com/couchbase/gocbcore/v10 v10.5.2-0.20240905091535-7e29c2c3e197
+	github.com/couchbase/gocbcore/v10 v10.5.2
 	github.com/couchbase/godbc v0.0.0-20210615212222-79da1b49cb4d
 	github.com/couchbase/gomemcached v0.2.2-0.20230407174933-7d7ce13da8cc
 	github.com/couchbase/goutils v0.1.2
@@ -86,7 +86,7 @@ require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bits-and-blooms/bitset v1.12.0 // indirect
 	github.com/blevesearch/bleve-mapping-ui v0.5.2 // indirect
-	github.com/blevesearch/bleve/v2 v2.4.3-0.20240920163836-49eee2c57206 // indirect
+	github.com/blevesearch/bleve/v2 v2.4.3-0.20241008193842-fab6e1ebcfa4 // indirect
 	github.com/blevesearch/bleve_index_api v1.1.12 // indirect
 	github.com/blevesearch/geo v0.1.20 // indirect
 	github.com/blevesearch/go-faiss v1.0.22 // indirect
