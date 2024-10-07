@@ -136,8 +136,8 @@ func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.Keyspa
 		if !baseKeyspace.IsOuter() && len(baseKeyspace.JoinFilters()) > 0 {
 			// derive IS NOT NULL predicate
 			var duration time.Duration
-			err, duration = deriveNotNullFilter(keyspace, baseKeyspace, this.useCBO, virtualIndexes, this.advisorValidate(),
-				this.context, this.aliases)
+			err, duration = this.deriveNotNullFilter(keyspace, baseKeyspace, this.useCBO,
+				virtualIndexes, this.advisorValidate(), this.context, this.aliases)
 			this.recordSubTime("index.metadata", duration)
 			if err != nil {
 				return nil, nil, err

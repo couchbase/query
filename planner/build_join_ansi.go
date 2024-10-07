@@ -1135,23 +1135,25 @@ func (this *builder) buildHashJoinOp(right algebra.SimpleFromTerm, left algebra.
 		}
 
 		if eqFltr, ok := fltr.FltrExpr().(*expression.Eq); ok {
-			if !eqFltr.First().Indexable() || !eqFltr.Second().Indexable() {
+			first := eqFltr.First()
+			second := eqFltr.Second()
+			if !first.Indexable() || !second.Indexable() {
 				continue
 			}
 
 			// make sure only one side of the equality predicate references
 			// alias (which is right-hand-side of the join)
-			firstRef := expression.HasKeyspaceReferences(eqFltr.First(), keyspaceNames)
-			secondRef := expression.HasKeyspaceReferences(eqFltr.Second(), keyspaceNames)
+			firstRef := expression.HasSingleKeyspaceReference(first, alias, this.keyspaceNames)
+			secondRef := expression.HasSingleKeyspaceReference(second, alias, this.keyspaceNames)
 
 			found := false
 			if firstRef && !secondRef {
-				rightExprs = append(rightExprs, eqFltr.First().Copy())
-				leftExprs = append(leftExprs, eqFltr.Second().Copy())
+				rightExprs = append(rightExprs, first.Copy())
+				leftExprs = append(leftExprs, second.Copy())
 				found = true
 			} else if !firstRef && secondRef {
-				leftExprs = append(leftExprs, eqFltr.First().Copy())
-				rightExprs = append(rightExprs, eqFltr.Second().Copy())
+				leftExprs = append(leftExprs, first.Copy())
+				rightExprs = append(rightExprs, second.Copy())
 				found = true
 			}
 

@@ -35,6 +35,17 @@ func HasKeyspaceReferences(expr Expression, keyspaces map[string]string) bool {
 	return false
 }
 
+// check whether expr has a single keyspace reference to 'alias'
+func HasSingleKeyspaceReference(expr Expression, alias string, keyspaces map[string]string) bool {
+	refs, err := CountKeySpaces(expr, keyspaces)
+	if err == nil && len(refs) == 1 {
+		if _, ok := refs[alias]; ok {
+			return true
+		}
+	}
+	return false
+}
+
 type keyspaceCounter struct {
 	TraverserBase
 
