@@ -53,13 +53,7 @@ func (this *spillFile) rewind() error {
 	if this.compress {
 		this.reader, _ = zlib.NewReader(this.reader)
 	}
-	err = this.nextValue()
-	if err != nil {
-		if _, ok := err.(errors.Error); ok {
-			return err
-		}
-		return errors.NewValueError(errors.E_VALUE_SPILL_READ, err)
-	}
+	this.current = nil
 	return nil
 }
 
@@ -314,20 +308,28 @@ func (this *AnnotatedArray) Foreach(f func(AnnotatedValue) bool) errors.Error {
 	this.iterator.fileIndex = 0
 	this.iterator.memIndex = 0
 
-	if this.less != nil {
-		this.heapSize = 0
-		sort.Sort(this)
-
-		for i := range this.spill {
-			err := this.spill[i].rewind()
+	for i := range this.spill {
+		err := this.spill[i].rewind()
+		if err != nil {
+			logging.Debugf("[%p] rewind failed on [%d] %s: %v", this, i, this.spill[i].f.Name(), err)
+			return errors.NewValueError(errors.E_VALUE_SPILL_READ, err)
+		}
+		if this.less != nil {
+			err = this.spill[i].nextValue()
 			if err != nil {
-				logging.Debugf("[%p] rewind failed on [%d] %s: %v", this, i, this.spill[i].f.Name(), err)
+				logging.Debugf("[%p] initial read failed on [%d] %s: %v", this, i, this.spill[i].f.Name(), err)
 				return errors.NewValueError(errors.E_VALUE_SPILL_READ, err)
 			}
 			if this.trackMemory != nil {
 				this.trackMemory(int64(this.spill[i].current.Size()))
 			}
 		}
+	}
+
+	if this.less != nil {
+		this.heapSize = 0
+		sort.Sort(this)
+
 		heap.Init(&this.spill)
 
 		for {
@@ -376,7 +378,10 @@ func (this *AnnotatedArray) nextUnsorted() (AnnotatedValue, errors.Error, bool) 
 			}
 			return nil, errors.NewValueError(errors.E_VALUE_SPILL_READ, err), false
 		}
-		if this.trackMemory != nil {
+		if this.spill[this.iterator.fileIndex].current == nil {
+			logging.Debugf("[%p] nil value for [%d] %s", this, this.iterator.fileIndex,
+				this.spill[this.iterator.fileIndex].f.Name())
+		} else if this.trackMemory != nil {
 			this.trackMemory(int64(this.spill[this.iterator.fileIndex].current.Size()))
 		}
 		return this.spill[this.iterator.fileIndex].current, nil, false

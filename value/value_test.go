@@ -782,16 +782,16 @@ func TestSpillingArray(t *testing.T) {
 	av := NewAnnotatedValue([]byte(`{"name":"Marty","surname":"McFly"}`))
 	av.SetId("doc1")
 	av.SetField("selfref", av)
+	spillThreshold += av.Size()
 	array.Append(av)
 	check[3] = av.GetId().(string)
-	spillThreshold += av.Size()
 
 	av = NewAnnotatedValue([]byte(`{"name":"Emmett","surname":"Brown"}`))
 	av.SetId("doc2")
 	av.SetField("selfref", av)
+	spillThreshold += av.Size()
 	array.Append(av)
 	check[0] = av.GetId().(string)
-	spillThreshold += av.Size()
 
 	av = NewAnnotatedValue([]byte(`{"name":"Loraine","surname":"Baines"}`))
 	av.SetId("doc3")
@@ -823,6 +823,71 @@ func TestSpillingArray(t *testing.T) {
 		t.Errorf("memory accounting error, found %v (should be 0)", tracking)
 	}
 
+}
+
+func TestSpillingUnsortedArray(t *testing.T) {
+
+	tracking := int64(0)
+	spillThreshold := uint64(0)
+
+	shouldSpill := func(c uint64, n uint64) bool {
+		return c > spillThreshold
+	}
+	acquire := func(size int) AnnotatedValues { return make(AnnotatedValues, 0, size) }
+	trackMem := func(sz int64) {
+		tracking -= sz
+	}
+	array := NewAnnotatedArray(acquire, nil, shouldSpill, trackMem, nil, false)
+	check := make(map[string]bool, 4)
+
+	av := NewAnnotatedValue([]byte(`{"name":"Marty","surname":"McFly"}`))
+	av.SetId("doc1")
+	av.SetField("selfref", av)
+	spillThreshold += av.Size()
+	array.Append(av)
+	check[av.GetId().(string)] = true
+
+	av = NewAnnotatedValue([]byte(`{"name":"Emmett","surname":"Brown"}`))
+	av.SetId("doc2")
+	av.SetField("selfref", av)
+	spillThreshold += av.Size()
+	array.Append(av)
+	check[av.GetId().(string)] = true
+
+	av = NewAnnotatedValue([]byte(`{"name":"Loraine","surname":"Baines"}`))
+	av.SetId("doc3")
+	av.SetField("selfref", av)
+	array.Append(av)
+	check[av.GetId().(string)] = true
+
+	av = NewAnnotatedValue([]byte(`{"name":"George","surname":"McFly"}`))
+	av.SetId("doc4")
+	av.SetField("selfref", av)
+	array.Append(av)
+	check[av.GetId().(string)] = true
+
+	pos := 0
+	err := array.Foreach(func(av AnnotatedValue) bool {
+		if _, ok := check[av.GetId().(string)]; ok {
+			check[av.GetId().(string)] = false
+		} else {
+			t.Errorf("unexpected document found: '%v' at position %v", av.GetId().(string), pos)
+		}
+		pos++
+		return true
+	})
+	if err != nil {
+		t.Errorf("Error: %v", err)
+	}
+	for k, v := range check {
+		if v {
+			t.Errorf("document '%v' not found", k)
+		}
+	}
+
+	if tracking != 0 {
+		t.Errorf("memory accounting error, found %v (should be 0)", tracking)
+	}
 }
 
 func TestSpillingMap(t *testing.T) {
@@ -914,5 +979,4 @@ func TestSpillingMap(t *testing.T) {
 	if tracking != 0 {
 		t.Errorf("memory accounting error, found %v (should be 0)", tracking)
 	}
-
 }
