@@ -259,6 +259,15 @@ func (this *TermSpans) EquivalenceRangeAt(pos int) (eq bool, expr expression.Exp
 	return true, expr
 }
 
+func (this *TermSpans) ValidRangeAt(pos int) bool {
+	for _, span := range this.spans {
+		if pos >= len(span.Ranges) {
+			return false
+		}
+	}
+	return true
+}
+
 func (this *TermSpans) Size() int {
 	return len(this.spans)
 }
