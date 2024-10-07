@@ -172,7 +172,7 @@ func (this *builder) buildCreateSecondaryScan(indexes, flex map[datastore.Index]
 
 		var indexKeyOrders plan.IndexKeyOrders
 		if orderEntry != nil && index == orderEntry.index {
-			_, indexKeyOrders, _ = this.useIndexOrder(entry, entry.idxKeys)
+			_, indexKeyOrders, _ = this.entryUseIndexOrder(entry)
 		}
 
 		if index.Type() != datastore.SYSTEM {

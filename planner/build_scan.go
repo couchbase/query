@@ -408,7 +408,7 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm,
 	if this.hasBuilderFlag(BUILDER_CHK_INDEX_ORDER) {
 		// only consider indexes that satisfy ordering
 		for i, e := range sargables {
-			ok, _, _ := this.useIndexOrder(e, e.idxKeys)
+			ok, _, _ := this.entryUseIndexOrder(e)
 			if !ok {
 				delete(sargables, i)
 			}

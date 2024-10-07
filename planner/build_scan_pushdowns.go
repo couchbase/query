@@ -46,7 +46,7 @@ func (this *builder) indexPushDownProperty(entry *indexEntry, keys,
 			if exact && vector {
 				idxKeys, _ = replaceVectorKey(idxKeys, entry)
 			}
-			ok, _, partSortCount := this.useIndexOrder(entry, idxKeys)
+			ok, _, partSortCount := this.useIndexOrder(entry, idxKeys, pushDownProperty)
 			logging.Debugf("indexPushDownProperty: ok: %v, count: %v", ok, partSortCount)
 			if ok {
 				pushDownProperty |= _PUSHDOWN_ORDER
@@ -81,7 +81,7 @@ func (this *builder) indexPushDownProperty(entry *indexEntry, keys,
 			if isPushDownProperty(pushDownProperty, _PUSHDOWN_ORDER) {
 				pushDownProperty &^= _PUSHDOWN_ORDER
 			}
-			_, _, partSortCount := this.useIndexOrder(entry, idxKeys)
+			_, _, partSortCount := this.useIndexOrder(entry, idxKeys, pushDownProperty)
 			if partSortCount > 0 {
 				pushDownProperty |= _PUSHDOWN_PARTIAL_ORDER
 				entry.partialSortTermCount = partSortCount
@@ -494,7 +494,12 @@ func (this *builder) canPushDownProjectionDistinct(entry *indexEntry, projection
 	return true
 }
 
-func (this *builder) useIndexOrder(entry *indexEntry, keys datastore.IndexKeys) (bool, plan.IndexKeyOrders, int) {
+func (this *builder) entryUseIndexOrder(entry *indexEntry) (bool, plan.IndexKeyOrders, int) {
+	return this.useIndexOrder(entry, entry.idxKeys, entry.pushDownProperty)
+}
+
+func (this *builder) useIndexOrder(entry *indexEntry, keys datastore.IndexKeys, pushDownProperty PushDownProperties) (
+	bool, plan.IndexKeyOrders, int) {
 
 	// Force the use of sorts on indexes that we know not to be ordered
 	// (for now system indexes)
@@ -510,7 +515,7 @@ func (this *builder) useIndexOrder(entry *indexEntry, keys datastore.IndexKeys) 
 	logging.Debugf("useIndexOrder: entry: %v, order: %v", entry, this.order.Terms())
 
 	vector := entry.HasFlag(IE_VECTOR_KEY_SARGABLE)
-	if vector && entry.IsPushDownProperty(_PUSHDOWN_ORDER) {
+	if vector && isPushDownProperty(pushDownProperty, _PUSHDOWN_ORDER) {
 		// for vector index key, only do key replacement if we've previously determined that
 		// order can be pushed down, otherwise key replacement needs to be performed by caller
 		var err error
@@ -610,12 +615,25 @@ outer:
 			} else if eq, _ := entry.spans.EquivalenceRangeAt(i); eq {
 				// orderTerm not yet matched, but can skip equivalence range key, don't add to indexOrder
 				i++
-				if i >= len(keys) {
-					return false, indexOrder, partSortTermCount
+				if i < len(keys) {
+					continue
 				}
-			} else {
-				return false, indexOrder, partSortTermCount
+			} else if vector && vectorOrder && isPushDownProperty(pushDownProperty, _PUSHDOWN_EXACTSPANS) {
+				if tspans, ok := entry.spans.(*TermSpans); ok && tspans.ValidRangeAt(i) {
+					// when vector key order is present, the indexer uses max heap
+					// and can accommodate non-eq ranges
+					// this assume LIMIT can be pushed down, if for whatever reason
+					// LIMIT cannot be pushed down, this function will be called
+					// a second time with vectorOrder == false
+					if _, ok := keys[i].Expr.(*expression.Ann); !ok {
+						i++
+						if i < len(keys) {
+							continue
+						}
+					}
+				}
 			}
+			return false, indexOrder, partSortTermCount
 		}
 	}
 

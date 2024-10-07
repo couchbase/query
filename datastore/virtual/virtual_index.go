@@ -289,6 +289,22 @@ func (this *VirtualIndex) VectorProbes() int {
 	return -1
 }
 
+func (this *VirtualIndex) NumberOfCentroids() int {
+	if this.IsVector() {
+		return int(1024)
+	} else {
+		return int(0)
+	}
+}
+
+func (this *VirtualIndex) NumberOfPartitions() int {
+	return int(1)
+}
+
+func (this *VirtualIndex) MaxHeapSize() int {
+	return int(8192)
+}
+
 func (this *VirtualIndex) VectorDescription() string {
 	if this.vectorDesc != nil {
 		if desc, ok := this.vectorDesc["description"]; ok {
