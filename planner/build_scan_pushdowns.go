@@ -72,19 +72,21 @@ func (this *builder) indexPushDownProperty(entry *indexEntry, keys,
 		//        *  Query Order By matches with Index key order
 		//        *  LIMIT is hint to indexer
 
-		if this.limit != nil && exactLimitOffset {
-			pushDownProperty |= _PUSHDOWN_LIMIT
-		} else if vector && this.order != nil {
-			// if determined above that ORDER can be pushed down but LIMIT cannot,
-			// need to unset ORDER pushdown
-			entry.SetFlags(IE_VECTOR_KEY_SKIP_ORDER, true)
-			if isPushDownProperty(pushDownProperty, _PUSHDOWN_ORDER) {
-				pushDownProperty &^= _PUSHDOWN_ORDER
-			}
-			_, _, partSortCount := this.useIndexOrder(entry, idxKeys, pushDownProperty)
-			if partSortCount > 0 {
-				pushDownProperty |= _PUSHDOWN_PARTIAL_ORDER
-				entry.partialSortTermCount = partSortCount
+		if this.limit != nil {
+			if exactLimitOffset {
+				pushDownProperty |= _PUSHDOWN_LIMIT
+			} else if vector && this.order != nil {
+				// if determined above that ORDER can be pushed down but LIMIT cannot,
+				// need to unset ORDER pushdown
+				entry.SetFlags(IE_VECTOR_KEY_SKIP_ORDER, true)
+				if isPushDownProperty(pushDownProperty, _PUSHDOWN_ORDER) {
+					pushDownProperty &^= _PUSHDOWN_ORDER
+				}
+				_, _, partSortCount := this.useIndexOrder(entry, idxKeys, pushDownProperty)
+				if partSortCount > 0 {
+					pushDownProperty |= _PUSHDOWN_PARTIAL_ORDER
+					entry.partialSortTermCount = partSortCount
+				}
 			}
 		}
 
@@ -547,7 +549,7 @@ func (this *builder) useIndexOrder(entry *indexEntry, keys datastore.IndexKeys, 
 	indexOrder := make(plan.IndexKeyOrders, 0, len(keys))
 	partSortTermCount := 0
 	vectorOrder := false
-	if vector && !entry.HasFlag(IE_VECTOR_KEY_SKIP_ORDER) {
+	if vector && !entry.HasFlag(IE_VECTOR_KEY_SKIP_ORDER) && this.limit != nil {
 		if _, ok := entry.spans.(*TermSpans); ok {
 			vectorOrder = true
 		}
