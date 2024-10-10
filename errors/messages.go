@@ -3855,6 +3855,22 @@ var errData = []ErrData{
 		},
 	},
 	{
+		Code:        E_MAXHEAP_SIZE_EXCEEDED, // 5433
+		symbol:      "E_MAXHEAP_SIZE_EXCEEDED",
+		Description: "Total heap size for (Limit + Offset) exceeded maximum heap size allowed for vector index <<index>>.",
+		Reason: []string{
+			"Limit and/or Offset specified as query parameters have values that exceeded maximum allowed values for vector index.",
+		},
+		Action: []string{
+			"Specify Limit/Offset as constants and re-submit the query.",
+			"Use values that do not exceed the maximum allowed value and re-submit the query.",
+		},
+		IsUser: YES,
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
 		Code:        E_MEMORY_QUOTA_EXCEEDED, // 5500
 		symbol:      "E_MEMORY_QUOTA_EXCEEDED",
 		Description: "Request has exceeded memory quota.",

@@ -464,6 +464,13 @@ func NewInvalidActualVector(msg string) Error {
 		InternalCaller: CallerN(1)}
 }
 
+func NewMaxHeapSizeExceeded(heapSize, maxHeapSize int, name string) Error {
+	return &err{level: EXCEPTION, ICode: E_MAXHEAP_SIZE_EXCEEDED, IKey: "execution.vector_index.maxheap_size",
+		InternalMsg: fmt.Sprintf("Total heap size for (Limit + Offset) (%d) exceeded maximum heap size (%d)"+
+			" allowed for vector index %s", heapSize, maxHeapSize, name),
+		InternalCaller: CallerN(1)}
+}
+
 func NewMemoryQuotaExceededError() Error {
 	return &err{level: EXCEPTION, ICode: E_MEMORY_QUOTA_EXCEEDED, IKey: "execution.memory_quota.exceeded",
 		InternalMsg:    "Request has exceeded memory quota",

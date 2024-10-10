@@ -369,6 +369,21 @@ func (this *IndexScan3) scan(context *Context, conn *datastore.IndexConnection, 
 
 	offset := evalLimitOffset(this.plan.Offset(), parent, int64(0), this.plan.Covering(), &this.operatorCtx)
 	limit := evalLimitOffset(this.plan.Limit(), parent, math.MaxInt64, this.plan.Covering(), &this.operatorCtx)
+
+	if index6, ok := index3.(datastore.Index6); ok && indexVector != nil {
+		maxHeap := int64(0)
+		if this.plan.Limit() != nil && limit >= 0 && limit < math.MaxInt64 {
+			maxHeap += limit
+		}
+		if this.plan.Offset() != nil && offset >= 0 {
+			maxHeap += offset
+		}
+		if maxHeap > int64(index6.MaxHeapSize()) {
+			context.Error(errors.NewMaxHeapSizeExceeded(int(maxHeap), index6.MaxHeapSize(), index6.Name()))
+			conn.Sender().Close()
+			return
+		}
+	}
 	scanVector := context.ScanVectorSource().ScanVector(plan.Term().Namespace(), plan.Term().Path().Bucket())
 
 	indexProjection, indexOrder, indexGroupAggs := planToScanMapping(index3, plan.Projection(),
