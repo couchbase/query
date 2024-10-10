@@ -321,18 +321,19 @@ func (this *AnnotatedArray) spillToDisk() error {
 	for i, v := range this.mem {
 		vv := v.GetValue()
 		if sv, ok := vv.(*ScopeValue); ok {
-			parent := sv.Parent()
-			ps := fmt.Sprintf("%p", parent)
-			_, ok := this.parentsMap[ps]
-			if !ok && len(this.parentsMap) < _MAX_PARENTS {
-				parent.Track()
-				this.parentsMap[ps] = parent
-				ok = true
-			}
-			if ok {
-				// avoid spilling the parent; spill the map key only
-				sv.ResetParent(nil)
-				v.SetAttachment(ATT_PARENT, ps)
+			if parent := sv.Parent(); parent != nil {
+				ps := fmt.Sprintf("%p", parent)
+				_, ok := this.parentsMap[ps]
+				if !ok && len(this.parentsMap) < _MAX_PARENTS {
+					parent.Track()
+					this.parentsMap[ps] = parent
+					ok = true
+				}
+				if ok {
+					// avoid spilling the parent; spill the map key only
+					sv.ResetParent(nil)
+					v.SetAttachment(ATT_PARENT, ps)
+				}
 			}
 		}
 		s := time.Now()
