@@ -14,6 +14,7 @@ import (
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/plan"
+	base "github.com/couchbase/query/plannerbase"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
@@ -55,6 +56,31 @@ func (this *builder) indexPushDownProperty(entry *indexEntry, keys,
 				if partSortCount > 0 && partSortCount < len(this.order.Terms()) && !indexHasFlattenKeys(entry.index) {
 					entry.partialSortTermCount = partSortCount
 					pushDownProperty |= _PUSHDOWN_PARTIAL_ORDER
+				}
+			}
+			// for vector index ordering, check (Limit + Offset) <= MaxHeapSize defined
+			// by the index.
+			// in case Limit/Offset not available, defer to execution time
+			if vector && exactLimitOffset && this.limit != nil {
+				maxHeapSize := -1
+				if index6, ok := entry.index.(datastore.Index6); ok {
+					maxHeapSize = index6.MaxHeapSize()
+				}
+				heapSize := -1
+				lv, static := base.GetStaticInt(this.limit)
+				if static {
+					heapSize = int(lv)
+					if this.offset != nil {
+						ov, static := base.GetStaticInt(this.offset)
+						if static {
+							heapSize += int(ov)
+						} else {
+							heapSize = -1
+						}
+					}
+					if heapSize > 0 && maxHeapSize > 0 && heapSize > maxHeapSize {
+						exactLimitOffset = false
+					}
 				}
 			}
 		} else {
