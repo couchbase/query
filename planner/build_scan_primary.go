@@ -12,7 +12,6 @@ import (
 	"fmt"
 
 	"github.com/couchbase/query/algebra"
-	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
@@ -67,7 +66,6 @@ func (this *builder) buildPrimaryScan(keyspace datastore.Keyspace, node *algebra
 			if skipNewKeys {
 				this.mustSkipKeys = true
 			}
-			node.SetExtraPrivilege(auth.PRIV_QUERY_SEQ_SCAN)
 		}
 
 		return plan.NewPrimaryScan3(primary3, keyspace, node, this.offset, this.limit,
