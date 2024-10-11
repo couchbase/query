@@ -170,3 +170,8 @@ func NewAusTaskNotStartedError() Error {
 		InternalMsg:    "The Auto Update Statistics task was not started due to existing load on the node.",
 		InternalCaller: CallerN(1)}
 }
+
+func NewAusTaskTimeoutExceeded() Error {
+	return &err{level: EXCEPTION, ICode: E_AUS_TASK_TIMEOUT, IKey: "aus_task_timeout",
+		InternalMsg: "Scheduled window of the Auto Update Statistics task exceeded.", InternalCaller: CallerN(1)}
+}

@@ -1104,7 +1104,7 @@ func scheduleTask(task taskInfo) errors.Error {
 	parms["task"] = task
 
 	after := task.startTime.Sub(time.Now())
-	err = scheduler.ScheduleTask(session, "auto_update_statistics", "", after, execTask, stopTask, parms, "", context)
+	err = scheduler.ScheduleStoppableTask(session, "auto_update_statistics", "", after, execTask, stopTask, parms, "", context)
 	if err != nil {
 		return errors.NewAusSchedulingError(task.startTime, task.endTime, err)
 	}
@@ -1112,7 +1112,7 @@ func scheduleTask(task taskInfo) errors.Error {
 	return nil
 }
 
-func execTask(context scheduler.Context, parms interface{}) (interface{}, []errors.Error) {
+func execTask(context scheduler.Context, parms interface{}, stopChannel <-chan bool) (interface{}, []errors.Error) {
 
 	if params, okP := parms.(map[string]interface{}); okP {
 		var task taskInfo
@@ -1124,13 +1124,63 @@ func execTask(context scheduler.Context, parms interface{}) (interface{}, []erro
 			return nil, []errors.Error{errors.NewAusTaskInvalidInfoError("execution", "task", nil)}
 		}
 
+		var activeUpdStatLock sync.Mutex
+		// The currently executing update statistics.
+		var activeUpdStat *ausOutput
+		// Indicates that a stop signal has been received.
+		// Further code must check this variable to determine if further processing can proceed.
+		abort := false
+
+		timedOut := false
+		timer := time.AfterFunc(task.endTime.Sub(task.startTime), func() {
+			activeUpdStatLock.Lock()
+			updStat := activeUpdStat
+			abort = true
+			activeUpdStatLock.Unlock()
+
+			// Stop any currently running update statistics
+			if updStat != nil {
+				updStat.stopActiveUpdStat()
+			}
+
+			timedOut = true
+			logging.Errorf(AUS_LOG_PREFIX + "Task stopped as timeout exceeded.")
+		})
+
+		go func() {
+			_, ok := <-stopChannel
+			// If a stop signal was received
+			if ok {
+				// Stops the timer if not already fired/ stopped.
+				// Because once the stop signal is received there is no need for the timer to fire.
+				timer.Stop()
+
+				activeUpdStatLock.Lock()
+				updStat := activeUpdStat
+				abort = true
+				activeUpdStatLock.Unlock()
+
+				// Stop any currently running update statistics
+				if updStat != nil {
+					updStat.stopActiveUpdStat()
+				}
+
+				logging.Warnf(AUS_LOG_PREFIX + "Task stopped due to user cancellation.")
+			}
+			return
+		}()
+
 		defer func() {
+			// Stops the timer if not already fired/ stopped.
+			timer.Stop()
+			timer = nil
+
 			r := recover()
 			if r != nil {
 				buf := make([]byte, 1<<16)
 				n := runtime.Stack(buf, false)
 				s := string(buf[0:n])
-				logging.Severef(AUS_DOC_PREFIX+"Panic in task execution: %v\n%v", r, s)
+				logging.Severef(AUS_LOG_PREFIX+"Panic in task execution: %v\n%v", r, s)
 			}
 
 			// End the AUS Evaluation Task
@@ -1138,7 +1188,7 @@ func execTask(context scheduler.Context, parms interface{}) (interface{}, []erro
 			_, err := ausCfg.schedule(true, true, task.version, false, false)
 
 			if err != nil {
-				logging.Errorf(AUS_DOC_PREFIX+"Error re-scheduling task: %v", err)
+				logging.Errorf(AUS_LOG_PREFIX+"Error re-scheduling task: %v", err)
 			}
 		}()
 
@@ -1162,6 +1212,10 @@ func execTask(context scheduler.Context, parms interface{}) (interface{}, []erro
 		allBuckets := ausCfg.settings.allBuckets
 		ausCfg.Unlock()
 
+		logging.Infof(AUS_LOG_PREFIX + fmt.Sprintf(
+			"Configurations of task: start_time: %v end_time: %v change_percentage: %v all_buckets: %v internal version: %v",
+			task.startTime, task.endTime, globalChangePercentage, allBuckets, task.version))
+
 		var errs errors.Errors
 
 		// Fuzzy Start
@@ -1171,7 +1225,7 @@ func execTask(context scheduler.Context, parms interface{}) (interface{}, []erro
 				break
 			} else if retry == _MAX_RETRY-1 {
 				// Exit on the last retry if the load factor is still beyond the threshold. Do not wastefully perform the sleep.
-				logging.Errorf(AUS_DOC_PREFIX + "Task not started due to existing load on the node.")
+				logging.Errorf(AUS_LOG_PREFIX + "Task not started due to existing load on the node.")
 				return nil, append(errs, errors.NewAusTaskNotStartedError())
 			} else {
 				time.Sleep(_RETRY_INTERVAL)
@@ -1209,7 +1263,14 @@ func execTask(context scheduler.Context, parms interface{}) (interface{}, []erro
 			// Iterate through the buckets list. Generate the random start index.
 			gen := rand.New(rand.NewSource(time.Now().Unix()))
 			b := gen.Int() % len(buckets)
+
+		bucketLoop:
 			for i := 0; i < len(buckets); i++ {
+
+				if abort {
+					break
+				}
+
 				bucket := buckets[b]
 				b++
 				if b == len(buckets) {
@@ -1234,6 +1295,10 @@ func execTask(context scheduler.Context, parms interface{}) (interface{}, []erro
 				s := gen.Int() % len(scopeIds)
 				for j := 0; j < len(scopeIds); j++ {
 
+					if abort {
+						break bucketLoop
+					}
+
 					scope, err := bucket.ScopeById(scopeIds[s])
 					if err != nil {
 						continue
@@ -1255,6 +1320,10 @@ func execTask(context scheduler.Context, parms interface{}) (interface{}, []erro
 					// Iterate through the collections list. Generate the random start index.
 					c := gen.Int() % len(collectionIds)
 					for k := 0; k < len(collectionIds); k++ {
+
+						if abort {
+							break bucketLoop
+						}
 
 						coll, err := scope.KeyspaceById(collectionIds[c])
 						if err != nil {
@@ -1282,7 +1351,7 @@ func execTask(context scheduler.Context, parms interface{}) (interface{}, []erro
 						if len(iErrs) > 0 {
 							if !iErrs[0].HasCause(errors.E_DUPLICATE_KEY) {
 								errs = append(errs, errors.NewAusTaskError("coordination", errs[0]))
-								logging.Errorf(AUS_DOC_PREFIX + fmt.Sprintf(
+								logging.Errorf(AUS_LOG_PREFIX + fmt.Sprintf(
 									"Error inserting the coordination document for keyspace %s: %v", coll.QualifiedName(),
 									iErrs[0]))
 							}
@@ -1293,14 +1362,14 @@ func execTask(context scheduler.Context, parms interface{}) (interface{}, []erro
 						if !bucketSettingRetreived {
 							val, errsF := fetchSystemCollection(bucket.Name(), _AUS_SETTINGS_BUCKET_DOC_KEY)
 							if len(errsF) > 0 {
-								logging.Errorf(AUS_DOC_PREFIX + fmt.Sprintf(
+								logging.Errorf(AUS_LOG_PREFIX + fmt.Sprintf(
 									"Error fetching settings document for bucket %v: %v", bucket.Name(), errsF))
 								errs = append(errs, errsF[0])
 								continue
 							} else if val != nil {
 								setting, err := validateAusSettingDoc(val)
 								if err != nil {
-									logging.Errorf(AUS_DOC_PREFIX + fmt.Sprintf(
+									logging.Errorf(AUS_LOG_PREFIX + fmt.Sprintf(
 										"Invalid settings document for bucket %v: %v", bucket.Name(), err))
 									errs = append(errs, err)
 									continue
@@ -1319,7 +1388,7 @@ func execTask(context scheduler.Context, parms interface{}) (interface{}, []erro
 							val, errsS := fetchSystemCollection(bucket.Name(),
 								ausSettingsScopeKey(scope.Uid(), scope.Name()))
 							if len(errsS) > 0 {
-								logging.Errorf(AUS_DOC_PREFIX + fmt.Sprintf(
+								logging.Errorf(AUS_LOG_PREFIX + fmt.Sprintf(
 									"Error fetching settings document for scope %v: %v", algebra.PathFromParts("default",
 										bucket.Name(), scope.Name()), errsS))
 								errs = append(errs, errsS[0])
@@ -1327,7 +1396,7 @@ func execTask(context scheduler.Context, parms interface{}) (interface{}, []erro
 							} else if val != nil {
 								setting, err := validateAusSettingDoc(val)
 								if err != nil {
-									logging.Errorf(AUS_DOC_PREFIX + fmt.Sprintf(
+									logging.Errorf(AUS_LOG_PREFIX + fmt.Sprintf(
 										"Invalid settings document for scope %v: %v", algebra.PathFromParts("default",
 											bucket.Name(), scope.Name()), err))
 									errs = append(errs, err)
@@ -1347,14 +1416,14 @@ func execTask(context scheduler.Context, parms interface{}) (interface{}, []erro
 						val, errsC := fetchSystemCollection(bucket.Name(),
 							ausSettingsCollectionKey(scope.Uid(), scope.Name(), coll.Name(), coll.Uid()))
 						if len(errsC) > 0 {
-							logging.Errorf(AUS_DOC_PREFIX + fmt.Sprintf(
+							logging.Errorf(AUS_LOG_PREFIX + fmt.Sprintf(
 								"Error fetching settings document for collection %v: %v", coll.QualifiedName(), errsC))
 							errs = append(errs, errsC[0])
 							continue
 						} else if val != nil {
 							setting, err := validateAusSettingDoc(val)
 							if err != nil {
-								logging.Errorf(AUS_DOC_PREFIX + fmt.Sprintf(
+								logging.Errorf(AUS_LOG_PREFIX + fmt.Sprintf(
 									"Invalid settings document for collection %v: %v", coll.QualifiedName(), err))
 								errs = append(errs, err)
 								continue
@@ -1380,6 +1449,9 @@ func execTask(context scheduler.Context, parms interface{}) (interface{}, []erro
 						keyspacesEvaluated = append(keyspacesEvaluated, coll.QualifiedName())
 
 						// Evaluation Phase
+						if abort {
+							break bucketLoop
+						}
 						exprs, customUpdStats, err := aus.Evaluation(coll, change)
 						if err != nil {
 							errs = append(errs, errors.NewAusEvaluationStageError(coll.QualifiedName(), err))
@@ -1394,11 +1466,23 @@ func execTask(context scheduler.Context, parms interface{}) (interface{}, []erro
 						}
 
 						// Update Phase
-
 						// Perform the statistics update for all index expressions that require default UPDATE STATISTICS options
 						if len(exprs) > 0 {
+
+							if abort {
+								break bucketLoop
+							}
+
 							output := newAusOutput()
+							activeUpdStatLock.Lock()
+							activeUpdStat = output
+							activeUpdStatLock.Unlock()
+
 							err := output.executeUpdateStatistics(coll, exprs, nil)
+
+							activeUpdStatLock.Lock()
+							activeUpdStat = nil
+							activeUpdStatLock.Unlock()
 
 							if err != nil {
 								logging.Errorf(AUS_LOG_PREFIX+
@@ -1418,6 +1502,10 @@ func execTask(context scheduler.Context, parms interface{}) (interface{}, []erro
 
 						// Perform the statistics update for all index expressions that require customized UPDATE STATISTICS options
 						if len(customUpdStats) > 0 {
+							if abort {
+								break bucketLoop
+							}
+
 							for i, _ := range customUpdStats {
 								cExprs := customUpdStats[i].Expressions()
 
@@ -1427,7 +1515,15 @@ func execTask(context scheduler.Context, parms interface{}) (interface{}, []erro
 								})
 
 								output := newAusOutput()
+								activeUpdStatLock.Lock()
+								activeUpdStat = output
+								activeUpdStatLock.Unlock()
+
 								err := output.executeUpdateStatistics(coll, cExprs, with)
+
+								activeUpdStatLock.Lock()
+								activeUpdStat = nil
+								activeUpdStatLock.Unlock()
 
 								if err != nil {
 									logging.Errorf(AUS_LOG_PREFIX+
@@ -1452,10 +1548,11 @@ func execTask(context scheduler.Context, parms interface{}) (interface{}, []erro
 			}
 		}
 
+		if timedOut {
+			errs = append(errs, errors.NewAusTaskTimeoutExceeded())
+		}
+
 		// Persist task history in the log
-		logging.Infof(AUS_LOG_PREFIX + fmt.Sprintf(
-			"Configurations of task: start_time: %v end_time: %v change_percentage: %v all_buckets: %v internal version: %v",
-			task.startTime, task.endTime, globalChangePercentage, allBuckets, task.version))
 		logging.Infof(AUS_LOG_PREFIX + fmt.Sprintf("Keyspaces Evaluated: %v", keyspacesEvaluated))
 		logging.Infof(AUS_LOG_PREFIX + fmt.Sprintf("Keyspaces qualified for Update Phase: %v", keyspacesUpdated))
 
@@ -1505,6 +1602,7 @@ func stopTask(context scheduler.Context, parms interface{}) (interface{}, []erro
 		// Schedule the next task run. Do not consider "today" in the determination of the window of the next run
 		versionChange, err := ausCfg.schedule(true, true, task.version, false, false)
 		if versionChange {
+			rv += " Detected global settings change."
 			return rv, nil
 		}
 
@@ -1512,11 +1610,11 @@ func stopTask(context scheduler.Context, parms interface{}) (interface{}, []erro
 			return rv, []errors.Error{errors.NewAusTaskError("rescheduling", err)}
 		}
 
+		return rv, nil
+
 	} else {
 		return nil, []errors.Error{errors.NewAusTaskInvalidInfoError("execution", "param", parms)}
 	}
-
-	return nil, nil
 
 }
 
@@ -1776,5 +1874,6 @@ func (this *ausOutput) executeUpdateStatistics(collection datastore.Keyspace, te
 	this.activeUpdStat = datastore.NewValueConnection(opContext)
 	updStat.UpdateStatistics(collection, nil, terms, options, this.activeUpdStat, opContext, false)
 	this.stopActiveUpdStat()
+	this.activeUpdStat = nil
 	return nil
 }

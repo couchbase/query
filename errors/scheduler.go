@@ -35,3 +35,8 @@ func NewTaskNotFoundError(t string) Error {
 		InternalMsg:    fmt.Sprintf("the task %v was not found", t),
 		InternalCaller: CallerN(1)}
 }
+
+func NewTaskInvalidParameter(param string) Error {
+	return &err{level: EXCEPTION, ICode: E_TASK_INVALID_PARAMETER, IKey: "scheduler.task.invalid_parameter",
+		InternalMsg: fmt.Sprintf("Task parameter '%v' not provided.", param), InternalCaller: CallerN(1)}
+}

@@ -4479,6 +4479,20 @@ var errData = []ErrData{
 		},
 	},
 	{
+		Code:        E_TASK_INVALID_PARAMETER, // 6005
+		symbol:      "E_TASK_INVALID_PARAMETER",
+		Description: "Task parameter «param» not provided.",
+		Reason: []string{
+			"An attempt was made to perform a task action without a valid task parameter.",
+		},
+		Action: []string{
+			"Attempt to execute the task again. If unsuccessful, contact support.",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
 		Code:        E_REWRITE, // 6500
 		symbol:      "E_REWRITE",
 		Description: "An error occurred during query rewrite.",
@@ -7765,6 +7779,7 @@ var errData = []ErrData{
 	},
 	{
 		Code:        E_AUS_NOT_SUPPORTED, // 20000
+		symbol:      "E_AUS_NOT_SUPPORTED",
 		Description: "Auto Update Statistics is not supported in Community Edition. It is an enterprise level feature.",
 		Reason: []string{
 			"An Auto Update Statistics related operation was attempted on a Community Edition Couchbase cluster.",
@@ -7777,7 +7792,8 @@ var errData = []ErrData{
 		},
 	},
 	{
-		Code:        E_AUS_NOT_INITIALIZED, // 20001,
+		Code:        E_AUS_NOT_INITIALIZED, // 20001
+		symbol:      "E_AUS_NOT_INITIALIZED",
 		Description: "Auto Update Statistics is not initialized for the node. It is only available on clusters migrated to a supported version.",
 		Reason: []string{
 			"An Auto Update Statistics related operation was attempted on a cluster that is not fully migrated to a version that supports it.",
@@ -7790,7 +7806,8 @@ var errData = []ErrData{
 		},
 	},
 	{
-		Code:        E_AUS_STORAGE, // 20002,
+		Code:        E_AUS_STORAGE, // 20002
+		symbol:      "E_AUS_STORAGE",
 		Description: "Error accessing Auto Update Statistics information from storage.",
 		Action: []string{
 			"Retry the operation again. Or contact support.",
@@ -7801,6 +7818,7 @@ var errData = []ErrData{
 	},
 	{
 		Code:        E_AUS_INVALID_DOCUMENT_SCHEMA, // 20003
+		symbol:      "E_AUS_INVALID_DOCUMENT_SCHEMA",
 		Description: "Invalid schema detected in the Auto Update Statistics settings document.",
 		Reason: []string{
 			"The schema validation check failed when an attempt was made to INSERT/UPSERT/UPDATE a document in system:aus or system:aus_settings.",
@@ -7814,7 +7832,8 @@ var errData = []ErrData{
 		},
 	},
 	{
-		Code:        E_AUS_SETTINGS_ENCODING, // 20004,
+		Code:        E_AUS_SETTINGS_ENCODING, // 20004
+		symbol:      "E_AUS_SETTINGS_ENCODING",
 		Description: "Error «action» Automatic Update Statistics settings document.",
 		Action: []string{
 			"Retry the operation again. Or contact support.",
@@ -7824,7 +7843,8 @@ var errData = []ErrData{
 		},
 	},
 	{
-		Code:        E_AUS_STORAGE_INVALID_KEY, // 20005,
+		Code:        E_AUS_STORAGE_INVALID_KEY, // 20005
+		symbol:      "E_AUS_STORAGE_INVALID_KEY",
 		Description: "Invalid document key «key» for Auto Update Statistics document",
 		Reason: []string{
 			"An invalid document key was detected when an operation or SQL++ statement was run against system:aus or system:aus_settings.",
@@ -7839,6 +7859,7 @@ var errData = []ErrData{
 	},
 	{
 		Code:        E_AUS_SCHEDULING, // 20006
+		symbol:      "E_AUS_SCHEDULING",
 		Description: "Error during scheduling the Auto Update Statistics task.",
 		Reason: []string{
 			"An error occurred during scheduling the Auto Update Statistics task.",
@@ -7851,7 +7872,8 @@ var errData = []ErrData{
 		},
 	},
 	{
-		Code:        E_AUS_TASK, // 20007,
+		Code:        E_AUS_TASK, // 20007
+		symbol:      "E_AUS_TASK",
 		Description: "Error during «operation» of Auto Update Statistics task.",
 		Action: []string{
 			"Contact support.",
@@ -7861,7 +7883,8 @@ var errData = []ErrData{
 		},
 	},
 	{
-		Code:        E_AUS_EVALUATION_PHASE, // 20008,
+		Code:        E_AUS_EVALUATION_PHASE, // 20008
+		symbol:      "E_AUS_EVALUATION_PHASE",
 		Description: "Auto Update Statistics task's Evaluation phase for «keyspace» encountered an error.",
 		Action: []string{
 			"Observe if the error occurs again in future runs of the Auto Update Statistics task. If it occurs frequently, contact support.",
@@ -7871,7 +7894,8 @@ var errData = []ErrData{
 		},
 	},
 	{
-		Code:        E_AUS_UPDATE_PHASE, // 20009,
+		Code:        E_AUS_UPDATE_PHASE, // 20009
+		symbol:      "E_AUS_UPDATE_PHASE",
 		Description: "Auto Update Statistics task's Update phase for «keyspace» encountered an error.",
 		Action: []string{
 			"Observe if the error occurs again in future runs of the Auto Update Statistics task. If it occurs frequently, contact support.",
@@ -7881,13 +7905,25 @@ var errData = []ErrData{
 		},
 	},
 	{
-		Code:        E_AUS_TASK_NOT_STARTED, // 20010,
+		Code:        E_AUS_TASK_NOT_STARTED, // 20010
+		symbol:      "E_AUS_TASK_NOT_STARTED",
 		Description: "The Auto Update Statistics task was not started due to existing load on the node.",
 		Reason: []string{
 			"The Auto Update Statistics task was not started as the load factor of the Query node was too high to handle the additional workload of the task.",
 		},
 		Action: []string{
 			"Observe if the error occurs again in future runs of the Auto Update Statistics task. If it occurs frequently, the set schedule for Auto Update Statistics might not be suitable for the workload. Approach revising the schedule. Or contact support.",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_AUS_TASK_TIMEOUT, // 20011
+		symbol:      "E_AUS_TASK_TIMEOUT",
+		Description: "Scheduled window of the Auto Update Statistics task exceeded.",
+		Action: []string{
+			"Observe if the error occurs again in future runs of the Auto Update Statistics task. If it occurs frequently, the set scheduled window for Auto Update Statistics might not be long enough. Approach revising the start and end time of the schedule.",
 		},
 		AppliesTo: []string{
 			"Server",

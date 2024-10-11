@@ -337,6 +337,7 @@ const (
 	E_DUPLICATE_TASK                             ErrorCode = 6002
 	E_TASK_RUNNING                               ErrorCode = 6003
 	E_TASK_NOT_FOUND                             ErrorCode = 6004
+	E_TASK_INVALID_PARAMETER                     ErrorCode = 6005
 	E_REWRITE                                    ErrorCode = 6500
 	E_INFER_INVALID_OPTION                       ErrorCode = 7000
 	E_INFER_OPTION_MUST_BE_NUMERIC               ErrorCode = 7001
@@ -629,4 +630,5 @@ const (
 	E_AUS_EVALUATION_PHASE                       ErrorCode = 20008
 	E_AUS_UPDATE_PHASE                           ErrorCode = 20009
 	E_AUS_TASK_NOT_STARTED                       ErrorCode = 20010
+	E_AUS_TASK_TIMEOUT                           ErrorCode = 20011
 )
